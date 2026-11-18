@@ -1247,6 +1247,13 @@ void VPlanTransforms::createInLoopReductionRecipes(VPlan &Plan,
         UserR->moveAfter(RedRecipe);
       }
       ToDelete.push_back(CurrentLink);
+      // The compare of a min/max select is dead once the select is replaced,
+      // and may use RedRecipe before its definition.
+      if (RecurrenceDescriptor::isMinMaxRecurrenceKind(Kind)) {
+        VPValue *Cmp = CurrentLink->getOperand(0);
+        assert(Cmp->hasOneUse() && "compare must only be used by the select");
+        ToDelete.push_back(Cmp->getDefiningRecipe());
+      }
       PreviousLink = RedRecipe;
     }
   }
@@ -2021,9 +2028,6 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
 }
 
 bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
-  if (Plan.hasScalarVFOnly())
-    return false;
-
   // We want to create the following nodes:
   // vector.body:
   //   ...new WidenPHI recipe introduced to keep the mask value for the latest

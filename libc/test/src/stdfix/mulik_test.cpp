@@ -11,9 +11,9 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "MuliFxTest.h"
+#include "test/src/stdfix/MuliFxTest.h"
 
-#include "llvm-libc-macros/stdfix-macros.h"
+#include "include/llvm-libc-macros/stdfix-macros.h"
 #include "src/stdfix/mulik.h"
 
 LIST_MULIFX_TESTS(k, int, accum, LIBC_NAMESPACE::mulik);

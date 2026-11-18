@@ -9,24 +9,24 @@
 ; AIX32: @__ssp_canary_word = external global ptr
 ; AIX32-NEXT: declare i32 @_Unwind_RaiseException(ptr)
 ; AIX32-NEXT: declare void @_Unwind_Resume(ptr)
-; AIX32-NEXT: declare void @___bzero(ptr, i32)
+; AIX32-NEXT: declare void @___bzero(ptr writeonly captures(none), i32) [[ARGMEM_WRITE_ATTRS:#[0-9]+]]
 ; AIX32-NEXT: declare ptr @___memccpy(ptr, ptr, i32, i32)
-; AIX32-NEXT: declare i32 @___memcmp(ptr, ptr, i32)
+; AIX32-NEXT: declare i32 @___memcmp(ptr readonly captures(none), ptr readonly captures(none), i32) [[ARGMEM_READ_ATTRS:#[0-9]+]]
 ; AIX32-NEXT: declare ptr @___memmove(ptr, ptr, i32)
 ; AIX32-NEXT: declare ptr @___memset(ptr, i32, i32)
 ; AIX32-NEXT: declare i32 @___strcmp(ptr, ptr)
 ; AIX32-NEXT: declare ptr @___strcpy(ptr, ptr)
-; AIX32-NEXT: declare i32 @___strlen(ptr)
+; AIX32-NEXT: declare i32 @___strlen(ptr readonly captures(none)) [[ARGMEM_READ_ATTRS]]
 ; AIX32-NEXT: declare ptr @___strstr(ptr, ptr)
-; AIX32-NEXT: declare double @__adddf3(double, double)
-; AIX32-NEXT: declare fp128 @__addkf3(fp128, fp128)
-; AIX32-NEXT: declare float @__addsf3(float, float)
-; AIX32-NEXT: declare i64 @__ashldi3(i64, i32)
-; AIX32-NEXT: declare signext i16 @__ashlhi3(i16 signext, i32)
-; AIX32-NEXT: declare i32 @__ashlsi3(i32, i32)
-; AIX32-NEXT: declare i64 @__ashrdi3(i64, i32)
-; AIX32-NEXT: declare signext i16 @__ashrhi3(i16 signext, i32)
-; AIX32-NEXT: declare i32 @__ashrsi3(i32, i32)
+; AIX32-NEXT: declare double @__adddf3(double, double) [[NOMEM_ATTRS:#[0-9]+]]
+; AIX32-NEXT: declare fp128 @__addkf3(fp128, fp128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare float @__addsf3(float, float) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i64 @__ashldi3(i64, i32) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare signext i16 @__ashlhi3(i16 signext, i32) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i32 @__ashlsi3(i32, i32) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i64 @__ashrdi3(i64, i32) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare signext i16 @__ashrhi3(i16 signext, i32) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i32 @__ashrsi3(i32, i32) [[NOMEM_ATTRS]]
 ; AIX32-NEXT: declare zeroext i1 @__atomic_compare_exchange(i32, ptr, ptr, ptr, i32, i32)
 ; AIX32-NEXT: declare zeroext i1 @__atomic_compare_exchange_1(ptr, ptr, i8 zeroext, i32, i32)
 ; AIX32-NEXT: declare zeroext i1 @__atomic_compare_exchange_16(ptr, ptr, i128, i32, i32)
@@ -82,123 +82,123 @@
 ; AIX32-NEXT: declare void @__atomic_store_4(ptr, i32, i32)
 ; AIX32-NEXT: declare void @__atomic_store_8(ptr, i64, i32)
 ; AIX32-NEXT: declare void @__clear_cache(ptr, ptr)
-; AIX32-NEXT: declare i32 @__clzdi2(i64)
-; AIX32-NEXT: declare i32 @__clzsi2(i32)
-; AIX32-NEXT: declare i32 @__clzti2(i128)
-; AIX32-NEXT: declare i32 @__ctzdi2(i64)
-; AIX32-NEXT: declare i32 @__ctzsi2(i32)
-; AIX32-NEXT: declare i32 @__ctzti2(i128)
+; AIX32-NEXT: declare i32 @__clzdi2(i64) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i32 @__clzsi2(i32) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i32 @__clzti2(i128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i32 @__ctzdi2(i64) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i32 @__ctzsi2(i32) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i32 @__ctzti2(i128) [[NOMEM_ATTRS]]
 ; AIX32-NEXT: declare void @__cxa_end_cleanup()
-; AIX32-NEXT: declare double @__divdf3(double, double)
-; AIX32-NEXT: declare i64 @__divdi3(i64, i64)
-; AIX32-NEXT: declare signext i16 @__divhi3(i16 signext, i16 signext)
-; AIX32-NEXT: declare fp128 @__divkf3(fp128, fp128)
-; AIX32-NEXT: declare signext i8 @__divqi3(i8 signext, i8 signext)
-; AIX32-NEXT: declare float @__divsf3(float, float)
-; AIX32-NEXT: declare i32 @__divsi3(i32, i32)
-; AIX32-NEXT: declare i128 @__divti3(i128, i128)
-; AIX32-NEXT: declare i32 @__eqdf2(double, double)
-; AIX32-NEXT: declare i32 @__eqkf2(fp128, fp128)
-; AIX32-NEXT: declare i32 @__eqsf2(float, float)
-; AIX32-NEXT: declare double @__exp2_finite(double)
-; AIX32-NEXT: declare float @__exp2f_finite(float)
-; AIX32-NEXT: declare double @__exp2l_finite(double)
-; AIX32-NEXT: declare double @__exp_finite(double)
-; AIX32-NEXT: declare float @__expf_finite(float)
-; AIX32-NEXT: declare double @__expl_finite(double)
-; AIX32-NEXT: declare float @__extendbfsf2(bfloat)
-; AIX32-NEXT: declare fp128 @__extenddfkf2(double)
-; AIX32-NEXT: declare double @__extendhfdf2(half)
-; AIX32-NEXT: declare float @__extendhfsf2(half)
-; AIX32-NEXT: declare ppc_fp128 @__extendkftf2(fp128)
-; AIX32-NEXT: declare double @__extendsfdf2(float)
-; AIX32-NEXT: declare fp128 @__extendsfkf2(float)
-; AIX32-NEXT: declare i64 @__fixdfdi(double)
-; AIX32-NEXT: declare i32 @__fixdfsi(double)
-; AIX32-NEXT: declare i128 @__fixdfti(double)
-; AIX32-NEXT: declare i64 @__fixhfdi(half)
-; AIX32-NEXT: declare i32 @__fixhfsi(half)
-; AIX32-NEXT: declare i128 @__fixhfti(half)
-; AIX32-NEXT: declare i64 @__fixkfdi(fp128)
-; AIX32-NEXT: declare i32 @__fixkfsi(fp128)
-; AIX32-NEXT: declare i128 @__fixkfti(fp128)
-; AIX32-NEXT: declare i64 @__fixsfdi(float)
-; AIX32-NEXT: declare i32 @__fixsfsi(float)
-; AIX32-NEXT: declare i128 @__fixsfti(float)
-; AIX32-NEXT: declare i64 @__fixtfdi(ppc_fp128)
-; AIX32-NEXT: declare i128 @__fixtfti(ppc_fp128)
-; AIX32-NEXT: declare i64 @__fixunsdfdi(double)
-; AIX32-NEXT: declare i32 @__fixunsdfsi(double)
-; AIX32-NEXT: declare i128 @__fixunsdfti(double)
-; AIX32-NEXT: declare i64 @__fixunshfdi(half)
-; AIX32-NEXT: declare i32 @__fixunshfsi(half)
-; AIX32-NEXT: declare i128 @__fixunshfti(half)
-; AIX32-NEXT: declare i64 @__fixunskfdi(fp128)
-; AIX32-NEXT: declare i32 @__fixunskfsi(fp128)
-; AIX32-NEXT: declare i128 @__fixunskfti(fp128)
-; AIX32-NEXT: declare i64 @__fixunssfdi(float)
-; AIX32-NEXT: declare i32 @__fixunssfsi(float)
-; AIX32-NEXT: declare i128 @__fixunssfti(float)
-; AIX32-NEXT: declare i64 @__fixunstfdi(ppc_fp128)
-; AIX32-NEXT: declare i32 @__fixunstfsi(ppc_fp128)
-; AIX32-NEXT: declare i128 @__fixunstfti(ppc_fp128)
-; AIX32-NEXT: declare bfloat @__floatdibf(i64)
-; AIX32-NEXT: declare double @__floatdidf(i64)
-; AIX32-NEXT: declare half @__floatdihf(i64)
-; AIX32-NEXT: declare fp128 @__floatdikf(i64)
-; AIX32-NEXT: declare float @__floatdisf(i64)
-; AIX32-NEXT: declare ppc_fp128 @__floatditf(i64)
-; AIX32-NEXT: declare double @__floatsidf(i32)
-; AIX32-NEXT: declare half @__floatsihf(i32)
-; AIX32-NEXT: declare fp128 @__floatsikf(i32)
-; AIX32-NEXT: declare float @__floatsisf(i32)
-; AIX32-NEXT: declare double @__floattidf(i128)
-; AIX32-NEXT: declare half @__floattihf(i128)
-; AIX32-NEXT: declare fp128 @__floattikf(i128)
-; AIX32-NEXT: declare float @__floattisf(i128)
-; AIX32-NEXT: declare ppc_fp128 @__floattitf(i128)
-; AIX32-NEXT: declare bfloat @__floatundibf(i64)
-; AIX32-NEXT: declare double @__floatundidf(i64)
-; AIX32-NEXT: declare half @__floatundihf(i64)
-; AIX32-NEXT: declare fp128 @__floatundikf(i64)
-; AIX32-NEXT: declare float @__floatundisf(i64)
-; AIX32-NEXT: declare ppc_fp128 @__floatunditf(i64)
-; AIX32-NEXT: declare double @__floatunsidf(i32)
-; AIX32-NEXT: declare half @__floatunsihf(i32)
-; AIX32-NEXT: declare fp128 @__floatunsikf(i32)
-; AIX32-NEXT: declare float @__floatunsisf(i32)
-; AIX32-NEXT: declare double @__floatuntidf(i128)
-; AIX32-NEXT: declare half @__floatuntihf(i128)
-; AIX32-NEXT: declare fp128 @__floatuntikf(i128)
-; AIX32-NEXT: declare float @__floatuntisf(i128)
-; AIX32-NEXT: declare ppc_fp128 @__floatuntitf(i128)
-; AIX32-NEXT: declare ppc_fp128 @__gcc_dtoq(double)
-; AIX32-NEXT: declare ppc_fp128 @__gcc_itoq(i32)
-; AIX32-NEXT: declare ppc_fp128 @__gcc_qadd(ppc_fp128, ppc_fp128)
-; AIX32-NEXT: declare ppc_fp128 @__gcc_qdiv(ppc_fp128, ppc_fp128)
-; AIX32-NEXT: declare i32 @__gcc_qeq(ppc_fp128, ppc_fp128)
-; AIX32-NEXT: declare i32 @__gcc_qge(ppc_fp128, ppc_fp128)
-; AIX32-NEXT: declare i32 @__gcc_qgt(ppc_fp128, ppc_fp128)
-; AIX32-NEXT: declare i32 @__gcc_qle(ppc_fp128, ppc_fp128)
-; AIX32-NEXT: declare i32 @__gcc_qlt(ppc_fp128, ppc_fp128)
-; AIX32-NEXT: declare ppc_fp128 @__gcc_qmul(ppc_fp128, ppc_fp128)
-; AIX32-NEXT: declare i32 @__gcc_qne(ppc_fp128, ppc_fp128)
-; AIX32-NEXT: declare ppc_fp128 @__gcc_qsub(ppc_fp128, ppc_fp128)
-; AIX32-NEXT: declare double @__gcc_qtod(ppc_fp128)
-; AIX32-NEXT: declare float @__gcc_qtos(ppc_fp128)
-; AIX32-NEXT: declare i32 @__gcc_qtou(ppc_fp128)
-; AIX32-NEXT: declare i32 @__gcc_qunord(ppc_fp128, ppc_fp128)
-; AIX32-NEXT: declare ppc_fp128 @__gcc_stoq(float)
-; AIX32-NEXT: declare ppc_fp128 @__gcc_utoq(i32)
-; AIX32-NEXT: declare i32 @__gedf2(double, double)
-; AIX32-NEXT: declare i32 @__gekf2(fp128, fp128)
-; AIX32-NEXT: declare i32 @__gesf2(float, float)
-; AIX32-NEXT: declare i32 @__gtdf2(double, double)
-; AIX32-NEXT: declare i32 @__gtkf2(fp128, fp128)
-; AIX32-NEXT: declare i32 @__gtsf2(float, float)
-; AIX32-NEXT: declare i32 @__ledf2(double, double)
-; AIX32-NEXT: declare i32 @__lekf2(fp128, fp128)
-; AIX32-NEXT: declare i32 @__lesf2(float, float)
+; AIX32-NEXT: declare double @__divdf3(double, double) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i64 @__divdi3(i64, i64) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare signext i16 @__divhi3(i16 signext, i16 signext) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare fp128 @__divkf3(fp128, fp128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare signext i8 @__divqi3(i8 signext, i8 signext) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare float @__divsf3(float, float) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i32 @__divsi3(i32, i32) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i128 @__divti3(i128, i128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i32 @__eqdf2(double, double) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i32 @__eqkf2(fp128, fp128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i32 @__eqsf2(float, float) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare double @__exp2_finite(double) [[SQRT_ATTRS:#[0-9]+]]
+; AIX32-NEXT: declare float @__exp2f_finite(float) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare double @__exp2l_finite(double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare double @__exp_finite(double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare float @__expf_finite(float) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare double @__expl_finite(double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare float @__extendbfsf2(bfloat) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare fp128 @__extenddfkf2(double) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare double @__extendhfdf2(half) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare float @__extendhfsf2(half) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare ppc_fp128 @__extendkftf2(fp128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare double @__extendsfdf2(float) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare fp128 @__extendsfkf2(float) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i64 @__fixdfdi(double) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i32 @__fixdfsi(double) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i128 @__fixdfti(double) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i64 @__fixhfdi(half) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i32 @__fixhfsi(half) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i128 @__fixhfti(half) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i64 @__fixkfdi(fp128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i32 @__fixkfsi(fp128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i128 @__fixkfti(fp128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i64 @__fixsfdi(float) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i32 @__fixsfsi(float) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i128 @__fixsfti(float) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i64 @__fixtfdi(ppc_fp128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i128 @__fixtfti(ppc_fp128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i64 @__fixunsdfdi(double) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i32 @__fixunsdfsi(double) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i128 @__fixunsdfti(double) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i64 @__fixunshfdi(half) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i32 @__fixunshfsi(half) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i128 @__fixunshfti(half) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i64 @__fixunskfdi(fp128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i32 @__fixunskfsi(fp128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i128 @__fixunskfti(fp128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i64 @__fixunssfdi(float) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i32 @__fixunssfsi(float) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i128 @__fixunssfti(float) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i64 @__fixunstfdi(ppc_fp128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i32 @__fixunstfsi(ppc_fp128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i128 @__fixunstfti(ppc_fp128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare bfloat @__floatdibf(i64) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare double @__floatdidf(i64) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare half @__floatdihf(i64) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare fp128 @__floatdikf(i64) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare float @__floatdisf(i64) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare ppc_fp128 @__floatditf(i64) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare double @__floatsidf(i32) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare half @__floatsihf(i32) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare fp128 @__floatsikf(i32) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare float @__floatsisf(i32) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare double @__floattidf(i128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare half @__floattihf(i128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare fp128 @__floattikf(i128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare float @__floattisf(i128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare ppc_fp128 @__floattitf(i128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare bfloat @__floatundibf(i64) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare double @__floatundidf(i64) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare half @__floatundihf(i64) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare fp128 @__floatundikf(i64) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare float @__floatundisf(i64) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare ppc_fp128 @__floatunditf(i64) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare double @__floatunsidf(i32) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare half @__floatunsihf(i32) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare fp128 @__floatunsikf(i32) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare float @__floatunsisf(i32) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare double @__floatuntidf(i128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare half @__floatuntihf(i128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare fp128 @__floatuntikf(i128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare float @__floatuntisf(i128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare ppc_fp128 @__floatuntitf(i128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare ppc_fp128 @__gcc_dtoq(double) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare ppc_fp128 @__gcc_itoq(i32) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare ppc_fp128 @__gcc_qadd(ppc_fp128, ppc_fp128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare ppc_fp128 @__gcc_qdiv(ppc_fp128, ppc_fp128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i32 @__gcc_qeq(ppc_fp128, ppc_fp128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i32 @__gcc_qge(ppc_fp128, ppc_fp128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i32 @__gcc_qgt(ppc_fp128, ppc_fp128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i32 @__gcc_qle(ppc_fp128, ppc_fp128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i32 @__gcc_qlt(ppc_fp128, ppc_fp128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare ppc_fp128 @__gcc_qmul(ppc_fp128, ppc_fp128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i32 @__gcc_qne(ppc_fp128, ppc_fp128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare ppc_fp128 @__gcc_qsub(ppc_fp128, ppc_fp128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare double @__gcc_qtod(ppc_fp128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare float @__gcc_qtos(ppc_fp128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i32 @__gcc_qtou(ppc_fp128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i32 @__gcc_qunord(ppc_fp128, ppc_fp128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare ppc_fp128 @__gcc_stoq(float) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare ppc_fp128 @__gcc_utoq(i32) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i32 @__gedf2(double, double) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i32 @__gekf2(fp128, fp128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i32 @__gesf2(float, float) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i32 @__gtdf2(double, double) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i32 @__gtkf2(fp128, fp128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i32 @__gtsf2(float, float) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i32 @__ledf2(double, double) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i32 @__lekf2(fp128, fp128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i32 @__lesf2(float, float) [[NOMEM_ATTRS]]
 ; AIX32-NEXT: declare void @__llvm_deoptimize(...)
 ; AIX32-NEXT: declare void @__llvm_memcpy_element_unordered_atomic_1(ptr, ptr, i32)
 ; AIX32-NEXT: declare void @__llvm_memcpy_element_unordered_atomic_16(ptr, ptr, i32)
@@ -215,56 +215,56 @@
 ; AIX32-NEXT: declare void @__llvm_memset_element_unordered_atomic_2(ptr, i32, i32)
 ; AIX32-NEXT: declare void @__llvm_memset_element_unordered_atomic_4(ptr, i32, i32)
 ; AIX32-NEXT: declare void @__llvm_memset_element_unordered_atomic_8(ptr, i32, i32)
-; AIX32-NEXT: declare double @__log10_finite(double)
-; AIX32-NEXT: declare float @__log10f_finite(float)
-; AIX32-NEXT: declare double @__log10l_finite(double)
-; AIX32-NEXT: declare double @__log2_finite(double)
-; AIX32-NEXT: declare float @__log2f_finite(float)
-; AIX32-NEXT: declare double @__log2l_finite(double)
-; AIX32-NEXT: declare double @__log_finite(double)
-; AIX32-NEXT: declare float @__logf_finite(float)
-; AIX32-NEXT: declare double @__logl_finite(double)
-; AIX32-NEXT: declare i64 @__lshrdi3(i64, i32)
-; AIX32-NEXT: declare signext i16 @__lshrhi3(i16 signext, i32)
-; AIX32-NEXT: declare i32 @__lshrsi3(i32, i32)
-; AIX32-NEXT: declare i32 @__ltdf2(double, double)
-; AIX32-NEXT: declare i32 @__ltkf2(fp128, fp128)
-; AIX32-NEXT: declare i32 @__ltsf2(float, float)
+; AIX32-NEXT: declare double @__log10_finite(double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare float @__log10f_finite(float) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare double @__log10l_finite(double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare double @__log2_finite(double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare float @__log2f_finite(float) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare double @__log2l_finite(double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare double @__log_finite(double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare float @__logf_finite(float) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare double @__logl_finite(double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare i64 @__lshrdi3(i64, i32) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare signext i16 @__lshrhi3(i16 signext, i32) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i32 @__lshrsi3(i32, i32) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i32 @__ltdf2(double, double) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i32 @__ltkf2(fp128, fp128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i32 @__ltsf2(float, float) [[NOMEM_ATTRS]]
 ; AIX32-NEXT: declare ptr @__memcpy_chk(ptr, ptr, i32, i32)
 ; AIX32-NEXT: declare ptr @__memmove_chk(ptr, ptr, i32, i32)
 ; AIX32-NEXT: declare ptr @__memset_chk(ptr, i32, i32, i32)
-; AIX32-NEXT: declare i64 @__moddi3(i64, i64)
-; AIX32-NEXT: declare signext i16 @__modhi3(i16 signext, i16 signext)
-; AIX32-NEXT: declare signext i8 @__modqi3(i8 signext, i8 signext)
-; AIX32-NEXT: declare i32 @__modsi3(i32, i32)
-; AIX32-NEXT: declare i128 @__modti3(i128, i128)
-; AIX32-NEXT: declare double @__muldf3(double, double)
-; AIX32-NEXT: declare i64 @__muldi3(i64, i64)
-; AIX32-NEXT: declare signext i16 @__mulhi3(i16 signext, i16 signext)
-; AIX32-NEXT: declare fp128 @__mulkf3(fp128, fp128)
-; AIX32-NEXT: declare i32 @__mulosi4(i32, i32, ptr)
-; AIX32-NEXT: declare signext i8 @__mulqi3(i8 signext, i8 signext)
-; AIX32-NEXT: declare float @__mulsf3(float, float)
-; AIX32-NEXT: declare i32 @__mulsi3(i32, i32)
-; AIX32-NEXT: declare i32 @__nedf2(double, double)
-; AIX32-NEXT: declare i64 @__negdi2(i64)
-; AIX32-NEXT: declare i32 @__negsi2(i32)
-; AIX32-NEXT: declare i32 @__nekf2(fp128, fp128)
-; AIX32-NEXT: declare i32 @__nesf2(float, float)
-; AIX32-NEXT: declare i32 @__popcountdi2(i64)
-; AIX32-NEXT: declare i32 @__popcountsi2(i32)
-; AIX32-NEXT: declare i32 @__popcountti2(i128)
-; AIX32-NEXT: declare double @__pow_finite(double, double)
-; AIX32-NEXT: declare float @__powf_finite(float, float)
-; AIX32-NEXT: declare double @__powidf2(double, i32)
-; AIX32-NEXT: declare fp128 @__powikf2(fp128, i32)
-; AIX32-NEXT: declare float @__powisf2(float, i32)
-; AIX32-NEXT: declare ppc_fp128 @__powitf2(ppc_fp128, i32)
-; AIX32-NEXT: declare double @__powl_finite(double, double)
+; AIX32-NEXT: declare i64 @__moddi3(i64, i64) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare signext i16 @__modhi3(i16 signext, i16 signext) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare signext i8 @__modqi3(i8 signext, i8 signext) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i32 @__modsi3(i32, i32) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i128 @__modti3(i128, i128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare double @__muldf3(double, double) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i64 @__muldi3(i64, i64) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare signext i16 @__mulhi3(i16 signext, i16 signext) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare fp128 @__mulkf3(fp128, fp128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i32 @__mulosi4(i32, i32, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
+; AIX32-NEXT: declare signext i8 @__mulqi3(i8 signext, i8 signext) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare float @__mulsf3(float, float) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i32 @__mulsi3(i32, i32) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i32 @__nedf2(double, double) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i64 @__negdi2(i64) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i32 @__negsi2(i32) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i32 @__nekf2(fp128, fp128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i32 @__nesf2(float, float) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i32 @__popcountdi2(i64) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i32 @__popcountsi2(i32) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i32 @__popcountti2(i128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare double @__pow_finite(double, double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare float @__powf_finite(float, float) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare double @__powidf2(double, i32) [[NOMEM_ATTRS:#[0-9]+]]
+; AIX32-NEXT: declare fp128 @__powikf2(fp128, i32) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare float @__powisf2(float, i32) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare ppc_fp128 @__powitf2(ppc_fp128, i32) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare double @__powl_finite(double, double) [[SQRT_ATTRS]]
 ; AIX32-NEXT: declare void @__stack_chk_fail() [[NORETURN_ATTRS:#[0-9]+]]
-; AIX32-NEXT: declare double @__subdf3(double, double)
-; AIX32-NEXT: declare fp128 @__subkf3(fp128, fp128)
-; AIX32-NEXT: declare float @__subsf3(float, float)
+; AIX32-NEXT: declare double @__subdf3(double, double) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare fp128 @__subkf3(fp128, fp128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare float @__subsf3(float, float) [[NOMEM_ATTRS]]
 ; AIX32-NEXT: declare zeroext i8 @__sync_fetch_and_add_1(ptr, i8 zeroext)
 ; AIX32-NEXT: declare i128 @__sync_fetch_and_add_16(ptr, i128)
 ; AIX32-NEXT: declare zeroext i16 @__sync_fetch_and_add_2(ptr, i16 zeroext)
@@ -325,267 +325,274 @@
 ; AIX32-NEXT: declare zeroext i16 @__sync_val_compare_and_swap_2(ptr, i16 zeroext, i16 zeroext)
 ; AIX32-NEXT: declare i32 @__sync_val_compare_and_swap_4(ptr, i32, i32)
 ; AIX32-NEXT: declare i64 @__sync_val_compare_and_swap_8(ptr, i64, i64)
-; AIX32-NEXT: declare bfloat @__truncdfbf2(double)
-; AIX32-NEXT: declare half @__truncdfhf2(double)
-; AIX32-NEXT: declare float @__truncdfsf2(double)
-; AIX32-NEXT: declare double @__trunckfdf2(fp128)
-; AIX32-NEXT: declare half @__trunckfhf2(fp128)
-; AIX32-NEXT: declare float @__trunckfsf2(fp128)
-; AIX32-NEXT: declare bfloat @__truncsfbf2(float)
-; AIX32-NEXT: declare half @__truncsfhf2(float)
-; AIX32-NEXT: declare half @__trunctfhf2(ppc_fp128)
-; AIX32-NEXT: declare fp128 @__trunctfkf2(ppc_fp128)
-; AIX32-NEXT: declare i64 @__udivdi3(i64, i64)
-; AIX32-NEXT: declare zeroext i16 @__udivhi3(i16 zeroext, i16 zeroext)
-; AIX32-NEXT: declare zeroext i8 @__udivqi3(i8 zeroext, i8 zeroext)
-; AIX32-NEXT: declare i32 @__udivsi3(i32, i32)
-; AIX32-NEXT: declare i128 @__udivti3(i128, i128)
-; AIX32-NEXT: declare i64 @__umoddi3(i64, i64)
-; AIX32-NEXT: declare zeroext i16 @__umodhi3(i16 zeroext, i16 zeroext)
-; AIX32-NEXT: declare zeroext i8 @__umodqi3(i8 zeroext, i8 zeroext)
-; AIX32-NEXT: declare i32 @__umodsi3(i32, i32)
-; AIX32-NEXT: declare i128 @__umodti3(i128, i128)
-; AIX32-NEXT: declare i32 @__unorddf2(double, double)
-; AIX32-NEXT: declare i32 @__unordkf2(fp128, fp128)
-; AIX32-NEXT: declare i32 @__unordsf2(float, float)
-; AIX32-NEXT: declare double @acos(double)
-; AIX32-NEXT: declare float @acosf(float)
-; AIX32-NEXT: declare fp128 @acosf128(fp128)
-; AIX32-NEXT: declare double @acosl(double)
-; AIX32-NEXT: declare double @asin(double)
-; AIX32-NEXT: declare float @asinf(float)
-; AIX32-NEXT: declare fp128 @asinf128(fp128)
-; AIX32-NEXT: declare double @asinl(double)
-; AIX32-NEXT: declare double @atan(double)
-; AIX32-NEXT: declare double @atan2(double, double)
-; AIX32-NEXT: declare float @atan2f(float, float)
-; AIX32-NEXT: declare fp128 @atan2f128(fp128, fp128)
-; AIX32-NEXT: declare double @atan2l(double, double)
-; AIX32-NEXT: declare float @atanf(float)
-; AIX32-NEXT: declare fp128 @atanf128(fp128)
-; AIX32-NEXT: declare double @atanl(double)
+; AIX32-NEXT: declare bfloat @__truncdfbf2(double) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare half @__truncdfhf2(double) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare float @__truncdfsf2(double) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare double @__trunckfdf2(fp128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare half @__trunckfhf2(fp128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare float @__trunckfsf2(fp128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare bfloat @__truncsfbf2(float) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare half @__truncsfhf2(float) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare half @__trunctfhf2(ppc_fp128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare fp128 @__trunctfkf2(ppc_fp128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i64 @__udivdi3(i64, i64) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare zeroext i16 @__udivhi3(i16 zeroext, i16 zeroext) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare zeroext i8 @__udivqi3(i8 zeroext, i8 zeroext) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i32 @__udivsi3(i32, i32) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i128 @__udivti3(i128, i128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i64 @__umoddi3(i64, i64) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare zeroext i16 @__umodhi3(i16 zeroext, i16 zeroext) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare zeroext i8 @__umodqi3(i8 zeroext, i8 zeroext) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i32 @__umodsi3(i32, i32) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i128 @__umodti3(i128, i128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i32 @__unorddf2(double, double) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i32 @__unordkf2(fp128, fp128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare i32 @__unordsf2(float, float) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare double @acos(double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare float @acosf(float) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare fp128 @acosf128(fp128) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare double @acosl(double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare double @asin(double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare float @asinf(float) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare fp128 @asinf128(fp128) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare double @asinl(double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare double @atan(double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare double @atan2(double, double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare float @atan2f(float, float) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare fp128 @atan2f128(fp128, fp128) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare double @atan2l(double, double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare float @atanf(float) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare fp128 @atanf128(fp128) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare double @atanl(double) [[SQRT_ATTRS]]
 ; AIX32-NEXT: declare void @cabs(...)
 ; AIX32-NEXT: declare void @cabsf(...)
 ; AIX32-NEXT: declare void @cabsl(...)
 ; AIX32-NEXT: declare noalias noundef ptr @calloc(i32 noundef, i32 noundef) [[CALLOC_ATTRS:#[0-9]+]]
-; AIX32-NEXT: declare double @cbrt(double)
-; AIX32-NEXT: declare float @cbrtf(float)
-; AIX32-NEXT: declare fp128 @cbrtf128(fp128)
-; AIX32-NEXT: declare double @cbrtl(double)
-; AIX32-NEXT: declare double @ceil(double)
-; AIX32-NEXT: declare float @ceilf(float)
-; AIX32-NEXT: declare fp128 @ceilf128(fp128)
-; AIX32-NEXT: declare double @ceill(double)
-; AIX32-NEXT: declare double @copysign(double, double)
-; AIX32-NEXT: declare float @copysignf(float, float)
-; AIX32-NEXT: declare fp128 @copysignf128(fp128, fp128)
-; AIX32-NEXT: declare double @copysignl(double, double)
-; AIX32-NEXT: declare double @cos(double)
-; AIX32-NEXT: declare float @cosf(float)
-; AIX32-NEXT: declare fp128 @cosf128(fp128)
-; AIX32-NEXT: declare double @cosh(double)
-; AIX32-NEXT: declare float @coshf(float)
-; AIX32-NEXT: declare fp128 @coshf128(fp128)
-; AIX32-NEXT: declare double @coshl(double)
-; AIX32-NEXT: declare double @cosl(double)
-; AIX32-NEXT: declare double @exp(double)
-; AIX32-NEXT: declare double @exp10(double)
-; AIX32-NEXT: declare float @exp10f(float)
-; AIX32-NEXT: declare fp128 @exp10f128(fp128)
-; AIX32-NEXT: declare double @exp10l(double)
-; AIX32-NEXT: declare double @exp2(double)
-; AIX32-NEXT: declare float @exp2f(float)
-; AIX32-NEXT: declare fp128 @exp2f128(fp128)
-; AIX32-NEXT: declare double @exp2l(double)
-; AIX32-NEXT: declare float @expf(float)
-; AIX32-NEXT: declare fp128 @expf128(fp128)
-; AIX32-NEXT: declare double @expl(double)
-; AIX32-NEXT: declare double @fdim(double, double)
-; AIX32-NEXT: declare float @fdimf(float, float)
-; AIX32-NEXT: declare double @fdiml(double, double)
+; AIX32-NEXT: declare double @cbrt(double) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare float @cbrtf(float) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare fp128 @cbrtf128(fp128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare double @cbrtl(double) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare double @ceil(double) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare float @ceilf(float) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare fp128 @ceilf128(fp128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare double @ceill(double) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare double @copysign(double, double) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare float @copysignf(float, float) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare fp128 @copysignf128(fp128, fp128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare double @copysignl(double, double) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare double @cos(double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare float @cosf(float) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare fp128 @cosf128(fp128) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare double @cosh(double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare float @coshf(float) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare fp128 @coshf128(fp128) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare double @coshl(double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare double @cosl(double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare double @exp(double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare double @exp10(double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare float @exp10f(float) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare fp128 @exp10f128(fp128) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare double @exp10l(double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare double @exp2(double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare float @exp2f(float) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare fp128 @exp2f128(fp128) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare double @exp2l(double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare float @expf(float) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare fp128 @expf128(fp128) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare double @expl(double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare double @fdim(double, double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare float @fdimf(float, float) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare double @fdiml(double, double) [[SQRT_ATTRS]]
 ; AIX32-NEXT: declare i32 @fegetenv(ptr)
 ; AIX32-NEXT: declare i32 @fegetmode(ptr)
 ; AIX32-NEXT: declare i32 @fesetenv(ptr)
 ; AIX32-NEXT: declare i32 @fesetmode(ptr)
-; AIX32-NEXT: declare double @floor(double)
-; AIX32-NEXT: declare float @floorf(float)
-; AIX32-NEXT: declare fp128 @floorf128(fp128)
-; AIX32-NEXT: declare double @floorl(double)
-; AIX32-NEXT: declare double @fma(double, double, double)
-; AIX32-NEXT: declare float @fmaf(float, float, float)
-; AIX32-NEXT: declare fp128 @fmaf128(fp128, fp128, fp128)
-; AIX32-NEXT: declare double @fmal(double, double, double)
-; AIX32-NEXT: declare double @fmax(double, double)
-; AIX32-NEXT: declare float @fmaxf(float, float)
-; AIX32-NEXT: declare fp128 @fmaxf128(fp128, fp128)
-; AIX32-NEXT: declare double @fmaximum(double, double)
-; AIX32-NEXT: declare double @fmaximum_num(double, double)
-; AIX32-NEXT: declare float @fmaximum_numf(float, float)
-; AIX32-NEXT: declare fp128 @fmaximum_numf128(fp128, fp128)
-; AIX32-NEXT: declare double @fmaximum_numl(double, double)
-; AIX32-NEXT: declare float @fmaximumf(float, float)
-; AIX32-NEXT: declare fp128 @fmaximumf128(fp128, fp128)
-; AIX32-NEXT: declare double @fmaximuml(double, double)
-; AIX32-NEXT: declare double @fmaxl(double, double)
-; AIX32-NEXT: declare double @fmin(double, double)
-; AIX32-NEXT: declare float @fminf(float, float)
-; AIX32-NEXT: declare fp128 @fminf128(fp128, fp128)
-; AIX32-NEXT: declare double @fminimum(double, double)
-; AIX32-NEXT: declare double @fminimum_num(double, double)
-; AIX32-NEXT: declare float @fminimum_numf(float, float)
-; AIX32-NEXT: declare fp128 @fminimum_numf128(fp128, fp128)
-; AIX32-NEXT: declare double @fminimum_numl(double, double)
-; AIX32-NEXT: declare float @fminimumf(float, float)
-; AIX32-NEXT: declare fp128 @fminimumf128(fp128, fp128)
-; AIX32-NEXT: declare double @fminimuml(double, double)
-; AIX32-NEXT: declare double @fminl(double, double)
-; AIX32-NEXT: declare double @fmod(double, double)
-; AIX32-NEXT: declare float @fmodf(float, float)
-; AIX32-NEXT: declare fp128 @fmodf128(fp128, fp128)
-; AIX32-NEXT: declare double @fmodl(double, double)
+; AIX32-NEXT: declare double @floor(double) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare float @floorf(float) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare fp128 @floorf128(fp128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare double @floorl(double) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare double @fma(double, double, double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare float @fmaf(float, float, float) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare fp128 @fmaf128(fp128, fp128, fp128) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare double @fmal(double, double, double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare double @fmax(double, double) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare float @fmaxf(float, float) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare fp128 @fmaxf128(fp128, fp128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare double @fmaximum(double, double) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare double @fmaximum_num(double, double) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare float @fmaximum_numf(float, float) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare fp128 @fmaximum_numf128(fp128, fp128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare double @fmaximum_numl(double, double) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare float @fmaximumf(float, float) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare fp128 @fmaximumf128(fp128, fp128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare double @fmaximuml(double, double) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare double @fmaxl(double, double) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare double @fmin(double, double) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare float @fminf(float, float) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare fp128 @fminf128(fp128, fp128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare double @fminimum(double, double) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare double @fminimum_num(double, double) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare float @fminimum_numf(float, float) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare fp128 @fminimum_numf128(fp128, fp128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare double @fminimum_numl(double, double) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare float @fminimumf(float, float) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare fp128 @fminimumf128(fp128, fp128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare double @fminimuml(double, double) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare double @fminl(double, double) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare double @fmod(double, double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare float @fmodf(float, float) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare fp128 @fmodf128(fp128, fp128) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare double @fmodl(double, double) [[SQRT_ATTRS]]
 ; AIX32-NEXT: declare void @free(ptr allocptr noundef captures(none)) [[FREE_ATTRS:#[0-9]+]]
-; AIX32-NEXT: declare double @frexp(double, ptr)
-; AIX32-NEXT: declare float @frexpf(float, ptr)
-; AIX32-NEXT: declare fp128 @frexpf128(fp128, ptr)
-; AIX32-NEXT: declare double @frexpl(double, ptr)
-; AIX32-NEXT: declare double @ldexp(double, i32)
-; AIX32-NEXT: declare float @ldexpf(float, i32)
-; AIX32-NEXT: declare fp128 @ldexpf128(fp128, i32)
-; AIX32-NEXT: declare double @ldexpl(double, i32)
-; AIX32-NEXT: declare i64 @llrint(double)
-; AIX32-NEXT: declare i64 @llrintf(float)
-; AIX32-NEXT: declare i64 @llrintf128(fp128)
-; AIX32-NEXT: declare i64 @llrintl(double)
-; AIX32-NEXT: declare i64 @llround(double)
-; AIX32-NEXT: declare i64 @llroundf(float)
-; AIX32-NEXT: declare i64 @llroundf128(fp128)
-; AIX32-NEXT: declare i64 @llroundl(double)
-; AIX32-NEXT: declare double @log(double)
-; AIX32-NEXT: declare double @log10(double)
-; AIX32-NEXT: declare float @log10f(float)
-; AIX32-NEXT: declare fp128 @log10f128(fp128)
-; AIX32-NEXT: declare double @log10l(double)
-; AIX32-NEXT: declare double @log2(double)
-; AIX32-NEXT: declare float @log2f(float)
-; AIX32-NEXT: declare fp128 @log2f128(fp128)
-; AIX32-NEXT: declare double @log2l(double)
-; AIX32-NEXT: declare float @logf(float)
-; AIX32-NEXT: declare fp128 @logf128(fp128)
-; AIX32-NEXT: declare double @logl(double)
-; AIX32-NEXT: declare i32 @lrint(double)
-; AIX32-NEXT: declare i32 @lrintf(float)
-; AIX32-NEXT: declare i32 @lrintf128(fp128)
-; AIX32-NEXT: declare i32 @lrintl(double)
-; AIX32-NEXT: declare i32 @lround(double)
-; AIX32-NEXT: declare i32 @lroundf(float)
-; AIX32-NEXT: declare i32 @lroundf128(fp128)
-; AIX32-NEXT: declare i32 @lroundl(double)
+; AIX32-NEXT: declare double @frexp(double, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
+; AIX32-NEXT: declare float @frexpf(float, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
+; AIX32-NEXT: declare fp128 @frexpf128(fp128, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
+; AIX32-NEXT: declare double @frexpl(double, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
+; AIX32-NEXT: declare double @ldexp(double, i32) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare float @ldexpf(float, i32) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare fp128 @ldexpf128(fp128, i32) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare double @ldexpl(double, i32) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare i64 @llrint(double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare i64 @llrintf(float) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare i64 @llrintf128(fp128) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare i64 @llrintl(double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare i64 @llround(double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare i64 @llroundf(float) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare i64 @llroundf128(fp128) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare i64 @llroundl(double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare double @log(double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare double @log10(double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare float @log10f(float) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare fp128 @log10f128(fp128) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare double @log10l(double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare double @log2(double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare float @log2f(float) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare fp128 @log2f128(fp128) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare double @log2l(double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare float @logf(float) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare fp128 @logf128(fp128) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare double @logl(double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare i32 @lrint(double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare i32 @lrintf(float) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare i32 @lrintf128(fp128) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare i32 @lrintl(double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare i32 @lround(double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare i32 @lroundf(float) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare i32 @lroundf128(fp128) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare i32 @lroundl(double) [[SQRT_ATTRS]]
 ; AIX32-NEXT: declare noalias noundef ptr @malloc(i32 noundef) [[MALLOC_ATTRS:#[0-9]+]]
 ; AIX32-NEXT: declare ptr @memmove(ptr, ptr, i32)
 ; AIX32-NEXT: declare ptr @memset(ptr, i32, i32)
-; AIX32-NEXT: declare double @modf(double, ptr)
-; AIX32-NEXT: declare float @modff(float, ptr)
-; AIX32-NEXT: declare fp128 @modff128(fp128, ptr)
-; AIX32-NEXT: declare double @modfl(double, ptr)
-; AIX32-NEXT: declare double @nan(ptr)
-; AIX32-NEXT: declare float @nanf(ptr)
-; AIX32-NEXT: declare double @nanl(ptr)
-; AIX32-NEXT: declare double @nearbyint(double)
-; AIX32-NEXT: declare float @nearbyintf(float)
-; AIX32-NEXT: declare fp128 @nearbyintf128(fp128)
-; AIX32-NEXT: declare double @nearbyintl(double)
-; AIX32-NEXT: declare double @nexttoward(double, double)
-; AIX32-NEXT: declare float @nexttowardf(float, double)
-; AIX32-NEXT: declare double @nexttowardl(double, double)
-; AIX32-NEXT: declare double @pow(double, double)
-; AIX32-NEXT: declare float @powf(float, float)
-; AIX32-NEXT: declare fp128 @powf128(fp128, fp128)
-; AIX32-NEXT: declare double @powl(double, double)
-; AIX32-NEXT: declare double @remainder(double, double)
-; AIX32-NEXT: declare float @remainderf(float, float)
-; AIX32-NEXT: declare double @remainderl(double, double)
-; AIX32-NEXT: declare double @remquo(double, double, ptr)
-; AIX32-NEXT: declare float @remquof(float, float, ptr)
-; AIX32-NEXT: declare double @remquol(double, double, ptr)
-; AIX32-NEXT: declare double @rint(double)
-; AIX32-NEXT: declare float @rintf(float)
-; AIX32-NEXT: declare fp128 @rintf128(fp128)
-; AIX32-NEXT: declare double @rintl(double)
-; AIX32-NEXT: declare double @round(double)
-; AIX32-NEXT: declare double @roundeven(double)
-; AIX32-NEXT: declare float @roundevenf(float)
-; AIX32-NEXT: declare fp128 @roundevenf128(fp128)
-; AIX32-NEXT: declare double @roundevenl(double)
-; AIX32-NEXT: declare float @roundf(float)
-; AIX32-NEXT: declare fp128 @roundf128(fp128)
-; AIX32-NEXT: declare double @roundl(double)
-; AIX32-NEXT: declare double @scalbln(double, i32)
-; AIX32-NEXT: declare float @scalblnf(float, i32)
-; AIX32-NEXT: declare double @scalblnl(double, i32)
-; AIX32-NEXT: declare double @scalbn(double, i32)
-; AIX32-NEXT: declare float @scalbnf(float, i32)
-; AIX32-NEXT: declare double @scalbnl(double, i32)
-; AIX32-NEXT: declare double @sin(double)
-; AIX32-NEXT: declare void @sincosf128(fp128, ptr, ptr)
-; AIX32-NEXT: declare float @sinf(float)
-; AIX32-NEXT: declare fp128 @sinf128(fp128)
-; AIX32-NEXT: declare double @sinh(double)
-; AIX32-NEXT: declare float @sinhf(float)
-; AIX32-NEXT: declare fp128 @sinhf128(fp128)
-; AIX32-NEXT: declare double @sinhl(double)
-; AIX32-NEXT: declare double @sinl(double)
+; AIX32-NEXT: declare double @modf(double, ptr noalias nonnull writeonly align 4 dereferenceable(8)) [[ARGMEM_WRITE_ATTRS]]
+; AIX32-NEXT: declare float @modff(float, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
+; AIX32-NEXT: declare fp128 @modff128(fp128, ptr noalias nonnull writeonly align 16 dereferenceable(16)) [[ARGMEM_WRITE_ATTRS]]
+; AIX32-NEXT: declare double @modfl(double, ptr noalias nonnull writeonly align 4 dereferenceable(8)) [[ARGMEM_WRITE_ATTRS]]
+; AIX32-NEXT: declare nofpclass(snan inf zero sub norm) double @nan(ptr readonly captures(none)) [[ARGMEM_READ_ATTRS]]
+; AIX32-NEXT: declare nofpclass(snan inf zero sub norm) float @nanf(ptr readonly captures(none)) [[ARGMEM_READ_ATTRS]]
+; AIX32-NEXT: declare nofpclass(snan inf zero sub norm) double @nanl(ptr readonly captures(none)) [[ARGMEM_READ_ATTRS]]
+; AIX32-NEXT: declare double @nearbyint(double) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare float @nearbyintf(float) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare fp128 @nearbyintf128(fp128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare double @nearbyintl(double) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare double @nexttoward(double, double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare float @nexttowardf(float, double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare double @nexttowardl(double, double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare double @pow(double, double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare float @powf(float, float) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare fp128 @powf128(fp128, fp128) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare double @powl(double, double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare double @remainder(double, double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare float @remainderf(float, float) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare double @remainderl(double, double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare double @remquo(double, double, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS:#[0-9]+]]
+; AIX32-NEXT: declare float @remquof(float, float, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS]]
+; AIX32-NEXT: declare double @remquol(double, double, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS]]
+; AIX32-NEXT: declare double @rint(double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare float @rintf(float) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare fp128 @rintf128(fp128) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare double @rintl(double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare double @round(double) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare double @roundeven(double) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare float @roundevenf(float) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare fp128 @roundevenf128(fp128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare double @roundevenl(double) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare float @roundf(float) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare fp128 @roundf128(fp128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare double @roundl(double) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare double @scalbln(double, i32) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare float @scalblnf(float, i32) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare double @scalblnl(double, i32) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare double @scalbn(double, i32) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare float @scalbnf(float, i32) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare double @scalbnl(double, i32) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare double @sin(double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare void @sincosf128(fp128, ptr noalias nonnull writeonly align 16 dereferenceable(16), ptr noalias nonnull writeonly align 16 dereferenceable(16)) [[ARGMEM_ERRNO_WRITE_ATTRS]]
+; AIX32-NEXT: declare float @sinf(float) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare fp128 @sinf128(fp128) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare double @sinh(double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare float @sinhf(float) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare fp128 @sinhf128(fp128) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare double @sinhl(double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare double @sinl(double) [[SQRT_ATTRS]]
 ; AIX32-NEXT: declare nofpclass(ninf nsub nnorm) double @sqrt(double) [[SQRT_ATTRS:#[0-9]+]]
 ; AIX32-NEXT: declare nofpclass(ninf nsub nnorm) float @sqrtf(float) [[SQRT_ATTRS:#[0-9]+]]
-; AIX32-NEXT: declare fp128 @sqrtf128(fp128)
-; AIX32-NEXT: declare double @sqrtl(double)
-; AIX32-NEXT: declare double @tan(double)
-; AIX32-NEXT: declare float @tanf(float)
-; AIX32-NEXT: declare fp128 @tanf128(fp128)
-; AIX32-NEXT: declare double @tanh(double)
-; AIX32-NEXT: declare float @tanhf(float)
-; AIX32-NEXT: declare fp128 @tanhf128(fp128)
-; AIX32-NEXT: declare double @tanhl(double)
-; AIX32-NEXT: declare double @tanl(double)
-; AIX32-NEXT: declare double @tgamma(double)
-; AIX32-NEXT: declare float @tgammaf(float)
-; AIX32-NEXT: declare double @tgammal(double)
-; AIX32-NEXT: declare double @trunc(double)
-; AIX32-NEXT: declare float @truncf(float)
-; AIX32-NEXT: declare fp128 @truncf128(fp128)
-; AIX32-NEXT: declare double @truncl(double)
-; AIX32-NEXT: declare ptr @vec_calloc(i32, i32)
-; AIX32-NEXT: declare void @vec_free(ptr)
-; AIX32-NEXT: declare ptr @vec_malloc(i32)
+; AIX32-NEXT: declare nofpclass(ninf nsub nnorm) fp128 @sqrtf128(fp128) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare nofpclass(ninf nsub nnorm) double @sqrtl(double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare double @tan(double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare float @tanf(float) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare fp128 @tanf128(fp128) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare double @tanh(double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare float @tanhf(float) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare fp128 @tanhf128(fp128) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare double @tanhl(double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare double @tanl(double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare double @tgamma(double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare float @tgammaf(float) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare double @tgammal(double) [[SQRT_ATTRS]]
+; AIX32-NEXT: declare double @trunc(double) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare float @truncf(float) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare fp128 @truncf128(fp128) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare double @truncl(double) [[NOMEM_ATTRS]]
+; AIX32-NEXT: declare noalias noundef ptr @vec_calloc(i32 noundef, i32 noundef) [[VEC_CALLOC_ATTRS:#[0-9]+]]
+; AIX32-NEXT: declare void @vec_free(ptr allocptr noundef captures(none)) [[VEC_FREE_ATTRS:#[0-9]+]]
+; AIX32-NEXT: declare noalias noundef ptr @vec_malloc(i32 noundef) [[VEC_MALLOC_ATTRS:#[0-9]+]]
 ; AIX32-NEXT: declare ptr @vec_realloc(ptr, i32)
-; AIX32-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
-; AIX32-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
-; AIX32-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
-; AIX32-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
+; AIX32-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
+; AIX32-NEXT: attributes [[ARGMEM_READ_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
+; AIX32-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; AIX32-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
+; AIX32-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
+; AIX32-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
+; AIX32-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
+; AIX32-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
+; AIX32-NEXT: attributes [[ARGMEM_ERRNO_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write, errnomem: write) }
+; AIX32-NEXT: attributes [[VEC_CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="vec_malloc" }
+; AIX32-NEXT: attributes [[VEC_FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="vec_malloc" }
+; AIX32-NEXT: attributes [[VEC_MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="vec_malloc" }
 
 ; AIX64: @__ssp_canary_word = external global ptr
 ; AIX64-NEXT: declare signext i32 @_Unwind_RaiseException(ptr)
 ; AIX64-NEXT: declare void @_Unwind_Resume(ptr)
-; AIX64-NEXT: declare void @___bzero64(ptr, i64)
+; AIX64-NEXT: declare void @___bzero64(ptr writeonly captures(none), i64) [[ARGMEM_WRITE_ATTRS:#[0-9]+]]
 ; AIX64-NEXT: declare ptr @___memccpy64(ptr, ptr, i32 signext, i64)
-; AIX64-NEXT: declare signext i32 @___memcmp64(ptr, ptr, i64)
+; AIX64-NEXT: declare signext i32 @___memcmp64(ptr readonly captures(none), ptr readonly captures(none), i64) [[ARGMEM_READ_ATTRS:#[0-9]+]]
 ; AIX64-NEXT: declare ptr @___memmove64(ptr, ptr, i64)
 ; AIX64-NEXT: declare ptr @___memset64(ptr, i32 signext, i64)
 ; AIX64-NEXT: declare signext i32 @___strcmp64(ptr, ptr)
 ; AIX64-NEXT: declare ptr @___strcpy64(ptr, ptr)
-; AIX64-NEXT: declare i64 @___strlen64(ptr)
+; AIX64-NEXT: declare i64 @___strlen64(ptr readonly captures(none)) [[ARGMEM_READ_ATTRS]]
 ; AIX64-NEXT: declare ptr @___strstr64(ptr, ptr)
-; AIX64-NEXT: declare double @__adddf3(double, double)
-; AIX64-NEXT: declare fp128 @__addkf3(fp128, fp128)
-; AIX64-NEXT: declare float @__addsf3(float, float)
-; AIX64-NEXT: declare i64 @__ashldi3(i64, i32 signext)
-; AIX64-NEXT: declare signext i16 @__ashlhi3(i16 signext, i32 signext)
-; AIX64-NEXT: declare signext i32 @__ashlsi3(i32 signext, i32 signext)
-; AIX64-NEXT: declare i128 @__ashlti3(i128, i32 signext)
-; AIX64-NEXT: declare i64 @__ashrdi3(i64, i32 signext)
-; AIX64-NEXT: declare signext i16 @__ashrhi3(i16 signext, i32 signext)
-; AIX64-NEXT: declare signext i32 @__ashrsi3(i32 signext, i32 signext)
-; AIX64-NEXT: declare i128 @__ashrti3(i128, i32 signext)
+; AIX64-NEXT: declare double @__adddf3(double, double) [[NOMEM_ATTRS:#[0-9]+]]
+; AIX64-NEXT: declare fp128 @__addkf3(fp128, fp128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare float @__addsf3(float, float) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare i64 @__ashldi3(i64, i32 signext) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare signext i16 @__ashlhi3(i16 signext, i32 signext) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare signext i32 @__ashlsi3(i32 signext, i32 signext) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare i128 @__ashlti3(i128, i32 signext) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare i64 @__ashrdi3(i64, i32 signext) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare signext i16 @__ashrhi3(i16 signext, i32 signext) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare signext i32 @__ashrsi3(i32 signext, i32 signext) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare i128 @__ashrti3(i128, i32 signext) [[NOMEM_ATTRS]]
 ; AIX64-NEXT: declare zeroext i1 @__atomic_compare_exchange(i64, ptr, ptr, ptr, i32 signext, i32 signext)
 ; AIX64-NEXT: declare zeroext i1 @__atomic_compare_exchange_1(ptr, ptr, i8 zeroext, i32 signext, i32 signext)
 ; AIX64-NEXT: declare zeroext i1 @__atomic_compare_exchange_16(ptr, ptr, i128, i32 signext, i32 signext)
@@ -641,123 +648,123 @@
 ; AIX64-NEXT: declare void @__atomic_store_4(ptr, i32 zeroext, i32 signext)
 ; AIX64-NEXT: declare void @__atomic_store_8(ptr, i64, i32 signext)
 ; AIX64-NEXT: declare void @__clear_cache(ptr, ptr)
-; AIX64-NEXT: declare signext i32 @__clzdi2(i64)
-; AIX64-NEXT: declare signext i32 @__clzsi2(i32 zeroext)
-; AIX64-NEXT: declare signext i32 @__clzti2(i128)
-; AIX64-NEXT: declare signext i32 @__ctzdi2(i64)
-; AIX64-NEXT: declare signext i32 @__ctzsi2(i32 zeroext)
-; AIX64-NEXT: declare signext i32 @__ctzti2(i128)
+; AIX64-NEXT: declare signext i32 @__clzdi2(i64) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare signext i32 @__clzsi2(i32 zeroext) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare signext i32 @__clzti2(i128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare signext i32 @__ctzdi2(i64) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare signext i32 @__ctzsi2(i32 zeroext) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare signext i32 @__ctzti2(i128) [[NOMEM_ATTRS]]
 ; AIX64-NEXT: declare void @__cxa_end_cleanup()
-; AIX64-NEXT: declare double @__divdf3(double, double)
-; AIX64-NEXT: declare i64 @__divdi3(i64, i64)
-; AIX64-NEXT: declare signext i16 @__divhi3(i16 signext, i16 signext)
-; AIX64-NEXT: declare fp128 @__divkf3(fp128, fp128)
-; AIX64-NEXT: declare signext i8 @__divqi3(i8 signext, i8 signext)
-; AIX64-NEXT: declare float @__divsf3(float, float)
-; AIX64-NEXT: declare signext i32 @__divsi3(i32 signext, i32 signext)
-; AIX64-NEXT: declare i128 @__divti3(i128, i128)
-; AIX64-NEXT: declare i64 @__eqdf2(double, double)
-; AIX64-NEXT: declare i64 @__eqkf2(fp128, fp128)
-; AIX64-NEXT: declare i64 @__eqsf2(float, float)
-; AIX64-NEXT: declare double @__exp2_finite(double)
-; AIX64-NEXT: declare float @__exp2f_finite(float)
-; AIX64-NEXT: declare double @__exp2l_finite(double)
-; AIX64-NEXT: declare double @__exp_finite(double)
-; AIX64-NEXT: declare float @__expf_finite(float)
-; AIX64-NEXT: declare double @__expl_finite(double)
-; AIX64-NEXT: declare float @__extendbfsf2(bfloat)
-; AIX64-NEXT: declare fp128 @__extenddfkf2(double)
-; AIX64-NEXT: declare double @__extendhfdf2(half)
-; AIX64-NEXT: declare float @__extendhfsf2(half)
-; AIX64-NEXT: declare ppc_fp128 @__extendkftf2(fp128)
-; AIX64-NEXT: declare double @__extendsfdf2(float)
-; AIX64-NEXT: declare fp128 @__extendsfkf2(float)
-; AIX64-NEXT: declare i64 @__fixdfdi(double)
-; AIX64-NEXT: declare signext i32 @__fixdfsi(double)
-; AIX64-NEXT: declare i128 @__fixdfti(double)
-; AIX64-NEXT: declare i64 @__fixhfdi(half)
-; AIX64-NEXT: declare signext i32 @__fixhfsi(half)
-; AIX64-NEXT: declare i128 @__fixhfti(half)
-; AIX64-NEXT: declare i64 @__fixkfdi(fp128)
-; AIX64-NEXT: declare signext i32 @__fixkfsi(fp128)
-; AIX64-NEXT: declare i128 @__fixkfti(fp128)
-; AIX64-NEXT: declare i64 @__fixsfdi(float)
-; AIX64-NEXT: declare signext i32 @__fixsfsi(float)
-; AIX64-NEXT: declare i128 @__fixsfti(float)
-; AIX64-NEXT: declare i64 @__fixtfdi(ppc_fp128)
-; AIX64-NEXT: declare i128 @__fixtfti(ppc_fp128)
-; AIX64-NEXT: declare i64 @__fixunsdfdi(double)
-; AIX64-NEXT: declare zeroext i32 @__fixunsdfsi(double)
-; AIX64-NEXT: declare i128 @__fixunsdfti(double)
-; AIX64-NEXT: declare i64 @__fixunshfdi(half)
-; AIX64-NEXT: declare zeroext i32 @__fixunshfsi(half)
-; AIX64-NEXT: declare i128 @__fixunshfti(half)
-; AIX64-NEXT: declare i64 @__fixunskfdi(fp128)
-; AIX64-NEXT: declare zeroext i32 @__fixunskfsi(fp128)
-; AIX64-NEXT: declare i128 @__fixunskfti(fp128)
-; AIX64-NEXT: declare i64 @__fixunssfdi(float)
-; AIX64-NEXT: declare zeroext i32 @__fixunssfsi(float)
-; AIX64-NEXT: declare i128 @__fixunssfti(float)
-; AIX64-NEXT: declare i64 @__fixunstfdi(ppc_fp128)
-; AIX64-NEXT: declare zeroext i32 @__fixunstfsi(ppc_fp128)
-; AIX64-NEXT: declare i128 @__fixunstfti(ppc_fp128)
-; AIX64-NEXT: declare bfloat @__floatdibf(i64)
-; AIX64-NEXT: declare double @__floatdidf(i64)
-; AIX64-NEXT: declare half @__floatdihf(i64)
-; AIX64-NEXT: declare fp128 @__floatdikf(i64)
-; AIX64-NEXT: declare float @__floatdisf(i64)
-; AIX64-NEXT: declare ppc_fp128 @__floatditf(i64)
-; AIX64-NEXT: declare double @__floatsidf(i32 signext)
-; AIX64-NEXT: declare half @__floatsihf(i32 signext)
-; AIX64-NEXT: declare fp128 @__floatsikf(i32 signext)
-; AIX64-NEXT: declare float @__floatsisf(i32 signext)
-; AIX64-NEXT: declare double @__floattidf(i128)
-; AIX64-NEXT: declare half @__floattihf(i128)
-; AIX64-NEXT: declare fp128 @__floattikf(i128)
-; AIX64-NEXT: declare float @__floattisf(i128)
-; AIX64-NEXT: declare ppc_fp128 @__floattitf(i128)
-; AIX64-NEXT: declare bfloat @__floatundibf(i64)
-; AIX64-NEXT: declare double @__floatundidf(i64)
-; AIX64-NEXT: declare half @__floatundihf(i64)
-; AIX64-NEXT: declare fp128 @__floatundikf(i64)
-; AIX64-NEXT: declare float @__floatundisf(i64)
-; AIX64-NEXT: declare ppc_fp128 @__floatunditf(i64)
-; AIX64-NEXT: declare double @__floatunsidf(i32 zeroext)
-; AIX64-NEXT: declare half @__floatunsihf(i32 zeroext)
-; AIX64-NEXT: declare fp128 @__floatunsikf(i32 zeroext)
-; AIX64-NEXT: declare float @__floatunsisf(i32 zeroext)
-; AIX64-NEXT: declare double @__floatuntidf(i128)
-; AIX64-NEXT: declare half @__floatuntihf(i128)
-; AIX64-NEXT: declare fp128 @__floatuntikf(i128)
-; AIX64-NEXT: declare float @__floatuntisf(i128)
-; AIX64-NEXT: declare ppc_fp128 @__floatuntitf(i128)
-; AIX64-NEXT: declare ppc_fp128 @__gcc_dtoq(double)
-; AIX64-NEXT: declare ppc_fp128 @__gcc_itoq(i32 signext)
-; AIX64-NEXT: declare ppc_fp128 @__gcc_qadd(ppc_fp128, ppc_fp128)
-; AIX64-NEXT: declare ppc_fp128 @__gcc_qdiv(ppc_fp128, ppc_fp128)
-; AIX64-NEXT: declare signext i32 @__gcc_qeq(ppc_fp128, ppc_fp128)
-; AIX64-NEXT: declare signext i32 @__gcc_qge(ppc_fp128, ppc_fp128)
-; AIX64-NEXT: declare signext i32 @__gcc_qgt(ppc_fp128, ppc_fp128)
-; AIX64-NEXT: declare signext i32 @__gcc_qle(ppc_fp128, ppc_fp128)
-; AIX64-NEXT: declare signext i32 @__gcc_qlt(ppc_fp128, ppc_fp128)
-; AIX64-NEXT: declare ppc_fp128 @__gcc_qmul(ppc_fp128, ppc_fp128)
-; AIX64-NEXT: declare signext i32 @__gcc_qne(ppc_fp128, ppc_fp128)
-; AIX64-NEXT: declare ppc_fp128 @__gcc_qsub(ppc_fp128, ppc_fp128)
-; AIX64-NEXT: declare double @__gcc_qtod(ppc_fp128)
-; AIX64-NEXT: declare float @__gcc_qtos(ppc_fp128)
-; AIX64-NEXT: declare signext i32 @__gcc_qtou(ppc_fp128)
-; AIX64-NEXT: declare signext i32 @__gcc_qunord(ppc_fp128, ppc_fp128)
-; AIX64-NEXT: declare ppc_fp128 @__gcc_stoq(float)
-; AIX64-NEXT: declare ppc_fp128 @__gcc_utoq(i32 zeroext)
-; AIX64-NEXT: declare i64 @__gedf2(double, double)
-; AIX64-NEXT: declare i64 @__gekf2(fp128, fp128)
-; AIX64-NEXT: declare i64 @__gesf2(float, float)
-; AIX64-NEXT: declare i64 @__gtdf2(double, double)
-; AIX64-NEXT: declare i64 @__gtkf2(fp128, fp128)
-; AIX64-NEXT: declare i64 @__gtsf2(float, float)
-; AIX64-NEXT: declare i64 @__ledf2(double, double)
-; AIX64-NEXT: declare i64 @__lekf2(fp128, fp128)
-; AIX64-NEXT: declare i64 @__lesf2(float, float)
+; AIX64-NEXT: declare double @__divdf3(double, double) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare i64 @__divdi3(i64, i64) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare signext i16 @__divhi3(i16 signext, i16 signext) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare fp128 @__divkf3(fp128, fp128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare signext i8 @__divqi3(i8 signext, i8 signext) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare float @__divsf3(float, float) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare signext i32 @__divsi3(i32 signext, i32 signext) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare i128 @__divti3(i128, i128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare i64 @__eqdf2(double, double) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare i64 @__eqkf2(fp128, fp128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare i64 @__eqsf2(float, float) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare double @__exp2_finite(double) [[SQRT_ATTRS:#[0-9]+]]
+; AIX64-NEXT: declare float @__exp2f_finite(float) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare double @__exp2l_finite(double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare double @__exp_finite(double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare float @__expf_finite(float) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare double @__expl_finite(double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare float @__extendbfsf2(bfloat) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare fp128 @__extenddfkf2(double) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare double @__extendhfdf2(half) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare float @__extendhfsf2(half) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare ppc_fp128 @__extendkftf2(fp128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare double @__extendsfdf2(float) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare fp128 @__extendsfkf2(float) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare i64 @__fixdfdi(double) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare signext i32 @__fixdfsi(double) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare i128 @__fixdfti(double) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare i64 @__fixhfdi(half) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare signext i32 @__fixhfsi(half) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare i128 @__fixhfti(half) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare i64 @__fixkfdi(fp128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare signext i32 @__fixkfsi(fp128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare i128 @__fixkfti(fp128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare i64 @__fixsfdi(float) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare signext i32 @__fixsfsi(float) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare i128 @__fixsfti(float) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare i64 @__fixtfdi(ppc_fp128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare i128 @__fixtfti(ppc_fp128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare i64 @__fixunsdfdi(double) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare zeroext i32 @__fixunsdfsi(double) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare i128 @__fixunsdfti(double) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare i64 @__fixunshfdi(half) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare zeroext i32 @__fixunshfsi(half) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare i128 @__fixunshfti(half) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare i64 @__fixunskfdi(fp128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare zeroext i32 @__fixunskfsi(fp128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare i128 @__fixunskfti(fp128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare i64 @__fixunssfdi(float) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare zeroext i32 @__fixunssfsi(float) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare i128 @__fixunssfti(float) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare i64 @__fixunstfdi(ppc_fp128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare zeroext i32 @__fixunstfsi(ppc_fp128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare i128 @__fixunstfti(ppc_fp128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare bfloat @__floatdibf(i64) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare double @__floatdidf(i64) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare half @__floatdihf(i64) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare fp128 @__floatdikf(i64) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare float @__floatdisf(i64) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare ppc_fp128 @__floatditf(i64) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare double @__floatsidf(i32 signext) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare half @__floatsihf(i32 signext) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare fp128 @__floatsikf(i32 signext) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare float @__floatsisf(i32 signext) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare double @__floattidf(i128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare half @__floattihf(i128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare fp128 @__floattikf(i128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare float @__floattisf(i128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare ppc_fp128 @__floattitf(i128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare bfloat @__floatundibf(i64) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare double @__floatundidf(i64) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare half @__floatundihf(i64) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare fp128 @__floatundikf(i64) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare float @__floatundisf(i64) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare ppc_fp128 @__floatunditf(i64) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare double @__floatunsidf(i32 zeroext) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare half @__floatunsihf(i32 zeroext) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare fp128 @__floatunsikf(i32 zeroext) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare float @__floatunsisf(i32 zeroext) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare double @__floatuntidf(i128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare half @__floatuntihf(i128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare fp128 @__floatuntikf(i128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare float @__floatuntisf(i128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare ppc_fp128 @__floatuntitf(i128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare ppc_fp128 @__gcc_dtoq(double) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare ppc_fp128 @__gcc_itoq(i32 signext) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare ppc_fp128 @__gcc_qadd(ppc_fp128, ppc_fp128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare ppc_fp128 @__gcc_qdiv(ppc_fp128, ppc_fp128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare signext i32 @__gcc_qeq(ppc_fp128, ppc_fp128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare signext i32 @__gcc_qge(ppc_fp128, ppc_fp128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare signext i32 @__gcc_qgt(ppc_fp128, ppc_fp128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare signext i32 @__gcc_qle(ppc_fp128, ppc_fp128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare signext i32 @__gcc_qlt(ppc_fp128, ppc_fp128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare ppc_fp128 @__gcc_qmul(ppc_fp128, ppc_fp128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare signext i32 @__gcc_qne(ppc_fp128, ppc_fp128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare ppc_fp128 @__gcc_qsub(ppc_fp128, ppc_fp128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare double @__gcc_qtod(ppc_fp128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare float @__gcc_qtos(ppc_fp128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare signext i32 @__gcc_qtou(ppc_fp128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare signext i32 @__gcc_qunord(ppc_fp128, ppc_fp128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare ppc_fp128 @__gcc_stoq(float) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare ppc_fp128 @__gcc_utoq(i32 zeroext) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare i64 @__gedf2(double, double) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare i64 @__gekf2(fp128, fp128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare i64 @__gesf2(float, float) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare i64 @__gtdf2(double, double) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare i64 @__gtkf2(fp128, fp128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare i64 @__gtsf2(float, float) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare i64 @__ledf2(double, double) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare i64 @__lekf2(fp128, fp128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare i64 @__lesf2(float, float) [[NOMEM_ATTRS]]
 ; AIX64-NEXT: declare void @__llvm_deoptimize(...)
 ; AIX64-NEXT: declare void @__llvm_memcpy_element_unordered_atomic_1(ptr, ptr, i64)
 ; AIX64-NEXT: declare void @__llvm_memcpy_element_unordered_atomic_16(ptr, ptr, i64)
@@ -774,58 +781,58 @@
 ; AIX64-NEXT: declare void @__llvm_memset_element_unordered_atomic_2(ptr, i32 signext, i64)
 ; AIX64-NEXT: declare void @__llvm_memset_element_unordered_atomic_4(ptr, i32 signext, i64)
 ; AIX64-NEXT: declare void @__llvm_memset_element_unordered_atomic_8(ptr, i32 signext, i64)
-; AIX64-NEXT: declare double @__log10_finite(double)
-; AIX64-NEXT: declare float @__log10f_finite(float)
-; AIX64-NEXT: declare double @__log10l_finite(double)
-; AIX64-NEXT: declare double @__log2_finite(double)
-; AIX64-NEXT: declare float @__log2f_finite(float)
-; AIX64-NEXT: declare double @__log2l_finite(double)
-; AIX64-NEXT: declare double @__log_finite(double)
-; AIX64-NEXT: declare float @__logf_finite(float)
-; AIX64-NEXT: declare double @__logl_finite(double)
-; AIX64-NEXT: declare i64 @__lshrdi3(i64, i32 signext)
-; AIX64-NEXT: declare signext i16 @__lshrhi3(i16 signext, i32 signext)
-; AIX64-NEXT: declare signext i32 @__lshrsi3(i32 signext, i32 signext)
-; AIX64-NEXT: declare i128 @__lshrti3(i128, i32 signext)
-; AIX64-NEXT: declare i64 @__ltdf2(double, double)
-; AIX64-NEXT: declare i64 @__ltkf2(fp128, fp128)
-; AIX64-NEXT: declare i64 @__ltsf2(float, float)
+; AIX64-NEXT: declare double @__log10_finite(double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare float @__log10f_finite(float) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare double @__log10l_finite(double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare double @__log2_finite(double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare float @__log2f_finite(float) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare double @__log2l_finite(double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare double @__log_finite(double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare float @__logf_finite(float) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare double @__logl_finite(double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare i64 @__lshrdi3(i64, i32 signext) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare signext i16 @__lshrhi3(i16 signext, i32 signext) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare signext i32 @__lshrsi3(i32 signext, i32 signext) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare i128 @__lshrti3(i128, i32 signext) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare i64 @__ltdf2(double, double) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare i64 @__ltkf2(fp128, fp128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare i64 @__ltsf2(float, float) [[NOMEM_ATTRS]]
 ; AIX64-NEXT: declare ptr @__memcpy_chk(ptr, ptr, i64, i64)
 ; AIX64-NEXT: declare ptr @__memmove_chk(ptr, ptr, i64, i64)
 ; AIX64-NEXT: declare ptr @__memset_chk(ptr, i32 signext, i64, i64)
-; AIX64-NEXT: declare i64 @__moddi3(i64, i64)
-; AIX64-NEXT: declare signext i16 @__modhi3(i16 signext, i16 signext)
-; AIX64-NEXT: declare signext i8 @__modqi3(i8 signext, i8 signext)
-; AIX64-NEXT: declare signext i32 @__modsi3(i32 signext, i32 signext)
-; AIX64-NEXT: declare i128 @__modti3(i128, i128)
-; AIX64-NEXT: declare double @__muldf3(double, double)
-; AIX64-NEXT: declare i64 @__muldi3(i64, i64)
-; AIX64-NEXT: declare signext i16 @__mulhi3(i16 signext, i16 signext)
-; AIX64-NEXT: declare fp128 @__mulkf3(fp128, fp128)
-; AIX64-NEXT: declare signext i32 @__mulosi4(i32 signext, i32 signext, ptr)
-; AIX64-NEXT: declare signext i8 @__mulqi3(i8 signext, i8 signext)
-; AIX64-NEXT: declare float @__mulsf3(float, float)
-; AIX64-NEXT: declare signext i32 @__mulsi3(i32 signext, i32 signext)
-; AIX64-NEXT: declare i128 @__multi3(i128, i128)
-; AIX64-NEXT: declare i64 @__nedf2(double, double)
-; AIX64-NEXT: declare i64 @__negdi2(i64)
-; AIX64-NEXT: declare signext i32 @__negsi2(i32 signext)
-; AIX64-NEXT: declare i64 @__nekf2(fp128, fp128)
-; AIX64-NEXT: declare i64 @__nesf2(float, float)
-; AIX64-NEXT: declare signext i32 @__popcountdi2(i64)
-; AIX64-NEXT: declare signext i32 @__popcountsi2(i32 zeroext)
-; AIX64-NEXT: declare signext i32 @__popcountti2(i128)
-; AIX64-NEXT: declare double @__pow_finite(double, double)
-; AIX64-NEXT: declare float @__powf_finite(float, float)
-; AIX64-NEXT: declare double @__powidf2(double, i32 signext)
-; AIX64-NEXT: declare fp128 @__powikf2(fp128, i32 signext)
-; AIX64-NEXT: declare float @__powisf2(float, i32 signext)
-; AIX64-NEXT: declare ppc_fp128 @__powitf2(ppc_fp128, i32 signext)
-; AIX64-NEXT: declare double @__powl_finite(double, double)
+; AIX64-NEXT: declare i64 @__moddi3(i64, i64) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare signext i16 @__modhi3(i16 signext, i16 signext) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare signext i8 @__modqi3(i8 signext, i8 signext) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare signext i32 @__modsi3(i32 signext, i32 signext) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare i128 @__modti3(i128, i128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare double @__muldf3(double, double) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare i64 @__muldi3(i64, i64) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare signext i16 @__mulhi3(i16 signext, i16 signext) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare fp128 @__mulkf3(fp128, fp128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare signext i32 @__mulosi4(i32 signext, i32 signext, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
+; AIX64-NEXT: declare signext i8 @__mulqi3(i8 signext, i8 signext) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare float @__mulsf3(float, float) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare signext i32 @__mulsi3(i32 signext, i32 signext) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare i128 @__multi3(i128, i128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare i64 @__nedf2(double, double) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare i64 @__negdi2(i64) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare signext i32 @__negsi2(i32 signext) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare i64 @__nekf2(fp128, fp128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare i64 @__nesf2(float, float) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare signext i32 @__popcountdi2(i64) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare signext i32 @__popcountsi2(i32 zeroext) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare signext i32 @__popcountti2(i128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare double @__pow_finite(double, double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare float @__powf_finite(float, float) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare double @__powidf2(double, i32 signext) [[NOMEM_ATTRS:#[0-9]+]]
+; AIX64-NEXT: declare fp128 @__powikf2(fp128, i32 signext) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare float @__powisf2(float, i32 signext) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare ppc_fp128 @__powitf2(ppc_fp128, i32 signext) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare double @__powl_finite(double, double) [[SQRT_ATTRS]]
 ; AIX64-NEXT: declare void @__stack_chk_fail() [[NORETURN_ATTRS:#[0-9]+]]
-; AIX64-NEXT: declare double @__subdf3(double, double)
-; AIX64-NEXT: declare fp128 @__subkf3(fp128, fp128)
-; AIX64-NEXT: declare float @__subsf3(float, float)
+; AIX64-NEXT: declare double @__subdf3(double, double) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare fp128 @__subkf3(fp128, fp128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare float @__subsf3(float, float) [[NOMEM_ATTRS]]
 ; AIX64-NEXT: declare zeroext i8 @__sync_fetch_and_add_1(ptr, i8 zeroext)
 ; AIX64-NEXT: declare i128 @__sync_fetch_and_add_16(ptr, i128)
 ; AIX64-NEXT: declare zeroext i16 @__sync_fetch_and_add_2(ptr, i16 zeroext)
@@ -886,258 +893,265 @@
 ; AIX64-NEXT: declare zeroext i16 @__sync_val_compare_and_swap_2(ptr, i16 zeroext, i16 zeroext)
 ; AIX64-NEXT: declare zeroext i32 @__sync_val_compare_and_swap_4(ptr, i32 zeroext, i32 zeroext)
 ; AIX64-NEXT: declare i64 @__sync_val_compare_and_swap_8(ptr, i64, i64)
-; AIX64-NEXT: declare bfloat @__truncdfbf2(double)
-; AIX64-NEXT: declare half @__truncdfhf2(double)
-; AIX64-NEXT: declare float @__truncdfsf2(double)
-; AIX64-NEXT: declare double @__trunckfdf2(fp128)
-; AIX64-NEXT: declare half @__trunckfhf2(fp128)
-; AIX64-NEXT: declare float @__trunckfsf2(fp128)
-; AIX64-NEXT: declare bfloat @__truncsfbf2(float)
-; AIX64-NEXT: declare half @__truncsfhf2(float)
-; AIX64-NEXT: declare half @__trunctfhf2(ppc_fp128)
-; AIX64-NEXT: declare fp128 @__trunctfkf2(ppc_fp128)
-; AIX64-NEXT: declare i64 @__udivdi3(i64, i64)
-; AIX64-NEXT: declare zeroext i16 @__udivhi3(i16 zeroext, i16 zeroext)
-; AIX64-NEXT: declare zeroext i8 @__udivqi3(i8 zeroext, i8 zeroext)
-; AIX64-NEXT: declare zeroext i32 @__udivsi3(i32 zeroext, i32 zeroext)
-; AIX64-NEXT: declare i128 @__udivti3(i128, i128)
-; AIX64-NEXT: declare i64 @__umoddi3(i64, i64)
-; AIX64-NEXT: declare zeroext i16 @__umodhi3(i16 zeroext, i16 zeroext)
-; AIX64-NEXT: declare zeroext i8 @__umodqi3(i8 zeroext, i8 zeroext)
-; AIX64-NEXT: declare zeroext i32 @__umodsi3(i32 zeroext, i32 zeroext)
-; AIX64-NEXT: declare i128 @__umodti3(i128, i128)
-; AIX64-NEXT: declare i64 @__unorddf2(double, double)
-; AIX64-NEXT: declare i64 @__unordkf2(fp128, fp128)
-; AIX64-NEXT: declare i64 @__unordsf2(float, float)
-; AIX64-NEXT: declare double @acos(double)
-; AIX64-NEXT: declare float @acosf(float)
-; AIX64-NEXT: declare fp128 @acosf128(fp128)
-; AIX64-NEXT: declare double @acosl(double)
-; AIX64-NEXT: declare double @asin(double)
-; AIX64-NEXT: declare float @asinf(float)
-; AIX64-NEXT: declare fp128 @asinf128(fp128)
-; AIX64-NEXT: declare double @asinl(double)
-; AIX64-NEXT: declare double @atan(double)
-; AIX64-NEXT: declare double @atan2(double, double)
-; AIX64-NEXT: declare float @atan2f(float, float)
-; AIX64-NEXT: declare fp128 @atan2f128(fp128, fp128)
-; AIX64-NEXT: declare double @atan2l(double, double)
-; AIX64-NEXT: declare float @atanf(float)
-; AIX64-NEXT: declare fp128 @atanf128(fp128)
-; AIX64-NEXT: declare double @atanl(double)
+; AIX64-NEXT: declare bfloat @__truncdfbf2(double) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare half @__truncdfhf2(double) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare float @__truncdfsf2(double) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare double @__trunckfdf2(fp128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare half @__trunckfhf2(fp128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare float @__trunckfsf2(fp128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare bfloat @__truncsfbf2(float) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare half @__truncsfhf2(float) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare half @__trunctfhf2(ppc_fp128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare fp128 @__trunctfkf2(ppc_fp128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare i64 @__udivdi3(i64, i64) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare zeroext i16 @__udivhi3(i16 zeroext, i16 zeroext) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare zeroext i8 @__udivqi3(i8 zeroext, i8 zeroext) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare zeroext i32 @__udivsi3(i32 zeroext, i32 zeroext) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare i128 @__udivti3(i128, i128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare i64 @__umoddi3(i64, i64) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare zeroext i16 @__umodhi3(i16 zeroext, i16 zeroext) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare zeroext i8 @__umodqi3(i8 zeroext, i8 zeroext) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare zeroext i32 @__umodsi3(i32 zeroext, i32 zeroext) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare i128 @__umodti3(i128, i128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare i64 @__unorddf2(double, double) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare i64 @__unordkf2(fp128, fp128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare i64 @__unordsf2(float, float) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare double @acos(double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare float @acosf(float) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare fp128 @acosf128(fp128) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare double @acosl(double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare double @asin(double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare float @asinf(float) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare fp128 @asinf128(fp128) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare double @asinl(double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare double @atan(double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare double @atan2(double, double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare float @atan2f(float, float) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare fp128 @atan2f128(fp128, fp128) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare double @atan2l(double, double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare float @atanf(float) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare fp128 @atanf128(fp128) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare double @atanl(double) [[SQRT_ATTRS]]
 ; AIX64-NEXT: declare void @cabs(...)
 ; AIX64-NEXT: declare void @cabsf(...)
 ; AIX64-NEXT: declare void @cabsl(...)
 ; AIX64-NEXT: declare noalias noundef ptr @calloc(i64 noundef, i64 noundef) [[CALLOC_ATTRS:#[0-9]+]]
-; AIX64-NEXT: declare double @cbrt(double)
-; AIX64-NEXT: declare float @cbrtf(float)
-; AIX64-NEXT: declare fp128 @cbrtf128(fp128)
-; AIX64-NEXT: declare double @cbrtl(double)
-; AIX64-NEXT: declare double @ceil(double)
-; AIX64-NEXT: declare float @ceilf(float)
-; AIX64-NEXT: declare fp128 @ceilf128(fp128)
-; AIX64-NEXT: declare double @ceill(double)
-; AIX64-NEXT: declare double @copysign(double, double)
-; AIX64-NEXT: declare float @copysignf(float, float)
-; AIX64-NEXT: declare fp128 @copysignf128(fp128, fp128)
-; AIX64-NEXT: declare double @copysignl(double, double)
-; AIX64-NEXT: declare double @cos(double)
-; AIX64-NEXT: declare float @cosf(float)
-; AIX64-NEXT: declare fp128 @cosf128(fp128)
-; AIX64-NEXT: declare double @cosh(double)
-; AIX64-NEXT: declare float @coshf(float)
-; AIX64-NEXT: declare fp128 @coshf128(fp128)
-; AIX64-NEXT: declare double @coshl(double)
-; AIX64-NEXT: declare double @cosl(double)
-; AIX64-NEXT: declare double @exp(double)
-; AIX64-NEXT: declare double @exp10(double)
-; AIX64-NEXT: declare float @exp10f(float)
-; AIX64-NEXT: declare fp128 @exp10f128(fp128)
-; AIX64-NEXT: declare double @exp10l(double)
-; AIX64-NEXT: declare double @exp2(double)
-; AIX64-NEXT: declare float @exp2f(float)
-; AIX64-NEXT: declare fp128 @exp2f128(fp128)
-; AIX64-NEXT: declare double @exp2l(double)
-; AIX64-NEXT: declare float @expf(float)
-; AIX64-NEXT: declare fp128 @expf128(fp128)
-; AIX64-NEXT: declare double @expl(double)
-; AIX64-NEXT: declare double @fdim(double, double)
-; AIX64-NEXT: declare float @fdimf(float, float)
-; AIX64-NEXT: declare double @fdiml(double, double)
+; AIX64-NEXT: declare double @cbrt(double) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare float @cbrtf(float) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare fp128 @cbrtf128(fp128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare double @cbrtl(double) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare double @ceil(double) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare float @ceilf(float) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare fp128 @ceilf128(fp128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare double @ceill(double) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare double @copysign(double, double) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare float @copysignf(float, float) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare fp128 @copysignf128(fp128, fp128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare double @copysignl(double, double) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare double @cos(double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare float @cosf(float) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare fp128 @cosf128(fp128) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare double @cosh(double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare float @coshf(float) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare fp128 @coshf128(fp128) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare double @coshl(double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare double @cosl(double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare double @exp(double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare double @exp10(double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare float @exp10f(float) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare fp128 @exp10f128(fp128) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare double @exp10l(double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare double @exp2(double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare float @exp2f(float) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare fp128 @exp2f128(fp128) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare double @exp2l(double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare float @expf(float) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare fp128 @expf128(fp128) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare double @expl(double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare double @fdim(double, double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare float @fdimf(float, float) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare double @fdiml(double, double) [[SQRT_ATTRS]]
 ; AIX64-NEXT: declare signext i32 @fegetenv(ptr)
 ; AIX64-NEXT: declare signext i32 @fegetmode(ptr)
 ; AIX64-NEXT: declare signext i32 @fesetenv(ptr)
 ; AIX64-NEXT: declare signext i32 @fesetmode(ptr)
-; AIX64-NEXT: declare double @floor(double)
-; AIX64-NEXT: declare float @floorf(float)
-; AIX64-NEXT: declare fp128 @floorf128(fp128)
-; AIX64-NEXT: declare double @floorl(double)
-; AIX64-NEXT: declare double @fma(double, double, double)
-; AIX64-NEXT: declare float @fmaf(float, float, float)
-; AIX64-NEXT: declare fp128 @fmaf128(fp128, fp128, fp128)
-; AIX64-NEXT: declare double @fmal(double, double, double)
-; AIX64-NEXT: declare double @fmax(double, double)
-; AIX64-NEXT: declare float @fmaxf(float, float)
-; AIX64-NEXT: declare fp128 @fmaxf128(fp128, fp128)
-; AIX64-NEXT: declare double @fmaximum(double, double)
-; AIX64-NEXT: declare double @fmaximum_num(double, double)
-; AIX64-NEXT: declare float @fmaximum_numf(float, float)
-; AIX64-NEXT: declare fp128 @fmaximum_numf128(fp128, fp128)
-; AIX64-NEXT: declare double @fmaximum_numl(double, double)
-; AIX64-NEXT: declare float @fmaximumf(float, float)
-; AIX64-NEXT: declare fp128 @fmaximumf128(fp128, fp128)
-; AIX64-NEXT: declare double @fmaximuml(double, double)
-; AIX64-NEXT: declare double @fmaxl(double, double)
-; AIX64-NEXT: declare double @fmin(double, double)
-; AIX64-NEXT: declare float @fminf(float, float)
-; AIX64-NEXT: declare fp128 @fminf128(fp128, fp128)
-; AIX64-NEXT: declare double @fminimum(double, double)
-; AIX64-NEXT: declare double @fminimum_num(double, double)
-; AIX64-NEXT: declare float @fminimum_numf(float, float)
-; AIX64-NEXT: declare fp128 @fminimum_numf128(fp128, fp128)
-; AIX64-NEXT: declare double @fminimum_numl(double, double)
-; AIX64-NEXT: declare float @fminimumf(float, float)
-; AIX64-NEXT: declare fp128 @fminimumf128(fp128, fp128)
-; AIX64-NEXT: declare double @fminimuml(double, double)
-; AIX64-NEXT: declare double @fminl(double, double)
-; AIX64-NEXT: declare double @fmod(double, double)
-; AIX64-NEXT: declare float @fmodf(float, float)
-; AIX64-NEXT: declare fp128 @fmodf128(fp128, fp128)
-; AIX64-NEXT: declare double @fmodl(double, double)
+; AIX64-NEXT: declare double @floor(double) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare float @floorf(float) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare fp128 @floorf128(fp128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare double @floorl(double) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare double @fma(double, double, double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare float @fmaf(float, float, float) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare fp128 @fmaf128(fp128, fp128, fp128) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare double @fmal(double, double, double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare double @fmax(double, double) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare float @fmaxf(float, float) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare fp128 @fmaxf128(fp128, fp128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare double @fmaximum(double, double) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare double @fmaximum_num(double, double) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare float @fmaximum_numf(float, float) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare fp128 @fmaximum_numf128(fp128, fp128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare double @fmaximum_numl(double, double) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare float @fmaximumf(float, float) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare fp128 @fmaximumf128(fp128, fp128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare double @fmaximuml(double, double) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare double @fmaxl(double, double) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare double @fmin(double, double) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare float @fminf(float, float) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare fp128 @fminf128(fp128, fp128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare double @fminimum(double, double) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare double @fminimum_num(double, double) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare float @fminimum_numf(float, float) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare fp128 @fminimum_numf128(fp128, fp128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare double @fminimum_numl(double, double) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare float @fminimumf(float, float) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare fp128 @fminimumf128(fp128, fp128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare double @fminimuml(double, double) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare double @fminl(double, double) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare double @fmod(double, double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare float @fmodf(float, float) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare fp128 @fmodf128(fp128, fp128) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare double @fmodl(double, double) [[SQRT_ATTRS]]
 ; AIX64-NEXT: declare void @free(ptr allocptr noundef captures(none)) [[FREE_ATTRS:#[0-9]+]]
-; AIX64-NEXT: declare double @frexp(double, ptr)
-; AIX64-NEXT: declare float @frexpf(float, ptr)
-; AIX64-NEXT: declare fp128 @frexpf128(fp128, ptr)
-; AIX64-NEXT: declare double @frexpl(double, ptr)
-; AIX64-NEXT: declare double @ldexp(double, i32 signext)
-; AIX64-NEXT: declare float @ldexpf(float, i32 signext)
-; AIX64-NEXT: declare fp128 @ldexpf128(fp128, i32 signext)
-; AIX64-NEXT: declare double @ldexpl(double, i32 signext)
-; AIX64-NEXT: declare i64 @llrint(double)
-; AIX64-NEXT: declare i64 @llrintf(float)
-; AIX64-NEXT: declare i64 @llrintf128(fp128)
-; AIX64-NEXT: declare i64 @llrintl(double)
-; AIX64-NEXT: declare i64 @llround(double)
-; AIX64-NEXT: declare i64 @llroundf(float)
-; AIX64-NEXT: declare i64 @llroundf128(fp128)
-; AIX64-NEXT: declare i64 @llroundl(double)
-; AIX64-NEXT: declare double @log(double)
-; AIX64-NEXT: declare double @log10(double)
-; AIX64-NEXT: declare float @log10f(float)
-; AIX64-NEXT: declare fp128 @log10f128(fp128)
-; AIX64-NEXT: declare double @log10l(double)
-; AIX64-NEXT: declare double @log2(double)
-; AIX64-NEXT: declare float @log2f(float)
-; AIX64-NEXT: declare fp128 @log2f128(fp128)
-; AIX64-NEXT: declare double @log2l(double)
-; AIX64-NEXT: declare float @logf(float)
-; AIX64-NEXT: declare fp128 @logf128(fp128)
-; AIX64-NEXT: declare double @logl(double)
-; AIX64-NEXT: declare i64 @lrint(double)
-; AIX64-NEXT: declare i64 @lrintf(float)
-; AIX64-NEXT: declare i64 @lrintf128(fp128)
-; AIX64-NEXT: declare i64 @lrintl(double)
-; AIX64-NEXT: declare i64 @lround(double)
-; AIX64-NEXT: declare i64 @lroundf(float)
-; AIX64-NEXT: declare i64 @lroundf128(fp128)
-; AIX64-NEXT: declare i64 @lroundl(double)
+; AIX64-NEXT: declare double @frexp(double, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
+; AIX64-NEXT: declare float @frexpf(float, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
+; AIX64-NEXT: declare fp128 @frexpf128(fp128, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
+; AIX64-NEXT: declare double @frexpl(double, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
+; AIX64-NEXT: declare double @ldexp(double, i32 signext) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare float @ldexpf(float, i32 signext) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare fp128 @ldexpf128(fp128, i32 signext) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare double @ldexpl(double, i32 signext) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare i64 @llrint(double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare i64 @llrintf(float) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare i64 @llrintf128(fp128) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare i64 @llrintl(double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare i64 @llround(double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare i64 @llroundf(float) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare i64 @llroundf128(fp128) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare i64 @llroundl(double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare double @log(double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare double @log10(double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare float @log10f(float) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare fp128 @log10f128(fp128) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare double @log10l(double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare double @log2(double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare float @log2f(float) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare fp128 @log2f128(fp128) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare double @log2l(double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare float @logf(float) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare fp128 @logf128(fp128) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare double @logl(double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare i64 @lrint(double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare i64 @lrintf(float) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare i64 @lrintf128(fp128) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare i64 @lrintl(double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare i64 @lround(double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare i64 @lroundf(float) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare i64 @lroundf128(fp128) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare i64 @lroundl(double) [[SQRT_ATTRS]]
 ; AIX64-NEXT: declare noalias noundef ptr @malloc(i64 noundef) [[MALLOC_ATTRS:#[0-9]+]]
 ; AIX64-NEXT: declare ptr @memmove(ptr, ptr, i64)
 ; AIX64-NEXT: declare ptr @memset(ptr, i32 signext, i64)
-; AIX64-NEXT: declare double @modf(double, ptr)
-; AIX64-NEXT: declare float @modff(float, ptr)
-; AIX64-NEXT: declare fp128 @modff128(fp128, ptr)
-; AIX64-NEXT: declare double @modfl(double, ptr)
-; AIX64-NEXT: declare double @nan(ptr)
-; AIX64-NEXT: declare float @nanf(ptr)
-; AIX64-NEXT: declare double @nanl(ptr)
-; AIX64-NEXT: declare double @nearbyint(double)
-; AIX64-NEXT: declare float @nearbyintf(float)
-; AIX64-NEXT: declare fp128 @nearbyintf128(fp128)
-; AIX64-NEXT: declare double @nearbyintl(double)
-; AIX64-NEXT: declare double @nexttoward(double, double)
-; AIX64-NEXT: declare float @nexttowardf(float, double)
-; AIX64-NEXT: declare double @nexttowardl(double, double)
-; AIX64-NEXT: declare double @pow(double, double)
-; AIX64-NEXT: declare float @powf(float, float)
-; AIX64-NEXT: declare fp128 @powf128(fp128, fp128)
-; AIX64-NEXT: declare double @powl(double, double)
-; AIX64-NEXT: declare double @remainder(double, double)
-; AIX64-NEXT: declare float @remainderf(float, float)
-; AIX64-NEXT: declare double @remainderl(double, double)
-; AIX64-NEXT: declare double @remquo(double, double, ptr)
-; AIX64-NEXT: declare float @remquof(float, float, ptr)
-; AIX64-NEXT: declare double @remquol(double, double, ptr)
-; AIX64-NEXT: declare double @rint(double)
-; AIX64-NEXT: declare float @rintf(float)
-; AIX64-NEXT: declare fp128 @rintf128(fp128)
-; AIX64-NEXT: declare double @rintl(double)
-; AIX64-NEXT: declare double @round(double)
-; AIX64-NEXT: declare double @roundeven(double)
-; AIX64-NEXT: declare float @roundevenf(float)
-; AIX64-NEXT: declare fp128 @roundevenf128(fp128)
-; AIX64-NEXT: declare double @roundevenl(double)
-; AIX64-NEXT: declare float @roundf(float)
-; AIX64-NEXT: declare fp128 @roundf128(fp128)
-; AIX64-NEXT: declare double @roundl(double)
-; AIX64-NEXT: declare double @scalbln(double, i64)
-; AIX64-NEXT: declare float @scalblnf(float, i64)
-; AIX64-NEXT: declare double @scalblnl(double, i64)
-; AIX64-NEXT: declare double @scalbn(double, i32 signext)
-; AIX64-NEXT: declare float @scalbnf(float, i32 signext)
-; AIX64-NEXT: declare double @scalbnl(double, i32 signext)
-; AIX64-NEXT: declare double @sin(double)
-; AIX64-NEXT: declare void @sincosf128(fp128, ptr, ptr)
-; AIX64-NEXT: declare float @sinf(float)
-; AIX64-NEXT: declare fp128 @sinf128(fp128)
-; AIX64-NEXT: declare double @sinh(double)
-; AIX64-NEXT: declare float @sinhf(float)
-; AIX64-NEXT: declare fp128 @sinhf128(fp128)
-; AIX64-NEXT: declare double @sinhl(double)
-; AIX64-NEXT: declare double @sinl(double)
+; AIX64-NEXT: declare double @modf(double, ptr noalias nonnull writeonly align 4 dereferenceable(8)) [[ARGMEM_WRITE_ATTRS]]
+; AIX64-NEXT: declare float @modff(float, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
+; AIX64-NEXT: declare fp128 @modff128(fp128, ptr noalias nonnull writeonly align 16 dereferenceable(16)) [[ARGMEM_WRITE_ATTRS]]
+; AIX64-NEXT: declare double @modfl(double, ptr noalias nonnull writeonly align 4 dereferenceable(8)) [[ARGMEM_WRITE_ATTRS]]
+; AIX64-NEXT: declare nofpclass(snan inf zero sub norm) double @nan(ptr readonly captures(none)) [[ARGMEM_READ_ATTRS]]
+; AIX64-NEXT: declare nofpclass(snan inf zero sub norm) float @nanf(ptr readonly captures(none)) [[ARGMEM_READ_ATTRS]]
+; AIX64-NEXT: declare nofpclass(snan inf zero sub norm) double @nanl(ptr readonly captures(none)) [[ARGMEM_READ_ATTRS]]
+; AIX64-NEXT: declare double @nearbyint(double) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare float @nearbyintf(float) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare fp128 @nearbyintf128(fp128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare double @nearbyintl(double) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare double @nexttoward(double, double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare float @nexttowardf(float, double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare double @nexttowardl(double, double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare double @pow(double, double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare float @powf(float, float) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare fp128 @powf128(fp128, fp128) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare double @powl(double, double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare double @remainder(double, double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare float @remainderf(float, float) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare double @remainderl(double, double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare double @remquo(double, double, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS:#[0-9]+]]
+; AIX64-NEXT: declare float @remquof(float, float, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS]]
+; AIX64-NEXT: declare double @remquol(double, double, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS]]
+; AIX64-NEXT: declare double @rint(double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare float @rintf(float) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare fp128 @rintf128(fp128) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare double @rintl(double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare double @round(double) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare double @roundeven(double) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare float @roundevenf(float) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare fp128 @roundevenf128(fp128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare double @roundevenl(double) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare float @roundf(float) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare fp128 @roundf128(fp128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare double @roundl(double) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare double @scalbln(double, i64) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare float @scalblnf(float, i64) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare double @scalblnl(double, i64) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare double @scalbn(double, i32 signext) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare float @scalbnf(float, i32 signext) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare double @scalbnl(double, i32 signext) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare double @sin(double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare void @sincosf128(fp128, ptr noalias nonnull writeonly align 16 dereferenceable(16), ptr noalias nonnull writeonly align 16 dereferenceable(16)) [[ARGMEM_ERRNO_WRITE_ATTRS]]
+; AIX64-NEXT: declare float @sinf(float) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare fp128 @sinf128(fp128) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare double @sinh(double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare float @sinhf(float) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare fp128 @sinhf128(fp128) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare double @sinhl(double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare double @sinl(double) [[SQRT_ATTRS]]
 ; AIX64-NEXT: declare nofpclass(ninf nsub nnorm) double @sqrt(double) [[SQRT_ATTRS:#[0-9]+]]
 ; AIX64-NEXT: declare nofpclass(ninf nsub nnorm) float @sqrtf(float) [[SQRT_ATTRS:#[0-9]+]]
-; AIX64-NEXT: declare fp128 @sqrtf128(fp128)
-; AIX64-NEXT: declare double @sqrtl(double)
-; AIX64-NEXT: declare double @tan(double)
-; AIX64-NEXT: declare float @tanf(float)
-; AIX64-NEXT: declare fp128 @tanf128(fp128)
-; AIX64-NEXT: declare double @tanh(double)
-; AIX64-NEXT: declare float @tanhf(float)
-; AIX64-NEXT: declare fp128 @tanhf128(fp128)
-; AIX64-NEXT: declare double @tanhl(double)
-; AIX64-NEXT: declare double @tanl(double)
-; AIX64-NEXT: declare double @tgamma(double)
-; AIX64-NEXT: declare float @tgammaf(float)
-; AIX64-NEXT: declare double @tgammal(double)
-; AIX64-NEXT: declare double @trunc(double)
-; AIX64-NEXT: declare float @truncf(float)
-; AIX64-NEXT: declare fp128 @truncf128(fp128)
-; AIX64-NEXT: declare double @truncl(double)
-; AIX64-NEXT: declare ptr @vec_calloc(i64, i64)
-; AIX64-NEXT: declare void @vec_free(ptr)
-; AIX64-NEXT: declare ptr @vec_malloc(i64)
+; AIX64-NEXT: declare nofpclass(ninf nsub nnorm) fp128 @sqrtf128(fp128) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare nofpclass(ninf nsub nnorm) double @sqrtl(double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare double @tan(double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare float @tanf(float) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare fp128 @tanf128(fp128) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare double @tanh(double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare float @tanhf(float) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare fp128 @tanhf128(fp128) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare double @tanhl(double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare double @tanl(double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare double @tgamma(double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare float @tgammaf(float) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare double @tgammal(double) [[SQRT_ATTRS]]
+; AIX64-NEXT: declare double @trunc(double) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare float @truncf(float) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare fp128 @truncf128(fp128) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare double @truncl(double) [[NOMEM_ATTRS]]
+; AIX64-NEXT: declare noalias noundef ptr @vec_calloc(i64 noundef, i64 noundef) [[VEC_CALLOC_ATTRS:#[0-9]+]]
+; AIX64-NEXT: declare void @vec_free(ptr allocptr noundef captures(none)) [[VEC_FREE_ATTRS:#[0-9]+]]
+; AIX64-NEXT: declare noalias noundef ptr @vec_malloc(i64 noundef) [[VEC_MALLOC_ATTRS:#[0-9]+]]
 ; AIX64-NEXT: declare ptr @vec_realloc(ptr, i64)
-; AIX64-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
-; AIX64-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
-; AIX64-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
-; AIX64-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
+; AIX64-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
+; AIX64-NEXT: attributes [[ARGMEM_READ_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
+; AIX64-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; AIX64-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
+; AIX64-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
+; AIX64-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
+; AIX64-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
+; AIX64-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
+; AIX64-NEXT: attributes [[ARGMEM_ERRNO_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write, errnomem: write) }
+; AIX64-NEXT: attributes [[VEC_CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="vec_malloc" }
+; AIX64-NEXT: attributes [[VEC_FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="vec_malloc" }
+; AIX64-NEXT: attributes [[VEC_MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="vec_malloc" }
 
 ; LINUX: @__stack_chk_guard = external global ptr
 ; LINUX-NEXT: declare signext i32 @_Unwind_RaiseException(ptr)
 ; LINUX-NEXT: declare void @_Unwind_Resume(ptr)
-; LINUX-NEXT: declare double @__adddf3(double, double)
-; LINUX-NEXT: declare fp128 @__addkf3(fp128, fp128)
-; LINUX-NEXT: declare float @__addsf3(float, float)
-; LINUX-NEXT: declare i64 @__ashldi3(i64, i32 signext)
-; LINUX-NEXT: declare signext i16 @__ashlhi3(i16 signext, i32 signext)
-; LINUX-NEXT: declare signext i32 @__ashlsi3(i32 signext, i32 signext)
-; LINUX-NEXT: declare i128 @__ashlti3(i128, i32 signext)
-; LINUX-NEXT: declare i64 @__ashrdi3(i64, i32 signext)
-; LINUX-NEXT: declare signext i16 @__ashrhi3(i16 signext, i32 signext)
-; LINUX-NEXT: declare signext i32 @__ashrsi3(i32 signext, i32 signext)
-; LINUX-NEXT: declare i128 @__ashrti3(i128, i32 signext)
+; LINUX-NEXT: declare double @__adddf3(double, double) [[NOMEM_ATTRS:#[0-9]+]]
+; LINUX-NEXT: declare fp128 @__addkf3(fp128, fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare float @__addsf3(float, float) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare i64 @__ashldi3(i64, i32 signext) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare signext i16 @__ashlhi3(i16 signext, i32 signext) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare signext i32 @__ashlsi3(i32 signext, i32 signext) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare i128 @__ashlti3(i128, i32 signext) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare i64 @__ashrdi3(i64, i32 signext) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare signext i16 @__ashrhi3(i16 signext, i32 signext) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare signext i32 @__ashrsi3(i32 signext, i32 signext) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare i128 @__ashrti3(i128, i32 signext) [[NOMEM_ATTRS]]
 ; LINUX-NEXT: declare zeroext i1 @__atomic_compare_exchange(i64, ptr, ptr, ptr, i32 signext, i32 signext)
 ; LINUX-NEXT: declare zeroext i1 @__atomic_compare_exchange_1(ptr, ptr, i8 zeroext, i32 signext, i32 signext)
 ; LINUX-NEXT: declare zeroext i1 @__atomic_compare_exchange_16(ptr, ptr, i128, i32 signext, i32 signext)
@@ -1193,123 +1207,123 @@
 ; LINUX-NEXT: declare void @__atomic_store_4(ptr, i32 zeroext, i32 signext)
 ; LINUX-NEXT: declare void @__atomic_store_8(ptr, i64, i32 signext)
 ; LINUX-NEXT: declare void @__clear_cache(ptr, ptr)
-; LINUX-NEXT: declare signext i32 @__clzdi2(i64)
-; LINUX-NEXT: declare signext i32 @__clzsi2(i32 zeroext)
-; LINUX-NEXT: declare signext i32 @__clzti2(i128)
-; LINUX-NEXT: declare signext i32 @__ctzdi2(i64)
-; LINUX-NEXT: declare signext i32 @__ctzsi2(i32 zeroext)
-; LINUX-NEXT: declare signext i32 @__ctzti2(i128)
+; LINUX-NEXT: declare signext i32 @__clzdi2(i64) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare signext i32 @__clzsi2(i32 zeroext) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare signext i32 @__clzti2(i128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare signext i32 @__ctzdi2(i64) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare signext i32 @__ctzsi2(i32 zeroext) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare signext i32 @__ctzti2(i128) [[NOMEM_ATTRS]]
 ; LINUX-NEXT: declare void @__cxa_end_cleanup()
-; LINUX-NEXT: declare double @__divdf3(double, double)
-; LINUX-NEXT: declare i64 @__divdi3(i64, i64)
-; LINUX-NEXT: declare signext i16 @__divhi3(i16 signext, i16 signext)
-; LINUX-NEXT: declare fp128 @__divkf3(fp128, fp128)
-; LINUX-NEXT: declare signext i8 @__divqi3(i8 signext, i8 signext)
-; LINUX-NEXT: declare float @__divsf3(float, float)
-; LINUX-NEXT: declare signext i32 @__divsi3(i32 signext, i32 signext)
-; LINUX-NEXT: declare i128 @__divti3(i128, i128)
-; LINUX-NEXT: declare i64 @__eqdf2(double, double)
-; LINUX-NEXT: declare i64 @__eqkf2(fp128, fp128)
-; LINUX-NEXT: declare i64 @__eqsf2(float, float)
-; LINUX-NEXT: declare double @__exp2_finite(double)
-; LINUX-NEXT: declare float @__exp2f_finite(float)
-; LINUX-NEXT: declare ppc_fp128 @__exp2l_finite(ppc_fp128)
-; LINUX-NEXT: declare double @__exp_finite(double)
-; LINUX-NEXT: declare float @__expf_finite(float)
-; LINUX-NEXT: declare ppc_fp128 @__expl_finite(ppc_fp128)
-; LINUX-NEXT: declare float @__extendbfsf2(bfloat)
-; LINUX-NEXT: declare fp128 @__extenddfkf2(double)
-; LINUX-NEXT: declare double @__extendhfdf2(half)
-; LINUX-NEXT: declare float @__extendhfsf2(half)
-; LINUX-NEXT: declare ppc_fp128 @__extendkftf2(fp128)
-; LINUX-NEXT: declare double @__extendsfdf2(float)
-; LINUX-NEXT: declare fp128 @__extendsfkf2(float)
-; LINUX-NEXT: declare i64 @__fixdfdi(double)
-; LINUX-NEXT: declare signext i32 @__fixdfsi(double)
-; LINUX-NEXT: declare i128 @__fixdfti(double)
-; LINUX-NEXT: declare i64 @__fixhfdi(half)
-; LINUX-NEXT: declare signext i32 @__fixhfsi(half)
-; LINUX-NEXT: declare i128 @__fixhfti(half)
-; LINUX-NEXT: declare i64 @__fixkfdi(fp128)
-; LINUX-NEXT: declare signext i32 @__fixkfsi(fp128)
-; LINUX-NEXT: declare i128 @__fixkfti(fp128)
-; LINUX-NEXT: declare i64 @__fixsfdi(float)
-; LINUX-NEXT: declare signext i32 @__fixsfsi(float)
-; LINUX-NEXT: declare i128 @__fixsfti(float)
-; LINUX-NEXT: declare i64 @__fixtfdi(ppc_fp128)
-; LINUX-NEXT: declare i128 @__fixtfti(ppc_fp128)
-; LINUX-NEXT: declare i64 @__fixunsdfdi(double)
-; LINUX-NEXT: declare zeroext i32 @__fixunsdfsi(double)
-; LINUX-NEXT: declare i128 @__fixunsdfti(double)
-; LINUX-NEXT: declare i64 @__fixunshfdi(half)
-; LINUX-NEXT: declare zeroext i32 @__fixunshfsi(half)
-; LINUX-NEXT: declare i128 @__fixunshfti(half)
-; LINUX-NEXT: declare i64 @__fixunskfdi(fp128)
-; LINUX-NEXT: declare zeroext i32 @__fixunskfsi(fp128)
-; LINUX-NEXT: declare i128 @__fixunskfti(fp128)
-; LINUX-NEXT: declare i64 @__fixunssfdi(float)
-; LINUX-NEXT: declare zeroext i32 @__fixunssfsi(float)
-; LINUX-NEXT: declare i128 @__fixunssfti(float)
-; LINUX-NEXT: declare i64 @__fixunstfdi(ppc_fp128)
-; LINUX-NEXT: declare zeroext i32 @__fixunstfsi(ppc_fp128)
-; LINUX-NEXT: declare i128 @__fixunstfti(ppc_fp128)
-; LINUX-NEXT: declare bfloat @__floatdibf(i64)
-; LINUX-NEXT: declare double @__floatdidf(i64)
-; LINUX-NEXT: declare half @__floatdihf(i64)
-; LINUX-NEXT: declare fp128 @__floatdikf(i64)
-; LINUX-NEXT: declare float @__floatdisf(i64)
-; LINUX-NEXT: declare ppc_fp128 @__floatditf(i64)
-; LINUX-NEXT: declare double @__floatsidf(i32 signext)
-; LINUX-NEXT: declare half @__floatsihf(i32 signext)
-; LINUX-NEXT: declare fp128 @__floatsikf(i32 signext)
-; LINUX-NEXT: declare float @__floatsisf(i32 signext)
-; LINUX-NEXT: declare double @__floattidf(i128)
-; LINUX-NEXT: declare half @__floattihf(i128)
-; LINUX-NEXT: declare fp128 @__floattikf(i128)
-; LINUX-NEXT: declare float @__floattisf(i128)
-; LINUX-NEXT: declare ppc_fp128 @__floattitf(i128)
-; LINUX-NEXT: declare bfloat @__floatundibf(i64)
-; LINUX-NEXT: declare double @__floatundidf(i64)
-; LINUX-NEXT: declare half @__floatundihf(i64)
-; LINUX-NEXT: declare fp128 @__floatundikf(i64)
-; LINUX-NEXT: declare float @__floatundisf(i64)
-; LINUX-NEXT: declare ppc_fp128 @__floatunditf(i64)
-; LINUX-NEXT: declare double @__floatunsidf(i32 zeroext)
-; LINUX-NEXT: declare half @__floatunsihf(i32 zeroext)
-; LINUX-NEXT: declare fp128 @__floatunsikf(i32 zeroext)
-; LINUX-NEXT: declare float @__floatunsisf(i32 zeroext)
-; LINUX-NEXT: declare double @__floatuntidf(i128)
-; LINUX-NEXT: declare half @__floatuntihf(i128)
-; LINUX-NEXT: declare fp128 @__floatuntikf(i128)
-; LINUX-NEXT: declare float @__floatuntisf(i128)
-; LINUX-NEXT: declare ppc_fp128 @__floatuntitf(i128)
-; LINUX-NEXT: declare ppc_fp128 @__gcc_dtoq(double)
-; LINUX-NEXT: declare ppc_fp128 @__gcc_itoq(i32 signext)
-; LINUX-NEXT: declare ppc_fp128 @__gcc_qadd(ppc_fp128, ppc_fp128)
-; LINUX-NEXT: declare ppc_fp128 @__gcc_qdiv(ppc_fp128, ppc_fp128)
-; LINUX-NEXT: declare signext i32 @__gcc_qeq(ppc_fp128, ppc_fp128)
-; LINUX-NEXT: declare signext i32 @__gcc_qge(ppc_fp128, ppc_fp128)
-; LINUX-NEXT: declare signext i32 @__gcc_qgt(ppc_fp128, ppc_fp128)
-; LINUX-NEXT: declare signext i32 @__gcc_qle(ppc_fp128, ppc_fp128)
-; LINUX-NEXT: declare signext i32 @__gcc_qlt(ppc_fp128, ppc_fp128)
-; LINUX-NEXT: declare ppc_fp128 @__gcc_qmul(ppc_fp128, ppc_fp128)
-; LINUX-NEXT: declare signext i32 @__gcc_qne(ppc_fp128, ppc_fp128)
-; LINUX-NEXT: declare ppc_fp128 @__gcc_qsub(ppc_fp128, ppc_fp128)
-; LINUX-NEXT: declare double @__gcc_qtod(ppc_fp128)
-; LINUX-NEXT: declare float @__gcc_qtos(ppc_fp128)
-; LINUX-NEXT: declare signext i32 @__gcc_qtou(ppc_fp128)
-; LINUX-NEXT: declare signext i32 @__gcc_qunord(ppc_fp128, ppc_fp128)
-; LINUX-NEXT: declare ppc_fp128 @__gcc_stoq(float)
-; LINUX-NEXT: declare ppc_fp128 @__gcc_utoq(i32 zeroext)
-; LINUX-NEXT: declare i64 @__gedf2(double, double)
-; LINUX-NEXT: declare i64 @__gekf2(fp128, fp128)
-; LINUX-NEXT: declare i64 @__gesf2(float, float)
-; LINUX-NEXT: declare i64 @__gtdf2(double, double)
-; LINUX-NEXT: declare i64 @__gtkf2(fp128, fp128)
-; LINUX-NEXT: declare i64 @__gtsf2(float, float)
-; LINUX-NEXT: declare i64 @__ledf2(double, double)
-; LINUX-NEXT: declare i64 @__lekf2(fp128, fp128)
-; LINUX-NEXT: declare i64 @__lesf2(float, float)
+; LINUX-NEXT: declare double @__divdf3(double, double) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare i64 @__divdi3(i64, i64) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare signext i16 @__divhi3(i16 signext, i16 signext) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare fp128 @__divkf3(fp128, fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare signext i8 @__divqi3(i8 signext, i8 signext) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare float @__divsf3(float, float) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare signext i32 @__divsi3(i32 signext, i32 signext) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare i128 @__divti3(i128, i128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare i64 @__eqdf2(double, double) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare i64 @__eqkf2(fp128, fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare i64 @__eqsf2(float, float) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare double @__exp2_finite(double) [[SQRT_ATTRS:#[0-9]+]]
+; LINUX-NEXT: declare float @__exp2f_finite(float) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @__exp2l_finite(ppc_fp128) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare double @__exp_finite(double) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare float @__expf_finite(float) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @__expl_finite(ppc_fp128) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare float @__extendbfsf2(bfloat) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare fp128 @__extenddfkf2(double) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare double @__extendhfdf2(half) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare float @__extendhfsf2(half) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @__extendkftf2(fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare double @__extendsfdf2(float) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare fp128 @__extendsfkf2(float) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare i64 @__fixdfdi(double) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare signext i32 @__fixdfsi(double) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare i128 @__fixdfti(double) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare i64 @__fixhfdi(half) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare signext i32 @__fixhfsi(half) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare i128 @__fixhfti(half) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare i64 @__fixkfdi(fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare signext i32 @__fixkfsi(fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare i128 @__fixkfti(fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare i64 @__fixsfdi(float) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare signext i32 @__fixsfsi(float) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare i128 @__fixsfti(float) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare i64 @__fixtfdi(ppc_fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare i128 @__fixtfti(ppc_fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare i64 @__fixunsdfdi(double) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare zeroext i32 @__fixunsdfsi(double) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare i128 @__fixunsdfti(double) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare i64 @__fixunshfdi(half) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare zeroext i32 @__fixunshfsi(half) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare i128 @__fixunshfti(half) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare i64 @__fixunskfdi(fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare zeroext i32 @__fixunskfsi(fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare i128 @__fixunskfti(fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare i64 @__fixunssfdi(float) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare zeroext i32 @__fixunssfsi(float) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare i128 @__fixunssfti(float) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare i64 @__fixunstfdi(ppc_fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare zeroext i32 @__fixunstfsi(ppc_fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare i128 @__fixunstfti(ppc_fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare bfloat @__floatdibf(i64) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare double @__floatdidf(i64) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare half @__floatdihf(i64) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare fp128 @__floatdikf(i64) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare float @__floatdisf(i64) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @__floatditf(i64) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare double @__floatsidf(i32 signext) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare half @__floatsihf(i32 signext) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare fp128 @__floatsikf(i32 signext) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare float @__floatsisf(i32 signext) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare double @__floattidf(i128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare half @__floattihf(i128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare fp128 @__floattikf(i128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare float @__floattisf(i128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @__floattitf(i128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare bfloat @__floatundibf(i64) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare double @__floatundidf(i64) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare half @__floatundihf(i64) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare fp128 @__floatundikf(i64) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare float @__floatundisf(i64) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @__floatunditf(i64) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare double @__floatunsidf(i32 zeroext) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare half @__floatunsihf(i32 zeroext) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare fp128 @__floatunsikf(i32 zeroext) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare float @__floatunsisf(i32 zeroext) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare double @__floatuntidf(i128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare half @__floatuntihf(i128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare fp128 @__floatuntikf(i128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare float @__floatuntisf(i128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @__floatuntitf(i128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @__gcc_dtoq(double) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @__gcc_itoq(i32 signext) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @__gcc_qadd(ppc_fp128, ppc_fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @__gcc_qdiv(ppc_fp128, ppc_fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare signext i32 @__gcc_qeq(ppc_fp128, ppc_fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare signext i32 @__gcc_qge(ppc_fp128, ppc_fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare signext i32 @__gcc_qgt(ppc_fp128, ppc_fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare signext i32 @__gcc_qle(ppc_fp128, ppc_fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare signext i32 @__gcc_qlt(ppc_fp128, ppc_fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @__gcc_qmul(ppc_fp128, ppc_fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare signext i32 @__gcc_qne(ppc_fp128, ppc_fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @__gcc_qsub(ppc_fp128, ppc_fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare double @__gcc_qtod(ppc_fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare float @__gcc_qtos(ppc_fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare signext i32 @__gcc_qtou(ppc_fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare signext i32 @__gcc_qunord(ppc_fp128, ppc_fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @__gcc_stoq(float) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @__gcc_utoq(i32 zeroext) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare i64 @__gedf2(double, double) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare i64 @__gekf2(fp128, fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare i64 @__gesf2(float, float) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare i64 @__gtdf2(double, double) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare i64 @__gtkf2(fp128, fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare i64 @__gtsf2(float, float) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare i64 @__ledf2(double, double) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare i64 @__lekf2(fp128, fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare i64 @__lesf2(float, float) [[NOMEM_ATTRS]]
 ; LINUX-NEXT: declare void @__llvm_deoptimize(...)
 ; LINUX-NEXT: declare void @__llvm_memcpy_element_unordered_atomic_1(ptr, ptr, i64)
 ; LINUX-NEXT: declare void @__llvm_memcpy_element_unordered_atomic_16(ptr, ptr, i64)
@@ -1326,58 +1340,58 @@
 ; LINUX-NEXT: declare void @__llvm_memset_element_unordered_atomic_2(ptr, i32 signext, i64)
 ; LINUX-NEXT: declare void @__llvm_memset_element_unordered_atomic_4(ptr, i32 signext, i64)
 ; LINUX-NEXT: declare void @__llvm_memset_element_unordered_atomic_8(ptr, i32 signext, i64)
-; LINUX-NEXT: declare double @__log10_finite(double)
-; LINUX-NEXT: declare float @__log10f_finite(float)
-; LINUX-NEXT: declare ppc_fp128 @__log10l_finite(ppc_fp128)
-; LINUX-NEXT: declare double @__log2_finite(double)
-; LINUX-NEXT: declare float @__log2f_finite(float)
-; LINUX-NEXT: declare ppc_fp128 @__log2l_finite(ppc_fp128)
-; LINUX-NEXT: declare double @__log_finite(double)
-; LINUX-NEXT: declare float @__logf_finite(float)
-; LINUX-NEXT: declare ppc_fp128 @__logl_finite(ppc_fp128)
-; LINUX-NEXT: declare i64 @__lshrdi3(i64, i32 signext)
-; LINUX-NEXT: declare signext i16 @__lshrhi3(i16 signext, i32 signext)
-; LINUX-NEXT: declare signext i32 @__lshrsi3(i32 signext, i32 signext)
-; LINUX-NEXT: declare i128 @__lshrti3(i128, i32 signext)
-; LINUX-NEXT: declare i64 @__ltdf2(double, double)
-; LINUX-NEXT: declare i64 @__ltkf2(fp128, fp128)
-; LINUX-NEXT: declare i64 @__ltsf2(float, float)
+; LINUX-NEXT: declare double @__log10_finite(double) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare float @__log10f_finite(float) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @__log10l_finite(ppc_fp128) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare double @__log2_finite(double) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare float @__log2f_finite(float) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @__log2l_finite(ppc_fp128) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare double @__log_finite(double) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare float @__logf_finite(float) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @__logl_finite(ppc_fp128) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare i64 @__lshrdi3(i64, i32 signext) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare signext i16 @__lshrhi3(i16 signext, i32 signext) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare signext i32 @__lshrsi3(i32 signext, i32 signext) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare i128 @__lshrti3(i128, i32 signext) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare i64 @__ltdf2(double, double) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare i64 @__ltkf2(fp128, fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare i64 @__ltsf2(float, float) [[NOMEM_ATTRS]]
 ; LINUX-NEXT: declare ptr @__memcpy_chk(ptr, ptr, i64, i64)
 ; LINUX-NEXT: declare ptr @__memmove_chk(ptr, ptr, i64, i64)
 ; LINUX-NEXT: declare ptr @__memset_chk(ptr, i32 signext, i64, i64)
-; LINUX-NEXT: declare i64 @__moddi3(i64, i64)
-; LINUX-NEXT: declare signext i16 @__modhi3(i16 signext, i16 signext)
-; LINUX-NEXT: declare signext i8 @__modqi3(i8 signext, i8 signext)
-; LINUX-NEXT: declare signext i32 @__modsi3(i32 signext, i32 signext)
-; LINUX-NEXT: declare i128 @__modti3(i128, i128)
-; LINUX-NEXT: declare double @__muldf3(double, double)
-; LINUX-NEXT: declare i64 @__muldi3(i64, i64)
-; LINUX-NEXT: declare signext i16 @__mulhi3(i16 signext, i16 signext)
-; LINUX-NEXT: declare fp128 @__mulkf3(fp128, fp128)
-; LINUX-NEXT: declare signext i32 @__mulosi4(i32 signext, i32 signext, ptr)
-; LINUX-NEXT: declare signext i8 @__mulqi3(i8 signext, i8 signext)
-; LINUX-NEXT: declare float @__mulsf3(float, float)
-; LINUX-NEXT: declare signext i32 @__mulsi3(i32 signext, i32 signext)
-; LINUX-NEXT: declare i128 @__multi3(i128, i128)
-; LINUX-NEXT: declare i64 @__nedf2(double, double)
-; LINUX-NEXT: declare i64 @__negdi2(i64)
-; LINUX-NEXT: declare signext i32 @__negsi2(i32 signext)
-; LINUX-NEXT: declare i64 @__nekf2(fp128, fp128)
-; LINUX-NEXT: declare i64 @__nesf2(float, float)
-; LINUX-NEXT: declare signext i32 @__popcountdi2(i64)
-; LINUX-NEXT: declare signext i32 @__popcountsi2(i32 zeroext)
-; LINUX-NEXT: declare signext i32 @__popcountti2(i128)
-; LINUX-NEXT: declare double @__pow_finite(double, double)
-; LINUX-NEXT: declare float @__powf_finite(float, float)
-; LINUX-NEXT: declare double @__powidf2(double, i32 signext)
-; LINUX-NEXT: declare fp128 @__powikf2(fp128, i32 signext)
-; LINUX-NEXT: declare float @__powisf2(float, i32 signext)
-; LINUX-NEXT: declare ppc_fp128 @__powitf2(ppc_fp128, i32 signext)
-; LINUX-NEXT: declare ppc_fp128 @__powl_finite(ppc_fp128, ppc_fp128)
+; LINUX-NEXT: declare i64 @__moddi3(i64, i64) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare signext i16 @__modhi3(i16 signext, i16 signext) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare signext i8 @__modqi3(i8 signext, i8 signext) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare signext i32 @__modsi3(i32 signext, i32 signext) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare i128 @__modti3(i128, i128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare double @__muldf3(double, double) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare i64 @__muldi3(i64, i64) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare signext i16 @__mulhi3(i16 signext, i16 signext) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare fp128 @__mulkf3(fp128, fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare signext i32 @__mulosi4(i32 signext, i32 signext, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS:#[0-9]+]]
+; LINUX-NEXT: declare signext i8 @__mulqi3(i8 signext, i8 signext) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare float @__mulsf3(float, float) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare signext i32 @__mulsi3(i32 signext, i32 signext) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare i128 @__multi3(i128, i128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare i64 @__nedf2(double, double) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare i64 @__negdi2(i64) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare signext i32 @__negsi2(i32 signext) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare i64 @__nekf2(fp128, fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare i64 @__nesf2(float, float) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare signext i32 @__popcountdi2(i64) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare signext i32 @__popcountsi2(i32 zeroext) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare signext i32 @__popcountti2(i128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare double @__pow_finite(double, double) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare float @__powf_finite(float, float) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare double @__powidf2(double, i32 signext) [[NOMEM_ATTRS:#[0-9]+]]
+; LINUX-NEXT: declare fp128 @__powikf2(fp128, i32 signext) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare float @__powisf2(float, i32 signext) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @__powitf2(ppc_fp128, i32 signext) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @__powl_finite(ppc_fp128, ppc_fp128) [[SQRT_ATTRS]]
 ; LINUX-NEXT: declare void @__stack_chk_fail() [[NORETURN_ATTRS:#[0-9]+]]
-; LINUX-NEXT: declare double @__subdf3(double, double)
-; LINUX-NEXT: declare fp128 @__subkf3(fp128, fp128)
-; LINUX-NEXT: declare float @__subsf3(float, float)
+; LINUX-NEXT: declare double @__subdf3(double, double) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare fp128 @__subkf3(fp128, fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare float @__subsf3(float, float) [[NOMEM_ATTRS]]
 ; LINUX-NEXT: declare zeroext i8 @__sync_fetch_and_add_1(ptr, i8 zeroext)
 ; LINUX-NEXT: declare i128 @__sync_fetch_and_add_16(ptr, i128)
 ; LINUX-NEXT: declare zeroext i16 @__sync_fetch_and_add_2(ptr, i16 zeroext)
@@ -1438,240 +1452,244 @@
 ; LINUX-NEXT: declare zeroext i16 @__sync_val_compare_and_swap_2(ptr, i16 zeroext, i16 zeroext)
 ; LINUX-NEXT: declare zeroext i32 @__sync_val_compare_and_swap_4(ptr, i32 zeroext, i32 zeroext)
 ; LINUX-NEXT: declare i64 @__sync_val_compare_and_swap_8(ptr, i64, i64)
-; LINUX-NEXT: declare bfloat @__truncdfbf2(double)
-; LINUX-NEXT: declare half @__truncdfhf2(double)
-; LINUX-NEXT: declare float @__truncdfsf2(double)
-; LINUX-NEXT: declare double @__trunckfdf2(fp128)
-; LINUX-NEXT: declare half @__trunckfhf2(fp128)
-; LINUX-NEXT: declare float @__trunckfsf2(fp128)
-; LINUX-NEXT: declare bfloat @__truncsfbf2(float)
-; LINUX-NEXT: declare half @__truncsfhf2(float)
-; LINUX-NEXT: declare half @__trunctfhf2(ppc_fp128)
-; LINUX-NEXT: declare fp128 @__trunctfkf2(ppc_fp128)
-; LINUX-NEXT: declare i64 @__udivdi3(i64, i64)
-; LINUX-NEXT: declare zeroext i16 @__udivhi3(i16 zeroext, i16 zeroext)
-; LINUX-NEXT: declare zeroext i8 @__udivqi3(i8 zeroext, i8 zeroext)
-; LINUX-NEXT: declare zeroext i32 @__udivsi3(i32 zeroext, i32 zeroext)
-; LINUX-NEXT: declare i128 @__udivti3(i128, i128)
-; LINUX-NEXT: declare i64 @__umoddi3(i64, i64)
-; LINUX-NEXT: declare zeroext i16 @__umodhi3(i16 zeroext, i16 zeroext)
-; LINUX-NEXT: declare zeroext i8 @__umodqi3(i8 zeroext, i8 zeroext)
-; LINUX-NEXT: declare zeroext i32 @__umodsi3(i32 zeroext, i32 zeroext)
-; LINUX-NEXT: declare i128 @__umodti3(i128, i128)
-; LINUX-NEXT: declare i64 @__unorddf2(double, double)
-; LINUX-NEXT: declare i64 @__unordkf2(fp128, fp128)
-; LINUX-NEXT: declare i64 @__unordsf2(float, float)
-; LINUX-NEXT: declare double @acos(double)
-; LINUX-NEXT: declare float @acosf(float)
-; LINUX-NEXT: declare fp128 @acosf128(fp128)
-; LINUX-NEXT: declare ppc_fp128 @acosl(ppc_fp128)
-; LINUX-NEXT: declare double @asin(double)
-; LINUX-NEXT: declare float @asinf(float)
-; LINUX-NEXT: declare fp128 @asinf128(fp128)
-; LINUX-NEXT: declare ppc_fp128 @asinl(ppc_fp128)
-; LINUX-NEXT: declare double @atan(double)
-; LINUX-NEXT: declare double @atan2(double, double)
-; LINUX-NEXT: declare float @atan2f(float, float)
-; LINUX-NEXT: declare fp128 @atan2f128(fp128, fp128)
-; LINUX-NEXT: declare ppc_fp128 @atan2l(ppc_fp128, ppc_fp128)
-; LINUX-NEXT: declare float @atanf(float)
-; LINUX-NEXT: declare fp128 @atanf128(fp128)
-; LINUX-NEXT: declare ppc_fp128 @atanl(ppc_fp128)
+; LINUX-NEXT: declare bfloat @__truncdfbf2(double) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare half @__truncdfhf2(double) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare float @__truncdfsf2(double) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare double @__trunckfdf2(fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare half @__trunckfhf2(fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare float @__trunckfsf2(fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare bfloat @__truncsfbf2(float) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare half @__truncsfhf2(float) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare half @__trunctfhf2(ppc_fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare fp128 @__trunctfkf2(ppc_fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare i64 @__udivdi3(i64, i64) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare zeroext i16 @__udivhi3(i16 zeroext, i16 zeroext) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare zeroext i8 @__udivqi3(i8 zeroext, i8 zeroext) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare zeroext i32 @__udivsi3(i32 zeroext, i32 zeroext) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare i128 @__udivti3(i128, i128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare i64 @__umoddi3(i64, i64) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare zeroext i16 @__umodhi3(i16 zeroext, i16 zeroext) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare zeroext i8 @__umodqi3(i8 zeroext, i8 zeroext) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare zeroext i32 @__umodsi3(i32 zeroext, i32 zeroext) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare i128 @__umodti3(i128, i128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare i64 @__unorddf2(double, double) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare i64 @__unordkf2(fp128, fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare i64 @__unordsf2(float, float) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare double @acos(double) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare float @acosf(float) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare fp128 @acosf128(fp128) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @acosl(ppc_fp128) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare double @asin(double) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare float @asinf(float) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare fp128 @asinf128(fp128) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @asinl(ppc_fp128) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare double @atan(double) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare double @atan2(double, double) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare float @atan2f(float, float) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare fp128 @atan2f128(fp128, fp128) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @atan2l(ppc_fp128, ppc_fp128) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare float @atanf(float) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare fp128 @atanf128(fp128) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @atanl(ppc_fp128) [[SQRT_ATTRS]]
 ; LINUX-NEXT: declare void @cabs(...)
 ; LINUX-NEXT: declare void @cabsf(...)
 ; LINUX-NEXT: declare void @cabsl(...)
 ; LINUX-NEXT: declare noalias noundef ptr @calloc(i64 noundef, i64 noundef) [[CALLOC_ATTRS:#[0-9]+]]
-; LINUX-NEXT: declare double @cbrt(double)
-; LINUX-NEXT: declare float @cbrtf(float)
-; LINUX-NEXT: declare fp128 @cbrtf128(fp128)
-; LINUX-NEXT: declare ppc_fp128 @cbrtl(ppc_fp128)
-; LINUX-NEXT: declare double @ceil(double)
-; LINUX-NEXT: declare float @ceilf(float)
-; LINUX-NEXT: declare fp128 @ceilf128(fp128)
-; LINUX-NEXT: declare ppc_fp128 @ceill(ppc_fp128)
-; LINUX-NEXT: declare double @copysign(double, double)
-; LINUX-NEXT: declare float @copysignf(float, float)
-; LINUX-NEXT: declare fp128 @copysignf128(fp128, fp128)
-; LINUX-NEXT: declare ppc_fp128 @copysignl(ppc_fp128, ppc_fp128)
-; LINUX-NEXT: declare double @cos(double)
-; LINUX-NEXT: declare float @cosf(float)
-; LINUX-NEXT: declare fp128 @cosf128(fp128)
-; LINUX-NEXT: declare double @cosh(double)
-; LINUX-NEXT: declare float @coshf(float)
-; LINUX-NEXT: declare fp128 @coshf128(fp128)
-; LINUX-NEXT: declare ppc_fp128 @coshl(ppc_fp128)
-; LINUX-NEXT: declare ppc_fp128 @cosl(ppc_fp128)
-; LINUX-NEXT: declare double @exp(double)
-; LINUX-NEXT: declare double @exp10(double)
-; LINUX-NEXT: declare float @exp10f(float)
-; LINUX-NEXT: declare fp128 @exp10f128(fp128)
-; LINUX-NEXT: declare ppc_fp128 @exp10l(ppc_fp128)
-; LINUX-NEXT: declare double @exp2(double)
-; LINUX-NEXT: declare float @exp2f(float)
-; LINUX-NEXT: declare fp128 @exp2f128(fp128)
-; LINUX-NEXT: declare ppc_fp128 @exp2l(ppc_fp128)
-; LINUX-NEXT: declare float @expf(float)
-; LINUX-NEXT: declare fp128 @expf128(fp128)
-; LINUX-NEXT: declare ppc_fp128 @expl(ppc_fp128)
-; LINUX-NEXT: declare double @fdim(double, double)
-; LINUX-NEXT: declare float @fdimf(float, float)
-; LINUX-NEXT: declare ppc_fp128 @fdiml(ppc_fp128, ppc_fp128)
+; LINUX-NEXT: declare double @cbrt(double) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare float @cbrtf(float) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare fp128 @cbrtf128(fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @cbrtl(ppc_fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare double @ceil(double) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare float @ceilf(float) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare fp128 @ceilf128(fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @ceill(ppc_fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare double @copysign(double, double) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare float @copysignf(float, float) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare fp128 @copysignf128(fp128, fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @copysignl(ppc_fp128, ppc_fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare double @cos(double) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare float @cosf(float) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare fp128 @cosf128(fp128) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare double @cosh(double) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare float @coshf(float) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare fp128 @coshf128(fp128) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @coshl(ppc_fp128) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @cosl(ppc_fp128) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare double @exp(double) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare double @exp10(double) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare float @exp10f(float) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare fp128 @exp10f128(fp128) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @exp10l(ppc_fp128) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare double @exp2(double) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare float @exp2f(float) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare fp128 @exp2f128(fp128) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @exp2l(ppc_fp128) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare float @expf(float) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare fp128 @expf128(fp128) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @expl(ppc_fp128) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare double @fdim(double, double) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare float @fdimf(float, float) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @fdiml(ppc_fp128, ppc_fp128) [[SQRT_ATTRS]]
 ; LINUX-NEXT: declare signext i32 @fegetenv(ptr)
 ; LINUX-NEXT: declare signext i32 @fegetmode(ptr)
 ; LINUX-NEXT: declare signext i32 @fesetenv(ptr)
 ; LINUX-NEXT: declare signext i32 @fesetmode(ptr)
-; LINUX-NEXT: declare double @floor(double)
-; LINUX-NEXT: declare float @floorf(float)
-; LINUX-NEXT: declare fp128 @floorf128(fp128)
-; LINUX-NEXT: declare ppc_fp128 @floorl(ppc_fp128)
-; LINUX-NEXT: declare double @fma(double, double, double)
-; LINUX-NEXT: declare float @fmaf(float, float, float)
-; LINUX-NEXT: declare fp128 @fmaf128(fp128, fp128, fp128)
-; LINUX-NEXT: declare ppc_fp128 @fmal(ppc_fp128, ppc_fp128, ppc_fp128)
-; LINUX-NEXT: declare double @fmax(double, double)
-; LINUX-NEXT: declare float @fmaxf(float, float)
-; LINUX-NEXT: declare fp128 @fmaxf128(fp128, fp128)
-; LINUX-NEXT: declare double @fmaximum(double, double)
-; LINUX-NEXT: declare double @fmaximum_num(double, double)
-; LINUX-NEXT: declare float @fmaximum_numf(float, float)
-; LINUX-NEXT: declare fp128 @fmaximum_numf128(fp128, fp128)
-; LINUX-NEXT: declare ppc_fp128 @fmaximum_numl(ppc_fp128, ppc_fp128)
-; LINUX-NEXT: declare float @fmaximumf(float, float)
-; LINUX-NEXT: declare fp128 @fmaximumf128(fp128, fp128)
-; LINUX-NEXT: declare ppc_fp128 @fmaximuml(ppc_fp128, ppc_fp128)
-; LINUX-NEXT: declare ppc_fp128 @fmaxl(ppc_fp128, ppc_fp128)
-; LINUX-NEXT: declare double @fmin(double, double)
-; LINUX-NEXT: declare float @fminf(float, float)
-; LINUX-NEXT: declare fp128 @fminf128(fp128, fp128)
-; LINUX-NEXT: declare double @fminimum(double, double)
-; LINUX-NEXT: declare double @fminimum_num(double, double)
-; LINUX-NEXT: declare float @fminimum_numf(float, float)
-; LINUX-NEXT: declare fp128 @fminimum_numf128(fp128, fp128)
-; LINUX-NEXT: declare ppc_fp128 @fminimum_numl(ppc_fp128, ppc_fp128)
-; LINUX-NEXT: declare float @fminimumf(float, float)
-; LINUX-NEXT: declare fp128 @fminimumf128(fp128, fp128)
-; LINUX-NEXT: declare ppc_fp128 @fminimuml(ppc_fp128, ppc_fp128)
-; LINUX-NEXT: declare ppc_fp128 @fminl(ppc_fp128, ppc_fp128)
-; LINUX-NEXT: declare double @fmod(double, double)
-; LINUX-NEXT: declare float @fmodf(float, float)
-; LINUX-NEXT: declare fp128 @fmodf128(fp128, fp128)
-; LINUX-NEXT: declare ppc_fp128 @fmodl(ppc_fp128, ppc_fp128)
+; LINUX-NEXT: declare double @floor(double) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare float @floorf(float) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare fp128 @floorf128(fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @floorl(ppc_fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare double @fma(double, double, double) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare float @fmaf(float, float, float) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare fp128 @fmaf128(fp128, fp128, fp128) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @fmal(ppc_fp128, ppc_fp128, ppc_fp128) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare double @fmax(double, double) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare float @fmaxf(float, float) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare fp128 @fmaxf128(fp128, fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare double @fmaximum(double, double) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare double @fmaximum_num(double, double) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare float @fmaximum_numf(float, float) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare fp128 @fmaximum_numf128(fp128, fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @fmaximum_numl(ppc_fp128, ppc_fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare float @fmaximumf(float, float) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare fp128 @fmaximumf128(fp128, fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @fmaximuml(ppc_fp128, ppc_fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @fmaxl(ppc_fp128, ppc_fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare double @fmin(double, double) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare float @fminf(float, float) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare fp128 @fminf128(fp128, fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare double @fminimum(double, double) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare double @fminimum_num(double, double) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare float @fminimum_numf(float, float) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare fp128 @fminimum_numf128(fp128, fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @fminimum_numl(ppc_fp128, ppc_fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare float @fminimumf(float, float) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare fp128 @fminimumf128(fp128, fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @fminimuml(ppc_fp128, ppc_fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @fminl(ppc_fp128, ppc_fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare double @fmod(double, double) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare float @fmodf(float, float) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare fp128 @fmodf128(fp128, fp128) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @fmodl(ppc_fp128, ppc_fp128) [[SQRT_ATTRS]]
 ; LINUX-NEXT: declare void @free(ptr allocptr noundef captures(none)) [[FREE_ATTRS:#[0-9]+]]
-; LINUX-NEXT: declare double @frexp(double, ptr)
-; LINUX-NEXT: declare float @frexpf(float, ptr)
-; LINUX-NEXT: declare fp128 @frexpf128(fp128, ptr)
-; LINUX-NEXT: declare ppc_fp128 @frexpl(ppc_fp128, ptr)
-; LINUX-NEXT: declare double @ldexp(double, i32 signext)
-; LINUX-NEXT: declare float @ldexpf(float, i32 signext)
-; LINUX-NEXT: declare fp128 @ldexpf128(fp128, i32 signext)
-; LINUX-NEXT: declare ppc_fp128 @ldexpl(ppc_fp128, i32 signext)
-; LINUX-NEXT: declare i64 @llrint(double)
-; LINUX-NEXT: declare i64 @llrintf(float)
-; LINUX-NEXT: declare i64 @llrintf128(fp128)
-; LINUX-NEXT: declare i64 @llrintl(ppc_fp128)
-; LINUX-NEXT: declare i64 @llround(double)
-; LINUX-NEXT: declare i64 @llroundf(float)
-; LINUX-NEXT: declare i64 @llroundf128(fp128)
-; LINUX-NEXT: declare i64 @llroundl(ppc_fp128)
-; LINUX-NEXT: declare double @log(double)
-; LINUX-NEXT: declare double @log10(double)
-; LINUX-NEXT: declare float @log10f(float)
-; LINUX-NEXT: declare fp128 @log10f128(fp128)
-; LINUX-NEXT: declare ppc_fp128 @log10l(ppc_fp128)
-; LINUX-NEXT: declare double @log2(double)
-; LINUX-NEXT: declare float @log2f(float)
-; LINUX-NEXT: declare fp128 @log2f128(fp128)
-; LINUX-NEXT: declare ppc_fp128 @log2l(ppc_fp128)
-; LINUX-NEXT: declare float @logf(float)
-; LINUX-NEXT: declare fp128 @logf128(fp128)
-; LINUX-NEXT: declare ppc_fp128 @logl(ppc_fp128)
-; LINUX-NEXT: declare i64 @lrint(double)
-; LINUX-NEXT: declare i64 @lrintf(float)
-; LINUX-NEXT: declare i64 @lrintf128(fp128)
-; LINUX-NEXT: declare i64 @lrintl(ppc_fp128)
-; LINUX-NEXT: declare i64 @lround(double)
-; LINUX-NEXT: declare i64 @lroundf(float)
-; LINUX-NEXT: declare i64 @lroundf128(fp128)
-; LINUX-NEXT: declare i64 @lroundl(ppc_fp128)
+; LINUX-NEXT: declare double @frexp(double, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
+; LINUX-NEXT: declare float @frexpf(float, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
+; LINUX-NEXT: declare fp128 @frexpf128(fp128, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @frexpl(ppc_fp128, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
+; LINUX-NEXT: declare double @ldexp(double, i32 signext) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare float @ldexpf(float, i32 signext) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare fp128 @ldexpf128(fp128, i32 signext) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @ldexpl(ppc_fp128, i32 signext) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare i64 @llrint(double) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare i64 @llrintf(float) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare i64 @llrintf128(fp128) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare i64 @llrintl(ppc_fp128) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare i64 @llround(double) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare i64 @llroundf(float) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare i64 @llroundf128(fp128) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare i64 @llroundl(ppc_fp128) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare double @log(double) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare double @log10(double) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare float @log10f(float) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare fp128 @log10f128(fp128) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @log10l(ppc_fp128) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare double @log2(double) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare float @log2f(float) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare fp128 @log2f128(fp128) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @log2l(ppc_fp128) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare float @logf(float) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare fp128 @logf128(fp128) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @logl(ppc_fp128) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare i64 @lrint(double) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare i64 @lrintf(float) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare i64 @lrintf128(fp128) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare i64 @lrintl(ppc_fp128) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare i64 @lround(double) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare i64 @lroundf(float) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare i64 @lroundf128(fp128) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare i64 @lroundl(ppc_fp128) [[SQRT_ATTRS]]
 ; LINUX-NEXT: declare noalias noundef ptr @malloc(i64 noundef) [[MALLOC_ATTRS:#[0-9]+]]
 ; LINUX-NEXT: declare ptr @memcpy(ptr, ptr, i64)
 ; LINUX-NEXT: declare ptr @memmove(ptr, ptr, i64)
 ; LINUX-NEXT: declare ptr @memset(ptr, i32 signext, i64)
-; LINUX-NEXT: declare double @modf(double, ptr)
-; LINUX-NEXT: declare float @modff(float, ptr)
-; LINUX-NEXT: declare fp128 @modff128(fp128, ptr)
-; LINUX-NEXT: declare ppc_fp128 @modfl(ppc_fp128, ptr)
-; LINUX-NEXT: declare double @nan(ptr)
-; LINUX-NEXT: declare float @nanf(ptr)
-; LINUX-NEXT: declare ppc_fp128 @nanl(ptr)
-; LINUX-NEXT: declare double @nearbyint(double)
-; LINUX-NEXT: declare float @nearbyintf(float)
-; LINUX-NEXT: declare fp128 @nearbyintf128(fp128)
-; LINUX-NEXT: declare ppc_fp128 @nearbyintl(ppc_fp128)
-; LINUX-NEXT: declare double @nexttoward(double, ppc_fp128)
-; LINUX-NEXT: declare float @nexttowardf(float, ppc_fp128)
-; LINUX-NEXT: declare ppc_fp128 @nexttowardl(ppc_fp128, ppc_fp128)
-; LINUX-NEXT: declare double @pow(double, double)
-; LINUX-NEXT: declare float @powf(float, float)
-; LINUX-NEXT: declare fp128 @powf128(fp128, fp128)
-; LINUX-NEXT: declare ppc_fp128 @powl(ppc_fp128, ppc_fp128)
-; LINUX-NEXT: declare double @remainder(double, double)
-; LINUX-NEXT: declare float @remainderf(float, float)
-; LINUX-NEXT: declare ppc_fp128 @remainderl(ppc_fp128, ppc_fp128)
-; LINUX-NEXT: declare double @remquo(double, double, ptr)
-; LINUX-NEXT: declare float @remquof(float, float, ptr)
-; LINUX-NEXT: declare ppc_fp128 @remquol(ppc_fp128, ppc_fp128, ptr)
-; LINUX-NEXT: declare double @rint(double)
-; LINUX-NEXT: declare float @rintf(float)
-; LINUX-NEXT: declare fp128 @rintf128(fp128)
-; LINUX-NEXT: declare ppc_fp128 @rintl(ppc_fp128)
-; LINUX-NEXT: declare double @round(double)
-; LINUX-NEXT: declare double @roundeven(double)
-; LINUX-NEXT: declare float @roundevenf(float)
-; LINUX-NEXT: declare fp128 @roundevenf128(fp128)
-; LINUX-NEXT: declare ppc_fp128 @roundevenl(ppc_fp128)
-; LINUX-NEXT: declare float @roundf(float)
-; LINUX-NEXT: declare fp128 @roundf128(fp128)
-; LINUX-NEXT: declare ppc_fp128 @roundl(ppc_fp128)
-; LINUX-NEXT: declare double @scalbln(double, i64)
-; LINUX-NEXT: declare float @scalblnf(float, i64)
-; LINUX-NEXT: declare ppc_fp128 @scalblnl(ppc_fp128, i64)
-; LINUX-NEXT: declare double @scalbn(double, i32 signext)
-; LINUX-NEXT: declare float @scalbnf(float, i32 signext)
-; LINUX-NEXT: declare ppc_fp128 @scalbnl(ppc_fp128, i32 signext)
-; LINUX-NEXT: declare double @sin(double)
-; LINUX-NEXT: declare void @sincos(double, ptr, ptr)
-; LINUX-NEXT: declare void @sincosf(float, ptr, ptr)
-; LINUX-NEXT: declare void @sincosf128(fp128, ptr, ptr)
-; LINUX-NEXT: declare void @sincosl(ppc_fp128, ptr, ptr)
-; LINUX-NEXT: declare float @sinf(float)
-; LINUX-NEXT: declare fp128 @sinf128(fp128)
-; LINUX-NEXT: declare double @sinh(double)
-; LINUX-NEXT: declare float @sinhf(float)
-; LINUX-NEXT: declare fp128 @sinhf128(fp128)
-; LINUX-NEXT: declare ppc_fp128 @sinhl(ppc_fp128)
-; LINUX-NEXT: declare ppc_fp128 @sinl(ppc_fp128)
+; LINUX-NEXT: declare double @modf(double, ptr noalias nonnull writeonly align 8 dereferenceable(8)) [[ARGMEM_WRITE_ATTRS]]
+; LINUX-NEXT: declare float @modff(float, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
+; LINUX-NEXT: declare fp128 @modff128(fp128, ptr noalias nonnull writeonly align 16 dereferenceable(16)) [[ARGMEM_WRITE_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @modfl(ppc_fp128, ptr noalias nonnull writeonly align 16 dereferenceable(16)) [[ARGMEM_WRITE_ATTRS]]
+; LINUX-NEXT: declare nofpclass(snan inf zero sub norm) double @nan(ptr readonly captures(none)) [[ARGMEM_READ_ATTRS:#[0-9]+]]
+; LINUX-NEXT: declare nofpclass(snan inf zero sub norm) float @nanf(ptr readonly captures(none)) [[ARGMEM_READ_ATTRS]]
+; LINUX-NEXT: declare nofpclass(snan inf zero sub norm) ppc_fp128 @nanl(ptr readonly captures(none)) [[ARGMEM_READ_ATTRS]]
+; LINUX-NEXT: declare double @nearbyint(double) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare float @nearbyintf(float) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare fp128 @nearbyintf128(fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @nearbyintl(ppc_fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare double @nexttoward(double, ppc_fp128) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare float @nexttowardf(float, ppc_fp128) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @nexttowardl(ppc_fp128, ppc_fp128) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare double @pow(double, double) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare float @powf(float, float) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare fp128 @powf128(fp128, fp128) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @powl(ppc_fp128, ppc_fp128) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare double @remainder(double, double) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare float @remainderf(float, float) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @remainderl(ppc_fp128, ppc_fp128) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare double @remquo(double, double, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS:#[0-9]+]]
+; LINUX-NEXT: declare float @remquof(float, float, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @remquol(ppc_fp128, ppc_fp128, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS]]
+; LINUX-NEXT: declare double @rint(double) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare float @rintf(float) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare fp128 @rintf128(fp128) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @rintl(ppc_fp128) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare double @round(double) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare double @roundeven(double) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare float @roundevenf(float) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare fp128 @roundevenf128(fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @roundevenl(ppc_fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare float @roundf(float) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare fp128 @roundf128(fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @roundl(ppc_fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare double @scalbln(double, i64) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare float @scalblnf(float, i64) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @scalblnl(ppc_fp128, i64) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare double @scalbn(double, i32 signext) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare float @scalbnf(float, i32 signext) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @scalbnl(ppc_fp128, i32 signext) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare double @sin(double) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare void @sincos(double, ptr noalias nonnull writeonly align 8 dereferenceable(8), ptr noalias nonnull writeonly align 8 dereferenceable(8)) [[ARGMEM_ERRNO_WRITE_ATTRS]]
+; LINUX-NEXT: declare void @sincosf(float, ptr noalias nonnull writeonly align 4 dereferenceable(4), ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS]]
+; LINUX-NEXT: declare void @sincosf128(fp128, ptr noalias nonnull writeonly align 16 dereferenceable(16), ptr noalias nonnull writeonly align 16 dereferenceable(16)) [[ARGMEM_ERRNO_WRITE_ATTRS]]
+; LINUX-NEXT: declare void @sincosl(ppc_fp128, ptr noalias nonnull writeonly align 16 dereferenceable(16), ptr noalias nonnull writeonly align 16 dereferenceable(16)) [[ARGMEM_ERRNO_WRITE_ATTRS]]
+; LINUX-NEXT: declare float @sinf(float) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare fp128 @sinf128(fp128) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare double @sinh(double) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare float @sinhf(float) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare fp128 @sinhf128(fp128) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @sinhl(ppc_fp128) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @sinl(ppc_fp128) [[SQRT_ATTRS]]
 ; LINUX-NEXT: declare nofpclass(ninf nsub nnorm) double @sqrt(double) [[SQRT_ATTRS:#[0-9]+]]
 ; LINUX-NEXT: declare nofpclass(ninf nsub nnorm) float @sqrtf(float) [[SQRT_ATTRS:#[0-9]+]]
-; LINUX-NEXT: declare fp128 @sqrtf128(fp128)
-; LINUX-NEXT: declare ppc_fp128 @sqrtl(ppc_fp128)
-; LINUX-NEXT: declare double @tan(double)
-; LINUX-NEXT: declare float @tanf(float)
-; LINUX-NEXT: declare fp128 @tanf128(fp128)
-; LINUX-NEXT: declare double @tanh(double)
-; LINUX-NEXT: declare float @tanhf(float)
-; LINUX-NEXT: declare fp128 @tanhf128(fp128)
-; LINUX-NEXT: declare ppc_fp128 @tanhl(ppc_fp128)
-; LINUX-NEXT: declare ppc_fp128 @tanl(ppc_fp128)
-; LINUX-NEXT: declare double @tgamma(double)
-; LINUX-NEXT: declare float @tgammaf(float)
-; LINUX-NEXT: declare ppc_fp128 @tgammal(ppc_fp128)
-; LINUX-NEXT: declare double @trunc(double)
-; LINUX-NEXT: declare float @truncf(float)
-; LINUX-NEXT: declare fp128 @truncf128(fp128)
-; LINUX-NEXT: declare ppc_fp128 @truncl(ppc_fp128)
-; LINUX-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
-; LINUX-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
-; LINUX-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
-; LINUX-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
+; LINUX-NEXT: declare nofpclass(ninf nsub nnorm) fp128 @sqrtf128(fp128) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare nofpclass(ninf nsub nnorm) ppc_fp128 @sqrtl(ppc_fp128) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare double @tan(double) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare float @tanf(float) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare fp128 @tanf128(fp128) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare double @tanh(double) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare float @tanhf(float) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare fp128 @tanhf128(fp128) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @tanhl(ppc_fp128) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @tanl(ppc_fp128) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare double @tgamma(double) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare float @tgammaf(float) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @tgammal(ppc_fp128) [[SQRT_ATTRS]]
+; LINUX-NEXT: declare double @trunc(double) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare float @truncf(float) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare fp128 @truncf128(fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare ppc_fp128 @truncl(ppc_fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; LINUX-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
+; LINUX-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
+; LINUX-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
+; LINUX-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
+; LINUX-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
+; LINUX-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
+; LINUX-NEXT: attributes [[ARGMEM_READ_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
+; LINUX-NEXT: attributes [[ARGMEM_ERRNO_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write, errnomem: write) }

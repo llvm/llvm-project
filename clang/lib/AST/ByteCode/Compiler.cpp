@@ -4583,6 +4583,9 @@ bool Compiler<Emitter>::VisitBlockExpr(const BlockExpr *E) {
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitCXXTypeidExpr(const CXXTypeidExpr *E) {
+  if (E->containsErrors())
+    return false;
+
   const Type *TypeInfoType = E->getType().getTypePtr();
 
   auto canonType = [](const Type *T) {
@@ -4722,6 +4725,35 @@ bool Compiler<Emitter>::VisitCXXRewrittenBinaryOperator(
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitPseudoObjectExpr(const PseudoObjectExpr *E) {
+  // Diagnose a relocated BPF enumerator, i.e., of an enum with the
+  // preserve_access_index attribute, which is not a constant expression. Return
+  // true if diagnosed.
+  auto getAccessIndexConstantDecl = [&]() -> const EnumConstantDecl * {
+    const auto *DRE = dyn_cast<DeclRefExpr>(E->getSyntacticForm());
+    if (!DRE)
+      return nullptr;
+    const auto *ECD = dyn_cast<EnumConstantDecl>(DRE->getDecl());
+    if (!ECD)
+      return nullptr;
+    const auto *ED = dyn_cast<EnumDecl>(ECD->getDeclContext());
+    if (ED && ED->hasAttr<BPFPreserveAccessIndexAttr>())
+      return ECD;
+    return nullptr;
+  };
+
+  if (const EnumConstantDecl *ECD = getAccessIndexConstantDecl()) {
+    const auto *ED = cast<EnumDecl>(ECD->getDeclContext());
+    // An anonymous enum is only relocated through its typedef name.
+    QualType EnumTy;
+    if (ED->getDeclName())
+      EnumTy = Ctx.getASTContext().getCanonicalTagType(ED);
+    else if (const TypedefNameDecl *TD = ED->getTypedefNameForAnonDecl())
+      EnumTy = Ctx.getASTContext().getTypeDeclType(TD);
+    else
+      return false;
+
+    return this->emitInvalidAccessIndexAttr(ECD, EnumTy.getTypePtr(), E);
+  }
 
   for (const Expr *SemE : E->semantics()) {
     if (auto *OVE = dyn_cast<OpaqueValueExpr>(SemE)) {

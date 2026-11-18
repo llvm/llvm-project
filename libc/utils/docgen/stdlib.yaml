@@ -1,4 +1,38 @@
+standard: c23
+posix: posix-2024
 c-reference-root: program
+types:
+  constraint_handler_t:
+    c-definition: K.3.6
+    c-reference: error/set_constraint_handler_s
+  div_t:
+    c-definition: '7.24'
+    c-reference: numeric/math/div
+    in-latest-posix: ''
+  errno_t:
+    c-definition: K.3.6
+    c-reference: error
+  ldiv_t:
+    c-definition: '7.24'
+    c-reference: numeric/math/div
+    in-latest-posix: ''
+  lldiv_t:
+    c-definition: '7.24'
+    c-reference: numeric/math/div
+    in-latest-posix: ''
+  locale_t:
+    in-latest-posix: ''
+  rsize_t:
+    c-definition: K.3.6
+    c-reference: error
+  size_t:
+    c-definition: '7.24'
+    c-reference: types/size_t
+    in-latest-posix: ''
+  wchar_t:
+    c-definition: '7.24'
+    c-reference: types
+    in-latest-posix: ''
 functions:
   _Exit:
     c-definition: 7.24.4.5
@@ -186,6 +220,96 @@ functions:
     c-definition: 7.24.7.3
     c-reference: string/multibyte/wctomb
     in-latest-posix: ''
+  a64l:
+    in-latest-posix: ''
+  clearenv:
+    extension: gnu
+  drand48:
+    in-latest-posix: ''
+  erand48:
+    in-latest-posix: ''
+  getloadavg:
+    extension: bsd
+  getsubopt:
+    in-latest-posix: ''
+  grantpt:
+    in-latest-posix: ''
+  initstate:
+    in-latest-posix: ''
+  jrand48:
+    in-latest-posix: ''
+  l64a:
+    in-latest-posix: ''
+  lcong48:
+    in-latest-posix: ''
+  lrand48:
+    in-latest-posix: ''
+  mkdtemp:
+    in-latest-posix: ''
+  mkostemp:
+    in-latest-posix: ''
+  mkstemp:
+    in-latest-posix: ''
+  mrand48:
+    in-latest-posix: ''
+  nrand48:
+    in-latest-posix: ''
+  posix_memalign:
+    in-latest-posix: ''
+  posix_openpt:
+    in-latest-posix: ''
+  ptsname:
+    in-latest-posix: ''
+  ptsname_r:
+    in-latest-posix: ''
+  putenv:
+    in-latest-posix: ''
+  qsort_r:
+    in-latest-posix: ''
+  rand_r:
+    removed-in-posix-2024: ''
+  random:
+    in-latest-posix: ''
+  realpath:
+    in-latest-posix: ''
+  secure_getenv:
+    in-latest-posix: ''
+  seed48:
+    in-latest-posix: ''
+  setenv:
+    in-latest-posix: ''
+  setkey:
+    in-latest-posix: ''
+  setstate:
+    in-latest-posix: ''
+  srand48:
+    in-latest-posix: ''
+  srandom:
+    in-latest-posix: ''
+  strfromf128:
+    c-definition: 7.24.1.3
+    c-reference: string/byte/strfromf
+  strfromf16:
+    c-definition: 7.24.1.3
+    c-reference: string/byte/strfromf
+  strtod_l:
+    extension: bsd
+  strtof_l:
+    extension: bsd
+  strtol_l:
+    extension: bsd
+  strtold_l:
+    extension: bsd
+  strtoll_l:
+    extension: bsd
+  strtoul_l:
+    extension: bsd
+  strtoull_l:
+    extension: bsd
+  unlockpt:
+    in-latest-posix: ''
+  unsetenv:
+    in-latest-posix: ''
 macros:
   EXIT_FAILURE:
     c-definition: '7.24'
@@ -206,3 +330,7 @@ macros:
   __STDC_VERSION_STDLIB_H__:
     c-definition: '7.24'
 
+  'NULL':
+    c-definition: '7.24'
+    c-reference: types/NULL
+    in-latest-posix: ''
