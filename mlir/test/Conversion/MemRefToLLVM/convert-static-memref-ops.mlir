@@ -359,6 +359,21 @@ func.func @memref.reshape_index(%arg0: memref<?x?xi32>, %shape: memref<1xindex>)
   return %1 : memref<?xi32>
 }
 
+// CHECK-LABEL: func @memref.reshape_i32_shape
+// CHECK-SAME:    %[[arg:.*]]: memref<1x?x?x1xf32>, %[[shape:.*]]: memref<2xi32>
+func.func @memref.reshape_i32_shape(%arg: memref<1x?x?x1xf32>, %shape: memref<2xi32>) -> memref<?x?xf32> {
+  // CHECK-DAG: %[[arg_cast:.*]] = builtin.unrealized_conversion_cast %[[arg]] : memref<1x?x?x1xf32> to !llvm.struct<(ptr, ptr, i64, array<4 x i64>, array<4 x i64>)>
+  // CHECK-DAG: %[[shape_cast:.*]] = builtin.unrealized_conversion_cast %[[shape]] : memref<2xi32> to !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
+  // When the shape memref element type (i32) differs from the LLVM index type (i64),
+  // the lowering must emit llvm.zext rather than an unresolvable unrealized_conversion_cast.
+  // CHECK: %[[shape_load:.*]] = llvm.load {{.*}} : !llvm.ptr -> i32
+  // CHECK-NEXT: %[[zext:.*]] = llvm.zext %[[shape_load]] : i32 to i64
+  %0 = memref.reshape %arg(%shape) : (memref<1x?x?x1xf32>, memref<2xi32>) -> memref<?x?xf32>
+  return %0 : memref<?x?xf32>
+}
+
+// -----
+
 // CHECK-LABEL: @memref_memory_space_cast
 func.func @memref_memory_space_cast(%input : memref<?xf32>) -> memref<?xf32, 1> {
   %cast = memref.memory_space_cast %input : memref<?xf32> to memref<?xf32, 1>
