@@ -93,7 +93,6 @@ void syncThreadsAligned(atomic::OrderingTy Ordering) {
 
 // TODO: Don't have wavefront lane locks. Possibly can't have them.
 void unsetLock(omp_lock_t *) { __builtin_trap(); }
-int testLock(omp_lock_t *) { __builtin_trap(); }
 void initLock(omp_lock_t *) { __builtin_trap(); }
 void destroyLock(omp_lock_t *) { __builtin_trap(); }
 void setLock(omp_lock_t *) { __builtin_trap(); }
@@ -149,10 +148,6 @@ void unsetLock(omp_lock_t *Lock) {
       reinterpret_cast<uint32_t *>(Lock), UNSET, atomic::seq_cst);
 }
 
-int testLock(omp_lock_t *Lock) {
-  return atomic::add(reinterpret_cast<uint32_t *>(Lock), 0u, atomic::seq_cst);
-}
-
 void initLock(omp_lock_t *Lock) { unsetLock(Lock); }
 
 void destroyLock(omp_lock_t *Lock) { unsetLock(Lock); }
@@ -206,9 +201,6 @@ void namedBarrier() {
 void unsetLock(omp_lock_t *Lock) {
   atomic::store((int32_t *)Lock, 0, atomic::seq_cst);
 }
-int testLock(omp_lock_t *Lock) {
-  return atomic::add((int32_t *)Lock, 0, atomic::seq_cst);
-}
 void initLock(omp_lock_t *Lock) { unsetLock(Lock); }
 void destroyLock(omp_lock_t *Lock) { unsetLock(Lock); }
 void setLock(omp_lock_t *Lock) {
@@ -223,6 +215,13 @@ void syncThreadsAligned(atomic::OrderingTy Ordering) {
   synchronize::threads(Ordering);
 }
 #endif
+
+// A lock is a 32-bit word that is 1 while the lock is held and 0 otherwise.
+// omp_test_lock tries once to take the lock, and reports whether it did.
+int testLock(omp_lock_t *Lock) {
+  return atomic::cas(reinterpret_cast<uint32_t *>(Lock), 0u, 1u,
+                     atomic::seq_cst, atomic::seq_cst);
+}
 
 } // namespace impl
 
