@@ -2163,11 +2163,12 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
 /// unless \p MinOrMaxResult equals the start value of its MinOrMax reduction.
 /// In that case, return the start value of the FindLastIV reduction instead.
 /// Returns true if the pattern was handled successfully, false otherwise.
-static bool handleFirstArgMinOrMax(
-    VPlan &Plan, VPReductionPHIRecipe *MinOrMaxPhiR,
-    VPReductionPHIRecipe *FindLastIVPhiR, VPWidenIntOrFpInductionRecipe *WideIV,
-    VPInstruction *MinOrMaxResult, VPInstruction *FindIVSelect,
-    VPRecipeBase *FindIVCmp, VPInstruction *FindIVRdxResult) {
+static bool handleFirstArgMinOrMax(VPlan &Plan,
+                                   VPReductionPHIRecipe *MinOrMaxPhiR,
+                                   VPReductionPHIRecipe *FindLastIVPhiR,
+                                   VPWidenIntOrFpInductionRecipe *WideIV,
+                                   VPInstruction *MinOrMaxResult,
+                                   VPInstruction *FindIVRdxResult) {
   assert(!FindLastIVPhiR->isInLoop() && !FindLastIVPhiR->isOrdered() &&
          "inloop and ordered reductions not supported");
   assert(FindLastIVPhiR->getVFScaleFactor() == 1 &&
@@ -2472,8 +2473,7 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
     if (IsStrictPredicate) {
       if (!handleFirstArgMinOrMax(Plan, MinOrMaxPhiR, FindIVPhiR,
                                   cast<VPWidenIntOrFpInductionRecipe>(IVOp),
-                                  MinOrMaxResult, FindIVSelect, FindIVCmp,
-                                  FindIVRdxResult))
+                                  MinOrMaxResult, FindIVRdxResult))
         return false;
       continue;
     }
