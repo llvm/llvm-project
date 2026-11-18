@@ -5869,15 +5869,19 @@ let TargetPrefix = "x86" in {
                         [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<3>>]>;
 
   // ACE - internal intrinsics
+  // These write one column or row and keep the rest of the tile, so the tile
+  // being written is an argument as well as the result.
   def int_x86_acev1_tilemovcolinsert_internal :
               ClangBuiltin<"__builtin_ia32_tilemovcolinsert_internal">,
               Intrinsic<[llvm_x86amx_ty],
-                        [llvm_i16_ty, llvm_i16_ty, llvm_v16i32_ty, llvm_i32_ty],
+                        [llvm_i16_ty, llvm_i16_ty, llvm_x86amx_ty,
+                         llvm_v16i32_ty, llvm_i32_ty],
                         []>;
   def int_x86_acev1_tilemovrowinsert_internal :
               ClangBuiltin<"__builtin_ia32_tilemovrowinsert_internal">,
               Intrinsic<[llvm_x86amx_ty],
-                        [llvm_i16_ty, llvm_i16_ty, llvm_v16i32_ty, llvm_i32_ty],
+                        [llvm_i16_ty, llvm_i16_ty, llvm_x86amx_ty,
+                         llvm_v16i32_ty, llvm_i32_ty],
                         []>;
   def int_x86_acev1_top2bf16ps_internal :
               ClangBuiltin<"__builtin_ia32_top2bf16ps_internal">,

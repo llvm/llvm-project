@@ -2,6 +2,14 @@
 ; RUN:   -verify-machineinstrs | FileCheck %s --implicit-check-not=tilemovrow
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+amx-tile,+amx-int8,+acev1 \
 ; RUN:   -verify-machineinstrs | FileCheck %s --implicit-check-not=tilemovrow
+; The volatile tile model only runs at -O0, so that is the only level at which
+; an ACE-aware subtarget could divert plain AMX tiles away from it.
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+amx-tile,+amx-int8 -O0 \
+; RUN:   -verify-machineinstrs | FileCheck %s --check-prefix=O0 \
+; RUN:   --implicit-check-not=tilemovrow
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+amx-tile,+amx-int8,+acev1 \
+; RUN:   -O0 -verify-machineinstrs | FileCheck %s --check-prefix=O0 \
+; RUN:   --implicit-check-not=tilemovrow
 
 ; Test that a function holding only plain AMX intrinsics lowers the same way
 ; whether or not the target also supports ACE v1.
@@ -19,11 +27,18 @@ define void @amx_load_store_on_ace_target(ptr %in, ptr %out) nounwind {
   ret void
 }
 
+; At -O0 the tile has to go through the volatile model, which stores it with
+; TILESTORED and reads it straight back with TILELOADD. An ACE-aware subtarget
+; used to skip that for AMX tiles too, leaving the tile register live instead.
 define <256 x i32> @amx_tile_to_vector_on_ace_target() nounwind {
 ; CHECK-LABEL: amx_tile_to_vector_on_ace_target:
 ; CHECK:         movb $1, {{.*}}(%rsp)
 ; CHECK:         tilezero %tmm0
 ; CHECK:         tilestored %tmm0, (%rdi,%rsi)
+; O0-LABEL: amx_tile_to_vector_on_ace_target:
+; O0:         tilezero %tmm0
+; O0:         tilestored %tmm0, (%rsi,%r8)
+; O0:         tileloadd (%rsi,%r8), %tmm0
   %t = call x86_amx @llvm.x86.tilezero.internal(i16 16, i16 64)
   %v = call <256 x i32> @llvm.x86.cast.tile.to.vector.v256i32(x86_amx %t)
   ret <256 x i32> %v

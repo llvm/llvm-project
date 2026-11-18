@@ -39,7 +39,6 @@
 //===----------------------------------------------------------------------===//
 //
 #include "X86.h"
-#include "X86Subtarget.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -308,11 +307,11 @@ std::pair<Value *, Value *> getShape(IntrinsicInst *II, unsigned OpNo) {
     }
     break;
   }
-  // ACE TILEMOV intrinsics - move ZMM to tile row/column
-  // Pattern: (m, n, zmm_src, idx) -> tile
+  // ACE TILEMOV intrinsics - move ZMM into one row or column of a tile
+  // Pattern: (m, n, tile, zmm_src, idx) -> tile
   case Intrinsic::x86_acev1_tilemovcolinsert_internal:
   case Intrinsic::x86_acev1_tilemovrowinsert_internal: {
-    // Output tile shape
+    assert(OpNo == 2 && "Illegal Operand Number.");
     Row = II->getArgOperand(0);
     Col = II->getArgOperand(1);
     break;
@@ -1463,11 +1462,10 @@ bool lowerAmxType(Function &F, const TargetMachine *TM,
     // sure the amx data is volatile, that is necessary for AMX fast
     // register allocation.
     // This spills tiles with TILESTORED and reloads them with TILELOADD, which
-    // ACE cannot do under palette 2. ACE tile data is left non-volatile, so the
-    // tile registers stay live and X86FastPreTileConfig spills them instead.
-    const X86Subtarget *ST =
-        static_cast<const X86Subtarget *>(TM->getSubtargetImpl(F));
-    if (!F.hasFnAttribute(Attribute::OptimizeNone) && !(ST && ST->hasACEV1())) {
+    // ACE cannot do under palette 2. volatileTileData leaves ACE tiles alone
+    // per value, so the tile registers stay live and X86FastPreTileConfig
+    // spills them instead.
+    if (!F.hasFnAttribute(Attribute::OptimizeNone)) {
       X86VolatileTileData VTD(F);
       C = VTD.volatileTileData() || C;
     }

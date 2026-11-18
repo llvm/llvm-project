@@ -4,7 +4,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+acev1 -O0 \
 ; RUN:   -verify-machineinstrs | FileCheck %s --check-prefix=ASM
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+acev1 \
-; RUN:   -verify-machineinstrs | FileCheck %s --check-prefix=ASM
+; RUN:   -verify-machineinstrs | FileCheck %s --check-prefixes=ASM,O2
 
 ; Test the tile row and column writes modelled as read-modify-write: they write
 ; one row or column and keep the rest, so the destination is a source as well.
@@ -66,24 +66,54 @@ entry:
   ret void
 }
 
-; These intrinsics take no incoming tile, so the tied source is undef.
-define void @write_without_an_incoming_tile(ptr %out, <16 x i32> %v, i32 %idx) nounwind {
-; ASM-LABEL: write_without_an_incoming_tile:
+; A row write merges into the tile it is given, so the tile it writes and the
+; tile it returns are the same one.
+define void @write_merges_into_the_given_tile(ptr %out, <16 x i32> %v, i32 %idx) nounwind {
+; ASM-LABEL: write_merges_into_the_given_tile:
 ; ASM:         ldtilecfg
-; ASM:         tilemovrow %{{[a-z0-9]+}}, %zmm{{[0-9]+}}, %tmm{{[0-7]}}
-; ASM:         tilemovcol %{{[a-z0-9]+}}, %zmm{{[0-9]+}}, %tmm{{[0-7]}}
+; ASM:         tilezero %[[T:tmm[0-7]]]
+; ASM:         tilemovrow %{{[a-z0-9]+}}, %zmm{{[0-9]+}}, %[[T]]
+; ASM:         tilemovcol %{{[a-z0-9]+}}, %zmm{{[0-9]+}}, %[[T]]
 entry:
-  %row = call x86_amx @llvm.x86.acev1.tilemovrowinsert.internal(i16 16, i16 64, <16 x i32> %v, i32 %idx)
-  %col = call x86_amx @llvm.x86.acev1.tilemovcolinsert.internal(i16 16, i16 64, <16 x i32> %v, i32 %idx)
-  %a = call <16 x i32> @llvm.x86.acev1.tilemovrowextract.internal(i16 16, i16 64, x86_amx %row, i32 0)
-  %b = call <16 x i32> @llvm.x86.acev1.tilemovrowextract.internal(i16 16, i16 64, x86_amx %col, i32 0)
-  %s = add <16 x i32> %a, %b
-  store <16 x i32> %s, ptr %out
+  %t = call x86_amx @llvm.x86.acev1.tilezero.internal(i16 16, i16 64)
+  %row = call x86_amx @llvm.x86.acev1.tilemovrowinsert.internal(i16 16, i16 64, x86_amx %t, <16 x i32> %v, i32 %idx)
+  %col = call x86_amx @llvm.x86.acev1.tilemovcolinsert.internal(i16 16, i16 64, x86_amx %row, <16 x i32> %v, i32 %idx)
+  %a = call <16 x i32> @llvm.x86.acev1.tilemovrowextract.internal(i16 16, i16 64, x86_amx %col, i32 0)
+  store <16 x i32> %a, ptr %out
+  ret void
+}
+
+; Two tiles written alternately have to stay in registers of their own, or the
+; second write to %t0 lands in the tile %t1 is using.
+define void @interleaved_writes_keep_their_own_tiles(ptr %out0, ptr %out1, <16 x i32> %a, <16 x i32> %b, <16 x i32> %c) nounwind {
+; At -O0 both tiles live on the stack, so only the optimised run says anything
+; about which register each one gets. The registers are spelled out rather than
+; captured because the point of the test is that the two tiles differ.
+; O2-LABEL: interleaved_writes_keep_their_own_tiles:
+; O2:         ldtilecfg
+; O2:         tilezero %tmm0
+; O2-NEXT:    tilezero %tmm1
+; O2:         tilemovrow %{{[a-z0-9]+}}, %zmm0, %tmm0
+; O2-NEXT:    tilemovrow %{{[a-z0-9]+}}, %zmm1, %tmm1
+; O2:         tilemovrow %{{[a-z0-9]+}}, %zmm2, %tmm0
+; O2-NEXT:    tilemovrow $0, %tmm0, %zmm0
+; O2-NEXT:    tilemovrow $0, %tmm1, %zmm1
+entry:
+  %z0 = call x86_amx @llvm.x86.acev1.tilezero.internal(i16 16, i16 64)
+  %z1 = call x86_amx @llvm.x86.acev1.tilezero.internal(i16 16, i16 64)
+  %t0 = call x86_amx @llvm.x86.acev1.tilemovrowinsert.internal(i16 16, i16 64, x86_amx %z0, <16 x i32> %a, i32 0)
+  %t1 = call x86_amx @llvm.x86.acev1.tilemovrowinsert.internal(i16 16, i16 64, x86_amx %z1, <16 x i32> %b, i32 0)
+  %t2 = call x86_amx @llvm.x86.acev1.tilemovrowinsert.internal(i16 16, i16 64, x86_amx %t0, <16 x i32> %c, i32 1)
+  ; Row 0 of %t2 still holds %a, and row 0 of %t1 still holds %b.
+  %r0 = call <16 x i32> @llvm.x86.acev1.tilemovrowextract.internal(i16 16, i16 64, x86_amx %t2, i32 0)
+  %r1 = call <16 x i32> @llvm.x86.acev1.tilemovrowextract.internal(i16 16, i16 64, x86_amx %t1, i32 0)
+  store <16 x i32> %r0, ptr %out0
+  store <16 x i32> %r1, ptr %out1
   ret void
 }
 
 declare x86_amx @llvm.x86.acev1.tilezero.internal(i16, i16)
 declare x86_amx @llvm.x86.acev1.top2bf16ps.internal(i16, i16, i16, x86_amx, <32 x bfloat>, <32 x bfloat>)
 declare <16 x i32> @llvm.x86.acev1.tilemovrowextract.internal(i16, i16, x86_amx, i32)
-declare x86_amx @llvm.x86.acev1.tilemovrowinsert.internal(i16, i16, <16 x i32>, i32)
-declare x86_amx @llvm.x86.acev1.tilemovcolinsert.internal(i16, i16, <16 x i32>, i32)
+declare x86_amx @llvm.x86.acev1.tilemovrowinsert.internal(i16, i16, x86_amx, <16 x i32>, i32)
+declare x86_amx @llvm.x86.acev1.tilemovcolinsert.internal(i16, i16, x86_amx, <16 x i32>, i32)

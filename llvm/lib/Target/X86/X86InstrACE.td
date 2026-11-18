@@ -87,13 +87,14 @@ multiclass ACE_TILEMOVE<bits<8> OpcImm, bits<8> OpcReg, string Opstr,
                                  (ins u8imm:$dst, VR512:$src, GR32:$idx), []>;
   }
 
-  let isPseudo = true, hasNoSchedulingInfo = 1, usesCustomInserter = 1 in
+  let isPseudo = true, hasNoSchedulingInfo = 1, usesCustomInserter = 1,
+      Constraints = "$src0 = $dst" in
   def "P"#NAME#"treV"
       : PseudoI<(outs TILE:$dst),
-                (ins GR16:$row, GR16:$col, VR512:$src, GR32:$idx),
+                (ins GR16:$row, GR16:$col, TILE:$src0, VR512:$src, GR32:$idx),
                 [(set TILE:$dst,
                   (!cast<Intrinsic>("int_x86_acev1_"#IntName#"_internal")
-                   GR16:$row, GR16:$col, VR512:$src, GR32:$idx))]>;
+                   GR16:$row, GR16:$col, TILE:$src0, VR512:$src, GR32:$idx))]>;
 }
 
 // Outer products accumulate into the destination tile, so $src1 is tied to it.
