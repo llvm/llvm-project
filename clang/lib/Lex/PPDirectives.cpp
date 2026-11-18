@@ -1153,13 +1153,22 @@ OptionalFileEntryRef Preprocessor::LookupFile(
       return false;
     };
 
-    // Candidate names for FromFile: its path relative to each search directory
-    // containing it, innermost first. Directories are matched by identity, as
-    // the file may have been reached via another spelling (e.g. "./x/...").
-    // FIXME: With nested search directories (-Ix -Ix/sub) the original name is
-    // ambiguous; we assume the innermost. Fixing this requires recording the
-    // search directory when a module header is entered.
+    // Candidate names for FromFile. A module header is entered under the path
+    // given in its module map (relative to the module's root directory), so
+    // that is the name it was found as, even if nested search directories
+    // (-Ix -Ix/sub) make it reachable under several names. Otherwise, fall back
+    // to its path relative to each search directory containing it, innermost
+    // first. Directories are matched by identity, as the file may have been
+    // reached via another spelling (e.g. "./x/...").
     SmallVector<std::string, 4> Names;
+    if (CurLexerSubmodule)
+      for (Module::HeaderKind HK :
+           {Module::HK_Normal, Module::HK_Textual, Module::HK_Private,
+            Module::HK_PrivateTextual})
+        for (const Module::Header &H : CurLexerSubmodule->getHeaders(HK))
+          if (&H.Entry.getFileEntry() == FromFile &&
+              !H.PathRelativeToRootModuleDirectory.empty())
+            Names.push_back(H.PathRelativeToRootModuleDirectory);
     StringRef BaseName;
     if (CurPPLexer)
       if (OptionalFileEntryRef CurFE = CurPPLexer->getFileEntry()) {
@@ -2184,12 +2193,18 @@ Preprocessor::getIncludeNextStart(const Token &IncludeNextTok) const {
     Lookup = nullptr;
     Diag(IncludeNextTok, diag::pp_include_next_in_primary);
   } else if (CurLexerSubmodule) {
-    // Start looking up in the directory *after* the one in which the current
-    // file would be found, if any.
     assert(CurPPLexer && "#include_next directive in macro?");
-    if (auto FE = CurPPLexer->getFileEntry())
-      LookupFromFile = *FE;
-    Lookup = nullptr;
+    if (Lookup) {
+      // The file was found by walking the search path, so we know the exact
+      // directory it came from. Start looking after it.
+      ++Lookup;
+    } else {
+      // The file was not found via a search directory (e.g. it was reached
+      // through a module map). Start looking in the directory *after* the one
+      // in which the current file would be found, if any.
+      if (auto FE = CurPPLexer->getFileEntry())
+        LookupFromFile = *FE;
+    }
   } else if (!Lookup) {
     // The current file was not found by walking the include path. Either it
     // is the primary file (handled above), or it was found by absolute path,
