@@ -1866,7 +1866,11 @@ void AliasAnalysis::disableSourceCache() {
 AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
                                                bool getLastInstantiationPoint,
                                                bool collectScopedOrigins) {
-  if (!sourceCacheEnabled)
+  // While the source of an allocation is in progress, the walk does not
+  // follow that allocation into the descriptor it is stored into, so the
+  // sources that depend on it differ from the ones of a query that is not
+  // nested. Neither use nor record cached sources then.
+  if (!sourceCacheEnabled || !allocationsInProgress.empty())
     return getSourceImpl(v, getLastInstantiationPoint, collectScopedOrigins);
 
   // Key on the queried value and the two boolean flags. Recursive sub-queries

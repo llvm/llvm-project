@@ -7,6 +7,12 @@
 // RUN:   -pass-pipeline='builtin.module(func.func(test-fir-alias-analysis))' \
 // RUN:   2>&1 | FileCheck %s
 
+// The answers do not depend on the source cache.
+// RUN: fir-opt %s -split-input-file -o /dev/null --mlir-disable-threading \
+// RUN:   --allow-unregistered-dialect \
+// RUN:   -pass-pipeline='builtin.module(func.func(test-fir-alias-analysis{source-cache=true}))' \
+// RUN:   2>&1 | FileCheck %s
+
 // subroutine dummy_var(j, n)
 //   integer, allocatable :: j
 //   integer :: n
