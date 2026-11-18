@@ -1,0 +1,14 @@
+! RUN: %python %S/test_errors.py %s %flang_fc1
+! Managed objects in host subprograms may not be SAVEd unless allocatable.
+subroutine s1()
+  !ERROR: Saved object 'a' in host code may not have ATTRIBUTES(MANAGED) unless allocatable
+  real, managed, save :: a(10)
+  a = 1.0
+end subroutine
+
+subroutine s2()
+  real, managed, save, allocatable :: b(:)
+  real, managed :: c(10)
+  allocate(b(10))
+  c = 1.0
+end subroutine

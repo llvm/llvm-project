@@ -1302,9 +1302,10 @@ void CheckHelper::CheckObjectEntity(
     }
     if (subpDetails /* not a module variable */ && IsSaved(symbol) &&
         !inDeviceSubprogram && !IsAllocatable(symbol) &&
-        attr == common::CUDADataAttr::Device) {
+        (attr == common::CUDADataAttr::Device ||
+            attr == common::CUDADataAttr::Managed)) {
       messages_.Say(
-          "Saved object '%s' in host code may not have ATTRIBUTES(DEVICE) unless allocatable"_err_en_US,
+          "Saved object '%s' in host code may not have ATTRIBUTES(%s) unless allocatable"_err_en_US,
           symbol.name(),
           parser::ToUpperCaseLetters(common::EnumToString(attr)));
     }
