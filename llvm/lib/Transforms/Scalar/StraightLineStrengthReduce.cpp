@@ -510,47 +510,6 @@ private:
     return S;
   }
 
-  /// Wrapper for getMinusSCEV that computes the difference between two SCEVs.
-  /// 1. If A == B, returns 0.
-  /// 2. If both SCEVs are Div/Truncate/ZeroExtend/SignExtend, we do not run
-  /// getMinusSCEV to save compile time.
-  /// 3. For other cases, we run getMinusSCEV to compute the difference(A - B).
-  std::optional<const SCEV *> getDiffSCEV(const SCEV *A, const SCEV *B) const {
-    // Although getMinusSCEV has a "X - X --> 0" fast path, it is not redundant
-    // because it may return std::nullopt without calling getMinusSCEV when both
-    // SCEVs are Div/Truncate/ZeroExtend/SignExtend. So we test equality up
-    // front to return 0 when A == B.
-    if (A == B)
-      return SE->getZero(A->getType());
-
-    // For these SCEV types, getMinusSCEV is likely to give very conservative
-    // results, which is not helpful for SLSR/PSR. So we skip them.
-    auto IsConservativeExpr = [](const SCEV *A) {
-      switch (A->getSCEVType()) {
-      case SCEVTypes::scUDivExpr:
-      case SCEVTypes::scTruncate:
-      case SCEVTypes::scZeroExtend:
-      case SCEVTypes::scSignExtend:
-        return true;
-      default:
-        return false;
-      }
-    };
-
-    // We only skip when both SCEVs are Div/Truncate/ZeroExtend/SignExtend.
-    // This is because we may have the following case:
-    // A = sext(x) + 5 (Add)
-    // B = sext(x) (Sext)
-    // =>
-    // B - A = 5 (Const)
-    if (Opts.slsr_skip_scev_diff && IsConservativeExpr(A) &&
-        IsConservativeExpr(B))
-      return std::nullopt;
-
-    ++NumSCEVCandidateBasisDifferences;
-    return SE->getMinusSCEV(A, B);
-  }
-
   bool candidatePredicate(Candidate *Basis, Candidate &C, Candidate::DKind K);
 
   bool hasSameSCEVUnknowns(const SCEV *A, const SCEV *B);
@@ -1109,8 +1068,9 @@ void StraightLineStrengthReduce::collectPSRCandidates(
           if (!SE->haveMatchingLoopUses(CandidateSCEV, BasisSCEV) ||
               !hasSameSCEVUnknowns(CandidateSCEV, BasisSCEV))
             continue;
-          if (auto Diff = getDiffSCEV(CandidateSCEV, BasisSCEV))
-            if (auto *DeltaVal = dyn_cast<SCEVConstant>(*Diff))
+          ++NumSCEVCandidateBasisDifferences;
+          if (auto *Diff = SE->getMinusSCEV(CandidateSCEV, BasisSCEV))
+            if (auto *DeltaVal = dyn_cast<SCEVConstant>(Diff))
               Delta = DeltaVal->getValue();
         }
 
