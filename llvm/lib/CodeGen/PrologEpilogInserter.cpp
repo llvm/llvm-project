@@ -925,7 +925,13 @@ void PEIImpl::calculateFrameObjectOffsets(MachineFunction &MF) {
     if (!StackGrowsDown && MFI.isDeadObjectIndex(FI))
       continue;
 
-    AdjustStackOffset(MFI, FI, StackGrowsDown, Offset, MaxAlign);
+    int64_t CSOffset = MFI.getObjectOffset(FI);
+    if (StackGrowsDown)
+      CSOffset = -CSOffset;
+    if (CSOffset == 0)
+      AdjustStackOffset(MFI, FI, StackGrowsDown, Offset, MaxAlign);
+    else
+      Offset = std::max(CSOffset, Offset); // Target already allocated offset.
   }
 
   assert(MaxAlign == MFI.getMaxAlign() &&
