@@ -268,14 +268,14 @@ struct D2 {
 // Direct in-class initialization with default constructor (assign)
 struct D3 {
   S f3 = {};
-  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: initializer for member 'f3' is redundant
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: initializer for member 'f3' is redundant
   // CHECK-FIXES: S f3;
 };
 
 // Direct in-class initialization with constructor with default argument (assign)
 struct D4 {
   T f4 = {};
-  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: initializer for member 'f4' is redundant
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: initializer for member 'f4' is redundant
   // CHECK-FIXES: T f4;
 };
 
