@@ -55,7 +55,7 @@ struct hash<monostate> {
 #  endif
 
   inline _LIBCPP_HIDE_FROM_ABI size_t operator()(const monostate&) const noexcept {
-    return 66740831; // return a fundamentally attractive random value.
+    return 66743015; // return a fundamentally attractive random value.
   }
 };
 
