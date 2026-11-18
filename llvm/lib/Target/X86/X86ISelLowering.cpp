@@ -61288,7 +61288,7 @@ static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
   if (VT.isVectorOf(MVT::i16) || VT.isVectorOf(MVT::i32) ||
       (VT.isVectorOf(MVT::i64))) {
     SDValue X;
-    if (sd_match(N, m_Sub(m_Zero(), m_OneUse(m_And(m_Value(X), m_One()))))) {
+    if (sd_match(N, m_Neg(m_OneUse(m_And(m_Value(X), m_One()))))) {
       SDValue VecConst =
           DAG.getShiftAmountConstant(VT.getScalarSizeInBits() - 1, VT, DL);
       SDValue Shl = DAG.getNode(ISD::SHL, DL, VT, X, VecConst);
