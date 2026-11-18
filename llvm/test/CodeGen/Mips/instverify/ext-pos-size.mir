@@ -11,9 +11,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: gpr32, preferred-register: '' }
-  - { id: 1, class: gpr32, preferred-register: '' }
 liveins:
   - { reg: '$r4', virtual-reg: '%0' }
 frameInfo:
@@ -40,8 +37,8 @@ body:             |
   bb.0.entry:
     liveins: $r4
 
-    %0 = COPY $r4
-    %1 = EXT %0, 17, 17
+    %0:gpr32 = COPY $r4
+    %1:gpr32 = EXT %0, 17, 17
     $r2 = COPY %1
     RetRA implicit $r2
 

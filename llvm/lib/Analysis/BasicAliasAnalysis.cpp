@@ -56,6 +56,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Support/ModRef.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include <cassert>
 #include <cstdint>
@@ -253,17 +254,16 @@ CaptureComponents EarliestEscapeAnalysis::getCapturesBefore(
     if (!I)
       return false;
 
-    // Handle longjmp during re-entry.
-    if (callsReturnsTwiceFn())
-      return false;
-
     if (I == CaptureInst) {
-      if (OrAt)
+      if (OrAt || !isNotInCycle(I, &DT, LI, CI))
         return false;
-      return isNotInCycle(I, &DT, LI, CI);
+    } else if (isPotentiallyReachable(CaptureInst, I, nullptr, &DT, LI, CI)) {
+      return false;
     }
 
-    return !isPotentiallyReachable(CaptureInst, I, nullptr, &DT, LI, CI);
+    // Handle longjmp during re-entry. Checked last, as it scans the whole
+    // function the first time it is queried.
+    return !callsReturnsTwiceFn();
   };
   if (IsNotCapturedBefore())
     return CaptureComponents::None;
@@ -283,6 +283,20 @@ void EarliestEscapeAnalysis::removeInstruction(Instruction *I) {
     for (const Value *Obj : Iter->second)
       EarliestEscapes.erase(Obj);
     Inst2Obj.erase(I);
+  }
+}
+
+void EarliestEscapeAnalysis::insertPotentialCapture(const Instruction *I) {
+  for (const Use &U : I->operands()) {
+    if (!U->getType()->isPointerTy())
+      continue;
+
+    if (capturesAnyProvenance(
+            DetermineUseCaptureKind(U, /*Base=*/nullptr).UseCC)) {
+      EarliestEscapes.clear();
+      Inst2Obj.clear();
+      return;
+    }
   }
 }
 
@@ -495,17 +509,20 @@ static LinearExpression GetLinearExpression(
       case Instruction::Add: {
         E = GetLinearExpression(Val.withValue(BOp->getOperand(0), false), DL,
                                 Depth + 1, AC, DT);
-        E.Offset += RHS;
+        // Folding the constants can overflow even if each add is nsw.
+        bool Overflow;
+        E.Offset = E.Offset.sadd_ov(RHS, Overflow);
         E.IsNUW &= NUW;
-        E.IsNSW &= NSW;
+        E.IsNSW &= NSW && !Overflow;
         break;
       }
       case Instruction::Sub: {
         E = GetLinearExpression(Val.withValue(BOp->getOperand(0), false), DL,
                                 Depth + 1, AC, DT);
-        E.Offset -= RHS;
+        bool Overflow;
+        E.Offset = E.Offset.ssub_ov(RHS, Overflow);
         E.IsNUW = false; // sub nuw x, y is not add nuw x, -y.
-        E.IsNSW &= NSW;
+        E.IsNSW &= NSW && !Overflow;
         break;
       }
       case Instruction::Mul:
@@ -1664,12 +1681,24 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
                                                AAQI.AllowEphemerals)) ||
               (AAQI.AllowEphemerals && (ValidAssumeForPtrContext(V1) ||
                                         ValidAssumeForPtrContext(V2)))) {
+            // The assumption relates values from the same iteration. Across
+            // iterations, both underlying objects must be invariant.
+            if (!isValueEqualInPotentialCycles(O1, O1, AAQI) ||
+                !isValueEqualInPotentialCycles(O2, O2, AAQI))
+              break;
             return AliasResult::NoAlias;
           }
         }
       }
     }
   }
+
+  // aliasCheckRecursive() only looks through GEPs, phis and selects, and
+  // otherwise only refines accesses to the same underlying object. All other
+  // pairs are MayAlias without further queries, so don't cache them.
+  if (O1 != O2 && !isa<GEPOperator, PHINode, SelectInst>(V1) &&
+      !isa<GEPOperator, PHINode, SelectInst>(V2))
+    return AliasResult::MayAlias;
 
   // If one the accesses may be before the accessed pointer, canonicalize this
   // by using unknown after-pointer sizes for both accesses. This is

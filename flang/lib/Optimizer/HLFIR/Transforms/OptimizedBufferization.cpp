@@ -24,6 +24,7 @@
 #include "flang/Optimizer/OpenMP/Passes.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Dominance.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Pass/Pass.h"
@@ -481,7 +482,6 @@ llvm::LogicalResult ElementalAssignBufferization::matchAndRewrite(
   auto yield = hlfir::inlineElementalOp(loc, builder, elemental,
                                         loopNest.oneBasedIndices);
   hlfir::Entity elementValue{yield.getElementValue()};
-  rewriter.eraseOp(yield);
 
   // Assign the element value to the array element for this iteration.
   auto arrayElement =
@@ -493,6 +493,13 @@ llvm::LogicalResult ElementalAssignBufferization::matchAndRewrite(
           match->assign.getOperation()->getAttrOfType<mlir::ArrayAttr>(
               fir::getAccessGroupsAttrName()))
     newAssign->setAttr(fir::getAccessGroupsAttrName(), accessGroups);
+
+  if (!yield.getCleanup().empty()) {
+    mlir::IRMapping cleanupMapper;
+    for (auto &op : yield.getCleanup().front().without_terminator())
+      builder.clone(op, cleanupMapper);
+  }
+  rewriter.eraseOp(yield);
 
   rewriter.eraseOp(match->assign);
   rewriter.eraseOp(match->destroy);
