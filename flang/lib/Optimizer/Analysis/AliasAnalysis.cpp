@@ -2060,23 +2060,34 @@ AliasAnalysis::getSourceImpl(mlir::Value v, bool getLastInstantiationPoint,
       // data of a descriptor, which is then accessed through that
       // descriptor. A descriptor is never the data of another descriptor.
       if (!mlir::isa<fir::BaseBoxType>(
-              fir::unwrapRefType(opResult.getType())) &&
-          !allocationsInProgress.contains(opResult)) {
-        AllocationPublication publication = getAllocationPublication(opResult);
-        if (publication.kind == AllocationPublication::Kind::Unknown) {
-          type = SourceKind::Indirect;
-        } else if (publication.kind ==
-                   AllocationPublication::Kind::Descriptor) {
-          // The descriptor may also hold other data before or after it
-          // holds the allocation.
-          auto boxTy = mlir::cast<fir::BaseBoxType>(
-              fir::unwrapRefType(publication.descriptor.getType()));
-          ty = boxTy;
-          approximateSource = true;
-          type = SourceKind::Unknown;
-          allocationsInProgress.insert(opResult);
-          classifyDescriptorData(publication.descriptor, boxTy);
-          allocationsInProgress.erase(opResult);
+              fir::unwrapRefType(opResult.getType()))) {
+        auto inProgress = allocationsInProgress.find(opResult);
+        if (inProgress != allocationsInProgress.end()) {
+          inProgress->second = true;
+        } else {
+          AllocationPublication publication =
+              getAllocationPublication(opResult);
+          if (publication.kind == AllocationPublication::Kind::Unknown) {
+            type = SourceKind::Indirect;
+          } else if (publication.kind ==
+                     AllocationPublication::Kind::Descriptor) {
+            // The descriptor may also hold other data before or after it
+            // holds the allocation.
+            auto boxTy = mlir::cast<fir::BaseBoxType>(
+                fir::unwrapRefType(publication.descriptor.getType()));
+            ty = boxTy;
+            approximateSource = true;
+            type = SourceKind::Unknown;
+            allocationsInProgress.try_emplace(opResult, false);
+            classifyDescriptorData(publication.descriptor, boxTy);
+            // If the descriptor is reached through the allocation, e.g. it is
+            // a component of the allocation, the access path depends on
+            // where the walk stopped going around, and cannot be compared
+            // with the access paths of other values.
+            if (allocationsInProgress.lookup(opResult))
+              type = SourceKind::Indirect;
+            allocationsInProgress.erase(opResult);
+          }
         }
       }
       break;

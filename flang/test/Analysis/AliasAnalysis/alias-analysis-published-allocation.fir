@@ -481,3 +481,28 @@ func.func @_QPexpr_associate(%arg0: !fir.ref<!fir.array<2xi32>> {fir.bindc_name 
   hlfir.destroy %5 : !hlfir.expr<2xi32>
   return
 }
+
+// -----
+
+// The address of the new buffer is stored into a descriptor that is a
+// component of the buffer, so the source of the descriptor depends on the
+// source of the buffer. new.v and self.data.v are the same memory.
+
+// CHECK-LABEL: Testing : "_QPcycle"
+// CHECK-DAG: new#0 <-> self.data#0: MayAlias
+// CHECK-DAG: self.data#0 <-> new.v#0: MayAlias
+// CHECK-DAG: self.data.v#0 <-> new.v#0: MayAlias
+
+func.func @_QPcycle(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}) {
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = fir.declare %arg0 dummy_scope %0 arg 1 uniq_name("_QFcycleEn") {test.ptr = "n"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  %2 = fir.allocmem !fir.type<_QFcycleTnode{v:i32,self:!fir.box<!fir.heap<!fir.type<_QFcycleTnode>>>}> {test.ptr = "new"}
+  %3 = fir.coordinate_of %2, self {test.ptr = "self"} : (!fir.heap<!fir.type<_QFcycleTnode{v:i32,self:!fir.box<!fir.heap<!fir.type<_QFcycleTnode>>>}>>) -> !fir.ref<!fir.box<!fir.heap<!fir.type<_QFcycleTnode{v:i32,self:!fir.box<!fir.heap<!fir.type<_QFcycleTnode>>>}>>>>
+  %4 = fir.embox %2 : (!fir.heap<!fir.type<_QFcycleTnode{v:i32,self:!fir.box<!fir.heap<!fir.type<_QFcycleTnode>>>}>>) -> !fir.box<!fir.heap<!fir.type<_QFcycleTnode{v:i32,self:!fir.box<!fir.heap<!fir.type<_QFcycleTnode>>>}>>>
+  fir.store %4 to %3 : !fir.ref<!fir.box<!fir.heap<!fir.type<_QFcycleTnode{v:i32,self:!fir.box<!fir.heap<!fir.type<_QFcycleTnode>>>}>>>>
+  %5 = fir.load %3 : !fir.ref<!fir.box<!fir.heap<!fir.type<_QFcycleTnode{v:i32,self:!fir.box<!fir.heap<!fir.type<_QFcycleTnode>>>}>>>>
+  %6 = fir.box_addr %5 {test.ptr = "self.data"} : (!fir.box<!fir.heap<!fir.type<_QFcycleTnode{v:i32,self:!fir.box<!fir.heap<!fir.type<_QFcycleTnode>>>}>>>) -> !fir.heap<!fir.type<_QFcycleTnode{v:i32,self:!fir.box<!fir.heap<!fir.type<_QFcycleTnode>>>}>>
+  %7 = fir.coordinate_of %6, v {test.ptr = "self.data.v"} : (!fir.heap<!fir.type<_QFcycleTnode{v:i32,self:!fir.box<!fir.heap<!fir.type<_QFcycleTnode>>>}>>) -> !fir.ref<i32>
+  %8 = fir.coordinate_of %2, v {test.ptr = "new.v"} : (!fir.heap<!fir.type<_QFcycleTnode{v:i32,self:!fir.box<!fir.heap<!fir.type<_QFcycleTnode>>>}>>) -> !fir.ref<i32>
+  return
+}

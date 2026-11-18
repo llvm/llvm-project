@@ -18,7 +18,6 @@
 #include "mlir/IR/Value.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerUnion.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include <cstddef>
 #include <memory>
@@ -589,10 +588,10 @@ private:
   llvm::DenseMap<mlir::Value, AllocationPublication> publicationCache;
 
   /// The allocations whose source getSource() is computing from the
-  /// descriptor they are stored into. The source of that descriptor may
-  /// depend on the allocation itself, e.g. when the descriptor is a component
-  /// of the allocation.
-  llvm::SmallPtrSet<mlir::Value, 4> allocationsInProgress;
+  /// descriptor they are stored into, each mapped to whether the source of
+  /// that descriptor depends on the allocation itself, e.g. when the
+  /// descriptor is a component of the allocation.
+  llvm::SmallDenseMap<mlir::Value, bool, 4> allocationsInProgress;
 
   /// Whether getSource() should consult/populate getSourceCache.
   bool sourceCacheEnabled = false;
