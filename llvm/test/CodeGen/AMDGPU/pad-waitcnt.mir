@@ -149,7 +149,14 @@ body: |
   ; PAD-NEXT:   liveins: $exec, $scc, $vgpr0_vgpr1
   ; PAD-NEXT: {{  $}}
   ; PAD-NEXT:   $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
-  ; PAD-NEXT:   S_CBRANCH_SCC1 %bb.3, implicit $scc
+  ; PAD-NEXT:   S_CBRANCH_SCC0 %bb.1, implicit $scc
+  ; PAD-NEXT: {{  $}}
+  ; PAD-NEXT: bb.3:
+  ; PAD-NEXT:   successors: %bb.2(0x80000000)
+  ; PAD-NEXT:   liveins: $exec, $vgpr2
+  ; PAD-NEXT: {{  $}}
+  ; PAD-NEXT:   BUFFER_INV 0, implicit $exec
+  ; PAD-NEXT:   S_BRANCH %bb.2
   ; PAD-NEXT: {{  $}}
   ; PAD-NEXT: bb.1:
   ; PAD-NEXT:   successors: %bb.2(0x80000000)
@@ -163,13 +170,6 @@ body: |
   ; PAD-NEXT:   S_WAITCNT .Vmcnt_1
   ; PAD-NEXT:   $vgpr4 = V_MOV_B32_e32 $vgpr2, implicit $exec
   ; PAD-NEXT:   S_ENDPGM 0
-  ; PAD-NEXT: {{  $}}
-  ; PAD-NEXT: bb.3:
-  ; PAD-NEXT:   successors: %bb.2(0x80000000)
-  ; PAD-NEXT:   liveins: $exec, $vgpr2
-  ; PAD-NEXT: {{  $}}
-  ; PAD-NEXT:   BUFFER_INV 0, implicit $exec
-  ; PAD-NEXT:   S_BRANCH %bb.2
   ;
   ; FORCED-LABEL: name: hint_triangle_taken
   ; FORCED: bb.0:
@@ -178,7 +178,15 @@ body: |
   ; FORCED-NEXT: {{  $}}
   ; FORCED-NEXT:   S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
   ; FORCED-NEXT:   $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
-  ; FORCED-NEXT:   S_CBRANCH_SCC1 %bb.3, implicit $scc
+  ; FORCED-NEXT:   S_CBRANCH_SCC0 %bb.1, implicit $scc
+  ; FORCED-NEXT: {{  $}}
+  ; FORCED-NEXT: bb.3:
+  ; FORCED-NEXT:   successors: %bb.2(0x80000000)
+  ; FORCED-NEXT:   liveins: $exec, $vgpr2
+  ; FORCED-NEXT: {{  $}}
+  ; FORCED-NEXT:   S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
+  ; FORCED-NEXT:   BUFFER_INV 0, implicit $exec
+  ; FORCED-NEXT:   S_BRANCH %bb.2
   ; FORCED-NEXT: {{  $}}
   ; FORCED-NEXT: bb.1:
   ; FORCED-NEXT:   successors: %bb.2(0x80000000)
@@ -193,14 +201,6 @@ body: |
   ; FORCED-NEXT:   S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
   ; FORCED-NEXT:   $vgpr4 = V_MOV_B32_e32 $vgpr2, implicit $exec
   ; FORCED-NEXT:   S_ENDPGM 0
-  ; FORCED-NEXT: {{  $}}
-  ; FORCED-NEXT: bb.3:
-  ; FORCED-NEXT:   successors: %bb.2(0x80000000)
-  ; FORCED-NEXT:   liveins: $exec, $vgpr2
-  ; FORCED-NEXT: {{  $}}
-  ; FORCED-NEXT:   S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
-  ; FORCED-NEXT:   BUFFER_INV 0, implicit $exec
-  ; FORCED-NEXT:   S_BRANCH %bb.2
   ;
   ; DISABLED-LABEL: name: hint_triangle_taken
   ; DISABLED: bb.0:
@@ -385,7 +385,7 @@ body: |
   ; PAD-NEXT: {{  $}}
   ; PAD-NEXT: bb.3:
   ; PAD-NEXT:   successors: %bb.4(0x80000000)
-  ; PAD-NEXT:   liveins: $exec, $scc, $vgpr2, $vgpr3, $vgpr0_vgpr1
+  ; PAD-NEXT:   liveins: $exec, $scc, $vgpr0_vgpr1, $vgpr2, $vgpr3
   ; PAD-NEXT: {{  $}}
   ; PAD-NEXT:   S_WAITCNT .Vmcnt_1
   ; PAD-NEXT:   $vgpr5 = V_MOV_B32_e32 $vgpr3, implicit $exec
@@ -437,7 +437,7 @@ body: |
   ; FORCED-NEXT: {{  $}}
   ; FORCED-NEXT: bb.3:
   ; FORCED-NEXT:   successors: %bb.4(0x80000000)
-  ; FORCED-NEXT:   liveins: $exec, $scc, $vgpr2, $vgpr3, $vgpr0_vgpr1
+  ; FORCED-NEXT:   liveins: $exec, $scc, $vgpr0_vgpr1, $vgpr2, $vgpr3
   ; FORCED-NEXT: {{  $}}
   ; FORCED-NEXT:   S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
   ; FORCED-NEXT:   $vgpr5 = V_MOV_B32_e32 $vgpr3, implicit $exec
@@ -569,7 +569,14 @@ body: |
   ; PAD-NEXT:   liveins: $exec, $scc, $vgpr0_vgpr1
   ; PAD-NEXT: {{  $}}
   ; PAD-NEXT:   $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
-  ; PAD-NEXT:   S_CBRANCH_SCC1 %bb.5, implicit $scc
+  ; PAD-NEXT:   S_CBRANCH_SCC0 %bb.1, implicit $scc
+  ; PAD-NEXT: {{  $}}
+  ; PAD-NEXT: bb.5:
+  ; PAD-NEXT:   successors: %bb.2(0x80000000)
+  ; PAD-NEXT:   liveins: $exec, $scc, $vgpr0_vgpr1, $vgpr2
+  ; PAD-NEXT: {{  $}}
+  ; PAD-NEXT:   BUFFER_INV 0, implicit $exec
+  ; PAD-NEXT:   S_BRANCH %bb.2
   ; PAD-NEXT: {{  $}}
   ; PAD-NEXT: bb.1:
   ; PAD-NEXT:   successors: %bb.2(0x80000000)
@@ -581,7 +588,14 @@ body: |
   ; PAD-NEXT:   successors: %bb.3(0x40000000), %bb.6(0x40000000)
   ; PAD-NEXT:   liveins: $exec, $scc, $vgpr0_vgpr1, $vgpr2
   ; PAD-NEXT: {{  $}}
-  ; PAD-NEXT:   S_CBRANCH_SCC1 %bb.6, implicit $scc
+  ; PAD-NEXT:   S_CBRANCH_SCC0 %bb.3, implicit $scc
+  ; PAD-NEXT: {{  $}}
+  ; PAD-NEXT: bb.6:
+  ; PAD-NEXT:   successors: %bb.4(0x80000000)
+  ; PAD-NEXT:   liveins: $exec, $vgpr2
+  ; PAD-NEXT: {{  $}}
+  ; PAD-NEXT:   BUFFER_INV 0, implicit $exec
+  ; PAD-NEXT:   S_BRANCH %bb.4
   ; PAD-NEXT: {{  $}}
   ; PAD-NEXT: bb.3:
   ; PAD-NEXT:   successors: %bb.4(0x80000000)
@@ -595,20 +609,6 @@ body: |
   ; PAD-NEXT:   S_WAITCNT .Vmcnt_2
   ; PAD-NEXT:   $vgpr4 = V_MOV_B32_e32 $vgpr2, implicit $exec
   ; PAD-NEXT:   S_ENDPGM 0
-  ; PAD-NEXT: {{  $}}
-  ; PAD-NEXT: bb.5:
-  ; PAD-NEXT:   successors: %bb.2(0x80000000)
-  ; PAD-NEXT:   liveins: $exec, $scc, $vgpr2, $vgpr0_vgpr1
-  ; PAD-NEXT: {{  $}}
-  ; PAD-NEXT:   BUFFER_INV 0, implicit $exec
-  ; PAD-NEXT:   S_BRANCH %bb.2
-  ; PAD-NEXT: {{  $}}
-  ; PAD-NEXT: bb.6:
-  ; PAD-NEXT:   successors: %bb.4(0x80000000)
-  ; PAD-NEXT:   liveins: $exec, $vgpr2
-  ; PAD-NEXT: {{  $}}
-  ; PAD-NEXT:   BUFFER_INV 0, implicit $exec
-  ; PAD-NEXT:   S_BRANCH %bb.4
   ;
   ; FORCED-LABEL: name: hint_multiple_branches
   ; FORCED: bb.0:
@@ -617,7 +617,15 @@ body: |
   ; FORCED-NEXT: {{  $}}
   ; FORCED-NEXT:   S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
   ; FORCED-NEXT:   $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
-  ; FORCED-NEXT:   S_CBRANCH_SCC1 %bb.5, implicit $scc
+  ; FORCED-NEXT:   S_CBRANCH_SCC0 %bb.1, implicit $scc
+  ; FORCED-NEXT: {{  $}}
+  ; FORCED-NEXT: bb.5:
+  ; FORCED-NEXT:   successors: %bb.2(0x80000000)
+  ; FORCED-NEXT:   liveins: $exec, $scc, $vgpr0_vgpr1, $vgpr2
+  ; FORCED-NEXT: {{  $}}
+  ; FORCED-NEXT:   S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
+  ; FORCED-NEXT:   BUFFER_INV 0, implicit $exec
+  ; FORCED-NEXT:   S_BRANCH %bb.2
   ; FORCED-NEXT: {{  $}}
   ; FORCED-NEXT: bb.1:
   ; FORCED-NEXT:   successors: %bb.2(0x80000000)
@@ -630,7 +638,15 @@ body: |
   ; FORCED-NEXT:   successors: %bb.3(0x40000000), %bb.6(0x40000000)
   ; FORCED-NEXT:   liveins: $exec, $scc, $vgpr0_vgpr1, $vgpr2
   ; FORCED-NEXT: {{  $}}
-  ; FORCED-NEXT:   S_CBRANCH_SCC1 %bb.6, implicit $scc
+  ; FORCED-NEXT:   S_CBRANCH_SCC0 %bb.3, implicit $scc
+  ; FORCED-NEXT: {{  $}}
+  ; FORCED-NEXT: bb.6:
+  ; FORCED-NEXT:   successors: %bb.4(0x80000000)
+  ; FORCED-NEXT:   liveins: $exec, $vgpr2
+  ; FORCED-NEXT: {{  $}}
+  ; FORCED-NEXT:   S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
+  ; FORCED-NEXT:   BUFFER_INV 0, implicit $exec
+  ; FORCED-NEXT:   S_BRANCH %bb.4
   ; FORCED-NEXT: {{  $}}
   ; FORCED-NEXT: bb.3:
   ; FORCED-NEXT:   successors: %bb.4(0x80000000)
@@ -645,22 +661,6 @@ body: |
   ; FORCED-NEXT:   S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
   ; FORCED-NEXT:   $vgpr4 = V_MOV_B32_e32 $vgpr2, implicit $exec
   ; FORCED-NEXT:   S_ENDPGM 0
-  ; FORCED-NEXT: {{  $}}
-  ; FORCED-NEXT: bb.5:
-  ; FORCED-NEXT:   successors: %bb.2(0x80000000)
-  ; FORCED-NEXT:   liveins: $exec, $scc, $vgpr2, $vgpr0_vgpr1
-  ; FORCED-NEXT: {{  $}}
-  ; FORCED-NEXT:   S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
-  ; FORCED-NEXT:   BUFFER_INV 0, implicit $exec
-  ; FORCED-NEXT:   S_BRANCH %bb.2
-  ; FORCED-NEXT: {{  $}}
-  ; FORCED-NEXT: bb.6:
-  ; FORCED-NEXT:   successors: %bb.4(0x80000000)
-  ; FORCED-NEXT:   liveins: $exec, $vgpr2
-  ; FORCED-NEXT: {{  $}}
-  ; FORCED-NEXT:   S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
-  ; FORCED-NEXT:   BUFFER_INV 0, implicit $exec
-  ; FORCED-NEXT:   S_BRANCH %bb.4
   ;
   ; DISABLED-LABEL: name: hint_multiple_branches
   ; DISABLED: bb.0:
@@ -726,6 +726,7 @@ body: |
     S_ENDPGM 0
 ...
 
+# Hints in one arm add up, so each load in the arm can carry its own hint.
 ---
 name: hint_repeated
 tracksRegLiveness: true
@@ -745,18 +746,21 @@ body: |
   ; PAD-NEXT:   liveins: $exec, $vgpr0_vgpr1, $vgpr2
   ; PAD-NEXT: {{  $}}
   ; PAD-NEXT:   $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+  ; PAD-NEXT:   $vgpr5 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 4, 0, implicit $exec
   ; PAD-NEXT:   S_BRANCH %bb.3
   ; PAD-NEXT: {{  $}}
   ; PAD-NEXT: bb.2:
   ; PAD-NEXT:   successors: %bb.3(0x80000000)
   ; PAD-NEXT:   liveins: $exec, $vgpr2
   ; PAD-NEXT: {{  $}}
+  ; PAD-NEXT:   BUFFER_INV 0, implicit $exec
+  ; PAD-NEXT:   BUFFER_INV 0, implicit $exec
   ; PAD-NEXT:   S_BRANCH %bb.3
   ; PAD-NEXT: {{  $}}
   ; PAD-NEXT: bb.3:
   ; PAD-NEXT:   liveins: $exec, $vgpr2
   ; PAD-NEXT: {{  $}}
-  ; PAD-NEXT:   S_WAITCNT .Vmcnt_0
+  ; PAD-NEXT:   S_WAITCNT .Vmcnt_2
   ; PAD-NEXT:   $vgpr4 = V_MOV_B32_e32 $vgpr2, implicit $exec
   ; PAD-NEXT:   S_ENDPGM 0
   ;
@@ -775,12 +779,18 @@ body: |
   ; FORCED-NEXT: {{  $}}
   ; FORCED-NEXT:   S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
   ; FORCED-NEXT:   $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+  ; FORCED-NEXT:   S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
+  ; FORCED-NEXT:   $vgpr5 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 4, 0, implicit $exec
   ; FORCED-NEXT:   S_BRANCH %bb.3
   ; FORCED-NEXT: {{  $}}
   ; FORCED-NEXT: bb.2:
   ; FORCED-NEXT:   successors: %bb.3(0x80000000)
   ; FORCED-NEXT:   liveins: $exec, $vgpr2
   ; FORCED-NEXT: {{  $}}
+  ; FORCED-NEXT:   S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
+  ; FORCED-NEXT:   BUFFER_INV 0, implicit $exec
+  ; FORCED-NEXT:   S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
+  ; FORCED-NEXT:   BUFFER_INV 0, implicit $exec
   ; FORCED-NEXT:   S_BRANCH %bb.3
   ; FORCED-NEXT: {{  $}}
   ; FORCED-NEXT: bb.3:
@@ -804,6 +814,7 @@ body: |
   ; DISABLED-NEXT: {{  $}}
   ; DISABLED-NEXT:   $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
   ; DISABLED-NEXT:   PAD_WAITCNT 0, 1
+  ; DISABLED-NEXT:   $vgpr5 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 4, 0, implicit $exec
   ; DISABLED-NEXT:   PAD_WAITCNT 0, 1
   ; DISABLED-NEXT:   S_BRANCH %bb.3
   ; DISABLED-NEXT: {{  $}}
@@ -832,6 +843,7 @@ body: |
 
     $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
     PAD_WAITCNT 0, 1
+    $vgpr5 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 4, 0, implicit $exec
     PAD_WAITCNT 0, 1
     S_BRANCH %bb.3
 
@@ -867,18 +879,20 @@ body: |
   ; PAD-NEXT:   liveins: $exec, $vgpr0_vgpr1, $vgpr2
   ; PAD-NEXT: {{  $}}
   ; PAD-NEXT:   $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+  ; PAD-NEXT:   BUFFER_INV 0, implicit $exec
   ; PAD-NEXT:   S_BRANCH %bb.3
   ; PAD-NEXT: {{  $}}
   ; PAD-NEXT: bb.2:
   ; PAD-NEXT:   successors: %bb.3(0x80000000)
   ; PAD-NEXT:   liveins: $exec, $vgpr2
   ; PAD-NEXT: {{  $}}
+  ; PAD-NEXT:   BUFFER_INV 0, implicit $exec
   ; PAD-NEXT:   S_BRANCH %bb.3
   ; PAD-NEXT: {{  $}}
   ; PAD-NEXT: bb.3:
   ; PAD-NEXT:   liveins: $exec, $vgpr2
   ; PAD-NEXT: {{  $}}
-  ; PAD-NEXT:   S_WAITCNT .Vmcnt_0
+  ; PAD-NEXT:   S_WAITCNT .Vmcnt_1
   ; PAD-NEXT:   $vgpr4 = V_MOV_B32_e32 $vgpr2, implicit $exec
   ; PAD-NEXT:   S_ENDPGM 0
   ;
@@ -897,12 +911,16 @@ body: |
   ; FORCED-NEXT: {{  $}}
   ; FORCED-NEXT:   S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
   ; FORCED-NEXT:   $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+  ; FORCED-NEXT:   S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
+  ; FORCED-NEXT:   BUFFER_INV 0, implicit $exec
   ; FORCED-NEXT:   S_BRANCH %bb.3
   ; FORCED-NEXT: {{  $}}
   ; FORCED-NEXT: bb.2:
   ; FORCED-NEXT:   successors: %bb.3(0x80000000)
   ; FORCED-NEXT:   liveins: $exec, $vgpr2
   ; FORCED-NEXT: {{  $}}
+  ; FORCED-NEXT:   S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
+  ; FORCED-NEXT:   BUFFER_INV 0, implicit $exec
   ; FORCED-NEXT:   S_BRANCH %bb.3
   ; FORCED-NEXT: {{  $}}
   ; FORCED-NEXT: bb.3:

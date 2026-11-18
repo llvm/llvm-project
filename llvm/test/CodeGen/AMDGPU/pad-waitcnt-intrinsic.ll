@@ -18,19 +18,19 @@ define amdgpu_kernel void @hint_counter_intrinsic(ptr addrspace(1) %data,
 ; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-NEXT:    global_load_dword v2, v0, s[0:1]
 ; SDAG-NEXT:    s_cmp_eq_u32 s6, 0
-; SDAG-NEXT:    s_cbranch_scc1 .LBB0_3
-; SDAG-NEXT:  ; %bb.1: ; %long
+; SDAG-NEXT:    s_cbranch_scc0 .LBB0_2
+; SDAG-NEXT:  ; %bb.1:
+; SDAG-NEXT:    buffer_inv
+; SDAG-NEXT:    s_branch .LBB0_3
+; SDAG-NEXT:  .LBB0_2: ; %long
 ; SDAG-NEXT:    v_lshl_add_u64 v[4:5], s[0:1], 0, v[0:1]
 ; SDAG-NEXT:    global_load_dword v1, v[4:5], off offset:256
-; SDAG-NEXT:  .LBB0_2: ; %join
+; SDAG-NEXT:  .LBB0_3: ; %join
 ; SDAG-NEXT:    s_waitcnt vmcnt(1)
 ; SDAG-NEXT:    global_store_dword v0, v2, s[2:3]
 ; SDAG-NEXT:    s_waitcnt vmcnt(1)
 ; SDAG-NEXT:    global_store_dword v0, v1, s[2:3] offset:256
 ; SDAG-NEXT:    s_endpgm
-; SDAG-NEXT:  .LBB0_3:
-; SDAG-NEXT:    buffer_inv
-; SDAG-NEXT:    s_branch .LBB0_2
 ;
 ; GISEL-LABEL: hint_counter_intrinsic:
 ; GISEL:       ; %bb.0: ; %entry
@@ -43,18 +43,18 @@ define amdgpu_kernel void @hint_counter_intrinsic(ptr addrspace(1) %data,
 ; GISEL-NEXT:    global_load_dword v1, v0, s[0:1]
 ; GISEL-NEXT:    s_cmp_eq_u32 s6, 0
 ; GISEL-NEXT:    v_mov_b32_e32 v2, s4
-; GISEL-NEXT:    s_cbranch_scc1 .LBB0_3
-; GISEL-NEXT:  ; %bb.1: ; %long
+; GISEL-NEXT:    s_cbranch_scc0 .LBB0_2
+; GISEL-NEXT:  ; %bb.1:
+; GISEL-NEXT:    buffer_inv
+; GISEL-NEXT:    s_branch .LBB0_3
+; GISEL-NEXT:  .LBB0_2: ; %long
 ; GISEL-NEXT:    global_load_dword v2, v0, s[0:1] offset:256
-; GISEL-NEXT:  .LBB0_2: ; %join
+; GISEL-NEXT:  .LBB0_3: ; %join
 ; GISEL-NEXT:    s_waitcnt vmcnt(1)
 ; GISEL-NEXT:    global_store_dword v0, v1, s[2:3]
 ; GISEL-NEXT:    s_waitcnt vmcnt(1)
 ; GISEL-NEXT:    global_store_dword v0, v2, s[2:3] offset:256
 ; GISEL-NEXT:    s_endpgm
-; GISEL-NEXT:  .LBB0_3:
-; GISEL-NEXT:    buffer_inv
-; GISEL-NEXT:    s_branch .LBB0_2
 ;
 ; NO-PAD-LABEL: hint_counter_intrinsic:
 ; NO-PAD:       ; %bb.0: ; %entry
