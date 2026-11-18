@@ -46,8 +46,11 @@ GS = chr(0x1D)
 RS = chr(0x1E)
 US = chr(0x1F)
 
-COMPILER_WRAPPER_CC = "intercept-cc"
-COMPILER_WRAPPER_CXX = "intercept-c++"
+scanbuild_dir = os.path.dirname(os.path.realpath(__import__("sys").argv[0]))
+
+COMPILER_WRAPPER_CC = os.path.join(scanbuild_dir, "..", "libexec", "intercept-cc")
+COMPILER_WRAPPER_CXX = os.path.join(scanbuild_dir, "..", "libexec", "intercept-c++")
+
 TRACE_FILE_EXTENSION = ".cmd"  # same as in ear.c
 WRAPPER_ONLY_PLATFORMS = frozenset({"win32", "cygwin"})
 
