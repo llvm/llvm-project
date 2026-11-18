@@ -40,21 +40,24 @@ define void @loop_contains_store_condition_load_has_single_user(ptr dereferencea
 ; CHECK-NEXT:      EMIT branch-on-two-conds vp<[[VP9]]>, vp<[[VP10]]>
 ; CHECK-NEXT:    No successors
 ; CHECK-NEXT:  }
-; CHECK-NEXT:  Successor(s): middle.block, middle.block
+; CHECK-NEXT:  Successor(s): vector.early.exit, middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = first-active-lane vp<[[VP6]]>
-; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = extract-lane ir<0>, ir<%iv>
-; CHECK-NEXT:    EMIT vp<[[VP14:%[0-9]+]]> = add vp<[[VP13]]>, vp<[[VP12]]>
-; CHECK-NEXT:    EMIT vp<[[VP15:%[0-9]+]]> = icmp eq vp<[[VP14]]>, ir<20>
-; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP15]]>
+; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<20>, vp<[[VP2]]>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<exit>:
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
+; CHECK-NEXT:  vector.early.exit:
+; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = first-active-lane vp<[[VP6]]>
+; CHECK-NEXT:    EMIT vp<[[VP14:%[0-9]+]]> = extract-lane ir<0>, ir<%iv>
+; CHECK-NEXT:    EMIT vp<[[VP15:%[0-9]+]]> = add vp<[[VP14]]>, vp<[[VP13]]>
+; CHECK-NEXT:  Successor(s): scalar.ph
+; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP14]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP2]]>, middle.block ], [ vp<[[VP15]]>, vector.early.exit ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.body>:
@@ -129,21 +132,24 @@ define void @loop_contains_store_after_uncountable_exit(ptr dereferenceable(40) 
 ; CHECK-NEXT:      EMIT branch-on-two-conds vp<[[VP9]]>, vp<[[VP10]]>
 ; CHECK-NEXT:    No successors
 ; CHECK-NEXT:  }
-; CHECK-NEXT:  Successor(s): middle.block, middle.block
+; CHECK-NEXT:  Successor(s): vector.early.exit, middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = first-active-lane vp<[[VP6]]>
-; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = extract-lane ir<0>, ir<%iv>
-; CHECK-NEXT:    EMIT vp<[[VP14:%[0-9]+]]> = add vp<[[VP13]]>, vp<[[VP12]]>
-; CHECK-NEXT:    EMIT vp<[[VP15:%[0-9]+]]> = icmp eq vp<[[VP14]]>, ir<20>
-; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP15]]>
+; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<20>, vp<[[VP2]]>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<exit>:
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
+; CHECK-NEXT:  vector.early.exit:
+; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = first-active-lane vp<[[VP6]]>
+; CHECK-NEXT:    EMIT vp<[[VP14:%[0-9]+]]> = extract-lane ir<0>, ir<%iv>
+; CHECK-NEXT:    EMIT vp<[[VP15:%[0-9]+]]> = add vp<[[VP14]]>, vp<[[VP13]]>
+; CHECK-NEXT:  Successor(s): scalar.ph
+; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP14]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP2]]>, middle.block ], [ vp<[[VP15]]>, vector.early.exit ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.body>:
@@ -214,24 +220,27 @@ define i16 @uncountable_exit_with_live_out(ptr dereferenceable(40) noalias %arra
 ; CHECK-NEXT:      EMIT branch-on-two-conds vp<[[VP9]]>, vp<[[VP10]]>
 ; CHECK-NEXT:    No successors
 ; CHECK-NEXT:  }
-; CHECK-NEXT:  Successor(s): middle.block, middle.block
+; CHECK-NEXT:  Successor(s): vector.early.exit, middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
 ; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = extract-last-part ir<%data>
 ; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = extract-last-lane vp<[[VP12]]>
-; CHECK-NEXT:    EMIT vp<[[VP14:%[0-9]+]]> = first-active-lane vp<[[VP6]]>
-; CHECK-NEXT:    EMIT vp<[[VP15:%[0-9]+]]> = extract-lane ir<0>, ir<%iv>
-; CHECK-NEXT:    EMIT vp<[[VP16:%[0-9]+]]> = add vp<[[VP15]]>, vp<[[VP14]]>
-; CHECK-NEXT:    EMIT vp<[[VP17:%[0-9]+]]> = icmp eq vp<[[VP16]]>, ir<20>
-; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP17]]>
+; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<20>, vp<[[VP2]]>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<exit>:
 ; CHECK-NEXT:    IR   %data.lcssa = phi i16 [ %data, %for.inc ], [ %data, %for.body ] (extra operand: vp<[[VP13]]> from middle.block)
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
+; CHECK-NEXT:  vector.early.exit:
+; CHECK-NEXT:    EMIT vp<[[VP15:%[0-9]+]]> = first-active-lane vp<[[VP6]]>
+; CHECK-NEXT:    EMIT vp<[[VP16:%[0-9]+]]> = extract-lane ir<0>, ir<%iv>
+; CHECK-NEXT:    EMIT vp<[[VP17:%[0-9]+]]> = add vp<[[VP16]]>, vp<[[VP15]]>
+; CHECK-NEXT:  Successor(s): scalar.ph
+; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP16]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP2]]>, middle.block ], [ vp<[[VP17]]>, vector.early.exit ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.body>:
@@ -309,21 +318,24 @@ define void @combined_exit_conditions(ptr align 4 dereferenceable(80) readonly %
 ; CHECK-NEXT:      EMIT branch-on-two-conds vp<[[VP11]]>, vp<[[VP12]]>
 ; CHECK-NEXT:    No successors
 ; CHECK-NEXT:  }
-; CHECK-NEXT:  Successor(s): middle.block, middle.block
+; CHECK-NEXT:  Successor(s): vector.early.exit, middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP14:%[0-9]+]]> = first-active-lane vp<[[VP7]]>
-; CHECK-NEXT:    EMIT vp<[[VP15:%[0-9]+]]> = extract-lane ir<0>, ir<%iv>
-; CHECK-NEXT:    EMIT vp<[[VP16:%[0-9]+]]> = add vp<[[VP15]]>, vp<[[VP14]]>
-; CHECK-NEXT:    EMIT vp<[[VP17:%[0-9]+]]> = icmp eq vp<[[VP16]]>, ir<20>
-; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP17]]>
+; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<20>, vp<[[VP2]]>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<exit>:
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
+; CHECK-NEXT:  vector.early.exit:
+; CHECK-NEXT:    EMIT vp<[[VP15:%[0-9]+]]> = first-active-lane vp<[[VP7]]>
+; CHECK-NEXT:    EMIT vp<[[VP16:%[0-9]+]]> = extract-lane ir<0>, ir<%iv>
+; CHECK-NEXT:    EMIT vp<[[VP17:%[0-9]+]]> = add vp<[[VP16]]>, vp<[[VP15]]>
+; CHECK-NEXT:  Successor(s): scalar.ph
+; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP16]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP2]]>, middle.block ], [ vp<[[VP17]]>, vector.early.exit ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.body>:
