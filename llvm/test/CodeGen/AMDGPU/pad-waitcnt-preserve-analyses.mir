@@ -1,15 +1,14 @@
-# RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -passes="require<machine-dom-tree>,require<machine-post-dom-tree>,require<machine-loops>,si-insert-waitcnts,print<machine-dom-tree>,print<machine-post-dom-tree>,print<machine-loops>" -debug-pass-manager -filetype=null %s 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -passes="require<machine-dom-tree>,require<machine-post-dom-tree>,require<machine-loops>,si-insert-waitcnts,verify<machine-dom-tree>,print<machine-post-dom-tree>,print<machine-loops>" -debug-pass-manager -filetype=null %s 2>&1 | FileCheck %s
 
 # Splitting a hinted triangle inside a loop must update the cached dominator
-# trees and loop membership without reconstructing the analyses.
+# trees and loop membership without reconstructing the analyses. The verifier
+# compares the cached dominator tree against a fresh recomputation.
 # CHECK: Running analysis: MachineDominatorTreeAnalysis on hint_loop_triangle
 # CHECK: Running analysis: MachinePostDominatorTreeAnalysis on hint_loop_triangle
 # CHECK: Running analysis: MachineLoopAnalysis on hint_loop_triangle
 # CHECK: Running pass: SIInsertWaitcntsPass on hint_loop_triangle
 # CHECK-NOT: Running analysis: Machine{{.*}}Analysis
-# CHECK: Running pass: MachineDominatorTreePrinterPass on hint_loop_triangle
-# CHECK: Inorder Dominator Tree:
-# CHECK: %bb.6
+# CHECK: Running pass: MachineDominatorTreeVerifierPass on hint_loop_triangle
 # CHECK-NOT: Running analysis: Machine{{.*}}Analysis
 # CHECK: Running pass: MachinePostDominatorTreePrinterPass on hint_loop_triangle
 # CHECK: Inorder PostDominator Tree:
