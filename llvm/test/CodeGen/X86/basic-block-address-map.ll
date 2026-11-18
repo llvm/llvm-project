@@ -81,14 +81,14 @@ declare i32 @__gxx_personality_v0(...)
 ; CHECK-NEXT:	.uleb128 .LBB_END0_3-.LBB0_3
 ; CHECK-NEXT:	.byte	16
 ; CHECK-NEXT:   .byte	5		# BB id
-; CHECK-NEXT:	.uleb128 .LBB0_4-.LBB_END0_3
-; CHECK-NEXT:   .byte	0		# number of callsites
-; CHECK-NEXT:	.uleb128 .LBB_END0_4-.LBB0_4
-; CHECK-NEXT:	.byte	1
-; CHECK-NEXT:   .byte	2		# BB id
-; CHECK-NEXT:	.uleb128 .LBB0_5-.LBB_END0_4
+; CHECK-NEXT:	.uleb128 .LBB0_5-.LBB_END0_3
 ; CHECK-NEXT:   .byte	0		# number of callsites
 ; CHECK-NEXT:	.uleb128 .LBB_END0_5-.LBB0_5
+; CHECK-NEXT:	.byte	1
+; CHECK-NEXT:   .byte	2		# BB id
+; CHECK-NEXT:	.uleb128 .LBB0_4-.LBB_END0_5
+; CHECK-NEXT:   .byte	0		# number of callsites
+; CHECK-NEXT:	.uleb128 .LBB_END0_4-.LBB0_4
 ;; The landingpad block metadata differs: ELF uses eh_frame (HasReturn set),
 ;; COFF uses SEH (HasReturn not set).
 ; ELF-NEXT:	.byte	5
