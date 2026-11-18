@@ -354,6 +354,7 @@ set(files
   __coroutine/coroutine_traits.h
   __coroutine/noop_coroutine_handle.h
   __coroutine/trivial_awaitables.h
+  __cpp_release_namespaces.h
   __cstddef/byte.h
   __cstddef/max_align_t.h
   __cstddef/nullptr_t.h

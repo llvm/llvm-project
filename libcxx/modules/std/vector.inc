@@ -39,5 +39,14 @@ export namespace std {
   namespace pmr {
     using std::pmr::vector2;
   }
+
+  // PROTOTYPE: P3866R0 standard-release namespace entries contributed by <vector>
+  namespace cpp29 {
+    using std::cpp29::vector;
+
+    namespace pmr {
+      using std::cpp29::pmr::vector;
+    }
+  } // namespace cpp29
 #endif
 } // namespace std

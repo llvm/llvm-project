@@ -2363,10 +2363,12 @@ module std {
       header "__vector/vector2_pmr.h"
 
       export std.memory_resource.polymorphic_allocator
+      export std.cpp_release_namespaces
     }
     module vector2_swap          { header "__vector/vector2_swap.h" }
     module vector2               {
       header "__vector/vector2.h"
+      export std.cpp_release_namespaces
       export std.iterator.bounded_iter
       export std.iterator.wrap_iter
       export std.memory.allocator
@@ -2520,6 +2522,7 @@ module std {
     header "__bit_reference"
     export std.bit_reference_fwd
   }
+  module cpp_release_namespaces { header "__cpp_release_namespaces.h" } // PROTOTYPE: P3866R0
   module hash_table           { header "__hash_table" }
   module node_handle          { header "__node_handle" }
   module split_buffer         { header "__split_buffer" }

@@ -20,6 +20,7 @@
 #include <__algorithm/rotate.h>
 #include <__assert>
 #include <__config>
+#include <__cpp_release_namespaces.h>
 #include <__debug_utils/sanitizers.h>
 #include <__format/enable_insertable.h>
 #include <__fwd/vector2.h>
@@ -1290,6 +1291,15 @@ template <>
 inline constexpr bool __format::__enable_insertable<vector2<wchar_t>> = true;
 #  endif
 #endif // _LIBCPP_STD_VER >= 20
+
+// PROTOTYPE: P3866R0 standard-release namespace. In C++29, the most recent version of `vector` is `vector2`.
+//
+// Note that this is a variadic alias template on purpose: with `template <class _Tp, class _Allocator = allocator<_Tp>>`,
+// Clang fails to perform CTAD through the alias with the iterator-pair deduction guide (e.g. `cpp29::vector v(it, it)`).
+namespace cpp29 {
+template <class... _Args>
+using vector = std::vector2<_Args...>;
+} // namespace cpp29
 
 _LIBCPP_END_NAMESPACE_STD
 
