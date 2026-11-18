@@ -5,6 +5,7 @@ set(LLVM_OPTIONAL_SOURCES
 
 add_mlir_dialect_library(MLIRMemRefTransforms
   ComposeSubView.cpp
+  CopyToContiguous.cpp 
   ElideReinterpretCast.cpp
   ExpandOps.cpp
   ExpandRealloc.cpp
