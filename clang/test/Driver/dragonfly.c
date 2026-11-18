@@ -24,7 +24,7 @@
 // RELOCATABLE:     "-r"
 // RELOCATABLE-NOT: "-dynamic-linker"
 // RELOCATABLE-NOT: "-l
-// RELOCATABLE-NOT: {{.*}}crt{{[^./]+}}.o
+// RELOCATABLE-NOT: {{.*}}crt{{[^./\\]+}}.o
 
 // Check that the new linker flags are passed to DragonFly
 // RUN: %clang --target=x86_64-unknown-dragonfly -s -t -### %s 2>&1 \
