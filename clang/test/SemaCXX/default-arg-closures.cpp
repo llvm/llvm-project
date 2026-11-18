@@ -25,6 +25,15 @@ struct DependentDefaultCopyArg {
 struct HasMember {
   enum { member = 0 };
 };
+
+template <typename T>
+struct NestedDependentDefaultCtorArg {
+  struct Inner {
+    __declspec(dllexport) Inner(int n = T::member) {}
+  };
+};
+NestedDependentDefaultCtorArg<HasMember>::Inner ValidNestedDependentArg;
+
 void UseDependentArg() { throw DependentDefaultCopyArg<HasMember>(); }
 
 void ErrorInDependentArg() {

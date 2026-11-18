@@ -38,8 +38,9 @@ protected:
   raw_svector_ostream CommentStream;
   raw_null_ostream NullStream;
 
-  MCAsmBaseStreamer(MCContext &Context, std::unique_ptr<MCCodeEmitter> Emitter,
-                    std::unique_ptr<MCAsmBackend> AsmBackend);
+  LLVM_ABI MCAsmBaseStreamer(MCContext &Context,
+                             std::unique_ptr<MCCodeEmitter> Emitter,
+                             std::unique_ptr<MCAsmBackend> AsmBackend);
 
 public:
   /// Return a raw_ostream that comments can be written to.
@@ -54,7 +55,8 @@ public:
   /// Add a comment showing the encoding of an instruction.
   /// \param Inst - The instruction to encode.
   /// \param STI - Subtarget information.
-  void addEncodingComment(const MCInst &Inst, const MCSubtargetInfo &STI);
+  LLVM_ABI void addEncodingComment(const MCInst &Inst,
+                                   const MCSubtargetInfo &STI);
 
   MCAssembler &getAssembler() { return *Assembler; }
 };

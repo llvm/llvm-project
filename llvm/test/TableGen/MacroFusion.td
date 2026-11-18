@@ -117,12 +117,12 @@ def TestPostRAOnlyFusion: SimpleFusion<"test-postra-only", "HasTestPostRAOnlyFus
 // CHECK-PREDICATOR-NEXT:    {{[[]}}{{[[]}}maybe_unused{{[]]}}{{[]]}} auto &MRI = SecondMI.getMF()->getRegInfo();
 // CHECK-PREDICATOR-NEXT:    {
 // CHECK-PREDICATOR-NEXT:      {{[[]}}{{[[]}}maybe_unused{{[]]}}{{[]]}} const MachineInstr *MI = FirstMI;
-// CHECK-PREDICATOR-NEXT:      if (MI->getOperand(0).getReg() != Test::X0)
+// CHECK-PREDICATOR-NEXT:      if (!(MI->getOperand(0).isReg() && MI->getOperand(0).getReg() == Test::X0))
 // CHECK-PREDICATOR-NEXT:        return false;
 // CHECK-PREDICATOR-NEXT:    }
 // CHECK-PREDICATOR-NEXT:    {
 // CHECK-PREDICATOR-NEXT:      {{[[]}}{{[[]}}maybe_unused{{[]]}}{{[]]}} const MachineInstr *MI = &SecondMI;
-// CHECK-PREDICATOR-NEXT:      if (MI->getOperand(0).getReg() != Test::X0)
+// CHECK-PREDICATOR-NEXT:      if (!(MI->getOperand(0).isReg() && MI->getOperand(0).getReg() == Test::X0))
 // CHECK-PREDICATOR-NEXT:        return false;
 // CHECK-PREDICATOR-NEXT:    }
 // CHECK-PREDICATOR-NEXT:    if (SecondMI.getMF()->getProperties().hasNoVRegs())
@@ -145,7 +145,7 @@ def TestPostRAOnlyFusion: SimpleFusion<"test-postra-only", "HasTestPostRAOnlyFus
 // CHECK-PREDICATOR-NEXT:      {{[[]}}{{[[]}}maybe_unused{{[]]}}{{[]]}} const MachineInstr *MI = &SecondMI;
 // CHECK-PREDICATOR-NEXT:      if (!(
 // CHECK-PREDICATOR-NEXT:          ( MI->getOpcode() == Test::Inst1 )
-// CHECK-PREDICATOR-NEXT:          && MI->getOperand(0).getReg() == Test::X0
+// CHECK-PREDICATOR-NEXT:          && (MI->getOperand(0).isReg() && MI->getOperand(0).getReg() == Test::X0)
 // CHECK-PREDICATOR-NEXT:        ))
 // CHECK-PREDICATOR-NEXT:        return false;
 // CHECK-PREDICATOR-NEXT:    }
@@ -227,7 +227,7 @@ def TestPostRAOnlyFusion: SimpleFusion<"test-postra-only", "HasTestPostRAOnlyFus
 // CHECK-PREDICATOR-NEXT:      {{[[]}}{{[[]}}maybe_unused{{[]]}}{{[]]}} const MachineInstr *MI = &SecondMI;
 // CHECK-PREDICATOR-NEXT:      if (!(
 // CHECK-PREDICATOR-NEXT:          ( MI->getOpcode() == Test::Inst1 )
-// CHECK-PREDICATOR-NEXT:          && MI->getOperand(0).getReg() == Test::X0
+// CHECK-PREDICATOR-NEXT:          && (MI->getOperand(0).isReg() && MI->getOperand(0).getReg() == Test::X0)
 // CHECK-PREDICATOR-NEXT:        ))
 // CHECK-PREDICATOR-NEXT:        return false;
 // CHECK-PREDICATOR-NEXT:    }
@@ -349,7 +349,7 @@ def TestPostRAOnlyFusion: SimpleFusion<"test-postra-only", "HasTestPostRAOnlyFus
 // CHECK-PREDICATOR-NEXT:      {{[[]}}{{[[]}}maybe_unused{{[]]}}{{[]]}} const MachineInstr *MI = &SecondMI;
 // CHECK-PREDICATOR-NEXT:      if (!(
 // CHECK-PREDICATOR-NEXT:          ( MI->getOpcode() == Test::Inst2 )
-// CHECK-PREDICATOR-NEXT:          && MI->getOperand(0).getReg() == Test::X0
+// CHECK-PREDICATOR-NEXT:          && (MI->getOperand(0).isReg() && MI->getOperand(0).getReg() == Test::X0)
 // CHECK-PREDICATOR-NEXT:        ))
 // CHECK-PREDICATOR-NEXT:        return false;
 // CHECK-PREDICATOR-NEXT:    }
@@ -412,4 +412,18 @@ def TestPostRAOnlyFusion: SimpleFusion<"test-postra-only", "HasTestPostRAOnlyFus
 // CHECK-SUBTARGET-NEXT:   if (hasFeature(Test::TestPreRAOnlyFusion)) Fusions.push_back(llvm::isTestPreRAOnlyFusion);
 // CHECK-SUBTARGET-NEXT:   if (hasFeature(Test::TestSingleFusion)) Fusions.push_back(llvm::isTestSingleFusion);
 // CHECK-SUBTARGET-NEXT:   return Fusions;
+// CHECK-SUBTARGET-NEXT: }
+
+// Check that the generated fusion subtarget features are ignored for inlining.
+// CHECK-SUBTARGET:      const FeatureBitset &TestGenSubtargetInfo::getInlineIgnoreFeatures() const {
+// CHECK-SUBTARGET-NEXT:   static constexpr FeatureBitset Features = {
+// CHECK-SUBTARGET-NEXT: Test::TestBothFusionPredicate,
+// CHECK-SUBTARGET-NEXT: Test::TestCommutableFusion,
+// CHECK-SUBTARGET-NEXT: Test::TestFirstSameRegFusion,
+// CHECK-SUBTARGET-NEXT: Test::TestFusion,
+// CHECK-SUBTARGET-NEXT: Test::TestPostRAOnlyFusion,
+// CHECK-SUBTARGET-NEXT: Test::TestPreRAOnlyFusion,
+// CHECK-SUBTARGET-NEXT: Test::TestSingleFusion,
+// CHECK-SUBTARGET-NEXT:   };
+// CHECK-SUBTARGET-NEXT:   return Features;
 // CHECK-SUBTARGET-NEXT: }

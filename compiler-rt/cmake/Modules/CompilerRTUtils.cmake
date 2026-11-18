@@ -41,6 +41,10 @@ macro(append_string_if condition value)
   endif()
 endmacro()
 
+macro(remove_rtti_flags list)
+  list(REMOVE_ITEM ${list} -frtti -fno-rtti /GR /GR-)
+endmacro()
+
 macro(append_rtti_flag polarity list)
   if(${polarity})
     append_list_if(COMPILER_RT_HAS_FRTTI_FLAG -frtti ${list})
@@ -522,6 +526,16 @@ function(get_compiler_rt_install_dir arch install_dir)
     set(${install_dir} ${COMPILER_RT_INSTALL_LIBRARY_DIR}/${target} PARENT_SCOPE)
   else()
     set(${install_dir} ${COMPILER_RT_INSTALL_LIBRARY_DIR} PARENT_SCOPE)
+  endif()
+endfunction()
+
+# Multi-configuration generators get no per-library install targets, so their
+# libraries are installed with the parent target's component instead.
+function(get_compiler_rt_install_component name parent_target component)
+  if(CMAKE_CONFIGURATION_TYPES AND parent_target)
+    set(${component} ${parent_target} PARENT_SCOPE)
+  else()
+    set(${component} ${name} PARENT_SCOPE)
   endif()
 endfunction()
 

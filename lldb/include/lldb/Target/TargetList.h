@@ -61,7 +61,7 @@ public:
   /// \param[in] user_exe_path
   ///     The main executable file for a debug target. This value
   ///     can be empty and the file can be set later using:
-  ///     Target::SetExecutableModule (ModuleSP&)
+  ///     Target::RebuildModuleListWithExecutable (ModuleSP&)
   ///
   /// \param[in] triple_str
   ///     A target triple string to be used for the target. This can

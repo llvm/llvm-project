@@ -1,5 +1,5 @@
 set(arch_specific_deps)
-if(LIBC_TARGET_ARCHITECTURE_IS_AARCH64)
+if(LIBC_TARGET_ARCHITECTURE_IS_AARCH64 AND NOT LIBC_TARGET_OS_IS_BAREMETAL)
   set(arch_specific_deps libc.src.sys.auxv.getauxval)
 endif()
 add_object_library(

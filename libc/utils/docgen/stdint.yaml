@@ -1,0 +1,340 @@
+standard: c23
+posix: posix-2024
+c-reference-root: types/integer
+types:
+  int16_t:
+    c-definition: 7.22.1.1
+    in-latest-posix: ''
+  int32_t:
+    c-definition: 7.22.1.1
+    in-latest-posix: ''
+  int64_t:
+    c-definition: 7.22.1.1
+    in-latest-posix: ''
+  int8_t:
+    c-definition: 7.22.1.1
+    in-latest-posix: ''
+  int_fast16_t:
+    c-definition: 7.22.1.3
+    in-latest-posix: ''
+  int_fast32_t:
+    c-definition: 7.22.1.3
+    in-latest-posix: ''
+  int_fast64_t:
+    c-definition: 7.22.1.3
+    in-latest-posix: ''
+  int_fast8_t:
+    c-definition: 7.22.1.3
+    in-latest-posix: ''
+  int_least16_t:
+    c-definition: 7.22.1.2
+    in-latest-posix: ''
+  int_least32_t:
+    c-definition: 7.22.1.2
+    in-latest-posix: ''
+  int_least64_t:
+    c-definition: 7.22.1.2
+    in-latest-posix: ''
+  int_least8_t:
+    c-definition: 7.22.1.2
+    in-latest-posix: ''
+  intmax_t:
+    c-definition: 7.22.1.5
+    in-latest-posix: ''
+  intptr_t:
+    c-definition: 7.22.1.4
+    in-latest-posix: ''
+  uint16_t:
+    c-definition: 7.22.1.1
+    in-latest-posix: ''
+  uint32_t:
+    c-definition: 7.22.1.1
+    in-latest-posix: ''
+  uint64_t:
+    c-definition: 7.22.1.1
+    in-latest-posix: ''
+  uint8_t:
+    c-definition: 7.22.1.1
+    in-latest-posix: ''
+  uint_fast16_t:
+    c-definition: 7.22.1.3
+    in-latest-posix: ''
+  uint_fast32_t:
+    c-definition: 7.22.1.3
+    in-latest-posix: ''
+  uint_fast64_t:
+    c-definition: 7.22.1.3
+    in-latest-posix: ''
+  uint_fast8_t:
+    c-definition: 7.22.1.3
+    in-latest-posix: ''
+  uint_least16_t:
+    c-definition: 7.22.1.2
+    in-latest-posix: ''
+  uint_least32_t:
+    c-definition: 7.22.1.2
+    in-latest-posix: ''
+  uint_least64_t:
+    c-definition: 7.22.1.2
+    in-latest-posix: ''
+  uint_least8_t:
+    c-definition: 7.22.1.2
+    in-latest-posix: ''
+  uintmax_t:
+    c-definition: 7.22.1.5
+    in-latest-posix: ''
+  uintptr_t:
+    c-definition: 7.22.1.4
+    in-latest-posix: ''
+macros:
+  INT16_C:
+    c-definition: 7.22.4
+    in-latest-posix: ''
+  INT16_MAX:
+    c-definition: 7.22.2
+    in-latest-posix: ''
+  INT16_MIN:
+    c-definition: 7.22.2
+    in-latest-posix: ''
+  INT16_WIDTH:
+    c-definition: 7.22.2
+  INT32_C:
+    c-definition: 7.22.4
+    in-latest-posix: ''
+  INT32_MAX:
+    c-definition: 7.22.2
+    in-latest-posix: ''
+  INT32_MIN:
+    c-definition: 7.22.2
+    in-latest-posix: ''
+  INT32_WIDTH:
+    c-definition: 7.22.2
+  INT64_C:
+    c-definition: 7.22.4
+    in-latest-posix: ''
+  INT64_MAX:
+    c-definition: 7.22.2
+    in-latest-posix: ''
+  INT64_MIN:
+    c-definition: 7.22.2
+    in-latest-posix: ''
+  INT64_WIDTH:
+    c-definition: 7.22.2
+  INT8_C:
+    c-definition: 7.22.4
+    in-latest-posix: ''
+  INT8_MAX:
+    c-definition: 7.22.2
+    in-latest-posix: ''
+  INT8_MIN:
+    c-definition: 7.22.2
+    in-latest-posix: ''
+  INT8_WIDTH:
+    c-definition: 7.22.2
+  INTMAX_C:
+    c-definition: 7.22.4
+    in-latest-posix: ''
+  INTMAX_MAX:
+    c-definition: 7.22.2
+    in-latest-posix: ''
+  INTMAX_MIN:
+    c-definition: 7.22.2
+    in-latest-posix: ''
+  INTMAX_WIDTH:
+    c-definition: 7.22.2
+  INTPTR_MAX:
+    c-definition: 7.22.2
+    in-latest-posix: ''
+  INTPTR_MIN:
+    c-definition: 7.22.2
+    in-latest-posix: ''
+  INTPTR_WIDTH:
+    c-definition: 7.22.2
+  INT_FAST16_MAX:
+    c-definition: 7.22.2
+    in-latest-posix: ''
+  INT_FAST16_MIN:
+    c-definition: 7.22.2
+    in-latest-posix: ''
+  INT_FAST16_WIDTH:
+    c-definition: 7.22.2
+  INT_FAST32_MAX:
+    c-definition: 7.22.2
+    in-latest-posix: ''
+  INT_FAST32_MIN:
+    c-definition: 7.22.2
+    in-latest-posix: ''
+  INT_FAST32_WIDTH:
+    c-definition: 7.22.2
+  INT_FAST64_MAX:
+    c-definition: 7.22.2
+    in-latest-posix: ''
+  INT_FAST64_MIN:
+    c-definition: 7.22.2
+    in-latest-posix: ''
+  INT_FAST64_WIDTH:
+    c-definition: 7.22.2
+  INT_FAST8_MAX:
+    c-definition: 7.22.2
+    in-latest-posix: ''
+  INT_FAST8_MIN:
+    c-definition: 7.22.2
+    in-latest-posix: ''
+  INT_FAST8_WIDTH:
+    c-definition: 7.22.2
+  INT_LEAST16_MAX:
+    c-definition: 7.22.2
+    in-latest-posix: ''
+  INT_LEAST16_MIN:
+    c-definition: 7.22.2
+    in-latest-posix: ''
+  INT_LEAST16_WIDTH:
+    c-definition: 7.22.2
+  INT_LEAST32_MAX:
+    c-definition: 7.22.2
+    in-latest-posix: ''
+  INT_LEAST32_MIN:
+    c-definition: 7.22.2
+    in-latest-posix: ''
+  INT_LEAST32_WIDTH:
+    c-definition: 7.22.2
+  INT_LEAST64_MAX:
+    c-definition: 7.22.2
+    in-latest-posix: ''
+  INT_LEAST64_MIN:
+    c-definition: 7.22.2
+    in-latest-posix: ''
+  INT_LEAST64_WIDTH:
+    c-definition: 7.22.2
+  INT_LEAST8_MAX:
+    c-definition: 7.22.2
+    in-latest-posix: ''
+  INT_LEAST8_MIN:
+    c-definition: 7.22.2
+    in-latest-posix: ''
+  INT_LEAST8_WIDTH:
+    c-definition: 7.22.2
+  PTRDIFF_MAX:
+    c-definition: 7.22.2
+    in-latest-posix: ''
+  PTRDIFF_MIN:
+    c-definition: 7.22.2
+    in-latest-posix: ''
+  PTRDIFF_WIDTH:
+    c-definition: 7.22.2
+  SIG_ATOMIC_MAX:
+    c-definition: 7.22.2
+    in-latest-posix: ''
+  SIG_ATOMIC_MIN:
+    c-definition: 7.22.2
+    in-latest-posix: ''
+  SIG_ATOMIC_WIDTH:
+    c-definition: 7.22.2
+  SIZE_MAX:
+    c-definition: 7.22.2
+    in-latest-posix: ''
+  SIZE_WIDTH:
+    c-definition: 7.22.2
+  UINT16_C:
+    c-definition: 7.22.4
+    in-latest-posix: ''
+  UINT16_MAX:
+    c-definition: 7.22.2
+    in-latest-posix: ''
+  UINT16_WIDTH:
+    c-definition: 7.22.2
+  UINT32_C:
+    c-definition: 7.22.4
+    in-latest-posix: ''
+  UINT32_MAX:
+    c-definition: 7.22.2
+    in-latest-posix: ''
+  UINT32_WIDTH:
+    c-definition: 7.22.2
+  UINT64_C:
+    c-definition: 7.22.4
+    in-latest-posix: ''
+  UINT64_MAX:
+    c-definition: 7.22.2
+    in-latest-posix: ''
+  UINT64_WIDTH:
+    c-definition: 7.22.2
+  UINT8_C:
+    c-definition: 7.22.4
+    in-latest-posix: ''
+  UINT8_MAX:
+    c-definition: 7.22.2
+    in-latest-posix: ''
+  UINT8_WIDTH:
+    c-definition: 7.22.2
+  UINTMAX_C:
+    c-definition: 7.22.4
+    in-latest-posix: ''
+  UINTMAX_MAX:
+    c-definition: 7.22.2
+    in-latest-posix: ''
+  UINTMAX_WIDTH:
+    c-definition: 7.22.2
+  UINTPTR_MAX:
+    c-definition: 7.22.2
+    in-latest-posix: ''
+  UINTPTR_WIDTH:
+    c-definition: 7.22.2
+  UINT_FAST16_MAX:
+    c-definition: 7.22.2
+    in-latest-posix: ''
+  UINT_FAST16_WIDTH:
+    c-definition: 7.22.2
+  UINT_FAST32_MAX:
+    c-definition: 7.22.2
+    in-latest-posix: ''
+  UINT_FAST32_WIDTH:
+    c-definition: 7.22.2
+  UINT_FAST64_MAX:
+    c-definition: 7.22.2
+    in-latest-posix: ''
+  UINT_FAST64_WIDTH:
+    c-definition: 7.22.2
+  UINT_FAST8_MAX:
+    c-definition: 7.22.2
+    in-latest-posix: ''
+  UINT_FAST8_WIDTH:
+    c-definition: 7.22.2
+  UINT_LEAST16_MAX:
+    c-definition: 7.22.2
+    in-latest-posix: ''
+  UINT_LEAST16_WIDTH:
+    c-definition: 7.22.2
+  UINT_LEAST32_MAX:
+    c-definition: 7.22.2
+    in-latest-posix: ''
+  UINT_LEAST32_WIDTH:
+    c-definition: 7.22.2
+  UINT_LEAST64_MAX:
+    c-definition: 7.22.2
+    in-latest-posix: ''
+  UINT_LEAST64_WIDTH:
+    c-definition: 7.22.2
+  UINT_LEAST8_MAX:
+    c-definition: 7.22.2
+    in-latest-posix: ''
+  UINT_LEAST8_WIDTH:
+    c-definition: 7.22.2
+  WCHAR_MAX:
+    c-definition: 7.22.2
+    in-latest-posix: ''
+  WCHAR_MIN:
+    c-definition: 7.22.2
+    in-latest-posix: ''
+  WCHAR_WIDTH:
+    c-definition: 7.22.2
+  WINT_MAX:
+    c-definition: 7.22.2
+    in-latest-posix: ''
+  WINT_MIN:
+    c-definition: 7.22.2
+    in-latest-posix: ''
+  WINT_WIDTH:
+    c-definition: 7.22.2
+  __STDC_VERSION_STDINT_H__:
+    c-definition: '7.22'

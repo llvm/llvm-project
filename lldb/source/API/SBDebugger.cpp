@@ -49,11 +49,11 @@
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/OptionGroupPlatform.h"
+#include "lldb/Target/Language.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/TargetList.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/State.h"
-#include "lldb/Version/Version.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -531,9 +531,12 @@ void SBDebugger::HandleCommand(const char *command) {
   if (m_opaque_sp) {
     TargetSP target_sp(
         m_opaque_sp->GetCommandInterpreter().GetSelectedTarget());
-    std::unique_lock<std::recursive_mutex> lock;
-    if (target_sp)
-      lock = std::unique_lock<std::recursive_mutex>(target_sp->GetAPIMutex());
+    TargetAPIMutex api_lock;
+    std::unique_lock<TargetAPIMutex> guard;
+    if (target_sp) {
+      api_lock = TargetAPIMutex(target_sp->GetAPIMutex());
+      guard = std::unique_lock<TargetAPIMutex>(api_lock);
+    }
 
     SBCommandInterpreter sb_interpreter(GetCommandInterpreter());
     SBCommandReturnObject result;
@@ -606,7 +609,8 @@ void SBDebugger::HandleProcessEvent(const SBProcess &process,
   char stdio_buffer[1024];
   size_t len;
 
-  std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
+  TargetAPIMutex api_lock = target_sp->GetAPIMutex();
+  std::lock_guard<TargetAPIMutex> guard(api_lock);
 
   if (event_type &
       (Process::eBroadcastBitSTDOUT | Process::eBroadcastBitStateChanged)) {
@@ -704,7 +708,7 @@ SBDebugger::GetScriptInterpreterInfo(lldb::ScriptLanguage language) {
 const char *SBDebugger::GetVersionString() {
   LLDB_INSTRUMENT();
 
-  return lldb_private::GetVersion();
+  return ConstString(Language::GetVersionWithLanguageInfo()).GetCString();
 }
 
 const char *SBDebugger::StateAsCString(StateType state) {

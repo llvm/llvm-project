@@ -194,12 +194,12 @@ bool VPlanVerifier::verifyLastActiveLaneRecipe(
 
     // The header mask is a prefix mask. Before being materialized it is the
     // loop region's abstract header mask; afterwards it is an active lane mask
-    // (an intrinsic or a phi), or the icmp checked below.
-    if (match(Mask, m_HeaderMask()) || isa<VPActiveLaneMaskPHIRecipe>(Mask) ||
-        match(Mask, m_VPInstruction<VPInstruction::ActiveLaneMask>()))
-      continue;
-
-    if (match(Mask, m_ActiveLaneMask(m_VPValue(), m_VPValue(), m_VPValue())))
+    // (an intrinsic, phi, or an extract from a phi), or the icmp checked below.
+    if (match(Mask, m_CombineOr(
+                        m_HeaderMask(), m_Isa<VPActiveLaneMaskPHIRecipe>(),
+                        m_VPInstruction<VPInstruction::ActiveLaneMask>(),
+                        m_ExtractVectorForPart(
+                            m_Isa<VPActiveLaneMaskPHIRecipe>(), m_VPValue()))))
       continue;
 
     CmpPredicate Pred;
@@ -251,11 +251,6 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
         return false;
       }
 
-      // MaskedCond may be used from blocks it don't dominate; the block will be
-      // linearized and it will dominate its users after linearization.
-      if (match(&R, m_VPInstruction<VPInstruction::MaskedCond>()))
-        continue;
-
       for (const VPUser *U : V->users()) {
         auto *UI = cast<VPRecipeBase>(U);
         if (isa<VPIRPhi>(UI) &&
@@ -296,7 +291,11 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
           if (RecipeNumbering[UI] >= RecipeNumbering[&R])
             continue;
         } else {
-          if (VPDT.dominates(VPBB, UI->getParent()))
+          // MaskedCond may be used from blocks it don't dominate; the block
+          // will be linearized and it will dominate its users after
+          // linearization.
+          if (match(&R, m_VPInstruction<VPInstruction::MaskedCond>()) ||
+              VPDT.dominates(VPBB, UI->getParent()))
             continue;
         }
 
@@ -483,7 +482,19 @@ bool VPlanVerifier::verify(const VPlan &Plan) {
              [this](const VPBlockBase *VPB) { return !verifyBlock(VPB); }))
     return false;
 
+  // Check that the plan has a single loop region reachable from entry, and it
+  // matches the one returned by getVectorLoopRegion.
   const VPRegionBlock *TopRegion = Plan.getVectorLoopRegion();
+  if (any_of(VPBlockUtils::blocksOnly<const VPRegionBlock>(
+                 vp_depth_first_shallow(Plan.getEntry())),
+             [TopRegion](const VPRegionBlock *R) {
+               return !R->isReplicator() && R != TopRegion;
+             })) {
+    errs() << "VPlan must have a single top-level loop region, reachable from "
+              "the entry by following the last successor of each block\n";
+    return false;
+  }
+
   // TODO: Verify all blocks using vp_depth_first_deep iterators.
   if (!TopRegion)
     return true;
@@ -525,6 +536,13 @@ bool VPlanVerifier::verify(const VPlan &Plan) {
 }
 
 bool llvm::verifyVPlanIsValid(const VPlan &Plan) {
+  // The entry must be the root of the plan's top-level CFG: the dominator tree
+  // constructed below and the verifier's block walks all start there.
+  if (Plan.getEntry()->hasPredecessors()) {
+    errs() << "VPlan entry block has predecessors\n";
+    return false;
+  }
+
   VPDominatorTree VPDT(const_cast<VPlan &>(Plan));
   VPlanVerifier Verifier(VPDT);
   return Verifier.verify(Plan);

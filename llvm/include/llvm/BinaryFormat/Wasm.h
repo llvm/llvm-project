@@ -205,6 +205,7 @@ enum : unsigned {
   WASM_INIT_FUNCS = 0x6,
   WASM_COMDAT_INFO = 0x7,
   WASM_SYMBOL_TABLE = 0x8,
+  WASM_TARGET_ARCH = 0x9,
 };
 
 // Kind codes used in the custom "dylink" section
@@ -214,6 +215,7 @@ enum : unsigned {
   WASM_DYLINK_EXPORT_INFO = 0x3,
   WASM_DYLINK_IMPORT_INFO = 0x4,
   WASM_DYLINK_RUNTIME_PATH = 0x5,
+  WASM_DYLINK_TARGET_ARCH = 0x6,
 };
 
 // Kind codes used in the custom "linking" section in the WASM_COMDAT_INFO
@@ -251,6 +253,7 @@ const unsigned WASM_SYMBOL_VISIBILITY_MASK = 0xc;
 const unsigned WASM_SYMBOL_BINDING_GLOBAL = 0x0;
 const unsigned WASM_SYMBOL_BINDING_WEAK = 0x1;
 const unsigned WASM_SYMBOL_BINDING_LOCAL = 0x2;
+const unsigned WASM_SYMBOL_BINDING_COMMON = 0x3;
 const unsigned WASM_SYMBOL_VISIBILITY_DEFAULT = 0x0;
 const unsigned WASM_SYMBOL_VISIBILITY_HIDDEN = 0x4;
 const unsigned WASM_SYMBOL_UNDEFINED = 0x10;
@@ -308,6 +311,7 @@ struct WasmDylinkInfo {
   std::vector<WasmDylinkImportInfo> ImportInfo;
   std::vector<WasmDylinkExportInfo> ExportInfo;
   std::vector<StringRef> RuntimePath;
+  StringRef TargetArch;
 };
 
 struct WasmProducerInfo {
@@ -456,6 +460,11 @@ struct WasmDataReference {
   uint64_t Size;
 };
 
+struct WasmCommonReference {
+  uint64_t Size;
+  uint32_t Alignment;
+};
+
 struct WasmRelocation {
   uint8_t Type;    // The type of the relocation.
   uint32_t Index;  // Index into either symbol or type index space.
@@ -486,6 +495,8 @@ struct WasmSymbolInfo {
     uint32_t ElementIndex;
     // For a data symbols, the address of the data relative to segment.
     WasmDataReference DataRef;
+    // For common symbols, the size and alignment.
+    WasmCommonReference CommonRef;
   };
 };
 
@@ -506,6 +517,7 @@ struct WasmLinkingData {
   uint32_t Version;
   std::vector<WasmInitFunc> InitFunctions;
   std::vector<StringRef> Comdats;
+  StringRef TargetArch;
   // The linking section also contains a symbol table. This info (represented
   // in a WasmSymbolInfo struct) is stored inside the WasmSymbol object instead
   // of in this structure; this allows vectors of WasmSymbols and

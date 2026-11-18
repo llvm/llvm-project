@@ -33,11 +33,11 @@ Code difference detected with -g
 -   0:       48 8b 05 51 0b 20 00    mov    0x200b51(%rip),%rax
 +   0:       48 39 3d 51 0b 20 00    cmp    %rdi,0x200b51(%rip)
 
--To run LNT with Check CFC specify the absolute path to the wrapper to the --cc
- and --cxx options
+-To run the LLVM test-suite with Check CFC, configure it with the absolute path
+ to the wrapper as the compiler
    e.g.
-   lnt runtest nt --cc <path to check_cfc>/clang \\
-           --cxx <path to check_cfc>/clang++ ...
+   cmake -DCMAKE_C_COMPILER=<path to check_cfc>/clang \\
+         -DCMAKE_CXX_COMPILER=<path to check_cfc>/clang++ ...
 
 To add a new check:
 -Create a new subclass of WrapperCheck

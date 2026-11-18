@@ -15,9 +15,6 @@
 ```{role} good
 ```
 
-```{contents}
-:local:
-```
 
 # HIP Support
 
@@ -407,6 +404,64 @@ __host__ __device__ int Four(void) __attribute__((weak, alias("_Z6__Fourv")));
 __host__ __device__ float Four(float f) __attribute__((weak, alias("_Z6__Fourf")));
 ```
 
+## Managed Variables
+
+Clang currently implements the following diagnostics involving
+`__managed__` variables:
+
+- No dynamic initialization. Only constant initialization is permitted:
+
+  ```c++
+  struct A {
+    int a;
+    A() { a = 1; }
+  };
+
+  __managed__ A a; // error: dynamic initialization is not supported
+
+  ```
+
+- The address of a managed variable is not a constant expression:
+
+  ```c++
+  __managed__ int x;
+
+  void foo() {
+    static constexpr auto a = &x; // error: constexpr variable 'a' must be
+                                  // initialized by a constant expression
+  }
+  ```
+
+- Managed variables shall not be used in the initializer of a static/thread-local object,
+  because that initialization may run before the HIP runtime has registered the
+  managed variable, leaving its address null.
+  Clang can diagnose direct uses of a managed variable within an initializer;
+  however, it will not follow function calls, constructors,
+  destructors, function pointers, or definitions in other translation units,
+  i.e. even if a managed variable is used there, an error won't be emitted.
+  Accessing a managed variable during static or thread-local initialization or
+  destruction is still undefined behavior, even if Clang does not emit a
+  diagnostic. Example:
+
+  ```c++
+  __managed__ int x;
+
+  int *hostglob = &x;             // error: invalid use of a __managed__ variable
+
+  int *getX() {
+    return &x;
+  }
+  int *p = getX();                // No error emitted.
+  ```
+
+A managed variable is accessible from both host and device and its host and
+device initializers must be consistent; otherwise the behavior is undefined.
+A managed variable is emitted as an undefined global symbol in the device binary
+and is registered with the HIP runtime by `__hipRegisterManagedVar` function
+call during device module loading. Clang replaces device accesses to
+a managed variable with loads from a pointer to a chunk of managed memory
+allocated by the HIP runtime.
+
 ## C++17 Class Template Argument Deduction (CTAD) Support
 
 Clang supports C++17 Class Template Argument Deduction (CTAD) in both host and
@@ -700,7 +755,10 @@ C++ code:
    safely removed in the middle-end.
 
 `CodeGen` is similarly relaxed, with implicitly `__host__` functions being
-emitted as well.
+emitted as well. Because CUDA device code generation otherwise discards the
+exception-handling representation of a C++ `try` statement, HIPStdPar emits an
+unsupported-operation marker that is diagnosed later only if the containing
+function is reachable from an accelerator kernel.
 
 ## Implementation - Middle-End
 
@@ -711,6 +769,8 @@ We add two `opt` passes:
    - For all kernels in a `Module`, compute reachability, where a function
      `F` is reachable from a kernel `K` if and only if there exists a direct
      call-chain rooted in `F` that includes `K`;
+   - Diagnose unsupported constructs, including C++ exception handling, when
+     they are reachable from a kernel;
    - Remove all functions that are not reachable from kernels;
    - This pass is only run when compiling for the accelerator.
 

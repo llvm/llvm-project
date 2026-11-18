@@ -3504,6 +3504,24 @@ static_assert(__has_unique_object_representations(const int *), "as are pointers
 static_assert(__has_unique_object_representations(volatile int *), "as are pointers");
 static_assert(__has_unique_object_representations(const volatile int *), "as are pointers");
 
+static_assert(__has_unique_object_representations(_Atomic(int)), "layout-identical atomics are");
+static_assert(!__has_unique_object_representations(_Atomic(float)), "value type is not unique");
+// Sema rejects _Atomic directly on a _BitInt (Sema::BuildAtomicType), so go
+// through a trivially copyable wrapper to reach the _BitInt padding-bit check.
+struct AtomicReprBitIntPadded { _BitInt(12) x; };
+static_assert(!__has_unique_object_representations(_Atomic(AtomicReprBitIntPadded)),
+              "_BitInt(12) has padding bits");
+struct AtomicReprBitIntExact { _BitInt(32) x; };
+static_assert(__has_unique_object_representations(_Atomic(AtomicReprBitIntExact)),
+              "_BitInt(32) has no padding bits");
+struct AtomicReprThreeChars { char a, b, c; };
+static_assert(!__has_unique_object_representations(_Atomic(AtomicReprThreeChars)),
+              "atomic size rounded up to a power of two adds padding");
+struct AtomicReprMember { _Atomic(int) x; };
+static_assert(__has_unique_object_representations(AtomicReprMember), "atomic member, no padding");
+struct AtomicReprPadded { char c; _Atomic(int) x; };
+static_assert(!__has_unique_object_representations(AtomicReprPadded), "padding before atomic member");
+
 class C {};
 using FP = int (*)(int);
 using PMF = int (C::*)(int);
@@ -5185,4 +5203,21 @@ struct S;
 bool b = C<T, S>;
 // expected-note@-1 {{while checking the satisfaction of concept 'C<T, S>' requested here}}
 #endif
+}
+
+namespace GH214128{
+i < 0;
+#if __cplusplus <= 201703L
+// expected-error@-2 {{no template named 'i'}}
+#endif
+// expected-error@-4 {{expected '>'}}
+// expected-note@-5 {{to match this '<'}}
+#if __cplusplus > 201703L
+// expected-warning@-7 {{declaration does not declare anything}}
+#endif
+
+void f() {
+  struct __is_pod; // expected-warning {{keyword '__is_pod' will be made available as an identifier for the remainder of the translation unit}}
+  struct __is_pod;
+}
 }

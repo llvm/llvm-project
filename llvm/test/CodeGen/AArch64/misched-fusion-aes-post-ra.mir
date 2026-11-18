@@ -1,31 +1,31 @@
 # REQUIRES: asserts
 
-# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mattr=+fuse-aes,+crypto -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
-# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=generic -mattr=+crypto -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
-# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=cortex-a53 -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
-# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=cortex-a57 -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
-# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=cortex-a65 -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
-# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=cortex-a72 -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
-# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=cortex-a73 -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
-# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=cortex-a76 -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
-# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=cortex-a77 -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
-# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=cortex-a78 -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
-# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=cortex-a78c -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
-# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=cortex-x1 -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
-# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=neoverse-e1 -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
-# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=neoverse-n1 -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
-# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=neoverse-v1 -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
-# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=neoverse-512tvb -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
-# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=exynos-m3 -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
-# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=exynos-m4 -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
-# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=exynos-m5 -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
-# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=ampere1 -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
-# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=ampere1a -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
-# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=ampere1b -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
-# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=apple-m5 -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+# RUN: llc -filetype=null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mattr=+fuse-aes,+crypto -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+# RUN: llc -filetype=null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=generic -mattr=+crypto -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+# RUN: llc -filetype=null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=cortex-a53 -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+# RUN: llc -filetype=null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=cortex-a57 -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+# RUN: llc -filetype=null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=cortex-a65 -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+# RUN: llc -filetype=null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=cortex-a72 -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+# RUN: llc -filetype=null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=cortex-a73 -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+# RUN: llc -filetype=null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=cortex-a76 -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+# RUN: llc -filetype=null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=cortex-a77 -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+# RUN: llc -filetype=null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=cortex-a78 -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+# RUN: llc -filetype=null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=cortex-a78c -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+# RUN: llc -filetype=null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=cortex-x1 -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+# RUN: llc -filetype=null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=neoverse-e1 -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+# RUN: llc -filetype=null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=neoverse-n1 -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+# RUN: llc -filetype=null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=neoverse-v1 -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+# RUN: llc -filetype=null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=neoverse-512tvb -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+# RUN: llc -filetype=null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=exynos-m3 -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+# RUN: llc -filetype=null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=exynos-m4 -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+# RUN: llc -filetype=null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=exynos-m5 -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+# RUN: llc -filetype=null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=ampere1 -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+# RUN: llc -filetype=null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=ampere1a -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+# RUN: llc -filetype=null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=ampere1b -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+# RUN: llc -filetype=null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=apple-m5 -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
 
-# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mattr=-fuse-aes,+crypto -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s --check-prefixes=CHECK,NOFUSE
-# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=apple-m5 -mattr=-fuse-aes -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s --check-prefixes=CHECK,NOFUSE
+# RUN: llc -filetype=null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mattr=-fuse-aes,+crypto -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,NOFUSE
+# RUN: llc -filetype=null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=apple-m5 -mattr=-fuse-aes -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,NOFUSE
 
 ---
 name: encode_waw

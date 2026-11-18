@@ -182,24 +182,29 @@ public:
       return;
     }
 
-    // Delete all the MOVEM instruction till the end
-    while (MI != End) {
-      auto Next = std::next(MI);
-      MBB.erase(MI);
-      MI = Next;
+    // Add a unified MOVEM
+    MachineInstrBuilder NewMIB;
+    if (State.isLoad()) {
+      NewMIB = BuildMI(MBB, End, DL, TII->get(M68k::MOVM32mp))
+                   .addImm(State.getMask())
+                   .addImm(State.getFinalOffset())
+                   .addReg(State.getBase());
+    } else {
+      NewMIB = BuildMI(MBB, End, DL, TII->get(M68k::MOVM32pm))
+                   .addImm(State.getFinalOffset())
+                   .addReg(State.getBase())
+                   .addImm(State.getMask());
     }
 
-    // Add a unified one
-    if (State.isLoad()) {
-      BuildMI(MBB, End, DL, TII->get(M68k::MOVM32mp))
-          .addImm(State.getMask())
-          .addImm(State.getFinalOffset())
-          .addReg(State.getBase());
-    } else {
-      BuildMI(MBB, End, DL, TII->get(M68k::MOVM32pm))
-          .addImm(State.getFinalOffset())
-          .addReg(State.getBase())
-          .addImm(State.getMask());
+    // Delete all the old MOVEM instructions, and copy their implicit defs/uses
+    // over to the new instruction.
+    MachineFunction *MF = MBB.getParent();
+    MachineInstr *NewMI = NewMIB.getInstr();
+    while (MI != NewMI) {
+      auto Next = std::next(MI);
+      NewMI->copyImplicitOps(*MF, *MI);
+      MBB.erase(MI);
+      MI = Next;
     }
 
     State = MOVEMState();

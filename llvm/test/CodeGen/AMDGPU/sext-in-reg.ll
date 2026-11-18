@@ -1,7 +1,7 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgpu6.00-- < %s | FileCheck -enable-var-scope --check-prefixes=GCN,SI,FUNC %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgpu8.02-- -mattr=-flat-for-global < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GFX89,FUNC %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgpu9.00-- -mattr=-flat-for-global < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GFX9,GFX89,FUNC %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=r600-- -mcpu=cypress < %s | FileCheck -enable-var-scope --check-prefixes=EG,FUNC %s
+; RUN: llc -mtriple=amdgpu6.00-- < %s | FileCheck -enable-var-scope --check-prefixes=GCN,SI,FUNC %s
+; RUN: llc -mtriple=amdgpu8.02-- -mattr=-flat-for-global < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GFX89,FUNC %s
+; RUN: llc -mtriple=amdgpu9.00-- -mattr=-flat-for-global < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GFX9,GFX89,FUNC %s
+; RUN: llc -mtriple=r600-- -mcpu=cypress < %s | FileCheck -enable-var-scope --check-prefixes=EG,FUNC %s
 
 ; FIXME: i16 promotion pass ruins the scalar cases when legal.
 ; FIXME: r600 fails verifier
@@ -419,8 +419,11 @@ define amdgpu_kernel void @testcase_3(ptr addrspace(1) %out, i8 %a) #0 {
 ; GCN: v_bfe_i32 [[EXTRACT:v[0-9]+]], {{v[0-9]+}}, 0, 8
 ; GCN: v_bfe_i32 [[EXTRACT:v[0-9]+]], {{v[0-9]+}}, 0, 8
 define amdgpu_kernel void @vgpr_sext_in_reg_v4i8_to_v4i32(ptr addrspace(1) %out, ptr addrspace(1) %a, ptr addrspace(1) %b) #0 {
-  %loada = load <4 x i32>, ptr addrspace(1) %a, align 16
-  %loadb = load <4 x i32>, ptr addrspace(1) %b, align 16
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %a.tid = getelementptr inbounds <4 x i32>, ptr addrspace(1) %a, i32 %tid
+  %b.tid = getelementptr inbounds <4 x i32>, ptr addrspace(1) %b, i32 %tid
+  %loada = load <4 x i32>, ptr addrspace(1) %a.tid, align 16
+  %loadb = load <4 x i32>, ptr addrspace(1) %b.tid, align 16
   %c = add <4 x i32> %loada, %loadb ; add to prevent folding into extload
   %shl = shl <4 x i32> %c, <i32 24, i32 24, i32 24, i32 24>
   %ashr = ashr <4 x i32> %shl, <i32 24, i32 24, i32 24, i32 24>
@@ -432,8 +435,11 @@ define amdgpu_kernel void @vgpr_sext_in_reg_v4i8_to_v4i32(ptr addrspace(1) %out,
 ; GCN: v_bfe_i32 [[EXTRACT:v[0-9]+]], {{v[0-9]+}}, 0, 16
 ; GCN: v_bfe_i32 [[EXTRACT:v[0-9]+]], {{v[0-9]+}}, 0, 16
 define amdgpu_kernel void @vgpr_sext_in_reg_v4i16_to_v4i32(ptr addrspace(1) %out, ptr addrspace(1) %a, ptr addrspace(1) %b) #0 {
-  %loada = load <4 x i32>, ptr addrspace(1) %a, align 16
-  %loadb = load <4 x i32>, ptr addrspace(1) %b, align 16
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %a.tid = getelementptr inbounds <4 x i32>, ptr addrspace(1) %a, i32 %tid
+  %b.tid = getelementptr inbounds <4 x i32>, ptr addrspace(1) %b, i32 %tid
+  %loada = load <4 x i32>, ptr addrspace(1) %a.tid, align 16
+  %loadb = load <4 x i32>, ptr addrspace(1) %b.tid, align 16
   %c = add <4 x i32> %loada, %loadb ; add to prevent folding into extload
   %shl = shl <4 x i32> %c, <i32 16, i32 16, i32 16, i32 16>
   %ashr = ashr <4 x i32> %shl, <i32 16, i32 16, i32 16, i32 16>

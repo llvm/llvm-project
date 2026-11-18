@@ -4,7 +4,7 @@ Test lldb-dap stackTrace request with an extended backtrace thread.
 
 import os
 
-from lldbsuite.test.decorators import skipUnlessDarwin
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbplatformutil import findBacktraceRecordingDylib
 from lldbsuite.test.lldbtest import line_number
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
@@ -42,7 +42,7 @@ class TestDAP_extendedStackTrace(DAPTestCaseBase):
         stop_event = session.verify_stopped_on_breakpoint(bp_id, after=cm.process_event)
         return session, stop_event
 
-    @skipUnlessDarwin
+    @requireDarwin
     def test_stackTrace(self):
         """Tests the 'stackTrace' packet on a thread with an extended backtrace."""
         session, stop_event = self.build_and_run_to_breakpoint()
@@ -104,7 +104,7 @@ class TestDAP_extendedStackTrace(DAPTestCaseBase):
                 total_frames, i, "total frames should include a pagination offset"
             )
 
-    @skipUnlessDarwin
+    @requireDarwin
     def test_stackTraceWithFormat(self):
         """Tests the 'stackTrace' packet using stack trace formats."""
         session, stop_event = self.build_and_run_to_breakpoint(

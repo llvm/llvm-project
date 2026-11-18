@@ -64,7 +64,7 @@ void test_omp_parallel_master_copyin(int *a) {
 // CHECK-NEXT:   ret void
 //
 // CHECK-LABEL: define {{[^@]+}}@test_omp_parallel_copyin.omp_outlined
-// CHECK-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[A:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr nofreeobj noundef nonnull align 8 dereferenceable(8) [[A:%.*]], ptr nofreeobj noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:   [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -167,7 +167,7 @@ void test_omp_parallel_master_copyin(int *a) {
 // CHECK-NEXT:   ret void
 //
 // CHECK-LABEL: define {{[^@]+}}@test_omp_parallel_for_copyin.omp_outlined
-// CHECK-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[A:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr nofreeobj noundef nonnull align 8 dereferenceable(8) [[A:%.*]], ptr nofreeobj noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:   [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -267,7 +267,7 @@ void test_omp_parallel_master_copyin(int *a) {
 // CHECK-NEXT:   ret void
 //
 // CHECK-LABEL: define {{[^@]+}}@test_omp_parallel_for_simd_copyin.omp_outlined
-// CHECK-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[A:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr nofreeobj noundef nonnull align 8 dereferenceable(8) [[A:%.*]], ptr nofreeobj noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:   [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -376,7 +376,7 @@ void test_omp_parallel_master_copyin(int *a) {
 // CHECK-NEXT:   ret void
 //
 // CHECK-LABEL: define {{[^@]+}}@test_omp_parallel_sections_copyin.omp_outlined
-// CHECK-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[A:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[B:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr nofreeobj noundef nonnull align 8 dereferenceable(8) [[A:%.*]], ptr nofreeobj noundef nonnull align 8 dereferenceable(8) [[B:%.*]], ptr nofreeobj noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:   [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -471,7 +471,7 @@ void test_omp_parallel_master_copyin(int *a) {
 // CHECK-NEXT:   ret void
 //
 // CHECK-LABEL: define {{[^@]+}}@test_omp_parallel_master_copyin.omp_outlined
-// CHECK-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[A:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr nofreeobj noundef nonnull align 8 dereferenceable(8) [[A:%.*]], ptr nofreeobj noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:   [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8

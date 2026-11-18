@@ -9,6 +9,7 @@
 #include "TestDialect.h"
 #include "TestOps.h"
 #include "TestTypes.h"
+#include "mlir/Bytecode/Encoding.h"
 #include "mlir/Conversion/ConvertToEmitC/ToEmitCInterface.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
@@ -44,7 +45,11 @@ struct TestResourceBlobManagerInterface
 };
 
 namespace {
-enum test_encoding { k_attr_params = 0, k_test_i32 = 99 };
+enum test_encoding {
+  k_attr_params = 0,
+  k_test_i32 = 99,
+  k_test_rec_alias = 100
+};
 } // namespace
 
 // Test support for interacting with the Bytecode reader/writer.
@@ -59,6 +64,17 @@ struct TestBytecodeDialectInterface : public BytecodeDialectInterface {
       writer.writeVarInt(test_encoding::k_test_i32);
       return success();
     }
+    // A mutable, possibly self-referential type. Exercises the cyclic path in
+    // the bytecode reader; see readType below.
+    if (auto recType = llvm::dyn_cast<TestRecursiveAliasType>(type)) {
+      writer.writeVarInt(test_encoding::k_test_rec_alias);
+      writer.writeOwnedString(recType.getName());
+      Type body = recType.getBody();
+      writer.writeOwnedBool(static_cast<bool>(body));
+      if (body)
+        writer.writeType(body);
+      return success();
+    }
     return failure();
   }
 
@@ -68,15 +84,51 @@ struct TestBytecodeDialectInterface : public BytecodeDialectInterface {
       return Type();
     if (encoding == test_encoding::k_test_i32)
       return TestI32Type::get(getContext());
+    if (encoding == test_encoding::k_test_rec_alias) {
+      StringRef name;
+      if (failed(reader.readString(name)))
+        return Type();
+
+      // The body may name this very type, so the type has to exist before the
+      // body is read. Publish it first: a reference back to it then resolves
+      // to this incomplete value instead of re-entering the same entry. This
+      // is the bytecode counterpart of tryStartCyclicParse in
+      // TestRecursiveAliasType::parse, and it needs the same stable identity:
+      // completing the type must mutate the published instance.
+      auto rec = TestRecursiveAliasType::get(getContext(), name);
+      if (failed(reader.tryStartCyclicRead(rec)))
+        return Type();
+
+      bool hasBody = false;
+      if (failed(reader.readBool(hasBody)))
+        return Type();
+      if (hasBody) {
+        Type body;
+        if (failed(reader.readType(body)))
+          return Type();
+        rec.setBody(body);
+      }
+      return rec;
+    }
     return Type();
   }
 
   LogicalResult writeAttribute(Attribute attr,
                                DialectBytecodeWriter &writer) const final {
     if (auto concreteAttr = llvm::dyn_cast<TestAttrParamsAttr>(attr)) {
+      // Without dialect version metadata, use the textual fallback rather than
+      // emit a historical encoding that a reader would interpret as current.
+      if (writer.getBytecodeVersion() < bytecode::kDialectVersioning)
+        return failure();
       writer.writeVarInt(test_encoding::k_attr_params);
-      writer.writeVarInt(concreteAttr.getV0());
-      writer.writeVarInt(concreteAttr.getV1());
+      auto version = writer.getDialectVersion<TestDialect>();
+      bool useOldEncoding =
+          succeeded(version) &&
+          static_cast<const TestDialectVersion *>(*version)->major_ < 2;
+      writer.writeVarInt(useOldEncoding ? concreteAttr.getV1()
+                                        : concreteAttr.getV0());
+      writer.writeVarInt(useOldEncoding ? concreteAttr.getV0()
+                                        : concreteAttr.getV1());
       return success();
     }
     return failure();
@@ -95,6 +147,39 @@ struct TestBytecodeDialectInterface : public BytecodeDialectInterface {
       return readAttrNewEncoding(reader);
     // Forbid reading future versions by returning nullptr.
     return Attribute();
+  }
+
+  std::unique_ptr<DialectVersion> parseVersion(StringRef version) const final {
+    auto [major, minor] = version.split('.');
+    uint32_t majorVersion, minorVersion;
+    if (major.getAsInteger(10, majorVersion) ||
+        minor.getAsInteger(10, minorVersion) || majorVersion > 2 ||
+        (majorVersion == 2 && minorVersion > 0))
+      return nullptr;
+    return std::make_unique<TestDialectVersion>(majorVersion, minorVersion);
+  }
+
+  LogicalResult verifyVersion(Operation *topLevelOp,
+                              const DialectVersion &version) const final {
+    if (static_cast<const TestDialectVersion &>(version).major_ >= 2)
+      return success();
+    WalkResult result = topLevelOp->walk([](TestVersionedOpA op) {
+      if (!op.getModifier())
+        return WalkResult::advance();
+      op.emitOpError("cannot emit test dialect versions before 2.0 with "
+                     "'modifier = true'");
+      return WalkResult::interrupt();
+    });
+    if (result.wasInterrupted())
+      return failure();
+    result = topLevelOp->walk([](TestOpWithVersionedProperties op) {
+      if (op.getProperties().prop.value2 == 0)
+        return WalkResult::advance();
+      op.emitOpError("cannot emit test dialect versions before 2.0 with "
+                     "a nonzero 'value2' property");
+      return WalkResult::interrupt();
+    });
+    return failure(result.wasInterrupted());
   }
 
   // Emit a specific version of the dialect.
@@ -327,7 +412,7 @@ struct TestInlinerInterface : public DialectInlinerInterface {
   bool isLegalToInline(Operation *call, Operation *callable,
                        bool wouldBeCloned) const final {
     // Don't allow inlining calls that are marked `noinline`.
-    return !call->hasAttr("noinline");
+    return !call->hasDiscardableAttr("noinline");
   }
   bool isLegalToInline(Region *, Region *, bool, IRMapping &) const final {
     // Inlining into test dialect regions is legal.
@@ -420,7 +505,8 @@ struct TestInlinerInterface : public DialectInlinerInterface {
     // Set attributed on all ops in the inlined blocks.
     for (Block &block : inlinedBlocks) {
       block.walk([&](Operation *op) {
-        op->setAttr("inlined_conversion", UnitAttr::get(call->getContext()));
+        op->setDiscardableAttr("inlined_conversion",
+                               UnitAttr::get(call->getContext()));
       });
     }
   }

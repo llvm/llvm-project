@@ -5,7 +5,7 @@
 # RUN:   | FileCheck -check-prefix=RV64 %s
 # RUN: llc -mtriple=riscv64 \
 # RUN:   -run-pass=prolog-epilog -run-pass=machine-latecleanup \
-# RUN:   -run-pass=riscv-post-ra-expand-pseudo -o - %s \
+# RUN:   -run-pass=riscv-expand-pseudo-post-ra -o - %s \
 # RUN:   | FileCheck -check-prefix=RV64-EXPAND %s
 # RUN: llc -mtriple=riscv32 \
 # RUN:   -run-pass=prolog-epilog -run-pass=machine-latecleanup -o - %s \
@@ -26,7 +26,6 @@
 # After expansion, only 2 LUI+ADD pairs remain instead of 4.
 name: test_same_region
 alignment: 4
-tracksRegLiveness: true
 frameInfo:
   maxAlignment: 8
   hasCalls: false
@@ -68,7 +67,6 @@ body: |
 # Different base anchors cannot be CSE'd with each other.
 name: test_different_regions
 alignment: 4
-tracksRegLiveness: true
 frameInfo:
   maxAlignment: 8
   hasCalls: false
@@ -105,7 +103,6 @@ body: |
 # No PseudoAddUpperImm generated.
 name: test_small_offset_no_pseudo
 alignment: 4
-tracksRegLiveness: true
 frameInfo:
   maxAlignment: 8
   hasCalls: false
@@ -135,7 +132,6 @@ body: |
 # RV32 -- verify with 32-bit stores/loads.
 name: test_rv32
 alignment: 4
-tracksRegLiveness: true
 frameInfo:
   maxAlignment: 4
   hasCalls: false

@@ -15,7 +15,7 @@ define void @main() {
       @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i8_1_0t(
           i32 0, i32 0, i32 1, i32 0, ptr null)
   ; CHECK:      Binding:
-  ; CHECK:        Record ID: 0
+  ; CHECK:        Binding ID: 0
   ; CHECK:        Space: 0
   ; CHECK:        Lower Bound: 0
   ; CHECK:        Size: 1
@@ -29,7 +29,7 @@ define void @main() {
       @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i8_1_0t(
           i32 0, i32 1, i32 1, i32 0, ptr null)
   ; CHECK:      Binding:
-  ; CHECK:        Record ID: 1
+  ; CHECK:        Binding ID: 1
   ; CHECK:        Space: 0
   ; CHECK:        Lower Bound: 1
   ; CHECK:        Size: 1
@@ -43,7 +43,7 @@ define void @main() {
       @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_i32_1_0_1t(
           i32 0, i32 2, i32 1, i32 0, ptr null)
   ; CHECK:      Binding:
-  ; CHECK:        Record ID: 2
+  ; CHECK:        Binding ID: 2
   ; CHECK:        Space: 0
   ; CHECK:        Lower Bound: 2
   ; CHECK:        Size: 1

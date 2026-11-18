@@ -106,7 +106,7 @@
 // TRAP-MERGE-NEXT:    [[TMP1:%.*]] = extractvalue { i32, i1 } [[TMP0]], 1, !nosanitize [[META6]]
 // TRAP-MERGE-NEXT:    br i1 [[TMP1]], label %[[TRAP:.*]], label %[[CONT:.*]], !prof [[PROF7:![0-9]+]], !nosanitize [[META6]]
 // TRAP-MERGE:       [[TRAP]]:
-// TRAP-MERGE-NEXT:    tail call void @llvm.ubsantrap(i8 0) #[[ATTR4:[0-9]+]], !nosanitize [[META6]]
+// TRAP-MERGE-NEXT:    tail call void @llvm.ubsantrap(i8 0), !nosanitize [[META6]]
 // TRAP-MERGE-NEXT:    unreachable, !nosanitize [[META6]]
 // TRAP-MERGE:       [[CONT]]:
 // TRAP-MERGE-NEXT:    [[TMP2:%.*]] = extractvalue { i32, i1 } [[TMP0]], 0, !nosanitize [[META6]]
@@ -229,7 +229,7 @@ int f(int x) {
 // TRAP-MERGE-NEXT:    [[TMP1:%.*]] = extractvalue { i32, i1 } [[TMP0]], 1, !nosanitize [[META6]]
 // TRAP-MERGE-NEXT:    br i1 [[TMP1]], label %[[TRAP:.*]], label %[[CONT:.*]], !prof [[PROF7]], !nosanitize [[META6]]
 // TRAP-MERGE:       [[TRAP]]:
-// TRAP-MERGE-NEXT:    tail call void @llvm.ubsantrap(i8 0) #[[ATTR4]], !nosanitize [[META6]]
+// TRAP-MERGE-NEXT:    tail call void @llvm.ubsantrap(i8 0), !nosanitize [[META6]]
 // TRAP-MERGE-NEXT:    unreachable, !nosanitize [[META6]]
 // TRAP-MERGE:       [[CONT]]:
 // TRAP-MERGE-NEXT:    [[TMP2:%.*]] = extractvalue { i32, i1 } [[TMP0]], 0, !nosanitize [[META6]]
@@ -387,7 +387,7 @@ int g(int x) {
 // TRAP-MERGE-NEXT:    [[TMP1:%.*]] = extractvalue { i32, i1 } [[TMP0]], 1, !nosanitize [[META6]]
 // TRAP-MERGE-NEXT:    br i1 [[TMP1]], label %[[TRAP:.*]], label %[[CONT:.*]], !prof [[PROF7]], !nosanitize [[META6]]
 // TRAP-MERGE:       [[TRAP]]:
-// TRAP-MERGE-NEXT:    tail call void @llvm.ubsantrap(i8 0) #[[ATTR4]], !nosanitize [[META6]]
+// TRAP-MERGE-NEXT:    tail call void @llvm.ubsantrap(i8 0), !nosanitize [[META6]]
 // TRAP-MERGE-NEXT:    unreachable, !nosanitize [[META6]]
 // TRAP-MERGE:       [[CONT]]:
 // TRAP-MERGE-NEXT:    [[TMP2:%.*]] = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 [[Y]], i32 129), !nosanitize [[META6]]
@@ -652,7 +652,7 @@ int h(int x, int y) {
 // TRAP-MERGE-NEXT:    [[TMP8:%.*]] = extractvalue { i32, i1 } [[TMP6]], 0, !nosanitize [[META6]]
 // TRAP-MERGE-NEXT:    ret i32 [[TMP8]]
 // TRAP-MERGE:       [[UNREACHABLE_MERGE]]:
-// TRAP-MERGE-NEXT:    tail call void @llvm.ubsantrap(i8 0) #[[ATTR4]], !nosanitize [[META6]]
+// TRAP-MERGE-NEXT:    tail call void @llvm.ubsantrap(i8 0), !nosanitize [[META6]]
 // TRAP-MERGE-NEXT:    unreachable
 //
 // HANDLER-MERGE-LABEL: define dso_local noundef i32 @m(

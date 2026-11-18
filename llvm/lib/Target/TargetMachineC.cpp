@@ -18,13 +18,13 @@
 #include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CBindingWrapping.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/CodeGenCWrappers.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
-#include <cstring>
 #include <optional>
 
 using namespace llvm;
@@ -203,6 +203,7 @@ LLVMCreateTargetMachineWithOptions(LLVMTargetRef T, const char *TripleStr,
   auto *Opt = unwrap(Options);
   TargetOptions TO;
   TO.MCOptions.ABIName = Opt->ABI;
+  TO.MCOptions.LibraryOptions = &cl::getCAPILibraryOptions();
   return wrap(unwrap(T)->createTargetMachine(Triple(TripleStr), Opt->CPU,
                                              Opt->Features, TO, Opt->RM,
                                              Opt->CM, Opt->OL, Opt->JIT));
@@ -285,7 +286,9 @@ void LLVMSetTargetMachineMachineOutliner(LLVMTargetMachineRef T,
 }
 
 LLVMTargetDataRef LLVMCreateTargetDataLayout(LLVMTargetMachineRef T) {
-  return wrap(new DataLayout(unwrap(T)->createDataLayout()));
+  TargetMachine *TM = unwrap(T);
+  return wrap(new DataLayout(TM->getTargetTriple().computeDataLayout(
+      TM->Options.MCOptions.getABIName())));
 }
 
 static LLVMBool LLVMTargetMachineEmit(LLVMTargetMachineRef T, LLVMModuleRef M,
@@ -299,7 +302,8 @@ static LLVMBool LLVMTargetMachineEmit(LLVMTargetMachineRef T, LLVMModuleRef M,
 
   std::string error;
 
-  Mod->setDataLayout(TM->createDataLayout());
+  Mod->setDataLayout(TM->getTargetTriple().computeDataLayout(
+      TM->Options.MCOptions.getABIName()));
 
   CodeGenFileType ft;
   switch (codegen) {

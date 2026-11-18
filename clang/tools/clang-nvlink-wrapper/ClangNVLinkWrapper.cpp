@@ -16,6 +16,8 @@
 
 #include "clang/Basic/Version.h"
 
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
@@ -37,6 +39,7 @@
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
@@ -44,6 +47,9 @@
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/WithColor.h"
+
+#include <list>
+#include <mutex>
 
 using namespace llvm;
 using namespace llvm::opt;
@@ -91,11 +97,11 @@ static void printVersion(raw_ostream &OS) {
 /// The value of `argv[0]` when run.
 static const char *Executable;
 
-/// Temporary files to be cleaned up.
-static SmallVector<SmallString<128>> TempFiles;
+/// Mutex lock to protect writes to shared TempFiles in parallel.
+static std::mutex TempFilesMutex;
 
-/// Codegen flags for LTO backend.
-static codegen::RegisterCodeGenFlags CodeGenFlags;
+/// Temporary files to be cleaned up.
+static std::list<SmallString<128>> TempFiles;
 
 namespace {
 // Must not overlap with llvm::opt::DriverFlag.
@@ -109,24 +115,12 @@ enum ID {
 #undef OPTION
 };
 
-#define OPTTABLE_STR_TABLE_CODE
+#define OPTTABLE_CODE
 #include "NVLinkOpts.inc"
-#undef OPTTABLE_STR_TABLE_CODE
 
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "NVLinkOpts.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-static constexpr OptTable::Info InfoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
-#include "NVLinkOpts.inc"
-#undef OPTION
-};
-
-class WrapperOptTable : public opt::GenericOptTable {
+class WrapperOptTable : public opt::OptTable {
 public:
-  WrapperOptTable()
-      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {}
+  WrapperOptTable() : opt::OptTable(optionTables()) {}
 };
 
 const OptTable &getOptTable() {
@@ -180,6 +174,7 @@ bool hasFatBinary(const ArgList &Args, MemoryBufferRef Buffer) {
 
 Expected<StringRef> createTempFile(const ArgList &Args, const Twine &Prefix,
                                    StringRef Extension) {
+  std::scoped_lock<decltype(TempFilesMutex)> Lock(TempFilesMutex);
   SmallString<128> OutputFile;
   if (Args.hasArg(OPT_save_temps)) {
     (Prefix + "." + Extension).toNullTerminatedStringRef(OutputFile);
@@ -255,6 +250,44 @@ void printCommands(ArrayRef<StringRef> CmdArgs) {
   errs() << join(std::next(CmdArgs.begin()), CmdArgs.end(), " ") << "\n";
 }
 
+Error executeProgram(StringRef Executable, ArrayRef<StringRef> Args,
+                     const ArgList &WrapperArgs) {
+  if (WrapperArgs.hasArg(OPT_dry_run) || WrapperArgs.hasArg(OPT_verbose))
+    printCommands(Args);
+  if (WrapperArgs.hasArg(OPT_dry_run))
+    return Error::success();
+
+  if (sys::commandLineFitsWithinSystemLimits(Executable, Args)) {
+    if (sys::ExecuteAndWait(Executable, Args))
+      return createStringError("'%s' failed",
+                               sys::path::filename(Executable).str().c_str());
+    return Error::success();
+  }
+
+  auto TempFileOrErr = createTempFile(WrapperArgs, "response", "txt");
+  if (!TempFileOrErr)
+    return TempFileOrErr.takeError();
+
+  SmallString<256> Contents;
+  raw_svector_ostream OS(Contents);
+  for (StringRef Arg : llvm::drop_begin(Args)) {
+    sys::printArg(OS, Arg, /*Quote=*/true);
+    OS << " ";
+  }
+
+  if (std::error_code EC = sys::writeFileWithEncoding(*TempFileOrErr, Contents))
+    return createStringError("failed to write response file: %s",
+                             EC.message().c_str());
+
+  // How nvlink spells its response file support.
+  std::string ResponseFile = ("--options-file=" + *TempFileOrErr).str();
+  SmallVector<StringRef, 2> NewArgs = {Args.front(), ResponseFile};
+  if (sys::ExecuteAndWait(Executable, NewArgs))
+    return createStringError("'%s' failed",
+                             sys::path::filename(Executable).str().c_str());
+  return Error::success();
+}
+
 /// A minimum symbol interface that provides the necessary information to
 /// extract archive members and resolve LTO symbols.
 struct Symbol {
@@ -313,8 +346,7 @@ Expected<StringRef> runPTXAs(StringRef File, const ArgList &Args) {
     return createStringError(
         "must pass in an explicit nvptx64 gpu architecture to 'ptxas'");
 
-  auto TempFileOrErr = createTempFile(
-      Args, sys::path::stem(Args.getLastArgValue(OPT_o, "a.out")), "cubin");
+  auto TempFileOrErr = createTempFile(Args, sys::path::stem(File), "cubin");
   if (!TempFileOrErr)
     return TempFileOrErr.takeError();
 
@@ -336,19 +368,17 @@ Expected<StringRef> runPTXAs(StringRef File, const ArgList &Args) {
     AssemblerArgs.push_back(A->getValue());
   AssemblerArgs.append({"-o", *TempFileOrErr});
 
-  if (Args.hasArg(OPT_dry_run) || Args.hasArg(OPT_verbose))
-    printCommands(AssemblerArgs);
-  if (Args.hasArg(OPT_dry_run))
-    return Args.MakeArgString(*TempFileOrErr);
-  if (sys::ExecuteAndWait(*PTXAsPath, AssemblerArgs))
-    return createStringError("'" + sys::path::filename(*PTXAsPath) + "'" +
-                             " failed");
+  if (Error Err = executeProgram(*PTXAsPath, AssemblerArgs, Args))
+    return Err;
   return Args.MakeArgString(*TempFileOrErr);
 }
 
-Expected<std::unique_ptr<lto::LTO>> createLTO(const ArgList &Args) {
+Expected<std::unique_ptr<lto::LTO>>
+createLTO(const cl::LibraryOptionsContext &LibraryOptions,
+          const ArgList &Args) {
   const llvm::Triple Triple("nvptx64-nvidia-cuda");
   lto::Config Conf;
+  Conf.LibraryOptions = &LibraryOptions;
   lto::ThinBackend Backend;
   unsigned Jobs = 0;
   if (auto *Arg = Args.getLastArg(OPT_jobs))
@@ -360,12 +390,12 @@ Expected<std::unique_ptr<lto::LTO>> createLTO(const ArgList &Args) {
       lto::createInProcessThinBackend(heavyweight_hardware_concurrency(Jobs));
 
   Conf.CPU = Args.getLastArgValue(OPT_arch);
-  Conf.Options = codegen::InitTargetOptionsFromCodeGenFlags(Triple);
+  Conf.Options = codegen::getTargetOptions(LibraryOptions, Triple);
 
   Conf.RemarksFilename =
       Args.getLastArgValue(OPT_opt_remarks_filename, RemarksFilename);
   Conf.RemarksPasses =
-      Args.getLastArgValue(OPT_opt_remarks_filter, RemarksPasses);
+      Args.getLastArgValue(OPT_opt_remarks_passes, RemarksPasses);
   Conf.RemarksFormat =
       Args.getLastArgValue(OPT_opt_remarks_format, RemarksFormat);
 
@@ -373,7 +403,7 @@ Expected<std::unique_ptr<lto::LTO>> createLTO(const ArgList &Args) {
       Args.hasArg(OPT_opt_remarks_with_hotness) || RemarksWithHotness;
   Conf.RemarksHotnessThreshold = RemarksHotnessThreshold;
 
-  Conf.MAttrs = llvm::codegen::getMAttrs();
+  Conf.MAttrs = llvm::codegen::getMAttrs(LibraryOptions);
   std::optional<CodeGenOptLevel> CGOptLevelOrNone =
       CodeGenOpt::parseLevel(Args.getLastArgValue(OPT_O, "2")[0]);
   assert(CGOptLevelOrNone && "Invalid optimization level");
@@ -499,7 +529,8 @@ Expected<bool> getSymbols(MemoryBufferRef Buffer, StringMap<Symbol> &SymTab,
   }
 }
 
-Expected<SmallVector<StringRef>> getInput(const ArgList &Args) {
+Expected<SmallVector<StringRef>>
+getInput(const cl::LibraryOptionsContext &LibraryOptions, const ArgList &Args) {
   SmallVector<StringRef> LibraryPaths;
   for (const opt::Arg *Arg : Args.filtered(OPT_library_path))
     LibraryPaths.push_back(Arg->getValue());
@@ -603,7 +634,7 @@ Expected<SmallVector<StringRef>> getInput(const ArgList &Args) {
   // Run the LTO pipeline on the extracted inputs.
   SmallVector<StringRef> Files;
   if (!BitcodeFiles.empty()) {
-    auto LTOBackendOrErr = createLTO(Args);
+    auto LTOBackendOrErr = createLTO(LibraryOptions, Args);
     if (!LTOBackendOrErr)
       return LTOBackendOrErr.takeError();
     lto::LTO &LTOBackend = **LTOBackendOrErr;
@@ -664,8 +695,10 @@ Expected<SmallVector<StringRef>> getInput(const ArgList &Args) {
       if (Args.hasArg(OPT_lto_emit_asm))
         TempFile = Args.getLastArgValue(OPT_o, "a.out");
       else {
+        StringRef Stem = sys::path::stem(Args.getLastArgValue(OPT_o, "a.out"));
         auto TempFileOrErr = createTempFile(
-            Args, sys::path::stem(Args.getLastArgValue(OPT_o, "a.out")), "s");
+            Args, Stem + (Task == 0 ? Twine("") : Twine('.') + Twine(Task)),
+            "s");
         if (!TempFileOrErr)
           reportError(TempFileOrErr.takeError());
         TempFile = Args.MakeArgString(*TempFileOrErr);
@@ -683,6 +716,8 @@ Expected<SmallVector<StringRef>> getInput(const ArgList &Args) {
       return Files;
 
     for (StringRef LTOFile : LTOFiles) {
+      if (LTOFile.empty())
+        continue;
       auto FileOrErr = runPTXAs(LTOFile, Args);
       if (!FileOrErr)
         return FileOrErr.takeError();
@@ -753,14 +788,7 @@ Error runNVLink(ArrayRef<StringRef> Files, const ArgList &Args) {
   for (StringRef Arg : NewLinkerArgs)
     LinkerArgs.push_back(Arg);
 
-  if (Args.hasArg(OPT_dry_run) || Args.hasArg(OPT_verbose))
-    printCommands(LinkerArgs);
-  if (Args.hasArg(OPT_dry_run))
-    return Error::success();
-  if (sys::ExecuteAndWait(*NVLinkPath, LinkerArgs))
-    return createStringError("'" + sys::path::filename(*NVLinkPath) + "'" +
-                             " failed");
-  return Error::success();
+  return executeProgram(*NVLinkPath, LinkerArgs, Args);
 }
 
 } // namespace
@@ -801,10 +829,12 @@ int main(int argc, char **argv) {
     NewArgv.push_back(Arg->getValue());
   for (const opt::Arg *Arg : Args.filtered(OPT_plugin_opt))
     NewArgv.push_back(Arg->getValue());
-  cl::ParseCommandLineOptions(NewArgv.size(), &NewArgv[0]);
+  cl::LibraryOptionsContext LibraryOptions;
+  cl::parseCommandLineOptions(LibraryOptions, codegen::getToolOptions(),
+                              NewArgv);
 
   // Get the input files to pass to 'nvlink'.
-  auto FilesOrErr = getInput(Args);
+  auto FilesOrErr = getInput(LibraryOptions, Args);
   if (!FilesOrErr)
     reportError(FilesOrErr.takeError());
 

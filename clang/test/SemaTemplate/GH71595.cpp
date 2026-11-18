@@ -18,7 +18,8 @@ void f() {
 template<class A>
 class temp {
     template<C<temp> T>
-    friend void g(); // expected-error {{friend declaration with a constraint that depends on an enclosing template parameter must be a definition}}
+    friend void g();
+    // expected-error@-1 {{friend declaration with a constraint that depends on an enclosing template parameter must be a definition}}
 
     temp();
 };

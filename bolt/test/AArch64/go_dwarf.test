@@ -31,6 +31,9 @@ CHECKORIG-NEXT:        DW_AT_high_pc   (0x0000000000000684)
 
 # Check the bolted binary.
 RUN: llvm-dwarfdump -debug-info %t.bolt 2>&1 | FileCheck %s
+RUN: llvm-dwarfdump --verify %t.bolt | FileCheck --check-prefix=CHECK-VERIFY %s
+
+CHECK-VERIFY: No errors.
 
 CHECK:         DW_TAG_compile_unit
 CHECK-NEXT:        DW_AT_producer
@@ -50,4 +53,6 @@ CHECK-NEXT:        DW_AT_decl_line (1)
 CHECK-NEXT:        DW_AT_decl_column       (5)
 CHECK-NEXT:        DW_AT_type
 CHECK-NEXT:        DW_AT_low_pc    (0x0000000000000660)
-CHECK-NEXT:        DW_AT_high_pc (0x0000000000000024)
+# DW_AT_high_pc keeps its DW_FORM_addr form, so it holds the end address rather
+# than the size of the function.
+CHECK-NEXT:        DW_AT_high_pc (0x0000000000000684)

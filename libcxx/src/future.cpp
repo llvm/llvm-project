@@ -50,7 +50,8 @@ const error_category& future_category() noexcept {
     constexpr explicit AvoidDestroyingFutureCategory() : future_error_category() {}
     ~AvoidDestroyingFutureCategory() {}
   };
-  constinit static AvoidDestroyingFutureCategory helper;
+  // Use no-destroy since this removes the function local static guard variable.
+  _LIBCPP_NO_DESTROY constinit static AvoidDestroyingFutureCategory helper;
   return helper.future_error_category;
 }
 

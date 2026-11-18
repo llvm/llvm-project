@@ -8,7 +8,7 @@ define amdgpu_kernel void @_dynamic_pack_simple_dispatch_0_pack_i32(ptr addrspac
 ; CHECK-LABEL: define amdgpu_kernel void @_dynamic_pack_simple_dispatch_0_pack_i32(
 ; CHECK-SAME: ptr addrspace(1) [[DOTPTR:%.*]], i64 [[V:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[DOTRSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1(ptr addrspace(1) [[DOTPTR]], i16 0, i64 2147483648, i32 159744)
+; CHECK-NEXT:    [[DOTRSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1.i64(ptr addrspace(1) [[DOTPTR]], i16 0, i64 2147483648, i32 159744)
 ; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspace(8) [[DOTRSRC]] to ptr addrspace(7)
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:

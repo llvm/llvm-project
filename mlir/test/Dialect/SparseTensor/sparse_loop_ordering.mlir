@@ -73,8 +73,8 @@ func.func @sparse_loop_ordering(%A: tensor<?x?x?xf32, #X>,
 // DEFAULT-LOWERED-DAG: %[[C0:.*]] = arith.constant 0 : index
 // DEFAULT-LOWERED-DAG: %[[C1:.*]] = arith.constant 1 : index
 // DEFAULT-LOWERED-DAG: %[[LVL_A:.*]] = sparse_tensor.lvl %arg0, %[[C0]]
-// DEFAULT-LOWERED-DAG: %[[POS_A:.*]] = sparse_tensor.positions %arg0 {level = 1 : index}
-// DEFAULT-LOWERED-DAG: %[[POS_B:.*]] = sparse_tensor.positions %arg1 {level = 0 : index}
+// DEFAULT-LOWERED-DAG: %[[POS_A:.*]] = sparse_tensor.positions %arg0 level = 1
+// DEFAULT-LOWERED-DAG: %[[POS_B:.*]] = sparse_tensor.positions %arg1 level = 0
 // DEFAULT-LOWERED-DAG: %[[LVL_B:.*]] = sparse_tensor.lvl %arg1, %{{.*}}
 // DEFAULT-LOWERED-DAG: %[[DIM_C0:.*]] = tensor.dim %arg2, %[[C0]]
 // DEFAULT-LOWERED-DAG: %[[DIM_C1:.*]] = tensor.dim %arg2, %[[C1]]
@@ -100,8 +100,8 @@ func.func @sparse_loop_ordering(%A: tensor<?x?x?xf32, #X>,
 // DENSE-LOWERED-DAG: %[[C0:.*]] = arith.constant 0 : index
 // DENSE-LOWERED-DAG: %[[C1:.*]] = arith.constant 1 : index
 // DENSE-LOWERED-DAG: %[[LVL_A:.*]] = sparse_tensor.lvl %arg0, %[[C0]]
-// DENSE-LOWERED-DAG: %[[POS_A:.*]] = sparse_tensor.positions %arg0 {level = 1 : index}
-// DENSE-LOWERED-DAG: %[[POS_B:.*]] = sparse_tensor.positions %arg1 {level = 0 : index}
+// DENSE-LOWERED-DAG: %[[POS_A:.*]] = sparse_tensor.positions %arg0 level = 1
+// DENSE-LOWERED-DAG: %[[POS_B:.*]] = sparse_tensor.positions %arg1 level = 0
 // DENSE-LOWERED-DAG: %[[LVL_B:.*]] = sparse_tensor.lvl %arg1, %{{.*}}
 // DENSE-LOWERED-DAG: %[[DIM_C0:.*]] = tensor.dim %arg2, %[[C0]]
 // DENSE-LOWERED-DAG: %[[DIM_C1:.*]] = tensor.dim %arg2, %[[C1]]
@@ -127,8 +127,8 @@ func.func @sparse_loop_ordering(%A: tensor<?x?x?xf32, #X>,
 // SPARSE-LOWERED-DAG: %[[C0:.*]] = arith.constant 0 : index
 // SPARSE-LOWERED-DAG: %[[C1:.*]] = arith.constant 1 : index
 // SPARSE-LOWERED-DAG: %[[LVL_A:.*]] = sparse_tensor.lvl %arg0, %[[C0]]
-// SPARSE-LOWERED-DAG: %[[POS_A:.*]] = sparse_tensor.positions %arg0 {level = 1 : index}
-// SPARSE-LOWERED-DAG: %[[POS_B:.*]] = sparse_tensor.positions %arg1 {level = 0 : index}
+// SPARSE-LOWERED-DAG: %[[POS_A:.*]] = sparse_tensor.positions %arg0 level = 1
+// SPARSE-LOWERED-DAG: %[[POS_B:.*]] = sparse_tensor.positions %arg1 level = 0
 // SPARSE-LOWERED-DAG: %[[LVL_B:.*]] = sparse_tensor.lvl %arg1, %{{.*}}
 // SPARSE-LOWERED-DAG: %[[DIM_C0:.*]] = tensor.dim %arg2, %[[C0]]
 // SPARSE-LOWERED-DAG: %[[DIM_C1:.*]] = tensor.dim %arg2, %[[C1]]

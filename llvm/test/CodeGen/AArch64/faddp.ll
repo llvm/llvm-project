@@ -4,7 +4,6 @@
 define float @faddp_2xfloat(<2 x float> %a) {
 ; CHECK-LABEL: faddp_2xfloat:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    faddp s0, v0.2s
 ; CHECK-NEXT:    ret
 entry:
@@ -41,7 +40,6 @@ entry:
 define float @faddp_2xfloat_commute(<2 x float> %a) {
 ; CHECK-LABEL: faddp_2xfloat_commute:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    faddp s0, v0.2s
 ; CHECK-NEXT:    ret
 entry:
@@ -78,7 +76,6 @@ entry:
 define float @faddp_2xfloat_strict(<2 x float> %a) #0 {
 ; CHECK-LABEL: faddp_2xfloat_strict:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    faddp s0, v0.2s
 ; CHECK-NEXT:    ret
 entry:
@@ -115,7 +112,6 @@ entry:
 define float @faddp_2xfloat_commute_strict(<2 x float> %a) #0 {
 ; CHECK-LABEL: faddp_2xfloat_commute_strict:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    faddp s0, v0.2s
 ; CHECK-NEXT:    ret
 entry:

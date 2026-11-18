@@ -175,7 +175,7 @@ void TelemetryManager::DispatchClientTelemetry(
 
   if (llvm::Error er = dispatch(&client_info))
     LLDB_LOG_ERROR(GetLog(LLDBLog::Object), std::move(er),
-                   "Failed to dispatch client telemetry");
+                   "Failed to dispatch client telemetry: {0}");
 }
 
 class NoOpTelemetryManager : public TelemetryManager {

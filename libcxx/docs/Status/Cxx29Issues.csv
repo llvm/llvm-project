@@ -17,3 +17,6 @@
 "`LWG4567 <https://wg21.link/LWG4567>`__","Feature test macro value for ``apply_result``, ``is_applicable``","2026-06 (Brno)","","","`#204455 <https://github.com/llvm/llvm-project/issues/204455>`__",""
 "`LWG4568 <https://wg21.link/LWG4568>`__","``std::execution::spawn_future`` is mishandling dependent senders","2026-06 (Brno)","","","`#204456 <https://github.com/llvm/llvm-project/issues/204456>`__",""
 "`LWG4579 <https://wg21.link/LWG4579>`__","``make-state<Rcvr>::state-type::complete`` uses ``Env`` which is not in scope","2026-06 (Brno)","","","`#204457 <https://github.com/llvm/llvm-project/issues/204457>`__",""
+"","","","","","",""
+"`LWG4612 <https://wg21.link/LWG4612>`__","Specify the details of ``std::nullopt_t``","Not Adopted Yet","|Complete|","24","",""
+"","","","","","",""

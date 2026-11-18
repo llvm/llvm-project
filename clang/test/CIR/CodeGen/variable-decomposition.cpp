@@ -16,8 +16,8 @@ float function() {
   return a + b;
 }
 
-// CIR-DAG: cir.global "private" constant cir_private @[[FUNC_CONST:.*]] = #cir.const_record<{#cir.int<1> : !s32i, #cir.fp<2.000000e+00> : !cir.float}> : !rec_some_struct
-// LLVM-DAG: @[[FUNC_CONST:.*]] = private constant %struct.some_struct { i32 1, float 2.000000e+00 }
+// CIR-DAG: cir.global "private" constant cir_private unnamed_addr @[[FUNC_CONST:.*]] = #cir.const_record<{#cir.int<1> : !s32i, #cir.fp<2.000000e+00> : !cir.float}> : !rec_some_struct
+// LLVM-DAG: @[[FUNC_CONST:.*]] = private unnamed_addr constant %struct.some_struct { i32 1, float 2.000000e+00 }
 
 // CIR-LABEL: cir.func {{.*}} @_Z8functionv() -> (!cir.float {llvm.noundef})
 // CIR:  %[[RETVAL:.+]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.float>
@@ -35,8 +35,8 @@ float function() {
 // CIR:  cir.return %[[RET]] : !cir.float
 
 // LLVM-LABEL: define dso_local noundef float @_Z8functionv()
-// LLVM:  %[[RETVAL:.+]] = alloca float, i64 1
-// LLVM:  %[[STRUCT:.+]] = alloca %struct.some_struct, i64 1
+// LLVM:  %[[RETVAL:.+]] = alloca float, 
+// LLVM:  %[[STRUCT:.+]] = alloca %struct.some_struct, 
 // LLVM:  call void @llvm.memcpy{{.*}}(ptr align 4 %[[STRUCT]], ptr align 4 @[[FUNC_CONST]], i64 8, i1 false)
 // LLVM:  %[[GEP_A:.+]] = getelementptr inbounds nuw %struct.some_struct, ptr %[[STRUCT]], i32 0, i32 0
 // LLVM:  %[[LOAD_A:.+]] = load i32, ptr %[[GEP_A]]

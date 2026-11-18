@@ -13,7 +13,7 @@ define void @halfx3_extend_chain(ptr align 16 captures(none) %rd0) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [halfx3_extend_chain_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [halfx3_extend_chain_param_0];
 ; CHECK-NEXT:    .pragma "used_bytes_mask 0xfff";
 ; CHECK-NEXT:    ld.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r3;
@@ -58,7 +58,7 @@ define void @halfx3_no_align(ptr align 4 captures(none) %rd0) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [halfx3_no_align_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [halfx3_no_align_param_0];
 ; CHECK-NEXT:    ld.b16 %rs1, [%rd1+4];
 ; CHECK-NEXT:    ld.v2.b16 {%rs2, %rs3}, [%rd1];
 ; CHECK-NEXT:    mov.b16 %rs4, 0x0000;

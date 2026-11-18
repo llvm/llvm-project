@@ -451,8 +451,8 @@
 
 - `--equalize-bb-counts`
 
-  Use same count for BBs that should have equivalent count (used in non-LBR and
-  shrink wrapping)
+  Use same count for BBs that should have equivalent count (used in non-brstack
+  mode and shrink wrapping)
 
 - `--execution-count-threshold=<uint>`
 
@@ -655,7 +655,7 @@
 
 - `--iterative-guess`
 
-  In non-LBR mode, guess edge counts using iterative technique
+  In non-brstack mode, guess edge counts using iterative technique
 
 - `--jt-footprint-optimize-for-icache`
 
@@ -1125,7 +1125,7 @@
 
 - `--print-estimate-edge-counts`
 
-  Print function after edge counts are set for no-LBR profile
+  Print function after edge counts are set for a non-brstack profile
 
 - `--print-finalized`
 

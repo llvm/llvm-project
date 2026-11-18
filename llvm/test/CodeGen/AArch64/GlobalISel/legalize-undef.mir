@@ -56,7 +56,7 @@ body: |
     ; CHECK-NEXT: $q0 = COPY [[DEF]](<2 x i64>)
     ; CHECK-NEXT: $q1 = COPY [[DEF]](<2 x i64>)
     %0:_(<4 x i64>) = G_IMPLICIT_DEF
-    %1:_(<2 x s64> ), %2:_(<2 x i64>) = G_UNMERGE_VALUES %0
+    %1:_(<2 x i64> ), %2:_(<2 x i64>) = G_UNMERGE_VALUES %0
     $q0 = COPY %1
     $q1 = COPY %2
 ...
@@ -107,3 +107,4 @@ body: |
     %undef:_(i130) = G_IMPLICIT_DEF
     %trunc:_(i64) = G_TRUNC %undef
     $x0 = COPY %trunc(i64)
+...

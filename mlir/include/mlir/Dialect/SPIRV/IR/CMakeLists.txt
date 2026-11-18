@@ -1,4 +1,11 @@
-add_mlir_dialect(SPIRVOps spirv)
+set(LLVM_TARGET_DEFINITIONS SPIRVOps.td)
+mlir_tablegen(SPIRVOps.h.inc -gen-op-decls -op-shard-count=8)
+mlir_tablegen(SPIRVOps.cpp.inc -gen-op-defs -op-shard-count=8)
+mlir_tablegen(SPIRVOpsTypes.h.inc -gen-typedef-decls -typedefs-dialect=spirv)
+mlir_tablegen(SPIRVOpsTypes.cpp.inc -gen-typedef-defs -typedefs-dialect=spirv)
+mlir_tablegen(SPIRVOpsDialect.h.inc -gen-dialect-decls -dialect=spirv)
+mlir_tablegen(SPIRVOpsDialect.cpp.inc -gen-dialect-defs -dialect=spirv)
+add_mlir_dialect_tablegen_target(MLIRSPIRVOpsIncGen)
 add_mlir_doc(SPIRVOps SPIRVOps Dialects/ -gen-op-doc -dialect=spirv)
 
 set(LLVM_TARGET_DEFINITIONS SPIRVBase.td)

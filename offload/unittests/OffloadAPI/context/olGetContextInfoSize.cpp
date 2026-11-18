@@ -10,20 +10,7 @@
 #include <OffloadAPI.h>
 #include <gtest/gtest.h>
 
-struct olGetContextInfoSizeTest : OffloadDeviceTest {
-  void SetUp() override {
-    RETURN_ON_FATAL_FAILURE(OffloadDeviceTest::SetUp());
-    ASSERT_SUCCESS(olCreateContext(1, &Device, &Context));
-  }
-
-  void TearDown() override {
-    if (Context)
-      olDestroyContext(Context);
-    RETURN_ON_FATAL_FAILURE(OffloadDeviceTest::TearDown());
-  }
-
-  ol_context_handle_t Context = nullptr;
-};
+using olGetContextInfoSizeTest = OffloadDeviceTest;
 OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olGetContextInfoSizeTest);
 
 TEST_P(olGetContextInfoSizeTest, SuccessNumDevices) {
@@ -57,4 +44,11 @@ TEST_P(olGetContextInfoSizeTest, InvalidNullOut) {
   ASSERT_ERROR(
       OL_ERRC_INVALID_NULL_POINTER,
       olGetContextInfoSize(Context, OL_CONTEXT_INFO_NUM_DEVICES, nullptr));
+}
+
+TEST_P(olGetContextInfoSizeTest, SuccessNativeHandle) {
+  size_t Size = 0;
+  ASSERT_SUCCESS_OR_UNSUPPORTED(
+      olGetContextInfoSize(Context, OL_CONTEXT_INFO_NATIVE_HANDLE, &Size));
+  ASSERT_EQ(Size, sizeof(void *));
 }

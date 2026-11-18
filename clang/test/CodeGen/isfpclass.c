@@ -136,7 +136,7 @@ typedef double __attribute__((ext_vector_type(4))) double4;
 typedef int __attribute__((ext_vector_type(4))) int4;
 typedef long __attribute__((ext_vector_type(4))) long4;
 
-// CHECK-LABEL: define dso_local range(i32 0, 2) <4 x i32> @check_isfpclass_nan_v4f32(
+// CHECK-LABEL: define dso_local noundef range(i32 0, 2) <4 x i32> @check_isfpclass_nan_v4f32(
 // CHECK-SAME: <4 x float> noundef [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = fcmp uno <4 x float> [[X]], zeroinitializer
@@ -147,7 +147,7 @@ int4 check_isfpclass_nan_v4f32(float4 x) {
   return __builtin_isfpclass(x, 3 /*NaN*/);
 }
 
-// CHECK-LABEL: define dso_local range(i32 0, 2) <4 x i32> @check_isfpclass_nan_strict_v4f32(
+// CHECK-LABEL: define dso_local noundef range(i32 0, 2) <4 x i32> @check_isfpclass_nan_strict_v4f32(
 // CHECK-SAME: <4 x float> noundef [[X:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> [[X]], /* (nan) */ i32 3) #[[ATTR5]]
@@ -160,19 +160,19 @@ int4 check_isfpclass_nan_strict_v4f32(float4 x) {
 }
 
 // CHECK-LABEL: define dso_local void @check_isfpclass_nan_v4f64(
-// CHECK-SAME: ptr dead_on_unwind noalias nofree writable writeonly sret(<4 x i64>) align 16 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr nofree noundef readonly align 16 captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR3:[0-9]+]] {
+// CHECK-SAME: ptr dead_on_unwind noalias nofree writable writeonly sret(<4 x i64>) align 16 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr nofreeobj noundef readonly align 16 captures(none) dead_on_return dereferenceable(32) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR3:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[X:%.*]] = load <4 x double>, ptr [[TMP0]], align 16, !tbaa [[CHAR_TBAA5:![0-9]+]]
+// CHECK-NEXT:    [[X:%.*]] = load <4 x double>, ptr [[TMP0]], align 16, !tbaa [[CHAR_TBAA12:![0-9]+]]
 // CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno <4 x double> [[X]], zeroinitializer
 // CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i1> [[TMP1]] to <4 x i64>
-// CHECK-NEXT:    store <4 x i64> [[TMP2]], ptr [[AGG_RESULT]], align 16, !tbaa [[CHAR_TBAA5]]
+// CHECK-NEXT:    store <4 x i64> [[TMP2]], ptr [[AGG_RESULT]], align 16, !tbaa [[CHAR_TBAA12]]
 // CHECK-NEXT:    ret void
 //
 long4 check_isfpclass_nan_v4f64(double4 x) {
   return __builtin_isfpclass(x, 3 /*NaN*/);
 }
 //.
-// CHECK: [[META3:![0-9]+]] = !{!"omnipotent char", [[META4:![0-9]+]], i64 0}
-// CHECK: [[META4]] = !{!"Simple C/C++ TBAA"}
-// CHECK: [[CHAR_TBAA5]] = !{[[META3]], [[META3]], i64 0}
+// CHECK: [[META10:![0-9]+]] = !{!"omnipotent char", [[META11:![0-9]+]], i64 0}
+// CHECK: [[META11]] = !{!"Simple C/C++ TBAA"}
+// CHECK: [[CHAR_TBAA12]] = !{[[META10]], [[META10]], i64 0}
 //.

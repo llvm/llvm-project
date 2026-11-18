@@ -63,7 +63,6 @@ class BreakpointByLineAndColumnTestCase(TestBase):
             in_condition |= b_loc.GetColumn() < 30
         self.assertTrue(in_condition)
 
-    @skipIfWindows
     ## Skip gcc version less 7.1 since it doesn't support -gcolumn-info
     @skipIf(compiler="gcc", compiler_version=["<", "7.1"])
     def testBreakpointByLineAndColumnNearestCode(self):
@@ -97,8 +96,9 @@ class BreakpointByLineAndColumnTestCase(TestBase):
             self.assertTrue(valid_bpkt, VALID_BREAKPOINT)
             self.assertEqual(valid_bpkt.GetNumLocations(), 1)
 
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        self.assertTrue(process, PROCESS_IS_VALID)
+        _, process, _, _ = lldbutil.run_to_breakpoint_do_run(
+            self, target, target.GetBreakpointAtIndex(0)
+        )
 
         nearest_column = [7, 17, 26]
 

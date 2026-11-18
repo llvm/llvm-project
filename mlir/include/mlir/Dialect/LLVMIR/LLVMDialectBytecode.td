@@ -67,10 +67,22 @@ class EnumClassFlag<string flag, string getter> :
 
 def DIBasicTypeAttr : DialectAttribute<(attr
   VarInt:$tag,
-  String:$name,
+  OptionalAttribute<"StringAttr">:$name,
   VarInt:$sizeInBits,
   VarInt:$encoding
 )>;
+
+//===----------------------------------------------------------------------===//
+// DIEnumeratorAttr
+//===----------------------------------------------------------------------===//
+
+def DIEnumeratorAttr : DialectAttribute<(attr
+  OptionalAttribute<"StringAttr">:$name,
+  Attr<"IntegerAttr">:$value,
+  Bool:$isUnsigned
+)> {
+  let cBuilder = "$_resultType::get(context, $_args)";
+}
 
 //===----------------------------------------------------------------------===//
 // DIExpressionAttr, DIExpressionElemAttr
@@ -125,6 +137,17 @@ def DISubroutineTypeAttr : DialectAttribute<(attr
 )>;
 
 //===----------------------------------------------------------------------===//
+// DISourceLanguageNameAttr
+//===----------------------------------------------------------------------===//
+
+def DISourceLanguageNameAttr : DialectAttribute<(attr
+  VarInt:$language,
+  VarInt:$name,
+  OptionalInt<"uint32_t">:$version,
+  VarInt:$dialect
+)>;
+
+//===----------------------------------------------------------------------===//
 // DICompileUnitAttr
 //===----------------------------------------------------------------------===//
 
@@ -132,7 +155,7 @@ def DICompileUnitAttr : DialectAttribute<(attr
   OptionalAttribute<"DistinctAttr">:$recId,
   Bool:$isRecSelf,
   OptionalAttribute<"DistinctAttr">:$id,
-  VarInt:$sourceLanguage,
+  OptionalAttribute<"DISourceLanguageNameAttr">:$sourceLanguage,
   OptionalAttribute<"DIFileAttr">:$file,
   OptionalAttribute<"StringAttr">:$producer,
   Bool:$isOptimized,
@@ -306,6 +329,7 @@ def DISubrangeAttr : DialectAttribute<(attr
 //===----------------------------------------------------------------------===//
 
 def LoopAnnotationAttr : DialectAttribute<(attr
+  OptionalAttribute<"DistinctAttr">:$id,
   OptionalAttribute<"BoolAttr">:$disableNonforced,
   OptionalAttribute<"LoopVectorizeAttr">:$vectorize,
   OptionalAttribute<"LoopInterleaveAttr">:$interleave,
@@ -318,6 +342,7 @@ def LoopAnnotationAttr : DialectAttribute<(attr
   OptionalAttribute<"LoopUnswitchAttr">:$unswitch,
   OptionalAttribute<"BoolAttr">:$mustProgress,
   OptionalAttribute<"BoolAttr">:$isVectorized,
+  VarInt:$align,
   OptionalAttribute<"FusedLoc">:$startLoc,
   OptionalAttribute<"FusedLoc">:$endLoc,
   OptionalArrayRef<"AccessGroupAttr">:$parallelAccesses
@@ -348,7 +373,8 @@ def LLVMDialectAttributes : DialectAttributes<"LLVM"> {
     DISubprogramAttr,
     DISubrangeAttr,
     DISubroutineTypeAttr,
-    LoopAnnotationAttr
+    LoopAnnotationAttr,
+    DIEnumeratorAttr
     // Referenced attributes currently missing support:
     // AccessGroupAttr, LoopVectorizeAttr, LoopInterleaveAttr, LoopUnrollAttr,
     // LoopUnrollAndJamAttr, LoopLICMAttr, LoopDistributeAttr, LoopPipelineAttr,

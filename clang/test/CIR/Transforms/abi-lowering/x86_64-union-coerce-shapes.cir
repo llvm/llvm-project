@@ -1,6 +1,6 @@
 // RUN: cir-opt %s -cir-call-conv-lowering=target=x86_64 | FileCheck %s
 // RUN: cir-opt %s -cir-call-conv-lowering=target=x86_64 -cir-to-llvm -o - 2>/dev/null \
-// RUN:   | mlir-translate -mlir-to-llvmir --allow-unregistered-dialect \
+// RUN:   | cir-translate -mlir-to-llvmir --allow-unregistered-dialect \
 // RUN:   | FileCheck %s --check-prefix=LLVM
 
 !s8i = !cir.int<s, 8>
@@ -8,10 +8,10 @@
 !s32i = !cir.int<s, 32>
 !s64i = !cir.int<s, 64>
 !s128i = !cir.int<s, 128>
-!rec_U128 = !cir.union<"U128" {!s128i, !cir.array<!s8i x 16>}>
-!rec_UMixed = !cir.union<"UMixed" {!cir.array<!cir.double x 2>, !s64i}>
-!rec_UD2 = !cir.union<"UD2" {!cir.array<!cir.double x 2>}>
-!rec_U12 = !cir.union<"U12" {!cir.array<!s8i x 12>, !s32i}, padding = {!cir.array<!u8i x 8>}>
+!rec_U128 = !cir.union<"U128" {data !s128i, data !cir.array<!s8i x 16>}>
+!rec_UMixed = !cir.union<"UMixed" {data !cir.array<!cir.double x 2>, data !s64i}>
+!rec_UD2 = !cir.union<"UD2" {data !cir.array<!cir.double x 2>}>
+!rec_U12 = !cir.union<"U12" {data !cir.array<!s8i x 12>, data !s32i}, padding = {!cir.array<!u8i x 8>}>
 !rec_UEmpty16 = !cir.union<"UEmpty16" {}, padding = {!cir.array<!u8i x 16>}>
 
 module attributes {
@@ -25,7 +25,7 @@ module attributes {
 
   // A 16-byte union whose spanning member is one 128-bit integer coerces to that
   // integer rather than to a pair of eightbytes.
-  cir.func @take_u128(%arg0: !rec_U128) {
+  cir.func @take_u128(%arg0: !rec_U128) requires_call_conv_lowering {
     cir.return
   }
 
@@ -34,14 +34,14 @@ module attributes {
   // The two eightbytes need not share a class.  The first covers half of the
   // double array and merges to INTEGER against the long, while the second is all
   // double and stays SSE.
-  cir.func @take_umixed(%arg0: !rec_UMixed) {
+  cir.func @take_umixed(%arg0: !rec_UMixed) requires_call_conv_lowering {
     cir.return
   }
 
   // CHECK: cir.func{{.*}} @take_umixed(%arg0: !u64i, %arg1: !cir.double)
 
   // With no integer member to merge against, both eightbytes stay SSE.
-  cir.func @take_ud2(%arg0: !rec_UD2) {
+  cir.func @take_ud2(%arg0: !rec_UD2) requires_call_conv_lowering {
     cir.return
   }
 
@@ -50,14 +50,14 @@ module attributes {
   // The second eightbyte is partial.  The classifier reduces this union to its
   // 4-byte integer, so an eightbyte sized from that member would cover only the
   // first four bytes and drop the rest of the array.
-  cir.func @take_u12(%arg0: !rec_U12) {
+  cir.func @take_u12(%arg0: !rec_U12) requires_call_conv_lowering {
     cir.return
   }
 
   // CHECK: cir.func{{.*}} @take_u12(%arg0: !u64i, %arg1: !u32i)
 
   // Two eightbytes in return position, flattened to an anonymous struct.
-  cir.func @ret_umixed(%arg0: !rec_UMixed) -> !rec_UMixed {
+  cir.func @ret_umixed(%arg0: !rec_UMixed) -> !rec_UMixed requires_call_conv_lowering {
     cir.return %arg0 : !rec_UMixed
   }
 
@@ -65,7 +65,7 @@ module attributes {
 
   // A member-less union at exactly two eightbytes still classifies Ignore.  One
   // byte more is MEMORY, which x86_64-aggregate-nyi.cir covers.
-  cir.func @take_empty16(%arg0: !rec_UEmpty16) {
+  cir.func @take_empty16(%arg0: !rec_UEmpty16) requires_call_conv_lowering {
     cir.return
   }
 

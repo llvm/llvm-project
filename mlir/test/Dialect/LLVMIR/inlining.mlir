@@ -8,8 +8,8 @@
 func.func @inner_func_inlinable(%ptr : !llvm.ptr) -> i32 {
   %0 = llvm.mlir.constant(42 : i32) : i32
   %stack = llvm.intr.stacksave : !llvm.ptr
-  llvm.store %0, %ptr { alignment = 8 } : i32, !llvm.ptr
-  %1 = llvm.load %ptr { alignment = 8 } : !llvm.ptr -> i32
+  llvm.store %0, %ptr <alignment = 8> : i32, !llvm.ptr
+  %1 = llvm.load %ptr <alignment = 8> : !llvm.ptr -> i32
   llvm.intr.dbg.value #variable = %0 : i32
   llvm.intr.dbg.declare #variableAddr = %ptr : !llvm.ptr
   llvm.intr.dbg.label #label
@@ -121,8 +121,6 @@ llvm.func @callee_with_multiple_blocks(%cond: i1) -> (i32) {
 // CHECK-NEXT: llvm.call @bar
 // CHECK-NEXT: llvm.br ^[[BB3]]
 // CHECK-NEXT: ^[[BB3]]
-// CHECK-NEXT: llvm.br ^[[BB4:[a-zA-Z0-9_]+]]
-// CHECK-NEXT: ^[[BB4]]
 // CHECK-NEXT: llvm.return
 llvm.func @caller(%cond: i1) -> (i32) {
   %0 = llvm.call @callee_with_multiple_blocks(%cond) : (i1) -> (i32)
@@ -409,9 +407,7 @@ llvm.func @with_byval_arg(%ptr : !llvm.ptr { llvm.byval = f64 }) {
 llvm.func @test_byval(%ptr : !llvm.ptr) {
   // Make sure the new static alloca goes to the entry block.
   // CHECK: %[[ALLOCA:.+]] = llvm.alloca %{{.+}} x f64
-  // CHECK: llvm.br ^[[BB1:[a-zA-Z0-9_]+]]
   llvm.br ^bb1
-  // CHECK: ^[[BB1]]
 ^bb1:
   // CHECK: "llvm.intr.memcpy"(%[[ALLOCA]], %[[PTR]]
   llvm.call @with_byval_arg(%ptr) : (!llvm.ptr) -> ()
@@ -647,7 +643,7 @@ llvm.func @test_disallow_arg_attr(%ptr : !llvm.ptr) {
 #caller = #llvm.access_group<id = distinct[1]<>>
 
 llvm.func @inlinee(%ptr : !llvm.ptr) -> i32 {
-  %0 = llvm.load %ptr { access_groups = [#callee] } : !llvm.ptr -> i32
+  %0 = llvm.load %ptr <access_groups = [#callee]> : !llvm.ptr -> i32
   llvm.return %0 : i32
 }
 
@@ -681,7 +677,7 @@ llvm.func @inlinee(%ptr : !llvm.ptr) -> i32 {
 llvm.func @caller(%ptr : !llvm.ptr) -> i32 {
   %c5 = llvm.mlir.constant(5 : i32) : i32
   %0 = llvm.call @inlinee(%ptr) { access_groups = [#caller] } : (!llvm.ptr) -> (i32)
-  llvm.store %c5, %ptr { access_groups = [#caller] } : i32, !llvm.ptr
+  llvm.store %c5, %ptr <access_groups = [#caller]> : i32, !llvm.ptr
   llvm.return %0 : i32
 }
 

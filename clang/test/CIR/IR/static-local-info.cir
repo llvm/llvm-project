@@ -1,0 +1,21 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+// #cir.dynamic_init_info holds plain data (no AST pointer), so it parses and
+// prints without a live ASTContext. Check that each field round-trips,
+// including the named tls / tsk enum keywords at non-default values.
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.global "private" internal dynamic_init_guard<"_ZGV7regular"> @regular = #cir.int<0> : !s32i
+    dynamic_init_info<
+       local = true, tls = none, is_inline = false, tsk = undeclared>
+  // CHECK: @regular
+  // CHECK-SAME: dynamic_init_info<local = true, tls = none, is_inline = false, tsk = undeclared>
+
+  cir.global "private" internal dynamic_init_guard<"_ZGV3tls"> @tls = #cir.int<0> : !s32i
+    dynamic_init_info<
+       local = true, tls = dynamic, is_inline = true, tsk = implicit_instantiation>
+  // CHECK: @tls
+  // CHECK-SAME: dynamic_init_info<local = true, tls = dynamic, is_inline = true, tsk = implicit_instantiation>
+}

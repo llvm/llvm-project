@@ -3,6 +3,13 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
 endif()
 
 add_entrypoint_object(
+  clone
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.clone
+)
+
+add_entrypoint_object(
   getcpu
   ALIAS
   DEPENDS

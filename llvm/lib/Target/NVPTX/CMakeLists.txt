@@ -2,12 +2,15 @@ add_llvm_component_group(NVPTX)
 
 set(LLVM_TARGET_DEFINITIONS NVPTX.td)
 
-tablegen(LLVM NVPTXGenAsmWriter.inc -gen-asm-writer)
-tablegen(LLVM NVPTXGenDAGISel.inc -gen-dag-isel)
-tablegen(LLVM NVPTXGenInstrInfo.inc -gen-instr-info)
-tablegen(LLVM NVPTXGenRegisterInfo.inc -gen-register-info)
-tablegen(LLVM NVPTXGenSDNodeInfo.inc -gen-sd-node-info)
-tablegen(LLVM NVPTXGenSubtargetInfo.inc -gen-subtarget)
+llvm_tablegen(NVPTXGenAsmWriter.inc -gen-asm-writer)
+llvm_tablegen(NVPTXGenDAGISel.inc -gen-dag-isel)
+llvm_tablegen(NVPTXGenInstrInfo.inc -gen-instr-info)
+llvm_tablegen(NVPTXGenRegisterInfo.inc -gen-register-info)
+llvm_tablegen(NVPTXGenSDNodeInfo.inc -gen-sd-node-info)
+llvm_tablegen(NVPTXGenSubtargetInfo.inc -gen-subtarget)
+
+set(LLVM_TARGET_DEFINITIONS NVPTXOptions.td)
+llvm_tablegen(NVPTXOptions.inc -gen-opt-parser-defs)
 
 add_public_tablegen_target(NVPTXCommonTableGen)
 
@@ -18,6 +21,8 @@ set(NVPTXCodeGen_sources
   NVPTXAsmPrinter.cpp
   NVPTXAssignValidGlobalNames.cpp
   NVPTXAtomicLower.cpp
+  NVPTXCanonicalizeDynamicShared.cpp
+  NVPTXCodeGenPassBuilder.cpp
   NVPTXCtorDtorLowering.cpp
   NVPTXDwarfDebug.cpp
   NVPTXForwardParams.cpp
@@ -64,6 +69,8 @@ add_llvm_target(NVPTXCodeGen
   MC
   NVPTXDesc
   NVPTXInfo
+  Option
+  Passes
   Scalar
   SelectionDAG
   Support

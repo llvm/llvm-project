@@ -91,9 +91,9 @@ end module
 ! The consumer renames the merged operator on import. All three reductions are
 ! still materialized (named from their source modules) and every clause binds, so
 ! no TODO aborts the compile.
-! CHECK-DAG: omp.declare_reduction @{{.*m_int.*op\.shared\..*}} : !fir.ref
-! CHECK-DAG: omp.declare_reduction @{{.*m_real.*op\.shared\..*}} : !fir.ref
-! CHECK-DAG: omp.declare_reduction @{{.*m_cplx.*op\.shared\..*}} : !fir.ref
+! CHECK-DAG: omp.declare_reduction @{{.*m_int.*op\.shared\..*}} byref_element_type({{.*}}) : !fir.ref
+! CHECK-DAG: omp.declare_reduction @{{.*m_real.*op\.shared\..*}} byref_element_type({{.*}}) : !fir.ref
+! CHECK-DAG: omp.declare_reduction @{{.*m_cplx.*op\.shared\..*}} byref_element_type({{.*}}) : !fir.ref
 ! CHECK-NOT: not yet implemented
 program test_rename_remerge
   use m_facade_outer, only: t_int, t_real, t_cplx, &

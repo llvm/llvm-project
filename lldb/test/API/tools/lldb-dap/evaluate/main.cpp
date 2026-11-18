@@ -8,6 +8,10 @@ static int static_int = 42;
 
 int non_static_int = 43;
 
+// Deliberately shares its name with the `help` LLDB command, to test
+// command/variable ambiguity handling for a global variable.
+int help = 99;
+
 int a_function(int list) {
   return list; // breakpoint 3
 }

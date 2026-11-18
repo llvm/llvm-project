@@ -45,6 +45,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/DependenceAnalysis.h"
+#include "AnalysisOptions.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/Delinearization.h"
@@ -53,9 +54,9 @@
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/InstIterator.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -93,69 +94,12 @@ STATISTIC(BanerjeeIndependence, "Banerjee independence");
 STATISTIC(BanerjeeSuccesses, "Banerjee successes");
 STATISTIC(SameSDLoopsCount, "Loops with Same iteration Space and Depth");
 
-static cl::opt<bool>
-    Delinearize("da-delinearize", cl::init(true), cl::Hidden,
-                cl::desc("Try to delinearize array references."));
-static cl::opt<bool> DisableDelinearizationChecks(
-    "da-disable-delinearization-checks", cl::Hidden,
-    cl::desc(
-        "Disable checks that try to statically verify validity of "
-        "delinearized subscripts. Enabling this option may result in incorrect "
-        "dependence vectors for languages that allow the subscript of one "
-        "dimension to underflow or overflow into another dimension."));
-
-static cl::opt<unsigned> MIVMaxLevelThreshold(
-    "da-miv-max-level-threshold", cl::init(7), cl::Hidden,
-    cl::desc("Maximum depth allowed for the recursive algorithm used to "
-             "explore MIV direction vectors."));
-
-namespace {
-
-/// Types of dependence test routines.
-enum class DependenceTestType {
-  Default, ///< All tests except BanerjeeMIV
-  All,
-  StrongSIV,
-  WeakCrossingSIV,
-  ExactSIV,
-  WeakZeroSIV,
-  ExactRDIV,
-  GCDMIV,
-  BanerjeeMIV,
-};
-
-} // anonymous namespace
-
-static cl::opt<DependenceTestType> EnableDependenceTest(
-    "da-enable-dependence-test", cl::init(DependenceTestType::Default),
-    cl::ReallyHidden,
-    cl::desc("Run only specified dependence test routine and disable others. "
-             "The purpose is mainly to exclude the influence of other "
-             "dependence test routines in regression tests. If set to All, all "
-             "dependence test routines are enabled."),
-    cl::values(clEnumValN(DependenceTestType::Default, "default",
-                          "Enable all dependence test routines except "
-                          "Banerjee MIV (default)."),
-               clEnumValN(DependenceTestType::All, "all",
-                          "Enable all dependence test routines."),
-               clEnumValN(DependenceTestType::StrongSIV, "strong-siv",
-                          "Enable only Strong SIV test."),
-               clEnumValN(DependenceTestType::WeakCrossingSIV,
-                          "weak-crossing-siv",
-                          "Enable only Weak-Crossing SIV test."),
-               clEnumValN(DependenceTestType::ExactSIV, "exact-siv",
-                          "Enable only Exact SIV test."),
-               clEnumValN(DependenceTestType::WeakZeroSIV, "weak-zero-siv",
-                          "Enable only Weak-Zero SIV test."),
-               clEnumValN(DependenceTestType::ExactRDIV, "exact-rdiv",
-                          "Enable only Exact RDIV test."),
-               clEnumValN(DependenceTestType::GCDMIV, "gcd-miv",
-                          "Enable only GCD MIV test."),
-               clEnumValN(DependenceTestType::BanerjeeMIV, "banerjee-miv",
-                          "Enable only Banerjee MIV test.")));
-
 //===----------------------------------------------------------------------===//
 // basics
+
+DependenceInfo::DependenceInfo(Function *F, AAResults *AA, ScalarEvolution *SE,
+                               LoopInfo *LI)
+    : Opts(getAnalysisOptions(*F)), AA(AA), SE(SE), LI(LI), F(F) {}
 
 DependenceAnalysis::Result
 DependenceAnalysis::run(Function &F, FunctionAnalysisManager &FAM) {
@@ -560,20 +504,48 @@ void Dependence::dumpImp(raw_ostream &OS, bool IsSameSD) const {
   OS << "]";
 }
 
+/// Drop alias scopes that are only valid within a single loop iteration.
+static MDNode *
+adjustAliasScopeList(MDNode *ScopeList,
+                     const SmallPtrSetImpl<const MDNode *> &LoopAliasScopes) {
+  if (!ScopeList || LoopAliasScopes.empty())
+    return ScopeList;
+
+  // For the sake of simplicity, drop the whole scope list if any scope is
+  // iteration-local.
+  if (any_of(ScopeList->operands(), [&](Metadata *Scope) {
+        return LoopAliasScopes.contains(cast<MDNode>(Scope));
+      }))
+    return nullptr;
+
+  return ScopeList;
+}
+
+// Location is spanned accross iteration
+// and single iteration alias scope are dropped
+static MemoryLocation
+adjustLoc(MemoryLocation Loc,
+          const SmallPtrSetImpl<const MDNode *> &LoopAliasScopes) {
+  MemoryLocation Adj = MemoryLocation::getBeforeOrAfter(Loc.Ptr, Loc.AATags);
+  Adj.AATags.Scope = adjustAliasScopeList(Adj.AATags.Scope, LoopAliasScopes);
+  Adj.AATags.NoAlias =
+      adjustAliasScopeList(Adj.AATags.NoAlias, LoopAliasScopes);
+  return Adj;
+}
+
 // Returns NoAlias/MayAliass/MustAlias for two memory locations based upon their
 // underlaying objects. If LocA and LocB are known to not alias (for any reason:
-// tbaa, non-overlapping regions etc), then it is known there is no dependecy.
+// tbaa, non-overlapping regions etc), then it is known there is no dependency.
 // Otherwise the underlying objects are checked to see if they point to
 // different identifiable objects.
-static AliasResult underlyingObjectsAlias(AAResults *AA, const DataLayout &DL,
-                                          const MemoryLocation &LocA,
-                                          const MemoryLocation &LocB) {
-  // Check the original locations (minus size) for noalias, which can happen for
-  // tbaa, incompatible underlying object locations, etc.
-  MemoryLocation LocAS =
-      MemoryLocation::getBeforeOrAfter(LocA.Ptr, LocA.AATags);
-  MemoryLocation LocBS =
-      MemoryLocation::getBeforeOrAfter(LocB.Ptr, LocB.AATags);
+static AliasResult
+underlyingObjectsAlias(AAResults *AA, const DataLayout &DL,
+                       const MemoryLocation &LocA, const MemoryLocation &LocB,
+                       const SmallPtrSetImpl<const MDNode *> &LoopAliasScopes) {
+
+  MemoryLocation LocAS = adjustLoc(LocA, LoopAliasScopes);
+  MemoryLocation LocBS = adjustLoc(LocB, LoopAliasScopes);
+
   BatchAAResults BAA(*AA);
   BAA.enableCrossIterationMode();
 
@@ -897,15 +869,16 @@ static const SCEV *minusSCEVNoSignedOverflow(const SCEV *A, const SCEV *B,
 }
 
 /// Returns true iff \p Test is enabled.
-static bool isDependenceTestEnabled(DependenceTestType Test) {
-  if (EnableDependenceTest == DependenceTestType::All)
+static bool isDependenceTestEnabled(const AnalysisOptions &Opts,
+                                    DependenceTestType Test) {
+  if (Opts.da_enable_dependence_test == DependenceTestType::All)
     return true;
   // The Banerjee test is disabled by default because of correctness issues,
   // but can be enabled with -da-enable-dependence-test=banerjee-miv or
   // -da-enable-dependence-test=all.
-  if (EnableDependenceTest == DependenceTestType::Default)
+  if (Opts.da_enable_dependence_test == DependenceTestType::Default)
     return Test != DependenceTestType::BanerjeeMIV;
-  return EnableDependenceTest == Test;
+  return Opts.da_enable_dependence_test == Test;
 }
 
 // testZIV -
@@ -967,7 +940,7 @@ bool DependenceInfo::strongSIVtest(const SCEVAddRecExpr *Src,
                                    const SCEVAddRecExpr *Dst, unsigned Level,
                                    FullDependence &Result,
                                    bool UnderRuntimeAssumptions) {
-  if (!isDependenceTestEnabled(DependenceTestType::StrongSIV))
+  if (!isDependenceTestEnabled(Opts, DependenceTestType::StrongSIV))
     return false;
 
   const SCEV *Coeff = Src->getStepRecurrence(*SE);
@@ -1106,7 +1079,7 @@ bool DependenceInfo::weakCrossingSIVtest(const SCEVAddRecExpr *Src,
                                          const SCEVAddRecExpr *Dst,
                                          unsigned Level,
                                          FullDependence &Result) const {
-  if (!isDependenceTestEnabled(DependenceTestType::WeakCrossingSIV))
+  if (!isDependenceTestEnabled(Opts, DependenceTestType::WeakCrossingSIV))
     return false;
 
   const SCEV *Coeff = Src->getStepRecurrence(*SE);
@@ -1342,7 +1315,7 @@ inferDomainOfAffine(OverflowSafeSignedAPInt A, OverflowSafeSignedAPInt B,
 bool DependenceInfo::exactSIVtest(const SCEVAddRecExpr *Src,
                                   const SCEVAddRecExpr *Dst, unsigned Level,
                                   FullDependence &Result) const {
-  if (!isDependenceTestEnabled(DependenceTestType::ExactSIV))
+  if (!isDependenceTestEnabled(Opts, DependenceTestType::ExactSIV))
     return false;
 
   LLVM_DEBUG(dbgs() << "\tExact SIV test\n");
@@ -1448,7 +1421,7 @@ bool DependenceInfo::weakZeroSrcSIVtest(const SCEV *SrcConst,
                                         const SCEVAddRecExpr *Dst,
                                         unsigned Level,
                                         FullDependence &Result) const {
-  if (!isDependenceTestEnabled(DependenceTestType::WeakZeroSIV))
+  if (!isDependenceTestEnabled(Opts, DependenceTestType::WeakZeroSIV))
     return false;
 
   // For the WeakSIV test, it's possible the loop isn't common to
@@ -1507,7 +1480,7 @@ bool DependenceInfo::weakZeroSrcSIVtest(const SCEV *SrcConst,
 bool DependenceInfo::weakZeroDstSIVtest(const SCEVAddRecExpr *Src,
                                         const SCEV *DstConst, unsigned Level,
                                         FullDependence &Result) const {
-  if (!isDependenceTestEnabled(DependenceTestType::WeakZeroSIV))
+  if (!isDependenceTestEnabled(Opts, DependenceTestType::WeakZeroSIV))
     return false;
 
   // For the WeakSIV test, it's possible the loop isn't common to the
@@ -1534,7 +1507,7 @@ bool DependenceInfo::weakZeroDstSIVtest(const SCEVAddRecExpr *Src,
 bool DependenceInfo::exactRDIVtest(const SCEVAddRecExpr *Src,
                                    const SCEVAddRecExpr *Dst,
                                    FullDependence &Result) const {
-  if (!isDependenceTestEnabled(DependenceTestType::ExactRDIV))
+  if (!isDependenceTestEnabled(Opts, DependenceTestType::ExactRDIV))
     return false;
 
   LLVM_DEBUG(dbgs() << "\tExact RDIV test\n");
@@ -1597,8 +1570,6 @@ bool DependenceInfo::exactTestImpl(const SCEVAddRecExpr *Src,
   if (DstUM)
     LLVM_DEBUG(dbgs() << "\t    DstUM = " << *DstUM << "\n");
 
-  APInt TU(APInt::getSignedMaxValue(Bits));
-  APInt TL(APInt::getSignedMinValue(Bits));
   OverflowSafeSignedAPInt TC = CM.sdiv(G);
   OverflowSafeSignedAPInt TX = OverflowSafeSignedAPInt(X) * TC;
   OverflowSafeSignedAPInt TY = OverflowSafeSignedAPInt(Y) * TC;
@@ -1643,8 +1614,8 @@ bool DependenceInfo::exactTestImpl(const SCEVAddRecExpr *Src,
   if (!OptTL || !OptTU)
     return false;
 
-  TL = std::move(*OptTL);
-  TU = std::move(*OptTU);
+  APInt TL = std::move(*OptTL);
+  APInt TU = std::move(*OptTU);
   LLVM_DEBUG(dbgs() << "\t    TL = " << TL << "\n");
   LLVM_DEBUG(dbgs() << "\t    TU = " << TU << "\n");
 
@@ -1834,7 +1805,7 @@ const SCEV *DependenceInfo::accumulateCoefficientsGCD(const SCEV *Expr,
 // to "a common divisor".
 bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
                                 FullDependence &Result) const {
-  if (!isDependenceTestEnabled(DependenceTestType::GCDMIV))
+  if (!isDependenceTestEnabled(Opts, DependenceTestType::GCDMIV))
     return false;
 
   LLVM_DEBUG(dbgs() << "starting gcd\n");
@@ -1859,7 +1830,7 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
   const SCEVConstant *Constant = dyn_cast<SCEVConstant>(Delta);
   if (!Constant)
     return false;
-  APInt ConstDelta = cast<SCEVConstant>(Constant)->getAPInt();
+  APInt ConstDelta = Constant->getAPInt();
   LLVM_DEBUG(dbgs() << "    ConstDelta = " << ConstDelta << "\n");
   if (ConstDelta == 0)
     return false;
@@ -1887,7 +1858,7 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
     const Loop *CurLoop = AddRec->getLoop();
     RunningGCD = 0;
     const SCEV *SrcCoeff = AddRec->getStepRecurrence(*SE);
-    const SCEV *DstCoeff = SE->getMinusSCEV(SrcCoeff, SrcCoeff);
+    const SCEV *DstCoeff = SE->getZero(SrcCoeff->getType());
 
     if (!accumulateCoefficientsGCD(Src, CurLoop, SrcCoeff, RunningGCD) ||
         !accumulateCoefficientsGCD(Dst, CurLoop, DstCoeff, RunningGCD))
@@ -2124,7 +2095,7 @@ static Type *getBanerjeeBaseType(const SCEV *Src, const SCEV *Dst,
 bool DependenceInfo::banerjeeMIVtest(const SCEV *Src, const SCEV *Dst,
                                      const SmallBitVector &Loops,
                                      FullDependence &Result) const {
-  if (!isDependenceTestEnabled(DependenceTestType::BanerjeeMIV))
+  if (!isDependenceTestEnabled(Opts, DependenceTestType::BanerjeeMIV))
     return false;
 
   LLVM_DEBUG(dbgs() << "starting Banerjee\n");
@@ -2284,7 +2255,7 @@ unsigned DependenceInfo::exploreDirections(unsigned Level,
                                            const SmallBitVector &Loops,
                                            const SCEV *Delta,
                                            const FullDependence &Result) const {
-  if (CommonLevels > MIVMaxLevelThreshold) {
+  if (CommonLevels > Opts.da_miv_max_level_threshold) {
     LLVM_DEBUG(dbgs() << "Number of common levels exceeded the threshold. MIV "
                          "direction exploration is terminated.\n");
     for (unsigned K = 1; K <= CommonLevels; ++K)
@@ -2550,7 +2521,7 @@ bool DependenceInfo::tryDelinearizeFixedSize(
   // impossible to verify this at compile-time. As such we can only delinearize
   // iff the subscripts are positive and are less than the range of the
   // dimension.
-  if (!DisableDelinearizationChecks) {
+  if (Opts.da_delinearization_checks) {
     if (!validateDelinearizationResult(*SE, SrcSizes, SrcSubscripts) ||
         !validateDelinearizationResult(*SE, DstSizes, DstSubscripts)) {
       SrcSubscripts.clear();
@@ -2614,7 +2585,7 @@ bool DependenceInfo::tryDelinearizeParametricSize(
   // and dst.
   // FIXME: It may be better to record these sizes and add them as constraints
   // to the dependency checks.
-  if (!DisableDelinearizationChecks)
+  if (Opts.da_delinearization_checks)
     if (!validateDelinearizationResult(*SE, Sizes, SrcSubscripts) ||
         !validateDelinearizationResult(*SE, Sizes, DstSubscripts))
       return false;
@@ -2650,6 +2621,33 @@ bool DependenceInfo::invalidate(Function &F, const PreservedAnalyses &PA,
          Inv.invalidate<LoopAnalysis>(F, PA);
 }
 
+void DependenceInfo::updateLoopAliasScopes(const Loop *L) {
+  if (!L || !AlreadyCheckedLoops.insert(L).second)
+    return;
+
+  Function *DeclFn = F->getParent()
+                         ? F->getParent()->getFunction(Intrinsic::getName(
+                               Intrinsic::experimental_noalias_scope_decl))
+                         : nullptr;
+  // No decls in this module. Parent loops cannot add any either.
+  if (!DeclFn || DeclFn->use_empty())
+    return;
+
+  for (BasicBlock *BB : L->blocks()) {
+    // Subloop blocks belong to the inner loop. Scan them when that loop
+    // is updated. The parent walk below picks up a decl between two loops.
+    if (LI->getLoopFor(BB) != L)
+      continue;
+    for (const Instruction &I : *BB) {
+      if (const auto *Decl = dyn_cast<NoAliasScopeDeclInst>(&I)) {
+        for (Metadata *Op : Decl->getScopeList()->operands())
+          LoopAliasScopes.insert(cast<MDNode>(Op));
+      }
+    }
+  }
+  updateLoopAliasScopes(L->getParentLoop());
+}
+
 // depends -
 // Returns NULL if there is no dependence.
 // Otherwise, return a Dependence with as many details as possible.
@@ -2681,7 +2679,11 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
   const MemoryLocation &DstLoc = MemoryLocation::get(Dst);
   const MemoryLocation &SrcLoc = MemoryLocation::get(Src);
 
-  switch (underlyingObjectsAlias(AA, F->getDataLayout(), DstLoc, SrcLoc)) {
+  updateLoopAliasScopes(LI->getLoopFor(Src->getParent()));
+  updateLoopAliasScopes(LI->getLoopFor(Dst->getParent()));
+
+  switch (underlyingObjectsAlias(AA, F->getDataLayout(), DstLoc, SrcLoc,
+                                 LoopAliasScopes)) {
   case AliasResult::MayAlias:
   case AliasResult::PartialAlias:
     // cannot analyse objects if we don't understand their aliasing.
@@ -2743,23 +2745,21 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
   const SCEV *DstEv = SE->getMinusSCEV(DstSCEV, DstBase);
 
   // Check that memory access offsets are multiples of element sizes.
-  if (!SE->isKnownMultipleOf(SrcEv, EltSize, Assume) ||
-      !SE->isKnownMultipleOf(DstEv, EltSize, Assume)) {
+  // Add to Assume if only runtime assumptions are allowed.
+  if (!SE->isKnownMultipleOf(SrcEv, EltSize,
+                             UnderRuntimeAssumptions ? &Assume : nullptr) ||
+      !SE->isKnownMultipleOf(DstEv, EltSize,
+                             UnderRuntimeAssumptions ? &Assume : nullptr)) {
     LLVM_DEBUG(dbgs() << "can't analyze SCEV with different offsets\n");
     return std::make_unique<Dependence>(Src, Dst,
                                         SCEVUnionPredicate(Assume, *SE));
   }
 
-  // Runtime assumptions needed but not allowed.
-  if (!Assume.empty() && !UnderRuntimeAssumptions)
-    return std::make_unique<Dependence>(Src, Dst,
-                                        SCEVUnionPredicate(Assume, *SE));
-
   unsigned Pairs = 1;
   SmallVector<Subscript, 2> Pair(Pairs);
   Pair[0].Src = SrcEv;
   Pair[0].Dst = DstEv;
-  if (Delinearize) {
+  if (Opts.da_delinearize) {
     if (tryDelinearize(Src, Dst, Pair)) {
       LLVM_DEBUG(dbgs() << "    delinearized\n");
       Pairs = Pair.size();
@@ -2782,8 +2782,7 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
     for (unsigned P = 0; P < Pairs; ++P) {
       SmallBitVector Loops;
       Subscript::ClassificationKind TestClass =
-          classifyPair(Pair[P].Src, LI->getLoopFor(Src->getParent()),
-                       Pair[P].Dst, LI->getLoopFor(Dst->getParent()), Loops);
+          classifyPair(Pair[P].Src, SrcLoop, Pair[P].Dst, DstLoop, Loops);
 
       if (TestClass != Subscript::ZIV && TestClass != Subscript::SIV &&
           TestClass != Subscript::RDIV) {
@@ -2807,13 +2806,8 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
     assert(Pair[P].Src->getType()->isIntegerTy() && "Src must be an integer");
     assert(Pair[P].Dst->getType()->isIntegerTy() && "Dst must be an integer");
     Pair[P].Loops.resize(MaxLevels + 1);
-    Pair[P].GroupLoops.resize(MaxLevels + 1);
-    Pair[P].Group.resize(Pairs);
     Pair[P].Classification =
-        classifyPair(Pair[P].Src, LI->getLoopFor(Src->getParent()), Pair[P].Dst,
-                     LI->getLoopFor(Dst->getParent()), Pair[P].Loops);
-    Pair[P].GroupLoops = Pair[P].Loops;
-    Pair[P].Group.set(P);
+        classifyPair(Pair[P].Src, SrcLoop, Pair[P].Dst, DstLoop, Pair[P].Loops);
     LLVM_DEBUG(dbgs() << "    subscript " << P << "\n");
     LLVM_DEBUG(dbgs() << "\tsrc = " << *Pair[P].Src << "\n");
     LLVM_DEBUG(dbgs() << "\tdst = " << *Pair[P].Dst << "\n");
@@ -2836,10 +2830,8 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
     case Subscript::NonLinear:
       // ignore these, but collect loops for later
       ++NonlinearSubscriptPairs;
-      collectCommonLoops(Pair[SI].Src, LI->getLoopFor(Src->getParent()),
-                         Pair[SI].Loops);
-      collectCommonLoops(Pair[SI].Dst, LI->getLoopFor(Dst->getParent()),
-                         Pair[SI].Loops);
+      collectCommonLoops(Pair[SI].Src, SrcLoop, Pair[SI].Loops);
+      collectCommonLoops(Pair[SI].Dst, DstLoop, Pair[SI].Loops);
       break;
     case Subscript::ZIV:
       LLVM_DEBUG(dbgs() << ", ZIV\n");

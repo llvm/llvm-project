@@ -237,8 +237,8 @@ entry:
   %l = call <8 x i16> @llvm.aarch64.neon.srshl(<8 x i16> %x, <8 x i16> <i16 -5, i16 -5, i16 -5, i16 -5, i16 -5, i16 -5, i16 -5, i16 -5>)
   %h = call <8 x i16> @llvm.aarch64.neon.srshl(<8 x i16> %y, <8 x i16> <i16 -5, i16 -5, i16 -5, i16 -5, i16 -5, i16 -5, i16 -5, i16 -5>)
   %s = shufflevector <8 x i16> %l, <8 x i16> %h, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  %min = call <16 x i16> @llvm.smin.v8i16(<16 x i16> %s, <16 x i16> <i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127>)
-  %max = call <16 x i16> @llvm.smax.v8i16(<16 x i16> %min, <16 x i16> <i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128>)
+  %min = call <16 x i16> @llvm.smin.v16i16(<16 x i16> %s, <16 x i16> <i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127>)
+  %max = call <16 x i16> @llvm.smax.v16i16(<16 x i16> %min, <16 x i16> <i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128>)
   %trunc = trunc <16 x i16> %max to <16 x i8>
   ret <16 x i8> %trunc
 }
@@ -253,7 +253,7 @@ entry:
   %l = call <8 x i16> @llvm.aarch64.neon.urshl(<8 x i16> %x, <8 x i16> <i16 -5, i16 -5, i16 -5, i16 -5, i16 -5, i16 -5, i16 -5, i16 -5>)
   %h = call <8 x i16> @llvm.aarch64.neon.urshl(<8 x i16> %y, <8 x i16> <i16 -5, i16 -5, i16 -5, i16 -5, i16 -5, i16 -5, i16 -5, i16 -5>)
   %s = shufflevector <8 x i16> %l, <8 x i16> %h, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  %min = call <16 x i16> @llvm.umin.v8i16(<16 x i16> %s, <16 x i16> <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>)
+  %min = call <16 x i16> @llvm.umin.v16i16(<16 x i16> %s, <16 x i16> <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>)
   %trunc = trunc <16 x i16> %min to <16 x i8>
   ret <16 x i8> %trunc
 }
@@ -268,8 +268,8 @@ entry:
   %l = call <8 x i16> @llvm.aarch64.neon.srshl(<8 x i16> %x, <8 x i16> <i16 -5, i16 -5, i16 -5, i16 -5, i16 -5, i16 -5, i16 -5, i16 -5>)
   %h = call <8 x i16> @llvm.aarch64.neon.srshl(<8 x i16> %y, <8 x i16> <i16 -5, i16 -5, i16 -5, i16 -5, i16 -5, i16 -5, i16 -5, i16 -5>)
   %s = shufflevector <8 x i16> %l, <8 x i16> %h, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  %max = call <16 x i16> @llvm.smax.v8i16(<16 x i16> %s, <16 x i16> <i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0>)
-  %min = call <16 x i16> @llvm.umin.v8i16(<16 x i16> %max, <16 x i16> <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>)
+  %max = call <16 x i16> @llvm.smax.v16i16(<16 x i16> %s, <16 x i16> <i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0>)
+  %min = call <16 x i16> @llvm.umin.v16i16(<16 x i16> %max, <16 x i16> <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>)
   %trunc = trunc <16 x i16> %min to <16 x i8>
   ret <16 x i8> %trunc
 }
@@ -333,8 +333,8 @@ entry:
   %l = call <2 x i64> @llvm.aarch64.neon.srshl.v2i64(<2 x i64> %x, <2 x i64> <i64 -5, i64 -5>)
   %h = call <2 x i64> @llvm.aarch64.neon.srshl.v2i64(<2 x i64> %y, <2 x i64> <i64 -5, i64 -5>)
   %s = shufflevector <2 x i64> %l, <2 x i64> %h, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %min = call <4 x i64> @llvm.smin.v8i64(<4 x i64> %s, <4 x i64> <i64 2147483647, i64 2147483647, i64 2147483647, i64 2147483647>)
-  %max = call <4 x i64> @llvm.smax.v8i64(<4 x i64> %min, <4 x i64> <i64 -2147483648, i64 -2147483648, i64 -2147483648, i64 -2147483648>)
+  %min = call <4 x i64> @llvm.smin.v4i64(<4 x i64> %s, <4 x i64> <i64 2147483647, i64 2147483647, i64 2147483647, i64 2147483647>)
+  %max = call <4 x i64> @llvm.smax.v4i64(<4 x i64> %min, <4 x i64> <i64 -2147483648, i64 -2147483648, i64 -2147483648, i64 -2147483648>)
   %trunc = trunc <4 x i64> %max to <4 x i32>
   ret <4 x i32> %trunc
 }
@@ -349,7 +349,7 @@ entry:
   %l = call <2 x i64> @llvm.aarch64.neon.urshl.v2i64(<2 x i64> %x, <2 x i64> <i64 -5, i64 -5>)
   %h = call <2 x i64> @llvm.aarch64.neon.urshl.v2i64(<2 x i64> %y, <2 x i64> <i64 -5, i64 -5>)
   %s = shufflevector <2 x i64> %l, <2 x i64> %h, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %min = call <4 x i64> @llvm.umin.v8i64(<4 x i64> %s, <4 x i64> <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>)
+  %min = call <4 x i64> @llvm.umin.v4i64(<4 x i64> %s, <4 x i64> <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>)
   %trunc = trunc <4 x i64> %min to <4 x i32>
   ret <4 x i32> %trunc
 }
@@ -364,8 +364,8 @@ entry:
   %l = call <2 x i64> @llvm.aarch64.neon.srshl.v2i64(<2 x i64> %x, <2 x i64> <i64 -5, i64 -5>)
   %h = call <2 x i64> @llvm.aarch64.neon.srshl.v2i64(<2 x i64> %y, <2 x i64> <i64 -5, i64 -5>)
   %s = shufflevector <2 x i64> %l, <2 x i64> %h, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %max = call <4 x i64> @llvm.smax.v8i64(<4 x i64> %s, <4 x i64> <i64 0, i64 0, i64 0, i64 0>)
-  %min = call <4 x i64> @llvm.umin.v8i64(<4 x i64> %max, <4 x i64> <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>)
+  %max = call <4 x i64> @llvm.smax.v4i64(<4 x i64> %s, <4 x i64> <i64 0, i64 0, i64 0, i64 0>)
+  %min = call <4 x i64> @llvm.umin.v4i64(<4 x i64> %max, <4 x i64> <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>)
   %trunc = trunc <4 x i64> %min to <4 x i32>
   ret <4 x i32> %trunc
 }

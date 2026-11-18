@@ -98,7 +98,7 @@ def : CompressPat<(BigInst Regs:$r), (SmallInst5 Regs:$r), [AsmPred1, AsmPred3]>
 
 // COMPRESS-LABEL: static bool uncompressInst
 
-// COMPRESS-LABEL: static bool isCompressibleInst
+// COMPRESS-LABEL: static unsigned getCompressedSize
 
 // COMPRESS:      if (STI.getFeatureBits()[arch::AsmCond1] &&
 // COMPRESS-NEXT: MI.getOperand(0).isReg() && MI.getOperand(0).getReg().isPhysical() &&

@@ -42,7 +42,7 @@ void testStrongException(void) {
 // CHECK: call void @genWeak(ptr dead_on_unwind writable sret(%[[STRUCT_WEAK]]) align 8 %[[AGG_TMP]])
 // CHECK: invoke void @genWeak(ptr dead_on_unwind writable sret(%[[STRUCT_WEAK]]) align 8 %[[AGG_TMP1]])
 
-// CHECK: call void @calleeWeak(ptr noundef align 8 dead_on_return %[[AGG_TMP]], ptr noundef align 8 dead_on_return %[[AGG_TMP1]])
+// CHECK: call void @calleeWeak(ptr nofreeobj noundef align 8 dead_on_return dereferenceable(16) %[[AGG_TMP]], ptr nofreeobj noundef align 8 dead_on_return dereferenceable(16) %[[AGG_TMP1]])
 // CHECK: ret void
 
 // CHECK: landingpad { ptr, i32 }

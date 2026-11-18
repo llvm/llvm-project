@@ -61,8 +61,13 @@ public:
     /// Input DWARF is loaded.
     Loaded,
 
-    /// Input DWARF is analysed(DIEs pointing to the real code section are
-    /// discovered, type names are assigned if ODR is requested).
+    /// DIEs with a live address are found. Marking a unit reads whether the
+    /// DIEs it references in other units have an address, so every
+    /// inter-connected unit gets here before any of them is marked.
+    LiveRootsCollected,
+
+    /// Input DWARF is analysed(DIEs pointing to the real code section and the
+    /// DIEs they depend on are marked).
     LivenessAnalysisDone,
 
     /// Check if dependencies have incompatible placement.
@@ -98,6 +103,9 @@ public:
   /// Returns stage of overall processing.
   Stage getStage() const { return Stage; }
 
+  /// Returns raw DW_AT_language of the input compile unit.
+  std::optional<uint16_t> getLanguage() const { return Language; }
+
   /// Set stage of overall processing.
   void setStage(Stage Stage) { this->Stage = Stage; }
 
@@ -109,9 +117,20 @@ public:
   StringEntry *getFileName(unsigned FileIdx, StringPool &GlobalStrings);
 
   /// Returns DWARFFile containing this compile unit.
-  const DWARFFile &getContaingFile() const { return File; }
+  const DWARFFile &getContainingFile() const { return File; }
 
-  /// Set deterministic priority for type DIE allocation ordering.
+  /// Appends the names of the DW_TAG_module enclosing \p DieEntry, outermost
+  /// first. Returns false when one of them has no name making the module
+  /// unidentifiable across units.
+  bool getModulePath(const DWARFDebugInfoEntry *DieEntry,
+                     SmallVectorImpl<char> &Path);
+
+  /// Must run while the output offsets are still available, and once they are
+  /// final.
+  void noteModuleAnchors();
+
+  /// Set deterministic priority for type DIE allocation ordering. Units compare
+  /// by \p ObjFileIdx first and by \p LocalIdx second.
   /// Lower priority values win when multiple CUs race to define the same type.
   llvm::Error setPriority(uint64_t ObjFileIdx, uint64_t LocalIdx);
 
@@ -148,8 +167,11 @@ public:
   /// This method copies output offsets for referenced DIEs into DIEs patches.
   void updateDieRefPatchesWithClonedOffsets();
 
-  /// Search for subprograms and variables referencing live code and discover
-  /// dependend DIEs. Mark live DIEs, set placement for DIEs.
+  /// Search for subprograms and variables referencing live code.
+  void collectLiveRoots();
+
+  /// Discover the DIEs the live roots depend on. Mark live DIEs, set placement
+  /// for DIEs.
   bool resolveDependenciesAndMarkLiveness(
       bool InterCUProcessingStarted,
       std::atomic<bool> &HasNewInterconnectedCUs);
@@ -289,6 +311,10 @@ public:
 
     /// Track liveness for the DIE.
     SINGLE_FLAG_METHODS_SET(HasAnAddress, 0x800)
+
+    /// DIE is a function-local variable with a live address that does not keep
+    /// its function, and is kept wherever the function is.
+    SINGLE_FLAG_METHODS_SET(KeepWithParent, 0x1000)
 
     void unsetFlagsWhichSetDuringLiveAnalysis() {
       auto InputData = Flags.load();

@@ -23,8 +23,11 @@ namespace direct {
 std::unique_ptr<mlir::Pass> createConvertCIRToLLVMPass();
 
 /// Adds passes that fully lower CIR to the LLVMIR dialect. When enableOpenMP
-/// is set (-fopenmp), the OpenMP lowering passes are also added.
-void populateCIRToLLVMPasses(mlir::OpPassManager &pm, bool enableOpenMP);
+/// is set (-fopenmp), the OpenMP lowering passes are also added. When
+/// enableOptimizations is set, the llvm-simplify-cfg pass runs after
+/// conversion, before translation.
+void populateCIRToLLVMPasses(mlir::OpPassManager &pm, bool enableOpenMP,
+                             bool enableOptimizations = false);
 
 } // namespace direct
 } // end namespace cir

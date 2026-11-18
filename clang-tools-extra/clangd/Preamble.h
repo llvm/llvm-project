@@ -31,6 +31,7 @@
 
 #include "clang-include-cleaner/Record.h"
 #include "support/Path.h"
+#include "clang/AST/ASTContext.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Frontend/CompilerInvocation.h"
@@ -40,7 +41,6 @@
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
-
 #include <cstddef>
 #include <functional>
 #include <memory>

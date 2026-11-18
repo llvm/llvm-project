@@ -4,6 +4,8 @@
 // No allocator.
 // UNSUPPORTED: ubsan
 
+// UNSUPPORTED: rtsan
+
 #include <assert.h>
 #include <sanitizer/allocator_interface.h>
 #include <stdio.h>

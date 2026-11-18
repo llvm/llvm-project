@@ -36,15 +36,15 @@ _LIBCPP_HIDE_FROM_ABI constexpr _Fp __lerp(_Fp __a, _Fp __b, _Fp __t) noexcept {
     return __x < __b ? __x : __b;
 }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr float lerp(float __a, float __b, float __t) _NOEXCEPT {
+_LIBCPP_HIDE_FROM_ABI inline constexpr float lerp(float __a, float __b, float __t) noexcept {
   return __lerp(__a, __b, __t);
 }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr double lerp(double __a, double __b, double __t) _NOEXCEPT {
+_LIBCPP_HIDE_FROM_ABI inline constexpr double lerp(double __a, double __b, double __t) noexcept {
   return __lerp(__a, __b, __t);
 }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr long double lerp(long double __a, long double __b, long double __t) _NOEXCEPT {
+_LIBCPP_HIDE_FROM_ABI inline constexpr long double lerp(long double __a, long double __b, long double __t) noexcept {
   return __lerp(__a, __b, __t);
 }
 

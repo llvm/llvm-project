@@ -5264,7 +5264,7 @@ define <8 x bfloat> @test_powi(<8 x bfloat> %a, i32 %b) #0 {
 ; CHECK-BF16-GI-NEXT:    mov v0.16b, v1.16b
 ; CHECK-BF16-GI-NEXT:    add sp, sp, #192
 ; CHECK-BF16-GI-NEXT:    ret
-  %r = call <8 x bfloat> @llvm.powi.v8bf16.v8i32(<8 x bfloat> %a, i32 %b)
+  %r = call <8 x bfloat> @llvm.powi.v8bf16.i32(<8 x bfloat> %a, i32 %b)
   ret <8 x bfloat> %r
 }
 
@@ -15440,13 +15440,6 @@ define bfloat @test_reduce_fmul_fast(<8 x bfloat> %b) #0 {
 ; CHECK-CVT-GI-NEXT:    fmul v0.2s, v0.2s, v1.2s
 ; CHECK-CVT-GI-NEXT:    mov s1, v0.s[1]
 ; CHECK-CVT-GI-NEXT:    fmul s0, s0, s1
-; CHECK-CVT-GI-NEXT:    fmov w9, s0
-; CHECK-CVT-GI-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-CVT-GI-NEXT:    add w9, w9, w8
-; CHECK-CVT-GI-NEXT:    add w9, w9, w10
-; CHECK-CVT-GI-NEXT:    lsr w9, w9, #16
-; CHECK-CVT-GI-NEXT:    fmov s0, w9
-; CHECK-CVT-GI-NEXT:    shll v0.4s, v0.4h, #16
 ; CHECK-CVT-GI-NEXT:    fmov w9, s0
 ; CHECK-CVT-GI-NEXT:    ubfx w10, w9, #16, #1
 ; CHECK-CVT-GI-NEXT:    add w8, w9, w8

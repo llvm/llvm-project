@@ -586,9 +586,9 @@ The source range record contains the following fields:
 
 ## Testing Format
 
-```{warning}
+:::{warning}
 This section is for the LLVM developers who are working on `llvm-cov` only.
-```
+:::
 
 `llvm-cov` uses a special file format (called `.covmapping` below) for
 testing purposes. This format is private and should have no use for general

@@ -28,15 +28,11 @@ class ChangeValueAPITestCase(TestBase):
         d = {"EXE": self.exe_name}
         self.build(dictionary=d)
         self.setTearDownCleanup(dictionary=d)
-        exe = self.getBuildArtifact(self.exe_name)
-
-        # Create a target by the debugger.
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
 
         # Create the breakpoint inside function 'main'.
-        breakpoint = target.BreakpointCreateByLocation("main.c", self.line)
-        self.assertTrue(breakpoint, VALID_BREAKPOINT)
+        target, process, thread, breakpoint = lldbutil.run_to_line_breakpoint(
+            self, lldb.SBFileSpec("main.c", False), self.line, exe_name=self.exe_name
+        )
 
         # Create the breakpoint inside the function 'main'
         check_breakpoint = target.BreakpointCreateByLocation("main.c", self.check_line)
@@ -46,17 +42,7 @@ class ChangeValueAPITestCase(TestBase):
         end_breakpoint = target.BreakpointCreateByLocation("main.c", self.end_line)
         self.assertTrue(end_breakpoint, VALID_BREAKPOINT)
 
-        # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        self.assertTrue(process, PROCESS_IS_VALID)
-
         # Get Frame #0.
-        self.assertState(process.GetState(), lldb.eStateStopped)
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-        self.assertTrue(
-            thread.IsValid(),
-            "There should be a thread stopped due to breakpoint condition",
-        )
         frame0 = thread.GetFrameAtIndex(0)
         self.assertTrue(frame0.IsValid(), "Got a valid frame.")
 
@@ -76,17 +62,21 @@ class ChangeValueAPITestCase(TestBase):
         self.assertEqual(actual_value, 12345, "Got the right changed value from val")
 
         # A normal variable backed by memory reports that it can be modified.
+        self.assertSuccess(val_value.CanSet(), "val can be modified")
         self.assertTrue(val_value.CanSetValue(), "val can be modified")
 
         # A constant expression result has no writable storage, so it cannot be
-        # modified and CanSetValue() is False.
+        # modified and CanSet() returns an error.
         const_value = frame0.EvaluateExpression("val + 1")
         self.assertTrue(const_value.IsValid(), "Got a valid expression result")
+        can_set_error = const_value.CanSet()
+        self.assertTrue(can_set_error.Fail(), "A constant cannot be modified")
+        self.assertIn("not in a writable location", can_set_error.GetCString())
         self.assertFalse(const_value.CanSetValue(), "A constant cannot be modified")
         error.Clear()
         result = const_value.SetValueFromCString("0", error)
         self.assertFalse(result, "SetValueFromCString on a constant failed")
-        self.assertIn("constant", error.GetCString())
+        self.assertIn("not in a writable location", error.GetCString())
 
         # Now check that we can set a structure element:
 

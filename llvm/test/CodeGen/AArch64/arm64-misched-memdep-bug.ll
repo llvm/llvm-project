@@ -3,7 +3,7 @@
 ;
 ; Test for bug in misched memory dependency calculation.
 ;
-; CHECK: ********** MI Scheduling **********
+; CHECK: Current Schedule Region
 ; CHECK: misched_bug:%bb.0 entry
 ; CHECK: SU(2):   %2:gpr32 = LDRWui %0:gpr64common, 1 :: (load (s32) from %ir.ptr1_plus1)
 ; CHECK:   Successors:

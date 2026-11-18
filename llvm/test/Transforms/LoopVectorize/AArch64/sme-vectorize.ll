@@ -63,7 +63,7 @@ for.body:
 !0 = distinct !{!0, !1, !2, !3}
 !1 = !{!"llvm.loop.mustprogress"}
 !2 = !{!"llvm.loop.interleave.count", i32 1}
-!3 = !{!"llvm.loop.vectorize.scalable.enable", i1 false}
+!3 = !{!"llvm.loop.vectorize.scalable.disable"}
 
 define void @test_scalable_loopvec(ptr noalias %dst, ptr readonly %src, i32 %N) #0 {
 ; CHECK-LABEL: @test_scalable_loopvec
@@ -96,7 +96,7 @@ for.body:
 !4 = distinct !{!4, !5, !6, !7}
 !5 = !{!"llvm.loop.mustprogress"}
 !6 = !{!"llvm.loop.interleave.count", i32 1}
-!7 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
+!7 = !{!"llvm.loop.vectorize.scalable.enable"}
 
 define void @test_slp(ptr noalias %dst, ptr readonly %src, i32 %N) #0 {
 ; CHECK-LABEL: @test_slp

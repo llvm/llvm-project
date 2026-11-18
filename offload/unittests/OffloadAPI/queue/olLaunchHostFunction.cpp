@@ -47,6 +47,7 @@ TEST_P(olLaunchHostFunctionTest, SuccessSequence) {
 
 TEST_P(olLaunchHostFunctionKernelTest, SuccessBlocking) {
   SKIP_KNOWN_FAILURE(LevelZero{"driver issue"});
+  SKIP_IF_FORCE_SYNC_OPS();
 
   // Verify that a host kernel can block execution - A host task is created that
   // only resolves when Block is set to false.
@@ -57,10 +58,10 @@ TEST_P(olLaunchHostFunctionKernelTest, SuccessBlocking) {
   LaunchArgs.DynSharedMemory = 0;
 
   ol_queue_handle_t Queue;
-  ASSERT_SUCCESS(olCreateQueue(Device, &Queue));
+  ASSERT_SUCCESS(olCreateQueue(Context, Device, &Queue));
 
   void *Mem;
-  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED,
+  ASSERT_SUCCESS(olMemAlloc(Context, Device, OL_ALLOC_TYPE_MANAGED,
                             LaunchArgs.GroupSize.x * sizeof(uint32_t), &Mem));
 
   uint32_t *Data = (uint32_t *)Mem;
@@ -98,7 +99,7 @@ TEST_P(olLaunchHostFunctionKernelTest, SuccessBlocking) {
   }
 
   ASSERT_SUCCESS(olDestroyQueue(Queue));
-  ASSERT_SUCCESS(olMemFree(Mem));
+  ASSERT_SUCCESS(olMemFree(Context, Mem));
 }
 
 TEST_P(olLaunchHostFunctionTest, InvalidNullCallback) {

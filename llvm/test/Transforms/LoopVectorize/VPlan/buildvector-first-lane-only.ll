@@ -4,31 +4,22 @@
 define i16 @last_active_lane_live_out(i32 %x) {
 ; CHECK-LABEL: VPlan for loop in 'last_active_lane_live_out'
 ; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
-; CHECK-NEXT:  Live-in ir<2> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<entry>:
 ; CHECK-NEXT:  Successor(s): vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<[[VP2:%[0-9]+]]> = trunc ir<%x> to i16
-; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = step-vector i16
-; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = broadcast vp<[[VP2]]>
-; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = mul vp<[[VP3]]>, vp<[[VP4]]>
 ; CHECK-NEXT:  Successor(s): vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.body:
-; CHECK-NEXT:    EMIT vp<%active.lane.mask> = active lane mask ir<0>, ir<2>, ir<1>
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = not vp<%active.lane.mask>
-; CHECK-NEXT:    EMIT vp<%first.inactive.lane> = first-active-lane vp<[[VP6]]>
-; CHECK-NEXT:    EMIT vp<%last.active.lane> = sub vp<%first.inactive.lane>, ir<1>
-; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = extractelement vp<[[VP5]]>, vp<%last.active.lane>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP2:%[0-9]+]]> = trunc ir<%x> to i16
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<exit>:
-; CHECK-NEXT:    IR   %t.lcssa = phi i16 [ %t, %loop ] (extra operand: vp<[[VP7]]> from middle.block)
+; CHECK-NEXT:    IR   %t.lcssa = phi i16 [ %t, %loop ] (extra operand: vp<[[VP2]]> from middle.block)
 ; CHECK-NEXT:  No successors
 ; CHECK-NEXT:  }
 ;

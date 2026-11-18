@@ -11,8 +11,8 @@ define void @test_runtime_check_known_false_after_construction(ptr %start.1, ptr
 ; CHECK-NEXT:    [[START_2_INT:%.*]] = ptrtoint ptr [[GEP_START_2]] to i64
 ; CHECK-NEXT:    [[DIFF:%.*]] = sub i64 [[START_1_INT]], [[START_2_INT]]
 ; CHECK-NEXT:    [[START_2_DIFF:%.*]] = getelementptr i8, ptr [[START_2]], i64 [[DIFF]]
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[END1]], [[START_1_INT]]
-; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[TMP1]], 8
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[END1]], 8
+; CHECK-NEXT:    [[TMP12:%.*]] = sub i64 [[TMP0]], [[START_1_INT]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP12]], 2305843009213693951
 ; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nuw nsw i64 [[TMP3]], 1
@@ -37,9 +37,9 @@ define void @test_runtime_check_known_false_after_construction(ptr %start.1, ptr
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], -8
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START_1]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr [[START_2_DIFF]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i64, ptr [[NEXT_GEP3]], i64 -3
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[NEXT_GEP3]], i64 -24
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP14]], align 8
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i64, ptr [[NEXT_GEP]], i64 -3
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 -24
 ; CHECK-NEXT:    store <4 x i64> [[WIDE_LOAD]], ptr [[TMP16]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]

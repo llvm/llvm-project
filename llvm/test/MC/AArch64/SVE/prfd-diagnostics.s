@@ -29,12 +29,12 @@ prfd #pldl1keep, p0, [x0]
 // invalid scalar + scalar addressing modes
 
 prfd #0, p0, [x0, #-33, mul vl]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be an integer in range [-32, 31].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [-32, 31].
 // CHECK-NEXT: prfd #0, p0, [x0, #-33, mul vl]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 prfd #0, p0, [x0, #32, mul vl]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be an integer in range [-32, 31].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [-32, 31].
 // CHECK-NEXT: prfd #0, p0, [x0, #32, mul vl]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
@@ -82,27 +82,27 @@ prfd #0, p0, [x0, z0.d, lsl]
 // Invalid vector + immediate addressing modes
 
 prfd #0, p0, [z0.d, #-8]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 8 in range [0, 248].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 8 in range [0, 248].
 // CHECK-NEXT: prfd #0, p0, [z0.d, #-8]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 prfd #0, p0, [z0.d, #-1]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 8 in range [0, 248].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 8 in range [0, 248].
 // CHECK-NEXT: prfd #0, p0, [z0.d, #-1]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 prfd #0, p0, [z0.d, #249]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 8 in range [0, 248].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 8 in range [0, 248].
 // CHECK-NEXT: prfd #0, p0, [z0.d, #249]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 prfd #0, p0, [z0.d, #256]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 8 in range [0, 248].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 8 in range [0, 248].
 // CHECK-NEXT: prfd #0, p0, [z0.d, #256]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 prfd #0, p0, [z0.d, #3]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 8 in range [0, 248].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 8 in range [0, 248].
 // CHECK-NEXT: prfd #0, p0, [z0.d, #3]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

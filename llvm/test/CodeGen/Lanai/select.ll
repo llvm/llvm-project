@@ -1,5 +1,4 @@
 ; RUN: llc < %s | FileCheck %s
-; RUN: llc -enable-new-pm < %s | FileCheck %s
 
 ; Test that Lanai select instruction is selected from LLVM select instruction.
 

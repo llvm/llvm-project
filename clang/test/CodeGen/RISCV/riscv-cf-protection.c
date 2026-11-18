@@ -70,22 +70,12 @@
 // RUN: -emit-llvm %s -o - 2>&1 | FileCheck \
 // RUN: --check-prefixes=NO-FLAG,FUNC-SIG-SCHEME-UNUSED %s
 
-// Default -mcf-branch-label-scheme is func-sig
-// RUN: not %clang --target=riscv32 -fcf-protection=branch -S -emit-llvm %s \
-// RUN: -o - 2>&1 | FileCheck --check-prefixes=FORCE-UNLABELED %s
-
-// Default -mcf-branch-label-scheme is func-sig
-// RUN: not %clang --target=riscv64 -fcf-protection=branch -S -emit-llvm %s \
-// RUN: -o - 2>&1 | FileCheck --check-prefixes=FORCE-UNLABELED %s
-
 // UNLABELED-SCHEME-UNUSED: warning: argument unused during compilation:
 // UNLABELED-SCHEME-UNUSED-SAME: '-mcf-branch-label-scheme=unlabeled'
 // FUNC-SIG-SCHEME-UNUSED: warning: argument unused during compilation:
 // FUNC-SIG-SCHEME-UNUSED-SAME: '-mcf-branch-label-scheme=func-sig'
 // FUNC-SIG-NOSUPPORT: error: option '-mcf-branch-label-scheme=func-sig' is
 // FUNC-SIG-NOSUPPORT-SAME: unsupported; consider using '-mcf-branch-label-scheme=unlabeled'
-// FORCE-UNLABELED: error: option '-fcf-protection=branch' cannot be specified
-// FORCE-UNLABELED-SAME: without '-mcf-branch-label-scheme=unlabeled'
 
 // BRANCH-PROT-FLAG-DAG: [[P_FLAG:![0-9]+]] = !{i32 8, !"cf-protection-branch", i32 1}
 // UNLABELED-FLAG-DAG: [[S_FLAG:![0-9]+]] = !{i32 1, !"cf-branch-label-scheme", !"unlabeled"}

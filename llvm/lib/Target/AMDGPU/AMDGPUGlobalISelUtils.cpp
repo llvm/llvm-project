@@ -11,9 +11,10 @@
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
-#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/CodeGen/GlobalISel/Utils.h"
+#include "llvm/CodeGen/LowLevelTypeUtils.h"
 #include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
@@ -21,6 +22,21 @@
 using namespace llvm;
 using namespace AMDGPU;
 using namespace MIPatternMatch;
+
+bool AMDGPU::isUnscaledIEEEDivFmas(const MachineInstr &MI,
+                                   const MachineRegisterInfo &MRI) {
+  Register ScaleReg = MI.getOperand(5).getReg();
+  MachineInstr *ScaleDef = getDefIgnoringCopies(ScaleReg, MRI);
+  if (ScaleDef && ScaleDef->getOpcode() == AMDGPU::G_AMDGPU_COPY_VCC_SCC)
+    ScaleReg = ScaleDef->getOperand(1).getReg();
+  auto Scale = getIConstantVRegValWithLookThrough(ScaleReg, MRI);
+  if (!Scale || !Scale->Value.isZero())
+    return false;
+
+  const fltSemantics &Semantics =
+      getFltSemanticForLLT(MRI.getType(MI.getOperand(0).getReg()));
+  return MI.getMF()->getDenormalMode(Semantics).Input == DenormalMode::IEEE;
+}
 
 std::pair<Register, unsigned>
 AMDGPU::getBaseWithConstantOffset(MachineRegisterInfo &MRI, Register Reg,
@@ -56,18 +72,21 @@ AMDGPU::getBaseWithConstantOffset(MachineRegisterInfo &MRI, Register Reg,
   }
 
   Register Base;
-  if (ValueTracking && mi_match(Reg, MRI, m_GOr(m_Reg(Base), m_ICst(Offset))) &&
-      ValueTracking->maskedValueIsZero(Base,
-                                       APInt(32, Offset, /*isSigned=*/true)))
+  if (mi_match(Reg, MRI, m_GOr(m_Reg(Base), m_ICst(Offset))) &&
+      (Def->getFlag(MachineInstr::Disjoint) ||
+       (ValueTracking && ValueTracking->maskedValueIsZero(
+                             Base, APInt(32, Offset, /*isSigned=*/true)))))
     return std::pair(Base, Offset);
 
   // Handle G_PTRTOINT (G_PTR_ADD base, const) case
   if (Def->getOpcode() == TargetOpcode::G_PTRTOINT) {
     MachineInstr *Base;
     Register PtrAdd = Def->getOperand(1).getReg();
-    if (mi_match(PtrAdd, MRI, m_GPtrAdd(m_MInstr(Base), m_ICst(Offset)))) {
+    uint32_t Flags;
+    if (mi_match(PtrAdd, MRI,
+                 m_GPtrAdd(m_MInstr(Base), m_ICst(Offset), m_MIFlags(Flags)))) {
       // Same check as for G_ADD; nuw comes from getelementptr inbounds.
-      if (CheckNUW && !MRI.getVRegDef(PtrAdd)->getFlag(MachineInstr::NoUWrap)) {
+      if (CheckNUW && !(Flags & MachineInstr::NoUWrap)) {
         assert(MRI.getType(Reg).getScalarSizeInBits() == 32);
         return std::pair(Reg, 0);
       }

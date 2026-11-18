@@ -54,3 +54,9 @@ add_header_library(
     .macro_utils
     libc.src.__support.CPP.string_view
 )
+
+add_header_library(
+  hardening
+  HDRS
+    hardening.h
+)

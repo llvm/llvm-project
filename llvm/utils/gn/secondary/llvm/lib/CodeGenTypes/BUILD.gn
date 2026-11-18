@@ -8,5 +8,8 @@ static_library("CodeGenTypes") {
     "//llvm/include/llvm/CodeGen:GenVT",
     "//llvm/lib/Support",
   ]
-  sources = [ "LowLevelType.cpp" ]
+  sources = [
+    "LowLevelType.cpp",
+    "MachineValueType.cpp",
+  ]
 }

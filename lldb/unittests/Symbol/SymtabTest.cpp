@@ -1,4 +1,4 @@
-//===-- SymbolTest.cpp ----------------------------------------------------===//
+//===-- SymtabTest.cpp ----------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,6 +18,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/Symtab.h"
 #include "lldb/Utility/DataEncoder.h"
@@ -37,6 +38,52 @@ class SymtabTest : public testing::Test {
       subsystem;
 };
 
+namespace {
+/// Exposes whether SymbolFileSymtab has built its symbol indexes.
+class SymbolFileSymtabTester : public SymbolFileSymtab {
+public:
+  using SymbolFileSymtab::SymbolFileSymtab;
+  bool SymbolIndexesInitialized() const { return m_symbol_indexes_initialized; }
+};
+
+/// Exposes whether a Symtab knows if it has source files without needing to
+/// search all of its symbols.
+class SymtabTester : public Symtab {
+public:
+  using Symtab::Symtab;
+  bool HasSourceFilesIsKnown() const { return m_has_source_files.has_value(); }
+};
+} // namespace
+
+static Symbol MakeSymbol(uint32_t id, SymbolType type, uint32_t flags) {
+  return Symbol(id, "symbol", type, /*external=*/false, /*is_debug=*/true,
+                /*is_trampoline=*/false, /*is_artificial=*/false,
+                /*section_sp=*/SectionSP(), /*value=*/0, /*size=*/0,
+                /*size_is_valid=*/false,
+                /*contains_linker_annotations=*/false, flags);
+}
+
+/// Parse the symbol table of \a objfile and check that the object file
+/// plug-in set whether it has source files and a debug map, so they don't
+/// need to be calculated by searching all of the symbols.
+static void CheckParsedHasSourceFilesAndDebugMap(ObjectFile *objfile,
+                                                 bool has_source_files,
+                                                 bool has_debug_map) {
+  SymtabTester symtab(objfile);
+  std::lock_guard<std::recursive_mutex> guard(symtab.GetMutex());
+  objfile->ParseSymtab(symtab);
+  EXPECT_TRUE(symtab.HasSourceFilesIsKnown());
+  EXPECT_EQ(symtab.HasSourceFiles(), has_source_files);
+  EXPECT_EQ(symtab.HasDebugMap(), has_debug_map);
+
+  // ObjectFile::GetSymtab() calls Finalize() after ParseSymtab(), which must
+  // keep the values the object file plug-in set.
+  symtab.Finalize();
+  EXPECT_TRUE(symtab.HasSourceFilesIsKnown());
+  EXPECT_EQ(symtab.HasSourceFiles(), has_source_files);
+  EXPECT_EQ(symtab.HasDebugMap(), has_debug_map);
+}
+
 static void EncodeDecode(const Symtab &object, ByteOrder byte_order) {
   const uint8_t addr_size = 8;
   DataEncoder file(byte_order, addr_size);
@@ -44,13 +91,17 @@ static void EncodeDecode(const Symtab &object, ByteOrder byte_order) {
   object.Encode(file);
   llvm::ArrayRef<uint8_t> bytes = file.GetData();
   DataExtractor data(bytes.data(), bytes.size(), byte_order, addr_size);
-  Symtab decoded_object(object.GetObjectFile());
+  SymtabTester decoded_object(object.GetObjectFile());
   offset_t data_offset = 0;
-  bool uuid_mismatch = false;
-  decoded_object.Decode(data, &data_offset, uuid_mismatch);
+  decoded_object.Decode(data, &data_offset);
   ASSERT_EQ(object.GetNumSymbols(), decoded_object.GetNumSymbols());
   for (size_t i = 0; i < object.GetNumSymbols(); ++i)
     EXPECT_EQ(*object.SymbolAtIndex(i), *decoded_object.SymbolAtIndex(i));
+  // Whether there are source files is decoded rather than calculated by
+  // searching all of the symbols.
+  EXPECT_TRUE(decoded_object.HasSourceFilesIsKnown());
+  EXPECT_EQ(object.HasDebugMap(), decoded_object.HasDebugMap());
+  EXPECT_EQ(object.HasSourceFiles(), decoded_object.HasSourceFiles());
 }
 
 static void EncodeDecode(const Symtab &object) {
@@ -58,10 +109,25 @@ static void EncodeDecode(const Symtab &object) {
   EncodeDecode(object, eByteOrderBig);
 }
 
+/// Decode \a bytes, encoded from a binary with the same UUID as the one
+/// \a expected was parsed from, using the ObjectFile of \a expected, and
+/// check that the decoded symbols match \a expected's.
+static void DecodeAndCompare(llvm::ArrayRef<uint8_t> bytes,
+                             const Symtab &expected) {
+  DataExtractor data(bytes.data(), bytes.size(), eByteOrderLittle, 8);
+  Symtab decoded(expected.GetObjectFile());
+  offset_t data_offset = 0;
+  ASSERT_TRUE(decoded.Decode(data, &data_offset));
+  ASSERT_EQ(expected.GetNumSymbols(), decoded.GetNumSymbols());
+  for (size_t i = 0; i < expected.GetNumSymbols(); ++i)
+    EXPECT_EQ(*expected.SymbolAtIndex(i), *decoded.SymbolAtIndex(i));
+}
+
 TEST_F(SymtabTest, EncodeDecodeSymtab) {
 
   auto ExpectedFile = TestFile::fromYaml(R"(
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x100000C
@@ -298,13 +364,130 @@ LinkEditData:
   // Test encoding and decoding an empty symbol table.
   Symtab symtab(objfile);
   symtab.PreloadSymbols();
+  EXPECT_FALSE(symtab.HasDebugMap());
+  EXPECT_FALSE(symtab.HasSourceFiles());
+  EncodeDecode(symtab);
+
+  // Make sure the debug map and source file values are encoded separately.
+  symtab.SetHasDebugMap(true);
   EncodeDecode(symtab);
 
   // Now encode and decode an actual symbol table from our yaml.
   Symtab *module_symtab = module_sp->GetSymtab();
   ASSERT_NE(module_symtab, nullptr);
   module_symtab->PreloadSymbols();
+  // The yaml contains N_SO and N_OSO debug map symbols.
+  EXPECT_TRUE(module_symtab->HasDebugMap());
+  EXPECT_TRUE(module_symtab->HasSourceFiles());
   EncodeDecode(*module_symtab);
+  CheckParsedHasSourceFilesAndDebugMap(objfile, /*has_source_files=*/true,
+                                       /*has_debug_map=*/true);
+}
+
+TEST_F(SymtabTest, TestHasDebugMapAndSourceFiles) {
+  Symtab symtab(/*objfile=*/nullptr);
+  EXPECT_FALSE(symtab.HasDebugMap());
+  EXPECT_FALSE(symtab.HasSourceFiles());
+
+  symtab.AddSymbol(MakeSymbol(0, eSymbolTypeCode, 0));
+  EXPECT_FALSE(symtab.HasSourceFiles());
+
+  symtab.AddSymbol(MakeSymbol(1, eSymbolTypeSourceFile, 0x640000));
+  EXPECT_TRUE(symtab.HasSourceFiles());
+
+  // Symtab doesn't search for debug map symbols itself, the object file
+  // plug-in says whether there is a debug map.
+  symtab.AddSymbol(MakeSymbol(2, eSymbolTypeObjectFile, 0x660001));
+  EXPECT_FALSE(symtab.HasDebugMap());
+  symtab.SetHasDebugMap(true);
+  EXPECT_TRUE(symtab.HasDebugMap());
+
+  // Resize is only used to add symbols, so once there are source files it
+  // doesn't calculate this again, even when the object file plug-in set it.
+  Symtab resized_symtab(/*objfile=*/nullptr);
+  resized_symtab.AddSymbol(MakeSymbol(0, eSymbolTypeCode, 0));
+  resized_symtab.SetHasSourceFiles(true);
+  resized_symtab.Resize(2);
+  EXPECT_TRUE(resized_symtab.HasSourceFiles());
+
+  // A source file symbol may be filled in through the pointer Resize returns,
+  // so if there were no source files, Resize makes it calculate this again.
+  resized_symtab.SetHasSourceFiles(false);
+  Symbol *symbols = resized_symtab.Resize(3);
+  symbols[2] = MakeSymbol(2, eSymbolTypeSourceFile, 0x640000);
+  EXPECT_TRUE(resized_symtab.HasSourceFiles());
+
+  // Adding a source file symbol updates the value set by the object file
+  // plug-in.
+  symtab.SetHasSourceFiles(false);
+  symtab.AddSymbol(MakeSymbol(3, eSymbolTypeSourceFile, 0x640000));
+  EXPECT_TRUE(symtab.HasSourceFiles());
+
+  // Modifying the symbols doesn't change the object file plug-in's debug map
+  // value.
+  EXPECT_TRUE(symtab.HasDebugMap());
+}
+
+TEST_F(SymtabTest, TestSymbolFileSymtabSourceFiles) {
+  auto ExpectedFile = TestFile::fromYaml(R"(
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+  Entry:           0x0000000000400180
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x0000000000400180
+    AddressAlign:    0x0000000000000010
+    Content:         554889E58B042500106000890425041060005DC3
+Symbols:
+  - Name:            main.c
+    Type:            STT_FILE
+    Index:           SHN_ABS
+  - Name:            _start
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x0000000000400180
+    Size:            0x0000000000000014
+    Binding:         STB_GLOBAL
+...
+)");
+  ASSERT_THAT_EXPECTED(ExpectedFile, llvm::Succeeded());
+  auto module_sp = std::make_shared<Module>(ExpectedFile->moduleSpec());
+
+  Symtab *module_symtab = module_sp->GetSymtab();
+  ASSERT_NE(module_symtab, nullptr);
+  EXPECT_FALSE(module_symtab->HasDebugMap());
+  EXPECT_TRUE(module_symtab->HasSourceFiles());
+
+  // SymbolFileSymtab calculates its abilities without building its symbol
+  // indexes, make sure the compile units are still found once they are built.
+  SymbolFile *symbol_file = module_sp->GetSymbolFile();
+  ASSERT_NE(symbol_file, nullptr);
+  EXPECT_EQ(symbol_file->GetPluginName(),
+            SymbolFileSymtab::GetPluginNameStatic());
+  EXPECT_EQ(
+      symbol_file->GetAbilities(),
+      static_cast<uint32_t>(SymbolFile::Symbols | SymbolFile::CompileUnits));
+  ASSERT_EQ(symbol_file->GetNumCompileUnits(), 1u);
+  CompUnitSP cu_sp = symbol_file->GetCompileUnitAtIndex(0);
+  ASSERT_NE(cu_sp, nullptr);
+  EXPECT_EQ(cu_sp->GetPrimaryFile().GetFilename(), "main.c");
+
+  // Calculating the abilities must not build the symbol indexes, only asking
+  // for the compile units should.
+  SymbolFileSymtabTester tester(module_sp->GetObjectFile()->shared_from_this());
+  EXPECT_FALSE(tester.SymbolIndexesInitialized());
+  EXPECT_EQ(
+      tester.GetAbilities(),
+      static_cast<uint32_t>(SymbolFile::Symbols | SymbolFile::CompileUnits));
+  EXPECT_FALSE(tester.SymbolIndexesInitialized());
+  EXPECT_EQ(tester.GetNumCompileUnits(), 1u);
+  EXPECT_TRUE(tester.SymbolIndexesInitialized());
 }
 
 TEST_F(SymtabTest, TestDecodeCStringMaps) {
@@ -319,6 +502,7 @@ TEST_F(SymtabTest, TestDecodeCStringMaps) {
   // can correctly lookup each of the names in the symbol table.
   auto ExpectedFile = TestFile::fromYaml(R"(
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x100000C
@@ -618,68 +802,54 @@ LinkEditData:
   // This data was taken from a hex dump of the object file from the above yaml
   // and hexdumped so we can load the cache data in this test.
   const uint8_t symtab_cache_bytes[] = {
-    0x01, 0x10, 0x3e, 0x94, 0x86, 0x6e, 0x0d, 0x1a,
-    0x39, 0xbd, 0x97, 0x5b, 0x64, 0xe8, 0xf1, 0xfd,
-    0xba, 0xae, 0xff, 0x53, 0x54, 0x41, 0x42, 0x91,
-    0x00, 0x00, 0x00, 0x00, 0x2f, 0x55, 0x73, 0x65,
-    0x72, 0x73, 0x2f, 0x67, 0x63, 0x6c, 0x61, 0x79,
-    0x74, 0x6f, 0x6e, 0x2f, 0x44, 0x6f, 0x63, 0x75,
-    0x6d, 0x65, 0x6e, 0x74, 0x73, 0x2f, 0x6f, 0x62,
-    0x6a, 0x66, 0x69, 0x6c, 0x65, 0x73, 0x2f, 0x69,
-    0x6e, 0x64, 0x65, 0x78, 0x2d, 0x6e, 0x61, 0x6d,
-    0x65, 0x73, 0x2f, 0x6d, 0x61, 0x69, 0x6e, 0x2e,
-    0x63, 0x00, 0x2f, 0x55, 0x73, 0x65, 0x72, 0x73,
-    0x2f, 0x67, 0x63, 0x6c, 0x61, 0x79, 0x74, 0x6f,
-    0x6e, 0x2f, 0x44, 0x6f, 0x63, 0x75, 0x6d, 0x65,
-    0x6e, 0x74, 0x73, 0x2f, 0x6f, 0x62, 0x6a, 0x66,
-    0x69, 0x6c, 0x65, 0x73, 0x2f, 0x69, 0x6e, 0x64,
-    0x65, 0x78, 0x2d, 0x6e, 0x61, 0x6d, 0x65, 0x73,
-    0x2f, 0x6d, 0x61, 0x69, 0x6e, 0x2e, 0x6f, 0x00,
-    0x66, 0x6f, 0x6f, 0x00, 0x62, 0x61, 0x72, 0x00,
-    0x62, 0x61, 0x7a, 0x00, 0x6d, 0x61, 0x69, 0x6e,
-    0x00, 0x5f, 0x6d, 0x68, 0x5f, 0x65, 0x78, 0x65,
-    0x63, 0x75, 0x74, 0x65, 0x5f, 0x68, 0x65, 0x61,
-    0x64, 0x65, 0x72, 0x00, 0x53, 0x59, 0x4d, 0x42,
-    0x01, 0x00, 0x00, 0x00, 0x07, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x2a,
-    0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x64, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x0a, 0x20, 0x01, 0x37, 0x00, 0x00, 0x00, 0x00,
-    0x7b, 0xc3, 0x69, 0x62, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x01, 0x00, 0x66, 0x00, 0x04, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x02, 0x32, 0x01, 0x6d, 0x00, 0x00,
-    0x00, 0x01, 0x64, 0x3f, 0x00, 0x00, 0x01, 0x00,
-    0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x0f, 0x00, 0x08, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x02, 0x32, 0x01, 0x71,
-    0x00, 0x00, 0x00, 0x01, 0x6c, 0x3f, 0x00, 0x00,
-    0x01, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0f, 0x00,
-    0x0c, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x32,
-    0x01, 0x75, 0x00, 0x00, 0x00, 0x01, 0x74, 0x3f,
-    0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x08, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x0f, 0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x02, 0x32, 0x01, 0x79, 0x00, 0x00, 0x00, 0x01,
-    0x7c, 0x3f, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
-    0x34, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x0f, 0x00, 0x14, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x04, 0x12, 0x02, 0x7e, 0x00, 0x00,
-    0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00,
-    0x00, 0x00, 0x64, 0x3f, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x10, 0x00, 0x0f, 0x00, 0x01, 0x00,
-    0x43, 0x4d, 0x41, 0x50, 0x07, 0x00, 0x00, 0x00,
-    0x6d, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
-    0x75, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00,
-    0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x79, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00,
-    0x37, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
-    0x71, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00,
-    0x7e, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00
-  };
+      0x01, 0x10, 0x3e, 0x94, 0x86, 0x6e, 0x0d, 0x1a, 0x39, 0xbd, 0x97, 0x5b,
+      0x64, 0xe8, 0xf1, 0xfd, 0xba, 0xae, 0xff, 0x53, 0x54, 0x41, 0x42, 0x91,
+      0x00, 0x00, 0x00, 0x00, 0x2f, 0x55, 0x73, 0x65, 0x72, 0x73, 0x2f, 0x67,
+      0x63, 0x6c, 0x61, 0x79, 0x74, 0x6f, 0x6e, 0x2f, 0x44, 0x6f, 0x63, 0x75,
+      0x6d, 0x65, 0x6e, 0x74, 0x73, 0x2f, 0x6f, 0x62, 0x6a, 0x66, 0x69, 0x6c,
+      0x65, 0x73, 0x2f, 0x69, 0x6e, 0x64, 0x65, 0x78, 0x2d, 0x6e, 0x61, 0x6d,
+      0x65, 0x73, 0x2f, 0x6d, 0x61, 0x69, 0x6e, 0x2e, 0x63, 0x00, 0x2f, 0x55,
+      0x73, 0x65, 0x72, 0x73, 0x2f, 0x67, 0x63, 0x6c, 0x61, 0x79, 0x74, 0x6f,
+      0x6e, 0x2f, 0x44, 0x6f, 0x63, 0x75, 0x6d, 0x65, 0x6e, 0x74, 0x73, 0x2f,
+      0x6f, 0x62, 0x6a, 0x66, 0x69, 0x6c, 0x65, 0x73, 0x2f, 0x69, 0x6e, 0x64,
+      0x65, 0x78, 0x2d, 0x6e, 0x61, 0x6d, 0x65, 0x73, 0x2f, 0x6d, 0x61, 0x69,
+      0x6e, 0x2e, 0x6f, 0x00, 0x66, 0x6f, 0x6f, 0x00, 0x62, 0x61, 0x72, 0x00,
+      0x62, 0x61, 0x7a, 0x00, 0x6d, 0x61, 0x69, 0x6e, 0x00, 0x5f, 0x6d, 0x68,
+      0x5f, 0x65, 0x78, 0x65, 0x63, 0x75, 0x74, 0x65, 0x5f, 0x68, 0x65, 0x61,
+      0x64, 0x65, 0x72, 0x00, 0x53, 0x59, 0x4d, 0x42,
+      // clang-format off
+      0x05, 0x00, 0x00, 0x00, // DataFileCache's CURRENT_CACHE_VERSION
+      0x03,                   // Has a debug map and source files
+      // clang-format on
+      0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x2a,
+      0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x64, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0a, 0x20, 0x01, 0x37,
+      0x00, 0x00, 0x00, 0x00, 0x7b, 0xc3, 0x69, 0x62, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x66, 0x00,
+      0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x32, 0x01, 0x6d, 0x00, 0x00,
+      0x00, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x0f, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x02, 0x32, 0x01, 0x71, 0x00, 0x00, 0x00, 0x01, 0x01, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0f, 0x00,
+      0x0c, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x32, 0x01, 0x75, 0x00, 0x00,
+      0x00, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x0f, 0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x02, 0x32, 0x01, 0x79, 0x00, 0x00, 0x00, 0x01, 0x01, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x34, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0f, 0x00,
+      0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x12, 0x01, 0x7e, 0x00, 0x00,
+      0x00, 0x01, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x64, 0x3f, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x10, 0x00, 0x0f, 0x00, 0x01, 0x00, 0x43, 0x4d, 0x41, 0x50,
+      0x07, 0x00, 0x00, 0x00, 0x79, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00,
+      0x7e, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x37, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+      0x6d, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x71, 0x00, 0x00, 0x00,
+      0x03, 0x00, 0x00, 0x00, 0x75, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00};
 
   ASSERT_THAT_EXPECTED(ExpectedFile, llvm::Succeeded());
   auto module_sp = std::make_shared<Module>(ExpectedFile->moduleSpec());
@@ -691,10 +861,11 @@ LinkEditData:
                      eByteOrderLittle, 8);
   Symtab symtab(objfile);
   offset_t data_offset = 0;
-  bool uuid_mismatch = false; // Gets set to true if signature doesn't match.
-  const bool success = symtab.Decode(data, &data_offset, uuid_mismatch);
+  const bool success = symtab.Decode(data, &data_offset);
   ASSERT_EQ(success, true);
-  ASSERT_EQ(uuid_mismatch, false);
+  // The yaml contains N_SO and N_OSO debug map symbols.
+  EXPECT_TRUE(symtab.HasDebugMap());
+  EXPECT_TRUE(symtab.HasSourceFiles());
 
   // Now make sure that name lookup works for all symbols. This indicates that
   // the Symtab::NameToIndexMap was decoded correctly and works as expected.
@@ -737,12 +908,24 @@ Sections:
     Address:         0x0000000000400180
     AddressAlign:    0x0000000000000010
     Content:         554889E58B042500106000890425041060005DC3
+  - Name:            .data
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x0000000000601000
+    AddressAlign:    0x0000000000000004
+    Content:         2F000000
 Symbols:
   - Name:            _start
     Type:            STT_FUNC
     Section:         .text
     Value:           0x0000000000400180
     Size:            0x0000000000000014
+    Binding:         STB_GLOBAL
+  - Name:            global_data
+    Type:            STT_OBJECT
+    Section:         .data
+    Value:           0x0000000000601000
+    Size:            0x0000000000000004
     Binding:         STB_GLOBAL
 ...
 )");
@@ -756,10 +939,32 @@ Symbols:
   // But it should be created on demand.
   module_symtab = module_sp->GetSymtab(/*can_create=*/true);
   ASSERT_NE(module_symtab, nullptr);
+  ASSERT_NE(module_symtab->FindFirstSymbolWithNameAndType(
+                ConstString("_start"), eSymbolTypeCode, Symtab::eDebugAny,
+                Symtab::eVisibilityAny),
+            nullptr);
+  ASSERT_NE(module_symtab->FindFirstSymbolWithNameAndType(
+                ConstString("global_data"), eSymbolTypeData, Symtab::eDebugAny,
+                Symtab::eVisibilityAny),
+            nullptr);
 
   // And we should be able to get it again once it has been created.
   Symtab *cached_module_symtab = module_sp->GetSymtab(/*can_create=*/false);
   ASSERT_EQ(module_symtab, cached_module_symtab);
+
+  SymbolFile *symbol_file = module_sp->GetSymbolFile();
+  ASSERT_NE(symbol_file, nullptr);
+  EXPECT_EQ(symbol_file->GetPluginName(),
+            SymbolFileSymtab::GetPluginNameStatic());
+  EXPECT_EQ(symbol_file->GetAbilities(),
+            static_cast<uint32_t>(SymbolFile::Symbols));
+
+  // There are no source file symbols, so there are no compile units, and
+  // finding that out doesn't require building the symbol indexes.
+  EXPECT_EQ(symbol_file->GetNumCompileUnits(), 0u);
+  SymbolFileSymtabTester tester(module_sp->GetObjectFile()->shared_from_this());
+  EXPECT_EQ(tester.GetNumCompileUnits(), 0u);
+  EXPECT_FALSE(tester.SymbolIndexesInitialized());
 }
 
 TEST_F(SymtabTest, TestSymbolTableCreatedOnDemand) {
@@ -834,4 +1039,875 @@ DWARF:
   // And we should be able to get it again once it has been created.
   Symtab *cached_symtab = symbol_file->GetSymtab(/*can_create=*/false);
   ASSERT_EQ(symtab, cached_symtab);
+}
+
+TEST_F(SymtabTest, TestSymbolTableRelativeFileAddresses) {
+  // Section-relative addresses in a serialized symbol table are expressed
+  // as a section ID and an offset within that section.  It is possible
+  // for a binary to be zero-address offset initially, but then included
+  // in a Darwin shared cache with its segments slid to non-zero file
+  // addresses, not all by the same amount -- with the same filename and
+  // UUID.  The serialized symtab must work for all of them.
+  //
+  // static int c = 10;
+  // int d = 20;
+  // int foo() { return c; }
+  // int bar() { return foo() + d; }
+  // int main() { int var = bar() + c; return var; }
+  //
+  // clang -dynamiclib -mmacosx-version-min=11 -o liba.dylib a.c
+  // obj2yaml liba.dylib > zero.yaml
+  // clang -image_base 0x3c000 -dynamiclib -mmacosx-version-min=11 -o liba.dylib
+  // a.c obj2yaml liba.dylib > nonzero.yaml
+  //
+  // hand-edit the UUID from one of them to match the other.
+  // Any macOS version higher than 11 results in chained fixups in the binary,
+  // and you can't compile the dylib to a non-zero offset with chained fixups.
+  //
+  // A third YAML is the non-zero one with __DATA and __LINKEDIT moved
+  // to 0x100000 and 0x104000, sliding them by a different amount than
+  // __TEXT, as the shared cache builder does.
+  //
+  // All three YAMLs are serialized into a buffer, and we compare the
+  // buffers -- they must be byte-by-byte identical.  Then buffers are
+  // decoded with a different binary's ObjectFile, and must produce that
+  // binary's symbols.
+
+  auto ExpectedFileZeroOffset = TestFile::fromYaml(R"(
+--- !mach-o
+IsLittleEndian:  true
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x100000C
+  cpusubtype:      0x0
+  filetype:        0x6
+  ncmds:           14
+  sizeofcmds:      824
+  flags:           0x100085
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         232
+    segname:         __TEXT
+    vmaddr:          0
+    vmsize:          16384
+    fileoff:         0
+    filesize:        16384
+    maxprot:         5
+    initprot:        5
+    nsects:          2
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x388
+        size:            96
+        offset:          0x388
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         28000090000540B9C0035FD6FD7BBFA9FD030091FBFFFF9728000090080140B90000080BFD7BC1A8C0035FD6FF8300D1FD7B01A9FD430091BFC31FB8F4FFFF9728000090080540B90800080BE80B00B9E00B40B9FD7B41A9FF830091C0035FD6
+      - sectname:        __unwind_info
+        segname:         __TEXT
+        addr:            0x3E8
+        size:            96
+        offset:          0x3E8
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         010000001C000000000000001C000000000000001C00000002000000880300004000000040000000E90300000000000040000000000000000000000000000000030000000C00020014000200000000000C000001000000020000000400000000
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         152
+    segname:         __DATA
+    vmaddr:          16384
+    vmsize:          16384
+    fileoff:         16384
+    filesize:        16384
+    maxprot:         3
+    initprot:        3
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        __data
+        segname:         __DATA
+        addr:            0x4000
+        size:            8
+        offset:          0x4000
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         140000000A000000
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __LINKEDIT
+    vmaddr:          32768
+    vmsize:          16384
+    fileoff:         32768
+    filesize:        584
+    maxprot:         1
+    initprot:        1
+    nsects:          0
+    flags:           0
+  - cmd:             LC_ID_DYLIB
+    cmdsize:         40
+    dylib:
+      name:            24
+      timestamp:       1
+      current_version: 0
+      compatibility_version: 0
+    Content:         liba.dylib
+    ZeroPadBytes:    6
+  - cmd:             LC_DYLD_INFO_ONLY
+    cmdsize:         48
+    rebase_off:      0
+    rebase_size:     0
+    bind_off:        0
+    bind_size:       0
+    weak_bind_off:   0
+    weak_bind_size:  0
+    lazy_bind_off:   0
+    lazy_bind_size:  0
+    export_off:      32768
+    export_size:     56
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          32832
+    nsyms:           5
+    stroff:          32912
+    strsize:         24
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       1
+    iextdefsym:      1
+    nextdefsym:      4
+    iundefsym:       5
+    nundefsym:       0
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  0
+    nindirectsyms:   0
+    extreloff:       0
+    nextrel:         0
+    locreloff:       0
+    nlocrel:         0
+  - cmd:             LC_UUID
+    cmdsize:         24
+    uuid:            9927BB37-87F9-3AAA-B3C2-98C5C531CBD5
+  - cmd:             LC_BUILD_VERSION
+    cmdsize:         32
+    platform:        1
+    minos:           720896
+    sdk:             1769472
+    ntools:          1
+    Tools:
+      - tool:            3
+        version:         1771897088
+  - cmd:             LC_SOURCE_VERSION
+    cmdsize:         16
+    version:         0
+  - cmd:             LC_LOAD_DYLIB
+    cmdsize:         56
+    dylib:
+      name:            24
+      timestamp:       2
+      current_version: 89063424
+      compatibility_version: 65536
+    Content:         '/usr/lib/libSystem.B.dylib'
+    ZeroPadBytes:    6
+  - cmd:             LC_FUNCTION_STARTS
+    cmdsize:         16
+    dataoff:         32824
+    datasize:        8
+  - cmd:             LC_DATA_IN_CODE
+    cmdsize:         16
+    dataoff:         32832
+    datasize:        0
+  - cmd:             LC_CODE_SIGNATURE
+    cmdsize:         16
+    dataoff:         32944
+    datasize:        408
+LinkEditData:
+  ExportTrie:
+    TerminalSize:    0
+    NodeOffset:      0
+    Name:            ''
+    Flags:           0x0
+    Address:         0x0
+    Other:           0x0
+    ImportName:      ''
+    Children:
+      - TerminalSize:    0
+        NodeOffset:      30
+        Name:            _
+        Flags:           0x0
+        Address:         0x0
+        Other:           0x0
+        ImportName:      ''
+        Children:
+          - TerminalSize:    3
+            NodeOffset:      9
+            Name:            bar
+            Flags:           0x0
+            Address:         0x394
+            Other:           0x0
+            ImportName:      ''
+          - TerminalSize:    4
+            NodeOffset:      14
+            Name:            d
+            Flags:           0x0
+            Address:         0x4000
+            Other:           0x0
+            ImportName:      ''
+          - TerminalSize:    3
+            NodeOffset:      20
+            Name:            foo
+            Flags:           0x0
+            Address:         0x388
+            Other:           0x0
+            ImportName:      ''
+          - TerminalSize:    3
+            NodeOffset:      25
+            Name:            main
+            Flags:           0x0
+            Address:         0x3B4
+            Other:           0x0
+            ImportName:      ''
+  NameList:
+    - n_strx:          21
+      n_type:          0xE
+      n_sect:          3
+      n_desc:          0
+      n_value:         16388
+    - n_strx:          2
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         916
+    - n_strx:          7
+      n_type:          0xF
+      n_sect:          3
+      n_desc:          0
+      n_value:         16384
+    - n_strx:          10
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         904
+    - n_strx:          15
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         948
+  StringTable:
+    - ' '
+    - _bar
+    - _d
+    - _foo
+    - _main
+    - _c
+  FunctionStarts:  [ 0x388, 0x394, 0x3B4 ]
+...
+)");
+
+  auto ExpectedFileNonZeroOffset = TestFile::fromYaml(R"(
+--- !mach-o
+IsLittleEndian:  true
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x100000C
+  cpusubtype:      0x0
+  filetype:        0x6
+  ncmds:           14
+  sizeofcmds:      824
+  flags:           0x100085
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         232
+    segname:         __TEXT
+    vmaddr:          245760
+    vmsize:          16384
+    fileoff:         0
+    filesize:        16384
+    maxprot:         5
+    initprot:        5
+    nsects:          2
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x3C388
+        size:            96
+        offset:          0x388
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         28000090000540B9C0035FD6FD7BBFA9FD030091FBFFFF9728000090080140B90000080BFD7BC1A8C0035FD6FF8300D1FD7B01A9FD430091BFC31FB8F4FFFF9728000090080540B90800080BE80B00B9E00B40B9FD7B41A9FF830091C0035FD6
+      - sectname:        __unwind_info
+        segname:         __TEXT
+        addr:            0x3C3E8
+        size:            96
+        offset:          0x3E8
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         010000001C000000000000001C000000000000001C00000002000000880300004000000040000000E90300000000000040000000000000000000000000000000030000000C00020014000200000000000C000001000000020000000400000000
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         152
+    segname:         __DATA
+    vmaddr:          262144
+    vmsize:          16384
+    fileoff:         16384
+    filesize:        16384
+    maxprot:         3
+    initprot:        3
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        __data
+        segname:         __DATA
+        addr:            0x40000
+        size:            8
+        offset:          0x4000
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         140000000A000000
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __LINKEDIT
+    vmaddr:          278528
+    vmsize:          16384
+    fileoff:         32768
+    filesize:        584
+    maxprot:         1
+    initprot:        1
+    nsects:          0
+    flags:           0
+  - cmd:             LC_ID_DYLIB
+    cmdsize:         40
+    dylib:
+      name:            24
+      timestamp:       1
+      current_version: 0
+      compatibility_version: 0
+    Content:         liba.dylib
+    ZeroPadBytes:    6
+  - cmd:             LC_DYLD_INFO_ONLY
+    cmdsize:         48
+    rebase_off:      0
+    rebase_size:     0
+    bind_off:        0
+    bind_size:       0
+    weak_bind_off:   0
+    weak_bind_size:  0
+    lazy_bind_off:   0
+    lazy_bind_size:  0
+    export_off:      32768
+    export_size:     56
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          32832
+    nsyms:           5
+    stroff:          32912
+    strsize:         24
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       1
+    iextdefsym:      1
+    nextdefsym:      4
+    iundefsym:       5
+    nundefsym:       0
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  0
+    nindirectsyms:   0
+    extreloff:       0
+    nextrel:         0
+    locreloff:       0
+    nlocrel:         0
+  - cmd:             LC_UUID
+    cmdsize:         24
+    uuid:            9927BB37-87F9-3AAA-B3C2-98C5C531CBD5
+  - cmd:             LC_BUILD_VERSION
+    cmdsize:         32
+    platform:        1
+    minos:           720896
+    sdk:             1769472
+    ntools:          1
+    Tools:
+      - tool:            3
+        version:         1771897088
+  - cmd:             LC_SOURCE_VERSION
+    cmdsize:         16
+    version:         0
+  - cmd:             LC_LOAD_DYLIB
+    cmdsize:         56
+    dylib:
+      name:            24
+      timestamp:       2
+      current_version: 89063424
+      compatibility_version: 65536
+    Content:         '/usr/lib/libSystem.B.dylib'
+    ZeroPadBytes:    6
+  - cmd:             LC_FUNCTION_STARTS
+    cmdsize:         16
+    dataoff:         32824
+    datasize:        8
+  - cmd:             LC_DATA_IN_CODE
+    cmdsize:         16
+    dataoff:         32832
+    datasize:        0
+  - cmd:             LC_CODE_SIGNATURE
+    cmdsize:         16
+    dataoff:         32944
+    datasize:        408
+LinkEditData:
+  ExportTrie:
+    TerminalSize:    0
+    NodeOffset:      0
+    Name:            ''
+    Flags:           0x0
+    Address:         0x0
+    Other:           0x0
+    ImportName:      ''
+    Children:
+      - TerminalSize:    0
+        NodeOffset:      30
+        Name:            _
+        Flags:           0x0
+        Address:         0x0
+        Other:           0x0
+        ImportName:      ''
+        Children:
+          - TerminalSize:    3
+            NodeOffset:      9
+            Name:            bar
+            Flags:           0x0
+            Address:         0x394
+            Other:           0x0
+            ImportName:      ''
+          - TerminalSize:    4
+            NodeOffset:      14
+            Name:            d
+            Flags:           0x0
+            Address:         0x4000
+            Other:           0x0
+            ImportName:      ''
+          - TerminalSize:    3
+            NodeOffset:      20
+            Name:            foo
+            Flags:           0x0
+            Address:         0x388
+            Other:           0x0
+            ImportName:      ''
+          - TerminalSize:    3
+            NodeOffset:      25
+            Name:            main
+            Flags:           0x0
+            Address:         0x3B4
+            Other:           0x0
+            ImportName:      ''
+  NameList:
+    - n_strx:          21
+      n_type:          0xE
+      n_sect:          3
+      n_desc:          0
+      n_value:         262148
+    - n_strx:          2
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         246676
+    - n_strx:          7
+      n_type:          0xF
+      n_sect:          3
+      n_desc:          0
+      n_value:         262144
+    - n_strx:          10
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         246664
+    - n_strx:          15
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         246708
+  StringTable:
+    - ' '
+    - _bar
+    - _d
+    - _foo
+    - _main
+    - _c
+  FunctionStarts:  [ 0x388, 0x394, 0x3B4 ]
+...
+)");
+
+  auto ExpectedFileSplitOffset = TestFile::fromYaml(R"(
+--- !mach-o
+IsLittleEndian:  true
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x100000C
+  cpusubtype:      0x0
+  filetype:        0x6
+  ncmds:           14
+  sizeofcmds:      824
+  flags:           0x100085
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         232
+    segname:         __TEXT
+    vmaddr:          245760
+    vmsize:          16384
+    fileoff:         0
+    filesize:        16384
+    maxprot:         5
+    initprot:        5
+    nsects:          2
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x3C388
+        size:            96
+        offset:          0x388
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         28000090000540B9C0035FD6FD7BBFA9FD030091FBFFFF9728000090080140B90000080BFD7BC1A8C0035FD6FF8300D1FD7B01A9FD430091BFC31FB8F4FFFF9728000090080540B90800080BE80B00B9E00B40B9FD7B41A9FF830091C0035FD6
+      - sectname:        __unwind_info
+        segname:         __TEXT
+        addr:            0x3C3E8
+        size:            96
+        offset:          0x3E8
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         010000001C000000000000001C000000000000001C00000002000000880300004000000040000000E90300000000000040000000000000000000000000000000030000000C00020014000200000000000C000001000000020000000400000000
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         152
+    segname:         __DATA
+    vmaddr:          1048576
+    vmsize:          16384
+    fileoff:         16384
+    filesize:        16384
+    maxprot:         3
+    initprot:        3
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        __data
+        segname:         __DATA
+        addr:            0x100000
+        size:            8
+        offset:          0x4000
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         140000000A000000
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __LINKEDIT
+    vmaddr:          1064960
+    vmsize:          16384
+    fileoff:         32768
+    filesize:        584
+    maxprot:         1
+    initprot:        1
+    nsects:          0
+    flags:           0
+  - cmd:             LC_ID_DYLIB
+    cmdsize:         40
+    dylib:
+      name:            24
+      timestamp:       1
+      current_version: 0
+      compatibility_version: 0
+    Content:         liba.dylib
+    ZeroPadBytes:    6
+  - cmd:             LC_DYLD_INFO_ONLY
+    cmdsize:         48
+    rebase_off:      0
+    rebase_size:     0
+    bind_off:        0
+    bind_size:       0
+    weak_bind_off:   0
+    weak_bind_size:  0
+    lazy_bind_off:   0
+    lazy_bind_size:  0
+    export_off:      32768
+    export_size:     56
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          32832
+    nsyms:           5
+    stroff:          32912
+    strsize:         24
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       1
+    iextdefsym:      1
+    nextdefsym:      4
+    iundefsym:       5
+    nundefsym:       0
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  0
+    nindirectsyms:   0
+    extreloff:       0
+    nextrel:         0
+    locreloff:       0
+    nlocrel:         0
+  - cmd:             LC_UUID
+    cmdsize:         24
+    uuid:            9927BB37-87F9-3AAA-B3C2-98C5C531CBD5
+  - cmd:             LC_BUILD_VERSION
+    cmdsize:         32
+    platform:        1
+    minos:           720896
+    sdk:             1769472
+    ntools:          1
+    Tools:
+      - tool:            3
+        version:         1771897088
+  - cmd:             LC_SOURCE_VERSION
+    cmdsize:         16
+    version:         0
+  - cmd:             LC_LOAD_DYLIB
+    cmdsize:         56
+    dylib:
+      name:            24
+      timestamp:       2
+      current_version: 89063424
+      compatibility_version: 65536
+    Content:         '/usr/lib/libSystem.B.dylib'
+    ZeroPadBytes:    6
+  - cmd:             LC_FUNCTION_STARTS
+    cmdsize:         16
+    dataoff:         32824
+    datasize:        8
+  - cmd:             LC_DATA_IN_CODE
+    cmdsize:         16
+    dataoff:         32832
+    datasize:        0
+  - cmd:             LC_CODE_SIGNATURE
+    cmdsize:         16
+    dataoff:         32944
+    datasize:        408
+LinkEditData:
+  ExportTrie:
+    TerminalSize:    0
+    NodeOffset:      0
+    Name:            ''
+    Flags:           0x0
+    Address:         0x0
+    Other:           0x0
+    ImportName:      ''
+    Children:
+      - TerminalSize:    0
+        NodeOffset:      30
+        Name:            _
+        Flags:           0x0
+        Address:         0x0
+        Other:           0x0
+        ImportName:      ''
+        Children:
+          - TerminalSize:    3
+            NodeOffset:      9
+            Name:            bar
+            Flags:           0x0
+            Address:         0x394
+            Other:           0x0
+            ImportName:      ''
+          - TerminalSize:    4
+            NodeOffset:      14
+            Name:            d
+            Flags:           0x0
+            Address:         0xC4000
+            Other:           0x0
+            ImportName:      ''
+          - TerminalSize:    3
+            NodeOffset:      20
+            Name:            foo
+            Flags:           0x0
+            Address:         0x388
+            Other:           0x0
+            ImportName:      ''
+          - TerminalSize:    3
+            NodeOffset:      25
+            Name:            main
+            Flags:           0x0
+            Address:         0x3B4
+            Other:           0x0
+            ImportName:      ''
+  NameList:
+    - n_strx:          21
+      n_type:          0xE
+      n_sect:          3
+      n_desc:          0
+      n_value:         1048580
+    - n_strx:          2
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         246676
+    - n_strx:          7
+      n_type:          0xF
+      n_sect:          3
+      n_desc:          0
+      n_value:         1048576
+    - n_strx:          10
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         246664
+    - n_strx:          15
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         246708
+  StringTable:
+    - ' '
+    - _bar
+    - _d
+    - _foo
+    - _main
+    - _c
+  FunctionStarts:  [ 0x388, 0x394, 0x3B4 ]
+...
+)");
+
+  //
+  // Create a binary for the 0-address YAML, serialize it
+  // to a buffer.
+  //
+  ASSERT_THAT_EXPECTED(ExpectedFileZeroOffset, llvm::Succeeded());
+  auto zero_module_sp =
+      std::make_shared<Module>(ExpectedFileZeroOffset->moduleSpec());
+  ObjectFile *zero_objfile = zero_module_sp->GetObjectFile();
+  ASSERT_NE(zero_objfile, nullptr);
+  // This dylib has no N_SO or N_OSO symbols.
+  CheckParsedHasSourceFilesAndDebugMap(zero_objfile, /*has_source_files=*/false,
+                                       /*has_debug_map=*/false);
+
+  Symtab *zero_module_symtab = zero_module_sp->GetSymtab();
+  zero_module_symtab->PreloadSymbols();
+  const uint8_t addr_size = 8;
+
+  DataEncoder zero_file(eByteOrderLittle, addr_size);
+  zero_module_symtab->Encode(zero_file);
+  llvm::ArrayRef<uint8_t> zero_filebytes = zero_file.GetData();
+
+  //
+  // Create a binary for the non-0-address YAML, serialize it
+  // to a buffer.
+  //
+  ASSERT_THAT_EXPECTED(ExpectedFileNonZeroOffset, llvm::Succeeded());
+  auto nonzero_module_sp =
+      std::make_shared<Module>(ExpectedFileNonZeroOffset->moduleSpec());
+  ObjectFile *nonzero_objfile = nonzero_module_sp->GetObjectFile();
+  ASSERT_NE(nonzero_objfile, nullptr);
+
+  Symtab *nonzero_module_symtab = nonzero_module_sp->GetSymtab();
+  ASSERT_NE(nonzero_module_symtab, nullptr);
+  nonzero_module_symtab->PreloadSymbols();
+
+  DataEncoder nonzero_file(eByteOrderLittle, addr_size);
+  nonzero_module_symtab->Encode(nonzero_file);
+  llvm::ArrayRef<uint8_t> nonzero_filebytes = nonzero_file.GetData();
+
+  //
+  // Create a binary for the split-slide YAML, serialize it
+  // to a buffer.
+  //
+  ASSERT_THAT_EXPECTED(ExpectedFileSplitOffset, llvm::Succeeded());
+  auto split_module_sp =
+      std::make_shared<Module>(ExpectedFileSplitOffset->moduleSpec());
+  ObjectFile *split_objfile = split_module_sp->GetObjectFile();
+  ASSERT_NE(split_objfile, nullptr);
+
+  Symtab *split_module_symtab = split_module_sp->GetSymtab();
+  ASSERT_NE(split_module_symtab, nullptr);
+  split_module_symtab->PreloadSymbols();
+
+  DataEncoder split_file(eByteOrderLittle, addr_size);
+  split_module_symtab->Encode(split_file);
+  llvm::ArrayRef<uint8_t> split_filebytes = split_file.GetData();
+
+  //
+  // Compare the serialized buffers, they must be identical.
+  //
+  ASSERT_EQ(zero_filebytes, nonzero_filebytes);
+  ASSERT_EQ(zero_filebytes, split_filebytes);
+
+  //
+  // Decoding one binary's serialized symtab with another binary's
+  // ObjectFile must yield that binary's own symbols.
+  //
+  DecodeAndCompare(zero_filebytes, *nonzero_module_symtab);
+  DecodeAndCompare(zero_filebytes, *split_module_symtab);
+  DecodeAndCompare(split_filebytes, *zero_module_symtab);
+
+  //
+  // Test that the symtabs round-trip through serialization and yield
+  // the same Symtab as the original binary.
+  //
+  EncodeDecode(*zero_module_symtab);
+  EncodeDecode(*nonzero_module_symtab);
+  EncodeDecode(*split_module_symtab);
 }

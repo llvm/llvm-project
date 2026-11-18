@@ -172,15 +172,15 @@ define i32 @PR35734(i32 %x, i32 %y) {
 ; CHECK-LABEL: @PR35734(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[X:%.*]], i32 78)
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[SMAX]], [[X]]
-; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[TMP1]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[SMAX]], 1
+; CHECK-NEXT:    [[TMP8:%.*]] = sub i32 [[TMP1]], [[X]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP8]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[TMP8]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP8]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[IND_END:%.*]] = add i32 [[X]], [[N_VEC]]
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[Y:%.*]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[Y:%.*]], i64 0
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]

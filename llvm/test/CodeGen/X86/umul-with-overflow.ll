@@ -9,7 +9,7 @@ define zeroext i1 @a(i32 %x)  nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl $3, %eax
 ; X86-NEXT:    mull {{[0-9]+}}(%esp)
-; X86-NEXT:    seto %al
+; X86-NEXT:    setb %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: a:
@@ -17,7 +17,7 @@ define zeroext i1 @a(i32 %x)  nounwind {
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    movl $3, %ecx
 ; X64-NEXT:    mull %ecx
-; X64-NEXT:    seto %al
+; X64-NEXT:    setb %al
 ; X64-NEXT:    retq
   %res = call {i32, i1} @llvm.umul.with.overflow.i32(i32 %x, i32 3)
   %obil = extractvalue {i32, i1} %res, 1

@@ -10,4 +10,4 @@
 
 #include "src/math/fdimf.h"
 
-LIST_FDIM_TESTS(float, LIBC_NAMESPACE::fdimf);
+LIST_FDIM_TESTS(Fdimf, float, LIBC_NAMESPACE::fdimf);

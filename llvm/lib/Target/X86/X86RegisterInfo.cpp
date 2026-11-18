@@ -30,32 +30,13 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Type.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Target/TargetOptions.h"
 
 using namespace llvm;
 
 #define GET_REGINFO_TARGET_DESC
 #include "X86GenRegisterInfo.inc"
-
-static cl::opt<bool>
-EnableBasePointer("x86-use-base-pointer", cl::Hidden, cl::init(true),
-          cl::desc("Enable use of a base pointer for complex stack frames"));
-
-static cl::opt<bool>
-    DisableRegAllocNDDHints("x86-disable-regalloc-hints-for-ndd", cl::Hidden,
-                            cl::init(false),
-                            cl::desc("Disable two address hints for register "
-                                     "allocation"));
-
-static cl::opt<unsigned> SetjmpCSRWarningThreshold(
-    "x86-setjmp-csr-warning-threshold", cl::Hidden, cl::init(50),
-    cl::desc("Basic block count threshold for emitting a warning about "
-             "callee-saved registers reserved due to setjmp"));
-
-extern cl::opt<bool> X86EnableAPXForRelocation;
 
 X86RegisterInfo::X86RegisterInfo(const Triple &TT)
     : X86GenRegisterInfo((TT.isX86_64() ? X86::RIP : X86::EIP),
@@ -131,10 +112,9 @@ X86RegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
 
   // Keep using non-rex2 register class when APX feature (EGPR/NDD/NF) is not
   // enabled for relocation.
-  if (!X86EnableAPXForRelocation && isNonRex2RegClass(RC))
-    return RC;
-
   const X86Subtarget &Subtarget = MF.getSubtarget<X86Subtarget>();
+  if (!Subtarget.getCLOpts().enable_apx_for_relocation && isNonRex2RegClass(RC))
+    return RC;
 
   const TargetRegisterClass *Super = RC;
   auto I = RC->superclasses().begin();
@@ -198,18 +178,6 @@ X86RegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
 }
 
 const TargetRegisterClass *
-X86RegisterInfo::getPointerRegClass(unsigned Kind) const {
-  assert(Kind == 0 && "this should only be used for default cases");
-  if (IsTarget64BitLP64)
-    return &X86::GR64RegClass;
-  // If the target is 64bit but we have been told to use 32bit addresses,
-  // we can still use 64-bit register as long as we know the high bits
-  // are zeros.
-  // Reflect that in the returned register class.
-  return Is64Bit ? &X86::LOW32_ADDR_ACCESSRegClass : &X86::GR32RegClass;
-}
-
-const TargetRegisterClass *
 X86RegisterInfo::getCrossCopyRegClass(const TargetRegisterClass *RC) const {
   if (RC == &X86::CCRRegClass) {
     if (Is64Bit)
@@ -270,8 +238,9 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     return CSR_NoRegs_SaveList;
   case CallingConv::AnyReg:
     if (HasAVX)
-      return CSR_64_AllRegs_AVX_SaveList;
-    return CSR_64_AllRegs_SaveList;
+      return HasEGPR ? CSR_64_APX_AllRegs_AVX_SaveList
+                     : CSR_64_AllRegs_AVX_SaveList;
+    return HasEGPR ? CSR_64_APX_AllRegs_SaveList : CSR_64_AllRegs_SaveList;
   case CallingConv::PreserveMost:
     if (IsWin64)
       return HasEGPR ? CSR_Win64_APX_RT_MostRegs_SaveList
@@ -341,12 +310,15 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   case CallingConv::X86_INTR:
     if (Is64Bit) {
       if (HasAVX512)
-        return CSR_64_AllRegs_AVX512_SaveList;
+        return HasEGPR ? CSR_64_APX_AllRegs_AVX512_SaveList
+                       : CSR_64_AllRegs_AVX512_SaveList;
       if (HasAVX)
-        return CSR_64_AllRegs_AVX_SaveList;
+        return HasEGPR ? CSR_64_APX_AllRegs_AVX_SaveList
+                       : CSR_64_AllRegs_AVX_SaveList;
       if (HasSSE)
-        return CSR_64_AllRegs_SaveList;
-      return CSR_64_AllRegs_NoSSE_SaveList;
+        return HasEGPR ? CSR_64_APX_AllRegs_SaveList : CSR_64_AllRegs_SaveList;
+      return HasEGPR ? CSR_64_APX_AllRegs_NoSSE_SaveList
+                     : CSR_64_AllRegs_NoSSE_SaveList;
     }
     if (HasAVX512)
       return CSR_32_AllRegs_AVX512_SaveList;
@@ -410,6 +382,8 @@ X86RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
   case CallingConv::HiPE:
     return CSR_NoRegs_RegMask;
   case CallingConv::AnyReg:
+    // Callers keep R16-R31 clobbered: callees built without EGPR or by older
+    // compilers may not save them (see CSR_64_APX_AllRegs).
     if (HasAVX)
       return CSR_64_AllRegs_AVX_RegMask;
     return CSR_64_AllRegs_RegMask;
@@ -480,6 +454,8 @@ X86RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
   case CallingConv::X86_64_SysV:
     return CSR_64_RegMask;
   case CallingConv::X86_INTR:
+    // Callers keep R16-R31 clobbered: callees built without EGPR or by older
+    // compilers may not save them (see CSR_64_APX_AllRegs).
     if (Is64Bit) {
       if (HasAVX512)
         return CSR_64_AllRegs_AVX512_RegMask;
@@ -575,7 +551,7 @@ BitVector X86RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
     Reserved.set(SubReg);
 
   // Set the frame-pointer register and its aliases as reserved if needed.
-  if (TFI->hasFP(MF) || MF.getTarget().Options.FramePointerIsReserved(MF)) {
+  if (TFI->hasFP(MF) || MF.framePointerIsReserved()) {
     if (MF.getInfo<X86MachineFunctionInfo>()->getFPClobberedByInvoke())
       MF.getContext().reportError(
           SMLoc(),
@@ -662,7 +638,8 @@ BitVector X86RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
         for (const MCPhysReg &SubReg : subregs_inclusive(Reg))
           Reserved.set(SubReg);
       }
-    if (NumReservedCSRs && MF.size() > SetjmpCSRWarningThreshold &&
+    if (NumReservedCSRs &&
+        MF.size() > ST.getCLOpts().setjmp_csr_warning_threshold &&
         !MF.getRegInfo().reservedRegsFrozen()) {
       MF.getContext().reportWarning(
           SMLoc(), Twine(NumReservedCSRs) +
@@ -821,7 +798,7 @@ bool X86RegisterInfo::hasBasePointer(const MachineFunction &MF) const {
 
   const MachineFrameInfo &MFI = MF.getFrameInfo();
 
-  if (!EnableBasePointer)
+  if (!MF.getSubtarget<X86Subtarget>().getCLOpts().use_base_pointer)
     return false;
 
   // When we need stack realignment, we can't address the stack from the frame
@@ -1025,7 +1002,19 @@ X86RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
       BuildMI(MBB, II, DL, TII->get(X86::MOV64ri), ScratchReg).addImm(Offset);
 
       MI.getOperand(FIOperandNum + 3).setImm(0);
-      MI.getOperand(FIOperandNum + 2).setReg(ScratchReg);
+      if (MI.getOperand(FIOperandNum + 2).getReg() == X86::NoRegister) {
+        MI.getOperand(FIOperandNum + 2).setReg(ScratchReg);
+      } else {
+        // The index register slot is already in use, fold the offset into
+        // the base register instead. LEA does not clobber EFLAGS.
+        BuildMI(MBB, II, DL, TII->get(X86::LEA64r), ScratchReg)
+            .addReg(MachineBasePtr)
+            .addImm(1)
+            .addReg(ScratchReg)
+            .addImm(0)
+            .addReg(X86::NoRegister);
+        MI.getOperand(FIOperandNum).setReg(ScratchReg);
+      }
 
       return false;
     }
@@ -1164,12 +1153,10 @@ static ShapeT getTileShape(Register VirtReg, VirtRegMap *VRM,
   }
 }
 
-bool X86RegisterInfo::getRegAllocationHints(Register VirtReg,
-                                            ArrayRef<MCPhysReg> Order,
-                                            SmallVectorImpl<MCPhysReg> &Hints,
-                                            const MachineFunction &MF,
-                                            const VirtRegMap *VRM,
-                                            const LiveRegMatrix *Matrix) const {
+bool X86RegisterInfo::getRegAllocationHints(
+    Register VirtReg, ArrayRef<MCPhysReg> Order,
+    SmallSetVector<MCPhysReg, 16> &Hints, const MachineFunction &MF,
+    const VirtRegMap *VRM, const LiveRegMatrix *Matrix) const {
   const MachineRegisterInfo *MRI = &MF.getRegInfo();
   const TargetRegisterClass &RC = *MRI->getRegClass(VirtReg);
   bool BaseImplRetVal = TargetRegisterInfo::getRegAllocationHints(
@@ -1183,7 +1170,7 @@ bool X86RegisterInfo::getRegAllocationHints(Register VirtReg,
     return BaseImplRetVal;
 
   if (ID != X86::TILERegClassID) {
-    if (DisableRegAllocNDDHints || !ST.hasNDD() ||
+    if (ST.getCLOpts().disable_regalloc_hints_for_ndd || !ST.hasNDD() ||
         !TRI.isGeneralPurposeRegisterClass(&RC))
       return BaseImplRetVal;
 
@@ -1193,7 +1180,7 @@ bool X86RegisterInfo::getRegAllocationHints(Register VirtReg,
     auto TryAddNDDHint = [&](const MachineOperand &MO) {
       Register Reg = MO.getReg();
       Register PhysReg = Reg.isPhysical() ? Reg : Register(VRM->getPhys(Reg));
-      if (PhysReg && !MRI->isReserved(PhysReg) && !is_contained(Hints, PhysReg))
+      if (PhysReg && !MRI->isReserved(PhysReg) && !Hints.contains(PhysReg))
         TwoAddrHints.insert(PhysReg);
     };
 
@@ -1220,7 +1207,7 @@ bool X86RegisterInfo::getRegAllocationHints(Register VirtReg,
 
     for (MCPhysReg OrderReg : Order)
       if (TwoAddrHints.count(OrderReg))
-        Hints.push_back(OrderReg);
+        Hints.insert(OrderReg);
 
     return BaseImplRetVal;
   }
@@ -1229,22 +1216,22 @@ bool X86RegisterInfo::getRegAllocationHints(Register VirtReg,
   auto AddHint = [&](MCPhysReg PhysReg) {
     Register VReg = Matrix->getOneVReg(PhysReg);
     if (VReg == MCRegister::NoRegister) { // Not allocated yet
-      Hints.push_back(PhysReg);
+      Hints.insert(PhysReg);
       return;
     }
     ShapeT PhysShape = getTileShape(VReg, const_cast<VirtRegMap *>(VRM), MRI);
     if (PhysShape == VirtShape)
-      Hints.push_back(PhysReg);
+      Hints.insert(PhysReg);
   };
 
-  SmallSet<MCPhysReg, 4> CopyHints(llvm::from_range, Hints);
+  SmallSetVector<MCPhysReg, 16> CopyHints(Hints);
   Hints.clear();
   for (auto Hint : CopyHints) {
     if (RC.contains(Hint) && !MRI->isReserved(Hint))
       AddHint(Hint);
   }
   for (MCPhysReg PhysReg : Order) {
-    if (!CopyHints.count(PhysReg) && RC.contains(PhysReg) &&
+    if (!CopyHints.contains(PhysReg) && RC.contains(PhysReg) &&
         !MRI->isReserved(PhysReg))
       AddHint(PhysReg);
   }
@@ -1295,4 +1282,15 @@ bool X86RegisterInfo::isNonRex2RegClass(const TargetRegisterClass *RC) const {
   case X86::GR64_with_sub_16bit_in_GR16_NOREX2RegClassID:
     return true;
   }
+}
+
+unsigned X86RegisterInfo::getCSRFirstUseCost(const MachineFunction &MF) const {
+  // PPX push/pop pairs don't access memory, but they still execute, so use a
+  // non-zero cost to let RAGreedy keep CSR saves off hot paths.
+  const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
+  if (ST.is64Bit() && ST.hasPPX())
+    return 1;
+
+  // push + pop.
+  return 2;
 }

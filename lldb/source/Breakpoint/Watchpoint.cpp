@@ -309,8 +309,10 @@ bool Watchpoint::DumpSnapshots(Stream *s, const char *prefix) const {
   }
 
   if (m_new_value_sp) {
-    if (values_ss.GetSize())
-      values_ss.PutCString("\n");
+    if (values_ss.GetSize()) {
+      values_ss.PutChar('\n');
+      values_ss.Indent(prefix);
+    }
 
     if (auto *new_value_cstr = m_new_value_sp->GetValueAsCString())
       values_ss.Printf("new value: %s", new_value_cstr);

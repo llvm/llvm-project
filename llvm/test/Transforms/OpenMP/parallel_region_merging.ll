@@ -4689,7 +4689,7 @@ entry:
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@merge..omp_par
-; CHECK2-SAME: (ptr noalias [[TID_ADDR:%.*]], ptr noalias [[ZERO_ADDR:%.*]], ptr [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK2-SAME: (ptr noalias [[TID_ADDR:%.*]], ptr noalias [[ZERO_ADDR:%.*]], ptr noalias nofreeobj [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK2-NEXT:  omp.par.entry:
 ; CHECK2-NEXT:    [[GEP_A_ADDR:%.*]] = getelementptr { ptr }, ptr [[TMP0]], i32 0, i32 0
 ; CHECK2-NEXT:    [[LOADGEP_A_ADDR:%.*]] = load ptr, ptr [[GEP_A_ADDR]], align 8, !align [[META2:![0-9]+]]
@@ -4838,7 +4838,7 @@ entry:
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@merge_seq..omp_par
-; CHECK2-SAME: (ptr noalias [[TID_ADDR:%.*]], ptr noalias [[ZERO_ADDR:%.*]], ptr [[TMP0:%.*]]) #[[ATTR0]] {
+; CHECK2-SAME: (ptr noalias [[TID_ADDR:%.*]], ptr noalias [[ZERO_ADDR:%.*]], ptr noalias nofreeobj [[TMP0:%.*]]) #[[ATTR0]] {
 ; CHECK2-NEXT:  omp.par.entry:
 ; CHECK2-NEXT:    [[GEP_A_ADDR:%.*]] = getelementptr { ptr }, ptr [[TMP0]], i32 0, i32 0
 ; CHECK2-NEXT:    [[LOADGEP_A_ADDR:%.*]] = load ptr, ptr [[GEP_A_ADDR]], align 8, !align [[META2]]
@@ -4931,7 +4931,7 @@ entry:
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@merge_seq_float..omp_par
-; CHECK2-SAME: (ptr noalias [[TID_ADDR:%.*]], ptr noalias [[ZERO_ADDR:%.*]], ptr [[TMP0:%.*]]) #[[ATTR0]] {
+; CHECK2-SAME: (ptr noalias [[TID_ADDR:%.*]], ptr noalias [[ZERO_ADDR:%.*]], ptr noalias nofreeobj [[TMP0:%.*]]) #[[ATTR0]] {
 ; CHECK2-NEXT:  omp.par.entry:
 ; CHECK2-NEXT:    [[GEP_F_RELOADED:%.*]] = getelementptr { ptr, ptr, ptr }, ptr [[TMP0]], i32 0, i32 0
 ; CHECK2-NEXT:    [[LOADGEP_F_RELOADED:%.*]] = load ptr, ptr [[GEP_F_RELOADED]], align 8, !align [[META2]]
@@ -5029,7 +5029,7 @@ entry:
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@merge_seq_firstprivate..omp_par
-; CHECK2-SAME: (ptr noalias [[TID_ADDR:%.*]], ptr noalias [[ZERO_ADDR:%.*]], ptr [[TMP0:%.*]]) #[[ATTR0]] {
+; CHECK2-SAME: (ptr noalias [[TID_ADDR:%.*]], ptr noalias [[ZERO_ADDR:%.*]], ptr noalias nofreeobj [[TMP0:%.*]]) #[[ATTR0]] {
 ; CHECK2-NEXT:  omp.par.entry:
 ; CHECK2-NEXT:    [[GEP_A_ADDR:%.*]] = getelementptr { ptr, ptr }, ptr [[TMP0]], i32 0, i32 0
 ; CHECK2-NEXT:    [[LOADGEP_A_ADDR:%.*]] = load ptr, ptr [[GEP_A_ADDR]], align 8, !align [[META2]]
@@ -5121,7 +5121,7 @@ entry:
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@merge_seq_sink_lt..omp_par
-; CHECK2-SAME: (ptr noalias [[TID_ADDR:%.*]], ptr noalias [[ZERO_ADDR:%.*]], ptr [[TMP0:%.*]]) #[[ATTR0]] {
+; CHECK2-SAME: (ptr noalias [[TID_ADDR:%.*]], ptr noalias [[ZERO_ADDR:%.*]], ptr noalias nofreeobj [[TMP0:%.*]]) #[[ATTR0]] {
 ; CHECK2-NEXT:  omp.par.entry:
 ; CHECK2-NEXT:    [[B:%.*]] = alloca i32, align 4
 ; CHECK2-NEXT:    [[GEP_A_ADDR:%.*]] = getelementptr { ptr }, ptr [[TMP0]], i32 0, i32 0
@@ -5215,7 +5215,7 @@ entry:
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@merge_seq_par_use..omp_par
-; CHECK2-SAME: (ptr noalias [[TID_ADDR:%.*]], ptr noalias [[ZERO_ADDR:%.*]], ptr [[TMP0:%.*]]) #[[ATTR0]] {
+; CHECK2-SAME: (ptr noalias [[TID_ADDR:%.*]], ptr noalias [[ZERO_ADDR:%.*]], ptr noalias nofreeobj [[TMP0:%.*]]) #[[ATTR0]] {
 ; CHECK2-NEXT:  omp.par.entry:
 ; CHECK2-NEXT:    [[B:%.*]] = alloca i32, align 4
 ; CHECK2-NEXT:    [[GEP_A_RELOADED:%.*]] = getelementptr { ptr, ptr }, ptr [[TMP0]], i32 0, i32 0
@@ -5313,7 +5313,7 @@ entry:
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@merge_cancellable_regions..omp_par
-; CHECK2-SAME: (ptr noalias [[TID_ADDR:%.*]], ptr noalias [[ZERO_ADDR:%.*]], ptr [[TMP0:%.*]]) #[[ATTR0]] {
+; CHECK2-SAME: (ptr noalias [[TID_ADDR:%.*]], ptr noalias [[ZERO_ADDR:%.*]], ptr noalias nofreeobj [[TMP0:%.*]]) #[[ATTR0]] {
 ; CHECK2-NEXT:  omp.par.entry:
 ; CHECK2-NEXT:    [[GEP_CANCEL1_ADDR:%.*]] = getelementptr { ptr, ptr }, ptr [[TMP0]], i32 0, i32 0
 ; CHECK2-NEXT:    [[LOADGEP_CANCEL1_ADDR:%.*]] = load ptr, ptr [[GEP_CANCEL1_ADDR]], align 8, !align [[META2]]
@@ -5399,7 +5399,7 @@ entry:
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@merge_cancellable_regions_seq..omp_par
-; CHECK2-SAME: (ptr noalias [[TID_ADDR:%.*]], ptr noalias [[ZERO_ADDR:%.*]], ptr [[TMP0:%.*]]) #[[ATTR0]] {
+; CHECK2-SAME: (ptr noalias [[TID_ADDR:%.*]], ptr noalias [[ZERO_ADDR:%.*]], ptr noalias nofreeobj [[TMP0:%.*]]) #[[ATTR0]] {
 ; CHECK2-NEXT:  omp.par.entry:
 ; CHECK2-NEXT:    [[GEP_CANCEL1_RELOADED:%.*]] = getelementptr { ptr, ptr, ptr }, ptr [[TMP0]], i32 0, i32 0
 ; CHECK2-NEXT:    [[LOADGEP_CANCEL1_RELOADED:%.*]] = load ptr, ptr [[GEP_CANCEL1_RELOADED]], align 8, !align [[META2]]
@@ -5503,7 +5503,7 @@ entry:
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@merge_3..omp_par
-; CHECK2-SAME: (ptr noalias [[TID_ADDR:%.*]], ptr noalias [[ZERO_ADDR:%.*]], ptr [[TMP0:%.*]]) #[[ATTR0]] {
+; CHECK2-SAME: (ptr noalias [[TID_ADDR:%.*]], ptr noalias [[ZERO_ADDR:%.*]], ptr noalias nofreeobj [[TMP0:%.*]]) #[[ATTR0]] {
 ; CHECK2-NEXT:  omp.par.entry:
 ; CHECK2-NEXT:    [[GEP_A_ADDR:%.*]] = getelementptr { ptr }, ptr [[TMP0]], i32 0, i32 0
 ; CHECK2-NEXT:    [[LOADGEP_A_ADDR:%.*]] = load ptr, ptr [[GEP_A_ADDR]], align 8, !align [[META2]]
@@ -5590,7 +5590,7 @@ entry:
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@merge_3_seq..omp_par
-; CHECK2-SAME: (ptr noalias [[TID_ADDR:%.*]], ptr noalias [[ZERO_ADDR:%.*]], ptr [[TMP0:%.*]]) #[[ATTR0]] {
+; CHECK2-SAME: (ptr noalias [[TID_ADDR:%.*]], ptr noalias [[ZERO_ADDR:%.*]], ptr noalias nofreeobj [[TMP0:%.*]]) #[[ATTR0]] {
 ; CHECK2-NEXT:  omp.par.entry:
 ; CHECK2-NEXT:    [[GEP_A_RELOADED:%.*]] = getelementptr { ptr, ptr, ptr, ptr }, ptr [[TMP0]], i32 0, i32 0
 ; CHECK2-NEXT:    [[LOADGEP_A_RELOADED:%.*]] = load ptr, ptr [[GEP_A_RELOADED]], align 8, !align [[META2]]
@@ -5830,7 +5830,7 @@ entry:
 ;
 ;
 ; CHECK2-LABEL: define {{[^@]+}}@merge_2_unmergable_1..omp_par
-; CHECK2-SAME: (ptr noalias [[TID_ADDR:%.*]], ptr noalias [[ZERO_ADDR:%.*]], ptr [[TMP0:%.*]]) #[[ATTR0]] {
+; CHECK2-SAME: (ptr noalias [[TID_ADDR:%.*]], ptr noalias [[ZERO_ADDR:%.*]], ptr noalias nofreeobj [[TMP0:%.*]]) #[[ATTR0]] {
 ; CHECK2-NEXT:  omp.par.entry:
 ; CHECK2-NEXT:    [[GEP_A_ADDR:%.*]] = getelementptr { ptr }, ptr [[TMP0]], i32 0, i32 0
 ; CHECK2-NEXT:    [[LOADGEP_A_ADDR:%.*]] = load ptr, ptr [[GEP_A_ADDR]], align 8, !align [[META2]]

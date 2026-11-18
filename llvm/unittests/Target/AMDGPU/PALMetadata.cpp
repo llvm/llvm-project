@@ -38,7 +38,7 @@ protected:
 
     Ctx = std::make_unique<LLVMContext>();
     M = std::make_unique<Module>("Module", *Ctx);
-    M->setDataLayout(TM->createDataLayout());
+    M->setDataLayout(TM->getTargetTriple().computeDataLayout());
     auto *FType = FunctionType::get(Type::getVoidTy(*Ctx), false);
     auto *F = Function::Create(FType, GlobalValue::ExternalLinkage, "Test", *M);
     MMI = std::make_unique<MachineModuleInfo>(TM.get());

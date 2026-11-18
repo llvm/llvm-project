@@ -134,4 +134,12 @@ TEST(RecursiveASTVisitor, NoRecursionInSelfFriend) {
     "vector_iterator<int> it_int;\n"));
 }
 
+TEST(RecursiveASTVisitor, VisitsObjCAtCatchStmtExceptionVariable) {
+  VarDeclVisitor Visitor;
+  Visitor.ExpectMatch("e", 2, 28);
+  EXPECT_TRUE(Visitor.runOver("@interface NSException; @end\n"
+                              "void f() { @try {} @catch (NSException *e) {} }",
+                              VarDeclVisitor::Lang_OBJC));
+}
+
 } // end anonymous namespace

@@ -25,8 +25,8 @@ define void @function0(ptr nocapture %a, ptr nocapture %b, i32 %start, i32 %end)
 ; CHECK-NEXT:    br i1 [[CMP16]], label %[[FOR_BODY_LR_PH:.*]], label %[[FOR_END:.*]]
 ; CHECK:       [[FOR_BODY_LR_PH]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[START]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[END]], [[START]]
-; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[END]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[TMP1]], [[START]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nuw nsw i64 [[TMP3]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP4]], 4
@@ -34,10 +34,7 @@ define void @function0(ptr nocapture %a, ptr nocapture %b, i32 %start, i32 %end)
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[TMP5:%.*]] = shl nsw i64 [[TMP0]], 2
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP6:%.*]] = add i32 [[END]], -1
-; CHECK-NEXT:    [[TMP7:%.*]] = sub i32 [[TMP6]], [[START]]
-; CHECK-NEXT:    [[TMP8:%.*]] = zext i32 [[TMP7]] to i64
-; CHECK-NEXT:    [[TMP9:%.*]] = shl nuw nsw i64 [[TMP8]], 2
+; CHECK-NEXT:    [[TMP9:%.*]] = shl nuw nsw i64 [[TMP3]], 2
 ; CHECK-NEXT:    [[TMP10:%.*]] = add i64 [[TMP5]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = add i64 [[TMP10]], 4
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP11]]
@@ -245,8 +242,8 @@ define void @PR34523(ptr %p, i16 %val) {
 ; CHECK-NEXT:  [[BB1:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i16 [[VAL]], 1
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i16 @llvm.smax.i16(i16 [[TMP0]], i16 2)
-; CHECK-NEXT:    [[TMP7:%.*]] = sub i16 [[SMAX]], [[VAL]]
-; CHECK-NEXT:    [[TMP2:%.*]] = add i16 [[TMP7]], -1
+; CHECK-NEXT:    [[TMP7:%.*]] = add i16 [[SMAX]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i16 [[TMP7]], [[VAL]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[TMP2]] to i32
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nuw nsw i32 [[TMP3]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP4]], 4

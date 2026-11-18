@@ -56,6 +56,12 @@ int3 test_clamp_int3(int3 p0, int3 p1) { return clamp(p0, p1,p1); }
 // CHECK: call <4 x i32> @llvm.[[TARGET]].sclamp.v4i32
 int4 test_clamp_int4(int4 p0, int4 p1) { return clamp(p0, p1,p1); }
 
+// CHECK: define [[FNATTRS]] <5 x i32> @
+// CHECK: call <5 x i32> @llvm.[[TARGET]].sclamp.v5i32
+vector<int, 5> test_clamp_int5(vector<int, 5> p0, vector<int, 5> p1) {
+	return clamp(p0, p1, p1);
+}
+
 // CHECK: define [[FNATTRS]] i32 @_Z15test_clamp_uint
 // CHECK: call i32 @llvm.[[TARGET]].uclamp.i32(
 int test_clamp_uint(uint p0, uint p1) { return clamp(p0, p1,p1); }

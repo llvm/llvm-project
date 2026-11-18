@@ -36,7 +36,7 @@ protected:
 // call with no callee symbol at all, and a cir.try_call to the marked callee.
 constexpr const char *moduleText = R"CIR(
 !s32i = !cir.int<s, 32>
-!rec_S = !cir.struct<"S" {!s32i}>
+!rec_S = !cir.struct<"S" {data !s32i}>
 
 module {
   cir.func @marked() func_info<#cir.cxx_ctor<!rec_S, default>> {

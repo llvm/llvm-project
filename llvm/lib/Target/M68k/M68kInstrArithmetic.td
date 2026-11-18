@@ -13,7 +13,7 @@
 ///  Machine:
 ///
 ///    ADD       [~]   ADDA      [~]   ADDI        [~]   ADDQ [ ]   ADDX [~]
-///    CLR       [ ]   CMP       [~]   CMPA        [~]   CMPI [~]   CMPM [ ]
+///    CLR       [~]   CMP       [~]   CMPA        [~]   CMPI [~]   CMPM [ ]
 ///    CMP2      [ ]   DIVS/DIVU [~]   DIVSL/DIVUL [ ]   EXT  [~]   EXTB [ ]
 ///    MULS/MULU [~]   NEG       [~]   NEGX        [~]   NOT  [~]   SUB  [~]
 ///    SUBA      [~]   SUBI      [~]   SUBQ        [ ]   SUBX [~]
@@ -561,7 +561,7 @@ def EXT32 : MxExt<MxType32d, MxType16d>;
 def : Pat<(sext_inreg i16:$src, i8),  (EXT16 $src)>;
 def : Pat<(sext_inreg i32:$src, i16), (EXT32 $src)>;
 def : Pat<(sext_inreg i32:$src, i8),
-          (EXT32 (MOVXd32d16 (EXT16 (EXTRACT_SUBREG $src, MxSubRegIndex16Lo))))>;
+          (EXT32 (MOVXr32r16 (EXT16 (EXTRACT_SUBREG $src, MxSubRegIndex16Lo))))>;
 
 
 //===----------------------------------------------------------------------===//
@@ -642,6 +642,9 @@ def as_i16imm : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i16);
 }]>;
 
+// M68k divs/divu outputs the quotient in the lower 16 bits and the remainder
+// in the upper 16 bits of the register.
+
 // RR i8
 def : Pat<(sdiv i8:$dst, i8:$opd),
           (EXTRACT_SUBREG
@@ -655,33 +658,33 @@ def : Pat<(udiv i8:$dst, i8:$opd),
 
 def : Pat<(srem i8:$dst, i8:$opd),
           (EXTRACT_SUBREG
-            (ASR32di (ASR32di (SDIVd32d16 (MOVSXd32d8 $dst), (MOVSXd16d8 $opd)), 8), 8),
+            (SWAP (SDIVd32d16 (MOVSXd32d8 $dst), (MOVSXd16d8 $opd))),
              MxSubRegIndex8Lo)>;
 
 def : Pat<(urem i8:$dst, i8:$opd),
           (EXTRACT_SUBREG
-            (LSR32di (LSR32di (UDIVd32d16 (MOVZXd32d8 $dst), (MOVZXd16d8 $opd)), 8), 8),
+            (SWAP (UDIVd32d16 (MOVZXd32d8 $dst), (MOVZXd16d8 $opd))),
              MxSubRegIndex8Lo)>;
 
 // RR i16
 def : Pat<(sdiv i16:$dst, i16:$opd),
           (EXTRACT_SUBREG
-            (SDIVd32d16 (MOVSXd32d16 $dst), $opd),
+            (SDIVd32d16 (MOVSXr32r16 $dst), $opd),
              MxSubRegIndex16Lo)>;
 
 def : Pat<(udiv i16:$dst, i16:$opd),
           (EXTRACT_SUBREG
-            (UDIVd32d16 (MOVZXd32d16 $dst), $opd),
+            (UDIVd32d16 (MOVZXd32r16 $dst), $opd),
              MxSubRegIndex16Lo)>;
 
 def : Pat<(srem i16:$dst, i16:$opd),
           (EXTRACT_SUBREG
-            (ASR32di (ASR32di (SDIVd32d16 (MOVSXd32d16 $dst), $opd), 8), 8),
+            (SWAP (SDIVd32d16 (MOVSXr32r16 $dst), $opd)),
              MxSubRegIndex16Lo)>;
 
 def : Pat<(urem i16:$dst, i16:$opd),
           (EXTRACT_SUBREG
-            (LSR32di (LSR32di (UDIVd32d16 (MOVZXd32d16 $dst), $opd), 8), 8),
+            (SWAP (UDIVd32d16 (MOVZXd32r16 $dst), $opd)),
              MxSubRegIndex16Lo)>;
 
 // RI i8
@@ -697,33 +700,33 @@ def : Pat<(udiv i8:$dst, Mxi8immSExt8:$opd),
 
 def : Pat<(srem i8:$dst, Mxi8immSExt8:$opd),
           (EXTRACT_SUBREG
-            (ASR32di (ASR32di (SDIVd32i16 (MOVSXd32d8 $dst), (as_i16imm $opd)), 8), 8),
+            (SWAP (SDIVd32i16 (MOVSXd32d8 $dst), (as_i16imm $opd))),
              MxSubRegIndex8Lo)>;
 
 def : Pat<(urem i8:$dst, Mxi8immSExt8:$opd),
           (EXTRACT_SUBREG
-            (LSR32di (LSR32di (UDIVd32i16 (MOVZXd32d8 $dst), (as_i16imm $opd)), 8), 8),
+            (SWAP (UDIVd32i16 (MOVZXd32d8 $dst), (as_i16imm $opd))),
              MxSubRegIndex8Lo)>;
 
 // RI i16
 def : Pat<(sdiv i16:$dst, Mxi16immSExt16:$opd),
           (EXTRACT_SUBREG
-            (SDIVd32i16 (MOVSXd32d16 $dst), imm:$opd),
+            (SDIVd32i16 (MOVSXr32r16 $dst), imm:$opd),
              MxSubRegIndex16Lo)>;
 
 def : Pat<(udiv i16:$dst, Mxi16immSExt16:$opd),
           (EXTRACT_SUBREG
-            (UDIVd32i16 (MOVZXd32d16 $dst), imm:$opd),
+            (UDIVd32i16 (MOVZXd32r16 $dst), imm:$opd),
              MxSubRegIndex16Lo)>;
 
 def : Pat<(srem i16:$dst, Mxi16immSExt16:$opd),
           (EXTRACT_SUBREG
-            (ASR32di (ASR32di (SDIVd32i16 (MOVSXd32d16 $dst), imm:$opd), 8), 8),
+            (SWAP (SDIVd32i16 (MOVSXr32r16 $dst), imm:$opd)),
              MxSubRegIndex16Lo)>;
 
 def : Pat<(urem i16:$dst, Mxi16immSExt16:$opd),
           (EXTRACT_SUBREG
-            (LSR32di (LSR32di (UDIVd32i16 (MOVZXd32d16 $dst), imm:$opd), 8), 8),
+            (SWAP (UDIVd32i16 (MOVZXd32r16 $dst), imm:$opd)),
              MxSubRegIndex16Lo)>;
 
 
@@ -735,17 +738,17 @@ def UMULd32d32 : MxDiMuOp_DD_Long<"mulu.l", MxUMul, 0x130, /*SIGNED*/false>;
 // RR
 def : Pat<(mul i16:$dst, i16:$opd),
           (EXTRACT_SUBREG
-            (SMULd32d16 (MOVXd32d16 $dst), $opd),
+            (SMULd32d16 (MOVXr32r16 $dst), $opd),
              MxSubRegIndex16Lo)>;
 
 def : Pat<(mulhs i16:$dst, i16:$opd),
           (EXTRACT_SUBREG
-            (ASR32di (ASR32di (SMULd32d16 (MOVXd32d16 $dst), $opd), 8), 8),
+            (SWAP (SMULd32d16 (MOVXr32r16 $dst), $opd)),
              MxSubRegIndex16Lo)>;
 
 def : Pat<(mulhu i16:$dst, i16:$opd),
           (EXTRACT_SUBREG
-            (LSR32di (LSR32di (UMULd32d16 (MOVXd32d16 $dst), $opd), 8), 8),
+            (SWAP (UMULd32d16 (MOVXr32r16 $dst), $opd)),
              MxSubRegIndex16Lo)>;
 
 def : Pat<(mul i32:$dst, i32:$opd), (SMULd32d32 $dst, $opd)>;
@@ -754,17 +757,17 @@ def : Pat<(mul i32:$dst, i32:$opd), (SMULd32d32 $dst, $opd)>;
 // RI
 def : Pat<(mul i16:$dst, Mxi16immSExt16:$opd),
           (EXTRACT_SUBREG
-            (SMULd32i16 (MOVXd32d16 $dst), imm:$opd),
+            (SMULd32i16 (MOVXr32r16 $dst), imm:$opd),
              MxSubRegIndex16Lo)>;
 
 def : Pat<(mulhs i16:$dst, Mxi16immSExt16:$opd),
           (EXTRACT_SUBREG
-            (ASR32di (ASR32di (SMULd32i16 (MOVXd32d16 $dst), imm:$opd), 8), 8),
+            (SWAP (SMULd32i16 (MOVXr32r16 $dst), imm:$opd)),
              MxSubRegIndex16Lo)>;
 
 def : Pat<(mulhu i16:$dst, Mxi16immSExt16:$opd),
           (EXTRACT_SUBREG
-            (LSR32di (LSR32di (UMULd32i16 (MOVXd32d16 $dst), imm:$opd), 8), 8),
+            (SWAP (UMULd32i16 (MOVXr32r16 $dst), imm:$opd)),
              MxSubRegIndex16Lo)>;
 
 
@@ -845,139 +848,113 @@ def : Pat<(sext_inreg i32:$src, i1), (NEG32d (AND32di MxDRD32:$src, 1))>;
 // no-CCR Patterns
 //===----------------------------------------------------------------------===//
 
-/// Basically the reason for this stuff is that add and addc share the same
-/// operand types constraints for whatever reasons and I had to define a common
-/// MxAdd and MxSub instructions that produce CCR and then pattern-map add and addc
-/// to it.
-/// NOTE On the other hand I see no reason why I cannot just drop explicit CCR
-/// result. Anyway works for now, hopefully I will better understand how this stuff
-/// is designed later
-foreach N = ["add", "addc"] in {
+// add reg, reg
+def : Pat<(add i8 :$src, i8 :$opd),
+          (ADD8dd  MxDRD8 :$src, MxDRD8 :$opd)>;
+def : Pat<(add i16:$src, i16:$opd),
+          (ADD16dr MxXRD16:$src, MxDRD16:$opd)>;
+def : Pat<(add i32:$src, i32:$opd),
+          (ADD32dr MxXRD32:$src, MxDRD32:$opd)>;
 
-  // add reg, reg
-  def : Pat<(!cast<SDNode>(N) i8 :$src, i8 :$opd),
-            (ADD8dd  MxDRD8 :$src, MxDRD8 :$opd)>;
-  def : Pat<(!cast<SDNode>(N) i16:$src, i16:$opd),
-            (ADD16dr MxXRD16:$src, MxDRD16:$opd)>;
-  def : Pat<(!cast<SDNode>(N) i32:$src, i32:$opd),
-            (ADD32dr MxXRD32:$src, MxDRD32:$opd)>;
+// add (An), reg
+def : Pat<(add MxType8.VT:$src, (Mxloadi8 MxType8.JPat:$opd)),
+          (ADD8dj MxDRD8:$src, MxType8.JOp:$opd)>;
+def : Pat<(add MxType16.VT:$src, (Mxloadi16 MxType16.JPat:$opd)),
+          (ADD16dj MxDRD16:$src, MxType16.JOp:$opd)>;
+def : Pat<(add MxType32.VT:$src, (Mxloadi32 MxType32.JPat:$opd)),
+          (ADD32dj MxDRD32:$src, MxType32.JOp:$opd)>;
 
-  // add (An), reg
-  def : Pat<(!cast<SDNode>(N) MxType8.VT:$src, (Mxloadi8 MxType8.JPat:$opd)),
-            (ADD8dj MxDRD8:$src, MxType8.JOp:$opd)>;
-  def : Pat<(!cast<SDNode>(N) MxType16.VT:$src, (Mxloadi16 MxType16.JPat:$opd)),
-            (ADD16dj MxDRD16:$src, MxType16.JOp:$opd)>;
-  def : Pat<(!cast<SDNode>(N) MxType32.VT:$src, (Mxloadi32 MxType32.JPat:$opd)),
-            (ADD32dj MxDRD32:$src, MxType32.JOp:$opd)>;
+// add (i,An), reg
+def : Pat<(add MxType8.VT:$src, (Mxloadi8 MxType8.PPat:$opd)),
+          (ADD8dp MxDRD8:$src, MxType8.POp:$opd)>;
+def : Pat<(add MxType16.VT:$src, (Mxloadi16 MxType16.PPat:$opd)),
+          (ADD16dp MxDRD16:$src, MxType16.POp:$opd)>;
+def : Pat<(add MxType32.VT:$src, (Mxloadi32 MxType32.PPat:$opd)),
+          (ADD32dp MxDRD32:$src, MxType32.POp:$opd)>;
 
-  // add (i,An), reg
-  def : Pat<(!cast<SDNode>(N) MxType8.VT:$src, (Mxloadi8 MxType8.PPat:$opd)),
-            (ADD8dp MxDRD8:$src, MxType8.POp:$opd)>;
-  def : Pat<(!cast<SDNode>(N) MxType16.VT:$src, (Mxloadi16 MxType16.PPat:$opd)),
-            (ADD16dp MxDRD16:$src, MxType16.POp:$opd)>;
-  def : Pat<(!cast<SDNode>(N) MxType32.VT:$src, (Mxloadi32 MxType32.PPat:$opd)),
-            (ADD32dp MxDRD32:$src, MxType32.POp:$opd)>;
+// add (i,An,Xn), reg
+def : Pat<(add MxType8.VT:$src, (Mxloadi8 MxType8.FPat:$opd)),
+          (ADD8df MxDRD8:$src, MxType8.FOp:$opd)>;
+def : Pat<(add MxType16.VT:$src, (Mxloadi16 MxType16.FPat:$opd)),
+          (ADD16df MxDRD16:$src, MxType16.FOp:$opd)>;
+def : Pat<(add MxType32.VT:$src, (Mxloadi32 MxType32.FPat:$opd)),
+          (ADD32df MxDRD32:$src, MxType32.FOp:$opd)>;
 
-  // add (i,An,Xn), reg
-  def : Pat<(!cast<SDNode>(N) MxType8.VT:$src, (Mxloadi8 MxType8.FPat:$opd)),
-            (ADD8df MxDRD8:$src, MxType8.FOp:$opd)>;
-  def : Pat<(!cast<SDNode>(N) MxType16.VT:$src, (Mxloadi16 MxType16.FPat:$opd)),
-            (ADD16df MxDRD16:$src, MxType16.FOp:$opd)>;
-  def : Pat<(!cast<SDNode>(N) MxType32.VT:$src, (Mxloadi32 MxType32.FPat:$opd)),
-            (ADD32df MxDRD32:$src, MxType32.FOp:$opd)>;
+// add reg, imm
+def : Pat<(add i8: $src, Mxi8immSExt8:$opd),
+          (ADD8di  MxDRD8 :$src, imm:$opd)>;
+def : Pat<(add i16:$src, Mxi16immSExt16:$opd),
+          (ADD16di MxDRD16:$src, imm:$opd)>;
 
-  // add reg, imm
-  def : Pat<(!cast<SDNode>(N) i8: $src, Mxi8immSExt8:$opd),
-            (ADD8di  MxDRD8 :$src, imm:$opd)>;
-  def : Pat<(!cast<SDNode>(N) i16:$src, Mxi16immSExt16:$opd),
-            (ADD16di MxDRD16:$src, imm:$opd)>;
-
-  // LEAp is more complex and thus will be selected over normal ADD32ri but it cannot
-  // be used with data registers, here by adding complexity to a simple ADD32ri insts
-  // we make sure it will be selected over LEAp
-  let AddedComplexity = 15 in {
-  def : Pat<(!cast<SDNode>(N) i32:$src, Mxi32immSExt32:$opd),
+// LEAp is more complex and thus will be selected over normal ADD32ri but it cannot
+// be used with data registers, here by adding complexity to a simple ADD32ri insts
+// we make sure it will be selected over LEAp
+let AddedComplexity = 15 in {
+  def : Pat<(add i32:$src, Mxi32immSExt32:$opd),
             (ADD32di MxDRD32:$src, imm:$opd)>;
-  } // AddedComplexity = 15
+} // AddedComplexity = 15
 
-  // add imm, (An)
-  def : Pat<(store (!cast<SDNode>(N) (load MxType8.JPat:$dst), MxType8.IPat:$opd),
-                   MxType8.JPat:$dst),
-            (ADD8ji MxType8.JOp:$dst, imm:$opd)>;
-  def : Pat<(store (!cast<SDNode>(N) (load MxType16.JPat:$dst), MxType16.IPat:$opd),
-                   MxType16.JPat:$dst),
-            (ADD16ji MxType16.JOp:$dst, imm:$opd)>;
-  def : Pat<(store (!cast<SDNode>(N) (load MxType32.JPat:$dst), MxType32.IPat:$opd),
-                   MxType32.JPat:$dst),
-            (ADD32ji MxType32.JOp:$dst, imm:$opd)>;
+// add imm, (An)
+def : Pat<(store (add (load MxType8.JPat:$dst), MxType8.IPat:$opd),
+                 MxType8.JPat:$dst),
+          (ADD8ji MxType8.JOp:$dst, imm:$opd)>;
+def : Pat<(store (add (load MxType16.JPat:$dst), MxType16.IPat:$opd),
+                 MxType16.JPat:$dst),
+          (ADD16ji MxType16.JOp:$dst, imm:$opd)>;
+def : Pat<(store (add (load MxType32.JPat:$dst), MxType32.IPat:$opd),
+                 MxType32.JPat:$dst),
+          (ADD32ji MxType32.JOp:$dst, imm:$opd)>;
 
-} // foreach add, addc
+// sub reg, reg
+def : Pat<(sub i8 :$src, i8 :$opd),
+          (SUB8dd  MxDRD8 :$src, MxDRD8 :$opd)>;
+def : Pat<(sub i16:$src, i16:$opd),
+          (SUB16dd MxDRD16:$src, MxDRD16:$opd)>;
+def : Pat<(sub i32:$src, i32:$opd),
+          (SUB32dd MxDRD32:$src, MxDRD32:$opd)>;
 
-def : Pat<(adde i8 :$src, i8 :$opd), (ADDX8dd  MxDRD8 :$src, MxDRD8 :$opd)>;
-def : Pat<(adde i16:$src, i16:$opd), (ADDX16dd MxDRD16:$src, MxDRD16:$opd)>;
-def : Pat<(adde i32:$src, i32:$opd), (ADDX32dd MxDRD32:$src, MxDRD32:$opd)>;
+// sub (An), reg
+def : Pat<(sub MxType8.VT:$src, (Mxloadi8 MxType8.JPat:$opd)),
+          (SUB8dj MxDRD8:$src, MxType8.JOp:$opd)>;
+def : Pat<(sub MxType16.VT:$src, (Mxloadi16 MxType16.JPat:$opd)),
+          (SUB16dj MxDRD16:$src, MxType16.JOp:$opd)>;
+def : Pat<(sub MxType32.VT:$src, (Mxloadi32 MxType32.JPat:$opd)),
+          (SUB32dj MxDRD32:$src, MxType32.JOp:$opd)>;
 
+// sub (i,An), reg
+def : Pat<(sub MxType8.VT:$src, (Mxloadi8 MxType8.PPat:$opd)),
+          (SUB8dp MxDRD8:$src, MxType8.POp:$opd)>;
+def : Pat<(sub MxType16.VT:$src, (Mxloadi16 MxType16.PPat:$opd)),
+          (SUB16dp MxDRD16:$src, MxType16.POp:$opd)>;
+def : Pat<(sub MxType32.VT:$src, (Mxloadi32 MxType32.PPat:$opd)),
+          (SUB32dp MxDRD32:$src, MxType32.POp:$opd)>;
 
+// sub (i,An,Xn), reg
+def : Pat<(sub MxType8.VT:$src, (Mxloadi8 MxType8.FPat:$opd)),
+          (SUB8df MxDRD8:$src, MxType8.FOp:$opd)>;
+def : Pat<(sub MxType16.VT:$src, (Mxloadi16 MxType16.FPat:$opd)),
+          (SUB16df MxDRD16:$src, MxType16.FOp:$opd)>;
+def : Pat<(sub MxType32.VT:$src, (Mxloadi32 MxType32.FPat:$opd)),
+          (SUB32df MxDRD32:$src, MxType32.FOp:$opd)>;
 
-foreach N = ["sub", "subc"] in {
+// sub reg, imm
+def : Pat<(sub i8 :$src, Mxi8immSExt8 :$opd),
+          (SUB8di  MxDRD8 :$src, imm:$opd)>;
+def : Pat<(sub i16:$src, Mxi16immSExt16:$opd),
+          (SUB16di MxDRD16:$src, imm:$opd)>;
+def : Pat<(sub i32:$src, Mxi32immSExt32:$opd),
+          (SUB32di MxDRD32:$src, imm:$opd)>;
 
-  // sub reg, reg
-  def : Pat<(!cast<SDNode>(N) i8 :$src, i8 :$opd),
-            (SUB8dd  MxDRD8 :$src, MxDRD8 :$opd)>;
-  def : Pat<(!cast<SDNode>(N) i16:$src, i16:$opd),
-            (SUB16dd MxDRD16:$src, MxDRD16:$opd)>;
-  def : Pat<(!cast<SDNode>(N) i32:$src, i32:$opd),
-            (SUB32dd MxDRD32:$src, MxDRD32:$opd)>;
-
-
-  // sub (An), reg
-  def : Pat<(!cast<SDNode>(N) MxType8.VT:$src, (Mxloadi8 MxType8.JPat:$opd)),
-            (SUB8dj MxDRD8:$src, MxType8.JOp:$opd)>;
-  def : Pat<(!cast<SDNode>(N) MxType16.VT:$src, (Mxloadi16 MxType16.JPat:$opd)),
-            (SUB16dj MxDRD16:$src, MxType16.JOp:$opd)>;
-  def : Pat<(!cast<SDNode>(N) MxType32.VT:$src, (Mxloadi32 MxType32.JPat:$opd)),
-            (SUB32dj MxDRD32:$src, MxType32.JOp:$opd)>;
-
-  // sub (i,An), reg
-  def : Pat<(!cast<SDNode>(N) MxType8.VT:$src, (Mxloadi8 MxType8.PPat:$opd)),
-            (SUB8dp MxDRD8:$src, MxType8.POp:$opd)>;
-  def : Pat<(!cast<SDNode>(N) MxType16.VT:$src, (Mxloadi16 MxType16.PPat:$opd)),
-            (SUB16dp MxDRD16:$src, MxType16.POp:$opd)>;
-  def : Pat<(!cast<SDNode>(N) MxType32.VT:$src, (Mxloadi32 MxType32.PPat:$opd)),
-            (SUB32dp MxDRD32:$src, MxType32.POp:$opd)>;
-
-  // sub (i,An,Xn), reg
-  def : Pat<(!cast<SDNode>(N) MxType8.VT:$src, (Mxloadi8 MxType8.FPat:$opd)),
-            (SUB8df MxDRD8:$src, MxType8.FOp:$opd)>;
-  def : Pat<(!cast<SDNode>(N) MxType16.VT:$src, (Mxloadi16 MxType16.FPat:$opd)),
-            (SUB16df MxDRD16:$src, MxType16.FOp:$opd)>;
-  def : Pat<(!cast<SDNode>(N) MxType32.VT:$src, (Mxloadi32 MxType32.FPat:$opd)),
-            (SUB32df MxDRD32:$src, MxType32.FOp:$opd)>;
-
-  // sub reg, imm
-  def : Pat<(!cast<SDNode>(N) i8 :$src, Mxi8immSExt8 :$opd),
-            (SUB8di  MxDRD8 :$src, imm:$opd)>;
-  def : Pat<(!cast<SDNode>(N) i16:$src, Mxi16immSExt16:$opd),
-            (SUB16di MxDRD16:$src, imm:$opd)>;
-  def : Pat<(!cast<SDNode>(N) i32:$src, Mxi32immSExt32:$opd),
-            (SUB32di MxDRD32:$src, imm:$opd)>;
-
-  // sub imm, (An)
-  def : Pat<(store (!cast<SDNode>(N) (load MxType8.JPat:$dst), MxType8.IPat:$opd),
-                   MxType8.JPat:$dst),
-            (SUB8ji MxType8.JOp:$dst, imm:$opd)>;
-  def : Pat<(store (!cast<SDNode>(N) (load MxType16.JPat:$dst), MxType16.IPat:$opd),
-                   MxType16.JPat:$dst),
-            (SUB16ji MxType16.JOp:$dst, imm:$opd)>;
-  def : Pat<(store (!cast<SDNode>(N) (load MxType32.JPat:$dst), MxType32.IPat:$opd),
-                   MxType32.JPat:$dst),
-            (SUB32ji MxType32.JOp:$dst, imm:$opd)>;
-
-} // foreach sub, subx
-
-def : Pat<(sube i8 :$src, i8 :$opd), (SUBX8dd  MxDRD8 :$src, MxDRD8 :$opd)>;
-def : Pat<(sube i16:$src, i16:$opd), (SUBX16dd MxDRD16:$src, MxDRD16:$opd)>;
-def : Pat<(sube i32:$src, i32:$opd), (SUBX32dd MxDRD32:$src, MxDRD32:$opd)>;
+// sub imm, (An)
+def : Pat<(store (sub (load MxType8.JPat:$dst), MxType8.IPat:$opd),
+                 MxType8.JPat:$dst),
+          (SUB8ji MxType8.JOp:$dst, imm:$opd)>;
+def : Pat<(store (sub (load MxType16.JPat:$dst), MxType16.IPat:$opd),
+                 MxType16.JPat:$dst),
+          (SUB16ji MxType16.JOp:$dst, imm:$opd)>;
+def : Pat<(store (sub (load MxType32.JPat:$dst), MxType32.IPat:$opd),
+                 MxType32.JPat:$dst),
+          (SUB32ji MxType32.JOp:$dst, imm:$opd)>;
 
 multiclass BitwisePat<string INST, SDNode OP> {
   // op reg, reg
@@ -1106,3 +1083,100 @@ defm FADD : MxFBinaryOp<"add", 0b1100010, 0b1100110, 0b0100010>;
 defm FSUB : MxFBinaryOp<"sub", 0b1101000, 0b1101100, 0b0101000>;
 defm FMUL : MxFBinaryOp<"mul", 0b1100011, 0b1100111, 0b0100011>;
 defm FDIV : MxFBinaryOp<"div", 0b1100000, 0b1100100, 0b0100000>;
+
+
+//===----------------------------------------------------------------------===//
+// CLR
+//===----------------------------------------------------------------------===//
+
+/// ---------------------------------------------------
+///  F  E  D  C  B  A  9  8 | 7  6 | 5  4  3 | 2  1  0
+/// ---------------------------------------------------
+///                         |      | EFFECTIVE ADDRESS
+///  0  1  0  0  0  0  1  0 | SIZE |   MODE  |   REG
+/// ---------------------------------------------------
+
+let Defs = [CCR] in {
+
+// No pattern, this instead gets used when expanding the MOVI pseudo.
+class MxClr_D<MxType TYPE>
+    : MxInst<(outs TYPE.ROp:$dst), (ins),
+             "clr."#TYPE.Prefix#"\t$dst", []> {
+  let Inst = (descend 0b01000010,
+    /*SIZE*/!cast<MxEncSize>("MxEncSize"#TYPE.Size).Value,
+    //MODE without last bit
+    0b00,
+    //REGISTER prefixed by D/A bit
+    (operand "$dst", 4)
+  );
+}
+
+// Identical to the above, but takes a register input for use in DAG selection
+let isCodeGenOnly = 1, Constraints = "$src = $dst" in
+class MxClr_DD<MxType TYPE>
+    : MxInst<(outs TYPE.ROp:$dst), (ins TYPE.ROp:$src),
+             "clr."#TYPE.Prefix#"\t$dst", []> {
+  let Inst = (descend 0b01000010,
+    /*SIZE*/!cast<MxEncSize>("MxEncSize"#TYPE.Size).Value,
+    //MODE without last bit
+    0b00,
+    //REGISTER prefixed by D/A bit
+    (operand "$dst", 4)
+  );
+}
+
+// NOTE: On M68000 specifically, the memory is (pointlessly) read before
+// written. This isn't modeled via mayLoad, because the 'store' in the pattern
+// is enough to implicitly indicate side effects for all practical purposes.
+class MxClr_M<MxType TYPE, MxOpBundle DST, MxEncMemOp DST_ENC>
+    : MxInst<(outs), (ins DST.Op:$dst),
+             "clr."#TYPE.Prefix#"\t$dst",
+             [(store (TYPE.VT 0), DST.Pat:$dst)]> {
+  let Inst = (ascend
+    (descend 0b01000010,
+    /*SIZE*/!cast<MxEncSize>("MxEncSize"#TYPE.Size).Value,
+    DST_ENC.EA), DST_ENC.Supplement
+  );
+}
+
+// Mirrors MxCmp_BI for abs.L pattern matching
+class MxClr_B<MxType TYPE>
+    : MxInst<(outs), (ins MxAL32:$dst),
+             "clr."#TYPE.Prefix#"\t$dst",
+             [(store (TYPE.VT 0), (i32 (MxWrapper tglobaladdr:$dst)))]> {
+  defvar AbsEncoding = MxEncAddrMode_abs<"dst", true>;
+  let Inst = (ascend
+    (descend 0b01000010,
+    /*SIZE*/!cast<MxEncSize>("MxEncSize"#TYPE.Size).Value,
+    AbsEncoding.EA), AbsEncoding.Supplement
+  );
+}
+} // let Defs = [CCR]
+
+foreach S = [8, 16, 32] in {
+  defvar DTYPE = !cast<MxType>("MxType"#S#"d");
+  def CLR#S#d : MxClr_D<DTYPE>;
+  def CLR#S#dd : MxClr_DD<DTYPE>;
+  def CLR#S#b : MxClr_B<DTYPE>;
+
+  defvar MTYPE = !cast<MxType>("MxType"#S);
+  def CLR#S#j : MxClr_M<MTYPE, !cast<MxOpBundle>("MxOp"#S#"AddrMode_j"),
+                        MxEncAddrMode_j<"dst">>;
+  def CLR#S#o : MxClr_M<MTYPE, !cast<MxOpBundle>("MxOp"#S#"AddrMode_o"),
+                        MxEncAddrMode_o<"dst">>;
+  def CLR#S#e : MxClr_M<MTYPE, !cast<MxOpBundle>("MxOp"#S#"AddrMode_e"),
+                        MxEncAddrMode_e<"dst">>;
+  def CLR#S#p : MxClr_M<MTYPE, !cast<MxOpBundle>("MxOp"#S#"AddrMode_p"),
+                        MxEncAddrMode_p<"dst">>;
+  def CLR#S#f : MxClr_M<MTYPE, !cast<MxOpBundle>("MxOp"#S#"AddrMode_f"),
+                        MxEncAddrMode_f<"dst">>;
+  def CLR#S#q : MxClr_M<MTYPE, !cast<MxOpBundle>("MxOp"#S#"AddrMode_q"),
+                        MxEncAddrMode_q<"dst">>;
+  def CLR#S#k : MxClr_M<MTYPE, !cast<MxOpBundle>("MxOp"#S#"AddrMode_k"),
+                        MxEncAddrMode_k<"dst">>;
+}
+
+// Left shift 16 bits lowers to: swap dn -> clr.w dn
+def : Pat<(shl i32:$src, (i32 16)),
+  (SUBREG_TO_REG (CLR16dd (EXTRACT_SUBREG (SWAP MxDRD32:$src),
+  MxSubRegIndex16Lo)), MxSubRegIndex16Lo)>;

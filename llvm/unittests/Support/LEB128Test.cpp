@@ -179,6 +179,29 @@ TEST(LEB128Test, DecodeInvalidULEB128) {
 #undef EXPECT_INVALID_ULEB128
 }
 
+TEST(LEB128Test, DecodeULEB128ErrorCode) {
+  // Report an encoding that reaches the buffer end before its terminating byte.
+  const uint8_t Truncated[] = {0x80};
+  ULEB128DecodeError ErrorCode = ULEB128DecodeError::None;
+  EXPECT_EQ(0u, decodeULEB128(Truncated, nullptr, Truncated + 1, nullptr,
+                              &ErrorCode));
+  EXPECT_EQ(ULEB128DecodeError::UnexpectedEnd, ErrorCode);
+
+  // Report an in-buffer encoding whose value does not fit in uint64_t.
+  const uint8_t TooBig[] = {0x80, 0x80, 0x80, 0x80, 0x80,
+                            0x80, 0x80, 0x80, 0x80, 0x02};
+  ErrorCode = ULEB128DecodeError::None;
+  EXPECT_EQ(0u,
+            decodeULEB128(TooBig, nullptr, TooBig + 10, nullptr, &ErrorCode));
+  EXPECT_EQ(ULEB128DecodeError::TooBig, ErrorCode);
+
+  // Clear a previous error when decoding succeeds.
+  const uint8_t Valid[] = {0x01};
+  ErrorCode = ULEB128DecodeError::TooBig;
+  EXPECT_EQ(1u, decodeULEB128(Valid, nullptr, Valid + 1, nullptr, &ErrorCode));
+  EXPECT_EQ(ULEB128DecodeError::None, ErrorCode);
+}
+
 TEST(LEB128Test, DecodeSLEB128) {
 #define EXPECT_DECODE_SLEB128_EQ(EXPECTED, VALUE) \
   do { \
