@@ -4393,7 +4393,8 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
         !TLI.isOperationLegalOrCustom(N1.getOpcode(), VT)) {
       if (!(TLI.isOperationLegal(ISD::SUB, VT) &&
             TLI.isOperationLegal(ISD::SMIN, VT)))
-        if (SDValue ABD = foldABSToABD(N1.getNode(), SDLoc(N1.getNode()), true))
+        if (SDValue ABD = foldABSToABD(N1.getNode(), SDLoc(N1.getNode()),
+                                       /*IsNegated=*/true))
           return DAG.getNode(ISD::SUB, DL, VT, N0, ABD);
 
       if (SDValue Result = TLI.expandABS(N1.getNode(), DAG, true))
