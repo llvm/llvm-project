@@ -166,9 +166,10 @@ class CmdPythonTestCase(TestBase):
             "command script add my_command --class welcome.TargetnameCommand",
             substrs=[
                 (
-                    'user command "my_command" already exists and force replace was'
-                    " not set by --overwrite or 'settings set"
-                    " interpreter.require-overwrite false'"
+                    'user command "my_command" already exists. To allow'
+                    " overwriting, pass --overwrite to 'command script add'"
+                    " or run 'settings set interpreter.require-overwrite"
+                    " false'"
                 ),
             ],
             error=True,
