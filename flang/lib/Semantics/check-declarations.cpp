@@ -1304,7 +1304,8 @@ void CheckHelper::CheckObjectEntity(
     // blanket SAVE statement or -fno-automatic does not make them an error.
     if (subpDetails /* not a module variable */ && !inDeviceSubprogram &&
         !IsAllocatable(symbol) &&
-        ((attr == common::CUDADataAttr::Device && IsSaved(symbol)) ||
+        ((attr == common::CUDADataAttr::Device &&
+             symbol.attrs().test(Attr::SAVE)) ||
             (attr == common::CUDADataAttr::Managed &&
                 symbol.attrs().test(Attr::SAVE)))) {
       messages_.Say(
