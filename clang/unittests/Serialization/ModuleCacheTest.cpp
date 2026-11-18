@@ -64,6 +64,15 @@ public:
     OS << Contents;
   }
 
+  // Checks that no temporary files were left behind in the module cache.
+  void expectNoTemporaryFiles() {
+    std::error_code EC;
+    for (sys::fs::recursive_directory_iterator I(ModuleCachePath, EC), E;
+         I != E && !EC; I.increment(EC))
+      EXPECT_NE(sys::path::extension(I->path()), ".tmp") << I->path();
+    EXPECT_FALSE(EC);
+  }
+
   void addDuplicateFrameworks() {
     addFile("test.m", R"cpp(
         @import Top;
@@ -426,7 +435,7 @@ TEST_F(ModuleCacheTest, WriteErrorCreateTempFileAfterCreateDirectories) {
 }
 
 // Test that failing to write the contents is reported instead of crashing in
-// the destructor of the stream.
+// the destructor of the stream, and that the temporary file is removed.
 TEST_F(ModuleCacheTest, WriteErrorWrite) {
   SmallString<256> Path(ModuleCachePath);
   sys::path::append(Path, "M.pcm");
@@ -451,10 +460,11 @@ TEST_F(ModuleCacheTest, WriteErrorWrite) {
   EXPECT_EQ(writeError(Path, Contents, /*ReadBack=*/false),
             std::errc::file_too_large);
   EXPECT_FALSE(sys::fs::exists(Path));
+  expectNoTemporaryFiles();
 }
 
 // Test that failing to rename the temporary file to the final path is
-// reported.
+// reported, and that the temporary file is removed.
 TEST_F(ModuleCacheTest, WriteErrorRename) {
   // The final path is a non-empty directory.
   SmallString<256> RelPath(ModuleCacheDir);
@@ -464,6 +474,7 @@ TEST_F(ModuleCacheTest, WriteErrorRename) {
   sys::path::append(Path, "M.pcm");
 
   EXPECT_EQ(writeError(Path, "contents"), std::errc::is_a_directory);
+  expectNoTemporaryFiles();
 }
 #endif
 
