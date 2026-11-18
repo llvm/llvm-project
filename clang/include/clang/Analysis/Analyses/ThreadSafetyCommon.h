@@ -425,6 +425,9 @@ private:
   til::SExpr *translateDeclRefExpr(const DeclRefExpr *DRE,
                                    CallingContext *Ctx) ;
   til::SExpr *translateCXXThisExpr(const CXXThisExpr *TE, CallingContext *Ctx);
+  til::SExpr *translateFieldOwner(const RecordDecl *Owner, CallingContext *Ctx,
+                                  bool &Found);
+  til::Project *translateProject(til::SExpr *BE, const ValueDecl *D);
   til::SExpr *translateMemberExpr(const MemberExpr *ME, CallingContext *Ctx);
   til::SExpr *translateObjCIVarRefExpr(const ObjCIvarRefExpr *IVRE,
                                        CallingContext *Ctx);

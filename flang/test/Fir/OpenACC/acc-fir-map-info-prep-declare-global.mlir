@@ -38,3 +38,19 @@ llvm.func @_QMmEdata_acc_dtor() {
       dataClause(acc_create) structured(false) name("data")
   llvm.return
 }
+
+// A `declare link` variable is mapped with the link flag, which keeps it apart
+// from a `declare create` one.
+fir.global @_QMmElnk : i32
+
+// CHECK-LABEL: llvm.func @_QMmElnk_acc_ctor
+// CHECK: acc.map_info varPtr(%{{.*}} : !fir.ref<i32>)
+// CHECK-SAME: name("lnk") descKind(none) mapFlags(link)
+// CHECK-NOT: acc.declare_link
+llvm.func @_QMmElnk_acc_ctor() {
+  %addr = fir.address_of(@_QMmElnk) : !fir.ref<i32>
+  %link = acc.declare_link varPtr(%addr : !fir.ref<i32>) structured(false)
+      name("lnk") -> !fir.ref<i32>
+  acc.declare_enter dataOperands(%link : !fir.ref<i32>)
+  llvm.return
+}

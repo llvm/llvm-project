@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/ArmSVE/IR/ArmSVEDialect.h"
 #include "mlir/Dialect/ArmSVE/Transforms/Passes.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -313,7 +314,9 @@ struct LegalizeSVEMaskLoadConversion : public OpRewritePattern<memref::LoadOp> {
 /// ```
 /// %collapse_shape = memref.collapse_shape %M [[0], [1, 2, 3]]
 ///   : memref<?x?x2x8xi8> into memref<?x?xi8>
-/// %0 = vector.transfer_read  %collapse_shape[%i, %j], %c0_i8
+/// %c16 = arith.constant 16 : index
+/// %idx = arith.muli %j, %c16 : index
+/// %0 = vector.transfer_read  %collapse_shape[%i, %idx], %c0_i8
 ///   {in_bounds = [false, true]}
 ///   : memref<?x?xi8>, vector<2x[64]xi8>
 /// %1 = vector.shape_cast %0 : vector<2x[64]xi8> to vector<2x[4]x2x8xi8>
@@ -420,8 +423,17 @@ struct LegalizeTransferRead : public OpRewritePattern<vector::TransferReadOp> {
         VectorType::get(shape, origVT.getElementType(),
                         origScalableDims.drop_back(numCollapseDims - 1));
 
-    // Drop the extra (zero) indices.
-    auto indices = readOp.getIndices().drop_back(numCollapseDims - 1);
+    // Drop the extra (zero) indices. The index of the scalable dimension now
+    // indexes the collapsed dimension, so scale it by the size of the
+    // dimensions collapsed into it.
+    SmallVector<Value> indices(
+        readOp.getIndices().drop_back(numCollapseDims - 1));
+    Value scale = arith::ConstantIndexOp::create(
+        rewriter, readOp.getLoc(),
+        ShapedType::getNumElements(
+            origVT.getShape().take_back(numCollapseDims - 1)));
+    indices.back() = rewriter.createOrFold<arith::MulIOp>(
+        readOp.getLoc(), indices.back(), scale);
 
     // Create the new `transfer_read`.
     auto newReadOp = vector::TransferReadOp::create(

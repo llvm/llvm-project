@@ -877,7 +877,8 @@ void OmpStructureChecker::SetAllowedClauseOverride(llvm::omp::Clause clauseId,
 
   auto leafs{llvm::omp::getLeafConstructsOrSelf(dirId)};
   if (leafs.size() > 1) {
-    llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
+    [[maybe_unused]] llvm::omp::Version version{
+        context_.langOptions().getOpenMPVersion()};
     assert(
         (!since || since > version) && "\"since\" should be a future version");
     for (llvm::omp::Directive leaf : leafs) {

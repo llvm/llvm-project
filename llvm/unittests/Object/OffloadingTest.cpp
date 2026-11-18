@@ -308,12 +308,18 @@ TEST(OffloadingTest, checkCompressedRoundTrip) {
   EXPECT_LT(Compressed.size(), Uncompressed.size());
 
   // Verify that the uncompressed and compressed versions are identical.
-  auto HeaderOrErr = OffloadBinary::extractHeader(MemoryBufferRef(
-      StringRef(Compressed.data(), Compressed.size()), "compressed"));
+  MemoryBufferRef CompressedBuf(StringRef(Compressed.data(), Compressed.size()),
+                                "compressed");
+  auto HeaderOrErr = OffloadBinary::extractHeader(CompressedBuf);
   ASSERT_THAT_EXPECTED(HeaderOrErr, Succeeded());
   EXPECT_EQ(Compressed.size(),
             alignTo((*HeaderOrErr)->Size, OffloadBinary::getAlignment()));
   EXPECT_EQ((*HeaderOrErr)->InflatedSize, Uncompressed.size());
+  EXPECT_TRUE(OffloadBinary::isCompressed(CompressedBuf));
+  EXPECT_FALSE(OffloadBinary::isCompressed(MemoryBufferRef(
+      StringRef(Uncompressed.data(), Uncompressed.size()), "uncompressed")));
+  EXPECT_FALSE(OffloadBinary::isCompressed(
+      MemoryBufferRef(StringRef("not a package"), "garbage")));
 
   auto BinaryBuffer = MemoryBuffer::getMemBufferCopy(Compressed);
   auto BinariesOrErr = OffloadBinary::create(*BinaryBuffer);

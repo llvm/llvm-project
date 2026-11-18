@@ -1995,8 +1995,7 @@ bool AreSameModuleSymbol(const Symbol &symbol, const Symbol &other) {
 }
 
 parser::CharBlock MakeNameFromOperator(
-    const parser::DefinedOperator::IntrinsicOperator &op,
-    SemanticsContext &context) {
+    const parser::DefinedOperator::IntrinsicOperator &op) {
   switch (op) {
   case parser::DefinedOperator::IntrinsicOperator::Multiply:
     return parser::CharBlock{"op.*", 4};
@@ -2015,7 +2014,6 @@ parser::CharBlock MakeNameFromOperator(
     return parser::CharBlock{"op.NEQV", 7};
 
   default:
-    context.Say("Unsupported operator in DECLARE REDUCTION"_err_en_US);
     return parser::CharBlock{"op.?", 4};
   }
 }
@@ -2031,8 +2029,8 @@ parser::CharBlock MangleSpecialFunctions(parser::CharBlock name) {
 }
 
 std::string MangleDefinedOperator(parser::CharBlock name) {
-  CHECK(name[0] == '.' && name[name.size() - 1] == '.');
-  return "op" + name.ToString();
+  CHECK(name.starts_with('.') && name.ends_with('.'));
+  return "op" + name.str();
 }
 
 std::string GetReductionFortranId(parser::CharBlock mangledName) {

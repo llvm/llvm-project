@@ -322,6 +322,11 @@ def fdo_concurrent_device_pure_procedures
       HelpText<"Emit a device version of every pure procedure defined in the "
                "file when `do concurrent` loops are mapped to the device">;
 
+def fimplicit_default_mapper_allocatable_members : Flag<["-"], "fimplicit-default-mapper-allocatable-members">,
+  Group<f_Group>, HelpText<"Enable implicit allocatable member maps in compiler-generated OpenMP default mappers">;
+def fno_implicit_default_mapper_allocatable_members : Flag<["-"], "fno-implicit-default-mapper-allocatable-members">,
+  Group<f_Group>, HelpText<"Disable implicit allocatable member maps in compiler-generated OpenMP default mappers">;
+
 def J : JoinedOrSeparate<["-"], "J">,
   Flags<[RenderJoined]>, Group<gfortran_Group>, Alias<module_dir>;
 

@@ -45,6 +45,14 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  arpa_nameser_macros
+  HDRS
+    arpa_nameser_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.arpa_nameser_macros
+)
+
+add_proxy_header_library(
   errno_macros
   HDRS
     errno_macros.h
@@ -261,6 +269,14 @@ add_proxy_header_library(
     libc.include.llvm-libc-macros.sys_sem_macros
 )
 
+add_proxy_header_library(
+  sys_shm_macros
+  HDRS
+    sys_shm_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.sys_shm_macros
+)
+
 add_header_library(sys_socket_overlay HDRS sys_socket_overlay.h)
 add_proxy_header_library(
   sys_socket_macros
@@ -302,6 +318,14 @@ add_proxy_header_library(
     sys_time_macros.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-macros.sys_time_macros
+)
+
+add_proxy_header_library(
+  sys_timerfd_macros
+  HDRS
+    sys_timerfd_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.sys_timerfd_macros
 )
 
 add_proxy_header_library(
