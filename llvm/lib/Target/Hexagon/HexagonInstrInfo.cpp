@@ -5007,7 +5007,8 @@ void HexagonInstrInfo::moveDependentDebugValues(MachineInstr &First,
   // variables are copied, so that their order holds.
   SmallVector<const DILocalVariable *, 4> Vars;
   for (MachineInstr &MI : Gap)
-    if (MI.isDebugValue() && MI.readsRegister(DefReg, TRI) &&
+    if (MI.isDebugValue() && !MI.isDebugEntryValue() &&
+        MI.readsRegister(DefReg, TRI) &&
         !is_contained(Vars, MI.getDebugVariable()))
       Vars.push_back(MI.getDebugVariable());
 
@@ -5026,7 +5027,7 @@ void HexagonInstrInfo::moveDependentDebugValues(MachineInstr &First,
     if (CanMove)
       MBB.insert(FinalPos, MF.CloneMachineInstr(MI));
   for (MachineInstr *MI : Group)
-    if (MI->readsRegister(DefReg, TRI))
+    if (!MI->isDebugEntryValue() && MI->readsRegister(DefReg, TRI))
       MI->setDebugValueUndef();
 }
 
