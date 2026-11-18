@@ -470,16 +470,22 @@ class _BodyBuilder:
     def _unary_exp(self, x: Value) -> Value:
         if isinstance(x.type, FloatType):
             return math.ExpOp(x).result
+        if _is_complex_type(x.type):
+            return complex.ExpOp(x).result
         raise NotImplementedError("Unsupported 'exp' operand: {x}")
 
     def _unary_log(self, x: Value) -> Value:
         if isinstance(x.type, FloatType):
             return math.LogOp(x).result
+        if _is_complex_type(x.type):
+            return complex.LogOp(x).result
         raise NotImplementedError("Unsupported 'log' operand: {x}")
 
     def _unary_abs(self, x: Value) -> Value:
         if isinstance(x.type, FloatType):
             return math.AbsFOp(x).result
+        if _is_complex_type(x.type):
+            return complex.AbsOp(x).result
         raise NotImplementedError("Unsupported 'abs' operand: {x}")
 
     def _unary_ceil(self, x: Value) -> Value:
@@ -498,6 +504,11 @@ class _BodyBuilder:
         if isinstance(x.type, ComplexType):
             return complex.NegOp(x).result
         raise NotImplementedError("Unsupported 'negf' operand: {x}")
+
+    def _unary_conj(self, x: Value) -> Value:
+        if _is_complex_type(x.type):
+            return complex.ConjOp(x).result
+        raise NotImplementedError("Unsupported 'conj' operand: {x}")
 
     def _binary_add(self, lhs: Value, rhs: Value) -> Value:
         if isinstance(lhs.type, FloatType):
