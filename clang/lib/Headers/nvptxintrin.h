@@ -199,7 +199,7 @@ _DEFAULT_FN_ATTRS [[noreturn]] static __inline__ void __gpu_exit(void) {
 // Suspend the thread briefly to assist the scheduler during busy loops.
 _DEFAULT_FN_ATTRS static __inline__ void __gpu_thread_suspend(void) {
   if (__nvvm_reflect("__CUDA_ARCH") >= 700)
-    asm("nanosleep.u32 64;" ::: "memory");
+    __nvvm_nanosleep(64);
 }
 
 _Pragma("omp end declare variant");
