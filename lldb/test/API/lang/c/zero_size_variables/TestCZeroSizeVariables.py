@@ -9,6 +9,9 @@ from lldbsuite.test import lldbutil
 
 
 class TestCZeroSizeVariables(TestBase):
+    # The MSVC ABI gives an empty C struct a nonzero size, and CodeView omits
+    # variables that have no location.
+    @skipIfWindows
     def test(self):
         self.build()
         lldbutil.run_to_name_breakpoint(self, "take")
