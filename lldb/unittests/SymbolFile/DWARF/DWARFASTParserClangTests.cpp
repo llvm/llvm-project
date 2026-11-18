@@ -15,6 +15,7 @@
 #include "lldb/Core/Debugger.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -172,6 +173,96 @@ DWARF:
 
   EXPECT_THAT(ast_parser.GetDeclContextToDIEMapKeys(),
               testing::UnorderedElementsAre(decl_ctxs[0], decl_ctxs[3]));
+}
+
+TEST_F(DWARFASTParserClangTests, ParseChildArrayInfoStaticProperties) {
+  const char *yamldata = R"(
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_386
+DWARF:
+  debug_abbrev:
+    - Table:
+        - Code:            0x00000001
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+        - Code:            0x00000002
+          Tag:             DW_TAG_array_type
+          Children:        DW_CHILDREN_yes
+        - Code:            0x00000003
+          Tag:             DW_TAG_subrange_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_lower_bound
+              Form:            DW_FORM_sdata
+            - Attribute:       DW_AT_upper_bound
+              Form:            DW_FORM_sdata
+            - Attribute:       DW_AT_byte_stride
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_bit_stride
+              Form:            DW_FORM_data1
+        - Code:            0x00000004
+          Tag:             DW_TAG_subrange_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_count
+              Form:            DW_FORM_data1
+        - Code:            0x00000005
+          Tag:             DW_TAG_subrange_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_upper_bound
+              Form:            DW_FORM_data1
+  debug_info:
+    - Version:         4
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x00000001
+          Values:
+            - Value:           0x0000000000000008
+        - AbbrCode:        0x00000002
+        - AbbrCode:        0x00000003
+          Values:
+            - Value:           0x0000000000000002
+            - Value:           0x0000000000000005
+            - Value:           0x0000000000000004
+            - Value:           0x0000000000000020
+        - AbbrCode:        0x00000004
+          Values:
+            - Value:           0x0000000000000003
+        - AbbrCode:        0x00000005
+          Values:
+            - Value:           0x0000000000000005
+        - AbbrCode:        0x00000000
+        - AbbrCode:        0x00000000
+)";
+
+  YAMLModuleTester t(yamldata);
+  DWARFUnit *unit = t.GetDwarfUnit();
+  ASSERT_NE(unit, nullptr);
+
+  DWARFDIE array_die = unit->DIE().GetFirstChild();
+  ASSERT_TRUE(array_die.IsValid());
+
+  std::optional<SymbolFile::ArrayInfo> array_info =
+      DWARFASTParser::ParseChildArrayInfo(array_die);
+  ASSERT_TRUE(array_info);
+
+  ASSERT_EQ(array_info->element_orders.size(), 3u);
+  ASSERT_TRUE(array_info->element_orders[0]);
+  EXPECT_EQ(*array_info->element_orders[0], 4u);
+  ASSERT_TRUE(array_info->element_orders[1]);
+  EXPECT_EQ(*array_info->element_orders[1], 3u);
+  ASSERT_TRUE(array_info->element_orders[2]);
+  EXPECT_EQ(*array_info->element_orders[2], 5u);
+  EXPECT_EQ(array_info->byte_stride, 4u);
+  EXPECT_EQ(array_info->bit_stride, 32u);
 }
 
 TEST_F(DWARFASTParserClangTests, TestCallingConventionParsing) {
