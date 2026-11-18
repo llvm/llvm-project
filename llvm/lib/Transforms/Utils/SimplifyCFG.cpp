@@ -1487,6 +1487,7 @@ bool SimplifyCFGOpt::performValueComparisonIntoPredecessorFolding(
 static void cloneInstsIntoSuccessors(BasicBlock *BB,
                                      ArrayRef<Instruction *> Insts,
                                      AssumptionCache *AC) {
+  Module *M = BB->getModule();
   SmallPtrSet<BasicBlock *, 8> Visited;
   for (BasicBlock *Succ : successors(BB)) {
     if (!Visited.insert(Succ).second)
@@ -1496,6 +1497,10 @@ static void cloneInstsIntoSuccessors(BasicBlock *BB,
     ValueToValueMapTy VMap;
     BasicBlock::iterator InsertPt = Succ->getFirstInsertionPt();
     BasicBlock::iterator DbgCursor = BB->begin();
+    auto RemapRecords = [&](iterator_range<DbgRecord::self_iterator> Records) {
+      RemapDbgRecordRange(M, Records, VMap,
+                          RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+    };
     for (Instruction *I : Insts) {
       Instruction *NewI = I->clone();
       NewI->insertInto(Succ, InsertPt);
@@ -1505,8 +1510,8 @@ static void cloneInstsIntoSuccessors(BasicBlock *BB,
       RemapInstruction(NewI, VMap,
                        RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
       for (; &*DbgCursor != I; ++DbgCursor)
-        NewI->cloneDebugInfoFrom(&*DbgCursor);
-      NewI->cloneDebugInfoFrom(I);
+        RemapRecords(NewI->cloneDebugInfoFrom(&*DbgCursor));
+      RemapRecords(NewI->cloneDebugInfoFrom(I));
       DbgCursor = std::next(DbgCursor);
       VMap[I] = NewI;
       if (auto *Assume = dyn_cast<AssumeInst>(NewI))
@@ -1517,8 +1522,8 @@ static void cloneInstsIntoSuccessors(BasicBlock *BB,
     // the block.
     for (auto It = BB->end(); It != DbgCursor;) {
       --It;
-      InsertPt->cloneDebugInfoFrom(&*It, std::nullopt,
-                                   /*InsertAtHead=*/true);
+      RemapRecords(InsertPt->cloneDebugInfoFrom(&*It, std::nullopt,
+                                                /*InsertAtHead=*/true));
     }
   }
 }

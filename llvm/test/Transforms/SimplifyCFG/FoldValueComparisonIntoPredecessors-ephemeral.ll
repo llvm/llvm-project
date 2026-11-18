@@ -181,16 +181,16 @@ define void @debug_records_remap(i32 %idx) !dbg !5 {
 ; CHECK-NEXT:    ]
 ; CHECK:       [[CALL0]]:
 ; CHECK-NEXT:    [[INRANGE1:%.*]] = icmp ult i32 [[IDX]], 2
-; CHECK-NEXT:      #dbg_value(i1 poison, [[META8:![0-9]+]], !DIExpression(), [[META9:![0-9]+]])
+; CHECK-NEXT:      #dbg_value(i1 [[INRANGE1]], [[META8:![0-9]+]], !DIExpression(), [[META9:![0-9]+]])
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[INRANGE1]])
-; CHECK-NEXT:      #dbg_value(i1 poison, [[META8]], !DIExpression(), [[META9]])
+; CHECK-NEXT:      #dbg_value(i1 [[INRANGE1]], [[META8]], !DIExpression(), [[META9]])
 ; CHECK-NEXT:    call void @fun0(i32 [[IDX]])
 ; CHECK-NEXT:    br label %[[DONE]]
 ; CHECK:       [[CALL1]]:
 ; CHECK-NEXT:    [[INRANGE2:%.*]] = icmp ult i32 [[IDX]], 2
-; CHECK-NEXT:      #dbg_value(i1 poison, [[META8]], !DIExpression(), [[META9]])
+; CHECK-NEXT:      #dbg_value(i1 [[INRANGE2]], [[META8]], !DIExpression(), [[META9]])
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[INRANGE2]])
-; CHECK-NEXT:      #dbg_value(i1 poison, [[META8]], !DIExpression(), [[META9]])
+; CHECK-NEXT:      #dbg_value(i1 [[INRANGE2]], [[META8]], !DIExpression(), [[META9]])
 ; CHECK-NEXT:    call void @fun1(i32 [[IDX]])
 ; CHECK-NEXT:    br label %[[DONE]]
 ; CHECK:       [[DONE]]:
