@@ -14,7 +14,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-bfloat16 hypotbf16(bfloat16 x, bfloat16 y);
+__bf16 hypotbf16(__bf16(x), __bf16(y));
 
 } // namespace LIBC_NAMESPACE_DECL
 
