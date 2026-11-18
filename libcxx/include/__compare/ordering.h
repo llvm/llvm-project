@@ -49,6 +49,11 @@ struct _CmpUnspecifiedParam {
   {
     (void)__zero;
   }
+
+  // Reject any other type and reject int lvalues.
+  template <class T>
+  _CmpUnspecifiedParam(T&&)                 = delete;
+  _CmpUnspecifiedParam(const volatile int&) = delete;
 };
 
 class partial_ordering {
