@@ -167,6 +167,10 @@ llvm::Error handle_launch(GDBRemoteCommunicationServerLLGS &gdb_server,
   FileSystem::Instance().Resolve(cwd_spec);
   info.SetWorkingDirectory(cwd_spec);
   info.GetEnvironment() = Host::GetEnvironment();
+#ifdef _WIN32
+  if (::getenv("LLDB_LAUNCH_FLAG_USE_PIPES"))
+    info.SetSTDIOWindowSize(0, 0);
+#endif
 
   gdb_server.SetLaunchInfo(info);
 
