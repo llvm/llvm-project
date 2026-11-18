@@ -832,24 +832,37 @@ struct TanTanhOpConversion : public OpConversionPattern<Op> {
 
     if (!arith::bitEnumContainsAll(fmf, arith::FastMathFlags::nnan |
                                             arith::FastMathFlags::ninf)) {
-      Value absReal = math::AbsFOp::create(b, real, fmf);
       Value zero = arith::ConstantOp::create(b, elementType,
                                              b.getFloatAttr(elementType, 0.0));
       Value nan = cst(APFloat::getNaN(floatSemantics));
-
-      Value absRealIsInf = arith::CmpFOp::create(b, arith::CmpFPredicate::OEQ,
-                                                 absReal, inf, fmf);
+      bool noInfs = arith::bitEnumContainsAll(fmf, arith::FastMathFlags::ninf);
+      Value imagIsNotFinite;
+      if (noInfs) {
+        imagIsNotFinite =
+            arith::CmpFOp::create(b, arith::CmpFPredicate::UNO, imag, imag);
+      } else {
+        Value absImag = math::AbsFOp::create(b, imag, fmf);
+        imagIsNotFinite =
+            arith::CmpFOp::create(b, arith::CmpFPredicate::UGE, absImag, inf);
+      }
       Value imagIsZero =
-          arith::CmpFOp::create(b, arith::CmpFPredicate::OEQ, imag, zero, fmf);
-      Value absRealIsNotInf = arith::XOrIOp::create(
-          b, absRealIsInf, arith::ConstantIntOp::create(b, true, /*width=*/1));
+          arith::CmpFOp::create(b, arith::CmpFPredicate::OEQ, imag, zero);
 
-      Value imagNumIsNaN = arith::CmpFOp::create(b, arith::CmpFPredicate::UNO,
-                                                 imagNum, imagNum, fmf);
-      Value resultRealIsNaN =
-          arith::AndIOp::create(b, imagNumIsNaN, absRealIsNotInf);
-      Value resultImagIsZero = arith::OrIOp::create(
-          b, imagIsZero, arith::AndIOp::create(b, absRealIsInf, imagNumIsNaN));
+      Value resultRealIsNaN = imagIsNotFinite;
+      Value resultImagIsZero = imagIsZero;
+      if (!noInfs) {
+        Value absReal = math::AbsFOp::create(b, real, fmf);
+        Value absRealIsInf =
+            arith::CmpFOp::create(b, arith::CmpFPredicate::OEQ, absReal, inf);
+        Value absRealIsNotInf = arith::XOrIOp::create(
+            b, absRealIsInf,
+            arith::ConstantIntOp::create(b, true, /*width=*/1));
+        resultRealIsNaN =
+            arith::AndIOp::create(b, imagIsNotFinite, absRealIsNotInf);
+        resultImagIsZero = arith::OrIOp::create(
+            b, imagIsZero,
+            arith::AndIOp::create(b, absRealIsInf, imagIsNotFinite));
+      }
 
       resultReal = arith::SelectOp::create(b, resultRealIsNaN, nan, resultReal);
       resultImag =
