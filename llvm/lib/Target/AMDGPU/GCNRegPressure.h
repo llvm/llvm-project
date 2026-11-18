@@ -116,19 +116,34 @@ struct GCNRegPressure {
   }
 
   /// Peak ArchVGPR32 and AccVGPR32 pressure over a set of program points, after
-  /// distributing the AVGPR pressure of each point with getBankedVGPRNum().
+  /// distributing the AVGPR pressure of each point with getBankedVGPRNum()
+  /// against the limits of the peaks.
   struct BankedVGPRPeaks {
+    unsigned ArchVGPRLimit = 0;
+    unsigned AGPRLimit = 0;
     unsigned ArchVGPRs = 0;
     unsigned AGPRs = 0;
+    /// Peak combined-file pressure of a single point.
+    unsigned PointUnifiedVGPRs = 0;
 
-    void add(const GCNRegPressure &RP, unsigned ArchLimit, unsigned AccLimit) {
-      auto [Arch, Acc] = RP.getBankedVGPRNum(ArchLimit, AccLimit);
+    BankedVGPRPeaks() = default;
+    BankedVGPRPeaks(unsigned ArchLimit, unsigned AccLimit)
+        : ArchVGPRLimit(ArchLimit), AGPRLimit(AccLimit) {}
+
+    void add(const GCNRegPressure &RP) {
+      auto [Arch, Acc] = RP.getBankedVGPRNum(ArchVGPRLimit, AGPRLimit);
       ArchVGPRs = std::max(ArchVGPRs, Arch);
       AGPRs = std::max(AGPRs, Acc);
+      PointUnifiedVGPRs =
+          std::max(PointUnifiedVGPRs, getBankedUnifiedVGPRNum(Arch, Acc));
     }
 
-    /// \returns the combined-file pressure. The banks use separate ranges of
-    /// the file, so this is the sum of both peaks.
+    /// Clears the peaks, keeping the limits.
+    void clear() { ArchVGPRs = AGPRs = PointUnifiedVGPRs = 0; }
+
+    /// \returns the combined-file pressure of the two peaks. The banks use
+    /// separate ranges of the file, so this is the sum of both peaks, which can
+    /// exceed PointUnifiedVGPRs.
     unsigned getUnifiedVGPRNum() const {
       return getBankedUnifiedVGPRNum(ArchVGPRs, AGPRs);
     }
@@ -401,15 +416,25 @@ protected:
   MachineBasicBlock::const_iterator LastTrackedMI;
   mutable const MachineRegisterInfo *MRI = nullptr;
   std::function<void(const GCNRegPressure &)> PressureCallback;
+  /// Banked VGPR peaks of the points folded into MaxPressure, one per set of
+  /// bank limits.
+  SmallVector<GCNRegPressure::BankedVGPRPeaks, 2> BankedPeaks;
 
   GCNRPTracker(LiveIntervals &LIS_) : LIS(LIS_) {}
 
-  /// Folds the pressure \p RP of one program point into MaxPressure and passes
-  /// it to the pressure callback.
+  /// Folds the pressure \p RP of one program point into MaxPressure and the
+  /// banked peaks, and passes it to the pressure callback.
   void updateMaxPressure(const GCNRegPressure &RP) {
     MaxPressure = maxPerRegFile(MaxPressure, RP);
+    for (GCNRegPressure::BankedVGPRPeaks &Peaks : BankedPeaks)
+      Peaks.add(RP);
     if (PressureCallback)
       PressureCallback(RP);
+  }
+
+  void clearBankedPeaks() {
+    for (GCNRegPressure::BankedVGPRPeaks &Peaks : BankedPeaks)
+      Peaks.clear();
   }
 
   /// Resets tracker before or \p After the provided \p MI, which can be a debug
@@ -434,11 +459,30 @@ public:
     return LastTrackedMI.isValid() ? &*LastTrackedMI : nullptr;
   }
 
-  void clearMaxPressure() { MaxPressure.clear(); }
+  void clearMaxPressure() {
+    MaxPressure.clear();
+    clearBankedPeaks();
+  }
 
   const GCNRegPressure &getMaxPressure() const { return MaxPressure; }
 
-  void resetMaxPressure() { MaxPressure = CurPressure; }
+  void resetMaxPressure() {
+    MaxPressure = CurPressure;
+    clearBankedPeaks();
+    for (GCNRegPressure::BankedVGPRPeaks &Peaks : BankedPeaks)
+      Peaks.add(CurPressure);
+  }
+
+  /// Makes the tracker also keep banked VGPR peaks, one for the bank limits of
+  /// each element of \p Peaks. Set this before resetting the tracker.
+  void trackBankedPeaks(ArrayRef<GCNRegPressure::BankedVGPRPeaks> Peaks) {
+    BankedPeaks.assign(Peaks.begin(), Peaks.end());
+    clearBankedPeaks();
+  }
+
+  ArrayRef<GCNRegPressure::BankedVGPRPeaks> getBankedPeaks() const {
+    return BankedPeaks;
+  }
 
   /// Sets a function that the tracker calls with the pressure of every program
   /// point that it folds into the maximum pressure. A user can compute there a
@@ -544,7 +588,7 @@ public:
   /// \p return MaxPressure and clear it.
   GCNRegPressure moveMaxPressure() {
     auto Res = MaxPressure;
-    MaxPressure.clear();
+    clearMaxPressure();
     return Res;
   }
 
