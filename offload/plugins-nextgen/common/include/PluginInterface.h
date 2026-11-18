@@ -13,6 +13,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <deque>
 #include <limits>
 #include <list>
@@ -995,6 +996,58 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
                    __tgt_async_info *AsyncInfo);
   virtual Error dataMemcpyImpl(void *DstPtr, const void *SrcPtr, int64_t Size,
                                AsyncInfoWrapperTy &AsyncInfoWrapper) = 0;
+
+  /// Copy a 2D/3D region between pitched layouts. Offsets and pitches are in
+  /// bytes for x; y counts rows and z counts slices.
+  struct Copy3DTy {
+    void *DstPtr;
+    const void *SrcPtr;
+    size_t DstOffset[3];
+    size_t SrcOffset[3];
+    size_t DstPitch;
+    size_t DstSlicePitch;
+    size_t SrcPitch;
+    size_t SrcSlicePitch;
+    size_t Extent[3];
+    bool DstIsHost;
+    bool SrcIsHost;
+
+    /// The slice pitches only matter if the copy spans or starts past the
+    /// first slice.
+    bool usesSlices() const {
+      return Extent[2] > 1 || DstOffset[2] > 0 || SrcOffset[2] > 0;
+    }
+
+    /// Whether all offsets, extents and pitches fit in 32 bits.
+    bool fitsIn32Bits() const {
+      constexpr size_t Max = std::numeric_limits<uint32_t>::max();
+      for (size_t I = 0; I < 3; ++I)
+        if (DstOffset[I] > Max || SrcOffset[I] > Max || Extent[I] > Max)
+          return false;
+      if (DstPitch > Max || SrcPitch > Max)
+        return false;
+      return !usesSlices() || (DstSlicePitch <= Max && SrcSlicePitch <= Max);
+    }
+
+    /// Perform the copy on the CPU. Both pointers must be host accessible.
+    void copyHost() const {
+      auto *Dst = static_cast<char *>(DstPtr);
+      auto *Src = static_cast<const char *>(SrcPtr);
+      for (size_t Z = 0; Z < Extent[2]; ++Z)
+        for (size_t Y = 0; Y < Extent[1]; ++Y)
+          std::memcpy(Dst + (DstOffset[2] + Z) * DstSlicePitch +
+                          (DstOffset[1] + Y) * DstPitch + DstOffset[0],
+                      Src + (SrcOffset[2] + Z) * SrcSlicePitch +
+                          (SrcOffset[1] + Y) * SrcPitch + SrcOffset[0],
+                      Extent[0]);
+    }
+  };
+  Error dataMemcpy3D(const Copy3DTy &Copy, __tgt_async_info *AsyncInfo);
+  virtual Error dataMemcpy3DImpl(const Copy3DTy &Copy,
+                                 AsyncInfoWrapperTy &AsyncInfoWrapper) {
+    return Plugin::error(error::ErrorCode::UNSUPPORTED,
+                         "3D copies are not supported by this plugin");
+  }
 
   /// Exchange data between devices (device to device transfer). Calling this
   /// function is only valid if GenericPlugin::isDataExchangable() passing the
