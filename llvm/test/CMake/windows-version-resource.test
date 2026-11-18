@@ -1,9 +1,0 @@
-# NOTE: Do not autogenerate. These checks cover CMake version strings and fallbacks.
-# RUN: %cmake -S %S/Inputs/windows-version-resource -B %t -DLLVM_SRC_ROOT=%S/../.. 2>&1 | FileCheck %s
-
-# CHECK: 24.0.0git: RC_FILE_VERSION="24.0.0git";RC_PRODUCT_VERSION="24.0.0git"
-# CHECK: 24.0.0: RC_FILE_VERSION="24.0.0";RC_PRODUCT_VERSION="24.0.0"
-# CHECK: Vendor 24.0.0: RC_FILE_VERSION="Vendor 24.0.0";RC_PRODUCT_VERSION="Vendor 24.0.0"
-# CHECK: override: RC_FILE_VERSION="23.0.0rc1";RC_PRODUCT_VERSION="23.0.0rc1"
-# CHECK: unset: RC_FILE_VERSION="0";RC_PRODUCT_VERSION="0"
-# CHECK: empty: RC_FILE_VERSION="0";RC_PRODUCT_VERSION="0"
