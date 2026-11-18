@@ -1724,7 +1724,7 @@ void Sema::ActOnEndOfTranslationUnit() {
   }
 
   if (!Diags.isIgnored(diag::warn_mismatched_delete_new, SourceLocation())) {
-    if (ExternalSource)
+    if (ExternalSource && !PP.isIncrementalProcessingEnabled())
       ExternalSource->ReadMismatchingDeleteExpressions(DeleteExprs);
     for (const auto &DeletedFieldInfo : DeleteExprs) {
       for (const auto &DeleteExprLoc : DeletedFieldInfo.second) {
@@ -1732,6 +1732,7 @@ void Sema::ActOnEndOfTranslationUnit() {
                                   DeleteExprLoc.second);
       }
     }
+    DeleteExprs.clear();
   }
 
   AnalysisWarnings.IssueWarnings(Context.getTranslationUnitDecl());
