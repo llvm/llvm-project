@@ -104,8 +104,8 @@ done:
 }
 
 ; Same as the test above, but with debug records on duplicated instructions.
-define void @goal_debug_records(i32 %idx) !dbg !2 {
-; CHECK-LABEL: define void @goal_debug_records(
+define void @debug_records(i32 %idx) !dbg !2 {
+; CHECK-LABEL: define void @debug_records(
 ; CHECK-SAME: i32 [[IDX:%.*]]) !dbg [[DBG1:![0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:      #dbg_value(i32 0, [[META5:![0-9]+]], !DIExpression(), [[META6:![0-9]+]])
@@ -171,12 +171,64 @@ done:
   ret void
 }
 
+define void @debug_records_remap(i32 %idx) !dbg !5 {
+; CHECK-LABEL: define void @debug_records_remap(
+; CHECK-SAME: i32 [[IDX:%.*]]) !dbg [[DBG7:![0-9]+]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    switch i32 [[IDX]], label %[[CALL1:.*]] [
+; CHECK-NEXT:      i32 -1, label %[[DONE:.*]]
+; CHECK-NEXT:      i32 0, label %[[CALL0:.*]]
+; CHECK-NEXT:    ]
+; CHECK:       [[CALL0]]:
+; CHECK-NEXT:    [[INRANGE1:%.*]] = icmp ult i32 [[IDX]], 2
+; CHECK-NEXT:      #dbg_value(i1 poison, [[META8:![0-9]+]], !DIExpression(), [[META9:![0-9]+]])
+; CHECK-NEXT:    call void @llvm.assume(i1 [[INRANGE1]])
+; CHECK-NEXT:      #dbg_value(i1 poison, [[META8]], !DIExpression(), [[META9]])
+; CHECK-NEXT:    call void @fun0(i32 [[IDX]])
+; CHECK-NEXT:    br label %[[DONE]]
+; CHECK:       [[CALL1]]:
+; CHECK-NEXT:    [[INRANGE2:%.*]] = icmp ult i32 [[IDX]], 2
+; CHECK-NEXT:      #dbg_value(i1 poison, [[META8]], !DIExpression(), [[META9]])
+; CHECK-NEXT:    call void @llvm.assume(i1 [[INRANGE2]])
+; CHECK-NEXT:      #dbg_value(i1 poison, [[META8]], !DIExpression(), [[META9]])
+; CHECK-NEXT:    call void @fun1(i32 [[IDX]])
+; CHECK-NEXT:    br label %[[DONE]]
+; CHECK:       [[DONE]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %test = icmp eq i32 %idx, -1
+  br i1 %test, label %done, label %dispatch
+
+dispatch:
+  %is0 = icmp eq i32 %idx, 0
+  %inrange = icmp ult i32 %idx, 2
+    #dbg_value(i1 %inrange, !6, !DIExpression(), !7)
+  call void @llvm.assume(i1 %inrange)
+    #dbg_value(i1 %inrange, !6, !DIExpression(), !7)
+  br i1 %is0, label %call0, label %call1
+
+call0:
+  call void @fun0(i32 %idx)
+  br label %done
+
+call1:
+  call void @fun1(i32 %idx)
+  br label %done
+
+done:
+  ret void
+}
+
 !llvm.module.flags = !{!0}
 !0 = !{i32 2, !"Debug Info Version", i32 3}
 !1 = distinct !DICompileUnit(language: 0, file: !DIFile(filename: "a", directory: ""))
 !2 = distinct !DISubprogram(type: !DISubroutineType(types: null), unit: !1)
 !3 = !DILocalVariable(scope: !2)
 !4 = !DILocation(scope: !2)
+!5 = distinct !DISubprogram(type: !DISubroutineType(types: null), unit: !1)
+!6 = !DILocalVariable(scope: !5)
+!7 = !DILocation(scope: !5)
 ;.
 ; CHECK: [[DBG1]] = distinct !DISubprogram(scope: null, type: [[META2:![0-9]+]], spFlags: DISPFlagDefinition, unit: [[META3:![0-9]+]])
 ; CHECK: [[META2]] = !DISubroutineType(types: null)
@@ -184,4 +236,7 @@ done:
 ; CHECK: [[META4]] = !DIFile(filename: "{{.*}}a", directory: {{.*}})
 ; CHECK: [[META5]] = !DILocalVariable(scope: [[DBG1]])
 ; CHECK: [[META6]] = !DILocation(line: 0, scope: [[DBG1]])
+; CHECK: [[DBG7]] = distinct !DISubprogram(scope: null, type: [[META2]], spFlags: DISPFlagDefinition, unit: [[META3]])
+; CHECK: [[META8]] = !DILocalVariable(scope: [[DBG7]])
+; CHECK: [[META9]] = !DILocation(line: 0, scope: [[DBG7]])
 ;.
