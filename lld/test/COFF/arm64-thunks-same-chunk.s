@@ -5,7 +5,8 @@
 
 // The margin is wider than the range of a TBZ, so without this every TBZ got a
 // thunk. The one to near, in its own chunk, stays direct; the one to far gets
-// the one thunk. near is a function so that the assembler keeps the relocation.
+// the one thunk. near is declared as a function: llvm-mc resolves a branch to a
+// plain label in the same section itself, so lld would never see that branch.
 
 // VERBOSE: Added 1 thunks with margin {{.*}} in 1 passes
 

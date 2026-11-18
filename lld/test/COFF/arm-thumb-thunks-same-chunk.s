@@ -6,7 +6,8 @@
 // A branch to a target in its own section chunk gets no thunk while it is in
 // range, even within the margin, because its distance can't change. A thunk
 // would clobber r12. far_target is out of range and gets the one thunk.
-// local_target is a function so that the assembler keeps the relocation.
+// local_target is declared as a function: llvm-mc resolves a branch to a plain
+// label in the same section itself, so lld would never see that branch.
 
 // VERBOSE: Added 1 thunks with margin {{.*}} in 1 passes
 
