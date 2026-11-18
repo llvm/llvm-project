@@ -12,10 +12,9 @@ define i1 @test(double %circ_radius, ptr %x, double %0) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = fadd <4 x double> [[TMP4]], <double -0.000000e+00, double -0.000000e+00, double 0.000000e+00, double -0.000000e+00>
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x double> [[TMP3]], <4 x double> <double 0.000000e+00, double poison, double 0.000000e+00, double 0.000000e+00>, <4 x i32> <i32 4, i32 0, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP7:%.*]] = fmul <4 x double> [[TMP5]], [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x double> [[TMP7]], <4 x double> poison, <4 x i32> <i32 1, i32 2, i32 poison, i32 0>
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x double> poison, double [[CIRC_RADIUS]], i64 0
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x double> [[TMP9]], <4 x double> poison, <4 x i32> <i32 poison, i32 poison, i32 0, i32 poison>
-; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x double> [[TMP8]], <4 x double> [[TMP10]], <4 x i32> <i32 0, i32 1, i32 6, i32 3>
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x double> [[TMP7]], <4 x double> poison, <4 x i32> <i32 poison, i32 poison, i32 poison, i32 0>
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x double> [[TMP8]], double [[CIRC_RADIUS]], i64 2
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x double> [[TMP9]], <4 x double> [[TMP7]], <4 x i32> <i32 5, i32 6, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP12:%.*]] = fadd <4 x double> [[TMP7]], [[TMP11]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = call <4 x double> @llvm.sqrt.v4f64(<4 x double> [[TMP12]])
 ; CHECK-NEXT:    [[TMP14:%.*]] = fcmp olt <4 x double> [[TMP13]], splat (double 1.000000e+00)

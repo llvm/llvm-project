@@ -30,8 +30,7 @@ define void @fast_two_sum_products(ptr %dst, ptr %src, ptr %tab) {
 ; CHECK-NEXT:    [[TMP11:%.*]] = fsub <2 x double> [[TMP10]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = fsub <2 x double> [[TMP10]], [[TMP11]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = fsub <2 x double> [[TMP6]], [[TMP11]]
-; CHECK-NEXT:    [[TMP19:%.*]] = shufflevector <2 x double> [[TMP21]], <2 x double> [[TMP23]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP14:%.*]] = fsub <2 x double> [[TMP19]], [[TMP12]]
+; CHECK-NEXT:    [[TMP14:%.*]] = fsub <2 x double> [[TMP9]], [[TMP12]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = fadd <2 x double> [[TMP13]], [[TMP14]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <2 x double> [[TMP10]], i64 0
 ; CHECK-NEXT:    store double [[TMP16]], ptr [[DST]], align 8

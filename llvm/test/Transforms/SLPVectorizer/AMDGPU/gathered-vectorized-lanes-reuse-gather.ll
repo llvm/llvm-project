@@ -9,7 +9,7 @@
 ; COST-NEXT: Pass:            slp-vectorizer
 ; COST-NEXT: Name:            StoresVectorized
 ; COST-NEXT: Function:        reuse_first_gather
-; COST:        - Cost:            '-5'
+; COST:        - Cost:            '-4'
 ; COST:        - TreeSize:        '8'
 
 define void @reuse_first_gather(ptr addrspace(1) noalias %a, float %x, float %y, ptr addrspace(1) noalias %out) {
@@ -44,7 +44,7 @@ define void @reuse_first_gather(ptr addrspace(1) noalias %a, float %x, float %y,
 ; COST-NEXT: Pass:            slp-vectorizer
 ; COST-NEXT: Name:            StoresVectorized
 ; COST-NEXT: Function:        reuse_second_gather
-; COST:        - Cost:            '-5'
+; COST:        - Cost:            '-4'
 ; COST:        - TreeSize:        '8'
 
 define void @reuse_second_gather(ptr addrspace(1) noalias %a, float %x, float %y, ptr addrspace(1) noalias %out) {

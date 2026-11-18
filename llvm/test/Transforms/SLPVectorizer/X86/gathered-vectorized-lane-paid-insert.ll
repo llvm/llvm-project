@@ -10,7 +10,7 @@
 ; COST-NEXT: Pass:            slp-vectorizer
 ; COST-NEXT: Name:            StoresVectorized
 ; COST-NEXT: Function:        lane_and_constants
-; COST:        - Cost:            '-8'
+; COST:        - Cost:            '-7'
 
 define void @lane_and_constants(ptr noalias %a, ptr noalias %out) {
 ; CHECK-LABEL: define void @lane_and_constants(

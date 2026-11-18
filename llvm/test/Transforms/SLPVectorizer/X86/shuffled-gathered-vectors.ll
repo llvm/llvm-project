@@ -9,10 +9,9 @@ define double @test(<8 x i32> %broadcast.splatinsert9, <8 x i16> %0) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul <16 x i32> [[TMP1]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i16> [[TMP0]], <8 x i16> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP4:%.*]] = sext <16 x i16> [[TMP3]] to <16 x i32>
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <16 x i32> [[TMP4]], <16 x i32> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    [[TMP6:%.*]] = mul <16 x i32> [[TMP1]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = or <16 x i32> [[TMP2]], splat (i32 1)
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <8 x i32> [[TMP5]], <8 x i32> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <16 x i32> [[TMP4]], <16 x i32> poison, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    [[TMP9:%.*]] = mul <16 x i32> [[TMP8]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = or <16 x i32> [[TMP7]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = or <16 x i32> [[TMP10]], [[TMP6]]

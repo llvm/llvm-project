@@ -6,15 +6,13 @@ define void @test(i32 %j.6, i32 %m.4, i8 %v.5, ptr %a, i1 %tobool14.not) {
 ; CHECK-SAME: i32 [[J_6:%.*]], i32 [[M_4:%.*]], i8 [[V_5:%.*]], ptr [[A:%.*]], i1 [[TOBOOL14_NOT:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i8> <i8 0, i8 poison>, i8 [[V_5]], i64 1
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> <i32 poison, i32 poison, i32 1, i32 poison>, i32 [[M_4]], i64 1
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[J_6]], i64 3
 ; CHECK-NEXT:    br label %[[N:.*]]
 ; CHECK:       [[ENTRY_O_CRIT_EDGE:.*]]:
 ; CHECK-NEXT:    br label %[[O:.*]]
 ; CHECK:       [[N]]:
 ; CHECK-NEXT:    [[J_0:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[J_6]], %[[IF_END18:.*]] ]
 ; CHECK-NEXT:    [[L_0:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[L_4:%.*]], %[[IF_END18]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = phi <4 x i32> [ zeroinitializer, %[[ENTRY]] ], [ [[TMP37:%.*]], %[[IF_END18]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = phi <4 x i32> [ zeroinitializer, %[[ENTRY]] ], [ [[TMP42:%.*]], %[[IF_END18]] ]
 ; CHECK-NEXT:    store i32 [[J_0]], ptr [[A]], align 4
 ; CHECK-NEXT:    [[CMP_NOT_NOT:%.*]] = icmp eq i8 [[L_0]], 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 1, i32 poison, i32 3>
@@ -77,7 +75,9 @@ define void @test(i32 %j.6, i32 %m.4, i8 %v.5, ptr %a, i1 %tobool14.not) {
 ; CHECK-NEXT:    [[L_4]] = phi i8 [ 0, %[[Q]] ], [ [[L_3_PH]], %[[O]] ]
 ; CHECK-NEXT:    [[TMP35]] = phi <8 x i32> [ [[TMP41]], %[[Q]] ], [ [[TMP28]], %[[O]] ]
 ; CHECK-NEXT:    [[TMP36:%.*]] = shufflevector <8 x i32> [[TMP35]], <8 x i32> poison, <4 x i32> <i32 4, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP37]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> [[TMP36]], <4 x i32> <i32 4, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP43:%.*]] = shufflevector <4 x i32> [[TMP36]], <4 x i32> <i32 poison, i32 poison, i32 1, i32 poison>, <4 x i32> <i32 0, i32 poison, i32 6, i32 poison>
+; CHECK-NEXT:    [[TMP44:%.*]] = insertelement <4 x i32> [[TMP43]], i32 [[M_4]], i64 1
+; CHECK-NEXT:    [[TMP42]] = insertelement <4 x i32> [[TMP44]], i32 [[J_6]], i64 3
 ; CHECK-NEXT:    br i1 [[TOBOOL14_NOT]], label %[[N]], label %[[P]]
 ;
 entry:

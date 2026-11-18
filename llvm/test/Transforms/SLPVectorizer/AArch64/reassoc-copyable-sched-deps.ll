@@ -39,7 +39,7 @@ define fastcc i1 @test(ptr %0, i64 %1, i64 %2, i64 %3, i64 %4) {
 ; CHECK-NEXT:    [[TMP31:%.*]] = add <2 x i64> [[TMP30]], [[TMP26]]
 ; CHECK-NEXT:    [[TMP32:%.*]] = add <2 x i64> [[TMP27]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP33:%.*]] = add <2 x i64> [[TMP31]], splat (i64 1)
-; CHECK-NEXT:    [[TMP34:%.*]] = shufflevector <2 x i64> [[TMP7]], <2 x i64> [[TMP24]], <8 x i32> <i32 0, i32 poison, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP34:%.*]] = shufflevector <2 x i64> [[TMP24]], <2 x i64> poison, <8 x i32> <i32 1, i32 poison, i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP35:%.*]] = insertelement <8 x i64> poison, i64 [[TMP4]], i64 0
 ; CHECK-NEXT:    [[TMP36:%.*]] = shufflevector <8 x i64> [[TMP35]], <8 x i64> poison, <8 x i32> <i32 poison, i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP37:%.*]] = shufflevector <8 x i64> [[TMP34]], <8 x i64> [[TMP36]], <8 x i32> <i32 0, i32 9, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
