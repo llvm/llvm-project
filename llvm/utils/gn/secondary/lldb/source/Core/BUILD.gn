@@ -69,7 +69,6 @@ static_library("Core") {
     "Diagnostics.cpp",
     "Disassembler.cpp",
     "DumpDataExtractor.cpp",
-    "DumpRegisterInfo.cpp",
     "DumpRegisterValue.cpp",
     "DynamicLoader.cpp",
     "EmulateInstruction.cpp",

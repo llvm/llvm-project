@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "EmulateInstructionPPC64.h"
-#include "lldb/Register/Arch/lldb-ppc64le-ehframe-register-enums.h"
+#include "lldb/Register/RegisterDescription.h"
 
 #include "lldb/Register/Arch/lldb-ppc64le-dwarf-register-enums.h"
 #include "lldb/lldb-defines.h"
@@ -27,12 +27,10 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/LLDBLog.h"
 
-
 namespace reg_ids = lldb_private::registers::ppc64le::id;
 using namespace lldb_private;
 
-#define DECLARE_REGISTER_INFOS_PPC64LE_STRUCT
-#include "Register/Arch/RegisterInfos_ppc64le.h"
+#include "lldb/Register/Descriptions/RegisterDescription_ppc64le.h"
 
 #include "Plugins/Process/Utility/InstructionUtils.h"
 
@@ -71,13 +69,16 @@ bool EmulateInstructionPPC64::SetTargetTriple(const ArchSpec &arch) {
   return arch.GetTriple().isPPC64();
 }
 
-static std::optional<RegisterInfo> LLDBTableGetRegisterInfo(uint32_t reg_num) {
-  if (reg_num >= std::size(g_register_infos_ppc64le))
-    return {};
-  return g_register_infos_ppc64le[reg_num];
+static std::optional<RegisterDescriptor>
+LLDBTableGetRegisterInfo(uint32_t reg_num) {
+  static const auto provider = RegisterDescription_ppc64le::GetShared();
+  if (const auto *reg =
+          provider->FindByNumber(lldb::eRegisterKindLLDB, reg_num))
+    return *reg;
+  return {};
 }
 
-std::optional<RegisterInfo>
+std::optional<RegisterDescriptor>
 EmulateInstructionPPC64::GetRegisterInfo(RegisterKind reg_kind,
                                          uint32_t reg_num) {
   if (reg_kind == eRegisterKindGeneric) {
@@ -252,7 +253,7 @@ bool EmulateInstructionPPC64::EmulateLD(uint32_t opcode) {
   Log *log = GetLog(LLDBLog::Unwind);
   LLDB_LOG(log, "EmulateLD: {0:X+8}: ld r{1}, {2}(r{3})", m_addr, rt, ids, ra);
 
-  std::optional<RegisterInfo> r1_info =
+  std::optional<RegisterDescriptor> r1_info =
       GetRegisterInfo(eRegisterKindLLDB, reg_ids::gpr_r1);
   if (!r1_info)
     return false;
@@ -303,11 +304,12 @@ bool EmulateInstructionPPC64::EmulateSTD(uint32_t opcode) {
   }
 
   // set context
-  std::optional<RegisterInfo> rs_info =
+  std::optional<RegisterDescriptor> rs_info =
       GetRegisterInfo(eRegisterKindLLDB, rs_num);
   if (!rs_info)
     return false;
-  std::optional<RegisterInfo> ra_info = GetRegisterInfo(eRegisterKindLLDB, ra);
+  std::optional<RegisterDescriptor> ra_info =
+      GetRegisterInfo(eRegisterKindLLDB, ra);
   if (!ra_info)
     return false;
 
@@ -350,7 +352,8 @@ bool EmulateInstructionPPC64::EmulateOR(uint32_t opcode) {
   LLDB_LOG(log, "EmulateOR: {0:X+8}: mr r{1}, r{2}", m_addr, ra, rb);
 
   // set context
-  std::optional<RegisterInfo> ra_info = GetRegisterInfo(eRegisterKindLLDB, ra);
+  std::optional<RegisterDescriptor> ra_info =
+      GetRegisterInfo(eRegisterKindLLDB, ra);
   if (!ra_info)
     return false;
 
@@ -385,7 +388,7 @@ bool EmulateInstructionPPC64::EmulateADDI(uint32_t opcode) {
   LLDB_LOG(log, "EmulateADDI: {0:X+8}: addi r1, r1, {1}", m_addr, si_val);
 
   // set context
-  std::optional<RegisterInfo> r1_info =
+  std::optional<RegisterDescriptor> r1_info =
       GetRegisterInfo(eRegisterKindLLDB, reg_ids::gpr_r1);
   if (!r1_info)
     return false;

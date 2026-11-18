@@ -11,7 +11,7 @@
 
 #include <algorithm>
 
-#include "Plugins/Register/Darwin/RegisterContextDarwin_arm.h"
+#include "Plugins/Register/Darwin/RegisterContextDarwin_arm32.h"
 #include "Plugins/Register/Darwin/RegisterContextDarwin_arm64.h"
 #include "Plugins/Register/Darwin/RegisterContextDarwin_riscv32.h"
 #include "Plugins/Register/Darwin/RegisterContextDarwin_x86_64.h"
@@ -172,12 +172,15 @@ static bool ReadMachOCommand(const DataExtractor &data, lldb::offset_t &offset,
 static void PrintRegisterValue(ThreadRegisterContext *reg_ctx, const char *name,
                                const char *alt_name, size_t reg_byte_size,
                                Stream &data) {
-  const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName(name);
+  const RegisterDescriptor *reg_info = reg_ctx->GetRegisterByName(name);
   if (reg_info == nullptr)
-    reg_info = reg_ctx->GetRegisterInfoByName(alt_name);
+    reg_info = reg_ctx->GetRegisterByName(alt_name);
   if (reg_info) {
     lldb_private::RegisterValue reg_value;
-    if (reg_ctx->ReadRegister(reg_info, reg_value)) {
+    if (!llvm::errorToBool(
+            reg_ctx
+                ->ReadRegister((reg_info ? reg_info->id : LLDB_INVALID_REGNUM))
+                .moveInto(reg_value))) {
       if (reg_info->byte_size >= reg_byte_size)
         data.Write(reg_value.GetBytes(), reg_byte_size);
       else {
@@ -384,11 +387,11 @@ protected:
   }
 };
 
-class RegisterContextDarwin_arm_Mach : public RegisterContextDarwin_arm {
+class RegisterContextDarwin_arm_Mach : public RegisterContextDarwin_arm32 {
 public:
   RegisterContextDarwin_arm_Mach(lldb_private::Thread &thread,
                                  const DataExtractor &data)
-      : RegisterContextDarwin_arm(thread, 0) {
+      : RegisterContextDarwin_arm32(thread, 0) {
     SetRegisterDataFrom_LC_THREAD(data);
   }
 

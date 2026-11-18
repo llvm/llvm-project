@@ -16,7 +16,7 @@ using namespace lldb_private;
 
 RegisterContextKDP_arm::RegisterContextKDP_arm(ThreadKDP &thread,
                                                uint32_t concrete_frame_idx)
-    : RegisterContextDarwin_arm(thread, concrete_frame_idx),
+    : RegisterContextDarwin_arm32(thread, concrete_frame_idx),
       m_kdp_thread(thread) {}
 
 RegisterContextKDP_arm::~RegisterContextKDP_arm() = default;

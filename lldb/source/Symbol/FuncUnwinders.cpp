@@ -9,6 +9,7 @@
 #include "lldb/Symbol/FuncUnwinders.h"
 #include "lldb/Core/Address.h"
 #include "lldb/Core/AddressRange.h"
+#include "lldb/Register/RegisterNumber.h"
 #include "lldb/Symbol/ArmUnwindInfo.h"
 #include "lldb/Symbol/CallFrameInfo.h"
 #include "lldb/Symbol/CompactUnwindInfo.h"
@@ -21,7 +22,6 @@
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/ThreadRegisterContext.h"
-#include "lldb/Target/RegisterNumber.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/UnwindAssembly.h"
@@ -174,12 +174,12 @@ class RegisterContextToInfo: public SymbolFile::RegisterInfoResolver {
 public:
   RegisterContextToInfo(ThreadRegisterContext &ctx) : m_ctx(ctx) {}
 
-  const RegisterInfo *ResolveName(llvm::StringRef name) const override {
-    return m_ctx.GetRegisterInfoByName(name);
+  const RegisterDescriptor *ResolveName(llvm::StringRef name) const override {
+    return m_ctx.GetRegisterByName(name);
   }
-  const RegisterInfo *ResolveNumber(lldb::RegisterKind kind,
+  const RegisterDescriptor *ResolveNumber(lldb::RegisterKind kind,
                                     uint32_t number) const override {
-    return m_ctx.GetRegisterInfo(kind, number);
+    return m_ctx.GetRegisterByNumber(kind, number);
   }
 
 private:
@@ -357,9 +357,11 @@ LazyBool FuncUnwinders::CompareUnwindPlansForIdenticalInitialPCLocation(
   if (!a_first_row || !b_first_row)
     return eLazyBoolCalculate;
 
-  RegisterNumber pc_reg(thread, eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC);
-  uint32_t a_pc_regnum = pc_reg.GetAsKind(a->GetRegisterKind());
-  uint32_t b_pc_regnum = pc_reg.GetAsKind(b->GetRegisterKind());
+  RegisterNumber pc_reg(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC);
+  uint32_t a_pc_regnum = pc_reg.GetAsKind(
+      *thread.GetRegisterContext()->GetDescription(), a->GetRegisterKind());
+  uint32_t b_pc_regnum = pc_reg.GetAsKind(
+      *thread.GetRegisterContext()->GetDescription(), b->GetRegisterKind());
 
   UnwindPlan::Row::AbstractRegisterLocation a_pc_regloc;
   UnwindPlan::Row::AbstractRegisterLocation b_pc_regloc;

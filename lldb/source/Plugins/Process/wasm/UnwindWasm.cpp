@@ -35,8 +35,8 @@ UnwindWasm::DoCreateRegisterContextForFrame(lldb_private::StackFrame *frame) {
   ProcessWasm *wasm_process =
       static_cast<ProcessWasm *>(thread->GetProcess().get());
 
-  return std::make_shared<RegisterContextWasm>(*gdb_thread, concrete_frame_idx,
-                                               wasm_process->GetRegisterInfo());
+  return std::make_shared<RegisterContextWasm>(
+      *gdb_thread, concrete_frame_idx, wasm_process->GetRegisterLayout());
 }
 
 uint32_t UnwindWasm::DoGetFrameCount() {

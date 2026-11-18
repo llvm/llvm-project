@@ -7,10 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "NativeRegisterContextFreeBSD.h"
+#include "lldb/Utility/ArchSpec.h"
 
 #include "Plugins/Process/FreeBSD/NativeProcessFreeBSD.h"
 
 #include "lldb/Host/common/NativeProcessProtocol.h"
+
+#if defined(__powerpc__)
+#include "NativeRegisterContextFreeBSD_ppc32be.h"
+#endif
 
 using namespace lldb_private;
 using namespace lldb_private::process_freebsd;
@@ -27,3 +32,16 @@ NativeProcessFreeBSD &NativeRegisterContextFreeBSD::GetProcess() {
 ::pid_t NativeRegisterContextFreeBSD::GetProcessPid() {
   return GetProcess().GetID();
 }
+
+#if defined(__powerpc__)
+NativeRegisterContextFreeBSD *
+NativeRegisterContextFreeBSD::CreateHostNativeRegisterContextFreeBSD(
+    const ArchSpec &arch, NativeThreadFreeBSD &thread) {
+  switch (arch.GetMachine()) {
+  case llvm::Triple::ppc:
+    return new NativeRegisterContextFreeBSD_ppc32be(arch, thread);
+  default:
+    llvm_unreachable("unsupported native FreeBSD PowerPC architecture");
+  }
+}
+#endif

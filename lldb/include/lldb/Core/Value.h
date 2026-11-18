@@ -9,9 +9,9 @@
 #ifndef LLDB_CORE_VALUE_H
 #define LLDB_CORE_VALUE_H
 
+#include "lldb/Register/RegisterDescription.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Utility/DataBufferHeap.h"
-#include "lldb/Utility/RegisterInfo.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-enumerations.h"
@@ -58,8 +58,8 @@ public:
     // m_context contains:
     /// Undefined.
     Invalid = -1,
-    /// RegisterInfo * (can be a scalar or a vector register).
-    RegisterInfo = 0,
+    /// A description and RegisterID, held separately from m_context.
+    RegisterDescriptor = 0,
     /// lldb_private::Type *.
     LLDBType,
     /// lldb_private::Variable *.
@@ -90,21 +90,33 @@ public:
   void SetValueType(ValueType value_type) { m_value_type = value_type; }
 
   void ClearContext() {
+    m_register_description.reset();
     m_context = nullptr;
     m_context_type = ContextType::Invalid;
   }
 
   void SetContext(ContextType context_type, void *p) {
+    assert(context_type != ContextType::RegisterDescriptor &&
+           "use SetRegister for owning register metadata");
+    m_register_description.reset();
     m_context_type = context_type;
     m_context = p;
-    if (m_context_type == ContextType::RegisterInfo) {
-      RegisterInfo *reg_info = GetRegisterInfo();
-      if (reg_info->encoding == lldb::eEncodingVector)
-        SetValueType(ValueType::Scalar);
-    }
   }
 
-  RegisterInfo *GetRegisterInfo() const;
+  void SetRegister(std::shared_ptr<const RegisterDescription> description,
+                   RegisterID id) {
+    m_register_description = std::move(description);
+    m_register_id = id;
+    m_context_type = ContextType::RegisterDescriptor;
+    m_context = nullptr;
+    const auto *reg = GetRegisterInfo();
+    if (reg && reg->encoding == lldb::eEncodingVector)
+      m_value_type = ValueType::Scalar;
+  }
+  std::shared_ptr<const RegisterDescription> GetRegisterDescription() const {
+    return m_register_description;
+  }
+  const RegisterDescriptor *GetRegisterInfo() const;
 
   Type *GetType();
 
@@ -171,14 +183,16 @@ protected:
   // - Rename GetScalar() to something more indicative to what the scalar is,
   //   like GetScalarOrAddress() for example.
   // - Split GetScalar() into two functions, GetScalar() and GetAddress(), which
-  //   verify (or assert) what m_value_type is to make sure users of the class are
-  //   querying the right thing.
+  //   verify (or assert) what m_value_type is to make sure users of the class
+  //   are querying the right thing.
   // TODO: It's confusing to point to multiple possible buffers when the
   // ValueType is a host address. Value should probably always own its buffer.
   // Perhaps as a shared pointer with a copy on write system if the same buffer
   // can be shared by multiple classes.
   Scalar m_value;
   CompilerType m_compiler_type;
+  std::shared_ptr<const RegisterDescription> m_register_description;
+  RegisterID m_register_id = LLDB_INVALID_REGNUM;
   void *m_context = nullptr;
   ValueType m_value_type = ValueType::Scalar;
   ContextType m_context_type = ContextType::Invalid;

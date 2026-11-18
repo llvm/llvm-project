@@ -160,9 +160,11 @@ bool StopInfoMachException::DeterminePtrauthFailure(ExecutionContext &exe_ctx) {
     if (!reg_ctx)
       return false;
 
-    const RegisterInfo *X16Info = reg_ctx->GetRegisterInfoByName("x16");
+    const RegisterDescriptor *X16Info = reg_ctx->GetRegisterByName("x16");
     RegisterValue X16Val;
-    if (!reg_ctx->ReadRegister(X16Info, X16Val))
+    if (llvm::errorToBool(
+            reg_ctx->ReadRegister((X16Info ? X16Info->id : LLDB_INVALID_REGNUM))
+                .moveInto(X16Val)))
       return false;
     uint64_t bad_address = X16Val.GetAsUInt64();
 

@@ -9,7 +9,7 @@
 #ifndef lldb_NativeRegisterContextFreeBSD_h
 #define lldb_NativeRegisterContextFreeBSD_h
 
-#include "Plugins/Register/Native/NativeRegisterContextRegisterInfo.h"
+#include "lldb/Host/common/NativeRegisterContext.h"
 
 namespace lldb_private {
 namespace process_freebsd {
@@ -17,14 +17,10 @@ namespace process_freebsd {
 class NativeProcessFreeBSD;
 class NativeThreadFreeBSD;
 
-class NativeRegisterContextFreeBSD
-    : public virtual NativeRegisterContextRegisterInfo {
+class NativeRegisterContextFreeBSD : public virtual NativeRegisterContext {
 public:
-  // This function is implemented in the NativeRegisterContextFreeBSD_*
-  // subclasses to create a new instance of the host specific
-  // NativeRegisterContextFreeBSD. The implementations can't collide as only one
-  // NativeRegisterContextFreeBSD_* variant should be compiled into the final
-  // executable.
+  // Each host defines one factory. A host that supports multiple inferior
+  // architectures dispatches to their architecture-specific native contexts.
   static NativeRegisterContextFreeBSD *
   CreateHostNativeRegisterContextFreeBSD(const ArchSpec &target_arch,
                                          NativeThreadFreeBSD &native_thread);

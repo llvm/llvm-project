@@ -51,13 +51,17 @@ public:
 
   void ValueUpdated() { m_frozen_sp->ValueUpdated(); }
 
-  RegisterInfo *GetRegisterInfo() {
+  const RegisterDescriptor *GetRegisterInfo() {
     return m_frozen_sp->GetValue().GetRegisterInfo();
   }
 
-  void SetRegisterInfo(const RegisterInfo *reg_info) {
-    return m_frozen_sp->GetValue().SetContext(
-        Value::ContextType::RegisterInfo, const_cast<RegisterInfo *>(reg_info));
+  std::shared_ptr<const RegisterDescription> GetRegisterDescription() {
+    return m_frozen_sp->GetValue().GetRegisterDescription();
+  }
+
+  void SetRegisterInfo(std::shared_ptr<const RegisterDescription> description,
+                       RegisterID id) {
+    m_frozen_sp->GetValue().SetRegister(std::move(description), id);
   }
 
   CompilerType GetCompilerType() { return GetValueObject()->GetCompilerType(); }

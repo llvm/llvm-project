@@ -54,7 +54,7 @@ ThreadWasm::CreateRegisterContextForFrame(StackFrame *frame) {
 
   if (concrete_frame_idx == 0)
     return std::make_shared<RegisterContextWasm>(
-        *this, concrete_frame_idx, wasm_process->GetRegisterInfo());
+        *this, concrete_frame_idx, wasm_process->GetRegisterLayout());
 
   return GetUnwinder().CreateRegisterContextForFrame(frame);
 }

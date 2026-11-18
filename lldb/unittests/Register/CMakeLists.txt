@@ -1,4 +1,21 @@
+set(FREEBSD_SOURCES
+  Layouts/RegisterLayoutFreeBSDNativeTest.cpp)
+set(NETBSD_SOURCES
+  Layouts/RegisterLayoutNetBSD_x86_32Test.cpp
+  Layouts/RegisterLayoutNetBSD_x86_64Test.cpp)
+
+if (CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
+  list(APPEND PLATFORM_SOURCES ${FREEBSD_SOURCES})
+elseif (CMAKE_SYSTEM_NAME MATCHES "NetBSD")
+  list(APPEND PLATFORM_SOURCES ${NETBSD_SOURCES})
+endif()
+
+set(LLVM_OPTIONAL_SOURCES
+  ${FREEBSD_SOURCES}
+  ${NETBSD_SOURCES})
+
 add_lldb_unittest(RegisterTests
+  Descriptions/DumpRegisterDescriptionTest.cpp
   Descriptions/RegisterDescriptionTest.cpp
   Descriptions/RegisterDescription_arm32Test.cpp
   Descriptions/RegisterDescription_arm64Test.cpp
@@ -16,16 +33,14 @@ add_lldb_unittest(RegisterTests
   Layouts/RegisterLayout_x86TagWordTest.cpp
   Layouts/RegisterLayout_x86Test.cpp
   RegisterContextTest.cpp
+  RegisterDefinitionTest.cpp
   RegisterLayoutBankTest.cpp
   RegisterLayoutTest.cpp
   RegisterTypeTest.cpp
   RegisterValueTest.cpp
+  ${PLATFORM_SOURCES}
 
-  LINK_COMPONENTS
-    Support
-    TargetParser
   LINK_LIBS
     lldbRegister
-    lldbUtilityHelpers
-    LLVMTestingSupport
-  )
+    lldbUtility
+    LLVMTestingSupport)

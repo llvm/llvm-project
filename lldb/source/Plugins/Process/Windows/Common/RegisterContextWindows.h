@@ -30,9 +30,6 @@ public:
 
   bool WriteAllRegisterValues(const lldb::DataBufferSP &data_sp) override;
 
-  uint32_t ConvertRegisterKindToRegisterNumber(lldb::RegisterKind kind,
-                                               uint32_t num) override;
-
   bool HardwareSingleStep(bool enable) override;
 
   static constexpr uint32_t GetNumHardwareBreakpointSlots() {

@@ -12,9 +12,8 @@
 #define lldb_NativeRegisterContextLinux_arm64_h
 
 #include "Plugins/Process/Linux/NativeRegisterContextLinux.h"
-#include "Plugins/Process/Utility/LinuxPTraceDefines_arm64sve.h"
 #include "Plugins/Register/Native/NativeRegisterContextDBReg_arm64.h"
-#include "Register/Common/RegisterInfo_arm64.h"
+#include "lldb/Register/Layouts/Linux/RegisterLayoutLinux_arm64.h"
 
 #include "llvm/ADT/BitmaskEnum.h"
 
@@ -29,21 +28,16 @@ class NativeRegisterContextLinux_arm64
     : public NativeRegisterContextLinux,
       public NativeRegisterContextDBReg_arm64 {
 public:
-  NativeRegisterContextLinux_arm64(
-      const ArchSpec &target_arch, NativeThreadProtocol &native_thread,
-      std::unique_ptr<RegisterInfo_arm64> register_info_up);
+  NativeRegisterContextLinux_arm64(const ArchSpec &target_arch,
+                                   NativeThreadProtocol &native_thread,
+                                   RegisterLayoutLinux_arm64::Config config);
 
-  uint32_t GetRegisterSetCount() const override;
+  llvm::Expected<lldb_private::RegisterValue>
+  ReadRegister(lldb_private::RegisterID id) override;
 
-  uint32_t GetUserRegisterCount() const override;
-
-  const RegisterSet *GetRegisterSet(uint32_t set_index) const override;
-
-  Status ReadRegister(const RegisterInfo *reg_info,
-                      RegisterValue &reg_value) override;
-
-  Status WriteRegister(const RegisterInfo *reg_info,
-                       const RegisterValue &reg_value) override;
+  llvm::Error
+  WriteRegister(lldb_private::RegisterID id,
+                const lldb_private::RegisterValue &reg_value) override;
 
   Status ReadAllRegisterValues(lldb::WritableDataBufferSP &data_sp) override;
 
@@ -51,7 +45,7 @@ public:
 
   void InvalidateAllRegisters() override;
 
-  std::vector<uint32_t>
+  std::vector<RegisterID>
   GetExpeditedRegisters(ExpeditedRegs expType) const override;
 
   bool RegisterOffsetIsDynamic() const override { return true; }
@@ -71,7 +65,7 @@ protected:
   void *GetGPRBuffer() override { return &m_gpr_arm64; }
 
   // GetGPRBufferSize returns sizeof arm64 GPR ptrace buffer, it is different
-  // from GetGPRSize which returns sizeof RegisterInfo_arm64::GPR.
+  // from GetGPRSize which returns sizeof RegisterLayoutLinux_arm64::GPR.
   size_t GetGPRBufferSize() { return sizeof(m_gpr_arm64); }
 
   void *GetFPRBuffer() override { return &m_fpr; }
@@ -149,19 +143,26 @@ private:
                           const RegisterSetType set,
                           std::function<Status()> writer);
 
+  RegisterLayoutLinux_arm64::Config m_register_config;
+  void RebuildRegisterLayout();
+  uint32_t ConfigureVectorLengthSVE(uint32_t vq);
+  void ConfigureVectorLengthZA(uint32_t vq);
+  void SetRegisterLayoutState(RegisterLayoutLinux_arm64::SVEState state);
+
   size_t m_tls_size = 0;
 
   /// 64-bit general purpose registers.
   struct user_pt_regs m_gpr_arm64{};
 
   /// Floating-point registers including extended register sets.
-  RegisterInfo_arm64::FPU m_fpr{};
+  RegisterLayoutLinux_arm64::FPU m_fpr{};
 
-  SVEState m_sve_state = SVEState::Unknown;
-  struct sve::user_sve_header m_sve_header{};
+  RegisterLayoutLinux_arm64::SVEState m_sve_state =
+      RegisterLayoutLinux_arm64::SVEState::Unknown;
+  struct RegisterLayoutLinux_arm64::SVEFormat::user_sve_header m_sve_header{};
   std::vector<uint8_t> m_sve_ptrace_payload;
 
-  sve::user_za_header m_za_header;
+  RegisterLayoutLinux_arm64::SVEFormat::user_za_header m_za_header;
   std::vector<uint8_t> m_za_ptrace_payload;
 
   bool m_refresh_hwdebug_info = true;
@@ -260,14 +261,7 @@ private:
 
   llvm::Error WriteHardwareDebugRegs(DREGType hwbType) override;
 
-  uint32_t CalculateFprOffset(const RegisterInfo *reg_info,
-                              bool streaming_fpsimd) const;
-
-  RegisterInfo_arm64 &GetRegisterInfo() const;
-
   void ConfigureRegisterContext();
-
-  uint32_t CalculateSVEOffset(const RegisterInfo *reg_info) const;
 
   Status CacheAllRegisters(uint32_t &cached_size);
 

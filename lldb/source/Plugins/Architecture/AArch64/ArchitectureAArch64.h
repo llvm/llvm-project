@@ -35,7 +35,8 @@ public:
     return name == "vg";
   }
 
-  bool ReconfigureRegisterInfo(DynamicRegisterInfo &reg_info,
+  bool
+  ReconfigureRegisterLayout(std::shared_ptr<const RegisterLayout> &layout,
                                DataExtractor &reg_data,
                                ThreadRegisterContext &reg_context) const override;
 

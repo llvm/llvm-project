@@ -17,18 +17,20 @@
 #include "lldb/Register/RegisterValue.h"
 
 #include "Plugins/Instruction/ARM64/EmulateInstructionARM64.h"
-#include "Register/Common/RegisterInfo_arm64.h"
 #include "lldb/Register/Arch/lldb-arm64-register-enums.h"
 
 #include <vector>
-
 
 namespace reg_ids = lldb_private::registers::arm64::id;
 using namespace lldb;
 using namespace lldb_private;
 
 struct Arch64EmulatorTester : public EmulateInstructionARM64 {
-  RegisterInfo_arm64::GPR gpr;
+  struct {
+    uint64_t x[29];
+    uint64_t fp, lr, sp, pc;
+    uint32_t cpsr;
+  } gpr;
   uint8_t memory[64] = {0};
   uint64_t memory_offset = 0;
 
@@ -64,10 +66,10 @@ struct Arch64EmulatorTester : public EmulateInstructionARM64 {
   }
 
   static bool ReadRegisterCallback(EmulateInstruction *instruction, void *baton,
-                                   const RegisterInfo *reg_info,
+                                   const RegisterDescriptor *reg_info,
                                    RegisterValue &reg_value) {
     auto *tester = static_cast<Arch64EmulatorTester *>(instruction);
-    uint32_t reg = reg_info->kinds[eRegisterKindLLDB];
+    uint32_t reg = reg_info->numbers[eRegisterKindLLDB];
     if (reg >= reg_ids::gpr_x0 && reg <= reg_ids::gpr_x28) {
       reg_value.SetUInt64(tester->gpr.x[reg - reg_ids::gpr_x0]);
       return true;
@@ -99,10 +101,10 @@ struct Arch64EmulatorTester : public EmulateInstructionARM64 {
 
   static bool WriteRegisterCallback(EmulateInstruction *instruction,
                                     void *baton, const Context &context,
-                                    const RegisterInfo *reg_info,
+                                    const RegisterDescriptor *reg_info,
                                     const RegisterValue &reg_value) {
     auto *tester = static_cast<Arch64EmulatorTester *>(instruction);
-    uint32_t reg = reg_info->kinds[eRegisterKindLLDB];
+    uint32_t reg = reg_info->numbers[eRegisterKindLLDB];
     RegisterWrite write;
     write.reg = reg;
     write.value = reg_value.GetAsUInt64();
@@ -110,7 +112,7 @@ struct Arch64EmulatorTester : public EmulateInstructionARM64 {
     if (context.GetInfoType() ==
         EmulateInstruction::eInfoTypeRegisterPlusOffset) {
       write.context_reg =
-          context.info.RegisterPlusOffset.reg.kinds[eRegisterKindLLDB];
+          context.info.RegisterPlusOffset.reg.numbers[eRegisterKindLLDB];
       write.context_offset = context.info.RegisterPlusOffset.signed_offset;
     }
     tester->writes.push_back(write);

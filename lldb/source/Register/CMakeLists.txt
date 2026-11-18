@@ -1,6 +1,4 @@
 add_lldb_library(lldbRegister NO_PLUGIN_DEPENDENCIES
-  Arch/RegisterContext_x86.cpp
-  Arch/RegisterInfos_x86_64_with_base_shared.cpp
   Descriptions/RegisterDescription_arm32.cpp
   Descriptions/RegisterDescription_arm64.cpp
   Descriptions/RegisterDescription_loongarch64.cpp
@@ -14,18 +12,7 @@ add_lldb_library(lldbRegister NO_PLUGIN_DEPENDENCIES
   Descriptions/RegisterDescription_s390x.cpp
   Descriptions/RegisterDescription_x86_32.cpp
   Descriptions/RegisterDescription_x86_64.cpp
-  Common/RegisterInfoDynamic_riscv32.cpp
-  Common/RegisterInfo_arm.cpp
-  Common/RegisterInfo_arm64.cpp
-  Common/RegisterInfo_loongarch64.cpp
-  Common/RegisterInfo_ppc64.cpp
-  Common/RegisterInfo_ppc64le.cpp
-  Common/RegisterInfo_riscv32.cpp
-  Common/RegisterInfo_riscv64.cpp
-  Common/RegisterTypeDetector_arm64.cpp
-  FreeBSD/RegisterInfoFreeBSD_i386.cpp
-  FreeBSD/RegisterInfoFreeBSD_powerpc.cpp
-  FreeBSD/RegisterInfoFreeBSD_x86_64.cpp
+  DumpRegisterInfo.cpp
   Layouts/Common/RegisterLayout_x86.cpp
   Layouts/Darwin/RegisterLayoutDarwin_arm32.cpp
   Layouts/Darwin/RegisterLayoutDarwin_arm64.cpp
@@ -46,21 +33,13 @@ add_lldb_library(lldbRegister NO_PLUGIN_DEPENDENCIES
   Layouts/Linux/RegisterLayoutLinux_x86_64.cpp
   Layouts/NetBSD/RegisterLayoutNetBSD_x86_32.cpp
   Layouts/NetBSD/RegisterLayoutNetBSD_x86_64.cpp
-  Linux/RegisterInfoLinux_i386.cpp
-  Linux/RegisterInfoLinux_s390x.cpp
-  Linux/RegisterInfoLinux_x86_64.cpp
-  NetBSD/RegisterInfoNetBSD_i386.cpp
-  NetBSD/RegisterInfoNetBSD_x86_64.cpp
-  OpenBSD/RegisterInfoOpenBSD_i386.cpp
-  OpenBSD/RegisterInfoOpenBSD_x86_64.cpp
   RegisterContext.cpp
+  RegisterDefinition.cpp
   RegisterDescription.cpp
   RegisterLayout.cpp
   RegisterType.cpp
   RegisterTypeFlags.cpp
   RegisterValue.cpp
-  Windows/RegisterInfoWindows_i386.cpp
-  Windows/RegisterInfoWindows_x86_64.cpp
 
   LINK_COMPONENTS
     Support

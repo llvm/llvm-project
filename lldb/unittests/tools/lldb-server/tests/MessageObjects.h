@@ -10,8 +10,8 @@
 #define LLDB_UNITTESTS_TOOLS_LLDB_SERVER_TESTS_MESSAGEOBJECTS_H
 
 #include "lldb/Host/Host.h"
+#include "lldb/Register/RegisterDescription.h"
 #include "lldb/Register/RegisterValue.h"
-#include "lldb/Utility/RegisterInfo.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/DenseMap.h"
@@ -66,26 +66,26 @@ class JThreadsInfo : public Parser<JThreadsInfo> {
 public:
   static llvm::Expected<JThreadsInfo>
   create(llvm::StringRef Response,
-         llvm::ArrayRef<lldb_private::RegisterInfo> RegInfos);
+         llvm::ArrayRef<lldb_private::RegisterDescriptor> RegInfos);
 
   const ThreadInfoMap &GetThreadInfos() const;
 
 private:
   static llvm::Expected<RegisterMap>
   parseRegisters(const lldb_private::StructuredData::Dictionary &Dict,
-                 llvm::ArrayRef<lldb_private::RegisterInfo> RegInfos);
+                 llvm::ArrayRef<lldb_private::RegisterDescriptor> RegInfos);
 
   JThreadsInfo() = default;
   ThreadInfoMap m_thread_infos;
 };
 
-struct RegisterInfoParser : public Parser<lldb_private::RegisterInfo> {
-  static llvm::Expected<lldb_private::RegisterInfo>
+struct RegisterInfoParser : public Parser<lldb_private::RegisterDescriptor> {
+  static llvm::Expected<lldb_private::RegisterDescriptor>
   create(llvm::StringRef Response);
 };
 
 llvm::Expected<lldb_private::RegisterValue>
-parseRegisterValue(const lldb_private::RegisterInfo &Info,
+parseRegisterValue(const lldb_private::RegisterDescriptor &Info,
                    llvm::StringRef HexValue, llvm::endianness Endian,
                    bool ZeroPad = false);
 
@@ -96,7 +96,7 @@ public:
 
   static llvm::Expected<std::unique_ptr<StopReply>>
   create(llvm::StringRef Response, llvm::endianness Endian,
-         llvm::ArrayRef<lldb_private::RegisterInfo> RegInfos);
+         llvm::ArrayRef<lldb_private::RegisterDescriptor> RegInfos);
 
   // for llvm::cast<>
   virtual lldb_private::WaitStatus getKind() const = 0;
@@ -116,7 +116,7 @@ public:
 
   static llvm::Expected<std::unique_ptr<StopReplyStop>>
   create(llvm::StringRef Response, llvm::endianness Endian,
-         llvm::ArrayRef<lldb_private::RegisterInfo> RegInfos);
+         llvm::ArrayRef<lldb_private::RegisterDescriptor> RegInfos);
 
   const RegisterMap &getThreadPcs() const { return ThreadPcs; }
   lldb::tid_t getThreadId() const { return ThreadId; }
@@ -133,7 +133,7 @@ private:
   static llvm::Expected<RegisterMap> parseRegisters(
       const llvm::StringMap<llvm::SmallVector<llvm::StringRef, 2>> &Elements,
       llvm::endianness Endian,
-      llvm::ArrayRef<lldb_private::RegisterInfo> RegInfos);
+      llvm::ArrayRef<lldb_private::RegisterDescriptor> RegInfos);
 
   uint8_t Signal;
   lldb::tid_t ThreadId;

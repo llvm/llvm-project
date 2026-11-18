@@ -9,14 +9,14 @@ add_lldb_library(lldbPluginProcessAIX
     Support
   LINK_LIBS
     lldbCore
-    lldbRegister
     lldbHost
-    lldbSymbol
-    lldbTarget
-    lldbUtility
     lldbPluginProcessPOSIX
     lldbPluginProcessUtility
     lldbPluginRegisterNative
+    lldbRegister
+    lldbSymbol
+    lldbTarget
+    lldbUtility
   )
 
 target_compile_definitions(lldbPluginProcessAIX PRIVATE "-D_ALL_SOURCE")

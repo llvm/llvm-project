@@ -656,9 +656,10 @@ void CommandCompletions::Registers(CommandInterpreter &interpreter,
   if (!reg_ctx)
     return;
 
-  const size_t reg_num = reg_ctx->GetRegisterCount();
+  const size_t reg_num = reg_ctx->GetUserRegisterCount();
   for (size_t reg_idx = 0; reg_idx < reg_num; ++reg_idx) {
-    const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoAtIndex(reg_idx);
+    const RegisterDescriptor *reg_info =
+        reg_ctx->GetUserRegisterAtIndex(reg_idx);
     request.TryCompleteCurrentArg(reg_prefix + reg_info->name,
                                   reg_info->alt_name);
   }

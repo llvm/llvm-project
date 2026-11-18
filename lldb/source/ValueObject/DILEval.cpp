@@ -436,7 +436,8 @@ lldb::ValueObjectSP LookupIdentifier(llvm::StringRef name_ref,
     if (!reg_ctx)
       return nullptr;
 
-    if (const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName(name_ref))
+    if (const RegisterDescriptor *reg_info =
+            reg_ctx->GetRegisterByName(name_ref))
       return ValueObjectRegister::Create(exe_ctx.GetBestExecutionContextScope(),
                                          reg_ctx, reg_info);
 
@@ -1537,8 +1538,8 @@ Interpreter::Visit(const MemberOfNode &node) {
     lldb::ThreadRegisterContextSP reg_ctx_sp =
         frame_sp ? frame_sp->GetRegisterContext() : nullptr;
     if (reg_ctx_sp) {
-      if (const RegisterInfo *reg_info =
-              reg_ctx_sp->GetRegisterInfoByName(*register_name))
+      if (const RegisterDescriptor *reg_info =
+              reg_ctx_sp->GetRegisterByName(*register_name))
         return ValueObjectRegister::Create(
             m_exe_ctx.GetBestExecutionContextScope(), reg_ctx_sp, reg_info);
     }

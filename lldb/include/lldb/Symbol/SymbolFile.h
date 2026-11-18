@@ -399,8 +399,9 @@ public:
   struct RegisterInfoResolver {
     virtual ~RegisterInfoResolver(); // anchor
 
-    virtual const RegisterInfo *ResolveName(llvm::StringRef name) const = 0;
-    virtual const RegisterInfo *ResolveNumber(lldb::RegisterKind kind,
+    virtual const RegisterDescriptor *
+    ResolveName(llvm::StringRef name) const = 0;
+    virtual const RegisterDescriptor *ResolveNumber(lldb::RegisterKind kind,
                                               uint32_t number) const = 0;
   };
   virtual lldb::UnwindPlanSP

@@ -8,8 +8,12 @@
 
 #if defined(__i386__) || defined(__x86_64__)
 
+#include <set>
+#include "lldb/Register/Layouts/Common/RegisterLayout_x86.h"
+#include "lldb/Utility/ArchSpec.h"
 #include "NativeRegisterContextFreeBSD_x86.h"
 #include "lldb/Register/Arch/lldb-x86_64-register-enums.h"
+
 #include "lldb/Register/Arch/lldb-x86_32-register-enums.h"
 
 // clang-format off
@@ -25,11 +29,12 @@
 #include "lldb/Utility/Status.h"
 
 #include "NativeProcessFreeBSD.h"
-#include "Register/FreeBSD/RegisterInfoFreeBSD_i386.h"
-#include "Register/FreeBSD/RegisterInfoFreeBSD_x86_64.h"
+#include "lldb/Register/Layouts/FreeBSD/RegisterLayoutFreeBSD_x86_32.h"
+#include "lldb/Register/Layouts/FreeBSD/RegisterLayoutFreeBSD_x86_64.h"
 #include <optional>
 
 using namespace lldb_private;
+using FXSAVE = RegisterLayout_x86::FXSAVE;
 using namespace lldb_private::process_freebsd;
 
 // x86 64-bit general purpose registers.
@@ -260,33 +265,58 @@ static_assert((sizeof(g_dbr_regnums_i386) / sizeof(g_dbr_regnums_i386[0])) -
 enum { k_num_register_sets = 5 };
 
 // Register sets for x86 32-bit.
-static const RegisterSet g_reg_sets_i386[k_num_register_sets] = {
-    {"General Purpose Registers", "gpr", registers::x86_32::id::k_num_gpr_registers,
-     g_gpr_regnums_i386},
-    {"Floating Point Registers", "fpu", registers::x86_32::id::k_num_fpr_registers,
-     g_fpu_regnums_i386},
-    {"Debug Registers", "dbr", registers::x86_32::id::k_num_dbr_registers, g_dbr_regnums_i386},
-    {"Advanced Vector Extensions", "avx", registers::x86_32::id::k_num_avx_registers,
-     g_avx_regnums_i386},
-    {"Memory Protection Extensions", "mpx", registers::x86_32::id::k_num_mpx_registers,
-     g_mpx_regnums_i386},
+struct RegisterGroupNumbers {
+  const char *name;
+  const char *short_name;
+  std::vector<uint32_t> registers;
 };
+
+static const RegisterGroupNumbers g_reg_sets_i386[k_num_register_sets] = {
+    {"General Purpose Registers", "gpr",
+     std::vector<RegisterID>(g_gpr_regnums_i386,
+                             g_gpr_regnums_i386 +
+                                 registers::x86_32::id::k_num_gpr_registers)},
+    {"Floating Point Registers", "fpu",
+     std::vector<RegisterID>(g_fpu_regnums_i386,
+                             g_fpu_regnums_i386 +
+                                 registers::x86_32::id::k_num_fpr_registers)},
+    {"Debug Registers", "dbr",
+     std::vector<RegisterID>(g_dbr_regnums_i386,
+                             g_dbr_regnums_i386 +
+                                 registers::x86_32::id::k_num_dbr_registers)},
+    {"Advanced Vector Extensions", "avx",
+     std::vector<RegisterID>(g_avx_regnums_i386,
+                             g_avx_regnums_i386 +
+                                 registers::x86_32::id::k_num_avx_registers)},
+    {"Memory Protection Extensions", "mpx",
+     std::vector<RegisterID>(g_mpx_regnums_i386,
+                             g_mpx_regnums_i386 +
+                                 registers::x86_32::id::k_num_mpx_registers)}};
 
 // Register sets for x86 64-bit.
-static const RegisterSet g_reg_sets_x86_64[k_num_register_sets] = {
-    {"General Purpose Registers", "gpr", registers::x86_64::id::k_num_gpr_registers,
-     g_gpr_regnums_x86_64},
-    {"Floating Point Registers", "fpu", registers::x86_64::id::k_num_fpr_registers,
-     g_fpu_regnums_x86_64},
-    {"Debug Registers", "dbr", registers::x86_64::id::k_num_dbr_registers,
-     g_dbr_regnums_x86_64},
-    {"Advanced Vector Extensions", "avx", registers::x86_64::id::k_num_avx_registers,
-     g_avx_regnums_x86_64},
-    {"Memory Protection Extensions", "mpx", registers::x86_64::id::k_num_mpx_registers,
-     g_mpx_regnums_x86_64},
-};
+static const RegisterGroupNumbers g_reg_sets_x86_64[k_num_register_sets] = {
+    {"General Purpose Registers", "gpr",
+     std::vector<RegisterID>(g_gpr_regnums_x86_64,
+                             g_gpr_regnums_x86_64 +
+                                 registers::x86_64::id::k_num_gpr_registers)},
+    {"Floating Point Registers", "fpu",
+     std::vector<RegisterID>(g_fpu_regnums_x86_64,
+                             g_fpu_regnums_x86_64 +
+                                 registers::x86_64::id::k_num_fpr_registers)},
+    {"Debug Registers", "dbr",
+     std::vector<RegisterID>(g_dbr_regnums_x86_64,
+                             g_dbr_regnums_x86_64 +
+                                 registers::x86_64::id::k_num_dbr_registers)},
+    {"Advanced Vector Extensions", "avx",
+     std::vector<RegisterID>(g_avx_regnums_x86_64,
+                             g_avx_regnums_x86_64 +
+                                 registers::x86_64::id::k_num_avx_registers)},
+    {"Memory Protection Extensions", "mpx",
+     std::vector<RegisterID>(g_mpx_regnums_x86_64,
+                             g_mpx_regnums_x86_64 +
+                                 registers::x86_64::id::k_num_mpx_registers)}};
 
-#define REG_CONTEXT_SIZE (GetRegisterInfoInterface().GetGPRSize())
+#define REG_CONTEXT_SIZE (GetBankSize(0))
 
 NativeRegisterContextFreeBSD *
 NativeRegisterContextFreeBSD::CreateHostNativeRegisterContextFreeBSD(
@@ -296,67 +326,91 @@ NativeRegisterContextFreeBSD::CreateHostNativeRegisterContextFreeBSD(
 
 // NativeRegisterContextFreeBSD_x86 members.
 
-static RegisterInfoInterface *
-CreateRegisterInfoInterface(const ArchSpec &target_arch) {
-  if (HostInfo::GetArchitecture().GetAddressByteSize() == 4) {
-    // 32-bit hosts run with a RegisterInfoFreeBSD_i386 context.
-    return new RegisterInfoFreeBSD_i386(target_arch);
-  } else {
-    assert((HostInfo::GetArchitecture().GetAddressByteSize() == 8) &&
-           "Register setting path assumes this is a 64-bit host");
-    // X86_64 hosts know how to work with 64-bit and 32-bit EXEs using the
-    // x86_64 register context.
-    return new RegisterInfoFreeBSD_x86_64(target_arch);
+static RegisterLayout CreateRegisterLayout(const ArchSpec &target_arch) {
+  const bool host32 = HostInfo::GetArchitecture().GetAddressByteSize() == 4;
+  assert((host32 || HostInfo::GetArchitecture().GetAddressByteSize() == 8) &&
+         "unsupported native x86 saved-state layout");
+
+  switch (target_arch.GetMachine()) {
+  case llvm::Triple::x86: {
+    if (host32)
+      return RegisterLayoutFreeBSD_x86_32(target_arch);
+
+    return RegisterLayoutFreeBSD_x86_32(target_arch,
+                                        RegisterLayout_x86::GPRMode::Compat64);
+  }
+  case llvm::Triple::x86_64:
+    assert(!host32 && "64-bit target requires a 64-bit native backend");
+    return RegisterLayoutFreeBSD_x86_64(target_arch);
+  default:
+    llvm_unreachable("unsupported native x86 target architecture");
   }
 }
 
 NativeRegisterContextFreeBSD_x86::NativeRegisterContextFreeBSD_x86(
     const ArchSpec &target_arch, NativeThreadFreeBSD &native_thread)
-    : NativeRegisterContextRegisterInfo(
-          native_thread, CreateRegisterInfoInterface(target_arch)),
-      m_regset_offsets({0}) {
-  assert(m_gpr.size() == GetRegisterInfoInterface().GetGPRSize());
-  std::array<uint32_t, MaxRegSet + 1> first_regnos;
+    : NativeRegisterContext(native_thread, target_arch,
+                            CreateRegisterLayout(target_arch)) {
+  assert(m_gpr.size() == GetBankSize(0));
 
-  switch (GetRegisterInfoInterface().GetTargetArchitecture().GetMachine()) {
-  case llvm::Triple::x86:
-    first_regnos[FPRegSet] = registers::x86_32::id::fctrl;
-    first_regnos[DBRegSet] = registers::x86_32::id::dr0;
-    break;
-  case llvm::Triple::x86_64:
-    first_regnos[FPRegSet] = registers::x86_64::id::fctrl;
-    first_regnos[DBRegSet] = registers::x86_64::id::dr0;
-    break;
-  default:
-    llvm_unreachable("Unhandled target architecture.");
+  // Bind native presentation policy to this schema generation once. The
+  // private definitions above use the backend's external numbering.
+  auto select_group = [&](uint32_t set_index) -> const RegisterGroupNumbers * {
+    switch (GetTargetArchitecture().GetMachine()) {
+    case llvm::Triple::x86:
+      return &g_reg_sets_i386[set_index];
+    case llvm::Triple::x86_64:
+      return &g_reg_sets_x86_64[set_index];
+    default:
+      llvm_unreachable("Unhandled target architecture.");
+    }
+  };
+
+  auto previous = GetDescription();
+  std::vector<RegisterGroup> groups;
+  std::set<RegisterID> visible;
+
+  for (uint32_t index = 0; index < k_num_register_sets; ++index) {
+    const auto *input = select_group(index);
+    if (!input)
+      continue;
+
+    RegisterGroup group{input->name, input->short_name, {}};
+
+    for (uint32_t number : input->registers) {
+      const auto *reg = previous->FindByNumber(lldb::eRegisterKindLLDB, number);
+      assert(reg && "native presentation names an unknown register");
+      if (reg) {
+        group.registers.push_back(reg->id);
+        visible.insert(reg->id);
+      }
+    }
+
+    groups.push_back(std::move(group));
   }
 
-  for (int i : {FPRegSet, DBRegSet})
-    m_regset_offsets[i] = GetRegisterInfoInterface()
-                              .GetRegisterInfo()[first_regnos[i]]
-                              .byte_offset;
-}
+  auto description = llvm::cantFail(RegisterDescription::Create(
+      {previous->GetRegisters().begin(), previous->GetRegisters().end()},
+      std::move(groups),
+      {previous->GetOwnedTypes().begin(), previous->GetOwnedTypes().end()}));
+  std::vector<RegisterID> order;
 
-uint32_t NativeRegisterContextFreeBSD_x86::GetRegisterSetCount() const {
-  return k_num_register_sets;
-}
+  for (RegisterID id : previous->GetUserRegisters())
+    if (visible.count(id))
+      order.push_back(id);
 
-const RegisterSet *
-NativeRegisterContextFreeBSD_x86::GetRegisterSet(uint32_t set_index) const {
-  switch (GetRegisterInfoInterface().GetTargetArchitecture().GetMachine()) {
-  case llvm::Triple::x86:
-    return &g_reg_sets_i386[set_index];
-  case llvm::Triple::x86_64:
-    return &g_reg_sets_x86_64[set_index];
-  default:
-    llvm_unreachable("Unhandled target architecture.");
-  }
+  auto presentation = llvm::cantFail(description.WithUserRegisters(order));
+  RegisterLayout updated_layout = GetLayout();
+  llvm::cantFail(updated_layout.Finalize(
+      std::make_shared<RegisterDescription>(std::move(presentation)),
+      updated_layout.GetByteOrder()));
+  SetRegisterLayout(std::move(updated_layout));
 }
 
 std::optional<NativeRegisterContextFreeBSD_x86::RegSetKind>
 NativeRegisterContextFreeBSD_x86::GetSetForNativeRegNum(
     uint32_t reg_num) const {
-  switch (GetRegisterInfoInterface().GetTargetArchitecture().GetMachine()) {
+  switch (GetTargetArchitecture().GetMachine()) {
   case llvm::Triple::x86:
     if (reg_num >= registers::x86_32::id::k_first_gpr &&
         reg_num <= registers::x86_32::id::k_last_gpr)
@@ -471,137 +525,81 @@ Status NativeRegisterContextFreeBSD_x86::WriteRegisterSet(RegSetKind set) {
   llvm_unreachable("NativeRegisterContextFreeBSD_x86::WriteRegisterSet");
 }
 
-Status
-NativeRegisterContextFreeBSD_x86::ReadRegister(const RegisterInfo *reg_info,
-                                                  RegisterValue &reg_value) {
-  Status error;
+llvm::Expected<RegisterValue>
+NativeRegisterContextFreeBSD_x86::ReadRegister(RegisterID id) {
+  auto description = GetDescription();
+  const auto *descriptor = description ? description->Find(id) : nullptr;
+  if (!descriptor)
+    return Status::FromErrorString("unknown register").ToError();
 
-  if (!reg_info) {
-    error = Status::FromErrorString("reg_info NULL");
-    return error;
+  const uint32_t reg = descriptor->numbers[lldb::eRegisterKindLLDB];
+  auto set = GetSetForNativeRegNum(reg);
+  if (!set)
+    return Status::FromErrorString("unsupported register set").ToError();
+
+  Status status = ReadRegisterSet(*set);
+  if (status.Fail())
+    return status.ToError();
+
+  const bool ymm = *set == YMMRegSet;
+  const uint32_t first_ymm =
+      GetTargetArchitecture().GetMachine() == llvm::Triple::x86
+          ? registers::x86_32::id::ymm0
+          : registers::x86_64::id::ymm0;
+  auto split = ymm ? GetYMMSplitReg(first_ymm) : std::nullopt;
+  if (ymm && !split)
+    return Status::FromErrorString("AVX state is unavailable").ToError();
+
+  uint8_t *fp = ymm ? m_xsave.data() : m_fpr.data();
+  auto value = ReadBankRegister(
+      descriptor->id,
+      {{RegisterLayout_x86::GP, m_gpr},
+       {RegisterLayout_x86::FP, {fp, sizeof(FXSAVE)}},
+       {RegisterLayout_x86::Debug, m_dbr},
+       {RegisterLayout_x86::YMMHigh,
+        {split ? static_cast<const uint8_t *>(split->ymm_hi) : nullptr,
+         split ? 256u : 0u}}});
+
+  return value;
   }
 
-  uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
-  if (reg == LLDB_INVALID_REGNUM) {
-    // This is likely an internal register for lldb use only and should not be
-    // directly queried.
-    error = Status::FromErrorStringWithFormat(
-        "register \"%s\" is an internal-only lldb "
-        "register, cannot read directly",
-        reg_info->name);
-    return error;
-  }
+llvm::Error NativeRegisterContextFreeBSD_x86::WriteRegister(
+    RegisterID id, const RegisterValue &reg_value) {
+  auto description = GetDescription();
+  const auto *descriptor = description ? description->Find(id) : nullptr;
+  if (!descriptor)
+    return Status::FromErrorString("unknown register").ToError();
 
-  std::optional<RegSetKind> opt_set = GetSetForNativeRegNum(reg);
-  if (!opt_set) {
-    // This is likely an internal register for lldb use only and should not be
-    // directly queried.
-    error = Status::FromErrorStringWithFormat(
-        "register \"%s\" is in unrecognized set", reg_info->name);
-    return error;
-  }
+  const uint32_t reg = descriptor->numbers[lldb::eRegisterKindLLDB];
+  auto set = GetSetForNativeRegNum(reg);
+  if (!set)
+    return Status::FromErrorString("unsupported register set").ToError();
 
-  RegSetKind set = opt_set.value();
-  error = ReadRegisterSet(set);
-  if (error.Fail())
-    return error;
+  Status status = ReadRegisterSet(*set);
+  if (status.Fail())
+    return status.ToError();
 
-  switch (set) {
-  case GPRegSet:
-  case FPRegSet:
-  case DBRegSet: {
-    void *data = GetOffsetRegSetData(set, reg_info->byte_offset);
-    FXSAVE *fpr = reinterpret_cast<FXSAVE *>(m_fpr.data());
-    if (data == &fpr->ftag) // ftag
-      reg_value.SetUInt16(
-          AbridgedToFullTagWord(fpr->ftag, fpr->fstat, fpr->stmm));
-    else
-      reg_value.SetBytes(data, reg_info->byte_size, endian::InlHostByteOrder());
-    break;
-  }
-  case YMMRegSet: {
-    std::optional<YMMSplitPtr> ymm_reg = GetYMMSplitReg(reg);
-    if (!ymm_reg) {
-      error = Status::FromErrorStringWithFormat(
-          "register \"%s\" not supported by CPU/kernel", reg_info->name);
-    } else {
-      YMMReg ymm = XStateToYMM(ymm_reg->xmm, ymm_reg->ymm_hi);
-      reg_value.SetBytes(ymm.bytes, reg_info->byte_size,
-                         endian::InlHostByteOrder());
-    }
-    break;
-  }
-  case MPXRegSet:
-    llvm_unreachable("MPX regset should have returned error");
-  }
+  const bool ymm = *set == YMMRegSet;
+  const uint32_t first_ymm =
+      GetTargetArchitecture().GetMachine() == llvm::Triple::x86
+          ? registers::x86_32::id::ymm0
+          : registers::x86_64::id::ymm0;
+  auto split = ymm ? GetYMMSplitReg(first_ymm) : std::nullopt;
+  if (ymm && !split)
+    return Status::FromErrorString("AVX state is unavailable").ToError();
 
-  return error;
-}
-
-Status NativeRegisterContextFreeBSD_x86::WriteRegister(
-    const RegisterInfo *reg_info, const RegisterValue &reg_value) {
-
-  Status error;
-
-  if (!reg_info) {
-    error = Status::FromErrorString("reg_info NULL");
-    return error;
-  }
-
-  uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
-  if (reg == LLDB_INVALID_REGNUM) {
-    // This is likely an internal register for lldb use only and should not be
-    // directly queried.
-    error = Status::FromErrorStringWithFormat(
-        "register \"%s\" is an internal-only lldb "
-        "register, cannot read directly",
-        reg_info->name);
-    return error;
-  }
-
-  std::optional<RegSetKind> opt_set = GetSetForNativeRegNum(reg);
-  if (!opt_set) {
-    // This is likely an internal register for lldb use only and should not be
-    // directly queried.
-    error = Status::FromErrorStringWithFormat(
-        "register \"%s\" is in unrecognized set", reg_info->name);
-    return error;
-  }
-
-  RegSetKind set = opt_set.value();
-  error = ReadRegisterSet(set);
-  if (error.Fail())
+  uint8_t *fp = ymm ? m_xsave.data() : m_fpr.data();
+  if (auto error = WriteBankRegister(
+          descriptor->id, reg_value,
+          {{RegisterLayout_x86::GP, m_gpr},
+           {RegisterLayout_x86::FP, {fp, sizeof(FXSAVE)}},
+           {RegisterLayout_x86::Debug, m_dbr},
+           {RegisterLayout_x86::YMMHigh,
+            {split ? static_cast<uint8_t *>(split->ymm_hi) : nullptr,
+             split ? 256u : 0u}}}))
     return error;
 
-  switch (set) {
-  case GPRegSet:
-  case FPRegSet:
-  case DBRegSet: {
-    void *data = GetOffsetRegSetData(set, reg_info->byte_offset);
-    FXSAVE *fpr = reinterpret_cast<FXSAVE *>(m_fpr.data());
-    if (data == &fpr->ftag) // ftag
-      fpr->ftag = FullToAbridgedTagWord(reg_value.GetAsUInt16());
-    else
-      ::memcpy(data, reg_value.GetBytes(), reg_value.GetByteSize());
-    break;
-  }
-  case YMMRegSet: {
-    std::optional<YMMSplitPtr> ymm_reg = GetYMMSplitReg(reg);
-    if (!ymm_reg) {
-      error = Status::FromErrorStringWithFormat(
-          "register \"%s\" not supported by CPU/kernel", reg_info->name);
-    } else {
-      YMMReg ymm;
-      ::memcpy(ymm.bytes, reg_value.GetBytes(), reg_value.GetByteSize());
-      YMMToXState(ymm, ymm_reg->xmm, ymm_reg->ymm_hi);
-    }
-    break;
-  }
-  case MPXRegSet:
-    llvm_unreachable("MPX regset should have returned error");
-  }
-
-  return WriteRegisterSet(set);
+  return WriteRegisterSet(*set).ToError();
 }
 
 Status NativeRegisterContextFreeBSD_x86::ReadAllRegisterValues(
@@ -614,8 +612,8 @@ Status NativeRegisterContextFreeBSD_x86::ReadAllRegisterValues(
     return error;
 
   uint8_t *dst = data_sp->GetBytes();
-  ::memcpy(dst, m_gpr.data(), GetRegisterInfoInterface().GetGPRSize());
-  dst += GetRegisterInfoInterface().GetGPRSize();
+  ::memcpy(dst, m_gpr.data(), GetBankSize(0));
+  dst += GetBankSize(0);
 
   return error;
 }
@@ -648,12 +646,14 @@ Status NativeRegisterContextFreeBSD_x86::WriteAllRegisterValues(
         __FUNCTION__);
     return error;
   }
-  ::memcpy(m_gpr.data(), src, GetRegisterInfoInterface().GetGPRSize());
+
+  ::memcpy(m_gpr.data(), src, GetBankSize(0));
 
   error = WriteRegisterSet(GPRegSet);
   if (error.Fail())
     return error;
-  src += GetRegisterInfoInterface().GetGPRSize();
+
+  src += GetBankSize(0);
 
   return error;
 }
@@ -662,40 +662,17 @@ llvm::Error NativeRegisterContextFreeBSD_x86::CopyHardwareWatchpointsFrom(
     NativeRegisterContextFreeBSD &source) {
   auto &r_source = static_cast<NativeRegisterContextFreeBSD_x86 &>(source);
   // NB: This implicitly reads the whole dbreg set.
-  RegisterValue dr7;
-  Status res = r_source.ReadRegister(GetDR(7), dr7);
-  if (!res.Fail()) {
-    // copy dbregs only if any watchpoints were set
-    if ((dr7.GetAsUInt64() & 0xFF) == 0)
+  auto dr7 = r_source.ReadRegister(r_source.GetDR(7));
+  if (!dr7)
+    return dr7.takeError();
+
+  // Copy dbregs only if any watchpoints were set.
+  if ((dr7->GetAsUInt64() & 0xFF) == 0)
       return llvm::Error::success();
 
     m_dbr = r_source.m_dbr;
-    res = WriteRegisterSet(DBRegSet);
-  }
-  return res.ToError();
-}
 
-uint8_t *
-NativeRegisterContextFreeBSD_x86::GetOffsetRegSetData(RegSetKind set,
-                                                         size_t reg_offset) {
-  uint8_t *base;
-  switch (set) {
-  case GPRegSet:
-    base = m_gpr.data();
-    break;
-  case FPRegSet:
-    base = m_fpr.data();
-    break;
-  case DBRegSet:
-    base = m_dbr.data();
-    break;
-  case YMMRegSet:
-    llvm_unreachable("GetRegSetData() is unsuitable for this regset.");
-  case MPXRegSet:
-    llvm_unreachable("MPX regset should have returned error");
-  }
-  assert(reg_offset >= m_regset_offsets[set]);
-  return base + (reg_offset - m_regset_offsets[set]);
+  return WriteRegisterSet(DBRegSet).ToError();
 }
 
 std::optional<NativeRegisterContextFreeBSD_x86::YMMSplitPtr>
@@ -705,7 +682,7 @@ NativeRegisterContextFreeBSD_x86::GetYMMSplitReg(uint32_t reg) {
     return std::nullopt;
 
   uint32_t reg_index;
-  switch (GetRegisterInfoInterface().GetTargetArchitecture().GetMachine()) {
+  switch (GetTargetArchitecture().GetMachine()) {
   case llvm::Triple::x86:
     reg_index = reg - registers::x86_32::id::ymm0;
     break;

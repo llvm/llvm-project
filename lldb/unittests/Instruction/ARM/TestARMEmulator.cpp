@@ -34,10 +34,10 @@ struct ARMEmulatorTester : public EmulateInstructionARM {
   }
 
   static bool ReadRegisterCallback(EmulateInstruction *instruction, void *baton,
-                                   const RegisterInfo *reg_info,
+                                   const RegisterDescriptor *reg_info,
                                    RegisterValue &reg_value) {
     auto *tester = static_cast<ARMEmulatorTester *>(instruction);
-    uint32_t reg = reg_info->kinds[eRegisterKindDWARF];
+    uint32_t reg = reg_info->numbers[eRegisterKindDWARF];
     if (reg <= dwarf_regs::cpsr) {
       reg_value.SetUInt32(tester->gpr[reg - dwarf_regs::r0]);
       return true;
@@ -47,10 +47,10 @@ struct ARMEmulatorTester : public EmulateInstructionARM {
 
   static bool WriteRegisterCallback(EmulateInstruction *instruction,
                                     void *baton, const Context &context,
-                                    const RegisterInfo *reg_info,
+                                    const RegisterDescriptor *reg_info,
                                     const RegisterValue &reg_value) {
     auto *tester = static_cast<ARMEmulatorTester *>(instruction);
-    uint32_t reg = reg_info->kinds[eRegisterKindDWARF];
+    uint32_t reg = reg_info->numbers[eRegisterKindDWARF];
     if (reg <= dwarf_regs::cpsr) {
       tester->gpr[reg - dwarf_regs::r0] = reg_value.GetAsUInt32();
       return true;

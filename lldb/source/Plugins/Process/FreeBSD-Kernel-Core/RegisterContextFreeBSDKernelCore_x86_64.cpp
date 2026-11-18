@@ -6,7 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <set>
 #include "RegisterContextFreeBSDKernelCore_x86_64.h"
+
 #include "lldb/Register/Arch/lldb-x86_64-register-enums.h"
 
 #include "lldb/Target/Process.h"
@@ -23,29 +25,50 @@ using namespace lldb;
 using namespace lldb_private;
 
 RegisterContextFreeBSDKernelCore_x86_64::
-    RegisterContextFreeBSDKernelCore_x86_64(
-        Thread &thread, RegisterInfoInterface *register_info,
+    RegisterContextFreeBSDKernelCore_x86_64(Thread &thread,
+                                            RegisterLayout layout,
         lldb::addr_t pcb_addr)
-    : RegisterContextCore_x86(thread, 0, register_info), m_pcb_addr(pcb_addr) {}
+    : ThreadRegisterContext(thread, 0, std::move(layout)),
+      m_pcb_addr(pcb_addr) {
 
-bool RegisterContextFreeBSDKernelCore_x86_64::ReadGPR() { return true; }
+  const size_t group_count = [&]() -> size_t { return 2; }();
 
-bool RegisterContextFreeBSDKernelCore_x86_64::ReadFPR() { return true; }
+  auto previous = GetDescription();
+  auto selected = previous->GetGroups().take_front(group_count);
+  std::vector<RegisterGroup> groups(selected.begin(), selected.end());
+  std::set<RegisterID> visible;
 
-bool RegisterContextFreeBSDKernelCore_x86_64::WriteGPR() {
-  assert(0);
-  return false;
+  for (const auto &group : groups)
+    visible.insert(group.registers.begin(), group.registers.end());
+
+  std::vector<RegisterID> order;
+
+  for (RegisterID id : previous->GetUserRegisters())
+    if (visible.count(id))
+      order.push_back(id);
+
+  auto description = llvm::cantFail(RegisterDescription::Create(
+      {previous->GetRegisters().begin(), previous->GetRegisters().end()},
+      std::move(groups),
+      {previous->GetOwnedTypes().begin(), previous->GetOwnedTypes().end()}));
+  auto presentation = llvm::cantFail(description.WithUserRegisters(order));
+  RegisterLayout updated_layout = GetLayout();
+  llvm::cantFail(updated_layout.Finalize(
+      std::make_shared<RegisterDescription>(std::move(presentation)),
+      updated_layout.GetByteOrder()));
+  SetRegisterLayout(std::move(updated_layout));
 }
 
-bool RegisterContextFreeBSDKernelCore_x86_64::WriteFPR() {
-  assert(0);
-  return false;
-}
+llvm::Expected<RegisterValue>
+RegisterContextFreeBSDKernelCore_x86_64::ReadRegister(RegisterID id) {
+  auto description = GetDescription();
+  const auto *reg_info = description ? description->Find(id) : nullptr;
+  if (!reg_info)
+    return llvm::createStringError("unknown register ID");
 
-bool RegisterContextFreeBSDKernelCore_x86_64::ReadRegister(
-    const RegisterInfo *reg_info, RegisterValue &value) {
+  RegisterValue value;
   if (m_pcb_addr == LLDB_INVALID_ADDRESS)
-    return false;
+    return llvm::createStringError("register value is unavailable");
 
   // https://cgit.freebsd.org/src/tree/sys/amd64/include/pcb.h
   struct {
@@ -77,9 +100,9 @@ bool RegisterContextFreeBSDKernelCore_x86_64::ReadRegister(
   size_t rd =
       m_thread.GetProcess()->ReadMemory(m_pcb_addr, &pcb, sizeof(pcb), error);
   if (rd != sizeof(pcb))
-    return false;
+    return llvm::createStringError("register value is unavailable");
 
-  uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
+  uint32_t reg = reg_info->numbers[lldb::eRegisterKindLLDB];
   switch (reg) {
 #define REG(x)                                                                 \
   case reg_ids::x:                                                             \
@@ -102,13 +125,13 @@ bool RegisterContextFreeBSDKernelCore_x86_64::ReadRegister(
     value.SetUInt(DATA_SEL, reg_info->byte_size);
     break;
   default:
-    return false;
+    return llvm::createStringError("register value is unavailable");
   }
 
-  return true;
+  return value;
 }
 
-bool RegisterContextFreeBSDKernelCore_x86_64::WriteRegister(
-    const RegisterInfo *reg_info, const RegisterValue &value) {
-  return false;
+llvm::Error RegisterContextFreeBSDKernelCore_x86_64::WriteRegister(
+    RegisterID id, const RegisterValue &value) {
+  return llvm::createStringError("register write is unavailable");
 }

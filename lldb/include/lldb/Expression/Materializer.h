@@ -13,9 +13,9 @@
 #include <vector>
 
 #include "lldb/Expression/IRMemoryMap.h"
+#include "lldb/Register/RegisterDescription.h"
 #include "lldb/Symbol/TaggedASTType.h"
 #include "lldb/Target/StackFrame.h"
-#include "lldb/Utility/RegisterInfo.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-private-types.h"
 
@@ -118,7 +118,8 @@ public:
                              bool keep_in_memory,
                              PersistentVariableDelegate *delegate, Status &err);
   uint32_t AddSymbol(const Symbol &symbol_sp, Status &err);
-  uint32_t AddRegister(const RegisterInfo &register_info, Status &err);
+  uint32_t AddRegister(std::shared_ptr<const RegisterDescription> description,
+                       RegisterID id, Status &err);
 
   uint32_t GetStructAlignment() { return m_struct_alignment; }
 

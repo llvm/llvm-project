@@ -29,7 +29,6 @@ if (CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
       lldbRegister
       lldbTarget
       lldbPluginObjectFileELF
-      lldbPluginRegisterCore
       kvm
     )
 

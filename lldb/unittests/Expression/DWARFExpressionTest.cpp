@@ -202,45 +202,29 @@ private:
 
 class MockRegisterContext : public ThreadRegisterContext {
 public:
-  MockRegisterContext(Thread &thread, const RegisterValue &reg_value)
-      : ThreadRegisterContext(thread, 0 /*concrete_frame_idx*/),
-        m_reg_value(reg_value) {}
-
-  void InvalidateAllRegisters() override {}
-
-  size_t GetRegisterCount() override { return 0; }
-
-  const RegisterInfo *GetRegisterInfoAtIndex(size_t reg) override {
-    return &m_reg_info;
+  MockRegisterContext(Thread &thread, const RegisterValue &value)
+      : ThreadRegisterContext(thread, 0), m_reg_value(value) {}
+  lldb::ByteOrder GetByteOrder() override { return lldb::eByteOrderLittle; }
+  llvm::Expected<RegisterID>
+  ResolveRegisterNumber(lldb::RegisterKind, uint32_t number) const override {
+    return number;
   }
-
-  size_t GetRegisterSetCount() override { return 0; }
-
-  const RegisterSet *GetRegisterSet(size_t reg_set) override { return nullptr; }
-
-  lldb::ByteOrder GetByteOrder() override {
-    return lldb::ByteOrder::eByteOrderLittle;
+  llvm::Expected<RegisterValue> ReadRegister(RegisterID id) override {
+    RegisterDescriptor reg;
+    reg.id = id;
+    reg.name = "test";
+    reg.byte_size = m_reg_value.GetByteSize();
+    reg.numbers[lldb::eRegisterKindLLDB] = id;
+    SetRegisterDescription(std::make_shared<RegisterDescription>(
+        llvm::cantFail(RegisterDescription::Create({std::move(reg)}))));
+    return m_reg_value;
   }
-
-  bool ReadRegister(const RegisterInfo *reg_info,
-                    RegisterValue &reg_value) override {
-    reg_value = m_reg_value;
-    return true;
-  }
-
-  bool WriteRegister(const RegisterInfo *reg_info,
-                     const RegisterValue &reg_value) override {
-    return false;
-  }
-
-  uint32_t ConvertRegisterKindToRegisterNumber(lldb::RegisterKind kind,
-                                               uint32_t num) override {
-    return num;
+  llvm::Error WriteRegister(RegisterID, const RegisterValue &) override {
+    return llvm::createStringError("test register is read-only");
   }
 
 private:
-  RegisterInfo m_reg_info{};
-  RegisterValue m_reg_value{};
+  RegisterValue m_reg_value;
 };
 
 class MockStackFrame : public StackFrame {
@@ -1761,7 +1745,7 @@ TEST_F(DWARFExpressionMockProcessTest, DW_OP_reg0) {
   ExecutionContext exe_ctx(ctx.process_sp);
   EXPECT_THAT_EXPECTED(
       Evaluate({DW_OP_reg0}, {}, {}, &exe_ctx, ctx.reg_ctx_sp.get()),
-      ExpectScalar(0xCAFE, Value::ContextType::RegisterInfo));
+      ExpectScalar(0xCAFE, Value::ContextType::RegisterDescriptor));
 }
 
 TEST_F(DWARFExpressionMockProcessTest, DW_OP_reg_all) {
@@ -1773,7 +1757,7 @@ TEST_F(DWARFExpressionMockProcessTest, DW_OP_reg_all) {
     uint8_t opcode = DW_OP_reg0 + n;
     EXPECT_THAT_EXPECTED(
         Evaluate({opcode}, {}, {}, &exe_ctx, ctx.reg_ctx_sp.get()),
-        ExpectScalar(0xABCD, Value::ContextType::RegisterInfo))
+        ExpectScalar(0xABCD, Value::ContextType::RegisterDescriptor))
         << "DW_OP_reg" << static_cast<int>(n) << " failed";
   }
 }
@@ -1786,7 +1770,7 @@ TEST_F(DWARFExpressionMockProcessTest, DW_OP_regx) {
   // ULEB128(64) for register 64.
   EXPECT_THAT_EXPECTED(
       Evaluate({DW_OP_regx, 0x40}, {}, {}, &exe_ctx, ctx.reg_ctx_sp.get()),
-      ExpectScalar(0xBEEF, Value::ContextType::RegisterInfo));
+      ExpectScalar(0xBEEF, Value::ContextType::RegisterDescriptor));
 }
 
 TEST_F(DWARFExpressionMockProcessTest, DW_OP_LLVM_piece_end) {
@@ -2167,7 +2151,7 @@ static auto testExpressionVendorExtensions(lldb::ModuleSP module_sp,
                 0x04, 0x00, 0x00,          // index:u32
                 0x00, DW_OP_stack_value},
                module_sp, &dwarf_unit, nullptr, reg_ctx),
-      ExpectScalar(32, 42, false, Value::ContextType::RegisterInfo));
+      ExpectScalar(32, 42, false, Value::ContextType::RegisterDescriptor));
 
   // Test that searches for opcodes work in the presence of extensions:
   uint8_t expr[] = {DW_OP_WASM_location,   0x03, 0x04, 0x00, 0x00, 0x00,
@@ -2580,9 +2564,11 @@ TEST_F(DWARFExpressionMockProcessTest, deref_register) {
   };
 
   // Reads from the register r0.
-  // Sets the context to RegisterInfo so we know this is a register location.
-  EXPECT_THAT_EXPECTED(Eval({DW_OP_reg0}),
-                       ExpectScalar(reg_r0, Value::ContextType::RegisterInfo));
+  // Sets the context to RegisterDescriptor so we know this is a register
+  // location.
+  EXPECT_THAT_EXPECTED(
+      Eval({DW_OP_reg0}),
+      ExpectScalar(reg_r0, Value::ContextType::RegisterDescriptor));
 
   // Reads from the location(register r0).
   // Clears the context so we know this is a value not a location.

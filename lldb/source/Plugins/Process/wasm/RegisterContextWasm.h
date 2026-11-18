@@ -12,7 +12,7 @@
 #include "Plugins/Process/gdb-remote/GDBRemoteRegisterContext.h"
 #include "Plugins/Process/gdb-remote/ThreadGDBRemote.h"
 #include "ThreadWasm.h"
-#include "Utility/WasmVirtualRegisters.h"
+#include "lldb/Register/Arch/lldb-wasm-register-enums.h"
 #include "lldb/lldb-private-types.h"
 #include <algorithm>
 #include <unordered_map>
@@ -24,45 +24,26 @@ class RegisterContextWasm;
 
 typedef std::shared_ptr<RegisterContextWasm> RegisterContextWasmSP;
 
-struct WasmVirtualRegisterInfo : public RegisterInfo {
-  WasmVirtualRegisterKinds kind;
-  uint32_t index;
-
-  WasmVirtualRegisterInfo(WasmVirtualRegisterKinds kind, uint32_t index)
-      : RegisterInfo(), kind(kind), index(index) {
-    // RegisterInfo() zeroes the numbers, and 0 is the generic PC.
-    std::fill(std::begin(kinds), std::end(kinds), LLDB_INVALID_REGNUM);
-    kinds[lldb::eRegisterKindLLDB] = GetWasmRegister(kind, index);
-  }
-};
-
 class RegisterContextWasm
     : public process_gdb_remote::GDBRemoteRegisterContext {
 public:
   RegisterContextWasm(process_gdb_remote::ThreadGDBRemote &thread,
                       uint32_t concrete_frame_idx,
-                      lldb::DynamicRegisterInfoSP reg_info_sp);
+                      std::shared_ptr<const RegisterLayout> layout_sp);
 
   ~RegisterContextWasm() override;
 
-  uint32_t ConvertRegisterKindToRegisterNumber(lldb::RegisterKind kind,
-                                               uint32_t num) override;
+  llvm::Expected<RegisterID>
+  ResolveRegisterNumber(lldb::RegisterKind kind,
+                        uint32_t number) const override;
 
   void InvalidateAllRegisters() override;
 
-  size_t GetRegisterCount() override;
+  llvm::Expected<lldb_private::RegisterValue>
+  ReadRegister(lldb_private::RegisterID id) override;
 
-  const RegisterInfo *GetRegisterInfoAtIndex(size_t reg) override;
-
-  size_t GetRegisterSetCount() override;
-
-  const RegisterSet *GetRegisterSet(size_t reg_set) override;
-
-  bool ReadRegister(const RegisterInfo *reg_info,
-                    RegisterValue &value) override;
-
-  bool WriteRegister(const RegisterInfo *reg_info,
-                     const RegisterValue &value) override;
+  llvm::Error WriteRegister(lldb_private::RegisterID id,
+                            const lldb_private::RegisterValue &value) override;
 
 private:
   /// The module whose code this context's frame is executing. Resolved on each
@@ -70,9 +51,6 @@ private:
   /// thread's own and outlives a stop, so a cached id would go on naming the
   /// module of a previous stop.
   uint32_t GetModuleID();
-
-  std::unordered_map<size_t, std::unique_ptr<WasmVirtualRegisterInfo>>
-      m_register_map;
 };
 
 } // namespace wasm

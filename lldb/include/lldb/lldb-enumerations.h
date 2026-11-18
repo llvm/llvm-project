@@ -287,8 +287,8 @@ enum ScriptedExtension {
 };
 
 /// Register numbering types.
-// See ThreadRegisterContext::ConvertRegisterKindToRegisterNumber to convert any of
-// these to the lldb internal register numbering scheme (eRegisterKindLLDB).
+// See ThreadRegisterContext::GetRegisterIndexForNumber to convert any
+// of these to the lldb internal register numbering scheme (eRegisterKindLLDB).
 enum RegisterKind {
   /// the register numbers seen in eh_frame
   eRegisterKindEHFrame = 0,

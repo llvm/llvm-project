@@ -13,18 +13,18 @@
 #include "lldb/Utility/Log.h"
 
 #include "ProcessFreeBSDKernelCore.h"
-#include "Register/Common/RegisterInfo_arm.h"
-#include "Register/Common/RegisterInfo_arm64.h"
-#include "Register/Common/RegisterInfo_ppc64le.h"
-#include "Register/Common/RegisterInfo_riscv64.h"
-#include "Register/FreeBSD/RegisterInfoFreeBSD_i386.h"
-#include "Register/FreeBSD/RegisterInfoFreeBSD_x86_64.h"
 #include "RegisterContextFreeBSDKernelCore_arm.h"
 #include "RegisterContextFreeBSDKernelCore_arm64.h"
 #include "RegisterContextFreeBSDKernelCore_i386.h"
 #include "RegisterContextFreeBSDKernelCore_ppc64le.h"
 #include "RegisterContextFreeBSDKernelCore_riscv64.h"
 #include "RegisterContextFreeBSDKernelCore_x86_64.h"
+#include "lldb/Register/Descriptions/RegisterDescription_arm32.h"
+#include "lldb/Register/Descriptions/RegisterDescription_arm64.h"
+#include "lldb/Register/Descriptions/RegisterDescription_ppc64le.h"
+#include "lldb/Register/Descriptions/RegisterDescription_riscv64.h"
+#include "lldb/Register/Layouts/FreeBSD/RegisterLayoutFreeBSD_x86_32.h"
+#include "lldb/Register/Layouts/FreeBSD/RegisterLayoutFreeBSD_x86_64.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -63,36 +63,55 @@ ThreadFreeBSDKernelCore::CreateRegisterContextForFrame(StackFrame *frame) {
     ArchSpec arch = process->GetTarget().GetArchitecture();
 
     switch (arch.GetMachine()) {
-    case llvm::Triple::aarch64:
+    case llvm::Triple::aarch64: {
+      RegisterLayout layout;
+      llvm::cantFail(
+          layout.Finalize(std::make_shared<RegisterDescription_arm64>(
+                              RegisterDescription_arm64::Config{0}),
+                          arch.GetByteOrder()));
       m_thread_reg_ctx_sp =
           std::make_shared<RegisterContextFreeBSDKernelCore_arm64>(
-              *this, std::make_unique<RegisterInfo_arm64>(arch, 0), m_pcb_addr);
+              *this, std::move(layout), m_pcb_addr);
       break;
-    case llvm::Triple::arm:
+    }
+    case llvm::Triple::arm: {
+      RegisterLayout layout;
+      llvm::cantFail(layout.Finalize(RegisterDescription_arm32::GetShared(),
+                                     arch.GetByteOrder()));
       m_thread_reg_ctx_sp =
           std::make_shared<RegisterContextFreeBSDKernelCore_arm>(
-              *this, std::make_unique<RegisterInfo_arm>(arch), m_pcb_addr);
+              *this, std::move(layout), m_pcb_addr);
       break;
-    case llvm::Triple::ppc64le:
+    }
+    case llvm::Triple::ppc64le: {
+      RegisterLayout layout;
+      llvm::cantFail(layout.Finalize(RegisterDescription_ppc64le::GetShared(),
+                                     arch.GetByteOrder()));
       m_thread_reg_ctx_sp =
           std::make_shared<RegisterContextFreeBSDKernelCore_ppc64le>(
-              *this, new RegisterInfo_ppc64le(arch), m_pcb_addr);
+              *this, std::move(layout), m_pcb_addr);
       break;
-    case llvm::Triple::riscv64:
+    }
+    case llvm::Triple::riscv64: {
+      RegisterLayout layout;
+      llvm::cantFail(
+          layout.Finalize(RegisterDescription_riscv64::GetShared(
+                              RegisterDescription_riscv64::Config{0}),
+                          arch.GetByteOrder()));
       m_thread_reg_ctx_sp =
           std::make_shared<RegisterContextFreeBSDKernelCore_riscv64>(
-              *this, std::make_unique<RegisterInfo_riscv64>(arch, 0),
-              m_pcb_addr);
+              *this, std::move(layout), m_pcb_addr);
       break;
+    }
     case llvm::Triple::x86:
       m_thread_reg_ctx_sp =
           std::make_shared<RegisterContextFreeBSDKernelCore_i386>(
-              *this, new RegisterInfoFreeBSD_i386(arch), m_pcb_addr);
+              *this, RegisterLayoutFreeBSD_x86_32(arch), m_pcb_addr);
       break;
     case llvm::Triple::x86_64:
       m_thread_reg_ctx_sp =
           std::make_shared<RegisterContextFreeBSDKernelCore_x86_64>(
-              *this, new RegisterInfoFreeBSD_x86_64(arch), m_pcb_addr);
+              *this, RegisterLayoutFreeBSD_x86_64(arch), m_pcb_addr);
       break;
     default:
       assert(false &&

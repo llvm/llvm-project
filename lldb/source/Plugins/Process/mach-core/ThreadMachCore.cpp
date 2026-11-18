@@ -17,9 +17,9 @@
 #include "lldb/Host/SafeMachO.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/AppleArm64ExceptionClass.h"
-#include "lldb/Target/DynamicRegisterInfo.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/ThreadRegisterContext.h"
+#include "lldb/Register/RegisterDefinition.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Unwind.h"
@@ -149,11 +149,21 @@ bool ThreadMachCore::CalculateStopInfo() {
 
       if (cputype == llvm::MachO::CPU_TYPE_ARM64 ||
           cputype == llvm::MachO::CPU_TYPE_ARM64_32) {
-        const RegisterInfo *esr_info = reg_ctx_sp->GetRegisterInfoByName("esr");
-        const RegisterInfo *far_info = reg_ctx_sp->GetRegisterInfoByName("far");
+        const RegisterDescriptor *esr_info =
+            reg_ctx_sp->GetRegisterByName("esr");
+        const RegisterDescriptor *far_info =
+            reg_ctx_sp->GetRegisterByName("far");
         RegisterValue esr, far;
-        if (reg_ctx_sp->ReadRegister(esr_info, esr) &&
-            reg_ctx_sp->ReadRegister(far_info, far)) {
+        if (!llvm::errorToBool(
+                reg_ctx_sp
+                    ->ReadRegister(
+                        (esr_info ? esr_info->id : LLDB_INVALID_REGNUM))
+                    .moveInto(esr)) &&
+            !llvm::errorToBool(
+                reg_ctx_sp
+                    ->ReadRegister(
+                        (far_info ? far_info->id : LLDB_INVALID_REGNUM))
+                    .moveInto(far))) {
           const uint32_t esr_val = esr.GetAsUInt32();
           const AppleArm64ExceptionClass exception_class =
               getAppleArm64ExceptionClass(esr_val);

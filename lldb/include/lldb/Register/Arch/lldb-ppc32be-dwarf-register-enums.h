@@ -89,26 +89,26 @@ enum : uint32_t {
   f31,
 
   // Control and Status Registers.
-  cr,
+  cr = 68,
 
   // Floating Point Control and Status Registers.
-  fpscr,
+  fpscr = UINT32_MAX, // No ELF DWARF number.
 
   // Control and Status Registers.
-  msr,
-  vscr,
-  xer = 101,
+  msr = UINT32_MAX, // No ELF DWARF number.
+  vscr = 110,
+  xer = 76,
 
   // General Purpose Registers.
-  lr = 108,
-  ctr,
-  pc,
+  lr = 65,
+  ctr = 66,
+  pc = UINT32_MAX, // Use the generic PC number.
 
   // Control and Status Registers.
-  vrsave = 356,
+  vrsave = 109,
 
   // Vector Registers.
-  v0 = 1124,
+  v0 = 77,
   v1,
   v2,
   v3,

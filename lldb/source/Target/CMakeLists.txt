@@ -14,7 +14,7 @@ lldb_tablegen(TargetProperties.json -dump-json
 add_lldb_library(lldbTarget
   ABI.cpp
   AssertFrameRecognizer.cpp
-  DynamicRegisterInfo.cpp
+  BorrowedStackFrame.cpp
   CoreFileMemoryRanges.cpp
   ExecutionContext.cpp
   InstrumentationRuntime.cpp
@@ -34,19 +34,15 @@ add_lldb_library(lldbTarget
   Platform.cpp
   Process.cpp
   ProcessIOHandler.cpp
-  ThreadRegisterContext.cpp
   ProcessTrace.cpp
   Queue.cpp
   QueueItem.cpp
   QueueList.cpp
   RegisterContextUnwind.cpp
-  RegisterNumber.cpp
   RemoteAwarePlatform.cpp
   ScriptedThreadPlan.cpp
-  SyntheticFrameProvider.cpp
   SectionLoadHistory.cpp
   SectionLoadList.cpp
-  BorrowedStackFrame.cpp
   StackFrame.cpp
   StackFrameList.cpp
   StackFrameRecognizer.cpp
@@ -54,6 +50,7 @@ add_lldb_library(lldbTarget
   Statistics.cpp
   StopInfo.cpp
   StructuredDataPlugin.cpp
+  SyntheticFrameProvider.cpp
   SystemRuntime.cpp
   Target.cpp
   TargetAPIMutex.cpp
@@ -71,8 +68,9 @@ add_lldb_library(lldbTarget
   ThreadPlanCallUserExpression.cpp
   ThreadPlanRunToAddress.cpp
   ThreadPlanRunToBreakpoint.cpp
-  ThreadPlanSingleThreadTimeout.cpp
   ThreadPlanShouldStopHere.cpp
+  ThreadPlanSingleThreadTimeout.cpp
+  ThreadPlanStack.cpp
   ThreadPlanStepInRange.cpp
   ThreadPlanStepInstruction.cpp
   ThreadPlanStepOut.cpp
@@ -82,12 +80,12 @@ add_lldb_library(lldbTarget
   ThreadPlanStepThrough.cpp
   ThreadPlanStepUntil.cpp
   ThreadPlanTracer.cpp
-  ThreadPlanStack.cpp
+  ThreadRegisterContext.cpp
   ThreadSpec.cpp
   Trace.cpp
   TraceCursor.cpp
-  TraceExporter.cpp
   TraceDumper.cpp
+  TraceExporter.cpp
   UnixSignals.cpp
   UnwindAssembly.cpp
   UnwindLLDB.cpp
@@ -103,11 +101,12 @@ add_lldb_library(lldbTarget
     lldbExpression
     lldbHost
     lldbInterpreter
+    lldbPluginProcessUtility
+    lldbRegister
     lldbSymbol
     lldbUtility
     lldbValueObject
     lldbVersion
-    lldbPluginProcessUtility
   )
 
 add_dependencies(lldbTarget

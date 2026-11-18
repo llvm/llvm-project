@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "RegisterContextFreeBSDKernelCore_riscv64.h"
-#include "lldb/Register/Arch/lldb-riscv-register-enums.h"
+#include "lldb/Register/Arch/lldb-riscv64-register-enums.h"
 
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Thread.h"
@@ -18,35 +18,27 @@
 #include <machine/pcb.h>
 #endif
 
-namespace reg_ids = lldb_private::registers::riscv::id;
+namespace reg_ids = lldb_private::registers::riscv64::id;
 using namespace lldb;
 using namespace lldb_private;
 
 RegisterContextFreeBSDKernelCore_riscv64::
-    RegisterContextFreeBSDKernelCore_riscv64(
-        Thread &thread, std::unique_ptr<RegisterInfo_riscv64> register_info_up,
+    RegisterContextFreeBSDKernelCore_riscv64(Thread &thread,
+                                             RegisterLayout layout,
         lldb::addr_t pcb_addr)
-    : RegisterContextCore_riscv64(thread, std::move(register_info_up)),
+    : ThreadRegisterContext(thread, 0, std::move(layout)),
       m_pcb_addr(pcb_addr) {}
 
-bool RegisterContextFreeBSDKernelCore_riscv64::ReadGPR() { return true; }
+llvm::Expected<RegisterValue>
+RegisterContextFreeBSDKernelCore_riscv64::ReadRegister(RegisterID id) {
+  auto description = GetDescription();
+  const auto *reg_info = description ? description->Find(id) : nullptr;
+  if (!reg_info)
+    return llvm::createStringError("unknown register ID");
 
-bool RegisterContextFreeBSDKernelCore_riscv64::ReadFPR() { return true; }
-
-bool RegisterContextFreeBSDKernelCore_riscv64::WriteGPR() {
-  assert(0);
-  return false;
-}
-
-bool RegisterContextFreeBSDKernelCore_riscv64::WriteFPR() {
-  assert(0);
-  return false;
-}
-
-bool RegisterContextFreeBSDKernelCore_riscv64::ReadRegister(
-    const RegisterInfo *reg_info, RegisterValue &value) {
+  RegisterValue value;
   if (m_pcb_addr == LLDB_INVALID_ADDRESS)
-    return false;
+    return llvm::createStringError("register value is unavailable");
 
   // https://cgit.freebsd.org/src/tree/sys/riscv/include/pcb.h
   struct {
@@ -69,9 +61,9 @@ bool RegisterContextFreeBSDKernelCore_riscv64::ReadRegister(
   size_t rd =
       m_thread.GetProcess()->ReadMemory(m_pcb_addr, &pcb, sizeof(pcb), error);
   if (rd != sizeof(pcb))
-    return false;
+    return llvm::createStringError("register value is unavailable");
 
-  uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
+  uint32_t reg = reg_info->numbers[lldb::eRegisterKindLLDB];
   switch (reg) {
   case reg_ids::gpr_pc:
   case reg_ids::gpr_ra:
@@ -107,12 +99,13 @@ bool RegisterContextFreeBSDKernelCore_riscv64::ReadRegister(
     value = pcb.s[reg - reg_ids::gpr_s2 + 2];
     break;
   default:
-    return false;
-  }
-  return true;
+    return llvm::createStringError("register value is unavailable");
 }
 
-bool RegisterContextFreeBSDKernelCore_riscv64::WriteRegister(
-    const RegisterInfo *reg_info, const RegisterValue &value) {
-  return false;
+  return value;
+}
+
+llvm::Error RegisterContextFreeBSDKernelCore_riscv64::WriteRegister(
+    RegisterID id, const RegisterValue &value) {
+  return llvm::createStringError("register write is unavailable");
 }

@@ -6,74 +6,85 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <set>
+#include "lldb/Register/Layouts/Common/RegisterLayout_x86.h"
+
 #include "RegisterContextELFCore_x86.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Register/RegisterValue.h"
 
 using namespace lldb_private;
+using FXSAVE = RegisterLayout_x86::FXSAVE;
 
 RegisterContextELFCore_x86::RegisterContextELFCore_x86(
-    Thread &thread, RegisterInfoInterface *register_info,
-    const DataExtractor &gpregset, llvm::ArrayRef<CoreNote> notes)
-    : RegisterContextCore_x86(thread, 0, register_info) {
+    Thread &thread, RegisterLayout layout, const DataExtractor &gpregset,
+    llvm::ArrayRef<CoreNote> notes)
+    : ThreadRegisterContext(thread, 0, std::move(layout)) {
   size_t size, len;
 
-  size = GetGPRSize();
+  size = GetBankSize(0);
   m_gpregset.reset(new uint8_t[size]);
   len =
       gpregset.ExtractBytes(0, size, lldb::eByteOrderLittle, m_gpregset.get());
   if (len != size)
     m_gpregset.reset();
 
-  DataExtractor fpregset = getRegset(
-      notes, register_info->GetTargetArchitecture().GetTriple(), FPR_Desc);
+  DataExtractor fpregset =
+      getRegset(notes, GetTargetArchitecture().GetTriple(), FPR_Desc);
   size = sizeof(FXSAVE);
   m_fpregset.reset(new uint8_t[size]);
   len =
       fpregset.ExtractBytes(0, size, lldb::eByteOrderLittle, m_fpregset.get());
   if (len != size)
     m_fpregset.reset();
+
+  const size_t group_count = [&]() -> size_t {
+    // Keep the existing AVX group visibility when a complete FXSAVE note
+    // exists.
+    return m_fpregset ? 3 : 2;
+  }();
+
+  auto previous = GetDescription();
+  auto selected = previous->GetGroups().take_front(group_count);
+  std::vector<RegisterGroup> groups(selected.begin(), selected.end());
+  std::set<RegisterID> visible;
+
+  for (const auto &group : groups)
+    visible.insert(group.registers.begin(), group.registers.end());
+
+  std::vector<RegisterID> order;
+
+  for (RegisterID id : previous->GetUserRegisters())
+    if (visible.count(id))
+      order.push_back(id);
+
+  auto description = llvm::cantFail(RegisterDescription::Create(
+      {previous->GetRegisters().begin(), previous->GetRegisters().end()},
+      std::move(groups),
+      {previous->GetOwnedTypes().begin(), previous->GetOwnedTypes().end()}));
+  auto presentation = llvm::cantFail(description.WithUserRegisters(order));
+  RegisterLayout updated_layout = GetLayout();
+  llvm::cantFail(updated_layout.Finalize(
+      std::make_shared<RegisterDescription>(std::move(presentation)),
+      updated_layout.GetByteOrder()));
+  SetRegisterLayout(std::move(updated_layout));
 }
 
-bool RegisterContextELFCore_x86::ReadGPR() { return m_gpregset != nullptr; }
+llvm::Expected<RegisterValue>
+RegisterContextELFCore_x86::ReadRegister(RegisterID id) {
+  auto description = GetDescription();
+  const auto *reg_info = description ? description->Find(id) : nullptr;
+  if (!reg_info)
+    return llvm::createStringError("unknown register ID");
 
-bool RegisterContextELFCore_x86::ReadFPR() { return m_fpregset != nullptr; }
+  auto result = ReadBankRegister(
+      reg_info->id, {{RegisterLayout_x86::GP,
+                      {m_gpregset.get(), m_gpregset ? GetBankSize(0) : 0}},
+                     {RegisterLayout_x86::FP,
+                      {m_fpregset.get(), m_fpregset ? sizeof(FXSAVE) : 0}}});
 
-bool RegisterContextELFCore_x86::WriteGPR() {
-  assert(0);
-  return false;
-}
-
-bool RegisterContextELFCore_x86::WriteFPR() {
-  assert(0);
-  return false;
-}
-
-bool RegisterContextELFCore_x86::ReadRegister(const RegisterInfo *reg_info,
-                                              RegisterValue &value) {
-  const uint8_t *src;
-  size_t offset;
-  const size_t fxsave_offset = reg_info->byte_offset - GetFXSAVEOffset();
-  // make the offset relative to the beginning of the FXSAVE structure because
-  // this is the data that we have (not the entire UserArea)
-
-  if (m_gpregset && reg_info->byte_offset < GetGPRSize()) {
-    src = m_gpregset.get();
-    offset = reg_info->byte_offset;
-  } else if (m_fpregset && fxsave_offset < sizeof(FXSAVE)) {
-    src = m_fpregset.get();
-    offset = fxsave_offset;
-  } else {
-    return false;
-  }
-
-  Status error;
-  value.SetFromMemoryData(reg_info->encoding, reg_info->byte_size, src + offset,
-                          reg_info->byte_size, lldb::eByteOrderLittle, error,
-                          reg_info->name);
-
-  return error.Success();
+  return result;
 }
 
 bool RegisterContextELFCore_x86::ReadAllRegisterValues(
@@ -81,9 +92,10 @@ bool RegisterContextELFCore_x86::ReadAllRegisterValues(
   return false;
 }
 
-bool RegisterContextELFCore_x86::WriteRegister(const RegisterInfo *reg_info,
+llvm::Error
+RegisterContextELFCore_x86::WriteRegister(RegisterID id,
                                                const RegisterValue &value) {
-  return false;
+  return llvm::createStringError("register write is unavailable");
 }
 
 bool RegisterContextELFCore_x86::WriteAllRegisterValues(

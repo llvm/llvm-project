@@ -478,7 +478,7 @@ void ValueObjectSynthetic::SetLanguageFlags(uint64_t flags) {
 
 void ValueObjectSynthetic::GetExpressionPath(Stream &stream,
                                              GetExpressionPathFormat epformat) {
-  // A synthetic ValueObject may wrap an underlying  Register or RegisterSet
+  // A synthetic ValueObject may wrap an underlying  Register or RegisterGroup
   // ValueObject, which requires a different approach to generating the
   // expression path. In such cases, delegate to the non-synthetic value object.
   if (const lldb::ValueType obj_value_type = GetValueType();

@@ -237,22 +237,19 @@ Error TestClient::qProcessInfo() {
 }
 
 Error TestClient::qRegisterInfos() {
-  uint32_t reg_offset = 0;
   for (unsigned int Reg = 0;; ++Reg) {
     std::string Message = formatv("qRegisterInfo{0:x-}", Reg).str();
-    Expected<RegisterInfo> InfoOr = SendMessage<RegisterInfoParser>(Message);
+    Expected<RegisterDescriptor> InfoOr =
+        SendMessage<RegisterInfoParser>(Message);
     if (!InfoOr) {
       consumeError(InfoOr.takeError());
       break;
     }
     m_register_infos.emplace_back(std::move(*InfoOr));
 
-    if (m_register_infos[Reg].byte_offset == LLDB_INVALID_INDEX32)
-      m_register_infos[Reg].byte_offset = reg_offset;
-
-    reg_offset =
-        m_register_infos[Reg].byte_offset + m_register_infos[Reg].byte_size;
-    if (m_register_infos[Reg].kinds[eRegisterKindGeneric] ==
+    m_register_infos[Reg].id = Reg;
+    m_register_infos[Reg].numbers[eRegisterKindProcessPlugin] = Reg;
+    if (m_register_infos[Reg].numbers[eRegisterKindGeneric] ==
         LLDB_REGNUM_GENERIC_PC)
       m_pc_register = Reg;
   }

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "NativeProcessAIX.h"
-#include "lldb/Register/Arch/lldb-ppc64be-ehframe-register-enums.h"
 
 #include "lldb/Register/Arch/lldb-ppc64be-register-enums.h"
 #include "lldb/Register/Arch/lldb-ppc64be-dwarf-register-enums.h"
@@ -39,9 +38,11 @@
 
 using namespace lldb_private;
 
-#define DECLARE_REGISTER_INFOS_PPC64_STRUCT
-#include "Register/Arch/RegisterInfos_ppc64.h"
-#undef DECLARE_REGISTER_INFOS_PPC64_STRUCT
+namespace {
+using OSLayout = RegisterLayoutAIX_ppc64;
+} // namespace
+
+#include "RegisterLayoutAIX_ppc64.h"
 
 using namespace lldb;
 using namespace lldb_private::process_aix;
@@ -363,12 +364,12 @@ llvm::Expected<int> NativeProcessAIX::PtraceWrapper(int req, lldb::pid_t pid,
   // fetch SPRs. Similarly, writes are also split across:
   // PTT_WRITE_GPRS & PTT_WRITE_SPRS.
   case PTT_READ_GPRS:
-    if (data_size == sizeof(GPR_PPC)) // 32bit SPRs read
-      ret = GetSPRs<GPR_PPC, ptsprs>(PTT_READ_SPRS, tid,
-                                     static_cast<GPR_PPC *>(data));
-    else if (data_size == sizeof(GPR_PPC64)) // 64bit SPRs read
-      ret = GetSPRs<GPR_PPC64, ptxsprs>(PTT_READ_SPRS, tid,
-                                        static_cast<GPR_PPC64 *>(data));
+    if (data_size == sizeof(OSLayout::GPR_PPC)) // 32bit SPRs read
+      ret = GetSPRs<OSLayout::GPR_PPC, ptsprs>(
+          PTT_READ_SPRS, tid, static_cast<OSLayout::GPR_PPC *>(data));
+    else if (data_size == sizeof(OSLayout::GPR_PPC64)) // 64bit SPRs read
+      ret = GetSPRs<OSLayout::GPR_PPC64, ptxsprs>(
+          PTT_READ_SPRS, tid, static_cast<OSLayout::GPR_PPC64 *>(data));
 
     if (ret != -1)
       ret = ptrace64(req, tid, reinterpret_cast<long long>(data), 0,
@@ -376,12 +377,12 @@ llvm::Expected<int> NativeProcessAIX::PtraceWrapper(int req, lldb::pid_t pid,
     break;
 
   case PTT_WRITE_GPRS:
-    if (data_size == sizeof(GPR_PPC)) // 32bit SPRs write
-      ret = SetSPRs<GPR_PPC, ptsprs>(PTT_WRITE_SPRS, tid,
-                                     static_cast<GPR_PPC *>(data));
-    else if (data_size == sizeof(GPR_PPC64)) // 64bit SPRS write
-      ret = SetSPRs<GPR_PPC64, ptxsprs>(PTT_WRITE_SPRS, tid,
-                                        static_cast<GPR_PPC64 *>(data));
+    if (data_size == sizeof(OSLayout::GPR_PPC)) // 32bit SPRs write
+      ret = SetSPRs<OSLayout::GPR_PPC, ptsprs>(
+          PTT_WRITE_SPRS, tid, static_cast<OSLayout::GPR_PPC *>(data));
+    else if (data_size == sizeof(OSLayout::GPR_PPC64)) // 64bit SPRS write
+      ret = SetSPRs<OSLayout::GPR_PPC64, ptxsprs>(
+          PTT_WRITE_SPRS, tid, static_cast<OSLayout::GPR_PPC64 *>(data));
 
     if (ret != -1)
       ret = ptrace64(req, tid, reinterpret_cast<long long>(data), 0,
