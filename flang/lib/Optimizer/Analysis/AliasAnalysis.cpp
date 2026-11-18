@@ -1147,6 +1147,64 @@ static bool isSavedLocal(const fir::AliasAnalysis::Source &src) {
   return false;
 }
 
+/// Whether \p func is the function of the procedure that owns the saved local
+/// variable whose global is named \p varName. The procedure is identified by
+/// the name of the function, or by its fir.internal_name if the function was
+/// renamed. The BLOCK construct of the variable, if any, does not matter.
+static bool isOwnerOf(mlir::func::FuncOp func, llvm::StringRef varName) {
+  llvm::StringRef funcName = func.getSymName();
+  if (auto internalName = func->getAttrOfType<mlir::StringAttr>(
+          fir::getInternalFuncNameAttrName()))
+    funcName = internalName.getValue();
+  auto [funcKind, funcParts] = fir::NameUniquer::deconstruct(funcName);
+  auto [varKind, varParts] = fir::NameUniquer::deconstruct(varName);
+  if (funcKind != fir::NameUniquer::NameKind::PROCEDURE ||
+      varKind != fir::NameUniquer::NameKind::VARIABLE ||
+      varParts.modules != funcParts.modules ||
+      varParts.procs.size() != funcParts.procs.size() + 1)
+    return false;
+  return llvm::equal(funcParts.procs,
+                     llvm::ArrayRef(varParts.procs).drop_back()) &&
+         varParts.procs.back() == funcParts.name;
+}
+
+/// Whether \p call cannot access the saved local variable \p src, other than
+/// through its arguments. All the instances of the procedure that owns the
+/// variable share it, so this requires that the call cannot invoke that
+/// procedure. Returns false if this cannot be proven.
+static bool callCannotReachSavedLocal(fir::CallOp call,
+                                      const fir::AliasAnalysis::Source &src) {
+  // A pure procedure only references pure procedures, and a pure procedure
+  // has no saved local variables (F2023 C1598, C15105).
+  if (fir::hasProcedureAttr<fir::FortranProcedureFlagsEnum::pure>(
+          call.getOperation()))
+    return true;
+  // A NON_RECURSIVE procedure cannot invoke itself, directly or indirectly
+  // (F2023 15.6.2.1), so a call in the func.func lowered from the procedure
+  // cannot invoke it. A call in another func.func that the procedure was
+  // inlined into may invoke it. For example, after work is inlined into
+  // caller, the call to g may invoke work and modify x, because no instance
+  // of work is active when g is called:
+  //
+  //   non_recursive subroutine work()
+  //     integer, save :: x = 0
+  //     x = x + 1
+  //   end subroutine
+  //   subroutine caller()
+  //     call work()  ! inlined: x = x + 1
+  //     call g()     ! may call work()
+  //     call work()  ! inlined: x = x + 1
+  //   end subroutine
+  auto func = mlir::dyn_cast_or_null<mlir::func::FuncOp>(
+      call->getParentOfType<mlir::FunctionOpInterface>());
+  if (!func ||
+      !fir::hasProcedureAttr<fir::FortranProcedureFlagsEnum::non_recursive>(
+          func.getOperation()))
+    return false;
+  auto symRef = llvm::dyn_cast<mlir::SymbolRefAttr>(src.origin.u);
+  return symRef && isOwnerOf(func, symRef.getLeafReference().getValue());
+}
+
 bool AliasAnalysis::isCallToFortranUserProcedure(Operation *op) {
   fir::CallOp call = dyn_cast<fir::CallOp>(op);
   if (!call)
@@ -1222,13 +1280,14 @@ ModRefResult AliasAnalysis::getCallModRef(Operation *op, Value var) {
   if (varSrc.kind == fir::AliasAnalysis::SourceKind::HostAssoc ||
       varSrc.isCapturedInInternalProcedure)
     return ModRefResult::getModAndRef();
-  // At that stage, it has been ruled out that local (including the saved ones)
-  // and dummy cannot be indirectly accessed in the call.
+  // At that stage, it has been ruled out that locals and dummies can be
+  // accessed indirectly in the call, except that a saved local may be
+  // accessed by another instance of its procedure.
   if (varSrc.kind != fir::AliasAnalysis::SourceKind::Allocate &&
       varSrc.kind != fir::AliasAnalysis::SourceKind::Argument &&
       !varSrc.isDummyArgument()) {
     if (varSrc.kind != fir::AliasAnalysis::SourceKind::Global ||
-        !isSavedLocal(varSrc))
+        !isSavedLocal(varSrc) || !callCannotReachSavedLocal(call, varSrc))
       return ModRefResult::getModAndRef();
   }
   // 2. Check if the variable is passed via the arguments. A dummy with a
