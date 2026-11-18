@@ -285,6 +285,21 @@ void llvm::copyMetadataForMemoryAccess(Instruction &Dest,
                   getMemCacheHint(Source, SourceInfo->PointerOperand));
 }
 
+void llvm::copyMetadataForScalarizedInstruction(
+    Instruction &Dest, const Instruction &Source,
+    std::optional<int64_t> DestByteOffset) {
+  if (auto DestInfo = getMemoryAccessInfo(Dest))
+    if (getMemoryAccessInfo(Source, DestInfo->IsRead)) {
+      copyMetadataForMemoryAccess(Dest, Source, DestByteOffset);
+      return;
+    }
+  if (Dest.getType()->getScalarType() == Source.getType()->getScalarType() &&
+      Dest.getType()->isFPOrFPVectorTy())
+    Dest.copyMetadata(Source, {LLVMContext::MD_fpmath});
+  if (!Dest.getDebugLoc())
+    Dest.setDebugLoc(Source.getDebugLoc());
+}
+
 /// Add all access groups in @p AccGroups to @p List.
 template <typename ListT>
 static void addToAccessGroupList(ListT &List, MDNode *AccGroups) {
