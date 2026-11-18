@@ -15,6 +15,7 @@
 #include <mutex>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "lldb/Core/Diagnostics.h"
@@ -305,19 +306,43 @@ protected:
   typedef std::vector<std::pair<lldb::tid_t, int>> tid_sig_collection;
   typedef std::map<lldb::addr_t, lldb::addr_t> MMapMap;
   typedef std::map<uint32_t, std::string> ExpeditedRegisterMap;
+
+  /// A "jstopinfo" or "jThreadsInfo" reply, indexed by thread ID.
+  class ThreadInfos {
+  public:
+    /// Index \a json_sp, which must not be null, by thread ID. The index is
+    /// empty if the reply is not an array of thread dictionaries.
+    explicit ThreadInfos(StructuredData::ObjectSP json_sp);
+
+    /// The reply as an array, or null if it is not one.
+    StructuredData::Array *GetArray() const { return m_json_sp->GetAsArray(); }
+
+    /// The dictionary of thread \a tid, or null if the reply has none.
+    StructuredData::Dictionary *FindThread(lldb::tid_t tid) const;
+
+  private:
+    StructuredData::ObjectSP m_json_sp;
+    /// Each thread's dictionary in m_json_sp, by thread ID.
+    std::unordered_map<lldb::tid_t, StructuredData::Dictionary *>
+        m_thread_dicts;
+  };
+  using ThreadInfosSP = std::shared_ptr<const ThreadInfos>;
+
   tid_collection m_thread_ids; // Thread IDs for all threads. This list gets
                                // updated after stopping
   std::vector<lldb::addr_t> m_thread_pcs;     // PC values for all the threads.
+  /// The position of each ID in m_thread_ids, for FindThreadIDIndex.
+  std::unordered_map<lldb::tid_t, size_t> m_thread_id_positions;
   /// Stop info caches filled at a stop and reset by WillResume, which runs on
   /// another thread. Hold the lock only long enough to copy the shared pointer
   /// out. The copy keeps the JSON alive past a reset, and reading the JSON
   /// takes the real thread list mutex, which a reader may already hold.
   /// @{
   /// Stop info for the threads that have one, from a stop reply's "jstopinfo".
-  Guarded<StructuredData::ObjectSP, std::mutex> m_jstopinfo;
+  Guarded<ThreadInfosSP, std::mutex> m_jstopinfo;
   /// Full stop info, expedited registers and memory for all threads, from the
   /// "jThreadsInfo" packet.
-  Guarded<StructuredData::ObjectSP, std::mutex> m_jthreadsinfo;
+  Guarded<ThreadInfosSP, std::mutex> m_jthreadsinfo;
   /// @}
   /// Shared cache image list from the "jGetSharedCacheInfo" packet.
   Guarded<StructuredData::ObjectSP, std::mutex> m_shared_cache_info;
@@ -376,6 +401,8 @@ protected:
 
   void SetLastStopPacket(const StringExtractorGDBRemote &response);
 
+  void SetExitStatusFromStopReply(StringExtractorGDBRemote &response);
+
   bool ParsePythonTargetDefinition(const FileSpec &target_definition_fspec);
 
   DataExtractor GetAuxvData() override;
@@ -402,12 +429,30 @@ protected:
 
   lldb::StateType SetThreadStopInfo(StringExtractor &stop_packet);
 
-  bool
-  GetThreadStopInfoFromJSON(ThreadGDBRemote *thread,
-                            const StructuredData::ObjectSP &thread_infos_sp);
+  bool GetThreadStopInfoFromJSON(ThreadGDBRemote *thread,
+                                 const ThreadInfosSP &thread_infos_sp);
 
-  lldb::ThreadSP SetThreadStopInfo(StructuredData::Dictionary *thread_dict);
+  /// Index a "jstopinfo" or "jThreadsInfo" reply by thread ID.
+  ///
+  /// \return
+  ///     Null if \a json_sp is null. Otherwise the indexed reply.
+  static ThreadInfosSP IndexThreadInfos(StructuredData::ObjectSP json_sp);
 
+  /// Set the stop info of the thread that \a thread_dict describes.
+  ///
+  /// \param[in] thread_sp
+  ///     The thread that \a thread_dict describes, if the caller already has
+  ///     it, which saves searching the thread list. A caller that sets stop
+  ///     info for every thread at a stop should pass it. If it is null or a
+  ///     different thread, the thread is found by its ID, or created.
+  lldb::ThreadSP SetThreadStopInfo(StructuredData::Dictionary *thread_dict,
+                                   lldb::ThreadSP thread_sp = nullptr);
+
+  /// Set the stop info of thread \a tid.
+  ///
+  /// \param[in] thread_sp
+  ///     The thread with ID \a tid, if the caller already has it, as in the
+  ///     overload above.
   lldb::ThreadSP
   SetThreadStopInfo(lldb::tid_t tid,
                     ExpeditedRegisterMap &expedited_register_map, uint8_t signo,
@@ -419,7 +464,8 @@ protected:
                     lldb::addr_t dispatch_queue_t, std::string &queue_name,
                     lldb::QueueKind queue_kind, uint64_t queue_serial,
                     std::vector<lldb::addr_t> &added_binaries,
-                    StructuredData::ObjectSP &detailed_binaries_info);
+                    StructuredData::ObjectSP &detailed_binaries_info,
+                    lldb::ThreadSP thread_sp = nullptr);
 
   void ClearThreadIDList();
 
@@ -538,6 +584,9 @@ private:
                              const std::string &description) override;
 
   void SetThreadPc(const lldb::ThreadSP &thread_sp, uint64_t index);
+
+  std::optional<size_t> FindThreadIDIndex(lldb::tid_t tid);
+
   using ModuleCacheKey = std::pair<std::string, std::string>;
   // KeyInfo for the cached module spec DenseMap.
   // The invariant is that all real keys will have the file and architecture

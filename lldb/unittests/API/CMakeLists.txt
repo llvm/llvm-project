@@ -1,16 +1,17 @@
 add_lldb_unittest(APITests
   SBCommandInterpreterTest.cpp
   SBEnvironmentTest.cpp
+  SBEventTest.cpp
   SBLineEntryTest.cpp
   SBMutexTest.cpp
   SBBreakpointClearConditionTest.cpp
   SBProtocolServerTest.cpp
   SBProgressTest.cpp
+  SBTypeSyntheticTest.cpp
 
   SBAPITEST
 
   LINK_LIBS
-    liblldb
     LLVMTestingSupport
     lldbSBUtilityHelpers
   )

@@ -13,8 +13,8 @@ loop:
   %p.off = getelementptr i32, ptr %a, i64 %iv.off
   %v0 = load i32, ptr %p.off
   %p0 = getelementptr i32, ptr %a, i64 %iv
-  %v1 = load i16, ptr %p0
-  %v1.ext = sext i16 %v1 to i32
+  %v1 = load i24, ptr %p0
+  %v1.ext = sext i24 %v1 to i32
   %s = add i32 %v0, %v1.ext
   %iv.next = add i64 %iv, 1
   %p1 = getelementptr i32, ptr %a, i64 %iv.next

@@ -783,6 +783,8 @@ class Thread:
 class CompileUnit:
     id: int
     compileUnitPath: str
+    language: Optional[str] = None
+    isOptimized: Optional[bool] = None
 
 
 @dataclass(frozen=True)
@@ -797,7 +799,15 @@ class StackFrame:
     canRestart: Optional[bool] = None
     instructionPointerReference: Optional[str] = None
     moduleId: Optional[Union[int, str]] = None
-    compileUnitId: Optional[int] = None
+    compileUnitId: Optional[int] = field(
+        metadata={"alias": "$__lldb_compileUnitId"}, default=None
+    )
+    languageSpecificData: Optional[Dict[str, Any]] = field(
+        metadata={"alias": "$__lldb_languageSpecificData"}, default=None
+    )
+    isOptimized: Optional[bool] = field(
+        metadata={"alias": "$__lldb_isOptimized"}, default=None
+    )
     presentationHint: Optional[StackFramePresentationHint] = None
 
 
@@ -1053,15 +1063,6 @@ ReverseResponse = Union[RunInTerminalResponse, EmptyBodyResponse, ErrorResponse]
 
 
 @dataclass(frozen=True)
-class StartDebuggingRequestArgs:
-    configuration: Dict[str, Any] = field(default_factory=dict)
-    request: StartDebuggingRequestType = StartDebuggingRequestType.LAUNCH
-
-    command_ = "startDebugging"
-    response_class_ = EmptyBodyResponse
-
-
-@dataclass(frozen=True)
 class InitializeResponse(Response):
     body: Capabilities
 
@@ -1124,7 +1125,7 @@ class LaunchArgs:
     args: Optional[List[str]] = None
     env: Optional[Union[Dict[str, str], List[str]]] = None
     detachOnError: Optional[bool] = None
-    disableASLR: bool = False
+    disableASLR: Optional[bool] = False
     disableSTDIO: Optional[bool] = None
     shellExpandArguments: bool = False
     console: Optional[Console] = None
@@ -1198,6 +1199,31 @@ class AttachArgs:
 
     command_ = "attach"
     response_class_ = EmptyBodyResponse
+
+
+@dataclass(frozen=True)
+class StartDebuggingRequestArgs:
+    configuration: Union[LaunchArgs, AttachArgs]
+    request: StartDebuggingRequestType
+
+    command_ = "startDebugging"
+    response_class_ = EmptyBodyResponse
+
+    def __post_init__(self):
+        if self.request == StartDebuggingRequestType.LAUNCH:
+            assert isinstance(
+                self.configuration, LaunchArgs
+            ), "request should match the configuration"
+
+        elif self.request == StartDebuggingRequestType.ATTACH:
+            assert isinstance(
+                self.configuration, AttachArgs
+            ), "request should match the configuration"
+
+
+@dataclass(frozen=True)
+class StartDebuggingRequest(Request):
+    arguments: StartDebuggingRequestArgs
 
 
 @dataclass(frozen=True)

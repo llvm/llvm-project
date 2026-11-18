@@ -10,8 +10,8 @@ if (LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
     lldbPluginScriptInterpreterLua
     ${lua_plugin_sources}
     LINK_LIBS
-      liblldb
       ${LUA_LIBRARIES}
+      liblldb
   )
   add_lua_wrapper(lldbPluginScriptInterpreterLua)
 

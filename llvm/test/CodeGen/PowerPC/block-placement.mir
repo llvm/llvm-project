@@ -1,4 +1,4 @@
-# RUN: llc -verify-machineinstrs -mcpu=pwr9 -mtriple powerpc64le-unknown-linux-gnu \
+# RUN: llc -mcpu=pwr9 -mtriple powerpc64le-unknown-linux-gnu \
 # RUN:   -run-pass=block-placement -o - %s | FileCheck %s
 --- |
   ; ModuleID = 'block-placement.ll'
@@ -90,7 +90,6 @@ selected:        false
 failedISel:      false
 tracksRegLiveness: true
 hasWinCFI:       false
-registers:       []
 liveins:
   - { reg: '$x4', virtual-reg: '' }
   - { reg: '$x5', virtual-reg: '' }

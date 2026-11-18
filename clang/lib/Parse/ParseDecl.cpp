@@ -2155,7 +2155,6 @@ void Parser::SkipMalformedDecl() {
     case tok::annot_module_begin:
     case tok::annot_module_end:
     case tok::annot_module_include:
-    case tok::annot_repl_input_end:
       return;
 
     default:
@@ -2644,7 +2643,11 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
           << 0 /* default */;
       else
         Diag(ConsumeToken(), diag::err_default_special_members)
-            << getLangOpts().CPlusPlus20;
+            << (getLangOpts().CPlusPlus29
+                    ? diag::DefaultableFunctionKinds::Cxx29
+                : getLangOpts().CPlusPlus20
+                    ? diag::DefaultableFunctionKinds::Cxx20
+                    : diag::DefaultableFunctionKinds::Default);
     } else {
       InitializerScopeRAII InitScope(*this, D, ThisDecl);
 
@@ -2769,12 +2772,17 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
 
 void Parser::ParseSpecifierQualifierList(
     DeclSpec &DS, ImplicitTypenameContext AllowImplicitTypename,
-    AccessSpecifier AS, DeclSpecContext DSC) {
+    AccessSpecifier AS, DeclSpecContext DSC, LateParsedAttrList *LateAttrs) {
   ParsedTemplateInfo TemplateInfo;
+
+  assert((!LateAttrs ||
+          llvm::none_of(*LateAttrs, llvm::IsaPred<LateParsedTypeAttribute>)) &&
+         "caller's late-attribute list must not hold type attributes yet");
+
   /// specifier-qualifier-list is a subset of declaration-specifiers.  Just
   /// parse declaration-specifiers and complain about extra stuff.
   /// TODO: diagnose attribute-specifiers and alignment-specifiers.
-  ParseDeclarationSpecifiers(DS, TemplateInfo, AS, DSC, nullptr,
+  ParseDeclarationSpecifiers(DS, TemplateInfo, AS, DSC, LateAttrs,
                              AllowImplicitTypename);
 
   // Validate declspec for type-name.
@@ -4949,7 +4957,7 @@ void Parser::CompleteLateParsedTypeAttributes(
   for (LateParsedTypeAttribute *RawLTA : LateTypeAttrs) {
     std::unique_ptr<LateParsedTypeAttribute> LTA(RawLTA);
 
-    BoundsAttributedType *BATy = LTA->TypeToComplete;
+    BoundsAttributedType *BATy = LTA->Info.TypeToComplete;
     if (!BATy || Actions.isLateParsedBoundsTypeRejected(BATy))
       continue;
 
@@ -5899,9 +5907,8 @@ Parser::DeclGroupPtrTy Parser::ParseTopLevelStmtDecl() {
     TLSD->setStmt(R.get());
   }
 
-  if (Tok.is(tok::annot_repl_input_end) &&
-      Tok.getAnnotationValue() != nullptr) {
-    ConsumeAnnotationToken();
+  if (Tok.is(tok::eof) && Tok.getEofData()) {
+    ConsumeToken();
     TLSD->setSemiMissing();
   }
 
@@ -6328,7 +6335,8 @@ bool Parser::isConstructorDeclarator(bool IsUnqualified, bool DeductionGuide,
 
 void Parser::ParseTypeQualifierListOpt(
     DeclSpec &DS, unsigned AttrReqs, bool AtomicOrPtrauthAllowed,
-    bool IdentifierRequired, llvm::function_ref<void()> CodeCompletionHandler) {
+    bool IdentifierRequired, llvm::function_ref<void()> CodeCompletionHandler,
+    LateParsedAttrList *LateAttrs) {
   if ((AttrReqs & AR_CXX11AttributesParsed) &&
       isAllowedCXX11AttributeSpecifier()) {
     ParsedAttributes Attrs(AttrFactory);
@@ -6496,7 +6504,7 @@ void Parser::ParseTypeQualifierListOpt(
       // recovery is graceful.
       if (AttrReqs & AR_GNUAttributesParsed ||
           AttrReqs & AR_GNUAttributesParsedAndRejected) {
-        ParseGNUAttributes(DS.getAttributes());
+        ParseGNUAttributes(DS.getAttributes(), LateAttrs);
         continue; // do *not* consume the next token!
       }
       // otherwise, FALL THROUGH!
@@ -6656,9 +6664,9 @@ void Parser::ParseDeclaratorInternal(Declarator &D,
     DeclSpec DS(AttrFactory);
     ParseTypeQualifierListOpt(DS);
 
-    D.AddTypeInfo(
-        DeclaratorChunk::getPipe(DS.getTypeQualifiers(), DS.getPipeLoc()),
-        std::move(DS.getAttributes()), SourceLocation());
+    D.AddTypeInfo(DeclaratorChunk::getPipe(DS.getTypeQualifiers(),
+                                           D.getDeclSpec().getPipeLoc()),
+                  std::move(DS.getAttributes()), SourceLocation());
   }
 
   // Not a pointer, C++ reference, or block.

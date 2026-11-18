@@ -55,12 +55,15 @@
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaAMDGPU.h"
 #include "clang/Sema/SemaARM.h"
+#include "clang/Sema/SemaBPF.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaFixItUtils.h"
 #include "clang/Sema/SemaHLSL.h"
+#include "clang/Sema/SemaHexagon.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenCL.h"
 #include "clang/Sema/SemaOpenMP.h"
+#include "clang/Sema/SemaProxy.h"
 #include "clang/Sema/SemaPseudoObject.h"
 #include "clang/Sema/Template.h"
 #include "llvm/ADT/STLExtras.h"
@@ -1107,7 +1110,7 @@ ExprResult Sema::DefaultVariadicArgumentPromotion(Expr *E, VariadicCallType CT,
     Name.setIdentifier(PP.getIdentifierInfo("__builtin_trap"),
                        E->getBeginLoc());
     ExprResult TrapFn = ActOnIdExpression(TUScope, SS, TemplateKWLoc, Name,
-                                          /*HasTrailingLParen=*/true,
+                                          /*IsCall=*/true,
                                           /*IsAddressOfOperand=*/false);
     if (TrapFn.isInvalid())
       return ExprError();
@@ -2263,8 +2266,8 @@ Sema::ExpandFunctionLocalPredefinedMacros(ArrayRef<Token> Toks) {
   return ExpandedToks;
 }
 
-ExprResult
-Sema::ActOnStringLiteral(ArrayRef<Token> StringToks, Scope *UDLScope) {
+ExprResult Sema::ActOnStringLiteral(ArrayRef<Token> StringToks, Scope *UDLScope,
+                                    ConversionAction Action) {
   assert(!StringToks.empty() && "Must have at least one string!");
 
   // StringToks needs backing storage as it doesn't hold array elements itself
@@ -2272,8 +2275,8 @@ Sema::ActOnStringLiteral(ArrayRef<Token> StringToks, Scope *UDLScope) {
   if (getLangOpts().MicrosoftExt)
     StringToks = ExpandedToks = ExpandFunctionLocalPredefinedMacros(StringToks);
 
-  StringLiteralParser Literal(
-      StringToks, PP, StringLiteralEvalMethod::Evaluated, CA_ToLiteralEncoding);
+  StringLiteralParser Literal(StringToks, PP,
+                              StringLiteralEvalMethod::Evaluated, Action);
   if (Literal.hadError)
     return ExprError();
 
@@ -2885,12 +2888,12 @@ recoverFromMSUnqualifiedLookup(Sema &S, ASTContext &Context,
 
 ExprResult Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
                                    SourceLocation TemplateKWLoc,
-                                   UnqualifiedId &Id, bool HasTrailingLParen,
+                                   UnqualifiedId &Id, bool IsCall,
                                    bool IsAddressOfOperand,
                                    CorrectionCandidateCallback *CCC,
                                    bool IsInlineAsmIdentifier) {
-  assert(!(IsAddressOfOperand && HasTrailingLParen) &&
-         "cannot be direct & operand and have a trailing lparen");
+  assert(!(IsAddressOfOperand && IsCall) &&
+         "cannot be direct & operand and a function call");
   if (SS.isInvalid())
     return ExprError();
 
@@ -2989,15 +2992,14 @@ ExprResult Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
 
   // This could be an implicitly declared function reference if the language
   // mode allows it as a feature.
-  if (R.empty() && HasTrailingLParen && II &&
-      getLangOpts().implicitFunctionsAllowed()) {
+  if (R.empty() && IsCall && II && getLangOpts().implicitFunctionsAllowed()) {
     NamedDecl *D = ImplicitlyDefineFunction(NameLoc, *II, S);
     if (D) R.addDecl(D);
   }
 
   // Determine whether this name might be a candidate for
   // argument-dependent lookup.
-  bool ADL = UseArgumentDependentLookup(SS, R, HasTrailingLParen);
+  bool ADL = UseArgumentDependentLookup(SS, R, IsCall);
 
   if (R.empty() && !ADL) {
     if (SS.isEmpty() && getLangOpts().MSVCCompat) {
@@ -3320,10 +3322,9 @@ ExprResult Sema::PerformObjectMemberConversion(Expr *From,
 }
 
 bool Sema::UseArgumentDependentLookup(const CXXScopeSpec &SS,
-                                      const LookupResult &R,
-                                      bool HasTrailingLParen) {
+                                      const LookupResult &R, bool IsCall) {
   // Only when used directly as the postfix-expression of a call.
-  if (!HasTrailingLParen)
+  if (!IsCall)
     return false;
 
   // Never if a scope specifier was provided.
@@ -3369,7 +3370,6 @@ bool Sema::UseArgumentDependentLookup(const CXXScopeSpec &SS,
 
   return true;
 }
-
 
 /// Diagnoses obvious problems with the use of the given declaration
 /// as an expression.  This is only actually called for lookups that
@@ -3685,6 +3685,8 @@ ExprResult Sema::BuildDeclarationNameExpr(
   // diagnostics).
   if (VD->isInvalidDecl() && E)
     return CreateRecoveryExpr(E->getBeginLoc(), E->getEndLoc(), {E});
+  if (isa<EnumConstantDecl>(VD) && Context.getTargetInfo().getTriple().isBPF())
+    return BPF().BuildPreserveAIEnumeratorRef(E);
   return E;
 }
 
@@ -5552,6 +5554,10 @@ Sema::CreateBuiltinArraySubscriptExpr(Expr *Base, SourceLocation LLoc,
                          << LHSExp->getSourceRange()
                          << RHSExp->getSourceRange());
       ResultType = BTy->getSveEltType(Context);
+    } else if (Hexagon().isHLXVectorType(LHSTy)) {
+      // There is no HLX vector element extract.
+      return ExprError(Diag(LLoc, diag::err_subscript_hlx)
+                       << LHSExp->getSourceRange() << RHSExp->getSourceRange());
     } else {
       const VectorType *VTy = LHSTy->getAs<VectorType>();
       ResultType = VTy->getElementType();
@@ -5775,12 +5781,17 @@ struct ImmediateCallVisitor : DynamicRecursiveASTVisitor {
   }
 
   // A nested lambda might have parameters with immediate invocations
-  // in their default arguments.
+  // in their default arguments, or init-captures that are evaluated in the
+  // enclosing context.
   // The compound statement is not visited (as it does not constitute a
   // subexpression).
-  // FIXME: We should consider visiting and transforming captures
-  // with init expressions.
   bool VisitLambdaExpr(LambdaExpr *E) override {
+    auto Init = E->capture_init_begin();
+    for (auto C = E->capture_begin(), CEnd = E->capture_end(); C != CEnd;
+         ++C, ++Init) {
+      if (E->isInitCapture(C) && !TraverseLambdaCapture(E, C, *Init))
+        return false;
+    }
     return VisitCXXMethodDecl(E->getCallOperator());
   }
 
@@ -5800,11 +5811,65 @@ struct EnsureImmediateInvocationInDefaultArgs
 
   bool AlwaysRebuild() { return true; }
 
-  // Lambda can only have immediate invocations in the default
-  // args of their parameters, which is transformed upon calling the closure.
-  // The body is not a subexpression, so we have nothing to do.
-  // FIXME: Immediate calls in capture initializers should be transformed.
-  ExprResult TransformLambdaExpr(LambdaExpr *E) { return E; }
+  // Lambda bodies are not subexpressions of the enclosing default initializer,
+  // but init-capture expressions are evaluated in the enclosing context. Keep
+  // the existing closure type and capture declarations so the existing body
+  // still refers to the right declarations.
+  ExprResult TransformLambdaExpr(LambdaExpr *E) {
+    SmallVector<Expr *, 4> CaptureInits(E->capture_inits());
+
+    bool Changed = false;
+    for (unsigned I = 0, N = E->capture_size(); I != N; ++I) {
+      const LambdaCapture *C = E->capture_begin() + I;
+      if (!E->isInitCapture(C))
+        continue;
+
+      auto *VD = cast<VarDecl>(C->getCapturedVar());
+      // Default initializers are rebuilt at their point of use, where the
+      // lambda is no longer dependent, so init-capture packs have already been
+      // expanded into separate captures.
+      assert(!VD->isParameterPack() &&
+             "unexpanded init-capture pack while rebuilding a default member "
+             "initializer");
+
+      Expr *Init = CaptureInits[I];
+      ExprResult NewInit =
+          TransformInitializer(Init, VD->getInitStyle() == VarDecl::CallInit);
+      if (NewInit.isInvalid())
+        return ExprError();
+
+      // TransformInitializer strips the CXXConstructExpr that a copy or move
+      // initialization produces, expecting the enclosing context to rebuild the
+      // initialization. Rebuild the capture's initialization sequence here so
+      // the closure still constructs its captured member; otherwise CodeGen is
+      // left with a bare initializer for a non-trivially copyable capture and
+      // crashes.
+      Expr *NewInitE = NewInit.get();
+      QualType CaptureType = SemaRef.buildLambdaInitCaptureInitialization(
+          C->getLocation(), C->getCaptureKind() == LCK_ByRef,
+          /*EllipsisLoc=*/SourceLocation(), /*NumExpansions=*/std::nullopt,
+          VD->getIdentifier(), VD->getInitStyle() != VarDecl::CInit, NewInitE);
+      if (CaptureType.isNull() || !NewInitE)
+        return ExprError();
+
+      Changed |= NewInitE != Init;
+      CaptureInits[I] = NewInitE;
+    }
+
+    LambdaExpr *Lambda = E;
+    if (Changed) {
+      // Reuse the existing closure class: it owns the capture declarations,
+      // fields, and call operator body. Only the LambdaExpr's capture
+      // initializer list is replaced.
+      Lambda = LambdaExpr::Create(
+          SemaRef.Context, E->getLambdaClass(), E->getIntroducerRange(),
+          E->getCaptureDefault(), E->getCaptureDefaultLoc(),
+          E->hasExplicitParameters(), E->hasExplicitResultType(), CaptureInits,
+          E->getEndLoc(), E->containsUnexpandedParameterPack());
+    }
+
+    return SemaRef.MaybeBindToTemporary(Lambda);
+  }
   ExprResult TransformBlockExpr(BlockExpr *E) { return E; }
 
   // Make sure we don't rebuild the this pointer as it would
@@ -5907,6 +5972,10 @@ ExprResult Sema::BuildCXXDefaultArgExpr(SourceLocation CallLoc,
           /*SkipImmediateInvocations=*/NestedDefaultChecking))
     return ExprError();
 
+  if (getLangOpts().CUDA)
+    CUDA().checkRTTIInDefaultInit(Param, Init ? Init : Param->getDefaultArg(),
+                                  CallLoc);
+
   return CXXDefaultArgExpr::Create(Context, InitializationContext->Loc, Param,
                                    Init, InitializationContext->Context);
 }
@@ -5975,6 +6044,9 @@ ExprResult Sema::BuildCXXDefaultInitInternal(SourceLocation Loc,
       Field->setInvalidDecl();
     return ExprError();
   }
+
+  if (getLangOpts().CUDA)
+    CUDA().checkRTTIInDefaultInit(Field, InClassInit, Loc);
 
   // CWG2631
   // An immediate invocation that is not evaluated where it appears is
@@ -7178,7 +7250,7 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
                                ExecConfig, IsExecConfig);
 }
 
-Expr *Sema::BuildBuiltinCallExpr(SourceLocation Loc, Builtin::ID Id,
+Expr *Sema::BuildBuiltinCallExpr(SourceLocation Loc, unsigned Id,
                                  MultiExprArg CallArgs) {
   std::string Name = Context.BuiltinInfo.getName(Id);
   LookupResult R(*this, &Context.Idents.get(Name), Loc,
@@ -7358,11 +7430,9 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
 
   CallExpr *TheCall;
   if (Config) {
-    assert(UsesADL == ADLCallKind::NotADL &&
-           "CUDAKernelCallExpr should not use ADL");
-    TheCall = CUDAKernelCallExpr::Create(Context, Fn, cast<CallExpr>(Config),
-                                         Args, ResultTy, VK_PRValue, RParenLoc,
-                                         CurFPFeatureOverrides(), NumParams);
+    TheCall = CUDAKernelCallExpr::Create(
+        Context, Fn, cast<CallExpr>(Config), Args, ResultTy, VK_PRValue,
+        RParenLoc, CurFPFeatureOverrides(), NumParams, UsesADL);
   } else {
     TheCall =
         CallExpr::Create(Context, Fn, Args, ResultTy, VK_PRValue, RParenLoc,
@@ -7667,12 +7737,12 @@ Sema::BuildCompoundLiteralExpr(SourceLocation LParenLoc, TypeSourceInfo *TInfo,
     // constant context.
     auto CheckElement = [&](Expr *Init) -> Expr * {
       if (Init->isTypeDependent() || Init->isValueDependent())
-        return ConstantExpr::Create(Context, Init);
+        return Init;
       if (DeferImmediate) {
         ImmediateCallVisitor V(Context);
         V.TraverseStmt(Init);
         if (V.HasImmediateCalls)
-          return ConstantExpr::Create(Context, Init);
+          return Init;
       }
       Expr::EvalResult Eval;
       if (!Init->EvaluateAsConstantExpr(Eval, Context,
@@ -10994,11 +11064,7 @@ QualType Sema::CheckVectorOperands(ExprResult &LHS, ExprResult &RHS,
       if (VecType->getVectorKind() == VectorKind::SveFixedLengthData ||
           VecType->getVectorKind() == VectorKind::SveFixedLengthPredicate)
         return true;
-      if (VecType->getVectorKind() == VectorKind::RVVFixedLengthData ||
-          VecType->getVectorKind() == VectorKind::RVVFixedLengthMask ||
-          VecType->getVectorKind() == VectorKind::RVVFixedLengthMask_1 ||
-          VecType->getVectorKind() == VectorKind::RVVFixedLengthMask_2 ||
-          VecType->getVectorKind() == VectorKind::RVVFixedLengthMask_4) {
+      if (isRVVFixedLengthVectorKind(VecType->getVectorKind())) {
         SVEorRVV = 1;
         return true;
       }
@@ -11029,14 +11095,7 @@ QualType Sema::CheckVectorOperands(ExprResult &LHS, ExprResult &RHS,
             SecondVecType->getVectorKind() ==
                 VectorKind::SveFixedLengthPredicate)
           return true;
-        if (SecondVecType->getVectorKind() == VectorKind::RVVFixedLengthData ||
-            SecondVecType->getVectorKind() == VectorKind::RVVFixedLengthMask ||
-            SecondVecType->getVectorKind() ==
-                VectorKind::RVVFixedLengthMask_1 ||
-            SecondVecType->getVectorKind() ==
-                VectorKind::RVVFixedLengthMask_2 ||
-            SecondVecType->getVectorKind() ==
-                VectorKind::RVVFixedLengthMask_4) {
+        if (isRVVFixedLengthVectorKind(SecondVecType->getVectorKind())) {
           SVEorRVV = 1;
           return true;
         }
@@ -11438,6 +11497,10 @@ QualType Sema::CheckMultiplyDivideOperands(ExprResult &LHS, ExprResult &RHS,
   if (LHSTy->isSveVLSBuiltinType() || RHSTy->isSveVLSBuiltinType())
     return CheckSizelessVectorOperands(LHS, RHS, Loc, IsCompAssign,
                                        ArithConvKind::Arithmetic);
+  // In HLSL, multiplying or dividing two matrices is element-wise.
+  if (getLangOpts().HLSL && LHSTy->isConstantMatrixType() &&
+      RHSTy->isConstantMatrixType())
+    return CheckMatrixElementwiseOperands(LHS, RHS, Loc, IsCompAssign);
   if (!IsDiv &&
       (LHSTy->isConstantMatrixType() || RHSTy->isConstantMatrixType()))
     return CheckMatrixMultiplyOperands(LHS, RHS, Loc, IsCompAssign);
@@ -13648,9 +13711,13 @@ QualType Sema::GetSignedVectorType(QualType V) {
       return Context.getExtVectorType(Context.Int128Ty, VTy->getNumElements());
     if (TypeSize == Context.getTypeSize(Context.LongTy))
       return Context.getExtVectorType(Context.LongTy, VTy->getNumElements());
-    assert(TypeSize == Context.getTypeSize(Context.LongLongTy) &&
-           "Unhandled vector element size in vector compare");
-    return Context.getExtVectorType(Context.LongLongTy, VTy->getNumElements());
+    if (TypeSize == Context.getTypeSize(Context.LongLongTy))
+      return Context.getExtVectorType(Context.LongLongTy,
+                                      VTy->getNumElements());
+    const auto *BIT = VTy->getElementType()->castAs<BitIntType>();
+    return Context.getExtVectorType(
+        Context.getBitIntType(/*IsUnsigned=*/false, BIT->getNumBits()),
+        VTy->getNumElements());
   }
 
   if (TypeSize == Context.getTypeSize(Context.Int128Ty))
@@ -13668,10 +13735,13 @@ QualType Sema::GetSignedVectorType(QualType V) {
   if (TypeSize == Context.getTypeSize(Context.ShortTy))
     return Context.getVectorType(Context.ShortTy, VTy->getNumElements(),
                                  VectorKind::Generic);
-  assert(TypeSize == Context.getTypeSize(Context.CharTy) &&
-         "Unhandled vector element size in vector compare");
-  return Context.getVectorType(Context.CharTy, VTy->getNumElements(),
-                               VectorKind::Generic);
+  if (TypeSize == Context.getTypeSize(Context.CharTy))
+    return Context.getVectorType(Context.CharTy, VTy->getNumElements(),
+                                 VectorKind::Generic);
+  const auto *BIT = VTy->getElementType()->castAs<BitIntType>();
+  return Context.getVectorType(
+      Context.getBitIntType(/*IsUnsigned=*/false, BIT->getNumBits()),
+      VTy->getNumElements(), VectorKind::Generic);
 }
 
 QualType Sema::GetSignedSizelessVectorType(QualType V) {
@@ -15522,6 +15592,12 @@ static QualType CheckIndirectionOperand(Sema &S, Expr *Op, ExprValueKind &VK,
           << OpTy << Op->getSourceRange();
   }
 
+  // HLX has no vector pair loads or stores.
+  if (S.Hexagon().isHLXVectorType(Result) &&
+      S.Context.getTypeSizeInChars(Result).getQuantity() == 4096)
+    S.Diag(OpLoc, diag::err_typecheck_indirection_hlx_vectorpair_pointer)
+        << OpTy << Op->getSourceRange();
+
   // Dereferences are usually l-values...
   VK = VK_LValue;
 
@@ -16575,6 +16651,8 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
                     VectorKind::AltiVecBool))
         break;
       else if (resultType->isSveVLSBuiltinType()) // SVE vectors allow + and -
+        break;
+      else if (getLangOpts().HLSL && resultType->isConstantMatrixType())
         break;
       else if (getLangOpts().CPlusPlus && // C++ [expr.unary.op]p6
                Opc == UO_Plus && resultType->isPointerType())
@@ -18314,12 +18392,14 @@ Sema::VerifyIntegerConstantExpression(Expr *E, llvm::APSInt *Result,
   // Circumvent ICE checking in C++11 to avoid evaluating the expression twice
   // in the non-ICE case.
   if (!getLangOpts().CPlusPlus11 && E->isIntegerConstantExpr(Context)) {
+
+    if (!Result)
+      return E;
+
     SmallVector<PartialDiagnosticAt, 8> Notes;
-    if (Result)
-      *Result = E->EvaluateKnownConstIntCheckOverflow(Context, &Notes);
+    *Result = E->EvaluateKnownConstIntCheckOverflow(Context, &Notes);
     if (!isa<ConstantExpr>(E))
-      E = Result ? ConstantExpr::Create(Context, E, APValue(*Result))
-                 : ConstantExpr::Create(Context, E);
+      E = ConstantExpr::Create(Context, E, APValue(*Result));
 
     if (Notes.empty())
       return E;
@@ -18357,12 +18437,16 @@ Sema::VerifyIntegerConstantExpression(Expr *E, llvm::APSInt *Result,
 
   // Try to evaluate the expression, and produce diagnostics explaining why it's
   // not a constant expression as a side-effect.
+  EvalProxy SProxy(*this);
   bool Folded =
-      E->EvaluateAsRValue(EvalResult, Context, /*isConstantContext*/ true) &&
+      (getLangOpts().CPlusPlus
+           ? E->EvaluateAsMandatedConstantRValue(EvalResult, Context, SProxy)
+           : E->EvaluateAsRValue(EvalResult, Context,
+                                 /*isConstantContext=*/true)) &&
       EvalResult.Val.isInt() && !EvalResult.HasSideEffects &&
       (!getLangOpts().CPlusPlus || !EvalResult.HasUndefinedBehavior);
 
-  if (!isa<ConstantExpr>(E))
+  if (Folded && !isa<ConstantExpr>(E))
     E = ConstantExpr::Create(Context, E, EvalResult.Val);
 
   // For -fms-compatibility mode we relax some requirements
@@ -18546,11 +18630,10 @@ void Sema::PushExpressionEvaluationContextForFunction(
     Current.InImmediateEscalatingFunctionContext =
         getLangOpts().CPlusPlus20 && FD->isImmediateEscalating();
 
-    if (isLambdaMethod(FD))
-      Current.InImmediateFunctionContext =
-          FD->isConsteval() ||
-          (isLambdaMethod(FD) && (Parent.isConstantEvaluated() ||
-                                  Parent.isImmediateFunctionContext()));
+    if (isLambdaMethod(FD) && !isLambdaCallOperator(FD))
+      Current.InImmediateFunctionContext = FD->isConsteval() ||
+                                           Parent.isConstantEvaluated() ||
+                                           Parent.isImmediateFunctionContext();
     else
       Current.InImmediateFunctionContext = FD->isConsteval();
   }
@@ -18671,8 +18754,9 @@ ExprResult Sema::CheckForImmediateInvocation(ExprResult E, FunctionDecl *Decl) {
   APValue Cached;
   auto CheckConstantExpressionAndKeepResult = [&]() {
     Expr::EvalResult Eval;
-    bool Res = E.get()->EvaluateAsConstantExpr(
-        Eval, getASTContext(), ConstantExprKind::ImmediateInvocation);
+    EvalProxy SProxy(*this);
+    bool Res = E.get()->EvaluateAsMandatedConstantExpr(
+        Eval, getASTContext(), SProxy, ConstantExprKind::ImmediateInvocation);
     if (Res && !Eval.DiagEmitted) {
       Cached = std::move(Eval.Val);
       return true;
@@ -18727,8 +18811,10 @@ static void EvaluateAndDiagnoseImmediateInvocation(
   Expr::EvalResult Eval;
   Eval.Diag = &Notes;
   ConstantExpr *CE = Candidate.getPointer();
-  bool Result = CE->EvaluateAsConstantExpr(
-      Eval, SemaRef.getASTContext(), ConstantExprKind::ImmediateInvocation);
+  EvalProxy SProxy(SemaRef);
+  bool Result =
+      CE->EvaluateAsMandatedConstantExpr(Eval, SemaRef.getASTContext(), SProxy,
+                                         ConstantExprKind::ImmediateInvocation);
   if (!Result || !Notes.empty()) {
     SemaRef.FailedImmediateInvocations.insert(CE);
     Expr *InnerExpr = CE->getSubExpr()->IgnoreImplicit();
@@ -19364,9 +19450,12 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
       }
 
       if (Func->isDefaulted() && !Func->isDeleted()) {
-        DefaultedComparisonKind DCK = Func->getDefaultedComparisonKind();
-        if (DCK != DefaultedComparisonKind::None)
-          DefineDefaultedComparison(Loc, Func, DCK);
+        FunctionDecl::DefaultedFunctionKind DFK =
+            Func->getDefaultedFunctionKind();
+        if (DFK.isComparison())
+          DefineDefaultedComparison(Loc, Func, DFK.asComparison());
+        else if (DFK.isPostfixOperator())
+          DefineDefaultedPostfixOperator(Loc, Func, DFK.asPostfixOperator());
       }
 
       // Implicit instantiation of function templates and member functions of
@@ -20977,8 +21066,7 @@ static void DoMarkVarDeclReferenced(
 
   bool NeedDefinition =
       OdrUse == OdrUseContext::Used || NeededForConstantEvaluation ||
-      (TSK != clang::TSK_Undeclared && !UsableInConstantExpr &&
-       Var->getType()->isUndeducedType());
+      (TSK != clang::TSK_Undeclared && Var->getType()->isUndeducedType());
 
   assert(!isa<VarTemplatePartialSpecializationDecl>(Var) &&
          "Can't instantiate a partial template specialization.");

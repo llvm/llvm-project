@@ -8,8 +8,11 @@
 
 #include "llvm/Support/WithColor.h"
 #include <dlfcn.h>
+#include <mach/mach.h>
+#include <signal.h>
 #include <spawn.h>
 #include <string.h>
+#include <sys/wait.h>
 #include <vector>
 
 using namespace llvm;
@@ -79,6 +82,25 @@ int main(int argc, const char *argv[], const char *envp[]) {
   if (waitpid(pid, &status, 0) == -1) {
     WithColor::error() << "waitpid failed\n";
     return EXIT_FAILURE;
+  }
+
+  if (WIFSIGNALED(status)) {
+    int sig = WTERMSIG(status);
+
+    // Avoid a second crash report. The program would inherit the ports, so
+    // only clear them now. EXC_MASK_CRASH alone isn't enough.
+    task_set_exception_ports(
+        mach_task_self(), EXC_MASK_CRASH | EXC_MASK_CORPSE_NOTIFY,
+        MACH_PORT_NULL, EXCEPTION_STATE_IDENTITY | MACH_EXCEPTION_CODES,
+        THREAD_STATE_NONE);
+
+    // Die from the same signal, which our parent may have ignored or blocked.
+    signal(sig, SIG_DFL);
+    sigset_t set;
+    sigemptyset(&set);
+    sigaddset(&set, sig);
+    sigprocmask(SIG_UNBLOCK, &set, nullptr);
+    raise(sig);
   }
 
   return WEXITSTATUS(status);

@@ -367,17 +367,13 @@ mlir::Attribute buildRecordHelper(ConstantEmitter &emitter,
     const ASTRecordLayout &astLayout =
         emitter.cgm.getASTContext().getASTRecordLayout(cxxrd);
     if (astLayout.hasOwnVFPtr()) {
-      mlir::Value addrPtr = emitter.cgm.getCXXABI().getVTableAddressPoint(
-          BaseSubobject(cxxrd, offsetInDerived),
-          cast<CXXRecordDecl>(vtableBaseTy));
       assert(!cir::MissingFeatures::addressPointerAuthInfo());
-      auto apOp = addrPtr.getDefiningOp<cir::VTableAddrPointOp>();
-      mlir::ArrayAttr indices = builder.getArrayAttr(
-          {builder.getI32IntegerAttr(apOp.getAddressPoint().getIndex()),
-           builder.getI32IntegerAttr(apOp.getAddressPoint().getOffset())});
-      elements[0] = cir::GlobalViewAttr::get(
-          cir::VPtrType::get(builder.getContext()), apOp.getNameAttr(), indices,
-          /*addressPoint=*/true);
+      cir::GlobalViewAttr vptr =
+          emitter.cgm.getCXXABI().getVTableAddressPointAttr(
+              BaseSubobject(cxxrd, offsetInDerived),
+              cast<CXXRecordDecl>(vtableBaseTy));
+      assert(vptr && "failed to get vtable address point");
+      elements[0] = vptr;
     }
 
     unsigned baseNo = 0;
@@ -950,14 +946,10 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
     // at properties of the most recent declaration at the point of emission.
     d = cast<ValueDecl>(d->getMostRecentDecl());
 
-    if (d->hasAttr<WeakRefAttr>()) {
-      cgm.errorNYI(d->getSourceRange(),
-                   "ConstantLValueEmitter: emit pointer base for weakref");
-      return {};
-    }
-
     if (auto *fd = dyn_cast<FunctionDecl>(d)) {
-      cir::FuncOp fop = cgm.getAddrOfFunction(fd);
+      cir::FuncOp fop = cgm.getRawFunctionPointer(GlobalDecl{fd});
+      if (!fop)
+        return {};
       CIRGenBuilderTy &builder = cgm.getBuilder();
       mlir::MLIRContext *mlirContext = builder.getContext();
       // Use the destination pointer type (e.g. struct field type), not
@@ -980,6 +972,14 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
                       .getSymNameAttr();
       return cir::GlobalViewAttr::get(
           ptrTy, mlir::FlatSymbolRefAttr::get(mlirContext, symName));
+    }
+
+    // A weakref refers to its alias target. Handle non-function versions here.
+    if (d->hasAttr<WeakRefAttr>()) {
+      auto aliasee = cast_or_null<cir::GlobalOp>(cgm.getWeakRefReference(d));
+      if (!aliasee)
+        return {};
+      return cgm.getBuilder().getGlobalViewAttr(aliasee);
     }
 
     if (auto *vd = dyn_cast<VarDecl>(d)) {

@@ -14,8 +14,6 @@
 #ifndef FORTRAN_OPTIMIZER_DIALECT_CUDA_KERNEL_OP_INTERFACE_H
 #define FORTRAN_OPTIMIZER_DIALECT_CUDA_KERNEL_OP_INTERFACE_H
 
-#include "mlir/IR/OpDefinition.h"
-
 #include "flang/Optimizer/Dialect/CUDAKernelOpInterface.h.inc"
 
 #endif // FORTRAN_OPTIMIZER_DIALECT_CUDA_KERNEL_OP_INTERFACE_H

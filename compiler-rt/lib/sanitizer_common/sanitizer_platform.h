@@ -76,10 +76,12 @@
 #endif
 
 // - SANITIZER_APPLE: all Apple code
-//   - TARGET_OS_OSX: macOS
+//   - SANITIZER_OSX: macOS
 //   - SANITIZER_IOS: devices (iOS and iOS-like)
+//     - SANITIZER_IPHONEOS: iOS only
 //     - SANITIZER_WATCHOS
 //     - SANITIZER_TVOS
+//     - SANITIZER_VISIONOS
 //   - SANITIZER_IOSSIM: simulators (iOS and iOS-like)
 //   - SANITIZER_DRIVERKIT
 #if defined(__APPLE__)
@@ -95,6 +97,11 @@
 #  else
 #    define SANITIZER_IOS 0
 #  endif
+#  if TARGET_OS_IOS
+#    define SANITIZER_IPHONEOS 1
+#  else
+#    define SANITIZER_IPHONEOS 0
+#  endif
 #  if TARGET_OS_WATCH
 #    define SANITIZER_WATCHOS 1
 #  else
@@ -104,6 +111,11 @@
 #    define SANITIZER_TVOS 1
 #  else
 #    define SANITIZER_TVOS 0
+#  endif
+#  if TARGET_OS_VISION
+#    define SANITIZER_VISIONOS 1
+#  else
+#    define SANITIZER_VISIONOS 0
 #  endif
 #  if TARGET_OS_SIMULATOR
 #    define SANITIZER_IOSSIM 1
@@ -121,8 +133,10 @@
 #  define SANITIZER_APPLE 0
 #  define SANITIZER_OSX 0
 #  define SANITIZER_IOS 0
+#  define SANITIZER_IPHONEOS 0
 #  define SANITIZER_WATCHOS 0
 #  define SANITIZER_TVOS 0
+#  define SANITIZER_VISIONOS 0
 #  define SANITIZER_IOSSIM 0
 #  define SANITIZER_DRIVERKIT 0
 #  define SANITIZER_IOSDEVICE 0

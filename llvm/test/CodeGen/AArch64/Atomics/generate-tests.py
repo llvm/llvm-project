@@ -24,6 +24,9 @@ class ByteSizes:
     def __iter__(self):
         return iter(self._data)
 
+    def __add__(self, other):
+        return self._data + other._data
+
 
 # fmt: off
 Type = ByteSizes([
@@ -129,6 +132,7 @@ class Feature(enum.Flag):
     outline_atomics = enum.auto()  # -moutline-atomics
     rcpc3 = enum.auto()  # FEAT_LSE2 + FEAT_LRCPC3
     lse2_lse128 = enum.auto()  # FEAT_LSE2 + FEAT_LSE128
+    lscp = enum.auto()  # FEAT_LSE2 + FEAT_LSCP
 
     def test_scope():
         return "all"
@@ -143,6 +147,8 @@ class Feature(enum.Flag):
             return "+lse2,+rcpc3"
         if self == Feature.lse2_lse128:
             return "+lse2,+lse128"
+        if self == Feature.lscp:
+            return "+lse2,+lscp"
         return "+" + self.name
 
 
@@ -320,14 +326,14 @@ def emit_load_tests(f, datatypes, alignments, orderings):
 
 
 def all_load(f, feature):
-    emit_load_tests(f, Type, Aligned, ATOMIC_LOAD_ORDERS)
-    if feature in [Feature.lse2, Feature.rcpc3, Feature.lse2_lse128]:
+    emit_load_tests(f, Type + FPType, Aligned, ATOMIC_LOAD_ORDERS)
+    if feature in [Feature.lse2, Feature.rcpc3, Feature.lse2_lse128, Feature.lscp]:
         emit_load_tests(f, FP128LoadType, [Aligned.aligned], [AtomicOrder.seq_cst])
 
 
 def all_store(f):
     for aligned in Aligned:
-        for ty, val in Type:
+        for ty, val in Type + FPType:
             alignval = align(val, aligned)
             for ordering in ATOMIC_STORE_ORDERS:  # FIXME stores
                 name = f"store_atomic_{ty}_{aligned}_{ordering}"

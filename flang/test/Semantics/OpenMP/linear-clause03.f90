@@ -6,6 +6,7 @@ interface
   subroutine f(x, y)
     integer :: x
     integer :: y
+    !WARNING: DECLARE SIMD directive is not implemented yet and will be ignored
     !WARNING: 'DECLARE SIMD' directive in an interface body has no effect [-Wopenmp-usage]
     !$omp declare simd(f) linear(ref(x) : 1) linear(uval(y))
   end

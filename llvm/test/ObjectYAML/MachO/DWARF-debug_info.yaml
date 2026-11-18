@@ -7,6 +7,7 @@
 # RUN: yaml2obj --docnum=1 %s | obj2yaml | FileCheck %s --check-prefix=DWARF32
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:      
   magic:           0xFEEDFACF
   cputype:         0x01000007
@@ -592,6 +593,7 @@ DWARF:
 # DWARF32-YAML-NEXT:           - Value: 0x1234
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:      0xFEEDFACF
   cputype:    0x01000007
@@ -754,6 +756,7 @@ DWARF:
 # MULTI-TABLES-NEXT: ...
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:      0xFEEDFACF
   cputype:    0x01000007
@@ -866,6 +869,7 @@ DWARF:
 # MISSING-ABBREV: yaml2obj: error: cannot find abbrev table whose ID is 0 for compilation unit with index 0
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:      0xFEEDFACF
   cputype:    0x01000007

@@ -22,7 +22,10 @@
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/Target/TargetMachine.h"
 
 #define GET_GICOMBINER_DEPS
@@ -84,11 +87,11 @@ MipsPostLegalizerCombinerImpl::MipsPostLegalizerCombinerImpl(
 // Pass boilerplate
 // ================
 
-class MipsPostLegalizerCombiner : public MachineFunctionPass {
+class MipsPostLegalizerCombinerLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  MipsPostLegalizerCombiner(bool IsOptNone = false);
+  MipsPostLegalizerCombinerLegacy(bool IsOptNone = false);
 
   StringRef getPassName() const override { return "MipsPostLegalizerCombiner"; }
 
@@ -98,11 +101,11 @@ public:
 
 private:
   bool IsOptNone;
-  MipsPostLegalizerCombinerImplRuleConfig RuleConfig;
 };
 } // end anonymous namespace
 
-void MipsPostLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
+void MipsPostLegalizerCombinerLegacy::getAnalysisUsage(
+    AnalysisUsage &AU) const {
   AU.setPreservesCFG();
   getSelectionDAGFallbackAnalysisUsage(AU);
   AU.addRequired<GISelValueTrackingAnalysisLegacy>();
@@ -113,28 +116,30 @@ void MipsPostLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-MipsPostLegalizerCombiner::MipsPostLegalizerCombiner(bool IsOptNone)
-    : MachineFunctionPass(ID), IsOptNone(IsOptNone) {
-  if (!RuleConfig.parseCommandLineOption())
-    report_fatal_error("Invalid rule identifier");
-}
+MipsPostLegalizerCombinerLegacy::MipsPostLegalizerCombinerLegacy(bool IsOptNone)
+    : MachineFunctionPass(ID), IsOptNone(IsOptNone) {}
 
-bool MipsPostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
+static bool
+runCombinerOnMachineFunction(MachineFunction &MF, bool IsOptNone,
+                             function_ref<bool()> ShouldSkip,
+                             function_ref<GISelValueTracking *()> GetVT,
+                             function_ref<MachineDominatorTree *()> GetMDT) {
   if (MF.getProperties().hasFailedISel())
     return false;
   const Function &F = MF.getFunction();
   bool EnableOpt =
-      MF.getTarget().getOptLevel() != CodeGenOptLevel::None && !skipFunction(F);
+      MF.getTarget().getOptLevel() != CodeGenOptLevel::None && !ShouldSkip();
+
+  MipsPostLegalizerCombinerImplRuleConfig RuleConfig;
+  if (!RuleConfig.parseCommandLineOption())
+    report_fatal_error("Invalid rule identifier");
 
   const MipsSubtarget &ST = MF.getSubtarget<MipsSubtarget>();
   const MipsLegalizerInfo *LI =
       static_cast<const MipsLegalizerInfo *>(ST.getLegalizerInfo());
 
-  GISelValueTracking *VT =
-      &getAnalysis<GISelValueTrackingAnalysisLegacy>().get(MF);
-  MachineDominatorTree *MDT =
-      IsOptNone ? nullptr
-                : &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  GISelValueTracking *VT = GetVT();
+  MachineDominatorTree *MDT = IsOptNone ? nullptr : GetMDT();
   CombinerInfo CInfo(/*AllowIllegalOps*/ false, /*ShouldLegalizeIllegal*/ true,
                      LI, EnableOpt, F.hasOptSize(), F.hasMinSize());
   MipsPostLegalizerCombinerImpl Impl(MF, CInfo, *VT, /*CSEInfo*/ nullptr,
@@ -142,15 +147,45 @@ bool MipsPostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   return Impl.combineMachineInstrs();
 }
 
-char MipsPostLegalizerCombiner::ID = 0;
-INITIALIZE_PASS_BEGIN(MipsPostLegalizerCombiner, DEBUG_TYPE,
+char MipsPostLegalizerCombinerLegacy::ID = 0;
+INITIALIZE_PASS_BEGIN(MipsPostLegalizerCombinerLegacy, DEBUG_TYPE,
                       "Combine Mips machine instrs after legalization", false,
                       false)
 INITIALIZE_PASS_DEPENDENCY(GISelValueTrackingAnalysisLegacy)
-INITIALIZE_PASS_END(MipsPostLegalizerCombiner, DEBUG_TYPE,
+INITIALIZE_PASS_END(MipsPostLegalizerCombinerLegacy, DEBUG_TYPE,
                     "Combine Mips machine instrs after legalization", false,
                     false)
 
-FunctionPass *llvm::createMipsPostLegalizeCombiner(bool IsOptNone) {
-  return new MipsPostLegalizerCombiner(IsOptNone);
+FunctionPass *llvm::createMipsPostLegalizeCombinerLegacyPass(bool IsOptNone) {
+  return new MipsPostLegalizerCombinerLegacy(IsOptNone);
+}
+
+bool MipsPostLegalizerCombinerLegacy::runOnMachineFunction(
+    MachineFunction &MF) {
+  return runCombinerOnMachineFunction(
+      MF, IsOptNone, [&]() { return skipFunction(MF.getFunction()); },
+      [&]() {
+        return &getAnalysis<GISelValueTrackingAnalysisLegacy>().get(MF);
+      },
+      [&]() {
+        return &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+      });
+}
+
+PreservedAnalyses
+MipsPostLegalizerCombinerPass::run(MachineFunction &MF,
+                                   MachineFunctionAnalysisManager &MFAM) {
+  bool Changed = runCombinerOnMachineFunction(
+      MF, IsOptNone,
+      [&]() {
+        return MF.getFunction().hasOptNone() ||
+               shouldSkipOptimizationForOptBisect(MF.getFunction());
+      },
+      [&]() { return &MFAM.getResult<GISelValueTrackingAnalysis>(MF); },
+      [&]() { return &MFAM.getResult<MachineDominatorTreeAnalysis>(MF); });
+  if (!Changed)
+    return PreservedAnalyses::all();
+  return getMachineFunctionPassPreservedAnalyses()
+      .preserveSet<CFGAnalyses>()
+      .preserve<GISelValueTrackingAnalysis>();
 }
