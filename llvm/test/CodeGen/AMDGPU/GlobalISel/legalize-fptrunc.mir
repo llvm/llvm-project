@@ -29,11 +29,13 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(f32) = COPY $vgpr0
     ; CHECK-NEXT: [[FPTRUNC:%[0-9]+]]:_(f16) = G_FPTRUNC [[COPY]](f32)
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[FPTRUNC]](f16)
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(i16) = G_BITCAST [[FPTRUNC]](f16)
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[BITCAST]](i16)
     ; CHECK-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
     %0:_(f32) = COPY $vgpr0
     %1:_(f16) = G_FPTRUNC %0
-    %2:_(s32) = G_ANYEXT %1
+    %3:_(i16) = G_BITCAST %1
+    %2:_(s32) = G_ANYEXT %3
     $vgpr0 = COPY %2
 ...
 
@@ -76,13 +78,15 @@ body: |
     ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(i32) = G_SHL [[ZEXT1]], [[C]](i32)
     ; CHECK-NEXT: [[OR:%[0-9]+]]:_(i32) = G_OR [[ZEXT]], [[SHL]]
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x f16>) = G_BITCAST [[OR]](i32)
-    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:_(i32) = G_BITCAST [[BITCAST]](<2 x f16>)
-    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(i32) = G_LSHR [[BITCAST1]], [[C]](i32)
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[BITCAST1]](i32), [[LSHR]](i32)
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x i16>) = G_BITCAST [[BITCAST]](<2 x f16>)
+    ; CHECK-NEXT: [[BITCAST2:%[0-9]+]]:_(i32) = G_BITCAST [[BITCAST1]](<2 x i16>)
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(i32) = G_LSHR [[BITCAST2]], [[C]](i32)
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[BITCAST2]](i32), [[LSHR]](i32)
     ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x s32>)
     %0:_(<2 x f32>) = COPY $vgpr0_vgpr1
     %1:_(<2 x f16>) = G_FPTRUNC %0
-    %2:_(<2 x s32>) = G_ANYEXT %1
+    %3:_(<2 x i16>) = G_BITCAST %1
+    %2:_(<2 x s32>) = G_ANYEXT %3
     $vgpr0_vgpr1 = COPY %2
 ...
 
@@ -159,10 +163,15 @@ body: |
     ; CHECK-NEXT: [[C20:%[0-9]+]]:_(i32) = G_CONSTANT i32 32768
     ; CHECK-NEXT: [[AND4:%[0-9]+]]:_(i32) = G_AND [[LSHR4]], [[C20]]
     ; CHECK-NEXT: [[OR7:%[0-9]+]]:_(i32) = G_OR [[AND4]], [[SELECT3]]
-    ; CHECK-NEXT: $vgpr0 = COPY [[OR7]](i32)
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[OR7]](i32)
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(f16) = G_BITCAST [[TRUNC]](i16)
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:_(i16) = G_BITCAST [[BITCAST]](f16)
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[BITCAST1]](i16)
+    ; CHECK-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
     %0:_(f64) = COPY $vgpr0_vgpr1
     %1:_(f16) = G_FPTRUNC %0
-    %2:_(s32) = G_ANYEXT %1
+    %3:_(i16) = G_BITCAST %1
+    %2:_(s32) = G_ANYEXT %3
     $vgpr0 = COPY %2
 ...
 
@@ -367,10 +376,15 @@ body: |
     ; CHECK-NEXT: [[C20:%[0-9]+]]:_(i32) = G_CONSTANT i32 32768
     ; CHECK-NEXT: [[AND4:%[0-9]+]]:_(i32) = G_AND [[LSHR4]], [[C20]]
     ; CHECK-NEXT: [[OR7:%[0-9]+]]:_(i32) = G_OR [[AND4]], [[SELECT3]]
-    ; CHECK-NEXT: $vgpr0 = COPY [[OR7]](i32)
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[OR7]](i32)
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(f16) = G_BITCAST [[TRUNC]](i16)
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:_(i16) = G_BITCAST [[BITCAST]](f16)
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = afn G_ANYEXT [[BITCAST1]](i16)
+    ; CHECK-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
     %0:_(f64) = COPY $vgpr0_vgpr1
     %1:_(f16) = G_FPTRUNC %0
-    %2:_(s32) = afn G_ANYEXT %1
+    %3:_(i16) = G_BITCAST %1
+    %2:_(s32) = afn G_ANYEXT %3
     $vgpr0 = COPY %2
 ...
 

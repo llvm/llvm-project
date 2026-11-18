@@ -32,7 +32,8 @@ body: |
 
     ; GCN-LABEL: name: test_fconstant_f16
     ; GCN: [[C:%[0-9]+]]:_(f16) = G_FCONSTANT half 1.000000e+00
-    ; GCN-NEXT: [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[C]](f16)
+    ; GCN-NEXT: [[BITCAST:%[0-9]+]]:_(i16) = G_BITCAST [[C]](f16)
+    ; GCN-NEXT: [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[BITCAST]](i16)
     ; GCN-NEXT: $vgpr0 = COPY [[ANYEXT]](i32)
     %0:_(f16) = G_FCONSTANT half 1.0
     %1:_(i16) = G_BITCAST %0
@@ -46,7 +47,8 @@ body: |
   bb.0:
     ; GCN-LABEL: name: test_fconstant_bf16
     ; GCN: [[C:%[0-9]+]]:_(bf16) = G_FCONSTANT bfloat 1.000000e+00
-    ; GCN-NEXT: [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[C]](bf16)
+    ; GCN-NEXT: [[BITCAST:%[0-9]+]]:_(i16) = G_BITCAST [[C]](bf16)
+    ; GCN-NEXT: [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[BITCAST]](i16)
     ; GCN-NEXT: $vgpr0 = COPY [[ANYEXT]](i32)
     %0:_(bf16) = G_FCONSTANT bfloat 1.0
     %1:_(i16) = G_BITCAST %0

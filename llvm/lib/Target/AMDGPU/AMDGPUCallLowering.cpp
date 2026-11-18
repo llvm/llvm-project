@@ -36,6 +36,13 @@ static Register extendRegisterMin32(CallLowering::ValueHandler &Handler,
   if (VA.getLocVT().getSizeInBits() < 32) {
     // 16-bit types are reported as legal for 32-bit registers. We need to
     // extend and do a 32-bit copy to avoid the verifier complaining about it.
+    LLT Ty = Handler.MRI.getType(ValVReg);
+    if (Ty.isFloat()) {
+      Register R1 =
+          Handler.MIRBuilder.buildBitcast(Ty.changeToInteger(), ValVReg)
+              .getReg(0);
+      return Handler.MIRBuilder.buildAnyExt(LLT::integer(32), R1).getReg(0);
+    }
     return Handler.MIRBuilder.buildAnyExt(LLT::integer(32), ValVReg).getReg(0);
   }
 

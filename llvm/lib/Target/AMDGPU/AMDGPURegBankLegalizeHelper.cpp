@@ -1698,6 +1698,7 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
   case UnmergeToShiftTrunc: {
     GUnmerge *Unmerge = dyn_cast<GUnmerge>(&MI);
     LLT Ty = MRI.getType(Unmerge->getSourceReg());
+    LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
     if (Ty.getSizeInBits() % 32 != 0) {
       reportGISelFailure(MF, MORE, DEBUG_TYPE,
                          "AMDGPU RegBankLegalize: unmerge not multiple of 32",
@@ -1711,13 +1712,31 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
       unsigned NumDefs = UnmergeI32->getNumDefs();
       for (unsigned i = 0; i < NumDefs; ++i) {
         auto [Dst0I32, Dst1I32] = unpackAExt(UnmergeI32.getReg(i));
-        B.buildTrunc(MI.getOperand(i * 2).getReg(), Dst0I32);
-        B.buildTrunc(MI.getOperand(i * 2 + 1).getReg(), Dst1I32);
+        if (DstTy.isFloatOrFloatVector()) {
+          B.buildBitcast(
+              MI.getOperand(i * 2).getReg(),
+              B.buildTrunc({SgprRB, DstTy.changeToInteger()}, Dst0I32));
+          B.buildBitcast(
+              MI.getOperand(i * 2 + 1).getReg(),
+              B.buildTrunc({SgprRB, DstTy.changeToInteger()}, Dst1I32));
+        } else {
+          B.buildTrunc(MI.getOperand(i * 2).getReg(), Dst0I32);
+          B.buildTrunc(MI.getOperand(i * 2 + 1).getReg(), Dst1I32);
+        }
       }
     } else {
       auto [Dst0I32, Dst1I32] = unpackAExt(MI.getOperand(2).getReg());
-      B.buildTrunc(MI.getOperand(0).getReg(), Dst0I32);
-      B.buildTrunc(MI.getOperand(1).getReg(), Dst1I32);
+      if (DstTy.isFloatOrFloatVector()) {
+        B.buildBitcast(
+            MI.getOperand(0).getReg(),
+            B.buildTrunc({SgprRB, DstTy.changeToInteger()}, Dst0I32));
+        B.buildBitcast(
+            MI.getOperand(1).getReg(),
+            B.buildTrunc({SgprRB, DstTy.changeToInteger()}, Dst1I32));
+      } else {
+        B.buildTrunc(MI.getOperand(0).getReg(), Dst0I32);
+        B.buildTrunc(MI.getOperand(1).getReg(), Dst1I32);
+      }
     }
 
     MI.eraseFromParent();
@@ -2230,9 +2249,20 @@ bool RegBankLegalizeHelper::applyMappingDst(
       Register NewVgprDstI32 = MRI.createVirtualRegister(VgprRB_I32);
       Register NewSgprDstI32 = MRI.createVirtualRegister(SgprRB_I32);
       Op.setReg(NewVgprDst16);
-      B.buildAnyExt(NewVgprDstI32, NewVgprDst16);
+      if (Ty.isFloatOrFloatVector()) {
+        B.buildAnyExt(
+            NewVgprDstI32,
+            B.buildBitcast({VgprRB, Ty.changeToInteger()}, NewVgprDst16));
+      } else {
+        B.buildAnyExt(NewVgprDstI32, NewVgprDst16);
+      }
       buildReadAnyLane(B, NewSgprDstI32, NewVgprDstI32, RBI);
-      B.buildTrunc(Reg, NewSgprDstI32);
+      if (Ty.isFloatOrFloatVector()) {
+        B.buildBitcast(
+            Reg, B.buildTrunc({SgprRB, Ty.changeToInteger()}, NewSgprDstI32));
+      } else {
+        B.buildTrunc(Reg, NewSgprDstI32);
+      }
       break;
     }
     case UniInVgprS32:
@@ -2276,8 +2306,15 @@ bool RegBankLegalizeHelper::applyMappingDst(
       assert(RB == SgprRB);
       Register NewDst = MRI.createVirtualRegister(SgprRB_I32);
       Op.setReg(NewDst);
-      if (!MRI.use_empty(Reg))
-        B.buildTrunc(Reg, NewDst);
+      if (!MRI.use_empty(Reg)) {
+        LLT Ty = MRI.getType(Reg);
+        if (Ty.isFloatOrFloatVector()) {
+          B.buildBitcast(Reg,
+                         B.buildTrunc({SgprRB, Ty.changeToInteger()}, NewDst));
+        } else {
+          B.buildTrunc(Reg, NewDst);
+        }
+      }
       break;
     }
     case Sgpr32ToVgprDst:

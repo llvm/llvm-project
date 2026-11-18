@@ -223,6 +223,8 @@ static bool buildAnyextOrCopy(Register Dst, Register Src,
                            "destination register class\n");
       return false;
     }
+    if (SrcTy.isFloat())
+      Src = MIRBuilder.buildBitcast(SrcTy.changeToInteger(), Src).getReg(0);
     Src = MIRBuilder.buildAnyExt(LLT::integer(DstSize), Src).getReg(0);
   }
 
@@ -647,7 +649,11 @@ bool InlineAsmLowering::lowerInlineAsm(
         // register
         auto Copy = MIRBuilder.buildCopy(LLT::integer(SrcSize), SrcReg);
         // Need to truncate the result of the register
-        MIRBuilder.buildTrunc(ResRegs[i], Copy);
+        if (ResTy.isFloat())
+          MIRBuilder.buildBitcast(
+              ResRegs[i], MIRBuilder.buildTrunc(ResTy.changeToInteger(), Copy));
+        else
+          MIRBuilder.buildTrunc(ResRegs[i], Copy);
       } else if (ResTy.getSizeInBits() == SrcSize) {
         MIRBuilder.buildCopy(ResRegs[i], SrcReg);
       } else {

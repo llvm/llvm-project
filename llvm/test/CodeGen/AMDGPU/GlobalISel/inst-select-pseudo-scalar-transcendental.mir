@@ -38,9 +38,11 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[V_S_EXP_F16_e64_]]
     ; CHECK-NEXT: $vgpr0 = COPY [[COPY1]]
     %0:sgpr(i32) = COPY $sgpr0
-    %1:sgpr(f16) = G_TRUNC %0(i32)
+    %4:sgpr(i16) = G_TRUNC %0
+    %1:sgpr(f16) = G_BITCAST %4
     %2:sgpr(f16) = G_INTRINSIC intrinsic(@llvm.amdgcn.exp2), %1
-    %3:sgpr(i32) = G_ANYEXT %2(f16)
+    %5:sgpr(i16) = G_BITCAST %2
+    %3:sgpr(i32) = G_ANYEXT %5
     $vgpr0 = COPY %3(i32)
 
 ...
@@ -81,9 +83,11 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[V_S_LOG_F16_e64_]]
     ; CHECK-NEXT: $vgpr0 = COPY [[COPY1]]
     %0:sgpr(i32) = COPY $sgpr0
-    %1:sgpr(f16) = G_TRUNC %0(i32)
+    %4:sgpr(i16) = G_TRUNC %0
+    %1:sgpr(f16) = G_BITCAST %4
     %2:sgpr(f16) = G_INTRINSIC intrinsic(@llvm.amdgcn.log), %1
-    %3:sgpr(i32) = G_ANYEXT %2(f16)
+    %5:sgpr(i16) = G_BITCAST %2
+    %3:sgpr(i32) = G_ANYEXT %5
     $vgpr0 = COPY %3(i32)
 
 ...
@@ -124,9 +128,11 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[V_S_RCP_F16_e64_]]
     ; CHECK-NEXT: $vgpr0 = COPY [[COPY1]]
     %0:sgpr(i32) = COPY $sgpr0
-    %1:sgpr(f16) = G_TRUNC %0(i32)
+    %4:sgpr(i16) = G_TRUNC %0
+    %1:sgpr(f16) = G_BITCAST %4
     %2:sgpr(f16) = nnan ninf nsz arcp contract afn reassoc G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), %1(f16)
-    %3:sgpr(i32) = G_ANYEXT %2(f16)
+    %5:sgpr(i16) = G_BITCAST %2
+    %3:sgpr(i32) = G_ANYEXT %5
     $vgpr0 = COPY %3(i32)
 
 ...
@@ -167,9 +173,11 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[V_S_RSQ_F16_e64_]]
     ; CHECK-NEXT: $vgpr0 = COPY [[COPY1]]
     %0:sgpr(i32) = COPY $sgpr0
-    %1:sgpr(f16) = G_TRUNC %0(i32)
+    %4:sgpr(i16) = G_TRUNC %0
+    %1:sgpr(f16) = G_BITCAST %4
     %2:sgpr(f16) = G_INTRINSIC intrinsic(@llvm.amdgcn.rsq), %1(f16)
-    %3:sgpr(i32) = G_ANYEXT %2(f16)
+    %5:sgpr(i16) = G_BITCAST %2
+    %3:sgpr(i32) = G_ANYEXT %5
     $vgpr0 = COPY %3(i32)
 
 ...
@@ -210,9 +218,11 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[V_S_SQRT_F16_e64_]]
     ; CHECK-NEXT: $vgpr0 = COPY [[COPY1]]
     %0:sgpr(i32) = COPY $sgpr0
-    %1:sgpr(f16) = G_TRUNC %0(i32)
+    %4:sgpr(i16) = G_TRUNC %0
+    %1:sgpr(f16) = G_BITCAST %4
     %2:sgpr(f16) = G_FSQRT %1
-    %3:sgpr(i32) = G_ANYEXT %2(f16)
+    %5:sgpr(i16) = G_BITCAST %2
+    %3:sgpr(i32) = G_ANYEXT %5
     $vgpr0 = COPY %3(i32)
 
 ...
@@ -253,9 +263,11 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[V_S_SQRT_F16_e64_]]
     ; CHECK-NEXT: $vgpr0 = COPY [[COPY1]]
     %0:sgpr(i32) = COPY $sgpr0
-    %1:sgpr(f16) = G_TRUNC %0(i32)
+    %4:sgpr(i16) = G_TRUNC %0
+    %1:sgpr(f16) = G_BITCAST %4
     %2:sgpr(f16) = G_INTRINSIC intrinsic(@llvm.amdgcn.sqrt), %1(f16)
-    %3:sgpr(i32) = G_ANYEXT %2(f16)
+    %5:sgpr(i16) = G_BITCAST %2
+    %3:sgpr(i32) = G_ANYEXT %5
     $vgpr0 = COPY %3(i32)
 
 ...

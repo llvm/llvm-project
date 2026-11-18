@@ -1,0 +1,80 @@
+# RUN: llc -amdgpu-global-isel-new-legality -mtriple=amdgpu11.00 -mattr=+real-true16 -run-pass=amdgpu-reg-bank-select,amdgpu-reg-bank-legalize -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=GCN
+# RUN: llc -amdgpu-global-isel-new-legality -mtriple=amdgpu12.50 -mattr=+real-true16 -run-pass=amdgpu-reg-bank-select,amdgpu-reg-bank-legalize -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=GCN
+
+# Uniform floating subword loads must keep SGPR banks on the integer
+# intermediate used by Sgpr32Trunc.
+
+--- |
+  define amdgpu_kernel void @load_sgpr_p1_f16(ptr addrspace(1) %ptr) { ret void }
+  define amdgpu_kernel void @load_sgpr_p1_bf16(ptr addrspace(1) %ptr) { ret void }
+  define amdgpu_kernel void @load_sgpr_p4_f16(ptr addrspace(4) %ptr) { ret void }
+  define amdgpu_kernel void @load_sgpr_p4_bf16(ptr addrspace(4) %ptr) { ret void }
+...
+
+---
+name: load_sgpr_p1_f16
+legalized: true
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+    ; GCN-LABEL: name: load_sgpr_p1_f16
+    ; GCN: [[PTR:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
+    ; GCN-NEXT: [[LOAD:%[0-9]+]]:sgpr(i32) = G_LOAD [[PTR]](p1)
+    ; GCN-NEXT: [[BITS:%[0-9]+]]:sgpr(i16) = G_TRUNC [[LOAD]](i32)
+    ; GCN-NEXT: [[RESULT:%[0-9]+]]:sgpr(f16) = G_BITCAST [[BITS]](i16)
+    ; GCN-NEXT: $vgpr0 = COPY [[RESULT]](f16)
+    %0:_(p1) = COPY $sgpr0_sgpr1
+    %1:_(f16) = G_LOAD %0 :: (invariant load (f16) from %ir.ptr, align 4, addrspace 1)
+    $vgpr0 = COPY %1
+...
+
+---
+name: load_sgpr_p1_bf16
+legalized: true
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+    ; GCN-LABEL: name: load_sgpr_p1_bf16
+    ; GCN: [[PTR:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
+    ; GCN-NEXT: [[LOAD:%[0-9]+]]:sgpr(i32) = G_LOAD [[PTR]](p1)
+    ; GCN-NEXT: [[BITS:%[0-9]+]]:sgpr(i16) = G_TRUNC [[LOAD]](i32)
+    ; GCN-NEXT: [[RESULT:%[0-9]+]]:sgpr(bf16) = G_BITCAST [[BITS]](i16)
+    ; GCN-NEXT: $vgpr0 = COPY [[RESULT]](bf16)
+    %0:_(p1) = COPY $sgpr0_sgpr1
+    %1:_(bf16) = G_LOAD %0 :: (invariant load (bf16) from %ir.ptr, align 4, addrspace 1)
+    $vgpr0 = COPY %1
+...
+
+---
+name: load_sgpr_p4_f16
+legalized: true
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+    ; GCN-LABEL: name: load_sgpr_p4_f16
+    ; GCN: [[PTR:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
+    ; GCN-NEXT: [[LOAD:%[0-9]+]]:sgpr(i32) = G_LOAD [[PTR]](p4)
+    ; GCN-NEXT: [[BITS:%[0-9]+]]:sgpr(i16) = G_TRUNC [[LOAD]](i32)
+    ; GCN-NEXT: [[RESULT:%[0-9]+]]:sgpr(f16) = G_BITCAST [[BITS]](i16)
+    ; GCN-NEXT: $vgpr0 = COPY [[RESULT]](f16)
+    %0:_(p4) = COPY $sgpr0_sgpr1
+    %1:_(f16) = G_LOAD %0 :: (invariant load (f16) from %ir.ptr, align 4, addrspace 4)
+    $vgpr0 = COPY %1
+...
+
+---
+name: load_sgpr_p4_bf16
+legalized: true
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+    ; GCN-LABEL: name: load_sgpr_p4_bf16
+    ; GCN: [[PTR:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
+    ; GCN-NEXT: [[LOAD:%[0-9]+]]:sgpr(i32) = G_LOAD [[PTR]](p4)
+    ; GCN-NEXT: [[BITS:%[0-9]+]]:sgpr(i16) = G_TRUNC [[LOAD]](i32)
+    ; GCN-NEXT: [[RESULT:%[0-9]+]]:sgpr(bf16) = G_BITCAST [[BITS]](i16)
+    ; GCN-NEXT: $vgpr0 = COPY [[RESULT]](bf16)
+    %0:_(p4) = COPY $sgpr0_sgpr1
+    %1:_(bf16) = G_LOAD %0 :: (invariant load (bf16) from %ir.ptr, align 4, addrspace 4)
+    $vgpr0 = COPY %1
+...

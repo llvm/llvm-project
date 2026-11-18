@@ -152,7 +152,8 @@ define half @f16_func_void() #0 {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(f16) = G_LOAD [[DEF]](p1) :: (load (f16) from `ptr addrspace(1) poison`, addrspace 1)
-  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[LOAD]](f16)
+  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(i16) = G_BITCAST [[LOAD]](f16)
+  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[BITCAST]](i16)
   ; CHECK-NEXT:   $vgpr0 = COPY [[ANYEXT]](i32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0
   %val = load half, ptr addrspace(1) poison

@@ -1,0 +1,91 @@
+# RUN: not --crash llc -global-isel -mtriple=amdgpu9.00 -stop-after=ir-translator -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck %s
+# REQUIRES: amdgpu-registered-target
+
+---
+name: invalid_fp_ext_trunc
+body: |
+  bb.0:
+    %f16:_(f16) = G_IMPLICIT_DEF
+    %f32:_(f32) = G_IMPLICIT_DEF
+    %i16:_(i16) = G_IMPLICIT_DEF
+    %i32:_(i32) = G_IMPLICIT_DEF
+    %bf16:_(bf16) = G_IMPLICIT_DEF
+    %i8:_(i8) = G_IMPLICIT_DEF
+    %v2f16:_(<2 x f16>) = G_IMPLICIT_DEF
+    %v2f32:_(<2 x f32>) = G_IMPLICIT_DEF
+    %v2i16:_(<2 x i16>) = G_IMPLICIT_DEF
+    %v2i32:_(<2 x i32>) = G_IMPLICIT_DEF
+    %v2bf16:_(<2 x bf16>) = G_IMPLICIT_DEF
+    %v2i8:_(<2 x i8>) = G_IMPLICIT_DEF
+    ; CHECK: Bad machine code: G_TRUNC/G_ANYEXT doesn't accept float type
+    ; CHECK: - instruction: %ext_from_float:_(i32) = G_ANYEXT %f16:_(f16)
+    %ext_from_float:_(i32) = G_ANYEXT %f16
+
+    ; CHECK: Bad machine code: G_TRUNC/G_ANYEXT doesn't accept float type
+    ; CHECK: - instruction: %ext_to_float:_(f32) = G_ANYEXT %i16:_(i16)
+    %ext_to_float:_(f32) = G_ANYEXT %i16
+
+    ; CHECK: Bad machine code: G_TRUNC/G_ANYEXT doesn't accept float type
+    ; CHECK: - instruction: %trunc_from_float:_(i16) = G_TRUNC %f32:_(f32)
+    %trunc_from_float:_(i16) = G_TRUNC %f32
+
+    ; CHECK: Bad machine code: G_TRUNC/G_ANYEXT doesn't accept float type
+    ; CHECK: - instruction: %trunc_to_float:_(f16) = G_TRUNC %i32:_(i32)
+    %trunc_to_float:_(f16) = G_TRUNC %i32
+
+    ; CHECK: Bad machine code: G_TRUNC/G_ANYEXT doesn't accept float type
+    ; CHECK: - instruction: %ext_from_bfloat:_(i32) = G_ANYEXT %bf16:_(bf16)
+    %ext_from_bfloat:_(i32) = G_ANYEXT %bf16
+
+    ; CHECK: Bad machine code: G_TRUNC/G_ANYEXT doesn't accept float type
+    ; CHECK: - instruction: %ext_to_bfloat:_(bf16) = G_ANYEXT %i8:_(i8)
+    %ext_to_bfloat:_(bf16) = G_ANYEXT %i8
+
+    ; CHECK: Bad machine code: G_TRUNC/G_ANYEXT doesn't accept float type
+    ; CHECK: - instruction: %trunc_from_bfloat:_(i8) = G_TRUNC %bf16:_(bf16)
+    %trunc_from_bfloat:_(i8) = G_TRUNC %bf16
+
+    ; CHECK: Bad machine code: G_TRUNC/G_ANYEXT doesn't accept float type
+    ; CHECK: - instruction: %trunc_to_bfloat:_(bf16) = G_TRUNC %i32:_(i32)
+    %trunc_to_bfloat:_(bf16) = G_TRUNC %i32
+
+    ; CHECK: Bad machine code: G_TRUNC/G_ANYEXT doesn't accept float type
+    ; CHECK: - instruction: %ext_from_vector:_(<2 x i32>) = G_ANYEXT %v2f16:_(<2 x f16>)
+    %ext_from_vector:_(<2 x i32>) = G_ANYEXT %v2f16
+
+    ; CHECK: Bad machine code: G_TRUNC/G_ANYEXT doesn't accept float type
+    ; CHECK: - instruction: %ext_to_vector:_(<2 x f32>) = G_ANYEXT %v2i16:_(<2 x i16>)
+    %ext_to_vector:_(<2 x f32>) = G_ANYEXT %v2i16
+
+    ; CHECK: Bad machine code: G_TRUNC/G_ANYEXT doesn't accept float type
+    ; CHECK: - instruction: %trunc_from_vector:_(<2 x i16>) = G_TRUNC %v2f32:_(<2 x f32>)
+    %trunc_from_vector:_(<2 x i16>) = G_TRUNC %v2f32
+
+    ; CHECK: Bad machine code: G_TRUNC/G_ANYEXT doesn't accept float type
+    ; CHECK: - instruction: %trunc_to_vector:_(<2 x f16>) = G_TRUNC %v2i32:_(<2 x i32>)
+    %trunc_to_vector:_(<2 x f16>) = G_TRUNC %v2i32
+
+    ; CHECK: Bad machine code: G_TRUNC/G_ANYEXT doesn't accept float type
+    ; CHECK: - instruction: %ext_from_bfloat_vector:_(<2 x i32>) = G_ANYEXT %v2bf16:_(<2 x bf16>)
+    %ext_from_bfloat_vector:_(<2 x i32>) = G_ANYEXT %v2bf16
+
+    ; CHECK: Bad machine code: G_TRUNC/G_ANYEXT doesn't accept float type
+    ; CHECK: - instruction: %ext_to_bfloat_vector:_(<2 x bf16>) = G_ANYEXT %v2i8:_(<2 x i8>)
+    %ext_to_bfloat_vector:_(<2 x bf16>) = G_ANYEXT %v2i8
+
+    ; CHECK: Bad machine code: G_TRUNC/G_ANYEXT doesn't accept float type
+    ; CHECK: - instruction: %trunc_from_bfloat_vector:_(<2 x i8>) = G_TRUNC %v2bf16:_(<2 x bf16>)
+    %trunc_from_bfloat_vector:_(<2 x i8>) = G_TRUNC %v2bf16
+
+    ; CHECK: Bad machine code: G_TRUNC/G_ANYEXT doesn't accept float type
+    ; CHECK: - instruction: %trunc_to_bfloat_vector:_(<2 x bf16>) = G_TRUNC %v2i32:_(<2 x i32>)
+    %trunc_to_bfloat_vector:_(<2 x bf16>) = G_TRUNC %v2i32
+
+    ; Integer scalar and vector controls must not add verifier errors.
+    %int_ext:_(i32) = G_ANYEXT %i16
+    %int_trunc:_(i16) = G_TRUNC %i32
+    %int_vector_ext:_(<2 x i32>) = G_ANYEXT %v2i16
+    %int_vector_trunc:_(<2 x i16>) = G_TRUNC %v2i32
+    S_ENDPGM 0
+    ; CHECK: LLVM ERROR: Found 16 machine code errors.
+...
