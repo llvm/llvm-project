@@ -10,7 +10,8 @@
 # after the MIR parser froze the reserved registers, so the pass list must start
 # there for the shared RegisterClassInfo to be stale until the allocator updates
 # it. The clobbers force %5 into AGPRs and %6 into a spill slot for which only
-# $vgpr31 has no interference. %5 is the copy greedy would split off; it is
+# the reserved $vgpr31 has no interference, so neither the allocator nor the
+# spill elimination may assign it. %5 is the copy greedy would split off; it is
 # explicit so that the basic allocator, which does not split, gets there too.
 
 # POST is hand-written and fails if the scenario is lost: with either allocator,
