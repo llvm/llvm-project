@@ -18,11 +18,13 @@
 
 namespace llvm {
 
+class Function;
 class LLVMContext;
 class MachineFunction;
 class Module;
 
 const CodeGenOptions &getCodeGenOptions(const LLVMContext &C);
+const CodeGenOptions &getCodeGenOptions(const Function &F);
 const CodeGenOptions &getCodeGenOptions(const Module &M);
 const CodeGenOptions &getCodeGenOptions(const MachineFunction &MF);
 

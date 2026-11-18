@@ -24,12 +24,6 @@
 
 using namespace llvm;
 
-static cl::opt<unsigned> IndirectCallSpecializationThreshold(
-    "amdgpu-indirect-call-specialization-threshold",
-    cl::desc(
-        "A threshold controls whether an indirect call will be specialized"),
-    cl::init(3));
-
 #define AMDGPU_ATTRIBUTE(Name, Str) Name##_POS,
 
 enum ImplicitArgumentPositions {
@@ -1702,26 +1696,31 @@ static bool runImpl(SetVector<Function *> &Functions, bool IsModulePass,
   CallGraphUpdater CGUpdater;
   BumpPtrAllocator Allocator;
   AMDGPUInformationCache InfoCache(M, AG, Allocator, nullptr, TM);
-  DenseSet<const char *> Allowed(
-      {&AAAMDAttributes::ID, &AAUniformWorkGroupSize::ID,
-       &AAPotentialValues::ID, &AAAMDFlatWorkGroupSize::ID,
-       &AAAMDMaxNumWorkgroups::ID, &AAAMDWavesPerEU::ID,
-       &AAAMDGPUMinAGPRAlloc::ID, &AACallEdges::ID, &AAPointerInfo::ID,
-       &AAPotentialConstantValues::ID, &AAUnderlyingObjects::ID,
-       &AANoAliasAddrSpace::ID, &AAAddressSpace::ID, &AAIndirectCallInfo::ID,
-       &AAAMDGPUClusterDims::ID, &AAAMDGPUNoLDSDMA::ID, &AAAlign::ID});
+  static constexpr AAKindSet Allowed = AAKindSet::get<
+      &AAAMDAttributes::ID, &AAUniformWorkGroupSize::ID, &AAPotentialValues::ID,
+      &AAAMDFlatWorkGroupSize::ID, &AAAMDMaxNumWorkgroups::ID,
+      &AAAMDWavesPerEU::ID, &AAAMDGPUMinAGPRAlloc::ID, &AACallEdges::ID,
+      &AAPointerInfo::ID, &AAPotentialConstantValues::ID,
+      &AAUnderlyingObjects::ID, &AANoAliasAddrSpace::ID, &AAAddressSpace::ID,
+      &AAIndirectCallInfo::ID, &AAAMDGPUClusterDims::ID, &AAAMDGPUNoLDSDMA::ID,
+      &AAAlign::ID>();
 
   AttributorConfig AC(CGUpdater);
   AC.IsClosedWorldModule = Options.IsClosedWorld;
-  AC.Allowed = &Allowed;
+  AC.Allowed = Allowed;
   AC.IsModulePass = IsModulePass;
   AC.DeleteFns = DeleteFns;
   AC.DefaultInitializeLiveInternals = false;
   // AAIsDead is not allowed, so nothing is ever assumed dead.
   AC.UseLiveness = false;
+  unsigned IndirectCallSpecializationThreshold =
+      static_cast<const AMDGPUTargetMachine &>(TM)
+          .getCLOpts()
+          .indirect_call_specialization_threshold;
   AC.IndirectCalleeSpecializationCallback =
-      [](Attributor &A, const AbstractAttribute &AA, CallBase &CB,
-         Function &Callee, unsigned NumAssumedCallees) {
+      [IndirectCallSpecializationThreshold](
+          Attributor &A, const AbstractAttribute &AA, CallBase &CB,
+          Function &Callee, unsigned NumAssumedCallees) {
         return !AMDGPU::isEntryFunctionCC(Callee.getCallingConv()) &&
                (NumAssumedCallees <= IndirectCallSpecializationThreshold);
       };

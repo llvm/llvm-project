@@ -54,10 +54,6 @@
 using namespace llvm;
 using namespace llvm::VPlanPatternMatch;
 
-namespace llvm {
-extern cl::opt<bool> ProfcheckDisableMetadataFixes;
-} // namespace llvm
-
 /// @{
 /// Metadata attribute names
 const char LLVMLoopVectorizeFollowupAll[] = "llvm.loop.vectorize.followup_all";
@@ -339,8 +335,9 @@ void VPTransformState::fixupHeaderPhis() {
     for (VPRecipeBase &R : Header->phis()) {
       auto *PhiR = cast<VPSingleDefRecipe>(&R);
       bool NeedsSingleScalar =
-          isa<VPPhi>(PhiR) || (isa<VPReductionPHIRecipe>(PhiR) &&
-                               cast<VPReductionPHIRecipe>(PhiR)->isInLoop());
+          isa<VPPhi, VPConditionalInductionPHIRecipe>(PhiR) ||
+          (isa<VPReductionPHIRecipe>(PhiR) &&
+           cast<VPReductionPHIRecipe>(PhiR)->isInLoop());
 
       Value *Phi = get(PhiR, NeedsSingleScalar);
       Value *Val = get(PhiR->getOperand(1), NeedsSingleScalar);
@@ -1787,7 +1784,7 @@ void LoopVectorizationPlanner::updateLoopMetadataAndProfileInfo(
       return;
     auto &SE = *PSE.getSE();
     AverageVectorTripCount = SE.getSmallConstantTripCount(VectorLoop);
-    if (ProfcheckDisableMetadataFixes || !AverageVectorTripCount)
+    if (!AverageVectorTripCount)
       return;
     if (ScalarPH)
       RemainderAverageTripCount =

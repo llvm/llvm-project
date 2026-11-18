@@ -266,7 +266,7 @@ body:             |
 
 # GCN: %0:vgpr_32 = COPY $vgpr0
 # GCN-NEXT: %1:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-# GCN-NEXT: %2:vreg_64 = REG_SEQUENCE %0, %subreg.sub0, killed %1, %subreg.sub1
+# GCN-NEXT: %2:vreg_64 = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1
 # GCN-NEXT: %3:sreg_32_xm0 = V_READFIRSTLANE_B32 %2.sub0, implicit $exec
 # GCN-NEXT: %4:sreg_32_xm0 = S_MOV_B32 0
 ---
@@ -277,7 +277,7 @@ body:             |
     liveins: $vgpr0
     %0:vgpr_32 = COPY $vgpr0
     %1:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    %2:vreg_64 = REG_SEQUENCE %0:vgpr_32, %subreg.sub0, killed %1:vgpr_32, %subreg.sub1
+    %2:vreg_64 = REG_SEQUENCE %0:vgpr_32, %subreg.sub0, %1:vgpr_32, %subreg.sub1
     %3:sreg_32_xm0 = V_READFIRSTLANE_B32 %2.sub0:vreg_64, implicit $exec
     %4:sreg_32_xm0 = V_READFIRSTLANE_B32 %2.sub1:vreg_64, implicit $exec
     S_NOP 0, implicit %3, implicit %4
@@ -287,7 +287,7 @@ body:             |
 # GCN-LABEL: name: fold-imm-readfirstlane-regsequence1{{$}}
 # GCN: %0:vgpr_32 = COPY $vgpr0
 # GCN-NEXT: %1:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-# GCN-NEXT: %2:vreg_64 = REG_SEQUENCE %1, %subreg.sub0, killed %0, %subreg.sub1
+# GCN-NEXT: %2:vreg_64 = REG_SEQUENCE %1, %subreg.sub0, %0, %subreg.sub1
 # GCN-NEXT: %3:sreg_32_xm0 = S_MOV_B32 0
 # GCN-NEXT: %4:sreg_32_xm0 = V_READFIRSTLANE_B32 %2.sub1, implicit $exec
 
@@ -299,7 +299,7 @@ body:             |
     liveins: $vgpr0
     %0:vgpr_32 = COPY $vgpr0
     %1:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    %2:vreg_64 = REG_SEQUENCE %1:vgpr_32, %subreg.sub0, killed %0:vgpr_32, %subreg.sub1
+    %2:vreg_64 = REG_SEQUENCE %1:vgpr_32, %subreg.sub0, %0:vgpr_32, %subreg.sub1
     %3:sreg_32_xm0 = V_READFIRSTLANE_B32 %2.sub0:vreg_64, implicit $exec
     %4:sreg_32_xm0 = V_READFIRSTLANE_B32 %2.sub1:vreg_64, implicit $exec
     S_NOP 0, implicit %3, implicit %4
@@ -309,7 +309,7 @@ body:             |
 # GCN-LABEL: name: fold-imm-readfirstlane-regsequence2{{$}}
 # GCN: %0:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
 # GCN-NEXT: %1:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
-# GCN-NEXT: %2:vreg_64 = REG_SEQUENCE %0, %subreg.sub0, killed %1, %subreg.sub1
+# GCN-NEXT: %2:vreg_64 = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1
 # GCN-NEXT: %3:sreg_32_xm0 = S_MOV_B32 0
 # GCN-NEXT: %4:sreg_32_xm0 = S_MOV_B32 1
 ---
@@ -319,7 +319,7 @@ body:             |
   bb.0:
     %0:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     %1:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
-    %2:vreg_64 = REG_SEQUENCE %0:vgpr_32, %subreg.sub0, killed %1:vgpr_32, %subreg.sub1
+    %2:vreg_64 = REG_SEQUENCE %0:vgpr_32, %subreg.sub0, %1:vgpr_32, %subreg.sub1
     %3:sreg_32_xm0 = V_READFIRSTLANE_B32 %2.sub0:vreg_64, implicit $exec
     %4:sreg_32_xm0 = V_READFIRSTLANE_B32 %2.sub1:vreg_64, implicit $exec
     S_NOP 0, implicit %3, implicit %4
@@ -329,7 +329,7 @@ body:             |
 # GCN-LABEL: name: fold-imm-readfirstlane-regsequence3{{$}}
 # GCN: %0:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
 # GCN-NEXT: %1:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-# GCN-NEXT: %2:vreg_64 = REG_SEQUENCE %0, %subreg.sub0, killed %1, %subreg.sub1
+# GCN-NEXT: %2:vreg_64 = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1
 # GCN-NEXT: %3:sreg_32_xm0 = S_MOV_B32 0
 # GCN-NEXT: %4:sreg_32_xm0 = S_MOV_B32 0
 ---
@@ -339,7 +339,7 @@ body:             |
   bb.0:
     %0:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     %1:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    %2:vreg_64 = REG_SEQUENCE %0:vgpr_32, %subreg.sub0, killed %1:vgpr_32, %subreg.sub1
+    %2:vreg_64 = REG_SEQUENCE %0:vgpr_32, %subreg.sub0, %1:vgpr_32, %subreg.sub1
     %3:sreg_32_xm0 = V_READFIRSTLANE_B32 %2.sub0:vreg_64, implicit $exec
     %4:sreg_32_xm0 = V_READFIRSTLANE_B32 %2.sub1:vreg_64, implicit $exec
     S_NOP 0, implicit %3, implicit %4
@@ -349,7 +349,7 @@ body:             |
 # GCN-LABEL: name: fold-copy-readfirstlane-regsequence0{{$}}
 # GCN: %0:vgpr_32 = COPY $sgpr10
 # GCN-NEXT: %1:vgpr_32 = COPY $sgpr11
-# GCN-NEXT: %2:vreg_64 = REG_SEQUENCE %0, %subreg.sub0, killed %1, %subreg.sub1
+# GCN-NEXT: %2:vreg_64 = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1
 # GCN-NEXT: %3:sreg_32_xm0 = V_READFIRSTLANE_B32 %2.sub0, implicit $exec
 # GCN-NEXT: %4:sreg_32_xm0 = V_READFIRSTLANE_B32 %2.sub1, implicit $exec
 ---
@@ -360,7 +360,7 @@ body:             |
     liveins: $sgpr10, $sgpr11
     %0:vgpr_32 = COPY $sgpr10
     %1:vgpr_32 = COPY $sgpr11
-    %2:vreg_64 = REG_SEQUENCE %0:vgpr_32, %subreg.sub0, killed %1:vgpr_32, %subreg.sub1
+    %2:vreg_64 = REG_SEQUENCE %0:vgpr_32, %subreg.sub0, %1:vgpr_32, %subreg.sub1
     %3:sreg_32_xm0 = V_READFIRSTLANE_B32 %2.sub0:vreg_64, implicit $exec
     %4:sreg_32_xm0 = V_READFIRSTLANE_B32 %2.sub1:vreg_64, implicit $exec
 ...
@@ -370,7 +370,7 @@ body:             |
 # GCN-NEXT: %1:sreg_32_xm0 = COPY $sgpr11
 # GCN-NEXT: %2:vgpr_32 = COPY %0
 # GCN-NEXT: %3:vgpr_32 = COPY %1
-# GCN-NEXT: %4:vreg_64 = REG_SEQUENCE %2, %subreg.sub0, killed %3, %subreg.sub1
+# GCN-NEXT: %4:vreg_64 = REG_SEQUENCE %2, %subreg.sub0, %3, %subreg.sub1
 # GCN-NEXT: %5:sreg_32_xm0 = V_READFIRSTLANE_B32 %4.sub0, implicit $exec
 # GCN-NEXT: %6:sreg_32_xm0 = V_READFIRSTLANE_B32 %4.sub1, implicit $exec
 ---
@@ -383,7 +383,7 @@ body:             |
     %1:sreg_32_xm0 = COPY $sgpr11
     %2:vgpr_32 = COPY %0
     %3:vgpr_32 = COPY %1
-    %4:vreg_64 = REG_SEQUENCE %2:vgpr_32, %subreg.sub0, killed %3:vgpr_32, %subreg.sub1
+    %4:vreg_64 = REG_SEQUENCE %2:vgpr_32, %subreg.sub0, %3:vgpr_32, %subreg.sub1
     %5:sreg_32_xm0 = V_READFIRSTLANE_B32 %4.sub0:vreg_64, implicit $exec
     %6:sreg_32_xm0 = V_READFIRSTLANE_B32 %4.sub1:vreg_64, implicit $exec
 ...

@@ -5,7 +5,7 @@ program omp_reduction
   integer :: i
   integer :: k = 10
 
-  !ERROR: Invalid reduction operator in REDUCTION clause.
+  !ERROR: Invalid reduction operator in REDUCTION clause
   !$omp parallel do reduction(**:k)
   do i = 1, 10
     k = k ** 1

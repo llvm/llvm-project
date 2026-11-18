@@ -114,7 +114,19 @@ which doesn't currently support Windows.
 
   - to implement submit & copy with accessors (low priority)
 
-  - get_info & properties
+  - get_info
+
+  - properties:
+
+    - every queue is in-order: liboffload creates in-order queues only, so the
+      `in_order` property does not change how a queue behaves and
+      `is_in_order()` reports whether the property was passed, not the actual
+      behavior of the queue. To revisit once liboffload supports out-of-order
+      queues
+    - `enable_profiling` is accepted only to be rejected with
+      `errc::feature_not_supported`: the queue does not capture profiling
+      information and `event::get_profiling_info` cannot report it, to
+      implement once liboffload supports profiling
 
   - ctors that accepts context (blocked by lack of liboffload support)
 
@@ -135,6 +147,8 @@ which doesn't currently support Windows.
 
   - get_info, get_profiling_info (no liboffload support) are not implemented
   - get_wait_list should be aligned with the results of this discussion: <https://github.com/KhronosGroup/SYCL-Docs/issues/1017>
+
+- `half`: usage in kernels is not restricted to devices with `aspect::fp16` (requires clang support of an attribute attaching aspects to types)
 
 - `range`, `id` - `__SYCL_DISABLE_ID_TO_INT_CONV__` and `__SYCL_ASSUME_ID_RANGE` optimizations are not implemented
 

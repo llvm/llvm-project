@@ -27,6 +27,7 @@
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "flang/Semantics/runtime-type-info.h"
 #include "flang/Semantics/unparse-with-symbols.h"
+#include "flang/Support/Flags.h"
 #include "flang/Support/default-kinds.h"
 #include "flang/Tools/CrossToolHelpers.h"
 
@@ -254,6 +255,11 @@ bool CodeGenAction::beginSourceFileAction() {
              runSemanticChecks() && generateRtTypeTables();
   if (!res)
     return res;
+
+  enableImplicitDefaultMapperAllocatableMembers.setValue(
+      ci.getInvocation()
+          .getCodeGenOpts()
+          .ImplicitDefaultMapperAllocatableMembers);
 
   timingScopeParse.stop();
   mlir::TimingScope timingScopeMLIRGen = timingScopeRoot.nest(
@@ -872,6 +878,15 @@ void CodeGenAction::generateLLVMIR() {
                                 opts.CodeObjectVersion);
     }
   }
+
+  // Add NonLazyBind attribute to function declarations when -fno-plt is used.
+  // Also set the RtLibUseGOT module flag so compiler-rt calls use the GOT.
+  if (opts.NoPLT) {
+    llvmModule->setRtLibUseGOT();
+    for (llvm::Function &func : *llvmModule)
+      if (func.isDeclaration() && !func.isIntrinsic())
+        func.addFnAttr(llvm::Attribute::NonLazyBind);
+  }
 }
 
 static std::unique_ptr<llvm::raw_pwrite_stream>
@@ -919,12 +934,6 @@ static void generateMachineCodeOrAssemblyImpl(
                                    ? llvm::CodeGenFileType::AssemblyFile
                                    : llvm::CodeGenFileType::ObjectFile;
 
-  // Invoke pre-codegen callback from plugin, which might want to take over the
-  // entire code generation itself.
-  for (const std::unique_ptr<llvm::PassPlugin> &plugin : ci.getPassPlugins())
-    if (plugin->invokePreCodeGenCallback(llvmModule, tm, cgft, os))
-      return;
-
   std::unique_ptr<llvm::ToolOutputFile> dwoOS;
   if (!codeGenOpts.SplitDwarfOutput.empty()) {
     std::error_code ec;
@@ -936,6 +945,20 @@ static void generateMachineCodeOrAssemblyImpl(
       return;
     }
   }
+
+  // Invoke pre-codegen callback from plugin, which might want to take over the
+  // entire code generation itself.
+  for (const std::unique_ptr<llvm::PassPlugin> &plugin : ci.getPassPlugins()) {
+    if (plugin->invokePreCodeGenCallback(
+            tm, llvmModule, os, dwoOS ? &dwoOS->os() : nullptr, cgft,
+            /*DisableVerify=*/true, /*DisableSimplifyLibCalls=*/false,
+            /*MSI=*/nullptr, llvm::vfs::getRealFileSystem())) {
+      if (dwoOS)
+        dwoOS->keep();
+      return;
+    }
+  }
+
   llvm::Error codeGenError = runCodeGenPipeline(
       tm, llvmModule, os, dwoOS ? &dwoOS->os() : nullptr, cgft);
   if (codeGenError) {
@@ -966,7 +989,7 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   llvm::PassInstrumentationCallbacks pic;
   const llvm::cl::LibraryOptionsContext &libraryOptions =
       llvmModule->getContext().getLibraryOptions();
-  llvm::PipelineTuningOptions pto(&libraryOptions);
+  llvm::PipelineTuningOptions pto;
   std::optional<llvm::PGOOptions> pgoOpt;
 
   if (opts.hasProfileIRInstr()) {

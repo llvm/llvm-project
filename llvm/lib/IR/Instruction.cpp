@@ -572,13 +572,15 @@ void Instruction::dropUBImplyingAttrsAndMetadata(ArrayRef<unsigned> Keep) {
   // speculate.
   // !fpmath specifies floating-point precision and does not imply UB.
   // !mem.cache_hint is a performance hint and does not imply UB.
+  // !pcsections only requests PC sections and does not imply UB.
   // !noundef and various AA metadata must be dropped, as it generally produces
   // immediate undefined behavior.
   static const unsigned KnownIDs[] = {
       LLVMContext::MD_annotation,     LLVMContext::MD_range,
       LLVMContext::MD_nonnull,        LLVMContext::MD_align,
       LLVMContext::MD_fpmath,         LLVMContext::MD_prof,
-      LLVMContext::MD_mem_cache_hint, LLVMContext::MD_nofpclass};
+      LLVMContext::MD_mem_cache_hint, LLVMContext::MD_nofpclass,
+      LLVMContext::MD_pcsections};
   SmallVector<unsigned> KeepIDs;
   KeepIDs.reserve(Keep.size() + std::size(KnownIDs));
   append_range(KeepIDs, KnownIDs);
@@ -1183,6 +1185,27 @@ bool Instruction::mayWriteToMemory() const {
   }
 }
 
+bool Instruction::mayReadOrWriteMemory() const {
+  // Keep in sync with mayReadFromMemory and mayWriteToMemory.
+  switch (getOpcode()) {
+  default:
+    return false;
+  case Instruction::VAArg:
+  case Instruction::Load:
+  case Instruction::Store:
+  case Instruction::Fence:
+  case Instruction::AtomicCmpXchg:
+  case Instruction::AtomicRMW:
+  case Instruction::CatchPad:
+  case Instruction::CatchRet:
+    return true;
+  case Instruction::Call:
+  case Instruction::Invoke:
+  case Instruction::CallBr:
+    return !cast<CallBase>(this)->doesNotAccessMemory();
+  }
+}
+
 bool Instruction::isAtomic() const {
   switch (getOpcode()) {
   default:
@@ -1192,9 +1215,9 @@ bool Instruction::isAtomic() const {
   case Instruction::Fence:
     return true;
   case Instruction::Load:
-    return cast<LoadInst>(this)->getOrdering() != AtomicOrdering::NotAtomic;
+    return cast<LoadInst>(this)->isAtomic();
   case Instruction::Store:
-    return cast<StoreInst>(this)->getOrdering() != AtomicOrdering::NotAtomic;
+    return cast<StoreInst>(this)->isAtomic();
   }
 }
 
@@ -1236,19 +1259,7 @@ bool Instruction::isVolatile() const {
     return cast<AtomicCmpXchgInst>(this)->isVolatile();
   case Instruction::Call:
   case Instruction::Invoke:
-    // There are a very limited number of intrinsics with volatile flags.
-    if (auto *II = dyn_cast<IntrinsicInst>(this)) {
-      if (auto *MI = dyn_cast<MemIntrinsic>(II))
-        return MI->isVolatile();
-      switch (II->getIntrinsicID()) {
-      default: break;
-      case Intrinsic::matrix_column_major_load:
-        return cast<ConstantInt>(II->getArgOperand(2))->isOne();
-      case Intrinsic::matrix_column_major_store:
-        return cast<ConstantInt>(II->getArgOperand(3))->isOne();
-      }
-    }
-    return false;
+    return cast<CallBase>(this)->isVolatile();
   }
 }
 
@@ -1366,7 +1377,32 @@ bool Instruction::mayThrow(bool IncludePhaseOneUnwind) const {
 }
 
 bool Instruction::mayHaveSideEffects() const {
-  return mayWriteToMemory() || mayThrow() || !willReturn();
+  switch (getOpcode()) {
+  case Instruction::Call:
+  case Instruction::Invoke:
+  case Instruction::CallBr:
+    return mayWriteToMemory() || mayThrow() || !willReturn();
+  case Instruction::Load:
+    // Ordered loads write to memory, and volatile loads may not return.
+    return !cast<LoadInst>(this)->isUnordered();
+  case Instruction::CleanupRet:
+    return cast<CleanupReturnInst>(this)->unwindsToCaller();
+  case Instruction::CatchSwitch:
+    return cast<CatchSwitchInst>(this)->unwindsToCaller();
+  case Instruction::Store:
+  case Instruction::VAArg:
+  case Instruction::Fence:
+  case Instruction::AtomicCmpXchg:
+  case Instruction::AtomicRMW:
+  case Instruction::CatchPad:
+  case Instruction::CatchRet:
+  case Instruction::Resume:
+    return true;
+  default:
+    assert(!mayWriteToMemory() && !mayThrow() && willReturn() &&
+           "missing instruction with side effects");
+    return false;
+  }
 }
 
 bool Instruction::isSafeToRemove() const {
@@ -1376,12 +1412,9 @@ bool Instruction::isSafeToRemove() const {
 
 bool Instruction::willReturn() const {
   // Volatile operations are not guaranteed to return.
-  if (isVolatile())
-    return false;
-
   if (const auto *CB = dyn_cast<CallBase>(this))
-    return CB->hasFnAttr(Attribute::WillReturn);
-  return true;
+    return CB->hasFnAttr(Attribute::WillReturn) && !isVolatile();
+  return !isVolatile();
 }
 
 bool Instruction::isLifetimeStartOrEnd() const {

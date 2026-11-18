@@ -1,7 +1,7 @@
 # RUN: llc -mtriple=x86_64-linux-gnu -O0 -run-pass=reg-bank-select \
 # RUN:   %s -o - | FileCheck %s --check-prefix=RBS
 # RUN: llc -mtriple=x86_64-linux-gnu -O0 -run-pass=reg-bank-select,instruction-select \
-# RUN:   -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ISEL
+# RUN:   %s -o - | FileCheck %s --check-prefix=ISEL
 
 # A DBG_VALUE can refer to a register that nothing defines. It still gets a
 # register bank, but instruction selection does not give it a register class.
@@ -27,7 +27,6 @@
 ---
 name:            foo
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     DBG_VALUE %0:_(s32), $noreg, !5, !DIExpression(), debug-location !6

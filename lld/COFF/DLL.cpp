@@ -306,7 +306,9 @@ static const uint8_t tailMergeARM[] = {
     0x61, 0x46,             // mov     r1, ip
     0x40, 0xf2, 0x00, 0x00, // mov.w   r0, #0 DELAY_IMPORT_DESCRIPTOR
     0xc0, 0xf2, 0x00, 0x00, // mov.t   r0, #0 DELAY_IMPORT_DESCRIPTOR
-    0x00, 0xf0, 0x00, 0xd0, // bl      #0 __delayLoadHelper2
+    0x40, 0xf2, 0x00, 0x02, // mov.w   r2, #0 __delayLoadHelper2
+    0xc0, 0xf2, 0x00, 0x02, // mov.t   r2, #0 __delayLoadHelper2
+    0x90, 0x47,             // blx     r2
     0x84, 0x46,             // mov     ip, r0
     0xbd, 0xec, 0x10, 0x0b, // vpop    {d0, d1, d2, d3, d4, d5, d6, d7}
     0xbd, 0xe8, 0x0f, 0x48, // pop.w   {r0, r1, r2, r3, r11, lr}
@@ -513,11 +515,13 @@ public:
   void writeTo(uint8_t *buf) const override {
     memcpy(buf, tailMergeARM, sizeof(tailMergeARM));
     applyMOV32T(buf + 14, desc->getRVA() + ctx.config.imageBase);
-    applyBranch24T(buf + 22, helper->getRVA() - rva - 26);
+    // The helper can be more than 16 MiB away, out of reach of a bl.
+    applyMOV32T(buf + 22, (helper->getRVA() + ctx.config.imageBase) | 1);
   }
 
   void getBaserels(std::vector<Baserel> *res) override {
     res->emplace_back(rva + 14, IMAGE_REL_BASED_ARM_MOV32T);
+    res->emplace_back(rva + 22, IMAGE_REL_BASED_ARM_MOV32T);
   }
 
   Chunk *desc = nullptr;

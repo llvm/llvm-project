@@ -1967,6 +1967,11 @@ Decl *TemplateDeclInstantiator::VisitFieldDecl(FieldDecl *D) {
   Field->setAccess(D->getAccess());
   Owner->addDecl(Field);
 
+  if (!SemaRef.Diags.isIgnored(diag::warn_unused_private_field,
+                               Field->getLocation()) &&
+      Field->isUnusedPrivateField())
+    SemaRef.UnusedPrivateFields.insert(Field);
+
   return Field;
 }
 
@@ -6264,6 +6269,14 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
 
   if (PatternDecl->isDefaulted()) {
     RebuildTypeSourceInfoForDefaultSpecialMembers();
+    // A function defaulted outside its class was not defaulted when its
+    // declaration was instantiated, so transfer the info recorded at its
+    // definition now: the floating-point features in effect there, and any
+    // unqualified lookups, which were performed from namespace scope and so
+    // don't need to be instantiated.
+    if (!Function->getDefaultedOrDeletedInfo())
+      if (auto *DFI = PatternDecl->getDefaultedOrDeletedInfo())
+        Function->setDefaultedOrDeletedInfo(DFI);
     SetDeclDefaulted(Function, PatternDecl->getLocation());
   } else {
     DeclContext *DC = Function->getLexicalDeclContext();
@@ -7043,21 +7056,8 @@ Sema::InstantiateMemInitializers(CXXConstructorDecl *New,
 
 // TODO: this could be templated if the various decl types used the
 // same method name.
-static bool isInstantiationOf(ClassTemplateDecl *Pattern,
-                              ClassTemplateDecl *Instance) {
-  Pattern = Pattern->getCanonicalDecl();
-
-  do {
-    Instance = Instance->getCanonicalDecl();
-    if (Pattern == Instance) return true;
-    Instance = Instance->getInstantiatedFromMemberTemplate();
-  } while (Instance);
-
-  return false;
-}
-
-static bool isInstantiationOf(FunctionTemplateDecl *Pattern,
-                              FunctionTemplateDecl *Instance) {
+static bool isInstantiationOf(RedeclarableTemplateDecl *Pattern,
+                              RedeclarableTemplateDecl *Instance) {
   Pattern = Pattern->getCanonicalDecl();
 
   do {

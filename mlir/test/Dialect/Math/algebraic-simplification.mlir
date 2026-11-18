@@ -292,6 +292,23 @@ func.func @ipowi_index_exp_int64_min(%arg0: index) -> index {
   return %0 : index
 }
 
+// The same pattern handles integer bases. Truncating this exponent to 64 bits
+// would incorrectly simplify the operation to its base.
+// CHECK-LABEL: @ipowi_exp_wide(
+// CHECK-SAME: %[[ARG0:.+]]: i128, %[[ARG1:.+]]: vector<4xi128>
+func.func @ipowi_exp_wide(%arg0: i128, %arg1: vector<4xi128>) -> (i128, vector<4xi128>) {
+  // CHECK-DAG: %[[CST_S:.*]] = arith.constant 18446744073709551617 : i128
+  // CHECK-DAG: %[[CST_V:.*]] = arith.constant dense<18446744073709551617> : vector<4xi128>
+  // CHECK: %[[SCALAR:.*]] = math.ipowi %[[ARG0]], %[[CST_S]] : i128
+  // CHECK: %[[VECTOR:.*]] = math.ipowi %[[ARG1]], %[[CST_V]] : vector<4xi128>
+  // CHECK: return %[[SCALAR]], %[[VECTOR]]
+  %c = arith.constant 18446744073709551617 : i128
+  %v = arith.constant dense<18446744073709551617> : vector<4xi128>
+  %0 = math.ipowi %arg0, %c : i128
+  %1 = math.ipowi %arg1, %v : vector<4xi128>
+  return %0, %1 : i128, vector<4xi128>
+}
+
 // CHECK-LABEL: @fpowi_zero_exp(
 // CHECK-SAME: %[[ARG0:.+]]: f32
 // CHECK-SAME: %[[ARG1:.+]]: vector<4xf32>
@@ -339,6 +356,69 @@ func.func @fpowi_exp_int64_min(%arg0: f32) -> f32 {
   %cmin = arith.constant -9223372036854775808 : i64
   %0 = math.fpowi %arg0, %cmin : f32, i64
   return %0 : f32
+}
+
+// Wide exponents outside the int64_t range must not be converted to int64_t.
+// CHECK-LABEL: @fpowi_exp_i104(
+// CHECK-SAME: %[[ARG0:.+]]: f32, %[[ARG1:.+]]: vector<4xf32>
+func.func @fpowi_exp_i104(%arg0: f32, %arg1: vector<4xf32>) -> (f32, vector<4xf32>) {
+  // CHECK-DAG: %[[CST_S:.*]] = arith.constant 18446744073709551578 : i104
+  // CHECK-DAG: %[[CST_V:.*]] = arith.constant dense<18446744073709551578> : vector<4xi104>
+  // CHECK: %[[SCALAR:.*]] = math.fpowi %[[ARG0]], %[[CST_S]] : f32, i104
+  // CHECK: %[[VECTOR:.*]] = math.fpowi %[[ARG1]], %[[CST_V]] : vector<4xf32>, vector<4xi104>
+  // CHECK: return %[[SCALAR]], %[[VECTOR]]
+  %c = arith.constant 18446744073709551578 : i104
+  %v = arith.constant dense<18446744073709551578> : vector<4xi104>
+  %0 = math.fpowi %arg0, %c : f32, i104
+  %1 = math.fpowi %arg1, %v : vector<4xf32>, vector<4xi104>
+  return %0, %1 : f32, vector<4xf32>
+}
+
+// CHECK-LABEL: @fpowi_exp_i112(
+// CHECK-SAME: %[[ARG0:.+]]: f32, %[[ARG1:.+]]: vector<4xf32>
+func.func @fpowi_exp_i112(%arg0: f32, %arg1: vector<4xf32>) -> (f32, vector<4xf32>) {
+  // CHECK-DAG: %[[CST_S:.*]] = arith.constant 18446744073709551558 : i112
+  // CHECK-DAG: %[[CST_V:.*]] = arith.constant dense<18446744073709551558> : vector<4xi112>
+  // CHECK: %[[SCALAR:.*]] = math.fpowi %[[ARG0]], %[[CST_S]] : f32, i112
+  // CHECK: %[[VECTOR:.*]] = math.fpowi %[[ARG1]], %[[CST_V]] : vector<4xf32>, vector<4xi112>
+  // CHECK: return %[[SCALAR]], %[[VECTOR]]
+  %c = arith.constant 18446744073709551558 : i112
+  %v = arith.constant dense<18446744073709551558> : vector<4xi112>
+  %0 = math.fpowi %arg0, %c : f32, i112
+  %1 = math.fpowi %arg1, %v : vector<4xf32>, vector<4xi112>
+  return %0, %1 : f32, vector<4xf32>
+}
+
+// This negative exponent is also the minimum signed value for its bit width.
+// CHECK-LABEL: @fpowi_exp_wide_negative(
+// CHECK-SAME: %[[ARG0:.+]]: f32, %[[ARG1:.+]]: vector<4xf32>
+func.func @fpowi_exp_wide_negative(%arg0: f32, %arg1: vector<4xf32>) -> (f32, vector<4xf32>) {
+  // CHECK-DAG: %[[CST_S:.*]] = arith.constant -18446744073709551616 : i65
+  // CHECK-DAG: %[[CST_V:.*]] = arith.constant dense<-18446744073709551616> : vector<4xi65>
+  // CHECK: %[[SCALAR:.*]] = math.fpowi %[[ARG0]], %[[CST_S]] : f32, i65
+  // CHECK: %[[VECTOR:.*]] = math.fpowi %[[ARG1]], %[[CST_V]] : vector<4xf32>, vector<4xi65>
+  // CHECK: return %[[SCALAR]], %[[VECTOR]]
+  %c = arith.constant -18446744073709551616 : i65
+  %v = arith.constant dense<-18446744073709551616> : vector<4xi65>
+  %0 = math.fpowi %arg0, %c : f32, i65
+  %1 = math.fpowi %arg1, %v : vector<4xf32>, vector<4xi65>
+  return %0, %1 : f32, vector<4xf32>
+}
+
+// Small values in wide integer types should still be simplified.
+// CHECK-LABEL: @fpowi_exp_wide_small(
+// CHECK-SAME: %[[ARG0:.+]]: f32, %[[ARG1:.+]]: vector<4xf32>
+func.func @fpowi_exp_wide_small(%arg0: f32, %arg1: vector<4xf32>) -> (f32, vector<4xf32>) {
+  // CHECK: %[[ONE:.*]] = arith.constant dense<1.000000e+00> : vector<4xf32>
+  // CHECK: %[[SCALAR:.*]] = arith.mulf %[[ARG0]], %[[ARG0]] : f32
+  // CHECK: %[[SQUARE:.*]] = arith.mulf %[[ARG1]], %[[ARG1]] : vector<4xf32>
+  // CHECK: %[[VECTOR:.*]] = arith.divf %[[ONE]], %[[SQUARE]] : vector<4xf32>
+  // CHECK: return %[[SCALAR]], %[[VECTOR]]
+  %c = arith.constant 2 : i104
+  %v = arith.constant dense<-2> : vector<4xi112>
+  %0 = math.fpowi %arg0, %c : f32, i104
+  %1 = math.fpowi %arg1, %v : vector<4xf32>, vector<4xi112>
+  return %0, %1 : f32, vector<4xf32>
 }
 
 // CHECK-LABEL: @fpowi_exp_two(
