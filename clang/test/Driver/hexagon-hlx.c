@@ -42,7 +42,7 @@
 // CHECK-NOHLX-V79: error: unsupported option '-mno-hlx' for target 'v79'
 // CHECK-HLX-NOVER: error: unsupported option '-mhlx' for target ''
 
-// -fhlx-vector-stack-limit= is passed to the backend and requires -mhlx.
+// -fhlx-vector-stack-limit= is passed to cc1 and requires -mhlx.
 // RUN: %clang -c %s -### --target=hexagon-unknown-elf -mv85 -mhlx \
 // RUN:  -fhlx-vector-stack-limit=1024 2>&1 \
 // RUN:  | FileCheck -check-prefix=CHECK-VSTACK-LIMIT %s
@@ -62,7 +62,7 @@
 // RUN:  -fhlx-vector-stack-limit=-128 2>&1 \
 // RUN:  | FileCheck -check-prefix=CHECK-VSTACK-LIMIT-NEG %s
 
-// CHECK-VSTACK-LIMIT: "-mllvm" "-hlx-vector-stack-limit=1024"
+// CHECK-VSTACK-LIMIT: "-cc1"{{.*}} "-fhlx-vector-stack-limit=1024"
 // CHECK-VSTACK-LIMIT-NOHLX: error: -fhlx-vector-stack-limit= requires HLX, use -mhlx to enable it
 // CHECK-VSTACK-LIMIT-BAD: error: invalid value 'a' in '-fhlx-vector-stack-limit=a'
 // CHECK-VSTACK-LIMIT-NEG: error: invalid value '-128' in '-fhlx-vector-stack-limit=-128'

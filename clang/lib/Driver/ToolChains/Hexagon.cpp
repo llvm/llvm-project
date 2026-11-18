@@ -948,9 +948,8 @@ void HexagonToolChain::addClangTargetOptions(const ArgList &DriverArgs,
       getDriver().Diag(diag::err_drv_invalid_value)
           << A->getAsString(DriverArgs) << A->getValue();
     } else {
-      CC1Args.push_back("-mllvm");
       CC1Args.push_back(
-          DriverArgs.MakeArgString("-hlx-vector-stack-limit=" + Twine(Limit)));
+          DriverArgs.MakeArgString("-fhlx-vector-stack-limit=" + Twine(Limit)));
     }
   }
 }

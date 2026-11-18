@@ -7357,9 +7357,10 @@ def mhexagon_scs_reg : Joined<["-"], "mscs-reg=">,
            "callee-saved registers r16-r27, default r18 (Hexagon only). "
            "The chosen register must also be reserved with -ffixed-<reg>.">;
 def fhlx_vector_stack_limit_EQ : Joined<["-"], "fhlx-vector-stack-limit=">,
-  Group<m_Group>, MetaVarName<"<bytes>">,
+  Group<m_Group>, Visibility<[ClangOption, CC1Option]>, MetaVarName<"<bytes>">,
   HelpText<"Report an error if a function needs more than <bytes> bytes of "
-           "HLX vector stack (Hexagon only, requires -mhlx)">;
+           "HLX vector stack (Hexagon only, requires -mhlx)">,
+  MarshallingInfoInt<CodeGenOpts<"HLXVectorStackLimit">, "UINT_MAX">;
 } // let Flags = [TargetSpecific]
 def mmemops : Flag<["-"], "mmemops">, Group<m_hexagon_Features_Group>,
   Visibility<[ClangOption, CC1Option]>,
