@@ -288,6 +288,27 @@ public:
     OPC_EmitIntegerI16,
     OPC_EmitIntegerI32,
     OPC_EmitIntegerI64,
+    // Space-optimized forms that encode common integer types and values in
+    // the opcode. Keep each type's values contiguous for inexpensive decoding.
+    OPC_EmitIntegerI32Neg1,
+    OPC_EmitIntegerI32_0,
+    OPC_EmitIntegerI32_1,
+    OPC_EmitIntegerI32_2,
+    OPC_EmitIntegerI32_3,
+    OPC_EmitIntegerI32_4,
+    OPC_EmitIntegerI32_5,
+    OPC_EmitIntegerI32_6,
+    OPC_EmitIntegerI32_7,
+    OPC_EmitIntegerI32_8,
+    OPC_EmitIntegerI64Neg1,
+    OPC_EmitIntegerI64_0,
+    OPC_EmitIntegerI64_1,
+    OPC_EmitIntegerI64_2,
+    OPC_EmitIntegerI64_3,
+    OPC_EmitIntegerI64_4,
+    OPC_EmitIntegerI64_5,
+    OPC_EmitIntegerI64_6,
+    OPC_EmitIntegerI64_7,
     OPC_EmitIntegerByHwMode,
     OPC_EmitIntegerByHwMode0,
     OPC_EmitRegister,
@@ -352,6 +373,7 @@ public:
     // Contains 32-bit offset in table for pattern being selected
     OPC_Coverage
   };
+  static_assert(OPC_Coverage < 256, "DAGISel opcodes must fit in one byte");
 
   enum {
     OPFL_None = 0,       // Node has no chain or glue input and isn't variadic.
