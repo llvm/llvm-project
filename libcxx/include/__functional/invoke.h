@@ -13,6 +13,7 @@
 #include <__config>
 #include <__type_traits/invoke.h>
 #include <__type_traits/is_void.h>
+#include <__type_traits/reference_converts_from_temporary.h>
 #include <__utility/forward.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -48,10 +49,8 @@ constexpr _Result invoke_r(_Fn&& __f, _Args&&... __args) noexcept(is_nothrow_inv
   if constexpr (is_void_v<_Result>) {
     static_cast<void>(std::invoke(std::forward<_Fn>(__f), std::forward<_Args>(__args)...));
   } else {
-    // TODO: Use reference_converts_from_temporary_v once implemented
-    // using _ImplicitInvokeResult = invoke_result_t<_Fn, _Args...>;
-    // static_assert(!reference_converts_from_temporary_v<_Result, _ImplicitInvokeResult>,
-    static_assert(true,
+    using _ImplicitInvokeResult = invoke_result_t<_Fn, _Args...>;
+    static_assert(!std::reference_converts_from_temporary_v<_Result, _ImplicitInvokeResult>,
                   "Returning from invoke_r would bind a temporary object to the reference return type, "
                   "which would result in a dangling reference.");
     return std::invoke(std::forward<_Fn>(__f), std::forward<_Args>(__args)...);
