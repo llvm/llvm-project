@@ -330,13 +330,6 @@ struct MustBeExecutedIterator {
 
   /// Return the underlying instruction.
   const Instruction *&operator*() { return CurInst; }
-  const Instruction *getCurrentInst() const { return CurInst; }
-
-  /// Return true if \p I was encountered by this iterator already.
-  bool count(const Instruction *I) const {
-    return Visited.count({I, ExplorationDirection::FORWARD}) ||
-           Visited.count({I, ExplorationDirection::BACKWARD});
-  }
 
 private:
   using VisitedSetTy =
@@ -453,52 +446,16 @@ struct MustBeExecutedContextExplorer {
   }
   ///}
 
-  /// Check \p Pred on all instructions in the context.
-  ///
-  /// This method will evaluate \p Pred and return
-  /// true if \p Pred holds in every instruction.
-  bool checkForAllContext(const Instruction *PP,
-                          function_ref<bool(const Instruction *)> Pred) {
-    for (auto EIt = begin(PP), EEnd = end(PP); EIt != EEnd; ++EIt)
-      if (!Pred(*EIt))
-        return false;
-    return true;
-  }
-
-  /// Helper to look for \p I in the context of \p PP.
-  ///
-  /// The context is expanded until \p I was found or no more expansion is
-  /// possible.
-  ///
-  /// \returns True, iff \p I was found.
-  bool findInContextOf(const Instruction *I, const Instruction *PP) {
-    auto EIt = begin(PP), EEnd = end(PP);
-    return findInContextOf(I, EIt, EEnd);
-  }
-
-  /// Helper to look for \p I in the context defined by \p EIt and \p EEnd.
-  ///
-  /// The context is expanded until \p I was found or no more expansion is
-  /// possible.
-  ///
-  /// \returns True, iff \p I was found.
-  bool findInContextOf(const Instruction *I, iterator &EIt, iterator &EEnd) {
-    bool Found = EIt.count(I);
-    while (!Found && EIt != EEnd)
-      Found = (++EIt).getCurrentInst() == I;
-    return Found;
-  }
-
   /// Return true if \p I is in the context of \p PP.
   ///
   /// That is the case if iterating over the context of \p PP visits \p I.
-  /// Unlike findInContextOf, this does not explore the context of every
-  /// program point separately but uses summaries of the contexts of basic
-  /// blocks that are shared by all program points.
+  /// This does not explore the context of every program point separately but
+  /// uses summaries of the contexts of basic blocks that are shared by all
+  /// program points.
   LLVM_ABI bool isInContextOf(const Instruction *I, const Instruction *PP);
 
-  /// Check \p Pred on all terminators in the context of \p PP, like
-  /// checkForAllContext but without exploring the context of \p PP itself.
+  /// Check \p Pred on all terminators in the context of \p PP and return
+  /// true if it holds for all of them.
   LLVM_ABI bool
   checkForAllTerminatorsInContext(const Instruction *PP,
                                   function_ref<bool(const Instruction *)> Pred);
