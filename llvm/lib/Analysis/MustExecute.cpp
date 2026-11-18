@@ -736,7 +736,7 @@ MustBeExecutedContextExplorer::getForwardStop(const Instruction *PP) {
         It->second.push_back(&I);
     }
   }
-  const auto &NonTransferring = It->second;
+  ArrayRef<const Instruction *> NonTransferring = It->second;
   auto Stop = llvm::lower_bound(NonTransferring, PP,
                                 [](const Instruction *A, const Instruction *B) {
                                   return A->comesBefore(B);
