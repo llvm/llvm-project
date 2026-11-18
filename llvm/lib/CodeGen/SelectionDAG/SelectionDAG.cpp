@@ -4664,9 +4664,9 @@ SelectionDAG::computeOverflowForUnsignedAdd(SDValue N0, SDValue N1) const {
   EVT N1VT = N1.getValueType();
   if (N0VT != N1VT) {
     if (N0VT.getScalarSizeInBits() < N1VT.getScalarSizeInBits()) {
-      N0Range = N0Range.zextOrTrunc(N1VT.getScalarSizeInBits());
+      N0Range = N0Range.zeroExtend(N1VT.getScalarSizeInBits());
     } else {
-      N1Range = N1Range.zextOrTrunc(N0VT.getScalarSizeInBits());
+      N1Range = N1Range.zeroExtend(N0VT.getScalarSizeInBits());
     }
   }
 
