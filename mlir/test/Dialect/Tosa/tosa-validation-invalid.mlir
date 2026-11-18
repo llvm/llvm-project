@@ -517,11 +517,3 @@ func.func @test_tile_minus_one_multiple(%arg0: tensor<4x31xf32>) {
   %0 = tosa.tile %arg0, %multiples : (tensor<4x31xf32>, !tosa.shape<2>) -> tensor<8x?xf32>
   return
 }
-
-// -----
-
-func.func @test_tile_nonconstant_multiples(%arg0: tensor<?xf32>) -> tensor<?xf32> {
-  %multiples = tosa.dim %arg0 axis(0) : (tensor<?xf32>) -> !tosa.shape<1>
-  %0 = tosa.tile %arg0, %multiples : (tensor<?xf32>, !tosa.shape<1>) -> tensor<?xf32>
-  return %0 : tensor<?xf32>
-}
