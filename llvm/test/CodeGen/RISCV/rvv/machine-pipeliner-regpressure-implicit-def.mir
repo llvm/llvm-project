@@ -1,0 +1,122 @@
+# RUN: llc -mtriple=riscv64 -mcpu=sifive-p670 -run-pass=pipeliner \
+# RUN:   -pipeliner-register-pressure -pipeliner-register-pressure-margin=75 \
+# RUN:   -pass-remarks-analysis=pipeliner %s -o /dev/null 2>&1 | FileCheck %s
+
+# The register pressure detector leaves out the reads of IMPLICIT_DEF values
+# that ProcessImplicitDefs, which runs after the pipeliner, marks undef. On
+# RISC-V, InitUndef runs before ProcessImplicitDefs. In an instruction with an
+# early-clobber def, it replaces each untied read of an IMPLICIT_DEF with a
+# read of a new INIT_UNDEF register. Check that the detector still counts these
+# reads.
+#
+# -pipeliner-register-pressure-margin=75 leaves the detector a quarter of each
+# register pressure limit, which is 8 vector registers.
+
+# In vadd_reads, each vadd.vv reads an IMPLICIT_DEF hoisted to the preheader.
+# ProcessImplicitDefs marks these reads undef. Counted as registers, they would
+# need more than 8 vector registers, and the detector would reject every
+# schedule.
+# CHECK-NOT: Unable to find schedule
+# CHECK: Schedule found with Initiation Interval
+
+# In vrgather_reads, each vrgather.vv has an early-clobber def and reads an
+# IMPLICIT_DEF in the same way. InitUndef gives these reads registers, so the
+# detector counts them and rejects every schedule.
+# CHECK-NOT: Schedule found
+# CHECK: Unable to find schedule
+
+--- |
+  define void @vadd_reads() {
+    ret void
+  }
+
+  define void @vrgather_reads() {
+    ret void
+  }
+...
+---
+name:            vadd_reads
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1
+    liveins: $x10, $x11, $v8
+
+    %base:gpr = COPY $x10
+    %end:gpr = COPY $x11
+    %init:vr = COPY $v8
+    %u0:vr = IMPLICIT_DEF
+    %u1:vr = IMPLICIT_DEF
+    %u2:vr = IMPLICIT_DEF
+    %u3:vr = IMPLICIT_DEF
+    %u4:vr = IMPLICIT_DEF
+    %u5:vr = IMPLICIT_DEF
+    %u6:vr = IMPLICIT_DEF
+    %u7:vr = IMPLICIT_DEF
+
+  bb.1:
+    successors: %bb.1, %bb.2
+
+    %p:gpr = PHI %base, %bb.0, %p_next, %bb.1
+    %acc:vr = PHI %init, %bb.0, %acc_next, %bb.1
+    %x:vr = PseudoVLE32_V_M1 $noreg, %p, 4, 5 /* e32 */, 3 /* ta, ma */ :: (load (s128))
+    %d0:vr = PseudoVADD_VV_M1 $noreg, %u0, %x, 4, 5 /* e32 */, 3 /* ta, ma */
+    %d1:vr = PseudoVADD_VV_M1 $noreg, %u1, %d0, 4, 5 /* e32 */, 3 /* ta, ma */
+    %d2:vr = PseudoVADD_VV_M1 $noreg, %u2, %d1, 4, 5 /* e32 */, 3 /* ta, ma */
+    %d3:vr = PseudoVADD_VV_M1 $noreg, %u3, %d2, 4, 5 /* e32 */, 3 /* ta, ma */
+    %d4:vr = PseudoVADD_VV_M1 $noreg, %u4, %d3, 4, 5 /* e32 */, 3 /* ta, ma */
+    %d5:vr = PseudoVADD_VV_M1 $noreg, %u5, %d4, 4, 5 /* e32 */, 3 /* ta, ma */
+    %d6:vr = PseudoVADD_VV_M1 $noreg, %u6, %d5, 4, 5 /* e32 */, 3 /* ta, ma */
+    %d7:vr = PseudoVADD_VV_M1 $noreg, %u7, %d6, 4, 5 /* e32 */, 3 /* ta, ma */
+    %acc_next:vr = PseudoVADD_VV_M1 $noreg, %acc, %d7, 4, 5 /* e32 */, 3 /* ta, ma */
+    %p_next:gpr = ADDI %p, 16
+    BNE %p_next, %end, %bb.1
+    PseudoBR %bb.2
+
+  bb.2:
+    $v8 = COPY %acc_next
+    PseudoRET implicit $v8
+...
+---
+name:            vrgather_reads
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1
+    liveins: $x10, $x11, $v8
+
+    %base:gpr = COPY $x10
+    %end:gpr = COPY $x11
+    %init:vr = COPY $v8
+    %u0:vr = IMPLICIT_DEF
+    %u1:vr = IMPLICIT_DEF
+    %u2:vr = IMPLICIT_DEF
+    %u3:vr = IMPLICIT_DEF
+    %u4:vr = IMPLICIT_DEF
+    %u5:vr = IMPLICIT_DEF
+    %u6:vr = IMPLICIT_DEF
+    %u7:vr = IMPLICIT_DEF
+
+  bb.1:
+    successors: %bb.1, %bb.2
+
+    %p:gpr = PHI %base, %bb.0, %p_next, %bb.1
+    %acc:vr = PHI %init, %bb.0, %acc_next, %bb.1
+    %x:vr = PseudoVLE32_V_M1 $noreg, %p, 4, 5 /* e32 */, 3 /* ta, ma */ :: (load (s128))
+    early-clobber %d0:vr = PseudoVRGATHER_VV_M1_E32 $noreg, %u0, %x, 4, 5 /* e32 */, 3 /* ta, ma */
+    early-clobber %d1:vr = PseudoVRGATHER_VV_M1_E32 $noreg, %u1, %d0, 4, 5 /* e32 */, 3 /* ta, ma */
+    early-clobber %d2:vr = PseudoVRGATHER_VV_M1_E32 $noreg, %u2, %d1, 4, 5 /* e32 */, 3 /* ta, ma */
+    early-clobber %d3:vr = PseudoVRGATHER_VV_M1_E32 $noreg, %u3, %d2, 4, 5 /* e32 */, 3 /* ta, ma */
+    early-clobber %d4:vr = PseudoVRGATHER_VV_M1_E32 $noreg, %u4, %d3, 4, 5 /* e32 */, 3 /* ta, ma */
+    early-clobber %d5:vr = PseudoVRGATHER_VV_M1_E32 $noreg, %u5, %d4, 4, 5 /* e32 */, 3 /* ta, ma */
+    early-clobber %d6:vr = PseudoVRGATHER_VV_M1_E32 $noreg, %u6, %d5, 4, 5 /* e32 */, 3 /* ta, ma */
+    early-clobber %d7:vr = PseudoVRGATHER_VV_M1_E32 $noreg, %u7, %d6, 4, 5 /* e32 */, 3 /* ta, ma */
+    %acc_next:vr = PseudoVADD_VV_M1 $noreg, %acc, %d7, 4, 5 /* e32 */, 3 /* ta, ma */
+    %p_next:gpr = ADDI %p, 16
+    BNE %p_next, %end, %bb.1
+    PseudoBR %bb.2
+
+  bb.2:
+    $v8 = COPY %acc_next
+    PseudoRET implicit $v8
+...
