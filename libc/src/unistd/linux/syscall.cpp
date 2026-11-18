@@ -31,10 +31,12 @@ LLVM_LIBC_FUNCTION(long, syscall, (long number, ...)) {
   va_end(vlist);
 
   // Like other libcs, this always reads six long-sized arguments, even when
-  // the caller passed fewer. The extra values are garbage, but the kernel
-  // ignores registers past a syscall's arity. Callers must pass every argument
-  // as a long-sized value (pointers, long, or a cast) and split 64-bit
-  // arguments themselves on 32-bit targets.
+  // the caller passed fewer. Reading past the end of a va_list is technically
+  // UB (FIXME: this could interact badly with LTO / ExpandVariadics if enabled
+  // on more targets), though on the ABIs we support the extra values are just
+  // harmless garbage ignored by the kernel past a syscall's arity. Callers must
+  // pass every argument as a long-sized value (pointers, long, or a cast) and
+  // split 64-bit arguments themselves on 32-bit targets.
   long arg1 = args.next_var<long>();
   long arg2 = args.next_var<long>();
   long arg3 = args.next_var<long>();

@@ -37,7 +37,11 @@ TEST_F(LlvmLibcSyscallTest, GetPid) {
 }
 
 TEST_F(LlvmLibcSyscallTest, InvalidSyscallNumber) {
-  constexpr long INVALID_SYSCALL_NUMBER = -1;
+  // Use an out-of-range positive syscall number below 0x0f0000
+  // (__ARM_NR_BASE). On 32-bit ARM, syscall numbers >= 0x0f0000 (including -1,
+  // which wraps to 0xffffffff) are routed to the ARM-private syscall handler
+  // and raise SIGILL instead of returning ENOSYS.
+  constexpr long INVALID_SYSCALL_NUMBER = 0xffff;
   ASSERT_THAT(LIBC_NAMESPACE::syscall(INVALID_SYSCALL_NUMBER),
               Fails(ENOSYS, -1L));
 }
@@ -95,8 +99,12 @@ TEST_F(LlvmLibcSyscallTest, FileReadWrite) {
   ASSERT_GT(fd, 0l);
   ASSERT_ERRNO_SUCCESS();
 
-  ASSERT_GE(LIBC_NAMESPACE::syscall(SYS_pwrite64, fd, HELLO, HELLO_SIZE, 0),
-            0l);
+  // Pass three zero args for the offset: 64-bit targets use arg4 and ignore the
+  // rest, 32-bit x86/RISC-V use arg4/arg5 for the split 64-bit offset, and
+  // 32-bit ARM EABI requires a padding register in arg4 before arg5/arg6.
+  ASSERT_GE(
+      LIBC_NAMESPACE::syscall(SYS_pwrite64, fd, HELLO, HELLO_SIZE, 0L, 0L, 0L),
+      0l);
   ASSERT_ERRNO_SUCCESS();
 
   ASSERT_GE(LIBC_NAMESPACE::syscall(SYS_fsync, fd), 0l);
