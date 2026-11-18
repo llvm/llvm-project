@@ -168,6 +168,7 @@ llvm::Error handle_launch(GDBRemoteCommunicationServerLLGS &gdb_server,
   info.SetWorkingDirectory(cwd_spec);
   info.GetEnvironment() = Host::GetEnvironment();
 #ifdef _WIN32
+  // A 0x0 window size makes the inferior use pipes instead of a ConPTY.
   if (::getenv("LLDB_LAUNCH_FLAG_USE_PIPES"))
     info.SetSTDIOWindowSize(0, 0);
 #endif
