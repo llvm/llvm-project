@@ -18,10 +18,10 @@ define void @wrap_check_iv.3_implies_iv.2(i32 noundef %N, ptr %dst, ptr %src) {
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %dst High: (4 + (12 * (zext i32 (-1 + %N) to i64))<nuw><nsw> + %dst))
-; CHECK-NEXT:            Member: {%dst,+,12}<%loop>
+; CHECK-NEXT:            Member: {%dst,+,12}<nw><%loop>
 ; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %src High: (4 + (8 * (zext i32 (-1 + %N) to i64))<nuw><nsw> + %src))
-; CHECK-NEXT:            Member: {%src,+,8}<%loop>
+; CHECK-NEXT:            Member: {%src,+,8}<nw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -30,10 +30,10 @@ define void @wrap_check_iv.3_implies_iv.2(i32 noundef %N, ptr %dst, ptr %src) {
 ; CHECK-NEXT:      Expressions re-written:
 ; CHECK-NEXT:      [PSE] %gep.iv.2 = getelementptr inbounds i32, ptr %src, i64 %ext.iv.2:
 ; CHECK-NEXT:        ((4 * (sext i32 {0,+,2}<%loop> to i64))<nsw> + %src)
-; CHECK-NEXT:        --> {%src,+,8}<%loop>
+; CHECK-NEXT:        --> {%src,+,8}<nw><%loop>
 ; CHECK-NEXT:      [PSE] %gep.iv.3 = getelementptr inbounds i32, ptr %dst, i64 %ext.iv.3:
 ; CHECK-NEXT:        ((4 * (sext i32 {0,+,3}<%loop> to i64))<nsw> + %dst)
-; CHECK-NEXT:        --> {%dst,+,12}<%loop>
+; CHECK-NEXT:        --> {%dst,+,12}<nw><%loop>
 ;
 entry:
   br label %loop
@@ -73,10 +73,10 @@ define void @wrap_check_iv.3_implies_iv.2_different_start(i32 noundef %N, ptr %d
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: (12 + %dst) High: (16 + (8 * (zext i32 (-1 + %N) to i64))<nuw><nsw> + %dst))
-; CHECK-NEXT:            Member: {(12 + %dst),+,8}<%loop>
+; CHECK-NEXT:            Member: {(12 + %dst),+,8}<nw><%loop>
 ; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %src High: (4 + (8 * (zext i32 (-1 + %N) to i64))<nuw><nsw> + %src))
-; CHECK-NEXT:            Member: {%src,+,8}<%loop>
+; CHECK-NEXT:            Member: {%src,+,8}<nw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -85,10 +85,10 @@ define void @wrap_check_iv.3_implies_iv.2_different_start(i32 noundef %N, ptr %d
 ; CHECK-NEXT:      Expressions re-written:
 ; CHECK-NEXT:      [PSE] %gep.iv.2 = getelementptr inbounds i32, ptr %src, i64 %ext.iv.2:
 ; CHECK-NEXT:        ((4 * (sext i32 {0,+,2}<%loop> to i64))<nsw> + %src)
-; CHECK-NEXT:        --> {%src,+,8}<%loop>
+; CHECK-NEXT:        --> {%src,+,8}<nw><%loop>
 ; CHECK-NEXT:      [PSE] %gep.iv.3 = getelementptr inbounds i32, ptr %dst, i64 %ext.iv.3:
 ; CHECK-NEXT:        (4 + (4 * (sext i32 {2,+,2}<%loop> to i64))<nsw> + %dst)
-; CHECK-NEXT:        --> {(12 + %dst),+,8}<%loop>
+; CHECK-NEXT:        --> {(12 + %dst),+,8}<nw><%loop>
 ;
 entry:
   br label %loop
@@ -128,10 +128,10 @@ define void @wrap_check_iv.3_implies_iv.2_predicates_added_in_different_order(i3
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %dst High: (4 + (8 * (zext i32 (-1 + %N) to i64))<nuw><nsw> + %dst))
-; CHECK-NEXT:            Member: {%dst,+,8}<%loop>
+; CHECK-NEXT:            Member: {%dst,+,8}<nw><%loop>
 ; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %src High: (4 + (12 * (zext i32 (-1 + %N) to i64))<nuw><nsw> + %src))
-; CHECK-NEXT:            Member: {%src,+,12}<%loop>
+; CHECK-NEXT:            Member: {%src,+,12}<nw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -140,10 +140,10 @@ define void @wrap_check_iv.3_implies_iv.2_predicates_added_in_different_order(i3
 ; CHECK-NEXT:      Expressions re-written:
 ; CHECK-NEXT:      [PSE] %gep.iv.3 = getelementptr inbounds i32, ptr %src, i64 %ext.iv.3:
 ; CHECK-NEXT:        ((4 * (sext i32 {0,+,3}<%loop> to i64))<nsw> + %src)
-; CHECK-NEXT:        --> {%src,+,12}<%loop>
+; CHECK-NEXT:        --> {%src,+,12}<nw><%loop>
 ; CHECK-NEXT:      [PSE] %gep.iv.2 = getelementptr inbounds i32, ptr %dst, i64 %ext.iv.2:
 ; CHECK-NEXT:        ((4 * (sext i32 {0,+,2}<%loop> to i64))<nsw> + %dst)
-; CHECK-NEXT:        --> {%dst,+,8}<%loop>
+; CHECK-NEXT:        --> {%dst,+,8}<nw><%loop>
 ;
 entry:
   br label %loop
@@ -182,10 +182,10 @@ define void @wrap_check_iv.3_does_not_implies_iv.2_due_to_start(i32 noundef %N, 
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %dst High: (4 + (12 * (zext i32 (-1 + %N) to i64))<nuw><nsw> + %dst))
-; CHECK-NEXT:            Member: {%dst,+,12}<%loop>
+; CHECK-NEXT:            Member: {%dst,+,12}<nw><%loop>
 ; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: (40 + %src) High: (44 + (8 * (zext i32 (-1 + %N) to i64))<nuw><nsw> + %src))
-; CHECK-NEXT:            Member: {(40 + %src),+,8}<%loop>
+; CHECK-NEXT:            Member: {(40 + %src),+,8}<nw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -195,10 +195,10 @@ define void @wrap_check_iv.3_does_not_implies_iv.2_due_to_start(i32 noundef %N, 
 ; CHECK-NEXT:      Expressions re-written:
 ; CHECK-NEXT:      [PSE] %gep.iv.2 = getelementptr inbounds i32, ptr %src, i64 %ext.iv.2:
 ; CHECK-NEXT:        ((4 * (sext i32 {10,+,2}<%loop> to i64))<nsw> + %src)
-; CHECK-NEXT:        --> {(40 + %src),+,8}<%loop>
+; CHECK-NEXT:        --> {(40 + %src),+,8}<nw><%loop>
 ; CHECK-NEXT:      [PSE] %gep.iv.3 = getelementptr inbounds i32, ptr %dst, i64 %ext.iv.3:
 ; CHECK-NEXT:        ((4 * (sext i32 {0,+,3}<%loop> to i64))<nsw> + %dst)
-; CHECK-NEXT:        --> {%dst,+,12}<%loop>
+; CHECK-NEXT:        --> {%dst,+,12}<nw><%loop>
 ;
 entry:
   br label %loop
@@ -237,10 +237,10 @@ define void @wrap_check_iv.3_does_not_imply_iv.2_due_to_start_negative(i32 nound
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: (-4 + %dst) High: ((12 * (zext i32 (-1 + %N) to i64))<nuw><nsw> + %dst))
-; CHECK-NEXT:            Member: {(-4 + %dst),+,12}<%loop>
+; CHECK-NEXT:            Member: {(-4 + %dst),+,12}<nw><%loop>
 ; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %src High: (4 + (8 * (zext i32 (-1 + %N) to i64))<nuw><nsw> + %src))
-; CHECK-NEXT:            Member: {%src,+,8}<%loop>
+; CHECK-NEXT:            Member: {%src,+,8}<nw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -250,10 +250,10 @@ define void @wrap_check_iv.3_does_not_imply_iv.2_due_to_start_negative(i32 nound
 ; CHECK-NEXT:      Expressions re-written:
 ; CHECK-NEXT:      [PSE] %gep.iv.2 = getelementptr inbounds i32, ptr %src, i64 %ext.iv.2:
 ; CHECK-NEXT:        ((4 * (sext i32 {0,+,2}<%loop> to i64))<nsw> + %src)
-; CHECK-NEXT:        --> {%src,+,8}<%loop>
+; CHECK-NEXT:        --> {%src,+,8}<nw><%loop>
 ; CHECK-NEXT:      [PSE] %gep.iv.3 = getelementptr inbounds i32, ptr %dst, i64 %ext.iv.3:
 ; CHECK-NEXT:        ((4 * (sext i32 {-1,+,3}<%loop> to i64))<nsw> + %dst)
-; CHECK-NEXT:        --> {(-4 + %dst),+,12}<%loop>
+; CHECK-NEXT:        --> {(-4 + %dst),+,12}<nw><%loop>
 ;
 entry:
   br label %loop
@@ -292,10 +292,10 @@ define void @wrap_check_iv.3_does_not_imply_iv.2_due_to_negative_step(i32 nounde
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: ((-4 * (zext i32 (-1 + %N) to i64))<nsw> + %dst) High: (4 + %dst))
-; CHECK-NEXT:            Member: {%dst,+,-4}<%loop>
+; CHECK-NEXT:            Member: {%dst,+,-4}<nw><%loop>
 ; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %src High: (4 + (8 * (zext i32 (-1 + %N) to i64))<nuw><nsw> + %src))
-; CHECK-NEXT:            Member: {%src,+,8}<%loop>
+; CHECK-NEXT:            Member: {%src,+,8}<nw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -305,10 +305,10 @@ define void @wrap_check_iv.3_does_not_imply_iv.2_due_to_negative_step(i32 nounde
 ; CHECK-NEXT:      Expressions re-written:
 ; CHECK-NEXT:      [PSE] %gep.iv.2 = getelementptr inbounds i32, ptr %src, i64 %ext.iv.2:
 ; CHECK-NEXT:        ((4 * (sext i32 {0,+,2}<%loop> to i64))<nsw> + %src)
-; CHECK-NEXT:        --> {%src,+,8}<%loop>
+; CHECK-NEXT:        --> {%src,+,8}<nw><%loop>
 ; CHECK-NEXT:      [PSE] %gep.iv.3 = getelementptr inbounds i32, ptr %dst, i64 %ext.iv.3:
 ; CHECK-NEXT:        ((4 * (sext i32 {0,+,-1}<%loop> to i64))<nsw> + %dst)
-; CHECK-NEXT:        --> {%dst,+,-4}<%loop>
+; CHECK-NEXT:        --> {%dst,+,-4}<nw><%loop>
 ;
 entry:
   br label %loop
@@ -407,7 +407,7 @@ define void @narrower_i8_nssw_implies_wider_i32_nssw(ptr %dst, ptr %src, i32 %N)
 ; CHECK-NEXT:            Member: {%dst,+,4}<nw><%loop>
 ; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %src High: (4 + (8 * (zext i32 (-1 + %N) to i64))<nuw><nsw> + %src))
-; CHECK-NEXT:            Member: {%src,+,8}<%loop>
+; CHECK-NEXT:            Member: {%src,+,8}<nw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -419,7 +419,7 @@ define void @narrower_i8_nssw_implies_wider_i32_nssw(ptr %dst, ptr %src, i32 %N)
 ; CHECK-NEXT:        --> {%dst,+,4}<nw><%loop>
 ; CHECK-NEXT:      [PSE] %gep.src = getelementptr inbounds i32, ptr %src, i64 %ext.iv.2:
 ; CHECK-NEXT:        ((4 * (sext i8 {0,+,2}<%loop> to i64))<nsw> + %src)
-; CHECK-NEXT:        --> {%src,+,8}<%loop>
+; CHECK-NEXT:        --> {%src,+,8}<nw><%loop>
 ;
 entry:
   br label %loop

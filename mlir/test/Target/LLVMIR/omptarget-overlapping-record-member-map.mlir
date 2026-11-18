@@ -5,9 +5,9 @@ module attributes {llvm.target_triple = "x86_64-unknown-linux-gnu", omp.is_gpu =
         %0 = llvm.mlir.constant(1 : i64) : i64
         %1 = llvm.alloca %0 x !llvm.struct<"_QFTdtype", (f32, i32)> {bindc_name = "dtypev"} : (i64) -> !llvm.ptr
         %2 = llvm.getelementptr %1[0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"_QFTdtype", (f32, i32)>
-        %3 = omp.map.info var_ptr(%2 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = "dtypev%value2"}
-        %4 = omp.map.info var_ptr(%1 : !llvm.ptr, !llvm.struct<"_QFTdtype", (f32, i32)>) map_clauses(to) capture(ByRef) members(%3 : [1] : !llvm.ptr) -> !llvm.ptr {name = "dtypev"}
-        omp.target map_entries(%4 -> %arg0, %3 -> %arg1 : !llvm.ptr, !llvm.ptr) {
+        %3 = omp.map.info var_ptr(%2 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) name("dtypev%value2") -> !llvm.ptr
+        %4 = omp.map.info var_ptr(%1 : !llvm.ptr, !llvm.struct<"_QFTdtype", (f32, i32)>) map_clauses(to) capture(ByRef) members(%3 : [1] : !llvm.ptr) name("dtypev") -> !llvm.ptr
+        omp.target kernel_type(generic) map_entries(%4 -> %arg0, %3 -> %arg1 : !llvm.ptr, !llvm.ptr) {
           omp.terminator
         }
         llvm.return
@@ -15,7 +15,7 @@ module attributes {llvm.target_triple = "x86_64-unknown-linux-gnu", omp.is_gpu =
 }
 
 // CHECK: @.offload_sizes = private unnamed_addr constant [4 x i64] [i64 0, i64 8, i64 4, i64 0]
-// CHECK: @.offload_maptypes = private unnamed_addr constant [4 x i64] [i64 32, i64 281474976710657, i64 281474976710659, i64 288]
+// CHECK: @.offload_maptypes = private unnamed_addr constant [4 x i64] [i64 33, i64 281474976710657, i64 281474976710659, i64 288]
 
 // CHECK: %[[ALLOCA:.*]] = alloca %_QFTdtype, i64 1, align 8
 // CHECK: %[[ELEMENT_ACC:.*]] = getelementptr %_QFTdtype, ptr %[[ALLOCA]], i32 0, i32 1

@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn -mcpu=bonaire < %s | FileCheck -strict-whitespace -check-prefix=SI %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -strict-whitespace -check-prefix=SI %s
+; RUN: llc -mtriple=amdgpu7.04 < %s | FileCheck -strict-whitespace -check-prefix=SI %s
+; RUN: llc -mtriple=amdgpu8.02 < %s | FileCheck -strict-whitespace -check-prefix=SI %s
 
 @lds = addrspace(3) global [512 x float] poison, align 4
 

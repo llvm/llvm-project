@@ -1,5 +1,5 @@
-; RUN: opt -S -mtriple=amdgcn-- -passes='amdgpu-promote-alloca,sroa,instcombine' -amdgpu-promote-alloca-to-vector-max-regs=64 < %s | FileCheck -check-prefix=OPT %s
-; RUN: opt -S -mtriple=amdgcn-- -passes='amdgpu-promote-alloca,sroa,instcombine' -amdgpu-promote-alloca-to-vector-limit=32 -amdgpu-promote-alloca-to-vector-max-regs=64 < %s | FileCheck -check-prefix=LIMIT32 %s
+; RUN: opt -S -mtriple=amdgpu-- -passes='amdgpu-promote-alloca,sroa,instcombine' -amdgpu-promote-alloca-to-vector-max-regs=64 < %s | FileCheck -check-prefix=OPT %s
+; RUN: opt -S -mtriple=amdgpu-- -passes='amdgpu-promote-alloca,sroa,instcombine' -amdgpu-promote-alloca-to-vector-limit=32 -amdgpu-promote-alloca-to-vector-max-regs=64 < %s | FileCheck -check-prefix=LIMIT32 %s
 
 ; OPT-LABEL: @alloca_8xi64_max1024(
 ; OPT-NOT: alloca

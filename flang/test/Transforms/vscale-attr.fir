@@ -19,6 +19,6 @@
 // VSCALE-MIN-NO-PO2: VScaleAttr: vscaleMin has to be a power-of-two greater than 0
 // VSCALE-MAX-NO-PO2: VScaleAttr: vscaleMax has to be a power-of-two greater-than-or-equal to vscaleMin or 0 to signify an unbounded maximum
 // VSCALE-MIN-GREATER: VScaleAttr: vscaleMax has to be a power-of-two greater-than-or-equal to vscaleMin or 0 to signify an unbounded maximum
-func.func @_QPtest(%arg0: !fir.ref<i32> {fir.bindc_name = "x"}) {
+func.func @_QPtest() {
   return
 }

@@ -89,7 +89,8 @@ float4 getCBufferSwizzleAccess() {
 // COL-CHECK-NEXT:    ret <2 x float> [[TMP1]]
 //
 // ROW-CHECK-NEXT:    [[M_ADDR:%.*]] = alloca [3 x <2 x float>], align 4
-// ROW-CHECK-NEXT:    store <6 x float> [[M]], ptr [[M_ADDR]], align 4
+// ROW-CHECK-NEXT:    [[M_ROW:%.*]] = call {{.*}} <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> [[M]], i32 3, i32 2)
+// ROW-CHECK-NEXT:    store <6 x float> [[M_ROW]], ptr [[M_ADDR]], align 4
 // ROW-CHECK-NEXT:    [[TMP0:%.*]] = load <6 x float>, ptr [[M_ADDR]], align 4
 // ROW-CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <6 x float> [[TMP0]], <6 x float> poison, <2 x i32> <i32 2, i32 1>
 // ROW-CHECK-NEXT:    ret <2 x float> [[TMP1]]

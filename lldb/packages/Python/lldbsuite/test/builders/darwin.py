@@ -60,18 +60,7 @@ class BuilderDarwin(Builder):
         return ["{}={}".format(key, value) for key, value in args.items()]
 
     def getArchCFlags(self):
-        triple = self.getTriple()
-        if not triple:
-            return []
-
-        _, _, os, version, _ = split_triple(triple)
-
-        if os == "darwin" or not version:
-            return []
-
-        target_os = "-mtargetos={}{}".format(os, version)
-
-        return ["ARCH_CFLAGS={}".format(target_os)]
+        return []
 
     def _getDebugInfoArgs(self, debug_info):
         if debug_info == "dsym":

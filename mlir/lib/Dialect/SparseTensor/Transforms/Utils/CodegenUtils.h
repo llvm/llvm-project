@@ -16,7 +16,6 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/SparseTensor/IR/Enums.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensorType.h"
@@ -59,11 +58,6 @@ StringRef overheadTypeFunctionSuffix(OverheadType ot);
 
 /// Converts an overhead storage type to its function-name suffix.
 StringRef overheadTypeFunctionSuffix(Type overheadTp);
-
-/// Returns true if the given type is a valid sparse tensor element type
-/// supported by the runtime library (i.e., maps to a PrimaryType).
-/// Use this to guard calls to primaryTypeEncoding() with invalid types.
-bool isValidPrimaryType(Type elemTp);
 
 /// Converts a primary storage type to its internal type-encoding.
 PrimaryType primaryTypeEncoding(Type elemTp);

@@ -19,7 +19,7 @@ namespace lldb_private {
 class OperatingSystemPythonInterface
     : virtual public OperatingSystemInterface,
       virtual public ScriptedThreadPythonInterface,
-      public PluginInterface {
+      virtual public PluginInterface {
 public:
   OperatingSystemPythonInterface(ScriptInterpreterPythonImpl &interpreter);
 

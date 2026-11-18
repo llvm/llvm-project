@@ -23,8 +23,6 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
-#include "mlir/Dialect/OpenACC/OpenACC.h"
-#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 
 namespace fir::factory {
 
@@ -153,6 +151,15 @@ genBoundsOpFromBoxChar(fir::FirOpBuilder &builder, mlir::Location loc,
   mlir::Type lenType = builder.getCharacterLengthType();
   mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
   mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
+  auto boxCharType =
+      mlir::cast<fir::BoxCharType>(fir::unwrapRefType(info.addr.getType()));
+  unsigned codeUnitBytes =
+      builder.getKindMap().getCharacterBitsize(boxCharType.getKind()) / 8;
+  // The extent counts character code units, but the stride is in bytes.
+  mlir::Value byteStride =
+      codeUnitBytes == 1
+          ? one
+          : builder.createIntegerConstant(loc, idxTy, codeUnitBytes);
   using ExtentAndStride = std::tuple<mlir::Value, mlir::Value>;
   auto [extent, stride] = [&]() -> ExtentAndStride {
     if (info.isPresent) {
@@ -171,7 +178,7 @@ genBoundsOpFromBoxChar(fir::FirOpBuilder &builder, mlir::Location loc,
                 auto unboxed = fir::UnboxCharOp::create(builder, loc, refType,
                                                         lenType, boxChar);
                 mlir::SmallVector<mlir::Value> results = {unboxed.getResult(1),
-                                                          one};
+                                                          byteStride};
                 fir::ResultOp::create(builder, loc, results);
               })
               .genElse([&]() {
@@ -191,7 +198,7 @@ genBoundsOpFromBoxChar(fir::FirOpBuilder &builder, mlir::Location loc,
     mlir::Type refType = builder.getRefType(boxCharType.getEleTy());
     auto unboxed =
         fir::UnboxCharOp::create(builder, loc, refType, lenType, boxChar);
-    return {unboxed.getResult(1), one};
+    return {unboxed.getResult(1), byteStride};
   }();
 
   mlir::Value ub = mlir::arith::SubIOp::create(builder, loc, extent, one);

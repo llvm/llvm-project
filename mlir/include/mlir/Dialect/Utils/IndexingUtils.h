@@ -55,9 +55,6 @@ SmallVector<int64_t> computeElementwiseMul(ArrayRef<int64_t> v1,
                                            ArrayRef<int64_t> v2);
 
 /// Self-explicit.
-int64_t computeSum(ArrayRef<int64_t> basis);
-
-/// Self-explicit.
 int64_t computeProduct(ArrayRef<int64_t> basis);
 
 /// Return the number of elements of basis (i.e. the max linear index).

@@ -36,7 +36,7 @@ end subroutine
 ! HLFIR:           omp.terminator
 ! HLFIR:         }
 ! HLFIR:         omp.terminator
-! HLFIR:       }
+! HLFIR:       } {omp.combined}
 
 ! After workshare lowering, the forall should be in omp.single (since it
 ! contains operations that are not safe to parallelize across threads).
@@ -51,6 +51,7 @@ end subroutine
 ! FIR:         omp.barrier
 ! FIR:         omp.terminator
 ! FIR:       }
+! FIR-NOT:   omp.combined
 
 ! Verify LLVM IR is generated successfully (the original issue caused crashes)
 ! LLVM-LABEL: define {{.*}}workshare_forall_sliced

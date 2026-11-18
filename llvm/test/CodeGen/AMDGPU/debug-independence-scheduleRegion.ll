@@ -3,12 +3,11 @@
 ; instructions are reordered.
 
 ; RUN: opt %s  -strip-debug -o %t.no_debug.ll -S
-; RUN: llc -O2 -mcpu=gfx1250 < %s             -misched=gcn-iterative-ilp -filetype=obj -o %t.with_debug.o
-; RUN: llc -O2 -mcpu=gfx1250 < %t.no_debug.ll -misched=gcn-iterative-ilp -filetype=obj -o %t.no_debug.o
+; RUN: llc -O2 -mtriple=amdgpu12.50-amd-amdhsa < %s             -misched=gcn-iterative-ilp -filetype=obj -o %t.with_debug.o
+; RUN: llc -O2 -mtriple=amdgpu12.50-amd-amdhsa < %t.no_debug.ll -misched=gcn-iterative-ilp -filetype=obj -o %t.no_debug.o
 ; RUN: llvm-strip %t.with_debug.o %t.no_debug.o
 ; RUN: cmp %t.with_debug.o %t.no_debug.o
 
-target triple = "amdgcn-amd-amdhsa"
 
 declare void @llvm.amdgcn.s.barrier() #0
 

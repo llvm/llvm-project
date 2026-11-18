@@ -3,7 +3,8 @@
 
 ; This is a regression test. Without the fix it crashes on SSAUpdater due to
 ; LoopVectroizer created a phi node placeholder without incoming values but
-; SSAUpdater expects that phi node is completely filled.
+; SSAUpdater expects that phi node is completely filled. L1 is kept scalar, so
+; the induction step of L2 is expanded as an IV in L1.
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128-ni:1-p2:32:8:8:32-ni:2"
 define void @test(i32 %arg, i32 %L1.limit, i32 %L2.switch, i1 %c, ptr %dst) {
@@ -25,7 +26,7 @@ define void @test(i32 %arg, i32 %L1.limit, i32 %L2.switch, i1 %c, ptr %dst) {
 ; CHECK-NEXT:    [[L1_EXIT_COND:%.*]] = icmp ult i32 [[L1_IV_NEXT]], [[L1_LIMIT:%.*]]
 ; CHECK-NEXT:    [[INDVAR_NEXT]] = add i32 [[INDVAR]], 1
 ; CHECK-NEXT:    [[INDUCTION_IV_NEXT]] = add i32 [[INDUCTION_IV]], [[TMP2]]
-; CHECK-NEXT:    br i1 [[L1_EXIT_COND]], label [[L1_HEADER]], label [[L1_EXIT:%.*]]
+; CHECK-NEXT:    br i1 [[L1_EXIT_COND]], label [[L1_HEADER]], label [[L1_EXIT:%.*]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       L1.early.exit:
 ; CHECK-NEXT:    ret void
 ; CHECK:       L1.exit:
@@ -56,7 +57,7 @@ define void @test(i32 %arg, i32 %L1.limit, i32 %L2.switch, i1 %c, ptr %dst) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ [[INDUCTION]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[INDEX]]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add nuw i64 1, [[INDEX]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub <4 x i32> [[VEC_IND]], [[DOTSPLAT]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = sext <4 x i32> [[TMP7]] to <4 x i64>
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr [[DST:%.*]], i64 [[OFFSET_IDX]]
@@ -64,7 +65,7 @@ define void @test(i32 %arg, i32 %L1.limit, i32 %L2.switch, i1 %c, ptr %dst) {
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 12
-; CHECK-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[L2_INNER_HEADER:%.*]]
 ; CHECK:       L2.exit:
@@ -82,7 +83,7 @@ L1.backedge:
   %L1.sum.next = add i32 %L1.iv, %L1.sum
   %L1.iv.next = add nuw nsw i32 %L1.iv, 1
   %L1.exit.cond = icmp ult i32 %L1.iv.next, %L1.limit
-  br i1 %L1.exit.cond, label %L1.header, label %L1.exit
+  br i1 %L1.exit.cond, label %L1.header, label %L1.exit, !llvm.loop !0
 
 L1.early.exit:
   ret void
@@ -112,3 +113,5 @@ L2.exit:
   ret void
 }
 
+!0 = distinct !{!0, !1}
+!1 = !{!"llvm.loop.vectorize.disable"}

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa < %s | FileCheck %s
 
 ; Recursion: foo -> bar -> baz -> qux -> foo
 

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu verde -S -verify -o - %s
+// RUN: %clang_cc1 -triple amdgpu6.01-unknown-unknown -S -verify -o - %s
 // REQUIRES: amdgpu-registered-target
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable

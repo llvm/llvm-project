@@ -2488,7 +2488,7 @@ define void @load_8byte_chunk_of_64byte_alloca_with_zero_upper_half(ptr %src, i6
 ; X86-SHLD-NEXT:    pushl %ebx
 ; X86-SHLD-NEXT:    pushl %edi
 ; X86-SHLD-NEXT:    pushl %esi
-; X86-SHLD-NEXT:    subl $128, %esp
+; X86-SHLD-NEXT:    addl $-128, %esp
 ; X86-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -2516,7 +2516,7 @@ define void @load_8byte_chunk_of_64byte_alloca_with_zero_upper_half(ptr %src, i6
 ; X86-SHLD-NEXT:    shrdl %cl, %esi, %edx
 ; X86-SHLD-NEXT:    movl %ebx, 4(%eax)
 ; X86-SHLD-NEXT:    movl %edx, (%eax)
-; X86-SHLD-NEXT:    addl $128, %esp
+; X86-SHLD-NEXT:    subl $-128, %esp
 ; X86-SHLD-NEXT:    popl %esi
 ; X86-SHLD-NEXT:    popl %edi
 ; X86-SHLD-NEXT:    popl %ebx

@@ -14,13 +14,11 @@
 
 ---
 name:            test
-registers:
-  - { id: 0, class: _ }
 body: |
   bb.0.entry:
     liveins: $r31r30
 
     ; CHECK-LABEL: test
 
-    $r29r28 = FRMIDX $r31r30, 0, implicit-def $sreg
+    $r29r28 = FRMIDX $r31r30, 0, $r31r30, implicit-def $sreg
 ...

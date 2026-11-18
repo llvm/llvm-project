@@ -21,14 +21,14 @@ class TestCTF(TestBase):
 
     @skipTestIfFn(no_ctf_convert)
     @skipTestIfFn(no_objcopy)
-    @skipUnlessDarwin
+    @requireDarwin
     def test(self):
         self.build()
         self.do_test()
 
     @skipTestIfFn(no_ctf_convert)
     @skipTestIfFn(no_objcopy)
-    @skipUnlessDarwin
+    @requireDarwin
     def test_compressed(self):
         self.build(dictionary={"COMPRESS_CTF": "YES"})
         self.do_test()

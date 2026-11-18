@@ -15,7 +15,7 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; IF-EVL-NEXT:    br label [[VECTOR_PH:%.*]]
 ; IF-EVL:       vector.ph:
 ; IF-EVL-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N:%.*]], 15
-; IF-EVL-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 16
+; IF-EVL-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N_RND_UP]], 15
 ; IF-EVL-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; IF-EVL-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[N]], 1
 ; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <16 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
@@ -49,23 +49,23 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; NO-VP-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[N]], 64
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; NO-VP:       vector.ph:
-; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 64
+; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 63
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; NO-VP-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; NO-VP:       vector.body:
 ; NO-VP-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; NO-VP-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[INDEX]]
-; NO-VP-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[TMP4]], i64 16
-; NO-VP-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[TMP4]], i64 32
-; NO-VP-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[TMP4]], i64 48
+; NO-VP-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[TMP4]], i64 64
+; NO-VP-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[TMP4]], i64 128
+; NO-VP-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr [[TMP4]], i64 192
 ; NO-VP-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i32>, ptr [[TMP4]], align 4
 ; NO-VP-NEXT:    [[WIDE_LOAD2:%.*]] = load <16 x i32>, ptr [[TMP9]], align 4
 ; NO-VP-NEXT:    [[WIDE_LOAD3:%.*]] = load <16 x i32>, ptr [[TMP10]], align 4
 ; NO-VP-NEXT:    [[WIDE_LOAD4:%.*]] = load <16 x i32>, ptr [[TMP11]], align 4
 ; NO-VP-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[C:%.*]], i64 [[INDEX]]
-; NO-VP-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i32, ptr [[TMP12]], i64 16
-; NO-VP-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i32, ptr [[TMP12]], i64 32
-; NO-VP-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i32, ptr [[TMP12]], i64 48
+; NO-VP-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i8, ptr [[TMP12]], i64 64
+; NO-VP-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i8, ptr [[TMP12]], i64 128
+; NO-VP-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i8, ptr [[TMP12]], i64 192
 ; NO-VP-NEXT:    [[WIDE_LOAD5:%.*]] = load <16 x i32>, ptr [[TMP12]], align 4
 ; NO-VP-NEXT:    [[WIDE_LOAD6:%.*]] = load <16 x i32>, ptr [[TMP17]], align 4
 ; NO-VP-NEXT:    [[WIDE_LOAD7:%.*]] = load <16 x i32>, ptr [[TMP18]], align 4
@@ -75,9 +75,9 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; NO-VP-NEXT:    [[TMP22:%.*]] = add nsw <16 x i32> [[WIDE_LOAD7]], [[WIDE_LOAD3]]
 ; NO-VP-NEXT:    [[TMP23:%.*]] = add nsw <16 x i32> [[WIDE_LOAD8]], [[WIDE_LOAD4]]
 ; NO-VP-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDEX]]
-; NO-VP-NEXT:    [[TMP29:%.*]] = getelementptr inbounds i32, ptr [[TMP24]], i64 16
-; NO-VP-NEXT:    [[TMP30:%.*]] = getelementptr inbounds i32, ptr [[TMP24]], i64 32
-; NO-VP-NEXT:    [[TMP31:%.*]] = getelementptr inbounds i32, ptr [[TMP24]], i64 48
+; NO-VP-NEXT:    [[TMP29:%.*]] = getelementptr inbounds i8, ptr [[TMP24]], i64 64
+; NO-VP-NEXT:    [[TMP30:%.*]] = getelementptr inbounds i8, ptr [[TMP24]], i64 128
+; NO-VP-NEXT:    [[TMP31:%.*]] = getelementptr inbounds i8, ptr [[TMP24]], i64 192
 ; NO-VP-NEXT:    store <16 x i32> [[TMP20]], ptr [[TMP24]], align 4
 ; NO-VP-NEXT:    store <16 x i32> [[TMP21]], ptr [[TMP29]], align 4
 ; NO-VP-NEXT:    store <16 x i32> [[TMP22]], ptr [[TMP30]], align 4
@@ -93,7 +93,7 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; NO-VP-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
 ; NO-VP:       vec.epilog.ph:
 ; NO-VP-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; NO-VP-NEXT:    [[N_MOD_VF9:%.*]] = urem i64 [[N]], 8
+; NO-VP-NEXT:    [[N_MOD_VF9:%.*]] = and i64 [[N]], 7
 ; NO-VP-NEXT:    [[N_VEC10:%.*]] = sub i64 [[N]], [[N_MOD_VF9]]
 ; NO-VP-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; NO-VP:       vec.epilog.vector.body:

@@ -102,6 +102,8 @@ template <> struct ScalarEnumerationTraits<WholeProgramDevirtResolution::Kind> {
     io.enumCase(value, "SingleImpl", WholeProgramDevirtResolution::SingleImpl);
     io.enumCase(value, "BranchFunnel",
                 WholeProgramDevirtResolution::BranchFunnel);
+    io.enumCase(value, "Speculative",
+                WholeProgramDevirtResolution::Speculative);
   }
 };
 
@@ -261,7 +263,8 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
     }
   }
   static void output(IO &io, GlobalValueSummaryMapTy &V) {
-    for (auto &P : V) {
+    // Sort by GUID for deterministic output.
+    for (const auto &P : V.sortedRange()) {
       std::vector<GlobalValueSummaryYaml> GVSums;
       for (auto &Sum : P.second.getSummaryList()) {
         if (auto *FSum = dyn_cast<FunctionSummary>(Sum.get())) {

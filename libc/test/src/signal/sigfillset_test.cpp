@@ -6,14 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/signal_macros.h"
+#include "hdr/types/sigset_t.h"
 #include "src/signal/raise.h"
 #include "src/signal/sigfillset.h"
 #include "src/signal/sigprocmask.h"
-
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
-
-#include <signal.h>
 
 TEST(LlvmLibcSigfillset, Invalid) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
@@ -26,5 +25,12 @@ TEST(LlvmLibcSigfillset, BlocksAll) {
   EXPECT_THAT(LIBC_NAMESPACE::sigfillset(&set), Succeeds());
   EXPECT_THAT(LIBC_NAMESPACE::sigprocmask(SIG_SETMASK, &set, nullptr),
               Succeeds());
-  EXPECT_EXITS([] { LIBC_NAMESPACE::raise(SIGUSR1); }, 0);
+  EXPECT_EXITS(
+      [] {
+        LIBC_NAMESPACE::raise(SIGUSR1);
+#ifdef SIGRTMAX
+        LIBC_NAMESPACE::raise(SIGRTMAX);
+#endif
+      },
+      0);
 }

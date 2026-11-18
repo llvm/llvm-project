@@ -3,7 +3,7 @@
 // RUN:   -emit-llvm-only -disable-llvm-passes -verify \
 // RUN:   -verify-ignore-unexpected=note
 // RUN: %clang_cc1 -finclude-default-header -fnative-half-type -x hlsl \
-// RUN:   -triple spirv-unknown-vulkan-compute %s -Wdouble-promotion \
+// RUN:   -triple spirv-unknown-vulkan-library %s -Wdouble-promotion \
 // RUN:   -emit-llvm-only -disable-llvm-passes -verify \
 // RUN:   -verify-ignore-unexpected=note
 

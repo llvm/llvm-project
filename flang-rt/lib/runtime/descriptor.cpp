@@ -173,7 +173,8 @@ RT_API_ATTRS int Descriptor::Allocate(std::int64_t *asyncObject) {
     elementBytes = raw_.elem_len = 0;
   }
   std::size_t byteSize{Elements() * elementBytes};
-  AllocFct alloc{allocatorRegistry.GetAllocator(MapAllocIdx())};
+  // For arrays, use the default array alignment
+  std::size_t alignment{rank() > 0 ? kDefaultArrayAlignment : 0};
   // Zero size allocation is possible in Fortran and the resulting
   // descriptor must be allocated/associated. Since std::malloc(0)
   // result is implementation defined, always allocate at least one byte.
@@ -183,7 +184,8 @@ RT_API_ATTRS int Descriptor::Allocate(std::int64_t *asyncObject) {
     }
     byteSize = 1;
   }
-  void *p{alloc(byteSize, asyncObject)};
+  void *p{allocatorRegistry.Allocate(
+      MapAllocIdx(), byteSize, alignment, asyncObject)};
   if (!p) {
     return CFI_ERROR_MEM_ALLOCATION;
   }

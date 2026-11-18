@@ -215,6 +215,18 @@ MLIR_CAPI_EXPORTED MlirType mlirFloat8E8M0FNUTypeGet(MlirContext ctx);
 
 MLIR_CAPI_EXPORTED MlirStringRef mlirFloat8E8M0FNUTypeGetName(void);
 
+/// Returns the typeID of a Float8E5M3FNU type.
+MLIR_CAPI_EXPORTED MlirTypeID mlirFloat8E5M3FNUTypeGetTypeID(void);
+
+/// Checks whether the given type is an f8E5M3FNU type.
+MLIR_CAPI_EXPORTED bool mlirTypeIsAFloat8E5M3FNU(MlirType type);
+
+/// Creates an f8E5M3FNU type in the given context. The type is owned by the
+/// context.
+MLIR_CAPI_EXPORTED MlirType mlirFloat8E5M3FNUTypeGet(MlirContext ctx);
+
+MLIR_CAPI_EXPORTED MlirStringRef mlirFloat8E5M3FNUTypeGetName(void);
+
 /// Returns the typeID of an BFloat16 type.
 MLIR_CAPI_EXPORTED MlirTypeID mlirBFloat16TypeGetTypeID(void);
 

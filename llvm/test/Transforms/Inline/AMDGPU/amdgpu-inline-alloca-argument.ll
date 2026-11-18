@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=amdgcn--amdhsa -S -passes=inline -inline-threshold=0 < %s | FileCheck %s
+; RUN: opt -mtriple=amdgpu--amdhsa -S -passes=inline -inline-threshold=0 < %s | FileCheck %s
 
 define void @use_flat_ptr_arg(ptr nocapture %p) {
 entry:

@@ -30,8 +30,7 @@ using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::returns;
 
 TEST_F(LlvmLibcFILETest, SimpleFileOperations) {
   // TODO: Use libc_make_test_file_path macro for file paths.
-  constexpr char FILENAME[] =
-      APPEND_LIBC_TEST("testdata/simple_operations.test");
+  constexpr char FILENAME[] = "testdata/simple_operations.test";
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
   ASSERT_GE(LIBC_NAMESPACE::fileno(file), 0);
@@ -129,7 +128,7 @@ TEST_F(LlvmLibcFILETest, SimpleFileOperations) {
 }
 
 TEST_F(LlvmLibcFILETest, FFlush) {
-  constexpr char FILENAME[] = APPEND_LIBC_TEST("testdata/fflush.test");
+  constexpr char FILENAME[] = "testdata/fflush.test";
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w+");
   ASSERT_FALSE(file == nullptr);
   constexpr char CONTENT[] = "1234567890987654321";
@@ -150,7 +149,7 @@ TEST_F(LlvmLibcFILETest, FFlush) {
 }
 
 TEST_F(LlvmLibcFILETest, FFlushNull) {
-  constexpr char FILENAME[] = APPEND_LIBC_TEST("testdata/fflush_null.test");
+  constexpr char FILENAME[] = "testdata/fflush_null.test";
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w+");
   ASSERT_FALSE(file == nullptr);
   constexpr char CONTENT[] = "1234567890987654321";
@@ -176,7 +175,7 @@ TEST_F(LlvmLibcFILETest, FOpenFWriteSizeGreaterThanOne) {
   };
   constexpr MyStruct WRITE_DATA[] = {{'a', 1}, {'b', 2}, {'c', 3}};
   constexpr size_t WRITE_NMEMB = sizeof(WRITE_DATA) / sizeof(MyStruct);
-  constexpr char FILENAME[] = APPEND_LIBC_TEST("testdata/fread_fwrite.test");
+  constexpr char FILENAME[] = "testdata/fread_fwrite.test";
 
   FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);

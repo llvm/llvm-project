@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass=prologepilog %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass=prolog-epilog %s -o - | FileCheck %s
 --- |
     define void @hasBasepointer() #0 { ret void }
     define void @hasBasepointer_sme_streaming() #1 { ret void }
@@ -15,7 +15,6 @@ name: hasBasepointer
 # CHECK-NEXT: $sp = frame-setup ADDVL_XXI $sp, -1
 # CHECK-NEXT: $x19 = ADDXri $sp, 0, 0
 # CHECK:      STRXui $x0, $x19, 0
-tracksRegLiveness: true
 frameInfo:
   isFrameAddressTaken: true
 stack:
@@ -37,7 +36,6 @@ name: hasBasepointer_sme_streaming
 # CHECK-NEXT: $sp = frame-setup ADDVL_XXI $sp, -1
 # CHECK-NEXT: $x19 = ADDXri $sp, 0, 0
 # CHECK:      STRXui $x0, $x19, 0
-tracksRegLiveness: true
 frameInfo:
   isFrameAddressTaken: true
 stack:

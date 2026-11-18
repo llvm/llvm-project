@@ -7,6 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/spawn/posix_spawn.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/close.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/dup2.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/exit_group.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/open.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
@@ -14,9 +17,9 @@
 #include "src/spawn/file_actions.h"
 
 #include "hdr/fcntl_macros.h"
+#include "hdr/signal_macros.h" // For SIGCHLD
 #include "hdr/types/mode_t.h"
 #include "src/signal/linux/signal_utils.h"
-#include <signal.h> // For SIGCHLD
 #include <spawn.h>
 #include <sys/syscall.h> // For syscall numbers.
 
@@ -39,28 +42,9 @@ pid_t fork() {
 #endif
 }
 
-void close(int fd) { LIBC_NAMESPACE::syscall_impl<long>(SYS_close, fd); }
-
-// We use dup3 if dup2 is not available, similar to our implementation of dup2
-bool dup2(int fd, int newfd) {
-#ifdef SYS_dup2
-  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_dup2, fd, newfd);
-#elif defined(SYS_dup3)
-  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_dup3, fd, newfd, 0);
-#else
-#error "dup2 and dup3 syscalls not available."
-#endif
-  return ret < 0 ? false : true;
-}
-
 // All exits from child_process are error exits. So, we use a simple
 // exit implementation which exits with code 127.
-void exit() {
-  for (;;) {
-    LIBC_NAMESPACE::syscall_impl<long>(SYS_exit_group, 127);
-    LIBC_NAMESPACE::syscall_impl<long>(SYS_exit, 127);
-  }
-}
+[[noreturn]] void exit() { linux_syscalls::exit_group(127); }
 
 void child_process(const char *__restrict path,
                    const posix_spawn_file_actions_t *file_actions,
@@ -84,8 +68,9 @@ void child_process(const char *__restrict path,
           exit();
         int actual_fd = *fd;
         if (actual_fd != open_act->fd) {
-          bool dup2_result = dup2(actual_fd, open_act->fd);
-          close(actual_fd); // The old fd is not needed anymore.
+          bool dup2_result =
+              linux_syscalls::dup2(actual_fd, open_act->fd).has_value();
+          linux_syscalls::close(actual_fd); // The old fd is not needed anymore.
           if (!dup2_result)
             exit();
         }
@@ -93,12 +78,12 @@ void child_process(const char *__restrict path,
       }
       case BaseSpawnFileAction::CLOSE: {
         auto *close_act = reinterpret_cast<SpawnFileCloseAction *>(act);
-        close(close_act->fd);
+        linux_syscalls::close(close_act->fd);
         break;
       }
       case BaseSpawnFileAction::DUP2: {
         auto *dup2_act = reinterpret_cast<SpawnFileDup2Action *>(act);
-        if (!dup2(dup2_act->fd, dup2_act->newfd))
+        if (!linux_syscalls::dup2(dup2_act->fd, dup2_act->newfd).has_value())
           exit();
         break;
       }

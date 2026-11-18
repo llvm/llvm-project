@@ -156,7 +156,8 @@ define i1 @cnt_positive_sgt_against_base(ptr %p, i32 %cnt) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[CNT:%.*]], -1
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i32 [[CNT]]
+; CHECK-NEXT:    [[ADD_PTR_IDX:%.*]] = sext i32 [[CNT]] to i64
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 [[ADD_PTR_IDX]]
 ; CHECK-NEXT:    br i1 true, label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    ret i1 false
@@ -166,7 +167,8 @@ define i1 @cnt_positive_sgt_against_base(ptr %p, i32 %cnt) {
 entry:
   %cmp = icmp sgt i32 %cnt, -1
   tail call void @llvm.assume(i1 %cmp)
-  %add.ptr = getelementptr inbounds i32, ptr %p, i32 %cnt
+  %add.ptr.idx = sext i32 %cnt to i64
+  %add.ptr = getelementptr inbounds i32, ptr %p, i64 %add.ptr.idx
   %cmp.1 = icmp uge ptr %add.ptr, %p
   br i1 %cmp.1, label %then, label %else
 
@@ -182,7 +184,8 @@ define i1 @cnt_not_known_positive_sgt_against_base(ptr %p, i32 %cnt) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[CNT:%.*]], -2
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i32 [[CNT]]
+; CHECK-NEXT:    [[ADD_PTR_IDX:%.*]] = sext i32 [[CNT]] to i64
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 [[ADD_PTR_IDX]]
 ; CHECK-NEXT:    [[CMP_1:%.*]] = icmp uge ptr [[ADD_PTR]], [[P]]
 ; CHECK-NEXT:    br i1 [[CMP_1]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
@@ -193,7 +196,8 @@ define i1 @cnt_not_known_positive_sgt_against_base(ptr %p, i32 %cnt) {
 entry:
   %cmp = icmp sgt i32 %cnt, -2
   tail call void @llvm.assume(i1 %cmp)
-  %add.ptr = getelementptr inbounds i32, ptr %p, i32 %cnt
+  %add.ptr.idx = sext i32 %cnt to i64
+  %add.ptr = getelementptr inbounds i32, ptr %p, i64 %add.ptr.idx
   %cmp.1 = icmp uge ptr %add.ptr, %p
   br i1 %cmp.1, label %then, label %else
 
@@ -209,7 +213,8 @@ define i1 @cnt_not_known_positive_uge_against_base(ptr %p, i32 %cnt) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[CNT:%.*]], 0
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i32 [[CNT]]
+; CHECK-NEXT:    [[ADD_PTR_IDX:%.*]] = sext i32 [[CNT]] to i64
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 [[ADD_PTR_IDX]]
 ; CHECK-NEXT:    [[CMP_1:%.*]] = icmp uge ptr [[ADD_PTR]], [[P]]
 ; CHECK-NEXT:    br i1 [[CMP_1]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
@@ -220,7 +225,8 @@ define i1 @cnt_not_known_positive_uge_against_base(ptr %p, i32 %cnt) {
 entry:
   %cmp = icmp ugt i32 %cnt, 0
   tail call void @llvm.assume(i1 %cmp)
-  %add.ptr = getelementptr inbounds i32, ptr %p, i32 %cnt
+  %add.ptr.idx = sext i32 %cnt to i64
+  %add.ptr = getelementptr inbounds i32, ptr %p, i64 %add.ptr.idx
   %cmp.1 = icmp uge ptr %add.ptr, %p
   br i1 %cmp.1, label %then, label %else
 
@@ -350,7 +356,8 @@ define i1 @cnt_not_signed_positive_uge_against_base_with_zext(ptr %p, i32 %cnt) 
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i32 [[CNT:%.*]], 0
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i32 [[CNT]]
+; CHECK-NEXT:    [[ADD_PTR_IDX:%.*]] = sext i32 [[CNT]] to i64
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 [[ADD_PTR_IDX]]
 ; CHECK-NEXT:    [[CMP_1:%.*]] = icmp uge ptr [[ADD_PTR]], [[P]]
 ; CHECK-NEXT:    br i1 [[CMP_1]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
@@ -361,7 +368,8 @@ define i1 @cnt_not_signed_positive_uge_against_base_with_zext(ptr %p, i32 %cnt) 
 entry:
   %cmp = icmp uge i32 %cnt, 0
   tail call void @llvm.assume(i1 %cmp)
-  %add.ptr = getelementptr inbounds i32, ptr %p, i32 %cnt
+  %add.ptr.idx = sext i32 %cnt to i64
+  %add.ptr = getelementptr inbounds i32, ptr %p, i64 %add.ptr.idx
   %cmp.1 = icmp uge ptr %add.ptr, %p
   br i1 %cmp.1, label %then, label %else
 
@@ -502,7 +510,8 @@ define i32 @sge_2_gep(i32 %idx, ptr %src, i32 %idx.2) {
 ; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[SRC:%.*]], i64 [[IDX_EXT]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i32 [[IDX]], 2
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[ADD_PTR_2:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i32 [[IDX_2:%.*]]
+; CHECK-NEXT:    [[ADD_PTR_2_IDX:%.*]] = sext i32 [[IDX_2:%.*]] to i64
+; CHECK-NEXT:    [[ADD_PTR_2:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[ADD_PTR_2_IDX]]
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ult ptr [[SRC]], [[ADD_PTR_2]]
 ; CHECK-NEXT:    [[X_1:%.*]] = xor i1 true, [[C_1]]
 ; CHECK-NEXT:    [[X_2:%.*]] = xor i1 [[X_1]], false
@@ -517,7 +526,8 @@ entry:
   %add.ptr = getelementptr inbounds i32, ptr %src, i64 %idx.ext
   %cmp = icmp sge i32 %idx, 2
   call void @llvm.assume(i1 %cmp)
-  %add.ptr.2 = getelementptr inbounds i32, ptr %src, i32 %idx.2
+  %add.ptr.2.idx = sext i32 %idx.2 to i64
+  %add.ptr.2 = getelementptr inbounds i32, ptr %src, i64 %add.ptr.2.idx
   %t.1 = icmp ult ptr %src, %add.ptr
   %c.1 = icmp ult ptr %src, %add.ptr.2
   %x.1 = xor i1 %t.1, %c.1
@@ -727,4 +737,130 @@ entry:
   %c.1 = icmp ult i8 3, %idx
   %res.2 = xor i1 %res.1, %c.1
   ret i1 %res.2
+}
+
+; %a is known non-negative, so %a <=s %b transfers to %a <=u %b. The strict
+; %a <u %b does not follow, because %a ==s %b is possible.
+define i1 @sle_a_known_pos(i8 %a, i8 %b) {
+; CHECK-LABEL: @sle_a_known_pos(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A_POS:%.*]] = icmp sge i8 [[A:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[A_POS]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i8 [[A]], [[B:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i8 [[A]], [[B]]
+; CHECK-NEXT:    [[RES:%.*]] = xor i1 true, [[C_1]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+entry:
+  %a.pos = icmp sge i8 %a, 0
+  call void @llvm.assume(i1 %a.pos)
+  %cmp = icmp sle i8 %a, %b
+  call void @llvm.assume(i1 %cmp)
+  %t.1 = icmp ule i8 %a, %b
+  %c.1 = icmp ult i8 %a, %b
+  %res = xor i1 %t.1, %c.1
+  ret i1 %res
+}
+
+; The first operand is the constant 2, which is trivially non-negative, so
+; 2 <=s %idx transfers to 2 <=u %idx.
+define i1 @sle_first_op_known_pos(i8 %idx) {
+; CHECK-LABEL: @sle_first_op_known_pos(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i8 2, [[IDX:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, true
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ule i8 3, [[IDX]]
+; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], [[C_1]]
+; CHECK-NEXT:    ret i1 [[RES_2]]
+;
+entry:
+  %cmp = icmp sle i8 2, %idx
+  call void @llvm.assume(i1 %cmp)
+  %t.1 = icmp ule i8 2, %idx
+  %t.2 = icmp ule i8 1, %idx
+  %res.1 = xor i1 %t.1, %t.2
+  %c.1 = icmp ule i8 3, %idx
+  %res.2 = xor i1 %res.1, %c.1
+  ret i1 %res.2
+}
+
+; %idx is known non-negative and %idx <=s %len, so %idx <=u %len holds.
+define i1 @sle_len_known_positive_via_idx(i8 %len, i8 %idx) {
+; CHECK-LABEL: @sle_len_known_positive_via_idx(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[IDX_POS:%.*]] = icmp sge i8 [[IDX:%.*]], 0
+; CHECK-NEXT:    [[IDX_SLE_LEN:%.*]] = icmp sle i8 [[IDX]], [[LEN:%.*]]
+; CHECK-NEXT:    [[AND_1:%.*]] = and i1 [[IDX_POS]], [[IDX_SLE_LEN]]
+; CHECK-NEXT:    br i1 [[AND_1]], label [[THEN_1:%.*]], label [[ELSE:%.*]]
+; CHECK:       then.1:
+; CHECK-NEXT:    [[RES:%.*]] = xor i1 true, true
+; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK:       else:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %idx.pos = icmp sge i8 %idx, 0
+  %idx.sle.len = icmp sle i8 %idx, %len
+  %and.1 = and i1 %idx.pos, %idx.sle.len
+  br i1 %and.1, label %then.1, label %else
+
+then.1:
+  %t.1 = icmp ule i8 %idx, %len
+  %t.2 = icmp sge i8 %len, 0
+  %res = xor i1 %t.1, %t.2
+  ret i1 %res
+
+else:
+  ret i1 0
+}
+
+define i1 @sle_first_op_known_neg(i8 %idx) {
+; CHECK-LABEL: @sle_first_op_known_neg(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i8 -2, [[IDX:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i8 -2, [[IDX]]
+; CHECK-NEXT:    ret i1 [[T_1]]
+;
+entry:
+  %cmp = icmp sle i8 -2, %idx
+  call void @llvm.assume(i1 %cmp)
+  %t.1 = icmp ule i8 -2, %idx
+  ret i1 %t.1
+}
+
+define i1 @sle_a_not_known_pos(i8 %a, i8 %b) {
+; CHECK-LABEL: @sle_a_not_known_pos(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i8 [[A]], [[B]]
+; CHECK-NEXT:    ret i1 [[T_1]]
+;
+entry:
+  %cmp = icmp sle i8 %a, %b
+  call void @llvm.assume(i1 %cmp)
+  %t.1 = icmp ule i8 %a, %b
+  ret i1 %t.1
+}
+
+define i1 @sle_only_b_known_pos(i8 %a, i8 %b) {
+; CHECK-LABEL: @sle_only_b_known_pos(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[B_POS:%.*]] = icmp sge i8 [[B:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[B_POS]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i8 [[A:%.*]], [[B]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i8 [[A]], [[B]]
+; CHECK-NEXT:    ret i1 [[T_1]]
+;
+entry:
+  %b.pos = icmp sge i8 %b, 0
+  call void @llvm.assume(i1 %b.pos)
+  %cmp = icmp sle i8 %a, %b
+  call void @llvm.assume(i1 %cmp)
+  %t.1 = icmp ule i8 %a, %b
+  ret i1 %t.1
 }

@@ -3,7 +3,7 @@
 
 ; RUN: opt -passes='require<globals-aa>,loop-simplify,loop-load-elim' -S %s | FileCheck %s
 
-target triple = "amdgcn-amd-amdhsa"
+target triple = "amdgpu6.00-amd-amdhsa"
 
 %struct.foo = type { %struct.pluto, i8, ptr, i32 }
 %struct.pluto = type { i32, i32, i32, ptr, i32, i32, i32 }

@@ -26,8 +26,8 @@ extern char ̀; // disallowed initially in C11/C++, always in C99
 #if __cplusplus
 // expected-error@11 {{not allowed in an identifier}}
 // expected-error@13 {{not allowed in an identifier}}
-// expected-error@20 {{character <U+0E50> not allowed at the start of an identifier}}
-// expected-error@21 {{character <U+0300> not allowed at the start of an identifier}}
+// expected-error@20 {{character '๐' U+0E50 not allowed at the start of an identifier}}
+// expected-error@21 {{character '̀' U+0300 not allowed at the start of an identifier}}
 // expected-warning@20 {{declaration does not declare anything}}
 // expected-warning@21 {{declaration does not declare anything}}
 
@@ -48,8 +48,8 @@ extern char ̀; // disallowed initially in C11/C++, always in C99
 // expected-error@11 {{not allowed in an identifier}}
 // expected-error@13 {{not allowed in an identifier}}
 // expected-error@14 {{not allowed in an identifier}}
-// expected-error@20 {{character <U+0E50> not allowed at the start of an identifier}}
-// expected-error@21 {{unexpected character <U+0300>}}
+// expected-error@20 {{character '๐' U+0E50 not allowed at the start of an identifier}}
+// expected-error@21 {{unexpected character '̀' U+0300}}
 // expected-warning@20 {{declaration does not declare anything}}
 // expected-warning@21 {{declaration does not declare anything}}
 

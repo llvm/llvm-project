@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=arm64-linux-gnu -mcpu=cortex-a57 -verify-misched -debug-only=machine-scheduler -aarch64-enable-stp-suppress=false -o - 2>&1 > /dev/null | FileCheck %s
 ; RUN: llc < %s -mtriple=arm64-linux-gnu -mcpu=cortex-a57 -force-fast-cluster -verify-misched -debug-only=machine-scheduler -aarch64-enable-stp-suppress=false -o - 2>&1 > /dev/null | FileCheck %s --check-prefix=CHECK-FAST
 
-; CHECK: ********** MI Scheduling **********
+; CHECK: Current Schedule Region
 ; CHECK-LABEL: stp_i64_scale:%bb.0
 ; CHECK:Cluster ld/st SU(3) - SU(4)
 ; CHECK:Cluster ld/st SU(2) - SU(5)
@@ -23,7 +23,7 @@ entry:
   ret i64 %v
 }
 
-; CHECK: ********** MI Scheduling **********
+; CHECK: Current Schedule Region
 ; CHECK-LABEL: stp_i32_scale:%bb.0
 ; CHECK:Cluster ld/st SU(3) - SU(4)
 ; CHECK:Cluster ld/st SU(2) - SU(5)
@@ -44,7 +44,7 @@ entry:
   ret i32 %v
 }
 
-; CHECK:********** MI Scheduling **********
+; CHECK:Current Schedule Region
 ; CHECK-LABEL:stp_i64_unscale:%bb.0 entry
 ; CHECK:Cluster ld/st SU(2) - SU(5)
 ; CHECK:Cluster ld/st SU(3) - SU(4)
@@ -65,7 +65,7 @@ entry:
   ret void
 }
 
-; CHECK:********** MI Scheduling **********
+; CHECK:Current Schedule Region
 ; CHECK-LABEL:stp_i32_unscale:%bb.0 entry
 ; CHECK:Cluster ld/st SU(2) - SU(5)
 ; CHECK:Cluster ld/st SU(3) - SU(4)
@@ -86,7 +86,7 @@ entry:
   ret void
 }
 
-; CHECK:********** MI Scheduling **********
+; CHECK:Current Schedule Region
 ; CHECK-LABEL:stp_double:%bb.0
 ; CHECK:Cluster ld/st SU(3) - SU(4)
 ; CHECK:Cluster ld/st SU(2) - SU(5)
@@ -107,7 +107,7 @@ entry:
   ret void
 }
 
-; CHECK:********** MI Scheduling **********
+; CHECK:Current Schedule Region
 ; CHECK-LABEL:stp_float:%bb.0
 ; CHECK:Cluster ld/st SU(3) - SU(4)
 ; CHECK:Cluster ld/st SU(2) - SU(5)
@@ -128,7 +128,7 @@ entry:
   ret void
 }
 
-; CHECK: ********** MI Scheduling **********
+; CHECK: Current Schedule Region
 ; CHECK-LABEL: stp_volatile:%bb.0
 ; CHECK-NOT: Cluster ld/st
 ; CHECK:SU(2):   STRXui %1:gpr64, %0:gpr64common, 3 :: (volatile
@@ -148,7 +148,7 @@ entry:
   ret i64 %v
 }
 
-; CHECK: ********** MI Scheduling **********
+; CHECK: Current Schedule Region
 ; CHECK-LABEL: stp_i64_with_ld:%bb.0
 ; CHECK:Cluster ld/st SU(5) - SU(10)
 ; CHECK:Cluster ld/st SU(15) - SU(20)
@@ -197,7 +197,7 @@ entry:
 }
 
 ; Verify that the SU(2) and SU(4) are the preds of SU(3)
-; CHECK: ********** MI Scheduling **********
+; CHECK: Current Schedule Region
 ; CHECK-LABEL: stp_missing_preds_edges:%bb.0
 ; CHECK:Cluster ld/st SU(3) - SU(5)
 ; CHECK: Copy Pred SU(4)
@@ -217,7 +217,7 @@ entry:
 
 ; Verify that the SU(4) and SU(7) can be clustered even with
 ; different preds
-; CHECK: ********** MI Scheduling **********
+; CHECK: Current Schedule Region
 ; CHECK-LABEL: cluster_with_different_preds:%bb.0
 ; CHECK:Cluster ld/st SU(4) - SU(7)
 ; CHECK:SU(3):   STRWui %2:gpr32, %0:gpr64common, 0 ::

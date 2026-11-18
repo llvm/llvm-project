@@ -189,23 +189,23 @@ TEST_CONSTEXPR_CXX26 void test_node_container(Converter conv) {
 }
 
 template <template <class> class Container>
-void test_invoke_set_like() {
+TEST_CONSTEXPR_CXX26 void test_invoke_set_like() {
   { // check that std::invoke is used
     struct T {
       mutable int i = 3;
 
-      void zero() const { i = 0; }
+      TEST_CONSTEXPR_CXX26 void zero() const { i = 0; }
     };
 
     class S {
       int val_;
 
     public:
-      S(int val) : val_(val) {}
+      TEST_CONSTEXPR_CXX26 S(int val) : val_(val) {}
 
       T j;
 
-      bool operator<(const S& rhs) const { return val_ < rhs.val_; }
+      TEST_CONSTEXPR_CXX26 bool operator<(const S& rhs) const { return val_ < rhs.val_; }
     };
 
     { // Iterator overload
@@ -252,24 +252,13 @@ TEST_CONSTEXPR_CXX26 void test_invoke_map_like() {
 }
 
 TEST_CONSTEXPR_CXX26 bool test() {
-  if (!TEST_IS_CONSTANT_EVALUATED) {
-    // FIXME: remove when set is made constexpr
-    test_node_container<std::set<int> >([](int i) { return i; });
-
-    // FIXME: remove when multiset is made constexpr
-    test_node_container<std::multiset<int> >([](int i) { return i; });
-  }
+  test_node_container<std::set<int> >([](int i) { return i; });
+  test_node_container<std::multiset<int> >([](int i) { return i; });
   test_node_container<std::map<int, int> >([](int i) { return std::make_pair(i, i); });
   test_node_container<std::multimap<int, int> >([](int i) { return std::make_pair(i, i); });
 
-  if (!TEST_IS_CONSTANT_EVALUATED) {
-    // FIXME: remove when set is made constexpr
-    test_invoke_set_like<std::set>();
-
-    // FIXME: remove when multiset is made constexpr
-    test_invoke_set_like<std::multiset>();
-  }
-
+  test_invoke_set_like<std::set>();
+  test_invoke_set_like<std::multiset>();
   test_invoke_map_like<std::map>();
   test_invoke_map_like<std::multimap>();
 

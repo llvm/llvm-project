@@ -25,16 +25,16 @@ vfmab.bf16 q0, d0, d0[0]
 vfmab.bf16 d0, q0, d0[0]
 vfmab.bf16 q0, d0, d0[9]
 
-//CHECK:error: invalid instruction
+//CHECK:error: operand must be a register in range [q0, q15]
 //CHECK-NEXT:vfmat.bf16 d0, d0, d0
 //CHECK-NEXT:^
-//CHECK-NEXT:error: invalid instruction
+//CHECK-NEXT:error: operand must be a register in range [q0, q15]
 //CHECK-NEXT:vfmat.bf16 d0, d0, q0
 //CHECK-NEXT:^
-//CHECK-NEXT:error: invalid instruction
+//CHECK-NEXT:error: operand must be a register in range [q0, q15]
 //CHECK-NEXT:vfmat.bf16 d0, q0, d0
 //CHECK-NEXT:^
-//CHECK-NEXT:error: invalid instruction
+//CHECK-NEXT:error: operand must be a register in range [q0, q15]
 //CHECK-NEXT:vfmat.bf16 q0, d0, d0
 //CHECK-NEXT:^
 //CHECK-NEXT:error: invalid instruction, any one of the following would fix this:
@@ -76,19 +76,19 @@ vfmab.bf16 q0, d0, d0[9]
 //CHECK-NEXT:error: operand must be a register in range [q0, q15]
 //CHECK-NEXT:vfmat.bf16 d0, q0, d0[0]
 //CHECK-NEXT:            ^
-//CHECK-NEXT:error: invalid instruction
+//CHECK-NEXT:error: operand must be a register in range [q0, q15]
 //CHECK-NEXT:vfmat.bf16 q0, d0, d0[9]
 //CHECK-NEXT:^
-//CHECK-NEXT:error: invalid instruction
+//CHECK-NEXT:error: operand must be a register in range [q0, q15]
 //CHECK-NEXT:vfmab.bf16 d0, d0, d0
 //CHECK-NEXT:^
-//CHECK-NEXT:error: invalid instruction
+//CHECK-NEXT:error: operand must be a register in range [q0, q15]
 //CHECK-NEXT:vfmab.bf16 d0, d0, q0
 //CHECK-NEXT:^
-//CHECK-NEXT:error: invalid instruction
+//CHECK-NEXT:error: operand must be a register in range [q0, q15]
 //CHECK-NEXT:vfmab.bf16 d0, q0, d0
 //CHECK-NEXT:^
-//CHECK-NEXT:error: invalid instruction
+//CHECK-NEXT:error: operand must be a register in range [q0, q15]
 //CHECK-NEXT:vfmab.bf16 q0, d0, d0
 //CHECK-NEXT:^
 //CHECK-NEXT:error: invalid instruction, any one of the following would fix this:
@@ -130,5 +130,5 @@ vfmab.bf16 q0, d0, d0[9]
 //CHECK-NEXT:error: operand must be a register in range [q0, q15]
 //CHECK-NEXT:vfmab.bf16 d0, q0, d0[0]
 //CHECK-NEXT:            ^
-//CHECK-NEXT:error: invalid instruction
+//CHECK-NEXT:error: operand must be a register in range [q0, q15]
 //CHECK-NEXT:vfmab.bf16 q0, d0, d0[9]

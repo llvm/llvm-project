@@ -5,6 +5,7 @@ VERS1.0 {
     __tgt_register_requires;
     __tgt_register_lib;
     __tgt_unregister_lib;
+    __tgt_get_mapped_ptr;
     __tgt_init_all_rtls;
     __tgt_target_data_begin;
     __tgt_target_data_end;

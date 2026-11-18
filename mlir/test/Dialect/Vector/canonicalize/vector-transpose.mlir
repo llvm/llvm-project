@@ -67,14 +67,27 @@ func.func @broadcast_transpose_partial_ones_to_broadcast(%arg0 : vector<1xi8>) -
 
 // -----
 
-// CHECK-LABEL: broadcast_transpose_mixed_example
+// CHECK-LABEL: broadcast_transpose_mixed_order_preserving
 //  CHECK-SAME:  %[[ARG:.*]]: vector<4x1x1x7xi8>) -> vector<3x2x4x5x6x7xi8> {
 //       CHECK:  %[[RES:.*]] = vector.broadcast %[[ARG]] : vector<4x1x1x7xi8> to vector<3x2x4x5x6x7xi8>
 //       CHECK:  return %[[RES]] : vector<3x2x4x5x6x7xi8>
-func.func @broadcast_transpose_mixed_example(%arg0 : vector<4x1x1x7xi8>) -> vector<3x2x4x5x6x7xi8> {
+func.func @broadcast_transpose_mixed_order_preserving(%arg0 : vector<4x1x1x7xi8>) -> vector<3x2x4x5x6x7xi8> {
   %0 = vector.broadcast %arg0 : vector<4x1x1x7xi8> to vector<2x3x4x5x6x7xi8>
   %1 = vector.transpose %0, [1, 0, 2, 3, 4, 5] : vector<2x3x4x5x6x7xi8> to vector<3x2x4x5x6x7xi8>
   return %1 : vector<3x2x4x5x6x7xi8>
+}
+
+// -----
+
+// CHECK-LABEL: negative_broadcast_transpose_mixed_not_order_preserving
+//  CHECK-SAME:  %[[ARG:.*]]: vector<4x1x1x7xi8>) -> vector<6x2x4x5x3x7xi8> {
+//       CHECK:  %[[BC:.*]] = vector.broadcast
+//       CHECK:  %[[TR:.*]] = vector.transpose %[[BC]]
+//       CHECK:  return %[[TR]] : vector<6x2x4x5x3x7xi8>
+func.func @negative_broadcast_transpose_mixed_not_order_preserving(%arg0 : vector<4x1x1x7xi8>) -> vector<6x2x4x5x3x7xi8> {
+  %0 = vector.broadcast %arg0 : vector<4x1x1x7xi8> to vector<2x3x4x5x6x7xi8>
+  %1 = vector.transpose %0, [4, 0, 2, 3, 1, 5] : vector<2x3x4x5x6x7xi8> to vector<6x2x4x5x3x7xi8>
+  return %1 : vector<6x2x4x5x3x7xi8>
 }
 
 // -----
@@ -207,7 +220,7 @@ func.func @negative_shape_cast_of_transpose(%arg : vector<1x4x4x1xi8>) -> vector
 /// Tests of FoldTransposeShapeCast:  transpose(shape_cast) -> shape_cast
 /// +--------------------------------------------------------------------------
 
-// A transpose that is 'order preserving' can be treated like a shape_cast. 
+// A transpose that is 'order preserving' can be treated like a shape_cast.
 // CHECK-LABEL: @transpose_of_shape_cast
 //  CHECK-SAME:   %[[ARG:.*]]: vector<2x3x1x1xi8>) -> vector<6x1x1xi8> {
 //       CHECK:   %[[SHAPE_CAST:.*]] = vector.shape_cast %[[ARG]] :

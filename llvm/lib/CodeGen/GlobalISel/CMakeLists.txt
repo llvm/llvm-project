@@ -6,7 +6,6 @@ add_llvm_component_library(LLVMGlobalISel
   GlobalISel.cpp
   Combiner.cpp
   CombinerHelper.cpp
-  CombinerHelperArtifacts.cpp
   CombinerHelperCasts.cpp
   CombinerHelperCompares.cpp
   CombinerHelperVectorOps.cpp
@@ -21,7 +20,6 @@ add_llvm_component_library(LLVMGlobalISel
   Legalizer.cpp
   LegalizerHelper.cpp
   LegalizerInfo.cpp
-  LegacyLegalizerInfo.cpp
   LoadStoreOpt.cpp
   Localizer.cpp
   LostDebugLocObserver.cpp
@@ -45,5 +43,6 @@ add_llvm_component_library(LLVMGlobalISel
   SelectionDAG
   Support
   Target
+  TargetParser
   TransformUtils
   )

@@ -1,0 +1,31 @@
+# REQUIRES: system-darwin
+# REQUIRES: aarch64-registered-target
+
+# lc_target_triple_universal.arm64 is a fat Mach-O whose two slices each carry a
+# distinct LC_TARGET_TRIPLE. dsymutil processes each slice independently, so the
+# generated companion must preserve each slice's own target triple.
+#
+# The slices were built like lc_target_triple.arm64 (see lc_target_triple.test),
+# once for arm64 and once for arm64e, then combined:
+# xcrun lipo -create lc_target_triple.arm64 lc_target_triple.arm64e \
+#   -output lc_target_triple_universal.arm64
+
+# RUN: dsymutil -f %p/../Inputs/lc_target_triple_universal.arm64 -o %t.classic \
+# RUN:   -oso-prepend-path=%p/..
+# RUN: llvm-objdump --macho --private-headers --arch arm64 %t.classic \
+# RUN:   | FileCheck %s --check-prefix=ARM64
+# RUN: llvm-objdump --macho --private-headers --arch arm64e %t.classic \
+# RUN:   | FileCheck %s --check-prefix=ARM64E
+
+# RUN: dsymutil --linker parallel -f %p/../Inputs/lc_target_triple_universal.arm64 \
+# RUN:   -o %t.parallel -oso-prepend-path=%p/..
+# RUN: llvm-objdump --macho --private-headers --arch arm64 %t.parallel \
+# RUN:   | FileCheck %s --check-prefix=ARM64
+# RUN: llvm-objdump --macho --private-headers --arch arm64e %t.parallel \
+# RUN:   | FileCheck %s --check-prefix=ARM64E
+
+# ARM64:      cmd LC_TARGET_TRIPLE
+# ARM64:   triple arm64-apple-macos27.0.0
+
+# ARM64E:      cmd LC_TARGET_TRIPLE
+# ARM64E:   triple arm64e-apple-macos27.0.0

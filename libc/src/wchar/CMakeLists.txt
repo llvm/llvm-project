@@ -246,7 +246,6 @@ add_entrypoint_object(
     libc.src.__support.libc_errno
 )
 
-
 add_entrypoint_object(
   mbrlen
   SRCS
@@ -371,6 +370,35 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.wchar_macros
     libc.hdr.types.size_t
+)
+
+add_entrypoint_object(
+  wcscasecmp
+  SRCS
+    wcscasecmp.cpp
+  HDRS
+    wcscasecmp.h
+  DEPENDS
+    libc.hdr.types.wchar_t
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.src.__support.wctype_utils
+)
+
+add_entrypoint_object(
+  wcsncasecmp
+  SRCS
+    wcsncasecmp.cpp
+  HDRS
+    wcsncasecmp.h
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.hdr.types.wchar_t
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.src.__support.wctype_utils
 )
 
 add_entrypoint_object(
@@ -735,7 +763,13 @@ add_entrypoint_object(
     libc.hdr.types.size_t
     libc.hdr.types.wchar_t
     libc.hdr.errno_macros
+    libc.src.__support.CPP.limits
+    libc.src.__support.arg_list
     libc.src.__support.common
     libc.src.__support.macros.config
+    libc.src.__support.printf_core.core_structs
+    libc.src.__support.printf_core.error_mapper
+    libc.src.__support.printf_core.printf_main
+    libc.src.__support.printf_core.writer
     libc.src.errno.errno
 )

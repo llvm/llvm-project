@@ -48,7 +48,7 @@ AST_MATCHER(TypeLoc, isValidAndNotInMacro) {
 
 AST_MATCHER(TypeLoc, isBuiltinType) {
   TypeLoc TL = Node;
-  if (auto QualLoc = Node.getAs<QualifiedTypeLoc>())
+  if (const auto QualLoc = Node.getAs<QualifiedTypeLoc>())
     TL = QualLoc.getUnqualifiedLoc();
 
   const auto BuiltinLoc = TL.getAs<BuiltinTypeLoc>();
@@ -106,10 +106,10 @@ void IntegerTypesCheck::check(const MatchFinder::MatchResult &Result) {
   const SourceLocation Loc = TL.getBeginLoc();
 
   // Look through qualification.
-  if (auto QualLoc = TL.getAs<QualifiedTypeLoc>())
+  if (const auto QualLoc = TL.getAs<QualifiedTypeLoc>())
     TL = QualLoc.getUnqualifiedLoc();
 
-  auto BuiltinLoc = TL.getAs<BuiltinTypeLoc>();
+  const auto BuiltinLoc = TL.getAs<BuiltinTypeLoc>();
   if (!BuiltinLoc)
     return;
 

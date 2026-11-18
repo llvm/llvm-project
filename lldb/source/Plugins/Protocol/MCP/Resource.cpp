@@ -81,7 +81,7 @@ DebuggerResourceProvider::GetTargetResource(size_t target_idx, Target &target) {
   std::string target_name = llvm::formatv("target {0}", target_idx);
 
   if (Module *exe_module = target.GetExecutableModulePointer())
-    target_name = exe_module->GetFileSpec().GetFilename().GetString();
+    target_name = exe_module->GetFileSpec().GetFilename().str();
 
   lldb_protocol::mcp::Resource resource;
   resource.uri =

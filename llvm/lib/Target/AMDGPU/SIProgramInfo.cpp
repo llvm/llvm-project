@@ -138,11 +138,11 @@ static uint64_t getPGMRSrc1Reg(const SIProgramInfo &ProgInfo,
 
 static uint64_t getComputePGMRSrc2Reg(const GCNSubtarget &ST,
                                       const SIProgramInfo &ProgInfo) {
-  uint64_t MaxNumUserSGRPs = AMDGPU::getMaxNumUserSGPRs(ST);
+  uint64_t MaxNumUserSGPRs = AMDGPU::getMaxNumUserSGPRs(ST);
   uint64_t Reg = 0;
-  if (MaxNumUserSGRPs == 32) {
+  if (MaxNumUserSGPRs == 32) {
     Reg = S_00B84C_USER_SGPR_GFX1250(ProgInfo.UserSGPR);
-  } else if (MaxNumUserSGRPs == 16) {
+  } else if (MaxNumUserSGPRs == 16) {
     Reg = (S_00B84C_USER_SGPR(ProgInfo.UserSGPR) |
            S_00B84C_TRAP_HANDLER(ProgInfo.TrapHandlerEnable));
   } else {
@@ -204,15 +204,6 @@ const MCExpr *SIProgramInfo::getComputePGMRSrc2(const GCNSubtarget &ST,
   uint64_t Reg = getComputePGMRSrc2Reg(ST, *this);
   const MCExpr *RegExpr = MCConstantExpr::create(Reg, Ctx);
   return MCBinaryExpr::createOr(ScratchEnable, RegExpr, Ctx);
-}
-
-const MCExpr *SIProgramInfo::getPGMRSrc2(CallingConv::ID CC,
-                                         const GCNSubtarget &ST,
-                                         MCContext &Ctx) const {
-  if (AMDGPU::isCompute(CC))
-    return getComputePGMRSrc2(ST, Ctx);
-
-  return MCConstantExpr::create(0, Ctx);
 }
 
 uint64_t SIProgramInfo::getFunctionCodeSize(const MachineFunction &MF) {

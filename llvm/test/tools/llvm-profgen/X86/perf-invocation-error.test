@@ -1,0 +1,62 @@
+# REQUIRES: system-linux
+
+# RUN: split-file %s %t
+# RUN: yaml2obj %t/binary.yaml -o %t/perf-invocation-error.exe
+# RUN: touch %t/perf.data
+# RUN: chmod +x %t/exit/perf
+
+## Verify that a nonzero perf exit status and its stderr are reported.
+# RUN: not env PATH="%t/exit%{pathsep}%{PATH}" \
+# RUN:   llvm-profgen --binary=%t/perf-invocation-error.exe \
+# RUN:   --perfdata=%t/perf.data --output=/dev/null \
+# RUN:   2>&1 | FileCheck %s --check-prefix=EXIT
+## Use a PATH that contains only the non-executable mock, so discovery cannot
+## fall through to a system perf if lookup ever requires executability.
+# RUN: not env PATH="%t/exec" \
+# RUN:   llvm-profgen --binary=%t/perf-invocation-error.exe \
+# RUN:   --perfdata=%t/perf.data \
+# RUN:   --output=/dev/null 2>&1 | FileCheck %s --check-prefix=EXEC
+
+# EXIT: error: Perf script failed with exit code 1
+# EXIT-NEXT: mock perf failed
+# EXEC: error: Failed to execute perf script
+
+#--- exit/perf
+#!/bin/sh
+echo "mock perf failed" >&2
+exit 1
+
+#--- exec/perf
+This file is deliberately not executable.
+
+#--- binary.yaml
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:         .text
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x1000
+    Offset:       0x1000
+    AddressAlign: 0x1
+    ## ret
+    Content:      C3
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    Offset:   0
+    VAddr:    0
+    Align:    0x1000
+    FirstSec: .text
+    LastSec:  .text
+Symbols:
+  - Name:    foo
+    Type:    STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL
+    Value:   0x1000
+    Size:    0x1

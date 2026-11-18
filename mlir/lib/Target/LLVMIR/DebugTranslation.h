@@ -14,7 +14,7 @@
 #ifndef MLIR_LIB_TARGET_LLVMIR_DEBUGTRANSLATION_H_
 #define MLIR_LIB_TARGET_LLVMIR_DEBUGTRANSLATION_H_
 
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/IR/Location.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
@@ -113,6 +113,10 @@ private:
   /// Constructs a tuple metadata node from the `elements`. Returns nullptr if
   /// `elements` is empty.
   llvm::MDTuple *getMDTupleOrNull(ArrayRef<DINodeAttr> elements);
+
+  /// Consturct a DISubprogram's retainedNodes metadata node from the
+  /// `retainedNodes`. Returns nullptr if `retainedNodes` is empty.
+  llvm::MDTuple *getRetainedNodesOrNull(ArrayRef<Attribute> retainedNodes);
 
   /// Constructs a DIExpression metadata node from the DIExpressionAttr. Returns
   /// nullptr if `DIExpressionAttr` is null.

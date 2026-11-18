@@ -1,5 +1,5 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -emit-llvm -disable-llvm-passes -fcuda-is-device -fsanitize=null \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -x hip -emit-llvm -disable-llvm-passes -fcuda-is-device -fsanitize=null \
 // RUN:   -o - %s | FileCheck --enable-var-scope %s
 
 // Check there are no assertions when trying to sanitize when globals have non-0
@@ -22,7 +22,7 @@
 // CHECK-NEXT:    br i1 [[TMP1]], label [[CONT:%.*]], label [[HANDLER_TYPE_MISMATCH:%.*]], !prof [[PROF3:![0-9]+]], !nosanitize !3
 // CHECK:       handler.type_mismatch:
 // CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[TMP0]] to i64, !nosanitize !3
-// CHECK-NEXT:    call void @__ubsan_handle_type_mismatch_v1_abort(ptr addrspace(1) @[[GLOB1:[0-9]+]], i64 [[TMP2]]) #[[ATTR2:[0-9]+]], !nosanitize !3
+// CHECK-NEXT:    call void @__ubsan_handle_type_mismatch_v1_abort(ptr addrspacecast (ptr addrspace(1) @[[GLOB1:[0-9]+]] to ptr), i64 [[TMP2]]) #[[ATTR2:[0-9]+]], !nosanitize !3
 // CHECK-NEXT:    unreachable, !nosanitize !3
 // CHECK:       cont:
 // CHECK-NEXT:    store i8 0, ptr [[TMP0]], align 1

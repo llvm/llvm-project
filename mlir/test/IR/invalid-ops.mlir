@@ -126,6 +126,11 @@ test.variadic_args_types_split "hello_world" : i32
 
 // -----
 
+// expected-error@+1 {{number of operands and types do not match: got 0 operands and 1 types}}
+test.format_optional_operand_type : i64
+
+// -----
+
 // Test multiple verifier errors in the same split to ensure all are reported.
 
 func.func @verify_fail_1() {

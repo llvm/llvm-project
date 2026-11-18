@@ -8,3 +8,10 @@ add_entrypoint_object(
   DEPENDS
     .${LIBC_TARGET_OS}.getrandom
 )
+
+add_entrypoint_object(
+  getentropy
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.getentropy
+)

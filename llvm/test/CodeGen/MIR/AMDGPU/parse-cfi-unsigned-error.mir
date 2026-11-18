@@ -1,4 +1,4 @@
-# RUN: not llc -mtriple=amdgcn -mcpu=gfx908 -run-pass=none -filetype=null %s 2>&1 | FileCheck %s
+# RUN: not llc -mtriple=amdgpu9.08 -run-pass=none -filetype=null %s 2>&1 | FileCheck %s
 
 # Test MIParser::parseCFIUnsigned
 

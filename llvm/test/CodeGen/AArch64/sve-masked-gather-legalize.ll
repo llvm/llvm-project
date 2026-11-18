@@ -210,8 +210,7 @@ define <vscale x 16 x i8> @masked_gather_nxv16i8_undef_hi_mask(ptr %base, <vscal
 ; CHECK-NEXT:    sunpklo z0.s, z0.h
 ; CHECK-NEXT:    ld1b { z0.s }, p0/z, [x0, z0.s, sxtw]
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
-; CHECK-NEXT:    uzp1 z1.h, z0.h, z0.h
-; CHECK-NEXT:    uzp1 z0.b, z0.b, z1.b
+; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
 ; CHECK-NEXT:    ret
   %ptrs = getelementptr i8, ptr %base, <vscale x 16 x i8> %indices
   %mask.false.hi = call <vscale x 16 x i1> @llvm.vector.insert.nxv16i1.nxv4i1(<vscale x 16 x i1> splat (i1 false), <vscale x 4 x i1> %mask, i64 0)

@@ -9,11 +9,13 @@ static_library("performance") {
     "//clang/lib/Analysis",
     "//clang/lib/Basic",
     "//clang/lib/Lex",
+    "//clang/lib/Tooling",
     "//llvm/lib/Support",
   ]
   sources = [
     "AvoidEndlCheck.cpp",
     "EnumSizeCheck.cpp",
+    "ExpensiveValueOrCheck.cpp",
     "ForRangeCopyCheck.cpp",
     "ImplicitConversionInLoopCheck.cpp",
     "InefficientAlgorithmCheck.cpp",

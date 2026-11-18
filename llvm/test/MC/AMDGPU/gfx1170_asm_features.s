@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1170 -show-encoding %s | FileCheck -check-prefix=GFX1170 %s
+// RUN: llvm-mc -triple=amdgpu11.70 -show-encoding %s | FileCheck -check-prefix=GFX1170 %s
 
 //===----------------------------------------------------------------------===//
 // A VOPD OpY mov_b32 instruction uses SRC2 source-cache if OpX is also mov_b32

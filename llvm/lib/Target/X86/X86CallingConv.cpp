@@ -406,4 +406,5 @@ static bool CC_X86_32_I128_FP128(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
 }
 
 // Provides entry points of CC_X86 and RetCC_X86.
+#define GET_CALLING_CONV_IMPL
 #include "X86GenCallingConv.inc"

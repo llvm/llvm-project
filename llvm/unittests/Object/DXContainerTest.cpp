@@ -320,6 +320,36 @@ TEST(DXCFile, ParseILDNPart) {
   EXPECT_EQ(ILDN->Filename, "abc.pdb");
 }
 
+// This test verifies that PRIV part is correctly parsed.
+// This test is based on the binary output constructed from this yaml.
+// --- !dxcontainer
+// Header:
+//   Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+//                      0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+//   Version:
+//     Major:           1
+//     Minor:           0
+//   PartCount:       1
+// Parts:
+//   - Name:            PRIV
+//     Size:            5
+//     PrivateData:     [ 0xDE, 0xAD, 0xBE, 0xEF, 0x42 ]
+// ...
+TEST(DXCFile, ParsePRIVPart) {
+  uint8_t Buffer[] = {0x44, 0x58, 0x42, 0x43, 0x00, 0x00, 0x00, 0x00, 0x00,
+                      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                      0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x31, 0x00, 0x00,
+                      0x00, 0x01, 0x00, 0x00, 0x00, 0x24, 0x00, 0x00, 0x00,
+                      0x50, 0x52, 0x49, 0x56, 0x05, 0x00, 0x00, 0x00, 0xDE,
+                      0xAD, 0xBE, 0xEF, 0x42};
+  DXContainer C =
+      llvm::cantFail(DXContainer::create(getMemoryBuffer<49>(Buffer)));
+  EXPECT_EQ(C.getHeader().PartCount, 1u);
+  const std::optional<StringRef> &PrivateData = C.getPrivateData();
+  EXPECT_TRUE(PrivateData.has_value());
+  EXPECT_EQ(*PrivateData, "\xDE\xAD\xBE\xEF\x42");
+}
+
 // This test verifies that VERS part is correctly parsed.
 // This test is based on the binary output constructed from this yaml.
 // --- !dxcontainer

@@ -1,5 +1,5 @@
 // RUN: %dexter_regression_test_cxx_build %s -o %t
-// RUN: %dexter_regression_test_run --use-script --skip-evaluate --binary %t -- %s | FileCheck %s
+// RUN: %dexter_regression_test_run --skip-evaluate --binary %t -- %s | FileCheck %s
 
 void assign(int *Target, int Value) {
     // A comment.

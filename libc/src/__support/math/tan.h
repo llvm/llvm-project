@@ -13,11 +13,11 @@
 #include "range_reduction_double_common.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/double_double.h"
 #include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/multiply_add.h"
+#include "src/__support/FPUtil/polyeval.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"            // LIBC_UNLIKELY
@@ -108,8 +108,9 @@ LIBC_INLINE double tan_eval(const DoubleDouble &u, DoubleDouble &result) {
 // Calculation a / b = a * (1/b) for DFloat128.
 // Using the initial approximation of q ~ (1/b), then apply 2 Newton-Raphson
 // iterations, before multiplying by a.
-[[maybe_unused]] DFloat128 newton_raphson_div(const DFloat128 &a, DFloat128 b,
-                                              double q) {
+[[maybe_unused]] LIBC_INLINE DFloat128 newton_raphson_div(const DFloat128 &a,
+                                                          DFloat128 b,
+                                                          double q) {
   DFloat128 q0(q);
   LIBC_BIT_CAST_CONSTEXPR_VAR DFloat128 TWO(2.0);
   b.sign = (b.sign == Sign::POS) ? Sign::NEG : Sign::POS;

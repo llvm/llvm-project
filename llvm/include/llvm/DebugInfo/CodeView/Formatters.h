@@ -34,7 +34,7 @@ public:
   explicit GuidAdapter(ArrayRef<uint8_t> Guid);
   explicit GuidAdapter(StringRef Guid);
 
-  void format(raw_ostream &Stream, StringRef Style) override;
+  void format(raw_ostream &Stream, StringRef Style);
 };
 
 } // end namespace detail

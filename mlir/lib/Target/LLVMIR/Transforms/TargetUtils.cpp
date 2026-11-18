@@ -9,7 +9,7 @@
 #include "mlir/Target/LLVMIR/Transforms/Passes.h"
 
 #include "mlir/Dialect/DLTI/DLTI.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Target/LLVMIR/Import.h"
 
 #include "llvm/MC/TargetRegistry.h"
@@ -64,7 +64,8 @@ getDataLayout(mlir::LLVM::TargetAttrInterface attr) {
     LDBG() << "Failed to retrieve the target machine for data layout.\n";
     return failure();
   }
-  return (targetMachine.value())->createDataLayout();
+  return llvm::DataLayout(
+      (targetMachine.value())->getTargetTriple().computeDataLayout());
 }
 
 } // namespace detail

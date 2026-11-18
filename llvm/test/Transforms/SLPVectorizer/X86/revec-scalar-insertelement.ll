@@ -6,7 +6,7 @@ define <8 x i16> @test(ptr %0) {
 ; CHECK-SAME: ptr [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[VECTOR_PH:.*:]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr [[TMP0]], align 2
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i16> poison, i16 [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i16> poison, i16 [[TMP1]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i16> [[TMP2]], <4 x i16> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i16> [[TMP3]], <4 x i16> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 2, i32 poison, i32 3, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <8 x i16> zeroinitializer, <8 x i16> [[TMP4]], <8 x i32> <i32 8, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 7>

@@ -14,7 +14,7 @@ define void @test(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[N]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
@@ -28,7 +28,8 @@ define void @test(ptr %src, i64 %n) {
 ; CHECK-NEXT:    br label %[[LOOP_32:.*]]
 ; CHECK:       [[LOOP_32]]:
 ; CHECK-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x i64> [ zeroinitializer, %[[LOOP_2_HEADER1]] ], [ [[TMP2:%.*]], %[[LOOP_32]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [2000 x i32], ptr [[SRC]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI3]]
+; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds [8000 x i8], ptr [[SRC]], <4 x i64> [[VEC_IND]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [4 x i8], <4 x ptr> [[WIDE_GEP]], <4 x i64> [[VEC_PHI3]]
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 [[TMP0]], <4 x i1> splat (i1 true), <4 x i32> poison)
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul nsw <4 x i32> [[WIDE_MASKED_GATHER]], splat (i32 10)
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> [[TMP1]], <4 x ptr> align 4 [[TMP0]], <4 x i1> splat (i1 true))
@@ -119,4 +120,4 @@ exit:
 
 !0 = distinct !{!0, !1, !2}
 !1 = !{!"llvm.loop.vectorize.width", i32 4}
-!2 = !{!"llvm.loop.vectorize.enable", i1 true}
+!2 = !{!"llvm.loop.vectorize.enable"}

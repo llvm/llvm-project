@@ -42,19 +42,19 @@ void testVariadicityAttributes(MlirContext ctx) {
   MlirAttribute variadicitySingle =
       mlirIRDLVariadicityAttrGet(ctx, mlirStringRefCreateFromCString("single"));
 
-  // CHECK: #irdl<variadicity single>
+  // CHECK: #irdl.variadicity<single>
   mlirAttributeDump(variadicitySingle);
 
   MlirAttribute variadicityOptional = mlirIRDLVariadicityAttrGet(
       ctx, mlirStringRefCreateFromCString("optional"));
 
-  // CHECK: #irdl<variadicity optional>
+  // CHECK: #irdl.variadicity<optional>
   mlirAttributeDump(variadicityOptional);
 
   MlirAttribute variadicityVariadic = mlirIRDLVariadicityAttrGet(
       ctx, mlirStringRefCreateFromCString("variadic"));
 
-  // CHECK: #irdl<variadicity variadic>
+  // CHECK: #irdl.variadicity<variadic>
   mlirAttributeDump(variadicityVariadic);
 
   MlirAttribute variadicities[] = {variadicitySingle, variadicityOptional,
@@ -62,7 +62,7 @@ void testVariadicityAttributes(MlirContext ctx) {
   MlirAttribute variadicityArray =
       mlirIRDLVariadicityArrayAttrGet(ctx, 3, variadicities);
 
-  // CHECK: #irdl<variadicity_array[single, optional, variadic]>
+  // CHECK: #irdl<variadicity_array[<single>, <optional>, <variadic>]>
   mlirAttributeDump(variadicityArray);
 }
 

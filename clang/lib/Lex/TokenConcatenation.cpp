@@ -180,7 +180,7 @@ bool TokenConcatenation::AvoidConcat(const Token &PrevPrevTok,
     return false;
 
   tok::TokenKind PrevKind = PrevTok.getKind();
-  if (!PrevTok.isAnnotation() && PrevTok.getIdentifierInfo())
+  if (PrevTok.getIdentifierInfo())
     PrevKind = tok::identifier; // Language keyword or named operator.
 
   // Look up information on when we should avoid concatenation with prevtok.
@@ -271,8 +271,9 @@ bool TokenConcatenation::AvoidConcat(const Token &PrevPrevTok,
     return IsIdentifierStringPrefix(PrevTok);
 
   case tok::numeric_constant:
-    return isPreprocessingNumberBody(FirstChar) ||
-           FirstChar == '+' || FirstChar == '-';
+    return isPreprocessingNumberBody(FirstChar) || FirstChar == '+' ||
+           FirstChar == '-' ||
+           (PP.getLangOpts().DollarIdents && FirstChar == '$');
   case tok::period:          // ..., .*, .1234
     return (FirstChar == '.' && PrevPrevTok.is(tok::period)) ||
            isDigit(FirstChar) ||

@@ -6,7 +6,15 @@
 // RUN: llvm-mc -triple=aarch64 -show-encoding < %s \
 // RUN:        | sed '/.text/d' | sed 's/.*encoding: //g' \
 // RUN:        | llvm-mc -triple=aarch64 -disassemble -show-encoding \
-// RUN:        | FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INST
+// RUN:        | FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INST,CHECK-HINT-ALIAS
+
+hint #48
+// CHECK-HINT-ALIAS: stshh keep
+// CHECK-ENCODING: encoding: [0x1f,0x26,0x03,0xd5]
+
+hint #49
+// CHECK-HINT-ALIAS-NEXT: stshh strm
+// CHECK-ENCODING: encoding: [0x3f,0x26,0x03,0xd5]
 
 stshh keep
 // CHECK-INST: stshh keep

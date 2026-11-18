@@ -60,4 +60,4 @@ References
 ----------
 
 * CERT C++ Coding Standard rule `DCL56-CPP. Avoid cycles during initialization
-  of static objects <https://wiki.sei.cmu.edu/confluence/display/cplusplus/DCL56-CPP.+Avoid+cycles+during+initialization+of+static+objects>`_.
+  of static objects <https://cmu-sei.github.io/secure-coding-standards/sei-cert-cpp-coding-standard/rules/declarations-and-initialization-dcl/dcl56-cpp/>`_.

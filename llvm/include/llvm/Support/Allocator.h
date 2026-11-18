@@ -18,6 +18,7 @@
 #define LLVM_SUPPORT_ALLOCATOR_H
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Config/abi-breaking.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/AllocatorBase.h"
 #include "llvm/Support/Compiler.h"
@@ -27,6 +28,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
+#include <new>
 #include <optional>
 #include <utility>
 
@@ -36,9 +38,7 @@ namespace detail {
 
 // We call out to an external function to actually print the message as the
 // printing code uses Allocator.h in its implementation.
-LLVM_ABI void printBumpPtrAllocatorStats(unsigned NumSlabs,
-                                         size_t BytesAllocated,
-                                         size_t TotalMemory);
+LLVM_ABI void printBumpPtrAllocatorStats(unsigned NumSlabs, size_t TotalMemory);
 
 } // end namespace detail
 
@@ -64,8 +64,8 @@ LLVM_ABI void printBumpPtrAllocatorStats(unsigned NumSlabs,
 /// rounded up to a multiple of MinAlign so the fast path can skip realigning
 /// CurPtr when the requested alignment is no greater than MinAlign.
 template <typename AllocatorT = MallocAllocator, size_t SlabSize = 4096,
-          size_t SizeThreshold = SlabSize, size_t GrowthDelay = 128,
-          size_t MinAlign = 8>
+          size_t SizeThreshold = SlabSize, size_t GrowthDelay = 8,
+          size_t MinAlign = std::min<size_t>(8, alignof(std::max_align_t))>
 class BumpPtrAllocatorImpl
     : public AllocatorBase<BumpPtrAllocatorImpl<
           AllocatorT, SlabSize, SizeThreshold, GrowthDelay, MinAlign>>,
@@ -95,11 +95,13 @@ public:
   // slabs as a matter of correctness.
   BumpPtrAllocatorImpl(BumpPtrAllocatorImpl &&Old)
       : AllocTy(std::move(Old.getAllocator())), CurPtr(Old.CurPtr),
-        End(Old.End), Slabs(std::move(Old.Slabs)),
-        CustomSizedSlabs(std::move(Old.CustomSizedSlabs)),
-        BytesAllocated(Old.BytesAllocated), RedZoneSize(Old.RedZoneSize) {
-    Old.CurPtr = Old.End = nullptr;
-    Old.BytesAllocated = 0;
+        EndSentinel(Old.EndSentinel), Slabs(std::move(Old.Slabs)),
+        CustomSizedSlabs(std::move(Old.CustomSizedSlabs)) {
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+    RedZoneSize = Old.RedZoneSize;
+#endif
+    Old.CurPtr = nullptr;
+    Old.EndSentinel = 0;
     Old.Slabs.clear();
     Old.CustomSizedSlabs.clear();
   }
@@ -114,15 +116,16 @@ public:
     DeallocateCustomSizedSlabs();
 
     CurPtr = RHS.CurPtr;
-    End = RHS.End;
-    BytesAllocated = RHS.BytesAllocated;
+    EndSentinel = RHS.EndSentinel;
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
     RedZoneSize = RHS.RedZoneSize;
+#endif
     Slabs = std::move(RHS.Slabs);
     CustomSizedSlabs = std::move(RHS.CustomSizedSlabs);
     AllocTy::operator=(std::move(RHS.getAllocator()));
 
-    RHS.CurPtr = RHS.End = nullptr;
-    RHS.BytesAllocated = 0;
+    RHS.CurPtr = nullptr;
+    RHS.EndSentinel = 0;
     RHS.Slabs.clear();
     RHS.CustomSizedSlabs.clear();
     return *this;
@@ -139,9 +142,8 @@ public:
       return;
 
     // Reset the state.
-    BytesAllocated = 0;
     CurPtr = (char *)Slabs.front();
-    End = CurPtr + SlabSize;
+    EndSentinel = uintptr_t(CurPtr) + SlabSize + 1;
 
     __asan_poison_memory_region(*Slabs.begin(), computeSlabSize(0));
     DeallocateSlabs(std::next(Slabs.begin()), Slabs.end());
@@ -156,36 +158,33 @@ public:
   // Allocate(0, N) is valid, it returns a non-null pointer (which should not
   // be dereferenced).
   LLVM_ATTRIBUTE_RETURNS_NONNULL void *Allocate(size_t Size, Align Alignment) {
-    // Keep track of how many bytes we've allocated.
-    BytesAllocated += Size;
-
     size_t SizeToAllocate = Size;
-#if LLVM_ADDRESS_SANITIZER_BUILD
-    // Add trailing bytes as a "red zone" under ASan.
+#if LLVM_ADDRESS_SANITIZER_BUILD && LLVM_ENABLE_ABI_BREAKING_CHECKS
+    // Add trailing bytes as a "red zone" under ASan. RedZoneSize only exists
+    // when both conditions are true.
     SizeToAllocate += RedZoneSize;
 #endif
     SizeToAllocate = alignToPowerOf2(SizeToAllocate, MinAlign);
 
     // CurPtr is already MinAlign-aligned, so only a stricter request realigns.
-    char *Ptr = CurPtr;
+    uintptr_t AlignedPtr = uintptr_t(CurPtr);
     if (Alignment.value() > MinAlign)
-      Ptr = reinterpret_cast<char *>(alignAddr(Ptr, Alignment));
-    char *NewCurPtr = Ptr + SizeToAllocate;
-    assert(NewCurPtr >= Ptr && "Alignment + Size must not overflow");
+      AlignedPtr = alignAddr(CurPtr, Alignment);
+    uintptr_t AllocEndPtr = AlignedPtr + SizeToAllocate;
+    assert(AllocEndPtr >= uintptr_t(CurPtr) &&
+           "Alignment + Size must not overflow");
 
-    // Check if we have enough space.
-    if (LLVM_LIKELY(
-            uintptr_t(NewCurPtr) <= uintptr_t(End) &&
-            //  We can't return nullptr even for a zero-sized allocation!
-            CurPtr != nullptr)) {
-      CurPtr = NewCurPtr;
+    // Check if we have enough space. `EndSentinel` is 0 for an empty allocator,
+    // so this also rejects a null CurPtr when `SizeToAllocate` is 0.
+    if (LLVM_LIKELY(AllocEndPtr < EndSentinel)) {
+      CurPtr = reinterpret_cast<char *>(AllocEndPtr);
       // Update the allocation point of this memory block in MemorySanitizer.
       // Without this, MemorySanitizer messages for values originated from here
       // will point to the allocation of the entire slab.
-      __msan_allocated_memory(Ptr, Size);
+      __msan_allocated_memory(reinterpret_cast<char *>(AlignedPtr), Size);
       // Similarly, tell ASan about this space.
-      __asan_unpoison_memory_region(Ptr, Size);
-      return Ptr;
+      __asan_unpoison_memory_region(reinterpret_cast<char *>(AlignedPtr), Size);
+      return reinterpret_cast<char *>(AlignedPtr);
     }
 
     return AllocateSlow(Size, SizeToAllocate, Alignment);
@@ -214,7 +213,7 @@ public:
     // Otherwise, start a new slab and try again.
     StartNewSlab();
     uintptr_t AlignedAddr = alignAddr(CurPtr, Alignment);
-    assert(AlignedAddr + SizeToAllocate <= (uintptr_t)End &&
+    assert(AlignedAddr + SizeToAllocate < EndSentinel &&
            "Unable to allocate memory!");
     char *AlignedPtr = (char*)AlignedAddr;
     CurPtr = AlignedPtr + SizeToAllocate;
@@ -307,15 +306,14 @@ public:
     return TotalMemory;
   }
 
-  size_t getBytesAllocated() const { return BytesAllocated; }
-
-  void setRedZoneSize(size_t NewSize) {
+  void setRedZoneSize([[maybe_unused]] size_t NewSize) {
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
     RedZoneSize = NewSize;
+#endif
   }
 
   void PrintStats() const {
-    detail::printBumpPtrAllocatorStats(Slabs.size(), BytesAllocated,
-                                       getTotalMemory());
+    detail::printBumpPtrAllocatorStats(Slabs.size(), getTotalMemory());
   }
 
 private:
@@ -324,8 +322,9 @@ private:
   /// This points to the next free byte in the slab.
   char *CurPtr = nullptr;
 
-  /// The end of the current slab.
-  char *End = nullptr;
+  /// One past the slab end (0 when there is no slab). +1 is so that the fast
+  /// path condition also rejects a empty allocator with a 0-size allocation.
+  uintptr_t EndSentinel = 0;
 
   /// The slabs allocated so far.
   SmallVector<void *, 4> Slabs;
@@ -333,14 +332,11 @@ private:
   /// Custom-sized slabs allocated for too-large allocation requests.
   SmallVector<std::pair<void *, size_t>, 0> CustomSizedSlabs;
 
-  /// How many bytes we've allocated.
-  ///
-  /// Used so that we can compute how much space was wasted.
-  size_t BytesAllocated = 0;
-
-  /// The number of bytes to put between allocations when running under
-  /// a sanitizer.
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+  /// The number of bytes to put between allocations when running under a
+  /// sanitizer.
   size_t RedZoneSize = 1;
+#endif
 
   static size_t computeSlabSize(unsigned SlabIdx) {
     // Scale the actual allocated slab size based on the number of slabs
@@ -352,7 +348,7 @@ private:
   }
 
   /// Allocate a new slab and move the bump pointers over into the new
-  /// slab, modifying CurPtr and End.
+  /// slab, modifying CurPtr and EndSentinel.
   void StartNewSlab() {
     size_t AllocatedSlabSize = computeSlabSize(Slabs.size());
 
@@ -364,7 +360,7 @@ private:
 
     Slabs.push_back(NewSlab);
     CurPtr = (char *)(NewSlab);
-    End = ((char *)NewSlab) + AllocatedSlabSize;
+    EndSentinel = uintptr_t(NewSlab) + AllocatedSlabSize + 1;
   }
 
   /// Deallocate a sequence of slabs.
@@ -419,9 +415,13 @@ public:
   ~SpecificBumpPtrAllocator() { DestroyAll(); }
 
   SpecificBumpPtrAllocator &operator=(SpecificBumpPtrAllocator &&RHS) {
+    DestroyAll();
     Allocator = std::move(RHS.Allocator);
     return *this;
   }
+
+  /// Total memory held by this allocator, including slack in the slabs.
+  size_t getTotalMemory() const { return Allocator.getTotalMemory(); }
 
   /// Call the destructor of each allocated object and deallocate all but the
   /// current slab and reset the current pointer to the beginning of it, freeing
@@ -480,8 +480,20 @@ void *
 operator new(size_t Size,
              llvm::BumpPtrAllocatorImpl<AllocatorT, SlabSize, SizeThreshold,
                                         GrowthDelay, MinAlign> &Allocator) {
-  return Allocator.Allocate(
-      Size, std::min(llvm::bit_ceil(Size), alignof(std::max_align_t)));
+  // alignof(T) is unknown but Size%alignof(T)==0, so the lowest set bit of Size
+  // bounds it. Types with alignof(T) > __STDCPP_DEFAULT_NEW_ALIGNMENT__ use the
+  // align_val_t overload below.
+  auto S = Size | __STDCPP_DEFAULT_NEW_ALIGNMENT__;
+  return Allocator.Allocate(Size, llvm::Align(S & -S));
+}
+
+template <typename AllocatorT, size_t SlabSize, size_t SizeThreshold,
+          size_t GrowthDelay, size_t MinAlign>
+void *
+operator new(size_t Size, std::align_val_t Alignment,
+             llvm::BumpPtrAllocatorImpl<AllocatorT, SlabSize, SizeThreshold,
+                                        GrowthDelay, MinAlign> &Allocator) {
+  return Allocator.Allocate(Size, llvm::Align(static_cast<size_t>(Alignment)));
 }
 
 template <typename AllocatorT, size_t SlabSize, size_t SizeThreshold,

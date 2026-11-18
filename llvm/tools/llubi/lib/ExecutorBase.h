@@ -64,6 +64,9 @@ struct Frame {
   // Reserved for in-flight subroutines.
   Function *ResolvedCallee = nullptr;
   SmallVector<AnyValue> CalleeArgs;
+  // Temporary memory objects created via pointer arguments with byval.
+  // They belong to the caller.
+  SmallVector<IntrusiveRefCntPtr<MemoryObject>> CalleeByValArgs;
   AnyValue CalleeRetVal;
 
   Frame(Function &F, CallBase *CallSite, Frame *LastFrame,
@@ -127,11 +130,12 @@ class DiagnosticReporter {
   ExecutorBase &Executor;
   std::string Buf;
   raw_string_ostream OS;
+  AnyValuePrinter Printer;
   DiagnosticKind Kind;
 
 public:
   DiagnosticReporter(ExecutorBase &E, DiagnosticKind K)
-      : Executor(E), OS(Buf), Kind(K) {}
+      : Executor(E), OS(Buf), Printer(E.Ctx, OS), Kind(K) {}
 
   DiagnosticReporter(const DiagnosticReporter &) = delete;
   DiagnosticReporter(DiagnosticReporter &&) noexcept = delete;
@@ -151,7 +155,7 @@ public:
   }
 
   template <typename T> DiagnosticReporter &operator<<(const T &Val) {
-    OS << Val;
+    Printer << Val;
     return *this;
   }
 };

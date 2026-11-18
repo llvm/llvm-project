@@ -21,13 +21,6 @@
 #include "flang/Optimizer/Builder/LowLevelIntrinsics.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 
-mlir::func::FuncOp fir::factory::getRealloc(fir::FirOpBuilder &builder) {
-  auto ptrTy = builder.getRefType(builder.getIntegerType(8));
-  llvm::SmallVector<mlir::Type> args = {ptrTy, builder.getI64Type()};
-  auto reallocTy = mlir::FunctionType::get(builder.getContext(), args, {ptrTy});
-  return builder.createFunction(builder.getUnknownLoc(), "realloc", reallocTy);
-}
-
 mlir::func::FuncOp
 fir::factory::getLlvmGetRounding(fir::FirOpBuilder &builder) {
   auto int32Ty = builder.getIntegerType(32);
@@ -41,6 +34,20 @@ fir::factory::getLlvmSetRounding(fir::FirOpBuilder &builder) {
   auto int32Ty = builder.getIntegerType(32);
   auto funcTy = mlir::FunctionType::get(builder.getContext(), {int32Ty}, {});
   return builder.createFunction(builder.getUnknownLoc(), "llvm.set.rounding",
+                                funcTy);
+}
+
+mlir::func::FuncOp fir::factory::getLlvmPpcReadflm(fir::FirOpBuilder &builder) {
+  auto f64Ty = builder.getF64Type();
+  auto funcTy = mlir::FunctionType::get(builder.getContext(), {}, {f64Ty});
+  return builder.createFunction(builder.getUnknownLoc(), "llvm.ppc.readflm",
+                                funcTy);
+}
+
+mlir::func::FuncOp fir::factory::getLlvmPpcSetflm(fir::FirOpBuilder &builder) {
+  auto f64Ty = builder.getF64Type();
+  auto funcTy = mlir::FunctionType::get(builder.getContext(), {f64Ty}, {f64Ty});
+  return builder.createFunction(builder.getUnknownLoc(), "llvm.ppc.setflm",
                                 funcTy);
 }
 

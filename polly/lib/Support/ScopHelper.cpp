@@ -368,9 +368,6 @@ private:
   const SCEV *visitPtrToAddrExpr(const SCEVPtrToAddrExpr *E) {
     return GenSE.getPtrToAddrExpr(visit(E->getOperand()));
   }
-  const SCEV *visitPtrToIntExpr(const SCEVPtrToIntExpr *E) {
-    return GenSE.getPtrToIntExpr(visit(E->getOperand()), E->getType());
-  }
   const SCEV *visitTruncateExpr(const SCEVTruncateExpr *E) {
     return GenSE.getTruncateExpr(visit(E->getOperand()), E->getType());
   }
@@ -445,6 +442,10 @@ private:
     // FIXME: This emits a SCEV for GenSE (since GenLRepl will refer to the
     // induction variable of a generated loop), so we should not use SCEVVisitor
     // with it. However, it still contains references to the SCoP region.
+    //
+    // Insert in the cache to cut recursive cycles:
+    // visitUnknown follow VMap and GenSE.getSCEV() back to E.
+    SCEVCache[E] = Evaluated;
     return visit(Evaluated);
   }
   ///}
@@ -626,9 +627,6 @@ bool polly::isIgnoredIntrinsic(const Value *V) {
     case llvm::Intrinsic::annotation:
     case llvm::Intrinsic::donothing:
     case llvm::Intrinsic::assume:
-    // Some debug info intrinsics are supported/ignored.
-    case llvm::Intrinsic::dbg_value:
-    case llvm::Intrinsic::dbg_declare:
       return true;
     default:
       break;

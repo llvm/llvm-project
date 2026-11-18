@@ -1,6 +1,6 @@
-# RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx1100 -run-pass=none -filetype=null %s 2>&1 | FileCheck %s --check-prefix=GFX_NO_SRC1_SGPR
-# RUN: llc -mtriple=amdgcn -mcpu=gfx1150 -run-pass=none -filetype=null %s 2>&1 | FileCheck %s --check-prefix=GFX_SRC1_SGPR
-# RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -run-pass=none -filetype=null %s 2>&1 | FileCheck %s --check-prefix=GFX_SRC1_SGPR
+# RUN: not --crash llc -mtriple=amdgpu11.00 -run-pass=none -filetype=null %s 2>&1 | FileCheck %s --check-prefix=GFX_NO_SRC1_SGPR
+# RUN: llc -mtriple=amdgpu11.50 -run-pass=none -filetype=null %s 2>&1 | FileCheck %s --check-prefix=GFX_SRC1_SGPR
+# RUN: llc -mtriple=amdgpu12.00 -run-pass=none -filetype=null %s 2>&1 | FileCheck %s --check-prefix=GFX_SRC1_SGPR
 
 # GFX_SRC1_SGPR-NOT: *** Bad machine code: DPP src1 cannot be SGPR on this subtarget ***
 

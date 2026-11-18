@@ -6,10 +6,10 @@
 ^0 = module: (path: "thinlto-summary1.o", hash: (1369602428, 2747878711, 259090915, 2507395659, 1141468049))
 ^1 = module: (path: "thinlto-summary2.o", hash: (2998369023, 4283347029, 1195487472, 2757298015, 1852134156))
 
-; Check a function that makes several calls with various profile hotness, and a
-; reference (also tests forward references to function and variables in calls
-; and refs).
-^2 = gv: (guid: 1, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 10, calls: ((callee: ^15, hotness: hot), (callee: ^17, hotness: cold), (callee: ^16, hotness: none, tail: 1)), refs: (writeonly ^14, readonly ^13, ^11))))
+; Check a function that makes several calls with various profile hotness and
+; flags, and a reference (also tests forward references to function and
+; variables in calls and refs).
+^2 = gv: (guid: 1, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 10, calls: ((callee: ^15, hotness: hot), (callee: ^17, hotness: cold, indirect: 1), (callee: ^16, hotness: none, tail: 1, indirect: 1)), refs: (writeonly ^14, readonly ^13, ^11))))
 
 ;; relbf is deprecated, but we support reading old files.
 ; Function with a call that has relative block frequency instead of profile
@@ -70,7 +70,7 @@
 ^28 = typeid: (name: "_ZTS1B", summary: (typeTestRes: (kind: inline, sizeM1BitWidth: 0, alignLog2: 1, sizeM1: 2, bitMask: 3, inlineBits: 4)))
 ; Test the AllOnes resolution, and all kinds of WholeProgramDevirtResolution
 ; types, including all optional resolution by argument kinds.
-^29 = typeid: (name: "_ZTS1A", summary: (typeTestRes: (kind: allOnes, sizeM1BitWidth: 7), wpdResolutions: ((offset: 0, wpdRes: (kind: branchFunnel)), (offset: 8, wpdRes: (kind: singleImpl, singleImplName: "_ZN1A1nEi")), (offset: 16, wpdRes: (kind: indir, resByArg: (args: (1, 2), byArg: (kind: indir, byte: 2, bit: 3), args: (3), byArg: (kind: uniformRetVal, info: 1), args: (4), byArg: (kind: uniqueRetVal, info: 1), args: (5), byArg: (kind: virtualConstProp)))))))
+^29 = typeid: (name: "_ZTS1A", summary: (typeTestRes: (kind: allOnes, sizeM1BitWidth: 7), wpdResolutions: ((offset: 0, wpdRes: (kind: branchFunnel)), (offset: 8, wpdRes: (kind: singleImpl, singleImplName: "_ZN1A1nEi")), (offset: 16, wpdRes: (kind: speculative, singleImplName: "_ZN1A1mEi")), (offset: 24, wpdRes: (kind: indir, resByArg: (args: (1, 2), byArg: (kind: indir, byte: 2, bit: 3), args: (3), byArg: (kind: uniformRetVal, info: 1), args: (4), byArg: (kind: uniqueRetVal, info: 1), args: (5), byArg: (kind: virtualConstProp)))))))
 ; Test the other kinds of type test resoultions
 ^30 = typeid: (name: "_ZTS1D", summary: (typeTestRes: (kind: byteArray, sizeM1BitWidth: 0)))
 ^31 = typeid: (name: "_ZTS1E", summary: (typeTestRes: (kind: unsat, sizeM1BitWidth: 0)))
@@ -80,7 +80,7 @@
 ; Make sure we get back from llvm-dis essentially what we put in via llvm-as.
 ; CHECK: ^0 = module: (path: "thinlto-summary1.o", hash: (1369602428, 2747878711, 259090915, 2507395659, 1141468049))
 ; CHECK: ^1 = module: (path: "thinlto-summary2.o", hash: (2998369023, 4283347029, 1195487472, 2757298015, 1852134156))
-; CHECK: ^2 = gv: (guid: 1, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0, importType: definition, noRenameOnPromotion: 0), insts: 10, calls: ((callee: ^15, hotness: hot), (callee: ^17, hotness: cold), (callee: ^16, hotness: none, tail: 1)), refs: (^11, readonly ^13, writeonly ^14))))
+; CHECK: ^2 = gv: (guid: 1, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0, importType: definition, noRenameOnPromotion: 0), insts: 10, calls: ((callee: ^15, hotness: hot), (callee: ^17, hotness: cold, indirect: 1), (callee: ^16, hotness: none, tail: 1, indirect: 1)), refs: (^11, readonly ^13, writeonly ^14))))
 ;; relbf is not emitted since this is a combined summary, and that is only
 ;; emitted for per-module summaries. Additionally, it is now deprecated.
 ; CHECK: ^3 = gv: (guid: 2, summaries: (function: (module: ^1, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0, importType: definition, noRenameOnPromotion: 0), insts: 10, calls: ((callee: ^15, tail: 1)))))
@@ -109,7 +109,7 @@
 ; CHECK: ^26 = gv: (guid: 9123456789101112131, summaries: (function: (module: ^0, flags: (linkage: internal, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 1, canAutoHide: 0, importType: definition, noRenameOnPromotion: 0), insts: 1)))
 ; CHECK: ^27 = typeid: (name: "_ZTS1C", summary: (typeTestRes: (kind: single, sizeM1BitWidth: 0))) ; guid = 1884921850105019584
 ; CHECK: ^28 = typeid: (name: "_ZTS1B", summary: (typeTestRes: (kind: inline, sizeM1BitWidth: 0, alignLog2: 1, sizeM1: 2, bitMask: 3, inlineBits: 4))) ; guid = 6203814149063363976
-; CHECK: ^29 = typeid: (name: "_ZTS1A", summary: (typeTestRes: (kind: allOnes, sizeM1BitWidth: 7), wpdResolutions: ((offset: 0, wpdRes: (kind: branchFunnel)), (offset: 8, wpdRes: (kind: singleImpl, singleImplName: "_ZN1A1nEi")), (offset: 16, wpdRes: (kind: indir, resByArg: (args: (1, 2), byArg: (kind: indir, byte: 2, bit: 3), args: (3), byArg: (kind: uniformRetVal, info: 1), args: (4), byArg: (kind: uniqueRetVal, info: 1), args: (5), byArg: (kind: virtualConstProp))))))) ; guid = 7004155349499253778
+; CHECK: ^29 = typeid: (name: "_ZTS1A", summary: (typeTestRes: (kind: allOnes, sizeM1BitWidth: 7), wpdResolutions: ((offset: 0, wpdRes: (kind: branchFunnel)), (offset: 8, wpdRes: (kind: singleImpl, singleImplName: "_ZN1A1nEi")), (offset: 16, wpdRes: (kind: speculative, singleImplName: "_ZN1A1mEi")), (offset: 24, wpdRes: (kind: indir, resByArg: (args: (1, 2), byArg: (kind: indir, byte: 2, bit: 3), args: (3), byArg: (kind: uniformRetVal, info: 1), args: (4), byArg: (kind: uniqueRetVal, info: 1), args: (5), byArg: (kind: virtualConstProp))))))) ; guid = 7004155349499253778
 ; CHECK: ^30 = typeid: (name: "_ZTS1D", summary: (typeTestRes: (kind: byteArray, sizeM1BitWidth: 0))) ; guid = 9614786172484273522
 ; CHECK: ^31 = typeid: (name: "_ZTS1E", summary: (typeTestRes: (kind: unsat, sizeM1BitWidth: 0))) ; guid = 17437243864166745132
 ; CHECK: ^32 = flags: 8

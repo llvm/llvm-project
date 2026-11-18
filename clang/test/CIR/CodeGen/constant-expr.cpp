@@ -26,9 +26,9 @@ void calling_consteval_methods() {
 // CIR: %[[CONST_COMPLEX:.*]] = cir.const #cir.const_complex<#cir.int<1> : !s32i, #cir.int<2> : !s32i> : !cir.complex<!s32i>
 // CIR: cir.store {{.*}} %[[CONST_COMPLEX]], %[[C_ADDR]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
 
-// LLVM: %[[A_ADDR:.*]] = alloca %struct.StructWithConstEval, i64 1, align 1
-// LLVM: %[[B_ADDR:.*]] = alloca i32, i64 1, align 4
-// LLVM: %[[C_ADDR:.*]] = alloca { i32, i32 }, i64 1, align 4
+// LLVM: %[[A_ADDR:.*]] = alloca %struct.StructWithConstEval, align 1
+// LLVM: %[[B_ADDR:.*]] = alloca i32, align 4
+// LLVM: %[[C_ADDR:.*]] = alloca { i32, i32 }, align 4
 // LLVM: store i32 1, ptr %[[B_ADDR]], align 4
 // LLVM: store { i32, i32 } { i32 1, i32 2 }, ptr %[[C_ADDR]], align 4
 

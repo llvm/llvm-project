@@ -1,0 +1,45 @@
+; Test that llvm-profdata outputs body samples and inlined callsites in sorted
+; order by LineLocation when writing text profiles or showing sample profiles.
+
+; RUN: llvm-profdata merge --sample --text %p/Inputs/sample-profile-sort.proftext -o - | FileCheck %s --check-prefix=MERGE-TEXT
+; MERGE-TEXT: foo:1000:0
+; MERGE-TEXT-NEXT:  2: 20
+; MERGE-TEXT-NEXT:  4: 30
+; MERGE-TEXT-NEXT:  4.1: 40
+; MERGE-TEXT-NEXT:  4.2: 50
+; MERGE-TEXT-NEXT:  10: 100
+; MERGE-TEXT-NEXT:  3.1: inlined_foo:50
+; MERGE-TEXT-NEXT:   1: 50
+; MERGE-TEXT-NEXT:  3.2: inlined_baz:100
+; MERGE-TEXT-NEXT:   1: 100
+; MERGE-TEXT-NEXT:  8: inlined_bar:200
+; MERGE-TEXT-NEXT:   1: 100
+; MERGE-TEXT-NEXT:   2: 200
+
+; RUN: llvm-profdata show --sample %p/Inputs/sample-profile-sort.proftext | FileCheck %s --check-prefix=SHOW
+; SHOW: Function: foo: 1000, 0, 5 sampled lines
+; SHOW-NEXT: Samples collected in the function's body {
+; SHOW-NEXT:   2: 20
+; SHOW-NEXT:   4: 30
+; SHOW-NEXT:   4.1: 40
+; SHOW-NEXT:   4.2: 50
+; SHOW-NEXT:   10: 100
+; SHOW-NEXT: }
+; SHOW-NEXT: Samples collected in inlined callsites {
+; SHOW-NEXT:   3.1: inlined callee: inlined_foo: 50, 0, 1 sampled lines
+; SHOW-NEXT:     Samples collected in the function's body {
+; SHOW-NEXT:       1: 50
+; SHOW-NEXT:     }
+; SHOW-NEXT:     No inlined callsites in this function
+; SHOW-NEXT:   3.2: inlined callee: inlined_baz: 100, 0, 1 sampled lines
+; SHOW-NEXT:     Samples collected in the function's body {
+; SHOW-NEXT:       1: 100
+; SHOW-NEXT:     }
+; SHOW-NEXT:     No inlined callsites in this function
+; SHOW-NEXT:   8: inlined callee: inlined_bar: 200, 0, 2 sampled lines
+; SHOW-NEXT:     Samples collected in the function's body {
+; SHOW-NEXT:       1: 100
+; SHOW-NEXT:       2: 200
+; SHOW-NEXT:     }
+; SHOW-NEXT:     No inlined callsites in this function
+; SHOW-NEXT: }

@@ -38,7 +38,7 @@ class AArch64LinuxMTEMemoryTagFaultsTestCase(TestBase):
         )
 
     @skipUnlessArch("aarch64")
-    @skipUnlessPlatform(["linux"])
+    @requireLinux
     @skipUnlessAArch64MTELinuxCompiler
     def test_mte_tag_fault_sync(self):
         self.setup_mte_test("sync")
@@ -57,7 +57,7 @@ class AArch64LinuxMTEMemoryTagFaultsTestCase(TestBase):
         )
 
     @skipUnlessArch("aarch64")
-    @skipUnlessPlatform(["linux"])
+    @requireLinux
     @skipUnlessAArch64MTELinuxCompiler
     def test_mte_tag_fault_async(self):
         self.setup_mte_test("async")

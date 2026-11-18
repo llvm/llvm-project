@@ -557,7 +557,7 @@ vadd.vi v0, v2, 1, v0.t
 # CHECK-ERROR-LABEL: vadd.vi v0, v2, 1, v0.t
 
 vmsge.vx v0, v4, a0, v0.t
-# CHECK-ERROR: too few operands for instruction
+# CHECK-ERROR: the destination vector register cannot overlap the mask register unless a temporary register is provided
 # CHECK-ERROR-LABEL: vmsge.vx v0, v4, a0, v0.t
 
 vmerge.vim v0, v1, 1, v0

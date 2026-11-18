@@ -214,83 +214,36 @@ define <2 x double> @hadd_v2f64(<2 x double> %a) {
 }
 
 define <2 x double> @hadd_v2f64_scalar_splat(<2 x double> %a) {
-; SSE_SLOW-LABEL: hadd_v2f64_scalar_splat:
-; SSE_SLOW:       # %bb.0:
-; SSE_SLOW-NEXT:    movapd %xmm0, %xmm1
-; SSE_SLOW-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
-; SSE_SLOW-NEXT:    addsd %xmm0, %xmm1
-; SSE_SLOW-NEXT:    movddup {{.*#+}} xmm0 = xmm1[0,0]
-; SSE_SLOW-NEXT:    retq
+; SSE-LABEL: hadd_v2f64_scalar_splat:
+; SSE:       # %bb.0:
+; SSE-NEXT:    haddpd %xmm0, %xmm0
+; SSE-NEXT:    retq
 ;
-; SSE_FAST-LABEL: hadd_v2f64_scalar_splat:
-; SSE_FAST:       # %bb.0:
-; SSE_FAST-NEXT:    haddpd %xmm0, %xmm0
-; SSE_FAST-NEXT:    retq
-;
-; AVX1_SLOW-LABEL: hadd_v2f64_scalar_splat:
-; AVX1_SLOW:       # %bb.0:
-; AVX1_SLOW-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
-; AVX1_SLOW-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
-; AVX1_SLOW-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
-; AVX1_SLOW-NEXT:    retq
-;
-; AVX1_FAST-LABEL: hadd_v2f64_scalar_splat:
-; AVX1_FAST:       # %bb.0:
-; AVX1_FAST-NEXT:    vhaddpd %xmm0, %xmm0, %xmm0
-; AVX1_FAST-NEXT:    retq
-;
-; AVX2_SLOW-LABEL: hadd_v2f64_scalar_splat:
-; AVX2_SLOW:       # %bb.0:
-; AVX2_SLOW-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
-; AVX2_SLOW-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
-; AVX2_SLOW-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
-; AVX2_SLOW-NEXT:    retq
-;
-; AVX2_FAST-LABEL: hadd_v2f64_scalar_splat:
-; AVX2_FAST:       # %bb.0:
-; AVX2_FAST-NEXT:    vhaddpd %xmm0, %xmm0, %xmm0
-; AVX2_FAST-NEXT:    retq
-  %a0 = extractelement <2 x double> %a, i32 0
-  %a1 = extractelement <2 x double> %a, i32 1
-  %hop = fadd double %a0, %a1
-  %ins = insertelement <2 x double> undef, double %hop, i32 0
-  %shuf = shufflevector <2 x double> %ins, <2 x double> undef, <2 x i32> <i32 0, i32 0>
-  ret <2 x double> %shuf
+; AVX-LABEL: hadd_v2f64_scalar_splat:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vhaddpd %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %a0 = shufflevector <2 x double> %a, <2 x double> poison, <2 x i32> <i32 0, i32 0>
+  %a1 = shufflevector <2 x double> %a, <2 x double> poison, <2 x i32> <i32 1, i32 1>
+  %hop = fadd <2 x double> %a0, %a1
+  ret <2 x double> %hop
 }
 
 define <4 x double> @hadd_v4f64_scalar_splat(<4 x double> %a) {
-; SSE_SLOW-LABEL: hadd_v4f64_scalar_splat:
-; SSE_SLOW:       # %bb.0:
-; SSE_SLOW-NEXT:    movapd %xmm0, %xmm2
-; SSE_SLOW-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1],xmm0[1]
-; SSE_SLOW-NEXT:    addsd %xmm0, %xmm2
-; SSE_SLOW-NEXT:    movapd %xmm1, %xmm3
-; SSE_SLOW-NEXT:    unpckhpd {{.*#+}} xmm3 = xmm3[1],xmm1[1]
-; SSE_SLOW-NEXT:    addsd %xmm1, %xmm3
-; SSE_SLOW-NEXT:    movddup {{.*#+}} xmm0 = xmm2[0,0]
-; SSE_SLOW-NEXT:    movddup {{.*#+}} xmm1 = xmm3[0,0]
-; SSE_SLOW-NEXT:    retq
-;
-; SSE_FAST-LABEL: hadd_v4f64_scalar_splat:
-; SSE_FAST:       # %bb.0:
-; SSE_FAST-NEXT:    haddpd %xmm0, %xmm0
-; SSE_FAST-NEXT:    haddpd %xmm1, %xmm1
-; SSE_FAST-NEXT:    retq
+; SSE-LABEL: hadd_v4f64_scalar_splat:
+; SSE:       # %bb.0:
+; SSE-NEXT:    haddpd %xmm0, %xmm0
+; SSE-NEXT:    haddpd %xmm1, %xmm1
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: hadd_v4f64_scalar_splat:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vhaddpd %ymm0, %ymm0, %ymm0
 ; AVX-NEXT:    retq
-  %a0 = extractelement <4 x double> %a, i32 0
-  %a1 = extractelement <4 x double> %a, i32 1
-  %hop0 = fadd double %a0, %a1
-  %a2 = extractelement <4 x double> %a, i32 2
-  %a3 = extractelement <4 x double> %a, i32 3
-  %hop1 = fadd double %a2, %a3
-  %ins = insertelement <4 x double> undef, double %hop0, i32 0
-  %ins2 = insertelement <4 x double> %ins,  double %hop1, i32 2
-  %shuf = shufflevector <4 x double> %ins2, <4 x double> undef, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
-  ret <4 x double> %shuf
+  %a0 = shufflevector <4 x double> %a, <4 x double> undef, <4 x i32> <i32 0, i32 0, i32 3, i32 3>
+  %a1 = shufflevector <4 x double> %a, <4 x double> undef, <4 x i32> <i32 1, i32 1, i32 2, i32 2>
+  %hop = fadd <4 x double> %a0, %a1
+  ret <4 x double> %hop
 }
 
 define <4 x double> @hadd_v4f64_scalar_broadcast(<4 x double> %a) {
@@ -338,13 +291,49 @@ define <4 x double> @hadd_v4f64_scalar_broadcast(<4 x double> %a) {
   %a0 = extractelement <4 x double> %a, i32 0
   %a1 = extractelement <4 x double> %a, i32 1
   %hop0 = fadd double %a0, %a1
-  %a2 = extractelement <4 x double> %a, i32 2
-  %a3 = extractelement <4 x double> %a, i32 3
-  %hop1 = fadd double %a2, %a3
-  %ins = insertelement <4 x double> undef, double %hop0, i32 0
-  %ins2 = insertelement <4 x double> %ins,  double %hop1, i32 2
-  %shuf = shufflevector <4 x double> %ins2, <4 x double> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
+  %ins = insertelement <4 x double> poison, double %hop0, i32 0
+  %shuf = shufflevector <4 x double> %ins, <4 x double> poison, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   ret <4 x double> %shuf
+}
+
+define <4 x double> @hadd_v4f64_broadcast(<4 x double> %a) {
+; SSE-LABEL: hadd_v4f64_broadcast:
+; SSE:       # %bb.0:
+; SSE-NEXT:    haddpd %xmm0, %xmm0
+; SSE-NEXT:    movapd %xmm0, %xmm1
+; SSE-NEXT:    retq
+;
+; AVX1_SLOW-LABEL: hadd_v4f64_broadcast:
+; AVX1_SLOW:       # %bb.0:
+; AVX1_SLOW-NEXT:    vmovddup {{.*#+}} xmm1 = xmm0[0,0]
+; AVX1_SLOW-NEXT:    vinsertf128 $1, %xmm1, %ymm1, %ymm1
+; AVX1_SLOW-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,1]
+; AVX1_SLOW-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; AVX1_SLOW-NEXT:    vaddpd %ymm0, %ymm1, %ymm0
+; AVX1_SLOW-NEXT:    retq
+;
+; AVX1_FAST-LABEL: hadd_v4f64_broadcast:
+; AVX1_FAST:       # %bb.0:
+; AVX1_FAST-NEXT:    vhaddpd %xmm0, %xmm0, %xmm0
+; AVX1_FAST-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; AVX1_FAST-NEXT:    retq
+;
+; AVX2_SLOW-LABEL: hadd_v4f64_broadcast:
+; AVX2_SLOW:       # %bb.0:
+; AVX2_SLOW-NEXT:    vbroadcastsd %xmm0, %ymm1
+; AVX2_SLOW-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[1,1,1,1]
+; AVX2_SLOW-NEXT:    vaddpd %ymm0, %ymm1, %ymm0
+; AVX2_SLOW-NEXT:    retq
+;
+; AVX2_FAST-LABEL: hadd_v4f64_broadcast:
+; AVX2_FAST:       # %bb.0:
+; AVX2_FAST-NEXT:    vhaddpd %xmm0, %xmm0, %xmm0
+; AVX2_FAST-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,1,0,1]
+; AVX2_FAST-NEXT:    retq
+  %a0 = shufflevector <4 x double> %a, <4 x double> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
+  %a1 = shufflevector <4 x double> %a, <4 x double> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %hop = fadd <4 x double> %a0, %a1
+  ret <4 x double> %hop
 }
 
 define <4 x double> @hadd_v4f64(<4 x double> %a) {

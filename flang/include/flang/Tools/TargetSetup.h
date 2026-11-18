@@ -1,4 +1,4 @@
-//===-- Tools/TargetSetup.h ------------------------------------- *-C++-*-===//
+//===-- Tools/TargetSetup.h -------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,7 +13,6 @@
 #include "flang/Evaluate/target.h"
 #include "flang/Frontend/TargetOptions.h"
 #include "llvm/Target/TargetMachine.h"
-#include <cfloat>
 
 namespace Fortran::tools {
 
@@ -47,7 +46,7 @@ namespace Fortran::tools {
   }
 
   switch (targetTriple.getArch()) {
-  case llvm::Triple::ArchType::amdgcn:
+  case llvm::Triple::ArchType::amdgpu:
   case llvm::Triple::ArchType::x86_64:
     break;
   default:

@@ -61,3 +61,19 @@ define i32 @udiv_by_3(i32 %x) nounwind {
   %div = udiv i32 %x, 3
   ret i32 %div
 }
+
+; Even divisor with 33-bit magic. On RISC-V the widen path is not used (i32->i64
+; zero-extension is not free); the even-divisor rewrite is kept instead.
+define i32 @udiv_by_14(i32 %x) nounwind {
+; CHECK-LABEL: udiv_by_14:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a1, 299593
+; CHECK-NEXT:    slli a1, a1, 1
+; CHECK-NEXT:    srliw a0, a0, 1
+; CHECK-NEXT:    addi a1, a1, 1171
+; CHECK-NEXT:    mul a0, a0, a1
+; CHECK-NEXT:    srli a0, a0, 34
+; CHECK-NEXT:    ret
+  %div = udiv i32 %x, 14
+  ret i32 %div
+}

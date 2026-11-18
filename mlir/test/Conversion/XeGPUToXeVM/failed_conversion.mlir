@@ -12,3 +12,296 @@ gpu.module @test_kernel [#xevm.target<chip = "pvc">] {
     return
   }
 }
+
+// -----
+
+// Verify that xegpu.store with a memref memory space attribute that has no
+// known numeric address space (a SPIR-V storage class, here) is rejected
+// during XeGPUToXeVM conversion rather than crashing.
+
+gpu.module @test_kernel {
+  gpu.func @store_scatter_unsupported_memspace(%src: memref<1024xf32, #spirv.storage_class<StorageBuffer>>, %offset: vector<1xindex>, %mask: vector<1xi1>) {
+    %0 = arith.constant dense<2.9> : vector<1xf32>
+    // expected-error@+1 {{failed to legalize operation 'xegpu.store' that was explicitly marked illegal}}
+    xegpu.store %0, %src[%offset], %mask <{l1_hint = #xegpu.cache_hint<write_back>, l2_hint = #xegpu.cache_hint<uncached>}>
+        : vector<1xf32>, memref<1024xf32, #spirv.storage_class<StorageBuffer>>, vector<1xindex>, vector<1xi1>
+    gpu.return
+  }
+}
+
+// -----
+
+// Vector offsets are coalesced into one block access, but the mask must be
+// uniform: one block access can only be gated on a single bit.
+
+gpu.module @test_kernel {
+  gpu.func @load_gather_non_uniform_mask(%src: i64, %base: index, %mask: vector<2xi1>) -> vector<2xf32> {
+    %c1 = arith.constant 1 : index
+    %o1 = arith.addi %base, %c1 : index
+    %offsets = vector.from_elements %base, %o1 : vector<2xindex>
+    // expected-error@+1 {{failed to legalize operation 'xegpu.load' that was explicitly marked illegal}}
+    %0 = xegpu.load %src[%offsets], %mask : i64, vector<2xindex>, vector<2xi1> -> vector<2xf32>
+    gpu.return %0 : vector<2xf32>
+  }
+}
+
+// -----
+
+// A partial vector.constant_mask is not uniform either: bit 0 cannot gate the
+// elements the mask turns off.
+
+gpu.module @test_kernel {
+  gpu.func @load_gather_partial_constant_mask(%src: i64, %base: index) -> vector<4xf32> {
+    %offsets = vector.broadcast %base : index to vector<4xindex>
+    %mask = vector.constant_mask [2] : vector<4xi1>
+    // expected-error@+1 {{failed to legalize operation 'xegpu.load' that was explicitly marked illegal}}
+    %0 = xegpu.load %src[%offsets], %mask : i64, vector<4xindex>, vector<4xi1> -> vector<4xf32>
+    gpu.return %0 : vector<4xf32>
+  }
+}
+
+// -----
+
+// Verify that xegpu.lane_shuffle of a sub-byte element type is rejected: the
+// shuffle redistributes whole bytes between the lanes, so fp4 fragments cannot
+// be shuffled.
+
+gpu.module @test_kernel {
+  gpu.func @lane_shuffle_f4(%a: vector<4xf4E2M1FN>) {
+    // expected-error@+1 {{failed to legalize operation 'xegpu.lane_shuffle' that was explicitly marked illegal}}
+    %0 = xegpu.lane_shuffle %a pack : vector<4xf4E2M1FN>
+    gpu.return
+  }
+}
+
+// -----
+
+// A non-extension consumer cannot hoist widening above an i4 shuffle.
+
+gpu.module @test_kernel {
+  gpu.func @lane_shuffle_i4_non_extension(%a: vector<4xi4>) -> vector<4xi4> {
+    // expected-error@+1 {{failed to legalize operation 'xegpu.lane_shuffle' that was explicitly marked illegal}}
+    %0 = xegpu.lane_shuffle %a unpack : vector<4xi4>
+    gpu.return %0 : vector<4xi4>
+  }
+}
+
+// -----
+
+// Mixed signed and unsigned extensions cannot share one widened shuffle.
+
+gpu.module @test_kernel {
+  gpu.func @lane_shuffle_i4_mixed_uses(%a: vector<2xi8>) -> (vector<4xi32>, vector<4xi32>) {
+    %nibbles = vector.bitcast %a : vector<2xi8> to vector<4xi4>
+    // expected-error@+1 {{failed to legalize operation 'xegpu.lane_shuffle' that was explicitly marked illegal}}
+    %0 = xegpu.lane_shuffle %nibbles pack : vector<4xi4>
+    %unsigned = arith.extui %0 : vector<4xi4> to vector<4xi32>
+    %signed = arith.extsi %0 : vector<4xi4> to vector<4xi32>
+    gpu.return %unsigned, %signed : vector<4xi32>, vector<4xi32>
+  }
+}
+
+// -----
+
+// An escaping narrow use of an intermediate mover prevents shared widening.
+
+gpu.module @test_kernel {
+  gpu.func @lane_shuffle_i4_shape_cast_multiple_uses(%a: vector<2xi8>) -> (vector<1x4xi32>, vector<1x4xi4>) {
+    %nibbles = vector.bitcast %a : vector<2xi8> to vector<4xi4>
+    // expected-error@+1 {{failed to legalize operation 'xegpu.lane_shuffle' that was explicitly marked illegal}}
+    %0 = xegpu.lane_shuffle %nibbles unpack : vector<4xi4>
+    %shaped = vector.shape_cast %0 : vector<4xi4> to vector<1x4xi4>
+    %extended = arith.extui %shaped : vector<1x4xi4> to vector<1x4xi32>
+    gpu.return %extended, %shaped : vector<1x4xi32>, vector<1x4xi4>
+  }
+}
+
+// -----
+
+// Mixed signedness is also rejected across scalar-extract/broadcast fan-out.
+
+gpu.module @test_kernel {
+  gpu.func @lane_shuffle_i4_mixed_broadcasts(%a: vector<2xi8>) -> (vector<4xi32>, vector<4xi32>) {
+    %nibbles = vector.bitcast %a : vector<2xi8> to vector<4xi4>
+    // expected-error@+1 {{failed to legalize operation 'xegpu.lane_shuffle' that was explicitly marked illegal}}
+    %shuffled = xegpu.lane_shuffle %nibbles unpack : vector<4xi4>
+    %e0 = vector.extract %shuffled[0] : i4 from vector<4xi4>
+    %e1 = vector.extract %shuffled[1] : i4 from vector<4xi4>
+    %b0 = vector.broadcast %e0 : i4 to vector<4xi4>
+    %b1 = vector.broadcast %e1 : i4 to vector<4xi4>
+    %unsigned = arith.extui %b0 : vector<4xi4> to vector<4xi32>
+    %signed = arith.extsi %b1 : vector<4xi4> to vector<4xi32>
+    gpu.return %unsigned, %signed : vector<4xi32>, vector<4xi32>
+  }
+}
+
+// -----
+
+// Even with a single extension consumer, widening sixteen i4 elements to i8
+// would exceed the byte shuffle's 64-bit fragment limit.
+
+gpu.module @test_kernel {
+  gpu.func @lane_shuffle_i4_ext_too_wide(%a: vector<8xi8>) -> vector<16xi32> {
+    %nibbles = vector.bitcast %a : vector<8xi8> to vector<16xi4>
+    // expected-error@+1 {{failed to legalize operation 'xegpu.lane_shuffle' that was explicitly marked illegal}}
+    %0 = xegpu.lane_shuffle %nibbles pack : vector<16xi4>
+    %extended = arith.extui %0 : vector<16xi4> to vector<16xi32>
+    gpu.return %extended : vector<16xi32>
+  }
+}
+
+// -----
+
+// Verify that a xegpu.lane_shuffle fragment wider than 64 bits is rejected.
+
+gpu.module @test_kernel {
+  gpu.func @lane_shuffle_too_wide(%a: vector<4xi32>) {
+    // expected-error@+1 {{failed to legalize operation 'xegpu.lane_shuffle' that was explicitly marked illegal}}
+    %0 = xegpu.lane_shuffle %a pack : vector<4xi32>
+    gpu.return
+  }
+}
+
+// -----
+
+// A non-unit leading dim cannot be lowered to a 2D-block op.
+
+gpu.module @test_kernel {
+  gpu.func @load_nd_non_unit_batch(%src: memref<4x8x16xf32>, %z: index) kernel {
+    %c0 = arith.constant 0 : index
+    %t = xegpu.create_nd_tdesc %src : memref<4x8x16xf32> -> !xegpu.tensor_desc<2x8x16xf32>
+    // expected-error@+1 {{failed to legalize operation 'xegpu.load_nd' that was explicitly marked illegal}}
+    %v = xegpu.load_nd %t[%z, %c0, %c0] : !xegpu.tensor_desc<2x8x16xf32> -> vector<16xf32>
+    gpu.return
+  }
+}
+
+// -----
+
+// The payload has room for only 3 leading strides, so rank > 5 is rejected.
+
+gpu.module @test_kernel {
+  gpu.func @create_nd_tdesc_rank_too_large(%src: memref<2x2x2x2x8x16xf32>) kernel {
+    // expected-error@+1 {{failed to legalize operation 'xegpu.create_nd_tdesc' that was explicitly marked illegal}}
+    %t = xegpu.create_nd_tdesc %src : memref<2x2x2x2x8x16xf32> -> !xegpu.tensor_desc<1x1x1x1x8x16xf32>
+    gpu.return
+  }
+}
+
+// -----
+
+// A memref with gaps between planes has no exact flattened-plane view.
+
+gpu.module @test_kernel {
+  gpu.func @create_nd_tdesc_plane_gap(%src: memref<2x8x16xf32, strided<[200, 16, 1]>>) kernel {
+    // expected-error@+1 {{failed to legalize operation 'xegpu.create_nd_tdesc' that was explicitly marked illegal}}
+    %t = xegpu.create_nd_tdesc %src : memref<2x8x16xf32, strided<[200, 16, 1]>> -> !xegpu.tensor_desc<1x8x16xf32>
+    gpu.return
+  }
+}
+
+// -----
+
+// Same check applies to an integer source, whose strides are explicit.
+
+gpu.module @test_kernel {
+  gpu.func @create_nd_tdesc_plane_gap_ptr(%ptr: i64) kernel {
+    // expected-error@+1 {{failed to legalize operation 'xegpu.create_nd_tdesc' that was explicitly marked illegal}}
+    %t = xegpu.create_nd_tdesc %ptr, shape: [2, 8, 16], strides: [200, 16, 1] : i64 -> !xegpu.tensor_desc<1x8x16xf32>
+    gpu.return
+  }
+}
+
+// -----
+
+// Xe3p has no minimum width and accepts the same source, see
+// create_nd_tdesc.mlir.
+
+gpu.module @test_kernel [#xevm.target<chip = "pvc">] {
+  gpu.func @create_nd_tdesc_width_too_narrow(%src: memref<8x8xf16, strided<[16, 1]>>) kernel {
+    // expected-error@+2 {{2D block surface width must be at least 32 bytes on this target, got 16 bytes.}}
+    // expected-error@+1 {{failed to legalize operation 'xegpu.create_nd_tdesc' that was explicitly marked illegal}}
+    %t = xegpu.create_nd_tdesc %src : memref<8x8xf16, strided<[16, 1]>> -> !xegpu.tensor_desc<8x8xf16>
+    gpu.return
+  }
+}
+
+// -----
+
+// A f16 row of 33 elements is past the Xe2 32 byte minimum, but not 4 byte
+// aligned.
+
+gpu.module @test_kernel [#xevm.target<chip = "pvc">] {
+  gpu.func @create_nd_tdesc_width_misaligned(%src: memref<8x33xf16>) kernel {
+    // expected-error@+2 {{2D block surface width must be a multiple of 4 bytes on this target, got 66 bytes.}}
+    // expected-error@+1 {{failed to legalize operation 'xegpu.create_nd_tdesc' that was explicitly marked illegal}}
+    %t = xegpu.create_nd_tdesc %src : memref<8x33xf16> -> !xegpu.tensor_desc<8x16xf16>
+    gpu.return
+  }
+}
+
+// -----
+
+gpu.module @test_kernel [#xevm.target<chip = "pvc">] {
+  gpu.func @create_nd_tdesc_pitch_misaligned_xe2(%src: memref<8x16xf32, strided<[17, 1]>>) kernel {
+    // expected-error@+2 {{2D block surface pitch must be a multiple of 16 bytes on this target, got 68 bytes.}}
+    // expected-error@+1 {{failed to legalize operation 'xegpu.create_nd_tdesc' that was explicitly marked illegal}}
+    %t = xegpu.create_nd_tdesc %src : memref<8x16xf32, strided<[17, 1]>> -> !xegpu.tensor_desc<8x16xf32>
+    gpu.return
+  }
+}
+
+// -----
+
+// The width and the pitch are checked independently, so a dynamic pitch does
+// not excuse a static width.
+
+gpu.module @test_kernel [#xevm.target<chip = "pvc">] {
+  gpu.func @create_nd_tdesc_narrow_width_dynamic_pitch(%src: memref<8x8xf16, strided<[?, 1]>>) kernel {
+    // expected-error@+2 {{2D block surface width must be at least 32 bytes on this target, got 16 bytes.}}
+    // expected-error@+1 {{failed to legalize operation 'xegpu.create_nd_tdesc' that was explicitly marked illegal}}
+    %t = xegpu.create_nd_tdesc %src : memref<8x8xf16, strided<[?, 1]>> -> !xegpu.tensor_desc<8x8xf16>
+    gpu.return
+  }
+}
+
+// -----
+
+// The mirror case: a dynamic width does not excuse a static pitch.
+
+gpu.module @test_kernel [#xevm.target<chip = "pvc">] {
+  gpu.func @create_nd_tdesc_dynamic_width_misaligned_pitch(%src: memref<8x?xf32, strided<[17, 1]>>) kernel {
+    // expected-error@+2 {{2D block surface pitch must be a multiple of 16 bytes on this target, got 68 bytes.}}
+    // expected-error@+1 {{failed to legalize operation 'xegpu.create_nd_tdesc' that was explicitly marked illegal}}
+    %t = xegpu.create_nd_tdesc %src : memref<8x?xf32, strided<[17, 1]>> -> !xegpu.tensor_desc<8x16xf32>
+    gpu.return
+  }
+}
+
+// -----
+
+// A sub-byte element type can leave the width on a fraction of a byte, which
+// satisfies no byte alignment at all and is rejected on every target.
+
+gpu.module @test_kernel [#xevm.target<chip = "pvc">] {
+  gpu.func @create_nd_tdesc_width_partial_byte(%src: memref<8x67xi4>) kernel {
+    // expected-error@+2 {{2D block surface width must be a multiple of 4 bytes on this target, got 268 bits.}}
+    // expected-error@+1 {{failed to legalize operation 'xegpu.create_nd_tdesc' that was explicitly marked illegal}}
+    %t = xegpu.create_nd_tdesc %src : memref<8x67xi4> -> !xegpu.tensor_desc<8x16xi4>
+    gpu.return
+  }
+}
+
+// -----
+
+// Both the width and the pitch pass their own limits here, but the rows would
+// overlap.
+
+gpu.module @test_kernel [#xevm.target<chip = "pvc">] {
+  gpu.func @create_nd_tdesc_pitch_below_width(%src: memref<8x16xf32, strided<[8, 1]>>) kernel {
+    // expected-error@+2 {{2D block surface pitch must be at least the surface width, got a pitch of 32 bytes for a surface 64 bytes wide.}}
+    // expected-error@+1 {{failed to legalize operation 'xegpu.create_nd_tdesc' that was explicitly marked illegal}}
+    %t = xegpu.create_nd_tdesc %src : memref<8x16xf32, strided<[8, 1]>> -> !xegpu.tensor_desc<8x16xf32>
+    gpu.return
+  }
+}

@@ -54,7 +54,7 @@ namespace llvm {
 /// and is the default value.
 template <typename T, typename Vector = SmallVector<T, 0>,
           typename Set = DenseSet<T>, unsigned N = 0>
-class SetVector {
+class LLVM_ATTRIBUTE_WARN_UNUSED SetVector {
   // Much like in SmallPtrSet, this value should not be too high to prevent
   // excessively long linear scans from occuring.
   static_assert(N <= 32, "Small size should be less than or equal to 32!");
@@ -101,6 +101,12 @@ public:
 
   /// Determine the number of elements in the SetVector.
   [[nodiscard]] size_type size() const { return vector_.size(); }
+
+  /// Reserve space in the SetVector if supported by the underlying containers.
+  void reserve(size_type Size) {
+    vector_.reserve(Size);
+    set_.reserve(Size);
+  }
 
   /// Get an iterator to the beginning of the SetVector.
   [[nodiscard]] iterator begin() { return vector_.begin(); }
@@ -336,7 +342,8 @@ private:
 /// A SetVector that performs no allocations if smaller than
 /// a certain size.
 template <typename T, unsigned N>
-class SmallSetVector : public SetVector<T, SmallVector<T, N>, DenseSet<T>, N> {
+class LLVM_ATTRIBUTE_WARN_UNUSED SmallSetVector
+    : public SetVector<T, SmallVector<T, N>, DenseSet<T>, N> {
 public:
   using SetVector<T, SmallVector<T, N>, DenseSet<T>, N>::SetVector;
 };

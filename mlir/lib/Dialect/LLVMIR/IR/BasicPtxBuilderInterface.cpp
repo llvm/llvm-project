@@ -12,6 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.h"
+#include "mlir/Dialect/LLVMIR/LLVMAggregateOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMCallOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Location.h"
@@ -474,6 +476,13 @@ LLVM::InlineAsmOp PtxBuilder::build() {
     ptxInstruction = predicateStr + " " + ptxInstruction;
   }
 
+  // Clobbers go after all register constraints.
+  if (interfaceOp.hasMemoryClobber()) {
+    if (!registerConstraints.empty())
+      registerConstraints += ",";
+    registerConstraints += "~{memory}";
+  }
+
   // Operand placeholders are written as %0, %1, ... (and the predicate as
   // @%N), because TableGen string attributes cannot contain '$', which inline
   // assembly uses for operand substitution. Convert only a '%' that is
@@ -498,6 +507,7 @@ LLVM::InlineAsmOp PtxBuilder::build() {
       /*constraints=*/registerConstraints.data(),
       /*has_side_effects=*/interfaceOp.hasSideEffect(),
       /*is_align_stack=*/false, LLVM::TailCallKind::None,
+      /*convergent=*/false,
       /*asm_dialect=*/asmDialectAttr,
       /*operand_attrs=*/ArrayAttr());
 }

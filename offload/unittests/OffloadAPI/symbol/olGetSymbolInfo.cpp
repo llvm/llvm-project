@@ -30,6 +30,24 @@ TEST_P(olGetSymbolInfoGlobalTest, SuccessKind) {
   ASSERT_EQ(RetrievedKind, OL_SYMBOL_KIND_GLOBAL_VARIABLE);
 }
 
+TEST_P(olGetSymbolInfoKernelTest, SuccessName) {
+  size_t Size = 0;
+  ASSERT_SUCCESS(olGetSymbolInfoSize(Kernel, OL_SYMBOL_INFO_NAME, &Size));
+  std::vector<char> Name(Size);
+  ASSERT_SUCCESS(
+      olGetSymbolInfo(Kernel, OL_SYMBOL_INFO_NAME, Size, Name.data()));
+  ASSERT_STREQ(Name.data(), "foo");
+}
+
+TEST_P(olGetSymbolInfoGlobalTest, SuccessName) {
+  size_t Size = 0;
+  ASSERT_SUCCESS(olGetSymbolInfoSize(Global, OL_SYMBOL_INFO_NAME, &Size));
+  std::vector<char> Name(Size);
+  ASSERT_SUCCESS(
+      olGetSymbolInfo(Global, OL_SYMBOL_INFO_NAME, Size, Name.data()));
+  ASSERT_STREQ(Name.data(), "global");
+}
+
 TEST_P(olGetSymbolInfoKernelTest, InvalidAddress) {
   void *RetrievedAddr;
   ASSERT_ERROR(OL_ERRC_SYMBOL_KIND,
@@ -42,6 +60,34 @@ TEST_P(olGetSymbolInfoGlobalTest, SuccessAddress) {
   ASSERT_SUCCESS(olGetSymbolInfo(Global, OL_SYMBOL_INFO_GLOBAL_VARIABLE_ADDRESS,
                                  sizeof(RetrievedAddr), &RetrievedAddr));
   ASSERT_NE(RetrievedAddr, nullptr);
+}
+
+using olGetSymbolInfoImageVariableTest = OffloadImageVariableTest;
+OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olGetSymbolInfoImageVariableTest);
+
+TEST_P(olGetSymbolInfoImageVariableTest, SuccessKind) {
+  ol_symbol_kind_t RetrievedKind;
+  ASSERT_SUCCESS(olGetSymbolInfo(Image, OL_SYMBOL_INFO_KIND,
+                                 sizeof(RetrievedKind), &RetrievedKind));
+  ASSERT_EQ(RetrievedKind, OL_SYMBOL_KIND_GLOBAL_VARIABLE);
+}
+
+TEST_P(olGetSymbolInfoImageVariableTest, SuccessSize) {
+  size_t RetrievedSize = 0;
+  ASSERT_SUCCESS(olGetSymbolInfo(Image, OL_SYMBOL_INFO_GLOBAL_VARIABLE_SIZE,
+                                 sizeof(RetrievedSize), &RetrievedSize));
+  ASSERT_EQ(RetrievedSize, 4 * sizeof(uint32_t));
+}
+
+TEST_P(olGetSymbolInfoImageVariableTest, SuccessAddressContents) {
+  void *RetrievedAddr = nullptr;
+  ASSERT_SUCCESS(olGetSymbolInfo(Image,
+                                 OL_SYMBOL_INFO_GLOBAL_VARIABLE_HOST_ADDRESS,
+                                 sizeof(RetrievedAddr), &RetrievedAddr));
+  ASSERT_NE(RetrievedAddr, nullptr);
+  const uint32_t *Data = static_cast<const uint32_t *>(RetrievedAddr);
+  for (uint32_t I = 0; I < 4; I++)
+    ASSERT_EQ(Data[I], I + 1);
 }
 
 TEST_P(olGetSymbolInfoKernelTest, InvalidSize) {

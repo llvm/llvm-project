@@ -132,7 +132,7 @@ define void @add_6(i32 %n) {
 ; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.inc, %loop ]
 ; CHECK-NEXT:    --> {0,+,6}<nuw><nsw><%loop> U: [0,-2147483648) S: [0,2147483647) Exits: (6 * ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 6) + (1 umin %n))) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.inc = add nsw i32 %iv, 6
-; CHECK-NEXT:    --> {6,+,6}<nuw><%loop> U: [6,-3) S: [-2147483648,2147483647) Exits: (6 + (6 * ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 6) + (1 umin %n)))) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {6,+,6}<nuw><%loop> U: [6,-3) S: [-2147483648,2147483647) Exits: (6 + (6 * ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 6) + (1 umin %n)))<u nuw>)<u nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @add_6
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 6) + (1 umin %n))
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 715827882
@@ -157,7 +157,7 @@ define void @add_7(i32 %n) {
 ; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.inc, %loop ]
 ; CHECK-NEXT:    --> {0,+,7}<nuw><nsw><%loop> U: [0,-2147483648) S: [0,-2147483648) Exits: (7 * ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 7) + (1 umin %n))) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.inc = add nsw i32 %iv, 7
-; CHECK-NEXT:    --> {7,+,7}<nuw><%loop> U: [7,-3) S: [7,0) Exits: (7 + (7 * ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 7) + (1 umin %n)))) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {7,+,7}<nuw><%loop> U: [7,-3) S: [7,0) Exits: (7 + (7 * ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 7) + (1 umin %n)))<u nuw>)<u nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @add_7
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 7) + (1 umin %n))
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 613566756
@@ -182,7 +182,7 @@ define void @add_8(i32 %n) {
 ; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.inc, %loop ]
 ; CHECK-NEXT:    --> {0,+,8}<nuw><nsw><%loop> U: [0,-2147483648) S: [0,2147483641) Exits: (8 * ((7 + %n) /u 8))<nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.inc = add nsw i32 %iv, 8
-; CHECK-NEXT:    --> {8,+,8}<nuw><%loop> U: [8,-7) S: [-2147483648,2147483641) Exits: (8 + (8 * ((7 + %n) /u 8))<nuw>) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {8,+,8}<nuw><%loop> U: [8,-7) S: [-2147483648,2147483641) Exits: (8 + (8 * ((7 + %n) /u 8))<nuw>)<u nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @add_8
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((7 + %n) /u 8)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 536870911
@@ -208,7 +208,7 @@ define void @add_9(i32 %n) {
 ; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.inc, %loop ]
 ; CHECK-NEXT:    --> {0,+,9}<nuw><nsw><%loop> U: [0,-2147483648) S: [0,-2147483648) Exits: (9 * ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 9) + (1 umin %n))) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.inc = add nsw i32 %iv, 9
-; CHECK-NEXT:    --> {9,+,9}<nuw><%loop> U: [9,-3) S: [9,0) Exits: (9 + (9 * ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 9) + (1 umin %n)))) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {9,+,9}<nuw><%loop> U: [9,-3) S: [9,0) Exits: (9 + (9 * ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 9) + (1 umin %n)))<u nuw>)<u nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @add_9
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 9) + (1 umin %n))
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 477218588
@@ -234,7 +234,7 @@ define void @add_10(i32 %n) {
 ; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.inc, %loop ]
 ; CHECK-NEXT:    --> {0,+,10}<nuw><nsw><%loop> U: [0,-2147483648) S: [0,2147483647) Exits: (10 * ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 10) + (1 umin %n))) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.inc = add nsw i32 %iv, 10
-; CHECK-NEXT:    --> {10,+,10}<nuw><%loop> U: [10,-5) S: [-2147483648,2147483647) Exits: (10 + (10 * ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 10) + (1 umin %n)))) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {10,+,10}<nuw><%loop> U: [10,-5) S: [-2147483648,2147483647) Exits: (10 + (10 * ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 10) + (1 umin %n)))<u nuw>)<u nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @add_10
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 10) + (1 umin %n))
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 429496729
@@ -509,4 +509,125 @@ leave:
   ret void
 }
 
+define void @select_of_constants_bound(i1 %c) {
+; CHECK-LABEL: 'select_of_constants_bound'
+; CHECK-NEXT:  Classifying expressions for: @select_of_constants_bound
+; CHECK-NEXT:    %n = select i1 %c, i64 5, i64 2
+; CHECK-NEXT:    --> %n U: [2,6) S: [2,6)
+; CHECK-NEXT:    %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,5) S: [0,5) Exits: (-1 + %n)<nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add nuw nsw i64 %iv, 1
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,6) S: [1,6) Exits: %n LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @select_of_constants_bound
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %n)<nsw>
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 4
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %n)<nsw>
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %n = select i1 %c, i64 5, i64 2
+  br label %loop
 
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp ult i64 %iv.next, %n
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+
+define void @select_of_constants_bound_wraps_unsigned(i1 %c) {
+; CHECK-LABEL: 'select_of_constants_bound_wraps_unsigned'
+; CHECK-NEXT:  Classifying expressions for: @select_of_constants_bound_wraps_unsigned
+; CHECK-NEXT:    %n = select i1 %c, i8 1, i8 -2
+; CHECK-NEXT:    --> %n U: [1,-1) S: [-2,2)
+; CHECK-NEXT:    %iv = phi i8 [ 0, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: [0,-2) S: [0,-2) Exits: (-1 + %n)<nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add nuw i8 %iv, 1
+; CHECK-NEXT:    --> {1,+,1}<nuw><%loop> U: [1,-1) S: [1,-1) Exits: %n LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @select_of_constants_bound_wraps_unsigned
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %n)<nsw>
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i8 -3
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %n)<nsw>
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %n = select i1 %c, i8 1, i8 -2
+  br label %loop
+
+loop:
+  %iv = phi i8 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.next = add nuw i8 %iv, 1
+  %ec = icmp ult i8 %iv.next, %n
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+define void @select_of_constants_bound_wraps_signed(i1 %c) {
+; CHECK-LABEL: 'select_of_constants_bound_wraps_signed'
+; CHECK-NEXT:  Classifying expressions for: @select_of_constants_bound_wraps_signed
+; CHECK-NEXT:    %n = select i1 %c, i8 -100, i8 100
+; CHECK-NEXT:    --> %n U: [100,-99) S: [-100,101)
+; CHECK-NEXT:    %iv = phi i8 [ -128, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {-128,+,1}<nsw><%loop> U: [-128,100) S: [-128,100) Exits: (-1 + %n)<nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add nsw i8 %iv, 1
+; CHECK-NEXT:    --> {-127,+,1}<nsw><%loop> U: [-127,101) S: [-127,101) Exits: %n LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @select_of_constants_bound_wraps_signed
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (127 + %n)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i8 -29
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (127 + %n)
+; CHECK-NEXT:  Loop %loop: Trip multiple is 4
+;
+entry:
+  %n = select i1 %c, i8 -100, i8 100
+  br label %loop
+
+loop:
+  %iv = phi i8 [ -128, %entry ], [ %iv.next, %loop ]
+  %iv.next = add nsw i8 %iv, 1
+  %ec = icmp slt i8 %iv.next, %n
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+define void @phi_of_constants_bound_wraps_unsigned(i1 %c) {
+; CHECK-LABEL: 'phi_of_constants_bound_wraps_unsigned'
+; CHECK-NEXT:  Classifying expressions for: @phi_of_constants_bound_wraps_unsigned
+; CHECK-NEXT:    %n = phi i8 [ 1, %then ], [ -2, %entry ]
+; CHECK-NEXT:    --> %n U: [1,-1) S: [-2,2)
+; CHECK-NEXT:    %iv = phi i8 [ 0, %join ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: [0,-2) S: [0,-2) Exits: (-1 + %n)<nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add nuw i8 %iv, 1
+; CHECK-NEXT:    --> {1,+,1}<nuw><%loop> U: [1,-1) S: [1,-1) Exits: %n LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @phi_of_constants_bound_wraps_unsigned
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %n)<nsw>
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i8 -3
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %n)<nsw>
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  br i1 %c, label %then, label %join
+
+then:
+  br label %join
+
+join:
+  %n = phi i8 [ 1, %then ], [ -2, %entry ]
+  br label %loop
+
+loop:
+  %iv = phi i8 [ 0, %join ], [ %iv.next, %loop ]
+  %iv.next = add nuw i8 %iv, 1
+  %ec = icmp ult i8 %iv.next, %n
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  ret void
+}

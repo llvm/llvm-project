@@ -81,16 +81,16 @@ void binary_assign_struct() {
 // CIR:   %[[LS:.*]] = cir.alloca "ls" {{.*}} : !cir.ptr<![[REC_S:.*]]>
 // CIR:   %[[LSV:.*]] = cir.alloca "lsv" {{.*}} : !cir.ptr<![[REC_SV:.*]]>
 // CIR:   %[[GS_PTR:.*]] = cir.get_global @gs : !cir.ptr<![[REC_S]]>
-// CIR:   cir.copy %[[GS_PTR]] to %[[LS]] : !cir.ptr<![[REC_S]]>
+// CIR:   cir.copy %[[GS_PTR]] align(4) to %[[LS]] align(4) : !cir.ptr<![[REC_S]]>
 // CIR:   %[[GSV_PTR:.*]] = cir.get_global @gsv : !cir.ptr<![[REC_SV]]>
-// CIR:   cir.copy %[[GSV_PTR]] to %[[LSV]] volatile : !cir.ptr<![[REC_SV]]>
+// CIR:   cir.copy %[[GSV_PTR]] align(4) to %[[LSV]] align(4) volatile : !cir.ptr<![[REC_SV]]>
 // CIR:   cir.return
 
 // LLVM: define {{.*}}void @binary_assign_struct()
 // LLVM:   %[[LS_PTR:.*]] = alloca %struct.S
 // LLVM:   %[[LSV_PTR:.*]] = alloca %struct.SV
-// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr %[[LS_PTR]], ptr @gs, i64 8, i1 false)
-// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr %[[LSV_PTR]], ptr @gsv, i64 8, i1 true)
+// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[LS_PTR]], ptr align 4 @gs, i64 8, i1 false)
+// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[LSV_PTR]], ptr align 4 @gsv, i64 8, i1 true)
 // LLVM:   ret void
 
 // OGCG: define {{.*}}void @binary_assign_struct()
@@ -124,7 +124,7 @@ int ignore_result_assign() {
 // CIR:         %[[VAL_5:.*]] = cir.const #cir.int<5> : !s32i
 // CIR:         cir.store{{.*}} %[[VAL_5]], %[[I]] : !s32i, !cir.ptr<!s32i>
 // CIR:         %[[VAL_5_64:.*]] = cir.const #cir.int<5> : !s64i
-// CIR:         %[[ARR_ELEM:.*]] = cir.get_element %[[ARR]][%[[VAL_5_64]] : !s64i] : !cir.ptr<!cir.array<!s32i x 10>> -> !cir.ptr<!s32i>
+// CIR:         %[[ARR_ELEM:.*]] = cir.get_element inbounds %[[ARR]][%[[VAL_5_64]] : !s64i] : !cir.ptr<!cir.array<!s32i x 10>> -> !cir.ptr<!s32i>
 // CIR:         %[[ARR_LOAD:.*]] = cir.load{{.*}} %[[ARR_ELEM]] : !cir.ptr<!s32i>, !s32i
 // CIR:         cir.store{{.*}} %[[ARR_LOAD]], %[[J]] : !s32i, !cir.ptr<!s32i>
 // CIR:         %[[NULL:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!s32i>
@@ -155,7 +155,7 @@ int ignore_result_assign() {
 // LLVM:         store i32 123, ptr %[[I_PTR]]
 // LLVM:         store i32 123, ptr %[[J_PTR]]
 // LLVM:         store i32 5, ptr %[[I_PTR]]
-// LLVM:         %[[GEP:.*]] = getelementptr [10 x i32], ptr %[[ARR_PTR]], i32 0, i64 5
+// LLVM:         %[[GEP:.*]] = getelementptr inbounds [10 x i32], ptr %[[ARR_PTR]], i64 0, i64 5
 // LLVM:         %[[ARR_VAL:.*]] = load i32, ptr %[[GEP]]
 // LLVM:         store i32 %[[ARR_VAL]], ptr %[[J_PTR]]
 // LLVM:         store ptr null, ptr %[[Q_PTR]]
@@ -169,7 +169,6 @@ int ignore_result_assign() {
 // LLVM:         %{{.*}} = load i32, ptr %[[RETVAL_PTR]]
 // LLVM:         ret i32
 // LLVM:       [[ELSE]]:
-// LLVM:         br label
 // LLVM:         store i32 0, ptr %[[RETVAL_PTR]]
 // LLVM:         %{{.*}} = load i32, ptr %[[RETVAL_PTR]]
 // LLVM:         ret i32

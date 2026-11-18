@@ -135,12 +135,23 @@ public:
     return true;
   }
 
+  /// Part of recursive declaration visitation. A global-storage variable's
+  /// initializer can define callables (lambdas, blocks) no function body
+  /// reaches; TraverseStmt is a no-op, so collect them here.
+  bool VisitVarDecl(VarDecl *VD) override {
+    addNodesForVarInit(VD);
+    return true;
+  }
+
   // We are only collecting the declarations, so do not step into the bodies.
   bool TraverseStmt(Stmt *S) override { return true; }
 
 private:
   /// Add the given declaration to the call graph.
   void addNodeForDecl(Decl *D, bool IsGlobal);
+
+  /// Walk a variable's initializer to add any callables defined within it.
+  void addNodesForVarInit(VarDecl *VD);
 };
 
 class CallGraphNode {

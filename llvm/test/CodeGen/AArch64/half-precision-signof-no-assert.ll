@@ -14,9 +14,8 @@ define ptr @fn(ptr %in, ptr %out) {
 ; CHECK-SD-NEXT:    fcvtl v1.4s, v1.4h
 ; CHECK-SD-NEXT:    fcmgt v2.4s, v1.4s, #0.0
 ; CHECK-SD-NEXT:    fcmlt v1.4s, v1.4s, #0.0
-; CHECK-SD-NEXT:    orr v1.16b, v1.16b, v2.16b
+; CHECK-SD-NEXT:    addhn v1.4h, v1.4s, v2.4s
 ; CHECK-SD-NEXT:    ldr h2, [x8, :lo12:.LCPI0_0]
-; CHECK-SD-NEXT:    xtn v1.4h, v1.4s
 ; CHECK-SD-NEXT:    and v0.8b, v1.8b, v0.8b
 ; CHECK-SD-NEXT:    movi d1, #0000000000000000
 ; CHECK-SD-NEXT:    str d0, [x1]
@@ -35,15 +34,13 @@ define ptr @fn(ptr %in, ptr %out) {
 ;
 ; CHECK-GI-LABEL: fn:
 ; CHECK-GI:       // %bb.0: // %fn
-; CHECK-GI-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-GI-NEXT:    ldr d1, [x0]
+; CHECK-GI-NEXT:    movi v0.4s, #1
 ; CHECK-GI-NEXT:    fcvtl v1.4s, v1.4h
-; CHECK-GI-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-GI-NEXT:    fcmgt v2.4s, v1.4s, v0.4s
-; CHECK-GI-NEXT:    fcmgt v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    movi v1.4s, #1
-; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v2.16b
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-GI-NEXT:    fcmgt v2.4s, v1.4s, #0.0
+; CHECK-GI-NEXT:    fcmlt v1.4s, v1.4s, #0.0
+; CHECK-GI-NEXT:    orr v1.16b, v1.16b, v2.16b
+; CHECK-GI-NEXT:    and v0.16b, v1.16b, v0.16b
 ; CHECK-GI-NEXT:    mvni v1.4h, #128, lsl #8
 ; CHECK-GI-NEXT:    ucvtf v0.4s, v0.4s
 ; CHECK-GI-NEXT:    fcvtn v0.4h, v0.4s

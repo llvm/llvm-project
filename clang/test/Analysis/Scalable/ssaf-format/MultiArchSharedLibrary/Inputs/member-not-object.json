@@ -1,0 +1,12 @@
+{
+  "members": [
+    "not an object"
+  ],
+  "namespace": [
+    {
+      "kind": "LinkUnit",
+      "name": "libfoo"
+    }
+  ],
+  "type": "MultiArchSharedLibrary"
+}

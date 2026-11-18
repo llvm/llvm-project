@@ -1,7 +1,9 @@
 ! Tests delayed privatization for `targets ... private(..)` for allocatables.
 
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -o - %s 2>&1 | FileCheck %s
-! RUN: bbc -emit-hlfir -fopenmp -o - %s 2>&1 | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --enable-delayed-privatization-staging \
+! RUN:   -o - %s 2>&1 | FileCheck %s
+! RUN: bbc -emit-hlfir -fopenmp --enable-delayed-privatization-staging -o - %s 2>&1 \
+! RUN:   | FileCheck %s
 
 subroutine target_allocatable(lb, ub, l)
   implicit none
@@ -132,13 +134,13 @@ end subroutine target_allocatable
 ! CHECK:      func.func @_QPtarget_allocatable
 ! CHECK:        %[[CHAR_VAR_DESC_ALLOCA:.*]] = fir.alloca !fir.boxchar<1>
 ! CHECK:        %[[REAL_ARR_DESC_ALLOCA:.*]] = fir.alloca !fir.box<!fir.array<?xf32>>
-! CHECK:        %[[ALLOC_VAR_ALLOCA:.*]] = fir.alloca !fir.box<!fir.heap<i32>> {bindc_name = "alloc_var", {{.*}}}
+! CHECK:        %[[ALLOC_VAR_ALLOCA:.*]] = fir.alloca !fir.box<!fir.heap<i32>> <{bindc_name = "alloc_var", {{.*}}}>
 ! CHECK:        %[[ALLOC_VAR_DECL:.*]]:2 = hlfir.declare %[[ALLOC_VAR_ALLOCA]]
-! CHECK:        %[[MAPPED_ALLOC:.*]] = fir.alloca i32 {bindc_name = "mapped_var", {{.*}}}
+! CHECK:        %[[MAPPED_ALLOC:.*]] = fir.alloca i32 <{bindc_name = "mapped_var", {{.*}}}>
 ! CHECK-NEXT:   %[[MAPPED_DECL:.*]]:2 = hlfir.declare %[[MAPPED_ALLOC]]
-! CHECK:        %[[CHAR_VAR_ALLOC:.*]] = fir.alloca !fir.char<1,?>{{.*}} {bindc_name = "char_var", {{.*}}}
+! CHECK:        %[[CHAR_VAR_ALLOC:.*]] = fir.alloca !fir.char<1,?>{{.*}} <{bindc_name = "char_var", {{.*}}}>
 ! CHECK:        %[[CHAR_VAR_DECL:.*]]:2 = hlfir.declare %[[CHAR_VAR_ALLOC]] typeparams
-! CHECK:        %[[REAL_ARR_ALLOC:.*]] = fir.alloca !fir.array<?xf32>, {{.*}} {bindc_name = "real_arr", {{.*}}}
+! CHECK:        %[[REAL_ARR_ALLOC:.*]] = fir.alloca !fir.array<?xf32>, {{.*}} <{bindc_name = "real_arr", {{.*}}}>
 ! CHECK:        %[[REAL_ARR_DECL:.*]]:2 = hlfir.declare %[[REAL_ARR_ALLOC]]({{.*}})
 ! CHECK:        fir.store %[[REAL_ARR_DECL]]#0 to %[[REAL_ARR_DESC_ALLOCA]] : !fir.ref<!fir.box<!fir.array<?xf32>>>
 ! CHECK:        %[[ALLOC_VAR_MEMBER:.*]] = omp.map.info var_ptr(%[[ALLOC_VAR_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>>, !fir.box<!fir.heap<i32>>)
@@ -175,4 +177,3 @@ end subroutine target_allocatable
 ! CHECK:          hlfir.declare %[[CHAR_ARG_UNBOX]]
 ! CHECK:          omp.terminator
 ! CHECK-NEXT:   }
-

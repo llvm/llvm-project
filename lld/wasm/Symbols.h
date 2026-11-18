@@ -59,6 +59,7 @@ public:
     UndefinedGlobalKind,
     UndefinedTableKind,
     UndefinedTagKind,
+    CommonKind,
     LazyKind,
     SharedFunctionKind,
     SharedDataKind,
@@ -77,6 +78,7 @@ public:
   }
 
   bool isLazy() const { return symbolKind == LazyKind; }
+  bool isCommon() const { return symbolKind == CommonKind; }
   bool isShared() const {
     return symbolKind == SharedFunctionKind || symbolKind == SharedDataKind ||
            symbolKind == SharedTagKind;
@@ -294,7 +296,7 @@ class DataSymbol : public Symbol {
 public:
   static bool classof(const Symbol *s) {
     return s->kind() == DefinedDataKind || s->kind() == UndefinedDataKind ||
-           s->kind() == SharedDataKind;
+           s->kind() == SharedDataKind || s->kind() == CommonKind;
   }
 
 protected:
@@ -347,6 +349,28 @@ public:
   static bool classof(const Symbol *s) {
     return s->kind() == UndefinedDataKind;
   }
+};
+
+class CommonSymbol : public DataSymbol {
+public:
+  CommonSymbol(StringRef name, uint32_t flags, InputFile *file, uint64_t size,
+               uint32_t alignment)
+      : DataSymbol(name, CommonKind, flags, file), size(size),
+        alignment(alignment) {}
+
+  static bool classof(const Symbol *s) { return s->kind() == CommonKind; }
+
+  uint64_t getSize() const { return size; }
+  uint32_t getAlignment() const { return alignment; }
+
+  void setCommon(uint64_t s, uint32_t a) {
+    size = s;
+    alignment = a;
+  }
+
+private:
+  uint64_t size;
+  uint32_t alignment;
 };
 
 class GlobalSymbol : public Symbol {
@@ -566,6 +590,7 @@ union SymbolUnion {
   alignas(SectionSymbol) char k[sizeof(SectionSymbol)];
   alignas(SharedFunctionSymbol) char l[sizeof(SharedFunctionSymbol)];
   alignas(SharedTagSymbol) char m[sizeof(SharedTagSymbol)];
+  alignas(CommonSymbol) char n[sizeof(CommonSymbol)];
 };
 
 // It is important to keep the size of SymbolUnion small for performance and

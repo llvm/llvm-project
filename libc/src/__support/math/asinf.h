@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_ASINF_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_ASINF_H
 
-#include "inv_trigf_utils.h"
+#include "asin_utils.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/except_value_utils.h"
@@ -24,7 +24,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
 LIBC_INLINE float asinf(float x) {
-  using namespace inv_trigf_utils_internal;
+  using namespace asin_internal;
   using FPBits = typename fputil::FPBits<float>;
 
   FPBits xbits(x);
@@ -122,7 +122,7 @@ LIBC_INLINE float asinf(float x) {
 
   xbits.set_sign(Sign::POS);
   double sign_two = TWO[x_sign]; // sign * (-2)
-  double uf = fputil::multiply_add(-0.5f, xbits.get_val(), 0.5f);
+  double uf = fputil::sub_multiply(0.5f, 0.5f, xbits.get_val());
   double u = static_cast<double>(uf);
   double c1 = sign_two * fputil::sqrt<double>(u);
   double c2 = fputil::multiply_add(sign_two, M_PI_OVER_4, c1);

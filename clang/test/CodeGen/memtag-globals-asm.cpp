@@ -248,32 +248,33 @@ int f(int x) {
       global_my_class.virtual_func() +
       local_my_class.virtual_func() +
       local_const_string[0] +
+  // GOT pointers may be spilled before use at -O0.
   // CHECK-Q-DAG: adrp  [[REG_J:x[0-9]+]], :got:_ZL12local_string
-  // CHECK-Q-DAG: ldr   [[REG_J2:x[0-9]+]], [[[REG_J]], :got_lo12:_ZL12local_string]
-  // CHECK-Q-DAG: ldrsb {{.*}}, [[[REG_J2]]]
+  // CHECK-Q-DAG: ldr   {{x[0-9]+}}, [[[REG_J]], :got_lo12:_ZL12local_string]
+  // CHECK-Q-DAG: ldrsb {{.*}}, [{{x[0-9]+}}]
       local_string[0] +
   // CHECK-Q-DAG: adrp  [[REG_K:x[0-9]+]], :got:_ZL16local_atomic_int
-  // CHECK-Q-DAG: ldr   [[REG_K2:x[0-9]+]], [[[REG_K]], :got_lo12:_ZL16local_atomic_int]
-  // CHECK-Q-DAG: ldar {{.*}}, [[[REG_K2]]]
+  // CHECK-Q-DAG: ldr   {{x[0-9]+}}, [[[REG_K]], :got_lo12:_ZL16local_atomic_int]
+  // CHECK-Q-DAG: ldar {{.*}}, [{{x[0-9]+}}]
       local_atomic_int +
   // CHECK-Q-DAG: adrp [[REG_L:x[0-9]+]], :got:global_atomic_int
-  // CHECK-Q-DAG: ldr  [[REG_L2:x[0-9]+]], [[[REG_L]], :got_lo12:global_atomic_int]
-  // CHECK-Q-DAG: ldar {{.*}}, [[[REG_L2]]]
+  // CHECK-Q-DAG: ldr  {{x[0-9]+}}, [[[REG_L]], :got_lo12:global_atomic_int]
+  // CHECK-Q-DAG: ldar {{.*}}, [{{x[0-9]+}}]
       global_atomic_int +
   // CHECK-Q-DAG: adrp [[REG_M:x[0-9]+]], :got:global_union
-  // CHECK-Q-DAG: ldr  [[REG_M2:x[0-9]+]], [[[REG_M]], :got_lo12:global_union]
-  // CHECK-Q-DAG: ldr  {{.*}}, [[[REG_M2]]]
+  // CHECK-Q-DAG: ldr  {{x[0-9]+}}, [[[REG_M]], :got_lo12:global_union]
+  // CHECK-Q-DAG: ldr  {{.*}}, [{{x[0-9]+}}]
       global_union.i +
   // CHECK-Q-DAG: adrp  [[REG_N:x[0-9]+]], :got:_ZL11local_union
-  // CHECK-Q-DAG: ldr   [[REG_N2:x[0-9]+]], [[[REG_N]], :got_lo12:_ZL11local_union]
-  // CHECK-Q-DAG: ldrsb {{.*}}, [[[REG_N2]]]
+  // CHECK-Q-DAG: ldr   {{x[0-9]+}}, [[[REG_N]], :got_lo12:_ZL11local_union]
+  // CHECK-Q-DAG: ldrsb {{.*}}, [{{x[0-9]+}}]
       local_union.c +
   /// Global variables - ignore.
       global_tls +
       local_tls +
   // CHECK-Q-DAG: adrp  [[REG_O:x[0-9]+]], :got:_ZZ1fiE12function_int
-  // CHECK-Q-DAG: ldr   [[REG_O2:x[0-9]+]], [[[REG_O]], :got_lo12:_ZZ1fiE12function_int]
-  // CHECK-Q-DAG: ldr   {{.*}}, [[[REG_O2]]]
+  // CHECK-Q-DAG: ldr   {{x[0-9]+}}, [[[REG_O]], :got_lo12:_ZZ1fiE12function_int]
+  // CHECK-Q-DAG: ldr   {{.*}}, [{{x[0-9]+}}]
       function_int;
 }
 

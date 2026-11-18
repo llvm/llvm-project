@@ -14,7 +14,6 @@
 #include "stmt-parser.h"
 #include "token-parsers.h"
 #include "type-parser-implementation.h"
-#include "flang/Parser/characters.h"
 #include "flang/Parser/parse-tree.h"
 
 namespace Fortran::parser {
@@ -43,6 +42,18 @@ TYPE_PARSER(validFunctionStmt ||
     construct<FunctionStmt>(many(prefixSpec), "FUNCTION" >> name,
         defaulted(parenthesized(optionalList(name))), maybe(suffix)) /
         checkEndOfKnownStmt)
+
+// R1535 subroutine-stmt ->
+//         [prefix] SUBROUTINE subroutine-name [( [dummy-arg-list] )
+//         [proc-language-binding-spec]]
+TYPE_PARSER(
+    (construct<SubroutineStmt>(many(prefixSpec), "SUBROUTINE" >> name,
+         !"("_tok >> pure<std::list<DummyArg>>(),
+         pure<std::optional<LanguageBindingSpec>>()) ||
+        construct<SubroutineStmt>(many(prefixSpec), "SUBROUTINE" >> name,
+            defaulted(parenthesized(optionalList(dummyArg))),
+            maybe(languageBindingSpec))) /
+    checkEndOfKnownStmt)
 
 // R502 program-unit ->
 //        main-program | external-subprogram | module | submodule | block-data
@@ -81,12 +92,72 @@ static constexpr auto normalProgramUnit{
                     semicolons >> not(endOfLine))),
             skipToNextLineIfAny)};
 
-static constexpr auto globalCompilerDirective{
-    construct<ProgramUnit>(indirect(compilerDirective))};
-
-static constexpr auto globalOpenACCCompilerDirective{
+// Directives accepted at file scope as ordinary program units.
+static constexpr auto globalDirective{
+    construct<ProgramUnit>(indirect(compilerDirective)) ||
     construct<ProgramUnit>(indirect(skipStuffBeforeStatement >>
         "!$ACC "_sptok >> Parser<OpenACCRoutineConstruct>{} / endOfLine))};
+
+// Collapse only consecutive misplaced DECLAREs into a recovery node.
+static constexpr auto misplacedOpenACCDeclareRun{construct<ProgramUnit>(
+    misplacedOpenACCDeclareRecovery / skipMany(misplacedOpenACCDeclare))};
+
+// Use the consuming parser's directive grammar during classification too.
+// A compiler directive can end at a semicolon before the procedure header.
+static constexpr auto skipFileScopeDirectives{
+    skipMany(skipStuffBeforeStatement >>
+        (globalDirective >> ok || misplacedOpenACCDeclare))};
+
+// At file scope, DECLARE may start an unnamed main program. Complete
+// specification statements, assignments, and construct names take precedence
+// over procedure headers, including CUDA ATTRIBUTES statements with
+// keyword-shaped object names. After fixed-form blank removal, REAL FUNCTION F
+// can be a scalar declaration and REAL FUNCTION F(N) can be an array
+// declaration. A CUDA header without arguments can be an ATTRIBUTES statement;
+// these cases retain normal parser diagnostics. In fixed form, MODULE
+// SUBROUTINE S can also start module SUBROUTINES. The lookahead recognizes a
+// prefixed header, but program-unit parsing gives the module interpretation
+// priority.
+static constexpr auto externalSubprogramStmt{skipStuffBeforeStatement >>
+    !statement(Parser<OtherSpecificationStmt>{}) >>
+    !statement(typeDeclarationStmt) >> !statement(assignmentStmt) >>
+    maybe(label) >> !(name / ":") >>
+    (validFunctionStmt >> ok || subroutineStmt >> ok)};
+
+// Recognize procedure headers using the ordinary SUBROUTINE parser, including
+// its recovery, so a malformed header still gets a DECLARE placement error.
+// A leading DECLARE is misplaced before a recognized procedure header.
+// Classify the whole prefix without consuming it, then parse it once while
+// retaining ordinary directive nodes. Both passes must reach the same header;
+// unsupported directives retain their normal parsing and diagnostics.
+static constexpr auto misplacedOpenACCDeclareAtFileScope{
+    lookAhead(MisplacedOpenACCDeclare{}) >>
+    lookAhead(skipFileScopeDirectives >> externalSubprogramStmt) >>
+    some(skipStuffBeforeStatement >>
+        (globalDirective || misplacedOpenACCDeclareRun)) /
+        lookAhead(externalSubprogramStmt)};
+
+// Recover a whole prefix as one group: classifying each DECLARE separately
+// would rescan the remaining suffix and take quadratic time on long runs,
+// including runs interleaved with ordinary directives. All alternatives return
+// lists so repetition can collect complete groups; flattenProgramUnits then
+// splices them into Program's flat list, retaining ordinary directive nodes.
+static constexpr auto programUnitGroup{skipStuffBeforeStatement >>
+    (applyFunction(singletonList<ProgramUnit>, globalDirective) ||
+        misplacedOpenACCDeclareAtFileScope ||
+        applyFunction(singletonList<ProgramUnit>, normalProgramUnit))};
+
+static std::list<ProgramUnit> flattenProgramUnits(
+    std::list<std::list<ProgramUnit>> &&groups) {
+  std::list<ProgramUnit> result;
+  for (auto &group : groups) {
+    result.splice(result.end(), std::move(group));
+  }
+  return result;
+}
+
+static constexpr auto programUnits{
+    applyFunction(flattenProgramUnits, some(programUnitGroup))};
 
 // R501 program -> program-unit [program-unit]...
 // This is the top-level production for the Fortran language.
@@ -94,10 +165,8 @@ TYPE_PARSER(construct<Program>(skipStuffBeforeStatement >>
     (extension<LanguageFeature::EmptySourceFile>(
          "nonstandard usage: empty source file"_port_en_US,
          consumedAllInput >> pure<std::list<ProgramUnit>>()) ||
-        some(skipStuffBeforeStatement >> (globalCompilerDirective ||
-                                             globalOpenACCCompilerDirective ||
-                                             normalProgramUnit)) /
-            skipStuffBeforeStatement)))
+        programUnits) /
+        skipStuffBeforeStatement))
 
 // R507 declaration-construct ->
 //        specification-construct | data-stmt | format-stmt |
@@ -294,7 +363,10 @@ TYPE_CONTEXT_PARSER("module subprogram part"_en_US,
 TYPE_PARSER(construct<ModuleSubprogram>(indirect(functionSubprogram)) ||
     construct<ModuleSubprogram>(indirect(subroutineSubprogram)) ||
     construct<ModuleSubprogram>(indirect(Parser<SeparateModuleSubprogram>{})) ||
-    construct<ModuleSubprogram>(indirect(compilerDirective)))
+    construct<ModuleSubprogram>(indirect(skipStuffBeforeStatement >>
+        "!$ACC "_sptok >> Parser<OpenACCRoutineConstruct>{} / endOfLine)) ||
+    construct<ModuleSubprogram>(indirect(compilerDirective)) ||
+    construct<ModuleSubprogram>(misplacedOpenACCDeclareRecovery))
 
 // R1410 module-nature -> INTRINSIC | NON_INTRINSIC
 constexpr auto moduleNature{
@@ -375,9 +447,14 @@ TYPE_PARSER(construct<InterfaceBlock>(statement(Parser<InterfaceStmt>{}),
 
 // R1502 interface-specification ->
 //         interface-body | procedure-stmt | compiler-directive
+// Flang extension: an OpenACC ROUTINE directive is also accepted directly
+// within an interface block (e.g. preceding the interface body it names).
 TYPE_PARSER(construct<InterfaceSpecification>(Parser<InterfaceBody>{}) ||
     construct<InterfaceSpecification>(statement(Parser<ProcedureStmt>{})) ||
-    construct<InterfaceSpecification>(indirect(compilerDirective)))
+    construct<InterfaceSpecification>(indirect(skipStuffBeforeStatement >>
+        "!$ACC "_sptok >> Parser<OpenACCRoutineConstruct>{} / endOfLine)) ||
+    construct<InterfaceSpecification>(indirect(compilerDirective)) ||
+    construct<InterfaceSpecification>(misplacedOpenACCDeclareRecovery))
 
 // R1503 interface-stmt -> INTERFACE [generic-spec] | ABSTRACT INTERFACE
 TYPE_PARSER(construct<InterfaceStmt>("INTERFACE" >> maybe(genericSpec)) ||
@@ -518,6 +595,14 @@ TYPE_PARSER(construct<ActualArgSpec>(
 // F2023 R1528 consequent-arg -> expr | variable
 // N.B. "variable" is subsumed by "expr" in the parser;
 // semantics determines the distinction.
+// C1544: "A consequent-arg that is an expr shall not be a variable."
+// This is a grammar disambiguation rule making the two alternatives of
+// R1528 mutually exclusive.  It is automatically satisfied here because
+// "variable" is subsumed by "expr" in the parser — there is only one
+// production, so no consequent-arg can accidentally match the wrong
+// alternative.  Semantics uses IsVariable() to distinguish the two
+// cases when it matters (e.g. C1541 requires variables for INTENT(OUT/
+// INOUT) dummies).
 constexpr auto consequent{construct<ConditionalArg::Consequent>(
                               ".NIL." >> construct<ConditionalArgNil>()) ||
     construct<ConditionalArg::Consequent>(indirect(expr))};
@@ -619,18 +704,6 @@ TYPE_CONTEXT_PARSER("SUBROUTINE subprogram"_en_US,
     construct<SubroutineSubprogram>(statement(subroutineStmt),
         specificationPart, executionPart, maybe(internalSubprogramPart),
         unterminatedStatement(endSubroutineStmt)))
-
-// R1535 subroutine-stmt ->
-//         [prefix] SUBROUTINE subroutine-name [( [dummy-arg-list] )
-//         [proc-language-binding-spec]]
-TYPE_PARSER(
-    (construct<SubroutineStmt>(many(prefixSpec), "SUBROUTINE" >> name,
-         !"("_tok >> pure<std::list<DummyArg>>(),
-         pure<std::optional<LanguageBindingSpec>>()) ||
-        construct<SubroutineStmt>(many(prefixSpec), "SUBROUTINE" >> name,
-            defaulted(parenthesized(optionalList(dummyArg))),
-            maybe(languageBindingSpec))) /
-    checkEndOfKnownStmt)
 
 // R1536 dummy-arg -> dummy-arg-name | *
 TYPE_PARSER(construct<DummyArg>(name) || construct<DummyArg>(star))

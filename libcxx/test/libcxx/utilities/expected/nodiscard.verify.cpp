@@ -15,6 +15,8 @@
 #include <expected>
 #include <utility>
 
+#include "test_macros.h"
+
 void test() {
   // [expected.bad.void]
 
@@ -47,6 +49,9 @@ void test() {
   *std::move(exp);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 
   exp.has_value(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+#if TEST_STD_VER >= 29
+  exp.has_error(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+#endif
 
   cExp.value();            // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   exp.value();             // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
@@ -110,6 +115,9 @@ void test() {
   const std::expected<void, int> cVExp{};
 
   vExp.has_value(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+#if TEST_STD_VER >= 29
+  vExp.has_error(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+#endif
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   cVExp.error();

@@ -165,6 +165,8 @@ public:
     eCore_arm_arm64_32,
     eCore_arm_aarch64,
 
+    eCore_arm_arm64ex1,
+
     eCore_mips32,
     eCore_mips32r2,
     eCore_mips32r3,
@@ -239,6 +241,9 @@ public:
     eCore_avr,
 
     eCore_wasm32,
+
+    // AMDGPU models are represented by the triple subarchitecture.
+    eCore_amd_gpu,
 
     kNumCores,
 

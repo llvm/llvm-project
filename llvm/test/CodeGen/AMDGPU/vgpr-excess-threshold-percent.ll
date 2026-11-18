@@ -1,16 +1,16 @@
 ; REQUIRES: asserts
 
 ; gfx942 tests with different threshold percentages
-; RUN: llc -mtriple=amdgcn -mcpu=gfx942 -amdgpu-vgpr-threshold-percent=40  -debug-only=machine-scheduler -o /dev/null %s 2>&1 | FileCheck -check-prefixes=GFX942-40  %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx942 -amdgpu-vgpr-threshold-percent=60  -debug-only=machine-scheduler -o /dev/null %s 2>&1 | FileCheck -check-prefixes=GFX942-60  %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx942 -amdgpu-vgpr-threshold-percent=80  -debug-only=machine-scheduler -o /dev/null %s 2>&1 | FileCheck -check-prefixes=GFX942-80  %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx942 -amdgpu-vgpr-threshold-percent=100 -debug-only=machine-scheduler -o /dev/null %s 2>&1 | FileCheck -check-prefixes=GFX942-100 %s
+; RUN: llc -mtriple=amdgpu9.42 -amdgpu-vgpr-threshold-percent=40  -debug-only=machine-scheduler -o /dev/null %s 2>&1 | FileCheck -check-prefixes=GFX942-40  %s
+; RUN: llc -mtriple=amdgpu9.42 -amdgpu-vgpr-threshold-percent=60  -debug-only=machine-scheduler -o /dev/null %s 2>&1 | FileCheck -check-prefixes=GFX942-60  %s
+; RUN: llc -mtriple=amdgpu9.42 -amdgpu-vgpr-threshold-percent=80  -debug-only=machine-scheduler -o /dev/null %s 2>&1 | FileCheck -check-prefixes=GFX942-80  %s
+; RUN: llc -mtriple=amdgpu9.42 -amdgpu-vgpr-threshold-percent=100 -debug-only=machine-scheduler -o /dev/null %s 2>&1 | FileCheck -check-prefixes=GFX942-100 %s
 
 ; gfx1250 tests with coexec scheduling strategy and different threshold percentages
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -mattr=+real-true16 --amdgpu-sched-strategy=coexec -amdgpu-vgpr-threshold-percent=40  -debug-only=machine-scheduler -o /dev/null %s 2>&1 | FileCheck -check-prefixes=GFX1250-40  %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -mattr=+real-true16 --amdgpu-sched-strategy=coexec -amdgpu-vgpr-threshold-percent=60  -debug-only=machine-scheduler -o /dev/null %s 2>&1 | FileCheck -check-prefixes=GFX1250-60  %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -mattr=+real-true16 --amdgpu-sched-strategy=coexec -amdgpu-vgpr-threshold-percent=80  -debug-only=machine-scheduler -o /dev/null %s 2>&1 | FileCheck -check-prefixes=GFX1250-80  %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -mattr=+real-true16 --amdgpu-sched-strategy=coexec -amdgpu-vgpr-threshold-percent=100 -debug-only=machine-scheduler -o /dev/null %s 2>&1 | FileCheck -check-prefixes=GFX1250-100 %s
+; RUN: llc -mtriple=amdgpu12.50 -mattr=+real-true16 --amdgpu-sched-strategy=coexec -amdgpu-vgpr-threshold-percent=40  -debug-only=machine-scheduler -o /dev/null %s 2>&1 | FileCheck -check-prefixes=GFX1250-40  %s
+; RUN: llc -mtriple=amdgpu12.50 -mattr=+real-true16 --amdgpu-sched-strategy=coexec -amdgpu-vgpr-threshold-percent=60  -debug-only=machine-scheduler -o /dev/null %s 2>&1 | FileCheck -check-prefixes=GFX1250-60  %s
+; RUN: llc -mtriple=amdgpu12.50 -mattr=+real-true16 --amdgpu-sched-strategy=coexec -amdgpu-vgpr-threshold-percent=80  -debug-only=machine-scheduler -o /dev/null %s 2>&1 | FileCheck -check-prefixes=GFX1250-80  %s
+; RUN: llc -mtriple=amdgpu12.50 -mattr=+real-true16 --amdgpu-sched-strategy=coexec -amdgpu-vgpr-threshold-percent=100 -debug-only=machine-scheduler -o /dev/null %s 2>&1 | FileCheck -check-prefixes=GFX1250-100 %s
 
 ; Test that -amdgpu-vgpr-threshold-percent affects VGPRExcessLimit and VGPRCriticalLimit
 ; for functions with different waves-per-eu targets.

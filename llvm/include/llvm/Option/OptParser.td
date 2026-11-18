@@ -32,10 +32,14 @@ def KIND_INPUT : OptionKind<"Input", 1, true>;
 def KIND_UNKNOWN : OptionKind<"Unknown", 2, true>;
 // A flag with no values.
 def KIND_FLAG : OptionKind<"Flag">;
+// A flag, or an option whose value follows '=' (--x or --x=v).
+def KIND_FLAG_OR_EQ : OptionKind<"FlagOrEq">;
 // An option which prefixes its (single) value.
 def KIND_JOINED : OptionKind<"Joined", 1>;
 // An option which is followed by its value.
 def KIND_SEPARATE : OptionKind<"Separate">;
+// An option whose value follows '=' or is the next argument (--x=v or --x v).
+def KIND_SEPARATE_OR_EQ : OptionKind<"SeparateOrEq">;
 // An option followed by its values, which are separated by commas.
 def KIND_COMMAJOINED : OptionKind<"CommaJoined">;
 // An option which is which takes multiple (separate) arguments.
@@ -134,8 +138,6 @@ class Option<list<string> prefixes, string name, OptionKind kind,
   code NormalizedValuesScope = "";
   code Normalizer = "";
   code Denormalizer = "";
-  code ValueMerger = "mergeForwardValue";
-  code ValueExtractor = "extractForwardValue";
   list<code> NormalizedValues = ?;
   list<SubCommand> SubCommands = subcommands;
 }
@@ -165,6 +167,12 @@ class JoinedOrSeparate<list<string> prefixes, string name,
 class JoinedAndSeparate<list<string> prefixes, string name,
                         list<SubCommand> subcommands = []>
     : Option<prefixes, name, KIND_JOINED_AND_SEPARATE, subcommands>;
+class FlagOrEq<list<string> prefixes, string name,
+               list<SubCommand> subcommands = []>
+    : Option<prefixes, name, KIND_FLAG_OR_EQ, subcommands>;
+class SeparateOrEq<list<string> prefixes, string name,
+                   list<SubCommand> subcommands = []>
+    : Option<prefixes, name, KIND_SEPARATE_OR_EQ, subcommands>;
 
 // Mix-ins for adding optional attributes.
 
@@ -248,14 +256,6 @@ class MarshallingInfoNegativeFlag<KeyPathAndMacro kpm, code defaultvalue = "true
   code Denormalizer = "denormalizeSimpleFlag";
 }
 
-// Marshalled option - single flag contributing to a bitfield.
-class MarshallingInfoBitfieldFlag<KeyPathAndMacro kpm, code value>
-  : MarshallingInfoFlag<kpm, "0u"> {
-  code Normalizer = "makeFlagToValueNormalizer("#value#")";
-  code ValueMerger = "mergeMaskValue";
-  code ValueExtractor = "(extractMaskValue<unsigned, decltype("#value#"), "#value#">)";
-}
-
 // Implementation detail of BoolOption.
 class MarshallingInfoBooleanFlag<KeyPathAndMacro kpm, code defaultvalue, code value,
                                  code other_value, code other_name>
@@ -280,8 +280,6 @@ class Normalizer<code normalizer> { code Normalizer = normalizer; }
 class Denormalizer<code denormalizer> { code Denormalizer = denormalizer; }
 class NormalizedValuesScope<code scope> { code NormalizedValuesScope = scope; }
 class NormalizedValues<list<code> definitions> { list<code> NormalizedValues = definitions; }
-class ValueMerger<code merger> { code ValueMerger = merger; }
-class ValueExtractor<code extractor> { code ValueExtractor = extractor; }
 
 // Predefined options.
 

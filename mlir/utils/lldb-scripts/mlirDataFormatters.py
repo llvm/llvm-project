@@ -61,6 +61,7 @@ builtin_attr_type_mnemonics = {
     "mlir::Float8E4M3B11FNUZType": '"f8E4M3B11FNUZ"',
     "mlir::Float8E3M4Type": '"f8E3M4"',
     "mlir::Float8E8M0FNUType": '"f8E8M0FNU"',
+    "mlir::Float8E5M3FNUType": '"f8E5M3FNU"',
     "mlir::BFloat16Type": '"bf16"',
     "mlir::Float16Type": '"f16"',
     "mlir::FloatTF32Type": '"tf32"',

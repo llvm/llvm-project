@@ -1,10 +1,10 @@
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=bonaire < %s | FileCheck -check-prefixes=GCN,CIVI %s
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=tonga < %s | FileCheck -check-prefixes=GCN,CIVI %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=fiji < %s | FileCheck -check-prefixes=GCN,CIVI,CIVI-HSA %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,GFX9 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 < %s | FileCheck -check-prefixes=GCN,GFX10,GFX10PLUS %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+real-true16 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,GFX10PLUS,GFX11-TRUE16 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=-real-true16 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,GFX10PLUS,GFX11-FAKE16 %s
+; RUN: llc -mtriple=amdgpu7.04-mesa-mesa3d < %s | FileCheck -check-prefixes=GCN,CIVI %s
+; RUN: llc -mtriple=amdgpu8.02-mesa-mesa3d < %s | FileCheck -check-prefixes=GCN,CIVI %s
+; RUN: llc -mtriple=amdgpu8.03-amd-amdhsa < %s | FileCheck -check-prefixes=GCN,CIVI,CIVI-HSA %s
+; RUN: llc -mtriple=amdgpu9.00-amd-amdhsa < %s | FileCheck -check-prefixes=GCN,GFX9 %s
+; RUN: llc -mtriple=amdgpu10.10-amd-amdhsa < %s | FileCheck -check-prefixes=GCN,GFX10,GFX10PLUS %s
+; RUN: llc -mtriple=amdgpu11.00-amd-amdhsa -mattr=+real-true16 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,GFX10PLUS,GFX11-TRUE16 %s
+; RUN: llc -mtriple=amdgpu11.00-amd-amdhsa -mattr=-real-true16 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,GFX10PLUS,GFX11-FAKE16 %s
 
 ; GCN-LABEL: {{^}}store_flat_i32:
 ; GCN-DAG: s_load_{{dwordx2|b64}} s[[[LO_SREG:[0-9]+]]:[[HI_SREG:[0-9]+]]],

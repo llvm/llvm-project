@@ -115,7 +115,6 @@ public:
 private:
   friend class NestedPatternContext;
   friend class NestedMatch;
-  friend struct State;
 
   /// Copies the list of nested patterns to the arena allocator associated with
   /// this pattern.
@@ -187,8 +186,6 @@ NestedPattern For(ArrayRef<NestedPattern> nested = {});
 NestedPattern For(const FilterFunctionType &filter,
                   ArrayRef<NestedPattern> nested = {});
 
-bool isParallelLoop(Operation &op);
-bool isReductionLoop(Operation &op);
 bool isLoadOrStore(Operation &op);
 
 } // namespace matcher

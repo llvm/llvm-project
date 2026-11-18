@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "Diagnostics.h"
-#include "../clang-tidy/ClangTidyDiagnosticConsumer.h"
 #include "Compiler.h"
 #include "Config.h"
 #include "Protocol.h"
@@ -20,6 +19,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TokenKinds.h"
+#include "clang/Edit/EditedSource.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/Token.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -388,12 +388,6 @@ void setTags(clangd::Diag &D) {
   } else if (UnusedDiags->contains(D.ID)) {
     D.Tags.push_back(DiagnosticTag::Unnecessary);
   }
-  if (D.Source == Diag::ClangTidy) {
-    if (llvm::StringRef(D.Name).starts_with("misc-unused-"))
-      D.Tags.push_back(DiagnosticTag::Unnecessary);
-    if (llvm::StringRef(D.Name).starts_with("modernize-"))
-      D.Tags.push_back(DiagnosticTag::Deprecated);
-  }
 }
 } // namespace
 
@@ -570,57 +564,45 @@ int getSeverity(DiagnosticsEngine::Level L) {
   llvm_unreachable("Unknown diagnostic level!");
 }
 
-std::vector<Diag> StoreDiags::take(const clang::tidy::ClangTidyContext *Tidy) {
+std::vector<Diag> StoreDiags::take() {
   // Do not forget to emit a pending diagnostic if there is one.
   flushLastDiag();
 
   // Fill in name/source now that we have all the context needed to map them.
   for (auto &Diag : Output) {
     if (const char *ClangDiag = getDiagnosticCode(Diag.ID)) {
-      // Warnings controlled by -Wfoo are better recognized by that name.
-      StringRef Warning = [&] {
-        if (OrigSrcMgr) {
-          return OrigSrcMgr->getDiagnostics()
-              .getDiagnosticIDs()
-              ->getWarningOptionForDiag(Diag.ID);
-        }
-        if (!DiagnosticIDs::IsCustomDiag(Diag.ID))
-          return DiagnosticIDs{}.getWarningOptionForDiag(Diag.ID);
-        return StringRef{};
-      }();
+      // Feature modules may already have supplied diagnostic metadata.
+      if (Diag.Source == Diag::Unknown)
+        Diag.Source = Diag::Clang;
+      if (Diag.Name.empty()) {
+        // Warnings controlled by -Wfoo are better recognized by that name.
+        StringRef Warning = [&] {
+          if (OrigSrcMgr) {
+            return OrigSrcMgr->getDiagnostics()
+                .getDiagnosticIDs()
+                ->getWarningOptionForDiag(Diag.ID);
+          }
+          if (!DiagnosticIDs::IsCustomDiag(Diag.ID))
+            return DiagnosticIDs{}.getWarningOptionForDiag(Diag.ID);
+          return StringRef{};
+        }();
 
-      if (!Warning.empty()) {
-        Diag.Name = ("-W" + Warning).str();
-      } else {
-        StringRef Name(ClangDiag);
-        // Almost always an error, with a name like err_enum_class_reference.
-        // Drop the err_ prefix for brevity.
-        Name.consume_front("err_");
-        Diag.Name = std::string(Name);
-      }
-      Diag.Source = Diag::Clang;
-    } else if (Tidy != nullptr) {
-      std::string TidyDiag = Tidy->getCheckName(Diag.ID);
-      if (!TidyDiag.empty()) {
-        Diag.Name = std::move(TidyDiag);
-        Diag.Source = Diag::ClangTidy;
-        // clang-tidy bakes the name into diagnostic messages. Strip it out.
-        // It would be much nicer to make clang-tidy not do this.
-        auto CleanMessage = [&](std::string &Msg) {
-          StringRef Rest(Msg);
-          if (Rest.consume_back("]") && Rest.consume_back(Diag.Name) &&
-              Rest.consume_back(" ["))
-            Msg.resize(Rest.size());
-        };
-        CleanMessage(Diag.Message);
-        for (auto &Note : Diag.Notes)
-          CleanMessage(Note.Message);
-        for (auto &Fix : Diag.Fixes)
-          CleanMessage(Fix.Message);
+        if (!Warning.empty()) {
+          Diag.Name = ("-W" + Warning).str();
+        } else {
+          StringRef Name(ClangDiag);
+          // Almost always an error, with a name like err_enum_class_reference.
+          // Drop the err_ prefix for brevity.
+          Name.consume_front("err_");
+          Diag.Name = std::string(Name);
+        }
       }
     }
     setTags(Diag);
   }
+  if (Finalizer)
+    for (auto &Diag : Output)
+      Finalizer(Diag);
   // Deduplicate clang-tidy diagnostics -- some clang-tidy checks may emit
   // duplicated messages due to various reasons (e.g. the check doesn't handle
   // template instantiations well; clang-tidy alias checks).
@@ -787,7 +769,6 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
       return false;
     // Copy as we may modify the ranges.
     auto FixIts = Info.getFixItHints().vec();
-    llvm::SmallVector<TextEdit, 1> Edits;
     for (auto &FixIt : FixIts) {
       // Allow fixits within a single macro-arg expansion to be applied.
       // This can be incorrect if the argument is expanded multiple times in
@@ -805,6 +786,14 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
       if (FixIt.RemoveRange.getBegin().isMacroID() ||
           FixIt.RemoveRange.getEnd().isMacroID())
         return false;
+    }
+    llvm::SmallVector<FixItHint> MergedFixIts;
+    clang::edit::mergeFixits(FixIts, SM, *LangOpts, MergedFixIts);
+    if (MergedFixIts.empty())
+      return false;
+    llvm::SmallVector<TextEdit> Edits;
+    Edits.reserve(MergedFixIts.size());
+    for (const auto &FixIt : MergedFixIts) {
       if (!isInsideMainFile(FixIt.RemoveRange.getBegin(), SM))
         return false;
       Edits.push_back(toTextEdit(FixIt, SM, *LangOpts));
@@ -812,8 +801,8 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
 
     llvm::SmallString<64> Message;
     // If requested and possible, create a message like "change 'foo' to 'bar'".
-    if (SyntheticMessage && FixIts.size() == 1) {
-      const auto &FixIt = FixIts.front();
+    if (SyntheticMessage && MergedFixIts.size() == 1) {
+      const auto &FixIt = MergedFixIts.front();
       bool Invalid = false;
       llvm::StringRef Remove =
           Lexer::getSourceText(FixIt.RemoveRange, SM, *LangOpts, &Invalid);

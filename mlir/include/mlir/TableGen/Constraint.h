@@ -17,6 +17,7 @@
 #include "mlir/TableGen/Predicate.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include <vector>
 
 namespace llvm {
 class Record;
@@ -79,6 +80,10 @@ public:
   /// Returns the name of the C++ function that should be generated for this
   /// constraint, or std::nullopt if no C++ function should be generated.
   std::optional<StringRef> getCppFunctionName() const;
+
+  /// Returns the C++ headers declaring the C++ classes this type or attribute
+  /// constraint refers to.
+  std::vector<StringRef> getCppIncludes() const;
 
   Kind getKind() const { return kind; }
 

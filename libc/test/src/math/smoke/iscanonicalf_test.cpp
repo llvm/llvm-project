@@ -10,4 +10,4 @@
 
 #include "src/math/iscanonicalf.h"
 
-LIST_ISCANONICAL_TESTS(float, LIBC_NAMESPACE::iscanonicalf)
+LIST_ISCANONICAL_TESTS(Iscanonicalf, float, LIBC_NAMESPACE::iscanonicalf)

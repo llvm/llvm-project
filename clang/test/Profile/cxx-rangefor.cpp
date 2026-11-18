@@ -1,10 +1,10 @@
 // Tests for instrumentation of C++11 range-for
 
-// RUN: %clang_cc1 -x c++ %s -triple %itanium_abi_triple -main-file-name cxx-rangefor.cpp -std=c++11 -o - -emit-llvm -fprofile-instrument=clang > %tgen
+// RUN: %clang_cc1 -x c++ %s -triple x86_64-unknown-linux-gnu -main-file-name cxx-rangefor.cpp -std=c++11 -o - -emit-llvm -fprofile-instrument=clang > %tgen
 // RUN: FileCheck --input-file=%tgen -check-prefix=CHECK -check-prefix=PGOGEN %s
 
 // RUN: llvm-profdata merge %S/Inputs/cxx-rangefor.proftext -o %t.profdata
-// RUN: %clang_cc1 -x c++ %s -triple %itanium_abi_triple -main-file-name cxx-rangefor.cpp -std=c++11 -o - -emit-llvm -fprofile-instrument-use=clang -fprofile-instrument-use-path=%t.profdata > %tuse
+// RUN: %clang_cc1 -x c++ %s -triple x86_64-unknown-linux-gnu -main-file-name cxx-rangefor.cpp -std=c++11 -o - -emit-llvm -fprofile-instrument-use=clang -fprofile-instrument-use-path=%t.profdata > %tuse
 // RUN: FileCheck --input-file=%tuse -check-prefix=CHECK -check-prefix=PGOUSE %s
 
 // PGOGEN: @[[RFC:__profc__Z9range_forv]] = {{(private|internal)}} global [5 x i64] zeroinitializer
@@ -14,21 +14,21 @@
 void range_for() {
   int arr[] = {1, 2, 3, 4, 5};
   int sum = 0;
-  // PGOGEN: store {{.*}} @[[RFC]], i32 0, i32 1
+  // PGOGEN: store {{.*}} @[[RFC]], i64 8
   // PGOUSE: br {{.*}} !prof ![[RF1:[0-9]+]]
   for (auto i : arr) {
-    // PGOGEN: store {{.*}} @[[RFC]], i32 0, i32 2
+    // PGOGEN: store {{.*}} @[[RFC]], i64 16
     // PGOUSE: br {{.*}} !prof ![[RF2:[0-9]+]]
     if (i == 3)
       continue;
     sum += i;
-    // PGOGEN: store {{.*}} @[[RFC]], i32 0, i32 3
+    // PGOGEN: store {{.*}} @[[RFC]], i64 24
     // PGOUSE: br {{.*}} !prof ![[RF3:[0-9]+]]
     if (sum >= 7)
       break;
   }
 
-  // PGOGEN: store {{.*}} @[[RFC]], i32 0, i32 4
+  // PGOGEN: store {{.*}} @[[RFC]], i64 32
   // PGOUSE: br {{.*}} !prof ![[RF4:[0-9]+]]
   if (sum) {}
 }

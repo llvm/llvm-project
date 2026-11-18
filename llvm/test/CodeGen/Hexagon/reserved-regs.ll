@@ -1,10 +1,13 @@
 ; RUN: llc -mtriple=hexagon -O2 < %s | FileCheck -check-prefix=CHECK-DEFAULT %s
+; RUN: llc -mtriple=hexagon -mattr=+reserved-r6 -O2 < %s | FileCheck -check-prefix=CHECK-R6 %s
+; RUN: llc -mtriple=hexagon -mattr=+reserved-r6,+reserved-r7 -O2 < %s | FileCheck -check-prefix=CHECK-R6R7 %s
 ; RUN: llc -mtriple=hexagon -mattr=+reserved-r16 -O2 < %s | FileCheck -check-prefix=CHECK-R16 %s
 ; RUN: llc -mtriple=hexagon -mattr=+reserved-r16,+reserved-r17 -O2 < %s | FileCheck -check-prefix=CHECK-R16R17 %s
 
 ; Test that reserved registers are not used by the register allocator.
 ; The function has a call, forcing values to be placed in callee-saved
 ; registers (R16-R27). Reserving a register must prevent its use.
+; Caller-saved registers (R6-R15) can also be reserved.
 
 declare void @bar()
 
@@ -25,6 +28,9 @@ define i32 @pressure(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f) {
 
 ; CHECK-DEFAULT: r16
 ; CHECK-DEFAULT: r17
+; CHECK-R6-NOT: r6
+; CHECK-R6R7-NOT: r6
+; CHECK-R6R7-NOT: r7
 ; CHECK-R16-NOT: r16
 ; CHECK-R16R17-NOT: r16
 ; CHECK-R16R17-NOT: r17

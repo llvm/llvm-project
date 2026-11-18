@@ -7,12 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "UseNodiscardCheck.h"
+#include "../utils/Matchers.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Type.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
+using namespace clang::tidy::matchers;
 
 namespace clang::tidy::modernize {
 
@@ -28,10 +30,6 @@ static bool doesNoDiscardMacroExist(ASTContext &Context,
 }
 
 namespace {
-AST_MATCHER(CXXMethodDecl, isOverloadedOperator) {
-  // Don't put ``[[nodiscard]]`` in front of operators.
-  return Node.isOverloadedOperator();
-}
 AST_MATCHER(CXXMethodDecl, isConversionOperator) {
   // Don't put ``[[nodiscard]]`` in front of a conversion decl
   // like operator bool().
@@ -82,9 +80,9 @@ void UseNodiscardCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void UseNodiscardCheck::registerMatchers(MatchFinder *Finder) {
-  auto FunctionObj =
+  const auto FunctionObj =
       cxxRecordDecl(hasAnyName("::std::function", "::boost::function"));
-  auto NoDiscardClassTemplateSpecialization =
+  const auto NoDiscardClassTemplateSpecialization =
       classTemplateSpecializationDecl(hasSpecializedTemplate(classTemplateDecl(
           has(cxxRecordDecl(hasAttr(attr::WarnUnusedResult))))));
 
@@ -122,8 +120,8 @@ void UseNodiscardCheck::check(const MatchFinder::MatchResult &Result) {
 
   ASTContext &Context = *Result.Context;
 
-  auto Diag = diag(RetLoc, "function %0 should be marked %1")
-              << MatchedDecl << NoDiscardMacro;
+  const auto Diag = diag(RetLoc, "function %0 should be marked %1")
+                    << MatchedDecl << NoDiscardMacro;
 
   // Check for the existence of the keyword being used as the ``[[nodiscard]]``.
   if (!doesNoDiscardMacroExist(Context, NoDiscardMacro))

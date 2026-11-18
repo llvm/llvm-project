@@ -1,5 +1,5 @@
 ; RUN: opt -S -passes=openmp-opt < %s
-target triple = "amdgcn-amd-amdhsa"
+target triple = "amdgpu7.00-amd-amdhsa"
 
 %"struct.ompx::state::TeamStateTy" = type { %"struct.ompx::state::ICVStateTy", i32, i32, ptr }
 %"struct.ompx::state::ICVStateTy" = type { i32, i32, i32, i32, i32, i32, i32 }

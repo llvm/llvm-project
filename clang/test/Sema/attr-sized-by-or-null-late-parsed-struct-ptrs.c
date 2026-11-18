@@ -66,7 +66,6 @@ struct has_unannotated_vla {
 };
 
 struct on_member_pointer_struct_with_vla {
-  // expected-error@+1{{'sized_by_or_null' cannot be applied to a pointer with pointee of unknown size because 'struct has_unannotated_vla' is a struct type with a flexible array member}}
   struct has_unannotated_vla* objects __sized_by_or_null(size);
   int size;
 };
@@ -78,7 +77,6 @@ struct has_annotated_vla {
 };
 
 struct on_member_pointer_struct_with_annotated_vla {
-  // expected-error@+1{{'sized_by_or_null' cannot be applied to a pointer with pointee of unknown size because 'struct has_annotated_vla' is a struct type with a flexible array member}}
   struct has_annotated_vla* objects __sized_by_or_null(size);
   int size;
 };

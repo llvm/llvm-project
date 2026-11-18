@@ -182,16 +182,19 @@ public:
   // expression result and is not a constant object like
   // SBFrame::EvaluateExpression(...) returns, but a child object of the
   // variable value.
-  lldb::SBValue
-  GetValueForVariablePath(const char *var_expr_cstr,
-                          DynamicValueType use_dynamic,
-                          lldb::DILMode mode = lldb::eDILModeFull);
+  lldb::SBValue GetValueForVariablePath(const char *var_path,
+                                        DynamicValueType use_dynamic);
 
   /// The version that doesn't supply a 'use_dynamic' value will use the
   /// target's default.
-  lldb::SBValue
-  GetValueForVariablePath(const char *var_path,
-                          lldb::DILMode mode = lldb::eDILModeFull);
+  lldb::SBValue GetValueForVariablePath(const char *var_path);
+
+  lldb::SBValue GetValueForVariablePathWithMode(const char *var_path,
+                                                lldb::DILMode mode,
+                                                DynamicValueType use_dynamic);
+
+  lldb::SBValue GetValueForVariablePathWithMode(const char *var_path,
+                                                lldb::DILMode mode);
 
   /// Find variables, register sets, registers, or persistent variables using
   /// the frame as the scope.
@@ -210,7 +213,7 @@ public:
 
   /// Similar to \a GetDescription() but the format of the description can be
   /// configured via the \p format parameter. See
-  /// https://lldb.llvm.org/use/formatting.html for more information on format
+  /// \lldbformatting for more information on format
   /// strings.
   ///
   /// \param[in] format
@@ -231,7 +234,7 @@ protected:
   friend class SBThread;
   friend class SBValue;
 
-  friend class lldb_private::ScriptInterpreter;
+  friend class lldb_private::ScriptInterpreterBridge;
   friend class lldb_private::python::SWIGBridge;
   friend class lldb_private::lua::SWIGBridge;
 

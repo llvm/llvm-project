@@ -1,6 +1,4 @@
-// Unsupported on AIX because we don't support the requisite "__clangast"
-// section in XCOFF yet.
-// UNSUPPORTED: target={{.*}}-aix{{.*}}
+// REQUIRES: object-wrapped-module
 
 // RUN: rm -rf %t && mkdir %t
 // RUN: cp %S/Inputs/modules-pch/* %t
@@ -11,7 +9,9 @@
 // RUN: sed "s|DIR|%/t|g" %S/Inputs/modules-pch/cdb_pch.json > %t/cdb_pch.json
 // RUN: clang-scan-deps -compilation-database %t/cdb_pch.json -format experimental-full \
 // RUN:   -module-files-dir %t/build > %t/result_pch.json
-// RUN: cat %t/result_pch.json | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t -check-prefix=CHECK-PCH
+// RUN: cat %t/result_pch.json | sed 's:\\\\\?:/:g' \
+// RUN:   | %scan-deps-filter --fields=name,clang-module-deps,clang-modulemap-file,command-line,context-hash,file-deps,link-libraries,clang-context-hash,input-file \
+// RUN:   | FileCheck %s -DPREFIX=%/t -check-prefix=CHECK-PCH
 //
 // Check we didn't build the PCH during dependency scanning.
 // RUN: not cat %/t/pch.h.pch
@@ -102,7 +102,9 @@
 // RUN: sed "s|DIR|%/t|g" %S/Inputs/modules-pch/cdb_tu.json > %t/cdb_tu.json
 // RUN: clang-scan-deps -compilation-database %t/cdb_tu.json -format experimental-full \
 // RUN:   -module-files-dir %t/build > %t/result_tu.json
-// RUN: cat %t/result_tu.json | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t -check-prefix=CHECK-TU
+// RUN: cat %t/result_tu.json | sed 's:\\\\\?:/:g' \
+// RUN:   | %scan-deps-filter --fields=name,clang-module-deps,clang-modulemap-file,command-line,context-hash,file-deps,link-libraries,clang-context-hash,input-file \
+// RUN:   | FileCheck %s -DPREFIX=%/t -check-prefix=CHECK-TU
 //
 // CHECK-TU:      {
 // CHECK-TU-NEXT:   "modules": [
@@ -152,7 +154,9 @@
 // RUN: sed "s|DIR|%/t|g" %S/Inputs/modules-pch/cdb_tu_with_common.json > %t/cdb_tu_with_common.json
 // RUN: clang-scan-deps -compilation-database %t/cdb_tu_with_common.json -format experimental-full \
 // RUN:   -module-files-dir %t/build > %t/result_tu_with_common.json
-// RUN: cat %t/result_tu_with_common.json | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t -check-prefix=CHECK-TU-WITH-COMMON
+// RUN: cat %t/result_tu_with_common.json | sed 's:\\\\\?:/:g' \
+// RUN:   | %scan-deps-filter --fields=name,clang-module-deps,clang-modulemap-file,command-line,context-hash,file-deps,link-libraries,clang-context-hash,input-file \
+// RUN:   | FileCheck %s -DPREFIX=%/t -check-prefix=CHECK-TU-WITH-COMMON
 //
 // CHECK-TU-WITH-COMMON:      {
 // CHECK-TU-WITH-COMMON-NEXT:   "modules": [

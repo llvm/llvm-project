@@ -31,13 +31,18 @@ public:
     return {};
   }
 
+  llvm::SmallVector<llvm::StringLiteral> GetOptionalMethods() const override {
+    return {"explains_stop", "should_stop", "is_stale", "should_step",
+            "stop_description"};
+  }
+
   llvm::Expected<bool> ExplainsStop(Event *event) override;
 
   llvm::Expected<bool> ShouldStop(Event *event) override;
 
   llvm::Expected<bool> IsStale() override;
 
-  lldb::StateType GetRunState() override;
+  llvm::Expected<lldb::StateType> GetRunState() override;
 
   llvm::Error GetStopDescription(lldb::StreamSP &stream) override;
 

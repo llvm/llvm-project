@@ -33,6 +33,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Support/Debug.h"
@@ -52,6 +53,11 @@ namespace {
     bool runOnMachineFunction(MachineFunction &Fn) override;
 
     StringRef getPassName() const override { return "ARM A15 S->D optimizer"; }
+
+    void getAnalysisUsage(AnalysisUsage &AU) const override {
+      AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
+      MachineFunctionPass::getAnalysisUsage(AU);
+    }
 
   private:
     const ARMBaseInstrInfo *TII;
@@ -584,6 +590,9 @@ bool A15SDOptimizer::runOnInstruction(MachineInstr *MI) {
   //                      defined input operand
   //                    * Otherwise, fall back on the same strategy as COPY.
   //
+
+  if (MI->isDebugInstr())
+    return false;
 
   // First, get all the reads of D-registers done by this instruction.
   SmallVector<unsigned, 8> Defs = getReadDPRs(MI);

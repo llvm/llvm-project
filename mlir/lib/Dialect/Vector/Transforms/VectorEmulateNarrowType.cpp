@@ -89,20 +89,26 @@ static FailureOr<Operation *> getCompressedMaskOp(OpBuilder &rewriter,
       numSrcElemsPerDest;
 
   Operation *maskOp = mask.getDefiningOp();
-  SmallVector<vector::ExtractOp, 2> extractOps;
+  // Chain of `vector.extract` ops that lead to the op that created the mask.
   // TODO: add support to `vector.broadcast`.
-  // Finding the mask creation operation.
+  SmallVector<vector::ExtractOp, 2> extractOps;
+
+  // Trace the mask back to its creation op, looking through `vector.extract`
+  // ops. Any other defining op is unsupported.
   while (maskOp &&
          !isa<arith::ConstantOp, vector::CreateMaskOp, vector::ConstantMaskOp>(
              maskOp)) {
-    if (auto extractOp = dyn_cast<vector::ExtractOp>(maskOp)) {
-      maskOp = extractOp.getSource().getDefiningOp();
-      extractOps.push_back(extractOp);
-    }
+    auto extractOp = dyn_cast<vector::ExtractOp>(maskOp);
+    if (!extractOp)
+      return failure();
+    maskOp = extractOp.getSource().getDefiningOp();
+    extractOps.push_back(extractOp);
   }
 
-  if (!isa<arith::ConstantOp, vector::CreateMaskOp, vector::ConstantMaskOp>(
-          maskOp))
+  // `maskOp` is null when the mask is a block argument, which has no defining
+  // op.
+  if (!isa_and_present<arith::ConstantOp, vector::CreateMaskOp,
+                       vector::ConstantMaskOp>(maskOp))
     return failure();
 
   // Computing the "compressed" mask. All the emulation logic (i.e. computing
@@ -1953,14 +1959,14 @@ static Value rewriteI8ToI4Trunc(PatternRewriter &rewriter, Location loc,
   Value zeroOutMask = arith::ConstantOp::create(
       rewriter, loc, DenseElementsAttr::get(deinterI8VecType, i8LowBitMask));
   Value zeroOutLow = arith::AndIOp::create(
-      rewriter, loc, deinterleaveOp.getRes1(), zeroOutMask);
+      rewriter, loc, deinterleaveOp.getResultEven(), zeroOutMask);
 
   // 3. Move high i4 values to upper side of the byte.
   constexpr int8_t bitsToShift = 4;
   auto shiftValues = arith::ConstantOp::create(
       rewriter, loc, DenseElementsAttr::get(deinterI8VecType, bitsToShift));
-  Value shlHigh = arith::ShLIOp::create(rewriter, loc, deinterleaveOp.getRes2(),
-                                        shiftValues);
+  Value shlHigh = arith::ShLIOp::create(
+      rewriter, loc, deinterleaveOp.getResultOdd(), shiftValues);
 
   // 4. Merge high and low i4 values.
   auto mergedHiLowOp = arith::OrIOp::create(rewriter, loc, zeroOutLow, shlHigh);

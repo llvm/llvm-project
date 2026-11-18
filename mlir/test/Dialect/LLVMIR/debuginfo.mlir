@@ -5,11 +5,12 @@
 
 // CHECK-DAG: #[[NS:.*]] = #llvm.di_namespace<name = "cu_import_ns", exportSymbols = false>
 // CHECK-DAG: #[[IE:.*]] = #llvm.di_imported_entity<tag = DW_TAG_imported_module, scope = #[[FILE]], entity = #[[NS]], file = #[[FILE]]>
-// CHECK-DAG: #[[CU:.*]] = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #[[FILE]], producer = "MLIR", isOptimized = true, emissionKind = Full, isDebugInfoForProfiling = true, importedEntities = #[[IE]]>
+// CHECK-DAG: #[[CU:.*]] = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = #llvm.di_source_language_name<language = DW_LANG_C, dialect = DW_LLVM_LANG_DIALECT_simt>, file = #[[FILE]], producer = "MLIR", isOptimized = true, emissionKind = Full, isDebugInfoForProfiling = true, importedEntities = #[[IE]]>
 #cu_import_ns = #llvm.di_namespace<name = "cu_import_ns", exportSymbols = false>
 #cu_import_ie = #llvm.di_imported_entity<tag = DW_TAG_imported_module, scope = #file, entity = #cu_import_ns, file = #file>
 #cu = #llvm.di_compile_unit<
-  id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #file,
+  id = distinct[0]<>, sourceLanguage = #llvm.di_source_language_name<
+  language = DW_LANG_C, dialect = DW_LLVM_LANG_DIALECT_simt>, file = #file,
   producer = "MLIR", isOptimized = true, emissionKind = Full,
   isDebugInfoForProfiling = true, importedEntities = #cu_import_ie
 >
@@ -244,6 +245,22 @@ llvm.mlir.global @data() {dbg_exprs = [#var_expression, #var_expression1]} : i64
 // CHECK-DAG: #[[GV1]] = #llvm.di_global_variable<{{.*}}name = "a"{{.*}}>
 // CHECK-DAG: #[[GV2]] = #llvm.di_global_variable<{{.*}}name = "b"{{.*}}>
 
+#enum0 = #llvm.di_enumerator<name = "zero", value = 0 : i64>
+#enum1 = #llvm.di_enumerator<value = 0 : i64>
+#enum2 = #llvm.di_enumerator<name = "thirty", value = 30 : i64>
+#enum3 = #llvm.di_enumerator<name = "neg_one", value = -1 : i64>
+#enum4 = #llvm.di_enumerator<name = "u64_max", value = -1 : i64, isUnsigned = true>
+#enum5 = #llvm.di_enumerator<name = "u8_max", value = 255 : i8, isUnsigned = true>
+#enum6 = #llvm.di_enumerator<name = "one_i1", value = true>
+#enum7 = #llvm.di_enumerator<name = "i128_min", value = -170141183460469231731687303715884105728 : i128>
+#enum8 = #llvm.di_enumerator<name = "i128_max", value = 170141183460469231731687303715884105727 : i128>
+#enum9 = #llvm.di_enumerator<name = "u132", value = -2722258935367507707706996859454145691648 : i132, isUnsigned = true>
+#enum_comp = #llvm.di_composite_type<
+  tag = DW_TAG_enumeration_type, name = "enum_type", file = #file, line = 42,
+  baseType = #int1, sizeInBits = 32, alignInBits = 32,
+  elements = #enum0, #enum1, #enum2, #enum3, #enum4, #enum5, #enum6, #enum7, #enum8, #enum9
+>
+// CHECK-DAG: #[[ENUM_COMP:.*]] = #llvm.di_composite_type<{{.*}}elements = #llvm.di_enumerator<name = "zero", value = 0 : i64>, #llvm.di_enumerator<value = 0 : i64>, #llvm.di_enumerator<name = "thirty", value = 30 : i64>, #llvm.di_enumerator<name = "neg_one", value = -1 : i64>, #llvm.di_enumerator<name = "u64_max", value = -1 : i64, isUnsigned = true>, #llvm.di_enumerator<name = "u8_max", value = -1 : i8, isUnsigned = true>, #llvm.di_enumerator<name = "one_i1", value = true>, #llvm.di_enumerator<name = "i128_min", value = -170141183460469231731687303715884105728 : i128>, #llvm.di_enumerator<name = "i128_max", value = 170141183460469231731687303715884105727 : i128>, #llvm.di_enumerator<name = "u132", value = -2722258935367507707706996859454145691648 : i132, isUnsigned = true>>
 
 // CHECK: llvm.func @addr(%[[ARG:.*]]: i64)
 llvm.func @addr(%arg: i64) {
@@ -268,5 +285,10 @@ llvm.func @value(%arg1: i32, %arg2: i32, %arg3 : i32) {
   llvm.intr.dbg.label #label1
   // CHECK: llvm.intr.dbg.label #[[LABEL2]]
   llvm.intr.dbg.label #label2
+  llvm.return
+}
+
+// CHECK: llvm.func @enumerators() attributes {di = #[[ENUM_COMP]]}
+llvm.func @enumerators() attributes {di = #enum_comp} {
   llvm.return
 }

@@ -1,9 +1,9 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,GFX9 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 < %s | FileCheck -check-prefixes=GCN,GFX10PLUS,GFX10 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,GFX10PLUS,GFX11 %s
+; RUN: llc -mtriple=amdgpu9.00 < %s | FileCheck -check-prefixes=GCN,GFX9 %s
+; RUN: llc -mtriple=amdgpu10.10 < %s | FileCheck -check-prefixes=GCN,GFX10PLUS,GFX10 %s
+; RUN: llc -mtriple=amdgpu11.00 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,GFX10PLUS,GFX11 %s
 
 ; GCN-LABEL: {{^}}test_add_lit:
-; GFX10PLUS: v_add_co_u32{{(_e64)?}} v{{[0-9]+}}, vcc_lo, 0x80992bff, v{{[0-9]+}}
+; GFX10PLUS: v_add_co_u32{{(_e64)?}} v{{[0-9]+}}, vcc_lo, v{{[0-9]+}}, 0x80992bff
 ; GFX11: v_add_co_ci_u32_e64 v{{[0-9]+}}, null, 0xe7, v{{[0-9]+}}, vcc_lo
 ; GFX10: v_add_co_ci_u32_e32 v{{[0-9]+}}, vcc_lo, 0xe7, v{{[0-9]+}}, vcc_lo
 ; GFX9:  v_mov_b32_e32 [[C2:v[0-9]+]], 0xe7

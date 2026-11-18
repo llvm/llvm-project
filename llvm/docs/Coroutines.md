@@ -1,13 +1,9 @@
 # Coroutines in LLVM
 
-```{contents}
-:local:
-:depth: 3
-```
 
-```{warning}
+:::{warning}
 Compatibility across LLVM releases is not guaranteed.
-```
+:::
 
 ## Introduction
 
@@ -526,7 +522,7 @@ suspend:
 If different cleanup code needs to be executed for different suspend points,
 a similar switch will be in the `f.destroy` function.
 
-```{note}
+:::{note}
 Using suspend index in a coroutine state and having a switch in `f.resume` and
 `f.destroy` is one of the possible implementation strategies. We explored
 another option where a distinct `f.resume1`, `f.resume2`, etc. are created for
@@ -534,7 +530,7 @@ every suspend point, and instead of storing an index, the resume and destroy
 function pointers are updated at every suspend. Early testing showed that the
 current approach is easier on the optimizer than the latter so it is a
 lowering strategy implemented at the moment.
-```
+:::
 
 ### Distinct Save and Suspend
 
@@ -2087,7 +2083,7 @@ and replaces `coro.alloc` and `coro.free` intrinsics with `false` and `null`
 respectively to remove the deallocation code.
 
 ### CoroElide
-The pass CoroElide examines if the inlined coroutine is eligible for heap
+The pass CoroElide examines if the coroutine is eligible for heap
 allocation elision optimization. If so, it replaces
 `coro.begin` intrinsic with an address of a coroutine frame placed on its caller
 and replaces `coro.alloc` and `coro.free` intrinsics with `false` and `null`

@@ -11,7 +11,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
 
 
-@skipUnlessDarwin
+@requireDarwin
 class TestdSYMModuleInit(TestBase):
     SHARED_BUILD_TESTCASE = False
 

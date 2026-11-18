@@ -157,7 +157,7 @@ Status PlatformRemoteDarwinDevice::GetSymbolFile(const FileSpec &platform_file,
 }
 
 Status PlatformRemoteDarwinDevice::GetSharedModule(
-    const ModuleSpec &module_spec, Process *process, ModuleSP &module_sp,
+    const ModuleSpec &module_spec, Target &target, ModuleSP &module_sp,
     llvm::SmallVectorImpl<ModuleSP> *old_modules, bool *did_create_ptr) {
   // For iOS, the SDK files are all cached locally on the host system. So first
   // we ask for the file in the cached SDK, then we attempt to get a shared
@@ -262,7 +262,7 @@ Status PlatformRemoteDarwinDevice::GetSharedModule(
   // This may not be an SDK-related module.  Try whether we can bring in the
   // thing to our local cache.
   error = GetSharedModuleWithLocalCache(module_spec, module_sp, old_modules,
-                                        did_create_ptr, process);
+                                        did_create_ptr, target);
   if (error.Success())
     return error;
 
@@ -270,7 +270,7 @@ Status PlatformRemoteDarwinDevice::GetSharedModule(
   // directories.
   if (!module_sp)
     error = PlatformDarwin::FindBundleBinaryInExecSearchPaths(
-        module_spec, process, module_sp, old_modules, did_create_ptr);
+        module_spec, target, module_sp, old_modules, did_create_ptr);
 
   if (error.Success())
     return error;
@@ -291,8 +291,7 @@ uint32_t PlatformRemoteDarwinDevice::GetConnectedSDKIndex() {
         const uint32_t num_sdk_infos = m_sdk_directory_infos.size();
         for (uint32_t i = 0; i < num_sdk_infos; ++i) {
           const SDKDirectoryInfo &sdk_dir_info = m_sdk_directory_infos[i];
-          if (strstr(sdk_dir_info.directory.GetFilename().AsCString(""),
-                     build->c_str())) {
+          if (sdk_dir_info.directory.GetFilename().contains(build->c_str())) {
             m_connected_module_sdk_idx = i;
           }
         }

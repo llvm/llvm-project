@@ -437,7 +437,8 @@ public:
   /// Get information about a script interpreter as structured data.
   SBStructuredData GetScriptInterpreterInfo(ScriptLanguage language);
 
-  /// Get the LLDB version string.
+  /// Get the LLDB version string. Plugins can augment this string. To
+  /// get the full string, call this after SBDebugger::Initialize().
   static const char *GetVersionString();
 
   /// Convert a state type to a string.
@@ -678,6 +679,7 @@ public:
 protected:
   friend class lldb_private::CommandPluginInterfaceImplementation;
   friend class lldb_private::python::SWIGBridge;
+  friend class lldb_private::ScriptInterpreterBridge;
   friend class lldb_private::SystemInitializerFull;
 
   SBDebugger(const lldb::DebuggerSP &debugger_sp);

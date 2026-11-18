@@ -21,21 +21,11 @@
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/CommandLine.h"
+#include "llvm/Option/LibraryOptions.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
-
-cl::opt<CompactBranchPolicy> MipsCompactBranchPolicy(
-    "mips-compact-branches", cl::Optional, cl::init(CB_Optimal),
-    cl::desc("MIPS Specific: Compact branch policy."),
-    cl::values(clEnumValN(CB_Never, "never",
-                          "Do not use compact branches if possible."),
-               clEnumValN(CB_Optimal, "optimal",
-                          "Use compact branches where appropriate (default)."),
-               clEnumValN(CB_Always, "always",
-                          "Always use compact branches if possible.")));
 
 #define DEBUG_TYPE "mips-subtarget"
 
@@ -43,59 +33,37 @@ cl::opt<CompactBranchPolicy> MipsCompactBranchPolicy(
 #define GET_SUBTARGETINFO_CTOR
 #include "MipsGenSubtargetInfo.inc"
 
-// FIXME: Maybe this should be on by default when Mips16 is specified
-//
-static cl::opt<bool>
-    Mixed16_32("mips-mixed-16-32", cl::init(false),
-               cl::desc("Allow for a mixture of Mips16 "
-                        "and Mips32 code in a single output file"),
-               cl::Hidden);
-
-static cl::opt<bool> Mips_Os16("mips-os16", cl::init(false),
-                               cl::desc("Compile all functions that don't use "
-                                        "floating point as Mips 16"),
-                               cl::Hidden);
-
-static cl::opt<bool> Mips16HardFloat("mips16-hard-float", cl::NotHidden,
-                                     cl::desc("Enable mips16 hard float."),
-                                     cl::init(false));
-
-static cl::opt<bool>
-    Mips16ConstantIslands("mips16-constant-islands", cl::NotHidden,
-                          cl::desc("Enable mips16 constant islands."),
-                          cl::init(true));
-
-static cl::opt<bool>
-    GPOpt("mgpopt", cl::Hidden,
-          cl::desc("Enable gp-relative addressing of mips small data items"));
+#define OPTIONS_STRUCT_DEFS
+#include "MipsOptions.inc"
 
 bool MipsSubtarget::DspWarningPrinted = false;
 bool MipsSubtarget::MSAWarningPrinted = false;
 bool MipsSubtarget::VirtWarningPrinted = false;
 bool MipsSubtarget::CRCWarningPrinted = false;
 bool MipsSubtarget::GINVWarningPrinted = false;
-bool MipsSubtarget::MIPS1WarningPrinted = false;
 
 void MipsSubtarget::anchor() {}
 
 MipsSubtarget::MipsSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
-                             bool little, const MipsTargetMachine &TM,
+                             StringRef ABIName, bool little,
+                             const MipsTargetMachine &TM,
                              MaybeAlign StackAlignOverride)
     : MipsGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS),
+      CLOpts(TM.getCLOpts()), MCCLOpts(TM.getMCCLOpts()),
       MipsArchVersion(MipsDefault), IsLittle(little), IsSoftFloat(false),
       IsSingleFloat(false), IsFPXX(false), NoABICalls(false), Abs2008(false),
       IsFP64bit(false), UseOddSPReg(true), IsNaN2008bit(false),
       IsGP64bit(false), HasVFPU(false), HasCnMips(false), HasCnMipsP(false),
       IsR5900(false), FixR5900(false), HasMips3_32(false), HasMips3_32r2(false),
       HasMips4_32(false), HasMips4_32r2(false), HasMips5_32r2(false),
-      InMips16Mode(false), InMips16HardFloat(Mips16HardFloat),
+      InMips16Mode(false), InMips16HardFloat(CLOpts.mips16_hard_float),
       InMicroMipsMode(false), HasDSP(false), HasDSPR2(false), HasDSPR3(false),
-      AllowMixed16_32(Mixed16_32 || Mips_Os16), Os16(Mips_Os16), HasMSA(false),
-      UseTCCInDIV(false), HasSym32(false), HasEVA(false), DisableMadd4(false),
-      HasMT(false), HasCRC(false), HasVirt(false), HasGINV(false),
-      UseIndirectJumpsHazard(false), StrictAlign(false),
-      UseCompactBranches(MipsCompactBranchPolicy != CB_Never),
-      StackAlignOverride(StackAlignOverride), TM(TM), TargetTriple(TT),
+      HasMSA(false), UseTCCInDIV(false), HasSym32(false), HasEVA(false),
+      DisableMadd4(false), HasMT(false), HasCRC(false), HasVirt(false),
+      HasGINV(false), UseIndirectJumpsHazard(false), StrictAlign(false),
+      UseCompactBranches(CLOpts.compact_branches != CompactBranchPolicy::Never),
+      StackAlignOverride(StackAlignOverride), TM(TM),
+      ABI(MipsABIInfo::computeTargetABI(TT, ABIName)),
       InstrInfo(
           MipsInstrInfo::create(initializeSubtargetDependencies(CPU, FS, TM))),
       FrameLowering(MipsFrameLowering::create(*this)),
@@ -104,20 +72,20 @@ MipsSubtarget::MipsSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
   if (MipsArchVersion == MipsDefault)
     MipsArchVersion = Mips32;
 
-  // MIPS-I has not been tested.
-  if (MipsArchVersion == Mips1 && !MIPS1WarningPrinted) {
-    errs() << "warning: MIPS-I support is experimental\n";
-    MIPS1WarningPrinted = true;
-  }
-
   // Don't even attempt to generate code for MIPS-V. It has not
   // been tested and currently exists for the integrated assembler only.
   if (MipsArchVersion == Mips5)
     report_fatal_error("Code generation for MIPS-V is not implemented", false);
 
-  // Check if Architecture and ABI are compatible.
-  assert(((!isGP64bit() && isABI_O32()) || isGP64bit()) &&
-         "Invalid  Arch & ABI pair.");
+  // nanoMIPS is 32-bit architecture and always uses the P32 ABI.
+  // Other MIPS 32-bit architectures supports only O32 ABI.
+  // 64-bit MIPS architectures supports all ABIs except P32.
+  const bool IsValidArchABI =
+      (hasNanoMips() && isABI_P32()) ||
+      (!hasNanoMips() && ((!isGP64bit() && isABI_O32()) || isGP64bit()));
+
+  if (!IsValidArchABI)
+    report_fatal_error("Invalid Arch & ABI pair.", false);
 
   if (hasMSA() && !isFP64bit())
     report_fatal_error("MSA requires a 64-bit FPU register file (FR=1 mode). "
@@ -129,17 +97,19 @@ MipsSubtarget::MipsSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
         "FPU with 64-bit registers is not available on MIPS32 pre revision 2. "
         "Use -mcpu=mips32r2 or greater.", false);
 
-  if (!isABI_O32() && !useOddSPReg())
-    report_fatal_error("-mattr=+nooddspreg requires the O32 ABI.", false);
-
   if (IsFPXX && (isABI_N32() || isABI_N64()))
     report_fatal_error("FPXX is not permitted for the N32/N64 ABI's.", false);
 
   if (hasMips64r6() && InMicroMipsMode)
     report_fatal_error("microMIPS64R6 is not supported", false);
 
-  if (!isABI_O32() && InMicroMipsMode)
-    report_fatal_error("microMIPS64 is not supported.", false);
+  if (!hasNanoMips()) {
+    if (!isABI_O32() && !useOddSPReg())
+      report_fatal_error("-mattr=+nooddspreg requires the O32 ABI.", false);
+
+    if (!isABI_O32() && InMicroMipsMode)
+      report_fatal_error("microMIPS64 is not supported.", false);
+  }
 
   if (UseIndirectJumpsHazard) {
     if (InMicroMipsMode)
@@ -165,6 +135,9 @@ MipsSubtarget::MipsSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
       report_fatal_error(ISA + " is not compatible with the DSP ASE", false);
   }
 
+  if (!NoABICalls && hasNanoMips())
+    report_fatal_error("nanoMIPS requires '-mno-abicalls'");
+
   if (NoABICalls && TM.isPositionIndependent())
     report_fatal_error("position-independent code requires '-mabicalls'");
 
@@ -172,8 +145,8 @@ MipsSubtarget::MipsSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
     NoABICalls = true;
 
   // Set UseSmallSection.
-  UseSmallSection = GPOpt;
-  if (!NoABICalls && GPOpt) {
+  UseSmallSection = CLOpts.mgpopt;
+  if (!NoABICalls && CLOpts.mgpopt) {
     errs() << "warning: cannot use small-data accesses for '-mabicalls'"
            << "\n";
     UseSmallSection = false;
@@ -203,25 +176,27 @@ MipsSubtarget::MipsSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
 
   StringRef ArchName = hasMips64() ? "MIPS64" : "MIPS32";
 
-  if (!hasMips32r5() && hasMSA() && !MSAWarningPrinted) {
-    errs() << "warning: the 'msa' ASE requires " << ArchName
-           << " revision 5 or greater\n";
-    MSAWarningPrinted = true;
-  }
-  if (!hasMips32r5() && hasVirt() && !VirtWarningPrinted) {
-    errs() << "warning: the 'virt' ASE requires " << ArchName
-           << " revision 5 or greater\n";
-    VirtWarningPrinted = true;
-  }
-  if (!hasMips32r6() && hasCRC() && !CRCWarningPrinted) {
-    errs() << "warning: the 'crc' ASE requires " << ArchName
-           << " revision 6 or greater\n";
-    CRCWarningPrinted = true;
-  }
-  if (!hasMips32r6() && hasGINV() && !GINVWarningPrinted) {
-    errs() << "warning: the 'ginv' ASE requires " << ArchName
-           << " revision 6 or greater\n";
-    GINVWarningPrinted = true;
+  if (!hasNanoMips()) {
+    if (!hasMips32r5() && hasMSA() && !MSAWarningPrinted) {
+      errs() << "warning: the 'msa' ASE requires " << ArchName
+             << " revision 5 or greater\n";
+      MSAWarningPrinted = true;
+    }
+    if (!hasMips32r5() && hasVirt() && !VirtWarningPrinted) {
+      errs() << "warning: the 'virt' ASE requires " << ArchName
+             << " revision 5 or greater\n";
+      VirtWarningPrinted = true;
+    }
+    if (!hasMips32r6() && hasCRC() && !CRCWarningPrinted) {
+      errs() << "warning: the 'crc' ASE requires " << ArchName
+             << " revision 6 or greater\n";
+      CRCWarningPrinted = true;
+    }
+    if (!hasMips32r6() && hasGINV() && !GINVWarningPrinted) {
+      errs() << "warning: the 'ginv' ASE requires " << ArchName
+             << " revision 6 or greater\n";
+      GINVWarningPrinted = true;
+    }
   }
 
   TSInfo = std::make_unique<MipsSelectionDAGInfo>();
@@ -260,12 +235,17 @@ MipsSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS,
 
   // Parse features string.
   ParseSubtargetFeatures(CPUName, /*TuneCPU*/ CPUName, FS);
+
+  // O32 uses 32-bit GPRs even when the selected CPU supports a 64-bit ISA.
+  if (isABI_O32())
+    IsGP64bit = false;
+
   if (InMips16Mode && !IsSoftFloat)
     InMips16HardFloat = true;
 
   if (StackAlignOverride)
     stackAlignment = *StackAlignOverride;
-  else if (isABI_N32() || isABI_N64())
+  else if (isABI_N32() || isABI_N64() || isABI_P32())
     stackAlignment = Align(16);
   else {
     assert(isABI_O32() && "Unknown ABI for stack alignment!");
@@ -279,10 +259,10 @@ MipsSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS,
   return *this;
 }
 
-bool MipsSubtarget::useConstantIslands() {
-  LLVM_DEBUG(dbgs() << "use constant islands " << Mips16ConstantIslands
+bool MipsSubtarget::useConstantIslands() const {
+  LLVM_DEBUG(dbgs() << "use constant islands " << CLOpts.mips16_constant_islands
                     << "\n");
-  return Mips16ConstantIslands;
+  return CLOpts.mips16_constant_islands;
 }
 
 Reloc::Model MipsSubtarget::getRelocationModel() const {
@@ -292,7 +272,7 @@ Reloc::Model MipsSubtarget::getRelocationModel() const {
 bool MipsSubtarget::isABI_N64() const { return getABI().IsN64(); }
 bool MipsSubtarget::isABI_N32() const { return getABI().IsN32(); }
 bool MipsSubtarget::isABI_O32() const { return getABI().IsO32(); }
-const MipsABIInfo &MipsSubtarget::getABI() const { return TM.getABI(); }
+bool MipsSubtarget::isABI_P32() const { return getABI().IsP32(); }
 
 const SelectionDAGTargetInfo *MipsSubtarget::getSelectionDAGInfo() const {
   return TSInfo.get();
@@ -335,13 +315,72 @@ const RTLIB::LibcallImpl MipsSubtarget::HardFloatLibCalls[34] = {
     RTLIB::impl___mips16_unorddf2,      RTLIB::impl___mips16_unordsf2};
 
 void MipsSubtarget::initLibcallLoweringInfo(LibcallLoweringInfo &Info) const {
-  if (inMips16Mode() && !useSoftFloat()) {
-    for (unsigned I = 0; I != std::size(HardFloatLibCalls); ++I) {
-      assert((I == 0 || HardFloatLibCalls[I - 1] < HardFloatLibCalls[I]) &&
-             "Array not sorted!");
-      RTLIB::Libcall LC =
-          RTLIB::RuntimeLibcallsInfo::getLibcallFromImpl(HardFloatLibCalls[I]);
-      Info.setLibcallImpl(LC, HardFloatLibCalls[I]);
-    }
+  assert(is_sorted(HardFloatLibCalls) && "Array not sorted!");
+
+  static const struct {
+    RTLIB::Libcall LC;
+    RTLIB::LibcallImpl Mips16Impl;
+    RTLIB::LibcallImpl GenericImpl;
+  } HardFloatCalls[] = {
+      {RTLIB::ADD_F64, RTLIB::impl___mips16_adddf3, RTLIB::impl___adddf3},
+      {RTLIB::ADD_F32, RTLIB::impl___mips16_addsf3, RTLIB::impl___addsf3},
+      {RTLIB::DIV_F64, RTLIB::impl___mips16_divdf3, RTLIB::impl___divdf3},
+      {RTLIB::DIV_F32, RTLIB::impl___mips16_divsf3, RTLIB::impl___divsf3},
+      {RTLIB::FCMP3_PRED_OEQ_F64, RTLIB::impl___mips16_eqdf2,
+       RTLIB::impl___eqdf2},
+      {RTLIB::FCMP3_PRED_OEQ_F32, RTLIB::impl___mips16_eqsf2,
+       RTLIB::impl___eqsf2},
+      {RTLIB::FPEXT_F32_F64, RTLIB::impl___mips16_extendsfdf2,
+       RTLIB::impl___extendsfdf2},
+      {RTLIB::FPTOSINT_F64_I32, RTLIB::impl___mips16_fix_truncdfsi,
+       RTLIB::impl___fixdfsi},
+      {RTLIB::FPTOSINT_F32_I32, RTLIB::impl___mips16_fix_truncsfsi,
+       RTLIB::impl___fixsfsi},
+      {RTLIB::SINTTOFP_I32_F64, RTLIB::impl___mips16_floatsidf,
+       RTLIB::impl___floatsidf},
+      {RTLIB::SINTTOFP_I32_F32, RTLIB::impl___mips16_floatsisf,
+       RTLIB::impl___floatsisf},
+      {RTLIB::UINTTOFP_I32_F64, RTLIB::impl___mips16_floatunsidf,
+       RTLIB::impl___floatunsidf},
+      {RTLIB::UINTTOFP_I32_F32, RTLIB::impl___mips16_floatunsisf,
+       RTLIB::impl___floatunsisf},
+      {RTLIB::FCMP3_PRED_OGE_F64, RTLIB::impl___mips16_gedf2,
+       RTLIB::impl___gedf2},
+      {RTLIB::FCMP3_PRED_OGE_F32, RTLIB::impl___mips16_gesf2,
+       RTLIB::impl___gesf2},
+      {RTLIB::FCMP3_PRED_OGT_F64, RTLIB::impl___mips16_gtdf2,
+       RTLIB::impl___gtdf2},
+      {RTLIB::FCMP3_PRED_OGT_F32, RTLIB::impl___mips16_gtsf2,
+       RTLIB::impl___gtsf2},
+      {RTLIB::FCMP3_PRED_OLE_F64, RTLIB::impl___mips16_ledf2,
+       RTLIB::impl___ledf2},
+      {RTLIB::FCMP3_PRED_OLE_F32, RTLIB::impl___mips16_lesf2,
+       RTLIB::impl___lesf2},
+      {RTLIB::FCMP3_PRED_OLT_F64, RTLIB::impl___mips16_ltdf2,
+       RTLIB::impl___ltdf2},
+      {RTLIB::FCMP3_PRED_OLT_F32, RTLIB::impl___mips16_ltsf2,
+       RTLIB::impl___ltsf2},
+      {RTLIB::MUL_F64, RTLIB::impl___mips16_muldf3, RTLIB::impl___muldf3},
+      {RTLIB::MUL_F32, RTLIB::impl___mips16_mulsf3, RTLIB::impl___mulsf3},
+      {RTLIB::FCMP3_PRED_UNE_F64, RTLIB::impl___mips16_nedf2,
+       RTLIB::impl___nedf2},
+      {RTLIB::FCMP3_PRED_UNE_F32, RTLIB::impl___mips16_nesf2,
+       RTLIB::impl___nesf2},
+      {RTLIB::MIPS16_RET_DC, RTLIB::impl___mips16_ret_dc, RTLIB::Unsupported},
+      {RTLIB::MIPS16_RET_DF, RTLIB::impl___mips16_ret_df, RTLIB::Unsupported},
+      {RTLIB::MIPS16_RET_SC, RTLIB::impl___mips16_ret_sc, RTLIB::Unsupported},
+      {RTLIB::MIPS16_RET_SF, RTLIB::impl___mips16_ret_sf, RTLIB::Unsupported},
+      {RTLIB::SUB_F64, RTLIB::impl___mips16_subdf3, RTLIB::impl___subdf3},
+      {RTLIB::SUB_F32, RTLIB::impl___mips16_subsf3, RTLIB::impl___subsf3},
+      {RTLIB::FPROUND_F64_F32, RTLIB::impl___mips16_truncdfsf2,
+       RTLIB::impl___truncdfsf2},
+      {RTLIB::UO_F64, RTLIB::impl___mips16_unorddf2, RTLIB::impl___unorddf2},
+      {RTLIB::UO_F32, RTLIB::impl___mips16_unordsf2, RTLIB::impl___unordsf2},
+  };
+
+  bool UseMips16HardFloat = inMips16Mode() && !useSoftFloat();
+  for (const auto &E : HardFloatCalls) {
+    Info.setLibcallImpl(E.LC,
+                        UseMips16HardFloat ? E.Mips16Impl : E.GenericImpl);
   }
 }

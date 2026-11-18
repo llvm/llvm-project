@@ -1,16 +1,16 @@
-// RUN: not llvm-mc -triple=amdgcn -mcpu=bonaire -show-encoding %s | FileCheck -check-prefix=GFX7 %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=tonga -show-encoding %s | FileCheck -check-prefix=GFX8 %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx908 -show-encoding %s | FileCheck -check-prefix=GFX9 %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1010 -show-encoding %s | FileCheck -check-prefix=GFX10PLUS %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1100 -show-encoding %s | FileCheck -check-prefix=GFX10PLUS %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -show-encoding %s | FileCheck -check-prefix=GFX10PLUS %s
+// RUN: not llvm-mc -triple=amdgpu7.04 -show-encoding %s | FileCheck -check-prefix=GFX7 %s
+// RUN: not llvm-mc -triple=amdgpu8.02 -show-encoding %s | FileCheck -check-prefix=GFX8 %s
+// RUN: not llvm-mc -triple=amdgpu9.08 -show-encoding %s | FileCheck -check-prefix=GFX9 %s
+// RUN: not llvm-mc -triple=amdgpu10.10 -show-encoding %s | FileCheck -check-prefix=GFX10PLUS %s
+// RUN: not llvm-mc -triple=amdgpu11.00 -show-encoding %s | FileCheck -check-prefix=GFX10PLUS %s
+// RUN: not llvm-mc -triple=amdgpu12.00 -show-encoding %s | FileCheck -check-prefix=GFX10PLUS %s
 
-// RUN: not llvm-mc -triple=amdgcn -mcpu=bonaire -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR-PREGFX9 %s --implicit-check-not=error:
-// RUN: not llvm-mc -triple=amdgcn -mcpu=tonga -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR-PREGFX9 %s --implicit-check-not=error:
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx908 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR %s --implicit-check-not=error:
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1010 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR %s --implicit-check-not=error:
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1100 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR %s --implicit-check-not=error:
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR %s --implicit-check-not=error:
+// RUN: not llvm-mc -triple=amdgpu7.04 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR-PREGFX9 %s --implicit-check-not=error:
+// RUN: not llvm-mc -triple=amdgpu8.02 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR-PREGFX9 %s --implicit-check-not=error:
+// RUN: not llvm-mc -triple=amdgpu9.08 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR %s --implicit-check-not=error:
+// RUN: not llvm-mc -triple=amdgpu10.10 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR %s --implicit-check-not=error:
+// RUN: not llvm-mc -triple=amdgpu11.00 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR %s --implicit-check-not=error:
+// RUN: not llvm-mc -triple=amdgpu12.00 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR %s --implicit-check-not=error:
 
 //==============================================================================
 // FFT mode

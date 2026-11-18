@@ -16,9 +16,11 @@
 #include "SparcTargetObjectFile.h"
 #include "SparcTargetTransformInfo.h"
 #include "TargetInfo/SparcTargetInfo.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Option/LibraryOptions.h"
 #include "llvm/Support/Compiler.h"
 #include <optional>
 using namespace llvm;
@@ -28,16 +30,13 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSparcTarget() {
   RegisterTargetMachine<SparcV8TargetMachine> X(getTheSparcTarget());
   RegisterTargetMachine<SparcV9TargetMachine> Y(getTheSparcV9Target());
   RegisterTargetMachine<SparcelTargetMachine> Z(getTheSparcelTarget());
+  static opt::RegisterLibraryOptions<SparcOptions> O;
 
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   initializeSparcAsmPrinterPass(PR);
   initializeSparcDAGToDAGISelLegacyPass(PR);
-  initializeErrataWorkaroundPass(PR);
+  initializeSparcErrataWorkaroundLegacyPass(PR);
 }
-
-static cl::opt<bool>
-    BranchRelaxation("sparc-enable-branch-relax", cl::Hidden, cl::init(true),
-                     cl::desc("Relax out of range conditional branches"));
 
 static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
   return RM.value_or(Reloc::Static);
@@ -79,11 +78,12 @@ SparcTargetMachine::SparcTargetMachine(const Target &T, const Triple &TT,
                                        std::optional<CodeModel::Model> CM,
                                        CodeGenOptLevel OL, bool JIT)
     : CodeGenTargetMachineImpl(
-          T, TT.computeDataLayout(), TT, CPU, FS, Options,
-          getEffectiveRelocModel(RM),
+          T, TT, CPU, FS, Options, getEffectiveRelocModel(RM),
           getEffectiveSparcCodeModel(CM, getEffectiveRelocModel(RM),
                                      TT.isSPARC64(), JIT),
           OL),
+      CLOpts(cl::LibraryOptionsContext::get<SparcOptions>(
+          Options.MCOptions.LibraryOptions)),
       TLOF(std::make_unique<SparcELFTargetObjectFile>()) {
   initAsmInfo();
 }
@@ -92,28 +92,44 @@ SparcTargetMachine::~SparcTargetMachine() = default;
 
 const SparcSubtarget *
 SparcTargetMachine::getSubtargetImpl(const Function &F) const {
-  Attribute CPUAttr = F.getFnAttribute("target-cpu");
-  Attribute TuneAttr = F.getFnAttribute("tune-cpu");
-  Attribute FSAttr = F.getFnAttribute("target-features");
+  AttributeSet FnAttrs = F.getAttributes().getFnAttrs();
+  const Module *M = F.getParent();
+  if (const SparcSubtarget *ST = LastSubtarget.lookup(FnAttrs, M))
+    return ST;
 
-  std::string CPU =
-      CPUAttr.isValid() ? CPUAttr.getValueAsString().str() : TargetCPU;
-  std::string TuneCPU =
-      TuneAttr.isValid() ? TuneAttr.getValueAsString().str() : CPU;
-  std::string FS =
-      FSAttr.isValid() ? FSAttr.getValueAsString().str() : TargetFS;
+  SubtargetAttrs Attrs;
+  Attrs.CPU = FnAttrs.getAttribute("target-cpu");
+  Attrs.TuneCPU = FnAttrs.getAttribute("tune-cpu");
+  Attrs.FS = FnAttrs.getAttribute("target-features");
+  Attrs.SoftFloat = FnAttrs.getAttribute("use-soft-float");
+
+  if (const SparcSubtarget *ST = LastSubtarget.lookup(FnAttrs, M, Attrs))
+    return ST;
+
+  StringRef CPU =
+      Attrs.CPU.isValid() ? Attrs.CPU.getValueAsString() : StringRef(TargetCPU);
+  StringRef TuneCPU =
+      Attrs.TuneCPU.isValid() ? Attrs.TuneCPU.getValueAsString() : CPU;
+  StringRef FS =
+      Attrs.FS.isValid() ? Attrs.FS.getValueAsString() : StringRef(TargetFS);
+
+  SmallString<256> Key({CPU, TuneCPU});
+
+  // Keep track of the start of the feature portion of the string.
+  unsigned FSStart = Key.size();
+  Key += FS;
 
   // FIXME: This is related to the code below to reset the target options,
   // we need to know whether or not the soft float flag is set on the
   // function, so we can enable it as a subtarget feature.
-  bool softFloat = F.getFnAttribute("use-soft-float").getValueAsBool();
+  if (Attrs.SoftFloat.getValueAsBool())
+    Key += FS.empty() ? "+soft-float" : ",+soft-float";
 
-  if (softFloat)
-    FS += FS.empty() ? "+soft-float" : ",+soft-float";
-
-  auto &I = SubtargetMap[CPU + FS];
+  auto &I = SubtargetMap[Key];
   if (!I)
-    I = std::make_unique<SparcSubtarget>(CPU, TuneCPU, FS, *this);
+    I = std::make_unique<SparcSubtarget>(CPU, TuneCPU, Key.substr(FSStart),
+                                         *this);
+  LastSubtarget.set(FnAttrs, M, Attrs, I.get());
   return I.get();
 }
 
@@ -157,19 +173,17 @@ void SparcPassConfig::addIRPasses() {
 }
 
 bool SparcPassConfig::addInstSelector() {
-  addPass(createSparcISelDag(getSparcTargetMachine()));
+  addPass(createSparcDAGToDAGISelLegacyPass(getSparcTargetMachine(),
+                                            getOptLevel()));
   return false;
 }
 
 void SparcPassConfig::addPreEmitPass(){
-  if (BranchRelaxation)
+  if (getSparcTargetMachine().getCLOpts().enable_branch_relax)
     addPass(&BranchRelaxationPassID);
 
-  addPass(createSparcDelaySlotFillerPass());
-  addPass(new InsertNOPLoad());
-  addPass(new DetectRoundChange());
-  addPass(new FixAllFDIVSQRT());
-  addPass(new ErrataWorkaround());
+  addPass(createSparcDelaySlotFillerLegacyPass());
+  addPass(new SparcErrataWorkaroundLegacy());
 }
 
 void SparcV8TargetMachine::anchor() { }

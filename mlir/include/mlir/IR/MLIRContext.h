@@ -12,6 +12,7 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/TypeID.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Config/llvm-config.h"
 #include <functional>
 #include <memory>
 #include <vector>
@@ -57,8 +58,15 @@ class RemarkEngine;
 ///  while (auto *request = nextCompilationRequests()) {
 ///    MLIRContext ctx(registry, MLIRContext::Threading::DISABLED);
 ///    ctx.setThreadPool(myThreadPool);
-///    processRequest(request, cxt);
+///    processRequest(request, ctx);
 ///  }
+///
+/// Clients that manage their own threads can enable thread-safe context access
+/// without creating a thread pool or enabling parallel execution within MLIR.
+/// Required dialects must be loaded before accessing the context concurrently:
+///
+///  MLIRContext ctx(registry, MLIRContext::Threading::DISABLED);
+///  ctx.enableThreadSafeLocking();
 ///
 class MLIRContext {
 public:
@@ -145,16 +153,89 @@ public:
   ///  operations) without being caught by assertions or other means.
   void allowUnregisteredDialects(bool allow = true);
 
+  /// Begins a transient scope on the context, freezing the current state (all
+  /// loaded dialects, registered operations, types, attributes, affine
+  /// expressions, and singletons) as the base state. Subsequent types,
+  /// attributes, and expressions allocated will belong to the transient layer.
+  ///
+  /// Preconditions:
+  /// - The context must not already be in a transient scope.
+  /// - Must be called from a single-threaded execution context.
+  /// - Loading dialects, modifying dialect registries, or mutating base
+  ///   storage instances is not supported while in a transient scope.
+  void beginTransientScope();
+
+  /// Ends the transient scope and resets the context to the base state, pruning
+  /// all types, attributes, affine expressions, distinct attributes, and
+  /// unregistered operations created during the transient scope.
+  ///
+  /// Preconditions:
+  /// - The context must be in a transient scope.
+  /// - There must be no remaining IR (operations, blocks, regions,
+  ///   values) referencing the transient types/attributes.
+  /// - Must be called from a single-threaded execution context.
+  void endTransientScope();
+
+  /// Returns true if the context is currently in a transient scope.
+  bool isInTransientScope() const;
+
+  /// RAII scope guard that calls beginTransientScope() on construction and
+  /// endTransientScope() on destruction. Provides exception-safe and
+  /// forgetting-proof transient scope management.
+  class TransientScope {
+  public:
+    explicit TransientScope(MLIRContext &ctx) : ctx(ctx) {
+      ctx.beginTransientScope();
+    }
+    ~TransientScope() { ctx.endTransientScope(); }
+
+    TransientScope(const TransientScope &) = delete;
+    TransientScope &operator=(const TransientScope &) = delete;
+
+  private:
+    MLIRContext &ctx;
+  };
+
   /// Return true if multi-threading is enabled by the context.
+  /// This controls parallel execution within MLIR. Use
+  /// isThreadSafeLockingEnabled() to query locking for context access.
+#if LLVM_ENABLE_THREADS
   bool isMultithreadingEnabled();
+#else
+  bool isMultithreadingEnabled() { return false; }
+#endif
 
   /// Set the flag specifying if multi-threading is disabled by the context.
+  /// Enabling multi-threading also enables thread-safe locking. Disabling it
+  /// also disables thread-safe locking, which can be re-enabled independently
+  /// with enableThreadSafeLocking().
   /// The command line debugging flag `--mlir-disable-threading` is overriding
   /// this call and making it a no-op!
   void disableMultithreading(bool disable = true);
   void enableMultithreading(bool enable = true) {
     disableMultithreading(!enable);
   }
+
+  /// Return true if thread-safe locking is enabled for context access.
+  /// This does not imply that parallel execution within MLIR is enabled.
+#if LLVM_ENABLE_THREADS
+  bool isThreadSafeLockingEnabled();
+#else
+  bool isThreadSafeLockingEnabled() { return false; }
+#endif
+
+  /// Enable thread-safe locking for context access, including
+  /// uniquing types, attributes, affine expressions, and operation names.
+  /// This does not create a thread pool or change isMultithreadingEnabled().
+  /// For example, clients using their own threads can construct a context with
+  /// Threading::DISABLED and then call enableThreadSafeLocking().
+  ///
+  /// Disabling multi-threading also disables locking. This method must be
+  /// called when no other threads are accessing the context. Dialects
+  /// must still be loaded before accessing the context concurrently.
+  /// Unlike enableMultithreading(), this is not overridden by the debugging
+  /// flag --mlir-disable-threading.
+  void enableThreadSafeLocking();
 
   /// Set a new thread pool to be used in this context. This method requires
   /// that multithreading is disabled for this context prior to the call. This

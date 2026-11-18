@@ -24,7 +24,7 @@
 ; CHECK-DAG: [[A]] = !DILocation(line: 4, scope: !{{[0-9]+}})
 
 ; Debug location of the inlined code.
-; CHECK-DAG: [[B]] = !DILocation(line: 2, scope: !{{[0-9]+}}, inlinedAt: [[A_INL:![0-9]*]])
+; CHECK-DAG: [[B]] = distinct !DILocation(line: 2, scope: !{{[0-9]+}}, inlinedAt: [[A_INL:![0-9]*]])
 ; CHECK-DAG: [[A_INL]] = distinct !DILocation(line: 4, scope: !{{[0-9]+}})
 
 

@@ -30,6 +30,8 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -37,6 +39,7 @@
 #include <cstdint>
 #include <memory>
 #include <optional>
+#include <string>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -46,6 +49,20 @@ using namespace SrcMgr;
 using llvm::MemoryBuffer;
 
 #define DEBUG_TYPE "source-manager"
+
+static SrcMgr::ContentCache *cloneContentCache(llvm::BumpPtrAllocator &Alloc,
+                                               const ContentCache &Other) {
+  auto *Clone = new (Alloc.Allocate<ContentCache>()) ContentCache;
+  Clone->OrigEntry = Other.OrigEntry;
+  Clone->ContentsEntry = Other.ContentsEntry;
+  Clone->Filename = Other.Filename;
+  Clone->BufferOverridden = Other.BufferOverridden;
+  Clone->IsFileVolatile = Other.IsFileVolatile;
+  Clone->IsTransient = Other.IsTransient;
+  Clone->IsBufferInvalid = Other.IsBufferInvalid;
+  Clone->setUnownedBuffer(Other.getBufferIfLoaded());
+  return Clone;
+}
 
 // Reaching a limit of 2^31 results in a hard error. This metric allows to track
 // if particular invocation of the compiler is close to it.
@@ -324,9 +341,23 @@ SourceManager::~SourceManager() {
       ContentCacheAlloc.Deallocate(I->second);
     }
   }
+  for (unsigned i = 0, e = FileIDContentCaches.size(); i != e; ++i) {
+    if (FileIDContentCaches[i]) {
+      FileIDContentCaches[i]->~ContentCache();
+      ContentCacheAlloc.Deallocate(FileIDContentCaches[i]);
+    }
+  }
 }
 
 void SourceManager::clearIDTables() {
+  for (unsigned i = 0, e = FileIDContentCaches.size(); i != e; ++i) {
+    if (FileIDContentCaches[i]) {
+      FileIDContentCaches[i]->~ContentCache();
+      ContentCacheAlloc.Deallocate(FileIDContentCaches[i]);
+    }
+  }
+  FileIDContentCaches.clear();
+
   MainFileID = FileID();
   LocalSLocEntryTable.clear();
   LocalLocOffsetTable.clear();
@@ -361,17 +392,6 @@ bool SourceManager::isMainFile(const FileEntry &SourceFile) {
 void SourceManager::initializeForReplay(const SourceManager &Old) {
   assert(MainFileID.isInvalid() && "expected uninitialized SourceManager");
 
-  auto CloneContentCache = [&](const ContentCache *Cache) -> ContentCache * {
-    auto *Clone = new (ContentCacheAlloc.Allocate<ContentCache>()) ContentCache;
-    Clone->OrigEntry = Cache->OrigEntry;
-    Clone->ContentsEntry = Cache->ContentsEntry;
-    Clone->BufferOverridden = Cache->BufferOverridden;
-    Clone->IsFileVolatile = Cache->IsFileVolatile;
-    Clone->IsTransient = Cache->IsTransient;
-    Clone->setUnownedBuffer(Cache->getBufferIfLoaded());
-    return Clone;
-  };
-
   // Ensure all SLocEntries are loaded from the external source.
   for (unsigned I = 0, N = Old.LoadedSLocEntryTable.size(); I != N; ++I)
     if (!Old.SLocEntryLoaded[I])
@@ -382,7 +402,7 @@ void SourceManager::initializeForReplay(const SourceManager &Old) {
     SrcMgr::ContentCache *&Slot = FileInfos[FileInfo.first];
     if (Slot)
       continue;
-    Slot = CloneContentCache(FileInfo.second);
+    Slot = cloneContentCache(ContentCacheAlloc, *FileInfo.second);
   }
 }
 
@@ -542,14 +562,22 @@ FileID SourceManager::createFileID(FileEntryRef SourceFile,
                                    SourceLocation::UIntTy LoadedOffset) {
   SrcMgr::ContentCache &IR = getOrCreateContentCache(SourceFile,
                                                      isSystem(FileCharacter));
+  SrcMgr::ContentCache *Cache = &IR;
+  StringRef Filename = SourceFile.getName();
+
+  if (IR.OrigEntry && !IR.OrigEntry->isSameRef(SourceFile)) {
+    Cache = cloneContentCache(ContentCacheAlloc, IR);
+    Cache->OrigEntry = SourceFile;
+    FileIDContentCaches.push_back(Cache);
+  }
 
   // If this is a named pipe, immediately load the buffer to ensure subsequent
   // calls to ContentCache::getSize() are accurate.
-  if (IR.ContentsEntry->isNamedPipe())
-    (void)IR.getBufferOrNone(Diag, getFileManager(), SourceLocation());
+  if (Cache->ContentsEntry->isNamedPipe())
+    (void)Cache->getBufferOrNone(Diag, getFileManager(), SourceLocation());
 
-  return createFileIDImpl(IR, SourceFile.getName(), IncludePos, FileCharacter,
-                          LoadedID, LoadedOffset);
+  return createFileIDImpl(*Cache, Filename, IncludePos, FileCharacter, LoadedID,
+                          LoadedOffset);
 }
 
 /// Create a new FileID that represents the specified memory buffer.
@@ -914,8 +942,12 @@ SourceLocation SourceManager::getSpellingLocSlowCase(SourceLocation Loc) const {
   return Loc;
 }
 
-SourceLocation SourceManager::getFileLocSlowCase(SourceLocation Loc) const {
+SourceLocation SourceManager::getFileLocSlowCase(SourceLocation Loc,
+                                                 unsigned MaxDepth) const {
+  unsigned Depth = 0;
   do {
+    if (Depth++ == MaxDepth)
+      return SourceLocation();
     const SLocEntry &Entry = getSLocEntry(getFileID(Loc));
     const ExpansionInfo &ExpInfo = Entry.getExpansion();
     if (ExpInfo.isMacroArgExpansion()) {
@@ -1678,6 +1710,12 @@ void SourceManager::computeMacroArgsCache(MacroArgsMap &MacroArgsCache,
   // Initially no macro argument chunk is present.
   MacroArgsCache.try_emplace(0);
 
+  // Macro arguments are often passed through other macros, so a macro argument
+  // expansion is often spelled in another one. Resolving each expansion once
+  // keeps the cost linear in the number of expansions instead of quadratic in
+  // the depth of such chains.
+  MacroArgFileChunksMap ChunksByFileID;
+
   int ID = FID.ID;
   while (true) {
     ++ID;
@@ -1730,89 +1768,113 @@ void SourceManager::computeMacroArgsCache(MacroArgsMap &MacroArgsCache,
     if (!ExpInfo.isMacroArgExpansion())
       continue;
 
-    associateFileChunkWithMacroArgExp(MacroArgsCache, FID,
-                                 ExpInfo.getSpellingLoc(),
-                                 SourceLocation::getMacroLoc(Entry.getOffset()),
-                                 getFileIDSize(FileID::get(ID)));
+    SourceLocation ExpansionLoc =
+        SourceLocation::getMacroLoc(Entry.getOffset());
+    for (const MacroArgFileChunk &Chunk :
+         getMacroArgFileChunks(ChunksByFileID, FID, FileID::get(ID))) {
+      unsigned BeginOffs = Chunk.FileOffset;
+      unsigned EndOffs = BeginOffs + Chunk.Length;
+
+      // Add a new chunk for this macro argument. A previous macro argument
+      // chunk may have been lexed again, so e.g. if the map is
+      //     0   -> SourceLocation()
+      //     100 -> Expanded loc #1
+      //     110 -> SourceLocation()
+      // and we found a new macro FileID that lexed from offset 105 with length
+      // 3, the new map will be:
+      //     0   -> SourceLocation()
+      //     100 -> Expanded loc #1
+      //     105 -> Expanded loc #2
+      //     108 -> Expanded loc #1
+      //     110 -> SourceLocation()
+      //
+      // Since re-lexed macro chunks will always be the same size or less of
+      // previous chunks, we only need to find where the ending of the new macro
+      // chunk is mapped to and update the map with new begin/end mappings.
+      MacroArgsMap::iterator I = MacroArgsCache.upper_bound(EndOffs);
+      --I;
+      SourceLocation EndOffsMappedLoc = I->second;
+      MacroArgsCache[BeginOffs] =
+          ExpansionLoc.getLocWithOffset(Chunk.ExpansionOffset);
+      MacroArgsCache[EndOffs] = EndOffsMappedLoc;
+    }
   }
 }
 
-void SourceManager::associateFileChunkWithMacroArgExp(
-                                         MacroArgsMap &MacroArgsCache,
-                                         FileID FID,
-                                         SourceLocation SpellLoc,
-                                         SourceLocation ExpansionLoc,
-                                         unsigned ExpansionLength) const {
-  if (!SpellLoc.isFileID()) {
-    SourceLocation::UIntTy SpellBeginOffs = SpellLoc.getOffset();
-    SourceLocation::UIntTy SpellEndOffs = SpellBeginOffs + ExpansionLength;
+const SourceManager::MacroArgFileChunks &
+SourceManager::getMacroArgFileChunks(MacroArgFileChunksMap &ChunksByFileID,
+                                     FileID FID, FileID MacroArgFID) const {
+  auto It = ChunksByFileID.find(MacroArgFID.ID);
+  if (It != ChunksByFileID.end())
+    return It->second;
 
-    // The spelling range for this macro argument expansion can span multiple
-    // consecutive FileID entries. Go through each entry contained in the
-    // spelling range and if one is itself a macro argument expansion, recurse
-    // and associate the file chunk that it represents.
+  // The tokens of a macro argument expansion are a copy of its spelling range.
+  MacroArgFileChunks Chunks = computeMacroArgFileChunks(
+      ChunksByFileID, FID,
+      getSLocEntry(MacroArgFID).getExpansion().getSpellingLoc(),
+      getFileIDSize(MacroArgFID));
+  return ChunksByFileID.try_emplace(MacroArgFID.ID, std::move(Chunks))
+      .first->second;
+}
 
-    // Current FileID in the spelling range.
-    auto [SpellFID, SpellRelativeOffs] = getDecomposedLoc(SpellLoc);
-    while (true) {
-      const SLocEntry &Entry = getSLocEntry(SpellFID);
-      SourceLocation::UIntTy SpellFIDBeginOffs = Entry.getOffset();
-      unsigned SpellFIDSize = getFileIDSize(SpellFID);
-      SourceLocation::UIntTy SpellFIDEndOffs = SpellFIDBeginOffs + SpellFIDSize;
-      const ExpansionInfo &Info = Entry.getExpansion();
-      if (Info.isMacroArgExpansion()) {
-        unsigned CurrSpellLength;
-        if (SpellFIDEndOffs < SpellEndOffs)
-          CurrSpellLength = SpellFIDSize - SpellRelativeOffs;
-        else
-          CurrSpellLength = ExpansionLength;
-        associateFileChunkWithMacroArgExp(MacroArgsCache, FID,
-                      Info.getSpellingLoc().getLocWithOffset(SpellRelativeOffs),
-                      ExpansionLoc, CurrSpellLength);
-      }
-
-      if (SpellFIDEndOffs >= SpellEndOffs)
-        return; // we covered all FileID entries in the spelling range.
-
-      // Move to the next FileID entry in the spelling range.
-      unsigned advance = SpellFIDSize - SpellRelativeOffs + 1;
-      ExpansionLoc = ExpansionLoc.getLocWithOffset(advance);
-      ExpansionLength -= advance;
-      ++SpellFID.ID;
-      SpellRelativeOffs = 0;
-    }
+SourceManager::MacroArgFileChunks
+SourceManager::computeMacroArgFileChunks(MacroArgFileChunksMap &ChunksByFileID,
+                                         FileID FID, SourceLocation SpellLoc,
+                                         unsigned Length) const {
+  MacroArgFileChunks Chunks;
+  if (SpellLoc.isFileID()) {
+    unsigned FileOffset;
+    if (isInFileID(SpellLoc, FID, &FileOffset))
+      Chunks.push_back({/*ExpansionOffset=*/0, FileOffset, Length});
+    return Chunks;
   }
 
-  assert(SpellLoc.isFileID());
+  SourceLocation::UIntTy SpellBeginOffs = SpellLoc.getOffset();
+  SourceLocation::UIntTy SpellEndOffs = SpellBeginOffs + Length;
 
-  unsigned BeginOffs;
-  if (!isInFileID(SpellLoc, FID, &BeginOffs))
-    return;
+  // The spelling range for this macro argument expansion can span multiple
+  // consecutive FileID entries. Go through each entry contained in the
+  // spelling range and if one is itself a macro argument expansion, take the
+  // file chunks of the part of it that is in the spelling range.
 
-  unsigned EndOffs = BeginOffs + ExpansionLength;
+  // Current FileID in the spelling range, and its offset from SpellLoc.
+  auto [SpellFID, SpellRelativeOffs] = getDecomposedLoc(SpellLoc);
+  unsigned ExpansionOffset = 0;
+  while (true) {
+    const SLocEntry &Entry = getSLocEntry(SpellFID);
+    SourceLocation::UIntTy SpellFIDBeginOffs = Entry.getOffset();
+    unsigned SpellFIDSize = getFileIDSize(SpellFID);
+    SourceLocation::UIntTy SpellFIDEndOffs = SpellFIDBeginOffs + SpellFIDSize;
+    if (Entry.getExpansion().isMacroArgExpansion()) {
+      unsigned CurrSpellLength;
+      if (SpellFIDEndOffs < SpellEndOffs)
+        CurrSpellLength = SpellFIDSize - SpellRelativeOffs;
+      else
+        CurrSpellLength = Length;
+      unsigned RangeBegin = SpellRelativeOffs;
+      unsigned RangeEnd = SpellRelativeOffs + CurrSpellLength;
+      for (const MacroArgFileChunk &Chunk :
+           getMacroArgFileChunks(ChunksByFileID, FID, SpellFID)) {
+        unsigned Begin = std::max(Chunk.ExpansionOffset, RangeBegin);
+        unsigned End = std::min(Chunk.ExpansionOffset + Chunk.Length, RangeEnd);
+        if (Begin >= End)
+          continue;
+        Chunks.push_back({ExpansionOffset + (Begin - RangeBegin),
+                          Chunk.FileOffset + (Begin - Chunk.ExpansionOffset),
+                          End - Begin});
+      }
+    }
 
-  // Add a new chunk for this macro argument. A previous macro argument chunk
-  // may have been lexed again, so e.g. if the map is
-  //     0   -> SourceLocation()
-  //     100 -> Expanded loc #1
-  //     110 -> SourceLocation()
-  // and we found a new macro FileID that lexed from offset 105 with length 3,
-  // the new map will be:
-  //     0   -> SourceLocation()
-  //     100 -> Expanded loc #1
-  //     105 -> Expanded loc #2
-  //     108 -> Expanded loc #1
-  //     110 -> SourceLocation()
-  //
-  // Since re-lexed macro chunks will always be the same size or less of
-  // previous chunks, we only need to find where the ending of the new macro
-  // chunk is mapped to and update the map with new begin/end mappings.
+    if (SpellFIDEndOffs >= SpellEndOffs)
+      return Chunks; // we covered all FileID entries in the spelling range.
 
-  MacroArgsMap::iterator I = MacroArgsCache.upper_bound(EndOffs);
-  --I;
-  SourceLocation EndOffsMappedLoc = I->second;
-  MacroArgsCache[BeginOffs] = ExpansionLoc;
-  MacroArgsCache[EndOffs] = EndOffsMappedLoc;
+    // Move to the next FileID entry in the spelling range.
+    unsigned advance = SpellFIDSize - SpellRelativeOffs + 1;
+    ExpansionOffset += advance;
+    Length -= advance;
+    ++SpellFID.ID;
+    SpellRelativeOffs = 0;
+  }
 }
 
 void SourceManager::updateSlocUsageStats() const {
@@ -2310,6 +2372,7 @@ SourceManager::MemoryBufferSizes SourceManager::getMemoryBufferSizes() const {
 
 size_t SourceManager::getDataStructureSizes() const {
   size_t size = llvm::capacity_in_bytes(MemBufferInfos) +
+                llvm::capacity_in_bytes(FileIDContentCaches) +
                 llvm::capacity_in_bytes(LocalSLocEntryTable) +
                 llvm::capacity_in_bytes(LoadedSLocEntryTable) +
                 llvm::capacity_in_bytes(SLocEntryLoaded) +

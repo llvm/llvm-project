@@ -22,9 +22,10 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
+#if _LIBCPP_STD_VER >= 17
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER >= 17
 template <class _InputIterator, class _Tp, class _BinaryOp>
 [[nodiscard]] _LIBCPP_HIDE_FROM_ABI
 _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp reduce(_InputIterator __first, _InputIterator __last, _Tp __init, _BinaryOp __b) {
@@ -44,9 +45,10 @@ template <class _InputIterator>
 reduce(_InputIterator __first, _InputIterator __last) {
   return std::reduce(__first, __last, typename iterator_traits<_InputIterator>::value_type{});
 }
-#endif
 
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 17
 
 _LIBCPP_POP_MACROS
 

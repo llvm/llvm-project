@@ -27,6 +27,13 @@ class CIRDataLayout {
 
   unsigned programAddrSpace = 0;
 
+  /// TargetInfo::getBitIntMaxAlign(), in bits, from the module's
+  /// #cir.bitint_spec entry.
+  uint64_t bitIntMaxAlignBits = 0;
+
+  /// The module whose cir.record_layouts entries give record alignments.
+  mlir::ModuleOp module;
+
 public:
   mlir::DataLayout layout;
 
@@ -46,6 +53,13 @@ public:
   llvm::Align getABITypeAlign(mlir::Type ty) const {
     return getAlignment(ty, true);
   }
+
+  /// Returns the alignment, in bytes, that the source language requires for
+  /// an object of type \p ty. ABI classification, coercion temporaries, and
+  /// accesses with no explicit alignment use it. The ABI alignment of \p ty is
+  /// the alignment of the memory representation \p ty lowers to, which record
+  /// layout and array strides use.
+  uint64_t getTypeLanguageAlignment(mlir::Type ty) const;
 
   /// Returns the maximum number of bytes that may be overwritten by
   /// storing the specified type.
@@ -119,6 +133,24 @@ public:
   /// For example, returns false for i19 that has a 24-bit store size.
   bool typeSizeEqualsStoreSize(mlir::Type ty) const {
     return getTypeSizeInBits(ty) == getTypeStoreSizeInBits(ty);
+  }
+
+  mlir::ptr::MemorySpaceAttrInterface
+  getAllocaAddrSpace(mlir::MLIRContext *ctx) {
+    auto allocaASAttr = mlir::dyn_cast_if_present<mlir::IntegerAttr>(
+        layout.getAllocaMemorySpace());
+    if (!allocaASAttr)
+      return {};
+    return cir::TargetAddressSpaceAttr::get(ctx, allocaASAttr.getUInt());
+  }
+
+  mlir::ptr::MemorySpaceAttrInterface
+  getDefaultGlobalsAddrSpace(mlir::MLIRContext *ctx) const {
+    auto globalsASAttr = mlir::dyn_cast_if_present<mlir::IntegerAttr>(
+        layout.getGlobalMemorySpace());
+    if (!globalsASAttr || globalsASAttr.getUInt() == 0)
+      return {};
+    return cir::TargetAddressSpaceAttr::get(ctx, globalsASAttr.getUInt());
   }
 };
 

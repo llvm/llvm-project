@@ -1,0 +1,140 @@
+// RUN: cir-opt %s -cir-simplify | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+
+cir.func private @use_ptr(!cir.ptr<!s32i>)
+
+// CHECK-LABEL: cir.func @fold_constant_load
+// CHECK: %[[ALLOCA:.*]] = cir.alloca "x" {{.*}} const
+// CHECK: %[[INIT:.*]] = cir.const #cir.int<100>
+// CHECK: cir.store %[[INIT]], %[[ALLOCA]]
+// CHECK: cir.call @use_ptr(%[[ALLOCA]])
+// CHECK-NOT: cir.load
+// CHECK: cir.return %[[INIT]]
+cir.func @fold_constant_load() -> !s32i {
+  %x = cir.alloca "x" align(4) init const : !cir.ptr<!s32i>
+  %init = cir.const #cir.int<100> : !s32i
+  cir.store %init, %x : !s32i, !cir.ptr<!s32i>
+  cir.call @use_ptr(%x) : (!cir.ptr<!s32i>) -> ()
+  %value = cir.load %x : !cir.ptr<!s32i>, !s32i
+  cir.return %value : !s32i
+}
+
+// CHECK-LABEL: cir.func @fold_through_dominating_store
+// CHECK: cir.brcond
+// CHECK: %[[A:.+]] = cir.const #cir.int<10> : !s32i
+// CHECK: cir.return %[[A]] : !s32i
+// CHECK: %[[B:.+]] = cir.const #cir.int<20> : !s32i
+// CHECK: cir.return %[[B]] : !s32i
+cir.func @fold_through_dominating_store(%cond: !cir.bool) -> !s32i {
+  %x = cir.alloca "x" align(4) init const : !cir.ptr<!s32i>
+  cir.brcond %cond ^bb1, ^bb2
+^bb1:
+  %a = cir.const #cir.int<10> : !s32i
+  cir.store %a, %x : !s32i, !cir.ptr<!s32i>
+  %0 = cir.load %x : !cir.ptr<!s32i>, !s32i
+  cir.return %0 : !s32i
+^bb2:
+  %b = cir.const #cir.int<20> : !s32i
+  cir.store %b, %x : !s32i, !cir.ptr<!s32i>
+  %1 = cir.load %x : !cir.ptr<!s32i>, !s32i
+  cir.return %1 : !s32i
+}
+
+// CHECK-LABEL: cir.func @do_not_fold_non_constant_alloca
+// CHECK: %[[VALUE:.*]] = cir.load
+// CHECK: cir.return %[[VALUE]]
+cir.func @do_not_fold_non_constant_alloca() -> !s32i {
+  %x = cir.alloca "x" align(4) init : !cir.ptr<!s32i>
+  %init = cir.const #cir.int<103> : !s32i
+  cir.store %init, %x : !s32i, !cir.ptr<!s32i>
+  %value = cir.load %x : !cir.ptr<!s32i>, !s32i
+  cir.return %value : !s32i
+}
+
+// CHECK-LABEL: cir.func @do_not_fold_without_store
+// CHECK: %[[VALUE:.*]] = cir.load
+// CHECK: cir.return %[[VALUE]]
+cir.func @do_not_fold_without_store() -> !s32i {
+  %x = cir.alloca "x" align(4) const : !cir.ptr<!s32i>
+  %value = cir.load %x : !cir.ptr<!s32i>, !s32i
+  cir.return %value : !s32i
+}
+
+// CHECK-LABEL: cir.func @do_not_fold_non_dominating_store
+// CHECK: cir.brcond
+// CHECK: cir.store
+// CHECK: %[[VALUE:.*]] = cir.load
+// CHECK: cir.return %[[VALUE]]
+cir.func @do_not_fold_non_dominating_store(%cond: !cir.bool) -> !s32i {
+  %x = cir.alloca "x" align(4) init const : !cir.ptr<!s32i>
+  %init = cir.const #cir.int<106> : !s32i
+  cir.brcond %cond ^bb1, ^bb2
+^bb1:
+  cir.store %init, %x : !s32i, !cir.ptr<!s32i>
+  cir.br ^bb2
+^bb2:
+  %value = cir.load %x : !cir.ptr<!s32i>, !s32i
+  cir.return %value : !s32i
+}
+
+// CHECK-LABEL: cir.func @do_not_fold_volatile_load
+// CHECK: %[[VALUE:.*]] = cir.load volatile
+// CHECK: cir.return %[[VALUE]]
+cir.func @do_not_fold_volatile_load() -> !s32i {
+  %x = cir.alloca "x" align(4) init const : !cir.ptr<!s32i>
+  %init = cir.const #cir.int<107> : !s32i
+  cir.store %init, %x : !s32i, !cir.ptr<!s32i>
+  %value = cir.load volatile %x : !cir.ptr<!s32i>, !s32i
+  cir.return %value : !s32i
+}
+
+// CHECK-LABEL: cir.func @do_not_fold_atomic_load
+// CHECK: %[[VALUE:.*]] = cir.load atomic(seq_cst)
+// CHECK: cir.return %[[VALUE]]
+cir.func @do_not_fold_atomic_load() -> !s32i {
+  %x = cir.alloca "x" align(4) init const : !cir.ptr<!s32i>
+  %init = cir.const #cir.int<108> : !s32i
+  cir.store %init, %x : !s32i, !cir.ptr<!s32i>
+  %value = cir.load atomic(seq_cst) %x : !cir.ptr<!s32i>, !s32i
+  cir.return %value : !s32i
+}
+
+// CHECK-LABEL: cir.func @do_not_fold_multiple_dominating_stores
+// CHECK: cir.store
+// CHECK: cir.store
+// CHECK: %[[VALUE:.*]] = cir.load
+// CHECK: cir.return %[[VALUE]]
+cir.func @do_not_fold_multiple_dominating_stores() -> !s32i {
+  %x = cir.alloca "x" align(4) init const : !cir.ptr<!s32i>
+  %first = cir.const #cir.int<109> : !s32i
+  cir.store %first, %x : !s32i, !cir.ptr<!s32i>
+  %second = cir.const #cir.int<110> : !s32i
+  cir.store %second, %x : !s32i, !cir.ptr<!s32i>
+  %value = cir.load %x : !cir.ptr<!s32i>, !s32i
+  cir.return %value : !s32i
+}
+
+// CHECK-LABEL: cir.func @do_not_fold_volatile_store
+// CHECK: cir.store volatile
+// CHECK: %[[VALUE:.*]] = cir.load
+// CHECK: cir.return %[[VALUE]]
+cir.func @do_not_fold_volatile_store() -> !s32i {
+  %x = cir.alloca "x" align(4) init const : !cir.ptr<!s32i>
+  %init = cir.const #cir.int<111> : !s32i
+  cir.store volatile %init, %x : !s32i, !cir.ptr<!s32i>
+  %value = cir.load %x : !cir.ptr<!s32i>, !s32i
+  cir.return %value : !s32i
+}
+
+// CHECK-LABEL: cir.func @do_not_fold_atomic_store
+// CHECK: cir.store atomic(seq_cst)
+// CHECK: %[[VALUE:.*]] = cir.load
+// CHECK: cir.return %[[VALUE]]
+cir.func @do_not_fold_atomic_store() -> !s32i {
+  %x = cir.alloca "x" align(4) init const : !cir.ptr<!s32i>
+  %init = cir.const #cir.int<112> : !s32i
+  cir.store atomic(seq_cst) %init, %x : !s32i, !cir.ptr<!s32i>
+  %value = cir.load %x : !cir.ptr<!s32i>, !s32i
+  cir.return %value : !s32i
+}

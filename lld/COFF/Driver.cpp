@@ -20,10 +20,12 @@
 #include "lld/Common/Args.h"
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/Filesystem.h"
+#include "lld/Common/TargetOptionsCommandFlags.h"
 #include "lld/Common/Timer.h"
 #include "lld/Common/Version.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Config/llvm-config.h"
@@ -33,6 +35,7 @@
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
+#include "llvm/Remarks/HotnessThresholdParser.h"
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -203,6 +206,26 @@ static bool compatibleMachineType(COFFLinkerContext &ctx, MachineTypes mt) {
   }
 }
 
+static llvm::SmallVector<std::string, 3>
+perTargetRuntimeDirForMachineType(MachineTypes mt) {
+  switch (mt) {
+  case ARM64:
+  case ARM64X:
+    return {"aarch64-pc-windows-msvc"};
+  case ARM64EC:
+    return {"arm64ec-pc-windows-msvc", "aarch64-pc-windows-msvc"};
+  case ARMNT:
+    return {"armv7-pc-windows-msvc", "arm-pc-windows-msvc",
+            "thumbv7-pc-windows-msvc"};
+  case AMD64:
+    return {"x86_64-pc-windows-msvc"};
+  case I386:
+    return {"i686-pc-windows-msvc", "i386-pc-windows-msvc"};
+  default:
+    return {};
+  }
+}
+
 void LinkerDriver::addFile(InputFile *file) {
   Log(ctx) << "Reading " << toString(file);
   if (file->lazy) {
@@ -262,21 +285,39 @@ MemoryBufferRef LinkerDriver::takeBuffer(std::unique_ptr<MemoryBuffer> mb) {
   return mbref;
 }
 
-static InputFile *tryCreateFatLTOFile(COFFLinkerContext &ctx,
-                                      MemoryBufferRef mb, StringRef archiveName,
-                                      uint64_t offsetInArchive, bool lazy) {
-  if (ctx.config.fatLTOObjects) {
-    Expected<MemoryBufferRef> fatLTOData =
-        IRObjectFile::findBitcodeInMemBuffer(mb);
+InputFile *LinkerDriver::addObjectFile(COFFLinkerContext &ctx,
+                                       MemoryBufferRef mb,
+                                       StringRef archiveName,
+                                       uint64_t offsetInArchive, bool lazy) {
+  std::unique_ptr<COFFObjectFile> coffObj = ObjFile::createCOFFObject(ctx, mb);
+  InputFile *obj = nullptr;
 
-    if (!errorToBool(fatLTOData.takeError())) {
-      return BitcodeFile::create(ctx, *fatLTOData, archiveName, offsetInArchive,
-                                 lazy);
+  // On ARM64EC, check for a hybrid object section and use it for the EC object.
+  if (ctx.symtab.isEC()) {
+    if (std::optional<MemoryBufferRef> hybridSec =
+            coffObj->findHybridObjectSection()) {
+      InputFile *hybridObj =
+          addObjectFile(ctx, *hybridSec, archiveName, offsetInArchive, lazy);
+      // For the ARM64X target, continue processing the native file.
+      if (ctx.config.machine != ARM64X)
+        return hybridObj;
     }
   }
 
-  InputFile *obj = ObjFile::create(ctx, mb, lazy);
+  if (ctx.config.fatLTOObjects) {
+    Expected<MemoryBufferRef> fatLTOData =
+        IRObjectFile::findBitcodeInObject(*coffObj);
+
+    if (!errorToBool(fatLTOData.takeError())) {
+      obj = BitcodeFile::create(ctx, *fatLTOData, archiveName, offsetInArchive,
+                                lazy);
+    }
+  }
+
+  if (!obj)
+    obj = ObjFile::create(ctx, coffObj.release(), lazy);
   obj->parentName = archiveName;
+  addFile(obj);
   return obj;
 }
 
@@ -323,7 +364,7 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> mb,
     addFile(BitcodeFile::create(ctx, mbref, "", 0, lazy));
     break;
   case file_magic::coff_object: {
-    addFile(tryCreateFatLTOFile(ctx, mbref, "", 0, lazy));
+    addObjectFile(ctx, mbref, "", 0, lazy);
     break;
   }
   case file_magic::coff_import_library:
@@ -338,7 +379,21 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> mb,
     break;
   case file_magic::pecoff_executable:
     if (ctx.config.mingw) {
-      addFile(make<DLLFile>(ctx.symtab, mbref));
+      std::unique_ptr<COFFObjectFile> obj =
+          ObjFile::createCOFFObject(ctx, mbref);
+      if (ctx.symtab.isEC()) {
+        // When importing an ARM64X image, add both the native and EC views.
+        if (std::unique_ptr<MemoryBuffer> hybridView =
+                obj->getHybridObjectView()) {
+          std::unique_ptr<COFFObjectFile> hybridObj =
+              ObjFile::createCOFFObject(ctx, takeBuffer(std::move(hybridView)));
+          addFile(make<DLLFile>(ctx.symtab, hybridObj));
+          addFile(make<DLLFile>(*ctx.hybridSymtab, obj));
+          break;
+        }
+      }
+      auto machine = static_cast<MachineTypes>(obj->getMachine());
+      addFile(make<DLLFile>(ctx.getSymtab(machine), obj));
       break;
     }
     if (filename.ends_with_insensitive(".dll")) {
@@ -378,30 +433,43 @@ void LinkerDriver::enqueuePath(StringRef path, bool lazy, InputOpt inputOpt) {
       createFutureForFile(std::string(path), ctx.config.prefetchInputs));
   std::string pathStr = std::string(path);
   enqueueTask([=]() {
-    llvm::TimeTraceScope timeScope("File: ", path);
+    llvm::TimeTraceScope timeScope("File: ", pathStr);
     auto [mb, ec] = future->get();
     if (ec) {
-      // Retry reading the file (synchronously) now that we may have added
-      // winsysroot search paths from SymbolTable::addFile().
-      // Retrying synchronously is important for keeping the order of inputs
-      // consistent.
-      // This makes it so that if the user passes something in the winsysroot
-      // before something we can find with an architecture, we won't find the
-      // winsysroot file.
-      if (std::optional<StringRef> retryPath = findFileIfNew(pathStr)) {
-        auto retryMb = MemoryBuffer::getFile(*retryPath, /*IsText=*/false,
-                                             /*RequiresNullTerminator=*/false);
-        ec = retryMb.getError();
-        if (!ec) {
-          mb = std::move(*retryMb);
-          // Prefetch memory pages in the background as we will need them soon
-          // enough.
-          if (ctx.config.prefetchInputs)
-            mb->willNeedIfMmap();
+      // Retry reading pathStr directly before consulting findFileIfNew: if the
+      // file already existed when findFileIfNew/findLibIfNew ran prior to
+      // enqueuePath, its UniqueID is already in visitedFiles, so findFileIfNew
+      // would return std::nullopt and silently drop the input file on error.
+      auto retryMb = MemoryBuffer::getFile(pathStr, /*IsText=*/false,
+                                           /*RequiresNullTerminator=*/false);
+      ec = retryMb.getError();
+      if (!ec) {
+        mb = std::move(*retryMb);
+        if (ctx.config.prefetchInputs)
+          mb->willNeedIfMmap();
+      } else if (findFile(pathStr) != pathStr) {
+        // Retry reading the file (synchronously) now that we may have added
+        // winsysroot search paths from SymbolTable::addFile().
+        // Retrying synchronously is important for keeping the order of inputs
+        // consistent.
+        // This makes it so that if the user passes something in the winsysroot
+        // before something we can find with an architecture, we won't find the
+        // winsysroot file.
+        if (std::optional<StringRef> retryPath = findFileIfNew(pathStr)) {
+          retryMb = MemoryBuffer::getFile(*retryPath, /*IsText=*/false,
+                                          /*RequiresNullTerminator=*/false);
+          ec = retryMb.getError();
+          if (!ec) {
+            mb = std::move(*retryMb);
+            // Prefetch memory pages in the background as we will need them soon
+            // enough.
+            if (ctx.config.prefetchInputs)
+              mb->willNeedIfMmap();
+          }
+        } else {
+          // We've already handled this file.
+          return;
         }
-      } else {
-        // We've already handled this file.
-        return;
       }
     }
     if (ec) {
@@ -437,9 +505,11 @@ void LinkerDriver::addArchiveBuffer(MemoryBufferRef mb, StringRef symName,
 
   InputFile *obj;
   if (magic == file_magic::coff_object) {
-    obj = tryCreateFatLTOFile(ctx, mb, parentName, offsetInArchive, lazy);
+    obj = addObjectFile(ctx, mb, parentName, offsetInArchive, lazy);
   } else if (magic == file_magic::bitcode) {
     obj = BitcodeFile::create(ctx, mb, parentName, offsetInArchive, lazy);
+    obj->parentName = parentName;
+    addFile(obj);
   } else if (magic == file_magic::coff_cl_gl_object) {
     Err(ctx) << mb.getBufferIdentifier()
              << ": is not a native COFF file. Recompile without /GL?";
@@ -449,8 +519,6 @@ void LinkerDriver::addArchiveBuffer(MemoryBufferRef mb, StringRef symName,
     return;
   }
 
-  obj->parentName = parentName;
-  addFile(obj);
   Log(ctx) << "Loaded " << obj << " for " << symName;
 }
 
@@ -750,6 +818,9 @@ void LinkerDriver::setMachine(MachineTypes machine) {
     ctx.hybridSymtab.emplace(ctx, ARM64);
   }
 
+  if (!ctx.config.mingw)
+    addClangPerTargetRuntimeDirSearchPaths();
+
   addWinSysRootLibSearchPaths();
 }
 
@@ -834,6 +905,7 @@ void LinkerDriver::addClangLibSearchPaths(const std::string &argv0) {
   SmallString<128> runtimeLibDir(rootDir);
   sys::path::append(runtimeLibDir, "lib", "clang",
                     std::to_string(LLVM_VERSION_MAJOR), "lib");
+  clangRuntimeLibDir = runtimeLibDir.str();
   // Resource dir + osname, which is hardcoded to windows since we are in the
   // COFF driver.
   SmallString<128> runtimeLibDirWithOS(runtimeLibDir);
@@ -842,6 +914,16 @@ void LinkerDriver::addClangLibSearchPaths(const std::string &argv0) {
   searchPaths.push_back(saver().save(runtimeLibDirWithOS.str()));
   searchPaths.push_back(saver().save(runtimeLibDir.str()));
   searchPaths.push_back(saver().save(libDir.str()));
+}
+
+void LinkerDriver::addClangPerTargetRuntimeDirSearchPaths() {
+  auto machineDirs = perTargetRuntimeDirForMachineType(ctx.config.machine);
+  // Add per-target resource dir library path
+  for (std::string machineDir : machineDirs) {
+    SmallString<128> targetRuntimeDir(clangRuntimeLibDir);
+    sys::path::append(targetRuntimeDir, machineDir);
+    searchPaths.push_back(saver().save(targetRuntimeDir.str()));
+  }
 }
 
 void LinkerDriver::addWinSysRootLibSearchPaths() {
@@ -921,6 +1003,7 @@ static std::string createResponseFile(const opt::InputArgList &args,
     case OPT_INPUT:
       os << quote(rewritePath(arg->getValue())) << "\n";
       break;
+    case OPT_lto_sample_profile:
     case OPT_wholearchive_file:
       os << arg->getSpelling() << quote(rewritePath(arg->getValue())) << "\n";
       break;
@@ -1608,8 +1691,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   }
   {
     llvm::TimeTraceScope timeScope2("Parse cl::opt");
-    cl::ResetAllOptionOccurrences();
-    cl::ParseCommandLineOptions(v.size(), v.data());
+    cl::parseCommandLineOptions(config->libraryOptions, getToolOptions(), v);
   }
 
   // Handle /errorlimit early, because error() depends on it.
@@ -1676,6 +1758,14 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
         Err(ctx) << "/linkrepro: failed to open " << *path << ": "
                  << toString(errOrWriter.takeError());
       }
+    }
+
+    // LTO reads the sample profile directly, so collect it explicitly.
+    if (tar) {
+      StringRef ltoSampleProfile = args.getLastArgValue(OPT_lto_sample_profile);
+      if (!ltoSampleProfile.empty())
+        takeBuffer(CHECK(MemoryBuffer::getFile(ltoSampleProfile),
+                         "could not open " + ltoSampleProfile));
     }
   }
   // Handle /linkreprofullpathrsp
@@ -2295,6 +2385,19 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   if (args.hasFlag(OPT_prefetch_inputs, OPT_prefetch_inputs_no, false))
     config->prefetchInputs = true;
 
+  config->optRemarksFilename = args.getLastArgValue(OPT_opt_remarks_filename);
+  config->optRemarksPasses = args.getLastArgValue(OPT_opt_remarks_passes);
+  config->optRemarksFormat = args.getLastArgValue(OPT_opt_remarks_format);
+  config->optRemarksWithHotness = args.hasArg(OPT_opt_remarks_with_hotness);
+  if (auto *arg = args.getLastArg(OPT_opt_remarks_hotness_threshold)) {
+    auto resultOrErr = remarks::parseHotnessThresholdOption(arg->getValue());
+    if (!resultOrErr)
+      Err(ctx) << arg->getSpelling() << ": invalid argument '"
+               << arg->getValue() << "', only integer or 'auto' is supported";
+    else
+      config->optRemarksHotnessThreshold = *resultOrErr;
+  }
+
   if (errCount(ctx))
     return;
 
@@ -2773,9 +2876,11 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   ltoCompilationDone = true;
   ctx.forEachSymtab([](SymbolTable &symtab) { symtab.compileBitcodeFiles(); });
 
-  if (Defined *d =
-          dyn_cast_or_null<Defined>(ctx.symtab.findUnderscore("_tls_used")))
-    config->gcroot.push_back(d);
+  ctx.forEachSymtab([&](SymbolTable &symtab) {
+    if (Defined *d =
+            dyn_cast_or_null<Defined>(symtab.findUnderscore("_tls_used")))
+      config->gcroot.push_back(d);
+  });
 
   // If -thinlto-index-only is given, we should create only "index
   // files" and not object files. Index file creation is already done
@@ -2804,6 +2909,22 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   if (errorCount())
     return;
+
+  if (ctx.hybridSymtab) {
+    // On ARM64X, merge tls chunks, there may be only one true _tls_start and
+    // _tls_end chunk.
+    auto maybeReplaceWithNative = [&](StringRef name) {
+      auto nativeSym = dyn_cast_or_null<DefinedRegular>(
+          ctx.hybridSymtab->findUnderscore(name));
+      if (!nativeSym)
+        return;
+      if (auto ecSym =
+              dyn_cast_or_null<DefinedRegular>(ctx.symtab.findUnderscore(name)))
+        nativeSym->getChunk()->replace(ecSym->getChunk());
+    };
+    maybeReplaceWithNative("_tls_start");
+    maybeReplaceWithNative("_tls_end");
+  }
 
   ctx.forEachActiveSymtab([](SymbolTable &symtab) {
     symtab.initializeECThunks();
@@ -2942,6 +3063,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   // Write the result.
   writeResult(ctx);
+  // LTO cleanup may create time trace events. Wait for it to complete before
+  // writing the time trace data.
+  ctx.forEachSymtab([](SymbolTable &symtab) { symtab.waitForLTOCleanup(); });
 
   // Stop early so we can print the results.
   rootTimer.stop();

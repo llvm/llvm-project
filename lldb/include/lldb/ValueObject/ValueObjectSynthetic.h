@@ -128,6 +128,8 @@ public:
                     GetExpressionPathFormat epformat =
                         eGetExpressionPathFormatDereferencePointers) override;
 
+  SyntheticChildrenFrontEnd *GetSyntheticChildrenFrontEnd() override;
+
 protected:
   bool UpdateValue() override;
 
@@ -174,6 +176,10 @@ private:
   ValueObjectSynthetic(ValueObject &parent, lldb::SyntheticChildrenSP filter);
 
   void CopyValueData(ValueObject *source);
+
+  /// Warn, once per session, that the provider returned a child that our
+  /// ClusterManager does not own.
+  void WarnAboutForeignChild(ValueObject &child, bool is_root);
 
   ValueObjectSynthetic(const ValueObjectSynthetic &) = delete;
   const ValueObjectSynthetic &operator=(const ValueObjectSynthetic &) = delete;

@@ -13,22 +13,37 @@
 //
 // Here is an example of an MCInstPredicate definition in TableGen:
 //
-// def MCInstPredicateExample : CheckAll<[
-//    CheckOpcode<[BLR]>,
-//    CheckIsRegOperand<0>,
-//    CheckNot<CheckRegOperand<0, LR>>]>;
+// def BLRWithRegOpOtherThanLR : CheckAll<[
+//   CheckOpcode<[BLR]>,
+//   CheckIsRegOperand<0>,
+//   CheckNot<CheckRegOperand<0, LR>>]>;
 //
 // The syntax for MCInstPredicate is declarative, and predicate definitions can
 // be composed together in order to generate more complex constraints.
 //
 // The `CheckAll` from the example defines a composition of three different
-// predicates.  Definition `MCInstPredicateExample` identifies instructions
+// predicates. Definition `BLRWithRegOpOtherThanLR` identifies instructions
 // whose opcode is BLR, and whose first operand is a register different from
 // register `LR`.
 //
 // Every MCInstPredicate class has a well-known semantic in tablegen. For
 // example, `CheckOpcode` is a special type of predicate used to describe a
-// constraint on the value of an instruction opcode.
+// constraint on the value of an instruction opcode, while `CheckIsRegOperand`
+// checks whether an instruction operand is a register operand.
+// `CheckRegOperand` performs this check implicitly before comparing the
+// register value. Therefore, a preceding `CheckIsRegOperand` is redundant
+// when `CheckRegOperand` is used directly. When `CheckRegOperand` is negated,
+// we can also omit the preceding `CheckIsRegOperand` if we don't care about
+// the type of the operand (e.g. an immediate or a register) but only care
+// about the fact that the operand is not the specified register. For example:
+//
+// def BLRWithOpAnythingButLR : CheckAll<[
+//   CheckOpcode<[BLR]>,
+//   CheckNot<CheckRegOperand<0, LR>>]>;
+//
+// This predicate ensures that the opcode is BLR and the first operand is not
+// the register `LR`. It is allowed to be anything other than `LR`, including
+// immediate, etc.
 //
 // MCInstPredicate definitions are typically used by scheduling models to
 // construct MCSchedPredicate definitions (see the definition of class
@@ -37,14 +52,19 @@
 // when defining the set of SchedReadVariant and SchedWriteVariant of a
 // processor scheduling model.
 //
-// The `MCInstPredicateExample` definition above is equivalent (and therefore
-// could replace) the following definition from a previous ExynosM3 model (see
-// AArch64SchedExynosM3.td):
+// The `BLRWithRegOpOtherThanLR` definition above is equivalent (and therefore
+// could replace) the following definition:
 //
-// def M3BranchLinkFastPred  : SchedPredicate<[{
+// def BLRWithRegOpOtherThanLRPred : SchedPredicate<[{
 //    MI->getOpcode() == AArch64::BLR &&
 //    MI->getOperand(0).isReg() &&
-//    MI->getOperand(0).getReg() != AArch64::LR}]>;
+//    !(MI->getOperand(0).isReg() && MI->getOperand(0).getReg() == AArch64::LR)}]>;
+//
+// The `BLRWithOpAnythingButLR` definition is equivalent to:
+//
+// def BLRWithOpAnythingButLRPred : SchedPredicate<[{
+//    MI->getOpcode() == AArch64::BLR &&
+//    !(MI->getOperand(0).isReg() && MI->getOperand(0).getReg() == AArch64::LR)}]>;
 //
 // The main advantage of using MCInstPredicate instead of SchedPredicate is
 // portability: users don't need to specify predicates in C++. As a consequence
@@ -122,9 +142,8 @@ class CheckOperandBase<int Index, string Fn = ""> : MCOperandPredicate<Index> {
   string FunctionMapper = Fn;
 }
 
-// Check that the machine register operand at position `Index` references
-// register R. This predicate assumes that we already checked that the machine
-// operand at position `Index` is a register operand.
+// Check that the machine register operand at position `Index` is a
+// register operand that references register `R`.
 class CheckRegOperand<int Index, Register R> : CheckOperandBase<Index> {
   Register Reg = R;
 }
@@ -137,10 +156,10 @@ class CheckInvalidRegOperand<int Index> : CheckOperandBase<Index>;
 class CheckValidRegOperand<int Index> :
   CheckNot<CheckInvalidRegOperand<Index>>;
 
-// Check that the operand at position `Index` is immediate `Imm`.
-// If field `FunctionMapper` is a non-empty string, then function
-// `FunctionMapper` is applied to the operand value, and the return value is then
-// compared against `Imm`.
+// Check that the operand at position `Index` is an immediate operand whose
+// value equals `Imm`. If field `FunctionMapper` is a non-empty string, then 
+// function `FunctionMapper` is applied to the operand value, and the return
+// value is then compared against `Imm`.
 class CheckImmOperand<int Index, int Imm> : CheckOperandBase<Index> {
   int ImmVal = Imm;
 }
@@ -152,33 +171,37 @@ class CheckImmOperand_s<int Index, string Value> : CheckOperandBase<Index> {
   string ImmVal = Value;
 }
 
-// Check that the operand at position `Index` is less than `Imm`.
-// If field `FunctionMapper` is a non-empty string, then function
-// `FunctionMapper` is applied to the operand value, and the return value is then
-// compared against `Imm`.
+// Check that the operand at position `Index` is an immediate operand whose
+// value is less than `Imm`. If field `FunctionMapper` is a non-empty string,
+// then function `FunctionMapper` is applied to the operand value, and the
+// return value is then compared against `Imm`.
 class CheckImmOperandLT<int Index, int Imm> : CheckOperandBase<Index> {
   int ImmVal = Imm;
 }
 
-// Check that the operand at position `Index` is greater than `Imm`.
-// If field `FunctionMapper` is a non-empty string, then function
-// `FunctionMapper` is applied to the operand value, and the return value is then
-// compared against `Imm`.
+// Check that the operand at position `Index` is an immediate operand whose
+// value is greater than `Imm`. If field `FunctionMapper` is a non-empty string,
+// then function `FunctionMapper` is applied to the operand value, and the
+// return value is then compared against `Imm`.
 class CheckImmOperandGT<int Index, int Imm> : CheckOperandBase<Index> {
   int ImmVal = Imm;
 }
 
-// Check that the operand at position `Index` is less than or equal to `Imm`.
-// If field `FunctionMapper` is a non-empty string, then function
-// `FunctionMapper` is applied to the operand value, and the return value is then
-// compared against `Imm`.
-class CheckImmOperandLE<int Index, int Imm> : CheckNot<CheckImmOperandGT<Index, Imm>>;
+// Check that the operand at position `Index` is an immediate operand whose
+// value is less than or equal to `Imm`. If field `FunctionMapper` is a
+// non-empty string, then function `FunctionMapper` is applied to the operand
+// value, and the return value is then compared against `Imm`.
+class CheckImmOperandLE<int Index, int Imm> : CheckOperandBase<Index> {
+  int ImmVal = Imm;
+}
 
-// Check that the operand at position `Index` is greater than or equal to `Imm`.
-// If field `FunctionMapper` is a non-empty string, then function
-// `FunctionMapper` is applied to the operand value, and the return value is then
-// compared against `Imm`.
-class CheckImmOperandGE<int Index, int Imm> : CheckNot<CheckImmOperandLT<Index, Imm>>;
+// Check that the operand at position `Index` is an immediate operand whose
+// value is greater than or equal to `Imm`. If field `FunctionMapper` is a
+// non-empty string, then function `FunctionMapper` is applied to the operand
+// value, and the return value is then compared against `Imm`.
+class CheckImmOperandGE<int Index, int Imm> : CheckOperandBase<Index> {
+  int ImmVal = Imm;
+}
 
 // Expands to a call to `FunctionMapper` if field `FunctionMapper` is set.
 // Otherwise, it expands to a CheckNot<CheckInvalidRegOperand<Index>>.
@@ -231,12 +254,15 @@ class CheckAll<list<MCInstPredicate> Sequence>
 class CheckAny<list<MCInstPredicate> Sequence>
     : CheckPredicateSequence<Sequence>;
 
-// Check that the operand at position `Index` is in range [Start, End].
-// If field `FunctionMapper` is a non-empty string, then function
-// `FunctionMapper` is applied to the operand value, and the return value is then
-// compared against range [Start, End].
+// Check that the operand at position `Index` is an immediate operand whose
+// value is in range [Start, End]. If field `FunctionMapper` is a non-empty
+// string, then function `FunctionMapper` is applied to the operand value,
+// and the return value is then compared against range [Start, End].
 class CheckImmOperandRange<int Index, int Start, int End>
-  : CheckAll<[CheckImmOperandGE<Index, Start>, CheckImmOperandLE<Index, End>]>;
+    : CheckOperandBase<Index> {
+  int StartVal = Start;
+  int EndVal = End;
+}
 
 // Used to expand the body of a function predicate. See the definition of
 // TIIPredicate below.

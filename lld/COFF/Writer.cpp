@@ -216,6 +216,7 @@ private:
   void appendImportThunks();
   void locateImportTables();
   void createExportTable();
+  StringRef getMergeDestination(StringRef fromSection, StringRef toSection);
   void mergeSection(const std::map<StringRef, StringRef>::value_type &p);
   void mergeSections();
   void sortECChunks();
@@ -266,7 +267,7 @@ private:
   void sortBySectionOrder(std::vector<Chunk *> &chunks);
   void fixPartialSectionChars(StringRef name, uint32_t chars);
   bool fixGnuImportChunks();
-  void fixTlsAlignment();
+  void fixTlsAlignment(SymbolTable &symtab);
   PartialSection *createPartialSection(StringRef name, uint32_t outChars);
   PartialSection *findPartialSection(StringRef name, uint32_t outChars);
 
@@ -490,12 +491,14 @@ bool Writer::createThunks(OutputSection *os, int margin) {
   DenseMap<uint64_t, Defined *> lastThunks;
   DenseMap<std::pair<ObjFile *, Defined *>, uint32_t> thunkSymtabIndices;
   size_t thunksSize = 0;
-  // Recheck Chunks.size() each iteration, since we can insert more
-  // elements into it.
-  for (size_t i = 0; i != os->chunks.size(); ++i) {
-    SectionChunk *sc = dyn_cast<SectionChunk>(os->chunks[i]);
+  // Append thunks without repeatedly shifting the remaining chunks.
+  std::vector<Chunk *> newChunks;
+  newChunks.reserve(os->chunks.size());
+  for (Chunk *c : os->chunks) {
+    newChunks.push_back(c);
+    SectionChunk *sc = dyn_cast<SectionChunk>(c);
     if (!sc) {
-      auto chunk = cast<NonSectionChunk>(os->chunks[i]);
+      auto chunk = cast<NonSectionChunk>(c);
       if (uint32_t size = chunk->extendRanges()) {
         thunksSize += size;
         addressesChanged = true;
@@ -503,7 +506,6 @@ bool Writer::createThunks(OutputSection *os, int margin) {
       continue;
     }
     MachineTypes machine = sc->getMachine();
-    size_t thunkInsertionSpot = i + 1;
 
     // Try to get a good enough estimate of where new thunks will be placed.
     // Offset this by the size of the new thunks added so far, to make the
@@ -539,8 +541,7 @@ bool Writer::createThunks(OutputSection *os, int margin) {
         Chunk *thunkChunk = thunk->getChunk();
         thunkChunk->setRVA(
             thunkInsertionRVA); // Estimate of where it will be located.
-        os->chunks.insert(os->chunks.begin() + thunkInsertionSpot, thunkChunk);
-        thunkInsertionSpot++;
+        newChunks.push_back(thunkChunk);
         thunksSize += thunkChunk->getSize();
         thunkInsertionRVA += thunkChunk->getSize();
         addressesChanged = true;
@@ -585,6 +586,7 @@ bool Writer::createThunks(OutputSection *os, int margin) {
 
     sc->setRelocs(newRelocs);
   }
+  os->chunks.swap(newChunks);
   return addressesChanged;
 }
 
@@ -814,7 +816,7 @@ void Writer::run() {
     // Fix up the alignment in the TLS Directory's characteristic field,
     // if a specific alignment value is needed
     if (tlsAlignment)
-      fixTlsAlignment();
+      ctx.forEachSymtab([&](SymbolTable &symtab) { fixTlsAlignment(symtab); });
   }
 
   if (!ctx.config.pdbPath.empty() && ctx.config.debug) {
@@ -1656,25 +1658,32 @@ void Writer::createSymbolAndStringTable() {
   fileSize = alignTo(fileOff, ctx.config.fileAlign);
 }
 
-void Writer::mergeSection(const std::map<StringRef, StringRef>::value_type &p) {
-  StringRef toName = p.second;
-  if (p.first == toName)
-    return;
+StringRef Writer::getMergeDestination(StringRef fromSection,
+                                      StringRef toSection) {
   StringSet<> names;
   while (true) {
-    if (!names.insert(toName).second)
-      Fatal(ctx) << "/merge: cycle found for section '" << p.first << "'";
-    auto i = ctx.config.merge.find(toName);
+    if (!names.insert(toSection).second)
+      Fatal(ctx) << "/merge: cycle found for section '" << fromSection << "'";
+    auto i = ctx.config.merge.find(toSection);
     if (i == ctx.config.merge.end())
       break;
-    toName = i->second;
+    toSection = i->second;
   }
+  return toSection;
+}
+
+void Writer::mergeSection(const std::map<StringRef, StringRef>::value_type &p) {
+  if (p.first == p.second)
+    return;
+
+  StringRef toSection = getMergeDestination(p.first, p.second);
+
   OutputSection *from = findSection(p.first);
-  OutputSection *to = findSection(toName);
+  OutputSection *to = findSection(toSection);
   if (!from)
     return;
   if (!to) {
-    from->name = toName;
+    from->name = toSection;
     return;
   }
   to->merge(from);
@@ -1716,8 +1725,17 @@ void Writer::mergeSections() {
   // whatever section it is being merged into (usually .data) so that the image
   // need not actually contain all of the zeros.
   auto it = ctx.config.merge.find(".bss");
-  if (it != ctx.config.merge.end())
-    mergeSection(*it);
+  if (it != ctx.config.merge.end()) {
+    // Resolve the final merge target name following the chain.
+    StringRef toSection = getMergeDestination(it->first, it->second);
+    // Don't merge .bss into a shared section. MSVC link.exe keeps .bss
+    // separate when the target has IMAGE_SCN_MEM_SHARED, preventing unexpected
+    // sharing across processes.
+    auto secIt = ctx.config.section.find(toSection);
+    if (secIt == ctx.config.section.end() ||
+        !(secIt->second & IMAGE_SCN_MEM_SHARED))
+      mergeSection({it->first, toSection});
+  }
 }
 
 // EC targets may have chunks of various architectures mixed together at this
@@ -2923,6 +2941,24 @@ void Writer::createDynamicRelocs() {
                              LOAD_CONFIG_TABLE * sizeof(data_directory) +
                              offsetof(data_directory, Size),
                          ctx.symtab.loadConfigSize);
+
+  auto nativeTlsUsed =
+      dyn_cast_or_null<Defined>(ctx.hybridSymtab->findUnderscore("_tls_used"));
+  auto ecTlsUsed =
+      dyn_cast_or_null<Defined>(ctx.symtab.findUnderscore("_tls_used"));
+  if (nativeTlsUsed || ecTlsUsed) {
+    ctx.dynamicRelocs->add(IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE, sizeof(uint32_t),
+                           dataDirOffset64 +
+                               TLS_TABLE * sizeof(data_directory) +
+                               offsetof(data_directory, RelativeVirtualAddress),
+                           Arm64XRelocVal(ecTlsUsed));
+    if (!nativeTlsUsed || !ecTlsUsed)
+      ctx.dynamicRelocs->add(
+          IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE, sizeof(uint32_t),
+          dataDirOffset64 + TLS_TABLE * sizeof(data_directory) +
+              offsetof(data_directory, Size),
+          ecTlsUsed ? sizeof(coff_tls_directory64) : 0);
+  }
 }
 
 PartialSection *Writer::createPartialSection(StringRef name,
@@ -2941,9 +2977,9 @@ PartialSection *Writer::findPartialSection(StringRef name, uint32_t outChars) {
   return nullptr;
 }
 
-void Writer::fixTlsAlignment() {
+void Writer::fixTlsAlignment(SymbolTable &symtab) {
   Defined *tlsSym =
-      dyn_cast_or_null<Defined>(ctx.symtab.findUnderscore("_tls_used"));
+      dyn_cast_or_null<Defined>(symtab.findUnderscore("_tls_used"));
   if (!tlsSym)
     return;
 

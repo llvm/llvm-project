@@ -835,6 +835,180 @@ define i32 @test_abs_int_min_poison_wrong_const(i32 %arg) {
   ret i32 %sel
 }
 
+; (X == 0) ? C : ctz(X * OddC) --> is_zero_poison can be set
+
+define i32 @test_cttz_not_bw_odd_mul(i32 %x) {
+; CHECK-LABEL: @test_cttz_not_bw_odd_mul(
+; CHECK-NEXT:    [[CT:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 true)
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[X]], 0
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP_NOT]], i32 123, i32 [[CT]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %m = mul i32 %x, 3
+  %ct = tail call i32 @llvm.cttz.i32(i32 %m, i1 false)
+  %cmp = icmp ne i32 %x, 0
+  %res = select i1 %cmp, i32 %ct, i32 123
+  ret i32 %res
+}
+
+define i32 @test_cttz_not_bw_odd_mul_eq(i32 %x) {
+; CHECK-LABEL: @test_cttz_not_bw_odd_mul_eq(
+; CHECK-NEXT:    [[CT:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 true)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X]], 0
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP]], i32 123, i32 [[CT]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %m = mul i32 %x, 3
+  %ct = tail call i32 @llvm.cttz.i32(i32 %m, i1 false)
+  %cmp = icmp eq i32 %x, 0
+  %res = select i1 %cmp, i32 123, i32 %ct
+  ret i32 %res
+}
+
+
+define i32 @test_cttz_not_bw_large_odd_mul(i32 %x) {
+; CHECK-LABEL: @test_cttz_not_bw_large_odd_mul(
+; CHECK-NEXT:    [[CT:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 true)
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[X]], 0
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP_NOT]], i32 123, i32 [[CT]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %m = mul i32 %x, 1234567
+  %ct = tail call i32 @llvm.cttz.i32(i32 %m, i1 false)
+  %cmp = icmp ne i32 %x, 0
+  %res = select i1 %cmp, i32 %ct, i32 123
+  ret i32 %res
+}
+
+
+define <2 x i32> @test_cttz_not_bw_odd_mul_vec(<2 x i32> %x) {
+; CHECK-LABEL: @test_cttz_not_bw_odd_mul_vec(
+; CHECK-NEXT:    [[CT:%.*]] = call range(i32 0, 33) <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[X:%.*]], i1 true)
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq <2 x i32> [[X]], zeroinitializer
+; CHECK-NEXT:    [[RES:%.*]] = select <2 x i1> [[CMP_NOT]], <2 x i32> splat (i32 123), <2 x i32> [[CT]]
+; CHECK-NEXT:    ret <2 x i32> [[RES]]
+;
+  %m = mul <2 x i32> %x, splat (i32 3)
+  %ct = tail call <2 x i32> @llvm.cttz.v2i32(<2 x i32> %m, i1 false)
+  %cmp = icmp ne <2 x i32> %x, zeroinitializer
+  %res = select <2 x i1> %cmp, <2 x i32> %ct, <2 x i32> splat (i32 123)
+  ret <2 x i32> %res
+}
+
+; negative test - X * 6 can be zero for non-zero X (X = 2^31)
+
+define i32 @test_cttz_not_bw_even_mul(i32 %x) {
+; CHECK-LABEL: @test_cttz_not_bw_even_mul(
+; CHECK-NEXT:    [[M:%.*]] = mul i32 [[X:%.*]], 6
+; CHECK-NEXT:    [[CT:%.*]] = tail call range(i32 1, 33) i32 @llvm.cttz.i32(i32 [[M]], i1 false)
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[X]], 0
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP_NOT]], i32 123, i32 [[CT]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %m = mul i32 %x, 6
+  %ct = tail call i32 @llvm.cttz.i32(i32 %m, i1 false)
+  %cmp = icmp ne i32 %x, 0
+  %res = select i1 %cmp, i32 %ct, i32 123
+  ret i32 %res
+}
+
+; negative test
+
+define i32 @test_cttz_not_bw_even_mul_eq(i32 %x) {
+; CHECK-LABEL: @test_cttz_not_bw_even_mul_eq(
+; CHECK-NEXT:    [[M:%.*]] = mul i32 [[X:%.*]], 12
+; CHECK-NEXT:    [[CT:%.*]] = tail call range(i32 2, 33) i32 @llvm.cttz.i32(i32 [[M]], i1 false)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X]], 0
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP]], i32 123, i32 [[CT]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %m = mul i32 %x, 12
+  %ct = tail call i32 @llvm.cttz.i32(i32 %m, i1 false)
+  %cmp = icmp eq i32 %x, 0
+  %res = select i1 %cmp, i32 123, i32 %ct
+  ret i32 %res
+}
+
+; negative test - one lane is even
+
+define <2 x i32> @test_cttz_not_bw_mixed_mul_vec(<2 x i32> %x) {
+; CHECK-LABEL: @test_cttz_not_bw_mixed_mul_vec(
+; CHECK-NEXT:    [[M:%.*]] = mul <2 x i32> [[X:%.*]], <i32 3, i32 6>
+; CHECK-NEXT:    [[CT:%.*]] = tail call range(i32 0, 33) <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[M]], i1 false)
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq <2 x i32> [[X]], zeroinitializer
+; CHECK-NEXT:    [[RES:%.*]] = select <2 x i1> [[CMP_NOT]], <2 x i32> splat (i32 123), <2 x i32> [[CT]]
+; CHECK-NEXT:    ret <2 x i32> [[RES]]
+;
+  %m = mul <2 x i32> %x, <i32 3, i32 6>
+  %ct = tail call <2 x i32> @llvm.cttz.v2i32(<2 x i32> %m, i1 false)
+  %cmp = icmp ne <2 x i32> %x, zeroinitializer
+  %res = select <2 x i1> %cmp, <2 x i32> %ct, <2 x i32> splat (i32 123)
+  ret <2 x i32> %res
+}
+
+; negative test - compared against a non-zero constant
+
+define i32 @test_cttz_not_bw_odd_mul_nonzero_cmp(i32 %x) {
+; CHECK-LABEL: @test_cttz_not_bw_odd_mul_nonzero_cmp(
+; CHECK-NEXT:    [[CT:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 false)
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[X]], 5
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP_NOT]], i32 123, i32 [[CT]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %m = mul i32 %x, 3
+  %ct = tail call i32 @llvm.cttz.i32(i32 %m, i1 false)
+  %cmp = icmp ne i32 %x, 5
+  %res = select i1 %cmp, i32 %ct, i32 123
+  ret i32 %res
+}
+
+; negative test - mul operand is not the compared value
+
+define i32 @test_cttz_not_bw_odd_mul_wrong_op(i32 %x, i32 %y) {
+; CHECK-LABEL: @test_cttz_not_bw_odd_mul_wrong_op(
+; CHECK-NEXT:    [[CT:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[Y:%.*]], i1 false)
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP_NOT]], i32 123, i32 [[CT]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %m = mul i32 %y, 3
+  %ct = tail call i32 @llvm.cttz.i32(i32 %m, i1 false)
+  %cmp = icmp ne i32 %x, 0
+  %res = select i1 %cmp, i32 %ct, i32 123
+  ret i32 %res
+}
+
+; negative test - extra use of the intrinsic
+
+define i32 @test_cttz_not_bw_odd_mul_multiuse(i32 %x) {
+; CHECK-LABEL: @test_cttz_not_bw_odd_mul_multiuse(
+; CHECK-NEXT:    [[CT:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 false)
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[X]], 0
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP_NOT]], i32 123, i32 [[CT]]
+; CHECK-NEXT:    [[RES:%.*]] = or i32 [[SEL]], [[CT]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %m = mul i32 %x, 3
+  %ct = tail call i32 @llvm.cttz.i32(i32 %m, i1 false)
+  %cmp = icmp ne i32 %x, 0
+  %sel = select i1 %cmp, i32 %ct, i32 123
+  %res = or i32 %sel, %ct
+  ret i32 %res
+}
+define <2 x i32> @test_cttz_not_bw_odd_mul_vec_nonsplat(<2 x i32> %x) {
+; CHECK-LABEL: @test_cttz_not_bw_odd_mul_vec_nonsplat(
+; CHECK-NEXT:    [[CT:%.*]] = call range(i32 0, 33) <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[X:%.*]], i1 true)
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq <2 x i32> [[X]], zeroinitializer
+; CHECK-NEXT:    [[RES:%.*]] = select <2 x i1> [[CMP_NOT]], <2 x i32> splat (i32 123), <2 x i32> [[CT]]
+; CHECK-NEXT:    ret <2 x i32> [[RES]]
+;
+  %m = mul <2 x i32> %x, <i32 3, i32 5>
+  %ct = tail call <2 x i32> @llvm.cttz.v2i32(<2 x i32> %m, i1 false)
+  %cmp = icmp ne <2 x i32> %x, zeroinitializer
+  %res = select <2 x i1> %cmp, <2 x i32> %ct, <2 x i32> splat (i32 123)
+  ret <2 x i32> %res
+}
+
 declare i16 @llvm.ctlz.i16(i16, i1)
 declare i32 @llvm.ctlz.i32(i32, i1)
 declare i64 @llvm.ctlz.i64(i64, i1)

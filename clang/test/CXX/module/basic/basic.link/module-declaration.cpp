@@ -47,7 +47,7 @@ export module x;
 
 //--- invalid_module_name.cppm
 export module z elderberry;
-// expected-error@-1 {{unexpected preprocessing token 'elderberry' after module name, only ';' and '[' (start of attribute specifier sequence) are allowed}}
+// expected-error@-1 {{unexpected 'elderberry' after module name, only ';' and '[' (start of attribute specifier sequence) are allowed}}
 
 //--- empty_attribute.cppm
 // expected-no-diagnostics

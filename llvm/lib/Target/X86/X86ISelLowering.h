@@ -197,6 +197,7 @@ namespace llvm {
     /// given node type. e.g. On x86 i16 is legal, but undesirable since i16
     /// instruction encodings are longer and some i16 instructions are slow.
     bool isTypeDesirableForOp(unsigned Opc, EVT VT) const override;
+    bool isTypeDesirableForOp(SDNode *N, EVT VT) const override;
 
     /// Return true if the target has native support for the
     /// specified value type and it is 'desirable' to use the type. e.g. On x86
@@ -238,6 +239,8 @@ namespace llvm {
 
     bool isCtlzFast() const override;
 
+    bool preferZeroCompareBranch() const override;
+
     bool isMultiStoresCheaperThanBitsMerge(EVT LTy, EVT HTy) const override {
       // If the pair to store is a mixture of float and int values, we will
       // save two bitwise instructions and one float-to-int instruction and
@@ -272,11 +275,14 @@ namespace llvm {
         const APInt &ShiftOrRotateAmt,
         const std::optional<APInt> &AndMask) const override;
 
+    bool preferIncOfAddToSubOfNot(EVT VT) const override;
+
     bool preferScalarizeSplat(SDNode *N) const override;
 
     CondMergingParams
     getJumpConditionMergingParams(Instruction::BinaryOps Opc, const Value *Lhs,
-                                  const Value *Rhs) const override;
+                                  const Value *Rhs,
+                                  const Function *F) const override;
 
     bool shouldFoldConstantShiftPairToMask(const SDNode *N) const override;
 
@@ -353,6 +359,9 @@ namespace llvm {
                                                     unsigned MaskIndex,
                                                     TargetLoweringOpt &TLO,
                                                     unsigned Depth) const;
+
+    unsigned getPreferredShrunkVectorSizeInBits(
+        SDValue Op, const APInt &DemandedElts) const override;
 
     bool SimplifyDemandedBitsForTargetNode(SDValue Op,
                                            const APInt &DemandedBits,
@@ -519,11 +528,9 @@ namespace llvm {
                             const CallBase &I, MachineFunction &MF,
                             unsigned Intrinsic) const override;
 
-    /// Returns true if the target can instruction select the
-    /// specified FP immediate natively. If false, the legalizer will
-    /// materialize the FP immediate as a load from a constant pool.
-    bool isFPImmLegal(const APFloat &Imm, EVT VT,
-                      bool ForCodeSize) const override;
+    /// Returns how to materialize the specified FP immediate.
+    FPImmAction getFPImmAction(const APFloat &Imm, EVT VT,
+                               bool ForCodeSize) const override;
 
     /// Targets can use this to indicate that they only support *some*
     /// VECTOR_SHUFFLE operations, those with specific masks. By default, if a
@@ -566,13 +573,16 @@ namespace llvm {
 
     bool convertSelectOfConstantsToMath(EVT VT) const override;
 
+    bool shouldNormalizeToSelectSequence(LLVMContext &Context, EVT VT,
+                                         EVT CCVT) const override;
+
     bool decomposeMulByConstant(LLVMContext &Context, EVT VT,
                                 SDValue C) const override;
 
-    /// Return true if EXTRACT_SUBVECTOR is cheap for this result type
-    /// with this index.
-    bool isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
-                                 unsigned Index) const override;
+    /// Return the cost of EXTRACT_SUBVECTOR for this result type with this
+    /// index.
+    ExtractSubvectorCost getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
+                                                 unsigned Index) const override;
 
     /// Scalar ops always have equal or better analysis/performance/power than
     /// the vector equivalent, so this always makes sense if the scalar op is
@@ -614,12 +624,14 @@ namespace llvm {
     /// If a physical register, this returns the register that receives the
     /// exception address on entry to an EH pad.
     Register
-    getExceptionPointerRegister(const Constant *PersonalityFn) const override;
+    getExceptionPointerRegister(ExceptionHandling EH,
+                                const Constant *PersonalityFn) const override;
 
     /// If a physical register, this returns the register that receives the
     /// exception typeid on entry to a landing pad.
     Register
-    getExceptionSelectorRegister(const Constant *PersonalityFn) const override;
+    getExceptionSelectorRegister(ExceptionHandling EH,
+                                 const Constant *PersonalityFn) const override;
 
     bool needsFixedCatchObjects() const override;
 
@@ -636,13 +648,12 @@ namespace llvm {
                            const LibcallLoweringInfo &Libcalls) const override;
 
     bool useLoadStackGuardNode(const Module &M) const override;
-    bool useStackGuardXorFP() const override;
+    bool useStackGuardMixFP() const override;
     void
     insertSSPDeclarations(Module &M,
                           const LibcallLoweringInfo &Libcalls) const override;
-    SDValue emitStackGuardXorFP(SelectionDAG &DAG, SDValue Val,
+    SDValue emitStackGuardMixFP(SelectionDAG &DAG, SDValue Val,
                                 const SDLoc &DL) const override;
-
 
     /// Return true if the target stores SafeStack pointer at a fixed offset in
     /// some non-standard address space, and populates the address space and
@@ -697,6 +708,10 @@ namespace llvm {
     bool isInlineAsmTargetBranch(const SmallVectorImpl<StringRef> &AsmStrs,
                                  unsigned OpNo) const override;
 
+    // An x86 address can use a symbol as its displacement, which the asm
+    // printer prints for a call target, e.g. "call foo@PLT".
+    bool supportsInlineAsmFuncOperands() const override { return true; }
+
     SDValue visitMaskedLoad(SelectionDAG &DAG, const SDLoc &DL, SDValue Chain,
                             MachineMemOperand *MMO, SDValue &NewLoad,
                             SDValue Ptr, SDValue PassThru,
@@ -721,13 +736,19 @@ namespace llvm {
     SDValue expandIndirectJTBranch(const SDLoc &dl, SDValue Value, SDValue Addr,
                                    int JTI, SelectionDAG &DAG) const override;
 
-    Align getPrefLoopAlignment(MachineLoop *ML) const override;
+    Align
+    getPrefLoopAlignment(MachineLoop *ML,
+                         const MachineBasicBlock *BlockToAlign) const override;
 
     EVT getTypeToTransformTo(LLVMContext &Context, EVT VT) const override {
       if (VT == MVT::f80)
         return EVT::getIntegerVT(Context, 96);
       return TargetLoweringBase::getTypeToTransformTo(Context, VT);
     }
+
+    /// Return true if \p VT has the rsqrt* based estimate of the square root,
+    /// or of its reciprocal if \p Reciprocal is set.
+    bool hasSqrtEstimate(EVT VT, bool Reciprocal) const;
 
   protected:
     std::pair<const TargetRegisterClass *, uint8_t>
@@ -843,6 +864,7 @@ namespace llvm {
     SDValue lowerFaddFsub(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerBF16_TO_FP(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerFP_TO_BF16(SDValue Op, SelectionDAG &DAG) const;
 
     SDValue
@@ -894,6 +916,7 @@ namespace llvm {
     shouldExpandLogicAtomicRMWInIR(const AtomicRMWInst *AI) const;
     void emitBitTestAtomicRMWIntrinsic(AtomicRMWInst *AI) const override;
     void emitCmpArithAtomicRMWIntrinsic(AtomicRMWInst *AI) const override;
+    void emitExpandAtomicRMW(AtomicRMWInst *AI) const override;
 
     LoadInst *
     lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const override;
@@ -902,7 +925,7 @@ namespace llvm {
       return false;
     }
 
-    bool needsCmpXchgNb(Type *MemType) const;
+    bool needsCmpXchgNb(unsigned OpWidth) const;
 
     void SetupEntryBlockForSjLj(MachineInstr &MI, MachineBasicBlock *MBB,
                                 MachineBasicBlock *DispatchBB, int FI) const;

@@ -39,6 +39,7 @@
 #include "UseEmplaceCheck.h"
 #include "UseEqualsDefaultCheck.h"
 #include "UseEqualsDeleteCheck.h"
+#include "UseIfConstevalCheck.h"
 #include "UseIntegerSignComparisonCheck.h"
 #include "UseNodiscardCheck.h"
 #include "UseNoexceptCheck.h"
@@ -53,6 +54,7 @@
 #include "UseStdPrintCheck.h"
 #include "UseStringViewCheck.h"
 #include "UseStructuredBindingCheck.h"
+#include "UseToUnderlyingCheck.h"
 #include "UseTrailingReturnTypeCheck.h"
 #include "UseTransparentFunctorsCheck.h"
 #include "UseUncaughtExceptionsCheck.h"
@@ -90,6 +92,8 @@ public:
     CheckFactories.registerCheck<PassByValueCheck>("modernize-pass-by-value");
     CheckFactories.registerCheck<UseDesignatedInitializersCheck>(
         "modernize-use-designated-initializers");
+    CheckFactories.registerCheck<UseIfConstevalCheck>(
+        "modernize-use-if-consteval");
     CheckFactories.registerCheck<UseIntegerSignComparisonCheck>(
         "modernize-use-integer-sign-comparison");
     CheckFactories.registerCheck<UseRangesCheck>("modernize-use-ranges");
@@ -138,6 +142,8 @@ public:
         "modernize-use-string-view");
     CheckFactories.registerCheck<UseStructuredBindingCheck>(
         "modernize-use-structured-binding");
+    CheckFactories.registerCheck<UseToUnderlyingCheck>(
+        "modernize-use-to-underlying");
     CheckFactories.registerCheck<UseTrailingReturnTypeCheck>(
         "modernize-use-trailing-return-type");
     CheckFactories.registerCheck<UseTransparentFunctorsCheck>(

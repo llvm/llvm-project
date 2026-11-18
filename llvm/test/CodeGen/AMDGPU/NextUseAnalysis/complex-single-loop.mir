@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn -mcpu=gfx1200 \
+# RUN: llc -mtriple=amdgpu12.00 \
 # RUN:     -run-pass=amdgpu-next-use-printer \
 # RUN:     -amdgpu-next-use-analysis-config=graphics \
 # RUN:     -amdgpu-next-use-analysis-dump-distance-as-json=- \
@@ -6,7 +6,7 @@
 # RUN:     -filetype=null \
 # RUN:     %s | FileCheck --check-prefix=CHECK-GX-JSON %s
 
-# RUN: llc -mtriple=amdgcn -mcpu=gfx1200 \
+# RUN: llc -mtriple=amdgpu12.00 \
 # RUN:     -run-pass=amdgpu-next-use-printer \
 # RUN:     -amdgpu-next-use-analysis-config=compute \
 # RUN:     -amdgpu-next-use-analysis-dump-distance-as-json=- \
@@ -14,7 +14,7 @@
 # RUN:     -filetype=null \
 # RUN:     %s | FileCheck --check-prefix=CHECK-CP-JSON %s
 
-# RUN: llc -mtriple=amdgcn -mcpu=gfx1200 \
+# RUN: llc -mtriple=amdgpu12.00 \
 # RUN:     "-passes=require<amdgpu-next-use-analysis>,print<amdgpu-next-use-analysis>" \
 # RUN:     -amdgpu-next-use-analysis-config=compute \
 # RUN:     -amdgpu-next-use-analysis-dump-distance-as-json=- \
@@ -158,7 +158,6 @@ body:             |
     GLOBAL_STORE_DWORD %7, %26, 0, 0, implicit $exec :: (store (s32) into %ir.p3, addrspace 1)
     S_ENDPGM 0
 ...
----
 
 
 # CHECK-GX-JSON:      {

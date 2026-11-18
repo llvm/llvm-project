@@ -32,7 +32,7 @@ static cl::list<std::string> InputArgv("args", cl::Positional,
                                        cl::desc("<program arguments>..."),
                                        cl::PositionalEatsArgs);
 
-static cl::opt<unsigned> NumThreads("num-threads", cl::Optional,
+static cl::opt<unsigned> NumThreads("num-threads",
                                     cl::desc("Number of compile threads"),
                                     cl::init(4));
 

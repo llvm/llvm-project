@@ -6,14 +6,22 @@
 // Malformed JSON input.
 // RUN: not clang-ssaf-linker %S/Inputs/tu-malformed.json -o %t/out.json 2>&1 \
 // RUN:   | FileCheck %s --match-full-lines --check-prefix=BAD-JSON
-// BAD-JSON:      clang-ssaf-linker: error: reading TUSummary from file '{{.*}}tu-malformed.json'
+// BAD-JSON:      clang-ssaf-linker: error: Reading artifact '{{.*}}tu-malformed.json'
+// BAD-JSON-NEXT: reading ArtifactEncoding from file '{{.*}}tu-malformed.json'
 // BAD-JSON-NEXT: {{.*}}: Invalid JSON value{{.*}}
 
 // Missing required fields in otherwise valid JSON.
 // RUN: not clang-ssaf-linker %S/Inputs/tu-missing-fields.json -o %t/out.json 2>&1 \
 // RUN:        | FileCheck %s --match-full-lines --check-prefix=MISSING-FIELDS
-// MISSING-FIELDS:      clang-ssaf-linker: error: reading TUSummary from file '{{.*}}tu-missing-fields.json'
+// MISSING-FIELDS:      clang-ssaf-linker: error: Reading artifact '{{.*}}tu-missing-fields.json'
+// MISSING-FIELDS-NEXT: reading ArtifactEncoding from file '{{.*}}tu-missing-fields.json'
 // MISSING-FIELDS-NEXT: failed to read IdTable from field 'id_table': expected JSON array
+
+// An unrecognized artifact kind names every kind the linker can read.
+// RUN: not clang-ssaf-linker %S/Inputs/bad-artifact.json -o %t/out.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=BAD-ARTIFACT
+// BAD-ARTIFACT: clang-ssaf-linker: error: Reading artifact '{{.*}}bad-artifact.json'
+// BAD-ARTIFACT: unknown value 'BogusKind' for field 'type'
 
 // Output file already exists.
 // RUN: touch %t/out.json

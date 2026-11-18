@@ -151,8 +151,10 @@ enum LLVMTypeID {
 };
 
 /// Get the string name of an LLVM Type ID.
-static inline const char *getLLVMTypeIDName(uint32_t type_id) {
+static inline const char *getLLVMTypeIDName(int32_t type_id) {
   switch (type_id) {
+  case -1:
+    return "none";
   case HalfTyID:
     return "half";
   case BFloatTyID:
@@ -303,5 +305,14 @@ typedef enum NumericFlags {
   NUMERIC_FLAG_IS_DISJOINT = 1 << 5,
   NUMERIC_FLAG_IS_EXACT = 1 << 6,
 } NumericFlags;
+
+/// CompareIO flag bitmask values.
+typedef enum CompareFlags {
+  COMPARE_FLAG_NONE = 0,
+  COMPARE_FLAG_SAMESIGN = 1 << 0,
+  COMPARE_FLAG_HAS_NO_NANS = 1 << 1,
+  COMPARE_FLAG_HAS_NO_INFS = 1 << 2,
+  COMPARE_FLAG_HAS_NO_SIGNED_ZEROS = 1 << 3,
+} CompareFlags;
 
 #endif // INSTRUMENTOR_RUNTIME_H

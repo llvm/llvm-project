@@ -126,8 +126,17 @@ public:
   /// @{
 
   bool shouldMangleDeclName(const NamedDecl *D);
+  bool shouldMangleDeclNameIgnoringAsmLabel(const NamedDecl *D);
   virtual bool shouldMangleCXXName(const NamedDecl *D) = 0;
   virtual bool shouldMangleStringLiteral(const StringLiteral *SL) = 0;
+
+  /// Return true if \p FD's body contains a direct call back to the symbol it
+  /// links as, through an asm label or a __builtin_* alias (PR9614 / glibc's
+  /// btowc pattern).  An available_externally body of such a function is not a
+  /// valid stand-in for the real implementation and should be dropped before
+  /// codegen.  The check keys off the mangled/asm name, hence it lives on
+  /// MangleContext.
+  bool isTriviallyRecursive(const FunctionDecl *FD);
 
   virtual bool isUniqueInternalLinkageDecl(const NamedDecl *ND) {
     return false;
@@ -137,6 +146,7 @@ public:
 
   // FIXME: consider replacing raw_ostream & with something like SmallString &.
   void mangleName(GlobalDecl GD, raw_ostream &);
+  void mangleNameIgnoringAsmLabel(GlobalDecl GD, raw_ostream &);
   virtual void mangleCXXName(GlobalDecl GD, raw_ostream &) = 0;
   virtual void mangleThunk(const CXXMethodDecl *MD, const ThunkInfo &Thunk,
                            bool ElideOverrideInfo, raw_ostream &) = 0;

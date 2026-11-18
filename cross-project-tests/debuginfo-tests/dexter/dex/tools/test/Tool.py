@@ -24,8 +24,13 @@ from dex.debugger.DebuggerControllers.ScriptDebuggerController import (
 )
 from dex.dextIR.DextIR import DextIR
 from dex.evaluation import DebuggerRunMatch
+from dex.evaluation.ExpectRewriter import ScriptExpectRewriter
 from dex.heuristic import Heuristic
-from dex.test_script.Script import get_dexter_script
+from dex.test_script.Script import (
+    DexterScript,
+    get_dexter_script,
+    write_dexter_script_file,
+)
 from dex.tools import TestToolBase
 from dex.utils.Exceptions import DebuggerException
 from dex.utils.Exceptions import BuildScriptException, HeuristicException
@@ -142,7 +147,7 @@ class Tool(TestToolBase):
             dexter_version=self.context.version,
         )
 
-        if self.context.options.use_script:
+        if not self.context.options.use_heuristic:
             step_collection.script, new_source_files = get_dexter_script(
                 self.context,
                 self.context.options.test_files[0],
@@ -155,11 +160,7 @@ class Tool(TestToolBase):
 
         self.context.options.source_files.extend(list(new_source_files))
 
-        # If we are not running a debugger, return the DextIR instead of a DebuggerController.
-        if self.context.options.skip_run:
-            return step_collection
-
-        if self.context.options.use_script:
+        if not self.context.options.use_heuristic:
             debugger_controller = ScriptDebuggerController(
                 self.context, step_collection
             )
@@ -180,7 +181,8 @@ class Tool(TestToolBase):
 
         if self.context.options.skip_run:
             self.context.logger.warning("Skipping run...")
-            return debugger_controller
+            assert isinstance(debugger_controller.step_collection, DextIR)
+            return debugger_controller.step_collection
         debugger_controller = run_debugger_subprocess(
             debugger_controller, self.context.working_directory.path
         )
@@ -254,6 +256,16 @@ class Tool(TestToolBase):
             with open(output_json_path, "w") as fp:
                 json.dump(run_match.get_metric_json_output(), fp)
 
+    def _write_updated_structured_script(
+        self, test_name, rewritten_script: DexterScript
+    ):
+        """Write out the original script file, modified to replace any unknown expects with the actual observed
+        values."""
+        if self.context.options.results_directory:
+            output_text_path = self._get_results_path(test_name)
+            with open(output_text_path, "w", encoding="utf-8") as fp:
+                fp.write(write_dexter_script_file(rewritten_script))
+
     def _record_test_and_display(self, test_case):
         """Output test case to o stream and record test case internally for
         handling later.
@@ -312,7 +324,23 @@ class Tool(TestToolBase):
                     print("\n".join(step.detailed_print()))
                 return
             self._record_steps(test_name, steps)
-            if self.context.options.use_script:
+            if not self.context.options.use_heuristic:
+                # Before evaluating, the script may contain "unknown" expects; if they should be rewritten, then do so
+                # first, and then use the rewritten script to evaluate.
+                script_writer = ScriptExpectRewriter(self.context, steps)
+                if script_writer.new_script:
+                    self.context.logger.note(
+                        f"Rewrote script to add {script_writer.num_successful_rewrites} expected values."
+                    )
+                    if script_writer.num_unsuccessful_rewrites:
+                        self.context.logger.error(
+                            f"Failed to rewrite {script_writer.num_unsuccessful_rewrites} expected values."
+                        )
+                    self._write_updated_structured_script(
+                        test_name, script_writer.new_script
+                    )
+                    steps.script = script_writer.new_script
+                # Then evaluate, using the new script if any was produced.
                 run_match = DebuggerRunMatch(self.context, steps)
                 self._record_structured_script_metric_results(test_name, run_match)
                 self._record_successful_test_match(test_name, steps, run_match)

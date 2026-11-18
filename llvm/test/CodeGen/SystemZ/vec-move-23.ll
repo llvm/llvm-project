@@ -42,20 +42,20 @@ define void @fun2(<2 x i32> %Src, ptr %Dst) {
 define void @fun3(<4 x i16> %Src, ptr %Dst) {
 ; CHECK-LABEL: fun3:
 
-; Z14:      vuphh	%v0, %v24
-; Z14-NEXT: vlgvf	%r0, %v0, 3
-; Z14-NEXT: cefbr	%f1, %r0
-; Z14-NEXT: vlgvf	%r0, %v0, 2
-; Z14-NEXT: cefbr	%f2, %r0
-; Z14-NEXT: vlgvf	%r0, %v0, 1
-; Z14-NEXT: vmrhf	%v1, %v2, %v1
-; Z14-NEXT: cefbr	%f2, %r0
-; Z14-NEXT: vlgvf	%r0, %v0, 0
-; Z14-NEXT: cefbr	%f0, %r0
-; Z14-NEXT: vmrhf	%v0, %v0, %v2
-; Z14-NEXT: vmrhg	%v0, %v0, %v1
-; Z14-NEXT: vst	%v0, 0(%r2), 3
-; Z14-NEXT: br	%r14
+; Z14:        vuphh   %v0, %v24
+; Z14-NEXT:   vlgvf   %r0, %v0, 3
+; Z14-NEXT:   vlgvf   %r1, %v0, 2
+; Z14-NEXT:   cefbr   %f1, %r1
+; Z14-NEXT:   vlgvf   %r3, %v0, 1
+; Z14-NEXT:   cefbr   %f2, %r3
+; Z14-NEXT:   vlgvf   %r4, %v0, 0
+; Z14-NEXT:   cefbr   %f0, %r0
+; Z14-NEXT:   vmrhf   %v0, %v1, %v0
+; Z14-NEXT:   cefbr   %f3, %r4
+; Z14-NEXT:   vmrhf   %v1, %v3, %v2
+; Z14-NEXT:   vmrhg   %v0, %v1, %v0
+; Z14-NEXT:   vst     %v0, 0(%r2), 3
+; Z14-NEXT:   br      %r14
 
 ; Z15:      vuphh	%v0, %v24
 ; Z15-NEXT: vcefb	%v0, %v0, 0, 0
@@ -106,20 +106,20 @@ define void @fun6(<2 x i32> %Src, ptr %Dst) {
 define void @fun7(<4 x i16> %Src, ptr %Dst) {
 ; CHECK-LABEL: fun7:
 
-; Z14:      vuplhh	%v0, %v24
-; Z14-NEXT: vlgvf	%r0, %v0, 3
-; Z14-NEXT: celfbr	%f1, 0, %r0, 0
-; Z14-NEXT: vlgvf	%r0, %v0, 2
-; Z14-NEXT: celfbr	%f2, 0, %r0, 0
-; Z14-NEXT: vlgvf	%r0, %v0, 1
-; Z14-NEXT: vmrhf	%v1, %v2, %v1
-; Z14-NEXT: celfbr	%f2, 0, %r0, 0
-; Z14-NEXT: vlgvf	%r0, %v0, 0
-; Z14-NEXT: celfbr	%f0, 0, %r0, 0
-; Z14-NEXT: vmrhf	%v0, %v0, %v2
-; Z14-NEXT: vmrhg	%v0, %v0, %v1
-; Z14-NEXT: vst	%v0, 0(%r2), 3
-; Z14-NEXT: br	%r14
+; Z14:      vuplhh  %v0, %v24
+; Z14-NEXT: vlgvf   %r0, %v0, 3
+; Z14-NEXT: vlgvf   %r1, %v0, 2
+; Z14-NEXT: celfbr  %f1, 0, %r1, 0
+; Z14-NEXT: vlgvf   %r3, %v0, 1
+; Z14-NEXT: celfbr  %f2, 0, %r3, 0
+; Z14-NEXT: vlgvf   %r4, %v0, 0
+; Z14-NEXT: celfbr  %f0, 0, %r0, 0
+; Z14-NEXT: vmrhf   %v0, %v1, %v0
+; Z14-NEXT: celfbr  %f3, 0, %r4, 0
+; Z14-NEXT: vmrhf   %v1, %v3, %v2
+; Z14-NEXT: vmrhg   %v0, %v1, %v0
+; Z14-NEXT: vst     %v0, 0(%r2), 3
+; Z14-NEXT: br      %r14
 
 ; Z15:      vuplhh	%v0, %v24
 ; Z15-NEXT: vcelfb	%v0, %v0, 0, 0
@@ -160,4 +160,53 @@ define void @fun9(ptr %Src, ptr %ptr) {
  %conv = uitofp <10 x i16> %Val to <10 x float>
  store <10 x float> %conv, ptr %ptr
  ret void
+}
+
+define <4 x double> @fun10(<4 x i16> %Src) {
+; CHECK-LABEL: fun10:
+; CHECK:      vperm	%v0, %v0, %v24, %v0
+; CHECK-NEXT: vperm	%v1, %v1, %v24, %v1
+; CHECK-NEXT: vcdlgb	%v24, %v0, 0, 0
+; CHECK-NEXT: vcdlgb	%v26, %v1, 0, 0
+; CHECK-NEXT: br	%r14
+  %conv = uitofp <4 x i16> %Src to <4 x double>
+  ret <4 x double> %conv
+}
+
+define <4 x double> @fun11(<4 x i16> %Src) {
+; CHECK-LABEL: fun11:
+; CHECK:      vuphh	%v0, %v24
+; CHECK-NEXT: vuplf	%v1, %v0
+; CHECK-NEXT: vuphf	%v0, %v0
+; CHECK-NEXT: vcdgb	%v24, %v0, 0, 0
+; CHECK-NEXT: vcdgb	%v26, %v1, 0, 0
+; CHECK-NEXT: br	%r14
+  %conv = sitofp <4 x i16> %Src to <4 x double>
+  ret <4 x double> %conv
+}
+
+define <4 x double> @fun12(<4 x i64> %Src) {
+; CHECK-LABEL: fun12:
+; CHECK:      vgbm	%v0, 771
+; CHECK-NEXT: vn	%v1, %v26, %v0
+; CHECK-NEXT: vn	%v0, %v24, %v0
+; CHECK-NEXT: vcdlgb	%v24, %v0, 0, 0
+; CHECK-NEXT: vcdlgb	%v26, %v1, 0, 0
+; CHECK-NEXT: br	%r14
+  %m = and <4 x i64> %Src, splat (i64 65535)
+  %conv = uitofp <4 x i64> %m to <4 x double>
+  ret <4 x double> %conv
+}
+
+define <4 x double> @fun13(<4 x i64> %Src) {
+; CHECK-LABEL: fun13:
+; CHECK:      vgbm	%v0, 771
+; CHECK-NEXT: vn	%v1, %v26, %v0
+; CHECK-NEXT: vn	%v0, %v24, %v0
+; CHECK-NEXT: vcdgb	%v24, %v0, 0, 0
+; CHECK-NEXT: vcdgb	%v26, %v1, 0, 0
+; CHECK-NEXT: br	%r14
+  %m = and <4 x i64> %Src, splat (i64 65535)
+  %conv = sitofp <4 x i64> %m to <4 x double>
+  ret <4 x double> %conv
 }
