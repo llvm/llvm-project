@@ -1595,6 +1595,36 @@ def CIR_BitIntSpecAttr : CIR_Attr<"BitIntSpec", "bitint_spec"> {
 }
 
 //===----------------------------------------------------------------------===//
+// VectorSpecAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_VectorSpecAttr : CIR_Attr<"VectorSpec", "vector_spec"> {
+  let summary = "!cir.vector data layout spec";
+  let description = [{
+    Upper bound, in bits, on the language alignment of a vector. This is
+    `TargetInfo::getMaxVectorAlign()`. The language alignment of a vector is
+    its size in bytes rounded up to a power of two, and then at most
+    `max_align` bits. The cap does not apply to the vector's ABI alignment,
+    which is the alignment of the LLVM vector type it lowers to. A target
+    that leaves the maximum at 0 records no entry, and the vector's
+    language alignment equals its ABI alignment.
+
+    Used as the value of the `!cir.vector<1 x !cir.int<u, 8>>`-keyed
+    data-layout entry. The key names the vector class. Its element type
+    and element count are not layout inputs.
+
+    ```mlir
+    #dlti.dl_spec<!cir.vector<1 x !cir.int<u, 8>> =
+        #cir.vector_spec<max_align = 128>>
+    ```
+  }];
+  let parameters = (ins "uint32_t":$max_align);
+  let assemblyFormat = "`<` struct(params) `>`";
+  let genVerifyDecl = 1;
+  let canHaveIllegalCXXABIType = 0;
+}
+
+//===----------------------------------------------------------------------===//
 // ConstComplexAttr
 //===----------------------------------------------------------------------===//
 

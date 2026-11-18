@@ -468,7 +468,7 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   extensions. `-fspv-extension=all` restores the previous behavior.
 
 - `-fdevirtualize-speculatively` can now also be used to enable speculative
-  devirtualization when using LTO, with the exception of Distributed ThinLTO.
+  devirtualization when using LTO.
 
 ### Removed Compiler Flags
 
@@ -1501,6 +1501,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 #### CUDA Support
 
+- Fixed argument-dependent lookup for CUDA and HIP kernel launches, including
+  calls to kernels declared as hidden friends. (#GH45327)
+
 - Fixed missing diagnostics for wrong-side functions reached through constructor
   and member initializers, as well as inherited constructors. (#GH118415)
 
@@ -1647,6 +1650,9 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   normalize `cfi-icall` and `kcfi` function type metadata, leaving C++ class
   vtable, member-pointer, and `-fexperimental-call-graph-section` metadata
   canonical so whole-program devirtualization works reliably. (#GH242466)
+- `-fsanitize=alloc-token` now also infers the allocated type from a placement
+  `new` into the result of an untyped allocation call, e.g. `new (malloc(n)) T`
+  or `void *p = malloc(n); new (p) T;`.
 
 ### Python Binding Changes
 

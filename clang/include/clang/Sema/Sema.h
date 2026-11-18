@@ -7366,7 +7366,7 @@ public:
 
   ExprResult ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
                                SourceLocation TemplateKWLoc, UnqualifiedId &Id,
-                               bool HasTrailingLParen, bool IsAddressOfOperand,
+                               bool IsCall, bool IsAddressOfOperand,
                                CorrectionCandidateCallback *CCC = nullptr,
                                bool IsInlineAsmIdentifier = false);
 
@@ -7429,7 +7429,7 @@ public:
                    const TemplateArgumentListInfo *TemplateArgs = nullptr);
 
   bool UseArgumentDependentLookup(const CXXScopeSpec &SS, const LookupResult &R,
-                                  bool HasTrailingLParen);
+                                  bool IsCall);
 
   /// BuildQualifiedDeclarationNameExpr - Build a C++ qualified
   /// declaration name, generally during template instantiation.
