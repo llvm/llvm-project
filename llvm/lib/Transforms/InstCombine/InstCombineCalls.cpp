@@ -27,6 +27,7 @@
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
+#include "llvm/Analysis/MetadataUtils.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/AttributeMask.h"
@@ -169,32 +170,17 @@ Instruction *InstCombinerImpl::SimplifyAnyMemTransfer(AnyMemTransferInst *MI) {
   // Use an integer load+store unless we can find something better.
   IntegerType* IntType = IntegerType::get(MI->getContext(), Size<<3);
 
-  // If the memcpy has metadata describing the members, see if we can get the
-  // TBAA, scope and noalias tags describing our copy.
-  AAMDNodes AACopyMD = MI->getAAMetadata().adjustForAccess(Size);
-
   Value *Src = MI->getArgOperand(1);
   Value *Dest = MI->getArgOperand(0);
   LoadInst *L = Builder.CreateLoad(IntType, Src);
   // Alignment from the mem intrinsic will be better, so use it.
   L->setAlignment(*CopySrcAlign);
-  L->setAAMetadata(AACopyMD);
-  MDNode *LoopMemParallelMD =
-    MI->getMetadata(LLVMContext::MD_mem_parallel_loop_access);
-  if (LoopMemParallelMD)
-    L->setMetadata(LLVMContext::MD_mem_parallel_loop_access, LoopMemParallelMD);
-  MDNode *AccessGroupMD = MI->getMetadata(LLVMContext::MD_access_group);
-  if (AccessGroupMD)
-    L->setMetadata(LLVMContext::MD_access_group, AccessGroupMD);
+  copyMetadataForMemoryAccess(*L, *MI);
 
   StoreInst *S = Builder.CreateStore(L, Dest);
   // Alignment from the mem intrinsic will be better, so use it.
   S->setAlignment(*CopyDstAlign);
-  S->setAAMetadata(AACopyMD);
-  if (LoopMemParallelMD)
-    S->setMetadata(LLVMContext::MD_mem_parallel_loop_access, LoopMemParallelMD);
-  if (AccessGroupMD)
-    S->setMetadata(LLVMContext::MD_access_group, AccessGroupMD);
+  copyMetadataForMemoryAccess(*S, *MI);
   S->copyMetadata(*MI, LLVMContext::MD_DIAssignID);
 
   if (auto *MT = dyn_cast<MemTransferInst>(MI)) {
@@ -272,6 +258,7 @@ Instruction *InstCombinerImpl::SimplifyAnyMemSet(AnyMemSetInst *MI) {
       return nullptr;
 
     StoreInst *S = Builder.CreateStore(FillVal, Dest, MI->isVolatile());
+    copyMetadataForMemoryAccess(*S, *MI);
     S->copyMetadata(*MI, LLVMContext::MD_DIAssignID);
     for (DbgVariableRecord *DbgAssign : at::getDVRAssignmentMarkers(S)) {
       if (llvm::is_contained(DbgAssign->location_ops(), Fill))
@@ -302,7 +289,7 @@ Value *InstCombinerImpl::simplifyMaskedLoad(IntrinsicInst &II) {
   if (match(Mask, m_AllOnesOrPoison())) {
     LoadInst *L = Builder.CreateAlignedLoad(II.getType(), LoadPtr, Alignment,
                                             "unmaskedload");
-    L->copyMetadata(II);
+    copyMetadataForMemoryAccess(*L, II);
     return L;
   }
 
@@ -312,7 +299,9 @@ Value *InstCombinerImpl::simplifyMaskedLoad(IntrinsicInst &II) {
                                SQ.getWithInstruction(&II))) {
     LoadInst *LI = Builder.CreateAlignedLoad(II.getType(), LoadPtr, Alignment,
                                              "unmaskedload");
-    LI->copyMetadata(II);
+    // TODO: Check whether metadata valid only for active lanes can be retained
+    // on the unmasked load.
+    copyMetadataForMemoryAccess(*LI, II);
     return Builder.CreateSelect(II.getArgOperand(1), LI, II.getArgOperand(2));
   }
 
@@ -338,7 +327,7 @@ Instruction *InstCombinerImpl::simplifyMaskedStore(IntrinsicInst &II) {
   if (match(ConstMask, m_AllOnesOrPoison())) {
     StoreInst *S =
         new StoreInst(II.getArgOperand(0), StorePtr, false, Alignment);
-    S->copyMetadata(II);
+    copyMetadataForMemoryAccess(*S, II);
     return S;
   }
 
@@ -375,6 +364,7 @@ Instruction *InstCombinerImpl::simplifyMaskedGather(IntrinsicInst &II) {
       const Align Alignment = II.getParamAlign(0).valueOrOne();
       LoadInst *L = Builder.CreateAlignedLoad(VecTy->getElementType(), SplatPtr,
                                               Alignment, "load.scalar");
+      copyMetadataForMemoryAccess(*L, II);
       Value *Shuf =
           Builder.CreateVectorSplat(VecTy->getElementCount(), L, "broadcast");
       return replaceInstUsesWith(II, cast<Instruction>(Shuf));
@@ -405,7 +395,7 @@ Instruction *InstCombinerImpl::simplifyMaskedScatter(IntrinsicInst &II) {
         Align Alignment = II.getParamAlign(1).valueOrOne();
         StoreInst *S = new StoreInst(SplatValue, SplatPtr, /*IsVolatile=*/false,
                                      Alignment);
-        S->copyMetadata(II);
+        copyMetadataForMemoryAccess(*S, II);
         return S;
       }
     }
@@ -421,7 +411,7 @@ Instruction *InstCombinerImpl::simplifyMaskedScatter(IntrinsicInst &II) {
           Builder.CreateExtractElement(II.getArgOperand(0), LastLane);
       StoreInst *S =
           new StoreInst(Extract, SplatPtr, /*IsVolatile=*/false, Alignment);
-      S->copyMetadata(II);
+      copyMetadataForMemoryAccess(*S, II);
       return S;
     }
   }

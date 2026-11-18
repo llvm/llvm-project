@@ -7,7 +7,7 @@ define float @bitcast_load(ptr %p) {
 ;
 ; CHECK-LABEL: define float @bitcast_load(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[V1:%.*]] = load float, ptr [[P]], align 4, !tbaa [[INT_TBAA0:![0-9]+]], !invariant.load [[META4:![0-9]+]], !alias.scope [[META5:![0-9]+]], !noalias [[META5]], !nontemporal [[META8:![0-9]+]], !llvm.mem.parallel_loop_access [[META9:![0-9]+]], !invariant.group [[META4]], !llvm.access.group [[META9]], !noundef [[META4]], !annotation [[META10:![0-9]+]], !mmra [[META11:![0-9]+]], !noalias.addrspace [[META12:![0-9]+]], !mem.cache_hint [[META13:![0-9]+]]
+; CHECK-NEXT:    [[V1:%.*]] = load float, ptr [[P]], align 4, !tbaa [[INT_TBAA0:![0-9]+]], !invariant.load [[META4:![0-9]+]], !alias.scope [[META5:![0-9]+]], !noalias [[META5]], !nontemporal [[META8:![0-9]+]], !llvm.mem.parallel_loop_access [[META9:![0-9]+]], !invariant.group [[META4]], !llvm.access.group [[META9]], !noundef [[META4]], !annotation [[META10:![0-9]+]], !nosanitize [[META4]], !mmra [[META11:![0-9]+]], !noalias.addrspace [[META12:![0-9]+]], !mem.cache_hint [[META13:![0-9]+]]
 ; CHECK-NEXT:    ret float [[V1]]
 ;
   %v = load i32, ptr %p, align 4, !tbaa !10, !range !9, !noundef !0, !invariant.load !0, !invariant.group !0, !mem.cache_hint !16, !alias.scope !6, !noalias !6, !nontemporal !1, !llvm.mem.parallel_loop_access !5, !llvm.access.group !5, !annotation !2, !nosanitize !0, !mmra !3, !noalias.addrspace !4, !test.unknown !0
@@ -19,7 +19,7 @@ define void @bitcast_store(ptr %p, float %v) {
 ;
 ; CHECK-LABEL: define void @bitcast_store(
 ; CHECK-SAME: ptr [[P:%.*]], float [[V:%.*]]) {
-; CHECK-NEXT:    store float [[V]], ptr [[P]], align 4, !tbaa [[INT_TBAA0]], !alias.scope [[META5]], !noalias [[META5]], !nontemporal [[META8]], !llvm.mem.parallel_loop_access [[META9]], !llvm.access.group [[META9]], !annotation [[META10]]
+; CHECK-NEXT:    store float [[V]], ptr [[P]], align 4, !tbaa [[INT_TBAA0]], !alias.scope [[META5]], !noalias [[META5]], !nontemporal [[META8]], !llvm.mem.parallel_loop_access [[META9]], !invariant.group [[META4]], !llvm.access.group [[META9]], !annotation [[META10]], !nosanitize [[META4]], !mmra [[META11]], !noalias.addrspace [[META12]], !mem.cache_hint [[META15:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %bits = bitcast float %v to i32
@@ -31,9 +31,9 @@ define i32 @unpack_struct_load(ptr %p) {
 ;
 ; CHECK-LABEL: define i32 @unpack_struct_load(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[V_UNPACK:%.*]] = load i32, ptr [[P]], align 8, !tbaa.struct [[TBAA_STRUCT15:![0-9]+]], !invariant.load [[META4]], !alias.scope [[META5]], !noalias [[META5]], !annotation [[META10]], !noalias.addrspace [[META12]]
+; CHECK-NEXT:    [[V_UNPACK:%.*]] = load i32, ptr [[P]], align 8, !tbaa [[INT_TBAA0]], !invariant.load [[META4]], !alias.scope [[META5]], !noalias [[META5]], !nontemporal [[META8]], !llvm.mem.parallel_loop_access [[META9]], !invariant.group [[META4]], !llvm.access.group [[META9]], !annotation [[META10]], !nosanitize [[META4]], !mmra [[META11]], !noalias.addrspace [[META12]], !mem.cache_hint [[META13]]
 ; CHECK-NEXT:    [[V_ELT1:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 4, !annotation [[META10]]
-; CHECK-NEXT:    [[V_UNPACK2:%.*]] = load i32, ptr [[V_ELT1]], align 4, !tbaa.struct [[TBAA_STRUCT15]], !invariant.load [[META4]], !alias.scope [[META5]], !noalias [[META5]], !annotation [[META10]], !noalias.addrspace [[META12]]
+; CHECK-NEXT:    [[V_UNPACK2:%.*]] = load i32, ptr [[V_ELT1]], align 4, !tbaa [[FLOAT_TBAA16:![0-9]+]], !invariant.load [[META4]], !alias.scope [[META5]], !noalias [[META5]], !nontemporal [[META8]], !llvm.mem.parallel_loop_access [[META9]], !llvm.access.group [[META9]], !annotation [[META10]], !nosanitize [[META4]], !mmra [[META11]], !noalias.addrspace [[META12]], !mem.cache_hint [[META13]]
 ; CHECK-NEXT:    [[R:%.*]] = add i32 [[V_UNPACK]], [[V_UNPACK2]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -48,9 +48,9 @@ define i32 @unpack_array_load(ptr %p) {
 ;
 ; CHECK-LABEL: define i32 @unpack_array_load(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[V_UNPACK:%.*]] = load i32, ptr [[P]], align 8, !tbaa.struct [[TBAA_STRUCT15]], !alias.scope [[META5]], !noalias [[META5]], !annotation [[META10]], !noalias.addrspace [[META12]]
+; CHECK-NEXT:    [[V_UNPACK:%.*]] = load i32, ptr [[P]], align 8, !tbaa [[INT_TBAA0]], !invariant.load [[META4]], !alias.scope [[META5]], !noalias [[META5]], !nontemporal [[META8]], !llvm.mem.parallel_loop_access [[META9]], !invariant.group [[META4]], !llvm.access.group [[META9]], !annotation [[META10]], !nosanitize [[META4]], !mmra [[META11]], !noalias.addrspace [[META12]], !mem.cache_hint [[META13]]
 ; CHECK-NEXT:    [[V_ELT1:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 4, !annotation [[META10]]
-; CHECK-NEXT:    [[V_UNPACK2:%.*]] = load i32, ptr [[V_ELT1]], align 4, !tbaa.struct [[TBAA_STRUCT15]], !alias.scope [[META5]], !noalias [[META5]], !annotation [[META10]], !noalias.addrspace [[META12]]
+; CHECK-NEXT:    [[V_UNPACK2:%.*]] = load i32, ptr [[V_ELT1]], align 4, !tbaa [[FLOAT_TBAA16]], !invariant.load [[META4]], !alias.scope [[META5]], !noalias [[META5]], !nontemporal [[META8]], !llvm.mem.parallel_loop_access [[META9]], !llvm.access.group [[META9]], !annotation [[META10]], !nosanitize [[META4]], !mmra [[META11]], !noalias.addrspace [[META12]], !mem.cache_hint [[META13]]
 ; CHECK-NEXT:    [[R:%.*]] = add i32 [[V_UNPACK]], [[V_UNPACK2]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -66,10 +66,10 @@ define void @unpack_struct_store(ptr %p, {i32, i32} %v) {
 ; CHECK-LABEL: define void @unpack_struct_store(
 ; CHECK-SAME: ptr [[P:%.*]], { i32, i32 } [[V:%.*]]) {
 ; CHECK-NEXT:    [[V_ELT:%.*]] = extractvalue { i32, i32 } [[V]], 0, !annotation [[META10]]
-; CHECK-NEXT:    store i32 [[V_ELT]], ptr [[P]], align 8, !tbaa.struct [[TBAA_STRUCT15]], !alias.scope [[META5]], !noalias [[META5]], !annotation [[META10]], !noalias.addrspace [[META12]]
+; CHECK-NEXT:    store i32 [[V_ELT]], ptr [[P]], align 8, !tbaa [[INT_TBAA0]], !alias.scope [[META5]], !noalias [[META5]], !nontemporal [[META8]], !llvm.mem.parallel_loop_access [[META9]], !invariant.group [[META4]], !llvm.access.group [[META9]], !annotation [[META10]], !nosanitize [[META4]], !mmra [[META11]], !noalias.addrspace [[META12]], !mem.cache_hint [[META15]]
 ; CHECK-NEXT:    [[P_REPACK1:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 4, !annotation [[META10]]
 ; CHECK-NEXT:    [[V_ELT2:%.*]] = extractvalue { i32, i32 } [[V]], 1, !annotation [[META10]]
-; CHECK-NEXT:    store i32 [[V_ELT2]], ptr [[P_REPACK1]], align 4, !tbaa.struct [[TBAA_STRUCT15]], !alias.scope [[META5]], !noalias [[META5]], !annotation [[META10]], !noalias.addrspace [[META12]]
+; CHECK-NEXT:    store i32 [[V_ELT2]], ptr [[P_REPACK1]], align 4, !tbaa [[FLOAT_TBAA16]], !alias.scope [[META5]], !noalias [[META5]], !nontemporal [[META8]], !llvm.mem.parallel_loop_access [[META9]], !llvm.access.group [[META9]], !annotation [[META10]], !nosanitize [[META4]], !mmra [[META11]], !noalias.addrspace [[META12]], !mem.cache_hint [[META15]]
 ; CHECK-NEXT:    ret void
 ;
   store {i32, i32} %v, ptr %p, align 8, !tbaa.struct !19, !invariant.group !0, !mem.cache_hint !18, !alias.scope !6, !noalias !6, !nontemporal !1, !llvm.mem.parallel_loop_access !5, !llvm.access.group !5, !annotation !2, !nosanitize !0, !mmra !3, !noalias.addrspace !4, !test.unknown !0
@@ -81,10 +81,10 @@ define void @unpack_array_store(ptr %p, [2 x i32] %v) {
 ; CHECK-LABEL: define void @unpack_array_store(
 ; CHECK-SAME: ptr [[P:%.*]], [2 x i32] [[V:%.*]]) {
 ; CHECK-NEXT:    [[V_ELT:%.*]] = extractvalue [2 x i32] [[V]], 0, !annotation [[META10]]
-; CHECK-NEXT:    store i32 [[V_ELT]], ptr [[P]], align 8, !tbaa.struct [[TBAA_STRUCT15]], !alias.scope [[META5]], !noalias [[META5]], !annotation [[META10]], !noalias.addrspace [[META12]]
+; CHECK-NEXT:    store i32 [[V_ELT]], ptr [[P]], align 8, !tbaa [[INT_TBAA0]], !alias.scope [[META5]], !noalias [[META5]], !nontemporal [[META8]], !llvm.mem.parallel_loop_access [[META9]], !invariant.group [[META4]], !llvm.access.group [[META9]], !annotation [[META10]], !nosanitize [[META4]], !mmra [[META11]], !noalias.addrspace [[META12]], !mem.cache_hint [[META15]]
 ; CHECK-NEXT:    [[P_REPACK1:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 4, !annotation [[META10]]
 ; CHECK-NEXT:    [[V_ELT2:%.*]] = extractvalue [2 x i32] [[V]], 1, !annotation [[META10]]
-; CHECK-NEXT:    store i32 [[V_ELT2]], ptr [[P_REPACK1]], align 4, !tbaa.struct [[TBAA_STRUCT15]], !alias.scope [[META5]], !noalias [[META5]], !annotation [[META10]], !noalias.addrspace [[META12]]
+; CHECK-NEXT:    store i32 [[V_ELT2]], ptr [[P_REPACK1]], align 4, !tbaa [[FLOAT_TBAA16]], !alias.scope [[META5]], !noalias [[META5]], !nontemporal [[META8]], !llvm.mem.parallel_loop_access [[META9]], !llvm.access.group [[META9]], !annotation [[META10]], !nosanitize [[META4]], !mmra [[META11]], !noalias.addrspace [[META12]], !mem.cache_hint [[META15]]
 ; CHECK-NEXT:    ret void
 ;
   store [2 x i32] %v, ptr %p, align 8, !tbaa.struct !19, !invariant.group !0, !mem.cache_hint !18, !alias.scope !6, !noalias !6, !nontemporal !1, !llvm.mem.parallel_loop_access !5, !llvm.access.group !5, !annotation !2, !nosanitize !0, !mmra !3, !noalias.addrspace !4, !test.unknown !0
@@ -97,8 +97,8 @@ define void @copy_memory(ptr %dst, ptr %src) {
 ;
 ; CHECK-LABEL: define void @copy_memory(
 ; CHECK-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[SRC]], align 8, !alias.scope [[META5]], !noalias [[META5]], !llvm.mem.parallel_loop_access [[META9]], !llvm.access.group [[META9]], !annotation [[META10]], !noalias.addrspace [[META12]]
-; CHECK-NEXT:    store i64 [[TMP1]], ptr [[DST]], align 8, !alias.scope [[META5]], !noalias [[META5]], !llvm.mem.parallel_loop_access [[META9]], !llvm.access.group [[META9]], !annotation [[META10]], !noalias.addrspace [[META12]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[SRC]], align 8, !tbaa.struct [[TBAA_STRUCT18:![0-9]+]], !alias.scope [[META5]], !noalias [[META5]], !nontemporal [[META8]], !llvm.mem.parallel_loop_access [[META9]], !llvm.access.group [[META9]], !annotation [[META10]], !nosanitize [[META4]], !mmra [[META11]], !noalias.addrspace [[META12]], !mem.cache_hint [[META19:![0-9]+]]
+; CHECK-NEXT:    store i64 [[TMP1]], ptr [[DST]], align 8, !tbaa.struct [[TBAA_STRUCT18]], !alias.scope [[META5]], !noalias [[META5]], !nontemporal [[META8]], !llvm.mem.parallel_loop_access [[META9]], !llvm.access.group [[META9]], !annotation [[META10]], !nosanitize [[META4]], !mmra [[META11]], !noalias.addrspace [[META12]], !mem.cache_hint [[META15]]
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %dst, ptr align 8 %src, i64 8, i1 false), !tbaa.struct !19, !prof !24, !mem.cache_hint !22, !alias.scope !6, !noalias !6, !nontemporal !1, !llvm.mem.parallel_loop_access !5, !llvm.access.group !5, !annotation !2, !nosanitize !0, !mmra !3, !noalias.addrspace !4, !test.unknown !0
@@ -109,7 +109,7 @@ define void @set_memory(ptr %dst) {
 ;
 ; CHECK-LABEL: define void @set_memory(
 ; CHECK-SAME: ptr [[DST:%.*]]) {
-; CHECK-NEXT:    store i32 0, ptr [[DST]], align 4, !annotation [[META10]]
+; CHECK-NEXT:    store i32 0, ptr [[DST]], align 4, !tbaa [[INT_TBAA0]], !alias.scope [[META5]], !noalias [[META5]], !nontemporal [[META8]], !llvm.mem.parallel_loop_access [[META9]], !llvm.access.group [[META9]], !annotation [[META10]], !nosanitize [[META4]], !mmra [[META11]], !noalias.addrspace [[META12]], !mem.cache_hint [[META15]]
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memset.p0.i64(ptr align 4 %dst, i8 0, i64 4, i1 false), !tbaa !10, !prof !24, !mem.cache_hint !16, !alias.scope !6, !noalias !6, !nontemporal !1, !llvm.mem.parallel_loop_access !5, !llvm.access.group !5, !annotation !2, !nosanitize !0, !mmra !3, !noalias.addrspace !4, !test.unknown !0
@@ -120,7 +120,7 @@ define <2 x i32> @splat_gather(ptr %p) {
 ;
 ; CHECK-LABEL: define <2 x i32> @splat_gather(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[LOAD_SCALAR:%.*]] = load i32, ptr [[P]], align 1, !annotation [[META10]]
+; CHECK-NEXT:    [[LOAD_SCALAR:%.*]] = load i32, ptr [[P]], align 1, !tbaa [[INT_TBAA0]], !range [[RNG21:![0-9]+]], !invariant.load [[META4]], !alias.scope [[META5]], !noalias [[META5]], !nontemporal [[META8]], !llvm.mem.parallel_loop_access [[META9]], !llvm.access.group [[META9]], !annotation [[META10]], !nosanitize [[META4]], !mmra [[META11]], !noalias.addrspace [[META12]], !mem.cache_hint [[META13]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[LOAD_SCALAR]], i64 0, !annotation [[META10]]
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer, !annotation [[META10]]
 ; CHECK-NEXT:    ret <2 x i32> [[BROADCAST_SPLAT]]
@@ -135,7 +135,7 @@ define void @splat_scatter(ptr %p, i32 %v) {
 ;
 ; CHECK-LABEL: define void @splat_scatter(
 ; CHECK-SAME: ptr [[P:%.*]], i32 [[V:%.*]]) {
-; CHECK-NEXT:    store i32 [[V]], ptr [[P]], align 1, !tbaa [[INT_TBAA0]], !alias.scope [[META5]], !noalias [[META5]], !nontemporal [[META8]], !llvm.mem.parallel_loop_access [[META9]], !llvm.access.group [[META9]], !annotation [[META10]], !nosanitize [[META4]], !mmra [[META11]], !noalias.addrspace [[META12]], !mem.cache_hint [[META18:![0-9]+]]
+; CHECK-NEXT:    store i32 [[V]], ptr [[P]], align 1, !tbaa [[INT_TBAA0]], !alias.scope [[META5]], !noalias [[META5]], !nontemporal [[META8]], !llvm.mem.parallel_loop_access [[META9]], !llvm.access.group [[META9]], !annotation [[META10]], !nosanitize [[META4]], !mmra [[META11]], !noalias.addrspace [[META12]], !mem.cache_hint [[META15]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr0 = insertelement <2 x ptr> poison, ptr %p, i32 0
@@ -174,7 +174,7 @@ define float @single_struct_fpmath(ptr %p) {
 ;
 ; CHECK-LABEL: define float @single_struct_fpmath(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[V_UNPACK:%.*]] = load float, ptr [[P]], align 4, !fpmath [[META19:![0-9]+]], !noundef [[META4]]
+; CHECK-NEXT:    [[V_UNPACK:%.*]] = load float, ptr [[P]], align 4, !fpmath [[META22:![0-9]+]], !noundef [[META4]], !nofpclass [[META23:![0-9]+]]
 ; CHECK-NEXT:    ret float [[V_UNPACK]]
 ;
   %v = load {float}, ptr %p, !fpmath !14, !nofpclass !15, !noundef !0
@@ -186,7 +186,7 @@ define float @single_array_fpmath(ptr %p) {
 ;
 ; CHECK-LABEL: define float @single_array_fpmath(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[V_UNPACK:%.*]] = load float, ptr [[P]], align 4, !fpmath [[META19]], !noundef [[META4]]
+; CHECK-NEXT:    [[V_UNPACK:%.*]] = load float, ptr [[P]], align 4, !fpmath [[META22]], !noundef [[META4]], !nofpclass [[META23]]
 ; CHECK-NEXT:    ret float [[V_UNPACK]]
 ;
   %v = load [1 x float], ptr %p, !fpmath !14, !nofpclass !15, !noundef !0
@@ -198,7 +198,7 @@ define <2 x i32> @unmask_pcsections(ptr %p) {
 ;
 ; CHECK-LABEL: define <2 x i32> @unmask_pcsections(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[UNMASKEDLOAD:%.*]] = load <2 x i32>, ptr [[P]], align 1, !pcsections [[META20:![0-9]+]]
+; CHECK-NEXT:    [[UNMASKEDLOAD:%.*]] = load <2 x i32>, ptr [[P]], align 1, !pcsections [[META24:![0-9]+]]
 ; CHECK-NEXT:    ret <2 x i32> [[UNMASKEDLOAD]]
 ;
   %v = call <2 x i32> @llvm.masked.load.v2i32.p0(ptr %p, <2 x i1> <i1 true, i1 true>, <2 x i32> poison), !pcsections !26
@@ -249,11 +249,15 @@ define <2 x i32> @unmask_pcsections(ptr %p) {
 ; CHECK: [[META12]] = !{i32 5, i32 6}
 ; CHECK: [[META13]] = !{i32 0, [[META14:![0-9]+]]}
 ; CHECK: [[META14]] = !{!"nvvm.l1_eviction", !"last"}
-; CHECK: [[TBAA_STRUCT15]] = !{i64 0, i64 4, [[INT_TBAA0]], i64 4, i64 4, [[META16:![0-9]+]]}
-; CHECK: [[META16]] = !{[[META17:![0-9]+]], [[META17]], i64 0}
+; CHECK: [[META15]] = !{i32 1, [[META14]]}
+; CHECK: [[FLOAT_TBAA16]] = !{[[META17:![0-9]+]], [[META17]], i64 0}
 ; CHECK: [[META17]] = !{!"float", [[META2]], i64 0}
-; CHECK: [[META18]] = !{i32 1, [[META14]]}
-; CHECK: [[META19]] = !{float 2.500000e+00}
-; CHECK: [[META20]] = !{!"test_section", [[META21:![0-9]+]]}
-; CHECK: [[META21]] = !{i32 42}
+; CHECK: [[TBAA_STRUCT18]] = !{i64 0, i64 4, [[INT_TBAA0]], i64 4, i64 4, [[FLOAT_TBAA16]]}
+; CHECK: [[META19]] = !{i32 0, [[META20:![0-9]+]]}
+; CHECK: [[META20]] = !{!"nvvm.l1_eviction", !"first"}
+; CHECK: [[RNG21]] = !{i32 0, i32 100}
+; CHECK: [[META22]] = !{float 2.500000e+00}
+; CHECK: [[META23]] = !{i32 3}
+; CHECK: [[META24]] = !{!"test_section", [[META25:![0-9]+]]}
+; CHECK: [[META25]] = !{i32 42}
 ;.
