@@ -1305,6 +1305,13 @@ public:
     IgnoreVRegDefs  // Ignore virtual register definitions
   };
 
+  enum MIBundleCheckType {
+    /// Compare every instruction nested inside a bundle.
+    CheckBundleDebugInstrs,
+    /// Ignore DBG_VALUE and DBG_VALUE_LIST instructions nested inside bundles.
+    IgnoreBundledDebugValues,
+  };
+
   /// Return true if this instruction is identical to \p Other.
   /// Two instructions are identical if they have the same opcode and all their
   /// operands are identical (with respect to MachineOperand::isIdenticalTo()).
@@ -1312,6 +1319,12 @@ public:
   /// affect the notion of identical.
   LLVM_ABI bool isIdenticalTo(const MachineInstr &Other,
                               MICheckType Check = CheckDefs) const;
+
+  /// Return true if this instruction is identical to \p Other, using
+  /// \p BundleCheck to control whether debug values nested inside bundles
+  /// participate in the comparison.
+  LLVM_ABI bool isIdenticalTo(const MachineInstr &Other, MICheckType Check,
+                              MIBundleCheckType BundleCheck) const;
 
   /// Returns true if this instruction is a debug instruction that represents an
   /// identical debug value to \p Other.

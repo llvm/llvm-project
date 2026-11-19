@@ -5,12 +5,19 @@
 # This test checks that the machine outliner properly clears debug locations
 # on instructions inside bundles.
 
-# CHECK: name: OUTLINED_FUNCTION_0
+# CHECK-LABEL: name: foo
+# CHECK: TCRETURNdi @OUTLINED_FUNCTION_0
+# CHECK-LABEL: name: bar
+# CHECK: TCRETURNdi @OUTLINED_FUNCTION_0
+# CHECK-LABEL: name: baz
+# CHECK: TCRETURNdi @OUTLINED_FUNCTION_0
+# CHECK-LABEL: name: OUTLINED_FUNCTION_0
 # CHECK: body:
 # CHECK: BUNDLE
 # The bundled instructions should not have debug-location attached
 # CHECK-NEXT: $w8 = ADDWrr $w0, $w1{{$}}
 # CHECK-NEXT: $w9 = ADDWrr $w1, $w2{{$}}
+# CHECK-NOT: DBG_VALUE
 
 --- |
   target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128-Fn32"
@@ -46,6 +53,8 @@
   !9 = !DILocation(line: 11, column: 1, scope: !8)
   !10 = distinct !DISubprogram(name: "baz", scope: !1, file: !1, line: 20, type: !5, scopeLine: 20, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
   !11 = !DILocation(line: 21, column: 1, scope: !10)
+  !12 = !DILocalVariable(name: "x", scope: !6, file: !1, line: 2, type: !13)
+  !13 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
 
 ...
 ---
@@ -56,6 +65,7 @@ body:             |
     ; Bundle with debug locations on internal instructions
     BUNDLE implicit-def $w8, implicit-def $w9, implicit $w0, implicit $w1, implicit $w2 {
       $w8 = ADDWrr $w0, $w1, debug-location !7
+      DBG_VALUE $w8, $noreg, !12, !DIExpression(), debug-location !7
       $w9 = ADDWrr $w1, $w2, debug-location !7
     }
     ; Long sequence of identical instructions to ensure outlining
