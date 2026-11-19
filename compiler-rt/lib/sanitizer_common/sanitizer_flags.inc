@@ -83,8 +83,12 @@ COMMON_FLAG(
     "detect_leaks=false, or if __lsan_do_leak_check() is called before the "
     "handler has a chance to run.")
 COMMON_FLAG(bool, allocator_may_return_null, false,
-            "If false, the allocator will crash instead of returning 0 on "
-            "out-of-memory.")
+            "If false (default), the allocator aborts on out-of-memory. If "
+            "true, allocation functions that can report failure return null "
+            "instead (for example, malloc and nothrow operator new). Throwing "
+            "operator new throws std::bad_alloc where the runtime supports "
+            "it (for example, AddressSanitizer built with exceptions) and "
+            "aborts otherwise.")
 COMMON_FLAG(bool, print_summary, true,
             "If false, disable printing error summaries in addition to error "
             "reports.")
