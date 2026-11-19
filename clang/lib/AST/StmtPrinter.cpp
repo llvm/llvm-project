@@ -46,6 +46,7 @@
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
@@ -796,7 +797,39 @@ void StmtPrinter::PrintOMPExecutableDirective(OMPExecutableDirective *S,
 
 void StmtPrinter::VisitOMPMetaDirective(OMPMetaDirective *Node) {
   Indent() << "#pragma omp metadirective";
-  PrintOMPExecutableDirective(Node);
+  llvm::omp::Version OpenMPVersion =
+      Context ? Context->getLangOpts().getOpenMPVersion()
+              : llvm::omp::FallbackVersion;
+  OMPClausePrinter Printer(OS, Policy, OpenMPVersion);
+  ArrayRef<Stmt *> Variants = Node->variants();
+  ArrayRef<OMPTraitInfo *> TraitInfos = Node->traitInfos();
+  unsigned NumClauses =
+      Node->getNumVariants() - (Node->hasImplicitOtherwise() ? 1 : 0);
+  for (unsigned I : llvm::seq<unsigned>(NumClauses)) {
+    if (TraitInfos[I]->Sets.empty()) {
+      OS << (OpenMPVersion < 52 ? " default(" : " otherwise(");
+    } else {
+      OS << " when(";
+      TraitInfos[I]->print(OS, Policy);
+      OS << ": ";
+    }
+    if (auto *D = dyn_cast<OMPExecutableDirective>(Variants[I])) {
+      OS << getOpenMPDirectiveName(D->getDirectiveKind(), OpenMPVersion);
+      for (OMPClause *C : D->clauses()) {
+        if (C && !C->isImplicit()) {
+          OS << ' ';
+          Printer.Visit(C);
+        }
+      }
+    }
+    OS << ')';
+  }
+  OS << NL;
+  // Every variant has the same associated statement; print it once.
+  Stmt *Body = Variants.front();
+  if (auto *D = dyn_cast<OMPExecutableDirective>(Body))
+    Body = D->getRawStmt();
+  PrintStmt(Body);
 }
 
 void StmtPrinter::VisitOMPParallelDirective(OMPParallelDirective *Node) {
@@ -1241,6 +1274,12 @@ void StmtPrinter::VisitOMPParallelGenericLoopDirective(
 void StmtPrinter::VisitOMPTargetParallelGenericLoopDirective(
     OMPTargetParallelGenericLoopDirective *Node) {
   Indent() << "#pragma omp target parallel loop";
+  PrintOMPExecutableDirective(Node);
+}
+
+void StmtPrinter::VisitOMPTargetGenericLoopDirective(
+    OMPTargetGenericLoopDirective *Node) {
+  Indent() << "#pragma omp target loop";
   PrintOMPExecutableDirective(Node);
 }
 

@@ -337,6 +337,10 @@ llvm::MDNode *CodeGenTBAA::getTypeInfoHelper(const Type *Ty) {
     return getTypeInfo(MTy->getElementType());
   }
 
+  // Accesses to complex types are accesses to objects of their element types.
+  if (const auto *CTy = dyn_cast<ComplexType>(Ty))
+    return getTypeInfo(CTy->getElementType());
+
   // Enum types are distinct types. In C++ they have "underlying types",
   // however they aren't related for TBAA.
   if (const EnumType *ETy = dyn_cast<EnumType>(Ty)) {

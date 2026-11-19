@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple spirv64-amd-amdhsa -x hip -emit-llvm -fcuda-is-device -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple spirv64-amd-amdhsa -x hip -emit-llvm -fcuda-is-device -o - %s | FileCheck %s %}
 
 #define __device__ __attribute__((device))
 

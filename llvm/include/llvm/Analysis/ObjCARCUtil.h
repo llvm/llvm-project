@@ -63,7 +63,7 @@ inline bool attachedCallOpBundleNeedsMarker(const CallBase *CB) {
   return true;
 }
 
-/// Check whether the function is retainRV/unsafeClaimRV.
+/// Check whether the function is retainRV/claimRV/unsafeClaimRV.
 inline bool isRetainOrClaimRV(ARCInstKind Kind) {
   return Kind == ARCInstKind::RetainRV || Kind == ARCInstKind::UnsafeClaimRV;
 }
@@ -71,7 +71,7 @@ inline bool isRetainOrClaimRV(ARCInstKind Kind) {
 /// This function returns the ARCInstKind of the function attached to operand
 /// bundle clang_arc_attachedcall. It returns std::nullopt if the call doesn't
 /// have the operand bundle or the operand is null. Otherwise it returns either
-/// RetainRV or UnsafeClaimRV.
+/// RetainRV (for retainRV and claimRV) or UnsafeClaimRV.
 inline ARCInstKind getAttachedARCFunctionKind(const CallBase *CB) {
   std::optional<Function *> Fn = getAttachedARCFunction(CB);
   if (!Fn)

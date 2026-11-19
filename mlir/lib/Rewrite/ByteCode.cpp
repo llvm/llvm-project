@@ -1498,12 +1498,13 @@ void ByteCodeExecutor::processNativeFunResults(
            "result");
     // If the result is a range, we need to copy it over to the bytecodes
     // range memory.
-    if (std::optional<TypeRange> typeRange = result.dyn_cast<TypeRange>()) {
+    if (std::optional<TypeRange> typeRange =
+            llvm::dyn_cast_if_present<TypeRange>(result)) {
       unsigned rangeIndex = read();
       typeRangeMemory[rangeIndex] = *typeRange;
       memory[read()] = &typeRangeMemory[rangeIndex];
     } else if (std::optional<ValueRange> valueRange =
-                   result.dyn_cast<ValueRange>()) {
+                   llvm::dyn_cast_if_present<ValueRange>(result)) {
       unsigned rangeIndex = read();
       valueRangeMemory[rangeIndex] = *valueRange;
       memory[read()] = &valueRangeMemory[rangeIndex];

@@ -1133,18 +1133,12 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
                        Subtarget->hasAnyDataBarrier() ? Custom : Expand);
 
     // Set them all for libcall, which will force libcalls.
-    setOperationAction(ISD::ATOMIC_CMP_SWAP, MVT::i32, LibCall);
-    setOperationAction(ISD::ATOMIC_SWAP, MVT::i32, LibCall);
-    setOperationAction(ISD::ATOMIC_LOAD_ADD, MVT::i32, LibCall);
-    setOperationAction(ISD::ATOMIC_LOAD_SUB, MVT::i32, LibCall);
-    setOperationAction(ISD::ATOMIC_LOAD_AND, MVT::i32, LibCall);
-    setOperationAction(ISD::ATOMIC_LOAD_OR, MVT::i32, LibCall);
-    setOperationAction(ISD::ATOMIC_LOAD_XOR, MVT::i32, LibCall);
-    setOperationAction(ISD::ATOMIC_LOAD_NAND, MVT::i32, LibCall);
-    setOperationAction(ISD::ATOMIC_LOAD_MIN, MVT::i32, LibCall);
-    setOperationAction(ISD::ATOMIC_LOAD_MAX, MVT::i32, LibCall);
-    setOperationAction(ISD::ATOMIC_LOAD_UMIN, MVT::i32, LibCall);
-    setOperationAction(ISD::ATOMIC_LOAD_UMAX, MVT::i32, LibCall);
+    setOperationAction(
+        {ISD::ATOMIC_CMP_SWAP, ISD::ATOMIC_SWAP, ISD::ATOMIC_LOAD_ADD,
+         ISD::ATOMIC_LOAD_SUB, ISD::ATOMIC_LOAD_AND, ISD::ATOMIC_LOAD_OR,
+         ISD::ATOMIC_LOAD_XOR, ISD::ATOMIC_LOAD_NAND, ISD::ATOMIC_LOAD_MIN,
+         ISD::ATOMIC_LOAD_MAX, ISD::ATOMIC_LOAD_UMIN, ISD::ATOMIC_LOAD_UMAX},
+        {MVT::i8, MVT::i16, MVT::i32, MVT::i64}, LibCall);
     // Mark ATOMIC_LOAD and ATOMIC_STORE custom so we can handle the
     // Unordered/Monotonic case.
     if (!InsertFencesForAtomic) {
@@ -6827,9 +6821,9 @@ static SDValue LowerVSETCC(SDValue Op, SelectionDAG &DAG,
     // Detect VTST (Vector Test Bits) = icmp ne (and (op0, op1), zero).
     if (ST->hasNEON() && Opc == ARMCC::EQ) {
       SDValue AndOp;
-      if (ISD::isBuildVectorAllZeros(Op1.getNode()))
+      if (ISD::isBuildVectorAllZeros(Op1))
         AndOp = Op0;
-      else if (ISD::isBuildVectorAllZeros(Op0.getNode()))
+      else if (ISD::isBuildVectorAllZeros(Op0))
         AndOp = Op1;
 
       // Ignore bitconvert.
@@ -6852,7 +6846,7 @@ static SDValue LowerVSETCC(SDValue Op, SelectionDAG &DAG,
 
   // If one of the operands is a constant vector zero, attempt to fold the
   // comparison to a specialized compare-against-zero form.
-  if (ISD::isBuildVectorAllZeros(Op0.getNode()) &&
+  if (ISD::isBuildVectorAllZeros(Op0) &&
       (Opc == ARMCC::GE || Opc == ARMCC::GT || Opc == ARMCC::EQ ||
        Opc == ARMCC::NE)) {
     if (Opc == ARMCC::GE)
@@ -6863,7 +6857,7 @@ static SDValue LowerVSETCC(SDValue Op, SelectionDAG &DAG,
   }
 
   SDValue Result;
-  if (ISD::isBuildVectorAllZeros(Op1.getNode()) &&
+  if (ISD::isBuildVectorAllZeros(Op1) &&
       (Opc == ARMCC::GE || Opc == ARMCC::GT || Opc == ARMCC::LE ||
        Opc == ARMCC::LT || Opc == ARMCC::NE || Opc == ARMCC::EQ))
     Result = DAG.getNode(ARMISD::VCMPZ, dl, CmpVT, Op0,
@@ -9941,9 +9935,8 @@ SDValue ARMTargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG,
 }
 
 static bool isZeroVector(SDValue N) {
-  return (ISD::isBuildVectorAllZeros(N.getNode()) ||
-          (N->getOpcode() == ARMISD::VMOVIMM &&
-           isNullConstant(N->getOperand(0))));
+  return (ISD::isBuildVectorAllZeros(N) || (N->getOpcode() == ARMISD::VMOVIMM &&
+                                            isNullConstant(N->getOperand(0))));
 }
 
 static SDValue LowerMLOAD(SDValue Op, SelectionDAG &DAG) {
@@ -17591,10 +17584,10 @@ static SDValue PerformVECREDUCE_ADDCombine(SDNode *N, SelectionDAG &DAG,
       return ExtendIfNeeded(A, ExtendCode);
     return SDValue();
   };
-  auto IsPredVADDV = [&](MVT RetTy, unsigned ExtendCode,
-                         ArrayRef<MVT> ExtTypes, SDValue &Mask) {
+  auto IsPredVADDV = [&](MVT RetTy, unsigned ExtendCode, ArrayRef<MVT> ExtTypes,
+                         SDValue &Mask) {
     if (ResVT != RetTy || N0->getOpcode() != ISD::VSELECT ||
-        !ISD::isBuildVectorAllZeros(N0->getOperand(2).getNode()))
+        !ISD::isBuildVectorAllZeros(N0->getOperand(2)))
       return SDValue();
     Mask = N0->getOperand(0);
     SDValue Ext = N0->getOperand(1);
@@ -17646,7 +17639,7 @@ static SDValue PerformVECREDUCE_ADDCombine(SDNode *N, SelectionDAG &DAG,
     // N0 = select Mask, Mul, 0
     // vecreduce.add N0
     if (ResVT != RetTy || N0->getOpcode() != ISD::VSELECT ||
-        !ISD::isBuildVectorAllZeros(N0->getOperand(2).getNode()))
+        !ISD::isBuildVectorAllZeros(N0->getOperand(2)))
       return false;
     Mask = N0->getOperand(0);
     SDValue Mul = N0->getOperand(1);
@@ -18513,10 +18506,10 @@ static SDValue PerformMinMaxCombine(SDNode *N, SelectionDAG &DAG,
       SaturateC = APInt(16, (1 << 7) - 1, true);
 
     APInt MinC, MaxC;
-    if (!ISD::isConstantSplatVector(Min->getOperand(1).getNode(), MinC) ||
+    if (!ISD::isConstantSplatVector(Min->getOperand(1), MinC) ||
         MinC != SaturateC)
       return false;
-    if (!ISD::isConstantSplatVector(Max->getOperand(1).getNode(), MaxC) ||
+    if (!ISD::isConstantSplatVector(Max->getOperand(1), MaxC) ||
         MaxC != ~SaturateC)
       return false;
     return true;
@@ -18556,7 +18549,7 @@ static SDValue PerformMinMaxCombine(SDNode *N, SelectionDAG &DAG,
       SaturateC = APInt(16, (1 << 8) - 1, true);
 
     APInt MinC;
-    if (!ISD::isConstantSplatVector(Min->getOperand(1).getNode(), MinC) ||
+    if (!ISD::isConstantSplatVector(Min->getOperand(1), MinC) ||
         MinC != SaturateC)
       return false;
     return true;
@@ -21950,8 +21943,26 @@ bool ARMTargetLowering::shouldInsertFencesForAtomic(
 }
 
 bool ARMTargetLowering::useLoadStackGuardNode(const Module &M) const {
+  if (Subtarget->isTargetFuchsia())
+    return TargetLowering::useLoadStackGuardNode(M);
   // ROPI/RWPI are not supported currently.
   return !Subtarget->isROPI() && !Subtarget->isRWPI();
+}
+
+Value *
+ARMTargetLowering::getIRStackGuard(IRBuilderBase &IRB,
+                                   const LibcallLoweringInfo &Libcalls) const {
+  // Fuchsia provides a fixed TLS slot for the stack cookie.
+  // <zircon/tls.h> defines ZX_TLS_STACK_GUARD_OFFSET with this value.
+  if (Subtarget->isTargetFuchsia()) {
+    Module *M = IRB.getModule();
+    Function *ThreadPointerFunc = Intrinsic::getOrInsertDeclaration(
+        M, Intrinsic::thread_pointer, IRB.getPtrTy());
+    return IRB.CreateConstGEP1_32(IRB.getInt8Ty(),
+                                  IRB.CreateCall(ThreadPointerFunc), -0x10);
+  }
+
+  return TargetLowering::getIRStackGuard(IRB, Libcalls);
 }
 
 void ARMTargetLowering::insertSSPDeclarations(
@@ -21965,14 +21976,12 @@ void ARMTargetLowering::insertSSPDeclarations(
   if (SecurityCheckCookieLibcall != RTLIB::Unsupported &&
       SecurityCookieVar != RTLIB::Unsupported) {
     // MSVC CRT has a global variable holding security cookie.
-    M.getOrInsertGlobal(getLibcallImplName(SecurityCookieVar),
-                        PointerType::getUnqual(M.getContext()));
+    const RTLIB::RuntimeLibcallsInfo &RTLCI = Libcalls.getRuntimeLibcallsInfo();
+    RTLCI.getOrInsertImplGlobal(M, SecurityCookieVar);
 
     // MSVC CRT has a function to validate security cookie.
     FunctionCallee SecurityCheckCookie =
-        M.getOrInsertFunction(getLibcallImplName(SecurityCheckCookieLibcall),
-                              Type::getVoidTy(M.getContext()),
-                              PointerType::getUnqual(M.getContext()));
+        RTLCI.getOrInsertLibcallDecl(M, SecurityCheckCookieLibcall);
     if (Function *F = dyn_cast<Function>(SecurityCheckCookie.getCallee()))
       F->addParamAttr(0, Attribute::AttrKind::InReg);
   }
@@ -22091,7 +22100,8 @@ Value *ARMTargetLowering::emitLoadLinked(IRBuilderBase &Builder, Type *ValueTy,
 
 void ARMTargetLowering::emitAtomicCmpXchgNoStoreLLBalance(
     IRBuilderBase &Builder) const {
-  if (!Subtarget->hasV7Ops())
+  if (!(Subtarget->isThumb() ? Subtarget->hasV7Clrex()
+                             : Subtarget->hasV6KOps()))
     return;
   Builder.CreateIntrinsic(Intrinsic::arm_clrex, {});
 }
@@ -22232,6 +22242,7 @@ bool ARMTargetLowering::lowerInterleavedLoad(
     VecTy = FixedVectorType::get(DL.getIntPtrType(EltTy), VecTy);
 
   IRBuilder<> Builder(LI);
+  Builder.disableGEPCanonicalization();
 
   // The base address of the load.
   Value *BaseAddr = LI->getPointerOperand();
@@ -22380,6 +22391,7 @@ bool ARMTargetLowering::lowerInterleavedStore(Instruction *Store,
   Value *Op0 = SVI->getOperand(0);
   Value *Op1 = SVI->getOperand(1);
   IRBuilder<> Builder(SI);
+  Builder.disableGEPCanonicalization();
 
   // StN intrinsics don't support pointer vectors as arguments. Convert pointer
   // vectors to integer vectors.

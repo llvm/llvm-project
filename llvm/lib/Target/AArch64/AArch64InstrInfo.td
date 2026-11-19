@@ -562,7 +562,7 @@ def SDT_AArch64ldp : SDTypeProfile<2, 1, [SDTCisVT<0, i64>, SDTCisSameAs<0, 1>, 
 def SDT_AArch64ldiapp : SDTypeProfile<2, 1, [SDTCisVT<0, i64>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
 def SDT_AArch64ldnp : SDTypeProfile<2, 1, [SDTCisVT<0, v2i64>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
 def SDT_AArch64stp : SDTypeProfile<0, 3, [SDTCisVT<0, i64>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
-def SDT_AArch64stilp : SDTypeProfile<0, 3, [SDTCisVT<0, i64>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
+def SDT_AArch64stp_rel : SDTypeProfile<0, 3, [SDTCisVT<0, i64>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
 def SDT_AArch64stnp : SDTypeProfile<0, 3, [SDTCisVT<0, v2i64>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
 
 // Generates the general dynamic sequences, i.e.
@@ -597,7 +597,8 @@ def nonext_masked_load :
           (masked_ld node:$ptr, undef, node:$pred, node:$def), [{
   return cast<MaskedLoadSDNode>(N)->getExtensionType() == ISD::NON_EXTLOAD &&
          cast<MaskedLoadSDNode>(N)->isUnindexed() &&
-         !cast<MaskedLoadSDNode>(N)->isNonTemporal();
+         !cast<MaskedLoadSDNode>(N)->isNonTemporal() &&
+         !cast<MaskedLoadSDNode>(N)->isExpandingLoad();
 }]>;
 // Any/Zero extending masked load fragments.
 def azext_masked_load :
@@ -605,44 +606,52 @@ def azext_masked_load :
           (masked_ld node:$ptr, undef, node:$pred, node:$def),[{
   return (cast<MaskedLoadSDNode>(N)->getExtensionType() == ISD::EXTLOAD ||
           cast<MaskedLoadSDNode>(N)->getExtensionType() == ISD::ZEXTLOAD) &&
-         cast<MaskedLoadSDNode>(N)->isUnindexed();
+         cast<MaskedLoadSDNode>(N)->isUnindexed() &&
+         !cast<MaskedLoadSDNode>(N)->isExpandingLoad();
 }]>;
 def azext_masked_load_i8 :
   PatFrag<(ops node:$ptr, node:$pred, node:$def),
           (azext_masked_load node:$ptr, node:$pred, node:$def), [{
-  return cast<MaskedLoadSDNode>(N)->getMemoryVT().getScalarType() == MVT::i8;
+  return cast<MaskedLoadSDNode>(N)->getMemoryVT().getScalarType() == MVT::i8 &&
+         !cast<MaskedLoadSDNode>(N)->isExpandingLoad();
 }]>;
 def azext_masked_load_i16 :
   PatFrag<(ops node:$ptr, node:$pred, node:$def),
           (azext_masked_load node:$ptr, node:$pred, node:$def), [{
-  return cast<MaskedLoadSDNode>(N)->getMemoryVT().getScalarType() == MVT::i16;
+  return cast<MaskedLoadSDNode>(N)->getMemoryVT().getScalarType() == MVT::i16 &&
+         !cast<MaskedLoadSDNode>(N)->isExpandingLoad();
 }]>;
 def azext_masked_load_i32 :
   PatFrag<(ops node:$ptr, node:$pred, node:$def),
           (azext_masked_load node:$ptr, node:$pred, node:$def), [{
-  return cast<MaskedLoadSDNode>(N)->getMemoryVT().getScalarType() == MVT::i32;
+  return cast<MaskedLoadSDNode>(N)->getMemoryVT().getScalarType() == MVT::i32 &&
+         !cast<MaskedLoadSDNode>(N)->isExpandingLoad();
 }]>;
 // Sign extending masked load fragments.
 def sext_masked_load :
   PatFrag<(ops node:$ptr, node:$pred, node:$def),
           (masked_ld node:$ptr, undef, node:$pred, node:$def), [{
   return cast<MaskedLoadSDNode>(N)->getExtensionType() == ISD::SEXTLOAD &&
-         cast<MaskedLoadSDNode>(N)->isUnindexed();
+         cast<MaskedLoadSDNode>(N)->isUnindexed() &&
+         !cast<MaskedLoadSDNode>(N)->isExpandingLoad();
 }]>;
 def sext_masked_load_i8 :
   PatFrag<(ops node:$ptr, node:$pred, node:$def),
           (sext_masked_load node:$ptr, node:$pred, node:$def), [{
-  return cast<MaskedLoadSDNode>(N)->getMemoryVT().getScalarType() == MVT::i8;
+  return cast<MaskedLoadSDNode>(N)->getMemoryVT().getScalarType() == MVT::i8 &&
+         !cast<MaskedLoadSDNode>(N)->isExpandingLoad();
 }]>;
 def sext_masked_load_i16 :
   PatFrag<(ops node:$ptr, node:$pred, node:$def),
           (sext_masked_load node:$ptr, node:$pred, node:$def), [{
-  return cast<MaskedLoadSDNode>(N)->getMemoryVT().getScalarType() == MVT::i16;
+  return cast<MaskedLoadSDNode>(N)->getMemoryVT().getScalarType() == MVT::i16 &&
+         !cast<MaskedLoadSDNode>(N)->isExpandingLoad();
 }]>;
 def sext_masked_load_i32 :
   PatFrag<(ops node:$ptr, node:$pred, node:$def),
           (sext_masked_load node:$ptr, node:$pred, node:$def), [{
-  return cast<MaskedLoadSDNode>(N)->getMemoryVT().getScalarType() == MVT::i32;
+  return cast<MaskedLoadSDNode>(N)->getMemoryVT().getScalarType() == MVT::i32 &&
+         !cast<MaskedLoadSDNode>(N)->isExpandingLoad();
 }]>;
 
 def non_temporal_load :
@@ -650,7 +659,8 @@ def non_temporal_load :
            (masked_ld node:$ptr, undef, node:$pred, node:$def), [{
    return cast<MaskedLoadSDNode>(N)->getExtensionType() == ISD::NON_EXTLOAD &&
           cast<MaskedLoadSDNode>(N)->isUnindexed() &&
-          cast<MaskedLoadSDNode>(N)->isNonTemporal();
+          cast<MaskedLoadSDNode>(N)->isNonTemporal() &&
+          !cast<MaskedLoadSDNode>(N)->isExpandingLoad();
 }]>;
 
 // non-truncating masked store fragment.
@@ -1236,7 +1246,7 @@ def AArch64ldp : SDNode<"AArch64ISD::LDP", SDT_AArch64ldp, [SDNPHasChain, SDNPMa
 def AArch64ldiapp : SDNode<"AArch64ISD::LDIAPP", SDT_AArch64ldiapp, [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def AArch64ldnp : SDNode<"AArch64ISD::LDNP", SDT_AArch64ldnp, [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def AArch64stp : SDNode<"AArch64ISD::STP", SDT_AArch64stp, [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
-def AArch64stilp : SDNode<"AArch64ISD::STILP", SDT_AArch64stilp, [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+def AArch64stp_rel : SDNode<"AArch64ISD::STP_REL", SDT_AArch64stp_rel, [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 def AArch64stnp : SDNode<"AArch64ISD::STNP", SDT_AArch64stnp, [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 
 def AArch64tbl : SDNode<"AArch64ISD::TBL", SDT_AArch64TBL>;
@@ -3920,6 +3930,10 @@ let Predicates = [HasLSCP] in {
 defm LDAP  : LoadAcquirePairOffset<0b0101, "ldap">;
 defm LDAPP : LoadAcquirePairOffset<0b0111, "ldapp">;
 defm STLP  : StoreAcquirePairOffset<0b0101, "stlp">;
+
+let AddedComplexity = 1 in
+def : Pat<(AArch64stp_rel GPR64:$Rt, GPR64:$Rt2, GPR64sp:$Rn),
+          (STLPi GPR64:$Rt, GPR64:$Rt2, GPR64sp:$Rn)>;
 }
 
 // Pair (indexed, offset)
@@ -6138,6 +6152,8 @@ def F128CSEL : Pseudo<(outs FPR128:$Rd),
 // Instructions used for emitting unwind opcodes on ARM64 Windows.
 //===----------------------------------------------------------------------===//
 let isMeta = 1, hasSideEffects = 1, mayLoad = 0, mayStore = 0, Size = 0 in {
+  def SEH_StartProc : Pseudo<(outs), (ins), []>, Sched<[]>;
+  def SEH_EndProc : Pseudo<(outs), (ins), []>, Sched<[]>;
   def SEH_EndC : Pseudo<(outs), (ins), []>, Sched<[]>;
 }
 
@@ -8759,6 +8775,75 @@ defm : Neon_INS_elt_ext_pattern<v16i8, v8i8, v4i16, scalar_to_vector, INSvi8lane
 defm : Neon_INS_elt_ext_pattern<v16i8, v8i8, v2i32, scalar_to_vector_v2f32, INSvi8lane, DUPi8, bsub, VecIndex_x4>;
 defm : Neon_INS_elt_ext_pattern<v8i16, v4i16, v2i32, scalar_to_vector_v2f32, INSvi16lane, DUPi16, hsub, VecIndex_x2>;
 
+
+let Predicates = [HasFullFP16] in {
+  def : Pat<(v8i16 (vector_insert immAllZerosV,
+              (i32 (vector_extract
+                (v8i16 V128:$Rn),
+                (i64 0))),
+              (i64 0))),
+            (v8i16 (SUBREG_TO_REG
+              (FMOVHr (f16 (EXTRACT_SUBREG (v8i16 V128:$Rn), hsub))),
+              hsub))>;
+
+  def : Pat<(v8f16 (vector_insert immAllZerosV,
+              (f16 (vector_extract
+                (v8f16 V128:$Rn),
+                (i64 0))),
+              (i64 0))),
+            (v8f16 (SUBREG_TO_REG
+              (FMOVHr (f16 (EXTRACT_SUBREG (v8f16 V128:$Rn), hsub))),
+              hsub))>;
+
+  def : Pat<(v8bf16 (vector_insert immAllZerosV,
+              (bf16 (vector_extract
+                (v8bf16 V128:$Rn),
+                (i64 0))),
+              (i64 0))),
+            (v8bf16 (SUBREG_TO_REG
+              (FMOVHr (f16 (EXTRACT_SUBREG (v8bf16 V128:$Rn), hsub))),
+              hsub))>;
+
+  def : Pat<(v4i16 (vector_insert immAllZerosV,
+            (i32 (vector_extract
+                (v8i16 (insert_subvector (v8i16 undef),
+                  (v4i16 V64:$Rn), (i64 0))),
+                (i64 0))),
+              (i64 0))),
+            (v4i16 (SUBREG_TO_REG
+              (FMOVHr (f16 (EXTRACT_SUBREG (v4i16 V64:$Rn), hsub))),
+              hsub))>;
+
+  def : Pat<(v4i16 (vector_insert immAllZerosV,
+            (i32 (vector_extract
+                (v8i16 (bitconvert
+                  (v8f16 (insert_subvector (v8f16 undef),
+                    (v4f16 V64:$Rn), (i64 0))))),
+                (i64 0))),
+              (i64 0))),
+            (v4i16 (SUBREG_TO_REG
+              (FMOVHr (f16 (EXTRACT_SUBREG (v4f16 V64:$Rn), hsub))),
+              hsub))>;
+
+  def : Pat<(v4i16 (vector_insert immAllZerosV,
+              (i32 (vector_extract
+                (v8i16 (bitconvert
+                  (v8bf16 (insert_subvector (v8bf16 undef),
+                    (v4bf16 V64:$Rn), (i64 0))))),
+                (i64 0))),
+              (i64 0))),
+            (v4i16 (SUBREG_TO_REG
+              (FMOVHr (f16 (EXTRACT_SUBREG (v4bf16 V64:$Rn), hsub))),
+              hsub))>;
+}
+
+// extract from lane 0 and insert into lane 0 of a zero vector
+// is equivalent to clearing upper bits of a register, we can use fmov
+def : Pat<(v4i32 (vector_insert immAllZerosV, (i32 (vector_extract (v4i32 V128:$Rn), (i64 0))), (i64 0))),
+          (v4i32 (SUBREG_TO_REG (FMOVSr (EXTRACT_SUBREG (v4i32 V128:$Rn), ssub)), ssub))>;
+def : Pat<(v4f32 (vector_insert immAllZerosV, (f32 (vector_extract (v4f32 V128:$Rn), (i64 0))), (i64 0))),
+          (v4f32 (SUBREG_TO_REG (FMOVSr (EXTRACT_SUBREG (v4f32 V128:$Rn), ssub)), ssub))>;
+
 // bitcast of an extract
 // f32 bitcast(vector_extract(v4i32 src, 0)) -> EXTRACT_SUBREG(src)
 def : Pat<(f32 (bitconvert (i32 (vector_extract v16i8:$src, (i64 0))))),
@@ -10188,7 +10273,7 @@ defm SSHLL   : SIMDVectorLShiftLongBHSD<0, 0b10100, "sshll",
 
 defm SSHR    : SIMDVectorRShiftBHSD<0, 0b00000, "sshr", AArch64vashr>;
 defm SSRA    : SIMDVectorRShiftBHSDTied<0, 0b00010, "ssra",
-                TriOpFrag<(add_like node:$LHS, (AArch64vashr node:$MHS, node:$RHS))>>;
+                TriOpFrag<(add_like node:$LHS, (AArch64vashr_oneuse node:$MHS, node:$RHS))>>;
 defm UCVTF   : SIMDVectorRShiftToFP<1, 0b11100, "ucvtf",
                         int_aarch64_neon_vcvtfxu2fp>;
 defm UQRSHRN : SIMDVectorRShiftNarrowBHS<1, 0b10011, "uqrshrn",
@@ -10204,7 +10289,7 @@ defm USHLL   : SIMDVectorLShiftLongBHSD<1, 0b10100, "ushll",
                 BinOpFrag<(AArch64vshl (zext node:$LHS), node:$RHS)>>;
 defm USHR    : SIMDVectorRShiftBHSD<1, 0b00000, "ushr", AArch64vlshr>;
 defm USRA    : SIMDVectorRShiftBHSDTied<1, 0b00010, "usra",
-                TriOpFrag<(add_like node:$LHS, (AArch64vlshr node:$MHS, node:$RHS))> >;
+                TriOpFrag<(add_like node:$LHS, (AArch64vlshr_oneuse node:$MHS, node:$RHS))> >;
 
 let Predicates = [HasNEON] in {
 defm : CVTFRecipPat<v2f64, v2i64, V128, fixedpoint_recip_v2f64>;
@@ -10923,13 +11008,15 @@ class St1Lane128SubvecPat<ValueType VTy, ComplexPattern extract_high>
   : Pat<(store (extract_high (VTy V128:$Vt)), GPR64sp:$Rn),
         (ST1i64 V128:$Vt, 1, GPR64sp:$Rn)>;
 
+let Predicates = [IsLE] in {
 def : St1Lane128SubvecPat<v16i8, extract_high_v16i8>;
 def : St1Lane128SubvecPat<v8i16, extract_high_v8i16>;
 def : St1Lane128SubvecPat<v4i32, extract_high_v4i32>;
-def : St1Lane128SubvecPat<v2i64, extract_high_v2i64>;
 def : St1Lane128SubvecPat<v8f16, extract_high_v8f16>;
 def : St1Lane128SubvecPat<v8bf16, extract_high_v8bf16>;
 def : St1Lane128SubvecPat<v4f32, extract_high_v4f32>;
+}
+def : St1Lane128SubvecPat<v2i64, extract_high_v2i64>;
 def : St1Lane128SubvecPat<v2f64, extract_high_v2f64>;
 
 // Truncating post-inc stores from lane 0 of v4i32/v2i64.
@@ -12458,7 +12545,8 @@ let Predicates = [HasRCPC3] in {
   def LDIAPPX:     BaseLRCPC3IntegerLoadStorePair<0b11, 0b01, 0b0001, (outs GPR64:$Rt, GPR64:$Rt2), (ins GPR64sp0:$Rn), "ldiapp", "\t$Rt, $Rt2, [$Rn]", "">;
 
   def : Pat<(AArch64ldiapp GPR64sp:$Rn), (LDIAPPX GPR64sp:$Rn)>;
-  def : Pat<(AArch64stilp GPR64:$Rt, GPR64:$Rt2, GPR64sp:$Rn), (STILPX GPR64:$Rt, GPR64:$Rt2, GPR64sp:$Rn)>;
+  def : Pat<(AArch64stp_rel GPR64:$Rt, GPR64:$Rt2, GPR64sp:$Rn),
+            (STILPX GPR64:$Rt, GPR64:$Rt2, GPR64sp:$Rn)>;
 
   // Aliases for when offset=0
   def : InstAlias<"stilp\t$Rt, $Rt2, [$Rn, #0]", (STILPW GPR32: $Rt, GPR32: $Rt2, GPR64sp:$Rn)>;

@@ -9,9 +9,6 @@
 #include "mlir/Dialect/SMT/IR/SMTAttributes.h"
 #include "mlir/Dialect/SMT/IR/SMTDialect.h"
 #include "mlir/Dialect/SMT/IR/SMTTypes.h"
-#include "mlir/IR/Builders.h"
-#include "mlir/IR/DialectImplementation.h"
-#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 using namespace mlir::smt;

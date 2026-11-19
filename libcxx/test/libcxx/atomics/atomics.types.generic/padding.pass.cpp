@@ -10,6 +10,9 @@
 
 // Older Clang doesn't implement __builtin_clear_padding
 // XFAIL: clang-21, apple-clang-21, clang-22
+// Android's r614150 prebuilt predates __builtin_clear_padding.
+// TODO: Re-enable after upgrading Android CI to the next compiler update.
+// UNSUPPORTED: LIBCXX-ANDROID-FIXME
 
 // atomic_init is deprecated
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS

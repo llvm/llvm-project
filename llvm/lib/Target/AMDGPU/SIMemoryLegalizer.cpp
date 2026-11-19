@@ -35,10 +35,6 @@ using namespace llvm::AMDGPU;
 #define DEBUG_TYPE "si-memory-legalizer"
 #define PASS_NAME "SI Memory Legalizer"
 
-static cl::opt<bool> AmdgcnSkipCacheInvalidations(
-    "amdgcn-skip-cache-invalidations", cl::init(false), cl::Hidden,
-    cl::desc("Use this to skip inserting cache invalidating instructions."));
-
 namespace {
 
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
@@ -1034,7 +1030,7 @@ static bool isNonVolatileMemoryAccess(const MachineInstr &MI) {
 SICacheControl::SICacheControl(const GCNSubtarget &ST, bool TgSplit) : ST(ST) {
   TII = ST.getInstrInfo();
   IV = getIsaVersion(ST.getCPU());
-  InsertCacheInv = !AmdgcnSkipCacheInvalidations;
+  InsertCacheInv = !ST.getCLOpts().skip_cache_invalidations;
   TgSplitEnabled = TgSplit;
 }
 
@@ -1907,7 +1903,8 @@ bool SIGfx12CacheControl::insertWaitsBeforeSystemScopeStore(
   BuildMI(MBB, MI, DL, TII->get(S_WAIT_LOADCNT_soft)).addImm(0);
   if (ST.hasImageInsts()) {
     BuildMI(MBB, MI, DL, TII->get(S_WAIT_SAMPLECNT_soft)).addImm(0);
-    BuildMI(MBB, MI, DL, TII->get(S_WAIT_BVHCNT_soft)).addImm(0);
+    if (ST.hasAnyBVHInsts())
+      BuildMI(MBB, MI, DL, TII->get(S_WAIT_BVHCNT_soft)).addImm(0);
   }
   BuildMI(MBB, MI, DL, TII->get(S_WAIT_KMCNT_soft)).addImm(0);
   BuildMI(MBB, MI, DL, TII->get(S_WAIT_STORECNT_soft)).addImm(0);
@@ -2016,7 +2013,8 @@ bool SIGfx12CacheControl::insertWait(MachineBasicBlock::iterator &MI,
     // This also applies to fences. Fences cannot pair with an instruction
     // tracked with bvh/samplecnt as we don't have any atomics that do that.
     if (!AtomicsOnly && ST.hasImageInsts()) {
-      BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAIT_BVHCNT_soft)).addImm(0);
+      if (ST.hasAnyBVHInsts())
+        BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAIT_BVHCNT_soft)).addImm(0);
       BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAIT_SAMPLECNT_soft)).addImm(0);
     }
     BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAIT_LOADCNT_soft)).addImm(0);
@@ -2398,6 +2396,9 @@ bool SIMemoryLegalizer::expandLoad(const SIMemOpInfo &MOI,
     if (MOI.isCooperative())
       Changed |= CC->handleCooperativeAtomic(*MI);
 
+    Changed |= CC->finalizeLoad(MI);
+    Changed |= CC->setCFS(MI, MOI.getCFS());
+
     if (Order == AtomicOrdering::SequentiallyConsistent)
       Changed |= CC->insertWait(MI, MOI.getScope(), MOI.getOrderingAddrSpace(),
                                 SIMemOp::LOAD | SIMemOp::STORE,
@@ -2417,8 +2418,6 @@ bool SIMemoryLegalizer::expandLoad(const SIMemOpInfo &MOI,
       }
     }
 
-    Changed |= CC->finalizeLoad(MI);
-    Changed |= CC->setCFS(MI, MOI.getCFS());
     return Changed;
   }
 

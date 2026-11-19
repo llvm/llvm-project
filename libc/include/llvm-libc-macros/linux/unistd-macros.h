@@ -14,6 +14,8 @@
 #ifndef LLVM_LIBC_MACROS_LINUX_UNISTD_MACROS_H
 #define LLVM_LIBC_MACROS_LINUX_UNISTD_MACROS_H
 
+#include <linux/close_range.h>
+
 // Values for mode argument to the access(...) function.
 #define F_OK 0
 #define X_OK 1
@@ -87,7 +89,7 @@
 #define _POSIX_THREAD_ATTR_STACKSIZE _POSIX_VERSION
 #define _POSIX_THREAD_PROCESS_SHARED _POSIX_VERSION
 #define _POSIX_THREAD_PRIORITY_SCHEDULING _POSIX_VERSION
-#define _POSIX_THREAD_CPUTIME -1
+#define _POSIX_THREAD_CPUTIME _POSIX_VERSION
 #define _POSIX_THREAD_PRIO_INHERIT -1
 #define _POSIX_THREAD_PRIO_PROTECT -1
 #define _POSIX_THREAD_ROBUST_PRIO_INHERIT -1
@@ -112,6 +114,8 @@
     } while (__result == -1L && errno == EINTR);                               \
     __result;                                                                  \
   }))
-#endif
+#endif // TEMP_FAILURE_RETRY
+
+#define POSIX_CLOSE_RESTART 0
 
 #endif // LLVM_LIBC_MACROS_LINUX_UNISTD_MACROS_H

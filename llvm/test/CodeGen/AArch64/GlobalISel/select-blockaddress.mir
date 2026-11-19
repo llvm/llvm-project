@@ -23,10 +23,6 @@ name:            test_blockaddress
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
 body:             |
   ; CHECK-LABEL: name: test_blockaddress
   ; CHECK: bb.0 (%ir-block.0):

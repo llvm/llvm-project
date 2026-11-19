@@ -33,9 +33,9 @@ define void @memcheck(ptr %dst, ptr %src, i32 %k, i64 %n) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i32, ptr [[SRC]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP3]], i64 4
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP3]], i64 8
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP3]], i64 12
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP3]], i64 16
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP3]], i64 32
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP3]], i64 48
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x i32>, ptr [[TMP4]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x i32>, ptr [[TMP5]], align 4
@@ -45,9 +45,9 @@ define void @memcheck(ptr %dst, ptr %src, i32 %k, i64 %n) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = add nsw <4 x i32> [[WIDE_LOAD5]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = add nsw <4 x i32> [[WIDE_LOAD6]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw i32, ptr [[DST]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP11]], i64 4
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP11]], i64 8
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP11]], i64 12
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP11]], i64 16
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP11]], i64 32
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP11]], i64 48
 ; CHECK-NEXT:    store <4 x i32> [[TMP7]], ptr [[TMP11]], align 4
 ; CHECK-NEXT:    store <4 x i32> [[TMP8]], ptr [[TMP12]], align 4
 ; CHECK-NEXT:    store <4 x i32> [[TMP9]], ptr [[TMP13]], align 4
@@ -173,9 +173,9 @@ define void @no_memcheck(ptr noalias %dst, ptr noalias %src, i32 %k, i64 %n) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i32, ptr [[SRC]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP1]], i64 4
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP1]], i64 8
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP1]], i64 12
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 16
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 32
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 48
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <4 x i32>, ptr [[TMP3]], align 4
@@ -185,9 +185,9 @@ define void @no_memcheck(ptr noalias %dst, ptr noalias %src, i32 %k, i64 %n) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = add nsw <4 x i32> [[WIDE_LOAD3]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = add nsw <4 x i32> [[WIDE_LOAD4]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i32, ptr [[DST]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP9]], i64 4
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP9]], i64 8
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP9]], i64 12
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP9]], i64 16
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP9]], i64 32
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP9]], i64 48
 ; CHECK-NEXT:    store <4 x i32> [[TMP5]], ptr [[TMP9]], align 4
 ; CHECK-NEXT:    store <4 x i32> [[TMP6]], ptr [[TMP10]], align 4
 ; CHECK-NEXT:    store <4 x i32> [[TMP7]], ptr [[TMP11]], align 4
@@ -223,12 +223,12 @@ define void @no_memcheck(ptr noalias %dst, ptr noalias %src, i32 %k, i64 %n) {
 ; CHECK-NEXT:    [[CMP_N12:%.*]] = icmp eq i64 [[N]], [[N_VEC6]]
 ; CHECK-NEXT:    br i1 [[CMP_N12]], label %[[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL12:%.*]] = phi i64 [ [[N_VEC6]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL13:%.*]] = phi i64 [ [[TMP14]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP0]], %[[VEC_EPILOG_ITER_CHECK]] ], [ [[N]], %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC6]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL12:%.*]] = phi i64 [ [[TMP14]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP0]], %[[VEC_EPILOG_ITER_CHECK]] ], [ [[N]], %[[ITER_CHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL12]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[CNT:%.*]] = phi i64 [ [[BC_RESUME_VAL13]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[CNT_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[CNT:%.*]] = phi i64 [ [[BC_RESUME_VAL12]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[CNT_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr inbounds nuw i32, ptr [[SRC]], i64 [[IV]]
 ; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[GEP_SRC]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[L]], [[K]]
