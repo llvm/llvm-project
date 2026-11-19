@@ -327,6 +327,20 @@ SBValue SBThread::GetStopErrorValue() {
   return SBValue();
 }
 
+SBValue SBThread::GetStopReturnOrErrorValue(bool &is_error_value) {
+  LLDB_INSTRUMENT_VA(this, is_error_value);
+
+  is_error_value = false;
+  ThreadPlanReturnValue return_value = GetStopReturnValueImpl(m_opaque_sp);
+  if (auto *returned = std::get_if<ReturnedValue>(&return_value))
+    return SBValue(returned->valobj_sp);
+  if (auto *thrown = std::get_if<ThrownError>(&return_value)) {
+    is_error_value = true;
+    return SBValue(thrown->valobj_sp);
+  }
+  return SBValue();
+}
+
 void SBThread::SetThread(const ThreadSP &lldb_object_sp) {
   m_opaque_sp->SetThreadSP(lldb_object_sp);
 }

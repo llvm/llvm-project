@@ -102,6 +102,18 @@ public:
   /// one.
   SBValue GetStopErrorValue();
 
+  /// Get what the function returned or threw, if the thread stopped because
+  /// it stepped out of a function.
+  ///
+  /// \param[out] is_error_value
+  ///   Set to true if the returned value is an error the function threw, and
+  ///   to false otherwise.
+  ///
+  /// \return
+  ///   The value GetStopReturnValue or GetStopErrorValue would return,
+  ///   whichever is valid.
+  SBValue GetStopReturnOrErrorValue(bool &is_error_value);
+
   lldb::tid_t GetThreadID() const;
 
   uint32_t GetIndexID() const;
