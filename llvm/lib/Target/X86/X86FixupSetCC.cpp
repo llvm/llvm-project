@@ -189,7 +189,7 @@ static bool fixupMovbeZExt(MachineFunction &MF) {
       Register SrcReg = MI.getOperand(1).getReg();
       if (!SrcReg.isVirtual())
         continue;
-      auto *MovbeInstruction = MRI->getVRegDef(SrcReg);
+      MachineInstr *MovbeInstruction = MRI->getVRegDef(SrcReg);
       if (!MovbeInstruction ||
           (MovbeInstruction->getOpcode() != X86::MOVBE16rm &&
            MovbeInstruction->getOpcode() != X86::MOVBE16rm_EVEX))
@@ -197,7 +197,7 @@ static bool fixupMovbeZExt(MachineFunction &MF) {
 
       MachineBasicBlock *MovbeMBB = MovbeInstruction->getParent();
       MachineInstr *InsertBefore = nullptr;
-      auto Liveness =
+      MachineBasicBlock::LivenessQueryResult Liveness =
           MovbeMBB->computeRegisterLiveness(TRI, X86::EFLAGS, MovbeInstruction);
       if (Liveness == MachineBasicBlock::LQR_Dead) {
         InsertBefore = MovbeInstruction;
