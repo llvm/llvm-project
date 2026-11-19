@@ -3439,7 +3439,8 @@ static Error showSampleProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
   if (ShowProfileSymbolList) {
     std::unique_ptr<sampleprof::ProfileSymbolList> ReaderList =
         Reader->getProfileSymbolList();
-    ReaderList->dump(OS);
+    if (ReaderList)
+      ReaderList->dump(OS);
   }
 
   if (ShowDetailedSummary) {
