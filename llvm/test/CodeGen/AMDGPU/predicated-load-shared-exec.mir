@@ -1,0 +1,279 @@
+# RUN: llc -mtriple=amdgpu11.00 -mcpu=gfx1100 -mattr=+wavefrontsize32 -run-pass=post-ra-pseudos -verify-machineinstrs %s -o - | FileCheck %s
+
+# CHECK-LABEL: name: same_predicate
+# CHECK: $sgpr5 = S_AND_SAVEEXEC_B32
+# CHECK-NEXT: {{.*}}GLOBAL_LOAD_DWORD
+# CHECK-NEXT: {{.*}}GLOBAL_LOAD_DWORD
+# CHECK-NEXT: $exec_lo = S_MOV_B32 killed $sgpr5
+# CHECK-NOT: S_AND_SAVEEXEC_B32
+# CHECK: S_ENDPGM
+---
+name: same_predicate
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $sgpr4, $sgpr6, $vgpr0, $vgpr1, $vgpr2, $vgpr4_vgpr5
+    $vgpr0, dead early-clobber $sgpr5 = PRED_GLOBAL_LOAD_DWORD_RA $vgpr4_vgpr5, 0, $sgpr4, $vgpr0, implicit-def dead $scc, implicit $exec :: (load (s32), addrspace 1)
+    $vgpr1, dead early-clobber $sgpr5 = PRED_GLOBAL_LOAD_DWORD_RA $vgpr4_vgpr5, 4, $sgpr4, $vgpr1, implicit-def dead $scc, implicit $exec :: (load (s32), addrspace 1)
+    S_ENDPGM 0
+...
+
+# CHECK-LABEL: name: three_loads
+# CHECK: $sgpr5 = S_AND_SAVEEXEC_B32
+# CHECK-NEXT: {{.*}}GLOBAL_LOAD_DWORD
+# CHECK-NEXT: {{.*}}GLOBAL_LOAD_DWORD
+# CHECK-NEXT: {{.*}}GLOBAL_LOAD_DWORD
+# CHECK-NEXT: $exec_lo = S_MOV_B32 killed $sgpr5
+# CHECK-NOT: S_AND_SAVEEXEC_B32
+# CHECK: S_ENDPGM
+---
+name: three_loads
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $sgpr4, $sgpr6, $vgpr0, $vgpr1, $vgpr2, $vgpr4_vgpr5
+    $vgpr0, dead early-clobber $sgpr5 = PRED_GLOBAL_LOAD_DWORD_RA $vgpr4_vgpr5, 0, $sgpr4, $vgpr0, implicit-def dead $scc, implicit $exec :: (load (s32), addrspace 1)
+    $vgpr1, dead early-clobber $sgpr5 = PRED_GLOBAL_LOAD_DWORD_RA $vgpr4_vgpr5, 4, $sgpr4, $vgpr1, implicit-def dead $scc, implicit $exec :: (load (s32), addrspace 1)
+    $vgpr2, dead early-clobber $sgpr5 = PRED_GLOBAL_LOAD_DWORD_RA $vgpr4_vgpr5, 8, $sgpr4, $vgpr2, implicit-def dead $scc, implicit $exec :: (load (s32), addrspace 1)
+    S_ENDPGM 0
+...
+
+# CHECK-LABEL: name: different_predicate
+# CHECK: S_AND_SAVEEXEC_B32
+# CHECK: GLOBAL_LOAD_DWORD
+# CHECK: $exec_lo = S_MOV_B32
+# CHECK: S_AND_SAVEEXEC_B32
+# CHECK: GLOBAL_LOAD_DWORD
+# CHECK: $exec_lo = S_MOV_B32
+# CHECK-NOT: S_AND_SAVEEXEC_B32
+# CHECK: S_ENDPGM
+---
+name: different_predicate
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $sgpr4, $sgpr6, $vgpr0, $vgpr1, $vgpr2, $vgpr4_vgpr5
+    $vgpr0, dead early-clobber $sgpr5 = PRED_GLOBAL_LOAD_DWORD_RA $vgpr4_vgpr5, 0, $sgpr4, $vgpr0, implicit-def dead $scc, implicit $exec :: (load (s32), addrspace 1)
+    $vgpr1, dead early-clobber $sgpr5 = PRED_GLOBAL_LOAD_DWORD_RA $vgpr4_vgpr5, 4, $sgpr6, $vgpr1, implicit-def dead $scc, implicit $exec :: (load (s32), addrspace 1)
+    S_ENDPGM 0
+...
+
+# CHECK-LABEL: name: different_scratch
+# CHECK: S_AND_SAVEEXEC_B32
+# CHECK: GLOBAL_LOAD_DWORD
+# CHECK: $exec_lo = S_MOV_B32
+# CHECK: S_AND_SAVEEXEC_B32
+# CHECK: GLOBAL_LOAD_DWORD
+# CHECK: $exec_lo = S_MOV_B32
+# CHECK-NOT: S_AND_SAVEEXEC_B32
+# CHECK: S_ENDPGM
+---
+name: different_scratch
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $sgpr4, $sgpr6, $vgpr0, $vgpr1, $vgpr2, $vgpr4_vgpr5
+    $vgpr0, dead early-clobber $sgpr5 = PRED_GLOBAL_LOAD_DWORD_RA $vgpr4_vgpr5, 0, $sgpr4, $vgpr0, implicit-def dead $scc, implicit $exec :: (load (s32), addrspace 1)
+    $vgpr1, dead early-clobber $sgpr7 = PRED_GLOBAL_LOAD_DWORD_RA $vgpr4_vgpr5, 4, $sgpr4, $vgpr1, implicit-def dead $scc, implicit $exec :: (load (s32), addrspace 1)
+    S_ENDPGM 0
+...
+
+# CHECK-LABEL: name: live_scratch
+# CHECK: S_AND_SAVEEXEC_B32
+# CHECK: GLOBAL_LOAD_DWORD
+# CHECK: $exec_lo = S_MOV_B32
+# CHECK: S_AND_SAVEEXEC_B32
+# CHECK: GLOBAL_LOAD_DWORD
+# CHECK: $exec_lo = S_MOV_B32
+# CHECK-NOT: S_AND_SAVEEXEC_B32
+# CHECK: S_ENDPGM
+---
+name: live_scratch
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $sgpr4, $sgpr6, $vgpr0, $vgpr1, $vgpr2, $vgpr4_vgpr5
+    $vgpr0, dead early-clobber $sgpr5 = PRED_GLOBAL_LOAD_DWORD_RA $vgpr4_vgpr5, 0, $sgpr4, $vgpr0, implicit-def dead $scc, implicit $exec :: (load (s32), addrspace 1)
+    $vgpr1, early-clobber $sgpr5 = PRED_GLOBAL_LOAD_DWORD_RA $vgpr4_vgpr5, 4, $sgpr4, $vgpr1, implicit-def dead $scc, implicit $exec :: (load (s32), addrspace 1)
+    S_ENDPGM 0
+...
+
+# CHECK-LABEL: name: live_scc
+# CHECK: S_AND_SAVEEXEC_B32
+# CHECK: GLOBAL_LOAD_DWORD
+# CHECK: $exec_lo = S_MOV_B32
+# CHECK: S_AND_SAVEEXEC_B32
+# CHECK: GLOBAL_LOAD_DWORD
+# CHECK: $exec_lo = S_MOV_B32
+# CHECK-NOT: S_AND_SAVEEXEC_B32
+# CHECK: S_ENDPGM
+---
+name: live_scc
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $sgpr4, $sgpr6, $vgpr0, $vgpr1, $vgpr2, $vgpr4_vgpr5
+    $vgpr0, dead early-clobber $sgpr5 = PRED_GLOBAL_LOAD_DWORD_RA $vgpr4_vgpr5, 0, $sgpr4, $vgpr0, implicit-def dead $scc, implicit $exec :: (load (s32), addrspace 1)
+    $vgpr1, dead early-clobber $sgpr5 = PRED_GLOBAL_LOAD_DWORD_RA $vgpr4_vgpr5, 4, $sgpr4, $vgpr1, implicit-def $scc, implicit $exec :: (load (s32), addrspace 1)
+    S_ENDPGM 0
+...
+
+# CHECK-LABEL: name: undefined_predicate
+# CHECK: S_AND_SAVEEXEC_B32
+# CHECK: GLOBAL_LOAD_DWORD
+# CHECK: $exec_lo = S_MOV_B32
+# CHECK: S_AND_SAVEEXEC_B32
+# CHECK: GLOBAL_LOAD_DWORD
+# CHECK: $exec_lo = S_MOV_B32
+# CHECK-NOT: S_AND_SAVEEXEC_B32
+# CHECK: S_ENDPGM
+---
+name: undefined_predicate
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $sgpr4, $sgpr6, $vgpr0, $vgpr1, $vgpr2, $vgpr4_vgpr5
+    $vgpr0, dead early-clobber $sgpr5 = PRED_GLOBAL_LOAD_DWORD_RA $vgpr4_vgpr5, 0, $sgpr4, $vgpr0, implicit-def dead $scc, implicit $exec :: (load (s32), addrspace 1)
+    $vgpr1, dead early-clobber $sgpr5 = PRED_GLOBAL_LOAD_DWORD_RA $vgpr4_vgpr5, 4, undef $sgpr4, $vgpr1, implicit-def dead $scc, implicit $exec :: (load (s32), addrspace 1)
+    S_ENDPGM 0
+...
+
+# CHECK-LABEL: name: intervening_instruction
+# CHECK: S_AND_SAVEEXEC_B32
+# CHECK: GLOBAL_LOAD_DWORD
+# CHECK: $exec_lo = S_MOV_B32
+# CHECK: S_AND_SAVEEXEC_B32
+# CHECK: GLOBAL_LOAD_DWORD
+# CHECK: $exec_lo = S_MOV_B32
+# CHECK-NOT: S_AND_SAVEEXEC_B32
+# CHECK: S_ENDPGM
+---
+name: intervening_instruction
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $sgpr4, $sgpr6, $vgpr0, $vgpr1, $vgpr2, $vgpr4_vgpr5
+    $vgpr0, dead early-clobber $sgpr5 = PRED_GLOBAL_LOAD_DWORD_RA $vgpr4_vgpr5, 0, $sgpr4, $vgpr0, implicit-def dead $scc, implicit $exec :: (load (s32), addrspace 1)
+    $vgpr2 = V_MOV_B32_e32 0, implicit $exec
+    $vgpr1, dead early-clobber $sgpr5 = PRED_GLOBAL_LOAD_DWORD_RA $vgpr4_vgpr5, 4, $sgpr4, $vgpr1, implicit-def dead $scc, implicit $exec :: (load (s32), addrspace 1)
+    S_ENDPGM 0
+...
+
+# CHECK-LABEL: name: intervening_reload
+# CHECK: S_AND_SAVEEXEC_B32
+# CHECK: GLOBAL_LOAD_DWORD
+# CHECK: $exec_lo = S_MOV_B32
+# CHECK: S_AND_SAVEEXEC_B32
+# CHECK: GLOBAL_LOAD_DWORD
+# CHECK: $exec_lo = S_MOV_B32
+# CHECK-NOT: S_AND_SAVEEXEC_B32
+# CHECK: S_ENDPGM
+---
+name: intervening_reload
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $sgpr4, $sgpr6, $vgpr0, $vgpr1, $vgpr2, $vgpr4_vgpr5
+    $vgpr0, dead early-clobber $sgpr5 = PRED_GLOBAL_LOAD_DWORD_RA $vgpr4_vgpr5, 0, $sgpr4, $vgpr0, implicit-def dead $scc, implicit $exec :: (load (s32), addrspace 1)
+    $vgpr2 = SCRATCH_LOAD_DWORD_SADDR $sgpr6, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32), addrspace 5)
+    $vgpr1, dead early-clobber $sgpr5 = PRED_GLOBAL_LOAD_DWORD_RA $vgpr4_vgpr5, 4, $sgpr4, $vgpr1, implicit-def dead $scc, implicit $exec :: (load (s32), addrspace 1)
+    S_ENDPGM 0
+...
+
+# CHECK-LABEL: name: exec_change
+# CHECK: S_AND_SAVEEXEC_B32
+# CHECK: GLOBAL_LOAD_DWORD
+# CHECK: $exec_lo = S_MOV_B32
+# CHECK: S_AND_SAVEEXEC_B32
+# CHECK: GLOBAL_LOAD_DWORD
+# CHECK: $exec_lo = S_MOV_B32
+# CHECK-NOT: S_AND_SAVEEXEC_B32
+# CHECK: S_ENDPGM
+---
+name: exec_change
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $sgpr4, $sgpr6, $vgpr0, $vgpr1, $vgpr2, $vgpr4_vgpr5
+    $vgpr0, dead early-clobber $sgpr5 = PRED_GLOBAL_LOAD_DWORD_RA $vgpr4_vgpr5, 0, $sgpr4, $vgpr0, implicit-def dead $scc, implicit $exec :: (load (s32), addrspace 1)
+    $exec_lo = S_MOV_B32 0
+    $vgpr1, dead early-clobber $sgpr5 = PRED_GLOBAL_LOAD_DWORD_RA $vgpr4_vgpr5, 4, $sgpr4, $vgpr1, implicit-def dead $scc, implicit $exec :: (load (s32), addrspace 1)
+    S_ENDPGM 0
+...
+
+# CHECK-LABEL: name: predicate_redefinition
+# CHECK: S_AND_SAVEEXEC_B32
+# CHECK: GLOBAL_LOAD_DWORD
+# CHECK: $exec_lo = S_MOV_B32
+# CHECK: S_AND_SAVEEXEC_B32
+# CHECK: GLOBAL_LOAD_DWORD
+# CHECK: $exec_lo = S_MOV_B32
+# CHECK-NOT: S_AND_SAVEEXEC_B32
+# CHECK: S_ENDPGM
+---
+name: predicate_redefinition
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $sgpr4, $sgpr6, $vgpr0, $vgpr1, $vgpr2, $vgpr4_vgpr5
+    $vgpr0, dead early-clobber $sgpr5 = PRED_GLOBAL_LOAD_DWORD_RA $vgpr4_vgpr5, 0, $sgpr4, $vgpr0, implicit-def dead $scc, implicit $exec :: (load (s32), addrspace 1)
+    $sgpr4 = S_MOV_B32 0
+    $vgpr1, dead early-clobber $sgpr5 = PRED_GLOBAL_LOAD_DWORD_RA $vgpr4_vgpr5, 4, $sgpr4, $vgpr1, implicit-def dead $scc, implicit $exec :: (load (s32), addrspace 1)
+    S_ENDPGM 0
+...
+
+# CHECK-LABEL: name: volatile_load
+# CHECK: S_AND_SAVEEXEC_B32
+# CHECK: GLOBAL_LOAD_DWORD
+# CHECK: $exec_lo = S_MOV_B32
+# CHECK: S_AND_SAVEEXEC_B32
+# CHECK: GLOBAL_LOAD_DWORD
+# CHECK: $exec_lo = S_MOV_B32
+# CHECK-NOT: S_AND_SAVEEXEC_B32
+# CHECK: S_ENDPGM
+---
+name: volatile_load
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $sgpr4, $sgpr6, $vgpr0, $vgpr1, $vgpr2, $vgpr4_vgpr5
+    $vgpr0, dead early-clobber $sgpr5 = PRED_GLOBAL_LOAD_DWORD_RA $vgpr4_vgpr5, 0, $sgpr4, $vgpr0, implicit-def dead $scc, implicit $exec :: (volatile load (s32), addrspace 1)
+    $vgpr1, dead early-clobber $sgpr5 = PRED_GLOBAL_LOAD_DWORD_RA $vgpr4_vgpr5, 4, $sgpr4, $vgpr1, implicit-def dead $scc, implicit $exec :: (load (s32), addrspace 1)
+    S_ENDPGM 0
+...
+
+# CHECK-LABEL: name: mixed_addressing
+# CHECK: $sgpr5 = S_AND_SAVEEXEC_B32
+# CHECK-NEXT: {{.*}}GLOBAL_LOAD_DWORD
+# CHECK-NEXT: {{.*}}GLOBAL_LOAD_DWORD
+# CHECK-NEXT: $exec_lo = S_MOV_B32 killed $sgpr5
+# CHECK-NOT: S_AND_SAVEEXEC_B32
+# CHECK: S_ENDPGM
+---
+name: mixed_addressing
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $sgpr4, $sgpr6, $vgpr0, $vgpr1, $vgpr2, $vgpr4_vgpr5
+    $vgpr0, dead early-clobber $sgpr5 = PRED_GLOBAL_LOAD_DWORD_RA $vgpr4_vgpr5, 0, $sgpr4, $vgpr0, implicit-def dead $scc, implicit $exec :: (load (s32), addrspace 1)
+    $vgpr1, dead early-clobber $sgpr5 = PRED_GLOBAL_LOAD_DWORD_RA_SADDR $sgpr0_sgpr1, $vgpr2, 4, 0, $sgpr4, $vgpr1, implicit-def dead $scc, implicit $exec :: (load (s32), addrspace 1)
+    S_ENDPGM 0
+...
+
+# CHECK-LABEL: name: mixed_widths
+# CHECK: $sgpr5 = S_AND_SAVEEXEC_B32
+# CHECK-NEXT: {{.*}}GLOBAL_LOAD_DWORD
+# CHECK-NEXT: {{.*}}GLOBAL_LOAD_DWORD
+# CHECK-NEXT: $exec_lo = S_MOV_B32 killed $sgpr5
+# CHECK-NOT: S_AND_SAVEEXEC_B32
+# CHECK: S_ENDPGM
+---
+name: mixed_widths
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $sgpr4, $sgpr6, $vgpr0, $vgpr1, $vgpr2, $vgpr4_vgpr5
+    $vgpr0_vgpr1, dead early-clobber $sgpr5 = PRED_GLOBAL_LOAD_DWORDX2_RA $vgpr4_vgpr5, 0, $sgpr4, $vgpr0_vgpr1, implicit-def dead $scc, implicit $exec :: (load (s64), addrspace 1)
+    $vgpr2, dead early-clobber $sgpr5 = PRED_GLOBAL_LOAD_DWORD_RA $vgpr4_vgpr5, 8, $sgpr4, $vgpr2, implicit-def dead $scc, implicit $exec :: (load (s32), addrspace 1)
+    S_ENDPGM 0
+...

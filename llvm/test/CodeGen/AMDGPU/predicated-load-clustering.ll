@@ -1,3 +1,4 @@
+; RUN: llc -global-isel=0 -mtriple=amdgpu11.00 -mcpu=gfx1100 -mattr=+wavefrontsize32 -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ASM
 ; REQUIRES: asserts
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize32 -verify-machineinstrs -verify-misched -stop-before=machine-scheduler %s -o - | FileCheck %s --check-prefix=PRE
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize32 -verify-machineinstrs -verify-misched -stop-after=machine-scheduler -debug-only=machine-scheduler %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=DAG
@@ -18,6 +19,15 @@
 ; DAG: {{^}}SU([[SECOND]]): {{.*}}PRED_GLOBAL_LOAD_DWORD_RA_SADDR
 ; DAG: Parent Cluster Index: [[CLUSTER]]
 ; DAG: SU([[FIRST]]): Ord  Latency=0 Cluster
+
+; ASM-LABEL: two_loads:
+; ASM: s_and_saveexec_b32 [[SAVE:s[0-9]+]], {{s[0-9]+}}
+; ASM-NEXT: s_clause 0x1
+; ASM-NEXT: global_load_b32 {{.*}}
+; ASM-NEXT: global_load_b32 {{.*}} offset:4
+; ASM-NEXT: s_mov_b32 exec_lo, [[SAVE]]
+; ASM-NOT: s_and_saveexec_b32
+; ASM: s_endpgm
 
 declare i32 @llvm.amdgcn.predicated.load.i32(ptr addrspace(1), i1, i32)
 

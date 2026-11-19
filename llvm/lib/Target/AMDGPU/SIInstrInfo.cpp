@@ -2178,6 +2178,86 @@ unsigned SIInstrInfo::getNumWaitStates(const MachineInstr &MI) {
   }
 }
 
+static void expandPredicatedGlobalLoads(MachineInstr &First,
+                                        const SIInstrInfo &TII) {
+  const MachineOperand *Predicate = getPredicatedGlobalLoadPredicate(First);
+  const SIRegisterInfo &TRI = TII.getRegisterInfo();
+  Register SavedExec = First.getOperand(1).getReg();
+  Register PredicateReg = Predicate->getReg();
+  MachineBasicBlock &MBB = *First.getParent();
+  SmallVector<MachineInstr *, 4> Loads;
+  for (auto Iter = First.getIterator(); Iter != MBB.end(); ++Iter) {
+    MachineInstr &Candidate = *Iter;
+    const MachineOperand *NextPredicate =
+        getPredicatedGlobalLoadPredicate(Candidate);
+    if (!NextPredicate || NextPredicate->isUndef() ||
+        NextPredicate->getReg() != PredicateReg ||
+        Candidate.isBundledWithPred() || Candidate.isBundledWithSucc() ||
+        Candidate.hasOrderedMemoryRef() ||
+        Candidate.getOperand(1).getReg() != SavedExec ||
+        !Candidate.getOperand(1).isDead() ||
+        !Candidate.registerDefIsDead(AMDGPU::SCC, &TRI))
+      break;
+    Loads.push_back(&Candidate);
+  }
+  if (Loads.empty())
+    Loads.push_back(&First);
+
+  BuildMI(MBB, First, First.getDebugLoc(), TII.get(AMDGPU::S_AND_SAVEEXEC_B32),
+          SavedExec)
+      .addReg(PredicateReg);
+  BuildMI(MBB, std::next(Loads.back()->getIterator()),
+          Loads.back()->getDebugLoc(), TII.get(AMDGPU::S_MOV_B32),
+          AMDGPU::EXEC_LO)
+      .addReg(SavedExec, getKillRegState(Loads.back()->getOperand(1).isDead()));
+
+  for (MachineInstr *Load : Loads) {
+    unsigned Opcode;
+    switch (Load->getOpcode()) {
+    case AMDGPU::PRED_GLOBAL_LOAD_DWORD_RA:
+      Opcode = AMDGPU::GLOBAL_LOAD_DWORD;
+      break;
+    case AMDGPU::PRED_GLOBAL_LOAD_DWORDX2_RA:
+      Opcode = AMDGPU::GLOBAL_LOAD_DWORDX2;
+      break;
+    case AMDGPU::PRED_GLOBAL_LOAD_DWORDX4_RA:
+      Opcode = AMDGPU::GLOBAL_LOAD_DWORDX4;
+      break;
+    case AMDGPU::PRED_GLOBAL_LOAD_DWORD_RA_SADDR:
+      Opcode = AMDGPU::GLOBAL_LOAD_DWORD_SADDR;
+      break;
+    case AMDGPU::PRED_GLOBAL_LOAD_DWORDX2_RA_SADDR:
+      Opcode = AMDGPU::GLOBAL_LOAD_DWORDX2_SADDR;
+      break;
+    case AMDGPU::PRED_GLOBAL_LOAD_DWORDX4_RA_SADDR:
+      Opcode = AMDGPU::GLOBAL_LOAD_DWORDX4_SADDR;
+      break;
+    default:
+      llvm_unreachable("unexpected predicated load opcode");
+    }
+
+    SmallVector<MachineOperand, 6> Operands;
+    Operands.push_back(Load->getOperand(0));
+    bool HasSAddr = TII.getNamedOperand(*Load, AMDGPU::OpName::saddr);
+    unsigned PredicateIndex = HasSAddr ? 6 : 4;
+    for (unsigned Index = 2; Index != PredicateIndex; ++Index)
+      Operands.push_back(Load->getOperand(Index));
+    MachineOperand Passthru = Load->getOperand(PredicateIndex + 1);
+    Passthru.setIsKill(false);
+    Passthru.setImplicit();
+    while (Load->getNumOperands())
+      Load->removeOperand(Load->getNumOperands() - 1);
+    Load->setDesc(TII.get(Opcode));
+    MachineInstrBuilder Builder(*MBB.getParent(), Load);
+    for (const MachineOperand &Operand : Operands)
+      Builder.add(Operand);
+    if (!HasSAddr)
+      Builder.addImm(0);
+    Load->addImplicitDefUseOperands(*MBB.getParent());
+    Builder.add(Passthru);
+  }
+}
+
 bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   MachineBasicBlock &MBB = *MI.getParent();
   DebugLoc DL = MBB.findDebugLoc(MI);
@@ -2674,85 +2754,12 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
 
   case AMDGPU::PRED_GLOBAL_LOAD_DWORD_RA:
   case AMDGPU::PRED_GLOBAL_LOAD_DWORDX2_RA:
-  case AMDGPU::PRED_GLOBAL_LOAD_DWORDX4_RA: {
-    // GV load: outs: vdst(0), saved_exec(1) ins: vaddr(2), offset(3), pred(4)
-    Register Vdst = MI.getOperand(0).getReg();
-    Register SavedExec = MI.getOperand(1).getReg();
-    Register Vaddr = MI.getOperand(2).getReg();
-    int64_t Offset = MI.getOperand(3).getImm();
-    Register Pred = MI.getOperand(4).getReg();
-
-    unsigned LoadOpc;
-    switch (MI.getOpcode()) {
-    case AMDGPU::PRED_GLOBAL_LOAD_DWORD_RA:
-      LoadOpc = AMDGPU::GLOBAL_LOAD_DWORD;
-      break;
-    case AMDGPU::PRED_GLOBAL_LOAD_DWORDX2_RA:
-      LoadOpc = AMDGPU::GLOBAL_LOAD_DWORDX2;
-      break;
-    case AMDGPU::PRED_GLOBAL_LOAD_DWORDX4_RA:
-      LoadOpc = AMDGPU::GLOBAL_LOAD_DWORDX4;
-      break;
-    default:
-      llvm_unreachable("unexpected opcode");
-    }
-
-    BuildMI(MBB, MI, DL, get(AMDGPU::S_AND_SAVEEXEC_B32), SavedExec)
-        .addReg(Pred);
-    auto LoadMI = BuildMI(MBB, MI, DL, get(LoadOpc), Vdst)
-                      .addReg(Vaddr)
-                      .addImm(Offset)
-                      .addImm(0);
-    LoadMI.cloneMemRefs(MI);
-    BuildMI(MBB, MI, DL, get(AMDGPU::S_MOV_B32), AMDGPU::EXEC_LO)
-        .addReg(SavedExec);
-
-    MI.eraseFromParent();
-    break;
-  }
-
+  case AMDGPU::PRED_GLOBAL_LOAD_DWORDX4_RA:
   case AMDGPU::PRED_GLOBAL_LOAD_DWORD_RA_SADDR:
   case AMDGPU::PRED_GLOBAL_LOAD_DWORDX2_RA_SADDR:
-  case AMDGPU::PRED_GLOBAL_LOAD_DWORDX4_RA_SADDR: {
-    // GVS load: outs: vdst(0), saved_exec(1) ins: saddr(2), voffset(3),
-    // offset(4), cpol(5), pred(6)
-    Register Vdst = MI.getOperand(0).getReg();
-    Register SavedExec = MI.getOperand(1).getReg();
-    Register Saddr = MI.getOperand(2).getReg();
-    Register Voffset = MI.getOperand(3).getReg();
-    int64_t Offset = MI.getOperand(4).getImm();
-    int64_t Cpol = MI.getOperand(5).getImm();
-    Register Pred = MI.getOperand(6).getReg();
-
-    unsigned LoadOpc;
-    switch (MI.getOpcode()) {
-    case AMDGPU::PRED_GLOBAL_LOAD_DWORD_RA_SADDR:
-      LoadOpc = AMDGPU::GLOBAL_LOAD_DWORD_SADDR;
-      break;
-    case AMDGPU::PRED_GLOBAL_LOAD_DWORDX2_RA_SADDR:
-      LoadOpc = AMDGPU::GLOBAL_LOAD_DWORDX2_SADDR;
-      break;
-    case AMDGPU::PRED_GLOBAL_LOAD_DWORDX4_RA_SADDR:
-      LoadOpc = AMDGPU::GLOBAL_LOAD_DWORDX4_SADDR;
-      break;
-    default:
-      llvm_unreachable("unexpected opcode");
-    }
-
-    BuildMI(MBB, MI, DL, get(AMDGPU::S_AND_SAVEEXEC_B32), SavedExec)
-        .addReg(Pred);
-    auto LoadMI = BuildMI(MBB, MI, DL, get(LoadOpc), Vdst)
-                      .addReg(Saddr)
-                      .addReg(Voffset)
-                      .addImm(Offset)
-                      .addImm(Cpol);
-    LoadMI.cloneMemRefs(MI);
-    BuildMI(MBB, MI, DL, get(AMDGPU::S_MOV_B32), AMDGPU::EXEC_LO)
-        .addReg(SavedExec);
-
-    MI.eraseFromParent();
+  case AMDGPU::PRED_GLOBAL_LOAD_DWORDX4_RA_SADDR:
+    expandPredicatedGlobalLoads(MI, *this);
     break;
-  }
 
   case AMDGPU::PRED_GLOBAL_STORE_DWORD_RA:
   case AMDGPU::PRED_GLOBAL_STORE_DWORDX2_RA:
