@@ -13,6 +13,7 @@
 #include "CppGenUtilities.h"
 #include "FormatGen.h"
 #include "mlir/TableGen/Attribute.h"
+#include "mlir/TableGen/CodeGenHelpers.h"
 #include "mlir/TableGen/EnumInfo.h"
 #include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/GenInfo.h"
@@ -36,7 +37,8 @@ using mlir::tblgen::Attribute;
 using mlir::tblgen::EnumCase;
 using mlir::tblgen::EnumInfo;
 using mlir::tblgen::FmtContext;
-using mlir::tblgen::tgfmt;
+using mlir::tblgen::FmtOrigin;
+using mlir::tblgen::tgfmtOrFatal;
 
 static std::string makeIdentifier(StringRef str) {
   if (!str.empty() && isDigit(static_cast<unsigned char>(str.front()))) {
@@ -695,7 +697,13 @@ static void emitSpecializedAttrDef(const Record &enumDef, raw_ostream &os) {
   std::string condition = baseAttrPred.getCondition();
   FmtContext verifyCtx;
   verifyCtx.withSelf("attr");
-  os << tgfmt("  return $0;\n", /*ctx=*/nullptr, tgfmt(condition, &verifyCtx));
+  os << tgfmtOrFatal(
+      FmtOrigin::at(enumDef.getLoc(), "enum attribute predicate"),
+      "  return $0;\n", FmtContext{},
+      tgfmtOrFatal(
+          FmtOrigin::at(baseAttrDef->getLoc(), "enum attribute predicate")
+              .withUse(enumDef.getLoc(), "enum attribute"),
+          condition, verifyCtx));
 
   os << "}\n";
 

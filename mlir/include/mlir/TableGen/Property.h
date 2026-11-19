@@ -57,6 +57,10 @@ public:
            StringRef writeToMlirBytecodeCall, StringRef hashPropertyCall,
            StringRef defaultValue, StringRef storageTypeValueOverride);
 
+  /// Whether this property has a TableGen definition. Builtin segment-size
+  /// properties may be synthesized without one.
+  bool hasDef() const { return def != nullptr; }
+
   // Returns the summary (for error messages) of this property's type.
   StringRef getSummary() const { return summary; }
 
