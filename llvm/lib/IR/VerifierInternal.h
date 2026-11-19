@@ -212,6 +212,13 @@ public:
 };
 
 //==============================================================================
+// AArch64-specific verification functions
+
+void verifyAArch64IntrinsicCall(VerifierSupport &VS, Intrinsic::ID ID,
+                                CallBase &Call);
+
+//==============================================================================
+
 // AMDGPU-specific verification functions
 
 void verifyAMDGPUModuleFlag(VerifierSupport &VS, const MDString *ID,
