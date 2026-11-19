@@ -37,9 +37,6 @@ protected:
   const AMDGPUOptions &CLOpts;
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
 
-  StringRef getGPUName(const Function &F) const;
-  StringRef getFeatureString(const Function &F) const;
-
 public:
   static bool EnableFunctionCalls;
   static bool EnableObjectLinking;
