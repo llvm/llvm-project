@@ -1771,3 +1771,198 @@ define i8 @bittest_trunc_not_or(i8 %x) {
   %cond = select i1 %not, i8 %or, i8 %x
   ret i8 %cond
 }
+
+; The select condition proves that the count is also zero on the constant arm.
+define i32 @cttz_select_low_bit(i32 noundef %x) {
+; CHECK-LABEL: @cttz_select_low_bit(
+; CHECK-NEXT:    [[COUNT:%.*]] = call i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 true)
+; CHECK-NEXT:    ret i32 [[COUNT]]
+;
+  %bit = and i32 %x, 1
+  %odd = icmp ne i32 %bit, 0
+  %count = call i32 @llvm.cttz.i32(i32 %x, i1 true)
+  %result = select i1 %odd, i32 0, i32 %count
+  ret i32 %result
+}
+
+define i32 @cttz_select_truncated_count(i64 noundef %x) {
+; CHECK-LABEL: @cttz_select_truncated_count(
+; CHECK-NEXT:    [[COUNT:%.*]] = call i64 @llvm.cttz.i64(i64 [[X:%.*]], i1 true)
+; CHECK-NEXT:    [[NARROW:%.*]] = trunc nsw i64 [[COUNT]] to i32
+; CHECK-NEXT:    ret i32 [[NARROW]]
+;
+  %odd = trunc i64 %x to i1
+  %count = call i64 @llvm.cttz.i64(i64 %x, i1 true)
+  %narrow = trunc nsw i64 %count to i32
+  %result = select i1 %odd, i32 0, i32 %narrow
+  ret i32 %result
+}
+
+define i32 @cttz_select_low_bits_equal(i32 noundef %x) {
+; CHECK-LABEL: @cttz_select_low_bits_equal(
+; CHECK-NEXT:    [[COUNT:%.*]] = call i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 false)
+; CHECK-NEXT:    ret i32 [[COUNT]]
+;
+  %bits = and i32 %x, 3
+  %condition = icmp ne i32 %bits, 3
+  %count = call i32 @llvm.cttz.i32(i32 %x, i1 false)
+  %result = select i1 %condition, i32 %count, i32 0
+  ret i32 %result
+}
+
+define i32 @ctlz_select_negative(i32 noundef %x) {
+; CHECK-LABEL: @ctlz_select_negative(
+; CHECK-NEXT:    [[COUNT:%.*]] = call i32 @llvm.ctlz.i32(i32 [[X:%.*]], i1 true)
+; CHECK-NEXT:    ret i32 [[COUNT]]
+;
+  %negative = icmp slt i32 %x, 0
+  %count = call i32 @llvm.ctlz.i32(i32 %x, i1 true)
+  %result = select i1 %negative, i32 0, i32 %count
+  ret i32 %result
+}
+
+; The constant arm hides a poison result when the range excludes zero.
+define i32 @cttz_select_range_excludes_zero(i32 noundef %x) {
+; CHECK-LABEL: @cttz_select_range_excludes_zero(
+; CHECK-NEXT:    [[ODD:%.*]] = trunc i32 [[X:%.*]] to i1
+; CHECK-NEXT:    [[COUNT:%.*]] = call range(i32 1, 33) i32 @llvm.cttz.i32(i32 [[X]], i1 true)
+; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[ODD]], i32 0, i32 [[COUNT]]
+; CHECK-NEXT:    ret i32 [[RESULT]]
+;
+  %odd = trunc i32 %x to i1
+  %count = call range(i32 1, 33) i32 @llvm.cttz.i32(i32 %x, i1 true)
+  %result = select i1 %odd, i32 0, i32 %count
+  ret i32 %result
+}
+
+define i32 @cttz_select_range_includes_zero(i32 noundef %x) {
+; CHECK-LABEL: @cttz_select_range_includes_zero(
+; CHECK-NEXT:    [[COUNT:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 true)
+; CHECK-NEXT:    ret i32 [[COUNT]]
+;
+  %odd = trunc i32 %x to i1
+  %count = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 %x, i1 true)
+  %result = select i1 %odd, i32 0, i32 %count
+  ret i32 %result
+}
+
+; Keep the fold conservative when the input may be undef or poison.
+define i32 @cttz_select_maybe_undef(i32 %x) {
+; CHECK-LABEL: @cttz_select_maybe_undef(
+; CHECK-NEXT:    [[ODD:%.*]] = trunc i32 [[X:%.*]] to i1
+; CHECK-NEXT:    [[COUNT:%.*]] = call i32 @llvm.cttz.i32(i32 [[X]], i1 true)
+; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[ODD]], i32 0, i32 [[COUNT]]
+; CHECK-NEXT:    ret i32 [[RESULT]]
+;
+  %odd = trunc i32 %x to i1
+  %count = call i32 @llvm.cttz.i32(i32 %x, i1 true)
+  %result = select i1 %odd, i32 0, i32 %count
+  ret i32 %result
+}
+
+; A nonzero multi-bit mask does not establish that the lowest bit is set.
+define i32 @cttz_select_multi_bit_nonzero(i32 noundef %x) {
+; CHECK-LABEL: @cttz_select_multi_bit_nonzero(
+; CHECK-NEXT:    [[BITS:%.*]] = and i32 [[X:%.*]], 3
+; CHECK-NEXT:    [[CONDITION:%.*]] = icmp ne i32 [[BITS]], 0
+; CHECK-NEXT:    [[COUNT:%.*]] = call i32 @llvm.cttz.i32(i32 [[X]], i1 true)
+; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[CONDITION]], i32 0, i32 [[COUNT]]
+; CHECK-NEXT:    ret i32 [[RESULT]]
+;
+  %bits = and i32 %x, 3
+  %condition = icmp ne i32 %bits, 0
+  %count = call i32 @llvm.cttz.i32(i32 %x, i1 true)
+  %result = select i1 %condition, i32 0, i32 %count
+  ret i32 %result
+}
+
+; Freezing the count can hide poison; it must not be treated as the count itself.
+define i32 @cttz_select_frozen_count(i32 noundef %x) {
+; CHECK-LABEL: @cttz_select_frozen_count(
+; CHECK-NEXT:    [[ODD:%.*]] = trunc i32 [[X:%.*]] to i1
+; CHECK-NEXT:    [[COUNT:%.*]] = call range(i32 1, 33) i32 @llvm.cttz.i32(i32 [[X]], i1 true)
+; CHECK-NEXT:    [[FROZEN:%.*]] = freeze i32 [[COUNT]]
+; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[ODD]], i32 0, i32 [[FROZEN]]
+; CHECK-NEXT:    ret i32 [[RESULT]]
+;
+  %odd = trunc i32 %x to i1
+  %count = call range(i32 1, 33) i32 @llvm.cttz.i32(i32 %x, i1 true)
+  %frozen = freeze i32 %count
+  %result = select i1 %odd, i32 0, i32 %frozen
+  ret i32 %result
+}
+
+declare i64 @llvm.cttz.i64(i64, i1 immarg)
+declare i32 @llvm.ctlz.i32(i32, i1 immarg)
+
+define <2 x i32> @cttz_select_vector(<2 x i32> noundef %x) {
+; CHECK-LABEL: @cttz_select_vector(
+; CHECK-NEXT:    [[COUNT:%.*]] = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[X:%.*]], i1 true)
+; CHECK-NEXT:    ret <2 x i32> [[COUNT]]
+;
+  %bit = and <2 x i32> %x, <i32 1, i32 1>
+  %odd = icmp ne <2 x i32> %bit, zeroinitializer
+  %count = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> %x, i1 true)
+  %result = select <2 x i1> %odd, <2 x i32> zeroinitializer, <2 x i32> %count
+  ret <2 x i32> %result
+}
+
+define <2 x i32> @ctlz_select_vector_truncated(<2 x i64> noundef %x) {
+; CHECK-LABEL: @ctlz_select_vector_truncated(
+; CHECK-NEXT:    [[COUNT:%.*]] = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> [[X:%.*]], i1 true)
+; CHECK-NEXT:    [[NARROW:%.*]] = trunc <2 x i64> [[COUNT]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[NARROW]]
+;
+  %negative = icmp slt <2 x i64> %x, zeroinitializer
+  %count = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> %x, i1 true)
+  %narrow = trunc <2 x i64> %count to <2 x i32>
+  %result = select <2 x i1> %negative, <2 x i32> zeroinitializer, <2 x i32> %narrow
+  ret <2 x i32> %result
+}
+
+; Lane 1 tests bit 1, which does not prove that cttz returns zero.
+define <2 x i32> @cttz_select_vector_nonsplat_mask(<2 x i32> noundef %x) {
+; CHECK-LABEL: @cttz_select_vector_nonsplat_mask(
+; CHECK-NEXT:    [[BITS:%.*]] = and <2 x i32> [[X:%.*]], <i32 1, i32 2>
+; CHECK-NEXT:    [[CONDITION:%.*]] = icmp ne <2 x i32> [[BITS]], zeroinitializer
+; CHECK-NEXT:    [[COUNT:%.*]] = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[X]], i1 true)
+; CHECK-NEXT:    [[RESULT:%.*]] = select <2 x i1> [[CONDITION]], <2 x i32> zeroinitializer, <2 x i32> [[COUNT]]
+; CHECK-NEXT:    ret <2 x i32> [[RESULT]]
+;
+  %bits = and <2 x i32> %x, <i32 1, i32 2>
+  %condition = icmp ne <2 x i32> %bits, zeroinitializer
+  %count = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> %x, i1 true)
+  %result = select <2 x i1> %condition, <2 x i32> zeroinitializer, <2 x i32> %count
+  ret <2 x i32> %result
+}
+
+; The condition describes different lanes than the count's shuffled input.
+define <2 x i32> @cttz_select_vector_shuffled_input(<2 x i32> noundef %x) {
+; CHECK-LABEL: @cttz_select_vector_shuffled_input(
+; CHECK-NEXT:    [[ODD:%.*]] = trunc <2 x i32> [[X:%.*]] to <2 x i1>
+; CHECK-NEXT:    [[SHUFFLED:%.*]] = shufflevector <2 x i32> [[X]], <2 x i32> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[COUNT:%.*]] = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[SHUFFLED]], i1 true)
+; CHECK-NEXT:    [[RESULT:%.*]] = select <2 x i1> [[ODD]], <2 x i32> zeroinitializer, <2 x i32> [[COUNT]]
+; CHECK-NEXT:    ret <2 x i32> [[RESULT]]
+;
+  %odd = trunc <2 x i32> %x to <2 x i1>
+  %shuffled = shufflevector <2 x i32> %x, <2 x i32> poison, <2 x i32> <i32 1, i32 0>
+  %count = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> %shuffled, i1 true)
+  %result = select <2 x i1> %odd, <2 x i32> zeroinitializer, <2 x i32> %count
+  ret <2 x i32> %result
+}
+
+define <vscale x 2 x i32> @cttz_select_scalable_vector(<vscale x 2 x i32> noundef %x) {
+; CHECK-LABEL: @cttz_select_scalable_vector(
+; CHECK-NEXT:    [[COUNT:%.*]] = call <vscale x 2 x i32> @llvm.cttz.nxv2i32(<vscale x 2 x i32> [[X:%.*]], i1 true)
+; CHECK-NEXT:    ret <vscale x 2 x i32> [[COUNT]]
+;
+  %odd = trunc <vscale x 2 x i32> %x to <vscale x 2 x i1>
+  %count = call <vscale x 2 x i32> @llvm.cttz.nxv2i32(<vscale x 2 x i32> %x, i1 true)
+  %result = select <vscale x 2 x i1> %odd, <vscale x 2 x i32> zeroinitializer, <vscale x 2 x i32> %count
+  ret <vscale x 2 x i32> %result
+}
+
+declare <2 x i32> @llvm.cttz.v2i32(<2 x i32>, i1 immarg)
+declare <2 x i64> @llvm.ctlz.v2i64(<2 x i64>, i1 immarg)
+declare <vscale x 2 x i32> @llvm.cttz.nxv2i32(<vscale x 2 x i32>, i1 immarg)
