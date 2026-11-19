@@ -999,8 +999,7 @@ define void @latch_cmp_bound_is_backedge_value_of_phi(i64 %n, i64 %s) {
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[Q:%.*]] = phi i64 [ [[S]], %[[ENTRY]] ], [ [[N]], %[[LOOP]] ]
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[I]], [[N]]
-; CHECK-NEXT:    call void @use(i1 [[C]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
 ; CHECK-NEXT:    [[CONT:%.*]] = icmp sgt i64 [[N]], [[I_NEXT]]
 ; CHECK-NEXT:    br i1 [[CONT]], label %[[LOOP]], label %[[EXIT]]

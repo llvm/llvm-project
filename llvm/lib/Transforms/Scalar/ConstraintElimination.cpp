@@ -1362,15 +1362,15 @@ getPhiWithBackedgeValue(Loop *L, const BasicBlock *LoopPred, Value *V) {
 }
 
 namespace {
-/// Matches a value that is the backedge value of a phi in the header of a loop
-/// and binds the phi.
+/// Matches a loop-varying value that is the backedge value of a phi in the
+/// header of a loop and binds the phi.
 struct BackedgeValueOfHeaderPhi {
   Loop *L;
   const BasicBlock *LoopPred;
   PHINode *&PN;
 
   template <typename ITy> bool match(ITy *V) const {
-    if (!LoopPred)
+    if (!LoopPred || L->isLoopInvariant(V))
       return false;
     PN = getPhiWithBackedgeValue(L, LoopPred, V).first;
     return PN;
