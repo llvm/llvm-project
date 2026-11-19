@@ -281,7 +281,6 @@ define void @extract_16xi8_sext(ptr %src, ptr %dst) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a0, 0
 ; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 1
-; CHECK-NEXT:    ext.w.b $a0, $a0
 ; CHECK-NEXT:    st.w $a0, $a1, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -297,7 +296,6 @@ define void @extract_8xi16_sext(ptr %src, ptr %dst) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a0, 0
 ; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 1
-; CHECK-NEXT:    ext.w.h $a0, $a0
 ; CHECK-NEXT:    st.w $a0, $a1, 0
 ; CHECK-NEXT:    ret
 entry:
