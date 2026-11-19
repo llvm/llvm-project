@@ -102,6 +102,7 @@ config.substitutions.append(
 # Library path of libflang_rt.runtime.a/.so (for lib search path when using non-Flang driver for linking and LD_LIBRARY_PATH)
 config.substitutions.append(("%libdir", config.flang_rt_output_resource_lib_dir))
 
+
 def push_dynamic_library_lookup_path(config, new_path):
     if platform.system() == "Windows":
         dynamic_library_lookup_var = "PATH"
