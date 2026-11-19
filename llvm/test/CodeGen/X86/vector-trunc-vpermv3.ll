@@ -6,12 +6,18 @@
 ; per 512-bit result instead of two VPMOV* truncations and a VINSERTI64X4.
 
 define <64 x i8> @trunc_v64i16_v64i8(<64 x i16> %x) {
-; AVX512-LABEL: trunc_v64i16_v64i8:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpmovwb %zmm0, %ymm0
-; AVX512-NEXT:    vpmovwb %zmm1, %ymm1
-; AVX512-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; AVX512-NEXT:    retq
+; AVX512BW-LABEL: trunc_v64i16_v64i8:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vpmovwb %zmm0, %ymm0
+; AVX512BW-NEXT:    vpmovwb %zmm1, %ymm1
+; AVX512BW-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; AVX512BW-NEXT:    retq
+;
+; AVX512VBMI-LABEL: trunc_v64i16_v64i8:
+; AVX512VBMI:       # %bb.0:
+; AVX512VBMI-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40,42,44,46,48,50,52,54,56,58,60,62,64,66,68,70,72,74,76,78,80,82,84,86,88,90,92,94,96,98,100,102,104,106,108,110,112,114,116,118,120,122,124,126]
+; AVX512VBMI-NEXT:    vpermt2b %zmm1, %zmm2, %zmm0
+; AVX512VBMI-NEXT:    retq
   %r = trunc <64 x i16> %x to <64 x i8>
   ret <64 x i8> %r
 }
@@ -19,9 +25,8 @@ define <64 x i8> @trunc_v64i16_v64i8(<64 x i16> %x) {
 define <32 x i16> @trunc_v32i32_v32i16(<32 x i32> %x) {
 ; AVX512-LABEL: trunc_v32i32_v32i16:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpmovdw %zmm0, %ymm0
-; AVX512-NEXT:    vpmovdw %zmm1, %ymm1
-; AVX512-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; AVX512-NEXT:    vpmovsxbw {{.*#+}} zmm2 = [0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40,42,44,46,48,50,52,54,56,58,60,62]
+; AVX512-NEXT:    vpermt2w %zmm1, %zmm2, %zmm0
 ; AVX512-NEXT:    retq
   %r = trunc <32 x i32> %x to <32 x i16>
   ret <32 x i16> %r
@@ -30,36 +35,51 @@ define <32 x i16> @trunc_v32i32_v32i16(<32 x i32> %x) {
 define <16 x i32> @trunc_v16i64_v16i32(<16 x i64> %x) {
 ; AVX512-LABEL: trunc_v16i64_v16i32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpmovqd %zmm0, %ymm0
-; AVX512-NEXT:    vpmovqd %zmm1, %ymm1
-; AVX512-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} zmm2 = [0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30]
+; AVX512-NEXT:    vpermt2d %zmm1, %zmm2, %zmm0
 ; AVX512-NEXT:    retq
   %r = trunc <16 x i64> %x to <16 x i32>
   ret <16 x i32> %r
 }
 
 define void @trunc_store_v64i16_v64i8(<64 x i16> %x, ptr %p) {
-; AVX512-LABEL: trunc_store_v64i16_v64i8:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpmovwb %zmm1, 32(%rdi)
-; AVX512-NEXT:    vpmovwb %zmm0, (%rdi)
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    retq
+; AVX512BW-LABEL: trunc_store_v64i16_v64i8:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vpmovwb %zmm1, 32(%rdi)
+; AVX512BW-NEXT:    vpmovwb %zmm0, (%rdi)
+; AVX512BW-NEXT:    vzeroupper
+; AVX512BW-NEXT:    retq
+;
+; AVX512VBMI-LABEL: trunc_store_v64i16_v64i8:
+; AVX512VBMI:       # %bb.0:
+; AVX512VBMI-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40,42,44,46,48,50,52,54,56,58,60,62,64,66,68,70,72,74,76,78,80,82,84,86,88,90,92,94,96,98,100,102,104,106,108,110,112,114,116,118,120,122,124,126]
+; AVX512VBMI-NEXT:    vpermi2b %zmm1, %zmm0, %zmm2
+; AVX512VBMI-NEXT:    vmovdqa64 %zmm2, (%rdi)
+; AVX512VBMI-NEXT:    vzeroupper
+; AVX512VBMI-NEXT:    retq
   %r = trunc <64 x i16> %x to <64 x i8>
   store <64 x i8> %r, ptr %p
   ret void
 }
 
 define <128 x i8> @trunc_v128i16_v128i8(<128 x i16> %x) {
-; AVX512-LABEL: trunc_v128i16_v128i8:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpmovwb %zmm0, %ymm0
-; AVX512-NEXT:    vpmovwb %zmm1, %ymm1
-; AVX512-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; AVX512-NEXT:    vpmovwb %zmm2, %ymm1
-; AVX512-NEXT:    vpmovwb %zmm3, %ymm2
-; AVX512-NEXT:    vinserti64x4 $1, %ymm2, %zmm1, %zmm1
-; AVX512-NEXT:    retq
+; AVX512BW-LABEL: trunc_v128i16_v128i8:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vpmovwb %zmm0, %ymm0
+; AVX512BW-NEXT:    vpmovwb %zmm1, %ymm1
+; AVX512BW-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; AVX512BW-NEXT:    vpmovwb %zmm2, %ymm1
+; AVX512BW-NEXT:    vpmovwb %zmm3, %ymm2
+; AVX512BW-NEXT:    vinserti64x4 $1, %ymm2, %zmm1, %zmm1
+; AVX512BW-NEXT:    retq
+;
+; AVX512VBMI-LABEL: trunc_v128i16_v128i8:
+; AVX512VBMI:       # %bb.0:
+; AVX512VBMI-NEXT:    vmovdqa64 {{.*#+}} zmm4 = [0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40,42,44,46,48,50,52,54,56,58,60,62,64,66,68,70,72,74,76,78,80,82,84,86,88,90,92,94,96,98,100,102,104,106,108,110,112,114,116,118,120,122,124,126]
+; AVX512VBMI-NEXT:    vpermt2b %zmm1, %zmm4, %zmm0
+; AVX512VBMI-NEXT:    vpermi2b %zmm3, %zmm2, %zmm4
+; AVX512VBMI-NEXT:    vmovdqa64 %zmm4, %zmm1
+; AVX512VBMI-NEXT:    retq
   %r = trunc <128 x i16> %x to <128 x i8>
   ret <128 x i8> %r
 }
@@ -67,12 +87,10 @@ define <128 x i8> @trunc_v128i16_v128i8(<128 x i16> %x) {
 define <64 x i16> @trunc_v64i32_v64i16(<64 x i32> %x) {
 ; AVX512-LABEL: trunc_v64i32_v64i16:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpmovdw %zmm0, %ymm0
-; AVX512-NEXT:    vpmovdw %zmm1, %ymm1
-; AVX512-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; AVX512-NEXT:    vpmovdw %zmm2, %ymm1
-; AVX512-NEXT:    vpmovdw %zmm3, %ymm2
-; AVX512-NEXT:    vinserti64x4 $1, %ymm2, %zmm1, %zmm1
+; AVX512-NEXT:    vpmovsxbw {{.*#+}} zmm4 = [0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40,42,44,46,48,50,52,54,56,58,60,62]
+; AVX512-NEXT:    vpermt2w %zmm1, %zmm4, %zmm0
+; AVX512-NEXT:    vpermi2w %zmm3, %zmm2, %zmm4
+; AVX512-NEXT:    vmovdqa64 %zmm4, %zmm1
 ; AVX512-NEXT:    retq
   %r = trunc <64 x i32> %x to <64 x i16>
   ret <64 x i16> %r
@@ -80,14 +98,20 @@ define <64 x i16> @trunc_v64i32_v64i16(<64 x i32> %x) {
 
 ; The shift folds into the shuffle, which then picks the odd bytes.
 define <64 x i8> @trunc_v64i16_v64i8_lshr8(<64 x i16> %x) {
-; AVX512-LABEL: trunc_v64i16_v64i8_lshr8:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpsrlw $8, %zmm1, %zmm1
-; AVX512-NEXT:    vpsrlw $8, %zmm0, %zmm0
-; AVX512-NEXT:    vpmovwb %zmm0, %ymm0
-; AVX512-NEXT:    vpmovwb %zmm1, %ymm1
-; AVX512-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; AVX512-NEXT:    retq
+; AVX512BW-LABEL: trunc_v64i16_v64i8_lshr8:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vpsrlw $8, %zmm1, %zmm1
+; AVX512BW-NEXT:    vpsrlw $8, %zmm0, %zmm0
+; AVX512BW-NEXT:    vpmovwb %zmm0, %ymm0
+; AVX512BW-NEXT:    vpmovwb %zmm1, %ymm1
+; AVX512BW-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; AVX512BW-NEXT:    retq
+;
+; AVX512VBMI-LABEL: trunc_v64i16_v64i8_lshr8:
+; AVX512VBMI:       # %bb.0:
+; AVX512VBMI-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31,33,35,37,39,41,43,45,47,49,51,53,55,57,59,61,63,65,67,69,71,73,75,77,79,81,83,85,87,89,91,93,95,97,99,101,103,105,107,109,111,113,115,117,119,121,123,125,127]
+; AVX512VBMI-NEXT:    vpermt2b %zmm1, %zmm2, %zmm0
+; AVX512VBMI-NEXT:    retq
   %s = lshr <64 x i16> %x, splat (i16 8)
   %r = trunc <64 x i16> %s to <64 x i8>
   ret <64 x i8> %r
@@ -118,6 +142,3 @@ define <64 x i8> @trunc_v64i16_v64i8_optsize(<64 x i16> %x) optsize {
   %r = trunc <64 x i16> %x to <64 x i8>
   ret <64 x i8> %r
 }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; AVX512BW: {{.*}}
-; AVX512VBMI: {{.*}}
