@@ -2046,9 +2046,16 @@ spirv::Deserializer::processSpecConstantComposite(ArrayRef<uint32_t> operands) {
 
   SmallVector<Attribute, 4> elements;
   elements.reserve(operands.size() - 2);
-  for (unsigned i = 2, e = operands.size(); i < e; ++i) {
-    auto elementInfo = getSpecConstant(operands[i]);
-    elements.push_back(SymbolRefAttr::get(elementInfo));
+  for (auto [index, id] : llvm::enumerate(operands.drop_front(2))) {
+    Operation *elementOp = getSpecConstant(id);
+    if (!elementOp)
+      elementOp = getSpecConstantComposite(id);
+    if (!elementOp) {
+      return emitError(unknownLoc, "OpSpecConstantComposite component #")
+             << index << " <id> " << id
+             << " cannot be represented in spirv.SpecConstantComposite";
+    }
+    elements.push_back(SymbolRefAttr::get(elementOp));
   }
 
   auto op = spirv::SpecConstantCompositeOp::create(
@@ -2085,6 +2092,13 @@ LogicalResult spirv::Deserializer::processSpecConstantCompositeReplicateEXT(
   auto symName = opBuilder.getStringAttr(getSpecConstantSymbol(resultID));
   spirv::SpecConstantOp constituentSpecConstantOp =
       getSpecConstant(operands[2]);
+  if (!constituentSpecConstantOp) {
+    return emitError(unknownLoc, "OpSpecConstantCompositeReplicateEXT operand "
+                                 "<id> ")
+           << operands[2]
+           << " cannot be represented in "
+              "spirv.EXT.SpecConstantCompositeReplicate";
+  }
   auto op = spirv::EXTSpecConstantCompositeReplicateOp::create(
       opBuilder, unknownLoc, TypeAttr::get(resultType), symName,
       SymbolRefAttr::get(constituentSpecConstantOp),

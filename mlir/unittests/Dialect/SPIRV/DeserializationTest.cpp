@@ -573,6 +573,45 @@ TEST_F(DeserializationTest, ConstantCompositeNonConstantConstituentFailure) {
                        .str());
 }
 
+TEST_F(DeserializationTest,
+       SpecConstantCompositeSpecConstantOpConstituentFailure) {
+  addHeader();
+  auto int32Type = addIntType(32);
+  auto vectorType = addVectorType(int32Type, 2);
+  auto specConst = nextID++;
+  addInstruction(spirv::Opcode::OpSpecConstant, {int32Type, specConst, 1});
+  auto specConstOp = nextID++;
+  addInstruction(spirv::Opcode::OpSpecConstantOp,
+                 {int32Type, specConstOp,
+                  static_cast<uint32_t>(spirv::Opcode::OpIAdd), specConst,
+                  specConst});
+  addInstruction(spirv::Opcode::OpSpecConstantComposite,
+                 {vectorType, nextID++, specConst, specConstOp});
+
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic(("OpSpecConstantComposite component #1 <id> " +
+                    Twine(specConstOp) +
+                    " cannot be represented in spirv.SpecConstantComposite")
+                       .str());
+}
+
+TEST_F(DeserializationTest,
+       SpecConstantCompositeReplicateConstantConstituentFailure) {
+  addHeader();
+  auto int32Type = addIntType(32);
+  auto vectorType = addVectorType(int32Type, 2);
+  auto one = addIntConstant(int32Type, 1);
+  addInstruction(spirv::Opcode::OpSpecConstantCompositeReplicateEXT,
+                 {vectorType, nextID++, one});
+
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic(("OpSpecConstantCompositeReplicateEXT operand <id> " +
+                    Twine(one) +
+                    " cannot be represented in "
+                    "spirv.EXT.SpecConstantCompositeReplicate")
+                       .str());
+}
+
 //===----------------------------------------------------------------------===//
 // Functions
 //===----------------------------------------------------------------------===//
