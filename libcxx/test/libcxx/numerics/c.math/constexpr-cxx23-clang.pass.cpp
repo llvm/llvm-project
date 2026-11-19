@@ -161,11 +161,11 @@ int main(int, char**) {
   ASSERT_NOT_CONSTEXPR_CXX23(std::remquof(0.5f, 1.0f, &DummyInt) == 0.5f);
   ASSERT_NOT_CONSTEXPR_CXX23(std::remquol(0.5L, 1.0L, &DummyInt) == 0.5L);
 
-  ASSERT_NOT_CONSTEXPR_CXX23(std::copysign(1.0f, 1.0f) == 1.0f);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::copysign(1.0, 1.0) == 1.0);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::copysign(1.0L, 1.0L) == 1.0L);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::copysignf(1.0f, 1.0f) == 1.0f);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::copysignl(1.0L, 1.0L) == 1.0L);
+  ASSERT_CONSTEXPR_CXX23(std::copysign(1.0f, 1.0f) == 1.0f);
+  ASSERT_CONSTEXPR_CXX23(std::copysign(1.0, 1.0) == 1.0);
+  ASSERT_CONSTEXPR_CXX23(std::copysign(1.0L, 1.0L) == 1.0L);
+  ASSERT_CONSTEXPR_CXX23(std::copysignf(1.0f, 1.0f) == 1.0f);
+  ASSERT_CONSTEXPR_CXX23(std::copysignl(1.0L, 1.0L) == 1.0L);
 
   ASSERT_NOT_CONSTEXPR_CXX23(std::nextafter(0.0f, 0.0f) == 0.0f);
   ASSERT_NOT_CONSTEXPR_CXX23(std::nextafter(0.0, 0.0) == 0.0);
