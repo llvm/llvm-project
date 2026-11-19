@@ -14,6 +14,7 @@
 #include "stl_extras.h"
 
 #include <cassert>
+#include <cstdlib> // for abort()
 #include <memory>
 #include <string>
 #include <type_traits>
