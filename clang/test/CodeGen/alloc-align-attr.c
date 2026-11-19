@@ -9,9 +9,7 @@ __INT32_TYPE__*m1(__INT32_TYPE__ i) __attribute__((alloc_align(1)));
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store i32 [[A:%.*]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    [[CALL:%.*]] = call ptr @m1(i32 noundef [[TMP0]])
-// CHECK-NEXT:    [[CASTED_ALIGN:%.*]] = zext i32 [[TMP0]] to i64
-// CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[CALL]], i64 [[CASTED_ALIGN]]) ]
+// CHECK-NEXT:    [[CALL:%.*]] = call ptr @m1(i32 allocalign noundef [[TMP0]])
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[CALL]], align 4
 // CHECK-NEXT:    ret i32 [[TMP1]]
 //
@@ -25,9 +23,7 @@ __INT32_TYPE__ test1(__INT32_TYPE__ a) {
 // CHECK-NEXT:    store i64 [[A:%.*]], ptr [[A_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[A_ADDR]], align 8
 // CHECK-NEXT:    [[CONV:%.*]] = trunc i64 [[TMP0]] to i32
-// CHECK-NEXT:    [[CALL:%.*]] = call ptr @m1(i32 noundef [[CONV]])
-// CHECK-NEXT:    [[CASTED_ALIGN:%.*]] = zext i32 [[CONV]] to i64
-// CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[CALL]], i64 [[CASTED_ALIGN]]) ]
+// CHECK-NEXT:    [[CALL:%.*]] = call ptr @m1(i32 allocalign noundef [[CONV]])
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[CALL]], align 4
 // CHECK-NEXT:    ret i32 [[TMP1]]
 //
@@ -43,8 +39,7 @@ __INT32_TYPE__ *m2(__SIZE_TYPE__ i) __attribute__((alloc_align(1)));
 // CHECK-NEXT:    store i32 [[A:%.*]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[TMP0]] to i64
-// CHECK-NEXT:    [[CALL:%.*]] = call ptr @m2(i64 noundef [[CONV]])
-// CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[CALL]], i64 [[CONV]]) ]
+// CHECK-NEXT:    [[CALL:%.*]] = call ptr @m2(i64 allocalign noundef [[CONV]])
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[CALL]], align 4
 // CHECK-NEXT:    ret i32 [[TMP1]]
 //
@@ -58,8 +53,7 @@ __INT32_TYPE__ test3(__INT32_TYPE__ a) {
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
 // CHECK-NEXT:    store i64 [[A:%.*]], ptr [[A_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[A_ADDR]], align 8
-// CHECK-NEXT:    [[CALL:%.*]] = call ptr @m2(i64 noundef [[TMP0]])
-// CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[CALL]], i64 [[TMP0]]) ]
+// CHECK-NEXT:    [[CALL:%.*]] = call ptr @m2(i64 allocalign noundef [[TMP0]])
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[CALL]], align 4
 // CHECK-NEXT:    ret i32 [[TMP1]]
 //
@@ -79,9 +73,7 @@ __INT32_TYPE__ *m3(struct Empty s, __int128_t i) __attribute__((alloc_align(2)))
 // CHECK-NEXT:    [[E:%.*]] = alloca [[STRUCT_EMPTY:%.*]], align 1
 // CHECK-NEXT:    store i128 [[A:%.*]], ptr [[A_ADDR]], align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = load i128, ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    [[CALL:%.*]] = call ptr @m3(i128 noundef [[TMP0]])
-// CHECK-NEXT:    [[CASTED_ALIGN:%.*]] = trunc i128 [[TMP0]] to i64
-// CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[CALL]], i64 [[CASTED_ALIGN]]) ]
+// CHECK-NEXT:    [[CALL:%.*]] = call ptr @m3(i128 allocalign noundef [[TMP0]])
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[CALL]], align 4
 // CHECK-NEXT:    ret i32 [[TMP1]]
 //
@@ -101,9 +93,7 @@ __INT32_TYPE__ *m4(struct MultiArgs s, __int128_t i) __attribute__((alloc_align(
 // CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[TMP1]], align 8
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw { i64, i64 }, ptr [[E]], i32 0, i32 1
 // CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr [[TMP3]], align 8
-// CHECK-NEXT:    [[CALL:%.*]] = call ptr @m4(i64 [[TMP2]], i64 [[TMP4]], i128 noundef [[TMP0]])
-// CHECK-NEXT:    [[CASTED_ALIGN:%.*]] = trunc i128 [[TMP0]] to i64
-// CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[CALL]], i64 [[CASTED_ALIGN]]) ]
+// CHECK-NEXT:    [[CALL:%.*]] = call ptr @m4(i64 [[TMP2]], i64 [[TMP4]], i128 allocalign noundef [[TMP0]])
 // CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[CALL]], align 4
 // CHECK-NEXT:    ret i32 [[TMP5]]
 //

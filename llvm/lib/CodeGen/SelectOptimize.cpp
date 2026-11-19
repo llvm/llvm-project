@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/SelectOptimize.h"
+#include "CodeGenOptions.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -64,45 +65,10 @@ namespace llvm {
 extern cl::opt<bool> ProfcheckDisableMetadataFixes;
 }
 
-static cl::opt<unsigned> ColdOperandThreshold(
-    "cold-operand-threshold",
-    cl::desc("Maximum frequency of path for an operand to be considered cold."),
-    cl::init(20), cl::Hidden);
-
-static cl::opt<unsigned> ColdOperandMaxCostMultiplier(
-    "cold-operand-max-cost-multiplier",
-    cl::desc("Maximum cost multiplier of TCC_expensive for the dependence "
-             "slice of a cold operand to be considered inexpensive."),
-    cl::init(1), cl::Hidden);
-
-static cl::opt<unsigned>
-    GainGradientThreshold("select-opti-loop-gradient-gain-threshold",
-                          cl::desc("Gradient gain threshold (%)."),
-                          cl::init(25), cl::Hidden);
-
-static cl::opt<unsigned>
-    GainCycleThreshold("select-opti-loop-cycle-gain-threshold",
-                       cl::desc("Minimum gain per loop (in cycles) threshold."),
-                       cl::init(4), cl::Hidden);
-
-static cl::opt<unsigned> GainRelativeThreshold(
-    "select-opti-loop-relative-gain-threshold",
-    cl::desc(
-        "Minimum relative gain per loop threshold (1/X). Defaults to 12.5%"),
-    cl::init(8), cl::Hidden);
-
-static cl::opt<unsigned> MispredictDefaultRate(
-    "mispredict-default-rate", cl::Hidden, cl::init(25),
-    cl::desc("Default mispredict rate (initialized to 25%)."));
-
-static cl::opt<bool>
-    DisableLoopLevelHeuristics("disable-loop-level-heuristics", cl::Hidden,
-                               cl::init(false),
-                               cl::desc("Disable loop-level heuristics."));
-
 namespace {
 
 class SelectOptimizeImpl {
+  const CodeGenOptions *Opts = nullptr;
   const TargetMachine *TM = nullptr;
   const TargetSubtargetInfo *TSI = nullptr;
   const TargetLowering *TLI = nullptr;
@@ -424,6 +390,7 @@ bool SelectOptimizeImpl::runOnFunction(Function &F, Pass &P) {
 }
 
 bool SelectOptimizeImpl::optimizeSelects(Function &F) {
+  Opts = &getCodeGenOptions(F);
   // Determine for which select groups it is profitable converting to branches.
   SelectGroups ProfSIGroups;
   // Base heuristics apply only to non-loops and outer loops.
@@ -1106,7 +1073,7 @@ bool SelectOptimizeImpl::hasExpensiveColdOperand(const SelectGroup &ASI) {
     uint64_t MinWeight = std::min(TrueWeight, FalseWeight);
     TotalWeight = TrueWeight + FalseWeight;
     // Is there a path with frequency <ColdOperandThreshold% (default:20%) ?
-    ColdOperand = TotalWeight * ColdOperandThreshold > 100 * MinWeight;
+    ColdOperand = TotalWeight * Opts->cold_operand_threshold > 100 * MinWeight;
   } else if (PSI->hasProfileSummary()) {
     OptimizationRemarkMissed ORmiss(DEBUG_TYPE, "SelectOpti",
                                     ASI.Selects.front().getI());
@@ -1143,8 +1110,8 @@ bool SelectOptimizeImpl::hasExpensiveColdOperand(const SelectGroup &ASI) {
       // Get nearest integer cost adjusted for coldness.
       InstructionCost AdjSliceCost =
           divideNearest(SliceCost * HotWeight, TotalWeight);
-      if (AdjSliceCost >=
-          ColdOperandMaxCostMultiplier * TargetTransformInfo::TCC_Expensive)
+      if (AdjSliceCost >= Opts->cold_operand_max_cost_multiplier *
+                              TargetTransformInfo::TCC_Expensive)
         return true;
     }
   }
@@ -1245,7 +1212,7 @@ bool SelectOptimizeImpl::checkLoopHeuristics(const Loop *L,
   // Loop-level checks to determine if a non-predicated version (with branches)
   // of the loop is more profitable than its predicated version.
 
-  if (DisableLoopLevelHeuristics)
+  if (!Opts->select_opti_loop_level_heuristics)
     return true;
 
   OptimizationRemarkMissed ORmissL(DEBUG_TYPE, "SelectOpti",
@@ -1265,8 +1232,9 @@ bool SelectOptimizeImpl::checkLoopHeuristics(const Loop *L,
   // Profitably converting to branches need to reduce the loop's critical path
   // by at least some threshold (absolute gain of GainCycleThreshold cycles and
   // relative gain of 12.5%).
-  if (Gain[1] < Scaled64::get(GainCycleThreshold) ||
-      Gain[1] * Scaled64::get(GainRelativeThreshold) < LoopCost[1].PredCost) {
+  if (Gain[1] < Scaled64::get(Opts->select_opti_loop_cycle_gain_threshold) ||
+      Gain[1] * Scaled64::get(Opts->select_opti_loop_relative_gain_threshold) <
+          LoopCost[1].PredCost) {
     Scaled64 RelativeGain = Scaled64::get(100) * Gain[1] / LoopCost[1].PredCost;
     ORmissL << "No select conversion in the loop due to small reduction of "
                "loop's critical path. Gain="
@@ -1284,7 +1252,8 @@ bool SelectOptimizeImpl::checkLoopHeuristics(const Loop *L,
   if (Gain[1] > Gain[0]) {
     Scaled64 GradientGain = Scaled64::get(100) * (Gain[1] - Gain[0]) /
                             (LoopCost[1].PredCost - LoopCost[0].PredCost);
-    if (GradientGain < Scaled64::get(GainGradientThreshold)) {
+    if (GradientGain <
+        Scaled64::get(Opts->select_opti_loop_gradient_gain_threshold)) {
       ORmissL << "No select conversion in the loop due to small gradient gain. "
                  "GradientGain="
               << GradientGain.toString() << "%. ";
@@ -1425,7 +1394,7 @@ SelectOptimizeImpl::getMispredictionCost(const SelectLike SI,
 
   // Account for the default misprediction rate when using a branch
   // (conservatively set to 25% by default).
-  uint64_t MispredictRate = MispredictDefaultRate;
+  uint64_t MispredictRate = Opts->mispredict_default_rate;
   // If the select condition is obviously predictable, then the misprediction
   // rate is zero.
   if (isSelectHighlyPredictable(SI))

@@ -14,7 +14,6 @@
 ...
 ---
 name:            unread
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: unread
@@ -30,7 +29,6 @@ body:             |
 ...
 ---
 name:            read
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: read
@@ -49,7 +47,6 @@ body:             |
 ...
 ---
 name:            succ_livein
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: succ_livein
   ; CHECK: bb.0:
@@ -78,7 +75,6 @@ body:             |
 ...
 ---
 name:            reserved
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $rdi

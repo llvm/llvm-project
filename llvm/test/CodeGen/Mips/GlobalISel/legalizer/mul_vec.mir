@@ -11,7 +11,6 @@
 ---
 name:            mul_v16i8
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6
@@ -39,7 +38,6 @@ body:             |
 ---
 name:            mul_v8i16
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6
@@ -67,7 +65,6 @@ body:             |
 ---
 name:            mul_v4i32
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6
@@ -95,7 +92,6 @@ body:             |
 ---
 name:            mul_v2i64
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6

@@ -3,7 +3,6 @@
 
 ---
 name:            legal_v4s32
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $w0, $w1, $w2, $w3
@@ -27,7 +26,6 @@ body: |
 ...
 ---
 name:            legal_v2s64
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $x0, $x1
@@ -47,7 +45,6 @@ body: |
 ...
 ---
 name:            legal_v2p0
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $x0, $x1
@@ -67,7 +64,6 @@ body: |
 ...
 ---
 name:            legal_v16s8
-tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: legal_v16s8
@@ -84,7 +80,6 @@ body: |
 ...
 ---
 name:            legal_v8s8
-tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: legal_v8s8
@@ -101,7 +96,6 @@ body: |
 ...
 ---
 name:            widen_v16s1
-tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: widen_v16s1
@@ -119,12 +113,11 @@ body: |
 ...
 ---
 name:            widen_v2s16
-tracksRegLiveness: false
 body: |
   bb.0:
-    liveins: $x0, $x1
+    liveins: $h0, $h1, $x0, $x1
     ; CHECK-LABEL: name: widen_v2s16
-    ; CHECK: liveins: $x0, $x1
+    ; CHECK: liveins: $h0, $h1, $x0, $x1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i16) = COPY $h0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i16) = COPY $h1
@@ -144,7 +137,6 @@ body: |
 
 ---
 name:            widen_v2s8
-tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: widen_v2s8
@@ -162,7 +154,6 @@ body: |
 
 ---
 name:            widen_v4s8
-tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: widen_v4s8
