@@ -692,7 +692,10 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(MemoryPhi, MemoryAccess)
 class MemorySSA {
 public:
   LLVM_ABI MemorySSA(Function &, AliasAnalysis *, DominatorTree *);
-  LLVM_ABI MemorySSA(Loop &, AliasAnalysis *, DominatorTree *);
+
+  /// Build MemorySSA for \p L with live on entry at its preheader.
+  /// The loop, DT, AA and owning function must outlive the graph.
+  LLVM_ABI MemorySSA(Loop &L, AliasAnalysis *, DominatorTree *);
 
   // MemorySSA must remain where it's constructed; Walkers it creates store
   // pointers to it.
@@ -822,10 +825,12 @@ private:
   class ClobberWalkerBase;
   class CachingWalker;
   class SkipSelfWalker;
+  struct BuildScope;
 
   CachingWalker *getWalkerImpl();
   template <typename IterT>
-  void buildMemorySSA(BatchAAResults &BAA, IterT Blocks);
+  void buildMemorySSA(BatchAAResults &BAA, IterT Blocks,
+                      const BuildScope *Scope = nullptr);
 
   void prepareForMoveTo(MemoryAccess *, BasicBlock *);
   void verifyUseInDefs(MemoryAccess *, MemoryAccess *) const;
@@ -865,13 +870,22 @@ private:
   template <typename AliasAnalysisType>
   MemoryUseOrDef *createNewAccess(Instruction *, AliasAnalysisType *,
                                   const MemoryUseOrDef *Template = nullptr);
-  void placePHINodes(const SmallPtrSetImpl<BasicBlock *> &);
+  void placePHINodes(const SmallPtrSetImpl<BasicBlock *> &,
+                     const BuildScope *Scope);
   MemoryAccess *renameBlock(BasicBlock *, MemoryAccess *, bool);
   void renameSuccessorPhis(BasicBlock *, MemoryAccess *, bool);
   LLVM_ABI void renamePass(DomTreeNode *, MemoryAccess *IncomingVal,
                            SmallPtrSetImpl<BasicBlock *> &Visited,
                            bool SkipVisited = false,
                            bool RenameAllUses = false);
+
+  /// Rename a subtree using \p GetChildren in place of the DT's child lists.
+  /// Iterators must outlive the range and remain valid through renaming.
+  /// \p Visited may be null when \p SkipVisited is false.
+  template <class GetChildrenT>
+  void renamePass(DomTreeNode *Root, MemoryAccess *IncomingVal,
+                  SmallPtrSetImpl<BasicBlock *> *Visited, bool SkipVisited,
+                  bool RenameAllUses, GetChildrenT GetChildren);
   void renumberBlock(const BasicBlock *) const;
   const AnalysisOptions &Opts;
   AliasAnalysis *AA = nullptr;
