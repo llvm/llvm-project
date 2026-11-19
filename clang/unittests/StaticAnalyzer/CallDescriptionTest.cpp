@@ -577,6 +577,36 @@ TEST(CallDescription, MatchBuiltins) {
             XXX_func_XXX();
           })"));
   }
+  {
+    SCOPED_TRACE("predefined lib builtins do not fuzzy match other lib names");
+    EXPECT_TRUE(tooling::runToolOnCode(
+        std::unique_ptr<FrontendAction>(new CallDescriptionAction<>(
+            {{{CDM::CLibrary, {"bzero"}, 2}, false},
+             {{CDM::CLibrary, {"explicit_bzero"}, 2}, true}})),
+        R"(typedef __typeof(sizeof(int)) size_t;
+          extern "C" void explicit_bzero(void *, size_t);
+          void test(void *p) {
+            explicit_bzero(p, 4);
+          })"));
+    EXPECT_TRUE(tooling::runToolOnCode(
+        std::unique_ptr<FrontendAction>(new CallDescriptionAction<>(
+            {{{CDM::CLibrary, {"memset"}, 3}, false},
+             {{CDM::CLibrary, {"memset_explicit"}, 3}, true}})),
+        R"(typedef __typeof(sizeof(int)) size_t;
+          extern "C" void *memset_explicit(void *, int, size_t);
+          void test(void *p) {
+            memset_explicit(p, 0, 4);
+          })"));
+  }
+  {
+    SCOPED_TRACE("compiler-prefixed inline builtin still fuzzy matches");
+    EXPECT_TRUE(tooling::runToolOnCode(
+        std::unique_ptr<FrontendAction>(new CallDescriptionAction<>(
+            {{{CDM::CLibrary, {"memcpy"}, 3}, true}})),
+        R"(void test(void *dst, const void *src) {
+            __builtin_memcpy_inline(dst, src, 4);
+          })"));
+  }
 }
 
 //===----------------------------------------------------------------------===//
