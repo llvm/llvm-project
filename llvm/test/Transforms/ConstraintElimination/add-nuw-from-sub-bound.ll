@@ -91,6 +91,74 @@ define i1 @add_of_sdiv_of_sub_sign_unknown(i64 %z, i64 %y) {
 }
 
 ; Negative: z >=u y is not known, so z - y may wrap.
+define i1 @add_of_ashr_of_sub(i64 %z, i64 %y, i64 %n) {
+; CHECK-LABEL: define i1 @add_of_ashr_of_sub(
+; CHECK-SAME: i64 [[Z:%.*]], i64 [[Y:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:    [[GE:%.*]] = icmp uge i64 [[Z]], [[Y]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[GE]])
+; CHECK-NEXT:    [[D:%.*]] = sub nuw i64 [[Z]], [[Y]]
+; CHECK-NEXT:    [[Q:%.*]] = ashr i64 [[D]], [[N]]
+; CHECK-NEXT:    [[A:%.*]] = add i64 [[Q]], [[Y]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ule i64 [[A]], [[Z]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %ge = icmp uge i64 %z, %y
+  call void @llvm.assume(i1 %ge)
+  %d = sub i64 %z, %y
+  %q = ashr i64 %d, %n
+  %a = add i64 %q, %y
+  %c = icmp ule i64 %a, %z
+  ret i1 %c
+}
+
+define i1 @add_of_sdiv_of_nonneg_sub_negative_divisor(i64 %z, i64 %y) {
+; CHECK-LABEL: define i1 @add_of_sdiv_of_nonneg_sub_negative_divisor(
+; CHECK-SAME: i64 [[Z:%.*]], i64 [[Y:%.*]]) {
+; CHECK-NEXT:    [[Y_NONNEG:%.*]] = icmp sge i64 [[Y]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[Y_NONNEG]])
+; CHECK-NEXT:    [[GE:%.*]] = icmp sge i64 [[Z]], [[Y]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[GE]])
+; CHECK-NEXT:    [[D:%.*]] = sub nuw nsw i64 [[Z]], [[Y]]
+; CHECK-NEXT:    [[Q:%.*]] = sdiv i64 [[D]], -2
+; CHECK-NEXT:    [[A:%.*]] = add i64 [[Q]], [[Y]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ule i64 [[A]], [[Z]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %y.nonneg = icmp sge i64 %y, 0
+  call void @llvm.assume(i1 %y.nonneg)
+  %ge = icmp sge i64 %z, %y
+  call void @llvm.assume(i1 %ge)
+  %d = sub i64 %z, %y
+  %q = sdiv i64 %d, -2
+  %a = add i64 %q, %y
+  %c = icmp ule i64 %a, %z
+  ret i1 %c
+}
+
+define i1 @add_of_sdiv_of_nonneg_sub_variable_divisor(i64 %z, i64 %y, i64 %n) {
+; CHECK-LABEL: define i1 @add_of_sdiv_of_nonneg_sub_variable_divisor(
+; CHECK-SAME: i64 [[Z:%.*]], i64 [[Y:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:    [[Y_NONNEG:%.*]] = icmp sge i64 [[Y]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[Y_NONNEG]])
+; CHECK-NEXT:    [[GE:%.*]] = icmp sge i64 [[Z]], [[Y]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[GE]])
+; CHECK-NEXT:    [[D:%.*]] = sub nuw nsw i64 [[Z]], [[Y]]
+; CHECK-NEXT:    [[Q:%.*]] = sdiv i64 [[D]], [[N]]
+; CHECK-NEXT:    [[A:%.*]] = add i64 [[Q]], [[Y]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ule i64 [[A]], [[Z]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %y.nonneg = icmp sge i64 %y, 0
+  call void @llvm.assume(i1 %y.nonneg)
+  %ge = icmp sge i64 %z, %y
+  call void @llvm.assume(i1 %ge)
+  %d = sub i64 %z, %y
+  %q = sdiv i64 %d, %n
+  %a = add i64 %q, %y
+  %c = icmp ule i64 %a, %z
+  ret i1 %c
+}
+
 define i1 @add_of_udiv_of_sub_no_order(i64 %z, i64 %y, i64 %n) {
 ; CHECK-LABEL: define i1 @add_of_udiv_of_sub_no_order(
 ; CHECK-SAME: i64 [[Z:%.*]], i64 [[Y:%.*]], i64 [[N:%.*]]) {
