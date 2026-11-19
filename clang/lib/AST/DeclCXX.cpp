@@ -2602,6 +2602,57 @@ CXXMethodDecl *CXXMethodDecl::getDevirtualizedMethod(const Expr *Base,
     }
   }
 
+  // By CWG1504 / C++11 [expr.add]p6, accessing an object through non-zero
+  // pointer arithmetic (including array subscripting) on a base pointer into
+  // an array of derived objects is undefined behavior when the element type and
+  // pointee type are not similar. This means we can devirtualize calls on
+  // objects accessed through non-zero pointer arithmetic, including array
+  // subscripting, since the dynamic type must match the static type.
+  const Expr *Inner = Base->IgnoreParens();
+
+  // 1. Handle p[N].f() (dot syntax with array subscript).
+  // The expression must be an lvalue of record type.
+  if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(Inner)) {
+    Expr::EvalResult Result;
+    if (ASE->getType()->isRecordType() &&
+        ASE->getIdx()->EvaluateAsInt(Result, getASTContext()) &&
+        !Result.Val.getInt().isZero())
+      return DevirtualizedMethod;
+  }
+
+  auto TryDevirtualizePointerArithmetic =
+      [&](const Expr *PtrExpr) -> CXXMethodDecl * {
+    if (const auto *BO = dyn_cast<BinaryOperator>(PtrExpr)) {
+      if (BO->getOpcode() == BO_Add || BO->getOpcode() == BO_Sub) {
+        if (const auto *PT = BO->getType()->getAs<PointerType>()) {
+          if (PT->getPointeeType()->isRecordType()) {
+            bool PointerOnLHS = BO->getLHS()->getType()->isPointerType();
+            const Expr *IdxExpr = PointerOnLHS ? BO->getRHS() : BO->getLHS();
+            Expr::EvalResult Result;
+            if (IdxExpr->EvaluateAsInt(Result, getASTContext()) &&
+                !Result.Val.getInt().isZero())
+              return DevirtualizedMethod;
+          }
+        }
+      }
+    }
+    return nullptr;
+  };
+
+  // 2. Handle (p + N)->f() (arrow syntax with pointer arithmetic).
+  if (CXXMethodDecl *MD = TryDevirtualizePointerArithmetic(Inner))
+    return MD;
+
+  // 3. Handle (*(p + N)).f() (pointer arithmetic with deref).
+  // Treat (*ptr).f() similarly to ptr->f() by examining the operand of a
+  // single dereference.
+  if (const auto *UO = dyn_cast<UnaryOperator>(Inner)) {
+    if (UO->getOpcode() == UO_Deref)
+      if (CXXMethodDecl *MD = TryDevirtualizePointerArithmetic(
+              UO->getSubExpr()->IgnoreParens()))
+        return MD;
+  }
+
   // We can't devirtualize the call.
   return nullptr;
 }
