@@ -17,14 +17,11 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
-#include "clang/Frontend/SSAFOptions.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/ScalableStaticAnalysis/Analyses/EntityPointerLevel/EntityPointerLevel.h"
 #include "clang/ScalableStaticAnalysis/Analyses/UnsafeBufferUsage/UnsafeBufferUsageAnalysis.h"
-#include "clang/ScalableStaticAnalysis/Core/ASTEntityMapping.h"
 #include "clang/ScalableStaticAnalysis/Core/Model/EntityId.h"
-#include "clang/ScalableStaticAnalysis/Core/Model/EntityIdTable.h"
-#include "clang/ScalableStaticAnalysis/Core/Model/EntityName.h"
+#include "clang/ScalableStaticAnalysis/SourceTransformation/EntityLookup.h"
 #include "clang/ScalableStaticAnalysis/SourceTransformation/TransformationRegistry.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/STLExtras.h"
@@ -209,62 +206,30 @@ using Levels = llvm::SmallSet<unsigned, 4>;
 using DeclLevels = std::map<const Decl *, Levels>;
 using ReturnLevels = std::map<const FunctionDecl *, Levels>;
 
-/// Reverse index from the whole-program reachability result onto entity names,
-/// so a declaration in this TU can look up its reachable pointer levels.
-class ReachabilityMap {
-  const EntityPointerLevelSet &Reachables;
-  std::map<EntityName, EntityId> NameToId;
-
-public:
-  ReachabilityMap(const WPASuite &Suite,
-                  const EntityPointerLevelSet &Reachables)
-      : Reachables(Reachables) {
-    Suite.getIdTable().forEach([this](const EntityName &Name, EntityId Id) {
-      NameToId.emplace(Name, Id);
-    });
-  }
-
-  llvm::SmallSet<unsigned, 4> levelsFor(std::optional<EntityName> Name) const {
-    llvm::SmallSet<unsigned, 4> Levels;
-    if (!Name)
-      return Levels;
-    auto NameIt = NameToId.find(*Name);
-    if (NameIt == NameToId.end())
-      return Levels;
-    auto [Begin, End] = Reachables.equal_range(NameIt->second);
-    for (const EntityPointerLevel &EPL : llvm::make_range(Begin, End))
-      Levels.insert(EPL.getPointerLevel());
-    return Levels;
-  }
-};
-
 /// Collects the reachable pointer/array declarators and function returns
 /// declared in this TU.
 class CollectVisitor : public DynamicRecursiveASTVisitor {
 public:
-  CollectVisitor(const ReachabilityMap &Reach,
-                 const NestedBuildNamespace &TUNamespace,
-                 const NestedBuildNamespace &LUNamespace, DeclLevels &Decls,
+  CollectVisitor(const EntityLookup &Lookup,
+                 const EntityPointerLevelSet &Reachables, DeclLevels &Decls,
                  ReturnLevels &Returns)
-      : Reach(Reach), TUNamespace(TUNamespace), LUNamespace(LUNamespace),
-        Decls(Decls), Returns(Returns) {}
+      : Lookup(Lookup), Reachables(Reachables), Decls(Decls), Returns(Returns) {
+  }
 
   bool VisitVarDecl(VarDecl *D) override {
-    collect(D, D->getType(),
-            getQualifiedEntityName(D, TUNamespace, LUNamespace));
+    collect(D, D->getType());
     return true;
   }
 
   bool VisitFieldDecl(FieldDecl *D) override {
-    collect(D, D->getType(),
-            getQualifiedEntityName(D, TUNamespace, LUNamespace));
+    collect(D, D->getType());
     return true;
   }
 
   bool VisitFunctionDecl(FunctionDecl *FD) override {
     if (!FD->isTemplated() && isCandidateType(FD->getReturnType())) {
-      llvm::SmallSet<unsigned, 4> Levels = Reach.levelsFor(
-          getQualifiedEntityNameForReturn(FD, TUNamespace, LUNamespace));
+      llvm::SmallSet<unsigned, 4> Levels =
+          levelsFor(Lookup.getEntityIdForReturn(FD));
       if (!Levels.empty())
         Returns[FD] = std::move(Levels);
     }
@@ -272,17 +237,28 @@ public:
   }
 
 private:
-  void collect(const Decl *D, QualType T, std::optional<EntityName> Name) {
+  void collect(const Decl *D, QualType T) {
     if (D->isTemplated() || !isCandidateType(T))
       return;
-    llvm::SmallSet<unsigned, 4> Levels = Reach.levelsFor(Name);
+    llvm::SmallSet<unsigned, 4> Levels = levelsFor(Lookup.getEntityId(D));
     if (!Levels.empty())
       Decls[D] = std::move(Levels);
   }
 
-  const ReachabilityMap &Reach;
-  NestedBuildNamespace TUNamespace;
-  NestedBuildNamespace LUNamespace;
+  /// The pointer levels at which the whole-program result marks \p Id
+  /// reachable.
+  llvm::SmallSet<unsigned, 4> levelsFor(std::optional<EntityId> Id) const {
+    llvm::SmallSet<unsigned, 4> Levels;
+    if (!Id)
+      return Levels;
+    auto [Begin, End] = Reachables.equal_range(*Id);
+    for (const EntityPointerLevel &EPL : llvm::make_range(Begin, End))
+      Levels.insert(EPL.getPointerLevel());
+    return Levels;
+  }
+
+  const EntityLookup &Lookup;
+  const EntityPointerLevelSet &Reachables;
   DeclLevels &Decls;
   ReturnLevels &Returns;
 };
@@ -599,16 +575,12 @@ void CppBoundedBuffers::HandleTranslationUnit(ASTContext &Ctx) {
     return;
   }
 
-  ReachabilityMap Reach(Suite, Reachable->Reachables);
-  NestedBuildNamespace TUNamespace =
-      NestedBuildNamespace::makeCompilationUnit(Opts.CompilationUnitId);
-  NestedBuildNamespace LUNamespace =
-      NestedBuildNamespace::makeLinkUnit(Opts.LinkUnitId);
+  EntityLookup Lookup(Suite, Opts);
   DeclLevels Decls;
   ReturnLevels Returns;
 
   Decl *TU = Ctx.getTranslationUnitDecl();
-  CollectVisitor(Reach, TUNamespace, LUNamespace, Decls, Returns)
+  CollectVisitor(Lookup, Reachable->Reachables, Decls, Returns)
       .TraverseDecl(TU);
   RewriteVisitor(Ctx, Decls, Returns, Edits, Report).TraverseDecl(TU);
 }
