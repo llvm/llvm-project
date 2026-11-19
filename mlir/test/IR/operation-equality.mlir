@@ -242,3 +242,89 @@ builtin.module attributes {test.includes_setup} {
   ^bb0(%arg0 : i32, %arg1 : i32):
     arith.addi %arg1, %arg0 : i32
   }) { ignore_commutativity } : () -> ()
+
+// -----
+
+// Dominating block ^bb2 appears after ^bb1 in lexical order.
+// CHECK-LABEL: test.cfg_non_lexical_dominance_match
+// CHECK-SAME: compares equals
+
+"test.cfg_non_lexical_dominance_match"() ({
+  ^bb0(%arg0 : i32):
+    "test.br"(%arg0) [^bb2] : (i32) -> ()
+  ^bb1:
+    %sum = arith.addi %dom_arg, %dom_val : i32
+    "test.consumer"(%sum) : (i32) -> ()
+  ^bb2(%dom_arg : i32):
+    %dom_val = "test.producer"() : () -> i32
+    "test.cond_br"() [^bb1, ^bb3] : () -> ()
+  ^bb3:
+    "test.end"() : () -> ()
+  }) : () -> ()
+"test.cfg_non_lexical_dominance_match"() ({
+  ^bb0(%arg0 : i32):
+    "test.br"(%arg0) [^bb2] : (i32) -> ()
+  ^bb1:
+    %sum = arith.addi %dom_val, %dom_arg : i32
+    "test.consumer"(%sum) : (i32) -> ()
+  ^bb2(%dom_arg : i32):
+    %dom_val = "test.producer"() : () -> i32
+    "test.cond_br"() [^bb1, ^bb3] : () -> ()
+  ^bb3:
+    "test.end"() : () -> ()
+  }) : () -> ()
+
+// -----
+
+// CHECK-LABEL: test.cfg_non_lexical_dominance_mismatch
+// CHECK-SAME: compares NOT equals
+
+"test.cfg_non_lexical_dominance_mismatch"() ({
+  ^bb0:
+    "test.br"() [^bb2] : () -> ()
+  ^bb1:
+    "test.consumer"(%0#0, %0#1) : (i32, i32) -> ()
+  ^bb2:
+    %0:2 = "test.producer"() : () -> (i32, i32)
+    "test.br"() [^bb1] : () -> ()
+  }) : () -> ()
+"test.cfg_non_lexical_dominance_mismatch"() ({
+  ^bb0:
+    "test.br"() [^bb2] : () -> ()
+  ^bb1:
+    "test.consumer"(%0#1, %0#0) : (i32, i32) -> ()
+  ^bb2:
+    %0:2 = "test.producer"() : () -> (i32, i32)
+    "test.br"() [^bb1] : () -> ()
+  }) : () -> ()
+
+// -----
+
+// Graph region with forward references and a self-loop.
+// CHECK-LABEL: test.graph_region_forward_ref_match
+// CHECK-SAME: compares equals
+
+"test.graph_region_forward_ref_match"() ({
+    "test.consumer"(%0#0, %0#1) : (i32, i32) -> ()
+    %1 = "test.cycle"(%1) : (i32) -> i32
+    %0:2 = "test.producer"(%1) : (i32) -> (i32, i32)
+  }) : () -> ()
+"test.graph_region_forward_ref_match"() ({
+    "test.consumer"(%0#0, %0#1) : (i32, i32) -> ()
+    %1 = "test.cycle"(%1) : (i32) -> i32
+    %0:2 = "test.producer"(%1) : (i32) -> (i32, i32)
+  }) : () -> ()
+
+// -----
+
+// CHECK-LABEL: test.graph_region_forward_ref_mismatch
+// CHECK-SAME: compares NOT equals
+
+"test.graph_region_forward_ref_mismatch"() ({
+    "test.consumer"(%0#0, %0#1) : (i32, i32) -> ()
+    %0:2 = "test.producer"() : () -> (i32, i32)
+  }) : () -> ()
+"test.graph_region_forward_ref_mismatch"() ({
+    "test.consumer"(%0#1, %0#0) : (i32, i32) -> ()
+    %0:2 = "test.producer"() : () -> (i32, i32)
+  }) : () -> ()
