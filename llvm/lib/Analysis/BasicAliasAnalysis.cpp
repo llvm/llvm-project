@@ -225,6 +225,12 @@ static bool isNotInCycle(const Instruction *I, const DominatorTree *DT,
          !isPotentiallyReachableFromMany(Succs, BB, nullptr, DT, LI);
 }
 
+EarliestEscapeAnalysis::EarliestEscapeAnalysis(DominatorTree &DT,
+                                               const LoopInfo *LI,
+                                               const CycleInfo *CI)
+    : DT(DT), LI(LI), CI(CI),
+      BlockNumberEpoch(DT.getRoot()->getParent()->getBlockNumberEpoch()) {}
+
 CaptureComponents EarliestEscapeAnalysis::getCapturesBefore(
     const Value *Object, const Instruction *I, bool OrAt, bool ReturnCaptures) {
   if (!isIdentifiedFunctionLocal(Object))
@@ -264,6 +270,8 @@ CaptureComponents EarliestEscapeAnalysis::getCapturesBefore(
       const BasicBlock *BB = I->getParent();
       if (CaptureBB == BB && CaptureInst->comesBefore(I))
         return false;
+      assert(BB->getParent()->getBlockNumberEpoch() == BlockNumberEpoch &&
+             "Blocks were renumbered while EarliestEscapeAnalysis was alive");
       auto [It, Inserted] = IsReachableCache.try_emplace(
           {CaptureBB->getNumber(), BB->getNumber()});
       if (Inserted)
