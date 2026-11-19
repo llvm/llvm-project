@@ -246,6 +246,7 @@ private:
   bool fixRequiredExportPriority(MachineInstr *MI);
   bool fixGetRegWaitIdle(MachineInstr *MI);
   bool fixDsAtomicAsyncBarrierArriveB64(MachineInstr *MI);
+  bool fixBarrierJoinCompletion(MachineInstr *MI);
   bool fixScratchBaseForwardingHazard(MachineInstr *MI);
   bool fixSetRegMode(MachineInstr *MI);
   bool fixTDM(MachineInstr *MI);

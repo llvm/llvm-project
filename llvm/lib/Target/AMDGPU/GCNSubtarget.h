@@ -1034,6 +1034,12 @@ public:
     return getGeneration() == GFX12;
   }
 
+  // \returns true if a singular s_barrier_join may observe spurious barrier
+  // completions.
+  bool hasBarrierJoinCompletionBug() const {
+    return HasGFX1250Insts && getGeneration() == GFX12;
+  }
+
   // Requires s_wait_alu(0) after s102/s103 write and src_flat_scratch_base
   // read.
   bool hasScratchBaseForwardingHazard() const {
