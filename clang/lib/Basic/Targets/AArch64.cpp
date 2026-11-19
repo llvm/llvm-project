@@ -839,10 +839,9 @@ AArch64TargetInfo::getTargetBuiltins() const {
   };
 }
 
-std::optional<std::pair<unsigned, unsigned>>
-AArch64TargetInfo::getVScaleRange(const LangOptions &LangOpts,
-                                  ArmStreamingKind Mode,
-                                  llvm::StringMap<bool> *FeatureMap) const {
+std::optional<std::pair<unsigned, unsigned>> AArch64TargetInfo::getVScaleRange(
+    const LangOptions &LangOpts, ArmStreamingKind Mode,
+    const llvm::StringMap<bool> *FeatureMap) const {
   if (Mode == ArmStreamingKind::NotStreaming &&
       (LangOpts.VScaleMin || LangOpts.VScaleMax))
     return std::pair<unsigned, unsigned>(

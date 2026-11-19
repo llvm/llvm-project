@@ -13,7 +13,7 @@
 #include "L0Event.h"
 #include "L0Trace.h"
 
-namespace llvm::omp::target::plugin {
+namespace llvm::offload::plugin {
 
 Expected<ze_event_handle_t> EventPoolTy::getEventLocked() {
   if (Events.empty()) {
@@ -103,4 +103,4 @@ Error EventPoolTy::releaseEventObject(L0EventTy *EventObj) {
   return Plugin::success();
 }
 
-} // namespace llvm::omp::target::plugin
+} // namespace llvm::offload::plugin

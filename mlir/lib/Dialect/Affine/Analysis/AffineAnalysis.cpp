@@ -664,12 +664,12 @@ DependenceResult mlir::affine::checkMemrefAccessDependence(
     return DependenceResult::NoDependence;
   }
 
-  return checkAccessDependence(srcRel, dstRel, loopDepth, dependenceConstraints,
-                               dependenceComponents);
+  return checkAccessDependence(std::move(srcRel), std::move(dstRel), loopDepth,
+                               dependenceConstraints, dependenceComponents);
 }
 
 DependenceResult mlir::affine::checkAccessDependence(
-    IntegerRelation srcRel, IntegerRelation dstRel, unsigned loopDepth,
+    IntegerRelation &&srcRel, IntegerRelation &&dstRel, unsigned loopDepth,
     FlatAffineValueConstraints *dependenceConstraints,
     SmallVector<DependenceComponent, 2> *dependenceComponents) {
   FlatAffineValueConstraints srcDomain(srcRel.getDomainSet());
@@ -707,9 +707,8 @@ DependenceResult mlir::affine::checkAccessDependence(
   LLVM_DEBUG(llvm::dbgs() << "Dependence polyhedron:\n");
   LLVM_DEBUG(dependenceDomain.dump());
 
-  FlatAffineValueConstraints result(dependenceDomain);
   if (dependenceConstraints)
-    *dependenceConstraints = result;
+    *dependenceConstraints = FlatAffineValueConstraints(dependenceDomain);
   return DependenceResult::HasDependence;
 }
 
