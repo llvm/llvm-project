@@ -58,14 +58,14 @@ Align getPTXParamAlign(const CallBase *CB, Type *Ty, unsigned AttrIdx,
 
 // PTX ABI requires all scalar argument/return values to have
 // bit-size as a power of two of at least 32 bits.
-inline unsigned promoteScalarArgumentSize(unsigned size) {
-  if (size <= 32)
-    return 32;
-  if (size <= 64)
-    return 64;
-  if (size <= 128)
-    return 128;
-  return size;
+inline unsigned promoteScalarArgumentSize(unsigned Size) {
+  assert(Size < 128 && "Size should be less than 128 (shouldPassAsArray)");
+  return PowerOf2Ceil(std::max(Size, 32U));
+}
+
+inline unsigned promoteScalarKernelArgumentSize(unsigned Size) {
+  assert(Size < 128 && "Size should be less than 128 (shouldPassAsArray)");
+  return PowerOf2Ceil(std::max(Size, 8U));
 }
 
 inline bool shouldPassAsArray(Type *Ty) {

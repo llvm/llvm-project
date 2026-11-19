@@ -66,11 +66,6 @@ public:
   static const char *getOpCodeName(dxil::OpCode DXILOp);
 
 private:
-  /// Gets a specific overload type of the function for the given DXIL op. If
-  /// the operation is not overloaded, \c OverloadType may be nullptr.
-  FunctionType *getOpFunctionType(dxil::OpCode OpCode,
-                                  Type *OverloadType = nullptr);
-
   Module &M;
   IRBuilder<> IRB;
   VersionTuple DXILVersion;

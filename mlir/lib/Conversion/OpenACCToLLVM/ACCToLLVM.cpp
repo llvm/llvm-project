@@ -15,6 +15,7 @@
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
 #include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
+#include "mlir/Dialect/OpenACC/Extensions/AllExtensions.h"
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
@@ -29,6 +30,11 @@ struct ConvertACCToLLVMPass
     : public impl::ConvertACCToLLVMPassBase<ConvertACCToLLVMPass> {
   using Base::Base;
 
+  void getDependentDialects(DialectRegistry &registry) const override {
+    Base::getDependentDialects(registry);
+    acc::registerAllExtensions(registry);
+  }
+
   void runOnOperation() override;
 };
 } // namespace
@@ -36,6 +42,7 @@ struct ConvertACCToLLVMPass
 void ConvertACCToLLVMPass::runOnOperation() {
   ModuleOp module = getOperation();
 
+  SymbolTable symbolTable(module);
   LLVMTypeConverter converter(&getContext());
   RewritePatternSet patterns(&getContext());
   arith::populateArithToLLVMConversionPatterns(converter, patterns);
@@ -43,17 +50,30 @@ void ConvertACCToLLVMPass::runOnOperation() {
   populateFuncToLLVMConversionPatterns(converter, patterns);
   populateFinalizeMemRefToLLVMConversionPatterns(converter, patterns);
 
-  // The device_type numbering is implementation-defined by the target
-  // runtime. For now assume the same numbering as the OpenACC dialect.
   acc::ACCRuntimeCallConfig runtimeConfig;
-  acc::populateDialectIdentityDeviceTypeMapping(runtimeConfig);
-  populateACCExecutableDirectivePatterns(converter, patterns, runtimeConfig);
+
+  populateACCExecutableDirectivePatterns(
+      converter, patterns, module.getBodyRegion(), symbolTable, runtimeConfig);
 
   acc::OpenACCSupport &accSupport = getAnalysis<acc::OpenACCSupport>();
+  populateACCDataDirectivePatterns(converter, patterns, accSupport,
+                                   module.getBodyRegion(), symbolTable,
+                                   runtimeConfig);
+  populateACCHostDataPatterns(converter, patterns, module.getBodyRegion(),
+                              symbolTable, runtimeConfig);
+  populateACCKernelLaunchPatterns(converter, patterns, accSupport,
+                                  module.getBodyRegion(), symbolTable,
+                                  runtimeConfig);
   populateACCAtomicPatterns(converter, patterns, accSupport);
+  populateACCDataClauseOpPatterns(converter, patterns, accSupport,
+                                  module.getBodyRegion(), symbolTable,
+                                  runtimeConfig);
 
   LLVMConversionTarget target(getContext());
   configureACCExecutableDirectiveConversionLegality(target);
+  configureACCDataDirectiveConversionLegality(target);
+  configureACCHostDataConversionLegality(target);
+  configureACCKernelLaunchConversionLegality(target);
   configureACCAtomicConversionLegality(target);
   if (failed(applyPartialConversion(module, target, std::move(patterns))))
     signalPassFailure();

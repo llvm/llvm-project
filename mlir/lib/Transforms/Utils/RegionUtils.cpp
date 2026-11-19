@@ -473,8 +473,11 @@ static LogicalResult deleteDeadness(RewriterBase &rewriter,
     // The entry block has an unknown contract with their enclosing block, so
     // skip it.
     for (Block &block : llvm::drop_begin(region.getBlocks(), 1)) {
-      block.eraseArguments(
-          [&](BlockArgument arg) { return !liveMap.wasProvenLive(arg); });
+      block.eraseArguments([&](BlockArgument arg) {
+        bool isDead = !liveMap.wasProvenLive(arg);
+        erasedAnything |= isDead;
+        return isDead;
+      });
     }
   }
   return success(erasedAnything);
@@ -1280,10 +1283,7 @@ static bool blockArgsDominateInsertionPoint(
 
   for (Operation *op : slice) {
     // Check direct operands.
-    for (Value operand : op->getOperands()) {
-      auto arg = dyn_cast<BlockArgument>(operand);
-      if (!arg)
-        continue;
+    for (auto arg : llvm::make_isa_range<BlockArgument>(op->getOperands())) {
       if (!argDominates(arg, op))
         return false;
     }
@@ -1293,10 +1293,7 @@ static bool blockArgsDominateInsertionPoint(
     for (Region &region : op->getRegions()) {
       SetVector<Value> capturedValues;
       getUsedValuesDefinedAbove(region, region, capturedValues);
-      for (Value val : capturedValues) {
-        auto arg = dyn_cast<BlockArgument>(val);
-        if (!arg)
-          continue;
+      for (auto arg : llvm::make_isa_range<BlockArgument>(capturedValues)) {
         if (!argDominates(arg, op))
           return false;
       }

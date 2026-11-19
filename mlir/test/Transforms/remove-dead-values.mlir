@@ -898,6 +898,55 @@ module @func_with_non_call_users {
 
 // -----
 
+// Verify that the upper bound of a for loop inside an unreachable
+// function is correctly replaced with a poison value.
+// CHECK-LABEL: module @unreachable_func_with_for_loops
+// CHECK-NEXT:    func.func private @main_func() {
+// CHECK-NEXT:      %[[ARG3:.*]] = ub.poison : index
+// CHECK-NEXT:      %[[C0:.*]] = ub.poison : index
+// CHECK-NEXT:      %[[C1:.*]] = ub.poison : index
+// CHECK-NEXT:      %[[C10:.*]] = ub.poison : index
+// CHECK-NEXT:      scf.for %{{.*}} = %[[C0]] to %[[C10]] step %[[C1]] {
+// CHECK-NEXT:        gpu.barrier
+// CHECK-NEXT:      }
+// CHECK-NEXT:      scf.for %{{.*}} = %[[C0]] to %[[ARG3]] step %[[C1]] {
+// CHECK-NEXT:        gpu.barrier
+// CHECK-NEXT:      }
+// CHECK-NEXT:      return
+
+// CHECK-CANONICALIZE-LABEL: module @unreachable_func_with_for_loops
+// CHECK-CANONICALIZE-NEXT:    func.func private @main_func() {
+// CHECK-CANONICALIZE-NEXT:      %[[ARG3:.*]] = ub.poison : index
+// CHECK-CANONICALIZE-NEXT:      %[[C0:.*]] = ub.poison : index
+// CHECK-CANONICALIZE-NEXT:      %[[C1:.*]] = ub.poison : index
+// CHECK-CANONICALIZE-NEXT:      %[[C10:.*]] = ub.poison : index
+// CHECK-CANONICALIZE-NEXT:      scf.for %{{.*}} = %[[C0]] to %[[C10]] step %[[C1]] {
+// CHECK-CANONICALIZE-NEXT:        gpu.barrier
+// CHECK-CANONICALIZE-NEXT:      }
+// CHECK-CANONICALIZE-NEXT:      scf.for %{{.*}} = %[[C0]] to %[[ARG3]] step %[[C1]] {
+// CHECK-CANONICALIZE-NEXT:        gpu.barrier
+// CHECK-CANONICALIZE-NEXT:      }
+// CHECK-CANONICALIZE-NEXT:      return
+module @unreachable_func_with_for_loops {
+  func.func private @main_func(%arg0: index, %arg1: memref<?xf32>, %arg2: index, %arg3: index) {
+    %cst = arith.constant 0.000000e+00 : f32
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    %c10 = arith.constant 10 : index
+    scf.for %arg4 = %c0 to %c10 step %c1 {
+      %0 = memref.load %arg1[%arg4] : memref<?xf32>
+      gpu.barrier
+    }
+    scf.for %arg4 = %c0 to %arg3 step %c1 {
+      %0 = memref.load %arg1[%arg4] : memref<?xf32>
+      gpu.barrier
+    }
+    return
+  }
+}
+
+// -----
+
 // A call op may have results that are produced by the call op itself instead of
 // being forwarded from the callee (`%status` below). Such results are not part
 // of the 1:1 relationship between call results and callee results.
@@ -917,4 +966,109 @@ func.func private @callee_with_dead_return() -> i32 {
 func.func @main() -> i1 {
   %status, %non_live = test.call_and_produce @callee_with_dead_return() : () -> (i1, i32)
   return %status : i1
+}
+
+// -----
+
+// Memory-effect-free symbol ops with known users must not be removed, while
+// those without known users are removed.
+// CHECK-LABEL: module @symbol_ops
+// CHECK:         "test.symbol"() <{sym_name = "used"}> : () -> ()
+// CHECK-NOT:     "test.symbol"() <{sym_name = "unused"}>
+// CHECK:         func.func @main()
+module @symbol_ops {
+  "test.symbol"() {sym_name = "used"} : () -> ()
+  "test.symbol"() {sym_name = "unused"} : () -> ()
+  func.func @main() attributes {test.use = @used} {
+    return
+  }
+}
+
+// -----
+
+// The condition of a surviving scf.if must remain valid when the result of a
+// recursive call in an unreachable function is removed.
+// CHECK-LABEL: func.func private @dead() {
+// CHECK-NEXT:    %[[COND:.*]] = ub.poison : i1
+// CHECK-NEXT:    call @dead() : () -> ()
+// CHECK-NEXT:    scf.if %[[COND]] {
+// CHECK-NEXT:      call @dead() : () -> ()
+// CHECK-NEXT:    }
+// CHECK-NEXT:    return
+// CHECK-NEXT:  }
+
+// CHECK-CANONICALIZE-LABEL: func.func private @dead() {
+// CHECK-CANONICALIZE-NEXT:    %[[COND:.*]] = ub.poison : i1
+// CHECK-CANONICALIZE-NEXT:    call @dead() : () -> ()
+// CHECK-CANONICALIZE-NEXT:    scf.if %[[COND]] {
+// CHECK-CANONICALIZE-NEXT:      call @dead() : () -> ()
+// CHECK-CANONICALIZE-NEXT:    }
+// CHECK-CANONICALIZE-NEXT:    return
+// CHECK-CANONICALIZE-NEXT:  }
+func.func private @dead() -> i1 {
+  %cond = func.call @dead() : () -> i1
+  scf.if %cond {
+    %unused = func.call @dead() : () -> i1
+  }
+  %false = arith.constant false
+  return %false : i1
+}
+
+// -----
+
+// Keep the result that is live at another call site. Only the removed result
+// with remaining uses needs a poison value, not the unused index result.
+// CHECK-LABEL: func.func private @callee() -> i32 {
+// CHECK-NEXT:    %[[C42:.*]] = arith.constant 42 : i32
+// CHECK-NEXT:    return %[[C42]] : i32
+// CHECK-NEXT:  }
+
+// CHECK-CANONICALIZE-LABEL: func.func private @callee() -> i32 {
+// CHECK-CANONICALIZE-NEXT:    %[[C42:.*]] = arith.constant 42 : i32
+// CHECK-CANONICALIZE-NEXT:    return %[[C42]] : i32
+// CHECK-CANONICALIZE-NEXT:  }
+func.func private @callee() -> (i32, i1, index) {
+  %c42 = arith.constant 42 : i32
+  %false = arith.constant false
+  %c0 = arith.constant 0 : index
+  return %c42, %false, %c0 : i32, i1, index
+}
+
+// CHECK-LABEL: func.func private @unreachable_caller() {
+// CHECK-NEXT:    %[[COND:.*]] = ub.poison : i1
+// CHECK-NEXT:    %{{.*}} = call @callee() : () -> i32
+// CHECK-NEXT:    scf.if %[[COND]] {
+// CHECK-NEXT:      %{{.*}} = func.call @callee() : () -> i32
+// CHECK-NEXT:    }
+// CHECK-NEXT:    return
+// CHECK-NEXT:  }
+
+// CHECK-CANONICALIZE-LABEL: func.func private @unreachable_caller() {
+// CHECK-CANONICALIZE-NEXT:    %[[COND:.*]] = ub.poison : i1
+// CHECK-CANONICALIZE-NEXT:    %{{.*}} = call @callee() : () -> i32
+// CHECK-CANONICALIZE-NEXT:    scf.if %[[COND]] {
+// CHECK-CANONICALIZE-NEXT:      %{{.*}} = func.call @callee() : () -> i32
+// CHECK-CANONICALIZE-NEXT:    }
+// CHECK-CANONICALIZE-NEXT:    return
+// CHECK-CANONICALIZE-NEXT:  }
+func.func private @unreachable_caller() {
+  %live, %cond, %unused = func.call @callee() : () -> (i32, i1, index)
+  scf.if %cond {
+    %unused_results:3 = func.call @callee() : () -> (i32, i1, index)
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @live_caller() -> i32 {
+// CHECK-NEXT:    %[[LIVE:.*]] = call @callee() : () -> i32
+// CHECK-NEXT:    return %[[LIVE]] : i32
+// CHECK-NEXT:  }
+
+// CHECK-CANONICALIZE-LABEL: func.func @live_caller() -> i32 {
+// CHECK-CANONICALIZE-NEXT:    %[[LIVE:.*]] = call @callee() : () -> i32
+// CHECK-CANONICALIZE-NEXT:    return %[[LIVE]] : i32
+// CHECK-CANONICALIZE-NEXT:  }
+func.func @live_caller() -> i32 {
+  %live, %unused_cond, %unused_index = func.call @callee() : () -> (i32, i1, index)
+  return %live : i32
 }

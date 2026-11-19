@@ -33,7 +33,8 @@ extern cl::OptionCategory BoltOptCategory;
 
 static cl::opt<bool> IterativeGuess(
     "iterative-guess",
-    cl::desc("in non-LBR mode, guess edge counts using iterative technique"),
+    cl::desc(
+        "in non-brstack mode, guess edge counts using iterative technique"),
     cl::Hidden, cl::cat(BoltOptCategory));
 } // namespace opts
 
@@ -44,7 +45,7 @@ namespace {
 
 // Edge Weight Inference Heuristic
 //
-// We start by maintaining the invariant used in LBR mode where the sum of
+// We start by maintaining the invariant used in brstack mode where the sum of
 // pred edges count is equal to the block execution count. This loop will set
 // pred edges count by balancing its own execution count in different pred
 // edges. The weight of each edge is guessed by looking at how hot each pred
@@ -153,7 +154,7 @@ void computeEdgeWeights(BinaryBasicBlock *BB, EdgeWeightMap &EdgeWeights) {
                                           E = GraphT::child_end(BB);
        CI != E; ++CI) {
     typename GraphT::NodeRef Child = *CI;
-    double Weight = 1 / (GraphT::child_end(BB) - GraphT::child_begin(BB));
+    double Weight = 1.0 / (GraphT::child_end(BB) - GraphT::child_begin(BB));
     if (TotalChildrenCount != 0.0)
       Weight = ChildrenExecCount[ChildIndex] / TotalChildrenCount;
     updateEdgeWeight<NodeT>(EdgeWeights, BB, Child, Weight);

@@ -28,6 +28,7 @@ include "mlir/IR/EnumAttr.td"
 class CIR_Type<string name, string typeMnemonic, list<Trait> traits = [],
                string baseCppClass = "::mlir::Type">
     : TypeDef<CIR_Dialect, name, traits, baseCppClass> {
+  let cppIncludes = ["clang/CIR/Dialect/IR/CIRTypes.h"];
   let mnemonic = typeMnemonic;
 }
 
@@ -36,7 +37,8 @@ class CIR_Type<string name, string typeMnemonic, list<Trait> traits = [],
 //===----------------------------------------------------------------------===//
 
 def CIR_IntType : CIR_Type<"Int", "int", [
-    DeclareTypeInterfaceMethods<DataLayoutTypeInterface>,
+    DeclareTypeInterfaceMethods<DataLayoutTypeInterface,
+        ["areCompatible", "verifyEntries"]>,
     DeclareTypeInterfaceMethods<CIR_SizedTypeInterface>,
     DeclareTypeInterfaceMethods<CIR_IntTypeInterface>,
 ]> {
@@ -87,6 +89,22 @@ def CIR_IntType : CIR_Type<"Int", "int", [
     bool isUnsignedFundamental() const {
       return isFundamentalUIntType(*this);
     }
+
+    /// Key of the data-layout entry that carries
+    /// TargetInfo::getBitIntMaxAlign(), in bits. The width is not a layout
+    /// input. Every _BitInt reads this one entry.
+    static IntType getBitIntMaxAlignKey(mlir::MLIRContext *ctx) {
+      return get(ctx, /*width=*/1, /*isSigned=*/false, /*isBitInt=*/true);
+    }
+
+    /// The _BitInt alignment cap, in bits, held by the #cir.bitint_spec entry
+    /// in \p params, or the default cap when there is no entry.
+    static uint64_t
+    getBitIntMaxAlignBits(mlir::DataLayoutEntryListRef params);
+
+    /// The alignment, in bytes, that C requires of this _BitInt when the
+    /// target caps _BitInt alignment at \p maxAlignBits bits.
+    uint64_t getBitIntAlignRequirement(uint64_t maxAlignBits) const;
 
     /// Returns a minimum bitwidth of cir::IntType
     static unsigned minBitwidth() { return 1; }
@@ -263,7 +281,7 @@ def CIR_PointerType : CIR_Type<"Pointer", "ptr", [
     space attribute that specifies the address space of the pointer. If not
     specified, the pointer is assumed to be in the default address space.
 
-    The `!cir.ptr` type can point to any type, including fundamental types,
+    The `!cir.ptr` type can point to any CIR type, including fundamental types,
     records, arrays, vectors, functions, and other pointers. It can also point
     to incomplete types, such as incomplete records.
 
@@ -279,7 +297,7 @@ def CIR_PointerType : CIR_Type<"Pointer", "ptr", [
   }];
 
   let parameters = (ins
-    "mlir::Type":$pointee,
+    CIR_DialectType:$pointee,
     OptionalParameter<
         "mlir::ptr::MemorySpaceAttrInterface">:$addrSpace
   );
@@ -355,7 +373,7 @@ def CIR_DataMemberType : CIR_Type<"DataMember", "data_member", [
     containing record.
   }];
 
-  let parameters = (ins "mlir::Type":$member_ty,
+  let parameters = (ins CIR_DialectType:$member_ty,
                         "cir::RecordType":$class_ty);
 
   let builders = [
@@ -389,8 +407,8 @@ def CIR_VPtrType : CIR_Type<"VPtr", "vptr", [
     This type will be the element type of the 'vptr' member of structures that
     require a vtable pointer. The `cir.vtable.address_point` operation returns
     this type. The `cir.vtable.get_vptr` operations returns a pointer to this
-    type. This pointer may be passed to the `cir.vtable.get_virtual_fn_addr`
-    operation to get the address of a virtual function pointer.
+    type. This pointer may be passed to the `cir.vtable.get_virtual_fn`
+    operation to get a virtual function pointer.
 
     The pointer may also be cast to other pointer types in order to perform
     pointer arithmetic based on information encoded in the AST layout to get
@@ -398,6 +416,20 @@ def CIR_VPtrType : CIR_Type<"VPtr", "vptr", [
     the base object offset value from the vtable, or the type information
     entry for an object.
     TODO: We should have special operations to do that too.
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// CUDADeviceSurfaceType
+//===----------------------------------------------------------------------===//
+
+def CIR_CUDADeviceSurfaceType :
+    CIR_Type<"CUDADeviceSurface", "cuda_surface"> {
+  let summary = "CUDA device surface reference type";
+  let description = [{
+    `!cir.cuda_surface` represents a CUDA built-in surface reference in CIR.
+    The type preserves surface semantics at the CIR level and lowers to the NVPTX
+    device-side handle representation (`i64`) during lowering to LLVM IR.
   }];
 }
 
@@ -442,7 +474,7 @@ def CIR_ArrayType : CIR_Type<"Array", "array", [
     `!cir.array` represents C/C++ constant arrays.
   }];
 
-  let parameters = (ins "mlir::Type":$elementType, "uint64_t":$size);
+  let parameters = (ins CIR_ArrayElementType:$elementType, "uint64_t":$size);
 
   let builders = [
     TypeBuilderWithInferredContext<(ins
@@ -464,25 +496,27 @@ def CIR_ArrayType : CIR_Type<"Array", "array", [
 }
 
 //===----------------------------------------------------------------------===//
-// VectorType (fixed size)
+// VectorType
 //===----------------------------------------------------------------------===//
 
 def CIR_VectorType : CIR_Type<"Vector", "vector", [
-    DeclareTypeInterfaceMethods<DataLayoutTypeInterface>,
+    DeclareTypeInterfaceMethods<DataLayoutTypeInterface,
+        ["areCompatible", "verifyEntries"]>,
     DeclareTypeInterfaceMethods<CIR_SizedTypeInterface, ["isSized"]>,
 ]> {
   let summary = "CIR vector type";
   let description = [{
     The `!cir.vector` type represents a one-dimensional vector.
-    It takes three parameters: the element type, the number of elements and the
-    scalability flag (optional, defaults to `false`).
+    It takes two parameters: the element type and an element count, which
+    records both the known minimum number of elements and whether the vector is
+    scalable.
 
     Syntax:
 
     ```
     vector-type ::= !cir.vector<size x element-type>
     size ::= (decimal-literal | `[` decimal-literal `]`)
-    element-type ::= float-type | integer-type | pointer-type
+    element-type ::= float-type | integer-type | bool-type
     ```
 
     The `element-type` must be a scalar CIR type. Zero-sized vectors are not
@@ -495,6 +529,15 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
     !cir.vector<2 x !cir.float>
     ```
 
+    A fixed-length vector of `!cir.bool` is packed one bit per element, and its
+    size is rounded up to a power of two of at least one byte, so
+    `!cir.vector<4 x !cir.bool>` occupies one byte and
+    `!cir.vector<17 x !cir.bool>` occupies four.
+
+    A vector's ABI alignment is its size in bytes, rounded up to a power of
+    two. Its language alignment is the same, capped at `max_align` bits when
+    the module carries a `#cir.vector_spec` entry.
+
     Scalable vectors are indicated by enclosing size in square brackets.
 
     Example:
@@ -505,18 +548,51 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
 
   let parameters = (ins
     CIR_VectorElementType:$element_type,
-    "uint64_t":$size,
-    OptionalParameter<"bool">:$is_scalable
+    "llvm::ElementCount":$size
   );
 
   let builders = [
     TypeBuilderWithInferredContext<(ins
-      "mlir::Type":$element_type, "uint64_t":$size, CArg<"bool",
-      "false">:$is_scalable
+      "mlir::Type":$element_type, "llvm::ElementCount":$size
     ), [{
-        return $_get(element_type.getContext(), element_type, size, is_scalable);
+        return $_get(element_type.getContext(), element_type, size);
     }]>,
   ];
+
+  let extraClassDeclaration = [{
+    /// Return the size of a fixed-width vector.
+    uint64_t getFixedSize() const { return getSize().getFixedValue(); }
+
+    /// Return whether this vector is scalable.
+    bool isScalable() const { return getSize().isScalable(); }
+
+    /// Return a fixed-width vector with the given element type and size.
+    static VectorType getFixed(mlir::Type elementType, uint64_t size) {
+      return get(elementType, llvm::ElementCount::getFixed(size));
+    }
+
+    /// Return a scalable vector with the given element type and minimum size.
+    static VectorType getScalable(mlir::Type elementType, uint64_t size) {
+      return get(elementType, llvm::ElementCount::getScalable(size));
+    }
+
+    /// The width of the integer a vector of `!cir.bool` is stored as: one bit
+    /// per element, at least a byte.
+    uint64_t getBoolStorageWidth() const;
+
+    /// Key of the data-layout entry that carries
+    /// TargetInfo::getMaxVectorAlign(), in bits. The element type and the
+    /// element count are not layout inputs. Every vector reads this one
+    /// entry.
+    static VectorType getMaxAlignKey(mlir::MLIRContext *ctx) {
+      return getFixed(IntType::get(ctx, /*width=*/8, /*isSigned=*/false),
+                      /*size=*/1);
+    }
+
+    /// The vector alignment cap, in bits, held by the #cir.vector_spec entry
+    /// in \p params, or 0 when there is no entry and the target sets no cap.
+    static uint64_t getMaxAlignBits(mlir::DataLayoutEntryListRef params);
+  }];
 
   let extraClassDefinition = [{
     bool $cppClass::isSized() const {
@@ -527,6 +603,60 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
   let genVerifyDecl = 1;
   let skipDefaultBuilders = 1;
   let hasCustomAssemblyFormat = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// MatrixType
+//===----------------------------------------------------------------------===//
+
+def CIR_MatrixType : CIR_Type<"Matrix", "matrix", [
+    DeclareTypeInterfaceMethods<DataLayoutTypeInterface>,
+    DeclareTypeInterfaceMethods<CIR_SizedTypeInterface>,
+]> {
+  let summary = "CIR matrix type";
+  let description = [{
+    The `!cir.matrix` type represents a fixed-size 2-dimensional matrix.
+    It takes three parameters: the element type, the number of rows,
+    and columns.
+
+    Syntax:
+
+    ```
+    matrix-type ::= !cir.matrix<row x colum x element-type>
+    size ::= (decimal-literal | `[` decimal-literal `]`)
+    element-type ::= float-type | integer-type | bool-type
+    ```
+
+    The `element-type` must be a scalar CIR type. Zero-sized matrices are not
+    allowed. The `row` and `column` count must be a positive integer.
+
+    Examples:
+
+    ```
+    !cir.matrix<3 x 3 x !cir.int<u, 8>>
+    !cir.matrix<2 x 4 x !cir.float>
+    ```
+  }];
+
+  let parameters = (ins
+    CIR_MatrixElementType:$element_type,
+    "uint64_t":$num_rows,
+    "uint64_t":$num_columns
+  );
+
+  let builders = [
+    TypeBuilderWithInferredContext<(ins
+      "mlir::Type":$element_type, "uint64_t":$num_rows, "uint64_t":$num_columns
+    ), [{
+        return $_get(element_type.getContext(), element_type, num_rows, num_columns);
+    }]>,
+  ];
+
+  let assemblyFormat = [{
+    `<` $num_rows `x` $num_columns `x` $element_type `>`
+  }];
+
+  let genVerifyDecl = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -734,6 +864,7 @@ def CIR_BitFieldType : CIR_Type<"BitField", "bitfield", [
         offset += decl.getWidth();
       return offset;
     }
+
   }];
 
   let genVerifyDecl = 1;
@@ -747,10 +878,10 @@ def CIR_BitFieldType : CIR_Type<"BitField", "bitfield", [
 
 def CIR_RecordMemberKind : CIR_I32Enum<
     "RecordMemberKind", "what a record member holds", [
-  I32EnumAttrCase<"Data", 0, "data">,
-  I32EnumAttrCase<"Pad", 1, "pad">,
-  I32EnumAttrCase<"Empty", 2, "empty">,
-  I32EnumAttrCase<"BitField", 3, "bitfield">
+  I32EnumCase<"Data", 0, "data">,
+  I32EnumCase<"Pad", 1, "pad">,
+  I32EnumCase<"Empty", 2, "empty">,
+  I32EnumCase<"BitField", 3, "bitfield">
 ]> {
   let description = [{
     `pad` is storage the compiler inserted to place a later member at its
@@ -893,7 +1024,15 @@ def CIR_StructType : CIR_Type<"Struct", "struct", [
   ];
 
   let extraClassDeclaration = [{
-    using Base::verifyInvariants;
+    /// Verifies a storage key, as sub-element replacement rebuilds from one.
+    /// It is a template because the storage class is incomplete here.
+    template <typename StorageKey>
+    static llvm::LogicalResult
+    verifyInvariants(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
+                     const StorageKey &key) {
+      return verifyInvariants(emitError, key.members, key.name, key.incomplete,
+                              key.packed, key.member_kinds, key.is_class);
+    }
 
     bool isClass() const { return getIsClass(); }
     bool isStruct() const { return !getIsClass(); }
@@ -984,9 +1123,10 @@ def CIR_UnionType : CIR_Type<"Union", "union", [
      - Anonymous: no name and a known body.
 
     Padded unions carry an explicit tail-padding type to ensure the LLVM struct
-    that models the union has the correct byte size.  That slot is separate
-    from the per-member kinds described by `CIR_RecordMemberKind`, which say
-    what each variant holds.  The parser rejects a mark on that slot.
+    that models the union has the correct byte size.  The padding type is
+    `!u8i` or an array of `!u8i`.  That slot is separate from the
+    per-member kinds described by `CIR_RecordMemberKind`, which say what each
+    variant holds.  The parser rejects a mark on that slot.
 
     Examples:
 
@@ -1052,7 +1192,15 @@ def CIR_UnionType : CIR_Type<"Union", "union", [
   ];
 
   let extraClassDeclaration = [{
-    using Base::verifyInvariants;
+    /// Verifies a storage key, as sub-element replacement rebuilds from one.
+    /// It is a template because the storage class is incomplete here.
+    template <typename StorageKey>
+    static llvm::LogicalResult
+    verifyInvariants(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
+                     const StorageKey &key) {
+      return verifyInvariants(emitError, key.members, key.name, key.incomplete,
+                              key.packed, key.padding, key.member_kinds);
+    }
 
     bool isUnion() const { return true; }
     bool isComplete() const { return !isIncomplete(); }
@@ -1160,10 +1308,11 @@ def CIR_CatchTokenType : CIR_Type<"CatchToken", "catch_token"> {
 //===----------------------------------------------------------------------===//
 
 def CIR_AnyType : AnyTypeOf<[
-  CIR_VoidType, CIR_BoolType, CIR_ArrayType, CIR_VectorType, CIR_IntType,
-  CIR_AnyFloatType, CIR_PointerType, CIR_FuncType, CIR_StructType,
+  CIR_VoidType, CIR_BoolType, CIR_ArrayType, CIR_VectorType, CIR_MatrixType,
+  CIR_IntType, CIR_AnyFloatType, CIR_PointerType, CIR_FuncType, CIR_StructType,
   CIR_UnionType, CIR_BitFieldType,
-  CIR_ComplexType, CIR_VPtrType, CIR_CUDADeviceTextureType,
+  CIR_ComplexType, CIR_VPtrType, CIR_CUDADeviceSurfaceType,
+  CIR_CUDADeviceTextureType,
   CIR_DataMemberType, CIR_MethodType,
   CIR_EhTokenType, CIR_CleanupTokenType, CIR_CatchTokenType
 ]>;

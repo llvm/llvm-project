@@ -44,21 +44,13 @@ define <4 x i8> @issue176578() #0 {
 ; CHECK-NEXT:    s_mov_b64 s[38:39], s[6:7]
 ; CHECK-NEXT:    s_mov_b64 s[48:49], s[4:5]
 ; CHECK-NEXT:    s_mov_b32 s54, 0
-; CHECK-NEXT:    s_branch .LBB0_2
-; CHECK-NEXT:  .LBB0_1: ; %Flow
-; CHECK-NEXT:    ; in Loop: Header=BB0_2 Depth=1
-; CHECK-NEXT:    s_and_b64 s[4:5], s[4:5], exec
-; CHECK-NEXT:    s_cselect_b32 s4, 1, 0
-; CHECK-NEXT:    s_cmp_lg_u32 s4, 1
-; CHECK-NEXT:    s_cbranch_scc0 .LBB0_4
-; CHECK-NEXT:  .LBB0_2: ; %bb1
+; CHECK-NEXT:  .LBB0_1: ; %bb1
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    s_and_b64 vcc, exec, -1
+; CHECK-NEXT:    s_and_b64 s[4:5], exec, -1
 ; CHECK-NEXT:    s_cselect_b32 s54, 0, s54
-; CHECK-NEXT:    s_mov_b64 s[4:5], -1
-; CHECK-NEXT:    s_cbranch_execnz .LBB0_1
-; CHECK-NEXT:  ; %bb.3: ; %bb3
-; CHECK-NEXT:    ; in Loop: Header=BB0_2 Depth=1
+; CHECK-NEXT:    s_cbranch_execnz .LBB0_3
+; CHECK-NEXT:  ; %bb.2: ; %bb3
+; CHECK-NEXT:    ; in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    s_getpc_b64 s[16:17]
 ; CHECK-NEXT:    s_add_u32 s16, s16, func@rel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s17, s17, func@rel32@hi+12
@@ -78,9 +70,8 @@ define <4 x i8> @issue176578() #0 {
 ; CHECK-NEXT:    v_mov_b32_e32 v4, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v5, 0
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; CHECK-NEXT:    s_mov_b64 s[4:5], 0
 ; CHECK-NEXT:    s_branch .LBB0_1
-; CHECK-NEXT:  .LBB0_4: ; %bb4
+; CHECK-NEXT:  .LBB0_3: ; %bb4
 ; CHECK-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
 ; CHECK-NEXT:    v_readlane_b32 s30, v41, 13
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s54

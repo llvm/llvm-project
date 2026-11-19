@@ -152,8 +152,8 @@ public:
 
   bool isFPImmLegalAsFMov(const APFloat &Imm, EVT VT) const;
 
-  bool isFPImmLegal(const APFloat &Imm, EVT VT,
-                    bool ForCodeSize) const override;
+  FPImmAction getFPImmAction(const APFloat &Imm, EVT VT,
+                             bool ForCodeSize) const override;
 
   /// Return true if the given shuffle mask can be codegen'd directly, or if it
   /// should be stack expanded.
@@ -228,6 +228,8 @@ public:
   bool optimizeExtendOrTruncateConversion(
       Instruction *I, Loop *L, const TargetTransformInfo &TTI) const override;
 
+  bool optimizeVectorCrossLaneOperation(Instruction *I, Loop *L) const override;
+
   bool hasPairedLoad(EVT LoadedType, Align &RequiredAlignment) const override;
 
   unsigned getMaxSupportedInterleaveFactor() const override { return 4; }
@@ -239,14 +241,6 @@ public:
   bool lowerInterleavedStore(Instruction *Store, Value *Mask,
                              ShuffleVectorInst *SVI, unsigned Factor,
                              const APInt &GapMask) const override;
-
-  bool lowerDeinterleaveIntrinsicToLoad(Instruction *Load, Value *Mask,
-                                        IntrinsicInst *DI,
-                                        const APInt &GapMask) const override;
-
-  bool lowerInterleaveIntrinsicToStore(
-      Instruction *Store, Value *Mask,
-      ArrayRef<Value *> InterleaveValues) const override;
 
   bool isLegalAddImmediate(int64_t) const override;
   bool isLegalAddScalableImmediate(int64_t) const override;
@@ -354,21 +348,28 @@ public:
                         AtomicOrdering Ord) const override;
   Value *emitStoreConditional(IRBuilderBase &Builder, Value *Val, Value *Addr,
                               AtomicOrdering Ord) const override;
+  Value *emitCanLoadSpeculatively(IRBuilderBase &Builder, Value *Ptr,
+                                  Value *SizeInBytes) const override;
 
   void emitAtomicCmpXchgNoStoreLLBalance(IRBuilderBase &Builder) const override;
 
   bool isOpSuitableForLDPSTP(const Instruction *I) const;
   bool isOpSuitableForLSE128(const Instruction *I) const;
   bool isOpSuitableForRCPC3(const Instruction *I) const;
+  bool isOpSuitableForLSCP(const Instruction *I) const;
   bool shouldInsertFencesForAtomic(const Instruction *I) const override;
   bool shouldInsertTrailingSeqCstFenceForAtomicStore(
       const Instruction *I) const override;
 
   TargetLoweringBase::AtomicExpansionKind
   shouldExpandAtomicLoadInIR(LoadInst *LI) const override;
+  TargetLoweringBase::AtomicExpansionKind
+  shouldCastAtomicLoadInIR(LoadInst *LI) const override;
 
   TargetLoweringBase::AtomicExpansionKind
   shouldExpandAtomicStoreInIR(StoreInst *SI) const override;
+  TargetLoweringBase::AtomicExpansionKind
+  shouldCastAtomicStoreInIR(StoreInst *SI) const override;
   TargetLoweringBase::AtomicExpansionKind
   shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const override;
 
@@ -763,7 +764,10 @@ private:
   SDValue LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerEXTEND_VECTOR_INREG(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerZERO_EXTEND_VECTOR_INREG(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerVECTOR_REPEAT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerVECTOR_REVERSE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerVECTOR_SHUFFLE_VAR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSPLAT_VECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerDUPQLane(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerToPredicatedOp(SDValue Op, SelectionDAG &DAG,
@@ -777,6 +781,7 @@ private:
   SDValue LowerVECTOR_HISTOGRAM(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerPARTIAL_REDUCE_MLA(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerGET_ACTIVE_LANE_MASK(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerMASK_BEFOREFIRST(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerDIV(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerMUL(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVectorSRA_SRL_SHL(SDValue Op, SelectionDAG &DAG) const;
@@ -805,13 +810,13 @@ private:
   SDValue LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVECREDUCE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVECREDUCE_MUL(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerATOMIC_LOAD_AND(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerWindowsDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerInlineDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerMSTORE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFCANONICALIZE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerAVG(SDValue Op, SelectionDAG &DAG, unsigned NewOp) const;
+  SDValue LowerFLDEXP(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerFPToIntToSVE(SDValue Op, SelectionDAG &DAG) const;
 
@@ -981,6 +986,12 @@ namespace AArch64 {
 FastISel *createFastISel(FunctionLoweringInfo &funcInfo,
                          const TargetLibraryInfo *libInfo,
                          const LibcallLoweringInfo *libcallLowering);
+
+// Determine the effective TLS model for an ELF global, applying
+// AArch64-specific restrictions and configuration.
+TLSModel::Model getELFTLSModel(const GlobalValue *GV,
+                               const AArch64TargetMachine &TM,
+                               bool HasELFSignedGOT);
 } // end namespace AArch64
 
 } // end namespace llvm

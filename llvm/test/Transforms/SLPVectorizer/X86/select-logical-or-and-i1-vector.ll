@@ -29,12 +29,12 @@ define void @select_logical_or_i1(ptr %dst,
 ; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x float> [[TMP13]], float [[Y1]], i64 1
 ; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x float> [[TMP14]], float [[Y2]], i64 2
 ; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x float> [[TMP15]], float [[Y3]], i64 3
-; CHECK-NEXT:    [[TMP17:%.*]] = fmul fast <4 x float> [[TMP12]], [[TMP16]]
+; CHECK-NEXT:    [[TMP17:%.*]] = fmul reassoc nnan ninf nsz arcp afn <4 x float> [[TMP12]], [[TMP16]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <4 x float> poison, float [[E0]], i64 0
 ; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x float> [[TMP18]], float [[E1]], i64 1
 ; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x float> [[TMP19]], float [[E2]], i64 2
 ; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <4 x float> [[TMP20]], float [[E3]], i64 3
-; CHECK-NEXT:    [[TMP22:%.*]] = fadd fast <4 x float> [[TMP21]], [[TMP17]]
+; CHECK-NEXT:    [[TMP22:%.*]] = fadd reassoc nnan ninf nsz arcp afn <4 x float> [[TMP21]], [[TMP17]]
 ; CHECK-NEXT:    store <4 x float> [[TMP22]], ptr [[DST]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -60,15 +60,16 @@ entry:
   %sel2 = select i1 %or2, float 0.000000e+00, float %hphb_val
   %sel3 = select i1 %or3, float 0.000000e+00, float %hphb_val
 
-  %mul0 = fmul fast float %sel0, %y0
-  %mul1 = fmul fast float %sel1, %y1
-  %mul2 = fmul fast float %sel2, %y2
-  %mul3 = fmul fast float %sel3, %y3
+  ; No 'contract' on fmul/fadd: keep them from fusing into fmadd so the test exercises i1 select costing, not FMA costing.
+  %mul0 = fmul reassoc nnan ninf nsz arcp afn float %sel0, %y0
+  %mul1 = fmul reassoc nnan ninf nsz arcp afn float %sel1, %y1
+  %mul2 = fmul reassoc nnan ninf nsz arcp afn float %sel2, %y2
+  %mul3 = fmul reassoc nnan ninf nsz arcp afn float %sel3, %y3
 
-  %res0 = fadd fast float %e0, %mul0
-  %res1 = fadd fast float %e1, %mul1
-  %res2 = fadd fast float %e2, %mul2
-  %res3 = fadd fast float %e3, %mul3
+  %res0 = fadd reassoc nnan ninf nsz arcp afn float %e0, %mul0
+  %res1 = fadd reassoc nnan ninf nsz arcp afn float %e1, %mul1
+  %res2 = fadd reassoc nnan ninf nsz arcp afn float %e2, %mul2
+  %res3 = fadd reassoc nnan ninf nsz arcp afn float %e3, %mul3
 
   store float %res0, ptr %dst, align 4
   %p1 = getelementptr inbounds float, ptr %dst, i64 1
@@ -101,12 +102,12 @@ define void @select_logical_and_i1(ptr %dst,
 ; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x float> [[TMP13]], float [[Y1]], i64 1
 ; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x float> [[TMP14]], float [[Y2]], i64 2
 ; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x float> [[TMP15]], float [[Y3]], i64 3
-; CHECK-NEXT:    [[TMP17:%.*]] = fmul fast <4 x float> [[TMP12]], [[TMP16]]
+; CHECK-NEXT:    [[TMP17:%.*]] = fmul reassoc nnan ninf nsz arcp afn <4 x float> [[TMP12]], [[TMP16]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <4 x float> poison, float [[E0]], i64 0
 ; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x float> [[TMP18]], float [[E1]], i64 1
 ; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x float> [[TMP19]], float [[E2]], i64 2
 ; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <4 x float> [[TMP20]], float [[E3]], i64 3
-; CHECK-NEXT:    [[TMP22:%.*]] = fadd fast <4 x float> [[TMP21]], [[TMP17]]
+; CHECK-NEXT:    [[TMP22:%.*]] = fadd reassoc nnan ninf nsz arcp afn <4 x float> [[TMP21]], [[TMP17]]
 ; CHECK-NEXT:    store <4 x float> [[TMP22]], ptr [[DST]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -132,15 +133,16 @@ entry:
   %sel2 = select i1 %and2, float 0.000000e+00, float %hphb_val
   %sel3 = select i1 %and3, float 0.000000e+00, float %hphb_val
 
-  %mul0 = fmul fast float %sel0, %y0
-  %mul1 = fmul fast float %sel1, %y1
-  %mul2 = fmul fast float %sel2, %y2
-  %mul3 = fmul fast float %sel3, %y3
+  ; No 'contract' on fmul/fadd: keep them from fusing into fmadd so the test exercises i1 select costing, not FMA costing.
+  %mul0 = fmul reassoc nnan ninf nsz arcp afn float %sel0, %y0
+  %mul1 = fmul reassoc nnan ninf nsz arcp afn float %sel1, %y1
+  %mul2 = fmul reassoc nnan ninf nsz arcp afn float %sel2, %y2
+  %mul3 = fmul reassoc nnan ninf nsz arcp afn float %sel3, %y3
 
-  %res0 = fadd fast float %e0, %mul0
-  %res1 = fadd fast float %e1, %mul1
-  %res2 = fadd fast float %e2, %mul2
-  %res3 = fadd fast float %e3, %mul3
+  %res0 = fadd reassoc nnan ninf nsz arcp afn float %e0, %mul0
+  %res1 = fadd reassoc nnan ninf nsz arcp afn float %e1, %mul1
+  %res2 = fadd reassoc nnan ninf nsz arcp afn float %e2, %mul2
+  %res3 = fadd reassoc nnan ninf nsz arcp afn float %e3, %mul3
 
   store float %res0, ptr %dst, align 4
   %p1 = getelementptr inbounds float, ptr %dst, i64 1

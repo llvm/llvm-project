@@ -1,0 +1,141 @@
+# A relocation that does not fit in the section it targets must be ignored,
+# leaving the section and the bytes that follow it in the file untouched.
+
+# RUN: yaml2obj --docnum=1 %s -o %t.x86_64
+# RUN: lldb-test object-file --contents %t.x86_64 | FileCheck %s
+# RUN: yaml2obj --docnum=2 %s -o %t.i386
+# RUN: lldb-test object-file --contents %t.i386 | FileCheck %s
+# RUN: yaml2obj --docnum=3 %s -o %t.arm
+# RUN: lldb-test object-file --contents %t.arm | FileCheck %s
+
+# CHECK-LABEL:  Name: .debug_info
+# CHECK:        Data: (
+# CHECK-NEXT:     0000: 00000000 00000000
+# CHECK-NEXT:   )
+# CHECK-LABEL:  Name: .next
+# CHECK:        Data: (
+# CHECK-NEXT:     0000: FFFFFFFF FFFFFFFF
+# CHECK-NEXT:   )
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .data
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    AddressAlign:    0x1
+  - Name:            .debug_info
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         '0000000000000000'
+  - Name:            .next
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         'FFFFFFFFFFFFFFFF'
+  - Name:            .rela.debug_info
+    Type:            SHT_RELA
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .debug_info
+    Relocations:
+      - Offset:          0x1
+        Symbol:          var
+        Type:            R_X86_64_64
+      - Offset:          0x5
+        Symbol:          var
+        Type:            R_X86_64_32
+      - Offset:          0x5
+        Symbol:          var
+        Type:            R_X86_64_32S
+      - Offset:          0xFFFFFFFFFFFFFFFC
+        Symbol:          var
+        Type:            R_X86_64_64
+Symbols:
+  - Name:            var
+    Type:            STT_OBJECT
+    Section:         .data
+    Binding:         STB_GLOBAL
+    Value:           0x11111111
+...
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS32
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_386
+Sections:
+  - Name:            .data
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    AddressAlign:    0x1
+  - Name:            .debug_info
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         '0000000000000000'
+  - Name:            .next
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         'FFFFFFFFFFFFFFFF'
+  - Name:            .rel.debug_info
+    Type:            SHT_REL
+    Link:            .symtab
+    AddressAlign:    0x4
+    Info:            .debug_info
+    Relocations:
+      - Offset:          0x5
+        Symbol:          var
+        Type:            R_386_32
+      - Offset:          0xFFFFFFFC
+        Symbol:          var
+        Type:            R_386_32
+Symbols:
+  - Name:            var
+    Type:            STT_OBJECT
+    Section:         .data
+    Binding:         STB_GLOBAL
+    Value:           0x11111111
+...
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS32
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_ARM
+Sections:
+  - Name:            .data
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    AddressAlign:    0x1
+  - Name:            .debug_info
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         '0000000000000000'
+  - Name:            .next
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         'FFFFFFFFFFFFFFFF'
+  - Name:            .rel.debug_info
+    Type:            SHT_REL
+    Link:            .symtab
+    AddressAlign:    0x4
+    Info:            .debug_info
+    Relocations:
+      - Offset:          0x5
+        Symbol:          var
+        Type:            R_ARM_ABS32
+      - Offset:          0xFFFFFFFC
+        Symbol:          var
+        Type:            R_ARM_ABS32
+Symbols:
+  - Name:            var
+    Type:            STT_OBJECT
+    Section:         .data
+    Binding:         STB_GLOBAL
+    Value:           0x11111111
+...

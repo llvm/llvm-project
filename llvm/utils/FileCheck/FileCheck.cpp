@@ -23,7 +23,6 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
-#include <cmath>
 using namespace llvm;
 
 static cl::extrahelp FileCheckOptsEnv(
@@ -176,14 +175,6 @@ static cl::opt<unsigned> DumpInputLabelWidth(
              "determine the width.  FileCheck's own test suite uses this\n"
              "option to avoid a fluctuating column width when checking input\n"
              "dumps.  This option is not expected to be useful elsewhere.\n"));
-
-typedef cl::list<std::string>::const_iterator prefix_iterator;
-
-
-
-
-
-
 
 static void DumpCommandLine(int argc, char **argv) {
   errs() << "FileCheck command line: ";

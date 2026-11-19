@@ -426,3 +426,15 @@ namespace DataPtrIsNull {
                              // expected-note {{read of dereferenced null pointer is not allowed in a constant expression}} \
                              // expected-error {{static assertion failed}}
 }
+
+namespace OnePastEndRead {
+  constexpr const char foo[] = {};
+
+  struct S {
+    constexpr int size() const { return 4; }
+    constexpr const char *data() const { return foo; }
+  };
+  static_assert(false, S{}); // expected-error {{must be produced by a constant expression}} \
+                             // expected-note {{read of dereferenced one-past-the-end pointer}} \
+                             // expected-error {{static assertion failed}}
+}

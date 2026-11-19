@@ -97,8 +97,11 @@ class SPIRVGlobalRegistry : public SPIRVIRMapping {
   // Maps OpVariable and OpFunction-related v-regs to its LLVM IR definition.
   DenseMap<std::pair<const MachineFunction *, Register>, const Value *> Reg2GO;
 
-  // map of aliasing decorations to aliasing metadata
-  DenseMap<const MDNode *, MachineInstr *> AliasInstMDMap;
+  // map of aliasing decorations to aliasing metadata, keyed per
+  // MachineFunction: the cached instructions define virtual registers, which
+  // are only valid in the function that created them.
+  DenseMap<std::pair<const MachineFunction *, const MDNode *>, MachineInstr *>
+      AliasInstMDMap;
 
   // Add a new OpTypeXXX instruction without checking for duplicates.
   SPIRVTypeInst createSPIRVType(const Type *Type, MachineIRBuilder &MIRBuilder,
@@ -152,6 +155,10 @@ public:
   // - Add a record.
   void addAssignPtrTypeInstr(Value *Val, CallInst *AssignPtrTyCI) {
     AssignPtrTypeInstr[Val] = AssignPtrTyCI;
+  }
+  // - Remove a record.
+  void removeAssignPtrTypeInstr(Value *OldVal) {
+    AssignPtrTypeInstr.erase(OldVal);
   }
   // - Find a record.
   CallInst *findAssignPtrTypeInstr(const Value *Val) {
@@ -726,7 +733,7 @@ public:
   SPIRVTypeInst getOrCreateUnknownType(const Type *Ty,
                                        MachineIRBuilder &MIRBuilder,
                                        unsigned Opcode,
-                                       const ArrayRef<MCOperand> Operands);
+                                       const ArrayRef<MachineOperand> Operands);
 
   const TargetRegisterClass *getRegClass(SPIRVTypeInst SpvType) const;
   LLT getRegType(SPIRVTypeInst SpvType) const;

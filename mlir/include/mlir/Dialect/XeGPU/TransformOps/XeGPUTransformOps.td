@@ -49,6 +49,13 @@ def SetAnchorLayoutOp : Op<Transform_Dialect, "xegpu.set_anchor_layout", [
     is provided, the `xegpu.layout` attribute is wrapped in an
     `xegpu.slice<..., dims=slice_dims>` attribute. Emits a silenceable failure
     if the target op does not support anchor layouts.
+
+    Each of `sg_layout`, `sg_data` and `inst_data` can either be provided as a
+    mix of static integers and single-value handles/params, or as a single
+    packed handle (using the `*(%handle)` syntax) that is associated with a
+    variadic number of values. In the packed case the handle must be either a
+    transform param with multiple integer attributes, or mapped to multiple
+    payload ops each defining a single constant index result.
   }];
 
   let arguments = (ins TransformHandleTypeInterface:$target,
@@ -56,6 +63,9 @@ def SetAnchorLayoutOp : Op<Transform_Dialect, "xegpu.set_anchor_layout", [
                    Variadic<TransformAnyParamTypeOrAnyHandle>:$sg_layout,
                    Variadic<TransformAnyParamTypeOrAnyHandle>:$sg_data,
                    Variadic<TransformAnyParamTypeOrAnyHandle>:$inst_data,
+                   Optional<TransformAnyParamTypeOrAnyHandle>:$packed_sg_layout,
+                   Optional<TransformAnyParamTypeOrAnyHandle>:$packed_sg_data,
+                   Optional<TransformAnyParamTypeOrAnyHandle>:$packed_inst_data,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_sg_layout,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_sg_data,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_inst_data,
@@ -64,6 +74,7 @@ def SetAnchorLayoutOp : Op<Transform_Dialect, "xegpu.set_anchor_layout", [
                    );
 
   let results = (outs);
+  let hasVerifier = 1;
   let builders = [
     OpBuilder<(ins "Value":$target,
                    "int64_t":$index,
@@ -77,12 +88,11 @@ def SetAnchorLayoutOp : Op<Transform_Dialect, "xegpu.set_anchor_layout", [
 
   let assemblyFormat = [{
     $target (`index` `=` $index^)?
-    `sg_layout` `=` custom<DynamicIndexList>($sg_layout, $static_sg_layout)
-    `sg_data` `=` custom<DynamicIndexList>($sg_data, $static_sg_data)
-    (`inst_data` `=` custom<DynamicIndexList>($inst_data, $static_inst_data)^)?
+    `sg_layout` `=` custom<PackedOrDynamicIndexList>($packed_sg_layout, $sg_layout, $static_sg_layout)
+    `sg_data` `=` custom<PackedOrDynamicIndexList>($packed_sg_data, $sg_data, $static_sg_data)
+    (`inst_data` `=` custom<PackedOrDynamicIndexList>($packed_inst_data, $inst_data, $static_inst_data)^)?
     (`order` `=` $order^)?
-    (`slice_dims` `=` $slice_dims^)?
-    attr-dict `:` qualified(type(operands))
+    (`slice_dims` `=` $slice_dims^)? attr-dict `:` qualified(type(operands))
   }];
 
   let extraClassDeclaration = [{
@@ -128,8 +138,7 @@ def SetGPULaunchThreadsOp
 
   let assemblyFormat = [{
     $target
-    `threads` `=` custom<DynamicIndexList>($threads, $static_threads)
-    attr-dict `:` qualified(type(operands))
+    `threads` `=` custom<DynamicIndexList>($threads, $static_threads) attr-dict `:` qualified(type(operands))
   }];
 
   let extraClassDeclaration = [{
@@ -167,8 +176,7 @@ def InsertPrefetchOp : Op<Transform_Dialect, "xegpu.insert_prefetch", [
 
   let assemblyFormat = [{
     $target
-    `nb_prefetch` `=` ($dynamic_nb_prefetch^):($static_nb_prefetch)?
-    attr-dict `:` functional-type(operands, results)
+    `nb_prefetch` `=` ($dynamic_nb_prefetch^):($static_nb_prefetch)? attr-dict `:` functional-type(operands, results)
   }];
 
   let extraClassDeclaration = [{
@@ -241,8 +249,7 @@ def ConvertLayoutOp : Op<Transform_Dialect, "xegpu.convert_layout", [
     `target_sg_layout` `=` custom<DynamicIndexList>($target_sg_layout, $static_target_sg_layout)
     `target_sg_data` `=` custom<DynamicIndexList>($target_sg_data, $static_target_sg_data)
     (`target_inst_data` `=` custom<DynamicIndexList>($target_inst_data, $static_target_inst_data)^)?
-    (`target_order` `=` $target_order^)?
-    attr-dict `:` functional-type(operands, results)
+    (`target_order` `=` $target_order^)? attr-dict `:` functional-type(operands, results)
   }];
 
   let extraClassDeclaration = [{

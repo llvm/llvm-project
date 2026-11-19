@@ -21,7 +21,6 @@
 #include "llvm/Analysis/RuntimeLibcallInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Bitcode/BitcodeWriterPass.h"
-#include "llvm/CodeGen/LibcallLoweringInfo.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/LLVMContext.h"
@@ -35,7 +34,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/ToolOutputFile.h"
-#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/IPO/ThinLTOBitcodeWriter.h"
@@ -164,6 +162,18 @@ static cl::opt<std::string> FullLinkTimeOptimizationLastEPPipeline(
     "passes-ep-full-link-time-optimization-last",
     cl::desc("A textual description of the module pass pipeline inserted at "
              "the FullLinkTimeOptimizationLast extension point into default "
+             "pipelines"),
+    cl::Hidden);
+static cl::opt<std::string> ThinLinkTimeOptimizationEarlyEPPipeline(
+    "passes-ep-thin-link-time-optimization-early",
+    cl::desc("A textual description of the module pass pipeline inserted at "
+             "the ThinLinkTimeOptimizationEarly extension point into default "
+             "pipelines"),
+    cl::Hidden);
+static cl::opt<std::string> ThinLinkTimeOptimizationLastEPPipeline(
+    "passes-ep-thin-link-time-optimization-last",
+    cl::desc("A textual description of the module pass pipeline inserted at "
+             "the ThinLinkTimeOptimizationLast extension point into default "
              "pipelines"),
     cl::Hidden);
 /// @}}
@@ -345,18 +355,30 @@ static void registerEPCallbacks(PassBuilder &PB) {
               "Unable to parse FullLinkTimeOptimizationLastEP pipeline: ");
           Err(PB.parsePassPipeline(PM, FullLinkTimeOptimizationLastEPPipeline));
         });
+  if (tryParsePipelineText<ModulePassManager>(
+          PB, ThinLinkTimeOptimizationEarlyEPPipeline))
+    PB.registerThinLinkTimeOptimizationEarlyEPCallback(
+        [&PB](ModulePassManager &PM, OptimizationLevel) {
+          ExitOnError Err(
+              "Unable to parse ThinLinkTimeOptimizationEarlyEP pipeline: ");
+          Err(PB.parsePassPipeline(PM,
+                                   ThinLinkTimeOptimizationEarlyEPPipeline));
+        });
+  if (tryParsePipelineText<ModulePassManager>(
+          PB, ThinLinkTimeOptimizationLastEPPipeline))
+    PB.registerThinLinkTimeOptimizationLastEPCallback(
+        [&PB](ModulePassManager &PM, OptimizationLevel) {
+          ExitOnError Err(
+              "Unable to parse ThinLinkTimeOptimizationLastEP pipeline: ");
+          Err(PB.parsePassPipeline(PM, ThinLinkTimeOptimizationLastEPPipeline));
+        });
 }
-
-#define HANDLE_EXTENSION(Ext)                                                  \
-  llvm::PassPluginLibraryInfo get##Ext##PluginInfo();
-#include "llvm/Support/Extension.def"
-#undef HANDLE_EXTENSION
 
 bool llvm::runPassPipeline(
     StringRef Arg0, Module &M, TargetMachine *TM, TargetLibraryInfoImpl *TLII,
     ToolOutputFile *Out, ToolOutputFile *ThinLTOLinkOut,
     ToolOutputFile *OptRemarkFile, StringRef PassPipeline,
-    ArrayRef<PassPlugin> PassPlugins,
+    ArrayRef<PassPluginLibraryInfo> Extensions,
     ArrayRef<std::function<void(PassBuilder &)>> PassBuilderCallbacks,
     OutputKind OK, VerifierKind VK, bool ShouldPreserveAssemblyUseListOrder,
     bool ShouldPreserveBitcodeUseListOrder, bool EmitSummaryIndex,
@@ -423,8 +445,7 @@ bool llvm::runPassPipeline(
 
     MAM.registerPass([&] {
       const TargetOptions &Options = TM->Options;
-      return RuntimeLibraryAnalysis(Options.ExceptionModel, Options.EABIVersion,
-                                    Options.MCOptions.ABIName, Options.VecLib);
+      return RuntimeLibraryAnalysis(Options.MCOptions.ABIName, Options.VecLib);
     });
   }
 
@@ -457,21 +478,17 @@ bool llvm::runPassPipeline(
   PTO.LoopUnrolling = !DisableLoopUnrolling;
   PTO.UnifiedLTO = UnifiedLTO;
   PTO.LoopFusion = EnableLoopFusion;
-  PassBuilder PB(TM, PTO, P, &PIC);
+  PassBuilder PB(M.getContext(), TM, PTO, P, &PIC);
   registerEPCallbacks(PB);
 
-  // For any loaded plugins, let them register pass builder callbacks.
-  for (auto &PassPlugin : PassPlugins)
-    PassPlugin.registerPassBuilderCallbacks(PB);
+  // Let plugins and linked extensions register pass builder callbacks.
+  for (const PassPluginLibraryInfo &Info : Extensions)
+    if (Info.RegisterPassBuilderCallbacks)
+      Info.RegisterPassBuilderCallbacks(PB);
 
   // Load any explicitly specified plugins.
   for (auto &PassCallback : PassBuilderCallbacks)
     PassCallback(PB);
-
-#define HANDLE_EXTENSION(Ext)                                                  \
-  get##Ext##PluginInfo().RegisterPassBuilderCallbacks(PB);
-#include "llvm/Support/Extension.def"
-#undef HANDLE_EXTENSION
 
   // Specially handle the alias analysis manager so that we can register
   // a custom pipeline of AA passes with it.
@@ -552,14 +569,15 @@ bool llvm::runPassPipeline(
 
   // Print a textual, '-passes=' compatible, representation of pipeline if
   // requested.
-  if (PrintPipelinePasses) {
+  if (std::optional<PrintPipelinePassesFormat> Format =
+          PB.getPrintPipelinePasses()) {
     std::string Pipeline;
     raw_string_ostream SOS(Pipeline);
     MPM.printPipeline(SOS, [&PIC](StringRef ClassName) {
       auto PassName = PIC.getPassNameForClassName(ClassName);
       return PassName.empty() ? ClassName : PassName;
     });
-    printFormattedPipelinePasses(outs(), Pipeline, *PrintPipelinePasses);
+    printFormattedPipelinePasses(outs(), Pipeline, *Format);
     outs() << "\n";
 
     if (!DisablePipelineVerification) {
@@ -605,7 +623,7 @@ bool llvm::runPassPipeline(
   return true;
 }
 
-void llvm::printPasses(raw_ostream &OS) {
-  PassBuilder PB;
+void llvm::printPasses(LLVMContext &Context, raw_ostream &OS) {
+  PassBuilder PB(Context);
   PB.printPassNames(OS);
 }

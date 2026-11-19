@@ -41,6 +41,7 @@ public:
   const X86RegisterInfo *TRI = nullptr;
   const X86MachineFunctionInfo *X86FI = nullptr;
   const X86FrameLowering *X86FL = nullptr;
+  bool CFGChanged = false;
 
   bool runOnMachineFunction(MachineFunction &MF);
 
@@ -99,6 +100,7 @@ INITIALIZE_PASS(X86ExpandPseudoLegacy, DEBUG_TYPE, X86_EXPAND_PSEUDO_NAME,
 
 void X86ExpandPseudoImpl::expandICallBranchFunnel(
     MachineBasicBlock *MBB, MachineBasicBlock::iterator MBBI) {
+  CFGChanged = true;
   MachineBasicBlock *JTMBB = MBB;
   MachineInstr *JTInst = &*MBBI;
   MachineFunction *MF = MBB->getParent();
@@ -399,6 +401,18 @@ bool X86ExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
     BuildMI(MBB, MBBI, DL,
             TII->get(Uses64BitFramePtr ? X86::MOV64rr : X86::MOV32rr), StackPtr)
         .addReg(DestAddr.getReg());
+    if (STI->hasSHSTK()) {
+      unsigned PopOpcode = STI->is64Bit() ? X86::POP64r : X86::POP32r;
+      unsigned JumpOpcode = X86::JMP32r;
+      if (Uses64BitFramePtr)
+        JumpOpcode = STI->isTargetWin64() || STI->isTargetUEFI64()
+                         ? X86::JMP64r_REX
+                         : X86::JMP64r;
+      BuildMI(MBB, MBBI, DL, TII->get(PopOpcode))
+          .addReg(DestAddr.getReg(), RegState::Define);
+      BuildMI(MBB, MBBI, DL, TII->get(JumpOpcode)).addReg(DestAddr.getReg());
+      MBB.erase(MBBI);
+    }
     // The EH_RETURN pseudo is really removed during the MC Lowering.
     return true;
   }
@@ -472,6 +486,7 @@ bool X86ExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
       NewInstr->addOperand(Base);
     for (unsigned Idx = 1 + 1; Idx < 1 + X86::AddrNumOperands; ++Idx)
       NewInstr->addOperand(MBBI->getOperand(Idx));
+    NewInstr->getOperand(7).setIsDead(MBBI->getOperand(11).isDead());
     // Finally, restore the value of RBX.
     TII->copyPhysReg(MBB, MBBI, DL, X86::RBX, SaveRbx,
                      /*SrcIsKill*/ true);
@@ -930,6 +945,7 @@ bool X86ExpandPseudoImpl::expandPseudosWhichAffectControlFlow(
   for (MachineInstr &Instr : MF.front().instrs()) {
     if (Instr.getOpcode() == X86::VASTART_SAVE_XMM_REGS) {
       expandVastartSaveXmmRegs(&(MF.front()), Instr);
+      CFGChanged = true;
       return true;
     }
   }
@@ -970,6 +986,9 @@ X86ExpandPseudoPass::run(MachineFunction &MF,
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
-  PA.preserveSet<CFGAnalyses>();
+  // TODO: We should propagate this info directly once we are done with NewPM
+  // transition.
+  if (!Impl.CFGChanged)
+    PA.preserveSet<CFGAnalyses>();
   return PA;
 }

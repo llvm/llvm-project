@@ -11,6 +11,7 @@
 
 #include "lldb/lldb-defines.h"
 #include "llvm/Support/Chrono.h"
+#include "llvm/Support/FormatVariadic.h"
 #include <atomic>
 #include <cstdint>
 
@@ -47,6 +48,8 @@ public:
 #endif
     ;
 
+  Timer(Category &category, const llvm::formatv_object_base &obj);
+
   /// Destructor
   ~Timer();
 
@@ -63,6 +66,8 @@ public:
 protected:
   using TimePoint = std::chrono::steady_clock::time_point;
   void ChildDuration(TimePoint::duration dur) { m_child_duration += dur; }
+
+  void Start(llvm::function_ref<std::string()> start_message_func);
 
   Category &m_category;
   TimePoint m_total_start;
@@ -86,5 +91,8 @@ private:
 #define LLDB_SCOPED_TIMERF(...)                                                \
   static ::lldb_private::Timer::Category _cat(LLVM_PRETTY_FUNCTION);           \
   ::lldb_private::Timer _scoped_timer(_cat, __VA_ARGS__)
+#define LLDB_SCOPED_TIMERV(...)                                                \
+  static ::lldb_private::Timer::Category _cat(LLVM_PRETTY_FUNCTION);           \
+  ::lldb_private::Timer _scoped_timer(_cat, llvm::formatv(__VA_ARGS__))
 
 #endif // LLDB_UTILITY_TIMER_H

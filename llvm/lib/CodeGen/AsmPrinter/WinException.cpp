@@ -63,6 +63,7 @@ void WinException::endModule() {
 
 void WinException::beginFunction(const MachineFunction *MF) {
   shouldEmitMoves = shouldEmitPersonality = shouldEmitLSDA = false;
+  HasExplicitWinCFIRanges = false;
 
   // If any landing pads survive, we need an EH table.
   bool hasLandingPads = !MF->getLandingPads().empty();
@@ -70,7 +71,7 @@ void WinException::beginFunction(const MachineFunction *MF) {
 
   const Function &F = MF->getFunction();
 
-  shouldEmitMoves = Asm->needsSEHMoves() && MF->hasWinCFI();
+  shouldEmitMoves = MF->hasWinCFI() && MF->needsWinCFI();
 
   const TargetLoweringObjectFile &TLOF = Asm->getObjFileLowering();
   unsigned PerEncoding = TLOF.getPersonalityEncoding();
@@ -100,7 +101,7 @@ void WinException::beginFunction(const MachineFunction *MF) {
 
   // If we're not using CFI, we don't want the CFI or the personality, but we
   // might want EH tables if we had EH pads.
-  if (!Asm->MAI.usesWindowsCFI()) {
+  if (!MF->usesWindowsUnwindInfo()) {
     if (Per == EHPersonality::MSVC_X86SEH && !hasEHFunclets) {
       // If this is 32-bit SEH and we don't have any funclets (really invokes),
       // make sure we emit the parent offset label. Some unreferenced filter
@@ -120,7 +121,8 @@ void WinException::beginFunction(const MachineFunction *MF) {
 
 void WinException::markFunctionEnd() {
   if (isAArch64 && CurrentFuncletEntry &&
-      (shouldEmitMoves || shouldEmitPersonality))
+      (shouldEmitMoves || shouldEmitPersonality) &&
+      (!HasExplicitWinCFIRanges || Asm->OutStreamer->hasActiveWinCFI()))
     Asm->OutStreamer->emitWinCFIFuncletOrFuncEnd();
 }
 
@@ -219,7 +221,9 @@ void WinException::beginFunclet(const MachineBasicBlock &MBB,
   // Mark 'Sym' as starting our funclet.
   if (shouldEmitMoves || shouldEmitPersonality) {
     CurrentFuncletTextSection = Asm->OutStreamer->getCurrentSectionOnly();
-    Asm->OutStreamer->emitWinCFIStartProc(Sym);
+    HasExplicitWinCFIRanges = Asm->hasExplicitWinCFIRanges();
+    if (!HasExplicitWinCFIRanges)
+      Asm->OutStreamer->emitWinCFIStartProc(Sym);
   }
 
   if (shouldEmitPersonality) {
@@ -303,7 +307,8 @@ void WinException::endFuncletImpl() {
     // writing to .xdata, and emit an .seh_endproc directive to mark the end of
     // the function.
     Asm->OutStreamer->switchSection(CurrentFuncletTextSection);
-    Asm->OutStreamer->emitWinCFIEndProc();
+    if (!HasExplicitWinCFIRanges || Asm->OutStreamer->hasActiveWinCFI())
+      Asm->OutStreamer->emitWinCFIEndProc();
   }
 
   // Let's make sure we don't try to end the same funclet twice.
@@ -346,7 +351,7 @@ int WinException::getFrameIndexOffset(int FrameIndex,
                                       const WinEHFuncInfo &FuncInfo) {
   const TargetFrameLowering &TFI = *Asm->MF->getSubtarget().getFrameLowering();
   Register UnusedReg;
-  if (Asm->MAI.usesWindowsCFI()) {
+  if (Asm->MF->usesWindowsUnwindInfo()) {
     StackOffset Offset =
         TFI.getFrameIndexReferencePreferSP(*Asm->MF, FrameIndex, UnusedReg,
                                            /*IgnoreSPUpdates*/ true);
@@ -690,8 +695,8 @@ void WinException::emitCXXFrameHandler3Table(const MachineFunction *MF) {
   // second check further below) can be removed if MS C++ unwinding is
   // implemented for ARM, when test/CodeGen/ARM/Windows/wineh-basic.ll
   // passes without the check.
-  if (Asm->MAI.usesWindowsCFI() &&
-      FuncInfo.UnwindHelpFrameIdx != std::numeric_limits<int>::max())
+  if (FuncInfo.UnwindHelpFrameIdx != std::numeric_limits<int>::max() &&
+      MF->usesWindowsUnwindInfo())
     UnwindHelpOffset =
         getFrameIndexOffset(FuncInfo.UnwindHelpFrameIdx, FuncInfo);
 
@@ -753,8 +758,8 @@ void WinException::emitCXXFrameHandler3Table(const MachineFunction *MF) {
   AddComment("IPToStateXData");
   OS.emitValue(create32bitRef(IPToStateXData), 4);
 
-  if (Asm->MAI.usesWindowsCFI() &&
-      FuncInfo.UnwindHelpFrameIdx != std::numeric_limits<int>::max()) {
+  if (FuncInfo.UnwindHelpFrameIdx != std::numeric_limits<int>::max() &&
+      MF->usesWindowsUnwindInfo()) {
     AddComment("UnwindHelp");
     OS.emitInt32(UnwindHelpOffset);
   }

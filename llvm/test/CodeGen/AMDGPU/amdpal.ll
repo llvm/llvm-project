@@ -86,6 +86,7 @@ declare void @llvm.amdgcn.raw.ptr.buffer.store.f32(float, ptr addrspace(8), i32,
 ; PAL-NEXT: amdpal.pipelines:
 ; PAL-NEXT:   - .hardware_stages:
 ; PAL-NEXT:       .cs:
+; PAL-NEXT:         .backend_stack_size: 0x10
 ; PAL-NEXT:         .entry_point:    _amdgpu_cs_main
 ; PAL-NEXT:         .entry_point_symbol:    scratch2_cs
 ; PAL-NEXT:         .scratch_memory_size: 0x10

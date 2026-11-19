@@ -14,11 +14,11 @@
 
 #include "LoopVectorizationPlanner.h"
 #include "VPlanUtils.h"
+#include "VectorizeOptions.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/DiagnosticInfo.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Transforms/Vectorize/LoopVectorizationLegality.h"
@@ -28,49 +28,6 @@ using namespace llvm;
 using namespace LoopVectorizationUtils;
 
 #define DEBUG_TYPE "loop-vectorize"
-
-extern cl::opt<bool> VPlanBuildOuterloopStressTest;
-
-static cl::opt<bool> MaximizeBandwidth(
-    "vectorizer-maximize-bandwidth", cl::init(false), cl::Hidden,
-    cl::desc("Maximize bandwidth when selecting vectorization factor which "
-             "will be determined by the smallest type in loop."));
-
-static cl::opt<bool> UseWiderVFIfCallVariantsPresent(
-    "vectorizer-maximize-bandwidth-for-vector-calls", cl::init(true),
-    cl::Hidden,
-    cl::desc("Try wider VFs if they enable the use of vector variants"));
-
-static cl::opt<bool> ConsiderRegPressure(
-    "vectorizer-consider-reg-pressure", cl::init(false), cl::Hidden,
-    cl::desc("Discard VFs if their register pressure is too high."));
-
-static cl::opt<bool> ForceTargetSupportsScalableVectors(
-    "force-target-supports-scalable-vectors", cl::init(false), cl::Hidden,
-    cl::desc(
-        "Pretend that scalable vectors are supported, even if the target does "
-        "not support them. This flag should only be used for testing."));
-
-cl::opt<bool> llvm::PreferInLoopReductions(
-    "prefer-inloop-reductions", cl::init(false), cl::Hidden,
-    cl::desc("Prefer in-loop vector reductions, "
-             "overriding the targets preference."));
-
-/// Note: This currently only applies to `llvm.masked.load` and
-/// `llvm.masked.store`. TODO: Extend this to cover other operations as needed.
-static cl::opt<bool> ForceTargetSupportsMaskedMemoryOps(
-    "force-target-supports-masked-memory-ops", cl::init(false), cl::Hidden,
-    cl::desc("Assume the target supports masked memory operations (used for "
-             "testing)."));
-
-static cl::opt<bool> ForceTargetSupportsGatherScatterOps(
-    "force-target-supports-gather-scatter-ops", cl::init(false), cl::Hidden,
-    cl::desc("Assume the target supports gather/scatter operations (used for "
-             "testing)."));
-
-static cl::opt<float> ScalableEpilogueVFCostScaleFactor(
-    "scalable-epilogue-vf-cost-scale-factor", cl::init(2.0), cl::Hidden,
-    cl::desc("Scale the cost of scalable epilogue VFs by this factor."));
 
 /// Write a \p DebugMsg about vectorization to the debug output stream. If \p I
 /// is passed, the message relates to that particular instruction.
@@ -142,7 +99,7 @@ void LoopVectorizationUtils::reportVectorization(OptimizationRemarkEmitter *ORE,
 bool VFSelectionContext::isLegalMaskedLoadOrStore(bool IsLoad, Type *ScalarTy,
                                                   Align Alignment,
                                                   unsigned AddressSpace) const {
-  return ForceTargetSupportsMaskedMemoryOps ||
+  return Opts.force_target_supports_masked_memory_ops ||
          (IsLoad ? TTI.isLegalMaskedLoad(ScalarTy, Alignment, AddressSpace)
                  : TTI.isLegalMaskedStore(ScalarTy, Alignment, AddressSpace));
 }
@@ -151,29 +108,33 @@ bool VFSelectionContext::isLegalGatherOrScatter(bool IsLoad, Type *ScalarTy,
                                                 Align Alignment,
                                                 ElementCount VF) const {
   Type *VectorTy = toVectorTy(ScalarTy, VF);
-  return ForceTargetSupportsGatherScatterOps ||
+  return Opts.force_target_supports_gather_scatter_ops ||
          (IsLoad ? TTI.isLegalMaskedGather(VectorTy, Alignment)
                  : TTI.isLegalMaskedScatter(VectorTy, Alignment));
 }
 
 bool VFSelectionContext::supportsScalableVectors() const {
-  return TTI.supportsScalableVectors() || ForceTargetSupportsScalableVectors ||
+  return TTI.supportsScalableVectors() ||
+         Opts.force_target_supports_scalable_vectors ||
          VectorizerParams::VectorizationFactor.isScalable();
 }
 
-bool VFSelectionContext::useMaxBandwidth(bool IsScalable) const {
-  TargetTransformInfo::RegisterKind RegKind =
-      IsScalable ? TargetTransformInfo::RGK_ScalableVector
-                 : TargetTransformInfo::RGK_FixedWidthVector;
-  return MaximizeBandwidth || (MaximizeBandwidth.getNumOccurrences() == 0 &&
-                               (TTI.shouldMaximizeVectorBandwidth(RegKind) ||
-                                (UseWiderVFIfCallVariantsPresent &&
-                                 Legal->hasVectorCallVariants())));
+bool VFSelectionContext::useMaxBandwidth(VectorKind Kind,
+                                         Type *ElementTy) const {
+  // Check if the target supports max-bandwidth for any element type. If so,
+  // if a specific element type is unsupported, avoid maximizing it for vector
+  // calls.
+  bool TargetHasMaxBW = TTI.shouldMaximizeVectorBandwidth(Kind);
+  bool ShouldEnableMaxBW =
+      TargetHasMaxBW ? TTI.shouldMaximizeVectorBandwidth(Kind, ElementTy)
+                     : Opts.vectorizer_maximize_bandwidth_for_vector_calls &&
+                           Legal->hasVectorCallVariants();
+  return valueOr(Opts.vectorizer_maximize_bandwidth, ShouldEnableMaxBW);
 }
 
 bool VFSelectionContext::shouldConsiderRegPressureForVF(ElementCount VF) const {
-  if (ConsiderRegPressure.getNumOccurrences())
-    return ConsiderRegPressure;
+  if (Opts.vectorizer_consider_reg_pressure != BoolOrDefault::Default)
+    return Opts.vectorizer_consider_reg_pressure == BoolOrDefault::True;
 
   // TODO: We should eventually consider register pressure for all targets. The
   // TTI hook is temporary whilst target-specific issues are being fixed.
@@ -230,9 +191,8 @@ ElementCount VFSelectionContext::clampVFByMaxTripCount(
 }
 
 ElementCount VFSelectionContext::getMaximizedVFForTarget(
-    unsigned MaxTripCount, unsigned SmallestType, unsigned WidestType,
-    ElementCount MaxSafeVF, unsigned UserIC, bool FoldTailByMasking,
-    bool RequiresScalarEpilogue) {
+    unsigned MaxTripCount, const TypeWidths &TyWidths, ElementCount MaxSafeVF,
+    unsigned UserIC, bool FoldTailByMasking, bool RequiresScalarEpilogue) {
   bool ComputeScalableMaxVF = MaxSafeVF.isScalable();
   const TypeSize WidestRegister = TTI.getRegisterBitWidth(
       ComputeScalableMaxVF ? TargetTransformInfo::RGK_ScalableVector
@@ -248,11 +208,12 @@ ElementCount VFSelectionContext::getMaximizedVFForTarget(
   // Ensure MaxVF is a power of 2; the dependence distance bound may not be.
   // Note that both WidestRegister and WidestType may not be a powers of 2.
   auto MaxVectorElementCount = ElementCount::get(
-      llvm::bit_floor(WidestRegister.getKnownMinValue() / WidestType),
+      llvm::bit_floor(WidestRegister.getKnownMinValue() / TyWidths.WidestType),
       ComputeScalableMaxVF);
   MaxVectorElementCount = MinVF(MaxVectorElementCount, MaxSafeVF);
   LLVM_DEBUG(dbgs() << "LV: The Widest register safe to use is: "
-                    << (MaxVectorElementCount * WidestType) << " bits.\n");
+                    << (MaxVectorElementCount * TyWidths.WidestType)
+                    << " bits.\n");
 
   if (!MaxVectorElementCount) {
     LLVM_DEBUG(dbgs() << "LV: The target has no "
@@ -275,13 +236,14 @@ ElementCount VFSelectionContext::getMaximizedVFForTarget(
     MaxPermissibleVFWithoutMaxBW.FixedVF = MaxVF;
 
   if (useMaxBandwidth(ComputeScalableMaxVF)) {
-    auto MaxVectorElementCountMaxBW = ElementCount::get(
-        llvm::bit_floor(WidestRegister.getKnownMinValue() / SmallestType),
-        ComputeScalableMaxVF);
+    auto MaxVectorElementCountMaxBW =
+        ElementCount::get(llvm::bit_floor(WidestRegister.getKnownMinValue() /
+                                          TyWidths.SmallestTypeForMaxBandwidth),
+                          ComputeScalableMaxVF);
     MaxVF = MinVF(MaxVectorElementCountMaxBW, MaxSafeVF);
 
     if (ElementCount MinVF =
-            TTI.getMinimumVF(SmallestType, ComputeScalableMaxVF)) {
+            TTI.getMinimumVF(TyWidths.SmallestType, ComputeScalableMaxVF)) {
       if (ElementCount::isKnownLT(MaxVF, MinVF)) {
         LLVM_DEBUG(dbgs() << "LV: Overriding calculated MaxVF(" << MaxVF
                           << ") with target's minimum: " << MinVF << '\n');
@@ -397,18 +359,18 @@ VFSelectionContext::getMaxLegalScalableVF(unsigned MaxSafeElements) {
 FixedScalableVFPair VFSelectionContext::computeFeasibleMaxVF(
     unsigned MaxTripCount, ElementCount UserVF, unsigned UserIC,
     bool FoldTailByMasking, bool RequiresScalarEpilogue) {
-  auto [SmallestType, WidestType] = getSmallestAndWidestTypes();
+  TypeWidths TyWidths = getTypeWidthsForVFSelection();
 
   // Get the maximum safe dependence distance in bits computed by LAA.
   // It is computed by MaxVF * sizeOf(type) * 8, where type is taken from
   // the memory accesses that is most restrictive (involved in the smallest
   // dependence distance).
-  unsigned MaxSafeElementsPowerOf2 =
-      llvm::bit_floor(Legal->getMaxSafeVectorWidthInBits() / WidestType);
+  unsigned MaxSafeElementsPowerOf2 = llvm::bit_floor(
+      Legal->getMaxSafeVectorWidthInBits() / TyWidths.WidestType);
   if (!Legal->isSafeForAnyStoreLoadForwardDistances()) {
     unsigned SLDist = Legal->getMaxStoreLoadForwardSafeDistanceInBits();
     MaxSafeElementsPowerOf2 =
-        std::min(MaxSafeElementsPowerOf2, SLDist / WidestType);
+        std::min(MaxSafeElementsPowerOf2, SLDist / TyWidths.WidestType);
   }
 
   auto MaxSafeFixedVF = ElementCount::getFixed(MaxSafeElementsPowerOf2);
@@ -484,19 +446,21 @@ FixedScalableVFPair VFSelectionContext::computeFeasibleMaxVF(
     }
   }
 
-  LLVM_DEBUG(dbgs() << "LV: The Smallest and Widest types: " << SmallestType
-                    << " / " << WidestType << " bits.\n");
+  LLVM_DEBUG(dbgs() << "LV: The smallest and widest types: "
+                    << TyWidths.SmallestType << " / " << TyWidths.WidestType
+                    << " bits (smallest type for maximizing bandwidth: "
+                    << TyWidths.SmallestTypeForMaxBandwidth << " bits)\n");
 
   FixedScalableVFPair Result(ElementCount::getFixed(1),
                              ElementCount::getScalable(0));
   if (auto MaxVF = getMaximizedVFForTarget(
-          MaxTripCount, SmallestType, WidestType, MaxSafeFixedVF, UserIC,
-          FoldTailByMasking, RequiresScalarEpilogue))
+          MaxTripCount, TyWidths, MaxSafeFixedVF, UserIC, FoldTailByMasking,
+          RequiresScalarEpilogue))
     Result.FixedVF = MaxVF;
 
   if (auto MaxVF = getMaximizedVFForTarget(
-          MaxTripCount, SmallestType, WidestType, MaxSafeScalableVF, UserIC,
-          FoldTailByMasking, RequiresScalarEpilogue))
+          MaxTripCount, TyWidths, MaxSafeScalableVF, UserIC, FoldTailByMasking,
+          RequiresScalarEpilogue))
     if (MaxVF.isScalable()) {
       Result.ScalableVF = MaxVF;
       LLVM_DEBUG(dbgs() << "LV: Found feasible scalable VF = " << MaxVF
@@ -506,43 +470,55 @@ FixedScalableVFPair VFSelectionContext::computeFeasibleMaxVF(
   return Result;
 }
 
-std::pair<unsigned, unsigned>
-VFSelectionContext::getSmallestAndWidestTypes() const {
-  unsigned MinWidth = -1U;
+VFSelectionContext::TypeWidths
+VFSelectionContext::getTypeWidthsForVFSelection() const {
   unsigned MaxWidth = 8;
+  unsigned MinWidth = -1;
+  unsigned MinWidthForMaxBandwidth = -1U;
+
   const DataLayout &DL = F.getDataLayout();
+  auto UpdateSmallestAndWidestSizes = [&](Type *T, bool UpdateMaxWidth = true) {
+    unsigned TySize = DL.getTypeSizeInBits(T->getScalarType()).getFixedValue();
+
+    MinWidth = std::min<unsigned>(MinWidth, TySize);
+    if (UpdateMaxWidth)
+      MaxWidth = std::max<unsigned>(MaxWidth, TySize);
+
+    if (!useMaxBandwidth(VectorKind::FixedOrScalable, T))
+      return;
+
+    MinWidthForMaxBandwidth =
+        std::min<unsigned>(MinWidthForMaxBandwidth, TySize);
+  };
+
   // For in-loop reductions, no element types are added to ElementTypesInLoop
   // if there are no loads/stores in the loop. In this case, check through the
   // reduction variables to determine the maximum width.
-  if (ElementTypesInLoop.empty() && !Legal->getReductionVars().empty()) {
-    for (const auto &[_, RdxDesc] : Legal->getReductionVars()) {
+  if (ElementTypesInLoop.empty()) {
+    for (const RecurrenceDescriptor &RdxDesc :
+         Legal->getReductionVars().values()) {
+      UpdateSmallestAndWidestSizes(RdxDesc.getRecurrenceType());
       // When finding the min width used by the recurrence we need to account
       // for casts on the input operands of the recurrence.
-      MinWidth = std::min(
-          MinWidth,
-          std::min(RdxDesc.getMinWidthCastToRecurrenceTypeInBits(),
-                   RdxDesc.getRecurrenceType()->getScalarSizeInBits()));
-      MaxWidth = std::max(MaxWidth,
-                          RdxDesc.getRecurrenceType()->getScalarSizeInBits());
+      if (Type *T = RdxDesc.getMinWidthCastToRecurrenceType())
+        UpdateSmallestAndWidestSizes(T, /*UpdateMaxWidth=*/false);
     }
   } else {
-    for (Type *T : ElementTypesInLoop) {
-      MinWidth = std::min<unsigned>(
-          MinWidth, DL.getTypeSizeInBits(T->getScalarType()).getFixedValue());
-      MaxWidth = std::max<unsigned>(
-          MaxWidth, DL.getTypeSizeInBits(T->getScalarType()).getFixedValue());
-    }
+    for (Type *T : ElementTypesInLoop)
+      UpdateSmallestAndWidestSizes(T);
   }
 
   // If the loop has no loads/stores or reductions (e.g. a search loop with an
-  // early exit), MinWidth is never updated and is left at its sentinel value.
-  // Fall back to MaxWidth to keep the SmallestType <= WidestType invariant, so
-  // callers such as the max-bandwidth VF computation don't divide by the
-  // sentinel and collapse the VF to zero.
+  // early exit), Min[WidthForMaxBandwidth] is never updated and is left at its
+  // sentinel value. Fall back to MaxWidth to keep the SmallestType <=
+  // WidestType invariant, so callers such as the max-bandwidth VF computation
+  // don't divide by the sentinel and collapse the VF to zero.
+  if (MinWidthForMaxBandwidth == -1U)
+    MinWidthForMaxBandwidth = MaxWidth;
   if (MinWidth == -1U)
     MinWidth = MaxWidth;
 
-  return {MinWidth, MaxWidth};
+  return {MinWidthForMaxBandwidth, MinWidth, MaxWidth};
 }
 
 void VFSelectionContext::collectElementTypesForWidening(
@@ -569,7 +545,7 @@ void VFSelectionContext::collectElementTypesForWidening(
           continue;
         const RecurrenceDescriptor &RdxDesc =
             Legal->getRecurrenceDescriptor(PN);
-        if (PreferInLoopReductions || useOrderedReductions(RdxDesc) ||
+        if (Opts.prefer_inloop_reductions || useOrderedReductions(RdxDesc) ||
             TTI.preferInLoopReduction(RdxDesc.getRecurrenceKind(),
                                       RdxDesc.getRecurrenceType()))
           continue;
@@ -678,7 +654,7 @@ void VFSelectionContext::collectInLoopReductions() {
 
     // If the target would prefer this reduction to happen "in-loop", then we
     // want to record it as such.
-    if (!PreferInLoopReductions && !useOrderedReductions(RdxDesc) &&
+    if (!Opts.prefer_inloop_reductions && !useOrderedReductions(RdxDesc) &&
         !TTI.preferInLoopReduction(Kind, Phi->getType()))
       continue;
 
@@ -689,15 +665,8 @@ void VFSelectionContext::collectInLoopReductions() {
         RdxDesc.getReductionOpChain(Phi, const_cast<Loop *>(TheLoop));
     bool InLoop = !ReductionOperations.empty();
 
-    if (InLoop) {
+    if (InLoop)
       InLoopReductions.insert(Phi);
-      // Add the elements to InLoopReductionImmediateChains for cost modelling.
-      Instruction *LastChain = Phi;
-      for (auto *I : ReductionOperations) {
-        InLoopReductionImmediateChains[I] = LastChain;
-        LastChain = I;
-      }
-    }
     LLVM_DEBUG(dbgs() << "LV: Using " << (InLoop ? "inloop" : "out of loop")
                       << " reduction for phi: " << *Phi << "\n");
   }
@@ -728,7 +697,7 @@ bool LoopVectorizationPlanner::isMoreProfitable(const VectorizationFactor &A,
     if (B.Width.isFixed())
       std::swap(FixedCost, ScalableCost);
 
-    ScalableCost *= ScalableEpilogueVFCostScaleFactor;
+    ScalableCost *= Opts.scalable_epilogue_vf_cost_scale_factor;
 
     if (FixedCost <= ScalableCost)
       return A.Width.isFixed();
@@ -829,7 +798,7 @@ VFSelectionContext::computeVPlanOuterloopVF(ElementCount UserVF) {
 
   ElementCount VF = UserVF;
   if (VF.isZero()) {
-    auto [_, WidestType] = getSmallestAndWidestTypes();
+    unsigned WidestType = getTypeWidthsForVFSelection().WidestType;
 
     auto RegKind = TTI.enableScalableVectorization()
                        ? TargetTransformInfo::RGK_ScalableVector
@@ -844,14 +813,13 @@ VFSelectionContext::computeVPlanOuterloopVF(ElementCount UserVF) {
     LLVM_DEBUG(dbgs() << "LV: VPlan computed VF " << VF << ".\n");
 
     // Make sure we have a VF > 1 for stress testing.
-    if (VPlanBuildOuterloopStressTest && VF.isScalar()) {
+    if (Opts.vplan_build_outerloop_stress_test && VF.isScalar()) {
       LLVM_DEBUG(dbgs() << "LV: VPlan stress testing: "
                         << "overriding computed VF.\n");
       VF = ElementCount::getFixed(4);
     }
   }
-  assert(isPowerOf2_32(VF.getKnownMinValue()) &&
-         "VF needs to be a power of two");
+  assert(VF.isPowerOf2() && "VF needs to be a power of two");
   if (VF.isScalar())
     return FixedScalableVFPair::getNone();
   LLVM_DEBUG(dbgs() << "LV: Using " << (!UserVF.isZero() ? "user " : "")
@@ -885,13 +853,8 @@ static bool hasUnsupportedHeaderPhiRecipe(VPlan &Plan) {
           // mul(ReducedIV, 3)), but the epilogue tracks raw IV values. A sunk
           // expression is identified by a non-VPInstruction user of
           // ComputeReductionResult.
-          if (RecurrenceDescriptor::isFindIVRecurrenceKind(Kind)) {
-            auto *RdxResult = vputils::findComputeReductionResult(RedPhi);
-            assert(RdxResult &&
-                   "FindIV reduction must have ComputeReductionResult");
-            return any_of(RdxResult->users(),
-                          std::not_fn(IsaPred<VPInstruction>));
-          }
+          if (RecurrenceDescriptor::isFindIVRecurrenceKind(Kind))
+            return RedPhi->isExpressionSunk();
           return false;
         }
         default:
@@ -911,7 +874,8 @@ bool LoopVectorizationPlanner::isCandidateForEpilogueVectorization(
   // non-latch exits properly.  It may be fine, but it needs auditted and
   // tested.
   // TODO: Add support for loops with an early exit.
-  if (OrigLoop->getExitingBlock() != OrigLoop->getLoopLatch())
+  if (OrigLoop->getExitingBlock() != OrigLoop->getLoopLatch() ||
+      Legal->hasUncountableEarlyExit())
     return false;
 
   return true;

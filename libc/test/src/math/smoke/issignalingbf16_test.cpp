@@ -11,4 +11,5 @@
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/math/issignalingbf16.h"
 
-LIST_ISSIGNALING_TESTS(bfloat16, LIBC_NAMESPACE::issignalingbf16)
+LIST_ISSIGNALING_TESTS(Issignalingbf16, bfloat16,
+                       LIBC_NAMESPACE::issignalingbf16)

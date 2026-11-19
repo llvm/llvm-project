@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -triple=i686-linux-gnu -emit-llvm -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -triple=i686-linux-gnu -emit-llvm -o - | FileCheck %s %}
 
 struct S {
   mutable int n;

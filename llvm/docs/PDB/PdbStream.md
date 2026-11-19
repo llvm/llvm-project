@@ -139,7 +139,7 @@ directory". The exact format of a debug directory is described by the
 [IMAGE_DEBUG_DIRECTORY structure](<https://msdn.microsoft.com/en-us/library/windows/desktop/ms680307(v=vs.85).aspx>).
 For this particular case, the linker emits a debug directory of type
 `IMAGE_DEBUG_TYPE_CODEVIEW`. The format of this record is defined in
-`llvm/DebugInfo/CodeView/CVDebugRecord.h`, but it suffices to say here only
+`llvm/include/llvm/Object/CVDebugRecord.h`, but it suffices to say here only
 that it includes the same `Guid` and `Age` fields. At runtime, a
 debugger or tool can scan the COFF executable image for the presence of
 a debug directory of the correct type and verify that the Guid and Age match.

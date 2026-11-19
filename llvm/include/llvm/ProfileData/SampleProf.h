@@ -122,11 +122,15 @@ static inline uint64_t SPMagic(SampleProfileFormat Format = SPF_Binary) {
 static constexpr uint64_t MinSupportedVersion = 103;
 
 // The default version of the extensible binary profile format written by the
-// compiler.  We default to v103 as v104 is work in progress.
+// compiler. We default to v103 as v104 is reserved for the in-progress on-disk
+// hash table.
 static constexpr uint64_t DefaultVersion = 103;
 
+// The first version that permits composite profile sections.
+static constexpr uint64_t CompositeProfileVersion = 105;
+
 // The latest supported version of the extensible binary profile format.
-static constexpr uint64_t LatestVersion = 104;
+static constexpr uint64_t LatestVersion = CompositeProfileVersion;
 
 // Query if a given format version is supported by this compiler.
 static inline bool formatVersionIsSupported(uint64_t Version) {
@@ -134,7 +138,8 @@ static inline bool formatVersionIsSupported(uint64_t Version) {
 }
 
 // Unused.  Retained for downstream uses only.
-LLVM_DEPRECATED("Use DefaultVersion or LatestVersion instead", "DefaultVersion")
+LLVM_DEPRECATED_WITH_FIXIT("Use DefaultVersion or LatestVersion instead",
+                           "DefaultVersion")
 static inline uint64_t SPVersion() { return 103; }
 
 // Section Type used by SampleProfileExtBinaryBaseReader and
@@ -148,9 +153,13 @@ enum SecType {
   SecFuncOffsetTable = 4,
   SecFuncMetadata = 5,
   SecCSNameTable = 6,
+  // Function offset table used by the composite profile representation.
+  SecCompositeFuncOffsetTable = 7,
   // marker for the first type of profile.
   SecFuncProfileFirst = 32,
-  SecLBRProfile = SecFuncProfileFirst
+  SecLBRProfile = SecFuncProfileFirst,
+  // Function profile section used by the composite profile representation.
+  SecCompositeProfile = 33
 };
 
 static inline std::string getSecName(SecType Type) {
@@ -169,10 +178,28 @@ static inline std::string getSecName(SecType Type) {
     return "FunctionMetadata";
   case SecCSNameTable:
     return "CSNameTableSection";
+  case SecCompositeFuncOffsetTable:
+    return "CompositeFuncOffsetTableSection";
   case SecLBRProfile:
     return "LBRProfileSection";
+  case SecCompositeProfile:
+    return "CompositeProfileSection";
   default:
     return "UnknownSection";
+  }
+}
+
+// Types of sample profiles that can be placed in SecCompositeProfile. These
+// values are persisted on disk; never change existing values, only append new
+// profile type IDs.
+enum ProfTypes { ProfTypeLBR = 0 };
+
+static inline StringRef getProfTypeName(uint64_t Type) {
+  switch (Type) {
+  case ProfTypeLBR:
+    return "LBR";
+  default:
+    return "unknown";
   }
 }
 
@@ -279,6 +306,7 @@ static inline void verifySecFlag(SecType Type, SecFlagType Flag) {
     IsFlagLegal = std::is_same<SecFuncMetadataFlags, SecFlagType>();
     break;
   case SecFuncOffsetTable:
+  case SecCompositeFuncOffsetTable:
     IsFlagLegal = std::is_same<SecFuncOffsetFlags, SecFlagType>();
     break;
   default:
@@ -1222,35 +1250,43 @@ public:
     return Result;
   }
 
-  /// Recursively traverses all children, if the total sample count of the
-  /// corresponding function is no less than \p Threshold, add its corresponding
-  /// GUID to \p S. Also traverse the BodySamples to add hot CallTarget's GUID
-  /// to \p S.
+  /// Add the import GUID of profiled function \p Name to \p S. Only functions
+  /// defined outside this module need importing, unless \p IncludeLocal is
+  /// set: then another module that imports the caller also imports the
+  /// function, as needed for a deferred indirect call target.
+  static void
+  addImportGUID(DenseSet<GlobalValue::GUID> &S,
+                const HashKeyMap<DenseMap, FunctionId, Function *> &SymbolMap,
+                FunctionId Name, bool IncludeLocal) {
+    const Function *F = SymbolMap.lookup(Name);
+    if (!F || F->isDeclaration())
+      S.insert(Name.getHashCode());
+    else if (IncludeLocal)
+      // GUID metadata is assigned at the end of pre-link, so use the fallback
+      // identity, which includes the source file name for locals.
+      S.insert(F->getGUIDOrFallback());
+  }
+
+  /// Recursively collect import GUIDs from contexts with total samples greater
+  /// than \p Threshold, including hot call targets in their body samples.
+  /// \p IncludeLocalTargets is passed to addImportGUID.
   void findInlinedFunctions(
       DenseSet<GlobalValue::GUID> &S,
       const HashKeyMap<DenseMap, FunctionId, Function *> &SymbolMap,
-      uint64_t Threshold) const {
+      uint64_t Threshold, bool IncludeLocalTargets = false) const {
     if (TotalSamples <= Threshold)
       return;
-    auto IsDeclaration = [](const Function *F) {
-      return !F || F->isDeclaration();
-    };
-    if (IsDeclaration(SymbolMap.lookup(getFunction()))) {
-      // Add to the import list only when it's defined out of module.
-      S.insert(getGUID());
-    }
+    addImportGUID(S, SymbolMap, getFunction(), IncludeLocalTargets);
     // Import hot CallTargets, which may not be available in IR because full
     // profile annotation cannot be done until backend compilation in ThinLTO.
     for (const auto &BS : BodySamples)
       for (const auto &TS : BS.second.getCallTargets())
-        if (TS.second > Threshold) {
-          const Function *Callee = SymbolMap.lookup(TS.first);
-          if (IsDeclaration(Callee))
-            S.insert(TS.first.getHashCode());
-        }
+        if (TS.second > Threshold)
+          addImportGUID(S, SymbolMap, TS.first, IncludeLocalTargets);
     for (const auto &CS : CallsiteSamples)
       for (const auto &NameFS : CS.second)
-        NameFS.second.findInlinedFunctions(S, SymbolMap, Threshold);
+        NameFS.second.findInlinedFunctions(S, SymbolMap, Threshold,
+                                           IncludeLocalTargets);
   }
 
   /// Set the name of the function.
@@ -1307,7 +1343,7 @@ public:
     // function during ThinLTO import. This will create a linkage name like
     // "_Zfoo.llvm.xxxx.cleanup". Remove the ".llvm." suffix after stripping all
     // the coroutine suffixes to avoid pseudo probe mismatch.
-    const SmallVector<StringRef, 3> CoroSuffixes{".cleanup", ".destroy",
+    const SmallVector<StringRef, 4> CoroSuffixes{".cleanup", ".destroy",
                                                  ".resume", LLVMSuffix};
     return getCanonicalFnName(FnName, CoroSuffixes, Attr);
   }
@@ -1725,6 +1761,7 @@ public:
   /// copy indicates whether we need to copy the underlying memory
   /// for the input Name.
   void add(StringRef Name, bool Copy = false) {
+    assert(!IsMD5 && "Adding string to MD5 ProfileSymbolList is not supported");
     if (!Copy) {
       Syms.insert(Name);
       return;
@@ -1733,39 +1770,61 @@ public:
   }
 
   bool contains(StringRef Name) const {
-    return IsMD5 ? ColdGUIDTable.contains(llvm::MD5Hash(Name))
-                 : Syms.count(Name);
+    if (!IsMD5)
+      return Syms.contains(Name);
+    uint64_t GUID = llvm::MD5Hash(Name);
+    return !ColdGUIDTable.empty() ? ColdGUIDTable.contains(GUID)
+                                  : GUIDs.contains(GUID);
   }
 
   void merge(const ProfileSymbolList &List) {
-    assert(!List.IsMD5 &&
-           "Merging pre-hashed MD5 ProfileSymbolList not yet implemented");
-    for (auto Sym : List.Syms)
-      add(Sym, true);
+    if (List.size() == 0)
+      return;
+    if (!List.IsMD5) {
+      assert(!IsMD5 &&
+             "Merging string and MD5 ProfileSymbolLists is not supported");
+      for (auto Sym : List.Syms)
+        add(Sym, true);
+      return;
+    }
+    assert(Syms.empty() && ColdGUIDTable.empty() &&
+           "Merging into non-empty string or ColdGUIDTable ProfileSymbolList "
+           "is not supported");
+    IsMD5 = true;
+    GUIDs.insert_range(List.ColdGUIDTable);
+    GUIDs.insert_range(List.GUIDs);
   }
 
-  unsigned size() const { return IsMD5 ? ColdGUIDTable.size() : Syms.size(); }
+  unsigned size() const {
+    if (!IsMD5)
+      return Syms.size();
+    return !ColdGUIDTable.empty() ? ColdGUIDTable.size() : GUIDs.size();
+  }
   void reserve(size_t Size) { Syms.reserve(Size); }
 
   std::vector<uint64_t> collectGUIDs() const {
-    assert(!IsMD5 &&
-           "Collecting GUIDs from existing MD5 table not yet implemented");
     std::vector<uint64_t> Keys;
-    Keys.reserve(Syms.size());
-    llvm::append_range(Keys, llvm::map_range(Syms, llvm::MD5Hash));
+    Keys.reserve(size());
+    if (!IsMD5)
+      llvm::append_range(Keys, llvm::map_range(Syms, llvm::MD5Hash));
+    else if (!ColdGUIDTable.empty())
+      llvm::append_range(Keys, ColdGUIDTable);
+    else
+      llvm::append_range(Keys, GUIDs);
     llvm::sort(Keys);
     Keys.erase(llvm::unique(Keys), Keys.end());
     return Keys;
   }
 
   void setColdGUIDTable(EytzingerTableSpan<support::ulittle64_t> Table) {
-    assert(Syms.empty() &&
-           "Setting ColdGUIDTable shadows existing strings in Syms");
+    assert(Syms.empty() && GUIDs.empty() &&
+           "Setting ColdGUIDTable shadows existing entries");
     ColdGUIDTable = Table;
     IsMD5 = true;
   }
   EytzingerTableSpan<support::ulittle64_t> getColdGUIDTable() const {
-    assert(IsMD5 && "Retrieving ColdGUIDTable from non-MD5 ProfileSymbolList");
+    assert(IsMD5 && GUIDs.empty() &&
+           "Retrieving ColdGUIDTable from non-table-backed ProfileSymbolList");
     return ColdGUIDTable;
   }
   bool isMD5() const { return IsMD5; }
@@ -1775,9 +1834,17 @@ public:
   LLVM_ABI void dump(raw_ostream &OS = dbgs()) const;
 
 private:
+  // Whether symbols are stored as 64-bit MD5 hashes (in ColdGUIDTable or
+  // GUIDs) rather than plain strings (in Syms). At most one of Syms,
+  // ColdGUIDTable, or GUIDs is non-empty at any given time.
   bool IsMD5 = false;
+  // Symbol names for string-based symbol lists (!IsMD5).
   DenseSet<StringRef> Syms;
+  // Non-owning view of Eytzinger-ordered MD5 hashes backed by the profile
+  // reader's buffer, used for zero-copy lookups during compilation.
   EytzingerTableSpan<support::ulittle64_t> ColdGUIDTable;
+  // Owning set of MD5 hashes populated when merging MD5 symbol lists.
+  DenseSet<uint64_t> GUIDs;
   BumpPtrAllocator Allocator;
 };
 

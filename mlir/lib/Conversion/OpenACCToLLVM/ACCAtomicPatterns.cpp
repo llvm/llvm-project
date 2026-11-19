@@ -16,7 +16,12 @@
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMAggregateOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMArithOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMConstantOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMConversionOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMMemoryOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMTerminatorOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
@@ -697,8 +702,16 @@ LogicalResult ACCAtomicOpConversion<AtomicUpdateOp>::matchAndRewrite(
 
   if (val && kind) {
     auto ordering = LLVM::AtomicOrdering::monotonic;
-    LLVM::AtomicRMWOp::create(rewriter, loc, *kind, xPtr,
-                              rewriter.getRemappedValue(*val), ordering);
+    Value operand = rewriter.getRemappedValue(*val);
+    // There is no atomic on i1, but it occupies a byte, and and/or/xor keep a
+    // 0/1 byte 0/1, so apply them to the byte.
+    if (operand.getType().isInteger(1) &&
+        llvm::is_contained({LLVM::AtomicBinOp::_and, LLVM::AtomicBinOp::_or,
+                            LLVM::AtomicBinOp::_xor},
+                           *kind))
+      operand =
+          LLVM::ZExtOp::create(rewriter, loc, rewriter.getI8Type(), operand);
+    LLVM::AtomicRMWOp::create(rewriter, loc, *kind, xPtr, operand, ordering);
   } else if (hasDistinctComplexLanes) {
     auto structTy = cast<LLVM::LLVMStructType>(
         this->getTypeConverter()->convertType(updateArgument.getType()));

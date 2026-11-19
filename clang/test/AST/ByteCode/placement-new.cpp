@@ -584,6 +584,25 @@ namespace PrimArray {
   }
   static_assert(primElem() == 30); // both-error {{not an integral constant expression}} \
                                    // both-note {{in call to}}
+}
 
+namespace ZeroOffset {
+  struct S {};
+  constexpr int test() {
+    S *p = std::allocator<S>{}.allocate(1);
+    new (p + 0) S{};
 
+    std::allocator<S>{}.deallocate(p);
+    return 0;
+  }
+  static_assert(test() == 0);
+
+  constexpr int test2() {
+    S *p = std::allocator<S>{}.allocate(1);
+    new (p - 0) S{};
+
+    std::allocator<S>{}.deallocate(p);
+    return 0;
+  }
+  static_assert(test2() == 0);
 }

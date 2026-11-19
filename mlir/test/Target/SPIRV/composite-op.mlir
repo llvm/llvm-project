@@ -16,6 +16,11 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
     %0 = spirv.CompositeConstruct %arg0, %arg1, %arg2 : (f32, f32, f32) -> vector<3xf32>
     spirv.ReturnValue %0: vector<3xf32>
   }
+  spirv.func @copy_object(%arg0: !spirv.struct<(f32, !spirv.array<4xf32>)>) -> !spirv.struct<(f32, !spirv.array<4xf32>)> "None" {
+    // CHECK: spirv.CopyObject {{%.*}} : !spirv.struct<(f32, !spirv.array<4 x f32>)>
+    %0 = spirv.CopyObject %arg0 : !spirv.struct<(f32, !spirv.array<4xf32>)>
+    spirv.ReturnValue %0: !spirv.struct<(f32, !spirv.array<4xf32>)>
+  }
   spirv.func @vector_dynamic_extract(%vec: vector<4xf32>, %id : i32) -> f32 "None" {
     // CHECK: spirv.VectorExtractDynamic %{{.*}}[%{{.*}}] : vector<4xf32>, i32
     %0 = spirv.VectorExtractDynamic %vec[%id] : vector<4xf32>, i32

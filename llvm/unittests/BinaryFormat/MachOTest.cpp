@@ -66,6 +66,7 @@ TEST(MachOTest, CPUType) {
   CHECK_CPUTYPE("thumbv7-apple-darwin", MachO::CPU_TYPE_ARM);
   CHECK_CPUTYPE("arm64-apple-darwin", MachO::CPU_TYPE_ARM64);
   CHECK_CPUTYPE("arm64e-apple-darwin", MachO::CPU_TYPE_ARM64);
+  CHECK_CPUTYPE("arm64e.x1-apple-darwin", MachO::CPU_TYPE_ARM64);
   CHECK_CPUTYPE("arm64_32-apple-darwin", MachO::CPU_TYPE_ARM64_32);
 
   {
@@ -107,6 +108,7 @@ TEST(MachOTest, CPUSubType) {
   CHECK_CPUSUBTYPE("thumbv6-apple-darwin", MachO::CPU_SUBTYPE_ARM_V6);
   CHECK_CPUSUBTYPE("arm64-apple-darwin", MachO::CPU_SUBTYPE_ARM64_ALL);
   CHECK_CPUSUBTYPE("arm64e-apple-darwin", MachO::CPU_SUBTYPE_ARM64E);
+  CHECK_CPUSUBTYPE("arm64e.x1-apple-darwin", MachO::CPU_SUBTYPE_ARM64E_X1);
   CHECK_CPUSUBTYPE("arm64_32-apple-darwin", MachO::CPU_SUBTYPE_ARM64_32_V8);
   CHECK_CPUSUBTYPE("armv8m.main-apple-darwin", MachO::CPU_SUBTYPE_ARM_V8M_MAIN);
   CHECK_CPUSUBTYPE("armv8m.base-apple-darwin", MachO::CPU_SUBTYPE_ARM_V8M_BASE);

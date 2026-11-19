@@ -169,7 +169,7 @@ public:
   /// Retrieve the base MapEntry after redirects.
   const MapEntry &getBaseMapEntry() const {
     const MapEntry *Base = ME;
-    while (const auto *Next = Base->second->V.dyn_cast<const MapEntry *>())
+    while (const auto *Next = dyn_cast<const MapEntry *>(Base->second->V))
       Base = Next;
     return *Base;
   }

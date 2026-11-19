@@ -40,8 +40,8 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-[[gnu::flatten]] LIBC_INLINE void inline_memset(void *dst, uint8_t value,
-                                                size_t count) {
+LIBC_FLATTEN LIBC_INLINE void inline_memset(void *dst, uint8_t value,
+                                            size_t count) {
   LIBC_SRC_STRING_MEMORY_UTILS_MEMSET(reinterpret_cast<Ptr>(dst), value, count);
 }
 

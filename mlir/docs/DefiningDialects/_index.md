@@ -274,22 +274,20 @@ For a more detail description of the expected usages of this hook, view the deta
 
 ### Strict Property Assembly Formats
 
-Dialects can set `useStrictPropertiesInAssemblyFormat` to require declarative
-assembly formats for property-backed operations to account for all inherent
-attributes and properties:
-
-```tablegen
-def MyDialect : Dialect {
-  let useStrictPropertiesInAssemblyFormat = 1;
-}
-```
-
-This mode is disabled by default for now. When enabled, an operation format must
+Declarative assembly formats for property-backed operations must account for
+all inherent attributes and properties by default. An operation format must
 either bind every inherent attribute and property directly in the format or
 include the `prop-dict` directive. Generated parsers also reject inherent
 attributes that arrive through `attr-dict`, so `attr-dict` only carries
-discardable attributes for these formats. See the
-[declarative assembly format](Operations.md/#declarative-assembly-format)
+discardable attributes for these formats.
+
+The `useStrictPropertiesInAssemblyFormat` field is deprecated. Setting it to
+`0` temporarily opts a dialect into legacy behavior, allowing inherent
+attributes to mix with discardable attributes in `attr-dict`. Dialects using
+this setting should migrate their formats to bind inherent attributes directly
+or use `prop-dict`.
+
+See the [declarative assembly format](Operations.md/#declarative-assembly-format)
 documentation for the corresponding format requirements.
 
 ### Default Attribute/Type Parsers and Printers 

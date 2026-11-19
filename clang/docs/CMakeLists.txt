@@ -104,10 +104,13 @@ if (LLVM_ENABLE_SPHINX)
     # directory before we run sphinx.
     set(clang_generated_docs
       AttributeReference.md
-      DiagnosticsReference.rst
+      DiagnosticsReference.md
       AMDGPUBuiltinReference.rst
       ClangCommandLineReference.md
-      analyzer/user-docs/Options.rst)
+      analyzer/user-docs/Options.rst
+      CIR/_raw/CIRDialect.md
+      CIR/_raw/CIRPasses.md
+      CIR/CIRDialect.md)
     add_sphinx_source_sync_target(copy-clang-rst-docs
       "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}"
       PRESERVE_DOCS ${clang_generated_docs})
@@ -146,7 +149,7 @@ if (LLVM_ENABLE_SPHINX)
 
     # Generated files
     gen_sphinx_file_from_td(AttributeReference.md -gen-attr-docs ../include/clang/Basic/Attr.td "${docs_targets}")
-    gen_sphinx_file_from_td(DiagnosticsReference.rst -gen-diag-docs ../include/clang/Basic/Diagnostic.td "${docs_targets}")
+    gen_sphinx_file_from_td(DiagnosticsReference.md -gen-diag-docs ../include/clang/Basic/Diagnostic.td "${docs_targets}")
     gen_sphinx_file_from_td(AMDGPUBuiltinReference.rst -gen-builtin-docs ../include/clang/Basic/BuiltinsAMDGPU.td "${docs_targets}")
     gen_sphinx_file_from_td(ClangCommandLineReference.md -gen-opt-docs ../include/clang/Options/ClangOptionDocs.td "${docs_targets}")
 

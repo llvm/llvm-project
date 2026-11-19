@@ -38,6 +38,8 @@ static bool isValidKind(bool isInt, vector::CombiningKind kind) {
   case CombiningKind::MINIMUMF:
   case CombiningKind::MAXNUMF:
   case CombiningKind::MAXIMUMF:
+  case CombiningKind::MAXIMUMNUMF:
+  case CombiningKind::MINIMUMNUMF:
     type = KindType::FLOAT;
     break;
   case CombiningKind::MINUI:

@@ -20,10 +20,10 @@ func.func @_QFtest1Pinner(%arg0: !fir.ref<!fir.array<10xi32>> {fir.bindc_name = 
   %c0 = arith.constant 0 : index
   %3:3 = fir.box_dims %1, %c0 : (!fir.box<!fir.array<10xi32>>, index) -> (index, index, index)
   %4 = fir.shape %3#1 : (index) -> !fir.shape<1>
-  %5:2 = hlfir.declare %2(%4) {fortran_attrs = #fir.var_attrs<host_assoc>, uniq_name = "_QFtest1Ex"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
+  %5:2 = hlfir.declare %2(%4) uniq_name("_QFtest1Ex") fortran_attrs<host_assoc> : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
   %c10 = arith.constant 10 : index
   %6 = fir.shape %c10 : (index) -> !fir.shape<1>
-  %7:2 = hlfir.declare %arg0(%6) {uniq_name = "_QFtest1FinnerEy"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
+  %7:2 = hlfir.declare %arg0(%6) uniq_name("_QFtest1FinnerEy") : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
   %c1 = arith.constant 1 : index
   %8 = hlfir.designate %7#0 (%c1) {test.ptr = "test1_y(1)"} : (!fir.ref<!fir.array<10xi32>>, index) -> !fir.ref<i32>
   %9 = fir.load %8 : !fir.ref<i32>
@@ -55,8 +55,8 @@ func.func @_QFtest2Pinner(%arg0: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
   %c0 = arith.constant 0 : index
   %3:3 = fir.box_dims %1, %c0 : (!fir.box<!fir.array<10xi32>>, index) -> (index, index, index)
   %4 = fir.shape %3#1 : (index) -> !fir.shape<1>
-  %5:2 = hlfir.declare %2(%4) {fortran_attrs = #fir.var_attrs<target, host_assoc>, uniq_name = "_QFtest2Ex"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
-  %6:2 = hlfir.declare %arg0 {fortran_attrs = #fir.var_attrs<intent_in, pointer>, uniq_name = "_QFtest2FinnerEy"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
+  %5:2 = hlfir.declare %2(%4) uniq_name("_QFtest2Ex") fortran_attrs<target, host_assoc> : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
+  %6:2 = hlfir.declare %arg0 uniq_name("_QFtest2FinnerEy") fortran_attrs<intent_in, pointer> : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
   %7 = fir.load %6#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
   %c1 = arith.constant 1 : index
   %8 = hlfir.designate %7 (%c1) {test.ptr = "test2_y(1)"} : (!fir.box<!fir.ptr<!fir.array<?xi32>>>, index) -> !fir.ref<i32>
@@ -89,8 +89,8 @@ func.func @_QFtest3Pinner(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "
   %c0 = arith.constant 0 : index
   %3:3 = fir.box_dims %1, %c0 : (!fir.box<!fir.array<10xi32>>, index) -> (index, index, index)
   %4 = fir.shape %3#1 : (index) -> !fir.shape<1>
-  %5:2 = hlfir.declare %2(%4) {fortran_attrs = #fir.var_attrs<host_assoc>, uniq_name = "_QFtest3Ex"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
-  %6:2 = hlfir.declare %arg0 {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFtest3FinnerEy"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+  %5:2 = hlfir.declare %2(%4) uniq_name("_QFtest3Ex") fortran_attrs<host_assoc> : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
+  %6:2 = hlfir.declare %arg0 uniq_name("_QFtest3FinnerEy") fortran_attrs<target> : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
   %c1 = arith.constant 1 : index
   %7 = hlfir.designate %6#0 (%c1) {test.ptr = "test3_y(1)"} : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
   %8 = fir.load %7 : !fir.ref<i32>
@@ -120,7 +120,7 @@ func.func @_QFtest4Pinner(%arg0: !fir.ref<tuple<!fir.box<!fir.array<10xi32>>, !f
   %c0 = arith.constant 0 : index
   %3:3 = fir.box_dims %1, %c0 : (!fir.box<!fir.array<10xi32>>, index) -> (index, index, index)
   %4 = fir.shape %3#1 : (index) -> !fir.shape<1>
-  %5:2 = hlfir.declare %2(%4) {fortran_attrs = #fir.var_attrs<host_assoc>, uniq_name = "_QFtest4En"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
+  %5:2 = hlfir.declare %2(%4) uniq_name("_QFtest4En") fortran_attrs<host_assoc> : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
   %c1_i32 = arith.constant 1 : i32
   %6 = fir.coordinate_of %arg0, %c1_i32 : (!fir.ref<tuple<!fir.box<!fir.array<10xi32>>, !fir.box<!fir.array<10xi32>>>>, i32) -> !fir.ref<!fir.box<!fir.array<10xi32>>>
   %7 = fir.load %6 : !fir.ref<!fir.box<!fir.array<10xi32>>>
@@ -128,7 +128,7 @@ func.func @_QFtest4Pinner(%arg0: !fir.ref<tuple<!fir.box<!fir.array<10xi32>>, !f
   %c0_0 = arith.constant 0 : index
   %9:3 = fir.box_dims %7, %c0_0 : (!fir.box<!fir.array<10xi32>>, index) -> (index, index, index)
   %10 = fir.shape %9#1 : (index) -> !fir.shape<1>
-  %11:2 = hlfir.declare %8(%10) {fortran_attrs = #fir.var_attrs<host_assoc>, uniq_name = "_QFtest4Em"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
+  %11:2 = hlfir.declare %8(%10) uniq_name("_QFtest4Em") fortran_attrs<host_assoc> : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
   %12 = fir.alloca !fir.array<40xi8> {uniq_name = "_QFtest4Em"}
   %c1 = arith.constant 1 : index
   %13 = hlfir.designate %11#0 (%c1) {test.ptr = "test4_m(1)"} : (!fir.ref<!fir.array<10xi32>>, index) -> !fir.ref<i32>
@@ -160,10 +160,10 @@ func.func @_QFtest5Pinner(%arg0: !fir.ref<!fir.array<10xi32>> {fir.bindc_name = 
   %c0 = arith.constant 0 : index
   %3:3 = fir.box_dims %1, %c0 : (!fir.box<!fir.array<10xi32>>, index) -> (index, index, index)
   %4 = fir.shape %3#1 : (index) -> !fir.shape<1>
-  %5:2 = hlfir.declare %2(%4) {fortran_attrs = #fir.var_attrs<target, host_assoc>, uniq_name = "_QFtest5Ex"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
+  %5:2 = hlfir.declare %2(%4) uniq_name("_QFtest5Ex") fortran_attrs<target, host_assoc> : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
   %c10 = arith.constant 10 : index
   %6 = fir.shape %c10 : (index) -> !fir.shape<1>
-  %7:2 = hlfir.declare %arg0(%6) {uniq_name = "_QFtest5FinnerEy"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
+  %7:2 = hlfir.declare %arg0(%6) uniq_name("_QFtest5FinnerEy") : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
   %c1 = arith.constant 1 : index
   %8 = hlfir.designate %7#0 (%c1) {test.ptr = "test5_y(1)"} : (!fir.ref<!fir.array<10xi32>>, index) -> !fir.ref<i32>
   %9 = fir.load %8 : !fir.ref<i32>
@@ -194,10 +194,10 @@ func.func @_QFtest6Pinner(%arg0: !fir.ref<!fir.array<10xi32>> {fir.bindc_name = 
   %c0_i32 = arith.constant 0 : i32
   %0 = fir.coordinate_of %arg1, %c0_i32 : (!fir.ref<tuple<!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>>>, i32) -> !fir.llvm_ptr<!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>>
   %1 = fir.load %0 : !fir.llvm_ptr<!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>>
-  %2:2 = hlfir.declare %1 {fortran_attrs = #fir.var_attrs<pointer, host_assoc>, uniq_name = "_QFtest6Ex"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
+  %2:2 = hlfir.declare %1 uniq_name("_QFtest6Ex") fortran_attrs<pointer, host_assoc> : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
   %c10 = arith.constant 10 : index
   %3 = fir.shape %c10 : (index) -> !fir.shape<1>
-  %4:2 = hlfir.declare %arg0(%3) {uniq_name = "_QFtest6FinnerEy"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
+  %4:2 = hlfir.declare %arg0(%3) uniq_name("_QFtest6FinnerEy") : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
   %c1 = arith.constant 1 : index
   %5 = hlfir.designate %4#0 (%c1) {test.ptr = "test6_y(1)"} : (!fir.ref<!fir.array<10xi32>>, index) -> !fir.ref<i32>
   %6 = fir.load %5 : !fir.ref<i32>
@@ -227,7 +227,7 @@ func.func @_QFtest7Pinner(%arg0: !fir.ref<tuple<!fir.box<!fir.array<10xi32>>>> {
   %0 = fir.address_of(@_QMglobalsEg) : !fir.ref<!fir.array<10xi32>>
   %c10 = arith.constant 10 : index
   %1 = fir.shape %c10 : (index) -> !fir.shape<1>
-  %2:2 = hlfir.declare %0(%1) {uniq_name = "_QMglobalsEg"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
+  %2:2 = hlfir.declare %0(%1) uniq_name("_QMglobalsEg") : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
   %c0_i32 = arith.constant 0 : i32
   %3 = fir.coordinate_of %arg0, %c0_i32 : (!fir.ref<tuple<!fir.box<!fir.array<10xi32>>>>, i32) -> !fir.ref<!fir.box<!fir.array<10xi32>>>
   %4 = fir.load %3 : !fir.ref<!fir.box<!fir.array<10xi32>>>
@@ -235,7 +235,7 @@ func.func @_QFtest7Pinner(%arg0: !fir.ref<tuple<!fir.box<!fir.array<10xi32>>>> {
   %c0 = arith.constant 0 : index
   %6:3 = fir.box_dims %4, %c0 : (!fir.box<!fir.array<10xi32>>, index) -> (index, index, index)
   %7 = fir.shape %6#1 : (index) -> !fir.shape<1>
-  %8:2 = hlfir.declare %5(%7) {fortran_attrs = #fir.var_attrs<host_assoc>, uniq_name = "_QFtest7Ex"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
+  %8:2 = hlfir.declare %5(%7) uniq_name("_QFtest7Ex") fortran_attrs<host_assoc> : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
   %c1 = arith.constant 1 : index
   %9 = hlfir.designate %2#0 (%c1) {test.ptr = "test7_g(1)"} : (!fir.ref<!fir.array<10xi32>>, index) -> !fir.ref<i32>
   %10 = fir.load %9 : !fir.ref<i32>
@@ -268,7 +268,7 @@ func.func @_QFtest8Pinner(%arg0: !fir.ref<tuple<!fir.box<!fir.array<10xi32>>>> {
   %0 = fir.address_of(@_QMglobalsEg) : !fir.ref<!fir.array<10xi32>>
   %c10 = arith.constant 10 : index
   %1 = fir.shape %c10 : (index) -> !fir.shape<1>
-  %2:2 = hlfir.declare %0(%1) {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QMglobalsEg"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
+  %2:2 = hlfir.declare %0(%1) uniq_name("_QMglobalsEg") fortran_attrs<target> : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
   %c0_i32 = arith.constant 0 : i32
   %3 = fir.coordinate_of %arg0, %c0_i32 : (!fir.ref<tuple<!fir.box<!fir.array<10xi32>>>>, i32) -> !fir.ref<!fir.box<!fir.array<10xi32>>>
   %4 = fir.load %3 : !fir.ref<!fir.box<!fir.array<10xi32>>>
@@ -276,7 +276,7 @@ func.func @_QFtest8Pinner(%arg0: !fir.ref<tuple<!fir.box<!fir.array<10xi32>>>> {
   %c0 = arith.constant 0 : index
   %6:3 = fir.box_dims %4, %c0 : (!fir.box<!fir.array<10xi32>>, index) -> (index, index, index)
   %7 = fir.shape %6#1 : (index) -> !fir.shape<1>
-  %8:2 = hlfir.declare %5(%7) {fortran_attrs = #fir.var_attrs<host_assoc>, uniq_name = "_QFtest8Ex"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
+  %8:2 = hlfir.declare %5(%7) uniq_name("_QFtest8Ex") fortran_attrs<host_assoc> : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
   %c1 = arith.constant 1 : index
   %9 = hlfir.designate %2#0 (%c1) {test.ptr = "test8_g(1)"} : (!fir.ref<!fir.array<10xi32>>, index) -> !fir.ref<i32>
   %10 = fir.load %9 : !fir.ref<i32>
@@ -303,7 +303,7 @@ func.func @_QFtest8Pinner(%arg0: !fir.ref<tuple<!fir.box<!fir.array<10xi32>>>> {
 // CHECK: test9_g(1)#0 <-> test9_x(1)#0: NoAlias
 func.func @_QFtest9Pinner(%arg0: !fir.ref<tuple<!fir.box<!fir.array<10xi32>>>> {fir.host_assoc}) attributes {fir.internal_proc} {
   %0 = fir.address_of(@_QMglobalsEg) : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
-  %1:2 = hlfir.declare %0 {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMglobalsEg"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
+  %1:2 = hlfir.declare %0 uniq_name("_QMglobalsEg") fortran_attrs<pointer> : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
   %c0_i32 = arith.constant 0 : i32
   %2 = fir.coordinate_of %arg0, %c0_i32 : (!fir.ref<tuple<!fir.box<!fir.array<10xi32>>>>, i32) -> !fir.ref<!fir.box<!fir.array<10xi32>>>
   %3 = fir.load %2 : !fir.ref<!fir.box<!fir.array<10xi32>>>
@@ -311,7 +311,7 @@ func.func @_QFtest9Pinner(%arg0: !fir.ref<tuple<!fir.box<!fir.array<10xi32>>>> {
   %c0 = arith.constant 0 : index
   %5:3 = fir.box_dims %3, %c0 : (!fir.box<!fir.array<10xi32>>, index) -> (index, index, index)
   %6 = fir.shape %5#1 : (index) -> !fir.shape<1>
-  %7:2 = hlfir.declare %4(%6) {fortran_attrs = #fir.var_attrs<host_assoc>, uniq_name = "_QFtest9Ex"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
+  %7:2 = hlfir.declare %4(%6) uniq_name("_QFtest9Ex") fortran_attrs<host_assoc> : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
   %8 = fir.load %1#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
   %c1 = arith.constant 1 : index
   %9 = hlfir.designate %8 (%c1) {test.ptr = "test9_g(1)"} : (!fir.box<!fir.ptr<!fir.array<?xi32>>>, index) -> !fir.ref<i32>
@@ -346,7 +346,7 @@ fir.global @_QMglobalsEg : !fir.box<!fir.ptr<!fir.array<?xi32>>> {
 // CHECK: test10_g(1)#0 <-> test10_x(1)#0: MayAlias
 func.func @_QFtest10Pinner(%arg0: !fir.ref<tuple<!fir.box<!fir.array<10xi32>>>> {fir.host_assoc}) attributes {fir.internal_proc} {
   %0 = fir.address_of(@_QMglobalsEg) : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
-  %1:2 = hlfir.declare %0 {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMglobalsEg"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
+  %1:2 = hlfir.declare %0 uniq_name("_QMglobalsEg") fortran_attrs<pointer> : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
   %c0_i32 = arith.constant 0 : i32
   %2 = fir.coordinate_of %arg0, %c0_i32 : (!fir.ref<tuple<!fir.box<!fir.array<10xi32>>>>, i32) -> !fir.ref<!fir.box<!fir.array<10xi32>>>
   %3 = fir.load %2 : !fir.ref<!fir.box<!fir.array<10xi32>>>
@@ -354,7 +354,7 @@ func.func @_QFtest10Pinner(%arg0: !fir.ref<tuple<!fir.box<!fir.array<10xi32>>>> 
   %c0 = arith.constant 0 : index
   %5:3 = fir.box_dims %3, %c0 : (!fir.box<!fir.array<10xi32>>, index) -> (index, index, index)
   %6 = fir.shape %5#1 : (index) -> !fir.shape<1>
-  %7:2 = hlfir.declare %4(%6) {fortran_attrs = #fir.var_attrs<target, host_assoc>, uniq_name = "_QFtest10Ex"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
+  %7:2 = hlfir.declare %4(%6) uniq_name("_QFtest10Ex") fortran_attrs<target, host_assoc> : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
   %8 = fir.load %1#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
   %c1 = arith.constant 1 : index
   %9 = hlfir.designate %8 (%c1) {test.ptr = "test10_g(1)"} : (!fir.box<!fir.ptr<!fir.array<?xi32>>>, index) -> !fir.ref<i32>
@@ -391,11 +391,11 @@ func.func @_QFtest11Pinner(%arg0: !fir.ref<tuple<!fir.ref<!fir.box<!fir.ptr<!fir
   %0 = fir.address_of(@_QMglobalsEg) : !fir.ref<!fir.array<10xi32>>
   %c10 = arith.constant 10 : index
   %1 = fir.shape %c10 : (index) -> !fir.shape<1>
-  %2:2 = hlfir.declare %0(%1) {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QMglobalsEg"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
+  %2:2 = hlfir.declare %0(%1) uniq_name("_QMglobalsEg") fortran_attrs<target> : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
   %c0_i32 = arith.constant 0 : i32
   %3 = fir.coordinate_of %arg0, %c0_i32 : (!fir.ref<tuple<!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>>>, i32) -> !fir.llvm_ptr<!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>>
   %4 = fir.load %3 : !fir.llvm_ptr<!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>>
-  %5:2 = hlfir.declare %4 {fortran_attrs = #fir.var_attrs<pointer, host_assoc>, uniq_name = "_QFtest11Ex"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
+  %5:2 = hlfir.declare %4 uniq_name("_QFtest11Ex") fortran_attrs<pointer, host_assoc> : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
   %c1 = arith.constant 1 : index
   %6 = hlfir.designate %2#0 (%c1) {test.ptr = "test11_g(1)"} : (!fir.ref<!fir.array<10xi32>>, index) -> !fir.ref<i32>
   %7 = fir.load %6 : !fir.ref<i32>
@@ -427,7 +427,7 @@ func.func @_QFtest12Pinner(%arg0: !fir.ref<tuple<!fir.ref<!fir.box<!fir.heap<!fi
   %c0_i32 = arith.constant 0 : i32
   %0 = fir.coordinate_of %arg0, %c0_i32 : (!fir.ref<tuple<!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>>>, i32) -> !fir.llvm_ptr<!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>>
   %1 = fir.load %0 : !fir.llvm_ptr<!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>>
-  %2:2 = hlfir.declare %1 {fortran_attrs = #fir.var_attrs<allocatable, host_assoc>, uniq_name = "_QFtest12Ea"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
+  %2:2 = hlfir.declare %1 uniq_name("_QFtest12Ea") fortran_attrs<allocatable, host_assoc> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
   %3 = fir.load %2#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
   %c1 = arith.constant 1 : index
   %4 = hlfir.designate %3 (%c1) {test.ptr = "test12_a(1)"} : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> !fir.ref<i32>
@@ -435,7 +435,7 @@ func.func @_QFtest12Pinner(%arg0: !fir.ref<tuple<!fir.ref<!fir.box<!fir.heap<!fi
   %c1_i32 = arith.constant 1 : i32
   %5 = fir.coordinate_of %arg0, %c1_i32 : (!fir.ref<tuple<!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>>>, i32) -> !fir.llvm_ptr<!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>>
   %6 = fir.load %5 : !fir.llvm_ptr<!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>>
-  %7:2 = hlfir.declare %6 {fortran_attrs = #fir.var_attrs<allocatable, host_assoc>, uniq_name = "_QFtest12Eb"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
+  %7:2 = hlfir.declare %6 uniq_name("_QFtest12Eb") fortran_attrs<allocatable, host_assoc> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
   %8 = fir.load %7#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
   %c1_0 = arith.constant 1 : index
   %9 = hlfir.designate %8 (%c1_0) {test.ptr = "test12_b(1)"} : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> !fir.ref<i32>
@@ -460,7 +460,7 @@ func.func @_QFtest13Pinner(%arg0: !fir.ref<tuple<!fir.ref<!fir.box<!fir.heap<!fi
   %c0_i32 = arith.constant 0 : i32
   %0 = fir.coordinate_of %arg0, %c0_i32 : (!fir.ref<tuple<!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>>>, i32) -> !fir.llvm_ptr<!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>>
   %1 = fir.load %0 : !fir.llvm_ptr<!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>>
-  %2:2 = hlfir.declare %1 {fortran_attrs = #fir.var_attrs<allocatable, target, host_assoc>, uniq_name = "_QFtest13Ea"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
+  %2:2 = hlfir.declare %1 uniq_name("_QFtest13Ea") fortran_attrs<allocatable, target, host_assoc> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
   %3 = fir.load %2#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
   %c1 = arith.constant 1 : index
   %4 = hlfir.designate %3 (%c1) {test.ptr = "test13_a(1)"} : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> !fir.ref<i32>
@@ -468,7 +468,7 @@ func.func @_QFtest13Pinner(%arg0: !fir.ref<tuple<!fir.ref<!fir.box<!fir.heap<!fi
   %c1_i32 = arith.constant 1 : i32
   %5 = fir.coordinate_of %arg0, %c1_i32 : (!fir.ref<tuple<!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>>>, i32) -> !fir.llvm_ptr<!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>>
   %6 = fir.load %5 : !fir.llvm_ptr<!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>>
-  %7:2 = hlfir.declare %6 {fortran_attrs = #fir.var_attrs<pointer, host_assoc>, uniq_name = "_QFtest13Ep"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
+  %7:2 = hlfir.declare %6 uniq_name("_QFtest13Ep") fortran_attrs<pointer, host_assoc> : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
   %8 = fir.load %7#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
   %c1_0 = arith.constant 1 : index
   %9 = hlfir.designate %8 (%c1_0) {test.ptr = "test13_p(1)"} : (!fir.box<!fir.ptr<!fir.array<?xi32>>>, index) -> !fir.ref<i32>

@@ -332,6 +332,14 @@ void MappedFileRegionArena::destroyImpl() {
     }
   }
 
+#ifdef _WIN32
+  // Always unmap to
+  // - avoid address space leak;
+  // - avoid data loss for sparse files.
+  if (Region)
+    Region.unmap();
+#endif
+
   auto Close = [](std::optional<int> &FD) {
     if (FD) {
       sys::fs::file_t File = sys::fs::convertFDToNativeFile(*FD);
@@ -426,17 +434,17 @@ Expected<int64_t> MappedFileRegionArena::allocateOffset(uint64_t AllocSize) {
 ErrorOr<FileSizeInfo> FileSizeInfo::get(sys::fs::file_t File) {
 #if LLVM_ON_UNIX && defined(MAPPED_FILE_BSIZE)
   struct stat Status;
-  int StatRet = sys::RetryAfterSignal(-1, ::fstat, File, &Status);
+  int StatRet = sys::RetryAfterSignal(-1, ::fstat, File.get(), &Status);
   if (StatRet)
     return errnoAsErrorCode();
-  uint64_t AllocatedSize = uint64_t(Status.st_blksize) * MAPPED_FILE_BSIZE;
+  uint64_t AllocatedSize = uint64_t(Status.st_blocks) * MAPPED_FILE_BSIZE;
   return FileSizeInfo{uint64_t(Status.st_size), AllocatedSize};
 #else
   // Fallback: assume the file is fully allocated. Note: this may result in
   // data loss on out-of-space.
-  sys::fs::file_status Status;
-  if (std::error_code EC = sys::fs::status(File, Status))
-    return EC;
-  return FileSizeInfo{Status.getSize(), Status.getSize()};
+  ErrorOr<uint64_t> FileSize = sys::fs::file_size(File);
+  if (!FileSize)
+    return FileSize.getError();
+  return FileSizeInfo{*FileSize, *FileSize};
 #endif
 }

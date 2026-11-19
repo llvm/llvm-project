@@ -70,6 +70,18 @@ template <typename T, int R, int C> struct elem_type<matrix<T, R, C>> {
 };
 template <typename T> using elem_type_t = typename elem_type<T>::Type;
 
+struct resource_descriptor_heap_struct {
+  heap_resource_info operator[](uint32_t Index) {
+    return heap_resource_info{Index};
+  }
+};
+
+struct sampler_descriptor_heap_struct {
+  heap_sampler_info operator[](uint32_t Index) {
+    return heap_sampler_info{Index};
+  }
+};
+
 } // namespace __detail
 } // namespace hlsl
 #endif //_HLSL_HLSL_DETAILS_H_

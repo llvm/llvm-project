@@ -473,6 +473,22 @@ func.func @reduce_invalid_op_type_minimumf(%arg0 : i32) {
 
 // -----
 
+func.func @reduce_invalid_op_type_minimumnumf(%arg0 : i32) {
+  // expected-error@+1 {{`minimumnumf` reduction operation is not compatible with type 'i32'}}
+  %res = gpu.all_reduce minimumnumf %arg0 {} : (i32) -> (i32)
+  return
+}
+
+// -----
+
+func.func @reduce_invalid_op_type_maximumnumf(%arg0 : i32) {
+  // expected-error@+1 {{`maximumnumf` reduction operation is not compatible with type 'i32'}}
+  %res = gpu.all_reduce maximumnumf %arg0 {} : (i32) -> (i32)
+  return
+}
+
+// -----
+
 func.func @reduce_invalid_op_type_maximumf(%arg0 : i32) {
   // expected-error@+1 {{`maximumf` reduction operation is not compatible with type 'i32'}}
   %res = gpu.all_reduce maximumf %arg0 {} : (i32) -> (i32)
@@ -541,6 +557,22 @@ func.func @subgroup_reduce_invalid_op_type_and(%arg0 : f32) {
 func.func @subgroup_reduce_invalid_op_type_maxnumf(%arg0 : i32) {
   // expected-error@+1 {{`maxnumf` reduction operation is not compatible with type 'i32'}}
   %res = gpu.subgroup_reduce maxnumf %arg0 : (i32) -> (i32)
+  return
+}
+
+// -----
+
+func.func @subgroup_reduce_invalid_op_type_minimumnumf(%arg0 : i32) {
+  // expected-error@+1 {{`minimumnumf` reduction operation is not compatible with type 'i32'}}
+  %res = gpu.subgroup_reduce minimumnumf %arg0 : (i32) -> (i32)
+  return
+}
+
+// -----
+
+func.func @subgroup_reduce_invalid_op_type_maximumnumf(%arg0 : vector<2xi32>) {
+  // expected-error@+1 {{`maximumnumf` reduction operation is not compatible with type 'vector<2xi32>'}}
+  %res = gpu.subgroup_reduce maximumnumf %arg0 : (vector<2xi32>) -> vector<2xi32>
   return
 }
 
@@ -898,6 +930,14 @@ func.func @wmmaMmaOp_invalid_operand_order(%A : !gpu.mma_matrix<16x16xf16, "AOp"
 func.func @wmmaMmaOp_invalid_operand_shapes(%A : !gpu.mma_matrix<16x32xf16, "AOp">, %B : !gpu.mma_matrix<16x16xf16, "BOp">, %C : !gpu.mma_matrix<16x16xf16, "COp">) -> () {
     // expected-error @+1 {{operand shapes do not satisfy matmul constraints}}
     %D = gpu.subgroup_mma_compute %A, %B, %C : !gpu.mma_matrix<16x32xf16, "AOp">, !gpu.mma_matrix<16x16xf16, "BOp"> -> !gpu.mma_matrix<16x16xf16, "COp">
+    return
+}
+
+// -----
+
+func.func @wmmaElementwiseOp_mismatched_operand_types(%A : !gpu.mma_matrix<16x16xf16, "COp">, %B : !gpu.mma_matrix<16x16xf32, "COp">) -> () {
+    // expected-error @+1 {{failed to verify that all elements of 'args' have same type}}
+    %C = gpu.subgroup_mma_elementwise addf %A, %B : (!gpu.mma_matrix<16x16xf16, "COp">, !gpu.mma_matrix<16x16xf32, "COp">) -> !gpu.mma_matrix<16x16xf16, "COp">
     return
 }
 

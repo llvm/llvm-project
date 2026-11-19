@@ -15,7 +15,7 @@ define void @test(ptr noalias dereferenceable(1) %in, ptr noalias dereferenceabl
 
 declare void @llvm.memcpy.p0.p0.i64(ptr, ptr, i64, i1)
 
-!0 = !{!0}
+!0 = !{!0, i1 false}
 !1 = distinct !{!1, !0, !"in"}
 !2 = distinct !{!2, !0, !"tmp"}
 !3 = distinct !{!3, !0, !"tmp2"}

@@ -319,6 +319,204 @@ void test_fp_ops_fail(struct FPOps *ops) {
   ops->requires_mu(); // expected-warning {{calling function 'requires_mu' requires holding mutex '&FPOps::mu' exclusively}}
 }
 
+// An attribute on a member of an anonymous struct/union may name a field of
+// the enclosing record, and vice versa.
+struct AnonMembers {
+  struct Mutex mu;
+  union {
+    int a GUARDED_BY(mu);
+  };
+  struct {
+    struct Mutex inner;
+    int c GUARDED_BY(inner);
+    struct Also {
+      int az GUARDED_BY(inner);
+    } al;
+  };
+  int e GUARDED_BY(inner);
+  struct {
+    struct {
+      struct Mutex deep;
+      int f GUARDED_BY(mu);
+    };
+    int g GUARDED_BY(deep);
+  };
+  int h GUARDED_BY(deep);
+  union { struct Mutex um; };
+  union { int i GUARDED_BY(um); };
+  int j GUARDED_BY(&um); // the wildcard, any object's um
+  struct Mutex after ACQUIRED_AFTER(inner);
+};
+
+void test_anon_members(struct AnonMembers *s, struct AnonMembers *other) {
+  mutex_exclusive_lock(&s->mu);
+  s->a = 1;
+  s->f = 6;
+  mutex_unlock(&s->mu);
+  mutex_exclusive_lock(&s->inner);
+  s->c = 3;
+  s->e = 5;
+  s->al.az = 10;
+  mutex_unlock(&s->inner);
+  mutex_exclusive_lock(&s->deep);
+  s->g = 7;
+  s->h = 8;
+  mutex_unlock(&s->deep);
+  mutex_exclusive_lock(&s->um);
+  s->i = 9;
+  s->j = 10;
+  mutex_unlock(&s->um);
+  mutex_exclusive_lock(&other->um);
+  s->j = 10;
+  mutex_unlock(&other->um);
+  mutex_exclusive_lock(&other->mu);
+  s->j = 10; // expected-warning {{writing variable 'j' requires holding mutex '&AnonMembers::um' exclusively}}
+  s->a = 1; // expected-warning {{writing variable 'a' requires holding mutex 's->mu' exclusively}} \
+            // expected-note {{found near match 'other->mu'}}
+  s->e = 5; // expected-warning {{writing variable 'e' requires holding mutex 's->inner' exclusively}}
+  s->al.az = 10; // expected-warning {{writing variable 'az' requires holding mutex 's->inner' exclusively}}
+  s->f = 6; // expected-warning {{writing variable 'f' requires holding mutex 's->mu' exclusively}} \
+            // expected-note {{found near match 'other->mu'}}
+  s->g = 7; // expected-warning {{writing variable 'g' requires holding mutex 's->deep' exclusively}}
+  s->h = 8; // expected-warning {{writing variable 'h' requires holding mutex 's->deep' exclusively}}
+  s->i = 9; // expected-warning {{writing variable 'i' requires holding mutex 's->um' exclusively}}
+  mutex_unlock(&other->mu);
+}
+
+void test_anon_members_value(struct AnonMembers s) {
+  mutex_exclusive_lock(&s.deep);
+  s.g = 7;
+  s.h = 8;
+  mutex_unlock(&s.deep);
+  s.h = 8; // expected-warning {{writing variable 'h' requires holding mutex 's.deep' exclusively}}
+}
+
+void test_anon_members_order(struct AnonMembers *s) {
+  mutex_exclusive_lock(&s->after);
+  mutex_exclusive_lock(&s->inner); // expected-warning {{mutex 'inner' must be acquired before 'after'}}
+  mutex_unlock(&s->inner);
+  mutex_unlock(&s->after);
+}
+
+// A field of a named nested record may be guarded by a field of an enclosing
+// record, resolved on the nearest enclosing object, and vice versa.
+struct NamedNesting {
+  struct Mutex mu;
+  union { struct Mutex amu; };
+  struct Named {
+    struct Mutex nmu;
+    int nx GUARDED_BY(nmu);
+    int ny GUARDED_BY(mu);
+    int nv GUARDED_BY(amu);
+    struct NamedIn {
+      int nix GUARDED_BY(nmu);
+    } nin;
+  } n, narr[2], *np, *pa[2];
+  struct {
+    struct Inner {
+      struct Mutex imu;
+      int w GUARDED_BY(mu);
+    } in;
+  };
+  int y GUARDED_BY(n.nmu);
+  int z GUARDED_BY(in.imu);
+};
+
+void test_named_nesting(struct NamedNesting *m, struct NamedNesting *o) {
+  mutex_exclusive_lock(&m->mu);
+  m->n.ny = 1;
+  m->in.w = 2;
+  m->narr[1].ny = 3;
+  m->narr->ny = 3;
+  (&m->n)->ny = 5;
+  m->np->ny = 4; // expected-warning {{writing variable 'ny' requires holding mutex 'm->np->NamedNesting::mu' exclusively}} \
+                 // expected-note {{found near match 'm->mu'}}
+  mutex_unlock(&m->mu);
+  mutex_exclusive_lock(&o->mu);
+  m->n.ny = 1; // expected-warning {{writing variable 'ny' requires holding mutex 'm->mu' exclusively}} \
+               // expected-note {{found near match 'o->mu'}}
+  m->in.w = 2; // expected-warning {{writing variable 'w' requires holding mutex 'm->mu' exclusively}} \
+               // expected-note {{found near match 'o->mu'}}
+  mutex_unlock(&o->mu);
+  mutex_exclusive_lock(&m->n.nmu);
+  mutex_exclusive_lock(&m->in.imu);
+  m->y = 1;
+  m->z = 2;
+  o->y = 1; // expected-warning {{writing variable 'y' requires holding mutex 'o->n.nmu' exclusively}} \
+            // expected-note {{found near match 'm->n.nmu'}}
+  o->z = 2; // expected-warning {{writing variable 'z' requires holding mutex 'o->in.imu' exclusively}} \
+            // expected-note {{found near match 'm->in.imu'}}
+  mutex_unlock(&m->in.imu);
+  mutex_unlock(&m->n.nmu);
+}
+
+// An array of records accessed through its decayed pointer is still an object
+// of its element type, whose own field may be named.
+void test_named_nesting_array(struct NamedNesting *m, struct Named narr[2]) {
+  mutex_exclusive_lock(&m->narr->nmu);
+  m->narr->nx = 1;
+  m->narr->nin.nix = 2;
+  m->narr[1].nx = 3; // expected-warning {{writing variable 'nx' requires holding mutex 'm->narr[1].nmu' exclusively}} \
+                     // expected-note {{found near match 'm->narr->nmu'}}
+  mutex_unlock(&m->narr->nmu);
+  m->narr->nx = 1; // expected-warning {{writing variable 'nx' requires holding mutex 'm->narr->nmu' exclusively}}
+  m->narr->nin.nix = 2; // expected-warning {{writing variable 'nix' requires holding mutex 'm->narr->nmu' exclusively}}
+  mutex_exclusive_lock(&narr->nmu);
+  narr->nx = 1;
+  narr->nin.nix = 2;
+  mutex_unlock(&narr->nmu);
+  // Pointer arithmetic is spelled as written, and is not a subscript.
+  mutex_exclusive_lock(&(m->narr + 1)->nmu);
+  (m->narr + 1)->nx = 1;
+  m->narr[1].nx = 3; // expected-warning {{writing variable 'nx' requires holding mutex 'm->narr[1].nmu' exclusively}} \
+                     // expected-note {{found near match '(m->narr + 1)->nmu'}}
+  mutex_unlock(&(m->narr + 1)->nmu);
+  (m->np + 1)->nx = 1; // expected-warning {{writing variable 'nx' requires holding mutex '(m->np + 1)->nmu' exclusively}}
+  // An element of an array of pointers is a pointer.
+  mutex_exclusive_lock(&m->pa[1]->nmu);
+  m->pa[1]->nx = 1;
+  m->pa[0]->nx = 1; // expected-warning {{writing variable 'nx' requires holding mutex 'm->pa[0]->nmu' exclusively}} \
+                    // expected-note {{found near match 'm->pa[1]->nmu'}}
+  mutex_unlock(&m->pa[1]->nmu);
+}
+
+// With only the nested object at hand, its enclosing record's field cannot be
+// reached; the requirement is spelled with the field's record.
+void test_unreachable(struct NamedNesting *o, struct Named *inner) {
+  mutex_exclusive_lock(&o->mu);
+  mutex_exclusive_lock(&o->amu);
+  o->n.nv = 1;
+  inner->ny = 1; // expected-warning {{writing variable 'ny' requires holding mutex 'inner->NamedNesting::mu' exclusively}} \
+                 // expected-note {{found near match 'o->mu'}}
+  inner->nv = 2; // expected-warning {{writing variable 'nv' requires holding mutex 'inner->NamedNesting::amu' exclusively}} \
+                 // expected-note {{found near match 'o->amu'}}
+  mutex_unlock(&o->amu);
+  mutex_unlock(&o->mu);
+}
+
+// An unqualified name is the innermost record's field.
+struct Shadowed {
+  struct Mutex mu;
+  struct Shadowing {
+    struct Mutex mu;
+    int ny GUARDED_BY(mu);
+    struct Deeper {
+      int dz GUARDED_BY(mu);
+    } d;
+  } n;
+};
+
+void test_shadowed(struct Shadowed *o) {
+  mutex_exclusive_lock(&o->mu);
+  o->n.ny = 1;   // expected-warning {{writing variable 'ny' requires holding mutex 'o->n.mu' exclusively}}
+  o->n.d.dz = 1; // expected-warning {{writing variable 'dz' requires holding mutex 'o->n.mu' exclusively}}
+  mutex_unlock(&o->mu);
+  mutex_exclusive_lock(&o->n.mu);
+  o->n.ny = 2;
+  o->n.d.dz = 2;
+  mutex_unlock(&o->n.mu);
+}
+
 // Function pointer parameters. The attributes constrain the function reached
 // through the pointer, so they are checked where the pointer is called, and
 // must not be mistaken for requirements of the enclosing function's callers
@@ -375,6 +573,135 @@ void test_bdev_ops(struct BDevOps *ops, struct BDev *bdev) {
 void test_bdev_ops_fail(struct BDevOps *ops, struct BDev *bdev) {
   ops->unlock(bdev); // expected-warning {{releasing mutex 'bdev->lock' that was not held}}
 }
+
+// lock_returned on a function pointer, naming the pointee's parameter.
+struct Mutex *(*bdev_lock_of)(struct BDev *bdev) LOCK_RETURNED(&bdev->lock);
+struct BDevLockOps {
+  struct Mutex *(*lock_of)(struct BDev *bdev) LOCK_RETURNED(&bdev->lock);
+};
+
+void test_bdev_lock_of(struct BDevLockOps *ops, struct BDev *bdev) {
+  mutex_exclusive_lock(bdev_lock_of(bdev));
+  bdev->a = 42;
+  mutex_exclusive_unlock(ops->lock_of(bdev));
+  mutex_exclusive_lock(ops->lock_of(bdev));
+  mutex_exclusive_unlock(&bdev->lock);
+}
+
+void test_bdev_lock_of_fail(struct BDevLockOps *ops, struct BDev *bdev) {
+  mutex_exclusive_lock(&mu1);
+  mutex_exclusive_unlock(ops->lock_of(bdev)); // expected-warning {{releasing mutex 'bdev->lock' that was not held}}
+  mutex_exclusive_unlock(&mu1);
+}
+
+void test_lock_of_param(struct BDev *bdev,
+                        struct Mutex *(*lock_of)(struct BDev *) LOCK_RETURNED(&bdev->lock)) {
+  mutex_exclusive_lock(lock_of(bdev));
+  bdev->a = 42;
+  mutex_exclusive_unlock(&bdev->lock);
+}
+
+// A function pointer field may name a sibling member, which is resolved
+// against the object the field was reached through.
+struct BDevSelf {
+  struct Mutex lock;
+  int a GUARDED_BY(lock);
+  struct Mutex *(*lock_of)(void) LOCK_RETURNED(lock);
+  void (*unlock)(void) UNLOCK_FUNCTION(lock);
+};
+
+void test_bdev_self(struct BDevSelf *bdev) {
+  mutex_exclusive_lock(bdev->lock_of());
+  bdev->a = 42;
+  bdev->unlock();
+}
+
+void test_bdev_self_fail(struct BDevSelf *bdev, struct BDevSelf *other) {
+  mutex_exclusive_lock(other->lock_of());
+  bdev->a = 42; // expected-warning {{writing variable 'a' requires holding mutex 'bdev->lock' exclusively}} \
+                // expected-note {{found near match 'other->lock'}}
+  mutex_exclusive_unlock(bdev->lock_of()); // expected-warning {{releasing mutex 'bdev->lock' that was not held}}
+  other->unlock();
+}
+
+// The field may also be called through an explicit dereference.
+void test_bdev_self_deref(struct BDevSelf *bdev, struct BDevSelf *other) {
+  mutex_exclusive_lock((*bdev->lock_of)());
+  bdev->a = 42;
+  (*bdev->unlock)();
+  mutex_exclusive_lock((**other->lock_of)());
+  other->a = 42;
+  bdev->a = 42; // expected-warning {{writing variable 'a' requires holding mutex 'bdev->lock' exclusively}} \
+                // expected-note {{found near match 'other->lock'}}
+  mutex_exclusive_unlock((*other->lock_of)());
+}
+
+// A pointee parameter shadows a member of the same name, in both modes: the
+// release is of the argument, not of 'ops->mu'.
+struct ShadowOps {
+  void (*unlock)(struct Mutex *mu) UNLOCK_FUNCTION(mu);
+  struct Mutex mu;
+};
+
+void test_shadow_ops(struct ShadowOps *ops, struct Mutex *m) {
+  ops->unlock(m); // expected-warning {{releasing mutex 'm' that was not held}}
+}
+
+// Likewise a later parameter of the same name: 'release' releases its own
+// argument, leaving the enclosing function's 'mu' held.
+void shadow_param(void (*release)(struct Mutex *mu) UNLOCK_FUNCTION(mu),
+                  struct Mutex *mu) EXCLUSIVE_LOCKS_REQUIRED(mu) {
+  release(&mu1); // expected-warning {{releasing mutex 'mu1' that was not held}}
+}
+
+// guarded_by describes the pointer itself, not a call through it, so a pointee
+// parameter of the same name does not shadow the member: reading 'cb' is
+// guarded by 'ops->mu', in both modes.
+struct GuardedOps {
+  struct Mutex mu;
+  void (*cb)(struct Mutex *mu) GUARDED_BY(mu);
+};
+
+void test_guarded_ops(struct GuardedOps *ops, struct Mutex *m) {
+  ops->cb(m); // expected-warning {{reading variable 'cb' requires holding mutex 'ops->mu'}}
+  mutex_exclusive_lock(&ops->mu);
+  ops->cb(m);
+  mutex_exclusive_unlock(&ops->mu);
+}
+
+#ifdef LATE_PARSING
+// Likewise when the member is declared after the field.
+struct GuardedOpsLater {
+  void (*cb)(struct Mutex *mu) GUARDED_BY(mu);
+  struct Mutex mu;
+};
+
+void test_guarded_ops_later(struct GuardedOpsLater *ops, struct Mutex *m) {
+  ops->cb(m); // expected-warning {{reading variable 'cb' requires holding mutex 'ops->mu'}}
+  mutex_exclusive_lock(&ops->mu);
+  ops->cb(m);
+  mutex_exclusive_unlock(&ops->mu);
+}
+#endif
+
+#ifdef LATE_PARSING
+// A requirement on a parameter may name another parameter declared later. The
+// deferred attribute has to end up on the parameter it was written on and stay
+// live, so check that the call through it is really honored rather than merely
+// accepted: the release consumes the lock, making the second one unheld.
+void late_param_cb(void (*release)(struct Mutex *) UNLOCK_FUNCTION(mu),
+                   struct Mutex *mu) EXCLUSIVE_LOCKS_REQUIRED(mu) { // expected-note {{mutex acquired here}}
+  release(mu); // expected-note {{mutex released here}}
+  mutex_exclusive_unlock(mu); // expected-warning {{releasing mutex 'mu' that was not held}}
+} // expected-warning {{expecting mutex 'mu' to be held at the end of function}}
+
+// It names 'mu', not the neighbouring parameter: only 'mu' is consumed.
+void late_param_other(void (*release)(struct Mutex *) UNLOCK_FUNCTION(mu),
+                      struct Mutex *other, struct Mutex *mu)
+    EXCLUSIVE_LOCKS_REQUIRED(mu, other) { // expected-note {{mutex acquired here}}
+  release(mu);
+} // expected-warning {{expecting mutex 'mu' to be held at the end of function}}
+#endif
 
 // Test unusual trylock patterns
 void do_some_work(void);

@@ -47,13 +47,13 @@ int main(int argc, char *argv[]) {
   }
 
   if (PrintTriple)
-    std::cout << EPI->targetTriple() << "\n";
+    std::cout << "triple: " << EPI->targetTriple() << "\n";
 
   if (PrintPageSize)
-    std::cout << EPI->pageSize() << "\n";
+    std::cout << "page-size: " << EPI->pageSize() << "\n";
 
   if (PrintCPUFeatures)
-    std::cout << EPI->targetCPUFeatures() << "\n";
+    std::cout << "cpu-features: " << EPI->targetCPUFeatures() << "\n";
 
   if (PrintTriple || PrintPageSize || PrintCPUFeatures)
     return 0;

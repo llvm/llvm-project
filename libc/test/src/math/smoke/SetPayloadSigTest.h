@@ -93,11 +93,11 @@ public:
   }
 };
 
-#define LIST_SETPAYLOADSIG_TESTS(T, func)                                      \
-  using LlvmLibcSetPayloadSigTest = SetPayloadSigTestTemplate<T>;              \
-  TEST_F(LlvmLibcSetPayloadSigTest, InvalidPayloads) {                         \
+#define LIST_SETPAYLOADSIG_TESTS(Name, T, func)                                \
+  using LlvmLibc##Name##Test = SetPayloadSigTestTemplate<T>;                   \
+  TEST_F(LlvmLibc##Name##Test, InvalidPayloads) {                              \
     testInvalidPayloads(&func);                                                \
   }                                                                            \
-  TEST_F(LlvmLibcSetPayloadSigTest, ValidPayloads) { testValidPayloads(&func); }
+  TEST_F(LlvmLibc##Name##Test, ValidPayloads) { testValidPayloads(&func); }
 
 #endif // LIBC_TEST_SRC_MATH_SMOKE_SETPAYLOADSIGTEST_H

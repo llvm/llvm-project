@@ -381,7 +381,7 @@ TEST_F(FileManagerTest, getVirtualFileWithDifferentName) {
   EXPECT_EQ(123, file1.getSize());
 
   // Lookup the virtual file with a different name:
-  auto file2 = manager.getOptionalFileRef("/tmp/./test", 100, 1);
+  auto file2 = manager.getOptionalFileRef("/tmp/./test");
   ASSERT_TRUE(file2);
   // Check that it's the same UFE:
   EXPECT_EQ(file1, *file2);

@@ -181,6 +181,7 @@ __host__ __device__ float func(float a, float b, float c) { return a + b * c; }
 // NV-ON:       fma.rn.f32
 // NV-ON-NEXT:  st.param.b32
 // AMD-ON:       v_fmac_f32_e32
+// AMD-ON-NEXT:  s_waitcnt vmcnt(0) lgkmcnt(0)
 // AMD-ON-NEXT:  s_setpc_b64
 
 // NV-OFF:      mul.rn.f32

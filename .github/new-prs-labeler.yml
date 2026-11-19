@@ -111,12 +111,6 @@ PGO:
       - llvm/**/llvm-profdata/**/*
       - llvm/**/llvm-profgen/**/*
 
-vectorizers:
-  - changed-files:
-    - any-glob-to-any-file:
-      - llvm/lib/Transforms/Vectorize/**/*
-      - llvm/include/llvm/Transforms/Vectorize/**/*
-
 # IMPORTED FROM CODEOWNERS
 LTO:
   - changed-files:
@@ -474,6 +468,8 @@ mlir:vector:
   - changed-files:
     - any-glob-to-any-file:
       - mlir/**/*Vector/**
+      - mlir/**/VectorTo*/**
+      - mlir/lib/Dialect/Linalg/Transforms/Vectorization.cpp
 
 mlir:execution-engine:
   - changed-files:
@@ -851,6 +847,22 @@ llvm:analysis:
       - llvm/test/Analysis/**
       - llvm/unittests/Analysis/**
 
+llvm:loopaccessanalysis:
+  - changed-files:
+    - any-glob-to-any-file:
+      - llvm/lib/Analysis/LoopAccessAnalysis.cpp
+      - llvm/include/llvm/Analysis/LoopAccessAnalysis.h
+      - llvm/test/Analysis/LoopAccessAnalysis/**
+
+llvm:scalarevolution:
+  - changed-files:
+    - any-glob-to-any-file:
+      - llvm/lib/Analysis/ScalarEvolution*
+      - llvm/lib/Transforms/Utils/ScalarEvolution*
+      - llvm/include/llvm/Analysis/ScalarEvolution*
+      - llvm/include/llvm/Transforms/Utils/ScalarEvolution*
+      - llvm/test/Analysis/ScalarEvolution/**
+
 llvm:adt:
   - changed-files:
     - any-glob-to-any-file:
@@ -887,11 +899,56 @@ llvm:instcombine:
       - llvm/test/Transforms/InstCombine/**
       - llvm/test/Transforms/InstSimplify/**
 
+llvm::Attributor:
+  - changed-files:
+    - any-glob-to-any-file:
+      - llvm/include/llvm/Transforms/IPO/Attributor.h
+      - llvm/lib/Transforms/IPO/Attributor*.cpp
+      - llvm/lib/Target/AMDGPU/AMDGPUAttributor.cpp
+      - llvm/test/Transforms/Attributor/**
+      - llvm/test/Transforms/OpenMP/attributor_*
+      - llvm/test/CodeGen/AMDGPU/*attributor*
+      - llvm/unittests/Transforms/IPO/Attributor*
+
+llvm:loop-unroll:
+  - changed-files:
+    - any-glob-to-any-file:
+      - llvm/include/llvm/Analysis/LoopUnrollAnalyzer.h
+      - llvm/include/llvm/Transforms/Scalar/LoopUnroll*.h
+      - llvm/include/llvm/Transforms/Utils/LoopPeel.h
+      - llvm/include/llvm/Transforms/Utils/UnrollLoop.h
+      - llvm/lib/Analysis/LoopUnrollAnalyzer.cpp
+      - llvm/lib/Transforms/Scalar/LoopUnroll*.cpp
+      - llvm/lib/Transforms/Utils/LoopPeel.cpp
+      - llvm/lib/Transforms/Utils/LoopUnroll*.cpp
+      - llvm/test/Transforms/LoopUnroll/**
+      - llvm/test/Transforms/LoopUnrollAndJam/**
+      - llvm/unittests/Analysis/UnrollAnalyzerTest.cpp
+      - llvm/unittests/Transforms/Utils/UnrollLoopTest.cpp
+
 llvm:vectorcombine:
   - changed-files:
     - any-glob-to-any-file:
       - llvm/lib/Transforms/Vectorize/VectorCombine.cpp
       - llvm/test/Transforms/VectorCombine/**
+
+llvm:vectorizers:
+  - changed-files:
+    - any-glob-to-any-file:
+      - llvm/lib/Transforms/Vectorize/**/*
+      - llvm/include/llvm/Transforms/Vectorize/**/*
+      - llvm/test/Transforms/LoopVectorize/**
+      - llvm/test/Transforms/SLPVectorizer/**
+      - llvm/test/Transforms/VectorCombine/**
+      - llvm/test/Transforms/SandboxVectorizer/**
+
+llvm:loopvectorize:
+  - changed-files:
+    - any-glob-to-any-file:
+      - llvm/lib/Transforms/Vectorize/LoopVectoriz*
+      - llvm/lib/Transforms/Vectorize/VPlan*
+      - llvm/include/llvm/Transforms/Vectorize/LoopVectorize.h
+      - llvm/test/Transforms/LoopVectorize/**
 
 clangd:
   - changed-files:
@@ -1065,14 +1122,14 @@ backend:AMDGPU:
 backend:NVPTX:
   - changed-files:
     - any-glob-to-any-file:
-      - 'llvm/**/*nvvm*'
-      - 'llvm/**/*NVVM*'
-      - 'llvm/**/*nvptx*'
-      - 'llvm/**/*NVPTX*'
-      - 'llvm/**/*nvvm*/**'
-      - 'llvm/**/*NVVM*/**'
-      - 'llvm/**/*nvptx*/**'
-      - 'llvm/**/*NVPTX*/**'
+      - '**/*nvvm*'
+      - '**/*NVVM*'
+      - '**/*nvptx*'
+      - '**/*NVPTX*'
+      - '**/*nvvm*/**'
+      - '**/*NVVM*/**'
+      - '**/*nvptx*/**'
+      - '**/*NVPTX*/**'
 
 backend:MIPS:
   - changed-files:
