@@ -664,7 +664,7 @@ void AArch64PassConfig::addMachineSSAOptimization() {
     addPass(createAArch64CleanupLocalDynamicTLSPass());
 
   if (TM->getOptLevel() != CodeGenOptLevel::None)
-    addPass(createMachineSMEABIPass(TM->getOptLevel()));
+    addPass(createMachineSMEABIPass());
 
   if (TM->getOptLevel() != CodeGenOptLevel::None &&
       CLOpts.enable_aarch64_sme_peephole_opt)
@@ -700,7 +700,7 @@ bool AArch64PassConfig::addILPOpts() {
 
 void AArch64PassConfig::addPreRegAlloc() {
   if (TM->getOptLevel() == CodeGenOptLevel::None)
-    addPass(createMachineSMEABIPass(CodeGenOptLevel::None));
+    addPass(createMachineSMEABIPass());
 
   // Change dead register definitions to refer to the zero register.
   if (TM->getOptLevel() != CodeGenOptLevel::None && CLOpts.enable_dead_defs)

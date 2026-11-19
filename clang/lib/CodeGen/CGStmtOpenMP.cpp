@@ -6226,8 +6226,8 @@ void CodeGenFunction::EmitOMPTaskgroupDirective(
       return llvm::Error::success();
     };
     CodeGenFunction::CGCapturedStmtInfo CapStmtInfo;
-    if (!CapturedStmtInfo)
-      CapturedStmtInfo = &CapStmtInfo;
+    CGCapturedStmtRAII CapInfoRAII(*this, CapturedStmtInfo ? CapturedStmtInfo
+                                                           : &CapStmtInfo);
     llvm::OpenMPIRBuilder::InsertPointTy AfterIP =
         cantFail(OMPBuilder.createTaskgroup(Builder, AllocaIP,
                                             /*DeallocBlocks=*/{}, BodyGenCB));

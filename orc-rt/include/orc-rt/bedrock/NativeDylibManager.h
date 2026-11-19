@@ -16,8 +16,8 @@
 #include "orc-rt/bedrock/BootstrapInfo.h"
 #include "orc-rt/bedrock/Service.h"
 #include "orc-rt/bedrock/sps/NativeDylibManagerSPSCI.h"
+#include "orc-rt/support/RemoteSymbolLookupSet.h"
 #include "orc-rt/support/SymbolLookupResult.h"
-#include "orc-rt/support/SymbolLookupSet.h"
 
 namespace orc_rt {
 
@@ -72,7 +72,7 @@ public:
   using OnLookupCompleteFn =
       move_only_function<void(Expected<SymbolLookupResult>)>;
   void lookup(OnLookupCompleteFn &&OnLookupComplete, void *Handle,
-              SymbolLookupSet Symbols);
+              RemoteSymbolLookupSet Symbols);
 
   void onDetach(Service::OnCompleteFn OnComplete,
                 bool ShutdownRequested) override;

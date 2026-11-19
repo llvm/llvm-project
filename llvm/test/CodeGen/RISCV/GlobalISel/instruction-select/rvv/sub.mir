@@ -28,10 +28,10 @@ body:             |
     ; RV64I-NEXT: [[PseudoVSUB_VV_MF8_:%[0-9]+]]:vr = PseudoVSUB_VV_MF8 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 3 /* e8 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8 = COPY [[PseudoVSUB_VV_MF8_]]
     ; RV64I-NEXT: PseudoRET implicit $v8
-    %0:vrb(<vscale x 1 x s8>) = COPY $v8
-    %1:vrb(<vscale x 1 x s8>) = COPY $v9
-    %2:vrb(<vscale x 1 x s8>) = G_SUB %0, %1
-    $v8 = COPY %2(<vscale x 1 x s8>)
+    %0:vrb(<vscale x 1 x i8>) = COPY $v8
+    %1:vrb(<vscale x 1 x i8>) = COPY $v9
+    %2:vrb(<vscale x 1 x i8>) = G_SUB %0, %1
+    $v8 = COPY %2(<vscale x 1 x i8>)
     PseudoRET implicit $v8
 
 ...
@@ -62,10 +62,10 @@ body:             |
     ; RV64I-NEXT: [[PseudoVSUB_VV_MF4_:%[0-9]+]]:vr = PseudoVSUB_VV_MF4 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 3 /* e8 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8 = COPY [[PseudoVSUB_VV_MF4_]]
     ; RV64I-NEXT: PseudoRET implicit $v8
-    %0:vrb(<vscale x 2 x s8>) = COPY $v8
-    %1:vrb(<vscale x 2 x s8>) = COPY $v9
-    %2:vrb(<vscale x 2 x s8>) = G_SUB %0, %1
-    $v8 = COPY %2(<vscale x 2 x s8>)
+    %0:vrb(<vscale x 2 x i8>) = COPY $v8
+    %1:vrb(<vscale x 2 x i8>) = COPY $v9
+    %2:vrb(<vscale x 2 x i8>) = G_SUB %0, %1
+    $v8 = COPY %2(<vscale x 2 x i8>)
     PseudoRET implicit $v8
 
 ...
@@ -96,10 +96,10 @@ body:             |
     ; RV64I-NEXT: [[PseudoVSUB_VV_MF2_:%[0-9]+]]:vr = PseudoVSUB_VV_MF2 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 3 /* e8 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8 = COPY [[PseudoVSUB_VV_MF2_]]
     ; RV64I-NEXT: PseudoRET implicit $v8
-    %0:vrb(<vscale x 4 x s8>) = COPY $v8
-    %1:vrb(<vscale x 4 x s8>) = COPY $v9
-    %2:vrb(<vscale x 4 x s8>) = G_SUB %0, %1
-    $v8 = COPY %2(<vscale x 4 x s8>)
+    %0:vrb(<vscale x 4 x i8>) = COPY $v8
+    %1:vrb(<vscale x 4 x i8>) = COPY $v9
+    %2:vrb(<vscale x 4 x i8>) = G_SUB %0, %1
+    $v8 = COPY %2(<vscale x 4 x i8>)
     PseudoRET implicit $v8
 
 ...
@@ -130,10 +130,10 @@ body:             |
     ; RV64I-NEXT: [[PseudoVSUB_VV_M1_:%[0-9]+]]:vr = PseudoVSUB_VV_M1 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 3 /* e8 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8 = COPY [[PseudoVSUB_VV_M1_]]
     ; RV64I-NEXT: PseudoRET implicit $v8
-    %0:vrb(<vscale x 8 x s8>) = COPY $v8
-    %1:vrb(<vscale x 8 x s8>) = COPY $v9
-    %2:vrb(<vscale x 8 x s8>) = G_SUB %0, %1
-    $v8 = COPY %2(<vscale x 8 x s8>)
+    %0:vrb(<vscale x 8 x i8>) = COPY $v8
+    %1:vrb(<vscale x 8 x i8>) = COPY $v9
+    %2:vrb(<vscale x 8 x i8>) = G_SUB %0, %1
+    $v8 = COPY %2(<vscale x 8 x i8>)
     PseudoRET implicit $v8
 
 ...
@@ -164,10 +164,10 @@ body:             |
     ; RV64I-NEXT: [[PseudoVSUB_VV_M2_:%[0-9]+]]:vrm2 = PseudoVSUB_VV_M2 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 3 /* e8 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8m2 = COPY [[PseudoVSUB_VV_M2_]]
     ; RV64I-NEXT: PseudoRET implicit $v8m2
-    %0:vrb(<vscale x 16 x s8>) = COPY $v8m2
-    %1:vrb(<vscale x 16 x s8>) = COPY $v10m2
-    %2:vrb(<vscale x 16 x s8>) = G_SUB %0, %1
-    $v8m2 = COPY %2(<vscale x 16 x s8>)
+    %0:vrb(<vscale x 16 x i8>) = COPY $v8m2
+    %1:vrb(<vscale x 16 x i8>) = COPY $v10m2
+    %2:vrb(<vscale x 16 x i8>) = G_SUB %0, %1
+    $v8m2 = COPY %2(<vscale x 16 x i8>)
     PseudoRET implicit $v8m2
 
 ...
@@ -198,10 +198,10 @@ body:             |
     ; RV64I-NEXT: [[PseudoVSUB_VV_M4_:%[0-9]+]]:vrm4 = PseudoVSUB_VV_M4 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 3 /* e8 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8m4 = COPY [[PseudoVSUB_VV_M4_]]
     ; RV64I-NEXT: PseudoRET implicit $v8m4
-    %0:vrb(<vscale x 32 x s8>) = COPY $v8m4
-    %1:vrb(<vscale x 32 x s8>) = COPY $v12m4
-    %2:vrb(<vscale x 32 x s8>) = G_SUB %0, %1
-    $v8m4 = COPY %2(<vscale x 32 x s8>)
+    %0:vrb(<vscale x 32 x i8>) = COPY $v8m4
+    %1:vrb(<vscale x 32 x i8>) = COPY $v12m4
+    %2:vrb(<vscale x 32 x i8>) = G_SUB %0, %1
+    $v8m4 = COPY %2(<vscale x 32 x i8>)
     PseudoRET implicit $v8m4
 
 ...
@@ -232,10 +232,10 @@ body:             |
     ; RV64I-NEXT: [[PseudoVSUB_VV_M8_:%[0-9]+]]:vrm8 = PseudoVSUB_VV_M8 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 3 /* e8 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8m8 = COPY [[PseudoVSUB_VV_M8_]]
     ; RV64I-NEXT: PseudoRET implicit $v8m8
-    %0:vrb(<vscale x 64 x s8>) = COPY $v8m8
-    %1:vrb(<vscale x 64 x s8>) = COPY $v16m8
-    %2:vrb(<vscale x 64 x s8>) = G_SUB %0, %1
-    $v8m8 = COPY %2(<vscale x 64 x s8>)
+    %0:vrb(<vscale x 64 x i8>) = COPY $v8m8
+    %1:vrb(<vscale x 64 x i8>) = COPY $v16m8
+    %2:vrb(<vscale x 64 x i8>) = G_SUB %0, %1
+    $v8m8 = COPY %2(<vscale x 64 x i8>)
     PseudoRET implicit $v8m8
 
 ...
@@ -266,10 +266,10 @@ body:             |
     ; RV64I-NEXT: [[PseudoVSUB_VV_MF4_:%[0-9]+]]:vr = PseudoVSUB_VV_MF4 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 4 /* e16 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8 = COPY [[PseudoVSUB_VV_MF4_]]
     ; RV64I-NEXT: PseudoRET implicit $v8
-    %0:vrb(<vscale x 1 x s16>) = COPY $v8
-    %1:vrb(<vscale x 1 x s16>) = COPY $v9
-    %2:vrb(<vscale x 1 x s16>) = G_SUB %0, %1
-    $v8 = COPY %2(<vscale x 1 x s16>)
+    %0:vrb(<vscale x 1 x i16>) = COPY $v8
+    %1:vrb(<vscale x 1 x i16>) = COPY $v9
+    %2:vrb(<vscale x 1 x i16>) = G_SUB %0, %1
+    $v8 = COPY %2(<vscale x 1 x i16>)
     PseudoRET implicit $v8
 
 ...
@@ -300,10 +300,10 @@ body:             |
     ; RV64I-NEXT: [[PseudoVSUB_VV_MF2_:%[0-9]+]]:vr = PseudoVSUB_VV_MF2 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 4 /* e16 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8 = COPY [[PseudoVSUB_VV_MF2_]]
     ; RV64I-NEXT: PseudoRET implicit $v8
-    %0:vrb(<vscale x 2 x s16>) = COPY $v8
-    %1:vrb(<vscale x 2 x s16>) = COPY $v9
-    %2:vrb(<vscale x 2 x s16>) = G_SUB %0, %1
-    $v8 = COPY %2(<vscale x 2 x s16>)
+    %0:vrb(<vscale x 2 x i16>) = COPY $v8
+    %1:vrb(<vscale x 2 x i16>) = COPY $v9
+    %2:vrb(<vscale x 2 x i16>) = G_SUB %0, %1
+    $v8 = COPY %2(<vscale x 2 x i16>)
     PseudoRET implicit $v8
 
 ...
@@ -334,10 +334,10 @@ body:             |
     ; RV64I-NEXT: [[PseudoVSUB_VV_M1_:%[0-9]+]]:vr = PseudoVSUB_VV_M1 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 4 /* e16 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8 = COPY [[PseudoVSUB_VV_M1_]]
     ; RV64I-NEXT: PseudoRET implicit $v8
-    %0:vrb(<vscale x 4 x s16>) = COPY $v8
-    %1:vrb(<vscale x 4 x s16>) = COPY $v9
-    %2:vrb(<vscale x 4 x s16>) = G_SUB %0, %1
-    $v8 = COPY %2(<vscale x 4 x s16>)
+    %0:vrb(<vscale x 4 x i16>) = COPY $v8
+    %1:vrb(<vscale x 4 x i16>) = COPY $v9
+    %2:vrb(<vscale x 4 x i16>) = G_SUB %0, %1
+    $v8 = COPY %2(<vscale x 4 x i16>)
     PseudoRET implicit $v8
 
 ...
@@ -368,10 +368,10 @@ body:             |
     ; RV64I-NEXT: [[PseudoVSUB_VV_M2_:%[0-9]+]]:vrm2 = PseudoVSUB_VV_M2 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 4 /* e16 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8m2 = COPY [[PseudoVSUB_VV_M2_]]
     ; RV64I-NEXT: PseudoRET implicit $v8m2
-    %0:vrb(<vscale x 8 x s16>) = COPY $v8m2
-    %1:vrb(<vscale x 8 x s16>) = COPY $v10m2
-    %2:vrb(<vscale x 8 x s16>) = G_SUB %0, %1
-    $v8m2 = COPY %2(<vscale x 8 x s16>)
+    %0:vrb(<vscale x 8 x i16>) = COPY $v8m2
+    %1:vrb(<vscale x 8 x i16>) = COPY $v10m2
+    %2:vrb(<vscale x 8 x i16>) = G_SUB %0, %1
+    $v8m2 = COPY %2(<vscale x 8 x i16>)
     PseudoRET implicit $v8m2
 
 ...
@@ -402,10 +402,10 @@ body:             |
     ; RV64I-NEXT: [[PseudoVSUB_VV_M4_:%[0-9]+]]:vrm4 = PseudoVSUB_VV_M4 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 4 /* e16 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8m4 = COPY [[PseudoVSUB_VV_M4_]]
     ; RV64I-NEXT: PseudoRET implicit $v8m4
-    %0:vrb(<vscale x 16 x s16>) = COPY $v8m4
-    %1:vrb(<vscale x 16 x s16>) = COPY $v12m4
-    %2:vrb(<vscale x 16 x s16>) = G_SUB %0, %1
-    $v8m4 = COPY %2(<vscale x 16 x s16>)
+    %0:vrb(<vscale x 16 x i16>) = COPY $v8m4
+    %1:vrb(<vscale x 16 x i16>) = COPY $v12m4
+    %2:vrb(<vscale x 16 x i16>) = G_SUB %0, %1
+    $v8m4 = COPY %2(<vscale x 16 x i16>)
     PseudoRET implicit $v8m4
 
 ...
@@ -436,10 +436,10 @@ body:             |
     ; RV64I-NEXT: [[PseudoVSUB_VV_M8_:%[0-9]+]]:vrm8 = PseudoVSUB_VV_M8 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 4 /* e16 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8m8 = COPY [[PseudoVSUB_VV_M8_]]
     ; RV64I-NEXT: PseudoRET implicit $v8m8
-    %0:vrb(<vscale x 32 x s16>) = COPY $v8m8
-    %1:vrb(<vscale x 32 x s16>) = COPY $v16m8
-    %2:vrb(<vscale x 32 x s16>) = G_SUB %0, %1
-    $v8m8 = COPY %2(<vscale x 32 x s16>)
+    %0:vrb(<vscale x 32 x i16>) = COPY $v8m8
+    %1:vrb(<vscale x 32 x i16>) = COPY $v16m8
+    %2:vrb(<vscale x 32 x i16>) = G_SUB %0, %1
+    $v8m8 = COPY %2(<vscale x 32 x i16>)
     PseudoRET implicit $v8m8
 
 ...
@@ -470,10 +470,10 @@ body:             |
     ; RV64I-NEXT: [[PseudoVSUB_VV_MF2_:%[0-9]+]]:vr = PseudoVSUB_VV_MF2 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 5 /* e32 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8 = COPY [[PseudoVSUB_VV_MF2_]]
     ; RV64I-NEXT: PseudoRET implicit $v8
-    %0:vrb(<vscale x 1 x s32>) = COPY $v8
-    %1:vrb(<vscale x 1 x s32>) = COPY $v9
-    %2:vrb(<vscale x 1 x s32>) = G_SUB %0, %1
-    $v8 = COPY %2(<vscale x 1 x s32>)
+    %0:vrb(<vscale x 1 x i32>) = COPY $v8
+    %1:vrb(<vscale x 1 x i32>) = COPY $v9
+    %2:vrb(<vscale x 1 x i32>) = G_SUB %0, %1
+    $v8 = COPY %2(<vscale x 1 x i32>)
     PseudoRET implicit $v8
 
 ...
@@ -504,10 +504,10 @@ body:             |
     ; RV64I-NEXT: [[PseudoVSUB_VV_M1_:%[0-9]+]]:vr = PseudoVSUB_VV_M1 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 5 /* e32 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8 = COPY [[PseudoVSUB_VV_M1_]]
     ; RV64I-NEXT: PseudoRET implicit $v8
-    %0:vrb(<vscale x 2 x s32>) = COPY $v8
-    %1:vrb(<vscale x 2 x s32>) = COPY $v9
-    %2:vrb(<vscale x 2 x s32>) = G_SUB %0, %1
-    $v8 = COPY %2(<vscale x 2 x s32>)
+    %0:vrb(<vscale x 2 x i32>) = COPY $v8
+    %1:vrb(<vscale x 2 x i32>) = COPY $v9
+    %2:vrb(<vscale x 2 x i32>) = G_SUB %0, %1
+    $v8 = COPY %2(<vscale x 2 x i32>)
     PseudoRET implicit $v8
 
 ...
@@ -538,10 +538,10 @@ body:             |
     ; RV64I-NEXT: [[PseudoVSUB_VV_M2_:%[0-9]+]]:vrm2 = PseudoVSUB_VV_M2 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 5 /* e32 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8m2 = COPY [[PseudoVSUB_VV_M2_]]
     ; RV64I-NEXT: PseudoRET implicit $v8m2
-    %0:vrb(<vscale x 4 x s32>) = COPY $v8m2
-    %1:vrb(<vscale x 4 x s32>) = COPY $v10m2
-    %2:vrb(<vscale x 4 x s32>) = G_SUB %0, %1
-    $v8m2 = COPY %2(<vscale x 4 x s32>)
+    %0:vrb(<vscale x 4 x i32>) = COPY $v8m2
+    %1:vrb(<vscale x 4 x i32>) = COPY $v10m2
+    %2:vrb(<vscale x 4 x i32>) = G_SUB %0, %1
+    $v8m2 = COPY %2(<vscale x 4 x i32>)
     PseudoRET implicit $v8m2
 
 ...
@@ -572,10 +572,10 @@ body:             |
     ; RV64I-NEXT: [[PseudoVSUB_VV_M4_:%[0-9]+]]:vrm4 = PseudoVSUB_VV_M4 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 5 /* e32 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8m4 = COPY [[PseudoVSUB_VV_M4_]]
     ; RV64I-NEXT: PseudoRET implicit $v8m4
-    %0:vrb(<vscale x 8 x s32>) = COPY $v8m4
-    %1:vrb(<vscale x 8 x s32>) = COPY $v12m4
-    %2:vrb(<vscale x 8 x s32>) = G_SUB %0, %1
-    $v8m4 = COPY %2(<vscale x 8 x s32>)
+    %0:vrb(<vscale x 8 x i32>) = COPY $v8m4
+    %1:vrb(<vscale x 8 x i32>) = COPY $v12m4
+    %2:vrb(<vscale x 8 x i32>) = G_SUB %0, %1
+    $v8m4 = COPY %2(<vscale x 8 x i32>)
     PseudoRET implicit $v8m4
 
 ...
@@ -606,10 +606,10 @@ body:             |
     ; RV64I-NEXT: [[PseudoVSUB_VV_M8_:%[0-9]+]]:vrm8 = PseudoVSUB_VV_M8 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 5 /* e32 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8m8 = COPY [[PseudoVSUB_VV_M8_]]
     ; RV64I-NEXT: PseudoRET implicit $v8m8
-    %0:vrb(<vscale x 16 x s32>) = COPY $v8m8
-    %1:vrb(<vscale x 16 x s32>) = COPY $v16m8
-    %2:vrb(<vscale x 16 x s32>) = G_SUB %0, %1
-    $v8m8 = COPY %2(<vscale x 16 x s32>)
+    %0:vrb(<vscale x 16 x i32>) = COPY $v8m8
+    %1:vrb(<vscale x 16 x i32>) = COPY $v16m8
+    %2:vrb(<vscale x 16 x i32>) = G_SUB %0, %1
+    $v8m8 = COPY %2(<vscale x 16 x i32>)
     PseudoRET implicit $v8m8
 
 ...
@@ -640,10 +640,10 @@ body:             |
     ; RV64I-NEXT: [[PseudoVSUB_VV_M1_:%[0-9]+]]:vr = PseudoVSUB_VV_M1 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 6 /* e64 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8 = COPY [[PseudoVSUB_VV_M1_]]
     ; RV64I-NEXT: PseudoRET implicit $v8
-    %0:vrb(<vscale x 1 x s64>) = COPY $v8
-    %1:vrb(<vscale x 1 x s64>) = COPY $v9
-    %2:vrb(<vscale x 1 x s64>) = G_SUB %0, %1
-    $v8 = COPY %2(<vscale x 1 x s64>)
+    %0:vrb(<vscale x 1 x i64>) = COPY $v8
+    %1:vrb(<vscale x 1 x i64>) = COPY $v9
+    %2:vrb(<vscale x 1 x i64>) = G_SUB %0, %1
+    $v8 = COPY %2(<vscale x 1 x i64>)
     PseudoRET implicit $v8
 
 ...
@@ -674,10 +674,10 @@ body:             |
     ; RV64I-NEXT: [[PseudoVSUB_VV_M2_:%[0-9]+]]:vrm2 = PseudoVSUB_VV_M2 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 6 /* e64 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8m2 = COPY [[PseudoVSUB_VV_M2_]]
     ; RV64I-NEXT: PseudoRET implicit $v8m2
-    %0:vrb(<vscale x 2 x s64>) = COPY $v8m2
-    %1:vrb(<vscale x 2 x s64>) = COPY $v10m2
-    %2:vrb(<vscale x 2 x s64>) = G_SUB %0, %1
-    $v8m2 = COPY %2(<vscale x 2 x s64>)
+    %0:vrb(<vscale x 2 x i64>) = COPY $v8m2
+    %1:vrb(<vscale x 2 x i64>) = COPY $v10m2
+    %2:vrb(<vscale x 2 x i64>) = G_SUB %0, %1
+    $v8m2 = COPY %2(<vscale x 2 x i64>)
     PseudoRET implicit $v8m2
 
 ...
@@ -708,10 +708,10 @@ body:             |
     ; RV64I-NEXT: [[PseudoVSUB_VV_M4_:%[0-9]+]]:vrm4 = PseudoVSUB_VV_M4 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 6 /* e64 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8m4 = COPY [[PseudoVSUB_VV_M4_]]
     ; RV64I-NEXT: PseudoRET implicit $v8m4
-    %0:vrb(<vscale x 4 x s64>) = COPY $v8m4
-    %1:vrb(<vscale x 4 x s64>) = COPY $v12m4
-    %2:vrb(<vscale x 4 x s64>) = G_SUB %0, %1
-    $v8m4 = COPY %2(<vscale x 4 x s64>)
+    %0:vrb(<vscale x 4 x i64>) = COPY $v8m4
+    %1:vrb(<vscale x 4 x i64>) = COPY $v12m4
+    %2:vrb(<vscale x 4 x i64>) = G_SUB %0, %1
+    $v8m4 = COPY %2(<vscale x 4 x i64>)
     PseudoRET implicit $v8m4
 
 ...
@@ -742,10 +742,10 @@ body:             |
     ; RV64I-NEXT: [[PseudoVSUB_VV_M8_:%[0-9]+]]:vrm8 = PseudoVSUB_VV_M8 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 6 /* e64 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8m8 = COPY [[PseudoVSUB_VV_M8_]]
     ; RV64I-NEXT: PseudoRET implicit $v8m8
-    %0:vrb(<vscale x 8 x s64>) = COPY $v8m8
-    %1:vrb(<vscale x 8 x s64>) = COPY $v16m8
-    %2:vrb(<vscale x 8 x s64>) = G_SUB %0, %1
-    $v8m8 = COPY %2(<vscale x 8 x s64>)
+    %0:vrb(<vscale x 8 x i64>) = COPY $v8m8
+    %1:vrb(<vscale x 8 x i64>) = COPY $v16m8
+    %2:vrb(<vscale x 8 x i64>) = G_SUB %0, %1
+    $v8m8 = COPY %2(<vscale x 8 x i64>)
     PseudoRET implicit $v8m8
 
 ...

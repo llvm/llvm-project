@@ -753,7 +753,8 @@ public:
 
   bool shouldIgnoreForPipelining(const MachineInstr *MI) const override {
     // Only ignore the terminator.
-    return MI == EndLoop;
+    return MI == EndLoop || TII->isHMXActivateInstr(*MI) ||
+           TII->isHMXWeightInstr(*MI);
   }
 
   std::optional<bool> createTripCountGreaterCondition(
@@ -2387,6 +2388,20 @@ bool HexagonInstrInfo::isDuplexPair(const MachineInstr &MIa,
   HexagonII::SubInstructionGroup MIaG = getDuplexCandidateGroup(MIa);
   HexagonII::SubInstructionGroup MIbG = getDuplexCandidateGroup(MIb);
   return (isDuplexPairMatch(MIaG, MIbG) || isDuplexPairMatch(MIbG, MIaG));
+}
+
+bool HexagonInstrInfo::isHMXActivateInstr(const MachineInstr &MI) const {
+  return HexagonII::getTSFlag(MI.getDesc(), HexagonII::isHMXActivatePos);
+}
+
+bool HexagonInstrInfo::isHMXWeightInstr(const MachineInstr &MI) const {
+  return HexagonII::getTSFlag(MI.getDesc(), HexagonII::isHMXWeightPos);
+}
+
+bool HexagonInstrInfo::isActivateWeightPair(const MachineInstr &MIa,
+                                            const MachineInstr &MIb) const {
+  return (isHMXActivateInstr(MIa) && isHMXWeightInstr(MIb)) ||
+         (isHMXWeightInstr(MIa) && isHMXActivateInstr(MIb));
 }
 
 bool HexagonInstrInfo::isEndLoopN(unsigned Opcode) const {
@@ -5067,6 +5082,55 @@ bool HexagonInstrInfo::isMIBefore(const MachineInstr *A,
       return false;
   }
   return false;
+}
+
+// Returns false if a call, or an instruction between MI and Second, changes a
+// register MI reads, so MI cannot be copied to just after Second.
+static bool canMoveDebugValue(MachineInstr &MI, MachineInstr &Second,
+                              const TargetRegisterInfo *TRI) {
+  for (MachineInstr &Between :
+       make_range(std::next(MI.getIterator()), Second.getIterator()))
+    for (const MachineOperand &MO : MI.debug_operands())
+      if (MO.isReg() && MO.getReg().isValid() &&
+          (Between.isCall() || Between.modifiesRegister(MO.getReg(), TRI)))
+        return false;
+  return true;
+}
+
+void HexagonInstrInfo::moveDependentDebugValues(MachineInstr &First,
+                                                MachineInstr &Second) const {
+  MachineBasicBlock &MBB = *Second.getParent();
+  MachineFunction &MF = *MBB.getParent();
+  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+  Register DefReg = First.getOperand(0).getReg();
+  auto Gap = make_range(std::next(First.getIterator()), Second.getIterator());
+
+  // The variables with a value that reads DefReg. All values of these
+  // variables are copied, so that their order holds.
+  SmallVector<const DILocalVariable *, 4> Vars;
+  for (MachineInstr &MI : Gap)
+    if (MI.isDebugValue() && !MI.isDebugEntryValue() &&
+        MI.readsRegister(DefReg, TRI) &&
+        !is_contained(Vars, MI.getDebugVariable()))
+      Vars.push_back(MI.getDebugVariable());
+
+  SmallVector<MachineInstr *, 8> Group;
+  for (MachineInstr &MI : Gap)
+    if (MI.isDebugValue() && is_contained(Vars, MI.getDebugVariable()))
+      Group.push_back(&MI);
+
+  bool CanMove = !Second.isTerminator();
+  for (MachineInstr *MI : Group)
+    CanMove = CanMove && canMoveDebugValue(*MI, Second, TRI);
+
+  // Computed once, so that the copies stay in order.
+  MachineBasicBlock::iterator FinalPos = std::next(Second.getIterator());
+  for (MachineInstr *MI : Group)
+    if (CanMove)
+      MBB.insert(FinalPos, MF.CloneMachineInstr(MI));
+  for (MachineInstr *MI : Group)
+    if (!MI->isDebugEntryValue() && MI->readsRegister(DefReg, TRI))
+      MI->setDebugValueUndef();
 }
 
 // Addressing mode relations.

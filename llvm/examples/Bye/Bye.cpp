@@ -61,8 +61,10 @@ void registerPassBuilderCallbacks(PassBuilder &PB) {
       });
 }
 
-bool preCodeGenCallback(Module &M, TargetMachine &, CodeGenFileType CGFT,
-                        raw_pwrite_stream &OS) {
+bool preCodeGenCallback(TargetMachine &, Module &M, raw_pwrite_stream &OS,
+                        raw_pwrite_stream *DwoOS, CodeGenFileType CGFT, bool,
+                        bool, const ModuleSummaryIndex *,
+                        IntrusiveRefCntPtr<vfs::FileSystem>) {
   if (LastWords) {
     if (CGFT != CodeGenFileType::AssemblyFile) {
       // Test error emission.
@@ -70,6 +72,8 @@ bool preCodeGenCallback(Module &M, TargetMachine &, CodeGenFileType CGFT,
       return false;
     }
     OS << "CodeGen Bye\n";
+    if (DwoOS)
+      *DwoOS << "DwoGen Bye\n";
     return true; // Suppress remaining compilation pipeline.
   }
   // Do nothing.

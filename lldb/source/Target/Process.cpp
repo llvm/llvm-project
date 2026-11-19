@@ -2909,6 +2909,11 @@ Status Process::Launch(ProcessLaunchInfo &launch_info) {
   if (status.Fail())
     return status;
 
+  if (state_after_launch == eStateExited) {
+    HandlePrivateEvent(first_stop_event_sp);
+    return Status();
+  }
+
   if (state_after_launch != eStateStopped &&
       state_after_launch != eStateCrashed)
     return Status();
@@ -3030,9 +3035,9 @@ Status Process::LaunchPrivate(ProcessLaunchInfo &launch_info, StateType &state,
   }
 
   if (state == eStateExited) {
-    // We exited while trying to launch somehow.  Don't call DidLaunch
-    // as that's not likely to work, and return an invalid pid.
-    HandlePrivateEvent(event_sp);
+    // We exited while trying to launch. Don't call DidLaunch as that's not
+    // likely to work. Let Launch handle the event after restoring the outer
+    // launch listener.
     return Status();
   }
 
@@ -6843,9 +6848,13 @@ bool Process::CallVoidArgVoidPtrReturn(const Address *address,
       ExpressionResults result =
           RunThreadPlan(exe_ctx, call_plan_sp, options, diagnostics);
       if (result == eExpressionCompleted) {
+        ThreadPlanReturnValue return_value = call_plan_sp->GetReturnValue();
+        auto *returned = std::get_if<ReturnedValue>(&return_value);
+        if (!returned)
+          return false;
+
         returned_func =
-            call_plan_sp->GetReturnValueObject()->GetValueAsUnsigned(
-                LLDB_INVALID_ADDRESS);
+            returned->valobj_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
 
         if (GetAddressByteSize() == 4) {
           if (returned_func == UINT32_MAX)
