@@ -108,6 +108,8 @@ defm : OptionalValueField<"force-target-num-vector-regs", "unsigned",
   "A flag that overrides the target's number of vector registers">;
 defm : OptionalBoolField<"force-widen-divrem-via-masked-intrinsic",
   "Override cost based masked intrinsic widening for div/rem instructions">;
+defm : BoolField<"enable-skip-cost-computation", "true",
+  "Enables skipping vplan cost computation in favour of legacy costs">;
 defm : BoolField<"interleave-loops", "true",
   "Enable loop interleaving in Loop vectorization passes">;
 defm : BoolField<"loop-vectorize-with-block-frequency", "true",
