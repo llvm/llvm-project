@@ -4976,27 +4976,6 @@ findCompleteObject(EvalInfo &Info, const Expr *E, AccessKinds AK,
         assert(BaseVal && "got reference to unevaluated temporary");
       } else if (const CompoundLiteralExpr *CLE =
                      dyn_cast_or_null<CompoundLiteralExpr>(Base)) {
-        // According to GCC info page:
-        //
-        // 6.28 Compound Literals
-        //
-        // As an optimization, G++ sometimes gives array compound literals
-        // longer lifetimes: when the array either appears outside a function or
-        // has a const-qualified type. If foo and its initializer had elements
-        // of type char *const rather than char *, or if foo were a global
-        // variable, the array would have static storage duration. But it is
-        // probably safest just to avoid the use of array compound literals in
-        // C++ code.
-        //
-        // Obey that rule by checking constness for converted array types.
-        if (QualType CLETy = CLE->getType(); CLETy->isArrayType() &&
-                                             !LValType->isArrayType() &&
-                                             !CLETy.isConstant(Info.Ctx)) {
-          Info.FFDiag(E);
-          Info.Note(CLE->getExprLoc(), diag::note_declared_at);
-          return CompleteObject();
-        }
-
         // A compound literal with static storage duration is an unnamed object
         // (C11 6.5.2.5) that can be modified unless it is const-qualified, so
         // its value is not known, except in the GNU extension
