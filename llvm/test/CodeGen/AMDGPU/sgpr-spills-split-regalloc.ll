@@ -742,6 +742,8 @@ define void @spill_sgpr_with_sgpr_uses() #0 {
 ; GCN-NEXT:    s_mov_b64 exec, s[10:11]
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_readlane_b32 s4, v254, 0
+; GCN-NEXT:    v_mov_b32_e32 v0, s4
+; GCN-NEXT:    v_readfirstlane_b32 s4, v0
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; use s4
 ; GCN-NEXT:    ;;#ASMEND

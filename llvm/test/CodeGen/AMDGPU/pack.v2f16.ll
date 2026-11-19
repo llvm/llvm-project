@@ -28,8 +28,9 @@ define amdgpu_kernel void @s_pack_v2f16(ptr addrspace(4) %in0, ptr addrspace(4) 
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s1
 ; GFX8-NEXT:    v_perm_b32 v0, s0, v0, v1
+; GFX8-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX8-NEXT:    ;;#ASMSTART
-; GFX8-NEXT:    ; use v0
+; GFX8-NEXT:    ; use s0
 ; GFX8-NEXT:    ;;#ASMEND
 ; GFX8-NEXT:    s_endpgm
 ;

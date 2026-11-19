@@ -13,7 +13,8 @@ define <4 x float> @test_sgpr_constraint_bug(ptr addrspace(5) %buf_desc_ptr) {
 ; CHECK-NEXT:    v_mov_b32_e32 v1, v0
 ; CHECK-NEXT:    v_mov_b32_e32 v2, v0
 ; CHECK-NEXT:    v_mov_b32_e32 v3, v0
-; CHECK-NEXT:    s_mov_b64 s[4:5], exec
+; CHECK-NEXT:    s_mov_b32 s4, exec_lo
+; CHECK-NEXT:    s_mov_b32 s5, exec_hi
 ; CHECK-NEXT:    v_mov_b32_e32 v8, 1
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_readfirstlane_b32 s3, v7
@@ -22,8 +23,8 @@ define <4 x float> @test_sgpr_constraint_bug(ptr addrspace(5) %buf_desc_ptr) {
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v4
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    v_cmpx_le_u32_e64 exec, 1, v8
-; CHECK-NEXT:  buffer_load_dwordx4 v[0:3], v0, s[0:3], 0 offen
-; CHECK-NEXT:  s_mov_b64 exec, s[4:5]
+; CHECK-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[0:3], 0 offen
+; CHECK-NEXT:    s_mov_b64 exec, s[4:5]
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %rsrc = load <4 x i32>, ptr addrspace(5) %buf_desc_ptr, align 16
@@ -157,7 +158,7 @@ define amdgpu_kernel void @multiple_divergent_sgpr_inputs(ptr addrspace(1) %out)
 ; CHECK-NEXT:    v_readfirstlane_b32 s4, v2
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    s_add_u32 s2, s2, s3
-; CHECK-NEXT:  s_add_u32 s2, s2, s4
+; CHECK-NEXT:    s_add_u32 s2, s2, s4
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s2
@@ -184,7 +185,7 @@ define amdgpu_kernel void @same_value_repeated_sgpr_inputs(ptr addrspace(1) %out
 ; CHECK-NEXT:    v_readfirstlane_b32 s2, v0
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    s_add_u32 s3, s2, s2
-; CHECK-NEXT:  s_add_u32 s3, s3, s2
+; CHECK-NEXT:    s_add_u32 s3, s3, s2
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s3
@@ -279,5 +280,167 @@ entry:
   %elem = extractelement <2 x i32> %result, i32 0
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 %tid
   store i32 %elem, ptr addrspace(1) %gep
+  ret void
+}
+
+define amdgpu_kernel void @untied_sgpr_constraint_uniform_vgpr(float %x) {
+; CHECK-LABEL: untied_sgpr_constraint_uniform_vgpr:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_load_dword s0, s[4:5], 0x24
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    v_sqrt_f32_e32 v0, s0
+; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    s_mov_b32 s0, s0
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_endpgm
+entry:
+  %sqrt = call float @llvm.amdgcn.sqrt.f32(float %x)
+  %result = call float asm sideeffect "s_mov_b32 $0, $1", "=s,s"(float %sqrt)
+  ret void
+}
+
+define amdgpu_kernel void @untied_sgpr_constraint_uniform_sgpr(i32 %value) {
+; CHECK-LABEL: untied_sgpr_constraint_uniform_sgpr:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_load_dword s0, s[4:5], 0x24
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    s_mov_b32 s0, s0
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_endpgm
+entry:
+  %result = call i32 asm sideeffect "s_mov_b32 $0, $1", "=s,s"(i32 %value)
+  ret void
+}
+
+define amdgpu_kernel void @untied_sgpr_tuple_uniform_vgpr(float %a, float %b, float %c, float %d) {
+; CHECK-LABEL: untied_sgpr_tuple_uniform_vgpr:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    v_sqrt_f32_e32 v0, s3
+; CHECK-NEXT:    v_sqrt_f32_e32 v1, s2
+; CHECK-NEXT:    v_sqrt_f32_e32 v2, s1
+; CHECK-NEXT:    v_sqrt_f32_e32 v3, s0
+; CHECK-NEXT:    v_readfirstlane_b32 s3, v0
+; CHECK-NEXT:    v_readfirstlane_b32 s2, v1
+; CHECK-NEXT:    v_readfirstlane_b32 s1, v2
+; CHECK-NEXT:    v_readfirstlane_b32 s0, v3
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use s[0:3]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_endpgm
+entry:
+  %sa = call float @llvm.amdgcn.sqrt.f32(float %a)
+  %sb = call float @llvm.amdgcn.sqrt.f32(float %b)
+  %sc = call float @llvm.amdgcn.sqrt.f32(float %c)
+  %sd = call float @llvm.amdgcn.sqrt.f32(float %d)
+  %v0 = insertelement <4 x float> poison, float %sa, i32 0
+  %v1 = insertelement <4 x float> %v0, float %sb, i32 1
+  %v2 = insertelement <4 x float> %v1, float %sc, i32 2
+  %v3 = insertelement <4 x float> %v2, float %sd, i32 3
+  call void asm sideeffect "; use $0", "s"(<4 x float> %v3)
+  ret void
+}
+
+define amdgpu_kernel void @tied_sgpr_constraint_divergent_value(ptr addrspace(1) %out) {
+; CHECK-LABEL: tied_sgpr_constraint_divergent_value:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; CHECK-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    v_readfirstlane_b32 s2, v0
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; in s2 out s2
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    v_mov_b32_e32 v1, s2
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    global_store_dword v0, v1, s[0:1]
+; CHECK-NEXT:    s_endpgm
+entry:
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %result = call i32 asm sideeffect "; in $1 out $0", "=s,0"(i32 %tid)
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 %tid
+  store i32 %result, ptr addrspace(1) %gep
+  ret void
+}
+
+define amdgpu_kernel void @tied_sgpr_tuple_v4i32_constraint(ptr addrspace(1) %out, ptr addrspace(1) %in) {
+; CHECK-LABEL: tied_sgpr_tuple_v4i32_constraint:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; CHECK-NEXT:    v_and_b32_e32 v4, 0x3ff, v0
+; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 4, v4
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    global_load_dwordx4 v[0:3], v0, s[2:3]
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_readfirstlane_b32 s7, v3
+; CHECK-NEXT:    v_readfirstlane_b32 s6, v2
+; CHECK-NEXT:    v_readfirstlane_b32 s5, v1
+; CHECK-NEXT:    v_readfirstlane_b32 s4, v0
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; in s[4:7] out s[4:7]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 2, v4
+; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    v_mov_b32_e32 v1, s4
+; CHECK-NEXT:    global_store_dword v0, v1, s[0:1]
+; CHECK-NEXT:    s_endpgm
+entry:
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %gep_in = getelementptr <4 x i32>, ptr addrspace(1) %in, i32 %tid
+  %val = load <4 x i32>, ptr addrspace(1) %gep_in
+  %result = call <4 x i32> asm sideeffect "; in $1 out $0", "=s,0"(<4 x i32> %val)
+  %elem = extractelement <4 x i32> %result, i32 0
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 %tid
+  store i32 %elem, ptr addrspace(1) %gep
+  ret void
+}
+
+define amdgpu_kernel void @tied_sgpr_tuple_uniform_vgpr(float %a, float %b, float %c, float %d) {
+; CHECK-LABEL: tied_sgpr_tuple_uniform_vgpr:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    v_sqrt_f32_e32 v0, s3
+; CHECK-NEXT:    v_sqrt_f32_e32 v1, s2
+; CHECK-NEXT:    v_sqrt_f32_e32 v2, s1
+; CHECK-NEXT:    v_sqrt_f32_e32 v3, s0
+; CHECK-NEXT:    v_readfirstlane_b32 s3, v0
+; CHECK-NEXT:    v_readfirstlane_b32 s2, v1
+; CHECK-NEXT:    v_readfirstlane_b32 s1, v2
+; CHECK-NEXT:    v_readfirstlane_b32 s0, v3
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; in s[0:3] out s[0:3]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_endpgm
+entry:
+  %sa = call float @llvm.amdgcn.sqrt.f32(float %a)
+  %sb = call float @llvm.amdgcn.sqrt.f32(float %b)
+  %sc = call float @llvm.amdgcn.sqrt.f32(float %c)
+  %sd = call float @llvm.amdgcn.sqrt.f32(float %d)
+  %v0 = insertelement <4 x float> poison, float %sa, i32 0
+  %v1 = insertelement <4 x float> %v0, float %sb, i32 1
+  %v2 = insertelement <4 x float> %v1, float %sc, i32 2
+  %v3 = insertelement <4 x float> %v2, float %sd, i32 3
+  %result = call <4 x float> asm sideeffect "; in $1 out $0", "=s,0"(<4 x float> %v3)
+  ret void
+}
+
+define amdgpu_kernel void @tied_sgpr_constraint_uniform_sgpr(i32 %value) {
+; CHECK-LABEL: tied_sgpr_constraint_uniform_sgpr:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_load_dword s0, s[4:5], 0x24
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; in s0 out s0
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_endpgm
+entry:
+  %result = call i32 asm sideeffect "; in $1 out $0", "=s,0"(i32 %value)
   ret void
 }
