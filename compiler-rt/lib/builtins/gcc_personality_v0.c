@@ -230,6 +230,11 @@ COMPILER_RT_ABI _Unwind_Reason_Code __gcc_personality_sj0(
 COMPILER_RT_ABI _Unwind_Reason_Code __gcc_personality_v0(
     _Unwind_State state, struct _Unwind_Exception *exceptionObject,
     struct _Unwind_Context *context)
+#elif defined(__MVS__)
+// The z/OS LE ABI personality routine has a different signature.
+COMPILER_RT_ABI _Unwind_Reason_Code __gcc_personality_v0(
+    int version, _Unwind_Action actions, const uint8_t *lsda,
+    struct _Unwind_Exception *exceptionObject, struct _Unwind_Context *context)
 #elif defined(__SEH__)
 static _Unwind_Reason_Code __gcc_personality_imp(
     int version, _Unwind_Action actions, uint64_t exceptionClass,
@@ -251,8 +256,11 @@ COMPILER_RT_ABI _Unwind_Reason_Code __gcc_personality_v0(
 #endif
     return continueUnwind(exceptionObject, context);
 
+  // z/OS provides the LSDA directly to the personality routine.
+#ifndef __MVS__
   // There is nothing to do if there is no LSDA for this frame.
   const uint8_t *lsda = (uint8_t *)_Unwind_GetLanguageSpecificData(context);
+#endif
   if (lsda == (uint8_t *)0)
     return continueUnwind(exceptionObject, context);
 
