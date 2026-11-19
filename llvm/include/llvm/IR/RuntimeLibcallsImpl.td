@@ -156,6 +156,7 @@ class MemoryEffects<ModRefInfo mr = ModRef> {
   ModRefInfo InaccessibleMem = mr;
   ModRefInfo ErrnoMem = mr;
   ModRefInfo Other = mr;
+  ModRefInfo ThreadIdMem = mr;
   ModRefInfo TargetMem0 = mr;
   ModRefInfo TargetMem1 = mr;
 }

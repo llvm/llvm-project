@@ -2310,7 +2310,7 @@ define void @f() "no-sse" { ... }
 :   This attribute specifies the possible memory effects of the call-site or
     function. It allows specifying the possible access kinds (`none`,
     `read`, `write`, or `readwrite`) for the possible memory location
-    kinds (`argmem`, `inaccessiblemem`, `errnomem`, `target_mem0`,
+    kinds (`argmem`, `inaccessiblemem`, `errnomem`, `threadid`, `target_mem0`,
     `target_mem1`, as well as a default).
     It is best understood by example:
 
@@ -2323,6 +2323,8 @@ define void @f() "no-sse" { ... }
       memory and only write inaccessible memory.
     - `memory(argmem: read, errnomem: write)`: May only read argument memory
       and only write errno.
+    - `memory(threadid: read)`: Does not access any memory, but the effects
+      of the call may depend on the thread it is executed on.
     - `memory(read, argmem: readwrite)`: May read any memory (default mode)
       and additionally write argument memory.
     - `memory(readwrite, argmem: none)`: May access any memory apart from
@@ -2353,6 +2355,13 @@ define void @f() "no-sse" { ... }
       accessing inaccessible memory itself). Inaccessible memory is often used
       to model control dependencies of intrinsics.
     - `errnomem`: This refers to accesses to the `errno` variable.
+    - `threadid`: This refers to the identity of the thread executing the
+      function. It is not memory that can be accessed through a pointer.
+      Reading it means that the result of the function may depend on the
+      executing thread, for example the address of a thread-local variable.
+      Writing it means that the function may return on a different thread than
+      the one it was called on, for example because a coroutine was suspended
+      and resumed on another thread.
     - `target_mem#` : These refer to target specific state that cannot be
       accessed by any other means. # is a number between 0 and 1 inclusive.
       Note: The following target_mem locations are implemented in AArch64.

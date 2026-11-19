@@ -2378,6 +2378,54 @@ Error BitcodeReader::parseAttrKind(uint64_t Code, Attribute::AttrKind *Kind) {
   return Error::success();
 }
 
+/// Decode the value of a memory attribute. The top byte holds the version of
+/// the encoding, the remaining bits hold two bits per memory location. Older
+/// versions used a different set of locations and are upgraded here.
+static MemoryEffects decodeMemoryEffects(uint64_t EncodedME, const Triple &TT) {
+  const uint8_t Version = EncodedME >> 56;
+  if (Version >= 3)
+    return MemoryEffects::createFromIntValue(EncodedME & 0x00FFFFFFFFFFFFFFULL);
+
+  auto GetModRef = [EncodedME](unsigned Pos) {
+    return ModRefInfo((EncodedME >> (2 * Pos)) & 3);
+  };
+  ModRefInfo ArgMR = GetModRef(0);
+  ModRefInfo InaccessibleMR = GetModRef(1);
+  ModRefInfo ErrnoMR, OtherMR, TargetMem0MR, TargetMem1MR;
+  if (Version == 0) {
+    // Version 0 had no errno location: it was part of other memory.
+    OtherMR = GetModRef(2);
+    ErrnoMR = OtherMR;
+    TargetMem0MR = ModRefInfo::NoModRef;
+    TargetMem1MR = ModRefInfo::NoModRef;
+  } else {
+    // Versions 1 and 2 placed the target memory locations right after other
+    // memory. Some version 1 bitcode already has them.
+    ErrnoMR = GetModRef(2);
+    OtherMR = GetModRef(3);
+    TargetMem0MR = GetModRef(4);
+    TargetMem1MR = GetModRef(5);
+  }
+
+  // Before version 2, AArch64 state was encoded as inaccessible memory.
+  // Upgrade those effects to target-specific memory locations.
+  if (Version < 2 && TT.isAArch64()) {
+    TargetMem0MR |= InaccessibleMR;
+    TargetMem1MR |= InaccessibleMR;
+  }
+
+  // Before version 3, the thread identity was part of other memory.
+  ModRefInfo ThreadIdMR = OtherMR;
+
+  return MemoryEffects::argMemOnly(ArgMR) |
+         MemoryEffects::inaccessibleMemOnly(InaccessibleMR) |
+         MemoryEffects::errnoMemOnly(ErrnoMR) |
+         MemoryEffects::otherMemOnly(OtherMR) |
+         MemoryEffects::threadIdMemOnly(ThreadIdMR) |
+         MemoryEffects(IRMemLocation::TargetMem0, TargetMem0MR) |
+         MemoryEffects(IRMemLocation::TargetMem1, TargetMem1MR);
+}
+
 static bool upgradeOldMemoryAttribute(MemoryEffects &ME, uint64_t EncodedKind) {
   switch (EncodedKind) {
   case bitc::ATTR_KIND_READ_NONE:
@@ -2505,45 +2553,10 @@ Error BitcodeReader::parseAttributeGroupBlock() {
             B.addUWTableAttr(UWTableKind(Record[++i]));
           else if (Kind == Attribute::AllocKind)
             B.addAllocKindAttr(static_cast<AllocFnKind>(Record[++i]));
-          else if (Kind == Attribute::Memory) {
-            uint64_t EncodedME = Record[++i];
-            const uint8_t Version = (EncodedME >> 56);
-            if (Version == 0) {
-              // Errno memory location was previously encompassed into default
-              // memory. Ensure this is taken into account while reconstructing
-              // the memory attribute prior to its introduction.
-              ModRefInfo ArgMem = ModRefInfo((EncodedME >> 0) & 3);
-              ModRefInfo InaccessibleMem = ModRefInfo((EncodedME >> 2) & 3);
-              ModRefInfo OtherMem = ModRefInfo((EncodedME >> 4) & 3);
-              auto ME = MemoryEffects::inaccessibleMemOnly(InaccessibleMem) |
-                        MemoryEffects::argMemOnly(ArgMem) |
-                        MemoryEffects::errnoMemOnly(OtherMem) |
-                        MemoryEffects::otherMemOnly(OtherMem);
-              // Old bitcode encoded AArch64 state as inaccessible memory.
-              // Upgrade those effects to target-specific memory locations.
-              if (getTargetTriple().isAArch64())
-                ME = ME.getWithModRef(IRMemLocation::TargetMem0,
-                                      InaccessibleMem) |
-                     ME.getWithModRef(IRMemLocation::TargetMem1,
-                                      InaccessibleMem);
-              B.addMemoryAttr(ME);
-            } else {
-              // Construct the memory attribute directly from the encoded base
-              // on newer versions.
-              auto ME = MemoryEffects::createFromIntValue(
-                  EncodedME & 0x00FFFFFFFFFFFFFFULL);
-              // Upgrade to target-specific memory locations introduced in
-              // version 2.
-              if (Version == 1 && getTargetTriple().isAArch64())
-                ME = ME.getWithModRef(
-                         IRMemLocation::TargetMem0,
-                         ME.getModRef(IRMemLocation::InaccessibleMem)) |
-                     ME.getWithModRef(
-                         IRMemLocation::TargetMem1,
-                         ME.getModRef(IRMemLocation::InaccessibleMem));
-              B.addMemoryAttr(ME);
-            }
-          } else if (Kind == Attribute::Captures)
+          else if (Kind == Attribute::Memory)
+            B.addMemoryAttr(
+                decodeMemoryEffects(Record[++i], getTargetTriple()));
+          else if (Kind == Attribute::Captures)
             B.addCapturesAttr(CaptureInfo::createFromIntValue(Record[++i]));
           else if (Kind == Attribute::NoFPClass)
             B.addNoFPClassAttr(

@@ -1827,6 +1827,9 @@ static void convertFunctionMemoryAttributes(LLVMFuncOp func,
       llvm::MemoryEffects(llvm::MemoryEffects::Location::Other,
                           convertModRefInfoToLLVM(memEffects.getOther()));
   newMemEffects |=
+      llvm::MemoryEffects(llvm::MemoryEffects::Location::ThreadIdMem,
+                          convertModRefInfoToLLVM(memEffects.getOther()));
+  newMemEffects |=
       llvm::MemoryEffects(llvm::MemoryEffects::Location::ErrnoMem,
                           convertModRefInfoToLLVM(memEffects.getErrnoMem()));
   newMemEffects |=
