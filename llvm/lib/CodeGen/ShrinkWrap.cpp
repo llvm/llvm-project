@@ -333,7 +333,7 @@ bool ShrinkWrapImpl::useOrDefCSROrFI(const MachineInstr &MI, RegScavenger *RS,
   for (const MachineOperand &MO : MI.operands()) {
     bool UseOrDefCSR = false;
     if (MO.isReg()) {
-      // Ignore instructions like DBG_VALUE which don't read/def the register.
+      // Ignore operands which don't read/def the register.
       if (!MO.isDef() && !MO.readsReg())
         continue;
       Register PhysReg = MO.getReg();
@@ -366,8 +366,7 @@ bool ShrinkWrapImpl::useOrDefCSROrFI(const MachineInstr &MI, RegScavenger *RS,
         }
       }
     }
-    // Skip FrameIndex operands in DBG_VALUE instructions.
-    if (UseOrDefCSR || (MO.isFI() && !MI.isDebugValue())) {
+    if (UseOrDefCSR || MO.isFI()) {
       LLVM_DEBUG(dbgs() << "Use or define CSR(" << UseOrDefCSR << ") or FI("
                         << MO.isFI() << "): " << MI << '\n');
       return true;
@@ -558,7 +557,8 @@ bool ShrinkWrapImpl::checkIfRestoreSplittable(
     SmallVectorImpl<MachineBasicBlock *> &DirtyPreds,
     SmallVectorImpl<MachineBasicBlock *> &CleanPreds,
     const TargetInstrInfo *TII, RegScavenger *RS) {
-  for (const MachineInstr &MI : *CurRestore)
+  for (const MachineInstr &MI :
+       instructionsWithoutDebug(CurRestore->begin(), CurRestore->end()))
     if (useOrDefCSROrFI(MI, RS, /*StackAddressUsed=*/true))
       return false;
 
@@ -620,7 +620,8 @@ bool ShrinkWrapImpl::postShrinkWrapping(bool HasCandidate, MachineFunction &MF,
       DirtyBBs.insert(&MBB);
       continue;
     }
-    for (const MachineInstr &MI : MBB)
+    for (const MachineInstr &MI :
+         instructionsWithoutDebug(MBB.begin(), MBB.end()))
       if (useOrDefCSROrFI(MI, RS, /*StackAddressUsed=*/true)) {
         DirtyBBs.insert(&MBB);
         break;
@@ -865,7 +866,8 @@ bool ShrinkWrapImpl::performShrinkWrapping(
       }
     }
 
-    for (const MachineInstr &MI : *MBB) {
+    for (const MachineInstr &MI :
+         instructionsWithoutDebug(MBB->begin(), MBB->end())) {
       if (useOrDefCSROrFI(MI, RS, StackAddressUsed)) {
         // Save (resp. restore) point must dominate (resp. post dominate)
         // MI. Look for the proper basic block for those.
