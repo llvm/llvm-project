@@ -4,9 +4,11 @@
 ;       checks are looking for the absence of specific metadata, which
 ;       cannot be expressed reliably by the generated checks.
 
-; RUN: llc < %s | FileCheck %s -check-prefix=ISA
+; RUN: llc -licm-phi-hoisting=false < %s | FileCheck %s -check-prefix=ISA
 ; RUN: opt --amdgpu-annotate-uniform -S %s |  FileCheck %s -check-prefix=UNIFORM
 ; RUN: opt --amdgpu-annotate-uniform --si-annotate-control-flow -S %s |  FileCheck %s -check-prefix=CONTROLFLOW
+
+; Disable LICM phi hoisting to keep the phi %4 in %Flow1 of @main
 
 ; This module creates a divergent branch in block Flow2. The branch is
 ; marked as divergent by the divergence analysis but the condition is

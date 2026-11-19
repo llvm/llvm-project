@@ -196,6 +196,8 @@ defm : OptionalValueField<"jump-threading-threshold", "unsigned",
 // Memory promotion is enabled by default.
 defm : BoolField<"disable-licm-promotion", "false",
   "Disable memory promotion in LICM pass">;
+defm : BoolField<"licm-phi-hoisting", "true",
+  "Convert loop-invariant phis to selects and hoist them in LICM pass">;
 defm : ValueField<"licm-max-num-fp-reassociations", "unsigned", "5U",
   "Set upper limit for the number of transformations performed during a single round of hoisting the reassociated expressions">;
 defm : ValueField<"licm-max-num-int-reassociations", "unsigned", "5U",
