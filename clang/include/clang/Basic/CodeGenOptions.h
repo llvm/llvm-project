@@ -110,6 +110,12 @@ public:
     OnlyAlwaysInlining  // Only run the always inlining pass.
   };
 
+  /// Fast math functions library to use with -ffastlib=.
+  enum FastLibrary {
+    NoFastLibrary, // Use default library.
+    AMDLIBM        // AMD fast math library.
+  };
+
   enum ObjCDispatchMethodKind {
     Legacy = 0,
     NonLegacy = 1,
