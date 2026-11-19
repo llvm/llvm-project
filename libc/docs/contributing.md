@@ -103,7 +103,7 @@ Tools make some mistakes in this project more often than people do:
   behavior to match another libc, because that is the shortest path to a
   passing build. See {ref}`making_existing_software_work`.
 - They reproduce code from other C libraries. That is not allowed, regardless
-  of how the code was produced.
+  of how the code was produced. See {ref}`original_implementations`.
 - They call one public function from another. See
   {ref}`entrypoints_do_not_call_entrypoints`.
 

@@ -109,12 +109,21 @@ preference:
 2. **Implement the missing standard function, macro, type, or header.**
 3. **Add transitive includes in public headers that POSIX requires** when a
    real program relies on them.
-4. **Add a widely used extension** (GNU, BSD, or Linux specific) when a real
+4. **Add a transitive include described by a standard** when a real program relies
+   on it. When a standard says that a header "may make visible" the symbols of
+   another header, including that header is acceptable. The permission alone
+   is not a reason to add the include. `<arpa/inet.h>` includes
+   `<netinet/in.h>` on this basis.
+5. **Add a widely used extension** (GNU, BSD, or Linux specific) when a real
    program needs it. See {ref}`extensions_and_stubs`.
-5. **Accommodate a non-standard assumption** only when doing so is cheap and
+6. **Accommodate a non-standard assumption** only when doing so is cheap and
    does not limit future changes to LLVM-libc. Declaring `alloca` from
-   `<stdlib.h>` is an example of an acceptable accommodation.
-6. **Change the program, or how it is configured,** when it depends on the
+   `<stdlib.h>` is an example of an acceptable accommodation. A transitive
+   include that no standard requires or permits belongs here, not under steps
+   3 and 4. Matching the way another libc happens to lay out its headers is
+   not a sufficient reason by itself, so expect such a change to need
+   justification.
+7. **Change the program, or how it is configured,** when it depends on the
    internals of another libc or on behavior no standard promises.
 
 The following are never acceptable ways to make a program work:
@@ -155,20 +164,24 @@ An entrypoint leaves the experimental list when it implements all of the
 functionality its specification requires. Some incomplete entrypoints predate
 the option and are still in the default lists; they should move.
 
+(original_implementations)=
+
 ## Original implementations only
 
-Do not copy code from other libc implementations, and do not port it line by
-line. This is a licensing requirement, and it is also a question of style:
+Do not copy code from other libc implementations, and do not translate or
+port it. Rewriting another libc's C code as C++ is still taking that code.
+This is a licensing requirement, and it is also a question of style:
 LLVM-libc is written in idiomatic C++, while most other libcs are written in
 C. Code translated from C rarely fits the conventions described in the
 {ref}`developer guides <developer_guides>`.
 
 Standards documents, manual pages, and observing the behavior of another
-implementation as a black box are all appropriate references. Reading another
-implementation to understand how it approaches a problem is generally
-acceptable too, as long as the code you contribute is newly written. This is
-not legal advice. Contributors are responsible for having the right to
-contribute their code; see LLVM's policy on
+implementation as a black box are all appropriate references. Knowing how
+other implementations approach a problem is generally acceptable too, as a
+way to learn what the options are. The code you contribute must still be
+written from scratch and must not be based on theirs. This is not legal
+advice. Contributors are responsible for having the right to contribute their
+code; see LLVM's policy on
 [copyright, license, and patents](https://llvm.org/docs/DeveloperPolicy.html#copyright-license-and-patents).
 
 The same applies to code written with AI tools: it must be new code and not a

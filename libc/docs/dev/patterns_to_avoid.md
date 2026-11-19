@@ -28,9 +28,9 @@ under the `libc` label in the
    running. That matching is not the intent for LLVM-libc, and goes against its
    design principles. See: {ref}`making_existing_software_work`.
 3. **Copying an outdated pattern from old code.** See the table below.
-4. **Copying from another libc.** This is not allowed for licensing reasons,
-   and translated C does not fit this code base. See
-   {ref}`design_philosophy`.
+4. **Copying or translating code from another libc.** Neither is allowed.
+   {ref}`original_implementations` states where the line is between learning
+   from another implementation and taking from it.
 5. **Leaving out part of the registration.** A new function needs an entry in
    `libc/include/<header>.yaml` and in the relevant `entrypoints.txt` files in
    addition to its implementation. A new public type needs its own
