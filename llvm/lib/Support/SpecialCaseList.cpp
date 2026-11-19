@@ -424,13 +424,17 @@ bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
   // preprocess the Glob pattern to use different escape sequences.
   bool SlashAgnostic = MinVersion(4) && llvm::sys::path::is_style_windows(
                                             llvm::sys::path::Style::native);
+  bool AllowImplicitSection = !MinVersion(6);
 
-  auto ErrOrSection = addSection("*", FileIdx, 1, true);
-  if (auto Err = ErrOrSection.takeError()) {
-    Error = toString(std::move(Err));
-    return false;
+  Section::SectionImpl *CurrentImpl = nullptr;
+  if (AllowImplicitSection) {
+    auto ErrOrSection = addSection("*", FileIdx, 1, true);
+    if (auto Err = ErrOrSection.takeError()) {
+      Error = toString(std::move(Err));
+      return false;
+    }
+    CurrentImpl = ErrOrSection.get()->Impl.get();
   }
-  Section::SectionImpl *CurrentImpl = ErrOrSection.get()->Impl.get();
 
   // This is the current list of prefixes for all existing users matching file
   // path. We may need parametrization in constructor in future.
@@ -467,6 +471,13 @@ bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
     if (Postfix.empty()) {
       // Missing ':' in the line.
       Error = ("malformed line " + Twine(LineNo) + ": '" + Line + "'").str();
+      return false;
+    }
+
+    if (!CurrentImpl) {
+      Error = ("entry without section header on line " + Twine(LineNo) + ": '" +
+               Line + "'")
+                  .str();
       return false;
     }
 

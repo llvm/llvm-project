@@ -673,6 +673,9 @@ static inline bool addrspacesMayAlias(unsigned AS1, unsigned AS2) {
   if (AS1 > AMDGPUAS::MAX_AMDGPU_ADDRESS || AS2 > AMDGPUAS::MAX_AMDGPU_ADDRESS)
     return true;
 
+  if (isReservedAddressSpace(AS1) || isReservedAddressSpace(AS2))
+    return true;
+
   // clang-format off
   static const bool ASAliasRules[][AMDGPUAS::MAX_AMDGPU_ADDRESS + 1] = {
     /*                       Flat   Global Region  Local Constant Private Const32 BufFatPtr BufRsrc BufStrdPtr Reserved Reserved Reserved VGPR Reserved Barrier */
