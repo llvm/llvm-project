@@ -5419,11 +5419,9 @@ computeKnownFPClassForFAddSub(const Operator *Op, const APInt &DemandedElts,
   if (Self)
     KnownLHS = KnownRHS;
 
-  auto *ConstFP = llvm::dyn_cast<llvm::ConstantFP>(Op->getOperand(1));
-
   if ((WantNaN && KnownRHS.isKnownNeverNaN()) ||
       (WantNegative && KnownRHS.cannotBeOrderedLessThanZero()) || WantNegZero ||
-      !IsAdd || (WantSubnormal && ConstFP)) {
+      WantSubnormal || !IsAdd) {
 
     // FIXME: Context function should always be passed in separately
     const Function *F = cast<Instruction>(Op)->getFunction();
@@ -5443,9 +5441,8 @@ computeKnownFPClassForFAddSub(const Operator *Op, const APInt &DemandedElts,
                             Depth + 1);
       }
 
-      if (ConstFP && IsAdd) {
-        const auto &APF = ConstFP->getValueAPF();
-        Known = KnownFPClass::fadd(KnownLHS, APF, RM, Mode);
+      if (const APFloat *CRHS; IsAdd && match(RHS, m_APFloat(CRHS))) {
+        Known = KnownFPClass::fadd(KnownLHS, *CRHS, RM, Mode);
         return;
       }
 

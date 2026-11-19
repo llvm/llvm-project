@@ -606,13 +606,14 @@ KnownFPClass KnownFPClass::fadd(const KnownFPClass &KnownLHS_,
   KnownFPClass Known =
       fadd(KnownLHS, KnownFPClass(RHS), RM, DenormalMode::getIEEE());
 
-  auto MinExp = APFloat::semanticsMinExponent(Semantics);
-  auto Precision = static_cast<int>(APFloat::semanticsPrecision(Semantics));
-  auto ThresholdExp = MinExp + Precision - 1;
+  int MinExp = APFloat::semanticsMinExponent(Semantics);
+  int Precision = static_cast<int>(APFloat::semanticsPrecision(Semantics));
+  int ThresholdExp = MinExp + Precision - 1;
 
-  // If |C| > T, X + C will never be subnormal.
-  if (ilogb(RHS) > ThresholdExp ||
-      (ilogb(RHS) == ThresholdExp && RHS.getExactLog2Abs() == INT_MIN))
+  // If |C| > T, X + C cannot be subnormal under any rounding mode.
+  int Exponent = ilogb(RHS);
+  if (Exponent > ThresholdExp ||
+      (Exponent == ThresholdExp && RHS.getExactLog2Abs() == INT_MIN))
     Known.knownNot(fcSubnormal);
 
   return applyOutputDenormalMode(Known, Mode);
