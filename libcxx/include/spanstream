@@ -181,13 +181,13 @@ protected:
     if (!((__which & ios_base::in) || (__which & ios_base::out)) && (ios_base::cur == __way))
       return __error;
 
-    // Calculate `__baseoff`
+    // Calculate `__baseoff`.
 
-    std::size_t __baseoff;
+    off_type __baseoff;
 
     switch (__way) {
     case ios_base::beg:
-      __baseoff = 0Z;
+      __baseoff = off_type{0};
       break;
 
     case ios_base::cur:
@@ -201,32 +201,32 @@ protected:
       if ((__mode_ & ios_base::out) && !(__mode_ & ios_base::in))
         __baseoff = this->pptr() - this->pbase();
       else
-        __baseoff = __buf_.size();
+        __baseoff = static_cast<off_type>(__buf_.size());
       break;
 
     default:
       return __error;
-    };
+    }
 
-    // Calculate `__newoff`
+    // Calculate `__newoff`.
 
     off_type __newoff;
 
     if (__builtin_add_overflow(__baseoff, __off, std::addressof(__newoff)) || (__newoff < off_type{0}) ||
-        std::cmp_greater(__newoff, __buf_.size()))
+        std::cmp_greater(__newoff, static_cast<off_type>(__buf_.size())))
       return __error;
 
-    // Set pointers
+    // Set pointers.
 
-    if (__which & ios_base::in) {
-      if ((this->gptr() == nullptr) && (__newoff != off_type{0}))
-        return __error;
+    // For the sequences to be positioned, both pointers must be valid.
+    if ((__which & ios_base::in) && (this->gptr() == nullptr) && (__newoff != off_type{0}))
+      return __error;
+    if ((__which & ios_base::out) && (this->pptr() == nullptr) && (__newoff != off_type{0}))
+      return __error;
+
+    if (__which & ios_base::in)
       this->setg(this->eback(), this->eback() + __newoff, this->egptr());
-    }
-
     if (__which & ios_base::out) {
-      if ((this->pptr() == nullptr) && (__newoff != off_type{0}))
-        return __error;
       this->setp(this->pbase(), this->epptr());
       this->pbump(__newoff);
     }
