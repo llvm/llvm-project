@@ -205,6 +205,18 @@ struct MonotonicInfo {
   bool Signed = false;
 };
 
+/// A value flowing into the backedge value of a loop header phi, together
+/// with the conditions known to hold when it does.
+struct IncomingValue {
+  Value *V;
+  /// The edge V flows along.
+  BasicBlock *From;
+  BasicBlock *To;
+  /// The conditions of the edges V flows along, outermost first, as
+  /// tightening facts using inequalities depends on the facts already known.
+  SmallVector<ConditionTy, 8> Conditions;
+};
+
 /// Keep state required to build worklist.
 struct State {
   DominatorTree &DT;
@@ -214,9 +226,23 @@ struct State {
   TargetLibraryInfo &TLI;
   SmallVector<FactOrCheck, 64> WorkList;
 
+  /// The conditions known to hold if a branch condition is true or false,
+  /// cached across the header phis checked for inductive bounds.
+  DenseMap<PointerIntPair<Value *, 1, bool>, SmallVector<ConditionTy, 2>>
+      BranchConditions;
+
+  /// Cached results of canAddSuccessor for the edges from the immediate
+  /// dominators of blocks.
+  DenseMap<BasicBlock *, bool> CanAddFromIDom;
+
+  /// The number of constraint systems that may still be built to check if
+  /// bounds are inductive.
+  unsigned InductiveBoundBudget;
+
   State(DominatorTree &DT, LoopInfo &LI, ScalarEvolution *SE,
-        TargetLibraryInfo &TLI)
-      : DT(DT), LI(LI), SE(SE), TLI(TLI) {}
+        TargetLibraryInfo &TLI, unsigned InductiveBoundBudget)
+      : DT(DT), LI(LI), SE(SE), TLI(TLI),
+        InductiveBoundBudget(InductiveBoundBudget) {}
 
   /// Process block \p BB and add known facts to work-list.
   void addInfoFor(BasicBlock &BB);
@@ -228,6 +254,15 @@ struct State {
   /// Try to add facts for loop inductions (AddRecs) in EQ/NE compares
   /// controlling the loop header.
   void addInfoForInductions(BasicBlock &BB);
+
+  /// If \p BB is a loop header, try to bound each phi in it that is only
+  /// updated on some paths through the loop, like a counter incremented
+  /// conditionally, by proving the bound is inductive.
+  void addInfoForConditionalInductions(BasicBlock &BB);
+
+  /// Collects the conditions that hold when \p In flows along its edge, i.e.
+  /// the conditions of that edge and of the edges dominating it in \p L.
+  void collectConditions(IncomingValue &In, const Loop &L);
 
   /// Returns the direction the induction phi \p PN with backedge value \p Step
   /// moves in, and the senses in which it is monotonic in that direction.
@@ -1661,6 +1696,265 @@ static void forEachBranchCondition(
   }
 }
 
+/// Returns true if \p V is an expression of at most a few instructions. Only
+/// such values are used when checking if bounds are inductive, to limit the
+/// cost of decomposing them repeatedly.
+static bool isSmallExpression(Value *V) {
+  static constexpr unsigned MaxInstructions = 8;
+  SmallVector<Value *, 8> Worklist = {V};
+  SmallPtrSet<Value *, 8> Seen;
+  while (!Worklist.empty()) {
+    auto *I = dyn_cast<Instruction>(Worklist.pop_back_val());
+    if (!I || isa<PHINode>(I) || !Seen.insert(I).second)
+      continue;
+    if (Seen.size() > MaxInstructions)
+      return false;
+    if (isa<BinaryOperator, CastInst, GetElementPtrInst>(I))
+      append_range(Worklist, I->operands());
+  }
+  return true;
+}
+
+/// Collects the values other than \p PN that flow into \p BackedgePhi through
+/// phis in \p L other than the header phis. As values only survive loop
+/// iterations through the header phis, every value \p BackedgePhi takes is one
+/// of them or \p PN. Values from unreachable blocks are skipped, as they never
+/// flow. Returns false if there are none or too many of them.
+static bool collectIncomingValues(PHINode &PN, PHINode &BackedgePhi,
+                                  const Loop &L, const DominatorTree &DT,
+                                  SmallVectorImpl<IncomingValue> &Incoming) {
+  static constexpr unsigned MaxPhis = 8;
+  static constexpr unsigned MaxIncomingValues = 8;
+  static constexpr unsigned MaxUses = 32;
+
+  SmallVector<PHINode *, 4> Worklist = {&BackedgePhi};
+  SmallPtrSet<PHINode *, 4> SeenPhis = {&BackedgePhi};
+  unsigned NumUses = 0;
+  while (!Worklist.empty()) {
+    PHINode *Phi = Worklist.pop_back_val();
+    for (const Use &U : Phi->incoming_values()) {
+      if (++NumUses > MaxUses)
+        return false;
+      Value *V = U.get();
+      BasicBlock *From = Phi->getIncomingBlock(U);
+      if (V == &PN || !DT.isReachableFromEntry(From))
+        continue;
+      auto *VPhi = dyn_cast<PHINode>(V);
+      if (VPhi && VPhi->getParent() != L.getHeader() && L.contains(VPhi)) {
+        if (SeenPhis.insert(VPhi).second) {
+          if (SeenPhis.size() > MaxPhis)
+            return false;
+          Worklist.push_back(VPhi);
+        }
+        continue;
+      }
+      // Phis may have multiple entries for the same edge.
+      if (any_of(Incoming, [&](const IncomingValue &In) {
+            return In.V == V && In.From == From && In.To == Phi->getParent();
+          }))
+        continue;
+      if (Incoming.size() == MaxIncomingValues || !isSmallExpression(V))
+        return false;
+      Incoming.push_back({V, From, Phi->getParent(), {}});
+    }
+  }
+  return !Incoming.empty();
+}
+
+void State::collectConditions(IncomingValue &In, const Loop &L) {
+  static constexpr unsigned MaxDomTreeSteps = 16;
+  static constexpr unsigned MaxConditions = 8;
+
+  auto AddConditions = [&](BasicBlock *From, BasicBlock *To) {
+    auto *Br = dyn_cast<CondBrInst>(From->getTerminator());
+    if (!Br || Br->getSuccessor(0) == Br->getSuccessor(1))
+      return;
+    bool IsTrue = Br->getSuccessor(0) == To;
+    auto Res = BranchConditions.try_emplace({Br->getCondition(), IsTrue});
+    SmallVectorImpl<ConditionTy> &Conds = Res.first->second;
+    if (Res.second)
+      forEachBranchCondition(Br->getCondition(), IsTrue,
+                             [&Conds](CmpPredicate Pred, Value *A, Value *B) {
+                               if (Conds.size() < MaxConditions &&
+                                   isSmallExpression(A) && isSmallExpression(B))
+                                 Conds.emplace_back(Pred, A, B);
+                             });
+    In.Conditions.append(
+        Conds.begin(),
+        Conds.begin() + std::min<size_t>(Conds.size(),
+                                         MaxConditions - In.Conditions.size()));
+  };
+
+  // In.V flows along the edge From -> To. The conditions of the edges
+  // dominating From also hold at that point. Collect them starting with the
+  // innermost edge, which is most likely to be relevant.
+  AddConditions(In.From, In.To);
+  BasicBlock *BB = In.From;
+  for (unsigned Steps = 0; BB != L.getHeader() && Steps < MaxDomTreeSteps &&
+                           In.Conditions.size() < MaxConditions;
+       ++Steps) {
+    BasicBlock *IDom = DT.getNode(BB)->getIDom()->getBlock();
+    auto Res = CanAddFromIDom.try_emplace(BB);
+    if (Res.second)
+      Res.first->second = canAddSuccessor(*IDom, BB);
+    if (Res.first->second)
+      AddConditions(IDom, BB);
+    BB = IDom;
+  }
+  std::reverse(In.Conditions.begin(), In.Conditions.end());
+}
+
+/// Returns true if \p PN \p Pred \p Bound holding in the loop header implies
+/// that each of the values in \p Incoming satisfies it as well when flowing
+/// into the backedge value, i.e. if the bound is inductive. Each constraint
+/// system built for the check uses up one unit of \p Budget.
+static bool isInductiveBound(PHINode &PN, CmpInst::Predicate Pred, Value *Bound,
+                             ArrayRef<IncomingValue> Incoming,
+                             unsigned &Budget) {
+  for (const IncomingValue &In : Incoming) {
+    if (Budget == 0)
+      return false;
+    --Budget;
+    ConstraintInfo Info(PN.getDataLayout(), {});
+    SmallVector<StackEntry, 8> Stack;
+    auto AddFact = [&Info, &Stack](CmpPredicate FactPred, Value *A, Value *B) {
+      Info.addFact(FactPred, A, B, /*NumIn=*/0, /*NumOut=*/0, Stack);
+      Info.transferToOtherSystem(FactPred, A, B, /*NumIn=*/0, /*NumOut=*/0,
+                                 Stack);
+    };
+
+    AddFact(Pred, &PN, Bound);
+    for (const ConditionTy &C : In.Conditions)
+      AddFact(C.Pred, C.Op0, C.Op1);
+    if (Info.doesHold(Pred, In.V, Bound))
+      continue;
+    // PN + 1 satisfies a non-strict bound if PN satisfies the strict one, as
+    // the increment cannot wrap then. This does not require no-wrap flags.
+    const APInt *Step;
+    if (CmpInst::isStrictPredicate(Pred) ||
+        !match(In.V, m_IncrementOf(m_Specific(&PN), Step)) || !Step->isOne() ||
+        !Info.doesHold(CmpInst::getStrictPredicate(Pred), &PN, Bound))
+      return false;
+  }
+  return true;
+}
+
+/// Returns false if \p Start \p Pred \p Bound does not hold for constant
+/// \p Start and \p Bound.
+static bool mayHoldOnEntry(CmpInst::Predicate Pred, Value *Start,
+                           Value *Bound) {
+  auto *StartC = dyn_cast<ConstantInt>(Start);
+  auto *BoundC = dyn_cast<ConstantInt>(Bound);
+  return !StartC || !BoundC ||
+         ICmpInst::compare(StartC->getValue(), BoundC->getValue(), Pred);
+}
+
+/// Collects candidate bounds for \p PN from the compares of \p PN and of the
+/// in-loop instructions in \p Incoming, together with the signedness of the
+/// compare, treating equality compares as unsigned. The bounds must be defined
+/// before the loop, so they are the same in all iterations.
+static void
+collectCandidateBounds(PHINode &PN, Value *Start,
+                       ArrayRef<IncomingValue> Incoming, const Loop &L,
+                       const DominatorTree &DT,
+                       SmallVectorImpl<std::pair<Value *, bool>> &Bounds) {
+  static constexpr unsigned MaxBounds = 4;
+  static constexpr unsigned MaxUsersToExplore = 32;
+
+  auto CollectBounds = [&](Value *V) {
+    unsigned NumUsers = 0;
+    for (User *U : V->users()) {
+      if (Bounds.size() == MaxBounds || ++NumUsers > MaxUsersToExplore)
+        return;
+      CmpPredicate Pred;
+      Value *Op0, *Op1;
+      if (!match(U, m_ICmp(Pred, m_Value(Op0), m_Value(Op1))))
+        continue;
+      Value *Bound = Op0 == V ? Op1 : Op0;
+      auto *BoundI = dyn_cast<Instruction>(Bound);
+      if (Bound == V ||
+          (BoundI &&
+           !DT.properlyDominates(BoundI->getParent(), L.getHeader())) ||
+          !isSmallExpression(Bound))
+        continue;
+      bool IsSigned = ICmpInst::isSigned(Pred);
+      // Skip bounds for which the non-strict bound always holds or the strict
+      // one never does.
+      const APInt *BoundC;
+      if (match(Bound, m_APInt(BoundC)) &&
+          (IsSigned ? BoundC->isMinSignedValue() || BoundC->isMaxSignedValue()
+                    : BoundC->isMinValue() || BoundC->isMaxValue()))
+        continue;
+      if (mayHoldOnEntry(IsSigned ? CmpInst::ICMP_SLE : CmpInst::ICMP_ULE,
+                         Start, Bound) &&
+          !is_contained(Bounds, std::make_pair(Bound, IsSigned)))
+        Bounds.emplace_back(Bound, IsSigned);
+    }
+  };
+  // The compares of the incoming values usually are the conditions that bound
+  // them, so look at those first.
+  for (const IncomingValue &In : Incoming)
+    if (auto *I = dyn_cast<Instruction>(In.V); I && L.contains(I))
+      CollectBounds(I);
+  CollectBounds(&PN);
+}
+
+void State::addInfoForConditionalInductions(BasicBlock &BB) {
+  Loop *L = LI.getLoopFor(&BB);
+  if (!L || L->getHeader() != &BB)
+    return;
+  BasicBlock *LoopPred = L->getLoopPredecessor();
+  if (!LoopPred)
+    return;
+
+  DomTreeNode *DTN = DT.getNode(&BB);
+  for (PHINode &PN : BB.phis()) {
+    if (InductiveBoundBudget == 0)
+      return;
+    if (!PN.getType()->isIntegerTy())
+      continue;
+    auto [Start, Backedge] = getStartAndBackedgeValue(PN, LoopPred);
+    auto *BackedgePhi = dyn_cast_or_null<PHINode>(Backedge);
+    if (!BackedgePhi || BackedgePhi->getParent() == &BB ||
+        !L->contains(BackedgePhi))
+      continue;
+
+    SmallVector<IncomingValue, 4> Incoming;
+    if (!collectIncomingValues(PN, *BackedgePhi, *L, DT, Incoming))
+      continue;
+    SmallVector<std::pair<Value *, bool>, 4> Bounds;
+    collectCandidateBounds(PN, Start, Incoming, *L, DT, Bounds);
+    if (Bounds.empty())
+      continue;
+    for (IncomingValue &In : Incoming)
+      collectConditions(In, *L);
+
+    for (auto [Bound, IsSigned] : Bounds) {
+      // Try the strict bound first. The non-strict one is still useful if the
+      // start value may not satisfy the strict one.
+      CmpInst::Predicate StrictPred =
+          IsSigned ? CmpInst::ICMP_SLT : CmpInst::ICMP_ULT;
+      for (CmpInst::Predicate Pred :
+           {StrictPred, ICmpInst::getNonStrictPredicate(StrictPred)}) {
+        if (!mayHoldOnEntry(Pred, Start, Bound))
+          continue;
+        LLVM_DEBUG(dbgs() << "Checking if '";
+                   dumpUnpackedICmp(dbgs(), Pred, &PN, Bound);
+                   dbgs() << "' is inductive\n");
+        if (!isInductiveBound(PN, Pred, Bound, Incoming, InductiveBoundBudget))
+          continue;
+        LLVM_DEBUG(dbgs() << "Adding inductive bound '";
+                   dumpUnpackedICmp(dbgs(), Pred, &PN, Bound); dbgs() << "'\n");
+        // The bound holds on entry if it holds for the start value.
+        WorkList.push_back(FactOrCheck::getConditionFact(
+            DTN, Pred, &PN, Bound, ConditionTy(Pred, Start, Bound)));
+        if (isa<ConstantInt>(Start) && isa<ConstantInt>(Bound))
+          break;
+      }
+    }
+  }
+}
+
 static bool getConstraintFromMemoryAccess(GetElementPtrInst &GEP,
                                           uint64_t AccessSize,
                                           CmpPredicate &Pred, Value *&A,
@@ -1764,6 +2058,7 @@ static bool tryToStrengthenFlags(Instruction *I, ConstraintInfo &Info) {
 void State::addInfoFor(BasicBlock &BB) {
   addBoundsForHeaderInductions(BB);
   addInfoForInductions(BB);
+  addInfoForConditionalInductions(BB);
   auto &DL = BB.getDataLayout();
 
   Value *A, *B;
@@ -2556,7 +2851,8 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
   DT.updateDFSNumbers();
   SmallVector<Value *> FunctionArgs(llvm::make_pointer_range(F.args()));
   ConstraintInfo Info(F.getDataLayout(), FunctionArgs);
-  State S(DT, LI, SE, TLI);
+  State S(DT, LI, SE, TLI,
+          Opts.constraint_elimination_max_inductive_bound_checks);
   std::unique_ptr<Module> ReproducerModule(
       Opts.constraint_elimination_dump_reproducers
           ? new Module(F.getName(), F.getContext())
