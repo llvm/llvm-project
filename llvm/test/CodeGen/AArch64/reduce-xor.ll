@@ -198,10 +198,9 @@ define i8 @test_redxor_v3i8(<3 x i8> %a) {
 ; CHECK-SD-NEXT:    mov v0.h[1], w1
 ; CHECK-SD-NEXT:    mov v0.h[2], w2
 ; CHECK-SD-NEXT:    fmov x8, d0
-; CHECK-SD-NEXT:    lsr x9, x8, #32
-; CHECK-SD-NEXT:    lsr x10, x8, #16
-; CHECK-SD-NEXT:    eor w8, w8, w9
-; CHECK-SD-NEXT:    eor w0, w8, w10
+; CHECK-SD-NEXT:    lsr x9, x8, #16
+; CHECK-SD-NEXT:    eor x8, x8, x8, lsr #32
+; CHECK-SD-NEXT:    eor w0, w8, w9
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_redxor_v3i8:
@@ -218,8 +217,8 @@ define i8 @test_redxor_v4i8(<4 x i8> %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fmov x8, d0
 ; CHECK-SD-NEXT:    eor x8, x8, x8, lsr #32
-; CHECK-SD-NEXT:    lsr x9, x8, #16
-; CHECK-SD-NEXT:    eor w0, w8, w9
+; CHECK-SD-NEXT:    eor x0, x8, x8, lsr #16
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_redxor_v4i8:
@@ -243,8 +242,8 @@ define i8 @test_redxor_v8i8(<8 x i8> %a) {
 ; CHECK-SD-NEXT:    fmov x8, d0
 ; CHECK-SD-NEXT:    eor x8, x8, x8, lsr #32
 ; CHECK-SD-NEXT:    eor x8, x8, x8, lsr #16
-; CHECK-SD-NEXT:    lsr x9, x8, #8
-; CHECK-SD-NEXT:    eor w0, w8, w9
+; CHECK-SD-NEXT:    eor x0, x8, x8, lsr #8
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_redxor_v8i8:
@@ -278,8 +277,8 @@ define i8 @test_redxor_v16i8(<16 x i8> %a) {
 ; CHECK-SD-NEXT:    fmov x8, d0
 ; CHECK-SD-NEXT:    eor x8, x8, x8, lsr #32
 ; CHECK-SD-NEXT:    eor x8, x8, x8, lsr #16
-; CHECK-SD-NEXT:    lsr x9, x8, #8
-; CHECK-SD-NEXT:    eor w0, w8, w9
+; CHECK-SD-NEXT:    eor x0, x8, x8, lsr #8
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_redxor_v16i8:
@@ -315,8 +314,8 @@ define i8 @test_redxor_v32i8(<32 x i8> %a) {
 ; CHECK-SD-NEXT:    fmov x8, d0
 ; CHECK-SD-NEXT:    eor x8, x8, x8, lsr #32
 ; CHECK-SD-NEXT:    eor x8, x8, x8, lsr #16
-; CHECK-SD-NEXT:    lsr x9, x8, #8
-; CHECK-SD-NEXT:    eor w0, w8, w9
+; CHECK-SD-NEXT:    eor x0, x8, x8, lsr #8
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_redxor_v32i8:
@@ -349,8 +348,8 @@ define i16 @test_redxor_v4i16(<4 x i16> %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fmov x8, d0
 ; CHECK-SD-NEXT:    eor x8, x8, x8, lsr #32
-; CHECK-SD-NEXT:    lsr x9, x8, #16
-; CHECK-SD-NEXT:    eor w0, w8, w9
+; CHECK-SD-NEXT:    eor x0, x8, x8, lsr #16
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_redxor_v4i16:
@@ -375,8 +374,8 @@ define i16 @test_redxor_v8i16(<8 x i16> %a) {
 ; CHECK-SD-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    fmov x8, d0
 ; CHECK-SD-NEXT:    eor x8, x8, x8, lsr #32
-; CHECK-SD-NEXT:    lsr x9, x8, #16
-; CHECK-SD-NEXT:    eor w0, w8, w9
+; CHECK-SD-NEXT:    eor x0, x8, x8, lsr #16
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_redxor_v8i16:
@@ -403,8 +402,8 @@ define i16 @test_redxor_v16i16(<16 x i16> %a) {
 ; CHECK-SD-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    fmov x8, d0
 ; CHECK-SD-NEXT:    eor x8, x8, x8, lsr #32
-; CHECK-SD-NEXT:    lsr x9, x8, #16
-; CHECK-SD-NEXT:    eor w0, w8, w9
+; CHECK-SD-NEXT:    eor x0, x8, x8, lsr #16
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_redxor_v16i16:
@@ -428,8 +427,8 @@ define i32 @test_redxor_v2i32(<2 x i32> %a) {
 ; CHECK-SD-LABEL: test_redxor_v2i32:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fmov x8, d0
-; CHECK-SD-NEXT:    lsr x9, x8, #32
-; CHECK-SD-NEXT:    eor w0, w8, w9
+; CHECK-SD-NEXT:    eor x0, x8, x8, lsr #32
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_redxor_v2i32:
@@ -449,8 +448,8 @@ define i32 @test_redxor_v4i32(<4 x i32> %a) {
 ; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    fmov x8, d0
-; CHECK-SD-NEXT:    lsr x9, x8, #32
-; CHECK-SD-NEXT:    eor w0, w8, w9
+; CHECK-SD-NEXT:    eor x0, x8, x8, lsr #32
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_redxor_v4i32:
@@ -472,8 +471,8 @@ define i32 @test_redxor_v8i32(<8 x i32> %a) {
 ; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    fmov x8, d0
-; CHECK-SD-NEXT:    lsr x9, x8, #32
-; CHECK-SD-NEXT:    eor w0, w8, w9
+; CHECK-SD-NEXT:    eor x0, x8, x8, lsr #32
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_redxor_v8i32:
