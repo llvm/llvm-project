@@ -23,13 +23,13 @@ define void @foo(i32 %no, ptr nocapture %d, ptr nocapture %q) nounwind {
 ; CHECK-NEXT:    %5 = getelementptr inbounds double, ptr %q, i64 %4
 ; CHECK-NEXT:    --> {%q,+,16}<nuw><%bb> U: full-set S: full-set Exits: ((16 * ((1 + (zext i32 (-2 + (2 * (%no /u 2))<nuw>) to i64))<nuw><nsw> /u 2))<nuw><nsw> + %q)<u nuw> LoopDispositions: { %bb: Computable }
 ; CHECK-NEXT:    %7 = or disjoint i32 %i.01, 1
-; CHECK-NEXT:    --> {1,+,2}<nuw><nsw><%bb> U: [1,2147483646) S: [1,2147483646) Exits: (1 + (2 * ((-1 + (2 * (%no /u 2))<nuw>) /u 2))<nuw>)<nuw><nsw> LoopDispositions: { %bb: Computable }
+; CHECK-NEXT:    --> {1,+,2}<nuw><nsw><%bb> U: [1,2147483646) S: [1,2147483646) Exits: (1 + (2 * ((-1 + (2 * (%no /u 2))<nuw>) /u 2))<nuw><u nsw>)<nuw><nsw> LoopDispositions: { %bb: Computable }
 ; CHECK-NEXT:    %8 = sext i32 %7 to i64
 ; CHECK-NEXT:    --> {1,+,2}<nuw><nsw><%bb> U: [1,2147483646) S: [1,2147483646) Exits: (1 + (2 * ((1 + (zext i32 (-2 + (2 * (%no /u 2))<nuw>) to i64))<nuw><nsw> /u 2))<nuw><nsw>)<nuw><nsw> LoopDispositions: { %bb: Computable }
 ; CHECK-NEXT:    %9 = getelementptr inbounds double, ptr %q, i64 %8
 ; CHECK-NEXT:    --> {(8 + %q),+,16}<nuw><%bb> U: full-set S: full-set Exits: (8 + (16 * ((1 + (zext i32 (-2 + (2 * (%no /u 2))<nuw>) to i64))<nuw><nsw> /u 2))<nuw><nsw> + %q) LoopDispositions: { %bb: Computable }
 ; CHECK-NEXT:    %t7 = add nsw i32 %i.01, 1
-; CHECK-NEXT:    --> {1,+,2}<nuw><nsw><%bb> U: [1,2147483646) S: [1,2147483646) Exits: (1 + (2 * ((-1 + (2 * (%no /u 2))<nuw>) /u 2))<nuw>)<nuw><nsw> LoopDispositions: { %bb: Computable }
+; CHECK-NEXT:    --> {1,+,2}<nuw><nsw><%bb> U: [1,2147483646) S: [1,2147483646) Exits: (1 + (2 * ((-1 + (2 * (%no /u 2))<nuw>) /u 2))<nuw><u nsw>)<nuw><nsw> LoopDispositions: { %bb: Computable }
 ; CHECK-NEXT:    %t8 = sext i32 %t7 to i64
 ; CHECK-NEXT:    --> {1,+,2}<nuw><nsw><%bb> U: [1,2147483646) S: [1,2147483646) Exits: (1 + (2 * ((1 + (zext i32 (-2 + (2 * (%no /u 2))<nuw>) to i64))<nuw><nsw> /u 2))<nuw><nsw>)<nuw><nsw> LoopDispositions: { %bb: Computable }
 ; CHECK-NEXT:    %t9 = getelementptr inbounds double, ptr %q, i64 %t8
@@ -39,7 +39,7 @@ define void @foo(i32 %no, ptr nocapture %d, ptr nocapture %q) nounwind {
 ; CHECK-NEXT:    %15 = getelementptr inbounds double, ptr %d, i64 %14
 ; CHECK-NEXT:    --> {%d,+,16}<nuw><%bb> U: full-set S: full-set Exits: ((16 * ((1 + (zext i32 (-2 + (2 * (%no /u 2))<nuw>) to i64))<nuw><nsw> /u 2))<nuw><nsw> + %d)<u nuw> LoopDispositions: { %bb: Computable }
 ; CHECK-NEXT:    %16 = add nsw i32 %i.01, 2
-; CHECK-NEXT:    --> {2,+,2}<nuw><nsw><%bb> U: [2,2147483647) S: [2,2147483647) Exits: (2 + (2 * ((-1 + (2 * (%no /u 2))<nuw>) /u 2))<nuw>)<u nuw> LoopDispositions: { %bb: Computable }
+; CHECK-NEXT:    --> {2,+,2}<nuw><nsw><%bb> U: [2,2147483647) S: [2,2147483647) Exits: (2 + (2 * ((-1 + (2 * (%no /u 2))<nuw>) /u 2))<nuw><u nsw>)<u nuw><u nsw> LoopDispositions: { %bb: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @foo
 ; CHECK-NEXT:  Loop %bb: backedge-taken count is ((-1 + (2 * (%no /u 2))<nuw>) /u 2)
 ; CHECK-NEXT:  Loop %bb: constant max backedge-taken count is i32 1073741822
