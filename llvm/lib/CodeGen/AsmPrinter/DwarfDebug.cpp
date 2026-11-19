@@ -3395,6 +3395,12 @@ void DwarfDebug::emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
                    << " bits\n");
         return false;
       }
+    } else if (Entry.isConstantInt()) {
+      // DWARF stack entries are address-sized (see PR52584).
+      const APInt &RawBytes = Entry.getConstantInt()->getValue();
+      if (RawBytes.getBitWidth() > 64)
+        return false;
+      DwarfExpr.addUnsignedConstant(RawBytes.getZExtValue());
     }
     return true;
   };
@@ -3406,10 +3412,13 @@ void DwarfDebug::emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
     return;
   }
 
-  // If any of the location entries are registers with the value 0, then the
-  // location is undefined.
+  // If any of the location entries are registers with the value 0, or integer
+  // constants too wide to emit, then the location is undefined. Check up front
+  // so that no partial expression is written.
   if (any_of(Value.getLocEntries(), [](const DbgValueLocEntry &Entry) {
-        return Entry.isLocation() && !Entry.getLoc().getReg();
+        return (Entry.isLocation() && !Entry.getLoc().getReg()) ||
+               (Entry.isConstantInt() &&
+                Entry.getConstantInt()->getBitWidth() > 64);
       }))
     return;
 

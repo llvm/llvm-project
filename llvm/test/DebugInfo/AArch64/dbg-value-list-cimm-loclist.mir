@@ -1,0 +1,68 @@
+# RUN: llc -mtriple=aarch64-unknown-linux-gnu -start-after=live-debug-values -filetype=obj %s -o - \
+# RUN:   | llvm-dwarfdump --debug-info - | FileCheck %s
+
+# Integer constants in a variadic location list entry are emitted when they fit
+# a DWARF stack entry; wider ones drop the range instead of emitting a partial
+# expression.
+
+# CHECK:      DW_TAG_variable
+# CHECK-NEXT:   DW_AT_location
+# CHECK-NEXT:     [{{.*}}): DW_OP_reg8 W8)
+# CHECK-NEXT:   DW_AT_name ("wide")
+
+# CHECK:      DW_TAG_variable
+# CHECK-NEXT:   DW_AT_location
+# CHECK-NEXT:     [{{.*}}): DW_OP_breg0 W0+0, DW_OP_lit7, DW_OP_xor, DW_OP_stack_value
+# CHECK-NEXT:     [{{.*}}): DW_OP_reg8 W8)
+# CHECK-NEXT:   DW_AT_name ("narrow")
+
+--- |
+  define i64 @wide_cimm(i64 %v, i64 %w) !dbg !3 {
+    ret i64 %v, !dbg !7
+  }
+
+  define i64 @narrow_cimm(i64 %v, i64 %w) !dbg !8 {
+    ret i64 %v, !dbg !10
+  }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!2}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, isOptimized: true, emissionKind: FullDebug)
+  !1 = !DIFile(filename: "t.c", directory: "/")
+  !2 = !{i32 2, !"Debug Info Version", i32 3}
+  !3 = distinct !DISubprogram(name: "wide_cimm", scope: !1, file: !1, line: 1, type: !4, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+  !4 = !DISubroutineType(types: !{})
+  !5 = !DILocalVariable(name: "wide", scope: !3, file: !1, line: 1, type: !6)
+  !6 = !DIBasicType(name: "long", size: 64, encoding: DW_ATE_signed)
+  !7 = !DILocation(line: 1, scope: !3)
+  !8 = distinct !DISubprogram(name: "narrow_cimm", scope: !1, file: !1, line: 2, type: !4, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+  !9 = !DILocalVariable(name: "narrow", scope: !8, file: !1, line: 2, type: !6)
+  !10 = !DILocation(line: 2, scope: !8)
+...
+---
+name:            wide_cimm
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x0, $x1
+
+    DBG_VALUE_LIST !5, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_xor, DW_OP_stack_value), $x0, i128 36893488147419103233, debug-location !7
+    $x8 = ADDXrs killed $x0, $x1, 0, debug-location !7
+    DBG_VALUE $x8, $noreg, !5, !DIExpression(), debug-location !7
+    $x0 = MADDXrrr killed $x8, killed $x1, $xzr, debug-location !7
+    RET undef $lr, implicit killed $x0, debug-location !7
+...
+---
+name:            narrow_cimm
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x0, $x1
+
+    DBG_VALUE_LIST !9, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_xor, DW_OP_stack_value), $x0, i64 7, debug-location !10
+    $x8 = ADDXrs killed $x0, $x1, 0, debug-location !10
+    DBG_VALUE $x8, $noreg, !9, !DIExpression(), debug-location !10
+    $x0 = MADDXrrr killed $x8, killed $x1, $xzr, debug-location !10
+    RET undef $lr, implicit killed $x0, debug-location !10
+...
