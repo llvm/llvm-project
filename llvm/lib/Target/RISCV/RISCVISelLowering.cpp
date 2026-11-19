@@ -25821,7 +25821,15 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       if (Opc == RISCVISD::SHA || Opc == RISCVISD::SHAR ||
           Opc == RISCVISD::SHL || Opc == RISCVISD::SHLR)
         return DAG.getConstant(0, DL, VT);
-      break;
+
+      if (Opc == RISCVISD::SSHA || Opc == RISCVISD::SSHAR)
+        return DAG.getNode(Opc, DL, VT, N->getOperand(0),
+                           DAG.getConstant(EltBits - 1, DL, XLenVT));
+
+      SDValue Zero = DAG.getConstant(0, DL, VT);
+      if (VT.isVector())
+        return DAG.getSetCC(DL, VT, Zero, N->getOperand(0), ISD::SETULT);
+      return DAG.getNode(RISCVISD::MSLTU, DL, VT, Zero, N->getOperand(0));
     }
 
     if (ShAmt > -EltBits)
@@ -25829,7 +25837,8 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
 
     bool IsSignFill = Opc == RISCVISD::SSHA || Opc == RISCVISD::SHA;
     bool IsHighBit = Opc == RISCVISD::SSHLR || Opc == RISCVISD::SHLR;
-    if (!IsSignFill && !IsHighBit)
+    // Rounding preserves the high bit only at exactly -EltBits.
+    if (!IsSignFill && (!IsHighBit || ShAmt != -EltBits))
       return DAG.getConstant(0, DL, VT);
 
     unsigned ShiftOpc = IsSignFill ? ISD::SRA : ISD::SRL;

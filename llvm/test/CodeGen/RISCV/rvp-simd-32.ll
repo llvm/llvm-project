@@ -4522,3 +4522,48 @@ define <2 x i16> @merge_v2i16(<2 x i16> %m, <2 x i16> %a, <2 x i16> %b) {
   %r = or <2 x i16> %x, %y
   ret <2 x i16> %r
 }
+
+define <2 x i16> @test_psshlr_s_u16x2_neg_imm_beyond_width(<2 x i16> %a) {
+; CHECK-LABEL: test_psshlr_s_u16x2_neg_imm_beyond_width:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.psshlr.v2i16.i32(<2 x i16> %a, i32 -17)
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_pssha_s_i16x2_imm_too_large(<2 x i16> %a) {
+; CHECK-LABEL: test_pssha_s_i16x2_imm_too_large:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    psslai.h a0, a0, 15
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.pssha.v2i16.i32(<2 x i16> %a, i32 16)
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_psshar_s_i16x2_imm_too_large(<2 x i16> %a) {
+; CHECK-LABEL: test_psshar_s_i16x2_imm_too_large:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    psslai.h a0, a0, 15
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.psshar.v2i16.i32(<2 x i16> %a, i32 16)
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_psshl_s_u16x2_imm_too_large(<2 x i16> %a) {
+; CHECK-LABEL: test_psshl_s_u16x2_imm_too_large:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pmsnez.h a0, a0
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.psshl.v2i16.i32(<2 x i16> %a, i32 16)
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_psshlr_s_u16x2_imm_too_large(<2 x i16> %a) {
+; CHECK-LABEL: test_psshlr_s_u16x2_imm_too_large:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pmsnez.h a0, a0
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.psshlr.v2i16.i32(<2 x i16> %a, i32 16)
+  ret <2 x i16> %res
+}

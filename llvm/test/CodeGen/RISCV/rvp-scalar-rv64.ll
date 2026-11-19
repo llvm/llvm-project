@@ -1960,3 +1960,12 @@ define signext i32 @msltu_i32_sext(i32 signext %a, i32 signext %b) nounwind {
   %r = call i32 @llvm.riscv.msltu.u32(i32 %a, i32 %b)
   ret i32 %r
 }
+
+define i64 @test_shlr_u64_negimm_beyond_width(i64 %a) {
+; CHECK-LABEL: test_shlr_u64_negimm_beyond_width:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    ret
+  %res = call i64 @llvm.riscv.shlr.u64(i64 %a, i32 -65)
+  ret i64 %res
+}
