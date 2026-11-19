@@ -165,6 +165,10 @@ public:
   iterator erase(iterator Pos) { return Vector.erase(Pos); }
   iterator erase(const_iterator Pos) { return Vector.erase(Pos); }
 
+  template <typename UnaryPredicate> void erase_if(UnaryPredicate P) {
+    llvm::erase_if(Vector, P);
+  }
+
   bool operator==(const SortedVectorMap &Other) const {
     return Vector == Other.Vector;
   }

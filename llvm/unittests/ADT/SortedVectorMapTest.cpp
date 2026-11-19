@@ -137,4 +137,16 @@ TEST(SortedVectorMapTest, Iterators) {
   EXPECT_EQ(ConstMap.crbegin()->first, 3);
   EXPECT_EQ(std::prev(ConstMap.crend())->first, 1);
 }
+
+TEST(SortedVectorMapTest, EraseIf) {
+  SortedVectorMap<int, int> Map;
+  Map[1] = 10;
+  Map[2] = 20;
+  Map[3] = 30;
+  Map[4] = 40;
+
+  Map.erase_if([](const auto &Entry) { return Entry.first % 2 == 0; });
+  EXPECT_THAT(Map,
+              testing::ElementsAre(testing::Pair(1, 10), testing::Pair(3, 30)));
+}
 } // namespace
