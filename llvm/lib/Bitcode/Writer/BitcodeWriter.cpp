@@ -337,6 +337,8 @@ private:
                        unsigned Abbrev);
   void writeDILayerLocList(const DILayerLocList *N,
                            SmallVectorImpl<uint64_t> &Record, unsigned Abbrev);
+  void writeDIDbgLoc(const DIDbgLoc *N, SmallVectorImpl<uint64_t> &Record,
+                     unsigned &Abbrev);
   void writeMDFunctionLocalContext(const MDFunctionLocalContext *N,
                                    SmallVectorImpl<uint64_t> &Record,
                                    unsigned &Abbrev);
@@ -2014,6 +2016,12 @@ void ModuleBitcodeWriter::writeDILayerLocList(const DILayerLocList *N,
     Record.push_back(VE.getMetadataID(Op.get()));
   Stream.EmitRecord(bitc::METADATA_LAYERLOCLIST, Record, Abbrev);
   Record.clear();
+}
+
+void ModuleBitcodeWriter::writeDIDbgLoc(const DIDbgLoc *N,
+                                        SmallVectorImpl<uint64_t> &Record,
+                                        unsigned &Abbrev) {
+  llvm_unreachable("not implemented");
 }
 
 unsigned ModuleBitcodeWriter::createGenericDINodeAbbrev() {

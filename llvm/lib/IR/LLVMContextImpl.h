@@ -31,6 +31,7 @@
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
@@ -364,6 +365,22 @@ template <> struct MDNodeKeyImpl<DILayerLocList> : MDNodeOpsKey {
   static unsigned calculateHash(DILayerLocList *N) {
     return MDNodeOpsKey::calculateHash(N);
   }
+};
+
+/// DenseMapInfo for DIDbgLoc.
+template <> struct MDNodeKeyImpl<DIDbgLoc> {
+  FLDebugLoc DL;
+  Metadata *Ctx;
+
+  MDNodeKeyImpl(Metadata *Ctx, FLDebugLoc DL) : DL(DL), Ctx(Ctx) {}
+  MDNodeKeyImpl(const DIDbgLoc *N)
+      : DL(N->getFLDebugLoc()), Ctx(N->getRawFLContext()) {}
+
+  bool isKeyOf(const DIDbgLoc *RHS) const {
+    return DL == RHS->getFLDebugLoc() && Ctx == RHS->getRawFLContext();
+  }
+
+  unsigned getHashValue() const { return hash_combine(DL, Ctx); }
 };
 
 /// DenseMapInfo for GenericDINode.

@@ -117,6 +117,200 @@ using DebugLocRef = DILocAndCoverageTracking;
 using DebugLocRef = DILocation *;
 #endif // LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE
 
+/// Represents a DebugLoc in Function-Local form, where it is defined primarily
+/// by Function-Local Metadata references, and thus requires an
+/// MDFunctionLocalContext* to resolve to its contents.
+/// FLDebugLoc has 3 possible kinds:
+/// - `Empty`, no SrcLocIdx, no InlinedAtIdx: represents the absence of a
+///   location. Must have an atom group/rank of 0.
+/// - `InstrLoc`, has SrcLocIdx, optional InlinedAtIdx: represents a "normal"
+///   DebugLoc that may be attached to e.g. an instruction, record, or loopMD.
+///   May have a valid atom group/rank.
+/// - `InlinedCallLoc`, no SrcLocIdx, has InlinedAtIdx: represents an inlined
+///   call, which it references via InlinedAtIdx. This is the kind of an
+///   FLDebugLoc returned by `getInlinedAt()`, and it may not be attached to an
+///   instruction or other end-user. Must have an atom group/rank of 0.
+struct FLDebugLoc {
+  FLIndex<FLSrcLoc> SrcLocIdx;
+  FLIndex<FLInlinedCall> InlinedAtIdx;
+  uint16_t AtomGroup : 13;
+  uint16_t AtomRank : 3;
+
+  /// Default Empty-kind constructor.
+  FLDebugLoc() : SrcLocIdx(), InlinedAtIdx(), AtomGroup(0), AtomRank(0) {}
+  /// Constructor with arguments for an InstrLoc-kind FLDebugLoc.
+  FLDebugLoc(FLIndex<FLSrcLoc> SrcLocIdx, FLIndex<FLInlinedCall> InlinedAtIdx,
+             uint16_t AtomGroup = 0, uint8_t AtomRank = 0)
+      : SrcLocIdx(SrcLocIdx), InlinedAtIdx(InlinedAtIdx), AtomGroup(AtomGroup),
+        AtomRank(AtomRank) {
+    assert((SrcLocIdx || !AtomGroup && !AtomRank) &&
+           "Only FLDebugLoc with a valid SrcLoc may have an atom.");
+  }
+  /// Constructor with arguments for an InlinedCall-kind FLDebugLoc.
+  FLDebugLoc(FLIndex<FLInlinedCall> InlinedCallIdx)
+      : SrcLocIdx(), InlinedAtIdx(InlinedCallIdx), AtomGroup(0), AtomRank(0) {}
+
+  bool operator==(const FLDebugLoc &Other) const {
+    return asRawInt() == Other.asRawInt();
+  }
+  bool operator!=(const FLDebugLoc &Other) const {
+    return asRawInt() != Other.asRawInt();
+  }
+  bool operator<(const FLDebugLoc &Other) const {
+    return asRawInt() < Other.asRawInt();
+  }
+
+  // Used primarily for hashing/comparison; more efficient than unpacking
+  // fields/bitfields individually.
+  uint64_t asRawInt() const {
+    static_assert(sizeof(*this) == sizeof(uint64_t));
+    uint64_t Result;
+    std::memcpy(&Result, this, sizeof(Result));
+    return Result;
+  }
+  static FLDebugLoc fromRawInt(uint64_t Raw) {
+    static_assert(sizeof(FLDebugLoc) == sizeof(uint64_t));
+    FLDebugLoc Result;
+    std::memcpy(&Result, &Raw, sizeof(Result));
+    return Result;
+  }
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Standalone methods (no context required)
+
+  /// An FLDebugLoc is empty iff !SrcLocIdx and !InlinedAtIdx; but since
+  /// !SrcLocIdx implies !AtomGroup and !AtomRank, we can perform a more
+  /// efficient check against `asRawInt()`.
+  explicit operator bool() const { return asRawInt(); }
+  bool isEmpty() const { return !*this; }
+  bool isInlinedInstrLoc() const { return InlinedAtIdx && SrcLocIdx; }
+  bool isNonInlinedInstrLoc() const { return !InlinedAtIdx && SrcLocIdx; }
+  bool isInstrLoc() const { return (bool)SrcLocIdx; }
+  bool isInlinedCall() const { return InlinedAtIdx && !SrcLocIdx; }
+
+  /// Returns the index of the InlinedCall that this FLDebugLoc represents; only
+  /// valid for InlinedCallLocs.
+  FLIndex<FLInlinedCall> getIdxForInlinedCall() const {
+    assert(isInlinedCall() &&
+           "can only getIdxForInlinedCall for an inlined call");
+    return InlinedAtIdx;
+  }
+
+  /// Returns the InlinedCall index that this loc was inlined at, without the
+  /// need for a context; invalid for an InlinedCallLoc.
+  FLIndex<FLInlinedCall> getInstrInlinedAt() const {
+    assert(!isInlinedCall() &&
+           "getInstrInlinedAt is invalid for InlinedCallLocs");
+    return InlinedAtIdx;
+  }
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Context methods
+
+  /// Methods for InlinedCallLocs
+
+  /// Where this loc is an InlinedCall, return the FLDebugLoc for the call's
+  /// original source location (minus any atom). Note that this removes the
+  /// distinction between distinct inlined calls with identical source
+  /// locations, meaning it is possible to have:
+  ///   D1.getInlinedAt() != D2->getInlinedAt() &&
+  ///   D1.getInlinedAt().getLocForInlinedCall() ==
+  ///     D2.getInlinedAt().getLocForInlinedCall();
+  FLDebugLoc getLocForInlinedCall(MDFunctionLocalContext *Context) const {
+    assert(isInlinedCall() &&
+           "getLocForInlinedCallLoc requires an inlined call");
+    FLInlinedCall InlinedCall = Context->getInlinedCall(InlinedAtIdx);
+    assert((!InlinedCall.InlinedAtIdx ||
+            InlinedCall.InlinedAtIdx.get() < InlinedAtIdx.get()) &&
+           "cyclic inlined call can't be handled");
+    return FLDebugLoc(InlinedCall.SrcLocIdx, InlinedCall.InlinedAtIdx);
+  }
+  /// Where this loc is an InlinedCall, return the FLInlinedCall that it
+  /// corresponds to.
+  FLInlinedCall asInlinedCall(MDFunctionLocalContext *Context) const {
+    assert(isInlinedCall() && "asInlinedCall called for non-InlinedCallLoc.");
+    return Context->getInlinedCall(InlinedAtIdx);
+  }
+  /// This is an awkward special case, where when we inlined DebugLocs into a
+  /// nodebug function, we create a special inlined call at the end of the
+  /// inline chain; this call has no SrcLocIdx, meaning some methods (such as
+  /// `getSrcLoc()`) will fail, similar to being called on an empty loc.
+  /// Fortunately, we more-or-less never try to handle such locs, as we ignore
+  /// DebugLocs inside of a nodebug function until it's time to inline them,
+  /// where this case is handled.
+  bool isNoDebugInlinedCall(MDFunctionLocalContext *Context) const {
+    return isInlinedCall() && !asInlinedCall(Context).SrcLocIdx;
+  }
+
+  /// Context data access methods; in general, these methods are used to fulfill
+  /// DebugLoc methods, e.g. getLine() => getSrcLoc(Ctx).Line.
+
+  FLDebugLoc getInlinedAt(MDFunctionLocalContext *Context) const {
+    if (isInlinedCall())
+      return FLDebugLoc(getLocForInlinedCall(Context).InlinedAtIdx);
+    return FLDebugLoc(InlinedAtIdx);
+  }
+  FLIndex<FLInlinedCall>
+  getInlinedAtIdx(MDFunctionLocalContext *Context) const {
+    if (isInlinedCall())
+      return getLocForInlinedCall(Context).InlinedAtIdx;
+    return InlinedAtIdx;
+  }
+  FLSrcLoc getSrcLoc(MDFunctionLocalContext *Context) const {
+    if (isInlinedCall())
+      return getLocForInlinedCall(Context).getSrcLoc(Context);
+    return Context->getSrcLoc(SrcLocIdx, InlinedAtIdx);
+  }
+  DILocalScope *getScope(MDFunctionLocalContext *Context) const {
+    if (isInlinedCall())
+      return getLocForInlinedCall(Context).getScope(Context);
+    FLSrcLoc SrcLoc = getSrcLoc(Context);
+    return Context->getScope(SrcLoc.ScopeIdx, InlinedAtIdx);
+  }
+
+  /// Returns the FunctionLocalContext which this FLDebugLoc represents a
+  /// location in, which is either the InlineeContext of the InlinedCall this
+  /// location immediately belongs to, or just Context if this is not inlined.
+  MDFunctionLocalContext *getInstrSrcContext(MDFunctionLocalContext *Context) {
+    FLDebugLoc InlinedAt = getInlinedAt(Context);
+    if (!InlinedAt)
+      return Context;
+    return InlinedAt.asInlinedCall(Context).InlineeContext;
+  }
+  /// Returns false if this loc contains indices that, when resolved against the
+  /// given \p Context, are invalid; returns true otherwise.
+  /// If false, then methods that read into \p Context may fail.
+  bool isValidInContext(MDFunctionLocalContext *Context) const {
+    if (InlinedAtIdx && InlinedAtIdx.get() >= Context->getInlinedCalls().size())
+      return false;
+    if (isInlinedCall()) {
+      FLInlinedCall IC = asInlinedCall(Context);
+      if (IC.InlinedAtIdx &&
+          IC.InlinedAtIdx.get() >= Context->getInlinedCalls().size())
+        return false;
+      if (IC.SrcLocIdx &&
+          !Context->isValidSrcLoc(IC.SrcLocIdx, IC.InlinedAtIdx))
+        return false;
+      return true;
+    }
+    // Empty locations have no indices that can be invalid.
+    if (!SrcLocIdx)
+      return true;
+    return Context->isValidSrcLoc(SrcLocIdx, InlinedAtIdx);
+  }
+};
+
+inline hash_code hash_value(const FLDebugLoc &Val) {
+  return hash_value(Val.asRawInt());
+}
+template <> struct DenseMapInfo<FLDebugLoc> {
+  static unsigned getHashValue(FLDebugLoc DL) { return hash_value(DL); }
+
+  static bool isEqual(FLDebugLoc LHS, FLDebugLoc RHS) {
+    return LHS.asRawInt() == RHS.asRawInt();
+  }
+};
+
 /// A debug info location.
 ///
 /// This class is a wrapper around an \a DILocation
