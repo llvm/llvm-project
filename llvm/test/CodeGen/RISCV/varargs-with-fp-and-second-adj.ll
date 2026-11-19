@@ -15,6 +15,8 @@ define dso_local void @_Z3fooPKcz(ptr noundef %0, ...) "frame-pointer"="all" {
 ; RV64V-NEXT:    lui t0, 2
 ; RV64V-NEXT:    addi t0, t0, -576
 ; RV64V-NEXT:    sub sp, sp, t0
+; RV64V-NEXT:    csrr t0, vlenb
+; RV64V-NEXT:    sub sp, sp, t0
 ; RV64V-NEXT:    sd a5, 40(s0)
 ; RV64V-NEXT:    sd a6, 48(s0)
 ; RV64V-NEXT:    sd a7, 56(s0)
@@ -34,6 +36,9 @@ define dso_local void @_Z3fooPKcz(ptr noundef %0, ...) "frame-pointer"="all" {
 ; RV64V-NEXT:    addi sp, sp, 496
 ; RV64V-NEXT:    .cfi_def_cfa_offset 0
 ; RV64V-NEXT:    ret
+  ; A scalable vector stack object leaves the call frame unreserved, so sp is
+  ; restored from the frame pointer, which is the epilogue this test is about.
+  %vec = alloca <vscale x 1 x i8>
   %2 = alloca ptr, align 8
   %3 = alloca ptr, align 8
   %4 = alloca [8000 x i8], align 1

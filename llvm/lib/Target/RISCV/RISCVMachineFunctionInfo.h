@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/MIRYamlMapping.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include <optional>
 
 namespace llvm {
 
@@ -76,6 +77,12 @@ private:
 
   /// Is there any vector argument or return?
   bool IsVectorCall = false;
+
+  /// Whether the function holds a scalable vector stack object, cached by the
+  /// first query made after register allocation has created its spill slots.
+  /// Unset until then: no hook runs between register allocation and that
+  /// query, which PEI makes before it calls determineCalleeSaves.
+  mutable std::optional<bool> HasRVVFrameObject;
 
   /// Registers that have been sign extended from i32.
   SmallVector<Register, 8> SExt32Registers;
@@ -243,6 +250,13 @@ public:
 
   bool isVectorCall() const { return IsVectorCall; }
   void setIsVectorCall() { IsVectorCall = true; }
+
+  /// True if the function has a scalable vector stack object or may still get
+  /// one. Until register allocation is done any vector register may be
+  /// spilled, so the answer is yes whenever V is enabled. Afterwards it is
+  /// exact: spill slots exist by then, and the only objects still to come are
+  /// the save slots of callee-saved vector registers the function clobbers.
+  bool hasRVVFrameObject(const MachineFunction &MF) const;
 
   bool hasDynamicAllocation() const { return HasDynamicAllocation; }
   void setDynamicAllocation() { HasDynamicAllocation = true; }
