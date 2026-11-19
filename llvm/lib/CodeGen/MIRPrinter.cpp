@@ -206,6 +206,7 @@ static void printMF(raw_ostream &OS, MFGetterFnT Fn, const MachineFunction &MF,
   YamlMF.NoPHIs = Props.hasNoPHIs();
   YamlMF.IsSSA = Props.hasIsSSA();
   YamlMF.NoVRegs = Props.hasNoVRegs();
+  YamlMF.UsesBlockArgs = Props.hasUsesBlockArgs();
 
   convertMRI(YamlMF, MF, MF.getRegInfo(), MF.getSubtarget().getRegisterInfo(),
              VRM);
