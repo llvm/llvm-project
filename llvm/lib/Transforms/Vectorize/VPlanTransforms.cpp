@@ -6366,19 +6366,16 @@ void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,
       // %iv.c is an induction with the same step as %iv, but starting at
       // %start + %c, which is computed once in the vector preheader. This also
       // covers the increment %iv.next, with %c == %step.
-      VPValue *IVOp = Op, *X, *Offset = nullptr;
-      bool IsSub = false;
-      auto MatchIV = m_VPValue(X, m_Isa<VPWidenIntOrFpInductionRecipe>());
-      if (match(Op, m_c_Add(MatchIV, m_VPValue(Offset)))) {
-        IVOp = X;
-      } else if (match(Op, m_Sub(MatchIV, m_VPValue(Offset)))) {
-        IVOp = X;
-        IsSub = true;
-      }
+      VPWidenIntOrFpInductionRecipe *WideIV;
+      VPValue *Offset = nullptr;
+      auto MatchIV = match_bind<VPWidenIntOrFpInductionRecipe>(WideIV);
+      bool IsSub = match(Op, m_Sub(MatchIV, m_VPValue(Offset)));
+      if (!IsSub && !match(Op, MatchIV) &&
+          !match(Op, m_c_Add(MatchIV, m_VPValue(Offset))))
+        continue;
 
       // An IV that is already truncated is not narrowed further.
-      auto *WideIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(IVOp);
-      if (!WideIV || WideIV->isTruncated())
+      if (WideIV->isTruncated())
         continue;
 
       // The IV plus a value that changes in the loop is not an induction.
