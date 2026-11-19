@@ -364,20 +364,6 @@ class ConstraintInfo {
   const DataLayout &DL;
 
 public:
-  /// A cached decomposition. Decomposing a value can query doesHold (e.g. to
-  /// prove no-wrap flags), which in turn decomposes other values. Nested
-  /// doesHold queries are cut off at MaxDoesHoldDepth to bound stack usage and
-  /// compile time, so a decomposition computed while nested may be less precise
-  /// than one computed at the top level.
-  struct CachedDecomposition {
-    Decomposition Result;
-    /// The doesHold nesting depth the decomposition was computed at, if a
-    /// doesHold query was cut off while computing it. Such an entry is only
-    /// valid for queries at least as deeply nested, as they have no more budget
-    /// to improve on it.
-    std::optional<unsigned> DegradedAtDepth;
-  };
-
   /// Maximum nesting of doesHold queries. Deeper queries conservatively return
   /// false.
   static constexpr unsigned MaxDoesHoldDepth = 2;
@@ -385,8 +371,7 @@ public:
 private:
   /// Decompositions computed against the current state of the systems. Must be
   /// cleared when the system changes.
-  DenseMap<PointerIntPair<Value *, 1, bool>, CachedDecomposition>
-      DecomposeCache;
+  DenseMap<PointerIntPair<Value *, 1, bool>, Decomposition> DecomposeCache;
 
   /// Current nesting depth of doesHold.
   unsigned DoesHoldDepth = 0;
@@ -396,12 +381,11 @@ private:
   unsigned NumDepthLimitHits = 0;
 
 public:
-  DenseMap<PointerIntPair<Value *, 1, bool>, CachedDecomposition> &
+  DenseMap<PointerIntPair<Value *, 1, bool>, Decomposition> &
   getDecomposeCache() {
     return DecomposeCache;
   }
 
-  unsigned getDoesHoldDepth() const { return DoesHoldDepth; }
   unsigned getNumDepthLimitHits() const { return NumDepthLimitHits; }
   void markDepthLimitHit() { ++NumDepthLimitHits; }
 
@@ -799,23 +783,15 @@ static Decomposition decompose(Value *V, ConstraintInfo &Info, bool IsSigned,
   PointerIntPair<Value *, 1, bool> Key(V, IsSigned);
   auto &Cache = Info.getDecomposeCache();
   auto It = Cache.find(Key);
-  if (It != Cache.end()) {
-    const auto &Entry = It->second;
-    if (!Entry.DegradedAtDepth)
-      return Entry.Result;
-    if (*Entry.DegradedAtDepth <= Info.getDoesHoldDepth()) {
-      Info.markDepthLimitHit();
-      return Entry.Result;
-    }
-  }
+  if (It != Cache.end())
+    return It->second;
 
   unsigned HitsBefore = Info.getNumDepthLimitHits();
   Decomposition Result = decomposeImpl(V, Info, IsSigned, DL);
-  std::optional<unsigned> DegradedAtDepth;
-  if (Info.getNumDepthLimitHits() != HitsBefore)
-    DegradedAtDepth = Info.getDoesHoldDepth();
-  Info.getDecomposeCache().insert_or_assign(
-      Key, ConstraintInfo::CachedDecomposition{Result, DegradedAtDepth});
+  // If a doesHold query was cut off while decomposing, the result may be less
+  // precise than what a shallower query could compute, so don't cache it.
+  if (Info.getNumDepthLimitHits() == HitsBefore)
+    Info.getDecomposeCache().insert({Key, Result});
   return Result;
 }
 
