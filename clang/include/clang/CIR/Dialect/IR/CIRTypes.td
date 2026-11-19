@@ -499,6 +499,10 @@ def CIR_ArrayType : CIR_Type<"Array", "array", [
 // VectorType
 //===----------------------------------------------------------------------===//
 
+// FIXME: This corresponds to the clang::VectorKind enum. We will eventually
+//        need to match more (though possibly not all) of the entries there. It
+//        would be nice to have a way to generate both from a common source or
+//        at least tablegen the conversion handling.
 def CIR_VectorKind : CIR_I32Enum<"VectorKind", "vector kind", [
     I32EnumCase<"Generic", 0, "generic">,
     I32EnumCase<"SVEData", 1, "sve_data">,
