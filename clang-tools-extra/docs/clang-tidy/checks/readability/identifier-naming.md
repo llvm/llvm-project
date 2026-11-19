@@ -543,28 +543,28 @@ public:
 (readability-identifier-naming-class-constexpr-case)=
 
 ```{option} ClassConstexprCase
-When defined, the check will ensure class `constexpr` names conform to
+When defined, the check will ensure class `static constexpr` names conform to
 the selected casing.
 ```
 
 (readability-identifier-naming-class-constexpr-prefix)=
 
 ```{option} ClassConstexprPrefix
-When defined, the check will ensure class `constexpr` names will add the
+When defined, the check will ensure class `static constexpr` names will add the
 prefix with the given value (regardless of casing).
 ```
 
 (readability-identifier-naming-class-constexpr-ignored-regexp)=
 
 ```{option} ClassConstexprIgnoredRegexp
-Identifier naming checks won't be enforced for class `constexpr` names
+Identifier naming checks won't be enforced for class `static constexpr` names
 matching this regular expression.
 ```
 
 (readability-identifier-naming-class-constexpr-suffix)=
 
 ```{option} ClassConstexprSuffix
-When defined, the check will ensure class `constexpr` names will add the
+When defined, the check will ensure class `static constexpr` names will add the
 suffix with the given value (regardless of casing).
 ```
 
@@ -598,35 +598,35 @@ After:
 ```c++
 class FOO {
 public:
-  static const int pre_class_constexpr_post;
+  static constexpr int pre_class_constexpr_post;
 };
 ```
 
 (readability-identifier-naming-class-constant-case)=
 
 ```{option} ClassConstantCase
-When defined, the check will ensure class constant names conform to the
+When defined, the check will ensure class static constant names conform to the
 selected casing.
 ```
 
 (readability-identifier-naming-class-constant-prefix)=
 
 ```{option} ClassConstantPrefix
-When defined, the check will ensure class constant names will add the
+When defined, the check will ensure class static constant names will add the
 prefix with the given value (regardless of casing).
 ```
 
 (readability-identifier-naming-class-constant-ignored-regexp)=
 
 ```{option} ClassConstantIgnoredRegexp
-Identifier naming checks won't be enforced for class constant names
+Identifier naming checks won't be enforced for class static constant names
 matching this regular expression.
 ```
 
 (readability-identifier-naming-class-constant-suffix)=
 
 ```{option} ClassConstantSuffix
-When defined, the check will ensure class constant names will add the
+When defined, the check will ensure class static constant names will add the
 suffix with the given value (regardless of casing).
 ```
 
@@ -667,28 +667,28 @@ public:
 (readability-identifier-naming-class-member-case)=
 
 ```{option} ClassMemberCase
-When defined, the check will ensure class member names conform to the
+When defined, the check will ensure class static member names conform to the
 selected casing.
 ```
 
 (readability-identifier-naming-class-member-prefix)=
 
 ```{option} ClassMemberPrefix
-When defined, the check will ensure class member names will add the
+When defined, the check will ensure class static member names will add the
 prefix with the given value (regardless of casing).
 ```
 
 (readability-identifier-naming-class-member-ignored-regexp)=
 
 ```{option} ClassMemberIgnoredRegexp
-Identifier naming checks won't be enforced for class member names
+Identifier naming checks won't be enforced for class static member names
 matching this regular expression.
 ```
 
 (readability-identifier-naming-class-member-suffix)=
 
 ```{option} ClassMemberSuffix
-When defined, the check will ensure class member names will add the
+When defined, the check will ensure class static member names will add the
 suffix with the given value (regardless of casing).
 ```
 
@@ -729,21 +729,21 @@ public:
 (readability-identifier-naming-class-method-case)=
 
 ```{option} ClassMethodCase
-When defined, the check will ensure class method names conform to the
+When defined, the check will ensure class static method names conform to the
 selected casing.
 ```
 
 (readability-identifier-naming-class-method-prefix)=
 
 ```{option} ClassMethodPrefix
-When defined, the check will ensure class method names will add the
+When defined, the check will ensure class static method names will add the
 prefix with the given value (regardless of casing).
 ```
 
 (readability-identifier-naming-class-method-ignored-regexp)=
 
 ```{option} ClassMethodIgnoredRegexp
-Identifier naming checks won't be enforced for class method names
+Identifier naming checks won't be enforced for class static method names
 matching this regular expression.
 ```
 
@@ -767,7 +767,7 @@ Before:
 ```c++
 class FOO {
 public:
-  int CLASS_MEMBER();
+  static int CLASS_MEMBER();
 };
 ```
 
@@ -776,7 +776,7 @@ After:
 ```c++
 class FOO {
 public:
-  int pre_class_member_post();
+  static int pre_class_member_post();
 };
 ```
 
