@@ -555,27 +555,16 @@ __packed_pabs(abs_u64, int64_t, uint64_t)
 #endif
 
 /* Scalar Merge */
-static __inline__ int32_t __DEFAULT_FN_ATTRS
-__riscv_merge_i32(int32_t __rs1, int32_t __rs2, uint32_t __rd) {
-  return (int32_t)__builtin_riscv_merge_u32((uint32_t)__rs1, (uint32_t)__rs2,
-                                            __rd);
-}
-
-static __inline__ uint32_t __DEFAULT_FN_ATTRS
-__riscv_merge_u32(uint32_t __rs1, uint32_t __rs2, uint32_t __rd) {
-  return __builtin_riscv_merge_u32(__rs1, __rs2, __rd);
-}
-
-static __inline__ int64_t __DEFAULT_FN_ATTRS
-__riscv_merge_i64(int64_t __rs1, int64_t __rs2, uint64_t __rd) {
-  return (int64_t)__builtin_riscv_merge_u64((uint64_t)__rs1, (uint64_t)__rs2,
-                                            __rd);
-}
-
-static __inline__ uint64_t __DEFAULT_FN_ATTRS
-__riscv_merge_u64(uint64_t __rs1, uint64_t __rs2, uint64_t __rd) {
-  return __builtin_riscv_merge_u64(__rs1, __rs2, __rd);
-}
+#define __scalar_merge(name, ty, uty)                                           \
+  static __inline__ ty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1, ty __rs2,   \
+                                                         uty __rd) {           \
+    return (ty)((__rd & (uty)__rs2) | (~__rd & (uty)__rs1));                   \
+  }
+__scalar_merge(merge_i32, int32_t, uint32_t)
+__scalar_merge(merge_u32, uint32_t, uint32_t)
+__scalar_merge(merge_i64, int64_t, uint64_t)
+__scalar_merge(merge_u64, uint64_t, uint64_t)
+#undef __scalar_merge
 
 /* Scalar Saturating and Rounding Shift */
 __packed_binary_builtin_mixed(ssha_i32, int32_t, int32_t, int, __builtin_riscv_ssha_i32)
