@@ -129,7 +129,6 @@ def isX86 : RuntimeLibcallAvailability<(all_of IsX86)>;
 
 def isAArch64 : RuntimeLibcallAvailability<(all_of IsAArch64)>;
 
-def isLongDoubleX87 : RuntimeLibcallAvailability<(all_of IsLongDoubleX87)>;
 def isLongDoubleF128 : RuntimeLibcallAvailability<(all_of IsLongDoubleF128)>;
 def isLongDoublePPCF128 : RuntimeLibcallAvailability<(all_of IsLongDoublePPCF128)>;
 def isLongDoubleWide : RuntimeLibcallAvailability<
@@ -137,8 +136,6 @@ def isLongDoubleWide : RuntimeLibcallAvailability<
 
 // The l-suffixed sincos exists only when hasSinCos and the long double type
 // matches the width.
-def isLongDoubleX87AndHasSinCos : RuntimeLibcallAvailability<
-  (all_of IsLongDoubleX87, (any_of IsGNUEnv, IsOSFuchsia, IsAndroid))>;
 def isLongDoubleF128AndHasSinCos : RuntimeLibcallAvailability<
   (all_of IsLongDoubleF128, (any_of IsGNUEnv, IsOSFuchsia, IsAndroid))>;
 def isLongDoubleWideAndHasSinCos : RuntimeLibcallAvailability<
@@ -397,9 +394,8 @@ foreach FPTy = [F32, F64, F80, F128, PPCF128] in {
   def CABS_#FPTy.Suffix : RuntimeLibcall<NoneType, []>;
 }
 
-foreach FPTy = [ "F32", "F64" ] in {
-  def SINCOS_STRET_#FPTy : RuntimeLibcall;
-}
+def SINCOS_STRET_F32 : RuntimeLibcall<CFltPair, [Flt]>;
+def SINCOS_STRET_F64 : RuntimeLibcall<CDblPair, [Dbl]>;
 
 foreach FPTy = [F32, F64, F80, F128, PPCF128] in {
   def POW_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
@@ -738,11 +734,27 @@ class MemCmpLibcall : RuntimeLibcall<Int, [Ptr, Ptr, SizeT]> {
 }
 
 def MEMCMP : MemCmpLibcall;
-def MEMCPY : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]>;
+def MEMCPY : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]> {
+  let FnAttrs = CommonFnAttrs;
+  let Memory = ArgMemOnly;
+  let ParamAttrs = [[NoAlias, Returned, WriteOnly],
+                    [NoAlias, ReadOnly]];
+}
+
 def MEMCPY_CHK : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT, SizeT]>;
-def MEMMOVE : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]>;
+def MEMMOVE : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]> {
+  let FnAttrs = CommonFnAttrs;
+  let Memory = ArgMemOnly;
+  let ParamAttrs = [[Returned, WriteOnly], [ReadOnly]];
+}
+
 def MEMMOVE_CHK : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT, SizeT]>;
-def MEMSET : RuntimeLibcall<Ptr, [Ptr, Int, SizeT]>;
+def MEMSET : RuntimeLibcall<Ptr, [Ptr, Int, SizeT]> {
+  let FnAttrs = CommonFnAttrs;
+  let Memory = ArgMemWriteOnly;
+  let ParamAttrs = [[Returned, WriteOnly]];
+}
+
 def MEMSET_CHK : RuntimeLibcall<Ptr, [Ptr, Int, SizeT, SizeT]>;
 class MallocLibcall<string family> : RuntimeLibcall<Ptr, [SizeT]> {
   let FnAttrs = [NoFree, NoUnwind, WillReturn,
@@ -788,11 +800,23 @@ def STRLEN : RuntimeLibcall<SizeT, [Ptr]> {
 // Element-wise unordered-atomic memory of different sizes
 foreach MemSize = [1, 2, 4, 8, 16] in {
   def MEMCPY_ELEMENT_UNORDERED_ATOMIC_#MemSize
-      : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]>;
+      : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]> {
+    let FnAttrs = CommonFnAttrs;
+    let Memory = ArgMemOnly;
+    let ParamAttrs = [[NoAlias, WriteOnly], [NoAlias, ReadOnly]];
+  }
   def MEMMOVE_ELEMENT_UNORDERED_ATOMIC_#MemSize
-      : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]>;
+      : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]> {
+    let FnAttrs = CommonFnAttrs;
+    let Memory = ArgMemOnly;
+    let ParamAttrs = [[WriteOnly], [ReadOnly]];
+  }
   def MEMSET_ELEMENT_UNORDERED_ATOMIC_#MemSize
-      : RuntimeLibcall<Void, [Ptr, Int, SizeT]>;
+      : RuntimeLibcall<Void, [Ptr, Int, SizeT]> {
+    let FnAttrs = CommonFnAttrs;
+    let Memory = ArgMemWriteOnly;
+    let ParamAttrs = [[WriteOnly]];
+  }
 }
 
 // Exception handling
@@ -809,86 +833,106 @@ def CXA_END_CLEANUP : RuntimeLibcall<Void, []>;
 // <https://llvm.org/docs/Atomics.html> for more info on the
 // difference between them.
 
+class AtomicLibcall<FuncArgType RetType, list<FuncArgType> ArgTypes,
+                    list<list<Attr>> paramAttrs>
+    : RuntimeLibcall<RetType, ArgTypes> {
+  let FnAttrs = [NoCallback, NoFree, NoUnwind, WillReturn];
+  let ParamAttrs = paramAttrs;
+}
+
 // Atomic '__sync_*' libcalls.
 defset list<RuntimeLibcall> LibCalls__sync = {
   foreach IntTy = [TypeSuffix<"1", UInt8>, TypeSuffix<"2", UInt16>,
                   TypeSuffix<"4", UInt32>, TypeSuffix<"8", UInt64>,
                   TypeSuffix<"16", UInt128>] in {
     def SYNC_VAL_COMPARE_AND_SWAP_#IntTy.Suffix
-        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type, IntTy.Type]>;
+        : AtomicLibcall<IntTy.Type, [Ptr, IntTy.Type, IntTy.Type],
+                        [[CapturesNone]]>;
     def SYNC_LOCK_TEST_AND_SET_#IntTy.Suffix
-        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type]>;
+        : AtomicLibcall<IntTy.Type, [Ptr, IntTy.Type], [[CapturesNone]]>;
     def SYNC_FETCH_AND_ADD_#IntTy.Suffix
-        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type]>;
+        : AtomicLibcall<IntTy.Type, [Ptr, IntTy.Type], [[CapturesNone]]>;
     def SYNC_FETCH_AND_SUB_#IntTy.Suffix
-        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type]>;
+        : AtomicLibcall<IntTy.Type, [Ptr, IntTy.Type], [[CapturesNone]]>;
     def SYNC_FETCH_AND_AND_#IntTy.Suffix
-        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type]>;
+        : AtomicLibcall<IntTy.Type, [Ptr, IntTy.Type], [[CapturesNone]]>;
     def SYNC_FETCH_AND_OR_#IntTy.Suffix
-        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type]>;
+        : AtomicLibcall<IntTy.Type, [Ptr, IntTy.Type], [[CapturesNone]]>;
     def SYNC_FETCH_AND_XOR_#IntTy.Suffix
-        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type]>;
+        : AtomicLibcall<IntTy.Type, [Ptr, IntTy.Type], [[CapturesNone]]>;
     def SYNC_FETCH_AND_NAND_#IntTy.Suffix
-        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type]>;
+        : AtomicLibcall<IntTy.Type, [Ptr, IntTy.Type], [[CapturesNone]]>;
     def SYNC_FETCH_AND_MAX_#IntTy.Suffix
-        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type]>;
+        : AtomicLibcall<IntTy.Type, [Ptr, IntTy.Type], [[CapturesNone]]>;
     def SYNC_FETCH_AND_UMAX_#IntTy.Suffix
-        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type]>;
+        : AtomicLibcall<IntTy.Type, [Ptr, IntTy.Type], [[CapturesNone]]>;
     def SYNC_FETCH_AND_MIN_#IntTy.Suffix
-        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type]>;
+        : AtomicLibcall<IntTy.Type, [Ptr, IntTy.Type], [[CapturesNone]]>;
     def SYNC_FETCH_AND_UMIN_#IntTy.Suffix
-        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type]>;
+        : AtomicLibcall<IntTy.Type, [Ptr, IntTy.Type], [[CapturesNone]]>;
   }
 }
 
 defset list<RuntimeLibcall> LibCalls__atomic = {
   // Atomic `__atomic_*' libcalls.
-  def ATOMIC_EXCHANGE : RuntimeLibcall<Void, [SizeT, Ptr, Ptr, Ptr, Int]>;
+  def ATOMIC_EXCHANGE
+      : AtomicLibcall<Void, [SizeT, Ptr, Ptr, Ptr, Int],
+                      [[], [CapturesNone], ReadPtrAttrs,
+                       [WriteOnly, CapturesNone]]>;
   def ATOMIC_COMPARE_EXCHANGE
-      : RuntimeLibcall<Bool, [SizeT, Ptr, Ptr, Ptr, Int, Int]>;
+      : AtomicLibcall<Bool, [SizeT, Ptr, Ptr, Ptr, Int, Int],
+                      [[], [CapturesNone], [CapturesNone], ReadPtrAttrs]>;
   foreach IntTy = [TypeSuffix<"1", UInt8>, TypeSuffix<"2", UInt16>,
                   TypeSuffix<"4", UInt32>, TypeSuffix<"8", UInt64>,
                   TypeSuffix<"16", UInt128>] in {
     def ATOMIC_EXCHANGE_#IntTy.Suffix
-        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type, Int]>;
+        : AtomicLibcall<IntTy.Type, [Ptr, IntTy.Type, Int], [[CapturesNone]]>;
     def ATOMIC_COMPARE_EXCHANGE_#IntTy.Suffix
-        : RuntimeLibcall<Bool, [Ptr, Ptr, IntTy.Type, Int, Int]>;
+        : AtomicLibcall<Bool, [Ptr, Ptr, IntTy.Type, Int, Int],
+                        [[CapturesNone], [CapturesNone]]>;
   }
 
-  def ATOMIC_LOAD : RuntimeLibcall<Void, [SizeT, Ptr, Ptr, Int]>;
-  def ATOMIC_STORE : RuntimeLibcall<Void, [SizeT, Ptr, Ptr, Int]>;
+  def ATOMIC_LOAD
+      : AtomicLibcall<Void, [SizeT, Ptr, Ptr, Int],
+                      [[], [CapturesNone], [WriteOnly, CapturesNone]]>;
+  def ATOMIC_STORE
+      : AtomicLibcall<Void, [SizeT, Ptr, Ptr, Int],
+                      [[], [CapturesNone], ReadPtrAttrs]>;
   foreach IntTy = [TypeSuffix<"1", UInt8>, TypeSuffix<"2", UInt16>,
                   TypeSuffix<"4", UInt32>, TypeSuffix<"8", UInt64>,
                   TypeSuffix<"16", UInt128>] in {
-    def ATOMIC_LOAD_#IntTy.Suffix : RuntimeLibcall<IntTy.Type, [Ptr, Int]>;
+    def ATOMIC_LOAD_#IntTy.Suffix
+        : AtomicLibcall<IntTy.Type, [Ptr, Int], [[CapturesNone]]>;
     def ATOMIC_STORE_#IntTy.Suffix
-        : RuntimeLibcall<Void, [Ptr, IntTy.Type, Int]>;
+        : AtomicLibcall<Void, [Ptr, IntTy.Type, Int], [[CapturesNone]]>;
   }
 
   foreach IntTy = [TypeSuffix<"1", UInt8>, TypeSuffix<"2", UInt16>,
                   TypeSuffix<"4", UInt32>, TypeSuffix<"8", UInt64>,
                   TypeSuffix<"16", UInt128>] in {
     def ATOMIC_FETCH_ADD_#IntTy.Suffix
-        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type, Int]>;
+        : AtomicLibcall<IntTy.Type, [Ptr, IntTy.Type, Int], [[CapturesNone]]>;
     def ATOMIC_FETCH_SUB_#IntTy.Suffix
-        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type, Int]>;
+        : AtomicLibcall<IntTy.Type, [Ptr, IntTy.Type, Int], [[CapturesNone]]>;
     def ATOMIC_FETCH_AND_#IntTy.Suffix
-        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type, Int]>;
+        : AtomicLibcall<IntTy.Type, [Ptr, IntTy.Type, Int], [[CapturesNone]]>;
     def ATOMIC_FETCH_OR_#IntTy.Suffix
-        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type, Int]>;
+        : AtomicLibcall<IntTy.Type, [Ptr, IntTy.Type, Int], [[CapturesNone]]>;
     def ATOMIC_FETCH_XOR_#IntTy.Suffix
-        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type, Int]>;
+        : AtomicLibcall<IntTy.Type, [Ptr, IntTy.Type, Int], [[CapturesNone]]>;
     def ATOMIC_FETCH_NAND_#IntTy.Suffix
-        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type, Int]>;
+        : AtomicLibcall<IntTy.Type, [Ptr, IntTy.Type, Int], [[CapturesNone]]>;
   }
 }
 
 multiclass AtomicOrderSizeLibcall<FuncArgType RetType,
                                   list<FuncArgType> ArgTypes> {
-  def _RELAX : RuntimeLibcall<RetType, ArgTypes>;
-  def _ACQ : RuntimeLibcall<RetType, ArgTypes>;
-  def _REL : RuntimeLibcall<RetType, ArgTypes>;
-  def _ACQ_REL : RuntimeLibcall<RetType, ArgTypes>;
+  defvar PtrAttrs = !listconcat(
+      !listsplat([]<Attr>, !sub(!size(ArgTypes), 1)), [[CapturesNone]]);
+  def _RELAX : AtomicLibcall<RetType, ArgTypes, PtrAttrs>;
+  def _ACQ : AtomicLibcall<RetType, ArgTypes, PtrAttrs>;
+  def _REL : AtomicLibcall<RetType, ArgTypes, PtrAttrs>;
+  def _ACQ_REL : AtomicLibcall<RetType, ArgTypes, PtrAttrs>;
 }
 
 multiclass AtomicOrderSizeLibcallImpl<string ProvidesBase> {
@@ -993,6 +1037,26 @@ def SMEABI_SME_SAVE : RuntimeLibcall<Void, [Ptr]>;
 def SMEABI_SME_RESTORE : RuntimeLibcall<Void, [Ptr]>;
 
 // ARM EABI calls
+// The AEABI memory functions (RTABI section 5.3.4) return void, and
+// __aeabi_memset takes (dest, n, c).
+def AEABI_MEMCPY : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]> {
+  let FnAttrs = CommonFnAttrs;
+  let Memory = ArgMemOnly;
+  let ParamAttrs = [[NoAlias, WriteOnly], [NoAlias, ReadOnly]];
+}
+
+def AEABI_MEMMOVE : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]> {
+  let FnAttrs = CommonFnAttrs;
+  let Memory = ArgMemOnly;
+  let ParamAttrs = [[WriteOnly], [ReadOnly]];
+}
+
+def AEABI_MEMSET : RuntimeLibcall<Void, [Ptr, SizeT, Int]> {
+  let FnAttrs = CommonFnAttrs;
+  let Memory = ArgMemWriteOnly;
+  let ParamAttrs = [[WriteOnly]];
+}
+
 def AEABI_MEMCPY4 : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]>; // Align 4
 def AEABI_MEMCPY8 : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]>; // Align 8
 def AEABI_MEMMOVE4 : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]>;
@@ -2132,6 +2196,7 @@ def __exp10 : RuntimeLibcallImpl<EXP10_F64>;
 def __exp10f : RuntimeLibcallImpl<EXP10_F32>;
 def __sincos_stret : RuntimeLibcallImpl<SINCOS_STRET_F64>;
 def __sincosf_stret : RuntimeLibcallImpl<SINCOS_STRET_F32>;
+
 def __sincospi : RuntimeLibcallImpl<SINCOSPI_F64>;
 def __sincospif : RuntimeLibcallImpl<SINCOSPI_F32>;
 
@@ -2881,15 +2946,15 @@ def __aeabi_uidivmod : DivRemPairImpl<UDIVREM_I32>; //  CallingConv::ARM_AAPCS
 
 // Memory operations
 // RTABI chapter 4.3.4
-def __aeabi_memcpy : RuntimeLibcallImpl<MEMCPY>; // CallingConv::ARM_AAPCS
+def __aeabi_memcpy : RuntimeLibcallImpl<AEABI_MEMCPY>; // CallingConv::ARM_AAPCS
 def __aeabi_memcpy4 : RuntimeLibcallImpl<AEABI_MEMCPY4>;
 def __aeabi_memcpy8 : RuntimeLibcallImpl<AEABI_MEMCPY8>;
 
-def __aeabi_memmove : RuntimeLibcallImpl<MEMMOVE>; // CallingConv::ARM_AAPCS
+def __aeabi_memmove : RuntimeLibcallImpl<AEABI_MEMMOVE>; // CallingConv::ARM_AAPCS
 def __aeabi_memmove4 : RuntimeLibcallImpl<AEABI_MEMMOVE4>;
 def __aeabi_memmove8 : RuntimeLibcallImpl<AEABI_MEMMOVE8>;
 
-def __aeabi_memset : RuntimeLibcallImpl<MEMSET>; // CallingConv::ARM_AAPCS
+def __aeabi_memset : RuntimeLibcallImpl<AEABI_MEMSET>; // CallingConv::ARM_AAPCS
 def __aeabi_memset4 : RuntimeLibcallImpl<AEABI_MEMSET4>;
 def __aeabi_memset8 : RuntimeLibcallImpl<AEABI_MEMSET8>;
 
@@ -3874,8 +3939,7 @@ def X86Libm : LibcallLibrary<"libm",
   (add X86_F128_Libcalls,
        LibcallImpls<(add sincosf, sincos), hasSinCos_f32_f64>,
        // frexpl/ldexpl are available on Windows too.
-       LibcallImpls<(add frexpl, ldexpl), isLongDoubleWide>,
-       LibcallImpls<(add sincosl), isLongDoubleX87AndHasSinCos>), isX86>;
+       LibcallImpls<(add frexpl, ldexpl), isLongDoubleWide>), isX86>;
 
 def X86SystemLibrary
     : SystemRuntimeLibrary<isX86,
@@ -3884,8 +3948,6 @@ def X86SystemLibrary
 
 def : LibraryExclusion<"compiler-rt", isX86,
   !listconcat(WindowsDivRemMulLibcallOverrides, [__powitf2_f128])>;
-// x86 has no fp128 sincosl, only the x87 one.
-def : LibraryExclusion<"libm", isX86, [sincosl]>;
 def : LibraryExclusion<"libc", isX86, !listconcat(MemChkLibcalls, [bzero])>;
 
 //===----------------------------------------------------------------------===//

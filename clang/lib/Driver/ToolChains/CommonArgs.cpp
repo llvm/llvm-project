@@ -682,6 +682,9 @@ void tools::addLinkerCompressDebugSectionsOption(
 
 bool tools::useMachORelocatableDwarf(const llvm::Triple &T,
                                      unsigned DwarfVersion) {
+  // 32-bit ARM and x86 Mach-O use scattered relocations.
+  if (T.isARM() || T.isThumb() || T.getArch() == llvm::Triple::x86)
+    return false;
   return T.isOSBinFormatMachO() && DwarfVersion >= 5 &&
          !(T.isMacOSX() || T.isiOS() || T.isWatchOS() || T.isXROS() ||
            T.isDriverKit());
@@ -1236,6 +1239,14 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
         Twine(PluginOptPrefix) + "-global-isel=" +
         (A->getOption().matches(options::OPT_fglobal_isel) ? "1" : "0")));
   }
+
+  if (Arg *A = Args.getLastArg(options::OPT_fdevirtualize_speculatively,
+                               options::OPT_fno_devirtualize_speculatively))
+    CmdArgs.push_back(Args.MakeArgString(
+        Twine(PluginOptPrefix) + "-devirtualize-speculatively=" +
+        (A->getOption().matches(options::OPT_fdevirtualize_speculatively)
+             ? "1"
+             : "0")));
 
   if (IsOSAIX) {
     if (!ToolChain.useIntegratedAs())

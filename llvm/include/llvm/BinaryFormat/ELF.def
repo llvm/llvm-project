@@ -203,6 +203,8 @@ ELF_MACHINE(EM_CEVA,          245, "ceva", "CEVA Processor Architecture Family")
 ELF_MACHINE(EM_CEVA_X2,       246, "ceva_x2", "CEVA X2 Processor Family")
 ELF_MACHINE(EM_BPF,           247, "bpf", "Linux BPF – in-kernel virtual machine")
 ELF_MACHINE(EM_GRAPHCORE_IPU, 248, "graphcore_ipu", "Graphcore Intelligent Processing Unit")
+// NOTE: EM_NANOMIPS and EM_IMG1 have the same number
+ELF_MACHINE(EM_NANOMIPS,      249, "nanomips", "nanoMIPS") // MIPS Tech nanoMIPS architecture
 ELF_MACHINE(EM_IMG1,          249, "img1", "Imagination Technologies")
 ELF_MACHINE(EM_NFP,           250, "nfp", "Netronome Flow Processor (NFP)")
 ELF_MACHINE(EM_VE,            251, "ve", "NEC SX-Aurora Vector Engine")

@@ -17,7 +17,7 @@ float TestAlign(void)
 
 // CHECK: [[R:%.*]] = alloca <8 x float>, align 32
 // PRE17-NEXT:  [[CALL:%.*]] = call noalias noundef nonnull ptr @_Znwm(i64 noundef 32)
-// CXX17-NEXT:  [[CALL:%.*]] = call noalias noundef nonnull align 32 ptr @_ZnwmSt11align_val_t(i64 noundef 32, i64 noundef 32)
+// CXX17-NEXT:  [[CALL:%.*]] = call noalias noundef nonnull align 32 ptr @_ZnwmSt11align_val_t(i64 noundef 32, i64 allocalign noundef 32)
 // CHECK-NEXT:  store ptr [[CALL]], ptr [[P:%.*]], align 8
 // CHECK-NEXT:  [[ONE:%.*]] = load ptr, ptr [[P]], align 8
 // CHECK-NEXT:  [[TWO:%.*]] = load volatile <8 x float>, ptr [[ONE]], align 16
@@ -49,7 +49,7 @@ float TestAlign2(void)
 
 // CHECK: [[R:%.*]] = alloca <8 x float>, align 32
 // PRE17-NEXT:  [[CALL:%.*]] = call noalias noundef nonnull ptr @_Znwm(i64 noundef 32)
-// CXX17-NEXT:  [[CALL:%.*]] = call noalias noundef nonnull align 32 ptr @_ZnwmSt11align_val_t(i64 noundef 32, i64 noundef 32)
+// CXX17-NEXT:  [[CALL:%.*]] = call noalias noundef nonnull align 32 ptr @_ZnwmSt11align_val_t(i64 noundef 32, i64 allocalign noundef 32)
 // CHECK-NEXT:  store ptr [[CALL]], ptr [[P:%.*]], align 8
 // CHECK-NEXT:  [[ONE:%.*]] = load ptr, ptr [[P]], align 8
 // CHECK-NEXT:  [[TWO:%.*]] = load volatile <8 x float>, ptr [[ONE]], align 32

@@ -37,6 +37,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/InstructionCost.h"
 #include <functional>
+#include <limits>
 #include <optional>
 #include <utility>
 
@@ -690,7 +691,7 @@ public:
     /// specific loops may be unrolled even with a cost above this threshold if
     /// deemed profitable. Set this to UINT_MAX to disable the loop body cost
     /// restriction.
-    unsigned Threshold;
+    unsigned Threshold = 150;
     /// If complete unrolling will reduce the cost of the loop, we will boost
     /// the Threshold by a certain percent to allow more aggressive complete
     /// unrolling. This value provides the maximum boost percentage that we
@@ -701,78 +702,78 @@ public:
     /// then we boost the threshold by the factor of 2x. If unrolling is not
     /// expected to reduce the running time, then we do not increase the
     /// threshold.
-    unsigned MaxPercentThresholdBoost;
+    unsigned MaxPercentThresholdBoost = 400;
     /// The cost threshold for the unrolled loop when optimizing for size (set
     /// to UINT_MAX to disable).
-    unsigned OptSizeThreshold;
+    unsigned OptSizeThreshold = 0;
     /// The cost threshold for the unrolled loop, like Threshold, but used
     /// for partial/runtime unrolling (set to UINT_MAX to disable).
-    unsigned PartialThreshold;
+    unsigned PartialThreshold = 150;
     /// The cost threshold for the unrolled loop when optimizing for size, like
     /// OptSizeThreshold, but used for partial/runtime unrolling (set to
     /// UINT_MAX to disable).
-    unsigned PartialOptSizeThreshold;
+    unsigned PartialOptSizeThreshold = 0;
     /// Default unroll count for loops with run-time trip count.
-    unsigned DefaultUnrollRuntimeCount;
+    unsigned DefaultUnrollRuntimeCount = 8;
     // Set the maximum unrolling factor. The unrolling factor may be selected
     // using the appropriate cost threshold, but may not exceed this number
     // (set to UINT_MAX to disable). This does not apply in cases where the
     // loop is being fully unrolled.
-    unsigned MaxCount;
+    unsigned MaxCount = std::numeric_limits<unsigned>::max();
     /// Set the maximum upper bound of trip count. Allowing the MaxUpperBound
     /// to be overrided by a target gives more flexiblity on certain cases.
     /// By default, MaxUpperBound uses UnrollMaxUpperBound which value is 8.
-    unsigned MaxUpperBound;
+    unsigned MaxUpperBound = 8;
     /// Set the maximum unrolling factor for full unrolling. Like MaxCount, but
     /// applies even if full unrolling is selected. This allows a target to fall
     /// back to Partial unrolling if full unrolling is above FullUnrollMaxCount.
-    unsigned FullUnrollMaxCount;
+    unsigned FullUnrollMaxCount = std::numeric_limits<unsigned>::max();
     // Represents number of instructions optimized when "back edge"
     // becomes "fall through" in unrolled loop.
     // For now we count a conditional branch on a backedge and a comparison
     // feeding it.
-    unsigned BEInsns;
+    unsigned BEInsns = 2;
     /// Allow partial unrolling (unrolling of loops to expand the size of the
     /// loop body, not only to eliminate small constant-trip-count loops).
-    bool Partial;
+    bool Partial = false;
     /// Allow runtime unrolling (unrolling of loops to expand the size of the
     /// loop body even when the number of loop iterations is not known at
     /// compile time).
-    bool Runtime;
+    bool Runtime = false;
     /// Allow generation of a loop remainder (extra iterations after unroll).
-    bool AllowRemainder;
+    bool AllowRemainder = true;
     /// Allow emitting expensive instructions (such as divisions) when computing
     /// the trip count of a loop for runtime unrolling.
-    bool AllowExpensiveTripCount;
+    bool AllowExpensiveTripCount = false;
     /// Apply loop unroll on any kind of loop
     /// (mainly to loops that fail runtime unrolling).
-    bool Force;
+    bool Force = false;
     /// Allow using trip count upper bound to unroll loops.
-    bool UpperBound;
+    bool UpperBound = false;
     /// Allow unrolling of all the iterations of the runtime loop remainder.
-    bool UnrollRemainder;
+    bool UnrollRemainder = false;
     /// Allow unroll and jam. Used to enable unroll and jam for the target.
-    bool UnrollAndJam;
+    bool UnrollAndJam = false;
     /// Threshold for unroll and jam, for inner loop size. The 'Threshold'
     /// value above is used during unroll and jam for the outer loop size.
     /// This value is used in the same manner to limit the size of the inner
     /// loop.
-    unsigned UnrollAndJamInnerLoopThreshold;
+    unsigned UnrollAndJamInnerLoopThreshold = 60;
     /// Don't allow loop unrolling to simulate more than this number of
     /// iterations when checking full unroll profitability
-    unsigned MaxIterationsCountToAnalyze;
+    unsigned MaxIterationsCountToAnalyze = 10;
     /// Disable runtime unrolling by default for vectorized loops.
     bool UnrollVectorizedLoop = false;
     /// Don't allow runtime unrolling if expanding the trip count takes more
     /// than SCEVExpansionBudget.
-    unsigned SCEVExpansionBudget;
+    unsigned SCEVExpansionBudget = 4;
     /// Allow runtime unrolling multi-exit loops. Should only be set if the
     /// target determined that multi-exit unrolling is profitable for the loop.
     /// Fall back to the generic logic to determine whether multi-exit unrolling
     /// is profitable if set to false.
-    bool RuntimeUnrollMultiExit;
+    bool RuntimeUnrollMultiExit = false;
     /// Allow unrolling to add parallel reduction phis.
-    bool AddAdditionalAccumulators;
+    bool AddAdditionalAccumulators = false;
   };
 
   /// Get target-customized preferences for the generic loop unrolling

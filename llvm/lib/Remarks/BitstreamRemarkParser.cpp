@@ -75,9 +75,7 @@ Error BitstreamBlockParserHelperBase::expectBlock() {
 }
 
 Error BitstreamBlockParserHelperBase::enterBlock() {
-  if (Stream.EnterSubBlock(BlockID))
-    return error("Error while entering {} block.", BlockName);
-  return Error::success();
+  return Stream.EnterSubBlock(BlockID);
 }
 
 Error BitstreamMetaParserHelper::parseRecord(unsigned Code) {
