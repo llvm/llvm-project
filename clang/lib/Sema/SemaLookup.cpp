@@ -303,6 +303,8 @@ static inline unsigned getIDNS(Sema::LookupNameKind NameKind,
 void LookupResult::configure() {
   IDNS = getIDNS(LookupKind, getSema().getLangOpts().CPlusPlus,
                  isForRedeclaration());
+  HiddenEntities.clear();
+  AcceptableRedecls.clear();
 
   // If we're looking for one of the allocation or deallocation
   // operators, make sure that the implicitly-declared new and delete
@@ -2150,6 +2152,45 @@ NamedDecl *LookupResult::getAcceptableDeclSlow(NamedDecl *D) const {
     return Acceptable;
   }
 
+  // A lookup can find many hidden declarations of the same entity, for example
+  // if several modules include the same header textually: each of them has a
+  // copy of its declarations, and these copies are merged into one
+  // redeclaration chain. Walking the chain from each of N such declarations
+  // takes O(N^2) time. So once a second declaration of an entity is looked up,
+  // compute the result for all of its redeclarations in a single walk.
+  auto [It, Inserted] =
+      HiddenEntities.try_emplace(D->getCanonicalDecl(), false);
+  if (Inserted)
+    return findAcceptableDecl(getSema(), D, IDNS);
+  if (!It->second) {
+    It->second = true;
+    // List the redeclarations in the order in which findAcceptableDecl walks
+    // them: from D to the first declaration, then from the most recent one
+    // back to D. Starting at the most recent one, the walk from the I-th
+    // redeclaration visits I + 1, ..., N - 1, 0, ..., I - 1.
+    SmallVector<NamedDecl *, 16> Redecls;
+    SmallVector<bool, 16> IsAcceptable;
+    for (Decl *RD : D->getMostRecentDecl()->redecls()) {
+      auto *ND = cast<NamedDecl>(RD);
+      Redecls.push_back(ND);
+      IsAcceptable.push_back(ND->isInIdentifierNamespace(IDNS) &&
+                             isAvailableForLookup(getSema(), ND));
+    }
+    // The first acceptable redeclaration after the I-th one, starting with the
+    // last one, after which the walk continues with the first one.
+    auto First = llvm::find(IsAcceptable, true);
+    NamedDecl *Next = First == IsAcceptable.end()
+                          ? nullptr
+                          : Redecls[First - IsAcceptable.begin()];
+    for (unsigned I = Redecls.size(); I-- > 0;) {
+      AcceptableRedecls[Redecls[I]] = Next == Redecls[I] ? nullptr : Next;
+      if (IsAcceptable[I])
+        Next = Redecls[I];
+    }
+  }
+  if (auto Cached = AcceptableRedecls.find(D);
+      Cached != AcceptableRedecls.end())
+    return Cached->second;
   return findAcceptableDecl(getSema(), D, IDNS);
 }
 
