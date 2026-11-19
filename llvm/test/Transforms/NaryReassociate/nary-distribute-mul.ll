@@ -10,8 +10,7 @@ define i32 @distribute(i32 %a, i32 %b, i32 %c) {
 ; CHECK-NEXT:    [[M2:%.*]] = mul i32 [[B]], [[C]]
 ; CHECK-NEXT:    call void @use(i32 [[M1]])
 ; CHECK-NEXT:    call void @use(i32 [[M2]])
-; CHECK-NEXT:    [[S:%.*]] = add i32 [[A]], [[B]]
-; CHECK-NEXT:    [[R:%.*]] = mul i32 [[S]], [[C]]
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[M1]], [[M2]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %m1 = mul i32 %a, %c
@@ -30,8 +29,7 @@ define i32 @distribute_commuted(i32 %a, i32 %b, i32 %c) {
 ; CHECK-NEXT:    [[M2:%.*]] = mul i32 [[C]], [[B]]
 ; CHECK-NEXT:    call void @use(i32 [[M1]])
 ; CHECK-NEXT:    call void @use(i32 [[M2]])
-; CHECK-NEXT:    [[S:%.*]] = add i32 [[A]], [[B]]
-; CHECK-NEXT:    [[R:%.*]] = mul i32 [[C]], [[S]]
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[M1]], [[M2]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %m1 = mul i32 %c, %a
@@ -88,8 +86,7 @@ define i32 @distribute_debugloc(i32 %a, i32 %b, i32 %c) !dbg !5 {
 ; CHECK-NEXT:    [[M2:%.*]] = mul i32 [[B]], [[C]]
 ; CHECK-NEXT:    call void @use(i32 [[M1]])
 ; CHECK-NEXT:    call void @use(i32 [[M2]])
-; CHECK-NEXT:    [[S:%.*]] = add i32 [[A]], [[B]]
-; CHECK-NEXT:    [[R:%.*]] = mul i32 [[S]], [[C]], !dbg [[DBG6:![0-9]+]]
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[M1]], [[M2]], !dbg [[DBG6:![0-9]+]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %m1 = mul i32 %a, %c
