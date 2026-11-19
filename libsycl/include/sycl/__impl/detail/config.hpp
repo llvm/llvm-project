@@ -72,6 +72,27 @@ static_assert(__cplusplus >= 201703L, "Libsycl requires C++17 or later.");
 #  endif
 #endif // __SYCL2020_DEPRECATED
 
+#ifndef _LIBSYCL_DO_PRAGMA
+#  define _LIBSYCL_DO_PRAGMA(x) _Pragma(#x)
+#endif
+
+// SYCL address spaces (4.7.7.). The attributes are only applied in a device
+// compilation: on host every pointer is a plain pointer, so a class carrying a
+// decorated pointer has the same layout on host and device.
+#ifdef __SYCL_DEVICE_ONLY__
+#  define _LIBSYCL_GLOBAL_AS [[clang::sycl_global]]
+#  define _LIBSYCL_LOCAL_AS [[clang::sycl_local]]
+#  define _LIBSYCL_CONSTANT_AS [[clang::sycl_constant]]
+#  define _LIBSYCL_PRIVATE_AS [[clang::sycl_private]]
+#  define _LIBSYCL_GENERIC_AS [[clang::sycl_generic]]
+#else
+#  define _LIBSYCL_GLOBAL_AS
+#  define _LIBSYCL_LOCAL_AS
+#  define _LIBSYCL_CONSTANT_AS
+#  define _LIBSYCL_PRIVATE_AS
+#  define _LIBSYCL_GENERIC_AS
+#endif // __SYCL_DEVICE_ONLY__
+
 #if defined(_WIN32) && !defined(_DLL) && !defined(__SYCL_DEVICE_ONLY__)
 // When built for use with the MSVC C++ standard library, libsycl requires
 // use of the DLL versions of the MSVC run-time (RT) library. This requirement
