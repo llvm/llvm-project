@@ -10,6 +10,11 @@
 # This is independent of LLVM's own "maintainer" concept.
 # See https://llvm.org/docs/DeveloperPolicy.html#maintainers as well as the
 # Maintainers.md files in the the respective subproject directories.
+#
+# NOTE: Before editing this file, please familiarise yourself with the syntax:
+# * https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners#codeowners-syntax
+# In particular, note that "Order is important; the last matching pattern takes
+# the most precedence. ".
 
 /libc/ @llvm/reviewers-libc
 /libc/**/*math* @lntue
@@ -289,8 +294,8 @@
 /openmp @mjklemm @TerryLWilmarth
 
 # Offloading runtime
-/offload/plugins-nextgen/common @jhuber6
-/offload/plugins-nextgen/amdgpu @jhuber6
+/offload/liboffload/plugins/common @jhuber6
+/offload/liboffload/plugins/amdgpu @jhuber6
 /openmp/device/ @jhuber6
 
 # GPU headers and tools

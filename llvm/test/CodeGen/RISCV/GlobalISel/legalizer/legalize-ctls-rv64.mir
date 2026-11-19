@@ -69,12 +69,12 @@ body:             |
     ; RV64P: liveins: $x10
     ; RV64P-NEXT: {{  $}}
     ; RV64P-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-    ; RV64P-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[COPY]], 8
-    ; RV64P-NEXT: [[CLSW:%[0-9]+]]:_(s64) = G_CLSW [[SEXT_INREG]]
+    ; RV64P-NEXT: [[SEXT_INREG:%[0-9]+]]:_(i64) = G_SEXT_INREG [[COPY]], 8
+    ; RV64P-NEXT: [[CLSW:%[0-9]+]]:_(i64) = G_CLSW [[SEXT_INREG]]
     ; RV64P-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 24
-    ; RV64P-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[CLSW]], [[C]]
-    ; RV64P-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s64) = G_SEXT_INREG [[SUB]], 32
-    ; RV64P-NEXT: $x10 = COPY [[SEXT_INREG1]](s64)
+    ; RV64P-NEXT: [[SUB:%[0-9]+]]:_(i64) = G_SUB [[CLSW]], [[C]]
+    ; RV64P-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(i64) = G_SEXT_INREG [[SUB]], 32
+    ; RV64P-NEXT: $x10 = COPY [[SEXT_INREG1]](i64)
     ; RV64P-NEXT: PseudoRET implicit $x10
     ;
     ; RV64ZBB-LABEL: name: cls_i8
@@ -86,12 +86,12 @@ body:             |
     ; RV64ZBB-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[COPY]], 8
     ; RV64ZBB-NEXT: [[ASHR:%[0-9]+]]:_(s64) = G_ASHR [[SEXT_INREG]], [[C]](s64)
     ; RV64ZBB-NEXT: [[XOR:%[0-9]+]]:_(s64) = G_XOR [[COPY]], [[ASHR]]
-    ; RV64ZBB-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 255
-    ; RV64ZBB-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[XOR]], [[C2]]
-    ; RV64ZBB-NEXT: [[CLZW:%[0-9]+]]:_(s64) = G_CLZW [[AND]]
+    ; RV64ZBB-NEXT: [[C2:%[0-9]+]]:_(i64) = G_CONSTANT i64 255
+    ; RV64ZBB-NEXT: [[AND:%[0-9]+]]:_(i64) = G_AND [[XOR]], [[C2]]
+    ; RV64ZBB-NEXT: [[CLZW:%[0-9]+]]:_(i64) = G_CLZW [[AND]]
     ; RV64ZBB-NEXT: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 24
-    ; RV64ZBB-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[CLZW]], [[C3]]
-    ; RV64ZBB-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s64) = G_SEXT_INREG [[SUB]], 32
+    ; RV64ZBB-NEXT: [[SUB:%[0-9]+]]:_(i64) = G_SUB [[CLZW]], [[C3]]
+    ; RV64ZBB-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(i64) = G_SEXT_INREG [[SUB]], 32
     ; RV64ZBB-NEXT: [[SUB1:%[0-9]+]]:_(s64) = G_SUB [[SEXT_INREG1]], [[C1]]
     ; RV64ZBB-NEXT: $x10 = COPY [[SUB1]](s64)
     ; RV64ZBB-NEXT: PseudoRET implicit $x10
@@ -165,12 +165,12 @@ body:             |
     ; RV64P: liveins: $x10
     ; RV64P-NEXT: {{  $}}
     ; RV64P-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-    ; RV64P-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[COPY]], 16
-    ; RV64P-NEXT: [[CLSW:%[0-9]+]]:_(s64) = G_CLSW [[SEXT_INREG]]
+    ; RV64P-NEXT: [[SEXT_INREG:%[0-9]+]]:_(i64) = G_SEXT_INREG [[COPY]], 16
+    ; RV64P-NEXT: [[CLSW:%[0-9]+]]:_(i64) = G_CLSW [[SEXT_INREG]]
     ; RV64P-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-    ; RV64P-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[CLSW]], [[C]]
-    ; RV64P-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s64) = G_SEXT_INREG [[SUB]], 32
-    ; RV64P-NEXT: $x10 = COPY [[SEXT_INREG1]](s64)
+    ; RV64P-NEXT: [[SUB:%[0-9]+]]:_(i64) = G_SUB [[CLSW]], [[C]]
+    ; RV64P-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(i64) = G_SEXT_INREG [[SUB]], 32
+    ; RV64P-NEXT: $x10 = COPY [[SEXT_INREG1]](i64)
     ; RV64P-NEXT: PseudoRET implicit $x10
     ;
     ; RV64ZBB-LABEL: name: cls_i16
@@ -182,12 +182,12 @@ body:             |
     ; RV64ZBB-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[COPY]], 16
     ; RV64ZBB-NEXT: [[ASHR:%[0-9]+]]:_(s64) = G_ASHR [[SEXT_INREG]], [[C]](s64)
     ; RV64ZBB-NEXT: [[XOR:%[0-9]+]]:_(s64) = G_XOR [[COPY]], [[ASHR]]
-    ; RV64ZBB-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 65535
-    ; RV64ZBB-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[XOR]], [[C2]]
-    ; RV64ZBB-NEXT: [[CLZW:%[0-9]+]]:_(s64) = G_CLZW [[AND]]
+    ; RV64ZBB-NEXT: [[C2:%[0-9]+]]:_(i64) = G_CONSTANT i64 65535
+    ; RV64ZBB-NEXT: [[AND:%[0-9]+]]:_(i64) = G_AND [[XOR]], [[C2]]
+    ; RV64ZBB-NEXT: [[CLZW:%[0-9]+]]:_(i64) = G_CLZW [[AND]]
     ; RV64ZBB-NEXT: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-    ; RV64ZBB-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[CLZW]], [[C3]]
-    ; RV64ZBB-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s64) = G_SEXT_INREG [[SUB]], 32
+    ; RV64ZBB-NEXT: [[SUB:%[0-9]+]]:_(i64) = G_SUB [[CLZW]], [[C3]]
+    ; RV64ZBB-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(i64) = G_SEXT_INREG [[SUB]], 32
     ; RV64ZBB-NEXT: [[SUB1:%[0-9]+]]:_(s64) = G_SUB [[SEXT_INREG1]], [[C1]]
     ; RV64ZBB-NEXT: $x10 = COPY [[SUB1]](s64)
     ; RV64ZBB-NEXT: PseudoRET implicit $x10
@@ -211,45 +211,45 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; RV64I-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 31
     ; RV64I-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-    ; RV64I-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[COPY]], 32
-    ; RV64I-NEXT: [[ASHR:%[0-9]+]]:_(s64) = G_ASHR [[SEXT_INREG]], [[C]](s64)
+    ; RV64I-NEXT: [[SEXT_INREG:%[0-9]+]]:_(i64) = G_SEXT_INREG [[COPY]], 32
+    ; RV64I-NEXT: [[ASHR:%[0-9]+]]:_(i64) = G_ASHR [[SEXT_INREG]], [[C]](s64)
     ; RV64I-NEXT: [[XOR:%[0-9]+]]:_(s64) = G_XOR [[COPY]], [[ASHR]]
-    ; RV64I-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 4294967295
-    ; RV64I-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[XOR]], [[C2]]
-    ; RV64I-NEXT: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[AND]], [[C1]](s64)
+    ; RV64I-NEXT: [[C2:%[0-9]+]]:_(i64) = G_CONSTANT i64 4294967295
+    ; RV64I-NEXT: [[AND:%[0-9]+]]:_(i64) = G_AND [[XOR]], [[C2]]
+    ; RV64I-NEXT: [[LSHR:%[0-9]+]]:_(i64) = G_LSHR [[AND]], [[C1]](s64)
     ; RV64I-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[XOR]], [[LSHR]]
     ; RV64I-NEXT: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
-    ; RV64I-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[OR]], [[C2]]
-    ; RV64I-NEXT: [[LSHR1:%[0-9]+]]:_(s64) = G_LSHR [[AND1]], [[C3]](s64)
+    ; RV64I-NEXT: [[AND1:%[0-9]+]]:_(i64) = G_AND [[OR]], [[C2]]
+    ; RV64I-NEXT: [[LSHR1:%[0-9]+]]:_(i64) = G_LSHR [[AND1]], [[C3]](s64)
     ; RV64I-NEXT: [[OR1:%[0-9]+]]:_(s64) = G_OR [[OR]], [[LSHR1]]
     ; RV64I-NEXT: [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
-    ; RV64I-NEXT: [[AND2:%[0-9]+]]:_(s64) = G_AND [[OR1]], [[C2]]
-    ; RV64I-NEXT: [[LSHR2:%[0-9]+]]:_(s64) = G_LSHR [[AND2]], [[C4]](s64)
+    ; RV64I-NEXT: [[AND2:%[0-9]+]]:_(i64) = G_AND [[OR1]], [[C2]]
+    ; RV64I-NEXT: [[LSHR2:%[0-9]+]]:_(i64) = G_LSHR [[AND2]], [[C4]](s64)
     ; RV64I-NEXT: [[OR2:%[0-9]+]]:_(s64) = G_OR [[OR1]], [[LSHR2]]
     ; RV64I-NEXT: [[C5:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-    ; RV64I-NEXT: [[AND3:%[0-9]+]]:_(s64) = G_AND [[OR2]], [[C2]]
-    ; RV64I-NEXT: [[LSHR3:%[0-9]+]]:_(s64) = G_LSHR [[AND3]], [[C5]](s64)
+    ; RV64I-NEXT: [[AND3:%[0-9]+]]:_(i64) = G_AND [[OR2]], [[C2]]
+    ; RV64I-NEXT: [[LSHR3:%[0-9]+]]:_(i64) = G_LSHR [[AND3]], [[C5]](s64)
     ; RV64I-NEXT: [[OR3:%[0-9]+]]:_(s64) = G_OR [[OR2]], [[LSHR3]]
     ; RV64I-NEXT: [[C6:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-    ; RV64I-NEXT: [[AND4:%[0-9]+]]:_(s64) = G_AND [[OR3]], [[C2]]
-    ; RV64I-NEXT: [[LSHR4:%[0-9]+]]:_(s64) = G_LSHR [[AND4]], [[C6]](s64)
+    ; RV64I-NEXT: [[AND4:%[0-9]+]]:_(i64) = G_AND [[OR3]], [[C2]]
+    ; RV64I-NEXT: [[LSHR4:%[0-9]+]]:_(i64) = G_LSHR [[AND4]], [[C6]](s64)
     ; RV64I-NEXT: [[OR4:%[0-9]+]]:_(s64) = G_OR [[OR3]], [[LSHR4]]
-    ; RV64I-NEXT: [[AND5:%[0-9]+]]:_(s64) = G_AND [[OR4]], [[C2]]
-    ; RV64I-NEXT: [[LSHR5:%[0-9]+]]:_(s64) = G_LSHR [[AND5]], [[C1]](s64)
+    ; RV64I-NEXT: [[AND5:%[0-9]+]]:_(i64) = G_AND [[OR4]], [[C2]]
+    ; RV64I-NEXT: [[LSHR5:%[0-9]+]]:_(i64) = G_LSHR [[AND5]], [[C1]](s64)
     ; RV64I-NEXT: [[C7:%[0-9]+]]:_(s64) = G_CONSTANT i64 1431655765
     ; RV64I-NEXT: [[AND6:%[0-9]+]]:_(s64) = G_AND [[LSHR5]], [[C7]]
-    ; RV64I-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[OR4]], [[AND6]]
-    ; RV64I-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s64) = G_SEXT_INREG [[SUB]], 32
-    ; RV64I-NEXT: [[AND7:%[0-9]+]]:_(s64) = G_AND [[SEXT_INREG1]], [[C2]]
-    ; RV64I-NEXT: [[LSHR6:%[0-9]+]]:_(s64) = G_LSHR [[AND7]], [[C3]](s64)
+    ; RV64I-NEXT: [[SUB:%[0-9]+]]:_(i64) = G_SUB [[OR4]], [[AND6]]
+    ; RV64I-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(i64) = G_SEXT_INREG [[SUB]], 32
+    ; RV64I-NEXT: [[AND7:%[0-9]+]]:_(i64) = G_AND [[SEXT_INREG1]], [[C2]]
+    ; RV64I-NEXT: [[LSHR6:%[0-9]+]]:_(i64) = G_LSHR [[AND7]], [[C3]](s64)
     ; RV64I-NEXT: [[C8:%[0-9]+]]:_(s64) = G_CONSTANT i64 858993459
     ; RV64I-NEXT: [[AND8:%[0-9]+]]:_(s64) = G_AND [[LSHR6]], [[C8]]
     ; RV64I-NEXT: [[AND9:%[0-9]+]]:_(s64) = G_AND [[SEXT_INREG1]], [[C8]]
-    ; RV64I-NEXT: [[ADD:%[0-9]+]]:_(s64) = G_ADD [[AND8]], [[AND9]]
-    ; RV64I-NEXT: [[SEXT_INREG2:%[0-9]+]]:_(s64) = G_SEXT_INREG [[ADD]], 32
-    ; RV64I-NEXT: [[LSHR7:%[0-9]+]]:_(s64) = G_LSHR [[SEXT_INREG2]], [[C4]](s64)
-    ; RV64I-NEXT: [[ADD1:%[0-9]+]]:_(s64) = G_ADD [[LSHR7]], [[SEXT_INREG2]]
-    ; RV64I-NEXT: [[SEXT_INREG3:%[0-9]+]]:_(s64) = G_SEXT_INREG [[ADD1]], 32
+    ; RV64I-NEXT: [[ADD:%[0-9]+]]:_(i64) = G_ADD [[AND8]], [[AND9]]
+    ; RV64I-NEXT: [[SEXT_INREG2:%[0-9]+]]:_(i64) = G_SEXT_INREG [[ADD]], 32
+    ; RV64I-NEXT: [[LSHR7:%[0-9]+]]:_(i64) = G_LSHR [[SEXT_INREG2]], [[C4]](s64)
+    ; RV64I-NEXT: [[ADD1:%[0-9]+]]:_(i64) = G_ADD [[LSHR7]], [[SEXT_INREG2]]
+    ; RV64I-NEXT: [[SEXT_INREG3:%[0-9]+]]:_(i64) = G_SEXT_INREG [[ADD1]], 32
     ; RV64I-NEXT: [[C9:%[0-9]+]]:_(s64) = G_CONSTANT i64 252645135
     ; RV64I-NEXT: [[AND10:%[0-9]+]]:_(s64) = G_AND [[SEXT_INREG3]], [[C9]]
     ; RV64I-NEXT: [[C10:%[0-9]+]]:_(s64) = G_CONSTANT i64 16843009
@@ -260,22 +260,22 @@ body:             |
     ; RV64I-NEXT: PseudoCALL target-flags(riscv-call) &__muldi3, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit $x11, implicit-def $x10
     ; RV64I-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x10
-    ; RV64I-NEXT: [[AND11:%[0-9]+]]:_(s64) = G_AND [[COPY1]], [[C2]]
-    ; RV64I-NEXT: [[LSHR8:%[0-9]+]]:_(s64) = G_LSHR [[AND11]], [[C11]](s64)
+    ; RV64I-NEXT: [[AND11:%[0-9]+]]:_(i64) = G_AND [[COPY1]], [[C2]]
+    ; RV64I-NEXT: [[LSHR8:%[0-9]+]]:_(i64) = G_LSHR [[AND11]], [[C11]](s64)
     ; RV64I-NEXT: [[C12:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
-    ; RV64I-NEXT: [[SUB1:%[0-9]+]]:_(s64) = G_SUB [[C12]], [[LSHR8]]
-    ; RV64I-NEXT: [[SEXT_INREG4:%[0-9]+]]:_(s64) = G_SEXT_INREG [[SUB1]], 32
-    ; RV64I-NEXT: [[SUB2:%[0-9]+]]:_(s64) = G_SUB [[SEXT_INREG4]], [[C1]]
-    ; RV64I-NEXT: [[SEXT_INREG5:%[0-9]+]]:_(s64) = G_SEXT_INREG [[SUB2]], 32
-    ; RV64I-NEXT: $x10 = COPY [[SEXT_INREG5]](s64)
+    ; RV64I-NEXT: [[SUB1:%[0-9]+]]:_(i64) = G_SUB [[C12]], [[LSHR8]]
+    ; RV64I-NEXT: [[SEXT_INREG4:%[0-9]+]]:_(i64) = G_SEXT_INREG [[SUB1]], 32
+    ; RV64I-NEXT: [[SUB2:%[0-9]+]]:_(i64) = G_SUB [[SEXT_INREG4]], [[C1]]
+    ; RV64I-NEXT: [[SEXT_INREG5:%[0-9]+]]:_(i64) = G_SEXT_INREG [[SUB2]], 32
+    ; RV64I-NEXT: $x10 = COPY [[SEXT_INREG5]](i64)
     ; RV64I-NEXT: PseudoRET implicit $x10
     ;
     ; RV64P-LABEL: name: cls_i32
     ; RV64P: liveins: $x10
     ; RV64P-NEXT: {{  $}}
     ; RV64P-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-    ; RV64P-NEXT: [[CLSW:%[0-9]+]]:_(s64) = G_CLSW [[COPY]]
-    ; RV64P-NEXT: $x10 = COPY [[CLSW]](s64)
+    ; RV64P-NEXT: [[CLSW:%[0-9]+]]:_(i64) = G_CLSW [[COPY]]
+    ; RV64P-NEXT: $x10 = COPY [[CLSW]](i64)
     ; RV64P-NEXT: PseudoRET implicit $x10
     ;
     ; RV64ZBB-LABEL: name: cls_i32
@@ -284,13 +284,13 @@ body:             |
     ; RV64ZBB-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; RV64ZBB-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 31
     ; RV64ZBB-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-    ; RV64ZBB-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[COPY]], 32
-    ; RV64ZBB-NEXT: [[ASHR:%[0-9]+]]:_(s64) = G_ASHR [[SEXT_INREG]], [[C]](s64)
+    ; RV64ZBB-NEXT: [[SEXT_INREG:%[0-9]+]]:_(i64) = G_SEXT_INREG [[COPY]], 32
+    ; RV64ZBB-NEXT: [[ASHR:%[0-9]+]]:_(i64) = G_ASHR [[SEXT_INREG]], [[C]](s64)
     ; RV64ZBB-NEXT: [[XOR:%[0-9]+]]:_(s64) = G_XOR [[COPY]], [[ASHR]]
-    ; RV64ZBB-NEXT: [[CLZW:%[0-9]+]]:_(s64) = G_CLZW [[XOR]]
-    ; RV64ZBB-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[CLZW]], [[C1]]
-    ; RV64ZBB-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s64) = G_SEXT_INREG [[SUB]], 32
-    ; RV64ZBB-NEXT: $x10 = COPY [[SEXT_INREG1]](s64)
+    ; RV64ZBB-NEXT: [[CLZW:%[0-9]+]]:_(i64) = G_CLZW [[XOR]]
+    ; RV64ZBB-NEXT: [[SUB:%[0-9]+]]:_(i64) = G_SUB [[CLZW]], [[C1]]
+    ; RV64ZBB-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(i64) = G_SEXT_INREG [[SUB]], 32
+    ; RV64ZBB-NEXT: $x10 = COPY [[SEXT_INREG1]](i64)
     ; RV64ZBB-NEXT: PseudoRET implicit $x10
     %1:_(s64) = COPY $x10
     %0:_(s32) = G_TRUNC %1(s64)

@@ -22,8 +22,8 @@
 #include <optional>
 
 #include "Plugins/Process/NetBSD/NativeRegisterContextNetBSD.h"
-#include "Register/Arch/RegisterContext_x86.h"
 #include "Plugins/Register/Native/NativeRegisterContextDBReg_x86.h"
+#include "Register/Arch/RegisterContext_x86.h"
 #include "Register/Arch/lldb-x86-register-enums.h"
 
 namespace lldb_private {
