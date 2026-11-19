@@ -245,6 +245,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     # sys/prctl.h entrypoints
     libc.src.sys.prctl.prctl
 
+    # sys/swap.h entrypoints
+    libc.src.sys.swap.swapoff
+    libc.src.sys.swap.swapon
+
     # sys/sysinfo.h entrypoints
     # Disabled due to QEMU test failures.
     # libc.src.sys.sysinfo.sysinfo

@@ -457,6 +457,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.statvfs.fstatvfs
     libc.src.sys.statvfs.statvfs
 
+    # sys/swap.h entrypoints
+    libc.src.sys.swap.swapoff
+    libc.src.sys.swap.swapon
+
     # sys/time.h entrypoints
     libc.src.sys.time.utimes
 
