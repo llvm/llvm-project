@@ -315,6 +315,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     # sys/ioctl.h entrypoints
     libc.src.sys.ioctl.ioctl
 
+    # sys/klog.h entrypoints
+    libc.src.sys.klog.klogctl
+
     # sys/mman.h entrypoints
     libc.src.sys.mman.madvise
     libc.src.sys.mman.memfd_create
