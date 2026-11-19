@@ -83,14 +83,14 @@ define void @push_before_probe(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i
 ; CHECK-X64:       # %bb.0:
 ; CHECK-X64-NEXT:    pushq %rax
 ; CHECK-X64-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-X64-NEXT:    movq %rsp, %r11
-; CHECK-X64-NEXT:    subq $69632, %r11 # imm = 0x11000
-; CHECK-X64-NEXT:    .cfi_def_cfa_register %r11
+; CHECK-X64-NEXT:    movq %rsp, %rax
+; CHECK-X64-NEXT:    subq $69632, %rax # imm = 0x11000
+; CHECK-X64-NEXT:    .cfi_def_cfa_register %rax
 ; CHECK-X64-NEXT:    .cfi_adjust_cfa_offset 69632
 ; CHECK-X64-NEXT:  .LBB1_1: # =>This Inner Loop Header: Depth=1
 ; CHECK-X64-NEXT:    subq $4096, %rsp # imm = 0x1000
 ; CHECK-X64-NEXT:    movq $0, (%rsp)
-; CHECK-X64-NEXT:    cmpq %r11, %rsp
+; CHECK-X64-NEXT:    cmpq %rax, %rsp
 ; CHECK-X64-NEXT:    jne .LBB1_1
 ; CHECK-X64-NEXT:  # %bb.2:
 ; CHECK-X64-NEXT:    subq $2240, %rsp # imm = 0x8C0
@@ -169,14 +169,14 @@ define void @push_before_probe(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i
 ; CHECK-X32:       # %bb.0:
 ; CHECK-X32-NEXT:    pushq %rax
 ; CHECK-X32-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-X32-NEXT:    movl %esp, %r11d
-; CHECK-X32-NEXT:    subl $69632, %r11d # imm = 0x11000
-; CHECK-X32-NEXT:    .cfi_def_cfa_register %r11
+; CHECK-X32-NEXT:    movl %esp, %eax
+; CHECK-X32-NEXT:    subl $69632, %eax # imm = 0x11000
+; CHECK-X32-NEXT:    .cfi_def_cfa_register %rax
 ; CHECK-X32-NEXT:    .cfi_adjust_cfa_offset 69632
 ; CHECK-X32-NEXT:  .LBB1_1: # =>This Inner Loop Header: Depth=1
 ; CHECK-X32-NEXT:    subl $4096, %esp # imm = 0x1000
 ; CHECK-X32-NEXT:    movq $0, (%esp)
-; CHECK-X32-NEXT:    cmpl %r11d, %esp
+; CHECK-X32-NEXT:    cmpl %eax, %esp
 ; CHECK-X32-NEXT:    jne .LBB1_1
 ; CHECK-X32-NEXT:  # %bb.2:
 ; CHECK-X32-NEXT:    subl $2240, %esp # imm = 0x8C0

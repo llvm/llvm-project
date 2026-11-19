@@ -198,6 +198,13 @@ static bool isEAXLiveIn(MachineBasicBlock &MBB) {
       return true;
   }
 
+  for (const MCPhysReg *CSRegs =
+           MBB.getParent()->getRegInfo().getCalleeSavedRegs();
+       CSRegs && *CSRegs; ++CSRegs) {
+    if (*CSRegs == X86::RAX || *CSRegs == X86::EAX)
+      return true;
+  }
+
   return false;
 }
 
@@ -939,10 +946,66 @@ void X86FrameLowering::emitStackProbeInlineGenericLoop(
   Register FinalStackProbed = Uses64BitFramePtr ? X86::R11
                               : Is64Bit         ? X86::R11D
                                                 : X86::EAX;
+  bool SpillFinalStackProbed = false;
+  if (Is64Bit) {
+    const MachineRegisterInfo &MRI = MF.getRegInfo();
+    const MCPhysReg *CSRegs = MRI.getCalleeSavedRegs();
+    ArrayRef<CalleeSavedInfo> CSI = MF.getFrameInfo().getCalleeSavedInfo();
+    auto IsCSRSaved = [&](MCRegister Reg) {
+      return any_of(CSI, [&](const CalleeSavedInfo &I) {
+        return TRI->regsOverlap(I.getReg(), Reg);
+      });
+    };
+    auto IsRegAvailable = [&](MCRegister Reg) {
+      if (any_of(MRI.liveins(), [&](const auto &LI) {
+            return TRI->regsOverlap(LI.first, Reg);
+          }))
+        return false;
+      if (any_of(MBB.liveins(), [&](const auto &LI) {
+            return TRI->regsOverlap(LI.PhysReg, Reg) && !IsCSRSaved(LI.PhysReg);
+          }))
+        return false;
+      for (const MCPhysReg *CSR = CSRegs; CSR && *CSR; ++CSR)
+        if (TRI->regsOverlap(*CSR, Reg) && !IsCSRSaved(*CSR))
+          return false;
+      return true;
+    };
+
+    MCRegister SelectedReg = X86::NoRegister;
+    for (MCRegister Cand : {X86::R11, X86::R10, X86::RAX}) {
+      if (IsRegAvailable(Cand)) {
+        SelectedReg = Cand;
+        break;
+      }
+    }
+    if (SelectedReg) {
+      FinalStackProbed =
+          Uses64BitFramePtr ? Register(SelectedReg)
+                            : Register(getX86SubSuperRegister(SelectedReg, 32));
+    } else {
+      SpillFinalStackProbed = true;
+    }
+  }
+
+  uint64_t LoopOffset = Offset;
+  if (SpillFinalStackProbed) {
+    // Allocate the first probed page and save FinalStackProbed at 0(%rsp),
+    // which both probes the page and keeps the saved register above %rsp.
+    BuildStackAdjustment(MBB, MBBI, DL, -StackProbeSize,
+                         /*InEpilogue=*/false)
+        .setMIFlag(MachineInstr::FrameSetup);
+    const unsigned MovRMOpc = Uses64BitFramePtr ? X86::MOV64mr : X86::MOV32mr;
+    addRegOffset(BuildMI(MBB, MBBI, DL, TII.get(MovRMOpc))
+                     .setMIFlag(MachineInstr::FrameSetup),
+                 StackPtr, 0)
+        .addReg(FinalStackProbed);
+    LoopOffset -= StackProbeSize;
+  }
 
   // save loop bound
   {
-    const uint64_t BoundOffset = alignDown(Offset, StackProbeSize);
+    const uint64_t BoundOffset = alignDown(LoopOffset, StackProbeSize);
+    const uint64_t TotalBoundOffset = alignDown(Offset, StackProbeSize);
 
     // Can we calculate the loop bound using SUB with a 32-bit immediate?
     // Note that the immediate gets sign-extended when used with a 64-bit
@@ -987,8 +1050,9 @@ void X86FrameLowering::emitStackProbeInlineGenericLoop(
       BuildCFI(MBB, MBBI, DL,
                MCCFIInstruction::createDefCfaRegister(
                    nullptr, TRI->getDwarfRegNum(DwarfFinalStackProbed, true)));
-      BuildCFI(MBB, MBBI, DL,
-               MCCFIInstruction::createAdjustCfaOffset(nullptr, BoundOffset));
+      BuildCFI(
+          MBB, MBBI, DL,
+          MCCFIInstruction::createAdjustCfaOffset(nullptr, TotalBoundOffset));
     }
   }
 
@@ -1030,6 +1094,13 @@ void X86FrameLowering::emitStackProbeInlineGenericLoop(
     BuildStackAdjustment(*tailMBB, TailMBBIter, DL, -TailOffset,
                          /*InEpilogue=*/false)
         .setMIFlag(MachineInstr::FrameSetup);
+  }
+  if (SpillFinalStackProbed) {
+    const unsigned MovMROpc = Uses64BitFramePtr ? X86::MOV64rm : X86::MOV32rm;
+    addRegOffset(
+        BuildMI(*tailMBB, TailMBBIter, DL, TII.get(MovMROpc), FinalStackProbed)
+            .setMIFlag(MachineInstr::FrameSetup),
+        StackPtr, Offset - StackProbeSize);
   }
 
   // after the loop, switch back to stack pointer for CFI
@@ -1573,7 +1644,8 @@ bool X86FrameLowering::has128ByteRedZone(const MachineFunction &MF) const {
          "MF used frame lowering for wrong subtarget");
   const Function &Fn = MF.getFunction();
   const bool IsWin64CC = STI.isCallingConvWin64(Fn.getCallingConv());
-  return Is64Bit && !IsWin64CC && !Fn.hasFnAttribute(Attribute::NoRedZone);
+  return Is64Bit && !IsWin64CC && !STI.isTargetWin64() &&
+         !STI.isTargetUEFI64() && !Fn.hasFnAttribute(Attribute::NoRedZone);
 }
 
 bool X86FrameLowering::needsDwarfCFI(const MachineFunction &MF) const {
