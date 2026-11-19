@@ -268,9 +268,9 @@ define amdgpu_kernel void @merge_global_store_3_constants_i32(ptr addrspace(1) %
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, -1
-; CI-NEXT:    v_mov_b32_e32 v2, 0x1c8
 ; CI-NEXT:    v_mov_b32_e32 v0, 0x4d2
 ; CI-NEXT:    v_mov_b32_e32 v1, 0x7b
+; CI-NEXT:    v_mov_b32_e32 v2, 0x1c8
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    buffer_store_dwordx3 v[0:2], off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
