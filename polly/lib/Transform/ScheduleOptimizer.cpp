@@ -957,6 +957,8 @@ static void runIslScheduleOptimizerImpl(
 
     isl::union_map Validity = D.getDependences(ValidityKinds);
     isl::union_map Proximity = D.getDependences(ProximityKinds);
+    isl::union_map ExactValidity = Validity;
+    isl::union_map ExactProximity = Proximity;
 
     // Simplify the dependences by removing the constraints introduced by the
     // domains. This can speed up the scheduling time significantly, as large
@@ -966,7 +968,6 @@ static void runIslScheduleOptimizerImpl(
     // interesting anyway. In some cases this option may stop the scheduler to
     // find any schedule.
     if (SimplifyDeps == "yes") {
-      isl::union_map ExactProximity = Proximity;
       Validity = Validity.gist_domain(Domain);
       Validity = Validity.gist_range(Domain);
       Proximity = Proximity.gist_domain(Domain);
@@ -1021,6 +1022,19 @@ static void runIslScheduleOptimizerImpl(
     SC = SC.set_coincidence(Validity);
 
     {
+      IslQuotaScope MaxOpScope = MaxOpGuard.enter();
+      Schedule = SC.compute_schedule();
+    }
+
+    // If the scheduler finds no schedule for the simplified dependences and the
+    // quota is not exceeded, compute the schedule from the exact dependences.
+    if (Schedule.is_null() && SimplifyDeps == "yes" &&
+        !MaxOpGuard.hasQuotaExceeded()) {
+      POLLY_DEBUG(dbgs() << "Retrying with the exact dependences\n");
+      isl_ctx_reset_error(Ctx);
+      SC = SC.set_proximity(ExactProximity);
+      SC = SC.set_validity(ExactValidity);
+      SC = SC.set_coincidence(ExactValidity);
       IslQuotaScope MaxOpScope = MaxOpGuard.enter();
       Schedule = SC.compute_schedule();
     }
