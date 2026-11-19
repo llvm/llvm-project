@@ -24,6 +24,7 @@ namespace cir {
 namespace direct {
 
 struct LLVMBlockAddressInfo;
+struct LLVMAnnotationGlobals;
 
 /// Convert a CIR attribute to an LLVM value, or return null on failure.
 /// May use the datalayout for lowering attributes to-be-stored in memory. When
@@ -96,6 +97,12 @@ mlir::LogicalResult lowerToConstrainedFPIntrinsic(
     mlir::Type llvmResTy, mlir::ConversionPatternRewriter &rewriter,
     llvm::StringRef constrainedMnemonic, bool hasRoundingMode,
     mlir::LLVM::FastmathFlags fastmathFlags = {});
+
+template <typename LLVMOp>
+mlir::LogicalResult lowerFPOp(mlir::Operation *op, mlir::ValueRange operands,
+                              cir::FastMathFlagsAttr fastmath,
+                              const mlir::TypeConverter &typeConverter,
+                              mlir::ConversionPatternRewriter &rewriter);
 
 template <typename LLVMOp>
 mlir::LogicalResult lowerConstrainableFPOp(

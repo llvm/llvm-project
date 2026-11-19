@@ -400,10 +400,10 @@ func.func @test_cast_bf16_block_scaled(%arg0: tensor<4x32xbf16>) -> tensor<4x32x
 }
 
 // -----
-func.func @test_cast_fp8_block_scaled(%arg0: tensor<4x32xf8E4M3FN>) -> tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>> {
+func.func @test_cast_fp8_block_scaled(%arg0: tensor<4x32xf8E4M3FN>) -> tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:mxi8>> {
   // expected-error@+1 {{'tosa.cast' op illegal: requires all of [fp8e4m3, mx_common, mx_int8] profiles/extensions to be specified in the target environment}}
-  %0 = tosa.cast %arg0 : (tensor<4x32xf8E4M3FN>) -> tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>>
-  return %0 : tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>>
+  %0 = tosa.cast %arg0 : (tensor<4x32xf8E4M3FN>) -> tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:mxi8>>
+  return %0 : tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:mxi8>>
 }
 
 // -----
@@ -793,4 +793,12 @@ func.func @test_conv3d_mxfp_mixed_formats(%input: tensor<1x4x4x4x32x!tosa.block_
   // expected-error@+1 {{'tosa.conv3d' op illegal: requires all of [mx_common, mx_fp4e2m1, mx_fp6e2m3] profiles/extensions to be specified in the target environment}}
   %0 = tosa.conv3d %input, %weight, %bias, %input_zp, %weight_zp pad([0, 0, 0, 0, 0, 0]) stride([1, 1, 1]) dilation([1, 1, 1]) acc_type(f32) : (tensor<1x4x4x4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, tensor<8x1x1x1x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E2M3FN>>, tensor<8xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x4x4x4x8xf32>
   return %0 : tensor<1x4x4x4x8xf32>
+}
+
+// -----
+
+func.func @test_legacy_cast_fp8_block_scaled(%arg0: tensor<4x32xf8E4M3FN>) -> tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>> {
+  // expected-error@+1 {{'tosa.cast' op illegal: requires all of [fp8e4m3, mx_common, mx_int8] profiles/extensions to be specified in the target environment}}
+  %0 = tosa.cast %arg0 : (tensor<4x32xf8E4M3FN>) -> tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>>
+  return %0 : tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>>
 }

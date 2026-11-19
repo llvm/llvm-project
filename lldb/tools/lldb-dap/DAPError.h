@@ -22,9 +22,9 @@ class DAPError : public llvm::ErrorInfo<DAPError> {
 public:
   static char ID;
 
-  DAPError(std::string message,
+  DAPError(std::string message, bool show_user = true,
            std::error_code EC = llvm::inconvertibleErrorCode(),
-           bool show_user = true, std::optional<std::string> url = std::nullopt,
+           std::optional<std::string> url = std::nullopt,
            std::optional<std::string> url_label = std::nullopt);
 
   void log(llvm::raw_ostream &OS) const override;

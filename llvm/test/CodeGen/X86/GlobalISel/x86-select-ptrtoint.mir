@@ -33,7 +33,6 @@ name:            ptrtoint_s1_p0
 alignment:       16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
@@ -63,7 +62,6 @@ name:            ptrtoint_s8_p0
 alignment:       16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
@@ -91,7 +89,6 @@ name:            ptrtoint_s16_p0
 alignment:       16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
@@ -119,7 +116,6 @@ name:            ptrtoint_s32_p0
 alignment:       16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }

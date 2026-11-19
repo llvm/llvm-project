@@ -147,6 +147,8 @@ bool SBTypeSynthetic::IsEqualTo(lldb::SBTypeSynthetic &rhs) {
 
   if (!IsValid())
     return !rhs.IsValid();
+  if (!rhs.IsValid())
+    return false;
 
   if (m_opaque_sp->IsScripted() != rhs.m_opaque_sp->IsScripted())
     return false;
