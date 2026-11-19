@@ -2356,7 +2356,8 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
             VectorType::get(IntegerType::get(Dst->getContext(), DstEltSize / 2),
                             cast<VectorType>(Dst)->getElementCount());
         unsigned Op = IsSigned ? Instruction::SExt : Instruction::ZExt;
-        Cost += getCastInstrCost(Op, VecTy, Src, CCH, CostKind, I);
+        // I is a SIToFP/UIToFP, not this synthetic extension.
+        Cost += getCastInstrCost(Op, VecTy, Src, CCH, CostKind, nullptr);
       }
       Cost += getRISCVInstructionCost(FWCVT, DstLT.second, CostKind);
     } else
