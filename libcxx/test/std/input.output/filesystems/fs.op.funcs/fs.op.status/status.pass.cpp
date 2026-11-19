@@ -10,10 +10,6 @@
 // UNSUPPORTED: c++03, c++11, c++14
 // UNSUPPORTED: no-filesystem
 
-// Starting in Android N (API 24), SELinux policy prevents the shell user from
-// creating a FIFO file.
-// XFAIL: LIBCXX-ANDROID-FIXME && !android-device-api=23
-
 // <filesystem>
 
 // file_status status(const path& p);
@@ -127,7 +123,7 @@ static void status_file_types_test()
 #if !defined(__APPLE__) && !defined(__FreeBSD__) && !defined(_WIN32) // No support for domain sockets
         {env.create_socket("socket"), file_type::socket},
 #endif
-#ifndef _WIN32
+#ifndef TEST_HAS_NO_FIFOS
         {env.create_fifo("fifo"), file_type::fifo}
 #endif
     };

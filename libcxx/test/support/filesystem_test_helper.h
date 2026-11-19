@@ -306,7 +306,11 @@ struct scoped_test_env
         return to;
     }
 
-#ifndef _WIN32
+#if defined(_WIN32) && !defined(TEST_HAS_NO_FIFOS)
+#  define TEST_HAS_NO_FIFOS
+#endif
+
+#ifndef TEST_HAS_NO_FIFOS
     std::string create_fifo(std::string file) {
         file = sanitize_path(std::move(file));
         int ret = ::mkfifo(file.c_str(), 0666); // rw-rw-rw- mode

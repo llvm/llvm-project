@@ -88,7 +88,7 @@ static void test_without_ec() {
   test_path(f);
   test_path(d);
   test_path(hl);
-#ifndef _WIN32
+#ifndef TEST_HAS_NO_FIFOS
   path fifo = env.create_fifo("fifo");
   test_path(fifo);
 #endif
@@ -152,7 +152,7 @@ static void test_with_ec() {
   test_path(f);
   test_path(d);
   test_path(hl);
-#ifndef _WIN32
+#ifndef TEST_HAS_NO_FIFOS
   path fifo = env.create_fifo("fifo");
   test_path(fifo);
 #endif

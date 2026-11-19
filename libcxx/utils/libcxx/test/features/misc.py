@@ -6,7 +6,7 @@
 #
 # ===----------------------------------------------------------------------===##
 
-from libcxx.test.dsl import compilerMacros, sourceBuilds, hasCompileFlag, programSucceeds, runScriptExitCode
+from libcxx.test.dsl import compilerMacros, sourceBuilds, hasCompileFlag, programSucceeds, runScriptExitCode, testMacros
 from libcxx.test.dsl import Feature, AddCompileFlag, AddLinkFlag
 import platform
 import sys
@@ -61,6 +61,31 @@ def _needsLibatomic(cfg):
         }
     """
     return not sourceBuilds(cfg, source) and sourceBuilds(cfg, source, ["-latomic"])
+
+
+def _hasNoFifos(cfg):
+    if "_WIN32" in compilerMacros(cfg) or "TEST_HAS_NO_FILESYSTEM" in testMacros(cfg):
+        return True
+    program = """
+        #include <stdio.h>
+        #include <stdlib.h>
+        #include <string.h>
+        #include <sys/stat.h>
+        #include <unistd.h>
+        int main(int, char** argv) {
+          size_t n = strlen(argv[0]) + 6;
+          char* p = (char*)malloc(n);
+          if (!p)
+            return 1;
+          snprintf(p, n, "%s.fifo", argv[0]);
+          unlink(p);
+          int res = mkfifo(p, 0666);
+          unlink(p);
+          free(p);
+          return res == 0 ? 0 : 1;
+        }
+    """
+    return not sourceBuilds(cfg, program) or not programSucceeds(cfg, program)
 
 
 features = [
@@ -319,6 +344,11 @@ features = [
     Feature(
         name="has-filecheck",
         when=lambda cfg: runScriptExitCode(cfg, ["FileCheck --version"]) == 0,
+    ),
+    Feature(
+        name="has-no-fifos",
+        when=_hasNoFifos,
+        actions=[AddCompileFlag("-DTEST_HAS_NO_FIFOS")],
     ),
     Feature(
         name="has-splitfile",

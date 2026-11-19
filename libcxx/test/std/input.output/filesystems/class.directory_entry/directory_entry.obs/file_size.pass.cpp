@@ -13,10 +13,6 @@
 // against a built library that doesn't contain 0aa637b2037d.
 // XFAIL: using-built-library-before-llvm-13
 
-// Starting in Android N (API 24), SELinux policy prevents the shell user from
-// creating a FIFO file.
-// XFAIL: LIBCXX-ANDROID-FIXME && !android-device-api=23
-
 // <filesystem>
 
 // class directory_entry
@@ -90,7 +86,7 @@ static void not_regular_file() {
     std::errc expected_err;
   } TestCases[] = {
       {env.create_dir("dir"), std::errc::is_a_directory},
-#ifndef _WIN32
+#ifndef TEST_HAS_NO_FIFOS
       {env.create_fifo("fifo"), std::errc::not_supported},
 #endif
       {env.create_directory_symlink("dir", "sym"), std::errc::is_a_directory}};

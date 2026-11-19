@@ -101,7 +101,7 @@ static void equivalent_hardlink_succeeds() {
   assert(equivalent(hl1, hl2));
 }
 
-#ifndef _WIN32
+#ifndef TEST_HAS_NO_FIFOS
 static void equivalent_is_other_succeeds() {
   scoped_test_env env;
   path const file = env.create_file("file", 42);
@@ -114,14 +114,14 @@ static void equivalent_is_other_succeeds() {
   assert(!equivalent(fifo1, fifo2));
   assert(equivalent(fifo1, fifo1));
 }
-#endif // _WIN32
+#endif // TEST_HAS_NO_FIFOS
 
 int main(int, char**) {
   signature_test();
   equivalent_test();
   equivalent_reports_error_if_input_dne();
   equivalent_hardlink_succeeds();
-#ifndef _WIN32
+#ifndef TEST_HAS_NO_FIFOS
   equivalent_is_other_succeeds();
 #endif
 
