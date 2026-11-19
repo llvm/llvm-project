@@ -1338,10 +1338,10 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  2      17    13.00   *             U     idivl	(%rax)
 # CHECK-NEXT:  2      17    17.00                 U     idivq	%rcx
 # CHECK-NEXT:  2      21    17.00   *             U     idivq	(%rax)
-# CHECK-NEXT:  1      3     3.00                        imulb	%dil
-# CHECK-NEXT:  1      7     3.00    *                   imulb	(%rax)
-# CHECK-NEXT:  3      3     3.00                        imulw	%di
-# CHECK-NEXT:  4      7     3.00    *                   imulw	(%rax)
+# CHECK-NEXT:  1      3     1.00                        imulb	%dil
+# CHECK-NEXT:  1      7     1.00    *                   imulb	(%rax)
+# CHECK-NEXT:  3      3     2.00                        imulw	%di
+# CHECK-NEXT:  4      7     2.00    *                   imulw	(%rax)
 # CHECK-NEXT:  1      3     1.00                        imulw	%si, %di
 # CHECK-NEXT:  1      7     1.00    *                   imulw	(%rax), %di
 # CHECK-NEXT:  2      4     4.00                        imulw	$511, %si, %di
@@ -1423,10 +1423,10 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  1      5     0.33    *                   movzwq	(%rax), %rdi
 # CHECK-NEXT:  1      1     0.25                        movslq	%eax, %rdi
 # CHECK-NEXT:  1      5     0.33    *                   movslq	(%rax), %rdi
-# CHECK-NEXT:  1      3     3.00                        mulb	%dil
-# CHECK-NEXT:  1      7     3.00    *                   mulb	(%rax)
-# CHECK-NEXT:  3      3     3.00                        mulw	%si
-# CHECK-NEXT:  4      7     3.00    *                   mulw	(%rax)
+# CHECK-NEXT:  1      3     1.00                        mulb	%dil
+# CHECK-NEXT:  1      7     1.00    *                   mulb	(%rax)
+# CHECK-NEXT:  3      3     2.00                        mulw	%si
+# CHECK-NEXT:  4      7     2.00    *                   mulw	(%rax)
 # CHECK-NEXT:  2      3     1.00                        mull	%edx
 # CHECK-NEXT:  2      7     1.00    *                   mull	(%rax)
 # CHECK-NEXT:  2      3     1.00                        mulq	%rcx
@@ -1975,7 +1975,7 @@ xorq (%rax), %rdi
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1]
-# CHECK-NEXT: 259.00 259.00 259.00 1733.00 1879.50 1775.50 1529.50 1.50  -    -      -      -      -      -      -     259.00 259.00 259.00 151.67 151.67 151.67 161.00 161.00
+# CHECK-NEXT: 259.00 259.00 259.00 1733.00 1867.50 1775.50 1529.50 1.50  -    -      -      -      -      -      -     259.00 259.00 259.00 151.67 151.67 151.67 161.00 161.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1] Instructions:
@@ -2283,10 +2283,10 @@ xorq (%rax), %rdi
 # CHECK-NEXT: 0.33   0.33   0.33   13.00   -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     idivl	(%rax)
 # CHECK-NEXT:  -      -      -     17.00   -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     idivq	%rcx
 # CHECK-NEXT: 0.33   0.33   0.33   17.00   -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     idivq	(%rax)
-# CHECK-NEXT:  -      -      -      -     3.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     imulb	%dil
-# CHECK-NEXT: 0.33   0.33   0.33    -     3.00    -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     imulb	(%rax)
-# CHECK-NEXT:  -      -      -      -     3.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     imulw	%di
-# CHECK-NEXT: 0.33   0.33   0.33    -     3.00    -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     imulw	(%rax)
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     imulb	%dil
+# CHECK-NEXT: 0.33   0.33   0.33    -     1.00    -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     imulb	(%rax)
+# CHECK-NEXT:  -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     imulw	%di
+# CHECK-NEXT: 0.33   0.33   0.33    -     2.00    -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     imulw	(%rax)
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     imulw	%si, %di
 # CHECK-NEXT: 0.33   0.33   0.33    -     1.00    -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     imulw	(%rax), %di
 # CHECK-NEXT:  -      -      -      -     4.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     imulw	$511, %si, %di
@@ -2368,10 +2368,10 @@ xorq (%rax), %rdi
 # CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     movzwq	(%rax), %rdi
 # CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movslq	%eax, %rdi
 # CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     movslq	(%rax), %rdi
-# CHECK-NEXT:  -      -      -      -     3.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     mulb	%dil
-# CHECK-NEXT: 0.33   0.33   0.33    -     3.00    -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     mulb	(%rax)
-# CHECK-NEXT:  -      -      -      -     3.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     mulw	%si
-# CHECK-NEXT: 0.33   0.33   0.33    -     3.00    -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     mulw	(%rax)
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     mulb	%dil
+# CHECK-NEXT: 0.33   0.33   0.33    -     1.00    -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     mulb	(%rax)
+# CHECK-NEXT:  -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     mulw	%si
+# CHECK-NEXT: 0.33   0.33   0.33    -     2.00    -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     mulw	(%rax)
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     mull	%edx
 # CHECK-NEXT: 0.33   0.33   0.33    -     1.00    -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     mull	(%rax)
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     mulq	%rcx
