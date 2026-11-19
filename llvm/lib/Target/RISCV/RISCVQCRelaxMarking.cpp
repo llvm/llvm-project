@@ -160,7 +160,9 @@ static bool runQCRelaxMarking(MachineFunction &MF) {
   bool Changed = false;
   for (MachineBasicBlock &MBB : MF) {
     for (auto MI = MBB.begin(), E = MBB.end(); MI != E; MI++) {
-      auto NextMI = std::next(MI);
+      // Debug instructions do not interrupt the QC.E.LI/access instruction
+      // sequence.
+      auto NextMI = next_nodbg(MI, E, /*SkipPseudoOp=*/false);
       if (NextMI == E)
         break;
 
@@ -186,6 +188,15 @@ static bool runQCRelaxMarking(MachineFunction &MF) {
       MachineOperand &SymOp = MI->getOperand(1);
       if (!SymOp.isSymbol() && !SymOp.isGlobal() && !SymOp.isMCSymbol() &&
           !SymOp.isCPI())
+        continue;
+
+      // Relaxation may remove the address materialization, so it is unsafe if
+      // an intervening debug instruction describes the address register.
+      Register AddrReg = MI->getOperand(0).getReg();
+      if (any_of(make_range(std::next(MI), NextMI),
+                 [&](const MachineInstr &DbgMI) {
+                   return DbgMI.readsRegister(AddrReg, STI.getRegisterInfo());
+                 }))
         continue;
 
       unsigned NewOpc = getQCMarkedOpcode(*NextMI, STI);
