@@ -1678,6 +1678,34 @@ class LinuxCoreTestCase(TestBase):
             )
         self.dbg.DeleteTarget(target)
 
+    @skipIfLLVMTargetMissing("X86")
+    @skipIfWindows
+    def test_nt_file_image_with_bogus_note_size(self):
+        # NT_FILE lists two images whose ELF headers are in core memory. The
+        # PT_NOTE program header of /tmp/libbogus.so has a p_memsz of 16 TiB,
+        # far more than the core holds, as when the program headers read from
+        # memory are garbage. Loading the core must not try to allocate a
+        # buffer that large (which aborts lldb), and must still find the build
+        # ID of /tmp/libgood.so.
+        yaml_path = self.getSourcePath("elf-NT_FILE-bogus-note-size.yaml")
+        core_path = self.getBuildArtifact("elf-NT_FILE-bogus-note-size.core")
+        log_path = self.getBuildArtifact("elf-NT_FILE-bogus-note-size.log")
+        self.yaml2obj(yaml_path, core_path)
+        target = self.dbg.CreateTarget(None)
+        self.runCmd(f"log enable lldb process -f '{log_path}'")
+        self.addTearDownHook(lambda: self.runCmd("log disable lldb process"))
+
+        process = target.LoadCore(core_path)
+        self.assertTrue(process.IsValid())
+        with open(log_path, "r") as f:
+            log_text = f.read()
+        self.assertIn(
+            '01020304-0506-0708-090A-0B0C0D0E0F10-11121314 "/tmp/libgood.so"',
+            log_text,
+        )
+        self.assertNotIn('"/tmp/libbogus.so"', log_text)
+        self.dbg.DeleteTarget(target)
+
 
 def replace_path(binary, replace_from, replace_to):
     src = replace_from.encode()
