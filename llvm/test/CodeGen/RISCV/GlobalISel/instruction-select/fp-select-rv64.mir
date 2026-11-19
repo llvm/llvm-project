@@ -21,13 +21,13 @@ body:             |
     ; CHECK-NEXT: [[Select_FPR32_Using_CC_GPR:%[0-9]+]]:fpr32 = Select_FPR32_Using_CC_GPR [[ANDI]], $x0, 1, [[COPY1]], [[COPY2]]
     ; CHECK-NEXT: $f10_f = COPY [[Select_FPR32_Using_CC_GPR]]
     ; CHECK-NEXT: PseudoRET implicit $f10_f
-    %0:gprb(s64) = COPY $x10
-    %1:fprb(s32) = COPY $f10_f
-    %2:fprb(s32) = COPY $f11_f
-    %3:gprb(s64) = G_CONSTANT i64 1
-    %4:gprb(s64) = G_AND %0, %3
-    %5:fprb(s32) = G_SELECT %4(s64), %1, %2
-    $f10_f = COPY %5(s32)
+    %0:gprb(i64) = COPY $x10
+    %1:fprb(f32) = COPY $f10_f
+    %2:fprb(f32) = COPY $f11_f
+    %3:gprb(i64) = G_CONSTANT i64 1
+    %4:gprb(i64) = G_AND %0, %3
+    %5:fprb(f32) = G_SELECT %4(i64), %1, %2
+    $f10_f = COPY %5(f32)
     PseudoRET implicit $f10_f
 
 ...
@@ -50,13 +50,13 @@ body:             |
     ; CHECK-NEXT: [[Select_FPR64_Using_CC_GPR:%[0-9]+]]:fpr64 = Select_FPR64_Using_CC_GPR [[ANDI]], $x0, 1, [[COPY1]], [[COPY2]]
     ; CHECK-NEXT: $f10_d = COPY [[Select_FPR64_Using_CC_GPR]]
     ; CHECK-NEXT: PseudoRET implicit $f10_d
-    %0:gprb(s64) = COPY $x10
-    %1:fprb(s64) = COPY $f10_d
-    %2:fprb(s64) = COPY $f11_d
-    %3:gprb(s64) = G_CONSTANT i64 1
-    %4:gprb(s64) = G_AND %0, %3
-    %5:fprb(s64) = G_SELECT %4(s64), %1, %2
-    $f10_d = COPY %5(s64)
+    %0:gprb(i64) = COPY $x10
+    %1:fprb(f64) = COPY $f10_d
+    %2:fprb(f64) = COPY $f11_d
+    %3:gprb(i64) = G_CONSTANT i64 1
+    %4:gprb(i64) = G_AND %0, %3
+    %5:fprb(f64) = G_SELECT %4(i64), %1, %2
+    $f10_d = COPY %5(f64)
     PseudoRET implicit $f10_d
 
 ...

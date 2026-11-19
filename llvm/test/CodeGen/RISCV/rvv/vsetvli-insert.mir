@@ -116,11 +116,6 @@
 ---
 name:            add
 alignment:       4
-registers:
-  - { id: 0, class: vr }
-  - { id: 1, class: vr }
-  - { id: 2, class: gprnox0 }
-  - { id: 3, class: vr }
 liveins:
   - { reg: '$v8', virtual-reg: '%0' }
   - { reg: '$v9', virtual-reg: '%1' }
@@ -153,12 +148,6 @@ body:             |
 ---
 name:            load_add
 alignment:       4
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: vr }
-  - { id: 2, class: gprnox0 }
-  - { id: 3, class: vr }
-  - { id: 4, class: vr }
 liveins:
   - { reg: '$x10', virtual-reg: '%0' }
   - { reg: '$v8', virtual-reg: '%1' }
@@ -193,11 +182,6 @@ body:             |
 ---
 name:            load_zext
 alignment:       4
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gprnox0 }
-  - { id: 2, class: vr }
-  - { id: 3, class: vr }
 liveins:
   - { reg: '$x10', virtual-reg: '%0' }
   - { reg: '$x11', virtual-reg: '%1' }
@@ -229,9 +213,6 @@ body:             |
 ---
 name:            vmv_x_s
 alignment:       4
-registers:
-  - { id: 0, class: vr }
-  - { id: 1, class: gpr }
 liveins:
   - { reg: '$v8', virtual-reg: '%0' }
 frameInfo:
@@ -258,12 +239,6 @@ body:             |
 ---
 name:            add_v2i64
 alignment:       4
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: vr }
-  - { id: 3, class: vr }
-  - { id: 4, class: vr }
 liveins:
   - { reg: '$x10', virtual-reg: '%0' }
   - { reg: '$x11', virtual-reg: '%1' }
@@ -297,13 +272,6 @@ body:             |
 ---
 name:            vreduce_add_v2i64
 alignment:       4
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: vr }
-  - { id: 2, class: vr }
-  - { id: 3, class: vr }
-  - { id: 4, class: vr }
-  - { id: 5, class: gpr }
 liveins:
   - { reg: '$x10', virtual-reg: '%0' }
 frameInfo:
@@ -338,12 +306,6 @@ body:             |
 ---
 name:            vsetvli_add
 alignment:       4
-registers:
-  - { id: 0, class: vr }
-  - { id: 1, class: vr }
-  - { id: 2, class: gprnox0 }
-  - { id: 3, class: gprnox0 }
-  - { id: 4, class: vr }
 liveins:
   - { reg: '$v8', virtual-reg: '%0' }
   - { reg: '$v9', virtual-reg: '%1' }
@@ -377,12 +339,6 @@ body:             |
 ---
 name:            load_add_inlineasm
 alignment:       4
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: vr }
-  - { id: 2, class: gprnox0 }
-  - { id: 3, class: vr }
-  - { id: 4, class: vr }
 liveins:
   - { reg: '$x10', virtual-reg: '%0' }
   - { reg: '$v8', virtual-reg: '%1' }
@@ -706,3 +662,4 @@ body: |
     %3:vr = PseudoVADD_VV_M1 undef $noreg, %1, %2, %0, 6, 0
     $v8 = COPY %3
     PseudoRET implicit $v8
+...

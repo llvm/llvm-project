@@ -22,8 +22,8 @@
 #include <cstdlib>
 #include <mutex>
 
-using namespace llvm::omp::target;
-using namespace llvm::omp::target::plugin;
+using namespace llvm::offload;
+using namespace llvm::offload::plugin;
 using namespace error;
 
 struct ol_platform_impl_t {
@@ -76,6 +76,9 @@ struct ol_device_impl_t {
                    ol_platform_impl_t &Platform, InfoTreeNode &&DevInfo)
       : DeviceNum(DeviceNum), Device(Device), Platform(Platform),
         Info(std::forward<InfoTreeNode>(DevInfo)) {}
+
+  ol_device_impl_t(const ol_device_impl_t &) = delete;
+  ol_device_impl_t &operator=(const ol_device_impl_t &) = delete;
 
   int DeviceNum;
   GenericDeviceTy *Device;
@@ -222,8 +225,8 @@ struct ol_context_impl_t {
                                   ol_alloc_type_t Kind, size_t Alignment) {
     if (auto Err = requireDevice(Device))
       return std::move(Err);
-    auto AllocOrErr = PluginCtx->allocate(*Device->Device, Size,
-                                          /*HostPtr=*/nullptr, Kind, Alignment);
+    auto AllocOrErr =
+        PluginCtx->allocate(*Device->Device, Size, Kind, Alignment);
     if (!AllocOrErr)
       return AllocOrErr.takeError();
 
@@ -338,6 +341,11 @@ struct OffloadContext {
   SmallVector<std::unique_ptr<ol_platform_impl_t>, 4> Platforms{};
   size_t RefCount;
 
+  // Cleanup routines to run, in reverse order, before the platforms are
+  // deinitialized.
+  std::mutex ShutdownCallbacksMutex;
+  SmallVector<std::pair<ol_shutdown_cb_t, void *>> ShutdownCallbacks;
+
   static OffloadContext &get() {
     assert(OffloadContextVal);
     return *OffloadContextVal;
@@ -372,7 +380,7 @@ ol_platform_backend_t pluginNameToBackend(StringRef Name) {
 
 // Every plugin exports this method to create an instance of the plugin type.
 #define PLUGIN_TARGET(Name) extern "C" GenericPluginTy *createPlugin_##Name();
-#include "Shared/Targets.def"
+#include "Targets.def"
 
 Error initPlugins(OffloadContext &Context, const ol_init_args_t *InitArgs) {
   SmallSet<ol_platform_backend_t, 0> Requested;
@@ -391,7 +399,7 @@ Error initPlugins(OffloadContext &Context, const ol_init_args_t *InitArgs) {
           std::unique_ptr<GenericPluginTy>(createPlugin_##Name()), Backend));  \
     }                                                                          \
   } while (false);
-#include "Shared/Targets.def"
+#include "Targets.def"
 
   Context.TracingEnabled = std::getenv("OFFLOAD_TRACE");
   Context.ValidationEnabled = !std::getenv("OFFLOAD_DISABLE_VALIDATION");
@@ -430,6 +438,21 @@ Error olInit_impl(const ol_init_args_t *InitArgs) {
   return InitResult;
 }
 
+// Run the registered cleanup routines. The context is still published here so
+// callbacks can use the API. Callbacks may register further callbacks.
+static void runShutdownCallbacks(OffloadContext &Context) {
+  while (true) {
+    std::pair<ol_shutdown_cb_t, void *> Entry;
+    {
+      std::lock_guard<std::mutex> Lock(Context.ShutdownCallbacksMutex);
+      if (Context.ShutdownCallbacks.empty())
+        return;
+      Entry = Context.ShutdownCallbacks.pop_back_val();
+    }
+    Entry.first(Entry.second);
+  }
+}
+
 static Error destroyContext(OffloadContext *Context) {
   Error Result = Error::success();
   for (auto &Platform : Context->Platforms)
@@ -455,7 +478,16 @@ Error olShutDown_impl() {
   if (--OffloadContext::get().RefCount != 0)
     return Error::success();
 
+  runShutdownCallbacks(OffloadContext::get());
   return destroyContext(OffloadContextVal.exchange(nullptr));
+}
+
+Error olRegisterShutdownCallback_impl(ol_shutdown_cb_t Callback,
+                                      void *UserData) {
+  OffloadContext &Context = OffloadContext::get();
+  std::lock_guard<std::mutex> Lock(Context.ShutdownCallbacksMutex);
+  Context.ShutdownCallbacks.emplace_back(Callback, UserData);
+  return Error::success();
 }
 
 // Vendor libraries have specific teardown orders but can be initialized lazily.
@@ -464,8 +496,11 @@ Error olShutDown_impl() {
 static void shutDownAtExit() {
   std::lock_guard<std::mutex> Lock(getOffloadContextMutex());
   ShutDownAtExit = true;
-  if (OffloadContext *Context = OffloadContextVal.exchange(nullptr))
+  if (OffloadContext *Context = OffloadContextVal.load()) {
+    runShutdownCallbacks(*Context);
+    OffloadContextVal.store(nullptr);
     consumeError(destroyContext(Context));
+  }
 }
 
 Error olGetPlatformInfoImplDetail(ol_platform_handle_t Platform,
@@ -975,8 +1010,11 @@ Error olCreateQueue_impl(ol_context_handle_t Context, ol_device_handle_t Device,
     // The queue is empty, but we still need to sync it to release any temporary
     // memory allocations or do other cleanup.
     if (auto Err =
-            Device->Device->synchronize(OutstandingQueue, /*Release=*/false))
-      return Err;
+            Device->Device->synchronize(OutstandingQueue, /*Release=*/false)) {
+      // This only fails after a fatal device error on the destroyed queue.
+      return createOffloadError(ErrorCode::UNKNOWN, std::move(Err),
+                                "failed to reuse a destroyed queue");
+    }
     CreatedQueue->AsyncInfo = OutstandingQueue;
   } else if (auto Err = Context->PluginCtx->initAsyncInfo(
                  *Device->Device, &(CreatedQueue->AsyncInfo))) {
@@ -1297,14 +1335,19 @@ Error olIsValidBinary_impl(ol_device_handle_t Device, const void *ProgData,
 
 Error olDestroyProgram_impl(ol_program_handle_t Program) {
   auto &Device = Program->Image->getDevice();
-  if (auto Err = Device.unloadBinary(Program->Image))
-    return Err;
+  auto *Image = Program->Image;
 
+  // Unregister the image first: unloading frees it, and deinit must not run
+  // its destructors a second time if something below fails. A failed unload
+  // therefore leaks the image instead of retrying it at deinit.
   auto &LoadedImages = Device.LoadedImages;
-  LoadedImages.erase(
-      std::find(LoadedImages.begin(), LoadedImages.end(), Program->Image));
+  auto It = std::find(LoadedImages.begin(), LoadedImages.end(), Image);
+  if (It != LoadedImages.end())
+    LoadedImages.erase(It);
 
-  return olDestroy(Program);
+  Error Result = Device.callGlobalDestructors(Device.Plugin, *Image);
+  Result = joinErrors(std::move(Result), Device.unloadBinary(Image));
+  return joinErrors(std::move(Result), olDestroy(Program));
 }
 
 Error olCalculateOptimalOccupancy_impl(ol_device_handle_t Device,
@@ -1707,11 +1750,8 @@ Error olQueryQueue_impl(ol_queue_handle_t Queue, bool *IsQueueWorkCompleted) {
 }
 
 namespace tmp {
-// Temporary helpers to help transition of libomptarget to liboffload
-DeviceImageTy *__ol_tgt_GetDeviceImageFromProgram(ol_program_handle_t Program) {
-  return Program->Image;
-}
-
+// Helpers for virtual address management that are only used RecordReplay until
+// it transitions to a new code.
 void *__ol_tgt_GetSuggestedVirtualAddress(ol_device_handle_t Device) {
   return Device->Device->getSuggestedVirtualAddress();
 }
@@ -1724,30 +1764,6 @@ Expected<void *> __ol_tgt_AllocWithVirtualAddress(ol_device_handle_t Device,
 Error __ol_tgt_DeallocWithVirtualAddress(ol_device_handle_t Device, void *VAddr,
                                          uint64_t Size) {
   return Device->Device->deallocateWithVirtualAddress(VAddr, Size);
-}
-
-// Same as olMemAlloc/olMemAllocHost, but takes the plugin allocation kind and
-// also passes on the host pointer the allocation is made for, which is only a
-// hint for diagnostics and profiling that the public API cannot express.
-llvm::Expected<void *> __ol_tgt_MemAlloc(ol_context_handle_t Context,
-                                         ol_device_handle_t Device,
-                                         ol_alloc_type_t Kind, int64_t Size,
-                                         void *HostPtr) {
-  if (auto Err = Context->requireDevice(Device))
-    return std::move(Err);
-  return Context->PluginCtx->allocate(*Device->Device, Size, HostPtr, Kind,
-                                      /*Alignment=*/0);
-}
-
-// Same as olMemFree, but for a caller that knows the kind of memory it is
-// freeing: the plugin diagnoses a kind that differs from the allocated one,
-// which olMemFree, resolving the kind from the allocation, cannot.
-llvm::Error __ol_tgt_MemFree(ol_context_handle_t Context,
-                             ol_device_handle_t Device, void *Ptr,
-                             ol_alloc_type_t Kind) {
-  if (auto Err = Context->requireDevice(Device))
-    return Err;
-  return Context->PluginCtx->deallocate(*Device->Device, Ptr, Kind);
 }
 
 } // namespace tmp

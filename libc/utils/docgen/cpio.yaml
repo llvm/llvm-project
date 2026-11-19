@@ -1,3 +1,4 @@
+posix: posix-2024
 macros:
   C_IRUSR:
     in-latest-posix: ''

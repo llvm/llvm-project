@@ -48,6 +48,9 @@ public:
   /// handled and should be skipped.
   bool markAsGlobalTarget(GlobalDecl gd);
 
+  /// Register a global variable that may need an offload entry.
+  void registerTargetGlobalVariable(const VarDecl *vd);
+
   /// Return whether unified shared memory is required.
   bool hasRequiresUnifiedSharedMemory() const;
 

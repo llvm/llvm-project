@@ -17,14 +17,16 @@ define void @test(ptr %this, ptr %0, double %1) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <3 x double> [[TMP8]], double [[TMP4]], i64 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <3 x double> [[TMP9]], <3 x double> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 1>
 ; CHECK-NEXT:    [[TMP11:%.*]] = fmul <4 x double> [[TMP10]], <double 1.000000e+00, double 0.000000e+00, double 1.000000e+00, double 1.000000e+00>
+; CHECK-NEXT:    [[TMP30:%.*]] = shufflevector <4 x double> [[TMP11]], <4 x double> [[TMP10]], <4 x i32> <i32 4, i32 1, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x double> <double poison, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, double [[TMP4]], i64 0
 ; CHECK-NEXT:    [[TMP27:%.*]] = fmul <4 x double> zeroinitializer, [[TMP12]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <3 x double> [[TMP9]], <3 x double> poison, <4 x i32> <i32 2, i32 0, i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP15:%.*]] = fmul <4 x double> [[TMP14]], <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 0.000000e+00>
+; CHECK-NEXT:    [[TMP32:%.*]] = shufflevector <4 x double> [[TMP15]], <4 x double> [[TMP14]], <4 x i32> <i32 4, i32 5, i32 6, i32 3>
 ; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x double> <double 1.000000e+00, double 1.000000e+00, double poison, double 1.000000e+00>, double [[TMP4]], i64 2
 ; CHECK-NEXT:    [[TMP17:%.*]] = fmul <4 x double> zeroinitializer, [[TMP16]]
-; CHECK-NEXT:    [[TMP18:%.*]] = fneg <4 x double> [[TMP11]]
-; CHECK-NEXT:    [[TMP19:%.*]] = fneg <4 x double> [[TMP15]]
+; CHECK-NEXT:    [[TMP18:%.*]] = fneg <4 x double> [[TMP30]]
+; CHECK-NEXT:    [[TMP19:%.*]] = fneg <4 x double> [[TMP32]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = shufflevector <2 x double> [[TMP13]], <2 x double> <double poison, double 1.000000e+00>, <4 x i32> <i32 1, i32 3, i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP21:%.*]] = fmul <4 x double> [[TMP18]], [[TMP20]]
 ; CHECK-NEXT:    [[TMP28:%.*]] = shufflevector <4 x double> [[TMP20]], <4 x double> poison, <4 x i32> <i32 0, i32 0, i32 0, i32 1>
@@ -34,7 +36,8 @@ define void @test(ptr %this, ptr %0, double %1) {
 ; CHECK-NEXT:    [[TMP26:%.*]] = call <4 x double> @llvm.fmuladd.v4f64(<4 x double> [[TMP29]], <4 x double> zeroinitializer, <4 x double> [[TMP17]])
 ; CHECK-NEXT:    [[TMP31:%.*]] = shufflevector <4 x double> [[TMP26]], <4 x double> [[TMP25]], <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 6, i32 2, i32 7, i32 3>
 ; CHECK-NEXT:    [[TMP34:%.*]] = fmul <8 x double> [[TMP31]], [[TMP22]]
-; CHECK-NEXT:    [[TMP35:%.*]] = fptrunc <8 x double> [[TMP34]] to <8 x float>
+; CHECK-NEXT:    [[TMP33:%.*]] = shufflevector <8 x double> [[TMP34]], <8 x double> [[TMP31]], <8 x i32> <i32 8, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP35:%.*]] = fptrunc <8 x double> [[TMP33]] to <8 x float>
 ; CHECK-NEXT:    store <8 x float> [[TMP35]], ptr [[TMP7]], align 4
 ; CHECK-NEXT:    ret void
 ;
