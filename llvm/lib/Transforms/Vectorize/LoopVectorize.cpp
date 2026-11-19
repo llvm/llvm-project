@@ -5335,7 +5335,7 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
 
   // Don't apply legacy scalarization costs if nothing remains scalar &
   // predicated.
-  if (!hasReplicatorRegion(Plan))
+  if (!hasReplicatorRegion(Plan) || !Opts.enable_skip_cost_computation)
     return Cost;
 
   auto UseVPlanCostModel = [](Instruction *I) -> bool {
