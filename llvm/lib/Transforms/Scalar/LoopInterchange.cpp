@@ -2176,7 +2176,8 @@ void LoopInterchangeTransform::restructureLoops(
 /// llvm.loop.parallel_accesses of the inner loop doesn't imply that the loop is
 /// parallel when it becomes the outer loop), and no followup attributes are
 /// defined for interchange.
-/// TODO: Preserve the branch weights by swapping them.
+/// TODO: Preserve the branch weights and the loop attributes that remain valid
+/// after interchange.
 void LoopInterchangeTransform::updateLatchMetadata() {
   auto *OuterLoopLatchBI =
       cast<CondBrInst>(OuterLoop->getLoopLatch()->getTerminator());
@@ -2185,6 +2186,8 @@ void LoopInterchangeTransform::updateLatchMetadata() {
 
   for (CondBrInst *BI : {OuterLoopLatchBI, InnerLoopLatchBI}) {
     BI->setMetadata(LLVMContext::MD_loop, nullptr);
+    // Drop the branch weights. If the function has profile data, mark them as
+    // unknown instead.
     BI->setMetadata(LLVMContext::MD_prof, nullptr);
     setExplicitlyUnknownBranchWeightsIfProfiled(*BI, DEBUG_TYPE);
   }
