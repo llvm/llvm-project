@@ -86,7 +86,8 @@ let Definition = "testing", Path = "testing" in {
   def DeprecatedSetting : Property<"deprecated-setting", "Boolean">,
                           Global,
                           DefaultFalse,
-                          Deprecated,
+                          Deprecated<"there is no replacement for this "
+                                     "setting">,
                           Desc<"Used for testing LLDB only. This setting has "
                                "no effect.">;
 }

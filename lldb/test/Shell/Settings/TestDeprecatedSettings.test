@@ -11,7 +11,7 @@
 # RUN:   -o 'settings show testing.deprecated-setting' \
 # RUN:   2>&1 | FileCheck %s --check-prefix=SET
 # SET-NOT: error:
-# SET: warning: setting 'testing.deprecated-setting' is deprecated and may be removed in a future release
+# SET: warning: setting 'testing.deprecated-setting' is deprecated and may be removed in a future release; there is no replacement for this setting
 # SET-NOT: error:
 # SET: testing.deprecated-setting (deprecated) (boolean) = true
 
@@ -22,6 +22,17 @@
 # CLEAR-NOT: warning:
 # CLEAR: (lldb) settings set -f testing.deprecated-setting
 # CLEAR-NOT: warning:
+
+# A setting that moved out of an experimental collection can still be reached
+# through its old experimental path, so that path must warn and be tagged too.
+# RUN: %lldb -x -b \
+# RUN:   -o 'settings set testing.experimental.deprecated-setting true' \
+# RUN:   -o 'settings show testing.experimental.deprecated-setting' \
+# RUN:   2>&1 | FileCheck %s --check-prefix=EXPERIMENTAL
+# EXPERIMENTAL-NOT: error:
+# EXPERIMENTAL: warning: setting 'testing.experimental.deprecated-setting' is deprecated and may be removed in a future release; there is no replacement for this setting
+# EXPERIMENTAL-NOT: error:
+# EXPERIMENTAL: testing.experimental.deprecated-setting (deprecated) (boolean) = true
 
 # RUN: %lldb -x -b -o 'settings show' -o 'settings show testing' \
 # RUN:   -o 'settings show -d' -o 'settings show -c' 2>&1 \

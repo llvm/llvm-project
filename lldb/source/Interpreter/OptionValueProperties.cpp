@@ -389,8 +389,8 @@ Status OptionValueProperties::DumpPropertyValue(const ExecutionContext *exe_ctx,
                                                 bool is_json) {
   Status error;
   // Look up the Property, not just its value, so a deprecated setting can be
-  // tagged. Paths into a value ("target.env-vars[FOO]") and experimental
-  // fallbacks don't name a Property, so for those only look up the value.
+  // tagged. Paths into a value ("target.env-vars[FOO]") don't name a Property,
+  // so for those only look up the value.
   const Property *property = GetPropertyAtPath(exe_ctx, property_path);
   lldb::OptionValueSP value_sp =
       property ? property->GetValue()
@@ -462,12 +462,21 @@ OptionValueProperties::GetPropertyAtPath(const ExecutionContext *exe_ctx,
   if (sub_name.empty() || !property)
     return property;
 
-  if (sub_name[0] == '.') {
-    OptionValueProperties *sub_properties =
-        property->GetValue()->GetAsProperties();
-    if (sub_properties)
-      return sub_properties->GetPropertyAtPath(exe_ctx, sub_name.drop_front());
-  }
+  if (sub_name[0] != '.')
+    return nullptr;
+  OptionValueProperties *sub_properties =
+      property->GetValue()->GetAsProperties();
+  if (!sub_properties)
+    return nullptr;
+  sub_name = sub_name.drop_front();
+  if (const Property *sub_property =
+          sub_properties->GetPropertyAtPath(exe_ctx, sub_name))
+    return sub_property;
+  // Like GetSubValue, resolve "foo.experimental.bar" to "foo.bar" when the
+  // experimental setting has moved out of the experimental collection.
+  if (sub_name.consume_front(Properties::GetExperimentalSettingsName()) &&
+      sub_name.consume_front("."))
+    return sub_properties->GetPropertyAtPath(exe_ctx, sub_name);
   return nullptr;
 }
 

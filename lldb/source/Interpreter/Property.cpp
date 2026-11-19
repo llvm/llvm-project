@@ -21,7 +21,8 @@ using namespace lldb_private;
 
 Property::Property(const PropertyDefinition &definition)
     : m_name(definition.name), m_description(definition.description),
-      m_is_global(definition.global), m_is_deprecated(definition.deprecated) {
+      m_is_global(definition.global), m_is_deprecated(definition.deprecated),
+      m_deprecation_message(definition.deprecation_message) {
   switch (definition.type) {
   case OptionValue::eTypeInvalid:
   case OptionValue::eTypeProperties:

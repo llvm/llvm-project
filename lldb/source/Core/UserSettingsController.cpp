@@ -90,11 +90,15 @@ Properties::GetDeprecationWarning(llvm::StringRef property_path) const {
       m_collection_sp->GetPropertyAtPath(nullptr, setting_name);
   if (!property || !property->IsDeprecated())
     return std::nullopt;
-  return llvm::formatv(
-             "setting '{0}' is deprecated and may be removed in a future "
-             "release",
-             setting_name)
-      .str();
+  std::string warning =
+      llvm::formatv("setting '{0}' is deprecated and may be removed in a "
+                    "future release",
+                    setting_name)
+          .str();
+  llvm::StringRef message = property->GetDeprecationMessage();
+  if (!message.empty())
+    warning += ("; " + message).str();
+  return warning;
 }
 
 llvm::StringRef Properties::GetExperimentalSettingsName() {

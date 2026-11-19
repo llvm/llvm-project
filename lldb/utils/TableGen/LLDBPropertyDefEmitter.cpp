@@ -13,6 +13,7 @@
 #include "LLDBTableGenBackends.h"
 #include "LLDBTableGenUtils.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/StringMatcher.h"
 #include "llvm/TableGen/TableGenBackend.h"
@@ -128,6 +129,19 @@ static void emitProperty(const Record *Property, raw_ostream &OS) {
   const bool deprecated =
       Property->getValue("Deprecated") && Property->getValueAsBit("Deprecated");
   OS << (deprecated ? "true" : "false");
+  OS << ", ";
+
+  // Emit the deprecation message.
+  if (deprecated) {
+    StringRef Message = Property->getValueAsString("DeprecationMessage");
+    if (Message.ends_with("."))
+      PrintFatalError(Property->getLoc(),
+                      "Deprecation message is part of a diagnostic, so it "
+                      "should not end with a period.");
+    OS << "\"" << Message << "\"";
+  } else {
+    OS << "nullptr";
+  }
 
   OS << "},\n";
 }

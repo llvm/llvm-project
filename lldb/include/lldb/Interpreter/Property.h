@@ -33,6 +33,8 @@ struct PropertyDefinition {
   // Deprecated settings can still be set and shown by name, but are mostly
   // hidden otherwise. See the Deprecated class in PropertiesBase.td.
   bool deprecated;
+  // What users of a deprecated setting should do instead, or nullptr.
+  const char *deprecation_message;
 };
 
 struct PropertyCollectionDefinition {
@@ -61,6 +63,11 @@ public:
   bool IsGlobal() const { return m_is_global; }
 
   bool IsDeprecated() const { return m_is_deprecated; }
+
+  /// What users of this deprecated property should do instead.
+  llvm::StringRef GetDeprecationMessage() const {
+    return m_deprecation_message;
+  }
 
   /// Whether listings should leave this property out. Deprecated properties
   /// are only listed when \a include_deprecated is set.
@@ -96,6 +103,8 @@ protected:
   lldb::OptionValueSP m_value_sp;
   bool m_is_global;
   bool m_is_deprecated = false;
+  /// Points into the static PropertyDefinition table, or is nullptr.
+  const char *m_deprecation_message = nullptr;
 };
 
 } // namespace lldb_private
