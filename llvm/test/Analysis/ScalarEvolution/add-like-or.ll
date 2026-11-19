@@ -117,7 +117,6 @@ bb10:                                             ; preds = %bb6, %bb
   ret void
 }
 
-; FIXME: This is a miscompilation (https://alive2.llvm.org/ce/z/vW5e4x).
 define i8 @cmp_samesign_simplify_common_addend(i8 %a, i8 %b) {
 ; CHECK-LABEL: 'cmp_samesign_simplify_common_addend'
 ; CHECK-NEXT:  Classifying expressions for: @cmp_samesign_simplify_common_addend
@@ -126,15 +125,15 @@ define i8 @cmp_samesign_simplify_common_addend(i8 %a, i8 %b) {
 ; CHECK-NEXT:    %sum.1 = add nuw i8 %b, 16
 ; CHECK-NEXT:    --> (16 + %b)<nuw> U: [16,0) S: [16,0)
 ; CHECK-NEXT:    %iv = phi i8 [ %a, %entry ], [ %iv.next, %loop ]
-; CHECK-NEXT:    --> {%a,+,1}<nsw><%loop> U: full-set S: full-set Exits: (-1 + %b) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%a,+,1}<nsw><%loop> U: full-set S: full-set Exits: (-1 + ((1 + %a) smax %b)) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add nsw i8 %iv, 1
-; CHECK-NEXT:    --> {(1 + %a),+,1}<nsw><%loop> U: full-set S: full-set Exits: %b LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(1 + %a),+,1}<nsw><%loop> U: full-set S: full-set Exits: ((1 + %a) smax %b) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %rv = phi i8 [ 0, %entry ], [ %iv, %loop ]
 ; CHECK-NEXT:    --> %rv U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @cmp_samesign_simplify_common_addend
-; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (-1 * %a) + %b)
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (-1 * %a) + ((1 + %a) smax %b))
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i8 -1
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (-1 * %a) + %b)
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (-1 * %a) + ((1 + %a) smax %b))
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:

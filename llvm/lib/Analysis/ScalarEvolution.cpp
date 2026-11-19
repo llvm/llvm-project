@@ -10931,6 +10931,9 @@ bool ScalarEvolution::SimplifyICmpOperands(CmpPredicate &Pred, SCEVUse &LHS,
            RAdd->hasNoUnsignedWrap())) {
         LHS = NewLHS;
         RHS = NewRHS;
+        // Nothing follows about the signs of A and B themselves, as adding K
+        // may move either A or B across the sign boundary.
+        Pred = Pred.dropSameSign();
         Changed = true;
       }
     }
