@@ -81,21 +81,51 @@ class SBLineEntryTestCase(TestBase):
         self.assertFalse(line_entry.GetStartAddress().IsValid())
         self.assertFalse(line_entry.GetEndAddress().IsValid())
 
-    def test_line_entry_column(self):
-        """Test setting and getting column information on synthetic line entries."""
+    def test_line_entry_line_and_column(self):
+        """Test setting and getting line and column information on synthetic line entries."""
 
         line_entry = lldb.SBLineEntry()
-        line_entry.SetLine(50)
+        # Default line and column should be invalid.
+        self.assertEqual(line_entry.GetLine(), lldb.LLDB_INVALID_LINE_NUMBER)
+        self.assertEqual(line_entry.line, lldb.LLDB_INVALID_LINE_NUMBER)
+        self.assertEqual(line_entry.GetColumn(), lldb.LLDB_INVALID_COLUMN_NUMBER)
+        self.assertEqual(line_entry.column, lldb.LLDB_INVALID_COLUMN_NUMBER)
 
-        # Default column should be 0.
-        self.assertEqual(line_entry.GetColumn(), 0)
+        # Set line and column.
+        line = 50
+        column = 25
+        line_entry.SetLine(line)
+        line_entry.SetColumn(column)
 
-        # Set column.
-        line_entry.SetColumn(25)
-        self.assertEqual(line_entry.GetColumn(), 25)
+        # Verify line and column.
+        self.assertEqual(line_entry.GetLine(), line)
+        self.assertEqual(line_entry.line, line)
+        self.assertEqual(line_entry.GetColumn(), column)
+        self.assertEqual(line_entry.column, column)
 
         # Verify line entry is still valid.
         self.assertTrue(line_entry.IsValid())
+
+    def test_args_constructor(self):
+        """SBLineEntry(filespec, line, column) constructor with default args."""
+        filespec = lldb.SBFileSpec(self.getSourcePath("test.cpp"), True)
+        line = 10
+        column = 30
+
+        line_entry = lldb.SBLineEntry(filespec, line, column)
+        self.assertEqual(line_entry.GetFileSpec(), filespec)
+        self.assertEqual(line_entry.GetLine(), line)
+        self.assertEqual(line_entry.GetColumn(), column)
+
+        line_entry = lldb.SBLineEntry(filespec, line)
+        self.assertEqual(line_entry.GetFileSpec(), filespec)
+        self.assertEqual(line_entry.GetLine(), line)
+        self.assertEqual(line_entry.GetColumn(), lldb.LLDB_INVALID_COLUMN_NUMBER)
+
+        line_entry = lldb.SBLineEntry(filespec)
+        self.assertEqual(line_entry.GetFileSpec(), filespec)
+        self.assertEqual(line_entry.GetLine(), lldb.LLDB_INVALID_LINE_NUMBER)
+        self.assertEqual(line_entry.GetColumn(), lldb.LLDB_INVALID_COLUMN_NUMBER)
 
     def test_non_synthetic_line_entry_requires_line_number(self):
         """Test that non-synthetic line entries with addresses still require a line number to be valid."""

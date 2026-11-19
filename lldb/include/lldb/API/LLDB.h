@@ -46,6 +46,7 @@
 #include "lldb/API/SBLanguages.h"
 #include "lldb/API/SBLaunchInfo.h"
 #include "lldb/API/SBLineEntry.h"
+#include "lldb/API/SBLineSpec.h"
 #include "lldb/API/SBListener.h"
 #include "lldb/API/SBMemoryRegionInfo.h"
 #include "lldb/API/SBMemoryRegionInfoList.h"
