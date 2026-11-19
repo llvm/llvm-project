@@ -2651,7 +2651,7 @@ void CopyConstrain::constrainLocalCopy(SUnit *CopySU, ScheduleDAGMILive *DAG) {
     return;
 
   // A copy that the coalescer can never eliminate, such as a copy between
-  // register banks, gains nothing from the edges below. 
+  // register banks, gains nothing from the edges below.
   CoalescerPair CP(*DAG->TRI);
   if (!CP.setRegisters(Copy))
     return;
