@@ -33,9 +33,6 @@ struct ProfiledInlineCandidate {
   uint64_t CallsiteCount;
   // Size proxy for function under particular call context.
   uint64_t SizeCost;
-  // Indirect call target rejected by the pre-inliner's ICP checks, so its
-  // context should follow the merge path into the callee's base profile.
-  bool ICPRejected = false;
 };
 
 // Inline candidate comparer using call site weight

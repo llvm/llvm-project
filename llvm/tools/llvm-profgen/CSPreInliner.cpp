@@ -12,7 +12,6 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Transforms/IPO/SampleProfile.h"
 #include <cstdint>
-#include <limits>
 #include <map>
 
 #define DEBUG_TYPE "cs-preinliner"
@@ -163,23 +162,25 @@ CSPreInliner::getICPRejectedCallees(ContextTrieNode *CallerNode,
     uint64_t HeadCount;
     uint64_t CallTargetCount = 0;
   };
+  uint64_t CallerGUID = CallerNode->getFuncName().getHashCode();
   std::map<LineLocation, SmallVector<Target, 4>> CallSites;
   for (auto &Child : CallerNode->getAllChildContext()) {
     ContextTrieNode *CalleeNode = &Child.second;
-    if (FunctionSamples *CalleeSamples = CalleeNode->getFunctionSamples())
-      CallSites[CalleeNode->getCallSiteLoc()].push_back(
-          {CalleeNode, CalleeSamples->getHeadSamplesEstimate()});
-  }
-
-  for (auto &[CallSite, Callees] : CallSites) {
+    FunctionSamples *CalleeSamples = CalleeNode->getFunctionSamples();
+    if (!CalleeSamples)
+      continue;
     // Apply ICP checks only when a decoded probe identifies an indirect call.
     // Multiple targets alone are not enough: a direct call can record several
     // functions when inline frames are lost. Without a matching probe, leave
     // the inline decision to the existing size and hotness checks.
-    if (!Binary.isIndirectCallProbe(CallerNode->getFuncName().getHashCode(),
-                                    CallSite.LineOffset))
+    LineLocation CallSite = CalleeNode->getCallSiteLoc();
+    if (!Binary.isIndirectCallProbe(CallerGUID, CallSite.LineOffset))
       continue;
+    CallSites[CallSite].push_back(
+        {CalleeNode, CalleeSamples->getHeadSamplesEstimate()});
+  }
 
+  for (auto &[CallSite, Callees] : CallSites) {
     // Site total with every target outlined, i.e. the raw call target map.
     uint64_t SiteTotal = 0;
     if (auto CallTargets = CallerSamples->findCallTargetMapAt(CallSite)) {
@@ -204,19 +205,16 @@ CSPreInliner::getICPRejectedCallees(ContextTrieNode *CallerNode,
                       << "\n");
     size_t MaxAccepted = std::min<size_t>(Callees.size(), ProfileICPMaxProm);
     size_t NumAccepted = 0;
-    uint64_t MinScaledHeadCount = std::numeric_limits<uint64_t>::max();
     for (; NumAccepted < MaxAccepted; ++NumAccepted) {
       const Target &T = Callees[NumAccepted];
       if (T.HeadCount < HotCountThreshold)
         break;
       uint64_t NewTotal = SiteTotal - T.CallTargetCount + T.HeadCount;
-      if (NumAccepted >= ProfileICPRelativeHotnessSkip) {
-        // All non-exempt targets use the same total, so checking the smallest
-        // scaled count is enough to keep every accepted target eligible.
-        MinScaledHeadCount = std::min(MinScaledHeadCount, T.HeadCount * 100);
-        if (MinScaledHeadCount < NewTotal * ProfileICPRelativeHotness)
-          break;
-      }
+      // Callees are sorted by head count, so if this target passes, so do the
+      // previously accepted ones.
+      if (NumAccepted >= ProfileICPRelativeHotnessSkip &&
+          T.HeadCount * 100 < NewTotal * ProfileICPRelativeHotness)
+        break;
       SiteTotal = NewTotal;
     }
     for (size_t I = NumAccepted; I < Callees.size(); ++I) {
@@ -250,6 +248,12 @@ bool CSPreInliner::getInlineCandidates(ProfiledCandidateQueue &CQueue,
     FunctionSamples *CalleeSamples = CalleeNode->getFunctionSamples();
     if (!CalleeSamples)
       continue;
+    // A target rejected by the ICP checks is never inlined, so leave it out of
+    // the queue. Its context is merged into its base profile.
+    if (ICPRejected.contains(CalleeNode)) {
+      ++PreInlNumCSICPRejected;
+      continue;
+    }
 
     // Call site count is more reliable, so we look up the corresponding call
     // target profile in caller's context profile to retrieve call site count.
@@ -266,10 +270,8 @@ bool CSPreInliner::getInlineCandidates(ProfiledCandidateQueue &CQueue,
     // check for that.
     HasNewCandidate = true;
     uint32_t CalleeSize = getFuncSize(CalleeNode);
-    ProfiledInlineCandidate Candidate(
-        CalleeSamples, std::max(CallsiteCount, CalleeEntryCount), CalleeSize);
-    Candidate.ICPRejected = ICPRejected.contains(CalleeNode);
-    CQueue.push(Candidate);
+    CQueue.emplace(CalleeSamples, std::max(CallsiteCount, CalleeEntryCount),
+                   CalleeSize);
   }
 
   return HasNewCandidate;
@@ -289,11 +291,6 @@ bool CSPreInliner::shouldInline(ProfiledInlineCandidate &Candidate) {
   // profiled binary.
   if (SamplePreInlineReplay)
     return WasInlined;
-
-  if (Candidate.ICPRejected) {
-    ++PreInlNumCSICPRejected;
-    return false;
-  }
 
   unsigned int SampleThreshold = SampleColdCallSiteThreshold;
   uint64_t ColdCountThreshold = ProfileSummaryBuilder::getColdCountThreshold(
