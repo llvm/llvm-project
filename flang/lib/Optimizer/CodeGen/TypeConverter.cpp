@@ -37,7 +37,10 @@ static mlir::LowerToLLVMOptions MakeLowerOptions(mlir::ModuleOp module) {
 
   auto options = mlir::LowerToLLVMOptions(module.getContext());
   auto llvmDL = llvm::DataLayout(dataLayoutString);
-  if (llvmDL.getPointerSizeInBits(0) == 32) {
+  bool use32BitIndices = dataLayoutString.empty()
+                             ? fir::getTargetTriple(module).isArch32Bit()
+                             : llvmDL.getPointerSizeInBits(0) == 32;
+  if (use32BitIndices) {
     // FIXME: Should translateDataLayout in the MLIR layer be doing this?
     options.overrideIndexBitwidth(32);
   }

@@ -147,3 +147,49 @@ func.func @boxchar_len_i32_i64(%arg0 : !fir.boxchar<4>) -> (i64) {
 // INT32:  %[[len:.*]] = llvm.extractvalue %[[box_char]][1] : !llvm.struct<(ptr, i32)>
 // INT32:  %{{.*}} = llvm.sext %0 : i32 to i64
 // INT32-NEXT:  llvm.return
+
+// -----
+
+// Test that MLIR index values use the target index width while FIR allocation
+// size arithmetic remains i64.
+
+func.func @dynamic_alloca(%extent : index) {
+  %0 = fir.alloca !fir.array<?xi32>, %extent
+  return
+}
+
+// INT64-LABEL: llvm.func @dynamic_alloca
+// INT64-SAME: %[[extent:.*]]: i64
+// INT64: %[[count:.*]] = llvm.mul %[[extent]], %{{.*}} : i64
+// INT64: llvm.alloca %[[count]] x i32 : (i64) -> !llvm.ptr
+
+// INT32-LABEL: llvm.func @dynamic_alloca
+// INT32-SAME: %[[extent:.*]]: i32
+// INT32: %[[extent64:.*]] = llvm.sext %[[extent]] : i32 to i64
+// INT32: %[[count:.*]] = llvm.mul %[[extent64]], %{{.*}} : i64
+// INT32: llvm.alloca %[[count]] x i32 : (i64) -> !llvm.ptr
+
+// -----
+
+// A 32-bit target must not narrow Fortran's i64 subscript arithmetic before
+// applying a lower bound. For example, index 2147483648 is the second element
+// of an array whose lower bound is 2147483647.
+
+func.func @large_lower_bound(%base : !fir.ref<!fir.array<4xi32>>,
+                             %index : i64) -> !fir.ref<i32> {
+  %extent = arith.constant 4 : index
+  %lower_bound = arith.constant 2147483647 : index
+  %addr = fircg.ext_array_coor %base(%extent) origin %lower_bound <%index> : (!fir.ref<!fir.array<4xi32>>, index, index, i64) -> !fir.ref<i32>
+  return %addr : !fir.ref<i32>
+}
+
+// INT64-LABEL: llvm.func @large_lower_bound
+// INT64-SAME: %[[base:.*]]: !llvm.ptr, %[[index:.*]]: i64
+// INT64: %[[lower_bound:.*]] = llvm.mlir.constant(2147483647 : i64) : i64
+// INT64: llvm.sub %[[index]], %[[lower_bound]] {{.*}} : i64
+
+// INT32-LABEL: llvm.func @large_lower_bound
+// INT32-SAME: %[[base:.*]]: !llvm.ptr, %[[index:.*]]: i64
+// INT32: %[[lower_bound32:.*]] = llvm.mlir.constant(2147483647 : i32) : i32
+// INT32: %[[lower_bound64:.*]] = llvm.sext %[[lower_bound32]] : i32 to i64
+// INT32: llvm.sub %[[index]], %[[lower_bound64]] {{.*}} : i64
