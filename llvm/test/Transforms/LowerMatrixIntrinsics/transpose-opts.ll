@@ -904,14 +904,8 @@ define <4 x float> @mult_tt_same_op(<4 x float> %a) {
 ; CHECK-NEXT:    [[TMP11:%.*]] = fadd <2 x float> [[TMP8]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x float> [[TMP11]], <2 x float> poison, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <2 x float> poison, <2 x float> [[TMP12]], <2 x i32> <i32 2, i32 3>
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x float> [[TMP6]], i64 0
-; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <2 x float> poison, float [[TMP14]], i64 0
-; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <2 x float> [[TMP13]], i64 0
-; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <2 x float> [[TMP15]], float [[TMP16]], i64 1
-; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <2 x float> [[TMP6]], i64 1
-; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <2 x float> poison, float [[TMP18]], i64 0
-; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <2 x float> [[TMP13]], i64 1
-; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <2 x float> [[TMP19]], float [[TMP20]], i64 1
+; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <2 x float> [[TMP6]], <2 x float> [[TMP13]], <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[TMP21:%.*]] = shufflevector <2 x float> [[TMP6]], <2 x float> [[TMP13]], <2 x i32> <i32 1, i32 3>
 ; CHECK-NEXT:    [[TMP22:%.*]] = shufflevector <2 x float> [[TMP17]], <2 x float> [[TMP21]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    ret <4 x float> [[TMP22]]
 ;
