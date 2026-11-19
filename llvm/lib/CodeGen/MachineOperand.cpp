@@ -464,7 +464,7 @@ hash_code llvm::hash_value(const MachineOperand &MO) {
     return hash_combine(MO.getType(), MO.getTargetFlags(), MO.getShuffleMask());
   case MachineOperand::MO_LaneMask:
     return hash_combine(MO.getType(), MO.getTargetFlags(),
-                        MO.getLaneMask().getAsInteger());
+                        hash_value(MO.getLaneMask()));
   }
   llvm_unreachable("Invalid machine operand type");
 }
