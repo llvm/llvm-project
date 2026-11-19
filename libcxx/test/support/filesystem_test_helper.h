@@ -308,10 +308,6 @@ struct scoped_test_env
     }
 #endif
 
-#if defined(_WIN32) && !defined(TEST_HAS_NO_FIFOS)
-#  define TEST_HAS_NO_FIFOS
-#endif
-
 #ifndef TEST_HAS_NO_FIFOS
     std::string create_fifo(std::string file) {
         file = sanitize_path(std::move(file));
@@ -319,10 +315,6 @@ struct scoped_test_env
         assert(ret == 0);
         return file;
     }
-#endif
-
-#if (defined(__FreeBSD__) || defined(__APPLE__) || defined(_WIN32)) && !defined(TEST_HAS_NO_SOCKETS)
-#  define TEST_HAS_NO_SOCKETS
 #endif
 
     // Some platforms doesn't support socket files so we shouldn't even
