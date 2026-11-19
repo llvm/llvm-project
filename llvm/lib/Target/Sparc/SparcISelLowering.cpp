@@ -44,6 +44,20 @@ using namespace llvm;
 // Calling Convention Implementation
 //===----------------------------------------------------------------------===//
 
+static const MCPhysReg ArgIs[] = {SP::I0, SP::I1, SP::I2,
+                                  SP::I3, SP::I4, SP::I5};
+
+static const MCPhysReg ArgFs[] = {
+    SP::F1,  SP::F3,  SP::F5,  SP::F7,  SP::F9,  SP::F11, SP::F13, SP::F15,
+    SP::F17, SP::F19, SP::F21, SP::F23, SP::F25, SP::F27, SP::F29, SP::F31};
+
+static const MCPhysReg ArgDs[] = {
+    SP::D0, SP::D1, SP::D2,  SP::D3,  SP::D4,  SP::D5,  SP::D6,  SP::D7,
+    SP::D8, SP::D9, SP::D10, SP::D11, SP::D12, SP::D13, SP::D14, SP::D15};
+
+static const MCPhysReg ArgQs[] = {SP::Q0, SP::Q1, SP::Q2, SP::Q3,
+                                  SP::Q4, SP::Q5, SP::Q6, SP::Q7};
+
 static bool CC_Sparc_Assign_SRet(unsigned &ValNo, MVT &ValVT,
                                  MVT &LocVT, CCValAssign::LocInfo &LocInfo,
                                  ISD::ArgFlagsTy &ArgFlags, CCState &State)
@@ -114,25 +128,60 @@ static bool Analyze_CC_Sparc64_Full(bool IsReturn, unsigned &ValNo, MVT &ValVT,
           || LocVT.getSizeInBits() == 64) &&
          "Can't handle non-64 bits locations");
 
-  // Stack space is allocated for all arguments starting from [%fp+BIAS+128].
+  // Zero-sized struct arguments are lowered as `i64 inreg`s, and here they get
+  // a special treatment:
+  // - If there are still free integer registers avaliable, it's lowered as if
+  //   it's a normal i64.
+  // - After that, the arguments will occupy a f64 register starting from %d12
+  //   (SP::D6 in LLVM parlance), but *not* occupy a stack slot.
+  // - After the f64 register slots are exhausted, the arguments will not be
+  //   allocated at all.
+  // This is to match GCC's lowering behavior.
+  // See also:
+  // https://github.com/llvm/llvm-project/issues/213561#issuecomment-5377850094
+  if (!IsReturn && LocVT == MVT::i64 && ArgFlags.isInReg() &&
+      State.isAllocated(SP::I5)) {
+    MCRegister Reg = State.AllocateReg(ArgDs);
+    if (Reg)
+      State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
+    return true;
+  }
+
+  // Stack space is allocated for all non-inreg arguments and the first six
+  // i64 inreg arguments starting from [%fp+BIAS+128].
   unsigned size      = (LocVT == MVT::f128) ? 16 : 8;
   Align alignment =
       (LocVT == MVT::f128 || ArgFlags.isSplit()) ? Align(16) : Align(8);
   unsigned Offset = State.AllocateStack(size, alignment);
-  unsigned Reg = 0;
+  MCRegister Reg = 0;
 
-  if (LocVT == MVT::i64 && Offset < 6*8)
+  if (LocVT == MVT::i64) {
     // Promote integers to %i0-%i5.
-    Reg = SP::I0 + Offset/8;
-  else if (LocVT == MVT::f64 && Offset < 16*8)
-    // Promote doubles to %d0-%d30. (Which LLVM calls D0-D15).
-    Reg = SP::D0 + Offset/8;
-  else if (LocVT == MVT::f32 && Offset < 16*8)
+    if (ArgFlags.isSplit() &&
+        ((State.getFirstUnallocated(ArgIs) - SP::I0) % 2 != 0)) {
+      // We are receiving a split i128, pad so we have an even-numbered
+      // integer register.
+      State.AllocateReg(ArgIs);
+      State.AllocateReg(ArgDs); // Shadow allocation.
+    }
+
+    Reg = State.AllocateReg(ArgIs);
+    State.AllocateReg(ArgDs); // Shadow allocation.
+  } else if (LocVT == MVT::f32) {
     // Promote floats to %f1, %f3, ...
-    Reg = SP::F1 + Offset/4;
-  else if (LocVT == MVT::f128 && Offset < 16*8)
+    Reg = State.AllocateReg(ArgFs);
+    State.AllocateReg(ArgIs); // Shadow allocation.
+  } else if (LocVT == MVT::f64) {
+    // Promote doubles to %d0-%d30. (Which LLVM calls D0-D15).
+    Reg = State.AllocateReg(ArgDs);
+    State.AllocateReg(ArgIs); // Shadow allocation.
+  } else if (LocVT == MVT::f128) {
     // Promote long doubles to %q0-%q28. (Which LLVM calls Q0-Q7).
-    Reg = SP::Q0 + Offset/16;
+    Reg = State.AllocateReg(ArgQs);
+    // Shadow allocation.
+    for (int i = 0; i < 2; i++)
+      State.AllocateReg(ArgIs);
+  }
 
   // Promote to register when possible, otherwise use the stack slot.
   if (Reg) {
