@@ -53,6 +53,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.pwd.getpwuid_r
     libc.src.pwd.setpwent
 
+    # sched.h entrypoints
+    libc.src.sched.unshare
+
     # string.h entrypoints
     libc.src.string.memccpy
     libc.src.string.memchr
