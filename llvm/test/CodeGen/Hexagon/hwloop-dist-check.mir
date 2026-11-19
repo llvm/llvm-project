@@ -1,7 +1,7 @@
 # RUN: llc --mtriple=hexagon -run-pass=hwloops %s -o - | FileCheck %s
 
 # CHECK-LABEL: name: f
-# CHECK: [[R1:%[0-9]+]]:predregs = C2_cmpgti [[R0:%[0-9]+]], 0
+# CHECK: [[R1:%[0-9]+]]:predregs = C2_cmpgtui [[R0:%[0-9]+]], 0
 # CHECK: [[R3:%[0-9]+]]:intregs = C2_muxir [[R1:%[0-9]+]], [[R2:%[0-9]+]], 1
 # CHECK-LABEL: name: g
 # CHECK: [[R1:%[0-9]+]]:predregs = C2_cmpgti [[R0:%[0-9]+]], 0
