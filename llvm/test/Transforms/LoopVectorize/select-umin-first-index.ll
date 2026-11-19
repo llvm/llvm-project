@@ -585,23 +585,36 @@ exit:
 define i32 @test_vectorize_select_umin_idx_with_trunc_valid(ptr %src, i64 %n) {
 ; CHECK-LABEL: define i32 @test_vectorize_select_umin_idx_with_trunc_valid(
 ; CHECK-SAME: ptr [[SRC:%.*]], i64 [[N:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[MIN_IDX:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[MIN_IDX_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[MIN_VAL:%.*]] = phi i64 [ -1, %[[ENTRY]] ], [ [[MIN_VAL_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[LOOP]] ], [ [[IV_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ poison, %[[LOOP]] ], [ [[TMP3:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i64> [ splat (i64 -1), %[[LOOP]] ], [ [[TMP2:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[LOOP]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[SRC]], i64 [[IV]]
-; CHECK-NEXT:    [[L:%.*]] = load i64, ptr [[GEP]], align 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[MIN_VAL]], [[L]]
-; CHECK-NEXT:    [[MIN_VAL_NEXT]] = tail call i64 @llvm.umin.i64(i64 [[MIN_VAL]], i64 [[L]])
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[IV]] to i32
-; CHECK-NEXT:    [[MIN_IDX_NEXT]] = select i1 [[CMP]], i32 [[TRUNC]], i32 [[MIN_IDX]]
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[GEP]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt <4 x i64> [[VEC_PHI1]], [[WIDE_LOAD]]
+; CHECK-NEXT:    [[TMP2]] = call <4 x i64> @llvm.umin.v4i64(<4 x i64> [[VEC_PHI1]], <4 x i64> [[WIDE_LOAD]])
+; CHECK-NEXT:    [[TMP3]] = select <4 x i1> [[TMP1]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 100
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ [[MIN_IDX_NEXT]], %[[LOOP]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vector.reduce.umin.v4i64(<4 x i64> [[TMP2]])
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[TMP5]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq <4 x i64> [[TMP2]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP7:%.*]] = select <4 x i1> [[TMP6]], <4 x i64> [[TMP3]], <4 x i64> splat (i64 -1)
+; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vector.reduce.umin.v4i64(<4 x i64> [[TMP7]])
+; CHECK-NEXT:    [[TMP9:%.*]] = trunc i64 [[TMP8]] to i32
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[TMP5]], -1
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[TMP10]], i32 0, i32 [[TMP9]]
+; CHECK-NEXT:    br label %[[EXIT1:.*]]
+; CHECK:       [[EXIT1]]:
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
 entry:
@@ -859,7 +872,7 @@ define i64 @test_vectorize_select_umin_idx_iv_start_different(ptr %src, i64 %n) 
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 9988
-; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vector.reduce.umin.v4i64(<4 x i64> [[TMP2]])
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[TMP5]], i64 0
@@ -884,7 +897,7 @@ define i64 @test_vectorize_select_umin_idx_iv_start_different(ptr %src, i64 %n) 
 ; CHECK-NEXT:    [[MIN_IDX_NEXT]] = select i1 [[CMP]], i64 [[IV1]], i64 [[MIN_IDX]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV1]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 10000
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[MIN_IDX_NEXT]], %[[LOOP]] ]
 ; CHECK-NEXT:    ret i64 [[RES]]
