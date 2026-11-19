@@ -1536,6 +1536,9 @@ defm : DemangledGetBuiltin<"__spirv_BuiltInSubgroupLeMask", OpenCL_std, Variable
 defm : DemangledGetBuiltin<"__spirv_BuiltInSubgroupLeMaskKHR", OpenCL_std, Variable, SubgroupLeMask>;
 defm : DemangledGetBuiltin<"__spirv_BuiltInSubgroupLtMask", OpenCL_std, Variable, SubgroupLtMask>;
 defm : DemangledGetBuiltin<"__spirv_BuiltInSubgroupLtMaskKHR", OpenCL_std, Variable, SubgroupLtMask>;
+defm : DemangledGetBuiltin<"__spirv_BuiltInDeviceBarrierExecutionValidINTEL", OpenCL_std, Variable, DeviceBarrierExecutionValidINTEL>;
+// Keep the old name so that __spirv_BuiltInDeviceBarrierValidINTEL is still recognized.
+defm : DemangledGetBuiltin<"__spirv_BuiltInDeviceBarrierValidINTEL", OpenCL_std, Variable, DeviceBarrierExecutionValidINTEL>;
 
 // GetQuery builtin records:
 defm : DemangledGetBuiltin<"get_local_id", OpenCL_std, GetQuery, LocalInvocationId>;
