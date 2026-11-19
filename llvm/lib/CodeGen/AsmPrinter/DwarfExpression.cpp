@@ -612,20 +612,43 @@ bool DwarfExpression::addExpression(
     case dwarf::DW_OP_LLVM_extract_bits_sext:
     case dwarf::DW_OP_LLVM_extract_bits_zext: {
       auto Extract = cast<DIExpression::ExtractBitsOp>(*Op);
-      unsigned SizeInBits = Extract.getSizeInBits();
-      unsigned BitOffset = Extract.getOffsetInBits();
+      uint64_t SizeInBits = Extract.getSizeInBits();
+      uint64_t BitOffset = Extract.getOffsetInBits();
       bool IsSigned = Extract.isSigned();
       unsigned DerefSize = 0;
-      //  Operations are done in the DWARF "generic type" whose size
-      // is the size of a pointer.
+      // Ordinary operations use the address-sized DWARF generic type.
       unsigned PtrSizeInBytes = CU.getAsmPrinter()->MAI.getCodePointerSize();
+      unsigned StackSizeInBits = PtrSizeInBytes * 8;
+      std::optional<unsigned> BaseType;
 
       // If we have a memory location then dereference to get the value, though
       // we have to make sure we don't dereference any bytes past the end of the
       // object.
       if (isMemoryLocation()) {
+        // Both sized dereferences have a one-byte size operand. Check before
+        // adding the bit offset so that an unrepresentable range cannot wrap.
+        if (SizeInBits > 255 * 8 || BitOffset > 255 * 8 - SizeInBits)
+          return false;
         DerefSize = alignTo(BitOffset + SizeInBits, 8) / 8;
-        if (DerefSize == PtrSizeInBytes) {
+        if (DerefSize > PtrSizeInBytes) {
+          // DW_OP_deref_size cannot read more than the generic type. Use a
+          // typed value, but do not pass it to subsequent untyped arithmetic.
+          bool IsTerminal = all_of(ExprCursor, [](auto Op) {
+            return Op.isNonEmitting() ||
+                   Op.getOp() == dwarf::DW_OP_stack_value ||
+                   Op.getOp() == dwarf::DW_OP_LLVM_fragment;
+          });
+          if (DwarfVersion < 5 || !CU.getDwarfDebug().useOpConvert() ||
+              !IsTerminal)
+            return false;
+          StackSizeInBits = DerefSize * 8;
+          BaseType = getOrCreateBaseType(StackSizeInBits,
+                                         IsSigned ? dwarf::DW_ATE_signed
+                                                  : dwarf::DW_ATE_unsigned);
+          emitOp(dwarf::DW_OP_deref_type);
+          emitData1(DerefSize);
+          emitBaseTypeRef(*BaseType);
+        } else if (DerefSize == PtrSizeInBytes) {
           emitOp(dwarf::DW_OP_deref);
         } else {
           emitOp(dwarf::DW_OP_deref_size);
@@ -636,7 +659,7 @@ bool DwarfExpression::addExpression(
       // If a dereference was emitted for an unsigned value, and
       // there's no bit offset, then a bit of optimization is
       // possible.
-      if (!IsSigned && BitOffset == 0) {
+      if (!IsSigned && BitOffset == 0 && !BaseType) {
         if (8 * DerefSize == SizeInBits) {
           // The correct value is already on the stack.
         } else {
@@ -649,16 +672,25 @@ bool DwarfExpression::addExpression(
         // Extract the bits by a shift left (to shift out the bits after what we
         // want to extract) followed by shift right (to shift the bits to
         // position 0 and also sign/zero extend).
-        unsigned LeftShift = PtrSizeInBytes * 8 - (SizeInBits + BitOffset);
+        unsigned LeftShift = StackSizeInBits - (SizeInBits + BitOffset);
         unsigned RightShift = LeftShift + BitOffset;
+        // Typed shifts require shift counts with the same base type.
         if (LeftShift) {
           emitOp(dwarf::DW_OP_constu);
           emitUnsigned(LeftShift);
+          if (BaseType) {
+            emitOp(dwarf::DW_OP_convert);
+            emitBaseTypeRef(*BaseType);
+          }
           emitOp(dwarf::DW_OP_shl);
         }
         if (RightShift) {
           emitOp(dwarf::DW_OP_constu);
           emitUnsigned(RightShift);
+          if (BaseType) {
+            emitOp(dwarf::DW_OP_convert);
+            emitBaseTypeRef(*BaseType);
+          }
           emitOp(IsSigned ? dwarf::DW_OP_shra : dwarf::DW_OP_shr);
         }
       }
