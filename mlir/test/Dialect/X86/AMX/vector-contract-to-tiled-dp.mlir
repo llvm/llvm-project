@@ -108,6 +108,66 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+!vec = vector<16x16x4xi8>
+!acc = vector<16x16xi32>
+#multi_lhs = affine_map<(d0, d1, d2, d3) -> (d1, d3, d0)>
+#multi_rhs = affine_map<(d0, d1, d2, d3) -> (d3, d2, d0)>
+#multi_acc = affine_map<(d0, d1, d2, d3) -> (d1, d2)>
+
+func.func @single_contract_multiple_users(%lhs: memref<16x16x4xi8>, %rhs: memref<16x16x4xi8>, %acc: memref<16x16xi32>, %out_add: memref<16x16xi32>, %out_sub: memref<16x16xi32>) {
+  %c0 = arith.constant 0 : index
+  %pad_i8 = ub.poison : i8
+  %pad_i32 = ub.poison : i32
+  %bias = arith.constant dense<1> : !acc
+
+  %lhs_vec = vector.transfer_read %lhs[%c0, %c0, %c0], %pad_i8 {in_bounds = [true, true, true]} :
+      memref<16x16x4xi8>, !vec
+  %rhs_vec = vector.transfer_read %rhs[%c0, %c0, %c0], %pad_i8 {in_bounds = [true, true, true]} :
+      memref<16x16x4xi8>, !vec
+  %acc_vec = vector.transfer_read %acc[%c0, %c0], %pad_i32 {in_bounds = [true, true]} :
+      memref<16x16xi32>, !acc
+
+  %result = vector.contract {indexing_maps = [#multi_lhs, #multi_rhs, #multi_acc], iterator_types =
+      ["reduction", "parallel", "parallel", "reduction"], kind = #vector.kind<add>}
+      %lhs_vec, %rhs_vec, %acc_vec : !vec, !vec into !acc
+
+  %sum = arith.addi %result, %bias : !acc
+  %diff = arith.subi %result, %bias : !acc
+  vector.transfer_write %sum, %out_add[%c0, %c0] {in_bounds = [true, true]} :
+      !acc, memref<16x16xi32>
+  vector.transfer_write %diff, %out_sub[%c0, %c0] {in_bounds = [true, true]} :
+      !acc, memref<16x16xi32>
+
+  return
+}
+
+// CHECK-LABEL: @single_contract_multiple_users
+// CHECK-SAME:      %[[ACC:[^:]+]]: memref<16x16xi32>, %[[OUT_ADD:[^:]+]]: memref<16x16xi32>, %[[OUT_SUB:[^:]+]]: memref<16x16xi32>
+// CHECK:         %[[C0:.+]] = arith.constant 0 : index
+// CHECK:         x86.amx.tile_load %[[ACC]][%[[C0]], %[[C0]]]
+// CHECK:         %[[TILE:.+]] = x86.amx.tile_muli
+// CHECK:         %[[BUF:.+]] = memref.alloca() : memref<16x16xi32>
+// CHECK:         x86.amx.tile_store %[[BUF]][%[[C0]], %[[C0]]], %[[TILE]]
+// CHECK:         %[[RES:.+]] = vector.transfer_read %[[BUF]][%[[C0]], %[[C0]]]
+// CHECK:         %[[SUM:.+]] = arith.addi %[[RES]], %[[BIAS:.+]] : vector<16x16xi32>
+// CHECK:         %[[DIFF:.+]] = arith.subi %[[RES]], %[[BIAS]] : vector<16x16xi32>
+// CHECK:         vector.transfer_write %[[SUM]], %[[OUT_ADD]][%[[C0]], %[[C0]]]
+// CHECK:         vector.transfer_write %[[DIFF]], %[[OUT_SUB]][%[[C0]], %[[C0]]]
+// CHECK:         return
+// CHECK-NOT: vector.contract
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.x86.vector_contract_to_amx_dot_product
+    } : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
 // The indices (i, vnni_index) of the two innermost dims of the operands map to
 // i * vnni + vnni_index in the collapsed buffers.
 
@@ -2978,6 +3038,105 @@ func.func @online_packing_int8_matmul_loop(%arg0: memref<64x256xi8>, %arg1: memr
 // CHECK-NEXT: vector.shuffle{{.*}}[8, 9, 10, 11, 24, 25, 26, 27, 12, 13, 14, 15, 28, 29, 30, 31] : vector<16xi32>, vector<16xi32>
 // CHECK-COUNT-4: arith.addi
 // CHECK-NOT: scf.for {{.*}} vector<16x16xi32>, vector<16x16xi32>, vector<16x16xi32>, vector<16x16xi32>
+// CHECK-NOT: vector.contract
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.x86.vector_contract_to_amx_dot_product
+    } : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+!vecA = vector<16x64xi8>
+!vecB = vector<64x16xi8>
+!vecC = vector<16x16xi32>
+!loopMemrefA = memref<16x64xi8, strided<[128, 1], offset: ?>>
+!loopMemrefB = memref<64x32xi8, strided<[32, 1], offset: ?>>
+#loop_lhs = affine_map<(d0, d1, d2) -> (d0, d2)>
+#loop_rhs = affine_map<(d0, d1, d2) -> (d2, d1)>
+#loop_acc = affine_map<(d0, d1, d2) -> (d0, d1)>
+
+func.func @loop_contract_multiple_users(%lhs: memref<16x128xi8>, %rhs: memref<128x32xi8>, %acc: memref<16x32xi32>, %out_add: memref<16x32xi32>, %out_sub: memref<16x32xi32>) {
+  %c0 = arith.constant 0 : index
+  %c16 = arith.constant 16 : index
+  %c64 = arith.constant 64 : index
+  %c128 = arith.constant 128 : index
+  %pad_i8 = ub.poison : i8
+  %pad_i32 = ub.poison : i32
+  %bias = arith.constant dense<1> : !vecC
+
+  %init0 = vector.transfer_read %acc[%c0, %c0], %pad_i32 {in_bounds = [true, true]} :
+          memref<16x32xi32>, !vecC
+  %init1 = vector.transfer_read %acc[%c0, %c16], %pad_i32 {in_bounds = [true, true]} :
+          memref<16x32xi32>, !vecC
+
+    %results:2 = scf.for %k = %c0 to %c128 step %c64 iter_args(%iter0 = %init0, %iter1 = %init1) -> (!vecC, !vecC) {
+      %lhs_view = memref.subview %lhs[%c0, %k] [16, 64] [1, 1] :
+        memref<16x128xi8> to !loopMemrefA
+      %rhs_view = memref.subview %rhs[%k, %c0] [64, 32] [1, 1] :
+        memref<128x32xi8> to !loopMemrefB
+      %lhs_vec = vector.transfer_read %lhs_view[%c0, %c0], %pad_i8 {in_bounds = [true, true]} :
+        !loopMemrefA, !vecA
+      %rhs0 = vector.transfer_read %rhs_view[%c0, %c0], %pad_i8 {in_bounds = [true, true]} :
+        !loopMemrefB, !vecB
+      %rhs1 = vector.transfer_read %rhs_view[%c0, %c16], %pad_i8 {in_bounds = [true, true]} :
+        !loopMemrefB, !vecB
+
+    %result0 = vector.contract {indexing_maps = [#loop_lhs, #loop_rhs, #loop_acc], iterator_types =
+        ["parallel", "parallel", "reduction"], kind = #vector.kind<add>}
+        %lhs_vec, %rhs0, %iter0 : !vecA, !vecB into !vecC
+    %result1 = vector.contract {indexing_maps = [#loop_lhs, #loop_rhs, #loop_acc], iterator_types =
+        ["parallel", "parallel", "reduction"], kind = #vector.kind<add>}
+        %lhs_vec, %rhs1, %iter1 : !vecA, !vecB into !vecC
+
+    scf.yield %result0, %result1 : !vecC, !vecC
+  }
+
+  %sum = arith.addi %results#0, %bias : !vecC
+  %diff = arith.subi %results#0, %bias : !vecC
+  %sum1 = arith.addi %results#1, %bias : !vecC
+  %diff1 = arith.subi %results#1, %bias : !vecC
+  vector.transfer_write %sum, %out_add[%c0, %c0] {in_bounds = [true, true]} :
+          !vecC, memref<16x32xi32>
+  vector.transfer_write %diff, %out_sub[%c0, %c0] {in_bounds = [true, true]} :
+          !vecC, memref<16x32xi32>
+  vector.transfer_write %sum1, %out_add[%c0, %c16] {in_bounds = [true, true]} :
+          !vecC, memref<16x32xi32>
+  vector.transfer_write %diff1, %out_sub[%c0, %c16] {in_bounds = [true, true]} :
+          !vecC, memref<16x32xi32>
+
+  return
+}
+
+// CHECK-LABEL: @loop_contract_multiple_users
+// CHECK-SAME:      %[[ACC:[^:]+]]: memref<16x32xi32>, %[[OUT_ADD:[^:]+]]: memref<16x32xi32>, %[[OUT_SUB:[^:]+]]: memref<16x32xi32>
+// CHECK:         %[[C0:.+]] = arith.constant 0 : index
+// CHECK:         %[[C16:.+]] = arith.constant 16 : index
+// CHECK:         scf.for {{.*}} -> (!x86.amx.tile<16x16xi32>, !x86.amx.tile<16x16xi32>)
+// CHECK-COUNT-2:   x86.amx.tile_muli
+// CHECK:         %[[TILES:.+]]:2 = scf.for {{.*}} -> (!x86.amx.tile<16x16xi32>, !x86.amx.tile<16x16xi32>)
+// CHECK-COUNT-2:   x86.amx.tile_muli
+// CHECK:         %[[BUF:.+]] = memref.alloca() : memref<16x32xi32>
+// CHECK:         x86.amx.tile_store %[[BUF]][%[[C0]], %[[C0]]], %[[TILES]]#0
+// CHECK:         x86.amx.tile_store %[[BUF]][%[[C0]], %[[C16]]], %[[TILES]]#1
+// CHECK:         scf.for
+// CHECK-COUNT-2:   vector.shuffle {{.*}} : vector<16xi32>, vector<16xi32>
+// CHECK:         %[[RES0:.+]] = vector.transfer_read %[[BUF]][%[[C0]], %[[C0]]]
+// CHECK:         %[[RES1:.+]] = vector.transfer_read %[[BUF]][%[[C0]], %[[C16]]]
+// CHECK:         %[[SUM0:.+]] = arith.addi %[[RES0]], %[[BIAS:.+]] : vector<16x16xi32>
+// CHECK:         %[[DIFF0:.+]] = arith.subi %[[RES0]], %[[BIAS]] : vector<16x16xi32>
+// CHECK:         %[[SUM1:.+]] = arith.addi %[[RES1]], %[[BIAS]] : vector<16x16xi32>
+// CHECK:         %[[DIFF1:.+]] = arith.subi %[[RES1]], %[[BIAS]] : vector<16x16xi32>
+// CHECK:         vector.transfer_write %[[SUM0]], %[[OUT_ADD]][%[[C0]], %[[C0]]]
+// CHECK:         vector.transfer_write %[[DIFF0]], %[[OUT_SUB]][%[[C0]], %[[C0]]]
+// CHECK:         vector.transfer_write %[[SUM1]], %[[OUT_ADD]][%[[C0]], %[[C16]]]
+// CHECK:         vector.transfer_write %[[DIFF1]], %[[OUT_SUB]][%[[C0]], %[[C16]]]
+// CHECK:         return
 // CHECK-NOT: vector.contract
 
 module attributes {transform.with_named_sequence} {
