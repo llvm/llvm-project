@@ -58,6 +58,7 @@ username for an individual isn't available, the brackets will be empty.
 * Tulio Magno Quites Machado Filho (Red Hat) [@tuliom]
 * Will Huhn (Intel) [@wphuhn-intel]
 * Yvan Roux (ST) [@yroux]
+* Zaara Syeda (IBM; observer) [@syzaara]
 
 Criteria
 --------
