@@ -131,17 +131,17 @@ define void @splice() {
 
 define void @splice1() {
 ; CHECK-LABEL: 'splice1'
-; CHECK-NEXT:  Cost Model: Found costs of 3 for: %v4i8 = shufflevector <4 x i8> poison, <4 x i8> poison, <4 x i32> <i32 1, i32 2, i32 3, i32 0>
-; CHECK-NEXT:  Cost Model: Found costs of 8 for: %v8i8 = shufflevector <8 x i8> poison, <8 x i8> poison, <8 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0>
-; CHECK-NEXT:  Cost Model: Found costs of 8 for: %v16i8 = shufflevector <16 x i8> poison, <16 x i8> poison, <16 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 0>
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v4i8 = shufflevector <4 x i8> poison, <4 x i8> poison, <4 x i32> <i32 1, i32 2, i32 3, i32 0>
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v8i8 = shufflevector <8 x i8> poison, <8 x i8> poison, <8 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0>
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v16i8 = shufflevector <16 x i8> poison, <16 x i8> poison, <16 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 0>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v4i16 = shufflevector <4 x i16> poison, <4 x i16> poison, <4 x i32> <i32 1, i32 2, i32 3, i32 0>
-; CHECK-NEXT:  Cost Model: Found costs of 8 for: %v8i16 = shufflevector <8 x i16> poison, <8 x i16> poison, <8 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0>
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v8i16 = shufflevector <8 x i16> poison, <8 x i16> poison, <8 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0>
 ; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v16i16 = shufflevector <16 x i16> poison, <16 x i16> poison, <16 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 0>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v4i32 = shufflevector <4 x i32> poison, <4 x i32> poison, <4 x i32> <i32 1, i32 2, i32 3, i32 0>
 ; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v8i32 = shufflevector <8 x i32> poison, <8 x i32> poison, <8 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0>
 ; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v4i64 = shufflevector <4 x i64> poison, <4 x i64> poison, <4 x i32> <i32 1, i32 2, i32 3, i32 0>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v4f16 = shufflevector <4 x half> poison, <4 x half> poison, <4 x i32> <i32 1, i32 2, i32 3, i32 0>
-; CHECK-NEXT:  Cost Model: Found costs of 8 for: %v8f16 = shufflevector <8 x half> poison, <8 x half> poison, <8 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0>
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v8f16 = shufflevector <8 x half> poison, <8 x half> poison, <8 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0>
 ; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v16f16 = shufflevector <16 x half> poison, <16 x half> poison, <16 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 0>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v4f32 = shufflevector <4 x float> poison, <4 x float> poison, <4 x i32> <i32 1, i32 2, i32 3, i32 0>
 ; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v8f32 = shufflevector <8 x float> poison, <8 x float> poison, <8 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0>
