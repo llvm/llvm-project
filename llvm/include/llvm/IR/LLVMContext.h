@@ -232,6 +232,8 @@ public:
   LLVM_ABI void
   setDiagnosticsMisExpectTolerance(std::optional<uint32_t> Tolerance);
   LLVM_ABI uint32_t getDiagnosticsMisExpectTolerance() const;
+  LLVM_ABI bool getAnnotationDiagsRequested() const;
+  LLVM_ABI void setAnnotationDiagsRequested(bool Requested);
 
   /// Return the minimum hotness value a diagnostic would need in order
   /// to be included in optimization diagnostics.

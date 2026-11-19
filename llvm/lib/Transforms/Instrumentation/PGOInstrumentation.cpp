@@ -2306,6 +2306,7 @@ void llvm::setProfMetadata(Instruction *TI, ArrayRef<uint64_t> EdgeCounts,
   } dbgs() << "\n");
 
   misexpect::checkExpectAnnotations(*TI, Weights, /*IsFrontend=*/false);
+  misexpect::checkMissingAnnotations(*TI, Weights, /*IsFrontend=*/false);
 
   setBranchWeights(*TI, Weights, /*IsExpected=*/false);
 
