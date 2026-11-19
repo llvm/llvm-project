@@ -698,6 +698,7 @@ unsigned GCCAsmStmt::AnalyzeAsmString(SmallVectorImpl<AsmStringPiece>&Pieces,
   std::string CurStringPiece;
 
   bool HasVariants = !C.getTargetInfo().hasNoAsmVariants();
+  bool InVariant = false;
 
   unsigned LastAsmStringToken = 0;
   unsigned LastAsmStringOffset = 0;
@@ -713,9 +714,19 @@ unsigned GCCAsmStmt::AnalyzeAsmString(SmallVectorImpl<AsmStringPiece>&Pieces,
     char CurChar = *CurPtr++;
     switch (CurChar) {
     case '$': CurStringPiece += "$$"; continue;
-    case '{': CurStringPiece += (HasVariants ? "$(" : "{"); continue;
+    case '{':
+      if (HasVariants && InVariant) {
+        DiagOffs = CurPtr - StrStart - 1;
+        return diag::err_asm_nested_variant;
+      }
+      CurStringPiece += (HasVariants ? "$(" : "{");
+      InVariant = HasVariants;
+      continue;
     case '|': CurStringPiece += (HasVariants ? "$|" : "|"); continue;
-    case '}': CurStringPiece += (HasVariants ? "$)" : "}"); continue;
+    case '}':
+      CurStringPiece += (HasVariants ? "$)" : "}");
+      InVariant = false;
+      continue;
     case '%':
       break;
     default:
