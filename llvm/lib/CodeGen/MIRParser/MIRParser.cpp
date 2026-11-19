@@ -543,18 +543,34 @@ bool MIRParserImpl::initializeCallSiteInfo(
 void MIRParserImpl::setupDebugValueTracking(
     MachineFunction &MF, PerFunctionMIParsingState &PFS,
     const yaml::MachineFunction &YamlMF) {
-  // Compute the value of the "next instruction number" field.
+  // Seed the counter with the highest debug instruction number in the MIR.
+  // References and substitutions can outlive the instructions they name.
   unsigned MaxInstrNum = 0;
-  for (auto &MBB : MF)
-    for (auto &MI : MBB)
+  for (const MachineBasicBlock &MBB : MF) {
+    for (const MachineInstr &MI : MBB.instrs()) {
       MaxInstrNum = std::max(MI.peekDebugInstrNum(), MaxInstrNum);
-  MF.setDebugInstrNumberingCount(MaxInstrNum);
+      // A DBG_PHI carries its number as operand 1.
+      if (MI.isDebugPHI() && MI.getNumOperands() > 1 &&
+          MI.getOperand(1).isImm())
+        MaxInstrNum =
+            std::max(unsigned(MI.getOperand(1).getImm()), MaxInstrNum);
+      // The instruction hasn't been verified yet, so walk operands() rather
+      // than debug_operands(), which assumes the two leading operands exist.
+      if (MI.isDebugRef()) {
+        for (const MachineOperand &MO : MI.operands())
+          if (MO.isDbgInstrRef())
+            MaxInstrNum = std::max(MO.getInstrRefInstrIndex(), MaxInstrNum);
+      }
+    }
+  }
 
-  // Load any substitutions.
+  // Load any substitutions; their source and destination numbers are in use.
   for (const auto &Sub : YamlMF.DebugValueSubstitutions) {
+    MaxInstrNum = std::max({MaxInstrNum, Sub.SrcInst, Sub.DstInst});
     MF.makeDebugValueSubstitution({Sub.SrcInst, Sub.SrcOp},
                                   {Sub.DstInst, Sub.DstOp}, Sub.Subreg);
   }
+  MF.setDebugInstrNumberingCount(MaxInstrNum);
 
   // Flag for whether we're supposed to be using DBG_INSTR_REF.
   MF.setUseDebugInstrRef(YamlMF.UseDebugInstrRef);

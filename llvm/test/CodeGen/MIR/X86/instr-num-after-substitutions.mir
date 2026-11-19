@@ -3,38 +3,35 @@
 # A debug instruction number allocated after parsing must not reuse one that
 # is already in use. The fixup pass rewrites each MOV16rm into a MOVZX32rm16
 # with a new number and records a substitution to it.
-#
-# FIXME: The parser only counts the numbers that instructions carry, so each
-# rewrite below reuses 2.
 
 # The highest number is only the source of a substitution. Reusing 2 would
 # form the cycle 2 -> 1 -> 2.
 # CHECK-LABEL: name: src_only
 # CHECK:       debugValueSubstitutions:
 # CHECK-DAG:   - { srcinst: 2, srcop: 0, dstinst: 1, dstop: 0, subreg: 0 }
-# CHECK-DAG:   - { srcinst: 1, srcop: 0, dstinst: 2, dstop: 0, subreg: {{[0-9]+}} }
-# CHECK:       $eax = MOVZX32rm16 {{.*}}, debug-instr-number 2
+# CHECK-DAG:   - { srcinst: 1, srcop: 0, dstinst: 3, dstop: 0, subreg: {{[0-9]+}} }
+# CHECK:       $eax = MOVZX32rm16 {{.*}}, debug-instr-number 3
 
 # The highest number is only the destination of a substitution.
 # CHECK-LABEL: name: dst_only
 # CHECK:       debugValueSubstitutions:
 # CHECK-DAG:   - { srcinst: 2, srcop: 0, dstinst: 3, dstop: 0, subreg: 0 }
-# CHECK-DAG:   - { srcinst: 1, srcop: 0, dstinst: 2, dstop: 0, subreg: {{[0-9]+}} }
-# CHECK:       $eax = MOVZX32rm16 {{.*}}, debug-instr-number 2
+# CHECK-DAG:   - { srcinst: 1, srcop: 0, dstinst: 4, dstop: 0, subreg: {{[0-9]+}} }
+# CHECK:       $eax = MOVZX32rm16 {{.*}}, debug-instr-number 4
 
 # The highest number is carried by a DBG_PHI operand.
 # CHECK-LABEL: name: dbg_phi
 # CHECK:       debugValueSubstitutions:
-# CHECK-NEXT:  - { srcinst: 1, srcop: 0, dstinst: 2, dstop: 0, subreg: {{[0-9]+}} }
+# CHECK-NEXT:  - { srcinst: 1, srcop: 0, dstinst: 3, dstop: 0, subreg: {{[0-9]+}} }
 # CHECK:       DBG_PHI $rdi, 2
-# CHECK:       $eax = MOVZX32rm16 {{.*}}, debug-instr-number 2
+# CHECK:       $eax = MOVZX32rm16 {{.*}}, debug-instr-number 3
 
 # The highest number is carried by an instruction inside a bundle.
 # CHECK-LABEL: name: in_bundle
 # CHECK:       debugValueSubstitutions:
-# CHECK-NEXT:  - { srcinst: 1, srcop: 0, dstinst: 2, dstop: 0, subreg: {{[0-9]+}} }
+# CHECK-NEXT:  - { srcinst: 1, srcop: 0, dstinst: 3, dstop: 0, subreg: {{[0-9]+}} }
 # CHECK:       $rdx = MOV64ri 1, debug-instr-number 2
-# CHECK:       $eax = MOVZX32rm16 {{.*}}, debug-instr-number 2
+# CHECK:       $eax = MOVZX32rm16 {{.*}}, debug-instr-number 3
 
 ---
 name:            src_only

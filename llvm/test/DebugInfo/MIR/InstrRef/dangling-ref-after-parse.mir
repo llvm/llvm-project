@@ -5,11 +5,9 @@
 # variable has no location. The fixup pass rewrites the MOV16rm with a new
 # number; that number must not be 2, or the reference would resolve to the
 # rewritten load.
-#
-# FIXME: The rewrite reuses 2, so the variable gets the load's value.
 
 # CHECK:      DBG_INSTR_REF {{![0-9]+}}, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(2, 0)
-# CHECK-NEXT: DBG_VALUE_LIST {{![0-9]+}}, !DIExpression(DW_OP_LLVM_arg, 0), $eax,
+# CHECK-NEXT: DBG_VALUE_LIST {{![0-9]+}}, !DIExpression(DW_OP_LLVM_arg, 0), $noreg,
 --- |
   define i16 @test(ptr %p) !dbg !5 {
     ret i16 0, !dbg !10
