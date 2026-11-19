@@ -353,6 +353,10 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.dirent.readdir
     libc.src.dirent.fdopendir
 
+    # langinfo.h entrypoints
+    libc.src.langinfo.nl_langinfo
+    libc.src.langinfo.nl_langinfo_l
+
     # unistd.h entrypoints
     libc.src.unistd.confstr
     libc.src.unistd.sysconf

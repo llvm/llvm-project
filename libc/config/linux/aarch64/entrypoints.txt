@@ -1556,6 +1556,10 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.sys.select.pselect
     libc.src.sys.select.select
 
+    # langinfo.h entrypoints
+    libc.src.langinfo.nl_langinfo
+    libc.src.langinfo.nl_langinfo_l
+
     # link.h entrypoints
     libc.src.link._r_debug
     libc.src.link.dl_iterate_phdr

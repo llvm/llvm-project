@@ -519,6 +519,14 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  nl_item
+  HDRS
+    nl_item.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.nl_item
+)
+
+add_proxy_header_library(
   stack_t
   HDRS
     stack_t.h
