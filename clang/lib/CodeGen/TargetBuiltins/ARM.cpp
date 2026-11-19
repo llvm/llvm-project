@@ -7316,6 +7316,8 @@ Value *CodeGenFunction::EmitBPFBuiltinExpr(unsigned BuiltinID,
                         : EmitLValue(Arg).emitRawPointer(*this);
     }
 
+    checkPreservedAccessBaseConversions(Arg);
+
     // Enable underlying preserve_*_access_index() generation. Field info
     // never dereferences the field, so skip preserve_static_offset markers:
     // the backend would replace the access indices under them with plain GEPs.
