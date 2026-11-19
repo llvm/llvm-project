@@ -32,12 +32,12 @@
 #define BNDR_OFFSET(reg_index)                                                 \
   (LLVM_EXTENSION offsetof(UserArea, i387) +                                   \
    LLVM_EXTENSION offsetof(FPR, xsave) +                                       \
-   LLVM_EXTENSION offsetof(XSAVE, mpxr[reg_index]))
+   LLVM_EXTENSION offsetof(XSAVE, mpx.mpxr[reg_index]))
 
 #define BNDC_OFFSET(reg_index)                                                 \
   (LLVM_EXTENSION offsetof(UserArea, i387) +                                   \
    LLVM_EXTENSION offsetof(FPR, xsave) +                                       \
-   LLVM_EXTENSION offsetof(XSAVE, mpxc[reg_index]))
+   LLVM_EXTENSION offsetof(XSAVE, mpx.mpxc[reg_index]))
 
 // Number of bytes needed to represent a FPR.
 #if !defined(FPR_SIZE)
