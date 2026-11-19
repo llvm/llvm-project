@@ -489,3 +489,44 @@ func.func @inner_loop_yields_induction_var() -> index {
   }
   return %r : index
 }
+
+// -----
+
+// Verify that coalescing is not attempted when a loop has a known zero trip
+// count, which would put a non-positive element in the delinearization basis.
+
+// CHECK-LABEL: @no_coalesce_ub_eq_lb
+func.func @no_coalesce_ub_eq_lb() {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+  // CHECK: scf.for
+  // CHECK: scf.for
+  // CHECK-NOT: affine.delinearize_index
+  scf.for %i = %c0 to %c4 step %c1 {
+    scf.for %j = %c0 to %c0 step %c1 {
+      "use"(%i, %j) : (index, index) -> ()
+    }
+  }
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @no_coalesce_ub_lt_lb
+func.func @no_coalesce_ub_lt_lb() {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c4 = arith.constant 4 : index
+  %c5 = arith.constant 5 : index
+  // CHECK: scf.for
+  // CHECK: scf.for
+  // CHECK-NOT: affine.delinearize_index
+  scf.for %i = %c0 to %c4 step %c1 {
+    scf.for %j = %c5 to %c2 step %c1 {
+      "use"(%i, %j) : (index, index) -> ()
+    }
+  }
+  return
+}
