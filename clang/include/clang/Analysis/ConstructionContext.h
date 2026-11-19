@@ -275,8 +275,7 @@ private:
   // A helper function for constructing an instance into a bump vector context.
   template <typename T, typename... ArgTypes>
   static T *create(BumpVectorContext &C, ArgTypes... Args) {
-    void *CC = C.getAllocator().Allocate(sizeof(T), alignof(T));
-    return new (CC) T(Args...);
+    return new (C.getAllocator()) T(std::forward<ArgTypes>(Args)...);
   }
 
   // A sub-routine of createFromLayers() that deals with temporary objects
