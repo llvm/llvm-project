@@ -449,29 +449,130 @@ SUnit *HardwareUnitInfo::getNextTargetSU(bool LookDeep) const {
   return TargetSU;
 }
 
+/// The net number of VGPRs/AGPRs scheduling \p SU frees: the width of the
+/// registers it reads whose defining SU has \p SU as its only remaining
+/// unscheduled data successor, minus the width of the registers it defines. An
+/// instruction that redefines a register in place, like an accumulating WMMA,
+/// frees nothing and defines nothing: its tied use and def are left out, so it
+/// nets zero whether the accumulator was defined in the region or before it.
+///
+/// A def is charged at the width of the whole register, also when it writes
+/// only a subregister: a wide register built piece by piece is allocated whole
+/// from its first piece on.
+///
+/// TODO: SGPRs have a separate budget and are not counted yet.
+static int getRegFreeDelta(const SUnit *SU) {
+  const MachineInstr *MI = SU->getInstr();
+  if (!MI)
+    return 0;
+  const MachineRegisterInfo &MRI = MI->getMF()->getRegInfo();
+  const SIRegisterInfo *TRI = static_cast<const SIRegisterInfo *>(
+      MI->getMF()->getSubtarget().getRegisterInfo());
+  // Width in 32-bit registers of a VGPR/AGPR virtual register.
+  auto Width = [&](Register Reg) -> int {
+    if (!Reg.isVirtual())
+      return 0;
+    const TargetRegisterClass *RC = MRI.getRegClass(Reg);
+    if (!TRI->isVGPRClass(RC) && !TRI->isAGPRClass(RC))
+      return 0;
+    return TRI->getRegSizeInBits(*RC) / 32;
+  };
+
+  // A def tied to a use rewrites that register in place: the old value dies
+  // and the new one takes its registers, so the pair neither frees nor grows
+  // anything, wherever the old value came from.
+  auto IsTiedUse = [MI](Register Reg) {
+    return any_of(MI->uses(), [Reg](const MachineOperand &Use) {
+      return Use.isReg() && Use.isTied() && Use.getReg() == Reg;
+    });
+  };
+
+  SmallDenseMap<Register, unsigned, 8> RegMaxUnsched;
+
+  for (const SDep &Pred : SU->Preds) {
+    if (Pred.getKind() != SDep::Data)
+      continue;
+    Register Reg = Pred.getReg();
+    if (!Reg || IsTiedUse(Reg))
+      continue;
+    const SUnit *PredSU = Pred.getSUnit();
+    unsigned Unscheduled = 0;
+    // Only successors that read Reg keep it live; PredSU may define other
+    // registers whose edges say nothing about when Reg dies.
+    for (const SDep &Succ : PredSU->Succs)
+      if (Succ.getKind() == SDep::Data && Succ.getReg() == Reg &&
+          !Succ.getSUnit()->isScheduled)
+        ++Unscheduled;
+
+    auto &MaxUnsched = RegMaxUnsched[Reg];
+    MaxUnsched = std::max(MaxUnsched, Unscheduled);
+  }
+
+  // SU itself is always counted, so MaxUnsched >= 1 and freed means == 1.
+  int Delta = 0;
+  for (const auto &[Reg, MaxUnsched] : RegMaxUnsched)
+    if (MaxUnsched < 2)
+      Delta += Width(Reg);
+  for (const MachineOperand &Def : MI->defs())
+    if (Def.isReg() && !Def.isTied())
+      Delta -= Width(Def.getReg());
+  return Delta;
+}
+
+int HardwareUnitInfo::getCachedRegFreeDelta(const SUnit *SU) {
+  std::optional<int> &Slot = (*RegFreeCache)[SU->NodeNum];
+  if (!Slot)
+    Slot = getRegFreeDelta(SU);
+  return *Slot;
+}
+
+void HardwareUnitInfo::updatePrioritySUsWith(SUnit *Cand) {
+  if (PrioritySUs.empty()) {
+    PrioritySUs.insert(Cand);
+    PriorityHeadFrees.reset();
+    return;
+  }
+
+  SUnit *Existing = *PrioritySUs.begin();
+
+  LLVM_DEBUG(dbgs() << "    updatePrioritySUs: SU(" << Cand->NodeNum
+                    << ") vs existing SU(" << Existing->NodeNum << ")\n");
+
+  if (!PriorityHeadFrees)
+    PriorityHeadFrees = getCachedRegFreeDelta(Existing);
+  int CandFrees = getCachedRegFreeDelta(Cand);
+  LLVM_DEBUG(dbgs() << "      Existing: frees=" << *PriorityHeadFrees
+                    << "  Candidate: frees=" << CandFrees << "\n");
+
+  if (CandFrees < *PriorityHeadFrees)
+    return;
+
+  // Keep every tied SU so the candidate heuristics can pick among them.
+  if (CandFrees == *PriorityHeadFrees) {
+    PrioritySUs.insert(Cand);
+    return;
+  }
+
+  PrioritySUs.clear();
+  PrioritySUs.insert(Cand);
+  // Cand is the new head; reuse the count just computed for it.
+  PriorityHeadFrees = CandFrees;
+}
+
+void HardwareUnitInfo::rebuildPrioritySUs() {
+  if (AllSUs.empty())
+    return;
+  PrioritySUs.clear();
+  PriorityHeadFrees.reset();
+  for (auto *SU : AllSUs)
+    updatePrioritySUsWith(SU);
+}
+
 void HardwareUnitInfo::insert(SUnit *SU, unsigned BlockingCycles) {
   if (!AllSUs.insert(SU))
     llvm_unreachable("HardwareUnit already contains SU!");
 
   TotalCycles += BlockingCycles;
-
-  if (PrioritySUs.empty()) {
-    PrioritySUs.insert(SU);
-    return;
-  }
-  unsigned SUDepth = SU->getDepth();
-  unsigned CurrDepth = (*PrioritySUs.begin())->getDepth();
-  if (SUDepth > CurrDepth)
-    return;
-
-  if (SUDepth == CurrDepth) {
-    PrioritySUs.insert(SU);
-    return;
-  }
-
-  // SU is lower depth and should be prioritized.
-  PrioritySUs.clear();
-  PrioritySUs.insert(SU);
 }
 
 void HardwareUnitInfo::markScheduled(SUnit *SU, unsigned BlockingCycles) {
@@ -483,36 +584,11 @@ void HardwareUnitInfo::markScheduled(SUnit *SU, unsigned BlockingCycles) {
 
   ScheduledSUs.push_back(SU);
   AllSUs.remove(SU);
-  PrioritySUs.remove(SU);
 
   // BufferSize 0 is unlimited, while size 1 has no parallel buffering. In
   // either case, each SU uses the HardwareUnit for BlockingCycles.
   if (BufferSize <= 1 || (ScheduledSUs.size() % BufferSize == 0))
     TotalCycles -= std::min(TotalCycles, BlockingCycles);
-
-  if (AllSUs.empty())
-    return;
-  if (PrioritySUs.empty()) {
-    for (auto SU : AllSUs) {
-      if (PrioritySUs.empty()) {
-        PrioritySUs.insert(SU);
-        continue;
-      }
-      unsigned SUDepth = SU->getDepth();
-      unsigned CurrDepth = (*PrioritySUs.begin())->getDepth();
-      if (SUDepth > CurrDepth)
-        continue;
-
-      if (SUDepth == CurrDepth) {
-        PrioritySUs.insert(SU);
-        continue;
-      }
-
-      // SU is lower depth and should be prioritized.
-      PrioritySUs.clear();
-      PrioritySUs.insert(SU);
-    }
-  }
 }
 
 void HardwareUnitInfo::finalizeCycles() {
@@ -571,7 +647,22 @@ unsigned CandidateHeuristics::getHWUICyclesForMI(MachineInstr *MI) {
   return getMaxBlockingCycles(SchedModel->resolveSchedClass(MI), MI);
 }
 
+void CandidateHeuristics::invalidateRegFreeDeltas(const SUnit *SU) {
+  RegFreeCache[SU->NodeNum].reset();
+  for (const SDep &Pred : SU->Preds) {
+    if (Pred.getKind() != SDep::Data || !Pred.getReg())
+      continue;
+    // Scheduling SU lowers the number of unscheduled readers of the register
+    // for everything else that reads it from the same producer.
+    for (const SDep &Succ : Pred.getSUnit()->Succs)
+      if (Succ.getKind() == SDep::Data && Succ.getReg() == Pred.getReg() &&
+          !Succ.getSUnit()->isBoundaryNode())
+        RegFreeCache[Succ.getSUnit()->NodeNum].reset();
+  }
+}
+
 void CandidateHeuristics::updateForScheduling(SUnit *SU) {
+  invalidateRegFreeDeltas(SU);
   MachineInstr *MI = SU->getInstr();
   HardwareUnitInfo *HWUI = getHWUIFromFlavor(classifyFlavor(*MI, *SII));
   assert(HWUI);
@@ -591,10 +682,12 @@ void CandidateHeuristics::initialize(ScheduleDAGMI *SchedDAG,
   SII = static_cast<const SIInstrInfo *>(DAG->TII);
 
   HWUInfo.resize(static_cast<int>(InstructionFlavor::NUM_FLAVORS));
+  RegFreeCache.assign(DAG->SUnits.size(), std::nullopt);
 
   for (unsigned I = 0; I < HWUInfo.size(); I++) {
     HWUInfo[I].reset();
     HWUInfo[I].setType(I);
+    HWUInfo[I].setRegFreeCache(&RegFreeCache);
   }
 
   HWUInfo[static_cast<int>(InstructionFlavor::WMMA)].setProducesCoexecWindow(
@@ -1232,6 +1325,10 @@ void AMDGPUCoExecSchedStrategy::pickNodeFromQueue(
           getBankedPressure(DownwardTracker.getPressure());
     }
   }
+
+  // getRegFreeDelta() depends on what is already scheduled, so the ranking goes
+  // stale after every pick.
+  Heurs.rebuildAllPrioritySUs();
 
   auto EvaluateQueue = [&](ReadyQueue &Q, bool FromPending) {
     for (SUnit *SU : Q) {
