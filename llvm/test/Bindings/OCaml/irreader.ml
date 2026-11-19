@@ -72,8 +72,46 @@ let test_irreader () =
   end
 
 
+(*===-- Opcodes -----------------------------------------------------------===*)
+
+(* [instr_opcode] must map every opcode of the C API, including the ones added
+   after [Freeze]: [PtrToAddr], [UncondBr], [CondBr], [BitInsert] and
+   [BitExtract]. *)
+let test_opcodes () =
+  let ir = {|
+define b32 @f(ptr %p, i1 %c, b32 %b, i8 %v) {
+entry:
+  %a = ptrtoaddr ptr %p to i64
+  br label %next
+next:
+  %i = bitinsert b32 %b, i8 %v, i32 3
+  %e = bitextract i8, b32 %i, i32 24
+  br i1 %c, label %next, label %exit
+exit:
+  %f = freeze b32 %i
+  ret b32 %f
+}
+|} in
+  let buf = MemoryBuffer.of_string ir in
+  let m = protect ~finally:(fun () -> MemoryBuffer.dispose buf)
+            (fun () -> parse_ir_bitcode_or_assembly context buf) in
+  protect ~finally:(fun () -> dispose_module m) (fun () ->
+    match lookup_function "f" m with
+    | None -> failwith "function"
+    | Some f ->
+        let opcodes =
+          fold_left_blocks
+            (fun acc bb -> fold_left_instrs (fun acc i -> instr_opcode i :: acc) acc bb)
+            [] f
+          |> List.rev
+        in
+        insist (opcodes = Opcode.[ PtrToAddr; UncondBr; BitInsert; BitExtract;
+                                   CondBr; Freeze; Ret ]))
+
+
 (*===-- Driver ------------------------------------------------------------===*)
 
 let _ =
   suite "irreader" test_irreader;
+  suite "opcodes" test_opcodes;
   dispose_context context
