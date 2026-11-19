@@ -111,6 +111,9 @@ public:
   // bits are zero extended.
   bool matchCombine_s_mul_u64(MachineInstr &MI, unsigned &NewOpcode) const;
 
+  // Convert unsigned BFE(x, 0, N) to AND(x, 1<<N - 1)
+  void applyUBFEToAnd(MachineInstr &MI, unsigned WidthVal) const;
+
 private:
 #define GET_GICOMBINER_CLASS_MEMBERS
 #define AMDGPUSubtarget GCNSubtarget
@@ -391,6 +394,24 @@ bool AMDGPUPostLegalizerCombinerImpl::matchCombine_s_mul_u64(
     return true;
   }
   return false;
+}
+
+void AMDGPUPostLegalizerCombinerImpl::applyUBFEToAnd(
+    MachineInstr &MI, unsigned WidthVal) const {
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(2).getReg();
+
+  LLT DstTy = MRI.getType(Dst);
+  unsigned DstBits = DstTy.getSizeInBits();
+
+  APInt Mask = (WidthVal >= DstBits)
+                   ? APInt::getAllOnes(DstBits)
+                   : APInt::getLowBitsSet(DstBits, WidthVal);
+
+  B.setInstrAndDebugLoc(MI);
+  auto MaskCst = B.buildConstant(DstTy, Mask);
+  B.buildAnd(Dst, Src, MaskCst);
+  MI.eraseFromParent();
 }
 
 // Pass boilerplate
