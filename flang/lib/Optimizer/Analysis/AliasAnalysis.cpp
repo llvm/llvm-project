@@ -1210,7 +1210,7 @@ static bool callCannotReachSavedLocal(fir::CallOp call,
   // The main program cannot be referenced (F2023 14.1), so a call in its
   // func.func cannot invoke it either.
   auto func = mlir::dyn_cast_or_null<mlir::func::FuncOp>(
-      call->getParentOfType<mlir::FunctionOpInterface>());
+      call->getParentOfType<mlir::FunctionOpInterface>().getOperation());
   if (!func ||
       (!isMainProgram(func) &&
        !fir::hasProcedureAttr<fir::FortranProcedureFlagsEnum::non_recursive>(
