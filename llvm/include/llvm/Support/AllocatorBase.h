@@ -73,7 +73,8 @@ public:
   // core methods.
 
   /// Allocate space for a sequence of objects without constructing them.
-  template <typename T> T *Allocate(size_t Num = 1) {
+  // CFI: typed pointer to unconstructed storage for placement-new.
+  template <typename T> LLVM_NO_SANITIZE("cfi") T *Allocate(size_t Num = 1) {
     return static_cast<T *>(Allocate(Num * sizeof(T), alignof(T)));
   }
 
