@@ -186,10 +186,14 @@ DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(NAME(cas))
         LDXP   x0, x1, [x4]
         cmp    x0, x(tmp0)
         ccmp   x1, x(tmp1), #0, eq
-        bne    1f
+        bne    2f
         STXP   w(tmp2), x2, x3, [x4]
         cbnz   w(tmp2), 0b
-1:
+        BARRIER
+        ret
+2:
+        STXP   w(tmp2), x0, x1, [x4]
+        cbnz   w(tmp2), 0b
         BARRIER
         ret
 #endif
