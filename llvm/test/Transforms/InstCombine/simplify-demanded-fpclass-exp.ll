@@ -656,6 +656,16 @@ define nofpclass(pzero) float @source_is_known_zero_subnormal_anyinf_or_nan_exp(
   ret float %exp
 }
 
+define nofpclass(psub) float @source_is_known_zero_subnormal_anyinf_or_nan_exp_psub(float nofpclass(norm) %must.be.zero.subnormal.anyinf.or.nan) {
+; CHECK-LABEL: define nofpclass(psub) float @source_is_known_zero_subnormal_anyinf_or_nan_exp_psub(
+; CHECK-SAME: float nofpclass(norm) [[MUST_BE_ZERO_SUBNORMAL_ANYINF_OR_NAN:%.*]]) {
+; CHECK-NEXT:    [[EXP:%.*]] = call float @llvm.exp.f32(float [[MUST_BE_ZERO_SUBNORMAL_ANYINF_OR_NAN]])
+; CHECK-NEXT:    ret float [[EXP]]
+;
+  %exp = call float @llvm.exp.f32(float %must.be.zero.subnormal.anyinf.or.nan)
+  ret float %exp
+}
+
 define nofpclass(nzero) float @source_is_known_subnormal_exp2(float nofpclass(inf nan norm zero) %must.be.subnormal) {
 ; CHECK-LABEL: define nofpclass(nzero) float @source_is_known_subnormal_exp2(
 ; CHECK-SAME: float nofpclass(nan inf zero norm) [[MUST_BE_SUBNORMAL:%.*]]) {
