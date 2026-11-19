@@ -257,7 +257,7 @@ ObjectFile::ObjectFile(const lldb::ModuleSP &module_sp,
       m_file_offset(file_offset), m_length(length),
       m_data_nsp(std::make_shared<DataExtractor>()), m_process_wp(),
       m_memory_addr(LLDB_INVALID_ADDRESS),
-      m_disable_memory_symtab_caching(false), m_sections_up(), m_symtab_up(),
+      m_disable_memory_symtab_caching(false), m_sections_up(),
       m_symtab_once_up(new llvm::once_flag()) {
   if (file_spec_ptr)
     m_file = *file_spec_ptr;
@@ -285,7 +285,7 @@ ObjectFile::ObjectFile(const lldb::ModuleSP &module_sp,
       m_strata(eStrataInvalid), m_file_offset(0), m_length(0),
       m_data_nsp(std::make_shared<DataExtractor>()), m_process_wp(process_sp),
       m_memory_addr(header_addr), m_disable_memory_symtab_caching(false),
-      m_sections_up(), m_symtab_up(), m_symtab_once_up(new llvm::once_flag()) {
+      m_sections_up(), m_symtab_once_up(new llvm::once_flag()) {
   if (header_extractor_sp && header_extractor_sp->HasData())
     m_data_nsp = header_extractor_sp;
   Log *log = GetLog(LLDBLog::Object);
@@ -300,6 +300,7 @@ ObjectFile::ObjectFile(const lldb::ModuleSP &module_sp,
 ObjectFile::~ObjectFile() {
   Log *log = GetLog(LLDBLog::Object);
   LLDB_LOGF(log, "%p ObjectFile::~ObjectFile ()\n", static_cast<void *>(this));
+  delete m_symtab.load();
 }
 
 bool ObjectFile::SetModulesArchitecture(const ArchSpec &new_arch) {
@@ -607,12 +608,11 @@ void ObjectFile::ClearSymtab() {
   if (module_sp) {
     Log *log = GetLog(LLDBLog::Object);
     LLDB_LOGF(log, "%p ObjectFile::ClearSymtab () symtab = %p",
-              static_cast<void *>(this),
-              static_cast<void *>(m_symtab_up.get()));
+              static_cast<void *>(this), static_cast<void *>(m_symtab.load()));
     // Since we need to clear the symbol table, we need a new llvm::once_flag
     // instance so we can safely create another symbol table
     m_symtab_once_up.reset(new llvm::once_flag());
-    m_symtab_up.reset();
+    delete m_symtab.exchange(nullptr);
   }
 }
 
@@ -805,16 +805,16 @@ Symtab *ObjectFile::GetSymtab(bool can_create) {
     llvm::call_once(*m_symtab_once_up, [&]() {
       Symtab *symtab = new Symtab(this);
       std::lock_guard<std::recursive_mutex> symtab_guard(symtab->GetMutex());
-      m_symtab_up.reset(symtab);
-      if (!m_symtab_up->LoadFromCache()) {
+      delete m_symtab.exchange(symtab);
+      if (!symtab->LoadFromCache()) {
         ElapsedTime elapsed(module_sp->GetSymtabParseTime());
-        ParseSymtab(*m_symtab_up);
-        m_symtab_up->SetWasParsedFromObjectFile();
-        m_symtab_up->Finalize();
+        ParseSymtab(*symtab);
+        symtab->SetWasParsedFromObjectFile();
+        symtab->Finalize();
       }
     });
   }
-  return m_symtab_up.get();
+  return m_symtab.load();
 }
 
 uint32_t ObjectFile::GetCacheHash() {
