@@ -28,7 +28,7 @@ public:
     return LangOpts.CPlusPlus11;
   }
   std::optional<TraversalKind> getCheckTraversalKind() const override {
-    return TK_IgnoreUnlessSpelledInSource;
+    return TK_AsIs;
   }
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
 
