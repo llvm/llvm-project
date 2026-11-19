@@ -5534,9 +5534,9 @@ MachineInstr *CombinerHelper::buildUDivOrURemUsingMul(MachineInstr &MI) const {
       VT ? VT->getKnownBits(LHS).countMinLeadingZeros() : 0;
 
   // Allow scalars to be widened to twice their size for divisors whose magic
-  // number needs one more bit, if G_UMULH is legal for the wider type.
-  // SelectionDAG only does this for i32. For even divisors, only do it if the
-  // zero-extension is free.
+  // number needs one more bit, if G_UMULH is legal for the wider type, as
+  // SelectionDAG does. For even divisors, only do it if the zero-extension is
+  // free.
   LLT WideTy = Ty.changeElementSize(EltBits * 2);
   LLVMContext &Ctx = MI.getMF()->getFunction().getContext();
   const bool AllowWiden =
