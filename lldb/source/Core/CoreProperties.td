@@ -83,6 +83,13 @@ let Definition = "testing", Path = "testing" in {
                           DefaultStringValue<"">,
                           Desc<"List of paths that LLDB will automatically "
                                "load scripting resources from.">;
+  def DeprecatedSetting : Property<"deprecated-setting", "Boolean">,
+                          Global,
+                          DefaultFalse,
+                          Deprecated<"there is no replacement for this "
+                                     "setting">,
+                          Desc<"Used for testing LLDB only. This setting has "
+                               "no effect.">;
 }
 #endif
 

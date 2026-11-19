@@ -4771,6 +4771,8 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::FSQRT,      MVT::f64,     { 27, 27,  1,  1 } }, // vsqrtsd
     { ISD::FSQRT,      MVT::v2f64,   { 27, 27,  1,  1 } }, // vsqrtpd
     { ISD::FSQRT,      MVT::v4f64,   { 54, 54,  1,  3 } }, // vsqrtpd
+    { ISD::VECTOR_SHUFFLE_VAR, MVT::v2i64, { 1, 1, 2, 2 } }, // vpaddq+vpermilpd
+    { ISD::VECTOR_SHUFFLE_VAR, MVT::v4i32, { 1, 1, 1, 1 } }, // vpermilps
   };
   static const CostKindTblEntry GFNICostTbl[] = {
     { ISD::BITREVERSE, MVT::i8,      {  3,  3,  3,  4 } }, // gf2p8affineqb
@@ -4874,6 +4876,8 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::CTTZ,       MVT::v8i16,   { 13, 20, 17, 23 } },
     { ISD::CTTZ,       MVT::v16i8,   { 11, 16, 13, 19 } },
     { ISD::MASK_BEFOREFIRST, MVT::v16i8, {  8, 11,  9, 11 } }, // movmsk seq
+    { ISD::VECTOR_SHUFFLE_VAR, MVT::v8i16, { 2, 6, 3, 5 } }, // pmul+padd+pshufb 
+    { ISD::VECTOR_SHUFFLE_VAR, MVT::v16i8, { 1, 1, 1, 1 } }, // pshufb 
   };
   static const CostKindTblEntry SSE2CostTbl[] = {
     { ISD::ABS,        MVT::v2i64,   {  3,  6,  5,  5 } },
@@ -5225,6 +5229,10 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   case Intrinsic::umul_with_overflow:
     ISD = ISD::UMULO;
     OpTy = RetTy->getContainedType(0);
+    break;
+  case Intrinsic::vector_shuffle:
+    // TODO: mask op zext/trunc costs.
+    ISD = ISD::VECTOR_SHUFFLE_VAR;
     break;
   case Intrinsic::clmul:
     ISD = ISD::CLMUL;
@@ -6363,6 +6371,12 @@ InstructionCost X86TTIImpl::getPartialReductionCost(
           AccVecTy->getPrimitiveSizeInBits().getFixedValue() ||
       !TLI->isPartialReduceMLALegalOrCustom(Opc, AccLT.second, InputLT.second))
     return ExpandCost();
+
+  // Without VNNI, the signed i16 dot product is a PMADDWD and an ADD, which
+  // cost about the same.
+  if (Opc == ISD::PARTIAL_REDUCE_SMLA && InputTypeA->isIntegerTy(16) &&
+      !ST->hasVNNI() && !ST->hasAVXVNNI())
+    return 2 * getArithmeticInstrCost(Instruction::Add, AccVecTy, CostKind);
 
   return AccLT.first;
 }
@@ -8362,6 +8376,7 @@ bool X86TTIImpl::isProfitableToSinkOperands(Instruction *I,
 
 bool X86TTIImpl::useFastCCForInternalCall(Function &F) const {
   bool HasEGPR = ST->hasEGPR();
+  bool UseAPXFastCC = ST->useAPXFastCC();
   const TargetMachine &TM = getTLI()->getTargetMachine();
 
   for (User *U : F.users()) {
@@ -8369,7 +8384,9 @@ bool X86TTIImpl::useFastCCForInternalCall(Function &F) const {
     if (!CB || CB->getCalledOperand() != &F)
       continue;
     Function *CallerFunc = CB->getFunction();
-    if (TM.getSubtarget<X86Subtarget>(*CallerFunc).hasEGPR() != HasEGPR)
+    const X86Subtarget &CallerST = TM.getSubtarget<X86Subtarget>(*CallerFunc);
+    if (CallerST.hasEGPR() != HasEGPR ||
+        CallerST.useAPXFastCC() != UseAPXFastCC)
       return false;
   }
 

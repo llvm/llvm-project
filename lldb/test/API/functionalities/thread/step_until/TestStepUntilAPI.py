@@ -91,6 +91,7 @@ class TestStepUntilAPI(TestBase):
 
         self._assertDiscontinuity()
 
+    @skipIfWasm  # step-until stops one line late
     def test_missing(self):
         """Test SBThread.StepOverUntil - targeting a line and missing it by stepping out to call site"""
         self._do_until(

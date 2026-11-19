@@ -92,7 +92,7 @@ __device__ void delete_array(S *p) { delete[] p; }
 // OGCG: %[[ALLOC:.*]] = getelementptr inbounds i8, ptr addrspace(4) %{{.*}}, i64 -8
 // OGCG: load i64, ptr addrspace(4) %[[ALLOC]], align 4
 // OGCG: call spir_func addrspace(4) void @_ZN1SD1Ev(ptr addrspace(4) {{.*}})
-// OGCG: call spir_func addrspace(4) void @_ZdaPvm(ptr addrspace(4) noundef %[[ALLOC]], i64 noundef %{{.*}})
+// OGCG: call spir_func addrspace(4) void @_ZdaPvm(ptr addrspace(4) allocptr noundef %[[ALLOC]], i64 noundef %{{.*}})
 
 #else
 

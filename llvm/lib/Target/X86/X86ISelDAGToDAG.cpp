@@ -822,7 +822,7 @@ X86DAGToDAGISel::IsProfitableToFold(SDValue N, SDNode *U, SDNode *Root) const {
   if (Root->getOpcode() == ISD::INSERT_SUBVECTOR &&
       isNullConstant(Root->getOperand(2)) &&
       (Root->getOperand(0).isUndef() ||
-       ISD::isBuildVectorAllZeros(Root->getOperand(0).getNode())))
+       ISD::isBuildVectorAllZeros(Root->getOperand(0))))
     return false;
 
   return true;
@@ -1076,7 +1076,7 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
         N->getSimpleValueType(0).isVector() && !mayPreventLoadFold()) {
       APInt SplatVal;
       if (!ISD::isBuildVectorOfConstantSDNodes(
-              peekThroughBitcasts(N->getOperand(0)).getNode()) &&
+              peekThroughBitcasts(N->getOperand(0))) &&
           X86::isConstantSplat(N->getOperand(1), SplatVal) &&
           SplatVal.isOne()) {
         SDLoc DL(N);
@@ -5103,7 +5103,7 @@ bool X86DAGToDAGISel::tryVPTERNLOG(SDNode *N) {
   // Identify and (optionally) peel an outer NOT that wraps a pure logic tree
   auto tryPeelOuterNotWrappingLogic = [&](SDNode *Op) {
     if (Op->getOpcode() == ISD::XOR && Op->hasOneUse() &&
-        ISD::isBuildVectorAllOnes(Op->getOperand(1).getNode())) {
+        ISD::isBuildVectorAllOnes(Op->getOperand(1))) {
       SDValue InnerOp = getFoldableLogicOp(Op->getOperand(0));
 
       if (!InnerOp)
@@ -5157,7 +5157,7 @@ bool X86DAGToDAGISel::tryVPTERNLOG(SDNode *N) {
   // TODO: There may be a bitcast before the xor that we should peek through.
   auto PeekThroughNot = [](SDValue &Op, SDNode *&Parent, uint8_t &Magic) {
     if (Op.getOpcode() == ISD::XOR && Op.hasOneUse() &&
-        ISD::isBuildVectorAllOnes(Op.getOperand(1).getNode())) {
+        ISD::isBuildVectorAllOnes(Op.getOperand(1))) {
       Magic = ~Magic;
       Parent = Op.getNode();
       Op = Op.getOperand(0);
@@ -5353,11 +5353,11 @@ bool X86DAGToDAGISel::tryVPTESTM(SDNode *Root, SDValue Setcc,
   SDValue SetccOp1 = Setcc.getOperand(1);
 
   // Canonicalize the all zero vector to the RHS.
-  if (ISD::isBuildVectorAllZeros(SetccOp0.getNode()))
+  if (ISD::isBuildVectorAllZeros(SetccOp0))
     std::swap(SetccOp0, SetccOp1);
 
   // See if we're comparing against zero.
-  if (!ISD::isBuildVectorAllZeros(SetccOp1.getNode()))
+  if (!ISD::isBuildVectorAllZeros(SetccOp1))
     return false;
 
   SDValue N0 = SetccOp0;

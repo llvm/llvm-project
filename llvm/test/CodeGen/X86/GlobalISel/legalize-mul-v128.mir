@@ -29,10 +29,6 @@ regBankSelected: false
 # ALL-NEXT:   - { id: 0, class: _, preferred-register: '', flags: [   ] }
 # ALL-NEXT:   - { id: 1, class: _, preferred-register: '', flags: [   ] }
 # ALL-NEXT:   - { id: 2, class: _, preferred-register: '', flags: [   ] }
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 # ALL:          %0:_(<8 x s16>) = COPY $xmm0
 # ALL-NEXT:     %1:_(<8 x s16>) = COPY $xmm1
 # ALL-NEXT:     %2:_(<8 x s16>) = G_MUL %0, %1
@@ -42,9 +38,9 @@ body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
 
-    %0(<8 x s16>) = COPY $xmm0
-    %1(<8 x s16>) = COPY $xmm1
-    %2(<8 x s16>) = G_MUL %0, %1
+    %0:_(<8 x s16>) = COPY $xmm0
+    %1:_(<8 x s16>) = COPY $xmm1
+    %2:_(<8 x s16>) = G_MUL %0, %1
     $xmm0 = COPY %2(<8 x s16>)
     RET 0, implicit $xmm0
 
@@ -59,10 +55,6 @@ regBankSelected: false
 # ALL-NEXT:   - { id: 0, class: _, preferred-register: '', flags: [   ] }
 # ALL-NEXT:   - { id: 1, class: _, preferred-register: '', flags: [   ] }
 # ALL-NEXT:   - { id: 2, class: _, preferred-register: '', flags: [   ] }
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 # ALL:          %0:_(<4 x s32>) = COPY $xmm0
 # ALL-NEXT:     %1:_(<4 x s32>) = COPY $xmm1
 # ALL-NEXT:     %2:_(<4 x s32>) = G_MUL %0, %1
@@ -72,9 +64,9 @@ body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
 
-    %0(<4 x s32>) = COPY $xmm0
-    %1(<4 x s32>) = COPY $xmm1
-    %2(<4 x s32>) = G_MUL %0, %1
+    %0:_(<4 x s32>) = COPY $xmm0
+    %1:_(<4 x s32>) = COPY $xmm1
+    %2:_(<4 x s32>) = G_MUL %0, %1
     $xmm0 = COPY %2(<4 x s32>)
     RET 0, implicit $xmm0
 
@@ -89,10 +81,6 @@ regBankSelected: false
 # ALL-NEXT:   - { id: 0, class: _, preferred-register: '', flags: [   ] }
 # ALL-NEXT:   - { id: 1, class: _, preferred-register: '', flags: [   ] }
 # ALL-NEXT:   - { id: 2, class: _, preferred-register: '', flags: [   ] }
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 # ALL:          %0:_(<2 x s64>) = COPY $xmm0
 # ALL-NEXT:     %1:_(<2 x s64>) = COPY $xmm1
 # ALL-NEXT:     %2:_(<2 x s64>) = G_MUL %0, %1
@@ -102,9 +90,9 @@ body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
 
-    %0(<2 x s64>) = COPY $xmm0
-    %1(<2 x s64>) = COPY $xmm1
-    %2(<2 x s64>) = G_MUL %0, %1
+    %0:_(<2 x s64>) = COPY $xmm0
+    %1:_(<2 x s64>) = COPY $xmm1
+    %2:_(<2 x s64>) = G_MUL %0, %1
     $xmm0 = COPY %2(<2 x s64>)
     RET 0, implicit $xmm0
 
