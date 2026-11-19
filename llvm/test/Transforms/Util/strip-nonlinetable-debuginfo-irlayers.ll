@@ -1,11 +1,10 @@
 ; RUN: opt -passes=strip-nonlinetable-debuginfo -S %s | FileCheck %s
 
-;; Layers are line-table data, so downgrading to line-tables-only keeps them,
-;; as DILayerLoc/DILayerLocList nodes rather than plain tuples. The pass
-;; rebuilds locations on two routes. Instruction !dbg attachments and the
-;; locations inside !llvm.loop metadata share one lambda (@f, @loop). An
-;; inlinedAt location goes through the metadata mapper instead, which is also
-;; where the layer nodes would be rebuilt as plain tuples (@inlined).
+;; Check that downgrading to line-tables-only keeps irlayers, as DILayerLoc and
+;; DILayerLocList nodes: they are line-table data, so the downgraded module
+;; still maps its code to the intermediate IR. Covered are an instruction's
+;; location (@f), the start and end locations of !llvm.loop (@loop), and an
+;; inlined location with the one it is inlined at (@inlined).
 
 define void @f(ptr %p) !dbg !5 {
   store ptr null, ptr %p, align 8, !dbg !20
@@ -41,10 +40,12 @@ define void @inlined(ptr %p) !dbg !7 {
 ; CHECK-DAG:   ![[LIST]] = !DILayerLocList(![[LAYER:[0-9]+]])
 ; CHECK-DAG:   ![[LAYER]] = !DILayerLoc(line: 42, column: 5, file: ![[INTF:[0-9]+]], kind: "IntermediateIR")
 ; CHECK-DAG:   ![[INTF]] = !DIFile(filename: "intermediate.ir", directory: ".")
-;; The loop's start location is the store's node; its end location is its own.
+
+;; The loop's start and end locations keep their layers.
 ; CHECK-DAG:   ![[LOOPDBG]] = !DILocation(line: 5, column: 3, scope: !{{[0-9]+}}, irlayers: ![[LIST]])
 ; CHECK-DAG:   ![[LOOPMD]] = distinct !{![[LOOPMD]], ![[LOOPDBG]], ![[LOOPEND:[0-9]+]],
 ; CHECK-DAG:   ![[LOOPEND]] = !DILocation(line: 7, column: 1, scope: !{{[0-9]+}}, irlayers: ![[LIST]])
+
 ;; The callee and inlined-at locations each keep their own list.
 ; CHECK-DAG:   ![[INLDBG]] = !DILocation(line: 13, column: 3, scope: !{{[0-9]+}}, inlinedAt: ![[IA:[0-9]+]], irlayers: ![[LIST]])
 ; CHECK-DAG:   ![[IA]] = !DILocation(line: 9, column: 7, scope: !{{[0-9]+}}, irlayers: ![[LIST2:[0-9]+]])
@@ -72,11 +73,13 @@ define void @inlined(ptr %p) !dbg !7 {
 
 !20 = !DILocation(line: 2, column: 5, scope: !5, irlayers: !12)
 !21 = !DILocation(line: 3, column: 1, scope: !5)
+
 ;; Loop ID operands: self, start location, end location, then options.
 !22 = !DILocation(line: 5, column: 3, scope: !6, irlayers: !12)
 !23 = !DILocation(line: 7, column: 1, scope: !6, irlayers: !12)
 !30 = distinct !{!30, !22, !23, !31}
 !31 = !{!"llvm.loop.mustprogress"}
+
 ;; A callee location inlined at a caller location, each with its own layers.
 !40 = !DILocation(line: 13, column: 3, scope: !8, inlinedAt: !41, irlayers: !12)
 !41 = !DILocation(line: 9, column: 7, scope: !7, irlayers: !14)

@@ -905,9 +905,8 @@ private:
       if (isa<DIFile>(N))
         return N;
       // Intermediate-IR layer nodes hold only a kind string and a DIFile, so
-      // none of their content is part of the type hierarchy being stripped. The
-      // generic fallback below would rebuild them as plain MDTuples, which
-      // DILocation::getIRLayers() cannot cast.
+      // none of their content is part of the type hierarchy being stripped.
+      // Return them as they are to preserve their node types.
       if (isa<DILayerLoc>(N) || isa<DILayerLocList>(N))
         return N;
       if (auto *MDLB = dyn_cast<DILexicalBlockBase>(N))
