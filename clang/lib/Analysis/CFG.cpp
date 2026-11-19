@@ -1990,6 +1990,7 @@ void CFGBuilder::addAutomaticObjDestruction(
     return;
 
   SmallVector<VarDecl *, 10> LocalVarDecls;
+  LocalVarDecls.reserve(R.begin().distance(R.end()));
   for (VarDecl *VD : R)
     LocalVarDecls.push_back(VD);
 
