@@ -6,6 +6,7 @@ add_libc_test(
     expr_test.cpp
   DEPENDS
     libc.hdr.regex_macros
+    libc.src.__support.error_or
     libc.src.__support.regex.regex_expr_pool
 )
 

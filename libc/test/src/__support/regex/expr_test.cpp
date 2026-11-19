@@ -11,6 +11,7 @@
 ///
 //===----------------------------------------------------------------------===//
 #include "hdr/regex_macros.h"
+#include "src/__support/error_or.h"
 #include "src/__support/regex/regex_ast.h"
 #include "src/__support/regex/regex_expr_pool.h"
 #include "test/UnitTest/Test.h"
@@ -351,16 +352,23 @@ TEST(LlvmLibcRegexExprTest, MemoryLimits) {
   // EmptySet (1), EmptyStr (2), and 'a' (3) occupy the first 3 slots.
   const ExprId lit_a = *pool.make_lit('a');
   ExprId current = lit_a;
+  ExprId chain_24 = INVALID_EXPR_ID;
   for (size_t i = 0; i < 9997; ++i) {
     auto next = pool.make_concat(lit_a, current);
     ASSERT_TRUE(next.has_value());
     current = *next;
+    if (i == 23)
+      chain_24 = current;
   }
 
-  // Next one should fail.
+  // Next one should fail, including when flattening a left chain that spills
+  // ReverseExprIdStack past its 16-element inline block.
   auto fail = pool.make_concat(lit_a, current);
   ASSERT_FALSE(fail.has_value());
   EXPECT_EQ(fail.error(), REG_ESPACE);
+  auto spilled_fail = pool.make_concat(chain_24, current);
+  ASSERT_FALSE(spilled_fail.has_value());
+  EXPECT_EQ(spilled_fail.error(), REG_ESPACE);
 
   // A new multi-bit ByteSet at MAX_NODE_LIMIT fails without incrementing
   // byte_set_count.
@@ -431,4 +439,80 @@ TEST(LlvmLibcRegexExprTest, BoundsGuardsAndNullableMask) {
   EXPECT_EQ(pool.get(*rep_bol_0).nullable_mask, uint8_t(0b1111));
   EXPECT_EQ(pool.get(*star_bol).nullable_mask, uint8_t(0b1111));
   EXPECT_EQ(pool.get(*rep_bol_or_a).nullable_mask, uint8_t(0b1010));
+}
+
+namespace {
+
+// Compositional wrapper around ExprPool that unwraps ErrorOr<ExprId> so spine
+// tests read directly as regex algebra instead of boilerplate assertions.
+class ExprBuilder {
+  ExprPool pool;
+
+  ExprId unwrap(LIBC_NAMESPACE::ErrorOr<ExprId> res) {
+    EXPECT_TRUE(res.has_value());
+    return res.has_value() ? *res : INVALID_EXPR_ID;
+  }
+
+public:
+  ExprPool &raw() { return pool; }
+
+  ExprId lit(char c) { return unwrap(pool.make_lit(c)); }
+  ExprId star(ExprId body) { return unwrap(pool.make_star(body)); }
+  ExprId rep(ExprId body, uint16_t min, uint16_t max) {
+    return unwrap(pool.make_repeat(body, min, max));
+  }
+  ExprId cat(ExprId l, ExprId r) { return unwrap(pool.make_concat(l, r)); }
+  ExprId alt(ExprId l, ExprId r) { return unwrap(pool.make_alt(l, r)); }
+
+  // Builds a right-associated literal chain cycling `pattern` (`count`
+  // literals) followed by `tail`.  A 3-character cycle ("abc") is asymmetric
+  // at both DEPTH and DEPTH - 1, so reversing rebuild order fails immediately.
+  template <size_t N>
+  ExprId cycle_literals(const char (&pattern)[N], size_t count,
+                        ExprId tail = EMPTY_STR_ID) {
+    static_assert(N > 1, "pattern must contain at least one character");
+    constexpr size_t PERIOD = N - 1;
+    ExprId acc = tail;
+    for (size_t i = count; i > 0 && acc != INVALID_EXPR_ID; --i)
+      acc = cat(lit(pattern[(i - 1) % PERIOD]), acc);
+    return acc;
+  }
+};
+
+} // namespace
+
+TEST(LlvmLibcRegexExprTest, DeepConcatFlatteningAndPrefixCoalesce) {
+  ExprBuilder b;
+  const ExprId lit_d = b.lit('d');
+
+  // Flatten a 500-deep asymmetric left Concat spine (spilling
+  // ReverseExprIdStack's 16-item inline block): P · d == a · (b · (c · ... d)).
+  constexpr size_t DEPTH = 500;
+  const ExprId prefix = b.cycle_literals("abc", DEPTH);
+  const ExprId expected = b.cycle_literals("abc", DEPTH, lit_d);
+  EXPECT_EQ(b.cat(prefix, lit_d), expected);
+
+  // Coalesce 500-deep shared-prefix Concat spines in both argument orders:
+  //   (P · d{1,2}) | (P · d{3,4}) -> P · d{1,4}
+  //   (P · d{1,2}) | (P · d{4,5}) -> Alt (non-adjacent, unmerged)
+  const ExprId p_1_2 = b.cycle_literals("abc", DEPTH, b.rep(lit_d, 1, 2));
+  const ExprId p_3_4 = b.cycle_literals("abc", DEPTH, b.rep(lit_d, 3, 4));
+  const ExprId p_4_5 = b.cycle_literals("abc", DEPTH, b.rep(lit_d, 4, 5));
+  const ExprId p_1_4 = b.cycle_literals("abc", DEPTH, b.rep(lit_d, 1, 4));
+  EXPECT_EQ(b.alt(p_1_2, p_3_4), p_1_4);
+  EXPECT_EQ(b.alt(p_3_4, p_1_2), p_1_4);
+  EXPECT_EQ(b.raw().get(b.alt(p_1_2, p_4_5)).kind, ExprKind::Alt);
+}
+
+TEST(LlvmLibcRegexExprTest, NestedRepeatStarUnwrapping) {
+  ExprBuilder b;
+  const ExprId lit_a = b.lit('a');
+
+  // Unwrap nested repeats with min <= 1: ((a{1,2}){1,3})* -> a*
+  const ExprId rep_1_2 = b.rep(lit_a, 1, 2);
+  EXPECT_EQ(b.star(b.rep(rep_1_2, 1, 3)), b.star(lit_a));
+
+  // Stop unwrapping once min >= 2: ((a{2,3}){0,2})* -> (a{2,3})*
+  const ExprId rep_2_3 = b.rep(lit_a, 2, 3);
+  EXPECT_EQ(b.star(b.rep(rep_2_3, 0, 2)), b.star(rep_2_3));
 }
