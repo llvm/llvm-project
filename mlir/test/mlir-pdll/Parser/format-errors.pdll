@@ -1,0 +1,78 @@
+// RUN: split-file %s %t
+// RUN: not mlir-pdll %t/attr.pdll -I %t -I %S/../../../include 2>&1 | FileCheck %s --check-prefix=ATTR
+// RUN: not mlir-pdll %t/escaped.pdll -I %t -I %S/../../../include 2>&1 | FileCheck %s --check-prefix=ESCAPED
+// RUN: not mlir-pdll %t/multi.pdll -I %t -I %S/../../../include 2>&1 | FileCheck %s --check-prefix=MULTI
+// RUN: not mlir-pdll %t/direct.pdll -I %t -I %S/../../../include 2>&1 | FileCheck %s --check-prefix=DIRECT --implicit-check-not="PDLL constraint 'ZBroken'" --implicit-check-not="<no-subst-found>"
+// RUN: not mlir-pdll %t/nested.pdll -I %t -I %S/../../../include 2>&1 | FileCheck %s --check-prefix=NESTED --implicit-check-not="<no-subst-found>"
+// RUN: mlir-pdll %t/valid.pdll -I %t -I %S/../../../include | FileCheck %s --check-prefix=VALID
+
+// DIRECT: direct.pdll:1:10: error: cannot substitute '$missing' while formatting PDLL constraint 'ABroken': missing named binding
+// DIRECT: bad.td:2:5: note: constraint 'ABroken' is defined here
+// DIRECT: note: cannot substitute '$missing' at template byte offset 12: missing named binding
+// DIRECT: note: cannot substitute '$3' at template byte offset 23: positional argument out of range
+// DIRECT: note: template: ($missing + $missing + $3)
+// DIRECT: note: failed occurrence starts at template byte offset 1
+// DIRECT: note: available named substitutions: $_self
+// DIRECT: note: no positional substitutions were supplied
+
+// The primary location must reach the main document through the PDLL include.
+// The definition is inside a second-level TableGen include.
+// NESTED: nested.pdll:1:22: error: cannot substitute '$missing' while formatting PDLL constraint 'ABroken'
+// NESTED: bad.td:2:5: note: constraint 'ABroken' is defined here
+// NESTED: note: available named substitutions: $_self
+// NESTED: middle.pdll:1:10: note: while importing TableGen constraints
+// NESTED: inner.pdll:1:23: note: while importing TableGen constraints
+
+// VALID: Name<Valid> ResultType<Tuple<>> Code<return ::mlir::success((self.isInteger(32)));>
+
+// ESCAPED: escaped.pdll:1:10: error: cannot substitute '$missing'
+// ESCAPED: note: template: (\"quoted\" + $missing\n + $_self)
+// ESCAPED: note: available named substitutions: $_self
+
+// MULTI: multi.pdll:1:10: error: cannot substitute '$missing' while formatting PDLL constraint 'BrokenType'
+// MULTI: multi.td:3:7: note: constraint 'BrokenType' is defined here
+// MULTI: multi.td:5:{{[0-9]+}}: note: instantiated from multiclass
+// MULTI: note: available named substitutions: $_self
+
+// ATTR: attr.pdll:1:10: error: cannot substitute '$missing' while formatting PDLL constraint 'BrokenAttr'
+// ATTR: attr.td:2:5: note: constraint 'BrokenAttr' is defined here
+// ATTR: note: available named substitutions: $_self
+
+//--- direct.pdll
+#include "bad.td"
+//--- nested.pdll
+#include "inner.pdll"
+//--- inner.pdll
+#include "middle.pdll"
+//--- middle.pdll
+#include "wrapper.td"
+//--- wrapper.td
+include "bad.td"
+//--- bad.td
+include "mlir/IR/OpBase.td"
+def ABroken : Type<CPred<"$missing + $missing + $3">, "broken">;
+def ZBroken : Type<CPred<"$_builder">, "also broken">;
+//--- valid.pdll
+#include "valid.td"
+//--- valid.td
+include "mlir/IR/OpBase.td"
+def Valid : Type<CPred<"$_self.isInteger(32)">, "valid">;
+//--- escaped.pdll
+#include "escaped.td"
+//--- escaped.td
+include "mlir/IR/OpBase.td"
+def Escaped : Type<CPred<[{"quoted" + $missing
+ + $_self}]>, "escaped">;
+//--- multi.pdll
+#include "multi.td"
+//--- multi.td
+include "mlir/IR/OpBase.td"
+multiclass Bad {
+  def Type : Type<CPred<"$missing">, "broken">;
+}
+defm Broken : Bad;
+//--- attr.pdll
+#include "attr.td"
+//--- attr.td
+include "mlir/IR/OpBase.td"
+def BrokenAttr : Attr<CPred<"$missing">, "broken attribute">;

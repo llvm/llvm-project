@@ -17,6 +17,7 @@
 
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/SMLoc.h"
@@ -114,6 +115,9 @@ SmallVector<FmtDiagnostic> getFmtDiagnostics(const FmtError &error);
 /// through unchanged, including non-formatting leaves in an ErrorList.
 llvm::Error addFmtOrigin(llvm::Error error, const FmtOrigin &origin);
 
+// Compatibility types remain implementation building blocks until removal.
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
+
 /// Format context containing substitutions for special placeholders.
 ///
 /// Builtin placeholders have convenience setters and share storage and lookup
@@ -128,7 +132,7 @@ llvm::Error addFmtOrigin(llvm::Error error, const FmtOrigin &origin);
 class FmtContext {
 public:
   // Placeholder kinds
-  enum class PHKind : char {
+  enum class [[deprecated("use named string lookup")]] PHKind : char {
     None,
     Custom,  // For custom placeholders
     Builder, // For the $_builder placeholder
@@ -147,9 +151,11 @@ public:
   FmtContext &withBuilder(Twine subst);
   FmtContext &withSelf(Twine subst);
 
+  [[deprecated("use getSubstFor(StringRef)")]]
   std::optional<StringRef> getSubstFor(PHKind placeholder) const;
   std::optional<StringRef> getSubstFor(StringRef placeholder) const;
 
+  [[deprecated("use named string lookup")]]
   static PHKind getPlaceHolderKind(StringRef str);
 
   /// Sorted, owned snapshots, including builtin bindings and empty
@@ -164,7 +170,8 @@ private:
 /// Struct representing a replacement segment for the formatted string. It can
 /// be a segment of the formatting template (for `Literal`) or a replacement
 /// parameter (for `PositionalPH`, `PositionalRangePH` and `SpecialPH`).
-struct FmtReplacement {
+struct [[deprecated("use tgfmt with a context reference or tgfmtOrFatal")]]
+FmtReplacement {
   enum class Type {
     Empty,
     Literal,
@@ -193,7 +200,8 @@ struct FmtReplacement {
   static constexpr size_t kUnset = -1;
 };
 
-class FmtObjectBase {
+class [[deprecated("use tgfmt with a context reference or tgfmtOrFatal")]]
+FmtObjectBase {
 private:
   static std::pair<FmtReplacement, StringRef> splitFmtSegment(StringRef fmt);
   static std::vector<FmtReplacement> parseFormatString(StringRef fmt);
@@ -260,7 +268,8 @@ public:
 };
 
 template <typename Tuple>
-class FmtObject : public FmtObjectBase {
+class [[deprecated("use tgfmt with a context reference or tgfmtOrFatal")]]
+FmtObject : public FmtObjectBase {
   // Storage for the parameter adapters.  Since the base class erases the type
   // of the parameters, we have to own the storage for the parameters here, and
   // have the base class store type-erased pointers into this tuple.
@@ -283,7 +292,8 @@ public:
   }
 };
 
-class FmtStrVecObject : public FmtObjectBase {
+class [[deprecated("use tgfmt with a context reference or tgfmtOrFatal")]]
+FmtStrVecObject : public FmtObjectBase {
 public:
   using StrFormatAdapter = llvm::support::detail::FormatFunctor<std::string>;
 
@@ -338,6 +348,7 @@ private:
 /// 2. This utility does not support format layout because it is rarely needed
 ///    in C++ code generation.
 template <typename... Ts>
+[[deprecated("use tgfmt(fmt, ctx) and handle its Expected, or tgfmtOrFatal")]]
 inline auto tgfmt(StringRef fmt, const FmtContext *ctx, Ts &&...vals)
     -> FmtObject<decltype(std::make_tuple(
         llvm::support::detail::FormatFunctor<Ts>(std::forward<Ts>(vals))...))> {
@@ -350,6 +361,7 @@ inline auto tgfmt(StringRef fmt, const FmtContext *ctx, Ts &&...vals)
 }
 
 /// Like tgfmt, but take replacement parameters as an array of strings instead.
+[[deprecated("use tgfmtv(fmt, ctx) and handle its Expected, or tgfmtvOrFatal")]]
 inline FmtStrVecObject tgfmtv(StringRef fmt, const FmtContext *ctx,
                               ArrayRef<std::string> params) {
   return FmtStrVecObject(fmt, ctx, params);
@@ -404,6 +416,7 @@ inline llvm::Expected<std::string> tgfmtvChecked(StringRef fmt,
                                                  ArrayRef<std::string> params) {
   return tgfmtv(fmt, ctx, params);
 }
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 } // namespace tblgen
 } // namespace mlir
 
