@@ -319,6 +319,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.vsprintf
     libc.src.stdio.vasprintf
 
+    # sys/capability.h entrypoints
+    libc.src.sys.capability.capget
+    libc.src.sys.capability.capset
+
     # sys/epoll.h entrypoints
     libc.src.sys.epoll.epoll_create
     libc.src.sys.epoll.epoll_create1
@@ -366,6 +370,11 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.mman.posix_madvise
     libc.src.sys.mman.shm_open
     libc.src.sys.mman.shm_unlink
+
+    # sys/mount.h entrypoints
+    libc.src.sys.mount.mount
+    libc.src.sys.mount.umount
+    libc.src.sys.mount.umount2
 
     # sys/random.h entrypoints
     libc.src.sys.random.getrandom
@@ -1813,6 +1822,10 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.nl_types.catopen
     libc.src.nl_types.catclose
     libc.src.nl_types.catgets
+
+    # langinfo.h entrypoints
+    libc.src.langinfo.nl_langinfo
+    libc.src.langinfo.nl_langinfo_l
 
     # link.h entrypoints
     libc.src.link._r_debug
