@@ -2085,6 +2085,7 @@ void computeCalleeSaveRegisterGroups(const AArch64FrameLowering &AFL,
   }
 }
 
+/// Sets of offsets of callee-saved objects relative to the entry SP.
 static void assignCalleeSavedOffsets(MachineFunction &MF,
                                      const TargetRegisterInfo *TRI,
                                      ArrayRef<RegGroupInfo> RegGroups,
@@ -2101,6 +2102,10 @@ static void assignCalleeSavedOffsets(MachineFunction &MF,
     int Scale = TRI->getSpillSize(*RGI.RC);
     int64_t OffsetFromSP = EndOfCSArea + int64_t(RGI.Offset) * Scale;
 
+    // Note: The first frame index is Reg2 on Windows and Reg1 on all other
+    // targets. On windows we do `stp Reg1, Reg2` and on other targets we do
+    // `stp Reg2, Reg1`, so the first frame index always has the highest
+    // address (which is why we allocate the offsets in reverse).
     for (int FI : reverse(RGI.getFrameIndexes())) {
       LLVM_DEBUG(dbgs() << "alloc FI(" << FI << ") at SP[" << OffsetFromSP
                         << "]\n");
