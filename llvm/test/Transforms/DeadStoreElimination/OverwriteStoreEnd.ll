@@ -25,6 +25,23 @@ entry:
   ret void
 }
 
+define void @write24to28_inline(ptr nocapture %p) nounwind uwtable ssp {
+; CHECK-LABEL: @write24to28_inline(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ARRAYIDX0:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 1
+; CHECK-NEXT:    call void @llvm.memset.inline.p0.i64(ptr align 4 [[ARRAYIDX0]], i8 0, i64 24, i1 false)
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 7
+; CHECK-NEXT:    store i32 1, ptr [[ARRAYIDX1]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %arrayidx0 = getelementptr inbounds i32, ptr %p, i64 1
+  call void @llvm.memset.inline.p0.i64(ptr align 4 %arrayidx0, i8 0, i64 28, i1 false)
+  %arrayidx1 = getelementptr inbounds i32, ptr %p, i64 7
+  store i32 1, ptr %arrayidx1, align 4
+  ret void
+}
+
 define void @write24to28_atomic(ptr nocapture %p) nounwind uwtable ssp {
 ; CHECK-LABEL: @write24to28_atomic(
 ; CHECK-NEXT:  entry:
@@ -75,6 +92,21 @@ entry:
   ret void
 }
 
+define void @write28to32_inline(ptr nocapture %p) nounwind uwtable ssp {
+; CHECK-LABEL: @write28to32_inline(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @llvm.memset.inline.p0.i64(ptr align 4 [[P:%.*]], i8 0, i64 28, i1 false)
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 7
+; CHECK-NEXT:    store i32 1, ptr [[ARRAYIDX1]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  call void @llvm.memset.inline.p0.i64(ptr align 4 %p, i8 0, i64 32, i1 false)
+  %arrayidx1 = getelementptr inbounds i32, ptr %p, i64 7
+  store i32 1, ptr %arrayidx1, align 4
+  ret void
+}
+
 define void @write28to32_atomic(ptr nocapture %p) nounwind uwtable ssp {
 ; CHECK-LABEL: @write28to32_atomic(
 ; CHECK-NEXT:  entry:
@@ -105,6 +137,21 @@ entry:
   ret void
 }
 
+define void @dontwrite28to32memset_inline(ptr nocapture %p) nounwind uwtable ssp {
+; CHECK-LABEL: @dontwrite28to32memset_inline(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @llvm.memset.inline.p0.i64(ptr align 16 [[P:%.*]], i8 0, i64 32, i1 false)
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 7
+; CHECK-NEXT:    store i32 1, ptr [[ARRAYIDX1]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  call void @llvm.memset.inline.p0.i64(ptr align 16 %p, i8 0, i64 32, i1 false)
+  %arrayidx1 = getelementptr inbounds i32, ptr %p, i64 7
+  store i32 1, ptr %arrayidx1, align 4
+  ret void
+}
+
 define void @dontwrite28to32memset_atomic(ptr nocapture %p) nounwind uwtable ssp {
 ; CHECK-LABEL: @dontwrite28to32memset_atomic(
 ; CHECK-NEXT:  entry:
@@ -120,8 +167,8 @@ entry:
   ret void
 }
 
-define void @write32to36(ptr nocapture %p) nounwind uwtable ssp {
-; CHECK-LABEL: @write32to36(
+define void @memcpy36to32(ptr nocapture %p) nounwind uwtable ssp {
+; CHECK-LABEL: @memcpy36to32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[P:%.*]], ptr align 16 @glob2, i64 32, i1 false)
 ; CHECK-NEXT:    [[C:%.*]] = getelementptr inbounds [[STRUCT_VEC2PLUSI:%.*]], ptr [[P]], i64 0, i32 2
@@ -135,8 +182,38 @@ entry:
   ret void
 }
 
-define void @write32to36_atomic(ptr nocapture %p) nounwind uwtable ssp {
-; CHECK-LABEL: @write32to36_atomic(
+define void @memcpy36to32_inline(ptr nocapture %p) nounwind uwtable ssp {
+; CHECK-LABEL: @memcpy36to32_inline(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    tail call void @llvm.memcpy.inline.p0.p0.i64(ptr align 16 [[P:%.*]], ptr align 16 @glob2, i64 32, i1 false)
+; CHECK-NEXT:    [[C:%.*]] = getelementptr inbounds [[STRUCT_VEC2PLUSI:%.*]], ptr [[P]], i64 0, i32 2
+; CHECK-NEXT:    store i32 1, ptr [[C]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  tail call void @llvm.memcpy.inline.p0.p0.i64(ptr align 16 %p, ptr align 16 @glob2, i64 36, i1 false)
+  %c = getelementptr inbounds %struct.vec2plusi, ptr %p, i64 0, i32 2
+  store i32 1, ptr %c, align 4
+  ret void
+}
+
+define void @memmove36to32(ptr %dst, ptr %src) {
+; CHECK-LABEL: @memmove36to32(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    tail call void @llvm.memmove.p0.p0.i64(ptr align 1 [[DST:%.*]], ptr [[SRC:%.*]], i64 32, i1 false)
+; CHECK-NEXT:    [[OFFSET:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 32
+; CHECK-NEXT:    store i32 1, ptr [[OFFSET]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  tail call void @llvm.memmove.p0.p0.i64(ptr %dst, ptr %src, i64 36, i1 false)
+  %offset = getelementptr inbounds i8, ptr %dst, i64 32
+  store i32 1, ptr %offset
+  ret void
+}
+
+define void @memcpy36to32_atomic(ptr nocapture %p) nounwind uwtable ssp {
+; CHECK-LABEL: @memcpy36to32_atomic(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    tail call void @llvm.memcpy.element.unordered.atomic.p0.p0.i64(ptr align 16 [[P:%.*]], ptr align 16 @glob2, i64 32, i32 4)
 ; CHECK-NEXT:    [[C:%.*]] = getelementptr inbounds [[STRUCT_VEC2PLUSI:%.*]], ptr [[P]], i64 0, i32 2
@@ -150,9 +227,24 @@ entry:
   ret void
 }
 
+define void @memmove36to32_atomic(ptr %dst, ptr %src) {
+; CHECK-LABEL: @memmove36to32_atomic(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    tail call void @llvm.memmove.element.unordered.atomic.p0.p0.i64(ptr align 16 [[DST:%.*]], ptr align 16 [[SRC:%.*]], i64 32, i32 4)
+; CHECK-NEXT:    [[OFFSET:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 32
+; CHECK-NEXT:    store atomic i32 1, ptr [[OFFSET]] unordered, align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  tail call void @llvm.memmove.element.unordered.atomic.p0.p0.i64(ptr align 16 %dst, ptr align 16 %src, i64 36, i32 4)
+  %offset = getelementptr inbounds i8, ptr %dst, i64 32
+  store atomic i32 1, ptr %offset unordered, align 4
+  ret void
+}
+
 ; Atomicity of the store is weaker than the memcpy
-define void @write32to36_atomic_weaker(ptr nocapture %p) nounwind uwtable ssp {
-; CHECK-LABEL: @write32to36_atomic_weaker(
+define void @memcpy36to32_atomic_weaker(ptr nocapture %p) nounwind uwtable ssp {
+; CHECK-LABEL: @memcpy36to32_atomic_weaker(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    tail call void @llvm.memcpy.element.unordered.atomic.p0.p0.i64(ptr align 16 [[P:%.*]], ptr align 16 @glob2, i64 32, i32 4)
 ; CHECK-NEXT:    [[C:%.*]] = getelementptr inbounds [[STRUCT_VEC2PLUSI:%.*]], ptr [[P]], i64 0, i32 2
@@ -166,8 +258,23 @@ entry:
   ret void
 }
 
-define void @write16to32(ptr nocapture %p) nounwind uwtable ssp {
-; CHECK-LABEL: @write16to32(
+define void @memmove36to32_atomic_weaker(ptr %dst, ptr %src) {
+; CHECK-LABEL: @memmove36to32_atomic_weaker(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    tail call void @llvm.memmove.element.unordered.atomic.p0.p0.i64(ptr align 16 [[DST:%.*]], ptr align 16 [[SRC:%.*]], i64 32, i32 4)
+; CHECK-NEXT:    [[OFFSET:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 32
+; CHECK-NEXT:    store i32 1, ptr [[OFFSET]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  tail call void @llvm.memmove.element.unordered.atomic.p0.p0.i64(ptr align 16 %dst, ptr align 16 %src, i64 36, i32 4)
+  %offset = getelementptr inbounds i8, ptr %dst, i64 32
+  store i32 1, ptr %offset, align 4
+  ret void
+}
+
+define void @memcpy32to16(ptr nocapture %p) nounwind uwtable ssp {
+; CHECK-LABEL: @memcpy32to16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[P:%.*]], ptr align 16 @glob1, i64 16, i1 false)
 ; CHECK-NEXT:    [[C:%.*]] = getelementptr inbounds [[STRUCT_VEC2:%.*]], ptr [[P]], i64 0, i32 1
@@ -181,8 +288,38 @@ entry:
   ret void
 }
 
-define void @write16to32_atomic(ptr nocapture %p) nounwind uwtable ssp {
-; CHECK-LABEL: @write16to32_atomic(
+define void @memcpy32to16_inline(ptr nocapture %p) nounwind uwtable ssp {
+; CHECK-LABEL: @memcpy32to16_inline(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    tail call void @llvm.memcpy.inline.p0.p0.i64(ptr align 16 [[P:%.*]], ptr align 16 @glob1, i64 16, i1 false)
+; CHECK-NEXT:    [[C:%.*]] = getelementptr inbounds [[STRUCT_VEC2:%.*]], ptr [[P]], i64 0, i32 1
+; CHECK-NEXT:    store <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr [[C]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  tail call void @llvm.memcpy.inline.p0.p0.i64(ptr align 16 %p, ptr align 16 @glob1, i64 32, i1 false)
+  %c = getelementptr inbounds %struct.vec2, ptr %p, i64 0, i32 1
+  store <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr %c, align 4
+  ret void
+}
+
+define void @memmove32to16(ptr %dst, ptr %src) {
+; CHECK-LABEL: @memmove32to16(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    tail call void @llvm.memmove.p0.p0.i64(ptr align 1 [[DST:%.*]], ptr [[SRC:%.*]], i64 16, i1 false)
+; CHECK-NEXT:    [[C:%.*]] = getelementptr inbounds [[STRUCT_VEC2:%.*]], ptr [[DST]], i64 0, i32 1
+; CHECK-NEXT:    store <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr [[C]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  tail call void @llvm.memmove.p0.p0.i64(ptr %dst, ptr %src, i64 32, i1 false)
+  %c = getelementptr inbounds %struct.vec2, ptr %dst, i64 0, i32 1
+  store <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr %c, align 4
+  ret void
+}
+
+define void @memcpy32to16_atomic(ptr nocapture %p) nounwind uwtable ssp {
+; CHECK-LABEL: @memcpy32to16_atomic(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    tail call void @llvm.memcpy.element.unordered.atomic.p0.p0.i64(ptr align 16 [[P:%.*]], ptr align 16 @glob1, i64 16, i32 4)
 ; CHECK-NEXT:    [[C:%.*]] = getelementptr inbounds [[STRUCT_VEC2:%.*]], ptr [[P]], i64 0, i32 1
@@ -192,6 +329,21 @@ define void @write16to32_atomic(ptr nocapture %p) nounwind uwtable ssp {
 entry:
   tail call void @llvm.memcpy.element.unordered.atomic.p0.p0.i64(ptr align 16 %p, ptr align 16 @glob1, i64 32, i32 4)
   %c = getelementptr inbounds %struct.vec2, ptr %p, i64 0, i32 1
+  store <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr %c, align 4
+  ret void
+}
+
+define void @memmove32to16_atomic(ptr %dst, ptr %src) {
+; CHECK-LABEL: @memmove32to16_atomic(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    tail call void @llvm.memmove.element.unordered.atomic.p0.p0.i64(ptr align 16 [[DST:%.*]], ptr align 16 [[SRC:%.*]], i64 16, i32 4)
+; CHECK-NEXT:    [[C:%.*]] = getelementptr inbounds [[STRUCT_VEC2:%.*]], ptr [[DST]], i64 0, i32 1
+; CHECK-NEXT:    store <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr [[C]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  tail call void @llvm.memmove.element.unordered.atomic.p0.p0.i64(ptr align 16 %dst, ptr align 16 %src, i64 32, i32 4)
+  %c = getelementptr inbounds %struct.vec2, ptr %dst, i64 0, i32 1
   store <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr %c, align 4
   ret void
 }
@@ -211,6 +363,36 @@ entry:
   ret void
 }
 
+define void @dontwrite28to32memcpy_inline(ptr nocapture %p) nounwind uwtable ssp {
+; CHECK-LABEL: @dontwrite28to32memcpy_inline(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    tail call void @llvm.memcpy.inline.p0.p0.i64(ptr align 16 [[P:%.*]], ptr align 16 @glob1, i64 32, i1 false)
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [[STRUCT_VEC2:%.*]], ptr [[P]], i64 0, i32 0, i64 7
+; CHECK-NEXT:    store i32 1, ptr [[ARRAYIDX1]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  tail call void @llvm.memcpy.inline.p0.p0.i64(ptr align 16 %p, ptr align 16 @glob1, i64 32, i1 false)
+  %arrayidx1 = getelementptr inbounds %struct.vec2, ptr %p, i64 0, i32 0, i64 7
+  store i32 1, ptr %arrayidx1, align 4
+  ret void
+}
+
+define void @dontwrite28to32memmove(ptr %dst, ptr %src) {
+; CHECK-LABEL: @dontwrite28to32memmove(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    tail call void @llvm.memmove.p0.p0.i64(ptr align 16 [[DST:%.*]], ptr align 16 [[SRC:%.*]], i64 32, i1 false)
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [[STRUCT_VEC2:%.*]], ptr [[DST]], i64 0, i32 0, i64 7
+; CHECK-NEXT:    store i32 1, ptr [[ARRAYIDX1]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  tail call void @llvm.memmove.p0.p0.i64(ptr align 16 %dst, ptr align 16 %src, i64 32, i1 false)
+  %arrayidx1 = getelementptr inbounds %struct.vec2, ptr %dst, i64 0, i32 0, i64 7
+  store i32 1, ptr %arrayidx1, align 4
+  ret void
+}
+
 define void @dontwrite28to32memcpy_atomic(ptr nocapture %p) nounwind uwtable ssp {
 ; CHECK-LABEL: @dontwrite28to32memcpy_atomic(
 ; CHECK-NEXT:  entry:
@@ -226,10 +408,20 @@ entry:
   ret void
 }
 
-declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture, i64, i1) nounwind
-declare void @llvm.memcpy.element.unordered.atomic.p0.p0.i64(ptr nocapture, ptr nocapture, i64, i32) nounwind
-declare void @llvm.memset.p0.i64(ptr nocapture, i8, i64, i1) nounwind
-declare void @llvm.memset.element.unordered.atomic.p0.i64(ptr nocapture, i8, i64, i32) nounwind
+define void @dontwrite28to32memmove_atomic(ptr %dst, ptr %src) {
+; CHECK-LABEL: @dontwrite28to32memmove_atomic(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    tail call void @llvm.memmove.element.unordered.atomic.p0.p0.i64(ptr align 16 [[DST:%.*]], ptr align 16 [[SRC:%.*]], i64 32, i32 4)
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [[STRUCT_VEC2:%.*]], ptr [[DST]], i64 0, i32 0, i64 7
+; CHECK-NEXT:    store atomic i32 1, ptr [[ARRAYIDX1]] unordered, align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  tail call void @llvm.memmove.element.unordered.atomic.p0.p0.i64(ptr align 16 %dst, ptr align 16 %src, i64 32, i32 4)
+  %arrayidx1 = getelementptr inbounds %struct.vec2, ptr %dst, i64 0, i32 0, i64 7
+  store atomic i32 1, ptr %arrayidx1 unordered, align 4
+  ret void
+}
 
 %struct.trapframe = type { i64, i64, i64 }
 
@@ -253,19 +445,60 @@ entry:
   ret void
 }
 
+define void @cpu_lwp_fork_inline(ptr %md_regs, i64 %pcb_rsp0) nounwind uwtable noinline ssp {
+; CHECK-LABEL: @cpu_lwp_fork_inline(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = inttoptr i64 [[PCB_RSP0:%.*]] to ptr
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds [[STRUCT_TRAPFRAME:%.*]], ptr [[TMP0]], i64 -1
+; CHECK-NEXT:    call void @llvm.memcpy.inline.p0.p0.i64(ptr [[ADD_PTR]], ptr [[MD_REGS:%.*]], i64 24, i1 false)
+; CHECK-NEXT:    [[TF_TRAPNO:%.*]] = getelementptr inbounds [[STRUCT_TRAPFRAME]], ptr [[TMP0]], i64 -1, i32 1
+; CHECK-NEXT:    store i64 3, ptr [[TF_TRAPNO]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = inttoptr i64 %pcb_rsp0 to ptr
+  %add.ptr = getelementptr inbounds %struct.trapframe, ptr %0, i64 -1
+  call void @llvm.memcpy.inline.p0.p0.i64(ptr %add.ptr, ptr %md_regs, i64 24, i1 false)
+  %tf_trapno = getelementptr inbounds %struct.trapframe, ptr %0, i64 -1, i32 1
+  store i64 3, ptr %tf_trapno, align 8
+  ret void
+}
+
 define void @write16To23AndThen24To31(ptr nocapture %P, i64 %n64, i32 %n32, i16 %n16, i8 %n8) {
 ; CHECK-LABEL: @write16To23AndThen24To31(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr align 8 [[P:%.*]], i8 0, i64 16, i1 false)
 ; CHECK-NEXT:    [[BASE64_2:%.*]] = getelementptr inbounds i64, ptr [[P]], i64 2
 ; CHECK-NEXT:    [[BASE64_3:%.*]] = getelementptr inbounds i64, ptr [[P]], i64 3
-; CHECK-NEXT:    store i64 3, ptr [[BASE64_2]]
-; CHECK-NEXT:    store i64 3, ptr [[BASE64_3]]
+; CHECK-NEXT:    store i64 3, ptr [[BASE64_2]], align 8
+; CHECK-NEXT:    store i64 3, ptr [[BASE64_3]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
 
   tail call void @llvm.memset.p0.i64(ptr align 8 %P, i8 0, i64 32, i1 false)
+
+  %base64_2 = getelementptr inbounds i64, ptr %P, i64 2
+  %base64_3 = getelementptr inbounds i64, ptr %P, i64 3
+
+  store i64 3, ptr %base64_2
+  store i64 3, ptr %base64_3
+  ret void
+}
+
+define void @write16To23AndThen24To31_inline(ptr nocapture %P, i64 %n64, i32 %n32, i16 %n16, i8 %n8) {
+; CHECK-LABEL: @write16To23AndThen24To31_inline(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    tail call void @llvm.memset.inline.p0.i64(ptr align 8 [[P:%.*]], i8 0, i64 16, i1 false)
+; CHECK-NEXT:    [[BASE64_2:%.*]] = getelementptr inbounds i64, ptr [[P]], i64 2
+; CHECK-NEXT:    [[BASE64_3:%.*]] = getelementptr inbounds i64, ptr [[P]], i64 3
+; CHECK-NEXT:    store i64 3, ptr [[BASE64_2]], align 8
+; CHECK-NEXT:    store i64 3, ptr [[BASE64_3]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+
+  tail call void @llvm.memset.inline.p0.i64(ptr align 8 %P, i8 0, i64 32, i1 false)
 
   %base64_2 = getelementptr inbounds i64, ptr %P, i64 2
   %base64_3 = getelementptr inbounds i64, ptr %P, i64 3
@@ -358,6 +591,23 @@ entry:
   ret void
 }
 
+define void @ow_end_align1_inline(ptr nocapture %p) {
+; CHECK-LABEL: @ow_end_align1_inline(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 1
+; CHECK-NEXT:    call void @llvm.memset.inline.p0.i64(ptr align 1 [[P1]], i8 0, i64 27, i1 false)
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 27
+; CHECK-NEXT:    store i64 1, ptr [[P2]], align 1
+; CHECK-NEXT:    ret void
+;
+entry:
+  %p1 = getelementptr inbounds i8, ptr %p, i64 1
+  call void @llvm.memset.inline.p0.i64(ptr align 1 %p1, i8 0, i64 32, i1 false)
+  %p2 = getelementptr inbounds i8, ptr %p1, i64 27
+  store i64 1, ptr %p2, align 1
+  ret void
+}
+
 define void @ow_end_align4(ptr nocapture %p) {
 ; CHECK-LABEL: @ow_end_align4(
 ; CHECK-NEXT:  entry:
@@ -370,6 +620,23 @@ define void @ow_end_align4(ptr nocapture %p) {
 entry:
   %p1 = getelementptr inbounds i8, ptr %p, i64 1
   call void @llvm.memset.p0.i64(ptr align 4 %p1, i8 0, i64 32, i1 false)
+  %p2 = getelementptr inbounds i8, ptr %p1, i64 27
+  store i64 1, ptr %p2, align 1
+  ret void
+}
+
+define void @ow_end_align4_inline(ptr nocapture %p) {
+; CHECK-LABEL: @ow_end_align4_inline(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 1
+; CHECK-NEXT:    call void @llvm.memset.inline.p0.i64(ptr align 4 [[P1]], i8 0, i64 28, i1 false)
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 27
+; CHECK-NEXT:    store i64 1, ptr [[P2]], align 1
+; CHECK-NEXT:    ret void
+;
+entry:
+  %p1 = getelementptr inbounds i8, ptr %p, i64 1
+  call void @llvm.memset.inline.p0.i64(ptr align 4 %p1, i8 0, i64 32, i1 false)
   %p2 = getelementptr inbounds i8, ptr %p1, i64 27
   store i64 1, ptr %p2, align 1
   ret void
@@ -392,3 +659,19 @@ entry:
   ret void
 }
 
+define void @ow_end_align8_inline(ptr nocapture %p) {
+; CHECK-LABEL: @ow_end_align8_inline(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 1
+; CHECK-NEXT:    call void @llvm.memset.inline.p0.i64(ptr align 8 [[P1]], i8 0, i64 32, i1 false)
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 27
+; CHECK-NEXT:    store i64 1, ptr [[P2]], align 1
+; CHECK-NEXT:    ret void
+;
+entry:
+  %p1 = getelementptr inbounds i8, ptr %p, i64 1
+  call void @llvm.memset.inline.p0.i64(ptr align 8 %p1, i8 0, i64 32, i1 false)
+  %p2 = getelementptr inbounds i8, ptr %p1, i64 27
+  store i64 1, ptr %p2, align 1
+  ret void
+}
