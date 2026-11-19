@@ -77,6 +77,7 @@ Error PatchEntries::runOnFunctions(BinaryContext &BC) {
   do {
     NeedsRescan = false;
     Patches.clear();
+    // Collect candidate entry patches in one full sweep.
     for (auto &BFI : BC.getBinaryFunctions()) {
       BinaryFunction &Function = BFI.second;
 

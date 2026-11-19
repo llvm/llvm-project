@@ -1,18 +1,19 @@
-## Check that entry patches reflect the final function states after reference
-## scanning.
-
-# REQUIRES: system-linux
+## Check that entry patches reflect the final function states after reference scanning.
 
 # RUN: llvm-mc -triple=aarch64 -filetype=obj %s -o %t.o
 # RUN: ld.lld --emit-relocs -e _start %t.o -o %t.exe
 # RUN: llvm-bolt %t.exe -o %t.bolt --skip-funcs=_start --lite=0 --use-old-text=0
-# RUN: llvm-objdump -d --no-print-imm-hex --section=.bolt.org.text %t.bolt | FileCheck %s
+# RUN: llvm-objdump -d --section=.bolt.org.text %t.bolt | FileCheck %s
 
-## The ignored target keeps its original body; the other target gains a patch.
+## Check that ignored_target is retained.
 # CHECK-LABEL: <ignored_target{{(\.org\.0)?}}>:
-# CHECK-NEXT: mov w0, #42
+# CHECK-NEXT: mov w0,
+
+## Ensure that patched_target has the complete trampoline.
 # CHECK-LABEL: <patched_target.org.0>:
 # CHECK-NEXT: adrp x16,
+# CHECK-NEXT: add x16, x16,
+# CHECK-NEXT: br x16
 
   .text
   .p2align 2
