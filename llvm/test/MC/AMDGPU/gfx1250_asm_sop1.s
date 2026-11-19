@@ -82,3 +82,41 @@ s_wakeup_barrier -1
 s_wakeup_barrier m0
 // GFX12-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1200): s_wakeup_barrier
 // GFX1250: s_wakeup_barrier m0                     ; encoding: [0x7d,0x57,0x80,0xbe]
+
+s_set_pc_i64 src_shared_base
+// GFX12-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1200): s_set_pc_i64
+// GFX1250: s_set_pc_i64 src_shared_base            ; encoding: [0xeb,0x48,0x80,0xbe]
+
+s_set_pc_i64 src_shared_limit
+// GFX12-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1200): s_set_pc_i64
+// GFX1250: s_set_pc_i64 src_shared_limit           ; encoding: [0xec,0x48,0x80,0xbe]
+
+s_set_pc_i64 src_flat_scratch_base_lo
+// GFX12-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1200): s_set_pc_i64
+// GFX1250: s_set_pc_i64 src_flat_scratch_base_lo   ; encoding: [0xe6,0x48,0x80,0xbe]
+
+s_set_pc_i64 null
+// GFX12-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1200): s_set_pc_i64
+// GFX1250: s_set_pc_i64 null                       ; encoding: [0x7c,0x48,0x80,0xbe]
+
+s_rfe_i64 src_shared_base
+// GFX12-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1200): s_rfe_i64
+// GFX1250: s_rfe_i64 src_shared_base               ; encoding: [0xeb,0x4a,0x80,0xbe]
+
+s_rfe_i64 src_flat_scratch_base_lo
+// GFX12-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1200): s_rfe_i64
+// GFX1250: s_rfe_i64 src_flat_scratch_base_lo      ; encoding: [0xe6,0x4a,0x80,0xbe]
+
+s_movrels_b32 s0, src_scc
+// GFX1250: s_movrels_b32 s0, src_scc               ; encoding: [0xfd,0x40,0x80,0xbe]
+
+s_movrels_b32 s0, src_flat_scratch_base_lo
+// GFX12-ERR: :[[@LINE-1]]:19: error: src_flat_scratch_base_lo register not available on this GPU
+// GFX1250: s_movrels_b32 s0, src_flat_scratch_base_lo ; encoding: [0xe6,0x40,0x80,0xbe]
+
+s_movrels_b32 s0, src_flat_scratch_base_hi
+// GFX12-ERR: :[[@LINE-1]]:19: error: src_flat_scratch_base_hi register not available on this GPU
+// GFX1250: s_movrels_b32 s0, src_flat_scratch_base_hi ; encoding: [0xe7,0x40,0x80,0xbe]
+
+s_movrels_b64 s[0:1], null
+// GFX1250: s_movrels_b64 s[0:1], null              ; encoding: [0x7c,0x41,0x80,0xbe]

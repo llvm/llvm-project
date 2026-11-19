@@ -1,0 +1,18 @@
+# RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx900 -run-pass=none -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck --implicit-check-not="Bad machine code" %s
+
+# 64-bit read-only source registers read the constant bus. gfx9 allows only
+# one constant bus read per VALU instruction, so two different aperture
+# registers are illegal, while the same aperture read twice is a single read.
+
+---
+name: read_only_src_constant_bus
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK: *** Bad machine code: VOP* instruction violates constant bus restriction ***
+    ; CHECK: - instruction: $vgpr0_vgpr1 = V_ADD_F64_e64 0, $src_shared_base, 0, $src_private_base, 0, 0, implicit $mode, implicit $exec
+    $vgpr0_vgpr1 = V_ADD_F64_e64 0, $src_shared_base, 0, $src_private_base, 0, 0, implicit $mode, implicit $exec
+
+    $vgpr2_vgpr3 = V_ADD_F64_e64 0, $src_shared_base, 0, $src_shared_base, 0, 0, implicit $mode, implicit $exec
+    S_ENDPGM 0
+...

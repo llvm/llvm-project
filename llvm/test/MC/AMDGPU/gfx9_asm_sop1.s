@@ -2383,6 +2383,18 @@ s_movrels_b32 flat_scratch_lo, s1
 s_movrels_b32 m0, s1
 // CHECK: s_movrels_b32 m0, s1                    ; encoding: [0x01,0x2a,0xfc,0xbe]
 
+s_movrels_b32 s0, src_execz
+// CHECK: s_movrels_b32 s0, src_execz             ; encoding: [0xfc,0x2a,0x80,0xbe]
+
+s_movrels_b32 s0, src_pops_exiting_wave_id
+// CHECK: s_movrels_b32 s0, src_pops_exiting_wave_id ; encoding: [0xef,0x2a,0x80,0xbe]
+
+s_movrels_b32 s0, src_scc
+// CHECK: s_movrels_b32 s0, src_scc               ; encoding: [0xfd,0x2a,0x80,0xbe]
+
+s_movrels_b32 s0, src_vccz
+// CHECK: s_movrels_b32 s0, src_vccz              ; encoding: [0xfb,0x2a,0x80,0xbe]
+
 s_movrels_b32 s101, s1
 // CHECK: s_movrels_b32 s101, s1                  ; encoding: [0x01,0x2a,0xe5,0xbe]
 
@@ -3079,6 +3091,9 @@ s_rfe_b64 s[2:3]
 s_rfe_b64 s[4:5]
 // CHECK: s_rfe_b64 s[4:5]                        ; encoding: [0x04,0x1f,0x80,0xbe]
 
+s_rfe_b64 src_private_base
+// CHECK: s_rfe_b64 src_private_base              ; encoding: [0xed,0x1f,0x80,0xbe]
+
 s_rfe_b64 ttmp[14:15]
 // CHECK: s_rfe_b64 ttmp[14:15]                   ; encoding: [0x7a,0x1f,0x80,0xbe]
 
@@ -3147,6 +3162,12 @@ s_setpc_b64 s[2:3]
 
 s_setpc_b64 s[4:5]
 // CHECK: s_setpc_b64 s[4:5]                      ; encoding: [0x04,0x1d,0x80,0xbe]
+
+s_setpc_b64 src_private_limit
+// CHECK: s_setpc_b64 src_private_limit           ; encoding: [0xee,0x1d,0x80,0xbe]
+
+s_setpc_b64 src_shared_base
+// CHECK: s_setpc_b64 src_shared_base             ; encoding: [0xeb,0x1d,0x80,0xbe]
 
 s_setpc_b64 ttmp[14:15]
 // CHECK: s_setpc_b64 ttmp[14:15]                 ; encoding: [0x7a,0x1d,0x80,0xbe]

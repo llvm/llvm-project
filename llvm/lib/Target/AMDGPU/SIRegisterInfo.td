@@ -813,9 +813,7 @@ let GeneratePressureSet = 0, HasSGPR = 1 in {
 // See comments in SIInstructions.td for more info.
 def SReg_32_XM0_XEXEC : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2f16, v2bf16, i1], 32,
   (add SGPR_32, FLAT_SCR_LO, FLAT_SCR_HI, XNACK_MASK_LO, XNACK_MASK_HI,
-   SGPR_NULL, SGPR_NULL_HI, TTMP_32, TMA_LO, TMA_HI, TBA_LO, TBA_HI, SRC_SHARED_BASE_LO,
-   SRC_SHARED_LIMIT_LO, SRC_PRIVATE_BASE_LO, SRC_PRIVATE_LIMIT_LO, SRC_POPS_EXITING_WAVE_ID,
-   SRC_VCCZ, SRC_EXECZ, SRC_SCC, SRC_FLAT_SCRATCH_BASE_LO, SRC_FLAT_SCRATCH_BASE_HI)> {
+   SGPR_NULL, SGPR_NULL_HI, TTMP_32, TMA_LO, TMA_HI, TBA_LO, TBA_HI)> {
   let AllocationPriority = 0;
 }
 
@@ -865,12 +863,25 @@ def SReg_32 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2f16,
   let Size = 32;
 }
 
+// SReg_32 plus the read-only source registers. This may only be used as the
+// register class of encodable source operands, and not as the class of a
+// virtual register.
+def SReg_32_Encodable : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2f16, v2bf16, i1], 32,
+  (add SReg_32, SRC_SHARED_BASE_LO, SRC_SHARED_LIMIT_LO, SRC_PRIVATE_BASE_LO,
+   SRC_PRIVATE_LIMIT_LO, SRC_POPS_EXITING_WAVE_ID, SRC_VCCZ, SRC_EXECZ, SRC_SCC,
+   SRC_FLAT_SCRATCH_BASE_LO, SRC_FLAT_SCRATCH_BASE_HI)> {
+  let isAllocatable = 0;
+  let HasSGPR = 1;
+  let Size = 32;
+  let BaseClassOrder = 10000;
+}
+
 def SGPR_NULL128 : SIReg<"null">;
 def SGPR_NULL256 : SIReg<"null">;
 
 let GeneratePressureSet = 0 in {
 def SRegOrLds_32 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2f16, v2bf16], 32,
-  (add SReg_32, LDS_DIRECT)> {
+  (add SReg_32_Encodable, LDS_DIRECT)> {
   let isAllocatable = 0;
   let HasSGPR = 1;
   let Size = 32;
@@ -905,8 +916,7 @@ def TTMP_64 : SIRegisterClass<"AMDGPU", [v2i32, i64, f64, v4i16, v4f16, v4bf16],
 }
 
 def SReg_64_XEXEC_XNULL : SIRegisterClass<"AMDGPU", [v2i32, i64, v2f32, f64, i1, v4i16, v4f16, v4bf16], 32,
-  (add SGPR_64, FLAT_SCR, XNACK_MASK, TTMP_64, TBA, TMA,
-       SRC_FLAT_SCRATCH_BASE)> {
+  (add SGPR_64, FLAT_SCR, XNACK_MASK, TTMP_64, TBA, TMA)> {
   let CopyCost = 1;
   let AllocationPriority = 1;
   let HasSGPR = 1;
@@ -928,12 +938,19 @@ def SReg_64 : SIRegisterClass<"AMDGPU", [v2i32, i64, v2f32, f64, i1, v4i16, v4f1
   let Size = 64;
 }
 
+// SReg_64 plus the read-only source registers. This may only be used as the
+// register class of encodable source operands, and not as the class of a
+// virtual register.
 def SReg_64_Encodable : SIRegisterClass<"AMDGPU", [v2i32, i64, v2f32, f64, i1, v4i16, v4f16, v4bf16], 32,
-  (add SReg_64, APERTURE_Class)> {
+  (add SReg_64, APERTURE_Class, SRC_FLAT_SCRATCH_BASE)> {
   let CopyCost = 1;
   let isAllocatable = 0;
   let HasSGPR = 1;
   let Size = 64;
+  // This is the base class of SRC_FLAT_SCRATCH_BASE, which is in no other base
+  // class. Order it after SReg_64 (64) and APERTURE_Class (10000), so that the
+  // other members keep those as their base classes.
+  let BaseClassOrder = 10001;
 }
 
 multiclass SRegClass<int numRegs,
@@ -1112,28 +1129,28 @@ def VReg_1 : SIRegisterClass<"AMDGPU", [i1], 32, (add)> {
 }
 
 def VS_16 : SIRegisterClass<"AMDGPU", Reg16Types.types, 16,
-                          (add VGPR_16, SReg_32, LDS_DIRECT)> {
+                          (add VGPR_16, SReg_32_Encodable, LDS_DIRECT)> {
   let isAllocatable = 0;
   let HasVGPR = 1;
   let Size = 16;
 }
 
 def VS_16_Lo128 : SIRegisterClass<"AMDGPU", Reg16Types.types, 16,
-                          (add VGPR_16_Lo128, SReg_32, LDS_DIRECT)> {
+                          (add VGPR_16_Lo128, SReg_32_Encodable, LDS_DIRECT)> {
   let isAllocatable = 0;
   let HasVGPR = 1;
   let Size = 16;
 }
 
 def VS_16_LO16 : SIRegisterClass<"AMDGPU", Reg16Types.types, 16,
-                           (add VGPR_16_LO16, SReg_32, LDS_DIRECT)> {
+                           (add VGPR_16_LO16, SReg_32_Encodable, LDS_DIRECT)> {
   let isAllocatable = 0;
   let HasVGPR = 1;
   let Size = 16;
 }
 
 def VS_32 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2f16, v2bf16], 32,
-                          (add VGPR_32, SReg_32, LDS_DIRECT)> {
+                          (add VGPR_32, SReg_32_Encodable, LDS_DIRECT)> {
   let isAllocatable = 0;
   let HasVGPR = 1;
   let HasSGPR = 1;
@@ -1141,7 +1158,7 @@ def VS_32 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2f16, v
 }
 
 def VS_32_Lo128 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2f16, v2bf16], 32,
-                          (add VGPR_32_Lo128, SReg_32, LDS_DIRECT)> {
+                          (add VGPR_32_Lo128, SReg_32_Encodable, LDS_DIRECT)> {
   let isAllocatable = 0;
   let HasVGPR = 1;
   let HasSGPR = 1;
@@ -1149,7 +1166,7 @@ def VS_32_Lo128 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2
 }
 
 def VS_32_Lo256 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2f16, v2bf16], 32,
-                                  (add VGPR_32_Lo256, SReg_32, LDS_DIRECT)> {
+                                  (add VGPR_32_Lo256, SReg_32_Encodable, LDS_DIRECT)> {
   let isAllocatable = 0;
   let HasVGPR = 1;
   let HasSGPR = 1;
@@ -1461,12 +1478,12 @@ class SrcRegOrImm9_t16<string operandType, RegisterClass regClass = VS_16>
   let EncoderMethod = "getMachineOpValueT16";
 }
 
-def SSrc_b16  : SrcRegOrImm9 <SReg_32, "OPERAND_REG_IMM_INT16">;
-def SSrc_bf16 : SrcRegOrImm9 <SReg_32, "OPERAND_REG_IMM_BF16">;
-def SSrc_f16  : SrcRegOrImm9 <SReg_32, "OPERAND_REG_IMM_FP16">;
-def SSrc_NoInline_f16 : SrcRegOrImm9 <SReg_32, "OPERAND_REG_IMM_NOINLINE_FP16">;
-def SSrc_b32  : SrcRegOrImm9 <SReg_32, "OPERAND_REG_IMM_INT32">;
-def SSrc_f32  : SrcRegOrImm9 <SReg_32, "OPERAND_REG_IMM_FP32">;
+def SSrc_b16  : SrcRegOrImm9 <SReg_32_Encodable, "OPERAND_REG_IMM_INT16">;
+def SSrc_bf16 : SrcRegOrImm9 <SReg_32_Encodable, "OPERAND_REG_IMM_BF16">;
+def SSrc_f16  : SrcRegOrImm9 <SReg_32_Encodable, "OPERAND_REG_IMM_FP16">;
+def SSrc_NoInline_f16 : SrcRegOrImm9 <SReg_32_Encodable, "OPERAND_REG_IMM_NOINLINE_FP16">;
+def SSrc_b32  : SrcRegOrImm9 <SReg_32_Encodable, "OPERAND_REG_IMM_INT32">;
+def SSrc_f32  : SrcRegOrImm9 <SReg_32_Encodable, "OPERAND_REG_IMM_FP32">;
 def SSrc_b64  : SrcRegOrImm9 <SReg_64_Encodable, "OPERAND_REG_IMM_INT64">;
 
 def SSrcOrLds_b32 : SrcRegOrImm9 <SRegOrLds_32, "OPERAND_REG_IMM_INT32">;
@@ -1475,8 +1492,8 @@ def SSrcOrLds_b32 : SrcRegOrImm9 <SRegOrLds_32, "OPERAND_REG_IMM_INT32">;
 //  SCSrc_* Operands with an SGPR or a inline constant
 //===----------------------------------------------------------------------===//
 
-def SCSrc_b32 : SrcRegOrImm9 <SReg_32, "OPERAND_REG_INLINE_C_INT32">;
-def SCSrc_b64 : SrcRegOrImm9 <SReg_64, "OPERAND_REG_INLINE_C_INT64">;
+def SCSrc_b32 : SrcRegOrImm9 <SReg_32_Encodable, "OPERAND_REG_INLINE_C_INT32">;
+def SCSrc_b64 : SrcRegOrImm9 <SReg_64_Encodable, "OPERAND_REG_INLINE_C_INT64">;
 
 //===----------------------------------------------------------------------===//
 //  VSrc_* Operands with an SGPR, VGPR or a 32-bit immediate

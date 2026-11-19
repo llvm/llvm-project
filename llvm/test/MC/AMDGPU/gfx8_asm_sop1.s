@@ -1261,6 +1261,15 @@ s_cbranch_join s1
 s_cbranch_join s101
 // CHECK: s_cbranch_join s101                     ; encoding: [0x65,0x2e,0x80,0xbe]
 
+s_cbranch_join src_execz
+// CHECK: s_cbranch_join src_execz                ; encoding: [0xfc,0x2e,0x80,0xbe]
+
+s_cbranch_join src_scc
+// CHECK: s_cbranch_join src_scc                  ; encoding: [0xfd,0x2e,0x80,0xbe]
+
+s_cbranch_join src_vccz
+// CHECK: s_cbranch_join src_vccz                 ; encoding: [0xfb,0x2e,0x80,0xbe]
+
 s_cbranch_join tba_hi
 // CHECK: s_cbranch_join tba_hi                   ; encoding: [0x6d,0x2e,0x80,0xbe]
 
@@ -2664,6 +2673,9 @@ s_movrels_b32 flat_scratch_lo, s1
 
 s_movrels_b32 m0, s1
 // CHECK: s_movrels_b32 m0, s1                    ; encoding: [0x01,0x2a,0xfc,0xbe]
+
+s_movrels_b32 s0, src_scc
+// CHECK: s_movrels_b32 s0, src_scc               ; encoding: [0xfd,0x2a,0x80,0xbe]
 
 s_movrels_b32 s101, s1
 // CHECK: s_movrels_b32 s101, s1                  ; encoding: [0x01,0x2a,0xe5,0xbe]

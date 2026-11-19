@@ -1,0 +1,32 @@
+# RUN: llc -mtriple=amdgpu12.50 -mattr=+real-true16 -run-pass=none -verify-machineinstrs -o - %s | FileCheck %s
+
+# Read-only source registers are not in the allocatable SGPR classes, but they
+# are still valid source operands wherever an SGPR source is encodable.
+
+---
+name: vs_16_lo16_src
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    ; CHECK-LABEL: name: vs_16_lo16_src
+    ; CHECK: $vgpr0 = V_CVT_SR_FP8_F16_t16_e64 0, $src_flat_scratch_base_lo, 0, $vgpr1, $vgpr0, 0, implicit $exec
+    ; CHECK: $vgpr0 = V_CVT_SR_BF8_F16_t16_e64 0, $src_shared_base_lo, 0, $vgpr1, $vgpr0, 0, implicit $exec
+    $vgpr0 = V_CVT_SR_FP8_F16_t16_e64 0, $src_flat_scratch_base_lo, 0, $vgpr1, $vgpr0, 0, implicit $exec
+    $vgpr0 = V_CVT_SR_BF8_F16_t16_e64 0, $src_shared_base_lo, 0, $vgpr1, $vgpr0, 0, implicit $exec
+    S_ENDPGM 0, implicit $vgpr0
+...
+---
+name: sop1_64_register_src
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: sop1_64_register_src
+    ; CHECK: S_RFE_B64 $src_shared_limit
+    ; CHECK: S_SETPC_B64 $src_flat_scratch_base
+    ; CHECK: S_SETPC_B64 $src_shared_base
+    S_RFE_B64 $src_shared_limit
+    S_SETPC_B64 $src_flat_scratch_base
+    S_SETPC_B64 $src_shared_base
+...
