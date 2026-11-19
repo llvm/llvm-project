@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "runs": [
+    {
+      "results": [
+        {
+          "level": "error",
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///src/shared.h"
+                },
+                "region": {
+                  "byteOffset": 4
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "2 overlapping replacement(s) at file:///src/shared.h byte 4 were dropped; resolve manually."
+          },
+          "relatedLocations": [
+            {
+              "id": 1,
+              "message": {
+                "text": "candidate edit: \"int\""
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///src/shared.h"
+                },
+                "region": {
+                  "byteLength": 3,
+                  "byteOffset": 4
+                }
+              }
+            },
+            {
+              "id": 2,
+              "message": {
+                "text": "candidate edit: \"long\""
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///src/shared.h"
+                },
+                "region": {
+                  "byteLength": 4,
+                  "byteOffset": 4
+                }
+              }
+            }
+          ],
+          "ruleId": "clang-reforge-replacement-conflict"
+        },
+        {
+          "level": "error",
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///src/y.cpp"
+                },
+                "region": {
+                  "byteOffset": 30
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "2 overlapping replacement(s) at file:///src/y.cpp byte 30 were dropped; resolve manually."
+          },
+          "relatedLocations": [
+            {
+              "id": 1,
+              "message": {
+                "text": "candidate edit: \"Q\""
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///src/y.cpp"
+                },
+                "region": {
+                  "byteLength": 2,
+                  "byteOffset": 30
+                }
+              }
+            },
+            {
+              "id": 2,
+              "message": {
+                "text": "candidate edit: \"Z\""
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///src/y.cpp"
+                },
+                "region": {
+                  "byteLength": 2,
+                  "byteOffset": 30
+                }
+              }
+            }
+          ],
+          "ruleId": "clang-reforge-replacement-conflict"
+        }
+      ],
+      "tool": {
+        "driver": {
+          "name": "clang-ssaf-src-edit-merge",
+          "version": "24.0.0git"
+        }
+      }
+    }
+  ],
+  "version": "2.1.0"
+}

@@ -1,0 +1,41 @@
+
+# REQUIRES: ssaf-orchestrator-make-build
+# RUN: rm -rf %t && split-file %s %t
+# RUN: mkdir -p %t/build
+# RUN: chmod +x %t/bin/ld64.lld
+
+# On Darwin, a clang that links with lld, by default or through -fuse-ld=lld,
+# runs ld64.lld. --ld-path makes this one run a fake ld64.lld the same way.
+# RUN: cd %t
+# RUN: %clang-ssaf-orchestrator-make \
+# RUN:     --extract-summaries=PointerFlow \
+# RUN:     --ssaf-clang=%ssaf-orchestrator-make-clang \
+# RUN:     -o %t/out -- make \
+# RUN:   | FileCheck %s --check-prefix=STDOUT
+# STDOUT: summaries: 2
+# STDOUT: link-unit: {{[^ ]*}}/build/prg
+
+# RUN: ls %t/build/prg
+# RUN: cat %t/out/ssaf-artifacts%t/build/prg.summary.json | FileCheck %s --check-prefix=LU
+# LU: "kind": "LinkUnit"
+
+#--- Makefile
+CXX = clang++
+all: build/prg
+build/a.o: src/a.cpp
+	$(CXX) -c -o $@ $<
+build/prg: build/a.o
+	$(CXX) --ld-path=./bin/ld64.lld -o $@ build/a.o
+
+#--- src/a.cpp
+int main() { return 0; }
+
+#--- bin/ld64.lld
+#!/bin/sh
+prev=
+for arg in "$@"; do
+  if [ "$prev" = "-o" ]; then
+    : > "$arg"
+  fi
+  prev=$arg
+done

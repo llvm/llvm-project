@@ -1,0 +1,44 @@
+
+# REQUIRES: ssaf-orchestrator-make-build
+# RUN: rm -rf %t && split-file %s %t
+# RUN: mkdir -p %t/build
+
+# RUN: cd %t
+# RUN: %clang-ssaf-orchestrator-make \
+# RUN:     --extract-summaries=PointerFlow,UnsafeBufferUsage \
+# RUN:     --analysis=UnsafeBufferReachableAnalysisResult \
+# RUN:     --transformation=cpp-bounded-buffers \
+# RUN:     --ssaf-clang=%ssaf-orchestrator-make-clang \
+# RUN:     -o %t/out -- make \
+# RUN:   | FileCheck %s --check-prefix=STDOUT
+
+# STDOUT: summaries: 3
+# STDOUT: link-unit: {{[^ ]*}}/build/prg
+# STDOUT: source-edits: {{[^ ]*}}/out/ssaf-artifacts{{[^ ]*}}/build/prg.edits.yaml
+
+# RUN: cat %t/out/ssaf-artifacts%t/build/prg.edits.yaml \
+# RUN:   | FileCheck %s --check-prefix=EDITS
+# EDITS: Replacements:
+# EDITS-DAG: FilePath: {{.*}}src/main.cpp
+# EDITS-DAG: FilePath: {{.*}}src/parse.cpp
+
+#--- Makefile
+CXX = clang++
+all: build/prg
+build/prg: src/main.cpp src/parse.cpp
+	$(CXX) -o $@ src/main.cpp src/parse.cpp
+
+#--- src/parse.cpp
+int total(int *data, int n) {
+  int t = 0;
+  for (int i = 0; i < n; ++i)
+    t += data[i];
+  return t;
+}
+
+#--- src/main.cpp
+int total(int *data, int n);
+int main() {
+  int values[4] = {1, 2, 3, 4};
+  return total(values, 4);
+}
