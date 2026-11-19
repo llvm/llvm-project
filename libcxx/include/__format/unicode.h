@@ -303,7 +303,7 @@ public:
 
   [[nodiscard]] constexpr bool operator()(char32_t __next_code_point) {
     __EGC_property __next_property = __extended_grapheme_custer_property_boundary::__get_property(__next_code_point);
-    bool __result                  = __evaluate(__next_code_point, __next_property);
+    bool __result                  = __evaluate(__next_property);
 
     // *** GB9c: Indic_Conjunct_Break (InCB). ***
     //
@@ -352,19 +352,19 @@ private:
   // The naming of the identifiers matches the Unicode standard.
   // NOLINTBEGIN(readability-identifier-naming)
 
-  [[nodiscard]] constexpr bool __evaluate(char32_t __next_code_point, __EGC_property __next_property) {
+  [[nodiscard]] constexpr bool __evaluate(__EGC_property __next_property) {
     switch (__active_rule_) {
     case __rule::__none:
-      return __evaluate_none(__next_code_point, __next_property);
+      return __evaluate_none(__next_property);
     case __rule::__GB11_emoji:
-      return __evaluate_GB11_emoji(__next_code_point, __next_property);
+      return __evaluate_GB11_emoji(__next_property);
     case __rule::__GB12_GB13_regional_indicator:
-      return __evaluate_GB12_GB13_regional_indicator(__next_code_point, __next_property);
+      return __evaluate_GB12_GB13_regional_indicator(__next_property);
     }
     __libcpp_unreachable();
   }
 
-  constexpr bool __evaluate_none(char32_t __next_code_point, __EGC_property __next_property) {
+  constexpr bool __evaluate_none(__EGC_property __next_property) {
     // *** Break at the start and end of text, unless the text is empty. ***
 
     _LIBCPP_ASSERT_INTERNAL(__prev_property_ != __EGC_property::__sot, "should be handled in the constructor"); // GB1
@@ -427,7 +427,7 @@ private:
     return true; // GB999
   }
 
-  [[nodiscard]] constexpr bool __evaluate_GB11_emoji(char32_t __next_code_point, __EGC_property __next_property) {
+  [[nodiscard]] constexpr bool __evaluate_GB11_emoji(__EGC_property __next_property) {
     switch (__GB11_emoji_state_) {
     case __GB11_emoji_state::__Extended_Pictographic:
       if (__next_property == __EGC_property::__Extend) {
@@ -443,7 +443,7 @@ private:
       if (__next_property == __EGC_property::__Extend)
         return false;
       __active_rule_ = __rule::__none;
-      return __evaluate_none(__next_code_point, __next_property);
+      return __evaluate_none(__next_property);
 
     case __GB11_emoji_state::__ZWJ:
       if (__next_property == __EGC_property::__Extended_Pictographic) {
@@ -451,17 +451,16 @@ private:
         return false;
       }
       __active_rule_ = __rule::__none;
-      return __evaluate_none(__next_code_point, __next_property);
+      return __evaluate_none(__next_property);
     }
     __libcpp_unreachable();
   }
 
-  [[nodiscard]] constexpr bool
-  __evaluate_GB12_GB13_regional_indicator(char32_t __next_code_point, __EGC_property __next_property) {
+  [[nodiscard]] constexpr bool __evaluate_GB12_GB13_regional_indicator(__EGC_property __next_property) {
     __active_rule_ = __rule::__none;
     if (__next_property == __EGC_property::__Regional_Indicator)
       return false;
-    return __evaluate_none(__next_code_point, __next_property);
+    return __evaluate_none(__next_property);
   }
 
   char32_t __prev_code_point_;
