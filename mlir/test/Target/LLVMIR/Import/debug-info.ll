@@ -1090,7 +1090,7 @@ define void @fn_cu_source_language_name() !dbg !3 {
 ; // -----
 
 ; CHECK-LABEL: llvm.func @fn_enum()
-; CHECK-DAG: #[[ENUM_COMP:.+]] = #llvm.di_composite_type<{{.*}}elements = #llvm.di_enumerator<name = "zero", value = {{false|0 : i[0-9]+}}>, #llvm.di_enumerator<name = "thirty", value = 30 : i{{[0-9]+}}>, #llvm.di_enumerator<name = "neg_one", value = {{true|-1 : i[0-9]+}}>, #llvm.di_enumerator<name = "u64_max", value = -1 : i{{[0-9]+}}, isUnsigned = true>, #llvm.di_enumerator<name = "i128_min", value = -170141183460469231731687303715884105728 : i{{[0-9]+}}>, #llvm.di_enumerator<name = "u132", value = -2722258935367507707706996859454145691648 : i{{[0-9]+}}, isUnsigned = true>, #llvm.di_enumerator<value = {{false|0 : i[0-9]+}}>>
+; CHECK: #[[ENUM_COMP:.+]] = #llvm.di_composite_type<{{.*}}elements = #llvm.di_enumerator<name = "zero", value = false>, #llvm.di_enumerator<name = "thirty", value = 30 : i6>, #llvm.di_enumerator<name = "neg_one", value = true>, #llvm.di_enumerator<name = "u64_max", value = -1 : i64, isUnsigned = true>, #llvm.di_enumerator<name = "i128_min", value = -170141183460469231731687303715884105728 : i128>, #llvm.di_enumerator<name = "u132", value = -2722258935367507707706996859454145691648 : i132, isUnsigned = true>, #llvm.di_enumerator<value = false>>
 
 define void @fn_enum() !dbg !3 {
   ret void
