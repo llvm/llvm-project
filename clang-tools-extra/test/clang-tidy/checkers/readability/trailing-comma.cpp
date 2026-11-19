@@ -190,6 +190,65 @@ enum NullDirectiveAfter {
 #
 };
 
+// A multi-line block comment before '}' is skipped.
+enum MultiLineCommentAfterComma {
+  MLC_A, /* comment that
+            spans multiple lines */
+};
+
+enum MultiLineCommentNoComma {
+  MLC_B /* comment that
+           spans multiple lines */
+};
+// CHECK-MESSAGES: :[[@LINE-3]]:8: warning: enum should have a trailing comma
+// CHECK-FIXES: enum MultiLineCommentNoComma {
+// CHECK-FIXES-NEXT:   MLC_B, /* comment that
+// CHECK-FIXES-NEXT:            spans multiple lines */
+// CHECK-FIXES-NEXT: };
+
+// Enumerators from macros are checked like other enumerators.
+#define ENUMERATOR(n) n
+enum MacroEnumerator {
+  ENUMERATOR(ME_A),
+  ENUMERATOR(ME_B)
+};
+// CHECK-MESSAGES: :[[@LINE-2]]:19: warning: enum should have a trailing comma
+// CHECK-FIXES: enum MacroEnumerator {
+// CHECK-FIXES-NEXT:   ENUMERATOR(ME_A),
+// CHECK-FIXES-NEXT:   ENUMERATOR(ME_B),
+// CHECK-FIXES-NEXT: };
+
+enum MacroEnumeratorMultiLineComment {
+  ENUMERATOR(MEC_A),
+  ENUMERATOR(MEC_B) /* comment that
+                       spans multiple lines */
+};
+// CHECK-MESSAGES: :[[@LINE-3]]:20: warning: enum should have a trailing comma
+// CHECK-FIXES: enum MacroEnumeratorMultiLineComment {
+// CHECK-FIXES-NEXT:   ENUMERATOR(MEC_A),
+// CHECK-FIXES-NEXT:   ENUMERATOR(MEC_B), /* comment that
+// CHECK-FIXES-NEXT:                        spans multiple lines */
+// CHECK-FIXES-NEXT: };
+
+// The opening brace can come from a macro.
+#define LBRACE {
+enum MacroOpeningBrace LBRACE
+  MOB_A,
+  MOB_B
+};
+// CHECK-MESSAGES: :[[@LINE-2]]:8: warning: enum should have a trailing comma
+// CHECK-FIXES: enum MacroOpeningBrace LBRACE
+// CHECK-FIXES-NEXT:   MOB_A,
+// CHECK-FIXES-NEXT:   MOB_B,
+// CHECK-FIXES-NEXT: };
+
+// An enum whose closing brace comes from a macro is ignored.
+#define RBRACE }
+enum MacroClosingBrace {
+  MCB_A,
+  MCB_B
+RBRACE;
+
 // Macros are ignored
 #define ENUM(n, a, b) enum n { a, b }
 #define INIT {1, 2}
