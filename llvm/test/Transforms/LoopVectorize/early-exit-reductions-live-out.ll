@@ -54,7 +54,7 @@ define i32 @add_reduction_used_on_early_exit(ptr align 4 dereferenceable(4096) %
 ; VF4IC2-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP2:%.*]], %[[VECTOR_BODY_INTERIM]] ]
 ; VF4IC2-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP3:%.*]], %[[VECTOR_BODY_INTERIM]] ]
 ; VF4IC2-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[SRC]], i64 [[INDEX]]
-; VF4IC2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP0]], i64 4
+; VF4IC2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 16
 ; VF4IC2-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4
 ; VF4IC2-NEXT:    [[WIDE_LOAD3:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
 ; VF4IC2-NEXT:    [[TMP2]] = add <4 x i32> [[VEC_PHI]], [[WIDE_LOAD]]
@@ -219,7 +219,7 @@ define i32 @umax_reduction_used_on_early_exit(ptr align 4 dereferenceable(4096) 
 ; VF4IC2-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP2:%.*]], %[[VECTOR_BODY_INTERIM]] ]
 ; VF4IC2-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP3:%.*]], %[[VECTOR_BODY_INTERIM]] ]
 ; VF4IC2-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[SRC]], i64 [[INDEX]]
-; VF4IC2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP0]], i64 4
+; VF4IC2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 16
 ; VF4IC2-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4
 ; VF4IC2-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
 ; VF4IC2-NEXT:    [[TMP2]] = call <4 x i32> @llvm.umax.v4i32(<4 x i32> [[VEC_PHI]], <4 x i32> [[WIDE_LOAD]])
@@ -387,7 +387,7 @@ define i32 @two_early_exits_reduction_used_on_one(ptr align 4 dereferenceable(40
 ; VF4IC2-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP2:%.*]], %[[VECTOR_BODY_INTERIM]] ]
 ; VF4IC2-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP3:%.*]], %[[VECTOR_BODY_INTERIM]] ]
 ; VF4IC2-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[SRC]], i64 [[INDEX]]
-; VF4IC2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP0]], i64 4
+; VF4IC2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 16
 ; VF4IC2-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4
 ; VF4IC2-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
 ; VF4IC2-NEXT:    [[TMP2]] = add <4 x i32> [[VEC_PHI]], [[WIDE_LOAD]]
@@ -779,7 +779,7 @@ define float @fadd_strict_reduction_used_on_early_exit(ptr align 4 dereferenceab
 ; VF4IC2-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ <float 0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %[[VECTOR_PH]] ], [ [[TMP2:%.*]], %[[VECTOR_BODY_INTERIM]] ]
 ; VF4IC2-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x float> [ splat (float -0.000000e+00), %[[VECTOR_PH]] ], [ [[TMP3:%.*]], %[[VECTOR_BODY_INTERIM]] ]
 ; VF4IC2-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[SRC]], i64 [[INDEX]]
-; VF4IC2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw float, ptr [[TMP0]], i64 4
+; VF4IC2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 16
 ; VF4IC2-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP0]], align 4
 ; VF4IC2-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x float>, ptr [[TMP1]], align 4
 ; VF4IC2-NEXT:    [[TMP2]] = fadd <4 x float> [[VEC_PHI]], [[WIDE_LOAD]]

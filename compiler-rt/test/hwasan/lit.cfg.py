@@ -87,6 +87,9 @@ llvm_config.add_tool_substitutions(
 # Default test suffixes.
 config.suffixes = [".c", ".cpp"]
 
-supported_os = ["Linux"] if enable_aliases else ["Linux", "Android"]
-if config.target_os not in supported_os or not config.has_lld:
+if (
+    config.target_os not in ["Linux", "Android"]
+    or not config.has_lld
+    or (enable_aliases and config.android)
+):
     config.unsupported = True

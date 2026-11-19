@@ -156,6 +156,10 @@ public:
   void addAssignPtrTypeInstr(Value *Val, CallInst *AssignPtrTyCI) {
     AssignPtrTypeInstr[Val] = AssignPtrTyCI;
   }
+  // - Remove a record.
+  void removeAssignPtrTypeInstr(Value *OldVal) {
+    AssignPtrTypeInstr.erase(OldVal);
+  }
   // - Find a record.
   CallInst *findAssignPtrTypeInstr(const Value *Val) {
     auto It = AssignPtrTypeInstr.find(Val);
@@ -729,7 +733,7 @@ public:
   SPIRVTypeInst getOrCreateUnknownType(const Type *Ty,
                                        MachineIRBuilder &MIRBuilder,
                                        unsigned Opcode,
-                                       const ArrayRef<MCOperand> Operands);
+                                       const ArrayRef<MachineOperand> Operands);
 
   const TargetRegisterClass *getRegClass(SPIRVTypeInst SpvType) const;
   LLT getRegType(SPIRVTypeInst SpvType) const;

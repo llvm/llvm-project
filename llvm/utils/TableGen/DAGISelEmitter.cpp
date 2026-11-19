@@ -30,7 +30,7 @@ class DAGISelEmitter {
   const CodeGenDAGPatterns CGP;
 
 public:
-  explicit DAGISelEmitter(const RecordKeeper &R) : Records(R), CGP(R, false) {}
+  explicit DAGISelEmitter(const RecordKeeper &R) : Records(R), CGP(R) {}
   void run(raw_ostream &OS);
 };
 } // End anonymous namespace
@@ -78,65 +78,57 @@ static unsigned getResultPatternSize(const TreePatternNode &P,
 }
 
 namespace {
+// The properties of a pattern used to sort it, computed once per pattern.
+struct PatternSortKey {
+  const PatternToMatch *Pattern;
+  bool IsVector = false;
+  bool IsFP = false;
+  int Complexity;
+  unsigned Cost;
+  unsigned Size;
+
+  PatternSortKey(const PatternToMatch *P, const CodeGenDAGPatterns &CGP)
+      : Pattern(P), Complexity(P->getPatternComplexity(CGP)),
+        Cost(getResultPatternCost(P->getDstPattern(), CGP)),
+        Size(getResultPatternSize(P->getDstPattern(), CGP)) {
+    const TreePatternNode &T = P->getSrcPattern();
+    if (T.getNumTypes() != 0) {
+      for (auto [_, VT] : T.getType(0)) {
+        IsVector |= VT.isVector();
+        IsFP |= VT.isFloatingPoint();
+      }
+    }
+  }
+};
+
 // PatternSortingPredicate - return true if we prefer to match LHS before RHS.
 // In particular, we want to match maximal patterns first and lowest cost within
 // a particular complexity first.
 struct PatternSortingPredicate {
-  PatternSortingPredicate(const CodeGenDAGPatterns &cgp) : CGP(cgp) {}
-  const CodeGenDAGPatterns &CGP;
+  bool operator()(const PatternSortKey &LHS, const PatternSortKey &RHS) {
+    if (LHS.IsVector != RHS.IsVector)
+      return RHS.IsVector;
 
-  bool operator()(const PatternToMatch *LHS, const PatternToMatch *RHS) {
-    const TreePatternNode &LT = LHS->getSrcPattern();
-    const TreePatternNode &RT = RHS->getSrcPattern();
-
-    bool LHSIsVector = false;
-    bool RHSIsVector = false;
-    bool LHSIsFP = false;
-    bool RHSIsFP = false;
-
-    if (LT.getNumTypes() != 0) {
-      for (auto [_, VT] : LT.getType(0)) {
-        LHSIsVector |= VT.isVector();
-        LHSIsFP |= VT.isFloatingPoint();
-      }
-    }
-
-    if (RT.getNumTypes() != 0) {
-      for (auto [_, VT] : RT.getType(0)) {
-        RHSIsVector |= VT.isVector();
-        RHSIsFP |= VT.isFloatingPoint();
-      }
-    }
-
-    if (LHSIsVector != RHSIsVector)
-      return RHSIsVector;
-
-    if (LHSIsFP != RHSIsFP)
-      return RHSIsFP;
+    if (LHS.IsFP != RHS.IsFP)
+      return RHS.IsFP;
 
     // Otherwise, if the patterns might both match, sort based on complexity,
     // which means that we prefer to match patterns that cover more nodes in the
     // input over nodes that cover fewer.
-    int LHSSize = LHS->getPatternComplexity(CGP);
-    int RHSSize = RHS->getPatternComplexity(CGP);
-    if (LHSSize > RHSSize)
+    if (LHS.Complexity > RHS.Complexity)
       return true; // LHS -> bigger -> less cost
-    if (LHSSize < RHSSize)
+    if (LHS.Complexity < RHS.Complexity)
       return false;
 
     // If the patterns have equal complexity, compare generated instruction cost
-    unsigned LHSCost = getResultPatternCost(LHS->getDstPattern(), CGP);
-    unsigned RHSCost = getResultPatternCost(RHS->getDstPattern(), CGP);
-    if (LHSCost < RHSCost)
+    if (LHS.Cost < RHS.Cost)
       return true;
-    if (LHSCost > RHSCost)
+    if (LHS.Cost > RHS.Cost)
       return false;
 
-    unsigned LHSPatSize = getResultPatternSize(LHS->getDstPattern(), CGP);
-    unsigned RHSPatSize = getResultPatternSize(RHS->getDstPattern(), CGP);
-    if (LHSPatSize < RHSPatSize)
+    if (LHS.Size < RHS.Size)
       return true;
-    if (LHSPatSize > RHSPatSize)
+    if (LHS.Size > RHS.Size)
       return false;
 
     // Sort based on the UID of the pattern, to reflect source order.
@@ -144,7 +136,7 @@ struct PatternSortingPredicate {
     // pattern may have been resolved into multiple match patterns due to
     // alternative fragments.  To ensure deterministic output, always use
     // std::stable_sort with this predicate.
-    return LHS->getID() < RHS->getID();
+    return LHS.Pattern->getID() < RHS.Pattern->getID();
   }
 };
 } // End anonymous namespace
@@ -183,13 +175,17 @@ void DAGISelEmitter::run(raw_ostream &OS) {
 
   // Add all the patterns to a temporary list so we can sort them.
   Timer.startTimer("Sort patterns");
-  std::vector<const PatternToMatch *> Patterns;
+  std::vector<PatternSortKey> SortKeys;
   for (const PatternToMatch &PTM : CGP.ptms())
-    Patterns.push_back(&PTM);
+    SortKeys.emplace_back(&PTM, CGP);
 
   // We want to process the matches in order of minimal cost.  Sort the patterns
   // so the least cost one is at the start.
-  llvm::stable_sort(Patterns, PatternSortingPredicate(CGP));
+  llvm::stable_sort(SortKeys, PatternSortingPredicate());
+  std::vector<const PatternToMatch *> Patterns;
+  Patterns.reserve(SortKeys.size());
+  for (const PatternSortKey &Key : SortKeys)
+    Patterns.push_back(Key.Pattern);
 
   // Convert each variant of each pattern into a Matcher.
   Timer.startTimer("Convert to matchers");

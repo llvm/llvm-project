@@ -46,40 +46,45 @@ TEST(RuntimeLibcallsTest, LibcallImplByName) {
   {
     auto SquirtleSquad =
         RTLIB::RuntimeLibcallsInfo::lookupLibcallImplName("sqrtl");
-    ASSERT_EQ(size(SquirtleSquad), 3);
-    auto I = SquirtleSquad.begin();
-    EXPECT_EQ(*I++, RTLIB::impl_sqrtl_f128);
-    EXPECT_EQ(*I++, RTLIB::impl_sqrtl_f80);
-    EXPECT_EQ(*I++, RTLIB::impl_sqrtl_ppcf128);
+    ASSERT_EQ(size(SquirtleSquad), 1);
+    EXPECT_EQ(*SquirtleSquad.begin(), RTLIB::impl_sqrtl);
   }
 
   // Last libcall
   {
     auto Truncs = RTLIB::RuntimeLibcallsInfo::lookupLibcallImplName("truncl");
-    ASSERT_EQ(size(Truncs), 3);
-    auto I = Truncs.begin();
-    EXPECT_EQ(*I++, RTLIB::impl_truncl_f128);
-    EXPECT_EQ(*I++, RTLIB::impl_truncl_f80);
-    EXPECT_EQ(*I++, RTLIB::impl_truncl_ppcf128);
+    ASSERT_EQ(size(Truncs), 1);
+    EXPECT_EQ(*Truncs.begin(), RTLIB::impl_truncl);
   }
 }
 
 TEST(RuntimeLibcallsTest, DefaultRuntimeLibraries) {
   using Info = RTLIB::RuntimeLibcallsInfo;
   const RTLIB::RuntimeLibrary X86Libs[] = {
-      RTLIB::RuntimeLibrary::compiler_rt, RTLIB::RuntimeLibrary::libatomic,
-      RTLIB::RuntimeLibrary::libc, RTLIB::RuntimeLibrary::libm,
+      RTLIB::RuntimeLibrary::compiler_rt,
+      RTLIB::RuntimeLibrary::libatomic,
+      RTLIB::RuntimeLibrary::libc,
+      RTLIB::RuntimeLibrary::libm,
+      RTLIB::RuntimeLibrary::llvm_client_runtime,
       RTLIB::RuntimeLibrary::unwind};
   const RTLIB::RuntimeLibrary AArch64Libs[] = {
-      RTLIB::RuntimeLibrary::compiler_rt, RTLIB::RuntimeLibrary::libatomic,
-      RTLIB::RuntimeLibrary::libc,        RTLIB::RuntimeLibrary::libm,
-      RTLIB::RuntimeLibrary::sme,         RTLIB::RuntimeLibrary::unwind};
+      RTLIB::RuntimeLibrary::compiler_rt,
+      RTLIB::RuntimeLibrary::libatomic,
+      RTLIB::RuntimeLibrary::libc,
+      RTLIB::RuntimeLibrary::libm,
+      RTLIB::RuntimeLibrary::llvm_client_runtime,
+      RTLIB::RuntimeLibrary::sme,
+      RTLIB::RuntimeLibrary::unwind};
   const RTLIB::RuntimeLibrary Arm64ECLibs[] = {
       RTLIB::RuntimeLibrary::compiler_rt, RTLIB::RuntimeLibrary::libatomic,
-      RTLIB::RuntimeLibrary::libc, RTLIB::RuntimeLibrary::unwind};
+      RTLIB::RuntimeLibrary::libc, RTLIB::RuntimeLibrary::llvm_client_runtime,
+      RTLIB::RuntimeLibrary::unwind};
   const RTLIB::RuntimeLibrary PPCLibs[] = {
-      RTLIB::RuntimeLibrary::compiler_rt, RTLIB::RuntimeLibrary::libatomic,
-      RTLIB::RuntimeLibrary::libc, RTLIB::RuntimeLibrary::libm,
+      RTLIB::RuntimeLibrary::compiler_rt,
+      RTLIB::RuntimeLibrary::libatomic,
+      RTLIB::RuntimeLibrary::libc,
+      RTLIB::RuntimeLibrary::libm,
+      RTLIB::RuntimeLibrary::llvm_client_runtime,
       RTLIB::RuntimeLibrary::unwind};
   const RTLIB::RuntimeLibrary AMDGPULibs[] = {
       RTLIB::RuntimeLibrary::compiler_rt_profile};

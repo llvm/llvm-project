@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify=expected,both            %s
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify=expected,both -std=gnu++17 %s
 // RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify=expected,both -std=c++20 %s
-// RUN: %clang_cc1 -verify=ref,both            %s
+// RUN: %clang_cc1 -verify=ref,both -std=gnu++17 %s
 // RUN: %clang_cc1 -verify=ref,both -std=c++20 %s
 
 constexpr int m = 3;
@@ -854,4 +854,29 @@ namespace ErroneousArraySubscriptExpr {
     int val[] = {1, 2, 3, 4};
     foo(val, 2) = 42;
   }
+}
+
+namespace ZeroNonArray {
+  struct __bit_iterator {
+    unsigned* __seg_;
+  };
+
+  struct bitset {
+    unsigned __first_;
+    constexpr bitset() : __first_() {}
+
+    constexpr void set() {
+      __bit_iterator  __trans_tmp_4{&__first_};
+      long __trans_tmp_3 = 0;
+      __trans_tmp_4.__seg_ += 0;
+      __trans_tmp_3 = *__trans_tmp_4.__seg_;
+    }
+  };
+
+  constexpr bool test() {
+    bitset v;
+    v.set();
+    return true;
+  }
+  static_assert(test(), "");
 }

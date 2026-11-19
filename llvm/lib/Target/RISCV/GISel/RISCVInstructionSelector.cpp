@@ -484,12 +484,11 @@ RISCVInstructionSelector::selectSHXADDOp(MachineOperand &Root,
 
   // (shl (and y, mask), c2)
   if (mi_match(RootReg, *MRI,
-               m_GShl(m_OneNonDBGUse(m_GAnd(m_Reg(RegY), m_ICst(Mask))),
-                      m_ICst(C2))))
+               m_GShl(m_OneUse(m_GAnd(m_Reg(RegY), m_ICst(Mask))), m_ICst(C2))))
     LeftShift = true;
   // (lshr (and y, mask), c2)
   else if (mi_match(RootReg, *MRI,
-                    m_GLShr(m_OneNonDBGUse(m_GAnd(m_Reg(RegY), m_ICst(Mask))),
+                    m_GLShr(m_OneUse(m_GAnd(m_Reg(RegY), m_ICst(Mask))),
                             m_ICst(C2))))
     LeftShift = false;
 
@@ -536,10 +535,9 @@ RISCVInstructionSelector::selectSHXADD_UWOp(MachineOperand &Root,
   APInt Mask;
   int64_t C2;
   Register RegX;
-  if (mi_match(
-          RootReg, *MRI,
-          m_OneNonDBGUse(m_GAnd(m_OneNonDBGUse(m_GShl(m_Reg(RegX), m_ICst(C2))),
-                                m_ICst(Mask))))) {
+  if (mi_match(RootReg, *MRI,
+               m_OneUse(m_GAnd(m_OneUse(m_GShl(m_Reg(RegX), m_ICst(C2))),
+                               m_ICst(Mask))))) {
     assert(C2 > 0 && C2 < Mask.getBitWidth() && "Unexpected shift amount!");
     Mask &= maskTrailingZeros<uint64_t>(C2);
 
@@ -1346,6 +1344,7 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     return true;
 
   switch (Opc) {
+  case TargetOpcode::G_BITCAST:
   case TargetOpcode::G_ANYEXT:
   case TargetOpcode::G_PTRTOINT:
   case TargetOpcode::G_INTTOPTR:
@@ -1690,8 +1689,8 @@ bool RISCVInstructionSelector::replacePtrWithInt(MachineInstr &MI,
   Register PtrReg = Op.getReg();
   assert(MRI->getType(PtrReg).isPointer() && "Operand is not a pointer!");
 
-  const LLT sXLen = LLT::scalar(STI.getXLen());
-  Register IntReg = MRI->createGenericVirtualRegister(sXLen);
+  const LLT iXLen = LLT::integer(STI.getXLen());
+  Register IntReg = MRI->createGenericVirtualRegister(iXLen);
   MRI->setRegBank(IntReg, RBI.getRegBank(RISCV::GPRBRegBankID));
   MachineInstr *PtrToInt = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
                                    TII.get(TargetOpcode::G_PTRTOINT), IntReg)
@@ -1704,19 +1703,19 @@ void RISCVInstructionSelector::preISelLower(MachineInstr &MI) {
   switch (MI.getOpcode()) {
   case TargetOpcode::G_PTR_ADD: {
     Register DstReg = MI.getOperand(0).getReg();
-    const LLT sXLen = LLT::scalar(STI.getXLen());
+    const LLT iXLen = LLT::integer(STI.getXLen());
 
     replacePtrWithInt(MI, 1);
     MI.setDesc(TII.get(TargetOpcode::G_ADD));
-    MRI->setType(DstReg, sXLen);
+    MRI->setType(DstReg, iXLen);
     break;
   }
   case TargetOpcode::G_PTRMASK: {
     Register DstReg = MI.getOperand(0).getReg();
-    const LLT sXLen = LLT::scalar(STI.getXLen());
+    const LLT iXLen = LLT::integer(STI.getXLen());
     replacePtrWithInt(MI, 1);
     MI.setDesc(TII.get(TargetOpcode::G_AND));
-    MRI->setType(DstReg, sXLen);
+    MRI->setType(DstReg, iXLen);
     break;
   }
   }

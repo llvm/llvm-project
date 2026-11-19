@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 /// \file
 /// This file contains X86 CodeGen pipeline builder.
-/// TODO: Port CodeGen passes to new pass manager.
+///
 //===----------------------------------------------------------------------===//
 
 #include "X86.h"
@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/CFIInstrInserter.h"
 #include "llvm/CodeGen/EHContGuardTargets.h"
 #include "llvm/CodeGen/EarlyIfConversion.h"
+#include "llvm/CodeGen/ExecutionDomainFix.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
@@ -68,16 +69,16 @@ public:
   Error addRegBankSelect(PassManagerWrapper &PMW) override;
   Error addGlobalInstructionSelect(PassManagerWrapper &PMW) override;
 
-  void addILPOpts(PassManagerWrapper &PMW) override;
   void addMachineSSAOptimization(PassManagerWrapper &PMW) override;
+  void addILPOpts(PassManagerWrapper &PMW) override;
   void addPreRegAlloc(PassManagerWrapper &PMW) override;
+  Error addRegAssignAndRewriteFast(PassManagerWrapper &PMW) override;
+  Expected<bool>
+  addRegAssignAndRewriteOptimized(PassManagerWrapper &PMW) override;
   void addPostRegAlloc(PassManagerWrapper &PMW) override;
   void addPreSched2(PassManagerWrapper &PMW) override;
   void addPreEmitPass(PassManagerWrapper &PMW) override;
   void addPreEmitPass2(PassManagerWrapper &PMW) override;
-  Error addRegAssignAndRewriteFast(PassManagerWrapper &PMW) override;
-  Expected<bool>
-  addRegAssignAndRewriteOptimized(PassManagerWrapper &PMW) override;
   void addAsmPrinterBegin(PassManagerWrapper &PMW) override;
   void addAsmPrinter(PassManagerWrapper &PMW) override;
   void addAsmPrinterEnd(PassManagerWrapper &PMW) override;
@@ -112,6 +113,8 @@ void X86CodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
     flushFPMsToMPM(PMW);
     addModulePass(JMCInstrumenterPass(), PMW);
   }
+
+  addFunctionPass(X86FenceNonTemporalStoresPass(&getTM()), PMW);
 }
 
 void X86CodeGenPassBuilder::addPreISel(PassManagerWrapper &PMW) {
@@ -171,16 +174,16 @@ Error X86CodeGenPassBuilder::addGlobalInstructionSelect(
   return Error::success();
 }
 
+void X86CodeGenPassBuilder::addMachineSSAOptimization(PassManagerWrapper &PMW) {
+  addMachineFunctionPass(X86DomainReassignmentPass(), PMW);
+  Base::addMachineSSAOptimization(PMW);
+}
+
 void X86CodeGenPassBuilder::addILPOpts(PassManagerWrapper &PMW) {
   addMachineFunctionPass(EarlyIfConverterPass(), PMW);
   if (getTM().getCLOpts().machine_combiner)
     addMachineFunctionPass(MachineCombinerPass(), PMW);
   addMachineFunctionPass(X86CmovConversionPass(), PMW);
-}
-
-void X86CodeGenPassBuilder::addMachineSSAOptimization(PassManagerWrapper &PMW) {
-  addMachineFunctionPass(X86DomainReassignmentPass(), PMW);
-  Base::addMachineSSAOptimization(PMW);
 }
 
 void X86CodeGenPassBuilder::addPreRegAlloc(PassManagerWrapper &PMW) {
@@ -203,6 +206,32 @@ void X86CodeGenPassBuilder::addPreRegAlloc(PassManagerWrapper &PMW) {
     addMachineFunctionPass(X86FastPreTileConfigPass(), PMW);
 }
 
+static bool onlyAllocateTileRegisters(const TargetRegisterInfo &TRI,
+                                      const MachineRegisterInfo &MRI,
+                                      const Register Reg) {
+  const TargetRegisterClass *RC = MRI.getRegClass(Reg);
+  return static_cast<const X86RegisterInfo &>(TRI).isTileRegisterClass(RC);
+}
+
+Error X86CodeGenPassBuilder::addRegAssignAndRewriteFast(
+    PassManagerWrapper &PMW) {
+  Error PossibleError = Base::addRegAssignAndRewriteFast(PMW);
+  addMachineFunctionPass(X86FastTileConfigPass(), PMW);
+  return PossibleError;
+}
+
+Expected<bool> X86CodeGenPassBuilder::addRegAssignAndRewriteOptimized(
+    PassManagerWrapper &PMW) {
+  // Don't support tile RA when RA is specified by command line "-regalloc".
+  if (Opt.RegAlloc == RegAllocType::Default && getTM().getCLOpts().tile_ra) {
+    // Allocate tile register first.
+    addMachineFunctionPass(
+        RAGreedyPass({RAGreedyPass::Options(onlyAllocateTileRegisters)}), PMW);
+    addMachineFunctionPass(X86TileConfigPass(), PMW);
+  }
+  return Base::addRegAssignAndRewriteOptimized(PMW);
+}
+
 void X86CodeGenPassBuilder::addPostRegAlloc(PassManagerWrapper &PMW) {
   addMachineFunctionPass(X86LowerTileCopyPass(), PMW);
   addMachineFunctionPass(X86FPStackifierPass(), PMW);
@@ -222,8 +251,7 @@ void X86CodeGenPassBuilder::addPreSched2(PassManagerWrapper &PMW) {
 
 void X86CodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
   if (getOptLevel() != CodeGenOptLevel::None) {
-    // TODO(boomanaiden154): Add X86ExecutionDomainFixPass here once it has
-    // been ported.
+    addMachineFunctionPass(ExecutionDomainFixPass(), PMW);
     addMachineFunctionPass(BreakFalseDepsPass(), PMW);
   }
 
@@ -258,8 +286,7 @@ void X86CodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) {
   // hand inspection of the codegen output.
   addMachineFunctionPass(X86SpeculativeExecutionSideEffectSuppressionPass(),
                          PMW);
-  // TODO(boomanaiden154): Add X86IndirectThunksPass here
-  // once it has been ported.
+  addMachineFunctionPass(X86IndirectThunksPass(), PMW);
   addMachineFunctionPass(X86ReturnThunksPass(), PMW);
 
   // Insert extra int3 instructions after trailing call instructions to avoid
@@ -306,32 +333,6 @@ void X86CodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) {
   if (TT.isOSWindows() && TT.isX86_64()) {
     addMachineFunctionPass(X86WinEHUnwindV2Pass(), PMW);
   }
-}
-
-static bool onlyAllocateTileRegisters(const TargetRegisterInfo &TRI,
-                                      const MachineRegisterInfo &MRI,
-                                      const Register Reg) {
-  const TargetRegisterClass *RC = MRI.getRegClass(Reg);
-  return static_cast<const X86RegisterInfo &>(TRI).isTileRegisterClass(RC);
-}
-
-Error X86CodeGenPassBuilder::addRegAssignAndRewriteFast(
-    PassManagerWrapper &PMW) {
-  Error PossibleError = Base::addRegAssignAndRewriteFast(PMW);
-  addMachineFunctionPass(X86FastTileConfigPass(), PMW);
-  return PossibleError;
-}
-
-Expected<bool> X86CodeGenPassBuilder::addRegAssignAndRewriteOptimized(
-    PassManagerWrapper &PMW) {
-  // Don't support tile RA when RA is specified by command line "-regalloc".
-  if (Opt.RegAlloc == RegAllocType::Default && getTM().getCLOpts().tile_ra) {
-    // Allocate tile register first.
-    addMachineFunctionPass(
-        RAGreedyPass({RAGreedyPass::Options(onlyAllocateTileRegisters)}), PMW);
-    addMachineFunctionPass(X86TileConfigPass(), PMW);
-  }
-  return Base::addRegAssignAndRewriteOptimized(PMW);
 }
 
 void X86CodeGenPassBuilder::addAsmPrinterBegin(PassManagerWrapper &PMW) {

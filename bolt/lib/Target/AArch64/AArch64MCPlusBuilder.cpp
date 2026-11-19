@@ -774,13 +774,14 @@ public:
 
     const MCSymbol *Target = getTargetSymbol(LDRInst, 1);
     assert(Target && "missing target symbol in LDR instruction");
+    const int64_t Addend = getTargetAddend(LDRInst, 1);
 
     InstructionListType Insts(2);
     Insts[0].setOpcode(AArch64::ADRP);
     Insts[0].clear();
     Insts[0].addOperand(MCOperand::createReg(AddrReg));
     Insts[0].addOperand(MCOperand::createImm(0));
-    setOperandToSymbolRef(Insts[0], /* OpNum */ 1, Target, 0, Ctx,
+    setOperandToSymbolRef(Insts[0], /* OpNum */ 1, Target, Addend, Ctx,
                           ELF::R_AARCH64_NONE);
     Insts[1].setOpcode(OpCode);
     Insts[1].clear();
@@ -788,7 +789,8 @@ public:
     Insts[1].addOperand(MCOperand::createReg(AddrReg));
     Insts[1].addOperand(MCOperand::createImm(0));
     Insts[1].addOperand(MCOperand::createImm(0));
-    setOperandToSymbolRef(Insts[1], /* OpNum */ 2, Target, 0, Ctx, RelType);
+    setOperandToSymbolRef(Insts[1], /* OpNum */ 2, Target, Addend, Ctx,
+                          RelType);
     return Insts;
   }
 
@@ -1103,7 +1105,7 @@ public:
            isLDRQ(Inst) || isLDRD(Inst) || isLDRS(Inst);
   }
 
-  bool isAArch64ExclusiveLoad(const MCInst &Inst) const override {
+  bool isExclusiveLoad(const MCInst &Inst) const override {
     return (Inst.getOpcode() == AArch64::LDXPX ||
             Inst.getOpcode() == AArch64::LDXPW ||
             Inst.getOpcode() == AArch64::LDXRX ||
@@ -1118,7 +1120,7 @@ public:
             Inst.getOpcode() == AArch64::LDAXRB);
   }
 
-  bool isAArch64ExclusiveStore(const MCInst &Inst) const override {
+  bool isExclusiveStore(const MCInst &Inst) const override {
     return (Inst.getOpcode() == AArch64::STXPX ||
             Inst.getOpcode() == AArch64::STXPW ||
             Inst.getOpcode() == AArch64::STXRX ||
@@ -1133,7 +1135,7 @@ public:
             Inst.getOpcode() == AArch64::STLXRB);
   }
 
-  bool isAArch64ExclusiveClear(const MCInst &Inst) const override {
+  bool isExclusiveClear(const MCInst &Inst) const override {
     return (Inst.getOpcode() == AArch64::CLREX);
   }
 
@@ -2654,8 +2656,7 @@ public:
   }
 
   bool mayStore(const MCInst &Inst) const override {
-    return isStorePair(Inst) || isStoreReg(Inst) ||
-           isAArch64ExclusiveStore(Inst);
+    return isStorePair(Inst) || isStoreReg(Inst) || isExclusiveStore(Inst);
   }
 
   bool isCleanReg(const MCInst &Inst) const override {
