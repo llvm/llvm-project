@@ -516,16 +516,16 @@ int PluginManager::loadImagesOntoDevice(DeviceTy &Device) {
             // Max = Config.Max > 0 ? min(Config.Max, Device.Max) : Device.Max,
             // further clamped to the kernel function's own driver-reported
             // maximum.
-            uint32_t DeviceThreadLimit = Device.getThreadLimit();
-            LaunchInfo.MaxNumThreads =
-                std::min(Cfg.MaxThreads > 0 ? std::min(uint32_t(Cfg.MaxThreads),
-                                                       DeviceThreadLimit)
-                                            : DeviceThreadLimit,
-                         KernelMaxThreads);
-            uint32_t DefaultNumThreads = Device.getDefaultNumThreads();
+            uint64_t DeviceThreadLimit = Device.getThreadLimit();
+            LaunchInfo.MaxNumThreads = std::min<uint64_t>(
+                Cfg.MaxThreads > 0
+                    ? std::min<uint64_t>(Cfg.MaxThreads, DeviceThreadLimit)
+                    : DeviceThreadLimit,
+                KernelMaxThreads);
+            uint64_t DefaultNumThreads = Device.getDefaultNumThreads();
             LaunchInfo.PreferredNumThreads =
                 Cfg.MinThreads > 0
-                    ? std::max(Cfg.MinThreads, int32_t(DefaultNumThreads))
+                    ? std::max<uint64_t>(Cfg.MinThreads, DefaultNumThreads)
                     : DefaultNumThreads;
 
             Device.setKernelLaunchInfo(DeviceEntry.Address, LaunchInfo);

@@ -3700,6 +3700,25 @@ bool IndexCallsiteContextGraph::findProfiledCalleeThroughTailCalls(
     FoundCalleeChain.push_back({Callee, FS});
   };
 
+  // Returns true if the given tail call callee is the profiled callee, or is
+  // an alias of it. Only the aliasee's function summary gets a context node
+  // (see calleeMatchesFunc), so the profiled callee is always the aliasee. The
+  // synthesized callsite record is still keyed by the alias (the callee of the
+  // call edge), which is what the ThinLTO backend looks up for the tail call
+  // (see findValueInfoForGV).
+  auto IsProfiledCallee = [&](ValueInfo Callee) {
+    if (Callee == ProfiledCallee)
+      return true;
+    for (auto &S : Callee.getSummaryList()) {
+      if (!GlobalValue::isLocalLinkage(S->linkage()) &&
+          !isPrevailing(Callee.getGUID(), S.get()))
+        continue;
+      auto *AS = dyn_cast<AliasSummary>(S.get());
+      return AS && AS->getAliaseeVI() == ProfiledCallee;
+    }
+    return false;
+  };
+
   // Look for tail calls in this function, and check if they either call the
   // profiled callee directly, or indirectly (via a recursive search).
   // Only succeed if there is a single unique tail call chain found between the
@@ -3724,7 +3743,7 @@ bool IndexCallsiteContextGraph::findProfiledCalleeThroughTailCalls(
       // ICP to the target in order to call a clone of it.
       if (CallEdge.second.hasIndirectCall() && !IndirectTailCallSearch)
         continue;
-      if (CallEdge.first == ProfiledCallee) {
+      if (IsProfiledCallee(CallEdge.first)) {
         if (FoundSingleCalleeChain) {
           FoundMultipleCalleeChains = true;
           return false;

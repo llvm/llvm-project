@@ -670,6 +670,25 @@ TEST_F(MIR2VecEmbeddingTestFixture, InvalidRegisterHandling) {
       << "MOV instruction embedding should match expected embedding";
 }
 
+// Operand types without a vocabulary entry get a zero embedding.
+TEST_F(MIR2VecEmbeddingTestFixture, UnmappedOperandType) {
+  auto VocabOrErr =
+      createTestVocab({{"MOV", 1.0f}}, {{"LaneMask", 0.7f}}, {}, {}, 3);
+  ASSERT_TRUE(static_cast<bool>(VocabOrErr))
+      << "Failed to create vocabulary: " << toString(VocabOrErr.takeError());
+  auto &Vocab = *VocabOrErr;
+  const MachineRegisterInfo &MRI = MF->getRegInfo();
+
+  EXPECT_TRUE(
+      Vocab.getOperandEmbedding(MachineOperand::CreateDbgInstrRef(1, 0), MRI)
+          .approximatelyEquals(Embedding(3, 0.0f)));
+  EXPECT_TRUE(
+      Vocab
+          .getOperandEmbedding(MachineOperand::CreateLaneMask(LaneBitmask(2)),
+                               MRI)
+          .approximatelyEquals(Embedding(3, 0.7f * CommonOperandWeight)));
+}
+
 // Test handling of both physical and virtual registers in an instruction
 TEST_F(MIR2VecEmbeddingTestFixture, PhysicalAndVirtualRegisterHandling) {
   float MOVValue = 2.0f;

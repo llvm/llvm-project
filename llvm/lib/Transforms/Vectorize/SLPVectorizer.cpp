@@ -155,6 +155,12 @@ namespace {
 /// A vectorized part of a split reduction, combined into the final reduction
 /// result by the horizontal reduction emitter.
 struct ReductionVectorPart {
+  ReductionVectorPart(Value *Vec, unsigned Scale, bool IsSigned,
+                      bool ReducedInTree, bool Negated,
+                      TTI::CastContextHint Ctx)
+      : Vec(Vec), Scale(Scale), IsSigned(IsSigned),
+        ReducedInTree(ReducedInTree), Negated(Negated), Ctx(Ctx) {}
+
   /// The vectorized value, tracked in case it is replaced while other parts
   /// are vectorized.
   WeakTrackingVH Vec;
@@ -169,6 +175,9 @@ struct ReductionVectorPart {
   /// the final reduction result. Used for reassociated fadd reductions,
   /// flattened through fsub/fneg operations.
   bool Negated = false;
+  /// Cast context hint of the vectorized tree root, selects the i1 reduction
+  /// form.
+  TTI::CastContextHint Ctx = TTI::CastContextHint::None;
 };
 } // namespace
 
@@ -2570,6 +2579,13 @@ private:
   InstructionCost getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
                                 Type *ScalarTy) const;
 
+  /// \returns the cost of the buildvector of the values in \p VL, inserted
+  /// into \p Root, if specified, or into poison vector otherwise.
+  InstructionCost getBuildVectorCost(ArrayRef<Value *> VL, Type *ScalarTy,
+                                     Value *Root = nullptr,
+                                     TTI::VectorInstrContext ContextHint =
+                                         TTI::VectorInstrContext::None) const;
+
   /// Set the Builder insert point to one after the last instruction in
   /// the bundle
   void setInsertPointAfterBundle(const TreeEntry *E);
@@ -2665,9 +2681,20 @@ private:
 
   /// Checks if the \p SelectTE matches zext+selects, which can be inversed for
   /// better codegen in case like zext (icmp ne), select (icmp eq), ....
-  bool matchesInversedZExtSelect(
-      const TreeEntry &SelectTE,
-      SmallVectorImpl<unsigned> &InversedCmpsIndices) const;
+  bool matchesInversedZExtSelect(const TreeEntry &SelectTE,
+                                 SmallBitVector &InversedCmpsIndices) const;
+
+  /// Checks if the \p SelectTE selects on the eq bit tests, whose trunc X to i1
+  /// lanes are cheaper to inverse to and X, 1 == 0 by swapping the operands of
+  /// their selects in case like select (trunc), B, A, select (icmp eq), A, B.
+  bool matchesInversedBitTestSelect(const TreeEntry &SelectTE,
+                                    SmallBitVector &InversedCmpsIndices) const;
+
+  /// \returns the predicate and the constant of the element type \p EltTy,
+  /// which the bit tests of the trunc X to i1 lanes in \p TE compare and A, B
+  /// with.
+  static std::pair<CmpInst::Predicate, Constant *>
+  getBitTestCompare(const TreeEntry &TE, Type *EltTy);
 
   /// Checks if the tree is reduction or of bit selects, like select %cmp, <1,
   /// 2, 4, 8, ..>, zeroinitializer, which can be reduced just to a bitcast %cmp
@@ -2828,6 +2855,7 @@ private:
       ReducedBitPack,
       ReducedCmpBitcast,
       ExtractedFieldsBSwap,
+      InversedBitTest,
     };
     CombinedOpcode CombinedOp = NotCombinedOp;
 
@@ -10391,7 +10419,8 @@ class InstructionsCompatibilityAnalysis {
   /// themselves. A scalar zext is supported: the copyable lanes are constants
   /// modeled as zexts of truncated constants. A freeze is supported: the
   /// copyable lanes are modeled as freezes of the lane values, which refine
-  /// them.
+  /// them. A scalar integer compare is supported: the copyable lanes are i1
+  /// constants modeled as compares of constants or of a value with itself.
   static bool isSupportedMainOp(Instruction *I) {
     return isSupportedOpcode(I->getOpcode()) ||
            isa<MinMaxIntrinsic, FreezeInst>(I) || isFMAOrFMulAdd(I) ||
@@ -10400,7 +10429,8 @@ class InstructionsCompatibilityAnalysis {
            (isa<GetElementPtrInst>(I) && I->getNumOperands() == 2 &&
             !I->getType()->isVectorTy()) ||
            (isa<ZExtInst>(I) && !I->getType()->isVectorTy() &&
-            !isa<Constant>(I->getOperand(0)));
+            !isa<Constant>(I->getOperand(0))) ||
+           (isa<ICmpInst>(I) && I->getOperand(0)->getType()->isIntegerTy());
   }
 
   /// Identifies the best candidate value, which represents main opcode
@@ -10640,6 +10670,9 @@ class InstructionsCompatibilityAnalysis {
     if (MainOpcode == Instruction::ZExt)
       return {ConstantExpr::getTrunc(cast<Constant>(V),
                                      cast<CastInst>(MainOp)->getSrcTy())};
+    // icmp pred C1, C2 == V for the i1 constant lanes.
+    if (auto *Cmp = dyn_cast<ICmpInst>(MainOp))
+      return CmpSamePredicateHelper::getConstantLaneOperands(V, Cmp);
     // freeze(V) refines V.
     if (MainOpcode == Instruction::Freeze)
       return {V};
@@ -11226,16 +11259,40 @@ public:
       return S;
     InstructionsState OrigS = S;
     S = InstructionsState(MainOp, MainOp, /*HasCopyables=*/true);
-    // Cast nodes support only matching lanes from the main op block and
-    // copyable (round-trippable constant) lanes.
-    if (isa<CastInst>(MainOp) && any_of(VL, [&](Value *V) {
+    auto *Cmp = dyn_cast<ICmpInst>(MainOp);
+    // Cast and compare nodes support only matching lanes of the same operand
+    // type from the main op block and copyable (constant) lanes.
+    if ((Cmp || isa<CastInst>(MainOp)) && any_of(VL, [&](Value *V) {
           auto *I = dyn_cast<Instruction>(V);
           return !isa<PoisonValue>(V) &&
                  !(I && I->getOpcode() == MainOpcode &&
-                   I->getParent() == MainOp->getParent()) &&
+                   I->getParent() == MainOp->getParent() &&
+                   I->getOperand(0)->getType() ==
+                       MainOp->getOperand(0)->getType()) &&
                  !S.isCopyableElement(V);
         }))
       return OrigS;
+    // A compare node needs the constant lanes and a predicate shared by all
+    // the lanes, the main op must be a compare with this predicate.
+    if (Cmp) {
+      if (none_of(VL, [&](Value *V) { return S.isCopyableElement(V); }))
+        return OrigS;
+      CmpInst::Predicate Pred =
+          CmpSamePredicateHelper::getSharedPredicate(VL, Cmp);
+      if (Pred == CmpInst::BAD_ICMP_PREDICATE)
+        return OrigS;
+      if (Pred != Cmp->getPredicate()) {
+        auto Cmps = make_isa_range<ICmpInst>(VL);
+        auto It = find_if(Cmps, [&](ICmpInst *I) {
+          return I->getPredicate() == Pred &&
+                 (!doesNotNeedToBeScheduled(I) || !R.isVectorized(I));
+        });
+        if (It == Cmps.end())
+          return OrigS;
+        MainOp = Cmp = *It;
+        S = InstructionsState(MainOp, MainOp, /*HasCopyables=*/true);
+      }
+    }
     if (OrigS && !isCopyablePreferable(VL, R, OrigS, S))
       return OrigS;
     if (!WithProfitabilityCheck)
@@ -11255,16 +11312,21 @@ public:
     // Check if it is profitable to vectorize the instruction.
     unsigned CopyableNum =
         count_if(VL, [&](Value *V) { return S.isCopyableElement(V); });
-    // A cast copyable node just extends the sources of the matching lanes:
-    // the constant lanes are free in a gather of the original values, so it
-    // cannot be better unless the matching lanes are the majority and are not
-    // vectorized already (the gather reuses the vector otherwise).
-    if (isa<CastInst>(MainOp) &&
+    // A cast or compare copyable node just converts the operands of the
+    // matching lanes: the constant lanes are free in a gather of the original
+    // values, so it cannot be better unless the matching lanes are the
+    // majority and are not vectorized already (the gather reuses the vector
+    // otherwise).
+    if ((Cmp || isa<CastInst>(MainOp)) &&
         (CopyableNum * 2 >= VL.size() || none_of(VL, [&](Value *V) {
            return !S.isCopyableElement(V) && !isa<PoisonValue>(V) &&
                   !R.isVectorized(V);
          })))
       return OrigS;
+    // The constant lanes add only constants or the splat value to the compare
+    // operands, so the operand checks below are not needed.
+    if (Cmp)
+      return S;
     // Absorb copyable single-use fmuls/fadds as fmuladd(a, b, -0.0) or
     // fmuladd(1.0, a, b) when every copyable is such a binop: the binops die
     // instead of being computed and gathered.
@@ -11553,6 +11615,50 @@ public:
               return isa<GetElementPtrInst>(V) && !S.isCopyableElement(V);
             },
             Operands[1]);
+      // The constant lanes, equal to the compare of the equal operands,
+      // compare the not undef or poison value of a splat operand column with
+      // itself. The constant lanes are not scheduled, so the value cannot be
+      // an instruction from the main op block or from a block of the other
+      // operands, where it may become a scheduled copyable element.
+      if (auto *Cmp = dyn_cast<ICmpInst>(MainOp)) {
+        const bool IsTrueWhenEqual =
+            ICmpInst::isTrueWhenEqual(Cmp->getPredicate());
+        auto IsSelfCmpLane = [&](Value *V) {
+          auto *CI = dyn_cast<ConstantInt>(V);
+          return S.isCopyableElement(V) &&
+                 (!CI || CI->isOne() == IsTrueWhenEqual);
+        };
+        auto GetSelfOperand = [&](ArrayRef<Value *> Ops,
+                                  ArrayRef<Value *> OtherOps) -> Value * {
+          Value *X = nullptr;
+          for (auto [V, Op] : zip(VL, Ops)) {
+            if (isa<PoisonValue>(V) || S.isCopyableElement(V))
+              continue;
+            if (X && X != Op)
+              return nullptr;
+            X = Op;
+          }
+          auto *XI = dyn_cast<Instruction>(X);
+          auto SameBlock = [&](Value *V) {
+            auto *I = dyn_cast<Instruction>(V);
+            return I && I->getParent() == XI->getParent();
+          };
+          if ((XI && (SameBlock(MainOp) || any_of(OtherOps, SameBlock))) ||
+              !isGuaranteedNotToBeUndefOrPoison(X, /*AC=*/nullptr, MainOp, &DT))
+            return nullptr;
+          return X;
+        };
+        if (any_of(VL, IsSelfCmpLane)) {
+          Value *X = GetSelfOperand(Operands[0], Operands[1]);
+          if (!X)
+            X = GetSelfOperand(Operands[1], Operands[0]);
+          if (X) {
+            for (auto [V, Op0, Op1] : zip(VL, Operands[0], Operands[1]))
+              if (IsSelfCmpLane(V))
+                Op0 = Op1 = X;
+          }
+        }
+      }
       // Operand-order normalization below swaps OpIdx 0 and OpIdx 1
       // of non-copyable lanes. That is only safe when the main op is
       // commutative (e.g. 0 - X is not X - 0, so `sub` must be
@@ -12410,9 +12516,9 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
 
   // Cmp nodes with interchangeable lanes (e.g. x == 0 mixed with x <u C)
   // try the split by the original predicates, like the alternate nodes. The
-  // trunc X to i1 lanes have no original predicate.
+  // trunc X to i1 and constant lanes have no original predicate.
   if (S.getOpcode() == Instruction::ICmp && !S.isAltShuffle() &&
-      none_of(VL, IsaPred<TruncInst>)) {
+      all_of(VL, IsaPred<ICmpInst, PoisonValue>)) {
     auto SameOrSwapped = [](const ICmpInst *CI, CmpInst::Predicate P) {
       return CI->getPredicate() == P ||
              CI->getPredicate() == CmpInst::getSwappedPredicate(P);
@@ -14459,8 +14565,7 @@ bool BoUpSLP::matchesBitPack(const TreeEntry &TE) const {
 }
 
 bool BoUpSLP::matchesInversedZExtSelect(
-    const TreeEntry &SelectTE,
-    SmallVectorImpl<unsigned> &InversedCmpsIndices) const {
+    const TreeEntry &SelectTE, SmallBitVector &InversedCmpsIndices) const {
   assert(SelectTE.hasState() && SelectTE.getOpcode() == Instruction::Select &&
          "Expected select node.");
   SmallVector<std::pair<Instruction *, unsigned>> ZExts;
@@ -14506,10 +14611,10 @@ bool BoUpSLP::matchesInversedZExtSelect(
       return false;
     if (!V->hasOneUse())
       return false;
-    InversedCmpsIndices.push_back(Idx);
+    InversedCmpsIndices.set(Idx);
   }
 
-  if (InversedCmpsIndices.empty())
+  if (InversedCmpsIndices.none())
     return false;
   Type *VecTy =
       getWidenedType(Cmp->getOperand(0)->getType(), CmpTE->getVectorFactor());
@@ -14526,6 +14631,77 @@ bool BoUpSLP::matchesInversedZExtSelect(
   for (Instruction *I : make_isa_range<Instruction>(CmpTE->Scalars))
     BVCost += TTI->getInstructionCost(I, CostKind);
   return VecCost < BVCost;
+}
+
+bool BoUpSLP::matchesInversedBitTestSelect(
+    const TreeEntry &SelectTE, SmallBitVector &InversedCmpsIndices) const {
+  assert(SelectTE.hasState() && SelectTE.getOpcode() == Instruction::Select &&
+         "Expected select node.");
+  const TreeEntry *CmpTE = getOperandEntry(&SelectTE, 0);
+  const TreeEntry *Op1TE = getOperandEntry(&SelectTE, 1);
+  const TreeEntry *Op2TE = getOperandEntry(&SelectTE, 2);
+  if (CmpTE->State != TreeEntry::Vectorize || CmpTE->isAltShuffle() ||
+      CmpTE->getOpcode() != Instruction::ICmp || !CmpTE->isInOrder() ||
+      !CmpSamePredicateHelper::canConvertTo(CmpTE->getMainOp(),
+                                            CmpInst::ICMP_EQ))
+    return false;
+  // The operands must be buildvectors, not the loads, postponed for the
+  // vectorization.
+  if (!Op1TE->isGather() || !Op1TE->isInOrder() || !Op2TE->isGather() ||
+      !Op2TE->isInOrder() || LoadEntriesToVectorize.contains(Op1TE->Idx) ||
+      LoadEntriesToVectorize.contains(Op2TE->Idx))
+    return false;
+  // The inversed lanes must have the only select user, vectorized in a single
+  // node.
+  if (any_of(make_isa_range<TruncInst>(CmpTE->Scalars), [&](TruncInst *TI) {
+        return !TI->hasOneUse() || getTreeEntries(TI->user_back()).size() != 1;
+      }))
+    return false;
+  ValueList Op1(Op1TE->Scalars), Op2(Op2TE->Scalars);
+  for (auto [Idx, V] : enumerate(CmpTE->Scalars)) {
+    if (!isa<TruncInst>(V))
+      continue;
+    InversedCmpsIndices.set(Idx);
+    std::swap(Op1[Idx], Op2[Idx]);
+  }
+  if (InversedCmpsIndices.none())
+    return false;
+  // The inversion changes the compared constant and the select operands.
+  Instruction *Cmp = CmpTE->getMainOp();
+  Type *VecTy =
+      getWidenedType(Cmp->getOperand(0)->getType(), CmpTE->getVectorFactor());
+  Type *CmpTy = CmpInst::makeCmpResultType(VecTy);
+  Type *ScalarTy = SelectTE.getMainOp()->getType();
+  auto GetCost = [&](Constant *C, ArrayRef<Value *> VL1,
+                     ArrayRef<Value *> VL2) {
+    return TTI->getCmpSelInstrCost(Instruction::ICmp, VecTy, CmpTy,
+                                   CmpInst::ICMP_EQ, CostKind, {},
+                                   TTI::getOperandInfo(C), Cmp) +
+           getBuildVectorCost(VL1, ScalarTy) +
+           getBuildVectorCost(VL2, ScalarTy);
+  };
+  Constant *C = getBitTestCompare(*CmpTE, VecTy->getScalarType()).second;
+  if (GetCost(Constant::getNullValue(VecTy), Op1, Op2) <
+      GetCost(C, Op1TE->Scalars, Op2TE->Scalars))
+    return true;
+  InversedCmpsIndices.reset();
+  return false;
+}
+
+std::pair<CmpInst::Predicate, Constant *>
+BoUpSLP::getBitTestCompare(const TreeEntry &TE, Type *EltTy) {
+  // The bit tests compare and A, B with 0, the eq bit tests compare the not
+  // inversed trunc X to i1 lanes with 1.
+  Instruction *MainOp = TE.getMainOp();
+  const bool IsEq =
+      CmpSamePredicateHelper::canConvertTo(MainOp, CmpInst::ICMP_EQ);
+  const bool IsEqOne = IsEq && TE.CombinedOp != TreeEntry::InversedBitTest;
+  SmallVector<Constant *> Consts;
+  for (Value *V : TE.Scalars)
+    Consts.append(getNumElements(MainOp->getType()),
+                  ConstantInt::get(EltTy, IsEqOne && isa<TruncInst>(V)));
+  return {IsEq ? CmpInst::ICMP_EQ : CmpInst::ICMP_NE,
+          ConstantVector::get(Consts)};
 }
 
 bool BoUpSLP::matchesSelectOfBits(const TreeEntry &SelectTE) const {
@@ -15075,15 +15251,21 @@ void BoUpSLP::transformNodes() {
         }
         break;
       }
-      // Check for zext + selects, which can be reordered.
-      SmallVector<unsigned> InversedCmpsIndices;
-      if (matchesInversedZExtSelect(E, InversedCmpsIndices)) {
-        auto *CmpTE = getOperandEntry(&E, 0);
-        auto *Op1TE = getOperandEntry(&E, 1);
-        auto *Op2TE = getOperandEntry(&E, 2);
-        // State now is uniform, not alternate opcode.
-        CmpTE->setOperations(
-            InstructionsState(CmpTE->getMainOp(), CmpTE->getMainOp()));
+      // Check for zext + selects and selects of the bit tests, which can be
+      // reordered.
+      auto *CmpTE = getOperandEntry(&E, 0);
+      auto *Op1TE = getOperandEntry(&E, 1);
+      auto *Op2TE = getOperandEntry(&E, 2);
+      SmallBitVector InversedCmpsIndices(CmpTE->Scalars.size());
+      if (matchesInversedBitTestSelect(E, InversedCmpsIndices) ||
+          matchesInversedZExtSelect(E, InversedCmpsIndices)) {
+        // State now is uniform, not alternate opcode, or the trunc lanes of
+        // the bit tests are inversed.
+        if (CmpTE->isAltShuffle())
+          CmpTE->setOperations(
+              InstructionsState(CmpTE->getMainOp(), CmpTE->getMainOp()));
+        else
+          CmpTE->CombinedOp = TreeEntry::InversedBitTest;
         // Update mapping between the swapped values and their internal matching
         // nodes.
         auto UpdateGatherEntry = [&](TreeEntry *OldTE, TreeEntry *NewTE,
@@ -15100,7 +15282,7 @@ void BoUpSLP::transformNodes() {
         };
         ValueList &Op1 = E.getOperand(1);
         ValueList &Op2 = E.getOperand(2);
-        for (const unsigned Idx : InversedCmpsIndices) {
+        for (const unsigned Idx : InversedCmpsIndices.set_bits()) {
           Value *V1 = Op1TE->Scalars[Idx];
           Value *V2 = Op2TE->Scalars[Idx];
           std::swap(Op1TE->Scalars[Idx], Op2TE->Scalars[Idx]);
@@ -15116,8 +15298,6 @@ void BoUpSLP::transformNodes() {
         // This node is a (reduced or) cmp bitcast node.
         const TreeEntry::CombinedOpcode Code = TreeEntry::ReducedCmpBitcast;
         E.CombinedOp = Code;
-        auto *Op1TE = getOperandEntry(&E, 1);
-        auto *Op2TE = getOperandEntry(&E, 2);
         Op1TE->State = TreeEntry::CombinedVectorize;
         Op1TE->CombinedOp = Code;
         Op2TE->State = TreeEntry::CombinedVectorize;
@@ -15414,54 +15594,6 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
     }
     return Constant::getAllOnesValue(Ty);
   }
-
-  InstructionCost getBuildVectorCost(ArrayRef<Value *> VL, Value *Root,
-                                     TTI::VectorInstrContext ContextHint) {
-    if ((!Root && allConstant(VL)) || all_of(VL, IsaPred<UndefValue>))
-      return TTI::TCC_Free;
-    auto *VecTy = cast<VectorType>(getWidenedType(ScalarTy, VL.size()));
-    InstructionCost GatherCost = 0;
-    if (!Root && isSplat(VL)) {
-      // Found the broadcasting of the single scalar, calculate the cost as
-      // the broadcast.
-      const auto *It = find_if_not(VL, IsaPred<UndefValue>);
-      assert(It != VL.end() && "Expected at least one non-undef value.");
-      // Add broadcast for non-identity shuffle only.
-      bool NeedShuffle =
-          count(VL, *It) > 1 &&
-          (VL.front() != *It || !all_of(VL.drop_front(), IsaPred<UndefValue>));
-      if (!NeedShuffle) {
-        if (isa<FixedVectorType>(ScalarTy)) {
-          assert(R.Opts.slp_revec && "FixedVectorType is not expected.");
-          return TTI.getShuffleCost(
-              TTI::SK_InsertSubvector, VecTy, VecTy, CostKind, {},
-              std::distance(VL.begin(), It) * getNumElements(ScalarTy),
-              cast<FixedVectorType>(ScalarTy));
-        }
-        return TTI.getVectorInstrCost(Instruction::InsertElement, VecTy,
-                                      CostKind, std::distance(VL.begin(), It),
-                                      PoisonValue::get(VecTy), *It,
-                                      ContextHint);
-      }
-
-      SmallVector<int> ShuffleMask(VL.size(), PoisonMaskElem);
-      transform(VL, ShuffleMask.begin(), [](Value *V) {
-        return isa<PoisonValue>(V) ? PoisonMaskElem : 0;
-      });
-      InstructionCost InsertCost =
-          TTI.getVectorInstrCost(Instruction::InsertElement, VecTy, CostKind, 0,
-                                 PoisonValue::get(VecTy), *It, ContextHint);
-      return InsertCost + getShuffleCost(TTI, TargetTransformInfo::SK_Broadcast,
-                                         VecTy, CostKind, ShuffleMask,
-                                         /*Index=*/0, /*SubTp=*/nullptr,
-                                         /*Args=*/*It, ContextHint);
-    }
-    assert(ContextHint != TTI::VectorInstrContext::SplatOpFolded &&
-           "Expected SplatOpFolded to be a splat");
-    return GatherCost + (all_of(VL, IsaPred<UndefValue>)
-                             ? TTI::TCC_Free
-                             : R.getGatherCost(VL, !Root, ScalarTy));
-  };
 
   /// Compute the cost of creating a vector containing the extracted values from
   /// \p VL.
@@ -16200,7 +16332,7 @@ public:
   Value *
   gather(ArrayRef<Value *> VL, unsigned MaskVF = 0, Value *Root = nullptr,
          TTI::VectorInstrContext ContextHint = TTI::VectorInstrContext::None) {
-    Cost += getBuildVectorCost(VL, Root, ContextHint);
+    Cost += R.getBuildVectorCost(VL, ScalarTy, Root, ContextHint);
     if (BVValues) {
       if (BVValues->empty() && InVectors.empty())
         BVValues->assign(VL.begin(), VL.end());
@@ -17434,6 +17566,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     };
     return GetCostDiff(GetScalarCost, GetVectorCost);
   }
+  case TreeEntry::InversedBitTest:
   case Instruction::FCmp:
   case Instruction::ICmp:
     // Override ScalarTy/VecTy with the compared operand type (not i1). The
@@ -17472,18 +17605,43 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                                      : CmpInst::BAD_ICMP_PREDICATE;
     // The bit tests of trunc X to i1 lanes compare and A, B with a constant.
     const bool IsBitTest = any_of(E->Scalars, IsaPred<TruncInst>);
+    Constant *BitTestC = nullptr;
+    if (IsBitTest)
+      std::tie(VecPred, BitTestC) =
+          getBitTestCompare(*E, OrigScalarTy->getScalarType());
     auto GetScalarCost = [&](unsigned Idx) {
-      if (isa<PoisonValue>(UniqueValues[Idx]))
+      if (isa<PoisonValue>(UniqueValues[Idx]) ||
+          E->isCopyableElement(UniqueValues[Idx]))
         return InstructionCost(TTI::TCC_Free);
 
       if (!isa<SelectInst>(UniqueValues[Idx])) {
         auto *I = cast<Instruction>(UniqueValues[Idx]);
-        InstructionCost Cost = TTI->getInstructionCost(I, CostKind);
+        // The zext i1 lanes are modeled as the selects.
+        if (isa<ZExtInst>(I))
+          return TTI->getCastInstrCost(Instruction::ZExt, I->getType(),
+                                       I->getOperand(0)->getType(),
+                                       TTI::getCastContextHint(I), CostKind, I);
+        // The trunc X to i1 lanes are lowered to the bit test compares (e.g.
+        // test on X86), not to the free truncates.
+        auto *Cmp = dyn_cast<CmpInst>(I);
+        assert((Cmp || IsBitTest) && "Expected compare or bit test lane.");
+        InstructionCost Cost = TTI->getCmpSelInstrCost(
+            E->getOpcode(), OrigScalarTy, I->getType(),
+            Cmp ? Cmp->getPredicate() : CmpInst::ICMP_NE, CostKind,
+            TTI::getOperandInfo(I->getOperand(0)),
+            TTI::getOperandInfo(Cmp ? Cmp->getOperand(1)
+                                    : Constant::getNullValue(OrigScalarTy)),
+            Cmp);
+        if (!IsBitTest || !Cmp)
+          return Cost;
         // The and of the bit test is erased with the compare.
-        if (IsBitTest && isa<ICmpInst>(I))
-          Cost += TTI->getInstructionCost(cast<Instruction>(I->getOperand(0)),
-                                          CostKind);
-        return Cost;
+        unsigned Lane = UniqueIndexes[Idx];
+        Value *Op1 = E->getOperand(0)[Lane];
+        Value *Op2 = E->getOperand(1)[Lane];
+        return Cost + TTI->getArithmeticInstrCost(
+                          Instruction::And, OrigScalarTy, CostKind,
+                          TTI::getOperandInfo(Op1), TTI::getOperandInfo(Op2),
+                          {Op1, Op2}, cast<Instruction>(Cmp->getOperand(0)));
       }
 
       auto *VI = cast<Instruction>(UniqueValues[Idx]);
@@ -17581,16 +17739,23 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         }
       }
       if (!VecCost.isValid()) {
-        VecCost = TTI->getCmpSelInstrCost(
-            E->getOpcode(), VecTy, MaskTy, VecPred, CostKind,
-            TTI::getOperandInfo(
-                E->getOperand(ShuffleOrOp == Instruction::Select ? 1 : 0)),
-            TTI::getOperandInfo(
-                E->getOperand(ShuffleOrOp == Instruction::Select ? 2 : 1)),
-            VL0);
+        TTI::OperandValueInfo Op1Info, Op2Info;
+        if (IsBitTest) {
+          Op2Info = TTI::getOperandInfo(BitTestC);
+        } else {
+          Op1Info = TTI::getOperandInfo(
+              E->getOperand(ShuffleOrOp == Instruction::Select ? 1 : 0));
+          Op2Info = TTI::getOperandInfo(
+              E->getOperand(ShuffleOrOp == Instruction::Select ? 2 : 1));
+        }
+        VecCost =
+            TTI->getCmpSelInstrCost(E->getOpcode(), VecTy, MaskTy, VecPred,
+                                    CostKind, Op1Info, Op2Info, VL0);
         if (IsBitTest)
-          VecCost +=
-              TTI->getArithmeticInstrCost(Instruction::And, VecTy, CostKind);
+          VecCost += TTI->getArithmeticInstrCost(
+              Instruction::And, VecTy, CostKind,
+              TTI::getOperandInfo(E->getOperand(0)),
+              TTI::getOperandInfo(E->getOperand(1)));
         if (isa<SelectInst>(VL0)) {
           unsigned CondNumElements = getNumElements(MaskTy);
           unsigned VecTyNumElements = getNumElements(VecTy);
@@ -20065,13 +20230,14 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
       continue;
     }
     // Skip inversed compare nodes, they cannot be transformed to buildvectors.
-    if (TE->State == TreeEntry::Vectorize && !TE->isAltShuffle() &&
-        (TE->getOpcode() == Instruction::ICmp ||
-         TE->getOpcode() == Instruction::FCmp) &&
-        any_of(make_isa_range<CmpInst>(TE->Scalars), [&](CmpInst *I) {
-          return I->getPredicate() !=
-                 cast<CmpInst>(TE->getMainOp())->getPredicate();
-        })) {
+    if (TE->CombinedOp == TreeEntry::InversedBitTest ||
+        (TE->State == TreeEntry::Vectorize && !TE->isAltShuffle() &&
+         (TE->getOpcode() == Instruction::ICmp ||
+          TE->getOpcode() == Instruction::FCmp) &&
+         any_of(make_isa_range<CmpInst>(TE->Scalars), [&](CmpInst *I) {
+           return I->getPredicate() !=
+                  cast<CmpInst>(TE->getMainOp())->getPredicate();
+         }))) {
       Worklist.pop();
       continue;
     }
@@ -22325,6 +22491,54 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
   return Cost;
 }
 
+InstructionCost
+BoUpSLP::getBuildVectorCost(ArrayRef<Value *> VL, Type *ScalarTy, Value *Root,
+                            TTI::VectorInstrContext ContextHint) const {
+  if ((!Root && allConstant(VL)) || all_of(VL, IsaPred<UndefValue>))
+    return TTI::TCC_Free;
+  auto *VecTy = cast<VectorType>(getWidenedType(ScalarTy, VL.size()));
+  InstructionCost GatherCost = 0;
+  if (!Root && isSplat(VL)) {
+    // Found the broadcasting of the single scalar, calculate the cost as
+    // the broadcast.
+    const auto *It = find_if_not(VL, IsaPred<UndefValue>);
+    assert(It != VL.end() && "Expected at least one non-undef value.");
+    // Add broadcast for non-identity shuffle only.
+    bool NeedShuffle =
+        count(VL, *It) > 1 &&
+        (VL.front() != *It || !all_of(VL.drop_front(), IsaPred<UndefValue>));
+    if (!NeedShuffle) {
+      if (isa<FixedVectorType>(ScalarTy)) {
+        assert(Opts.slp_revec && "FixedVectorType is not expected.");
+        return TTI->getShuffleCost(
+            TTI::SK_InsertSubvector, VecTy, VecTy, CostKind, {},
+            std::distance(VL.begin(), It) * getNumElements(ScalarTy),
+            cast<FixedVectorType>(ScalarTy));
+      }
+      return TTI->getVectorInstrCost(Instruction::InsertElement, VecTy,
+                                     CostKind, std::distance(VL.begin(), It),
+                                     PoisonValue::get(VecTy), *It, ContextHint);
+    }
+
+    SmallVector<int> ShuffleMask(VL.size(), PoisonMaskElem);
+    transform(VL, ShuffleMask.begin(), [](Value *V) {
+      return isa<PoisonValue>(V) ? PoisonMaskElem : 0;
+    });
+    InstructionCost InsertCost =
+        TTI->getVectorInstrCost(Instruction::InsertElement, VecTy, CostKind, 0,
+                                PoisonValue::get(VecTy), *It, ContextHint);
+    return InsertCost + getShuffleCost(*TTI, TargetTransformInfo::SK_Broadcast,
+                                       VecTy, CostKind, ShuffleMask,
+                                       /*Index=*/0, /*SubTp=*/nullptr,
+                                       /*Args=*/*It, ContextHint);
+  }
+  assert(ContextHint != TTI::VectorInstrContext::SplatOpFolded &&
+         "Expected SplatOpFolded to be a splat");
+  return GatherCost + (all_of(VL, IsaPred<UndefValue>)
+                           ? TTI::TCC_Free
+                           : getGatherCost(VL, !Root, ScalarTy));
+}
+
 Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
   auto It = EntryToLastInstruction.find(E);
   if (It != EntryToLastInstruction.end())
@@ -24482,8 +24696,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       I->setHasNoSignedWrap(/*b=*/false);
     // Keep the intersected samesign unless narrowing changed the sign of some
     // compared operand (it neither sign-extends from the narrow type nor has
-    // a known-zero narrow sign bit), or a converted lane's adjusted constant
-    // flips the sign.
+    // a known-zero narrow sign bit), a converted lane's adjusted constant
+    // flips the sign, or a copyable lane compares different i1 constants.
     if (auto *ICmp = dyn_cast<ICmpInst>(I); ICmp && It == MinBWs.end()) {
       // The bit tests compare and L, R, which sign-extends from the narrow
       // type only if both L and R do.
@@ -24508,7 +24722,14 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
                    match(Adj, m_APInt(AdjC)) &&
                    AdjC->isNegative() != OrigC->isNegative();
           });
-      if (SignChange || SignFlip)
+      bool CopyableSignFlip =
+          !SignChange && !SignFlip && E->hasCopyableElements() &&
+          ICmp->getOperand(0)->getType()->getScalarType()->isIntegerTy(1) &&
+          any_of(enumerate(E->Scalars), [&](const auto &P) {
+            return E->isCopyableElement(P.value()) &&
+                   E->getOperand(0)[P.index()] != E->getOperand(1)[P.index()];
+          });
+      if (SignChange || SignFlip || CopyableSignFlip)
         ICmp->setSameSign(/*B=*/false);
     }
     return I;
@@ -24931,20 +25152,11 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       }
 
       CmpInst::Predicate P0 = cast<CmpInst>(VL0)->getPredicate();
-      // The bit tests compare and L, R with 0, the eq bit tests compare the
-      // trunc X to i1 lanes with 1, exactly in the narrowed type.
+      // The bit tests compare and L, R exactly in the narrowed type.
       const bool IsBitTest = any_of(E->Scalars, IsaPred<TruncInst>);
       if (IsBitTest) {
         L = Builder.CreateAnd(L, R);
-        const bool IsEq =
-            CmpSamePredicateHelper::canConvertTo(VL0, CmpInst::ICMP_EQ);
-        P0 = IsEq ? CmpInst::ICMP_EQ : CmpInst::ICMP_NE;
-        Type *EltTy = L->getType()->getScalarType();
-        SmallVector<Constant *> Consts;
-        for (Value *V : E->Scalars)
-          Consts.append(getNumElements(VL0->getType()),
-                        ConstantInt::get(EltTy, IsEq && isa<TruncInst>(V)));
-        R = ConstantVector::get(Consts);
+        std::tie(P0, R) = getBitTestCompare(*E, L->getType()->getScalarType());
       } else {
         ExtendNarrowedCmpOperands(P0, L, R);
       }
@@ -33668,10 +33880,11 @@ public:
                        getNumElements(P.Vec->getType()) == Cnt;
               })) {
             Value *Splat = Builder.CreateVectorSplat(Cnt, Candidates.front());
-            VectorValuesAndScales.push_back({Splat, /*Scale=*/1,
-                                             /*IsSigned=*/true,
-                                             /*ReducedInTree=*/false,
-                                             GroupNegated});
+            VectorValuesAndScales.emplace_back(Splat, /*Scale=*/1,
+                                               /*IsSigned=*/true,
+                                               /*ReducedInTree=*/false,
+                                               GroupNegated,
+                                               TTI::CastContextHint::None);
           } else if (NeedsOrigOrder(Candidates.front())) {
             // Left for the scalar remainder.
             Cnt = 0;
@@ -34087,19 +34300,20 @@ public:
         Type *ScalarTy = VL.front()->getType();
         Type *VecTy = VectorizedRoot->getType();
         Type *RedScalarTy = VecTy->getScalarType();
+        TTI::CastContextHint RootCtx = V.getCastContextHint(V.getRootNode());
         // A group of negated reduced values (from an fsub/fneg in the chain)
         // is subtracted in the final combine.
-        VectorValuesAndScales.push_back(
-            {VectorizedRoot,
-             OptReusedScalars && SameScaleFactor
-                 ? SameValuesCounter.front().second
-                 : 1,
-             RedScalarTy != ScalarTy->getScalarType()
-                 ? NarrowedLeafShifts.empty() && V.isSignedMinBitwidthRootNode()
-                 : true,
-             V.isReducedBitcastRoot() || V.isReducedCmpBitcastRoot() ||
-                 !VectorizedRoot->getType()->isVectorTy(),
-             GroupNegated});
+        VectorValuesAndScales.emplace_back(
+            VectorizedRoot,
+            OptReusedScalars && SameScaleFactor
+                ? SameValuesCounter.front().second
+                : 1,
+            RedScalarTy != ScalarTy->getScalarType()
+                ? NarrowedLeafShifts.empty() && V.isSignedMinBitwidthRootNode()
+                : true,
+            V.isReducedBitcastRoot() || V.isReducedCmpBitcastRoot() ||
+                !VectorizedRoot->getType()->isVectorTy(),
+            GroupNegated, RootCtx);
         LoopAccVectorized = UseLoopAccForm;
 
         // Count vectorized reduced values to exclude them from final reduction.
@@ -34179,9 +34393,8 @@ public:
     Value *AccV = LoopAcc.tryEmit(
         Builder, RdxFMF, LoopAccVectorized, VectorizedTree, LeftoverReductions,
         VectorValuesAndScales, RequiredExtract, ReducedValsToOps, ReductionOps,
-        [this, TTI = TTI, &V](Value *Vec, IRBuilderBase &B, Type *Ty) {
-          return emitReduction(Vec, B, TTI,
-                               V.getCastContextHint(V.getRootNode()), Ty);
+        [this, TTI = TTI](Value *Vec, IRBuilderBase &B, Type *Ty) {
+          return emitReduction(Vec, B, TTI, TTI::CastContextHint::None, Ty);
         });
     if (AccV)
       VectorizedTree = AccV;
@@ -34206,7 +34419,7 @@ public:
                                          V.getCostKind());
       if (!Res)
         std::tie(Res, ResNegated) = emitReduction(
-            Builder, *TTI, V.getCastContextHint(V.getRootNode()),
+            Builder, *TTI,
             BoolReduxWideTy ? BoolReduxWideTy : ReductionRoot->getType());
       Builder.setFastMathFlags(RdxFMF);
       // The reduction result of the all-negated parts is subtracted in the
@@ -35174,7 +35387,6 @@ private:
   /// combine.
   std::pair<Value *, bool> emitReduction(IRBuilderBase &Builder,
                                          const TargetTransformInfo &TTI,
-                                         TTI::CastContextHint Ctx,
                                          Type *DestTy) {
     Value *ReducedSubTree = nullptr;
     bool ResNegated = false;
@@ -35201,7 +35413,8 @@ private:
     // Creates reduction and combines with the previous reduction, respecting
     // the signs of the operands.
     auto CreateSingleOp = [&](Value *Vec, unsigned Scale, bool IsSigned,
-                              bool ReducedInTree, bool Negated) {
+                              bool ReducedInTree, bool Negated,
+                              TTI::CastContextHint Ctx) {
       Value *Rdx = createSingleOp(Builder, TTI, Ctx, Vec, Scale, IsSigned,
                                   DestTy, ReducedInTree);
       if (!ReducedSubTree) {
@@ -35215,7 +35428,8 @@ private:
     };
     if (VectorValuesAndScales.size() == 1) {
       const ReductionVectorPart &P = VectorValuesAndScales.front();
-      CreateSingleOp(P.Vec, P.Scale, P.IsSigned, P.ReducedInTree, P.Negated);
+      CreateSingleOp(P.Vec, P.Scale, P.IsSigned, P.ReducedInTree, P.Negated,
+                     P.Ctx);
       return {ReducedSubTree, ResNegated};
     }
     // Scales Vec using given Cnt scale factor and then performs vector combine
@@ -35226,7 +35440,8 @@ private:
     auto CreateVecOp = [&](Value *Vec, unsigned Cnt, bool IsSigned,
                            bool ReducedInTree, bool Negated) {
       if (ReducedInTree) {
-        CreateSingleOp(Vec, Cnt, IsSigned, ReducedInTree, Negated);
+        CreateSingleOp(Vec, Cnt, IsSigned, ReducedInTree, Negated,
+                       /*Ctx=*/TTI::CastContextHint::None);
         return;
       }
       Type *ScalarTy = Vec->getType()->getScalarType();
@@ -35383,7 +35598,8 @@ private:
     // to reduce.
     if (VecRes)
       CreateSingleOp(VecRes, /*Scale=*/1, VecResSignedness,
-                     /*ReducedInTree=*/false, VecResNegated);
+                     /*ReducedInTree=*/false, VecResNegated,
+                     /*Ctx=*/TTI::CastContextHint::None);
 
     return {ReducedSubTree, ResNegated};
   }
