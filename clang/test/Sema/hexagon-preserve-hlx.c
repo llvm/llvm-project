@@ -22,18 +22,12 @@ int bad = foo4; // expected-error {{incompatible pointer to integer conversion i
 
 void __attribute__((preserve_hlx)) ok(int *, HLX_Vector *);
 
-HLX_Vector __attribute__((preserve_hlx)) bar0(void);   // expected-error {{'preserve_hlx' attribute cannot be used on functions with HLX types in their signature}}
-HLX_Vector __attribute__((preserve_hlx)) bar0(void) {} // expected-error {{'preserve_hlx' attribute cannot be used on functions with HLX types in their signature}}
-
-HLX_Vector __attribute__((preserve_hlx)) bar1();   // expected-error {{'preserve_hlx' attribute cannot be used on functions with HLX types in their signature}}
-HLX_Vector __attribute__((preserve_hlx)) bar1() {} // expected-error {{'preserve_hlx' attribute cannot be used on functions with HLX types in their signature}}
-
-void __attribute__((preserve_hlx)) bar2(HLX_Vector a);   // expected-error {{'preserve_hlx' attribute cannot be used on functions with HLX types in their signature}}
-void __attribute__((preserve_hlx)) bar2(HLX_Vector a) {} // expected-error {{'preserve_hlx' attribute cannot be used on functions with HLX types in their signature}}
-
-void __attribute__((preserve_hlx)) bar3(int, HLX_VectorPair); // expected-error {{'preserve_hlx' attribute cannot be used on functions with HLX types in their signature}}
-
-void (*__attribute__((preserve_hlx)) bar4)(HLX_Vector); // expected-error {{'preserve_hlx' attribute cannot be used on functions with HLX types in their signature}}
+// HLX types are allowed in the signature.
+HLX_Vector __attribute__((preserve_hlx)) bar0(void);
+HLX_Vector __attribute__((preserve_hlx)) bar1();
+void __attribute__((preserve_hlx)) bar2(HLX_Vector a);
+void __attribute__((preserve_hlx)) bar3(int, HLX_VectorPair);
+void (*__attribute__((preserve_hlx)) bar4)(HLX_Vector);
 
 // Function pointer and typedef uses are fine.
 void (*fp)(int) __attribute__((preserve_hlx));

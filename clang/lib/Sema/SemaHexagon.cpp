@@ -314,12 +314,4 @@ bool SemaHexagon::isHLXVectorType(QualType T) const {
   return Size == 2048 || Size == 4096;
 }
 
-bool SemaHexagon::hasHLXVectorInSignature(const FunctionType *FT) const {
-  if (isHLXVectorType(FT->getReturnType()))
-    return true;
-  const auto *FPT = dyn_cast<FunctionProtoType>(FT);
-  return FPT && llvm::any_of(FPT->getParamTypes(),
-                             [&](QualType T) { return isHLXVectorType(T); });
-}
-
 } // namespace clang

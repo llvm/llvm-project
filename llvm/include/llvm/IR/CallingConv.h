@@ -303,8 +303,9 @@ namespace CallingConv {
     Hexagon_HLXCall = 128,
 
     /// Used for Hexagon functions and call sites selected by Clang's
-    /// __attribute__((preserve_hlx)). If HLX is enabled, all HLX vector
-    /// registers (L0-L15) are callee-saved.
+    /// __attribute__((preserve_hlx)). If HLX is enabled, the HLX vector
+    /// registers (L0-L15) are callee-saved, except the registers that hold an
+    /// HLX vector return value.
     Hexagon_PreserveHLX = 129,
 
     /// The highest possible ID. Must be some 2^k - 1.
