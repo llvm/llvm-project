@@ -35,6 +35,7 @@ public:
 
   list() = default;
   list(initializer_list<T>) {}
+  list(size_t count, const T &value);
 
   iterator begin();
   const_iterator begin() const;
