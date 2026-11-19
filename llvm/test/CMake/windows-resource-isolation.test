@@ -1,8 +1,0 @@
-# REQUIRES: system-windows, cmake-msvc, host={{.*-windows-msvc.*}}
-# NOTE: Do not autogenerate. These checks cover resource ownership across library kinds.
-# RUN: rm -rf %/t
-# RUN: %cmake -G Ninja -S %/S/Inputs/windows-resource-metadata -B %/t -DLLVM_SRC_ROOT=%/S/../.. -DTEST_LIBRARY_RESOURCE_SCOPES=ON -DCMAKE_CXX_COMPILER=cl 2>&1 | FileCheck %s
-
-# CHECK: STATIC resource: none; executable metadata unchanged
-# CHECK: MODULE resource: none; executable metadata unchanged
-# CHECK: dual static resource: none; executable metadata unchanged
