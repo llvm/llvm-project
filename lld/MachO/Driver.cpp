@@ -1362,12 +1362,9 @@ static uint16_t getChainedFixupsPointerFormat() {
 }
 
 static bool shouldEmitRelativeMethodLists(const InputArgList &args) {
-  const Arg *arg = args.getLastArg(OPT_objc_relative_method_lists,
-                                   OPT_no_objc_relative_method_lists);
-  if (arg && arg->getOption().getID() == OPT_objc_relative_method_lists)
-    return true;
-  if (arg && arg->getOption().getID() == OPT_no_objc_relative_method_lists)
-    return false;
+  if (const Arg *arg = args.getLastArg(OPT_objc_relative_method_lists,
+                                       OPT_no_objc_relative_method_lists))
+    return arg->getOption().matches(OPT_objc_relative_method_lists);
 
   // If no flag is specified, enable this on newer versions by default.
   // The min versions is taken from

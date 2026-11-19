@@ -302,7 +302,7 @@ def getLLDBArchitecture():
             "file " + lldbtest_config.lldbExec,
         ]
 
-        output = subprocess.check_output(command)
+        output = subprocess.check_output(command, stderr=subprocess.PIPE)
         str = output.decode()
 
         for line in str.splitlines():
@@ -325,7 +325,7 @@ def getCompilerVersion():
     Supports: llvm, clang.
     """
     version_output = subprocess.check_output(
-        [getCompiler(), "--version"], errors="replace"
+        [getCompiler(), "--version"], stderr=subprocess.PIPE, errors="replace"
     )
     m = re.search("version ([0-9.]+)", version_output)
     if m:

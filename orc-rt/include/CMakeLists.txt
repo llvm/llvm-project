@@ -56,6 +56,7 @@ set(ORC_RT_HEADERS
     orc-rt/support/MemoryFlags.h
     orc-rt/support/Proxy.h
     orc-rt/support/RTTI.h
+    orc-rt/support/RemoteSymbolLookupSet.h
     orc-rt/support/StringPool.h
     orc-rt/support/SymbolLookupFlags.h
     orc-rt/support/SymbolLookupResult.h
@@ -80,6 +81,7 @@ set(ORC_RT_HEADERS
 # Headers for POSIX-only interfaces, installed only where they're implemented.
 if (ORC_RT_TARGET_POSIX)
   list(APPEND ORC_RT_HEADERS
+    orc-rt-c/bedrock/host/posix/dlfcn-host.h
     orc-rt/bedrock/sps/DWARFEHFrameRegistrarSPSCI.h
   )
 endif()
