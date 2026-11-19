@@ -1424,6 +1424,14 @@ public:
   /// Return true if the callsite is an indirect call.
   LLVM_ABI bool isIndirectCall() const;
 
+  /// Append the possible callees listed by !callees metadata to \p Callees and
+  /// return true, also for an empty list. Duplicate operands are omitted,
+  /// keeping the order of their first occurrence. Return false and leave
+  /// \p Callees unchanged if there is no such metadata or one of its operands
+  /// is not a Function, since such a list must be ignored. This does not check
+  /// whether the called operand is in the list.
+  LLVM_ABI bool getCalleesMetadata(SmallVectorImpl<Function *> &Callees) const;
+
   /// Determine whether the passed iterator points to the callee operand's Use.
   bool isCallee(Value::const_user_iterator UI) const {
     return isCallee(&UI.getUse());
