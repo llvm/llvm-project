@@ -6785,8 +6785,14 @@ void LoopVectorizationPlanner::addReductionResultComputation(
     // Also replace redundant extracts.
     for (auto *U : to_vector(OrigExitingVPV->users())) {
       auto *Parent = cast<VPRecipeBase>(U)->getParent();
-      if (FinalReductionResult == U || Parent != MiddleVPBB)
+      if (FinalReductionResult == U || Parent->getParent())
         continue;
+      if (Parent != MiddleVPBB) {
+        assert(match(U, m_Select(m_VPValue(), m_Specific(OrigExitingVPV),
+                                 m_Specific(PhiR))) &&
+               "only users outside middle block must be blends created above");
+        continue;
+      }
       // Skip ComputeReductionResult and FindIV reductions when they are not the
       // final result.
       if (match(U, m_VPInstruction<VPInstruction::ComputeReductionResult>()) ||
