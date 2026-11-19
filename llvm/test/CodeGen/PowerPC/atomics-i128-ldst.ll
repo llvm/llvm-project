@@ -288,10 +288,10 @@ define dso_local i128 @lq_acquire(ptr %src) {
 ; P8-LABEL: lq_acquire:
 ; P8:       # %bb.0: # %entry
 ; P8-NEXT:    lq r4, 0(r3)
-; P8-NEXT:    cmpd cr7, r5, r5
+; P8-NEXT:    cmpd r5, r5
 ; P8-NEXT:    mr r3, r4
 ; P8-NEXT:    mr r4, r5
-; P8-NEXT:    bne- cr7, .+4
+; P8-NEXT:    bne- cr0, .+4
 ; P8-NEXT:    isync
 ; P8-NEXT:    blr
 ;
@@ -313,19 +313,19 @@ define dso_local i128 @lq_acquire(ptr %src) {
 ; LE-PWR8-LABEL: lq_acquire:
 ; LE-PWR8:       # %bb.0: # %entry
 ; LE-PWR8-NEXT:    lq r4, 0(r3)
-; LE-PWR8-NEXT:    cmpd cr7, r5, r5
+; LE-PWR8-NEXT:    cmpd r5, r5
 ; LE-PWR8-NEXT:    mr r3, r5
-; LE-PWR8-NEXT:    bne- cr7, .+4
+; LE-PWR8-NEXT:    bne- cr0, .+4
 ; LE-PWR8-NEXT:    isync
 ; LE-PWR8-NEXT:    blr
 ;
 ; AIX64-PWR8-LABEL: lq_acquire:
 ; AIX64-PWR8:       # %bb.0: # %entry
 ; AIX64-PWR8-NEXT:    lq r4, 0(r3)
-; AIX64-PWR8-NEXT:    cmpd cr7, r5, r5
+; AIX64-PWR8-NEXT:    cmpd r5, r5
 ; AIX64-PWR8-NEXT:    mr r3, r4
 ; AIX64-PWR8-NEXT:    mr r4, r5
-; AIX64-PWR8-NEXT:    bne- cr7, $+4
+; AIX64-PWR8-NEXT:    bne- cr0, $+4
 ; AIX64-PWR8-NEXT:    isync
 ; AIX64-PWR8-NEXT:    blr
 ;
@@ -359,9 +359,9 @@ define dso_local i128 @lq_seqcst(ptr %src) {
 ; P8:       # %bb.0: # %entry
 ; P8-NEXT:    sync
 ; P8-NEXT:    lq r4, 0(r3)
-; P8-NEXT:    cmpd cr7, r5, r5
+; P8-NEXT:    cmpd r5, r5
 ; P8-NEXT:    mr r3, r4
-; P8-NEXT:    bne- cr7, .+4
+; P8-NEXT:    bne- cr0, .+4
 ; P8-NEXT:    isync
 ; P8-NEXT:    mr r4, r5
 ; P8-NEXT:    blr
@@ -385,9 +385,9 @@ define dso_local i128 @lq_seqcst(ptr %src) {
 ; LE-PWR8:       # %bb.0: # %entry
 ; LE-PWR8-NEXT:    sync
 ; LE-PWR8-NEXT:    lq r4, 0(r3)
-; LE-PWR8-NEXT:    cmpd cr7, r5, r5
+; LE-PWR8-NEXT:    cmpd r5, r5
 ; LE-PWR8-NEXT:    mr r3, r5
-; LE-PWR8-NEXT:    bne- cr7, .+4
+; LE-PWR8-NEXT:    bne- cr0, .+4
 ; LE-PWR8-NEXT:    isync
 ; LE-PWR8-NEXT:    blr
 ;
@@ -395,9 +395,9 @@ define dso_local i128 @lq_seqcst(ptr %src) {
 ; AIX64-PWR8:       # %bb.0: # %entry
 ; AIX64-PWR8-NEXT:    sync
 ; AIX64-PWR8-NEXT:    lq r4, 0(r3)
-; AIX64-PWR8-NEXT:    cmpd cr7, r5, r5
+; AIX64-PWR8-NEXT:    cmpd r5, r5
 ; AIX64-PWR8-NEXT:    mr r3, r4
-; AIX64-PWR8-NEXT:    bne- cr7, $+4
+; AIX64-PWR8-NEXT:    bne- cr0, $+4
 ; AIX64-PWR8-NEXT:    isync
 ; AIX64-PWR8-NEXT:    mr r4, r5
 ; AIX64-PWR8-NEXT:    blr

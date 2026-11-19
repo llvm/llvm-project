@@ -9,8 +9,8 @@ define float @bar(ptr %fp) {
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    lwz 3, 0(3)
 ; CHECK-LE-NEXT:    mtfprd 0, 3
-; CHECK-LE-NEXT:    cmpd 7, 3, 3
-; CHECK-LE-NEXT:    bne- 7, .+4
+; CHECK-LE-NEXT:    cmpd 3, 3
+; CHECK-LE-NEXT:    bne- 0, .+4
 ; CHECK-LE-NEXT:    isync
 ; CHECK-LE-NEXT:    xxsldwi 0, 0, 0, 1
 ; CHECK-LE-NEXT:    xscvspdpn 1, 0
@@ -19,8 +19,8 @@ define float @bar(ptr %fp) {
 ; CHECK-LABEL: bar:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lwz 3, 0(3)
-; CHECK-NEXT:    cmpd 7, 3, 3
-; CHECK-NEXT:    bne- 7, .+4
+; CHECK-NEXT:    cmpd 3, 3
+; CHECK-NEXT:    bne- 0, .+4
 ; CHECK-NEXT:    isync
 ; CHECK-NEXT:    stw 3, -4(1)
 ; CHECK-NEXT:    lfs 1, -4(1)

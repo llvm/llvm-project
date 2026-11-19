@@ -8,17 +8,17 @@ define double @foo(ptr %dp) {
 ; CHECK-LE-LABEL: foo:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    ld 3, 0(3)
-; CHECK-LE-NEXT:    cmpd 7, 3, 3
+; CHECK-LE-NEXT:    cmpd 3, 3
 ; CHECK-LE-NEXT:    mtfprd 1, 3
-; CHECK-LE-NEXT:    bne- 7, .+4
+; CHECK-LE-NEXT:    bne- 0, .+4
 ; CHECK-LE-NEXT:    isync
 ; CHECK-LE-NEXT:    blr
 ;
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    ld 3, 0(3)
-; CHECK-NEXT:    cmpd 7, 3, 3
-; CHECK-NEXT:    bne- 7, .+4
+; CHECK-NEXT:    cmpd 3, 3
+; CHECK-NEXT:    bne- 0, .+4
 ; CHECK-NEXT:    isync
 ; CHECK-NEXT:    std 3, -8(1)
 ; CHECK-NEXT:    lfd 1, -8(1)
