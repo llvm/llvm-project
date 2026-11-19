@@ -880,6 +880,13 @@ if (MINGW)
   )
 endif()
 
+if (APPLE)
+  set(aarch64_SOURCES
+      ${aarch64_SOURCES}
+      aarch64/chkstk_darwin.S
+      aarch64/chkstk_darwin2.S)
+endif()
+
 # Don't build enable_execute_stack on arm64 darwin.
 if (APPLE)
   list(REMOVE_ITEM aarch64_SOURCES enable_execute_stack.c)
