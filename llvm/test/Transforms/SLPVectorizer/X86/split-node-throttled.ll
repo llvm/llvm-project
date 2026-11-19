@@ -15,9 +15,9 @@ define fastcc void @test(i32 %arg) {
 ; CHECK-NEXT:    [[TMP25:%.*]] = zext <2 x i32> [[TMP24]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP26:%.*]] = shufflevector <2 x i64> [[TMP25]], <2 x i64> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP27:%.*]] = shufflevector <4 x i64> [[TMP2]], <4 x i64> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP28:%.*]] = shufflevector <8 x i64> [[TMP27]], <8 x i64> <i64 0, i64 0, i64 0, i64 0, i64 undef, i64 undef, i64 undef, i64 undef>, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
+; CHECK-NEXT:    [[TMP28:%.*]] = shufflevector <8 x i64> [[TMP27]], <8 x i64> <i64 0, i64 0, i64 0, i64 0, i64 poison, i64 poison, i64 poison, i64 poison>, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
 ; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x i64> [[TMP26]], <4 x i64> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <8 x i64> [[TMP9]], <8 x i64> <i64 0, i64 0, i64 0, i64 0, i64 undef, i64 undef, i64 undef, i64 undef>, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <8 x i64> [[TMP9]], <8 x i64> <i64 0, i64 0, i64 0, i64 0, i64 poison, i64 poison, i64 poison, i64 poison>, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
 ; CHECK-NEXT:    [[TMP14:%.*]] = mul <8 x i64> zeroinitializer, [[TMP28]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = trunc <8 x i64> [[TMP14]] to <8 x i1>
 ; CHECK-NEXT:    [[TMP12:%.*]] = or <8 x i1> zeroinitializer, [[TMP11]]

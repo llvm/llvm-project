@@ -160,10 +160,6 @@ def MxBrCond  : SDNode<"M68kISD::BRCOND",      MxSDT_BrCond, [SDNPHasChain]>;
 // operand, usually produced by a CMP instruction.
 def MxSetCC   : SDNode<"M68kISD::SETCC",       MxSDT_SetCC>;
 
-// Same as SETCC except it's materialized with a subx and the value is all
-// one's or all zero's.
-def MxSetCC_C : SDNode<"M68kISD::SETCC_CARRY", MxSDT_SetCC_C>;
-
 // For allocating variable amounts of stack space when using
 // segmented stacks. Check if the current stacklet has enough space, and
 // falls back to heap allocation if not.
@@ -530,7 +526,7 @@ def MxCONDle  : PatLeaf<(i8 15)>; // Less or Equal
 // Complex Patterns
 //===----------------------------------------------------------------------===//
 
-// NOTE Though this CP is not strictly necessarily it will simplify instruciton
+// NOTE Though this CP is not strictly necessarily it will simplify instruction
 // definitions
 let WantsParent = true in {
   def MxCP_ARI   : ComplexPattern<iPTR, 1, "SelectARI">;

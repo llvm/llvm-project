@@ -1191,7 +1191,7 @@ for.end:
 declare float @powf(float, float) nounwind readnone
 define void @powf_v4f32(i64 %n, ptr noalias %y, ptr noalias %x) {
 ; CHECK-LABEL: @powf_v4f32(
-; CHECK: call <4 x float> @_simd_pow_f4(
+; CHECK: call <4 x float> @llvm.pow.v4f32(
 ; CHECK: ret void
 
 entry:
@@ -1215,7 +1215,7 @@ for.end:
 declare double @pow(double, double) nounwind readnone
 define void @pow_v2f64(i64 %n, ptr noalias %y, ptr noalias %x) {
 ; CHECK-LABEL: @pow_v2f64(
-; CHECK: call <2 x double> @_simd_pow_d2(
+; CHECK: call <2 x double> @llvm.pow.v2f64(
 ; CHECK: ret void
 
 entry:

@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-- -target-feature +movrs -target-feature +avx10.2 -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -ffreestanding %s -triple=x86_64-- -target-feature +movrs -target-feature +avx10.2 -emit-llvm -o - -Wall -Werror | FileCheck %s %}
 
 #include <immintrin.h>
 

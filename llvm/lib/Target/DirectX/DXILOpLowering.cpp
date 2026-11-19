@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "DXILOpLowering.h"
 #include "DXILConstants.h"
 #include "DXILOpBuilder.h"
 #include "DXILRootSignature.h"
 #include "DXILShaderFlags.h"
+#include "DXILSignatureAnalysis.h"
 #include "DirectX.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
@@ -644,19 +644,26 @@ public:
 
   /// Recover the scalar components of `Vec` from the `insertelement` chain that
   /// built it. Since we run after the scalarizer, such a chain is usually just
-  /// a temporary gathered to pass the vector to a call.
+  /// a temporary gathered to pass the vector to a call. Components the chain
+  /// leaves unset are taken from its base when that base is a constant, which
+  /// is where constant folding puts leading literals.
   static void collectInsertedElements(Value *Vec,
                                       MutableArrayRef<Value *> Elements) {
     unsigned NumElts = cast<FixedVectorType>(Vec->getType())->getNumElements();
     assert(NumElts <= Elements.size() && "Not enough room for the components");
 
     SmallVector<InsertElementInst *, 4> Chain;
-    for (auto *IEI = dyn_cast<InsertElementInst>(Vec); IEI;
-         IEI = dyn_cast<InsertElementInst>(IEI->getOperand(0))) {
+    Value *Base = Vec;
+    while (auto *IEI = dyn_cast<InsertElementInst>(Base)) {
       if (!isa<ConstantInt>(IEI->getOperand(2)))
         break; // This break should never happen below SM6.9.
       Chain.push_back(IEI);
+      Base = IEI->getOperand(0);
     }
+
+    if (auto *C = dyn_cast<Constant>(Base))
+      for (unsigned I = 0; I < NumElts; ++I)
+        Elements[I] = C->getAggregateElement(I);
 
     // Replay element insertion from the innermost first, so that a repeated
     // index ends up holding the live value.
@@ -946,6 +953,25 @@ public:
         return E;
 
       CI->replaceAllUsesWith(*OpCall);
+      CI->eraseFromParent();
+      return Error::success();
+    });
+  }
+
+  [[nodiscard]] bool lowerBarrierByMemoryHandle(Function &F) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+      Value *Handle =
+          createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
+      Value *SemanticFlags = CI->getArgOperand(1);
+
+      Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(
+          OpCode::BarrierByMemoryHandle, {Handle, SemanticFlags});
+      if (Error E = OpCall.takeError())
+        return E;
+
       CI->eraseFromParent();
       return Error::success();
     });
@@ -1456,6 +1482,9 @@ public:
       case Intrinsic::dx_resource_updatecounter:
         HasErrors |= lowerUpdateCounter(F);
         break;
+      case Intrinsic::dx_barrier_by_memory_handle:
+        HasErrors |= lowerBarrierByMemoryHandle(F);
+        break;
       case Intrinsic::dx_resource_atomic_binop:
         HasErrors |= lowerResourceAtomicBinOp(F);
         break;
@@ -1495,7 +1524,8 @@ public:
 };
 } // namespace
 
-PreservedAnalyses DXILOpLowering::run(Module &M, ModuleAnalysisManager &MAM) {
+PreservedAnalyses DXILOpLoweringPass::run(Module &M,
+                                          ModuleAnalysisManager &MAM) {
   DXILResourceMap &DRM = MAM.getResult<DXILResourceAnalysis>(M);
   DXILResourceTypeMap &DRTM = MAM.getResult<DXILResourceTypeAnalysis>(M);
   const ModuleMetadataInfo MMDI = MAM.getResult<DXILMetadataAnalysis>(M);
@@ -1508,6 +1538,7 @@ PreservedAnalyses DXILOpLowering::run(Module &M, ModuleAnalysisManager &MAM) {
   PA.preserve<DXILMetadataAnalysis>();
   PA.preserve<ShaderFlagsAnalysis>();
   PA.preserve<RootSignatureAnalysis>();
+  PA.preserve<SignatureAnalysis>();
   return PA;
 }
 
@@ -1536,6 +1567,7 @@ public:
     AU.addPreserved<DXILMetadataAnalysisWrapperPass>();
     AU.addPreserved<ShaderFlagsAnalysisWrapper>();
     AU.addPreserved<RootSignatureAnalysisWrapper>();
+    AU.addPreserved<SignatureAnalysisWrapper>();
   }
 };
 char DXILOpLoweringLegacy::ID = 0;

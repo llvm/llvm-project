@@ -2167,7 +2167,9 @@ void SimplexBase::print(raw_ostream &os) const {
   os << '\n';
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void SimplexBase::dump() const { print(llvm::errs()); }
+#endif
 
 bool Simplex::isRationalSubsetOf(const IntegerRelation &rel) {
   if (isEmpty())

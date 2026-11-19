@@ -45,11 +45,11 @@ define dso_local [2 x i64] @bar3(i32 noundef %0, i32 noundef %1, i32 noundef %2)
 ; CHECK-NEXT:    .type .Lbar3$local,@function
 ; CHECK-NEXT:    .cfi_startproc
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    r0 = r2
+; CHECK-NEXT:    r0 = r1
+; CHECK-NEXT:    r2 <<= 32
 ; CHECK-NEXT:    r0 <<= 32
-; CHECK-NEXT:    r1 <<= 32
-; CHECK-NEXT:    r1 >>= 32
-; CHECK-NEXT:    r0 |= r1
+; CHECK-NEXT:    r0 >>= 32
+; CHECK-NEXT:    r0 |= r2
 ; CHECK-NEXT:    r3 <<= 32
 ; CHECK-NEXT:    r3 s>>= 32
 ; CHECK-NEXT:    r2 = r3
@@ -158,15 +158,14 @@ define dso_local i32 @check4(i32 noundef %0, i32 noundef %1, i32 noundef %2, i32
 ; CHECK-NEXT:    r1 = r0
 ; CHECK-NEXT:    r1 <<= 12
 ; CHECK-NEXT:    r1 s>>= 44
-; CHECK-NEXT:    r1 += r0
-; CHECK-NEXT:    r3 = r2
-; CHECK-NEXT:    r3 <<= 44
-; CHECK-NEXT:    r3 s>>= 44
-; CHECK-NEXT:    r1 += r3
+; CHECK-NEXT:    r0 += r1
+; CHECK-NEXT:    r1 = r2
+; CHECK-NEXT:    r1 <<= 44
+; CHECK-NEXT:    r1 s>>= 44
+; CHECK-NEXT:    r0 += r1
 ; CHECK-NEXT:    r2 <<= 8
 ; CHECK-NEXT:    r2 s>>= 40
-; CHECK-NEXT:    r1 += r2
-; CHECK-NEXT:    r0 = r1
+; CHECK-NEXT:    r0 += r2
 ; CHECK-NEXT:    exit
   %5 = tail call [2 x i64] @bar4(i32 noundef %0, i32 noundef %1, i32 noundef %2, i32 noundef %3)
   %6 = extractvalue [2 x i64] %5, 0

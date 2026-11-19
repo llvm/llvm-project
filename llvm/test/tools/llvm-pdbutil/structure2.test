@@ -1,0 +1,23 @@
+; REQUIRES: diasdk
+; RUN: llvm-pdbutil dump -all %p/Inputs/structure2.obj | FileCheck %s
+
+; CHECK:      0x1004 | LF_STRUCTURE2 [size = 48] `NS::Foo`
+; CHECK-NEXT:          unique name: `.?AUFoo@NS@@`
+; CHECK-NEXT:          vtable: <no type>, base list: <no type>, field list: <no type>
+; CHECK-NEXT:          options: forward ref | has unique name, sizeof 0
+; CHECK-NEXT: 0x1005 | LF_POINTER [size = 12]
+; CHECK-NEXT:          referent = 0x1004, mode = pointer, opts = const, kind = ptr64
+; CHECK-NEXT: 0x1006 | LF_ARGLIST [size = 12]
+; CHECK-NEXT:          0x0074 (int): `int`
+; CHECK-NEXT: 0x1007 | LF_MFUNCTION [size = 28]
+; CHECK-NEXT:          return type = 0x0003 (void), # args = 1, param list = 0x1006
+; CHECK-NEXT:          class type = 0x1004, this type = 0x1005, this adjust = 0
+; CHECK-NEXT:          calling conv = cdecl, options = constructor
+; CHECK-NEXT: 0x1008 | LF_FIELDLIST [size = 28]
+; CHECK-NEXT:          - LF_ONEMETHOD [name = `Foo`]
+; CHECK-NEXT:            type = 0x1007, vftable offset = -1, attrs = public
+; CHECK-NEXT:          - LF_MEMBER [name = `X`, Type = 0x0074 (int), offset = 0, attrs = public]
+; CHECK-NEXT: 0x1009 | LF_STRUCTURE2 [size = 48] `NS::Foo`
+; CHECK-NEXT:          unique name: `.?AUFoo@NS@@`
+; CHECK-NEXT:          vtable: <no type>, base list: <no type>, field list: 0x1008
+; CHECK-NEXT:          options: has ctor / dtor | has unique name, sizeof 4

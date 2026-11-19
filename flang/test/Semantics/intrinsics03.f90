@@ -3,16 +3,16 @@
 
 program test
   interface
-    pure integer function index1(string, substring)
+    simple integer function index1(string, substring)
       character(*), intent(in) :: string, substring ! ok
     end
-    pure integer function index2(x1, x2)
+    simple integer function index2(x1, x2)
       character(*), intent(in) :: x1, x2 ! ok
     end
-    pure integer function index3(string, substring)
+    simple integer function index3(string, substring)
       character, intent(in) :: string, substring ! not assumed length
     end
-    pure integer function index4(string, substring, back)
+    simple integer function index4(string, substring, back)
       character(*), intent(in) :: string, substring
       logical, optional, intent(in) :: back ! not ok
     end

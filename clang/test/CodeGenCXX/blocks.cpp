@@ -274,6 +274,91 @@ namespace test10 {
   }
 }
 
+namespace test11 {
+  // A block in a default member initializer captures the object being
+  // initialized, wherever the initializer happens to be emitted.
+  struct A {
+    int x;
+    int func();
+    int (^callMember)() = ^{ return func(); };
+    int (^useField)() = ^{ return x; };
+  };
+  template <class T> struct TA {
+    int func();
+    int (^callMember)() = ^{ return func(); };
+  };
+  struct B {
+    int func();
+    int (^nested)() = ^{ return ^{ return func(); }(); };
+    int viaLambda = [this] { return ^{ return func(); }(); }();
+    void m();
+  };
+  struct Other {
+    int y;
+    void m();
+    static void s();
+  };
+
+  // CHECK-LABEL: define{{.*}} void @_ZN6test112f1Ev()
+  // CHECK:       [[T:%.*]] = alloca %"struct.test11::A",
+  // CHECK:       [[BLOCK:%.*]] = alloca [[BLOCK_T:<{.*}>]],
+  // CHECK:       store ptr @___ZN6test112f1Ev_block_invoke, ptr
+  // CHECK:       [[THIS_ADDR:%.*]] = getelementptr inbounds nuw [[BLOCK_T]], ptr [[BLOCK]], i32 0, i32 5
+  // CHECK-NEXT:  store ptr [[T]], ptr [[THIS_ADDR]],
+  // CHECK:       store ptr @___ZN6test112f1Ev_block_invoke_2, ptr
+  // CHECK:       store ptr [[T]], ptr
+  void f1() { A t{}; }
+
+  // CHECK-LABEL: define internal noundef i32 @___ZN6test112f1Ev_block_invoke(
+  // CHECK:       [[THIS:%.*]] = load ptr, ptr
+  // CHECK-NEXT:  call noundef i32 @_ZN6test111A4funcEv(ptr {{[^,]*}} [[THIS]])
+
+  // CHECK-LABEL: define internal noundef i32 @___ZN6test112f1Ev_block_invoke_2(
+  // CHECK:       [[THIS:%.*]] = load ptr, ptr
+  // CHECK-NEXT:  [[X:%.*]] = getelementptr inbounds nuw %"struct.test11::A", ptr [[THIS]], i32 0, i32 0
+  // CHECK-NEXT:  load i32, ptr [[X]],
+
+  // Not the 'this' of the member function emitting the initializer.
+  // CHECK-LABEL: define{{.*}} void @_ZN6test115Other1mEv(ptr {{[^,]*}} %this)
+  // CHECK:       [[T:%.*]] = alloca %"struct.test11::A",
+  // CHECK:       [[BLOCK:%.*]] = alloca [[BLOCK_T]],
+  // CHECK:       [[THIS_ADDR:%.*]] = getelementptr inbounds nuw [[BLOCK_T]], ptr [[BLOCK]], i32 0, i32 5
+  // CHECK-NEXT:  store ptr [[T]], ptr [[THIS_ADDR]],
+  void Other::m() { A t{}; }
+
+  // CHECK-LABEL: define{{.*}} void @_ZN6test115Other1sEv()
+  // CHECK:       [[T:%.*]] = alloca %"struct.test11::A",
+  // CHECK:       store ptr [[T]], ptr
+  void Other::s() { A t{}; }
+
+  // CHECK-LABEL: define{{.*}} void @_ZN6test112f2Ev()
+  // CHECK:       [[T:%.*]] = alloca %"struct.test11::TA",
+  // CHECK:       store ptr [[T]], ptr
+  void f2() { TA<int> t{}; }
+
+  // CHECK-LABEL: define{{.*}} void @_ZN6test112f3Ev()
+  // CHECK:       [[T:%.*]] = alloca %"struct.test11::B",
+  // CHECK:       store ptr [[T]], ptr
+  void f3() { B t{}; }
+
+  // CHECK-LABEL: define internal noundef i32 @___ZN6test112f3Ev_block_invoke(
+  // CHECK:       [[THIS:%.*]] = load ptr, ptr
+  // CHECK:       store ptr [[THIS]], ptr
+
+  // CHECK-LABEL: define internal noundef i32 @___ZN6test112f3Ev_block_invoke_2(
+  // CHECK:       [[THIS:%.*]] = load ptr, ptr
+  // CHECK-NEXT:  call noundef i32 @_ZN6test111B4funcEv(ptr {{[^,]*}} [[THIS]])
+
+  // A block around a lambda that copies '*this' still captures the pointer.
+  // CHECK-LABEL: define{{.*}} void @_ZN6test111B1mEv(
+  // CHECK:       alloca <{ ptr, i32, i32, ptr, ptr, ptr }>,
+  void B::m() { ^{ return [*this]() mutable { return func(); }(); }(); }
+
+  // CHECK-LABEL: define internal void @__cxx_global_var_init()
+  // CHECK:       store ptr @_ZN6test112gaE, ptr
+  A ga{};
+}
+
 // Copy/dispose helper functions and block descriptors of blocks that capture
 // objects that are non-external and non-trivial have internal linkage.
 

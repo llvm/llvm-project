@@ -53,6 +53,7 @@ public:
     PtrDiffType = SignedInt;
     IntPtrType = SignedInt;
     Char16Type = UnsignedInt;
+    WCharType = SignedInt;
     WIntType = SignedInt;
     Int16Type = SignedInt;
     Char32Type = UnsignedLong;

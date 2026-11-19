@@ -11,6 +11,7 @@
 #include "DiagOutputUtils.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/Type.h"
 #include "clang/Analysis/DomainSpecific/CocoaConventions.h"
@@ -58,7 +59,7 @@ public:
   bool isPtrType(const std::string &Name) const override {
     return isCheckedPtr(Name);
   }
-  bool isSafeExpr(const Expr *E, bool, QualType) const override {
+  bool isSafeExpr(const Expr *E, bool, QualType, bool) const override {
     return isExprToGetCheckedPtrCapableMember(E);
   }
   const char *typeName() const override { return "CheckedPtr-capable type"; }
@@ -83,7 +84,7 @@ public:
   bool isPtrType(const std::string &Name) const override {
     return isRetainPtrOrOSPtr(Name);
   }
-  bool isSafeExpr(const Expr *E, bool, QualType) const override {
+  bool isSafeExpr(const Expr *E, bool, QualType, bool) const override {
     return ento::cocoa::isCocoaObjectRef(E->getType()) &&
            isa<ObjCMessageExpr>(E);
   }
@@ -123,6 +124,38 @@ static bool isSameRecord(QualType A, QualType B) {
   auto *RecordB = B->getAsCXXRecordDecl();
   return RecordA && RecordB &&
          RecordA->getCanonicalDecl() == RecordB->getCanonicalDecl();
+}
+
+static const ValueDecl *declaredObject(const Expr *E) {
+  const Expr *Stripped = E->IgnoreParenImpCasts();
+  if (auto *DeclRef = dyn_cast<DeclRefExpr>(Stripped))
+    return DeclRef->getDecl();
+  if (auto *Member = dyn_cast<MemberExpr>(Stripped))
+    return Member->getMemberDecl();
+  return nullptr;
+}
+
+// Returns the const-declared variable or member that E denotes, directly or
+// through a dereference that vends it as const, or nullptr.
+static const ValueDecl *constDeclaredObject(const Expr *E) {
+  const Expr *Stripped = E->IgnoreParenImpCasts();
+
+  if (auto *Op = dyn_cast<CXXOperatorCallExpr>(Stripped)) {
+    OverloadedOperatorKind Kind = Op->getOperator();
+    if ((Kind != OO_Star && Kind != OO_Arrow) || Op->getNumArgs() != 1)
+      return nullptr;
+    if (!pointeeType(Op->getType()).isConstQualified())
+      return nullptr;
+    return constDeclaredObject(Op->getArg(0));
+  }
+
+  const ValueDecl *Decl = declaredObject(Stripped);
+  if (!isa_and_nonnull<VarDecl>(Decl) && !isa_and_nonnull<FieldDecl>(Decl))
+    return nullptr;
+  QualType T = Decl->getType();
+  if (!T.isConstQualified() || T->isReferenceType() || T->isPointerType())
+    return nullptr;
+  return Decl;
 }
 
 static bool mayHoldPointerTo(QualType ViewType, QualType CanBorrowType) {
@@ -168,17 +201,25 @@ public:
   }
 
   bool isSafeExpr(const Expr *Origin, bool PtrIsLifetimeBoundToOrigin,
-                  QualType SinkType) const override {
-    if (!PtrIsLifetimeBoundToOrigin)
-      return true;
-
+                  QualType SinkType, bool SinkMayEscape) const override {
     QualType OriginType = pointeeType(Origin->getType());
-
     if (OriginType.isNull())
       return true;
 
+    // A Borrow or a non-global const object guards a loan only within its own
+    // scope, so neither vouches for a sink that may outlive that scope. This
+    // holds for a reference to the Borrow itself, not just a loan through it.
     if (isBorrowType(OriginType))
+      return !SinkMayEscape;
+
+    if (!PtrIsLifetimeBoundToOrigin)
       return true;
+
+    if (const ValueDecl *ConstObject = constDeclaredObject(Origin)) {
+      auto *ConstVar = dyn_cast<VarDecl>(ConstObject);
+      if (!SinkMayEscape || (ConstVar && ConstVar->hasGlobalStorage()))
+        return true;
+    }
 
     if (Origin->isPRValue() &&
         isCanBorrowType(Origin->getType()).value_or(false) &&
@@ -218,7 +259,7 @@ public:
       printTypeName(Os, OriginType);
     } else
       Os << "a CanBorrow object";
-    Os << " that is not guarded by a Borrow";
+    Os << " that is not guarded by const or a Borrow";
   }
 };
 

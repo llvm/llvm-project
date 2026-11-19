@@ -27,7 +27,7 @@ struct S {
 }
 
 // POST-LABEL: cir.func {{.*}}@_Z12store_memberPU3AS1i
-// POST: cir.get_member %{{.*}}[0] {name = "p"} : !cir.ptr<!rec_S> -> !cir.ptr<!cir.ptr<!s32i, target_address_space(1)>>
+// POST: cir.get_member %{{.*}}[0] {name = "p"} : !cir.ptr<!rec_S, target_address_space(4)> -> !cir.ptr<!cir.ptr<!s32i, target_address_space(1)>, target_address_space(4)>
 
 // LLVM-LABEL: define {{.*}}@_Z12store_memberPU3AS1i
 // LLVM: %[[P:.*]] = getelementptr inbounds nuw %struct.S, ptr {{.*}}, i32 0, i32 0

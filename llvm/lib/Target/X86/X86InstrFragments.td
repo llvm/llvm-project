@@ -87,7 +87,10 @@ def SDT_X86CallSeqStart : SDCallSeqStart<[SDTCisVT<0, i32>,
 def SDT_X86CallSeqEnd   : SDCallSeqEnd<[SDTCisVT<0, i32>,
                                         SDTCisVT<1, i32>]>;
 
-def SDT_X86Call   : SDTypeProfile<0, -1, [SDTCisVT<0, iPTR>]>;
+// The call target is an integer, not necessarily a pointer: on the
+// x32 ABI it is a 64-bit zero-extension of a 32-bit pointer, since calls
+// still execute in 64-bit mode even though pointers are 32-bit.
+def SDT_X86Call   : SDTypeProfile<0, -1, [SDTCisInt<0>]>;
 
 def SDT_X86NtBrind : SDTypeProfile<0, -1, [SDTCisVT<0, iPTR>]>;
 

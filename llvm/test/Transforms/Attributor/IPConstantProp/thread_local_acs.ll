@@ -45,7 +45,7 @@ entry:
 define dso_local void @caller() {
 ; TUNIT-LABEL: define {{[^@]+}}@caller() {
 ; TUNIT-NEXT:  entry:
-; TUNIT-NEXT:    call void @broker(ptr nofree nonnull readonly align 4 captures(none) dereferenceable(4) undef, ptr noundef nonnull @callee, ptr nofree nonnull readonly align 4 captures(none) dereferenceable(4) undef)
+; TUNIT-NEXT:    call void @broker(ptr nofree nonnull readonly align 4 captures(none) undef, ptr noundef nonnull @callee, ptr nofree nonnull readonly align 4 captures(none) undef)
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@caller() {

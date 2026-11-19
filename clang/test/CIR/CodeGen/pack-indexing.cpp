@@ -21,10 +21,10 @@ int pack_indexing_scalar() { return pack_indexing(1, 2, 3); }
 // CIR: %[[TMP:.*]] = cir.load %[[RET_VAL]] : !cir.ptr<!s32i>, !s32i
 // CIR: cir.return %[[TMP]] : !s32i
 
+// CIR: %[[RET_VAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
 // CIR: %[[P_0:.*]] = cir.alloca "p" {{.*}} init : !cir.ptr<!s32i>
 // CIR: %[[P_1:.*]] = cir.alloca "p" {{.*}} init : !cir.ptr<!s32i>
 // CIR: %[[P_2:.*]] = cir.alloca "p" {{.*}} init : !cir.ptr<!s32i>
-// CIR: %[[RET_VAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
 // CIR: %[[RESULT:.*]] = cir.load{{.*}} %[[P_0]] : !cir.ptr<!s32i>, !s32i
 // CIR: cir.store %[[RESULT]], %[[RET_VAL]] : !s32i, !cir.ptr<!s32i>
 // CIR: %[[TMP:.*]] = cir.load %[[RET_VAL]] : !cir.ptr<!s32i>, !s32i
@@ -36,10 +36,10 @@ int pack_indexing_scalar() { return pack_indexing(1, 2, 3); }
 // LLVM: %[[TMP:.*]] = load i32, ptr %[[RET_VAL]], align 4
 // LLVM: ret i32 %[[TMP]]
 
+// LLVM: %[[RET_VAL:.*]] = alloca i32, align 4
 // LLVM: %[[P_0:.*]] = alloca i32, align 4
 // LLVM: %[[P_1:.*]] = alloca i32, align 4
 // LLVM: %[[P_2:.*]] = alloca i32, align 4
-// LLVM: %[[RET_VAL:.*]] = alloca i32, align 4
 // LLVM: %[[RESULT:.*]] = load i32, ptr %[[P_0]], align 4
 // LLVM: store i32 %[[RESULT]], ptr %[[RET_VAL]], align 4
 // LLVM: %[[TMP:.*]] = load i32, ptr %[[RET_VAL]], align 4
@@ -147,8 +147,8 @@ void pack_indexing_lvalue() {
 // CIR:   cir.return
 
 // CIR: cir.func {{.*}} @_Z27pack_indexing_lvalue_helperIJiEERDaDpRT_(%[[ARG0:.*]]: !cir.ptr<!s32i> {{.*}}) -> (!cir.ptr<!s32i> {{.*}})
-// CIR:   %[[P_ADDR:.*]] = cir.alloca "p" {{.*}} : !cir.ptr<!cir.ptr<!s32i>>
 // CIR:   %[[RET_VAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.ptr<!s32i>>
+// CIR:   %[[P_ADDR:.*]] = cir.alloca "p" {{.*}} : !cir.ptr<!cir.ptr<!s32i>>
 // CIR:   cir.store %[[ARG0]], %[[P_ADDR]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
 // CIR:   %[[P_LOAD:.*]] = cir.load %[[P_ADDR]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
 // CIR:   cir.store %[[P_LOAD]], %[[RET_VAL]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
@@ -164,8 +164,8 @@ void pack_indexing_lvalue() {
 // LLVM:   ret void
 
 // LLVM: define {{.*}} ptr @_Z27pack_indexing_lvalue_helperIJiEERDaDpRT_(ptr {{.*}} %[[ARG0:.*]])
-// LLVM:   %[[P_ADDR:.*]] = alloca ptr, align 8
 // LLVM:   %[[RET_VAL:.*]] = alloca ptr, align 8
+// LLVM:   %[[P_ADDR:.*]] = alloca ptr, align 8
 // LLVM:   store ptr %[[ARG0]], ptr %[[P_ADDR]], align 8
 // LLVM:   %[[P_LOAD:.*]] = load ptr, ptr %[[P_ADDR]], align 8
 // LLVM:   store ptr %[[P_LOAD]], ptr %[[RET_VAL]], align 8
@@ -201,9 +201,9 @@ Agg pack_indexing_aggregate() {
 // CIR:   cir.call @_Z13pack_indexingIJ3AggS0_EEDaDpT_
 
 // CIR: cir.func {{.*}} @_Z13pack_indexingIJ3AggS0_EEDaDpT_
+// CIR:   %[[RET_VAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!rec_Agg>
 // CIR:   %[[P0:.*]] = cir.alloca "p" {{.*}} : !cir.ptr<!rec_Agg>
 // CIR:   %[[P1:.*]] = cir.alloca "p" {{.*}} : !cir.ptr<!rec_Agg>
-// CIR:   %[[RET_VAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!rec_Agg>
 // CIR:   cir.copy %[[P0]] {{.*}} to %[[RET_VAL]] {{.*}} : !cir.ptr<!rec_Agg>
 
 // LLVM: define {{.*}} i64 @_Z23pack_indexing_aggregatev()
