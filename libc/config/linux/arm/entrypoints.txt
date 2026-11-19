@@ -234,6 +234,11 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.mman.mmap
     libc.src.sys.mman.munmap
 
+    # sys/mount.h entrypoints
+    libc.src.sys.mount.mount
+    libc.src.sys.mount.umount
+    libc.src.sys.mount.umount2
+
     # sys/prctl.h entrypoints
     libc.src.sys.prctl.prctl
 

@@ -371,6 +371,11 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.mman.shm_open
     libc.src.sys.mman.shm_unlink
 
+    # sys/mount.h entrypoints
+    libc.src.sys.mount.mount
+    libc.src.sys.mount.umount
+    libc.src.sys.mount.umount2
+
     # sys/random.h entrypoints
     libc.src.sys.random.getrandom
     libc.src.sys.random.getentropy
