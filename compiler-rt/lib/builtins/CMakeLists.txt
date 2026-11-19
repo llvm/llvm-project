@@ -42,8 +42,8 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   if(MINGW)
     # Simplified version of what's set in cmake/config-ix.cmake; not including
     # builtins, which are linked separately.
-    set(MINGW_LIBRARIES mingw32 moldname mingwex msvcrt advapi32 shell32
-                        user32 kernel32 mingw32 moldname mingwex msvcrt)
+    set(MINGW_LIBRARIES mingw32 mingwex msvcrt advapi32 shell32
+                        user32 kernel32 mingw32 mingwex msvcrt)
    endif()
 endif()
 
