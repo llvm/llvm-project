@@ -56,90 +56,94 @@ There are 2 configurations of composing the PSTL backends (`__pstl/backend_fwd.h
 
 The following table shows which algorithms are implemented in the backends.
 The values in the `default` backend show which algorithms are used to reframe as.
+The `parallel` column shows whether the algorithm runs in parallel when
+`std::execution::par` is passed on a platform with threading support:
+- ✅ - runs in parallel (given the iterator requirements described above).
+- ❌ - accepts an execution policy, but runs serially.
 
-| Algorithm                              | default | serial | statpart |
-| -------------------------------------- | ------- | :----: | :------: |
-| adjacent_difference | → transform |  |  |
-| adjacent_find | → mismatch |  |  |
-| all_of | → any_of |  |  |
-| any_of | → find_if |  | ● |
-| copy | → transform |  |  |
-| copy_if |  | ● |  |
-| copy_n | → copy |  |  |
-| count | → count_if |  |  |
-| count_if | → transform_reduce |  |  |
-| destroy | → for_each |  |  |
-| destroy_n | → for_each_n |  |  |
-| equal | → transform_reduce |  |  |
-| exclusive_scan |  |  |  |
-| fill | → for_each |  | ● |
-| fill_n | → for_each_n |  |  |
-| find | → find_if |  |  |
-| find_end |  | ● | ● |
-| find_first_of | → find_if |  |  |
-| find_if |  | ● | ● |
-| find_if_not | → find_if |  |  |
-| for_each |  | ● | ● |
-| for_each_n | → for_each |  |  |
-| generate | → for_each |  |  |
-| generate_n | → for_each_n |  |  |
-| includes |  | ● |  |
-| inclusive_scan | → transform_inclusive_scan |  |  |
-| inplace_merge |  |  |  |
-| is_heap | → is_heap_until |  |  |
-| is_heap_until |  | ● | ● |
-| is_partitioned | → find_if_not, none_of |  |  |
-| is_sorted | → is_sorted_until |  |  |
-| is_sorted_until | → adjacent_find |  |  |
-| lexicographical_compare | → mismatch |  |  |
-| max_element | → min_element |  |  |
-| merge |  | ● | ● |
-| min_element |  | ● | ● |
-| minmax_element |  | ● | ● |
-| mismatch | → mismatch | ● | ● |
-| move | → transform |  |  |
-| none_of | → any_of |  |  |
-| nth_element |  |  |  |
-| partial_sort |  |  |  |
-| partial_sort_copy |  |  |  |
-| partition |  | ● |  |
-| partition_copy |  | ● |  |
-| reduce | → transform_reduce |  |  |
-| remove |  |  |  |
-| remove_copy |  |  |  |
-| remove_copy_if |  |  |  |
-| remove_if |  |  |  |
-| replace | → replace_if |  |  |
-| replace_copy | → replace_copy_if |  |  |
-| replace_copy_if | → transform |  |  |
-| replace_if | → for_each |  |  |
-| reverse |  | ● | ● |
-| reverse_copy | → copy |  |  |
-| rotate |  |  |  |
-| rotate_copy | → copy |  |  |
-| search |  | ● | ● |
-| search_n |  | ● | ● |
-| set_difference |  | ● |  |
-| set_intersection |  | ● |  |
-| set_symmetric_difference |  | ● |  |
-| set_union |  | ● |  |
-| sort | → stable_sort |  |  |
-| stable_partition |  | ● |  |
-| stable_sort |  | ● | ● |
-| swap_ranges |  | ● | ● |
-| transform |  | ● | ● |
-| transform_exclusive_scan |  |  |  |
-| transform_inclusive_scan | → transform_inclusive_scan | ● | ● |
-| transform_reduce |  | ● | ● |
-| uninitialized_copy |  | ● | ● |
-| uninitialized_copy_n | → uninitialized_copy |  |  |
-| uninitialized_default_construct | → for_each |  |  |
-| uninitialized_default_construct_n | → for_each_n |  |  |
-| uninitialized_fill | → for_each |  |  |
-| uninitialized_fill_n | → for_each_n |  |  |
-| uninitialized_move |  | ● | ● |
-| uninitialized_move_n | → uninitialized_move |  |  |
-| uninitialized_value_construct | → for_each |  |  |
-| uninitialized_value_construct_n | → for_each_n |  |  |
-| unique |  |  |  |
-| unique_copy |  |  |  |
+| Algorithm                              | default | serial | statpart | parallel? |
+| -------------------------------------- | ------- | :----: | :------: | :------: |
+| adjacent_difference | → transform |  |  | ✅ |
+| adjacent_find | → mismatch |  |  | ✅ |
+| all_of | → any_of |  |  | ✅ |
+| any_of | → find_if |  | ● | ✅ |
+| copy | → transform |  |  | ✅ |
+| copy_if |  | ● |  | ❌ |
+| copy_n | → copy |  |  | ✅ |
+| count | → count_if |  |  | ✅ |
+| count_if | → transform_reduce |  |  | ✅ |
+| destroy | → for_each |  |  | ✅ |
+| destroy_n | → for_each_n |  |  | ✅ |
+| equal | → transform_reduce |  |  | ✅ |
+| exclusive_scan |  |  |  |  |
+| fill | → for_each |  | ● | ✅ |
+| fill_n | → for_each_n |  |  | ✅ |
+| find | → find_if |  |  | ✅ |
+| find_end |  | ● | ● | ✅ |
+| find_first_of | → find_if |  |  | ✅ |
+| find_if |  | ● | ● | ✅ |
+| find_if_not | → find_if |  |  | ✅ |
+| for_each |  | ● | ● | ✅ |
+| for_each_n | → for_each |  |  | ✅ |
+| generate | → for_each |  |  | ✅ |
+| generate_n | → for_each_n |  |  | ✅ |
+| includes |  | ● |  | ❌ |
+| inclusive_scan | → transform_inclusive_scan |  |  | ✅ |
+| inplace_merge |  |  |  |  |
+| is_heap | → is_heap_until |  |  | ✅ |
+| is_heap_until |  | ● | ● | ✅ |
+| is_partitioned | → find_if_not, none_of |  |  | ✅ |
+| is_sorted | → is_sorted_until |  |  | ✅ |
+| is_sorted_until | → adjacent_find |  |  | ✅ |
+| lexicographical_compare | → mismatch |  |  | ✅ |
+| max_element | → min_element |  |  | ✅ |
+| merge |  | ● | ● | ✅ |
+| min_element |  | ● | ● | ✅ |
+| minmax_element |  | ● | ● | ✅ |
+| mismatch | → mismatch | ● | ● | ✅ |
+| move | → transform |  |  | ✅ |
+| none_of | → any_of |  |  | ✅ |
+| nth_element |  |  |  |  |
+| partial_sort |  |  |  |  |
+| partial_sort_copy |  |  |  |  |
+| partition |  | ● |  | ❌ |
+| partition_copy |  | ● |  | ❌ |
+| reduce | → transform_reduce |  |  | ✅ |
+| remove |  |  |  |  |
+| remove_copy |  |  |  |  |
+| remove_copy_if |  |  |  |  |
+| remove_if |  |  |  |  |
+| replace | → replace_if |  |  | ✅ |
+| replace_copy | → replace_copy_if |  |  | ✅ |
+| replace_copy_if | → transform |  |  | ✅ |
+| replace_if | → for_each |  |  | ✅ |
+| reverse |  | ● | ● | ✅ |
+| reverse_copy | → copy |  |  | ✅ |
+| rotate |  |  |  |  |
+| rotate_copy | → copy |  |  | ✅ |
+| search |  | ● | ● | ✅ |
+| search_n |  | ● | ● | ✅ |
+| set_difference |  | ● |  | ❌ |
+| set_intersection |  | ● |  | ❌ |
+| set_symmetric_difference |  | ● |  | ❌ |
+| set_union |  | ● |  | ❌ |
+| sort | → stable_sort |  |  | ✅ |
+| stable_partition |  | ● |  | ❌ |
+| stable_sort |  | ● | ● | ✅ |
+| swap_ranges |  | ● | ● | ✅ |
+| transform |  | ● | ● | ✅ |
+| transform_exclusive_scan |  |  |  |  |
+| transform_inclusive_scan | → transform_inclusive_scan | ● | ● | ✅ |
+| transform_reduce |  | ● | ● | ✅ |
+| uninitialized_copy |  | ● | ● | ✅ |
+| uninitialized_copy_n | → uninitialized_copy |  |  | ✅ |
+| uninitialized_default_construct | → for_each |  |  | ✅ |
+| uninitialized_default_construct_n | → for_each_n |  |  | ✅ |
+| uninitialized_fill | → for_each |  |  | ✅ |
+| uninitialized_fill_n | → for_each_n |  |  | ✅ |
+| uninitialized_move |  | ● | ● | ✅ |
+| uninitialized_move_n | → uninitialized_move |  |  | ✅ |
+| uninitialized_value_construct | → for_each |  |  | ✅ |
+| uninitialized_value_construct_n | → for_each_n |  |  | ✅ |
+| unique |  |  |  |  |
+| unique_copy |  |  |  |  |
