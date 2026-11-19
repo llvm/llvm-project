@@ -200,7 +200,7 @@ public:
 private:
   struct TokOp {
     const char *Data;
-    unsigned Length;
+    size_t Length;
   };
 
   struct ImmOp {
@@ -1162,8 +1162,7 @@ class AMDGPUAsmParser : public MCTargetAsmParser {
   /// parsed labels and emitted instruction opcodes, plus the set of symbols
   /// named by .amdhsa_kernel directives, and match them up at end of file.
   SmallVector<unsigned> OpcodeStream;
-  SmallVector<std::tuple<const MCSymbol *, SMLoc, unsigned>>
-      OpcodeStreamSymbols;
+  SmallVector<std::tuple<const MCSymbol *, SMLoc, size_t>> OpcodeStreamSymbols;
   SmallPtrSet<const MCSymbol *, 8> AMDHSAKernelSymbols;
 
   /// Verify recorded kernel prologues.
@@ -1253,7 +1252,7 @@ public:
     OperandMode_NSA,
   };
 
-  using OptionalImmIndexMap = std::map<AMDGPUOperand::ImmTy, unsigned>;
+  using OptionalImmIndexMap = std::map<AMDGPUOperand::ImmTy, size_t>;
 
   AMDGPUAsmParser(const MCSubtargetInfo &STI, MCAsmParser &_Parser,
                   const MCInstrInfo &MII)
@@ -1663,7 +1662,7 @@ private:
   bool validateCoherencyBits(const MCInst &Inst, const OperandVector &Operands,
                              SMLoc IDLoc);
   bool validateTHAndScopeBits(const MCInst &Inst, const OperandVector &Operands,
-                              const unsigned CPol);
+                              const int64_t CPol);
   bool validateCFSBits(const MCInst &Inst, const OperandVector &Operands);
   bool validateTFE(const MCInst &Inst, const OperandVector &Operands);
   bool validateLdsDirect(const MCInst &Inst, const OperandVector &Operands);
@@ -1724,8 +1723,8 @@ public:
   ParseStatus parseSOPPBrTarget(OperandVector &Operands);
   ParseStatus parseBoolReg(OperandVector &Operands);
 
-  bool parseSwizzleOperand(int64_t &Op, const unsigned MinVal,
-                           const unsigned MaxVal, const Twine &ErrMsg,
+  bool parseSwizzleOperand(int64_t &Op, const int64_t MinVal,
+                           const int64_t MaxVal, const Twine &ErrMsg,
                            SMLoc &Loc);
   bool parseSwizzleOperands(const unsigned OpNum, int64_t *Op,
                             const unsigned MinVal, const unsigned MaxVal,
@@ -1769,7 +1768,7 @@ public:
 
   void cvtVOP3Interp(MCInst &Inst, const OperandVector &Operands);
   void cvtVINTERP(MCInst &Inst, const OperandVector &Operands);
-  void cvtOpSelHelper(MCInst &Inst, unsigned OpSel);
+  void cvtOpSelHelper(MCInst &Inst, int64_t OpSel);
 
   bool parseDimId(unsigned &Encoding);
   ParseStatus parseDim(OperandVector &Operands);
@@ -1812,7 +1811,7 @@ public:
 } // end anonymous namespace
 
 // May be called with integer type with equivalent bitwidth.
-static const fltSemantics *getFltSemantics(unsigned Size) {
+static const fltSemantics *getFltSemantics(uint64_t Size) {
   switch (Size) {
   case 4:
     return &APFloat::IEEEsingle();
@@ -1896,20 +1895,21 @@ static bool canLosslesslyConvertToFPType(APFloat &FPLiteral, MVT VT) {
   return true;
 }
 
-static bool isSafeTruncation(int64_t Val, unsigned Size) {
-  return isUIntN(Size, Val) || isIntN(Size, Val);
+static bool isSafeTruncation(int64_t Val, uint64_t Size) {
+  unsigned N = static_cast<unsigned>(Size);
+  return isUIntN(N, Val) || isIntN(N, Val);
 }
 
 static bool isInlineableLiteralOp16(int64_t Val, MVT VT, bool HasInv2Pi) {
   if (VT.getScalarType() == MVT::i16)
-    return isInlinableLiteral32(Val, HasInv2Pi);
+    return isInlinableLiteral32(static_cast<int32_t>(Val), HasInv2Pi);
 
   if (VT.getScalarType() == MVT::f16)
-    return AMDGPU::isInlinableLiteralFP16(Val, HasInv2Pi);
+    return AMDGPU::isInlinableLiteralFP16(static_cast<int16_t>(Val), HasInv2Pi);
 
   assert(VT.getScalarType() == MVT::bf16);
 
-  return AMDGPU::isInlinableLiteralBF16(Val, HasInv2Pi);
+  return AMDGPU::isInlinableLiteralBF16(static_cast<int16_t>(Val), HasInv2Pi);
 }
 
 bool AMDGPUOperand::isInlinableImm(MVT type) const {
@@ -1968,7 +1968,7 @@ bool AMDGPUOperand::isInlinableImm(MVT type) const {
       // inline constant is used as an i16 operand, its 32-bit representation
       // representation will be used. We will need the 32-bit value to check if
       // it is FP inline constant.
-      uint32_t ImmVal = FPLiteral.bitcastToAPInt().getZExtValue();
+      int64_t ImmVal = FPLiteral.bitcastToAPInt().getZExtValue();
       return isInlineableLiteralOp16(ImmVal, type,
                                      AsmParser->hasInv2PiInlineImm());
     }
@@ -2019,7 +2019,7 @@ bool AMDGPUOperand::isLiteralImm(MVT type) const {
       return false;
     }
 
-    unsigned Size = type.getSizeInBits();
+    uint64_t Size = type.getSizeInBits();
     if (Size == 64) {
       if (Allow64Bit && !AMDGPU::isValid32BitLiteral(Imm.Val, false))
         return true;
@@ -2846,7 +2846,7 @@ bool AMDGPUAsmParser::ParseRegRange(unsigned &Num, unsigned &RegWidth,
   }
 
   Num = static_cast<unsigned>(RegLo);
-  RegWidth = 32 * ((RegHi - RegLo) + 1);
+  RegWidth = static_cast<unsigned>(32 * ((RegHi - RegLo) + 1));
 
   return true;
 }
@@ -3602,35 +3602,40 @@ bool AMDGPUAsmParser::isInlineConstant(const MCInst &Inst,
   case 8:
     return AMDGPU::isInlinableLiteral64(Val, hasInv2PiInlineImm());
   case 4:
-    return AMDGPU::isInlinableLiteral32(Val, hasInv2PiInlineImm());
+    return AMDGPU::isInlinableLiteral32(static_cast<int32_t>(Val),
+                                        hasInv2PiInlineImm());
   case 2: {
     const unsigned OperandType = Desc.operands()[OpIdx].OperandType;
     if (OperandType == AMDGPU::OPERAND_REG_IMM_INT16 ||
         OperandType == AMDGPU::OPERAND_REG_INLINE_C_INT16)
-      return AMDGPU::isInlinableLiteralI16(Val, hasInv2PiInlineImm());
+      return AMDGPU::isInlinableLiteralI16(static_cast<int32_t>(Val),
+                                           hasInv2PiInlineImm());
 
     if (OperandType == AMDGPU::OPERAND_REG_INLINE_C_V2INT16 ||
         OperandType == AMDGPU::OPERAND_REG_IMM_V2INT16)
-      return AMDGPU::isInlinableLiteralV2I16(Val);
+      return AMDGPU::isInlinableLiteralV2I16(static_cast<uint32_t>(Val));
 
     if (OperandType == AMDGPU::OPERAND_REG_INLINE_C_V2FP16 ||
         OperandType == AMDGPU::OPERAND_REG_IMM_V2FP16)
-      return AMDGPU::isInlinableLiteralV2F16(Val);
+      return AMDGPU::isInlinableLiteralV2F16(static_cast<uint32_t>(Val));
 
     if (OperandType == AMDGPU::OPERAND_REG_IMM_V2FP16_SPLAT)
-      return AMDGPU::isPKFMACF16InlineConstant(Val, isGFX11Plus());
+      return AMDGPU::isPKFMACF16InlineConstant(static_cast<uint32_t>(Val),
+                                               isGFX11Plus());
 
     if (OperandType == AMDGPU::OPERAND_REG_INLINE_C_V2BF16 ||
         OperandType == AMDGPU::OPERAND_REG_IMM_V2BF16)
-      return AMDGPU::isInlinableLiteralV2BF16(Val);
+      return AMDGPU::isInlinableLiteralV2BF16(static_cast<uint32_t>(Val));
 
     if (OperandType == AMDGPU::OPERAND_REG_IMM_FP16 ||
         OperandType == AMDGPU::OPERAND_REG_INLINE_C_FP16)
-      return AMDGPU::isInlinableLiteralFP16(Val, hasInv2PiInlineImm());
+      return AMDGPU::isInlinableLiteralFP16(static_cast<int16_t>(Val),
+                                            hasInv2PiInlineImm());
 
     if (OperandType == AMDGPU::OPERAND_REG_IMM_BF16 ||
         OperandType == AMDGPU::OPERAND_REG_INLINE_C_BF16)
-      return AMDGPU::isInlinableLiteralBF16(Val, hasInv2PiInlineImm());
+      return AMDGPU::isInlinableLiteralBF16(static_cast<int16_t>(Val),
+                                            hasInv2PiInlineImm());
 
     if (OperandType == AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16 ||
         OperandType == AMDGPU::OPERAND_REG_IMM_NOINLINE_FP16)
@@ -3853,7 +3858,8 @@ AMDGPUAsmParser::checkVOPDRegBankConstraints(const MCInst &Inst, bool AsVOPD3) {
       if (!Op.isImm())
         continue;
       int64_t Imm = Op.getImm();
-      if (!AMDGPU::isInlinableLiteral32(Imm, hasInv2PiInlineImm()) &&
+      if (!AMDGPU::isInlinableLiteral32(static_cast<int32_t>(Imm),
+                                        hasInv2PiInlineImm()) &&
           !AMDGPU::isInlinableLiteral64(Imm, hasInv2PiInlineImm()))
         return (unsigned)I;
     }
@@ -4075,7 +4081,7 @@ bool AMDGPUAsmParser::validateMIMGAddrSize(const MCInst &Inst, SMLoc IDLoc) {
     return false;
   }
 
-  unsigned Dim = Inst.getOperand(DimIdx).getImm();
+  uint8_t Dim = static_cast<uint8_t>(Inst.getOperand(DimIdx).getImm());
   const AMDGPU::MIMGDimInfo *DimInfo = AMDGPU::getMIMGDimInfoByEncoding(Dim);
   bool IsNSA = SrsrcIdx - VAddr0Idx > 1;
   unsigned ActualAddrSize =
@@ -4162,7 +4168,7 @@ bool AMDGPUAsmParser::validateMIMGDim(const MCInst &Inst,
   if (AMDGPU::getMIMGBaseOpcode(Opc)->BVH)
     return true;
 
-  for (unsigned i = 1, e = Operands.size(); i != e; ++i) {
+  for (size_t i = 1, e = Operands.size(); i != e; ++i) {
     AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[i]);
     if (Op.isDim())
       return true;
@@ -4186,7 +4192,7 @@ bool AMDGPUAsmParser::validateMIMGMSAA(const MCInst &Inst) {
   int DimIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::dim);
   assert(DimIdx != -1);
 
-  unsigned Dim = Inst.getOperand(DimIdx).getImm();
+  uint8_t Dim = static_cast<uint8_t>(Inst.getOperand(DimIdx).getImm());
   const AMDGPU::MIMGDimInfo *DimInfo = AMDGPU::getMIMGDimInfoByEncoding(Dim);
 
   return DimInfo->MSAA;
@@ -4566,7 +4572,7 @@ bool AMDGPUAsmParser::validateLdsDirect(const MCInst &Inst,
 }
 
 SMLoc AMDGPUAsmParser::getFlatOffsetLoc(const OperandVector &Operands) const {
-  for (unsigned i = 1, e = Operands.size(); i != e; ++i) {
+  for (size_t i = 1, e = Operands.size(); i != e; ++i) {
     AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[i]);
     if (Op.isFlatOffset())
       return Op.getStartLoc();
@@ -4642,7 +4648,7 @@ bool AMDGPUAsmParser::validateFlatOffset(const MCInst &Inst,
 
 SMLoc AMDGPUAsmParser::getSMEMOffsetLoc(const OperandVector &Operands) const {
   // Start with second operand because SMEM Offset cannot be dst or src0.
-  for (unsigned i = 2, e = Operands.size(); i != e; ++i) {
+  for (size_t i = 2, e = Operands.size(); i != e; ++i) {
     AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[i]);
     if (Op.isSMEMOffset() || Op.isSMEMOffsetMod())
       return Op.getStartLoc();
@@ -4811,7 +4817,7 @@ bool AMDGPUAsmParser::validateOpSel(const MCInst &Inst) {
   const unsigned Opc = Inst.getOpcode();
   if (isPermlane16(Opc)) {
     int OpSelIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::op_sel);
-    unsigned OpSel = Inst.getOperand(OpSelIdx).getImm();
+    int64_t OpSel = Inst.getOperand(OpSelIdx).getImm();
 
     if (OpSel & ~3)
       return false;
@@ -4834,7 +4840,7 @@ bool AMDGPUAsmParser::validateOpSel(const MCInst &Inst) {
   if (isGFX11Plus() && SIInstrFlags::isDOT(MII, Inst) &&
       SIInstrFlags::isVOP3(MII, Inst) && !SIInstrFlags::isVOP3P(MII, Inst)) {
     int OpSelIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::op_sel);
-    unsigned OpSel = Inst.getOperand(OpSelIdx).getImm();
+    int64_t OpSel = Inst.getOperand(OpSelIdx).getImm();
     if (OpSel & 3)
       return false;
   }
@@ -4866,8 +4872,8 @@ bool AMDGPUAsmParser::validateOpSel(const MCInst &Inst) {
 
     const MCOperand &Src0 = Inst.getOperand(Src0Idx);
     const MCOperand &Src1 = Inst.getOperand(Src1Idx);
-    unsigned OpSel = Inst.getOperand(OpSelIdx).getImm();
-    unsigned OpSelHi = Inst.getOperand(OpSelHiIdx).getImm();
+    int64_t OpSel = Inst.getOperand(OpSelIdx).getImm();
+    int64_t OpSelHi = Inst.getOperand(OpSelHiIdx).getImm();
 
     const MCRegisterInfo *TRI = getContext().getRegisterInfo();
 
@@ -4903,7 +4909,7 @@ bool AMDGPUAsmParser::validateTrue16OpSel(const MCInst &Inst) {
   int OpSelIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::op_sel);
   if (OpSelIdx == -1)
     return true;
-  unsigned OpSelOpValue = Inst.getOperand(OpSelIdx).getImm();
+  int64_t OpSelOpValue = Inst.getOperand(OpSelIdx).getImm();
   // If the value is 0 we could have a default OpSel Operand, so conservatively
   // allow it.
   if (OpSelOpValue == 0)
@@ -4945,7 +4951,7 @@ bool AMDGPUAsmParser::validateNeg(const MCInst &Inst, AMDGPU::OpName OpName) {
   if (NegIdx == -1)
     return true;
 
-  unsigned Neg = Inst.getOperand(NegIdx).getImm();
+  int64_t Neg = Inst.getOperand(NegIdx).getImm();
 
   // Instructions that have neg_lo or neg_hi operand but neg modifier is allowed
   // on some src operands but not allowed on other.
@@ -5223,7 +5229,7 @@ bool AMDGPUAsmParser::validateVGPRAlign(const MCInst &Inst) const {
 }
 
 SMLoc AMDGPUAsmParser::getBLGPLoc(const OperandVector &Operands) const {
-  for (unsigned i = 1, e = Operands.size(); i != e; ++i) {
+  for (size_t i = 1, e = Operands.size(); i != e; ++i) {
     AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[i]);
     if (Op.isBLGP())
       return Op.getStartLoc();
@@ -5297,7 +5303,7 @@ bool AMDGPUAsmParser::validateDS(const MCInst &Inst,
       AMDGPU::getNamedOperandIdx(Inst.getOpcode(), AMDGPU::OpName::gds);
   if (GDSIdx < 0)
     return true;
-  unsigned GDS = Inst.getOperand(GDSIdx).getImm();
+  int64_t GDS = Inst.getOperand(GDSIdx).getImm();
   if (GDS) {
     SMLoc S = getImmLoc(AMDGPUOperand::ImmTyGDS, Operands);
     Error(S, "gds modifier is not supported on this GPU");
@@ -5341,7 +5347,7 @@ bool AMDGPUAsmParser::validateCoherencyBits(const MCInst &Inst,
   if (CPolPos == -1)
     return true;
 
-  unsigned CPol = Inst.getOperand(CPolPos).getImm();
+  int64_t CPol = Inst.getOperand(CPolPos).getImm();
 
   if (CPol & CPol::CFS) {
     if (!hasCacheFillSize()) {
@@ -5427,7 +5433,7 @@ bool AMDGPUAsmParser::validateCoherencyBits(const MCInst &Inst,
 
 bool AMDGPUAsmParser::validateTHAndScopeBits(const MCInst &Inst,
                                              const OperandVector &Operands,
-                                             const unsigned CPol) {
+                                             const int64_t CPol) {
   const unsigned TH = CPol & AMDGPU::CPol::TH;
   const unsigned Scope = CPol & AMDGPU::CPol::SCOPE;
 
@@ -5582,7 +5588,7 @@ bool AMDGPUAsmParser::validateClusterBarrierIsFirst(
     return true;
 
   int Src0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0);
-  int BarrierID = Inst.getOperand(Src0Idx).getImm();
+  int64_t BarrierID = Inst.getOperand(Src0Idx).getImm();
   if (BarrierID != AMDGPU::Barrier::CLUSTER)
     return true;
 
@@ -5626,7 +5632,7 @@ bool AMDGPUAsmParser::validateScaleSel(const MCInst &Inst,
   if (getSTI().hasFeature(AMDGPU::FeatureBlock16ConversionScaleInsts))
     MaxSel *= 2;
 
-  int ScaleSel = Inst.getOperand(ScaleSelIdx).getImm();
+  int64_t ScaleSel = Inst.getOperand(ScaleSelIdx).getImm();
   if (ScaleSel < MaxSel)
     return true;
 
@@ -6136,11 +6142,11 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
   const MCExpr *NextFreeSGPR = ZeroExpr;
 
   // Count the number of user SGPRs implied from the enabled feature bits.
-  unsigned ImpliedUserSGPRCount = 0;
+  uint64_t ImpliedUserSGPRCount = 0;
 
   // Track if the asm explicitly contains the directive for the user SGPR
   // count.
-  std::optional<unsigned> ExplicitUserSGPRCount;
+  std::optional<uint64_t> ExplicitUserSGPRCount;
   const MCExpr *ReserveVCC = OneExpr;
   const MCExpr *ReserveFlatScr = OneExpr;
   std::optional<bool> EnableWavefrontSize32;
@@ -6505,7 +6511,7 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
   if (!Seen.contains(".amdhsa_next_free_sgpr"))
     return TokError(".amdhsa_next_free_sgpr directive is required");
 
-  unsigned UserSGPRCount = ExplicitUserSGPRCount.value_or(ImpliedUserSGPRCount);
+  uint64_t UserSGPRCount = ExplicitUserSGPRCount.value_or(ImpliedUserSGPRCount);
   if (UserSGPRCount > getMaxNumUserSGPRs())
     return TokError("too many user SGPRs enabled, found " +
                     Twine(UserSGPRCount) + ", but only " +
@@ -7225,7 +7231,7 @@ ParseStatus AMDGPUAsmParser::parseOperand(OperandVector &Operands,
   SMLoc RBraceLoc;
   SMLoc LBraceLoc = getLoc();
   if (Mode == OperandMode_NSA && trySkipToken(AsmToken::LBrac)) {
-    unsigned Prefix = Operands.size();
+    size_t Prefix = Operands.size();
 
     for (;;) {
       auto Loc = getLoc();
@@ -7680,7 +7686,7 @@ addOptionalImmOperand(MCInst &Inst, const OperandVector &Operands,
                       std::optional<unsigned> InsertAt = std::nullopt) {
   auto i = OptionalIdx.find(ImmT);
   if (i != OptionalIdx.end()) {
-    unsigned Idx = i->second;
+    size_t Idx = i->second;
     const AMDGPUOperand &Op =
         static_cast<const AMDGPUOperand &>(*Operands[Idx]);
     if (InsertAt)
@@ -8077,13 +8083,13 @@ void AMDGPUAsmParser::cvtExp(MCInst &Inst, const OperandVector &Operands) {
   unsigned EnMask = 0;
   int SrcIdx = 0;
 
-  for (unsigned i = 1, e = Operands.size(); i != e; ++i) {
+  for (size_t i = 1, e = Operands.size(); i != e; ++i) {
     AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[i]);
 
     // Add the register arguments
     if (Op.isReg()) {
       assert(SrcIdx < 4);
-      OperandIdx[SrcIdx] = Inst.size();
+      OperandIdx[SrcIdx] = static_cast<unsigned>(Inst.size());
       Op.addRegOperands(Inst, 1);
       ++SrcIdx;
       continue;
@@ -8091,7 +8097,7 @@ void AMDGPUAsmParser::cvtExp(MCInst &Inst, const OperandVector &Operands) {
 
     if (Op.isOff()) {
       assert(SrcIdx < 4);
-      OperandIdx[SrcIdx] = Inst.size();
+      OperandIdx[SrcIdx] = static_cast<unsigned>(Inst.size());
       Inst.addOperand(MCOperand::createReg(MCRegister()));
       ++SrcIdx;
       continue;
@@ -8143,10 +8149,11 @@ static bool encodeCnt(const AMDGPU::IsaVersion ISA, int64_t &IntVal,
                       unsigned (*decode)(const IsaVersion &Version, unsigned)) {
   bool Failed = false;
 
-  IntVal = encode(ISA, IntVal, CntVal);
-  if (CntVal != decode(ISA, IntVal)) {
+  IntVal =
+      encode(ISA, static_cast<unsigned>(IntVal), static_cast<unsigned>(CntVal));
+  if (CntVal != decode(ISA, static_cast<unsigned>(IntVal))) {
     if (Saturate) {
-      IntVal = encode(ISA, IntVal, -1);
+      IntVal = encode(ISA, static_cast<unsigned>(IntVal), -1);
     } else {
       Failed = true;
     }
@@ -8457,7 +8464,9 @@ ParseStatus AMDGPUAsmParser::parseHwreg(OperandVector &Operands) {
   if (Res.isSuccess()) {
     if (!validateStructuredOpFields({&HwReg, &Offset, &Width}))
       return ParseStatus::Failure;
-    ImmVal = HwregEncoding::encode(HwReg.Val, Offset.Val, Width.Val);
+    ImmVal = HwregEncoding::encode(static_cast<unsigned>(HwReg.Val),
+                                   static_cast<unsigned>(Offset.Val),
+                                   static_cast<unsigned>(Width.Val));
   }
 
   if (Res.isNoMatch() &&
@@ -8891,7 +8900,7 @@ SMLoc AMDGPUAsmParser::getOperandLoc(const OperandVector &Operands,
 SMLoc AMDGPUAsmParser::getOperandLoc(
     std::function<bool(const AMDGPUOperand &)> Test,
     const OperandVector &Operands) const {
-  for (unsigned i = Operands.size() - 1; i > 0; --i) {
+  for (size_t i = Operands.size() - 1; i > 0; --i) {
     AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[i]);
     if (Test(Op))
       return Op.getStartLoc();
@@ -8952,16 +8961,16 @@ bool AMDGPUAsmParser::validateStructuredOpFields(
 //===----------------------------------------------------------------------===//
 
 LLVM_READNONE
-static unsigned encodeBitmaskPerm(const unsigned AndMask, const unsigned OrMask,
-                                  const unsigned XorMask) {
+static int64_t encodeBitmaskPerm(const int64_t AndMask, const int64_t OrMask,
+                                 const int64_t XorMask) {
   using namespace llvm::AMDGPU::Swizzle;
 
   return BITMASK_PERM_ENC | (AndMask << BITMASK_AND_SHIFT) |
          (OrMask << BITMASK_OR_SHIFT) | (XorMask << BITMASK_XOR_SHIFT);
 }
 
-bool AMDGPUAsmParser::parseSwizzleOperand(int64_t &Op, const unsigned MinVal,
-                                          const unsigned MaxVal,
+bool AMDGPUAsmParser::parseSwizzleOperand(int64_t &Op, const int64_t MinVal,
+                                          const int64_t MaxVal,
                                           const Twine &ErrMsg, SMLoc &Loc) {
   if (!skipToken(AsmToken::Comma, "expected a comma")) {
     return false;
@@ -9358,7 +9367,7 @@ void AMDGPUAsmParser::cvtMubufImpl(MCInst &Inst, const OperandVector &Operands,
     IsAtomicReturn = SIInstrFlags::isAtomicRet(MII, Inst);
   }
 
-  for (unsigned i = FirstOperandIdx, e = Operands.size(); i != e; ++i) {
+  for (size_t i = FirstOperandIdx, e = Operands.size(); i != e; ++i) {
     AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[i]);
 
     // Add the register arguments
@@ -9574,7 +9583,7 @@ static void cvtVOP3DstOpSelOnly(MCInst &Inst, const MCRegisterInfo &MRI) {
     ;
   assert(SrcNum > 0);
 
-  unsigned OpSel = Inst.getOperand(OpSelIdx).getImm();
+  int64_t OpSel = Inst.getOperand(OpSelIdx).getImm();
 
   int DstIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vdst);
   if (DstIdx == -1)
@@ -9582,7 +9591,7 @@ static void cvtVOP3DstOpSelOnly(MCInst &Inst, const MCRegisterInfo &MRI) {
 
   const MCOperand &DstOp = Inst.getOperand(DstIdx);
   int ModIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0_modifiers);
-  uint32_t ModVal = Inst.getOperand(ModIdx).getImm();
+  int64_t ModVal = Inst.getOperand(ModIdx).getImm();
   if (DstOp.isReg() &&
       MRI.getRegClass(AMDGPU::VGPR_16RegClassID).contains(DstOp.getReg())) {
     if (AMDGPU::isHi16Reg(DstOp.getReg(), MRI))
@@ -9619,7 +9628,7 @@ static bool isRegOrImmWithInputMods(const MCInstrDesc &Desc, unsigned OpNum) {
                                    MCOI::OperandConstraint::TIED_TO) == -1;
 }
 
-void AMDGPUAsmParser::cvtOpSelHelper(MCInst &Inst, unsigned OpSel) {
+void AMDGPUAsmParser::cvtOpSelHelper(MCInst &Inst, int64_t OpSel) {
   unsigned Opc = Inst.getOpcode();
   constexpr AMDGPU::OpName Ops[] = {AMDGPU::OpName::src0, AMDGPU::OpName::src1,
                                     AMDGPU::OpName::src2};
@@ -9634,7 +9643,7 @@ void AMDGPUAsmParser::cvtOpSelHelper(MCInst &Inst, unsigned OpSel) {
       continue;
 
     int ModIdx = AMDGPU::getNamedOperandIdx(Opc, ModOps[J]);
-    uint32_t ModVal = Inst.getOperand(ModIdx).getImm();
+    int64_t ModVal = Inst.getOperand(ModIdx).getImm();
 
     if ((OpSel & (1 << J)) != 0)
       ModVal |= SISrcMods::OP_SEL_0;
@@ -9657,7 +9666,7 @@ void AMDGPUAsmParser::cvtVOP3Interp(MCInst &Inst,
     ((AMDGPUOperand &)*Operands[I++]).addRegOperands(Inst, 1);
   }
 
-  for (unsigned E = Operands.size(); I != E; ++I) {
+  for (size_t E = Operands.size(); I != E; ++I) {
     AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[I]);
     if (isRegOrImmWithInputMods(Desc, Inst.getNumOperands())) {
       Op.addRegOrImmWithFPInputModsOperands(Inst, 2);
@@ -9688,7 +9697,7 @@ void AMDGPUAsmParser::cvtVOP3Interp(MCInst &Inst,
     addOptionalImmOperand(Inst, Operands, OptionalIdx,
                           AMDGPUOperand::ImmTyOpSel);
     int OpSelIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::op_sel);
-    unsigned OpSel = Inst.getOperand(OpSelIdx).getImm();
+    int64_t OpSel = Inst.getOperand(OpSelIdx).getImm();
 
     cvtOpSelHelper(Inst, OpSel);
   }
@@ -9704,7 +9713,7 @@ void AMDGPUAsmParser::cvtVINTERP(MCInst &Inst, const OperandVector &Operands) {
     ((AMDGPUOperand &)*Operands[I++]).addRegOperands(Inst, 1);
   }
 
-  for (unsigned E = Operands.size(); I != E; ++I) {
+  for (size_t E = Operands.size(); I != E; ++I) {
     AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[I]);
     if (isRegOrImmWithInputMods(Desc, Inst.getNumOperands())) {
       Op.addRegOrImmWithFPInputModsOperands(Inst, 2);
@@ -9728,7 +9737,7 @@ void AMDGPUAsmParser::cvtVINTERP(MCInst &Inst, const OperandVector &Operands) {
   if (OpSelIdx == -1)
     return;
 
-  unsigned OpSel = Inst.getOperand(OpSelIdx).getImm();
+  int64_t OpSel = Inst.getOperand(OpSelIdx).getImm();
   cvtOpSelHelper(Inst, OpSel);
 }
 
@@ -9744,7 +9753,7 @@ void AMDGPUAsmParser::cvtScaledMFMA(MCInst &Inst,
   for (unsigned J = 0; J < Desc.getNumDefs(); ++J)
     static_cast<AMDGPUOperand &>(*Operands[I++]).addRegOperands(Inst, 1);
 
-  for (unsigned E = Operands.size(); I != E; ++I) {
+  for (size_t E = Operands.size(); I != E; ++I) {
     AMDGPUOperand &Op = static_cast<AMDGPUOperand &>(*Operands[I]);
     int NumOperands = Inst.getNumOperands();
     // The order of operands in MCInst and parsed operands are different.
@@ -9766,14 +9775,14 @@ void AMDGPUAsmParser::cvtScaledMFMA(MCInst &Inst,
   // Insert CBSZ and BLGP operands for F8F6F4 variants
   auto CbszIdx = OptionalIdx.find(AMDGPUOperand::ImmTyCBSZ);
   if (CbszIdx != OptionalIdx.end()) {
-    int CbszVal = ((AMDGPUOperand &)*Operands[CbszIdx->second]).getImm();
+    int64_t CbszVal = ((AMDGPUOperand &)*Operands[CbszIdx->second]).getImm();
     Inst.getOperand(CbszOpIdx).setImm(CbszVal);
   }
 
   int BlgpOpIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::blgp);
   auto BlgpIdx = OptionalIdx.find(AMDGPUOperand::ImmTyBLGP);
   if (BlgpIdx != OptionalIdx.end()) {
-    int BlgpVal = ((AMDGPUOperand &)*Operands[BlgpIdx->second]).getImm();
+    int64_t BlgpVal = ((AMDGPUOperand &)*Operands[BlgpIdx->second]).getImm();
     Inst.getOperand(BlgpOpIdx).setImm(BlgpVal);
   }
 
@@ -9783,14 +9792,14 @@ void AMDGPUAsmParser::cvtScaledMFMA(MCInst &Inst,
 
   // Handle op_sel fields
 
-  unsigned OpSel = 0;
+  int64_t OpSel = 0;
   auto OpselIdx = OptionalIdx.find(AMDGPUOperand::ImmTyOpSel);
   if (OpselIdx != OptionalIdx.end()) {
     OpSel = static_cast<const AMDGPUOperand &>(*Operands[OpselIdx->second])
                 .getImm();
   }
 
-  unsigned OpSelHi = 0;
+  int64_t OpSelHi = 0;
   auto OpselHiIdx = OptionalIdx.find(AMDGPUOperand::ImmTyOpSelHi);
   if (OpselHiIdx != OptionalIdx.end()) {
     OpSelHi = static_cast<const AMDGPUOperand &>(*Operands[OpselHiIdx->second])
@@ -9821,7 +9830,7 @@ void AMDGPUAsmParser::cvtVOP3(MCInst &Inst, const OperandVector &Operands,
     ((AMDGPUOperand &)*Operands[I++]).addRegOperands(Inst, 1);
   }
 
-  for (unsigned E = Operands.size(); I != E; ++I) {
+  for (size_t E = Operands.size(); I != E; ++I) {
     AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[I]);
     if (isRegOrImmWithInputMods(Desc, Inst.getNumOperands())) {
       Op.addRegOrImmWithFPInputModsOperands(Inst, 2);
@@ -9983,10 +9992,10 @@ void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst, const OperandVector &Operands,
                                    AMDGPU::OpName::src1_modifiers,
                                    AMDGPU::OpName::src2_modifiers};
 
-  unsigned OpSel = 0;
-  unsigned OpSelHi = 0;
-  unsigned NegLo = 0;
-  unsigned NegHi = 0;
+  int64_t OpSel = 0;
+  int64_t OpSelHi = 0;
+  int64_t NegLo = 0;
+  int64_t NegHi = 0;
 
   if (OpSelIdx != -1)
     OpSel = Inst.getOperand(OpSelIdx).getImm();
@@ -10118,7 +10127,7 @@ ParseStatus AMDGPUAsmParser::parseVOPD(OperandVector &Operands) {
 void AMDGPUAsmParser::cvtVOPD(MCInst &Inst, const OperandVector &Operands) {
   const MCInstrDesc &Desc = MII.get(Inst.getOpcode());
 
-  auto addOp = [&](uint16_t ParsedOprIdx) { // NOLINT:function pointer
+  auto addOp = [&](unsigned ParsedOprIdx) { // NOLINT:function pointer
     AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[ParsedOprIdx]);
     if (isRegOrImmWithInputMods(Desc, Inst.getNumOperands())) {
       Op.addRegOrImmWithFPInputModsOperands(Inst, 2);
@@ -10449,7 +10458,7 @@ void AMDGPUAsmParser::cvtVOP3DPP(MCInst &Inst, const OperandVector &Operands,
     ((AMDGPUOperand &)*Operands[I++]).addRegOperands(Inst, 1);
   }
 
-  int Fi = 0;
+  int64_t Fi = 0;
   int VdstInIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vdst_in);
   bool IsVOP3CvtSrDpp = Opc == AMDGPU::V_CVT_SR_BF8_F32_gfx12_e64_dpp8_gfx12 ||
                         Opc == AMDGPU::V_CVT_SR_BF8_F32_gfx12_e64_dpp8_gfx13 ||
@@ -10460,7 +10469,7 @@ void AMDGPUAsmParser::cvtVOP3DPP(MCInst &Inst, const OperandVector &Operands,
                         Opc == AMDGPU::V_CVT_SR_FP8_F32_gfx12_e64_dpp_gfx12 ||
                         Opc == AMDGPU::V_CVT_SR_FP8_F32_gfx12_e64_dpp_gfx13;
 
-  for (unsigned E = Operands.size(); I != E; ++I) {
+  for (size_t E = Operands.size(); I != E; ++I) {
 
     if (IsMAC) {
       int NumOperands = Inst.getNumOperands();
@@ -10565,8 +10574,8 @@ void AMDGPUAsmParser::cvtDPP(MCInst &Inst, const OperandVector &Operands,
     ((AMDGPUOperand &)*Operands[I++]).addRegOperands(Inst, 1);
   }
 
-  int Fi = 0;
-  for (unsigned E = Operands.size(); I != E; ++I) {
+  int64_t Fi = 0;
+  for (size_t E = Operands.size(); I != E; ++I) {
     auto TiedTo =
         Desc.getOperandConstraint(Inst.getNumOperands(), MCOI::TIED_TO);
     if (TiedTo != -1) {
@@ -10683,7 +10692,7 @@ void AMDGPUAsmParser::cvtSDWA(MCInst &Inst, const OperandVector &Operands,
     ((AMDGPUOperand &)*Operands[I++]).addRegOperands(Inst, 1);
   }
 
-  for (unsigned E = Operands.size(); I != E; ++I) {
+  for (size_t E = Operands.size(); I != E; ++I) {
     AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[I]);
     if (SkipVcc && !SkippedVcc && Op.isReg() &&
         (Op.getReg() == AMDGPU::VCC || Op.getReg() == AMDGPU::VCC_LO)) {
