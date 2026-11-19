@@ -20,6 +20,7 @@ void test_braceless(int x) {
   if (x)
     static int foo = 30;
   else
+  arm_label:
     static int foo = 40;
   if (x)
 #line 100

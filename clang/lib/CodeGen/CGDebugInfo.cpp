@@ -5399,7 +5399,7 @@ void CGDebugInfo::EmitLexicalBlockStart(CGBuilderTy &Builder,
       CGM.getLLVMContext(), getLineNumber(Loc), getColumnNumber(Loc),
       LexicalBlockStack.back(), CurInlinedAt));
 
-  if (DebugKind <= llvm::codegenoptions::DebugLineTablesOnly)
+  if (!CGM.getCodeGenOpts().hasReducedDebugInfo())
     return;
 
   // Create a new lexical block and push it on the stack.
@@ -5413,7 +5413,7 @@ void CGDebugInfo::EmitLexicalBlockEnd(CGBuilderTy &Builder,
   // Provide an entry in the line table for the end of the block.
   EmitLocation(Builder, Loc);
 
-  if (DebugKind <= llvm::codegenoptions::DebugLineTablesOnly)
+  if (!CGM.getCodeGenOpts().hasReducedDebugInfo())
     return;
 
   LexicalBlockStack.pop_back();
