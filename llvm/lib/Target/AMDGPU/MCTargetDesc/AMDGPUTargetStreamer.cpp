@@ -209,7 +209,7 @@ void AMDGPUTargetAsmStreamer::EmitAMDGPUSymbolType(StringRef SymbolName,
   }
 }
 
-void AMDGPUTargetAsmStreamer::emitAMDGPULDS(MCSymbol *Symbol, unsigned Size,
+void AMDGPUTargetAsmStreamer::emitAMDGPULDS(MCSymbol *Symbol, uint64_t Size,
                                             Align Alignment) {
   OS << "\t.amdgpu_lds " << Symbol->getName() << ", " << Size << ", "
      << Alignment.value() << '\n';
@@ -946,7 +946,7 @@ void AMDGPUTargetELFStreamer::EmitAMDGPUSymbolType(StringRef SymbolName,
   Symbol->setType(Type);
 }
 
-void AMDGPUTargetELFStreamer::emitAMDGPULDS(MCSymbol *Symbol, unsigned Size,
+void AMDGPUTargetELFStreamer::emitAMDGPULDS(MCSymbol *Symbol, uint64_t Size,
                                             Align Alignment) {
   auto *SymbolELF = static_cast<MCSymbolELF *>(Symbol);
   SymbolELF->setType(ELF::STT_OBJECT);
