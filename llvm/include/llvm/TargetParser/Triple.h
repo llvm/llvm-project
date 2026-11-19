@@ -312,6 +312,7 @@ public:
     KFreeBSD,
     Linux,
     Lv2, // PS3
+    Xbox360,
     MacOSX,
     Managarm,
     NetBSD,
@@ -1156,6 +1157,12 @@ public:
   /// Tests whether the target is 64-bit PowerPC (little and big endian).
   bool isPPC64() const {
     return getArch() == Triple::ppc64 || getArch() == Triple::ppc64le;
+  }
+
+  /// Tests whether the target uses the PPC64 ISA with 32-bit pointers.
+  bool isPPC64ILP32ABI() const {
+    return getArch() == Triple::ppc64 &&
+           (getOS() == Triple::Lv2 || getOS() == Triple::Xbox360);
   }
 
   /// Tests whether the target 64-bit PowerPC big endian ABI is ELFv2.
