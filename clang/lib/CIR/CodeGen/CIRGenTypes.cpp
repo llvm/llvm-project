@@ -763,6 +763,13 @@ bool CIRGenTypes::isZeroInitializable(const RecordDecl *rd) {
   return getCIRGenRecordLayout(rd).isZeroInitializable();
 }
 
+bool CIRGenTypes::isPointerZeroInitializable(clang::QualType t) {
+  assert((t->isAnyPointerType() || t->isBlockPointerType() ||
+          t->isNullPtrType()) &&
+         "Invalid type");
+  return isZeroInitializable(t);
+}
+
 cir::CallingConv
 CIRGenTypes::clangCallConvToCIRCallConv(clang::CallingConv cc) {
   switch (cc) {
