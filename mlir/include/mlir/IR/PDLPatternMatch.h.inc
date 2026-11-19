@@ -14,8 +14,8 @@
 #if MLIR_ENABLE_PDL_IN_PATTERNMATCH
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
-#include "llvm/ADT/TypeSwitch.h"
 
+class TypeConverter;
 namespace mlir {
 //===----------------------------------------------------------------------===//
 // PDL Patterns
@@ -520,7 +520,6 @@ template <typename T>
 struct ProcessPDLValue<T, std::enable_if_t<std::is_base_of<OpState, T>::value>>
     : public ProcessDerivedPDLValue<T, Operation *> {
   static T processAsArg(Operation *value) { return cast<T>(value); }
-  using ProcessDerivedPDLValue<T, Operation *>::processAsArg;
 };
 
 //===----------------------------------------------------------------------===//
@@ -642,8 +641,8 @@ void assertArgs(PatternRewriter &rewriter, ArrayRef<PDLValue> values,
 
 /// Store a single result within the result list.
 template <typename T>
-LogicalResult processResults(PatternRewriter &rewriter, PDLResultList &results,
-                             T &&value) {
+static LogicalResult processResults(PatternRewriter &rewriter,
+                                    PDLResultList &results, T &&value) {
   ProcessPDLValue<T>::processAsResult(rewriter, results,
                                       std::forward<T>(value));
   return success();
@@ -651,8 +650,9 @@ LogicalResult processResults(PatternRewriter &rewriter, PDLResultList &results,
 
 /// Store a std::pair<> as individual results within the result list.
 template <typename T1, typename T2>
-LogicalResult processResults(PatternRewriter &rewriter, PDLResultList &results,
-                             std::pair<T1, T2> &&pair) {
+static LogicalResult processResults(PatternRewriter &rewriter,
+                                    PDLResultList &results,
+                                    std::pair<T1, T2> &&pair) {
   if (failed(processResults(rewriter, results, std::move(pair.first))) ||
       failed(processResults(rewriter, results, std::move(pair.second))))
     return failure();
@@ -661,8 +661,9 @@ LogicalResult processResults(PatternRewriter &rewriter, PDLResultList &results,
 
 /// Store a std::tuple<> as individual results within the result list.
 template <typename... Ts>
-LogicalResult processResults(PatternRewriter &rewriter, PDLResultList &results,
-                             std::tuple<Ts...> &&tuple) {
+static LogicalResult processResults(PatternRewriter &rewriter,
+                                    PDLResultList &results,
+                                    std::tuple<Ts...> &&tuple) {
   auto applyFn = [&](auto &&...args) {
     return (succeeded(processResults(rewriter, results, std::move(args))) &&
             ...);
@@ -677,8 +678,9 @@ inline LogicalResult processResults(PatternRewriter &rewriter,
   return result;
 }
 template <typename T>
-LogicalResult processResults(PatternRewriter &rewriter, PDLResultList &results,
-                             FailureOr<T> &&result) {
+static LogicalResult processResults(PatternRewriter &rewriter,
+                                    PDLResultList &results,
+                                    FailureOr<T> &&result) {
   if (failed(result))
     return failure();
   return processResults(rewriter, results, std::move(*result));
@@ -913,6 +915,17 @@ public:
     return rewriteFunctions;
   }
 
+  /// Register a type converter for PDLL dialect conversion patterns
+  void registerTypeConverter(StringRef name, const TypeConverter *converter) {
+    typeConverters[name] = static_cast<const void *>(converter);
+  }
+
+  /// Return the set of registered type converters
+  const llvm::StringMap<const void *> &getTypeConverters() const {
+    return typeConverters;
+  }
+
+
   /// Return the set of the registered pattern configs.
   SmallVector<std::unique_ptr<PDLPatternConfigSet>> takeConfigs() {
     return std::move(configs);
@@ -943,6 +956,8 @@ private:
   /// The external functions referenced from within the PDL module.
   llvm::StringMap<PDLConstraintFunction> constraintFunctions;
   llvm::StringMap<PDLRewriteFunction> rewriteFunctions;
+  /// Type converters for PDLL dialect conversion
+  llvm::StringMap<const void *> typeConverters;
 };
 } // namespace mlir
 
