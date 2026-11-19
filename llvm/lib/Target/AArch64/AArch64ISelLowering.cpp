@@ -8102,14 +8102,6 @@ SDValue AArch64TargetLowering::LowerStore128(SDValue Op,
         StoreNode->getMergedOrdering() == AtomicOrdering::Unordered ||
         StoreNode->getMergedOrdering() == AtomicOrdering::Monotonic);
   }
-  bool IsStoreRelease = isReleaseOrStronger(StoreNode->getMergedOrdering());
-  if (StoreNode->isAtomic()) {
-    assert(Subtarget->hasLSE2());
-    assert(
-        ((Subtarget->hasRCPC3() || Subtarget->hasLSCP()) && IsStoreRelease) ||
-        StoreNode->getMergedOrdering() == AtomicOrdering::Unordered ||
-        StoreNode->getMergedOrdering() == AtomicOrdering::Monotonic);
-  }
 
   SDValue Value = (StoreNode->getOpcode() == ISD::STORE ||
                    StoreNode->getOpcode() == ISD::ATOMIC_STORE)
