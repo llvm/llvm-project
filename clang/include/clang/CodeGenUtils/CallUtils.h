@@ -32,7 +32,9 @@ enum class EvaluationOrder {
   ///! Language semantics require left-to-right evaluation.
   ForceLeftToRight,
   ///! Language semantics require right-to-left evaluation.
-  ForceRightToLeft
+  ForceRightToLeft,
+  ///! Language semantics require the first argument before the others.
+  ForceFirstBeforeRest
 };
 
 /// Returns the argument evaluation order the language requires for the given
