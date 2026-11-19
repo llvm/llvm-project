@@ -206,7 +206,11 @@ for.end:                                          ; preds = %for.cond.for.end_cr
 
 declare i32 @dummy(ptr, ptr)
 
-; A case where zext should not be eliminated when its operands could only be extended by sext.
+; TODO: the zext can be eliminated.
+; %i.02 starts at 0 and increments with nsw.
+; There's the guard M >s 0, so %add3 = %i.02 + %M (nsw)
+; is non-negative on every iteration and so
+; zext(%add3) == sext(%add3) == wide add.
 define i32 @foo3(i32 %M) {
 ; CHECK-LABEL: @foo3(
 ; CHECK-NEXT:  entry:
@@ -242,6 +246,75 @@ define i32 @foo3(i32 %M) {
 entry:
   %cmp1 = icmp slt i32 0, %M
   br i1 %cmp1, label %for.body.lr.ph, label %for.end
+
+for.body.lr.ph:                                   ; preds = %entry
+  br label %for.body
+
+for.body:                                         ; preds = %for.body.lr.ph, %for.inc
+  %i.02 = phi i32 [ 0, %for.body.lr.ph ], [ %inc, %for.inc ]
+  %idxprom = sext i32 %i.02 to i64
+  %arrayidx = getelementptr inbounds [100 x i32], ptr @a, i64 0, i64 %idxprom
+  %0 = load i32, ptr %arrayidx, align 4
+  %idxprom1 = sext i32 %i.02 to i64
+  %arrayidx2 = getelementptr inbounds [100 x i32], ptr @b, i64 0, i64 %idxprom1
+  %1 = load i32, ptr %arrayidx2, align 4
+  %add = add nsw i32 %0, %1
+  %add3 = add nsw i32 %i.02, %M
+  %idxprom4 = zext i32 %add3 to i64
+  %arrayidx5 = getelementptr inbounds [100 x i32], ptr @a, i64 0, i64 %idxprom4
+  store i32 %add, ptr %arrayidx5, align 4
+  br label %for.inc
+
+for.inc:                                          ; preds = %for.body
+  %inc = add nsw i32 %i.02, 1
+  %cmp = icmp slt i32 %inc, %M
+  br i1 %cmp, label %for.body, label %for.cond.for.end_crit_edge
+
+for.cond.for.end_crit_edge:                       ; preds = %for.inc
+  br label %for.end
+
+for.end:                                          ; preds = %for.cond.for.end_crit_edge, %entry
+  %call = call i32 @dummy(ptr @a, ptr @b)
+  ret i32 0
+}
+
+; %M may be negative, so %add3 = %i.02 + %M may be negative and
+; zext(%add3) != sext(%add3), so we must truncate the wide add.
+; trunc + zext must stay.
+define i32 @foo3_neg(i32 %M) {
+; CHECK-LABEL: @foo3_neg(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_BODY_LR_PH:%.*]]
+; CHECK:       for.body.lr.ph:
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[M:%.*]] to i64
+; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[M]], i32 1)
+; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[SMAX]] to i64
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ], [ 0, [[FOR_BODY_LR_PH]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [100 x i32], ptr @a, i64 0, i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [100 x i32], ptr @b, i64 0, i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = add nsw i64 [[INDVARS_IV]], [[TMP0]]
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc nsw i64 [[TMP3]] to i32
+; CHECK-NEXT:    [[IDXPROM4:%.*]] = zext i32 [[TMP4]] to i64
+; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds [100 x i32], ptr @a, i64 0, i64 [[IDXPROM4]]
+; CHECK-NEXT:    store i32 [[ADD]], ptr [[ARRAYIDX5]], align 4
+; CHECK-NEXT:    br label [[FOR_INC]]
+; CHECK:       for.inc:
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_COND_FOR_END_CRIT_EDGE:%.*]]
+; CHECK:       for.cond.for.end_crit_edge:
+; CHECK-NEXT:    br label [[FOR_END:%.*]]
+; CHECK:       for.end:
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @dummy(ptr @a, ptr @b)
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  br label %for.body.lr.ph
 
 for.body.lr.ph:                                   ; preds = %entry
   br label %for.body
