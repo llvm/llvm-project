@@ -67,6 +67,7 @@ enum {
   NT_AUXV = 11,
   NT_REGS = 20,
   NT_FPREGS = 21,
+  NT_PACMASK = 24,
 };
 }
 
@@ -246,6 +247,7 @@ constexpr RegsetDesc AARCH64_ZT_Desc[] = {
 
 constexpr RegsetDesc AARCH64_PAC_Desc[] = {
     {llvm::Triple::Linux, llvm::Triple::aarch64, llvm::ELF::NT_ARM_PAC_MASK},
+    {llvm::Triple::OpenBSD, llvm::Triple::aarch64, OPENBSD::NT_PACMASK},
 };
 
 constexpr RegsetDesc AARCH64_TLS_Desc[] = {
