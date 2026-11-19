@@ -75,6 +75,22 @@ TEST(StdlibTest, All) {
                           stdlib::Header::named("<cstdio>")));
   EXPECT_EQ(stdlib::Symbol::named("std::", "size_t")->header(),
             stdlib::Header::named("<cstddef>"));
+  EXPECT_THAT(
+      stdlib::Symbol::named("", "size_t")->headers(),
+      ElementsAre(
+          stdlib::Header::named("<stddef.h>"),
+          stdlib::Header::named("<stdlib.h>"),
+          stdlib::Header::named("<string.h>"),
+          stdlib::Header::named("<wchar.h>"),
+          stdlib::Header::named("<uchar.h>"), stdlib::Header::named("<time.h>"),
+          stdlib::Header::named("<stdio.h>"),
+          stdlib::Header::named("<cstddef>"),
+          stdlib::Header::named("<cstdlib>"),
+          stdlib::Header::named("<cstring>"), stdlib::Header::named("<cwchar>"),
+          stdlib::Header::named("<cuchar>"), stdlib::Header::named("<ctime>"),
+          stdlib::Header::named("<cstdio>")));
+  EXPECT_EQ(stdlib::Symbol::named("", "size_t")->header(),
+            stdlib::Header::named("<stddef.h>"));
 
   EXPECT_THAT(stdlib::Header::all(), Contains(*VectorH));
   EXPECT_THAT(stdlib::Symbol::all(), Contains(*Vector));
@@ -102,8 +118,8 @@ TEST(StdlibTest, Experimental) {
 TEST(StdlibTest, CCompat) {
   EXPECT_THAT(
       stdlib::Symbol::named("", "int16_t", stdlib::Lang::CXX)->headers(),
-      ElementsAre(stdlib::Header::named("<cstdint>"),
-                  stdlib::Header::named("<stdint.h>")));
+      ElementsAre(stdlib::Header::named("<stdint.h>"),
+                  stdlib::Header::named("<cstdint>")));
   EXPECT_THAT(
       stdlib::Symbol::named("std::", "int16_t", stdlib::Lang::CXX)->headers(),
       ElementsAre(stdlib::Header::named("<cstdint>")));
