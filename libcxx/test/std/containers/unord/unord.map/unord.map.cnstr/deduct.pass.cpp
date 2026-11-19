@@ -363,9 +363,8 @@ int main(int, char**) {
                               !std::is_same_v<UI, SizeType>);
 
                 // (init_list, size, alloc)
-                static_assert(
-                    SFINAEs_away_initializer_list<std::unordered_map, P, OnlyConvertibleTo<UI>, Alloc> ==
-                    !std::is_same_v<UI, SizeType>);
+                static_assert(SFINAEs_away_initializer_list<std::unordered_map, P, OnlyConvertibleTo<UI>, Alloc> ==
+                              !std::is_same_v<UI, SizeType>);
 
                 // (init_list, size, hash, alloc)
                 static_assert(
@@ -387,7 +386,7 @@ int main(int, char**) {
 #endif
                 // (iter, iter, size, alloc) - runtime check
                 if constexpr (std::is_same_v<UI, SizeType>) {
-                  const P arr[] = {{1, 1}, {2, 2}, {1, 1}, {INT_MAX, 1}, {3, 1}};
+                  const P arr[]       = {{1, 1}, {2, 2}, {1, 1}, {INT_MAX, 1}, {3, 1}};
                   const PC expected[] = {{1, 1}, {2, 2}, {3, 1}, {INT_MAX, 1}};
                   std::unordered_map m(std::begin(arr), std::end(arr), OnlyConvertibleTo<SizeType>{}, Alloc());
                   ASSERT_SAME_TYPE(decltype(m), std::unordered_map<int, long, Hash, std::equal_to<int>, Alloc>);

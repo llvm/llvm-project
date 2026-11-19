@@ -284,7 +284,7 @@ int main(int, char**) {
     // Test multiple allocators with different size_types (unsigned int and size_t)
     types::for_each(
         AllocList(), types::apply_type_identity{[](auto alloc_id) {
-          using Alloc = typename decltype(alloc_id)::type;
+          using Alloc    = typename decltype(alloc_id)::type;
           using SizeType = typename std::unordered_set<int, Hash, std::equal_to<int>, Alloc>::size_type;
 
           // Ensure deduction guides only accept the exact SizeType and SFINAE away for other integer types.
@@ -312,8 +312,9 @@ int main(int, char**) {
                 using Range = std::array<int, 0>;
 
                 // (from_range, range, size, alloc)
-                static_assert(SFINAEs_away<std::unordered_set, std::from_range_t, Range, OnlyConvertibleTo<UI>, Alloc> ==
-                              !std::is_same_v<UI, SizeType>);
+                static_assert(
+                    SFINAEs_away<std::unordered_set, std::from_range_t, Range, OnlyConvertibleTo<UI>, Alloc> ==
+                    !std::is_same_v<UI, SizeType>);
 
                 // (from_range, range, size, hash, alloc)
                 static_assert(
@@ -322,7 +323,7 @@ int main(int, char**) {
 #endif
                 // (iter, iter, size, alloc) - runtime check
                 if constexpr (std::is_same_v<UI, SizeType>) {
-                  const int arr[] = {1, 2, 1, INT_MAX, 3};
+                  const int arr[]      = {1, 2, 1, INT_MAX, 3};
                   const int expected[] = {1, 2, 3, INT_MAX};
                   std::unordered_set s(std::begin(arr), std::end(arr), OnlyConvertibleTo<SizeType>{}, Alloc());
                   ASSERT_SAME_TYPE(decltype(s), std::unordered_set<int, std::hash<int>, std::equal_to<int>, Alloc>);
