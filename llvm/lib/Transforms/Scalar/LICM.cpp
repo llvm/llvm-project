@@ -1406,8 +1406,8 @@ static bool sink(Instruction &I, const LICMDependencies &Deps,
     // The PHI must be trivially replaceable.
     Instruction *New = sinkThroughTriviallyReplaceablePHI(
         PN, &I, &Deps.LI, SunkCopies, &Deps.SafetyInfo, CurLoop, Deps.MSSAU);
-    // As we sink the instruction out of the BB, drop its debug location.
-    New->dropLocation();
+    // As we sink the instruction out of the BB, drop its source position.
+    New->dropSourcePositionKeepIRLayers();
     PN->replaceAllUsesWith(New);
     eraseInstruction(*PN, Deps);
     Changed = true;
@@ -1453,7 +1453,7 @@ static void hoist(Instruction &I, const DominatorTree *DT, const Loop *CurLoop,
     moveInstructionBefore(I, Dest->getTerminator()->getIterator(), *SafetyInfo,
                           MSSAU, SE);
 
-  I.updateLocationAfterHoist();
+  I.dropSourcePositionKeepIRLayers();
 
   if (isa<LoadInst>(I))
     ++NumMovedLoads;
