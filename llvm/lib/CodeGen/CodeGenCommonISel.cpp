@@ -14,6 +14,7 @@
 #include "llvm/CodeGen/CodeGenCommonISel.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
