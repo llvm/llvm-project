@@ -62,7 +62,7 @@ template <typename T> class span {
     } else {
       T *end_ptr = end;
       assert_precondition(first <= end_ptr);
-      return first == end_ptr ? 0 : static_cast<size_t>(end_ptr - first);
+      return static_cast<size_t>(end_ptr - first);
     }
   }
 
