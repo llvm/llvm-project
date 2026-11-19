@@ -27,5 +27,6 @@ int main(int argc, char** argv) {
     printf("global=%d\n", global);
 
     watch_local();
+    local += 1; // Write to main's 'local' after watch_local returns.
     reuse_stack_after_return();
 }
