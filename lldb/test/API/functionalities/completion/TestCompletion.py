@@ -90,6 +90,32 @@ class CommandLineCompletionTestCase(TestBase):
         self.complete_from_to("frame variable te", "frame variable temp")
         self.complete_from_to("frame variable t.", "frame variable t.x")
 
+    def test_completion_in_execution_context(self):
+        """Test that completion uses the given frame, without selecting it."""
+        self.build()
+        _, process, thread, _ = lldbutil.run_to_name_breakpoint(self, "Bar")
+        main_frame_ctx = lldb.SBExecutionContext(thread.GetFrameAtIndex(1))
+
+        self.complete_from_to(
+            "frame variable ptr_f", "frame variable ptr_fooo", exe_ctx=main_frame_ctx
+        )
+        self.completions_contain(
+            "expression -- ptr_f", ["ptr_fooo"], exe_ctx=main_frame_ctx
+        )
+
+        # Without a context, the selected frame (Bar's) is used.
+        self.completions_match(
+            "frame variable ptr_f", [], exe_ctx=lldb.SBExecutionContext()
+        )
+        self.assertEqual(thread.GetSelectedFrame().GetFrameID(), 0)
+
+        # A context whose process has gone doesn't crash and completes nothing.
+        process.Continue()
+        self.assertState(process.GetState(), lldb.eStateExited)
+        self.completions_contain(
+            "frame variable ", ["ptr_fooo"], match=False, exe_ctx=main_frame_ctx
+        )
+
     def test_process_attach_dash_dash_con(self):
         """Test that 'process attach --con' completes to 'process attach --continue '."""
         self.complete_from_to("process attach --con", "process attach --continue ")

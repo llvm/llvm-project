@@ -2407,6 +2407,13 @@ void CommandInterpreter::HandleCompletion(CompletionRequest &request) {
   HandleCompletionMatches(request);
 }
 
+void CommandInterpreter::HandleCompletion(
+    CompletionRequest &request, const ExecutionContext &override_context) {
+  OverrideExecutionContext(override_context);
+  HandleCompletion(request);
+  RestoreExecutionContext();
+}
+
 std::optional<std::string>
 CommandInterpreter::GetAutoSuggestionForCommand(llvm::StringRef line) {
   if (line.empty())
