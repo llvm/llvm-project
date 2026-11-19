@@ -131,8 +131,11 @@ public:
   bool shouldFormOverflowOp(unsigned Opcode, EVT VT,
                             bool MathUsed) const override {
     // Form add and sub with overflow intrinsics regardless of any extra
-    // users of the math result.
-    return VT == MVT::i32 || VT == MVT::i64 || VT == MVT::i128;
+    // users of the math result.  When i128 is legal in vector registers,
+    // our own matching in combineToAddSubCarry gives better results, so
+    // only form overflow ops for i128 when it is not a legal type.
+    return VT == MVT::i32 || VT == MVT::i64 ||
+           (VT == MVT::i128 && !isTypeLegal(VT));
   }
 
   bool shouldConsiderGEPOffsetSplit() const override { return true; }
@@ -416,6 +419,8 @@ private:
   SDValue combineBR_CCMASK(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineSELECT_CCMASK(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineGET_CCMASK(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue combineToAddSubCarry(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue combineAddSubCarry(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineShiftToMulAddHigh(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineMUL(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineIntDIVREM(SDNode *N, DAGCombinerInfo &DCI) const;

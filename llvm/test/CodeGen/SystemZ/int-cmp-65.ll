@@ -258,3 +258,44 @@ define i128 @i128_addc_xor_inv(i128 %a, i128 %b) {
   %ext = zext i1 %cmp to i128
   ret i128 %ext
 }
+
+define i128 @i128_addc_invout(i128 %a, i128 %b) {
+; BASELINE-LABEL: i128_addc_invout:
+; BASELINE:       # %bb.0:
+; BASELINE-NEXT:    stmg %r14, %r15, 112(%r15)
+; BASELINE-NEXT:    .cfi_offset %r14, -48
+; BASELINE-NEXT:    .cfi_offset %r15, -40
+; BASELINE-NEXT:    lg %r5, 0(%r4)
+; BASELINE-NEXT:    lg %r14, 0(%r3)
+; BASELINE-NEXT:    lg %r1, 8(%r3)
+; BASELINE-NEXT:    clgr %r14, %r5
+; BASELINE-NEXT:    ipm %r0
+; BASELINE-NEXT:    clg %r1, 8(%r4)
+; BASELINE-NEXT:    ipm %r1
+; BASELINE-NEXT:    cgrjlh %r14, %r5, .LBB8_2
+; BASELINE-NEXT:  # %bb.1:
+; BASELINE-NEXT:    risbg %r0, %r1, 63, 191, 35
+; BASELINE-NEXT:    j .LBB8_3
+; BASELINE-NEXT:  .LBB8_2:
+; BASELINE-NEXT:    risbg %r0, %r0, 63, 191, 35
+; BASELINE-NEXT:  .LBB8_3:
+; BASELINE-NEXT:    llgfr %r0, %r0
+; BASELINE-NEXT:    stg %r0, 8(%r2)
+; BASELINE-NEXT:    mvghi 0(%r2), 0
+; BASELINE-NEXT:    lmg %r14, %r15, 112(%r15)
+; BASELINE-NEXT:    br %r14
+;
+; Z13-LABEL: i128_addc_invout:
+; Z13:       # %bb.0:
+; Z13-NEXT:    vl %v0, 0(%r3), 3
+; Z13-NEXT:    vl %v1, 0(%r4), 3
+; Z13-NEXT:    larl %r1, .LCPI8_0
+; Z13-NEXT:    vscbiq %v0, %v1, %v0
+; Z13-NEXT:    vl %v1, 0(%r1), 3
+; Z13-NEXT:    vx %v0, %v0, %v1
+; Z13-NEXT:    vst %v0, 0(%r2), 3
+; Z13-NEXT:    br %r14
+  %cmp = icmp ugt i128 %a, %b
+  %ext = zext i1 %cmp to i128
+  ret i128 %ext
+}
