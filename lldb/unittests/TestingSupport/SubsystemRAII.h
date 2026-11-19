@@ -83,7 +83,6 @@ template <typename... T> class SubsystemRAII {};
 ///   @endcode
 template <typename T, typename... Ts> class SubsystemRAII<T, Ts...> {
   detail::SubsystemRAIICase<T> CurrentSubsystem;
-  SubsystemRAII<Ts...> RemainingSubsystems;
 };
 } // namespace lldb_private
 
