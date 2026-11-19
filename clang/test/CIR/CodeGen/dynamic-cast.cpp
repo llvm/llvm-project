@@ -22,7 +22,7 @@ Derived *ptr_cast(Base *b) {
 }
 
 // CIR-BEFORE: cir.func {{.*}} @_Z8ptr_castP4Base
-// CIR-BEFORE:   %{{.+}} = cir.dyn_cast ptr %{{.+}} : !cir.ptr<!rec_Base> -> !cir.ptr<!rec_Derived> #dyn_cast_info__ZTI4Base__ZTI7Derived
+// CIR-BEFORE:   %{{.+}} = cir.dyn_cast ptr #dyn_cast_info__ZTI4Base__ZTI7Derived %{{.+}} : !cir.ptr<!rec_Base> -> !cir.ptr<!rec_Derived>
 // CIR-BEFORE: }
 
 //      CIR-AFTER: cir.func {{.*}} @_Z8ptr_castP4Base
@@ -70,7 +70,7 @@ Derived &ref_cast(Base &b) {
 }
 
 // CIR-BEFORE: cir.func {{.*}} @_Z8ref_castR4Base
-// CIR-BEFORE:   %{{.+}} = cir.dyn_cast ref %{{.+}} : !cir.ptr<!rec_Base> -> !cir.ptr<!rec_Derived> #dyn_cast_info__ZTI4Base__ZTI7Derived
+// CIR-BEFORE:   %{{.+}} = cir.dyn_cast ref #dyn_cast_info__ZTI4Base__ZTI7Derived %{{.+}} : !cir.ptr<!rec_Base> -> !cir.ptr<!rec_Derived>
 // CIR-BEFORE: }
 
 //      CIR-AFTER: cir.func {{.*}} @_Z8ref_castR4Base
@@ -166,7 +166,7 @@ const Derived *const_ptr_cast(const Base *b) {
 }
 
 // CIR-BEFORE: cir.func {{.*}} @_Z14const_ptr_castPK4Base
-// CIR-BEFORE:   %{{.+}} = cir.dyn_cast ptr %{{.+}} : !cir.ptr<!rec_Base> -> !cir.ptr<!rec_Derived> #dyn_cast_info__ZTI4Base__ZTI7Derived
+// CIR-BEFORE:   %{{.+}} = cir.dyn_cast ptr #dyn_cast_info__ZTI4Base__ZTI7Derived %{{.+}} : !cir.ptr<!rec_Base> -> !cir.ptr<!rec_Derived>
 // CIR-BEFORE: }
 
 // LLVM: define {{.*}} @_Z14const_ptr_castPK4Base
@@ -182,7 +182,7 @@ const Derived &const_ref_cast(const Base &b) {
 }
 
 // CIR-BEFORE: cir.func {{.*}} @_Z14const_ref_castRK4Base
-// CIR-BEFORE:   %{{.+}} = cir.dyn_cast ref %{{.+}} : !cir.ptr<!rec_Base> -> !cir.ptr<!rec_Derived> #dyn_cast_info__ZTI4Base__ZTI7Derived
+// CIR-BEFORE:   %{{.+}} = cir.dyn_cast ref #dyn_cast_info__ZTI4Base__ZTI7Derived %{{.+}} : !cir.ptr<!rec_Base> -> !cir.ptr<!rec_Derived>
 // CIR-BEFORE: }
 
 // LLVM: define {{.*}} ptr @_Z14const_ref_castRK4Base
