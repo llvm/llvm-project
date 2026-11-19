@@ -2793,11 +2793,55 @@ public:
   ~CommandObjectTargetModulesDump() override = default;
 };
 
+/// Make \p symbol_fspec the symbol file of \p module_sp. On failure the module
+/// is left without a symbol file spec.
+static bool SetModuleSymbolFile(Target &target, const ModuleSP &module_sp,
+                                const FileSpec &symbol_fspec,
+                                CommandReturnObject &result) {
+  // The module has not yet created its symbol vendor, we can just give
+  // the existing target module the symfile path to use for when it
+  // decides to create it!
+  module_sp->SetSymbolFileFileSpec(symbol_fspec);
+
+  SymbolFile *symbol_file =
+      module_sp->GetSymbolFile(true, &result.GetErrorStream());
+  if (symbol_file) {
+    ObjectFile *object_file = symbol_file->GetObjectFile();
+    if (object_file && object_file->GetFileSpec() == symbol_fspec) {
+      // Provide feedback that the symfile has been successfully added.
+      result.AppendMessageWithFormatv(
+          "symbol file '{0}' has been added to '{1}'", symbol_fspec.GetPath(),
+          module_sp->GetFileSpec().GetPath());
+
+      // Let clients know something changed in the module if it is
+      // currently loaded
+      ModuleList module_list;
+      module_list.Append(module_sp);
+      target.SymbolsDidLoad(module_list);
+
+      // Make sure we load any scripting resources that may be embedded
+      // in the debug info files in case the platform supports that.
+      std::list<Status> errors;
+      module_list.LoadScriptingResourcesInTarget(&target, errors);
+      for (const auto &err : errors)
+        result.AppendWarning(err.AsCString());
+
+      result.SetStatus(eReturnStatusSuccessFinishResult);
+      return true;
+    }
+  }
+  // Clear the symbol file spec if anything went wrong
+  module_sp->SetSymbolFileFileSpec(FileSpec());
+  return false;
+}
+
 class CommandObjectTargetModulesAdd : public CommandObjectParsed {
 public:
   CommandObjectTargetModulesAdd(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "target modules add",
-                            "Add a new module to the current target's modules.",
+                            "Add a new module to the current target's modules. "
+                            "A debug info file that matches a module in the "
+                            "target becomes that module's symbol file.",
                             "target modules add [<module>]",
                             eCommandRequiresTarget),
         m_symbol_file(LLDB_OPT_SET_1, false, "symfile", 's', 0,
@@ -2820,6 +2864,29 @@ protected:
   OptionGroupOptions m_option_group;
   OptionGroupUUID m_uuid_option_group;
   OptionGroupFile m_symbol_file;
+
+  /// Use a debug info file as the symbol file of the module it describes, so
+  /// the target does not end up with two modules for one binary.
+  static bool AddAsSymbolFile(Target &target, const ModuleSpec &module_spec,
+                              CommandReturnObject &result) {
+    // Not added to any module list: only the type and UUID are needed.
+    ModuleSP symfile_module_sp = std::make_shared<Module>(module_spec);
+    ObjectFile *objfile = symfile_module_sp->GetObjectFile();
+    if (!objfile || objfile->GetType() != ObjectFile::eTypeDebugInfo)
+      return false;
+
+    ModuleSpec uuid_spec;
+    uuid_spec.GetUUID() = symfile_module_sp->GetUUID();
+    if (!uuid_spec.GetUUID().IsValid())
+      return false;
+
+    ModuleSP module_sp = target.GetImages().FindFirstModule(uuid_spec);
+    if (!module_sp || module_sp->GetFileSpec() == module_spec.GetFileSpec())
+      return false;
+
+    return SetModuleSymbolFile(target, module_sp, module_spec.GetFileSpec(),
+                               result);
+  }
 
   void DoExecute(Args &args, CommandReturnObject &result) override {
     Target *target = GetTarget();
@@ -2897,6 +2964,10 @@ protected:
                 m_symbol_file.GetOptionValue().GetCurrentValue();
           if (!module_spec.GetArchitecture().IsValid())
             module_spec.GetArchitecture() = target->GetArchitecture();
+          if (AddAsSymbolFile(*target, module_spec, result)) {
+            flush = true;
+            continue;
+          }
           Status error;
           ModuleSP module_sp(target->GetOrCreateModule(
               module_spec, true /* notify */, &error));
@@ -4466,45 +4537,11 @@ protected:
       return false;
     }
 
-    if (matching_modules.GetSize() == 1) {
-      ModuleSP module_sp(matching_modules.GetModuleAtIndex(0));
-
-      // The module has not yet created its symbol vendor, we can just give
-      // the existing target module the symfile path to use for when it
-      // decides to create it!
-      module_sp->SetSymbolFileFileSpec(symbol_fspec);
-
-      SymbolFile *symbol_file =
-          module_sp->GetSymbolFile(true, &result.GetErrorStream());
-      if (symbol_file) {
-        ObjectFile *object_file = symbol_file->GetObjectFile();
-        if (object_file && object_file->GetFileSpec() == symbol_fspec) {
-          // Provide feedback that the symfile has been successfully added.
-          const FileSpec &module_fs = module_sp->GetFileSpec();
-          result.AppendMessageWithFormatv(
-              "symbol file '{0}' has been added to '{1}'", symfile_path,
-              module_fs.GetPath().c_str());
-
-          // Let clients know something changed in the module if it is
-          // currently loaded
-          ModuleList module_list;
-          module_list.Append(module_sp);
-          target->SymbolsDidLoad(module_list);
-
-          // Make sure we load any scripting resources that may be embedded
-          // in the debug info files in case the platform supports that.
-          std::list<Status> errors;
-          module_list.LoadScriptingResourcesInTarget(target, errors);
-          for (const auto &err : errors)
-            result.AppendWarning(err.AsCString());
-
-          flush = true;
-          result.SetStatus(eReturnStatusSuccessFinishResult);
-          return true;
-        }
-      }
-      // Clear the symbol file spec if anything went wrong
-      module_sp->SetSymbolFileFileSpec(FileSpec());
+    if (matching_modules.GetSize() == 1 &&
+        SetModuleSymbolFile(*target, matching_modules.GetModuleAtIndex(0),
+                            symbol_fspec, result)) {
+      flush = true;
+      return true;
     }
 
     StreamString ss_symfile_uuid;
