@@ -37,7 +37,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -61,34 +60,6 @@ STATISTIC(MissedConvertibleImmediateInstrs,
           "Number of compare-immediate instructions fed by constants");
 STATISTIC(NumRcRotatesConvertedToRcAnd,
           "Number of record-form rotates converted to record-form andi");
-
-static cl::opt<bool>
-    EnableCTRLoopAnal("ppc-ctr-loop-analysis",
-                      cl::desc("Enable analysis for CTR loops"), cl::init(true),
-                      cl::Hidden);
-
-static cl::opt<bool>
-    EnableCmpOpt("ppc-cmp-opt",
-                 cl::desc("Enable compare instruction optimization"),
-                 cl::init(true), cl::Hidden);
-
-static cl::opt<bool> VSXSelfCopyCrash(
-    "ppc-crash-on-vsx-self-copy",
-    cl::desc(
-        "Causes the backend to crash instead of generating a nop VSX copy"),
-    cl::Hidden);
-
-static cl::opt<bool>
-UseOldLatencyCalc("ppc-old-latency-calc", cl::Hidden,
-  cl::desc("Use the old (incorrect) instruction latency calculation"));
-
-static cl::opt<float>
-    FMARPFactor("ppc-fma-rp-factor", cl::Hidden, cl::init(1.5),
-                cl::desc("register pressure factor for the transformations."));
-
-static cl::opt<bool> EnableFMARegPressureReduction(
-    "ppc-fma-rp-reduction", cl::Hidden, cl::init(true),
-    cl::desc("enable register pressure reduce in machine combiner pass."));
 
 // Pin the vtable to this file.
 void PPCInstrInfo::anchor() {}
@@ -148,7 +119,7 @@ PPCInstrInfo::CreateTargetPostRAHazardRecognizer(const InstrItineraryData *II,
 unsigned PPCInstrInfo::getInstrLatency(const InstrItineraryData *ItinData,
                                        const MachineInstr &MI,
                                        unsigned *PredCost) const {
-  if (!ItinData || UseOldLatencyCalc)
+  if (!ItinData || Subtarget.getCLOpts().old_latency_calc)
     return PPCGenInstrInfo::getInstrLatency(ItinData, MI, PredCost);
 
   // The default implementation of getInstrLatency calls getStageLatency, but
@@ -603,7 +574,7 @@ void PPCInstrInfo::finalizeInsInstrs(
 bool PPCInstrInfo::shouldReduceRegisterPressure(
     const MachineBasicBlock *MBB, const RegisterClassInfo *RegClassInfo) const {
 
-  if (!EnableFMARegPressureReduction)
+  if (!Subtarget.getCLOpts().fma_rp_reduction)
     return false;
 
   // Currently, we only enable register pressure reducing in machine combiner
@@ -656,7 +627,7 @@ bool PPCInstrInfo::shouldReduceRegisterPressure(
 
   // Only reduce register pressure when pressure is high.
   return GetMBBPressure(MBB)[PPC::RegisterPressureSets::VSSRC] >
-         (float)VSSRCLimit * FMARPFactor;
+         (float)VSSRCLimit * Subtarget.getCLOpts().fma_rp_factor;
 }
 
 bool PPCInstrInfo::isLoadFromConstantPool(MachineInstr *I) const {
@@ -1310,7 +1281,7 @@ bool PPCInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
                LastInst.getOpcode() == PPC::BDNZ) {
       if (!LastInst.getOperand(0).isMBB())
         return true;
-      if (!EnableCTRLoopAnal)
+      if (!Subtarget.getCLOpts().ctr_loop_analysis)
         return true;
       TBB = LastInst.getOperand(0).getMBB();
       Cond.push_back(MachineOperand::CreateImm(1));
@@ -1321,7 +1292,7 @@ bool PPCInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
                LastInst.getOpcode() == PPC::BDZ) {
       if (!LastInst.getOperand(0).isMBB())
         return true;
-      if (!EnableCTRLoopAnal)
+      if (!Subtarget.getCLOpts().ctr_loop_analysis)
         return true;
       TBB = LastInst.getOperand(0).getMBB();
       Cond.push_back(MachineOperand::CreateImm(0));
@@ -1378,7 +1349,7 @@ bool PPCInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
     if (!SecondLastInst.getOperand(0).isMBB() ||
         !LastInst.getOperand(0).isMBB())
       return true;
-    if (!EnableCTRLoopAnal)
+    if (!Subtarget.getCLOpts().ctr_loop_analysis)
       return true;
     TBB = SecondLastInst.getOperand(0).getMBB();
     Cond.push_back(MachineOperand::CreateImm(1));
@@ -1392,7 +1363,7 @@ bool PPCInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
     if (!SecondLastInst.getOperand(0).isMBB() ||
         !LastInst.getOperand(0).isMBB())
       return true;
-    if (!EnableCTRLoopAnal)
+    if (!Subtarget.getCLOpts().ctr_loop_analysis)
       return true;
     TBB = SecondLastInst.getOperand(0).getMBB();
     Cond.push_back(MachineOperand::CreateImm(0));
@@ -1674,7 +1645,7 @@ void PPCInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     MCRegister SuperReg =
         RI.getMatchingSuperReg(DestReg, PPC::sub_64, &PPC::VSRCRegClass);
 
-    if (VSXSelfCopyCrash && SrcReg == SuperReg)
+    if (Subtarget.getCLOpts().crash_on_vsx_self_copy && SrcReg == SuperReg)
       llvm_unreachable("nop VSX copy");
 
     DestReg = SuperReg;
@@ -1683,7 +1654,7 @@ void PPCInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     MCRegister SuperReg =
         RI.getMatchingSuperReg(SrcReg, PPC::sub_64, &PPC::VSRCRegClass);
 
-    if (VSXSelfCopyCrash && DestReg == SuperReg)
+    if (Subtarget.getCLOpts().crash_on_vsx_self_copy && DestReg == SuperReg)
       llvm_unreachable("nop VSX copy");
 
     SrcReg = SuperReg;
@@ -2420,7 +2391,7 @@ bool PPCInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
                                         Register SrcReg2, int64_t Mask,
                                         int64_t Value,
                                         const MachineRegisterInfo *MRI) const {
-  if (!EnableCmpOpt)
+  if (!Subtarget.getCLOpts().cmp_opt)
     return false;
 
   int OpC = CmpInstr.getOpcode();

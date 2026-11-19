@@ -35,11 +35,6 @@ STATISTIC(NumPESpillVSR, "Number of spills to vector in prologue");
 STATISTIC(NumPEReloadVSR, "Number of reloads from vector in epilogue");
 STATISTIC(NumPrologProbed, "Number of prologues probed");
 
-static cl::opt<bool>
-EnablePEVectorSpills("ppc-enable-pe-vector-spills",
-                     cl::desc("Enable spills in prologue to vector registers."),
-                     cl::init(false), cl::Hidden);
-
 static unsigned computeReturnSaveOffset(const PPCSubtarget &STI) {
   if (STI.isAIXABI())
     return STI.isPPC64() ? 16 : 8;
@@ -2373,7 +2368,8 @@ bool PPCFrameLowering::assignCalleeSavedSpillSlots(
 
   // Early exit if cannot spill gprs to volatile vector registers.
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  if (!EnablePEVectorSpills || MFI.hasCalls() || !Subtarget.hasP9Vector())
+  if (!Subtarget.getCLOpts().enable_pe_vector_spills || MFI.hasCalls() ||
+      !Subtarget.hasP9Vector())
     return false;
 
   // Build a BitVector of VSRs that can be used for spilling GPRs.

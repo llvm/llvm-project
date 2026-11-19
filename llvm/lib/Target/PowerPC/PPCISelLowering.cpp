@@ -79,7 +79,6 @@
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CodeGen.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -102,66 +101,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "ppc-lowering"
 
-extern cl::opt<bool> EnablePPCGenScalarMASSEntries;
-
-static cl::opt<bool> EnableP10StoreForward(
-    "ppc-p10-store-forward",
-    cl::desc("enable P10 store forward-friendly conversion"), cl::init(true),
-    cl::Hidden);
-
-static cl::opt<bool> EnablePPCPreinc(
-    "ppc-preinc", cl::desc("enable preincrement load/store generation on PPC"),
-    cl::init(true), cl::Hidden);
-
-static cl::opt<bool>
-    EnableILPPref("ppc-ilp-pref",
-                  cl::desc("Set the node scheduling preference to ILP on PPC"),
-                  cl::init(true), cl::Hidden);
-
-static cl::opt<bool> EnablePPCUnaligned(
-    "ppc-unaligned", cl::desc("enable unaligned load/store generation on PPC"),
-    cl::init(true), cl::Hidden);
-
-static cl::opt<bool>
-    EnableSCO("ppc-sco", cl::desc("enable sibling call optimization on ppc"),
-              cl::init(true), cl::Hidden);
-
-static cl::opt<bool> EnableInnermostLoopAlign32(
-    "ppc-innermost-loop-align32",
-    cl::desc("Align innermost loops to 32 bytes on ppc"), cl::init(true),
-    cl::Hidden);
-
-static cl::opt<bool> UseAbsoluteJumpTables("ppc-use-absolute-jumptables",
-cl::desc("use absolute jump tables on ppc"), cl::Hidden);
-
-static cl::opt<bool>
-    EnablePerfectShuffle("ppc-perfect-shuffle",
-                         cl::desc("enable vector permute decomposition"),
-                         cl::init(false), cl::Hidden);
-
-cl::opt<bool> EnableAutoPairedVecSt(
-    "ppc-auto-paired-vec-st",
-    cl::desc("enable automatically generated 32byte paired vector stores"),
-    cl::init(false), cl::Hidden);
-
-static cl::opt<unsigned> PPCMinimumJumpTableEntries(
-    "ppc-min-jump-table-entries", cl::init(64), cl::Hidden,
-    cl::desc("Set minimum number of entries to use a jump table on PPC"));
-
-static cl::opt<unsigned> PPCMinimumBitTestCmps(
-    "ppc-min-bit-test-cmps", cl::init(3), cl::Hidden,
-    cl::desc("Set minimum of largest number of comparisons to use bit test for "
-             "switch on PPC."));
-
-static cl::opt<unsigned> PPCGatherAllAliasesMaxDepth(
-    "ppc-gather-alias-max-depth", cl::init(18), cl::Hidden,
-    cl::desc("max depth when checking alias info in GatherAllAliases()"));
-
-static cl::opt<unsigned> PPCAIXTLSModelOptUseIEForLDLimit(
-    "ppc-aix-shared-lib-tls-model-opt-limit", cl::init(1), cl::Hidden,
-    cl::desc("Set inclusive limit count of TLS local-dynamic access(es) in a "
-             "function to use initial-exec"));
-
 STATISTIC(NumTailCalls, "Number of tail calls");
 STATISTIC(NumSiblingCalls, "Number of sibling calls");
 STATISTIC(ShufflesHandledWithVPERM,
@@ -181,9 +120,6 @@ static void signExtendOperandIfUnknown(MachineInstr &MI, MachineBasicBlock *BB,
 // variables; consistent with the IBM XL compiler, we apply a max size of
 // slightly under 32KB.
 constexpr uint64_t AIXSmallTlsPolicySizeLimit = 32751;
-
-// FIXME: Remove this once the bug has been fixed!
-extern cl::opt<bool> ANDIGlueBug;
 
 PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
                                      const PPCSubtarget &STI)
@@ -322,7 +258,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setOperationAction(ISD::STORE, MVT::i1, Custom);
 
     // FIXME: Remove this once the ANDI glue bug is fixed:
-    if (ANDIGlueBug)
+    if (Subtarget.getCLOpts().expose_andi_glue_bug)
       setOperationAction(ISD::TRUNCATE, MVT::i1, Custom);
 
     for (MVT VT : MVT::integer_valuetypes()) {
@@ -1046,7 +982,8 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     // LE is P8+/64-bit so direct moves are supported and these operations
     // are legal. The custom transformation requires 64-bit since we need a
     // pair of stores that will cover a 128-bit load for P10.
-    if (EnableP10StoreForward && isPPC64 && !Subtarget.isLittleEndian()) {
+    if (Subtarget.getCLOpts().p10_store_forward && isPPC64 &&
+        !Subtarget.isLittleEndian()) {
       setOperationAction(ISD::SCALAR_TO_VECTOR, MVT::v2i64, Custom);
       setOperationAction(ISD::SCALAR_TO_VECTOR, MVT::v8i16, Custom);
       setOperationAction(ISD::SCALAR_TO_VECTOR, MVT::v16i8, Custom);
@@ -1501,10 +1438,10 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   // generation on PPC. But it is good for current PPC HWs because the indirect
   // branch instruction mtctr to the jump table may lead to bad branch predict.
   // Re-evaluate this value on future HWs that can do better with mtctr.
-  setMinimumJumpTableEntries(PPCMinimumJumpTableEntries);
+  setMinimumJumpTableEntries(Subtarget.getCLOpts().min_jump_table_entries);
 
   // The default minimum of largest number in a BitTest cluster is 3.
-  setMinimumBitTestCmps(PPCMinimumBitTestCmps);
+  setMinimumBitTestCmps(Subtarget.getCLOpts().min_bit_test_cmps);
 
   setMinFunctionAlignment(Align(4));
   setMinCmpXchgSizeInBits(Subtarget.hasPartwordAtomics() ? 8 : 32);
@@ -1562,11 +1499,6 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     MaxLoadsPerMemcmpOptSize = 4;
   }
 
-  // Enable generation of STXVP instructions by default for mcpu=future.
-  if (CPUDirective == PPC::DIR_PWR_FUTURE &&
-      EnableAutoPairedVecSt.getNumOccurrences() == 0)
-    EnableAutoPairedVecSt = true;
-
   IsStrictFPEnabled = true;
 
   // Let the subtarget (CPU) decide if a predictable select is more expensive
@@ -1574,7 +1506,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   // when to convert selects into branches.
   PredictableSelectIsExpensive = Subtarget.isPredictableSelectIsExpensive();
 
-  GatherAllAliasesMaxDepth = PPCGatherAllAliasesMaxDepth;
+  GatherAllAliasesMaxDepth = Subtarget.getCLOpts().gather_alias_max_depth;
 }
 
 // *********************************** NOTE ************************************
@@ -2941,7 +2873,7 @@ bool PPCTargetLowering::getPreIndexedAddressParts(SDNode *N, SDValue &Base,
                                                   SDValue &Offset,
                                                   ISD::MemIndexedMode &AM,
                                                   SelectionDAG &DAG) const {
-  if (!EnablePPCPreinc)
+  if (!Subtarget.getCLOpts().preinc)
     return false;
 
   bool isLoad = true;
@@ -3129,7 +3061,7 @@ unsigned PPCTargetLowering::getJumpTableEncoding() const {
 }
 
 bool PPCTargetLowering::isJumpTableRelative() const {
-  if (UseAbsoluteJumpTables)
+  if (Subtarget.getCLOpts().use_absolute_jumptables)
     return false;
   if (Subtarget.isPPC64() || Subtarget.isAIXABI())
     return true;
@@ -3254,7 +3186,7 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddress(SDValue Op,
 /// and then apply the update.
 static void updateForAIXShLibTLSModelOpt(TLSModel::Model &Model,
                                          SelectionDAG &DAG,
-                                         const TargetMachine &TM) {
+                                         const PPCTargetMachine &TM) {
   // Initialize TLS model opt setting lazily:
   // (1) Use initial-exec for single TLS var references within current function.
   // (2) Use local-dynamic for multiple TLS var references within current
@@ -3283,7 +3215,7 @@ static void updateForAIXShLibTLSModelOpt(TLSModel::Model &Model,
 
     unsigned TLSGVCnt = TLSGV.size();
     LLVM_DEBUG(dbgs() << format("LocalDynamic TLSGV count:%d\n", TLSGVCnt));
-    if (TLSGVCnt <= PPCAIXTLSModelOptUseIEForLDLimit)
+    if (TLSGVCnt <= TM.getCLOpts().aix_shared_lib_tls_model_opt_limit)
       FuncInfo->setAIXFuncUseTLSIEForLD();
     FuncInfo->setAIXFuncTLSModelOptInitDone();
   }
@@ -3311,7 +3243,7 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddressAIX(SDValue Op,
 
   // Apply update to the TLS model.
   if (Subtarget.hasAIXShLibTLSModelOpt())
-    updateForAIXShLibTLSModelOpt(Model, DAG, getTargetMachine());
+    updateForAIXShLibTLSModelOpt(Model, DAG, Subtarget.getTargetMachine());
 
   // TLS variables are accessed through TOC entries.
   // To support this, set the DAG to use the TOC base pointer.
@@ -5020,7 +4952,7 @@ bool PPCTargetLowering::IsEligibleForTailCallOptimization_64SVR4(
     bool isCalleeExternalSymbol) const {
   bool TailCallOpt = getTargetMachine().Options.GuaranteedTailCallOpt;
 
-  if (!EnableSCO && !TailCallOpt)
+  if (!Subtarget.getCLOpts().sco && !TailCallOpt)
     return false;
 
   // Variadic argument functions are not supported.
@@ -5080,7 +5012,7 @@ bool PPCTargetLowering::IsEligibleForTailCallOptimization_64SVR4(
   if (CalleeCC == CallingConv::Fast && TailCallOpt)
     return true;
 
-  if (!EnableSCO)
+  if (!Subtarget.getCLOpts().sco)
     return false;
 
   // If callee use the same argument list that caller is using, then we can
@@ -10659,7 +10591,7 @@ SDValue PPCTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
   // perfect shuffle table to emit an optimal matching sequence.
   ArrayRef<int> PermMask = SVOp->getMask();
 
-  if (EnablePerfectShuffle && !isLittleEndian) {
+  if (Subtarget.getCLOpts().perfect_shuffle && !isLittleEndian) {
     unsigned PFIndexes[4];
     bool isFourElementShuffle = true;
     for (unsigned i = 0; i != 4 && isFourElementShuffle;
@@ -12076,7 +12008,7 @@ SDValue PPCTargetLowering::LowerSCALAR_TO_VECTOR(SDValue Op,
   // to avoid load hit store on P10 when running binaries compiled for older
   // processors by generating two mergeable scalar stores to forward with the
   // vector load.
-  if (EnableP10StoreForward && Subtarget.isPPC64() &&
+  if (Subtarget.getCLOpts().p10_store_forward && Subtarget.isPPC64() &&
       !Subtarget.isLittleEndian() && ValVT.isInteger() &&
       ValVT.getSizeInBits() <= 64) {
     Val = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::i64, Val);
@@ -12446,7 +12378,7 @@ SDValue PPCTargetLowering::LowerVectorStore(SDValue Op,
   // For v256i1 on ISA Future, let the store go through to instruction selection
   // where it will be matched to stxvp/pstxvp by the instruction patterns.
   if (StoreVT == MVT::v256i1 && Subtarget.isISAFuture() &&
-      EnableAutoPairedVecSt)
+      Subtarget.enableAutoPairedVecSt())
     return Op;
 
   // For other cases, create 2 or 4 v16i8 stores to store the pair or
@@ -18845,7 +18777,7 @@ Align PPCTargetLowering::getPrefLoopAlignment(
     if (!ML)
       break;
 
-    if (EnableInnermostLoopAlign32) {
+    if (Subtarget.getCLOpts().innermost_loop_align32) {
       // If the nested loop is an innermost loop, prefer to a 32-byte alignment,
       // so that we can decrease cache misses and branch-prediction misses.
       // Actual alignment of the loop will depend on the hotness check and other
@@ -19617,7 +19549,7 @@ bool PPCTargetLowering::isLegalAddImmediate(int64_t Imm) const {
 bool PPCTargetLowering::allowsMisalignedMemoryAccesses(EVT VT, unsigned, Align,
                                                        MachineMemOperand::Flags,
                                                        unsigned *Fast) const {
-  if (!EnablePPCUnaligned)
+  if (!Subtarget.getCLOpts().unaligned)
     return false;
 
   // PowerPC supports unaligned memory access for simple non-vector types.
@@ -19788,7 +19720,7 @@ PPCTargetLowering::shouldExpandBuildVectorWithShuffles(
 }
 
 Sched::Preference PPCTargetLowering::getSchedulingPreference(SDNode *N) const {
-  if (!EnableILPPref || Subtarget.enableMachineScheduler())
+  if (!Subtarget.getCLOpts().ilp_pref || Subtarget.enableMachineScheduler())
     return TargetLowering::getSchedulingPreference(N);
 
   return Sched::ILP;
@@ -20461,7 +20393,7 @@ bool PPCTargetLowering::mayBeEmittedAsTailCall(const CallInst *CI) const {
   // If sibling calls have been disabled and tail-calls aren't guaranteed
   // there is no reason to duplicate.
   auto &TM = getTargetMachine();
-  if (!TM.Options.GuaranteedTailCallOpt && !EnableSCO)
+  if (!TM.Options.GuaranteedTailCallOpt && !Subtarget.getCLOpts().sco)
     return false;
 
   // Can't tail call a function called indirectly, or if it has variadic args.
@@ -20845,7 +20777,7 @@ bool PPCTargetLowering::isLowringToMASSSafe(SDValue Op) const {
 
 bool PPCTargetLowering::isScalarMASSConversionEnabled() const {
   return getTargetMachine().getOptLevel() == CodeGenOptLevel::Aggressive &&
-         EnablePPCGenScalarMASSEntries;
+         Subtarget.getCLOpts().scalar_mass;
 }
 
 SDValue PPCTargetLowering::lowerLibCallBase(const char *LibCallDoubleName,
