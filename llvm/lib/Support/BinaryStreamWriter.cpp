@@ -32,6 +32,21 @@ Error BinaryStreamWriter::writeBytes(ArrayRef<uint8_t> Buffer) {
   return Error::success();
 }
 
+Error BinaryStreamWriter::writeInt128(const APSInt &Value) {
+  assert(Value.getBitWidth() == 128 && "expected a 128-bit value");
+  // Regardless of host endianness APInt always stores the low words first.
+  const uint64_t *Words = Value.getRawData(); // [low, high]
+  if (Stream.getEndian() == endianness::big) {
+    if (auto EC = writeInteger(Words[1]))
+      return EC;
+    return writeInteger(Words[0]);
+  }
+
+  if (auto EC = writeInteger(Words[0]))
+    return EC;
+  return writeInteger(Words[1]);
+}
+
 Error BinaryStreamWriter::writeULEB128(uint64_t Value) {
   uint8_t EncodedBytes[10] = {0};
   unsigned Size = encodeULEB128(Value, &EncodedBytes[0]);

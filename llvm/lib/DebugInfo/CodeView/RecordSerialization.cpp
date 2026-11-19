@@ -96,6 +96,29 @@ Error llvm::codeview::consume(BinaryStreamReader &Reader, APSInt &Num) {
     Num = APSInt(APInt(64, N, false), true);
     return Error::success();
   }
+  case LF_OCTWORD: {
+    uint64_t Lo = 0, Hi = 0;
+    if (auto EC = Reader.readInteger(Lo))
+      return EC;
+    if (auto EC = Reader.readInteger(Hi))
+      return EC;
+    // APInt expects the low words first and each word in native endian. Since
+    // we know that the integer was encoded in little endian, there's no need to
+    // swap the words.
+    uint64_t Words[2] = {Lo, Hi};
+    Num = APSInt(APInt(128, Words), /*isUnsigned=*/false);
+    return Error::success();
+  }
+  case LF_UOCTWORD: {
+    uint64_t Lo = 0, Hi = 0;
+    if (auto EC = Reader.readInteger(Lo))
+      return EC;
+    if (auto EC = Reader.readInteger(Hi))
+      return EC;
+    uint64_t Words[2] = {Lo, Hi};
+    Num = APSInt(APInt(128, Words), /*isUnsigned=*/true);
+    return Error::success();
+  }
   }
   return make_error<CodeViewError>(cv_error_code::corrupt_record,
                                    "Buffer contains invalid APSInt type");
