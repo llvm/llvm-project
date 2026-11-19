@@ -321,10 +321,6 @@ void ExternalFileUnit::CloseAll(IoErrorHandler &handler) {
     unitMap->CloseAll(handler);
     FreeMemoryAndNullify(unitMap);
   }
-  if (executionEnvironment.convertUnits) {
-    std::free(executionEnvironment.convertUnits);
-    executionEnvironment.convertUnits = nullptr;
-  }
   defaultOutput = nullptr;
   defaultInput = nullptr;
   errorOutput = nullptr;
