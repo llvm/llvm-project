@@ -4877,6 +4877,27 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
         Diag(Loc, diag::note_sme_use_preserves_za);
       }
     }
+
+    // Check for conflicting RISC-V architecture state attributes between the
+    // caller and callee.
+    if (Context.getTargetInfo().getTriple().isRISCV()) {
+      auto CalleeRISCVState =
+          FunctionType::getRISCVXsfmmState(ExtInfo.RISCVAttributes);
+      auto CallerRISCVState = FunctionType::RISCVNone;
+      if (CallerFD) {
+        QualType CallerType = CallerFD->getType();
+        if (!CallerType.isNull()) {
+          if (const auto *CallerFPT = CallerType->getAs<FunctionProtoType>())
+            CallerRISCVState = FunctionType::getRISCVXsfmmState(
+                CallerFPT->getRISCVAttributes());
+
+          if (CallerRISCVState != FunctionType::RISCVNone ||
+              CalleeRISCVState != FunctionType::RISCVNone)
+            RISCV().checkConflictingStateAttributes(
+                CallerFD, FD, CallerRISCVState, CalleeRISCVState, Loc);
+        }
+      }
+    }
   }
 
   if (FDecl && FDecl->hasAttr<AllocAlignAttr>()) {
