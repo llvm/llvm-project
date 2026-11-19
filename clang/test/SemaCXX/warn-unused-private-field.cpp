@@ -433,8 +433,7 @@ class Tracker {
     return 0;
   }
  private:
-  // FIXME: false positive.
-  long x_; // expected-warning {{private field 'x_' is not used}}
+  long x_;
 };
 int f() { return Tracker<int>().Get(); }
 } // namespace if_constexpr_template
