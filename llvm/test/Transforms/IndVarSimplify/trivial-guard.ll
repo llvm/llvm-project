@@ -3,6 +3,7 @@
 
 declare i1 @cond()
 
+; loop.2 is unreachable, so its check may fold either way.
 define void @test_01(i32 %x) {
 ; CHECK-LABEL: @test_01(
 ; CHECK-NEXT:  entry:
@@ -20,7 +21,7 @@ define void @test_01(i32 %x) {
 ; CHECK-NEXT:    [[LOOP_COND_1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[LOOP_COND_1]], label [[LOOP_1]], label [[EXIT_LOOPEXIT:%.*]]
 ; CHECK:       loop.2:
-; CHECK-NEXT:    br i1 true, label [[GUARDED_2:%.*]], label [[FAIL_LOOPEXIT1:%.*]]
+; CHECK-NEXT:    br i1 false, label [[GUARDED_2:%.*]], label [[FAIL_LOOPEXIT1:%.*]]
 ; CHECK:       guarded.2:
 ; CHECK-NEXT:    [[LOOP_COND_2:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[LOOP_COND_2]], label [[LOOP_2]], label [[EXIT_LOOPEXIT2:%.*]]
@@ -67,6 +68,7 @@ fail:
   unreachable
 }
 
+; loop.1 is unreachable, so its check may fold either way.
 define void @test_02(i32 %x) {
 ; CHECK-LABEL: @test_02(
 ; CHECK-NEXT:  entry:
@@ -76,7 +78,7 @@ define void @test_02(i32 %x) {
 ; CHECK:       loop.1.preheader:
 ; CHECK-NEXT:    br label [[LOOP_1:%.*]]
 ; CHECK:       loop.1:
-; CHECK-NEXT:    br i1 true, label [[GUARDED_1:%.*]], label [[FAIL_LOOPEXIT:%.*]]
+; CHECK-NEXT:    br i1 false, label [[GUARDED_1:%.*]], label [[FAIL_LOOPEXIT:%.*]]
 ; CHECK:       guarded.1:
 ; CHECK-NEXT:    [[LOOP_COND_1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[LOOP_COND_1]], label [[LOOP_1]], label [[EXIT_LOOPEXIT:%.*]]
