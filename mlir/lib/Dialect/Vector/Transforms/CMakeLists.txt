@@ -12,6 +12,7 @@ add_mlir_dialect_library(MLIRVectorTransforms
   LowerVectorMask.cpp
   LowerVectorMultiReduction.cpp
   LowerVectorScan.cpp
+  LowerVectorScatter.cpp
   LowerVectorShapeCast.cpp
   LowerVectorShuffle.cpp
   LowerVectorStep.cpp
