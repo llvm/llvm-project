@@ -2139,11 +2139,11 @@ LValue CIRGenFunction::emitMaterializeTemporaryExpr(
           // a destructor needs a conditional cleanup anyway, and the sanitizers
           // that need precise lifetimes must not see the temporary live on a
           // path that never creates it.
-          const SanitizerSet &sanitizers = getLangOpts().Sanitize;
+          assert(!cir::MissingFeatures::coroInSuspendBlock());
           if (isInConditionalBranch() && !e->getType().isDestructedType() &&
-              !(sanitizers.has(SanitizerKind::HWAddress) ||
-                sanitizers.has(SanitizerKind::Memory) ||
-                sanitizers.has(SanitizerKind::MemtagStack) ||
+              !(sanOpts.has(SanitizerKind::HWAddress) ||
+                sanOpts.has(SanitizerKind::Memory) ||
+                sanOpts.has(SanitizerKind::MemtagStack) ||
                 cgm.getCodeGenOpts().SanitizeAddressUseAfterScope)) {
             {
               mlir::OpBuilder::InsertionGuard guard(builder);

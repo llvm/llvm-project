@@ -399,8 +399,21 @@ public:
 
   // Look into the semantic form of initializer lists, which holds the backing
   // array of a std::initializer_list, and into default member initializers.
-  // The array filler of an initializer list is not visited.
   bool shouldVisitImplicitCode() const { return true; }
+
+  // InitListExpr::children() and CXXParenListInitExpr::children() do not
+  // include the array filler expression, so traverse it explicitly.
+  bool VisitInitListExpr(InitListExpr *ile) {
+    if (Expr *filler = ile->getArrayFiller())
+      return TraverseStmt(filler);
+    return true;
+  }
+
+  bool VisitCXXParenListInitExpr(CXXParenListInitExpr *cplie) {
+    if (Expr *filler = cplie->getArrayFiller())
+      return TraverseStmt(filler);
+    return true;
+  }
 
   /// Records each temporary whose lifetime is extended by \c var, and the
   /// type of those requiring destruction.
@@ -521,8 +534,7 @@ void CIRGenFunction::emitLoopConditionVariable(
 
   // Only lifetime-extended cleanups remain after initialization. If none were
   // expected to be captured, these cleanups are uncaptured and wrap
-  // cir.condition in cir.cleanup.scope (e.g. for initializer-list array
-  // fillers).
+  // cir.condition in cir.cleanup.scope.
   if (!capturesExtendedCleanups && ehStack.stable_begin() != initDepth) {
     cgm.errorNYI(d.getSourceRange(),
                  "loop condition variable whose initializer leaves uncaptured "

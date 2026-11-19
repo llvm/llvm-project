@@ -483,6 +483,98 @@ void while_extended_mixed_condvar() {
 // EXT-LLVM-EH-NEXT: call void @llvm.lifetime.end.p0(ptr %[[H]])
 // EXT-LLVM-EH:      resume
 
+struct LoopCondElem {
+  const LoopCond &c = makeLoopCond();
+};
+
+struct LoopCondArrayHolder {
+  LoopCondElem a[2];
+  operator bool() const;
+};
+
+// An array filler's default member initializer can lifetime-extend a temporary
+// with a destructor.
+void while_extended_array_filler_condvar() {
+  while (LoopCondArrayHolder h{}) {}
+}
+
+// EXT-CIR-LABEL: cir.func{{.*}} @_Z35while_extended_array_filler_condvarv
+// EXT-CIR:           %[[TMP:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_LoopCond>
+// EXT-CIR:           %[[H:.*]] = cir.alloca "h" {{.*}} : !cir.ptr<!rec_LoopCondArrayHolder>
+// EXT-CIR:           cir.while {
+// EXT-CIR-NEXT:        cir.lifetime.start %[[H]] : !cir.ptr<!rec_LoopCondArrayHolder>
+// EXT-CIR:             cir.do {
+// EXT-CIR:               cir.lifetime.start %[[TMP]] : !cir.ptr<!rec_LoopCond>
+// EXT-CIR-NEXT:          cir.call @_Z12makeLoopCondv(%[[TMP]])
+// EXT-CIR-EH:            } cleanup eh {
+// EXT-CIR-EH-NEXT:         cir.call @_ZN8LoopCondD1Ev(%[[TMP]]){{.*}}
+// EXT-CIR:             } while {
+// EXT-CIR:           } do {
+// EXT-CIR-NOEH:      } cleanup normal {
+// EXT-CIR-EH:        } cleanup all {
+// EXT-CIR:             cir.if %{{.*}} {
+// EXT-CIR-NEXT:          cir.call @_ZN8LoopCondD1Ev(%[[TMP]]){{.*}}
+// EXT-CIR-NEXT:        }
+// EXT-CIR-NEXT:        cir.lifetime.end %[[TMP]] : !cir.ptr<!rec_LoopCond>
+// EXT-CIR-NEXT:        cir.lifetime.end %[[H]] : !cir.ptr<!rec_LoopCondArrayHolder>
+// EXT-CIR-NEXT:        cir.yield
+
+// EXT-LLVM-LABEL: define{{.*}} void @_Z35while_extended_array_filler_condvarv
+// EXT-LLVM:         call void @llvm.lifetime.start.p0(ptr %[[H:.*]])
+// EXT-LLVM:         call void @llvm.lifetime.start.p0(ptr %[[TMP:.*]])
+// EXT-LLVM-NOEH:    call void @_Z12makeLoopCondv(ptr {{.*}} %[[TMP]])
+// EXT-LLVM-EH:      invoke void @_Z12makeLoopCondv(ptr {{.*}} %[[TMP]])
+// EXT-LLVM:         call void @_ZN8LoopCondD1Ev(ptr {{.*}} %[[TMP]])
+// EXT-LLVM:         call void @llvm.lifetime.end.p0(ptr %[[TMP]])
+// EXT-LLVM-NEXT:    call void @llvm.lifetime.end.p0(ptr %[[H]])
+// EXT-LLVM-EH:      landingpad { ptr, i32 }
+// EXT-LLVM-EH-NEXT:        cleanup
+// EXT-LLVM-EH:      call void @_ZN8LoopCondD1Ev(ptr {{.*}} %[[TMP]])
+// EXT-LLVM-EH:      call void @llvm.lifetime.end.p0(ptr %[[TMP]])
+// EXT-LLVM-EH-NEXT: call void @llvm.lifetime.end.p0(ptr %[[H]])
+// EXT-LLVM-EH:      resume
+
+struct TrivialCondElem {
+  const TrivialCond &c = makeTrivialCond();
+};
+
+struct TrivialCondArrayHolder {
+  TrivialCondElem a[2];
+  operator bool() const;
+};
+
+// An array filler's default member initializer can also lifetime-extend a
+// trivially destructible temporary, which needs only a lifetime.end marker in
+// the loop cleanup region and no active flag.
+void while_extended_trivial_array_filler_condvar() {
+  while (TrivialCondArrayHolder h{}) {}
+}
+
+// EXT-CIR-LABEL: cir.func{{.*}} @_Z43while_extended_trivial_array_filler_condvarv
+// EXT-CIR-NOT:       cond.cleanup.isactive
+// EXT-CIR:           %[[TMP:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_TrivialCond>
+// EXT-CIR:           %[[H:.*]] = cir.alloca "h" {{.*}} : !cir.ptr<!rec_TrivialCondArrayHolder>
+// EXT-CIR:           cir.while {
+// EXT-CIR-NEXT:        cir.lifetime.start %[[H]] : !cir.ptr<!rec_TrivialCondArrayHolder>
+// EXT-CIR:             cir.do {
+// EXT-CIR:               cir.lifetime.start %[[TMP]] : !cir.ptr<!rec_TrivialCond>
+// EXT-CIR-NEXT:          cir.call @_Z15makeTrivialCondv()
+// EXT-CIR:             } while {
+// EXT-CIR:           } do {
+// EXT-CIR-NOEH:      } cleanup normal {
+// EXT-CIR-EH:        } cleanup all {
+// EXT-CIR-NEXT:        cir.lifetime.end %[[TMP]] : !cir.ptr<!rec_TrivialCond>
+// EXT-CIR-NEXT:        cir.lifetime.end %[[H]] : !cir.ptr<!rec_TrivialCondArrayHolder>
+// EXT-CIR-NEXT:        cir.yield
+
+// EXT-LLVM-LABEL: define{{.*}} void @_Z43while_extended_trivial_array_filler_condvarv()
+// EXT-LLVM-NOT:     personality
+// EXT-LLVM:         call void @llvm.lifetime.start.p0(ptr %[[H:.*]])
+// EXT-LLVM:         call void @llvm.lifetime.start.p0(ptr %[[TMP:.*]])
+// EXT-LLVM-NEXT:    call i32 @_Z15makeTrivialCondv()
+// EXT-LLVM:         call void @llvm.lifetime.end.p0(ptr %[[TMP]])
+// EXT-LLVM-NEXT:    call void @llvm.lifetime.end.p0(ptr %[[H]])
+
 int consume(const TrivialCond &);
 
 // A full-expression temporary's lifetime ends with the full-expression.
@@ -537,6 +629,18 @@ void extended_temporary() {
 // CIR:         } cleanup normal {
 // CIR-NEXT:      cir.lifetime.end %[[R]] : !cir.ptr<!cir.ptr<!rec_TrivialCond>>
 
+// CIR-EH-LABEL: cir.func{{.*}} @_Z18extended_temporaryv
+// CIR-EH:         %[[TMP:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_TrivialCond>
+// CIR-EH:         %[[R:.*]] = cir.alloca "r" {{.*}} : !cir.ptr<!cir.ptr<!rec_TrivialCond>>
+// CIR-EH:         cir.lifetime.start %[[R]] : !cir.ptr<!cir.ptr<!rec_TrivialCond>>
+// CIR-EH:         cir.lifetime.start %[[TMP]] : !cir.ptr<!rec_TrivialCond>
+// CIR-EH-NEXT:    cir.call @_Z15makeTrivialCondv()
+// CIR-EH:         cir.call @_Z3usei
+// CIR-EH:         } cleanup all {
+// CIR-EH-NEXT:      cir.lifetime.end %[[TMP]] : !cir.ptr<!rec_TrivialCond>
+// CIR-EH:         } cleanup all {
+// CIR-EH-NEXT:      cir.lifetime.end %[[R]] : !cir.ptr<!cir.ptr<!rec_TrivialCond>>
+
 // LLVM-LABEL: define{{.*}} void @_Z18extended_temporaryv
 // LLVM:         call void @llvm.lifetime.start.p0(ptr %[[R:.*]])
 // LLVM:         call void @llvm.lifetime.start.p0(ptr %[[TMP:.*]])
@@ -577,6 +681,13 @@ extern "C" void scalar() {
 // CIR: cir.call @consume(%[[TMP]])
 // CIR: cir.lifetime.end %[[TMP]]
 // CIR: cir.call @after()
+// CIR-EH-LABEL: cir.func{{.*}} @scalar()
+// CIR-EH: %[[TMP:.*]] = cir.alloca "ref.tmp0"{{.*}} : !cir.ptr<!s32i>
+// CIR-EH: cir.lifetime.start %[[TMP]]
+// CIR-EH: cir.call @consume(%[[TMP]])
+// CIR-EH: } cleanup all {
+// CIR-EH-NEXT: cir.lifetime.end %[[TMP]]
+// CIR-EH: cir.call @after()
 // LLVM-LABEL: define{{.*}} void @scalar()
 // LLVM: %[[TMP:.*]] = alloca i32
 // LLVM: call void @llvm.lifetime.start.p0(ptr %[[TMP]])
@@ -606,6 +717,16 @@ extern "C" void nontrivial() {
 // CIR: cir.call @_ZN5GuardD1Ev(%[[TMP]])
 // CIR: cir.lifetime.end %[[TMP]]
 // CIR: cir.call @after()
+// CIR-EH-LABEL: cir.func{{.*}} @nontrivial()
+// CIR-EH: %[[TMP:.*]] = cir.alloca "ref.tmp0"{{.*}} : !cir.ptr<!rec_Guard>
+// CIR-EH: cir.lifetime.start %[[TMP]]
+// CIR-EH: cir.call @_ZN5GuardC1Ei(%[[TMP]]
+// CIR-EH: cir.call @use_guard(%[[TMP]])
+// CIR-EH: } cleanup all {
+// CIR-EH-NEXT: cir.call @_ZN5GuardD1Ev(%[[TMP]])
+// CIR-EH: } cleanup all {
+// CIR-EH-NEXT: cir.lifetime.end %[[TMP]]
+// CIR-EH: cir.call @after()
 // LLVM-LABEL: define{{.*}} void @nontrivial()
 // LLVM: %[[TMP:.*]] = alloca %struct.Guard
 // LLVM: call void @llvm.lifetime.start.p0(ptr %[[TMP]])
@@ -613,6 +734,18 @@ extern "C" void nontrivial() {
 // LLVM: call void @_ZN5GuardD1Ev(ptr{{.*}} %[[TMP]])
 // LLVM: call void @llvm.lifetime.end.p0(ptr %[[TMP]])
 // LLVM: call void @after()
+// LLVM-EH-LABEL: define{{.*}} void @nontrivial()
+// LLVM-EH: %[[TMP:.*]] = alloca %struct.Guard
+// LLVM-EH: call void @llvm.lifetime.start.p0(ptr %[[TMP]])
+// LLVM-EH: call void @_ZN5GuardC1Ei(ptr{{.*}} %[[TMP]]
+// LLVM-EH: invoke void @use_guard(ptr{{.*}} %[[TMP]])
+// LLVM-EH: call void @_ZN5GuardD1Ev(ptr{{.*}} %[[TMP]])
+// LLVM-EH: landingpad
+// LLVM-EH: call void @_ZN5GuardD1Ev(ptr{{.*}} %[[TMP]])
+// LLVM-EH: call void @llvm.lifetime.end.p0(ptr %[[TMP]])
+// LLVM-EH: call void @llvm.lifetime.end.p0(ptr %[[TMP]])
+// LLVM-EH: resume
+// LLVM-EH: call void @after()
 
 // The pending end is promoted after initialization and belongs to the
 // enclosing scope, rather than the initialization full-expression.
@@ -629,12 +762,41 @@ extern "C" void extended() {
 // CIR: cir.call @after()
 // CIR: cir.call @_ZN5GuardD1Ev(%[[TMP]])
 // CIR: cir.lifetime.end %[[TMP]]
+// CIR-EH-LABEL: cir.func{{.*}} @extended()
+// CIR-EH: %[[TMP:.*]] = cir.alloca "ref.tmp0"{{.*}} : !cir.ptr<!rec_Guard>
+// CIR-EH: %[[REF:.*]] = cir.alloca "ref"{{.*}} : !cir.ptr<!cir.ptr<!rec_Guard>>
+// CIR-EH: cir.lifetime.start %[[REF]]
+// CIR-EH: cir.lifetime.start %[[TMP]]
+// CIR-EH: cir.call @use_guard(
+// CIR-EH: cir.call @after()
+// CIR-EH: } cleanup all {
+// CIR-EH-NEXT: cir.call @_ZN5GuardD1Ev(%[[TMP]])
+// CIR-EH: } cleanup all {
+// CIR-EH-NEXT: cir.lifetime.end %[[TMP]]
+// CIR-EH: } cleanup all {
+// CIR-EH-NEXT: cir.lifetime.end %[[REF]]
 // LLVM-LABEL: define{{.*}} void @extended()
 // LLVM: %[[TMP:.*]] = alloca %struct.Guard
 // LLVM: call void @use_guard(
 // LLVM: call void @after()
 // LLVM: call void @_ZN5GuardD1Ev(ptr{{.*}} %[[TMP]])
 // LLVM: call void @llvm.lifetime.end.p0(ptr %[[TMP]])
+// LLVM-EH-LABEL: define{{.*}} void @extended()
+// LLVM-EH: %[[TMP:.*]] = alloca %struct.Guard
+// LLVM-EH: %[[REF:.*]] = alloca ptr
+// LLVM-EH: call void @llvm.lifetime.start.p0(ptr %[[REF]])
+// LLVM-EH: call void @llvm.lifetime.start.p0(ptr %[[TMP]])
+// LLVM-EH: call void @_ZN5GuardC1Ei(ptr{{.*}} %[[TMP]]
+// LLVM-EH: invoke void @use_guard(
+// LLVM-EH: invoke void @after()
+// LLVM-EH: call void @_ZN5GuardD1Ev(ptr{{.*}} %[[TMP]])
+// LLVM-EH: landingpad
+// LLVM-EH: call void @_ZN5GuardD1Ev(ptr{{.*}} %[[TMP]])
+// LLVM-EH: call void @llvm.lifetime.end.p0(ptr %[[TMP]])
+// LLVM-EH: call void @llvm.lifetime.end.p0(ptr %[[TMP]])
+// LLVM-EH: call void @llvm.lifetime.end.p0(ptr %[[REF]])
+// LLVM-EH: call void @llvm.lifetime.end.p0(ptr %[[REF]])
+// LLVM-EH: resume
 
 // The conditional pending entry contains only an address and a marker kind.
 // Its empty type and null destroyer must never reach emitDestroy. Hoisting
@@ -653,12 +815,28 @@ extern "C" void conditional_scalar(bool enabled) {
 // CIR: } cleanup normal {
 // CIR-NEXT: cir.lifetime.end %[[TMP]]
 // CIR: cir.call @after()
+// CIR-EH-LABEL: cir.func{{.*}} @conditional_scalar(
+// CIR-EH: %[[TMP:.*]] = cir.alloca "ref.tmp0"{{.*}} : !cir.ptr<!s32i>
+// CIR-EH-NOT: cleanup.cond
+// CIR-EH: cir.lifetime.start %[[TMP]]
+// CIR-EH-NEXT: {{.*}}cir.ternary
+// CIR-EH: cir.call @consume(%[[TMP]])
+// CIR-EH: } cleanup all {
+// CIR-EH-NEXT: cir.lifetime.end %[[TMP]]
+// CIR-EH: cir.call @after()
 // LLVM-LABEL: define{{.*}} void @conditional_scalar(
 // LLVM: call void @llvm.lifetime.start.p0(ptr %[[TMP:.*]])
 // LLVM: br i1
 // LLVM: call void @consume(ptr{{.*}} %[[TMP]])
 // LLVM: call void @llvm.lifetime.end.p0(ptr %[[TMP]])
 // LLVM: call void @after()
+// LLVM-EH-LABEL: define{{.*}} void @conditional_scalar(
+// LLVM-EH-NOT: personality
+// LLVM-EH: call void @llvm.lifetime.start.p0(ptr %[[TMP:.*]])
+// LLVM-EH: br i1
+// LLVM-EH: call void @consume(ptr{{.*}} %[[TMP]])
+// LLVM-EH: call void @llvm.lifetime.end.p0(ptr %[[TMP]])
+// LLVM-EH: call void @after()
 
 // Precise lifetime boundaries must retain conditional starts and guarded ends.
 // PRECISE-LABEL: cir.func{{.*}} @conditional_scalar(
@@ -694,6 +872,35 @@ extern "C" void conditional_guard(bool enabled) {
 // CIR: cir.if %[[CHECK_LIFE]] {
 // CIR: cir.lifetime.end %[[TMP]]
 // CIR: cir.call @after()
+// CIR-EH-LABEL: cir.func{{.*}} @conditional_guard(
+// CIR-EH: %[[TMP:.*]] = cir.alloca "ref.tmp0"{{.*}} : !cir.ptr<!rec_Guard>
+// CIR-EH: %[[LIFE:.*]] = cir.alloca "cleanup.cond"{{.*}} : !cir.ptr<!cir.bool>
+// CIR-EH: %[[DTOR:.*]] = cir.alloca "cleanup.cond"{{.*}} : !cir.ptr<!cir.bool>
+// CIR-EH: cir.lifetime.start %[[TMP]]
+// CIR-EH: cir.call @_ZN5GuardC1Ei(%[[TMP]]
+// CIR-EH: cir.call @use_guard(%[[TMP]])
+// CIR-EH: } cleanup all {
+// CIR-EH: %[[CHECK_DTOR:.*]] = cir.load{{.*}} %[[DTOR]]
+// CIR-EH: cir.if %[[CHECK_DTOR]] {
+// CIR-EH: cir.call @_ZN5GuardD1Ev(%[[TMP]])
+// CIR-EH: %[[CHECK_LIFE:.*]] = cir.load{{.*}} %[[LIFE]]
+// CIR-EH: cir.if %[[CHECK_LIFE]] {
+// CIR-EH: cir.lifetime.end %[[TMP]]
+// CIR-EH: cir.call @after()
+// LLVM-LABEL: define{{.*}} void @conditional_guard(
+// LLVM: %[[TMP:.*]] = alloca %struct.Guard
+// LLVM: %[[LIFE:.*]] = alloca i8
+// LLVM: %[[DTOR:.*]] = alloca i8
+// LLVM: call void @llvm.lifetime.start.p0(ptr %[[TMP]])
+// LLVM: store i8 1, ptr %[[LIFE]]
+// LLVM: call void @_ZN5GuardC1Ei(
+// LLVM: store i8 1, ptr %[[DTOR]]
+// LLVM: call void @use_guard(
+// LLVM: load i8, ptr %[[DTOR]]
+// LLVM: call void @_ZN5GuardD1Ev(ptr{{.*}} %[[TMP]])
+// LLVM: load i8, ptr %[[LIFE]]
+// LLVM: call void @llvm.lifetime.end.p0(ptr %[[TMP]])
+// LLVM: call void @after()
 
 // The deferred destructor and lifetime end also run in that order during
 // unwinding, with their own activation flags.
@@ -719,7 +926,7 @@ extern "C" void conditional_guard(bool enabled) {
 // LLVM-EH: call void @after()
 
 // A conditionally initialized scalar reference extends the chosen temporary's
-// lifetime. The end entries are promoted with their active flags intact.
+// lifetime. The end entries are promoted without an active flag.
 extern "C" void conditional_extended(bool enabled) {
   const int &ref = enabled ? static_cast<const int &>(44)
                           : static_cast<const int &>(45);
@@ -730,6 +937,7 @@ extern "C" void conditional_extended(bool enabled) {
 // CIR-LABEL: cir.func{{.*}} @conditional_extended(
 // CIR-DAG: %[[LEFT:.*]] = cir.alloca "ref.tmp0"{{.*}} : !cir.ptr<!s32i>
 // CIR-DAG: %[[RIGHT:.*]] = cir.alloca "ref.tmp1"{{.*}} : !cir.ptr<!s32i>
+// CIR-NOT: cleanup.cond
 // CIR: cir.lifetime.start %[[LEFT]]
 // CIR-NOT: cir.lifetime.end
 // CIR: cir.lifetime.start %[[RIGHT]]
@@ -737,10 +945,38 @@ extern "C" void conditional_extended(bool enabled) {
 // CIR: cir.call @consume(
 // CIR-NOT: cir.lifetime.end
 // CIR: cir.call @after()
-// CIR: cir.if %{{.*}} {
 // CIR: cir.lifetime.end %[[RIGHT]]
-// CIR: cir.if %{{.*}} {
 // CIR: cir.lifetime.end %[[LEFT]]
+// CIR-EH-LABEL: cir.func{{.*}} @conditional_extended(
+// CIR-EH-DAG: %[[LEFT:.*]] = cir.alloca "ref.tmp0"{{.*}} : !cir.ptr<!s32i>
+// CIR-EH-DAG: %[[RIGHT:.*]] = cir.alloca "ref.tmp1"{{.*}} : !cir.ptr<!s32i>
+// CIR-EH-NOT: cleanup.cond
+// CIR-EH: cir.lifetime.start %[[LEFT]]
+// CIR-EH-NOT: cir.lifetime.end
+// CIR-EH: cir.lifetime.start %[[RIGHT]]
+// CIR-EH-NOT: cir.lifetime.end
+// CIR-EH: cir.call @consume(
+// CIR-EH-NOT: cir.lifetime.end
+// CIR-EH: cir.call @after()
+// CIR-EH: } cleanup all {
+// CIR-EH-NEXT: cir.lifetime.end %[[RIGHT]]
+// CIR-EH: } cleanup all {
+// CIR-EH-NEXT: cir.lifetime.end %[[LEFT]]
+// LLVM-LABEL: define{{.*}} void @conditional_extended(
+// LLVM: call void @llvm.lifetime.start.p0(ptr %[[LEFT:.*]])
+// LLVM: call void @llvm.lifetime.start.p0(ptr %[[RIGHT:.*]])
+// LLVM: call void @consume(
+// LLVM: call void @after()
+// LLVM: call void @llvm.lifetime.end.p0(ptr %[[RIGHT]])
+// LLVM: call void @llvm.lifetime.end.p0(ptr %[[LEFT]])
+// LLVM-EH-LABEL: define{{.*}} void @conditional_extended(
+// LLVM-EH-NOT: personality
+// LLVM-EH: call void @llvm.lifetime.start.p0(ptr %[[LEFT:.*]])
+// LLVM-EH: call void @llvm.lifetime.start.p0(ptr %[[RIGHT:.*]])
+// LLVM-EH: call void @consume(
+// LLVM-EH: call void @after()
+// LLVM-EH: call void @llvm.lifetime.end.p0(ptr %[[RIGHT]])
+// LLVM-EH: call void @llvm.lifetime.end.p0(ptr %[[LEFT]])
 
 struct Holder {
   int value;
@@ -758,6 +994,26 @@ extern "C" void subobject() {
 // CIR: cir.call @consume(
 // CIR: cir.lifetime.end %[[TMP]] : !cir.ptr<!rec_Holder>
 // CIR: cir.call @after()
+// CIR-EH-LABEL: cir.func{{.*}} @subobject()
+// CIR-EH: %[[TMP:.*]] = cir.alloca "ref.tmp0"{{.*}} : !cir.ptr<!rec_Holder>
+// CIR-EH: cir.lifetime.start %[[TMP]]
+// CIR-EH: cir.call @consume(
+// CIR-EH: } cleanup all {
+// CIR-EH-NEXT: cir.lifetime.end %[[TMP]] : !cir.ptr<!rec_Holder>
+// CIR-EH: cir.call @after()
+// LLVM-LABEL: define{{.*}} void @subobject()
+// LLVM: %[[TMP:.*]] = alloca %struct.Holder
+// LLVM: call void @llvm.lifetime.start.p0(ptr %[[TMP]])
+// LLVM: call void @consume(
+// LLVM: call void @llvm.lifetime.end.p0(ptr %[[TMP]])
+// LLVM: call void @after()
+// LLVM-EH-LABEL: define{{.*}} void @subobject()
+// LLVM-EH-NOT: personality
+// LLVM-EH: %[[TMP:.*]] = alloca %struct.Holder
+// LLVM-EH: call void @llvm.lifetime.start.p0(ptr %[[TMP]])
+// LLVM-EH: call void @consume(
+// LLVM-EH: call void @llvm.lifetime.end.p0(ptr %[[TMP]])
+// LLVM-EH: call void @after()
 
 using IntArray = int[2];
 
@@ -774,6 +1030,36 @@ extern "C" void extended_array() {
 // CIR: cir.call @consume(
 // CIR: cir.call @after()
 // CIR: cir.lifetime.end %[[TMP]]
+// CIR-EH-LABEL: cir.func{{.*}} @extended_array()
+// CIR-EH: %[[TMP:.*]] = cir.alloca "ref.tmp0"{{.*}} : !cir.ptr<!cir.array<!s32i x 2>>
+// CIR-EH: %[[REF:.*]] = cir.alloca "ref"{{.*}} : !cir.ptr<!cir.ptr<!cir.array<!s32i x 2>>>
+// CIR-EH: cir.lifetime.start %[[REF]]
+// CIR-EH: cir.lifetime.start %[[TMP]]
+// CIR-EH: cir.call @consume(
+// CIR-EH: cir.call @after()
+// CIR-EH: } cleanup all {
+// CIR-EH-NEXT: cir.lifetime.end %[[TMP]]
+// CIR-EH: } cleanup all {
+// CIR-EH-NEXT: cir.lifetime.end %[[REF]]
+// LLVM-LABEL: define{{.*}} void @extended_array()
+// LLVM: %[[TMP:.*]] = alloca [2 x i32]
+// LLVM: %[[REF:.*]] = alloca ptr
+// LLVM: call void @llvm.lifetime.start.p0(ptr %[[REF]])
+// LLVM: call void @llvm.lifetime.start.p0(ptr %[[TMP]])
+// LLVM: call void @consume(
+// LLVM: call void @after()
+// LLVM: call void @llvm.lifetime.end.p0(ptr %[[TMP]])
+// LLVM: call void @llvm.lifetime.end.p0(ptr %[[REF]])
+// LLVM-EH-LABEL: define{{.*}} void @extended_array()
+// LLVM-EH-NOT: personality
+// LLVM-EH: %[[TMP:.*]] = alloca [2 x i32]
+// LLVM-EH: %[[REF:.*]] = alloca ptr
+// LLVM-EH: call void @llvm.lifetime.start.p0(ptr %[[REF]])
+// LLVM-EH: call void @llvm.lifetime.start.p0(ptr %[[TMP]])
+// LLVM-EH: call void @consume(
+// LLVM-EH: call void @after()
+// LLVM-EH: call void @llvm.lifetime.end.p0(ptr %[[TMP]])
+// LLVM-EH: call void @llvm.lifetime.end.p0(ptr %[[REF]])
 
 // Mixing unconditional and conditional temporaries keeps both destructor and
 // lifetime-end order across the conditional scope.
@@ -795,6 +1081,56 @@ extern "C" void mixed(bool enabled) {
 // CIR: cir.call @_ZN5GuardD1Ev(%[[FIRST]])
 // CIR: cir.lifetime.end %[[FIRST]]
 // CIR: cir.call @after()
+// CIR-EH-LABEL: cir.func{{.*}} @mixed(
+// CIR-EH-DAG: %[[FIRST:.*]] = cir.alloca "ref.tmp0"{{.*}} : !cir.ptr<!rec_Guard>
+// CIR-EH-DAG: %[[SECOND:.*]] = cir.alloca "ref.tmp1"{{.*}} : !cir.ptr<!rec_Guard>
+// CIR-EH-DAG: %[[THIRD:.*]] = cir.alloca "ref.tmp2"{{.*}} : !cir.ptr<!rec_Guard>
+// CIR-EH: cir.call @use_guard(%[[THIRD]])
+// CIR-EH: } cleanup all {
+// CIR-EH-NEXT: cir.call @_ZN5GuardD1Ev(%[[THIRD]])
+// CIR-EH: } cleanup all {
+// CIR-EH-NEXT: cir.lifetime.end %[[THIRD]]
+// CIR-EH: } cleanup all {
+// CIR-EH: cir.call @_ZN5GuardD1Ev(%[[SECOND]])
+// CIR-EH: cir.lifetime.end %[[SECOND]]
+// CIR-EH: } cleanup all {
+// CIR-EH-NEXT: cir.call @_ZN5GuardD1Ev(%[[FIRST]])
+// CIR-EH: } cleanup all {
+// CIR-EH-NEXT: cir.lifetime.end %[[FIRST]]
+// CIR-EH: cir.call @after()
+// LLVM-LABEL: define{{.*}} void @mixed(
+// LLVM: %[[FIRST:.*]] = alloca %struct.Guard
+// LLVM: %[[SECOND:.*]] = alloca %struct.Guard
+// LLVM: %[[THIRD:.*]] = alloca %struct.Guard
+// LLVM: call void @_ZN5GuardD1Ev(ptr{{.*}} %[[THIRD]])
+// LLVM: call void @llvm.lifetime.end.p0(ptr %[[THIRD]])
+// LLVM: call void @_ZN5GuardD1Ev(ptr{{.*}} %[[SECOND]])
+// LLVM: call void @llvm.lifetime.end.p0(ptr %[[SECOND]])
+// LLVM: call void @_ZN5GuardD1Ev(ptr{{.*}} %[[FIRST]])
+// LLVM: call void @llvm.lifetime.end.p0(ptr %[[FIRST]])
+// LLVM: call void @after()
+// LLVM-EH-LABEL: define{{.*}} void @mixed(
+// LLVM-EH: %[[FIRST:.*]] = alloca %struct.Guard
+// LLVM-EH: %[[SECOND:.*]] = alloca %struct.Guard
+// LLVM-EH: %[[THIRD:.*]] = alloca %struct.Guard
+// LLVM-EH: call void @_ZN5GuardD1Ev(ptr{{.*}} %[[THIRD]])
+// LLVM-EH: landingpad
+// LLVM-EH: call void @_ZN5GuardD1Ev(ptr{{.*}} %[[THIRD]])
+// LLVM-EH: call void @llvm.lifetime.end.p0(ptr %[[THIRD]])
+// LLVM-EH: landingpad
+// LLVM-EH: call void @llvm.lifetime.end.p0(ptr %[[THIRD]])
+// LLVM-EH: call void @_ZN5GuardD1Ev(ptr{{.*}} %[[SECOND]])
+// LLVM-EH: call void @llvm.lifetime.end.p0(ptr %[[SECOND]])
+// LLVM-EH: landingpad
+// LLVM-EH: call void @_ZN5GuardD1Ev(ptr{{.*}} %[[SECOND]])
+// LLVM-EH: call void @llvm.lifetime.end.p0(ptr %[[SECOND]])
+// LLVM-EH: call void @_ZN5GuardD1Ev(ptr{{.*}} %[[FIRST]])
+// LLVM-EH: landingpad
+// LLVM-EH: call void @_ZN5GuardD1Ev(ptr{{.*}} %[[FIRST]])
+// LLVM-EH: call void @llvm.lifetime.end.p0(ptr %[[FIRST]])
+// LLVM-EH: call void @llvm.lifetime.end.p0(ptr %[[FIRST]])
+// LLVM-EH: resume
+// LLVM-EH: call void @after()
 
 // Hoisting nested branches must place both starts before the outer conditional.
 // The starts execute on every loop iteration, and both ends precede after().
@@ -818,9 +1154,39 @@ extern "C" void nested_loop(bool first, bool second) {
 // CIR-NEXT: cir.lifetime.end %[[RIGHT]]
 // CIR-NEXT: cir.lifetime.end %[[LEFT]]
 // CIR: cir.call @after()
+// CIR-EH-LABEL: cir.func{{.*}} @nested_loop(
+// CIR-EH-NOT: cleanup.cond
+// CIR-EH: cir.while
+// CIR-EH: } do {
+// CIR-EH: cir.lifetime.start %[[LEFT:.*]] :
+// CIR-EH-NEXT: cir.lifetime.start %[[RIGHT:.*]] :
+// CIR-EH-NEXT: {{.*}}cir.ternary
+// CIR-EH: cir.call @consume(%[[LEFT]])
+// CIR-EH: cir.call @consume(%[[RIGHT]])
+// CIR-EH: } cleanup all {
+// CIR-EH-NEXT: cir.lifetime.end %[[RIGHT]]
+// CIR-EH-NEXT: cir.lifetime.end %[[LEFT]]
+// CIR-EH: cir.call @after()
+// LLVM-LABEL: define{{.*}} void @nested_loop(
+// LLVM: call void @llvm.lifetime.start.p0(ptr %[[LEFT:.*]])
+// LLVM-NEXT: call void @llvm.lifetime.start.p0(ptr %[[RIGHT:.*]])
+// LLVM: call void @consume(ptr{{.*}} %[[LEFT]])
+// LLVM: call void @consume(ptr{{.*}} %[[RIGHT]])
+// LLVM: call void @llvm.lifetime.end.p0(ptr %[[RIGHT]])
+// LLVM-NEXT: call void @llvm.lifetime.end.p0(ptr %[[LEFT]])
+// LLVM: call void @after()
+// LLVM-EH-LABEL: define{{.*}} void @nested_loop(
+// LLVM-EH-NOT: personality
+// LLVM-EH: call void @llvm.lifetime.start.p0(ptr %[[LEFT:.*]])
+// LLVM-EH-NEXT: call void @llvm.lifetime.start.p0(ptr %[[RIGHT:.*]])
+// LLVM-EH: call void @consume(ptr{{.*}} %[[LEFT]])
+// LLVM-EH: call void @consume(ptr{{.*}} %[[RIGHT]])
+// LLVM-EH: call void @llvm.lifetime.end.p0(ptr %[[RIGHT]])
+// LLVM-EH-NEXT: call void @llvm.lifetime.end.p0(ptr %[[LEFT]])
+// LLVM-EH: call void @after()
 
-// Lifetime-extended entries from both arms are captured by the loop cleanup,
-// keeping their branch flags rather than ending at the initializer boundary.
+// Lifetime-extended entries from both arms are captured by the loop cleanup
+// rather than ending at the initializer boundary.
 extern "C" void conditional_extended_loop(bool enabled) {
   while (const int &ref = enabled ? static_cast<const int &>(51)
                                  : static_cast<const int &>(0)) {
@@ -831,6 +1197,7 @@ extern "C" void conditional_extended_loop(bool enabled) {
 // CIR-LABEL: cir.func{{.*}} @conditional_extended_loop(
 // CIR-DAG: %[[LEFT:.*]] = cir.alloca "ref.tmp0"
 // CIR-DAG: %[[RIGHT:.*]] = cir.alloca "ref.tmp1"
+// CIR-NOT: cleanup.cond
 // CIR: cir.while {
 // CIR: cir.lifetime.start %[[LEFT]]
 // CIR-NOT: cir.lifetime.end
@@ -840,10 +1207,36 @@ extern "C" void conditional_extended_loop(bool enabled) {
 // CIR: } do {
 // CIR: cir.call @consume(
 // CIR: } cleanup normal {
-// CIR: cir.if %{{.*}} {
-// CIR: cir.lifetime.end %[[RIGHT]]
-// CIR: cir.if %{{.*}} {
-// CIR: cir.lifetime.end %[[LEFT]]
+// CIR-NEXT: cir.lifetime.end %[[RIGHT]]
+// CIR-NEXT: cir.lifetime.end %[[LEFT]]
+// CIR-EH-LABEL: cir.func{{.*}} @conditional_extended_loop(
+// CIR-EH-DAG: %[[LEFT:.*]] = cir.alloca "ref.tmp0"
+// CIR-EH-DAG: %[[RIGHT:.*]] = cir.alloca "ref.tmp1"
+// CIR-EH-NOT: cleanup.cond
+// CIR-EH: cir.while {
+// CIR-EH: cir.lifetime.start %[[LEFT]]
+// CIR-EH-NOT: cir.lifetime.end
+// CIR-EH: cir.lifetime.start %[[RIGHT]]
+// CIR-EH-NOT: cir.lifetime.end
+// CIR-EH: cir.condition
+// CIR-EH: } do {
+// CIR-EH: cir.call @consume(
+// CIR-EH: } cleanup all {
+// CIR-EH-NEXT: cir.lifetime.end %[[RIGHT]]
+// CIR-EH-NEXT: cir.lifetime.end %[[LEFT]]
+// LLVM-LABEL: define{{.*}} void @conditional_extended_loop(
+// LLVM: call void @llvm.lifetime.start.p0(ptr %[[LEFT:.*]])
+// LLVM: call void @llvm.lifetime.start.p0(ptr %[[RIGHT:.*]])
+// LLVM: call void @consume(
+// LLVM: call void @llvm.lifetime.end.p0(ptr %[[RIGHT]])
+// LLVM-NEXT: call void @llvm.lifetime.end.p0(ptr %[[LEFT]])
+// LLVM-EH-LABEL: define{{.*}} void @conditional_extended_loop(
+// LLVM-EH-NOT: personality
+// LLVM-EH: call void @llvm.lifetime.start.p0(ptr %[[LEFT:.*]])
+// LLVM-EH: call void @llvm.lifetime.start.p0(ptr %[[RIGHT:.*]])
+// LLVM-EH: call void @consume(
+// LLVM-EH: call void @llvm.lifetime.end.p0(ptr %[[RIGHT]])
+// LLVM-EH-NEXT: call void @llvm.lifetime.end.p0(ptr %[[LEFT]])
 
 #ifdef __EXCEPTIONS
 

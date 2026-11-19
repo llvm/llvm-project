@@ -47,10 +47,8 @@ void CIRGenFunction::pushLifetimeEndAfterFullExpr(
     Address addr, const ValueDecl *extendingDecl) {
   assert(addr.getDefiningOp<cir::AllocaOp>() &&
          "lifetime cleanup requires the raw alloca address");
-  Address activeFlag =
-      isInConditionalBranch() ? createCleanupActiveFlag() : Address::invalid();
   PendingCleanupEntry entry{NormalEHLifetimeMarker, addr, QualType(), nullptr,
-                            activeFlag};
+                            Address::invalid()};
   // A loop condition variable's temporary ends its lifetime in the loop's
   // cleanup region. Unlike its destructor, this is not guarded by the
   // variable's active flag.
