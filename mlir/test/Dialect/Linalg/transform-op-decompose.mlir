@@ -486,9 +486,9 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// MXFP4 block scaling of the reduction dim - the reduction dim is split into
-// blocks; the contraction reduces within blocks, the block results are scaled
-// in place and then reduced into the output.
+// MXFP4 block scaling of the reduction dim - the reduction dim is expanded at
+// scaling block boundaries; the contraction reduces within scaling blocks, the
+// scaling block results are scaled in place and then reduced into the output.
 
 func.func @scaled_contract_mxfp4(
     %A: tensor<8x64xf4E2M1FN>, %sA: tensor<8x2xf8E8M0FNU>,
@@ -558,10 +558,10 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// Nested block sizes on the reduction dim and block scaling of a parallel dim.
-// The dims are split into multiple block levels, scales and output are
-// reshaped accordingly. Mixed integer and floating-point inputs accumulate in
-// f32. Scales are converted directly to the compute type.
+// Nested scaling blocks on the reduction dim and block scaling of a parallel
+// dim. The dims are expanded at all scaling block boundaries, scales and output
+// are reshaped accordingly. Mixed integer and floating-point inputs accumulate
+// in f32. Scales are converted directly to the compute type.
 // Output is accumulated in f32 and rounded once after the accumulation.
 
 func.func @scaled_contract_nested_blocks(
@@ -645,9 +645,53 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// Block scale spanning the whole reduction dim, e.g., after tiling, is
-// broadcast. Tensor scaling with a scalar scale and transposed output. Output
-// narrower than f32 with no remaining reduction dims is rounded by the only
+// Nested scaling blocks with the larger block on the first input. The reduction
+// dim is expanded from the largest to the smallest block.
+
+func.func @scaled_contract_nested_blocks_descending(
+    %A: tensor<8x128xf8E4M3FN>, %sA: tensor<8x2xf8E8M0FNU>,
+    %B: tensor<4x128xf8E4M3FN>, %sB: tensor<4x4xf8E8M0FNU>,
+    %C: tensor<8x4xf32>) -> tensor<8x4xf32> {
+  %D = linalg.scaled_contract
+      indexing_maps = [affine_map<(m, n, k) -> (m, k)>,
+                       affine_map<(m, n, k) -> (m, k floordiv 64)>,
+                       affine_map<(m, n, k) -> (n, k)>,
+                       affine_map<(m, n, k) -> (n, k floordiv 32)>,
+                       affine_map<(m, n, k) -> (m, n)>]
+      ins(%A, %sA, %B, %sB : tensor<8x128xf8E4M3FN>, tensor<8x2xf8E8M0FNU>, tensor<4x128xf8E4M3FN>, tensor<4x4xf8E8M0FNU>)
+      outs(%C : tensor<8x4xf32>) -> tensor<8x4xf32>
+  return %D : tensor<8x4xf32>
+}
+
+// CHECK-DAG: #[[$SCALE_A:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d2)>
+// CHECK-DAG: #[[$SCALE_B:.+]] = affine_map<(d0, d1, d2, d3) -> (d1, d2, d3)>
+
+// CHECK-LABEL: func @scaled_contract_nested_blocks_descending
+//  CHECK-SAME:   %[[A:[a-zA-Z0-9]+]]: tensor<8x128xf8E4M3FN>
+//  CHECK-SAME:   %[[SA:[a-zA-Z0-9]+]]: tensor<8x2xf8E8M0FNU>
+//  CHECK-SAME:   %[[B:[a-zA-Z0-9]+]]: tensor<4x128xf8E4M3FN>
+//  CHECK-SAME:   %[[SB:[a-zA-Z0-9]+]]: tensor<4x4xf8E8M0FNU>
+//       CHECK:   tensor.expand_shape %[[A]] {{\[}}[0], [1, 2, 3]] output_shape [8, 2, 2, 32]
+//       CHECK:   tensor.expand_shape %[[B]] {{\[}}[0], [1, 2, 3]] output_shape [4, 2, 2, 32]
+//       CHECK:   linalg.contract
+//       CHECK:   %[[EXP_SB:.+]] = tensor.expand_shape %[[SB]] {{\[}}[0], [1, 2]] output_shape [4, 2, 2]
+//       CHECK:   linalg.generic
+//  CHECK-SAME:     indexing_maps = [#[[$SCALE_A]], #[[$SCALE_B]], #{{.+}}]
+//  CHECK-SAME:     ins(%[[SA]], %[[EXP_SB]] : tensor<8x2xf8E8M0FNU>, tensor<4x2x2xf8E8M0FNU>)
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.scaled_contract"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.structured.decompose_interface %0 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// The scale of a scaling block spanning the whole reduction dim is broadcast.
+// Tensor scaling with a scalar scale and transposed output. Output narrower
+// than f32 with no remaining reduction dims is rounded by the only
 // accumulation.
 
 func.func @scaled_contract_uniform_block(
@@ -712,10 +756,10 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// Block scaling of a dynamic parallel dim is applied by the scaling as is.
-// Scaling and final accumulation of a wide output are performed in output
-// precision. Unsigned cast applies to the contraction and to the conversion of
-// partial results and integer scales.
+// A block scaled dynamic parallel dim cannot be expanded and keeps its
+// semi-affine scale map. Scaling and final accumulation of a wide output are
+// performed in output precision. Unsigned cast applies to the contraction and
+// to the conversion of partial results and integer scales.
 
 func.func @scaled_contract_dynamic_parallel_block(
     %A: tensor<?x64xi8>, %sA: tensor<?x2xi8>,
@@ -767,12 +811,12 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// Dimension scale of a reduction dim split by the block scale of the other
-// input is expanded over all block levels. Both levels are reduced after
-// scaling and only the remaining reduction dim is contracted. A scale other
-// than f8E8M0FNU is converted directly to the compute type.
+// One input has dimension scaling and the other has block scaling of the same
+// reduction dim. The dimension scale is reshaped to index all the expanded
+// dims, which are reduced after scaling. Only the remaining reduction dim is
+// contracted. A scale other than f8E8M0FNU is converted to the compute type.
 
-func.func @scaled_contract_dim_scale_of_split_dim(
+func.func @scaled_contract_dim_scale_of_expanded_dim(
     %A: tensor<4x64x8xf8E4M3FN>, %sA: tensor<64xf8E8M0FNU>,
     %B: tensor<3x64x8xf8E4M3FN>, %sB: tensor<3x2xf8E5M2>,
     %C: tensor<4x3xf32>) -> tensor<4x3xf32> {
@@ -792,7 +836,7 @@ func.func @scaled_contract_dim_scale_of_split_dim(
 // CHECK-DAG: #[[$SCALE_B:.+]] = affine_map<(d0, d1, d2, d3) -> (d1, d2)>
 // CHECK-DAG: #[[$SCALE_OUT:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1)>
 
-// CHECK-LABEL: func @scaled_contract_dim_scale_of_split_dim
+// CHECK-LABEL: func @scaled_contract_dim_scale_of_expanded_dim
 //  CHECK-SAME:   %[[SA:[a-zA-Z0-9]+]]: tensor<64xf8E8M0FNU>
 //  CHECK-SAME:   %[[SB:[a-zA-Z0-9]+]]: tensor<3x2xf8E5M2>
 //  CHECK-SAME:   %[[C:[a-zA-Z0-9]+]]: tensor<4x3xf32>
@@ -883,7 +927,7 @@ func.func @negative_scaled_contract_dynamic_reduction_block(
   return %D : tensor<8x4xf32>
 }
 
-// Reduction dim size not divisible by the block size.
+// Reduction dim size not divisible by the scaling block size.
 // CHECK-LABEL: func @negative_scaled_contract_partial_block
 //  CHECK-NEXT:   linalg.scaled_contract
 func.func @negative_scaled_contract_partial_block(
@@ -901,7 +945,7 @@ func.func @negative_scaled_contract_partial_block(
   return %D : tensor<8x4xf32>
 }
 
-// Block sizes of the reduction dim which do not divide each other.
+// Scaling block sizes of the reduction dim which do not divide each other.
 // CHECK-LABEL: func @negative_scaled_contract_incompatible_blocks
 //  CHECK-NEXT:   linalg.scaled_contract
 func.func @negative_scaled_contract_incompatible_blocks(
