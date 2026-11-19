@@ -58,6 +58,13 @@ namespace llvm {
                               MCStreamer &Streamer) const override;
   };
 
+  class X86COFFTargetObjectFile : public TargetLoweringObjectFileCOFF {
+  public:
+    X86COFFTargetObjectFile() = default;
+
+    const MCExpr *getDebugThreadLocalSymbol(const MCSymbol *Sym) const override;
+  };
+
 } // end namespace llvm
 
 #endif
