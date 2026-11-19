@@ -107,13 +107,10 @@ fir.global internal @_QEmultiarray : !fir.array<32x32xi32> {
   fir.has_value %2 : !fir.array<32x32xi32>
 }
 
-// CHECK: llvm.mlir.global internal @_QEmultiarray() 
+// CHECK: llvm.mlir.global internal @_QEmultiarray(dense<1> : tensor<32x32xi32>) 
 // GENERIC-SAME: {addr_space = 0 : i32}
 // AMDGPU-SAME: {addr_space = 1 : i32}
-// CHECK-SAME: : !llvm.array<32 x array<32 x i32>> {
-// CHECK:   %[[CST:.*]] = llvm.mlir.constant(dense<1> : vector<32x32xi32>) : !llvm.array<32 x array<32 x i32>>
-// CHECK:   llvm.return %[[CST]] : !llvm.array<32 x array<32 x i32>>
-// CHECK: }
+// CHECK-SAME: : !llvm.array<32 x array<32 x i32>>
 
 // -----
 
