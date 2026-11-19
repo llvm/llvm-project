@@ -97,13 +97,17 @@ class SymbolConjured : public SymbolData {
     assert(isValidTypeForSymbol(t));
   }
 
-public:
-  /// Returns a valid CFGElementRef or std::nullopt.
-  std::optional<ConstCFGElementRef> getCFGElementRef() const {
+  bool hasValidElem() const {
     const CFGBlock *P = Elem.getParent();
     if (P && Elem.getIndexInBlock() < P->size())
-      return Elem;
-    return std::nullopt;
+      return true;
+    assert(Elem.getIndexInBlock() == UINT_MAX && "No other sentinel allowed!");
+    return false;
+  }
+
+public:
+  std::optional<ConstCFGElementRef> getCFGElementRef() const {
+    return hasValidElem() ? std::optional(Elem) : std::nullopt;
   }
 
   // It might return null.

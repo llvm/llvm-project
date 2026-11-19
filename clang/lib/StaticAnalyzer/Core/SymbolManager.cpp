@@ -77,9 +77,7 @@ void UnarySymExpr::dumpToStream(raw_ostream &os) const {
 }
 
 const Stmt *SymbolConjured::getStmt() const {
-  // getCFGElementRef() returns either the member 'Elem' (if it's valid) or
-  // std::nullopt; call it to check the validity of 'Elem'.
-  if (!getCFGElementRef())
+  if (!hasValidElem())
     return nullptr;
 
   switch (Elem->getKind()) {
