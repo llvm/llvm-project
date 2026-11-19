@@ -40,6 +40,8 @@ defm : BoolField<"spirv-debug-lexical-block-discriminator-scope", "false",
   "Use a DebugLexicalBlockDiscriminator as a DebugScope">;
 defm : BoolField<"spirv-debug-scope-forward-refs", "false",
   "Forward-reference debug scopes when SPV_KHR_relaxed_extended_instruction is enabled">;
+defm : BoolField<"spirv-debug-declare-untyped-variable", "false",
+  "Accept an OpUntypedVariableKHR as DebugDeclare's Variable operand (not allowed by NonSemantic.Shader.DebugInfo)">;
 
 // SPIRVRemoveUnusedResources.cpp
 defm : BoolField<"spirv-enable-remove-unused-resources", "true",
