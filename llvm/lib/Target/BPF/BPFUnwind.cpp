@@ -290,10 +290,15 @@ struct BPFUnwindLower : public MachineFunctionPass {
       MBB.setIsEHPad(false);
     MF.clearLandingPads();
 
-    // What was behind a call that does not return. It can be a loop.
+    // What was behind a call that does not return. It can be a loop. A block
+    // whose address is taken stays, and so does what it branches to.
     df_iterator_default_set<MachineBasicBlock *> Reachable;
-    for (MachineBasicBlock *MBB : depth_first_ext(&MF, Reachable))
-      (void)MBB;
+    for (MachineBasicBlock &MBB : MF) {
+      if (&MBB != &MF.front() && !MBB.hasAddressTaken())
+        continue;
+      for (MachineBasicBlock *Succ : depth_first_ext(&MBB, Reachable))
+        (void)Succ;
+    }
 
     // Unlink them all before erasing any: one can be a successor of another.
     SmallVector<MachineBasicBlock *, 8> Dead;
