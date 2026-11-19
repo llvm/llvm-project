@@ -1584,7 +1584,8 @@ define nofpclass(nan pzero sub) float @ret__no_nan_pzero_sub__canonicalize_nsz__
 ; CHECK-LABEL: define nofpclass(nan pzero sub) float @ret__no_nan_pzero_sub__canonicalize_nsz__demand_psub__dynamic_dynamic(
 ; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[PSUB:%.*]] = call float @returns_psub()
-; CHECK-NEXT:    [[RESULT:%.*]] = call nnan nsz float @llvm.canonicalize.f32(float [[UNKNOWN]])
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[PSUB]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan nsz float @llvm.canonicalize.f32(float [[SELECT]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %psub = call float @returns_psub()
@@ -1597,7 +1598,8 @@ define nofpclass(nan pzero sub) float @ret__no_nan_pzero_sub__canonicalize_nsz__
 ; CHECK-LABEL: define nofpclass(nan pzero sub) float @ret__no_nan_pzero_sub__canonicalize_nsz__demand_psub__ftz_daz(
 ; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[PSUB:%.*]] = call float @returns_psub()
-; CHECK-NEXT:    [[RESULT:%.*]] = call nnan nsz float @llvm.canonicalize.f32(float [[UNKNOWN]])
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[PSUB]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan nsz float @llvm.canonicalize.f32(float [[SELECT]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %psub = call float @returns_psub()
@@ -1610,7 +1612,8 @@ define nofpclass(nan pzero sub) float @ret__no_nan_pzero_sub__canonicalize_nsz__
 ; CHECK-LABEL: define nofpclass(nan pzero sub) float @ret__no_nan_pzero_sub__canonicalize_nsz__demand_psub__ftpz_dapz(
 ; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[PSUB:%.*]] = call float @returns_psub()
-; CHECK-NEXT:    [[RESULT:%.*]] = call nnan nsz float @llvm.canonicalize.f32(float [[UNKNOWN]])
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[PSUB]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan nsz float @llvm.canonicalize.f32(float [[SELECT]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %psub = call float @returns_psub()
@@ -1623,7 +1626,8 @@ define nofpclass(nan pzero sub) float @ret__no_nan_pzero_sub__canonicalize_nsz__
 ; CHECK-LABEL: define nofpclass(nan pzero sub) float @ret__no_nan_pzero_sub__canonicalize_nsz__demand_psub__ieee_dynamic(
 ; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:    [[PSUB:%.*]] = call float @returns_psub()
-; CHECK-NEXT:    [[RESULT:%.*]] = call nnan nsz float @llvm.canonicalize.f32(float [[UNKNOWN]])
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[PSUB]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan nsz float @llvm.canonicalize.f32(float [[SELECT]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %psub = call float @returns_psub()
@@ -1636,7 +1640,8 @@ define nofpclass(nan pzero sub) float @ret__no_nan_pzero_sub__canonicalize_nsz__
 ; CHECK-LABEL: define nofpclass(nan pzero sub) float @ret__no_nan_pzero_sub__canonicalize_nsz__demand_psub__ieee_daz(
 ; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR5]] {
 ; CHECK-NEXT:    [[PSUB:%.*]] = call float @returns_psub()
-; CHECK-NEXT:    [[RESULT:%.*]] = call nnan nsz float @llvm.canonicalize.f32(float [[UNKNOWN]])
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[PSUB]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan nsz float @llvm.canonicalize.f32(float [[SELECT]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %psub = call float @returns_psub()
@@ -1649,7 +1654,8 @@ define nofpclass(nan pzero sub) float @ret__no_nan_pzero_sub__canonicalize_nsz__
 ; CHECK-LABEL: define nofpclass(nan pzero sub) float @ret__no_nan_pzero_sub__canonicalize_nsz__demand_psub__ieee_dapz(
 ; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR6]] {
 ; CHECK-NEXT:    [[PSUB:%.*]] = call float @returns_psub()
-; CHECK-NEXT:    [[RESULT:%.*]] = call nnan nsz float @llvm.canonicalize.f32(float [[UNKNOWN]])
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[PSUB]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan nsz float @llvm.canonicalize.f32(float [[SELECT]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %psub = call float @returns_psub()
@@ -1662,7 +1668,8 @@ define nofpclass(nan pzero sub) float @ret__no_nan_pzero_sub__canonicalize_nsz__
 ; CHECK-LABEL: define nofpclass(nan pzero sub) float @ret__no_nan_pzero_sub__canonicalize_nsz__demand_psub__dynamic_ieee(
 ; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR7]] {
 ; CHECK-NEXT:    [[PSUB:%.*]] = call float @returns_psub()
-; CHECK-NEXT:    [[RESULT:%.*]] = call nnan nsz float @llvm.canonicalize.f32(float [[UNKNOWN]])
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[PSUB]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan nsz float @llvm.canonicalize.f32(float [[SELECT]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %psub = call float @returns_psub()
@@ -1675,7 +1682,8 @@ define nofpclass(nan pzero sub) float @ret__no_nan_pzero_sub__canonicalize_nsz__
 ; CHECK-LABEL: define nofpclass(nan pzero sub) float @ret__no_nan_pzero_sub__canonicalize_nsz__demand_psub__ftz_ieee(
 ; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR8]] {
 ; CHECK-NEXT:    [[PSUB:%.*]] = call float @returns_psub()
-; CHECK-NEXT:    [[RESULT:%.*]] = call nnan nsz float @llvm.canonicalize.f32(float [[UNKNOWN]])
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[PSUB]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan nsz float @llvm.canonicalize.f32(float [[SELECT]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %psub = call float @returns_psub()
@@ -1688,7 +1696,8 @@ define nofpclass(nan pzero sub) float @ret__no_nan_pzero_sub__canonicalize_nsz__
 ; CHECK-LABEL: define nofpclass(nan pzero sub) float @ret__no_nan_pzero_sub__canonicalize_nsz__demand_psub__ftpz_ieee(
 ; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR9]] {
 ; CHECK-NEXT:    [[PSUB:%.*]] = call float @returns_psub()
-; CHECK-NEXT:    [[RESULT:%.*]] = call nnan nsz float @llvm.canonicalize.f32(float [[UNKNOWN]])
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[PSUB]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan nsz float @llvm.canonicalize.f32(float [[SELECT]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %psub = call float @returns_psub()
@@ -1701,7 +1710,8 @@ define nofpclass(nan pzero sub) float @ret__no_nan_pzero_sub__canonicalize_nsz__
 ; CHECK-LABEL: define nofpclass(nan pzero sub) float @ret__no_nan_pzero_sub__canonicalize_nsz__demand_psub__dynamic_daz(
 ; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR11]] {
 ; CHECK-NEXT:    [[PSUB:%.*]] = call float @returns_psub()
-; CHECK-NEXT:    [[RESULT:%.*]] = call nnan nsz float @llvm.canonicalize.f32(float [[UNKNOWN]])
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[PSUB]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan nsz float @llvm.canonicalize.f32(float [[SELECT]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %psub = call float @returns_psub()
@@ -1714,7 +1724,8 @@ define nofpclass(nan pzero sub) float @ret__no_nan_pzero_sub__canonicalize_nsz__
 ; CHECK-LABEL: define nofpclass(nan pzero sub) float @ret__no_nan_pzero_sub__canonicalize_nsz__demand_psub__ftz_dynamic(
 ; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR10]] {
 ; CHECK-NEXT:    [[PSUB:%.*]] = call float @returns_psub()
-; CHECK-NEXT:    [[RESULT:%.*]] = call nnan nsz float @llvm.canonicalize.f32(float [[UNKNOWN]])
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[PSUB]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan nsz float @llvm.canonicalize.f32(float [[SELECT]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %psub = call float @returns_psub()
@@ -1741,7 +1752,8 @@ define nofpclass(nan nzero sub) float @ret__no_nan_nzero_sub__canonicalize_nsz__
 ; CHECK-LABEL: define nofpclass(nan nzero sub) float @ret__no_nan_nzero_sub__canonicalize_nsz__demand_nsub__ftz_daz(
 ; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[NSUB:%.*]] = call float @returns_nsub()
-; CHECK-NEXT:    [[RESULT:%.*]] = call nnan nsz float @llvm.canonicalize.f32(float [[UNKNOWN]])
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[NSUB]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan nsz float @llvm.canonicalize.f32(float [[SELECT]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %nsub = call float @returns_nsub()
@@ -1782,7 +1794,8 @@ define nofpclass(nan nzero sub) float @ret__no_nan_nzero_sub__canonicalize_nsz__
 ; CHECK-LABEL: define nofpclass(nan nzero sub) float @ret__no_nan_nzero_sub__canonicalize_nsz__demand_nsub__ieee_daz(
 ; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR5]] {
 ; CHECK-NEXT:    [[NSUB:%.*]] = call float @returns_nsub()
-; CHECK-NEXT:    [[RESULT:%.*]] = call nnan nsz float @llvm.canonicalize.f32(float [[UNKNOWN]])
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[NSUB]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan nsz float @llvm.canonicalize.f32(float [[SELECT]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %nsub = call float @returns_nsub()
@@ -1823,7 +1836,8 @@ define nofpclass(nan nzero sub) float @ret__no_nan_nzero_sub__canonicalize_nsz__
 ; CHECK-LABEL: define nofpclass(nan nzero sub) float @ret__no_nan_nzero_sub__canonicalize_nsz__demand_nsub__ftz_ieee(
 ; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR8]] {
 ; CHECK-NEXT:    [[NSUB:%.*]] = call float @returns_nsub()
-; CHECK-NEXT:    [[RESULT:%.*]] = call nnan nsz float @llvm.canonicalize.f32(float [[UNKNOWN]])
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[NSUB]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan nsz float @llvm.canonicalize.f32(float [[SELECT]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %nsub = call float @returns_nsub()

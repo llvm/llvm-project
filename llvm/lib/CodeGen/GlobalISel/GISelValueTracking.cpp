@@ -1729,15 +1729,21 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     break;
   }
   case TargetOpcode::G_FCANONICALIZE: {
+    FPClassTest InterestedSrcs = InterestedClasses;
+    // Subnormals flush to zero, and the NSZ flag may demand the other zero.
+    if (InterestedClasses & fcZero)
+      InterestedSrcs |= fcZero | fcSubnormal;
+
     Register Val = MI.getOperand(1).getReg();
     KnownFPClass KnownSrc;
-    computeKnownFPClass(Val, DemandedElts, InterestedClasses, KnownSrc,
-                        Depth + 1);
+    computeKnownFPClass(Val, DemandedElts, InterestedSrcs, KnownSrc, Depth + 1);
 
     LLT Ty = MRI.getType(Val).getScalarType();
     const fltSemantics &FPType = getFltSemanticForLLT(Ty);
     DenormalMode Mode = MF->getDenormalMode(FPType);
-    Known = KnownFPClass::canonicalize(KnownSrc, FPType, Mode);
+
+    const bool HasNSZ = MI.getFlag(MachineInstr::MIFlag::FmNsz);
+    Known = KnownFPClass::canonicalize(KnownSrc, FPType, Mode, HasNSZ);
     break;
   }
   case TargetOpcode::G_VECREDUCE_FMAX:
