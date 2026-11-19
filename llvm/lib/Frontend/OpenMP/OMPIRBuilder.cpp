@@ -697,6 +697,19 @@ void OpenMPIRBuilder::getKernelArgsVector(TargetKernelArgs &KernelArgs,
                 KernelArgs.DynCGroupMem};
 }
 
+/// Add the target's extension attribute to the C int parameter \p ArgNo.
+static void addI32ExtParamAttr(Function &F, unsigned ArgNo) {
+  if (auto AK = TargetLibraryInfo::getExtAttrForI32Param(
+          F.getParent()->getTargetTriple()))
+    F.addParamAttr(ArgNo, AK);
+}
+
+static void addI32ExtParamAttr(CallInst *CI, unsigned ArgNo) {
+  if (auto AK = TargetLibraryInfo::getExtAttrForI32Param(
+          CI->getModule()->getTargetTriple()))
+    CI->addParamAttr(ArgNo, AK);
+}
+
 void OpenMPIRBuilder::addAttributes(omp::RuntimeFunction FnID, Function &Fn) {
   LLVMContext &Ctx = Fn.getContext();
 
@@ -2509,6 +2522,7 @@ Expected<Value *> OpenMPIRBuilder::createTaskDuplicationFunction(
 
   Function *DupFunction = Function::Create(DupFuncTy, Function::InternalLinkage,
                                            "omp_taskloop_dup", M);
+  addI32ExtParamAttr(*DupFunction, 2);
   Value *DestTaskArg = DupFunction->getArg(0);
   Value *SrcTaskArg = DupFunction->getArg(1);
   Value *LastprivateFlagArg = DupFunction->getArg(2);
@@ -2643,6 +2657,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
     assert(OutlinedFn.hasOneUse() &&
            "there must be a single user for the outlined function");
     CallInst *StaleCI = cast<CallInst>(OutlinedFn.user_back());
+    addI32ExtParamAttr(OutlinedFn, 0);
 
     /* Create the casting for the Bounds Values that can be used when outlining
      * to replace the uses of the fakes with real values */
@@ -2963,6 +2978,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
     assert(OutlinedFn.hasOneUse() &&
            "there must be a single user for the outlined function");
     CallInst *StaleCI = cast<CallInst>(OutlinedFn.user_back());
+    addI32ExtParamAttr(OutlinedFn, 0);
 
     // HasShareds is true if any variables are captured in the outlined region,
     // false otherwise.
@@ -3157,6 +3173,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
         CI = createRuntimeFunctionCall(&OutlinedFn, {ThreadID, TaskData});
       else
         CI = createRuntimeFunctionCall(&OutlinedFn, {ThreadID});
+      addI32ExtParamAttr(CI, 0);
       CI->setDebugLoc(StaleCI->getDebugLoc());
       createRuntimeFunctionCall(TaskCompleteFn, {Ident, ThreadID, TaskData});
       Builder.SetInsertPoint(ThenTI);
@@ -9597,6 +9614,7 @@ static Function *emitTargetTaskProxyFunction(
                         /* isVarArg */ false);
   auto ProxyFn = Function::Create(ProxyFnTy, GlobalValue::InternalLinkage,
                                   ".omp_target_task_proxy_func", M);
+  addI32ExtParamAttr(*ProxyFn, 0);
   Value *ThreadId = ProxyFn->getArg(0);
   Value *TaskWithPrivates = ProxyFn->getArg(1);
   ThreadId->setName("thread.id");
@@ -10110,6 +10128,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
           getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_task_complete_if0);
       createRuntimeFunctionCall(TaskBeginFn, {Ident, ThreadID, TaskData});
       CallInst *CI = createRuntimeFunctionCall(ProxyFn, {ThreadID, TaskData});
+      addI32ExtParamAttr(CI, 0);
       CI->setDebugLoc(StaleCI->getDebugLoc());
       createRuntimeFunctionCall(TaskCompleteFn, {Ident, ThreadID, TaskData});
     } else if (DepArray) {

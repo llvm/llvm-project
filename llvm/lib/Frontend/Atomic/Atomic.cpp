@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Frontend/Atomic/Atomic.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
 #include <utility>
@@ -35,7 +36,8 @@ Value *AtomicInfo::EmitAtomicLoadOp(AtomicOrdering AO, bool IsVolatile,
 }
 
 CallInst *AtomicInfo::EmitAtomicLibcall(StringRef fnName, Type *ResultType,
-                                        ArrayRef<Value *> Args) {
+                                        ArrayRef<Value *> Args,
+                                        AttributeList ParamAttrs) {
   LLVMContext &ctx = Builder->getContext();
   SmallVector<Type *, 6> ArgTys;
   for (Value *Arg : Args)
@@ -47,10 +49,12 @@ CallInst *AtomicInfo::EmitAtomicLibcall(StringRef fnName, Type *ResultType,
   AttrBuilder fnAttrBuilder(ctx);
   fnAttrBuilder.addAttribute(Attribute::NoUnwind);
   fnAttrBuilder.addAttribute(Attribute::WillReturn);
-  AttributeList fnAttrs =
-      AttributeList::get(ctx, AttributeList::FunctionIndex, fnAttrBuilder);
+  AttributeList fnAttrs = ParamAttrs.addFnAttributes(ctx, fnAttrBuilder);
   FunctionCallee LibcallFn = M->getOrInsertFunction(fnName, FnType, fnAttrs);
   CallInst *Call = Builder->CreateCall(LibcallFn, Args);
+  // Only targets that extend C int arguments need call-site attributes.
+  if (!ParamAttrs.isEmpty())
+    Call->setAttributes(fnAttrs);
   return Call;
 }
 
@@ -83,8 +87,14 @@ std::pair<Value *, Value *> AtomicInfo::EmitAtomicCompareExchangeLibcall(
                                       static_cast<uint64_t>(toCABI(Failure)),
                                       /*signed=*/true)),
   };
-  auto Result = EmitAtomicLibcall("__atomic_compare_exchange",
-                                  IntegerType::getInt1Ty(ctx), Args);
+  AttributeList ParamAttrs;
+  if (auto AK = TargetLibraryInfo::getExtAttrForI32Param(
+          Builder->getModule()->getTargetTriple()))
+    ParamAttrs =
+        ParamAttrs.addParamAttribute(ctx, 4, AK).addParamAttribute(ctx, 5, AK);
+  auto Result =
+      EmitAtomicLibcall("__atomic_compare_exchange",
+                        IntegerType::getInt1Ty(ctx), Args, ParamAttrs);
   return std::make_pair(ExpectedVal, Result);
 }
 
@@ -132,6 +142,8 @@ AtomicInfo::EmitAtomicLoadLibcall(AtomicOrdering AO) {
   Constant *OrderingVal =
       ConstantInt::get(Type::getInt32Ty(Ctx), (int)toCABI(AO));
   Args.push_back(OrderingVal);
+  if (auto AK = TargetLibraryInfo::getExtAttrForI32Param(M->getTargetTriple()))
+    Attr = Attr.addParamAttribute(Ctx, 3, AK);
 
   ResultTy = Type::getVoidTy(Ctx);
   SmallVector<Type *, 6> ArgTys;
@@ -172,6 +184,8 @@ void AtomicInfo::EmitAtomicStoreLibcall(AtomicOrdering AO, Value *Source) {
   Constant *OrderingVal =
       ConstantInt::get(Type::getInt32Ty(Ctx), (int)toCABI(AO));
   Args.push_back(OrderingVal);
+  if (auto AK = TargetLibraryInfo::getExtAttrForI32Param(M->getTargetTriple()))
+    Attr = Attr.addParamAttribute(Ctx, 3, AK);
 
   SmallVector<Type *, 6> ArgTys;
   for (Value *Arg : Args)
