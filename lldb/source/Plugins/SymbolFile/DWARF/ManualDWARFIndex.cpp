@@ -94,10 +94,22 @@ void ManualDWARFIndex::IndexImpl() {
   const size_t num_threads = std::min<size_t>(
       Debugger::GetThreadPool().getMaxConcurrency(), units_to_index.size());
 
+  // With a single worker (one unit, e.g. a GPU code object, or a one-thread
+  // pool) nothing runs in parallel, so do the work on this thread instead of
+  // going through the pool.
+  const bool run_inline = num_threads == 1;
+
   // Run a function for each compile unit in parallel using as many threads as
   // are available. This is significantly faster than submiting a new task for
   // each unit.
   auto for_each_unit = [&](auto &&fn) {
+    if (run_inline) {
+      for (size_t i = 0; i < units_to_index.size(); ++i) {
+        fn(0, i, units_to_index[i]);
+        progress.Increment();
+      }
+      return;
+    }
     std::atomic<size_t> next_cu_idx = 0;
     auto wrapper = [&fn, &next_cu_idx, &units_to_index,
                     &progress](size_t worker_id) {
@@ -137,13 +149,17 @@ void ManualDWARFIndex::IndexImpl() {
   // Merge partial indexes into a single index. Process each index in a set in
   // parallel.
   for (NameToDIE IndexSet<NameToDIE>::*index : indices) {
-    task_group.async([this, &sets, index, &progress]() {
+    auto merge = [this, &sets, index, &progress]() {
       NameToDIE &result = m_set.*index;
       for (auto &set : sets)
         result.Append(set.*index);
       result.Finalize();
       progress.Increment();
-    });
+    };
+    if (run_inline)
+      merge();
+    else
+      task_group.async(merge);
   }
   task_group.wait();
 
