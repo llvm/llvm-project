@@ -36,7 +36,7 @@ USAGE: clang-sycl-linker [options] <input bitcode files>
 
 OPTIONS:
   --arch=<arch>           The device architecture
-  --code=<code>           Specify a real device to compile the virtual --arch for ahead of time. Can be repeated. Without it, the SPIR-V is kept for just-in-time compilation.
+  --code=<device>         Specify a real device to compile the virtual --arch for ahead of time. Can be repeated. Without it, the SPIR-V is kept for just-in-time compilation.
   --dry-run               Print generated commands without running.
   -help-hidden            Display all available options
   -help                   Display available options (--help-hidden for more)

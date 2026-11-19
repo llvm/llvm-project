@@ -48,7 +48,7 @@ def arch_EQ : Joined<["--", "-"], "arch=">,
               HelpText<"The device architecture">;
 def code_EQ : Joined<["--", "-"], "code=">,
               Flags<[LinkerOnlyOption]>,
-              MetaVarName<"<code>">,
+              MetaVarName<"<device>">,
               HelpText<"Specify a real device to compile the virtual --arch "
                        "for ahead of time. Can be repeated. Without it, the "
                        "SPIR-V is kept for just-in-time compilation.">;
