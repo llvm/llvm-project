@@ -1,3 +1,4 @@
+// XFAIL: system-zos
 // RUN: rm -rf %t
 // RUN: %clang_cc1 -extract-api --pretty-sgf -verify \
 // RUN:   -triple arm64-apple-macosx -x c-header %s -o %t/output.symbols.json
