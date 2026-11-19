@@ -232,6 +232,7 @@ ExprEngine::ExprEngine(cross_tu::CrossTranslationUnitContext &CTU,
       svalBuilder(StateMgr.getSValBuilder()), ObjCNoRet(mgr.getASTContext()),
       BR(mgr, *this), VisitedCallees(VisitedCalleesIn),
       HowToInline(HowToInlineIn) {
+  SymMgr.initAccessToCurrAnalysisStep(this);
   unsigned TrimInterval = mgr.options.GraphTrimInterval;
   if (TrimInterval != 0) {
     // Enable eager node reclamation when constructing the ExplodedGraph.
@@ -4009,4 +4010,19 @@ void ExprEngine::ConstructInitList(const Expr *E, ArrayRef<Expr *> Args,
     Val = S->getSVal(Args.front(), SF);
   }
   Dst.insert(Engine.makeNodeWithBinding(Pred, E, Val));
+}
+
+const StackFrame *AccessToCurrAnalysisStep::getCurrStackFrame() const {
+  assert(EE && "Constructor of ExprEngine should have initialized this!");
+  return EE->getCurrStackFrame();
+}
+
+ConstCFGElementRef AccessToCurrAnalysisStep::getCFGElementRef() const {
+  assert(EE && "Constructor of ExprEngine should have initialized this!");
+  return EE->getCFGElementRef();
+}
+
+unsigned AccessToCurrAnalysisStep::getNumVisitedCurrent() const {
+  assert(EE && "Constructor of ExprEngine should have initialized this!");
+  return EE->getNumVisitedCurrent();
 }

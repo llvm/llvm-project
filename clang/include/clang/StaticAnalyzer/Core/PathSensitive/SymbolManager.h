@@ -39,6 +39,7 @@ namespace ento {
 
 class BasicValueFactory;
 class StoreManager;
+class ExprEngine;
 
 ///A symbol representing the value stored at a MemRegion.
 class SymbolRegionValue : public SymbolData {
@@ -505,6 +506,20 @@ private:
   SymbolID nextID() { return NextSymbolID++; }
 };
 
+/// To conjure symbols, the SymbolManager needs to query the canonical
+/// identifiers of the current analysis step from the ExprEngine (which queries
+/// the visit count from the BlockCounter of the WorkList).
+///
+class AccessToCurrAnalysisStep {
+  const ExprEngine *EE = nullptr;
+
+public:
+  void setExprEngine(const ExprEngine *P) { EE = P; }
+  const StackFrame *getCurrStackFrame() const;
+  ConstCFGElementRef getCFGElementRef() const;
+  unsigned getNumVisitedCurrent() const;
+};
+
 class SymbolManager {
   using DataSetTy = llvm::FoldingSet<SymExpr>;
   using SymbolDependTy =
@@ -520,10 +535,16 @@ class SymbolManager {
   BasicValueFactory &BV;
   ASTContext &Ctx;
 
+  AccessToCurrAnalysisStep CurrStep;
+
 public:
   SymbolManager(ASTContext &ctx, BasicValueFactory &bv,
                 llvm::BumpPtrAllocator &bpalloc)
       : SymbolDependencies(16), Alloc(bpalloc), BV(bv), Ctx(ctx) {}
+
+  void initAccessToCurrAnalysisStep(ExprEngine *EE) {
+    CurrStep.setExprEngine(EE);
+  }
 
   static bool canSymbolicate(QualType T);
 
@@ -537,8 +558,18 @@ public:
                                       const StackFrame *SF, QualType T,
                                       unsigned VisitCount,
                                       const void *SymbolTag = nullptr) {
+    assert(Elem == CurrStep.getCFGElementRef());
+    assert(SF == CurrStep.getCurrStackFrame());
+    assert(VisitCount == CurrStep.getNumVisitedCurrent());
 
     return acquire<SymbolConjured>(Elem, SF, T, VisitCount, SymbolTag);
+  }
+
+  const SymbolConjured *conjureSymbol(QualType T,
+                                      const void *SymbolTag = nullptr) {
+    return conjureSymbol(CurrStep.getCFGElementRef(),
+                         CurrStep.getCurrStackFrame(), T,
+                         CurrStep.getNumVisitedCurrent(), SymbolTag);
   }
 
   QualType getType(const SymExpr *SE) const {
