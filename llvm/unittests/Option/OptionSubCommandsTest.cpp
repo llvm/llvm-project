@@ -224,6 +224,34 @@ TYPED_TEST(OptSubCommandTableTest, SubCommandParsing) {
   }
 }
 
+TYPED_TEST(OptSubCommandTableTest, SubCommandDashDash) {
+  TypeParam T;
+  T.setDashDashParsing(true);
+  unsigned MAI, MAC;
+  SmallVector<StringRef, 4> SubCommands;
+  SmallVector<StringRef, 4> Positionals;
+  auto HandleMultiple = [&](ArrayRef<StringRef> SCs) {
+    SubCommands.assign(SCs.begin(), SCs.end());
+  };
+  auto HandlePositionals = [&](ArrayRef<StringRef> Pos) {
+    Positionals.assign(Pos.begin(), Pos.end());
+  };
+  const char *AfterSC[] = {"foo", "--", "bar"};
+  InputArgList AL1 = T.ParseArgs(AfterSC, MAI, MAC);
+  EXPECT_EQ(
+      AL1.getSubCommand(T.getSubCommands(), HandleMultiple, HandlePositionals),
+      "foo");
+  EXPECT_TRUE(SubCommands.empty());
+  EXPECT_EQ(Positionals, SmallVector<StringRef>({"bar"}));
+  Positionals.clear();
+  const char *LeadingDashDash[] = {"--", "foo"};
+  InputArgList AL2 = T.ParseArgs(LeadingDashDash, MAI, MAC);
+  EXPECT_TRUE(
+      AL2.getSubCommand(T.getSubCommands(), HandleMultiple, HandlePositionals)
+          .empty());
+  EXPECT_EQ(Positionals, SmallVector<StringRef>({"foo"}));
+}
+
 TYPED_TEST(OptSubCommandTableTest, SubCommandHelp) {
   TypeParam T;
   std::string Help;
