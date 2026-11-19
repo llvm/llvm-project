@@ -3801,6 +3801,13 @@ def AllocA : GNULibBuiltin<"stdlib.h"> {
   let AddBuiltinPrefixedAlias = 1;
 }
 
+// POSIX stdlib.h
+
+def PtsNameR : GNULibBuiltin<"stdlib.h"> {
+  let Spellings = ["ptsname_r"];
+  let Prototype = "int(int, char*, size_t)";
+}
+
 // POSIX malloc.h
 
 def MemAlign : GNULibBuiltin<"malloc.h"> {
@@ -3905,10 +3912,28 @@ def StrnCaseCmp : GNULibBuiltin<"strings.h"> {
   let RequiresUndef = 1;
 }
 
+// POSIX unistd.h
+
 def GNU_Exit : GNULibBuiltin<"unistd.h"> {
   let Spellings = ["_exit"];
   let Attributes = [NoReturn];
   let Prototype = "void(int)";
+}
+
+def GetLoginR : GNULibBuiltin<"unistd.h"> {
+  let Spellings = ["getlogin_r"];
+  let Prototype = "int(char*, size_t)";
+}
+
+def TtyNameR : GNULibBuiltin<"unistd.h"> {
+  let Spellings = ["ttyname_r"];
+  let Prototype = "int(int, char*, size_t)";
+}
+
+def ConfStr : GNULibBuiltin<"unistd.h"> {
+  let Spellings = ["confstr"];
+  let Attributes = [NoThrow];
+  let Prototype = "size_t(int, char*, size_t)";
 }
 
 def VFork : LibBuiltin<"unistd.h"> {
