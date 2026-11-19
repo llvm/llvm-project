@@ -74,6 +74,63 @@ body:
 exit:
   ret i32 %v
 }
+; A write to %i between the dominating write and the call must not block the
+; reachability query either.
+define i32 @count_overwrite(i32 %n) {
+; TUNIT: Function Attrs: nofree norecurse nosync nounwind memory(none)
+; TUNIT-LABEL: define i32 @count_overwrite(
+; TUNIT-SAME: i32 [[N:%.*]]) #[[ATTR1]] {
+; TUNIT-NEXT:  [[ENTRY:.*:]]
+; TUNIT-NEXT:    [[I:%.*]] = alloca i32, align 4
+; TUNIT-NEXT:    store i32 0, ptr [[I]], align 4
+; TUNIT-NEXT:    br label %[[COND:.*]]
+; TUNIT:       [[COND]]:
+; TUNIT-NEXT:    [[V:%.*]] = load i32, ptr [[I]], align 4
+; TUNIT-NEXT:    [[C:%.*]] = icmp slt i32 [[V]], [[N]]
+; TUNIT-NEXT:    br i1 [[C]], label %[[BODY:.*]], label %[[EXIT:.*]]
+; TUNIT:       [[BODY]]:
+; TUNIT-NEXT:    store i32 [[V]], ptr [[I]], align 4
+; TUNIT-NEXT:    call void @inc(ptr noalias nofree noundef nonnull align 4 captures(none) dereferenceable(4) [[I]]) #[[ATTR2]]
+; TUNIT-NEXT:    br label %[[COND]]
+; TUNIT:       [[EXIT]]:
+; TUNIT-NEXT:    ret i32 [[V]]
+;
+; CGSCC: Function Attrs: nofree nosync nounwind memory(none)
+; CGSCC-LABEL: define i32 @count_overwrite(
+; CGSCC-SAME: i32 [[N:%.*]]) #[[ATTR1]] {
+; CGSCC-NEXT:  [[ENTRY:.*:]]
+; CGSCC-NEXT:    [[I:%.*]] = alloca i32, align 4
+; CGSCC-NEXT:    store i32 0, ptr [[I]], align 4
+; CGSCC-NEXT:    br label %[[COND:.*]]
+; CGSCC:       [[COND]]:
+; CGSCC-NEXT:    [[V:%.*]] = load i32, ptr [[I]], align 4
+; CGSCC-NEXT:    [[C:%.*]] = icmp slt i32 [[V]], [[N]]
+; CGSCC-NEXT:    br i1 [[C]], label %[[BODY:.*]], label %[[EXIT:.*]]
+; CGSCC:       [[BODY]]:
+; CGSCC-NEXT:    store i32 [[V]], ptr [[I]], align 4
+; CGSCC-NEXT:    call void @inc(ptr noalias nofree noundef nonnull align 4 captures(none) dereferenceable(4) [[I]]) #[[ATTR2]]
+; CGSCC-NEXT:    br label %[[COND]]
+; CGSCC:       [[EXIT]]:
+; CGSCC-NEXT:    ret i32 [[V]]
+;
+entry:
+  %i = alloca i32, align 4
+  store i32 0, ptr %i, align 4
+  br label %cond
+
+cond:
+  %v = load i32, ptr %i, align 4
+  %c = icmp slt i32 %v, %n
+  br i1 %c, label %body, label %exit
+
+body:
+  store i32 %v, ptr %i, align 4
+  call void @inc(ptr %i)
+  br label %cond
+
+exit:
+  ret i32 %v
+}
 ;.
 ; TUNIT: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) }
 ; TUNIT: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind memory(none) }
