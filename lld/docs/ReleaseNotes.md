@@ -36,6 +36,10 @@ from the [LLVM releases web site](https://llvm.org/releases/).
 
 ### COFF Improvements
 
+* Fixed `_LINK_` environment-variable options to follow command-line
+  arguments, matching `link.exe` precedence: `LINK`, command line, then
+  `_LINK_`. ([#220973](https://github.com/llvm/llvm-project/issues/220973))
+
 ### MinGW Improvements
 
 ### MachO Improvements

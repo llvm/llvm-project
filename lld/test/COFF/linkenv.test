@@ -7,3 +7,37 @@ CHECK: OVERVIEW: LLVM Linker
 # RUN:     FileCheck --check-prefix=ERR %s
 
 ERR: error: no input files
+
+# REQUIRES: x86
+# RUN: cp %p/Inputs/ret42.obj %t.obj
+
+# RUN: rm -f %t.link.exe %t.last.exe %t.cmd.exe %t.ignored-link.exe \
+# RUN:   %t.ignored-last.exe %t.ignore.exe %t.rsp.exe %t.before-rsp.exe
+
+# LINK precedes the command line, and _LINK_ follows it. The last /out wins.
+# RUN: env LINK=/out:%t.link.exe _LINK_=/out:%t.last.exe lld-link %t.obj \
+# RUN:   /entry:main /subsystem:console /nodefaultlib /out:%t.cmd.exe
+# RUN: ls %t.last.exe
+# RUN: not ls %t.cmd.exe
+# RUN: not ls %t.link.exe
+
+# With no _LINK_, command-line options override LINK.
+# RUN: env LINK=/out:%t.link.exe _LINK_= lld-link %t.obj \
+# RUN:   /entry:main /subsystem:console /nodefaultlib /out:%t.cmd.exe
+# RUN: ls %t.cmd.exe
+# RUN: not ls %t.link.exe
+
+# /lldignoreenv ignores both environment variables.
+# RUN: env LINK=/out:%t.ignored-link.exe _LINK_=/out:%t.ignored-last.exe \
+# RUN:   lld-link %t.obj /entry:main /subsystem:console /nodefaultlib \
+# RUN:   /lldignoreenv /out:%t.ignore.exe
+# RUN: ls %t.ignore.exe
+# RUN: not ls %t.ignored-link.exe
+# RUN: not ls %t.ignored-last.exe
+
+# Response files in _LINK_ also follow command-line options after expansion.
+# RUN: echo /out:%t.rsp.exe > %t.rsp
+# RUN: env LINK=/out:%t.link.exe _LINK_=@%t.rsp lld-link %t.obj \
+# RUN:   /entry:main /subsystem:console /nodefaultlib /out:%t.before-rsp.exe
+# RUN: ls %t.rsp.exe
+# RUN: not ls %t.before-rsp.exe
