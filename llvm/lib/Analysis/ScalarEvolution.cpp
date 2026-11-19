@@ -15991,8 +15991,6 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
   // original header. If there is no such predecessor, continue at the
   // immediate dominator.
   // TODO: share this logic with isLoopEntryGuardedByCond.
-  SmallVector<std::tuple<CmpInst::Predicate, const SCEV *, const SCEV *>>
-      GuardsToProcess;
   unsigned NumCollectedConditions = 0;
   unsigned NumDomTreeSteps = 0;
   VisitedBlocks.insert(Block);
@@ -16015,28 +16013,24 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
       continue;
     }
     VisitedBlocks.insert(Pair.second);
-    // On a switch default edge, cond != case for each case, if no case leads
-    // to the same successor. Only switches with up to 4 cases are used.
+
+    // Taking a switch default edge implies cond != case for each case, if no
+    // case leads to the same successor. Only switches with up to 4 cases are
+    // considered. The switch itself is queued as the term.
     if (const auto *SI = dyn_cast<SwitchInst>(Pair.first->getTerminator())) {
       if (SI->getDefaultDest() != Pair.second || SI->getNumCases() > 4 ||
           any_of(SI->cases(), [&](const auto &C) {
             return C.getCaseSuccessor() == Pair.second;
           }))
         continue;
-      const SCEV *Cond = SE.getSCEV(SI->getCondition());
-      for (const auto &C : SI->cases())
-        GuardsToProcess.emplace_back(
-            CmpInst::ICMP_NE, Cond,
-            SE.getConstant(C.getCaseValue()->getValue()));
+      Terms.emplace_back(const_cast<SwitchInst *>(SI), false);
+    } else if (const auto *LoopEntryPredicate =
+                   dyn_cast<CondBrInst>(Pair.first->getTerminator())) {
+      Terms.emplace_back(LoopEntryPredicate->getCondition(),
+                         LoopEntryPredicate->getSuccessor(0) == Pair.second);
+    } else {
       continue;
     }
-    const CondBrInst *LoopEntryPredicate =
-        dyn_cast<CondBrInst>(Pair.first->getTerminator());
-    if (!LoopEntryPredicate)
-      continue;
-
-    Terms.emplace_back(LoopEntryPredicate->getCondition(),
-                       LoopEntryPredicate->getSuccessor(0) == Pair.second);
     NumCollectedConditions++;
 
     // If we are recursively collecting guards stop after 2
@@ -16050,7 +16044,17 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
   // earliest conditions is processed first, except guards with divisibility
   // information, which are moved to the back. This ensures the SCEVs with the
   // shortest dependency chains are constructed first.
+  SmallVector<std::tuple<CmpInst::Predicate, const SCEV *, const SCEV *>>
+      GuardsToProcess;
   for (auto [Term, EnterIfTrue] : reverse(Terms)) {
+    if (auto *SI = dyn_cast<SwitchInst>(Term)) {
+      const SCEV *Cond = SE.getSCEV(SI->getCondition());
+      for (const auto &C : SI->cases())
+        GuardsToProcess.emplace_back(
+            CmpInst::ICMP_NE, Cond,
+            SE.getConstant(C.getCaseValue()->getValue()));
+      continue;
+    }
     SmallVector<Value *, 8> Worklist;
     SmallPtrSet<Value *, 8> Visited;
     Worklist.push_back(Term);
@@ -16087,7 +16091,6 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
   // Process divisibility guards in reverse order to populate DivGuards early.
   DenseMap<const SCEV *, APInt> Multiples;
   LoopGuards DivGuards(SE);
-
   for (const auto &[Predicate, LHS, RHS] : GuardsToProcess) {
     if (!isDivisibilityGuard(LHS, RHS, SE))
       continue;
