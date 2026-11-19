@@ -715,10 +715,10 @@ public:
   /// Declare a function.
   void declareFunction(Fortran::lower::pft::FunctionLikeUnit &funit) {
     CHECK(builder && "declareFunction called with uninitialized builder");
-    setCurrentPosition(funit.getStartingSourceLoc());
     for (int entryIndex = 0, last = funit.entryPointList.size();
          entryIndex < last; ++entryIndex) {
       funit.setActiveEntry(entryIndex);
+      setCurrentPosition(funit.getActiveEntrySourceLoc());
       // Calling CalleeInterface ctor will build a declaration
       // mlir::func::FuncOp with no other side effects.
       // TODO: when doing some compiler profiling on real apps, it may be worth
@@ -7179,7 +7179,6 @@ private:
     const bool hasGlobals = hostAssociations.hasGlobalAssociations();
     if (hasGlobals)
       hostAssociations.prepareGlobalBindings(funit);
-    setCurrentPosition(funit.getStartingSourceLoc());
     setCurrentFunctionUnit(&funit);
     assert(visibleCrayPointerTargets.empty() &&
            "Cray pointer targets must not outlive a procedure");
@@ -7188,6 +7187,7 @@ private:
     for (int entryIndex = 0, last = funit.entryPointList.size();
          entryIndex < last; ++entryIndex) {
       funit.setActiveEntry(entryIndex);
+      setCurrentPosition(funit.getActiveEntrySourceLoc());
       startNewFunction(funit); // the entry point for lowering this procedure
       wrapUnstructuredCount = 0;
 
