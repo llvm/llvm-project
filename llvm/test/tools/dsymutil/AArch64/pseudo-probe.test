@@ -7,14 +7,14 @@
 # RUN: yaml2obj %t/b.yaml -o %t/b.o
 
 # RUN: dsymutil --linker classic -y %t/debug.map -oso-prepend-path=%t -o %t/classic.dSYM
-# RUN: od -An -v -t x1 %t/classic.dSYM/Contents/Resources/Profiling/pseudo_probes | tr A-F a-f | FileCheck %s --check-prefix=PROBES
-# RUN: od -An -v -t x1 %t/classic.dSYM/Contents/Resources/Profiling/pseudo_probe_descs | tr A-F a-f | FileCheck %s --check-prefix=DESCS
+# RUN: od -An -v -t x1 %t/classic.dSYM/Contents/Resources/Profiling/pseudo_probes | FileCheck %s --ignore-case --check-prefix=PROBES
+# RUN: od -An -v -t x1 %t/classic.dSYM/Contents/Resources/Profiling/pseudo_probe_descs | FileCheck %s --ignore-case --check-prefix=DESCS
 # RUN: wc -c < %t/classic.dSYM/Contents/Resources/Profiling/pseudo_probes | FileCheck %s --check-prefix=PROBES-SIZE
 # RUN: wc -c < %t/classic.dSYM/Contents/Resources/Profiling/pseudo_probe_descs | FileCheck %s --check-prefix=DESCS-SIZE
 
 # RUN: dsymutil --linker parallel -y %t/debug.map -oso-prepend-path=%t -o %t/parallel.dSYM
-# RUN: od -An -v -t x1 %t/parallel.dSYM/Contents/Resources/Profiling/pseudo_probes | tr A-F a-f | FileCheck %s --check-prefix=PROBES
-# RUN: od -An -v -t x1 %t/parallel.dSYM/Contents/Resources/Profiling/pseudo_probe_descs | tr A-F a-f | FileCheck %s --check-prefix=DESCS
+# RUN: od -An -v -t x1 %t/parallel.dSYM/Contents/Resources/Profiling/pseudo_probes | FileCheck %s --ignore-case --check-prefix=PROBES
+# RUN: od -An -v -t x1 %t/parallel.dSYM/Contents/Resources/Profiling/pseudo_probe_descs | FileCheck %s --ignore-case --check-prefix=DESCS
 # RUN: wc -c < %t/parallel.dSYM/Contents/Resources/Profiling/pseudo_probes | FileCheck %s --check-prefix=PROBES-SIZE
 # RUN: wc -c < %t/parallel.dSYM/Contents/Resources/Profiling/pseudo_probe_descs | FileCheck %s --check-prefix=DESCS-SIZE
 
