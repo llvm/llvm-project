@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 3.20)
-project(WindowsResourceMetadata C)
+project(WindowsResourceMetadata NONE)
+# AddLLVM probes C linker flags on Darwin.
+if(CMAKE_SYSTEM_NAME MATCHES "Darwin")
+  enable_language(C)
+endif()
 list(APPEND CMAKE_MODULE_PATH
   "${LLVM_SRC_ROOT}/cmake/modules"
   "${LLVM_SRC_ROOT}/../cmake/Modules")
