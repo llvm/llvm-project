@@ -35,8 +35,10 @@
 //    - Each generated stub includes the `override` keyword, a `// TODO:`
 //      comment, and a `static_assert(false, ...)` to force a compile-time
 //      error if the method remains unimplemented.
-//    - The base method's signature is adjusted (e.g., `virtual` and `= 0`
-//      are removed for the override).
+//    - The base method's signature is adjusted for the override (e.g.,
+//      `virtual` and `= 0` are removed, and all nested name specifiers
+//      that do not enclose the derived class are added to the types of
+//      parameters and return value).
 //
 // 4. Code Action Provided:
 //    - A single code action titled "Override pure virtual methods" is offered.
@@ -75,57 +77,26 @@
 //===----------------------------------------------------------------------===//
 
 #include "refactor/Tweak.h"
-#include "support/Token.h"
 
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Attr.h"
+#include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/TypeBase.h"
 #include "clang/AST/TypeLoc.h"
+#include "clang/Basic/AttributeCommonInfo.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/Specifiers.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <string>
 
 namespace clang {
 namespace clangd {
 namespace {
-
-// This function removes the "virtual" and the "= 0" at the end;
-// e.g.:
-//   "virtual void foo(int var = 0) = 0"  // input.
-//   "void foo(int var = 0)"              // output.
-std::string removePureVirtualSyntax(const std::string &MethodDecl,
-                                    const LangOptions &LangOpts) {
-  assert(!MethodDecl.empty());
-
-  TokenStream TS = lex(MethodDecl, LangOpts);
-
-  std::string DeclString;
-  for (const clangd::Token &Tk : TS.tokens()) {
-    if (Tk.Kind == clang::tok::raw_identifier && Tk.text() == "virtual")
-      continue;
-
-    // If the ending two tokens are "= 0", we break here and we already have the
-    // method's string without the pure virtual syntax.
-    const auto &Next = Tk.next();
-    if (Next.next().Kind == tok::eof && Tk.Kind == clang::tok::equal &&
-        Next.text() == "0")
-      break;
-
-    DeclString += Tk.text();
-    if (Tk.Kind != tok::l_paren && Next.Kind != tok::comma &&
-        Next.Kind != tok::r_paren && Next.Kind != tok::l_paren &&
-        Tk.Kind != tok::coloncolon && Next.Kind != tok::coloncolon)
-      DeclString += ' ';
-  }
-  // Trim the last whitespace.
-  if (DeclString.back() == ' ')
-    DeclString.pop_back();
-
-  return DeclString;
-}
 
 class OverridePureVirtuals final : public Tweak {
 public:
@@ -264,30 +235,190 @@ void OverridePureVirtuals::collectMissingPureVirtuals() {
   }
 }
 
-std::string generateOverrideString(const CXXMethodDecl *Method,
-                                   const LangOptions &LangOpts) {
+std::string generateOverrideString(const CXXRecordDecl *CurrentDeclDef,
+                                   const CXXMethodDecl *Method) {
+  // Parts of this function mirror DeclPrinter::VisitFunctionDecl in
+  // (clang/lib/AST/DeclPrinter.cpp). We can't simply use DeclPrinter, because
+  // Policy.FullyQualifiedName qualifies the types and the method name together,
+  // and the name of the override has to stay unqualified.
+
   std::string MethodDecl;
   auto OS = llvm::raw_string_ostream(MethodDecl);
-  Method->print(OS);
+  std::string Pragmas;
+  auto POS = llvm::raw_string_ostream(Pragmas);
+
+  // Create policy that prints all nested name specifiers that do not enclose
+  // the class to be modified.
+  PrintingPolicy PP = Method->getASTContext().getPrintingPolicy();
+  PP.FullyQualifiedName = true;
+
+  class PrintCB : public PrintingCallbacks {
+  public:
+    PrintCB(const DeclContext *CurContext) : CurContext(CurContext) {}
+    virtual ~PrintCB() {}
+    bool isScopeVisible(const DeclContext *DC) const override {
+      return DC->Encloses(CurContext);
+    }
+
+  private:
+    const DeclContext *CurContext;
+  };
+
+  PrintCB PCB(CurrentDeclDef);
+  PP.Callbacks = &PCB;
+
+  // Get function prototype
+  QualType Ty = Method->getType();
+  const FunctionProtoType *FT = Ty->getAs<FunctionProtoType>();
+
+  // Attribute specifiers
+  if (Method->hasAttrs()) {
+    for (const Attr *A : Method->attrs()) {
+      // Pragmas will be printed above the function header. All other attributes
+      // are printed at the beginning of the header.
+      if (A->getSyntax() == AttributeCommonInfo::AS_Pragma) {
+        A->printPretty(POS, PP);
+        continue;
+      }
+      // Keyword attributes are not copied: `override` is added explicitly
+      // below, `final` is intentionally not carried over, and an asm label has
+      // to follow the declarator, so it can't be placed in front like the other
+      // attributes.
+      if (A->isInherited() || A->isImplicit() || A->isKeywordAttribute())
+        continue;
+
+      A->printPretty(OS, PP);
+      OS << " ";
+    }
+  }
+
+  // Relevant specifiers
+  if (Method->isInlineSpecified())
+    OS << "inline ";
+  if (Method->isConstexprSpecified())
+    OS << "constexpr ";
+  if (Method->isConsteval())
+    OS << "consteval ";
+
+  // Return type
+  bool HasReturnType = !isa<CXXConversionDecl>(Method);
+
+  if (HasReturnType) {
+    if (FT->hasTrailingReturn())
+      OS << "auto ";
+    else {
+      FT->getReturnType().print(OS, PP);
+      OS << " ";
+    }
+  }
+
+  // Calling convention
+  CallingConv CC = FT->getCallConv();
+  // An override must have the same convention as the method it overrides,
+  // otherwise Clang rejects it ("different calling convention attributes").
+  // Only conventions that are spelled as a plain attribute name are handled.
+  switch (CC) {
+  case CC_X86StdCall:
+  case CC_X86FastCall:
+  case CC_X86ThisCall:
+  case CC_X86VectorCall:
+  case CC_X86RegCall:
+  case CC_Win64:
+  case CC_X86_64SysV:
+  case CC_PreserveMost:
+  case CC_PreserveAll:
+  case CC_PreserveNone:
+    OS << "__attribute__((" << FunctionType::getNameForCallConv(CC) << ")) ";
+    break;
+  default:
+    // Not copied: CC_C is the default and printing it would only add noise
+    // (or an ignored-attribute warning on some targets), some conventions are
+    // unlikely to occur on C++ methods, and some (e.g. pcs("..."),
+    // riscv_vls_cc(N)) need an argument that we do not print.
+    break;
+  }
+
+  // Unqualified method name
+  OS << Method->getNameAsString();
+
+  // Parameter list
+  OS << "(";
+  llvm::ListSeparator LS;
+  for (unsigned I = 0, E = Method->getNumParams(); I < E; ++I) {
+    OS << LS;
+    Method->getParamDecl(I)->print(OS, PP);
+  }
+  if (FT->isVariadic()) {
+    if (Method->getNumParams())
+      OS << ", ";
+    OS << "...";
+  }
+  OS << ")";
+
+  // CV Qualifiers
+  if (FT->isConst())
+    OS << " const";
+  if (FT->isVolatile())
+    OS << " volatile";
+
+  // Reference Qualifiers
+  switch (FT->getRefQualifier()) {
+  case RQ_None:
+    break;
+  case RQ_LValue:
+    OS << " &";
+    break;
+  case RQ_RValue:
+    OS << " &&";
+    break;
+  }
+
+  // Exception specifier
+  if (FT->hasDynamicExceptionSpec()) {
+    OS << " throw(";
+    if (FT->getExceptionSpecType() == EST_MSAny)
+      OS << "...";
+    else {
+      llvm::ListSeparator LS;
+      for (unsigned I = 0, N = FT->getNumExceptions(); I != N; ++I) {
+        OS << LS;
+        OS << FT->getExceptionType(I).getAsString(PP);
+      }
+    }
+    OS << ")";
+  } else if (isNoexceptExceptionSpec(FT->getExceptionSpecType())) {
+    OS << " noexcept";
+    if (isComputedNoexcept(FT->getExceptionSpecType())) {
+      OS << "(";
+      FT->getNoexceptExpr()->printPretty(OS, nullptr, PP);
+      OS << ")";
+    }
+  }
+
+  // Trailing return type
+  if (HasReturnType && FT->hasTrailingReturn()) {
+    OS << " -> ";
+    FT->getReturnType().print(OS, PP);
+  }
 
   return llvm::formatv(
-             "\n  {0} override {{\n"
+             "\n{0}  {1} override {{\n"
              "    // TODO: Implement this pure virtual method.\n"
-             "    static_assert(false, \"Method `{1}` is not implemented.\");\n"
+             "    static_assert(false, \"Method `{2}` is not implemented.\");\n"
              "  }",
-             removePureVirtualSyntax(MethodDecl, LangOpts), Method->getName())
+             Pragmas, MethodDecl, Method->getNameAsString())
       .str();
 }
 
 // Free function to generate the string for a group of method overrides.
 std::string generateOverridesStringForGroup(
-    llvm::SmallVector<const CXXMethodDecl *> Methods,
-    const LangOptions &LangOpts) {
+    const CXXRecordDecl *CurrentDeclDef,
+    llvm::SmallVector<const CXXMethodDecl *> Methods) {
   llvm::SmallVector<std::string> MethodsString;
   MethodsString.reserve(Methods.size());
 
   for (const CXXMethodDecl *Method : Methods) {
-    MethodsString.emplace_back(generateOverrideString(Method, LangOpts));
+    MethodsString.emplace_back(generateOverrideString(CurrentDeclDef, Method));
   }
 
   return llvm::join(MethodsString, "\n") + '\n';
@@ -302,7 +433,6 @@ Expected<Tweak::Effect> OverridePureVirtuals::apply(const Selection &Sel) {
   assert(!MissingMethodsByAccess.empty());
 
   const auto &SM = Sel.AST->getSourceManager();
-  const auto &LangOpts = Sel.AST->getLangOpts();
 
   tooling::Replacements EditReplacements;
   // Stores text for new access specifier sections that are not already present
@@ -316,7 +446,7 @@ Expected<Tweak::Effect> OverridePureVirtuals::apply(const Selection &Sel) {
     assert(!Methods.empty());
 
     std::string MethodsGroupString =
-        generateOverridesStringForGroup(Methods, LangOpts);
+        generateOverridesStringForGroup(CurrentDeclDef, Methods);
 
     auto *ExistingSpecLocIter = AccessSpecifierLocations.find(AS);
     bool ASExists = ExistingSpecLocIter != AccessSpecifierLocations.end();
