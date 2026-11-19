@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSwitch.h"
 #include <algorithm>
+#include <set>
 #include <variant>
 
 using namespace Fortran::parser::literals;
@@ -50,15 +51,8 @@ Expr<SomeType> Parenthesize(Expr<SomeType> &&expr) {
         using T = std::decay_t<decltype(x)>;
         if constexpr (common::HasMember<T, TypelessExpression>) {
           return expr; // no parentheses around typeless
-        } else if constexpr (std::is_same_v<T, Expr<SomeDerived>>) {
-          return AsGenericExpr(Parentheses<SomeDerived>{std::move(x)});
         } else {
-          return common::visit(
-              [](auto &&y) {
-                using T = ResultType<decltype(y)>;
-                return AsGenericExpr(Parentheses<T>{std::move(y)});
-              },
-              std::move(x.u));
+          return AsGenericExpr(Parentheses<ResultType<T>>{std::move(x)});
         }
       },
       std::move(expr.u));
@@ -120,8 +114,9 @@ ConvertRealOperandsResult ConvertRealOperands(
     Expr<SomeType> &&y, int defaultRealKind) {
   return common::visit(
       common::visitors{
-          [&](Expr<SomeInteger> &&ix,
-              Expr<SomeInteger> &&iy) -> ConvertRealOperandsResult {
+          [&](Expr<Type<TypeCategory::Integer>> &&ix,
+              Expr<Type<TypeCategory::Integer>> &&iy)
+              -> ConvertRealOperandsResult {
             // Can happen in a CMPLX() constructor.  Per F'2018,
             // both integer operands are converted to default REAL.
             return {AsSameKindExprs<TypeCategory::Real>(
@@ -130,56 +125,64 @@ ConvertRealOperandsResult ConvertRealOperands(
                 ConvertToKind<TypeCategory::Real>(
                     defaultRealKind, std::move(iy)))};
           },
-          [&](Expr<SomeInteger> &&ix,
-              Expr<SomeUnsigned> &&iy) -> ConvertRealOperandsResult {
+          [&](Expr<Type<TypeCategory::Integer>> &&ix,
+              Expr<Type<TypeCategory::Unsigned>> &&iy)
+              -> ConvertRealOperandsResult {
             return {AsSameKindExprs<TypeCategory::Real>(
                 ConvertToKind<TypeCategory::Real>(
                     defaultRealKind, std::move(ix)),
                 ConvertToKind<TypeCategory::Real>(
                     defaultRealKind, std::move(iy)))};
           },
-          [&](Expr<SomeUnsigned> &&ix,
-              Expr<SomeInteger> &&iy) -> ConvertRealOperandsResult {
+          [&](Expr<Type<TypeCategory::Unsigned>> &&ix,
+              Expr<Type<TypeCategory::Integer>> &&iy)
+              -> ConvertRealOperandsResult {
             return {AsSameKindExprs<TypeCategory::Real>(
                 ConvertToKind<TypeCategory::Real>(
                     defaultRealKind, std::move(ix)),
                 ConvertToKind<TypeCategory::Real>(
                     defaultRealKind, std::move(iy)))};
           },
-          [&](Expr<SomeUnsigned> &&ix,
-              Expr<SomeUnsigned> &&iy) -> ConvertRealOperandsResult {
+          [&](Expr<Type<TypeCategory::Unsigned>> &&ix,
+              Expr<Type<TypeCategory::Unsigned>> &&iy)
+              -> ConvertRealOperandsResult {
             return {AsSameKindExprs<TypeCategory::Real>(
                 ConvertToKind<TypeCategory::Real>(
                     defaultRealKind, std::move(ix)),
                 ConvertToKind<TypeCategory::Real>(
                     defaultRealKind, std::move(iy)))};
           },
-          [&](Expr<SomeInteger> &&ix,
-              Expr<SomeReal> &&ry) -> ConvertRealOperandsResult {
+          [&](Expr<Type<TypeCategory::Integer>> &&ix,
+              Expr<Type<TypeCategory::Real>> &&ry)
+              -> ConvertRealOperandsResult {
             return {AsSameKindExprs<TypeCategory::Real>(
                 ConvertTo(ry, std::move(ix)), std::move(ry))};
           },
-          [&](Expr<SomeUnsigned> &&ix,
-              Expr<SomeReal> &&ry) -> ConvertRealOperandsResult {
+          [&](Expr<Type<TypeCategory::Unsigned>> &&ix,
+              Expr<Type<TypeCategory::Real>> &&ry)
+              -> ConvertRealOperandsResult {
             return {AsSameKindExprs<TypeCategory::Real>(
                 ConvertTo(ry, std::move(ix)), std::move(ry))};
           },
-          [&](Expr<SomeReal> &&rx,
-              Expr<SomeInteger> &&iy) -> ConvertRealOperandsResult {
+          [&](Expr<Type<TypeCategory::Real>> &&rx,
+              Expr<Type<TypeCategory::Integer>> &&iy)
+              -> ConvertRealOperandsResult {
             return {AsSameKindExprs<TypeCategory::Real>(
                 std::move(rx), ConvertTo(rx, std::move(iy)))};
           },
-          [&](Expr<SomeReal> &&rx,
-              Expr<SomeUnsigned> &&iy) -> ConvertRealOperandsResult {
+          [&](Expr<Type<TypeCategory::Real>> &&rx,
+              Expr<Type<TypeCategory::Unsigned>> &&iy)
+              -> ConvertRealOperandsResult {
             return {AsSameKindExprs<TypeCategory::Real>(
                 std::move(rx), ConvertTo(rx, std::move(iy)))};
           },
-          [&](Expr<SomeReal> &&rx,
-              Expr<SomeReal> &&ry) -> ConvertRealOperandsResult {
+          [&](Expr<Type<TypeCategory::Real>> &&rx,
+              Expr<Type<TypeCategory::Real>> &&ry)
+              -> ConvertRealOperandsResult {
             return {AsSameKindExprs<TypeCategory::Real>(
                 std::move(rx), std::move(ry))};
           },
-          [&](Expr<SomeInteger> &&ix,
+          [&](Expr<Type<TypeCategory::Integer>> &&ix,
               BOZLiteralConstant &&by) -> ConvertRealOperandsResult {
             return {AsSameKindExprs<TypeCategory::Real>(
                 ConvertToKind<TypeCategory::Real>(
@@ -187,7 +190,7 @@ ConvertRealOperandsResult ConvertRealOperands(
                 ConvertToKind<TypeCategory::Real>(
                     defaultRealKind, std::move(by)))};
           },
-          [&](Expr<SomeUnsigned> &&ix,
+          [&](Expr<Type<TypeCategory::Unsigned>> &&ix,
               BOZLiteralConstant &&by) -> ConvertRealOperandsResult {
             return {AsSameKindExprs<TypeCategory::Real>(
                 ConvertToKind<TypeCategory::Real>(
@@ -195,29 +198,29 @@ ConvertRealOperandsResult ConvertRealOperands(
                 ConvertToKind<TypeCategory::Real>(
                     defaultRealKind, std::move(by)))};
           },
-          [&](BOZLiteralConstant &&bx,
-              Expr<SomeInteger> &&iy) -> ConvertRealOperandsResult {
+          [&](BOZLiteralConstant &&bx, Expr<Type<TypeCategory::Integer>> &&iy)
+              -> ConvertRealOperandsResult {
             return {AsSameKindExprs<TypeCategory::Real>(
                 ConvertToKind<TypeCategory::Real>(
                     defaultRealKind, std::move(bx)),
                 ConvertToKind<TypeCategory::Real>(
                     defaultRealKind, std::move(iy)))};
           },
-          [&](BOZLiteralConstant &&bx,
-              Expr<SomeUnsigned> &&iy) -> ConvertRealOperandsResult {
+          [&](BOZLiteralConstant &&bx, Expr<Type<TypeCategory::Unsigned>> &&iy)
+              -> ConvertRealOperandsResult {
             return {AsSameKindExprs<TypeCategory::Real>(
                 ConvertToKind<TypeCategory::Real>(
                     defaultRealKind, std::move(bx)),
                 ConvertToKind<TypeCategory::Real>(
                     defaultRealKind, std::move(iy)))};
           },
-          [&](Expr<SomeReal> &&rx,
+          [&](Expr<Type<TypeCategory::Real>> &&rx,
               BOZLiteralConstant &&by) -> ConvertRealOperandsResult {
             return {AsSameKindExprs<TypeCategory::Real>(
                 std::move(rx), ConvertTo(rx, std::move(by)))};
           },
-          [&](BOZLiteralConstant &&bx,
-              Expr<SomeReal> &&ry) -> ConvertRealOperandsResult {
+          [&](BOZLiteralConstant &&bx, Expr<Type<TypeCategory::Real>> &&ry)
+              -> ConvertRealOperandsResult {
             return {AsSameKindExprs<TypeCategory::Real>(
                 ConvertTo(ry, std::move(bx)), std::move(ry))};
           },
@@ -239,12 +242,12 @@ ConvertRealOperandsResult ConvertRealOperands(
 static std::optional<Expr<SomeType>> NoExpr() { return std::nullopt; }
 
 template <TypeCategory CAT>
-std::optional<Expr<SomeType>> Package(Expr<SomeKind<CAT>> &&catExpr) {
+std::optional<Expr<SomeType>> Package(Expr<Type<CAT>> &&catExpr) {
   return {AsGenericExpr(std::move(catExpr))};
 }
 template <TypeCategory CAT>
 std::optional<Expr<SomeType>> Package(
-    std::optional<Expr<SomeKind<CAT>>> &&catExpr) {
+    std::optional<Expr<Type<CAT>>> &&catExpr) {
   if (catExpr) {
     return {AsGenericExpr(std::move(*catExpr))};
   } else {
@@ -255,30 +258,26 @@ std::optional<Expr<SomeType>> Package(
 // Mixed REAL+INTEGER operations.  REAL**INTEGER is a special case that
 // does not require conversion of the exponent expression.
 template <template <typename> class OPR>
-std::optional<Expr<SomeType>> MixedRealLeft(
-    Expr<SomeReal> &&rx, Expr<SomeInteger> &&iy) {
-  return Package(common::visit(
-      [&](auto &&rxk) -> Expr<SomeReal> {
-        using resultType = ResultType<decltype(rxk)>;
-        const int resultKind = rxk.kind();
-        if constexpr (std::is_same_v<OPR<resultType>, Power<resultType>>) {
-          return AsCategoryExpr(RealToIntPower<resultType>{
-              resultKind, std::move(rxk), std::move(iy)});
-        }
-        // G++ 8.1.0 emits bogus warnings about missing return statements if
-        // this statement is wrapped in an "else", as it should be.
-        return AsCategoryExpr(OPR<resultType>{resultKind, std::move(rxk),
-            ConvertToType<resultType>(resultKind, std::move(iy))});
-      },
-      std::move(rx.u)));
+std::optional<Expr<SomeType>> MixedRealLeft(Expr<Type<TypeCategory::Real>> &&rx,
+    Expr<Type<TypeCategory::Integer>> &&iy) {
+  using resultType = Type<TypeCategory::Real>;
+  const int resultKind{rx.kind()};
+  if constexpr (std::is_same_v<OPR<resultType>, Power<resultType>>) {
+    return Package(AsCategoryExpr(
+        RealToIntPower<resultType>{resultKind, std::move(rx), std::move(iy)}));
+  }
+  // G++ 8.1.0 emits bogus warnings about missing return statements if
+  // this statement is wrapped in an "else", as it should be.
+  return Package(AsCategoryExpr(OPR<resultType>{resultKind, std::move(rx),
+      ConvertToType<resultType>(resultKind, std::move(iy))}));
 }
 
-static Expr<SomeComplex> MakeComplex(
+static Expr<Type<TypeCategory::Complex>> MakeComplex(
     Expr<Type<TypeCategory::Real>> &&re, Expr<Type<TypeCategory::Real>> &&im) {
   return AsCategoryExpr(ComplexConstructor{std::move(re), std::move(im)});
 }
 
-std::optional<Expr<SomeComplex>> ConstructComplex(
+std::optional<Expr<Type<TypeCategory::Complex>>> ConstructComplex(
     parser::ContextualMessages &messages, Expr<SomeType> &&real,
     Expr<SomeType> &&imaginary, int defaultRealKind) {
   if (auto converted{ConvertRealOperands(
@@ -292,7 +291,7 @@ std::optional<Expr<SomeComplex>> ConstructComplex(
   return std::nullopt;
 }
 
-std::optional<Expr<SomeComplex>> ConstructComplex(
+std::optional<Expr<Type<TypeCategory::Complex>>> ConstructComplex(
     parser::ContextualMessages &messages, std::optional<Expr<SomeType>> &&real,
     std::optional<Expr<SomeType>> &&imaginary, int defaultRealKind) {
   if (auto parts{common::AllPresent(std::move(real), std::move(imaginary))}) {
@@ -313,7 +312,8 @@ template <bool GET_IMAGINARY> struct ComplexPartExtractor {
   // due to never having been checked by the compiler, because they were never
   // instantiated. As a result, the complex expression is just never considered
   // "simple enough".
-  template <typename A> static std::optional<Expr<SomeReal>> Get(const A &) {
+  template <typename A>
+  static std::optional<Expr<Type<TypeCategory::Real>>> Get(const A &) {
     return std::nullopt;
   }
 };
@@ -322,16 +322,12 @@ template <bool GET_IMAGINARY> struct ComplexPartExtractor {
 // and then applying complex operand promotion rules allows the result to have
 // the highest precision of REAL and COMPLEX operands as required by Fortran
 // 2018 10.9.1.3.
-Expr<SomeComplex> PromoteRealToComplex(Expr<SomeReal> &&someX) {
-  return common::visit(
-      [](auto &&x) {
-        using RT = ResultType<decltype(x)>;
-        int rtKind{x.kind()};
-        return AsCategoryExpr(ComplexConstructor{std::move(x),
-            AsExpr(
-                Constant<RT>{rtKind, Scalar<RT>::Zero(rtKind), RT{rtKind}})});
-      },
-      std::move(someX.u));
+Expr<Type<TypeCategory::Complex>> PromoteRealToComplex(
+    Expr<Type<TypeCategory::Real>> &&x) {
+  using RT = Type<TypeCategory::Real>;
+  int rtKind{x.kind()};
+  return AsCategoryExpr(ComplexConstructor{std::move(x),
+      AsExpr(Constant<RT>{rtKind, Scalar<RT>::Zero(rtKind), RT{rtKind}})});
 }
 
 // Handle mixed COMPLEX+REAL (or INTEGER) operations in a better way
@@ -339,22 +335,20 @@ Expr<SomeComplex> PromoteRealToComplex(Expr<SomeReal> &&someX) {
 // corresponding COMPLEX+COMPLEX operation.
 template <template <typename> class OPR, TypeCategory RCAT>
 std::optional<Expr<SomeType>> MixedComplexLeft(
-    parser::ContextualMessages &messages, const Expr<SomeComplex> &zx,
-    const Expr<SomeKind<RCAT>> &iry, [[maybe_unused]] int defaultRealKind) {
+    parser::ContextualMessages &messages,
+    const Expr<Type<TypeCategory::Complex>> &zx, const Expr<Type<RCAT>> &iry,
+    [[maybe_unused]] int defaultRealKind) {
   if constexpr (RCAT == TypeCategory::Integer &&
       std::is_same_v<OPR<LargestReal>, Power<LargestReal>>) {
     // COMPLEX**INTEGER is a special case that doesn't convert the exponent.
-    return Package(common::visit(
-        [&](const auto &zxk) {
-          const int zxkKind{zxk.kind()};
-          using Ty = ResultType<decltype(zxk)>;
-          return AsCategoryExpr(AsExpr(RealToIntPower<Ty>{
-              zxkKind, common::Clone(zxk), common::Clone(iry)}));
-        },
-        zx.u));
+    using Ty = Type<TypeCategory::Complex>;
+    return Package(AsCategoryExpr(AsExpr(
+        RealToIntPower<Ty>{zx.kind(), common::Clone(zx), common::Clone(iry)})));
   }
-  std::optional<Expr<SomeReal>> zr{ComplexPartExtractor<false>{}.Get(zx)};
-  std::optional<Expr<SomeReal>> zi{ComplexPartExtractor<true>{}.Get(zx)};
+  std::optional<Expr<Type<TypeCategory::Real>>> zr{
+      ComplexPartExtractor<false>{}.Get(zx)};
+  std::optional<Expr<Type<TypeCategory::Real>>> zi{
+      ComplexPartExtractor<true>{}.Get(zx)};
   if (!zr || !zi) {
   } else if constexpr (std::is_same_v<OPR<LargestReal>, Add<LargestReal>> ||
       std::is_same_v<OPR<LargestReal>, Subtract<LargestReal>>) {
@@ -391,8 +385,9 @@ std::optional<Expr<SomeType>> MixedComplexLeft(
 //  x / (a,b) -> (x,0) / (a,b)   (and **)
 template <template <typename> class OPR, TypeCategory LCAT>
 std::optional<Expr<SomeType>> MixedComplexRight(
-    parser::ContextualMessages &messages, const Expr<SomeKind<LCAT>> &irx,
-    const Expr<SomeComplex> &zy, [[maybe_unused]] int defaultRealKind) {
+    parser::ContextualMessages &messages, const Expr<Type<LCAT>> &irx,
+    const Expr<Type<TypeCategory::Complex>> &zy,
+    [[maybe_unused]] int defaultRealKind) {
   if constexpr (std::is_same_v<OPR<LargestReal>, Add<LargestReal>>) {
     // x + (a,b) -> (a,b) + x -> (a+x, b)
     return MixedComplexLeft<OPR, LCAT>(messages, zy, irx, defaultRealKind);
@@ -403,8 +398,10 @@ std::optional<Expr<SomeType>> MixedComplexRight(
   } else if constexpr (std::is_same_v<OPR<LargestReal>,
                            Subtract<LargestReal>>) {
     // x - (a,b) -> (x-a, -b)
-    std::optional<Expr<SomeReal>> zr{ComplexPartExtractor<false>{}.Get(zy)};
-    std::optional<Expr<SomeReal>> zi{ComplexPartExtractor<true>{}.Get(zy)};
+    std::optional<Expr<Type<TypeCategory::Real>>> zr{
+        ComplexPartExtractor<false>{}.Get(zy)};
+    std::optional<Expr<Type<TypeCategory::Real>>> zi{
+        ComplexPartExtractor<true>{}.Get(zy)};
     if (zr && zi) {
       if (std::optional<Expr<SomeType>> rr{NumericOperation<Subtract>(messages,
               AsGenericExpr(common::Clone(irx)), AsGenericExpr(std::move(*zr)),
@@ -420,19 +417,14 @@ std::optional<Expr<SomeType>> MixedComplexRight(
 // Promotes REAL(rk) and COMPLEX(zk) operands COMPLEX(max(rk,zk))
 // then combine them with an operator.
 template <template <typename> class OPR, TypeCategory XCAT, TypeCategory YCAT>
-Expr<SomeComplex> PromoteMixedComplexReal(
-    Expr<SomeKind<XCAT>> &&x, Expr<SomeKind<YCAT>> &&y) {
+Expr<Type<TypeCategory::Complex>> PromoteMixedComplexReal(
+    Expr<Type<XCAT>> &&x, Expr<Type<YCAT>> &&y) {
   static_assert(XCAT == TypeCategory::Complex || YCAT == TypeCategory::Complex);
   static_assert(XCAT == TypeCategory::Real || YCAT == TypeCategory::Real);
-  return common::visit(
-      [&](const auto &kx, const auto &ky) {
-        int maxKind{std::max(kx.kind(), ky.kind())};
-        using ZTy = Type<TypeCategory::Complex>;
-        return Expr<SomeComplex>{Expr<ZTy>{
-            OPR<ZTy>{maxKind, ConvertToType<ZTy>(maxKind, std::move(x)),
-                ConvertToType<ZTy>(maxKind, std::move(y))}}};
-      },
-      x.u, y.u);
+  int maxKind{std::max(x.kind(), y.kind())};
+  using ZTy = Type<TypeCategory::Complex>;
+  return Expr<ZTy>{OPR<ZTy>{maxKind, ConvertToType<ZTy>(maxKind, std::move(x)),
+      ConvertToType<ZTy>(maxKind, std::move(y))}};
 }
 
 // N.B. When a "typeless" BOZ literal constant appears as one (not both!) of
@@ -444,39 +436,42 @@ std::optional<Expr<SomeType>> NumericOperation(
     Expr<SomeType> &&y, int defaultRealKind) {
   return common::visit(
       common::visitors{
-          [](Expr<SomeInteger> &&ix, Expr<SomeInteger> &&iy) {
+          [](Expr<Type<TypeCategory::Integer>> &&ix,
+              Expr<Type<TypeCategory::Integer>> &&iy) {
             return Package(PromoteAndCombine<OPR, TypeCategory::Integer>(
                 std::move(ix), std::move(iy)));
           },
-          [](Expr<SomeReal> &&rx, Expr<SomeReal> &&ry) {
+          [](Expr<Type<TypeCategory::Real>> &&rx,
+              Expr<Type<TypeCategory::Real>> &&ry) {
             return Package(PromoteAndCombine<OPR, TypeCategory::Real>(
                 std::move(rx), std::move(ry)));
           },
-          [&](Expr<SomeUnsigned> &&ix, Expr<SomeUnsigned> &&iy) {
+          [&](Expr<Type<TypeCategory::Unsigned>> &&ix,
+              Expr<Type<TypeCategory::Unsigned>> &&iy) {
             return Package(PromoteAndCombine<OPR, TypeCategory::Unsigned>(
                 std::move(ix), std::move(iy)));
           },
           // Mixed REAL/INTEGER operations
-          [](Expr<SomeReal> &&rx, Expr<SomeInteger> &&iy) {
+          [](Expr<Type<TypeCategory::Real>> &&rx,
+              Expr<Type<TypeCategory::Integer>> &&iy) {
             return MixedRealLeft<OPR>(std::move(rx), std::move(iy));
           },
-          [](Expr<SomeInteger> &&ix, Expr<SomeReal> &&ry) {
-            return Package(common::visit(
-                [&](auto &&ryk) -> Expr<SomeReal> {
-                  using resultType = ResultType<decltype(ryk)>;
-                  const int resultKind{ryk.kind()};
-                  return AsCategoryExpr(OPR<resultType>{resultKind,
-                      ConvertToType<resultType>(resultKind, std::move(ix)),
-                      std::move(ryk)});
-                },
-                std::move(ry.u)));
+          [](Expr<Type<TypeCategory::Integer>> &&ix,
+              Expr<Type<TypeCategory::Real>> &&ry) {
+            using resultType = Type<TypeCategory::Real>;
+            const int resultKind{ry.kind()};
+            return Package(AsCategoryExpr(OPR<resultType>{resultKind,
+                ConvertToType<resultType>(resultKind, std::move(ix)),
+                std::move(ry)}));
           },
           // Homogeneous and mixed COMPLEX operations
-          [](Expr<SomeComplex> &&zx, Expr<SomeComplex> &&zy) {
+          [](Expr<Type<TypeCategory::Complex>> &&zx,
+              Expr<Type<TypeCategory::Complex>> &&zy) {
             return Package(PromoteAndCombine<OPR, TypeCategory::Complex>(
                 std::move(zx), std::move(zy)));
           },
-          [&](Expr<SomeComplex> &&zx, Expr<SomeInteger> &&iy) {
+          [&](Expr<Type<TypeCategory::Complex>> &&zx,
+              Expr<Type<TypeCategory::Integer>> &&iy) {
             if (auto result{
                     MixedComplexLeft<OPR>(messages, zx, iy, defaultRealKind)}) {
               return result;
@@ -485,7 +480,8 @@ std::optional<Expr<SomeType>> NumericOperation(
                   std::move(zx), ConvertTo(zx, std::move(iy))));
             }
           },
-          [&](Expr<SomeComplex> &&zx, Expr<SomeReal> &&ry) {
+          [&](Expr<Type<TypeCategory::Complex>> &&zx,
+              Expr<Type<TypeCategory::Real>> &&ry) {
             if (auto result{
                     MixedComplexLeft<OPR>(messages, zx, ry, defaultRealKind)}) {
               return result;
@@ -494,7 +490,8 @@ std::optional<Expr<SomeType>> NumericOperation(
                   PromoteMixedComplexReal<OPR>(std::move(zx), std::move(ry)));
             }
           },
-          [&](Expr<SomeInteger> &&ix, Expr<SomeComplex> &&zy) {
+          [&](Expr<Type<TypeCategory::Integer>> &&ix,
+              Expr<Type<TypeCategory::Complex>> &&zy) {
             if (auto result{MixedComplexRight<OPR>(
                     messages, ix, zy, defaultRealKind)}) {
               return result;
@@ -503,7 +500,8 @@ std::optional<Expr<SomeType>> NumericOperation(
                   ConvertTo(zy, std::move(ix)), std::move(zy)));
             }
           },
-          [&](Expr<SomeReal> &&rx, Expr<SomeComplex> &&zy) {
+          [&](Expr<Type<TypeCategory::Real>> &&rx,
+              Expr<Type<TypeCategory::Complex>> &&zy) {
             if (auto result{MixedComplexRight<OPR>(
                     messages, rx, zy, defaultRealKind)}) {
               return result;
@@ -513,39 +511,41 @@ std::optional<Expr<SomeType>> NumericOperation(
             }
           },
           // Operations with one typeless operand
-          [&](BOZLiteralConstant &&bx, Expr<SomeInteger> &&iy) {
+          [&](BOZLiteralConstant &&bx, Expr<Type<TypeCategory::Integer>> &&iy) {
             return NumericOperation<OPR>(messages,
                 AsGenericExpr(ConvertTo(iy, std::move(bx))), std::move(y),
                 defaultRealKind);
           },
-          [&](BOZLiteralConstant &&bx, Expr<SomeUnsigned> &&iy) {
+          [&](BOZLiteralConstant &&bx,
+              Expr<Type<TypeCategory::Unsigned>> &&iy) {
             return NumericOperation<OPR>(messages,
                 AsGenericExpr(ConvertTo(iy, std::move(bx))), std::move(y),
                 defaultRealKind);
           },
-          [&](BOZLiteralConstant &&bx, Expr<SomeReal> &&ry) {
+          [&](BOZLiteralConstant &&bx, Expr<Type<TypeCategory::Real>> &&ry) {
             return NumericOperation<OPR>(messages,
                 AsGenericExpr(ConvertTo(ry, std::move(bx))), std::move(y),
                 defaultRealKind);
           },
-          [&](Expr<SomeInteger> &&ix, BOZLiteralConstant &&by) {
+          [&](Expr<Type<TypeCategory::Integer>> &&ix, BOZLiteralConstant &&by) {
             return NumericOperation<OPR>(messages, std::move(x),
                 AsGenericExpr(ConvertTo(ix, std::move(by))), defaultRealKind);
           },
-          [&](Expr<SomeUnsigned> &&ix, BOZLiteralConstant &&by) {
+          [&](Expr<Type<TypeCategory::Unsigned>> &&ix,
+              BOZLiteralConstant &&by) {
             return NumericOperation<OPR>(messages, std::move(x),
                 AsGenericExpr(ConvertTo(ix, std::move(by))), defaultRealKind);
           },
-          [&](Expr<SomeReal> &&rx, BOZLiteralConstant &&by) {
+          [&](Expr<Type<TypeCategory::Real>> &&rx, BOZLiteralConstant &&by) {
             return NumericOperation<OPR>(messages, std::move(x),
                 AsGenericExpr(ConvertTo(rx, std::move(by))), defaultRealKind);
           },
           // Error cases
-          [&](Expr<SomeUnsigned> &&, auto &&) {
+          [&](Expr<Type<TypeCategory::Unsigned>> &&, auto &&) {
             messages.Say("Both operands must be UNSIGNED"_err_en_US);
             return NoExpr();
           },
-          [&](auto &&, Expr<SomeUnsigned> &&) {
+          [&](auto &&, Expr<Type<TypeCategory::Unsigned>> &&) {
             messages.Say("Both operands must be UNSIGNED"_err_en_US);
             return NoExpr();
           },
@@ -593,19 +593,27 @@ std::optional<Expr<SomeType>> Negation(
             messages.Say("Pointer to subroutine cannot be negated"_err_en_US);
             return NoExpr();
           },
-          [&](Expr<SomeInteger> &&x) { return Package(-std::move(x)); },
-          [&](Expr<SomeReal> &&x) { return Package(-std::move(x)); },
-          [&](Expr<SomeComplex> &&x) { return Package(-std::move(x)); },
-          [&](Expr<SomeCharacter> &&) {
+          [&](Expr<Type<TypeCategory::Integer>> &&x) {
+            return Package(-std::move(x));
+          },
+          [&](Expr<Type<TypeCategory::Real>> &&x) {
+            return Package(-std::move(x));
+          },
+          [&](Expr<Type<TypeCategory::Complex>> &&x) {
+            return Package(-std::move(x));
+          },
+          [&](Expr<Type<TypeCategory::Character>> &&) {
             messages.Say("CHARACTER cannot be negated"_err_en_US);
             return NoExpr();
           },
-          [&](Expr<SomeLogical> &&) {
+          [&](Expr<Type<TypeCategory::Logical>> &&) {
             messages.Say("LOGICAL cannot be negated"_err_en_US);
             return NoExpr();
           },
-          [&](Expr<SomeUnsigned> &&x) { return Package(-std::move(x)); },
-          [&](Expr<SomeDerived> &&) {
+          [&](Expr<Type<TypeCategory::Unsigned>> &&x) {
+            return Package(-std::move(x));
+          },
+          [&](Expr<Type<TypeCategory::Derived>> &&) {
             messages.Say("Operand cannot be negated"_err_en_US);
             return NoExpr();
           },
@@ -613,15 +621,9 @@ std::optional<Expr<SomeType>> Negation(
       std::move(x.u));
 }
 
-Expr<SomeLogical> LogicalNegation(Expr<SomeLogical> &&x) {
-  return common::visit(
-      [](auto &&xk) { return AsCategoryExpr(LogicalNegation(std::move(xk))); },
-      std::move(x.u));
-}
-
 template <TypeCategory CAT>
 Expr<LogicalResult> PromoteAndRelate(
-    RelationalOperator opr, Expr<SomeKind<CAT>> &&x, Expr<SomeKind<CAT>> &&y) {
+    RelationalOperator opr, Expr<Type<CAT>> &&x, Expr<Type<CAT>> &&y) {
   return common::visit(
       [=](auto &&xy) {
         return PackageRelation(opr, std::move(xy[0]), std::move(xy[1]));
@@ -629,7 +631,8 @@ Expr<LogicalResult> PromoteAndRelate(
       AsSameKindExprs(std::move(x), std::move(y)));
 }
 
-std::optional<Expr<SomeType>> GetEnumerationOrdinal(Expr<SomeDerived> &expr) {
+std::optional<Expr<SomeType>> GetEnumerationOrdinal(
+    Expr<Type<TypeCategory::Derived>> &expr) {
   if (const auto *derived{GetEnumerationTypeSpec(expr.GetType())}) {
     if (const auto *scope{derived->GetScope()}) {
       auto iter{scope->find(semantics::SourceName{
@@ -637,7 +640,8 @@ std::optional<Expr<SomeType>> GetEnumerationOrdinal(Expr<SomeDerived> &expr) {
           sizeof(semantics::DerivedTypeDetails::ordinalComponentName) - 1})};
       if (iter != scope->end()) {
         const semantics::Symbol &ordSym{*iter->second};
-        if (auto *constant{UnwrapConstantValue<SomeDerived>(expr)}) {
+        if (auto *constant{
+                UnwrapConstantValue<Type<TypeCategory::Derived>>(expr)}) {
           if (auto sc{constant->GetScalarValue()}) {
             return sc->Find(ordSym);
           }
@@ -650,7 +654,8 @@ std::optional<Expr<SomeType>> GetEnumerationOrdinal(Expr<SomeDerived> &expr) {
   return std::nullopt;
 }
 
-Expr<SomeType> MakeEnumerationIntCall(Expr<SomeDerived> &&operand) {
+Expr<SomeType> MakeEnumerationIntCall(
+    Expr<Type<TypeCategory::Derived>> &&operand) {
   using IntType = Type<TypeCategory::Integer>;
   const int intKind{4};
   const semantics::DerivedTypeSpec *derived{
@@ -670,36 +675,43 @@ Expr<SomeType> MakeEnumerationIntCall(Expr<SomeDerived> &&operand) {
           std::move(dummies), attrs}};
   ActualArguments intArgs;
   intArgs.emplace_back(AsGenericExpr(std::move(operand)));
-  return AsGenericExpr(Expr<SomeInteger>(Expr<IntType>(FunctionRef<IntType>{
-      intKind, ProcedureDesignator{std::move(intSpec)}, std::move(intArgs)})));
+  return AsGenericExpr(Expr<Type<TypeCategory::Integer>>(
+      Expr<IntType>(FunctionRef<IntType>{intKind,
+          ProcedureDesignator{std::move(intSpec)}, std::move(intArgs)})));
 }
 
 std::optional<Expr<LogicalResult>> Relate(parser::ContextualMessages &messages,
     RelationalOperator opr, Expr<SomeType> &&x, Expr<SomeType> &&y) {
   return common::visit(
       common::visitors{
-          [=](Expr<SomeInteger> &&ix,
-              Expr<SomeInteger> &&iy) -> std::optional<Expr<LogicalResult>> {
+          [=](Expr<Type<TypeCategory::Integer>> &&ix,
+              Expr<Type<TypeCategory::Integer>> &&iy)
+              -> std::optional<Expr<LogicalResult>> {
             return PromoteAndRelate(opr, std::move(ix), std::move(iy));
           },
-          [=](Expr<SomeUnsigned> &&ix,
-              Expr<SomeUnsigned> &&iy) -> std::optional<Expr<LogicalResult>> {
+          [=](Expr<Type<TypeCategory::Unsigned>> &&ix,
+              Expr<Type<TypeCategory::Unsigned>> &&iy)
+              -> std::optional<Expr<LogicalResult>> {
             return PromoteAndRelate(opr, std::move(ix), std::move(iy));
           },
-          [=](Expr<SomeReal> &&rx,
-              Expr<SomeReal> &&ry) -> std::optional<Expr<LogicalResult>> {
+          [=](Expr<Type<TypeCategory::Real>> &&rx,
+              Expr<Type<TypeCategory::Real>> &&ry)
+              -> std::optional<Expr<LogicalResult>> {
             return PromoteAndRelate(opr, std::move(rx), std::move(ry));
           },
-          [&](Expr<SomeReal> &&rx, Expr<SomeInteger> &&iy) {
+          [&](Expr<Type<TypeCategory::Real>> &&rx,
+              Expr<Type<TypeCategory::Integer>> &&iy) {
             return Relate(messages, opr, std::move(x),
                 AsGenericExpr(ConvertTo(rx, std::move(iy))));
           },
-          [&](Expr<SomeInteger> &&ix, Expr<SomeReal> &&ry) {
+          [&](Expr<Type<TypeCategory::Integer>> &&ix,
+              Expr<Type<TypeCategory::Real>> &&ry) {
             return Relate(messages, opr,
                 AsGenericExpr(ConvertTo(ry, std::move(ix))), std::move(y));
           },
-          [&](Expr<SomeComplex> &&zx,
-              Expr<SomeComplex> &&zy) -> std::optional<Expr<LogicalResult>> {
+          [&](Expr<Type<TypeCategory::Complex>> &&zx,
+              Expr<Type<TypeCategory::Complex>> &&zy)
+              -> std::optional<Expr<LogicalResult>> {
             if (opr == RelationalOperator::EQ ||
                 opr == RelationalOperator::NE) {
               return PromoteAndRelate(opr, std::move(zx), std::move(zy));
@@ -709,40 +721,40 @@ std::optional<Expr<LogicalResult>> Relate(parser::ContextualMessages &messages,
               return std::nullopt;
             }
           },
-          [&](Expr<SomeComplex> &&zx, Expr<SomeInteger> &&iy) {
+          [&](Expr<Type<TypeCategory::Complex>> &&zx,
+              Expr<Type<TypeCategory::Integer>> &&iy) {
             return Relate(messages, opr, std::move(x),
                 AsGenericExpr(ConvertTo(zx, std::move(iy))));
           },
-          [&](Expr<SomeComplex> &&zx, Expr<SomeReal> &&ry) {
+          [&](Expr<Type<TypeCategory::Complex>> &&zx,
+              Expr<Type<TypeCategory::Real>> &&ry) {
             return Relate(messages, opr, std::move(x),
                 AsGenericExpr(ConvertTo(zx, std::move(ry))));
           },
-          [&](Expr<SomeInteger> &&ix, Expr<SomeComplex> &&zy) {
+          [&](Expr<Type<TypeCategory::Integer>> &&ix,
+              Expr<Type<TypeCategory::Complex>> &&zy) {
             return Relate(messages, opr,
                 AsGenericExpr(ConvertTo(zy, std::move(ix))), std::move(y));
           },
-          [&](Expr<SomeReal> &&rx, Expr<SomeComplex> &&zy) {
+          [&](Expr<Type<TypeCategory::Real>> &&rx,
+              Expr<Type<TypeCategory::Complex>> &&zy) {
             return Relate(messages, opr,
                 AsGenericExpr(ConvertTo(zy, std::move(rx))), std::move(y));
           },
-          [&](Expr<SomeCharacter> &&cx, Expr<SomeCharacter> &&cy) {
-            return common::visit(
-                [&](auto &&cxk,
-                    auto &&cyk) -> std::optional<Expr<LogicalResult>> {
-                  using Ty = ResultType<decltype(cxk)>;
-                  if (std::is_same_v<Ty, ResultType<decltype(cyk)>> &&
-                      cxk.kind() == cyk.kind()) {
-                    return PackageRelation(opr, std::move(cxk), std::move(cyk));
-                  } else {
-                    messages.Say(
-                        "CHARACTER operands do not have same KIND"_err_en_US);
-                    return std::nullopt;
-                  }
-                },
-                std::move(cx.u), std::move(cy.u));
+          [&](Expr<Type<TypeCategory::Character>> &&cx,
+              Expr<Type<TypeCategory::Character>> &&cy)
+              -> std::optional<Expr<LogicalResult>> {
+            if (cx.kind() == cy.kind()) {
+              return PackageRelation(opr, std::move(cx), std::move(cy));
+            } else {
+              messages.Say(
+                  "CHARACTER operands do not have same KIND"_err_en_US);
+              return std::nullopt;
+            }
           },
-          [&](Expr<SomeDerived> &&dx,
-              Expr<SomeDerived> &&dy) -> std::optional<Expr<LogicalResult>> {
+          [&](Expr<Type<TypeCategory::Derived>> &&dx,
+              Expr<Type<TypeCategory::Derived>> &&dy)
+              -> std::optional<Expr<LogicalResult>> {
             // Enumeration type comparison: extract __ordinal and delegate
             // to integer comparison
             auto xType{dx.GetType()};
@@ -777,13 +789,14 @@ std::optional<Expr<LogicalResult>> Relate(parser::ContextualMessages &messages,
       std::move(x.u), std::move(y.u));
 }
 
-Expr<SomeLogical> BinaryLogicalOperation(
-    LogicalOperator opr, Expr<SomeLogical> &&x, Expr<SomeLogical> &&y) {
+Expr<Type<TypeCategory::Logical>> BinaryLogicalOperation(LogicalOperator opr,
+    Expr<Type<TypeCategory::Logical>> &&x,
+    Expr<Type<TypeCategory::Logical>> &&y) {
   CHECK(opr != LogicalOperator::Not);
   return common::visit(
       [=](auto &&xy) {
-        return Expr<SomeLogical>{
-            BinaryLogicalOperation(opr, std::move(xy[0]), std::move(xy[1]))};
+        return AsExpr(
+            LogicalOperation{opr, std::move(xy[0]), std::move(xy[1])});
       },
       AsSameKindExprs(std::move(x), std::move(y)));
 }
@@ -823,7 +836,7 @@ std::optional<Expr<SomeType>> ConvertToType(
       return Expr<SomeType>{
           ConvertToKind<TypeCategory::Unsigned>(type.kind(), std::move(*boz))};
     }
-    if (auto *cx{UnwrapExpr<Expr<SomeUnsigned>>(x)}) {
+    if (auto *cx{UnwrapExpr<Expr<Type<TypeCategory::Unsigned>>>(x)}) {
       return Expr<SomeType>{
           ConvertToKind<TypeCategory::Unsigned>(type.kind(), std::move(*cx))};
     }
@@ -837,24 +850,19 @@ std::optional<Expr<SomeType>> ConvertToType(
   case TypeCategory::Complex:
     return ConvertToNumeric<TypeCategory::Complex>(type.kind(), std::move(x));
   case TypeCategory::Character:
-    if (auto *cx{UnwrapExpr<Expr<SomeCharacter>>(x)}) {
+    if (auto *cx{UnwrapExpr<Expr<Type<TypeCategory::Character>>>(x)}) {
       auto converted{
           ConvertToKind<TypeCategory::Character>(type.kind(), std::move(*cx))};
       if (auto length{type.GetCharLength()}) {
-        converted = common::visit(
-            [&](auto &&x) {
-              using CharacterType = ResultType<decltype(x)>;
-              const int characterKind{x.kind()};
-              return Expr<SomeCharacter>{Expr<CharacterType>{
-                  SetLength{characterKind, std::move(x), std::move(*length)}}};
-            },
-            std::move(converted.u));
+        const int characterKind{converted.kind()};
+        converted = Expr<Type<TypeCategory::Character>>{
+            SetLength{characterKind, std::move(converted), std::move(*length)}};
       }
       return Expr<SomeType>{std::move(converted)};
     }
     break;
   case TypeCategory::Logical:
-    if (auto *cx{UnwrapExpr<Expr<SomeLogical>>(x)}) {
+    if (auto *cx{UnwrapExpr<Expr<Type<TypeCategory::Logical>>>(x)}) {
       return Expr<SomeType>{
           ConvertToKind<TypeCategory::Logical>(type.kind(), std::move(*cx))};
     }
@@ -1012,7 +1020,8 @@ template <bool IS_PROC_PTR> struct IsNullPointerHelper {
           // TODO: nested component and array references
           if (IsNamedConstant(base) && object->init()) {
             if (auto structCons{
-                    GetScalarConstantValue<SomeDerived>(*object->init())}) {
+                    GetScalarConstantValue<Type<TypeCategory::Derived>>(
+                        *object->init())}) {
               auto iter{structCons->values().find(component->GetLastSymbol())};
               if (iter != structCons->values().end()) {
                 return (*this)(iter->second.value());
@@ -1127,8 +1136,6 @@ template <typename A> semantics::UnorderedSymbolSet CollectSymbols(const A &x) {
 }
 template semantics::UnorderedSymbolSet CollectSymbols(const Expr<SomeType> &);
 template semantics::UnorderedSymbolSet CollectSymbols(
-    const Expr<SomeInteger> &);
-template semantics::UnorderedSymbolSet CollectSymbols(
     const Expr<SubscriptInteger> &);
 template semantics::UnorderedSymbolSet CollectSymbols(
     const ProcedureDesignator &);
@@ -1157,8 +1164,6 @@ semantics::UnorderedSymbolSet CollectRankOneBoundProvenanceSymbols(const A &x) {
 }
 template semantics::UnorderedSymbolSet CollectRankOneBoundProvenanceSymbols(
     const Expr<SomeType> &);
-template semantics::UnorderedSymbolSet CollectRankOneBoundProvenanceSymbols(
-    const Expr<SomeInteger> &);
 template semantics::UnorderedSymbolSet CollectRankOneBoundProvenanceSymbols(
     const Expr<SubscriptInteger> &);
 
@@ -1189,8 +1194,6 @@ semantics::UnorderedSymbolSet CollectCudaSymbols(const A &x) {
 }
 template semantics::UnorderedSymbolSet CollectCudaSymbols(
     const Expr<SomeType> &);
-template semantics::UnorderedSymbolSet CollectCudaSymbols(
-    const Expr<SomeInteger> &);
 template semantics::UnorderedSymbolSet CollectCudaSymbols(
     const Expr<SubscriptInteger> &);
 
@@ -1227,32 +1230,116 @@ std::vector<SymbolVector> GetSymbolVectors(const Expr<SomeType> &expr) {
   return symbolVectors;
 }
 
-static semantics::UnorderedSymbolSet CollectUniqueCUDADeviceSymbols(
+// Collect the symbols that are referenced inside the subscripts of an
+// expression. CollectCudaSymbols leaves them out because a subscript is not
+// the data that a designator designates, but a device symbol in a subscript is
+// still a reference to a device object, as in a(idx(1)) where idx is device.
+struct CollectCudaSubscriptSymbolsHelper
+    : public SetTraverse<CollectCudaSubscriptSymbolsHelper,
+          semantics::UnorderedSymbolSet> {
+  using Base = SetTraverse<CollectCudaSubscriptSymbolsHelper,
+      semantics::UnorderedSymbolSet>;
+  CollectCudaSubscriptSymbolsHelper(bool inSubscript = false)
+      : Base{*this}, inSubscript_{inSubscript} {}
+  using Base::operator();
+  semantics::UnorderedSymbolSet operator()(const Symbol &symbol) const {
+    if (inSubscript_) {
+      return {symbol.GetUltimate()};
+    }
+    return {};
+  }
+  semantics::UnorderedSymbolSet operator()(const Subscript &subscript) const {
+    return CollectCudaSubscriptSymbolsHelper{true}(subscript.u);
+  }
+  semantics::UnorderedSymbolSet operator()(const DescriptorInquiry &) const {
+    return {};
+  }
+  semantics::UnorderedSymbolSet operator()(const ProcedureRef &) const {
+    return {};
+  }
+
+private:
+  bool inSubscript_;
+};
+
+// Collect the distinct component references of an expression that designate a
+// device component. The data attribute of a component hides the one of its
+// base, so a component reference is a device object by itself: m(1)%d and
+// m(2)%d are two allocations, even though they share the component symbol.
+struct CollectCUDADeviceComponentsHelper
+    : public AnyTraverse<CollectCUDADeviceComponentsHelper> {
+  using Base = AnyTraverse<CollectCUDADeviceComponentsHelper>;
+  CollectCUDADeviceComponentsHelper() : Base{*this} {}
+  using Base::operator();
+  bool operator()(const Component &component) const {
+    if (IsCUDADeviceSymbol(component.GetLastSymbol())) {
+      if (std::find_if(components.begin(), components.end(),
+              [&](const Component *c) { return *c == component; }) ==
+          components.end()) {
+        components.push_back(&component);
+      }
+      return false;
+    }
+    return (*this)(component.base());
+  }
+  bool operator()(const ProcedureRef &) const { return false; }
+  bool operator()(const DescriptorInquiry &) const { return false; }
+  mutable std::vector<const Component *> components;
+};
+
+// The device objects of an expression: the device components, and the other
+// device symbols. A symbol is identified with the base object it is taken from
+// so that a(1) and a(2) are the same one.
+struct CUDADeviceObjects {
+  std::vector<const Component *> components;
+  std::set<std::pair<const Symbol *, const Symbol *>> symbols;
+};
+
+static CUDADeviceObjects CollectUniqueCUDADeviceObjects(
     const Expr<SomeType> &expr) {
+  CUDADeviceObjects objects;
   std::vector<SymbolVector> symbolVectors{evaluate::GetSymbolVectors(expr)};
-  semantics::UnorderedSymbolSet symbols;
   semantics::UnorderedSymbolSet cudaSymbols{CollectCudaSymbols(expr)};
   for (const auto &symbolVector : symbolVectors) {
     for (const auto &sym : symbolVector) {
       if (cudaSymbols.find(sym) != cudaSymbols.end()) {
         if (IsCUDADeviceSymbol(*sym)) {
-          symbols.insert(sym);
+          // Components are handled below, by component reference.
+          if (!sym->owner().IsDerivedType()) {
+            objects.symbols.emplace(
+                &sym->GetUltimate(), &symbolVector.back()->GetUltimate());
+          }
           break;
         }
       }
     }
   }
-  return symbols;
+  CollectCUDADeviceComponentsHelper components;
+  components(expr);
+  objects.components = std::move(components.components);
+  for (const Symbol &sym : CollectCudaSubscriptSymbolsHelper{}(expr)) {
+    if (IsCUDADeviceSymbol(sym)) {
+      objects.symbols.emplace(&sym, &sym);
+    }
+  }
+  return objects;
 }
 
 int GetNbOfUniqueCUDADeviceSymbols(const Expr<SomeType> &expr) {
-  return CollectUniqueCUDADeviceSymbols(expr).size();
+  CUDADeviceObjects objects{CollectUniqueCUDADeviceObjects(expr)};
+  return objects.components.size() + objects.symbols.size();
 }
 
 int GetNbOfUniqueCUDAManagedOrUnifiedSymbols(const Expr<SomeType> &expr) {
+  CUDADeviceObjects objects{CollectUniqueCUDADeviceObjects(expr)};
   int count{0};
-  for (const Symbol &sym : CollectUniqueCUDADeviceSymbols(expr)) {
-    if (IsCUDAManagedOrUnifiedSymbol(sym)) {
+  for (const Component *component : objects.components) {
+    if (IsCUDAManagedOrUnifiedSymbol(component->GetLastSymbol())) {
+      ++count;
+    }
+  }
+  for (const auto &object : objects.symbols) {
+    if (IsCUDAManagedOrUnifiedSymbol(*object.first)) {
       ++count;
     }
   }
@@ -1526,13 +1613,8 @@ static std::optional<NumericExpr<CAT>> tryBuildSplitSumExpressionTree(
     const NumericExpr<CAT> &expr) {
   const int kind{expr.kind()};
   if (const auto *convert = std::get_if<Convert<Numeric<CAT>, CAT>>(&expr.u)) {
-    std::optional<Expr<SomeKind<CAT>>> rewritten = common::visit(
-        [&](const auto &typedExpr) -> std::optional<Expr<SomeKind<CAT>>> {
-          if (auto result = tryBuildSplitSumExpressionTree(typedExpr))
-            return Expr<SomeKind<CAT>>{std::move(*result)};
-          return std::nullopt;
-        },
-        convert->left().u);
+    std::optional<NumericExpr<CAT>> rewritten =
+        tryBuildSplitSumExpressionTree(convert->left());
     if (!rewritten)
       return std::nullopt;
     return NumericExpr<CAT>{
@@ -1943,6 +2025,28 @@ const Symbol *GetLastPointerSymbol(const DataRef &x) {
       [](const auto &y) { return GetLastPointerSymbol(y); }, x.u);
 }
 
+template <> semantics::Attrs GetAttrs<Expr<SomeType>>(const Expr<SomeType> &x) {
+  if (IsVariable(x)) {
+    if (const auto *procRef{UnwrapProcedureRef(x)}) {
+      if (const Symbol *interface{procRef->proc().GetInterfaceSymbol()}) {
+        if (const auto *details{
+                interface->detailsIf<semantics::SubprogramDetails>()}) {
+          if (details->isFunction() &&
+              details->result().attrs().test(semantics::Attr::POINTER)) {
+            // N.B.: POINTER becomes TARGET in SetAttrsFromAssociation()
+            return details->result().attrs();
+          }
+        }
+      }
+    }
+  }
+  if (const Symbol *symbol{GetLastSymbol(x)}) {
+    return symbol->attrs();
+  } else {
+    return {};
+  }
+}
+
 template <TypeCategory TO, TypeCategory FROM>
 static std::optional<Expr<SomeType>> DataConstantConversionHelper(
     FoldingContext &context, const DynamicType &toType,
@@ -1953,36 +2057,30 @@ static std::optional<Expr<SomeType>> DataConstantConversionHelper(
   DynamicType sizedType{FROM, toType.kind()};
   if (auto sized{
           Fold(context, ConvertToType(sizedType, Expr<SomeType>{expr}))}) {
-    if (const auto *someExpr{UnwrapExpr<Expr<SomeKind<FROM>>>(*sized)}) {
-      return common::visit(
-          [](const auto &w) -> std::optional<Expr<SomeType>> {
-            using FromType = ResultType<decltype(w)>;
-            const int kind{w.kind()};
-            if (IsValidKindOfIntrinsicType(TO, kind)) {
-              if (const auto *fromConst{UnwrapExpr<Constant<FromType>>(w)}) {
-                using LogicalType = value::LogicalValue;
-                using ElementType =
-                    std::conditional_t<TO == TypeCategory::Logical, LogicalType,
-                        typename LogicalType::Word>;
-                std::vector<ElementType> values;
-                auto at{fromConst->lbounds()};
-                auto shape{fromConst->shape()};
-                for (auto n{GetSize(shape)}; n-- > 0;
-                     fromConst->IncrementSubscripts(at)) {
-                  auto elt{fromConst->At(at)};
-                  if constexpr (TO == TypeCategory::Logical) {
-                    values.emplace_back(kind, elt);
-                  } else {
-                    values.emplace_back(elt.word());
-                  }
-                }
-                return {AsGenericExpr(AsExpr(Constant<Type<TO>>{kind,
-                    std::move(values), std::move(shape), Type<TO>{kind}}))};
-              }
+    if (const auto *w{UnwrapExpr<Expr<Type<FROM>>>(*sized)}) {
+      using FromType = Type<FROM>;
+      const int kind{w->kind()};
+      if (IsValidKindOfIntrinsicType(TO, kind)) {
+        if (const auto *fromConst{UnwrapExpr<Constant<FromType>>(*w)}) {
+          using LogicalType = value::LogicalValue;
+          using ElementType = std::conditional_t<TO == TypeCategory::Logical,
+              LogicalType, typename LogicalType::Word>;
+          std::vector<ElementType> values;
+          auto at{fromConst->lbounds()};
+          auto shape{fromConst->shape()};
+          for (auto n{GetSize(shape)}; n-- > 0;
+              fromConst->IncrementSubscripts(at)) {
+            auto elt{fromConst->At(at)};
+            if constexpr (TO == TypeCategory::Logical) {
+              values.emplace_back(kind, elt);
+            } else {
+              values.emplace_back(elt.word());
             }
-            return std::nullopt;
-          },
-          someExpr->u);
+          }
+          return {AsGenericExpr(AsExpr(Constant<Type<TO>>{
+              kind, std::move(values), std::move(shape), Type<TO>{kind}}))};
+        }
+      }
     }
   }
   return std::nullopt;
@@ -2089,26 +2187,17 @@ const Symbol *GetBoundSymbol(const Expr<Type<TypeCategory::Integer>> &expr) {
             }
             return nullptr;
           },
-          [kind](const Convert<T, TypeCategory::Integer> &x) {
-            return common::visit(
-                [kind](const auto &y) -> const Symbol * {
-                  int yKind{y.kind()};
-                  if (yKind <= kind) {
-                    return GetBoundSymbol(y);
-                  } else {
-                    return nullptr;
-                  }
-                },
-                x.left().u);
+          [kind](const Convert<T, TypeCategory::Integer> &x) -> const Symbol * {
+            const auto &y{x.left()};
+            if (y.kind() <= kind) {
+              return GetBoundSymbol(y);
+            } else {
+              return nullptr;
+            }
           },
           [](const auto &) -> const Symbol * { return nullptr; },
       },
       expr.u);
-}
-template <>
-const Symbol *GetBoundSymbol<SomeInteger>(const Expr<SomeInteger> &expr) {
-  return common::visit(
-      [](const auto &kindExpr) { return GetBoundSymbol(kindExpr); }, expr.u);
 }
 
 template <typename T>
@@ -2149,8 +2238,6 @@ std::optional<bool> AreEquivalentInInterface(
 }
 template std::optional<bool> AreEquivalentInInterface<SubscriptInteger>(
     const Expr<SubscriptInteger> &, const Expr<SubscriptInteger> &);
-template std::optional<bool> AreEquivalentInInterface<SomeInteger>(
-    const Expr<SomeInteger> &, const Expr<SomeInteger> &);
 
 bool CheckForCoindexedObject(parser::ContextualMessages &messages,
     const std::optional<ActualArgument> &arg, const std::string &procName,

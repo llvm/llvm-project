@@ -7,13 +7,13 @@
 ## IE
 # RUN: ld.lld -shared %t/ie64.o -o %t/ie64.so
 # RUN: llvm-readobj -r -d %t/ie64.so | FileCheck %s --check-prefix=IE64-REL
-# RUN: llvm-objdump -d --no-show-raw-insn %t/ie64.so | FileCheck %s --check-prefixes=IE64
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t/ie64.so | FileCheck %s --check-prefixes=IE64
 
 ## IE -> LE
 # RUN: ld.lld %t/ie64.o -o %t/64
 # RUN: llvm-readelf -r %t/64 | FileCheck %s --check-prefix=NOREL
 # RUN: llvm-readelf -x .got %t/64 2>&1 | FileCheck --check-prefix=LE64-GOT %s
-# RUN: llvm-objdump -d --no-show-raw-insn %t/64 | FileCheck %s --check-prefixes=LE64
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t/64 | FileCheck %s --check-prefixes=LE64
 
 # IE64-REL:      FLAGS STATIC_TLS
 # IE64-REL:      .rela.dyn {

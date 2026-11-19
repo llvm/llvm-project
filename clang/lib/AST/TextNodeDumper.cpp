@@ -2168,14 +2168,13 @@ void TextNodeDumper::VisitVectorType(const VectorType *T) {
   case VectorKind::SveFixedLengthPredicate:
     OS << " fixed-length sve predicate vector";
     break;
-  case VectorKind::RVVFixedLengthData:
-    OS << " fixed-length rvv data vector";
-    break;
-  case VectorKind::RVVFixedLengthMask:
-  case VectorKind::RVVFixedLengthMask_1:
-  case VectorKind::RVVFixedLengthMask_2:
-  case VectorKind::RVVFixedLengthMask_4:
-    OS << " fixed-length rvv mask vector";
+  default:
+    assert(isRVVFixedLengthVectorKind(T->getVectorKind()) &&
+           "unexpected vector kind");
+    OS << (isRVVFixedLengthMaskVectorKind(T->getVectorKind())
+               ? " fixed-length rvv mask vector ratio "
+               : " fixed-length rvv data vector lmul ")
+       << getRVVFixedLengthString(T->getVectorKind());
     break;
   }
   OS << " " << T->getNumElements();

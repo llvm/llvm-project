@@ -1022,7 +1022,7 @@ void SizeClassAllocator32<Config>::getSizeClassFragmentationInfo(
   const uptr NumberOfRegions = Last - First + 1U;
   auto SkipRegion = [this, First, ClassId](uptr RegionIndex) {
     ScopedLock L(ByteMapMutex);
-    return (PossibleRegions[First + RegionIndex] - 1U) != ClassId;
+    return PossibleRegions[First + RegionIndex] != (ClassId + 1U);
   };
 
   FragmentationRecorder Recorder;
@@ -1120,7 +1120,7 @@ uptr SizeClassAllocator32<Config>::releaseToOSMaybe(SizeClassInfo *Sci,
   ReleaseRecorder Recorder(Base);
   auto SkipRegion = [this, First, ClassId](uptr RegionIndex) {
     ScopedLock L(ByteMapMutex);
-    return (PossibleRegions[First + RegionIndex] - 1U) != ClassId;
+    return PossibleRegions[First + RegionIndex] != (ClassId + 1U);
   };
   releaseFreeMemoryToOS(Context, Recorder, SkipRegion);
 

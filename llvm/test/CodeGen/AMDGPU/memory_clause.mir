@@ -63,12 +63,9 @@ body:             |
 ---
 name:            subreg_full
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: vreg_128 }
-  - { id: 1, class: vreg_128 }
 body:             |
   bb.0:
-    %0 = IMPLICIT_DEF
+    %0:vreg_128 = IMPLICIT_DEF
     undef %1.sub0:vreg_128 = GLOBAL_LOAD_DWORD %0.sub0_sub1, 0, 0, implicit $exec
     %1.sub1:vreg_128 = GLOBAL_LOAD_DWORD %0.sub1_sub2, 16, 0, implicit $exec
     %1.sub2:vreg_128 = GLOBAL_LOAD_DWORD %0.sub2_sub3, 32, 0, implicit $exec
@@ -86,12 +83,9 @@ body:             |
 ---
 name:            subreg_part
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: vreg_128 }
-  - { id: 1, class: vreg_128 }
 body:             |
   bb.0:
-    %0 = IMPLICIT_DEF
+    %0:vreg_128 = IMPLICIT_DEF
     undef %1.sub0:vreg_128 = GLOBAL_LOAD_DWORD %0.sub0_sub1, 0, 0, implicit $exec
     %1.sub1:vreg_128 = GLOBAL_LOAD_DWORD %0.sub1_sub2, 16, 0, implicit $exec
     %1.sub3:vreg_128 = GLOBAL_LOAD_DWORD %0.sub2_sub3, 32, 0, implicit $exec
@@ -108,15 +102,9 @@ body:             |
 ---
 name:            dead
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: vreg_64 }
-  - { id: 1, class: vreg_128 }
-  - { id: 2, class: vreg_128 }
-  - { id: 3, class: vreg_128 }
-  - { id: 4, class: vreg_128 }
 body:             |
   bb.0:
-    %0 = IMPLICIT_DEF
+    %0:vreg_64 = IMPLICIT_DEF
     dead %1:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 0, 0, implicit $exec
     dead %2:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 16, 0, implicit $exec
     dead %3:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 32, 0, implicit $exec
@@ -156,7 +144,7 @@ body:             |
     %1:vreg_64 = IMPLICIT_DEF
     %2:vreg_64 = IMPLICIT_DEF
     %3:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 0, 0, implicit $exec
-    %4:vreg_128 = GLOBAL_LOAD_DWORDX4 killed %1, 16, 0, implicit $exec
+    %4:vreg_128 = GLOBAL_LOAD_DWORDX4 %1, 16, 0, implicit $exec
     GLOBAL_STORE_DWORDX4 %2, %3, 0, 0, implicit $exec
     GLOBAL_STORE_DWORDX4 %2, %4, 16, 0, implicit $exec
 ...
@@ -170,14 +158,9 @@ body:             |
 ---
 name:            indirect
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: vreg_64 }
-  - { id: 1, class: vreg_64 }
-  - { id: 2, class: vreg_128 }
-  - { id: 3, class: vreg_128 }
 body:             |
   bb.0:
-    %0 = IMPLICIT_DEF
+    %0:vreg_64 = IMPLICIT_DEF
     %1:vreg_64 = GLOBAL_LOAD_DWORDX2 %0, 0, 0, implicit $exec
     %2:vreg_128 = GLOBAL_LOAD_DWORDX4 %1, 0, 0, implicit $exec
     %3:vreg_128 = GLOBAL_LOAD_DWORDX4 %1, 16, 0, implicit $exec
@@ -194,15 +177,11 @@ body:             |
 ---
 name:            stack
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: vreg_64 }
-  - { id: 1, class: vreg_128 }
-  - { id: 2, class: vreg_128 }
 stack:
   - { id: 0, type: default, offset: 0, size: 64, alignment: 8 }
 body:             |
   bb.0:
-    %0 = IMPLICIT_DEF
+    %0:vreg_64 = IMPLICIT_DEF
     %1:vreg_128 = GLOBAL_LOAD_DWORDX4 %stack.0, 0, 0, implicit $exec
     %2:vreg_128 = GLOBAL_LOAD_DWORDX4 %stack.0, 16, 0, implicit $exec
     GLOBAL_STORE_DWORDX4 %0, %1, 0, 0, implicit $exec
@@ -288,26 +267,19 @@ body:             |
 ...
 
 # GCN-LABEL: {{^}}name: image_clause{{$}}
-# GCN:      %3:vreg_128 = IMAGE_SAMPLE_LZ_V4_V2 %0, %1, undef %2:sgpr_128, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec
-# GCN-NEXT: %4:vreg_128 = IMAGE_SAMPLE_LZ_V4_V2 %0, %1, undef %2:sgpr_128, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec
-# GCN-NEXT: %5:vreg_128 = IMAGE_SAMPLE_LZ_V4_V2 %0, %1, undef %2:sgpr_128, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec
-# GCN-NEXT: KILL undef %2:sgpr_128{{$}}
-# GCN-NEXT: IMAGE_STORE_V4_V2 %3, %0, %1, 15, -1, 0, 0, 0, 0, 0, 0, implicit $exec
+# GCN:      %2:vreg_128 = IMAGE_SAMPLE_LZ_V4_V2 %0, %1, undef %3:sgpr_128, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+# GCN-NEXT: %4:vreg_128 = IMAGE_SAMPLE_LZ_V4_V2 %0, %1, undef %3:sgpr_128, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+# GCN-NEXT: %5:vreg_128 = IMAGE_SAMPLE_LZ_V4_V2 %0, %1, undef %3:sgpr_128, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+# GCN-NEXT: KILL undef %3:sgpr_128{{$}}
+# GCN-NEXT: IMAGE_STORE_V4_V2 %2, %0, %1, 15, -1, 0, 0, 0, 0, 0, 0, implicit $exec
 
 ---
 name:            image_clause
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: vreg_64 }
-  - { id: 1, class: sgpr_256 }
-  - { id: 2, class: sgpr_128 }
-  - { id: 3, class: vreg_128 }
-  - { id: 4, class: vreg_128 }
-  - { id: 5, class: vreg_128 }
 body:             |
   bb.0:
-    %0 = IMPLICIT_DEF
-    %1 = IMPLICIT_DEF
+    %0:vreg_64 = IMPLICIT_DEF
+    %1:sgpr_256 = IMPLICIT_DEF
     %3:vreg_128 = IMAGE_SAMPLE_LZ_V4_V2 %0, %1, undef %2:sgpr_128, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s128))
     %4:vreg_128 = IMAGE_SAMPLE_LZ_V4_V2 %0, %1, undef %2:sgpr_128, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s128))
     %5:vreg_128 = IMAGE_SAMPLE_LZ_V4_V2 %0, %1, undef %2:sgpr_128, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s128))
@@ -327,18 +299,11 @@ body:             |
 ---
 name:            mixed_clause
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: vreg_64 }
-  - { id: 1, class: sgpr_256 }
-  - { id: 2, class: sgpr_128 }
-  - { id: 3, class: vreg_128 }
-  - { id: 4, class: vreg_128 }
-  - { id: 5, class: vgpr_32 }
 body:             |
   bb.0:
-    %0 = IMPLICIT_DEF
-    %1 = IMPLICIT_DEF
-    %2 = IMPLICIT_DEF
+    %0:vreg_64 = IMPLICIT_DEF
+    %1:sgpr_256 = IMPLICIT_DEF
+    %2:sgpr_128 = IMPLICIT_DEF
     %3:vreg_128 = IMAGE_SAMPLE_LZ_V4_V2 %0, %1, %2, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s128))
     %4:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 0, 0, implicit $exec
     %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2, 0, 0, 0, 0, implicit $exec
@@ -355,15 +320,10 @@ body:             |
 ---
 name:            atomic
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: vreg_64 }
-  - { id: 1, class: vgpr_32 }
-  - { id: 2, class: vgpr_32 }
-  - { id: 3, class: vgpr_32 }
 body:             |
   bb.0:
-    %0 = IMPLICIT_DEF
-    %1 = IMPLICIT_DEF
+    %0:vreg_64 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
     %2:vgpr_32 = FLAT_ATOMIC_ADD_RTN %0, %1, 0, 2, implicit $exec, implicit $flat_scr
     %3:vgpr_32 = FLAT_ATOMIC_ADD_RTN %0, %1, 0, 2, implicit $exec, implicit $flat_scr
     FLAT_ATOMIC_ADD %0, %1, 0, 0, implicit $exec, implicit $flat_scr

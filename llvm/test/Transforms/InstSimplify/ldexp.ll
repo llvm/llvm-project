@@ -19,7 +19,7 @@ define float @ldexp_f32_poison_undef() {
 
 define float @ldexp_f32_undef_poison() {
 ; CHECK-LABEL: @ldexp_f32_undef_poison(
-; CHECK-NEXT:    ret float undef
+; CHECK-NEXT:    ret float poison
 ;
   %call = call float @llvm.ldexp.f32.i32(float undef, i32 poison)
   ret float %call
@@ -30,6 +30,14 @@ define float @ldexp_f32_poison_poison() {
 ; CHECK-NEXT:    ret float poison
 ;
   %call = call float @llvm.ldexp.f32.i32(float poison, i32 poison)
+  ret float %call
+}
+
+define float @ldexp_f32_val_poison(float %x) {
+; CHECK-LABEL: @ldexp_f32_val_poison(
+; CHECK-NEXT:    ret float poison
+;
+  %call = call float @llvm.ldexp.f32.i32(float %x, i32 poison)
   ret float %call
 }
 
@@ -241,13 +249,13 @@ define void @ldexp_f32_0() {
 
 define void @ldexp_f32_undef_strictfp(float %x, i32 %y) #0 {
 ; CHECK-LABEL: @ldexp_f32_undef_strictfp(
-; CHECK-NEXT:    [[UNDEF_EXP:%.*]] = call float @llvm.experimental.constrained.ldexp.f32.i32(float [[X:%.*]], i32 undef, metadata !"round.dynamic", metadata !"fpexcept.maytrap") #[[ATTR0]]
-; CHECK-NEXT:    store volatile float [[UNDEF_EXP]], ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    [[X:%.*]] = call float @llvm.experimental.constrained.ldexp.f32.i32(float [[X1:%.*]], i32 undef, metadata !"round.dynamic", metadata !"fpexcept.maytrap") #[[ATTR0]]
 ; CHECK-NEXT:    store volatile float [[X]], ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float poison, ptr addrspace(1) undef, align 4
 ; CHECK-NEXT:    store volatile float +qnan, ptr addrspace(1) undef, align 4
 ; CHECK-NEXT:    store volatile float poison, ptr addrspace(1) undef, align 4
 ; CHECK-NEXT:    store volatile float poison, ptr addrspace(1) undef, align 4
-; CHECK-NEXT:    store volatile float undef, ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float poison, ptr addrspace(1) undef, align 4
 ; CHECK-NEXT:    ret void
 ;
   %undef.exp = call float @llvm.experimental.constrained.ldexp.f32.i32(float %x, i32 undef, metadata !"round.dynamic", metadata !"fpexcept.maytrap") #0

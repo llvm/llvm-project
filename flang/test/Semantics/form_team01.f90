@@ -6,8 +6,8 @@ subroutine test
   type(team_type) :: team
   integer :: team_number
   integer :: team_index
-  integer :: statvar
-  character(len=50) :: errvar
+  integer :: statvar, statvar2
+  character(len=50) :: errvar, errvar2
   integer, codimension[*], save :: co_team_number, co_team_index
   type(team_type), dimension(1) :: array_team
   integer, dimension(1) :: array_team_number
@@ -61,6 +61,8 @@ subroutine test
   FORM TEAM (team_number, team, NEW_INDEX=array_team_index)
   !ERROR: Must be a scalar value, but is a rank-1 array
   FORM TEAM (team_number, team, STAT=array_statvar)
-  !ERROR: Must be a scalar value, but is a rank-1 array
-  FORM TEAM (team_number, team, ERRMSG=array_errvar)
+  !ERROR: The errmsg-variable in a form-team-spec-list may not be repeated
+  FORM TEAM (team_number, team, ERRMSG=errvar, ERRMSG=errvar2)
+  !ERROR: The stat-variable in a form-team-spec-list may not be repeated
+  FORM TEAM (team_number, team, STAT=statvar, STAT=statvar2)
 end subroutine

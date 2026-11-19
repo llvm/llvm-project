@@ -158,8 +158,8 @@ public:
     return ST->getVScaleForTuning();
   }
 
-  bool shouldMaximizeVectorBandwidth(
-      TargetTransformInfo::RegisterKind K) const override;
+  bool shouldMaximizeVectorBandwidth(TargetTransformInfo::VectorKind K,
+                                     Type *ElementTy) const override;
 
   /// Try to return an estimate cost factor that can be used as a multiplier
   /// when scalarizing an operation for a vector with ElementCount \p VF.
@@ -271,6 +271,12 @@ public:
   enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const override;
   bool useNeonVector(const Type *Ty) const;
 
+  // The expansion uses overlapping unaligned accesses, which are split up under
+  // strict alignment, and MOPS has its own variable-length lowering.
+  uint64_t getMaxBoundedMemSetInlineSize() const override {
+    return ST->requiresStrictAlign() || ST->hasMOPS() ? 0 : 64;
+  }
+
   InstructionCost getMemoryOpCost(
       unsigned Opcode, Type *Src, Align Alignment, unsigned AddressSpace,
       TTI::TargetCostKind CostKind,
@@ -323,12 +329,6 @@ public:
     if (!ST->isSVEorStreamingSVEAvailable())
       return false;
 
-    if (isa<FixedVectorType>(DataType) && !ST->useSVEForFixedLengthVectors()) {
-      unsigned Bits = DataType->getPrimitiveSizeInBits();
-      if (Bits != 64 && Bits != 128)
-        return false; // Fall back to scalarization of masked operations.
-    }
-
     // Type legalization cannot scalarize the data of a masked load/store.
     // Reject types that would be legalized to a scalar (e.g. <1 x half>).
     if (isa<FixedVectorType>(DataType) &&
@@ -370,10 +370,9 @@ public:
     if (!ST->isSVEAvailable())
       return false;
 
-    // For fixed vectors, scalarize if not using SVE for them.
     auto *DataTypeFVTy = dyn_cast<FixedVectorType>(DataType);
-    if (DataTypeFVTy && (!ST->useSVEForFixedLengthVectors() ||
-                         DataTypeFVTy->getNumElements() < 2))
+    if (DataTypeFVTy && (DataTypeFVTy->getNumElements() < 2 ||
+                         DataType->getScalarType()->isIntegerTy(1)))
       return false;
 
     return isElementTypeLegalForScalableVector(DataType->getScalarType());

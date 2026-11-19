@@ -48,8 +48,10 @@
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaAMDGPU.h"
 #include "clang/Sema/SemaARM.h"
+#include "clang/Sema/SemaBPF.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaHLSL.h"
+#include "clang/Sema/SemaHexagon.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenACC.h"
@@ -965,9 +967,9 @@ Sema::NameClassification Sema::ClassifyName(Scope *S, CXXScopeSpec &SS,
 Corrected:
   switch (Result.getResultKind()) {
   case LookupResultKind::NotFound:
-    // If an unqualified-id is followed by a '(', then we have a function
-    // call.
-    if (SS.isEmpty() && NextToken.is(tok::l_paren)) {
+    // If an unqualified-id is followed by '(' or '<<<', then we have a
+    // function call or kernel launch.
+    if (SS.isEmpty() && NextToken.isOneOf(tok::l_paren, tok::lesslessless)) {
       // In C++, this is an ADL-only call.
       // FIXME: Reference?
       if (getLangOpts().CPlusPlus)
@@ -1287,7 +1289,8 @@ Corrected:
   // that declaration directly. Defer resolving even non-overloaded class
   // member accesses, as we need to defer certain access checks until we know
   // the context.
-  bool ADL = UseArgumentDependentLookup(SS, Result, NextToken.is(tok::l_paren));
+  bool ADL = UseArgumentDependentLookup(
+      SS, Result, NextToken.isOneOf(tok::l_paren, tok::lesslessless));
   if (Result.isSingleResult() && !ADL &&
       (!FirstDecl->isCXXClassMember() || isa<EnumConstantDecl>(FirstDecl)))
     return NameClassification::NonType(Result.getRepresentativeDecl());
@@ -1333,7 +1336,8 @@ ExprResult Sema::ActOnNameClassifiedAsNonType(Scope *S, const CXXScopeSpec &SS,
   Result.addDecl(Found);
   Result.resolveKind();
 
-  bool ADL = UseArgumentDependentLookup(SS, Result, NextToken.is(tok::l_paren));
+  bool ADL = UseArgumentDependentLookup(
+      SS, Result, NextToken.isOneOf(tok::l_paren, tok::lesslessless));
   return BuildDeclarationNameExpr(SS, Result, ADL, /*AcceptInvalidDecl=*/true);
 }
 
@@ -3517,11 +3521,12 @@ static void mergeParamDeclAttributes(ParmVarDecl *newDecl,
       newDecl, oldDecl, [&S](ParmVarDecl *To, const ParmVarDecl *From) {
         unsigned found = 0;
         found += propagateAttribute<InheritableParamAttr>(To, From, S);
-        // Propagate the lifetimebound attribute from parameters to the
-        // most recent declaration. Note that this doesn't include the implicit
-        // 'this' parameter, as the attribute is applied to the function type in
-        // that case.
+        // Propagate the lifetimebound and lifetime_capture_by attributes from
+        // parameters to the most recent declaration. Note that this doesn't
+        // include the implicit 'this' parameter, as the attribute is applied to
+        // the function type in that case.
         found += propagateAttribute<LifetimeBoundAttr>(To, From, S);
+        found += propagateAttribute<LifetimeCaptureByAttr>(To, From, S);
         return found;
       });
 }
@@ -7030,6 +7035,12 @@ Sema::CheckTypedefForVariablyModifiedType(Scope *S, TypedefNameDecl *NewTD) {
   // that redeclarations will match.
   TypeSourceInfo *TInfo = NewTD->getTypeSourceInfo();
   QualType T = TInfo->getType();
+
+  if (!CheckVariablyModifiedTypeUse(T, TInfo->getTypeLoc().getBeginLoc())) {
+    NewTD->setInvalidDecl();
+    return;
+  }
+
   if (T->isVariablyModifiedType()) {
     setFunctionHasBranchProtectedScope();
 
@@ -9036,6 +9047,14 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
   if (NewVD->isInvalidDecl())
     return;
 
+  SourceLocation VMLoc = NewVD->getLocation();
+  if (TypeSourceInfo *TSI = NewVD->getTypeSourceInfo())
+    VMLoc = TSI->getTypeLoc().getBeginLoc();
+  if (!CheckVariablyModifiedTypeUse(NewVD->getType(), VMLoc)) {
+    NewVD->setInvalidDecl();
+    return;
+  }
+
   QualType T = NewVD->getType();
 
   // Defer checking an 'auto' type until its initializer is attached.
@@ -9350,6 +9369,14 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
     Context.getFunctionFeatureMap(CallerFeatureMap, FD);
     RISCV().checkRVVTypeSupport(T, NewVD->getLocation(), cast<Decl>(CurContext),
                                 CallerFeatureMap);
+  }
+
+  // Global, static or variable sized objects of HLX types are not allowed.
+  if (Hexagon().isHLXVectorType(T) &&
+      (NewVD->hasGlobalStorage() || T->isVariableArrayType())) {
+    Diag(NewVD->getLocation(), diag::err_hlx_invalid_object);
+    NewVD->setInvalidDecl();
+    return;
   }
 
   if (Context.getTargetInfo().hasAMDGPUTypes()) {
@@ -14325,6 +14352,9 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
     if (!HLSL().handleInitialization(VDecl, Init))
       return;
 
+  if (Context.getTargetInfo().getTriple().isBPF())
+    Init = BPF().checkLocalConstantInitializer(VDecl, Init);
+
   // Get the decls type and save a reference for later, since
   // CheckInitializerTypes may change it.
   QualType DclT = VDecl->getType(), SavT = DclT;
@@ -15443,9 +15473,10 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
     // Apply the init_seg attribute if this has an initializer.  If the
     // initializer turns out to not be dynamic, we'll end up ignoring this
     // attribute.
-    if (CurInitSeg && var->getInit())
-      var->addAttr(InitSegAttr::CreateImplicit(Context, CurInitSeg->getString(),
-                                               CurInitSegLoc));
+    if (CurInitSeg.Segment && var->getInit())
+      var->addAttr(InitSegAttr::CreateImplicit(
+          Context, CurInitSeg.Segment->getString(), CurInitSeg.Func,
+          CurInitSeg.PragmaLocation));
   }
 
   // All the following checks are C++ only.
@@ -16174,6 +16205,10 @@ ParmVarDecl *Sema::CheckParameter(DeclContext *DC, SourceLocation StartLoc,
   ParmVarDecl *New = ParmVarDecl::Create(Context, DC, StartLoc, NameLoc, Name,
                                          Context.getAdjustedParameterType(T),
                                          TSInfo, SC, nullptr);
+
+  SourceLocation VMLoc = TSInfo ? TSInfo->getTypeLoc().getBeginLoc() : NameLoc;
+  if (!CheckVariablyModifiedTypeUse(T, VMLoc))
+    New->setInvalidDecl();
 
   // Make a note if we created a new pack in the scope of a lambda, so that
   // we know that references to that pack must also be expanded within the
@@ -18954,6 +18989,12 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
             // tag. We're going to create a new Decl for it.
           }
 
+          // Qualified lookup can find a tag in an inline namespace. Its
+          // redeclaration belongs to that namespace, which need not be the
+          // context named by the qualifier.
+          if (SS.isNotEmpty())
+            SearchDC = PrevTagDecl->getDeclContext();
+
           // Okay, we're going to make a redeclaration.  If this is some kind
           // of reference, make sure we build the redeclaration in the same DC
           // as the original, and ignore the current access specifier.
@@ -19780,6 +19821,12 @@ FieldDecl *Sema::CheckFieldDecl(DeclarationName Name, QualType T,
         InvalidDecl = true;
       }
     }
+  }
+
+  // Aggregates with members of HLX types are not allowed.
+  if (Hexagon().isHLXVectorType(T)) {
+    Diag(Loc, diag::err_hlx_invalid_field);
+    InvalidDecl = true;
   }
 
   // C++11 [class.union]p8 (DR1460):

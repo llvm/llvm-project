@@ -69,6 +69,7 @@ def ol_symbol_info_t : Enum {
   let etors = [
     TaggedEtor<"KIND", "ol_symbol_kind_t", "The kind of this symbol.">,
     TaggedEtor<"GLOBAL_VARIABLE_ADDRESS", "void *", "The address in memory for this global variable.">,
+    TaggedEtor<"GLOBAL_VARIABLE_HOST_ADDRESS", "void *", "The host address of this global variable within the host-side program image.">,
     TaggedEtor<"GLOBAL_VARIABLE_SIZE", "size_t", "The size in bytes for this global variable.">,
     TaggedEtor<"NAME", "char[]", "The name of this symbol.">,
     TaggedEtor<"KERNEL_STATIC_BLOCK_MEM_SIZE", "uint32_t", "The size in bytes of the static per-block memory used by this kernel.">,
