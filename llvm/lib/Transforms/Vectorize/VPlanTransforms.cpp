@@ -6572,9 +6572,9 @@ void VPlanTransforms::expandMaskBeforeFirst(VPlan &Plan, VPCostContext &Ctx,
         continue;
 
       VPBuilder Builder(&R);
+      DebugLoc DL = R.getDebugLoc();
       if (Range.Start.isScalar()) {
-        R.getVPSingleValue()->replaceAllUsesWith(
-            Builder.createNot(X, R.getDebugLoc()));
+        R.getVPSingleValue()->replaceAllUsesWith(Builder.createNot(X, DL);
         R.eraseFromParent();
         continue;
       }
@@ -6596,7 +6596,6 @@ void VPlanTransforms::expandMaskBeforeFirst(VPlan &Plan, VPCostContext &Ctx,
       if (LoopVectorizationPlanner::getDecisionAndClampRange(IsCheap, Range))
         continue;
 
-      DebugLoc DL = BeforeFirst->getDebugLoc();
       VPValue *FirstActive = Builder.createScalarZExtOrTrunc(
           Builder.createFirstActiveLane(X, DL), Ty, DL);
       VPValue *PartStart = Builder.createOverflowingOp(
