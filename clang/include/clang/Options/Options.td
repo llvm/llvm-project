@@ -3569,6 +3569,11 @@ defm clangir : BoolFOption<"clangir",
   BothFlags<[], [ClangOption, CC1Option], "">>;
 def emit_cir : Flag<["-"], "emit-cir">, Visibility<[ClangOption, CC1Option]>,
   Group<Action_Group>, HelpText<"Build ASTs and then lower to ClangIR">;
+def emit_cir_EQ : Joined<["-"], "emit-cir=">, Visibility<[CC1Option]>,
+  Group<Action_Group>, Values<"pristine">,
+  HelpText<"Build ASTs and then lower to ClangIR, stopping at the named "
+           "point (experimental). 'pristine' is CIRGen's output before any "
+           "ClangIR pass">;
 def emit_cir_bc : Flag<["-"], "emit-cir-bc">,
   Visibility<[CC1Option]>, Group<Action_Group>,
   HelpText<"Build ASTs and then emit ClangIR bytecode">;
@@ -3788,11 +3793,11 @@ def fexperimental_abi_lowering : Flag<["-"], "fexperimental-abi-lowering">,
   MarshallingInfoFlag<CodeGenOpts<"ExperimentalABILowering">>;
 
 defm module_local_hints : BoolFOption<"module-local-hints",
-  CodeGenOpts<"ModuleLocalHints">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option],
-          "Mark inline functions and template instantiations defined in the "
-          "main source file as likely_module_local">,
-  NegFlag<SetFalse>>;
+  CodeGenOpts<"ModuleLocalHints">, DefaultTrue,
+  PosFlag<SetTrue, [], [ClangOption], "Mark">,
+  NegFlag<SetFalse, [], [ClangOption, CC1Option], "Don't mark">,
+  BothFlags<[], [ClangOption], " inline functions and template instantiations "
+            "defined in the main source file as likely_module_local">>;
 
 def fmodules_embed_all_files : Joined<["-"], "fmodules-embed-all-files">,
   Visibility<[ClangOption, CC1Option, CLOption]>,

@@ -63,5 +63,5 @@ bb9:
   ret i8 %phi10
 }
 
-declare ptr @_Znwm(i64)
+declare ptr @_Znwm(i64) allockind("alloc,uninitialized") allocsize(0)
 declare void @use(i64)

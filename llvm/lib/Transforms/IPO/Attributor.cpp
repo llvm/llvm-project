@@ -3963,13 +3963,11 @@ static bool runAttributorLightOnFunctions(InformationCache &InfoCache,
   AC.IsModulePass = IsModulePass;
   AC.DeleteFns = false;
   static constexpr AAKindSet Allowed =
-      AAKindSet::get<&AAWillReturn::ID, &AANoUnwind::ID, &AANoRecurse::ID,
-                     &AANoSync::ID, &AANoFree::ID, &AANoReturn::ID,
-                     &AAMemoryLocation::ID, &AAMemoryBehavior::ID,
-                     &AAUnderlyingObjects::ID, &AANoCapture::ID,
-                     &AAInterFnReachability::ID, &AAIntraFnReachability::ID,
-                     &AACallEdges::ID, &AANoFPClass::ID, &AAMustProgress::ID,
-                     &AANonNull::ID, &AADenormalFPMath::ID>();
+      AAKindSet::get<AAWillReturn, AANoUnwind, AANoRecurse, AANoSync, AANoFree,
+                     AANoReturn, AAMemoryLocation, AAMemoryBehavior,
+                     AAUnderlyingObjects, AANoCapture, AAInterFnReachability,
+                     AAIntraFnReachability, AACallEdges, AANoFPClass,
+                     AAMustProgress, AANonNull, AADenormalFPMath>();
   AC.Allowed = Allowed;
   AC.UseLiveness = false;
 

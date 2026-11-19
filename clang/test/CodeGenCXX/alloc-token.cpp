@@ -311,16 +311,12 @@ void test_placement_new_read_only_var(bool c) {
 // Any use of the variable other than a read may change its value and
 // disqualifies it: assignment (so the storage the placement new ends up in
 // would depend on control flow, and the sizeof or cast of the other
-// allocation would be overridden), compound assignment, increment,
-// address-of, a write to one of its fields, a member call, binding to a
-// reference directly or as a call argument, and a by-reference capture.
-// Nothing is inferred for any of these allocations; with the variable
-// disqualified, the cast of the result still applies.
+// allocation would be overridden), including assignment of a class-typed
+// variable, address-of, a write to one of its fields, binding to a reference
+// directly or as a call argument, and a by-reference capture.
+// Nothing is inferred for any of these allocations.
 void rebind(void *&p);
 void peek(void *const &p);
-struct Rebinder {
-  Rebinder(void *&p);
-};
 // CHECK-LABEL: define dso_local void @_Z26test_placement_new_writtenb(
 // CHECK: call noalias ptr @malloc(i64 noundef 8)
 // CHECK-NOT: !alloc_token
@@ -336,13 +332,13 @@ struct Rebinder {
 // CHECK-NOT: !alloc_token
 // CHECK: call noalias ptr @malloc(i64 noundef 64)
 // CHECK-NOT: !alloc_token
-// CHECK: call noalias ptr @malloc(i64 noundef 64){{.*}} !alloc_token [[META_CHAR]]
-// CHECK: call noalias ptr @malloc(i64 noundef 64){{.*}} !alloc_token [[META_CHAR]]
 // CHECK: call noalias ptr @malloc(i64 noundef 64)
 // CHECK-NOT: !alloc_token
 // CHECK: call { ptr, i64 } @_Z13alloc_storagem(i64 noundef 64)
 // CHECK-NOT: !alloc_token
-// CHECK: call noalias ptr @malloc(i64 noundef 64)
+// CHECK: call { ptr, i64 } @_Z13alloc_storagem(i64 noundef 64)
+// CHECK-NOT: !alloc_token
+// CHECK: call { ptr, i64 } @_Z13alloc_storagem(i64 noundef 32)
 // CHECK-NOT: !alloc_token
 // CHECK: call noalias ptr @malloc(i64 noundef 64)
 // CHECK-NOT: !alloc_token
@@ -371,18 +367,16 @@ void test_placement_new_written(bool c) {
   // The assignment of the placement new's result.
   void *p4 = malloc(64);
   p4 = new (p4) PlacedNoPtr();
-  char *p5 = static_cast<char *>(malloc(64));
-  p5 += 8;
-  sink = new (p5) PlacedNoPtr();
-  char *p6 = static_cast<char *>(malloc(64));
-  ++p6;
-  sink = new (p6) PlacedNoPtr();
   void *p7 = malloc(64);
   sink = &p7;
   sink = new (p7) PlacedNoPtr();
   Storage s = alloc_storage(64);
   s.p = sink;
   sink = new (s.p) PlacedNoPtr();
+  // A class-typed assignment is an operator call, not a BinaryOperator.
+  Storage s2 = alloc_storage(64);
+  s2 = alloc_storage(32);
+  sink = new (s2.p) PlacedNoPtr();
   void *p8 = malloc(64);
   void *&p8ref = p8;
   p8ref = sink;
@@ -390,9 +384,6 @@ void test_placement_new_written(bool c) {
   void *p9 = malloc(64);
   rebind(p9);
   sink = new (p9) PlacedNoPtr();
-  void *p10 = malloc(64);
-  Rebinder rebinder(p10);
-  sink = new (p10) PlacedNoPtr();
   // Binding to a const reference is not a read either.
   void *p11 = malloc(64);
   peek(p11);

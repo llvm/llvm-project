@@ -536,6 +536,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUInsertDelayAluLegacyPass(*PR);
   initializeAMDGPULowerVGPREncodingLegacyPass(*PR);
   initializeSIInsertHardClausesLegacyPass(*PR);
+  initializeSIInsertAsyncBarrierArriveWorkaroundLegacyPass(*PR);
   initializeSIInsertWaitcntsLegacyPass(*PR);
   initializeSIModeRegisterLegacyPass(*PR);
   initializeSIWholeQuadModeLegacyPass(*PR);
@@ -743,18 +744,6 @@ bool AMDGPUTargetMachine::EnableObjectLinking = false;
 bool AMDGPUTargetMachine::EnableLowerModuleLDS = true;
 
 AMDGPUTargetMachine::~AMDGPUTargetMachine() = default;
-
-StringRef AMDGPUTargetMachine::getGPUName(const Function &F) const {
-  Attribute GPUAttr = F.getFnAttribute("target-cpu");
-  return GPUAttr.isValid() ? GPUAttr.getValueAsString() : getTargetCPU();
-}
-
-StringRef AMDGPUTargetMachine::getFeatureString(const Function &F) const {
-  Attribute FSAttr = F.getFnAttribute("target-features");
-
-  return FSAttr.isValid() ? FSAttr.getValueAsString()
-                          : getTargetFeatureString();
-}
 
 llvm::ScheduleDAGInstrs *
 AMDGPUTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
@@ -1847,12 +1836,21 @@ void GCNPassConfig::addPreSched2() {
   addPass(&SIPostRABundlerLegacyID);
 }
 
+static bool mayNeedAsyncBarrierArriveWorkaround(const Triple &TT) {
+  Triple::SubArchType SubArch = TT.getSubArch();
+  return SubArch == Triple::NoSubArch ||
+         SubArch == Triple::AMDGPUSubArch1250S ||
+         AMDGPU::getMajorSubArch(SubArch) == Triple::AMDGPUSubArch12_5;
+}
+
 void GCNPassConfig::addPreEmitPass() {
   if (isPassEnabled(CLOpts.enable_vopd, CodeGenOptLevel::Less))
     addPass(&GCNCreateVOPDID);
   addPass(createSIMemoryLegalizerPass());
   if (getOptLevel() > CodeGenOptLevel::None)
     addPass(&SIPostRA16BitMovFoldingLegacyID);
+  if (mayNeedAsyncBarrierArriveWorkaround(TM->getTargetTriple()))
+    addPass(createSIInsertAsyncBarrierArriveWorkaroundPass());
   addPass(createSIInsertWaitcntsPass());
 
   addPass(createSIModeRegisterPass());
@@ -2610,6 +2608,8 @@ void AMDGPUCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
   addMachineFunctionPass(SIMemoryLegalizerPass(), PMW);
   if (TM.getOptLevel() > CodeGenOptLevel::None)
     addMachineFunctionPass(SIPostRA16BitMovFoldingPass(), PMW);
+  if (mayNeedAsyncBarrierArriveWorkaround(TM.getTargetTriple()))
+    addMachineFunctionPass(SIInsertAsyncBarrierArriveWorkaroundPass(), PMW);
   addMachineFunctionPass(SIInsertWaitcntsPass(), PMW);
 
   addMachineFunctionPass(SIModeRegisterPass(), PMW);

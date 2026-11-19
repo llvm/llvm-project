@@ -1352,6 +1352,16 @@ KMP_LABEL(kmp_no_args):
 __gtid = 4
 __tid = 8
 
+// On arm64_32 pointers are 4 bytes, so p_argv entries, stack arguments and
+// *exit_frame_ptr are 4 bytes.
+# if KMP_ARCH_AARCH64_32
+#  define KMP_PTR_SIZE 4
+#  define KMP_PTR_REG(n) w##n
+# else
+#  define KMP_PTR_SIZE 8
+#  define KMP_PTR_REG(n) x##n
+# endif
+
 // -- Begin __kmp_invoke_microtask
 // mark_begin;
 	.text
@@ -1376,40 +1386,40 @@ __tid = 8
 	mov	x10, x4
 # if OMPT_SUPPORT
 	mov	x19, x5
-	str	x29, [x19]
+	str	KMP_PTR_REG(29), [x19]
 # endif
 
 	sub	x0, x29, #__gtid
 	sub	x1, x29, #__tid
 
 	cbz	w9, KMP_LABEL(kmp_1)
-	ldr	x2, [x10]
+	ldr	KMP_PTR_REG(2), [x10]
 
 	sub	w9, w9, #1
 	cbz	w9, KMP_LABEL(kmp_1)
-	ldr	x3, [x10, #8]!
+	ldr	KMP_PTR_REG(3), [x10, #KMP_PTR_SIZE]!
 
 	sub	w9, w9, #1
 	cbz	w9, KMP_LABEL(kmp_1)
-	ldr	x4, [x10, #8]!
+	ldr	KMP_PTR_REG(4), [x10, #KMP_PTR_SIZE]!
 
 	sub	w9, w9, #1
 	cbz	w9, KMP_LABEL(kmp_1)
-	ldr	x5, [x10, #8]!
+	ldr	KMP_PTR_REG(5), [x10, #KMP_PTR_SIZE]!
 
 	sub	w9, w9, #1
 	cbz	w9, KMP_LABEL(kmp_1)
-	ldr	x6, [x10, #8]!
+	ldr	KMP_PTR_REG(6), [x10, #KMP_PTR_SIZE]!
 
 	sub	w9, w9, #1
 	cbz	w9, KMP_LABEL(kmp_1)
-	ldr	x7, [x10, #8]!
+	ldr	KMP_PTR_REG(7), [x10, #KMP_PTR_SIZE]!
 
 KMP_LABEL(kmp_0):
 	sub	w9, w9, #1
 	cbz	w9, KMP_LABEL(kmp_1)
-	ldr	x12, [x10, #8]!
-	str	x12, [x11], #8
+	ldr	KMP_PTR_REG(12), [x10, #KMP_PTR_SIZE]!
+	str	KMP_PTR_REG(12), [x11], #KMP_PTR_SIZE
 	b	KMP_LABEL(kmp_0)
 KMP_LABEL(kmp_1):
 	blr	x8
@@ -1417,7 +1427,7 @@ KMP_LABEL(kmp_1):
 	mov	sp, x29
 	ldp	x29, x30, [sp], #16
 # if OMPT_SUPPORT
-	str	xzr, [x19]
+	str	KMP_PTR_REG(zr), [x19]
 	ldp	x19, x20, [sp], #16
 # endif
 	PACBTI_RET
@@ -1425,6 +1435,9 @@ KMP_LABEL(kmp_1):
 
 	DEBUG_INFO __kmp_invoke_microtask
 // -- End  __kmp_invoke_microtask
+
+# undef KMP_PTR_SIZE
+# undef KMP_PTR_REG
 
 #endif /* KMP_ARCH_AARCH64 || KMP_ARCH_AARCH64_32 */
 

@@ -10,6 +10,14 @@ include "llvm/Option/LibraryOptions.td"
 
 def CodeGenOptions : OptionsStruct;
 
+// AggressiveAntiDepBreaker.cpp
+let Condition = AssertsOnly in {
+defm : ValueField<"agg-antidep-debugdiv", "int", "0",
+  "Debug control for aggressive anti-dep breaker">;
+defm : ValueField<"agg-antidep-debugmod", "int", "0",
+  "Debug control for aggressive anti-dep breaker">;
+}
+
 // BasicBlockMatchingAndInference.cpp
 defm : ValueField<"propeller-infer-threshold", "float", "0.6f",
   "Threshold for infer stale profile">;
@@ -119,6 +127,12 @@ defm : BoolField<"enable-early-ifcvt-data-dependent", "false",
 defm : BoolField<"stress-early-ifcvt", "false",
   "Turn all knobs to 11">;
 
+// ExpandIRInsts.cpp
+defm : OptionalValueField<"expand-div-rem-bits", "unsigned",
+  "div and rem instructions on integers with more than <N> bits are expanded">;
+defm : OptionalValueField<"expand-fp-convert-bits", "unsigned",
+  "fp convert instructions on integers with more than <N> bits are expanded">;
+
 // FixupStatepointCallerSaved.cpp
 defm : BoolField<"fixup-allow-gcptr-in-csr", "false",
   "Allow passing GC Pointer arguments in callee saved registers">;
@@ -160,6 +174,21 @@ defm : BoolField<"ifcvt-triangle-rev", "true", "">;
 // TODO: Remove the old spellings after 2027-05.
 def : AliasOf<"disable-ifcvt-diamond", "ifcvt-diamond=false">;
 def : AliasOf<"disable-ifcvt-triangle-false", "ifcvt-triangle-false=false">;
+
+// ImplicitNullChecks.cpp
+defm : ValueField<"imp-null-check-page-size", "int", "4096",
+  "The page size of the target in bytes">;
+defm : ValueField<"imp-null-max-insts-to-consider", "unsigned", "8",
+  "The max number of instructions to consider hoisting loads over (the algorithm is quadratic over this number)">;
+
+// MIRCanonicalizerPass.cpp
+let MetaVarName = "<N>" in
+defm : ValueField<"mir-canonicalizer-nth-function", "unsigned", "~0u",
+  "Function number to canonicalize">;
+
+// MIRVRegNamerUtils.cpp
+defm : BoolField<"mir-vreg-namer-use-stable-hash", "false",
+  "Use Stable Hashing for MIR VReg Renaming">;
 
 // MachineCSE.cpp
 defm : BoolField<"machine-cse-aggressive", "false",
@@ -270,6 +299,32 @@ defm : ValueField<"rewrite-phi-limit", "unsigned", "10",
 // TODO: Remove the old spelling after 2027-05.
 def : AliasOf<"disable-peephole", "peephole=false">;
 
+// PostRASchedulerList.cpp
+defm : OptionalValueField<"break-anti-dependencies", "StringRef",
+  "Break post-RA scheduling anti-dependencies: \"critical\", \"all\", or \"none\"">;
+// Post-RA scheduling is enabled with
+// TargetSubtargetInfo.enablePostRAScheduler(). This flag can be used to
+// override the target.
+defm : OptionalBoolField<"post-RA-scheduler",
+  "Enable scheduling after register allocation">;
+let Condition = AssertsOnly in {
+defm : ValueField<"postra-sched-debugdiv", "int", "0",
+  "Debug control MBBs that are scheduled">;
+defm : ValueField<"postra-sched-debugmod", "int", "0",
+  "Debug control MBBs that are scheduled">;
+}
+
+// PreISelIntrinsicLowering.cpp
+// Maximum bound of a memset with non-constant length for it to be expanded
+// inline. Overrides TargetTransformInfo::getMaxBoundedMemSetInlineSize.
+defm : OptionalValueField<"bounded-memset-inline-size", "uint64_t",
+  "Set maximum bound of a variable-length memset to expand inline">;
+// Threshold to leave statically sized memory intrinsic calls. Calls of known
+// size larger than this will be expanded by the pass. Calls of unknown or
+// lower size will be left for expansion in codegen.
+defm : OptionalValueField<"mem-intrinsic-expand-size", "int64_t",
+  "Set minimum mem intrinsic size to expand in IR">;
+
 // RegisterCoalescer.cpp
 // Temporary flag to test global copy optimization.
 defm : OptionalBoolField<"join-globalcopies",
@@ -289,6 +344,19 @@ defm : BoolField<"terminal-rule", "true",
   "Apply the terminal rule">;
 defm : BoolField<"verify-coalescing", "false",
   "Verify machine instrs before and after register coalescing">;
+
+// SafeStack.cpp
+defm : BoolField<"safe-stack-coloring", "true",
+  "enable safe stack coloring">;
+// Use __safestack_pointer_address even if the platform has a faster way of
+// access safe stack pointer.
+defm : BoolField<"safe-stack-use-pointer-address", "false", "">;
+// TODO: Remove the old spelling after 2027-05.
+def : AliasOf<"safestack-use-pointer-address", "safe-stack-use-pointer-address">;
+
+// SafeStackLayout.cpp
+defm : BoolField<"safe-stack-layout", "true",
+  "enable safe stack layout">;
 
 // SelectOptimize.cpp
 defm : ValueField<"cold-operand-max-cost-multiplier", "unsigned", "1",
@@ -334,6 +402,13 @@ defm : BoolField<"stackcoloring-protect-from-escaped-allocas", "false",
   "Do not optimize lifetime zones that are broken">;
 // TODO: Remove the old spelling after 2027-05.
 def : AliasOf<"no-stack-coloring", "stack-coloring=false">;
+
+// StackProtector.cpp
+defm : BoolField<"stack-protector-check-noreturn-call", "true", "">;
+defm : BoolField<"stack-protector-selectiondag", "true", "">;
+// TODO: Remove the old spellings after 2027-05.
+def : AliasOf<"disable-check-noreturn-call", "stack-protector-check-noreturn-call=false">;
+def : AliasOf<"enable-selectiondag-sp", "stack-protector-selectiondag">;
 
 // StackSlotColoring.cpp
 defm : ValueField<"ssc-dce-limit", "int", "-1", "">;
@@ -499,3 +574,9 @@ defm : ValueField<"twoaddr-dataflow-edge-limit", "unsigned", "10",
 // Temporary flag to disable rescheduling.
 defm : BoolField<"twoaddr-reschedule", "true",
   "Coalesce copies by rescheduling">;
+
+// WinEHPrepare.cpp
+defm : BoolField<"win-eh-prepare-cleanups", "true",
+  "Remove implausible terminators and do other similar cleanups">;
+defm : BoolField<"win-eh-prepare-demotion", "true",
+  "Demote cross scopes after cloning multicolor basic blocks">;

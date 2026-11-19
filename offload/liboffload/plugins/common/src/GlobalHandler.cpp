@@ -24,8 +24,7 @@
 #include <string>
 
 using namespace llvm;
-using namespace omp;
-using namespace target;
+using namespace offload;
 using namespace plugin;
 using namespace error;
 using namespace llvm::offload::debug;
