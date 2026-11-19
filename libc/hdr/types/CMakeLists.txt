@@ -771,6 +771,14 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  struct_tcp_info
+  HDRS
+    struct_tcp_info.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_tcp_info
+)
+
+add_proxy_header_library(
   struct_udphdr
   HDRS
     struct_udphdr.h

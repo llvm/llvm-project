@@ -11170,8 +11170,9 @@ def warn_lifetime_safety_lifetimebound_violation
       DefaultIgnore;
 
 def warn_lifetime_safety_capture_by_violation
-    : Warning<"%0 is captured by %select{this object|global storage}1 but is "
-              "not marked [[clang::lifetime_capture_by_%select{this|global}1]]">,
+    : Warning<"%0 is captured by %select{this object|global storage|'%2'}1 but "
+              "is not marked [[clang::lifetime_capture_by"
+              "%select{_this|_global|(%2)}1]]">,
       InGroup<LifetimeSafetyCaptureByViolation>,
       DefaultIgnore;
 
@@ -11206,6 +11207,7 @@ def note_lifetime_safety_dangling_static_here: Note<"this static storage dangles
 def note_lifetime_safety_escapes_to_field_here: Note<"escapes to this field">;
 def note_lifetime_safety_escapes_to_global_here: Note<"escapes to this global storage">;
 def note_lifetime_safety_escapes_to_static_storage_here: Note<"escapes to this static storage">;
+def note_lifetime_safety_escapes_to_param_here: Note<"escapes to this parameter">;
 def note_lifetime_safety_lifetimebound_here: Note<"'lifetimebound' attribute appears here on the definition">;
 def note_lifetime_safety_aliases_storage : Note<"%0 aliases the storage of %1">;
 def note_lifetime_safety_aliases_storage_lifetimebound : Note<
