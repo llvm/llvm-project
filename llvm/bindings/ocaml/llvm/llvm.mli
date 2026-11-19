@@ -281,6 +281,8 @@ module Opcode : sig
   | PtrToAddr
   | UncondBr
   | CondBr
+  | BitInsert
+  | BitExtract
 end
 
 (** The type of a clause of a [landingpad] instruction.

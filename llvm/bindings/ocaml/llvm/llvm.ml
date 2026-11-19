@@ -255,6 +255,8 @@ module Opcode  = struct
   | PtrToAddr
   | UncondBr
   | CondBr
+  | BitInsert
+  | BitExtract
 end
 
 module LandingPadClauseTy = struct

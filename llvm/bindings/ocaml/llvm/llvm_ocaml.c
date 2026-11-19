@@ -1820,7 +1820,7 @@ value llvm_instr_get_opcode(value Inst) {
   if (!LLVMIsAInstruction(Value_val(Inst)))
     caml_failwith("Not an instruction");
   o = LLVMGetInstructionOpcode(Value_val(Inst));
-  assert(o <= LLVMFreeze);
+  assert(o <= LLVMBitExtract);
   return Val_int(o);
 }
 
