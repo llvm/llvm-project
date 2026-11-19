@@ -609,42 +609,20 @@ bool GlobalValue::isLargeGlobalValue() const {
       return true;
   }
 
-  // Treat all globals in user-defined sections as small, except for the
-  // standard large sections of .lbss, .ldata, .lrodata. This reduces the risk
-  // of linking together small and large sections, resulting in small
-  // references to large data sections. The code model attribute overrides this
-  // above.
+  // Treat all globals in explicit sections as small, except for the standard
+  // large sections of .lbss, .ldata, .lrodata. This reduces the risk of linking
+  // together small and large sections, resulting in small references to large
+  // data sections. The code model attribute overrides this above.
   if (GV->hasSection()) {
-    StringRef SectionName = GV->getSection();
-    if (!SectionName.empty()) {
-      return IsPrefix(SectionName, ".lbss") ||
-             IsPrefix(SectionName, ".ldata") ||
-             IsPrefix(SectionName, ".lrodata");
-    }
-  } else if (GV->hasImplicitSection()) {
-    StringRef SectionName;
-    auto Attrs = GV->getAttributes();
-    if (!GV->isConstant()) {
-      if (const Constant *I = GV->getInitializer();
-          I && I->isNullOrUndef() && Attrs.hasAttribute("bss-section"))
-        SectionName = Attrs.getAttribute("bss-section").getValueAsString();
-      else if (Attrs.hasAttribute("data-section"))
-        SectionName = Attrs.getAttribute("data-section").getValueAsString();
-    } else {
-      bool IsRelro = M->getPICLevel() != PICLevel::NotPIC &&
-                     GV->hasInitializer() &&
-                     GV->getInitializer()->needsDynamicRelocation();
-      if (IsRelro && Attrs.hasAttribute("relro-section"))
-        SectionName = Attrs.getAttribute("relro-section").getValueAsString();
-      else if (Attrs.hasAttribute("rodata-section"))
-        SectionName = Attrs.getAttribute("rodata-section").getValueAsString();
-    }
-    if (!SectionName.empty()) {
-      return IsPrefix(SectionName, ".lbss") ||
-             IsPrefix(SectionName, ".ldata") ||
-             IsPrefix(SectionName, ".lrodata");
-    }
+    StringRef Name = GV->getSection();
+    return IsPrefix(Name, ".lbss") || IsPrefix(Name, ".ldata") ||
+           IsPrefix(Name, ".lrodata");
   }
+
+  // Treat all globals with implicit section attributes (e.g. from '#pragma
+  // clang section') as small.
+  if (GV->hasImplicitSection())
+    return false;
 
   // Respect large data threshold for medium and large code models.
   if (CM == CodeModel::Medium || CM == CodeModel::Large) {

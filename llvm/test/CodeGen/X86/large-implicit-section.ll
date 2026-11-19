@@ -17,15 +17,12 @@
 define i32 @load_bss() {
 ; STATIC-LABEL: load_bss:
 ; STATIC:       # %bb.0:
-; STATIC-NEXT:    movabsq $small_in_large_bss, %rax
-; STATIC-NEXT:    movl (%rax), %eax
+; STATIC-NEXT:    movl small_in_large_bss(%rip), %eax
 ; STATIC-NEXT:    retq
 ;
 ; PIC-LABEL: load_bss:
 ; PIC:       # %bb.0:
-; PIC-NEXT:    leaq _GLOBAL_OFFSET_TABLE_(%rip), %rax
-; PIC-NEXT:    movabsq $.Lsmall_in_large_bss$local@GOTOFF, %rcx
-; PIC-NEXT:    movl (%rax,%rcx), %eax
+; PIC-NEXT:    movl .Lsmall_in_large_bss$local(%rip), %eax
 ; PIC-NEXT:    retq
   %v = load i32, ptr @small_in_large_bss
   ret i32 %v
@@ -34,15 +31,12 @@ define i32 @load_bss() {
 define i32 @load_data() {
 ; STATIC-LABEL: load_data:
 ; STATIC:       # %bb.0:
-; STATIC-NEXT:    movabsq $small_in_large_data, %rax
-; STATIC-NEXT:    movl (%rax), %eax
+; STATIC-NEXT:    movl small_in_large_data(%rip), %eax
 ; STATIC-NEXT:    retq
 ;
 ; PIC-LABEL: load_data:
 ; PIC:       # %bb.0:
-; PIC-NEXT:    leaq _GLOBAL_OFFSET_TABLE_(%rip), %rax
-; PIC-NEXT:    movabsq $.Lsmall_in_large_data$local@GOTOFF, %rcx
-; PIC-NEXT:    movl (%rax,%rcx), %eax
+; PIC-NEXT:    movl .Lsmall_in_large_data$local(%rip), %eax
 ; PIC-NEXT:    retq
   %v = load i32, ptr @small_in_large_data
   ret i32 %v
@@ -51,15 +45,12 @@ define i32 @load_data() {
 define i32 @load_rodata() {
 ; STATIC-LABEL: load_rodata:
 ; STATIC:       # %bb.0:
-; STATIC-NEXT:    movabsq $small_in_large_rodata, %rax
-; STATIC-NEXT:    movl (%rax), %eax
+; STATIC-NEXT:    movl small_in_large_rodata(%rip), %eax
 ; STATIC-NEXT:    retq
 ;
 ; PIC-LABEL: load_rodata:
 ; PIC:       # %bb.0:
-; PIC-NEXT:    leaq _GLOBAL_OFFSET_TABLE_(%rip), %rax
-; PIC-NEXT:    movabsq $.Lsmall_in_large_rodata$local@GOTOFF, %rcx
-; PIC-NEXT:    movl (%rax,%rcx), %eax
+; PIC-NEXT:    movl .Lsmall_in_large_rodata$local(%rip), %eax
 ; PIC-NEXT:    retq
   %v = load i32, ptr @small_in_large_rodata
   ret i32 %v
@@ -73,9 +64,7 @@ define ptr @load_relro() {
 ;
 ; PIC-LABEL: load_relro:
 ; PIC:       # %bb.0:
-; PIC-NEXT:    leaq _GLOBAL_OFFSET_TABLE_(%rip), %rax
-; PIC-NEXT:    movabsq $.Lsmall_in_large_relro$local@GOTOFF, %rcx
-; PIC-NEXT:    movq (%rax,%rcx), %rax
+; PIC-NEXT:    movq .Lsmall_in_large_relro$local(%rip), %rax
 ; PIC-NEXT:    retq
   %v = load ptr, ptr @small_in_large_relro
   ret ptr %v
@@ -123,7 +112,7 @@ define ptr @lea_large_in_small_implicit_rodata() {
 define ptr @lea_large_in_small_implicit_relro() {
 ; STATIC-LABEL: lea_large_in_small_implicit_relro:
 ; STATIC:       # %bb.0:
-; STATIC-NEXT:    movabsq $large_in_small_implicit_relro, %rax
+; STATIC-NEXT:    movl $large_in_small_implicit_relro, %eax
 ; STATIC-NEXT:    retq
 ;
 ; PIC-LABEL: lea_large_in_small_implicit_relro:
