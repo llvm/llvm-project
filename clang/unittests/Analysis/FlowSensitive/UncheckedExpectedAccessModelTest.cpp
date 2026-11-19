@@ -25,13 +25,12 @@
 #include <vector>
 
 namespace clang::dataflow::test {
-namespace {
 
 using ::testing::ContainerEq;
 
 /// Replaces all occurrences of `Pattern` in `S` with `Replacement`.
-void ReplaceAllOccurrences(std::string &S, const std::string &Pattern,
-                           const std::string &Replacement) {
+static void ReplaceAllOccurrences(std::string &S, const std::string &Pattern,
+                                  const std::string &Replacement) {
   size_t Pos = 0;
   while (true) {
     Pos = S.find(Pattern, Pos);
@@ -45,7 +44,8 @@ struct ExpectedTypeIdentifier {
   std::string NamespaceName;
 };
 
-raw_ostream &operator<<(raw_ostream &OS, const ExpectedTypeIdentifier &TypeId) {
+static raw_ostream &operator<<(raw_ostream &OS,
+                               const ExpectedTypeIdentifier &TypeId) {
   OS << TypeId.NamespaceName << "::expected";
   return OS;
 }
@@ -610,5 +610,4 @@ TEST_P(UncheckedExpectedAccessTest, UnexpectedErrorIsNotAnAccess) {
   )");
 }
 
-} // namespace
 } // namespace clang::dataflow::test
