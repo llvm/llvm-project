@@ -24,6 +24,7 @@ add_libc_test(
     libc.src.__support.CPP.string_view
     libc.src.__support.error_or
     libc.src.__support.regex.regex_expr_pool
+    libc.src.__support.regex.regex_internal
     libc.src.__support.regex.regex_matcher
     libc.src.__support.regex.regex_parser
 )
