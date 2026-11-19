@@ -879,8 +879,8 @@ exit:
   ret void
 }
 
-define void @latch_three_distinct_phis(i8 %sx, i8 %sp) {
-; CHECK-LABEL: define void @latch_three_distinct_phis(
+define void @latch_cmp_two_increments_of_one_phi(i8 %sx, i8 %sp) {
+; CHECK-LABEL: define void @latch_cmp_two_increments_of_one_phi(
 ; CHECK-SAME: i8 [[SX:%.*]], i8 [[SP:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[PRE:%.*]] = icmp sgt i8 [[SP]], [[SX]]
@@ -914,8 +914,8 @@ exit:
   ret void
 }
 
-define void @neg_latch_three_distinct_phis_start_unknown(i8 %sx, i8 %sp) {
-; CHECK-LABEL: define void @neg_latch_three_distinct_phis_start_unknown(
+define void @neg_latch_cmp_two_increments_of_one_phi_start_unknown(i8 %sx, i8 %sp) {
+; CHECK-LABEL: define void @neg_latch_cmp_two_increments_of_one_phi_start_unknown(
 ; CHECK-SAME: i8 [[SX:%.*]], i8 [[SP:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
