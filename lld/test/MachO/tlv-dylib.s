@@ -29,8 +29,8 @@
 # CHECK-NEXT: movq [[#]](%rip), %rax ## 0x[[#%x, BAZ:]]
 
 # CHECK-LABEL: Bind table:
-# CHECK-DAG: __DATA       __thread_ptrs  0x{{0*}}[[#%x, FOO]] pointer 0   libtlv   _foo
-# CHECK-DAG: __DATA       __thread_ptrs  0x{{0*}}[[#%x, BAR]] pointer 0   libtlv   _bar
+# CHECK-DAG: __DATA_CONST __got          0x{{0*}}[[#%x, FOO]] pointer 0   libtlv   _foo
+# CHECK-DAG: __DATA_CONST __got          0x{{0*}}[[#%x, BAR]] pointer 0   libtlv   _bar
 # CHECK-DAG: __DATA_CONST __got          0x{{0*}}[[#%x, BAZ]] pointer 0   libtlv   _baz
 
 ## Check `type` on the various TLV sections, and check that
@@ -39,7 +39,7 @@
 # FLAGS:       sectname __got
 # FLAGS-NEXT:   segname __DATA_CONST
 # FLAGS-NEXT:      addr
-# FLAGS-NEXT:      size 0x0000000000000008
+# FLAGS-NEXT:      size 0x0000000000000018
 # FLAGS-NEXT:    offset
 # FLAGS-NEXT:     align 2^3 (8)
 # FLAGS-NEXT:    reloff 0
@@ -54,15 +54,6 @@
 # FLAGS-NEXT:    reloff 0
 # FLAGS-NEXT:    nreloc 0
 # FLAGS-NEXT:      type S_THREAD_LOCAL_VARIABLES
-# FLAGS:       sectname __thread_ptrs
-# FLAGS-NEXT:   segname __DATA
-# FLAGS-NEXT:      addr
-# FLAGS-NEXT:      size 0x0000000000000010
-# FLAGS-NEXT:    offset
-# FLAGS-NEXT:     align 2^3 (8)
-# FLAGS-NEXT:    reloff 0
-# FLAGS-NEXT:    nreloc 0
-# FLAGS-NEXT:      type S_THREAD_LOCAL_VARIABLE_POINTERS
 # FLAGS:       sectname __thread_data
 # FLAGS-NEXT:   segname __DATA
 # FLAGS-NEXT:      addr
@@ -119,7 +110,7 @@ _main:
   ret
 
 ## Add some TLVs to test too, so that we can test the ordering
-## of __thread_ptrs, __thread_data, and __thread_bss.
+## of __thread_data and __thread_bss.
 ## Also add a .bss and a .comm for good measure too. Since they
 ## are both zerofill, they end up after __thread_bss.
 .comm _com, 0x4000

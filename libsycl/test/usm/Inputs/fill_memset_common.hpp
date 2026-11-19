@@ -5,6 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
+#ifndef _LIBSYCL_TEST_USM_INPUTS_FILL_MEMSET_COMMON_HPP
+#define _LIBSYCL_TEST_USM_INPUTS_FILL_MEMSET_COMMON_HPP
+
 #include <sycl/sycl.hpp>
 
 #include <cassert>
@@ -46,3 +50,5 @@ void runTests(sycl::queue &Q, OpT Op, PatternT Pattern = 42) {
   test<true>(Q, sycl::malloc_shared<DataT>(ElementCount, Q), Op, Pattern);
   test<true>(Q, sycl::malloc_device<DataT>(ElementCount, Q), Op, Pattern);
 }
+
+#endif // _LIBSYCL_TEST_USM_INPUTS_FILL_MEMSET_COMMON_HPP

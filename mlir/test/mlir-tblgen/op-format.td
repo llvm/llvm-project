@@ -9,7 +9,6 @@ def TestDialect : Dialect {
 }
 def TestStrictPropertiesDialect : Dialect {
   let name = "test_strict_properties";
-  let useStrictPropertiesInAssemblyFormat = 1;
 }
 class TestFormat_Op<string fmt, list<Trait> traits = []>
     : Op<TestDialect, "format_op", traits> {
@@ -32,21 +31,23 @@ class TestStrictPropertiesFormat_Op<string fmt, list<Trait> traits = []>
 // CHECK: // coverity[ARRAY_VS_SINGLETON]
 // CHECK-NEXT: if (parser.resolveOperands(
 // CHECK-LABEL: AttrDictContextOperand::print
-// CHECK: _odsPrinter.printOptionalAttrDict(_odsAttrs.getDictionary((*this)->getContext()).getValue(), elidedAttrs);
+// CHECK: _odsPrinter.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue());
 def AttrDictContextOperand : TestFormat_Op<[{
   $context `:` type($context) attr-dict
 }]>, Arguments<(ins AnyType:$context)>;
 
-// CHECK-LABEL: AttrDictDefaultInherentAttr::parse
-// CHECK: verifyInherentAttrs
-def AttrDictDefaultInherentAttr : TestFormat_Op<[{
-  $attr attr-dict
-}]>, Arguments<(ins I64Attr:$attr)>;
+// CHECK-LABEL: AttrDictStrictDefaultAttr::print
+// CHECK-NOT: elidedAttrs
+// CHECK: _odsPrinter.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue());
+def AttrDictStrictDefaultAttr : TestStrictPropertiesFormat_Op<
+    "prop-dict attr-dict">,
+    Arguments<(ins DefaultValuedStrAttr<StrAttr, "default">:$attr)>;
 
 // CHECK-LABEL: AttrDictStrictInferredSegmentAttr::parse
 // CHECK: result.getOrAddProperties<AttrDictStrictInferredSegmentAttr::Properties>().segment_sizes = parser.getBuilder().getDenseI32ArrayAttr(inputsOperandGroupSizes);
 // CHECK-LABEL: AttrDictStrictInferredSegmentAttr::print
-// CHECK: elidedAttrs.push_back("segment_sizes");
+// CHECK-NOT: elidedAttrs
+// CHECK: _odsPrinter.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue());
 def AttrDictStrictInferredSegmentAttr : TestStrictPropertiesFormat_Op<[{
   custom<Foo>($inputs, type($inputs)) attr-dict
 }]>, Arguments<(ins VariadicOfVariadic<I64, "segment_sizes">:$inputs,
@@ -85,6 +86,7 @@ def AttrDictStrictPropDictInherentAttr : TestStrictPropertiesFormat_Op<[{
 // CHECK: parseFoo({{.*}}, parser.getBuilder().getI1Type())
 // CHECK-LABEL: CustomStringLiteralA::print
 // CHECK: printFoo({{.*}}, ::mlir::Builder(getContext()).getI1Type())
+// CHECK: _odsPrinter.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue());
 def CustomStringLiteralA : TestFormat_Op<[{
   custom<Foo>("$_builder.getI1Type()") attr-dict
 }]>;
@@ -221,7 +223,7 @@ def DefaultEnumAttrPropDictOp : TestFormat_Op<"prop-dict attr-dict">,
 
 // Default-valued optional attributes have a non-optional getter.
 
-// CHECK-LABEL: DefaultOptionalEnumAttrOp::print
+// CHECK-LABEL: LLVM_ATTRIBUTE_MINSIZE void DefaultOptionalEnumAttrOp::print
 // CHECK: auto caseValue = getAttr();
 def DefaultOptionalEnumAttrOp : TestFormat_Op<"(enum($attr)^)? attr-dict">,
     Arguments<(ins DefaultValuedOptionalAttr<
@@ -326,10 +328,10 @@ def LegacyUnquotedBitEnumOp : TestFormat_Op<"$attr attr-dict">,
 // CHECK-LABEL: OptionalGroupA::parse
 // CHECK: if (::mlir::succeeded(parser.parseOptionalQuestion())
 // CHECK-NEXT: else
-// CHECK: parser.parseOptionalOperand
+// CHECK: ::mlir::detail::parseOptionalOperandInto(parser, aOperands)
 // CHECK-LABEL: OptionalGroupA::print
 // CHECK: if (!getA())
-// CHECK-NEXT: odsPrinter << ' ' << "?";
+// CHECK-NEXT: odsPrinter << " ?";
 // CHECK-NEXT: else
 // CHECK: odsPrinter << value;
 def OptionalGroupA : TestFormat_Op<[{
@@ -343,9 +345,9 @@ def OptionalGroupA : TestFormat_Op<[{
 // CHECK: parser.parseKeyword("bar")
 // CHECK-LABEL: OptionalGroupB::print
 // CHECK: if (!(getAAttr() && getAAttr() != ((false) ? ::mlir::OpBuilder((*this)->getContext()).getUnitAttr() : nullptr)))
-// CHECK-NEXT: odsPrinter << ' ' << "foo"
+// CHECK-NEXT: odsPrinter << " foo"
 // CHECK-NEXT: else
-// CHECK-NEXT: odsPrinter << ' ' << "bar"
+// CHECK-NEXT: odsPrinter << " bar"
 def OptionalGroupB : TestFormat_Op<[{
   (`foo`) : (`bar` $a^)? attr-dict
 }]>, Arguments<(ins UnitAttr:$a)>;
@@ -357,9 +359,7 @@ def OptionalGroupB : TestFormat_Op<[{
 //  CHECK-NEXT:   odsPrinter << ' ';
 //  CHECK-NEXT:   odsPrinter.printAttributeWithoutType(getAAttr());
 //  CHECK-NEXT: }
-//       CHECK: elidedAttrs.push_back("a");
-//   CHECK-NOT: elidedAttrs.push_back("a");
-//       CHECK: _odsPrinter.printOptionalAttrDict
+//       CHECK: _odsPrinter.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue());
 def OptionalGroupC : TestFormat_Op<[{
   ($a^)? attr-dict
 }]>, Arguments<(ins DefaultValuedStrAttr<StrAttr, "default">:$a)>;
@@ -368,9 +368,7 @@ def OptionalGroupC : TestFormat_Op<[{
 //       CHECK: elidedProps.push_back("a");
 //   CHECK-NOT: elidedProps.push_back("a");
 //       CHECK: printProperties
-//       CHECK: elidedAttrs.push_back("a");
-//   CHECK-NOT: elidedAttrs.push_back("a");
-//       CHECK: _odsPrinter.printOptionalAttrDict
+//       CHECK: _odsPrinter.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue());
 def OptionalGroupCPropDict : TestFormat_Op<[{
   ($a^)? prop-dict attr-dict
 }]>, Arguments<(ins DefaultValuedStrAttr<StrAttr, "default">:$a)>;
@@ -401,6 +399,10 @@ def OptionalGroupD : TestFormat_Op<[{
 // segment sizes can be inferred from what was actually parsed, so the
 // `operandSegmentSizes` key is left completely untouched: it isn't read,
 // validated, or marked as a used key at all.
+// CHECK-LABEL: PropDictSegmentSizesInferred::parse
+// CHECK: ::mlir::detail::OperandParserStorage<2> odsOperandVectors;
+// CHECK: auto &a1Operands = odsOperandVectors[0];
+// CHECK: auto &a2Operands = odsOperandVectors[1];
 // CHECK-LABEL: PropDictSegmentSizesInferred::setPropertiesFromParsedAttr
 // CHECK-NOT: operandSegmentSizes
 // CHECK: for (::mlir::NamedAttribute attr : dict) {

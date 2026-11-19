@@ -1,0 +1,58 @@
+## Check if short and long form perf-script LBR entries are parsed correctly.
+
+# REQUIRES: system-linux
+
+# RUN: split-file %s %t
+# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux-gnu %t/main.s -o %t/main.o
+# RUN: ld.lld -Ttext=0x400000 -e main %t/main.o -o %t/test.exe
+# RUN: perf2bolt %t/test.exe -ps -p %t/short_lbr_form.perfscript -o %t/short.fdata
+# RUN: perf2bolt %t/test.exe -ps -p %t/long_lbr_form.perfscript -o %t/long.fdata
+# RUN: FileCheck %s --input-file=%t/short.fdata
+# RUN: FileCheck %s --input-file=%t/long.fdata
+# RUN: sort %t/short.fdata > %t/short.sorted
+# RUN: sort %t/long.fdata > %t/long.sorted
+# RUN: diff %t/short.sorted %t/long.sorted
+
+# CHECK-DAG: 1 foo 0 1 foo 5 0 1{{$}}
+# CHECK-DAG: 1 main 5 1 foo 0 0 2{{$}}
+# CHECK-DAG: 1 main 5 1 main a 0 2{{$}}
+# CHECK-DAG: 1 main a 1 main c 0 2{{$}}
+# CHECK-DAG: 1 main c 1 main 5 0 2{{$}}
+
+#--- main.s
+.text
+.globl main
+.type main, @function
+main:
+  movl $1, %eax
+callsite:
+  call foo
+continuation:
+  testl %eax, %eax
+branch:
+  jne callsite
+  ret
+.size main, .-main
+
+.globl foo
+.type foo, @function
+foo:
+  movl $1, %eax
+returnsite:
+  ret
+.size foo, .-foo
+
+#--- short_lbr_form.perfscript
+PERFTEXT;BUILDIDS=0;MMAP=50;MAIN=d3;TASK=0;
+PERF_RECORD_MMAP2 1234/1234: [0x400000(0x1000) @ 0x1000 00:00 0]: r-xp test.exe
+1234  0x40000c/0x400005/P/-/-/0  0x400014/0x40000a/M/-/-/12  0x400005/0x40000f/P/-/-/0
+5678  0x40000c/0x400005/P/-/-/0
+1234  0x40000c/0x400005/P/-/-/0  0x400014/0x40000a/M/-/-/12
+1234  0x400005/0x40000f/P/-/-/0
+#--- long_lbr_form.perfscript
+PERFTEXT;BUILDIDS=0;MMAP=50;MAIN=18a;TASK=0;
+PERF_RECORD_MMAP2 1234/1234: [0x400000(0x1000) @ 0x1000 00:00 0]: r-xp test.exe
+1234  0x40000c/0x400005/P/-/-/0/COND/NON_SPEC_CORRECT_PATH  0x400014/0x40000a/M/-/-/12/RET/NON_SPEC_CORRECT_PATH  0x400005/0x40000f/P/-/-/0/CALL/NON_SPEC_CORRECT_PATH
+5678  0x40000c/0x400005/P/-/-/0/COND/NON_SPEC_CORRECT_PATH
+1234  0x40000c/0x400005/P/-/-/0/COND/NON_SPEC_CORRECT_PATH  0x400014/0x40000a/M/-/-/12/RET/NON_SPEC_CORRECT_PATH
+1234  0x400005/0x40000f/P/-/-/0//NON_SPEC_CORRECT_PATH

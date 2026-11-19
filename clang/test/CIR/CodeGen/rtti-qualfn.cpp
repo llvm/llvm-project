@@ -31,8 +31,8 @@ void f() noexcept {
 // pointers, but both name its address point.
 // LLVMCIR-DAG: @_ZTIFvvE = linkonce_odr constant { ptr, ptr } { ptr getelementptr (i8, ptr @_ZTVN10__cxxabiv120__function_type_infoE, i64 16), ptr @_ZTSFvvE }, comdat
 // LLVMCIR-DAG: @_ZTIPDoFvvE = linkonce_odr constant { ptr, ptr, i32, ptr } { ptr getelementptr (i8, ptr @_ZTVN10__cxxabiv119__pointer_type_infoE, i64 16), ptr @_ZTSPDoFvvE, i32 64, ptr @_ZTIFvvE }, comdat
-// OGCG-DAG: @_ZTIFvvE = linkonce_odr constant { ptr, ptr } { ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv120__function_type_infoE, i64 2), ptr @_ZTSFvvE }, comdat
-// OGCG-DAG: @_ZTIPDoFvvE = linkonce_odr constant { ptr, ptr, i32, ptr } { ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv119__pointer_type_infoE, i64 2), ptr @_ZTSPDoFvvE, i32 64, ptr @_ZTIFvvE }, comdat
+// OGCG-DAG: @_ZTIFvvE = linkonce_odr constant { ptr, ptr } { ptr getelementptr inbounds (i8, ptr @_ZTVN10__cxxabiv120__function_type_infoE, i64 16), ptr @_ZTSFvvE }, comdat
+// OGCG-DAG: @_ZTIPDoFvvE = linkonce_odr constant { ptr, ptr, i32, ptr } { ptr getelementptr inbounds (i8, ptr @_ZTVN10__cxxabiv119__pointer_type_infoE, i64 16), ptr @_ZTSPDoFvvE, i32 64, ptr @_ZTIFvvE }, comdat
 
 // The throw unwinds to the terminate scope of the enclosing noexcept function.
 // LLVM-LABEL: define{{.*}} void @_Z1fv()

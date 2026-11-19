@@ -210,7 +210,8 @@ struct DescriptorTableView : RootParameterView {
     Current += sizeof(uint32_t);
 
     Table.Ranges.Data = ParamData.substr(2 * sizeof(uint32_t),
-                                         Table.NumRanges * Table.Ranges.Stride);
+                                         static_cast<size_t>(Table.NumRanges) *
+                                             Table.Ranges.Stride);
     return Table;
   }
 };

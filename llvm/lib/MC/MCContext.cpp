@@ -159,7 +159,7 @@ void MCContext::reset() {
 
   CVContext.reset();
 
-  MCSubtargetAllocator.DestroyAll();
+  SubtargetCopies.clear();
   InlineAsmUsedLabelNames.clear();
   Symbols.clear();
   Allocator.Reset();
@@ -949,7 +949,7 @@ MCSectionDXContainer *MCContext::getDXContainerSection(StringRef Section,
 }
 
 MCSubtargetInfo &MCContext::getSubtargetCopy(const MCSubtargetInfo &STI) {
-  return *new (MCSubtargetAllocator.Allocate()) MCSubtargetInfo(STI);
+  return *SubtargetCopies.emplace_back(STI.clone());
 }
 
 void MCContext::addDebugPrefixMapEntry(const std::string &From,
@@ -1081,6 +1081,8 @@ CodeViewContext &MCContext::getCVContext() {
 
 void MCContext::diagnose(const SMDiagnostic &SMD) {
   assert(DiagHandler && "MCContext::DiagHandler is not set");
+  if (SMD.getKind() == SourceMgr::DK_Error)
+    HadError = true;
   bool UseInlineSrcMgr = false;
   const SourceMgr *SMP = nullptr;
   if (SrcMgr) {

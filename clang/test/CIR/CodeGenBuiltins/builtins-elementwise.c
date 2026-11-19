@@ -262,6 +262,34 @@ void test_builtin_elementwise_exp10(float f, double d, vfloat4 vf4,
   vd4 = __builtin_elementwise_exp10(vd4);
 }
 
+void test_builtin_elementwise_ldexp(float f, double d, vfloat4 vf4,
+                                    int i, short s, long l, vint4 vi4) {
+  // CIR-LABEL: test_builtin_elementwise_ldexp
+  // LLVM-LABEL: test_builtin_elementwise_ldexp
+
+  // CIR: cir.ldexp %{{.*}}, %{{.*}} : !cir.float, !s32i
+  // LLVM: call float @llvm.ldexp.f32.i32(float %{{.*}}, i32 %{{.*}})
+  f = __builtin_elementwise_ldexp(f, i);
+
+  // CIR: %[[S32:.*]] = cir.cast integral %{{.*}} : !s16i -> !s32i
+  // CIR: cir.ldexp %{{.*}}, %[[S32]] : !cir.float, !s32i
+  // LLVM: %[[S32:.*]] = sext i16 %{{.*}} to i32
+  // LLVM: call float @llvm.ldexp.f32.i32(float %{{.*}}, i32 %[[S32]])
+  f = __builtin_elementwise_ldexp(f, s);
+
+  // CIR: cir.ldexp %{{.*}}, %{{.*}} : !cir.float, !s64i
+  // LLVM: call float @llvm.ldexp.f32.i64(float %{{.*}}, i64 %{{.*}})
+  f = __builtin_elementwise_ldexp(f, l);
+
+  // CIR: cir.ldexp %{{.*}}, %{{.*}} : !cir.double, !s32i
+  // LLVM: call double @llvm.ldexp.f64.i32(double %{{.*}}, i32 %{{.*}})
+  d = __builtin_elementwise_ldexp(d, i);
+
+  // CIR: cir.ldexp %{{.*}}, %{{.*}} : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
+  // LLVM: call <4 x float> @llvm.ldexp.v4f32.v4i32(<4 x float> %{{.*}}, <4 x i32> %{{.*}})
+  vf4 = __builtin_elementwise_ldexp(vf4, vi4);
+}
+
 void test_builtin_elementwise_log(float f, double d, vfloat4 vf4,
                                   vdouble4  vd4) {
   // CIR-LABEL: test_builtin_elementwise_log
@@ -604,27 +632,27 @@ void test_builtin_elementwise_fshl(long long int i1, long long int i2,
   // CIR-LABEL: test_builtin_elementwise_fshl
   // LLVM-LABEL: test_builtin_elementwise_fshl
 
-  // CIR: cir.call_llvm_intrinsic "fshl" %{{.*}}, %{{.*}}, %{{.*}} : (!s64i, !s64i, !s64i) -> !s64i
+  // CIR: cir.fshl %{{.*}}, %{{.*}}, %{{.*}} : !s64i
   // LLVM: call i64 @llvm.fshl.i64(i64 %{{.*}}, i64 %{{.*}}, i64 %{{.*}})
   i1 = __builtin_elementwise_fshl(i1, i2, i3);
 
-  // CIR: cir.call_llvm_intrinsic "fshl" %{{.*}}, %{{.*}}, %{{.*}} : (!u16i, !u16i, !u16i) -> !u16i
+  // CIR: cir.fshl %{{.*}}, %{{.*}}, %{{.*}} : !u16i
   // LLVM: call i16 @llvm.fshl.i16(i16 %{{.*}}, i16 %{{.*}}, i16 %{{.*}})
   us1 = __builtin_elementwise_fshl(us1, us2, us3);
 
-  // CIR: cir.call_llvm_intrinsic "fshl" %{{.*}}, %{{.*}}, %{{.*}} : (!s8i, !s8i, !s8i) -> !s8i
+  // CIR: cir.fshl %{{.*}}, %{{.*}}, %{{.*}} : !s8i
   // LLVM: call i8 @llvm.fshl.i8(i8 %{{.*}}, i8 %{{.*}}, i8 %{{.*}})
   c1 = __builtin_elementwise_fshl(c1, c2, c3);
 
-  // CIR: cir.call_llvm_intrinsic "fshl" %{{.*}}, %{{.*}}, %{{.*}} : (!u8i, !u8i, !u8i) -> !u8i
+  // CIR: cir.fshl %{{.*}}, %{{.*}}, %{{.*}} : !u8i
   // LLVM: call i8 @llvm.fshl.i8(i8 %{{.*}}, i8 %{{.*}}, i8 %{{.*}})
   uc1 = __builtin_elementwise_fshl(uc1, uc2, uc3);
 
-  // CIR: cir.call_llvm_intrinsic "fshl" %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<8 x !s16i>, !cir.vector<8 x !s16i>, !cir.vector<8 x !s16i>) -> !cir.vector<8 x !s16i>
+  // CIR: cir.fshl %{{.*}}, %{{.*}}, %{{.*}} : !cir.vector<8 x !s16i>
   // LLVM: call <8 x i16> @llvm.fshl.v8i16(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   vi1 = __builtin_elementwise_fshl(vi1, vi2, vi3);
 
-  // CIR: cir.call_llvm_intrinsic "fshl" %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>) -> !cir.vector<4 x !s32i>
+  // CIR: cir.fshl %{{.*}}, %{{.*}}, %{{.*}} : !cir.vector<4 x !s32i>
   // LLVM: call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   vu1 = __builtin_elementwise_fshl(vu1, vu2, vu3);
 }
@@ -640,27 +668,27 @@ void test_builtin_elementwise_fshr(long long int i1, long long int i2,
   // CIR-LABEL: test_builtin_elementwise_fshr
   // LLVM-LABEL: test_builtin_elementwise_fshr
 
-  // CIR: cir.call_llvm_intrinsic "fshr" %{{.*}}, %{{.*}}, %{{.*}} : (!s64i, !s64i, !s64i) -> !s64i
+  // CIR: cir.fshr %{{.*}}, %{{.*}}, %{{.*}} : !s64i
   // LLVM: call i64 @llvm.fshr.i64(i64 %{{.*}}, i64 %{{.*}}, i64 %{{.*}})
   i1 = __builtin_elementwise_fshr(i1, i2, i3);
 
-  // CIR: cir.call_llvm_intrinsic "fshr" %{{.*}}, %{{.*}}, %{{.*}} : (!u16i, !u16i, !u16i) -> !u16i
+  // CIR: cir.fshr %{{.*}}, %{{.*}}, %{{.*}} : !u16i
   // LLVM: call i16 @llvm.fshr.i16(i16 %{{.*}}, i16 %{{.*}}, i16 %{{.*}})
   us1 = __builtin_elementwise_fshr(us1, us2, us3);
 
-  // CIR: cir.call_llvm_intrinsic "fshr" %{{.*}}, %{{.*}}, %{{.*}} : (!s8i, !s8i, !s8i) -> !s8i
+  // CIR: cir.fshr %{{.*}}, %{{.*}}, %{{.*}} : !s8i
   // LLVM: call i8 @llvm.fshr.i8(i8 %{{.*}}, i8 %{{.*}}, i8 %{{.*}})
   c1 = __builtin_elementwise_fshr(c1, c2, c3);
 
-  // CIR: cir.call_llvm_intrinsic "fshr" %{{.*}}, %{{.*}}, %{{.*}} : (!u8i, !u8i, !u8i) -> !u8i
+  // CIR: cir.fshr %{{.*}}, %{{.*}}, %{{.*}} : !u8i
   // LLVM: call i8 @llvm.fshr.i8(i8 %{{.*}}, i8 %{{.*}}, i8 %{{.*}})
   uc1 = __builtin_elementwise_fshr(uc1, uc2, uc3);
 
-  // CIR: cir.call_llvm_intrinsic "fshr" %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<8 x !s16i>, !cir.vector<8 x !s16i>, !cir.vector<8 x !s16i>) -> !cir.vector<8 x !s16i>
+  // CIR: cir.fshr %{{.*}}, %{{.*}}, %{{.*}} : !cir.vector<8 x !s16i>
   // LLVM: call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   vi1 = __builtin_elementwise_fshr(vi1, vi2, vi3);
 
-  // CIR: cir.call_llvm_intrinsic "fshr" %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>) -> !cir.vector<4 x !s32i>
+  // CIR: cir.fshr %{{.*}}, %{{.*}}, %{{.*}} : !cir.vector<4 x !s32i>
   // LLVM: call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   vu1 = __builtin_elementwise_fshr(vu1, vu2, vu3);
 }
@@ -672,27 +700,27 @@ void test_builtin_elementwise_add_sat(int i1, int i2, unsigned u1, unsigned u2,
   // CIR-LABEL: test_builtin_elementwise_add_sat
   // LLVM-LABEL: test_builtin_elementwise_add_sat
 
-  // CIR: cir.add sat %{{.*}}, %{{.*}} : !s32i
+  // CIR: cir.add.sat %{{.*}}, %{{.*}} : !s32i
   // LLVM: call i32 @llvm.sadd.sat.i32(i32 %{{.*}}, i32 %{{.*}})
   i1 = __builtin_elementwise_add_sat(i1, i2);
 
-  // CIR: cir.add sat %{{.*}}, %{{.*}} : !u32i
+  // CIR: cir.add.sat %{{.*}}, %{{.*}} : !u32i
   // LLVM: call i32 @llvm.uadd.sat.i32(i32 %{{.*}}, i32 %{{.*}})
   u1 = __builtin_elementwise_add_sat(u1, u2);
 
-  // CIR: cir.add sat %{{.*}}, %{{.*}} : !s16i
+  // CIR: cir.add.sat %{{.*}}, %{{.*}} : !s16i
   // LLVM: call i16 @llvm.sadd.sat.i16(i16 %{{.*}}, i16 %{{.*}})
   s1 = __builtin_elementwise_add_sat(s1, s2);
 
-  // CIR: cir.add sat %{{.*}}, %{{.*}} : !cir.vector<4 x !s32i>
+  // CIR: cir.add.sat %{{.*}}, %{{.*}} : !cir.vector<4 x !s32i>
   // LLVM: call <4 x i32> @llvm.sadd.sat.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   vi1 = __builtin_elementwise_add_sat(vi1, vi2);
 
-  // CIR: cir.add sat %{{.*}}, %{{.*}} : !cir.vector<4 x !u32i>
+  // CIR: cir.add.sat %{{.*}}, %{{.*}} : !cir.vector<4 x !u32i>
   // LLVM: call <4 x i32> @llvm.uadd.sat.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   vu1 = __builtin_elementwise_add_sat(vu1, vu2);
 
-  // CIR: cir.add sat %{{.*}}, %{{.*}} : !cir.vector<8 x !s16i>
+  // CIR: cir.add.sat %{{.*}}, %{{.*}} : !cir.vector<8 x !s16i>
   // LLVM: call <8 x i16> @llvm.sadd.sat.v8i16(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   vs1 = __builtin_elementwise_add_sat(vs1, vs2);
 }
@@ -704,27 +732,27 @@ void test_builtin_elementwise_sub_sat(int i1, int i2, unsigned u1, unsigned u2,
   // CIR-LABEL: test_builtin_elementwise_sub_sat
   // LLVM-LABEL: test_builtin_elementwise_sub_sat
 
-  // CIR: cir.sub sat %{{.*}}, %{{.*}} : !s32i
+  // CIR: cir.sub.sat %{{.*}}, %{{.*}} : !s32i
   // LLVM: call i32 @llvm.ssub.sat.i32(i32 %{{.*}}, i32 %{{.*}})
   i1 = __builtin_elementwise_sub_sat(i1, i2);
 
-  // CIR: cir.sub sat %{{.*}}, %{{.*}} : !u32i
+  // CIR: cir.sub.sat %{{.*}}, %{{.*}} : !u32i
   // LLVM: call i32 @llvm.usub.sat.i32(i32 %{{.*}}, i32 %{{.*}})
   u1 = __builtin_elementwise_sub_sat(u1, u2);
 
-  // CIR: cir.sub sat %{{.*}}, %{{.*}} : !s16i
+  // CIR: cir.sub.sat %{{.*}}, %{{.*}} : !s16i
   // LLVM: call i16 @llvm.ssub.sat.i16(i16 %{{.*}}, i16 %{{.*}})
   s1 = __builtin_elementwise_sub_sat(s1, s2);
 
-  // CIR: cir.sub sat %{{.*}}, %{{.*}} : !cir.vector<4 x !s32i>
+  // CIR: cir.sub.sat %{{.*}}, %{{.*}} : !cir.vector<4 x !s32i>
   // LLVM: call <4 x i32> @llvm.ssub.sat.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   vi1 = __builtin_elementwise_sub_sat(vi1, vi2);
 
-  // CIR: cir.sub sat %{{.*}}, %{{.*}} : !cir.vector<4 x !u32i>
+  // CIR: cir.sub.sat %{{.*}}, %{{.*}} : !cir.vector<4 x !u32i>
   // LLVM: call <4 x i32> @llvm.usub.sat.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   vu1 = __builtin_elementwise_sub_sat(vu1, vu2);
 
-  // CIR: cir.sub sat %{{.*}}, %{{.*}} : !cir.vector<8 x !s16i>
+  // CIR: cir.sub.sat %{{.*}}, %{{.*}} : !cir.vector<8 x !s16i>
   // LLVM: call <8 x i16> @llvm.ssub.sat.v8i16(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   vs1 = __builtin_elementwise_sub_sat(vs1, vs2);
 }

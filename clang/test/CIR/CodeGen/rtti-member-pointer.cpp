@@ -31,8 +31,8 @@ void throw_data_member_ptr() {
 
 // OGCG-DAG: @_ZTSM1Ai = linkonce_odr constant [5 x i8] c"M1Ai\00", comdat
 // OGCG-DAG: @_ZTS1A = linkonce_odr constant [3 x i8] c"1A\00", comdat
-// OGCG-DAG: @_ZTI1A = linkonce_odr constant { ptr, ptr } { ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv117__class_type_infoE, i64 2), ptr @_ZTS1A }, comdat
-// OGCG-DAG: @_ZTIM1Ai = linkonce_odr constant { ptr, ptr, i32, ptr, ptr } { ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv129__pointer_to_member_type_infoE, i64 2), ptr @_ZTSM1Ai, i32 0, ptr @_ZTIi, ptr @_ZTI1A }, comdat
+// OGCG-DAG: @_ZTI1A = linkonce_odr constant { ptr, ptr } { ptr getelementptr inbounds (i8, ptr @_ZTVN10__cxxabiv117__class_type_infoE, i64 16), ptr @_ZTS1A }, comdat
+// OGCG-DAG: @_ZTIM1Ai = linkonce_odr constant { ptr, ptr, i32, ptr, ptr } { ptr getelementptr inbounds (i8, ptr @_ZTVN10__cxxabiv129__pointer_to_member_type_infoE, i64 16), ptr @_ZTSM1Ai, i32 0, ptr @_ZTIi, ptr @_ZTI1A }, comdat
 // OGCG-DAG: call void @__cxa_throw(ptr %{{.*}}, ptr @_ZTIM1Ai, ptr null)
 
 void throw_member_fn_ptr() {
@@ -53,6 +53,6 @@ void throw_member_fn_ptr() {
 
 // OGCG-DAG: @_ZTSM1AFvvE = linkonce_odr constant [8 x i8] c"M1AFvvE\00", comdat
 // OGCG-DAG: @_ZTSFvvE = linkonce_odr constant [5 x i8] c"FvvE\00", comdat
-// OGCG-DAG: @_ZTIFvvE = linkonce_odr constant { ptr, ptr } { ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv120__function_type_infoE, i64 2), ptr @_ZTSFvvE }, comdat
-// OGCG-DAG: @_ZTIM1AFvvE = linkonce_odr constant { ptr, ptr, i32, ptr, ptr } { ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv129__pointer_to_member_type_infoE, i64 2), ptr @_ZTSM1AFvvE, i32 0, ptr @_ZTIFvvE, ptr @_ZTI1A }, comdat
+// OGCG-DAG: @_ZTIFvvE = linkonce_odr constant { ptr, ptr } { ptr getelementptr inbounds (i8, ptr @_ZTVN10__cxxabiv120__function_type_infoE, i64 16), ptr @_ZTSFvvE }, comdat
+// OGCG-DAG: @_ZTIM1AFvvE = linkonce_odr constant { ptr, ptr, i32, ptr, ptr } { ptr getelementptr inbounds (i8, ptr @_ZTVN10__cxxabiv129__pointer_to_member_type_infoE, i64 16), ptr @_ZTSM1AFvvE, i32 0, ptr @_ZTIFvvE, ptr @_ZTI1A }, comdat
 // OGCG-DAG: call void @__cxa_throw(ptr %{{.*}}, ptr @_ZTIM1AFvvE, ptr null)

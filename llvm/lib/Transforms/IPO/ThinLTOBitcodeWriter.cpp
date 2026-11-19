@@ -17,6 +17,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
@@ -30,7 +31,9 @@ using namespace llvm;
 namespace {
 
 // Promote each local-linkage entity defined by ExportM and used by ImportM by
-// changing visibility and appending the given ModuleId.
+// changing visibility and appending ".llvm." + ModuleId (matching
+// ModuleSummaryIndex::getGlobalNameForLocal so downstream PGO, SamplePGO,
+// MemProf, and linker symbol canonicalization strip the promotion suffix).
 void promoteInternals(Module &ExportM, Module &ImportM, StringRef ModuleId,
                       SetVector<GlobalValue *> *PromoteExtra = nullptr) {
   DenseMap<const Comdat *, Comdat *> RenamedComdats;
@@ -52,12 +55,16 @@ void promoteInternals(Module &ExportM, Module &ImportM, StringRef ModuleId,
       }
     }
 
-    std::string OldName = Name.str();
-    std::string NewName = (Name + ModuleId).str();
+    std::string NewName =
+        ModuleSummaryIndex::getGlobalNameForLocal(Name, ModuleId);
 
     if (const auto *C = ExportGV.getComdat())
       if (C->getName() == Name)
         RenamedComdats.try_emplace(C, ExportM.getOrInsertComdat(NewName));
+
+    Constant *Aliasee = &ExportGV;
+    while (auto *GA = dyn_cast<GlobalAlias>(Aliasee))
+      Aliasee = GA->getAliasee();
 
     // We must use the function's value type (FunctionType), not ptr - hence
     // ExportGV.getValueType() rather than getType(). Otherwise, when an
@@ -70,12 +77,12 @@ void promoteInternals(Module &ExportM, Module &ImportM, StringRef ModuleId,
     // cleaner.
     auto *ExternalAlias = GlobalAlias::create(
         ExportGV.getValueType(), ExportGV.getAddressSpace(),
-        GlobalValue::ExternalLinkage, NewName, &ExportGV, &ExportM);
+        GlobalValue::ExternalLinkage, NewName, Aliasee, &ExportM);
     ExternalAlias->setVisibility(GlobalValue::HiddenVisibility);
-    ExportGV.replaceUsesWithIf(
-        ExternalAlias, [](Use &U) { return !isa<GlobalAlias>(U.getUser()); });
 
     if (MustPromote) {
+      ExportGV.replaceUsesWithIf(
+          ExternalAlias, [](Use &U) { return !isa<GlobalAlias>(U.getUser()); });
       PromoteExtra->remove(&ExportGV);
       PromoteExtra->insert(ExternalAlias);
     }
@@ -110,7 +117,8 @@ void promoteTypeIds(Module &M, StringRef ModuleId) {
     if (isa<MDNode>(MD) && cast<MDNode>(MD)->isDistinct()) {
       Metadata *&GlobalMD = LocalToGlobal[MD];
       if (!GlobalMD) {
-        std::string NewName = (Twine(LocalToGlobal.size()) + ModuleId).str();
+        std::string NewName =
+            (Twine(LocalToGlobal.size()) + "." + ModuleId).str();
         GlobalMD = MDString::get(M.getContext(), NewName);
       }
 

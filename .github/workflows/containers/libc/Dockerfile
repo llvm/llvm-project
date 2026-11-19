@@ -35,7 +35,8 @@ RUN apt-get update && \
     gnupg \
     cmake \
     m4 \
-    linux-libc-dev && \
+    linux-libc-dev \
+    qemu-system-arm && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -92,9 +93,11 @@ RUN if [ "$(uname -m)" = "x86_64" ]; then \
     rm -f /tmp/clang+llvm-23.1.0-rc1-cross-hexagon-unknown-linux-musl.tar.zst; \
     fi
 
+ARG LLVM_VERSION_MAJOR=24
+
 RUN wget https://apt.llvm.org/llvm.sh && \
     chmod +x llvm.sh && \
-    sudo ./llvm.sh 23 && \
+    sudo ./llvm.sh ${LLVM_VERSION_MAJOR} && \
     rm llvm.sh
 
 # Install the LLVM testing tools, which the llvm.sh script above does not
@@ -104,9 +107,9 @@ RUN wget https://apt.llvm.org/llvm.sh && \
 # the tools into /usr/bin under versioned names (lit-23, FileCheck-23, ...),
 # so also symlink them under their canonical names.
 # llvm-link is required to build bitcode library for GPU targets
-RUN apt-get install -y llvm-23-tools && \
-    ln -s -t /usr/bin $(dpkg -L llvm-23-tools | grep '^/usr/lib/llvm-23/bin/') && \
-    ln -s /usr/lib/llvm-23/bin/llvm-link /usr/bin/llvm-link
+RUN apt-get install -y llvm-${LLVM_VERSION_MAJOR}-tools llvm-${LLVM_VERSION_MAJOR} && \
+    ln -s -t /usr/bin $(dpkg -L llvm-${LLVM_VERSION_MAJOR}-tools | grep "^/usr/lib/llvm-${LLVM_VERSION_MAJOR}/bin/") && \
+    ln -s /usr/lib/llvm-${LLVM_VERSION_MAJOR}/bin/llvm-link /usr/bin/llvm-link
 
 # Install gmp and mpfr for cross compilation
 RUN wget https://ftp.gnu.org/gnu/gmp/gmp-6.3.0.tar.xz && \
@@ -151,7 +154,7 @@ RUN wget --progress=dot:mega https://ftp.gnu.org/gnu/gcc/gcc-7.5.0/gcc-7.5.0.tar
     mkdir gcc-7 && \
     cd gcc-7 && \
     ../gcc-7.5.0/configure --prefix=/usr/local/gcc7 --enable-languages=c,c++ \
-    --disable-multilib --disable-libsanitizer && \
+    --disable-multilib --disable-libsanitizer --disable-bootstrap && \
     make -j8 && \
     sudo make install && \
     cd .. && \
@@ -168,7 +171,7 @@ RUN wget --progress=dot:mega https://ftp.gnu.org/gnu/gcc/gcc-8.5.0/gcc-8.5.0.tar
     mkdir gcc-8 && \
     cd gcc-8 && \
     ../gcc-8.5.0/configure --prefix=/usr/local/gcc8 --enable-languages=c,c++ \
-    --disable-multilib --disable-libsanitizer && \
+    --disable-multilib --disable-libsanitizer --disable-bootstrap && \
     make -j8 && \
     sudo make install && \
     cd .. && \
@@ -185,7 +188,7 @@ RUN wget --progress=dot:mega https://ftp.gnu.org/gnu/gcc/gcc-9.5.0/gcc-9.5.0.tar
     mkdir gcc-9 && \
     cd gcc-9 && \
     ../gcc-9.5.0/configure --prefix=/usr/local/gcc9 --enable-languages=c,c++ \
-    --disable-multilib --disable-libsanitizer && \
+    --disable-multilib --disable-libsanitizer --disable-bootstrap && \
     make -j8 && \
     sudo make install && \
     cd .. && \
@@ -195,7 +198,7 @@ RUN wget --progress=dot:mega https://ftp.gnu.org/gnu/gcc/gcc-9.5.0/gcc-9.5.0.tar
 
 # Debian has a multilib setup, so we need to symlink the asm directory.
 # For more information, see https://wiki.debian.org/Multiarch/LibraryPathOverview
-RUN ln -sf /usr/include/$(uname -p)-linux-gnu/asm /usr/include/asm
+RUN ln -sf /usr/include/$(uname -m)-linux-gnu/asm /usr/include/asm
 
 # Create a new user to avoid test failures related to a lack of expected
 # permissions issues in some tests. Set the user id to 1001 as that is the

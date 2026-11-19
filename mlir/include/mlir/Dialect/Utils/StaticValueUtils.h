@@ -285,6 +285,14 @@ struct SaturatedInteger {
   int64_t v = 0;
 };
 
+/// Returns a memref type matching the provided offset, size, and stride
+/// metadata. Static attributes become static type metadata; SSA values remain
+/// dynamic. The caller remains responsible for ensuring the metadata is
+/// semantically correct.
+MemRefType updateTypeFromMetadata(MemRefType type, OpFoldResult offset,
+                                  ArrayRef<OpFoldResult> sizes,
+                                  ArrayRef<OpFoldResult> strides);
+
 } // namespace mlir
 
 #endif // MLIR_DIALECT_UTILS_STATICVALUEUTILS_H

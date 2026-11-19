@@ -88,6 +88,10 @@ ErrorOr<struct passwd *> read_next() {
   return &pwd_entry;
 }
 
+ErrorOr<bool> read_next(struct passwd *pwd, cpp::span<char> buffer) {
+  return db.getnext(pwd, buffer);
+}
+
 namespace {
 
 // The lookups are shared between the caller-supplied fixed buffer used by the

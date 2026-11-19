@@ -59,7 +59,6 @@
 ---
 name:            foo
 alignment:       4
-tracksRegLiveness: true
 registers:       
   - { id: 0, class: gr32 }
   - { id: 1, class: gr32 }

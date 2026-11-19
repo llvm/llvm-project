@@ -68,7 +68,8 @@ private:
 
   /// Caches results for getPolicyInEffectAt().
   /// Flushed whenever a diagnostic pragma changes severities.
-  llvm::DenseMap<const void *, Policy> PolicyCache[4];
+  llvm::DenseMap<const void *, Policy>
+      PolicyCache[static_cast<unsigned>(DiagStateSystemClass::NUM_CLASSES)];
 
   /// \name Statistics
   /// @{

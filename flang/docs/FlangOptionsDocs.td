@@ -15,9 +15,6 @@ def GlobalDocumentation {
 
 # Flang command line argument reference
 
-```{contents}
-:local:
-```
 
 ## Introduction
 

@@ -104,3 +104,58 @@ func.func @caller(%buf: !type, %val: f32, %idx: index) -> f32 {
 
 !type = memref<?xf32, strided<[?], offset: ?>>
 func.func private @negative_external_function(%arg0: !type) -> !type
+
+// -----
+
+// A callee result update must be propagated to a caller that was already
+// processed.
+
+// CHECK-LABEL: func private @caller_before_callee_wrapper(
+// CHECK-SAME:      %[[ARG:.+]]: memref<8xf32>) {
+// CHECK:         call @caller_before_callee_identity(%[[ARG]])
+// CHECK-SAME:        : (memref<8xf32>) -> ()
+// CHECK:         return
+func.func private @caller_before_callee_wrapper(
+    %arg0: memref<8xf32>) -> memref<8xf32> {
+  %0 = call @caller_before_callee_identity(%arg0)
+      : (memref<8xf32>) -> memref<8xf32>
+  return %0 : memref<8xf32>
+}
+
+// CHECK-LABEL: func private @caller_before_callee_identity(
+// CHECK:         return
+func.func private @caller_before_callee_identity(
+    %arg0: memref<8xf32>) -> memref<8xf32> {
+  return %arg0 : memref<8xf32>
+}
+
+// CHECK-LABEL: func @caller_before_callee_driver(
+// CHECK-SAME:      %[[ARG:.+]]: memref<8xf32>, %[[VALUE:.+]]: f32) {
+// CHECK:         call @caller_before_callee_wrapper(%[[ARG]])
+// CHECK-SAME:        : (memref<8xf32>) -> ()
+// CHECK:         memref.store %[[VALUE]], %[[ARG]]
+func.func @caller_before_callee_driver(
+    %arg0: memref<8xf32>, %value: f32) {
+  %c0 = arith.constant 0 : index
+  %0 = call @caller_before_callee_wrapper(%arg0)
+      : (memref<8xf32>) -> memref<8xf32>
+  memref.store %value, %0[%c0] : memref<8xf32>
+  return
+}
+
+// -----
+
+// Recursive functions must be revisited when rewriting a self-call exposes an
+// additional equivalent result.
+
+// CHECK-LABEL: func private @recursive_equivalent_results(
+// CHECK-SAME:      %[[ARG:.+]]: memref<8xf32>) {
+// CHECK:         call @recursive_equivalent_results(%[[ARG]])
+// CHECK-SAME:        : (memref<8xf32>) -> ()
+// CHECK:         return
+func.func private @recursive_equivalent_results(
+    %arg0: memref<8xf32>) -> (memref<8xf32>, memref<8xf32>) {
+  %0:2 = call @recursive_equivalent_results(%arg0)
+      : (memref<8xf32>) -> (memref<8xf32>, memref<8xf32>)
+  return %arg0, %0#0 : memref<8xf32>, memref<8xf32>
+}

@@ -14,11 +14,11 @@ libc_test(
     name = "access_test",
     srcs = ["access_test.cpp"],
     deps = [
-        "//libc:access",
-        "//libc:close",
-        "//libc:hdr_sys_stat_macros",
-        "//libc:open",
-        "//libc:unlink",
+        "//libc/hdr:sys_stat_macros",
+        "//libc/src/fcntl:open",
+        "//libc/src/unistd:access",
+        "//libc/src/unistd:close",
+        "//libc/src/unistd:unlink",
     ],
 )
 
@@ -26,13 +26,13 @@ libc_test(
     name = "dup_test",
     srcs = ["dup_test.cpp"],
     deps = [
-        "//libc:close",
-        "//libc:dup",
-        "//libc:hdr_sys_stat_macros",
-        "//libc:open",
-        "//libc:read",
-        "//libc:unlink",
-        "//libc:write",
+        "//libc/hdr:sys_stat_macros",
+        "//libc/src/fcntl:open",
+        "//libc/src/unistd:close",
+        "//libc/src/unistd:dup",
+        "//libc/src/unistd:read",
+        "//libc/src/unistd:unlink",
+        "//libc/src/unistd:write",
     ],
 )
 
@@ -40,13 +40,13 @@ libc_test(
     name = "dup2_test",
     srcs = ["dup2_test.cpp"],
     deps = [
-        "//libc:close",
-        "//libc:dup2",
-        "//libc:hdr_sys_stat_macros",
-        "//libc:open",
-        "//libc:read",
-        "//libc:unlink",
-        "//libc:write",
+        "//libc/hdr:sys_stat_macros",
+        "//libc/src/fcntl:open",
+        "//libc/src/unistd:close",
+        "//libc/src/unistd:dup2",
+        "//libc/src/unistd:read",
+        "//libc/src/unistd:unlink",
+        "//libc/src/unistd:write",
     ],
 )
 
@@ -54,13 +54,13 @@ libc_test(
     name = "dup3_test",
     srcs = ["dup3_test.cpp"],
     deps = [
-        "//libc:close",
-        "//libc:dup3",
-        "//libc:hdr_sys_stat_macros",
-        "//libc:open",
-        "//libc:read",
-        "//libc:unlink",
-        "//libc:write",
+        "//libc/hdr:sys_stat_macros",
+        "//libc/src/fcntl:open",
+        "//libc/src/unistd:close",
+        "//libc/src/unistd:dup3",
+        "//libc/src/unistd:read",
+        "//libc/src/unistd:unlink",
+        "//libc/src/unistd:write",
     ],
 )
 
@@ -68,14 +68,14 @@ libc_test(
     name = "ftruncate_test",
     srcs = ["ftruncate_test.cpp"],
     deps = [
-        "//libc:__support_cpp_string_view",
-        "//libc:close",
-        "//libc:ftruncate",
-        "//libc:hdr_sys_stat_macros",
-        "//libc:open",
-        "//libc:read",
-        "//libc:unlink",
-        "//libc:write",
+        "//libc/hdr:sys_stat_macros",
+        "//libc/src/__support/CPP:string_view",
+        "//libc/src/fcntl:open",
+        "//libc/src/unistd:close",
+        "//libc/src/unistd:ftruncate",
+        "//libc/src/unistd:read",
+        "//libc/src/unistd:unlink",
+        "//libc/src/unistd:write",
     ],
 )
 
@@ -83,7 +83,7 @@ libc_test(
     name = "getpagesize_test",
     srcs = ["getpagesize_test.cpp"],
     deps = [
-        "//libc:getpagesize",
+        "//libc/src/unistd:getpagesize",
     ],
 )
 
@@ -91,14 +91,14 @@ libc_test(
     name = "pread_pwrite_test",
     srcs = ["pread_pwrite_test.cpp"],
     deps = [
-        "//libc:close",
-        "//libc:fsync",
-        "//libc:hdr_sys_stat_macros",
-        "//libc:open",
-        "//libc:pread",
-        "//libc:pwrite",
-        "//libc:unlink",
-        "//libc:write",
+        "//libc/hdr:sys_stat_macros",
+        "//libc/src/fcntl:open",
+        "//libc/src/unistd:close",
+        "//libc/src/unistd:fsync",
+        "//libc/src/unistd:pread",
+        "//libc/src/unistd:pwrite",
+        "//libc/src/unistd:unlink",
+        "//libc/src/unistd:write",
     ],
 )
 
@@ -106,10 +106,10 @@ libc_test(
     name = "read_write_test",
     srcs = ["read_write_test.cpp"],
     deps = [
-        "//libc:close",
-        "//libc:pipe",
-        "//libc:read",
-        "//libc:write",
+        "//libc/src/unistd:close",
+        "//libc/src/unistd:pipe",
+        "//libc/src/unistd:read",
+        "//libc/src/unistd:write",
     ],
 )
 
@@ -117,11 +117,11 @@ libc_test(
     name = "link_test",
     srcs = ["link_test.cpp"],
     deps = [
-        "//libc:close",
-        "//libc:hdr_sys_stat_macros",
-        "//libc:link",
-        "//libc:open",
-        "//libc:unlink",
+        "//libc/hdr:sys_stat_macros",
+        "//libc/src/fcntl:open",
+        "//libc/src/unistd:close",
+        "//libc/src/unistd:link",
+        "//libc/src/unistd:unlink",
     ],
 )
 
@@ -129,8 +129,8 @@ libc_test(
     name = "swab_test",
     srcs = ["swab_test.cpp"],
     deps = [
-        "//libc:string_utils",
-        "//libc:swab",
+        "//libc/src/string:utils",
+        "//libc/src/unistd:swab",
     ],
 )
 
@@ -138,11 +138,11 @@ libc_test(
     name = "symlink_test",
     srcs = ["symlink_test.cpp"],
     deps = [
-        "//libc:close",
-        "//libc:hdr_sys_stat_macros",
-        "//libc:open",
-        "//libc:symlink",
-        "//libc:unlink",
+        "//libc/hdr:sys_stat_macros",
+        "//libc/src/fcntl:open",
+        "//libc/src/unistd:close",
+        "//libc/src/unistd:symlink",
+        "//libc/src/unistd:unlink",
     ],
 )
 
@@ -150,14 +150,14 @@ libc_test(
     name = "truncate_test",
     srcs = ["truncate_test.cpp"],
     deps = [
-        "//libc:__support_cpp_string_view",
-        "//libc:close",
-        "//libc:hdr_sys_stat_macros",
-        "//libc:open",
-        "//libc:read",
-        "//libc:truncate",
-        "//libc:unlink",
-        "//libc:write",
+        "//libc/hdr:sys_stat_macros",
+        "//libc/src/__support/CPP:string_view",
+        "//libc/src/fcntl:open",
+        "//libc/src/unistd:close",
+        "//libc/src/unistd:read",
+        "//libc/src/unistd:truncate",
+        "//libc/src/unistd:unlink",
+        "//libc/src/unistd:write",
     ],
 )
 
@@ -165,10 +165,10 @@ libc_test(
     name = "unlink_test",
     srcs = ["unlink_test.cpp"],
     deps = [
-        "//libc:close",
-        "//libc:hdr_sys_stat_macros",
-        "//libc:open",
-        "//libc:unlink",
+        "//libc/hdr:sys_stat_macros",
+        "//libc/src/fcntl:open",
+        "//libc/src/unistd:close",
+        "//libc/src/unistd:unlink",
     ],
 )
 
@@ -176,7 +176,7 @@ libc_test(
     name = "getppid_test",
     srcs = ["getppid_test.cpp"],
     deps = [
-        "//libc:getppid",
+        "//libc/src/unistd:getppid",
     ],
 )
 
@@ -184,7 +184,7 @@ libc_test(
     name = "getuid_test",
     srcs = ["getuid_test.cpp"],
     deps = [
-        "//libc:getuid",
+        "//libc/src/unistd:getuid",
     ],
 )
 
@@ -192,10 +192,10 @@ libc_test(
     name = "isatty_test",
     srcs = ["isatty_test.cpp"],
     deps = [
-        "//libc:close",
-        "//libc:hdr_sys_stat_macros",
-        "//libc:isatty",
-        "//libc:open",
+        "//libc/hdr:sys_stat_macros",
+        "//libc/src/fcntl:open",
+        "//libc/src/unistd:close",
+        "//libc/src/unistd:isatty",
     ],
 )
 
@@ -203,7 +203,23 @@ libc_test(
     name = "geteuid_test",
     srcs = ["geteuid_test.cpp"],
     deps = [
-        "//libc:geteuid",
+        "//libc/src/unistd:geteuid",
+    ],
+)
+
+libc_test(
+    name = "getgid_test",
+    srcs = ["getgid_test.cpp"],
+    deps = [
+        "//libc/src/unistd:getgid",
+    ],
+)
+
+libc_test(
+    name = "getegid_test",
+    srcs = ["getegid_test.cpp"],
+    deps = [
+        "//libc/src/unistd:getegid",
     ],
 )
 

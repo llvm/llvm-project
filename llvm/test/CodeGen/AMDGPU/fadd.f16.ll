@@ -598,7 +598,7 @@ define amdgpu_kernel void @fadd_v2f16_imm_a(
 ; GFX11-SDAG-NEXT:    s_mov_b32 s4, s0
 ; GFX11-SDAG-NEXT:    s_mov_b32 s5, s1
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-SDAG-NEXT:    v_pk_add_f16 v0, 0x40003c00, v0
+; GFX11-SDAG-NEXT:    v_pk_add_f16 v0, v0, 0x40003c00
 ; GFX11-SDAG-NEXT:    buffer_store_b32 v0, off, s[4:7], 0
 ; GFX11-SDAG-NEXT:    s_endpgm
 ;
@@ -630,7 +630,7 @@ define amdgpu_kernel void @fadd_v2f16_imm_a(
 ; GFX11-FAKE16-SDAG-NEXT:    s_mov_b32 s4, s0
 ; GFX11-FAKE16-SDAG-NEXT:    s_mov_b32 s5, s1
 ; GFX11-FAKE16-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-FAKE16-SDAG-NEXT:    v_pk_add_f16 v0, 0x40003c00, v0
+; GFX11-FAKE16-SDAG-NEXT:    v_pk_add_f16 v0, v0, 0x40003c00
 ; GFX11-FAKE16-SDAG-NEXT:    buffer_store_b32 v0, off, s[4:7], 0
 ; GFX11-FAKE16-SDAG-NEXT:    s_endpgm
 ;
@@ -721,7 +721,7 @@ define amdgpu_kernel void @fadd_v2f16_imm_b(
 ; GFX11-SDAG-NEXT:    s_mov_b32 s4, s0
 ; GFX11-SDAG-NEXT:    s_mov_b32 s5, s1
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-SDAG-NEXT:    v_pk_add_f16 v0, 0x3c004000, v0
+; GFX11-SDAG-NEXT:    v_pk_add_f16 v0, v0, 0x3c004000
 ; GFX11-SDAG-NEXT:    buffer_store_b32 v0, off, s[4:7], 0
 ; GFX11-SDAG-NEXT:    s_endpgm
 ;
@@ -736,7 +736,7 @@ define amdgpu_kernel void @fadd_v2f16_imm_b(
 ; GFX11-GISEL-NEXT:    s_mov_b32 s2, -1
 ; GFX11-GISEL-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-GISEL-NEXT:    v_pk_add_f16 v0, 0x3c004000, v0
+; GFX11-GISEL-NEXT:    v_pk_add_f16 v0, v0, 0x3c004000
 ; GFX11-GISEL-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
 ; GFX11-GISEL-NEXT:    s_endpgm
 ;
@@ -753,7 +753,7 @@ define amdgpu_kernel void @fadd_v2f16_imm_b(
 ; GFX11-FAKE16-SDAG-NEXT:    s_mov_b32 s4, s0
 ; GFX11-FAKE16-SDAG-NEXT:    s_mov_b32 s5, s1
 ; GFX11-FAKE16-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-FAKE16-SDAG-NEXT:    v_pk_add_f16 v0, 0x3c004000, v0
+; GFX11-FAKE16-SDAG-NEXT:    v_pk_add_f16 v0, v0, 0x3c004000
 ; GFX11-FAKE16-SDAG-NEXT:    buffer_store_b32 v0, off, s[4:7], 0
 ; GFX11-FAKE16-SDAG-NEXT:    s_endpgm
 ;
@@ -768,7 +768,7 @@ define amdgpu_kernel void @fadd_v2f16_imm_b(
 ; GFX11-FAKE16-GISEL-NEXT:    s_mov_b32 s2, -1
 ; GFX11-FAKE16-GISEL-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-FAKE16-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-FAKE16-GISEL-NEXT:    v_pk_add_f16 v0, 0x3c004000, v0
+; GFX11-FAKE16-GISEL-NEXT:    v_pk_add_f16 v0, v0, 0x3c004000
 ; GFX11-FAKE16-GISEL-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
 ; GFX11-FAKE16-GISEL-NEXT:    s_endpgm
     ptr addrspace(1) %r,

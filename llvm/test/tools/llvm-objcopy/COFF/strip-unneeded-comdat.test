@@ -1,0 +1,94 @@
+## Check that --strip-unneeded and --discard-all keep the section definition
+## symbol of a COMDAT section, even if no relocation references it. It carries
+## the COMDAT selection, without it the linker discards the section.
+
+# RUN: yaml2obj %s -o %t.in.o
+# RUN: llvm-objcopy --strip-unneeded %t.in.o %t.strip-unneeded.o
+# RUN: llvm-readobj --symbols %t.strip-unneeded.o | FileCheck %s
+# RUN: llvm-objcopy --discard-all %t.in.o %t.discard-all.o
+# RUN: llvm-readobj --symbols %t.discard-all.o | FileCheck %s
+
+# CHECK:      Symbols [
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: .rdata$.refptr.foo
+# CHECK-NEXT:     Value: 0
+# CHECK-NEXT:     Section: .rdata$.refptr.foo (2)
+# CHECK-NEXT:     BaseType: Null (0x0)
+# CHECK-NEXT:     ComplexType: Null (0x0)
+# CHECK-NEXT:     StorageClass: Static (0x3)
+# CHECK-NEXT:     AuxSymbolCount: 1
+# CHECK-NEXT:     AuxSectionDef {
+# CHECK-NEXT:       Length: 8
+# CHECK-NEXT:       RelocationCount: 1
+# CHECK-NEXT:       LineNumberCount: 0
+# CHECK-NEXT:       Checksum: 0x0
+# CHECK-NEXT:       Number: 2
+# CHECK-NEXT:       Selection: Any (0x2)
+# CHECK-NEXT:     }
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: .refptr.foo
+# CHECK:        Symbol {
+# CHECK-NEXT:     Name: foo
+# CHECK-NOT:      Name: .text
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment:       16
+    SectionData:     488B0500000000C3
+    Relocations:
+      - VirtualAddress:  3
+        SymbolName:      .refptr.foo
+        Type:            IMAGE_REL_AMD64_REL32
+  - Name:            '.rdata$.refptr.foo'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_LNK_COMDAT, IMAGE_SCN_MEM_READ ]
+    Alignment:       8
+    SectionData:     '0000000000000000'
+    Relocations:
+      - VirtualAddress:  0
+        SymbolName:      foo
+        Type:            IMAGE_REL_AMD64_ADDR64
+symbols:
+  - Name:            .text
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          8
+      NumberOfRelocations: 1
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          1
+  - Name:            '.rdata$.refptr.foo'
+    Value:           0
+    SectionNumber:   2
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          8
+      NumberOfRelocations: 1
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          2
+      Selection:       IMAGE_COMDAT_SELECT_ANY
+  - Name:            .refptr.foo
+    Value:           0
+    SectionNumber:   2
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            foo
+    Value:           0
+    SectionNumber:   0
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+...

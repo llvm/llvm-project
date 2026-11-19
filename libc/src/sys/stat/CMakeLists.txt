@@ -73,6 +73,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  mknod
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.mknod
+)
+
+add_entrypoint_object(
+  mknodat
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.mknodat
+)
+
+add_entrypoint_object(
   stat
   ALIAS
   DEPENDS

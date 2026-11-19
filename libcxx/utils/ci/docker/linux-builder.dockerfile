@@ -16,7 +16,7 @@
 # This image also gets built on every push to `main` that modifies these Docker
 # files, and can be found at ghcr.io/libcxx/libcxx-linux-builder-base .
 
-FROM docker.io/library/ubuntu:noble
+FROM docker.io/library/ubuntu:26.04
 
 # Changing this file causes a rebuild of the image in a GitHub action. However, it does not cause
 # the CI runners to switch to that image automatically, that must be done by updating the image used
@@ -99,8 +99,8 @@ RUN <<EOF
   # Install the most recent GCC as well as the previous version to ease transitions.
   install_gcc() {
     sudo /tmp/ce-infra/bin/ce_install install compilers/c++/x86/gcc $1.1.0
-    sudo ln -s /opt/compiler-explorer/gcc-$1.1.0/bin/gcc /usr/bin/gcc-$1
-    sudo ln -s /opt/compiler-explorer/gcc-$1.1.0/bin/g++ /usr/bin/g++-$1
+    sudo ln -sf /opt/compiler-explorer/gcc-$1.1.0/bin/gcc /usr/bin/gcc-$1
+    sudo ln -sf /opt/compiler-explorer/gcc-$1.1.0/bin/g++ /usr/bin/g++-$1
   }
 
   set -e
@@ -141,3 +141,10 @@ RUN <<EOF
     sudo bash /tmp/install-cmake.sh --prefix=/usr --exclude-subdir --skip-license
     rm /tmp/install-cmake.sh
 EOF
+
+# Setup the user
+RUN useradd gha -u 1001 -m -s /bin/bash
+RUN adduser gha sudo
+RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+WORKDIR /home/gha
+USER gha

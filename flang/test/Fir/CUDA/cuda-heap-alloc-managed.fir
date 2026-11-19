@@ -16,7 +16,7 @@
 module attributes {fir.cuda_heap_alloc = "managed"} {
 
 // HEAP-LABEL: func.func @vla(
-// HEAP: %[[MEM:.*]] = fir.allocmem !fir.array<?xf32>, %{{.*}} {bindc_name = "a", fir.cuda_heap_alloc = "managed", fir.must_be_heap = true, uniq_name = "_QFvlaEa"}
+// HEAP: %[[MEM:.*]] = fir.allocmem !fir.array<?xf32>, %{{.*}} <{bindc_name = "a", uniq_name = "_QFvlaEa"}> {fir.cuda_heap_alloc = "managed", fir.must_be_heap = true}
 // HEAP: fir.freemem %[[MEM]] {fir.cuda_heap_alloc = "managed"} : !fir.heap<!fir.array<?xf32>>
 func.func @vla(%arg0: !fir.ref<i32>) {
   %0 = fir.load %arg0 : !fir.ref<i32>

@@ -15,6 +15,7 @@
 #include <mutex>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "lldb/Core/Diagnostics.h"
@@ -167,6 +168,8 @@ public:
   lldb::addr_t DoAllocateMemory(size_t size, uint32_t permissions,
                                 Status &error) override;
 
+  bool DoCanAllocateMemory() override;
+
   Status DoDeallocateMemory(lldb::addr_t ptr) override;
 
   // Process STDIO
@@ -306,6 +309,8 @@ protected:
   tid_collection m_thread_ids; // Thread IDs for all threads. This list gets
                                // updated after stopping
   std::vector<lldb::addr_t> m_thread_pcs;     // PC values for all the threads.
+  /// The position of each ID in m_thread_ids, for FindThreadIDIndex.
+  std::unordered_map<lldb::tid_t, size_t> m_thread_id_positions;
   /// Stop info caches filled at a stop and reset by WillResume, which runs on
   /// another thread. Hold the lock only long enough to copy the shared pointer
   /// out. The copy keeps the JSON alive past a reset, and reading the JSON
@@ -404,8 +409,21 @@ protected:
   GetThreadStopInfoFromJSON(ThreadGDBRemote *thread,
                             const StructuredData::ObjectSP &thread_infos_sp);
 
-  lldb::ThreadSP SetThreadStopInfo(StructuredData::Dictionary *thread_dict);
+  /// Set the stop info of the thread that \a thread_dict describes.
+  ///
+  /// \param[in] thread_sp
+  ///     The thread that \a thread_dict describes, if the caller already has
+  ///     it, which saves searching the thread list. A caller that sets stop
+  ///     info for every thread at a stop should pass it. If it is null or a
+  ///     different thread, the thread is found by its ID, or created.
+  lldb::ThreadSP SetThreadStopInfo(StructuredData::Dictionary *thread_dict,
+                                   lldb::ThreadSP thread_sp = nullptr);
 
+  /// Set the stop info of thread \a tid.
+  ///
+  /// \param[in] thread_sp
+  ///     The thread with ID \a tid, if the caller already has it, as in the
+  ///     overload above.
   lldb::ThreadSP
   SetThreadStopInfo(lldb::tid_t tid,
                     ExpeditedRegisterMap &expedited_register_map, uint8_t signo,
@@ -417,7 +435,8 @@ protected:
                     lldb::addr_t dispatch_queue_t, std::string &queue_name,
                     lldb::QueueKind queue_kind, uint64_t queue_serial,
                     std::vector<lldb::addr_t> &added_binaries,
-                    StructuredData::ObjectSP &detailed_binaries_info);
+                    StructuredData::ObjectSP &detailed_binaries_info,
+                    lldb::ThreadSP thread_sp = nullptr);
 
   void ClearThreadIDList();
 
@@ -536,6 +555,9 @@ private:
                              const std::string &description) override;
 
   void SetThreadPc(const lldb::ThreadSP &thread_sp, uint64_t index);
+
+  std::optional<size_t> FindThreadIDIndex(lldb::tid_t tid);
+
   using ModuleCacheKey = std::pair<std::string, std::string>;
   // KeyInfo for the cached module spec DenseMap.
   // The invariant is that all real keys will have the file and architecture

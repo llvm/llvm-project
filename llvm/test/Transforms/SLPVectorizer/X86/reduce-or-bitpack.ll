@@ -8,11 +8,7 @@ define i32 @shl_and_pack(i32 %x) {
 ; CHECK-LABEL: define i32 @shl_and_pack(
 ; CHECK-SAME: i32 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr <4 x i32> [[TMP1]], <i32 0, i32 8, i32 16, i32 24>
-; CHECK-NEXT:    [[TMP3:%.*]] = and <4 x i32> [[TMP2]], <i32 255, i32 255, i32 255, i32 -1>
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc <4 x i32> [[TMP3]] to <4 x i8>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i32 [[X]] to <4 x i8>
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i8> [[TMP4]] to i32
 ; CHECK-NEXT:    ret i32 [[TMP6]]
 ;
@@ -270,4 +266,30 @@ define dso_local { i64, i64 } @and_shl_add_pack(i64 %0, i64 %1, i64 %2, i64 %3) 
   %139 = or i64 %138, %70
   %140 = insertvalue { i64, i64 } %117, i64 %139, 1
   ret { i64, i64 } %140
+}
+
+; The add of zero in the first lane is interchangeable with a shl by zero.
+
+define i32 @add_zero_lane_pack(i8 %a, i8 %b, i8 %c, i8 %d) {
+; CHECK-LABEL: define i32 @add_zero_lane_pack(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]], i8 [[D:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i8> poison, i8 [[A]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i8> [[TMP1]], i8 [[B]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i8> [[TMP2]], i8 [[C]], i64 2
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i8> [[TMP3]], i8 [[D]], i64 3
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x i8> [[TMP4]] to i32
+; CHECK-NEXT:    ret i32 [[TMP5]]
+;
+  %za = zext i8 %a to i32
+  %zb = zext i8 %b to i32
+  %zc = zext i8 %c to i32
+  %zd = zext i8 %d to i32
+  %sa = add i32 %za, 0
+  %sb = shl i32 %zb, 8
+  %sc = shl i32 %zc, 16
+  %sd = shl i32 %zd, 24
+  %o1 = or i32 %sa, %sb
+  %o2 = or i32 %o1, %sc
+  %o3 = or i32 %o2, %sd
+  ret i32 %o3
 }

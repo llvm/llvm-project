@@ -24,7 +24,7 @@ endsubroutine
 ! CHECK-BASE-NEXT:      hlfir.destroy %[[MATMUL_RES]]
 ! CHECK-BASE-NEXT:      hlfir.destroy %[[TRANSPOSE_RES]]
 
-! CHECK-CANONICAL-NEXT: %[[CHAIN_RES:.*]] = hlfir.matmul_transpose %[[A_DECL]]#0 %[[B_DECL]]#0 {fastmath = #arith.fastmath<contract>} : (!fir.ref<!fir.array<2x1xf32>>, !fir.ref<!fir.array<2x2xf32>>) -> !hlfir.expr<1x2xf32>
+! CHECK-CANONICAL-NEXT: %[[CHAIN_RES:.*]] = hlfir.matmul_transpose %[[A_DECL]]#0 %[[B_DECL]]#0 fastmath(contract) : (!fir.ref<!fir.array<2x1xf32>>, !fir.ref<!fir.array<2x2xf32>>) -> !hlfir.expr<1x2xf32>
 ! CHECK-CANONICAL-NEXT: hlfir.assign %[[CHAIN_RES]] to %[[RES_DECL]]#0 : !hlfir.expr<1x2xf32>, !fir.ref<!fir.array<1x2xf32>>
 ! CHECK-CANONICAL-NEXT: hlfir.destroy %[[CHAIN_RES]]
 
@@ -34,7 +34,7 @@ endsubroutine
 ! CHECK-LOWERING:       fir.call @_FortranATranspose(%[[TRANSPOSE_CONV_RES]], %[[A_BOX_CONV]], %[[LOC_STR1:.*]], %[[LOC_N1:.*]])
 ! CHECK-LOWERING:       %[[TRANSPOSE_RES_LD:.*]] = fir.load %[[TRANSPOSE_RES_BOX:.*]]
 ! CHECK-LOWERING:       %[[TRANSPOSE_RES_ADDR:.*]] = fir.box_addr %[[TRANSPOSE_RES_LD]]
-! CHECK-LOWERING:       %[[TRANSPOSE_RES_VAR:.*]]:2 = hlfir.declare %[[TRANSPOSE_RES_ADDR]]({{.*}}) {uniq_name = ".tmp.intrinsic_result"}
+! CHECK-LOWERING:       %[[TRANSPOSE_RES_VAR:.*]]:2 = hlfir.declare %[[TRANSPOSE_RES_ADDR]]({{.*}}) uniq_name(".tmp.intrinsic_result")
 ! CHECK-LOWERING:       %[[TRANSPOSE_EXPR:.*]] = hlfir.as_expr %[[TRANSPOSE_RES_VAR]]#0 move {{.*}} : (!fir.box<!fir.array<?x?xf32>>, i1) -> !hlfir.expr<?x?xf32>
 ! CHECK-LOWERING:       %[[TRANSPOSE_ASSOC:.*]]:3 = hlfir.associate %[[TRANSPOSE_EXPR]]({{.*}}) {adapt.valuebyref}
 ! CHECK-LOWERING:           (!hlfir.expr<?x?xf32>, !fir.shape<2>) -> (!fir.ref<!fir.array<1x2xf32>>, !fir.ref<!fir.array<1x2xf32>>, i1)
@@ -47,7 +47,7 @@ endsubroutine
 ! CHECK-LOWERING:       fir.call @_FortranAMatmulReal4Real4(%[[MUL_CONV_RES]], %[[LHS_CONV]], %[[B_BOX_CONV]], %[[LOC_STR2:.*]], %[[LOC_N2:.*]])
 ! CHECK-LOWERING:       %[[MUL_RES_LD:.*]] = fir.load %[[MUL_RES_BOX:.*]]
 ! CHECK-LOWERING:       %[[MUL_RES_ADDR:.*]] = fir.box_addr %[[MUL_RES_LD]]
-! CHECK-LOWERING:       %[[MUL_RES_VAR:.*]]:2 = hlfir.declare %[[MUL_RES_ADDR]]({{.*}}) {uniq_name = ".tmp.intrinsic_result"}
+! CHECK-LOWERING:       %[[MUL_RES_VAR:.*]]:2 = hlfir.declare %[[MUL_RES_ADDR]]({{.*}}) uniq_name(".tmp.intrinsic_result")
 ! CHECK-LOWERING:       %[[MUL_EXPR:.*]] = hlfir.as_expr %[[MUL_RES_VAR]]#0 move {{.*}} : (!fir.box<!fir.array<?x?xf32>>, i1) -> !hlfir.expr<?x?xf32>
 
 ! CHECK-LOWERING:       hlfir.end_associate %[[TRANSPOSE_ASSOC]]#1, %[[TRANSPOSE_ASSOC]]#2 : !fir.ref<!fir.array<1x2xf32>>, i1
@@ -63,7 +63,7 @@ endsubroutine
 ! CHECK-LOWERING-OPT:   fir.call @_FortranAMatmulTransposeReal4Real4(%[[MUL_CONV_RES]], %[[LHS_CONV]], %[[B_BOX_CONV]], %[[LOC_STR2:.*]], %[[LOC_N2:.*]])
 ! CHECK-LOWERING-OPT:   %[[MUL_RES_LD:.*]] = fir.load %[[MUL_RES_BOX:.*]]
 ! CHECK-LOWERING-OPT:   %[[MUL_RES_ADDR:.*]] = fir.box_addr %[[MUL_RES_LD]]
-! CHECK-LOWERING-OPT:   %[[MUL_RES_VAR:.*]]:2 = hlfir.declare %[[MUL_RES_ADDR]]({{.*}}) {uniq_name = ".tmp.intrinsic_result"}
+! CHECK-LOWERING-OPT:   %[[MUL_RES_VAR:.*]]:2 = hlfir.declare %[[MUL_RES_ADDR]]({{.*}}) uniq_name(".tmp.intrinsic_result")
 ! CHECK-LOWERING-OPT:   %[[MUL_EXPR:.*]] = hlfir.as_expr %[[MUL_RES_VAR]]#0 move {{.*}} : (!fir.box<!fir.array<?x?xf32>>, i1) -> !hlfir.expr<?x?xf32>
 ! CHECK-LOWERING-OPT:   hlfir.assign %[[MUL_EXPR]] to %[[RES_DECL]]#0 : !hlfir.expr<?x?xf32>, !fir.ref<!fir.array<1x2xf32>>
 ! CHECK-LOWERING-OPT:   hlfir.destroy %[[MUL_EXPR]]
@@ -72,7 +72,7 @@ endsubroutine
 ! CHECK-BUFFERING:      fir.call @_FortranATranspose(
 ! CHECK-BUFFERING:      %[[TRANSPOSE_RES_LD:.*]] = fir.load %[[TRANSPOSE_RES_BOX:.*]]
 ! CHECK-BUFFERING:      %[[TRANSPOSE_RES_ADDR:.*]] = fir.box_addr %[[TRANSPOSE_RES_LD]]
-! CHECK-BUFFERING:      %[[TRANSPOSE_RES_VAR:.*]]:2 = hlfir.declare %[[TRANSPOSE_RES_ADDR]]({{.*}}) {uniq_name = ".tmp.intrinsic_result"}
+! CHECK-BUFFERING:      %[[TRANSPOSE_RES_VAR:.*]]:2 = hlfir.declare %[[TRANSPOSE_RES_ADDR]]({{.*}}) uniq_name(".tmp.intrinsic_result")
 ! CHECK-BUFFERING:      %[[TRANSPOSE_REBOX:.*]] = fir.rebox %[[TRANSPOSE_RES_VAR]]#0 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.box<!fir.array<?x?xf32>>
 ! CHECK-BUFFERING:      %[[TUPLE0:.*]] = fir.undefined tuple<!fir.box<!fir.array<?x?xf32>>, i1>
 ! CHECK-BUFFERING:      %[[TUPLE1:.*]] = fir.insert_value %[[TUPLE0]], {{.*}}, [1 : index]
@@ -86,7 +86,7 @@ endsubroutine
 ! CHECK-BUFFERING:      fir.call @_FortranAMatmulReal4Real4(
 ! CHECK-BUFFERING:      %[[MUL_RES_LD:.*]] = fir.load %[[MUL_RES_BOX:.*]]
 ! CHECK-BUFFERING:      %[[MUL_RES_ADDR:.*]] = fir.box_addr %[[MUL_RES_LD]]
-! CHECK-BUFFERING:      %[[MUL_RES_VAR:.*]]:2 = hlfir.declare %[[MUL_RES_ADDR]]({{.*}}) {uniq_name = ".tmp.intrinsic_result"}
+! CHECK-BUFFERING:      %[[MUL_RES_VAR:.*]]:2 = hlfir.declare %[[MUL_RES_ADDR]]({{.*}}) uniq_name(".tmp.intrinsic_result")
 ! CHECK-BUFFERING:      %[[MUL_REBOX:.*]] = fir.rebox %[[MUL_RES_VAR]]#0 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.box<!fir.array<?x?xf32>>
 ! CHECK-BUFFERING:      %[[TUPLE3:.*]] = fir.undefined tuple<!fir.box<!fir.array<?x?xf32>>, i1>
 ! CHECK-BUFFERING:      %[[TUPLE4:.*]] = fir.insert_value %[[TUPLE3]], {{.*}}, [1 : index]

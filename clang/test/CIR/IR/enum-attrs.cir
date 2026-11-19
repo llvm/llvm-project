@@ -131,6 +131,14 @@ cir.func @fp_class_attr() {
                           #cir.fp_class<fcSNan|fcNegInf>]}
 }
 
+// CHECK-LABEL: cir.func @fastmath_attr() {
+cir.func @fastmath_attr() {
+  // CHECK: cir.return {cir.test = [#cir.fastmath<reassoc>, #cir.fastmath<nnan, ninf>, #cir.fastmath<fast>]}
+  cir.return {cir.test = [#cir.fastmath<reassoc>,
+                          #cir.fastmath<nnan, ninf>,
+                          #cir.fastmath<fast>]}
+}
+
 // The operations themselves keep printing a bare keyword.
 
 // CHECK-LABEL: cir.func @mem_order_sync_scope_ops(%arg0: !cir.ptr<!s32i>) {

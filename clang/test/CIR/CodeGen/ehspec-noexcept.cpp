@@ -82,14 +82,8 @@ void permissive() noexcept {
 // CIR:         } catch all (%[[TOK:.*]]: !cir.eh_token
 // CIR:           cir.eh.terminate %[[TOK]] : !cir.eh_token
 
-// So it leaves no landing pad behind. It does leave the personality function
-// that CIRGen set for the wrapper, which classic codegen omits because it only
-// sets one where it emits a landing pad. The same difference shows up for a
-// try statement whose body cannot throw, so it is not specific to exception
-// specifications.
 // LLVM-LABEL: define{{.*}} void @_Z10permissivev()
-// LLVMCIR-SAME: personality ptr @__gxx_personality_v0
-// OGCG-NOT:   personality
+// LLVM-NOT:     personality
 // LLVM:         call void @_Z8harmlessv()
 // LLVM-NOT:     landingpad
 // LLVM-NOT:     __clang_call_terminate
@@ -166,32 +160,22 @@ void outer() noexcept {
 // LLVM:         br label %[[TRY_CONT]]
 
 // The pipelines lay the join and the terminate handler out in opposite orders,
-// and the CIR pipeline reaches each of them through a chain of empty
-// forwarding blocks, so these checks follow the branches. Interleaving the two
-// chains is what the layout requires, not what the control flow does.
+// and the CIR pipeline reaches the terminate handler through a chain of
+// forwarding blocks, so these checks follow the branches.
 
 // An exception of any other type is on its way to the terminate handler.
 // LLVMCIR:    {{^}}[[NOMATCH]]:
 // LLVMCIR:      br label %[[TERM_CHAIN:[^ ,]+]]
-
-// The join leads to the return.
-// LLVMCIR:    {{^}}[[TRY_CONT]]:
-// LLVMCIR-NEXT: br label %[[RET_CHAIN:[^ ,]+]]
-// LLVMCIR:    {{^}}[[RET_CHAIN]]:
-// LLVMCIR-NEXT: br label %[[RET:[^ ,]+]]
-
-// And the block the unmatched exception branched to terminates.
 // LLVMCIR:    {{^}}[[TERM_CHAIN]]:
 // LLVMCIR:      br label %[[TERM:[^ ,]+]]
 // LLVMCIR:    {{^}}[[TERM]]:
 // LLVMCIR:      call void @__clang_call_terminate(ptr %{{.*}})
 // LLVMCIR-NEXT: unreachable
 
-// LLVMCIR:    {{^}}[[RET]]:
-// LLVMCIR-NEXT: ret void
+// The join returns.
+// LLVM:    {{^}}[[TRY_CONT]]:
+// LLVM-NEXT: ret void
 
-// OGCG:       {{^}}[[TRY_CONT]]:
-// OGCG-NEXT:    ret void
 // OGCG:       {{^}}[[NOMATCH]]:
 // OGCG:         call void @__clang_call_terminate(ptr %{{.*}})
 // OGCG-NEXT:    unreachable

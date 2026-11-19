@@ -9,8 +9,6 @@
 #ifndef MLIR_DIALECT_SMT_IR_SMTATTRIBUTES_H
 #define MLIR_DIALECT_SMT_IR_SMTATTRIBUTES_H
 
-#include "mlir/IR/Attributes.h"
-#include "mlir/IR/BuiltinAttributeInterfaces.h"
 #include "mlir/IR/BuiltinAttributes.h"
 
 namespace mlir {

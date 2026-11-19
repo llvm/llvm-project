@@ -3,7 +3,7 @@
 // Verify that a write of non-addressable AccCurrentDeviceIdResource
 // resource does not prevent LICM of fir.load:
 // CHECK-LABEL:   func.func @_QPtest(
-// CHECK:           %[[DECLARE_1:.*]] = fir.declare %{{.*}} dummy_scope %{{.*}} arg 2 {uniq_name = "_QFtestEy"} : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
+// CHECK:           %[[DECLARE_1:.*]] = fir.declare %{{.*}} dummy_scope %{{.*}} arg 2 uniq_name("_QFtestEy") : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
 // CHECK:           %[[LOAD_0:.*]] = fir.load %[[DECLARE_1]] : !fir.ref<f32>
 // CHECK:           fir.do_loop {{.*}} {
 // CHECK:             acc.set device_num(%{{.*}} : index)
@@ -13,8 +13,8 @@ func.func @_QPtest(%arg0: !fir.ref<!fir.array<10xf32>> {fir.bindc_name = "x"}, %
   %c10 = arith.constant 10 : index
   %0 = fir.dummy_scope : !fir.dscope
   %3 = fir.shape %c10 : (index) -> !fir.shape<1>
-  %4 = fir.declare %arg0(%3) dummy_scope %0 arg 1 {uniq_name = "_QFtestEx"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<10xf32>>
-  %5 = fir.declare %arg1 dummy_scope %0 arg 2 {uniq_name = "_QFtestEy"} : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
+  %4 = fir.declare %arg0(%3) dummy_scope %0 arg 1 uniq_name("_QFtestEx") : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<10xf32>>
+  %5 = fir.declare %arg1 dummy_scope %0 arg 2 uniq_name("_QFtestEy") : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
   fir.do_loop %arg2 = %c1 to %c10 step %c1 {
     %8 = fir.load %5 : !fir.ref<f32>
     acc.set device_num(%c1 : index)

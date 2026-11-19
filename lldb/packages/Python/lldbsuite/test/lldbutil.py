@@ -964,6 +964,28 @@ def get_one_thread_stopped_at_breakpoint(process, bkpt, require_exactly_one=True
     )
 
 
+def get_threads_in_executable(process):
+    """Returns the threads of process that have a frame in the target's main
+    executable.
+
+    Count these rather than process.GetNumThreads() when a test checks how many
+    threads it created: the OS can add threads of its own between two stops.
+    For example, on Windows, starting a std::thread also starts a thread pool
+    worker thread
+    (https://learn.microsoft.com/en-us/windows/win32/procthread/thread-pools).
+    The debugger is only told about that worker once it first runs, which can
+    be after the next stop, so the thread count changes from one stop to the
+    next.
+
+    Match on the module rather than the test's source file: a thread stopped in
+    a runtime library function without debug info may only unwind back to its
+    caller, which is still in the executable.
+    """
+    target = process.GetTarget()
+    exe = target.FindModule(target.GetExecutable())
+    return [t for t in process if any(f.GetModule() == exe for f in t)]
+
+
 def is_thread_crashed(test, thread):
     """In the test suite we dereference a null pointer to simulate a crash. The way this is
     reported depends on the platform."""
@@ -1809,6 +1831,21 @@ def read_file_on_target(test, remote):
 def read_file_from_process_wd(test, name):
     path = append_to_process_working_directory(test, name)
     return read_file_on_target(test, path)
+
+
+def create_file_on_target(test, remote):
+    """Create an empty file at remote, a path on the target."""
+    if lldb.remote_platform:
+        local = test.getBuildArtifact("file_to_target")
+        open(local, "w").close()
+        error = lldb.remote_platform.Put(
+            lldb.SBFileSpec(local, True), lldb.SBFileSpec(remote, False)
+        )
+        test.assertTrue(
+            error.Success(), "Creating file {0} failed: {1}".format(remote, error)
+        )
+    else:
+        open(remote, "w").close()
 
 
 def wait_for_file_on_target(testcase, file_path: str):

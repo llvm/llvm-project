@@ -12,9 +12,7 @@
 
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/PassManager.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/Basic/LangOptions.h"
-#include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/Passes.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -44,10 +42,9 @@ static llvm::abi::X86AVXABILevel getX86AVXABILevel(llvm::StringRef abi) {
 /// Whether `__attribute__((target(...)))` on a function may raise its AVX ABI
 /// level above the command line's.  A target that opts out, and any ABI older
 /// than the rule, stay at the module level.
-static bool allowsX86TargetAttrAvx(const clang::ASTContext &astContext,
+static bool allowsX86TargetAttrAvx(const llvm::Triple &triple,
                                    clang::LangOptions::ClangABI compat) {
-  return !astContext.getTargetInfo().getTriple().isPS() &&
-         compat > clang::LangOptions::ClangABI::Ver23;
+  return !triple.isPS() && compat > clang::LangOptions::ClangABI::Ver23;
 }
 
 /// The x86_64 ABI-compatibility flags, derived from the target and the
@@ -56,9 +53,8 @@ static bool allowsX86TargetAttrAvx(const clang::ASTContext &astContext,
 /// modern Linux target, so leaving it at the default classifies a union larger
 /// than an eightbyte as though every member spanned its size.
 static llvm::abi::X86ABICompatInfo
-getX86ABICompatInfo(const clang::ASTContext &astContext,
+getX86ABICompatInfo(const llvm::Triple &triple,
                     clang::LangOptions::ClangABI compat) {
-  const llvm::Triple &triple = astContext.getTargetInfo().getTriple();
   llvm::abi::X86ABICompatInfo abiCompat;
   abiCompat.HonorsRevision98 = !triple.isOSDarwin();
   abiCompat.ClassifyIntegerMMXAsSSE =
@@ -76,12 +72,24 @@ getX86ABICompatInfo(const clang::ASTContext &astContext,
 
 mlir::LogicalResult
 runCIRToCIRPasses(mlir::ModuleOp theModule, mlir::MLIRContext &mlirContext,
-                  clang::ASTContext &astContext, bool enableVerifier,
-                  bool enableIdiomRecognizer, bool enableCIRSimplify,
-                  bool enableLibOpt, llvm::StringRef libOptOptions,
-                  bool enableCallConvLowering) {
+                  bool enableVerifier, bool enableIdiomRecognizer,
+                  bool enableCIRSimplify, bool enableLibOpt,
+                  llvm::StringRef libOptOptions, bool enableCallConvLowering) {
 
   llvm::TimeTraceScope scope("CIR To CIR Passes");
+
+  std::optional<llvm::Triple> triple = cir::getTripleFromModule(theModule);
+  if (!triple)
+    return theModule.emitError()
+           << "missing '" << cir::CIRDialect::getTripleAttrName()
+           << "' attribute";
+
+  auto abiAttr = theModule->getAttrOfType<mlir::StringAttr>(
+      cir::CIRDialect::getTargetABIAttrName());
+  if (!abiAttr)
+    return theModule.emitError()
+           << "missing '" << cir::CIRDialect::getTargetABIAttrName()
+           << "' attribute";
 
   mlir::PassManager pm(&mlirContext);
   pm.addPass(mlir::createCIRCanonicalizePass());
@@ -111,31 +119,30 @@ runCIRToCIRPasses(mlir::ModuleOp theModule, mlir::MLIRContext &mlirContext,
   // outlines dynamic global initializers into functions.  It must run before
   // CallConvLowering so the classifier sees them, otherwise their signatures
   // go unclassified and caller and callee disagree on the ABI.
-  pm.addPass(mlir::createLoweringPreparePass(&astContext));
+  pm.addPass(mlir::createLoweringPreparePass());
 
   if (enableCallConvLowering) {
     // CallConvLowering rewrites signatures and call sites using the classifier,
     // so it must run after CXXABILowering has lowered C++ ABI types to plain
     // records the classifier can handle.  Only the x86_64 System V classifier
     // is implemented; other targets are left unchanged.
-    const clang::TargetInfo &targetInfo = astContext.getTargetInfo();
-    CallConvTarget target = getCallConvTarget(targetInfo.getTriple());
+    CallConvTarget target = getCallConvTarget(*triple);
     if (target != CallConvTarget::None) {
       // Source the ABI-compatibility version from the module's serialized
-      // #cir.lowering_lang_options so a reloaded .cir classifies the same way
+      // #cir.lowering_options so a reloaded .cir classifies the same way
       // it was compiled, without a live clang::LangOptions. CIRGen sets this
       // attribute at module construction; if it is absent fall back to the
       // LangOptions default, matching how LowerModule reads the same attribute.
       auto compat = clang::LangOptions::ClangABI::Latest;
       if (auto loweringLangOpts =
-              theModule->getAttrOfType<cir::LoweringLangOptionsAttr>(
-                  cir::CIRDialect::getLoweringLangOptionsAttrName()))
+              theModule->getAttrOfType<cir::LoweringOptionsAttr>(
+                  cir::CIRDialect::getLoweringOptionsAttrName()))
         compat = static_cast<clang::LangOptions::ClangABI>(
             loweringLangOpts.getClangAbiCompat());
       pm.addPass(mlir::createCallConvLoweringPass(
-          target, getX86AVXABILevel(targetInfo.getABI()),
-          allowsX86TargetAttrAvx(astContext, compat),
-          getX86ABICompatInfo(astContext, compat)));
+          target, getX86AVXABILevel(abiAttr.getValue()),
+          allowsX86TargetAttrAvx(*triple, compat),
+          getX86ABICompatInfo(*triple, compat)));
     }
   }
 
@@ -153,6 +160,7 @@ void populateCIRPreLoweringPasses(OpPassManager &pm) {
   pm.addPass(createCIRFlattenCFGPass());
   pm.addPass(createCIREHABILoweringPass());
   pm.addPass(createGotoSolverPass());
+  pm.addPass(createCIRFoldEmptyBranchesPass());
 }
 
 } // namespace mlir

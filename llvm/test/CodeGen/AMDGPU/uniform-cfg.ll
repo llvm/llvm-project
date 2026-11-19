@@ -60,8 +60,7 @@ define amdgpu_kernel void @uniform_if_vcc(float %cond, ptr addrspace(1) %out) {
 ; SI-NEXT:    s_load_dword s1, s[4:5], 0x9
 ; SI-NEXT:    s_mov_b32 s0, 0
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    v_cmp_eq_f32_e64 s[2:3], s1, 0
-; SI-NEXT:    s_and_b64 vcc, exec, s[2:3]
+; SI-NEXT:    v_cmp_eq_f32_e64 vcc, s1, 0
 ; SI-NEXT:    s_cbranch_vccnz .LBB1_2
 ; SI-NEXT:  ; %bb.1: ; %else
 ; SI-NEXT:    s_mov_b32 s0, 1
@@ -79,8 +78,7 @@ define amdgpu_kernel void @uniform_if_vcc(float %cond, ptr addrspace(1) %out) {
 ; VI-NEXT:    s_load_dword s1, s[4:5], 0x24
 ; VI-NEXT:    s_mov_b32 s0, 0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    v_cmp_eq_f32_e64 s[2:3], s1, 0
-; VI-NEXT:    s_and_b64 vcc, exec, s[2:3]
+; VI-NEXT:    v_cmp_eq_f32_e64 vcc, s1, 0
 ; VI-NEXT:    s_cbranch_vccnz .LBB1_2
 ; VI-NEXT:  ; %bb.1: ; %else
 ; VI-NEXT:    s_mov_b32 s0, 1
@@ -166,8 +164,7 @@ define amdgpu_kernel void @uniform_if_swap_br_targets_vcc(float %cond, ptr addrs
 ; SI-NEXT:    s_load_dword s1, s[4:5], 0x9
 ; SI-NEXT:    s_mov_b32 s0, 0
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    v_cmp_neq_f32_e64 s[2:3], s1, 0
-; SI-NEXT:    s_and_b64 vcc, exec, s[2:3]
+; SI-NEXT:    v_cmp_neq_f32_e64 vcc, s1, 0
 ; SI-NEXT:    s_cbranch_vccnz .LBB3_2
 ; SI-NEXT:  ; %bb.1: ; %else
 ; SI-NEXT:    s_mov_b32 s0, 1
@@ -185,8 +182,7 @@ define amdgpu_kernel void @uniform_if_swap_br_targets_vcc(float %cond, ptr addrs
 ; VI-NEXT:    s_load_dword s1, s[4:5], 0x24
 ; VI-NEXT:    s_mov_b32 s0, 0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    v_cmp_neq_f32_e64 s[2:3], s1, 0
-; VI-NEXT:    s_and_b64 vcc, exec, s[2:3]
+; VI-NEXT:    v_cmp_neq_f32_e64 vcc, s1, 0
 ; VI-NEXT:    s_cbranch_vccnz .LBB3_2
 ; VI-NEXT:  ; %bb.1: ; %else
 ; VI-NEXT:    s_mov_b32 s0, 1
@@ -875,9 +871,8 @@ define amdgpu_kernel void @uniform_if_scc_i64_eq(i64 %cond, ptr addrspace(1) %ou
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    v_cmp_eq_u64_e64 s[4:5], s[0:1], 0
+; SI-NEXT:    v_cmp_eq_u64_e64 vcc, s[0:1], 0
 ; SI-NEXT:    s_mov_b32 s0, 0
-; SI-NEXT:    s_and_b64 vcc, exec, s[4:5]
 ; SI-NEXT:    s_cbranch_vccnz .LBB15_2
 ; SI-NEXT:  ; %bb.1: ; %else
 ; SI-NEXT:    s_mov_b32 s0, 1
@@ -929,9 +924,8 @@ define amdgpu_kernel void @uniform_if_scc_i64_ne(i64 %cond, ptr addrspace(1) %ou
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    v_cmp_ne_u64_e64 s[4:5], s[0:1], 0
+; SI-NEXT:    v_cmp_ne_u64_e64 vcc, s[0:1], 0
 ; SI-NEXT:    s_mov_b32 s0, 0
-; SI-NEXT:    s_and_b64 vcc, exec, s[4:5]
 ; SI-NEXT:    s_cbranch_vccnz .LBB16_2
 ; SI-NEXT:  ; %bb.1: ; %else
 ; SI-NEXT:    s_mov_b32 s0, 1
@@ -983,9 +977,8 @@ define amdgpu_kernel void @uniform_if_scc_i64_sgt(i64 %cond, ptr addrspace(1) %o
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    v_cmp_gt_i64_e64 s[4:5], s[0:1], 0
+; SI-NEXT:    v_cmp_gt_i64_e64 vcc, s[0:1], 0
 ; SI-NEXT:    s_mov_b32 s0, 0
-; SI-NEXT:    s_and_b64 vcc, exec, s[4:5]
 ; SI-NEXT:    s_cbranch_vccnz .LBB17_2
 ; SI-NEXT:  ; %bb.1: ; %else
 ; SI-NEXT:    s_mov_b32 s0, 1
@@ -1002,9 +995,8 @@ define amdgpu_kernel void @uniform_if_scc_i64_sgt(i64 %cond, ptr addrspace(1) %o
 ; VI:       ; %bb.0: ; %entry
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    v_cmp_gt_i64_e64 s[4:5], s[0:1], 0
+; VI-NEXT:    v_cmp_gt_i64_e64 vcc, s[0:1], 0
 ; VI-NEXT:    s_mov_b32 s0, 0
-; VI-NEXT:    s_and_b64 vcc, exec, s[4:5]
 ; VI-NEXT:    s_cbranch_vccnz .LBB17_2
 ; VI-NEXT:  ; %bb.1: ; %else
 ; VI-NEXT:    s_mov_b32 s0, 1

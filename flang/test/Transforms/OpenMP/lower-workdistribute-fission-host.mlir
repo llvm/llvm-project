@@ -2,11 +2,11 @@
 // Test lowering of workdistribute after fission on host device.
 
 // CHECK-LABEL:   func.func @x(
-// CHECK:           %[[VAL_0:.*]] = fir.alloca index {bindc_name = "lb"}
+// CHECK:           %[[VAL_0:.*]] = fir.alloca index <{bindc_name = "lb"}>
 // CHECK:           fir.store %[[ARG0:.*]] to %[[VAL_0]] : !fir.ref<index>
-// CHECK:           %[[VAL_1:.*]] = fir.alloca index {bindc_name = "ub"}
+// CHECK:           %[[VAL_1:.*]] = fir.alloca index <{bindc_name = "ub"}>
 // CHECK:           fir.store %[[ARG1:.*]] to %[[VAL_1]] : !fir.ref<index>
-// CHECK:           %[[VAL_2:.*]] = fir.alloca index {bindc_name = "step"}
+// CHECK:           %[[VAL_2:.*]] = fir.alloca index <{bindc_name = "step"}>
 // CHECK:           fir.store %[[ARG2:.*]] to %[[VAL_2]] : !fir.ref<index>
 // CHECK:           %[[VAL_3:.*]] = omp.map.info var_ptr(%[[VAL_0]] : !fir.ref<index>, index) map_clauses(to) capture(ByRef) name("lb") -> !fir.ref<index>
 // CHECK:           %[[VAL_4:.*]] = omp.map.info var_ptr(%[[VAL_1]] : !fir.ref<index>, index) map_clauses(to) capture(ByRef) name("ub") -> !fir.ref<index>

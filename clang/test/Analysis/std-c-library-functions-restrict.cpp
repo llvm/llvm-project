@@ -5,11 +5,8 @@
 // RUN:   -analyzer-config unix.StdCLibraryFunctions:DisplayLoadedSummaries=true \
 // RUN:   -triple i686-unknown-linux 2>&1 | FileCheck %s
 
-// The signatures for these functions are the same and they specify their
-// parameter with the restrict qualifier. In C++, however, we are more
-// indulgent and we do not match based on this qualifier. Thus, the given
-// signature should match for both of the declarations below, i.e the summary
-// should be loaded for both of them.
+// The signature should match regardless of the restrict qualifier, including
+// the __restrict extension in C++.
 void __test_restrict_param_0(void *p);
 void __test_restrict_param_1(void *__restrict p);
 // The below declaration is illegal, "restrict" is not a keyword in C++.
