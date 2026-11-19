@@ -18,6 +18,7 @@ import shlex
 import socket
 import subprocess
 import sys
+import tempfile
 from typing import List, Tuple
 
 
@@ -177,13 +178,32 @@ def run_command(args: argparse.Namespace) -> int:
             f"cd {remote_dir} && run_without_root {shlex.join(command_line)}"
         )
     else:
+        stdin_redirect = ""
+        cleanup_stdin = ""
+        if not sys.stdin.isatty():
+            stdin_bytes = sys.stdin.buffer.read()
+            if stdin_bytes:
+                with tempfile.NamedTemporaryFile(delete=False) as tmp_stdin:
+                    tmp_stdin.write(stdin_bytes)
+                    local_stdin = tmp_stdin.name
+                try:
+                    remote_stdin = f"{REMOTE_BASE_DIR}/stdin-{local_dir_hash}-{os.getpid()}"
+                    run_adb_sync_command(["adb", "push", local_stdin, remote_stdin])
+                    run_adb_sync_command(["adb", "shell", "chmod", "644", remote_stdin])
+                finally:
+                    os.remove(local_stdin)
+                stdin_redirect = f" <{shlex.quote(remote_stdin)}"
+                cleanup_stdin = f"rm -f {shlex.quote(remote_stdin)}; "
+            else:
+                stdin_redirect = " </dev/null"
         adb_shell_command += (
             f"{{"
             f"  stdout=$("
-            f"    cd {remote_dir} && run_without_root {shlex.join(command_line)};"
+            f"    cd {remote_dir} && run_without_root {shlex.join(command_line)}{stdin_redirect};"
             f"    echo -n __libcxx_adb_exit__=$?"
             f"  ); "
             f"}} 2>&1; "
+            f"{cleanup_stdin}"
             f"echo -n __libcxx_adb_stdout__\"$stdout\""
         )
 
@@ -196,9 +216,15 @@ def run_command(args: argparse.Namespace) -> int:
                               encoding="utf-8")
         return proc.returncode
     else:
-        proc = subprocess.run(adb_command_line, shell=False, check=False,
-                              stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                              encoding="utf-8")
+        proc = subprocess.run(
+            adb_command_line,
+            shell=False,
+            check=False,
+            stdin=subprocess.DEVNULL if not sys.stdin.isatty() else None,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            encoding="utf-8",
+        )
         # The old `adb shell` mode used a pty, which converted LF to CRLF.
         # Convert it back.
         output = proc.stdout.replace("\r\n", "\n")
