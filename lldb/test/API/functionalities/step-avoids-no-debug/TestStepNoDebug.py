@@ -118,7 +118,7 @@ class StepAvoidsNoDebugTestCase(TestBase):
         # in this function anymore.
         func_name = self.thread.frames[0].name
         while self.thread.frames[0].name == func_name:
-          self.thread.StepOver()
+            self.thread.StepOver()
         self.hit_correct_line(
             "intermediate_return_value = called_from_nodebug_actual(some_value)"
         )
@@ -139,7 +139,7 @@ class StepAvoidsNoDebugTestCase(TestBase):
         # in this function anymore.
         func_name = self.thread.frames[0].name
         while self.thread.frames[0].name == func_name:
-          self.thread.StepInto()
+            self.thread.StepInto()
         self.hit_correct_line(
             "intermediate_return_value = called_from_nodebug_actual(some_value)"
         )

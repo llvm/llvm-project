@@ -22,23 +22,19 @@ no_debug_caller_intermediate(int input, debug_callee callee)
   return return_value;
 }
 
-void
-no_debug_during() {
+void no_debug_during() {
   no_debug_caller_intermediate(0, NULL);
   no_debug_deeper();
   no_debug_caller_intermediate(2, NULL);
 }
 
-void
-no_debug_deeper() {
-  no_debug_caller_intermediate(1, NULL);
-}
+void no_debug_deeper() { no_debug_caller_intermediate(1, NULL); }
 
 int
 no_debug_caller (int input, debug_callee callee)
 {
   int return_value = 0;
   if (input != 1)
-    return_value = no_debug_caller_intermediate (input, callee);
+    return_value = no_debug_caller_intermediate(input, callee);
   return return_value;
 }
