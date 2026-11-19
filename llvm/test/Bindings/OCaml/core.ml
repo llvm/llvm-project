@@ -1235,6 +1235,7 @@ let test_builder () =
     let bb02 = append_block context "Bb02" fn in
     let b = builder_at_end bb02 in
     let br = build_br bb02 b in
+    insist (instr_opcode br = Opcode.UncondBr) ;
     insist (successors br = [| bb02 |]) ;
     insist (is_conditional br = false) ;
     insist (get_branch br = Some (`Unconditional bb02)) ;
@@ -1247,6 +1248,7 @@ let test_builder () =
     let b = builder_at_end bb03 in
     let cond = build_trunc p1 i1_type "build_br" b in
     let br = build_cond_br cond bb03 bb00 b in
+    insist (instr_opcode br = Opcode.CondBr) ;
     insist (num_successors br = 2) ;
     insist (successor br 0 = bb03) ;
     insist (successor br 1 = bb00) ;
@@ -1382,7 +1384,8 @@ let test_builder () =
     ignore (build_nsw_neg p1 "build_nsw_neg" b);
     ignore (build_fneg f1 "build_fneg" b);
     ignore (build_not p1 "build_not" b);
-    ignore (build_freeze p1 "build_freeze" b);
+    let freeze = build_freeze p1 "build_freeze" b in
+    insist (instr_opcode freeze = Opcode.Freeze);
     ignore (build_unreachable b)
   end;
 
