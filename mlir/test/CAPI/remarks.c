@@ -68,6 +68,11 @@ static void remarkCallback(MlirRemark remark, void *userData) {
           *count, kind, (int)name.length, name.data, (int)category.length,
           category.data, (int)fullCategory.length, fullCategory.data,
           (int)function.length, function.data, mlirRemarkGetId(remark));
+  intptr_t numRelated = mlirRemarkGetNumRelatedRemarks(remark);
+  fprintf(stderr, "  related (%" PRIdPTR "):", numRelated);
+  for (intptr_t i = 0; i < numRelated; ++i)
+    fprintf(stderr, " %" PRIu64, mlirRemarkGetRelatedRemarkId(remark, i));
+  fprintf(stderr, "\n");
   intptr_t numArgs = mlirRemarkGetNumArgs(remark);
   for (intptr_t i = 0; i < numArgs; ++i) {
     MlirStringRef key = mlirRemarkGetArgKey(remark, i);
@@ -121,6 +126,7 @@ static void testCallbackStreamer(void) {
 
   // clang-format off
   // CHECK: remark #1 kind=passed name=Unroll category=Loop full=Loop:inner function=main id=1
+  // CHECK:   related (0):
   // CHECK:   arg RemarkId=1
   // CHECK:   arg Remark=unrolled
   // CHECK:   arg factor=4
@@ -289,6 +295,14 @@ static void testAccessorDefaults(void) {
   // clang-format on
   mlirEmitOptimizationRemark(loc, MlirRemarkKindMissed, str("Name"), str(""),
                              str("Sub"), str(""), str(""), 0, NULL, NULL);
+  // A user argument named RelatedTo is not a typed remark link.
+  // CHECK: remark #3 kind=analysis name=UserArgument
+  // CHECK:   related (0):
+  // CHECK:   arg RelatedTo=999
+  MlirStringRef key = str("RelatedTo"), value = str("999");
+  mlirEmitOptimizationRemark(loc, MlirRemarkKindAnalysis, str("UserArgument"),
+                             str(""), str(""), str(""), str(""), 1, &key,
+                             &value);
   // CHECK: unknown emitted=0
   emitted = emit(loc, MlirRemarkKindUnknown, "Name", "Loop", "");
   fprintf(stderr, "unknown emitted=%d\n", emitted);

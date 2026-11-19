@@ -47,7 +47,6 @@
 ...
 ---
 name:            foo
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    16
 # CHECK-LABEL: foo

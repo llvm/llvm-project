@@ -66,6 +66,10 @@ let Definition = "diagnostics", Path = "diagnostics" in {
     Global,
     DefaultFalse,
     Desc<"When enabled, a diagnostics bundle also collects the main executable, its symbol file, and the core file (when debugging one) to help reproduce the bug. These files can be large and may contain sensitive data (a core file captures process memory), so this is off by default.">;
+  def SuggestBugReport: Property<"suggest-bugreport", "Boolean">,
+    Global,
+    DefaultTrue,
+    Desc<"Follow errors that may be bugs in LLDB with a note suggesting the 'bugreport' command.">;
 }
 
 #ifndef NDEBUG

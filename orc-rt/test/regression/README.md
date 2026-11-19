@@ -133,6 +133,10 @@ int main(void) {
 * **`%{obj-jit}`**: Links and runs its inputs under ogre, using `llvm-jitlink`
   as the controller. Pass `-show-jit-result` to print `JIT result: <value>`.
 * **`%{ogre}`**: Path to the ogre executable.
+* **`%{test-dylib}`**: Path to a minimal shared library
+  (`test/Inputs/orc-rt-test-dylib.c`), for tests that load, search, and close
+  a host library. Its functions return distinct values, so that a test can
+  check that a lookup found the right one.
 
 Don't spell out a target triple or connection method in a test unless that's
 what the test is about: the substitutions provide these, so that the same
