@@ -252,6 +252,7 @@ void initializer_acts_the_same_as_null_attr() {
 
   ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_lock(&mutex), 0);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_trylock(&mutex), EBUSY);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_destroy(&mutex), EBUSY);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_unlock(&mutex), 0);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_destroy(&mutex), 0);
 
