@@ -153,7 +153,7 @@ declare void @final_suspend()
 !5 = !{!"clang version 11.0.0"}
 !6 = !DILocalVariable(name: "__promise", scope: !7, file: !1, line: 24, type: !10)
 !7 = distinct !DILexicalBlock(scope: !8, file: !1, line: 23, column: 12)
-!8 = distinct !DISubprogram(name: "foo", linkageName: "_Z3foov", scope: !8, file: !1, line: 23, type: !9, scopeLine: 23, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !2)
+!8 = distinct !DISubprogram(name: "foo", linkageName: "_Z3foov", scope: !1, file: !1, line: 23, type: !9, scopeLine: 23, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !2)
 !9 = !DISubroutineType(types: !2)
 !10 = !DIDerivedType(tag: DW_TAG_typedef, name: "promise_type", scope: !8, file: !1, line: 15, baseType: !11)
 !11 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "promise_type", scope: !8, file: !1, line: 10, size: 128, flags: DIFlagTypePassByValue | DIFlagNonTrivial, elements: !12, identifier: "_ZTSN4coro12promise_typeE")

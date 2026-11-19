@@ -1,5 +1,318 @@
 // RUN: mlir-opt %s -canonicalize="test-convergence" -split-input-file | FileCheck %s
 
+// CHECK-LABEL: func.func @reduce_broadcast_maxsi(
+// CHECK-SAME: %[[INPUT:[a-zA-Z0-9]+]]: tensor<3xi32>
+// CHECK-NEXT: return %[[INPUT]] : tensor<3xi32>
+func.func @reduce_broadcast_maxsi(%input: tensor<3xi32>,
+    %broadcast_init: tensor<3x4xi32>)
+    -> tensor<3xi32> {
+  %reduce_init = arith.constant dense<-2147483648> : tensor<3xi32>
+  %broadcasted = linalg.broadcast
+      ins(%input : tensor<3xi32>)
+      outs(%broadcast_init : tensor<3x4xi32>) dimensions = [1]
+  %result = linalg.reduce
+      ins(%broadcasted : tensor<3x4xi32>)
+      outs(%reduce_init : tensor<3xi32>) dimensions = [1]
+      (%in: i32, %out: i32) {
+      %max = arith.maxsi %in, %out : i32
+      linalg.yield %max : i32
+  }
+  return %result : tensor<3xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @reduce_broadcast_minui(
+// CHECK-SAME: %[[INPUT:[a-zA-Z0-9]+]]: tensor<3xi8>
+// CHECK-NEXT: return %[[INPUT]] : tensor<3xi8>
+func.func @reduce_broadcast_minui(%input: tensor<3xi8>,
+    %broadcast_init: tensor<2x3x4xi8>)
+    -> tensor<3xi8> {
+  %reduce_init = arith.constant dense<255> : tensor<3xi8>
+  %broadcasted = linalg.broadcast
+      ins(%input : tensor<3xi8>)
+      outs(%broadcast_init : tensor<2x3x4xi8>) dimensions = [0, 2]
+  %result = linalg.reduce
+      ins(%broadcasted : tensor<2x3x4xi8>)
+      outs(%reduce_init : tensor<3xi8>) dimensions = [0, 2]
+      (%in: i8, %out: i8) {
+      %min = arith.minui %in, %out : i8
+      linalg.yield %min : i8
+  }
+  return %result : tensor<3xi8>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @negative_reduce_broadcast_wrong_dimension
+// CHECK: linalg.broadcast
+// CHECK: linalg.reduce
+func.func @negative_reduce_broadcast_wrong_dimension(%input: tensor<3xi32>,
+    %broadcast_init: tensor<3x4xi32>, %reduce_init: tensor<4xi32>)
+    -> tensor<4xi32> {
+  %broadcasted = linalg.broadcast
+      ins(%input : tensor<3xi32>)
+      outs(%broadcast_init : tensor<3x4xi32>) dimensions = [1]
+  %result = linalg.reduce
+      ins(%broadcasted : tensor<3x4xi32>)
+      outs(%reduce_init : tensor<4xi32>) dimensions = [0]
+      (%in: i32, %out: i32) {
+      %max = arith.maxsi %in, %out : i32
+      linalg.yield %max : i32
+  }
+  return %result : tensor<4xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @negative_reduce_broadcast_non_identity_init
+// CHECK: linalg.broadcast
+// CHECK: linalg.reduce
+func.func @negative_reduce_broadcast_non_identity_init(%input: tensor<3xi32>,
+    %broadcast_init: tensor<3x4xi32>)
+    -> tensor<3xi32> {
+  %reduce_init = arith.constant dense<0> : tensor<3xi32>
+  %broadcasted = linalg.broadcast
+      ins(%input : tensor<3xi32>)
+      outs(%broadcast_init : tensor<3x4xi32>) dimensions = [1]
+  %result = linalg.reduce
+      ins(%broadcasted : tensor<3x4xi32>)
+      outs(%reduce_init : tensor<3xi32>) dimensions = [1]
+      (%in: i32, %out: i32) {
+      %max = arith.maxsi %in, %out : i32
+      linalg.yield %max : i32
+  }
+  return %result : tensor<3xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @negative_reduce_broadcast_empty_dimension
+// CHECK: linalg.broadcast
+// CHECK: linalg.reduce
+func.func @negative_reduce_broadcast_empty_dimension(%input: tensor<3xi32>,
+    %broadcast_init: tensor<3x0xi32>)
+    -> tensor<3xi32> {
+  %reduce_init = arith.constant dense<-2147483648> : tensor<3xi32>
+  %broadcasted = linalg.broadcast
+      ins(%input : tensor<3xi32>)
+      outs(%broadcast_init : tensor<3x0xi32>) dimensions = [1]
+  %result = linalg.reduce
+      ins(%broadcasted : tensor<3x0xi32>)
+      outs(%reduce_init : tensor<3xi32>) dimensions = [1]
+      (%in: i32, %out: i32) {
+      %max = arith.maxsi %in, %out : i32
+      linalg.yield %max : i32
+  }
+  return %result : tensor<3xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @reduce_broadcast_andi(
+// CHECK-SAME: %[[INPUT:[a-zA-Z0-9]+]]: tensor<3xi32>
+// CHECK-NEXT: return %[[INPUT]] : tensor<3xi32>
+func.func @reduce_broadcast_andi(%input: tensor<3xi32>,
+    %broadcast_init: tensor<3x4xi32>)
+    -> tensor<3xi32> {
+  %reduce_init = arith.constant dense<-1> : tensor<3xi32>
+  %broadcasted = linalg.broadcast
+      ins(%input : tensor<3xi32>)
+      outs(%broadcast_init : tensor<3x4xi32>) dimensions = [1]
+  %result = linalg.reduce
+      ins(%broadcasted : tensor<3x4xi32>)
+      outs(%reduce_init : tensor<3xi32>) dimensions = [1]
+      (%in: i32, %out: i32) {
+      %and = arith.andi %in, %out : i32
+      linalg.yield %and : i32
+  }
+  return %result : tensor<3xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @reduce_broadcast_ori(
+// CHECK-SAME: %[[INPUT:[a-zA-Z0-9]+]]: tensor<3xi32>
+// CHECK-NEXT: return %[[INPUT]] : tensor<3xi32>
+func.func @reduce_broadcast_ori(%input: tensor<3xi32>,
+    %broadcast_init: tensor<2x3xi32>)
+    -> tensor<3xi32> {
+  %reduce_init = arith.constant dense<0> : tensor<3xi32>
+  %broadcasted = linalg.broadcast
+      ins(%input : tensor<3xi32>)
+      outs(%broadcast_init : tensor<2x3xi32>) dimensions = [0]
+  %result = linalg.reduce
+      ins(%broadcasted : tensor<2x3xi32>)
+      outs(%reduce_init : tensor<3xi32>) dimensions = [0]
+      (%in: i32, %out: i32) {
+      %or = arith.ori %out, %in : i32
+      linalg.yield %or : i32
+  }
+  return %result : tensor<3xi32>
+}
+
+// -----
+
+// Init 5 is not the ori identity, so no fold.
+// CHECK-LABEL: func.func @negative_reduce_broadcast_ori_non_identity_init
+// CHECK: linalg.broadcast
+// CHECK: linalg.reduce
+func.func @negative_reduce_broadcast_ori_non_identity_init(
+    %input: tensor<3xi32>, %broadcast_init: tensor<3x4xi32>)
+    -> tensor<3xi32> {
+  %reduce_init = arith.constant dense<5> : tensor<3xi32>
+  %broadcasted = linalg.broadcast
+      ins(%input : tensor<3xi32>)
+      outs(%broadcast_init : tensor<3x4xi32>) dimensions = [1]
+  %result = linalg.reduce
+      ins(%broadcasted : tensor<3x4xi32>)
+      outs(%reduce_init : tensor<3xi32>) dimensions = [1]
+      (%in: i32, %out: i32) {
+      %or = arith.ori %in, %out : i32
+      linalg.yield %or : i32
+  }
+  return %result : tensor<3xi32>
+}
+
+// -----
+
+// Init 1 is not the andi identity, so no fold.
+// CHECK-LABEL: func.func @negative_reduce_broadcast_andi_non_identity_init
+// CHECK: linalg.broadcast
+// CHECK: linalg.reduce
+func.func @negative_reduce_broadcast_andi_non_identity_init(
+    %input: tensor<3xi32>, %broadcast_init: tensor<3x4xi32>)
+    -> tensor<3xi32> {
+  %reduce_init = arith.constant dense<1> : tensor<3xi32>
+  %broadcasted = linalg.broadcast
+      ins(%input : tensor<3xi32>)
+      outs(%broadcast_init : tensor<3x4xi32>) dimensions = [1]
+  %result = linalg.reduce
+      ins(%broadcasted : tensor<3x4xi32>)
+      outs(%reduce_init : tensor<3xi32>) dimensions = [1]
+      (%in: i32, %out: i32) {
+      %and = arith.andi %in, %out : i32
+      linalg.yield %and : i32
+  }
+  return %result : tensor<3xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @reduce_broadcast_maximumf(
+// CHECK-SAME: %[[INPUT:[a-zA-Z0-9]+]]: tensor<3xf32>
+// CHECK-NEXT: return %[[INPUT]] : tensor<3xf32>
+func.func @reduce_broadcast_maximumf(%input: tensor<3xf32>,
+    %broadcast_init: tensor<3x4xf32>)
+    -> tensor<3xf32> {
+  %reduce_init = arith.constant dense<0xFF800000> : tensor<3xf32>
+  %broadcasted = linalg.broadcast
+      ins(%input : tensor<3xf32>)
+      outs(%broadcast_init : tensor<3x4xf32>) dimensions = [1]
+  %result = linalg.reduce
+      ins(%broadcasted : tensor<3x4xf32>)
+      outs(%reduce_init : tensor<3xf32>) dimensions = [1]
+      (%in: f32, %out: f32) {
+      %max = arith.maximumf %in, %out : f32
+      linalg.yield %max : f32
+  }
+  return %result : tensor<3xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @reduce_broadcast_minimumf(
+// CHECK-SAME: %[[INPUT:[a-zA-Z0-9]+]]: tensor<3xf32>
+// CHECK-NEXT: return %[[INPUT]] : tensor<3xf32>
+func.func @reduce_broadcast_minimumf(%input: tensor<3xf32>,
+    %broadcast_init: tensor<2x3xf32>)
+    -> tensor<3xf32> {
+  %reduce_init = arith.constant dense<0x7F800000> : tensor<3xf32>
+  %broadcasted = linalg.broadcast
+      ins(%input : tensor<3xf32>)
+      outs(%broadcast_init : tensor<2x3xf32>) dimensions = [0]
+  %result = linalg.reduce
+      ins(%broadcasted : tensor<2x3xf32>)
+      outs(%reduce_init : tensor<3xf32>) dimensions = [0]
+      (%in: f32, %out: f32) {
+      %min = arith.minimumf %out, %in : f32
+      linalg.yield %min : f32
+  }
+  return %result : tensor<3xf32>
+}
+
+// -----
+
+// Init 0.0 is not the maximumf identity (-inf), so no fold.
+// CHECK-LABEL: func.func @negative_reduce_broadcast_maximumf_finite_init
+// CHECK: linalg.broadcast
+// CHECK: linalg.reduce
+func.func @negative_reduce_broadcast_maximumf_finite_init(
+    %input: tensor<3xf32>, %broadcast_init: tensor<3x4xf32>)
+    -> tensor<3xf32> {
+  %reduce_init = arith.constant dense<0.0> : tensor<3xf32>
+  %broadcasted = linalg.broadcast
+      ins(%input : tensor<3xf32>)
+      outs(%broadcast_init : tensor<3x4xf32>) dimensions = [1]
+  %result = linalg.reduce
+      ins(%broadcasted : tensor<3x4xf32>)
+      outs(%reduce_init : tensor<3xf32>) dimensions = [1]
+      (%in: f32, %out: f32) {
+      %max = arith.maximumf %in, %out : f32
+      linalg.yield %max : f32
+  }
+  return %result : tensor<3xf32>
+}
+
+// -----
+
+// maxnumf ignores NaN, so reduce(broadcast(NaN)) with init=-inf yields -inf,
+// not NaN: the fold would be incorrect. Not folded even with an -inf init.
+// CHECK-LABEL: func.func @negative_reduce_broadcast_maxnumf_identity_init
+// CHECK: linalg.broadcast
+// CHECK: linalg.reduce
+func.func @negative_reduce_broadcast_maxnumf_identity_init(
+    %input: tensor<3xf32>, %broadcast_init: tensor<3x4xf32>)
+    -> tensor<3xf32> {
+  %reduce_init = arith.constant dense<0xFF800000> : tensor<3xf32>
+  %broadcasted = linalg.broadcast
+      ins(%input : tensor<3xf32>)
+      outs(%broadcast_init : tensor<3x4xf32>) dimensions = [1]
+  %result = linalg.reduce
+      ins(%broadcasted : tensor<3x4xf32>)
+      outs(%reduce_init : tensor<3xf32>) dimensions = [1]
+      (%in: f32, %out: f32) {
+      %max = arith.maxnumf %in, %out : f32
+      linalg.yield %max : f32
+  }
+  return %result : tensor<3xf32>
+}
+
+// -----
+
+// NaN is not the maximumf identity (maximumf(NaN, x) = NaN, not x), so no fold.
+// CHECK-LABEL: func.func @negative_reduce_broadcast_maximumf_nan_init
+// CHECK: linalg.broadcast
+// CHECK: linalg.reduce
+func.func @negative_reduce_broadcast_maximumf_nan_init(
+    %input: tensor<3xf32>, %broadcast_init: tensor<3x4xf32>)
+    -> tensor<3xf32> {
+  %reduce_init = arith.constant dense<0x7FC00000> : tensor<3xf32>
+  %broadcasted = linalg.broadcast
+      ins(%input : tensor<3xf32>)
+      outs(%broadcast_init : tensor<3x4xf32>) dimensions = [1]
+  %result = linalg.reduce
+      ins(%broadcasted : tensor<3x4xf32>)
+      outs(%reduce_init : tensor<3xf32>) dimensions = [1]
+      (%in: f32, %out: f32) {
+      %max = arith.maximumf %in, %out : f32
+      linalg.yield %max : f32
+  }
+  return %result : tensor<3xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @memref_cast(
 func.func @memref_cast(%a: index, %b: index) -> memref<?x?xf32> {
   %c0 = arith.constant 0 : index
@@ -512,7 +825,7 @@ func.func @fold_self_copy(%0 : memref<4x16xf32>) {
 // -----
 
 // CHECK-LABEL: func @negative_fold_fill_like_memref
-//  CHECK-NEXT:   linalg.generic 
+//  CHECK-NEXT:   linalg.generic
 func.func @negative_fold_fill_like_memref(%in_out : memref<4x16xf32>, %fill_val : f32) {
   linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
                                    affine_map<(d0, d1) -> (d0, d1)>],
@@ -528,7 +841,7 @@ func.func @negative_fold_fill_like_memref(%in_out : memref<4x16xf32>, %fill_val 
 // -----
 
 // CHECK-LABEL: func @negative_fold_fill_like_tensor
-//  CHECK-NEXT:   linalg.generic 
+//  CHECK-NEXT:   linalg.generic
 func.func @negative_fold_fill_like_tensor(%in_out : tensor<4x16xf32>, %fill_val : f32) -> tensor<4x16xf32> {
   %result = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
                                    affine_map<(d0, d1) -> (d0, d1)>],

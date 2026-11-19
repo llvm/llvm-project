@@ -10,7 +10,7 @@
 // RT_USE_PSEUDO_FILE_UNIT=0 and RT_USE_PSEUDO_FILE_UNIT=1.
 //
 //===----------------------------------------------------------------------===//
-#include "unit.h"
+#include "flang-rt/runtime/unit.h"
 #include "flang-rt/runtime/io-error.h"
 #include "flang-rt/runtime/lock.h"
 #include "flang-rt/runtime/tools.h"
@@ -31,6 +31,63 @@ RT_OFFLOAD_API_GROUP_BEGIN
 
 static inline RT_API_ATTRS void SwapEndianness(
     char *data, std::size_t bytes, std::size_t elementBytes) {
+#ifndef RT_DEVICE_COMPILATION
+  switch (elementBytes) {
+  case 2:
+    for (std::size_t j{0}; j + 2 <= bytes; j += 2) {
+      std::uint16_t x;
+      runtime::memcpy(&x, data + j, sizeof(x));
+#if defined(_MSC_VER)
+      x = _byteswap_ushort(x);
+#else
+      x = __builtin_bswap16(x);
+#endif
+      runtime::memcpy(data + j, &x, sizeof(x));
+    }
+    return;
+  case 4:
+    for (std::size_t j{0}; j + 4 <= bytes; j += 4) {
+      std::uint32_t x;
+      runtime::memcpy(&x, data + j, sizeof(x));
+#if defined(_MSC_VER)
+      x = _byteswap_ulong(x);
+#else
+      x = __builtin_bswap32(x);
+#endif
+      runtime::memcpy(data + j, &x, sizeof(x));
+    }
+    return;
+  case 8:
+    for (std::size_t j{0}; j + 8 <= bytes; j += 8) {
+      std::uint64_t x;
+      runtime::memcpy(&x, data + j, sizeof(x));
+#if defined(_MSC_VER)
+      x = _byteswap_uint64(x);
+#else
+      x = __builtin_bswap64(x);
+#endif
+      runtime::memcpy(data + j, &x, sizeof(x));
+    }
+    return;
+  case 16:
+    for (std::size_t j{0}; j + 16 <= bytes; j += 16) {
+      std::uint64_t hi, lo;
+      runtime::memcpy(&lo, data + j, sizeof(lo));
+      runtime::memcpy(&hi, data + j + 8, sizeof(hi));
+#if defined(_MSC_VER)
+      lo = _byteswap_uint64(lo);
+      hi = _byteswap_uint64(hi);
+#else
+      lo = __builtin_bswap64(lo);
+      hi = __builtin_bswap64(hi);
+#endif
+      runtime::memcpy(data + j + 8, &lo, sizeof(lo));
+      runtime::memcpy(data + j, &hi, sizeof(hi));
+    }
+    return;
+  default:;
+  }
+#endif
   if (elementBytes > 1) {
     auto half{elementBytes >> 1};
     for (std::size_t j{0}; j + elementBytes <= bytes; j += elementBytes) {
@@ -474,7 +531,7 @@ void ExternalFileUnit::Sought(std::int64_t zeroBasedPos) {
   } else {
     // We no longer know which record we're in.  Set currentRecordNumber to
     // a large value from whence we can both advance and backspace.
-    currentRecordNumber = std::numeric_limits<std::int64_t>::max() / 2;
+    currentRecordNumber = common::numeric_limits<std::int64_t>::max() / 2;
     endfileRecordNumber.reset();
   }
 }
@@ -705,39 +762,50 @@ static RT_API_ATTRS const char *FindLastNewline(
 void ExternalFileUnit::BackspaceVariableFormattedRecord(
     IoErrorHandler &handler) {
   // File offset of previous record's newline
-  auto prevNL{
+  auto lastByte{
       frameOffsetInFile_ + static_cast<std::int64_t>(recordOffsetInFrame_) - 1};
-  if (prevNL < 0) {
+  if (lastByte < 0) {
     handler.SignalError(IostatBackspaceAtFirstRecord);
     return;
   }
+  if (!(lastByte >= FrameAt() &&
+          lastByte - FrameAt() < static_cast<std::int64_t>(FrameLength()))) {
+    frameOffsetInFile_ = std::max<std::int64_t>(0, lastByte + 1 - 1024);
+    auto need{static_cast<std::size_t>(lastByte + 1 - frameOffsetInFile_)};
+    if (ReadFrame(frameOffsetInFile_, need, handler) < need) {
+      handler.SignalError(IostatShortRead);
+      return;
+    }
+  }
+  bool terminated{Frame()[lastByte - FrameAt()] == '\n'};
+  if (!terminated && knownSize().value_or(lastByte + 1) != lastByte + 1) {
+    handler.SignalError(IostatMissingTerminator);
+    return;
+  }
+  auto recordEnd{terminated ? lastByte : lastByte + 1};
   while (true) {
-    if (frameOffsetInFile_ < prevNL) {
+    if (frameOffsetInFile_ < recordEnd) {
       if (const char *p{
-              FindLastNewline(Frame(), prevNL - 1 - frameOffsetInFile_)}) {
+              FindLastNewline(Frame(), recordEnd - 1 - frameOffsetInFile_)}) {
         recordOffsetInFrame_ = p - Frame() + 1;
-        recordLength = prevNL - (frameOffsetInFile_ + recordOffsetInFrame_);
+        recordLength = recordEnd - (frameOffsetInFile_ + recordOffsetInFrame_);
         break;
       }
     }
     if (frameOffsetInFile_ == 0) {
       recordOffsetInFrame_ = 0;
-      recordLength = prevNL;
+      recordLength = recordEnd;
       break;
     }
     frameOffsetInFile_ -= std::min<std::int64_t>(frameOffsetInFile_, 1024);
-    auto need{static_cast<std::size_t>(prevNL + 1 - frameOffsetInFile_)};
+    auto need{static_cast<std::size_t>(lastByte + 1 - frameOffsetInFile_)};
     auto got{ReadFrame(frameOffsetInFile_, need, handler)};
     if (got < need) {
       handler.SignalError(IostatShortRead);
       return;
     }
   }
-  if (Frame()[recordOffsetInFrame_ + *recordLength] != '\n') {
-    handler.SignalError(IostatMissingTerminator);
-    return;
-  }
-  if (*recordLength > 0 &&
+  if (terminated && *recordLength > 0 &&
       Frame()[recordOffsetInFrame_ + *recordLength - 1] == '\r') {
     --*recordLength;
   }

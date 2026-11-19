@@ -93,6 +93,53 @@ bool OpenMPClauseEmitter::emitProcBind(
   return false;
 }
 
+bool OpenMPClauseEmitter::emitNumThreads(
+    mlir::omp::NumThreadsClauseOps &result) const {
+  for (const OMPClause *clause : clauses) {
+    const auto *ntc = dyn_cast<OMPNumThreadsClause>(clause);
+    if (!ntc)
+      continue;
+
+    for (const Expr *expr : ntc->getNumThreads()) {
+      mlir::Value numThreadsValue = cgf.emitScalarExpr(expr);
+      auto intType = builder.getIntegerType(32);
+      numThreadsValue = builder.createBuiltinIntCast(numThreadsValue, intType);
+      result.numThreadsVars.push_back(numThreadsValue);
+    }
+
+    return true;
+  }
+  return false;
+}
+
+bool OpenMPClauseEmitter::emitIf(mlir::omp::IfClauseOps &result,
+                                 llvm::omp::Directive directiveName) const {
+  for (const OMPClause *clause : clauses) {
+    const auto *ic = dyn_cast<OMPIfClause>(clause);
+    if (!ic)
+      continue;
+
+    if (!(ic->getNameModifier() == llvm::omp::Directive::OMPD_unknown) &&
+        ic->getNameModifier() != directiveName)
+      continue;
+
+    Expr *ifCondition = ic->getCondition();
+    mlir::Value ifBoolValue = cgf.evaluateExprAsBool(ifCondition); // !cir.bool
+
+    mlir::Type uIntType = builder.getUIntNTy(1);
+    mlir::Value ifUIntValue =
+        builder.createBoolToInt(ifBoolValue, uIntType); // u1
+
+    mlir::Type intType = builder.getI1Type();
+    mlir::Value ifExpr =
+        builder.createBuiltinIntCast(ifUIntValue, intType); // i1
+
+    result.ifExpr = ifExpr;
+    return true;
+  }
+  return false;
+}
+
 bool OpenMPClauseEmitter::emitMap(
     mlir::omp::MapClauseOps &result,
     llvm::SmallVectorImpl<const VarDecl *> *mapSyms) const {

@@ -18,7 +18,7 @@ namespace lld::elf {
 struct Ctx;
 
 // Parses command line options.
-class ELFOptTable : public llvm::opt::GenericOptTable {
+class ELFOptTable : public llvm::opt::OptTable {
 public:
   ELFOptTable();
   llvm::opt::InputArgList parse(Ctx &, ArrayRef<const char *> argv);
@@ -34,6 +34,7 @@ enum {
 
 void printHelp(Ctx &ctx);
 std::string createResponseFile(const llvm::opt::InputArgList &args);
+void markBuffersAsDontNeed(Ctx &ctx, bool skipLinkedOutput);
 
 std::optional<std::string> findFromSearchPaths(Ctx &, StringRef path);
 std::optional<std::string> searchScript(Ctx &, StringRef path);

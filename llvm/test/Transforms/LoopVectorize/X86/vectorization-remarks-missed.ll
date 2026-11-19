@@ -1,5 +1,5 @@
 ; RUN: opt < %s -passes=loop-vectorize,transform-warning -S -pass-remarks-missed='loop-vectorize' -pass-remarks-analysis='loop-vectorize' -vectorize-memory-check-threshold=1 -mtriple=x86_64-apple-macosx 2>&1 | FileCheck %s
-; RUN: opt < %s -passes=loop-vectorize,transform-warning -o /dev/null -pass-remarks-output=%t.yaml -vectorize-memory-check-threshold=1 -mtriple=x86_64-apple-macosx
+; RUN: opt < %s -passes=loop-vectorize,transform-warning -disable-output -pass-remarks-output=%t.yaml -vectorize-memory-check-threshold=1 -mtriple=x86_64-apple-macosx
 ; RUN: cat %t.yaml | FileCheck -check-prefix=YAML %s
 
 ; C/C++ code for tests
@@ -47,6 +47,15 @@
 ; CHECK: loop not vectorized: too many memory checks needed
 
 ; YAML:       --- !Analysis
+; YAML-NEXT: Pass:            loop-vectorize
+; YAML-NEXT: Name:            NoCountableConditionInLatchBlock
+; YAML-NEXT: DebugLoc:        { File: source.cpp, Line: 5, Column: 9 }
+; YAML-NEXT: Function:        _Z4testPii
+; YAML-NEXT: Args:
+; YAML-NEXT:   - String:          'loop not vectorized: '
+; YAML-NEXT:   - String:          Latch block does not have a countable exit condition
+; YAML-NEXT: ...
+; YAML-NEXT: --- !Analysis
 ; YAML-NEXT: Pass:            loop-vectorize
 ; YAML-NEXT: Name:            UnsupportedUncountableLoop
 ; YAML-NEXT: DebugLoc:        { File: source.cpp, Line: 5, Column: 9 }
@@ -134,6 +143,15 @@
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - String:          'loop not vectorized: '
 ; YAML-NEXT:   - String:          loop induction variable could not be identified
+; YAML-NEXT: ...
+; YAML-NEXT: --- !Analysis
+; YAML-NEXT: Pass:            loop-vectorize
+; YAML-NEXT: Name:            UnknownLatchExitCountEarlyExitLoop
+; YAML-NEXT: DebugLoc:        { File: source.cpp, Line: 27, Column: 3 }
+; YAML-NEXT: Function:        test_multiple_failures
+; YAML-NEXT: Args:
+; YAML-NEXT:   - String:          'loop not vectorized: '
+; YAML-NEXT:   - String:          Cannot vectorize early exit loop
 ; YAML-NEXT: ...
 ; YAML-NEXT: --- !Analysis
 ; YAML-NEXT: Pass:            loop-vectorize

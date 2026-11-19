@@ -1,6 +1,8 @@
 ;; Tests memprof profile matching (with and without instrumentation profiles).
 ; RUN: rm -rf %t && split-file %s %t
 
+;; Our memprof stack ID algorithm is inconsistent across platforms
+; REQUIRES: x86_64-linux
 ;; -stats requires asserts
 ; REQUIRES: asserts
 

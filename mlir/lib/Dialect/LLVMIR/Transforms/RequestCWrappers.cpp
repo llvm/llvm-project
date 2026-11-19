@@ -8,7 +8,7 @@
 
 #include "mlir/Dialect/LLVMIR/Transforms/RequestCWrappers.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
@@ -25,8 +25,9 @@ class RequestCWrappersPass
     : public LLVM::impl::LLVMRequestCWrappersPassBase<RequestCWrappersPass> {
 public:
   void runOnOperation() override {
-    getOperation()->setAttr(LLVM::LLVMDialect::getEmitCWrapperAttrName(),
-                            UnitAttr::get(&getContext()));
+    getOperation()->setDiscardableAttr(
+        LLVM::LLVMDialect::getEmitCWrapperAttrName(),
+        UnitAttr::get(&getContext()));
   }
 };
 } // namespace

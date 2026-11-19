@@ -14,7 +14,6 @@ include "mlir/IR/OpBase.td"
 
 def Arith_Dialect : Dialect {
   let name = "arith";
-  let useStrictPropertiesInAssemblyFormat = 1;
   let cppNamespace = "::mlir::arith";
   let description = [{
     The arith dialect is intended to hold basic integer and floating point
@@ -143,9 +142,7 @@ def FastMathFlags : I32BitEnumAttr<
 }
 
 def Arith_FastMathAttr :
-    EnumAttr<Arith_Dialect, FastMathFlags, "fastmath"> {
-  let assemblyFormat = "`<` $value `>`";
-}
+    EnumAttr<Arith_Dialect, FastMathFlags, "fastmath">;
 
 //===----------------------------------------------------------------------===//
 // Arith_IntegerOverflowFlags
@@ -166,9 +163,7 @@ def Arith_IntegerOverflowFlags : I32BitEnumAttr<
 }
 
 def Arith_IntegerOverflowAttr :
-    EnumAttr<Arith_Dialect, Arith_IntegerOverflowFlags, "overflow"> {
-  let assemblyFormat = "`<` $value `>`";
-}
+    EnumAttr<Arith_Dialect, Arith_IntegerOverflowFlags, "overflow">;
 
 //===----------------------------------------------------------------------===//
 // Arith_RoundingMode

@@ -656,10 +656,6 @@ int FunctionComparator::cmpOperations(const Instruction *L,
   if (int Res = cmpValues(L, R))
     return Res;
 
-  // Differences from Instruction::isSameOperationAs:
-  //  * replace type comparison with calls to cmpTypes.
-  //  * we test for I->getRawSubclassOptionalData (nuw/nsw/tail) at the top.
-  //  * because of the above, we don't test for the tail bit on calls later on.
   if (int Res = cmpNumbers(L->getOpcode(), R->getOpcode()))
     return Res;
 
@@ -676,10 +672,6 @@ int FunctionComparator::cmpOperations(const Instruction *L,
     return Res;
 
   if (int Res = cmpTypes(L->getType(), R->getType()))
-    return Res;
-
-  if (int Res = cmpNumbers(L->getRawSubclassOptionalData(),
-                           R->getRawSubclassOptionalData()))
     return Res;
 
   // We have two instructions of identical opcode and #operands.  Check to see
@@ -734,6 +726,8 @@ int FunctionComparator::cmpOperations(const Instruction *L,
     auto *CBR = cast<CallBase>(R);
     if (int Res = cmpNumbers(CBL->getCallingConv(), CBR->getCallingConv()))
       return Res;
+    if (int Res = cmpTypes(CBL->getFunctionType(), CBR->getFunctionType()))
+      return Res;
     if (int Res = cmpAttrs(CBL->getAttributes(), CBR->getAttributes()))
       return Res;
     if (int Res = cmpOperandBundlesSchema(*CBL, *CBR))
@@ -784,6 +778,9 @@ int FunctionComparator::cmpOperations(const Instruction *L,
                              cast<AtomicCmpXchgInst>(R)->isVolatile()))
       return Res;
     if (int Res =
+            cmpAligns(CXI->getAlign(), cast<AtomicCmpXchgInst>(R)->getAlign()))
+      return Res;
+    if (int Res =
             cmpNumbers(CXI->isWeak(), cast<AtomicCmpXchgInst>(R)->isWeak()))
       return Res;
     if (int Res =
@@ -807,6 +804,9 @@ int FunctionComparator::cmpOperations(const Instruction *L,
     if (int Res = cmpNumbers(RMWI->isElementwise(),
                              cast<AtomicRMWInst>(R)->isElementwise()))
       return Res;
+    if (int Res =
+            cmpAligns(RMWI->getAlign(), cast<AtomicRMWInst>(R)->getAlign()))
+      return Res;
     if (int Res = cmpOrderings(RMWI->getOrdering(),
                                cast<AtomicRMWInst>(R)->getOrdering()))
       return Res;
@@ -823,6 +823,8 @@ int FunctionComparator::cmpOperations(const Instruction *L,
         return Res;
     }
   }
+  if (const LandingPadInst *LP = dyn_cast<LandingPadInst>(L))
+    return cmpNumbers(LP->isCleanup(), cast<LandingPadInst>(R)->isCleanup());
   if (const PHINode *PNL = dyn_cast<PHINode>(L)) {
     const PHINode *PNR = cast<PHINode>(R);
     // Ensure that in addition to the incoming values being identical

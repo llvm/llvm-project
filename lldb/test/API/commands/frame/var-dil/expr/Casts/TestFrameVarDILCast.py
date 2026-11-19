@@ -13,6 +13,7 @@ import time
 
 
 class TestFrameVarDILCast(TestBase):
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test_type_cast(self):
         self.build()
         (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
@@ -303,8 +304,8 @@ class TestFrameVarDILCast(TestBase):
 
         # Check that casts are not allowed in both simple and legacy modes
         frame = thread.GetFrameAtIndex(0)
-        simple = frame.GetValueForVariablePath("(char)a", lldb.eDILModeSimple)
-        legacy = frame.GetValueForVariablePath("(char)a", lldb.eDILModeLegacy)
+        simple = frame.GetValueForVariablePathWithMode("(char)a", lldb.eDILModeSimple)
+        legacy = frame.GetValueForVariablePathWithMode("(char)a", lldb.eDILModeLegacy)
         self.assertFailure(simple.GetError())
         self.assertFailure(legacy.GetError())
 

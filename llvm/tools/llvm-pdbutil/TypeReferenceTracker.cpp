@@ -150,9 +150,13 @@ void TypeReferenceTracker::markReferencedTypes() {
       default:
         break;
       case LF_CLASS:
+      case LF_CLASS2:
       case LF_INTERFACE:
+      case LF_INTERFACE2:
       case LF_STRUCTURE:
+      case LF_STRUCTURE2:
       case LF_UNION:
+      case LF_UNION2:
       case LF_ENUM:
         addOneTypeRef(TiRefKind::TypeRef,
                       cantFail(Tpi->findFullDeclForForwardRef(RefTI)));

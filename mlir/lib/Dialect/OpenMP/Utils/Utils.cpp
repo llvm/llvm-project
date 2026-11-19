@@ -12,8 +12,10 @@
 
 #include "mlir/Dialect/OpenMP/Utils/Utils.h"
 
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMConversionOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMMemoryOps.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include "mlir/Interfaces/CallInterfaces.h"
 
 using namespace mlir;
 
@@ -138,9 +140,10 @@ bool mlir::omp::opInSharedDeviceContext(Operation &op) {
       return false;
   } else {
     auto declTargetIface = op.getParentOfType<omp::DeclareTargetInterface>();
-    if (!declTargetIface || !declTargetIface.isDeclareTarget() ||
-        declTargetIface.getDeclareTargetDeviceType() ==
-            omp::DeclareTargetDeviceType::host)
+    omp::DeclareTargetAttr declTargetAttr =
+        declTargetIface ? declTargetIface.getDeclareTarget() : nullptr;
+    if (!declTargetAttr ||
+        declTargetAttr.getDeviceType() == omp::DeclareTargetDeviceType::host)
       return false;
   }
   return true;

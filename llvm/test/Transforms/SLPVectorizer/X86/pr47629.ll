@@ -286,11 +286,30 @@ define void @gather_load_3(ptr noalias nocapture %0, ptr noalias nocapture reado
 ;
 ; AVX2-LABEL: define void @gather_load_3(
 ; AVX2-SAME: ptr noalias captures(none) [[TMP0:%.*]], ptr noalias readonly captures(none) [[TMP1:%.*]]) #[[ATTR0]] {
-; AVX2-NEXT:    [[TMP3:%.*]] = call <22 x i32> @llvm.masked.load.v22i32.p0(ptr align 4 [[TMP1]], <22 x i1> <i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true>, <22 x i32> poison), !tbaa [[SHORT_TBAA0]]
-; AVX2-NEXT:    [[TMP4:%.*]] = shufflevector <22 x i32> [[TMP3]], <22 x i32> poison, <8 x i32> <i32 0, i32 4, i32 6, i32 9, i32 11, i32 15, i32 18, i32 21>
-; AVX2-NEXT:    [[TMP5:%.*]] = add <8 x i32> [[TMP4]], <i32 1, i32 3, i32 3, i32 2, i32 2, i32 4, i32 1, i32 4>
-; AVX2-NEXT:    [[TMP6:%.*]] = shufflevector <8 x i32> [[TMP5]], <8 x i32> poison, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 6, i32 3, i32 2, i32 7>
-; AVX2-NEXT:    store <8 x i32> [[TMP6]], ptr [[TMP0]], align 4, !tbaa [[SHORT_TBAA0]]
+; AVX2-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP1]], align 4, !tbaa [[SHORT_TBAA0]]
+; AVX2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 11
+; AVX2-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP4]], align 4, !tbaa [[SHORT_TBAA0]]
+; AVX2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 4
+; AVX2-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP6]], align 4, !tbaa [[SHORT_TBAA0]]
+; AVX2-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 15
+; AVX2-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP8]], align 4, !tbaa [[SHORT_TBAA0]]
+; AVX2-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 18
+; AVX2-NEXT:    [[TMP11:%.*]] = load i32, ptr [[TMP10]], align 4, !tbaa [[SHORT_TBAA0]]
+; AVX2-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 6
+; AVX2-NEXT:    [[TMP13:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[TMP12]], <4 x i1> <i1 true, i1 false, i1 false, i1 true>, <4 x i32> poison), !tbaa [[SHORT_TBAA0]]
+; AVX2-NEXT:    [[TMP14:%.*]] = shufflevector <4 x i32> [[TMP13]], <4 x i32> poison, <2 x i32> <i32 0, i32 3>
+; AVX2-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 21
+; AVX2-NEXT:    [[TMP16:%.*]] = load i32, ptr [[TMP15]], align 4, !tbaa [[SHORT_TBAA0]]
+; AVX2-NEXT:    [[TMP17:%.*]] = insertelement <8 x i32> poison, i32 [[TMP3]], i64 0
+; AVX2-NEXT:    [[TMP18:%.*]] = insertelement <8 x i32> [[TMP17]], i32 [[TMP5]], i64 1
+; AVX2-NEXT:    [[TMP19:%.*]] = insertelement <8 x i32> [[TMP18]], i32 [[TMP7]], i64 2
+; AVX2-NEXT:    [[TMP20:%.*]] = insertelement <8 x i32> [[TMP19]], i32 [[TMP9]], i64 3
+; AVX2-NEXT:    [[TMP21:%.*]] = insertelement <8 x i32> [[TMP20]], i32 [[TMP11]], i64 4
+; AVX2-NEXT:    [[TMP22:%.*]] = shufflevector <2 x i32> [[TMP14]], <2 x i32> poison, <8 x i32> <i32 1, i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; AVX2-NEXT:    [[TMP23:%.*]] = shufflevector <8 x i32> [[TMP21]], <8 x i32> [[TMP22]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 8, i32 9, i32 poison>
+; AVX2-NEXT:    [[TMP24:%.*]] = insertelement <8 x i32> [[TMP23]], i32 [[TMP16]], i64 7
+; AVX2-NEXT:    [[TMP25:%.*]] = add <8 x i32> [[TMP24]], <i32 1, i32 2, i32 3, i32 4, i32 1, i32 2, i32 3, i32 4>
+; AVX2-NEXT:    store <8 x i32> [[TMP25]], ptr [[TMP0]], align 4, !tbaa [[SHORT_TBAA0]]
 ; AVX2-NEXT:    ret void
 ;
 ; AVX512F-LABEL: define void @gather_load_3(
@@ -426,11 +445,30 @@ define void @gather_load_4(ptr noalias nocapture %t0, ptr noalias nocapture read
 ;
 ; AVX2-LABEL: define void @gather_load_4(
 ; AVX2-SAME: ptr noalias captures(none) [[T0:%.*]], ptr noalias readonly captures(none) [[T1:%.*]]) #[[ATTR0]] {
-; AVX2-NEXT:    [[TMP1:%.*]] = call <22 x i32> @llvm.masked.load.v22i32.p0(ptr align 4 [[T1]], <22 x i1> <i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true>, <22 x i32> poison), !tbaa [[SHORT_TBAA0]]
-; AVX2-NEXT:    [[TMP2:%.*]] = shufflevector <22 x i32> [[TMP1]], <22 x i32> poison, <8 x i32> <i32 0, i32 4, i32 6, i32 9, i32 11, i32 15, i32 18, i32 21>
-; AVX2-NEXT:    [[TMP3:%.*]] = add <8 x i32> [[TMP2]], <i32 1, i32 3, i32 3, i32 2, i32 2, i32 4, i32 1, i32 4>
-; AVX2-NEXT:    [[TMP4:%.*]] = shufflevector <8 x i32> [[TMP3]], <8 x i32> poison, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 6, i32 3, i32 2, i32 7>
-; AVX2-NEXT:    store <8 x i32> [[TMP4]], ptr [[T0]], align 4, !tbaa [[SHORT_TBAA0]]
+; AVX2-NEXT:    [[T6:%.*]] = getelementptr inbounds i32, ptr [[T1]], i64 11
+; AVX2-NEXT:    [[T10:%.*]] = getelementptr inbounds i32, ptr [[T1]], i64 4
+; AVX2-NEXT:    [[T14:%.*]] = getelementptr inbounds i32, ptr [[T1]], i64 15
+; AVX2-NEXT:    [[T18:%.*]] = getelementptr inbounds i32, ptr [[T1]], i64 18
+; AVX2-NEXT:    [[T26:%.*]] = getelementptr inbounds i32, ptr [[T1]], i64 6
+; AVX2-NEXT:    [[T30:%.*]] = getelementptr inbounds i32, ptr [[T1]], i64 21
+; AVX2-NEXT:    [[T3:%.*]] = load i32, ptr [[T1]], align 4, !tbaa [[SHORT_TBAA0]]
+; AVX2-NEXT:    [[T7:%.*]] = load i32, ptr [[T6]], align 4, !tbaa [[SHORT_TBAA0]]
+; AVX2-NEXT:    [[T11:%.*]] = load i32, ptr [[T10]], align 4, !tbaa [[SHORT_TBAA0]]
+; AVX2-NEXT:    [[T15:%.*]] = load i32, ptr [[T14]], align 4, !tbaa [[SHORT_TBAA0]]
+; AVX2-NEXT:    [[T19:%.*]] = load i32, ptr [[T18]], align 4, !tbaa [[SHORT_TBAA0]]
+; AVX2-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[T26]], <4 x i1> <i1 true, i1 false, i1 false, i1 true>, <4 x i32> poison), !tbaa [[SHORT_TBAA0]]
+; AVX2-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <2 x i32> <i32 0, i32 3>
+; AVX2-NEXT:    [[T31:%.*]] = load i32, ptr [[T30]], align 4, !tbaa [[SHORT_TBAA0]]
+; AVX2-NEXT:    [[TMP3:%.*]] = insertelement <8 x i32> poison, i32 [[T3]], i64 0
+; AVX2-NEXT:    [[TMP4:%.*]] = insertelement <8 x i32> [[TMP3]], i32 [[T7]], i64 1
+; AVX2-NEXT:    [[TMP5:%.*]] = insertelement <8 x i32> [[TMP4]], i32 [[T11]], i64 2
+; AVX2-NEXT:    [[TMP6:%.*]] = insertelement <8 x i32> [[TMP5]], i32 [[T15]], i64 3
+; AVX2-NEXT:    [[TMP7:%.*]] = insertelement <8 x i32> [[TMP6]], i32 [[T19]], i64 4
+; AVX2-NEXT:    [[TMP8:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <8 x i32> <i32 1, i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; AVX2-NEXT:    [[TMP9:%.*]] = shufflevector <8 x i32> [[TMP7]], <8 x i32> [[TMP8]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 8, i32 9, i32 poison>
+; AVX2-NEXT:    [[TMP10:%.*]] = insertelement <8 x i32> [[TMP9]], i32 [[T31]], i64 7
+; AVX2-NEXT:    [[TMP11:%.*]] = add <8 x i32> [[TMP10]], <i32 1, i32 2, i32 3, i32 4, i32 1, i32 2, i32 3, i32 4>
+; AVX2-NEXT:    store <8 x i32> [[TMP11]], ptr [[T0]], align 4, !tbaa [[SHORT_TBAA0]]
 ; AVX2-NEXT:    ret void
 ;
 ; AVX512F-LABEL: define void @gather_load_4(

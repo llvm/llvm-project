@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -polly-stmt-granularity=scalar-indep -polly-print-instructions '-passes=polly-custom<scops>' -polly-print-scops -disable-output < %s 2>&1 | FileCheck %s -match-full-lines
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-stmt-granularity=scalar-indep -plugin-arg=Polly,-polly-print-instructions '-passes=polly-custom<scops>' -plugin-arg=Polly,-polly-print-scops -disable-output < %s 2>&1 | FileCheck %s -match-full-lines
 ;
 ; Split a block into two independent statements that share no scalar.
 ; This case has the instructions of the two statements interleaved, such that

@@ -27,11 +27,11 @@ spirv.module Logical Vulkan requires
   }
 
   // CHECK-LABEL: @cooperative_matrix_load_2
-  spirv.func @cooperative_matrix_load_2(%ptr : !spirv.ptr<f32, StorageBuffer>, %stride : i64) "None" {
+  spirv.func @cooperative_matrix_load_2(%ptr : !spirv.ptr<f32, StorageBuffer>, %stride : i32) "None" {
     // CHECK:      {{%.+}} = spirv.KHR.CooperativeMatrixLoad {{%.*}}, {{%.*}}, <ColumnMajor>, <Volatile>
-    // CHECK-SAME:   : !spirv.ptr<f32, StorageBuffer>, i64 -> !spirv.coopmatrix<8x16xf32, Subgroup, MatrixAcc>
+    // CHECK-SAME:   : !spirv.ptr<f32, StorageBuffer>, i32 -> !spirv.coopmatrix<8x16xf32, Subgroup, MatrixAcc>
     %0 = spirv.KHR.CooperativeMatrixLoad %ptr, %stride, <ColumnMajor>, <Volatile> :
-      !spirv.ptr<f32, StorageBuffer>, i64 -> !spirv.coopmatrix<8x16xf32, Subgroup, MatrixAcc>
+      !spirv.ptr<f32, StorageBuffer>, i32 -> !spirv.coopmatrix<8x16xf32, Subgroup, MatrixAcc>
     spirv.Return
   }
 
@@ -64,12 +64,12 @@ spirv.module Logical Vulkan requires
   }
 
   // CHECK-LABEL: @cooperative_matrix_store_2
-  spirv.func @cooperative_matrix_store_2(%ptr : !spirv.ptr<f32, Workgroup>, %stride : i64,
+  spirv.func @cooperative_matrix_store_2(%ptr : !spirv.ptr<f32, Workgroup>, %stride : i32,
                                          %m : !spirv.coopmatrix<4x8xf32, Subgroup, MatrixB>) "None" {
     // CHECK:      spirv.KHR.CooperativeMatrixStore {{%.*}}, {{%.*}}, <ColumnMajor>, <Nontemporal>
-    // CHECK-SAME:   : !spirv.ptr<f32, Workgroup>, !spirv.coopmatrix<4x8xf32, Subgroup, MatrixB>, i64
+    // CHECK-SAME:   : !spirv.ptr<f32, Workgroup>, !spirv.coopmatrix<4x8xf32, Subgroup, MatrixB>, i32
     spirv.KHR.CooperativeMatrixStore %ptr, %m, %stride, <ColumnMajor>, <Nontemporal> :
-      !spirv.ptr<f32, Workgroup>, !spirv.coopmatrix<4x8xf32, Subgroup, MatrixB>, i64
+      !spirv.ptr<f32, Workgroup>, !spirv.coopmatrix<4x8xf32, Subgroup, MatrixB>, i32
     spirv.Return
   }
 

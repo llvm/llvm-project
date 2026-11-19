@@ -110,11 +110,15 @@ void LoopAnnotationConversion::convertFollowupNode(StringRef name,
   if (!attr)
     return;
 
-  llvm::MDNode *node =
+  llvm::MDNode *loopID =
       loopAnnotationTranslation.translateLoopAnnotation(attr, op);
 
-  metadataNodes.push_back(
-      llvm::MDNode::get(ctx, {llvm::MDString::get(ctx, name), node}));
+  // Follow-ups contain properties directly, without the LoopID self-reference.
+  SmallVector<llvm::Metadata *> operands;
+  operands.push_back(llvm::MDString::get(ctx, name));
+  for (const llvm::MDOperand &operand : llvm::drop_begin(loopID->operands()))
+    operands.push_back(operand.get());
+  metadataNodes.push_back(llvm::MDNode::get(ctx, operands));
 }
 
 void LoopAnnotationConversion::convertLoopOptions(LoopVectorizeAttr options) {
@@ -241,6 +245,8 @@ llvm::MDNode *LoopAnnotationConversion::convert() {
   // "isvectorized" is encoded as an i32 value.
   if (BoolAttr isVectorized = attr.getIsVectorized())
     addI32NodeWithVal("llvm.loop.isvectorized", isVectorized.getValue());
+  if (uint32_t align = attr.getAlign())
+    addI32NodeWithVal("llvm.loop.align", align);
 
   if (auto options = attr.getVectorize())
     convertLoopOptions(options);

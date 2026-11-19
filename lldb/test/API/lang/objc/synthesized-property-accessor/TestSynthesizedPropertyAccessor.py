@@ -3,11 +3,15 @@ Test debug-info parsing of synthesized Objective-C properties.
 """
 
 import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
+from lldbsuite.test.decorators import *
 from lldbsuite.test import lldbutil
 
 
 class TestSynthesizedPropertyAccessor(TestBase):
+    @skipIf(compiler="clang", compiler_version=["<", "22.0"])
+    @requireDarwin
     def test(self):
         self.build()
 

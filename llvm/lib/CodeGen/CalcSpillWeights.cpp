@@ -167,10 +167,17 @@ bool VirtRegAuxInfo::allUsesAvailableAt(const MachineInstr *MI,
     // We can't remat physreg uses, unless it is a constant or target wants
     // to ignore this use.
     if (MO.getReg().isPhysical()) {
-      if (MRI.isConstantPhysReg(MO.getReg()) || TII.isIgnorableUse(MO))
+      if (MRI.isConstantPhysReg(MO.getReg()) ||
+          TII.isIgnorableUse(*MI, MI->getOperandNo(&MO)))
         continue;
       return false;
     }
+
+    // A partial (non-undef) subregister def reads the other subregisters.
+    // A rematerialized copy defines a new register that contains undefined
+    // subregisters, so such instructions cannot be rematerialized.
+    if (MO.isDef())
+      return false;
 
     const LiveInterval &li = LIS.getInterval(MO.getReg());
     const VNInfo *OVNI = li.getVNInfoAt(OrigIdx);

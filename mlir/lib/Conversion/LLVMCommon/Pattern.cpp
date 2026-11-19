@@ -8,8 +8,16 @@
 
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/LLVMIR/FunctionCallUtils.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMAggregateOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMArithOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMCallOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMConstantOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMConversionOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMMemoryIntrinsicOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMMemoryOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMModuleOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include "mlir/Dialect/LLVMIR/LLVMVectorOps.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "llvm/Support/CheckedArithmetic.h"
@@ -372,7 +380,19 @@ LogicalResult LLVM::detail::intrinsicRewrite(
   auto callIntrOp = LLVM::CallIntrinsicOp::create(
       rewriter, loc, resType, rewriter.getStringAttr(intrinsic), operands);
   // Propagate attributes.
-  callIntrOp->setAttrs(op->getAttrDictionary());
+  SmallVector<NamedAttribute> discardableAttrs;
+  auto copyAttr = [&](StringAttr name, Attribute attr) {
+    if (callIntrOp->getInherentAttr(name).has_value())
+      callIntrOp->setInherentAttr(name, attr);
+    else
+      discardableAttrs.emplace_back(name, attr);
+  };
+  for (NamedAttribute attr : op->getDiscardableAttrDictionary())
+    copyAttr(attr.getName(), attr.getValue());
+  op->getName().walkInherentAttrs(op, [&](StringRef name, Attribute &attr) {
+    copyAttr(rewriter.getStringAttr(name), attr);
+  });
+  callIntrOp->setDiscardableAttrs(discardableAttrs);
 
   if (numResults <= 1) {
     // Directly replace the original op.

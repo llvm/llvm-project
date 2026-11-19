@@ -322,8 +322,6 @@ void ObjectFileXCOFF::CreateSectionsWithBitness(
   for (const typename T::SectionHeader &section :
        GetSections<T>(m_binary.get())) {
 
-    ConstString const_sect_name(section.Name);
-
     SectionType section_type = lldb::eSectionTypeOther;
     if (section.Flags & XCOFF::STYP_TEXT)
       section_type = eSectionTypeCode;
@@ -341,7 +339,7 @@ void ObjectFileXCOFF::CreateSectionsWithBitness(
     }
 
     SectionSP section_sp = std::make_shared<Section>(
-        module_sp, this, ++idx, const_sect_name, section_type,
+        module_sp, this, ++idx, section.Name, section_type,
         section.VirtualAddress, section.SectionSize,
         section.FileOffsetToRawData, section.SectionSize, 0, section.Flags);
 

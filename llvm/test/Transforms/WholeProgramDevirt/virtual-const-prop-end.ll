@@ -57,10 +57,10 @@ i32 trunc (i64 sub (i64 ptrtoint (ptr dso_local_equivalent @vf1i1 to i64), i64 p
 i32 trunc (i64 sub (i64 ptrtoint (ptr dso_local_equivalent @vf4i32 to i64), i64 ptrtoint (ptr @vt6_rel to i64)) to i32)
 ], !type !2
 
-; CHECK: @vt1 = alias [4 x ptr], getelementptr inbounds ({ [0 x i8], [4 x ptr], [8 x i8] }, ptr [[VT1DATA]], i32 0, i32 1)
-; CHECK: @vt2 = alias [3 x ptr], getelementptr inbounds ({ [0 x i8], [3 x ptr], [8 x i8] }, ptr [[VT2DATA]], i32 0, i32 1)
-; CHECK: @vt3 = alias [4 x ptr], getelementptr inbounds ({ [0 x i8], [4 x ptr], [8 x i8] }, ptr [[VT3DATA]], i32 0, i32 1)
-; CHECK: @vt4 = alias [3 x ptr], getelementptr inbounds ({ [0 x i8], [3 x ptr], [8 x i8] }, ptr [[VT4DATA]], i32 0, i32 1)
+; CHECK: @vt1 = alias [4 x ptr], ptr [[VT1DATA]]
+; CHECK: @vt2 = alias [3 x ptr], ptr [[VT2DATA]]
+; CHECK: @vt3 = alias [4 x ptr], ptr [[VT3DATA]]
+; CHECK: @vt4 = alias [3 x ptr], ptr [[VT4DATA]]
 
 define i1 @vf0i1(ptr %this) readnone {
   ret i1 0
@@ -92,7 +92,7 @@ define i1 @call1(ptr %obj) {
   %p = call i1 @llvm.type.test(ptr %vtable, metadata !"typeid")
   call void @llvm.assume(i1 %p)
   %fptr = load ptr, ptr %vtable
-  ; CHECK: [[VTGEP1:%[^ ]*]] = getelementptr i8, ptr %vtable, i32 24
+  ; CHECK: [[VTGEP1:%[^ ]*]] = getelementptr i8, ptr %vtable, i64 24
   ; CHECK: [[VTLOAD1:%[^ ]*]] = load i8, ptr [[VTGEP1]]
   ; CHECK: [[VTAND1:%[^ ]*]] = and i8 [[VTLOAD1]], 1
   ; CHECK: [[VTCMP1:%[^ ]*]] = icmp ne i8 [[VTAND1]], 0
@@ -108,7 +108,7 @@ define i1 @call2(ptr %obj) {
   call void @llvm.assume(i1 %p)
   %fptrptr = getelementptr [3 x ptr], ptr %vtable, i32 0, i32 1
   %fptr = load ptr, ptr %fptrptr
-  ; CHECK: [[VTGEP2:%[^ ]*]] = getelementptr i8, ptr %vtable, i32 24
+  ; CHECK: [[VTGEP2:%[^ ]*]] = getelementptr i8, ptr %vtable, i64 24
   ; CHECK: [[VTLOAD2:%[^ ]*]] = load i8, ptr [[VTGEP2]]
   ; CHECK: [[VTAND2:%[^ ]*]] = and i8 [[VTLOAD2]], 2
   ; CHECK: [[VTCMP2:%[^ ]*]] = icmp ne i8 [[VTAND2]], 0
@@ -124,7 +124,7 @@ define i32 @call3(ptr %obj) {
   call void @llvm.assume(i1 %p)
   %fptrptr = getelementptr [3 x ptr], ptr %vtable, i32 0, i32 2
   %fptr = load ptr, ptr %fptrptr
-  ; CHECK: [[VTGEP3:%[^ ]*]] = getelementptr i8, ptr %vtable, i32 28
+  ; CHECK: [[VTGEP3:%[^ ]*]] = getelementptr i8, ptr %vtable, i64 28
   ; CHECK: [[VTLOAD3:%[^ ]*]] = load i32, ptr [[VTGEP3]]
   %result = call i32 %fptr(ptr %obj)
   ; CHECK: ret i32 [[VTLOAD3]]
@@ -161,7 +161,7 @@ define i32 @call3_rel(ptr %obj) {
   %p = call i1 @llvm.type.test(ptr %vtable, metadata !"typeid2")
   call void @llvm.assume(i1 %p)
   %fptr = call ptr @llvm.load.relative.i32(ptr %vtable, i32 8)
-  ; CHECK: [[VTGEP3:%[^ ]*]] = getelementptr i8, ptr %vtable, i32 12
+  ; CHECK: [[VTGEP3:%[^ ]*]] = getelementptr i8, ptr %vtable, i64 12
   ; CHECK: [[VTLOAD3:%[^ ]*]] = load i32, ptr [[VTGEP3]]
   %result = call i32 %fptr(ptr %obj)
   ; CHECK: ret i32 [[VTLOAD3]]

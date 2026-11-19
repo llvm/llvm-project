@@ -16,6 +16,12 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/SandboxIR/Pass.h"
+#include "llvm/Support/InstructionCost.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/Legality.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/Scheduler.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/VecUtils.h"
+
+#include <optional>
 
 namespace llvm {
 
@@ -23,20 +29,86 @@ class DataLayout;
 
 namespace sandboxir {
 
+class Context;
+class Function;
 class Value;
 class Instruction;
-class Scheduler;
 class Type;
+class Constant;
+
+/// Reinterprets the bits of a value as another type of the same size, for
+/// example float 1.0 as i32 0x3f800000, a null pointer as i64 0, or <2 x i32>
+/// as double. Used by createConstantVector() to pack constants, and by
+/// vectorizeLoads() to unpack each load from the vector load.
+class SameSizeReinterpret {
+  /// A single cast in the chain built by getCastChain().
+  using CastStep = std::pair<Instruction::Opcode, Type *>;
+
+  /// \returns an integer type with the same layout as \p Ty: iN for scalars,
+  /// <N x iM> for vectors.
+  static Type *getIntTypeFor(Type *Ty, const DataLayout &DL);
+
+  /// \returns the casts that reinterpret \p SrcTy as \p DestTy, empty if the
+  /// types match. \p SrcTy and \p DestTy must be the same size, and
+  /// canReinterpret() must be true.
+  static SmallVector<CastStep, 3> getCastChain(Type *SrcTy, Type *DestTy,
+                                               const DataLayout &DL);
+
+public:
+  /// \returns true if \p SrcTy can be reinterpreted as \p DestTy. False when
+  /// either type is a non-integral pointer, which has no stable integer
+  /// representation.
+  LLVM_ABI static bool canReinterpret(Type *SrcTy, Type *DestTy,
+                                      const DataLayout &DL);
+
+  /// Reinterprets constant \p C as \p DestTy, e.g., float 1.0 to i32
+  /// 0x3f800000, or a null pointer to i64 0. \returns nullptr if a
+  /// non-integral pointer is involved.
+  LLVM_ABI static Constant *reinterpretConstant(Constant *C, Type *DestTy,
+                                                const DataLayout &DL);
+};
 
 class LLVM_ABI LoadStoreVec final : public RegionPass {
   const DataLayout *DL = nullptr;
+  /// The region saved by saveIR(), used by acceptOrRevert().
+  Region *Rgn = nullptr;
+  /// The region's cost at the time of saveIR().
+  InstructionCost CostBefore = 0;
+  const Analyses *A = nullptr;
+  Context *Ctx = nullptr;
+  std::unique_ptr<LegalityAnalysis> Legality;
+  VecUtils::DeadInstructionMorgue DeadInstrMorgue;
+
+  /// Saves the IR along with the current cost of \p Rgn, so that
+  /// acceptOrRevert() can tell whether vectorizing was profitable.
+  void saveIR(Region &Rgn);
+
+  /// Accepts the transaction saved by saveIR() if vectorizing was profitable,
+  /// reverts it otherwise. \returns true if the transaction was accepted.
+  bool acceptOrRevert();
+
   /// Checks legality of vectorization and \returns the vector type on success,
   /// nullopt otherwise.
-  std::optional<Type *> canVectorize(ArrayRef<Instruction *> Bndl,
-                                     Scheduler &Sched);
+  std::optional<Type *> canVectorize(BndlRef<Instruction *> Bndl);
 
-  void tryEraseDeadInstrs(ArrayRef<Instruction *> Stores,
-                          ArrayRef<Value *> Operands);
+  /// Builds a single vector load out of \p Loads. \returns the new load.
+  LoadInst *createVectorLoad(BndlRef<Instruction *> Loads);
+
+  /// Packs \p Constants into one constant vector. The element type is chosen
+  /// by VecUtils::getCombinedVectorTypeFor().
+  ///
+  /// \returns the packed constant vector, or nullptr if some constant cannot
+  /// be converted, e.g., a vector constant that is not yet flattened, a
+  /// non-integral pointer, or a wide constant without a known bit pattern such
+  /// as a ConstantExpr or a global's address.
+  Constant *createConstantVector(BndlRef<Constant *> Constants);
+
+  /// Vectorizes \p Stores and their operands if constants or consecutive
+  /// loads. \returns true on success.
+  bool vectorizeStores(BndlRef<Instruction *> Stores, Region &Rgn);
+
+  /// Vectorizes \p Loads into a single load. \return the packed load.
+  LoadInst *vectorizeLoads(BndlRef<Instruction *> Loads, Region &Rgn);
 
 public:
   LoadStoreVec(StringRef AuxArg) : RegionPass("load-store-vec") {

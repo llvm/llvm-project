@@ -75,6 +75,9 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// determineCalleeSaves().
   bool HasStackFrame = false;
 
+  /// SEH_StartProc/SEH_EndProc pseudos own the function's unwind boundaries.
+  bool HasExplicitWinCFIRanges = false;
+
   /// Amount of stack frame size, not including callee-saved registers.
   uint64_t LocalStackSize = 0;
 
@@ -190,6 +193,12 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// epilogue when using PC as a second salt (FEAT_PAuth_LR)
   MCSymbol *SignInstrLabel = nullptr;
 
+  /// SignReturnAddressHardening specifies the PAC-RET hardening scheme.
+  enum class SignReturnAddressHardeningKind { None, LoadReturnAddress };
+
+  SignReturnAddressHardeningKind SignReturnAddressHardening =
+      SignReturnAddressHardeningKind::None;
+
   /// BranchTargetEnforcement enables placing BTI instructions at potential
   /// indirect branch destinations.
   bool BranchTargetEnforcement = false;
@@ -204,6 +213,12 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// bit 60 of the in-memory FP will be 1 to enable other tools to detect the
   /// extended record.
   bool HasSwiftAsyncContext = false;
+
+  /// Whether this function makes a non-tail call, on Windows, to a function
+  /// that pops its own stack arguments. The unwinder gives the SP after that
+  /// pop, which isn't the SP our unwind info describes if we reserved the
+  /// argument area in the prologue, so we must be found via the frame pointer.
+  bool HasWinCallToCalleePopFunction = false;
 
   /// The stack slot where the Swift asynchronous context is stored.
   int SwiftAsyncContextFrameIdx = std::numeric_limits<int>::max();
@@ -227,7 +242,7 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
 
   // Holds a register containing pstate.sm. This is set
   // on function entry to record the initial pstate of a function.
-  Register PStateSMReg = MCRegister::NoRegister;
+  Register PStateSMReg = Register();
 
   // Has the PNReg used to build PTRUE instruction.
   // The PTRUE is used for the LD/ST of ZReg pairs in save and restore.
@@ -238,7 +253,7 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
 
   // Holds the TPIDR2 block if allocated early (for Windows/stack probes
   // support).
-  Register EarlyAllocSMESaveBuffer = AArch64::NoRegister;
+  Register EarlyAllocSMESaveBuffer = Register();
 
 public:
   AArch64FunctionInfo(const Function &F, const AArch64Subtarget *STI);
@@ -309,6 +324,11 @@ public:
 
   bool hasStackFrame() const { return HasStackFrame; }
   void setHasStackFrame(bool s) { HasStackFrame = s; }
+
+  bool hasExplicitWinCFIRanges() const { return HasExplicitWinCFIRanges; }
+  void setHasExplicitWinCFIRanges(bool Value) {
+    HasExplicitWinCFIRanges = Value;
+  }
 
   bool isStackRealigned() const { return StackRealigned; }
   void setStackRealigned(bool s) { StackRealigned = s; }
@@ -581,6 +601,10 @@ public:
 
   bool isMTETagged() const { return IsMTETagged; }
 
+  bool shouldHardenSignReturnAddress() const {
+    return SignReturnAddressHardening != SignReturnAddressHardeningKind::None;
+  }
+
   bool branchTargetEnforcement() const { return BranchTargetEnforcement; }
 
   bool branchProtectionPAuthLR() const { return BranchProtectionPAuthLR; }
@@ -589,6 +613,13 @@ public:
     HasSwiftAsyncContext = HasContext;
   }
   bool hasSwiftAsyncContext() const { return HasSwiftAsyncContext; }
+
+  void setHasWinCallToCalleePopFunction(bool Has) {
+    HasWinCallToCalleePopFunction = Has;
+  }
+  bool hasWinCallToCalleePopFunction() const {
+    return HasWinCallToCalleePopFunction;
+  }
 
   void setSwiftAsyncContextFrameIdx(int FI) {
     SwiftAsyncContextFrameIdx = FI;
@@ -622,6 +653,7 @@ struct AArch64FunctionInfo final : public yaml::MachineFunctionInfo {
   std::optional<uint64_t> StackSizePPR;
   std::optional<bool> HasStackFrame;
   std::optional<bool> HasStreamingModeChanges;
+  bool HasExplicitWinCFIRanges = false;
 
   AArch64FunctionInfo() = default;
   AArch64FunctionInfo(const llvm::AArch64FunctionInfo &MFI);
@@ -637,6 +669,8 @@ template <> struct MappingTraits<AArch64FunctionInfo> {
     YamlIO.mapOptional("stackSizePPR", MFI.StackSizePPR);
     YamlIO.mapOptional("hasStackFrame", MFI.HasStackFrame);
     YamlIO.mapOptional("hasStreamingModeChanges", MFI.HasStreamingModeChanges);
+    YamlIO.mapOptional("hasExplicitWinCFIRanges", MFI.HasExplicitWinCFIRanges,
+                       false);
   }
 };
 

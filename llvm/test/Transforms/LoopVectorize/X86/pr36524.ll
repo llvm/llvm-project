@@ -22,7 +22,7 @@ define void @foo(ptr %ptr, ptr %ptr.2) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[PTR]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <4 x i64> [[VEC_IND]], ptr [[TMP6]], align 8, !alias.scope [[META0:![0-9]+]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 80
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       middle.block:

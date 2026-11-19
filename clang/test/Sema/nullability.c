@@ -250,3 +250,11 @@ void arraysInBlocks(void) {
 }
 
 struct _Nullable NotCplusplusClass {}; // expected-error {{'_Nullable' attribute only applies to classes}}
+
+// This code used to crash in TypeProcessingState::takeAttrForAttributedType.
+struct NullabilityAtomicTypeofS {
+  int * _Nonnull f1;
+};
+void nullabilityAtomicTypeof(const struct NullabilityAtomicTypeofS *s) {
+  (void)(__typeof__(s->f1) _Atomic *)(&s->f1);
+}

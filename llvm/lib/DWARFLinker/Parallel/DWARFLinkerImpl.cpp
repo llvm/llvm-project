@@ -555,12 +555,12 @@ Error DWARFLinkerImpl::LinkContext::link(TypeUnit *ArtificialTypeUnit) {
     if (Error Err = finiteLoop([&]() -> Expected<bool> {
           HasNewInterconnectedCUs = false;
 
-          // Load inter-connected units.
+          // Load inter-connected units and find their live roots.
           parallelForEach(CompileUnits, [&](std::unique_ptr<CompileUnit> &CU) {
             if (CU->isInterconnectedCU()) {
               CU->maybeResetToLoadedStage();
               linkSingleCompileUnit(*CU, ArtificialTypeUnit,
-                                    CompileUnit::Stage::Loaded);
+                                    CompileUnit::Stage::LiveRootsCollected);
             }
           });
 
@@ -652,7 +652,12 @@ void DWARFLinkerImpl::LinkContext::linkSingleCompileUnit(
             // registerModuleReferences doesn't do any new work, but it
             // will collect top-level errors, which are suppressed. Module
             // warnings were already displayed in the first iteration.
-            if (registerModuleReference(
+            //
+            // Runs concurrently, so it must stay a no-op: it may only be
+            // entered when the serial pass in addObjectFile() has already
+            // populated the module map.
+            if (!GlobalData.getOptions().UpdateIndexTablesOnly &&
+                registerModuleReference(
                     CU.getOrigUnit().getUnitDIE(), nullptr,
                     [](const DWARFUnit &) {}, 0))
               CU.setStage(CompileUnit::Stage::PatchesUpdated);
@@ -661,7 +666,12 @@ void DWARFLinkerImpl::LinkContext::linkSingleCompileUnit(
           }
         } break;
 
-        case CompileUnit::Stage::Loaded: {
+        case CompileUnit::Stage::Loaded:
+          CU.collectLiveRoots();
+          CU.setStage(CompileUnit::Stage::LiveRootsCollected);
+          break;
+
+        case CompileUnit::Stage::LiveRootsCollected: {
           // Mark all the DIEs that need to be present in the generated output.
           // If ODR requested, build type names.
           if (!CU.resolveDependenciesAndMarkLiveness(InterCUProcessingStarted,

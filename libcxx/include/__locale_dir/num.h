@@ -20,13 +20,13 @@
 #include <__iterator/ostreambuf_iterator.h>
 #include <__locale_dir/check_grouping.h>
 #include <__locale_dir/ctype.h>
-#include <__locale_dir/get_c_locale.h>
 #include <__locale_dir/locale.h>
 #include <__locale_dir/pad_and_output.h>
 #include <__locale_dir/scan_keyword.h>
 #include <__memory/unique_ptr.h>
 #include <__system_error/errc.h>
 #include <__type_traits/is_signed.h>
+#include <__utility/checked_int.h>
 #include <cerrno>
 #include <ios>
 #include <streambuf>
@@ -303,30 +303,12 @@ extern template struct _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS __num_get<wchar_t>;
 #  endif
 
 template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI _Tp __do_strtod(const char* __a, char** __p2);
-
-template <>
-inline _LIBCPP_HIDE_FROM_ABI float __do_strtod<float>(const char* __a, char** __p2) {
-  return __locale::__strtof(__a, __p2, _LIBCPP_GET_C_LOCALE);
-}
-
-template <>
-inline _LIBCPP_HIDE_FROM_ABI double __do_strtod<double>(const char* __a, char** __p2) {
-  return __locale::__strtod(__a, __p2, _LIBCPP_GET_C_LOCALE);
-}
-
-template <>
-inline _LIBCPP_HIDE_FROM_ABI long double __do_strtod<long double>(const char* __a, char** __p2) {
-  return __locale::__strtold(__a, __p2, _LIBCPP_GET_C_LOCALE);
-}
-
-template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI _Tp __num_get_float(const char* __a, const char* __a_end, ios_base::iostate& __err) {
   if (__a != __a_end) {
     __libcpp_remove_reference_t<decltype(errno)> __save_errno = errno;
     errno                                                     = 0;
     char* __p2;
-    _Tp __ld                                                     = std::__do_strtod<_Tp>(__a, &__p2);
+    _Tp __ld                                                     = __locale::__str_to_float_c_locale<_Tp>(__a, &__p2);
     __libcpp_remove_reference_t<decltype(errno)> __current_errno = errno;
     if (__current_errno == 0)
       errno = __save_errno;
@@ -484,7 +466,7 @@ protected:
     using _Unsigned = __make_unsigned_t<_MaybeSigned>;
 
     // Stage 1
-    int __base = this->__get_base(__iob);
+    unsigned char __base = this->__get_base(__iob);
 
     // Stages 2 & 3
     // These are combined into a single step where we parse the characters and calculate the value in one go instead of
@@ -574,8 +556,7 @@ protected:
     }
 
     // Calculate the actual number
-    _Unsigned __val   = 0;
-    bool __overflowed = false;
+    __checked_int<_Unsigned> __val(0);
     for (; __first != __last; ++__first) {
       auto __c = *__first;
       if (!__grouping.empty() && __c == __thousands_sep) {
@@ -593,9 +574,7 @@ protected:
         __offset -= 6;
       if (__offset >= __base)
         break;
-      // __val = (__val * __base) + __offset
-      __overflowed |= __builtin_mul_overflow(__val, __base, std::addressof(__val)) ||
-                      __builtin_add_overflow(__val, __offset, std::addressof(__val));
+      __val        = (__val * __base) + static_cast<unsigned short>(__offset);
       __parsed_num = true;
       ++__dc;
     }
@@ -603,29 +582,29 @@ protected:
     if (!__parsed_num) {
       __err |= ios_base::failbit;
       __v = 0;
-    } else if (__overflowed) {
+    } else if (__val.__overflowed()) {
       __err |= ios_base::failbit;
       __v = is_signed<_MaybeSigned>::value && __negate
               ? numeric_limits<_MaybeSigned>::min()
               : numeric_limits<_MaybeSigned>::max();
-    } else if (!__negate) {
-      if (__val > static_cast<_Unsigned>(numeric_limits<_MaybeSigned>::max())) {
+    } else if (auto __value = __val.__value(); !__negate) {
+      if (__value > static_cast<_Unsigned>(numeric_limits<_MaybeSigned>::max())) {
         __err |= ios_base::failbit;
         __v = numeric_limits<_MaybeSigned>::max();
       } else {
-        __v = __val;
+        __v = __value;
       }
     } else if (is_signed<_MaybeSigned>::value) {
-      if (__val > static_cast<_Unsigned>(numeric_limits<_MaybeSigned>::max()) + 1) {
+      if (__value > static_cast<_Unsigned>(numeric_limits<_MaybeSigned>::max()) + 1) {
         __err |= ios_base::failbit;
         __v = numeric_limits<_MaybeSigned>::min();
-      } else if (__val == static_cast<_Unsigned>(numeric_limits<_MaybeSigned>::max()) + 1) {
+      } else if (__value == static_cast<_Unsigned>(numeric_limits<_MaybeSigned>::max()) + 1) {
         __v = numeric_limits<_MaybeSigned>::min();
       } else {
-        __v = -__val;
+        __v = -__value;
       }
     } else {
-      __v = -__val;
+      __v = -__value;
     }
 
     if (__grouping.size() != 0 && __g_end - __g < __num_get_base::__num_get_buf_sz)
@@ -1046,15 +1025,15 @@ _LIBCPP_HIDE_FROM_ABI inline _OutputIterator num_put<_CharT, _OutputIterator>::_
   _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wformat-nonliteral")
   _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wformat-nonliteral")
   if (__specify_precision)
-    __nc = __locale::__snprintf(__nb, __nbuf, _LIBCPP_GET_C_LOCALE, __fmt, (int)__iob.precision(), __v);
+    __nc = __locale::__snprintf(__nb, __nbuf, __locale::__get_c_locale(), __fmt, (int)__iob.precision(), __v);
   else
-    __nc = __locale::__snprintf(__nb, __nbuf, _LIBCPP_GET_C_LOCALE, __fmt, __v);
+    __nc = __locale::__snprintf(__nb, __nbuf, __locale::__get_c_locale(), __fmt, __v);
   unique_ptr<char, void (*)(void*)> __nbh(nullptr, free);
   if (__nc > static_cast<int>(__nbuf - 1)) {
     if (__specify_precision)
-      __nc = __locale::__asprintf(&__nb, _LIBCPP_GET_C_LOCALE, __fmt, (int)__iob.precision(), __v);
+      __nc = __locale::__asprintf(&__nb, __locale::__get_c_locale(), __fmt, (int)__iob.precision(), __v);
     else
-      __nc = __locale::__asprintf(&__nb, _LIBCPP_GET_C_LOCALE, __fmt, __v);
+      __nc = __locale::__asprintf(&__nb, __locale::__get_c_locale(), __fmt, __v);
     if (__nc == -1)
       std::__throw_bad_alloc();
     __nbh.reset(__nb);

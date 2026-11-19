@@ -51,7 +51,7 @@ static cl::opt<bool> EnableAggressiveRDFCopy(
     "hexagon-aggressive-rdf-copy",
     cl::desc("Enable aggressive RDF copy propagation with super-register "
              "support"),
-    cl::init(false), cl::Hidden);
+    cl::init(true), cl::Hidden);
 static cl::opt<bool> RDFDump("hexagon-rdf-dump", cl::Hidden);
 static cl::opt<bool> RDFTrackReserved("hexagon-rdf-track-reserved", cl::Hidden);
 

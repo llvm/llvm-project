@@ -280,13 +280,13 @@ fir.global internal @_QFEvar2 target : f32 {
 func.func @_QFPtest4(%arg0: !fir.ref<!fir.box<!fir.ptr<f32>>> {fir.bindc_name = "p1"}, %arg1: !fir.ref<f32>) attributes {test.ptr = "func"} {
   %3 = fir.load %arg0 {test.ptr = "arg0.load"} : !fir.ref<!fir.box<!fir.ptr<f32>>>
   %4 = fir.address_of(@_QFEvar2) {test.ptr = "var2"} : !fir.ref<f32>
-  %fir_decl_var2 = fir.declare %4 {uniq_name = "var2_fir", test.ptr = "var2_fir"}: (!fir.ref<f32>) -> !fir.ref<f32>
-  %hlfir_decl_var2:2 = hlfir.declare %4 {uniq_name = "var2_hlfir", test.ptr = "var2_hlfir"}: (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %fir_decl_var2 = fir.declare %4 uniq_name("var2_fir") {test.ptr = "var2_fir"}: (!fir.ref<f32>) -> !fir.ref<f32>
+  %hlfir_decl_var2:2 = hlfir.declare %4 uniq_name("var2_hlfir") {test.ptr = "var2_hlfir"}: (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   %5 = fir.address_of(@_QMpointersEp) {test.ptr = "p"} : !fir.ref<!fir.box<!fir.ptr<f32>>>
-  %fir_decl_p = fir.declare %5 {uniq_name = "p_fir", test.ptr = "p_fir"}: (!fir.ref<!fir.box<!fir.ptr<f32>>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
-  %hlfir_decl_p:2 = hlfir.declare %5 {uniq_name = "p_hlfir", test.ptr = "p_hlfir"}: (!fir.ref<!fir.box<!fir.ptr<f32>>>) -> (!fir.ref<!fir.box<!fir.ptr<f32>>>, !fir.ref<!fir.box<!fir.ptr<f32>>>)
+  %fir_decl_p = fir.declare %5 uniq_name("p_fir") {test.ptr = "p_fir"}: (!fir.ref<!fir.box<!fir.ptr<f32>>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
+  %hlfir_decl_p:2 = hlfir.declare %5 uniq_name("p_hlfir") {test.ptr = "p_hlfir"}: (!fir.ref<!fir.box<!fir.ptr<f32>>>) -> (!fir.ref<!fir.box<!fir.ptr<f32>>>, !fir.ref<!fir.box<!fir.ptr<f32>>>)
   %13 = fir.convert %4 {test.ptr = "box.addr"} : (!fir.ref<f32>) -> !fir.ptr<f32>
-  %fir_decl_convert = fir.declare %13 {uniq_name = "box_addr_fir", test.ptr = "box.addr_fir"}: (!fir.ptr<f32>) -> !fir.ptr<f32>
-  %hlfir_decl_convert:2 = hlfir.declare %13 {uniq_name = "box_addr_hlfir", test.ptr = "box.addr_hlfir"}: (!fir.ptr<f32>) -> (!fir.ptr<f32>, !fir.ptr<f32>)
+  %fir_decl_convert = fir.declare %13 uniq_name("box_addr_fir") {test.ptr = "box.addr_fir"}: (!fir.ptr<f32>) -> !fir.ptr<f32>
+  %hlfir_decl_convert:2 = hlfir.declare %13 uniq_name("box_addr_hlfir") {test.ptr = "box.addr_hlfir"}: (!fir.ptr<f32>) -> (!fir.ptr<f32>, !fir.ptr<f32>)
   return
 }

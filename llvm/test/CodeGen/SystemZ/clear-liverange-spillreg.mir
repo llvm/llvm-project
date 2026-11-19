@@ -21,10 +21,10 @@
   declare void @SetModesAndRefframeForBlocks(i32 signext) local_unnamed_addr #1
 
   define void @encode_one_macroblock() { ret void }
+...
 ---
 name:            encode_one_macroblock
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: addr64bit }
   - { id: 1, class: addr64bit }

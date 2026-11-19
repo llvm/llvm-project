@@ -1,6 +1,6 @@
 // RUN: cir-opt %s -cir-call-conv-lowering=target=x86_64 | FileCheck %s
 // RUN: cir-opt %s -cir-call-conv-lowering=target=x86_64 -cir-to-llvm -o - 2>/dev/null \
-// RUN:   | mlir-translate -mlir-to-llvmir --allow-unregistered-dialect \
+// RUN:   | cir-translate -mlir-to-llvmir --allow-unregistered-dialect \
 // RUN:   | FileCheck %s --check-prefix=LLVM
 
 !s32i = !cir.int<s, 32>
@@ -58,7 +58,7 @@ module attributes {
 
   // A lone vtable pointer is a scalar in its own right, and passes Direct in
   // its natural type the way any other pointer does.
-  cir.func @take_bare_vptr(%arg0: !cir.vptr) -> !cir.vptr {
+  cir.func @take_bare_vptr(%arg0: !cir.vptr) -> !cir.vptr requires_call_conv_lowering {
     cir.return %arg0 : !cir.vptr
   }
 
@@ -68,7 +68,7 @@ module attributes {
 
   // A record holding nothing but a vtable pointer fills one eightbyte, which
   // classifies INTEGER and coerces to the pointer occupying it.
-  cir.func @take_vp(%arg0: !rec_VP) {
+  cir.func @take_vp(%arg0: !rec_VP) requires_call_conv_lowering {
     cir.return
   }
 
@@ -80,7 +80,7 @@ module attributes {
 
   // The vtable pointer owns the first eightbyte and the long owns the second,
   // so the record passes as a pointer and an integer register.
-  cir.func @take_vp_long(%arg0: !rec_VPLong) -> !s64i {
+  cir.func @take_vp_long(%arg0: !rec_VPLong) -> !s64i requires_call_conv_lowering {
     %0 = cir.alloca "v" align(8) : !cir.ptr<!rec_VPLong>
     cir.store %arg0, %0 : !rec_VPLong, !cir.ptr<!rec_VPLong>
     %1 = cir.get_member %0[1] {name = "x"} : !cir.ptr<!rec_VPLong> -> !cir.ptr<!s64i>
@@ -89,18 +89,19 @@ module attributes {
   }
 
   // CHECK: cir.func{{.*}} @take_vp_long(%arg0: !cir.ptr<!void>, %arg1: !s64i) -> !s64i
-  // CHECK:   cir.alloca "coerce" align(8) : !cir.ptr<!rec_anon_struct>
   // CHECK:   %[[FLAT:.*]] = cir.alloca "coerce" align(8) : !cir.ptr<!rec_anon_struct>
   // CHECK:   %[[E0:.*]] = cir.get_member %[[FLAT]][0] {{.*}} : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!cir.ptr<!void>>
   // CHECK:   cir.store %arg0, %[[E0]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
   // CHECK:   %[[E1:.*]] = cir.get_member %[[FLAT]][1] {{.*}} : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!s64i>
   // CHECK:   cir.store %arg1, %[[E1]] : !s64i, !cir.ptr<!s64i>
-  // CHECK:   %{{.*}} = cir.cast bitcast %{{.*}} : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!rec_VPLong>
+  // CHECK:   %[[VIEW:.*]] = cir.cast bitcast %[[FLAT]] : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!rec_VPLong>
+  // CHECK:   %[[V:.*]] = cir.alloca "v" align(8) : !cir.ptr<!rec_VPLong>
+  // CHECK:   cir.copy %[[VIEW]] align(8) to %[[V]] align(8) : !cir.ptr<!rec_VPLong>
   // LLVM: define i64 @take_vp_long(ptr %{{[^,]+}}, i64 %{{[^,)]+}})
 
   // Two ints share the second eightbyte behind the vtable pointer, so that
   // eightbyte coerces to i64 while the first stays a pointer.
-  cir.func @take_vp_two_int(%arg0: !rec_VPTwoInt) {
+  cir.func @take_vp_two_int(%arg0: !rec_VPTwoInt) requires_call_conv_lowering {
     cir.return
   }
 
@@ -108,14 +109,14 @@ module attributes {
   // LLVM: define void @take_vp_two_int(ptr %{{[^,]+}}, i64 %{{[^,)]+}})
 
   // A vtable pointer in the second eightbyte rather than the first.
-  cir.func @take_long_vp(%arg0: !rec_LongVP) {
+  cir.func @take_long_vp(%arg0: !rec_LongVP) requires_call_conv_lowering {
     cir.return
   }
 
   // CHECK: cir.func{{.*}} @take_long_vp(%arg0: !s64i, %arg1: !cir.ptr<!void>)
   // LLVM: define void @take_long_vp(i64 %{{[^,]+}}, ptr %{{[^,)]+}})
 
-  cir.func @ret_long_vp() -> !rec_LongVP {
+  cir.func @ret_long_vp() -> !rec_LongVP requires_call_conv_lowering {
     %0 = cir.alloca "r" align(8) : !cir.ptr<!rec_LongVP>
     %1 = cir.load %0 : !cir.ptr<!rec_LongVP>, !rec_LongVP
     cir.return %1 : !rec_LongVP
@@ -126,14 +127,14 @@ module attributes {
 
   // A double behind the vtable pointer makes the second eightbyte SSE, so the
   // two eightbytes land in registers of different classes.
-  cir.func @take_vp_double(%arg0: !rec_VPDouble) {
+  cir.func @take_vp_double(%arg0: !rec_VPDouble) requires_call_conv_lowering {
     cir.return
   }
 
   // CHECK: cir.func{{.*}} @take_vp_double(%arg0: !cir.ptr<!void>, %arg1: !cir.double)
   // LLVM: define void @take_vp_double(ptr %{{[^,]+}}, double %{{[^,)]+}})
 
-  cir.func @ret_vp_double() -> !rec_VPDouble {
+  cir.func @ret_vp_double() -> !rec_VPDouble requires_call_conv_lowering {
     %0 = cir.alloca "r" align(8) : !cir.ptr<!rec_VPDouble>
     %1 = cir.load %0 : !cir.ptr<!rec_VPDouble>, !rec_VPDouble
     cir.return %1 : !rec_VPDouble
@@ -143,7 +144,7 @@ module attributes {
   // LLVM: define { ptr, double } @ret_vp_double()
 
   // Reached by recursing through the array element type.
-  cir.func @take_vp_arr(%arg0: !rec_VPArr) {
+  cir.func @take_vp_arr(%arg0: !rec_VPArr) requires_call_conv_lowering {
     cir.return
   }
 
@@ -152,7 +153,7 @@ module attributes {
 
   // A union reduces to one member before classification, so the vtable pointer
   // has to survive that reduction.
-  cir.func @take_union_vp(%arg0: !rec_UVP) {
+  cir.func @take_union_vp(%arg0: !rec_UVP) requires_call_conv_lowering {
     cir.return
   }
 
@@ -160,19 +161,21 @@ module attributes {
   // LLVM: define void @take_union_vp(ptr %{{[^,)]+}})
 
   // VPLong returned comes back in two registers.
-  cir.func @ret_vp_long() -> !rec_VPLong {
+  cir.func @ret_vp_long() -> !rec_VPLong requires_call_conv_lowering {
     %0 = cir.alloca "r" align(8) : !cir.ptr<!rec_VPLong>
     %1 = cir.load %0 : !cir.ptr<!rec_VPLong>, !rec_VPLong
     cir.return %1 : !rec_VPLong
   }
 
   // CHECK: cir.func{{.*}} @ret_vp_long() -> !rec_anon_struct
-  // CHECK:   %[[SLOT:.*]] = cir.alloca "coerce" align(8) : !cir.ptr<!rec_VPLong>
-  // CHECK:   %[[CAST:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!rec_VPLong> -> !cir.ptr<!rec_anon_struct>
+  // CHECK:   %[[SLOT:.*]] = cir.alloca "r" align(8) : !cir.ptr<!rec_VPLong>
+  // CHECK-NEXT:   %[[CAST:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!rec_VPLong> -> !cir.ptr<!rec_anon_struct>
+  // CHECK-NEXT:   %[[RET:.*]] = cir.load align(8) %[[CAST]] : !cir.ptr<!rec_anon_struct>, !rec_anon_struct
+  // CHECK-NEXT:   cir.return %[[RET]] : !rec_anon_struct
   // LLVM: define { ptr, i64 } @ret_vp_long()
 
   // A single eightbyte comes back in the one return register holding it.
-  cir.func @ret_vp() -> !rec_VP {
+  cir.func @ret_vp() -> !rec_VP requires_call_conv_lowering {
     %0 = cir.alloca "r" align(8) : !cir.ptr<!rec_VP>
     %1 = cir.load %0 : !cir.ptr<!rec_VP>, !rec_VP
     cir.return %1 : !rec_VP
@@ -183,16 +186,16 @@ module attributes {
 
   // Past two eightbytes SysV says memory whatever the eightbytes hold.  A
   // record eligible for registers reaches memory by the byval path, not the
-  // byref path a cannot-pass-in-registers record takes.
-  cir.func @take_vp_big(%arg0: !rec_VPBig) {
+  // non-byval path a cannot-pass-in-registers record takes.
+  cir.func @take_vp_big(%arg0: !rec_VPBig) requires_call_conv_lowering {
     cir.return
   }
 
-  // CHECK: cir.func{{.*}} @take_vp_big(%arg0: !cir.ptr<!rec_VPBig> {llvm.align = 8 : i64, llvm.byval = !rec_VPBig, llvm.noalias, llvm.noundef})
-  // LLVM: define void @take_vp_big(ptr noalias noundef byval(%struct.VPBig) align 8 %{{[^,)]+}})
+  // CHECK: cir.func{{.*}} @take_vp_big(%arg0: !cir.ptr<!rec_VPBig> {llvm.align = 8 : i64, llvm.byval = !rec_VPBig, llvm.noundef})
+  // LLVM: define void @take_vp_big(ptr noundef byval(%struct.VPBig) align 8 %{{[^,)]+}})
 
   // Returned at that size it uses sret instead.
-  cir.func @ret_vp_big() -> !rec_VPBig {
+  cir.func @ret_vp_big() -> !rec_VPBig requires_call_conv_lowering {
     %0 = cir.alloca "r" align(8) : !cir.ptr<!rec_VPBig>
     %1 = cir.load %0 : !cir.ptr<!rec_VPBig>, !rec_VPBig
     cir.return %1 : !rec_VPBig
@@ -204,15 +207,15 @@ module attributes {
   // A declared argument-passing kind of cannot-pass-in-registers sends the
   // record to memory whatever its eightbytes classify as, which is the path
   // every polymorphic C++ class takes.
-  cir.func @take_vp_no_regs(%arg0: !rec_VPNoRegs) {
+  cir.func @take_vp_no_regs(%arg0: !rec_VPNoRegs) requires_call_conv_lowering {
     cir.return
   }
 
-  // CHECK: cir.func{{.*}} @take_vp_no_regs(%arg0: !cir.ptr<!rec_VPNoRegs> {llvm.align = 8 : i64, llvm.byref = !rec_VPNoRegs})
-  // LLVM: define void @take_vp_no_regs(ptr byref(%struct.VPNoRegs) align 8 %{{[^,)]+}})
+  // CHECK: cir.func{{.*}} @take_vp_no_regs(%arg0: !cir.ptr<!rec_VPNoRegs> {llvm.align = 8 : i64, llvm.dead_on_return = -1 : i64, llvm.dereferenceable = 16 : i64, llvm.nofreeobj, llvm.noundef})
+  // LLVM: define void @take_vp_no_regs(ptr nofreeobj noundef align 8 dead_on_return dereferenceable(16) %{{[^,)]+}})
 
-  // The same record returned takes sret rather than byref.
-  cir.func @ret_vp_no_regs() -> !rec_VPNoRegs {
+  // The same record returned takes sret rather than the non-byval form.
+  cir.func @ret_vp_no_regs() -> !rec_VPNoRegs requires_call_conv_lowering {
     %0 = cir.alloca "r" align(8) : !cir.ptr<!rec_VPNoRegs>
     %1 = cir.load %0 : !cir.ptr<!rec_VPNoRegs>, !rec_VPNoRegs
     cir.return %1 : !rec_VPNoRegs
@@ -222,7 +225,7 @@ module attributes {
   // LLVM: define void @ret_vp_no_regs(ptr dead_on_unwind noalias writable sret(%struct.VPNoRegs) align 8 %{{[^,)]+}})
 
   // A call site is decomposed into the same two registers the callee now takes.
-  cir.func @caller(%arg0: !rec_VPLong) -> !s64i {
+  cir.func @caller(%arg0: !rec_VPLong) -> !s64i requires_call_conv_lowering {
     %0 = cir.call @take_vp_long(%arg0) : (!rec_VPLong) -> !s64i
     cir.return %0 : !s64i
   }
@@ -236,14 +239,14 @@ module attributes {
   // A polymorphic class with tail padding lowers to a packed record, since
   // CIRGen marks that packed as a layout fallback.  Its vtable-pointer
   // eightbyte still coerces to a pointer, the same as an unpacked one.
-  cir.func @take_poly(%arg0: !rec_Poly) {
+  cir.func @take_poly(%arg0: !rec_Poly) requires_call_conv_lowering {
     cir.return
   }
 
   // CHECK: cir.func{{.*}} @take_poly(%arg0: !cir.ptr<!void>, %arg1: !s32i)
   // LLVM: define void @take_poly(ptr %{{[^,]+}}, i32 %{{[^,)]+}})
 
-  cir.func @ret_poly() -> !rec_Poly {
+  cir.func @ret_poly() -> !rec_Poly requires_call_conv_lowering {
     %0 = cir.alloca "r" align(8) : !cir.ptr<!rec_Poly>
     %1 = cir.load %0 : !cir.ptr<!rec_Poly>, !rec_Poly
     cir.return %1 : !rec_Poly

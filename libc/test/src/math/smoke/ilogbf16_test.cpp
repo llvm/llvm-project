@@ -10,4 +10,4 @@
 
 #include "src/math/ilogbf16.h"
 
-LIST_INTLOGB_TESTS(int, float16, LIBC_NAMESPACE::ilogbf16);
+LIST_INTLOGB_TESTS(Ilogbf16, int, float16, LIBC_NAMESPACE::ilogbf16);

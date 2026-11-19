@@ -67,13 +67,12 @@
 # DYLIB-DAG:   __DATA       __data           0x[[#%.8X, EXTERN_REF]]  pointer
 # DYLIB-DAG:   __DATA       __data           0x[[#%.8X, LOCAL_REF]]   pointer
 # DYLIB-DAG:   __DATA       __data           0x[[#%.8X, WEAK_REF]]    pointer
-# DYLIB-DAG:   __DATA       __thread_ptrs    0x[[#%.8X, TLV_REF]]     pointer
 # DYLIB-EMPTY:
 # DYLIB-NEXT:  Bind table:
 # DYLIB-NEXT:  segment      section        address                 type     addend dylib            symbol
 # DYLIB-DAG:   __DATA_CONST __got          {{.*}}                  pointer       0 flat-namespace   dyld_stub_binder
 # DYLIB-DAG:   __DATA       __data         0x[[#%.8X, EXTERN_REF]] pointer       0 flat-namespace   _extern
-# DYLIB-DAG:   __DATA       __thread_ptrs  0x[[#%.8X, TLV_REF]]    pointer       0 flat-namespace   _tlv
+# DYLIB-DAG:   __DATA_CONST __got          0x[[#%.8X, TLV_REF]]    pointer       0 flat-namespace   _tlv
 # DYLIB-EMPTY:
 # DYLIB-NEXT:  Lazy bind table:
 # DYLIB-NEXT:  segment  section            address                  dylib           symbol
@@ -92,7 +91,7 @@
 # CHAINED-DYLIB-DAG: __DATA       __data        0x[[#%x, EXTERN_REF]] {{.*}}  bind  0x0    flat-namespace  _extern
 # CHAINED-DYLIB-DAG: __DATA       __data        0x[[#%x, WEAK_REF]]   {{.*}}  bind  0x0    weak            _weak_extern
 # CHAINED-DYLIB-DAG: __DATA       __data        0x[[#%x, LOCAL_REF]]  {{.*}}  rebase                       {{.*}}
-# CHAINED-DYLIB-DAG: __DATA       __thread_ptrs 0x[[#%x, TLV_REF]]    {{.*}}  bind  0x0    flat-namespace  _tlv
+# CHAINED-DYLIB-DAG: __DATA_CONST __got         {{.*}}                {{.*}}  bind  0x0    flat-namespace  _tlv
 # CHAINED-DYLIB-EMPTY:
 
 #--- foo.s

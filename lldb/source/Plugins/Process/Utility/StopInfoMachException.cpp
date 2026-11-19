@@ -252,6 +252,27 @@ bool StopInfoMachException::DeterminePtrauthFailure(ExecutionContext &exe_ctx) {
   return false;
 }
 
+bool StopInfoMachException::DetermineCPA2Failure() {
+  const bool is_bad_access = (m_value == 1);
+  const bool is_cpa2_fault = (m_exc_code == 0x108);
+
+  // Check if subcode has address.
+  const bool has_fault_addr = (m_exc_data_count >= 2);
+
+  if (!is_bad_access || !is_cpa2_fault || !has_fault_addr)
+    return false;
+
+  const addr_t fault_address = m_exc_subcode;
+
+  StreamString strm;
+  strm.Printf("EXC_ARM_CPA_FAIL (code=%" PRIu64 ", address=0x%" PRIx64 ")\n",
+              m_exc_code, fault_address);
+  strm.Printf("Note: Checked Pointer Arithmetic failure detected.\n");
+
+  m_description = std::string(strm.GetString());
+  return true;
+}
+
 const char *StopInfoMachException::GetDescription() {
   if (!m_description.empty())
     return m_description.c_str();
@@ -305,6 +326,8 @@ const char *StopInfoMachException::GetDescription() {
       if (DeterminePtrauthFailure(exe_ctx))
         return m_description.c_str();
       if (DetermineTagMismatch())
+        return m_description.c_str();
+      if (DetermineCPA2Failure())
         return m_description.c_str();
       break;
 

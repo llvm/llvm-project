@@ -11,12 +11,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/AsmParser/Parser.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/AsmParser/LLParser.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
+#include <algorithm>
 #include <system_error>
 
 using namespace llvm;
@@ -246,4 +248,51 @@ DIExpression *llvm::parseDIExpressionBodyAtBeginning(StringRef Asm,
           .parseDIExpressionBodyAtBeginning(MD, Read, Slots))
     return nullptr;
   return dyn_cast<DIExpression>(MD);
+}
+
+bool llvm::parseMetadataDefinitions(ArrayRef<StringRef> Definitions,
+                                    SMDiagnostic &Err, const Module &M,
+                                    SlotMapping &Slots,
+                                    unsigned &ErrorDefinitionIndex) {
+  std::string Asm;
+  SmallVector<std::pair<size_t, size_t>> DefinitionRanges;
+  for (StringRef Definition : Definitions) {
+    size_t Start = Asm.size();
+    Asm.append(Definition);
+    DefinitionRanges.emplace_back(Start, Asm.size());
+    Asm.push_back('\n');
+  }
+
+  SourceMgr SM;
+  std::unique_ptr<MemoryBuffer> Buf = MemoryBuffer::getMemBuffer(Asm);
+  SM.AddNewSourceBuffer(std::move(Buf), SMLoc());
+  SmallVector<SMLoc> DefinitionEnds;
+  for (auto [_, End] : DefinitionRanges)
+    DefinitionEnds.push_back(SMLoc::getFromPointer(Asm.data() + End));
+  if (!LLParser(Asm, SM, Err, const_cast<Module *>(&M), nullptr, M.getContext())
+           .parseMetadataDefinitions(Slots, DefinitionEnds))
+    return false;
+
+  const char *ErrorPtr = Err.getLoc().getPointer();
+  size_t ErrorOffset =
+      ErrorPtr ? std::min<size_t>(ErrorPtr - Asm.data(), Asm.size()) : 0;
+  ErrorDefinitionIndex = DefinitionRanges.size() - 1;
+  for (unsigned I = 0; I != DefinitionRanges.size(); ++I) {
+    if (ErrorOffset <= DefinitionRanges[I].second) {
+      ErrorDefinitionIndex = I;
+      break;
+    }
+  }
+
+  auto [Start, End] = DefinitionRanges[ErrorDefinitionIndex];
+  size_t DefinitionOffset = std::clamp(ErrorOffset, Start, End) - Start;
+  SourceMgr DefinitionSM;
+  std::unique_ptr<MemoryBuffer> DefinitionBuf = MemoryBuffer::getMemBuffer(
+      Definitions[ErrorDefinitionIndex], "", /*RequiresNullTerminator=*/false);
+  StringRef Definition = DefinitionBuf->getBuffer();
+  DefinitionSM.AddNewSourceBuffer(std::move(DefinitionBuf), SMLoc());
+  Err = DefinitionSM.GetMessage(
+      SMLoc::getFromPointer(Definition.data() + DefinitionOffset),
+      Err.getKind(), Err.getMessage());
+  return true;
 }

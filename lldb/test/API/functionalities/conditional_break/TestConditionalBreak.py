@@ -29,20 +29,8 @@ class ConditionalBreakTestCase(TestBase):
         """Exercise some thread and frame APIs to break if c() is called by a()."""
         exe = self.getBuildArtifact("a.out")
 
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        breakpoint = target.BreakpointCreateByName("c", exe)
-        self.assertTrue(breakpoint, VALID_BREAKPOINT)
-
-        # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        # The stop reason of the thread should be breakpoint.
-        self.assertState(
-            process.GetState(), lldb.eStateStopped, STOPPED_DUE_TO_BREAKPOINT
+        _, process, _, breakpoint = lldbutil.run_to_name_breakpoint(
+            self, "c", bkpt_module=exe
         )
 
         # Find the line number where a's parent frame function is c.

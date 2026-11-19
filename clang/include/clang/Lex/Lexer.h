@@ -294,6 +294,8 @@ public:
   /// position in the current buffer into a SourceLocation object for rendering.
   DiagnosticBuilder Diag(const char *Loc, unsigned DiagID) const;
 
+  DiagnosticBuilder DiagCompat(const char *Loc, unsigned CompatDiagId) const;
+
   /// getSourceLocation - Return a source location identifier for the specified
   /// offset in the current file.
   SourceLocation getSourceLocation(const char *Loc, unsigned TokLen = 1) const;
@@ -395,7 +397,7 @@ public:
                                             const LangOptions &LangOpts);
 
   /// Get the physical length (including trigraphs and escaped newlines) of the
-  /// first \p Characters characters of the token starting at TokStart.
+  /// first \p CharNo characters of the token starting at TokStart.
   static unsigned getTokenPrefixLength(SourceLocation TokStart,
                                        unsigned CharNo,
                                        const SourceManager &SM,

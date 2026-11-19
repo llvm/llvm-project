@@ -560,14 +560,7 @@ def Zn3WritePDEP_PEXT : SchedWriteRes<[Zn3ALU1]> {
 def : InstRW<[Zn3WritePDEP_PEXT], (instrs PDEP32rr, PDEP64rr,
                                           PEXT32rr, PEXT64rr)>;
 
-defm : Zn3WriteResIntPair<WriteADC, [Zn3ALU0123], 1, [4], 1>; // Integer ALU + flags op.
-
-def Zn3WriteADC8mr_SBB8mr : SchedWriteRes<[Zn3AGU012, Zn3Load, Zn3ALU0123, Zn3Store]> {
-  let Latency = 1;
-  let ReleaseAtCycles = [1, 1, 7, 1];
-  let NumMicroOps = 1;
-}
-def : InstRW<[Zn3WriteADC8mr_SBB8mr], (instrs ADC8mr, SBB8mr)>;
+defm : Zn3WriteResIntPair<WriteADC, [Zn3ALU0123], 1, [1], 1>; // Integer ALU + flags op.
 
 // This is for simple LEAs with one or two input operands.
 defm : Zn3WriteResInt<WriteLEA, [Zn3AGU012], 1, [1], 1>;     // LEA instructions can't fold loads.
@@ -1120,6 +1113,10 @@ defm : Zn3WriteResXMMPair<WriteVarShuffle, [Zn3FPVShuf01], 1, [1], 1>;  // Vecto
 defm : Zn3WriteResXMMPair<WriteVarShuffleX, [Zn3FPVShuf01], 1, [1], 1>; // Vector variable shuffles (XMM).
 defm : Zn3WriteResYMMPair<WriteVarShuffleY, [Zn3FPVShuf01], 1, [1], 1>; // Vector variable shuffles (YMM).
 defm : X86WriteResPairUnsupported<WriteVarShuffleZ>; // Vector variable shuffles (ZMM).
+defm : Zn3WriteResXMMPair<WritePack, [Zn3FPVShuf01], 1, [1], 1>;
+defm : Zn3WriteResXMMPair<WritePackX, [Zn3FPVShuf01], 1, [1], 1>;
+defm : Zn3WriteResYMMPair<WritePackY, [Zn3FPVShuf01], 1, [1], 1>;
+defm : X86WriteResPairUnsupported<WritePackZ>;
 defm : Zn3WriteResXMMPair<WriteBlend, [Zn3FPVMisc0123], 1, [1], 1>; // Vector blends.
 defm : Zn3WriteResYMMPair<WriteBlendY, [Zn3FPVMisc0123], 1, [1], 1>; // Vector blends (YMM).
 defm : X86WriteResPairUnsupported<WriteBlendZ>; // Vector blends (ZMM).

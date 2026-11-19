@@ -315,12 +315,15 @@ bool ClassDescriptorV2::method_t::Read(DataExtractor &extractor,
 
     m_name_ptr = addr + nameref_offset;
 
-    Status error;
     if (!has_direct_sel) {
       // The SEL offset points to a SELRef. We need to dereference twice.
-      m_name_ptr = process->ReadPointerFromMemory(m_name_ptr, error);
-      if (error.Fail())
+      llvm::Expected<lldb::addr_t> name_ptr =
+          process->ReadPointerFromMemory(m_name_ptr);
+      if (!name_ptr) {
+        llvm::consumeError(name_ptr.takeError());
         return false;
+      }
+      m_name_ptr = *name_ptr;
     } else if (relative_string_base_addr != LLDB_INVALID_ADDRESS) {
       m_name_ptr = relative_string_base_addr + nameref_offset;
     }

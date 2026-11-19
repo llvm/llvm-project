@@ -24,7 +24,6 @@
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/Support/Debug.h"
-#include <stack>
 
 #define DEBUG_TYPE "spirv-postlegalizer"
 
@@ -36,6 +35,9 @@ public:
   static char ID;
   SPIRVPostLegalizerLegacy() : MachineFunctionPass(ID) {}
   bool runOnMachineFunction(MachineFunction &MF) override;
+  MachineFunctionProperties getSetProperties() const override {
+    return MachineFunctionProperties().setRegBankSelected();
+  }
 };
 } // namespace
 
@@ -158,6 +160,7 @@ static SPIRVTypeInst deduceTypeFromUses(Register Reg, MachineFunction &MF,
     LLVM_DEBUG(dbgs() << "Looking at use " << Use);
     switch (Use.getOpcode()) {
     case TargetOpcode::G_BUILD_VECTOR:
+    case TargetOpcode::G_CONCAT_VECTORS:
     case TargetOpcode::G_SHUFFLE_VECTOR:
     case TargetOpcode::G_EXTRACT_VECTOR_ELT:
     case TargetOpcode::G_UNMERGE_VALUES:
@@ -172,13 +175,40 @@ static SPIRVTypeInst deduceTypeFromUses(Register Reg, MachineFunction &MF,
     case TargetOpcode::G_FSUB:
     case TargetOpcode::G_FMUL:
     case TargetOpcode::G_FDIV:
+    case TargetOpcode::G_FEXP:
+    case TargetOpcode::G_FEXP2:
+    case TargetOpcode::G_FCEIL:
+    case TargetOpcode::G_FFLOOR:
     case TargetOpcode::G_FREM:
     case TargetOpcode::G_FMA:
+    case TargetOpcode::G_FACOS:
+    case TargetOpcode::G_FASIN:
+    case TargetOpcode::G_FATAN:
     case TargetOpcode::G_FATAN2:
+    case TargetOpcode::G_FCOS:
+    case TargetOpcode::G_FSIN:
+    case TargetOpcode::G_FTAN:
+    case TargetOpcode::G_FCOSH:
+    case TargetOpcode::G_FSINH:
+    case TargetOpcode::G_FTANH:
+    case TargetOpcode::G_FLOG:
+    case TargetOpcode::G_FLOG2:
+    case TargetOpcode::G_FLOG10:
     case TargetOpcode::G_FPOW:
+    case TargetOpcode::G_FMINNUM:
+    case TargetOpcode::G_FMAXNUM:
+    case TargetOpcode::G_FABS:
+    case TargetOpcode::G_FSQRT:
     case TargetOpcode::COPY:
     case TargetOpcode::G_STRICT_FMA:
+    case TargetOpcode::G_INTRINSIC_TRUNC:
+    case TargetOpcode::G_INTRINSIC_ROUNDEVEN:
       ResType = deduceTypeFromResultRegister(&Use, Reg, GR, MIB);
+      break;
+    case TargetOpcode::G_SELECT:
+      if (Reg == Use.getOperand(2).getReg() ||
+          Reg == Use.getOperand(3).getReg())
+        ResType = deduceTypeFromResultRegister(&Use, Reg, GR, MIB);
       break;
     case TargetOpcode::G_LOAD:
     case TargetOpcode::G_STORE:
@@ -291,16 +321,22 @@ static SPIRVTypeInst deduceResultTypeFromOperands(MachineInstr *I,
   case TargetOpcode::G_SEXT:
   case TargetOpcode::G_ZEXT:
   case TargetOpcode::G_TRUNC:
+  case TargetOpcode::G_FPTOSI:
+  case TargetOpcode::G_FPTOUI:
     return deduceIntTypeFromResult(ResVReg, MIB, GR);
   case TargetOpcode::G_BUILD_VECTOR:
     return deduceTypeFromOperandRange(I, MIB, GR, 1, I->getNumOperands());
   case TargetOpcode::G_SHUFFLE_VECTOR:
     return deduceTypeFromOperandRange(I, MIB, GR, 1, 3);
+  case TargetOpcode::G_SELECT:
+    return deduceTypeFromOperandRange(I, MIB, GR, 2, 4);
   case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
   case TargetOpcode::G_INTRINSIC: {
     auto IntrinsicID = cast<GIntrinsic>(I)->getIntrinsicID();
     if (IntrinsicID == Intrinsic::spv_gep)
       return deduceGEPType(I, GR, MIB);
+    if (IntrinsicID == Intrinsic::spv_extractelt)
+      return deduceTypeFromSingleOperand(I, MIB, GR, 2);
     break;
   }
   case TargetOpcode::G_LOAD: {
@@ -503,6 +539,7 @@ static void generateAssignType(MachineInstr &MI, Register ResultRegister,
                     << " with type: " << *ResultType);
   MachineIRBuilder MIB(MI);
   updateRegType(ResultRegister, nullptr, ResultType, GR, MIB, MRI);
+  MIB.setInsertPt(*MI.getParent(), std::next(MI.getIterator()));
 
   // Tablegen definition assumes SPIRV::ASSIGN_TYPE pseudo-instruction is
   // present after each auto-folded instruction to take a type reference
@@ -584,6 +621,7 @@ bool SPIRVPostLegalizerLegacy::runOnMachineFunction(MachineFunction &MF) {
 PreservedAnalyses
 SPIRVPostLegalizerPass::run(MachineFunction &MF,
                             MachineFunctionAnalysisManager &MFAM) {
+  MFPropsModifier _(*this, MF);
   return runPostLegalizer(MF) ? getMachineFunctionPassPreservedAnalyses()
                               : PreservedAnalyses::all();
 }

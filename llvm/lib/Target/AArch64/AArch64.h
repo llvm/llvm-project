@@ -34,10 +34,12 @@ struct AArch64O0PreLegalizerCombinerImplRuleConfig;
 struct AArch64PreLegalizerCombinerImplRuleConfig;
 struct AArch64PostLegalizerCombinerImplRuleConfig;
 struct AArch64PostLegalizerLoweringImplRuleConfig;
+struct SLSHardeningInserter;
 
 namespace llvm {
 
 class AArch64RegisterBankInfo;
+struct AArch64Options;
 class AArch64Subtarget;
 class AArch64TargetMachine;
 enum class CodeGenOptLevel;
@@ -50,6 +52,7 @@ FunctionPass *createAArch64RedundantCopyEliminationPass();
 FunctionPass *createAArch64RedundantCondBranchPass();
 FunctionPass *createAArch64CondBrTuning();
 FunctionPass *createAArch64CompressJumpTablesPass();
+FunctionPass *createAArch64WinCFIPass();
 FunctionPass *createAArch64ConditionalCompares();
 FunctionPass *createAArch64AdvSIMDScalar();
 FunctionPass *createAArch64ISelDag(AArch64TargetMachine &TM,
@@ -76,8 +79,9 @@ FunctionPass *createAArch64PTrueCoalescingLegacyPass();
 FunctionPass *createAArch64CleanupLocalDynamicTLSPass();
 
 FunctionPass *createAArch64CollectLOHPass();
+Pass *createAArch64PredicateAsCounterLoopRewritesPass();
 FunctionPass *createSMEPeepholeOptPass();
-FunctionPass *createMachineSMEABIPass(CodeGenOptLevel);
+FunctionPass *createMachineSMEABIPass();
 FunctionPass *createAArch64SRLTDefineSuperRegsLegacyPass();
 Pass *createSVEShuffleOptsPass();
 InstructionSelector *
@@ -158,7 +162,8 @@ FunctionPass *createAArch64PreLegalizerCombiner();
 FunctionPass *createAArch64PostLegalizerCombinerLegacy(bool IsOptNone);
 FunctionPass *createAArch64PostLegalizerLowering();
 FunctionPass *createAArch64PostSelectOptimize();
-FunctionPass *createAArch64StackTaggingPass(bool IsOptNone);
+FunctionPass *createAArch64StackTaggingPass(const AArch64Options &CLOpts,
+                                            bool IsOptNone);
 FunctionPass *createAArch64StackTaggingPreRALegacyPass();
 ModulePass *createAArch64Arm64ECCallLoweringPass();
 
@@ -167,10 +172,11 @@ void initializeAArch64A57FPLoadBalancingLegacyPass(PassRegistry &);
 void initializeAArch64AdvSIMDScalarLegacyPass(PassRegistry &);
 void initializeAArch64AsmPrinterPass(PassRegistry &);
 void initializeAArch64PointerAuthLegacyPass(PassRegistry &);
+void initializeAArch64PredicateAsCounterLoopRewritesPass(PassRegistry &);
 void initializeAArch64BranchTargetsLegacyPass(PassRegistry &);
-void initializeAArch64CFIFixupPass(PassRegistry&);
 void initializeAArch64CollectLOHLegacyPass(PassRegistry &);
 void initializeAArch64CompressJumpTablesLegacyPass(PassRegistry &);
+void initializeAArch64WinCFILegacyPass(PassRegistry &);
 void initializeAArch64CondBrTuningPass(PassRegistry &);
 void initializeAArch64ConditionOptimizerLegacyPass(PassRegistry &);
 void initializeAArch64ConditionalComparesLegacyPass(PassRegistry &);
@@ -273,6 +279,12 @@ public:
                         MachineFunctionAnalysisManager &MFAM);
 };
 
+class AArch64WinCFIPass : public RequiredPassInfoMixin<AArch64WinCFIPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
 class AArch64CompressJumpTablesPass
     : public OptionalPassInfoMixin<AArch64CompressJumpTablesPass> {
 public:
@@ -340,7 +352,13 @@ public:
 
 class AArch64SLSHardeningPass
     : public RequiredPassInfoMixin<AArch64SLSHardeningPass> {
+  std::unique_ptr<SLSHardeningInserter> Inserter;
+
 public:
+  AArch64SLSHardeningPass();
+  AArch64SLSHardeningPass(AArch64SLSHardeningPass &&);
+  ~AArch64SLSHardeningPass();
+
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
 };

@@ -11,4 +11,7 @@ add_lldb_unittest(Arm64InstEmulationTests
     lldbPluginDisassemblerLLVMC
     lldbPluginInstructionARM64
     lldbPluginProcessUtility
+    lldbPluginObjectFileELF
+    lldbPluginSymbolFileSymtab
+    lldbUtilityHelpers
   )

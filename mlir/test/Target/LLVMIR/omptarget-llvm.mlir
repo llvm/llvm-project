@@ -204,7 +204,7 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
 // CHECK:         store ptr null, ptr %[[VAL_36]], align 8
 // CHECK:         %[[VAL_37:.*]] = getelementptr inbounds [2 x ptr], ptr %[[VAL_0]], i32 0, i32 0
 // CHECK:         %[[VAL_38:.*]] = getelementptr inbounds [2 x ptr], ptr %[[VAL_1]], i32 0, i32 0
-// CHECK:         call void @__tgt_target_data_end_mapper(ptr @3, i64 %[[DEV_I64_END]], i32 2, ptr %[[VAL_37]], ptr %[[VAL_38]], ptr @.offload_sizes.1, ptr @.offload_maptypes.2, ptr @.offload_mapnames.3, ptr null)
+// CHECK:         call void @__tgt_target_data_end_mapper(ptr @7, i64 %[[DEV_I64_END]], i32 2, ptr %[[VAL_37]], ptr %[[VAL_38]], ptr @.offload_sizes.1, ptr @.offload_maptypes.2, ptr @.offload_mapnames.3, ptr null)
 // CHECK:         br label %[[VAL_39:.*]]
 // CHECK:       omp_if.else8:                                     ; preds = %[[VAL_25]]
 // CHECK:         br label %[[VAL_39]]
@@ -502,7 +502,7 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
 // CHECK:         store ptr null, ptr %[[MAPPERS_VAL]], align 8
 // CHECK:         %[[BASEPTRS_VAL_2:.*]] = getelementptr inbounds [1 x ptr], ptr %[[OFFLOAD_BASEPTRS]], i32 0, i32 0
 // CHECK:         %[[PTRS_VAL_2:.*]] = getelementptr inbounds [1 x ptr], ptr %[[OFFLOAD_PTRS]], i32 0, i32 0
-// CHECK:         call void @__tgt_target_data_update_mapper(ptr @2, i64 -1, i32 1, ptr %[[BASEPTRS_VAL_2]], ptr %[[PTRS_VAL_2]], ptr @{{.*}}, ptr @{{.*}}, ptr @{{.*}}, ptr null)
+// CHECK:         call void @__tgt_target_data_update_mapper(ptr @4, i64 -1, i32 1, ptr %[[BASEPTRS_VAL_2]], ptr %[[PTRS_VAL_2]], ptr @{{.*}}, ptr @{{.*}}, ptr @{{.*}}, ptr null)
 
 // CHECK:         ret void
 
@@ -549,12 +549,12 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
 // CHECK:         store ptr @.omp_mapper._QQFmy_testmy_mapper, ptr %[[VAL_9]], align 8
 // CHECK:         %[[VAL_10:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_0]], i32 0, i32 0
 // CHECK:         %[[VAL_11:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_1]], i32 0, i32 0
-// CHECK:         call void @__tgt_target_data_begin_mapper(ptr @4, i64 -1, i32 1, ptr %[[VAL_10]], ptr %[[VAL_11]], ptr @.offload_sizes, ptr @.offload_maptypes, ptr @.offload_mapnames, ptr %[[VAL_2]])
+// CHECK:         call void @__tgt_target_data_begin_mapper(ptr @2, i64 -1, i32 1, ptr %[[VAL_10]], ptr %[[VAL_11]], ptr @.offload_sizes, ptr @.offload_maptypes, ptr @.offload_mapnames, ptr %[[VAL_2]])
 // CHECK:         %[[VAL_12:.*]] = getelementptr %[[VAL_4]], ptr %[[VAL_3]], i32 0, i32 0
 // CHECK:         store i32 10, ptr %[[VAL_12]], align 4
 // CHECK:         %[[VAL_13:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_0]], i32 0, i32 0
 // CHECK:         %[[VAL_14:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_1]], i32 0, i32 0
-// CHECK:         call void @__tgt_target_data_end_mapper(ptr @4, i64 -1, i32 1, ptr %[[VAL_13]], ptr %[[VAL_14]], ptr @.offload_sizes, ptr @.offload_maptypes, ptr @.offload_mapnames, ptr %[[VAL_2]])
+// CHECK:         call void @__tgt_target_data_end_mapper(ptr @2, i64 -1, i32 1, ptr %[[VAL_13]], ptr %[[VAL_14]], ptr @.offload_sizes, ptr @.offload_maptypes, ptr @.offload_mapnames, ptr %[[VAL_2]])
 // CHECK:         ret void
 
 // CHECK-LABEL: define internal void @.omp_mapper._QQFmy_testmy_mapper
@@ -599,11 +599,11 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
 // CHECK:         br label %[[VAL_42]]
 // CHECK:       omp.type.end:                                     ; preds = %[[VAL_59]], %[[VAL_56]], %[[VAL_55]], %[[VAL_51]]
 // CHECK:         %[[VAL_61:.*]] = phi i64 [ 0, %[[VAL_51]] ], [ 1, %[[VAL_55]] ], [ 2, %[[VAL_59]] ], [ 3, %[[VAL_56]] ]
-// Map-type modifiers (ALWAYS|DELETE|CLOSE = 1036) from the outer clause are
-// propagated to each entry the mapper pushes.
-// CHECK:         %[[VAL_MODMASK:.*]] = and i64 %{{.*}}, 1036
+// Map-type modifiers (ALWAYS|DELETE|CLOSE|PRESENT = 5132) from the outer
+// clause are propagated to eligible entries the mapper pushes.
+// CHECK:         %[[VAL_MODMASK:.*]] = and i64 %{{.*}}, 5132
 // CHECK:         %[[VAL_MTYPEMOD:.*]] = or i64 %[[VAL_61]], %[[VAL_MODMASK]]
-// CHECK:         call void @__tgt_push_mapper_component(ptr %[[VAL_37]], ptr %[[VAL_45]], ptr %[[VAL_45]], i64 4, i64 %[[VAL_MTYPEMOD]], ptr @2)
+// CHECK:         call void @__tgt_push_mapper_component(ptr %[[VAL_37]], ptr %[[VAL_45]], ptr %[[VAL_45]], i64 4, i64 %[[VAL_MTYPEMOD]], ptr @4)
 // CHECK:         %[[VAL_44]] = getelementptr %[[VAL_18]], ptr %[[VAL_43]], i32 1
 // CHECK:         %[[VAL_62:.*]] = icmp eq ptr %[[VAL_44]], %[[VAL_17]]
 // CHECK:         br i1 %[[VAL_62]], label %[[VAL_63:.*]], label %[[VAL_41]]

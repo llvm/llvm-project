@@ -22,6 +22,23 @@ class TestFrameVar(TestBase):
         self.build()
         self.do_test()
 
+    def test_legacy_expression_path_malformed_trailing_operator(self):
+        """
+        A '-' or '>' with no matching partner is not a valid variable
+        expression path.
+        """
+        self.build()
+        _, _, thread, _ = lldbutil.run_to_source_breakpoint(
+            self, "Set a breakpoint here", lldb.SBFileSpec("main.c")
+        )
+        self.runCmd("settings set target.experimental.use-DIL false")
+        for expr in ("test_var-", "test_var>", "test_var-x"):
+            # Make sure parser reprots an error instead of assert.
+            self.expect(
+                f"frame variable {expr}",
+                error=True,
+            )
+
     def do_test(self):
         _, _, thread, _ = lldbutil.run_to_source_breakpoint(
             self, "Set a breakpoint here", lldb.SBFileSpec("main.c")
@@ -170,7 +187,7 @@ class TestFrameVar(TestBase):
 
     @skipIfRemote
     @skipIfWindows  # Windows can't set breakpoints by name 'main' in this case.
-    @skipIf(compiler=no_match("clang"))
+    @requireClang
     def test_gline_tables_only(self):
         """
         Test that if we build a binary with "-gline-tables-only" that we can
@@ -178,7 +195,7 @@ class TestFrameVar(TestBase):
         letting us know that this build option was enabled when trying to
         read variables.
         """
-        self.build(dictionary={"CFLAGS_EXTRAS": "-gline-tables-only"})
+        self.build(dictionary={"TEST_CFLAGS_EXTRAS": "-gline-tables-only"})
         exe = self.getBuildArtifact("a.out")
 
         # We have to set a named breakpoint because we don't have any debug info
@@ -198,7 +215,7 @@ class TestFrameVar(TestBase):
         set a file and line breakpoint successfully, and get an error
         letting us know we were unable to load the .dwo file.
         """
-        self.build(dictionary={"CFLAGS_EXTRAS": "-gsplit-dwarf"})
+        self.build(dictionary={"TEST_CFLAGS_EXTRAS": "-gsplit-dwarf"})
         exe = self.getBuildArtifact("a.out")
         main_dwo = self.getBuildArtifact("main.dwo")
 
@@ -228,7 +245,7 @@ class TestFrameVar(TestBase):
         letting us know we were unable to load the .dwo file because it
         existed, but it wasn't a valid object file.
         """
-        self.build(dictionary={"CFLAGS_EXTRAS": "-gsplit-dwarf"})
+        self.build(dictionary={"TEST_CFLAGS_EXTRAS": "-gsplit-dwarf"})
         exe = self.getBuildArtifact("a.out")
         main_dwo = self.getBuildArtifact("main.dwo")
 

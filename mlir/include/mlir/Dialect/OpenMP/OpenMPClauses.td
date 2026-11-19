@@ -241,13 +241,16 @@ def OpenMP_CollapseClause : OpenMP_CollapseClauseSkip<>;
 
 class OpenMP_CopyprivateClauseSkip<
     bit traits = false, bit arguments = false, bit assemblyFormat = false,
-    bit description = false, bit extraClassDeclaration = false
+    bit description = false, bit extraClassDeclaration = false,
+    bit boundedRecipeEffects = false
   > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
-  let arguments = (ins
+  let arguments = !con((ins
     Variadic<OpenMP_PointerLikeType>:$copyprivate_vars,
     OptionalAttr<SymbolRefArrayAttr>:$copyprivate_syms
-  );
+  ), !if(boundedRecipeEffects, (ins
+    UnitAttr:$copyprivate_assume_bounded_recipe_effects
+  ), (ins)));
 
   let optAssemblyFormat = [{
     `copyprivate` `(`
@@ -259,6 +262,15 @@ class OpenMP_CopyprivateClauseSkip<
     If `copyprivate` variables and functions are specified, then each thread
     variable is updated with the variable value of the thread that executed
     the single region, using the specified copy functions.
+
+    The optional `copyprivate_assume_bounded_recipe_effects` unit attribute
+    asserts that referenced copyprivatisation recipes may only read or write
+    `copyprivate` variables associated with the clause.
+    These effects apply only to storage directly designated by the `copyprivate`
+    variables. Recipes may not access other storage, including globals or
+    pointees reached by loading pointers from these variables. Without the
+    attribute, referenced copy functions are assumed to have arbitrary memory
+    effects.
   }];
 }
 
@@ -396,7 +408,7 @@ class OpenMP_DoacrossClauseSkip<
   );
 
   let reqAssemblyFormat = [{
-    ( `depend_type` `` $doacross_depend_type^ )?
+    ( `depend_type` `(` enum($doacross_depend_type)^ `)` )?
     ( `depend_vec` `(` $doacross_depend_vars^ `:` type($doacross_depend_vars)
                    `)` )?
     ( `num_loops` `(` $doacross_num_loops^ `)` )?
@@ -821,16 +833,21 @@ class OpenMP_LinearClauseSkip<
     bit description = false, bit extraClassDeclaration = false
   > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
+  let traits = [
+    BlockArgOpenMPOpInterface
+  ];
+
   let arguments = (ins Variadic<AnyType>:$linear_vars,
       Variadic<AnyInteger>:$linear_step_vars,
       OptionalAttr<ArrayAttr>:$linear_var_types,
-      OptionalAttr<ArrayAttr>:$linear_modifiers);
+      OptionalAttr<ArrayAttr>:$linear_modifiers,
+      OptionalAttr<SymbolRefArrayAttr>:$linear_syms);
 
   let optAssemblyFormat = [{
     `linear` `(`
       custom<LinearClause>($linear_vars, type($linear_vars),
                            $linear_step_vars, type($linear_step_vars),
-                           $linear_modifiers) `)`
+                           $linear_modifiers, $linear_syms) `)`
       ( `linear_var_types` `(` $linear_var_types^ `)` )?
   }];
 
@@ -843,6 +860,10 @@ class OpenMP_LinearClauseSkip<
     The `linear_modifiers` attribute optionally specifies a per-variable
     linear-modifier: `val`, `ref`, or `uval`. When omitted, the default
     modifier is determined by the language semantics.
+
+    On operations with a region, `linear_syms` names the `omp.private`
+    declaration of `linear` type that privatizes each linear variable, and each
+    linear variable defines an entry block argument for its private copy.
   }];
 }
 
@@ -1006,6 +1027,36 @@ class OpenMP_MergeableClauseSkip<
 def OpenMP_MergeableClause : OpenMP_MergeableClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
+// V5.2: [7.6.2] `nocontext` clause
+//===----------------------------------------------------------------------===//
+
+class OpenMP_NocontextClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+  let arguments = (ins
+    Optional<I1>:$nocontext
+  );
+
+  let optAssemblyFormat = [{
+    `nocontext` `(` $nocontext `)`
+  }];
+
+  let description = [{
+    When parameter to `nocontext` evaluates to `true`, the dispatch construct is
+    not added to the OpenMP context, so a function variant that would be selected
+    only because of the enclosing dispatch construct is not selected.
+
+    At the dialect level this operand carries no semantics of its own. The
+    producer of the region is responsible for materializing the base/variant
+    selection, and the LLVM IR translation deliberately ignores this operand.
+  }];
+}
+
+def OpenMP_NocontextClause : OpenMP_NocontextClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
 // V5.2: [15.7] `nogroup` clause
 //===----------------------------------------------------------------------===//
 
@@ -1079,6 +1130,38 @@ class OpenMP_NotinbranchClauseSkip<
   }];
 }
 def OpenMP_NotinbranchClause : OpenMP_NotinbranchClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
+// V5.2: [7.6.1] `novariants` clause
+//===----------------------------------------------------------------------===//
+
+class OpenMP_NovariantsClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+  let arguments = (ins
+    Optional<I1>:$novariants
+  );
+
+  let optAssemblyFormat = [{
+    `novariants` `(` $novariants `)`
+  }];
+
+  let description = [{
+    When a `novariants` clause is present and its expression evaluates to
+    `true`, no function variant is selected for the target call of the dispatch
+    region, even if one would be selected normally. The use of a variable in a
+    `novariants` clause expression causes an implicit reference to the variable
+    in all enclosing constructs.
+
+    At the dialect level this operand carries no semantics of its own. The
+    producer of the region is responsible for materializing the base/variant
+    selection, and the LLVM IR translation deliberately ignores this operand.
+  }];
+}
+
+def OpenMP_NovariantsClause : OpenMP_NovariantsClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
 // V5.2: [15.6] `nowait` clause
@@ -1443,22 +1526,36 @@ def OpenMP_PriorityClause : OpenMP_PriorityClauseSkip<>;
 
 class OpenMP_PrivateClauseSkip<
     bit traits = false, bit arguments = false, bit assemblyFormat = false,
-    bit description = false, bit extraClassDeclaration = false
+    bit description = false, bit extraClassDeclaration = false,
+    bit boundedRecipeEffects = false
   > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
   let traits = [
     BlockArgOpenMPOpInterface
   ];
 
-  let arguments = (ins
+  let arguments = !con((ins
     Variadic<AnyType>:$private_vars,
     OptionalAttr<SymbolRefArrayAttr>:$private_syms,
     // Set this attribute if a barrier is needed after initialization and
     // copying of lastprivate variables.
     UnitAttr:$private_needs_barrier
-  );
+  ), !if(boundedRecipeEffects, (ins
+    UnitAttr:$private_assume_bounded_recipe_effects
+  ), (ins)));
 
-  // TODO: Add description.
+  let description = [{
+    The optional `private_assume_bounded_recipe_effects` unit attribute asserts
+    that all regions of every referenced privatisation recipe may only read the
+    original variable and allocate, write or free private storage.
+    Lastprivate copy-back is represented by explicit nested operations.
+
+    These effects apply only to storage directly designated by the original
+    variables and their corresponding private block arguments. Recipes may not
+    access other storage, including globals or pointees reached by loading
+    pointers from these variables. Without the attribute, referenced
+    privatisation recipes are assumed to have arbitrary memory effects.
+  }];
   // Assembly format not defined because this clause must be processed together
   // with the first region of the operation, as it defines entry block
   // arguments.
@@ -1497,39 +1594,73 @@ def OpenMP_ProcBindClause : OpenMP_ProcBindClauseSkip<>;
 
 class OpenMP_ReductionClauseSkip<
     bit traits = false, bit arguments = false, bit assemblyFormat = false,
-    bit description = false, bit extraClassDeclaration = false
+    bit description = false, bit extraClassDeclaration = false,
+    bit boundedRecipeEffects = false
   > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
   let traits = [
     BlockArgOpenMPOpInterface
   ];
 
-  let arguments = (ins
-    OptionalAttr<ReductionModifierAttr>:$reduction_mod,
+  let arguments = !con((ins
+    OptionalAttr<ReductionModifierArrayAttr>:$reduction_mods,
     Variadic<OpenMP_PointerLikeType>:$reduction_vars,
     OptionalAttr<DenseBoolArrayAttr>:$reduction_byref,
     OptionalAttr<SymbolRefArrayAttr>:$reduction_syms
-  );
+  ), !if(boundedRecipeEffects, (ins
+    UnitAttr:$reduction_assume_bounded_recipe_effects
+  ), (ins)));
 
   let extraClassDeclaration = [{
     /// Returns the number of reduction variables.
     unsigned getNumReductionVars() { return getReductionVars().size(); }
+
+    /// Returns the modifier for a reduction variable, defaulting to defaultmod.
+    ReductionModifier getReductionModifier(unsigned index) {
+      auto mods = getReductionModsAttr();
+      return mods ? ::llvm::cast<ReductionModifierAttr>(mods[index]).getValue()
+                  : ReductionModifier::defaultmod;
+    }
+
+    bool hasReductionModifier(ReductionModifier modifier) {
+      for (unsigned i = 0, e = getNumReductionVars(); i != e; ++i)
+        if (getReductionModifier(i) == modifier)
+          return true;
+      return false;
+    }
   }];
 
   // Description varies depending on the operation.
   let description = [{
-    Reductions can be performed by specifying the reduction modifer
-    (`default`, `inscan` or `task`) in `reduction_mod`, reduction accumulator
+    Reductions can be performed by specifying per-variable reduction modifiers
+    (`defaultmod`, `inscan` or `task`) in `reduction_mods`, reduction accumulator
     variables in `reduction_vars`, symbols referring to reduction declarations
     in the `reduction_syms` attribute, and whether the reduction variable
     should be passed into the reduction region by value or by reference in
-    `reduction_byref`. Each reduction is identified by the accumulator it uses
+    `reduction_byref`. The modifier array, when present, has one entry per
+    reduction variable;
+    when absent, all modifiers are `defaultmod`. The assembly syntax places
+    each non-default modifier before its reduction item, for example
+    `reduction(task @add %x -> %px, @mul %y -> %py : !llvm.ptr, !llvm.ptr)`.
+    Default modifiers are omitted.
+    Each reduction is identified by the accumulator it uses
     and accumulators must not be repeated in the same reduction. A private
     variable corresponding to the accumulator is used in place of the
     accumulator inside the body of the operation. The reduction declaration
     specifies how to combine the values from each iteration, section, team,
     thread or simd lane defined by the operation's region into the final value,
     which is available in the accumulator after they all complete.
+
+    The optional `reduction_assume_bounded_recipe_effects` unit attribute
+    asserts that all regions of every referenced reduction recipe may only read
+    or write the original variable and allocate, free, read or write private
+    accumulators.
+
+    These effects apply only to storage directly designated by the original
+    variables and their corresponding private block arguments. Recipes may not
+    access other storage, including globals or pointees reached by loading
+    pointers from these variables. Without the attribute, referenced reduction
+    recipes are assumed to have arbitrary memory effects.
   }];
 
   // Assembly format not defined because this clause must be processed together
@@ -1628,18 +1759,21 @@ def OpenMP_SimdlenClause : OpenMP_SimdlenClauseSkip<>;
 
 class OpenMP_TaskReductionClauseSkip<
     bit traits = false, bit arguments = false, bit assemblyFormat = false,
-    bit description = false, bit extraClassDeclaration = false
+    bit description = false, bit extraClassDeclaration = false,
+    bit boundedRecipeEffects = false
   > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
   let traits = [
     BlockArgOpenMPOpInterface
   ];
 
-  let arguments = (ins
+  let arguments = !con((ins
     Variadic<OpenMP_PointerLikeType>:$task_reduction_vars,
     OptionalAttr<DenseBoolArrayAttr>:$task_reduction_byref,
     OptionalAttr<SymbolRefArrayAttr>:$task_reduction_syms
-  );
+  ), !if(boundedRecipeEffects, (ins
+    UnitAttr:$task_reduction_assume_bounded_recipe_effects
+  ), (ins)));
 
   let description = [{
     The `task_reduction` clause specifies a reduction among tasks. For each list
@@ -1651,6 +1785,17 @@ class OpenMP_TaskReductionClauseSkip<
     symbols referring to reduction declarations in the `task_reduction_syms`
     attribute, and whether the reduction variable should be passed into the
     reduction region by value or by reference in `task_reduction_byref`.
+
+    The optional `task_reduction_assume_bounded_recipe_effects` unit attribute
+    asserts that all regions of every referenced reduction recipe may only read
+    or write the original variable and allocate, free, read or write private
+    accumulators.
+
+    These effects apply only to storage directly designated by the original
+    variables and their corresponding private block arguments. Recipes may not
+    access other storage, including globals or pointees reached by loading
+    pointers from these variables. Without the attribute, referenced reduction
+    recipes are assumed to have arbitrary memory effects.
   }];
 
   // Assembly format not defined because this clause must be processed together
@@ -1715,6 +1860,33 @@ class OpenMP_ThreadLimitClauseSkip<
 }
 
 def OpenMP_ThreadLimitClause : OpenMP_ThreadLimitClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
+// V6.0: [14.8] `threadset` clause
+//===----------------------------------------------------------------------===//
+
+class OpenMP_ThreadsetClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+  let arguments = (ins
+    OptionalAttr<ThreadsetPolicyAttr>:$threadset
+  );
+
+  let optAssemblyFormat = [{
+    `threadset` `(` custom<ClauseAttr>($threadset) `)`
+  }];
+
+  let description = [{
+    The `threadset` clause specifies the set of threads that may execute the
+    generated task. When the policy is `omp_pool`, the task is eligible to be
+    executed by a free-agent thread. When the policy is `omp_team`, the task
+    may only be executed by a thread in the current team.
+  }];
+}
+
+def OpenMP_ThreadsetClause : OpenMP_ThreadsetClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
 // V5.2: [9.1.1] `sizes` clause

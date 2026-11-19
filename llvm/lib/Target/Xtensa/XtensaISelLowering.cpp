@@ -287,9 +287,10 @@ bool XtensaTargetLowering::isOffsetFoldingLegal(
   return false;
 }
 
-bool XtensaTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
-                                        bool ForCodeSize) const {
-  return false;
+TargetLowering::FPImmAction
+XtensaTargetLowering::getFPImmAction(const APFloat &Imm, EVT VT,
+                                     bool ForCodeSize) const {
+  return FPImmAction::ConstantPool;
 }
 
 //===----------------------------------------------------------------------===//
@@ -778,8 +779,7 @@ XtensaTargetLowering::LowerCall(CallLoweringInfo &CLI,
   Glue = Chain.getValue(1);
 
   // Mark the end of the call, which is glued to the call itself.
-  Chain = DAG.getCALLSEQ_END(Chain, DAG.getConstant(NumBytes, DL, PtrVT, true),
-                             DAG.getConstant(0, DL, PtrVT, true), Glue, DL);
+  Chain = DAG.getCALLSEQ_END(Chain, NextStackOffset, 0, Glue, DL);
   Glue = Chain.getValue(1);
 
   // Assign locations to each value returned by this call.
@@ -1474,7 +1474,7 @@ bool XtensaTargetLowering::decomposeMulByConstant(LLVMContext &Context, EVT VT,
   APInt Imm;
   unsigned EltSizeInBits;
 
-  if (ISD::isConstantSplatVector(C.getNode(), Imm)) {
+  if (ISD::isConstantSplatVector(C, Imm)) {
     EltSizeInBits = VT.getScalarSizeInBits();
   } else if (VT.isScalarInteger()) {
     EltSizeInBits = VT.getSizeInBits();

@@ -52,7 +52,7 @@ define float @call_ifunc_aliasee(i64 %arg) {
 ; ALL-LABEL: @call_alias_of_ifunc(
 ; CHECK-FINAL-IFUNCS: call float @alias_of_ifunc(
 
-; CHECK-FINAL-BOTH-NEXT: %1 = load ptr, ptr getelementptr inbounds ([2 x ptr], ptr [[TABLE]], i32 0, i32 1), align 8
+; CHECK-FINAL-BOTH-NEXT: %1 = load ptr, ptr getelementptr inbounds (i8, ptr [[TABLE]], i64 8), align 8
 ; CHECK-FINAL-BOTH-NEXT: %call = call float %1(i64 %arg)
 ; CHECK-FINAL-BOTH-NEXT: ret float %call
 define float @call_alias_of_ifunc(i64 %arg) {
@@ -64,5 +64,5 @@ define float @call_alias_of_ifunc(i64 %arg) {
 ; CHECK-FINAL-BOTH-NEXT: %1 = call ptr @resolver()
 ; CHECK-FINAL-BOTH-NEXT: store ptr %1, ptr [[TABLE]], align 8
 ; CHECK-FINAL-BOTH-NEXT: %2 = call ptr @resolver()
-; CHECK-FINAL-BOTH-NEXT: store ptr %2, ptr getelementptr inbounds ([2 x ptr], ptr [[TABLE]], i32 0, i32 1), align 8
+; CHECK-FINAL-BOTH-NEXT: store ptr %2, ptr getelementptr inbounds (i8, ptr [[TABLE]], i64 8), align 8
 ; CHECK-FINAL-BOTH-NEXT: ret void

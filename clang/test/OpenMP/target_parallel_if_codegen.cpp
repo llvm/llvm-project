@@ -305,7 +305,7 @@ int bar(int n){
 // CHECK1-NEXT:    [[TMP36:%.*]] = icmp ne i32 [[TMP35]], 0
 // CHECK1-NEXT:    br i1 [[TMP36]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // CHECK1:       omp_offload.failed:
-// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2S12r1Ei_l121(ptr [[THIS1]], i64 [[TMP2]], i64 [[TMP4]], ptr null) #[[ATTR2:[0-9]+]]
+// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2S12r1Ei_l121(ptr [[THIS1]], i64 [[TMP2]], i64 [[TMP4]], ptr null) #[[ATTR3:[0-9]+]]
 // CHECK1-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 // CHECK1:       omp_offload.cont:
 // CHECK1-NEXT:    [[TMP37:%.*]] = load i32, ptr [[N_ADDR]], align 4
@@ -376,12 +376,12 @@ int bar(int n){
 // CHECK1-NEXT:    [[TMP69:%.*]] = icmp ne i32 [[TMP68]], 0
 // CHECK1-NEXT:    br i1 [[TMP69]], label [[OMP_OFFLOAD_FAILED17:%.*]], label [[OMP_OFFLOAD_CONT18:%.*]]
 // CHECK1:       omp_offload.failed17:
-// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2S12r1Ei_l126(ptr [[THIS1]], i64 [[TMP39]], ptr null) #[[ATTR2]]
+// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2S12r1Ei_l126(ptr [[THIS1]], i64 [[TMP39]], ptr null) #[[ATTR3]]
 // CHECK1-NEXT:    br label [[OMP_OFFLOAD_CONT18]]
 // CHECK1:       omp_offload.cont18:
 // CHECK1-NEXT:    br label [[OMP_IF_END:%.*]]
 // CHECK1:       omp_if.else:
-// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2S12r1Ei_l126(ptr [[THIS1]], i64 [[TMP39]], ptr null) #[[ATTR2]]
+// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2S12r1Ei_l126(ptr [[THIS1]], i64 [[TMP39]], ptr null) #[[ATTR3]]
 // CHECK1-NEXT:    br label [[OMP_IF_END]]
 // CHECK1:       omp_if.end:
 // CHECK1-NEXT:    [[A19:%.*]] = getelementptr inbounds nuw [[STRUCT_S1]], ptr [[THIS1]], i32 0, i32 0
@@ -466,12 +466,12 @@ int bar(int n){
 // CHECK1-NEXT:    [[TMP29:%.*]] = icmp ne i32 [[TMP28]], 0
 // CHECK1-NEXT:    br i1 [[TMP29]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // CHECK1:       omp_offload.failed:
-// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZL7fstatici_l104(i64 [[TMP2]], ptr null) #[[ATTR2]]
+// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZL7fstatici_l104(i64 [[TMP2]], ptr null) #[[ATTR3]]
 // CHECK1-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 // CHECK1:       omp_offload.cont:
 // CHECK1-NEXT:    br label [[OMP_IF_END:%.*]]
 // CHECK1:       omp_if.else:
-// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZL7fstatici_l104(i64 [[TMP2]], ptr null) #[[ATTR2]]
+// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZL7fstatici_l104(i64 [[TMP2]], ptr null) #[[ATTR3]]
 // CHECK1-NEXT:    br label [[OMP_IF_END]]
 // CHECK1:       omp_if.end:
 // CHECK1-NEXT:    [[TMP30:%.*]] = load i32, ptr [[N_ADDR]], align 4
@@ -517,12 +517,12 @@ int bar(int n){
 // CHECK1-NEXT:    [[TMP50:%.*]] = icmp ne i32 [[TMP49]], 0
 // CHECK1-NEXT:    br i1 [[TMP50]], label [[OMP_OFFLOAD_FAILED10:%.*]], label [[OMP_OFFLOAD_CONT11:%.*]]
 // CHECK1:       omp_offload.failed10:
-// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZL7fstatici_l108(ptr null) #[[ATTR2]]
+// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZL7fstatici_l108(ptr null) #[[ATTR3]]
 // CHECK1-NEXT:    br label [[OMP_OFFLOAD_CONT11]]
 // CHECK1:       omp_offload.cont11:
 // CHECK1-NEXT:    br label [[OMP_IF_END13:%.*]]
 // CHECK1:       omp_if.else12:
-// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZL7fstatici_l108(ptr null) #[[ATTR2]]
+// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZL7fstatici_l108(ptr null) #[[ATTR3]]
 // CHECK1-NEXT:    br label [[OMP_IF_END13]]
 // CHECK1:       omp_if.end13:
 // CHECK1-NEXT:    [[TMP51:%.*]] = load i32, ptr [[N_ADDR]], align 4
@@ -596,7 +596,7 @@ int bar(int n){
 // CHECK1-NEXT:    [[TMP24:%.*]] = icmp ne i32 [[TMP23]], 0
 // CHECK1-NEXT:    br i1 [[TMP24]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // CHECK1:       omp_offload.failed:
-// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l87(i64 [[TMP1]], ptr null) #[[ATTR2]]
+// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l87(i64 [[TMP1]], ptr null) #[[ATTR3]]
 // CHECK1-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 // CHECK1:       omp_offload.cont:
 // CHECK1-NEXT:    store i16 1, ptr [[B]], align 2
@@ -656,7 +656,7 @@ int bar(int n){
 // CHECK1-NEXT:    [[TMP54:%.*]] = icmp ne i32 [[TMP53]], 0
 // CHECK1-NEXT:    br i1 [[TMP54]], label [[OMP_OFFLOAD_FAILED6:%.*]], label [[OMP_OFFLOAD_CONT7:%.*]]
 // CHECK1:       omp_offload.failed6:
-// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l93(i64 [[TMP26]], i64 [[TMP28]], ptr null) #[[ATTR2]]
+// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l93(i64 [[TMP26]], i64 [[TMP28]], ptr null) #[[ATTR3]]
 // CHECK1-NEXT:    br label [[OMP_OFFLOAD_CONT7]]
 // CHECK1:       omp_offload.cont7:
 // CHECK1-NEXT:    [[TMP55:%.*]] = load i32, ptr [[A]], align 4
@@ -692,7 +692,7 @@ int bar(int n){
 // CHECK1-NEXT:    call void @__kmpc_serialized_parallel(ptr @[[GLOB1]], i32 [[TMP0]])
 // CHECK1-NEXT:    store i32 [[TMP0]], ptr [[DOTTHREADID_TEMP_]], align 4
 // CHECK1-NEXT:    store i32 0, ptr [[DOTBOUND_ZERO_ADDR]], align 4
-// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2S12r1Ei_l121.omp_outlined(ptr [[DOTTHREADID_TEMP_]], ptr [[DOTBOUND_ZERO_ADDR]], ptr [[TMP1]], i64 [[TMP3]]) #[[ATTR2]]
+// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2S12r1Ei_l121.omp_outlined(ptr [[DOTTHREADID_TEMP_]], ptr [[DOTBOUND_ZERO_ADDR]], ptr [[TMP1]], i64 [[TMP3]]) #[[ATTR3]]
 // CHECK1-NEXT:    call void @__kmpc_end_serialized_parallel(ptr @[[GLOB1]], i32 [[TMP0]])
 // CHECK1-NEXT:    br label [[OMP_IF_END]]
 // CHECK1:       omp_if.end:
@@ -700,7 +700,7 @@ int bar(int n){
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2S12r1Ei_l121.omp_outlined
-// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]], i64 noundef [[B:%.*]]) #[[ATTR1]] {
+// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]], i64 noundef [[B:%.*]]) #[[ATTR2:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -742,7 +742,7 @@ int bar(int n){
 // CHECK1-NEXT:    call void @__kmpc_serialized_parallel(ptr @[[GLOB1]], i32 [[TMP0]])
 // CHECK1-NEXT:    store i32 [[TMP0]], ptr [[DOTTHREADID_TEMP_]], align 4
 // CHECK1-NEXT:    store i32 0, ptr [[DOTBOUND_ZERO_ADDR]], align 4
-// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2S12r1Ei_l126.omp_outlined(ptr [[DOTTHREADID_TEMP_]], ptr [[DOTBOUND_ZERO_ADDR]], ptr [[TMP1]]) #[[ATTR2]]
+// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2S12r1Ei_l126.omp_outlined(ptr [[DOTTHREADID_TEMP_]], ptr [[DOTBOUND_ZERO_ADDR]], ptr [[TMP1]]) #[[ATTR3]]
 // CHECK1-NEXT:    call void @__kmpc_end_serialized_parallel(ptr @[[GLOB1]], i32 [[TMP0]])
 // CHECK1-NEXT:    br label [[OMP_IF_END]]
 // CHECK1:       omp_if.end:
@@ -750,7 +750,7 @@ int bar(int n){
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2S12r1Ei_l126.omp_outlined
-// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR1]] {
+// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR2]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -784,7 +784,7 @@ int bar(int n){
 // CHECK1-NEXT:    call void @__kmpc_serialized_parallel(ptr @[[GLOB1]], i32 [[TMP0]])
 // CHECK1-NEXT:    store i32 [[TMP0]], ptr [[DOTTHREADID_TEMP_]], align 4
 // CHECK1-NEXT:    store i32 0, ptr [[DOTBOUND_ZERO_ADDR]], align 4
-// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZL7fstatici_l104.omp_outlined(ptr [[DOTTHREADID_TEMP_]], ptr [[DOTBOUND_ZERO_ADDR]]) #[[ATTR2]]
+// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZL7fstatici_l104.omp_outlined(ptr [[DOTTHREADID_TEMP_]], ptr [[DOTBOUND_ZERO_ADDR]]) #[[ATTR3]]
 // CHECK1-NEXT:    call void @__kmpc_end_serialized_parallel(ptr @[[GLOB1]], i32 [[TMP0]])
 // CHECK1-NEXT:    br label [[OMP_IF_END]]
 // CHECK1:       omp_if.end:
@@ -792,7 +792,7 @@ int bar(int n){
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZL7fstatici_l104.omp_outlined
-// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR2]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -811,7 +811,7 @@ int bar(int n){
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZL7fstatici_l108.omp_outlined
-// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR2]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -837,13 +837,13 @@ int bar(int n){
 // CHECK1-NEXT:    call void @__kmpc_serialized_parallel(ptr @[[GLOB1]], i32 [[TMP0]])
 // CHECK1-NEXT:    store i32 [[TMP0]], ptr [[DOTTHREADID_TEMP_]], align 4
 // CHECK1-NEXT:    store i32 0, ptr [[DOTBOUND_ZERO_ADDR]], align 4
-// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l87.omp_outlined(ptr [[DOTTHREADID_TEMP_]], ptr [[DOTBOUND_ZERO_ADDR]], i64 [[TMP2]]) #[[ATTR2]]
+// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l87.omp_outlined(ptr [[DOTTHREADID_TEMP_]], ptr [[DOTBOUND_ZERO_ADDR]], i64 [[TMP2]]) #[[ATTR3]]
 // CHECK1-NEXT:    call void @__kmpc_end_serialized_parallel(ptr @[[GLOB1]], i32 [[TMP0]])
 // CHECK1-NEXT:    ret void
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l87.omp_outlined
-// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR1]] {
+// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR2]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -879,7 +879,7 @@ int bar(int n){
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l93.omp_outlined
-// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]], i64 noundef [[B:%.*]]) #[[ATTR1]] {
+// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]], i64 noundef [[B:%.*]]) #[[ATTR2]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1020,7 +1020,7 @@ int bar(int n){
 // CHECK3-NEXT:    [[TMP36:%.*]] = icmp ne i32 [[TMP35]], 0
 // CHECK3-NEXT:    br i1 [[TMP36]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // CHECK3:       omp_offload.failed:
-// CHECK3-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2S12r1Ei_l121(ptr [[THIS1]], i32 [[TMP2]], i32 [[TMP4]], ptr null) #[[ATTR2:[0-9]+]]
+// CHECK3-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2S12r1Ei_l121(ptr [[THIS1]], i32 [[TMP2]], i32 [[TMP4]], ptr null) #[[ATTR3:[0-9]+]]
 // CHECK3-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 // CHECK3:       omp_offload.cont:
 // CHECK3-NEXT:    [[TMP37:%.*]] = load i32, ptr [[N_ADDR]], align 4
@@ -1091,12 +1091,12 @@ int bar(int n){
 // CHECK3-NEXT:    [[TMP69:%.*]] = icmp ne i32 [[TMP68]], 0
 // CHECK3-NEXT:    br i1 [[TMP69]], label [[OMP_OFFLOAD_FAILED17:%.*]], label [[OMP_OFFLOAD_CONT18:%.*]]
 // CHECK3:       omp_offload.failed17:
-// CHECK3-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2S12r1Ei_l126(ptr [[THIS1]], i32 [[TMP39]], ptr null) #[[ATTR2]]
+// CHECK3-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2S12r1Ei_l126(ptr [[THIS1]], i32 [[TMP39]], ptr null) #[[ATTR3]]
 // CHECK3-NEXT:    br label [[OMP_OFFLOAD_CONT18]]
 // CHECK3:       omp_offload.cont18:
 // CHECK3-NEXT:    br label [[OMP_IF_END:%.*]]
 // CHECK3:       omp_if.else:
-// CHECK3-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2S12r1Ei_l126(ptr [[THIS1]], i32 [[TMP39]], ptr null) #[[ATTR2]]
+// CHECK3-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2S12r1Ei_l126(ptr [[THIS1]], i32 [[TMP39]], ptr null) #[[ATTR3]]
 // CHECK3-NEXT:    br label [[OMP_IF_END]]
 // CHECK3:       omp_if.end:
 // CHECK3-NEXT:    [[A19:%.*]] = getelementptr inbounds nuw [[STRUCT_S1]], ptr [[THIS1]], i32 0, i32 0
@@ -1181,12 +1181,12 @@ int bar(int n){
 // CHECK3-NEXT:    [[TMP29:%.*]] = icmp ne i32 [[TMP28]], 0
 // CHECK3-NEXT:    br i1 [[TMP29]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // CHECK3:       omp_offload.failed:
-// CHECK3-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZL7fstatici_l104(i32 [[TMP2]], ptr null) #[[ATTR2]]
+// CHECK3-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZL7fstatici_l104(i32 [[TMP2]], ptr null) #[[ATTR3]]
 // CHECK3-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 // CHECK3:       omp_offload.cont:
 // CHECK3-NEXT:    br label [[OMP_IF_END:%.*]]
 // CHECK3:       omp_if.else:
-// CHECK3-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZL7fstatici_l104(i32 [[TMP2]], ptr null) #[[ATTR2]]
+// CHECK3-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZL7fstatici_l104(i32 [[TMP2]], ptr null) #[[ATTR3]]
 // CHECK3-NEXT:    br label [[OMP_IF_END]]
 // CHECK3:       omp_if.end:
 // CHECK3-NEXT:    [[TMP30:%.*]] = load i32, ptr [[N_ADDR]], align 4
@@ -1232,12 +1232,12 @@ int bar(int n){
 // CHECK3-NEXT:    [[TMP50:%.*]] = icmp ne i32 [[TMP49]], 0
 // CHECK3-NEXT:    br i1 [[TMP50]], label [[OMP_OFFLOAD_FAILED10:%.*]], label [[OMP_OFFLOAD_CONT11:%.*]]
 // CHECK3:       omp_offload.failed10:
-// CHECK3-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZL7fstatici_l108(ptr null) #[[ATTR2]]
+// CHECK3-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZL7fstatici_l108(ptr null) #[[ATTR3]]
 // CHECK3-NEXT:    br label [[OMP_OFFLOAD_CONT11]]
 // CHECK3:       omp_offload.cont11:
 // CHECK3-NEXT:    br label [[OMP_IF_END13:%.*]]
 // CHECK3:       omp_if.else12:
-// CHECK3-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZL7fstatici_l108(ptr null) #[[ATTR2]]
+// CHECK3-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZL7fstatici_l108(ptr null) #[[ATTR3]]
 // CHECK3-NEXT:    br label [[OMP_IF_END13]]
 // CHECK3:       omp_if.end13:
 // CHECK3-NEXT:    [[TMP51:%.*]] = load i32, ptr [[N_ADDR]], align 4
@@ -1311,7 +1311,7 @@ int bar(int n){
 // CHECK3-NEXT:    [[TMP24:%.*]] = icmp ne i32 [[TMP23]], 0
 // CHECK3-NEXT:    br i1 [[TMP24]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // CHECK3:       omp_offload.failed:
-// CHECK3-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l87(i32 [[TMP1]], ptr null) #[[ATTR2]]
+// CHECK3-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l87(i32 [[TMP1]], ptr null) #[[ATTR3]]
 // CHECK3-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 // CHECK3:       omp_offload.cont:
 // CHECK3-NEXT:    store i16 1, ptr [[B]], align 2
@@ -1371,7 +1371,7 @@ int bar(int n){
 // CHECK3-NEXT:    [[TMP54:%.*]] = icmp ne i32 [[TMP53]], 0
 // CHECK3-NEXT:    br i1 [[TMP54]], label [[OMP_OFFLOAD_FAILED6:%.*]], label [[OMP_OFFLOAD_CONT7:%.*]]
 // CHECK3:       omp_offload.failed6:
-// CHECK3-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l93(i32 [[TMP26]], i32 [[TMP28]], ptr null) #[[ATTR2]]
+// CHECK3-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l93(i32 [[TMP26]], i32 [[TMP28]], ptr null) #[[ATTR3]]
 // CHECK3-NEXT:    br label [[OMP_OFFLOAD_CONT7]]
 // CHECK3:       omp_offload.cont7:
 // CHECK3-NEXT:    [[TMP55:%.*]] = load i32, ptr [[A]], align 4
@@ -1407,7 +1407,7 @@ int bar(int n){
 // CHECK3-NEXT:    call void @__kmpc_serialized_parallel(ptr @[[GLOB1]], i32 [[TMP0]])
 // CHECK3-NEXT:    store i32 [[TMP0]], ptr [[DOTTHREADID_TEMP_]], align 4
 // CHECK3-NEXT:    store i32 0, ptr [[DOTBOUND_ZERO_ADDR]], align 4
-// CHECK3-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2S12r1Ei_l121.omp_outlined(ptr [[DOTTHREADID_TEMP_]], ptr [[DOTBOUND_ZERO_ADDR]], ptr [[TMP1]], i32 [[TMP3]]) #[[ATTR2]]
+// CHECK3-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2S12r1Ei_l121.omp_outlined(ptr [[DOTTHREADID_TEMP_]], ptr [[DOTBOUND_ZERO_ADDR]], ptr [[TMP1]], i32 [[TMP3]]) #[[ATTR3]]
 // CHECK3-NEXT:    call void @__kmpc_end_serialized_parallel(ptr @[[GLOB1]], i32 [[TMP0]])
 // CHECK3-NEXT:    br label [[OMP_IF_END]]
 // CHECK3:       omp_if.end:
@@ -1415,7 +1415,7 @@ int bar(int n){
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2S12r1Ei_l121.omp_outlined
-// CHECK3-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]], i32 noundef [[B:%.*]]) #[[ATTR1]] {
+// CHECK3-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]], i32 noundef [[B:%.*]]) #[[ATTR2:[0-9]+]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK3-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -1457,7 +1457,7 @@ int bar(int n){
 // CHECK3-NEXT:    call void @__kmpc_serialized_parallel(ptr @[[GLOB1]], i32 [[TMP0]])
 // CHECK3-NEXT:    store i32 [[TMP0]], ptr [[DOTTHREADID_TEMP_]], align 4
 // CHECK3-NEXT:    store i32 0, ptr [[DOTBOUND_ZERO_ADDR]], align 4
-// CHECK3-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2S12r1Ei_l126.omp_outlined(ptr [[DOTTHREADID_TEMP_]], ptr [[DOTBOUND_ZERO_ADDR]], ptr [[TMP1]]) #[[ATTR2]]
+// CHECK3-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2S12r1Ei_l126.omp_outlined(ptr [[DOTTHREADID_TEMP_]], ptr [[DOTBOUND_ZERO_ADDR]], ptr [[TMP1]]) #[[ATTR3]]
 // CHECK3-NEXT:    call void @__kmpc_end_serialized_parallel(ptr @[[GLOB1]], i32 [[TMP0]])
 // CHECK3-NEXT:    br label [[OMP_IF_END]]
 // CHECK3:       omp_if.end:
@@ -1465,7 +1465,7 @@ int bar(int n){
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2S12r1Ei_l126.omp_outlined
-// CHECK3-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR1]] {
+// CHECK3-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR2]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK3-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -1499,7 +1499,7 @@ int bar(int n){
 // CHECK3-NEXT:    call void @__kmpc_serialized_parallel(ptr @[[GLOB1]], i32 [[TMP0]])
 // CHECK3-NEXT:    store i32 [[TMP0]], ptr [[DOTTHREADID_TEMP_]], align 4
 // CHECK3-NEXT:    store i32 0, ptr [[DOTBOUND_ZERO_ADDR]], align 4
-// CHECK3-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZL7fstatici_l104.omp_outlined(ptr [[DOTTHREADID_TEMP_]], ptr [[DOTBOUND_ZERO_ADDR]]) #[[ATTR2]]
+// CHECK3-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZL7fstatici_l104.omp_outlined(ptr [[DOTTHREADID_TEMP_]], ptr [[DOTBOUND_ZERO_ADDR]]) #[[ATTR3]]
 // CHECK3-NEXT:    call void @__kmpc_end_serialized_parallel(ptr @[[GLOB1]], i32 [[TMP0]])
 // CHECK3-NEXT:    br label [[OMP_IF_END]]
 // CHECK3:       omp_if.end:
@@ -1507,7 +1507,7 @@ int bar(int n){
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZL7fstatici_l104.omp_outlined
-// CHECK3-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK3-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR2]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK3-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -1526,7 +1526,7 @@ int bar(int n){
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZL7fstatici_l108.omp_outlined
-// CHECK3-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK3-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR2]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK3-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -1552,13 +1552,13 @@ int bar(int n){
 // CHECK3-NEXT:    call void @__kmpc_serialized_parallel(ptr @[[GLOB1]], i32 [[TMP0]])
 // CHECK3-NEXT:    store i32 [[TMP0]], ptr [[DOTTHREADID_TEMP_]], align 4
 // CHECK3-NEXT:    store i32 0, ptr [[DOTBOUND_ZERO_ADDR]], align 4
-// CHECK3-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l87.omp_outlined(ptr [[DOTTHREADID_TEMP_]], ptr [[DOTBOUND_ZERO_ADDR]], i32 [[TMP2]]) #[[ATTR2]]
+// CHECK3-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l87.omp_outlined(ptr [[DOTTHREADID_TEMP_]], ptr [[DOTBOUND_ZERO_ADDR]], i32 [[TMP2]]) #[[ATTR3]]
 // CHECK3-NEXT:    call void @__kmpc_end_serialized_parallel(ptr @[[GLOB1]], i32 [[TMP0]])
 // CHECK3-NEXT:    ret void
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l87.omp_outlined
-// CHECK3-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[A:%.*]]) #[[ATTR1]] {
+// CHECK3-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[A:%.*]]) #[[ATTR2]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK3-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -1594,7 +1594,7 @@ int bar(int n){
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l93.omp_outlined
-// CHECK3-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[A:%.*]], i32 noundef [[B:%.*]]) #[[ATTR1]] {
+// CHECK3-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[A:%.*]], i32 noundef [[B:%.*]]) #[[ATTR2]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK3-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -1643,7 +1643,7 @@ int bar(int n){
 // CHECK9-NEXT:    call void @__kmpc_serialized_parallel(ptr @[[GLOB1]], i32 [[TMP0]])
 // CHECK9-NEXT:    store i32 [[TMP0]], ptr [[DOTTHREADID_TEMP_]], align 4
 // CHECK9-NEXT:    store i32 0, ptr [[DOTBOUND_ZERO_ADDR]], align 4
-// CHECK9-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZL7fstatici_l104.omp_outlined(ptr [[DOTTHREADID_TEMP_]], ptr [[DOTBOUND_ZERO_ADDR]]) #[[ATTR1:[0-9]+]]
+// CHECK9-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZL7fstatici_l104.omp_outlined(ptr [[DOTTHREADID_TEMP_]], ptr [[DOTBOUND_ZERO_ADDR]]) #[[ATTR2:[0-9]+]]
 // CHECK9-NEXT:    call void @__kmpc_end_serialized_parallel(ptr @[[GLOB1]], i32 [[TMP0]])
 // CHECK9-NEXT:    br label [[OMP_IF_END]]
 // CHECK9:       omp_if.end:
@@ -1651,7 +1651,7 @@ int bar(int n){
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZL7fstatici_l104.omp_outlined
-// CHECK9-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
+// CHECK9-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK9-NEXT:  entry:
 // CHECK9-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK9-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1676,7 +1676,7 @@ int bar(int n){
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZL7fstatici_l108.omp_outlined
-// CHECK9-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
+// CHECK9-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK9-NEXT:  entry:
 // CHECK9-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK9-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1728,7 +1728,7 @@ int bar(int n){
 // CHECK9-NEXT:    call void @__kmpc_serialized_parallel(ptr @[[GLOB1]], i32 [[TMP0]])
 // CHECK9-NEXT:    store i32 [[TMP0]], ptr [[DOTTHREADID_TEMP_]], align 4
 // CHECK9-NEXT:    store i32 0, ptr [[DOTBOUND_ZERO_ADDR]], align 4
-// CHECK9-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2S12r1Ei_l121.omp_outlined(ptr [[DOTTHREADID_TEMP_]], ptr [[DOTBOUND_ZERO_ADDR]], ptr [[THIS]], i64 [[TMP12]]) #[[ATTR1]]
+// CHECK9-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2S12r1Ei_l121.omp_outlined(ptr [[DOTTHREADID_TEMP_]], ptr [[DOTBOUND_ZERO_ADDR]], ptr [[THIS]], i64 [[TMP12]]) #[[ATTR2]]
 // CHECK9-NEXT:    call void @__kmpc_end_serialized_parallel(ptr @[[GLOB1]], i32 [[TMP0]])
 // CHECK9-NEXT:    br label [[OMP_IF_END]]
 // CHECK9:       omp_if.end:
@@ -1736,7 +1736,7 @@ int bar(int n){
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2S12r1Ei_l121.omp_outlined
-// CHECK9-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]], i64 noundef [[B:%.*]]) #[[ATTR0]] {
+// CHECK9-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]], i64 noundef [[B:%.*]]) #[[ATTR1]] {
 // CHECK9-NEXT:  entry:
 // CHECK9-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK9-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1789,7 +1789,7 @@ int bar(int n){
 // CHECK9-NEXT:    call void @__kmpc_serialized_parallel(ptr @[[GLOB1]], i32 [[TMP0]])
 // CHECK9-NEXT:    store i32 [[TMP0]], ptr [[DOTTHREADID_TEMP_]], align 4
 // CHECK9-NEXT:    store i32 0, ptr [[DOTBOUND_ZERO_ADDR]], align 4
-// CHECK9-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2S12r1Ei_l126.omp_outlined(ptr [[DOTTHREADID_TEMP_]], ptr [[DOTBOUND_ZERO_ADDR]], ptr [[THIS]]) #[[ATTR1]]
+// CHECK9-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2S12r1Ei_l126.omp_outlined(ptr [[DOTTHREADID_TEMP_]], ptr [[DOTBOUND_ZERO_ADDR]], ptr [[THIS]]) #[[ATTR2]]
 // CHECK9-NEXT:    call void @__kmpc_end_serialized_parallel(ptr @[[GLOB1]], i32 [[TMP0]])
 // CHECK9-NEXT:    br label [[OMP_IF_END]]
 // CHECK9:       omp_if.end:
@@ -1797,7 +1797,7 @@ int bar(int n){
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2S12r1Ei_l126.omp_outlined
-// CHECK9-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR0]] {
+// CHECK9-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR1]] {
 // CHECK9-NEXT:  entry:
 // CHECK9-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK9-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1837,13 +1837,13 @@ int bar(int n){
 // CHECK9-NEXT:    call void @__kmpc_serialized_parallel(ptr @[[GLOB1]], i32 [[TMP0]])
 // CHECK9-NEXT:    store i32 [[TMP0]], ptr [[DOTTHREADID_TEMP_]], align 4
 // CHECK9-NEXT:    store i32 0, ptr [[DOTBOUND_ZERO_ADDR]], align 4
-// CHECK9-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l87.omp_outlined(ptr [[DOTTHREADID_TEMP_]], ptr [[DOTBOUND_ZERO_ADDR]], i64 [[TMP7]]) #[[ATTR1]]
+// CHECK9-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l87.omp_outlined(ptr [[DOTTHREADID_TEMP_]], ptr [[DOTBOUND_ZERO_ADDR]], i64 [[TMP7]]) #[[ATTR2]]
 // CHECK9-NEXT:    call void @__kmpc_end_serialized_parallel(ptr @[[GLOB1]], i32 [[TMP0]])
 // CHECK9-NEXT:    ret void
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l87.omp_outlined
-// CHECK9-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR0]] {
+// CHECK9-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR1]] {
 // CHECK9-NEXT:  entry:
 // CHECK9-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK9-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1891,7 +1891,7 @@ int bar(int n){
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l93.omp_outlined
-// CHECK9-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]], i64 noundef [[B:%.*]]) #[[ATTR0]] {
+// CHECK9-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]], i64 noundef [[B:%.*]]) #[[ATTR1]] {
 // CHECK9-NEXT:  entry:
 // CHECK9-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK9-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1940,7 +1940,7 @@ int bar(int n){
 // CHECK11-NEXT:    call void @__kmpc_serialized_parallel(ptr @[[GLOB1]], i32 [[TMP0]])
 // CHECK11-NEXT:    store i32 [[TMP0]], ptr [[DOTTHREADID_TEMP_]], align 4
 // CHECK11-NEXT:    store i32 0, ptr [[DOTBOUND_ZERO_ADDR]], align 4
-// CHECK11-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZL7fstatici_l104.omp_outlined(ptr [[DOTTHREADID_TEMP_]], ptr [[DOTBOUND_ZERO_ADDR]]) #[[ATTR1:[0-9]+]]
+// CHECK11-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZL7fstatici_l104.omp_outlined(ptr [[DOTTHREADID_TEMP_]], ptr [[DOTBOUND_ZERO_ADDR]]) #[[ATTR2:[0-9]+]]
 // CHECK11-NEXT:    call void @__kmpc_end_serialized_parallel(ptr @[[GLOB1]], i32 [[TMP0]])
 // CHECK11-NEXT:    br label [[OMP_IF_END]]
 // CHECK11:       omp_if.end:
@@ -1948,7 +1948,7 @@ int bar(int n){
 //
 //
 // CHECK11-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZL7fstatici_l104.omp_outlined
-// CHECK11-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
+// CHECK11-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK11-NEXT:  entry:
 // CHECK11-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK11-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -1973,7 +1973,7 @@ int bar(int n){
 //
 //
 // CHECK11-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZL7fstatici_l108.omp_outlined
-// CHECK11-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
+// CHECK11-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK11-NEXT:  entry:
 // CHECK11-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK11-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -2025,7 +2025,7 @@ int bar(int n){
 // CHECK11-NEXT:    call void @__kmpc_serialized_parallel(ptr @[[GLOB1]], i32 [[TMP0]])
 // CHECK11-NEXT:    store i32 [[TMP0]], ptr [[DOTTHREADID_TEMP_]], align 4
 // CHECK11-NEXT:    store i32 0, ptr [[DOTBOUND_ZERO_ADDR]], align 4
-// CHECK11-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2S12r1Ei_l121.omp_outlined(ptr [[DOTTHREADID_TEMP_]], ptr [[DOTBOUND_ZERO_ADDR]], ptr [[THIS]], i32 [[TMP12]]) #[[ATTR1]]
+// CHECK11-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2S12r1Ei_l121.omp_outlined(ptr [[DOTTHREADID_TEMP_]], ptr [[DOTBOUND_ZERO_ADDR]], ptr [[THIS]], i32 [[TMP12]]) #[[ATTR2]]
 // CHECK11-NEXT:    call void @__kmpc_end_serialized_parallel(ptr @[[GLOB1]], i32 [[TMP0]])
 // CHECK11-NEXT:    br label [[OMP_IF_END]]
 // CHECK11:       omp_if.end:
@@ -2033,7 +2033,7 @@ int bar(int n){
 //
 //
 // CHECK11-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2S12r1Ei_l121.omp_outlined
-// CHECK11-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]], i32 noundef [[B:%.*]]) #[[ATTR0]] {
+// CHECK11-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]], i32 noundef [[B:%.*]]) #[[ATTR1]] {
 // CHECK11-NEXT:  entry:
 // CHECK11-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK11-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -2086,7 +2086,7 @@ int bar(int n){
 // CHECK11-NEXT:    call void @__kmpc_serialized_parallel(ptr @[[GLOB1]], i32 [[TMP0]])
 // CHECK11-NEXT:    store i32 [[TMP0]], ptr [[DOTTHREADID_TEMP_]], align 4
 // CHECK11-NEXT:    store i32 0, ptr [[DOTBOUND_ZERO_ADDR]], align 4
-// CHECK11-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2S12r1Ei_l126.omp_outlined(ptr [[DOTTHREADID_TEMP_]], ptr [[DOTBOUND_ZERO_ADDR]], ptr [[THIS]]) #[[ATTR1]]
+// CHECK11-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2S12r1Ei_l126.omp_outlined(ptr [[DOTTHREADID_TEMP_]], ptr [[DOTBOUND_ZERO_ADDR]], ptr [[THIS]]) #[[ATTR2]]
 // CHECK11-NEXT:    call void @__kmpc_end_serialized_parallel(ptr @[[GLOB1]], i32 [[TMP0]])
 // CHECK11-NEXT:    br label [[OMP_IF_END]]
 // CHECK11:       omp_if.end:
@@ -2094,7 +2094,7 @@ int bar(int n){
 //
 //
 // CHECK11-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2S12r1Ei_l126.omp_outlined
-// CHECK11-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR0]] {
+// CHECK11-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR1]] {
 // CHECK11-NEXT:  entry:
 // CHECK11-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK11-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -2134,13 +2134,13 @@ int bar(int n){
 // CHECK11-NEXT:    call void @__kmpc_serialized_parallel(ptr @[[GLOB1]], i32 [[TMP0]])
 // CHECK11-NEXT:    store i32 [[TMP0]], ptr [[DOTTHREADID_TEMP_]], align 4
 // CHECK11-NEXT:    store i32 0, ptr [[DOTBOUND_ZERO_ADDR]], align 4
-// CHECK11-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l87.omp_outlined(ptr [[DOTTHREADID_TEMP_]], ptr [[DOTBOUND_ZERO_ADDR]], i32 [[TMP7]]) #[[ATTR1]]
+// CHECK11-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l87.omp_outlined(ptr [[DOTTHREADID_TEMP_]], ptr [[DOTBOUND_ZERO_ADDR]], i32 [[TMP7]]) #[[ATTR2]]
 // CHECK11-NEXT:    call void @__kmpc_end_serialized_parallel(ptr @[[GLOB1]], i32 [[TMP0]])
 // CHECK11-NEXT:    ret void
 //
 //
 // CHECK11-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l87.omp_outlined
-// CHECK11-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[A:%.*]]) #[[ATTR0]] {
+// CHECK11-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[A:%.*]]) #[[ATTR1]] {
 // CHECK11-NEXT:  entry:
 // CHECK11-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK11-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -2188,7 +2188,7 @@ int bar(int n){
 //
 //
 // CHECK11-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l93.omp_outlined
-// CHECK11-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[A:%.*]], i32 noundef [[B:%.*]]) #[[ATTR0]] {
+// CHECK11-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[A:%.*]], i32 noundef [[B:%.*]]) #[[ATTR1]] {
 // CHECK11-NEXT:  entry:
 // CHECK11-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK11-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4

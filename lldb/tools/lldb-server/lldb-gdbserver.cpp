@@ -167,6 +167,11 @@ llvm::Error handle_launch(GDBRemoteCommunicationServerLLGS &gdb_server,
   FileSystem::Instance().Resolve(cwd_spec);
   info.SetWorkingDirectory(cwd_spec);
   info.GetEnvironment() = Host::GetEnvironment();
+#ifdef _WIN32
+  // A 0x0 window size makes the inferior use pipes instead of a ConPTY.
+  if (::getenv("LLDB_LAUNCH_FLAG_USE_PIPES"))
+    info.SetSTDIOWindowSize(0, 0);
+#endif
 
   gdb_server.SetLaunchInfo(info);
 
@@ -302,24 +307,12 @@ enum ID {
 #undef OPTION
 };
 
-#define OPTTABLE_STR_TABLE_CODE
+#define OPTTABLE_CODE
 #include "LLGSOptions.inc"
-#undef OPTTABLE_STR_TABLE_CODE
 
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "LLGSOptions.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-static constexpr opt::OptTable::Info InfoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
-#include "LLGSOptions.inc"
-#undef OPTION
-};
-
-class LLGSOptTable : public opt::GenericOptTable {
+class LLGSOptTable : public opt::OptTable {
 public:
-  LLGSOptTable()
-      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {}
+  LLGSOptTable() : opt::OptTable(optionTables()) {}
 
   void PrintHelp(llvm::StringRef Name) {
     std::string Usage =
@@ -464,7 +457,8 @@ int main_gdbserver(int argc, char *argv[]) {
   }
 
   NativeProcessManager manager(mainloop);
-  GDBRemoteCommunicationServerLLGS gdb_server(mainloop, manager);
+  GDBRemoteCommunicationServerLLGS gdb_server(mainloop, manager,
+                                              "lldb-server.native");
 
 #if defined(LLDB_ENABLE_MOCK_ACCELERATOR_PLUGIN)
   gdb_server.InstallPlugin(

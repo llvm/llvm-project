@@ -86,7 +86,7 @@ define void @not_cmp_select_value_operand(ptr noalias %dst, ptr noalias %a, ptr 
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i8>, ptr [[TMP1]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc <4 x i8> [[WIDE_LOAD1]] to <4 x i1>
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp sle <4 x i32> [[WIDE_LOAD]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt <4 x i32> [[WIDE_LOAD]], zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = select <4 x i1> [[TMP3]], <4 x i1> [[TMP3]], <4 x i1> [[TMP2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext <4 x i1> [[TMP4]] to <4 x i8>
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[INDEX]]

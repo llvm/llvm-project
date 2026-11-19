@@ -183,9 +183,9 @@ define dso_local void @check_i128_stackalign(i32 %val0, i32 %val1, i32 %val2, i3
 
 declare void @llvm.memcpy.p0.p0.i32(ptr, ptr, i32, i1)
 
-define dso_local i32 @test_extern() {
+define dso_local i32 @test_extern(ptr %dst, ptr %src, i32 %size) {
 ; CHECK-LABEL: test_extern:
-  call void @llvm.memcpy.p0.p0.i32(ptr align 4 undef, ptr align 4 undef, i32 undef, i1 0)
+  call void @llvm.memcpy.p0.p0.i32(ptr align 4 %dst, ptr align 4 %src, i32 %size, i1 0)
 ; CHECK: bl memcpy
   ret i32 0
 }

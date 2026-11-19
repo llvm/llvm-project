@@ -108,6 +108,7 @@ public:
     eServerPacketType_QThreadSuffixSupported,
 
     eServerPacketType_jThreadsInfo,
+    eServerPacketType_jAddressSpacesInfo,
     eServerPacketType_qsThreadInfo,
     eServerPacketType_qfThreadInfo,
     eServerPacketType_qGetPid,
@@ -130,7 +131,6 @@ public:
     eServerPacketType_qWatchpointSupportInfoSupported,
     eServerPacketType_qXfer,
 
-    eServerPacketType_jSignalsInfo,
     eServerPacketType_jModulesInfo,
 
     eServerPacketType_vAttach,
@@ -168,6 +168,7 @@ public:
     eServerPacketType__m,
     eServerPacketType_notify, // '%' notification
 
+    eServerPacketType_jLLDBSettings,
     eServerPacketType_jLLDBTraceSupported,
     eServerPacketType_jLLDBTraceStart,
     eServerPacketType_jLLDBTraceStop,
@@ -176,6 +177,8 @@ public:
     eServerPacketType_jMultiBreakpoint,
     eServerPacketType_jAcceleratorPluginInitialize,
     eServerPacketType_jAcceleratorPluginBreakpointHit,
+    eServerPacketType_jAcceleratorPluginGetDynamicLoaderLibraryInfo,
+    eServerPacketType_jThreadExtendedInfo,
 
     eServerPacketType_qMemTags, // read memory tags
     eServerPacketType_QMemTags, // write memory tags
@@ -201,6 +204,22 @@ public:
   bool IsNormalResponse() const;
 
   bool IsErrorResponse() const;
+
+  enum StopReplyMask : uint32_t {
+    Signal = (1u << 0),     // 'T' and 'S' stop reply packets.
+    Exited = (1u << 1),     // 'W' process-exit and 'w' thread-exit packets.
+    Terminated = (1u << 2), // 'X' termination packets.
+    Output = (1u << 3),     // 'O' output packets; these do not imply a stop.
+    NoResumedThreads = (1u << 4), // 'N' no-resumed-threads packets.
+    Syscall = (1u << 5),          // 'F' file-I/O request packets.
+    ValidStop = (Signal | Exited | Terminated),
+    Any = (ValidStop | Output | NoResumedThreads | Syscall),
+  };
+
+  /// Classify packets from the stop-reply section of the GDB remote protocol.
+  /// Use ValidStop to match signal, exit, and termination replies. Other packet
+  /// classes, such as Output, can be received while the process is running.
+  bool IsStopReply(uint32_t mask = StopReplyMask::Any) const;
 
   // Returns zero if the packet isn't a EXX packet where XX are two hex digits.
   // Otherwise the error encoded in XX is returned.

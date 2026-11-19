@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "SparcAsmPrinter.h"
 #include "MCTargetDesc/SparcInstPrinter.h"
 #include "MCTargetDesc/SparcMCAsmInfo.h"
 #include "MCTargetDesc/SparcMCTargetDesc.h"
@@ -21,6 +22,7 @@
 #include "TargetInfo/SparcTargetInfo.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/AsmPrinter.h"
+#include "llvm/CodeGen/AsmPrinterAnalysis.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -66,6 +68,7 @@ public:
                        const char *ExtraCode, raw_ostream &O) override;
   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
                              const char *ExtraCode, raw_ostream &O) override;
+  void PrintSymbolOperand(const MachineOperand &MO, raw_ostream &O) override;
 
   void LowerGETPCXAndEmitMCInsts(const MachineInstr *MI,
                                  const MCSubtargetInfo &STI);
@@ -417,6 +420,17 @@ void SparcAsmPrinter::printOperand(const MachineInstr *MI, int opNum,
   }
 }
 
+void SparcAsmPrinter::PrintSymbolOperand(const MachineOperand &MO,
+                                         raw_ostream &O) {
+  const unsigned RelType = MO.getTargetFlags();
+  StringRef Specifier = Sparc::getSpecifierName(RelType);
+  if (!Specifier.empty())
+    O << '%' << Specifier << '(';
+  AsmPrinter::PrintSymbolOperand(MO, O);
+  if (!Specifier.empty())
+    O << ')';
+}
+
 void SparcAsmPrinter::printMemOperand(const MachineInstr *MI, int opNum,
                                       raw_ostream &O) {
   printOperand(MI, opNum, O);
@@ -488,9 +502,16 @@ bool SparcAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
       O << '%' << SparcInstPrinter::getRegisterName(Reg);
       return false;
     }
+    case 'r': {
+      const MachineOperand &MO = MI->getOperand(OpNo);
+      if (MO.isImm() && MO.getImm() == 0) {
+        O << "%g0";
+        return false;
+      }
+      break;
+    }
     case 'f':
-    case 'r':
-     break;
+      break;
     }
   }
 
@@ -524,4 +545,34 @@ LLVMInitializeSparcAsmPrinter() {
   RegisterAsmPrinter<SparcAsmPrinter> X(getTheSparcTarget());
   RegisterAsmPrinter<SparcAsmPrinter> Y(getTheSparcV9Target());
   RegisterAsmPrinter<SparcAsmPrinter> Z(getTheSparcelTarget());
+}
+
+PreservedAnalyses SparcAsmPrinterBeginPass::run(Module &M,
+                                                ModuleAnalysisManager &MAM) {
+  SparcAsmPrinter &AsmPrinter = static_cast<SparcAsmPrinter &>(
+      MAM.getResult<AsmPrinterAnalysis>(M).getPrinter());
+  setupModuleAsmPrinter(M, MAM, AsmPrinter);
+  AsmPrinter.doInitialization(M);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses
+SparcAsmPrinterPass::run(MachineFunction &MF,
+                         MachineFunctionAnalysisManager &MFAM) {
+  SparcAsmPrinter &AsmPrinter = static_cast<SparcAsmPrinter &>(
+      MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+          .getCachedResult<AsmPrinterAnalysis>(*MF.getFunction().getParent())
+          ->getPrinter());
+  setupMachineFunctionAsmPrinter(MFAM, MF, AsmPrinter);
+  AsmPrinter.runOnMachineFunction(MF);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses SparcAsmPrinterEndPass::run(Module &M,
+                                              ModuleAnalysisManager &MAM) {
+  SparcAsmPrinter &AsmPrinter = static_cast<SparcAsmPrinter &>(
+      MAM.getResult<AsmPrinterAnalysis>(M).getPrinter());
+  setupModuleAsmPrinter(M, MAM, AsmPrinter);
+  AsmPrinter.doFinalization(M);
+  return PreservedAnalyses::all();
 }

@@ -59,6 +59,8 @@ static constexpr LangASMap SPIRDefIsGenMap = {
     {LangAS::sycl_global_device, 5},
     {LangAS::sycl_global_host, 6},
     {LangAS::sycl_local, 3},
+    {LangAS::sycl_generic, 4},
+    {LangAS::sycl_constant, 2},
     {LangAS::hlsl_groupshared, 3},
     {LangAS::hlsl_private, 10},
     {LangAS::hlsl_device, 11},
@@ -504,6 +506,15 @@ public:
   }
 
   bool hasInt128Type() const override { return TargetInfo::hasInt128Type(); }
+
+  // Builtin address spaces use AMDGPU numbering, where 0 is flat.
+  LangAS getOpenCLBuiltinAddressSpace(unsigned AS) const override {
+    return AS == 0 ? LangAS::opencl_generic : getLangASFromTargetAS(AS);
+  }
+
+  LangAS getCUDABuiltinAddressSpace(unsigned AS) const override {
+    return AS == 0 ? LangAS::Default : getLangASFromTargetAS(AS);
+  }
 
   // This is only needed for validating arguments passed to
   // __builtin_amdgcn_processor_is

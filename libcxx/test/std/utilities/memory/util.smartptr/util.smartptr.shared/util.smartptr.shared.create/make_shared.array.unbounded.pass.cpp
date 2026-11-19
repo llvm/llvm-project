@@ -24,8 +24,11 @@
 
 #include <cassert>
 #include <concepts>
+#include <cstddef>
 #include <cstdint> // std::uintptr_t
+#include <limits>
 #include <memory>
+#include <new>
 #include <utility>
 
 #include "operator_hijacker.h"
@@ -36,6 +39,28 @@ template <class T, class ...Args>
 concept CanMakeShared = requires(Args&& ...args) {
   { std::make_shared<T>(std::forward<Args>(args)...) } -> std::same_as<std::shared_ptr<T>>;
 };
+
+// Make sure we throw an exception derived from std::bad_alloc when the number of bytes to
+// allocate isn't representable as a std::size_t.
+template <class Array>
+void check_size_overflow([[maybe_unused]] std::size_t n) {
+#ifndef TEST_HAS_NO_EXCEPTIONS
+  try {
+    std::shared_ptr<Array> ptr = std::make_shared<Array>(n);
+    assert(false); // expected an exception to be thrown
+  } catch (std::bad_alloc const&) {
+    // expected
+  }
+
+  try {
+    std::remove_extent_t<Array> init{};
+    std::shared_ptr<Array> ptr = std::make_shared<Array>(n, init);
+    assert(false); // expected an exception to be thrown
+  } catch (std::bad_alloc const&) {
+    // expected
+  }
+#endif
+}
 
 int main(int, char**) {
   // Check behavior for a zero-sized array
@@ -432,6 +457,16 @@ int main(int, char**) {
     static_assert( CanMakeShared<T[], std::size_t>);
     static_assert( CanMakeShared<T[], std::size_t, T>);
     static_assert(!CanMakeShared<T[], std::size_t, T, int>); // too many arguments
+  }
+
+  // Check that requesting a number of elements that overflows the computation of the allocation
+  // size is diagnosed instead of leading to an undersized allocation.
+  {
+    constexpr std::size_t max = std::numeric_limits<std::size_t>::max();
+    check_size_overflow<char[]>(max);
+    check_size_overflow<int[]>(max);
+    check_size_overflow<int[]>(max / sizeof(int) + 2);
+    check_size_overflow<int[][3]>(max / sizeof(int[3]) + 2);
   }
 
   return 0;

@@ -14,7 +14,7 @@
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMModuleOps.h"
 #include "llvm/ADT/Twine.h"
 #include <string>
 
@@ -142,6 +142,20 @@ void FunctionAttrPass::runOnOperation() {
     func->setAttr(
         getLlvmFuncPropertyAttrName(
             context, mlir::LLVM::LLVMFuncOp::getUseSampleProfileAttrName(
+                         llvmFuncOpName)),
+        mlir::BoolAttr::get(context, true));
+  if (UniqueInternalLinkageNames && fir::isInternalProcedure(func))
+    func->setAttr(
+        getLlvmFuncPropertyAttrName(
+            context,
+            mlir::LLVM::LLVMFuncOp::getSampleProfileSuffixElisionPolicyAttrName(
+                llvmFuncOpName)),
+        mlir::StringAttr::get(context, "selected"));
+
+  if (disableTailCalls)
+    func->setAttr(
+        getLlvmFuncPropertyAttrName(
+            context, mlir::LLVM::LLVMFuncOp::getDisableTailCallsAttrName(
                          llvmFuncOpName)),
         mlir::BoolAttr::get(context, true));
 

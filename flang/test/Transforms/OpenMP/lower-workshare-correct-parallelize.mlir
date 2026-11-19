@@ -8,7 +8,7 @@ func.func @foo() {
   omp.workshare {
     %alloc = fir.allocmem !fir.array<?xf32>, %c0 {bindc_name = ".tmp.forall", uniq_name = ""}
     %shape = fir.shape %c0 : (index) -> !fir.shape<1>
-    %declare = fir.declare %alloc(%shape) {uniq_name = ".tmp.forall"} : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.heap<!fir.array<?xf32>>
+    %declare = fir.declare %alloc(%shape) uniq_name(".tmp.forall") : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.heap<!fir.array<?xf32>>
     fir.freemem %alloc : !fir.heap<!fir.array<?xf32>>
     omp.terminator
   }

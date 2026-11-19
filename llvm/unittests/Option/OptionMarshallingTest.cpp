@@ -6,23 +6,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringTable.h"
+#include "llvm/Option/OptTable.h"
 #include "gtest/gtest.h"
 
-#define OPTTABLE_STR_TABLE_CODE
+enum ID {
+  OPT_INVALID = 0, // This is not an option ID.
+#define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
 #include "Opts.inc"
-#undef OPTTABLE_STR_TABLE_CODE
+  LastOption
+#undef OPTION
+};
 
 struct OptionWithMarshallingInfo {
-  int PrefixedNameOffset;
+  ID Opt;
   const char *KeyPath;
   const char *ImpliedCheck;
   const char *ImpliedValue;
-
-  llvm::StringRef getPrefixedName() const {
-    return OptionStrTable[PrefixedNameOffset];
-  }
 };
 
 static const OptionWithMarshallingInfo MarshallingTable[] = {
@@ -31,16 +30,16 @@ static const OptionWithMarshallingInfo MarshallingTable[] = {
     FLAGS, VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR, VALUES, \
     SUBCOMMANDIDS_OFFSET, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,   \
     IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER, TABLE_INDEX)       \
-  {PREFIXED_NAME_OFFSET, #KEYPATH, #IMPLIED_CHECK, #IMPLIED_VALUE},
+  {OPT_##ID, #KEYPATH, #IMPLIED_CHECK, #IMPLIED_VALUE},
 #include "Opts.inc"
 #undef OPTION_WITH_MARSHALLING
 };
 
 TEST(OptionMarshalling, EmittedOrderSameAsDefinitionOrder) {
-  ASSERT_EQ(MarshallingTable[0].getPrefixedName(), "-marshalled-flag-d");
-  ASSERT_EQ(MarshallingTable[1].getPrefixedName(), "-marshalled-flag-c");
-  ASSERT_EQ(MarshallingTable[2].getPrefixedName(), "-marshalled-flag-b");
-  ASSERT_EQ(MarshallingTable[3].getPrefixedName(), "-marshalled-flag-a");
+  ASSERT_EQ(MarshallingTable[0].Opt, OPT_marshalled_flag_d);
+  ASSERT_EQ(MarshallingTable[1].Opt, OPT_marshalled_flag_c);
+  ASSERT_EQ(MarshallingTable[2].Opt, OPT_marshalled_flag_b);
+  ASSERT_EQ(MarshallingTable[3].Opt, OPT_marshalled_flag_a);
 }
 
 TEST(OptionMarshalling, EmittedSpecifiedKeyPath) {

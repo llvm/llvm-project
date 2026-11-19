@@ -21,6 +21,7 @@ namespace clang {
 class AttributeCommonInfo;
 class Expr;
 class ParsedAttr;
+class TargetInfo;
 
 class SemaAMDGPU : public SemaBase {
   llvm::SmallPtrSet<Expr *, 32> ExpandedPredicates;
@@ -29,7 +30,8 @@ class SemaAMDGPU : public SemaBase {
 public:
   SemaAMDGPU(Sema &S);
 
-  bool CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
+  bool CheckAMDGCNBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
+                                      CallExpr *TheCall);
 
   /// Emits a diagnostic if the \p E is not an atomic ordering encoded in the C
   /// ABI format, or if the atomic ordering is not valid for the operation type

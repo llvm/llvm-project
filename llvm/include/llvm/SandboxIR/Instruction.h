@@ -104,17 +104,7 @@ protected:
 
   /// Helper function for create(). It sets the builder's insert position
   /// according to \p Pos.
-  static IRBuilder<> &setInsertPos(InsertPosition Pos) {
-    auto *WhereBB = Pos.getBasicBlock();
-    auto WhereIt = Pos.getIterator();
-    auto &Ctx = WhereBB->getContext();
-    auto &Builder = Ctx.getLLVMIRBuilder();
-    if (WhereIt != WhereBB->end())
-      Builder.SetInsertPoint((*Pos).getTopmostLLVMInstruction());
-    else
-      Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
-    return Builder;
-  }
+  LLVM_ABI static IRBuilder<> &setInsertPos(InsertPosition Pos);
 
 public:
   static const char *getOpcodeName(Opcode Opc) {
@@ -1967,8 +1957,8 @@ public:
   public:
     CaseHandleImpl(Context &Ctx, LLVMCaseItT LLVMCaseIt)
         : Ctx(Ctx), LLVMCaseIt(LLVMCaseIt) {}
-    LLVM_ABI ConstT *getCaseValue() const;
-    LLVM_ABI BlockT *getCaseSuccessor() const;
+    ConstT *getCaseValue() const;
+    BlockT *getCaseSuccessor() const;
     unsigned getCaseIndex() const {
       const auto &LLVMCaseHandle = *LLVMCaseIt;
       return LLVMCaseHandle.getCaseIndex();
@@ -2082,6 +2072,11 @@ public:
     return From->getSubclassID() == ClassID::Switch;
   }
 };
+
+extern template class LLVM_TEMPLATE_ABI SwitchInst::CaseHandleImpl<
+    llvm::SwitchInst::CaseIt, BasicBlock, ConstantInt>;
+extern template class LLVM_TEMPLATE_ABI SwitchInst::CaseHandleImpl<
+    llvm::SwitchInst::ConstCaseIt, const BasicBlock, const ConstantInt>;
 
 class UnaryOperator : public UnaryInstruction {
   static Opcode getUnaryOpcode(llvm::Instruction::UnaryOps UnOp) {
@@ -2627,9 +2622,6 @@ protected:
   CmpInst(llvm::CmpInst *CI, Context &Ctx, ClassID Id, Opcode Opc)
       : SingleLLVMInstructionImpl(Id, Opc, CI, Ctx) {}
   friend Context; // for CmpInst()
-  LLVM_ABI static Value *createCommon(Value *Cond, Value *True, Value *False,
-                                      const Twine &Name, IRBuilder<> &Builder,
-                                      Context &Ctx);
 
 public:
   using Predicate = llvm::CmpInst::Predicate;
@@ -2776,6 +2768,15 @@ inline unsigned getLoadStoreAddressSpace(const Instruction *I) {
   if (auto *LI = dyn_cast<LoadInst>(I))
     return LI->getPointerAddressSpace();
   return cast<StoreInst>(I)->getPointerAddressSpace();
+}
+
+/// A helper function that returns the alignment of load or store instruction.
+inline Align getLoadStoreAlignment(const Value *I) {
+  assert((isa<LoadInst>(I) || isa<StoreInst>(I)) &&
+         "Expected Load or Store instruction");
+  if (auto *LI = dyn_cast<LoadInst>(I))
+    return LI->getAlign();
+  return cast<StoreInst>(I)->getAlign();
 }
 
 } // namespace llvm::sandboxir

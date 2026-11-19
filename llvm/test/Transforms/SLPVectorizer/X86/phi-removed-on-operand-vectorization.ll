@@ -13,9 +13,7 @@ define i32 @test(double %mul321.i) {
 ; CHECK:       [[DO_BODY221_I]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x double> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul <2 x double> [[TMP2]], zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP3]], i64 0
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP3]], i64 1
-; CHECK-NEXT:    [[ADD318_I:%.*]] = fadd double [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[ADD318_I:%.*]] = call reassoc double @llvm.vector.reduce.fadd.v2f64(double -0.000000e+00, <2 x double> [[TMP3]])
 ; CHECK-NEXT:    [[TMP6]] = insertelement <2 x double> [[TMP0]], double [[ADD318_I]], i64 1
 ; CHECK-NEXT:    br label %[[DO_BODY220_I]]
 ;

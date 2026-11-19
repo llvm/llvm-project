@@ -20,6 +20,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/Reassociate.h"
+#include "ScalarOptions.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
@@ -52,7 +53,6 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
@@ -70,12 +70,6 @@ using namespace PatternMatch;
 STATISTIC(NumChanged, "Number of insts reassociated");
 STATISTIC(NumAnnihil, "Number of expr tree annihilated");
 STATISTIC(NumFactor , "Number of multiplies factored");
-
-static cl::opt<bool>
-    UseCSELocalOpt(DEBUG_TYPE "-use-cse-local",
-                   cl::desc("Only reorder expressions within a basic block "
-                            "when exposing CSE opportunities"),
-                   cl::init(true), cl::Hidden);
 
 #ifndef NDEBUG
 /// Print out the expression identified in the Ops list.
@@ -194,13 +188,15 @@ static BinaryOperator *isFMulAddCandidate(Value *V) {
     return m_CombineAnd(m_AllowContract(m_OneUse(m_FMul(m_Value(), m_Value()))),
                         m_BinOp(FMul));
   };
-  BinaryOperator *Mul = nullptr, *OtherMul = nullptr;
+  BinaryOperator *Mul = nullptr;
   Value *OtherOp = nullptr;
-  // Keep constants and nested additions visible to the enclosing expression so
-  // they can participate in folding and reassociation.
+  // Keep constants, nested additions, other contractible multiplies and shared
+  // addends visible to the enclosing expression so they can participate in
+  // folding, reassociation and factorization.
   if (!match(FAdd, m_c_FAdd(ContractableFMul(Mul), m_Value(OtherOp))) ||
       isa<Constant>(OtherOp) || isReassociableOp(OtherOp, Instruction::FAdd) ||
-      match(OtherOp, ContractableFMul(OtherMul)))
+      match(OtherOp, m_AllowContract(m_FMul(m_Value(), m_Value()))) ||
+      !OtherOp->hasOneUse())
     return nullptr;
   return Mul;
 }
@@ -260,8 +256,9 @@ unsigned ReassociatePass::getRank(Value *V) {
       Rank = Item.Rank;
       // If this is a 'not' or 'neg' instruction, do not count it for rank.
       // This assures us that X and ~X will have the same rank.
+      // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
       if (!match(I, m_Not(m_Value())) && !match(I, m_Neg(m_Value())) &&
-          !match(I, m_FNeg(m_Value())))
+          !match(I, m_FNegOrFSubNegZero(m_Value())))
         ++Rank;
 
       LLVM_DEBUG(dbgs() << "Calculated Rank[" << I->getName() << "] = " << Rank
@@ -554,9 +551,11 @@ static bool LinearizeExprTree(Instruction *I,
       // reassociation opportunities that are exposed will be reassociated
       // further.
       Instruction *Neg;
+      // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
       if (((Opcode == Instruction::Mul && match(Op, m_Neg(m_Value()))) ||
-           (Opcode == Instruction::FMul && match(Op, m_FNeg(m_Value())))) &&
-           match(Op, m_Instruction(Neg))) {
+           (Opcode == Instruction::FMul &&
+            match(Op, m_FNegOrFSubNegZero(m_Value())))) &&
+          match(Op, m_Instruction(Neg))) {
         LLVM_DEBUG(dbgs()
                    << "MORPH LEAF: " << *Op << " (" << Weight << ") TO ");
         Instruction *Mul = LowerNegateToMultiply(Neg);
@@ -863,7 +862,9 @@ static Value *NegateValue(Value *V, Instruction *BI,
   // Okay, we need to materialize a negated version of V with an instruction.
   // Scan the use lists of V to see if we have one already.
   for (User *U : V->users()) {
-    if (!match(U, m_Neg(m_Value())) && !match(U, m_FNeg(m_Value())))
+    // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
+    if (!match(U, m_Neg(m_Value())) &&
+        !match(U, m_FNegOrFSubNegZero(m_Value())))
       continue;
 
     // We found one!  Now we have to make sure that the definition dominates
@@ -892,7 +893,7 @@ static Value *NegateValue(Value *V, Instruction *BI,
     } else {
       InsertPt = TheNeg->getFunction()
                      ->getEntryBlock()
-                     .getFirstNonPHIOrDbg()
+                     .getFirstNonPHIOrPseudoProbe()
                      ->getIterator();
     }
 
@@ -1079,7 +1080,9 @@ static BinaryOperator *BreakUpDistribute(Instruction *Mul,
 /// Return true if we should break up this subtract of X-Y into (X + -Y).
 static bool ShouldBreakUpSubtract(Instruction *Sub) {
   // If this is a negation, we can't split it up!
-  if (match(Sub, m_Neg(m_Value())) || match(Sub, m_FNeg(m_Value()))) 
+  // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
+  if (match(Sub, m_Neg(m_Value())) ||
+      match(Sub, m_FNegOrFSubNegZero(m_Value())))
     return false;
 
   // Don't breakup X - undef.
@@ -1652,8 +1655,9 @@ Value *ReassociatePass::OptimizeAdd(Instruction *I,
 
     // Check for X and -X or X and ~X in the operand list.
     Value *X;
+    // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
     if (!match(TheOp, m_Neg(m_Value(X))) && !match(TheOp, m_Not(m_Value(X))) &&
-        !match(TheOp, m_FNeg(m_Value(X))))
+        !match(TheOp, m_FNegOrFSubNegZero(m_Value(X))))
       continue;
 
     unsigned FoundX = FindInOperandList(Ops, i, X);
@@ -1661,8 +1665,9 @@ Value *ReassociatePass::OptimizeAdd(Instruction *I,
       continue;
 
     // Remove X and -X from the operand list.
-    if (Ops.size() == 2 &&
-        (match(TheOp, m_Neg(m_Value())) || match(TheOp, m_FNeg(m_Value()))))
+    // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
+    if (Ops.size() == 2 && (match(TheOp, m_Neg(m_Value())) ||
+                            match(TheOp, m_FNegOrFSubNegZero(m_Value()))))
       return Constant::getNullValue(X->getType());
 
     // Remove X and ~X from the operand list.
@@ -2387,7 +2392,8 @@ void ReassociatePass::OptimizeInst(Instruction *I) {
       RedoInsts.insert(I);
       MadeChange = true;
       I = NI;
-    } else if (match(I, m_FNeg(m_Value()))) {
+    } else if (match(I, m_FNegOrFSubNegZero(m_Value()))) {
+      // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
       // Otherwise, this is a negation.  See if the operand is a multiply tree
       // and if this is not an inner node of a multiply tree.
       Value *Op = isa<BinaryOperator>(I) ? I->getOperand(1) :
@@ -2558,7 +2564,7 @@ void ReassociatePass::ReassociateExpression(BinaryOperator *I) {
     // reordering on the values that live in the first seen basic block.
     // The main idea is that we want to avoid forming expressions that would
     // become loop dependent.
-    if (UseCSELocalOpt) {
+    if (UseCSELocal) {
       const BasicBlock *FirstSeenBB = nullptr;
       int StartIdx = Ops.size() - 1;
       // Skip the first value of the expression since we need at least two
@@ -2735,6 +2741,7 @@ PreservedAnalyses ReassociatePass::run(Function &F,
 
 PreservedAnalyses ReassociatePass::runImpl(Function &F, UniformityInfo &UI) {
   UA = &UI;
+  UseCSELocal = getScalarOptions(F).reassociate_use_cse_local;
 
   // Get the functions basic blocks in Reverse Post Order. This order is used by
   // BuildRankMap to pre calculate ranks correctly. It also excludes dead basic

@@ -16,16 +16,36 @@
 #ifndef LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPCOSTANALYSIS_H
 #define LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPCOSTANALYSIS_H
 
+#include "SLPUtils.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/SmallBitVector.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/InstructionCost.h"
 
+#include <optional>
+#include <tuple>
 #include <utility>
 
 namespace llvm {
+class APInt;
+class BasicBlock;
+class CallInst;
+class DataLayout;
+class FastMathFlags;
+class FixedVectorType;
+class Function;
+class Instruction;
+class TargetLibraryInfo;
 class Type;
+class User;
 class Value;
 class VectorType;
+enum class RecurKind;
 } // namespace llvm
 
 namespace llvm::slpvectorizer {
@@ -38,7 +58,9 @@ getShuffleCost(const TargetTransformInfo &TTI,
                TargetTransformInfo::ShuffleKind Kind, VectorType *Tp,
                const TargetTransformInfo::TargetCostKind CostKind,
                ArrayRef<int> Mask = {}, int Index = 0,
-               VectorType *SubTp = nullptr, ArrayRef<const Value *> Args = {});
+               VectorType *SubTp = nullptr, ArrayRef<const Value *> Args = {},
+               TargetTransformInfo::VectorInstrContext VIC =
+                   TargetTransformInfo::VectorInstrContext::None);
 
 /// Calculate the scalar and the vector costs from vectorizing set of GEPs.
 std::pair<InstructionCost, InstructionCost>
@@ -55,6 +77,177 @@ InstructionCost
 getBlendedLoadCost(const TargetTransformInfo &TTI, Type *VecTy, Align Alignment,
                    unsigned AddressSpace,
                    const TargetTransformInfo::TargetCostKind CostKind);
+
+/// Returns the cost of the cast between the widened strided access type and
+/// the entry vector type.
+InstructionCost
+getWidenedStridedCastCost(const TargetTransformInfo &TTI, Type *SrcTy,
+                          Type *DstTy, const DataLayout &DL,
+                          TargetTransformInfo::CastContextHint CCH,
+                          TargetTransformInfo::TargetCostKind CostKind);
+
+/// For a non-power-of-2 \p NumElts-wide integer div/rem \p Opcode, checks if
+/// padding to a full register and using the masked div/rem intrinsic is
+/// cheaper than the direct vector op. Returns the cost of the masked
+/// alternative, or an invalid cost if it is not applicable or not cheaper.
+InstructionCost
+getMaskedDivRemCost(const TargetTransformInfo &TTI, bool ReVec, unsigned Opcode,
+                    Type *ScalarTy, unsigned NumElts,
+                    const TargetTransformInfo::TargetCostKind CostKind,
+                    FixedVectorType **PaddedTy = nullptr);
+
+/// Returns the cost of the booleanized logical and/or reduction of a vector
+/// of type \p VecTy with the i1 root \p Root, emitted as the wide reduction
+/// plus the result trunc.
+InstructionCost
+getBoolReduxWideRdxCost(const TargetTransformInfo &TTI, RecurKind RdxKind,
+                        FixedVectorType *VecTy, const Value *Root,
+                        FastMathFlags FMF,
+                        TargetTransformInfo::TargetCostKind CostKind);
+
+/// Returns the cost of the booleanized logical and/or reduction of a vector
+/// of type \p VecTy with the i1 root \p Root, emitted as trunc+bitcast+cmp,
+/// estimated in the context of the replaced cast chain \p ChainInsts.
+InstructionCost
+getBoolReduxBitcastCmpCost(const TargetTransformInfo &TTI, RecurKind RdxKind,
+                           FixedVectorType *VecTy, const Value *Root,
+                           ArrayRef<Instruction *> ChainInsts,
+                           TargetTransformInfo::TargetCostKind CostKind);
+
+/// Returns the cost of the boolean bitmask reduction of a vector of boolean
+/// leaves of type \p NarrowScalarTy, emitted as [and] + [lane permutation
+/// \p PermMask] + zero test + bitcast [+ zext] to \p WideTy. \p Root is the
+/// reduction root, used as the context of the emitted instructions.
+InstructionCost
+getBoolBitmaskCost(const TargetTransformInfo &TTI, bool NeedMask,
+                   Type *NarrowScalarTy, Type *WideTy, unsigned VF,
+                   ArrayRef<int> PermMask, const Value *Root,
+                   TargetTransformInfo::TargetCostKind CostKind);
+
+/// Returns the cost of the per-lane operations on the narrowed leaves
+/// \p NarrowedLeafShifts: the shl in the wide vector type if any leaf is
+/// shifted and the and in the narrow vector type if any leaf is masked.
+InstructionCost getNarrowedLeafOpsCost(
+    const TargetTransformInfo &TTI,
+    const SmallDenseMap<Value *, NarrowedLeafInfo> &NarrowedLeafShifts,
+    VectorType *NarrowVecTy, VectorType *WideVecTy, const Instruction *CtxI,
+    TargetTransformInfo::TargetCostKind CostKind);
+
+/// This is similar to TargetTransformInfo::getScalarizationOverhead, but if
+/// ScalarTy is a FixedVectorType, a vector will be inserted or extracted
+/// instead of a scalar.
+InstructionCost
+getScalarizationOverhead(const TargetTransformInfo &TTI, bool ReVec,
+                         Type *ScalarTy, VectorType *Ty,
+                         const APInt &DemandedElts, bool Insert, bool Extract,
+                         const TargetTransformInfo::TargetCostKind CostKind,
+                         bool ForPoisonSrc = true, ArrayRef<Value *> VL = {},
+                         TargetTransformInfo::VectorInstrContext VIC =
+                             TargetTransformInfo::VectorInstrContext::None);
+
+/// This is similar to TargetTransformInfo::getVectorInstrCost, but if ScalarTy
+/// is a FixedVectorType, a vector will be extracted instead of a scalar.
+InstructionCost
+getVectorInstrCost(const TargetTransformInfo &TTI, bool ReVec, Type *ScalarTy,
+                   unsigned Opcode, Type *Val,
+                   const TargetTransformInfo::TargetCostKind CostKind,
+                   unsigned Index, Value *Scalar,
+                   ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx,
+                   TTI::VectorInstrContext VIC = TTI::VectorInstrContext::None);
+
+/// This is similar to TargetTransformInfo::getExtractWithExtendCost, but if Dst
+/// is a FixedVectorType, a vector will be extracted instead of a scalar.
+InstructionCost
+getExtractWithExtendCost(const TargetTransformInfo &TTI, bool ReVec,
+                         unsigned Opcode, Type *Dst, VectorType *VecTy,
+                         unsigned Index,
+                         const TargetTransformInfo::TargetCostKind CostKind);
+
+/// Returns the cost of the bitfield packing of \p SrcTy into \p ResultTy,
+/// picking the cheapest shift width. The packing is a trunc, an lshr, a byte
+/// shuffle and a bitcast. \p ZExtSrcWidth is the source width of the lanes if
+/// they are a plain zext (0 otherwise), so compacting them back to it is free.
+/// \p CCH is the context of the pack's source operand.
+InstructionCost getBitPackCost(const TargetTransformInfo &TTI,
+                               FixedVectorType *SrcTy, Type *ResultTy,
+                               const BitPackInfo &Info, unsigned ZExtSrcWidth,
+                               TargetTransformInfo::CastContextHint CCH,
+                               TargetTransformInfo::TargetCostKind CostKind,
+                               const TargetLibraryInfo *TLI,
+                               const Instruction *CtxI, unsigned &ShiftWidth);
+
+/// i1 reductions can be emitted as the plain target reduction or in the
+/// bitcast-based form (bitcast to a scalar integer type plus a compare for
+/// and/or, plus ctpop for add). Returns the cost of the cheaper form and
+/// whether it is the bitcast-based one. Ties keep the historically default
+/// form: plain for and/or, bitcast-based for add.
+std::pair<InstructionCost, bool>
+getI1ReductionCost(RecurKind Kind, const TargetTransformInfo &TTI,
+                   FixedVectorType *VectorTy, Type *ScalarTy,
+                   TargetTransformInfo::CastContextHint Ctx,
+                   TargetTransformInfo::TargetCostKind CostKind);
+
+/// Builds the arguments types vector for the given call instruction with the
+/// given \p ID for the specified vector factor.
+SmallVector<Type *> buildIntrinsicArgTypes(const CallInst *CI,
+                                           const Intrinsic::ID ID,
+                                           const unsigned VF, unsigned MinBW,
+                                           const TargetTransformInfo &TTI);
+
+/// Calculates the costs of vectorized intrinsic (if possible) and vectorized
+/// function (if possible) calls. Returns invalid cost for the corresponding
+/// calls, if they cannot be vectorized/will be scalarized.
+std::pair<InstructionCost, InstructionCost>
+getVectorCallCosts(CallInst *CI, Type *VecTy, const TargetTransformInfo &TTI,
+                   const TargetLibraryInfo &TLI, ArrayRef<Type *> ArgTys,
+                   const TargetTransformInfo::TargetCostKind CostKind);
+
+/// Memoizes opcode / intrinsic / callee kinds already ruled out as seeds.
+struct PoorThroughputOpCache {
+  SmallDenseSet<std::pair<unsigned, unsigned>> CheapOpcodes;
+  SmallDenseSet<std::pair<Intrinsic::ID, unsigned>> CheapIntrinsics;
+  // Keyed on the callee alone: a Function's signature is fixed, so its type
+  // never varies between calls.
+  SmallDenseSet<const Function *> CheapCallees;
+};
+
+/// Returns true if \p I is an expensive scalar op whose vector form is cheaper
+/// per lane (e.g. fdiv, frem, fsqrt). If \p MaxVecRegSize is non-zero, the
+/// widest vector fitting into it is checked too.
+bool isPoorThroughputOp(bool ReVec, Instruction *I,
+                        const TargetTransformInfo &TTI,
+                        const TargetLibraryInfo &TLI,
+                        PoorThroughputOpCache &Cache,
+                        const TargetTransformInfo::TargetCostKind CostKind,
+                        unsigned MaxVecRegSize = 0);
+
+/// \returns true if \p Op is a contractable single-use fmul, which the backend
+/// fuses with its fadd/fsub user \p I: \p Op is in the block of \p I or the
+/// target sinks it there.
+bool isFusableFMulOperand(Value *Op, Instruction *I,
+                          const TargetTransformInfo &TTI);
+
+/// \returns true if more values with the scalar type \p Ty than registers are
+/// live at some point of the block \p BB. The blocks larger than the scheduling
+/// budget \p ScheduleBudget are skipped to save compile time.
+bool hasHighRegisterPressure(unsigned ScheduleBudget, const BasicBlock &BB,
+                             Type *Ty, const TargetTransformInfo &TTI);
+
+/// Selects the gathers of \p GatheredScalars, which fully reverse the bytes of
+/// a scalar and are emitted as a byte swap of the scalar, if it is not more
+/// expensive than the permutation of the bytes. The permutation of the scalar
+/// extracted from a vector folds the extraction, the byte swap does not, so the
+/// byte swaps of the scalars extracted from the same vector are estimated
+/// together with all these extractions. \p GetVectorizedSource returns the key
+/// and the type of the vector the vectorized scalar is extracted from, and its
+/// lane. \returns the mask of the selected gathers.
+SmallBitVector selectBSwapGathers(
+    ArrayRef<SmallVector<Value *>> GatheredScalars, const DataLayout &DL,
+    const TargetTransformInfo &TTI, bool ReVec,
+    TargetTransformInfo::TargetCostKind CostKind,
+    function_ref<std::optional<
+        std::tuple<const void *, FixedVectorType *, unsigned>>(Value *)>
+        GetVectorizedSource);
 
 } // namespace llvm::slpvectorizer
 

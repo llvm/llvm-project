@@ -7,6 +7,12 @@ let Definition = "target_experimental", Path = "target.experimental" in {
   def UseDIL : Property<"use-DIL", "Boolean">,
     Global, DefaultTrue,
     Desc<"If true, use the DIL implementation for frame variable evaluation.">;
+  def UseDILForCreatingValues: Property<"use-DIL-for-creating-values", "Boolean">,
+    Global, DefaultTrue,
+    Desc<"If true, use the DIL implementation in API SBValue::CreateValueFromExpression.">;
+  def ReloadModuleScripts: Property<"reload-module-scripts", "Boolean">,
+    Global, DefaultFalse,
+    Desc<"If true, load a module's scripts again every time the target sees the module, instead of once per target. This is only meant for scripts that relied on running several times, and will be removed.">;
 }
 
 let Definition = "target", Path = "target" in {
@@ -114,6 +120,12 @@ let Definition = "target", Path = "target" in {
   def BreakpointUseAvoidList: Property<"breakpoints-use-platform-avoid-list", "Boolean">,
     DefaultTrue,
     Desc<"Consult the platform module avoid list when setting non-module specific breakpoints.">;
+  def BreakpointsConditionMode: Property<"breakpoints-condition-mode", "Enum">,
+    DefaultEnumValue<"eBreakpointConditionModeDWIM">,
+    EnumValues<"OptionEnumValues(g_breakpoint_condition_mode)">,
+    Desc<"Specifies the default mode to use when evaluating the condition expression "
+         "of breakpoints. Default value: dwim. Use `help condition-mode` to list the modes. "
+         "Can be overridden by breakpoint command option -Z (--condition-mode).">;
   def Arg0: Property<"arg0", "String">,
     DefaultStringValue<"">,
     Desc<"The first argument passed to the program in the argument array which can be different from the executable itself.">;
@@ -343,6 +355,10 @@ let Definition = "platform", Path = "platform" in {
     Global,
     DefaultStringValue<"">,
     Desc<"Root directory for cached modules.">;
+  def ShellExpandTimeout: Property<"shell-expand-timeout", "UInt64">,
+    Global,
+    DefaultUnsignedValue<180>,
+    Desc<"The time in seconds to wait for the shell expansion of launch arguments to complete. A value of 0 disables the timeout.">;
 }
 
 let Definition = "thread", Path = "target.process.thread" in {

@@ -10,17 +10,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef ORC_RT_SIMPLENATIVEMEMORYMAP_H
-#define ORC_RT_SIMPLENATIVEMEMORYMAP_H
+#ifndef ORC_RT_BEDROCK_SIMPLENATIVEMEMORYMAP_H
+#define ORC_RT_BEDROCK_SIMPLENATIVEMEMORYMAP_H
 
-#include "orc-rt/bedrock/AllocAction.h"
 #include "orc-rt/bedrock/BootstrapInfo.h"
-#include "orc-rt/bedrock/Error.h"
-#include "orc-rt/bedrock/MemoryFlags.h"
 #include "orc-rt/bedrock/Service.h"
 #include "orc-rt/bedrock/SimpleSymbolTable.h"
-#include "orc-rt/bedrock/move_only_function.h"
-#include "orc-rt/bedrock/sps-ci/SimpleNativeMemoryMapSPSCI.h"
+#include "orc-rt/bedrock/sps/SimpleNativeMemoryMapSPSCI.h"
+#include "orc-rt/support/AllocAction.h"
+#include "orc-rt/support/Error.h"
+#include "orc-rt/support/MemoryFlags.h"
+#include "orc-rt/support/move_only_function.h"
 
 #include <map>
 #include <mutex>
@@ -52,7 +52,7 @@ public:
   Create(Session &S, SimpleSymbolTable &ST,
          const char *InstanceName = "orc_rt_ci_SimpleNativeMemoryMap_Instance",
          SimpleSymbolTable::MutatorFn AddInterface =
-             sps_ci::addSimpleNativeMemoryMap);
+             sps::ci::addSimpleNativeMemoryMap);
 
   /// Convenience constructor that adds default symbols to the given
   /// BootstrapInfo's symbols map.
@@ -141,4 +141,4 @@ private:
 
 } // namespace orc_rt
 
-#endif // ORC_RT_SIMPLENATIVEMEMORYMAP_H
+#endif // ORC_RT_BEDROCK_SIMPLENATIVEMEMORYMAP_H

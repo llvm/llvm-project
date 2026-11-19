@@ -1,4 +1,4 @@
-// RUN: mlir-opt -transform-interpreter %s --split-input-file --allow-unregistered-dialect -verify-diagnostics | FileCheck %s
+// RUN: mlir-opt -transform-interpreter %s --split-input-file -verify-diagnostics | FileCheck %s
 
 // CHECK:  func.func @linalg_copy_to_memref_copy(%[[INPUT:.*]]: memref<128x64xf32>, %[[OUTPUT:.*]]: memref<128x64xf32>) {
 // CHECK:    memref.copy %[[INPUT]], %[[OUTPUT]] : memref<128x64xf32> to memref<128x64xf32>

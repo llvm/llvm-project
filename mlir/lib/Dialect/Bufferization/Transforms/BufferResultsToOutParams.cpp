@@ -168,6 +168,11 @@ updateReturnOps(func::FuncOp func, ArrayRef<BlockArgument> appendedEntryArgs,
     }
     OpBuilder builder(op);
     SmallVector<SmallVector<Value>> dynamicSizes;
+    // Map each returned memref to its primary out parameter.
+    DenseMap<Value, BlockArgument> primaryArgs;
+    // Delay erasure until all return operands have been inspected because an
+    // allocation may be returned multiple times.
+    SetVector<Operation *> toErase;
     for (auto [orig, arg] : llvm::zip(copyIntoOutParams, appendedEntryArgs)) {
       bool hoistStaticAllocs =
           options.hoistStaticAllocs &&
@@ -175,20 +180,38 @@ updateReturnOps(func::FuncOp func, ArrayRef<BlockArgument> appendedEntryArgs,
       bool hoistDynamicAllocs =
           options.hoistDynamicAllocs &&
           !cast<MemRefType>(orig.getType()).hasStaticShape();
-      if ((hoistStaticAllocs || hoistDynamicAllocs) &&
-          isa_and_nonnull<bufferization::AllocationOpInterface>(
-              orig.getDefiningOp())) {
-        orig.replaceAllUsesWith(arg);
+      // Keep non-hoistable allocations such as memref.realloc and
+      // bufferization.clone. Erasing them would discard the data they preserve
+      // or reproduce in their results.
+      auto allocOp = dyn_cast_if_present<bufferization::AllocationOpInterface>(
+          orig.getDefiningOp());
+      if ((hoistStaticAllocs || hoistDynamicAllocs) && allocOp &&
+          allocOp.getHoistingKind() != HoistingKind::None) {
         if (hoistDynamicAllocs) {
           SmallVector<Value> dynamicSize = getDynamicSize(orig, func);
           dynamicSizes.push_back(dynamicSize);
         }
-        orig.getDefiningOp()->erase();
-      } else {
+
+        auto [it, inserted] = primaryArgs.try_emplace(orig, arg);
+        // Repeated returns of the same allocation reuse the primary out
+        // parameter; copy its contents into the out parameter for this
+        // occurrence.
+        if (!inserted) {
+          if (failed(options.memCpyFn(builder, op->getLoc(), it->second, arg)))
+            return WalkResult::interrupt();
+          continue;
+        }
+        orig.replaceAllUsesWith(arg);
+        toErase.insert(orig.getDefiningOp());
+      } else if (orig != arg) {
         if (failed(options.memCpyFn(builder, op.getLoc(), orig, arg)))
           return WalkResult::interrupt();
       }
     }
+
+    for (Operation *eraseOp : toErase)
+      eraseOp->erase();
+
     func::ReturnOp::create(builder, op.getLoc(), keepAsReturnOperands);
     op.erase();
     auto dynamicSizePair =
