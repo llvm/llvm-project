@@ -97,6 +97,56 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// The mulf has no fast-math flags, but the multi_reduction has. By default,
+// they are converted, and the contract keeps the flags that both carry (none).
+
+// CHECK-LABEL: func.func @reduction_to_contract_uneven_fast_math_flags
+//  CHECK-NEXT:   %[[R:.+]] = vector.contract {indexing_maps =
+//  CHECK-SAME:   kind = #vector.kind<add>}
+//  CHECK-NEXT:   return %[[R]]
+func.func @reduction_to_contract_uneven_fast_math_flags(%arg0: vector<8x32x16xf32>, %arg1: vector<8x32x16xf32>, %acc: vector<8x16xf32>) -> vector<8x16xf32> {
+  %0 = arith.mulf %arg0, %arg1 : vector<8x32x16xf32>
+  %1 = vector.multi_reduction <add>, %0, %acc fastmath<reassoc> [1] : vector<8x32x16xf32> to vector<8x16xf32>
+  return %1 : vector<8x16xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %module_op : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.vector.reduction_to_contract
+    } : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// Same as above, but with allow_fast_math_flag_loss = false: the two ops are
+// not converted, so the reduction keeps its flags.
+
+// CHECK-LABEL: func.func @reduction_to_contract_keep_fast_math_flags
+//  CHECK-NEXT:   %[[M:.+]] = arith.mulf
+//  CHECK-NEXT:   %[[R:.+]] = vector.multi_reduction <add>, %[[M]], %{{.+}} fastmath<reassoc> [1]
+//  CHECK-NEXT:   return %[[R]]
+func.func @reduction_to_contract_keep_fast_math_flags(%arg0: vector<8x32x16xf32>, %arg1: vector<8x32x16xf32>, %acc: vector<8x16xf32>) -> vector<8x16xf32> {
+  %0 = arith.mulf %arg0, %arg1 : vector<8x32x16xf32>
+  %1 = vector.multi_reduction <add>, %0, %acc fastmath<reassoc> [1] : vector<8x32x16xf32> to vector<8x16xf32>
+  return %1 : vector<8x16xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %module_op : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.vector.reduction_to_contract allow_fast_math_flag_loss = false
+    } : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
 // CHECK-LABEL: func.func @arith_to_outerproduct_scalable_i32
 //  CHECK-SAME:   %[[LHS:.*]]: vector<[4]xi32>,
 //  CHECK-SAME:   %[[RHS:.*]]: vector<[4]xi32>) -> vector<[4]x[4]xi32> {
