@@ -628,7 +628,7 @@ func.func @vector_print_vector_0d(%arg0: vector<f32>) {
 // CHECK:             }
 // CHECK:           }
 // CHECK:           vector.print punctuation <close>
-// CHECK:           vector.print
+// CHECK:           vector.print punctuation <newline>
 // CHECK:           return
 // CHECK:         }
 
@@ -664,7 +664,7 @@ func.func @vector_print_vector(%arg0: vector<2x2xf32>) {
 // CHECK:             }
 // CHECK:           }
 // CHECK:           vector.print punctuation <close>
-// CHECK:           vector.print
+// CHECK:           vector.print punctuation <newline>
 // CHECK:           return
 // CHECK:         }
 
@@ -692,7 +692,7 @@ func.func @vector_print_scalable_vector(%arg0: vector<[4]xi32>) {
 // CHECK:             }
 // CHECK:           }
 // CHECK:           vector.print punctuation <close>
-// CHECK:           vector.print
+// CHECK:           vector.print punctuation <newline>
 // CHECK:           return
 // CHECK:         }
 
