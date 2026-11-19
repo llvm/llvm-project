@@ -2489,3 +2489,47 @@ ResourceSectionRef::getContents(const coff_resource_data_entry &Entry) {
                              "address not found in image");
   }
 }
+
+Expected<COFFComdatSections>
+COFFComdatSections::create(const COFFObjectFile &Obj) {
+  COFFComdatSections C;
+  C.Sections.resize(Obj.getNumberOfSections() + 1);
+  for (const SymbolRef &Sym : Obj.symbols()) {
+    COFFSymbolRef COFFSym = Obj.getCOFFSymbol(Sym);
+    const coff_aux_section_definition *Def = COFFSym.getSectionDefinition();
+    int32_t SecIndex = COFFSym.getSectionNumber();
+    if (!Def || COFF::isReservedSectionNumber(SecIndex))
+      continue;
+    Expected<const coff_section *> Sec = Obj.getSection(SecIndex);
+    if (!Sec)
+      return Sec.takeError();
+    if ((*Sec)->Characteristics & COFF::IMAGE_SCN_LNK_COMDAT)
+      C.Sections[SecIndex] = {Def->Selection,
+                              Def->getNumber(COFFSym.isBigObj())};
+  }
+  return C;
+}
+
+std::optional<uint8_t>
+COFFComdatSections::getSelection(int32_t SecIndex) const {
+  if (SecIndex <= 0 || static_cast<size_t>(SecIndex) >= Sections.size() ||
+      !Sections[SecIndex])
+    return std::nullopt;
+  return Sections[SecIndex]->Selection;
+}
+
+std::optional<int32_t>
+COFFComdatSections::getAssociativeRoot(int32_t SecIndex) const {
+  if (getSelection(SecIndex) != COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE)
+    return std::nullopt;
+  int32_t Next = Sections[SecIndex]->Associated;
+  // Bound the walk so that a cycle has no root.
+  for (size_t Steps = 0; Steps < Sections.size(); ++Steps) {
+    if (Next <= 0 || static_cast<size_t>(Next) >= Sections.size())
+      return std::nullopt;
+    if (getSelection(Next) != COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE)
+      return Next;
+    Next = Sections[Next]->Associated;
+  }
+  return std::nullopt;
+}

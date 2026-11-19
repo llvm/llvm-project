@@ -28,7 +28,9 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <system_error>
+#include <vector>
 
 namespace llvm {
 
@@ -1229,6 +1231,29 @@ public:
   StringRef mapDebugSectionName(StringRef Name) const override;
 
   static bool classof(const Binary *v) { return v->isCOFF(); }
+};
+
+/// The COMDAT sections of a COFF object. Read up front: an associative
+/// section's definition symbol may precede its leader's.
+class COFFComdatSections {
+public:
+  LLVM_ABI static Expected<COFFComdatSections>
+  create(const COFFObjectFile &Obj);
+
+  /// The selection of a COMDAT section, if SecIndex is one.
+  LLVM_ABI std::optional<uint8_t> getSelection(int32_t SecIndex) const;
+
+  /// The first section in an associative section's chain that is not itself
+  /// associative. std::nullopt if SecIndex is not associative, or the chain
+  /// leaves the section table or loops.
+  LLVM_ABI std::optional<int32_t> getAssociativeRoot(int32_t SecIndex) const;
+
+private:
+  struct SectionInfo {
+    uint8_t Selection;
+    int32_t Associated;
+  };
+  std::vector<std::optional<SectionInfo>> Sections;
 };
 
 // The iterator for the import directory table.
