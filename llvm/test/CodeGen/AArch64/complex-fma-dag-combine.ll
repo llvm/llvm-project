@@ -6,14 +6,9 @@ target triple = "aarch64"
 define <4 x float> @complex_mul_backend_only_f32(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: complex_mul_backend_only_f32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fneg v3.4s, v0.4s
 ; CHECK-NEXT:    movi v2.2d, #0000000000000000
-; CHECK-NEXT:    trn1 v4.4s, v1.4s, v1.4s
-; CHECK-NEXT:    trn2 v1.4s, v1.4s, v1.4s
-; CHECK-NEXT:    trn1 v5.4s, v3.4s, v0.4s
-; CHECK-NEXT:    fmla v2.4s, v4.4s, v0.4s
-; CHECK-NEXT:    trn2 v3.4s, v3.4s, v5.4s
-; CHECK-NEXT:    fmla v2.4s, v1.4s, v3.4s
+; CHECK-NEXT:    fcmla v2.4s, v1.4s, v0.4s, #0
+; CHECK-NEXT:    fcmla v2.4s, v1.4s, v0.4s, #90
 ; CHECK-NEXT:    mov v0.16b, v2.16b
 ; CHECK-NEXT:    ret
 entry:
@@ -31,10 +26,8 @@ define <2 x double> @complex_mul_backend_only_f64(<2 x double> %a, <2 x double> 
 ; CHECK-LABEL: complex_mul_backend_only_f64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v2.2d, #0000000000000000
-; CHECK-NEXT:    fneg v3.2d, v0.2d
-; CHECK-NEXT:    fmla v2.2d, v0.2d, v1.d[0]
-; CHECK-NEXT:    ext v0.16b, v3.16b, v0.16b, #8
-; CHECK-NEXT:    fmla v2.2d, v0.2d, v1.d[1]
+; CHECK-NEXT:    fcmla v2.2d, v1.2d, v0.2d, #0
+; CHECK-NEXT:    fcmla v2.2d, v1.2d, v0.2d, #90
 ; CHECK-NEXT:    mov v0.16b, v2.16b
 ; CHECK-NEXT:    ret
 entry:
@@ -51,16 +44,9 @@ entry:
 define <8 x half> @complex_mul_backend_only_f16(<8 x half> %a, <8 x half> %b) {
 ; CHECK-LABEL: complex_mul_backend_only_f16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $q31_q0
 ; CHECK-NEXT:    movi v2.2d, #0000000000000000
-; CHECK-NEXT:    trn1 v3.8h, v1.8h, v1.8h
-; CHECK-NEXT:    adrp x8, .LCPI2_0
-; CHECK-NEXT:    fneg v31.8h, v0.8h
-; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI2_0]
-; CHECK-NEXT:    trn2 v1.8h, v1.8h, v1.8h
-; CHECK-NEXT:    fmla v2.8h, v3.8h, v0.8h
-; CHECK-NEXT:    tbl v4.16b, { v31.16b, v0.16b }, v4.16b
-; CHECK-NEXT:    fmla v2.8h, v1.8h, v4.8h
+; CHECK-NEXT:    fcmla v2.8h, v1.8h, v0.8h, #0
+; CHECK-NEXT:    fcmla v2.8h, v1.8h, v0.8h, #90
 ; CHECK-NEXT:    mov v0.16b, v2.16b
 ; CHECK-NEXT:    ret
 entry:
