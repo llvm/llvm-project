@@ -24,6 +24,9 @@ globals().update(common_conf(tags))
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions += ["sphinx.ext.todo", "sphinx.ext.mathjax"]
 
+# MyST extension.
+myst_enable_extensions += ["deflist"]
+
 # General information about the project.
 project = "Extra Clang Tools"
 copyright = "2007-%d, The Clang Team" % date.today().year
