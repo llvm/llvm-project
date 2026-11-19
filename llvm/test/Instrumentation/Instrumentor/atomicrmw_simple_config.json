@@ -1,0 +1,41 @@
+{
+  "configuration": {
+    "runtime_prefix": "__instrumentor_",
+    "demangle_function_names": true
+  },
+  "instruction_pre": {
+    "atomicrmw": {
+      "enabled": true,
+      "pointer": true,
+      "pointer_as": true,
+      "val_operand": true,
+      "value_size": true,
+      "alignment": true,
+      "value_type_id": true,
+      "value_sub_type_id": true,
+      "atomicity_ordering": true,
+      "sync_scope_id": true,
+      "operation": true,
+      "is_volatile": true,
+      "id": true
+    }
+  },
+  "instruction_post": {
+    "atomicrmw": {
+      "enabled": true,
+      "pointer": true,
+      "pointer_as": true,
+      "val_operand": true,
+      "value": true,
+      "value_size": true,
+      "alignment": true,
+      "value_type_id": true,
+      "value_sub_type_id": true,
+      "atomicity_ordering": true,
+      "sync_scope_id": true,
+      "operation": true,
+      "is_volatile": true,
+      "id": true
+    }
+  }
+}
