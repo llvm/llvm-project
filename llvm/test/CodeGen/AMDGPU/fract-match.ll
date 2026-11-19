@@ -2725,7 +2725,7 @@ define double @safe_math_fract_f64(double %x, ptr addrspace(1) writeonly capture
 ; GFX11-NEXT:    v_fract_f64_e32 v[4:5], v[0:1]
 ; GFX11-NEXT:    v_cmp_neq_f64_e64 vcc_lo, |v[0:1]|, 0x7ff00000
 ; GFX11-NEXT:    v_floor_f64_e32 v[6:7], v[0:1]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-NEXT:    v_dual_cndmask_b32 v0, 0, v4 :: v_dual_cndmask_b32 v1, 0, v5
 ; GFX11-NEXT:    global_store_b64 v[2:3], v[6:7], off
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -2741,7 +2741,7 @@ define double @safe_math_fract_f64(double %x, ptr addrspace(1) writeonly capture
 ; GFX12-NEXT:    v_cmp_neq_f64_e64 vcc_lo, |v[0:1]|, 0x7ff00000
 ; GFX12-NEXT:    v_floor_f64_e32 v[6:7], v[0:1]
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-NEXT:    v_dual_cndmask_b32 v0, 0, v4 :: v_dual_cndmask_b32 v1, 0, v5
 ; GFX12-NEXT:    global_store_b64 v[2:3], v[6:7], off
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
@@ -4194,7 +4194,7 @@ define double @fract_match_f64_assume_not_nan(double %x) #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_fract_f64_e32 v[2:3], v[0:1]
 ; GFX11-NEXT:    v_cmp_neq_f64_e64 vcc_lo, |v[0:1]|, 0x7ff00000
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_dual_cndmask_b32 v0, 0, v2 :: v_dual_cndmask_b32 v1, 0, v3
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -4208,7 +4208,7 @@ define double @fract_match_f64_assume_not_nan(double %x) #0 {
 ; GFX12-NEXT:    v_fract_f64_e32 v[2:3], v[0:1]
 ; GFX12-NEXT:    v_cmp_neq_f64_e64 vcc_lo, |v[0:1]|, 0x7ff00000
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_dual_cndmask_b32 v0, 0, v2 :: v_dual_cndmask_b32 v1, 0, v3
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ; GFX6-IR-LABEL: define double @fract_match_f64_assume_not_nan(
@@ -5236,6 +5236,7 @@ define float @safe_math_fract_f32_swapped_edge_case_x_is_const() #0 {
 ; GFX12-NEXT:    s_and_b32 s0, gv@abs32@lo, s0
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_cmp_neq_f32 s0, 0x7f800000
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
 ; GFX12-NEXT:    s_cselect_b32 vcc_lo, -1, 0
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc_lo
@@ -5367,7 +5368,7 @@ define float @safe_math_fract_f32_swapped_edge_case_split_block(float %x, i1 %co
 ; GFX11-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc_lo
 ; GFX11-NEXT:  ; %bb.4: ; %UnifiedReturnBlock
 ; GFX11-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -5403,7 +5404,7 @@ define float @safe_math_fract_f32_swapped_edge_case_split_block(float %x, i1 %co
 ; GFX12-NEXT:  ; %bb.4: ; %UnifiedReturnBlock
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ; GFX6-IR-LABEL: define float @safe_math_fract_f32_swapped_edge_case_split_block(
@@ -5506,7 +5507,7 @@ define <3 x float> @safe_math_fract_f32_swapped_edge_case_vector(<3 x float> %x)
 ; GFX11-NEXT:    v_cmp_class_f32_e64 vcc_lo, v0, 0x1fb
 ; GFX11-NEXT:    v_fract_f32_e32 v4, v2
 ; GFX11-NEXT:    v_fract_f32_e32 v1, v1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_4)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_cndmask_b32_e32 v0, 0, v3, vcc_lo
 ; GFX11-NEXT:    v_cmp_class_f32_e64 vcc_lo, v2, 0x1fb
 ; GFX11-NEXT:    v_cndmask_b32_e32 v2, 0, v4, vcc_lo
@@ -5524,6 +5525,7 @@ define <3 x float> @safe_math_fract_f32_swapped_edge_case_vector(<3 x float> %x)
 ; GFX12-NEXT:    v_fract_f32_e32 v4, v2
 ; GFX12-NEXT:    v_fract_f32_e32 v1, v1
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_2) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_cndmask_b32_e32 v0, 0, v3, vcc_lo
 ; GFX12-NEXT:    v_cmp_class_f32_e64 vcc_lo, v2, 0x1fb
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)

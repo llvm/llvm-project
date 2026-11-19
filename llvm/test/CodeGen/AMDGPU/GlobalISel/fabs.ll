@@ -47,6 +47,7 @@ define amdgpu_ps void @s_fabs_f16_salu_use(half inreg %in, i32 inreg %val) {
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_and_b32 s0, s0, 0x7fff
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, 0
 ; GFX12-NEXT:    ;;#ASMSTART
 ; GFX12-NEXT:    ; use s0
@@ -104,6 +105,7 @@ define amdgpu_ps void @s_fabs_f32_salu_use(float inreg %in, i32 inreg %val) {
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_bitset0_b32 s0, 31
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, 0
 ; GFX12-NEXT:    ;;#ASMSTART
 ; GFX12-NEXT:    ; use s0
@@ -188,6 +190,7 @@ define amdgpu_ps void @s_fabs_v2f16_salu_use(<2 x half> inreg %in, i32 inreg %va
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_and_b32 s0, s0, 0x7fff7fff
 ; GCN-NEXT:    s_cmp_eq_u32 s1, 0
+; GCN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GCN-NEXT:    s_cselect_b32 s0, s0, 0
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; use s0
@@ -251,6 +254,7 @@ define amdgpu_ps void @s_fabs_v2f32_salu_use(<2 x float> inreg %in, i32 inreg %v
 ; GFX12-NEXT:    s_bitset0_b32 s0, 31
 ; GFX12-NEXT:    s_bitset0_b32 s1, 31
 ; GFX12-NEXT:    s_cmp_eq_u32 s2, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b64 s[0:1], s[0:1], 0
 ; GFX12-NEXT:    ;;#ASMSTART
 ; GFX12-NEXT:    ; use s[0:1]

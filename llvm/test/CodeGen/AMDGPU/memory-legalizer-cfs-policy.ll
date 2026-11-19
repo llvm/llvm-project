@@ -127,6 +127,7 @@ define amdgpu_kernel void @flat_atomicrmw_cfs_128B(ptr %ptr, float %val, ptr %ou
 ; GFX13-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v3
 ; GFX13-NEXT:    s_or_b32 s3, vcc_lo, s3
 ; GFX13-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s3
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX13-NEXT:    s_cbranch_execnz .LBB6_1
 ; GFX13-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX13-NEXT:    s_or_b32 exec_lo, exec_lo, s3
@@ -160,6 +161,7 @@ define amdgpu_kernel void @flat_atomicrmw_cfs_64B(ptr %ptr, float %val, ptr %out
 ; GFX13-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v3
 ; GFX13-NEXT:    s_or_b32 s3, vcc_lo, s3
 ; GFX13-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s3
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX13-NEXT:    s_cbranch_execnz .LBB7_1
 ; GFX13-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX13-NEXT:    s_or_b32 exec_lo, exec_lo, s3
@@ -193,6 +195,7 @@ define amdgpu_kernel void @flat_atomicrmw_cfs_32B(ptr %ptr, float %val, ptr %out
 ; GFX13-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v3
 ; GFX13-NEXT:    s_or_b32 s3, vcc_lo, s3
 ; GFX13-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s3
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX13-NEXT:    s_cbranch_execnz .LBB8_1
 ; GFX13-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX13-NEXT:    s_or_b32 exec_lo, exec_lo, s3
@@ -681,7 +684,7 @@ define float @buffer_atomicrmw_cfs_128B(ptr addrspace(7) inreg %ptr, float %val)
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v5
 ; GFX13-NEXT:    s_or_b32 s4, vcc_lo, s4
-; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX13-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
 ; GFX13-NEXT:    s_cbranch_execnz .LBB27_1
 ; GFX13-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -720,7 +723,7 @@ define float @buffer_atomicrmw_cfs_64B(ptr addrspace(7) inreg %ptr, float %val) 
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v5
 ; GFX13-NEXT:    s_or_b32 s4, vcc_lo, s4
-; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX13-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
 ; GFX13-NEXT:    s_cbranch_execnz .LBB28_1
 ; GFX13-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -759,7 +762,7 @@ define float @buffer_atomicrmw_cfs_32B(ptr addrspace(7) inreg %ptr, float %val) 
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v5
 ; GFX13-NEXT:    s_or_b32 s4, vcc_lo, s4
-; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX13-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
 ; GFX13-NEXT:    s_cbranch_execnz .LBB29_1
 ; GFX13-NEXT:  ; %bb.2: ; %atomicrmw.end

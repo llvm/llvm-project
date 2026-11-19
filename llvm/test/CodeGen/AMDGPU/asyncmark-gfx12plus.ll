@@ -231,6 +231,7 @@ define amdgpu_kernel void @test_pipelined_loop(ptr addrspace(1) %foo, ptr addrsp
 ; GISEL-NEXT:    s_add_co_ci_u32 s1, s1, 0
 ; GISEL-NEXT:    s_add_co_u32 s8, s8, 4
 ; GISEL-NEXT:    s_cmp_lt_i32 s7, s3
+; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GISEL-NEXT:    s_cbranch_scc1 .LBB1_1
 ; GISEL-NEXT:  ; %bb.2: ; %epilog
 ; GISEL-NEXT:    s_lshl_b32 s0, s3, 2

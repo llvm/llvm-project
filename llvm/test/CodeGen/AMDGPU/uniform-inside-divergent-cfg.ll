@@ -36,6 +36,7 @@ define amdgpu_kernel void @div_unif_div(ptr addrspace(1) %out, float %ubeta, i32
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 1
 ; CHECK-NEXT:  .LBB0_8: ; %join
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s2
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_and_saveexec_b32 s0, s1
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_10
 ; CHECK-NEXT:  ; %bb.9: ; %do.store
@@ -111,6 +112,7 @@ define amdgpu_kernel void @unif_div(ptr addrspace(1) %out, float %u1, float %u2,
 ; CHECK-NEXT:    s_or_b32 s3, exec_lo, exec_lo
 ; CHECK-NEXT:  .LBB1_7: ; %join
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s2
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_and_saveexec_b32 s0, s3
 ; CHECK-NEXT:    s_cbranch_execz .LBB1_9
 ; CHECK-NEXT:  ; %bb.8: ; %do.store

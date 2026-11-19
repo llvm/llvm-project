@@ -191,6 +191,7 @@ define amdgpu_cs void @no_extract_hi16_uniform_sgpr(<2 x half> inreg %v, ptr add
 ; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s0
 ; GFX12-TRUE16-NEXT:    s_cmp_eq_f16 s0, s1
 ; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_2)
 ; GFX12-TRUE16-NEXT:    s_cselect_b32 s0, -1, 0
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-TRUE16-NEXT:    v_cndmask_b16 v0.l, s1, v0.l, s0
@@ -204,8 +205,9 @@ define amdgpu_cs void @no_extract_hi16_uniform_sgpr(<2 x half> inreg %v, ptr add
 ; GFX12-FAKE16-NEXT:    s_lshr_b32 s1, s0, 16
 ; GFX12-FAKE16-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, 0
 ; GFX12-FAKE16-NEXT:    s_cmp_eq_f16 s0, s1
+; GFX12-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
 ; GFX12-FAKE16-NEXT:    s_cselect_b32 vcc_lo, -1, 0
-; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-FAKE16-NEXT:    v_cndmask_b32_e32 v0, s1, v0, vcc_lo
 ; GFX12-FAKE16-NEXT:    global_store_b16 v1, v0, s[2:3]
 ; GFX12-FAKE16-NEXT:    s_endpgm
@@ -217,8 +219,8 @@ define amdgpu_cs void @no_extract_hi16_uniform_sgpr(<2 x half> inreg %v, ptr add
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX12-GISEL-NEXT:    s_cmp_eq_f16 s0, s1
 ; GFX12-GISEL-NEXT:    s_mov_b32 s5, s2
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_2) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-GISEL-NEXT:    s_cselect_b32 s0, s0, s1
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-GISEL-NEXT:    v_mov_b16_e32 v0.l, s0
 ; GFX12-GISEL-NEXT:    global_store_b16 v1, v0, s[4:5]
 ; GFX12-GISEL-NEXT:    s_endpgm

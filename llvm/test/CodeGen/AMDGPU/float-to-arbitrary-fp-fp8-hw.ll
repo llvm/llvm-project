@@ -595,7 +595,7 @@ define i8 @to_fp8_f32_saturate(float %x) {
 ; GFX1200-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc_lo
 ; GFX1200-NEXT:    v_cmp_eq_f32_e32 vcc_lo, 0, v0
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_2)
+; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_1)
 ; GFX1200-NEXT:    v_cndmask_b32_e32 v1, v1, v4, vcc_lo
 ; GFX1200-NEXT:    v_cmp_class_f32_e64 vcc_lo, v0, 0x204
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
@@ -639,10 +639,9 @@ define i8 @to_fp8_f32_saturate(float %x) {
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-NEXT:    v_bitop3_b32 v6, v6, v9, v10 bitop3:0xe0
 ; GFX1250-NEXT:    v_dual_cndmask_b32 v3, 0, v6 :: v_dual_lshrrev_b32 v4, 24, v0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3)
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX1250-NEXT:    v_cmp_lt_i32_e32 vcc_lo, 7, v2
 ; GFX1250-NEXT:    s_mov_b32 s0, 0x80
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instid1(SALU_CYCLE_1)
 ; GFX1250-NEXT:    v_dual_add_nc_u32 v3, v5, v3 :: v_dual_bitop2_b32 v4, s0, v4 bitop3:0x40
 ; GFX1250-NEXT:    v_cndmask_b32_e64 v2, v2, 0, vcc_lo
 ; GFX1250-NEXT:    v_add_co_ci_u32_e64 v1, null, 6, v1, vcc_lo
@@ -667,7 +666,7 @@ define i8 @to_fp8_f32_saturate(float %x) {
 ; GFX1250-NEXT:    v_cmp_eq_f32_e32 vcc_lo, 0, v0
 ; GFX1250-NEXT:    v_cndmask_b32_e32 v1, v1, v4, vcc_lo
 ; GFX1250-NEXT:    v_cmp_class_f32_e64 vcc_lo, v0, 0x204
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX1250-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc_lo
 ; GFX1250-NEXT:    v_cmp_o_f32_e32 vcc_lo, v0, v0
 ; GFX1250-NEXT:    v_cndmask_b32_e32 v0, 0x7f, v1, vcc_lo
@@ -708,10 +707,9 @@ define i8 @to_fp8_f32_saturate(float %x) {
 ; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1310-NEXT:    v_bitop3_b32 v6, v6, v9, v10 bitop3:0xe0
 ; GFX1310-NEXT:    v_dual_cndmask_b32 v3, 0, v6 :: v_dual_lshrrev_b32 v4, 24, v0
-; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_3)
+; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX1310-NEXT:    v_cmp_lt_i32_e32 vcc_lo, 7, v2
 ; GFX1310-NEXT:    s_mov_b32 s0, 0x80
-; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instid1(SALU_CYCLE_1)
 ; GFX1310-NEXT:    v_dual_add_nc_u32 v3, v5, v3 :: v_dual_bitop2_b32 v4, s0, v4 bitop3:0x40
 ; GFX1310-NEXT:    v_cndmask_b32_e64 v2, v2, 0, vcc_lo
 ; GFX1310-NEXT:    v_add_co_ci_u32_e64 v1, null, 6, v1, vcc_lo
@@ -736,7 +734,7 @@ define i8 @to_fp8_f32_saturate(float %x) {
 ; GFX1310-NEXT:    v_cmp_eq_f32_e32 vcc_lo, 0, v0
 ; GFX1310-NEXT:    v_cndmask_b32_e32 v1, v1, v4, vcc_lo
 ; GFX1310-NEXT:    v_cmp_class_f32_e64 vcc_lo, v0, 0x204
-; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX1310-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc_lo
 ; GFX1310-NEXT:    v_cmp_o_f32_e32 vcc_lo, v0, v0
 ; GFX1310-NEXT:    v_cndmask_b32_e32 v0, 0x7f, v1, vcc_lo
@@ -1238,42 +1236,42 @@ define i8 @to_fp8_f64(double %x) {
 ; GFX1200-NEXT:    v_and_b32_e32 v7, 0x1ffff, v3
 ; GFX1200-NEXT:    v_lshrrev_b32_e32 v3, 17, v3
 ; GFX1200-NEXT:    v_mov_b32_e32 v6, v2
-; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_2) | instid1(VALU_DEP_1)
+; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX1200-NEXT:    v_cmp_gt_u64_e32 vcc_lo, 63, v[4:5]
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX1200-NEXT:    v_dual_cndmask_b32 v5, 0, v5 :: v_dual_cndmask_b32 v4, 63, v4
+; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_2)
 ; GFX1200-NEXT:    v_cmp_lt_u64_e32 vcc_lo, 1, v[4:5]
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX1200-NEXT:    v_cndmask_b32_e32 v8, 1, v4, vcc_lo
 ; GFX1200-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[6:7]
-; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_2)
 ; GFX1200-NEXT:    v_add_nc_u32_e32 v14, -1, v8
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX1200-NEXT:    v_cndmask_b32_e64 v11, 0, 1, vcc_lo
-; GFX1200-NEXT:    v_lshlrev_b64_e64 v[6:7], v14, 1
 ; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1200-NEXT:    v_lshlrev_b64_e64 v[6:7], v14, 1
 ; GFX1200-NEXT:    v_and_or_b32 v11, v10, 1, v11
+; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX1200-NEXT:    v_add_co_u32 v15, vcc_lo, v6, -1
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX1200-NEXT:    v_add_co_ci_u32_e64 v16, null, -1, v7, vcc_lo
-; GFX1200-NEXT:    v_dual_mov_b32 v8, v2 :: v_dual_and_b32 v11, v3, v11
 ; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX1200-NEXT:    v_dual_mov_b32 v8, v2 :: v_dual_and_b32 v11, v3, v11
 ; GFX1200-NEXT:    v_and_b32_e32 v2, v2, v15
+; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX1200-NEXT:    v_and_b32_e32 v3, v9, v16
-; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX1200-NEXT:    v_add_co_u32 v10, s0, v10, v11
+; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX1200-NEXT:    v_lshrrev_b64 v[6:7], v4, v[8:9]
-; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_3) | instid1(VALU_DEP_4)
 ; GFX1200-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[2:3]
 ; GFX1200-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX1200-NEXT:    v_add_co_ci_u32_e64 v11, null, 0, 0, s0
 ; GFX1200-NEXT:    v_lshrrev_b64 v[2:3], v14, v[8:9]
+; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_3) | instid1(VALU_DEP_2)
 ; GFX1200-NEXT:    v_and_b32_e32 v15, 1, v6
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX1200-NEXT:    v_cndmask_b32_e64 v16, 0, 1, vcc_lo
 ; GFX1200-NEXT:    v_cmp_lt_i64_e32 vcc_lo, 3, v[10:11]
-; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1200-NEXT:    v_or_b32_e32 v8, v16, v15
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX1200-NEXT:    v_cndmask_b32_e64 v9, 0, 1, vcc_lo
@@ -1323,7 +1321,7 @@ define i8 @to_fp8_f64(double %x) {
 ; GFX1200-NEXT:    v_cndmask_b32_e32 v2, v2, v9, vcc_lo
 ; GFX1200-NEXT:    v_cmp_class_f64_e64 vcc_lo, v[0:1], 0x204
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_2)
+; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_2)
 ; GFX1200-NEXT:    v_cndmask_b32_e32 v2, v2, v3, vcc_lo
 ; GFX1200-NEXT:    v_cmp_o_f64_e32 vcc_lo, v[0:1], v[0:1]
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
@@ -1344,58 +1342,58 @@ define i8 @to_fp8_f64(double %x) {
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX1250-NEXT:    v_mov_b32_e32 v10, v4
 ; GFX1250-NEXT:    v_sub_nc_u64_e32 v[6:7], 37, v[2:3]
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-NEXT:    v_cmp_gt_u64_e32 vcc_lo, 63, v[6:7]
 ; GFX1250-NEXT:    v_dual_cndmask_b32 v7, 0, v7 :: v_dual_cndmask_b32 v6, 63, v6
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX1250-NEXT:    v_cmp_lt_u64_e32 vcc_lo, 1, v[6:7]
 ; GFX1250-NEXT:    v_cndmask_b32_e32 v8, 1, v6, vcc_lo
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX1250-NEXT:    v_add_nc_u32_e32 v14, -1, v8
 ; GFX1250-NEXT:    v_lshrrev_b64 v[12:13], v6, v[10:11]
-; GFX1250-NEXT:    v_lshlrev_b64_e64 v[8:9], v14, 1
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-NEXT:    v_lshlrev_b64_e64 v[8:9], v14, 1
 ; GFX1250-NEXT:    v_and_b32_e32 v15, 1, v12
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-NEXT:    v_add_nc_u64_e32 v[8:9], -1, v[8:9]
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1250-NEXT:    v_and_b32_e32 v9, v11, v9
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_3)
 ; GFX1250-NEXT:    v_and_b32_e32 v8, v4, v8
 ; GFX1250-NEXT:    v_lshrrev_b64 v[10:11], v14, v[10:11]
 ; GFX1250-NEXT:    v_lshrrev_b32_e32 v14, 17, v5
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX1250-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[8:9]
 ; GFX1250-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc_lo
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_3)
 ; GFX1250-NEXT:    v_or_b32_e32 v11, v8, v15
 ; GFX1250-NEXT:    v_mov_b32_e32 v8, v4
 ; GFX1250-NEXT:    v_bfe_u32 v4, v5, 18, 2
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX1250-NEXT:    v_and_b32_e32 v10, v10, v11
 ; GFX1250-NEXT:    v_and_b32_e32 v9, 0x1ffff, v5
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX1250-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[8:9]
 ; GFX1250-NEXT:    v_mov_b32_e32 v9, 0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_3)
 ; GFX1250-NEXT:    v_mov_b32_e32 v5, v9
 ; GFX1250-NEXT:    v_cndmask_b32_e64 v11, 0, 1, vcc_lo
 ; GFX1250-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[6:7]
 ; GFX1250-NEXT:    v_cndmask_b32_e32 v8, 0, v10, vcc_lo
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1250-NEXT:    v_and_or_b32 v10, v4, 1, v11
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1250-NEXT:    v_add_nc_u64_e32 v[6:7], v[12:13], v[8:9]
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-NEXT:    v_dual_lshrrev_b32 v10, 24, v1 :: v_dual_bitop2_b32 v8, v14, v10 bitop3:0x40
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_4)
 ; GFX1250-NEXT:    v_add_nc_u64_e32 v[4:5], v[4:5], v[8:9]
 ; GFX1250-NEXT:    v_mov_b32_e32 v9, s0
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX1250-NEXT:    v_cmp_lt_i64_e64 s0, 3, v[6:7]
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_4) | instid1(VALU_DEP_3)
 ; GFX1250-NEXT:    v_cmp_lt_i64_e32 vcc_lo, 3, v[4:5]
 ; GFX1250-NEXT:    v_cndmask_b32_e64 v6, v6, 0, s0
 ; GFX1250-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc_lo
 ; GFX1250-NEXT:    v_cndmask_b32_e64 v5, v5, 0, vcc_lo
 ; GFX1250-NEXT:    v_cndmask_b32_e64 v4, v4, 0, vcc_lo
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1250-NEXT:    v_add_nc_u64_e32 v[2:3], v[2:3], v[8:9]
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1250-NEXT:    v_cmp_lt_i64_e32 vcc_lo, 3, v[4:5]
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-NEXT:    v_add_nc_u64_e32 v[2:3], 14, v[2:3]
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-NEXT:    v_lshlrev_b64_e32 v[8:9], 2, v[2:3]
 ; GFX1250-NEXT:    v_cndmask_b32_e64 v9, 0, 4, s0
 ; GFX1250-NEXT:    v_cmp_eq_u64_e64 s0, 30, v[2:3]
@@ -1416,7 +1414,7 @@ define i8 @to_fp8_f64(double %x) {
 ; GFX1250-NEXT:    v_cmp_eq_f64_e32 vcc_lo, 0, v[0:1]
 ; GFX1250-NEXT:    v_cndmask_b32_e32 v2, v2, v7, vcc_lo
 ; GFX1250-NEXT:    v_cmp_class_f64_e64 vcc_lo, v[0:1], 0x204
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX1250-NEXT:    v_cndmask_b32_e32 v2, v2, v3, vcc_lo
 ; GFX1250-NEXT:    v_cmp_o_f64_e32 vcc_lo, v[0:1], v[0:1]
 ; GFX1250-NEXT:    v_cndmask_b32_e32 v0, 0x7e, v2, vcc_lo
@@ -1441,57 +1439,58 @@ define i8 @to_fp8_f64(double %x) {
 ; GFX1310-NEXT:    s_mov_b32 s0, 0x1ffff
 ; GFX1310-NEXT:    v_dual_mov_b32 v6, v2 :: v_dual_bitop2_b32 v7, s0, v3 bitop3:0x40
 ; GFX1310-NEXT:    v_cmp_gt_u64_e32 vcc_lo, 63, v[4:5]
+; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1310-NEXT:    v_dual_cndmask_b32 v5, 0, v5 :: v_dual_cndmask_b32 v4, 63, v4
-; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_2)
 ; GFX1310-NEXT:    v_cmp_lt_u64_e32 vcc_lo, 1, v[4:5]
 ; GFX1310-NEXT:    v_cndmask_b32_e32 v8, 1, v4, vcc_lo
 ; GFX1310-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[6:7]
+; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX1310-NEXT:    v_dual_add_nc_u32 v14, -1, v8 :: v_dual_mov_b32 v8, v2
 ; GFX1310-NEXT:    v_cndmask_b32_e64 v11, 0, 1, vcc_lo
-; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1310-NEXT:    v_lshlrev_b64_e64 v[6:7], v14, 1
+; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1310-NEXT:    v_and_or_b32 v11, v10, 1, v11
-; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX1310-NEXT:    v_add_co_u32 v15, vcc_lo, v6, -1
+; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_2) | instid1(VALU_DEP_4)
 ; GFX1310-NEXT:    v_add_co_ci_u32_e64 v16, null, -1, v7, vcc_lo
 ; GFX1310-NEXT:    v_lshrrev_b64 v[6:7], v4, v[8:9]
 ; GFX1310-NEXT:    v_lshrrev_b32_e32 v3, 17, v3
-; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX1310-NEXT:    v_and_b32_e32 v2, v2, v15
+; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX1310-NEXT:    v_and_b32_e32 v15, 1, v6
-; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX1310-NEXT:    v_and_b32_e32 v11, v3, v11
 ; GFX1310-NEXT:    v_and_b32_e32 v3, v9, v16
+; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1310-NEXT:    v_add_co_u32 v10, s0, v10, v11
-; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_3) | instid1(VALU_DEP_3)
 ; GFX1310-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[2:3]
 ; GFX1310-NEXT:    v_add_co_ci_u32_e64 v11, null, 0, 0, s0
 ; GFX1310-NEXT:    v_lshrrev_b64 v[2:3], v14, v[8:9]
 ; GFX1310-NEXT:    v_cndmask_b32_e64 v16, 0, 1, vcc_lo
+; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1310-NEXT:    v_cmp_lt_i64_e32 vcc_lo, 3, v[10:11]
-; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_3)
 ; GFX1310-NEXT:    v_or_b32_e32 v8, v16, v15
 ; GFX1310-NEXT:    v_cndmask_b32_e64 v9, 0, 1, vcc_lo
 ; GFX1310-NEXT:    v_cndmask_b32_e64 v3, v11, 0, vcc_lo
+; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX1310-NEXT:    v_dual_lshrrev_b32 v11, 24, v1 :: v_dual_bitop2_b32 v2, v2, v8 bitop3:0x40
-; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_2) | instid1(VALU_DEP_4)
 ; GFX1310-NEXT:    v_add_co_u32 v8, s0, v12, v9
 ; GFX1310-NEXT:    v_add_co_ci_u32_e64 v9, null, 0, v13, s0
 ; GFX1310-NEXT:    v_cmp_ne_u64_e64 s0, 0, v[4:5]
-; GFX1310-NEXT:    v_cndmask_b32_e64 v2, 0, v2, s0
 ; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX1310-NEXT:    v_cndmask_b32_e64 v2, 0, v2, s0
 ; GFX1310-NEXT:    v_add_co_u32 v4, s0, v8, 14
+; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX1310-NEXT:    v_add_co_ci_u32_e64 v5, null, 0, v9, s0
-; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX1310-NEXT:    v_add_co_u32 v6, s0, v6, v2
 ; GFX1310-NEXT:    v_add_co_ci_u32_e64 v7, null, 0, v7, s0
+; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_2) | instid1(VALU_DEP_4)
 ; GFX1310-NEXT:    v_lshlrev_b64_e32 v[8:9], 2, v[4:5]
 ; GFX1310-NEXT:    v_and_b32_e32 v9, 0x80, v11
 ; GFX1310-NEXT:    v_cndmask_b32_e64 v2, v10, 0, vcc_lo
-; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_2) | instid1(VALU_DEP_4)
 ; GFX1310-NEXT:    v_cmp_lt_i64_e64 s0, 3, v[6:7]
 ; GFX1310-NEXT:    v_cmp_gt_i64_e64 s2, 1, v[4:5]
 ; GFX1310-NEXT:    v_cmp_lt_i64_e64 s1, 30, v[4:5]
+; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX1310-NEXT:    v_cmp_lt_i64_e32 vcc_lo, 3, v[2:3]
 ; GFX1310-NEXT:    v_or_b32_e32 v3, 0x7c, v9
 ; GFX1310-NEXT:    v_or_b32_e32 v7, v8, v9
@@ -1510,7 +1509,7 @@ define i8 @to_fp8_f64(double %x) {
 ; GFX1310-NEXT:    v_cmp_eq_f64_e32 vcc_lo, 0, v[0:1]
 ; GFX1310-NEXT:    v_cndmask_b32_e32 v2, v2, v9, vcc_lo
 ; GFX1310-NEXT:    v_cmp_class_f64_e64 vcc_lo, v[0:1], 0x204
-; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX1310-NEXT:    v_cndmask_b32_e32 v2, v2, v3, vcc_lo
 ; GFX1310-NEXT:    v_cmp_o_f64_e32 vcc_lo, v[0:1], v[0:1]
 ; GFX1310-NEXT:    v_cndmask_b32_e32 v0, 0x7e, v2, vcc_lo
@@ -2887,21 +2886,22 @@ define <4 x i8> @to_e5m3fnu_v4f32(<4 x float> %x) {
 ; GFX1310-NEXT:    v_sub_nc_u32_e64 v20, v16, 1 clamp
 ; GFX1310-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v7
 ; GFX1310-NEXT:    v_and_b32_e32 v19, 0x7fffff, v10
-; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_3) | instid1(VALU_DEP_4)
+; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX1310-NEXT:    v_bitop3_b32 v11, v12, v13, v11 bitop3:0xe0
 ; GFX1310-NEXT:    v_dual_cndmask_b32 v7, 0, v15 :: v_dual_lshrrev_b32 v14, v7, v14
 ; GFX1310-NEXT:    v_bfe_u32 v12, v22, 0, v20
 ; GFX1310-NEXT:    v_bfe_u32 v13, v22, v16, 1
-; GFX1310-NEXT:    v_dual_add_nc_u32 v5, v5, v11 :: v_dual_lshrrev_b32 v11, v20, v22
 ; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX1310-NEXT:    v_dual_add_nc_u32 v5, v5, v11 :: v_dual_lshrrev_b32 v11, v20, v22
 ; GFX1310-NEXT:    v_add_nc_u32_e32 v7, v14, v7
+; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX1310-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v12
 ; GFX1310-NEXT:    v_sub_nc_u32_e64 v15, v18, 1 clamp
-; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_3) | instid1(VALU_DEP_3)
 ; GFX1310-NEXT:    v_cmp_lt_i32_e64 s0, 7, v7
 ; GFX1310-NEXT:    v_cndmask_b32_e64 v12, 0, 1, vcc_lo
 ; GFX1310-NEXT:    v_cmp_lt_i32_e32 vcc_lo, 7, v5
 ; GFX1310-NEXT:    v_cndmask_b32_e64 v7, v7, 0, s0
+; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX1310-NEXT:    v_bitop3_b32 v11, v11, v12, v13 bitop3:0xe0
 ; GFX1310-NEXT:    v_cndmask_b32_e64 v5, v5, 0, vcc_lo
 ; GFX1310-NEXT:    v_add_co_ci_u32_e64 v4, null, 14, v4, vcc_lo
@@ -2938,35 +2938,36 @@ define <4 x i8> @to_e5m3fnu_v4f32(<4 x float> %x) {
 ; GFX1310-NEXT:    v_or_b32_e32 v4, v11, v7
 ; GFX1310-NEXT:    v_and_b32_e32 v12, 0x7ffff, v8
 ; GFX1310-NEXT:    v_bfe_u32 v11, v17, 20, 1
+; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_4)
 ; GFX1310-NEXT:    v_dual_cndmask_b32 v5, 0, v5 :: v_dual_lshrrev_b32 v18, 19, v10
 ; GFX1310-NEXT:    v_sub_nc_u32_e32 v16, 7, v14
-; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_3) | instid1(SALU_CYCLE_1)
 ; GFX1310-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v12
 ; GFX1310-NEXT:    v_lshrrev_b32_e32 v7, 19, v8
 ; GFX1310-NEXT:    v_bfe_u32 v8, v8, 20, 3
 ; GFX1310-NEXT:    s_mov_b32 s0, 0x7fffff
+; GFX1310-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(VALU_DEP_4)
 ; GFX1310-NEXT:    v_dual_add_nc_u32 v5, v13, v5 :: v_dual_bitop2_b32 v13, s0, v15 bitop3:0x40
 ; GFX1310-NEXT:    v_min_u32_e32 v16, 31, v16
 ; GFX1310-NEXT:    v_cndmask_b32_e64 v12, 0, 1, vcc_lo
 ; GFX1310-NEXT:    v_lshlrev_b16 v1, 8, v1
-; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX1310-NEXT:    v_or_b32_e32 v20, 0x800000, v13
+; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_4) | instid1(VALU_DEP_4)
 ; GFX1310-NEXT:    v_sub_nc_u32_e64 v21, v16, 1 clamp
 ; GFX1310-NEXT:    v_and_b32_e32 v17, 0x7ffff, v10
 ; GFX1310-NEXT:    v_bitop3_b32 v7, v7, v12, v11 bitop3:0xe0
 ; GFX1310-NEXT:    v_bfe_u32 v10, v10, 20, 3
 ; GFX1310-NEXT:    v_bfe_u32 v13, v13, 20, 1
-; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_2) | instid1(VALU_DEP_2)
 ; GFX1310-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v17
 ; GFX1310-NEXT:    v_cndmask_b32_e64 v17, 0, 1, vcc_lo
 ; GFX1310-NEXT:    v_cmp_lt_i32_e32 vcc_lo, 7, v5
+; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_3)
 ; GFX1310-NEXT:    v_bitop3_b32 v12, v18, v17, v19 bitop3:0xe0
 ; GFX1310-NEXT:    v_cndmask_b32_e64 v5, v5, 0, vcc_lo
 ; GFX1310-NEXT:    v_cndmask_b32_e64 v19, 0, 8, vcc_lo
-; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
 ; GFX1310-NEXT:    v_dual_add_nc_u32 v7, v8, v7 :: v_dual_add_nc_u32 v10, v10, v12
 ; GFX1310-NEXT:    v_bfe_u32 v11, v20, 0, v21
 ; GFX1310-NEXT:    s_mov_b32 s0, 0x7ffff
+; GFX1310-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1310-NEXT:    v_dual_lshrrev_b32 v18, v21, v20 :: v_dual_bitop2_b32 v21, s0, v15 bitop3:0x40
 ; GFX1310-NEXT:    v_lshrrev_b32_e32 v12, 19, v15
 ; GFX1310-NEXT:    v_bfe_u32 v17, v20, v16, 1
@@ -3027,10 +3028,10 @@ define <4 x i8> @to_e5m3fnu_v4f32(<4 x float> %x) {
 ; GFX1310-NEXT:    v_cmp_o_f32_e32 vcc_lo, v0, v0
 ; GFX1310-NEXT:    v_lshl_or_b32 v3, v2, 16, v3
 ; GFX1310-NEXT:    s_mov_b32 s0, 0xff
-; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instid1(SALU_CYCLE_1)
+; GFX1310-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1310-NEXT:    v_dual_cndmask_b32 v0, s0, v4, vcc_lo :: v_dual_lshlrev_b32 v4, 16, v2
-; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1310-NEXT:    v_bitop3_b16 v0, v0, v1, 0xff bitop3:0xec
+; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1310-NEXT:    v_dual_lshrrev_b32 v1, 8, v3 :: v_dual_lshrrev_b32 v3, 24, v4
 ; GFX1310-NEXT:    s_set_pc_i64 s[30:31]
   %r = call <4 x i8> @llvm.convert.to.arbitrary.fp.v4i8.v4f32(<4 x float> %x, metadata !"Float8E5M3FNU", metadata !"round.tonearest", i1 false)

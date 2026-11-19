@@ -12,6 +12,7 @@ define amdgpu_kernel void @histogram_i8_keys(i1 %in.range, ptr addrspace(1) %key
 ; GFX11-NEXT:    s_load_b32 s0, s[4:5], 0x24
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_bitcmp0_b32 s0, 0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_cbranch_scc1 .LBB0_2
 ; GFX11-NEXT:  ; %bb.1: ; %load
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x2c
@@ -43,6 +44,7 @@ define amdgpu_kernel void @histogram_i8_keys(i1 %in.range, ptr addrspace(1) %key
 ; GFX12-NEXT:    s_load_b32 s0, s[4:5], 0x24
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_bitcmp0_b32 s0, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB0_2
 ; GFX12-NEXT:  ; %bb.1: ; %load
 ; GFX12-NEXT:    s_load_b64 s[0:1], s[4:5], 0x2c

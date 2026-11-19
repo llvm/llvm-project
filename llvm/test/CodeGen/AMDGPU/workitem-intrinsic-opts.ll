@@ -246,6 +246,7 @@ define i1 @workgroup_zero() {
 ; GISEL-GFX12-NEXT:    s_or_b32 s0, s0, s1
 ; GISEL-GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL-GFX12-NEXT:    s_cmp_eq_u32 s0, 0
+; GISEL-GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GISEL-GFX12-NEXT:    s_cselect_b32 s0, 1, 0
 ; GISEL-GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL-GFX12-NEXT:    v_mov_b32_e32 v0, s0

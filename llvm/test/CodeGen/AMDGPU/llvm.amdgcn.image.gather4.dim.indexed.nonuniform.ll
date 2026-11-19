@@ -6,6 +6,7 @@ define amdgpu_ps <4 x float> @gather4_2d(i32 %rsrc, <4 x i32> inreg %samp, float
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    s_mov_b32 s4, exec_lo ; encoding: [0x7e,0x03,0x84,0xbe]
 ; GFX13-NEXT:    s_wqm_b32 exec_lo, exec_lo ; encoding: [0x7e,0x09,0xfe,0xbe]
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) ; encoding: [0x09,0x00,0xae,0xbf]
 ; GFX13-NEXT:    v_dual_mov_b32 v5, v2 :: v_dual_mov_b32 v6, v1 ; encoding: [0x02,0x01,0x10,0xca,0x01,0x01,0x06,0x05]
 ; GFX13-NEXT:    v_mov_b32_e32 v4, v0 ; encoding: [0x00,0x03,0x08,0x7e]
 ; GFX13-NEXT:    s_and_b32 exec_lo, exec_lo, s4 ; encoding: [0x7e,0x04,0x7e,0x87]
@@ -22,9 +23,9 @@ define amdgpu_ps <4 x float> @gather4_2d_tfe(i32 %rsrc, <4 x i32> inreg %samp, f
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    s_mov_b32 s4, exec_lo ; encoding: [0x7e,0x03,0x84,0xbe]
 ; GFX13-NEXT:    s_wqm_b32 exec_lo, exec_lo ; encoding: [0x7e,0x09,0xfe,0xbe]
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_2) ; encoding: [0x29,0x01,0xae,0xbf]
 ; GFX13-NEXT:    v_dual_mov_b32 v5, v0 :: v_dual_mov_b32 v0, 0 ; encoding: [0x00,0x01,0x10,0xca,0x80,0x00,0x00,0x05]
 ; GFX13-NEXT:    v_dual_mov_b32 v6, v2 :: v_dual_mov_b32 v7, v1 ; encoding: [0x02,0x01,0x10,0xca,0x01,0x01,0x06,0x06]
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2) ; encoding: [0x02,0x00,0xae,0xbf]
 ; GFX13-NEXT:    v_dual_mov_b32 v1, v0 :: v_dual_mov_b32 v2, v0 ; encoding: [0x00,0x01,0x10,0xca,0x00,0x01,0x02,0x01]
 ; GFX13-NEXT:    v_dual_mov_b32 v3, v0 :: v_dual_mov_b32 v4, v0 ; encoding: [0x00,0x01,0x10,0xca,0x00,0x01,0x04,0x03]
 ; GFX13-NEXT:    s_and_b32 exec_lo, exec_lo, s4 ; encoding: [0x7e,0x04,0x7e,0x87]
@@ -42,6 +43,7 @@ define amdgpu_ps <4 x float> @gather4_cube(i32 %rsrc, <4 x i32> inreg %samp, flo
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    s_mov_b32 s4, exec_lo ; encoding: [0x7e,0x03,0x84,0xbe]
 ; GFX13-NEXT:    s_wqm_b32 exec_lo, exec_lo ; encoding: [0x7e,0x09,0xfe,0xbe]
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) ; encoding: [0x09,0x00,0xae,0xbf]
 ; GFX13-NEXT:    v_dual_mov_b32 v5, v3 :: v_dual_mov_b32 v6, v2 ; encoding: [0x03,0x01,0x10,0xca,0x02,0x01,0x06,0x05]
 ; GFX13-NEXT:    v_dual_mov_b32 v7, v1 :: v_dual_mov_b32 v4, v0 ; encoding: [0x01,0x01,0x10,0xca,0x00,0x01,0x04,0x07]
 ; GFX13-NEXT:    s_and_b32 exec_lo, exec_lo, s4 ; encoding: [0x7e,0x04,0x7e,0x87]
@@ -58,6 +60,7 @@ define amdgpu_ps <4 x float> @gather4_2darray(i32 %rsrc, <4 x i32> inreg %samp, 
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    s_mov_b32 s4, exec_lo ; encoding: [0x7e,0x03,0x84,0xbe]
 ; GFX13-NEXT:    s_wqm_b32 exec_lo, exec_lo ; encoding: [0x7e,0x09,0xfe,0xbe]
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) ; encoding: [0x09,0x00,0xae,0xbf]
 ; GFX13-NEXT:    v_dual_mov_b32 v5, v3 :: v_dual_mov_b32 v6, v2 ; encoding: [0x03,0x01,0x10,0xca,0x02,0x01,0x06,0x05]
 ; GFX13-NEXT:    v_dual_mov_b32 v7, v1 :: v_dual_mov_b32 v4, v0 ; encoding: [0x01,0x01,0x10,0xca,0x00,0x01,0x04,0x07]
 ; GFX13-NEXT:    s_and_b32 exec_lo, exec_lo, s4 ; encoding: [0x7e,0x04,0x7e,0x87]
@@ -74,6 +77,7 @@ define amdgpu_ps <4 x float> @gather4_c_2d(i32 %rsrc, <4 x i32> inreg %samp, flo
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    s_mov_b32 s4, exec_lo ; encoding: [0x7e,0x03,0x84,0xbe]
 ; GFX13-NEXT:    s_wqm_b32 exec_lo, exec_lo ; encoding: [0x7e,0x09,0xfe,0xbe]
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) ; encoding: [0x09,0x00,0xae,0xbf]
 ; GFX13-NEXT:    v_dual_mov_b32 v5, v3 :: v_dual_mov_b32 v6, v2 ; encoding: [0x03,0x01,0x10,0xca,0x02,0x01,0x06,0x05]
 ; GFX13-NEXT:    v_dual_mov_b32 v7, v1 :: v_dual_mov_b32 v4, v0 ; encoding: [0x01,0x01,0x10,0xca,0x00,0x01,0x04,0x07]
 ; GFX13-NEXT:    s_and_b32 exec_lo, exec_lo, s4 ; encoding: [0x7e,0x04,0x7e,0x87]
@@ -90,6 +94,7 @@ define amdgpu_ps <4 x float> @gather4_cl_2d(i32 %rsrc, <4 x i32> inreg %samp, fl
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    s_mov_b32 s4, exec_lo ; encoding: [0x7e,0x03,0x84,0xbe]
 ; GFX13-NEXT:    s_wqm_b32 exec_lo, exec_lo ; encoding: [0x7e,0x09,0xfe,0xbe]
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) ; encoding: [0x09,0x00,0xae,0xbf]
 ; GFX13-NEXT:    v_dual_mov_b32 v5, v3 :: v_dual_mov_b32 v6, v2 ; encoding: [0x03,0x01,0x10,0xca,0x02,0x01,0x06,0x05]
 ; GFX13-NEXT:    v_dual_mov_b32 v7, v1 :: v_dual_mov_b32 v4, v0 ; encoding: [0x01,0x01,0x10,0xca,0x00,0x01,0x04,0x07]
 ; GFX13-NEXT:    s_and_b32 exec_lo, exec_lo, s4 ; encoding: [0x7e,0x04,0x7e,0x87]
@@ -106,6 +111,7 @@ define amdgpu_ps <4 x float> @gather4_c_cl_2d(i32 %rsrc, <4 x i32> inreg %samp, 
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    s_mov_b32 s4, exec_lo ; encoding: [0x7e,0x03,0x84,0xbe]
 ; GFX13-NEXT:    s_wqm_b32 exec_lo, exec_lo ; encoding: [0x7e,0x09,0xfe,0xbe]
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) ; encoding: [0x09,0x00,0xae,0xbf]
 ; GFX13-NEXT:    v_dual_mov_b32 v6, v3 :: v_dual_mov_b32 v7, v2 ; encoding: [0x03,0x01,0x10,0xca,0x02,0x01,0x06,0x06]
 ; GFX13-NEXT:    v_dual_mov_b32 v8, v1 :: v_dual_mov_b32 v5, v0 ; encoding: [0x01,0x01,0x10,0xca,0x00,0x01,0x04,0x08]
 ; GFX13-NEXT:    s_and_b32 exec_lo, exec_lo, s4 ; encoding: [0x7e,0x04,0x7e,0x87]
@@ -122,6 +128,7 @@ define amdgpu_ps <4 x float> @gather4_b_2d(i32 %rsrc, <4 x i32> inreg %samp, flo
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    s_mov_b32 s4, exec_lo ; encoding: [0x7e,0x03,0x84,0xbe]
 ; GFX13-NEXT:    s_wqm_b32 exec_lo, exec_lo ; encoding: [0x7e,0x09,0xfe,0xbe]
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) ; encoding: [0x09,0x00,0xae,0xbf]
 ; GFX13-NEXT:    v_dual_mov_b32 v5, v3 :: v_dual_mov_b32 v6, v2 ; encoding: [0x03,0x01,0x10,0xca,0x02,0x01,0x06,0x05]
 ; GFX13-NEXT:    v_dual_mov_b32 v7, v1 :: v_dual_mov_b32 v4, v0 ; encoding: [0x01,0x01,0x10,0xca,0x00,0x01,0x04,0x07]
 ; GFX13-NEXT:    s_and_b32 exec_lo, exec_lo, s4 ; encoding: [0x7e,0x04,0x7e,0x87]
@@ -138,6 +145,7 @@ define amdgpu_ps <4 x float> @gather4_c_b_2d(i32 %rsrc, <4 x i32> inreg %samp, f
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    s_mov_b32 s4, exec_lo ; encoding: [0x7e,0x03,0x84,0xbe]
 ; GFX13-NEXT:    s_wqm_b32 exec_lo, exec_lo ; encoding: [0x7e,0x09,0xfe,0xbe]
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) ; encoding: [0x09,0x00,0xae,0xbf]
 ; GFX13-NEXT:    v_dual_mov_b32 v6, v3 :: v_dual_mov_b32 v7, v2 ; encoding: [0x03,0x01,0x10,0xca,0x02,0x01,0x06,0x06]
 ; GFX13-NEXT:    v_dual_mov_b32 v8, v1 :: v_dual_mov_b32 v5, v0 ; encoding: [0x01,0x01,0x10,0xca,0x00,0x01,0x04,0x08]
 ; GFX13-NEXT:    s_and_b32 exec_lo, exec_lo, s4 ; encoding: [0x7e,0x04,0x7e,0x87]
@@ -154,6 +162,7 @@ define amdgpu_ps <4 x float> @gather4_b_cl_2d(i32 %rsrc, <4 x i32> inreg %samp, 
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    s_mov_b32 s4, exec_lo ; encoding: [0x7e,0x03,0x84,0xbe]
 ; GFX13-NEXT:    s_wqm_b32 exec_lo, exec_lo ; encoding: [0x7e,0x09,0xfe,0xbe]
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) ; encoding: [0x09,0x00,0xae,0xbf]
 ; GFX13-NEXT:    v_dual_mov_b32 v6, v3 :: v_dual_mov_b32 v7, v2 ; encoding: [0x03,0x01,0x10,0xca,0x02,0x01,0x06,0x06]
 ; GFX13-NEXT:    v_dual_mov_b32 v8, v1 :: v_dual_mov_b32 v5, v0 ; encoding: [0x01,0x01,0x10,0xca,0x00,0x01,0x04,0x08]
 ; GFX13-NEXT:    s_and_b32 exec_lo, exec_lo, s4 ; encoding: [0x7e,0x04,0x7e,0x87]
@@ -170,6 +179,7 @@ define amdgpu_ps <4 x float> @gather4_c_b_cl_2d(i32 %rsrc, <4 x i32> inreg %samp
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    s_mov_b32 s4, exec_lo ; encoding: [0x7e,0x03,0x84,0xbe]
 ; GFX13-NEXT:    s_wqm_b32 exec_lo, exec_lo ; encoding: [0x7e,0x09,0xfe,0xbe]
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) ; encoding: [0x09,0x00,0xae,0xbf]
 ; GFX13-NEXT:    v_dual_mov_b32 v7, v3 :: v_dual_mov_b32 v8, v2 ; encoding: [0x03,0x01,0x10,0xca,0x02,0x01,0x08,0x07]
 ; GFX13-NEXT:    v_dual_mov_b32 v9, v1 :: v_dual_mov_b32 v6, v0 ; encoding: [0x01,0x01,0x10,0xca,0x00,0x01,0x06,0x09]
 ; GFX13-NEXT:    s_and_b32 exec_lo, exec_lo, s4 ; encoding: [0x7e,0x04,0x7e,0x87]
@@ -238,6 +248,7 @@ define amdgpu_ps <4 x float> @gather4_2d_dmask_2(i32 %rsrc, <4 x i32> inreg %sam
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    s_mov_b32 s4, exec_lo ; encoding: [0x7e,0x03,0x84,0xbe]
 ; GFX13-NEXT:    s_wqm_b32 exec_lo, exec_lo ; encoding: [0x7e,0x09,0xfe,0xbe]
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) ; encoding: [0x09,0x00,0xae,0xbf]
 ; GFX13-NEXT:    v_dual_mov_b32 v5, v2 :: v_dual_mov_b32 v6, v1 ; encoding: [0x02,0x01,0x10,0xca,0x01,0x01,0x06,0x05]
 ; GFX13-NEXT:    v_mov_b32_e32 v4, v0 ; encoding: [0x00,0x03,0x08,0x7e]
 ; GFX13-NEXT:    s_and_b32 exec_lo, exec_lo, s4 ; encoding: [0x7e,0x04,0x7e,0x87]
@@ -254,6 +265,7 @@ define amdgpu_ps <4 x float> @gather4_2d_dmask_4(i32 %rsrc, <4 x i32> inreg %sam
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    s_mov_b32 s4, exec_lo ; encoding: [0x7e,0x03,0x84,0xbe]
 ; GFX13-NEXT:    s_wqm_b32 exec_lo, exec_lo ; encoding: [0x7e,0x09,0xfe,0xbe]
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) ; encoding: [0x09,0x00,0xae,0xbf]
 ; GFX13-NEXT:    v_dual_mov_b32 v5, v2 :: v_dual_mov_b32 v6, v1 ; encoding: [0x02,0x01,0x10,0xca,0x01,0x01,0x06,0x05]
 ; GFX13-NEXT:    v_mov_b32_e32 v4, v0 ; encoding: [0x00,0x03,0x08,0x7e]
 ; GFX13-NEXT:    s_and_b32 exec_lo, exec_lo, s4 ; encoding: [0x7e,0x04,0x7e,0x87]
@@ -270,6 +282,7 @@ define amdgpu_ps <4 x float> @gather4_2d_dmask_8(i32 %rsrc, <4 x i32> inreg %sam
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    s_mov_b32 s4, exec_lo ; encoding: [0x7e,0x03,0x84,0xbe]
 ; GFX13-NEXT:    s_wqm_b32 exec_lo, exec_lo ; encoding: [0x7e,0x09,0xfe,0xbe]
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) ; encoding: [0x09,0x00,0xae,0xbf]
 ; GFX13-NEXT:    v_dual_mov_b32 v5, v2 :: v_dual_mov_b32 v6, v1 ; encoding: [0x02,0x01,0x10,0xca,0x01,0x01,0x06,0x05]
 ; GFX13-NEXT:    v_mov_b32_e32 v4, v0 ; encoding: [0x00,0x03,0x08,0x7e]
 ; GFX13-NEXT:    s_and_b32 exec_lo, exec_lo, s4 ; encoding: [0x7e,0x04,0x7e,0x87]

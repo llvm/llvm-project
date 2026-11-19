@@ -279,6 +279,7 @@ define void @write_imm_into_exec_and_store(ptr addrspace(1) %out) {
 ; GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GISEL-NEXT:    s_mov_b64 exec, 0x1cbe991a14
+; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GISEL-NEXT:    v_mov_b64_e32 v[2:3], 0x1cbe991a14
 ; GISEL-NEXT:    s_mov_b64 s[0:1], exec
 ; GISEL-NEXT:    global_store_b64 v[0:1], v[2:3], off
