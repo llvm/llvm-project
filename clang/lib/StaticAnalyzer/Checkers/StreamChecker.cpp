@@ -1725,11 +1725,13 @@ void StreamChecker::evalFflush(const FnDescription *Desc, const CallEvent &Call,
   ProgramStateRef StateFailed = bindInt(*EofVal, State, C, CE);
   ProgramStateRef StateNotFailed = bindInt(0, State, C, CE);
 
-  // Clear error states if `fflush` returns 0, but retain their EOF flags.
   auto SetNotFailedStreamState =
       [Desc, &StateNotFailed](SymbolRef Sym, const StreamState *SS) {
-        StreamErrorState NewES =
-            (SS->ErrorState & ErrorFEof) ? ErrorFEof : ErrorNone;
+        // If `fflush` is successful, the FError flag is cleared but the EOF
+        // flag remains (if it was set).
+        StreamErrorState NewES = SS->ErrorState & (~ErrorFError);
+        if (!NewES)
+          NewES = ErrorNone;
         StateNotFailed = StateNotFailed->set<StreamMap>(
             Sym, StreamState::getOpened(Desc, NewES, false));
       };
@@ -1745,7 +1747,7 @@ void StreamChecker::evalFflush(const FnDescription *Desc, const CallEvent &Call,
         return;
     }
   } else {
-    // Clear error states for all streams.
+    // `fflush` applies to all open streams, change state for all streams.
     const StreamMapTy &Map = StateNotFailed->get<StreamMap>();
     for (const auto &I : Map) {
       SymbolRef Sym = I.first;
@@ -1755,7 +1757,7 @@ void StreamChecker::evalFflush(const FnDescription *Desc, const CallEvent &Call,
     }
   }
 
-  // Intentionally do not clean the error states in the failure case.
+  // If `fflush` fails, do not change state of the affected streams.
 
   C.addTransition(StateNotFailed);
   C.addTransition(StateFailed);
