@@ -249,26 +249,18 @@ static uint64_t constantBits(const APInt &Value, const DIBasicType *BT) {
                       BT);
 }
 
-// The DIBasicType that \p Ty resolves to through typedefs and through const,
-// volatile, restrict, and atomic qualifiers, or null.
+// The DIBasicType that \p Ty resolves to through typedefs and qualifiers, or
+// null.
 static const DIBasicType *stripToScalarType(const DIType *Ty) {
-  // visitDIDerivedType accepts a cyclic typedef chain, so this stops once it
-  // reaches an already seen type.
+  // visitDIDerivedType accepts a cyclic chain of typedefs and qualifiers, so
+  // this stops once it reaches an already seen type.
   SmallPtrSet<const DIDerivedType *, 4> Seen;
   while (const auto *DT = dyn_cast_or_null<DIDerivedType>(Ty)) {
-    switch (DT->getTag()) {
-    case dwarf::DW_TAG_typedef:
-    case dwarf::DW_TAG_const_type:
-    case dwarf::DW_TAG_volatile_type:
-    case dwarf::DW_TAG_restrict_type:
-    case dwarf::DW_TAG_atomic_type:
-      if (!Seen.insert(DT).second)
-        return nullptr;
-      Ty = DT->getBaseType();
-      break;
-    default:
+    unsigned Tag = DT->getTag();
+    if ((Tag != dwarf::DW_TAG_typedef && !mapTypeQualifierTag(Tag)) ||
+        !Seen.insert(DT).second)
       return nullptr;
-    }
+    Ty = DT->getBaseType();
   }
 
   const auto *BT = dyn_cast_or_null<DIBasicType>(Ty);
@@ -1015,16 +1007,13 @@ auto SPIRVNonSemanticDebugHandler::emitDebugTypeForDerivedType(
   switch (DT->getTag()) {
   case dwarf::DW_TAG_pointer_type:
     return emitDebugTypePointer(DT, MAI);
-  case dwarf::DW_TAG_const_type:
-  case dwarf::DW_TAG_volatile_type:
-  case dwarf::DW_TAG_restrict_type:
-  case dwarf::DW_TAG_atomic_type:
-    return emitDebugTypeQualifier(DT, MAI);
   case dwarf::DW_TAG_typedef:
     return emitDebugTypedef(DT, VoidTypeReg, I32TypeReg, ExtInstSetReg, MAI);
   case dwarf::DW_TAG_member:
     return emitDebugTypeMember(DT, VoidTypeReg, I32TypeReg, ExtInstSetReg, MAI);
   default:
+    if (std::optional<uint32_t> Qualifier = mapTypeQualifierTag(DT->getTag()))
+      return emitDebugTypeQualifier(DT, *Qualifier, MAI);
     return EmitResult<PreparedScope>::unsupported();
   }
 }
@@ -1068,12 +1057,8 @@ auto SPIRVNonSemanticDebugHandler::emitDebugTypePointer(
 }
 
 auto SPIRVNonSemanticDebugHandler::emitDebugTypeQualifier(
-    const DIDerivedType *QT, SPIRV::ModuleAnalysisInfo &MAI)
+    const DIDerivedType *QT, uint32_t Qualifier, SPIRV::ModuleAnalysisInfo &MAI)
     -> EmitResult<PreparedScope> {
-  std::optional<uint32_t> Qualifier = mapTypeQualifierTag(QT->getTag());
-  if (!Qualifier)
-    return EmitResult<PreparedScope>::unsupported();
-
   // No base type (e.g. const void): use DebugInfoNone, as for pointers.
   MCRegister BaseReg = CachedDebugInfoNoneReg;
   if (const DIType *BaseTy = QT->getBaseType()) {
@@ -1084,7 +1069,7 @@ auto SPIRVNonSemanticDebugHandler::emitDebugTypeQualifier(
   }
 
   MCRegister QualifierReg =
-      emitOpConstantI32(*Qualifier, getOrEmitOpTypeInt32Reg(MAI), MAI);
+      emitOpConstantI32(Qualifier, getOrEmitOpTypeInt32Reg(MAI), MAI);
   return EmitResult<PreparedScope>::emitted(PreparedScope{
       SPIRV::NonSemanticExtInst::DebugTypeQualifier, {BaseReg, QualifierReg}});
 }

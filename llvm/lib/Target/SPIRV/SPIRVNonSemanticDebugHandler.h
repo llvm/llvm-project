@@ -462,13 +462,13 @@ private:
   EmitResult<PreparedScope>
   emitDebugTypePointer(const DIDerivedType *PT, SPIRV::ModuleAnalysisInfo &MAI);
 
-  /// Build \c DebugTypeQualifier for the const, volatile, restrict or atomic
-  /// type \p QT. Uses \c DebugInfoNone as Base Type when \p QT has none.
+  /// Build \c DebugTypeQualifier with Type Qualifier value \p Qualifier for
+  /// the qualified type \p QT. Uses \c DebugInfoNone as Base Type when \p QT
+  /// has none.
   ///
-  /// \returns Unsupported when \p QT's tag has no Type Qualifier value.
-  /// The base's status if it fails.
+  /// \returns The base's status if it fails.
   EmitResult<PreparedScope>
-  emitDebugTypeQualifier(const DIDerivedType *QT,
+  emitDebugTypeQualifier(const DIDerivedType *QT, uint32_t Qualifier,
                          SPIRV::ModuleAnalysisInfo &MAI);
 
   /// Build one DebugTypeFunction for ST when every DI operand maps to a debug
