@@ -479,6 +479,12 @@ defm : OptionalBoolField<"msan-keep-going",
   "Keep going after reporting a UMR">;
 defm : OptionalBoolField<"msan-kernel",
   "Enable KernelMemorySanitizer instrumentation">;
+// The Linux kernel's noinstr functions (disable_sanitizer_instrumentation) may
+// call instrumented code between instrumentation_begin() and
+// instrumentation_end(). Under KMSAN these expand to inline asm markers, see
+// "KMSAN instrumentation regions" in MemorySanitizer.cpp.
+defm : BoolField<"msan-kernel-instrumentation-regions", "true",
+  "KMSAN: pass clean parameter shadow to the calls made between kmsan.instrumentation.begin/end inline asm markers in functions with disable_sanitizer_instrumentation">;
 defm : OptionalValueField<"msan-origin-base", "uint64_t",
   "Define custom MSan OriginBase">;
 defm : BoolField<"msan-poison-stack", "true",

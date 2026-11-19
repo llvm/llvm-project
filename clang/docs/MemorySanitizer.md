@@ -91,6 +91,30 @@ positives and therefore should be used with care, and only if absolutely
 required; for example for certain code that cannot tolerate any instrumentation
 and resulting side-effects. This attribute overrides `no_sanitize("memory")`.
 
+With `-fsanitize=kernel-memory`, such a function can still tell
+KernelMemorySanitizer which of its calls go to instrumented code, so that the
+callees do not report false positives on their arguments. The calls are
+bracketed with inline assembly markers, which the Linux kernel emits from
+`instrumentation_begin()` and `instrumentation_end()`:
+
+```c
+__attribute__((disable_sanitizer_instrumentation))
+void handle_irq(struct pt_regs *regs) {
+  enter_irq_context(regs);       // left alone
+  asm volatile("# kmsan.instrumentation.begin");
+  dispatch_irq(regs);            // the arguments are passed as initialized
+  asm volatile("# kmsan.instrumentation.end");
+  exit_irq_context(regs);        // left alone
+}
+```
+
+The markers are recognized by the `kmsan.instrumentation.begin` and
+`kmsan.instrumentation.end` tokens in the assembly template; placed in an
+assembler comment, they generate no code. Regions nest, and a call is in a
+region only if every path to it has passed a begin marker that is not closed
+yet. Nothing but the calls inside the regions is instrumented, and no checks
+are inserted. Userspace MemorySanitizer ignores the markers.
+
 ### Interaction of Inlining with Disabling Sanitizer Instrumentation
 
 - A `no_sanitize` function will not be inlined heuristically by the compiler into a sanitized function.
