@@ -1,0 +1,26 @@
+## With -empty-profile, objects without coverage data (e.g. compiled from a
+## source file that only defines data) contribute no baseline coverage instead
+## of causing an error.
+
+# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-cov export -format=lcov -empty-profile %t.o | count 0
+# RUN: llvm-cov export -format=lcov -empty-profile %t.o \
+# RUN:   -object %S/Inputs/lineExecutionCounts.covmapping \
+# RUN:   | FileCheck --check-prefix=BASELINE %s
+
+# BASELINE: SF:{{.*}}showLineExecutionCounts.cpp
+# BASELINE: end_of_record
+
+## With a profile, the lack of coverage data is still an error.
+# RUN: llvm-profdata merge %S/Inputs/lineExecutionCounts.proftext -o %t.profdata
+# RUN: not llvm-cov export -format=lcov -instr-profile %t.profdata %t.o 2>&1 \
+# RUN:   | FileCheck --check-prefix=ERROR %s
+
+# ERROR: no coverage data found
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
