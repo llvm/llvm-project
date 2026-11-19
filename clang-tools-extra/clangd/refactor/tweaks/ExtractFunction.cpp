@@ -846,7 +846,7 @@ struct CapturedZoneInfo {
     bool HasUnsafeTypeQueryUseInZone = false;
     DeclInformation(const Decl *TheDecl, ZoneRelative DeclaredIn,
                     unsigned DeclIndex)
-        : TheDecl(TheDecl), DeclaredIn(DeclaredIn), DeclIndex(DeclIndex){};
+        : TheDecl(TheDecl), DeclaredIn(DeclaredIn), DeclIndex(DeclIndex) {};
     // Marks the occurence of a reference for this declaration
     void markOccurence(ZoneRelative ReferenceLoc);
   };
@@ -857,8 +857,14 @@ struct CapturedZoneInfo {
   // Control flow is broken if we are extracting a break/continue without a
   // corresponding parent loop/switch
   bool BrokenControlFlow = false;
+  // Whether an explicit type mention inside the zone (a declarator, a
+  // cast, sizeof(T), etc.) refers to a struct/class/union, enum, or
+  // typedef declared inside the enclosing function. Such a type isn't
+  // visible at the extracted function's insertion point, which is
+  // always before the enclosing function -- see
+  // referencesFunctionLocalType.
+  bool ReferencesFunctionLocalType = false;
   // FIXME: capture TypeAliasDecl and UsingDirectiveDecl
-  // FIXME: Capture type information as well.
   DeclInformation *createDeclInfo(const Decl *D, ZoneRelative RelativeLoc);
   DeclInformation *getDeclInfoFor(const Decl *D);
 };
@@ -962,6 +968,54 @@ void collectUnderlyingDecls(const Expr *E,
   }
 }
 
+// Whether T refers, anywhere within it (looking through pointers,
+// references, arrays, and template arguments), to a struct/class/union,
+// enum, or typedef declared inside some function. Such a type isn't visible
+// outside that function, so it can't be used in the extracted
+// function's signature or body, which always end up placed before the
+// enclosing function.
+//
+bool referencesFunctionLocalType(QualType T) {
+  if (T.isNull())
+    return false;
+  if (const TagDecl *TD = T->getAsTagDecl())
+    if (TD->getDeclContext()->isFunctionOrMethod())
+      return true;
+  if (const auto *PT = T->getAs<PointerType>())
+    return referencesFunctionLocalType(PT->getPointeeType());
+  if (const auto *RT = T->getAs<ReferenceType>())
+    return referencesFunctionLocalType(RT->getPointeeType());
+  if (const auto *AT = T->getAsArrayTypeUnsafe())
+    return referencesFunctionLocalType(AT->getElementType());
+  if (const auto *TST = T->getAs<TemplateSpecializationType>())
+    for (const TemplateArgument &Arg : TST->template_arguments())
+      if (Arg.getKind() == TemplateArgument::Type &&
+          referencesFunctionLocalType(Arg.getAsType()))
+        return true;
+  // A pointer-to-member's own class (`S::*`, for either a data or a
+  // member-function member) must be nameable too, same as the member's
+  // own type, which getPointeeType() below covers uniformly for both
+  // kinds (a plain type for a data member, a function type for a
+  // member-function one).
+  if (const auto *MPT = T->getAs<MemberPointerType>()) {
+    if (const CXXRecordDecl *RD = MPT->getMostRecentCXXRecordDecl())
+      if (RD->getDeclContext()->isFunctionOrMethod())
+        return true;
+    return referencesFunctionLocalType(MPT->getPointeeType());
+  }
+  // A function type itself (as opposed to a function *pointer*, whose
+  // pointee is handled above): its return type, and -- if the parameter
+  // list isn't just `()`/unprototyped -- every parameter's type.
+  if (const auto *FT = T->getAs<FunctionType>()) {
+    if (referencesFunctionLocalType(FT->getReturnType()))
+      return true;
+    if (const auto *FPT = dyn_cast<FunctionProtoType>(FT))
+      if (llvm::any_of(FPT->getParamTypes(), referencesFunctionLocalType))
+        return true;
+  }
+  return false;
+}
+
 // Captures information from Extraction Zone
 CapturedZoneInfo captureZoneInfo(const ExtractionZone &ExtZone) {
   // We use the ASTVisitor instead of using the selection tree since we need to
@@ -1006,6 +1060,23 @@ CapturedZoneInfo captureZoneInfo(const ExtractionZone &ExtZone) {
 
     bool VisitDecl(Decl *D) {
       Info.createDeclInfo(D, CurrentLocation);
+      return true;
+    }
+
+    // Catches a local type named explicitly -- a declarator, a cast, or
+    // sizeof(T) -- anywhere inside the zone. Deliberately doesn't also
+    // check every Expr's own type: that would over-trigger on e.g. a
+    // local lambda's closure type (its DeclContext is the enclosing
+    // function too), even though an `auto`-declared lambda variable
+    // never needs to spell that type out anywhere. A *captured*
+    // variable (declared outside the zone) of a local type is instead
+    // caught separately, in getExtractedFunction, by checking the
+    // actual generated parameter/return types: that's the only place
+    // such a type would actually need to be spelled out.
+    bool VisitTypeLoc(TypeLoc TL) {
+      if (CurrentLocation == ZoneRelative::Inside &&
+          referencesFunctionLocalType(TL.getType()))
+        Info.ReferencesFunctionLocalType = true;
       return true;
     }
 
@@ -1484,6 +1555,12 @@ llvm::Expected<NewFunction> getExtractedFunction(ExtractionZone &ExtZone,
   if (CapturedInfo.BrokenControlFlow)
     return error("Cannot extract break/continue without corresponding "
                  "loop/switch statement.");
+  // The extracted function is always placed before the enclosing
+  // function, where a type declared inside it (e.g. a local struct)
+  // isn't visible.
+  if (CapturedInfo.ReferencesFunctionLocalType)
+    return error("Cannot extract code that uses a type local to the "
+                 "enclosing function.");
   NewFunction ExtractedFunc(getSemicolonPolicy(ExtZone, SM, LangOpts),
                             &LangOpts);
 
@@ -1529,6 +1606,17 @@ llvm::Expected<NewFunction> getExtractedFunction(ExtractionZone &ExtZone,
       !generateReturnProperties(ExtractedFunc, *ExtZone.EnclosingFunction,
                                 CapturedInfo))
     return error("Too complex to extract.");
+  // A captured variable's own type can be function-local (e.g. a local
+  // struct) without any explicit mention of that type ever appearing
+  // inside the zone itself (checked above): the type still has to be
+  // spelled out here, in the parameter it becomes.
+  if (referencesFunctionLocalType(ExtractedFunc.ReturnType) ||
+      llvm::any_of(ExtractedFunc.Parameters,
+                   [](const NewFunction::Parameter &P) {
+                     return referencesFunctionLocalType(P.TypeInfo);
+                   }))
+    return error("Cannot extract code that uses a type local to the "
+                 "enclosing function.");
   return ExtractedFunc;
 }
 
