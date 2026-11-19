@@ -779,9 +779,8 @@ define i1 @switch_to_select_assumptions(i8 %x) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[BOUND:%.*]] = icmp ule i8 [[X:%.*]], 3
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[BOUND]])
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i8 [[X]], 1
-; CHECK-NEXT:    [[SWITCH_AND:%.*]] = and i8 [[TMP0]], -3
-; CHECK-NEXT:    [[SWITCH_SELECTCMP:%.*]] = icmp eq i8 [[SWITCH_AND]], 0
+; CHECK-NEXT:    [[TMP0:%.*]] = and i8 [[X]], 1
+; CHECK-NEXT:    [[SWITCH_SELECTCMP:%.*]] = icmp eq i8 [[TMP0]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[SWITCH_SELECTCMP]], i1 true, i1 false
 ; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
