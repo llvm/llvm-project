@@ -18,6 +18,7 @@
 #include "clang/Basic/FileEntry.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/Inclusions/StandardLibrary.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -254,6 +255,38 @@ llvm::SmallVector<Header> headersForSymbol(const Symbol &S,
     for (auto &Loc : locateSymbol(S, PP.getLangOpts()))
       Headers.append(applyHints(findHeaders(Loc, SM, PI), Loc.Hint));
   }
+
+  llvm::SmallVector<Hinted<Header>> RedirectedHeaders;
+  for (auto &H : Headers) {
+    if (H.kind() == Header::Physical) {
+      FileEntryRef FE = H.physical();
+      bool IsSystem = SrcMgr::isSystem(static_cast<SrcMgr::CharacteristicKind>(
+          PP.getHeaderSearchInfo().getFileInfo(FE).DirInfo));
+      llvm::StringRef Path = H.resolvedPath();
+      llvm::StringRef FileName = llvm::sys::path::filename(Path);
+      // Check if header is a system header and starts with '_' or '__'
+      if (IsSystem && FileName.starts_with("_")) {
+        // Some private headers have "__"
+        llvm::StringRef Stripped = FileName.ltrim('_');
+        if (!Stripped.empty()) {
+          llvm::SmallString<128> PublicPath =
+              llvm::sys::path::parent_path(Path);
+          llvm::sys::path::append(PublicPath, Stripped);
+          if (auto PublicFE =
+                  SM.getFileManager().getOptionalFileRef(PublicPath)) {
+            // We found a public header, so we'll redirect to it.
+            RedirectedHeaders.push_back(
+                Hinted<Header>(Header(*PublicFE), H.Hint | Hints::PublicHeader |
+                                                      Hints::PreferredHeader));
+            continue;
+          }
+        }
+      }
+    }
+    RedirectedHeaders.push_back(H);
+  }
+  Headers = std::move(RedirectedHeaders);
+
   // If two Headers probably refer to the same file (e.g. Verbatim(foo.h) and
   // Physical(/path/to/foo.h), we won't deduplicate them or merge their hints
   llvm::stable_sort(

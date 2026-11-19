@@ -678,5 +678,53 @@ TEST_F(HeadersForSymbolTest, ExporterNoNameMatch) {
                                            physicalHeader("exporter/foo.h")));
 }
 
+TEST_F(HeadersForSymbolTest, InternalSystemHeaderUnderscoreRedirection) {
+  Inputs.Code = R"cpp(
+    #include <_stdlib.h>
+    void foo() { arc4random_uniform(42); }
+  )cpp";
+  Inputs.ExtraFiles["/usr/include/_stdlib.h"] = guard(R"cpp(
+    void arc4random_uniform(int);
+  )cpp");
+  Inputs.ExtraFiles["/usr/include/stdlib.h"] = guard(R"cpp(
+    #include <_stdlib.h>
+  )cpp");
+  Inputs.ExtraArgs.push_back("-isystem/usr/include");
+  buildAST();
+  EXPECT_THAT(headersFor("arc4random_uniform"),
+              ElementsAre(physicalHeader("/usr/include/stdlib.h")));
+}
+
+TEST_F(HeadersForSymbolTest, InternalSystemHeaderNoPublicHeader) {
+  Inputs.Code = R"cpp(
+    #include <__stddef_null.h>
+    void foo() { my_null(); }
+  )cpp";
+  Inputs.ExtraFiles["/usr/include/__stddef_null.h"] = guard(R"cpp(
+    void my_null();
+  )cpp");
+  Inputs.ExtraArgs.push_back("-isystem/usr/include");
+  buildAST();
+  EXPECT_THAT(headersFor("my_null"),
+              ElementsAre(physicalHeader("/usr/include/__stddef_null.h")));
+}
+
+TEST_F(HeadersForSymbolTest, InternalUserHeaderUnderscoreNotRedirected) {
+  Inputs.Code = R"cpp(
+    #include "user_proj/_myheader.h"
+    void foo() { my_func(); }
+  )cpp";
+  Inputs.ExtraFiles["user_proj/_myheader.h"] = guard(R"cpp(
+    void my_func();
+  )cpp");
+  Inputs.ExtraFiles["user_proj/myheader.h"] = guard(R"cpp(
+    #include "user_proj/_myheader.h"
+  )cpp");
+  Inputs.ExtraArgs.push_back("-Iuser_proj");
+  buildAST();
+  EXPECT_THAT(headersFor("my_func"),
+              ElementsAre(physicalHeader("user_proj/_myheader.h")));
+}
+
 } // namespace
 } // namespace clang::include_cleaner
