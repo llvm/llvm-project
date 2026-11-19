@@ -169,6 +169,7 @@ Sel.  Mnemonic                         Stack Effect                             
 0x25  ``get_pointee_type``             ``(Type @get_pointee_type -> Type)``                                  ``SBType::GetPointeeType``
 0x26  ``get_byte_size``                ``(Type @get_byte_size -> Integer)``                                  ``SBType::GetByteSize``
 0x27  ``create_child_at_offset``       ``(Object String Integer Type @create_child_at_offset -> Object)``    ``SBValue::CreateChildAtOffset``
+0x28  ``get_byte_stride``              ``(Type @get_byte_stride -> Integer)``                                ``SBType::GetByteStride``
 0x40  ``read_memory_byte``             ``(UInt @read_memory_byte -> UInt)``                                  ``Target::ReadMemory``
 0x41  ``read_memory_uint32``           ``(UInt @read_memory_uint32 -> UInt)``                                ``Target::ReadMemory``
 0x42  ``read_memory_int32``            ``(UInt @read_memory_int32 -> Int)``                                  ``Target::ReadMemory``

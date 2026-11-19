@@ -542,6 +542,15 @@ public:
     return {};
   }
 
+  /// Returns an explanation of why there is no variable named \p name in
+  /// \p sc, for example because \p sc is a closure that didn't capture a
+  /// variable of that name from its parent function, or an empty string.
+  virtual std::string
+  GetMissingVariableDiagnostic(llvm::StringRef name,
+                               const SymbolContext &sc) const {
+    return {};
+  }
+
   virtual std::optional<bool> GetBooleanFromString(llvm::StringRef str) const;
 
   /// Returns true if this Language supports exception breakpoints on throw via

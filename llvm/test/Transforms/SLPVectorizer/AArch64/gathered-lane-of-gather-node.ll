@@ -24,7 +24,8 @@ define void @load_lane_in_gather_node(ptr %a, ptr %out, half %y0, half %y1) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x half> [[TMP4]], <2 x half> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x half> [[TMP9]], <4 x half> [[TMP10]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; CHECK-NEXT:    [[TMP12:%.*]] = fsub <4 x half> [[TMP8]], [[TMP11]]
-; CHECK-NEXT:    store <4 x half> [[TMP12]], ptr [[OUT]], align 4
+; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <4 x half> [[TMP12]], <4 x half> [[TMP8]], <4 x i32> <i32 0, i32 5, i32 2, i32 3>
+; CHECK-NEXT:    store <4 x half> [[TMP13]], ptr [[OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %l0 = load half, ptr %a, align 4

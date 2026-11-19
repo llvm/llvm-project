@@ -3,26 +3,39 @@
 ## A DW_OP_addrx in a location list can name a data symbol, which the linker
 ## moves independently of the code that the list's address ranges cover. Check
 ## that each such operand is relocated by the delta of the symbol it names
-## rather than by that of the enclosing function.
+## rather than by that of the enclosing function. The classic linker keeps the
+## operands indexing .debug_addr, whose entries carry the relocations.
 
 # RUN: rm -rf %t && split-file %s %t
 # RUN: llvm-mc -triple arm64-apple-darwin -filetype=obj %t/t.s -o %t/t.o
 
 # RUN: dsymutil --linker classic -f -y %t/t.map -oso-prepend-path %t \
 # RUN:   -o %t/classic.dwarf
-# RUN: llvm-dwarfdump --debug-info %t/classic.dwarf | FileCheck %s
+# RUN: llvm-dwarfdump --debug-info --debug-addr %t/classic.dwarf \
+# RUN:   | FileCheck %s --check-prefix=CLASSIC
 
 # RUN: dsymutil --linker parallel -f -y %t/t.map -oso-prepend-path %t \
 # RUN:   -o %t/parallel.dwarf
-# RUN: llvm-dwarfdump --debug-info %t/parallel.dwarf | FileCheck %s
+# RUN: llvm-dwarfdump --debug-info %t/parallel.dwarf \
+# RUN:   | FileCheck %s --check-prefix=PARALLEL
 
 ## The ranges move with _f by 0x10000, while _g and _h each move by a delta of
 ## their own.
-# CHECK:      DW_TAG_variable
-# CHECK-NEXT:   DW_AT_location (0x{{[0-9a-f]+}}:
-# CHECK-NEXT:     [0x0000000000010004, 0x0000000000010008): DW_OP_addr 0x20000, DW_OP_stack_value
-# CHECK-NEXT:     [0x0000000000010008, 0x0000000000010010): DW_OP_addr 0x30008, DW_OP_stack_value)
-# CHECK-NEXT:   DW_AT_name ("p")
+# CLASSIC:      DW_TAG_variable
+# CLASSIC-NEXT:   DW_AT_location (0x{{[0-9a-f]+}}:
+# CLASSIC-NEXT:     [0x0000000000010004, 0x0000000000010008): DW_OP_addrx 0x1, DW_OP_stack_value
+# CLASSIC-NEXT:     [0x0000000000010008, 0x0000000000010010): DW_OP_addrx 0x2, DW_OP_stack_value)
+# CLASSIC-NEXT:   DW_AT_name ("p")
+# CLASSIC:      Addrs: [
+# CLASSIC-NEXT: 0x0000000000010000
+# CLASSIC-NEXT: 0x0000000000020000
+# CLASSIC-NEXT: 0x0000000000030008
+
+# PARALLEL:      DW_TAG_variable
+# PARALLEL-NEXT:   DW_AT_location (0x{{[0-9a-f]+}}:
+# PARALLEL-NEXT:     [0x0000000000010004, 0x0000000000010008): DW_OP_addr 0x20000, DW_OP_stack_value
+# PARALLEL-NEXT:     [0x0000000000010008, 0x0000000000010010): DW_OP_addr 0x30008, DW_OP_stack_value)
+# PARALLEL-NEXT:   DW_AT_name ("p")
 
 #--- t.map
 ---

@@ -19,6 +19,7 @@ using llvm::Twine;
 using llvm::libc_benchmarks::BzeroConfiguration;
 using llvm::libc_benchmarks::ComparisonSetup;
 using llvm::libc_benchmarks::CopySetup;
+using llvm::libc_benchmarks::MemchrConfiguration;
 using llvm::libc_benchmarks::MemcmpOrBcmpConfiguration;
 using llvm::libc_benchmarks::MemcpyConfiguration;
 using llvm::libc_benchmarks::MemmoveConfiguration;
@@ -26,6 +27,7 @@ using llvm::libc_benchmarks::MemorySizeDistribution;
 using llvm::libc_benchmarks::MemsetConfiguration;
 using llvm::libc_benchmarks::MoveSetup;
 using llvm::libc_benchmarks::OffsetDistribution;
+using llvm::libc_benchmarks::SearchSetup;
 using llvm::libc_benchmarks::SetSetup;
 
 // Alignment to use for when accessing the buffers.
@@ -123,3 +125,7 @@ BENCHMARK_MEMORY_FUNCTION(BM_Memset, SetSetup, MemsetConfiguration,
 extern llvm::ArrayRef<BzeroConfiguration> getBzeroConfigurations();
 BENCHMARK_MEMORY_FUNCTION(BM_Bzero, SetSetup, BzeroConfiguration,
                           getBzeroConfigurations());
+
+extern llvm::ArrayRef<MemchrConfiguration> getMemchrConfigurations();
+BENCHMARK_MEMORY_FUNCTION(BM_Memchr, SearchSetup, MemchrConfiguration,
+                          getMemchrConfigurations());

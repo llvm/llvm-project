@@ -73,8 +73,8 @@ void CompileUnit::maybeResetToLoadedStage() {
   if (getStage() < Stage::Loaded)
     return;
 
-  // Note: We need to do erasing for "Loaded" stage because
-  // if live analysys failed then we will have "Loaded" stage
+  // Note: We need to do erasing for "LiveRootsCollected" stage because
+  // if live analysys failed then we will have "LiveRootsCollected" stage
   // with marking from "LivenessAnalysisDone" stage partially
   // done. That marking should be cleared.
 
@@ -2087,10 +2087,16 @@ TypeUnit *CompileUnit::OutputUnitVariantPtr::getAsTypeUnit() {
   return cast<TypeUnit *>(Ptr);
 }
 
-bool CompileUnit::resolveDependenciesAndMarkLiveness(
-    bool InterCUProcessingStarted, std::atomic<bool> &HasNewInterconnectedCUs) {
+void CompileUnit::collectLiveRoots() {
   if (!Dependencies)
     Dependencies.reset(new DependencyTracker(*this));
+
+  Dependencies->collectLiveRoots();
+}
+
+bool CompileUnit::resolveDependenciesAndMarkLiveness(
+    bool InterCUProcessingStarted, std::atomic<bool> &HasNewInterconnectedCUs) {
+  assert(Dependencies.get());
 
   return Dependencies->resolveDependenciesAndMarkLiveness(
       InterCUProcessingStarted, HasNewInterconnectedCUs);

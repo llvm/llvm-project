@@ -517,6 +517,10 @@ public:
   /// guess if exact information is not available.
   virtual SourceLanguage GuessLanguage();
 
+  /// Returns an explanation of why this frame has no variable named \p name,
+  /// from the plugin of the frame's language, or an empty string.
+  std::string GetMissingVariableDiagnostic(llvm::StringRef name);
+
   /// Attempt to econstruct the ValueObject for a given raw address touched by
   /// the current instruction.  The ExpressionPath should indicate how to get
   /// to this value using "frame variable."

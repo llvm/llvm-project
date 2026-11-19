@@ -15,9 +15,9 @@ void t1() {
 }
 
 // CHECK: declare noundef nonnull ptr @_Znwm(i64 noundef) [[ATTR_NOBUILTIN:#[^ ]*]]
-// CHECK: declare void @_ZdlPvm(ptr noundef, i64 noundef) [[ATTR_NOBUILTIN_NOUNWIND:#[^ ]*]]
+// CHECK: declare void @_ZdlPvm(ptr allocptr noundef, i64 noundef) [[ATTR_NOBUILTIN_NOUNWIND:#[^ ]*]]
 // CHECK: declare noundef nonnull ptr @_Znam(i64 noundef) [[ATTR_NOBUILTIN]]
-// CHECK: declare void @_ZdaPv(ptr noundef) [[ATTR_NOBUILTIN_NOUNWIND]]
+// CHECK: declare void @_ZdaPv(ptr allocptr noundef) [[ATTR_NOBUILTIN_NOUNWIND]]
 
 namespace std {
   struct nothrow_t {};
@@ -192,7 +192,7 @@ void f() {
   // CHECK: store i64 200
   delete[] new (nothrow) Alloc[10][20];
   // CHECK: call noalias noundef nonnull ptr @_Znwm
-  // CHECK: call void @_ZdlPvm(ptr noundef {{%.*}}, i64 noundef 1)
+  // CHECK: call void @_ZdlPvm(ptr allocptr noundef {{%.*}}, i64 noundef 1)
   delete new bool;
   // CHECK: ret void
 }

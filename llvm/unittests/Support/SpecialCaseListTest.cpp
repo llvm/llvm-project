@@ -484,4 +484,53 @@ TEST_F(SpecialCaseListTest, SlashAgnosticPathsOnWindows) {
 
 #endif
 
+TEST_F(SpecialCaseListTest, Version6RequireExplicitSection) {
+  std::string Error;
+  EXPECT_EQ(nullptr, makeSpecialCaseList("src:foo\n", Error, /*Version=*/6));
+  EXPECT_EQ("entry without section header on line 2: 'src:foo'", Error);
+
+  EXPECT_EQ(nullptr,
+            makeSpecialCaseList("# comment\n\nsrc:foo\n[sect1]\nsrc:bar\n",
+                                Error, /*Version=*/6));
+  EXPECT_EQ("entry without section header on line 4: 'src:foo'", Error);
+
+  EXPECT_EQ(nullptr, makeSpecialCaseList("badline\n", Error, /*Version=*/6));
+  EXPECT_EQ("malformed line 2: 'badline'", Error);
+
+  // Version 5 still allows implicit default section.
+  std::unique_ptr<SpecialCaseList> SCL5 =
+      makeSpecialCaseList("src:foo\n", /*Version=*/5);
+  EXPECT_TRUE(SCL5->inSection("arbitrary", "src", "foo"));
+
+  // Empty or comments-only files are valid in version 6.
+  std::unique_ptr<SpecialCaseList> EmptySCL =
+      makeSpecialCaseList("# comment\n\n", /*Version=*/6);
+  EXPECT_FALSE(EmptySCL->inSection("arbitrary", "src", "foo"));
+
+  // Explicit [*] and named sections work in version 6.
+  std::unique_ptr<SpecialCaseList> ExplicitStar =
+      makeSpecialCaseList("[*]\nsrc:foo\n", /*Version=*/6);
+  EXPECT_TRUE(ExplicitStar->inSection("arbitrary", "src", "foo"));
+
+  std::unique_ptr<SpecialCaseList> Named =
+      makeSpecialCaseList("[sect1]\nsrc:foo\n", /*Version=*/6);
+  EXPECT_TRUE(Named->inSection("sect1", "src", "foo"));
+  EXPECT_FALSE(Named->inSection("sect2", "src", "foo"));
+}
+
+TEST_F(SpecialCaseListTest, Version6DotSlash) {
+  StringRef IgnoreList = "[dot]\n"
+                         "src:./bar\n"
+                         "[not]\n"
+                         "src:bar\n";
+  std::unique_ptr<SpecialCaseList> SCL6 =
+      makeSpecialCaseList(IgnoreList, /*Version=*/6);
+
+  testing::internal::CaptureStderr();
+  EXPECT_FALSE(SCL6->inSection("dot", "src", "./bar"));
+  EXPECT_TRUE(SCL6->inSection("not", "src", "./bar"));
+  EXPECT_TRUE(SCL6->inSection("not", "src", "bar"));
+  EXPECT_TRUE(testing::internal::GetCapturedStderr().empty());
+}
+
 } // namespace

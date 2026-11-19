@@ -15,7 +15,6 @@
 #include <__config>
 #include <__fwd/memory.h>
 #include <__iterator/iterator_traits.h>
-#include <__iterator/reverse_iterator.h>
 #include <__memory/addressof.h>
 #include <__memory/allocator_traits.h>
 #include <__memory/construct_at.h>
@@ -371,7 +370,7 @@ public:
       : __alloc_(__alloc), __first_(__first), __last_(__last) {}
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void operator()() const {
-    std::__allocator_destroy(__alloc_, std::reverse_iterator<_Iter>(__last_), std::reverse_iterator<_Iter>(__first_));
+    std::__allocator_destroy_backward(__alloc_, __first_, __last_);
   }
 
 private:

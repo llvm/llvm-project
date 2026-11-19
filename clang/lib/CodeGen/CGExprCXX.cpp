@@ -197,13 +197,10 @@ RValue CodeGenFunction::EmitCXXMemberCallExpr(const CXXMemberCallExpr *CE,
   const MemberExpr *ME = cast<MemberExpr>(callee);
   const CXXMethodDecl *MD = cast<CXXMethodDecl>(ME->getMemberDecl());
 
-  if (MD->isStatic()) {
-    // The method is static, emit it as we would a regular call.
-    CGCallee callee =
-        CGCallee::forDirect(CGM.GetAddrOfFunction(MD), GlobalDecl(MD));
-    return EmitCall(getContext().getPointerType(MD->getType()), callee, CE,
-                    ReturnValue, /*Chain=*/nullptr, CallOrInvoke);
-  }
+  // Sema represents calls to static member functions as ordinary CallExpr
+  // nodes rather than CXXMemberCallExpr.
+  assert(!MD->isStatic() &&
+         "static member call is unexpected in EmitCXXMemberCallExpr");
 
   bool HasQualifier = ME->hasQualifier();
   NestedNameSpecifier Qualifier = ME->getQualifier();

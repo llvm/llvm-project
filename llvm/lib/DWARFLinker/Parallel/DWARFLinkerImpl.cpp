@@ -555,12 +555,12 @@ Error DWARFLinkerImpl::LinkContext::link(TypeUnit *ArtificialTypeUnit) {
     if (Error Err = finiteLoop([&]() -> Expected<bool> {
           HasNewInterconnectedCUs = false;
 
-          // Load inter-connected units.
+          // Load inter-connected units and find their live roots.
           parallelForEach(CompileUnits, [&](std::unique_ptr<CompileUnit> &CU) {
             if (CU->isInterconnectedCU()) {
               CU->maybeResetToLoadedStage();
               linkSingleCompileUnit(*CU, ArtificialTypeUnit,
-                                    CompileUnit::Stage::Loaded);
+                                    CompileUnit::Stage::LiveRootsCollected);
             }
           });
 
@@ -666,7 +666,12 @@ void DWARFLinkerImpl::LinkContext::linkSingleCompileUnit(
           }
         } break;
 
-        case CompileUnit::Stage::Loaded: {
+        case CompileUnit::Stage::Loaded:
+          CU.collectLiveRoots();
+          CU.setStage(CompileUnit::Stage::LiveRootsCollected);
+          break;
+
+        case CompileUnit::Stage::LiveRootsCollected: {
           // Mark all the DIEs that need to be present in the generated output.
           // If ODR requested, build type names.
           if (!CU.resolveDependenciesAndMarkLiveness(InterCUProcessingStarted,

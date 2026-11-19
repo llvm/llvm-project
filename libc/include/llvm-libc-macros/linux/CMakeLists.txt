@@ -173,6 +173,14 @@ add_header(
 )
 
 add_header(
+  sys_timerfd_macros
+  HDR
+    sys-timerfd-macros.h
+  DEPENDS
+    .fcntl_macros
+)
+
+add_header(
   unistd_macros
   HDR
     unistd-macros.h

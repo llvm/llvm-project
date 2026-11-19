@@ -295,8 +295,16 @@ bool IsWholeAssumedSizeArray(const parser::OmpObject &object) {
   return false;
 }
 
+bool IsCoindexedObject(const parser::OmpObject &object) {
+  const auto *designator{GetDesignatorFromObj(object)};
+  return designator && parser::GetCoindexedNamedObject(*designator);
+}
+
 bool IsExtendedListItem(
     const parser::OmpObject &object, SemanticsContext *semaCtx) {
+  if (IsCoindexedObject(object)) {
+    return false;
+  }
   if (IsVariableListItem(object, semaCtx)) {
     return true;
   }
@@ -310,6 +318,9 @@ bool IsExtendedListItem(
 
 bool IsLocatorListItem(
     const parser::OmpObject &object, SemanticsContext *semaCtx) {
+  if (IsCoindexedObject(object)) {
+    return false;
+  }
   if (IsVariableListItem(object, semaCtx) || GetLocatorFromObj(object)) {
     return true;
   }
@@ -324,6 +335,9 @@ bool IsLocatorListItem(
 
 bool IsVariableListItem(
     const parser::OmpObject &object, SemanticsContext *semaCtx) {
+  if (IsCoindexedObject(object)) {
+    return false;
+  }
   if (auto *sym{GetObjectSymbol(object, /*ultimate=*/true)}) {
     return IsVariableListItem(*sym);
   }
@@ -3050,6 +3064,15 @@ bool OmpVariantMatchContext::matchesISATrait(llvm::StringRef rawString) const {
   llvm::StringRef(features_).split(
       tokens, ',', /*MaxSplit=*/-1, /*KeepEmpty=*/false);
   return llvm::is_contained(tokens, want);
+}
+
+bool IsTypeCompatible(const DeclTypeSpec &formal, const DeclTypeSpec &actual) {
+  auto fdt = evaluate::DynamicType::From(formal);
+  auto adt = evaluate::DynamicType::From(actual);
+  if (fdt && adt) {
+    return fdt->IsTkCompatibleWith(*adt);
+  }
+  return false;
 }
 
 // User-defined reduction resolution, shared between the OpenMP semantic checks

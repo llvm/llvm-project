@@ -932,6 +932,21 @@ void FactsGenerator::handleExitBlock() {
       ThisOrigins && !IsDestructor)
     EscapesInCurrentBlock.push_back(FactMgr.createFact<ThisEscapeFact>(
         (*ThisOrigins)->getOuterOriginID(), AC.getDecl()->getEndLoc()));
+
+  // Storage reachable through a reference parameter, i.e. every origin of the
+  // parameter but the outermost, is visible to the caller. A pointer parameter
+  // can be pointed at local storage, so stores through it are not necessarily
+  // visible to the caller.
+  if (const auto *Fn = dyn_cast_if_present<FunctionDecl>(AC.getDecl()))
+    for (const ParmVarDecl *PVD : Fn->parameters()) {
+      OriginList *List = getOriginsList(*PVD);
+      if (!List || !PVD->getType()->isReferenceType())
+        continue;
+      for (OriginList *Inner = List->peelOuterOrigin(); Inner;
+           Inner = Inner->peelOuterOrigin())
+        EscapesInCurrentBlock.push_back(FactMgr.createFact<ParamEscapeFact>(
+            Inner->getOuterOriginID(), PVD));
+    }
 }
 
 void FactsGenerator::handleGSLPointerConstruction(const CXXConstructExpr *CCE) {

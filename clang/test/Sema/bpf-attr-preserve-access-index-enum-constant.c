@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple bpf -debug-info-kind=limited -fsyntax-only -verify=err %s
+// RUN: %clang_cc1 -triple bpf -debug-info-kind=limited -fsyntax-only -verify=err %s -fexperimental-new-constant-interpreter
 // RUN: %clang_cc1 -triple bpf -debug-info-kind=limited -fsyntax-only -verify=warn \
 // RUN:   -Wno-error=bpf-enum-not-relocated %s
 // RUN: %clang_cc1 -triple bpf -debug-info-kind=limited -fsyntax-only -verify=none \

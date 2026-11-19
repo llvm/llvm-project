@@ -66,6 +66,7 @@ func.func @char_type(%arg0: !fir.box<!fir.array<?x!fir.char<1,?>>>, %arg1: index
 // CHECK:    %[[VAL_8:.*]] = arith.constant 1 : index
 // CHECK:    fir.do_loop %[[VAL_9:.*]] = %[[VAL_8]] to %[[VAL_1]] step %[[VAL_8]] {
 // CHECK:      %[[VAL_10:.*]] = hlfir.designate %[[VAL_0]] (%[[VAL_9]])  typeparams %[[VAL_3]] : (!fir.box<!fir.array<?x!fir.char<1,?>>>, index, index) -> !fir.boxchar<1>
+// CHECK:      %[[VAL_57:.*]] = fir.allocmem !fir.char<1,?>(%[[VAL_2]] : index) <{bindc_name = ".chrtmp", uniq_name = ""}>
                // concatenation
 // CHECK:      %[[VAL_30:.*]]:2 = hlfir.declare %[[VAL_14:.*]] typeparams %[[VAL_13:.*]] uniq_name("tmp") : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 // CHECK:      %[[VAL_31:.*]] = arith.constant true

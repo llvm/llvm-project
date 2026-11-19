@@ -35,6 +35,7 @@ class StepAvoidsNoDebugTestCase(TestBase):
         debug_info=["dwarf", "dwo"]
     )
     @expectedFailureAll(archs=["arm64e"])
+    @skipIfWasm  # steps past no-debug code stop on the wrong line
     def test_step_over_with_python(self):
         """Test stepping over using avoid-no-debug."""
         self.build()
@@ -55,6 +56,7 @@ class StepAvoidsNoDebugTestCase(TestBase):
         debug_info=["dwarf", "dwo"]
     )
     @expectedFailureAll(archs=["arm64e"])
+    @skipIfWasm  # steps past no-debug code stop on the wrong line
     def test_step_in_with_python(self):
         """Test stepping in using avoid-no-debug."""
         self.build()

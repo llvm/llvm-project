@@ -12,10 +12,10 @@
 #include "atan_utils.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/double_double.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/nearest_integer.h"
+#include "src/__support/FPUtil/polyeval.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"            // LIBC_UNLIKELY
 #include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
@@ -127,8 +127,8 @@ LIBC_INLINE float atan2f_double_double(double num_d, double den_d, double q_d,
     // atan(n/d) - atan(idx/16) = atan((n/d - idx/16) / (1 + (n/d) * (idx/16)))
     //                          = atan((n - d*(idx/16)) / (d + n*idx/16))
     k_d *= 0x1.0p-4;
-    num_r = fputil::multiply_add(k_d, -den_d, num_d); // Exact
-    den_r = fputil::multiply_add(k_d, num_d, den_d);  // Exact
+    num_r = fputil::sub_multiply(num_d, k_d, den_d); // Exact
+    den_r = fputil::multiply_add(k_d, num_d, den_d); // Exact
     q.hi = num_r / den_r;
   } else {
     // For 0 < n/d < 1/16, we just need to calculate the lower part of their
@@ -138,13 +138,13 @@ LIBC_INLINE float atan2f_double_double(double num_d, double den_d, double q_d,
     den_r = den_d;
   }
 #ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
-  q.lo = fputil::multiply_add(q.hi, -den_r, num_r) / den_r;
+  q.lo = fputil::sub_multiply(num_r, q.hi, den_r) / den_r;
 #else
   // Compute `(num_r - q.hi * den_r) / den_r` accurately without FMA
   // instructions.
   fputil::DoubleDouble q_hi_dd = split_d(q.hi);
-  double t1 = fputil::multiply_add(q_hi_dd.hi, -den_r, num_r); // Exact
-  double t2 = fputil::multiply_add(q_hi_dd.lo, -den_r, t1);
+  double t1 = fputil::sub_multiply(num_r, q_hi_dd.hi, den_r); // Exact
+  double t2 = fputil::sub_multiply(t1, q_hi_dd.lo, den_r);
   q.lo = t2 / den_r;
 #endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 
@@ -314,7 +314,7 @@ LIBC_INLINE float atan2f(float y, float x) {
   double p = atan_eval_no_table(num_d, den_d, k_d * 0x1.0p-4);
   r = final_sign * (p + (const_term.hi + ATAN_K_OVER_16[idx]));
 #else
-  q_d = fputil::multiply_add(k_d, -0x1.0p-4, q_d);
+  q_d = fputil::sub_multiply(q_d, k_d, 0x1.0p-4);
 
   double p = atan_eval(q_d, idx);
   r = final_sign *

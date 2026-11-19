@@ -720,6 +720,9 @@ corresponding `branch_weights` attribute of `llvm.cond_br`. When translated to
 proper LLVM, `branch_weights` are converted into LLVM metadata associated with
 the conditional branch.
 
+`spirv.Switch` is mapped to `llvm.switch`. Case literals are rebuilt with the
+signless selector type.
+
 ### `spirv.FunctionCall`
 
 `spirv.FunctionCall` maps to `llvm.call`. For example:

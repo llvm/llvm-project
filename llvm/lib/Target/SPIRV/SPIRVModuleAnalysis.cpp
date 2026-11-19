@@ -872,12 +872,13 @@ void SPIRV::RequirementHandler::getAndAddRequirements(
     addQuadControlRequirements(*this, ST,
                                getSymbolicOperandMnemonic(Category, i));
   if (Category == SPIRV::OperandCategory::ExecutionModeOperand &&
-      i == SPIRV::ExecutionMode::DerivativeGroupQuadsKHR &&
+      (i == SPIRV::ExecutionMode::DerivativeGroupQuadsKHR ||
+       i == SPIRV::ExecutionMode::DerivativeGroupLinearKHR) &&
       !ST.canUseExtension(SPIRV::Extension::SPV_KHR_compute_shader_derivatives))
-    report_fatal_error(
-        "DerivativeGroupQuadsKHR requires the following SPIR-V extension: "
-        "SPV_KHR_compute_shader_derivatives",
-        false);
+    report_fatal_error(Twine(getSymbolicOperandMnemonic(Category, i)) +
+                           " requires the following SPIR-V extension: "
+                           "SPV_KHR_compute_shader_derivatives",
+                       false);
   addRequirements(getSymbolicOperandRequirements(Category, i, ST, *this));
 }
 
@@ -1831,14 +1832,14 @@ void addInstrRequirements(const MachineInstr &MI,
 
       if (UsesBFloat16) {
         if (!ST.canUseExtension(
-                SPIRV::Extension::SPV_INTEL_bfloat16_arithmetic)) {
+                SPIRV::Extension::SPV_EXT_bfloat16_arithmetic)) {
           reportUnsupported(
               MI, "OpenCL Extended instructions with bfloat16 require the "
-                  "following SPIR-V extension: SPV_INTEL_bfloat16_arithmetic");
+                  "following SPIR-V extension: SPV_EXT_bfloat16_arithmetic");
           break;
         }
-        Reqs.addExtension(SPIRV::Extension::SPV_INTEL_bfloat16_arithmetic);
-        Reqs.addCapability(SPIRV::Capability::BFloat16ArithmeticINTEL);
+        Reqs.addExtension(SPIRV::Extension::SPV_EXT_bfloat16_arithmetic);
+        Reqs.addCapability(SPIRV::Capability::BFloat16ArithmeticEXT);
       }
     }
     break;
@@ -2741,13 +2742,13 @@ void addInstrRequirements(const MachineInstr &MI,
     if (isVectorType(TypeDef))
       TypeDef = MRI.getVRegDef(TypeDef->getOperand(1).getReg());
     if (isBFloat16Type(TypeDef)) {
-      if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_bfloat16_arithmetic))
+      if (!ST.canUseExtension(SPIRV::Extension::SPV_EXT_bfloat16_arithmetic))
         report_fatal_error(
             "Arithmetic instructions with bfloat16 arguments require the "
-            "following SPIR-V extension: SPV_INTEL_bfloat16_arithmetic",
+            "following SPIR-V extension: SPV_EXT_bfloat16_arithmetic",
             false);
-      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_bfloat16_arithmetic);
-      Reqs.addCapability(SPIRV::Capability::BFloat16ArithmeticINTEL);
+      Reqs.addExtension(SPIRV::Extension::SPV_EXT_bfloat16_arithmetic);
+      Reqs.addCapability(SPIRV::Capability::BFloat16ArithmeticEXT);
     }
     break;
   }
@@ -2772,13 +2773,13 @@ void addInstrRequirements(const MachineInstr &MI,
     if (isVectorType(TypeDef))
       TypeDef = MRI.getVRegDef(TypeDef->getOperand(1).getReg());
     if (isBFloat16Type(TypeDef)) {
-      if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_bfloat16_arithmetic))
+      if (!ST.canUseExtension(SPIRV::Extension::SPV_EXT_bfloat16_arithmetic))
         report_fatal_error(
             "Relational instructions with bfloat16 arguments require the "
-            "following SPIR-V extension: SPV_INTEL_bfloat16_arithmetic",
+            "following SPIR-V extension: SPV_EXT_bfloat16_arithmetic",
             false);
-      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_bfloat16_arithmetic);
-      Reqs.addCapability(SPIRV::Capability::BFloat16ArithmeticINTEL);
+      Reqs.addExtension(SPIRV::Extension::SPV_EXT_bfloat16_arithmetic);
+      Reqs.addCapability(SPIRV::Capability::BFloat16ArithmeticEXT);
     }
     break;
   }

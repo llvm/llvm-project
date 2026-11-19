@@ -11,6 +11,10 @@ add_libc_test(
 
 add_libc_test(
   matcher_test
+  # The long grouped-repeat and RFC grammar cases need more than the default
+  # 3 KiB device stack for recursive parsing and derivative evaluation.
+  ENV
+    LIBOMPTARGET_STACK_SIZE=65536
   SUITE
     libc-support-tests
   SRCS

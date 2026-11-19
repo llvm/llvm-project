@@ -1551,8 +1551,7 @@ private:
           Ptr = untagPointer(Ptr);
         BlockBegin = getBlockBegin(Ptr, Header);
         if (ZeroOnDeallocate && ClassId != 0) {
-          memset(BlockBegin, 0,
-                 SizeClassMap::getSizeByClassId(Header->ClassId));
+          memset(BlockBegin, 0, SizeClassMap::getSizeByClassId(ClassId));
         }
       } else {
         // retagBlock always zeroes the allocation.

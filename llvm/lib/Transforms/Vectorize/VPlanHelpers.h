@@ -164,9 +164,6 @@ public:
   /// runtime.
   Value *getAsRuntimeExpr(IRBuilderBase &Builder, const ElementCount &VF) const;
 
-  /// Returns the Kind of lane offset.
-  Kind getKind() const { return LaneKind; }
-
   /// Returns true if this is the first lane of the whole vector.
   bool isFirstLane() const { return Lane == 0 && LaneKind == Kind::First; }
 

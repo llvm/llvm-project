@@ -90,6 +90,7 @@ DEFINE_SELECTOR(0x24, clone)
 DEFINE_SELECTOR(0x25, get_pointee_type)
 DEFINE_SELECTOR(0x26, get_byte_size)
 DEFINE_SELECTOR(0x27, create_child_at_offset)
+DEFINE_SELECTOR(0x28, get_byte_stride)
 
 DEFINE_SELECTOR(0x40, read_memory_byte)
 DEFINE_SELECTOR(0x41, read_memory_uint32)

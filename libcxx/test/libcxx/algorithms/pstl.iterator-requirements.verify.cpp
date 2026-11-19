@@ -63,6 +63,11 @@ void f(non_forward_iterator non_fwd,
     (void)std::copy(pol, it, it, non_output);   // expected-error@*:* {{static assertion failed: copy}}
   }
   {
+    (void)std::copy_if(pol, non_fwd, non_fwd, it, pred); // expected-error@*:* {{static assertion failed: copy_if}}
+    (void)std::copy_if(pol, it, it, non_fwd, pred);      // expected-error@*:* {{static assertion failed: copy_if}}
+    (void)std::copy_if(pol, it, it, non_output, pred);   // expected-error@*:* {{static assertion failed: copy_if}}
+  }
+  {
     (void)std::copy_n(pol, non_fwd, n, it);    // expected-error@*:* {{static assertion failed: copy_n}}
     (void)std::copy_n(pol, it, n, non_fwd);    // expected-error@*:* {{static assertion failed: copy_n}}
     (void)std::copy_n(pol, it, n, non_output); // expected-error@*:* {{static assertion failed: copy_n}}

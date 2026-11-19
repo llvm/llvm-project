@@ -15,8 +15,8 @@
 #define LLVM_LIBC_SRC___SUPPORT_REGEX_REGEX_MATCHER_H
 
 #include "src/__support/CPP/string_view.h"
-#include "src/__support/common.h"
 #include "src/__support/error_or.h"
+#include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/regex/regex_ast.h"
 #include "src/__support/regex/regex_expr_pool.h"

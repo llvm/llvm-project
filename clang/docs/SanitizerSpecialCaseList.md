@@ -220,17 +220,6 @@ fun:*BadCfiCall
 ```
 
 :::{note}
-By default, `src` and `mainfile` are matched against the filename as seen
-by LLVM. On Windows, this might involve a mix of forward and backslashes as
-file separators, and writing patterns to match both variants can be
-inconvenient.
-
-Starting with version 4 (indicated by `#!special-case-list-v4`), path matching
-on Windows hosts is slash-agnostic: both forward slashes (`/`) and backslashes
-(`\`) match either path separator in both patterns and paths.
-:::
-
-:::{note}
 By default, path matching (for `src` and `mainfile`) matches the query
 path as-is. For example, a query with `./foo.c` will not match a rule
 defined as `src:foo.c`.
@@ -243,11 +232,31 @@ a rule like `src:./foo.c` will no longer match.
 Version 4 (indicated by `#!special-case-list-v4`) is a transition version
 that maintains backward compatibility by matching both canonicalized and
 non-canonicalized paths, but emits a warning if a match would be lost in
-Version 5 (i.e., if it only matches because of the deprecated leading `./`
+version 5 (i.e., if it only matches because of the deprecated leading `./`
 in the rule).
 
-Version 5 (indicated by `#!special-case-list-v5`) drops backward
-compatibility and behaves like Version 3.
+Starting with version 5 (indicated by `#!special-case-list-v5`), backward
+compatibility for leading `./` is dropped, matching version 3 behavior.
+:::
+
+:::{note}
+By default, `src` and `mainfile` are matched against the filename as seen
+by LLVM. On Windows, this might involve a mix of forward and backslashes as
+file separators, and writing patterns to match both variants can be
+inconvenient.
+
+Starting with version 4 (indicated by `#!special-case-list-v4`), path matching
+on Windows hosts is slash-agnostic: both forward slashes (`/`) and backslashes
+(`\`) match either path separator in both patterns and paths.
+:::
+
+:::{note}
+By default, entries without a preceding section header are placed under the
+implicit `[*]` section, matching all sections.
+
+Starting with version 6 (indicated by `#!special-case-list-v6`), entries
+without a preceding section header are disallowed and result in a parse error.
+Use an explicit section header such as `[address]` or `[*]` instead.
 :::
 
 `mainfile` is similar to applying `-fno-sanitize=` to a set of files but

@@ -6856,7 +6856,7 @@ const ConstantRange &ScalarEvolution::getRangeRef(
 
         for (const auto &Op : Phi->operands()) {
           auto OpRange = getRangeRef(getSCEV(Op), SignHint, Depth + 1);
-          RangeFromOps = RangeFromOps.unionWith(OpRange);
+          RangeFromOps = RangeFromOps.unionWith(OpRange, RangeType);
           // No point to continue if we already have a full set.
           if (RangeFromOps.isFullSet())
             break;
@@ -10924,13 +10924,17 @@ bool ScalarEvolution::SimplifyICmpOperands(CmpPredicate &Pred, SCEVUse &LHS,
         match(RHS, m_scev_Add(m_scev_Specific(C), m_SCEV(NewRHS)))) {
       const auto *LAdd = cast<SCEVAddExpr>(LHS);
       const auto *RAdd = cast<SCEVAddExpr>(RHS);
-      if (ICmpInst::isEquality(Pred) ||
-          (ICmpInst::isSigned(Pred) && LAdd->hasNoSignedWrap() &&
-           RAdd->hasNoSignedWrap()) ||
-          (ICmpInst::isUnsigned(Pred) && LAdd->hasNoUnsignedWrap() &&
-           RAdd->hasNoUnsignedWrap())) {
+      bool BothNUW = LAdd->hasNoUnsignedWrap() && RAdd->hasNoUnsignedWrap();
+      bool BothNSW = LAdd->hasNoSignedWrap() && RAdd->hasNoSignedWrap();
+      if (ICmpInst::isEquality(Pred) || (ICmpInst::isSigned(Pred) && BothNSW) ||
+          (ICmpInst::isUnsigned(Pred) && BothNUW)) {
         LHS = NewLHS;
         RHS = NewRHS;
+        // Nothing follows about the signs of A and B themselves, as adding K
+        // may move either A or B across the sign boundary, unless both adds are
+        // guaranteed not to wrap in either domain.
+        if (!(BothNUW && BothNSW))
+          Pred = Pred.dropSameSign();
         Changed = true;
       }
     }
@@ -15706,42 +15710,21 @@ static bool isDivisibilityGuard(const SCEV *LHS, const SCEV *RHS,
 // recursively. This is done by aligning up/down the constant value to the
 // Divisor.
 static const SCEV *applyDivisibilityOnMinMaxExpr(const SCEV *MinMaxExpr,
-                                                 APInt Divisor,
+                                                 const APInt &Divisor,
                                                  ScalarEvolution &SE) {
-  // Return true if \p Expr is a MinMax SCEV expression with a non-negative
-  // constant operand. If so, return in \p SCTy the SCEV type and in \p RHS
-  // the non-constant operand and in \p LHS the constant operand.
-  auto IsMinMaxSCEVWithNonNegativeConstant =
-      [&](const SCEV *Expr, SCEVTypes &SCTy, const SCEV *&LHS,
-          const SCEV *&RHS) {
-        if (auto *MinMax = dyn_cast<SCEVMinMaxExpr>(Expr)) {
-          if (MinMax->getNumOperands() != 2)
-            return false;
-          if (auto *C = dyn_cast<SCEVConstant>(MinMax->getOperand(0))) {
-            if (C->getAPInt().isNegative())
-              return false;
-            SCTy = MinMax->getSCEVType();
-            LHS = MinMax->getOperand(0);
-            RHS = MinMax->getOperand(1);
-            return true;
-          }
-        }
-        return false;
-      };
-
-  const SCEV *MinMaxLHS = nullptr, *MinMaxRHS = nullptr;
-  SCEVTypes SCTy;
-  if (!IsMinMaxSCEVWithNonNegativeConstant(MinMaxExpr, SCTy, MinMaxLHS,
-                                           MinMaxRHS))
+  // Only handle min/max expressions of a non-negative constant and another
+  // operand.
+  const SCEVConstant *C;
+  const SCEV *Op;
+  if (!match(MinMaxExpr, m_scev_MinMax(m_SCEVConstant(C), m_SCEV(Op))) ||
+      C->getAPInt().isNegative())
     return MinMaxExpr;
-  auto IsMin = isa<SCEVSMinExpr>(MinMaxExpr) || isa<SCEVUMinExpr>(MinMaxExpr);
-  assert(SE.isKnownNonNegative(MinMaxLHS) && "Expected non-negative operand!");
-  auto *DivisibleExpr =
-      IsMin ? getPreviousSCEVDivisibleByDivisor(MinMaxLHS, Divisor, SE)
-            : getNextSCEVDivisibleByDivisor(MinMaxLHS, Divisor, SE);
-  SmallVector<SCEVUse> Ops = {
-      applyDivisibilityOnMinMaxExpr(MinMaxRHS, Divisor, SE), DivisibleExpr};
-  return SE.getMinMaxExpr(SCTy, Ops);
+  auto *DivisibleExpr = isa<SCEVSMinExpr, SCEVUMinExpr>(MinMaxExpr)
+                            ? getPreviousSCEVDivisibleByDivisor(C, Divisor, SE)
+                            : getNextSCEVDivisibleByDivisor(C, Divisor, SE);
+  SmallVector<SCEVUse> Ops = {applyDivisibilityOnMinMaxExpr(Op, Divisor, SE),
+                              DivisibleExpr};
+  return SE.getMinMaxExpr(MinMaxExpr->getSCEVType(), Ops);
 }
 
 void ScalarEvolution::LoopGuards::collectFromBlock(
@@ -16173,8 +16156,8 @@ const SCEV *ScalarEvolution::LoopGuards::rewrite(
 
     const SCEV *visit(const SCEV *Expr) {
       if (isa<SCEVUnknown, SCEVPtrToAddrExpr, SCEVZeroExtendExpr,
-              SCEVSignExtendExpr, SCEVUMinExpr, SCEVSMinExpr, SCEVAddExpr>(
-              Expr))
+              SCEVSignExtendExpr, SCEVUMinExpr, SCEVSMinExpr, SCEVAddExpr,
+              SCEVMulExpr>(Expr))
         if (const SCEV *S = lookup(Expr))
           return S;
       return SCEVRewriteVisitor::visit(Expr);
