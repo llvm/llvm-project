@@ -1004,46 +1004,22 @@ PrintCompletion(FILE *output_file,
     // Print the separator.
     fprintf(output_file, " -- ");
 
-    // Descriptions can contain newlines. We want to print them below each
-    // other, aligned after the separator. For example, foo has a
-    // two-line description:
-    //
-    // foo   -- Something that fits on the line.
-    //          More information below.
-    //
-    // However, as soon as a line exceed the available screen width and
-    // print ellipsis, we don't print the next line. For example, foo has a
-    // three-line description:
-    //
-    // foo   -- Something that fits on the line.
-    //          Something much longer  that doesn't fit...
-    //
-    // Because we had to print ellipsis on line two, we don't print the
-    // third line.
-    bool first = true;
-    for (llvm::StringRef line : llvm::split(c.GetDescription(), '\n')) {
-      if (line.empty())
-        break;
-      if (max_height && lines_printed >= *max_height)
-        break;
-      if (!first)
-        fprintf(output_file, "%*s",
-                static_cast<int>(description_col + separator_length), "");
-
-      first = false;
-      const size_t position = description_col + separator_length;
-      const size_t description_length = line.size();
-      if (position + description_length < max_length) {
-        fprintf(output_file, "%.*s\n", static_cast<int>(description_length),
-                line.data());
-        lines_printed++;
-      } else {
-        fprintf(output_file, "%.*s...\n",
-                static_cast<int>(max_length - position - ellipsis_length),
-                line.data());
-        lines_printed++;
-        continue;
-      }
+    // Descriptions can contain newlines. We only show the first line and
+    // cut off the rest, so that multi-line descriptions don't clutter the
+    // completion list.
+    llvm::StringRef description =
+        llvm::StringRef(c.GetDescription()).split('\n').first;
+    const size_t position = description_col + separator_length;
+    const size_t description_length = description.size();
+    if (position + description_length < max_length) {
+      fprintf(output_file, "%.*s\n", static_cast<int>(description_length),
+              description.data());
+      lines_printed++;
+    } else {
+      fprintf(output_file, "%.*s...\n",
+              static_cast<int>(max_length - position - ellipsis_length),
+              description.data());
+      lines_printed++;
     }
   }
   return results_printed;
