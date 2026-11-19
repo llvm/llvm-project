@@ -67,6 +67,9 @@ class RuntimeDyldELF : public RuntimeDyldImpl {
   void resolveSystemZRelocation(const SectionEntry &Section, uint64_t Offset,
                                 uint64_t Value, uint32_t Type, int64_t Addend);
 
+  void resolveHexagonRelocation(const SectionEntry &Section, uint64_t Offset,
+                                uint64_t Value, uint32_t Type, int64_t Addend);
+
   void resolveBPFRelocation(const SectionEntry &Section, uint64_t Offset,
                             uint64_t Value, uint32_t Type, int64_t Addend);
 
