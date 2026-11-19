@@ -6529,22 +6529,21 @@ bool SimplifyCFGOpt::turnSwitchRangeIntoICmp(SwitchInst *SI,
   if (hasBranchWeightMD(*SI) && isa<CondBrInst>(NewBI)) {
     SmallVector<uint64_t, 8> Weights;
     getBranchWeights(SI, Weights);
-    if (Weights.size() == 1 + SI->getNumCases()) {
-      uint64_t TrueWeight = 0;
-      uint64_t FalseWeight = 0;
-      for (size_t I = 0, E = Weights.size(); I != E; ++I) {
-        if (SI->getSuccessor(I) == Dest)
-          TrueWeight += Weights[I];
-        else
-          FalseWeight += Weights[I];
-      }
-      while (TrueWeight > UINT32_MAX || FalseWeight > UINT32_MAX) {
-        TrueWeight /= 2;
-        FalseWeight /= 2;
-      }
-      setFittedBranchWeights(*NewBI, {TrueWeight, FalseWeight},
-                             /*IsExpected=*/false, /*ElideAllZero=*/true);
+    assert(Weights.size() == 1 + SI->getNumCases() &&
+           "expected number of branch weights to be equal to the number of "
+           "switch destinations");
+    uint64_t TrueWeight = 0;
+    uint64_t FalseWeight = 0;
+    for (size_t I = 0, E = Weights.size(); I != E; ++I) {
+      if (SI->getSuccessor(I) == Dest)
+        TrueWeight += Weights[I];
+      else
+        FalseWeight += Weights[I];
     }
+    setFittedBranchWeights(*NewBI, {TrueWeight, FalseWeight},
+                           /*IsExpected=*/false, /*ElideAllZero=*/true);
+  } else if (isa<CondBrInst>(NewBI)) {
+    setExplicitlyUnknownBranchWeightsIfProfiled(*NewBI, DEBUG_TYPE);
   }
 
   // Prune obsolete incoming values off the successors' PHI nodes.
@@ -7006,6 +7005,7 @@ static bool initializeUniqueCases(SwitchInst *SI, PHINode *&PHI,
 static Value *foldSwitchToSelect(const SwitchCaseResultVectorTy &ResultVector,
                                  Constant *DefaultResult, Value *Condition,
                                  IRBuilder<> &Builder, const DataLayout &DL,
+                                 AssumptionCache *AC, const Instruction *CtxI,
                                  ArrayRef<uint32_t> BranchWeights) {
   // If we are selecting between only two cases transform into a simple
   // select or a two-way select if default is possible.
@@ -7081,7 +7081,7 @@ static Value *foldSwitchToSelect(const SwitchCaseResultVectorTy &ResultVector,
           MinCaseVal = Case;
         AndMask &= Case->getValue();
       }
-      KnownBits Known = computeKnownBits(Condition, DL);
+      KnownBits Known = computeKnownBits(Condition, DL, AC, CtxI);
 
       if (!AndMask.isZero() && Known.getMaxValue().uge(AndMask)) {
         // Compute the number of bits that are free to vary.
@@ -7196,7 +7196,8 @@ static void removeSwitchAfterSelectFold(SwitchInst *SI, PHINode *PHI,
 /// successor block with only two different constant values, try to replace the
 /// switch with a select. Returns true if the fold was made.
 static bool trySwitchToSelect(SwitchInst *SI, IRBuilder<> &Builder,
-                              DomTreeUpdater *DTU, const DataLayout &DL) {
+                              DomTreeUpdater *DTU, AssumptionCache *AC,
+                              const DataLayout &DL) {
   Value *const Cond = SI->getCondition();
   PHINode *PHI = nullptr;
   BasicBlock *CommonDest = nullptr;
@@ -7218,7 +7219,7 @@ static bool trySwitchToSelect(SwitchInst *SI, IRBuilder<> &Builder,
           UniqueResults.size() + (DefaultResult != nullptr)));
 
   Value *SelectValue = foldSwitchToSelect(UniqueResults, DefaultResult, Cond,
-                                          Builder, DL, BranchWeights);
+                                          Builder, DL, AC, SI, BranchWeights);
   if (!SelectValue)
     return false;
 
@@ -8312,8 +8313,8 @@ static bool simplifySwitchWhenUMin(SwitchInst *SI, DomTreeUpdater *DTU) {
 }
 
 static bool simplifySwitchDefaultBranch(SwitchInst *SI, DomTreeUpdater *DTU,
-                                        const DataLayout &DL,
-                                        AssumptionCache *AC) {
+                                        AssumptionCache *AC,
+                                        const DataLayout &DL) {
   assert(SI);
   if (SI->defaultDestUnreachable())
     return false;
@@ -8861,7 +8862,7 @@ bool SimplifyCFGOpt::simplifySwitch(SwitchInst *SI, IRBuilder<> &Builder) {
   if (simplifySwitchOfCmpIntrinsic(SI, Builder, DTU))
     return requestResimplify();
 
-  if (trySwitchToSelect(SI, Builder, DTU, DL))
+  if (trySwitchToSelect(SI, Builder, DTU, Options.AC, DL))
     return requestResimplify();
 
   if (Options.ForwardSwitchCondToPhi && forwardSwitchConditionToPHI(SI))
@@ -8893,7 +8894,7 @@ bool SimplifyCFGOpt::simplifySwitch(SwitchInst *SI, IRBuilder<> &Builder) {
   if (simplifySwitchWhenUMin(SI, DTU))
     return requestResimplify();
 
-  if (simplifySwitchDefaultBranch(SI, DTU, DL, Options.AC))
+  if (simplifySwitchDefaultBranch(SI, DTU, Options.AC, DL))
     return requestResimplify();
 
   return false;

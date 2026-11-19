@@ -24,6 +24,7 @@
 
 namespace llvm {
 
+struct CodeGenOptions;
 class MachineBasicBlock;
 class MachineInstr;
 class MachineRegisterInfo;
@@ -45,6 +46,7 @@ class VRegRenamer {
     Register getReg() const { return Reg; }
   };
 
+  const CodeGenOptions &Opts;
   MachineRegisterInfo &MRI;
 
   unsigned CurrentBBNumber = 0;
@@ -82,7 +84,8 @@ class VRegRenamer {
 
 public:
   VRegRenamer() = delete;
-  VRegRenamer(MachineRegisterInfo &MRI) : MRI(MRI) {}
+  VRegRenamer(const CodeGenOptions &Opts, MachineRegisterInfo &MRI)
+      : Opts(Opts), MRI(MRI) {}
 
   /// Same as the above, but sets a BBNum depending on BB traversal that
   /// will be used as prefix for the vreg names.

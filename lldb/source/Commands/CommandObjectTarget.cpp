@@ -4955,7 +4955,7 @@ public:
       m_use_one_liner = false;
       m_one_liner.clear();
       m_auto_continue = false;
-      m_at_initial_stop = true;
+      m_at_initial_stop = false;
       m_one_shot = false;
     }
 
@@ -5585,7 +5585,7 @@ public:
       m_thread_name.clear();
       m_queue_name.clear();
       m_auto_continue = false;
-      m_at_initial_stop = true;
+      m_at_initial_stop = false;
     }
 
     std::vector<std::string> m_one_liner;
@@ -5608,7 +5608,7 @@ public:
     std::string m_thread_name;
     std::string m_queue_name;
     bool m_auto_continue = false;
-    bool m_at_initial_stop = true;
+    bool m_at_initial_stop = false;
   };
 
   CommandObjectTargetHookAdd(CommandInterpreter &interpreter)

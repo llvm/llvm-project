@@ -228,20 +228,34 @@ ARM::ARMABI ARMBaseTargetMachine::getEffectiveABI(const Module &M) const {
 
 const ARMSubtarget *
 ARMBaseTargetMachine::getSubtargetImpl(const Function &F) const {
-  Attribute CPUAttr = F.getFnAttribute("target-cpu");
-  Attribute FSAttr = F.getFnAttribute("target-features");
+  AttributeSet FnAttrs = F.getAttributes().getFnAttrs();
+  const Module *M = F.getParent();
+  if (const ARMSubtarget *ST = LastSubtarget.lookup(FnAttrs, M))
+    return ST;
+
+  SubtargetAttrs Attrs;
+  Attrs.CPU = FnAttrs.getAttribute("target-cpu");
+  Attrs.FS = FnAttrs.getAttribute("target-features");
+  Attrs.SoftFloat = FnAttrs.getAttribute("use-soft-float");
+  Attrs.MinSize = FnAttrs.getAttribute(Attribute::MinSize);
+  Attrs.DenormalFPEnv = FnAttrs.getAttribute(Attribute::DenormalFPEnv);
+  Attrs.FloatABI = getFloatABI(*M);
+  Attrs.ABI = getEffectiveABI(*M);
+
+  if (const ARMSubtarget *ST = LastSubtarget.lookup(FnAttrs, M, Attrs))
+    return ST;
 
   std::string CPU =
-      CPUAttr.isValid() ? CPUAttr.getValueAsString().str() : TargetCPU;
+      Attrs.CPU.isValid() ? Attrs.CPU.getValueAsString().str() : TargetCPU;
   std::string FS =
-      FSAttr.isValid() ? FSAttr.getValueAsString().str() : TargetFS;
+      Attrs.FS.isValid() ? Attrs.FS.getValueAsString().str() : TargetFS;
 
   // FIXME: This is related to the code below to reset the target options,
   // we need to know whether or not the soft float flag is set on the
   // function before we can generate a subtarget. We also need to use
   // it as a key for the subtarget since that can be the only difference
   // between two functions.
-  bool SoftFloat = F.getFnAttribute("use-soft-float").getValueAsBool();
+  bool SoftFloat = Attrs.SoftFloat.getValueAsBool();
   // If the soft float attribute is set on the function turn on the soft float
   // subtarget feature.
   if (SoftFloat)
@@ -250,31 +264,32 @@ ARMBaseTargetMachine::getSubtargetImpl(const Function &F) const {
   // Use the optminsize to identify the subtarget, but don't use it in the
   // feature string.
   std::string Key = CPU + FS;
-  if (F.hasMinSize())
+  if (Attrs.MinSize.isValid())
     Key += "+minsize";
 
   DenormalMode DM = F.getDenormalFPEnv().DefaultMode;
   if (DM != DenormalMode::getIEEE())
     Key += "denormal-fp-math=" + DM.str();
 
-  FloatABI::ABIType FloatABI = getFloatABI(*F.getParent());
   // It is legal to have FloatABI::Hard for targets with SIMD registers
   // but no floating-point hardware (mve+nofp).
-  Key += FloatABI == FloatABI::Hard ? "+hard-float-abi" : "+soft-float-abi";
+  Key +=
+      Attrs.FloatABI == FloatABI::Hard ? "+hard-float-abi" : "+soft-float-abi";
 
-  ARM::ARMABI ABI = getEffectiveABI(*F.getParent());
-  Key += "+abi=" + std::to_string((int)ABI);
+  Key += "+abi=" + std::to_string((int)Attrs.ABI);
 
   auto &I = SubtargetMap[Key];
   if (!I) {
     I = std::make_unique<ARMSubtarget>(TargetTriple, CPU, FS, *this, isLittle,
-                                       FloatABI, ABI, F.hasMinSize(), DM);
+                                       Attrs.FloatABI, Attrs.ABI,
+                                       Attrs.MinSize.isValid(), DM);
 
     if (!I->isThumb() && !I->hasARMOps())
       F.getContext().emitError("Function '" + F.getName() + "' uses ARM "
           "instructions, but the target does not support ARM mode execution.");
   }
 
+  LastSubtarget.set(FnAttrs, M, Attrs, I.get());
   return I.get();
 }
 
@@ -595,4 +610,7 @@ bool ARMBaseTargetMachine::parseMachineFunctionInfo(
   return false;
 }
 
-void ARMBaseTargetMachine::reset() { SubtargetMap.clear(); }
+void ARMBaseTargetMachine::reset() {
+  SubtargetMap.clear();
+  LastSubtarget.clear();
+}

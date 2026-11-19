@@ -27,6 +27,17 @@ class CIRDataLayout {
 
   unsigned programAddrSpace = 0;
 
+  /// TargetInfo::getBitIntMaxAlign(), in bits, from the module's
+  /// #cir.bitint_spec entry.
+  uint64_t bitIntMaxAlignBits = 0;
+
+  /// TargetInfo::getMaxVectorAlign(), in bits, from the module's
+  /// #cir.vector_spec entry, or 0 when there is no entry.
+  uint64_t vectorMaxAlignBits = 0;
+
+  /// The module whose cir.record_layouts entries give record alignments.
+  mlir::ModuleOp module;
+
 public:
   mlir::DataLayout layout;
 
@@ -46,6 +57,13 @@ public:
   llvm::Align getABITypeAlign(mlir::Type ty) const {
     return getAlignment(ty, true);
   }
+
+  /// Returns the alignment, in bytes, that the source language requires for
+  /// an object of type \p ty. ABI classification, coercion temporaries, and
+  /// accesses with no explicit alignment use it. The ABI alignment of \p ty is
+  /// the alignment of the memory representation \p ty lowers to, which record
+  /// layout and array strides use.
+  uint64_t getTypeLanguageAlignment(mlir::Type ty) const;
 
   /// Returns the maximum number of bytes that may be overwritten by
   /// storing the specified type.

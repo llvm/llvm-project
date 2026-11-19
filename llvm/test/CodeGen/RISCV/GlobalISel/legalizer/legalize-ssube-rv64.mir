@@ -176,13 +176,13 @@ body:             |
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY4]], [[C]]
     ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[DEF]], [[C1]]
     ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(s64) = G_ADD [[COPY2]], [[AND]]
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s64) = G_ICMP intpred(ult), [[ADD]](s64), [[AND]]
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i64) = G_ICMP intpred(ult), [[ADD]](s64), [[AND]]
     ; CHECK-NEXT: [[COPY5:%[0-9]+]]:_(s64) = COPY [[ADD]](s64)
     ; CHECK-NEXT: [[ADD1:%[0-9]+]]:_(s64) = G_ADD [[COPY3]], [[AND1]]
     ; CHECK-NEXT: [[ADD2:%[0-9]+]]:_(s64) = G_ADD [[ADD1]], [[ICMP]]
     ; CHECK-NEXT: [[COPY6:%[0-9]+]]:_(s64) = COPY [[ADD2]](s64)
     ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[COPY]], [[COPY5]]
-    ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(s64) = G_ICMP intpred(ult), [[COPY]](s64), [[COPY5]]
+    ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(i64) = G_ICMP intpred(ult), [[COPY]](s64), [[COPY5]]
     ; CHECK-NEXT: [[SUB1:%[0-9]+]]:_(s64) = G_SUB [[COPY1]], [[COPY6]]
     ; CHECK-NEXT: [[SUB2:%[0-9]+]]:_(s64) = G_SUB [[SUB1]], [[ICMP1]]
     ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s64) = G_XOR [[COPY]], [[COPY2]]
