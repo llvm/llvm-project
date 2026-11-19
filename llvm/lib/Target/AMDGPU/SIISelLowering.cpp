@@ -459,6 +459,13 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                       MVT::v16i32, MVT::v16f32, MVT::v32i32, MVT::v32f32},
                      Custom);
 
+  if (Subtarget->hasPkMovB32()) {
+    // TODO: 16-bit element vectors should be legal with even aligned elements.
+    // TODO: Can be legal with wider source types than the result with
+    // subregister extracts.
+    setOperationAction(ISD::VECTOR_SHUFFLE, {MVT::v2i32, MVT::v2f32}, Legal);
+  }
+
   setOperationAction({ISD::AND, ISD::OR, ISD::XOR}, MVT::v2i32, Legal);
   // Prevent SELECT v2i32 from being implemented with the above bitwise ops and
   // instead lower to cndmask in SITargetLowering::LowerSELECT().
@@ -9912,6 +9919,12 @@ static bool elementPairIsContiguous(ArrayRef<int> Mask, int Elt) {
   return Mask[Elt + 1] == Mask[Elt] + 1 && (Mask[Elt] % 2 == 0);
 }
 
+static bool elementPairIsOddToEven(ArrayRef<int> Mask, int Elt) {
+  assert(Elt % 2 == 0);
+  return Mask[Elt] >= 0 && Mask[Elt + 1] >= 0 && (Mask[Elt] & 1) &&
+         !(Mask[Elt + 1] & 1);
+}
+
 SDValue SITargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
                                               SelectionDAG &DAG) const {
   SDLoc SL(Op);
@@ -9924,9 +9937,11 @@ SDValue SITargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
 
   // Break up the shuffle into registers sized pieces.
   //
-  // Preserve consecutive 16-bit elements as a single register. Lower 32-bit
-  // elements to copies: order their REG_SEQUENCE operands for coalescing, then
-  // combine residual copies into packed moves before register allocation.
+  // We're trying to form sub-shuffles that the register allocation pipeline
+  // won't be able to figure out, like how to use v_pk_mov_b32 to do a register
+  // blend or 16-bit op_sel. It should be able to figure out how to reassemble a
+  // pair of copies into a consecutive register copy, so use the ordinary
+  // extract_vector_elt lowering unless we can use the shuffle.
   //
   // TODO: This is a bit of hack, and we should probably always use
   // extract_subvector for the largest possible subvector we can (or at least
@@ -9947,6 +9962,13 @@ SDValue SITargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
 
   // Avoid scalarizing when both halves are reading from consecutive elements.
 
+  // If we're treating 2 element shuffles as legal, also create odd-to-even
+  // shuffles of neighboring pairs.
+  //
+  // vector_shuffle <3,2,7,6> lhs, rhs
+  //  -> concat_vectors vector_shuffle <1, 0> (extract_subvector lhs, 0)
+  //                    vector_shuffle <1, 0> (extract_subvector rhs, 2)
+
   SmallVector<SDValue, 16> Pieces;
   for (int I = 0, N = ResultVT.getVectorNumElements(); I != N; I += 2) {
     if (ShouldUseConsecutiveExtract &&
@@ -9958,6 +9980,48 @@ SDValue SITargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
                                    SVN->getOperand(VecIdx),
                                    DAG.getConstant(EltIdx, SL, MVT::i32));
       Pieces.push_back(SubVec);
+    } else if (elementPairIsOddToEven(SVN->getMask(), I) &&
+               isOperationLegal(ISD::VECTOR_SHUFFLE, PackVT)) {
+      int Idx0 = SVN->getMaskElt(I);
+      int Idx1 = SVN->getMaskElt(I + 1);
+
+      SDValue SrcOp0 = SVN->getOperand(0);
+      SDValue SrcOp1 = SrcOp0;
+      if (Idx0 >= SrcNumElts) {
+        SrcOp0 = SVN->getOperand(1);
+        Idx0 -= SrcNumElts;
+      }
+
+      if (Idx1 >= SrcNumElts) {
+        SrcOp1 = SVN->getOperand(1);
+        Idx1 -= SrcNumElts;
+      }
+
+      int AlignedIdx0 = Idx0 & ~(NewSrcNumElts - 1);
+      int AlignedIdx1 = Idx1 & ~(NewSrcNumElts - 1);
+
+      // Extract nearest even aligned piece.
+      SDValue SubVec0 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, SL, PackVT, SrcOp0,
+                                    DAG.getConstant(AlignedIdx0, SL, MVT::i32));
+      SDValue SubVec1 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, SL, PackVT, SrcOp1,
+                                    DAG.getConstant(AlignedIdx1, SL, MVT::i32));
+
+      int NewMaskIdx0 = Idx0 - AlignedIdx0;
+      int NewMaskIdx1 = Idx1 - AlignedIdx1;
+
+      SDValue Result0 = SubVec0;
+      SDValue Result1 = SubVec0;
+
+      if (SubVec0 != SubVec1) {
+        NewMaskIdx1 += NewSrcNumElts;
+        Result1 = SubVec1;
+      } else {
+        Result1 = DAG.getPOISON(PackVT);
+      }
+
+      SDValue Shuf = DAG.getVectorShuffle(PackVT, SL, Result0, Result1,
+                                          {NewMaskIdx0, NewMaskIdx1});
+      Pieces.push_back(Shuf);
     } else {
       const int Idx0 = SVN->getMaskElt(I);
       const int Idx1 = SVN->getMaskElt(I + 1);

@@ -77,7 +77,10 @@ public:
 
 protected:
   void SelectBuildVector(SDNode *N, unsigned RegClassID);
-  void orderRegSequenceOperands(SDNode *N, SmallVectorImpl<SDValue> &Ops);
+  SDValue buildPkMovOperand(SDValue Elt, bool HighHalf, const SDLoc &DL);
+  bool matchPkMovPair(SDValue Lo, SDValue Hi, const SDLoc &DL,
+                      SmallVectorImpl<SDValue> &Ops);
+  void SelectVectorShuffle(SDNode *N);
   bool isSDWAOperand(const SDNode *N) const;
 
 private:
