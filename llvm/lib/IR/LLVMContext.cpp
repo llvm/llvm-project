@@ -109,6 +109,7 @@ void LLVMContext::addModule(Module *M) {
 void LLVMContext::removeModule(Module *M) {
   pImpl->OwnedModules.erase(M);
   pImpl->MachineFunctionNums.erase(M);
+  pImpl->DebugLocConversionStorage.erase(M);
 }
 
 unsigned LLVMContext::generateMachineFunctionNum(Function &F) {
@@ -402,4 +403,9 @@ void LLVMContext::updateDILocationAtomGroupWaterline(uint64_t V) {
 
 uint64_t LLVMContext::incNextDILocationAtomGroup() {
   return pImpl->NextAtomGroup++;
+}
+
+std::shared_ptr<DebugLocationStorage>
+LLVMContext::getModuleDLConversionStorage(Module *M) {
+  return pImpl->getModuleDLConversionStorage(M);
 }
