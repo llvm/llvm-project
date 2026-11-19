@@ -56,8 +56,8 @@ struct DebugLineStrPatch : SectionPatch {
 /// This structure is used to update range list offset into
 /// .debug_ranges/.debug_rnglists.
 struct DebugRangePatch : SectionPatch {
-  /// Indicates patch which points to immediate compile unit's attribute.
-  bool IsCompileUnitRanges = false;
+  /// Indicates patch which points to the unit root's attribute.
+  bool IsUnitRanges = false;
 };
 
 /// This structure is used to update location list offset into

@@ -145,6 +145,11 @@ public:
     return nullptr;
   }
 
+  /// Check whether \p Die is this unit's root DIE, whatever its tag.
+  bool isUnitRootDIE(const DIE &Die) const {
+    return &Die == getOutputUnitDIE();
+  }
+
   dwarf::Tag getTag() const { return OrigUnit.getUnitDIE().getTag(); }
 
   bool hasODR() const { return HasODR; }
