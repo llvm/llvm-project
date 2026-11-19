@@ -115,8 +115,8 @@ public:
   /// if both the source and build directories are remapped and one is nested
   /// inside the other, the nested one will come first.
   ///
-  /// FIXME: Doubtful that this would work correctly on windows, since it's
-  /// case- and separator-sensitive.
+  /// FIXME: The comparison is case- and separator-sensitive, unlike matching
+  /// with a Windows path style.
   ///
   /// FIXME: Should probably be done implicitly, maybe by moving to a std::set
   /// or std::map.
@@ -138,7 +138,7 @@ public:
 
   sys::path::Style getPathStyle() const { return PathStyle; }
 
-  PrefixMapper(sys::path::Style PathStyle = sys::path::Style::native)
+  explicit PrefixMapper(sys::path::Style PathStyle = sys::path::Style::native)
       : PathStyle(PathStyle) {}
 
 private:

@@ -181,8 +181,8 @@ bool PrefixMapper::mapInPlace(std::string &Path) const {
 }
 
 void PrefixMapper::sort() {
-  // FIXME: Only works for posix right now since it doesn't handle case- and
-  // separator-insensitivity.
+  // FIXME: Compare the way startsWith() matches, so that sorting is case- and
+  // separator-insensitive with a Windows path style.
   std::stable_sort(Mappings.begin(), Mappings.end(),
                    [](const MappedPrefix &LHS, const MappedPrefix &RHS) {
                      return LHS.Old > RHS.Old;
