@@ -62,7 +62,9 @@ let test_other_types () =
   insist (TypeKind.Label = classify_type (label_type context));
   insist (TypeKind.X86_amx = classify_type (x86_amx_type context));
   insist (TypeKind.Token = classify_type (token_type context));
-  insist (TypeKind.Metadata = classify_type (metadata_type context))
+  insist (TypeKind.Metadata = classify_type (metadata_type context));
+  insist (TypeKind.Byte = classify_type (byte_type context 32));
+  insist (32 = byte_bitwidth (byte_type context 32))
 
 (*===-- Conversion --------------------------------------------------------===*)
 
@@ -1025,6 +1027,7 @@ let test_builder () =
      * CHECK-DAG: %build_fpext2 = fpext float %build_fptrunc to double
      * CHECK-DAG: %build_inttoptr = inttoptr i32 %P1 to ptr
      * CHECK-DAG: %build_ptrtoint = ptrtoint ptr %build_inttoptr to i64
+     * CHECK-DAG: %build_ptrtoaddr = ptrtoaddr ptr %build_inttoptr to i32
      * CHECK-DAG: %build_ptrtoint2 = ptrtoint ptr %build_inttoptr to i64
      * CHECK-DAG: %build_bitcast = bitcast i64 %build_ptrtoint to double
      * CHECK-DAG: %build_bitcast2 = bitcast i64 %build_ptrtoint to double
@@ -1042,6 +1045,9 @@ let test_builder () =
     ignore(build_fpext inst35 double_type "build_fpext" atentry);
     let inst37 = build_inttoptr p1 void_ptr "build_inttoptr" atentry in
     let inst38 = build_ptrtoint inst37 i64_type "build_ptrtoint" atentry in
+    (* ptrtoaddr yields the address width: 32 bits in this module's layout *)
+    let ptrtoaddr = build_ptrtoaddr inst37 i32_type "build_ptrtoaddr" atentry in
+    insist (instr_opcode ptrtoaddr = Opcode.PtrToAddr);
     ignore(build_bitcast inst38 double_type "build_bitcast" atentry);
     ignore(build_zext_or_bitcast inst38 double_type "build_bitcast2" atentry);
     ignore(build_sext_or_bitcast inst38 double_type "build_bitcast3" atentry);
@@ -1354,6 +1360,9 @@ let test_builder () =
      * CHECK: %build_fneg = fneg float %F1
      * CHECK: %build_not = xor i32 %P1, -1
      * CHECK: %build_freeze = freeze i32 %P1
+     * CHECK: %build_trunc_byte = trunc i32 %P1 to i8
+     * CHECK: %build_bitinsert = bitinsert b32 poison, i8 %build_trunc_byte, i32 8
+     * CHECK: %build_bitextract = bitextract i8, b32 %build_bitinsert, i32 8
      *)
     ignore (build_add p1 p2 "build_add" b);
     ignore (build_nsw_add p1 p2 "build_nsw_add" b);
@@ -1386,6 +1395,14 @@ let test_builder () =
     ignore (build_not p1 "build_not" b);
     let freeze = build_freeze p1 "build_freeze" b in
     insist (instr_opcode freeze = Opcode.Freeze);
+    let byte = build_trunc p1 i8_type "build_trunc_byte" b in
+    let eight = const_int i32_type 8 in
+    let bitinsert = build_bitinsert (poison (byte_type context 32)) byte eight
+                      "build_bitinsert" b in
+    insist (instr_opcode bitinsert = Opcode.BitInsert);
+    let bitextract = build_bitextract i8_type bitinsert eight
+                       "build_bitextract" b in
+    insist (instr_opcode bitextract = Opcode.BitExtract);
     ignore (build_unreachable b)
   end;
 
