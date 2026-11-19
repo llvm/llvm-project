@@ -106,7 +106,7 @@ template <typename Word> LIBC_INLINE constexpr Word repeat_byte(Word byte) {
 // high bit set will no longer have it set, narrowing the list of bytes which
 // result in non-zero values to just the zero byte.
 template <typename Word> LIBC_INLINE constexpr bool has_zeroes(Word block) {
-  constexpr unsigned int LOW_BITS = repeat_byte<Word>(0x01);
+  constexpr Word LOW_BITS = repeat_byte<Word>(0x01);
   constexpr Word HIGH_BITS = repeat_byte<Word>(0x80);
   Word subtracted = block - LOW_BITS;
   Word inverted = ~block;
