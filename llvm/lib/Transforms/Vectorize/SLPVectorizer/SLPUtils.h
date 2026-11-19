@@ -562,6 +562,25 @@ bool areTwoInsertFromSameBuildVector(
     InsertElementInst *VU, InsertElementInst *V,
     function_ref<Value *(InsertElementInst *)> GetBaseOperand);
 
+/// \returns true if \p I can occupy a lane of the next level of a downward
+/// use-chain walk, judged on its own. \p IsDeleted tells whether an
+/// instruction has already been erased by an earlier vectorization.
+bool canBeDownwardChainUser(Instruction *I,
+                            function_ref<bool(Instruction *)> IsDeleted,
+                            bool ReVec);
+
+/// \returns true if \p I and \p ReprInst can occupy lanes of the same bundle.
+bool areDownwardChainSiblings(Instruction *I, Instruction *ReprInst);
+
+/// Collects the successive levels of the isomorphic user chain starting at
+/// \p VL into \p Levels, with Levels[0] == \p VL. Descends at most
+/// \p MaxLevels levels, and, unless \p AllowMultiUse is set, stops at the
+/// first value that has uses outside the chain.
+void collectDownwardChain(ArrayRef<Value *> VL,
+                          function_ref<bool(Instruction *)> IsDeleted,
+                          bool ReVec, bool AllowMultiUse, unsigned MaxLevels,
+                          SmallVectorImpl<SmallVector<Value *, 8>> &Levels);
+
 } // namespace llvm::slpvectorizer
 
 #endif // LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPUTILS_H

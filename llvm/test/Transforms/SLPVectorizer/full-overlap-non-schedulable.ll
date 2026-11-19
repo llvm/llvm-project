@@ -10,21 +10,19 @@ define void @test(ptr %p1, ptr %0, i32 %1, i1 %c1, ptr %p2) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i64 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP0]], i64 12
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i64 16
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x ptr> poison, ptr [[TMP0]], i64 0
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x ptr> [[TMP8]], <4 x ptr> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, <4 x ptr> [[TMP6]], <4 x i64> <i64 8, i64 12, i64 16, i64 20>
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP0]], i64 20
 ; CHECK-NEXT:    br i1 [[C1]], label %[[L42:.*]], label %[[L41:.*]]
 ; CHECK:       [[L41]]:
-; CHECK-NEXT:    [[DOTNOT276:%.*]] = icmp eq ptr [[TMP2]], null
-; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP2]], align 4
-; CHECK-NEXT:    [[TMP7:%.*]] = select i1 [[DOTNOT276]], i32 0, i32 [[TMP6]]
-; CHECK-NEXT:    [[DOTNOT277:%.*]] = icmp eq ptr [[TMP3]], null
-; CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP3]], align 4
-; CHECK-NEXT:    [[TMP9:%.*]] = select i1 [[DOTNOT277]], i32 0, i32 [[TMP8]]
-; CHECK-NEXT:    [[DOTNOT278:%.*]] = icmp eq ptr [[TMP4]], null
-; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[TMP4]], align 4
-; CHECK-NEXT:    [[TMP11:%.*]] = select i1 [[DOTNOT278]], i32 0, i32 [[TMP10]]
-; CHECK-NEXT:    [[DOTNOT279:%.*]] = icmp eq ptr [[TMP5]], null
-; CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr [[TMP5]], align 4
-; CHECK-NEXT:    [[TMP13:%.*]] = select i1 [[DOTNOT279]], i32 0, i32 [[TMP12]]
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq <4 x ptr> [[TMP7]], splat (ptr null)
+; CHECK-NEXT:    [[TMP10:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
+; CHECK-NEXT:    [[TMP11:%.*]] = select <4 x i1> [[TMP9]], <4 x i32> zeroinitializer, <4 x i32> [[TMP10]]
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i32> [[TMP11]], i64 0
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i32> [[TMP11]], i64 1
+; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <4 x i32> [[TMP11]], i64 2
+; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <4 x i32> [[TMP11]], i64 3
 ; CHECK-NEXT:    br label %[[L112:.*]]
 ; CHECK:       [[L42]]:
 ; CHECK-NEXT:    [[TMP14:%.*]] = load i32, ptr [[TMP2]], align 4
@@ -40,10 +38,10 @@ define void @test(ptr %p1, ptr %0, i32 %1, i1 %c1, ptr %p2) {
 ; CHECK-NEXT:    [[TMP19:%.*]] = select i1 [[DOTNOT283]], i32 0, i32 [[TMP18]]
 ; CHECK-NEXT:    br label %[[L112]]
 ; CHECK:       [[L112]]:
-; CHECK-NEXT:    [[VALUE_PHI13336:%.*]] = phi i32 [ [[TMP19]], %[[L47]] ], [ [[TMP13]], %[[L41]] ], [ 0, %[[L42]] ]
-; CHECK-NEXT:    [[VALUE_PHI12335:%.*]] = phi i32 [ [[TMP17]], %[[L47]] ], [ [[TMP11]], %[[L41]] ], [ [[TMP1]], %[[L42]] ]
-; CHECK-NEXT:    [[VALUE_PHI11334:%.*]] = phi i32 [ [[TMP15]], %[[L47]] ], [ [[TMP9]], %[[L41]] ], [ 0, %[[L42]] ]
-; CHECK-NEXT:    [[VALUE_PHI10333:%.*]] = phi i32 [ 0, %[[L47]] ], [ [[TMP7]], %[[L41]] ], [ 0, %[[L42]] ]
+; CHECK-NEXT:    [[VALUE_PHI13336:%.*]] = phi i32 [ [[TMP19]], %[[L47]] ], [ [[TMP21]], %[[L41]] ], [ 0, %[[L42]] ]
+; CHECK-NEXT:    [[VALUE_PHI12335:%.*]] = phi i32 [ [[TMP17]], %[[L47]] ], [ [[TMP20]], %[[L41]] ], [ [[TMP1]], %[[L42]] ]
+; CHECK-NEXT:    [[VALUE_PHI11334:%.*]] = phi i32 [ [[TMP15]], %[[L47]] ], [ [[TMP13]], %[[L41]] ], [ 0, %[[L42]] ]
+; CHECK-NEXT:    [[VALUE_PHI10333:%.*]] = phi i32 [ 0, %[[L47]] ], [ [[TMP12]], %[[L41]] ], [ 0, %[[L42]] ]
 ; CHECK-NEXT:    store i32 [[VALUE_PHI10333]], ptr [[P2]], align 4
 ; CHECK-NEXT:    store i32 [[VALUE_PHI11334]], ptr [[P1]], align 4
 ; CHECK-NEXT:    store i32 [[VALUE_PHI12335]], ptr [[P2]], align 4

@@ -64,15 +64,15 @@ define void @test(ptr noalias readonly %0, ptr noalias readonly %1, i32 %2, doub
 ; CHECK-NEXT:    [[TMP58:%.*]] = load double, ptr [[TMP57]], align 8
 ; CHECK-NEXT:    [[TMP59:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP56]], i64 16
 ; CHECK-NEXT:    [[TMP60:%.*]] = load double, ptr [[TMP59]], align 8
+; CHECK-NEXT:    [[TMP67:%.*]] = zext nneg i32 [[TMP40]] to i64
+; CHECK-NEXT:    [[TMP68:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[TMP7]], i64 [[TMP67]]
+; CHECK-NEXT:    store i32 [[TMP41]], ptr [[TMP68]], align 4
 ; CHECK-NEXT:    [[TMP61:%.*]] = fmul <2 x double> [[TMP46]], [[TMP46]]
 ; CHECK-NEXT:    [[TMP62:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP47]], <2 x double> [[TMP47]], <2 x double> [[TMP61]])
 ; CHECK-NEXT:    [[TMP63:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP48]], <2 x double> [[TMP48]], <2 x double> [[TMP62]])
 ; CHECK-NEXT:    [[TMP64:%.*]] = load <2 x double>, ptr [[TMP54]], align 8
 ; CHECK-NEXT:    [[TMP65:%.*]] = load <2 x double>, ptr [[TMP56]], align 8
 ; CHECK-NEXT:    [[TMP66:%.*]] = fcmp olt <2 x double> [[TMP63]], [[TMP37]]
-; CHECK-NEXT:    [[TMP67:%.*]] = zext nneg i32 [[TMP40]] to i64
-; CHECK-NEXT:    [[TMP68:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[TMP7]], i64 [[TMP67]]
-; CHECK-NEXT:    store i32 [[TMP41]], ptr [[TMP68]], align 4
 ; CHECK-NEXT:    [[TMP69:%.*]] = extractelement <2 x i1> [[TMP66]], i64 1
 ; CHECK-NEXT:    [[TMP70:%.*]] = zext i1 [[TMP69]] to i32
 ; CHECK-NEXT:    [[TMP71:%.*]] = add nuw nsw i32 [[TMP40]], [[TMP70]]

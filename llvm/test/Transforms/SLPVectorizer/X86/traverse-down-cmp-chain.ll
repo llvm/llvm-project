@@ -12,30 +12,22 @@ define i32 @cmp_deep_chain_hetero_sinks(ptr %a, ptr %b, ptr %s, i32 %x) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[B]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = fcmp olt <4 x float> [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i1> [[TMP2]], i64 0
-; CHECK-NEXT:    [[Z0:%.*]] = zext i1 [[TMP3]] to i32
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i1> [[TMP2]], i64 1
-; CHECK-NEXT:    [[Z1:%.*]] = zext i1 [[TMP4]] to i32
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i1> [[TMP2]], i64 2
-; CHECK-NEXT:    [[Z2:%.*]] = zext i1 [[TMP5]] to i32
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP2]], i64 3
-; CHECK-NEXT:    [[Z3:%.*]] = zext i1 [[TMP6]] to i32
-; CHECK-NEXT:    [[M0:%.*]] = mul i32 [[Z0]], 7
-; CHECK-NEXT:    [[M1:%.*]] = mul i32 [[Z1]], 7
-; CHECK-NEXT:    [[M2:%.*]] = mul i32 [[Z2]], 7
-; CHECK-NEXT:    [[M3:%.*]] = mul i32 [[Z3]], 7
-; CHECK-NEXT:    [[O0:%.*]] = or i32 [[M0]], 3
-; CHECK-NEXT:    [[O1:%.*]] = or i32 [[M1]], 3
-; CHECK-NEXT:    [[O2:%.*]] = or i32 [[M2]], 3
-; CHECK-NEXT:    [[O3:%.*]] = or i32 [[M3]], 3
-; CHECK-NEXT:    [[X0:%.*]] = xor i32 [[O0]], 5
-; CHECK-NEXT:    [[X1:%.*]] = xor i32 [[O1]], 5
-; CHECK-NEXT:    [[X2:%.*]] = xor i32 [[O2]], 5
-; CHECK-NEXT:    [[X3:%.*]] = xor i32 [[O3]], 5
-; CHECK-NEXT:    store i32 [[X0]], ptr [[S]], align 4
-; CHECK-NEXT:    [[H1:%.*]] = mul i32 [[X1]], [[X]]
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X2]], [[H1]]
-; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[ADD]], [[X3]]
+; CHECK-NEXT:    [[TMP3:%.*]] = zext <4 x i1> [[TMP2]] to <4 x i8>
+; CHECK-NEXT:    [[TMP4:%.*]] = mul <4 x i8> [[TMP3]], splat (i8 7)
+; CHECK-NEXT:    [[TMP5:%.*]] = or <4 x i8> [[TMP4]], splat (i8 3)
+; CHECK-NEXT:    [[TMP6:%.*]] = xor <4 x i8> [[TMP5]], splat (i8 5)
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i8> [[TMP6]], i64 0
+; CHECK-NEXT:    [[TMP8:%.*]] = zext i8 [[TMP7]] to i32
+; CHECK-NEXT:    store i32 [[TMP8]], ptr [[S]], align 4
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i8> [[TMP6]], i64 1
+; CHECK-NEXT:    [[TMP10:%.*]] = zext i8 [[TMP9]] to i32
+; CHECK-NEXT:    [[H1:%.*]] = mul i32 [[TMP10]], [[X]]
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i8> [[TMP6]], i64 2
+; CHECK-NEXT:    [[TMP12:%.*]] = zext i8 [[TMP11]] to i32
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[TMP12]], [[H1]]
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i8> [[TMP6]], i64 3
+; CHECK-NEXT:    [[TMP14:%.*]] = zext i8 [[TMP13]] to i32
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[ADD]], [[TMP14]]
 ; CHECK-NEXT:    ret i32 [[SUB]]
 ;
 entry:
@@ -91,31 +83,29 @@ define float @cmp_uitofp_fmul_hetero_sinks(ptr %a, ptr %b, ptr %w, ptr %s) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[PA2:%.*]] = getelementptr inbounds float, ptr [[A]], i64 2
 ; CHECK-NEXT:    [[PB2:%.*]] = getelementptr inbounds float, ptr [[B]], i64 2
-; CHECK-NEXT:    [[W0:%.*]] = load float, ptr [[W]], align 4
 ; CHECK-NEXT:    [[PW1:%.*]] = getelementptr inbounds float, ptr [[W]], i64 1
-; CHECK-NEXT:    [[W1:%.*]] = load float, ptr [[PW1]], align 4
 ; CHECK-NEXT:    [[PW2:%.*]] = getelementptr inbounds float, ptr [[W]], i64 2
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[A]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[B]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = fcmp olt <2 x float> [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i1> [[TMP2]], i64 0
-; CHECK-NEXT:    [[Z0:%.*]] = uitofp i1 [[TMP3]] to float
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i1> [[TMP2]], i64 1
-; CHECK-NEXT:    [[Z1:%.*]] = uitofp i1 [[TMP4]] to float
-; CHECK-NEXT:    [[M0:%.*]] = fmul float [[W0]], [[Z0]]
-; CHECK-NEXT:    [[M1:%.*]] = fmul float [[W1]], [[Z1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = load <2 x float>, ptr [[PA2]], align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = load <2 x float>, ptr [[PB2]], align 4
-; CHECK-NEXT:    [[TMP7:%.*]] = load <2 x float>, ptr [[PW2]], align 4
-; CHECK-NEXT:    [[TMP8:%.*]] = fcmp olt <2 x float> [[TMP5]], [[TMP6]]
-; CHECK-NEXT:    [[TMP9:%.*]] = uitofp <2 x i1> [[TMP8]] to <2 x float>
-; CHECK-NEXT:    [[TMP10:%.*]] = fmul <2 x float> [[TMP7]], [[TMP9]]
-; CHECK-NEXT:    store float [[M0]], ptr [[S]], align 4
-; CHECK-NEXT:    [[H1:%.*]] = fmul float [[W1]], [[M1]]
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x float> [[TMP10]], i64 0
-; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[TMP11]], [[H1]]
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x float> [[TMP10]], i64 1
-; CHECK-NEXT:    [[SUB:%.*]] = fsub float [[ADD]], [[TMP12]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr [[W]], align 4
+; CHECK-NEXT:    [[W1:%.*]] = load float, ptr [[PW1]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = fcmp olt <2 x float> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = uitofp <2 x i1> [[TMP3]] to <2 x float>
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul <2 x float> [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = load <2 x float>, ptr [[PA2]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = load <2 x float>, ptr [[PB2]], align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = load <2 x float>, ptr [[PW2]], align 4
+; CHECK-NEXT:    [[TMP9:%.*]] = fcmp olt <2 x float> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP10:%.*]] = uitofp <2 x i1> [[TMP9]] to <2 x float>
+; CHECK-NEXT:    [[TMP11:%.*]] = fmul <2 x float> [[TMP8]], [[TMP10]]
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x float> [[TMP5]], i64 0
+; CHECK-NEXT:    store float [[TMP12]], ptr [[S]], align 4
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x float> [[TMP5]], i64 1
+; CHECK-NEXT:    [[H1:%.*]] = fmul float [[W1]], [[TMP13]]
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x float> [[TMP11]], i64 0
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[TMP14]], [[H1]]
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <2 x float> [[TMP11]], i64 1
+; CHECK-NEXT:    [[SUB:%.*]] = fsub float [[ADD]], [[TMP15]]
 ; CHECK-NEXT:    ret float [[SUB]]
 ;
 entry:
