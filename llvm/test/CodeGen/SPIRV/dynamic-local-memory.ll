@@ -59,6 +59,26 @@ exit:
   ret ptr addrspace(3) %p
 }
 
+; IR-LABEL: define spir_func ptr addrspace(3) @phi_duplicate_predecessor(
+; IR: entry:
+; IR-NEXT: %[[PTR:.*]] = load ptr addrspace(3), ptr addrspace(3) @__spirv_dynamic_local_memory
+; IR: exit:
+; IR-NEXT: %p = phi ptr addrspace(3) [ %[[PTR]], %entry ], [ %[[PTR]], %entry ], [ @sized, %other ]
+define spir_func ptr addrspace(3) @phi_duplicate_predecessor(i32 %selector) addrspace(9) {
+entry:
+  switch i32 %selector, label %other [
+    i32 0, label %exit
+    i32 1, label %exit
+  ]
+
+other:
+  br label %exit
+
+exit:
+  %p = phi ptr addrspace(3) [ @buf, %entry ], [ @buf, %entry ], [ @sized, %other ]
+  ret ptr addrspace(3) %p
+}
+
 ; Kernels get the argument, stored on entry after the allocas. Attributes and
 ; metadata are kept.
 ; IR-LABEL: define spir_kernel void @kernel(
