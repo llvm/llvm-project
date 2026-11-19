@@ -175,10 +175,13 @@ std::optional<const MemRegion *> StoreManager::castRegion(const MemRegion *R,
       const RegionRawOffset &rawOff = elementR->getAsArrayOffset();
       const MemRegion *baseR = rawOff.getRegion();
 
-      // If we cannot compute a raw offset, throw up our hands and return
-      // a NULL MemRegion*.
-      if (!baseR)
-        return std::nullopt;
+      if (!baseR) {
+        const MemRegion *uncastedR = elementR->StripCasts(false);
+        if (IsSameRegionType(uncastedR, CanonPointeeTy))
+          return uncastedR;
+
+        return MakeElementRegion(cast<SubRegion>(uncastedR), PointeeTy);
+      }
 
       CharUnits off = rawOff.getOffset();
 
