@@ -1,0 +1,54 @@
+## Test a big archive whose global symbol table declares more symbols than it
+## can hold. The symbol count is read from the archive, so the table's extent
+## has to be derived from it without overflowing.
+
+# RUN: rm -rf %t && mkdir %t && cd %t
+# RUN: yaml2obj %s -o t.o
+# RUN: llvm-ar q t.a t.o
+
+## The 32-bit global symbol table offset lives in the fixed-length header, and
+## its content starts after a 114-byte member header. Both helpers below seek
+## relative to it rather than to a fixed file offset.
+
+# RUN: cp t.a sym_count.a
+# RUN: cp t.a sym_count_max.a
+# RUN: cp t.a sym_count_tiny.a
+
+## 8 * (6 + 1) is larger than the table, which underflowed the string table's
+## length.
+# RUN: %python -c "import struct; f = open('sym_count.a', 'r+b'); d = f.read(); o = int(d[28:48]); f.seek(o + 114); f.write(struct.pack('>Q', 6))"
+# RUN: not llvm-ar t sym_count.a 2>&1 | FileCheck -DFILE=sym_count.a --check-prefix=COUNT %s
+
+## A symbol count of 2^64-1 wraps to zero in 8 * (count + 1).
+# RUN: %python -c "import struct; f = open('sym_count_max.a', 'r+b'); d = f.read(); o = int(d[28:48]); f.seek(o + 114); f.write(struct.pack('>Q', 0xFFFFFFFFFFFFFFFF))"
+# RUN: not llvm-ar t sym_count_max.a 2>&1 | FileCheck -DFILE=sym_count_max.a --check-prefix=COUNT-MAX %s
+
+## A symbol table too small to hold the symbol count at all.
+# RUN: %python -c "f = open('sym_count_tiny.a', 'r+b'); d = f.read(); o = int(d[28:48]); f.seek(o); f.write(b'4'.ljust(20))"
+# RUN: not llvm-ar t sym_count_tiny.a 2>&1 | FileCheck -DFILE=sym_count_tiny.a --check-prefix=TINY %s
+
+## The unmodified archive still reads back.
+# RUN: llvm-nm --print-armap t.a | FileCheck --check-prefix=VALID %s
+
+# COUNT:     error: unable to load '[[FILE]]': truncated or malformed archive (32-bit global symbol table has 6 symbols, more than its size of {{[0-9]+}} can hold)
+# COUNT-MAX: error: unable to load '[[FILE]]': truncated or malformed archive (32-bit global symbol table has 18446744073709551615 symbols, more than its size of {{[0-9]+}} can hold)
+# TINY:      error: unable to load '[[FILE]]': truncated or malformed archive (32-bit global symbol table is too small to read the symbol count, size is 4)
+
+# VALID: Archive map
+# VALID: export_protected_var in t.o
+
+--- !XCOFF
+FileHeader:
+  MagicNumber:       0x1DF
+Sections:
+  - Name:            .data
+    Flags:           [ STYP_DATA ]
+Symbols:
+  - Name:            export_protected_var
+    Section:         .data
+    Type:            0x4000
+    StorageClass:    C_EXT
+    AuxEntries:
+     - Type:                   AUX_CSECT
+       SymbolAlignmentAndType: 0x09
+       StorageMappingClass:    XMC_RW
