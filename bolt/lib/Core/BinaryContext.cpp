@@ -2213,16 +2213,12 @@ void BinaryContext::preprocessDebugInfo() {
       StringRef CompDir =
           dwarf::toString(LineTable->Prologue.IncludeDirectories[0], "");
 
-      SmallString<128> Name;
-      if (FileNames[0].DirIdx == 0) {
-        Name = dwarf::toString(FileNames[0].Name, "");
-      } else {
-        // If the first file name entry doesn't use dir index 0, then construct
-        // its absolute path.
-        Name = dwarf::toString(
-            LineTable->Prologue.IncludeDirectories[FileNames[0].DirIdx], "");
-        sys::path::append(Name, dwarf::toString(FileNames[0].Name, ""));
-      }
+      std::string Name;
+      [[maybe_unused]] bool Success = LineTable->Prologue.getFileNameByIndex(
+          0, CompDir, DILineInfoSpecifier::FileLineInfoKind::RelativeFilePath,
+          Name);
+      assert(Success &&
+             "Unable to get path of root file in DWARF 5 line table");
 
       // If the first directory/file name entry is not the same as
       // DW_AT_comp_dir/DW_AT_name (if the attribute exists), then the input
