@@ -153,6 +153,9 @@ void DestroyedAsWrongTypeChecker::checkPostStmt(const CXXNewExpr *NE,
   ProgramStateRef State = C.getState();
   const MemRegion *R = getPlacementNewStorage(State, NE, C.getStackFrame());
   if (!R) {
+    const FunctionDecl *OperatorNew = NE->getOperatorNew();
+    if (OperatorNew && OperatorNew->isReservedGlobalPlacementOperator())
+      return;
     if (const MemRegion *Result = C.getSVal(NE).getAsRegion())
       C.addTransition(State->add<ObjectsAllocatedByNew>(Result->StripCasts()));
     return;
@@ -204,16 +207,6 @@ static const MemRegion *getDestroyedRegion(const CallEvent &Call) {
   return R->StripCasts();
 }
 
-// The array of which R is an element, or R itself if it is an array.
-static const MemRegion *getEnclosingArray(const MemRegion *R, ASTContext &Ctx) {
-  if (const auto *ER = dyn_cast<ElementRegion>(R))
-    return ER->getSuperRegion();
-  const auto *TR = dyn_cast<TypedValueRegion>(R);
-  if (!TR || !Ctx.getAsArrayType(TR->getValueType()))
-    return nullptr;
-  return R;
-}
-
 static std::optional<WrongDestruction>
 findWrongDestruction(const CallEvent &Call, const CXXDestructorDecl *Dtor,
                      const MemRegion *R, ProgramStateRef State) {
@@ -223,7 +216,10 @@ findWrongDestruction(const CallEvent &Call, const CXXDestructorDecl *Dtor,
   std::optional<QualType> Placed = getPlacedType(*DTI);
   const CXXRecordDecl *DtorClass = Dtor->getParent();
   // An object placed at the address of a union may be its member.
-  if (!Placed || DtorClass->isUnion() || isSameRecord(*Placed, DtorClass) ||
+  if (DtorClass->isUnion())
+    return std::nullopt;
+
+  if (!Placed || isSameRecord(*Placed, DtorClass) ||
       !State->contains<ReusedStorages>(R))
     return std::nullopt;
 
@@ -278,6 +274,16 @@ findHiddenWrongDestruction(const MemRegion *R, const MemRegion *Scope,
       return std::make_pair(Key, WrongDestruction{*Placed, RD, nullptr});
   }
   return std::nullopt;
+}
+
+// The array of which R is an element, or R itself if it is an array.
+static const MemRegion *getEnclosingArray(const MemRegion *R, ASTContext &Ctx) {
+  if (const auto *ER = dyn_cast<ElementRegion>(R))
+    return ER->getSuperRegion();
+  const auto *TR = dyn_cast<TypedValueRegion>(R);
+  if (!TR || !Ctx.getAsArrayType(TR->getValueType()))
+    return nullptr;
+  return R;
 }
 
 void DestroyedAsWrongTypeChecker::checkPreCall(const CallEvent &Call,

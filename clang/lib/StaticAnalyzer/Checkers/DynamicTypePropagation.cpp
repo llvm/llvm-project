@@ -278,6 +278,7 @@ void DynamicTypePropagation::checkPreCall(const CallEvent &Call,
     return;
   }
 
+  // An inherited constructor runs as a base constructor ([class.inhctor.init]).
   if (const auto *Ctor = dyn_cast<CXXInheritedConstructorCall>(&Call)) {
     if (const MemRegion *Target = Ctor->getCXXThisVal().getAsRegion())
       recordFixedType(Target, Ctor->getDecl(), C);
@@ -393,6 +394,7 @@ void DynamicTypePropagation::checkPostCall(const CallEvent &Call,
     }
   }
 
+  // After an inherited constructor, use the inheriting class's type again.
   if (const auto *Ctor = dyn_cast<CXXInheritedConstructorCall>(&Call)) {
     const MemRegion *Target = Ctor->getCXXThisVal().getAsRegion();
     const auto *Outer =
@@ -450,7 +452,6 @@ void DynamicTypePropagation::checkPostStmt(const CXXNewExpr *NewE,
     MR = C.getSVal(NewE).getAsRegion();
   }
 
-  // We only track dynamic type info for regions.
   if (NewE->isArray() || !MR) {
     C.addTransition(State);
     return;

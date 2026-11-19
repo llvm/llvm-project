@@ -4,6 +4,11 @@
 // RUN: %clang_analyze_cc1 -std=c++20 %s \
 // RUN:   -analyzer-checker=core,cplusplus.DestroyedAsWrongType \
 // RUN:   -analyzer-output=text -verify -triple x86_64-unknown-linux-gnu
+// RUN: %clang_analyze_cc1 -std=c++11 %s \
+// RUN:   -analyzer-checker=core,cplusplus.DestroyedAsWrongType \
+// RUN:   -analyzer-config c++-allocator-inlining=false \
+// RUN:   -analyze-function="array_placement_new_at_concrete_address()" \
+// RUN:   -verify=no-inlining -triple x86_64-unknown-linux-gnu
 
 #include "Inputs/system-header-simulator-cxx.h"
 
@@ -48,7 +53,7 @@ void delete_through_base_without_virtual_dtor() {
 
 void new_derived_deleted_through_base_without_virtual_dtor() {
   Base *p = new Derived;
-  delete p; // no-warning
+  delete p; // no-warning: reported by alpha.cplusplus.DeleteWithNonVirtualDtor
 }
 
 struct Holder {
@@ -466,6 +471,13 @@ void restore_through_array_placement_new() {
   b.~B();
   new (&b) A;
   new (&b) B[1];
+} // no-warning
+
+// no-inlining-no-diagnostics
+void array_placement_new_at_concrete_address() {
+  B *P = new (reinterpret_cast<void *>(0x1000)) B[2];
+  new (P) A;
+  P->~B();
 } // no-warning
 
 void heap_destroy_then_replace() {
