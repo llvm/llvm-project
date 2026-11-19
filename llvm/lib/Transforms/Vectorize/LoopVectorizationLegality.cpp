@@ -208,8 +208,8 @@ void LoopVectorizeHints::emitRemarkWithHints() const {
 bool LoopVectorizeHints::allowReordering() const {
   // An explicit fp_unsafe hint takes precedence over the vectorize.enable
   // default.
-  if ((ForceKind)FPUnsafe != FK_Undefined)
-    return (ForceKind)FPUnsafe == FK_Enabled;
+  if (FPUnsafe != FK_Undefined)
+    return FPUnsafe == FK_Enabled;
 
   // Allow the vectorizer to change the order of operations if enabling
   // loop hints are provided
