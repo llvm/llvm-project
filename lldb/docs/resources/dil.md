@@ -271,11 +271,12 @@ calls `GetTryDILFirst`, and acts appropriately, either calling DIL first
 (falling back on the expression evaluator if necessary), or bypassing DIL and
 going straight to the expression evaluator.
 
-#### SBFrame::GetValueForVariablePathWithMode
+#### SBFrame::GetValueForVariablePath and GetValueForVariablePathWithMode
 
-Initially we wanted to update `SBFrame::GetValueForVariablePath` directly to use
-DIL, controlled by a `DILMode` parameter. However, that involved making a
-breaking change to the LLDB API. So instead we added two new functions to
+`SBFrame::GetValueForVariablePath` (like `frame variable`, through
+`StackFrame::GetValueForVariableExpressionPath`) evaluates its argument with
+DIL, using `eDILModeFull`. Adding a `DILMode` parameter to it would have been a
+breaking change to the LLDB API, so instead we added two new functions to
 `SBFrame`:
 
 ```cpp
@@ -287,9 +288,8 @@ lldb::SBValue GetValueForVariablePathWithMode(const char *var_path,
                                               lldb::DILMode mode);
 ```
 
-As you might guess, they are similar to `SBFrame::GetValueForVariablePath`, but
-they use DIL and allow explicitly setting which `DILMode` to use, rather than 
-using the default (`eDILModeFull`).
+They behave like `SBFrame::GetValueForVariablePath`, but use the given
+`DILMode` instead of `eDILModeFull`.
 
 
 #### Uses of DIL inside lldb-dap

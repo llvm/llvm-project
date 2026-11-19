@@ -315,12 +315,11 @@ public:
                          bool include_synthetic_vars = true,
                          bool must_have_valid_location = false);
 
-  /// Create a ValueObject for a variable name / pathname, possibly including
-  /// simple dereference/child selection syntax.
+  /// Evaluate the Data Inspection Language (DIL) expression \p var_expr in
+  /// this frame.
   ///
   /// \param[in] var_expr
-  ///     The string specifying a variable to base the VariableObject off
-  ///     of.
+  ///     The DIL expression to evaluate.
   ///
   /// \param[in] use_dynamic
   ///     Whether the correct dynamic type of an object pointer should be

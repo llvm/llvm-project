@@ -130,7 +130,8 @@ See also SBThread."
 ) lldb::SBFrame::FindVariable;
 
 %feature("docstring", "
-    Get a lldb.SBValue for a variable path.
+    Get a lldb.SBValue for a variable path, using the Data Inspection
+    Language (DIL).
 
     Variable paths can include access to pointer or instance members: ::
 

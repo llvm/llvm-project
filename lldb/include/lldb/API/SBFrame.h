@@ -177,11 +177,11 @@ public:
   lldb::SBValue FindVariable(const char *var_name,
                              lldb::DynamicValueType use_dynamic);
 
-  // Find a value for a variable expression path like "rect.origin.x" or
-  // "pt_ptr->x", "*self", "*this->obj_ptr". The returned value is _not_ and
-  // expression result and is not a constant object like
-  // SBFrame::EvaluateExpression(...) returns, but a child object of the
-  // variable value.
+  /// Find a value for a variable expression path like "rect.origin.x" or
+  /// "pt_ptr->x", "*self", "*this->obj_ptr", using the Data Inspection
+  /// Language (DIL). The returned value is _not_ an expression result and is
+  /// not a constant object like SBFrame::EvaluateExpression(...) returns, but
+  /// a child object of the variable value.
   lldb::SBValue GetValueForVariablePath(const char *var_path,
                                         DynamicValueType use_dynamic);
 
@@ -189,6 +189,7 @@ public:
   /// target's default.
   lldb::SBValue GetValueForVariablePath(const char *var_path);
 
+  /// Like GetValueForVariablePath(), but using the DIL mode \p mode.
   lldb::SBValue GetValueForVariablePathWithMode(const char *var_path,
                                                 lldb::DILMode mode,
                                                 DynamicValueType use_dynamic);
