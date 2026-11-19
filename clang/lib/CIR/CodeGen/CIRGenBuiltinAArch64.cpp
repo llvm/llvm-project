@@ -679,7 +679,7 @@ static cir::VectorType getNeonType(CIRGenFunction *cgf, NeonTypeFlags typeFlags,
                                                             : cgf->sInt8Ty,
                                      v1Ty ? 1 : (8 << isQuad));
   case NeonTypeFlags::MFloat8:
-    return cir::VectorType::getFixed(cgf->uInt8Ty, v1Ty ? 1 : (8 << isQuad));
+    return cir::VectorType::getFixed(cgf->mFloat8Ty, v1Ty ? 1 : (8 << isQuad));
   case NeonTypeFlags::Int16:
   case NeonTypeFlags::Poly16:
     return cir::VectorType::getFixed(typeFlags.isUnsigned() ? cgf->uInt16Ty
@@ -1618,7 +1618,7 @@ cir::VectorType CIRGenFunction::getSVEType(const SVETypeFlags &typeFlags) {
                                         cir::VectorAbiKind::SVEData);
 
   case SVETypeFlags::EltTyMFloat8:
-    return cir::VectorType::getScalable(builder.getUInt8Ty(), 16,
+    return cir::VectorType::getScalable(builder.getMFloat8Ty(), 16,
                                         cir::VectorAbiKind::SVEData);
   case SVETypeFlags::EltTyFloat16:
     return cir::VectorType::getScalable(builder.getFp16Ty(), 8,

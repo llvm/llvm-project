@@ -1307,6 +1307,22 @@ LongDoubleType::getABIAlignment(const mlir::DataLayout &dataLayout,
 }
 
 //===----------------------------------------------------------------------===//
+// Opaque floating-point type definitions
+//===----------------------------------------------------------------------===//
+
+llvm::TypeSize
+MFloat8Type::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
+                               mlir::DataLayoutEntryListRef params) const {
+  return llvm::TypeSize::getFixed(getWidth());
+}
+
+uint64_t
+MFloat8Type::getABIAlignment(const mlir::DataLayout &dataLayout,
+                             mlir::DataLayoutEntryListRef params) const {
+  return (uint64_t)(getWidth() / 8);
+}
+
+//===----------------------------------------------------------------------===//
 // ComplexType Definitions
 //===----------------------------------------------------------------------===//
 
@@ -1685,13 +1701,13 @@ mlir::LogicalResult cir::VectorType::verify(
       if (!intTy.isBitInt() &&
           (width == 8 || width == 16 || width == 32 || width == 64))
         return success();
-    } else if (mlir::isa<cir::FP16Type, cir::BF16Type, cir::SingleType,
-                         cir::DoubleType>(elementType)) {
+    } else if (mlir::isa<cir::MFloat8Type, cir::FP16Type, cir::BF16Type,
+                         cir::SingleType, cir::DoubleType>(elementType)) {
       return success();
     }
     return emitError() << "an SVE data vector must have 8-, 16-, 32-, or "
-                          "64-bit integer elements or f16, bf16, float, or "
-                          "double elements";
+                          "64-bit integer elements or mfp8, f16, bf16, float, "
+                          "or double elements";
   }
   case cir::VectorAbiKind::SVEPredicate: {
     unsigned width = size.isScalable() ? 1 : 8;

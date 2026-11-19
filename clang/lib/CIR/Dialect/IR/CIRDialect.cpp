@@ -976,10 +976,11 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
 
   if (isa<cir::ZeroAttr>(attrType)) {
     if (isa<cir::RecordType, cir::ArrayType, cir::MatrixType, cir::VectorType,
-            cir::ComplexType>(opType))
+            cir::ComplexType>(opType) ||
+        cir::isAnyOpaqueFloatingPointType(opType))
       return success();
-    return op->emitOpError(
-        "zero expects struct, array, vector, or complex type");
+    return op->emitOpError("zero expects struct, array, vector, complex, or "
+                           "opaque floating-point type");
   }
 
   if (mlir::isa<cir::UndefAttr>(attrType)) {
