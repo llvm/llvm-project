@@ -653,6 +653,11 @@ static bool isValidReservedSectionIndex(uint16_t Index, uint16_t Machine) {
     return true;
   }
 
+  // Known OS-specific values, e.g. Linux SHN_LIVEPATCH, do not refer to a
+  // section, so they can be preserved without knowing their meaning.
+  if (Index >= SHN_LOOS && Index <= SHN_HIOS)
+    return true;
+
   if (Machine == EM_AMDGPU) {
     return Index == SHN_AMDGPU_LDS;
   }
