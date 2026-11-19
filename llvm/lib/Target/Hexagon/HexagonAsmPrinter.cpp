@@ -765,7 +765,8 @@ void HexagonAsmPrinter::emitInstruction(const MachineInstr *MI) {
     MachineBasicBlock::const_instr_iterator MII = MI->getIterator();
 
     for (++MII; MII != MBB->instr_end() && MII->isInsideBundle(); ++MII)
-      if (!MII->isDebugInstr() && !MII->isImplicitDef())
+      if (!MII->isDebugInstr() && !MII->isImplicitDef() &&
+          MII->getOpcode() != TargetOpcode::FREEZE)
         HexagonLowerToMC(MCII, &*MII, MCB, *this);
   } else {
     HexagonLowerToMC(MCII, MI, MCB, *this);

@@ -30,6 +30,7 @@ from lldbsuite.test.lldbtest import *
 class TestSBMutexReflectsTargetMutex(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
+    @skipIfWasm  # continuing never hits the breakpoint again
     def test_sbmutex_reflects_target_mutex(self):
         """
         Register a scripted frame provider that checks
