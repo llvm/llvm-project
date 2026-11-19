@@ -412,6 +412,11 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - New option `-fdefined-pointer-subtraction` added to preserve stable semantics
   when subtracting pointers to unrelated objects.
 
+- Added `-f[no-]defined-int-divrem` (enabled by default for OpenCL C and C++
+  for OpenCL; see the OpenCL section below) to give integer `/` and `%` an
+  unspecified value instead of undefined behavior on division by zero and
+  `INT_MIN / -1`.
+
 - Added `--print-cxx-stdlib` and `--print-cxx-stdlib-include-dirs` to print
   the C++ standard library selected by the driver and the include directories
   added for it.
@@ -540,6 +545,10 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 - Fixed `-Wheader-guard` warnings pointing at `if` instead of the macro name
   in `#if !defined(...)` header guards.
+
+- Under `-fdefined-int-divrem`, the default for OpenCL C and C++ for OpenCL,
+  `-Wdivision-by-zero` now says that an integer division or remainder by zero
+  results in an unspecified value instead of calling it undefined.
 
 - Fixed a false-positive `-Wimplicit-fallthrough` warning when
   consecutive switch labels share a body and are annotated with
@@ -1390,6 +1399,15 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 ### OpenCL Specific Changes
 
+- Integer division and remainder by zero, and signed division overflow
+  (`INT_MIN / -1`), now give an unspecified value instead of undefined behavior,
+  as OpenCL C v3.0 s6.5.1 requires. The integer `/` and `%` operators are
+  lowered to frozen `llvm.masked.{s,u}{div,rem}` intrinsics unless the
+  operands are known to be safe. On SPIR and SPIR-V targets, whose division
+  instructions are undefined for these operands too and whose consumers do not
+  know these intrinsics, the divisor is replaced by 1 for these operands
+  instead; ClangIR (`-fclangir`) does that on every target.
+  `-fno-defined-int-divrem` restores the previous behavior.
 - Extensions ``cl_khr_extended_bit_ops``, ``cl_khr_integer_dot_product``,
   ``cl_khr_subgroup_extended_types``, ``cl_khr_subgroup_rotate``,
   ``cl_khr_subgroup_shuffle``, and ``cl_khr_subgroup_shuffle_relative`` are
@@ -1675,6 +1693,11 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   other signed integer overflow. Every existing use of
   `signed-integer-overflow` keeps its meaning, but the driver now passes the
   two checks to `-cc1` instead of `signed-integer-overflow`.
+- Under `-fdefined-int-divrem`, which is the default for OpenCL C and C++ for
+  OpenCL, `-fsanitize=undefined` no longer includes `integer-divide-by-zero`
+  and `signed-integer-overflow-divide`, since these operations are not
+  undefined there. Enabling the checks explicitly still works as before,
+  including `-fno-sanitize-recover` and `-fsanitize-trap`.
 
 ### Python Binding Changes
 

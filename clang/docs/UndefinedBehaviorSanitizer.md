@@ -139,7 +139,8 @@ Available checks are:
   or the original value was positive, and the new value is negative.
   Issues caught by this sanitizer are not undefined behavior,
   but are often unintentional.
-- `-fsanitize=integer-divide-by-zero`: Integer division by zero.
+- `-fsanitize=integer-divide-by-zero`: Integer division by zero. Not part of
+  `-fsanitize=undefined` under `-fdefined-int-divrem`.
 - `-fsanitize=implicit-bitfield-conversion`: Implicit conversion from
   integer of larger bit width to smaller bitfield, if that results in data
   loss. This includes unsigned/signed truncations and sign changes, similarly
@@ -217,7 +218,12 @@ You can also use the following check groups:
 : - `-fsanitize=undefined`: All of the checks listed above other than
     `float-divide-by-zero`, `unsigned-integer-overflow`,
     `implicit-conversion`, `local-bounds`, `vptr` and the
-    `nullability-*` group of checks.
+    `nullability-*` group of checks. Under `-fdefined-int-divrem`, which is
+    the default for OpenCL, integer division by zero and `INT_MIN/-1` are not
+    undefined, so `integer-divide-by-zero` and `signed-integer-overflow-divide`
+    are not included either; enabling them in any other way, e.g. with
+    `-fsanitize=undefined,integer-divide-by-zero` or `-fsanitize=integer`,
+    still works, with the usual recover and trap behavior.
   - `-fsanitize=undefined-trap`: Deprecated alias of
     `-fsanitize=undefined`.
   - `-fsanitize=implicit-integer-truncation`: Catches lossy integral
