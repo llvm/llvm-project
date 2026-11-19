@@ -35,29 +35,17 @@ int* new_stuff_nothrow() {
 // NVPTX-CXX11-NEXT:  entry:
 // NVPTX-CXX11-NEXT:    [[CALL:%.*]] = call noalias noundef ptr @_ZnamRKSt9nothrow_t(i64 noundef 136, ptr noundef nonnull align 1 dereferenceable(1) @nothrow) #[[ATTR7:[0-9]+]]
 // NVPTX-CXX11-NEXT:    ret ptr [[CALL]]
-// NVPTX-CXX03-LABEL: define hidden noundef ptr @_Z23new_array_stuff_nothrowv
-// NVPTX-CXX03-SAME: () #[[ATTR0]] {
-// NVPTX-CXX03-NEXT:  entry:
-// NVPTX-CXX03-NEXT:    [[CALL:%.*]] = call noalias noundef ptr @_ZnamRKSt9nothrow_t(i64 noundef 136, ptr noundef nonnull align 1 dereferenceable(1) @nothrow) #[[ATTR4]]
-// NVPTX-CXX03-NEXT:    ret ptr [[CALL]]
+// NVPTX-LABEL: define hidden noundef ptr @_Z23new_array_stuff_nothrowv
+// NVPTX-SAME: () #[[ATTR0]] {
+// NVPTX-NEXT:  entry:
+// NVPTX-NEXT:    [[CALL:%.*]] = call noalias noundef ptr @_ZnamRKSt9nothrow_t(i64 noundef 136, ptr noundef nonnull align 1 dereferenceable(1) @nothrow) #[[ATTR7:[0-9]+]]
+// NVPTX-NEXT:    ret ptr [[CALL]]
 //
-// NVPTX-NVPTX-CXX11-LABEL: define hidden noundef ptr @_Z23new_array_stuff_nothrowv
-// NVPTX-NVPTX-CXX11-SAME: () #[[ATTR0]] {
-// NVPTX-NVPTX-CXX11-NEXT:  entry:
-// NVPTX-NVPTX-CXX11-NEXT:    [[CALL:%.*]] = call noalias noundef ptr @_ZnamRKSt9nothrow_t(i64 noundef 136, ptr noundef nonnull align 1 dereferenceable(1) @nothrow) #[[ATTR7:[0-9]+]]
-// NVPTX-NVPTX-CXX11-NEXT:    ret ptr [[CALL]]
-//
-// AMDGPU-CXX03-LABEL: define hidden noundef ptr @_Z23new_array_stuff_nothrowv
-// AMDGPU-CXX03-SAME: () #[[ATTR0]] {
-// AMDGPU-CXX03-NEXT:  entry:
-// AMDGPU-CXX03-NEXT:    [[CALL:%.*]] = call noalias noundef ptr @_ZnamRKSt9nothrow_t(i64 noundef 136, ptr noundef nonnull align 1 dereferenceable(1) addrspacecast (ptr addrspace(1) @nothrow to ptr)) #[[ATTR4]]
-// AMDGPU-CXX03-NEXT:    ret ptr [[CALL]]
-//
-// AMDGPU-CXX11-LABEL: define hidden noundef ptr @_Z23new_array_stuff_nothrowv
-// AMDGPU-CXX11-SAME: () #[[ATTR0]] {
-// AMDGPU-CXX11-NEXT:  entry:
-// AMDGPU-CXX11-NEXT:    [[CALL:%.*]] = call noalias noundef ptr @_ZnamRKSt9nothrow_t(i64 noundef 136, ptr noundef nonnull align 1 dereferenceable(1) addrspacecast (ptr addrspace(1) @nothrow to ptr)) #[[ATTR7:[0-9]+]]
-// AMDGPU-CXX11-NEXT:    ret ptr [[CALL]]
+// AMDGPU-LABEL: define hidden noundef ptr @_Z23new_array_stuff_nothrowv
+// AMDGPU-SAME: () #[[ATTR0]] {
+// AMDGPU-NEXT:  entry:
+// AMDGPU-NEXT:    [[CALL:%.*]] = call noalias noundef ptr @_ZnamRKSt9nothrow_t(i64 noundef 136, ptr noundef nonnull align 1 dereferenceable(1) addrspacecast (ptr addrspace(1) @nothrow to ptr)) #[[ATTR7:[0-9]+]]
+// AMDGPU-NEXT:    ret ptr [[CALL]]
 //
 int* new_array_stuff_nothrow() {
   return new (nothrow) int[34];

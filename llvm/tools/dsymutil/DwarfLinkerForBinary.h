@@ -321,8 +321,6 @@ private:
   std::mutex &ErrorHandlerMutex;
   ThreadPoolInterface *ThreadPool;
 
-  std::vector<std::string> EmptyWarnings;
-
   /// A list of all .swiftinterface files referenced by the debug
   /// info, mapping Module name to path on disk. The entries need to
   /// be uniqued and sorted and there are only few entries expected

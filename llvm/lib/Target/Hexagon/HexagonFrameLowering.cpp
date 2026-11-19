@@ -43,6 +43,7 @@
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -296,6 +297,11 @@ static cl::opt<bool>
     EnableSaveRestoreLong("enable-save-restore-long", cl::Hidden,
                           cl::desc("Enable long calls for save-restore stubs."),
                           cl::init(false));
+
+static cl::opt<unsigned> HLXVectorStackLimit(
+    "hlx-vector-stack-limit", cl::Hidden,
+    cl::init(std::numeric_limits<unsigned>::max()),
+    cl::desc("Maximum HLX vector (VTCM) stack frame size in bytes"));
 
 static cl::opt<bool> EliminateFramePointer("hexagon-fp-elim", cl::init(true),
     cl::Hidden, cl::desc("Refrain from using FP whenever possible"));
@@ -1954,7 +1960,16 @@ void HexagonFrameLowering::computeVTCMStackOffsets(MachineFunction &MF) const {
   }
   // Outgoing HLX stack arguments are stored at VSP+0 and up, below the
   // objects above.
-  VTCMFrameInfo.setStackSize(Offset + HMFI.getMaxVTCMCallFrameSize());
+  uint64_t StackSize = Offset + HMFI.getMaxVTCMCallFrameSize();
+  VTCMFrameInfo.setStackSize(StackSize);
+
+  // The "hlx-vector-stack-limit" function attribute overrides the option.
+  const Function &F = MF.getFunction();
+  uint64_t Limit = F.getFnAttributeAsParsedInteger("hlx-vector-stack-limit",
+                                                   HLXVectorStackLimit);
+  if (StackSize > Limit)
+    F.getContext().diagnose(DiagnosticInfoResourceLimit(
+        F, "HLX vector stack size", StackSize, Limit, DS_Error));
 }
 
 void HexagonFrameLowering::processFunctionBeforeFrameFinalized(

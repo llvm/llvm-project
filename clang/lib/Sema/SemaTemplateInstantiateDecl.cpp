@@ -1967,11 +1967,6 @@ Decl *TemplateDeclInstantiator::VisitFieldDecl(FieldDecl *D) {
   Field->setAccess(D->getAccess());
   Owner->addDecl(Field);
 
-  if (!SemaRef.Diags.isIgnored(diag::warn_unused_private_field,
-                               Field->getLocation()) &&
-      Field->isUnusedPrivateField())
-    SemaRef.UnusedPrivateFields.insert(Field);
-
   return Field;
 }
 

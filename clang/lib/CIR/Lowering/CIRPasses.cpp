@@ -73,7 +73,7 @@ getX86ABICompatInfo(const llvm::Triple &triple,
   // Match the classic CodeGen default of -msmall-int-abi-compat.
   assert(!cir::MissingFeatures::smallIntABICompatOption());
   abiCompat.SmallIntABICompat = triple.isOSDarwin() || triple.isPS()
-                                    ? llvm::abi::SmallIntABICompatKind::Clang
+                                    ? llvm::abi::SmallIntABICompatKind::Clang23
                                     : llvm::abi::SmallIntABICompatKind::Both;
   return abiCompat;
 }

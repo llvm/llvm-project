@@ -102,4 +102,3 @@ def setup(app: Sphinx) -> Dict[str, Any]:
     app.add_config_value("llvm_inventory_stamp", "", "env")
     app.connect("config-inited", _configure_inventories)
     return {"version": __version__, "parallel_read_safe": True}
-

@@ -123,13 +123,6 @@ name:            test_basic
 alignment:       16
 selected:        false
 failedISel:      false
-registers:
-  - { id: 0, class: gr64, preferred-register: '' }
-  - { id: 1, class: gr64, preferred-register: '' }
-  - { id: 2, class: gr64, preferred-register: '' }
-  - { id: 3, class: gr64, preferred-register: '' }
-  - { id: 4, class: gr32, preferred-register: '' }
-  - { id: 5, class: gr32, preferred-register: '' }
 liveins:
   - { reg: '$rdi', virtual-reg: '%0' }
   - { reg: '$rsi', virtual-reg: '%1' }
