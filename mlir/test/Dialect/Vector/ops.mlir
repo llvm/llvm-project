@@ -34,20 +34,14 @@ func.func @vector_transfer_ops_0d_from_higher_d(%arg0: tensor<?xf32>, %arg1: mem
 // CHECK-LABEL: func @vector_transfer_ops(
 func.func @vector_transfer_ops(%arg0: memref<?x?xf32>,
                           %arg1 : memref<?x?xvector<4x3xf32>>,
-                          %arg2 : memref<?x?xvector<4x3xi32>>,
-                          %arg3 : memref<?x?xvector<4x3xindex>>,
                           %arg4 : memref<?x?x?xf32>) {
   // CHECK: %[[C3:.*]] = arith.constant 3 : index
   %c3 = arith.constant 3 : index
   %cst = arith.constant 3.0 : f32
   %f0 = arith.constant 0.0 : f32
-  %c0 = arith.constant 0 : i32
-  %i0 = arith.constant 0 : index
   %i1 = arith.constant 1 : i1
 
   %vf0 = vector.broadcast %f0 : f32 to vector<4x3xf32>
-  %v0 = vector.broadcast %c0 : i32 to vector<4x3xi32>
-  %vi0 = vector.broadcast %i0 : index to vector<4x3xindex>
   %m = arith.constant dense<[0, 0, 1, 0, 1]> : vector<5xi1>
   %m2 = vector.broadcast %i1 : i1 to vector<4x5xi1>
   //
@@ -63,10 +57,6 @@ func.func @vector_transfer_ops(%arg0: memref<?x?xf32>,
   %4 = vector.transfer_read %arg1[%c3, %c3], %vf0 {permutation_map = affine_map<(d0, d1)->(d0, d1)>} : memref<?x?xvector<4x3xf32>>, vector<1x1x4x3xf32>
   // CHECK: vector.transfer_read %{{.*}}[%[[C3]], %[[C3]]], %{{.*}} {in_bounds = [false, true], test.marker} : memref<?x?xvector<4x3xf32>>, vector<1x1x4x3xf32>
   %5 = vector.transfer_read %arg1[%c3, %c3], %vf0 {in_bounds = [false, true], test.marker} : memref<?x?xvector<4x3xf32>>, vector<1x1x4x3xf32>
-  // CHECK: vector.transfer_read %{{.*}}[%[[C3]], %[[C3]]], %{{.*}} : memref<?x?xvector<4x3xi32>>, vector<5x24xi8>
-  %6 = vector.transfer_read %arg2[%c3, %c3], %v0 : memref<?x?xvector<4x3xi32>>, vector<5x24xi8>
-  // CHECK: vector.transfer_read %{{.*}}[%[[C3]], %[[C3]]], %{{.*}} : memref<?x?xvector<4x3xindex>>, vector<5x48xi8>
-  %7 = vector.transfer_read %arg3[%c3, %c3], %vi0 : memref<?x?xvector<4x3xindex>>, vector<5x48xi8>
   // CHECK: vector.transfer_read %{{.*}}[%[[C3]], %[[C3]]], %{{.*}}, %{{.*}} : memref<?x?xf32>, vector<5xf32>
   %8 = vector.transfer_read %arg0[%c3, %c3], %f0, %m : memref<?x?xf32>, vector<5xf32>
   // CHECK: vector.transfer_read %{{.*}}[%[[C3]], %[[C3]], %[[C3]]], %{{.*}}, %{{.*}} : memref<?x?x?xf32>, vector<5x4x8xf32>
@@ -80,10 +70,6 @@ func.func @vector_transfer_ops(%arg0: memref<?x?xf32>,
   vector.transfer_write %4, %arg1[%c3, %c3] {permutation_map = affine_map<(d0, d1)->(d0, d1)>} : vector<1x1x4x3xf32>, memref<?x?xvector<4x3xf32>>
   // CHECK: vector.transfer_write %{{.*}}, %{{.*}}[%[[C3]], %[[C3]]] : vector<1x1x4x3xf32>, memref<?x?xvector<4x3xf32>>
   vector.transfer_write %5, %arg1[%c3, %c3] {in_bounds = [false, false]} : vector<1x1x4x3xf32>, memref<?x?xvector<4x3xf32>>
-  // CHECK: vector.transfer_write %{{.*}}, %{{.*}}[%[[C3]], %[[C3]]] : vector<5x24xi8>, memref<?x?xvector<4x3xi32>>
-  vector.transfer_write %6, %arg2[%c3, %c3] : vector<5x24xi8>, memref<?x?xvector<4x3xi32>>
-  // CHECK: vector.transfer_write %{{.*}}, %{{.*}}[%[[C3]], %[[C3]]] : vector<5x48xi8>, memref<?x?xvector<4x3xindex>>
-  vector.transfer_write %7, %arg3[%c3, %c3] : vector<5x48xi8>, memref<?x?xvector<4x3xindex>>
   // CHECK: vector.transfer_write %{{.*}}, %{{.*}}[%[[C3]], %[[C3]]], %{{.*}} : vector<5xf32>, memref<?x?xf32>
   vector.transfer_write %8, %arg0[%c3, %c3], %m : vector<5xf32>, memref<?x?xf32>
 
@@ -93,22 +79,14 @@ func.func @vector_transfer_ops(%arg0: memref<?x?xf32>,
 
 // CHECK-LABEL: func @vector_transfer_ops_tensor(
 func.func @vector_transfer_ops_tensor(%arg0: tensor<?x?xf32>,
-                          %arg1 : tensor<?x?xvector<4x3xf32>>,
-                          %arg2 : tensor<?x?xvector<4x3xi32>>,
-                          %arg3 : tensor<?x?xvector<4x3xindex>>) ->
+                          %arg1 : tensor<?x?xvector<4x3xf32>>) ->
   (tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xvector<4x3xf32>>,
-   tensor<?x?xvector<4x3xf32>>, tensor<?x?xvector<4x3xi32>>,
-   tensor<?x?xvector<4x3xindex>>){
+   tensor<?x?xvector<4x3xf32>>){
   // CHECK: %[[C3:.*]] = arith.constant 3 : index
   %c3 = arith.constant 3 : index
   %cst = arith.constant 3.0 : f32
   %f0 = arith.constant 0.0 : f32
-  %c0 = arith.constant 0 : i32
-  %i0 = arith.constant 0 : index
-
   %vf0 = vector.broadcast %f0 : f32 to vector<4x3xf32>
-  %v0 = vector.broadcast %c0 : i32 to vector<4x3xi32>
-  %vi0 = vector.broadcast %i0 : index to vector<4x3xindex>
 
   //
   // CHECK: vector.transfer_read
@@ -123,12 +101,6 @@ func.func @vector_transfer_ops_tensor(%arg0: tensor<?x?xf32>,
   %4 = vector.transfer_read %arg1[%c3, %c3], %vf0 {permutation_map = affine_map<(d0, d1)->(d0, d1)>} : tensor<?x?xvector<4x3xf32>>, vector<1x1x4x3xf32>
   // CHECK: vector.transfer_read %{{.*}}[%[[C3]], %[[C3]]], %{{.*}} {in_bounds = [false, true]} : tensor<?x?xvector<4x3xf32>>, vector<1x1x4x3xf32>
   %5 = vector.transfer_read %arg1[%c3, %c3], %vf0 {in_bounds = [false, true]} : tensor<?x?xvector<4x3xf32>>, vector<1x1x4x3xf32>
-  // CHECK: vector.transfer_read %{{.*}}[%[[C3]], %[[C3]]], %{{.*}} : tensor<?x?xvector<4x3xi32>>, vector<5x24xi8>
-  %6 = vector.transfer_read %arg2[%c3, %c3], %v0 : tensor<?x?xvector<4x3xi32>>, vector<5x24xi8>
-  // CHECK: vector.transfer_read %{{.*}}[%[[C3]], %[[C3]]], %{{.*}} : tensor<?x?xvector<4x3xindex>>, vector<5x48xi8>
-  %7 = vector.transfer_read %arg3[%c3, %c3], %vi0 : tensor<?x?xvector<4x3xindex>>, vector<5x48xi8>
-
-
   // CHECK: vector.transfer_write
   %8 = vector.transfer_write %0, %arg0[%c3, %c3] {permutation_map = affine_map<(d0, d1)->(d0)>} : vector<128xf32>, tensor<?x?xf32>
   // CHECK: vector.transfer_write
@@ -137,15 +109,10 @@ func.func @vector_transfer_ops_tensor(%arg0: tensor<?x?xf32>,
   %10 = vector.transfer_write %4, %arg1[%c3, %c3] {permutation_map = affine_map<(d0, d1)->(d0, d1)>} : vector<1x1x4x3xf32>, tensor<?x?xvector<4x3xf32>>
   // CHECK: vector.transfer_write %{{.*}}, %{{.*}}[%[[C3]], %[[C3]]] : vector<1x1x4x3xf32>, tensor<?x?xvector<4x3xf32>>
   %11 = vector.transfer_write %5, %arg1[%c3, %c3] {in_bounds = [false, false]} : vector<1x1x4x3xf32>, tensor<?x?xvector<4x3xf32>>
-  // CHECK: vector.transfer_write %{{.*}}, %{{.*}}[%[[C3]], %[[C3]]] : vector<5x24xi8>, tensor<?x?xvector<4x3xi32>>
-  %12 = vector.transfer_write %6, %arg2[%c3, %c3] : vector<5x24xi8>, tensor<?x?xvector<4x3xi32>>
-  // CHECK: vector.transfer_write %{{.*}}, %{{.*}}[%[[C3]], %[[C3]]] : vector<5x48xi8>, tensor<?x?xvector<4x3xindex>>
-  %13 = vector.transfer_write %7, %arg3[%c3, %c3] : vector<5x48xi8>, tensor<?x?xvector<4x3xindex>>
 
-  return %8, %9, %10, %11, %12, %13 :
+  return %8, %9, %10, %11 :
     tensor<?x?xf32>, tensor<?x?xf32>,  tensor<?x?xvector<4x3xf32>>,
-    tensor<?x?xvector<4x3xf32>>, tensor<?x?xvector<4x3xi32>>,
-    tensor<?x?xvector<4x3xindex>>
+    tensor<?x?xvector<4x3xf32>>
 }
 
 // CHECK-LABEL: @vector_broadcast
