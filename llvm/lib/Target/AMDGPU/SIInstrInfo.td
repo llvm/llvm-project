@@ -69,6 +69,16 @@ def SIreg_load : SDNode<"AMDGPUISD::REG_LOAD", SDTRegIdxLoad,
 def SIreg_store : SDNode<"AMDGPUISD::REG_STORE", SDTRegIdxStore,
                          [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 
+// A store of the bits of $data that $mask selects into the dword at
+// dword_index, which reads the dword and writes it back.
+def SDTRegIdxBitsStore : SDTypeProfile<0, 3,
+    [SDTCisVT<0, i32>,   // data
+     SDTCisVT<1, i32>,   // dword_index
+     SDTCisVT<2, i32>]>; // mask
+def SIreg_store_bits : SDNode<"AMDGPUISD::REG_STORE_BITS", SDTRegIdxBitsStore,
+                              [SDNPHasChain, SDNPMayLoad, SDNPMayStore,
+                               SDNPMemOperand]>;
+
 def SDTSBufferLoad : SDTypeProfile<1, 3,
     [                    // vdata
      SDTCisVT<1, v4i32>, // rsrc

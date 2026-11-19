@@ -14,6 +14,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/IR/DebugLoc.h"
 
 namespace llvm {
@@ -24,6 +25,7 @@ class DataLayout;
 class GlobalVariable;
 class Instruction;
 class LoadInst;
+class MachineFunction;
 class MemoryDef;
 class MemorySSA;
 class MMRAMetadata;
@@ -50,6 +52,19 @@ unsigned getSyntheticApertureNumber(unsigned AS);
 // value-independent metadata is copied; metadata describing the loaded value
 // (!range, !noundef, !nofpclass, !tbaa, ...) is dropped.
 void copyMetadataForWidenedLoad(LoadInst &Dest, const LoadInst &Source);
+
+// The memory operand, with flags \p Flags, of a dword access that an 8- or
+// 16-bit access makes in the VGPR address space. It names no IR value: the
+// dword can be larger than the object the value points to, which alias analysis
+// takes to mean the access cannot alias that object.
+MachineMemOperand *getVGPRDwordMemOperand(MachineFunction &MF,
+                                          MachineMemOperand::Flags Flags);
+
+// The width of the first part of a VGPR address space access of \p Bits bits
+// at \p Alignment that is neither a naturally aligned 8- or 16-bit one nor
+// whole dwords at dword alignment, when it is split: whole dwords if it is
+// dword-aligned, otherwise a half or a byte, as the alignment allows.
+unsigned getVGPRSplitPartSize(unsigned Bits, Align Alignment);
 
 // If GV is a named-barrier return its type. Otherwise return nullptr.
 TargetExtType *isNamedBarrier(const GlobalVariable &GV);

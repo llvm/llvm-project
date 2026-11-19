@@ -13,6 +13,7 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/MemorySSA.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Instructions.h"
@@ -60,6 +61,20 @@ void copyMetadataForWidenedLoad(LoadInst &Dest, const LoadInst &Source) {
       break;
     }
   }
+}
+
+MachineMemOperand *getVGPRDwordMemOperand(MachineFunction &MF,
+                                          MachineMemOperand::Flags Flags) {
+  return MF.getMachineMemOperand(MachinePointerInfo(AMDGPUAS::VGPR), Flags,
+                                 LLT::scalar(32), Align(4));
+}
+
+unsigned getVGPRSplitPartSize(unsigned Bits, Align Alignment) {
+  if (Alignment >= Align(4) && Bits > 32)
+    return alignDown(Bits - 1, 32);
+  if (Alignment >= Align(2) && Bits > 16)
+    return 16;
+  return 8;
 }
 
 // Returns the target extension type of a global variable,

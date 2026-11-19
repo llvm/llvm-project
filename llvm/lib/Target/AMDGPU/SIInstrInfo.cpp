@@ -2116,6 +2116,7 @@ unsigned SIInstrInfo::getNumWaitStates(const MachineInstr &MI) {
 // Expand a VGPR "as memory" access into one indexed move per dword.
 static void expandLoadStoreIdx(const SIInstrInfo &TII, MachineInstr &MI) {
   auto &LdSt = cast<AMDGPUMI::VLoadStoreIdxInst>(MI);
+  assert(!LdSt.isSubDword() && "the custom inserter expands a sub-dword store");
   MachineBasicBlock &MBB = *MI.getParent();
   MachineFunction &MF = *MBB.getParent();
   const DebugLoc &DL = MI.getDebugLoc();

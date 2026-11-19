@@ -73,3 +73,61 @@ define void @store_atomic(ptr addrspace(13) %p, i32 %v) {
   store atomic i32 %v, ptr addrspace(13) %p release, align 4
   ret void
 }
+
+define i8 @atomicrmw_add_i8(ptr addrspace(13) %p, i8 %v) {
+; CHECK-LABEL: define i8 @atomicrmw_add_i8(
+; CHECK-SAME: ptr addrspace(13) [[P:%.*]], i8 [[V:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr addrspace(13) [[P]], align 1
+; CHECK-NEXT:    [[NEW:%.*]] = add i8 [[TMP1]], [[V]]
+; CHECK-NEXT:    store i8 [[NEW]], ptr addrspace(13) [[P]], align 1
+; CHECK-NEXT:    ret i8 [[TMP1]]
+;
+  %r = atomicrmw add ptr addrspace(13) %p, i8 %v seq_cst
+  ret i8 %r
+}
+
+define i16 @atomicrmw_xchg_i16(ptr addrspace(13) %p, i16 %v) {
+; CHECK-LABEL: define i16 @atomicrmw_xchg_i16(
+; CHECK-SAME: ptr addrspace(13) [[P:%.*]], i16 [[V:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr addrspace(13) [[P]], align 2
+; CHECK-NEXT:    store i16 [[V]], ptr addrspace(13) [[P]], align 2
+; CHECK-NEXT:    ret i16 [[TMP1]]
+;
+  %r = atomicrmw xchg ptr addrspace(13) %p, i16 %v monotonic
+  ret i16 %r
+}
+
+define { i8, i1 } @cmpxchg_i8(ptr addrspace(13) %p, i8 %cmp, i8 %new) {
+; CHECK-LABEL: define { i8, i1 } @cmpxchg_i8(
+; CHECK-SAME: ptr addrspace(13) [[P:%.*]], i8 [[CMP:%.*]], i8 [[NEW:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr addrspace(13) [[P]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8 [[TMP1]], [[CMP]]
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i8 [[NEW]], i8 [[TMP1]]
+; CHECK-NEXT:    store i8 [[TMP3]], ptr addrspace(13) [[P]], align 1
+; CHECK-NEXT:    [[TMP4:%.*]] = insertvalue { i8, i1 } poison, i8 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertvalue { i8, i1 } [[TMP4]], i1 [[TMP2]], 1
+; CHECK-NEXT:    ret { i8, i1 } [[TMP5]]
+;
+  %r = cmpxchg ptr addrspace(13) %p, i8 %cmp, i8 %new seq_cst seq_cst
+  ret { i8, i1 } %r
+}
+
+define i16 @load_atomic_i16(ptr addrspace(13) %p) {
+; CHECK-LABEL: define i16 @load_atomic_i16(
+; CHECK-SAME: ptr addrspace(13) [[P:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = load i16, ptr addrspace(13) [[P]], align 2
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %r = load atomic i16, ptr addrspace(13) %p acquire, align 2
+  ret i16 %r
+}
+
+define void @store_atomic_i8(ptr addrspace(13) %p, i8 %v) {
+; CHECK-LABEL: define void @store_atomic_i8(
+; CHECK-SAME: ptr addrspace(13) [[P:%.*]], i8 [[V:%.*]]) {
+; CHECK-NEXT:    store i8 [[V]], ptr addrspace(13) [[P]], align 1
+; CHECK-NEXT:    ret void
+;
+  store atomic i8 %v, ptr addrspace(13) %p release, align 1
+  ret void
+}

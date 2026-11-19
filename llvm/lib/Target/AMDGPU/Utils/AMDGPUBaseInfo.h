@@ -479,11 +479,13 @@ struct VLdStIdxOpcodeInfo {
   uint16_t BitWidth;
   bool IsStore;
   bool IsGPRIdx;
+  bool IsSubDword;
 };
 
 LLVM_READONLY
 const VLdStIdxOpcodeInfo *getVLdStIdxOpcodeInfoByOpcode(unsigned Opc);
 
+// The whole-dword pseudo of this width and form, if there is one.
 LLVM_READONLY
 const VLdStIdxOpcodeInfo *
 getVLdStIdxOpcodeInfoByKey(unsigned BitWidth, bool IsStore, bool IsGPRIdx);

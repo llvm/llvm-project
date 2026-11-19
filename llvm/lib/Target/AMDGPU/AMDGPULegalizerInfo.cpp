@@ -552,7 +552,7 @@ static bool isLoadStoreLegal(const GCNSubtarget &ST, const LegalityQuery &Query)
          !hasBufferRsrcWorkaround(Ty) && !loadStoreBitcastWorkaround(ST, Ty);
 }
 
-// Whole-dword accesses only, for now.
+// Whole-dword accesses with a pseudo of their width.
 static bool isVGPRLoadStoreSizeSupported(unsigned MemSize, unsigned ValSize) {
   return MemSize == ValSize && MemSize <= MaxRegisterSize &&
          AMDGPUMI::VLoadStoreIdxInst::isSupportedBitWidth(MemSize);
@@ -3568,9 +3568,175 @@ static LLT getVGPRLoadStorePartType(LLT Ty) {
   return LLT();
 }
 
-/// Lower a whole-dword load or store on AMDGPUAS::VGPR into
-/// G_AMDGPU_REG_LOAD / G_AMDGPU_REG_STORE. Parallels
-/// SITargetLowering::lowerLoadStoreVGPR.
+namespace {
+// Where the bits of an 8- or 16-bit access on AMDGPUAS::VGPR are: the index of
+// the dword holding them, and their offset in it, which may be known.
+struct SubDwordPosition {
+  Register Index;
+  Register BitOffset;
+  std::optional<uint64_t> KnownBitOffset;
+};
+} // end anonymous namespace
+
+static SubDwordPosition getSubDwordPosition(LegalizerHelper &Helper,
+                                            GLoadStore &LdSt) {
+  MachineIRBuilder &B = Helper.MIRBuilder;
+  const LLT I32 = LLT::integer(32);
+  const Register Ptr = LdSt.getPointerReg();
+  const MachineMemOperand &MMO = LdSt.getMMO();
+  auto PtrAsInt = B.buildPtrToInt(I32, Ptr);
+  SubDwordPosition Pos;
+
+  // The bits start at (Ptr & 3) * 8. If the base of the memory operand is
+  // dword-aligned, its offset gives them, and the parts of a split access share
+  // the index of their dword. Otherwise the alignment of the access makes low
+  // bits of the address zero, and known bits may give the others. Failing that,
+  // the offset is (Ptr << 3) & 31.
+  KnownBits Known;
+  Register DwordAddress = PtrAsInt.getReg(0);
+  if (MMO.getBaseAlign() >= Align(4)) {
+    const uint64_t LowBits = MMO.getOffset() & 3;
+    Known = KnownBits::makeConstant(APInt(2, LowBits));
+    if (LowBits != 0) {
+      DwordAddress =
+          B.buildSub(I32, PtrAsInt, B.buildConstant(I32, LowBits)).getReg(0);
+    }
+  } else {
+    Known = Helper.getValueTracking()->getKnownBits(Ptr).trunc(2);
+    const unsigned AlignBits = std::min(Log2(LdSt.getAlign()), 2u);
+    Known.Zero.setLowBits(AlignBits);
+    Known.One.clearLowBits(AlignBits);
+  }
+  Pos.Index = B.buildLShr(I32, DwordAddress, B.buildConstant(I32, 2)).getReg(0);
+  if (Known.isConstant()) {
+    Pos.KnownBitOffset = Known.getConstant().getZExtValue() * 8;
+    Pos.BitOffset = B.buildConstant(I32, *Pos.KnownBitOffset).getReg(0);
+  } else {
+    auto BitAddress = B.buildShl(I32, PtrAsInt, B.buildConstant(I32, 3));
+    Pos.BitOffset =
+        B.buildAnd(I32, BitAddress, B.buildConstant(I32, 31)).getReg(0);
+  }
+  return Pos;
+}
+
+// Lower a naturally aligned 8- or 16-bit load on AMDGPUAS::VGPR: read the dword
+// containing it and extract the bits.
+static void lowerSubDwordLoadVGPR(LegalizerHelper &Helper, GAnyLoad &Ld) {
+  MachineIRBuilder &B = Helper.MIRBuilder;
+  MachineRegisterInfo &MRI = *B.getMRI();
+  const MachineMemOperand &MMO = Ld.getMMO();
+  const unsigned MemSize = MMO.getMemoryType().getSizeInBits();
+  const Register ValReg = Ld.getDstReg();
+  const LLT ValTy = MRI.getType(ValReg);
+  const LLT IntTy = LLT::integer(ValTy.getSizeInBits());
+  const LLT I32 = LLT::integer(32);
+  assert((ValTy.getSizeInBits() == MemSize || ValTy.isScalar()) &&
+         "only scalar extending loads are formed");
+
+  const SubDwordPosition Pos = getSubDwordPosition(Helper, Ld);
+  Register Bits = B.buildInstr(AMDGPU::G_AMDGPU_REG_LOAD, {I32}, {Pos.Index})
+                      .addMemOperand(AMDGPU::getVGPRDwordMemOperand(
+                          B.getMF(), MMO.getFlags()))
+                      .getReg(0);
+
+  // With a known offset the bits are shifted down and extended in registers,
+  // as for an extending load of a whole dword; otherwise they are extracted.
+  const bool IsSigned = isa<GSExtLoad>(Ld);
+  const bool IsZExt = isa<GZExtLoad>(Ld);
+  if (!Pos.KnownBitOffset) {
+    auto Width = B.buildConstant(I32, MemSize);
+    Bits = IsSigned ? B.buildSbfx(I32, Bits, Pos.BitOffset, Width).getReg(0)
+                    : B.buildUbfx(I32, Bits, Pos.BitOffset, Width).getReg(0);
+  } else {
+    if (*Pos.KnownBitOffset != 0)
+      Bits = B.buildLShr(I32, Bits, Pos.BitOffset).getReg(0);
+    if (IsSigned)
+      Bits = B.buildSExtInReg(I32, Bits, MemSize).getReg(0);
+    else if (IsZExt)
+      Bits = B.buildZExtInReg(I32, Bits, MemSize).getReg(0);
+  }
+
+  const Register Int =
+      ValTy == IntTy ? ValReg : MRI.createGenericVirtualRegister(IntTy);
+  if (IsSigned)
+    B.buildSExtOrTrunc(Int, Bits);
+  else if (IsZExt)
+    B.buildZExtOrTrunc(Int, Bits);
+  else
+    B.buildAnyExtOrTrunc(Int, Bits);
+  if (Int != ValReg)
+    B.buildBitcast(ValReg, Int);
+  Ld.eraseFromParent();
+}
+
+// Lower a naturally aligned 8- or 16-bit store on AMDGPUAS::VGPR: read the
+// dword containing it, insert the bits and write the dword back.
+static void lowerSubDwordStoreVGPR(LegalizerHelper &Helper, GStore &St) {
+  MachineIRBuilder &B = Helper.MIRBuilder;
+  MachineFunction &MF = B.getMF();
+  MachineRegisterInfo &MRI = *B.getMRI();
+  const MachineMemOperand &MMO = St.getMMO();
+  const unsigned MemSize = MMO.getMemoryType().getSizeInBits();
+  Register Value = St.getValueReg();
+  const LLT ValTy = MRI.getType(Value);
+  const LLT IntTy = LLT::integer(ValTy.getSizeInBits());
+  const LLT I32 = LLT::integer(32);
+  assert((ValTy.getSizeInBits() == MemSize || ValTy.isScalar()) &&
+         "only scalar truncating stores are formed");
+
+  const SubDwordPosition Pos = getSubDwordPosition(Helper, St);
+  auto Dword = B.buildInstr(AMDGPU::G_AMDGPU_REG_LOAD, {I32}, {Pos.Index})
+                   .addMemOperand(AMDGPU::getVGPRDwordMemOperand(
+                       MF, (MMO.getFlags() & ~MachineMemOperand::MOStore) |
+                               MachineMemOperand::MOLoad));
+
+  // The value is shifted into place under a mask of its bits. Selection folds
+  // the mask of a variable shift amount away.
+  if (ValTy != IntTy)
+    Value = B.buildBitcast(IntTy, Value).getReg(0);
+  Value = B.buildAnyExtOrTrunc(I32, Value).getReg(0);
+  auto Mask =
+      B.buildShl(I32, B.buildConstant(I32, maskTrailingOnes<uint32_t>(MemSize)),
+                 Pos.BitOffset);
+  auto NewBits = B.buildAnd(I32, B.buildShl(I32, Value, Pos.BitOffset), Mask);
+  auto OldBits = B.buildAnd(I32, Dword, B.buildNot(I32, Mask));
+  auto NewDword = B.buildOr(I32, NewBits, OldBits);
+  B.buildInstr(AMDGPU::G_AMDGPU_REG_STORE, {}, {NewDword, Pos.Index})
+      .addMemOperand(AMDGPU::getVGPRDwordMemOperand(MF, MMO.getFlags()));
+  St.eraseFromParent();
+}
+
+// Split an access on AMDGPUAS::VGPR of whole bytes into parts as wide as
+// AMDGPU::getVGPRSplitPartSize allows, each of which is legalized again. The
+// parts are integers, so a pointer or vector value is made one first.
+static bool splitLoadStoreVGPR(LegalizerHelper &Helper, GLoadStore &LdSt) {
+  MachineIRBuilder &B = Helper.MIRBuilder;
+  MachineMemOperand &MMO = LdSt.getMMO();
+  const Register ValReg = LdSt.getReg(0);
+  const Register PtrReg = LdSt.getPointerReg();
+  const LLT ValTy = B.getMRI()->getType(ValReg);
+  if (ValTy.isPointerOrPointerVector()) {
+    const LLT IntTy =
+        ValTy.changeElementType(LLT::integer(ValTy.getScalarSizeInBits()));
+    if (isa<GStore>(LdSt))
+      B.buildStore(B.buildPtrToInt(IntTy, ValReg), PtrReg, MMO);
+    else
+      B.buildIntToPtr(ValReg, B.buildLoad(IntTy, PtrReg, MMO));
+    LdSt.eraseFromParent();
+    return true;
+  }
+  if (ValTy.isVector()) {
+    return Helper.bitcast(LdSt, 0, LLT::integer(ValTy.getSizeInBits())) ==
+           LegalizerHelper::Legalized;
+  }
+  const unsigned PartSize =
+      AMDGPU::getVGPRSplitPartSize(ValTy.getSizeInBits(), LdSt.getAlign());
+  return Helper.reduceLoadStoreWidth(LdSt, 0, LLT::integer(PartSize)) ==
+         LegalizerHelper::Legalized;
+}
+
+/// Lower a load or store on AMDGPUAS::VGPR into G_AMDGPU_REG_LOAD /
+/// G_AMDGPU_REG_STORE. Parallels SITargetLowering::lowerLoadStoreVGPR.
 static bool lowerLoadStoreVGPR(LegalizerHelper &Helper, GLoadStore &LdSt) {
   MachineIRBuilder &B = Helper.MIRBuilder;
   MachineRegisterInfo &MRI = *B.getMRI();
@@ -3582,46 +3748,62 @@ static bool lowerLoadStoreVGPR(LegalizerHelper &Helper, GLoadStore &LdSt) {
 
   const LLT ValTy = MRI.getType(ValReg);
   const unsigned ValSize = ValTy.getSizeInBits();
+  const unsigned MemSize = MMO.getMemoryType().getSizeInBits();
   const LLT I32 = LLT::integer(32);
 
-  // The combiner turns a masked or sign-extended whole-dword load into an
-  // extending load of its low bits. Load the dword back and extend it in
-  // registers; a load that really is sub-dword gets the checks below.
-  auto *ExtLoad = dyn_cast<GExtLoad>(&LdSt);
-  if (ExtLoad && MMO.getMemoryType().isScalar()) {
-    const unsigned MemSize = MMO.getMemoryType().getSizeInBits();
-    LLT LoadTy = LLT::integer(MemSize);
-    if (MemSize < 32 && LdSt.getAlign() >= Align(4))
-      LoadTy = I32;
-    Register Loaded = B.buildLoadFromOffset(LoadTy, PtrReg, MMO, 0).getReg(0);
-    const bool IsSigned = isa<GSExtLoad>(ExtLoad);
-    if (LoadTy.getSizeInBits() != MemSize) {
-      Loaded = IsSigned ? B.buildSExtInReg(LoadTy, Loaded, MemSize).getReg(0)
-                        : B.buildZExtInReg(LoadTy, Loaded, MemSize).getReg(0);
-    }
-    if (IsSigned)
-      B.buildSExtOrTrunc(ValReg, Loaded);
-    else
-      B.buildZExtOrTrunc(ValReg, Loaded);
-    LdSt.eraseFromParent();
-    return true;
-  }
-
-  // The index is the pointer >> 2, so an under-aligned access would silently
-  // reach the containing dword.
-  const unsigned MemSize = MMO.getMemoryType().getSizeInBits();
-  if (MemSize != ValSize || MemSize % 32 != 0 || LdSt.getAlign() < Align(4)) {
+  auto reportUnsupported = [&]() {
     const Function &F = B.getMF().getFunction();
     F.getContext().diagnose(DiagnosticInfoUnsupported(
         F,
         "unsupported access of VGPR 'as memory' address space (13); only "
-        "dword-aligned whole-dword loads and stores are implemented",
+        "loads and stores of whole bytes are implemented",
         LdSt.getDebugLoc()));
     if (!IsStore)
       B.buildUndef(ValReg);
     LdSt.eraseFromParent();
     return true;
+  };
+
+  // Natural alignment keeps an 8- or 16-bit access inside one dword.
+  const bool IsSubDword = MemSize == 8 || MemSize == 16;
+  if (IsSubDword && LdSt.getAlign() >= Align(MemSize / 8)) {
+    if (auto *St = dyn_cast<GStore>(&LdSt))
+      lowerSubDwordStoreVGPR(Helper, *St);
+    else
+      lowerSubDwordLoadVGPR(Helper, cast<GAnyLoad>(LdSt));
+    return true;
   }
+
+  if (MemSize % 8 != 0)
+    return reportUnsupported();
+
+  // The combiner turns an extension of a load into an extending load, and a
+  // truncation of a stored value into a truncating store. Access the memory
+  // type, and extend or truncate in registers.
+  if (MemSize != ValSize && MMO.getMemoryType().isScalar()) {
+    const LLT MemTy = LLT::integer(MemSize);
+    if (IsStore) {
+      B.buildStore(B.buildTrunc(MemTy, ValReg), PtrReg, MMO);
+    } else {
+      Register Loaded = B.buildLoadFromOffset(MemTy, PtrReg, MMO, 0).getReg(0);
+      if (isa<GSExtLoad>(LdSt))
+        B.buildSExtOrTrunc(ValReg, Loaded);
+      else if (isa<GZExtLoad>(LdSt))
+        B.buildZExtOrTrunc(ValReg, Loaded);
+      else
+        B.buildAnyExtOrTrunc(ValReg, Loaded);
+    }
+    LdSt.eraseFromParent();
+    return true;
+  }
+
+  // The index is the pointer >> 2, so any other access that is not a whole
+  // number of dwords at dword alignment is split.
+  if (MemSize % 32 != 0 || LdSt.getAlign() < Align(4))
+    return splitLoadStoreVGPR(Helper, LdSt);
+
+  if (MemSize != ValSize)
+    return reportUnsupported();
 
   // A width no VGPR tuple has is split, the widest part first, and each part is
   // legalized again. When there is no part, the access is first made one of
