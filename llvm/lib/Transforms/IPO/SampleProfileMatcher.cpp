@@ -499,7 +499,8 @@ void SampleProfileMatcher::recordCallsiteMatchStates(
     const LocToLocMap *IRToProfileLocationMap) {
   bool IsPostMatch = IRToProfileLocationMap != nullptr;
   auto &CallsiteMatchStates =
-      FuncCallsiteMatchStates[FunctionSamples::getCanonicalFnName(F.getName())];
+      FuncCallsiteMatchStates[Function::getGUIDAssumingExternalLinkage(
+          FunctionSamples::getCanonicalFnName(F.getName()))];
 
   auto MapIRLocToProfileLoc = [&](const LineLocation &IRLoc) {
     // IRToProfileLocationMap is null in pre-match phrase.
@@ -583,7 +584,7 @@ void SampleProfileMatcher::countMismatchedFuncSamples(const FunctionSamples &FS,
 
 void SampleProfileMatcher::countMismatchedCallsiteSamples(
     const FunctionSamples &FS) {
-  auto It = FuncCallsiteMatchStates.find(FS.getFuncName());
+  auto It = FuncCallsiteMatchStates.find(FS.getGUID());
   // Skip it if no mismatched callsite or this is an external function.
   if (It == FuncCallsiteMatchStates.end() || It->second.empty())
     return;
@@ -629,7 +630,7 @@ void SampleProfileMatcher::countMismatchedCallsiteSamples(
 }
 
 void SampleProfileMatcher::countMismatchCallsites(const FunctionSamples &FS) {
-  auto It = FuncCallsiteMatchStates.find(FS.getFuncName());
+  auto It = FuncCallsiteMatchStates.find(FS.getGUID());
   // Skip it if no mismatched callsite or this is an external function.
   if (It == FuncCallsiteMatchStates.end() || It->second.empty())
     return;
@@ -1104,7 +1105,7 @@ void SampleProfileMatcher::runOnModule() {
 
 void SampleProfileMatcher::distributeIRToProfileLocationMap(
     FunctionSamples &FS) {
-  const auto ProfileMappings = FuncMappings.find(FS.getFuncName());
+  const auto ProfileMappings = FuncMappings.find(FS.getGUID());
   if (ProfileMappings != FuncMappings.end()) {
     FS.setIRToProfileLocationMap(&(ProfileMappings->second));
   }
