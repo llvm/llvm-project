@@ -429,4 +429,3 @@ exit:
   ret i1 false
 }
 
-declare { i8, i1 } @llvm.sadd.with.overflow.i8(i8, i8)

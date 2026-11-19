@@ -774,12 +774,12 @@ static Decomposition decompose(Value *V, ConstraintInfo &Info, bool IsSigned,
 
 static Decomposition decomposeImpl(Value *V, ConstraintInfo &Info,
                                    bool IsSigned, const DataLayout &DL) {
-  auto MergeResults = [&Info, IsSigned, &DL](
-                          Value *A, Value *B, bool IsSignedB,
-                          bool IsSub = false) -> std::optional<Decomposition> {
+  auto MergeResults = [&Info, IsSigned,
+                       &DL](Instruction::BinaryOps Opc, Value *A, Value *B,
+                            bool IsSignedB) -> std::optional<Decomposition> {
     auto ResA = decompose(A, Info, IsSigned, DL);
     auto ResB = decompose(B, Info, IsSignedB, DL);
-    if (IsSub ? ResA.sub(ResB) : ResA.add(ResB))
+    if (Opc == Instruction::Sub ? ResA.sub(ResB) : ResA.add(ResB))
       return std::nullopt;
     return ResA;
   };
@@ -795,8 +795,7 @@ static Decomposition decomposeImpl(Value *V, ConstraintInfo &Info,
     if ((Opc == Instruction::Add || Opc == Instruction::Sub) &&
         isKnownNoWrap(Opc, WO->getLHS(), WO->getRHS(), WO->getNoWrapKind(),
                       Info, IsSigned))
-      if (auto Decomp = MergeResults(WO->getLHS(), WO->getRHS(), IsSigned,
-                                     Opc == Instruction::Sub))
+      if (auto Decomp = MergeResults(Opc, WO->getLHS(), WO->getRHS(), IsSigned))
         return *Decomp;
     return V;
   }
@@ -849,7 +848,7 @@ static Decomposition decomposeImpl(Value *V, ConstraintInfo &Info,
 
   if (match(V, m_AddLike(m_Value(Op0), m_Value(Op1)))) {
     if (isKnownNoWrap(V, Info, IsSigned)) {
-      if (auto Decomp = MergeResults(Op0, Op1, IsSigned))
+      if (auto Decomp = MergeResults(Instruction::Add, Op0, Op1, IsSigned))
         return *Decomp;
       return V;
     }
@@ -859,7 +858,8 @@ static Decomposition decomposeImpl(Value *V, ConstraintInfo &Info,
         canUseSExt(CI) &&
         Info.doesHold(CmpInst::ICMP_UGE, Op0,
                       ConstantInt::get(Op0->getType(), -CI->getSExtValue())))
-      if (auto Decomp = MergeResults(Op0, CI, /*IsSignedB=*/true))
+      if (auto Decomp =
+              MergeResults(Instruction::Add, Op0, CI, /*IsSignedB=*/true))
         return *Decomp;
     return V;
   }
@@ -2854,18 +2854,6 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
       Pred = CB.Cond.Pred;
       A = CB.Cond.Op0;
       B = CB.Cond.Op1;
-      if (CB.DoesHold.Pred != CmpInst::BAD_ICMP_PREDICATE &&
-          !Info.doesHold(CB.DoesHold.Pred, CB.DoesHold.Op0, CB.DoesHold.Op1)) {
-        LLVM_DEBUG({
-          dbgs() << "Not adding fact ";
-          dumpUnpackedICmp(dbgs(), Pred, A, B);
-          dbgs() << " because precondition ";
-          dumpUnpackedICmp(dbgs(), CB.DoesHold.Pred, CB.DoesHold.Op0,
-                           CB.DoesHold.Op1);
-          dbgs() << " does not hold.\n";
-        });
-        continue;
-      }
       // The EQ fact for an add/sub.with.overflow result holds only while the
       // result still extracts from the intrinsic. replaceOverflowUses may have
       // replaced the intrinsic after the fact was queued.
@@ -2875,6 +2863,18 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
           dbgs() << "Not adding fact ";
           dumpUnpackedICmp(dbgs(), Pred, A, B);
           dbgs() << " because the intrinsic was replaced.\n";
+        });
+        continue;
+      }
+      if (CB.DoesHold.Pred != CmpInst::BAD_ICMP_PREDICATE &&
+          !Info.doesHold(CB.DoesHold.Pred, CB.DoesHold.Op0, CB.DoesHold.Op1)) {
+        LLVM_DEBUG({
+          dbgs() << "Not adding fact ";
+          dumpUnpackedICmp(dbgs(), Pred, A, B);
+          dbgs() << " because precondition ";
+          dumpUnpackedICmp(dbgs(), CB.DoesHold.Pred, CB.DoesHold.Op0,
+                           CB.DoesHold.Op1);
+          dbgs() << " does not hold.\n";
         });
         continue;
       }

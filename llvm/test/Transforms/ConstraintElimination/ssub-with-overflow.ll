@@ -608,7 +608,4 @@ exit:
   ret void
 }
 
-
-declare { i32, i1 } @llvm.ssub.with.overflow.i32(i32, i32)
-declare { i32, i1 } @llvm.sadd.with.overflow.i32(i32, i32)
 declare void @use_res32({ i32, i1 })
