@@ -128,6 +128,7 @@ add_llvm_component_library(LLVMCodeGen
   LowLevelTypeUtils.cpp
   LowerEmuTLS.cpp
   MachineBasicBlock.cpp
+  MachineBlockAlignment.cpp
   MachineBlockFrequencyInfo.cpp
   MachineBlockHashInfo.cpp
   MachineBlockPlacement.cpp
