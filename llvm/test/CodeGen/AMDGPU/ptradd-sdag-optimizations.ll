@@ -49,13 +49,15 @@ define amdgpu_kernel void @store_v16i32(ptr addrspace(1) %out, <16 x i32> %a) {
 ; GFX942-NEXT:    v_mov_b64_e32 v[2:3], s[20:21]
 ; GFX942-NEXT:    v_mov_b64_e32 v[4:5], s[22:23]
 ; GFX942-NEXT:    global_store_dwordx4 v0, v[2:5], s[0:1] offset:48
-; GFX942-NEXT:    v_mov_b64_e32 v[6:7], s[16:17]
-; GFX942-NEXT:    v_mov_b64_e32 v[8:9], s[18:19]
+; GFX942-NEXT:    s_nop 1
+; GFX942-NEXT:    v_mov_b64_e32 v[2:3], s[16:17]
+; GFX942-NEXT:    v_mov_b64_e32 v[4:5], s[18:19]
+; GFX942-NEXT:    global_store_dwordx4 v0, v[2:5], s[0:1] offset:32
+; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_mov_b64_e32 v[2:3], s[12:13]
 ; GFX942-NEXT:    v_mov_b64_e32 v[4:5], s[14:15]
 ; GFX942-NEXT:    global_store_dwordx4 v0, v[2:5], s[0:1] offset:16
-; GFX942-NEXT:    global_store_dwordx4 v0, v[6:9], s[0:1] offset:32
-; GFX942-NEXT:    s_nop 0
+; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_mov_b64_e32 v[2:3], s[8:9]
 ; GFX942-NEXT:    v_mov_b64_e32 v[4:5], s[10:11]
 ; GFX942-NEXT:    global_store_dwordx4 v0, v[2:5], s[0:1]

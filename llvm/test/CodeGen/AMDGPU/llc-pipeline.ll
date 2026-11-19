@@ -352,7 +352,6 @@
 ; GCN-O1-NEXT:        Two-Address instruction pass
 ; GCN-O1-NEXT:        Machine Natural Loop Construction
 ; GCN-O1-NEXT:        Register Coalescer
-; GCN-O1-NEXT:        SI Fold Packed Moves
 ; GCN-O1-NEXT:        Rename Disconnected Subregister Components
 ; GCN-O1-NEXT:        Rewrite Partial Register Uses
 ; GCN-O1-NEXT:        Machine Instruction Scheduler
@@ -394,6 +393,7 @@
 ; GCN-O1-NEXT:        Stack Slot Coloring
 ; GCN-O1-NEXT:        Machine Copy Propagation Pass
 ; GCN-O1-NEXT:        Machine Loop Invariant Code Motion
+; GCN-O1-NEXT:        SI Fold Packed Moves
 ; GCN-O1-NEXT:        SI Fix VGPR copies
 ; GCN-O1-NEXT:        SI optimize exec mask operations
 ; GCN-O1-NEXT:        Remove Redundant DEBUG_VALUE analysis
@@ -674,7 +674,6 @@
 ; GCN-O1-OPTS-NEXT:        Two-Address instruction pass
 ; GCN-O1-OPTS-NEXT:        Machine Natural Loop Construction
 ; GCN-O1-OPTS-NEXT:        Register Coalescer
-; GCN-O1-OPTS-NEXT:        SI Fold Packed Moves
 ; GCN-O1-OPTS-NEXT:        Rename Disconnected Subregister Components
 ; GCN-O1-OPTS-NEXT:        Rewrite Partial Register Uses
 ; GCN-O1-OPTS-NEXT:        Machine Instruction Scheduler
@@ -717,6 +716,7 @@
 ; GCN-O1-OPTS-NEXT:        Stack Slot Coloring
 ; GCN-O1-OPTS-NEXT:        Machine Copy Propagation Pass
 ; GCN-O1-OPTS-NEXT:        Machine Loop Invariant Code Motion
+; GCN-O1-OPTS-NEXT:        SI Fold Packed Moves
 ; GCN-O1-OPTS-NEXT:        SI Fix VGPR copies
 ; GCN-O1-OPTS-NEXT:        SI optimize exec mask operations
 ; GCN-O1-OPTS-NEXT:        Remove Redundant DEBUG_VALUE analysis
@@ -1001,7 +1001,6 @@
 ; GCN-O2-NEXT:        Two-Address instruction pass
 ; GCN-O2-NEXT:        Machine Natural Loop Construction
 ; GCN-O2-NEXT:        Register Coalescer
-; GCN-O2-NEXT:        SI Fold Packed Moves
 ; GCN-O2-NEXT:        Rename Disconnected Subregister Components
 ; GCN-O2-NEXT:        Rewrite Partial Register Uses
 ; GCN-O2-NEXT:        Machine Instruction Scheduler
@@ -1045,6 +1044,7 @@
 ; GCN-O2-NEXT:        Stack Slot Coloring
 ; GCN-O2-NEXT:        Machine Copy Propagation Pass
 ; GCN-O2-NEXT:        Machine Loop Invariant Code Motion
+; GCN-O2-NEXT:        SI Fold Packed Moves
 ; GCN-O2-NEXT:        SI Fix VGPR copies
 ; GCN-O2-NEXT:        SI optimize exec mask operations
 ; GCN-O2-NEXT:        Remove Redundant DEBUG_VALUE analysis
@@ -1344,7 +1344,6 @@
 ; GCN-O3-NEXT:        Two-Address instruction pass
 ; GCN-O3-NEXT:        Machine Natural Loop Construction
 ; GCN-O3-NEXT:        Register Coalescer
-; GCN-O3-NEXT:        SI Fold Packed Moves
 ; GCN-O3-NEXT:        Rename Disconnected Subregister Components
 ; GCN-O3-NEXT:        Rewrite Partial Register Uses
 ; GCN-O3-NEXT:        Machine Instruction Scheduler
@@ -1388,6 +1387,7 @@
 ; GCN-O3-NEXT:        Stack Slot Coloring
 ; GCN-O3-NEXT:        Machine Copy Propagation Pass
 ; GCN-O3-NEXT:        Machine Loop Invariant Code Motion
+; GCN-O3-NEXT:        SI Fold Packed Moves
 ; GCN-O3-NEXT:        SI Fix VGPR copies
 ; GCN-O3-NEXT:        SI optimize exec mask operations
 ; GCN-O3-NEXT:        Remove Redundant DEBUG_VALUE analysis

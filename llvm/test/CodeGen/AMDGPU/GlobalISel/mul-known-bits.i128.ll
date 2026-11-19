@@ -8,8 +8,7 @@ define i128 @mul_i128_zext_operands(i64 %a, i64 %b) nounwind {
 ; GFX90A-LABEL: mul_i128_zext_operands:
 ; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX90A-NEXT:    v_mov_b32_e32 v4, v0
-; GFX90A-NEXT:    v_mov_b32_e32 v5, v1
+; GFX90A-NEXT:    v_pk_mov_b32 v[4:5], v[0:1], v[0:1] op_sel:[0,1]
 ; GFX90A-NEXT:    v_mad_u64_u32 v[8:9], s[4:5], v4, v3, 0
 ; GFX90A-NEXT:    v_mad_u64_u32 v[0:1], s[4:5], v4, v2, 0
 ; GFX90A-NEXT:    v_mad_u64_u32 v[6:7], s[4:5], v5, v3, 0

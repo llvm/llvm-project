@@ -1669,9 +1669,6 @@ void GCNPassConfig::addPreRegAlloc() {
 }
 
 void GCNPassConfig::addOptimizedRegAlloc() {
-  if (getOptLevel() != CodeGenOptLevel::None)
-    insertPass(&RegisterCoalescerID, &SIFoldPackedMovesLegacyID);
-
   if (CLOpts.dce_in_ra)
     insertPass(&DetectDeadLanesID, &DeadMachineInstructionElimID);
 
@@ -1841,6 +1838,8 @@ bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
 }
 
 void GCNPassConfig::addPostRegAlloc() {
+  if (getOptLevel() != CodeGenOptLevel::None && getOptimizeRegAlloc())
+    addPass(&SIFoldPackedMovesLegacyID);
   addPass(&SIFixVGPRCopiesID);
   if (getOptLevel() > CodeGenOptLevel::None)
     addPass(&SIOptimizeExecMaskingLegacyID);
@@ -2488,9 +2487,6 @@ Error AMDGPUCodeGenPassBuilder::addRegAssignAndRewriteFast(
 }
 
 Error AMDGPUCodeGenPassBuilder::addOptimizedRegAlloc(PassManagerWrapper &PMW) {
-  if (getOptLevel() != CodeGenOptLevel::None)
-    insertPass<RegisterCoalescerPass>(SIFoldPackedMovesPass());
-
   if (CLOpts.dce_in_ra)
     insertPass<DetectDeadLanesPass>(DeadMachineInstructionElimPass());
 
@@ -2593,6 +2589,9 @@ Expected<bool> AMDGPUCodeGenPassBuilder::addRegAssignAndRewriteOptimized(
 }
 
 void AMDGPUCodeGenPassBuilder::addPostRegAlloc(PassManagerWrapper &PMW) {
+  if (getOptLevel() != CodeGenOptLevel::None &&
+      Opt.OptimizeRegAlloc == cl::boolOrDefault::BOU_TRUE)
+    addMachineFunctionPass(SIFoldPackedMovesPass(), PMW);
   addMachineFunctionPass(SIFixVGPRCopiesPass(), PMW);
   if (TM.getOptLevel() > CodeGenOptLevel::None)
     addMachineFunctionPass(SIOptimizeExecMaskingPass(), PMW);

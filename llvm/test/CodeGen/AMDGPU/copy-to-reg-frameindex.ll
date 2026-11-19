@@ -54,8 +54,7 @@ define void @phi_with_alloca_and_divergent_copy_to_reg(ptr addrspace(5) %diverge
 ; CHECK-NEXT:    v_add_u32_e32 v2, 1, v3
 ; CHECK-NEXT:    v_cmp_lt_u32_e32 vcc, 15, v2
 ; CHECK-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; CHECK-NEXT:    v_mov_b32_e32 v3, v4
-; CHECK-NEXT:    v_mov_b32_e32 v2, v0
+; CHECK-NEXT:    v_pk_mov_b32 v[2:3], v[0:1], v[4:5]
 ; CHECK-NEXT:    s_andn2_b64 exec, exec, s[4:5]
 ; CHECK-NEXT:    s_cbranch_execnz .LBB1_1
 ; CHECK-NEXT:  ; %bb.2: ; %done

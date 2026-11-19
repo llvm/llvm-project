@@ -313,8 +313,9 @@ define amdgpu_kernel void @test_mfma_f32_32x32x2bf16(ptr addrspace(1) %arg) #0 {
 ; GFX90A-VGPR-LABEL: test_mfma_f32_32x32x2bf16:
 ; GFX90A-VGPR:       ; %bb.0: ; %bb
 ; GFX90A-VGPR-NEXT:    s_load_dwordx2 s[34:35], s[4:5], 0x24
-; GFX90A-VGPR-NEXT:    v_mov_b32_e32 v32, 1
-; GFX90A-VGPR-NEXT:    v_mov_b32_e32 v33, 2
+; GFX90A-VGPR-NEXT:    v_mov_b32_e32 v33, 1
+; GFX90A-VGPR-NEXT:    v_mov_b32_e32 v34, 2
+; GFX90A-VGPR-NEXT:    v_mov_b32_e32 v32, 0
 ; GFX90A-VGPR-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-VGPR-NEXT:    s_load_dwordx16 s[16:31], s[34:35], 0x0
 ; GFX90A-VGPR-NEXT:    s_load_dwordx16 s[0:15], s[34:35], 0x40
@@ -336,10 +337,9 @@ define amdgpu_kernel void @test_mfma_f32_32x32x2bf16(ptr addrspace(1) %arg) #0 {
 ; GFX90A-VGPR-NEXT:    v_pk_mov_b32 v[28:29], s[12:13], s[12:13] op_sel:[0,1]
 ; GFX90A-VGPR-NEXT:    v_pk_mov_b32 v[30:31], s[14:15], s[14:15] op_sel:[0,1]
 ; GFX90A-VGPR-NEXT:    s_nop 1
-; GFX90A-VGPR-NEXT:    v_mfma_f32_32x32x2bf16 v[0:31], v32, v33, v[0:31] cbsz:1 abid:2 blgp:3
-; GFX90A-VGPR-NEXT:    v_mov_b32_e32 v32, 0
+; GFX90A-VGPR-NEXT:    v_mfma_f32_32x32x2bf16 v[0:31], v33, v34, v[0:31] cbsz:1 abid:2 blgp:3
 ; GFX90A-VGPR-NEXT:    s_nop 15
-; GFX90A-VGPR-NEXT:    s_nop 1
+; GFX90A-VGPR-NEXT:    s_nop 2
 ; GFX90A-VGPR-NEXT:    global_store_dwordx4 v32, v[24:27], s[34:35] offset:96
 ; GFX90A-VGPR-NEXT:    global_store_dwordx4 v32, v[28:31], s[34:35] offset:112
 ; GFX90A-VGPR-NEXT:    global_store_dwordx4 v32, v[16:19], s[34:35] offset:64

@@ -383,20 +383,23 @@ define amdgpu_kernel void @test_mfma_f32_32x32x1f32(ptr addrspace(1) %arg) #0 {
 ; FAST90A-LABEL: test_mfma_f32_32x32x1f32:
 ; FAST90A:       ; %bb.0: ; %bb
 ; FAST90A-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; FAST90A-NEXT:    v_mov_b32_e32 v0, 1.0
-; FAST90A-NEXT:    v_mov_b32_e32 v1, 2.0
+; FAST90A-NEXT:    v_mov_b32_e32 v1, 1.0
+; FAST90A-NEXT:    v_mov_b32_e32 v34, 2.0
+; FAST90A-NEXT:    v_mov_b32_e32 v0, 0
 ; FAST90A-NEXT:    s_waitcnt lgkmcnt(0)
 ; FAST90A-NEXT:    s_load_dwordx16 s[36:51], s[0:1], 0x0
 ; FAST90A-NEXT:    s_load_dwordx16 s[4:19], s[0:1], 0x40
 ; FAST90A-NEXT:    s_waitcnt lgkmcnt(0)
-; FAST90A-NEXT:    v_pk_mov_b32 v[2:3], s[36:37], s[36:37] op_sel:[0,1]
+; FAST90A-NEXT:    v_mov_b32_e32 v2, s36
+; FAST90A-NEXT:    v_mov_b32_e32 v3, s37
 ; FAST90A-NEXT:    v_pk_mov_b32 v[4:5], s[38:39], s[38:39] op_sel:[0,1]
 ; FAST90A-NEXT:    v_pk_mov_b32 v[6:7], s[40:41], s[40:41] op_sel:[0,1]
 ; FAST90A-NEXT:    v_pk_mov_b32 v[8:9], s[42:43], s[42:43] op_sel:[0,1]
 ; FAST90A-NEXT:    v_pk_mov_b32 v[10:11], s[44:45], s[44:45] op_sel:[0,1]
 ; FAST90A-NEXT:    v_pk_mov_b32 v[12:13], s[46:47], s[46:47] op_sel:[0,1]
 ; FAST90A-NEXT:    v_pk_mov_b32 v[14:15], s[48:49], s[48:49] op_sel:[0,1]
-; FAST90A-NEXT:    v_pk_mov_b32 v[16:17], s[50:51], s[50:51] op_sel:[0,1]
+; FAST90A-NEXT:    v_mov_b32_e32 v16, s50
+; FAST90A-NEXT:    v_mov_b32_e32 v17, s51
 ; FAST90A-NEXT:    v_pk_mov_b32 v[18:19], s[4:5], s[4:5] op_sel:[0,1]
 ; FAST90A-NEXT:    v_pk_mov_b32 v[20:21], s[6:7], s[6:7] op_sel:[0,1]
 ; FAST90A-NEXT:    v_pk_mov_b32 v[22:23], s[8:9], s[8:9] op_sel:[0,1]
@@ -404,32 +407,33 @@ define amdgpu_kernel void @test_mfma_f32_32x32x1f32(ptr addrspace(1) %arg) #0 {
 ; FAST90A-NEXT:    v_pk_mov_b32 v[26:27], s[12:13], s[12:13] op_sel:[0,1]
 ; FAST90A-NEXT:    v_pk_mov_b32 v[28:29], s[14:15], s[14:15] op_sel:[0,1]
 ; FAST90A-NEXT:    v_pk_mov_b32 v[30:31], s[16:17], s[16:17] op_sel:[0,1]
-; FAST90A-NEXT:    v_pk_mov_b32 v[32:33], s[18:19], s[18:19] op_sel:[0,1]
+; FAST90A-NEXT:    v_mov_b32_e32 v32, s18
+; FAST90A-NEXT:    v_mov_b32_e32 v33, s19
 ; FAST90A-NEXT:    s_nop 1
-; FAST90A-NEXT:    v_mfma_f32_32x32x1f32 v[2:33], v0, v1, v[2:33]
-; FAST90A-NEXT:    v_mfma_f32_32x32x1f32 v[34:65], v0, v1, v[2:33]
+; FAST90A-NEXT:    v_mfma_f32_32x32x1f32 v[2:33], v1, v34, v[2:33]
+; FAST90A-NEXT:    v_mfma_f32_32x32x1f32 v[36:67], v1, v34, v[2:33]
 ; FAST90A-NEXT:    s_nop 15
 ; FAST90A-NEXT:    s_nop 2
-; FAST90A-NEXT:    v_pk_mov_b32 v[4:5], v[34:35], v[34:35] op_sel:[0,1]
-; FAST90A-NEXT:    v_pk_mov_b32 v[6:7], v[36:37], v[36:37] op_sel:[0,1]
-; FAST90A-NEXT:    v_pk_mov_b32 v[8:9], v[38:39], v[38:39] op_sel:[0,1]
-; FAST90A-NEXT:    v_pk_mov_b32 v[10:11], v[40:41], v[40:41] op_sel:[0,1]
-; FAST90A-NEXT:    v_pk_mov_b32 v[12:13], v[42:43], v[42:43] op_sel:[0,1]
-; FAST90A-NEXT:    v_pk_mov_b32 v[14:15], v[44:45], v[44:45] op_sel:[0,1]
-; FAST90A-NEXT:    v_pk_mov_b32 v[16:17], v[46:47], v[46:47] op_sel:[0,1]
-; FAST90A-NEXT:    v_pk_mov_b32 v[18:19], v[48:49], v[48:49] op_sel:[0,1]
-; FAST90A-NEXT:    v_pk_mov_b32 v[20:21], v[50:51], v[50:51] op_sel:[0,1]
-; FAST90A-NEXT:    v_pk_mov_b32 v[22:23], v[52:53], v[52:53] op_sel:[0,1]
-; FAST90A-NEXT:    v_pk_mov_b32 v[24:25], v[54:55], v[54:55] op_sel:[0,1]
-; FAST90A-NEXT:    v_pk_mov_b32 v[26:27], v[56:57], v[56:57] op_sel:[0,1]
-; FAST90A-NEXT:    v_pk_mov_b32 v[28:29], v[58:59], v[58:59] op_sel:[0,1]
-; FAST90A-NEXT:    v_pk_mov_b32 v[30:31], v[60:61], v[60:61] op_sel:[0,1]
-; FAST90A-NEXT:    v_pk_mov_b32 v[32:33], v[62:63], v[62:63] op_sel:[0,1]
+; FAST90A-NEXT:    v_pk_mov_b32 v[4:5], v[36:37], v[36:37] op_sel:[0,1]
+; FAST90A-NEXT:    v_pk_mov_b32 v[6:7], v[38:39], v[38:39] op_sel:[0,1]
+; FAST90A-NEXT:    v_pk_mov_b32 v[8:9], v[40:41], v[40:41] op_sel:[0,1]
+; FAST90A-NEXT:    v_pk_mov_b32 v[10:11], v[42:43], v[42:43] op_sel:[0,1]
+; FAST90A-NEXT:    v_pk_mov_b32 v[12:13], v[44:45], v[44:45] op_sel:[0,1]
+; FAST90A-NEXT:    v_pk_mov_b32 v[14:15], v[46:47], v[46:47] op_sel:[0,1]
+; FAST90A-NEXT:    v_pk_mov_b32 v[16:17], v[48:49], v[48:49] op_sel:[0,1]
+; FAST90A-NEXT:    v_pk_mov_b32 v[18:19], v[50:51], v[50:51] op_sel:[0,1]
+; FAST90A-NEXT:    v_pk_mov_b32 v[20:21], v[52:53], v[52:53] op_sel:[0,1]
+; FAST90A-NEXT:    v_pk_mov_b32 v[22:23], v[54:55], v[54:55] op_sel:[0,1]
+; FAST90A-NEXT:    v_pk_mov_b32 v[24:25], v[56:57], v[56:57] op_sel:[0,1]
+; FAST90A-NEXT:    v_pk_mov_b32 v[26:27], v[58:59], v[58:59] op_sel:[0,1]
+; FAST90A-NEXT:    v_pk_mov_b32 v[28:29], v[60:61], v[60:61] op_sel:[0,1]
+; FAST90A-NEXT:    v_pk_mov_b32 v[30:31], v[62:63], v[62:63] op_sel:[0,1]
+; FAST90A-NEXT:    v_mov_b32_e32 v32, v64
+; FAST90A-NEXT:    v_mov_b32_e32 v33, v65
 ; FAST90A-NEXT:    s_nop 1
-; FAST90A-NEXT:    v_mfma_f32_32x32x1f32 v[2:33], v0, v1, v[2:33]
-; FAST90A-NEXT:    v_mov_b32_e32 v0, 0
+; FAST90A-NEXT:    v_mfma_f32_32x32x1f32 v[2:33], v1, v34, v[2:33]
 ; FAST90A-NEXT:    s_nop 15
-; FAST90A-NEXT:    s_nop 1
+; FAST90A-NEXT:    s_nop 2
 ; FAST90A-NEXT:    global_store_dwordx4 v0, v[26:29], s[0:1] offset:96
 ; FAST90A-NEXT:    global_store_dwordx4 v0, v[30:33], s[0:1] offset:112
 ; FAST90A-NEXT:    global_store_dwordx4 v0, v[18:21], s[0:1] offset:64
@@ -696,7 +700,8 @@ define amdgpu_kernel void @test_mfma_f32_16x16x1f32(ptr addrspace(1) %arg) #0 {
 ; FAST90A-NEXT:    v_pk_mov_b32 v[10:11], v[24:25], v[24:25] op_sel:[0,1]
 ; FAST90A-NEXT:    v_pk_mov_b32 v[12:13], v[26:27], v[26:27] op_sel:[0,1]
 ; FAST90A-NEXT:    v_pk_mov_b32 v[14:15], v[28:29], v[28:29] op_sel:[0,1]
-; FAST90A-NEXT:    v_pk_mov_b32 v[16:17], v[30:31], v[30:31] op_sel:[0,1]
+; FAST90A-NEXT:    v_mov_b32_e32 v16, v30
+; FAST90A-NEXT:    v_mov_b32_e32 v17, v31
 ; FAST90A-NEXT:    s_nop 1
 ; FAST90A-NEXT:    v_mfma_f32_16x16x1f32 v[2:17], v0, v1, v[2:17]
 ; FAST90A-NEXT:    v_mov_b32_e32 v0, 0

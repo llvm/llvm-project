@@ -49,8 +49,7 @@ define <3 x float> @extract_subvector_v3f32_v33f32_elt30_0(ptr addrspace(1) %ptr
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off offset:112 sc0 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    v_mov_b32_e32 v0, v6
-; GFX942-NEXT:    v_mov_b32_e32 v1, v7
+; GFX942-NEXT:    v_mov_b64_e32 v[0:1], v[6:7]
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %val = load volatile <33 x float>, ptr addrspace(1) %ptr, align 4
   %extract.subvector = shufflevector <33 x float> %val, <33 x float> poison, <3 x i32> <i32 30, i32 31, i32 32>
@@ -89,8 +88,7 @@ define <3 x float> @extract_subvector_v3f32_v33f32_elt30_1(ptr addrspace(1) %ptr
 ; GFX942-NEXT:    s_waitcnt vmcnt(2)
 ; GFX942-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0
 ; GFX942-NEXT:    s_waitcnt vmcnt(2)
-; GFX942-NEXT:    v_mov_b32_e32 v0, v10
-; GFX942-NEXT:    v_mov_b32_e32 v1, v11
+; GFX942-NEXT:    v_mov_b64_e32 v[0:1], v[10:11]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %val = load <33 x float>, ptr addrspace(1) %ptr, align 4
@@ -132,8 +130,7 @@ define <6 x float> @extract_subvector_v6f32_v36f32_elt30(ptr addrspace(1) %ptr) 
 ; GFX942-NEXT:    s_waitcnt vmcnt(2)
 ; GFX942-NEXT:    buffer_store_dwordx4 v[6:9], off, s[0:3], 0
 ; GFX942-NEXT:    s_waitcnt vmcnt(2)
-; GFX942-NEXT:    v_mov_b32_e32 v0, v12
-; GFX942-NEXT:    v_mov_b32_e32 v1, v13
+; GFX942-NEXT:    v_mov_b64_e32 v[0:1], v[12:13]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %val = load <36 x float>, ptr addrspace(1) %ptr, align 4
@@ -172,8 +169,7 @@ define <3 x float> @issue153808_vector_extract_assert(ptr addrspace(1) %ptr) #0 
 ; GFX942-NEXT:    s_waitcnt vmcnt(1)
 ; GFX942-NEXT:    buffer_store_dwordx4 v[6:9], off, s[0:3], 0
 ; GFX942-NEXT:    s_waitcnt vmcnt(1)
-; GFX942-NEXT:    v_mov_b32_e32 v0, v2
-; GFX942-NEXT:    v_mov_b32_e32 v1, v3
+; GFX942-NEXT:    v_mov_b64_e32 v[0:1], v[2:3]
 ; GFX942-NEXT:    v_mov_b32_e32 v2, v4
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]

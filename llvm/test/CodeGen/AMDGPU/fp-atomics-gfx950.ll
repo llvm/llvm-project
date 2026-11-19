@@ -19,8 +19,8 @@ define amdgpu_ps float @struct_buffer_atomic_add_v2bf16_ret(<2 x bfloat> %val, <
 ;
 ; GFX950-GISEL-LABEL: struct_buffer_atomic_add_v2bf16_ret:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_pk_mov_b32 v[2:3], v[0:1], v[2:3] op_sel:[1,0]
-; GFX950-GISEL-NEXT:    buffer_atomic_pk_add_bf16 v0, v[2:3], s[0:3], s4 idxen offen sc0
+; GFX950-GISEL-NEXT:    v_pk_mov_b32 v[4:5], v[0:1], v[2:3] op_sel:[1,0]
+; GFX950-GISEL-NEXT:    buffer_atomic_pk_add_bf16 v0, v[4:5], s[0:3], s4 idxen offen sc0
 ; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], 0
 ; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-GISEL-NEXT:    flat_store_dword v[2:3], v0
@@ -41,8 +41,8 @@ define amdgpu_ps void @struct_buffer_atomic_add_v2bf16_noret(<2 x bfloat> %val, 
 ;
 ; GFX950-GISEL-LABEL: struct_buffer_atomic_add_v2bf16_noret:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_pk_mov_b32 v[2:3], v[0:1], v[2:3] op_sel:[1,0]
-; GFX950-GISEL-NEXT:    buffer_atomic_pk_add_bf16 v0, v[2:3], s[0:3], s4 idxen offen
+; GFX950-GISEL-NEXT:    v_pk_mov_b32 v[4:5], v[0:1], v[2:3] op_sel:[1,0]
+; GFX950-GISEL-NEXT:    buffer_atomic_pk_add_bf16 v0, v[4:5], s[0:3], s4 idxen offen
 ; GFX950-GISEL-NEXT:    s_endpgm
   %orig = call <2 x bfloat> @llvm.amdgcn.struct.buffer.atomic.fadd.v2bf16(<2 x bfloat> %val, <4 x i32> %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
   ret void

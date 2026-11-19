@@ -78,8 +78,9 @@ define amdgpu_kernel void @not_enough_agprs(ptr addrspace(1) %arg) #2 {
 ; HEURRC-LABEL: not_enough_agprs:
 ; HEURRC:       ; %bb.0: ; %bb
 ; HEURRC-NEXT:    s_load_dwordx2 s[34:35], s[4:5], 0x24
-; HEURRC-NEXT:    v_mov_b32_e32 v32, 1.0
-; HEURRC-NEXT:    v_mov_b32_e32 v33, 2.0
+; HEURRC-NEXT:    v_mov_b32_e32 v33, 1.0
+; HEURRC-NEXT:    v_mov_b32_e32 v34, 2.0
+; HEURRC-NEXT:    v_mov_b32_e32 v32, 0
 ; HEURRC-NEXT:    s_waitcnt lgkmcnt(0)
 ; HEURRC-NEXT:    s_load_dwordx16 s[16:31], s[34:35], 0x0
 ; HEURRC-NEXT:    s_load_dwordx16 s[0:15], s[34:35], 0x40
@@ -101,10 +102,9 @@ define amdgpu_kernel void @not_enough_agprs(ptr addrspace(1) %arg) #2 {
 ; HEURRC-NEXT:    v_mov_b64_e32 v[28:29], s[12:13]
 ; HEURRC-NEXT:    v_mov_b64_e32 v[30:31], s[14:15]
 ; HEURRC-NEXT:    s_nop 1
-; HEURRC-NEXT:    v_mfma_f32_32x32x1_2b_f32 v[0:31], v32, v33, v[0:31] cbsz:1 abid:2 blgp:3
-; HEURRC-NEXT:    v_mov_b32_e32 v32, 0
+; HEURRC-NEXT:    v_mfma_f32_32x32x1_2b_f32 v[0:31], v33, v34, v[0:31] cbsz:1 abid:2 blgp:3
 ; HEURRC-NEXT:    s_nop 15
-; HEURRC-NEXT:    s_nop 0
+; HEURRC-NEXT:    s_nop 1
 ; HEURRC-NEXT:    global_store_dwordx4 v32, v[24:27], s[34:35] offset:96
 ; HEURRC-NEXT:    global_store_dwordx4 v32, v[28:31], s[34:35] offset:112
 ; HEURRC-NEXT:    global_store_dwordx4 v32, v[16:19], s[34:35] offset:64
@@ -118,8 +118,9 @@ define amdgpu_kernel void @not_enough_agprs(ptr addrspace(1) %arg) #2 {
 ; VGPRRC-LABEL: not_enough_agprs:
 ; VGPRRC:       ; %bb.0: ; %bb
 ; VGPRRC-NEXT:    s_load_dwordx2 s[34:35], s[4:5], 0x24
-; VGPRRC-NEXT:    v_mov_b32_e32 v32, 1.0
-; VGPRRC-NEXT:    v_mov_b32_e32 v33, 2.0
+; VGPRRC-NEXT:    v_mov_b32_e32 v33, 1.0
+; VGPRRC-NEXT:    v_mov_b32_e32 v34, 2.0
+; VGPRRC-NEXT:    v_mov_b32_e32 v32, 0
 ; VGPRRC-NEXT:    s_waitcnt lgkmcnt(0)
 ; VGPRRC-NEXT:    s_load_dwordx16 s[16:31], s[34:35], 0x0
 ; VGPRRC-NEXT:    s_load_dwordx16 s[0:15], s[34:35], 0x40
@@ -141,10 +142,9 @@ define amdgpu_kernel void @not_enough_agprs(ptr addrspace(1) %arg) #2 {
 ; VGPRRC-NEXT:    v_mov_b64_e32 v[28:29], s[12:13]
 ; VGPRRC-NEXT:    v_mov_b64_e32 v[30:31], s[14:15]
 ; VGPRRC-NEXT:    s_nop 1
-; VGPRRC-NEXT:    v_mfma_f32_32x32x1_2b_f32 v[0:31], v32, v33, v[0:31] cbsz:1 abid:2 blgp:3
-; VGPRRC-NEXT:    v_mov_b32_e32 v32, 0
+; VGPRRC-NEXT:    v_mfma_f32_32x32x1_2b_f32 v[0:31], v33, v34, v[0:31] cbsz:1 abid:2 blgp:3
 ; VGPRRC-NEXT:    s_nop 15
-; VGPRRC-NEXT:    s_nop 0
+; VGPRRC-NEXT:    s_nop 1
 ; VGPRRC-NEXT:    global_store_dwordx4 v32, v[24:27], s[34:35] offset:96
 ; VGPRRC-NEXT:    global_store_dwordx4 v32, v[28:31], s[34:35] offset:112
 ; VGPRRC-NEXT:    global_store_dwordx4 v32, v[16:19], s[34:35] offset:64
@@ -216,22 +216,14 @@ define <16 x float> @mfma_scale_respect_flag(<8 x i32> %arg0, <8 x i32> %arg1, <
 ; VGPRRC-NEXT:    v_mfma_scale_f32_32x32x64_f8f6f4 v[16:31], v[0:7], v[8:15], v[16:31], v33, v32 op_sel_hi:[0,0,0]
 ; VGPRRC-NEXT:    s_nop 15
 ; VGPRRC-NEXT:    s_nop 3
-; VGPRRC-NEXT:    v_mov_b32_e32 v0, v16
-; VGPRRC-NEXT:    v_mov_b32_e32 v1, v17
-; VGPRRC-NEXT:    v_mov_b32_e32 v2, v18
-; VGPRRC-NEXT:    v_mov_b32_e32 v3, v19
-; VGPRRC-NEXT:    v_mov_b32_e32 v4, v20
-; VGPRRC-NEXT:    v_mov_b32_e32 v5, v21
-; VGPRRC-NEXT:    v_mov_b32_e32 v6, v22
-; VGPRRC-NEXT:    v_mov_b32_e32 v7, v23
-; VGPRRC-NEXT:    v_mov_b32_e32 v8, v24
-; VGPRRC-NEXT:    v_mov_b32_e32 v9, v25
-; VGPRRC-NEXT:    v_mov_b32_e32 v10, v26
-; VGPRRC-NEXT:    v_mov_b32_e32 v11, v27
-; VGPRRC-NEXT:    v_mov_b32_e32 v12, v28
-; VGPRRC-NEXT:    v_mov_b32_e32 v13, v29
-; VGPRRC-NEXT:    v_mov_b32_e32 v14, v30
-; VGPRRC-NEXT:    v_mov_b32_e32 v15, v31
+; VGPRRC-NEXT:    v_mov_b64_e32 v[0:1], v[16:17]
+; VGPRRC-NEXT:    v_mov_b64_e32 v[2:3], v[18:19]
+; VGPRRC-NEXT:    v_mov_b64_e32 v[4:5], v[20:21]
+; VGPRRC-NEXT:    v_mov_b64_e32 v[6:7], v[22:23]
+; VGPRRC-NEXT:    v_mov_b64_e32 v[8:9], v[24:25]
+; VGPRRC-NEXT:    v_mov_b64_e32 v[10:11], v[26:27]
+; VGPRRC-NEXT:    v_mov_b64_e32 v[12:13], v[28:29]
+; VGPRRC-NEXT:    v_mov_b64_e32 v[14:15], v[30:31]
 ; VGPRRC-NEXT:    s_setpc_b64 s[30:31]
   %result = call <16 x float> @llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4.v8i32.v8i32(<8 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2,
                                                                                       i32 0, ; cbsz

@@ -79,9 +79,8 @@ define amdgpu_kernel void @swp_amdgpu_pipeline_minimal(i1 %arg) {
 ; CHECK-PIPELINED-NEXT:  ; %bb.1: ; %bb1
 ; CHECK-PIPELINED-NEXT:    s_cmp_lt_i32 s6, 1
 ; CHECK-PIPELINED-NEXT:    s_cselect_b64 s[6:7], -1, 0
-; CHECK-PIPELINED-NEXT:    v_mov_b32_e32 v8, s10
 ; CHECK-PIPELINED-NEXT:    s_or_b32 s11, s9, 1
-; CHECK-PIPELINED-NEXT:    v_mov_b32_e32 v9, s11
+; CHECK-PIPELINED-NEXT:    v_mov_b64_e32 v[8:9], s[10:11]
 ; CHECK-PIPELINED-NEXT:    buffer_load_dword v6, v8, s[0:3], 0 offen
 ; CHECK-PIPELINED-NEXT:    buffer_load_dword v7, v9, s[0:3], 0 offen
 ; CHECK-PIPELINED-NEXT:    s_and_b64 s[6:7], vcc, s[6:7]
@@ -114,14 +113,11 @@ define amdgpu_kernel void @swp_amdgpu_pipeline_minimal(i1 %arg) {
 ; CHECK-PIPELINED-NEXT:    s_cselect_b64 s[14:15], -1, 0
 ; CHECK-PIPELINED-NEXT:    s_or_b32 s13, s11, 1
 ; CHECK-PIPELINED-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-PIPELINED-NEXT:    v_mov_b32_e32 v11, v5
+; CHECK-PIPELINED-NEXT:    v_mov_b64_e32 v[10:11], v[4:5]
 ; CHECK-PIPELINED-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-PIPELINED-NEXT:    v_mov_b32_e32 v5, v7
+; CHECK-PIPELINED-NEXT:    v_mov_b64_e32 v[4:5], v[6:7]
 ; CHECK-PIPELINED-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-PIPELINED-NEXT:    v_mov_b32_e32 v7, v9
-; CHECK-PIPELINED-NEXT:    v_mov_b32_e32 v10, v4
-; CHECK-PIPELINED-NEXT:    v_mov_b32_e32 v4, v6
-; CHECK-PIPELINED-NEXT:    v_mov_b32_e32 v6, v8
+; CHECK-PIPELINED-NEXT:    v_mov_b64_e32 v[6:7], v[8:9]
 ; CHECK-PIPELINED-NEXT:    v_mov_b32_e32 v8, s12
 ; CHECK-PIPELINED-NEXT:    v_mov_b32_e32 v9, s13
 ; CHECK-PIPELINED-NEXT:    buffer_load_dword v8, v8, s[0:3], 0 offen

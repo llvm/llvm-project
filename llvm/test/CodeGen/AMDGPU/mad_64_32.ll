@@ -1485,8 +1485,7 @@ define i48 @mad_i48_i48(i48 %arg0, i48 %arg1, i48 %arg2) #0 {
 ; GFX9-LABEL: mad_i48_i48:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v6, v1
-; GFX9-NEXT:    v_mov_b32_e32 v7, v0
+; GFX9-NEXT:    v_pk_mov_b32 v[6:7], v[0:1], v[0:1] op_sel:[1,0]
 ; GFX9-NEXT:    v_mad_u64_u32 v[0:1], s[4:5], v7, v2, v[4:5]
 ; GFX9-NEXT:    v_mul_lo_u32 v3, v7, v3
 ; GFX9-NEXT:    v_mul_lo_u32 v2, v6, v2
@@ -2108,8 +2107,7 @@ define i64 @lshr_mad_i64_negative_4(i64 %arg0) #0 {
 ; GFX9-NEXT:    v_mad_u64_u32 v[2:3], s[4:5], v1, v0, v[0:1]
 ; GFX9-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX9-NEXT:    v_mad_u64_u32 v[4:5], s[4:5], v1, v1, v[0:1]
-; GFX9-NEXT:    v_mov_b32_e32 v0, v2
-; GFX9-NEXT:    v_mov_b32_e32 v1, v4
+; GFX9-NEXT:    v_pk_mov_b32 v[0:1], v[2:3], v[4:5]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1100-LABEL: lshr_mad_i64_negative_4:

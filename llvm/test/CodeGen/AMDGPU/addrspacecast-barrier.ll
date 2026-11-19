@@ -24,8 +24,7 @@ define amdgpu_kernel void @barrier_to_generic(ptr addrspace(15) %bar, ptr %out) 
 ; GFX942-SDAG-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX942-SDAG-NEXT:    s_cselect_b32 s1, s1, 0
 ; GFX942-SDAG-NEXT:    s_cselect_b32 s0, s0, 0
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v2, s0
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v3, s1
+; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
 ; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX942-SDAG-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; GFX942-SDAG-NEXT:    s_endpgm

@@ -572,8 +572,8 @@ define void @flat_atomic_cmpxchg_i64_ret_a_a__a(ptr %ptr) #0 {
 ; CHECK-NEXT:  ; %bb.1: ; %atomicrmw.global
 ; CHECK-NEXT:    v_accvgpr_read_b32 v2, a4
 ; CHECK-NEXT:    v_accvgpr_read_b32 v3, a5
-; CHECK-NEXT:    v_accvgpr_read_b32 v5, a3
 ; CHECK-NEXT:    v_accvgpr_read_b32 v4, a2
+; CHECK-NEXT:    v_accvgpr_read_b32 v5, a3
 ; CHECK-NEXT:    buffer_wbl2
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[0:1], v[2:5] glc
@@ -642,8 +642,8 @@ define void @flat_atomic_cmpxchg_i64_ret_a_a__v(ptr %ptr) #0 {
 ; CHECK-NEXT:  ; %bb.1: ; %atomicrmw.global
 ; CHECK-NEXT:    v_accvgpr_read_b32 v2, a2
 ; CHECK-NEXT:    v_accvgpr_read_b32 v3, a3
-; CHECK-NEXT:    v_accvgpr_read_b32 v5, a1
 ; CHECK-NEXT:    v_accvgpr_read_b32 v4, a0
+; CHECK-NEXT:    v_accvgpr_read_b32 v5, a1
 ; CHECK-NEXT:    buffer_wbl2
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    flat_atomic_cmpswap_x2 v[2:3], v[0:1], v[2:5] glc
@@ -766,8 +766,8 @@ define void @flat_atomic_cmpxchg_i64_ret_a_v__v(ptr %ptr) #0 {
 ; CHECK-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; CHECK-NEXT:    s_cbranch_execz .LBB18_2
 ; CHECK-NEXT:  ; %bb.1: ; %atomicrmw.global
-; CHECK-NEXT:    v_accvgpr_read_b32 v3, a1
 ; CHECK-NEXT:    v_accvgpr_read_b32 v2, a0
+; CHECK-NEXT:    v_accvgpr_read_b32 v3, a1
 ; CHECK-NEXT:    buffer_wbl2
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    flat_atomic_cmpswap_x2 v[2:3], v[4:5], v[0:3] glc
@@ -1065,8 +1065,8 @@ define void @flat_atomic_cmpxchg_i64_ret_a_av__av(ptr %ptr) #0 {
 ; CHECK-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; CHECK-NEXT:    s_cbranch_execz .LBB23_2
 ; CHECK-NEXT:  ; %bb.1: ; %atomicrmw.global
-; CHECK-NEXT:    v_accvgpr_read_b32 v3, a1
 ; CHECK-NEXT:    v_accvgpr_read_b32 v2, a0
+; CHECK-NEXT:    v_accvgpr_read_b32 v3, a1
 ; CHECK-NEXT:    buffer_wbl2
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    flat_atomic_cmpswap_x2 v[2:3], v[4:5], v[0:3] glc

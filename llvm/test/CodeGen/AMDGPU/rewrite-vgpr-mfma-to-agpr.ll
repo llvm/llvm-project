@@ -373,23 +373,22 @@ define amdgpu_kernel void @illegal_mfma_after_rewrite() #1 {
 ; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[4:7], v[22:23], v[22:23], v[0:3]
 ; CHECK-NEXT:    v_mov_b64_e32 v[24:25], s[0:1]
 ; CHECK-NEXT:    v_mov_b32_e32 v11, v10
-; CHECK-NEXT:    v_mov_b32_e32 v12, v10
+; CHECK-NEXT:    v_pk_mov_b32 v[12:13], v[10:11], v[10:11]
 ; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[4:7], v[22:23], v[22:23], v[4:7]
-; CHECK-NEXT:    v_mov_b32_e32 v13, v10
 ; CHECK-NEXT:    s_mov_b32 s0, 0x7e007e00
 ; CHECK-NEXT:    s_mov_b32 s1, s0
-; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[6:9], v[22:23], v[24:25], v[0:3]
 ; CHECK-NEXT:    v_mov_b64_e32 v[26:27], s[0:1]
+; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[6:9], v[22:23], v[24:25], v[0:3]
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def v[14:17]
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    s_nop 1
+; CHECK-NEXT:    s_nop 2
 ; CHECK-NEXT:    v_cvt_f16_f32_e32 v21, v4
-; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[6:9], v[22:23], v[22:23], v[6:9]
 ; CHECK-NEXT:    v_mov_b64_e32 v[18:19], 0
+; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[6:9], v[22:23], v[22:23], v[6:9]
 ; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[8:11], v[22:23], v[22:23], v[10:13]
 ; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[0:3], v[22:23], v[26:27], v[0:3]
-; CHECK-NEXT:    s_nop 3
+; CHECK-NEXT:    s_nop 4
 ; CHECK-NEXT:    v_cvt_f16_f32_e32 v20, v6
 ; CHECK-NEXT:    global_store_short v[18:19], v20, off
 ; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[8:11], v[22:23], v[22:23], v[8:11]

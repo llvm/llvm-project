@@ -228,7 +228,6 @@
 ; GCN-O2-NEXT:       si-lower-control-flow
 ; GCN-O2-NEXT:       two-address-instruction
 ; GCN-O2-NEXT:       register-coalescer
-; GCN-O2-NEXT:       si-fold-packed-moves
 ; GCN-O2-NEXT:       rename-independent-subregs
 ; GCN-O2-NEXT:       amdgpu-rewrite-partial-reg-uses
 ; GCN-O2-NEXT:       machine-scheduler
@@ -254,6 +253,7 @@
 ; GCN-O2-NEXT:       stack-slot-coloring
 ; GCN-O2-NEXT:       machine-cp
 ; GCN-O2-NEXT:       machinelicm
+; GCN-O2-NEXT:       si-fold-packed-moves
 ; GCN-O2-NEXT:       si-fix-vgpr-copies
 ; GCN-O2-NEXT:       si-optimize-exec-masking
 ; GCN-O2-NEXT:       remove-redundant-debug-values
@@ -417,7 +417,6 @@
 ; GCN-O3-NEXT:       si-lower-control-flow
 ; GCN-O3-NEXT:       two-address-instruction
 ; GCN-O3-NEXT:       register-coalescer
-; GCN-O3-NEXT:       si-fold-packed-moves
 ; GCN-O3-NEXT:       rename-independent-subregs
 ; GCN-O3-NEXT:       amdgpu-rewrite-partial-reg-uses
 ; GCN-O3-NEXT:       machine-scheduler
@@ -443,6 +442,7 @@
 ; GCN-O3-NEXT:       stack-slot-coloring
 ; GCN-O3-NEXT:       machine-cp
 ; GCN-O3-NEXT:       machinelicm
+; GCN-O3-NEXT:       si-fold-packed-moves
 ; GCN-O3-NEXT:       si-fix-vgpr-copies
 ; GCN-O3-NEXT:       si-optimize-exec-masking
 ; GCN-O3-NEXT:       remove-redundant-debug-values

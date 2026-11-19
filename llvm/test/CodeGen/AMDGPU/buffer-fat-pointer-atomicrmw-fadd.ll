@@ -839,11 +839,10 @@ define float @buffer_fat_ptr_agent_atomic_fadd_ret_f32__offset__amdgpu_no_fine_g
 ; GFX90A-LABEL: buffer_fat_ptr_agent_atomic_fadd_ret_f32__offset__amdgpu_no_fine_grained_memory:
 ; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX90A-NEXT:    v_mov_b32_e32 v2, v0
+; GFX90A-NEXT:    v_pk_mov_b32 v[2:3], v[0:1], s[20:21]
 ; GFX90A-NEXT:    v_mov_b32_e32 v0, s20
 ; GFX90A-NEXT:    buffer_load_dword v0, v0, s[16:19], 0 offen offset:1024
 ; GFX90A-NEXT:    s_mov_b64 s[4:5], 0
-; GFX90A-NEXT:    v_mov_b32_e32 v3, s20
 ; GFX90A-NEXT:  .LBB3_1: ; %atomicrmw.start
 ; GFX90A-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
@@ -1251,11 +1250,10 @@ define float @buffer_fat_ptr_agent_atomic_fadd_ret_f32__offset(ptr addrspace(7) 
 ; GFX90A-LABEL: buffer_fat_ptr_agent_atomic_fadd_ret_f32__offset:
 ; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX90A-NEXT:    v_mov_b32_e32 v2, v0
+; GFX90A-NEXT:    v_pk_mov_b32 v[2:3], v[0:1], s[20:21]
 ; GFX90A-NEXT:    v_mov_b32_e32 v0, s20
 ; GFX90A-NEXT:    buffer_load_dword v0, v0, s[16:19], 0 offen offset:1024
 ; GFX90A-NEXT:    s_mov_b64 s[4:5], 0
-; GFX90A-NEXT:    v_mov_b32_e32 v3, s20
 ; GFX90A-NEXT:  .LBB5_1: ; %atomicrmw.start
 ; GFX90A-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
@@ -1469,11 +1467,10 @@ define float @buffer_fat_ptr_agent_atomic_fadd_ret_f32__offset__amdgpu_no_remote
 ; GFX90A-LABEL: buffer_fat_ptr_agent_atomic_fadd_ret_f32__offset__amdgpu_no_remote_memory:
 ; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX90A-NEXT:    v_mov_b32_e32 v2, v0
+; GFX90A-NEXT:    v_pk_mov_b32 v[2:3], v[0:1], s[20:21]
 ; GFX90A-NEXT:    v_mov_b32_e32 v0, s20
 ; GFX90A-NEXT:    buffer_load_dword v0, v0, s[16:19], 0 offen offset:1024
 ; GFX90A-NEXT:    s_mov_b64 s[4:5], 0
-; GFX90A-NEXT:    v_mov_b32_e32 v3, s20
 ; GFX90A-NEXT:  .LBB6_1: ; %atomicrmw.start
 ; GFX90A-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
@@ -1687,11 +1684,10 @@ define float @buffer_fat_ptr_agent_atomic_fadd_ret_f32__offset__amdgpu_no_remote
 ; GFX90A-LABEL: buffer_fat_ptr_agent_atomic_fadd_ret_f32__offset__amdgpu_no_remote_memory__amdgpu_ignore_denormal_mode:
 ; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX90A-NEXT:    v_mov_b32_e32 v2, v0
+; GFX90A-NEXT:    v_pk_mov_b32 v[2:3], v[0:1], s[20:21]
 ; GFX90A-NEXT:    v_mov_b32_e32 v0, s20
 ; GFX90A-NEXT:    buffer_load_dword v0, v0, s[16:19], 0 offen offset:1024
 ; GFX90A-NEXT:    s_mov_b64 s[4:5], 0
-; GFX90A-NEXT:    v_mov_b32_e32 v3, s20
 ; GFX90A-NEXT:  .LBB7_1: ; %atomicrmw.start
 ; GFX90A-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
@@ -2394,8 +2390,7 @@ define double @buffer_fat_ptr_agent_atomic_fadd_ret_f64__offset__waterfall__amdg
 ; GFX942-NEXT:  ; %bb.2:
 ; GFX942-NEXT:    s_mov_b64 exec, s[2:3]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    v_mov_b32_e32 v0, v6
-; GFX942-NEXT:    v_mov_b32_e32 v1, v7
+; GFX942-NEXT:    v_mov_b64_e32 v[0:1], v[6:7]
 ; GFX942-NEXT:    buffer_inv sc1
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -2550,8 +2545,7 @@ define double @buffer_fat_ptr_agent_atomic_fadd_ret_f64__offset__waterfall__amdg
 ; GFX90A-NEXT:  ; %bb.2:
 ; GFX90A-NEXT:    s_mov_b64 exec, s[6:7]
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
-; GFX90A-NEXT:    v_mov_b32_e32 v0, v6
-; GFX90A-NEXT:    v_mov_b32_e32 v1, v7
+; GFX90A-NEXT:    v_pk_mov_b32 v[0:1], v[6:7], v[6:7] op_sel:[0,1]
 ; GFX90A-NEXT:    buffer_wbinvl1
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -2919,10 +2913,9 @@ define double @buffer_fat_ptr_agent_atomic_fadd_ret_f64__offset__amdgpu_no_remot
 ; GFX90A-LABEL: buffer_fat_ptr_agent_atomic_fadd_ret_f64__offset__amdgpu_no_remote_memory:
 ; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX90A-NEXT:    v_mov_b32_e32 v4, v0
+; GFX90A-NEXT:    v_pk_mov_b32 v[4:5], v[0:1], v[0:1] op_sel:[0,1]
 ; GFX90A-NEXT:    v_mov_b32_e32 v0, s20
 ; GFX90A-NEXT:    buffer_load_dwordx2 v[8:9], v0, s[16:19], 0 offen offset:2048
-; GFX90A-NEXT:    v_mov_b32_e32 v5, v1
 ; GFX90A-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX90A-NEXT:    v_mov_b32_e32 v10, s20
 ; GFX90A-NEXT:  .LBB11_1: ; %atomicrmw.start
@@ -8173,9 +8166,8 @@ define <2 x half> @buffer_fat_ptr_agent_atomic_fadd_ret_v2f16__offset(ptr addrsp
 ; GFX90A-LABEL: buffer_fat_ptr_agent_atomic_fadd_ret_v2f16__offset:
 ; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX90A-NEXT:    v_mov_b32_e32 v1, s20
 ; GFX90A-NEXT:    v_mov_b32_e32 v2, v0
-; GFX90A-NEXT:    v_mov_b32_e32 v0, s20
+; GFX90A-NEXT:    v_pk_mov_b32 v[0:1], s[20:21], s[20:21]
 ; GFX90A-NEXT:    buffer_load_ushort v3, v1, s[16:19], 0 offen offset:1026
 ; GFX90A-NEXT:    buffer_load_ushort v4, v0, s[16:19], 0 offen offset:1024
 ; GFX90A-NEXT:    s_mov_b64 s[4:5], 0
@@ -8787,9 +8779,8 @@ define <2 x half> @buffer_fat_ptr_agent_atomic_fadd_ret_v2f16__offset__amdgpu_no
 ; GFX90A-LABEL: buffer_fat_ptr_agent_atomic_fadd_ret_v2f16__offset__amdgpu_no_remote_memory:
 ; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX90A-NEXT:    v_mov_b32_e32 v1, s20
 ; GFX90A-NEXT:    v_mov_b32_e32 v2, v0
-; GFX90A-NEXT:    v_mov_b32_e32 v0, s20
+; GFX90A-NEXT:    v_pk_mov_b32 v[0:1], s[20:21], s[20:21]
 ; GFX90A-NEXT:    buffer_load_ushort v3, v1, s[16:19], 0 offen offset:1026
 ; GFX90A-NEXT:    buffer_load_ushort v4, v0, s[16:19], 0 offen offset:1024
 ; GFX90A-NEXT:    s_mov_b64 s[4:5], 0
@@ -13401,11 +13392,10 @@ define float @buffer_fat_ptr_system_atomic_fadd_ret_f32__offset__amdgpu_no_fine_
 ; GFX90A-LABEL: buffer_fat_ptr_system_atomic_fadd_ret_f32__offset__amdgpu_no_fine_grained_memory:
 ; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX90A-NEXT:    v_mov_b32_e32 v2, v0
+; GFX90A-NEXT:    v_pk_mov_b32 v[2:3], v[0:1], s[20:21]
 ; GFX90A-NEXT:    v_mov_b32_e32 v0, s20
 ; GFX90A-NEXT:    buffer_load_dword v0, v0, s[16:19], 0 offen offset:1024
 ; GFX90A-NEXT:    s_mov_b64 s[4:5], 0
-; GFX90A-NEXT:    v_mov_b32_e32 v3, s20
 ; GFX90A-NEXT:  .LBB34_1: ; %atomicrmw.start
 ; GFX90A-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
