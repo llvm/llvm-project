@@ -23,6 +23,7 @@ add_mlir_dialect_library(MLIRArithTransforms
   MLIRAnalysisDataFlow
   MLIRArithCommonConversion
   MLIRArithDialect
+  MLIRArithUtils
   MLIRFuncDialect
   MLIRFuncTransforms
   MLIRInferIntRangeInterface
