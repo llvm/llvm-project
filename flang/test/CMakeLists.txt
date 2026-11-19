@@ -72,6 +72,11 @@ else ()
 endif ()
 
 set(LIT_LOAD_CONFIG "${CMAKE_CURRENT_SOURCE_DIR}/test.lit.cfg")
+if (TARGET llvm-lto)
+  set(FLANG_TEST_HAS_LLVM_LTO 1)
+else()
+  set(FLANG_TEST_HAS_LLVM_LTO 0)
+endif()
 configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
   ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg.py
@@ -123,6 +128,10 @@ if (NOT FLANG_STANDALONE_BUILD)
     split-file
   )
 endif ()
+
+if (TARGET llvm-lto)
+  list(APPEND FLANG_TEST_DEPENDS llvm-lto)
+endif()
 
 if (LLVM_INCLUDE_EXAMPLES AND LLVM_ENABLE_PLUGINS AND NOT (WIN32 OR CYGWIN) AND NOT FLANG_STANDALONE_BUILD)
   list(APPEND FLANG_TEST_DEPENDS Bye)
