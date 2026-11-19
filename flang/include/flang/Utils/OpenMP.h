@@ -10,6 +10,14 @@
 #define FORTRAN_UTILS_OPENMP_H_
 
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include "mlir/IR/IRMapping.h"
+#include "llvm/ADT/DenseMap.h"
+
+#include <vector>
+
+namespace mlir {
+class ConversionPatternRewriter;
+} // namespace mlir
 
 namespace fir {
 class FirOpBuilder;
@@ -91,6 +99,53 @@ mlir::FlatSymbolRefAttr getOrGenImplicitDefaultDeclareMapper(
     fir::RecordType recordType, llvm::StringRef mapperNameStr,
     RecordMemberMapperMangler mangler = {},
     bool emitAllocatableMemberMaps = true);
+
+/// Shape information for a value that is live-in to a loop nest which will be
+/// mapped to a target region. It is recovered from the live-in's defining
+/// `hlfir.declare` (if any) so that a matching declare can be regenerated
+/// inside the target region.
+struct TargetDeclareShapeCreationInfo {
+  // Note: We use `std::vector` (rather than `llvm::SmallVector` as usual) to
+  // interface more easily `ShapeShiftOp::getOrigins()` which returns
+  // `std::vector`.
+  std::vector<mlir::Value> startIndices;
+  std::vector<mlir::Value> extents;
+
+  TargetDeclareShapeCreationInfo(mlir::Value liveIn);
+
+  bool isShapedValue() const {
+    return !extents.empty() || !startIndices.empty();
+  }
+  bool isShapeShiftedValue() const {
+    return !startIndices.empty() && !extents.empty();
+  }
+  bool isShiftedValue() const {
+    return !startIndices.empty() && extents.empty();
+  }
+};
+
+using LiveInShapeInfoMap =
+    llvm::DenseMap<mlir::Value, TargetDeclareShapeCreationInfo>;
+
+/// Build an `omp.map.info` op that maps a value defined outside a target
+/// region (a "live-in") into the region. Handles trivial scalars, character
+/// types, arrays, and Fortran derived types (using an implicit declare mapper
+/// for records with allocatable components).
+mlir::omp::MapInfoOp genMapInfoOpForLiveIn(fir::FirOpBuilder &builder,
+    mlir::Value liveIn, bool isReductionVar = false);
+
+/// Create an `omp.target` op whose region maps the given `mappedVars` (matched
+/// 1:1 with `clauseOps.mapVars`) by regenerating a device-side `hlfir.declare`
+/// for each, populating `mapper` so uses of the live-ins inside the region see
+/// the device-side declares, and cloning/mapping any remaining outsiders.
+///
+/// `loopNestClauseOps`'s loop bounds/steps are also remapped through `mapper`.
+mlir::omp::TargetOp genTargetOp(mlir::Location loc,
+    mlir::ConversionPatternRewriter &rewriter, mlir::IRMapping &mapper,
+    llvm::ArrayRef<mlir::Value> mappedVars,
+    mlir::omp::TargetExtOperands &clauseOps,
+    mlir::omp::LoopNestOperands &loopNestClauseOps,
+    const LiveInShapeInfoMap &liveInShapeInfoMap);
 } // namespace Fortran::utils::openmp
 
 #endif // FORTRAN_UTILS_OPENMP_H_
