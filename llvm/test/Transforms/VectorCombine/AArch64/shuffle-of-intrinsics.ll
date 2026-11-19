@@ -90,10 +90,11 @@ entry:
 
 define <2 x float> @test6(<4 x float> %a1, <4 x float> %b1, <4 x float> %c1, <4 x float> %a2, <4 x float> %b2, <4 x float> %c2) {
 ; CHECK-LABEL: @test6(
-; CHECK-NEXT:    [[F1:%.*]] = call <4 x float> @llvm.fma.v4f32(<4 x float> [[A1:%.*]], <4 x float> [[B1:%.*]], <4 x float> [[C1:%.*]])
-; CHECK-NEXT:    [[F2:%.*]] = call <4 x float> @llvm.fma.v4f32(<4 x float> [[A2:%.*]], <4 x float> [[B2:%.*]], <4 x float> [[C2:%.*]])
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x float> [[F1]], <4 x float> [[F2]], <2 x i32> <i32 0, i32 4>
-; CHECK-NEXT:    ret <2 x float> [[S]]
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x float> [[F1:%.*]], <4 x float> [[F2:%.*]], <2 x i32> <i32 0, i32 4>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[B1:%.*]], <4 x float> [[B2:%.*]], <2 x i32> <i32 0, i32 4>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[C1:%.*]], <4 x float> [[C2:%.*]], <2 x i32> <i32 0, i32 4>
+; CHECK-NEXT:    [[S1:%.*]] = call <2 x float> @llvm.fma.v2f32(<2 x float> [[S]], <2 x float> [[TMP2]], <2 x float> [[TMP3]])
+; CHECK-NEXT:    ret <2 x float> [[S1]]
 ;
   %f1 = call <4 x float> @llvm.fma.v4f32(<4 x float> %a1, <4 x float> %b1, <4 x float> %c1)
   %f2 = call <4 x float> @llvm.fma.v4f32(<4 x float> %a2, <4 x float> %b2, <4 x float> %c2)
