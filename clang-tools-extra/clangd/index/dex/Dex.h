@@ -41,8 +41,13 @@ public:
       : Corpus(0) {
     for (auto &&Sym : Symbols)
       this->Symbols.push_back(&Sym);
-    for (auto &&Ref : Refs)
-      this->Refs.try_emplace(Ref.first, Ref.second);
+    if constexpr (std::is_assignable_v<decltype(this->Refs) &, RefsRange>) {
+      // Take a map that can be assigned as is instead of rehashing every entry.
+      this->Refs = std::forward<RefsRange>(Refs);
+    } else {
+      for (auto &&Ref : Refs)
+        this->Refs.try_emplace(Ref.first, Ref.second);
+    }
     for (auto &&Rel : Relations) {
       this->Relations[std::make_pair(Rel.Subject,
                                      static_cast<uint8_t>(Rel.Predicate))]
