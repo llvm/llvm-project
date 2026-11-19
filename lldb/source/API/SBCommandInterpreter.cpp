@@ -659,7 +659,33 @@ lldb::SBCommand SBCommandInterpreter::AddCommand(
   return lldb::SBCommand();
 }
 
+SBCommandPluginInterface::SBCommandPluginInterface() = default;
+
+SBCommandPluginInterface::~SBCommandPluginInterface() = default;
+
 SBCommand::SBCommand() { LLDB_INSTRUMENT_VA(this); }
+
+SBCommand::SBCommand(const SBCommand &rhs) : m_opaque_sp(rhs.m_opaque_sp) {
+  LLDB_INSTRUMENT_VA(this, rhs);
+}
+
+SBCommand &SBCommand::operator=(const SBCommand &rhs) {
+  LLDB_INSTRUMENT_VA(this, rhs);
+
+  if (this != &rhs)
+    m_opaque_sp = rhs.m_opaque_sp;
+  return *this;
+}
+
+SBCommand::SBCommand(SBCommand &&rhs)
+    : m_opaque_sp(std::move(rhs.m_opaque_sp)) {}
+
+SBCommand &SBCommand::operator=(SBCommand &&rhs) {
+  m_opaque_sp = std::move(rhs.m_opaque_sp);
+  return *this;
+}
+
+SBCommand::~SBCommand() = default;
 
 SBCommand::SBCommand(lldb::CommandObjectSP cmd_sp) : m_opaque_sp(cmd_sp) {}
 

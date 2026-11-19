@@ -10924,13 +10924,17 @@ bool ScalarEvolution::SimplifyICmpOperands(CmpPredicate &Pred, SCEVUse &LHS,
         match(RHS, m_scev_Add(m_scev_Specific(C), m_SCEV(NewRHS)))) {
       const auto *LAdd = cast<SCEVAddExpr>(LHS);
       const auto *RAdd = cast<SCEVAddExpr>(RHS);
-      if (ICmpInst::isEquality(Pred) ||
-          (ICmpInst::isSigned(Pred) && LAdd->hasNoSignedWrap() &&
-           RAdd->hasNoSignedWrap()) ||
-          (ICmpInst::isUnsigned(Pred) && LAdd->hasNoUnsignedWrap() &&
-           RAdd->hasNoUnsignedWrap())) {
+      bool BothNUW = LAdd->hasNoUnsignedWrap() && RAdd->hasNoUnsignedWrap();
+      bool BothNSW = LAdd->hasNoSignedWrap() && RAdd->hasNoSignedWrap();
+      if (ICmpInst::isEquality(Pred) || (ICmpInst::isSigned(Pred) && BothNSW) ||
+          (ICmpInst::isUnsigned(Pred) && BothNUW)) {
         LHS = NewLHS;
         RHS = NewRHS;
+        // Nothing follows about the signs of A and B themselves, as adding K
+        // may move either A or B across the sign boundary, unless both adds are
+        // guaranteed not to wrap in either domain.
+        if (!(BothNUW && BothNSW))
+          Pred = Pred.dropSameSign();
         Changed = true;
       }
     }

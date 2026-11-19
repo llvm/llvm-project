@@ -305,6 +305,7 @@ add_header_library(
   DEPENDS
     .ctype_utils
     .high_precision_decimal
+    .math_extras
     .str_to_integer
     .str_to_num_result
     .uint128
@@ -315,11 +316,15 @@ add_header_library(
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.limits
     libc.src.__support.CPP.optional
+    libc.src.__support.CPP.string_view
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.attributes
     libc.src.__support.macros.config
     libc.src.__support.macros.null_check
     libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.types
 )
 
 add_header_library(

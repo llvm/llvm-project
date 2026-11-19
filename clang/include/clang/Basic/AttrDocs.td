@@ -6979,6 +6979,22 @@ the ABI. This variant aims to pass fixed-length vectors via vector registers,
 if possible, rather than through general-purpose registers.}];
 }
 
+def HexagonHLXVectorStackLimitDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``hlx_vector_stack_limit`` attribute (Hexagon only) sets a limit, in bytes,
+on the HLX vector stack frame of a function. HLX vectors that are stored on the
+stack are placed on a separate stack in VTCM. If the function needs a larger
+vector stack frame, the compiler reports an error.
+
+The attribute overrides the limit set with ``-fhlx-vector-stack-limit=<bytes>``.
+
+.. code-block:: c
+
+  void foo(void) __attribute__((hlx_vector_stack_limit(8192)));
+  }];
+}
+
 def PreferredNameDocs : Documentation {
   let Category = DocCatDecl;
   let Content = [{
