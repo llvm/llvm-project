@@ -603,9 +603,15 @@ void CoreEngine::enqueueStmtNode(ExplodedNode *N,
     return;
   }
 
-  // At this point, we know we're processing a normal statement.
-  CFGStmt CS = (*Block)[Idx].castAs<CFGStmt>();
-  PostStmt Loc(CS.getStmt(), N->getStackFrame());
+  // At this point, we know we're processing a normal statement from a CFGStmt
+  // or the pseudo CallExpr from CFGCleanupFunction.
+  const Stmt *S = nullptr;
+  if (std::optional<CFGStmt> CS = (*Block)[Idx].getAs<CFGStmt>())
+    S = CS->getStmt();
+  else if (std::optional<CFGCleanupFunction> CF =
+               (*Block)[Idx].getAs<CFGCleanupFunction>())
+    S = CF->getPseudoCallExpr();
+  PostStmt Loc(S, N->getStackFrame());
 
   if (Loc == N->getLocation().withTag(nullptr)) {
     // Note: 'N' should be a fresh node because otherwise it shouldn't be
