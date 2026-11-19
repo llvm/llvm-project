@@ -146,7 +146,9 @@ LogicalResult loopUnrollFull(scf::ForOp forOp);
 /// due to invalid unroll factors. In case of unroll factor of 1, the function
 /// bails out without doing anything (returns success). Currently, only constant
 /// trip count that are divided by the unroll factor is supported. Currently,
-/// for operations with results are not supported.
+/// for operations with results are not supported. If an inner `scf.for` is
+/// jammed, the loop must have no recursively nested memory effects other than
+/// reads. Loops with other or unknown effects are rejected conservatively.
 LogicalResult loopUnrollJamByFactor(scf::ForOp forOp, uint64_t unrollFactor);
 
 /// Materialize bounds and step of a zero-based and unit-step loop derived by
