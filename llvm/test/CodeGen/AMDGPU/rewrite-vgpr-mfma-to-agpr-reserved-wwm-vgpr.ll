@@ -13,8 +13,8 @@
 
 ; PRE and POST bracket AMDGPURewriteAGPRCopyMFMA: it must find the lane, a
 ; VGPR-form MFMA and the spill, and leave the MFMA rewritten and the spill in
-; place. CHECK requires the lanes in v31, the spill around the second clobber
-; and both spill counts in the final code.
+; place. CHECK requires the lanes in v31, the spill around the second clobber,
+; SGPR spills and exactly one VGPR spill, so no other spill can mask this one.
 ; PRE: $vgpr31 = SI_SPILL_S32_TO_VGPR
 ; PRE: V_MFMA_I32_4X4X4I8_vgprcd_e64
 ; PRE: SI_SPILL_AV32_SAVE
@@ -28,7 +28,7 @@
 ; CHECK: ; clobber vgprs and agprs
 ; CHECK: scratch_load_dword v{{[0-9]+}}, off, off ; 4-byte Folded Reload
 ; CHECK: .sgpr_spill_count: {{[1-9][0-9]*}}
-; CHECK: .vgpr_spill_count: {{[1-9][0-9]*}}
+; CHECK: .vgpr_spill_count: 1
 
 define amdgpu_kernel void @reserved_wwm_vgpr_not_in_alloc_order(ptr addrspace(1) %ptr) #0 {
   %sgpr = call i32 asm sideeffect "; def $0", "=s"()

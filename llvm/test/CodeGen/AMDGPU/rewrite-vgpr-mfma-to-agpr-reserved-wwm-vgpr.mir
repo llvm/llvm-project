@@ -10,8 +10,9 @@
 # %6 a spill slot for which only the reserved $vgpr31 has no interference.
 # Assigning it, by the allocator or by the spill elimination, fails an assertion
 # in VirtRegMap or, without assertions, the machine verifier. Regenerated checks
-# must keep V_MFMA_I32_4X4X4I8_e64 and SI_SPILL_AV32_SAVE: without them, the
-# scenario is gone.
+# must keep V_MFMA_I32_4X4X4I8_e64 (the MFMA was not rewritten, so no spill
+# elimination runs) and SI_SPILL_AV32_SAVE (no spill): without them, the
+# intended scenario is gone.
 
 --- |
   define amdgpu_kernel void @reserved_wwm_vgpr_not_in_alloc_order() #0 {
