@@ -3,9 +3,9 @@
 ; RUN:   -verify-machineinstrs -target-abi=ilp32d | FileCheck %s --check-prefixes=OVERLAP
 ; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -mattr=+v \
 ; RUN:   -verify-machineinstrs -target-abi=lp64d | FileCheck %s --check-prefixes=OVERLAP
-; RUN: sed 's/iXLen/i32/g' %s | llc -mtriple=riscv32 -mattr=+v,+fix-sifive-mal-9174-mal-9191 \
+; RUN: sed 's/iXLen/i32/g' %s | llc -mtriple=riscv32 -mattr=+v,+fix-sifive-mal-9174 \
 ; RUN:   -verify-machineinstrs -target-abi=ilp32d | FileCheck %s --check-prefixes=NOOVERLAP
-; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -mattr=+v,+fix-sifive-mal-9174-mal-9191 \
+; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -mattr=+v,+fix-sifive-mal-9174 \
 ; RUN:   -verify-machineinstrs -target-abi=lp64d | FileCheck %s --check-prefixes=NOOVERLAP
 ; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -mcpu=sifive-p870-d \
 ; RUN:   -verify-machineinstrs -target-abi=lp64d | FileCheck %s --check-prefixes=NOOVERLAP

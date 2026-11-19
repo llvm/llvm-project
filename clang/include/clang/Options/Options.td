@@ -5924,13 +5924,18 @@ def mzilsd_word_align : Flag<["-"], "mzilsd-word-align">, Group<m_Group>,
   HelpText<"Allow Zilsd/Zclsd memory accesses to be 4-byte aligned (RISC-V only)">;
 def mzilsd_strict_align : Flag<["-"], "mzilsd-strict-align">, Group<m_Group>,
   HelpText<"Force all Zilsd/Zclsd memory accesses to be 8-byte aligned (RISC-V only)">;
-defm fix_sifive_mal_9174_mal_9191 : BoolOptionWithoutMarshalling<"m", "fix-sifive-mal-9174-mal-9191",
-  PosFlag<SetFalse, [], [],
-          "Workaround SiFive erratum MAL-9174 or MAL-9191 by forcing vector "
-          "indexed loads to have non-">,
-  NegFlag<SetTrue, [], [], "Allow vector indexed loads to have ">,
-  BothFlags<[], [], "overlapping source and destination register groups (RISC-V only)">>,
-  Group<m_Group>;
+def mfix_sifive_mal_9174 : Flag<["-"], "mfix-sifive-mal-9174">, Group<m_Group>,
+  HelpText<"Workaround SiFive erratum MAL-9174 by forcing vector indexed loads "
+           "to have non-overlapping source and destination register groups (RISC-V only)">;
+def mno_fix_sifive_mal_9174 : Flag<["-"], "mno-fix-sifive-mal-9174">, Group<m_Group>,
+  HelpText<"Don't workaround SiFive erratum MAL-9174 (RISC-V only)">;
+def mfix_sifive_mal_9191 : Flag<["-"], "mfix-sifive-mal-9191">, Group<m_Group>,
+  Alias<mfix_sifive_mal_9174>,
+  HelpText<"Workaround SiFive erratum MAL-9191 by forcing vector indexed loads "
+           "to have non-overlapping source and destination register groups (RISC-V only)">;
+def mno_fix_sifive_mal_9191 : Flag<["-"], "mno-fix-sifive-mal-9191">, Group<m_Group>,
+  Alias<mno_fix_sifive_mal_9174>,
+  HelpText<"Don't workaround SiFive erratum MAL-9191 (RISC-V only)">;
 def mno_thumb : Flag<["-"], "mno-thumb">, Group<m_arm_Features_Group>;
 def mrestrict_it: Flag<["-"], "mrestrict-it">, Group<m_arm_Features_Group>,
   HelpText<"Disallow generation of complex IT blocks. It is off by default.">;

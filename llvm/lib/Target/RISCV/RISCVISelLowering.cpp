@@ -28603,7 +28603,7 @@ RISCVTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
 
 void RISCVTargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
                                                         SDNode *Node) const {
-  if (Subtarget.fixSiFiveMAL9174MAL9191()) {
+  if (Subtarget.fixSiFiveMAL9174()) {
     const RISCVVPseudosTable::PseudoInfo *RVV =
         RISCVVPseudosTable::getPseudoInfo(MI.getOpcode());
     if (RVV && (RVV->BaseInstr == RISCV::VLUXEI8_V ||
