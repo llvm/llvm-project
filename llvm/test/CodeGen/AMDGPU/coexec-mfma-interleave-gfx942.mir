@@ -9,7 +9,6 @@ body: |
   bb.0:
     ; CHECK-LABEL: name: mfma_dgemm_16x16x4f64
     ; CHECK: early-clobber %m0:vreg_256_align2 = V_MFMA_F64_16X16X4F64_vgprcd_e64 undef %s0:vreg_64_align2, undef %t0:vreg_64_align2, undef %acc0:vreg_256_align2, 0, 0, 0, implicit $mode, implicit $exec
-    ; CHECK-NEXT: early-clobber %m1:vreg_256_align2 = V_MFMA_F64_16X16X4F64_vgprcd_e64 undef %s1:vreg_64_align2, undef %t1:vreg_64_align2, undef %acc1:vreg_256_align2, 0, 0, 0, implicit $mode, implicit $exec
     ; CHECK-NEXT: %sa0:sgpr_32 = S_ADD_I32 undef $sgpr10, undef $sgpr11, implicit-def $scc
     ; CHECK-NEXT: %sa1:sgpr_32 = S_ADD_I32 undef $sgpr12, undef $sgpr13, implicit-def $scc
     ; CHECK-NEXT: %sa2:sgpr_32 = S_ADD_I32 undef $sgpr14, undef $sgpr15, implicit-def $scc
@@ -17,6 +16,7 @@ body: |
     ; CHECK-NEXT: %sa4:sgpr_32 = S_ADD_I32 undef $sgpr18, undef $sgpr19, implicit-def $scc
     ; CHECK-NEXT: %sa5:sgpr_32 = S_ADD_I32 undef $sgpr20, undef $sgpr21, implicit-def $scc
     ; CHECK-NEXT: %sa6:sgpr_32 = S_ADD_I32 undef $sgpr22, undef $sgpr23, implicit-def $scc
+    ; CHECK-NEXT: early-clobber %m1:vreg_256_align2 = V_MFMA_F64_16X16X4F64_vgprcd_e64 undef %s1:vreg_64_align2, undef %t1:vreg_64_align2, undef %acc1:vreg_256_align2, 0, 0, 0, implicit $mode, implicit $exec
     ; CHECK-NEXT: %sa7:sgpr_32 = S_ADD_I32 undef $sgpr24, undef $sgpr25, implicit-def $scc
     ; CHECK-NEXT: %sa8:sgpr_32 = S_ADD_I32 undef $sgpr26, undef $sgpr27, implicit-def $scc
     ; CHECK-NEXT: %sa9:sgpr_32 = S_ADD_I32 undef $sgpr28, undef $sgpr29, implicit-def $scc

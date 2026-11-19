@@ -48,7 +48,7 @@ TEST_F(AMDGPUMFMACoExecRules, GFX950) {
     if (!Required.test(AMDGPU_MC::Feature_HasGFX950InstsBit))
       continue;
 
-    CoExecInfo Info = getMFMACoExecInfo(Op);
+    CoExecInfo Info = getMFMACoExecInfo(Op, *ST);
     // None of gfx950 MFMAs can co-execute anything in their issue slot and our
     // fallback for unrecognized MFMA instructions is to allow everything in
     // every slot, so here we check that we did not encounter the fallback
@@ -100,22 +100,24 @@ TEST_F(AMDGPUMFMACoExecRules, StartStages) {
       {"gfx950", V_SMFMAC_F32_16X16X64_F16_e64, {1, 2, 3, 4, 8}},
       {"gfx950", V_SMFMAC_F32_32X32X32_F16_e64, {1, 3, 3, 8, 12}},
       {"gfx950", V_MFMA_F64_16X16X4F64_e64, {1, 1, 18, 16, 19}},
-      {"gfx942", V_MFMA_F64_16X16X4F64_e64, {1, 1, 18, 16, 19}},
-      {"gfx950", V_MFMA_F32_4X4X4F16_e64, {0, 0, 0, 0, 9}},
-      {"gfx950", V_MFMA_F32_16X16X16F16_e64, {0, 0, 0, 0, 9}},
-      {"gfx950", V_MFMA_F32_32X32X8F16_e64, {0, 0, 0, 0, 9}},
-      {"gfx950", V_MFMA_F32_32X32X4F16_e64, {0, 0, 0, 0, 9}},
-      {"gfx950", V_SMFMAC_F32_16X16X32_F16_e64, {0, 0, 0, 0, 9}},
-      {"gfx950", V_SMFMAC_F32_32X32X16_F16_e64, {0, 0, 0, 0, 9}},
-      {"gfx950", V_MFMA_F32_4X4X1F32_e64, {0, 0, 0, 0, 9}},
-      {"gfx950", V_MFMA_F32_16X16X4F32_e64, {0, 0, 0, 0, 9}},
-      {"gfx950", V_MFMA_F32_32X32X2F32_e64, {0, 0, 0, 0, 9}},
-      {"gfx950", V_MFMA_F64_4X4X4F64_e64, {0, 0, 0, 0, 9}},
+      {"gfx942", V_MFMA_F64_16X16X4F64_e64, {1, 1, 10, 8, 11}},
+      {"gfx950", V_MFMA_F32_4X4X4F16_e64, {1, 1, 1, 2, 5}},
+      {"gfx950", V_MFMA_F32_16X16X16F16_e64, {1, 1, 1, 4, 7}},
+      {"gfx950", V_MFMA_F32_32X32X8F16_e64, {1, 1, 1, 8, 11}},
+      {"gfx950", V_MFMA_F32_32X32X4F16_e64, {1, 1, 1, 16, 19}},
+      {"gfx950", V_SMFMAC_F32_16X16X32_F16_e64, {1, 2, 2, 4, 7}},
+      {"gfx950", V_SMFMAC_F32_32X32X16_F16_e64, {1, 2, 2, 8, 11}},
+      {"gfx950", V_MFMA_F32_4X4X1F32_e64, {1, 1, 4, 2, 5}},
+      {"gfx950", V_MFMA_F32_16X16X4F32_e64, {1, 1, 10, 8, 11}},
+      {"gfx950", V_MFMA_F32_32X32X2F32_e64, {1, 1, 18, 16, 19}},
+      {"gfx950", V_MFMA_F64_4X4X4F64_e64, {1, 1, 6, 4, 7}},
   };
   for (const Case &C : Cases) {
     std::unique_ptr<GCNTargetMachine> TM =
         createAMDGPUTargetMachine(Triple("amdgpu-amd-amdhsa"), C.CPU, "");
-    CoExecInfo Info = getMFMACoExecInfo(C.Opcode);
+    GCNSubtarget ST(TM->getTargetTriple(), TM->getTargetCPU(),
+                    TM->getTargetFeatureString(), *TM);
+    CoExecInfo Info = getMFMACoExecInfo(C.Opcode, ST);
     Stages Actual = {getFirstStage(Info, CoExecMask::SALU),
                      getFirstStage(Info, CoExecMask::DS | CoExecMask::VMEM),
                      getFirstStage(Info, CoExecMask::VALU),

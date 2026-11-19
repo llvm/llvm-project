@@ -210,7 +210,7 @@ bool GCNHazardRecognizer::hasCoExecWindowModel() const {
       AMDGPU::isGFX1250(ST))
     return true;
 
-  if (ST.hasGFX950Insts() &&
+  if (ST.hasGFX940Insts() &&
       AMDGPU::getSchedStrategy(ST.getCLOpts(), MF.getFunction()) == "coexec")
     return true;
 

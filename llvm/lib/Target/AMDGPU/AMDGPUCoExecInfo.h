@@ -368,8 +368,8 @@ inline CoExecInfo CoExecInfo::build(unsigned UnitOccupancy,
   return Info;
 }
 
-/// Get co-execution info for a gfx950 MFMA instruction.
-CoExecInfo getMFMACoExecInfo(unsigned Opcode);
+/// Get co-execution info for a gfx942 or gfx950 MFMA instruction.
+CoExecInfo getMFMACoExecInfo(unsigned Opcode, const GCNSubtarget &ST);
 
 /// Get co-execution info for a WMMA instruction, selecting the per-cycle slot
 /// pattern from the opcode (and operand formats for the F8F6F4 variants).
@@ -381,7 +381,7 @@ inline CoExecInfo getCoExecInfo(const MachineInstr &MI,
       InstInfo ? InstInfo->CoExecVariant : WMMAVariant::Unknown;
 
   if (TII.isMFMA(Opc))
-    return getMFMACoExecInfo(Opc);
+    return getMFMACoExecInfo(Opc, TII.getSubtarget());
 
   // Scaled variants (LD_SCALE rule) absorb the next WMMA in the last I slot.
   bool HasScaling = InstInfo && InstInfo->HasMatrixScale;

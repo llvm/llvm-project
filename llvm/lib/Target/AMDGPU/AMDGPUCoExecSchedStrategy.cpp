@@ -81,7 +81,8 @@ static CoExecInfo buildMFMACoExecInfo(unsigned SALU, unsigned Mem,
 }
 
 /// Get co-execution info for an MFMA instruction.
-CoExecInfo llvm::AMDGPU::getMFMACoExecInfo(unsigned Opcode) {
+CoExecInfo llvm::AMDGPU::getMFMACoExecInfo(unsigned Opcode,
+                                           const GCNSubtarget &ST) {
   const MAIInstInfo *Info = getMAIInstInfoHelper(Opcode);
   MFMAVariant Variant = Info ? Info->Variant : MFMAVariant::Unknown;
 
@@ -110,22 +111,56 @@ CoExecInfo llvm::AMDGPU::getMFMACoExecInfo(unsigned Opcode) {
     return buildMFMACoExecInfo(/*SALU=*/1, /*Mem=*/3, /*VALU=*/3, /*MFMA=*/8,
                                /*Window=*/12);
   }
-  case MFMAVariant::DGEMM_16x16x4: {
+  case MFMAVariant::XDL_2Pass: {
+    return buildMFMACoExecInfo(/*SALU=*/1, /*Mem=*/1, /*VALU=*/1, /*MFMA=*/2,
+                               /*Window=*/5);
+  }
+  case MFMAVariant::XDL_4Pass: {
+    return buildMFMACoExecInfo(/*SALU=*/1, /*Mem=*/1, /*VALU=*/1, /*MFMA=*/4,
+                               /*Window=*/7);
+  }
+  case MFMAVariant::XDL_8Pass: {
+    return buildMFMACoExecInfo(/*SALU=*/1, /*Mem=*/1, /*VALU=*/1, /*MFMA=*/8,
+                               /*Window=*/11);
+  }
+  case MFMAVariant::XDL_16Pass: {
+    return buildMFMACoExecInfo(/*SALU=*/1, /*Mem=*/1, /*VALU=*/1, /*MFMA=*/16,
+                               /*Window=*/19);
+  }
+  case MFMAVariant::SMFMAC_4Pass: {
+    return buildMFMACoExecInfo(/*SALU=*/1, /*Mem=*/2, /*VALU=*/2, /*MFMA=*/4,
+                               /*Window=*/7);
+  }
+  case MFMAVariant::SMFMAC_8Pass: {
+    return buildMFMACoExecInfo(/*SALU=*/1, /*Mem=*/2, /*VALU=*/2, /*MFMA=*/8,
+                               /*Window=*/11);
+  }
+  case MFMAVariant::SGEMM_2Pass: {
+    return buildMFMACoExecInfo(/*SALU=*/1, /*Mem=*/1, /*VALU=*/4, /*MFMA=*/2,
+                               /*Window=*/5);
+  }
+  case MFMAVariant::SGEMM_8Pass: {
+    return buildMFMACoExecInfo(/*SALU=*/1, /*Mem=*/1, /*VALU=*/10, /*MFMA=*/8,
+                               /*Window=*/11);
+  }
+  case MFMAVariant::SGEMM_16Pass: {
     return buildMFMACoExecInfo(/*SALU=*/1, /*Mem=*/1, /*VALU=*/18, /*MFMA=*/16,
                                /*Window=*/19);
   }
+  case MFMAVariant::DGEMM_4Pass: {
+    return buildMFMACoExecInfo(/*SALU=*/1, /*Mem=*/1, /*VALU=*/6, /*MFMA=*/4,
+                               /*Window=*/7);
+  }
+  case MFMAVariant::DGEMM_16x16x4: {
+    if (ST.hasGFX950Insts()) {
+      return buildMFMACoExecInfo(/*SALU=*/1, /*Mem=*/1, /*VALU=*/18,
+                                 /*MFMA=*/16, /*Window=*/19);
+    }
+    return buildMFMACoExecInfo(/*SALU=*/1, /*Mem=*/1, /*VALU=*/10, /*MFMA=*/8,
+                               /*Window=*/11);
+  }
   case MFMAVariant::Unknown:
-  case MFMAVariant::XDL_2Pass:
-  case MFMAVariant::XDL_4Pass:
-  case MFMAVariant::XDL_8Pass:
-  case MFMAVariant::XDL_16Pass:
-  case MFMAVariant::SMFMAC_4Pass:
-  case MFMAVariant::SMFMAC_8Pass:
-  case MFMAVariant::SGEMM_2Pass:
-  case MFMAVariant::SGEMM_8Pass:
-  case MFMAVariant::SGEMM_16Pass:
-  case MFMAVariant::DGEMM_4Pass:
-    // No co-execution model yet: permissive 9-cycle window.
+    // No co-execution model: permissive 9-cycle window.
     return CoExecInfo::build(0, 9, "AAAAAAAAA");
   }
   llvm_unreachable("unknown MFMA variant");
