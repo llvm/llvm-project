@@ -112,7 +112,7 @@ public:
 
     while (true) {
       auto original_pos = file->tell();
-      auto result = read_line(file, buffer);
+      auto result = read_line(file, buffer.first(buffer.size() - 1));
       if (!result.has_value())
         return Error(result.error());
 
@@ -130,8 +130,10 @@ public:
         return Error(ERANGE);
       }
 
-      // Slicing at bytes_read + 1 includes the terminating null byte written
-      // by read_line; the remainder of the buffer serves as scratch space.
+      buffer[res.bytes_read] = '\0';
+
+      // Slicing at bytes_read + 1 includes the terminating null byte; the
+      // remainder of the buffer serves as scratch space.
       auto parse_res =
           parse_line<EntryType>(buffer.first(res.bytes_read + 1),
                                 buffer.subspan(res.bytes_read + 1), entry);
@@ -170,9 +172,13 @@ public:
       if (res.bytes_read == 0)
         continue;
 
+      if (!buffer.reserve(res.bytes_read + 1))
+        return Error(ENOMEM);
+      buffer.span()[res.bytes_read] = '\0';
+
       while (true) {
-        // Slicing at bytes_read + 1 includes the terminating null byte written
-        // by read_line; the remainder of the buffer serves as scratch space.
+        // Slicing at bytes_read + 1 includes the terminating null byte; the
+        // remainder of the buffer serves as scratch space.
         auto parse_res = parse_line<EntryType>(
             buffer.span().first(res.bytes_read + 1),
             buffer.span().subspan(res.bytes_read + 1), entry);

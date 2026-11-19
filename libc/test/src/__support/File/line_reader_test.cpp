@@ -41,38 +41,56 @@ LIBC_NAMESPACE::File *open_temp(const char *path,
 
 } // namespace
 
-TEST(LlvmLibcLineReaderTest, InvalidArgumentsAndWriteOnlyStream) {
-  char buf[8];
-  auto null_span = LIBC_NAMESPACE::read_line(nullptr, buf);
-  ASSERT_FALSE(null_span.has_value());
-  EXPECT_EQ(null_span.error(), EINVAL);
+TEST(LlvmLibcLineReaderTest, EmptySpanAndWriteOnlyStream) {
+  {
+    const char *path = libc_make_test_file_path("line_reader_empty_span.test");
+    LIBC_NAMESPACE::File *f = open_temp(path, "\na\n");
+    ASSERT_NE(f, nullptr);
+    LIBC_NAMESPACE::cpp::scope_exit cleanup([&]() {
+      f->close();
+      LIBC_NAMESPACE::remove(path);
+    });
 
-  LIBC_NAMESPACE::ScopedDynamicBuffer dyn_buf;
-  auto null_dyn = LIBC_NAMESPACE::read_line(nullptr, dyn_buf);
-  ASSERT_FALSE(null_dyn.has_value());
-  EXPECT_EQ(null_dyn.error(), EINVAL);
+    LIBC_NAMESPACE::cpp::span<char> empty;
+    auto blank = LIBC_NAMESPACE::read_line(f, empty);
+    ASSERT_TRUE(blank.has_value());
+    EXPECT_EQ(blank->bytes_read, size_t{0});
+    EXPECT_FALSE(blank->truncated);
+    EXPECT_FALSE(blank->eof);
 
-  const char *path = libc_make_test_file_path("line_reader_invalid.test");
-  LIBC_NAMESPACE::File *f = open_temp(path, "hello\n", "w");
-  ASSERT_NE(f, nullptr);
-  LIBC_NAMESPACE::cpp::scope_exit cleanup([&]() {
-    f->close();
-    LIBC_NAMESPACE::remove(path);
-  });
+    auto trunc = LIBC_NAMESPACE::read_line(f, empty);
+    ASSERT_TRUE(trunc.has_value());
+    EXPECT_EQ(trunc->bytes_read, size_t{0});
+    EXPECT_TRUE(trunc->truncated);
+    EXPECT_FALSE(trunc->eof);
 
-  char one_byte[1];
-  auto small = LIBC_NAMESPACE::read_line(f, one_byte);
-  ASSERT_FALSE(small.has_value());
-  EXPECT_EQ(small.error(), ERANGE);
+    auto eof = LIBC_NAMESPACE::read_line(f, empty);
+    ASSERT_TRUE(eof.has_value());
+    EXPECT_EQ(eof->bytes_read, size_t{0});
+    EXPECT_FALSE(eof->truncated);
+    EXPECT_TRUE(eof->eof);
+  }
 
-  auto bad_span = LIBC_NAMESPACE::read_line(f, buf);
-  ASSERT_FALSE(bad_span.has_value());
-  EXPECT_EQ(bad_span.error(), EBADF);
+  {
+    const char *path = libc_make_test_file_path("line_reader_wonly.test");
+    LIBC_NAMESPACE::File *f = open_temp(path, "hello\n", "w");
+    ASSERT_NE(f, nullptr);
+    LIBC_NAMESPACE::cpp::scope_exit cleanup([&]() {
+      f->close();
+      LIBC_NAMESPACE::remove(path);
+    });
 
-  auto bad_dyn = LIBC_NAMESPACE::read_line(f, dyn_buf);
-  ASSERT_FALSE(bad_dyn.has_value());
-  EXPECT_EQ(bad_dyn.error(), EBADF);
-  EXPECT_EQ(dyn_buf.capacity(), size_t{0});
+    char buf[8];
+    auto bad_span = LIBC_NAMESPACE::read_line(f, buf);
+    ASSERT_FALSE(bad_span.has_value());
+    EXPECT_EQ(bad_span.error(), EBADF);
+
+    LIBC_NAMESPACE::ScopedDynamicBuffer dyn_buf;
+    auto bad_dyn = LIBC_NAMESPACE::read_line(f, dyn_buf);
+    ASSERT_FALSE(bad_dyn.has_value());
+    EXPECT_EQ(bad_dyn.error(), EBADF);
+    EXPECT_EQ(dyn_buf.capacity(), size_t{0});
+  }
 }
 
 TEST(LlvmLibcLineReaderTest, FixedSpanReadTruncateAndEof) {
@@ -84,41 +102,44 @@ TEST(LlvmLibcLineReaderTest, FixedSpanReadTruncateAndEof) {
     LIBC_NAMESPACE::remove(path);
   });
 
-  // Size 5 holds 4 chars + NUL: "abcd\n" fits, "\n" is blank, "efghi\n"
-  // truncates and drains, "ok" has no trailing newline, then EOF.
-  char buf[5];
+  // 4-byte span: "abcd\n" fits, "\n" is blank, "efghi\n" truncates and drains,
+  // "ok" has no trailing newline, then EOF.
+  char buf[4];
 
   auto r1 = LIBC_NAMESPACE::read_line(f, buf);
   ASSERT_TRUE(r1.has_value());
   EXPECT_EQ(r1->bytes_read, size_t{4});
   EXPECT_FALSE(r1->truncated);
   EXPECT_FALSE(r1->eof);
-  EXPECT_STREQ(buf, "abcd");
+  EXPECT_EQ(LIBC_NAMESPACE::cpp::string_view(buf, r1->bytes_read),
+            LIBC_NAMESPACE::cpp::string_view("abcd"));
 
   auto r2 = LIBC_NAMESPACE::read_line(f, buf);
   ASSERT_TRUE(r2.has_value());
   EXPECT_EQ(r2->bytes_read, size_t{0});
+  EXPECT_FALSE(r2->truncated);
   EXPECT_FALSE(r2->eof);
-  EXPECT_STREQ(buf, "");
 
   auto r3 = LIBC_NAMESPACE::read_line(f, buf);
   ASSERT_TRUE(r3.has_value());
   EXPECT_EQ(r3->bytes_read, size_t{4});
   EXPECT_TRUE(r3->truncated);
-  EXPECT_STREQ(buf, "efgh");
+  EXPECT_EQ(LIBC_NAMESPACE::cpp::string_view(buf, r3->bytes_read),
+            LIBC_NAMESPACE::cpp::string_view("efgh"));
 
   auto r4 = LIBC_NAMESPACE::read_line(f, buf);
   ASSERT_TRUE(r4.has_value());
   EXPECT_EQ(r4->bytes_read, size_t{2});
   EXPECT_FALSE(r4->truncated);
   EXPECT_FALSE(r4->eof);
-  EXPECT_STREQ(buf, "ok");
+  EXPECT_EQ(LIBC_NAMESPACE::cpp::string_view(buf, r4->bytes_read),
+            LIBC_NAMESPACE::cpp::string_view("ok"));
 
   auto r5 = LIBC_NAMESPACE::read_line(f, buf);
   ASSERT_TRUE(r5.has_value());
   EXPECT_EQ(r5->bytes_read, size_t{0});
+  EXPECT_FALSE(r5->truncated);
   EXPECT_TRUE(r5->eof);
-  EXPECT_STREQ(buf, "");
 }
 
 TEST(LlvmLibcLineReaderTest, EmbeddedNullAndCarriageReturnPreserved) {
@@ -136,7 +157,7 @@ TEST(LlvmLibcLineReaderTest, EmbeddedNullAndCarriageReturnPreserved) {
   auto r = LIBC_NAMESPACE::read_line(f, buf);
   ASSERT_TRUE(r.has_value());
   EXPECT_EQ(r->bytes_read, size_t{6});
-  EXPECT_MEM_EQ(MemoryView("ab\0cd\r\0", 7), MemoryView(buf, 7));
+  EXPECT_MEM_EQ(MemoryView("ab\0cd\r", 6), MemoryView(buf, r->bytes_read));
 }
 
 TEST(LlvmLibcLineReaderTest, DynamicBufferGrowthReuseAndEmptyEof) {
@@ -187,5 +208,7 @@ TEST(LlvmLibcLineReaderTest, DynamicBufferGrowthReuseAndEmptyEof) {
   ASSERT_TRUE(r2.has_value());
   EXPECT_EQ(r2->bytes_read, size_t{2});
   EXPECT_EQ(dyn_buf.capacity(), CAP);
-  EXPECT_STREQ(dyn_buf.span().data(), "hi");
+  EXPECT_EQ(
+      LIBC_NAMESPACE::cpp::string_view(dyn_buf.span().data(), r2->bytes_read),
+      LIBC_NAMESPACE::cpp::string_view("hi"));
 }
