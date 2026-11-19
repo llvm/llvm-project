@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Target/LLVMIR/LLVMImportInterface.h"
+#include "mlir/Dialect/LLVMIR/LLVMCallOps.h"
 #include "mlir/Target/LLVMIR/ModuleImport.h"
 
 using namespace mlir;

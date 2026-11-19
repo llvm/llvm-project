@@ -113,6 +113,7 @@ class TestUnregisteredMacho(TestBase):
 
     @no_debug_info_test
     @skipUnlessDarwin
+    @skipIfOutOfTreeDebugserver
     def test_load_command_prefixes_across_cache_boundaries(self):
         target, process = self.start_load_command_fixture()
         for name, version in [
@@ -143,6 +144,7 @@ class TestUnregisteredMacho(TestBase):
 
     @no_debug_info_test
     @skipUnlessDarwin
+    @skipIfOutOfTreeDebugserver
     def test_unreadable_optional_load_command_payloads(self):
         target, process = self.start_load_command_fixture()
         for name in [
@@ -159,6 +161,7 @@ class TestUnregisteredMacho(TestBase):
 
     @no_debug_info_test
     @skipUnlessDarwin
+    @skipIfOutOfTreeDebugserver
     def test_malformed_load_command_prefixes(self):
         target, process = self.start_load_command_fixture()
         for name in [

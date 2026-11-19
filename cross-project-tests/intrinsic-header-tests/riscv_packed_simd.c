@@ -3340,6 +3340,34 @@ int32_t test_mhraccsu_i32(int32_t rd, int32_t rs1, uint32_t rs2) {
   return __riscv_mhraccsu_i32(rd, rs1, rs2);
 }
 
+// CHECK-LABEL: test_mhacc_h0_i32:
+// RV32:        mhacc.h0{{[[:space:]]}}
+// RV64:        pmhacc.w.h0{{[[:space:]]}}
+int32_t test_mhacc_h0_i32(int32_t rd, int32_t rs1, int16x2_t rs2) {
+  return __riscv_mhacc_h0_i32(rd, rs1, rs2);
+}
+
+// CHECK-LABEL: test_mhacc_h1_i32:
+// RV32:        mhacc.h1{{[[:space:]]}}
+// RV64:        pmhacc.w.h1{{[[:space:]]}}
+int32_t test_mhacc_h1_i32(int32_t rd, int32_t rs1, int16x2_t rs2) {
+  return __riscv_mhacc_h1_i32(rd, rs1, rs2);
+}
+
+// CHECK-LABEL: test_mhaccsu_h0_i32:
+// RV32:        mhaccsu.h0{{[[:space:]]}}
+// RV64:        pmhaccsu.w.h0{{[[:space:]]}}
+int32_t test_mhaccsu_h0_i32(int32_t rd, int32_t rs1, uint16x2_t rs2) {
+  return __riscv_mhaccsu_h0_i32(rd, rs1, rs2);
+}
+
+// CHECK-LABEL: test_mhaccsu_h1_i32:
+// RV32:        mhaccsu.h1{{[[:space:]]}}
+// RV64:        pmhaccsu.w.h1{{[[:space:]]}}
+int32_t test_mhaccsu_h1_i32(int32_t rd, int32_t rs1, uint16x2_t rs2) {
+  return __riscv_mhaccsu_h1_i32(rd, rs1, rs2);
+}
+
 // Scalar "Q-format" multiplication
 // CHECK-LABEL: test_mulq_i32:
 // RV32:        mulq{{[[:space:]]}}
@@ -6033,8 +6061,7 @@ int32x2_t test_pset_i32_i32x2(int32x2_t v, int32_t e) {
 
 // CHECK-LABEL: test_pset_u32_u32x2:
 // RV32:         mv{{[[:space:]]}}
-// RV64:         srli{{[[:space:]]}}
-// RV64-NEXT:    pack{{[[:space:]]}}
+// RV64:         ppaireo.w{{[[:space:]]}}
 uint32x2_t test_pset_u32_u32x2(uint32x2_t v, uint32_t e) {
   return __riscv_pset_u32_u32x2(v, e, 0);
 }

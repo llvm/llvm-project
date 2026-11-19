@@ -15,7 +15,7 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMMemoryIntrinsicOps.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
 
@@ -278,16 +278,6 @@ fir::factory::CharacterExprHelper::createElementAddr(mlir::Value buffer,
   auto coor = builder.createConvert(loc, coorTy, buffer);
   auto i = builder.createConvert(loc, builder.getIndexType(), index);
   return fir::CoordinateOp::create(builder, loc, singleRefTy, coor, i);
-}
-
-/// Load a character out of `buff` from offset `index`.
-/// `buff` must be a reference to memory.
-mlir::Value
-fir::factory::CharacterExprHelper::createLoadCharAt(mlir::Value buff,
-                                                    mlir::Value index) {
-  LLVM_DEBUG(llvm::dbgs() << "load a char: " << buff << " type: "
-                          << buff.getType() << " at: " << index << '\n');
-  return fir::LoadOp::create(builder, loc, createElementAddr(buff, index));
 }
 
 /// Store the singleton character `c` to `str` at offset `index`.

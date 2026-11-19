@@ -18,7 +18,6 @@
 # RUN: llc -mcpu=znver6 -mtriple=x86_64-unknown-unknown -run-pass=break-false-deps %s -o - | FileCheck %s --check-prefixes=FAST,ALL
 ---
 name:            blsi32_rr
-registers:       []
 body:             |
   bb.0:
     liveins: $edi, $eax
@@ -39,7 +38,6 @@ body:             |
 ...
 ---
 name:            blsi64_rr
-registers:       []
 body:             |
   bb.0:
     liveins: $rdi, $rax
@@ -60,7 +58,6 @@ body:             |
 ...
 ---
 name:            blsi32_rm
-registers:       []
 body:             |
   bb.0:
     liveins: $rdi, $rax
@@ -81,7 +78,6 @@ body:             |
 ...
 ---
 name:            blsi64_rm
-registers:       []
 body:             |
   bb.0:
     liveins: $rdi, $rax
@@ -102,7 +98,6 @@ body:             |
 ...
 ---
 name:            blsr32_rr
-registers:       []
 body:             |
   bb.0:
     liveins: $edi, $eax
@@ -123,7 +118,6 @@ body:             |
 ...
 ---
 name:            blsr64_rr
-registers:       []
 body:             |
   bb.0:
     liveins: $rdi, $rax
@@ -144,7 +138,6 @@ body:             |
 ...
 ---
 name:            blsr32_rm
-registers:       []
 body:             |
   bb.0:
     liveins: $rdi, $rax
@@ -165,7 +158,6 @@ body:             |
 ...
 ---
 name:            blsr64_rm
-registers:       []
 body:             |
   bb.0:
     liveins: $rdi, $rax
@@ -186,7 +178,6 @@ body:             |
 ...
 ---
 name:            blsmsk32_rr
-registers:       []
 body:             |
   bb.0:
     liveins: $edi, $eax
@@ -207,7 +198,6 @@ body:             |
 ...
 ---
 name:            blsmsk64_rr
-registers:       []
 body:             |
   bb.0:
     liveins: $rdi, $rax
@@ -228,7 +218,6 @@ body:             |
 ...
 ---
 name:            blsmsk32_rm
-registers:       []
 body:             |
   bb.0:
     liveins: $rdi, $rax
@@ -249,7 +238,6 @@ body:             |
 ...
 ---
 name:            blsmsk64_rm
-registers:       []
 body:             |
   bb.0:
     liveins: $rdi, $rax
@@ -270,7 +258,6 @@ body:             |
 ...
 ---
 name:            no_break_blsi32_rr
-registers:       []
 body:             |
   bb.0:
     liveins: $edi
@@ -286,7 +273,6 @@ body:             |
 ...
 ---
 name:            no_break_blsi64_rr
-registers:       []
 body:             |
   bb.0:
     liveins: $rdi
@@ -302,7 +288,6 @@ body:             |
 ...
 ---
 name:            no_break_blsi32_rm
-registers:       []
 body:             |
   bb.0:
     liveins: $rdi
@@ -316,7 +301,6 @@ body:             |
 ...
 ---
 name:            no_break_blsi64_rm
-registers:       []
 body:             |
   bb.0:
     liveins: $rdi
@@ -330,7 +314,6 @@ body:             |
 ...
 ---
 name:            no_break_blsr32_rr
-registers:       []
 body:             |
   bb.0:
     liveins: $edi
@@ -346,7 +329,6 @@ body:             |
 ...
 ---
 name:            no_break_blsr64_rr
-registers:       []
 body:             |
   bb.0:
     liveins: $rdi
@@ -362,7 +344,6 @@ body:             |
 ...
 ---
 name:            no_break_blsr32_rm
-registers:       []
 body:             |
   bb.0:
     liveins: $rdi
@@ -376,7 +357,6 @@ body:             |
 ...
 ---
 name:            no_break_blsr64_rm
-registers:       []
 body:             |
   bb.0:
     liveins: $rdi
@@ -390,7 +370,6 @@ body:             |
 ...
 ---
 name:            no_break_blsmsk32_rr
-registers:       []
 body:             |
   bb.0:
     liveins: $edi
@@ -406,7 +385,6 @@ body:             |
 ...
 ---
 name:            no_break_blsmsk64_rr
-registers:       []
 body:             |
   bb.0:
     liveins: $rdi
@@ -422,7 +400,6 @@ body:             |
 ...
 ---
 name:            no_break_blsmsk32_rm
-registers:       []
 body:             |
   bb.0:
     liveins: $rdi
@@ -436,7 +413,6 @@ body:             |
 ...
 ---
 name:            no_break_blsmsk64_rm
-registers:       []
 body:             |
   bb.0:
     liveins: $rdi

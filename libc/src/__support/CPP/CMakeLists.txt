@@ -8,6 +8,10 @@ add_header_library(
   array
   HDRS
     array.h
+  DEPENDS
+    .iterator
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
 )
 
 add_header_library(
@@ -27,6 +31,11 @@ add_header_library(
   bitset
   HDRS
     bitset.h
+  DEPENDS
+    .span
+    libc.hdr.types.size_t
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
 )
 
 add_header_library(
@@ -59,6 +68,17 @@ add_header_library(
 )
 
 add_header_library(
+  iterator
+  HDRS
+    iterator.h
+  DEPENDS
+    .type_traits
+    libc.hdr.types.size_t
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   limits
   HDRS
     limits.h
@@ -81,7 +101,14 @@ add_header_library(
     span.h
   DEPENDS
     .array
+    .cstddef
+    .iterator
+    .limits
     .type_traits
+    libc.hdr.types.size_t
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
 )
 
 add_header_library(
@@ -120,7 +147,11 @@ add_header_library(
   DEPENDS
     .span
     .string_view
+    .type_traits
+    libc.hdr.types.size_t
     libc.src.__support.integer_to_string
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
 )
 
 add_header_library(
