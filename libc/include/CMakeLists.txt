@@ -1316,6 +1316,9 @@ add_header_macro(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-macros.arpa_nameser_macros
+    .llvm-libc-types.ns_class
+    .llvm-libc-types.ns_sect
+    .llvm-libc-types.ns_type
 )
 
 add_header_macro(
