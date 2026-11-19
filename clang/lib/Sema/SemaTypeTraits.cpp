@@ -2406,6 +2406,41 @@ static void DiagnoseIsEmptyReason(Sema &S, SourceLocation Loc, QualType T) {
   }
 }
 
+static void DiagnoseNonIntegralReason(Sema &S, SourceLocation Loc, QualType T) {
+  S.Diag(Loc, diag::note_unsatisfied_trait) << T << diag::TraitName::Integral;
+  if (T->isFloatingType()) {
+    S.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::FloatingPointType;
+  } else if (T->isEnumeralType()) {
+    S.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::EnumType;
+  } else if (T->isPointerType()) {
+    S.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::PointerType;
+  } else if (T->isReferenceType()) {
+    S.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::Ref;
+  } else if (T->isArrayType()) {
+    S.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::ArrayType;
+  } else if (T->isUnionType()) {
+    S.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::UnionType;
+  } else if (T->isFunctionType()) {
+    S.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::FunctionType;
+  } else if (T->isVoidType()) {
+    S.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::VoidType;
+  } else if (T->isStructureOrClassType()) {
+    S.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::ClassType;
+  } else if (T->isMemberPointerType()) {
+    S.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::MemberPointerType;
+  }
+}
+
 static void DiagnoseIsFinalReason(Sema &S, SourceLocation Loc,
                                   const CXXRecordDecl *D) {
   if (!D || D->isInvalidDecl())
@@ -2772,6 +2807,9 @@ void Sema::DiagnoseTypeTraitDetails(const Expr *E) {
     break;
   case UTT_IsEmpty:
     DiagnoseIsEmptyReason(*this, E->getBeginLoc(), Args[0]);
+    break;
+  case UTT_IsIntegral:
+    DiagnoseNonIntegralReason(*this, E->getBeginLoc(), Args[0]);
     break;
   case UTT_IsStandardLayout:
     DiagnoseNonStandardLayoutReason(*this, E->getBeginLoc(), Args[0]);
