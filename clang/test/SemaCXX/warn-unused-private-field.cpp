@@ -413,8 +413,7 @@ class Holder : public Base {
   explicit Holder(T v) : value_(v) {}
  private:
   friend class Base;
-  // FIXME: false positive.
-  T value_; // expected-warning {{private field 'value_' is not used}}
+  T value_;
 };
 template <class T>
 T& Base::Cast() { return static_cast<Holder<T>*>(this)->value_; }
