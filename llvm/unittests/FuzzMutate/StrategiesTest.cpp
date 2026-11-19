@@ -773,6 +773,18 @@ TEST(AllStrategies, SpecialTerminator) {
   mutateAndVerifyModule<SinkInstructionStrategy>(Source);
 }
 
+TEST(AllStrategies, UnreachableOnlyBlock) {
+  // The unreachable is the only instruction in the block, so it has no previous
+  // node. getEffectiveTerminator must handle that instead of dereferencing it.
+  StringRef Source = "\n\
+    define void @only_unreachable() {\n\
+      unreachable\n\
+    }\n\
+  ";
+  mutateAndVerifyModule<InjectorIRStrategy>(Source);
+  mutateAndVerifyModule<ShuffleBlockStrategy>(Source);
+}
+
 TEST(AllStrategies, AMDGCNLegalAddrspace) {
   StringRef Source = "\n\
     target triple = \"amdgpu7.00-amd-amdhsa\"\n\
