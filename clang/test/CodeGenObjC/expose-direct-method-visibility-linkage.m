@@ -46,6 +46,8 @@ __attribute__((objc_root_class))
 
 // Exported readonly property, redeclared readwrite in foo.m
 @property (nonatomic, direct, readonly) int counter __attribute__((visibility("default")));
+// Hidden readonly property, redeclared readwrite and exported in foo.m
+@property (nonatomic, direct, readonly) int counterHidden;
 @end
 
 @interface Foo (Cat)
@@ -59,10 +61,11 @@ __attribute__((objc_root_class))
 // FOO_M-NOT: @{{.*}}_thunk
 #import "foo.h"
 
-// The setter takes the visibility of this redeclaration, which has no
-// attribute, not that of the exported readonly property in foo.h.
+// The setter takes the visibility of the readwrite redeclaration, not that of
+// the readonly property in foo.h. The getter takes the readonly property's.
 @interface Foo ()
 @property (nonatomic, direct, readwrite) int counter;
+@property (nonatomic, direct, readwrite) int counterHidden __attribute__((visibility("default")));
 @end
 
 @implementation Foo
@@ -153,6 +156,10 @@ __attribute__((objc_root_class))
 // The private setter is hidden, although the readonly property is exported
 // FOO_M-LABEL: define dso_local i32 @"-[Foo counter]D"
 // FOO_M-LABEL: define hidden void @"-[Foo setCounter:]D"
+
+// The private setter is exported, although the readonly property is hidden
+// FOO_M-LABEL: define hidden i32 @"-[Foo counterHidden]D"
+// FOO_M-LABEL: define dso_local void @"-[Foo setCounterHidden:]D"
 
 @end
 
