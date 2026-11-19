@@ -24,6 +24,12 @@ void handleTypeMismatchImpl(TypeMismatchData *Data, ValueHandle Pointer,
 void handleAlignmentAssumptionImpl(AlignmentAssumptionData *Data,
                                    ValueHandle Pointer, ValueHandle Alignment,
                                    ValueHandle Offset, ReportOptions Opts);
+void handleReturnAlignmentAssumptionImpl(ReturnAlignmentAssumptionData *Data,
+                                         SourceLocation *LocPtr,
+                                         ValueHandle Pointer,
+                                         ValueHandle Alignment,
+                                         ValueHandle Offset,
+                                         ReportOptions Opts);
 void handleIntegerOverflowImpl(OverflowData *Data, ValueHandle LHS,
                                const char *Operator, ValueHandle RHS,
                                ReportOptions Opts);

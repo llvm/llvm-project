@@ -36,9 +36,9 @@ define float @fadd_dyn__nan_pnorm__nan_pnorm__strict(float nofpclass(inf zero su
 }
 
 define float @fsub_dyn__nan_pnorm__nan_pnorm__ignore(float nofpclass(inf zero sub nnorm) %lhs, float nofpclass(inf zero sub nnorm) %rhs) #0 strictfp {
-; CHECK-LABEL: define float @fsub_dyn__nan_pnorm__nan_pnorm__ignore(
+; CHECK-LABEL: define nofpclass(inf) float @fsub_dyn__nan_pnorm__nan_pnorm__ignore(
 ; CHECK-SAME: float nofpclass(inf zero sub nnorm) [[LHS:%.*]], float nofpclass(inf zero sub nnorm) [[RHS:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[FSUB:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float nofpclass(inf zero sub nnorm) [[LHS]], float nofpclass(inf zero sub nnorm) [[RHS]], metadata !"round.dynamic", metadata !"fpexcept.ignore") #[[ATTR8]]
+; CHECK-NEXT:    [[FSUB:%.*]] = call nofpclass(inf) float @llvm.experimental.constrained.fsub.f32(float nofpclass(inf zero sub nnorm) [[LHS]], float nofpclass(inf zero sub nnorm) [[RHS]], metadata !"round.dynamic", metadata !"fpexcept.ignore") #[[ATTR8]]
 ; CHECK-NEXT:    ret float [[FSUB]]
 ;
   %fsub = call float @llvm.experimental.constrained.fsub.f32(float %lhs, float %rhs, metadata !"round.dynamic", metadata !"fpexcept.ignore")
@@ -46,9 +46,9 @@ define float @fsub_dyn__nan_pnorm__nan_pnorm__ignore(float nofpclass(inf zero su
 }
 
 define float @fsub_dyn__nan_pnorm__nan_pnorm__maytrap(float nofpclass(inf zero sub nnorm) %lhs, float nofpclass(inf zero sub nnorm) %rhs) #0 strictfp {
-; CHECK-LABEL: define float @fsub_dyn__nan_pnorm__nan_pnorm__maytrap(
+; CHECK-LABEL: define nofpclass(inf) float @fsub_dyn__nan_pnorm__nan_pnorm__maytrap(
 ; CHECK-SAME: float nofpclass(inf zero sub nnorm) [[LHS:%.*]], float nofpclass(inf zero sub nnorm) [[RHS:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[FSUB:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float nofpclass(inf zero sub nnorm) [[LHS]], float nofpclass(inf zero sub nnorm) [[RHS]], metadata !"round.dynamic", metadata !"fpexcept.maytrap") #[[ATTR8]]
+; CHECK-NEXT:    [[FSUB:%.*]] = call nofpclass(inf) float @llvm.experimental.constrained.fsub.f32(float nofpclass(inf zero sub nnorm) [[LHS]], float nofpclass(inf zero sub nnorm) [[RHS]], metadata !"round.dynamic", metadata !"fpexcept.maytrap") #[[ATTR8]]
 ; CHECK-NEXT:    ret float [[FSUB]]
 ;
   %fsub = call float @llvm.experimental.constrained.fsub.f32(float %lhs, float %rhs, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
@@ -56,9 +56,9 @@ define float @fsub_dyn__nan_pnorm__nan_pnorm__maytrap(float nofpclass(inf zero s
 }
 
 define float @fsub_dyn__nan_pnorm__nan_pnorm__strict(float nofpclass(inf zero sub nnorm) %lhs, float nofpclass(inf zero sub nnorm) %rhs) #0 strictfp {
-; CHECK-LABEL: define float @fsub_dyn__nan_pnorm__nan_pnorm__strict(
+; CHECK-LABEL: define nofpclass(inf) float @fsub_dyn__nan_pnorm__nan_pnorm__strict(
 ; CHECK-SAME: float nofpclass(inf zero sub nnorm) [[LHS:%.*]], float nofpclass(inf zero sub nnorm) [[RHS:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[FSUB:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float nofpclass(inf zero sub nnorm) [[LHS]], float nofpclass(inf zero sub nnorm) [[RHS]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR8]]
+; CHECK-NEXT:    [[FSUB:%.*]] = call nofpclass(inf) float @llvm.experimental.constrained.fsub.f32(float nofpclass(inf zero sub nnorm) [[LHS]], float nofpclass(inf zero sub nnorm) [[RHS]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR8]]
 ; CHECK-NEXT:    ret float [[FSUB]]
 ;
   %fsub = call float @llvm.experimental.constrained.fsub.f32(float %lhs, float %rhs, metadata !"round.dynamic", metadata !"fpexcept.strict")
@@ -126,9 +126,9 @@ define float @fadd_dyn__snan_pnorm__snan_pnorm__strict(float nofpclass(qnan inf 
 }
 
 define float @fadd_dyn__inf__inf__ignore(float nofpclass(nan zero sub norm) %lhs, float nofpclass(nan zero sub norm) %rhs) #0 strictfp {
-; CHECK-LABEL: define nofpclass(snan) float @fadd_dyn__inf__inf__ignore(
+; CHECK-LABEL: define nofpclass(snan zero sub norm) float @fadd_dyn__inf__inf__ignore(
 ; CHECK-SAME: float nofpclass(nan zero sub norm) [[LHS:%.*]], float nofpclass(nan zero sub norm) [[RHS:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[FADD:%.*]] = call nofpclass(snan) float @llvm.experimental.constrained.fadd.f32(float nofpclass(nan zero sub norm) [[LHS]], float nofpclass(nan zero sub norm) [[RHS]], metadata !"round.dynamic", metadata !"fpexcept.ignore") #[[ATTR8]]
+; CHECK-NEXT:    [[FADD:%.*]] = call nofpclass(snan zero sub norm) float @llvm.experimental.constrained.fadd.f32(float nofpclass(nan zero sub norm) [[LHS]], float nofpclass(nan zero sub norm) [[RHS]], metadata !"round.dynamic", metadata !"fpexcept.ignore") #[[ATTR8]]
 ; CHECK-NEXT:    ret float [[FADD]]
 ;
   %fadd = call float @llvm.experimental.constrained.fadd.f32(float %lhs, float %rhs, metadata !"round.dynamic", metadata !"fpexcept.ignore")
@@ -136,9 +136,9 @@ define float @fadd_dyn__inf__inf__ignore(float nofpclass(nan zero sub norm) %lhs
 }
 
 define float @fadd_dyn__inf__inf__maytrap(float nofpclass(nan zero sub norm) %lhs, float nofpclass(nan zero sub norm) %rhs) #0 strictfp {
-; CHECK-LABEL: define nofpclass(snan) float @fadd_dyn__inf__inf__maytrap(
+; CHECK-LABEL: define nofpclass(snan zero sub norm) float @fadd_dyn__inf__inf__maytrap(
 ; CHECK-SAME: float nofpclass(nan zero sub norm) [[LHS:%.*]], float nofpclass(nan zero sub norm) [[RHS:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[FADD:%.*]] = call nofpclass(snan) float @llvm.experimental.constrained.fadd.f32(float nofpclass(nan zero sub norm) [[LHS]], float nofpclass(nan zero sub norm) [[RHS]], metadata !"round.dynamic", metadata !"fpexcept.maytrap") #[[ATTR8]]
+; CHECK-NEXT:    [[FADD:%.*]] = call nofpclass(snan zero sub norm) float @llvm.experimental.constrained.fadd.f32(float nofpclass(nan zero sub norm) [[LHS]], float nofpclass(nan zero sub norm) [[RHS]], metadata !"round.dynamic", metadata !"fpexcept.maytrap") #[[ATTR8]]
 ; CHECK-NEXT:    ret float [[FADD]]
 ;
   %fadd = call float @llvm.experimental.constrained.fadd.f32(float %lhs, float %rhs, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
@@ -146,9 +146,9 @@ define float @fadd_dyn__inf__inf__maytrap(float nofpclass(nan zero sub norm) %lh
 }
 
 define float @fadd_dyn__inf__inf__strict(float nofpclass(nan zero sub norm) %lhs, float nofpclass(nan zero sub norm) %rhs) #0 strictfp {
-; CHECK-LABEL: define nofpclass(snan) float @fadd_dyn__inf__inf__strict(
+; CHECK-LABEL: define nofpclass(snan zero sub norm) float @fadd_dyn__inf__inf__strict(
 ; CHECK-SAME: float nofpclass(nan zero sub norm) [[LHS:%.*]], float nofpclass(nan zero sub norm) [[RHS:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[FADD:%.*]] = call nofpclass(snan) float @llvm.experimental.constrained.fadd.f32(float nofpclass(nan zero sub norm) [[LHS]], float nofpclass(nan zero sub norm) [[RHS]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR8]]
+; CHECK-NEXT:    [[FADD:%.*]] = call nofpclass(snan zero sub norm) float @llvm.experimental.constrained.fadd.f32(float nofpclass(nan zero sub norm) [[LHS]], float nofpclass(nan zero sub norm) [[RHS]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR8]]
 ; CHECK-NEXT:    ret float [[FADD]]
 ;
   %fadd = call float @llvm.experimental.constrained.fadd.f32(float %lhs, float %rhs, metadata !"round.dynamic", metadata !"fpexcept.strict")
@@ -160,9 +160,9 @@ define float @fadd_dyn__inf__inf__strict(float nofpclass(nan zero sub norm) %lhs
 ;-------------------------------------------------------------------------------
 
 define float @fadd_rtn__nsub__pnorm__dynamic_dynamic(float nofpclass(nan inf zero psub norm) %lhs, float nofpclass(nan inf zero sub nnorm) %rhs) #1 strictfp {
-; CHECK-LABEL: define nofpclass(nan) float @fadd_rtn__nsub__pnorm__dynamic_dynamic(
+; CHECK-LABEL: define nofpclass(nan inf nzero nsub nnorm) float @fadd_rtn__nsub__pnorm__dynamic_dynamic(
 ; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[LHS:%.*]], float nofpclass(nan inf zero sub nnorm) [[RHS:%.*]]) #[[ATTR1:[0-9]+]] {
-; CHECK-NEXT:    [[FADD:%.*]] = call nofpclass(nan) float @llvm.experimental.constrained.fadd.f32(float nofpclass(nan inf zero psub norm) [[LHS]], float nofpclass(nan inf zero sub nnorm) [[RHS]], metadata !"round.downward", metadata !"fpexcept.strict") #[[ATTR8]]
+; CHECK-NEXT:    [[FADD:%.*]] = call nofpclass(nan inf nzero nsub nnorm) float @llvm.experimental.constrained.fadd.f32(float nofpclass(nan inf zero psub norm) [[LHS]], float nofpclass(nan inf zero sub nnorm) [[RHS]], metadata !"round.downward", metadata !"fpexcept.strict") #[[ATTR8]]
 ; CHECK-NEXT:    ret float [[FADD]]
 ;
   %fadd = call float @llvm.experimental.constrained.fadd.f32(float %lhs, float %rhs, metadata !"round.downward", metadata !"fpexcept.strict")
@@ -170,9 +170,9 @@ define float @fadd_rtn__nsub__pnorm__dynamic_dynamic(float nofpclass(nan inf zer
 }
 
 define float @fadd_rtn__nsub__pnorm__ftz_daz(float nofpclass(nan inf zero psub norm) %lhs, float nofpclass(nan inf zero sub nnorm) %rhs) #2 strictfp {
-; CHECK-LABEL: define nofpclass(nan) float @fadd_rtn__nsub__pnorm__ftz_daz(
+; CHECK-LABEL: define nofpclass(nan inf nzero nsub nnorm) float @fadd_rtn__nsub__pnorm__ftz_daz(
 ; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[LHS:%.*]], float nofpclass(nan inf zero sub nnorm) [[RHS:%.*]]) #[[ATTR2:[0-9]+]] {
-; CHECK-NEXT:    [[FADD:%.*]] = call nofpclass(nan) float @llvm.experimental.constrained.fadd.f32(float nofpclass(nan inf zero psub norm) [[LHS]], float nofpclass(nan inf zero sub nnorm) [[RHS]], metadata !"round.downward", metadata !"fpexcept.strict") #[[ATTR8]]
+; CHECK-NEXT:    [[FADD:%.*]] = call nofpclass(nan inf nzero nsub nnorm) float @llvm.experimental.constrained.fadd.f32(float nofpclass(nan inf zero psub norm) [[LHS]], float nofpclass(nan inf zero sub nnorm) [[RHS]], metadata !"round.downward", metadata !"fpexcept.strict") #[[ATTR8]]
 ; CHECK-NEXT:    ret float [[FADD]]
 ;
   %fadd = call float @llvm.experimental.constrained.fadd.f32(float %lhs, float %rhs, metadata !"round.downward", metadata !"fpexcept.strict")
@@ -180,9 +180,9 @@ define float @fadd_rtn__nsub__pnorm__ftz_daz(float nofpclass(nan inf zero psub n
 }
 
 define float @fadd_rtn__nsub__pnorm__ftpz_dapz(float nofpclass(nan inf zero psub norm) %lhs, float nofpclass(nan inf zero sub nnorm) %rhs) #3 strictfp {
-; CHECK-LABEL: define nofpclass(nan) float @fadd_rtn__nsub__pnorm__ftpz_dapz(
+; CHECK-LABEL: define nofpclass(nan inf nzero nsub nnorm) float @fadd_rtn__nsub__pnorm__ftpz_dapz(
 ; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[LHS:%.*]], float nofpclass(nan inf zero sub nnorm) [[RHS:%.*]]) #[[ATTR3:[0-9]+]] {
-; CHECK-NEXT:    [[FADD:%.*]] = call nofpclass(nan) float @llvm.experimental.constrained.fadd.f32(float nofpclass(nan inf zero psub norm) [[LHS]], float nofpclass(nan inf zero sub nnorm) [[RHS]], metadata !"round.downward", metadata !"fpexcept.strict") #[[ATTR8]]
+; CHECK-NEXT:    [[FADD:%.*]] = call nofpclass(nan inf nzero nsub nnorm) float @llvm.experimental.constrained.fadd.f32(float nofpclass(nan inf zero psub norm) [[LHS]], float nofpclass(nan inf zero sub nnorm) [[RHS]], metadata !"round.downward", metadata !"fpexcept.strict") #[[ATTR8]]
 ; CHECK-NEXT:    ret float [[FADD]]
 ;
   %fadd = call float @llvm.experimental.constrained.fadd.f32(float %lhs, float %rhs, metadata !"round.downward", metadata !"fpexcept.strict")
@@ -220,9 +220,9 @@ define float @fsub_rtn__nsub__pnorm__ftpz_dapz(float nofpclass(nan inf zero psub
 }
 
 define float @fsub_rtp__nzero__psub__ieee_dynamic(float nofpclass(nan inf pzero sub norm) %lhs, float nofpclass(nan inf zero nsub norm) %rhs) #4 strictfp {
-; CHECK-LABEL: define nofpclass(nan pinf psub pnorm) float @fsub_rtp__nzero__psub__ieee_dynamic(
+; CHECK-LABEL: define nofpclass(nan inf pzero psub norm) float @fsub_rtp__nzero__psub__ieee_dynamic(
 ; CHECK-SAME: float nofpclass(nan inf pzero sub norm) [[LHS:%.*]], float nofpclass(nan inf zero nsub norm) [[RHS:%.*]]) #[[ATTR4:[0-9]+]] {
-; CHECK-NEXT:    [[FSUB:%.*]] = call nofpclass(nan pinf psub pnorm) float @llvm.experimental.constrained.fsub.f32(float nofpclass(nan inf pzero sub norm) [[LHS]], float nofpclass(nan inf zero nsub norm) [[RHS]], metadata !"round.upward", metadata !"fpexcept.strict") #[[ATTR8]]
+; CHECK-NEXT:    [[FSUB:%.*]] = call nofpclass(nan inf pzero psub norm) float @llvm.experimental.constrained.fsub.f32(float nofpclass(nan inf pzero sub norm) [[LHS]], float nofpclass(nan inf zero nsub norm) [[RHS]], metadata !"round.upward", metadata !"fpexcept.strict") #[[ATTR8]]
 ; CHECK-NEXT:    ret float [[FSUB]]
 ;
   %fsub = call float @llvm.experimental.constrained.fsub.f32(float %lhs, float %rhs, metadata !"round.upward", metadata !"fpexcept.strict")
@@ -230,9 +230,9 @@ define float @fsub_rtp__nzero__psub__ieee_dynamic(float nofpclass(nan inf pzero 
 }
 
 define float @fsub_rtp__nzero__psub__ieee_daz(float nofpclass(nan inf pzero sub norm) %lhs, float nofpclass(nan inf zero nsub norm) %rhs) #5 strictfp {
-; CHECK-LABEL: define nofpclass(nan pinf psub pnorm) float @fsub_rtp__nzero__psub__ieee_daz(
+; CHECK-LABEL: define nofpclass(nan inf pzero psub norm) float @fsub_rtp__nzero__psub__ieee_daz(
 ; CHECK-SAME: float nofpclass(nan inf pzero sub norm) [[LHS:%.*]], float nofpclass(nan inf zero nsub norm) [[RHS:%.*]]) #[[ATTR5:[0-9]+]] {
-; CHECK-NEXT:    [[FSUB:%.*]] = call nofpclass(nan pinf psub pnorm) float @llvm.experimental.constrained.fsub.f32(float nofpclass(nan inf pzero sub norm) [[LHS]], float nofpclass(nan inf zero nsub norm) [[RHS]], metadata !"round.upward", metadata !"fpexcept.strict") #[[ATTR8]]
+; CHECK-NEXT:    [[FSUB:%.*]] = call nofpclass(nan inf pzero psub norm) float @llvm.experimental.constrained.fsub.f32(float nofpclass(nan inf pzero sub norm) [[LHS]], float nofpclass(nan inf zero nsub norm) [[RHS]], metadata !"round.upward", metadata !"fpexcept.strict") #[[ATTR8]]
 ; CHECK-NEXT:    ret float [[FSUB]]
 ;
   %fsub = call float @llvm.experimental.constrained.fsub.f32(float %lhs, float %rhs, metadata !"round.upward", metadata !"fpexcept.strict")
@@ -240,9 +240,9 @@ define float @fsub_rtp__nzero__psub__ieee_daz(float nofpclass(nan inf pzero sub 
 }
 
 define float @fsub_rtp__nzero__psub__ieee_dapz(float nofpclass(nan inf pzero sub norm) %lhs, float nofpclass(nan inf zero nsub norm) %rhs) #6 strictfp {
-; CHECK-LABEL: define nofpclass(nan pinf psub pnorm) float @fsub_rtp__nzero__psub__ieee_dapz(
+; CHECK-LABEL: define nofpclass(nan inf pzero psub norm) float @fsub_rtp__nzero__psub__ieee_dapz(
 ; CHECK-SAME: float nofpclass(nan inf pzero sub norm) [[LHS:%.*]], float nofpclass(nan inf zero nsub norm) [[RHS:%.*]]) #[[ATTR6:[0-9]+]] {
-; CHECK-NEXT:    [[FSUB:%.*]] = call nofpclass(nan pinf psub pnorm) float @llvm.experimental.constrained.fsub.f32(float nofpclass(nan inf pzero sub norm) [[LHS]], float nofpclass(nan inf zero nsub norm) [[RHS]], metadata !"round.upward", metadata !"fpexcept.strict") #[[ATTR8]]
+; CHECK-NEXT:    [[FSUB:%.*]] = call nofpclass(nan inf pzero psub norm) float @llvm.experimental.constrained.fsub.f32(float nofpclass(nan inf pzero sub norm) [[LHS]], float nofpclass(nan inf zero nsub norm) [[RHS]], metadata !"round.upward", metadata !"fpexcept.strict") #[[ATTR8]]
 ; CHECK-NEXT:    ret float [[FSUB]]
 ;
   %fsub = call float @llvm.experimental.constrained.fsub.f32(float %lhs, float %rhs, metadata !"round.upward", metadata !"fpexcept.strict")
@@ -250,9 +250,9 @@ define float @fsub_rtp__nzero__psub__ieee_dapz(float nofpclass(nan inf pzero sub
 }
 
 define float @fsub_rtn__pzero__psub__ieee_dynamic(float nofpclass(nan inf nzero sub norm) %lhs, float nofpclass(nan inf zero nsub norm) %rhs) #4 strictfp {
-; CHECK-LABEL: define nofpclass(nan pinf pzero psub pnorm) float @fsub_rtn__pzero__psub__ieee_dynamic(
+; CHECK-LABEL: define nofpclass(nan inf pzero psub norm) float @fsub_rtn__pzero__psub__ieee_dynamic(
 ; CHECK-SAME: float nofpclass(nan inf nzero sub norm) [[LHS:%.*]], float nofpclass(nan inf zero nsub norm) [[RHS:%.*]]) #[[ATTR4]] {
-; CHECK-NEXT:    [[FSUB:%.*]] = call nofpclass(nan pinf pzero psub pnorm) float @llvm.experimental.constrained.fsub.f32(float nofpclass(nan inf nzero sub norm) [[LHS]], float nofpclass(nan inf zero nsub norm) [[RHS]], metadata !"round.downward", metadata !"fpexcept.strict") #[[ATTR8]]
+; CHECK-NEXT:    [[FSUB:%.*]] = call nofpclass(nan inf pzero psub norm) float @llvm.experimental.constrained.fsub.f32(float nofpclass(nan inf nzero sub norm) [[LHS]], float nofpclass(nan inf zero nsub norm) [[RHS]], metadata !"round.downward", metadata !"fpexcept.strict") #[[ATTR8]]
 ; CHECK-NEXT:    ret float [[FSUB]]
 ;
   %fsub = call float @llvm.experimental.constrained.fsub.f32(float %lhs, float %rhs, metadata !"round.downward", metadata !"fpexcept.strict")
@@ -260,9 +260,9 @@ define float @fsub_rtn__pzero__psub__ieee_dynamic(float nofpclass(nan inf nzero 
 }
 
 define float @fsub_rtn__pzero__psub__ieee_daz(float nofpclass(nan inf nzero sub norm) %lhs, float nofpclass(nan inf zero nsub norm) %rhs) #5 strictfp {
-; CHECK-LABEL: define nofpclass(nan pinf pzero psub pnorm) float @fsub_rtn__pzero__psub__ieee_daz(
+; CHECK-LABEL: define nofpclass(nan inf pzero psub norm) float @fsub_rtn__pzero__psub__ieee_daz(
 ; CHECK-SAME: float nofpclass(nan inf nzero sub norm) [[LHS:%.*]], float nofpclass(nan inf zero nsub norm) [[RHS:%.*]]) #[[ATTR5]] {
-; CHECK-NEXT:    [[FSUB:%.*]] = call nofpclass(nan pinf pzero psub pnorm) float @llvm.experimental.constrained.fsub.f32(float nofpclass(nan inf nzero sub norm) [[LHS]], float nofpclass(nan inf zero nsub norm) [[RHS]], metadata !"round.downward", metadata !"fpexcept.strict") #[[ATTR8]]
+; CHECK-NEXT:    [[FSUB:%.*]] = call nofpclass(nan inf pzero psub norm) float @llvm.experimental.constrained.fsub.f32(float nofpclass(nan inf nzero sub norm) [[LHS]], float nofpclass(nan inf zero nsub norm) [[RHS]], metadata !"round.downward", metadata !"fpexcept.strict") #[[ATTR8]]
 ; CHECK-NEXT:    ret float [[FSUB]]
 ;
   %fsub = call float @llvm.experimental.constrained.fsub.f32(float %lhs, float %rhs, metadata !"round.downward", metadata !"fpexcept.strict")
@@ -270,9 +270,9 @@ define float @fsub_rtn__pzero__psub__ieee_daz(float nofpclass(nan inf nzero sub 
 }
 
 define float @fsub_rtn__pzero__psub__ieee_dapz(float nofpclass(nan inf nzero sub norm) %lhs, float nofpclass(nan inf zero nsub norm) %rhs) #6 strictfp {
-; CHECK-LABEL: define nofpclass(nan pinf pzero psub pnorm) float @fsub_rtn__pzero__psub__ieee_dapz(
+; CHECK-LABEL: define nofpclass(nan inf pzero psub norm) float @fsub_rtn__pzero__psub__ieee_dapz(
 ; CHECK-SAME: float nofpclass(nan inf nzero sub norm) [[LHS:%.*]], float nofpclass(nan inf zero nsub norm) [[RHS:%.*]]) #[[ATTR6]] {
-; CHECK-NEXT:    [[FSUB:%.*]] = call nofpclass(nan pinf pzero psub pnorm) float @llvm.experimental.constrained.fsub.f32(float nofpclass(nan inf nzero sub norm) [[LHS]], float nofpclass(nan inf zero nsub norm) [[RHS]], metadata !"round.downward", metadata !"fpexcept.strict") #[[ATTR8]]
+; CHECK-NEXT:    [[FSUB:%.*]] = call nofpclass(nan inf pzero psub norm) float @llvm.experimental.constrained.fsub.f32(float nofpclass(nan inf nzero sub norm) [[LHS]], float nofpclass(nan inf zero nsub norm) [[RHS]], metadata !"round.downward", metadata !"fpexcept.strict") #[[ATTR8]]
 ; CHECK-NEXT:    ret float [[FSUB]]
 ;
   %fsub = call float @llvm.experimental.constrained.fsub.f32(float %lhs, float %rhs, metadata !"round.downward", metadata !"fpexcept.strict")
@@ -478,9 +478,9 @@ define float @fsub_self_rtn__norm(float noundef nofpclass(nan inf zero sub) %arg
 }
 
 define float @fsub_self_dyn__nan_pnorm__ignore(float noundef nofpclass(inf zero sub nnorm) %arg) #0 strictfp {
-; CHECK-LABEL: define float @fsub_self_dyn__nan_pnorm__ignore(
+; CHECK-LABEL: define nofpclass(inf) float @fsub_self_dyn__nan_pnorm__ignore(
 ; CHECK-SAME: float noundef nofpclass(inf zero sub nnorm) [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[FSUB:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float noundef nofpclass(inf zero sub nnorm) [[ARG]], float noundef nofpclass(inf zero sub nnorm) [[ARG]], metadata !"round.dynamic", metadata !"fpexcept.ignore") #[[ATTR8]]
+; CHECK-NEXT:    [[FSUB:%.*]] = call nofpclass(inf) float @llvm.experimental.constrained.fsub.f32(float noundef nofpclass(inf zero sub nnorm) [[ARG]], float noundef nofpclass(inf zero sub nnorm) [[ARG]], metadata !"round.dynamic", metadata !"fpexcept.ignore") #[[ATTR8]]
 ; CHECK-NEXT:    ret float [[FSUB]]
 ;
   %fsub = call float @llvm.experimental.constrained.fsub.f32(float %arg, float %arg, metadata !"round.dynamic", metadata !"fpexcept.ignore")
@@ -488,9 +488,9 @@ define float @fsub_self_dyn__nan_pnorm__ignore(float noundef nofpclass(inf zero 
 }
 
 define float @fsub_self_dyn__nan_pnorm__maytrap(float noundef nofpclass(inf zero sub nnorm) %arg) #0 strictfp {
-; CHECK-LABEL: define float @fsub_self_dyn__nan_pnorm__maytrap(
+; CHECK-LABEL: define nofpclass(inf) float @fsub_self_dyn__nan_pnorm__maytrap(
 ; CHECK-SAME: float noundef nofpclass(inf zero sub nnorm) [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[FSUB:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float noundef nofpclass(inf zero sub nnorm) [[ARG]], float noundef nofpclass(inf zero sub nnorm) [[ARG]], metadata !"round.dynamic", metadata !"fpexcept.maytrap") #[[ATTR8]]
+; CHECK-NEXT:    [[FSUB:%.*]] = call nofpclass(inf) float @llvm.experimental.constrained.fsub.f32(float noundef nofpclass(inf zero sub nnorm) [[ARG]], float noundef nofpclass(inf zero sub nnorm) [[ARG]], metadata !"round.dynamic", metadata !"fpexcept.maytrap") #[[ATTR8]]
 ; CHECK-NEXT:    ret float [[FSUB]]
 ;
   %fsub = call float @llvm.experimental.constrained.fsub.f32(float %arg, float %arg, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
@@ -498,9 +498,9 @@ define float @fsub_self_dyn__nan_pnorm__maytrap(float noundef nofpclass(inf zero
 }
 
 define float @fsub_self_dyn__nan_pnorm__strict(float noundef nofpclass(inf zero sub nnorm) %arg) #0 strictfp {
-; CHECK-LABEL: define float @fsub_self_dyn__nan_pnorm__strict(
+; CHECK-LABEL: define nofpclass(inf) float @fsub_self_dyn__nan_pnorm__strict(
 ; CHECK-SAME: float noundef nofpclass(inf zero sub nnorm) [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[FSUB:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float noundef nofpclass(inf zero sub nnorm) [[ARG]], float noundef nofpclass(inf zero sub nnorm) [[ARG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR8]]
+; CHECK-NEXT:    [[FSUB:%.*]] = call nofpclass(inf) float @llvm.experimental.constrained.fsub.f32(float noundef nofpclass(inf zero sub nnorm) [[ARG]], float noundef nofpclass(inf zero sub nnorm) [[ARG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR8]]
 ; CHECK-NEXT:    ret float [[FSUB]]
 ;
   %fsub = call float @llvm.experimental.constrained.fsub.f32(float %arg, float %arg, metadata !"round.dynamic", metadata !"fpexcept.strict")
@@ -508,9 +508,9 @@ define float @fsub_self_dyn__nan_pnorm__strict(float noundef nofpclass(inf zero 
 }
 
 define float @fsub_self_rtp__nsub__dynamic_dynamic(float noundef nofpclass(nan inf zero psub norm) %arg) #1 strictfp {
-; CHECK-LABEL: define nofpclass(nan) float @fsub_self_rtp__nsub__dynamic_dynamic(
+; CHECK-LABEL: define nofpclass(nan inf norm) float @fsub_self_rtp__nsub__dynamic_dynamic(
 ; CHECK-SAME: float noundef nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[FSUB:%.*]] = call nofpclass(nan) float @llvm.experimental.constrained.fsub.f32(float noundef nofpclass(nan inf zero psub norm) [[ARG]], float noundef nofpclass(nan inf zero psub norm) [[ARG]], metadata !"round.upward", metadata !"fpexcept.strict") #[[ATTR8]]
+; CHECK-NEXT:    [[FSUB:%.*]] = call nofpclass(nan inf norm) float @llvm.experimental.constrained.fsub.f32(float noundef nofpclass(nan inf zero psub norm) [[ARG]], float noundef nofpclass(nan inf zero psub norm) [[ARG]], metadata !"round.upward", metadata !"fpexcept.strict") #[[ATTR8]]
 ; CHECK-NEXT:    ret float [[FSUB]]
 ;
   %fsub = call float @llvm.experimental.constrained.fsub.f32(float %arg, float %arg, metadata !"round.upward", metadata !"fpexcept.strict")
@@ -518,9 +518,9 @@ define float @fsub_self_rtp__nsub__dynamic_dynamic(float noundef nofpclass(nan i
 }
 
 define float @fsub_self_rtp__nsub__ftpz_dapz(float noundef nofpclass(nan inf zero psub norm) %arg) #3 strictfp {
-; CHECK-LABEL: define nofpclass(nan nzero) float @fsub_self_rtp__nsub__ftpz_dapz(
+; CHECK-LABEL: define nofpclass(nan inf nzero norm) float @fsub_self_rtp__nsub__ftpz_dapz(
 ; CHECK-SAME: float noundef nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[FSUB:%.*]] = call nofpclass(nan nzero) float @llvm.experimental.constrained.fsub.f32(float noundef nofpclass(nan inf zero psub norm) [[ARG]], float noundef nofpclass(nan inf zero psub norm) [[ARG]], metadata !"round.upward", metadata !"fpexcept.strict") #[[ATTR8]]
+; CHECK-NEXT:    [[FSUB:%.*]] = call nofpclass(nan inf nzero norm) float @llvm.experimental.constrained.fsub.f32(float noundef nofpclass(nan inf zero psub norm) [[ARG]], float noundef nofpclass(nan inf zero psub norm) [[ARG]], metadata !"round.upward", metadata !"fpexcept.strict") #[[ATTR8]]
 ; CHECK-NEXT:    ret float [[FSUB]]
 ;
   %fsub = call float @llvm.experimental.constrained.fsub.f32(float %arg, float %arg, metadata !"round.upward", metadata !"fpexcept.strict")
@@ -528,9 +528,9 @@ define float @fsub_self_rtp__nsub__ftpz_dapz(float noundef nofpclass(nan inf zer
 }
 
 define float @fsub_self_rtn__nsub__dynamic_dynamic(float noundef nofpclass(nan inf zero psub norm) %arg) #1 strictfp {
-; CHECK-LABEL: define nofpclass(nan) float @fsub_self_rtn__nsub__dynamic_dynamic(
+; CHECK-LABEL: define nofpclass(nan inf norm) float @fsub_self_rtn__nsub__dynamic_dynamic(
 ; CHECK-SAME: float noundef nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[FSUB:%.*]] = call nofpclass(nan) float @llvm.experimental.constrained.fsub.f32(float noundef nofpclass(nan inf zero psub norm) [[ARG]], float noundef nofpclass(nan inf zero psub norm) [[ARG]], metadata !"round.downward", metadata !"fpexcept.strict") #[[ATTR8]]
+; CHECK-NEXT:    [[FSUB:%.*]] = call nofpclass(nan inf norm) float @llvm.experimental.constrained.fsub.f32(float noundef nofpclass(nan inf zero psub norm) [[ARG]], float noundef nofpclass(nan inf zero psub norm) [[ARG]], metadata !"round.downward", metadata !"fpexcept.strict") #[[ATTR8]]
 ; CHECK-NEXT:    ret float [[FSUB]]
 ;
   %fsub = call float @llvm.experimental.constrained.fsub.f32(float %arg, float %arg, metadata !"round.downward", metadata !"fpexcept.strict")
@@ -538,9 +538,9 @@ define float @fsub_self_rtn__nsub__dynamic_dynamic(float noundef nofpclass(nan i
 }
 
 define float @fsub_self_rtn__nsub__ftpz_dapz(float noundef nofpclass(nan inf zero psub norm) %arg) #3 strictfp {
-; CHECK-LABEL: define nofpclass(nan) float @fsub_self_rtn__nsub__ftpz_dapz(
+; CHECK-LABEL: define nofpclass(nan inf norm) float @fsub_self_rtn__nsub__ftpz_dapz(
 ; CHECK-SAME: float noundef nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[FSUB:%.*]] = call nofpclass(nan) float @llvm.experimental.constrained.fsub.f32(float noundef nofpclass(nan inf zero psub norm) [[ARG]], float noundef nofpclass(nan inf zero psub norm) [[ARG]], metadata !"round.downward", metadata !"fpexcept.strict") #[[ATTR8]]
+; CHECK-NEXT:    [[FSUB:%.*]] = call nofpclass(nan inf norm) float @llvm.experimental.constrained.fsub.f32(float noundef nofpclass(nan inf zero psub norm) [[ARG]], float noundef nofpclass(nan inf zero psub norm) [[ARG]], metadata !"round.downward", metadata !"fpexcept.strict") #[[ATTR8]]
 ; CHECK-NEXT:    ret float [[FSUB]]
 ;
   %fsub = call float @llvm.experimental.constrained.fsub.f32(float %arg, float %arg, metadata !"round.downward", metadata !"fpexcept.strict")
@@ -669,6 +669,86 @@ define float @fsub_rtn__qnan_nzero__qnan_nzero(float nofpclass(snan inf pzero su
 ;
   %fsub = call float @llvm.experimental.constrained.fsub.f32(float %lhs, float %rhs, metadata !"round.downward", metadata !"fpexcept.strict")
   ret float %fsub
+}
+
+define float @fadd_dyn__no_pzero_nsub_pnorm__no_pzero_nsub_pnorm(float nofpclass(pzero nsub pnorm) %lhs, float nofpclass(pzero nsub pnorm) %rhs) #0 strictfp {
+; CHECK-LABEL: define nofpclass(pzero) float @fadd_dyn__no_pzero_nsub_pnorm__no_pzero_nsub_pnorm(
+; CHECK-SAME: float nofpclass(pzero nsub pnorm) [[LHS:%.*]], float nofpclass(pzero nsub pnorm) [[RHS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FADD:%.*]] = call nofpclass(pzero) float @llvm.experimental.constrained.fadd.f32(float nofpclass(pzero nsub pnorm) [[LHS]], float nofpclass(pzero nsub pnorm) [[RHS]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR8]]
+; CHECK-NEXT:    ret float [[FADD]]
+;
+  %fadd = call float @llvm.experimental.constrained.fadd.f32(float %lhs, float %rhs, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret float %fadd
+}
+
+define float @fadd_dyn__no_pzero_psub_nnorm__no_pzero_psub_nnorm(float nofpclass(pzero psub nnorm) %lhs, float nofpclass(pzero psub nnorm) %rhs) #0 strictfp {
+; CHECK-LABEL: define nofpclass(pzero) float @fadd_dyn__no_pzero_psub_nnorm__no_pzero_psub_nnorm(
+; CHECK-SAME: float nofpclass(pzero psub nnorm) [[LHS:%.*]], float nofpclass(pzero psub nnorm) [[RHS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FADD:%.*]] = call nofpclass(pzero) float @llvm.experimental.constrained.fadd.f32(float nofpclass(pzero psub nnorm) [[LHS]], float nofpclass(pzero psub nnorm) [[RHS]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR8]]
+; CHECK-NEXT:    ret float [[FADD]]
+;
+  %fadd = call float @llvm.experimental.constrained.fadd.f32(float %lhs, float %rhs, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret float %fadd
+}
+
+define float @fadd_dyn__no_nzero_nsub_pnorm__no_nzero_nsub_pnorm(float nofpclass(nzero nsub pnorm) %lhs, float nofpclass(nzero nsub pnorm) %rhs) #0 strictfp {
+; CHECK-LABEL: define nofpclass(nzero) float @fadd_dyn__no_nzero_nsub_pnorm__no_nzero_nsub_pnorm(
+; CHECK-SAME: float nofpclass(nzero nsub pnorm) [[LHS:%.*]], float nofpclass(nzero nsub pnorm) [[RHS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FADD:%.*]] = call nofpclass(nzero) float @llvm.experimental.constrained.fadd.f32(float nofpclass(nzero nsub pnorm) [[LHS]], float nofpclass(nzero nsub pnorm) [[RHS]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR8]]
+; CHECK-NEXT:    ret float [[FADD]]
+;
+  %fadd = call float @llvm.experimental.constrained.fadd.f32(float %lhs, float %rhs, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret float %fadd
+}
+
+define float @fadd_dyn__no_nzero_psub_nnorm__no_nzero_psub_nnorm(float nofpclass(nzero psub nnorm) %lhs, float nofpclass(nzero psub nnorm) %rhs) #0 strictfp {
+; CHECK-LABEL: define nofpclass(nzero) float @fadd_dyn__no_nzero_psub_nnorm__no_nzero_psub_nnorm(
+; CHECK-SAME: float nofpclass(nzero psub nnorm) [[LHS:%.*]], float nofpclass(nzero psub nnorm) [[RHS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FADD:%.*]] = call nofpclass(nzero) float @llvm.experimental.constrained.fadd.f32(float nofpclass(nzero psub nnorm) [[LHS]], float nofpclass(nzero psub nnorm) [[RHS]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR8]]
+; CHECK-NEXT:    ret float [[FADD]]
+;
+  %fadd = call float @llvm.experimental.constrained.fadd.f32(float %lhs, float %rhs, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret float %fadd
+}
+
+define float @fadd_rtp__no_pzero_nsub_pnorm__no_pzero_nsub_pnorm(float nofpclass(pzero nsub pnorm) %lhs, float nofpclass(pzero nsub pnorm) %rhs) #0 strictfp {
+; CHECK-LABEL: define nofpclass(pzero) float @fadd_rtp__no_pzero_nsub_pnorm__no_pzero_nsub_pnorm(
+; CHECK-SAME: float nofpclass(pzero nsub pnorm) [[LHS:%.*]], float nofpclass(pzero nsub pnorm) [[RHS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FADD:%.*]] = call nofpclass(pzero) float @llvm.experimental.constrained.fadd.f32(float nofpclass(pzero nsub pnorm) [[LHS]], float nofpclass(pzero nsub pnorm) [[RHS]], metadata !"round.upward", metadata !"fpexcept.strict") #[[ATTR8]]
+; CHECK-NEXT:    ret float [[FADD]]
+;
+  %fadd = call float @llvm.experimental.constrained.fadd.f32(float %lhs, float %rhs, metadata !"round.upward", metadata !"fpexcept.strict")
+  ret float %fadd
+}
+
+define float @fadd_rtp__no_pzero_psub_nnorm__no_pzero_psub_nnorm(float nofpclass(pzero psub nnorm) %lhs, float nofpclass(pzero psub nnorm) %rhs) #0 strictfp {
+; CHECK-LABEL: define nofpclass(pzero) float @fadd_rtp__no_pzero_psub_nnorm__no_pzero_psub_nnorm(
+; CHECK-SAME: float nofpclass(pzero psub nnorm) [[LHS:%.*]], float nofpclass(pzero psub nnorm) [[RHS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FADD:%.*]] = call nofpclass(pzero) float @llvm.experimental.constrained.fadd.f32(float nofpclass(pzero psub nnorm) [[LHS]], float nofpclass(pzero psub nnorm) [[RHS]], metadata !"round.upward", metadata !"fpexcept.strict") #[[ATTR8]]
+; CHECK-NEXT:    ret float [[FADD]]
+;
+  %fadd = call float @llvm.experimental.constrained.fadd.f32(float %lhs, float %rhs, metadata !"round.upward", metadata !"fpexcept.strict")
+  ret float %fadd
+}
+
+define float @fadd_rtn__no_nzero_nsub_pnorm__no_nzero_nsub_pnorm(float nofpclass(nzero nsub pnorm) %lhs, float nofpclass(nzero nsub pnorm) %rhs) #0 strictfp {
+; CHECK-LABEL: define nofpclass(nzero) float @fadd_rtn__no_nzero_nsub_pnorm__no_nzero_nsub_pnorm(
+; CHECK-SAME: float nofpclass(nzero nsub pnorm) [[LHS:%.*]], float nofpclass(nzero nsub pnorm) [[RHS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FADD:%.*]] = call nofpclass(nzero) float @llvm.experimental.constrained.fadd.f32(float nofpclass(nzero nsub pnorm) [[LHS]], float nofpclass(nzero nsub pnorm) [[RHS]], metadata !"round.downward", metadata !"fpexcept.strict") #[[ATTR8]]
+; CHECK-NEXT:    ret float [[FADD]]
+;
+  %fadd = call float @llvm.experimental.constrained.fadd.f32(float %lhs, float %rhs, metadata !"round.downward", metadata !"fpexcept.strict")
+  ret float %fadd
+}
+
+define float @fadd_rtn__no_nzero_psub_nnorm__no_nzero_psub_nnorm(float nofpclass(nzero psub nnorm) %lhs, float nofpclass(nzero psub nnorm) %rhs) #0 strictfp {
+; CHECK-LABEL: define nofpclass(nzero) float @fadd_rtn__no_nzero_psub_nnorm__no_nzero_psub_nnorm(
+; CHECK-SAME: float nofpclass(nzero psub nnorm) [[LHS:%.*]], float nofpclass(nzero psub nnorm) [[RHS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FADD:%.*]] = call nofpclass(nzero) float @llvm.experimental.constrained.fadd.f32(float nofpclass(nzero psub nnorm) [[LHS]], float nofpclass(nzero psub nnorm) [[RHS]], metadata !"round.downward", metadata !"fpexcept.strict") #[[ATTR8]]
+; CHECK-NEXT:    ret float [[FADD]]
+;
+  %fadd = call float @llvm.experimental.constrained.fadd.f32(float %lhs, float %rhs, metadata !"round.downward", metadata !"fpexcept.strict")
+  ret float %fadd
 }
 
 ;-------------------------------------------------------------------------------
@@ -958,9 +1038,9 @@ define float @fsub_rtp__nnorm__pnorm(float nofpclass(nan inf zero sub pnorm) %lh
 }
 
 define float @fadd_rna__norm__sub(float nofpclass(nan inf zero sub) %lhs, float nofpclass(nan inf zero norm) %rhs) #0 strictfp {
-; CHECK-LABEL: define nofpclass(nan nzero) float @fadd_rna__norm__sub(
+; CHECK-LABEL: define nofpclass(nan zero) float @fadd_rna__norm__sub(
 ; CHECK-SAME: float nofpclass(nan inf zero sub) [[LHS:%.*]], float nofpclass(nan inf zero norm) [[RHS:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[FADD:%.*]] = call nofpclass(nan nzero) float @llvm.experimental.constrained.fadd.f32(float nofpclass(nan inf zero sub) [[LHS]], float nofpclass(nan inf zero norm) [[RHS]], metadata !"round.tonearestaway", metadata !"fpexcept.strict") #[[ATTR8]]
+; CHECK-NEXT:    [[FADD:%.*]] = call nofpclass(nan zero) float @llvm.experimental.constrained.fadd.f32(float nofpclass(nan inf zero sub) [[LHS]], float nofpclass(nan inf zero norm) [[RHS]], metadata !"round.tonearestaway", metadata !"fpexcept.strict") #[[ATTR8]]
 ; CHECK-NEXT:    ret float [[FADD]]
 ;
   %fadd = call float @llvm.experimental.constrained.fadd.f32(float %lhs, float %rhs, metadata !"round.tonearestaway", metadata !"fpexcept.strict")
@@ -968,9 +1048,9 @@ define float @fadd_rna__norm__sub(float nofpclass(nan inf zero sub) %lhs, float 
 }
 
 define float @fsub_rna__sub__norm(float nofpclass(nan inf zero norm) %lhs, float nofpclass(nan inf zero sub) %rhs) #0 strictfp {
-; CHECK-LABEL: define nofpclass(nan nzero) float @fsub_rna__sub__norm(
+; CHECK-LABEL: define nofpclass(nan zero) float @fsub_rna__sub__norm(
 ; CHECK-SAME: float nofpclass(nan inf zero norm) [[LHS:%.*]], float nofpclass(nan inf zero sub) [[RHS:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[FSUB:%.*]] = call nofpclass(nan nzero) float @llvm.experimental.constrained.fsub.f32(float nofpclass(nan inf zero norm) [[LHS]], float nofpclass(nan inf zero sub) [[RHS]], metadata !"round.tonearestaway", metadata !"fpexcept.strict") #[[ATTR8]]
+; CHECK-NEXT:    [[FSUB:%.*]] = call nofpclass(nan zero) float @llvm.experimental.constrained.fsub.f32(float nofpclass(nan inf zero norm) [[LHS]], float nofpclass(nan inf zero sub) [[RHS]], metadata !"round.tonearestaway", metadata !"fpexcept.strict") #[[ATTR8]]
 ; CHECK-NEXT:    ret float [[FSUB]]
 ;
   %fsub = call float @llvm.experimental.constrained.fsub.f32(float %lhs, float %rhs, metadata !"round.tonearestaway", metadata !"fpexcept.strict")

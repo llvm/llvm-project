@@ -61,6 +61,15 @@ public:
   using SeekFunc = ErrorOr<off_t>(File *, off_t, int);
   using CloseFunc = int(File *);
 
+  // Exposes the platform I/O callbacks so a platform backend can positively
+  // identify which concrete File subclass an object is (e.g. distinguishing
+  // a LinuxFile from a CookieFile/MemoryFile) without needing RTTI. See
+  // is_linux_file() in the Linux backend for the concrete use.
+  LIBC_INLINE ReadFunc *get_read_func() const { return platform_read; }
+  LIBC_INLINE WriteFunc *get_write_func() const { return platform_write; }
+  LIBC_INLINE SeekFunc *get_seek_func() const { return platform_seek; }
+  LIBC_INLINE CloseFunc *get_close_func() const { return platform_close; }
+
   // This is a convenience RAII class to lock and unlock file objects.
   class FileLock {
     File *file;
@@ -159,7 +168,7 @@ public:
       : platform_write(wf), platform_read(rf), platform_seek(sf),
         platform_close(cf), buf(buffer), bufsize(buffer_size), pos(0),
         read_limit(0), prev(nullptr), next(nullptr), mbstate(), mode(mode),
-        ungetc_buf{}, mutex(/*timed=*/false, /*recursive=*/false,
+        ungetc_buf{}, mutex(/*timed=*/false, /*recursive=*/true,
                             /*robust=*/false, /*pshared=*/false),
         bufmode(static_cast<int8_t>(buffer_mode)), prev_op(FileOp::NONE),
         orientation(Orientation::UNORIENTED), own_buf(owned), eof(false),
@@ -279,6 +288,8 @@ public:
 
   LIBC_INLINE bool error_unlocked() const { return err; }
 
+  LIBC_INLINE void set_error_unlocked() { err = true; }
+
   LIBC_INLINE bool error() {
     FileLock l(this);
     return error_unlocked();
@@ -336,6 +347,8 @@ private:
 
   FileIOResult read_unlocked_fbf(uint8_t *data, size_t len);
   FileIOResult read_unlocked_nbf(uint8_t *data, size_t len);
+  FileIOResult read_from_platform(uint8_t *dst, size_t min_bytes,
+                                  size_t max_bytes);
   size_t copy_data_from_buf(uint8_t *data, size_t len);
 
   LIBC_INLINE constexpr void adjust_buf() {
@@ -376,7 +389,7 @@ int reopenfile_unlocked(File *f, const char *path, const char *mode);
 
 // The platform_file library should implement it if it relevant for that
 // platform.
-int get_fileno(File *f);
+ErrorOr<int> get_fileno(File *f);
 
 } // namespace LIBC_NAMESPACE_DECL
 
