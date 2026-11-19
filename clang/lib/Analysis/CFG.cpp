@@ -805,8 +805,7 @@ private:
   void addLoopExit(const Stmt *LoopStmt);
   void addAutomaticObjHandling(LocalScope::const_iterator B,
                                LocalScope::const_iterator E, Stmt *S);
-  void addAutomaticObjDestruction(LocalScope::const_iterator B,
-                                  LocalScope::const_iterator E, Stmt *S);
+  void addAutomaticObjDestruction(llvm::iterator_range<LocalScope::const_iterator> R, Stmt *S);
   void addScopeExitHandling(LocalScope::const_iterator B,
                             LocalScope::const_iterator E, Stmt *S);
   void addImplicitDtorsForDestructor(const CXXDestructorDecl *DD);
@@ -1955,7 +1954,7 @@ void CFGBuilder::addAutomaticObjHandling(LocalScope::const_iterator B,
 
   // Not leaving the scope, only need to handle destruction and lifetime
   if (B.inSameLocalScope(E)) {
-    addAutomaticObjDestruction(B, E, S);
+    addAutomaticObjDestruction(llvm::iterator_range(B, E), S);
     return;
   }
 
@@ -1976,24 +1975,20 @@ void CFGBuilder::addAutomaticObjHandling(LocalScope::const_iterator B,
   for (auto [E, B] : Pairwise) {
     if (!B.inSameLocalScope(E))
       addScopeExitHandling(B, E, S);
-    addAutomaticObjDestruction(B, E, S);
+    addAutomaticObjDestruction(llvm::iterator_range(B, E), S);
   }
 }
 
 /// Add CFG elements corresponding to call destructor and end of lifetime
 /// of all automatic variables with trivial and non-trivial destructors in
 /// range [B, E). This includes AutomaticObjectDtor and LifetimeEnds elements.
-void CFGBuilder::addAutomaticObjDestruction(LocalScope::const_iterator B,
-                                            LocalScope::const_iterator E,
+void CFGBuilder::addAutomaticObjDestruction(llvm::iterator_range<LocalScope::const_iterator> R,
                                             Stmt *S) {
   if (!BuildOpts.AddImplicitDtors && !BuildOpts.AddLifetime)
     return;
 
-  if (B == E)
-    return;
-
   SmallVector<VarDecl *, 10> LocalVarDecls;
-  for (VarDecl *VD : llvm::make_range(B, E))
+  for (VarDecl *VD : R)
     LocalVarDecls.push_back(VD);
 
   for (VarDecl *VD : llvm::reverse(LocalVarDecls)) {
