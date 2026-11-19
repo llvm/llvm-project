@@ -237,12 +237,11 @@ private:
   findPathsToMatch(LoopInfo &LI, BasicBlock *From,
                    std::function<bool(const BasicBlock *)> isMatch) const {
     ForwardPostOrderTraversal Traversal(*this, From);
-    SmallVector<BasicBlock *, 16> PostOrder(Traversal.begin(), Traversal.end());
 
-    // |PostOrder| puts successors before predecessors, so reachability to a
+    // Postorder visits successors before predecessors, so reachability to a
     // match propagates in one linear scan instead of per-path recursion.
     SmallPtrSet<BasicBlock *, 0> Output;
-    for (auto *BB : PostOrder) {
+    for (auto *BB : Traversal) {
       bool ReachesMatch = false;
       auto *Terminator = BB->getTerminator();
       for (unsigned i = 0; i < Terminator->getNumSuccessors(); ++i) {

@@ -954,9 +954,8 @@ TEST_F(SPIRVConvergenceRegionAnalysisTest,
                     {"", "l1_end", "end", "d"});
 }
 
-// Regression test for findPathsToMatch: a naive recursive enumeration
-// revisits the common suffix once per incoming path, growing exponentially
-// with the number of diamonds.
+// Every block of reconverging diamonds between the loop exit and the
+// convergent call belongs to the loop region.
 TEST_F(SPIRVConvergenceRegionAnalysisTest,
        ReconvergingDiamondsWithConvergenceBranch) {
   StringRef Assembly = R"(
