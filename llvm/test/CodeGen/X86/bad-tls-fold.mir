@@ -19,7 +19,6 @@
 # CHECK-LABEL: or:
 name: or
 alignment: 16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr64 }
   - { id: 1, class: gr64 }
@@ -49,7 +48,6 @@ body: |
 # CHECK-LABEL: and:
 name: and
 alignment: 16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr64 }
   - { id: 1, class: gr64 }

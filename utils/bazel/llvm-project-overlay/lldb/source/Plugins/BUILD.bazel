@@ -48,6 +48,7 @@ cc_library(
         ":LanguageCPlusPlusProperties",
         ":PluginHighlighterClang",
         ":PluginObjectFilePDB",
+        ":PluginObjectFilePECOFF",
         ":PluginProcessUtility",
         ":SymbolFileDWARFProperties",
         ":SymbolFilePDBProperties",
@@ -1183,6 +1184,23 @@ cc_library(
         "//lldb:Utility",
         "//llvm:Support",
         "//llvm:TargetParser",
+    ],
+)
+
+cc_library(
+    name = "PluginDynamicLoaderAcceleratorGDBRemote",
+    srcs = glob(["DynamicLoader/AcceleratorGDBRemote/*.cpp"]),
+    hdrs = glob(["DynamicLoader/AcceleratorGDBRemote/*.h"]),
+    includes = [".."],
+    deps = [
+        ":PluginProcessGDBRemote",
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:Symbol",
+        "//lldb:Target",
+        "//lldb:Utility",
+        "//llvm:Support",
     ],
 )
 

@@ -893,6 +893,7 @@ Status ProcessGDBRemote::DoLaunch(lldb_private::Module *exe_module,
     // Send the environment and the program + arguments after we connect
     m_gdb_comm.SendEnvironment(launch_info.GetEnvironment());
 
+    StringExtractorGDBRemote response;
     {
       // Scope for the scoped timeout object
       GDBRemoteCommunication::ScopedTimeout timeout(m_gdb_comm,
@@ -914,11 +915,14 @@ Status ProcessGDBRemote::DoLaunch(lldb_private::Module *exe_module,
                                       exe_file.GetPath(/*denormalize=*/true));
         }
       }
-      if (llvm::Error err = m_gdb_comm.LaunchProcess(args)) {
+      llvm::Expected<StringExtractorGDBRemote> launch_response =
+          m_gdb_comm.LaunchProcess(args);
+      if (!launch_response) {
         error = Status::FromErrorStringWithFormatv(
             "Cannot launch '{0}': {1}", args.GetArgumentAtIndex(0),
-            llvm::fmt_consume(std::move(err)));
+            llvm::fmt_consume(launch_response.takeError()));
       } else {
+        response = std::move(*launch_response);
         SetID(m_gdb_comm.GetCurrentProcessID());
       }
     }
@@ -930,8 +934,8 @@ Status ProcessGDBRemote::DoLaunch(lldb_private::Module *exe_module,
       return error;
     }
 
-    StringExtractorGDBRemote response;
-    if (m_gdb_comm.GetStopReply(response)) {
+    if (response.IsStopReply(StringExtractorGDBRemote::ValidStop) ||
+        m_gdb_comm.GetStopReply(response)) {
       SetLastStopPacket(response);
 
       const ArchSpec &process_arch = m_gdb_comm.GetProcessArchitecture();
@@ -944,7 +948,11 @@ Status ProcessGDBRemote::DoLaunch(lldb_private::Module *exe_module,
           GetTarget().MergeArchitecture(host_arch);
       }
 
-      SetPrivateState(SetThreadStopInfo(response));
+      StateType state = SetThreadStopInfo(response);
+      if (state == eStateExited)
+        SetExitStatusFromStopReply(response);
+      else
+        SetPrivateState(state);
 
       if (!disable_stdio) {
         if (pty.GetPrimaryFileDescriptor() != PseudoTerminal::invalid_fd) {
@@ -1692,10 +1700,10 @@ size_t ProcessGDBRemote::UpdateThreadPCsFromStopReplyThreadsValue(
 bool ProcessGDBRemote::UpdateThreadIDList() {
   std::lock_guard<std::recursive_mutex> guard(m_thread_list_real.GetMutex());
 
-  StructuredData::ObjectSP threads_info_sp = *m_jthreadsinfo.Lock();
+  ThreadInfosSP threads_info_sp = *m_jthreadsinfo.Lock();
   if (threads_info_sp) {
     // If we have the JSON threads info, we can get the thread list from that
-    StructuredData::Array *thread_infos = threads_info_sp->GetAsArray();
+    StructuredData::Array *thread_infos = threads_info_sp->GetArray();
     if (thread_infos && thread_infos->GetSize() > 0) {
       m_thread_ids.clear();
       m_thread_pcs.clear();
@@ -1839,42 +1847,57 @@ std::optional<size_t> ProcessGDBRemote::FindThreadIDIndex(lldb::tid_t tid) {
   return it->second;
 }
 
-bool ProcessGDBRemote::GetThreadStopInfoFromJSON(
-    ThreadGDBRemote *thread, const StructuredData::ObjectSP &thread_infos_sp) {
-  // See if we got thread stop infos for all threads via the "jThreadsInfo"
-  // packet
-  if (thread_infos_sp) {
-    StructuredData::Array *thread_infos = thread_infos_sp->GetAsArray();
-    if (thread_infos) {
-      lldb::tid_t tid;
-      const size_t n = thread_infos->GetSize();
-      for (size_t i = 0; i < n; ++i) {
-        StructuredData::Dictionary *thread_dict =
-            thread_infos->GetItemAtIndex(i)->GetAsDictionary();
-        if (thread_dict) {
-          if (thread_dict->GetValueForKeyAsInteger<lldb::tid_t>(
-                  "tid", tid, LLDB_INVALID_THREAD_ID)) {
-            if (tid == thread->GetID())
-              return (bool)SetThreadStopInfo(thread_dict,
-                                             thread->shared_from_this());
-          }
-        }
-      }
-    }
+ProcessGDBRemote::ThreadInfos::ThreadInfos(StructuredData::ObjectSP json_sp)
+    : m_json_sp(std::move(json_sp)) {
+  StructuredData::Array *array = m_json_sp->GetAsArray();
+  if (!array)
+    return;
+  const size_t n = array->GetSize();
+  m_thread_dicts.reserve(n);
+  for (size_t i = 0; i < n; ++i) {
+    StructuredData::Dictionary *thread_dict =
+        array->GetItemAtIndex(i)->GetAsDictionary();
+    lldb::tid_t tid = LLDB_INVALID_THREAD_ID;
+    // If a reply lists a thread more than once, use its first entry.
+    if (thread_dict && thread_dict->GetValueForKeyAsInteger("tid", tid))
+      m_thread_dicts.try_emplace(tid, thread_dict);
   }
-  return false;
+}
+
+StructuredData::Dictionary *
+ProcessGDBRemote::ThreadInfos::FindThread(lldb::tid_t tid) const {
+  auto it = m_thread_dicts.find(tid);
+  return it == m_thread_dicts.end() ? nullptr : it->second;
+}
+
+ProcessGDBRemote::ThreadInfosSP
+ProcessGDBRemote::IndexThreadInfos(StructuredData::ObjectSP json_sp) {
+  if (!json_sp)
+    return nullptr;
+  return std::make_shared<const ThreadInfos>(std::move(json_sp));
+}
+
+bool ProcessGDBRemote::GetThreadStopInfoFromJSON(
+    ThreadGDBRemote *thread, const ThreadInfosSP &thread_infos_sp) {
+  if (!thread_infos_sp)
+    return false;
+  StructuredData::Dictionary *thread_dict =
+      thread_infos_sp->FindThread(thread->GetID());
+  if (!thread_dict)
+    return false;
+  return SetThreadStopInfo(thread_dict, thread->shared_from_this()) != nullptr;
 }
 
 bool ProcessGDBRemote::CalculateThreadStopInfo(ThreadGDBRemote *thread) {
   // See if we got thread stop infos for all threads via the "jThreadsInfo"
   // packet (we're at a public stop).
-  StructuredData::ObjectSP threads_info_sp = *m_jthreadsinfo.Lock();
+  ThreadInfosSP threads_info_sp = *m_jthreadsinfo.Lock();
   if (GetThreadStopInfoFromJSON(thread, threads_info_sp))
     return true;
 
   // See if the stop-reply packet (T05 etc) included a `jstopinfo` key
   // with a mach exception description for any thread that has a stop reason.
-  StructuredData::ObjectSP stop_info_sp = *m_jstopinfo.Lock();
+  ThreadInfosSP stop_info_sp = *m_jstopinfo.Lock();
   if (stop_info_sp) {
     // Any thread not described in `jstopinfo` has no stop reason.
     // If a no-stop-reason thread is stopped at a breakpoint site (but
@@ -2155,6 +2178,15 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
         } else if (reason == "vforkdone") {
           thread_sp->SetStopInfo(
               StopInfo::CreateStopReasonVForkDone(*thread_sp));
+          handled = true;
+        } else if (reason == "dyld") {
+          if (llvm::Error error = LoadModules()) {
+            Log *log = GetLog(GDBRLog::Process);
+            LLDB_LOG_ERROR(log, std::move(error),
+                           "failed to load modules: {0}");
+          }
+          thread_sp->SetStopInfo(
+              StopInfo::CreateStopReasonDyld(*thread_sp, description.c_str()));
           handled = true;
         }
       }
@@ -2537,7 +2569,7 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
 
         // This JSON contains thread IDs and thread stop info for all threads.
         // It doesn't contain expedited registers, memory or queue info.
-        *m_jstopinfo.Lock() = StructuredData::ParseJSON(json);
+        *m_jstopinfo.Lock() = IndexThreadInfos(StructuredData::ParseJSON(json));
       } else if (key.compare("hexname") == 0) {
         StringExtractor name_extractor(value);
         // Now convert the HEX bytes into a string value
@@ -2895,6 +2927,24 @@ void ProcessGDBRemote::SetLastStopPacket(
   m_last_stop_packet = response;
 }
 
+void ProcessGDBRemote::SetExitStatusFromStopReply(
+    StringExtractorGDBRemote &response) {
+  response.SetFilePos(1);
+  int exit_status = response.GetHexU8();
+  std::string desc_string;
+  if (response.GetBytesLeft() > 0 && response.GetChar() == ';') {
+    llvm::StringRef desc_str;
+    llvm::StringRef desc_token;
+    while (response.GetNameColonValue(desc_token, desc_str)) {
+      if (desc_token != "description")
+        continue;
+      StringExtractor extractor(desc_str);
+      extractor.GetHexByteString(desc_string);
+    }
+  }
+  SetExitStatus(exit_status, desc_string);
+}
+
 void ProcessGDBRemote::SetUnixSignals(const UnixSignalsSP &signals_sp) {
   Process::SetUnixSignals(std::make_shared<GDBRemoteSignals>(signals_sp));
 }
@@ -2930,7 +2980,7 @@ void ProcessGDBRemote::WillPublicStop() {
   // memory will help stack backtracing be much faster. Expediting registers
   // will make sure we don't have to read the thread registers for GPRs.
   StructuredData::ObjectSP threads_info_sp = m_gdb_comm.GetThreadsInfo();
-  *m_jthreadsinfo.Lock() = threads_info_sp;
+  *m_jthreadsinfo.Lock() = IndexThreadInfos(threads_info_sp);
 
   if (threads_info_sp) {
     // Now set the stop info for each thread and also expedite any registers
@@ -4242,21 +4292,7 @@ thread_result_t ProcessGDBRemote::AsyncThread() {
             case eStateExited: {
               SetLastStopPacket(response);
               ClearThreadIDList();
-              response.SetFilePos(1);
-
-              int exit_status = response.GetHexU8();
-              std::string desc_string;
-              if (response.GetBytesLeft() > 0 && response.GetChar('-') == ';') {
-                llvm::StringRef desc_str;
-                llvm::StringRef desc_token;
-                while (response.GetNameColonValue(desc_token, desc_str)) {
-                  if (desc_token != "description")
-                    continue;
-                  StringExtractor extractor(desc_str);
-                  extractor.GetHexByteString(desc_string);
-                }
-              }
-              SetExitStatus(exit_status, desc_string.c_str());
+              SetExitStatusFromStopReply(response);
               done = true;
               break;
             }
@@ -4700,8 +4736,12 @@ bool ProcessGDBRemote::StopNoticingNewThreads() {
 }
 
 DynamicLoader *ProcessGDBRemote::GetDynamicLoader() {
-  if (m_dyld_up.get() == nullptr)
-    m_dyld_up.reset(DynamicLoader::FindPlugin(this, ""));
+  if (m_dyld_up.get() == nullptr) {
+    std::string plugin_name;
+    if (std::optional<LLDBSettings> settings = m_gdb_comm.GetLLDBSettings())
+      plugin_name = settings->dyld_plugin_name;
+    m_dyld_up.reset(DynamicLoader::FindPlugin(this, plugin_name));
+  }
   return m_dyld_up.get();
 }
 
@@ -6379,6 +6419,9 @@ lldb::ModuleSP ProcessGDBRemote::LoadModuleAtAddress(const FileSpec &file,
 llvm::Error ProcessGDBRemote::LoadModules() {
   using lldb_private::process_gdb_remote::ProcessGDBRemote;
 
+  if (m_dyld_up && m_dyld_up->HandleStopReasonDynamicLoader())
+    return llvm::ErrorSuccess();
+
   // request a list of loaded libraries from GDBServer
   llvm::Expected<LoadedModuleInfoList> module_list = GetLoadedModuleList();
   if (!module_list)
@@ -6660,17 +6703,19 @@ llvm::Expected<bool> ProcessGDBRemote::SaveCore(llvm::StringRef outfile) {
       return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                      "qSaveCore returned no core path");
 
-    // now transfer the core file
     FileSpec remote_core{llvm::StringRef(path)};
+    FileSpec local_core{outfile};
     Platform &platform = *GetTarget().GetPlatform();
-    Status error = platform.GetFile(remote_core, FileSpec(outfile));
 
-    if (platform.IsRemote()) {
-      // NB: we unlink the file on error too
-      platform.Unlink(remote_core);
-      if (error.Fail())
-        return error.ToError();
-    }
+    if (!platform.IsRemote() && remote_core == local_core)
+      return true;
+
+    // now transfer the core file
+    Status error = platform.GetFile(remote_core, local_core);
+    // NB: we unlink the file on error too
+    platform.Unlink(remote_core);
+    if (error.Fail())
+      return error.ToError();
 
     return true;
   }

@@ -11,9 +11,6 @@
 
 #include "mlir/Dialect/Arith/IR/ArithOpInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/OpImplementation.h"
-#include "mlir/Interfaces/InferTypeOpInterface.h"
-#include "mlir/Interfaces/SideEffectInterfaces.h"
 
 //===----------------------------------------------------------------------===//
 // Complex Dialect

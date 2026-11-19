@@ -59,7 +59,6 @@
 ---
 # Valid consecutive even/odd register pair - should expand to LD_RV32
 name: expand_pseudold_valid
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $x10
@@ -79,7 +78,6 @@ body: |
 ---
 # Valid consecutive even/odd register pair - should expand to SD_RV32
 name: expand_pseudosd_valid
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $x10, $x12, $x13
@@ -97,7 +95,6 @@ body: |
 ---
 # Invalid register pair (not consecutive) - should decompose back to LW
 name: expand_pseudold_invalid_pair
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $x10
@@ -119,7 +116,6 @@ body: |
 ---
 # Invalid register pair (not even/odd) - should decompose back to SW
 name: expand_pseudosd_invalid_pair
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $x10, $x11, $x14
@@ -139,7 +135,6 @@ body: |
 ---
 # Test store zero combinations - zeros don't need consecutive pairs
 name: store_zero_combine_valid
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $x10
@@ -156,12 +151,11 @@ body: |
 # Test store zero base combinations - zero can't be first register unless both
 # are zeros
 name: store_zero_combine_invalid
-tracksRegLiveness: false
 body: |
   bb.0:
-    liveins: $x10
+    liveins: $x1, $x10
     ; CHECK-LABEL: name: store_zero_combine_invalid
-    ; CHECK: liveins: $x10
+    ; CHECK: liveins: $x1, $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: SW killed $x0, $x10, 0
     ; CHECK-NEXT: SW killed $x1, killed $x10, 4
@@ -173,7 +167,6 @@ body: |
 ---
 # Test invalid register pair with symbolic operands - should split back to LW
 name: expand_pseudold_invalid_symbolic
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $x10
@@ -195,15 +188,14 @@ body: |
 ---
 # Test overlapped first reg and base reg - should split back to LW
 name: overlapped_first_reg_base_reg
-tracksRegLiveness: false
 body: |
   bb.0:
-    liveins: $x10
+    liveins: $x10, $x11
 
     ; PseudoLD_RV32_OPT with first destination register overlapping base register ($x11)
     ; Should decompose back to two LW instructions when first reg overlaps base reg
     ; CHECK-LABEL: name: overlapped_first_reg_base_reg
-    ; CHECK: liveins: $x10
+    ; CHECK: liveins: $x10, $x11
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $x14 = LW $x11, 4
     ; CHECK-NEXT: $x11 = LW killed $x11, 0

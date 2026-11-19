@@ -124,6 +124,7 @@ add_header(in_addr_t HDR in_addr_t.h)
 add_header(in_port_t HDR in_port_t.h DEPENDS libc.include.llvm-libc-macros.stdint_macros)
 add_header(struct_in_addr HDR struct_in_addr.h DEPENDS .in_addr_t)
 add_header(struct_in6_addr HDR struct_in6_addr.h DEPENDS libc.include.llvm-libc-macros.stdint_macros)
+add_header(struct_in6_pktinfo HDR struct_in6_pktinfo.h DEPENDS .struct_in6_addr)
 add_header(struct_ipv6_mreq HDR struct_ipv6_mreq.h DEPENDS .struct_in6_addr)
 add_header(struct_ip_mreq HDR struct_ip_mreq.h DEPENDS .struct_in_addr)
 add_header(struct_ip_mreq_source HDR struct_ip_mreq_source.h DEPENDS .struct_in_addr)
@@ -208,6 +209,16 @@ add_header(
     .struct_ipc_perm
     .time_t
 )
+add_header(
+  struct_shmid_ds
+  HDR struct_shmid_ds.h
+  DEPENDS
+    .pid_t
+    .shmatt_t
+    .size_t
+    .struct_ipc_perm
+    .time_t
+)
 add_header(struct_timeval HDR struct_timeval.h DEPENDS .suseconds_t .time_t)
 add_header(struct_itimerval HDR struct_itimerval.h DEPENDS .struct_timeval)
 add_header(struct_rusage HDR struct_rusage.h DEPENDS .struct_timeval)
@@ -232,6 +243,7 @@ add_header(
     .dev_t .ino_t .mode_t .nlink_t .uid_t .gid_t .off_t .struct_timespec
     .blksize_t .blkcnt_t
 )
+add_header(struct_statx HDR struct_statx.h)
 add_header(struct_tm HDR struct_tm.h)
 add_header(struct_passwd HDR struct_passwd.h DEPENDS .uid_t .gid_t)
 add_header(struct_group HDR struct_group.h DEPENDS .gid_t)
@@ -307,12 +319,14 @@ add_type_header(
     struct_ifreq.h
 )
 add_header(struct_if_nameindex HDR struct_if_nameindex.h)
+add_header(struct_ifaddrs HDR struct_ifaddrs.h DEPENDS .struct_sockaddr)
 add_header(struct_iovec HDR struct_iovec.h DEPENDS .size_t)
 add_header(struct_linger HDR struct_linger.h)
 add_header(struct_ucred HDR struct_ucred.h DEPENDS .pid_t .uid_t .gid_t)
 add_header(struct_cmsghdr HDR struct_cmsghdr.h DEPENDS .size_t)
 add_header(struct_msghdr HDR struct_msghdr.h DEPENDS .size_t .socklen_t .struct_iovec)
 add_header(struct_mmsghdr HDR struct_mmsghdr.h DEPENDS .struct_msghdr)
+add_header(struct_iphdr HDR struct_iphdr.h DEPENDS libc.include.llvm-libc-macros.stdint_macros)
 add_header(struct_udphdr HDR struct_udphdr.h DEPENDS libc.include.llvm-libc-macros.stdint_macros)
 add_header(struct_ether_addr HDR struct_ether_addr.h DEPENDS libc.include.llvm-libc-macros.stdint_macros)
 add_header(ACTION HDR ACTION.h)
@@ -369,6 +383,7 @@ add_header(
 )
 add_header(locale_t HDR locale_t.h)
 add_header(struct_lconv HDR struct_lconv.h)
+add_header(struct_mallinfo2 HDR struct_mallinfo2.h DEPENDS .size_t)
 add_header(int_hk_t HDR int_hk_t.h)
 add_header(int_hr_t HDR int_hr_t.h)
 add_header(int_k_t HDR int_k_t.h)
@@ -633,6 +648,7 @@ endif()
 add_type_header(mcontext_t HDR mcontext_t.h)
 add_type_header(ucontext_t HDR ucontext_t.h)
 add_type_header(struct_user_regs_struct HDR struct_user_regs_struct.h)
+add_header(struct_ar_hdr HDR struct_ar_hdr.h)
 
 # UEFI
 add_header(EFI_GUID HDR EFI_GUID.h DEPENDS libc.include.llvm-libc-macros.stdint_macros)
@@ -709,6 +725,7 @@ add_header(EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL
     libc.include.llvm-libc-macros.EFIAPI_macros
     libc.include.llvm-libc-macros.stdint_macros
     .EFI_STATUS
+    .char16_t
     .size_t
 )
 

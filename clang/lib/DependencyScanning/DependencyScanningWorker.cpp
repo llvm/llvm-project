@@ -737,7 +737,8 @@ public:
       // Skip over prebuilt modules.
       if (HasPrebuiltModules && !HS.getPrebuiltModuleFileName(Name).empty())
         continue;
-      OptionalFileEntryRef File = HS.lookupModuleMapFileForModule(Name);
+      OptionalFileEntryRef File = HS.lookupModuleMapFileForModule(
+          Name, /*AllowExtraModuleMapSearch=*/true);
       // Skip over modules that didn't find a modulemap.
       if (!File)
         continue;

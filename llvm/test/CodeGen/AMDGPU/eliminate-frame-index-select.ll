@@ -88,8 +88,7 @@ define void @wobble() #0 {
 ; CHECK-NEXT:    buffer_load_dword v1, v1, s[0:3], 0 offen
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; CHECK-NEXT:    s_mov_b32 s4, 1
-; CHECK-NEXT:    s_mov_b32 vcc_lo, exec_lo
-; CHECK-NEXT:    s_cbranch_vccnz .LBB0_1
+; CHECK-NEXT:    s_cbranch_execnz .LBB0_1
 ; CHECK-NEXT:  ; %bb.2: ; %DummyReturnBlock
 ; CHECK-NEXT:    s_inst_prefetch 0x2
 ; CHECK-NEXT:    s_clause 0x2 ; 12-byte Folded Reload

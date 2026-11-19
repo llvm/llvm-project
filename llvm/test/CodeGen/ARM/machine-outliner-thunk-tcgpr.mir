@@ -11,7 +11,6 @@
 ...
 ---
 name:            callee_saved
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: callee_saved
   ; CHECK:       tBL 14 /* CC::al */, $noreg, @[[CALLEE_SAVED_OUTLINED:OUTLINED_FUNCTION_[0-9]+]]
@@ -30,7 +29,6 @@ body:             |
 ...
 ---
 name:            caller_saved
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: caller_saved
   ; CHECK:       tBL 14 /* CC::al */, $noreg, @[[CALLER_SAVED_OUTLINED:OUTLINED_FUNCTION_[0-9]+]]

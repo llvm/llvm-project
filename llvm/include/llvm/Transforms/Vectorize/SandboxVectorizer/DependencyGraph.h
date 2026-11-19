@@ -150,9 +150,11 @@ protected:
   // TODO: Use a PointerIntPair for SubclassID and I.
   /// For isa/dyn_cast etc.
   DGNodeID SubclassID;
-  /// The number of unscheduled successors (predecessors) depending on the
-  /// scheduling direction. Optional represents whether the value is
-  /// meaningless, e.g., after a node gets scheduled.
+  /// The number of unscheduled successors in the bottom-up scheduling direction
+  /// (or predecessors in top-down). A value of 0 means that all its dependent
+  /// nodes have been scheduled so this node is ready to be scheduled. Optional
+  /// represents whether the value is meaningless, e.g., after a node gets
+  /// scheduled.
   std::optional<unsigned> UnscheduledDeps = 0;
   /// This is true if this node has been scheduled.
   bool Scheduled = false;
@@ -200,6 +202,7 @@ public:
   /// \Returns true if this node has been scheduled.
   bool scheduled() const { return Scheduled; }
   void setScheduled() {
+    assert(UnscheduledDeps == 0 && "Node not ready!");
     Scheduled = true;
     // UnscheduledDeps is meaningless from this point on, so prohibit its use.
     UnscheduledDeps = std::nullopt;
@@ -297,6 +300,7 @@ public:
   Instruction *getInstruction() const { return I; }
 
 #ifndef NDEBUG
+  void verify(DependencyGraph &DAG) const;
   virtual void print(raw_ostream &OS, bool PrintDeps = true) const;
   friend raw_ostream &operator<<(raw_ostream &OS, DGNode &N) {
     N.print(OS);
@@ -443,6 +447,8 @@ public:
   static Interval<MemDGNode> makeEmpty() { return {}; }
 };
 
+class Scheduler;
+
 class DependencyGraph {
 private:
   DenseMap<Instruction *, std::unique_ptr<DGNode>> InstrToNodeMap;
@@ -450,8 +456,12 @@ private:
   Interval<Instruction> DAGInterval;
 
   SchedDirection Dir;
-
+#ifndef NDEBUG
+  friend void DGNode::verify(DependencyGraph &DAG) const; // For Dir.
+#endif
   Context *Ctx = nullptr;
+  Scheduler *Sched = nullptr;
+
   std::optional<Context::CallbackID> CreateInstrCB;
   std::optional<Context::CallbackID> EraseInstrCB;
   std::optional<Context::CallbackID> MoveInstrCB;
@@ -516,8 +526,10 @@ private:
 
 public:
   /// This constructor also registers callbacks.
-  DependencyGraph(SchedDirection Dir, AAResults &AA, Context &Ctx)
-      : Dir(Dir), Ctx(&Ctx), BatchAA(std::make_unique<BatchAAResults>(AA)) {
+  DependencyGraph(SchedDirection Dir, AAResults &AA, Context &Ctx,
+                  Scheduler *Sched = nullptr)
+      : Dir(Dir), Ctx(&Ctx), Sched(Sched),
+        BatchAA(std::make_unique<BatchAAResults>(AA)) {
     CreateInstrCB = Ctx.registerCreateInstrCallback(
         [this](Instruction *I) { notifyCreateInstr(I); });
     EraseInstrCB = Ctx.registerEraseInstrCallback(
@@ -569,10 +581,8 @@ public:
     InstrToNodeMap.clear();
     DAGInterval = {};
   }
-  std::optional<Context::CallbackID> getEraseInstrCB() const {
-    return EraseInstrCB;
-  }
 #ifndef NDEBUG
+  void verify();
   /// \Returns true if the DAG's state is clear. Used in assertions.
   bool empty() const {
     bool IsEmpty = InstrToNodeMap.empty();

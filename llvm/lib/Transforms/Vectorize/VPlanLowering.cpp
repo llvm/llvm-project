@@ -116,10 +116,10 @@ void VPlanTransforms::replaceWideCanonicalIVWithWideIV(
 }
 
 // Add a VPActiveLaneMaskPHIRecipe and related recipes to \p Plan and replace
-// the loop terminator with a branch-on-cond recipe with the negated
-// wide-active-lane-mask as operand. Note that this turns the loop into an
-// uncountable one. Only the existing terminator is replaced, all other existing
-// recipes/users remain unchanged. Return the created VPActiveLaneMaskPHIRecipe.
+// the latch exit check with the negated wide-active-lane-mask. Note that this
+// turns the loop into an uncountable one. Other exit conditions combined with
+// the latch exit check are kept, all other existing recipes/users remain
+// unchanged. Return the created VPActiveLaneMaskPHIRecipe.
 //
 // The function adds the following recipes:
 //
@@ -179,10 +179,21 @@ addVPLaneMaskPhiAndUpdateExitBranch(VPlan &Plan) {
                                        "trip.count.minus.vf");
   }
 
+  // The latch exit check is either the terminator or a compare combined with
+  // other exit conditions, e.g. by handleMaxMinNumReductions.
+  auto *LatchExit = cast<VPInstruction>(EB->getTerminator());
+  bool IsBranchOnCount = match(LatchExit, m_BranchOnCount());
+  if (!IsBranchOnCount) {
+    LatchExit = findSingleUser<VPInstruction>(
+        CanonicalIVIncrement,
+        m_SpecificICmp(CmpInst::ICMP_EQ, m_Specific(CanonicalIVIncrement),
+                       m_Specific(&Plan.getVectorTripCount())));
+    assert(LatchExit && "expected latch exit compare");
+  }
+
   // Create the active lane mask for the next iteration of the loop before the
-  // original terminator.
-  VPRecipeBase *OriginalTerminator = EB->getTerminator();
-  Builder.setInsertPoint(OriginalTerminator);
+  // latch exit check.
+  Builder.setInsertPoint(LatchExit);
   auto *ALM = Builder.createNaryOp(VPInstruction::WideActiveLaneMask,
                                    {IncrementValue, TC, ALMMultiplier}, DL,
                                    "active.lane.mask.next");
@@ -191,11 +202,17 @@ addVPLaneMaskPhiAndUpdateExitBranch(VPlan &Plan) {
                              "extract.next.alm.part");
   LaneMaskPhi->addBackedgeValue(ALM);
 
-  // Replace the original terminator with BranchOnCond. We have to invert the
+  // Replace the latch exit check with the negated mask. We have to invert the
   // mask here because a true condition means jumping to the exit block.
   auto *NotMask = Builder.createNot(ALM, DL);
-  Builder.createNaryOp(VPInstruction::BranchOnCond, {NotMask}, DL);
-  OriginalTerminator->eraseFromParent();
+  if (IsBranchOnCount)
+    Builder.createNaryOp(VPInstruction::BranchOnCond, {NotMask}, DL);
+  else {
+    assert(LatchExit->getSingleUser()->usesFirstLaneOnly(LatchExit) &&
+           "Single user of latch exit compare must only use the first lane");
+    LatchExit->replaceAllUsesWith(NotMask);
+  }
+  LatchExit->eraseFromParent();
   return LaneMaskPhi;
 }
 
@@ -428,7 +445,7 @@ static void expandVPDerivedIV(VPDerivedIVRecipe *R) {
   Index = StepTy->isIntegerTy()
               ? Builder.createScalarZExtOrTrunc(
                     Index, StepTy, DebugLoc::getCompilerGenerated())
-              : Builder.createScalarCast(Instruction::SIToFP, Index, StepTy,
+              : Builder.createScalarCast(Instruction::UIToFP, Index, StepTy,
                                          DebugLoc::getCompilerGenerated());
   VPIRFlags::WrapFlagsTy Flags = R->getNoWrapFlags();
   switch (R->getInductionKind()) {
@@ -572,6 +589,15 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
         continue;
       }
 
+      if (auto *CondIV = dyn_cast<VPConditionalInductionPHIRecipe>(&R)) {
+        VPPhi *CondIVPhi = Builder.createScalarPhi(
+            CondIV->getStartValue(), CondIV->getDebugLoc(), "conditional.iv");
+        CondIVPhi->addIncoming(CondIV->getBackedgeValue());
+        CondIV->replaceAllUsesWith(CondIVPhi);
+        CondIV->eraseFromParent();
+        continue;
+      }
+
       if (auto *DerivedIVR = dyn_cast<VPDerivedIVRecipe>(&R)) {
         expandVPDerivedIV(DerivedIVR);
         DerivedIVR->eraseFromParent();
@@ -650,17 +676,6 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
 
         LastActiveL->replaceAllUsesWith(LastLane);
         LastActiveL->eraseFromParent();
-        continue;
-      }
-
-      // Lower MaskedCond with block mask to LogicalAnd.
-      if (match(&R, m_VPInstruction<VPInstruction::MaskedCond>())) {
-        auto *VPI = cast<VPInstruction>(&R);
-        assert(VPI->isMasked() &&
-               "Unmasked MaskedCond should be simplified earlier");
-        VPI->replaceAllUsesWith(Builder.createNaryOp(
-            VPInstruction::LogicalAnd, {VPI->getMask(), VPI->getOperand(0)}));
-        VPI->eraseFromParent();
         continue;
       }
 
@@ -954,8 +969,10 @@ void VPlanTransforms::materializeFactors(VPlan &Plan, VPBasicBlock *VectorPH,
 
 VPValue *
 VPlanTransforms::materializeAliasMask(VPlan &Plan, VPBasicBlock *AliasCheckVPBB,
-                                      ArrayRef<PointerDiffInfo> DiffChecks) {
+                                      ArrayRef<PointerDiffInfo> DiffChecks,
+                                      ScalarEvolution &SE) {
   VPBuilder Builder(AliasCheckVPBB);
+  VPSCEVExpander Expander(Builder, SE, DebugLoc::getCompilerGenerated());
   Type *I1Ty = IntegerType::getInt1Ty(Plan.getContext());
 
   VPValue *IncomingAliasMask = vputils::findIncomingAliasMask(Plan);
@@ -963,9 +980,8 @@ VPlanTransforms::materializeAliasMask(VPlan &Plan, VPBasicBlock *AliasCheckVPBB,
 
   VPValue *AliasMask = nullptr;
   for (const PointerDiffInfo &Check : DiffChecks) {
-    VPValue *Src = vputils::getOrCreateVPValueForSCEVExpr(Plan, Check.SrcStart);
-    VPValue *Sink =
-        vputils::getOrCreateVPValueForSCEVExpr(Plan, Check.SinkStart);
+    VPValue *Src = Expander.expand(Check.SrcStart);
+    VPValue *Sink = Expander.expand(Check.SinkStart);
     Type *AddrType = Src->getScalarType();
 
     // TODO: Only freeze the required pointer (not both src and sink).
@@ -1002,11 +1018,13 @@ VPlanTransforms::materializeAliasMask(VPlan &Plan, VPBasicBlock *AliasCheckVPBB,
 }
 
 void VPlanTransforms::materializeAliasMaskCheckBlock(
-    VPlan &Plan, ArrayRef<PointerDiffInfo> DiffChecks, bool HasBranchWeights) {
+    VPlan &Plan, ArrayRef<PointerDiffInfo> DiffChecks, ScalarEvolution &SE,
+    bool HasBranchWeights) {
   VPBasicBlock *ClampedVFCheck =
       Plan.createVPBasicBlock("vector.clamped.vf.check");
 
-  VPValue *ClampedVF = materializeAliasMask(Plan, ClampedVFCheck, DiffChecks);
+  VPValue *ClampedVF =
+      materializeAliasMask(Plan, ClampedVFCheck, DiffChecks, SE);
   VPBuilder Builder(ClampedVFCheck);
   DebugLoc DL = DebugLoc::getCompilerGenerated();
   Type *TCTy = Plan.getTripCount()->getScalarType();
@@ -1076,7 +1094,10 @@ void VPlanTransforms::expandSCEVsToVPInstructions(VPlan &Plan,
 
 DenseMap<const SCEV *, Value *>
 VPlanTransforms::expandSCEVs(VPlan &Plan, ScalarEvolution &SE) {
-  SCEVExpander Expander(SE, "induction", /*PreserveLCSSA=*/false);
+  // The IR SCEVExpander may expand expressions early, where they may cause UB.
+  // Use SafeUDivMode.
+  SCEVExpander Expander(SE, "induction", /*PreserveLCSSA=*/false,
+                        /*SafeUDivMode=*/true);
 
   auto *Entry = cast<VPIRBasicBlock>(Plan.getEntry());
   BasicBlock *EntryBB = Entry->getIRBasicBlock();
