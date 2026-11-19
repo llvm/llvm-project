@@ -258,6 +258,31 @@ define <16 x float> @negative_masked_load_wrong_step_vector(ptr %p, i32 signext 
   ret <16 x float> %19
 }
 
+define <64 x i8> @negative_masked_load_wrapping_sequence(ptr %p, i8 signext %n, i8 signext %base) nounwind {
+; CHECK-LABEL: negative_masked_load_wrapping_sequence:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a3, 64
+; CHECK-NEXT:    vsetvli zero, a3, e8, m4, ta, mu
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    li a3, 200
+; CHECK-NEXT:    vadd.vx v8, v8, a3
+; CHECK-NEXT:    andi a2, a2, 248
+; CHECK-NEXT:    vor.vx v8, v8, a2
+; CHECK-NEXT:    vmsltu.vx v0, v8, a1
+; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vle8.v v8, (a0), v0.t
+; CHECK-NEXT:    ret
+  %1 = and i8 %base, -8
+  %splat.splatinsert = insertelement <64 x i8> poison, i8 %1, i64 0
+  %splat.splat = shufflevector <64 x i8> %splat.splatinsert, <64 x i8> poison, <64 x i32> zeroinitializer
+  %or = or disjoint <64 x i8> %splat.splat, <i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 4, i8 5, i8 6, i8 7>
+  %splat.splatinsert4 = insertelement <64 x i8> poison, i8 %n, i64 0
+  %splat.splat5 = shufflevector <64 x i8> %splat.splatinsert4, <64 x i8> poison, <64 x i32> zeroinitializer
+  %cmp = icmp ult <64 x i8> %or, %splat.splat5
+  %r = tail call <64 x i8> @llvm.masked.load(ptr %p, <64 x i1> %cmp, <64 x i8> zeroinitializer)
+  ret <64 x i8> %r
+}
+
 ; We can't to do this transformation if we cannot gaurantee %base + %offset to always be non-negative.
 define <16 x float> @negative_masked_load_signed_cmp(ptr %p, i32 signext %n, i32 signext %base) nounwind {
 ; CHECK-LABEL: negative_masked_load_signed_cmp:
