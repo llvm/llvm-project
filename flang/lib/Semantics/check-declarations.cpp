@@ -20,6 +20,7 @@
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
 #include "flang/Semantics/type.h"
+#include "llvm/ADT/SmallVector.h"
 #include <algorithm>
 #include <map>
 #include <string>
@@ -198,8 +199,10 @@ private:
   // Collection of module procedure symbols with non-BIND(C)
   // global names, qualified by their module.
   std::map<std::pair<SourceName, const Symbol *>, SymbolRef> moduleProcs_;
-  // Collection of symbols with global names, BIND(C) or otherwise
-  std::map<std::string, SymbolRef> globalNames_;
+  // Collection of symbols with global names, BIND(C) or otherwise.  Retain
+  // every COMMON block sharing a name so that later conflicts cannot be
+  // hidden by the first appearance.
+  std::map<std::string, llvm::SmallVector<SymbolRef, 1>> globalNames_;
   // Collection of external procedures without global definitions
   std::map<std::string, SymbolRef> externalNames_;
   // Collection of target dependent assembly names of external and BIND(C)
@@ -3201,15 +3204,54 @@ static std::optional<std::string> DefinesGlobalName(const Symbol &symbol) {
 // 19.2 p2
 void CheckHelper::CheckGlobalName(const Symbol &symbol) {
   if (auto global{DefinesGlobalName(symbol)}) {
-    auto pair{globalNames_.emplace(std::move(*global), symbol)};
-    if (!pair.second) {
-      const Symbol &other{*pair.first->second};
+    auto &symbols{globalNames_[*global]};
+    if (symbols.empty()) {
+      symbols.emplace_back(symbol);
+    } else {
+      const Symbol *previous{&*symbols.front()};
+      if (symbol.has<CommonBlockDetails>() &&
+          previous->has<CommonBlockDetails>()) {
+        // Check the whole group, giving same-scope collisions priority so
+        // that the diagnostic points to the conflicting local declaration.
+        auto conflict{std::find_if(
+            symbols.begin(), symbols.end(), [&](const Symbol &other) {
+              return symbol.owner() == other.owner();
+            })};
+        if (conflict == symbols.end()) {
+          conflict = std::find_if(
+              symbols.begin(), symbols.end(), [&](const Symbol &other) {
+                return symbol.name() != other.name() &&
+                    !(symbol.GetBindName() && other.GetBindName());
+              });
+        }
+        if (conflict == symbols.end()) {
+          // Same-named common blocks in different scoping units are one
+          // entity (F2023 8.10.2.4).  As an extension, differently named
+          // blocks may share a binding label: their object names are that
+          // label, so they share storage.  Checking every member ensures
+          // that either all names agree or all blocks carry that label.
+          auto differentName{std::find_if(
+              symbols.begin(), symbols.end(), [&](const Symbol &other) {
+                return symbol.name() != other.name();
+              })};
+          if (differentName != symbols.end() && !context_.HasError(symbol) &&
+              !context_.HasError(**differentName)) {
+            if (auto *msg{Warn(common::LanguageFeature::CommonBlockBindingLabel,
+                    symbol.name(),
+                    "Sharing binding label '%s' between COMMON blocks with different names is not standard"_port_en_US,
+                    *global)}) {
+              msg->Attach((*differentName)->name(),
+                  "Previous COMMON block with this binding label"_en_US);
+            }
+          }
+          symbols.emplace_back(symbol);
+          return;
+        }
+        previous = &**conflict;
+      }
+      const Symbol &other{*previous};
       if (context_.HasError(symbol) || context_.HasError(other)) {
         // don't pile on
-      } else if (symbol.has<CommonBlockDetails>() &&
-          other.has<CommonBlockDetails>() && symbol.name() == other.name()) {
-        // Two common blocks can have the same global name so long as
-        // they're not in the same scope.
       } else if ((IsProcedure(symbol) || IsBlockData(symbol)) &&
           (IsProcedure(other) || IsBlockData(other)) &&
           (!IsExternalProcedureDefinition(symbol) ||
@@ -3219,15 +3261,13 @@ void CheckHelper::CheckGlobalName(const Symbol &symbol) {
         // Both symbols are the same thing.
       } else if (symbol.has<ModuleDetails>()) {
         Warn(common::LanguageFeature::BenignNameClash, symbol.name(),
-            "Module '%s' conflicts with a global name"_port_en_US,
-            pair.first->first);
+            "Module '%s' conflicts with a global name"_port_en_US, *global);
       } else if (other.has<ModuleDetails>()) {
         Warn(common::LanguageFeature::BenignNameClash, symbol.name(),
-            "Global name '%s' conflicts with a module"_port_en_US,
-            pair.first->first);
+            "Global name '%s' conflicts with a module"_port_en_US, *global);
       } else if (auto *msg{messages_.Say(symbol.name(),
                      "Two entities have the same global name '%s'"_err_en_US,
-                     pair.first->first)}) {
+                     *global)}) {
         msg->Attach(other.name(), "Conflicting declaration"_en_US);
         context_.SetError(symbol);
         context_.SetError(other);
