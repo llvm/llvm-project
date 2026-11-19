@@ -72,20 +72,17 @@ disk latency/throughput, your results may vary.
 
 ## Build
 
-If you have already checked out LLVM using SVN, you can check out LLD
-under `tools` directory just like you probably did for clang. For the
-details, see [Getting Started with the LLVM System](https://llvm.org/docs/GettingStarted.html).
-
-If you haven't checked out LLVM, the easiest way to build LLD is to
-check out the entire LLVM projects/sub-projects from a git mirror and
-build that tree. You need `cmake` and of course a C++ compiler.
+The easiest way to build LLD is to check out the LLVM monorepo and
+build that tree. You need `cmake` and of course a C++ compiler. For
+the details, see [Getting Started with the LLVM System](https://llvm.org/docs/GettingStarted.html).
 
 ```console
 $ git clone https://github.com/llvm/llvm-project llvm-project
 $ mkdir build
 $ cd build
 $ cmake -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS=lld -DCMAKE_INSTALL_PREFIX=/usr/local ../llvm-project/llvm
-$ make install
+$ make
+$ sudo make install
 ```
 
 ## Using LLD
