@@ -7436,7 +7436,7 @@ static SDValue combineVectorBitOpOfBitcastShl(SDNode *N, SelectionDAG &DAG) {
     if (Shl.getOpcode() == ISD::SHL && ShlVT.isVector() && ShlVT.isInteger() &&
         ShlVT != VT && ShlVT.getSizeInBits() == VT.getSizeInBits() &&
         TLI.isTypeLegal(ShlVT) &&
-        ISD::isConstantSplatVector(Shl.getOperand(0).getNode(), SplatVal) &&
+        ISD::isConstantSplatVector(Shl.getOperand(0), SplatVal) &&
         SplatVal.isOne()) {
       SDLoc DL(N);
       SDValue V = DAG.getNode(N->getOpcode(), DL, ShlVT, Shl,
