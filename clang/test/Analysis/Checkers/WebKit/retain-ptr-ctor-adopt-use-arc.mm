@@ -171,6 +171,18 @@ RetainPtr<CFTypeRef> getObject() {
   return adoptCF(obj);
 }
 
+// A +1 out argument is only tracked within the function body which passes it,
+// so adopting it elsewhere is reported. Doing so isn't safe anyway since every
+// call to adoptGlobalObject would adopt the same +1 value.
+static CFTypeRef gObj;
+void fillGlobalObject() {
+  GetObj(&gObj);
+}
+RetainPtr<CFTypeRef> adoptGlobalObject() {
+  return adoptCF(gObj);
+  // expected-warning@-1{{Incorrect use of adoptCF. The argument is +0 and results in an use-after-free when ARC is disabled [alpha.webkit.RetainPtrCtorAdoptChecker]}}
+}
+
 CFArrayRef CreateSingleArray(CFStringRef);
 CFArrayRef CreateSingleArray(CFDictionaryRef);
 CFArrayRef CreateSingleArray(CFArrayRef);
@@ -255,6 +267,35 @@ CFArrayRef make_array() CF_RETURNS_RETAINED;
 
 RetainPtr<CFArrayRef> adopt_make_array() {
   return adoptCF(make_array());
+}
+
+CFArrayRef provide_array();
+RetainPtr<CFMutableArrayRef> create_mutable_array();
+
+// A +1 function may return a +1 value through a conditional operator,
+// a local variable, or a casting helper function.
+CFArrayRef CreateArrayEitherWay(bool flag) {
+  return flag ? create_cf_array().leakRef() : make_array();
+}
+
+CFArrayRef CreateArrayViaLocalVariable() {
+  auto *array = create_cf_array().leakRef();
+  return array;
+}
+
+CFMutableArrayRef CreateCheckedArray() {
+  return checked_cf_cast<CFMutableArrayRef>(create_mutable_array().leakRef());
+}
+
+// A +1 function must not return a +0 CF value even under ARC.
+CFArrayRef CreateArrayPlusZero() {
+  return provide_array();
+  // expected-warning@-1{{The function is expected to return +1 but the return value is +0, which results in an use-after-free [alpha.webkit.RetainPtrCtorAdoptChecker]}}
+}
+
+// ARC retains the return value of a NS_RETURNS_RETAINED function as needed.
+SomeObj *makeSomeObjPlusZero(SomeObj *obj) NS_RETURNS_RETAINED {
+  return obj;
 }
 
 @interface SomeObject : NSObject
