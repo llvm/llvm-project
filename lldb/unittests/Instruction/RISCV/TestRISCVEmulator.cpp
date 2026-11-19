@@ -277,6 +277,13 @@ TEST_F(RISCVEmulatorTester, TestAtomicSequence) {
   ASSERT_EQ(this->gpr.gpr[0], uint64_t(16));
 }
 
+// An SC outside the recognized LR/SC sequence must fail to emulate, not abort.
+TEST_F(RISCVEmulatorTester, TestLoneStoreConditional) {
+  this->WritePC(0x0);
+  ASSERT_FALSE(this->DecodeAndExecute(0x18e426af, false)); // sc.w a3,a4,(s0)
+  ASSERT_FALSE(this->DecodeAndExecute(0x18e436af, false)); // sc.d a3,a4,(s0)
+}
+
 struct TestDecode {
   uint32_t inst;
   RISCVInst inst_type;
