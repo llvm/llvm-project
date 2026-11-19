@@ -65,6 +65,8 @@ using namespace llvm;
 
 #define DEBUG_TYPE "hexagon-lowering"
 
+extern cl::opt<bool> HexagonAutoHVX;
+
 static cl::opt<bool> EmitJumpTables("hexagon-emit-jump-tables",
   cl::init(true), cl::Hidden,
   cl::desc("Control jump table emission on Hexagon target"));
@@ -3950,6 +3952,15 @@ EVT HexagonTargetLowering::getOptimalMemOpType(
   if (Op.size() >= 2 && Op.isAligned(Align(2)))
     return MVT::i16;
   return MVT::Other;
+}
+
+// Prevent the DAGCombiner from merging scalar stores into HVX stores if
+// HexagonAutoHVX is not set.
+bool HexagonTargetLowering::canMergeStoresTo(unsigned AddrSpace, EVT MemVT,
+                                             const MachineFunction &MF) const {
+  if (!MemVT.isSimple() || !Subtarget.isHVXVectorType(MemVT.getSimpleVT()))
+    return true;
+  return HexagonAutoHVX && !MF.getFunction().hasFnAttribute("hexagon_hmx");
 }
 
 // The helpers below are versions of llvm::getShuffleReduction and

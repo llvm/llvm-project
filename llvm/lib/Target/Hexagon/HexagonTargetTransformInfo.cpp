@@ -28,8 +28,8 @@ using namespace llvm;
 
 #define DEBUG_TYPE "hexagontti"
 
-static cl::opt<bool> HexagonAutoHVX("hexagon-autohvx", cl::init(false),
-    cl::Hidden, cl::desc("Enable loop vectorizer for HVX"));
+cl::opt<bool> HexagonAutoHVX("hexagon-autohvx", cl::init(false), cl::Hidden,
+                             cl::desc("Enable loop vectorizer for HVX"));
 
 cl::opt<bool> HexagonAllowScatterGatherHVX(
     "hexagon-allow-scatter-gather-hvx", cl::init(false), cl::Hidden,
