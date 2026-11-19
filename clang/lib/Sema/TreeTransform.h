@@ -14041,6 +14041,13 @@ template<typename Derived>
 ExprResult
 TreeTransform<Derived>::TransformUnaryExprOrTypeTraitExpr(
                                                 UnaryExprOrTypeTraitExpr *E) {
+  // C++0x [expr.sizeof]p1:
+  //   The operand is either an expression, which is an unevaluated operand
+  //   [...]
+  EnterExpressionEvaluationContext Unevaluated(
+      SemaRef, Sema::ExpressionEvaluationContext::Unevaluated,
+      Sema::ReuseLambdaContextDecl);
+
   if (E->isArgumentType()) {
     TypeSourceInfo *OldT = E->getArgumentTypeInfo();
 
@@ -14055,13 +14062,6 @@ TreeTransform<Derived>::TransformUnaryExprOrTypeTraitExpr(
                                                     E->getKind(),
                                                     E->getSourceRange());
   }
-
-  // C++0x [expr.sizeof]p1:
-  //   The operand is either an expression, which is an unevaluated operand
-  //   [...]
-  EnterExpressionEvaluationContext Unevaluated(
-      SemaRef, Sema::ExpressionEvaluationContext::Unevaluated,
-      Sema::ReuseLambdaContextDecl);
 
   // Try to recover if we have something like sizeof(T::X) where X is a type.
   // Notably, there must be *exactly* one set of parens if X is a type.

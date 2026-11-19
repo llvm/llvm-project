@@ -18,7 +18,7 @@ function(add_target_library target_name lib_name)
   target_include_directories(${target_name} PUBLIC ${common_dir}/include
                              ${common_bin_dir}/include)
   target_link_libraries(${target_name} PRIVATE
-                        PluginCommon ${OFFLOAD_PTHREAD_LIB} ${llvm_libs})
+                        LLVMOffloadPluginCommon ${OFFLOAD_PTHREAD_LIB} ${llvm_libs})
 
   target_compile_definitions(${target_name} PRIVATE TARGET_NAME=${lib_name})
   target_compile_definitions(${target_name} PRIVATE
