@@ -941,6 +941,7 @@ def SPIRV_SpecConstantOperationOp : SPIRV_Op<"SpecConstantOperation", [
 
   let hasVerifier = 0;
   let hasRegionVerifier = 1;
+  let hasFolder = 1;
 }
 
 // -----
