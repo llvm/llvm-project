@@ -190,7 +190,7 @@ following sufficient conditions:
 
 1. Memory locations accessed by multicast loads are not modified during the
    lifetime of the dispatch that is executing those loads.
-2. The program is race free when assuming that every multicast load accesses an
+2. The program is race free when assuming that every multicast load is extended to an
    entire naturally aligned block of 256 bytes.
 
 #### Tensor Addressing
