@@ -22,6 +22,7 @@
 #include "llvm/ADT/StringRef.h"
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace clang {
 class SourceLocation;
@@ -71,8 +72,24 @@ struct AnalysisResults {
 /// This exposes conclusions but not reasons: use lower-level walkUsed for that.
 ///
 /// The HeaderFilter is a predicate that receives absolute path or spelling
-/// without quotes/brackets, when a phyiscal file doesn't exist.
+/// without quotes/brackets, when a physical file doesn't exist.
 /// No analysis will be performed for headers that satisfy the predicate.
+///
+/// The UnusedHeaderCallback is called for every header that is unused.
+///
+/// The Callback is called for every symbol reference. The Header pointer is
+/// NULL for every missing #include. Note that the Header pointer is temporary
+/// and might not survive the callback.
+void analyze(
+    llvm::ArrayRef<Decl *> ASTRoots, llvm::ArrayRef<SymbolReference> MacroRefs,
+    const Includes &Inc, const PragmaIncludes *PI, const Preprocessor &PP,
+    llvm::function_ref<bool(llvm::StringRef)> HeaderFilter,
+    llvm::function_ref<void(const Include *)> UnusedHeaderCallback,
+    llvm::function_ref<void(const Header *, const Include *,
+                            llvm::StringRef Spelling, const SymbolReference &,
+                            llvm::ArrayRef<Header> Providers)>
+        Callback);
+
 AnalysisResults
 analyze(llvm::ArrayRef<Decl *> ASTRoots,
         llvm::ArrayRef<SymbolReference> MacroRefs, const Includes &I,

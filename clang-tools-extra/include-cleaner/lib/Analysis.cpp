@@ -87,36 +87,41 @@ void walkUsed(llvm::ArrayRef<Decl *> ASTRoots,
   }
 }
 
-AnalysisResults
-analyze(llvm::ArrayRef<Decl *> ASTRoots,
-        llvm::ArrayRef<SymbolReference> MacroRefs, const Includes &Inc,
-        const PragmaIncludes *PI, const Preprocessor &PP,
-        llvm::function_ref<bool(llvm::StringRef)> HeaderFilter) {
+void analyze(
+    llvm::ArrayRef<Decl *> ASTRoots, llvm::ArrayRef<SymbolReference> MacroRefs,
+    const Includes &Inc, const PragmaIncludes *PI, const Preprocessor &PP,
+    llvm::function_ref<bool(llvm::StringRef)> HeaderFilter,
+    llvm::function_ref<void(const Include *)> UnusedHeaderCallback,
+    llvm::function_ref<void(const Header *, const Include *,
+                            llvm::StringRef Spelling, const SymbolReference &,
+                            llvm::ArrayRef<Header> Providers)>
+        Callback) {
   auto &SM = PP.getSourceManager();
   const auto MainFile = *SM.getFileEntryRefForID(SM.getMainFileID());
   llvm::DenseSet<const Include *> Used;
-  llvm::StringMap<Header> Missing;
   constexpr auto DefaultHeaderFilter = [](llvm::StringRef) { return false; };
   if (!HeaderFilter)
     HeaderFilter = DefaultHeaderFilter;
   OptionalDirectoryEntryRef ResourceDir =
       PP.getHeaderSearchInfo().getModuleMap().getBuiltinDir();
   walkUsed(ASTRoots, MacroRefs, PI, PP,
-           [&](const SymbolReference &Ref, llvm::ArrayRef<Header> Providers) {
-             bool Satisfied = false;
+           [=, &Used, &PP, &Inc](const SymbolReference &Ref,
+                                 llvm::ArrayRef<Header> Providers) {
+             std::pair<const Header *, const Include *> Satisfied;
              for (const Header &H : Providers) {
                if (H.kind() == Header::Physical &&
                    (H.physical() == MainFile ||
                     H.physical().getDir() == ResourceDir)) {
-                 Satisfied = true;
+                 Satisfied = {&H, nullptr};
                }
                for (const Include *I : Inc.match(H)) {
                  Used.insert(I);
-                 Satisfied = true;
+                 Satisfied = {&H, I};
                }
              }
              // Bail out if we can't (or need not) insert an include.
-             if (Satisfied || Providers.empty() || Ref.RT != RefType::Explicit)
+             if (Satisfied.first || Providers.empty() ||
+                 Ref.RT != RefType::Explicit)
                return;
              if (HeaderFilter(Providers.front().resolvedPath()))
                return;
@@ -126,36 +131,59 @@ analyze(llvm::ArrayRef<Decl *> ASTRoots,
              // refers to it.
              auto Spelling = spellHeader(
                  {Providers.front(), PP.getHeaderSearchInfo(), MainFile});
-             for (const Include *I : Inc.match(Header{Spelling})) {
+             Header similar_header(Spelling);
+             for (const Include *I : Inc.match(similar_header)) {
                Used.insert(I);
-               Satisfied = true;
+               Satisfied = {&similar_header, I};
              }
-             if (!Satisfied)
-               Missing.try_emplace(std::move(Spelling), Providers.front());
+             if (Callback) {
+               Callback(Satisfied.first, Satisfied.second, Spelling, Ref,
+                        Providers);
+             }
            });
 
-  AnalysisResults Results;
-  for (const Include &I : Inc.all()) {
-    if (Used.contains(&I) || !I.Resolved ||
-        HeaderFilter(I.Resolved->getName()) ||
-        I.Resolved->getDir() == ResourceDir)
-      continue;
-    if (PI) {
-      if (PI->shouldKeep(*I.Resolved))
+  if (UnusedHeaderCallback) {
+    for (const Include &I : Inc.all()) {
+      if (Used.contains(&I) || !I.Resolved ||
+          HeaderFilter(I.Resolved->getName()) ||
+          I.Resolved->getDir() == ResourceDir)
         continue;
-      // Check if main file is the public interface for a private header. If so
-      // we shouldn't diagnose it as unused.
-      if (auto PHeader = PI->getPublic(*I.Resolved); !PHeader.empty()) {
-        PHeader = PHeader.trim("<>\"");
-        // Since most private -> public mappings happen in a verbatim way, we
-        // check textually here. This might go wrong in presence of symlinks or
-        // header mappings. But that's not different than rest of the places.
-        if (MainFile.getName().ends_with(PHeader))
+      if (PI) {
+        if (PI->shouldKeep(*I.Resolved))
           continue;
+        // Check if main file is the public interface for a private header. If
+        // so we shouldn't diagnose it as unused.
+        if (auto PHeader = PI->getPublic(*I.Resolved); !PHeader.empty()) {
+          PHeader = PHeader.trim("<>\"");
+          // Since most private -> public mappings happen in a verbatim way, we
+          // check textually here. This might go wrong in presence of symlinks
+          // or header mappings. But that's not different than rest of the
+          // places.
+          if (MainFile.getName().ends_with(PHeader))
+            continue;
+        }
       }
+      UnusedHeaderCallback(&I);
     }
-    Results.Unused.push_back(&I);
   }
+}
+
+AnalysisResults
+analyze(llvm::ArrayRef<Decl *> ASTRoots,
+        llvm::ArrayRef<SymbolReference> MacroRefs, const Includes &Inc,
+        const PragmaIncludes *PI, const Preprocessor &PP,
+        llvm::function_ref<bool(llvm::StringRef)> HeaderFilter) {
+  llvm::StringMap<Header> Missing;
+  AnalysisResults Results;
+  analyze(
+      ASTRoots, MacroRefs, Inc, PI, PP, HeaderFilter,
+      [&Results](const Include *I) { Results.Unused.push_back(I); },
+      [&Results](const Header *H, const Include *, llvm::StringRef Spelling,
+                 const SymbolReference &, llvm::ArrayRef<Header> Providers) {
+        if (!H) {
+          Results.Missing.emplace_back(Spelling, Providers.front());
+        }
+      });
   for (auto &E : Missing)
     Results.Missing.emplace_back(E.first().str(), E.second);
   llvm::sort(Results.Missing);
