@@ -47,11 +47,18 @@ def ConvertToLLVMPass : Pass<"convert-to-llvm"> {
     the conversion process. This option also uses the `DataLayoutAnalysis`
     analysis to configure the type converter. Enabling this option incurs in
     extra overhead.
+
+    The dialects listed in `add-lowering` are loaded before the conversion, so
+    that their `ConvertToLLVMPatternInterface` patterns are used even if the
+    input contains no operation of them. They must implement the interface. If
+    `filter-dialects` is set, the `add-lowering` dialects are added to it.
   }];
 
   let options = [
     ListOption<"filterDialects", "filter-dialects", "std::string",
                "Test conversion patterns of only the specified dialects">,
+    ListOption<"addLowering", "add-lowering", "std::string",
+               "Load the specified dialects and use their conversion patterns">,
     Option<"useDynamic", "dynamic", "bool", "false",
            "Use op conversion attributes to configure the conversion">,
     Option<"allowPatternRollback", "allow-pattern-rollback", "bool", "true",
