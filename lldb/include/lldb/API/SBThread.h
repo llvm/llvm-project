@@ -106,8 +106,7 @@ public:
   /// it stepped out of a function.
   ///
   /// \param[out] is_error_value
-  ///   Set to true if the returned value is an error the function threw, and
-  ///   to false otherwise.
+  ///   Set to true if the returned value is an error the function threw.
   ///
   /// \return
   ///   The value GetStopReturnValue or GetStopErrorValue would return,
