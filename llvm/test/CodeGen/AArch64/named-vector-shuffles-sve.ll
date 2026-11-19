@@ -508,6 +508,65 @@ define <vscale x 16 x float> @splice_nxv16f32_16(<vscale x 16 x float> %a, <vsca
   ret <vscale x 16 x float> %res
 }
 
+; Shows expansion for unhandle type legalisation cases.
+define <vscale x 32 x i8> @splice_nxv32i8_8(<vscale x 32 x i8> %a, <vscale x 32 x i8> %b) #0 {
+; CHECK-LABEL: splice_nxv32i8_8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-4
+; CHECK-NEXT:    rdvl x8, #2
+; CHECK-NEXT:    mov w9, #8 // =0x8
+; CHECK-NEXT:    str z1, [sp, #1, mul vl]
+; CHECK-NEXT:    cmp x8, #8
+; CHECK-NEXT:    str z0, [sp]
+; CHECK-NEXT:    csel x8, x8, x9, lo
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    str z3, [sp, #3, mul vl]
+; CHECK-NEXT:    str z2, [sp, #2, mul vl]
+; CHECK-NEXT:    orr x8, x9, x8
+; CHECK-NEXT:    ldr z0, [x8]
+; CHECK-NEXT:    ldr z1, [x8, #1, mul vl]
+; CHECK-NEXT:    addvl sp, sp, #4
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %res = call <vscale x 32 x i8> @llvm.vector.splice.nxv32i8(<vscale x 32 x i8> %a, <vscale x 32 x i8> %b, i32 8)
+  ret <vscale x 32 x i8> %res
+}
+
+; Ensure expansion converts element indices into byte offsets.
+define <vscale x 32 x i1> @splice_nxv32i1_8(<vscale x 32 x i1> %a, <vscale x 32 x i1> %b) #0 {
+; CHECK-LABEL: splice_nxv32i1_8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-4
+; CHECK-NEXT:    mov z0.b, p1/z, #1 // =0x1
+; CHECK-NEXT:    mov z1.b, p0/z, #1 // =0x1
+; CHECK-NEXT:    rdvl x8, #2
+; CHECK-NEXT:    mov z2.b, p3/z, #1 // =0x1
+; CHECK-NEXT:    mov w9, #8 // =0x8
+; CHECK-NEXT:    cmp x8, #8
+; CHECK-NEXT:    csel x8, x8, x9, lo
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    ptrue p1.b
+; CHECK-NEXT:    str z0, [sp, #1, mul vl]
+; CHECK-NEXT:    mov z0.b, p2/z, #1 // =0x1
+; CHECK-NEXT:    orr x8, x9, x8
+; CHECK-NEXT:    str z1, [sp]
+; CHECK-NEXT:    str z2, [sp, #3, mul vl]
+; CHECK-NEXT:    str z0, [sp, #2, mul vl]
+; CHECK-NEXT:    ldr z0, [x8]
+; CHECK-NEXT:    ldr z1, [x8, #1, mul vl]
+; CHECK-NEXT:    and z0.b, z0.b, #0x1
+; CHECK-NEXT:    and z1.b, z1.b, #0x1
+; CHECK-NEXT:    cmpne p0.b, p1/z, z0.b, #0
+; CHECK-NEXT:    cmpne p1.b, p1/z, z1.b, #0
+; CHECK-NEXT:    addvl sp, sp, #4
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %res = call <vscale x 32 x i1> @llvm.vector.splice.nxv32i1(<vscale x 32 x i1> %a, <vscale x 32 x i1> %b, i32 8)
+  ret <vscale x 32 x i1> %res
+}
+
 ;
 ; VECTOR_SPLICE (trailing elements)
 ;
