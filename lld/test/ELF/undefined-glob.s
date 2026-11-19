@@ -54,5 +54,18 @@
 
 # BAD-PATTERN: --undefined-glob: invalid glob pattern, unmatched '[': [
 
+## Deterministic parallel matching (--threads=1 vs --threads=8).
+# RUN: ld.lld --threads=1 --why-extract=%t.why1 -o %t.par1.exe %t.o %t.a \
+# RUN:   --undefined-glob 'foo*' --undefined-glob 'bar'
+# RUN: ld.lld --threads=8 --why-extract=%t.why8 -o %t.par8.exe %t.o %t.a \
+# RUN:   --undefined-glob 'foo*' --undefined-glob 'bar'
+# RUN: cmp %t.par1.exe %t.par8.exe
+# RUN: diff -u %t.why1 %t.why8
+# RUN: llvm-readobj --symbols %t.par8.exe | FileCheck --check-prefix=PAR-ALL %s
+# PAR-ALL-DAG: foo1
+# PAR-ALL-DAG: foo2
+# PAR-ALL-DAG: foo32
+# PAR-ALL-DAG: bar
+
 .globl _start
 _start:
