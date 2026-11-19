@@ -324,10 +324,14 @@ infrastructure are described first, followed by tool-specific sections.
   literals created for raw user-defined literal operators, such as `12_w`.
 
 - Improved {doc}`modernize-return-braced-init-list
-  <clang-tidy/checks/modernize/return-braced-init-list>` check to no longer
-  rewrite the return value when the constructed type has a
-  `std::initializer_list` constructor, as the braced form could select a
-  different constructor.
+  <clang-tidy/checks/modernize/return-braced-init-list>` check:
+
+  - No longer rewrites the return value when the constructed type has a
+    `std::initializer_list` constructor, as the braced form could select a
+    different constructor.
+
+  - Fixed a crash when a returned constructor call passes arguments through
+    an ellipsis.
 
 - Fixed a crash in {doc}`modernize-use-designated-initializers
   <clang-tidy/checks/modernize/use-designated-initializers>` when analyzing
