@@ -1911,6 +1911,14 @@ Instruction *InstCombinerImpl::FoldOpIntoSelect(Instruction &Op, SelectInst *SI,
 
   SelectInst *NewSel = SelectInst::Create(SI->getCondition(), NewTV, NewFV);
 
+  // The select replaces Op's result, so preserve its no-NaN/no-Inf guarantees.
+  // nsz on Op does not imply that the sign of its zero result is insignificant.
+  if (isa<FPMathOperator>(NewSel)) {
+    FastMathFlags FMF = Op.getFastMathFlagsOrNone();
+    NewSel->setHasNoNaNs(FMF.noNaNs());
+    NewSel->setHasNoInfs(FMF.noInfs());
+  }
+
   // Preserve metadata that remains valid for the transformed select including
   // source location information.
   NewSel->copyMetadata(*SI,

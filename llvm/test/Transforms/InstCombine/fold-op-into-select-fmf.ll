@@ -10,7 +10,7 @@ declare float @llvm.log.f32(float)
 define float @copysign_select_ninf_nsz(i1 %c, float %x) {
 ; CHECK-LABEL: @copysign_select_ninf_nsz(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call ninf nsz float @llvm.copysign.f32(float 0.000000e+00, float [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C:%.*]], float [[TMP1]], float 0.000000e+00
+; CHECK-NEXT:    [[R:%.*]] = select ninf i1 [[C:%.*]], float [[TMP1]], float 0.000000e+00
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %s = select ninf nsz i1 %c, float %x, float 0.0
@@ -21,7 +21,7 @@ define float @copysign_select_ninf_nsz(i1 %c, float %x) {
 define float @copysign_select_nnan(i1 %c, float %x) {
 ; CHECK-LABEL: @copysign_select_nnan(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call nnan float @llvm.copysign.f32(float 0.000000e+00, float [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C:%.*]], float [[TMP1]], float 0.000000e+00
+; CHECK-NEXT:    [[R:%.*]] = select nnan i1 [[C:%.*]], float [[TMP1]], float 0.000000e+00
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %s = select i1 %c, float %x, float 0.0
@@ -45,7 +45,7 @@ define float @copysign_select_other_fmf(i1 %c, float %x) {
 define <2 x float> @copysign_select_ninf_vec(<2 x i1> %c, <2 x float> %x) {
 ; CHECK-LABEL: @copysign_select_ninf_vec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call ninf <2 x float> @llvm.copysign.v2f32(<2 x float> zeroinitializer, <2 x float> [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[C:%.*]], <2 x float> [[TMP1]], <2 x float> zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = select ninf <2 x i1> [[C:%.*]], <2 x float> [[TMP1]], <2 x float> zeroinitializer
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %s = select <2 x i1> %c, <2 x float> %x, <2 x float> zeroinitializer
@@ -56,7 +56,7 @@ define <2 x float> @copysign_select_ninf_vec(<2 x i1> %c, <2 x float> %x) {
 define float @fmul_select_nnan_ninf(i1 %c, float %x) {
 ; CHECK-LABEL: @fmul_select_nnan_ninf(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fmul nnan ninf float [[X:%.*]], 2.000000e+00
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C:%.*]], float [[TMP1]], float 2.000000e+00
+; CHECK-NEXT:    [[R:%.*]] = select nnan ninf i1 [[C:%.*]], float [[TMP1]], float 2.000000e+00
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %s = select i1 %c, float %x, float 1.0
@@ -92,7 +92,7 @@ define float @log_select_inner_ninf(i1 %c, float %x) {
 define float @sitofp_select_ninf(i1 %c, i8 %x) {
 ; CHECK-LABEL: @sitofp_select_ninf(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sitofp ninf i8 [[X:%.*]] to float
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C:%.*]], float [[TMP1]], float 1.000000e+00
+; CHECK-NEXT:    [[R:%.*]] = select ninf i1 [[C:%.*]], float [[TMP1]], float 1.000000e+00
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %s = select i1 %c, i8 %x, i8 1
