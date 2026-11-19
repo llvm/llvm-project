@@ -428,9 +428,7 @@ add_fp_unittest(
   SRCS
     math_comparison_macros_test.cpp
   DEPENDS
-    libc.hdr.fenv_macros
     libc.include.llvm-libc-macros.math_function_macros
-    libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.macros.properties.types
 )
 

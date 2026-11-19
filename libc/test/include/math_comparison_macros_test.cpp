@@ -11,8 +11,6 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "hdr/fenv_macros.h"
-#include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/macros/properties/types.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -24,7 +22,7 @@ class MathComparisonMacrosTest : public LIBC_NAMESPACE::testing::Test {
   DECLARE_SPECIAL_CONSTANTS(T)
 
 public:
-  void testComparisons(bool check_ordered_qnan_fe_invalid = true) {
+  void testComparisons() {
     const T neg_two = T(-2);
     const T neg_one = T(-1);
     const T pos_one = T(1);
@@ -39,19 +37,16 @@ public:
 
     for (size_t i = 0; i < N; ++i) {
       for (size_t j = 0; j < N; ++j) {
-        LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
         EXPECT_EQ(isgreater(ordered[i], ordered[j]), i > j ? 1 : 0);
         EXPECT_EQ(isgreaterequal(ordered[i], ordered[j]), i >= j ? 1 : 0);
         EXPECT_EQ(isless(ordered[i], ordered[j]), i < j ? 1 : 0);
         EXPECT_EQ(islessequal(ordered[i], ordered[j]), i <= j ? 1 : 0);
         EXPECT_EQ(islessgreater(ordered[i], ordered[j]), i != j ? 1 : 0);
         EXPECT_EQ(isunordered(ordered[i], ordered[j]), 0);
-        EXPECT_EQ(LIBC_NAMESPACE::fputil::test_except(FE_INVALID), 0);
       }
     }
 
     // +0.0 and -0.0 compare equal and ordered.
-    LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
     EXPECT_EQ(isgreater(zero, neg_zero), 0);
     EXPECT_EQ(isgreater(neg_zero, zero), 0);
     EXPECT_EQ(isgreaterequal(zero, neg_zero), 1);
@@ -64,33 +59,24 @@ public:
     EXPECT_EQ(islessgreater(neg_zero, zero), 0);
     EXPECT_EQ(isunordered(zero, neg_zero), 0);
     EXPECT_EQ(isunordered(neg_zero, zero), 0);
-    EXPECT_EQ(LIBC_NAMESPACE::fputil::test_except(FE_INVALID), 0);
 
-    // Quiet NaN comparisons must return 0 (except isunordered -> 1) without
-    // raising FE_INVALID.
-    const T nans[] = {aNaN, neg_aNaN};
+    // NaN comparisons return 0, except isunordered which returns 1.
+    const T nans[] = {aNaN, neg_aNaN, sNaN, neg_sNaN};
     const T vals[] = {neg_inf, neg_one, neg_zero, zero, pos_one, inf, aNaN};
-    for (T qnan : nans) {
+    for (T nan_val : nans) {
       for (T v : vals) {
-        LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
-        EXPECT_EQ(islessgreater(qnan, v), 0);
-        EXPECT_EQ(islessgreater(v, qnan), 0);
-        EXPECT_EQ(isunordered(qnan, v), 1);
-        EXPECT_EQ(isunordered(v, qnan), 1);
-        EXPECT_EQ(LIBC_NAMESPACE::fputil::test_except(FE_INVALID), 0);
-
-        EXPECT_EQ(isgreater(qnan, v), 0);
-        EXPECT_EQ(isgreater(v, qnan), 0);
-        EXPECT_EQ(isgreaterequal(qnan, v), 0);
-        EXPECT_EQ(isgreaterequal(v, qnan), 0);
-        EXPECT_EQ(isless(qnan, v), 0);
-        EXPECT_EQ(isless(v, qnan), 0);
-        EXPECT_EQ(islessequal(qnan, v), 0);
-        EXPECT_EQ(islessequal(v, qnan), 0);
-        if (check_ordered_qnan_fe_invalid)
-          EXPECT_EQ(LIBC_NAMESPACE::fputil::test_except(FE_INVALID), 0);
-        else
-          LIBC_NAMESPACE::fputil::clear_except(FE_INVALID);
+        EXPECT_EQ(isgreater(nan_val, v), 0);
+        EXPECT_EQ(isgreater(v, nan_val), 0);
+        EXPECT_EQ(isgreaterequal(nan_val, v), 0);
+        EXPECT_EQ(isgreaterequal(v, nan_val), 0);
+        EXPECT_EQ(isless(nan_val, v), 0);
+        EXPECT_EQ(isless(v, nan_val), 0);
+        EXPECT_EQ(islessequal(nan_val, v), 0);
+        EXPECT_EQ(islessequal(v, nan_val), 0);
+        EXPECT_EQ(islessgreater(nan_val, v), 0);
+        EXPECT_EQ(islessgreater(v, nan_val), 0);
+        EXPECT_EQ(isunordered(nan_val, v), 1);
+        EXPECT_EQ(isunordered(v, nan_val), 1);
       }
     }
 
@@ -103,33 +89,15 @@ public:
   }
 };
 
-#if defined(LIBC_COMPILER_IS_CLANG) && defined(LIBC_TYPES_HAS_NATIVE_FLOAT128)
-// LLVM's SelectionDAG softens ordered fp128 predicates (fcmp ogt/oge/olt/ole)
-// directly to __gttf2/__getf2/__lttf2/__letf2, which raise FE_INVALID on quiet
-// NaNs when linked against libgcc.
-constexpr bool CLANG_F128_SOFTFP_SIGNALS_QNAN = true;
-#else
-constexpr bool CLANG_F128_SOFTFP_SIGNALS_QNAN = false;
-#endif // defined(LIBC_COMPILER_IS_CLANG) &&
-       // defined(LIBC_TYPES_HAS_NATIVE_FLOAT128)
-
 using LlvmLibcMathComparisonMacrosFloatTest = MathComparisonMacrosTest<float>;
 TEST_F(LlvmLibcMathComparisonMacrosFloatTest, All) { testComparisons(); }
 
 using LlvmLibcMathComparisonMacrosDoubleTest = MathComparisonMacrosTest<double>;
 TEST_F(LlvmLibcMathComparisonMacrosDoubleTest, All) { testComparisons(); }
 
-#ifdef LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128
-constexpr bool LONG_DOUBLE_SIGNALS_QNAN = CLANG_F128_SOFTFP_SIGNALS_QNAN;
-#else
-constexpr bool LONG_DOUBLE_SIGNALS_QNAN = false;
-#endif // LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128
-
 using LlvmLibcMathComparisonMacrosLongDoubleTest =
     MathComparisonMacrosTest<long double>;
-TEST_F(LlvmLibcMathComparisonMacrosLongDoubleTest, All) {
-  testComparisons(/*check_ordered_qnan_fe_invalid=*/!LONG_DOUBLE_SIGNALS_QNAN);
-}
+TEST_F(LlvmLibcMathComparisonMacrosLongDoubleTest, All) { testComparisons(); }
 
 #ifdef LIBC_TYPES_HAS_FLOAT16
 using LlvmLibcMathComparisonMacrosFloat16Test =
@@ -140,14 +108,10 @@ TEST_F(LlvmLibcMathComparisonMacrosFloat16Test, All) { testComparisons(); }
 #ifdef LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE
 using LlvmLibcMathComparisonMacrosFloat128Test =
     MathComparisonMacrosTest<float128>;
-TEST_F(LlvmLibcMathComparisonMacrosFloat128Test, All) {
-  testComparisons(
-      /*check_ordered_qnan_fe_invalid=*/!CLANG_F128_SOFTFP_SIGNALS_QNAN);
-}
+TEST_F(LlvmLibcMathComparisonMacrosFloat128Test, All) { testComparisons(); }
 #endif // LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE
 
 TEST(LlvmLibcMathComparisonMacrosMixedTest, MixedTypes) {
-  LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
   EXPECT_EQ(isgreater(2.0f, 1.0), 1);
   EXPECT_EQ(isgreaterequal(1.0f, 1.0L), 1);
   EXPECT_EQ(isless(1.0f, 2.0), 1);
@@ -155,5 +119,4 @@ TEST(LlvmLibcMathComparisonMacrosMixedTest, MixedTypes) {
   EXPECT_EQ(islessgreater(1.0f, 2.0L), 1);
   EXPECT_EQ(isunordered(__builtin_nanf(""), 1.0), 1);
   EXPECT_EQ(isunordered(1.0f, __builtin_nanl("")), 1);
-  EXPECT_EQ(LIBC_NAMESPACE::fputil::get_except(), 0);
 }

@@ -273,9 +273,7 @@ libc_test(
     srcs = ["math_comparison_macros_test.cpp"],
     full_build_only = True,
     deps = [
-        "//libc/hdr:fenv_macros",
         "//libc/include:llvm_libc_macros_math_function_macros",
-        "//libc/src/__support/FPUtil:fenv_impl",
         "//libc/src/__support/macros/properties:types",
         "//libc/test/UnitTest:fp_test_helpers",
     ],
