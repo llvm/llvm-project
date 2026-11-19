@@ -2,6 +2,7 @@ add_lldb_unittest(APITests
   SBBreakpointNameTest.cpp
   SBBreakpointTest.cpp
   SBCommandInterpreterTest.cpp
+  SBCommandReturnObjectTest.cpp
   SBEnvironmentTest.cpp
   SBEventTest.cpp
   SBLineEntryTest.cpp
