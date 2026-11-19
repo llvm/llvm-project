@@ -77,7 +77,8 @@ struct Builtin {
        << Table.GetStringOffset(Name) << " /* " << Name << " */, "
        << Table.GetStringOffset(Type) << " /* " << Type << " */, "
        << Table.GetStringOffset(Attributes) << " /* " << Attributes << " */, ";
-    if (BT == BuiltinType::TargetBuiltin) {
+    if (BT == BuiltinType::TargetBuiltin ||
+        BT == BuiltinType::TargetLibBuiltin) {
       const auto &Features = BuiltinRecord->getValueAsString("Features");
       OS << Table.GetStringOffset(Features) << " /* " << Features << " */";
     } else {
@@ -632,7 +633,8 @@ void clang::EmitClangBuiltins(const RecordKeeper &Records, raw_ostream &OS) {
     Table.GetOrAddStringOffset(B.Name);
     Table.GetOrAddStringOffset(B.Type);
     Table.GetOrAddStringOffset(B.Attributes);
-    if (B.BT == BuiltinType::TargetBuiltin)
+    if (B.BT == BuiltinType::TargetBuiltin ||
+        B.BT == BuiltinType::TargetLibBuiltin)
       Table.GetOrAddStringOffset(B.BuiltinRecord->getValueAsString("Features"));
   }
 
