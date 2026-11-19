@@ -22,6 +22,7 @@
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/float128.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/common.h"
 #include "src/__support/ctype_utils.h"
@@ -476,7 +477,7 @@ LIBC_INLINE FloatConvertReturn<T> simple_decimal_conversion(
 // exact digits stored by the float type, described in
 // Gay DM, Correctly rounded binary-decimal and decimal-binary conversions;
 // 1990. AT&T Bell Laboratories Numerical Analysis Manuscript 90-10.
-template <typename T, typename U = void> class ClingerConsts;
+template <typename T> class ClingerConsts;
 
 template <> class ClingerConsts<float> {
 public:
@@ -551,71 +552,65 @@ public:
 #error "Unknown long double type"
 #endif
 
-#if defined(LIBC_TYPES_HAS_NATIVE_FLOAT128)
-// If `LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128` is defined, `long double` will have
-// the same format as `float128`, but they may still be distinct types.
-template <typename T>
-class ClingerConsts<T, cpp::enable_if_t<cpp::is_same_v<T, float128> &&
-                                        !cpp::is_same_v<T, long double>>> {
+template <> class ClingerConsts<fputil::Float128> {
 public:
-  static constexpr float128 POWERS_OF_TEN_ARRAY[] = {
-      1e0,
-      1e1,
-      1e2,
-      1e3,
-      1e4,
-      1e5,
-      1e6,
-      1e7,
-      1e8,
-      1e9,
-      1e10,
-      1e11,
-      1e12,
-      1e13,
-      1e14,
-      1e15,
-      1e16,
-      1e17,
-      1e18,
-      1e19,
-      1e20,
-      1e21,
-      1e22,
-      float128(1e22) * 1e1,
-      float128(1e22) * 1e2,
-      float128(1e22) * 1e3,
-      float128(1e22) * 1e4,
-      float128(1e22) * 1e5,
-      float128(1e22) * 1e6,
-      float128(1e22) * 1e7,
-      float128(1e22) * 1e8,
-      float128(1e22) * 1e9,
-      float128(1e22) * 1e10,
-      float128(1e22) * 1e11,
-      float128(1e22) * 1e12,
-      float128(1e22) * 1e13,
-      float128(1e22) * 1e14,
-      float128(1e22) * 1e15,
-      float128(1e22) * 1e16,
-      float128(1e22) * 1e17,
-      float128(1e22) * 1e18,
-      float128(1e22) * 1e19,
-      float128(1e22) * 1e20,
-      float128(1e22) * 1e21,
-      float128(1e22) * 1e22,
-      float128(1e22) * float128(1e22) * 1e1,
-      float128(1e22) * float128(1e22) * 1e2,
-      float128(1e22) * float128(1e22) * 1e3,
-      float128(1e22) * float128(1e22) * 1e4};
+  static constexpr fputil::Float128 POWERS_OF_TEN_ARRAY[] = {
+      fputil::Float128(1e0),
+      fputil::Float128(1e1),
+      fputil::Float128(1e2),
+      fputil::Float128(1e3),
+      fputil::Float128(1e4),
+      fputil::Float128(1e5),
+      fputil::Float128(1e6),
+      fputil::Float128(1e7),
+      fputil::Float128(1e8),
+      fputil::Float128(1e9),
+      fputil::Float128(1e10),
+      fputil::Float128(1e11),
+      fputil::Float128(1e12),
+      fputil::Float128(1e13),
+      fputil::Float128(1e14),
+      fputil::Float128(1e15),
+      fputil::Float128(1e16),
+      fputil::Float128(1e17),
+      fputil::Float128(1e18),
+      fputil::Float128(1e19),
+      fputil::Float128(1e20),
+      fputil::Float128(1e21),
+      fputil::Float128(1e22),
+      fputil::Float128(1e22) * fputil::Float128(1e1),
+      fputil::Float128(1e22) * fputil::Float128(1e2),
+      fputil::Float128(1e22) * fputil::Float128(1e3),
+      fputil::Float128(1e22) * fputil::Float128(1e4),
+      fputil::Float128(1e22) * fputil::Float128(1e5),
+      fputil::Float128(1e22) * fputil::Float128(1e6),
+      fputil::Float128(1e22) * fputil::Float128(1e7),
+      fputil::Float128(1e22) * fputil::Float128(1e8),
+      fputil::Float128(1e22) * fputil::Float128(1e9),
+      fputil::Float128(1e22) * fputil::Float128(1e10),
+      fputil::Float128(1e22) * fputil::Float128(1e11),
+      fputil::Float128(1e22) * fputil::Float128(1e12),
+      fputil::Float128(1e22) * fputil::Float128(1e13),
+      fputil::Float128(1e22) * fputil::Float128(1e14),
+      fputil::Float128(1e22) * fputil::Float128(1e15),
+      fputil::Float128(1e22) * fputil::Float128(1e16),
+      fputil::Float128(1e22) * fputil::Float128(1e17),
+      fputil::Float128(1e22) * fputil::Float128(1e18),
+      fputil::Float128(1e22) * fputil::Float128(1e19),
+      fputil::Float128(1e22) * fputil::Float128(1e20),
+      fputil::Float128(1e22) * fputil::Float128(1e21),
+      fputil::Float128(1e22) * fputil::Float128(1e22),
+      fputil::Float128(1e22) * fputil::Float128(1e22) * fputil::Float128(1e1),
+      fputil::Float128(1e22) * fputil::Float128(1e22) * fputil::Float128(1e2),
+      fputil::Float128(1e22) * fputil::Float128(1e22) * fputil::Float128(1e3),
+      fputil::Float128(1e22) * fputil::Float128(1e22) * fputil::Float128(1e4)};
   static constexpr int32_t EXACT_POWERS_OF_TEN = 48;
   static constexpr int32_t DIGITS_IN_MANTISSA = 33;
   // 2^113 - 1 = 10384593717069655257060992658440191.0
-  static constexpr float128 MAX_EXACT_INT =
-      (float128(0x1ffffffffffffULL) * float128(0x1.0p64)) +
-      float128(0xffffffffffffffffULL);
+  static constexpr fputil::Float128 MAX_EXACT_INT =
+      (fputil::Float128(0x1ffffffffffffULL) * fputil::Float128(0x1.0p64)) +
+      fputil::Float128(0xffffffffffffffffULL);
 };
-#endif // defined(LIBC_TYPES_HAS_NATIVE_FLOAT128)
 
 // Take an exact mantissa and exponent and attempt to convert it using only
 // exact floating point arithmetic. This only handles numbers with low

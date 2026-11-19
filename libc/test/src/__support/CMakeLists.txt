@@ -184,6 +184,7 @@ add_libc_test(
   DEPENDS
     libc.hdr.stdint_proxy
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.float128
     libc.src.__support.integer_literals
     libc.src.__support.macros.config
     libc.src.__support.macros.properties.types

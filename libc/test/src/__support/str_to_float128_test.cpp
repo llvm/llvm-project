@@ -7,11 +7,12 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Unittests for str_to_float<float128>
+/// Unittests for str_to_float<fputil::Float128>
 ///
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/float128.h"
 #include "src/__support/integer_literals.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h"
@@ -21,9 +22,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-#if defined(LIBC_TYPES_HAS_NATIVE_FLOAT128)
-
-using LlvmLibcStrToFloat128Test = LlvmLibcStrToFloatTest<float128>;
+using LlvmLibcStrToFloat128Test = LlvmLibcStrToFloatTest<fputil::Float128>;
 using LIBC_NAMESPACE::operator""_u128;
 
 TEST_F(LlvmLibcStrToFloat128Test, EiselLemireFloat128Simple) {
@@ -42,7 +41,7 @@ TEST_F(LlvmLibcStrToFloat128Test, EiselLemireFloat128LongerMantissa) {
 }
 
 TEST_F(LlvmLibcStrToFloat128Test, EiselLemireFloat128Fallback) {
-  ASSERT_FALSE(internal::eisel_lemire<float128>(
+  ASSERT_FALSE(internal::eisel_lemire<fputil::Float128>(
                    {0x5ce0e9a5'6015fec5'aadfa328'ae39b333_u128, 1})
                    .has_value());
 }
@@ -59,13 +58,14 @@ TEST_F(LlvmLibcStrToFloat128Test, ClingerFastPathFloat128Simple) {
 #if defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128)
 
 TEST_F(LlvmLibcStrToFloat128Test, ClingerConstsEqualLongDouble) {
-  using F128Consts = internal::ClingerConsts<float128>;
+  using F128Consts = internal::ClingerConsts<fputil::Float128>;
   using LDConsts = internal::ClingerConsts<long double>;
 
   EXPECT_EQ(F128Consts::EXACT_POWERS_OF_TEN, LDConsts::EXACT_POWERS_OF_TEN);
   EXPECT_EQ(F128Consts::DIGITS_IN_MANTISSA, LDConsts::DIGITS_IN_MANTISSA);
-  EXPECT_EQ(fputil::FPBits<float128>(F128Consts::MAX_EXACT_INT).uintval(),
-            fputil::FPBits<long double>(LDConsts::MAX_EXACT_INT).uintval());
+  EXPECT_EQ(
+      fputil::FPBits<fputil::Float128>(F128Consts::MAX_EXACT_INT).uintval(),
+      fputil::FPBits<long double>(LDConsts::MAX_EXACT_INT).uintval());
 
   constexpr size_t F128_LEN = sizeof(F128Consts::POWERS_OF_TEN_ARRAY) /
                               sizeof(F128Consts::POWERS_OF_TEN_ARRAY[0]);
@@ -74,13 +74,13 @@ TEST_F(LlvmLibcStrToFloat128Test, ClingerConstsEqualLongDouble) {
   ASSERT_EQ(F128_LEN, LD_LEN);
   for (size_t i = 0; i < F128_LEN; ++i) {
     EXPECT_EQ(
-        fputil::FPBits<float128>(F128Consts::POWERS_OF_TEN_ARRAY[i]).uintval(),
+        fputil::FPBits<fputil::Float128>(F128Consts::POWERS_OF_TEN_ARRAY[i])
+            .uintval(),
         fputil::FPBits<long double>(LDConsts::POWERS_OF_TEN_ARRAY[i])
             .uintval());
   }
 }
 
 #endif // defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128)
-#endif // defined(LIBC_TYPES_HAS_NATIVE_FLOAT128)
 
 } // namespace LIBC_NAMESPACE_DECL
