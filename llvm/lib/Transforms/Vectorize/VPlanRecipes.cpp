@@ -1512,7 +1512,7 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     }
 
     // Add on the cost of extracting the element.
-    auto *VecTy = toVectorTy(getOperand(0)->getScalarType(), VF);
+    auto *VecTy = toVectorTy(getScalarType(), VF);
     return Ctx.TTI.getVectorInstrCost(Instruction::ExtractElement, VecTy,
                                       Ctx.CostKind);
   }
@@ -1873,25 +1873,16 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
   }
 }
 
-bool VPInstruction::usesFirstPartOnly(const VPValue *Op) const {
-  assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
-  if (Instruction::isBinaryOp(getOpcode()))
-    return vputils::onlyFirstPartUsed(this);
-
+bool VPInstruction::usesFirstPartOnly() const {
   switch (getOpcode()) {
   default:
     return false;
-  case Instruction::FCmp:
-  case Instruction::ICmp:
-  case Instruction::Select:
-    return vputils::onlyFirstPartUsed(this);
   case VPInstruction::BranchOnCount:
   case VPInstruction::BranchOnCond:
   case VPInstruction::BranchOnTwoConds:
   case VPInstruction::CanonicalIVIncrementForPart:
     return true;
   };
-  llvm_unreachable("switch should return");
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -4349,7 +4340,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
                   PredR->getOperand(0)->getUnderlyingValue()),
               VF.isVector());
         }))
-      break;
+      return Ctx.getLegacyCost(UI, VF);
 
     ScalarCost = ScalarCost * VF.getFixedValue() +
                  Ctx.getScalarizationOverhead(this->getScalarType(),
@@ -4380,7 +4371,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
       // (PtrSCEV is unused) or predicated (legacy cost includes the region).
       const VPRegionBlock *ParentRegion = getRegion();
       if (!isSingleScalar() && (!ParentRegion || !ParentRegion->isReplicator()))
-        break;
+        return Ctx.getLegacyCost(UI, VF);
       PtrSCEV = nullptr;
     }
 
@@ -4463,9 +4454,12 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
   }
   case Instruction::ExtractValue:
     return Ctx.TTI.getInsertExtractValueCost(getOpcode(), Ctx.CostKind);
+  default:
+    // This opcode is unknown. Assume that it is the same as 'mul'.
+    return Ctx.TTI.getArithmeticInstrCost(Instruction::Mul,
+                                          this->getScalarType(), Ctx.CostKind) *
+           (isSingleScalar() ? 1 : VF.getFixedValue());
   }
-
-  return Ctx.getLegacyCost(UI, VF);
 }
 
 InstructionCost VPReplicateRecipe::computeCallCost(

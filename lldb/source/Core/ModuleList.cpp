@@ -1446,6 +1446,7 @@ To run all discovered debug scripts in this session:
   if (scripts_to_load.empty() || !target.RecordScriptingResources(module))
     return true;
 
+  bool loaded = true;
   for (const FileSpec *scripting_fspec : scripts_to_load) {
     LLDB_LOG(log, "Auto-loading {0}", scripting_fspec->GetPath());
 
@@ -1453,11 +1454,18 @@ To run all discovered debug scripts in this session:
                              error)) {
       LLDB_LOG(log, "Failed to load '{0}'. Remaining scripts won't be loaded.",
                scripting_fspec->GetPath());
-      return false;
+      loaded = false;
+      break;
     }
   }
 
-  return true;
+  // Run the stop hooks that __lldb_module_added_to_target added with
+  // --at-initial-stop, if the process is already stopped. When another
+  // module's __lldb_module_added_to_target loaded this module, that function
+  // hasn't returned yet, so the load that called it runs them.
+  if (!target.IsCollectingHooks())
+    target.RunCollectedInitialStopHooks();
+  return loaded;
 }
 
 bool ModuleList::LoadScriptingResourcesInTarget(Target *target,

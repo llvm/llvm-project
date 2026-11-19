@@ -289,6 +289,59 @@ ICmpInst::Predicate llvm::getICmpCondCode(ISD::CondCode Pred) {
   }
 }
 
+ISD::NodeType llvm::getAtomicRMWOpcode(AtomicRMWInst::BinOp Op) {
+  switch (Op) {
+  default:
+    llvm_unreachable("Unknown atomicrmw operation");
+  case AtomicRMWInst::Xchg:
+    return ISD::ATOMIC_SWAP;
+  case AtomicRMWInst::Add:
+    return ISD::ATOMIC_LOAD_ADD;
+  case AtomicRMWInst::Sub:
+    return ISD::ATOMIC_LOAD_SUB;
+  case AtomicRMWInst::And:
+    return ISD::ATOMIC_LOAD_AND;
+  case AtomicRMWInst::Nand:
+    return ISD::ATOMIC_LOAD_NAND;
+  case AtomicRMWInst::Or:
+    return ISD::ATOMIC_LOAD_OR;
+  case AtomicRMWInst::Xor:
+    return ISD::ATOMIC_LOAD_XOR;
+  case AtomicRMWInst::Max:
+    return ISD::ATOMIC_LOAD_MAX;
+  case AtomicRMWInst::Min:
+    return ISD::ATOMIC_LOAD_MIN;
+  case AtomicRMWInst::UMax:
+    return ISD::ATOMIC_LOAD_UMAX;
+  case AtomicRMWInst::UMin:
+    return ISD::ATOMIC_LOAD_UMIN;
+  case AtomicRMWInst::FAdd:
+    return ISD::ATOMIC_LOAD_FADD;
+  case AtomicRMWInst::FSub:
+    return ISD::ATOMIC_LOAD_FSUB;
+  case AtomicRMWInst::FMax:
+    return ISD::ATOMIC_LOAD_FMAX;
+  case AtomicRMWInst::FMin:
+    return ISD::ATOMIC_LOAD_FMIN;
+  case AtomicRMWInst::FMaximum:
+    return ISD::ATOMIC_LOAD_FMAXIMUM;
+  case AtomicRMWInst::FMinimum:
+    return ISD::ATOMIC_LOAD_FMINIMUM;
+  case AtomicRMWInst::FMaximumNum:
+    return ISD::ATOMIC_LOAD_FMAXIMUMNUM;
+  case AtomicRMWInst::FMinimumNum:
+    return ISD::ATOMIC_LOAD_FMINIMUMNUM;
+  case AtomicRMWInst::UIncWrap:
+    return ISD::ATOMIC_LOAD_UINC_WRAP;
+  case AtomicRMWInst::UDecWrap:
+    return ISD::ATOMIC_LOAD_UDEC_WRAP;
+  case AtomicRMWInst::USubCond:
+    return ISD::ATOMIC_LOAD_USUB_COND;
+  case AtomicRMWInst::USubSat:
+    return ISD::ATOMIC_LOAD_USUB_SAT;
+  }
+}
+
 static bool isNoopBitcast(Type *T1, Type *T2,
                           const TargetLoweringBase& TLI) {
   return T1 == T2 || (T1->isPointerTy() && T2->isPointerTy()) ||

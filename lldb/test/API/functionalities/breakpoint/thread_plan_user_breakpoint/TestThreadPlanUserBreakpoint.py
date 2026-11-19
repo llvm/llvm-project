@@ -109,6 +109,7 @@ class ThreadPlanUserBreakpointsTestCase(TestBase):
             condition=True, set_up_breakpoint_func=self.set_up_breakpoints_condition
         )
 
+    @skipIfWasm  # a step on Wasm runs to exit
     def test_thread_plan_user_breakpoint_conditional_inactive(self):
         # Test with breakpoints having false condition
         self.check_thread_plan_user_breakpoint(
@@ -122,6 +123,7 @@ class ThreadPlanUserBreakpointsTestCase(TestBase):
             condition=True, set_up_breakpoint_func=self.set_up_breakpoints_enable
         )
 
+    @skipIfWasm  # a step on Wasm runs to exit
     def test_thread_plan_user_breakpoint_unconditional_inactive(self):
         # Test with breakpoints disabled unconditionally
         self.check_thread_plan_user_breakpoint(
@@ -135,6 +137,7 @@ class ThreadPlanUserBreakpointsTestCase(TestBase):
             condition=True, set_up_breakpoint_func=self.set_up_breakpoints_callback
         )
 
+    @skipIfWasm  # a step on Wasm runs to exit
     def test_thread_plan_user_breakpoint_callback_inactive(self):
         # Test with breakpoints with callback that returns 'False'
         self.check_thread_plan_user_breakpoint(

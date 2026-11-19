@@ -540,9 +540,9 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
 
         while (response.GetNameColonValue(name, value)) {
           if (name == "name") {
-            reg_info.name.SetString(value);
+            reg_info.name = value.str();
           } else if (name == "alt-name") {
-            reg_info.alt_name.SetString(value);
+            reg_info.alt_name = value.str();
           } else if (name == "bitsize") {
             if (!value.getAsInteger(BASE_10, reg_info.byte_size))
               reg_info.byte_size /= CHAR_BIT;
@@ -599,7 +599,7 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
                       .Case("float128", eFormatFloat128)
                       .Default(eFormatInvalid);
           } else if (name == "set") {
-            reg_info.set_name.SetString(value);
+            reg_info.set_name = value.str();
           } else if (name == "gcc" || name == "ehframe") {
             value.getAsInteger(BASE_AUTOSENSE, reg_info.regnum_ehframe);
           } else if (name == "dwarf") {
@@ -1700,10 +1700,10 @@ size_t ProcessGDBRemote::UpdateThreadPCsFromStopReplyThreadsValue(
 bool ProcessGDBRemote::UpdateThreadIDList() {
   std::lock_guard<std::recursive_mutex> guard(m_thread_list_real.GetMutex());
 
-  StructuredData::ObjectSP threads_info_sp = *m_jthreadsinfo.Lock();
+  ThreadInfosSP threads_info_sp = *m_jthreadsinfo.Lock();
   if (threads_info_sp) {
     // If we have the JSON threads info, we can get the thread list from that
-    StructuredData::Array *thread_infos = threads_info_sp->GetAsArray();
+    StructuredData::Array *thread_infos = threads_info_sp->GetArray();
     if (thread_infos && thread_infos->GetSize() > 0) {
       m_thread_ids.clear();
       m_thread_pcs.clear();
@@ -1847,42 +1847,57 @@ std::optional<size_t> ProcessGDBRemote::FindThreadIDIndex(lldb::tid_t tid) {
   return it->second;
 }
 
-bool ProcessGDBRemote::GetThreadStopInfoFromJSON(
-    ThreadGDBRemote *thread, const StructuredData::ObjectSP &thread_infos_sp) {
-  // See if we got thread stop infos for all threads via the "jThreadsInfo"
-  // packet
-  if (thread_infos_sp) {
-    StructuredData::Array *thread_infos = thread_infos_sp->GetAsArray();
-    if (thread_infos) {
-      lldb::tid_t tid;
-      const size_t n = thread_infos->GetSize();
-      for (size_t i = 0; i < n; ++i) {
-        StructuredData::Dictionary *thread_dict =
-            thread_infos->GetItemAtIndex(i)->GetAsDictionary();
-        if (thread_dict) {
-          if (thread_dict->GetValueForKeyAsInteger<lldb::tid_t>(
-                  "tid", tid, LLDB_INVALID_THREAD_ID)) {
-            if (tid == thread->GetID())
-              return (bool)SetThreadStopInfo(thread_dict,
-                                             thread->shared_from_this());
-          }
-        }
-      }
-    }
+ProcessGDBRemote::ThreadInfos::ThreadInfos(StructuredData::ObjectSP json_sp)
+    : m_json_sp(std::move(json_sp)) {
+  StructuredData::Array *array = m_json_sp->GetAsArray();
+  if (!array)
+    return;
+  const size_t n = array->GetSize();
+  m_thread_dicts.reserve(n);
+  for (size_t i = 0; i < n; ++i) {
+    StructuredData::Dictionary *thread_dict =
+        array->GetItemAtIndex(i)->GetAsDictionary();
+    lldb::tid_t tid = LLDB_INVALID_THREAD_ID;
+    // If a reply lists a thread more than once, use its first entry.
+    if (thread_dict && thread_dict->GetValueForKeyAsInteger("tid", tid))
+      m_thread_dicts.try_emplace(tid, thread_dict);
   }
-  return false;
+}
+
+StructuredData::Dictionary *
+ProcessGDBRemote::ThreadInfos::FindThread(lldb::tid_t tid) const {
+  auto it = m_thread_dicts.find(tid);
+  return it == m_thread_dicts.end() ? nullptr : it->second;
+}
+
+ProcessGDBRemote::ThreadInfosSP
+ProcessGDBRemote::IndexThreadInfos(StructuredData::ObjectSP json_sp) {
+  if (!json_sp)
+    return nullptr;
+  return std::make_shared<const ThreadInfos>(std::move(json_sp));
+}
+
+bool ProcessGDBRemote::GetThreadStopInfoFromJSON(
+    ThreadGDBRemote *thread, const ThreadInfosSP &thread_infos_sp) {
+  if (!thread_infos_sp)
+    return false;
+  StructuredData::Dictionary *thread_dict =
+      thread_infos_sp->FindThread(thread->GetID());
+  if (!thread_dict)
+    return false;
+  return SetThreadStopInfo(thread_dict, thread->shared_from_this()) != nullptr;
 }
 
 bool ProcessGDBRemote::CalculateThreadStopInfo(ThreadGDBRemote *thread) {
   // See if we got thread stop infos for all threads via the "jThreadsInfo"
   // packet (we're at a public stop).
-  StructuredData::ObjectSP threads_info_sp = *m_jthreadsinfo.Lock();
+  ThreadInfosSP threads_info_sp = *m_jthreadsinfo.Lock();
   if (GetThreadStopInfoFromJSON(thread, threads_info_sp))
     return true;
 
   // See if the stop-reply packet (T05 etc) included a `jstopinfo` key
   // with a mach exception description for any thread that has a stop reason.
-  StructuredData::ObjectSP stop_info_sp = *m_jstopinfo.Lock();
+  ThreadInfosSP stop_info_sp = *m_jstopinfo.Lock();
   if (stop_info_sp) {
     // Any thread not described in `jstopinfo` has no stop reason.
     // If a no-stop-reason thread is stopped at a breakpoint site (but
@@ -2554,7 +2569,7 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
 
         // This JSON contains thread IDs and thread stop info for all threads.
         // It doesn't contain expedited registers, memory or queue info.
-        *m_jstopinfo.Lock() = StructuredData::ParseJSON(json);
+        *m_jstopinfo.Lock() = IndexThreadInfos(StructuredData::ParseJSON(json));
       } else if (key.compare("hexname") == 0) {
         StringExtractor name_extractor(value);
         // Now convert the HEX bytes into a string value
@@ -2965,7 +2980,7 @@ void ProcessGDBRemote::WillPublicStop() {
   // memory will help stack backtracing be much faster. Expediting registers
   // will make sure we don't have to read the thread registers for GPRs.
   StructuredData::ObjectSP threads_info_sp = m_gdb_comm.GetThreadsInfo();
-  *m_jthreadsinfo.Lock() = threads_info_sp;
+  *m_jthreadsinfo.Lock() = IndexThreadInfos(threads_info_sp);
 
   if (threads_info_sp) {
     // Now set the stop info for each thread and also expedite any registers
@@ -5107,7 +5122,7 @@ typedef std::vector<std::string> stringVec;
 
 typedef std::vector<struct GdbServerRegisterInfo> GDBServerRegisterVec;
 struct RegisterSetInfo {
-  ConstString name;
+  std::string name;
 };
 
 typedef std::map<uint32_t, RegisterSetInfo> RegisterSetMap;
@@ -5835,7 +5850,7 @@ bool ParseRegisters(
                                    log](const llvm::StringRef &name,
                                         const llvm::StringRef &value) -> bool {
           if (name == "name") {
-            reg_info.name.SetString(value);
+            reg_info.name = value.str();
           } else if (name == "bitsize") {
             if (llvm::to_integer(value, reg_info.byte_size))
               reg_info.byte_size =
@@ -5849,7 +5864,7 @@ bool ParseRegisters(
           } else if (name == "offset") {
             llvm::to_integer(value, reg_info.byte_offset);
           } else if (name == "altname") {
-            reg_info.alt_name.SetString(value);
+            reg_info.alt_name = value.str();
           } else if (name == "encoding") {
             encoding_set = true;
             reg_info.encoding = Args::StringToEncoding(value, eEncodingUint);
@@ -6015,13 +6030,13 @@ bool ParseRegisters(
         // Only update the register set name if we didn't get a "reg_set"
         // attribute. "set_name" will be empty if we didn't have a "reg_set"
         // attribute.
-        if (!reg_info.set_name) {
+        if (reg_info.set_name.empty()) {
           if (!gdb_group.empty()) {
-            reg_info.set_name.SetCString(gdb_group.c_str());
+            reg_info.set_name = gdb_group;
           } else {
             // If no register group name provided anywhere,
             // we'll create a 'general' register set
-            reg_info.set_name.SetCString("general");
+            reg_info.set_name = "general";
           }
         }
 
@@ -6088,7 +6103,7 @@ bool ProcessGDBRemote::GetGDBServerRegisterInfoXMLAndProcess(
                       if (name == "id")
                         llvm::to_integer(value, set_id);
                       if (name == "name")
-                        set_info.name = ConstString(value);
+                        set_info.name = value.str();
                       return true; // Keep iterating through all attributes
                     });
 

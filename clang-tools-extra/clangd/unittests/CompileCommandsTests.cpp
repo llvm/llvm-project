@@ -273,6 +273,10 @@ TEST(ArgStripperTest, ArgStyles) {
   // Separate
   EXPECT_EQ(strip("-mllvm", "clang -mllvm X foo.cc"), "clang foo.cc");
   EXPECT_EQ(strip("-mllvm", "clang -mllvmX foo.cc"), "clang -mllvmX foo.cc");
+  EXPECT_EQ(strip("-mllvm", "clang -mllvm=X foo.cc"), "clang foo.cc");
+  EXPECT_EQ(strip("-o", "clang --output=x --output y foo.cc"), "clang foo.cc");
+  EXPECT_EQ(strip("-o", "clang --output-class-directory=x foo.cc"),
+            "clang --output-class-directory=x foo.cc");
   // RemainingArgsJoined
   EXPECT_EQ(strip("/link", "clang-cl /link b c d foo.cc"), "clang-cl");
   EXPECT_EQ(strip("/link", "clang-cl /linka b c d foo.cc"), "clang-cl");

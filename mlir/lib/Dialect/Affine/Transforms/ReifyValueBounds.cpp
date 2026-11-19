@@ -26,7 +26,7 @@ FailureOr<OpFoldResult> mlir::affine::reifyValueBound(
   AffineMap boundMap;
   ValueDimList mapOperands;
   if (failed(ValueBoundsConstraintSet::computeBound(
-          boundMap, mapOperands, type, var, stopCondition, options)))
+          boundMap, mapOperands, type, var, std::move(stopCondition), options)))
     return failure();
 
   // Reify bound.
@@ -98,9 +98,9 @@ FailureOr<OpFoldResult> mlir::affine::reifyShapedValueDimBound(
     // the owner of `value`.
     return v != value;
   };
-  return reifyValueBound(b, loc, type, {value, dim},
-                         stopCondition ? stopCondition : reifyToOperands,
-                         options);
+  return reifyValueBound(
+      b, loc, type, {value, dim},
+      stopCondition ? std::move(stopCondition) : reifyToOperands, options);
 }
 
 FailureOr<OpFoldResult> mlir::affine::reifyIndexValueBound(
@@ -111,7 +111,7 @@ FailureOr<OpFoldResult> mlir::affine::reifyIndexValueBound(
                              ValueBoundsConstraintSet &cstr) {
     return v != value;
   };
-  return reifyValueBound(b, loc, type, value,
-                         stopCondition ? stopCondition : reifyToOperands,
-                         options);
+  return reifyValueBound(
+      b, loc, type, value,
+      stopCondition ? std::move(stopCondition) : reifyToOperands, options);
 }
