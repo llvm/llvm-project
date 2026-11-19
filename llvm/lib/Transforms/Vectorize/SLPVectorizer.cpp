@@ -18307,8 +18307,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         Align CommonAlignment =
             computeCommonAlignment<StoreInst>(UniqueValues.getArrayRef());
         Value *Stride = getStrideBytesIfConstant(
-            dyn_cast_if_present<ConstantInt>(SPtrInfo.StrideVal), ScalarTy,
-            *DL, E->isReverse());
+            dyn_cast_if_present<ConstantInt>(SPtrInfo.StrideVal), ScalarTy, *DL,
+            E->isReverse());
         VecStCost = TTI->getMemIntrinsicInstrCost(
             MemIntrinsicCostAttributes(Intrinsic::experimental_vp_strided_store,
                                        StridedStoreTy,
