@@ -21836,16 +21836,16 @@ Instruction *ARMTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
 // anything for those.
 TargetLoweringBase::AtomicExpansionKind
 ARMTargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
-  bool has64BitAtomicStore;
+  bool has64BitLLSC;
   if (Subtarget->isMClass())
-    has64BitAtomicStore = false;
+    has64BitLLSC = false;
   else if (Subtarget->isThumb())
-    has64BitAtomicStore = Subtarget->hasV7Ops();
+    has64BitLLSC = Subtarget->hasV7Ops();
   else
-    has64BitAtomicStore = Subtarget->hasV6Ops();
+    has64BitLLSC = Subtarget->hasV6Ops();
 
   unsigned Size = SI->getValueOperand()->getType()->getPrimitiveSizeInBits();
-  if (Size == 64 && has64BitAtomicStore)
+  if (Size == 64 && has64BitLLSC)
     return AtomicExpansionKind::Expand;
 
   if (Size <= 32 && !hasNativeAtomics(*Subtarget) && !InsertFencesForAtomic &&
@@ -21864,16 +21864,16 @@ ARMTargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
 // sections A8.8.72-74 LDRD)
 TargetLowering::AtomicExpansionKind
 ARMTargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
-  bool has64BitAtomicLoad;
+  bool has64BitLLSC;
   if (Subtarget->isMClass())
-    has64BitAtomicLoad = false;
+    has64BitLLSC = false;
   else if (Subtarget->isThumb())
-    has64BitAtomicLoad = Subtarget->hasV7Ops();
+    has64BitLLSC = Subtarget->hasV7Ops();
   else
-    has64BitAtomicLoad = Subtarget->hasV6Ops();
+    has64BitLLSC = Subtarget->hasV6Ops();
 
   unsigned Size = LI->getType()->getPrimitiveSizeInBits();
-  if (Size == 64 && has64BitAtomicLoad)
+  if (Size == 64 && has64BitLLSC)
     return AtomicExpansionKind::LLOnly;
 
   if (Size <= 32 && !hasNativeAtomics(*Subtarget) && !InsertFencesForAtomic &&
