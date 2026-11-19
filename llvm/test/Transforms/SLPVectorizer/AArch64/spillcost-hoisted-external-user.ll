@@ -353,7 +353,6 @@ define double @copyable_phi_backedge(double %init, double %b) {
 ; CHECK-SAME: double [[INIT:%.*]], double [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x double> poison, double [[B]], i64 1
-; CHECK-NEXT:    [[E1:%.*]] = fadd fast double [[B]], 1.000000e+00
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[PHI0:%.*]] = phi double [ [[INIT]], %[[ENTRY]] ], [ [[TMP6:%.*]], %[[LOOP]] ]
@@ -361,6 +360,7 @@ define double @copyable_phi_backedge(double %init, double %b) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> [[TMP0]], double [[PHI0]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[TMP1]], <4 x double> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP3:%.*]] = fadd <4 x double> [[TMP2]], <double -0.000000e+00, double 1.000000e+00, double 2.000000e+00, double 4.000000e+00>
+; CHECK-NEXT:    [[E1:%.*]] = extractelement <4 x double> [[TMP3]], i64 1
 ; CHECK-NEXT:    [[E1_USE:%.*]] = fmul double [[E1]], 7.000000e+00
 ; CHECK-NEXT:    call void @use(double [[E1_USE]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = fmul fast <4 x double> [[TMP3]], <double 1.100000e+01, double 1.300000e+01, double 1.700000e+01, double 1.900000e+01>
