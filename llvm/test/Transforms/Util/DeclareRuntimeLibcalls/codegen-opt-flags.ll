@@ -15,3 +15,8 @@
 ; CHECK: declare arm_aapcscc void @__aeabi_memclr(ptr, i32)
 ; CHECK: declare arm_aapcscc void @__aeabi_memclr4(ptr, i32)
 ; CHECK: declare arm_aapcscc void @__aeabi_memclr8(ptr, i32)
+
+; The AEABI memory functions do not return the destination.
+; CHECK: declare arm_aapcscc void @__aeabi_memcpy(ptr, ptr, i32){{$}}
+; CHECK: declare arm_aapcscc void @__aeabi_memmove(ptr, ptr, i32){{$}}
+; CHECK: declare arm_aapcscc void @__aeabi_memset(ptr, i32, i32){{$}}
