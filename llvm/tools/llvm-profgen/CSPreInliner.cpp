@@ -22,6 +22,11 @@ STATISTIC(PreInlNumCSInlined,
           "Number of functions inlined with context sensitive profile");
 STATISTIC(PreInlNumCSNotInlined,
           "Number of functions not inlined with context sensitive profile");
+STATISTIC(PreInlNumCSDeferredContexts,
+          "Number of context profiles kept out of a base profile until their "
+          "caller decided whether to inline them");
+STATISTIC(PreInlNumCSLateBaseRevisits,
+          "Number of base profiles reconsidered after a late context merge");
 STATISTIC(PreInlNumCSInlinedHitMinLimit,
           "Number of functions with FDO inline stopped due to min size limit");
 STATISTIC(PreInlNumCSInlinedHitMaxLimit,
@@ -44,6 +49,13 @@ cl::opt<bool> UseContextCostForPreInliner(
     cl::desc("Use context-sensitive byte size cost for preinliner decisions"));
 } // namespace llvm
 
+static cl::opt<bool> CSPreinlDeferPendingContexts(
+    "csspgo-preinliner-defer-pending-contexts", cl::Hidden, cl::init(true),
+    cl::desc("Do not merge a context profile into its base profile until the "
+             "pre-inliner has decided whether to inline it into its caller. "
+             "This matters for recursive call graphs, where a callee can be "
+             "processed before its caller."));
+
 static cl::opt<bool> SamplePreInlineReplay(
     "csspgo-replay-preinline", cl::Hidden, cl::init(false),
     cl::desc(
@@ -58,6 +70,7 @@ static cl::opt<int> CSPreinlMultiplierForPrevInl(
 CSPreInliner::CSPreInliner(SampleContextTracker &Tracker,
                            ProfiledBinary &Binary, ProfileSummary *Summary)
     : UseContextCost(UseContextCostForPreInliner),
+      DeferPendingContexts(CSPreinlDeferPendingContexts),
       // TODO: Pass in a guid-to-name map in order for
       // ContextTracker.getFuncNameFor to work, if `Profiles` can have md5 codes
       // as their profile context.
@@ -103,8 +116,10 @@ std::vector<FunctionId> CSPreInliner::buildTopDownOrder() {
 }
 
 bool CSPreInliner::getInlineCandidates(ProfiledCandidateQueue &CQueue,
-                                       const FunctionSamples *CallerSamples) {
+                                       const FunctionSamples *CallerSamples,
+                                       unsigned &InlinedSize) {
   assert(CallerSamples && "Expect non-null caller samples");
+  ExpandedProfiles.insert(CallerSamples);
 
   // Ideally we want to consider everything a function calls, but as far as
   // context profile is concerned, only those frames that are children of
@@ -135,6 +150,14 @@ bool CSPreInliner::getInlineCandidates(ProfiledCandidateQueue &CQueue,
     // check for that.
     HasNewCandidate = true;
     uint32_t CalleeSize = getFuncSize(CalleeNode);
+    // A late context merge can make us revisit a base profile. Keep the
+    // inline decisions made earlier, charge their size, and only reconsider
+    // the children that were left out of line.
+    if (CalleeSamples->getContext().hasState(InlinedContext)) {
+      InlinedSize += CalleeSize;
+      getInlineCandidates(CQueue, CalleeSamples, InlinedSize);
+      continue;
+    }
     CQueue.emplace(CalleeSamples, std::max(CallsiteCount, CalleeEntryCount),
                    CalleeSize);
   }
@@ -193,8 +216,102 @@ bool CSPreInliner::shouldInline(ProfiledInlineCandidate &Candidate) {
   return (Candidate.SizeCost < SampleThreshold);
 }
 
-void CSPreInliner::processFunction(const FunctionId Name) {
+CSPreInliner::MergeStatus
+CSPreInliner::getMergeStatus(FunctionSamples *CSamples, FunctionId Name) {
+  // The context was already inlined into its caller or merged into its base.
+  SampleContext &Context = CSamples->getContext();
+  if (Context.hasState(InlinedContext) || Context.hasState(MergedContext))
+    return MergeStatus::Done;
+
+  // A top-level profile is a base profile itself, so there is nothing to merge.
+  ContextTrieNode *Root = &ContextTracker.getRootContext();
+  ContextTrieNode *Parent =
+      ContextTracker.getContextNodeForProfile(CSamples)->getParentContext();
+  if (Parent == Root)
+    return MergeStatus::Done;
+
+  // The context can merge now if its parent context has no profile, because
+  // then nothing can inline it, or if the parent context has already queued
+  // its children as inline candidates, because then the parent decided not to
+  // inline it. This checks the parent context profile, not the parent
+  // function: in G -> R -> F, the context G:R:F waits for the context G:R even
+  // if the base profile of R was already processed.
+  const FunctionSamples *ParentSamples = Parent->getFunctionSamples();
+  if (!ParentSamples || ExpandedProfiles.contains(ParentSamples))
+    return MergeStatus::Ready;
+
+  // A recursive copy, where Name already appears above the context, can merge
+  // now too, as it did before: it cannot be inlined back into Name. This also
+  // guarantees that a pending context is never inside a subtree that
+  // getBaseSamplesFor(Name) moves.
+  for (ContextTrieNode *Ancestor = Parent; Ancestor != Root;
+       Ancestor = Ancestor->getParentContext())
+    if (Ancestor->getFuncName() == Name)
+      return MergeStatus::Ready;
+
+  // The parent context has a profile and has not decided yet.
+  return MergeStatus::Pending;
+}
+
+FunctionSamples *CSPreInliner::getBaseSamplesForProcessing(FunctionId Name) {
+  if (!DeferPendingContexts)
+    return ContextTracker.getBaseSamplesFor(Name);
+
+  // In a recursive call graph a callee can be processed before its caller.
+  // Merging all of the callee's contexts into its base profile at that point
+  // takes the caller's contexts away before the caller had a chance to inline
+  // them. Hide contexts whose parent has not decided yet: the tracker skips
+  // MergedContext profiles, and the state is cleared right after the merge.
+  SmallVector<std::pair<FunctionSamples *, const FunctionSamples *>, 8> Pending;
+  for (FunctionSamples *CSamples :
+       ContextTracker.getFuncToCtxtProfiles()[Name]) {
+    if (getMergeStatus(CSamples, Name) != MergeStatus::Pending)
+      continue;
+    CSamples->getContext().setState(MergedContext);
+    Pending.emplace_back(CSamples,
+                         ContextTracker.getContextNodeForProfile(CSamples)
+                             ->getParentContext()
+                             ->getFunctionSamples());
+  }
   FunctionSamples *FSamples = ContextTracker.getBaseSamplesFor(Name);
+  for (const auto &[CSamples, ParentSamples] : Pending) {
+    assert(ContextTracker.getContextNodeForProfile(CSamples)
+                   ->getParentContext()
+                   ->getFunctionSamples() == ParentSamples &&
+           "Pending context was moved by the base profile merge");
+    CSamples->getContext().clearState(MergedContext);
+  }
+  if (!Pending.empty())
+    FuncsWithDeferredContexts.insert(Name);
+  PreInlNumCSDeferredContexts += Pending.size();
+  return FSamples;
+}
+
+void CSPreInliner::mergeRemainingContexts(ArrayRef<FunctionId> Order) {
+  // A deferred context that its caller did not inline still has to reach its
+  // base profile, and so do contexts carried along by such merges. The late
+  // samples can turn a cold call site in the base hot, so process the base
+  // again instead of only merging. A caller is settled before its children
+  // because a context only becomes ready once its parent has decided. Each
+  // revisit moves at least one nested context to the top level, so this ends.
+  bool Changed = true;
+  while (Changed) {
+    Changed = false;
+    for (FunctionId Name : Order) {
+      if (none_of(ContextTracker.getFuncToCtxtProfiles()[Name],
+                  [&](FunctionSamples *CSamples) {
+                    return getMergeStatus(CSamples, Name) == MergeStatus::Ready;
+                  }))
+        continue;
+      ++PreInlNumCSLateBaseRevisits;
+      processFunction(Name);
+      Changed = true;
+    }
+  }
+}
+
+void CSPreInliner::processFunction(const FunctionId Name) {
+  FunctionSamples *FSamples = getBaseSamplesForProcessing(Name);
   if (!FSamples)
     return;
 
@@ -210,7 +327,7 @@ void CSPreInliner::processFunction(const FunctionId Name) {
                     << FuncSize << ", size limit: " << SizeLimit << ")\n");
 
   ProfiledCandidateQueue CQueue;
-  getInlineCandidates(CQueue, FSamples);
+  getInlineCandidates(CQueue, FSamples, FuncFinalSize);
 
   while (!CQueue.empty() && FuncFinalSize < SizeLimit) {
     ProfiledInlineCandidate Candidate = CQueue.top();
@@ -224,7 +341,7 @@ void CSPreInliner::processFunction(const FunctionId Name) {
       Candidate.CalleeSamples->getContext().setAttribute(
           ContextShouldBeInlined);
       FuncFinalSize += Candidate.SizeCost;
-      getInlineCandidates(CQueue, Candidate.CalleeSamples);
+      getInlineCandidates(CQueue, Candidate.CalleeSamples, FuncFinalSize);
     } else {
       ++PreInlNumCSNotInlined;
     }
@@ -294,8 +411,17 @@ void CSPreInliner::run() {
   // It also helps better compress context profile to control profile
   // size, as we now only need context profile for functions going to
   // be inlined.
-  for (FunctionId FuncName : buildTopDownOrder()) {
+  std::vector<FunctionId> Order = buildTopDownOrder();
+  for (FunctionId FuncName : Order)
     processFunction(FuncName);
+  if (DeferPendingContexts) {
+    // Contexts are only moved or merged, never created, so a nested context
+    // that is still undecided after the main pass was deferred, and only
+    // functions that deferred a context need another look.
+    erase_if(Order, [&](FunctionId Name) {
+      return !FuncsWithDeferredContexts.contains(Name);
+    });
+    mergeRemainingContexts(Order);
   }
 
   // Not inlined context profiles are merged into its base, so we can
@@ -305,6 +431,8 @@ void CSPreInliner::run() {
     if (FProfile &&
         (Node->getParentContext() != &ContextTracker.getRootContext() &&
          !FProfile->getContext().hasState(InlinedContext))) {
+      assert(!DeferPendingContexts &&
+             "A nested profile was neither inlined nor merged into its base");
       Node->setFunctionSamples(nullptr);
     }
   }

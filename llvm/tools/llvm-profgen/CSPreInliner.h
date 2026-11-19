@@ -10,6 +10,7 @@
 #define LLVM_TOOLS_LLVM_PROFGEN_PGOINLINEADVISOR_H
 
 #include "ProfiledBinary.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/PriorityQueue.h"
 #include "llvm/ProfileData/ProfileCommon.h"
 #include "llvm/ProfileData/SampleProf.h"
@@ -75,16 +76,31 @@ public:
   void run();
 
 private:
+  // Where a context profile stands in the base profile merge.
+  enum class MergeStatus {
+    Done,    // A base profile, or already inlined or merged.
+    Pending, // Nested, and its parent context has not decided yet.
+    Ready,   // Nested, and its parent decided not to inline it.
+  };
   bool getInlineCandidates(ProfiledCandidateQueue &CQueue,
-                           const FunctionSamples *FCallerContextSamples);
+                           const FunctionSamples *FCallerContextSamples,
+                           unsigned &InlinedSize);
   std::vector<FunctionId> buildTopDownOrder();
   void processFunction(FunctionId Name);
+  MergeStatus getMergeStatus(FunctionSamples *CSamples, FunctionId Name);
+  FunctionSamples *getBaseSamplesForProcessing(FunctionId Name);
+  void mergeRemainingContexts(ArrayRef<FunctionId> Order);
   bool shouldInline(ProfiledInlineCandidate &Candidate);
   uint32_t getFuncSize(const ContextTrieNode *ContextNode);
   bool UseContextCost;
+  bool DeferPendingContexts;
   SampleContextTracker &ContextTracker;
   ProfiledBinary &Binary;
   ProfileSummary *Summary;
+  // Profiles whose children have been queued as inline candidates.
+  DenseSet<const FunctionSamples *> ExpandedProfiles;
+  // Functions that kept a context out of their base profile at least once.
+  DenseSet<FunctionId> FuncsWithDeferredContexts;
 };
 
 } // end namespace sampleprof

@@ -1,0 +1,28 @@
+; G -> R -> F -> G is one SCC. Every F context starts out pending under a
+; parent that has not decided yet, and the G:2 @ R context only reaches the R
+; base late, after G decides not to inline it. Two things must hold:
+; - A context becomes ready only once its own parent context has been
+;   expanded, not just some copy of the parent function. If F were finished
+;   as soon as R was processed, F would end up as a standalone profile before
+;   R's late base context arrives.
+; - After the late merge, R is processed again with the new samples, keeping
+;   F nested in R, and no sample is dropped or counted twice.
+
+; RUN: llvm-profgen --format=text --llvm-sample-profile=%S/Inputs/cs-preinline-scc-late.prof --binary=%S/Inputs/cs-preinline-scc-late.perfbin --output=%t
+; RUN: FileCheck %s --input-file %t
+
+; CHECK-NOT:  {{^}}_Z1Fm:
+; CHECK:      {{^}}_Z1Rm:10000051:51
+; CHECK-NEXT:  1: 51
+; CHECK-NEXT:  2: _Z1Fm:10000000
+; CHECK-NEXT:   1: 5000000
+; CHECK-NEXT:   3: 5000000 _Z1Gm:5000000
+; CHECK-NEXT:   !CFGChecksum: 281528181014178
+; CHECK-NEXT:   !Attributes: 2
+; CHECK-NOT:  {{^}}_Z1Fm:
+; CHECK:      {{^}}_Z1Gm:7000000:6000000
+; CHECK-NOT:  {{^}}_Z1Fm:
+
+; Build (AArch64):
+;   clang++ -O2 -g -fpseudo-probe-for-profiling -fdebug-info-for-profiling \
+;     cs-preinline-scc-late.cpp -o cs-preinline-scc-late.perfbin

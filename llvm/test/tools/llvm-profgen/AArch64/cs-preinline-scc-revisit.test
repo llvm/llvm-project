@@ -1,0 +1,27 @@
+; Revisit of a base profile after a late merge. R is processed first and
+; inlines R:2 @ F. G then rejects the cold G:2 @ R, so it is merged into the R
+; base late and R is processed again. The second visit must keep the earlier
+; decision for R:2 @ F instead of deciding it again, and the late child
+; G:2 @ R:2 @ F must land in the inlined R:2 @ F without double counting.
+
+; RUN: llvm-profgen --format=text --llvm-sample-profile=%S/Inputs/cs-preinline-scc-revisit.prof --binary=%S/Inputs/cs-preinline-scc-late.perfbin --output=%t -debug-only=cs-preinliner 2>&1 | FileCheck %s --check-prefix=DECISION
+; RUN: FileCheck %s --input-file %t
+
+; REQUIRES: asserts
+
+; DECISION:      Process _Z1Rm
+; DECISION-NEXT:   Inlined context profile for: _Z1Rm:2 @ _Z1Fm (callee size: 56, call count:5000000)
+; DECISION:      Process _Z1Gm
+; DECISION-NEXT:   Outlined context profile for: _Z1Gm:2 @ _Z1Rm (callee size: 36, call count:50)
+; DECISION-NEXT: Process _Z1Rm
+; DECISION-NOT:  context profile for:
+
+; CHECK:      {{^}}_Z1Rm:10000090:5000050
+; CHECK-NEXT:  1: 5000050
+; CHECK-NEXT:  2: _Z1Fm:5000040
+; CHECK-NEXT:   1: 5000040
+; CHECK-NEXT:   !CFGChecksum: 281528181014178
+; CHECK-NEXT:   !Attributes: 2
+; CHECK:      {{^}}_Z1Gm:2000000:1000000
+; CHECK-NEXT:  1: 1000000
+; CHECK-NEXT:  2: 50 _Z1Rm:50
