@@ -781,9 +781,6 @@ class CodeGenRegBank {
 
   // Register categories.
   std::list<CodeGenRegisterCategory> RegCategories;
-  using RCatKeyMap =
-      std::map<CodeGenRegisterClass::Key, CodeGenRegisterCategory *>;
-  RCatKeyMap Key2RCat;
 
   // Remember each unique set of register units. Initially, this contains a
   // unique set for each register class. Simliar sets are coalesced with

@@ -4634,6 +4634,11 @@ void Sema::DiagnoseExceptionUse(SourceLocation Loc, bool IsTry) {
     return;
   }
 
+  if (getLangOpts().HLSL) {
+    targetDiag(Loc, diag::err_hlsl_exceptions) << IsTry;
+    return;
+  }
+
   if (!getLangOpts().CXXExceptions && !getSourceManager().isInSystemHeader(Loc))
     targetDiag(Loc, diag::err_exceptions_disabled) << IsTry;
 }

@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/Target/LastSubtargetCache.h"
 #include <optional>
 #include <utility>
 
@@ -86,6 +87,24 @@ public:
 class GCNTargetMachine final : public AMDGPUTargetMachine {
 private:
   mutable StringMap<std::unique_ptr<GCNSubtarget>> SubtargetMap;
+
+  /// The attributes that select a subtarget.
+  struct SubtargetAttrs {
+    Attribute GPU, FS;
+    bool BufRelaxed = false;
+    bool TBufRelaxed = false;
+    AMDGPU::TargetIDSetting Xnack = AMDGPU::TargetIDSetting::Any;
+    AMDGPU::TargetIDSetting SramEcc = AMDGPU::TargetIDSetting::Any;
+
+    bool operator==(const SubtargetAttrs &RHS) const {
+      return GPU == RHS.GPU && FS == RHS.FS && BufRelaxed == RHS.BufRelaxed &&
+             TBufRelaxed == RHS.TBufRelaxed && Xnack == RHS.Xnack &&
+             SramEcc == RHS.SramEcc;
+    }
+
+    bool operator!=(const SubtargetAttrs &RHS) const { return !(*this == RHS); }
+  };
+  mutable LastSubtargetCache<GCNSubtarget, SubtargetAttrs> LastSubtarget;
 
 public:
   GCNTargetMachine(const Target &T, const Triple &TT, StringRef CPU,

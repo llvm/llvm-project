@@ -605,7 +605,18 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
     StringRef Val = A->getValue();
     if (Val == "atomic" || Val == "prefer-atomic")
       CmdArgs.push_back("-fprofile-update=atomic");
-    else if (Val != "single")
+    else if (Val == "single") {
+      if (SanArgs.needsTsanRt() &&
+          (PGOGenerateArg || CSPGOGenerateArg || ProfileGenerateArg)) {
+        // Under TSan, instrprof defaults to atomic counter updates to avoid
+        // data race reports on profile counters; override that default and
+        // warn.
+        D.Diag(diag::warn_drv_tsan_profile_update_single)
+            << A->getAsString(Args);
+        CmdArgs.push_back("-mllvm");
+        CmdArgs.push_back("-instrprof-atomic-counter-update-all=false");
+      }
+    } else
       D.Diag(diag::err_drv_unsupported_option_argument)
           << A->getSpelling() << Val;
   }
@@ -2443,6 +2454,14 @@ void Clang::AddHexagonTargetArgs(const ArgList &Args,
   }
   CmdArgs.push_back("-mllvm");
   CmdArgs.push_back("-machine-sink-split=0");
+
+  // Let debuggers find the caller's HLX vector stack pointer.
+  if (const Arg *A = Args.getLastArg(options::OPT_g_Group);
+      A && !A->getOption().matches(options::OPT_g0) &&
+      !A->getOption().matches(options::OPT_ggdb0)) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("-hexagon-save-parent-vsp");
+  }
 
   addQFloatBackendArg(getToolChain().getDriver(), Args, CmdArgs);
 }
@@ -7468,6 +7487,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.addOptOutFlag(CmdArgs, options::OPT_mstack_arg_probe,
                      options::OPT_mno_stack_arg_probe);
 
+  if (Arg *A = Args.getLastArg(options::OPT_msmall_int_abi_compat_EQ))
+    A->render(Args, CmdArgs);
+
   if (Arg *A = Args.getLastArg(options::OPT_mrestrict_it,
                                options::OPT_mno_restrict_it)) {
     if (A->getOption().matches(options::OPT_mrestrict_it)) {
@@ -8615,8 +8637,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                     options::OPT_fno_keep_persistent_storage_variables);
   Args.addOptInFlag(CmdArgs, options::OPT_fkeep_inline_functions,
                     options::OPT_fno_keep_inline_functions);
-  Args.addOptInFlag(CmdArgs, options::OPT_fmodule_local_hints,
-                    options::OPT_fno_module_local_hints);
+  Args.addOptOutFlag(CmdArgs, options::OPT_fmodule_local_hints,
+                     options::OPT_fno_module_local_hints);
   Args.addOptInFlag(CmdArgs, options::OPT_fcomplete_member_pointers,
                     options::OPT_fno_complete_member_pointers);
   if (Arg *A = Args.getLastArg(options::OPT_cxx_static_destructors_EQ))

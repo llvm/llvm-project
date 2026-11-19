@@ -23,9 +23,11 @@ namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(void, regfree, (regex_t * preg)) {
   LIBC_CRASH_ON_NULLPTR(preg);
-  delete static_cast<regex::RegexInternal *>(preg->__internal);
+  // Clear preg before deleting so __internal never dangles during teardown.
+  auto *internal = static_cast<regex::RegexInternal *>(preg->__internal);
   preg->__internal = nullptr;
   preg->re_nsub = 0;
+  delete internal;
 }
 
 } // namespace LIBC_NAMESPACE_DECL

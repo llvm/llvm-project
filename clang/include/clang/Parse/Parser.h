@@ -3894,8 +3894,9 @@ private:
   /// associated with the class's definition.
   void PopParsingClass(Sema::ParsingClassState);
 
-  ExprResult ParseStringLiteralExpression(bool AllowUserDefinedLiteral,
-                                          bool Unevaluated);
+  ExprResult
+  ParseStringLiteralExpression(bool AllowUserDefinedLiteral, bool Unevaluated,
+                               ConversionAction CA = CA_ToLiteralEncoding);
 
   /// This routine is called when the '@' is seen and consumed.
   /// Current token is an Identifier and is not a 'try'. This
@@ -4123,8 +4124,9 @@ private:
   /// suffix.
   bool isPostfixExpressionSuffixStart() {
     tok::TokenKind K = Tok.getKind();
-    return (K == tok::l_square || K == tok::l_paren || K == tok::period ||
-            K == tok::arrow || K == tok::plusplus || K == tok::minusminus);
+    return (K == tok::l_square || K == tok::l_paren || K == tok::lesslessless ||
+            K == tok::period || K == tok::arrow || K == tok::plusplus ||
+            K == tok::minusminus);
   }
 
   /// Once the leading part of a postfix-expression is parsed, this

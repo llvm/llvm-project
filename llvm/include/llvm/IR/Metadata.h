@@ -1478,6 +1478,9 @@ public:
   LLVM_ABI static MDNode *getMergedCalleeTypeMetadata(const MDNode *A,
                                                       const MDNode *B);
   LLVM_ABI static MDNode *getMergedCalleesMetadata(MDNode *A, MDNode *B);
+  /// Merge !pcsections of two merged instructions: the result requests every
+  /// section that either requests.
+  LLVM_ABI static MDNode *getMergedPCSectionsMetadata(MDNode *A, MDNode *B);
   LLVM_ABI static MDNode *getMergedAllocTokenMetadata(const MDNode *A,
                                                       const MDNode *B);
 

@@ -640,9 +640,8 @@ def builder_module():
 
 class Base(unittest.TestCase):
     """
-    Abstract base for performing lldb (see TestBase) or other generic tests (see
-    BenchBase for one example).  lldbtest.Base works with the test driver to
-    accomplish things.
+    Abstract base for performing lldb (see TestBase) or other generic tests.
+    lldbtest.Base works with the test driver to accomplish things.
 
     """
 

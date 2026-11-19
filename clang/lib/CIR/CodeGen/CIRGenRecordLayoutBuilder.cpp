@@ -147,24 +147,10 @@ struct CIRRecordLowering final {
     return CharUnits::fromQuantity(dataLayout.layout.getTypeSizeInBits(ty));
   }
 
-  CharUnits getMemberAlignment(mlir::Type Ty) {
-    // An access unit takes the alignment of its storage type. A zero-width
-    // bit-field has no storage and so imposes no alignment.
-    if (auto bitFieldTy = mlir::dyn_cast<cir::BitFieldType>(Ty)) {
-      if (mlir::Type storage = bitFieldTy.getStorageType())
-        return getMemberAlignment(storage);
-      return CharUnits::One();
-    }
-    // Recurse on Arrays, they have the member alignment of their element type.
-    if (auto arrayTy = mlir::dyn_cast<cir::ArrayType>(Ty))
-      return getMemberAlignment(arrayTy.getElementType());
-    // Int types (_BitInt in particular) share the alignment of their storage
-    // type.
-    if (auto intTy = mlir::dyn_cast<cir::IntType>(Ty))
-      return CharUnits::fromQuantity(
-          intTy.getStorageTypeAlignment(dataLayout.layout));
-
-    return CharUnits::fromQuantity(dataLayout.layout.getTypeABIAlignment(Ty));
+  /// The record is marked packed when a member's offset is not a multiple of
+  /// this alignment.
+  CharUnits getMemberAlignment(mlir::Type ty) {
+    return CharUnits::fromQuantity(dataLayout.layout.getTypeABIAlignment(ty));
   }
 
   bool isZeroInitializable(const FieldDecl *fd) {

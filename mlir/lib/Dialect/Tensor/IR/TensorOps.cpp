@@ -164,7 +164,7 @@ bool tensor::isSameTypeWithoutEncoding(Type tp1, Type tp2) {
 static llvm::SmallBitVector getDroppedDims(ArrayRef<int64_t> reducedShape,
                                            ArrayRef<OpFoldResult> mixedSizes) {
   llvm::SmallBitVector droppedDims(mixedSizes.size());
-  int64_t shapePos = reducedShape.size() - 1;
+  int64_t shapePos = static_cast<int64_t>(reducedShape.size()) - 1;
 
   for (const auto &size : enumerate(llvm::reverse(mixedSizes))) {
     size_t idx = mixedSizes.size() - size.index() - 1;

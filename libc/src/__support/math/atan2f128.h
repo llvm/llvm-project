@@ -187,7 +187,7 @@ LIBC_INLINE Float128 atan2f128(Float128 y, Float128 x) {
   // atan(n/d) - atan(k) = atan((n/d - k/64) / (1 + (n/d) * (k/64)))
   //                     = atan((n - d * k/64)) / (d + n * k/64))
   // num_f128 = n - d * k/64
-  DFloat128 num_f128 = fputil::multiply_add(den, -k_f128, num);
+  DFloat128 num_f128 = fputil::sub_multiply(num, den, k_f128);
   // den_f128 = d + n * k/64
   DFloat128 den_f128 = fputil::multiply_add(num, k_f128, den);
 

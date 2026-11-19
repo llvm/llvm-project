@@ -548,8 +548,8 @@ libc_function(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//libc:llvm_libc_macros_fcntl_macros",
         "//libc/hdr:fcntl_macros",
+        "//libc/include:llvm_libc_macros_fcntl_macros",
         "//libc/src/__support:common",
         "//libc/src/__support:libc_errno",
         "//libc/src/__support/OSUtil:syscall",

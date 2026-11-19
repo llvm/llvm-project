@@ -152,7 +152,6 @@ regBankSelected: false
 selected:        false
 failedISel:      false
 hasWinCFI:       false
-registers:       
 liveins:         
   - { reg: '$edi', virtual-reg: '' }
 frameInfo:       
@@ -194,7 +193,6 @@ regBankSelected: false
 selected:        false
 failedISel:      false
 hasWinCFI:       false
-registers:       
 liveins:         
   - { reg: '$rdi', virtual-reg: '' }
 frameInfo:       
@@ -267,7 +265,6 @@ regBankSelected: false
 selected:        false
 failedISel:      false
 hasWinCFI:       false
-registers:       
 liveins:         
   - { reg: '$rdi', virtual-reg: '' }
 frameInfo:       

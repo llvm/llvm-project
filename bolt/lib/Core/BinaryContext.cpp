@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Core/BinaryContext.h"
+#include "bolt/Core/BinaryBasicBlock.h"
 #include "bolt/Core/BinaryEmitter.h"
 #include "bolt/Core/BinaryFunction.h"
 #include "bolt/Utils/CommandLineOpts.h"
@@ -2306,6 +2307,10 @@ void BinaryContext::collectDebugScopeBoundaries() {
     if (std::optional<uint64_t> DWOId = CU->getDWOId())
       releaseDWOCU(*DWOId);
   }
+}
+
+bool BinaryContext::shouldEmitBlockAlignment(const BinaryBasicBlock &BB) const {
+  return (AlignBlocks || PreserveBlocksAlignment) && BB.getAlignment() > 1;
 }
 
 bool BinaryContext::shouldEmit(const BinaryFunction &Function) const {

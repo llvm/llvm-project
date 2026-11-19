@@ -93,12 +93,11 @@ SBBroadcaster SBEvent::GetBroadcaster() const {
 const char *SBEvent::GetBroadcasterClass() const {
   LLDB_INSTRUMENT_VA(this);
 
-  const Event *lldb_event = get();
-  if (lldb_event)
-    return ConstString(lldb_event->GetBroadcaster()->GetBroadcasterClass())
-        .AsCString(nullptr);
-  else
-    return "unknown class";
+  // An event has no broadcaster until it is broadcast.
+  if (const Event *lldb_event = get())
+    if (Broadcaster *broadcaster = lldb_event->GetBroadcaster())
+      return ConstString(broadcaster->GetBroadcasterClass()).AsCString(nullptr);
+  return "unknown class";
 }
 
 bool SBEvent::BroadcasterMatchesPtr(const SBBroadcaster *broadcaster) {

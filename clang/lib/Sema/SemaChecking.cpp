@@ -4902,6 +4902,17 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
     SYCL().DiagIfDeviceCode(Loc, diag::err_variadic_device_fn)
         << diag::OffloadLang::SYCL;
 
+  // A calling convention that is supported only by the host is accepted on the
+  // declaration, but cannot be used for a call from device code.
+  if (Proto && getLangOpts().SYCLIsDevice && !isUnevaluatedContext()) {
+    CallingConv CC = Proto->getCallConv();
+    if (Context.getTargetInfo().checkCallingConvention(CC) !=
+        TargetInfo::CCCR_OK)
+      SYCL().DiagIfDeviceCode(Loc, diag::warn_cconv_unsupported)
+          << &Context.Idents.get(FunctionType::getNameForCallConv(CC))
+          << (int)CallingConventionIgnoredReason::ForThisTarget;
+  }
+
   if (FD)
     diagnoseArgDependentDiagnoseIfAttrs(FD, ThisArg, Args, Loc);
 }

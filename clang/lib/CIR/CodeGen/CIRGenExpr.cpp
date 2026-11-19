@@ -2995,10 +2995,10 @@ RValue CIRGenFunction::emitCXXMemberCallExpr(const CXXMemberCallExpr *ce,
   const auto *me = cast<MemberExpr>(callee);
   const auto *md = cast<CXXMethodDecl>(me->getMemberDecl());
 
-  if (md->isStatic()) {
-    cgm.errorNYI(ce->getSourceRange(), "emitCXXMemberCallExpr: static method");
-    return RValue::get(nullptr);
-  }
+  // Sema represents calls to static member functions as ordinary CallExpr
+  // nodes rather than CXXMemberCallExpr.
+  assert(!md->isStatic() &&
+         "static member call is unexpected in emitCXXMemberCallExpr");
 
   bool hasQualifier = me->hasQualifier();
   NestedNameSpecifier qualifier = me->getQualifier();
@@ -3095,12 +3095,6 @@ Address CIRGenFunction::createMemTemp(QualType ty, CharUnits align,
   Address result =
       createTempAlloca(convertTypeForMem(ty), /*destAddrSpace=*/{}, align, loc,
                        name, /*arraySize=*/nullptr, alloca, ip);
-  if (ty->isConstantMatrixType()) {
-    assert(!cir::MissingFeatures::matrixType());
-    cgm.errorNYI(loc, "createMemTemp constant matrix type");
-    return Address::invalid();
-  }
-
   return result;
 }
 

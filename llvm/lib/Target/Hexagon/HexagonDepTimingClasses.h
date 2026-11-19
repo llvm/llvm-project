@@ -17,10 +17,12 @@ namespace llvm {
 
 inline bool is_TC1(unsigned SchedClass) {
   switch (SchedClass) {
+  case Hexagon::Sched::tc_0ab1c240:
   case Hexagon::Sched::tc_112d30d6:
   case Hexagon::Sched::tc_151bf368:
   case Hexagon::Sched::tc_1c2c7a4a:
   case Hexagon::Sched::tc_1d41f8b7:
+  case Hexagon::Sched::tc_206d49bb:
   case Hexagon::Sched::tc_23708a21:
   case Hexagon::Sched::tc_24f426ab:
   case Hexagon::Sched::tc_2f573607:
@@ -29,6 +31,7 @@ inline bool is_TC1(unsigned SchedClass) {
   case Hexagon::Sched::tc_3fbf1042:
   case Hexagon::Sched::tc_407e96f9:
   case Hexagon::Sched::tc_42ff66ba:
+  case Hexagon::Sched::tc_434ba433:
   case Hexagon::Sched::tc_4a55d03c:
   case Hexagon::Sched::tc_5502c366:
   case Hexagon::Sched::tc_55b33fda:
@@ -49,6 +52,7 @@ inline bool is_TC1(unsigned SchedClass) {
   case Hexagon::Sched::tc_a1297125:
   case Hexagon::Sched::tc_a7a13fac:
   case Hexagon::Sched::tc_b837298f:
+  case Hexagon::Sched::tc_c39e5579:
   case Hexagon::Sched::tc_c57d9f39:
   case Hexagon::Sched::tc_d33e5eee:
   case Hexagon::Sched::tc_decdde8a:

@@ -512,12 +512,12 @@ if (NOT MSVC)
 endif()
 
 # Determine if we should restrict stack frame sizes.
-# Stack frames on PowerPC, Mips, SystemZ and in debug build can be much larger than
-# anticipated.
+# Stack frames on PowerPC, Mips, SystemZ, PA-RISC and in debug build can be
+# much larger than anticipated.
 # FIXME: Fix all sanitizers and add -Wframe-larger-than to
 # SANITIZER_COMMON_FLAGS
 if(COMPILER_RT_HAS_WFRAME_LARGER_THAN_FLAG AND NOT COMPILER_RT_DEBUG
-   AND NOT ${COMPILER_RT_DEFAULT_TARGET_ARCH} MATCHES "powerpc|mips|s390x")
+   AND NOT ${COMPILER_RT_DEFAULT_TARGET_ARCH} MATCHES "powerpc|mips|s390x|hppa")
   set(SANITIZER_LIMIT_FRAME_SIZE TRUE)
 else()
   set(SANITIZER_LIMIT_FRAME_SIZE FALSE)
@@ -533,10 +533,12 @@ endif()
 # in cflags during testing. This fixes the compiler/linker version mismatch
 # issue when running a clang built with a newer Xcode in an older Xcode
 set(COMPILER_RT_DARWIN_LINKER_VERSION)
-if (APPLE AND NOT CMAKE_LINKER MATCHES ".*lld.*")
+get_filename_component(CLANG_LINKER_NAME "${CMAKE_LINKER}" NAME)
+if (APPLE AND NOT CLANG_LINKER_NAME MATCHES "lld")
   get_darwin_linker_version(COMPILER_RT_DARWIN_LINKER_VERSION)
   message(STATUS "Host linker version: ${COMPILER_RT_DARWIN_LINKER_VERSION}")
 endif()
+unset(CLANG_LINKER_NAME)
 
 # Build sanitizer runtimes with debug info.
 if(MSVC)

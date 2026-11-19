@@ -191,17 +191,9 @@ class BreakpointConditionsTestCase(TestBase):
         location.SetCondition("val == 3")
         self.expect(location.GetCondition(), exe=False, startstr="val == 3")
 
-        # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        self.assertTrue(process, PROCESS_IS_VALID)
-
         # Frame #0 should be on self.line1 and the break condition should hold.
-        from lldbsuite.test.lldbutil import get_stopped_thread
-
-        thread = get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-        self.assertTrue(
-            thread.IsValid(),
-            "There should be a thread stopped due to breakpoint condition",
+        _, process, thread, _ = lldbutil.run_to_breakpoint_do_run(
+            self, target, breakpoint
         )
 
         frame0 = thread.GetFrameAtIndex(0)
@@ -247,18 +239,8 @@ class BreakpointConditionsTestCase(TestBase):
             startstr="no_such_variable == not_this_one_either",
         )
 
-        # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        self.assertTrue(process, PROCESS_IS_VALID)
-
         # Frame #0 should be on self.line1 and the break condition should hold.
-        from lldbsuite.test.lldbutil import get_stopped_thread
-
-        thread = get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-        self.assertTrue(
-            thread.IsValid(),
-            "There should be a thread stopped due to breakpoint condition",
-        )
+        _, _, thread, _ = lldbutil.run_to_breakpoint_do_run(self, target, breakpoint)
         frame0 = thread.GetFrameAtIndex(0)
         var = frame0.FindValue("val", lldb.eValueTypeVariableArgument)
         self.assertEqual(frame0.GetLineEntry().GetLine(), self.line1)

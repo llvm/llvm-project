@@ -70,7 +70,7 @@ void foo()
   b1.noHintTplFunction<0>(12);
 // CHECK: @_ZN1B17noHintTplFunctionILi1EEEii({{.*}}) [[EXPLICIT_ATTR]]
   b1.noHintTplFunction<1>(13);
-// CHECK: @_ZN1B17noHintTplFunctionILi2EEEii({{.*}}) [[NOHINT_ATTR]]
+// CHECK: @_ZN1B17noHintTplFunctionILi2EEEii({{.*}}) [[NOHINT_TPL_ATTR:#[0-9]+]]
   b1.noHintTplFunction<2>(14);
 // CHECK: @_ZN1B25explicitRedeclTplFunctionILi2EEEii({{.*}}) [[EXPLICIT_ATTR]]
   b1.explicitRedeclTplFunction<2>(15);
@@ -92,5 +92,9 @@ void foo()
 // SUITABLE-NOT: attributes [[EXPLICIT_ATTR]] = { {{.*}}noinline{{.*}} }
 //   HINTED-NOT: attributes [[IMPLICIT_ATTR]] = { {{.*}}noinline{{.*}} }
 // NOINLINE-DAG: attributes [[EXPLICIT_ATTR]] = { {{.*}}noinline{{.*}} }
+
+// SUITABLE-NOT: attributes [[NOHINT_TPL_ATTR]] = { {{.*}}noinline{{.*}} }
+//   HINTED-DAG: attributes [[NOHINT_TPL_ATTR]] = { likely_module_local {{.*}}noinline{{.*}} }
+// NOINLINE-DAG: attributes [[NOHINT_TPL_ATTR]] = { likely_module_local {{.*}}noinline{{.*}} }
 
 // CHECK-DAG: attributes [[OPTNONE_ATTR]] = { {{.*}}noinline{{.*}} }

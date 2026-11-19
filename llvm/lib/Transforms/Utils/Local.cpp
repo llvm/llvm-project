@@ -3055,13 +3055,14 @@ static void combineMetadata(Instruction *K, const Instruction *J,
         if (!AAOnly && (DoesKMove || !K->hasMetadata(LLVMContext::MD_noundef)))
           K->setMetadata(Kind, JMD);
         break;
-      // Keep empty cases for prof, mmra, memprof, and callsite to prevent them
-      // from being removed as unknown metadata. The actual merging is handled
-      // separately below.
+      // Keep empty cases for prof, mmra, memprof, callsite, and pcsections to
+      // prevent them from being removed as unknown metadata. The actual merging
+      // is handled separately below.
       case LLVMContext::MD_prof:
       case LLVMContext::MD_mmra:
       case LLVMContext::MD_memprof:
       case LLVMContext::MD_callsite:
+      case LLVMContext::MD_pcsections:
         break;
       case LLVMContext::MD_callee_type:
         if (!AAOnly) {
@@ -3156,6 +3157,15 @@ static void combineMetadata(Instruction *K, const Instruction *J,
     K->setMetadata(LLVMContext::MD_callsite,
                    MDNode::getMergedCallsiteMetadata(KCallSite, JCallSite));
   }
+
+  // Merge PC sections metadata: the merged instruction stands for both, so it
+  // requests the sections of either. Handled separately to support cases where
+  // only J has the metadata.
+  if (!AAOnly)
+    K->setMetadata(LLVMContext::MD_pcsections,
+                   MDNode::getMergedPCSectionsMetadata(
+                       K->getMetadata(LLVMContext::MD_pcsections),
+                       J->getMetadata(LLVMContext::MD_pcsections)));
 
   // Merge prof metadata.
   // Handle separately to support cases where only one instruction has the

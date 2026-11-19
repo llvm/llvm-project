@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -triple dxil-pc-shadermodel6.6-compute %s -emit-llvm -o - -verify
 
+using namespace hlsl;
+
 // expected-no-diagnostics
 RWByteAddressBuffer GBuf0 : register(u0);
 

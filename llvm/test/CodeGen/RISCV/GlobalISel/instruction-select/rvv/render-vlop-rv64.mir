@@ -12,9 +12,9 @@ body:             |
     ; CHECK-NEXT: [[PseudoVMCLR_M_B64_:%[0-9]+]]:vr = PseudoVMCLR_M_B64 [[ADDI]] /* vl */, 0 /* e8 */
     ; CHECK-NEXT: $v0 = COPY [[PseudoVMCLR_M_B64_]]
     ; CHECK-NEXT: PseudoRET implicit $v0
-    %0:gprb(s64) = G_CONSTANT i64 -2
-    %1:vrb(<vscale x 1 x s1>) = G_VMCLR_VL %0(s64)
-    $v0 = COPY %1(<vscale x 1 x s1>)
+    %0:gprb(i64) = G_CONSTANT i64 -2
+    %1:vrb(<vscale x 1 x i1>) = G_VMCLR_VL %0(i64)
+    $v0 = COPY %1(<vscale x 1 x i1>)
     PseudoRET implicit $v0
 ...
 ---
@@ -31,9 +31,9 @@ body:             |
     ; CHECK-NEXT: [[PseudoVMCLR_M_B64_:%[0-9]+]]:vr = PseudoVMCLR_M_B64 [[COPY]] /* vl */, 0 /* e8 */
     ; CHECK-NEXT: $v0 = COPY [[PseudoVMCLR_M_B64_]]
     ; CHECK-NEXT: PseudoRET implicit $v0
-    %0:gprb(s64) = COPY $x10
-    %1:vrb(<vscale x 1 x s1>) = G_VMCLR_VL %0(s64)
-    $v0 = COPY %1(<vscale x 1 x s1>)
+    %0:gprb(i64) = COPY $x10
+    %1:vrb(<vscale x 1 x i1>) = G_VMCLR_VL %0(i64)
+    $v0 = COPY %1(<vscale x 1 x i1>)
     PseudoRET implicit $v0
 ...
 
@@ -47,9 +47,9 @@ body:             |
     ; CHECK: [[PseudoVMCLR_M_B64_:%[0-9]+]]:vr = PseudoVMCLR_M_B64 1 /* vl */, 0 /* e8 */
     ; CHECK-NEXT: $v0 = COPY [[PseudoVMCLR_M_B64_]]
     ; CHECK-NEXT: PseudoRET implicit $v0
-    %0:gprb(s64) = G_CONSTANT i64 1
-    %1:vrb(<vscale x 1 x s1>) = G_VMCLR_VL %0(s64)
-    $v0 = COPY %1(<vscale x 1 x s1>)
+    %0:gprb(i64) = G_CONSTANT i64 1
+    %1:vrb(<vscale x 1 x i1>) = G_VMCLR_VL %0(i64)
+    $v0 = COPY %1(<vscale x 1 x i1>)
     PseudoRET implicit $v0
 ...
 
@@ -63,9 +63,9 @@ body:             |
     ; CHECK: [[PseudoVMCLR_M_B64_:%[0-9]+]]:vr = PseudoVMCLR_M_B64 0 /* vl */, 0 /* e8 */
     ; CHECK-NEXT: $v0 = COPY [[PseudoVMCLR_M_B64_]]
     ; CHECK-NEXT: PseudoRET implicit $v0
-    %0:gprb(s64) = G_CONSTANT i64 0
-    %1:vrb(<vscale x 1 x s1>) = G_VMCLR_VL %0(s64)
-    $v0 = COPY %1(<vscale x 1 x s1>)
+    %0:gprb(i64) = G_CONSTANT i64 0
+    %1:vrb(<vscale x 1 x i1>) = G_VMCLR_VL %0(i64)
+    $v0 = COPY %1(<vscale x 1 x i1>)
     PseudoRET implicit $v0
 ...
 

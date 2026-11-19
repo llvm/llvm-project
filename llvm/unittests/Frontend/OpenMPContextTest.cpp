@@ -803,4 +803,32 @@ TEST_F(OpenMPContextTest, StrictSubsetsOfAlternatingTiedSupersets) {
   EXPECT_EQ(Best({Host, CPU, Host, HostSuperset}), 1);
 }
 
+TEST_F(OpenMPContextTest, ISANamesInStrictSubset) {
+  struct ISAContext : OMPContext {
+    using OMPContext::OMPContext;
+    bool matchesISATrait(StringRef) const override { return true; }
+  } Context(false, Triple("x86_64-unknown-linux"), Triple(), -1);
+  APInt Three(64, 3), Four(64, 4);
+  VariantMatchInfo SSE, AVX;
+  SSE.addTrait(TraitProperty::device_isa___ANY, "sse");
+  SSE.addTrait(TraitProperty::implementation_vendor_llvm, "", &Four);
+  AVX.addTrait(TraitProperty::device_isa___ANY, "avx");
+  AVX.addTrait(TraitProperty::implementation_vendor_llvm, "", &Three);
+  AVX.addTrait(TraitProperty::device_kind_host, "");
+  auto Best = [&](const VariantMatchInfo &First,
+                  const VariantMatchInfo &Second) {
+    return getBestVariantMatchForContext(
+        SmallVector<VariantMatchInfo, 2>{First, Second}, Context);
+  };
+
+  // Both score 9. AVX requires more traits, but not the `sse` ISA name.
+  EXPECT_EQ(Best(SSE, AVX), 0);
+  EXPECT_EQ(Best(AVX, SSE), 0);
+
+  // With all of SSE's ISA names, AVX is a strict superset.
+  AVX.addTrait(TraitProperty::device_isa___ANY, "sse");
+  EXPECT_EQ(Best(SSE, AVX), 1);
+  EXPECT_EQ(Best(AVX, SSE), 0);
+}
+
 } // namespace

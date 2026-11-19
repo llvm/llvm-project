@@ -68,7 +68,7 @@ void test_tied_pointer(struct C *p, void *x) {
 
 // The input is the same size, so the asm returns the destination's size.
 // CHECK-LABEL: define dso_local void @test_tied_same_size(
-// CHECK-SAME: ptr noundef [[P:%.*]], i16 noundef signext [[X:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: ptr noundef [[P:%.*]], i16 noundef [[X:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[X_ADDR:%.*]] = alloca i16, align 2
