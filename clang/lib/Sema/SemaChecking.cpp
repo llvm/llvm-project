@@ -1725,7 +1725,11 @@ void Sema::checkFortifiedLibcArgument(FunctionDecl *FD, CallExpr *TheCall) {
   if (TheCall->getNumArgs() != 1)
     return;
   Expr *Arg = TheCall->getArg(0);
-  if (!Arg->getType()->isIntegerType())
+  // POSIX mode_t is at least 16 bits; bail out if the argument has a narrower
+  // integer type (which is not POSIX umask and would otherwise assert
+  // constructing the 0777 bitmask for widths under 9 bits).
+  if (!Arg->getType()->isIntegerType() ||
+      getASTContext().getIntWidth(Arg->getType()) < 16)
     return;
   Expr::EvalResult R;
   if (!Arg->EvaluateAsInt(R, getASTContext()))
@@ -1733,12 +1737,6 @@ void Sema::checkFortifiedLibcArgument(FunctionDecl *FD, CallExpr *TheCall) {
   // Operate on the raw two's-complement bit pattern so that negative literals
   // (which convert to large unsigned mode_t values) are caught.
   llvm::APInt RawValue = R.Val.getInt();
-  // 0777 requires 9 bits; a mode_t with 9 or fewer bits cannot have unused bits
-  // set outside 0777, and constructing the mask would assert for smaller
-  // widths.
-  constexpr unsigned MinBitWidthForPermissionsFlag = 10;
-  if (RawValue.getBitWidth() < MinBitWidthForPermissionsFlag)
-    return;
   llvm::APInt Mask(RawValue.getBitWidth(), 0777);
   llvm::APInt Extra = RawValue & ~Mask;
   if (Extra == 0)
