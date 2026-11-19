@@ -11037,7 +11037,7 @@ bool SIInstrInfo::isLegalFLATOffset(int64_t Offset, unsigned AddrSpace,
   using AMDGPU::FlatAddrSpace;
   if (ST.hasFlatSegmentOffsetBug() && FlatVariant == FlatAddrSpace::FLAT &&
       (AddrSpace == AMDGPUAS::FLAT_ADDRESS ||
-       AddrSpace == AMDGPUAS::GLOBAL_ADDRESS))
+       AMDGPU::isExtendedGlobalAddrSpace(AddrSpace)))
     return false;
 
   if (ST.hasNegativeUnalignedScratchOffsetBug() &&
