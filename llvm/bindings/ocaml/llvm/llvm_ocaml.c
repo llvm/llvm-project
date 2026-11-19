@@ -1816,12 +1816,9 @@ DEFINE_ITERATORS(instr, Instruction, BasicBlock_val, LLVMValueRef, Value_val,
 
 /* llvalue -> Opcode.t */
 value llvm_instr_get_opcode(value Inst) {
-  LLVMOpcode o;
   if (!LLVMIsAInstruction(Value_val(Inst)))
     caml_failwith("Not an instruction");
-  o = LLVMGetInstructionOpcode(Value_val(Inst));
-  assert(o <= LLVMBitExtract);
-  return Val_int(o);
+  return Val_int(LLVMGetInstructionOpcode(Value_val(Inst)));
 }
 
 /* llvalue -> ICmp.t option */
