@@ -41,6 +41,7 @@ set(ORC_RT_BEDROCK_POSIX_SOURCES
   host/posix/DynamicLibrary.cpp
   host/posix/Memory.cpp
   host/posix/PageSize.cpp
+  host/posix/dlfcn-host.cpp
   host/posix/sps/DWARFEHFrameRegistrarSPSCI.cpp
 )
 
