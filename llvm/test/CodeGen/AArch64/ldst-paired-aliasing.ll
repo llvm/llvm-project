@@ -21,10 +21,10 @@ define i32 @main() local_unnamed_addr #1 {
 ; CHECK-NEXT:    mov w9, #1 // =0x1
 ; CHECK-NEXT:    add x0, sp, #48
 ; CHECK-NEXT:    mov x1, sp
-; CHECK-NEXT:    str xzr, [sp, #80]
-; CHECK-NEXT:    str w9, [sp, #80]
 ; CHECK-NEXT:    stp q0, q0, [sp, #48]
 ; CHECK-NEXT:    ldr w8, [sp, #48]
+; CHECK-NEXT:    str xzr, [sp, #80]
+; CHECK-NEXT:    str w9, [sp, #80]
 ; CHECK-NEXT:    cmp w8, #1
 ; CHECK-NEXT:    b.ne .LBB0_2
 ; CHECK-NEXT:  // %bb.1: // %for.inc
