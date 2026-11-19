@@ -78,6 +78,15 @@ void SMEAttrs::addKnownFunctionAttrs(StringRef FuncName,
   RTLIB::LibcallImpl Impl = RTLCI.getSupportedLibcallImpl(FuncName);
   if (Impl == RTLIB::Unsupported)
     return;
+  // Out-of-line atomic preserve-most helpers execute only scalar integer and
+  // atomic/exclusive instructions without touching SIMD/SVE registers or SME
+  // ZA/ZT0 state, so SME callers can invoke them directly without smstop/
+  // smstart mode switches or lazy ZA/ZT0 saves.
+  if (RTLCI.getLibcallImplCallingConv(Impl) ==
+      CallingConv::AArch64_Outline_Atomics_PreserveMost) {
+    set(SMEAttrs::SM_Compatible | SMEAttrs::ZA_State_Agnostic);
+    return;
+  }
   unsigned KnownAttrs = SMEAttrs::Normal;
   RTLIB::Libcall LC = RTLCI.getLibcallFromImpl(Impl);
   switch (LC) {

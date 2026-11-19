@@ -178,6 +178,14 @@ public:
   InstructionSelector *getInstructionSelector() const override;
   const LegalizerInfo *getLegalizerInfo() const override;
   const RegisterBankInfo *getRegBankInfo() const override;
+  /// Override runtime libcall lowering (such as `*_preservemost` outline
+  /// atomics) when enabled on this subtarget.
+  void initLibcallLoweringInfo(LibcallLoweringInfo &Info) const override;
+
+  /// Return true if out-of-line atomic helper calls should use the
+  /// `aarch64_outline_atomics_preservemost` calling convention and
+  /// `__aarch64_*_preservemost` entry points.
+  bool useOutlineAtomicsPreserveMost() const;
   const Triple &getTargetTriple() const { return TargetTriple; }
   bool enableMachineScheduler() const override { return true; }
   bool enablePostRAScheduler() const override { return usePostRAScheduler(); }
@@ -430,6 +438,9 @@ public:
     case CallingConv::Fast:
     case CallingConv::Swift:
     case CallingConv::SwiftTail:
+    // Outline-atomic preserve-most helpers pass arguments and return values
+    // using the target's standard C calling convention.
+    case CallingConv::AArch64_Outline_Atomics_PreserveMost:
       return isTargetWindowsOrUEFI();
     case CallingConv::PreserveNone:
       return IsVarArg && isTargetWindowsOrUEFI();
