@@ -787,6 +787,18 @@
 // CHECK-LOONGARCH-LP64S: "-dynamic-linker" "{{.*}}/lib64/ld-linux-loongarch-lp64s.so.1"
 //
 // RUN: %clang -### %s -no-pie 2>&1 \
+// RUN:     --target=loongarch32-linux-gnu \
+// RUN:   | FileCheck --check-prefix=CHECK-LOONGARCH32-ROSEGMENT %s
+// CHECK-LOONGARCH32-ROSEGMENT: "{{.*}}ld{{(.exe)?}}"
+// CHECK-LOONGARCH32-ROSEGMENT: "--no-rosegment"
+//
+// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN:     --target=loongarch64-linux-gnu \
+// RUN:   | FileCheck --check-prefix=CHECK-LOONGARCH64-ROSEGMENT %s
+// CHECK-LOONGARCH64-ROSEGMENT: "{{.*}}ld{{(.exe)?}}"
+// CHECK-LOONGARCH64-ROSEGMENT: "--no-rosegment"
+//
+// RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=powerpc64-linux-gnu \
 // RUN:   | FileCheck --check-prefix=CHECK-PPC64 %s
 // CHECK-PPC64: "{{.*}}ld{{(.exe)?}}"
