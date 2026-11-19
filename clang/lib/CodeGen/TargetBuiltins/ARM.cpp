@@ -2193,6 +2193,12 @@ Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
   if (auto Hint = GetValueForARMHint(BuiltinID))
     return Hint;
 
+  if (BuiltinID == clang::ARM::BI_AddressOfReturnAddress) {
+    llvm::Function *F =
+        CGM.getIntrinsic(Intrinsic::addressofreturnaddress, AllocaInt8PtrTy);
+    return Builder.CreateCall(F);
+  }
+
   if (BuiltinID == clang::ARM::BI__emit) {
     bool IsThumb = getTarget().getTriple().getArch() == llvm::Triple::thumb;
     llvm::FunctionType *FTy =

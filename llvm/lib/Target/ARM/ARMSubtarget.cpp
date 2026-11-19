@@ -16,6 +16,7 @@
 #include "ARMFrameLowering.h"
 #include "ARMInstrInfo.h"
 #include "ARMLegalizerInfo.h"
+#include "ARMMachineFunctionInfo.h"
 #include "ARMRegisterBankInfo.h"
 #include "ARMSubtarget.h"
 #include "ARMTargetMachine.h"
@@ -612,7 +613,9 @@ ARMSubtarget::getPushPopSplitVariation(const MachineFunction &MF) const {
   // If R7 is the frame pointer, we must split at R7 to ensure that the
   // previous frame pointer (R7) and return address (LR) are adjacent on the
   // stack, to form a valid frame record.
-  if (getFramePointerReg() == ARM::R7 && MF.framePointerIsReserved())
+  if (getFramePointerReg() == ARM::R7 &&
+      (MF.framePointerIsReserved() ||
+       MF.getInfo<ARMFunctionInfo>()->isAddressOfReturnAddressTaken()))
     return SplitR7;
 
   // Returns SplitR11WindowsSEH when the stack pointer needs to be
