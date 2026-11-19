@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -o - %s                                         | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-linux -emit-llvm -o - %s                                         | FileCheck %s %}
 // RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -o - %s -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-linux -emit-llvm -o - %s -fexperimental-new-constant-interpreter | FileCheck %s %}
 
 template<typename T>
 struct Wrapper {
@@ -25,5 +27,7 @@ int main() {
 /// by doing an integer conversion in between, which caused the
 /// %0 line to be:
 /// store ptr inttoptr (i64 138574454870464 to ptr), ptr %__f, align 8
-// CHECK: @_ZN7WrapperIFvvEEC2IRS0_EEOT_
-// CHECK: %0 = load ptr, ptr %__u.addr
+// CHECK: define {{.*}} @_ZN7WrapperIFvvEEC2IRS0_EEOT_({{[^,]*}}, ptr {{.*}} %[[U_ARG:[^)]*]])
+// CHECK: store ptr %[[U_ARG]], ptr %[[U_ADDR:.*]], align 8
+// CHECK: %[[U_LOAD:.*]] = load ptr, ptr %[[U_ADDR]]
+// CHECK: store ptr %[[U_LOAD]], ptr %{{.*}}, align 8

@@ -1,5 +1,6 @@
 // REQUIRES: x86-registered-target
 // RUN: %clang_cc1 -x c++ %s -triple i386-apple-darwin10 -fasm-blocks -emit-llvm -o - -std=c++11 | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -x c++ %s -triple i386-apple-darwin10 -fasm-blocks -emit-llvm -o - -std=c++11 | FileCheck %s %}
 
 struct Foo {
   static int *ptr;
@@ -109,7 +110,7 @@ void test5() {
   // CHECK-SAME: push $0
   // CHECK-SAME: call ${2:P}
   // CHECK-SAME: mov $1, eax
-  // CHECK-SAME: "=*m,=*m,*m,~{esp},~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i32) %y, ptr elementtype(i32) %x, ptr elementtype(i32 (float)) @_ZN2T5IiE6createIfEEiT_)
+  // CHECK-SAME: "=*m,=*m,*m,~{esp},~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i32) [[Y]], ptr elementtype(i32) [[X]], ptr elementtype(i32 (float)) @_ZN2T5IiE6createIfEEiT_)
 }
 
 // Just verify this doesn't emit an error.
