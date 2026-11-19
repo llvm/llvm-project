@@ -42,6 +42,13 @@
 ; FIXME-R600-NEXT: .long 0
 ; FIXME @nullptr9 = global ptr addrspace(9) addrspacecast (ptr null to ptr addrspace(9))
 
+; A null constant wider than 64 bits.
+; CHECK-LABEL: nullptr8_null:
+; GCN-NEXT: .quad 0
+; GCN-NEXT: .quad 0
+; R600-NEXT: .long 0
+@nullptr8_null = global ptr addrspace(8) null
+
 ; CHECK-LABEL: nullptr10:
 ; R600-NEXT: .long 0
 @nullptr10 = global ptr addrspace(10) addrspacecast (ptr null to ptr addrspace(10))
@@ -121,3 +128,11 @@
   ptr addrspace(3) addrspacecast (ptr null to ptr addrspace(3)),
   ptr null,
   ptr addrspace(2) addrspacecast (ptr null to ptr addrspace(2))}, align 4
+
+; CHECK-LABEL: structWithWidePointer:
+; CHECK-NEXT: .long 1
+; GCN-NEXT:   .zero 12
+; GCN-NEXT:   .quad 0
+; GCN-NEXT:   .quad 0
+; R600-NEXT:  .long 0
+@structWithWidePointer = addrspace(1) global { i32, ptr addrspace(8) } { i32 1, ptr addrspace(8) null }

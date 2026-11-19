@@ -4692,7 +4692,18 @@ static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *CV,
   if (isa<ConstantPointerNull>(CV)) {
     if (isa<VectorType>(CV->getType()))
       return emitGlobalConstantVector(DL, CV, AP, AliasList);
-    AP.OutStreamer->emitIntValue(0, Size);
+
+    // Some pointers can be wider than 64 bits.
+    APInt NullValue =
+        DL.getNullPtrValue(CV->getType()->getPointerAddressSpace());
+    const uint64_t StoreSize = DL.getTypeStoreSize(CV->getType());
+    if (StoreSize <= 8)
+      AP.OutStreamer->emitIntValue(NullValue.getZExtValue(), StoreSize);
+    else
+      emitGlobalConstantLargeAPInt(NullValue, StoreSize, AP);
+    // Emit tail padding if needed.
+    if (Size != StoreSize)
+      AP.OutStreamer->emitZeros(Size - StoreSize);
     return;
   }
 
