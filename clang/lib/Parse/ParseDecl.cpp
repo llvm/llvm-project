@@ -8067,6 +8067,12 @@ void Parser::ParseBracketDeclarator(Declarator &D) {
       EnterExpressionEvaluationContext Unevaluated(
           Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated);
       NumElements = ParseAssignmentExpression();
+      // A non-constant bound is evaluated at run time, so a compound literal
+      // in it needs the ExprWithCleanups made here, while the context above
+      // still holds the cleanup; convert first so the load stays inside it.
+      if (NumElements.isUsable())
+        NumElements = Actions.MaybeCreateExprWithCleanups(
+            Actions.DefaultLvalueConversion(NumElements.get()));
     }
   } else {
     if (StaticLoc.isValid()) {

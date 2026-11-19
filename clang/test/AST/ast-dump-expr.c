@@ -346,3 +346,14 @@ void PrimaryExpressions(int a) {
 
   // Generic selection expressions are covered elsewhere.
 }
+
+void GH237441(void) {
+  typedef char T[(int){3}];
+  // CHECK: TypedefDecl 0x{{[^ ]*}} <col:3, col:26> col:16 T 'char[(int){3}]'
+  // CHECK-NEXT: VariableArrayType 0x{{[^ ]*}} 'char[(int){3}]' variably_modified
+  // CHECK-NEXT: BuiltinType 0x{{[^ ]*}} 'char'
+  // CHECK-NEXT: ExprWithCleanups 0x{{[^ ]*}} <col:18, col:25> 'int'
+  // CHECK-NEXT: cleanup CompoundLiteralExpr 0x{{[^ ]*}}
+  // CHECK-NEXT: ImplicitCastExpr 0x{{[^ ]*}} <col:18, col:25> 'int' <LValueToRValue>
+  // CHECK-NEXT: CompoundLiteralExpr 0x{{[^ ]*}} <col:18, col:25> 'int' lvalue
+}

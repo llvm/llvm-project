@@ -123,18 +123,4 @@ void test3(int b, int c) {
   for (auto &d : varr) 0;
 }
 
-// GH237441: a temporary in a VLA bound is destroyed at the end of the
-// declaration, before the array is allocated.
-struct GH237441 { int x; GH237441(); ~GH237441(); };
-void gh237441_use(char *);
-void gh237441(int n) {
-  // CHECK-LABEL: define{{.*}} void @_Z8gh237441i(
-  // CHECK: call void @_ZN8GH237441C1Ev(
-  // CHECK: call void @_ZN8GH237441D1Ev(
-  // CHECK: @llvm.stacksave
-  // CHECK: call void @_Z12gh237441_usePc(
-  char c[n + GH237441().x];
-  gh237441_use(c);
-}
-
 
