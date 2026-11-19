@@ -35,9 +35,10 @@ public:
     return name == "vg";
   }
 
-  bool ReconfigureRegisterInfo(DynamicRegisterInfo &reg_info,
+  bool
+  ReconfigureRegisterLayout(std::shared_ptr<const RegisterLayout> &layout,
                                DataExtractor &reg_data,
-                               RegisterContext &reg_context) const override;
+                               ThreadRegisterContext &reg_context) const override;
 
   bool IsValidTrapInstruction(llvm::ArrayRef<uint8_t> reference,
                               llvm::ArrayRef<uint8_t> observed) const override;

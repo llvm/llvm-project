@@ -32,6 +32,7 @@ add_lldb_library(lldbValueObject NO_PLUGIN_DEPENDENCIES
     lldbExpression
     lldbHost
     lldbInterpreter
+    lldbRegister
     lldbSymbol
     lldbTarget
     lldbUtility

@@ -10,7 +10,7 @@
 #define LLDB_TARGET_REGISTERTYPEBUILDER_H
 
 #include "lldb/Core/PluginInterface.h"
-#include "lldb/Utility/RegisterInfo.h"
+#include "lldb/Register/RegisterDescription.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {
@@ -21,7 +21,7 @@ public:
 
   /// Do not cache the returned CompilerType. A target may replace its scratch
   /// type system, so callers must request the type again whenever needed.
-  virtual CompilerType GetRegisterType(const RegisterInfo &reg_info) = 0;
+  virtual CompilerType GetRegisterType(const RegisterDescriptor &reg_info) = 0;
 
 protected:
   RegisterTypeBuilder() = default;

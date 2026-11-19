@@ -5,7 +5,6 @@ add_lldb_unittest(LLDBCoreTests
   DiagnosticEventTest.cpp
   DiagnosticsTest.cpp
   DumpDataExtractorTest.cpp
-  DumpRegisterInfoTest.cpp
   FormatEntityTest.cpp
   MangledTest.cpp
   ModuleListTest.cpp
@@ -35,6 +34,7 @@ add_lldb_unittest(LLDBCoreTests
     lldbPluginPlatformMacOSX
     lldbPluginRustLanguage
     lldbPluginSymbolFileSymtab
+    lldbRegister
     lldbSymbol
     lldbUtilityHelpers
     lldbHostHelpers

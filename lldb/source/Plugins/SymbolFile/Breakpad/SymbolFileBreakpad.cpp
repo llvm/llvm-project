@@ -540,7 +540,7 @@ GetRule(llvm::StringRef &unwind_rules) {
   return std::make_pair(lhs, rhs);
 }
 
-static const RegisterInfo *
+static const RegisterDescriptor *
 ResolveRegister(const llvm::Triple &triple,
                 const SymbolFile::RegisterInfoResolver &resolver,
                 llvm::StringRef name) {
@@ -553,7 +553,7 @@ ResolveRegister(const llvm::Triple &triple,
   return resolver.ResolveName(name);
 }
 
-static const RegisterInfo *
+static const RegisterDescriptor *
 ResolveRegisterOrRA(const llvm::Triple &triple,
                     const SymbolFile::RegisterInfoResolver &resolver,
                     llvm::StringRef name) {
@@ -593,10 +593,10 @@ bool SymbolFileBreakpad::ParseCFIUnwindRow(llvm::StringRef unwind_rules,
           if (name == ".cfa" && lhs != ".cfa")
             return postfix::MakeNode<postfix::InitialValueNode>(node_alloc);
 
-          if (const RegisterInfo *info =
+          if (const RegisterDescriptor *info =
                   ResolveRegister(triple, resolver, name)) {
             return postfix::MakeNode<postfix::RegisterNode>(
-                node_alloc, info->kinds[eRegisterKindLLDB]);
+                node_alloc, info->numbers[eRegisterKindLLDB]);
           }
           return nullptr;
         });
@@ -609,11 +609,11 @@ bool SymbolFileBreakpad::ParseCFIUnwindRow(llvm::StringRef unwind_rules,
     llvm::ArrayRef<uint8_t> saved = SaveAsDWARF(*rhs);
     if (lhs == ".cfa") {
       row.GetCFAValue().SetIsDWARFExpression(saved.data(), saved.size());
-    } else if (const RegisterInfo *info =
+    } else if (const RegisterDescriptor *info =
                    ResolveRegisterOrRA(triple, resolver, lhs)) {
       UnwindPlan::Row::AbstractRegisterLocation loc;
       loc.SetIsDWARFExpression(saved.data(), saved.size());
-      row.SetRegisterInfo(info->kinds[eRegisterKindLLDB], loc);
+      row.SetRegisterInfo(info->numbers[eRegisterKindLLDB], loc);
     } else
       LLDB_LOG(log, "Invalid register `{0}` in unwind rule.", lhs);
   }
@@ -718,9 +718,10 @@ SymbolFileBreakpad::ParseWinUnwindPlan(const Bookmark &bookmark,
       if (rule.first == name)
         return rule.second;
     }
-    if (const RegisterInfo *info = ResolveRegister(triple, resolver, name))
+    if (const RegisterDescriptor *info =
+            ResolveRegister(triple, resolver, name))
       return postfix::MakeNode<postfix::RegisterNode>(
-          node_alloc, info->kinds[eRegisterKindLLDB]);
+          node_alloc, info->numbers[eRegisterKindLLDB]);
     return nullptr;
   };
 
@@ -745,10 +746,10 @@ SymbolFileBreakpad::ParseWinUnwindPlan(const Bookmark &bookmark,
   // expression.
   it->second = postfix::MakeNode<postfix::InitialValueNode>(node_alloc);
 
-
   // Now process the rest of the assignments.
   for (++it; it != program.end(); ++it) {
-    const RegisterInfo *info = ResolveRegister(triple, resolver, it->first);
+    const RegisterDescriptor *info =
+        ResolveRegister(triple, resolver, it->first);
     // It is not an error if the resolution fails because the program may
     // contain temporary variables.
     if (!info)
@@ -762,7 +763,7 @@ SymbolFileBreakpad::ParseWinUnwindPlan(const Bookmark &bookmark,
     llvm::ArrayRef<uint8_t> saved = SaveAsDWARF(*it->second);
     UnwindPlan::Row::AbstractRegisterLocation loc;
     loc.SetIsDWARFExpression(saved.data(), saved.size());
-    row.SetRegisterInfo(info->kinds[eRegisterKindLLDB], loc);
+    row.SetRegisterInfo(info->numbers[eRegisterKindLLDB], loc);
   }
 
   plan_sp->AppendRow(std::move(row));

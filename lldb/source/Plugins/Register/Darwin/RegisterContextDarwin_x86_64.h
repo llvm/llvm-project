@@ -9,10 +9,12 @@
 #ifndef LLDB_SOURCE_PLUGINS_REGISTER_DARWIN_REGISTERCONTEXTDARWIN_X86_64_H
 #define LLDB_SOURCE_PLUGINS_REGISTER_DARWIN_REGISTERCONTEXTDARWIN_X86_64_H
 
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Register/Layouts/Darwin/RegisterLayoutDarwin_x86_64.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/lldb-private.h"
 
-class RegisterContextDarwin_x86_64 : public lldb_private::RegisterContext {
+class RegisterContextDarwin_x86_64
+    : public lldb_private::ThreadRegisterContext {
 public:
   RegisterContextDarwin_x86_64(lldb_private::Thread &thread,
                                uint32_t concrete_frame_idx);
@@ -21,91 +23,30 @@ public:
 
   void InvalidateAllRegisters() override;
 
-  size_t GetRegisterCount() override;
+  llvm::Expected<lldb_private::RegisterValue>
+  ReadRegister(lldb_private::RegisterID id) override;
 
-  const lldb_private::RegisterInfo *GetRegisterInfoAtIndex(size_t reg) override;
-
-  size_t GetRegisterSetCount() override;
-
-  const lldb_private::RegisterSet *GetRegisterSet(size_t set) override;
-
-  bool ReadRegister(const lldb_private::RegisterInfo *reg_info,
-                    lldb_private::RegisterValue &value) override;
-
-  bool WriteRegister(const lldb_private::RegisterInfo *reg_info,
+  llvm::Error WriteRegister(lldb_private::RegisterID id,
                      const lldb_private::RegisterValue &value) override;
 
   bool ReadAllRegisterValues(lldb::WritableDataBufferSP &data_sp) override;
 
   bool WriteAllRegisterValues(const lldb::DataBufferSP &data_sp) override;
 
-  uint32_t ConvertRegisterKindToRegisterNumber(lldb::RegisterKind kind,
-                                               uint32_t num) override;
-
   bool HardwareSingleStep(bool enable) override;
 
-  struct GPR {
-    uint64_t rax;
-    uint64_t rbx;
-    uint64_t rcx;
-    uint64_t rdx;
-    uint64_t rdi;
-    uint64_t rsi;
-    uint64_t rbp;
-    uint64_t rsp;
-    uint64_t r8;
-    uint64_t r9;
-    uint64_t r10;
-    uint64_t r11;
-    uint64_t r12;
-    uint64_t r13;
-    uint64_t r14;
-    uint64_t r15;
-    uint64_t rip;
-    uint64_t rflags;
-    uint64_t cs;
-    uint64_t fs;
-    uint64_t gs;
-  };
-
-  struct MMSReg {
-    uint8_t bytes[10];
-    uint8_t pad[6];
-  };
-
-  struct XMMReg {
-    uint8_t bytes[16];
-  };
-
-  struct FPU {
-    uint32_t pad[2];
-    uint16_t fcw; // "fctrl"
-    uint16_t fsw; // "fstat"
-    uint8_t ftw;  // "ftag"
-    uint8_t pad1;
-    uint16_t fop; // "fop"
-    uint32_t ip;  // "fioff"
-    uint16_t cs;  // "fiseg"
-    uint16_t pad2;
-    uint32_t dp; // "fooff"
-    uint16_t ds; // "foseg"
-    uint16_t pad3;
-    uint32_t mxcsr;
-    uint32_t mxcsrmask;
-    MMSReg stmm[8];
-    XMMReg xmm[16];
-    uint8_t pad4[6 * 16];
-    int pad5;
-  };
-
-  struct EXC {
-    uint32_t trapno;
-    uint32_t err;
-    uint64_t faultvaddr;
-  };
+  using GPR = lldb_private::RegisterLayoutDarwin_x86_64::GPR;
+  using MMSReg = lldb_private::RegisterLayoutDarwin_x86_64::MMSReg;
+  using XMMReg = lldb_private::RegisterLayoutDarwin_x86_64::XMMReg;
+  using FPU = lldb_private::RegisterLayoutDarwin_x86_64::FPU;
+  using EXC = lldb_private::RegisterLayoutDarwin_x86_64::EXC;
 
 protected:
-  enum { GPRRegSet = 4, FPURegSet = 5, EXCRegSet = 6 };
+  enum {
+    GPRRegSet = lldb_private::RegisterLayoutDarwin_x86_64::GPRRegSet,
+    FPURegSet = lldb_private::RegisterLayoutDarwin_x86_64::FPURegSet,
+    EXCRegSet = lldb_private::RegisterLayoutDarwin_x86_64::EXCRegSet
+  };
 
   enum {
     GPRWordCount = sizeof(GPR) / sizeof(uint32_t),
@@ -202,12 +143,6 @@ protected:
   int WriteRegisterSet(uint32_t set);
 
   static uint32_t GetRegisterNumber(uint32_t reg_kind, uint32_t reg_num);
-
-  static int GetSetForNativeRegNum(int reg_num);
-
-  static size_t GetRegisterInfosCount();
-
-  static const lldb_private::RegisterInfo *GetRegisterInfos();
 };
 
 #endif // LLDB_SOURCE_PLUGINS_REGISTER_DARWIN_REGISTERCONTEXTDARWIN_X86_64_H

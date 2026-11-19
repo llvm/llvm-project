@@ -54,7 +54,7 @@ public:
                              const uint8_t op) const = 0;
     virtual bool
     ParseVendorDWARFOpcode(uint8_t op, const llvm::DataExtractor &opcodes,
-                           lldb::offset_t &offset, RegisterContext *reg_ctx,
+                           lldb::offset_t &offset, ThreadRegisterContext *reg_ctx,
                            lldb::RegisterKind reg_kind, Stack &stack) const = 0;
 
     Delegate(const Delegate &) = delete;
@@ -131,7 +131,7 @@ public:
   ///     explicitly.
   ///
   ///  \param[in] reg_ctx
-  ///     An optional parameter which provides a RegisterContext for use
+  ///     An optional parameter which provides a ThreadRegisterContext for use
   ///     when evaluating the expression (i.e. for fetching register values).
   ///     Normally this will come from the ExecutionContext's StackFrame but
   ///     in the case where an expression needs to be evaluated while building
@@ -155,7 +155,7 @@ public:
   ///     True on success; false otherwise.  If error_ptr is non-NULL,
   ///     details of the failure are provided through it.
   static llvm::Expected<Value>
-  Evaluate(ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
+  Evaluate(ExecutionContext *exe_ctx, ThreadRegisterContext *reg_ctx,
            lldb::ModuleSP module_sp, const DataExtractor &opcodes,
            const Delegate *dwarf_cu, const lldb::RegisterKind reg_set,
            const Value *initial_value_ptr, const Value *object_address_ptr);
@@ -170,7 +170,7 @@ public:
 
   bool MatchesOperand(StackFrame &frame, const Instruction::Operand &op) const;
 
-  static llvm::Error ReadRegisterValueAsScalar(RegisterContext *reg_ctx,
+  static llvm::Error ReadRegisterValueAsScalar(ThreadRegisterContext *reg_ctx,
                                                lldb::RegisterKind reg_kind,
                                                uint32_t reg_num, Value &value);
 

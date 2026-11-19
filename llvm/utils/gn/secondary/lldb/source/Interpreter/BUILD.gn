@@ -23,6 +23,7 @@ static_library("Interpreter") {
 
     # #"//lldb/source/Target", FIXME: 2-hop dependency cyle
     # (Interpreter->Target->Expression->Interpreter)
+    "//lldb/source/Register",
     "//lldb/source/Utility",
     "//llvm/lib/Support",
   ]

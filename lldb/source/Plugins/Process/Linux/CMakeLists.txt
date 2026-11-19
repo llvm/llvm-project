@@ -25,6 +25,7 @@ add_lldb_library(lldbPluginProcessLinux
   LINK_LIBS
     lldbCore
     lldbHost
+    lldbRegister
     lldbSymbol
     lldbTarget
     lldbUtility

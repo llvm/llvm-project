@@ -1,10 +1,9 @@
 add_lldb_library(lldbPluginRegisterNative NO_PLUGIN_DEPENDENCIES
   NativeRegisterContextDBReg.cpp
-  NativeRegisterContextDBReg_arm.cpp
+  NativeRegisterContextDBReg_arm32.cpp
   NativeRegisterContextDBReg_arm64.cpp
   NativeRegisterContextDBReg_loongarch.cpp
   NativeRegisterContextDBReg_x86.cpp
-  NativeRegisterContextRegisterInfo.cpp
 
   LINK_COMPONENTS
     Support

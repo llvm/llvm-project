@@ -46,7 +46,7 @@ public:
 
   void ThreadWasSelected(lldb_private::Thread *thread) override {}
 
-  lldb::RegisterContextSP
+  lldb::ThreadRegisterContextSP
   CreateRegisterContextForThread(lldb_private::Thread *thread,
                                  lldb::addr_t reg_data_addr) override {
     return thread->GetRegisterContext();

@@ -15,8 +15,8 @@
 #endif
 
 #include "Plugins/Process/Utility/LinuxSignals.h"
-#include "Register/Arch/lldb-riscv-register-enums.h"
-#include "Utility/ARM64_DWARF_Registers.h"
+#include "lldb/Register/Arch/lldb-riscv-register-enums.h"
+#include "lldb/Register/Arch/lldb-arm64-dwarf-register-enums.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Host/HostInfo.h"
@@ -255,41 +255,75 @@ GetAArch64TrapHandlerUnwindPlan(llvm::StringRef name) {
 
   // Skip fault address
   offset += 8;
-  row.GetCFAValue().SetIsRegisterPlusOffset(arm64_dwarf::sp, offset);
+  row.GetCFAValue().SetIsRegisterPlusOffset(registers::arm64::dwarf::sp,
+                                            offset);
 
-  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x0, 0 * 8, false);
-  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x1, 1 * 8, false);
-  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x2, 2 * 8, false);
-  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x3, 3 * 8, false);
-  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x4, 4 * 8, false);
-  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x5, 5 * 8, false);
-  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x6, 6 * 8, false);
-  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x7, 7 * 8, false);
-  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x8, 8 * 8, false);
-  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x9, 9 * 8, false);
-  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x10, 10 * 8, false);
-  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x11, 11 * 8, false);
-  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x12, 12 * 8, false);
-  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x13, 13 * 8, false);
-  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x14, 14 * 8, false);
-  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x15, 15 * 8, false);
-  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x16, 16 * 8, false);
-  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x17, 17 * 8, false);
-  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x18, 18 * 8, false);
-  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x19, 19 * 8, false);
-  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x20, 20 * 8, false);
-  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x21, 21 * 8, false);
-  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x22, 22 * 8, false);
-  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x23, 23 * 8, false);
-  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x24, 24 * 8, false);
-  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x25, 25 * 8, false);
-  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x26, 26 * 8, false);
-  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x27, 27 * 8, false);
-  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x28, 28 * 8, false);
-  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::fp, 29 * 8, false);
-  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x30, 30 * 8, false);
-  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::sp, 31 * 8, false);
-  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::pc, 32 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(registers::arm64::dwarf::x0, 0 * 8,
+                                           false);
+  row.SetRegisterLocationToAtCFAPlusOffset(registers::arm64::dwarf::x1, 1 * 8,
+                                           false);
+  row.SetRegisterLocationToAtCFAPlusOffset(registers::arm64::dwarf::x2, 2 * 8,
+                                           false);
+  row.SetRegisterLocationToAtCFAPlusOffset(registers::arm64::dwarf::x3, 3 * 8,
+                                           false);
+  row.SetRegisterLocationToAtCFAPlusOffset(registers::arm64::dwarf::x4, 4 * 8,
+                                           false);
+  row.SetRegisterLocationToAtCFAPlusOffset(registers::arm64::dwarf::x5, 5 * 8,
+                                           false);
+  row.SetRegisterLocationToAtCFAPlusOffset(registers::arm64::dwarf::x6, 6 * 8,
+                                           false);
+  row.SetRegisterLocationToAtCFAPlusOffset(registers::arm64::dwarf::x7, 7 * 8,
+                                           false);
+  row.SetRegisterLocationToAtCFAPlusOffset(registers::arm64::dwarf::x8, 8 * 8,
+                                           false);
+  row.SetRegisterLocationToAtCFAPlusOffset(registers::arm64::dwarf::x9, 9 * 8,
+                                           false);
+  row.SetRegisterLocationToAtCFAPlusOffset(registers::arm64::dwarf::x10, 10 * 8,
+                                           false);
+  row.SetRegisterLocationToAtCFAPlusOffset(registers::arm64::dwarf::x11, 11 * 8,
+                                           false);
+  row.SetRegisterLocationToAtCFAPlusOffset(registers::arm64::dwarf::x12, 12 * 8,
+                                           false);
+  row.SetRegisterLocationToAtCFAPlusOffset(registers::arm64::dwarf::x13, 13 * 8,
+                                           false);
+  row.SetRegisterLocationToAtCFAPlusOffset(registers::arm64::dwarf::x14, 14 * 8,
+                                           false);
+  row.SetRegisterLocationToAtCFAPlusOffset(registers::arm64::dwarf::x15, 15 * 8,
+                                           false);
+  row.SetRegisterLocationToAtCFAPlusOffset(registers::arm64::dwarf::x16, 16 * 8,
+                                           false);
+  row.SetRegisterLocationToAtCFAPlusOffset(registers::arm64::dwarf::x17, 17 * 8,
+                                           false);
+  row.SetRegisterLocationToAtCFAPlusOffset(registers::arm64::dwarf::x18, 18 * 8,
+                                           false);
+  row.SetRegisterLocationToAtCFAPlusOffset(registers::arm64::dwarf::x19, 19 * 8,
+                                           false);
+  row.SetRegisterLocationToAtCFAPlusOffset(registers::arm64::dwarf::x20, 20 * 8,
+                                           false);
+  row.SetRegisterLocationToAtCFAPlusOffset(registers::arm64::dwarf::x21, 21 * 8,
+                                           false);
+  row.SetRegisterLocationToAtCFAPlusOffset(registers::arm64::dwarf::x22, 22 * 8,
+                                           false);
+  row.SetRegisterLocationToAtCFAPlusOffset(registers::arm64::dwarf::x23, 23 * 8,
+                                           false);
+  row.SetRegisterLocationToAtCFAPlusOffset(registers::arm64::dwarf::x24, 24 * 8,
+                                           false);
+  row.SetRegisterLocationToAtCFAPlusOffset(registers::arm64::dwarf::x25, 25 * 8,
+                                           false);
+  row.SetRegisterLocationToAtCFAPlusOffset(registers::arm64::dwarf::x26, 26 * 8,
+                                           false);
+  row.SetRegisterLocationToAtCFAPlusOffset(registers::arm64::dwarf::x27, 27 * 8,
+                                           false);
+  row.SetRegisterLocationToAtCFAPlusOffset(registers::arm64::dwarf::x28, 28 * 8,
+                                           false);
+  row.SetRegisterLocationToAtCFAPlusOffset(registers::arm64::dwarf::fp, 29 * 8,
+                                           false);
+  row.SetRegisterLocationToAtCFAPlusOffset(registers::arm64::dwarf::x30, 30 * 8,
+                                           false);
+  row.SetRegisterLocationToAtCFAPlusOffset(registers::arm64::dwarf::sp, 31 * 8,
+                                           false);
+  row.SetRegisterLocationToAtCFAPlusOffset(registers::arm64::dwarf::pc, 32 * 8,
+                                           false);
 
   // The sigcontext may also contain floating point and SVE registers.
   // However this would require a dynamic unwind plan so they are not included
@@ -338,8 +372,8 @@ static lldb::UnwindPlanSP GetRISCVTrapHandlerUnwindPlan(llvm::StringRef name,
 
   // In user_regs_struct GPRs are always 64-bit length
   size_t gpr_size = 8;
-  row.GetCFAValue().SetIsRegisterPlusOffset(gpr_sp_riscv, offset);
-  for (uint32_t reg_num = gpr_first_riscv; reg_num < gpr_first_riscv + 32;
+  row.GetCFAValue().SetIsRegisterPlusOffset(registers::riscv::id::gpr_sp, offset);
+  for (uint32_t reg_num = registers::riscv::id::gpr_first; reg_num < registers::riscv::id::gpr_first + 32;
        ++reg_num)
     row.SetRegisterLocationToAtCFAPlusOffset(reg_num, reg_num * gpr_size,
                                              false);
@@ -361,15 +395,16 @@ static lldb::UnwindPlanSP GetRISCVTrapHandlerUnwindPlan(llvm::StringRef name,
   }
 
   if (fpr_size != 0) {
-    for (uint32_t reg_num = fpr_first_riscv; reg_num < fpr_first_riscv + 32;
+    for (uint32_t reg_num = registers::riscv::id::fpr_first; reg_num < registers::riscv::id::fpr_first + 32;
          ++reg_num) {
       size_t fpr_offset =
-          gpr_size * 32 + (reg_num - fpr_first_riscv) * fpr_size;
+          gpr_size * 32 +
+          (reg_num - registers::riscv::id::fpr_first) * fpr_size;
       row.SetRegisterLocationToAtCFAPlusOffset(reg_num, fpr_offset, false);
     }
 
     size_t fpr_fcsr_offset = gpr_size * 32 + fpr_size * 32;
-    row.SetRegisterLocationToAtCFAPlusOffset(fpr_fcsr_riscv, fpr_fcsr_offset,
+    row.SetRegisterLocationToAtCFAPlusOffset(registers::riscv::id::fpr_fcsr, fpr_fcsr_offset,
                                              false);
   }
 

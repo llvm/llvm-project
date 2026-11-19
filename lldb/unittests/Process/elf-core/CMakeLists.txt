@@ -9,6 +9,8 @@ add_lldb_unittest(ProcessElfCoreTests
   LINK_LIBS
     lldbCore
     lldbHost
+    lldbRegister
+    lldbTarget
     lldbUtilityHelpers
     lldbPluginProcessElfCore
     lldbPluginPlatformLinux

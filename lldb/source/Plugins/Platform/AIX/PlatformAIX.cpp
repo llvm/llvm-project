@@ -12,7 +12,7 @@
 #if LLDB_ENABLE_POSIX
 #include <sys/utsname.h>
 #endif
-#include "Utility/ARM64_DWARF_Registers.h"
+#include "lldb/Register/Arch/lldb-arm64-dwarf-register-enums.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Host/HostInfo.h"

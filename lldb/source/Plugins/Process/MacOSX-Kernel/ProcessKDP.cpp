@@ -27,7 +27,7 @@
 #include "lldb/Interpreter/OptionGroupUInt64.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Symbol/ObjectFile.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -427,7 +427,7 @@ Status ProcessKDP::DoResume(RunDirection direction) {
       break;
 
     case eStateStepping: {
-      lldb::RegisterContextSP reg_ctx_sp(
+      lldb::ThreadRegisterContextSP reg_ctx_sp(
           kernel_thread_sp->GetRegisterContext());
 
       if (reg_ctx_sp) {
@@ -444,7 +444,7 @@ Status ProcessKDP::DoResume(RunDirection direction) {
     } break;
 
     case eStateRunning: {
-      lldb::RegisterContextSP reg_ctx_sp(
+      lldb::ThreadRegisterContextSP reg_ctx_sp(
           kernel_thread_sp->GetRegisterContext());
 
       if (reg_ctx_sp) {
@@ -771,7 +771,7 @@ void *ProcessKDP::AsyncThread() {
                     exc_reply_packet, 1 * USEC_PER_SEC)) {
               ThreadSP thread_sp(GetKernelThread());
               if (thread_sp) {
-                lldb::RegisterContextSP reg_ctx_sp(
+                lldb::ThreadRegisterContextSP reg_ctx_sp(
                     thread_sp->GetRegisterContext());
                 if (reg_ctx_sp)
                   reg_ctx_sp->InvalidateAllRegisters();

@@ -12,7 +12,7 @@
 #include "lldb/Core/EmulateInstruction.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/UnwindAssembly.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 #include "lldb/lldb-private.h"
 
 class UnwindAssemblyInstEmulation : public lldb_private::UnwindAssembly {
@@ -88,13 +88,13 @@ private:
 
   static bool ReadRegister(lldb_private::EmulateInstruction *instruction,
                            void *baton,
-                           const lldb_private::RegisterInfo *reg_info,
+                           const lldb_private::RegisterDescriptor *reg_info,
                            lldb_private::RegisterValue &reg_value);
 
   static bool
   WriteRegister(lldb_private::EmulateInstruction *instruction, void *baton,
                 const lldb_private::EmulateInstruction::Context &context,
-                const lldb_private::RegisterInfo *reg_info,
+                const lldb_private::RegisterDescriptor *reg_info,
                 const lldb_private::RegisterValue &reg_value);
 
   size_t WriteMemory(lldb_private::EmulateInstruction *instruction,
@@ -102,36 +102,38 @@ private:
                      lldb::addr_t addr, const void *dst, size_t length);
 
   bool ReadRegister(lldb_private::EmulateInstruction *instruction,
-                    const lldb_private::RegisterInfo *reg_info,
+                    const lldb_private::RegisterDescriptor *reg_info,
                     lldb_private::RegisterValue &reg_value);
 
   bool WriteRegister(lldb_private::EmulateInstruction *instruction,
                      const lldb_private::EmulateInstruction::Context &context,
-                     const lldb_private::RegisterInfo *reg_info,
+                     const lldb_private::RegisterDescriptor *reg_info,
                      const lldb_private::RegisterValue &reg_value);
 
   static uint64_t
-  MakeRegisterKindValuePair(const lldb_private::RegisterInfo &reg_info);
+  MakeRegisterKindValuePair(const lldb_private::RegisterDescriptor &reg_info);
 
-  void SetRegisterValue(const lldb_private::RegisterInfo &reg_info,
+  void SetRegisterValue(const lldb_private::RegisterDescriptor &reg_info,
                         const lldb_private::RegisterValue &reg_value);
 
-  bool GetRegisterValue(const lldb_private::RegisterInfo &reg_info,
+  bool GetRegisterValue(const lldb_private::RegisterDescriptor &reg_info,
                         lldb_private::RegisterValue &reg_value);
 
   /// The sentinel value for a given register, which is used to determine
   /// whether a register contains the same value it did at function entry.
-  static uint64_t GetSentinelFor(const lldb_private::RegisterInfo &reg_info);
+  static uint64_t
+  GetSentinelFor(const lldb_private::RegisterDescriptor &reg_info);
 
   /// Whether \a reg_info currently holds its sentinel value. This is not the
   /// same as the register being unwritten: a register that was overwritten and
   /// then restored (e.g. through a move from another register) holds it again.
-  bool RegisterHoldsEntryValue(const lldb_private::RegisterInfo &reg_info);
+  bool
+  RegisterHoldsEntryValue(const lldb_private::RegisterDescriptor &reg_info);
 
   typedef std::map<uint64_t, lldb_private::RegisterValue> RegisterValueMap;
   struct UnwindState {
     lldb_private::UnwindPlan::Row row = {};
-    lldb_private::RegisterInfo cfa_reg_info = {};
+    lldb_private::RegisterDescriptor cfa_reg_info = {};
     bool fp_is_cfa = false;
     RegisterValueMap register_values = {};
   };

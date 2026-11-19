@@ -1388,10 +1388,12 @@ NativeProcessLinux::Syscall(llvm::ArrayRef<uint64_t> args) {
     return std::move(Err);
 
   for (const auto &zip : llvm::zip_first(args, syscall_data.Args)) {
+    const auto *reg = reg_ctx.GetDescription()->FindByNumber(eRegisterKindLLDB,
+                                                             std::get<1>(zip));
+    if (!reg)
+      return llvm::createStringError("unknown syscall argument register");
     if (llvm::Error Err =
-            reg_ctx
-                .WriteRegisterFromUnsigned(std::get<1>(zip), std::get<0>(zip))
-                .ToError()) {
+            reg_ctx.WriteRegisterFromUnsigned(reg->id, std::get<0>(zip))) {
       return std::move(Err);
     }
   }
@@ -1418,7 +1420,11 @@ NativeProcessLinux::Syscall(llvm::ArrayRef<uint64_t> args) {
   }
   assert((unsigned)wait_pid == thread.GetID());
 
-  uint64_t result = reg_ctx.ReadRegisterAsUnsigned(syscall_data.Result, -ESRCH);
+  const auto *result_reg = reg_ctx.GetDescription()->FindByNumber(
+      eRegisterKindLLDB, syscall_data.Result);
+  if (!result_reg)
+    return llvm::createStringError("unknown syscall result register");
+  uint64_t result = reg_ctx.ReadRegisterAsUnsigned(result_reg->id, -ESRCH);
 
   // Values larger than this are actually negative errno numbers.
   uint64_t errno_threshold =

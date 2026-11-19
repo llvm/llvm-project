@@ -26,9 +26,9 @@ public:
 
   const char *GetName() override;
 
-  lldb::RegisterContextSP GetRegisterContext() override;
+  lldb::ThreadRegisterContextSP GetRegisterContext() override;
 
-  lldb::RegisterContextSP
+  lldb::ThreadRegisterContextSP
   CreateRegisterContextForFrame(lldb_private::StackFrame *frame) override;
 
   static bool ThreadIDIsValid(lldb::tid_t thread);
@@ -57,7 +57,7 @@ protected:
   std::string m_thread_name;
   std::string m_dispatch_queue_name;
   lldb::addr_t m_thread_dispatch_qaddr;
-  lldb::RegisterContextSP m_thread_reg_ctx_sp;
+  lldb::ThreadRegisterContextSP m_thread_reg_ctx_sp;
   uint32_t m_objfile_lc_thread_idx;
 
   // Protected member functions.

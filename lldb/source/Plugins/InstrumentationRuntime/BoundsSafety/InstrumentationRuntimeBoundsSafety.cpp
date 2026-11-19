@@ -19,12 +19,12 @@
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/InstrumentationRuntimeStopInfo.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "clang/CodeGen/ModuleBuilder.h"
 
@@ -269,7 +269,7 @@ ComputedStopInfo InstrumentationBoundsSafetyStopInfo::
         BoundsSafetySoftTrapStr.data(), trap_reason_func_name.data());
   }
 
-  RegisterContextSP rc = thread_sp->GetRegisterContext();
+  ThreadRegisterContextSP rc = thread_sp->GetRegisterContext();
   if (!rc)
     return LogFailedCSI("failed to get register context");
 
@@ -303,13 +303,15 @@ ComputedStopInfo InstrumentationBoundsSafetyStopInfo::
   };
 
   // Examine the register for the first argument.
-  const RegisterInfo *arg0_info = rc->GetRegisterInfo(
+  const RegisterDescriptor *arg0_info = rc->GetRegisterByNumber(
       lldb::RegisterKind::eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG1);
   if (!arg0_info)
     return LogFailedCSI(
         "failed to get register info for LLDB_REGNUM_GENERIC_ARG1");
   RegisterValue reg_value;
-  if (!rc->ReadRegister(arg0_info, reg_value))
+  if (llvm::errorToBool(
+          rc->ReadRegister((arg0_info ? arg0_info->id : LLDB_INVALID_REGNUM))
+              .moveInto(reg_value)))
     return LogFailedCSI("failed to read register {0}", arg0_info->name);
   uint64_t reg_value_as_int = reg_value.GetAsUInt64(UINT64_MAX);
   if (reg_value_as_int == UINT64_MAX)

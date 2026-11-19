@@ -38,10 +38,11 @@ public:
 
   lldb::UnwindPlanSP CreateDefaultUnwindPlan() override;
 
-  bool RegisterIsVolatile(const lldb_private::RegisterInfo *reg_info) override;
+  bool
+  RegisterIsVolatile(const lldb_private::RegisterDescriptor *reg_info) override;
 
   bool GetFallbackRegisterLocation(
-      const lldb_private::RegisterInfo *reg_info,
+      const lldb_private::RegisterDescriptor *reg_info,
       lldb_private::UnwindPlan::Row::AbstractRegisterLocation &unwind_regloc)
       override;
 
@@ -59,7 +60,7 @@ public:
     return (pc & 1ull) == 0;
   }
 
-  const lldb_private::RegisterInfo *
+  const lldb_private::RegisterDescriptor *
   GetRegisterInfoArray(uint32_t &count) override;
 
   // Static Functions
@@ -83,10 +84,11 @@ protected:
   GetReturnValueObjectSimple(lldb_private::Thread &thread,
                              lldb_private::CompilerType &ast_type) const;
 
-  bool RegisterIsCalleeSaved(const lldb_private::RegisterInfo *reg_info);
+  bool RegisterIsCalleeSaved(const lldb_private::RegisterDescriptor *reg_info);
 
 private:
-  using lldb_private::RegInfoBasedABI::RegInfoBasedABI; // Call CreateInstance instead.
+  using lldb_private::RegInfoBasedABI::RegInfoBasedABI; // Call CreateInstance
+                                                        // instead.
 };
 
 #endif // LLDB_SOURCE_PLUGINS_ABI_SYSTEMZ_ABISYSV_S390X_H

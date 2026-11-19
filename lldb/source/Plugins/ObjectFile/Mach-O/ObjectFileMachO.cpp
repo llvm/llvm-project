@@ -11,7 +11,7 @@
 
 #include <algorithm>
 
-#include "Plugins/Register/Darwin/RegisterContextDarwin_arm.h"
+#include "Plugins/Register/Darwin/RegisterContextDarwin_arm32.h"
 #include "Plugins/Register/Darwin/RegisterContextDarwin_arm64.h"
 #include "Plugins/Register/Darwin/RegisterContextDarwin_riscv32.h"
 #include "Plugins/Register/Darwin/RegisterContextDarwin_x86_64.h"
@@ -40,7 +40,7 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RangeMap.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
@@ -169,15 +169,18 @@ static bool ReadMachOCommand(const DataExtractor &data, lldb::offset_t &offset,
   return true;
 }
 
-static void PrintRegisterValue(RegisterContext *reg_ctx, const char *name,
+static void PrintRegisterValue(ThreadRegisterContext *reg_ctx, const char *name,
                                const char *alt_name, size_t reg_byte_size,
                                Stream &data) {
-  const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName(name);
+  const RegisterDescriptor *reg_info = reg_ctx->GetRegisterByName(name);
   if (reg_info == nullptr)
-    reg_info = reg_ctx->GetRegisterInfoByName(alt_name);
+    reg_info = reg_ctx->GetRegisterByName(alt_name);
   if (reg_info) {
     lldb_private::RegisterValue reg_value;
-    if (reg_ctx->ReadRegister(reg_info, reg_value)) {
+    if (!llvm::errorToBool(
+            reg_ctx
+                ->ReadRegister((reg_info ? reg_info->id : LLDB_INVALID_REGNUM))
+                .moveInto(reg_value))) {
       if (reg_info->byte_size >= reg_byte_size)
         data.Write(reg_value.GetBytes(), reg_byte_size);
       else {
@@ -205,6 +208,7 @@ public:
     // Do nothing... registers are always valid...
   }
 
+  // RegisterLayoutDarwin interprets saved banks as little-endian Mach bytes.
   void SetRegisterDataFrom_LC_THREAD(const DataExtractor &data) {
     lldb::offset_t offset = 0;
     SetError(GPRRegSet, Read, -1);
@@ -218,9 +222,13 @@ public:
       uint32_t count = data.GetU32(&offset);
       switch (flavor) {
       case GPRRegSet: {
-        uint32_t *gpr_data = reinterpret_cast<uint32_t *>(&gpr.rax);
-        for (uint32_t i = 0; i < count && offset < data.GetByteSize(); ++i)
-          gpr_data[i] = data.GetU32(&offset);
+        auto *gpr_data = reinterpret_cast<uint8_t *>(&gpr);
+        for (uint32_t i = 0;
+             i < count && i < GPRWordCount && offset < data.GetByteSize(); ++i)
+          llvm::support::endian::write32le(gpr_data + i * sizeof(uint32_t),
+                                           data.GetU32(&offset));
+        if (count > GPRWordCount)
+          offset += (count - GPRWordCount) * sizeof(uint32_t);
         SetError(GPRRegSet, Read, 0);
       } break;
       case FPURegSet:
@@ -228,9 +236,9 @@ public:
         SetError(FPURegSet, Read, -1);
         break;
       case EXCRegSet:
-        exc.trapno = data.GetU32(&offset);
-        exc.err = data.GetU32(&offset);
-        exc.faultvaddr = data.GetU64(&offset);
+        llvm::support::endian::write32le(&exc.trapno, data.GetU32(&offset));
+        llvm::support::endian::write32le(&exc.err, data.GetU32(&offset));
+        llvm::support::endian::write64le(&exc.faultvaddr, data.GetU64(&offset));
         SetError(EXCRegSet, Read, 0);
         break;
       default:
@@ -241,9 +249,9 @@ public:
   }
 
   static bool Create_LC_THREAD(Thread *thread, Stream &data) {
-    RegisterContextSP reg_ctx_sp(thread->GetRegisterContext());
+    ThreadRegisterContextSP reg_ctx_sp(thread->GetRegisterContext());
     if (reg_ctx_sp) {
-      RegisterContext *reg_ctx = reg_ctx_sp.get();
+      ThreadRegisterContext *reg_ctx = reg_ctx_sp.get();
 
       data.PutHex32(GPRRegSet); // Flavor
       data.PutHex32(GPRWordCount);
@@ -384,11 +392,11 @@ protected:
   }
 };
 
-class RegisterContextDarwin_arm_Mach : public RegisterContextDarwin_arm {
+class RegisterContextDarwin_arm_Mach : public RegisterContextDarwin_arm32 {
 public:
   RegisterContextDarwin_arm_Mach(lldb_private::Thread &thread,
                                  const DataExtractor &data)
-      : RegisterContextDarwin_arm(thread, 0) {
+      : RegisterContextDarwin_arm32(thread, 0) {
     SetRegisterDataFrom_LC_THREAD(data);
   }
 
@@ -413,9 +421,9 @@ public:
         uint32_t gpr_buf_count = (sizeof(gpr.r) / sizeof(gpr.r[0])) + 1;
         if (count == gpr_buf_count) {
           for (uint32_t i = 0; i < (count - 1); ++i) {
-            gpr.r[i] = data.GetU32(&offset);
+            llvm::support::endian::write32le(&gpr.r[i], data.GetU32(&offset));
           }
-          gpr.cpsr = data.GetU32(&offset);
+          llvm::support::endian::write32le(&gpr.cpsr, data.GetU32(&offset));
 
           SetError(GPRRegSet, Read, 0);
         }
@@ -427,16 +435,17 @@ public:
         if (data.ExtractBytes(offset, fpu_reg_buf_size, eByteOrderLittle,
                               fpu_reg_buf) == fpu_reg_buf_size) {
           offset += fpu_reg_buf_size;
-          fpu.fpscr = data.GetU32(&offset);
+          llvm::support::endian::write32le(&fpu.fpscr, data.GetU32(&offset));
           SetError(FPURegSet, Read, 0);
         }
       } break;
 
       case EXCRegSet:
         if (count == 3) {
-          exc.exception = data.GetU32(&offset);
-          exc.fsr = data.GetU32(&offset);
-          exc.far = data.GetU32(&offset);
+          llvm::support::endian::write32le(&exc.exception,
+                                           data.GetU32(&offset));
+          llvm::support::endian::write32le(&exc.fsr, data.GetU32(&offset));
+          llvm::support::endian::write32le(&exc.far, data.GetU32(&offset));
           SetError(EXCRegSet, Read, 0);
         }
         break;
@@ -446,9 +455,9 @@ public:
   }
 
   static bool Create_LC_THREAD(Thread *thread, Stream &data) {
-    RegisterContextSP reg_ctx_sp(thread->GetRegisterContext());
+    ThreadRegisterContextSP reg_ctx_sp(thread->GetRegisterContext());
     if (reg_ctx_sp) {
-      RegisterContext *reg_ctx = reg_ctx_sp.get();
+      ThreadRegisterContext *reg_ctx = reg_ctx_sp.get();
 
       data.PutHex32(GPRRegSet); // Flavor
       data.PutHex32(GPRWordCount);
@@ -534,12 +543,12 @@ public:
         // 32-bit register)
         if (count >= (33 * 2) + 1) {
           for (uint32_t i = 0; i < 29; ++i)
-            gpr.x[i] = data.GetU64(&offset);
-          gpr.fp = data.GetU64(&offset);
-          gpr.lr = data.GetU64(&offset);
-          gpr.sp = data.GetU64(&offset);
-          gpr.pc = data.GetU64(&offset);
-          gpr.cpsr = data.GetU32(&offset);
+            llvm::support::endian::write64le(&gpr.x[i], data.GetU64(&offset));
+          llvm::support::endian::write64le(&gpr.fp, data.GetU64(&offset));
+          llvm::support::endian::write64le(&gpr.lr, data.GetU64(&offset));
+          llvm::support::endian::write64le(&gpr.sp, data.GetU64(&offset));
+          llvm::support::endian::write64le(&gpr.pc, data.GetU64(&offset));
+          llvm::support::endian::write32le(&gpr.cpsr, data.GetU32(&offset));
           SetError(GPRRegSet, Read, 0);
         }
         break;
@@ -554,9 +563,10 @@ public:
       } break;
       case EXCRegSet:
         if (count == 4) {
-          exc.far = data.GetU64(&offset);
-          exc.esr = data.GetU32(&offset);
-          exc.exception = data.GetU32(&offset);
+          llvm::support::endian::write64le(&exc.far, data.GetU64(&offset));
+          llvm::support::endian::write32le(&exc.esr, data.GetU32(&offset));
+          llvm::support::endian::write32le(&exc.exception,
+                                           data.GetU32(&offset));
           SetError(EXCRegSet, Read, 0);
         }
         break;
@@ -566,9 +576,9 @@ public:
   }
 
   static bool Create_LC_THREAD(Thread *thread, Stream &data) {
-    RegisterContextSP reg_ctx_sp(thread->GetRegisterContext());
+    ThreadRegisterContextSP reg_ctx_sp(thread->GetRegisterContext());
     if (reg_ctx_sp) {
-      RegisterContext *reg_ctx = reg_ctx_sp.get();
+      ThreadRegisterContext *reg_ctx = reg_ctx_sp.get();
 
       data.PutHex32(GPRRegSet); // Flavor
       data.PutHex32(GPRWordCount);
@@ -673,8 +683,10 @@ public:
         // x0-x31 + pc
         if (count >= 32) {
           for (uint32_t i = 0; i < 32; ++i)
-            ((uint32_t *)&gpr.x0)[i] = data.GetU32(&offset);
-          gpr.pc = data.GetU32(&offset);
+            llvm::support::endian::write32le(reinterpret_cast<uint8_t *>(&gpr) +
+                                                 i * sizeof(uint32_t),
+                                             data.GetU32(&offset));
+          llvm::support::endian::write32le(&gpr.pc, data.GetU32(&offset));
           SetError(GPRRegSet, Read, 0);
         }
         break;
@@ -682,16 +694,19 @@ public:
         // f0-f31 + fcsr
         if (count >= 32) {
           for (uint32_t i = 0; i < 32; ++i)
-            ((uint32_t *)&fpr.f0)[i] = data.GetU32(&offset);
-          fpr.fcsr = data.GetU32(&offset);
+            llvm::support::endian::write32le(reinterpret_cast<uint8_t *>(&fpr) +
+                                                 i * sizeof(uint32_t),
+                                             data.GetU32(&offset));
+          llvm::support::endian::write32le(&fpr.fcsr, data.GetU32(&offset));
           SetError(FPURegSet, Read, 0);
         }
       } break;
       case EXCRegSet:
         if (count == 3) {
-          exc.exception = data.GetU32(&offset);
-          exc.fsr = data.GetU32(&offset);
-          exc.far = data.GetU32(&offset);
+          llvm::support::endian::write32le(&exc.exception,
+                                           data.GetU32(&offset));
+          llvm::support::endian::write32le(&exc.fsr, data.GetU32(&offset));
+          llvm::support::endian::write32le(&exc.far, data.GetU32(&offset));
           SetError(EXCRegSet, Read, 0);
         }
         break;
@@ -701,9 +716,9 @@ public:
   }
 
   static bool Create_LC_THREAD(Thread *thread, Stream &data) {
-    RegisterContextSP reg_ctx_sp(thread->GetRegisterContext());
+    ThreadRegisterContextSP reg_ctx_sp(thread->GetRegisterContext());
     if (reg_ctx_sp) {
-      RegisterContext *reg_ctx = reg_ctx_sp.get();
+      ThreadRegisterContext *reg_ctx = reg_ctx_sp.get();
 
       data.PutHex32(GPRRegSet); // Flavor
       data.PutHex32(GPRWordCount);
@@ -4192,7 +4207,7 @@ lldb_private::Address ObjectFileMachO::GetEntryPointAddress() {
   //
   // So we just keep reading the various register flavors till we find the GPR
   // one, then read the PC out of there.
-  // FIXME: We will need to have a "RegisterContext data provider" class at some
+  // FIXME: We will need to have a "ThreadRegisterContext data provider" class at some
   // point that can get all the registers
   // out of data in this form & attach them to a given thread.  That should
   // underlie the MacOS X User process plugin, and we'll also need it for the
@@ -4746,10 +4761,10 @@ StructuredData::ObjectSP ObjectFileMachO::GetCorefileProcessMetadata() {
   return object_sp;
 }
 
-lldb::RegisterContextSP
+lldb::ThreadRegisterContextSP
 ObjectFileMachO::GetThreadContextAtIndex(uint32_t idx,
                                          lldb_private::Thread &thread) {
-  lldb::RegisterContextSP reg_ctx_sp;
+  lldb::ThreadRegisterContextSP reg_ctx_sp;
 
   ModuleSP module_sp(GetModule());
   if (module_sp) {

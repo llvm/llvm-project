@@ -26,7 +26,7 @@ public:
 protected:
   void DoClear() override;
 
-  lldb::RegisterContextSP
+  lldb::ThreadRegisterContextSP
   DoCreateRegisterContextForFrame(StackFrame *frame) override;
 
   bool DoGetFrameInfoAtIndex(uint32_t frame_idx, lldb::addr_t &cfa,

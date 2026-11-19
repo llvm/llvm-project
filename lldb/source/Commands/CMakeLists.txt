@@ -53,6 +53,7 @@ add_lldb_library(lldbCommands NO_PLUGIN_DEPENDENCIES
     lldbExpression
     lldbHost
     lldbInterpreter
+    lldbRegister
     lldbSymbol
     lldbTarget
     lldbUtility

@@ -12,8 +12,7 @@
 #define lldb_NativeRegisterContextLinux_s390x_h
 
 #include "Plugins/Process/Linux/NativeRegisterContextLinux.h"
-#include "Register/Arch/RegisterContext_s390x.h"
-#include "Register/Arch/lldb-s390x-register-enums.h"
+#include "lldb/Register/Arch/lldb-s390x-register-enums.h"
 #include <asm/ptrace.h>
 
 namespace lldb_private {
@@ -26,17 +25,12 @@ public:
   NativeRegisterContextLinux_s390x(const ArchSpec &target_arch,
                                    NativeThreadProtocol &native_thread);
 
-  uint32_t GetRegisterSetCount() const override;
+  llvm::Expected<lldb_private::RegisterValue>
+  ReadRegister(lldb_private::RegisterID id) override;
 
-  const RegisterSet *GetRegisterSet(uint32_t set_index) const override;
-
-  uint32_t GetUserRegisterCount() const override;
-
-  Status ReadRegister(const RegisterInfo *reg_info,
-                      RegisterValue &reg_value) override;
-
-  Status WriteRegister(const RegisterInfo *reg_info,
-                       const RegisterValue &reg_value) override;
+  llvm::Error
+  WriteRegister(lldb_private::RegisterID id,
+                const lldb_private::RegisterValue &reg_value) override;
 
   Status ReadAllRegisterValues(lldb::WritableDataBufferSP &data_sp) override;
 

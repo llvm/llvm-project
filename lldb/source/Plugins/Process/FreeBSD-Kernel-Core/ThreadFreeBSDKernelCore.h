@@ -33,9 +33,9 @@ public:
       m_thread_name.clear();
   }
 
-  lldb::RegisterContextSP GetRegisterContext() override;
+  lldb::ThreadRegisterContextSP GetRegisterContext() override;
 
-  lldb::RegisterContextSP
+  lldb::ThreadRegisterContextSP
   CreateRegisterContextForFrame(lldb_private::StackFrame *frame) override;
 
   bool CalculateStopInfo() override;
@@ -44,7 +44,7 @@ public:
 
 private:
   std::string m_thread_name;
-  lldb::RegisterContextSP m_thread_reg_ctx_sp;
+  lldb::ThreadRegisterContextSP m_thread_reg_ctx_sp;
   lldb::addr_t m_pcb_addr;
   bool m_is_crashed = false;
 };

@@ -38,9 +38,9 @@ public:
 
   ~HistoryThread() override;
 
-  lldb::RegisterContextSP GetRegisterContext() override;
+  lldb::ThreadRegisterContextSP GetRegisterContext() override;
 
-  lldb::RegisterContextSP
+  lldb::ThreadRegisterContextSP
   CreateRegisterContextForFrame(StackFrame *frame) override;
 
   void RefreshStateAfterStop() override {}

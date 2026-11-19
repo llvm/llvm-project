@@ -25,13 +25,13 @@
 #include "lldb/Target/Language.h"
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/StackFrameRecognizer.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 #include "lldb/ValueObject/DILEval.h"
 #include "lldb/ValueObject/DILLexer.h"
 #include "lldb/ValueObject/DILParser.h"
@@ -50,13 +50,13 @@ using namespace lldb_private;
 // LLVM RTTI support.
 char StackFrame::ID;
 
-static std::pair<const RegisterInfo *, llvm::StringRef>
-FindRegisterInExpressionPath(RegisterContext &reg_ctx,
+static std::pair<const RegisterDescriptor *, llvm::StringRef>
+FindRegisterInExpressionPath(ThreadRegisterContext &reg_ctx,
                              llvm::StringRef expression_path) {
   // Register names may contain periods. Prefer an exact name, then the
   // longest name that leaves a member or index expression as the suffix.
-  if (const RegisterInfo *reg_info =
-          reg_ctx.GetRegisterInfoByName(expression_path))
+  if (const RegisterDescriptor *reg_info =
+          reg_ctx.GetRegisterByName(expression_path))
     return {reg_info, {}};
 
   size_t search_end = expression_path.size();
@@ -69,8 +69,8 @@ FindRegisterInExpressionPath(RegisterContext &reg_ctx,
       split = arrow;
     if (split == llvm::StringRef::npos)
       break;
-    if (const RegisterInfo *reg_info =
-            reg_ctx.GetRegisterInfoByName(expression_path.take_front(split)))
+    if (const RegisterDescriptor *reg_info =
+            reg_ctx.GetRegisterByName(expression_path.take_front(split)))
       return {reg_info, expression_path.drop_front(split)};
     search_end = split;
   }
@@ -115,7 +115,7 @@ StackFrame::StackFrame(const ThreadSP &thread_sp, user_id_t frame_idx,
 
 StackFrame::StackFrame(const ThreadSP &thread_sp, user_id_t frame_idx,
                        user_id_t unwind_frame_index,
-                       const RegisterContextSP &reg_context_sp, addr_t cfa,
+                       const ThreadRegisterContextSP &reg_context_sp, addr_t cfa,
                        addr_t pc, bool behaves_like_zeroth_frame,
                        const SymbolContext *sc_ptr)
     : m_thread_wp(thread_sp), m_frame_index(frame_idx),
@@ -142,7 +142,7 @@ StackFrame::StackFrame(const ThreadSP &thread_sp, user_id_t frame_idx,
 
 StackFrame::StackFrame(const ThreadSP &thread_sp, user_id_t frame_idx,
                        user_id_t unwind_frame_index,
-                       const RegisterContextSP &reg_context_sp, addr_t cfa,
+                       const ThreadRegisterContextSP &reg_context_sp, addr_t cfa,
                        const Address &pc_addr, bool behaves_like_zeroth_frame,
                        const SymbolContext *sc_ptr)
     : m_thread_wp(thread_sp), m_frame_index(frame_idx),
@@ -254,7 +254,7 @@ const Address &StackFrame::GetFrameCodeAddress() {
 }
 
 // This can't be rewritten into a call to
-// RegisterContext::GetPCForSymbolication because this
+// ThreadRegisterContext::GetPCForSymbolication because this
 // StackFrame may have been constructed with a special pc,
 // e.g. tail-call artificial frames.
 Address StackFrame::GetFrameCodeAddressForSymbolication() {
@@ -672,11 +672,11 @@ ValueObjectSP StackFrame::LegacyGetValueForVariableExpressionPath(
   VariableList *variable_list = nullptr;
 
   if (is_register_path) {
-    RegisterContextSP reg_ctx_sp = GetRegisterContextSP();
+    ThreadRegisterContextSP reg_ctx_sp = GetRegisterContextSP();
     auto [reg_info, register_path] =
-        reg_ctx_sp
-            ? FindRegisterInExpressionPath(*reg_ctx_sp, var_expr)
-            : std::pair<const RegisterInfo *, llvm::StringRef>{nullptr, {}};
+        reg_ctx_sp ? FindRegisterInExpressionPath(*reg_ctx_sp, var_expr)
+                   : std::pair<const RegisterDescriptor *, llvm::StringRef>{
+                         nullptr, {}};
     if (!reg_info) {
       error = Status::FromErrorStringWithFormat(
           "no register named '%s' found in this frame",
@@ -1293,7 +1293,7 @@ DWARFExpressionList *StackFrame::GetFrameBaseExpression(Status *error_ptr) {
   return &m_sc.function->GetFrameBaseExpression();
 }
 
-RegisterContextSP StackFrame::GetRegisterContext() {
+ThreadRegisterContextSP StackFrame::GetRegisterContext() {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   if (!m_reg_context_sp) {
     ThreadSP thread_sp(GetThread());
@@ -1472,7 +1472,8 @@ SourceLanguage StackFrame::GuessLanguage() {
 namespace {
 std::pair<const Instruction::Operand *, int64_t>
 GetBaseExplainingValue(const Instruction::Operand &operand,
-                       RegisterContext &register_context, lldb::addr_t value) {
+                       ThreadRegisterContext &register_context,
+                       lldb::addr_t value) {
   switch (operand.m_type) {
   case Instruction::Operand::Type::Dereference:
   case Instruction::Operand::Type::Immediate:
@@ -1514,13 +1515,16 @@ GetBaseExplainingValue(const Instruction::Operand &operand,
     return base_and_offset;
   }
   case Instruction::Operand::Type::Register: {
-    const RegisterInfo *info =
-        register_context.GetRegisterInfoByName(operand.m_register);
+    const RegisterDescriptor *info =
+        register_context.GetRegisterByName(operand.m_register);
     if (!info) {
       return std::make_pair(nullptr, 0);
     }
     RegisterValue reg_value;
-    if (!register_context.ReadRegister(info, reg_value)) {
+    if (llvm::errorToBool(
+            register_context
+                .ReadRegister((info ? info->id : LLDB_INVALID_REGNUM))
+                .moveInto(reg_value))) {
       return std::make_pair(nullptr, 0);
     }
     if (reg_value.GetAsUInt64() == value) {
@@ -1535,7 +1539,7 @@ GetBaseExplainingValue(const Instruction::Operand &operand,
 
 std::pair<const Instruction::Operand *, int64_t>
 GetBaseExplainingDereference(const Instruction::Operand &operand,
-                             RegisterContext &register_context,
+                             ThreadRegisterContext &register_context,
                              lldb::addr_t addr) {
   if (operand.m_type == Instruction::Operand::Type::Dereference) {
     return GetBaseExplainingValue(operand.m_children[0], register_context,
@@ -1577,7 +1581,7 @@ lldb::ValueObjectSP StackFrame::GuessValueForAddress(lldb::addr_t addr) {
     return ValueObjectSP();
   }
 
-  RegisterContextSP register_context_sp = GetRegisterContext();
+  ThreadRegisterContextSP register_context_sp = GetRegisterContext();
 
   if (!register_context_sp) {
     return ValueObjectSP();
@@ -1756,8 +1760,8 @@ lldb::ValueObjectSP DoGuessValueAt(StackFrame &frame, llvm::StringRef reg,
 
   using namespace OperandMatchers;
 
-  const RegisterInfo *reg_info =
-      frame.GetRegisterContext()->GetRegisterInfoByName(reg);
+  const RegisterDescriptor *reg_info =
+      frame.GetRegisterContext()->GetRegisterByName(reg);
   if (!reg_info) {
     return ValueObjectSP();
   }
@@ -1800,8 +1804,8 @@ lldb::ValueObjectSP DoGuessValueAt(StackFrame &frame, llvm::StringRef reg,
         continue;
       }
 
-      const RegisterInfo *return_register_info =
-          frame.GetRegisterContext()->GetRegisterInfoByName(
+      const RegisterDescriptor *return_register_info =
+          frame.GetRegisterContext()->GetRegisterByName(
               return_register_name);
       if (!return_register_info) {
         continue;
@@ -1846,8 +1850,11 @@ lldb::ValueObjectSP DoGuessValueAt(StackFrame &frame, llvm::StringRef reg,
         }
         CompilerType return_type = function_type.GetFunctionReturnType();
         RegisterValue return_value;
-        if (!frame.GetRegisterContext()->ReadRegister(return_register_info,
-                                                      return_value)) {
+        if (llvm::errorToBool(frame.GetRegisterContext()
+                                  ->ReadRegister((return_register_info
+                                                      ? return_register_info->id
+                                                      : LLDB_INVALID_REGNUM))
+                                  .moveInto(return_value))) {
           break;
         }
         std::string name_str(

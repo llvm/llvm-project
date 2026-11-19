@@ -21,7 +21,7 @@ namespace lldb_private {
 /// can inherit from this pure virtual class can reconstruct their execution
 /// context without having to keep a complete ExecutionContext object in the
 /// object state. Examples of these objects include: Process, Thread,
-/// RegisterContext and StackFrame.
+/// ThreadRegisterContext and StackFrame.
 ///
 /// Objects can contain a valid pointer to an instance of this so they can
 /// reconstruct the execution context.

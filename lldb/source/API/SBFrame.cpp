@@ -30,7 +30,7 @@
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/StackFrameRecognizer.h"
 #include "lldb/Target/StackID.h"
@@ -310,7 +310,7 @@ bool SBFrame::SetPC(addr_t new_pc) {
   }
 
   if (StackFrame *frame = exe_ctx->GetFramePtr())
-    if (RegisterContextSP reg_ctx_sp = frame->GetRegisterContext())
+    if (ThreadRegisterContextSP reg_ctx_sp = frame->GetRegisterContext())
       return reg_ctx_sp->SetPC(new_pc);
 
   return error_ret_val;
@@ -327,7 +327,7 @@ addr_t SBFrame::GetSP() const {
   }
 
   if (StackFrame *frame = exe_ctx->GetFramePtr())
-    if (RegisterContextSP reg_ctx_sp = frame->GetRegisterContext())
+    if (ThreadRegisterContextSP reg_ctx_sp = frame->GetRegisterContext())
       return reg_ctx_sp->GetSP();
 
   return LLDB_INVALID_ADDRESS;
@@ -344,7 +344,7 @@ addr_t SBFrame::GetFP() const {
   }
 
   if (StackFrame *frame = exe_ctx->GetFramePtr())
-    if (RegisterContextSP reg_ctx_sp = frame->GetRegisterContext())
+    if (ThreadRegisterContextSP reg_ctx_sp = frame->GetRegisterContext())
       return reg_ctx_sp->GetFP();
 
   return LLDB_INVALID_ADDRESS;
@@ -596,8 +596,9 @@ SBValue SBFrame::FindValue(const char *name, ValueType value_type,
   } break;
 
   case eValueTypeRegister: { // stack frame register value
-    if (RegisterContextSP reg_ctx = frame->GetRegisterContext()) {
-      if (const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName(name)) {
+    if (ThreadRegisterContextSP reg_ctx = frame->GetRegisterContext()) {
+      if (const RegisterDescriptor *reg_info =
+              reg_ctx->GetRegisterByName(name)) {
         value_sp = ValueObjectRegister::Create(frame, reg_ctx, reg_info);
         sb_value.SetSP(value_sp);
       }
@@ -606,10 +607,10 @@ SBValue SBFrame::FindValue(const char *name, ValueType value_type,
 
   case eValueTypeRegisterSet: { // A collection of stack frame register
                                 // values
-    if (RegisterContextSP reg_ctx = frame->GetRegisterContext()) {
-      const uint32_t num_sets = reg_ctx->GetRegisterSetCount();
+    if (ThreadRegisterContextSP reg_ctx = frame->GetRegisterContext()) {
+      const uint32_t num_sets = reg_ctx->GetRegisterGroupCount();
       for (uint32_t set_idx = 0; set_idx < num_sets; ++set_idx) {
-        const RegisterSet *reg_set = reg_ctx->GetRegisterSet(set_idx);
+        const RegisterGroup *reg_set = reg_ctx->GetRegisterGroup(set_idx);
         if (reg_set &&
             (llvm::StringRef(reg_set->name).equals_insensitive(name) ||
              llvm::StringRef(reg_set->short_name).equals_insensitive(name))) {
@@ -931,12 +932,12 @@ SBValueList SBFrame::GetRegisters() {
   if (!frame)
     return SBValueList();
 
-  RegisterContextSP reg_ctx(frame->GetRegisterContext());
+  ThreadRegisterContextSP reg_ctx(frame->GetRegisterContext());
   if (!reg_ctx)
     return SBValueList();
 
   SBValueList value_list;
-  const uint32_t num_sets = reg_ctx->GetRegisterSetCount();
+  const uint32_t num_sets = reg_ctx->GetRegisterGroupCount();
   for (uint32_t set_idx = 0; set_idx < num_sets; ++set_idx)
     value_list.Append(ValueObjectRegisterSet::Create(frame, reg_ctx, set_idx));
 
@@ -958,11 +959,11 @@ SBValue SBFrame::FindRegister(const char *name) {
   if (!frame)
     return SBValue();
 
-  RegisterContextSP reg_ctx(frame->GetRegisterContext());
+  ThreadRegisterContextSP reg_ctx(frame->GetRegisterContext());
   if (!reg_ctx)
     return SBValue();
 
-  const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName(name);
+  const RegisterDescriptor *reg_info = reg_ctx->GetRegisterByName(name);
   if (!reg_info)
     return SBValue();
 

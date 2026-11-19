@@ -11,7 +11,7 @@
 #include "lldb/Breakpoint/Breakpoint.h"
 #include "lldb/Symbol/SymbolContextScope.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/LLDBLog.h"

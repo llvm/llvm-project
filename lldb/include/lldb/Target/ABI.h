@@ -11,7 +11,7 @@
 
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Symbol/UnwindPlan.h"
-#include "lldb/Target/DynamicRegisterInfo.h"
+#include "lldb/Register/RegisterDefinition.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private.h"
@@ -101,10 +101,10 @@ public:
 
   virtual lldb::UnwindPlanSP CreateDefaultUnwindPlan() = 0;
 
-  virtual bool RegisterIsVolatile(const RegisterInfo *reg_info) = 0;
+  virtual bool RegisterIsVolatile(const RegisterDescriptor *reg_info) = 0;
 
   virtual bool GetFallbackRegisterLocation(
-      const RegisterInfo *reg_info,
+      const RegisterDescriptor *reg_info,
       UnwindPlan::Row::AbstractRegisterLocation &unwind_regloc);
 
   // Should take a look at a call frame address (CFA) which is just the stack
@@ -143,8 +143,7 @@ public:
 
   llvm::MCRegisterInfo &GetMCRegisterInfo() { return *m_mc_register_info_up; }
 
-  virtual void
-  AugmentRegisterInfo(std::vector<DynamicRegisterInfo::Register> &regs) = 0;
+  virtual void AugmentRegisterInfo(std::vector<RegisterDefinition> &regs) = 0;
 
   virtual bool GetPointerReturnRegister(const char *&name) { return false; }
 
@@ -174,7 +173,7 @@ public:
   ///   the effective permissions. If the target does not have an overlay
   ///   system, or it does and the protection key is invalid, returns nullopt.
   virtual std::optional<MemoryPermissions>
-  GetMemoryPermissions(lldb_private::RegisterContext &reg_ctx,
+  GetMemoryPermissions(lldb_private::ThreadRegisterContext &reg_ctx,
                        unsigned protection_key, uint32_t original_permissions) {
     return std::nullopt;
   }
@@ -201,21 +200,19 @@ private:
 
 class RegInfoBasedABI : public ABI {
 public:
-  void AugmentRegisterInfo(
-      std::vector<DynamicRegisterInfo::Register> &regs) override;
+  void AugmentRegisterInfo(std::vector<RegisterDefinition> &regs) override;
 
 protected:
   using ABI::ABI;
 
-  bool GetRegisterInfoByName(llvm::StringRef name, RegisterInfo &info);
+  bool GetRegisterInfoByName(llvm::StringRef name, RegisterDescriptor &info);
 
-  virtual const RegisterInfo *GetRegisterInfoArray(uint32_t &count) = 0;
+  virtual const RegisterDescriptor *GetRegisterInfoArray(uint32_t &count) = 0;
 };
 
 class MCBasedABI : public ABI {
 public:
-  void AugmentRegisterInfo(
-      std::vector<DynamicRegisterInfo::Register> &regs) override;
+  void AugmentRegisterInfo(std::vector<RegisterDefinition> &regs) override;
 
   /// If the register name is of the form "<from_prefix>[<number>]" then change
   /// the name to "<to_prefix>[<number>]". Otherwise, leave the name unchanged.

@@ -21,13 +21,16 @@ PC = REGS.index("pc")
 
 
 class Responder(MockGDBServerResponder):
-    def __init__(self):
+    def __init__(self, restore_vector_length=False):
         super().__init__()
+        self.restore_vector_length = restore_vector_length
         self.vg = 2
         self.pc = 0x30100
         self.breakpoint = None
         self.next_alloc = 0x20000000
         self.writes_after_resize = []
+        self.restored_vectors = []
+        self.resized = False
 
     def qSupported(self, client_supported):
         return "PacketSize=3fff;QStartNoAckMode+"
@@ -69,6 +72,10 @@ class Responder(MockGDBServerResponder):
     def writeRegister(self, register, value_hex):
         if self.vg != 2:
             self.writes_after_resize.append(REGS[register])
+        if register == VG and self.restore_vector_length:
+            self.vg = int.from_bytes(bytes.fromhex(value_hex), "little")
+        if self.resized and REGS[register].startswith("z"):
+            self.restored_vectors.append((REGS[register], len(value_hex) // 2))
         return "OK"
 
     def other(self, packet):
@@ -88,16 +95,15 @@ class Responder(MockGDBServerResponder):
 
     def cont(self):
         # Grow the SVE registers while the expression runs.
+        self.resized = True
         self.vg = 32
         self.pc = self.breakpoint
         return self.haltReason()
 
 
 class TestRestoreRegistersAfterReconfigure(GDBRemoteTestBase):
-    @skipIfRemote
-    @skipIfLLVMTargetMissing("AArch64")
-    def test(self):
-        self.server.responder = Responder()
+    def evaluate_expression(self, responder):
+        self.server.responder = responder
         target = self.createTarget("arm64-ios-main.yaml")
         process = self.connect(target)
         lldbutil.expect_state_changes(
@@ -106,5 +112,23 @@ class TestRestoreRegistersAfterReconfigure(GDBRemoteTestBase):
         target.SetModuleLoadAddress(target.GetModuleAtIndex(0), 0)
 
         self.expect("expression -- ((int(*)())0x30000)()", substrs=["= 0"])
-        self.assertEqual(self.server.responder.vg, 32)
-        self.assertEqual(self.server.responder.writes_after_resize, [])
+
+    @skipIfRemote
+    @skipIfLLVMTargetMissing("AArch64")
+    def test(self):
+        responder = Responder()
+        self.evaluate_expression(responder)
+        self.assertEqual(responder.vg, 32)
+        # Attempt the layout control, but do not replay the saved values if
+        # the stub acknowledges it without restoring the saved vector length.
+        self.assertEqual(responder.writes_after_resize, ["vg"])
+        self.assertEqual(responder.restored_vectors, [])
+
+    @skipIfRemote
+    @skipIfLLVMTargetMissing("AArch64")
+    def test_restores_vector_length_before_values(self):
+        responder = Responder(restore_vector_length=True)
+        self.evaluate_expression(responder)
+        self.assertEqual(responder.vg, 2)
+        self.assertEqual(responder.writes_after_resize, ["vg"])
+        self.assertEqual(responder.restored_vectors, [(f"z{i}", 16) for i in range(4)])

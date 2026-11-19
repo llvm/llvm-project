@@ -6,6 +6,7 @@ add_lldb_library(lldbPluginInstructionRISCV PLUGIN
   LINK_LIBS
     lldbCore
     lldbInterpreter
+    lldbRegister
     lldbSymbol
     lldbPluginProcessUtility
   )

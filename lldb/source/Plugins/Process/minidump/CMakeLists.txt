@@ -3,8 +3,7 @@ add_lldb_library(lldbPluginProcessMinidump PLUGIN
   MinidumpParser.cpp
   RegisterContextMinidump_ARM.cpp
   RegisterContextMinidump_ARM64.cpp
-  RegisterContextMinidump_x86_32.cpp
-  RegisterContextMinidump_x86_64.cpp
+  RegisterContextMinidump_x86.cpp
   ProcessMinidump.cpp
   ThreadMinidump.cpp
 
@@ -14,9 +13,10 @@ add_lldb_library(lldbPluginProcessMinidump PLUGIN
     Support
   LINK_LIBS
     lldbCore
+    lldbPluginObjectFilePlaceholder
+    lldbPluginProcessUtility
+    lldbPluginRegisterDarwin
+    lldbRegister
     lldbTarget
     lldbUtility
-    lldbPluginProcessUtility
-    lldbPluginProcessElfCore
-    lldbPluginObjectFilePlaceholder
   )

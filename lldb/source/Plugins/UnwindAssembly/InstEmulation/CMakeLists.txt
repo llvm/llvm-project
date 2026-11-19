@@ -3,6 +3,7 @@ add_lldb_library(lldbPluginUnwindAssemblyInstEmulation PLUGIN
 
   LINK_LIBS
     lldbCore
+    lldbRegister
     lldbSymbol
     lldbTarget
   )

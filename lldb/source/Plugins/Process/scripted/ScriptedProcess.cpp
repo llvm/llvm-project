@@ -20,7 +20,7 @@
 #include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Queue.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Utility/AddressableBits.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/ScriptedMetadata.h"
@@ -450,7 +450,7 @@ bool ScriptedProcess::DoUpdateThreadList(ThreadList &old_thread_list,
     ThreadSP thread_sp = thread_or_error.get();
     lldbassert(thread_sp && "Couldn't initialize scripted thread.");
 
-    RegisterContextSP reg_ctx_sp = thread_sp->GetRegisterContext();
+    ThreadRegisterContextSP reg_ctx_sp = thread_sp->GetRegisterContext();
     if (!reg_ctx_sp)
       return ScriptedInterface::ErrorWithMessage<bool>(
           LLVM_PRETTY_FUNCTION,

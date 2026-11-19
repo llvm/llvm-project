@@ -50,16 +50,16 @@ StructuredData::ObjectSP TargetThreadWindows::FetchThreadExtendedInfo() {
 
 void TargetThreadWindows::DidStop() {}
 
-RegisterContextSP TargetThreadWindows::GetRegisterContext() {
+ThreadRegisterContextSP TargetThreadWindows::GetRegisterContext() {
   if (!m_reg_context_sp)
     m_reg_context_sp = CreateRegisterContextForFrame(nullptr);
 
   return m_reg_context_sp;
 }
 
-RegisterContextSP
+ThreadRegisterContextSP
 TargetThreadWindows::CreateRegisterContextForFrame(StackFrame *frame) {
-  RegisterContextSP reg_ctx_sp;
+  ThreadRegisterContextSP reg_ctx_sp;
   uint32_t concrete_frame_idx = 0;
   Log *log = GetLog(LLDBLog::Thread);
 
@@ -133,8 +133,7 @@ Status TargetThreadWindows::DoResume() {
   if (resume_state == eStateStepping) {
     Log *log = GetLog(LLDBLog::Thread);
 
-    uint32_t flags_index =
-        GetRegisterContext()->ConvertRegisterKindToRegisterNumber(
+    uint32_t flags_index = GetRegisterContext()->GetRegisterIDForNumber(
             eRegisterKindGeneric, LLDB_REGNUM_GENERIC_FLAGS);
     uint64_t flags_value =
         GetRegisterContext()->ReadRegisterAsUnsigned(flags_index, 0);
@@ -154,7 +153,8 @@ Status TargetThreadWindows::DoResume() {
       LLDB_LOG(log, "single stepping unsupported on this architecture");
       break;
     }
-    GetRegisterContext()->WriteRegisterFromUnsigned(flags_index, flags_value);
+    llvm::consumeError(GetRegisterContext()->WriteRegisterFromUnsigned(
+        flags_index, flags_value));
   }
 
   if (resume_state == eStateStepping || resume_state == eStateRunning) {

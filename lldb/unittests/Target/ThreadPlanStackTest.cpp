@@ -73,8 +73,8 @@ public:
   using Thread::Thread;
   ~TestThread() override { DestroyThread(); }
   void RefreshStateAfterStop() override {}
-  RegisterContextSP GetRegisterContext() override { return nullptr; }
-  RegisterContextSP CreateRegisterContextForFrame(StackFrame *) override {
+  ThreadRegisterContextSP GetRegisterContext() override { return nullptr; }
+  ThreadRegisterContextSP CreateRegisterContextForFrame(StackFrame *) override {
     return nullptr;
   }
   bool CalculateStopInfo() override { return false; }

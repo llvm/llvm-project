@@ -19,7 +19,7 @@
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/ThreadList.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -27,7 +27,7 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RangeMap.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Minidump.h"
@@ -417,69 +417,79 @@ Status MinidumpFileBuilder::AddModuleList() {
   return error;
 }
 
-uint16_t read_register_u16_raw(RegisterContext *reg_ctx,
+uint16_t read_register_u16_raw(ThreadRegisterContext *reg_ctx,
                                llvm::StringRef reg_name) {
-  const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName(reg_name);
+  const RegisterDescriptor *reg_info = reg_ctx->GetRegisterByName(reg_name);
   if (!reg_info)
     return 0;
   lldb_private::RegisterValue reg_value;
-  bool success = reg_ctx->ReadRegister(reg_info, reg_value);
+  bool success = !llvm::errorToBool(
+      reg_ctx->ReadRegister((reg_info ? reg_info->id : LLDB_INVALID_REGNUM))
+          .moveInto(reg_value));
   if (!success)
     return 0;
   return reg_value.GetAsUInt16();
 }
 
-uint32_t read_register_u32_raw(RegisterContext *reg_ctx,
+uint32_t read_register_u32_raw(ThreadRegisterContext *reg_ctx,
                                llvm::StringRef reg_name) {
-  const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName(reg_name);
+  const RegisterDescriptor *reg_info = reg_ctx->GetRegisterByName(reg_name);
   if (!reg_info)
     return 0;
   lldb_private::RegisterValue reg_value;
-  bool success = reg_ctx->ReadRegister(reg_info, reg_value);
+  bool success = !llvm::errorToBool(
+      reg_ctx->ReadRegister((reg_info ? reg_info->id : LLDB_INVALID_REGNUM))
+          .moveInto(reg_value));
   if (!success)
     return 0;
   return reg_value.GetAsUInt32();
 }
 
-uint64_t read_register_u64_raw(RegisterContext *reg_ctx,
+uint64_t read_register_u64_raw(ThreadRegisterContext *reg_ctx,
                                llvm::StringRef reg_name) {
-  const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName(reg_name);
+  const RegisterDescriptor *reg_info = reg_ctx->GetRegisterByName(reg_name);
   if (!reg_info)
     return 0;
   lldb_private::RegisterValue reg_value;
-  bool success = reg_ctx->ReadRegister(reg_info, reg_value);
+  bool success = !llvm::errorToBool(
+      reg_ctx->ReadRegister((reg_info ? reg_info->id : LLDB_INVALID_REGNUM))
+          .moveInto(reg_value));
   if (!success)
     return 0;
   return reg_value.GetAsUInt64();
 }
 
-llvm::support::ulittle16_t read_register_u16(RegisterContext *reg_ctx,
+llvm::support::ulittle16_t read_register_u16(ThreadRegisterContext *reg_ctx,
                                              llvm::StringRef reg_name) {
   return static_cast<llvm::support::ulittle16_t>(
       read_register_u16_raw(reg_ctx, reg_name));
 }
 
-llvm::support::ulittle32_t read_register_u32(RegisterContext *reg_ctx,
+llvm::support::ulittle32_t read_register_u32(ThreadRegisterContext *reg_ctx,
                                              llvm::StringRef reg_name) {
   return static_cast<llvm::support::ulittle32_t>(
       read_register_u32_raw(reg_ctx, reg_name));
 }
 
-llvm::support::ulittle64_t read_register_u64(RegisterContext *reg_ctx,
+llvm::support::ulittle64_t read_register_u64(ThreadRegisterContext *reg_ctx,
                                              llvm::StringRef reg_name) {
   return static_cast<llvm::support::ulittle64_t>(
       read_register_u64_raw(reg_ctx, reg_name));
 }
 
-void read_register_u128(RegisterContext *reg_ctx, llvm::StringRef reg_name,
-                        uint8_t *dst) {
-  const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName(reg_name);
+void read_register_u128(ThreadRegisterContext *reg_ctx,
+                        llvm::StringRef reg_name, uint8_t *dst) {
+  const RegisterDescriptor *reg_info = reg_ctx->GetRegisterByName(reg_name);
   if (reg_info) {
     lldb_private::RegisterValue reg_value;
-    if (reg_ctx->ReadRegister(reg_info, reg_value)) {
+    if (!llvm::errorToBool(
+            reg_ctx
+                ->ReadRegister((reg_info ? reg_info->id : LLDB_INVALID_REGNUM))
+                .moveInto(reg_value))) {
       Status error;
       uint32_t bytes_copied = reg_value.GetAsMemoryData(
-          *reg_info, dst, 16, lldb::ByteOrder::eByteOrderLittle, error);
+          reg_info->byte_size, dst, 16, lldb::ByteOrder::eByteOrderLittle,
+          error, reg_info->name);
       if (bytes_copied == 16)
         return;
     }
@@ -489,7 +499,7 @@ void read_register_u128(RegisterContext *reg_ctx, llvm::StringRef reg_name,
 }
 
 lldb_private::minidump::MinidumpContext_x86_64
-GetThreadContext_x86_64(RegisterContext *reg_ctx) {
+GetThreadContext_x86_64(ThreadRegisterContext *reg_ctx) {
   lldb_private::minidump::MinidumpContext_x86_64 thread_context = {};
   thread_context.p1_home = {};
   thread_context.context_flags = static_cast<uint32_t>(
@@ -529,7 +539,7 @@ GetThreadContext_x86_64(RegisterContext *reg_ctx) {
 }
 
 minidump::RegisterContextMinidump_ARM64::Context
-GetThreadContext_ARM64(RegisterContext *reg_ctx) {
+GetThreadContext_ARM64(ThreadRegisterContext *reg_ctx) {
   minidump::RegisterContextMinidump_ARM64::Context thread_context = {};
   thread_context.context_flags = static_cast<uint32_t>(
       minidump::RegisterContextMinidump_ARM64::Flags::ARM64_Flag |
@@ -564,7 +574,7 @@ class ArchThreadContexts {
 public:
   ArchThreadContexts(llvm::Triple::ArchType arch) : m_arch(arch) {}
 
-  bool prepareRegisterContext(RegisterContext *reg_ctx) {
+  bool prepareRegisterContext(ThreadRegisterContext *reg_ctx) {
     switch (m_arch) {
     case llvm::Triple::ArchType::x86_64:
       context.x86_64 = GetThreadContext_x86_64(reg_ctx);
@@ -642,13 +652,13 @@ Status MinidumpFileBuilder::AddThreadList() {
 
   Log *log = GetLog(LLDBLog::Object);
   for (const ThreadSP &thread_sp : thread_list) {
-    RegisterContextSP reg_ctx_sp(thread_sp->GetRegisterContext());
+    ThreadRegisterContextSP reg_ctx_sp(thread_sp->GetRegisterContext());
 
     if (!reg_ctx_sp) {
       error = Status::FromErrorString("Unable to get the register context.");
       return error;
     }
-    RegisterContext *reg_ctx = reg_ctx_sp.get();
+    ThreadRegisterContext *reg_ctx = reg_ctx_sp.get();
     Target &target = m_process_sp->GetTarget();
     const ArchSpec &arch = target.GetArchitecture();
     ArchThreadContexts thread_context(arch.GetMachine());
@@ -719,7 +729,7 @@ Status MinidumpFileBuilder::AddExceptions() {
     if (error.Fail())
       return error;
 
-    RegisterContextSP reg_ctx_sp(thread_sp->GetRegisterContext());
+    ThreadRegisterContextSP reg_ctx_sp(thread_sp->GetRegisterContext());
     Exception exp_record = {};
     exp_record.ExceptionCode =
         static_cast<llvm::support::ulittle32_t>(stop_info_sp->GetValue());

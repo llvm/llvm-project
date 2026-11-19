@@ -23,19 +23,19 @@ using namespace wasm;
 static constexpr lldb::addr_t kWasmSyntheticCFABase =
     uint64_t(WasmAddressType::Invalid) << kWasmAddressTypeShift;
 
-lldb::RegisterContextSP
+lldb::ThreadRegisterContextSP
 UnwindWasm::DoCreateRegisterContextForFrame(lldb_private::StackFrame *frame) {
   const uint32_t concrete_frame_idx = frame->GetConcreteFrameIndex();
   if (m_frames.size() <= concrete_frame_idx)
-    return lldb::RegisterContextSP();
+    return lldb::ThreadRegisterContextSP();
 
   ThreadSP thread = frame->GetThread();
   ThreadGDBRemote *gdb_thread = static_cast<ThreadGDBRemote *>(thread.get());
   ProcessWasm *wasm_process =
       static_cast<ProcessWasm *>(thread->GetProcess().get());
 
-  return std::make_shared<RegisterContextWasm>(*gdb_thread, concrete_frame_idx,
-                                               wasm_process->GetRegisterInfo());
+  return std::make_shared<RegisterContextWasm>(
+      *gdb_thread, concrete_frame_idx, wasm_process->GetRegisterLayout());
 }
 
 uint32_t UnwindWasm::DoGetFrameCount() {

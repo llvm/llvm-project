@@ -139,9 +139,9 @@ public:
 
   void RefreshStateAfterStop() override;
 
-  lldb::RegisterContextSP GetRegisterContext() override;
+  lldb::ThreadRegisterContextSP GetRegisterContext() override;
 
-  lldb::RegisterContextSP
+  lldb::ThreadRegisterContextSP
   CreateRegisterContextForFrame(lldb_private::StackFrame *frame) override;
 
   static bool ThreadIDIsValid(lldb::tid_t thread) { return thread != 0; }
@@ -165,7 +165,7 @@ public:
 protected:
   // Member variables.
   std::string m_thread_name;
-  lldb::RegisterContextSP m_thread_reg_ctx_sp;
+  lldb::ThreadRegisterContextSP m_thread_reg_ctx_sp;
 
   lldb_private::DataExtractor m_gpregset_data;
   std::vector<lldb_private::CoreNote> m_notes;

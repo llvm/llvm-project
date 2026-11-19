@@ -12,7 +12,7 @@
 
 #include "lldb/Breakpoint/Watchpoint.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Unwind.h"
@@ -66,7 +66,7 @@ void ThreadKDP::RefreshStateAfterStop() {
   // register supply functions where they check the process stop ID and do the
   // right thing.
   const bool force = false;
-  lldb::RegisterContextSP reg_ctx_sp(GetRegisterContext());
+  lldb::ThreadRegisterContextSP reg_ctx_sp(GetRegisterContext());
   if (reg_ctx_sp)
     reg_ctx_sp->InvalidateIfNeeded(force);
 }
@@ -76,15 +76,15 @@ bool ThreadKDP::ThreadIDIsValid(lldb::tid_t thread) { return thread != 0; }
 void ThreadKDP::Dump(Log *log, uint32_t index) {}
 
 bool ThreadKDP::ShouldStop(bool &step_more) { return true; }
-lldb::RegisterContextSP ThreadKDP::GetRegisterContext() {
+lldb::ThreadRegisterContextSP ThreadKDP::GetRegisterContext() {
   if (!m_reg_context_sp)
     m_reg_context_sp = CreateRegisterContextForFrame(nullptr);
   return m_reg_context_sp;
 }
 
-lldb::RegisterContextSP
+lldb::ThreadRegisterContextSP
 ThreadKDP::CreateRegisterContextForFrame(StackFrame *frame) {
-  lldb::RegisterContextSP reg_ctx_sp;
+  lldb::ThreadRegisterContextSP reg_ctx_sp;
   uint32_t concrete_frame_idx = 0;
 
   if (frame)

@@ -11,7 +11,7 @@
 #include "Plugins/Process/Utility/RegisterContextThreadMemory.h"
 #include "lldb/Target/OperatingSystem.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Unwind.h"
 
@@ -45,14 +45,14 @@ void ThreadMemory::ClearStackFrames() {
   Thread::ClearStackFrames();
 }
 
-RegisterContextSP ThreadMemory::GetRegisterContext() {
+ThreadRegisterContextSP ThreadMemory::GetRegisterContext() {
   if (!m_reg_context_sp)
     m_reg_context_sp = std::make_shared<RegisterContextThreadMemory>(
         *this, m_register_data_addr);
   return m_reg_context_sp;
 }
 
-RegisterContextSP
+ThreadRegisterContextSP
 ThreadMemory::CreateRegisterContextForFrame(StackFrame *frame) {
   uint32_t concrete_frame_idx = 0;
 

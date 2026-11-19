@@ -10,11 +10,9 @@ static_library("Darwin") {
 
   include_dirs = [ "//lldb/source" ]
   sources = [
-    "RegisterContextDarwin_arm.cpp",
+    "RegisterContextDarwin_arm32.cpp",
     "RegisterContextDarwin_arm64.cpp",
     "RegisterContextDarwin_riscv32.cpp",
     "RegisterContextDarwin_x86_64.cpp",
-    "RegisterContextMach_arm.cpp",
-    "RegisterContextMach_x86_64.cpp",
   ]
 }

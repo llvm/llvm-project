@@ -9,14 +9,13 @@
 #ifndef LLDB_SOURCE_PLUGINS_PROCESS_AIX_NATIVEREGISTERCONTEXTAIX_H
 #define LLDB_SOURCE_PLUGINS_PROCESS_AIX_NATIVEREGISTERCONTEXTAIX_H
 
-#include "Plugins/Register/Native/NativeRegisterContextRegisterInfo.h"
+#include "lldb/Host/common/NativeRegisterContext.h"
 
 namespace lldb_private::process_aix {
 
 class NativeThreadAIX;
 
-class NativeRegisterContextAIX
-    : public virtual NativeRegisterContextRegisterInfo {
+class NativeRegisterContextAIX : public virtual NativeRegisterContext {
 public:
   // This function is implemented in the NativeRegisterContextAIX_ppc64
   // subclasses to create a new instance (for both 32-bit or 64-bit) of the host
@@ -29,7 +28,7 @@ public:
 
 protected:
   NativeRegisterContextAIX(NativeThreadProtocol &thread)
-      : NativeRegisterContextRegisterInfo(thread, nullptr) {}
+      : NativeRegisterContext(thread) {}
 
   lldb::ByteOrder GetByteOrder() const;
 
@@ -62,9 +61,7 @@ protected:
 
   virtual void *GetGPRBuffer() = 0;
 
-  virtual size_t GetGPRSize() const {
-    return GetRegisterInfoInterface().GetGPRSize();
-  }
+  virtual size_t GetGPRSize() const { return GetBankSize(0); }
 
   virtual void *GetFPRBuffer() = 0;
 

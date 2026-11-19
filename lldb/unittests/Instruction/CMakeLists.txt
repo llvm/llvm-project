@@ -30,6 +30,7 @@ if ("RISCV" IN_LIST LLVM_TARGETS_TO_BUILD)
       ${LLVM_TARGETS_TO_BUILD}
     LINK_LIBS
       lldbCore
+      lldbRegister
       lldbSymbol
       lldbTarget
       lldbPluginInstructionRISCV

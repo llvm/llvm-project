@@ -7,18 +7,21 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/lldb-types.h"
+#include "lldb/Register/Arch/lldb-arm64-ehframe-register-enums.h"
 
 #include "ABIAArch64.h"
 #include "ABIMacOSX_arm64.h"
 #include "ABISysV_arm64.h"
-#include "Utility/ARM64_DWARF_Registers.h"
-#include "Utility/ARM64_ehframe_Registers.h"
+#include "lldb/Register/Arch/lldb-arm64-dwarf-register-enums.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Target/Process.h"
 
 #include <bitset>
 #include <optional>
 
+
+namespace dwarf_regs = lldb_private::registers::arm64::dwarf;
+namespace ehframe_regs = lldb_private::registers::arm64::ehframe;
 using namespace lldb;
 using namespace lldb_private;
 
@@ -70,7 +73,7 @@ lldb::addr_t ABIAArch64::FixDataAddress(lldb::addr_t pc) {
 std::pair<uint32_t, uint32_t>
 ABIAArch64::GetEHAndDWARFNums(llvm::StringRef name) {
   if (name == "pc")
-    return {arm64_ehframe::pc, arm64_dwarf::pc};
+    return {ehframe_regs::pc, dwarf_regs::pc};
   return MCBasedABI::GetEHAndDWARFNums(name);
 }
 
@@ -100,8 +103,8 @@ uint32_t ABIAArch64::GetGenericNum(llvm::StringRef name) {
       .Default(LLDB_INVALID_REGNUM);
 }
 
-static void addPartialRegisters(
-    std::vector<lldb_private::DynamicRegisterInfo::Register> &regs,
+static void
+addPartialRegisters(std::vector<lldb_private::RegisterDefinition> &regs,
     llvm::ArrayRef<std::optional<uint32_t>> full_reg_indices,
     uint32_t full_reg_size, const char *partial_reg_format,
     uint32_t partial_reg_size, lldb::Encoding encoding, lldb::Format format) {
@@ -110,7 +113,7 @@ static void addPartialRegisters(
     if (!full_reg_index || regs[*full_reg_index].byte_size != full_reg_size)
       return;
 
-    lldb_private::DynamicRegisterInfo::Register partial_reg{
+    lldb_private::RegisterDefinition partial_reg{
         lldb_private::ConstString(
             llvm::formatv(partial_reg_format, it.index()).str()),
         lldb_private::ConstString(),
@@ -130,7 +133,7 @@ static void addPartialRegisters(
 }
 
 void ABIAArch64::AugmentRegisterInfo(
-    std::vector<lldb_private::DynamicRegisterInfo::Register> &regs) {
+    std::vector<lldb_private::RegisterDefinition> &regs) {
   lldb_private::MCBasedABI::AugmentRegisterInfo(regs);
 
   lldb_private::ConstString sp_string{"sp"};
@@ -141,7 +144,7 @@ void ABIAArch64::AugmentRegisterInfo(
   std::optional<uint32_t> z_byte_size;
 
   for (auto it : llvm::enumerate(regs)) {
-    lldb_private::DynamicRegisterInfo::Register &info = it.value();
+    lldb_private::RegisterDefinition &info = it.value();
     // GDB sends x31 as "sp".  Add the "x31" alt_name for convenience.
     if (info.name == sp_string && !info.alt_name)
       info.alt_name.SetCString("x31");

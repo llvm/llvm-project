@@ -9,6 +9,7 @@ add_lldb_library(lldbPluginProcessMachCore PLUGIN
     lldbBreakpoint
     lldbCore
     lldbHost
+    lldbRegister
     lldbSymbol
     lldbTarget
     lldbUtility

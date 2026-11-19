@@ -36,9 +36,9 @@ public:
 
   void RefreshStateAfterStop() override;
 
-  lldb::RegisterContextSP GetRegisterContext() override;
+  lldb::ThreadRegisterContextSP GetRegisterContext() override;
 
-  lldb::RegisterContextSP
+  lldb::ThreadRegisterContextSP
   CreateRegisterContextForFrame(StackFrame *frame) override;
 
   /// \return
@@ -48,7 +48,7 @@ public:
 protected:
   bool CalculateStopInfo() override;
 
-  lldb::RegisterContextSP m_thread_reg_ctx_sp;
+  lldb::ThreadRegisterContextSP m_thread_reg_ctx_sp;
 
 private:
   std::optional<FileSpec> m_trace_file;

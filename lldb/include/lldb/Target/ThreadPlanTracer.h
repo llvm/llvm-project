@@ -12,7 +12,7 @@
 
 #include "lldb/Symbol/TaggedASTType.h"
 #include "lldb/Target/Thread.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {

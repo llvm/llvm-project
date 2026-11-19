@@ -17,15 +17,15 @@
 #include "lldb/Host/SafeMachO.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/AppleArm64ExceptionClass.h"
-#include "lldb/Target/DynamicRegisterInfo.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
+#include "lldb/Register/RegisterDefinition.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Unwind.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/DataExtractor.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StructuredData.h"
@@ -69,13 +69,13 @@ void ThreadMachCore::RefreshStateAfterStop() {
 
 bool ThreadMachCore::ThreadIDIsValid(lldb::tid_t thread) { return thread != 0; }
 
-lldb::RegisterContextSP ThreadMachCore::GetRegisterContext() {
+lldb::ThreadRegisterContextSP ThreadMachCore::GetRegisterContext() {
   if (!m_reg_context_sp)
     m_reg_context_sp = CreateRegisterContextForFrame(nullptr);
   return m_reg_context_sp;
 }
 
-lldb::RegisterContextSP
+lldb::ThreadRegisterContextSP
 ThreadMachCore::CreateRegisterContextForFrame(StackFrame *frame) {
   uint32_t concrete_frame_idx = 0;
 
@@ -95,7 +95,7 @@ ThreadMachCore::CreateRegisterContextForFrame(StackFrame *frame) {
   if (!core_objfile)
     return {};
 
-  RegisterContextSP core_thread_regctx_sp =
+  ThreadRegisterContextSP core_thread_regctx_sp =
       core_objfile->GetThreadContextAtIndex(m_objfile_lc_thread_idx, *this);
 
   if (!core_thread_regctx_sp)
@@ -140,7 +140,7 @@ bool ThreadMachCore::CalculateStopInfo() {
   ProcessSP process_sp(GetProcess());
   if (process_sp) {
     StopInfoSP stop_info;
-    RegisterContextSP reg_ctx_sp = GetRegisterContext();
+    ThreadRegisterContextSP reg_ctx_sp = GetRegisterContext();
 
     if (reg_ctx_sp) {
       Target &target = process_sp->GetTarget();
@@ -149,11 +149,21 @@ bool ThreadMachCore::CalculateStopInfo() {
 
       if (cputype == llvm::MachO::CPU_TYPE_ARM64 ||
           cputype == llvm::MachO::CPU_TYPE_ARM64_32) {
-        const RegisterInfo *esr_info = reg_ctx_sp->GetRegisterInfoByName("esr");
-        const RegisterInfo *far_info = reg_ctx_sp->GetRegisterInfoByName("far");
+        const RegisterDescriptor *esr_info =
+            reg_ctx_sp->GetRegisterByName("esr");
+        const RegisterDescriptor *far_info =
+            reg_ctx_sp->GetRegisterByName("far");
         RegisterValue esr, far;
-        if (reg_ctx_sp->ReadRegister(esr_info, esr) &&
-            reg_ctx_sp->ReadRegister(far_info, far)) {
+        if (!llvm::errorToBool(
+                reg_ctx_sp
+                    ->ReadRegister(
+                        (esr_info ? esr_info->id : LLDB_INVALID_REGNUM))
+                    .moveInto(esr)) &&
+            !llvm::errorToBool(
+                reg_ctx_sp
+                    ->ReadRegister(
+                        (far_info ? far_info->id : LLDB_INVALID_REGNUM))
+                    .moveInto(far))) {
           const uint32_t esr_val = esr.GetAsUInt32();
           const AppleArm64ExceptionClass exception_class =
               getAppleArm64ExceptionClass(esr_val);

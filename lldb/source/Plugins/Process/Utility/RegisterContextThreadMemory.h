@@ -12,32 +12,27 @@
 #include <vector>
 
 #include "lldb/Symbol/SymbolContext.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {
 
-class RegisterContextThreadMemory : public lldb_private::RegisterContext {
+class RegisterContextThreadMemory : public lldb_private::ThreadRegisterContext {
 public:
   RegisterContextThreadMemory(Thread &thread, lldb::addr_t register_data_addr);
 
   ~RegisterContextThreadMemory() override;
 
+  std::shared_ptr<const RegisterDescription> GetDescription() const override;
+
   void InvalidateAllRegisters() override;
 
-  size_t GetRegisterCount() override;
+  llvm::Expected<lldb_private::RegisterValue>
+  ReadRegister(lldb_private::RegisterID id) override;
 
-  const RegisterInfo *GetRegisterInfoAtIndex(size_t reg) override;
-
-  size_t GetRegisterSetCount() override;
-
-  const RegisterSet *GetRegisterSet(size_t reg_set) override;
-
-  bool ReadRegister(const RegisterInfo *reg_info,
-                    RegisterValue &reg_value) override;
-
-  bool WriteRegister(const RegisterInfo *reg_info,
-                     const RegisterValue &reg_value) override;
+  llvm::Error
+  WriteRegister(lldb_private::RegisterID id,
+                const lldb_private::RegisterValue &reg_value) override;
 
   // These two functions are used to implement "push" and "pop" of register
   // states.  They are used primarily
@@ -52,17 +47,11 @@ public:
   // so these API's should only be used when this behavior is needed.
 
   bool ReadAllRegisterValues(lldb::WritableDataBufferSP &data_sp) override;
-  bool ReadAllRegisterValues(
-      lldb_private::RegisterCheckpoint &reg_checkpoint) override;
+  llvm::Expected<RegisterCheckpoint> SaveCheckpoint() override;
 
   bool WriteAllRegisterValues(const lldb::DataBufferSP &data_sp) override;
-  bool WriteAllRegisterValues(
-      const lldb_private::RegisterCheckpoint &reg_checkpoint) override;
 
-  bool CopyFromRegisterContext(lldb::RegisterContextSP context);
-
-  uint32_t ConvertRegisterKindToRegisterNumber(lldb::RegisterKind kind,
-                                               uint32_t num) override;
+  bool CopyFromRegisterContext(lldb::ThreadRegisterContextSP context);
 
   uint32_t NumSupportedHardwareBreakpoints() override;
 
@@ -79,28 +68,30 @@ public:
 
   bool HardwareSingleStep(bool enable) override;
 
-  Status ReadRegisterValueFromMemory(const lldb_private::RegisterInfo *reg_info,
+  Status
+  ReadRegisterValueFromMemory(const lldb_private::RegisterDescriptor *reg_info,
                                      lldb::addr_t src_addr, uint32_t src_len,
                                      RegisterValue &reg_value) override;
 
-  Status WriteRegisterValueToMemory(const lldb_private::RegisterInfo *reg_info,
+  Status
+  WriteRegisterValueToMemory(const lldb_private::RegisterDescriptor *reg_info,
                                     lldb::addr_t dst_addr, uint32_t dst_len,
                                     const RegisterValue &reg_value) override;
 
 protected:
-  void UpdateRegisterContext();
+  void UpdateRegisterContext() const;
 
   lldb::ThreadWP m_thread_wp;
-  lldb::RegisterContextSP m_reg_ctx_sp;
+  mutable lldb::ThreadRegisterContextSP m_reg_ctx_sp;
   lldb::addr_t m_register_data_addr;
-  uint32_t m_stop_id;
+  mutable uint32_t m_stop_id;
 
 private:
   RegisterContextThreadMemory(const RegisterContextThreadMemory &) = delete;
   const RegisterContextThreadMemory &
   operator=(const RegisterContextThreadMemory &) = delete;
 
-  std::mutex m_update_register_ctx_lock;
+  mutable std::mutex m_update_register_ctx_lock;
 };
 
 } // namespace lldb_private

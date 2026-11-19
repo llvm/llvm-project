@@ -12,11 +12,11 @@
 
 #include <memory>
 
+#include "lldb/Register/RegisterValue.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Scalar.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Compiler.h"
@@ -26,434 +26,17 @@
 using namespace lldb;
 using namespace lldb_private;
 
-enum {
-  gpr_rax = 0,
-  gpr_rbx,
-  gpr_rcx,
-  gpr_rdx,
-  gpr_rdi,
-  gpr_rsi,
-  gpr_rbp,
-  gpr_rsp,
-  gpr_r8,
-  gpr_r9,
-  gpr_r10,
-  gpr_r11,
-  gpr_r12,
-  gpr_r13,
-  gpr_r14,
-  gpr_r15,
-  gpr_rip,
-  gpr_rflags,
-  gpr_cs,
-  gpr_fs,
-  gpr_gs,
-
-  fpu_fcw,
-  fpu_fsw,
-  fpu_ftw,
-  fpu_fop,
-  fpu_ip,
-  fpu_cs,
-  fpu_dp,
-  fpu_ds,
-  fpu_mxcsr,
-  fpu_mxcsrmask,
-  fpu_stmm0,
-  fpu_stmm1,
-  fpu_stmm2,
-  fpu_stmm3,
-  fpu_stmm4,
-  fpu_stmm5,
-  fpu_stmm6,
-  fpu_stmm7,
-  fpu_xmm0,
-  fpu_xmm1,
-  fpu_xmm2,
-  fpu_xmm3,
-  fpu_xmm4,
-  fpu_xmm5,
-  fpu_xmm6,
-  fpu_xmm7,
-  fpu_xmm8,
-  fpu_xmm9,
-  fpu_xmm10,
-  fpu_xmm11,
-  fpu_xmm12,
-  fpu_xmm13,
-  fpu_xmm14,
-  fpu_xmm15,
-
-  exc_trapno,
-  exc_err,
-  exc_faultvaddr,
-
-  k_num_registers,
-
-  // Aliases
-  fpu_fctrl = fpu_fcw,
-  fpu_fstat = fpu_fsw,
-  fpu_ftag = fpu_ftw,
-  fpu_fiseg = fpu_cs,
-  fpu_fioff = fpu_ip,
-  fpu_foseg = fpu_ds,
-  fpu_fooff = fpu_dp
-};
-
-enum ehframe_dwarf_regnums {
-  ehframe_dwarf_gpr_rax = 0,
-  ehframe_dwarf_gpr_rdx,
-  ehframe_dwarf_gpr_rcx,
-  ehframe_dwarf_gpr_rbx,
-  ehframe_dwarf_gpr_rsi,
-  ehframe_dwarf_gpr_rdi,
-  ehframe_dwarf_gpr_rbp,
-  ehframe_dwarf_gpr_rsp,
-  ehframe_dwarf_gpr_r8,
-  ehframe_dwarf_gpr_r9,
-  ehframe_dwarf_gpr_r10,
-  ehframe_dwarf_gpr_r11,
-  ehframe_dwarf_gpr_r12,
-  ehframe_dwarf_gpr_r13,
-  ehframe_dwarf_gpr_r14,
-  ehframe_dwarf_gpr_r15,
-  ehframe_dwarf_gpr_rip,
-  ehframe_dwarf_fpu_xmm0,
-  ehframe_dwarf_fpu_xmm1,
-  ehframe_dwarf_fpu_xmm2,
-  ehframe_dwarf_fpu_xmm3,
-  ehframe_dwarf_fpu_xmm4,
-  ehframe_dwarf_fpu_xmm5,
-  ehframe_dwarf_fpu_xmm6,
-  ehframe_dwarf_fpu_xmm7,
-  ehframe_dwarf_fpu_xmm8,
-  ehframe_dwarf_fpu_xmm9,
-  ehframe_dwarf_fpu_xmm10,
-  ehframe_dwarf_fpu_xmm11,
-  ehframe_dwarf_fpu_xmm12,
-  ehframe_dwarf_fpu_xmm13,
-  ehframe_dwarf_fpu_xmm14,
-  ehframe_dwarf_fpu_xmm15,
-  ehframe_dwarf_fpu_stmm0,
-  ehframe_dwarf_fpu_stmm1,
-  ehframe_dwarf_fpu_stmm2,
-  ehframe_dwarf_fpu_stmm3,
-  ehframe_dwarf_fpu_stmm4,
-  ehframe_dwarf_fpu_stmm5,
-  ehframe_dwarf_fpu_stmm6,
-  ehframe_dwarf_fpu_stmm7
-
-};
-
-#define GPR_OFFSET(reg)                                                        \
-  (LLVM_EXTENSION offsetof(RegisterContextDarwin_x86_64::GPR, reg))
-#define FPU_OFFSET(reg)                                                        \
-  (LLVM_EXTENSION offsetof(RegisterContextDarwin_x86_64::FPU, reg) +           \
-   sizeof(RegisterContextDarwin_x86_64::GPR))
-#define EXC_OFFSET(reg)                                                        \
-  (LLVM_EXTENSION offsetof(RegisterContextDarwin_x86_64::EXC, reg) +           \
-   sizeof(RegisterContextDarwin_x86_64::GPR) +                                 \
-   sizeof(RegisterContextDarwin_x86_64::FPU))
-
-// These macros will auto define the register name, alt name, register size,
-// register offset, encoding, format and native register. This ensures that the
-// register state structures are defined correctly and have the correct sizes
-// and offsets.
-#define DEFINE_GPR(reg, alt)                                                   \
-  #reg, alt, sizeof(((RegisterContextDarwin_x86_64::GPR *) NULL)->reg),        \
-                    GPR_OFFSET(reg), eEncodingUint, eFormatHex
-#define DEFINE_FPU_UINT(reg)                                                   \
-  #reg, NULL, sizeof(((RegisterContextDarwin_x86_64::FPU *) NULL)->reg),       \
-                     FPU_OFFSET(reg), eEncodingUint, eFormatHex
-#define DEFINE_FPU_VECT(reg, i)                                                \
-  #reg #i, NULL,                                                               \
-      sizeof(((RegisterContextDarwin_x86_64::FPU *) NULL)->reg[i].bytes),      \
-              FPU_OFFSET(reg[i]), eEncodingVector, eFormatVectorOfUInt8,       \
-                         {ehframe_dwarf_fpu_##reg##i,                          \
-                          ehframe_dwarf_fpu_##reg##i, LLDB_INVALID_REGNUM,     \
-                          LLDB_INVALID_REGNUM, fpu_##reg##i },                 \
-                          nullptr, nullptr, nullptr,
-#define DEFINE_EXC(reg)                                                        \
-  #reg, NULL, sizeof(((RegisterContextDarwin_x86_64::EXC *) NULL)->reg),       \
-                     EXC_OFFSET(reg), eEncodingUint, eFormatHex
-
 #define REG_CONTEXT_SIZE                                                       \
   (sizeof(RegisterContextDarwin_x86_64::GPR) +                                 \
    sizeof(RegisterContextDarwin_x86_64::FPU) +                                 \
    sizeof(RegisterContextDarwin_x86_64::EXC))
 
 // General purpose registers for 64 bit
-static RegisterInfo g_register_infos[] = {
-    {DEFINE_GPR(rax, nullptr),
-     {ehframe_dwarf_gpr_rax, ehframe_dwarf_gpr_rax, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, gpr_rax},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_GPR(rbx, nullptr),
-     {ehframe_dwarf_gpr_rbx, ehframe_dwarf_gpr_rbx, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, gpr_rbx},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_GPR(rcx, nullptr),
-     {ehframe_dwarf_gpr_rcx, ehframe_dwarf_gpr_rcx, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, gpr_rcx},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_GPR(rdx, nullptr),
-     {ehframe_dwarf_gpr_rdx, ehframe_dwarf_gpr_rdx, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, gpr_rdx},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_GPR(rdi, nullptr),
-     {ehframe_dwarf_gpr_rdi, ehframe_dwarf_gpr_rdi, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, gpr_rdi},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_GPR(rsi, nullptr),
-     {ehframe_dwarf_gpr_rsi, ehframe_dwarf_gpr_rsi, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, gpr_rsi},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_GPR(rbp, "fp"),
-     {ehframe_dwarf_gpr_rbp, ehframe_dwarf_gpr_rbp, LLDB_REGNUM_GENERIC_FP,
-      LLDB_INVALID_REGNUM, gpr_rbp},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_GPR(rsp, "sp"),
-     {ehframe_dwarf_gpr_rsp, ehframe_dwarf_gpr_rsp, LLDB_REGNUM_GENERIC_SP,
-      LLDB_INVALID_REGNUM, gpr_rsp},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_GPR(r8, nullptr),
-     {ehframe_dwarf_gpr_r8, ehframe_dwarf_gpr_r8, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, gpr_r8},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_GPR(r9, nullptr),
-     {ehframe_dwarf_gpr_r9, ehframe_dwarf_gpr_r9, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, gpr_r9},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_GPR(r10, nullptr),
-     {ehframe_dwarf_gpr_r10, ehframe_dwarf_gpr_r10, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, gpr_r10},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_GPR(r11, nullptr),
-     {ehframe_dwarf_gpr_r11, ehframe_dwarf_gpr_r11, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, gpr_r11},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_GPR(r12, nullptr),
-     {ehframe_dwarf_gpr_r12, ehframe_dwarf_gpr_r12, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, gpr_r12},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_GPR(r13, nullptr),
-     {ehframe_dwarf_gpr_r13, ehframe_dwarf_gpr_r13, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, gpr_r13},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_GPR(r14, nullptr),
-     {ehframe_dwarf_gpr_r14, ehframe_dwarf_gpr_r14, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, gpr_r14},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_GPR(r15, nullptr),
-     {ehframe_dwarf_gpr_r15, ehframe_dwarf_gpr_r15, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, gpr_r15},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_GPR(rip, "pc"),
-     {ehframe_dwarf_gpr_rip, ehframe_dwarf_gpr_rip, LLDB_REGNUM_GENERIC_PC,
-      LLDB_INVALID_REGNUM, gpr_rip},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_GPR(rflags, "flags"),
-     {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_REGNUM_GENERIC_FLAGS,
-      LLDB_INVALID_REGNUM, gpr_rflags},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_GPR(cs, nullptr),
-     {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, gpr_cs},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_GPR(fs, nullptr),
-     {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, gpr_fs},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_GPR(gs, nullptr),
-     {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, gpr_gs},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-
-    {DEFINE_FPU_UINT(fcw),
-     {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, fpu_fcw},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_FPU_UINT(fsw),
-     {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, fpu_fsw},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_FPU_UINT(ftw),
-     {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, fpu_ftw},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_FPU_UINT(fop),
-     {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, fpu_fop},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_FPU_UINT(ip),
-     {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, fpu_ip},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_FPU_UINT(cs),
-     {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, fpu_cs},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_FPU_UINT(dp),
-     {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, fpu_dp},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_FPU_UINT(ds),
-     {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, fpu_ds},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_FPU_UINT(mxcsr),
-     {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, fpu_mxcsr},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_FPU_UINT(mxcsrmask),
-     {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, fpu_mxcsrmask},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_FPU_VECT(stmm, 0)},
-    {DEFINE_FPU_VECT(stmm, 1)},
-    {DEFINE_FPU_VECT(stmm, 2)},
-    {DEFINE_FPU_VECT(stmm, 3)},
-    {DEFINE_FPU_VECT(stmm, 4)},
-    {DEFINE_FPU_VECT(stmm, 5)},
-    {DEFINE_FPU_VECT(stmm, 6)},
-    {DEFINE_FPU_VECT(stmm, 7)},
-    {DEFINE_FPU_VECT(xmm, 0)},
-    {DEFINE_FPU_VECT(xmm, 1)},
-    {DEFINE_FPU_VECT(xmm, 2)},
-    {DEFINE_FPU_VECT(xmm, 3)},
-    {DEFINE_FPU_VECT(xmm, 4)},
-    {DEFINE_FPU_VECT(xmm, 5)},
-    {DEFINE_FPU_VECT(xmm, 6)},
-    {DEFINE_FPU_VECT(xmm, 7)},
-    {DEFINE_FPU_VECT(xmm, 8)},
-    {DEFINE_FPU_VECT(xmm, 9)},
-    {DEFINE_FPU_VECT(xmm, 10)},
-    {DEFINE_FPU_VECT(xmm, 11)},
-    {DEFINE_FPU_VECT(xmm, 12)},
-    {DEFINE_FPU_VECT(xmm, 13)},
-    {DEFINE_FPU_VECT(xmm, 14)},
-    {DEFINE_FPU_VECT(xmm, 15)},
-
-    {DEFINE_EXC(trapno),
-     {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, exc_trapno},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_EXC(err),
-     {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, exc_err},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_EXC(faultvaddr),
-     {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, exc_faultvaddr},
-     nullptr,
-     nullptr,
-     nullptr,
-     }};
-
-static size_t k_num_register_infos = std::size(g_register_infos);
-
 RegisterContextDarwin_x86_64::RegisterContextDarwin_x86_64(
     Thread &thread, uint32_t concrete_frame_idx)
-    : RegisterContext(thread, concrete_frame_idx), gpr(), fpu(), exc() {
+    : ThreadRegisterContext(thread, concrete_frame_idx), gpr(), fpu(), exc() {
+  SetRegisterLayout(RegisterLayoutDarwin_x86_64::GetShared());
+
   uint32_t i;
   for (i = 0; i < kNumErrors; i++) {
     gpr_errs[i] = -1;
@@ -466,81 +49,6 @@ RegisterContextDarwin_x86_64::~RegisterContextDarwin_x86_64() = default;
 
 void RegisterContextDarwin_x86_64::InvalidateAllRegisters() {
   InvalidateAllRegisterStates();
-}
-
-size_t RegisterContextDarwin_x86_64::GetRegisterCount() {
-  assert(k_num_register_infos == k_num_registers);
-  return k_num_registers;
-}
-
-const RegisterInfo *
-RegisterContextDarwin_x86_64::GetRegisterInfoAtIndex(size_t reg) {
-  assert(k_num_register_infos == k_num_registers);
-  if (reg < k_num_registers)
-    return &g_register_infos[reg];
-  return nullptr;
-}
-
-size_t RegisterContextDarwin_x86_64::GetRegisterInfosCount() {
-  return k_num_register_infos;
-}
-
-const lldb_private::RegisterInfo *
-RegisterContextDarwin_x86_64::GetRegisterInfos() {
-  return g_register_infos;
-}
-
-static uint32_t g_gpr_regnums[] = {
-    gpr_rax, gpr_rbx, gpr_rcx, gpr_rdx,    gpr_rdi, gpr_rsi, gpr_rbp,
-    gpr_rsp, gpr_r8,  gpr_r9,  gpr_r10,    gpr_r11, gpr_r12, gpr_r13,
-    gpr_r14, gpr_r15, gpr_rip, gpr_rflags, gpr_cs,  gpr_fs,  gpr_gs};
-
-static uint32_t g_fpu_regnums[] = {
-    fpu_fcw,   fpu_fsw,   fpu_ftw,   fpu_fop,       fpu_ip,    fpu_cs,
-    fpu_dp,    fpu_ds,    fpu_mxcsr, fpu_mxcsrmask, fpu_stmm0, fpu_stmm1,
-    fpu_stmm2, fpu_stmm3, fpu_stmm4, fpu_stmm5,     fpu_stmm6, fpu_stmm7,
-    fpu_xmm0,  fpu_xmm1,  fpu_xmm2,  fpu_xmm3,      fpu_xmm4,  fpu_xmm5,
-    fpu_xmm6,  fpu_xmm7,  fpu_xmm8,  fpu_xmm9,      fpu_xmm10, fpu_xmm11,
-    fpu_xmm12, fpu_xmm13, fpu_xmm14, fpu_xmm15};
-
-static uint32_t g_exc_regnums[] = {exc_trapno, exc_err, exc_faultvaddr};
-
-// Number of registers in each register set
-const size_t k_num_gpr_registers = std::size(g_gpr_regnums);
-const size_t k_num_fpu_registers = std::size(g_fpu_regnums);
-const size_t k_num_exc_registers = std::size(g_exc_regnums);
-
-// Register set definitions. The first definitions at register set index of
-// zero is for all registers, followed by other registers sets. The register
-// information for the all register set need not be filled in.
-static const RegisterSet g_reg_sets[] = {
-    {
-        "General Purpose Registers", "gpr", k_num_gpr_registers, g_gpr_regnums,
-    },
-    {"Floating Point Registers", "fpu", k_num_fpu_registers, g_fpu_regnums},
-    {"Exception State Registers", "exc", k_num_exc_registers, g_exc_regnums}};
-
-const size_t k_num_regsets = std::size(g_reg_sets);
-
-size_t RegisterContextDarwin_x86_64::GetRegisterSetCount() {
-  return k_num_regsets;
-}
-
-const RegisterSet *
-RegisterContextDarwin_x86_64::GetRegisterSet(size_t reg_set) {
-  if (reg_set < k_num_regsets)
-    return &g_reg_sets[reg_set];
-  return nullptr;
-}
-
-int RegisterContextDarwin_x86_64::GetSetForNativeRegNum(int reg_num) {
-  if (reg_num < fpu_fcw)
-    return GPRRegSet;
-  else if (reg_num < exc_trapno)
-    return FPURegSet;
-  else if (reg_num < k_num_registers)
-    return EXCRegSet;
-  return -1;
 }
 
 int RegisterContextDarwin_x86_64::ReadGPR(bool force) {
@@ -629,255 +137,57 @@ int RegisterContextDarwin_x86_64::WriteRegisterSet(uint32_t set) {
   return -1;
 }
 
-bool RegisterContextDarwin_x86_64::ReadRegister(const RegisterInfo *reg_info,
-                                                RegisterValue &value) {
-  const uint32_t reg = reg_info->kinds[eRegisterKindLLDB];
-  int set = RegisterContextDarwin_x86_64::GetSetForNativeRegNum(reg);
-  if (set == -1)
-    return false;
+llvm::Expected<RegisterValue>
+RegisterContextDarwin_x86_64::ReadRegister(RegisterID id) {
+  if (!GetDescription()->Find(id))
+    return llvm::createStringError("unknown register ID");
 
-  if (ReadRegisterSet(set, false) != 0)
-    return false;
+  auto required = GetLayout().GetRequiredBanks(id);
+  if (!required)
+    return required.takeError();
+  for (RegisterBankID bank : *required)
+    if (ReadRegisterSet(bank, false) != 0)
+      return llvm::createStringError("register value is unavailable");
 
-  switch (reg) {
-  case gpr_rax:
-  case gpr_rbx:
-  case gpr_rcx:
-  case gpr_rdx:
-  case gpr_rdi:
-  case gpr_rsi:
-  case gpr_rbp:
-  case gpr_rsp:
-  case gpr_r8:
-  case gpr_r9:
-  case gpr_r10:
-  case gpr_r11:
-  case gpr_r12:
-  case gpr_r13:
-  case gpr_r14:
-  case gpr_r15:
-  case gpr_rip:
-  case gpr_rflags:
-  case gpr_cs:
-  case gpr_fs:
-  case gpr_gs:
-    value = (&gpr.rax)[reg - gpr_rax];
-    break;
-
-  case fpu_fcw:
-    value = fpu.fcw;
-    break;
-
-  case fpu_fsw:
-    value = fpu.fsw;
-    break;
-
-  case fpu_ftw:
-    value = fpu.ftw;
-    break;
-
-  case fpu_fop:
-    value = fpu.fop;
-    break;
-
-  case fpu_ip:
-    value = fpu.ip;
-    break;
-
-  case fpu_cs:
-    value = fpu.cs;
-    break;
-
-  case fpu_dp:
-    value = fpu.dp;
-    break;
-
-  case fpu_ds:
-    value = fpu.ds;
-    break;
-
-  case fpu_mxcsr:
-    value = fpu.mxcsr;
-    break;
-
-  case fpu_mxcsrmask:
-    value = fpu.mxcsrmask;
-    break;
-
-  case fpu_stmm0:
-  case fpu_stmm1:
-  case fpu_stmm2:
-  case fpu_stmm3:
-  case fpu_stmm4:
-  case fpu_stmm5:
-  case fpu_stmm6:
-  case fpu_stmm7:
-    value.SetBytes(fpu.stmm[reg - fpu_stmm0].bytes, reg_info->byte_size,
-                   endian::InlHostByteOrder());
-    break;
-
-  case fpu_xmm0:
-  case fpu_xmm1:
-  case fpu_xmm2:
-  case fpu_xmm3:
-  case fpu_xmm4:
-  case fpu_xmm5:
-  case fpu_xmm6:
-  case fpu_xmm7:
-  case fpu_xmm8:
-  case fpu_xmm9:
-  case fpu_xmm10:
-  case fpu_xmm11:
-  case fpu_xmm12:
-  case fpu_xmm13:
-  case fpu_xmm14:
-  case fpu_xmm15:
-    value.SetBytes(fpu.xmm[reg - fpu_xmm0].bytes, reg_info->byte_size,
-                   endian::InlHostByteOrder());
-    break;
-
-  case exc_trapno:
-    value = exc.trapno;
-    break;
-
-  case exc_err:
-    value = exc.err;
-    break;
-
-  case exc_faultvaddr:
-    value = exc.faultvaddr;
-    break;
-
-  default:
-    return false;
-  }
-  return true;
+  const RegisterData banks[] = {
+      {GPRRegSet, {reinterpret_cast<const uint8_t *>(&gpr), sizeof(gpr)}},
+      {FPURegSet, {reinterpret_cast<const uint8_t *>(&fpu), sizeof(fpu)}},
+      {EXCRegSet, {reinterpret_cast<const uint8_t *>(&exc), sizeof(exc)}},
+  };
+  return GetLayout().Read(id, banks);
 }
 
-bool RegisterContextDarwin_x86_64::WriteRegister(const RegisterInfo *reg_info,
-                                                 const RegisterValue &value) {
-  const uint32_t reg = reg_info->kinds[eRegisterKindLLDB];
-  int set = RegisterContextDarwin_x86_64::GetSetForNativeRegNum(reg);
+llvm::Error
+RegisterContextDarwin_x86_64::WriteRegister(RegisterID id,
+                                            const RegisterValue &value) {
+  if (!GetDescription()->Find(id))
+    return llvm::createStringError("unknown register ID");
 
-  if (set == -1)
-    return false;
+  auto required = GetLayout().GetRequiredBanks(id, true);
+  if (!required)
+    return required.takeError();
+  for (RegisterBankID bank : *required)
+    if (ReadRegisterSet(bank, false) != 0)
+      return llvm::createStringError("register write is unavailable");
 
-  if (ReadRegisterSet(set, false) != 0)
-    return false;
+  const MutableRegisterData banks[] = {
+      {GPRRegSet, {reinterpret_cast<uint8_t *>(&gpr), sizeof(gpr)}},
+      {FPURegSet, {reinterpret_cast<uint8_t *>(&fpu), sizeof(fpu)}},
+      {EXCRegSet, {reinterpret_cast<uint8_t *>(&exc), sizeof(exc)}},
+  };
+  if (auto error = GetLayout().Write(id, value, banks))
+    return error;
 
-  switch (reg) {
-  case gpr_rax:
-  case gpr_rbx:
-  case gpr_rcx:
-  case gpr_rdx:
-  case gpr_rdi:
-  case gpr_rsi:
-  case gpr_rbp:
-  case gpr_rsp:
-  case gpr_r8:
-  case gpr_r9:
-  case gpr_r10:
-  case gpr_r11:
-  case gpr_r12:
-  case gpr_r13:
-  case gpr_r14:
-  case gpr_r15:
-  case gpr_rip:
-  case gpr_rflags:
-  case gpr_cs:
-  case gpr_fs:
-  case gpr_gs:
-    (&gpr.rax)[reg - gpr_rax] = value.GetAsUInt64();
-    break;
+  // Keep the existing policy of rejecting XMM writes before committing the
+  // bank.
+  if (RegisterLayoutDarwin_x86_64::IsXMM(id))
+    return llvm::createStringError("register write is unavailable");
 
-  case fpu_fcw:
-    fpu.fcw = value.GetAsUInt16();
-    break;
+  for (RegisterBankID bank : *required)
+    if (WriteRegisterSet(bank) != 0)
+      return llvm::createStringError("register write failed");
 
-  case fpu_fsw:
-    fpu.fsw = value.GetAsUInt16();
-    break;
-
-  case fpu_ftw:
-    fpu.ftw = value.GetAsUInt8();
-    break;
-
-  case fpu_fop:
-    fpu.fop = value.GetAsUInt16();
-    break;
-
-  case fpu_ip:
-    fpu.ip = value.GetAsUInt32();
-    break;
-
-  case fpu_cs:
-    fpu.cs = value.GetAsUInt16();
-    break;
-
-  case fpu_dp:
-    fpu.dp = value.GetAsUInt32();
-    break;
-
-  case fpu_ds:
-    fpu.ds = value.GetAsUInt16();
-    break;
-
-  case fpu_mxcsr:
-    fpu.mxcsr = value.GetAsUInt32();
-    break;
-
-  case fpu_mxcsrmask:
-    fpu.mxcsrmask = value.GetAsUInt32();
-    break;
-
-  case fpu_stmm0:
-  case fpu_stmm1:
-  case fpu_stmm2:
-  case fpu_stmm3:
-  case fpu_stmm4:
-  case fpu_stmm5:
-  case fpu_stmm6:
-  case fpu_stmm7:
-    ::memcpy(fpu.stmm[reg - fpu_stmm0].bytes, value.GetBytes(),
-             value.GetByteSize());
-    break;
-
-  case fpu_xmm0:
-  case fpu_xmm1:
-  case fpu_xmm2:
-  case fpu_xmm3:
-  case fpu_xmm4:
-  case fpu_xmm5:
-  case fpu_xmm6:
-  case fpu_xmm7:
-  case fpu_xmm8:
-  case fpu_xmm9:
-  case fpu_xmm10:
-  case fpu_xmm11:
-  case fpu_xmm12:
-  case fpu_xmm13:
-  case fpu_xmm14:
-  case fpu_xmm15:
-    ::memcpy(fpu.xmm[reg - fpu_xmm0].bytes, value.GetBytes(),
-             value.GetByteSize());
-    return false;
-
-  case exc_trapno:
-    exc.trapno = value.GetAsUInt32();
-    break;
-
-  case exc_err:
-    exc.err = value.GetAsUInt32();
-    break;
-
-  case exc_faultvaddr:
-    exc.faultvaddr = value.GetAsUInt64();
-    break;
-
-  default:
-    return false;
-  }
-  return WriteRegisterSet(set) == 0;
+  return llvm::Error::success();
 }
 
 bool RegisterContextDarwin_x86_64::ReadAllRegisterValues(
@@ -918,115 +228,6 @@ bool RegisterContextDarwin_x86_64::WriteAllRegisterValues(
     return success_count == 3;
   }
   return false;
-}
-
-uint32_t RegisterContextDarwin_x86_64::ConvertRegisterKindToRegisterNumber(
-    lldb::RegisterKind kind, uint32_t reg) {
-  if (kind == eRegisterKindGeneric) {
-    switch (reg) {
-    case LLDB_REGNUM_GENERIC_PC:
-      return gpr_rip;
-    case LLDB_REGNUM_GENERIC_SP:
-      return gpr_rsp;
-    case LLDB_REGNUM_GENERIC_FP:
-      return gpr_rbp;
-    case LLDB_REGNUM_GENERIC_FLAGS:
-      return gpr_rflags;
-    case LLDB_REGNUM_GENERIC_RA:
-    default:
-      break;
-    }
-  } else if (kind == eRegisterKindEHFrame || kind == eRegisterKindDWARF) {
-    switch (reg) {
-    case ehframe_dwarf_gpr_rax:
-      return gpr_rax;
-    case ehframe_dwarf_gpr_rdx:
-      return gpr_rdx;
-    case ehframe_dwarf_gpr_rcx:
-      return gpr_rcx;
-    case ehframe_dwarf_gpr_rbx:
-      return gpr_rbx;
-    case ehframe_dwarf_gpr_rsi:
-      return gpr_rsi;
-    case ehframe_dwarf_gpr_rdi:
-      return gpr_rdi;
-    case ehframe_dwarf_gpr_rbp:
-      return gpr_rbp;
-    case ehframe_dwarf_gpr_rsp:
-      return gpr_rsp;
-    case ehframe_dwarf_gpr_r8:
-      return gpr_r8;
-    case ehframe_dwarf_gpr_r9:
-      return gpr_r9;
-    case ehframe_dwarf_gpr_r10:
-      return gpr_r10;
-    case ehframe_dwarf_gpr_r11:
-      return gpr_r11;
-    case ehframe_dwarf_gpr_r12:
-      return gpr_r12;
-    case ehframe_dwarf_gpr_r13:
-      return gpr_r13;
-    case ehframe_dwarf_gpr_r14:
-      return gpr_r14;
-    case ehframe_dwarf_gpr_r15:
-      return gpr_r15;
-    case ehframe_dwarf_gpr_rip:
-      return gpr_rip;
-    case ehframe_dwarf_fpu_xmm0:
-      return fpu_xmm0;
-    case ehframe_dwarf_fpu_xmm1:
-      return fpu_xmm1;
-    case ehframe_dwarf_fpu_xmm2:
-      return fpu_xmm2;
-    case ehframe_dwarf_fpu_xmm3:
-      return fpu_xmm3;
-    case ehframe_dwarf_fpu_xmm4:
-      return fpu_xmm4;
-    case ehframe_dwarf_fpu_xmm5:
-      return fpu_xmm5;
-    case ehframe_dwarf_fpu_xmm6:
-      return fpu_xmm6;
-    case ehframe_dwarf_fpu_xmm7:
-      return fpu_xmm7;
-    case ehframe_dwarf_fpu_xmm8:
-      return fpu_xmm8;
-    case ehframe_dwarf_fpu_xmm9:
-      return fpu_xmm9;
-    case ehframe_dwarf_fpu_xmm10:
-      return fpu_xmm10;
-    case ehframe_dwarf_fpu_xmm11:
-      return fpu_xmm11;
-    case ehframe_dwarf_fpu_xmm12:
-      return fpu_xmm12;
-    case ehframe_dwarf_fpu_xmm13:
-      return fpu_xmm13;
-    case ehframe_dwarf_fpu_xmm14:
-      return fpu_xmm14;
-    case ehframe_dwarf_fpu_xmm15:
-      return fpu_xmm15;
-    case ehframe_dwarf_fpu_stmm0:
-      return fpu_stmm0;
-    case ehframe_dwarf_fpu_stmm1:
-      return fpu_stmm1;
-    case ehframe_dwarf_fpu_stmm2:
-      return fpu_stmm2;
-    case ehframe_dwarf_fpu_stmm3:
-      return fpu_stmm3;
-    case ehframe_dwarf_fpu_stmm4:
-      return fpu_stmm4;
-    case ehframe_dwarf_fpu_stmm5:
-      return fpu_stmm5;
-    case ehframe_dwarf_fpu_stmm6:
-      return fpu_stmm6;
-    case ehframe_dwarf_fpu_stmm7:
-      return fpu_stmm7;
-    default:
-      break;
-    }
-  } else if (kind == eRegisterKindLLDB) {
-    return reg;
-  }
-  return LLDB_INVALID_REGNUM;
 }
 
 bool RegisterContextDarwin_x86_64::HardwareSingleStep(bool enable) {
