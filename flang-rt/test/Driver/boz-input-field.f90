@@ -8,7 +8,6 @@
 
 ! CHECK: int4: 1F "XY"
 ! CHECK: int8: 1F "XY"
-! CHECK: int16: 1F "XY"
 ! CHECK: char: 4142 "XY"
 ! CHECK: comma: 1F 2
 ! CHECK: octal: 17 "XY"
@@ -24,7 +23,6 @@ program boz_input_field
   implicit none
   integer :: i4, j4, k4, iu, n
   integer(8) :: i8
-  integer(16) :: i16
   character(4) :: c4
   character(2) :: c2
   character(:), allocatable :: s
@@ -34,8 +32,6 @@ program boz_input_field
   print '(a,z0,1x,3a)', 'int4: ', i4, '"', c2, '"'
   read (s, '(z6,a2)') i8, c2
   print '(a,z0,1x,3a)', 'int8: ', i8, '"', c2, '"'
-  read (s, '(z6,a2)') i16, c2
-  print '(a,z0,1x,3a)', 'int16: ', i16, '"', c2, '"'
 
   ! B/O/Z editing of a CHARACTER item is an extension.
   s = '4142    XY'

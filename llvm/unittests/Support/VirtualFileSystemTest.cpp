@@ -273,6 +273,33 @@ TEST(VirtualFileSystemTest, StatusQueries) {
   EXPECT_FALSE(Status->equivalent(*Status2));
 }
 
+TEST(VirtualFileSystemTest, StatusIsExecutable) {
+  auto D = makeIntrusiveRefCnt<DummyFileSystem>();
+  auto IsExecutable = [&](StringRef Path) {
+    ErrorOr<vfs::Status> Status = D->status(Path);
+    EXPECT_FALSE(Status.getError());
+    return Status && Status->isExecutable();
+  };
+
+  D->addRegularFile("/all");
+  EXPECT_TRUE(IsExecutable("/all"));
+
+  D->addRegularFile("/owner", sys::fs::owner_exe);
+  EXPECT_TRUE(IsExecutable("/owner"));
+
+  D->addRegularFile("/group", sys::fs::group_exe);
+  EXPECT_TRUE(IsExecutable("/group"));
+
+  D->addRegularFile("/others", sys::fs::others_exe);
+  EXPECT_TRUE(IsExecutable("/others"));
+
+  D->addRegularFile("/none", sys::fs::all_read | sys::fs::all_write);
+  EXPECT_FALSE(IsExecutable("/none"));
+
+  D->addDirectory("/dir", sys::fs::all_read);
+  EXPECT_FALSE(IsExecutable("/dir"));
+}
+
 TEST(VirtualFileSystemTest, BaseOnlyOverlay) {
   auto D = makeIntrusiveRefCnt<DummyFileSystem>();
   ErrorOr<vfs::Status> Status((std::error_code()));

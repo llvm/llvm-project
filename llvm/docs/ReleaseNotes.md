@@ -236,6 +236,9 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to building LLVM
 
+* The minimum required CMake version to build LLVM has been raised from 3.20.0
+  to 3.31.0.
+
 * A new `LLVM_ENABLE_LZMA` option (`ON`, `OFF` or `FORCE_ON`; default `ON`)
   controls whether LLVM links liblzma for xz decompression. It replaces LLDB's
   `LLDB_ENABLE_LZMA`, which is deprecated: a monorepo build maps it onto
@@ -334,6 +337,9 @@ Makes programs 10x faster by doing Special New Thing.
   respectively, `apple-m6`, `apple-a20`, and `apple-s11`)
 
 ### Changes to the AMDGPU Backend
+
+* Added a compiler workaround for async barrier arrivals on gfx1250 and gfx1251
+  unless XNACK is explicitly disabled.
 
 * Replaced `xnack` and `sramecc` target features with `amdgpu.xnack`
   and `amdgpu.sramecc` module flags.
@@ -557,12 +563,16 @@ Makes programs 10x faster by doing Special New Thing.
 
 * `llvm-mc` now supports `--verify[=<prefixes>]` to check diagnostics against `<prefix>-<kind> {{...}}` comments in the input instead of printing them.
 
+* `opt` and `llc` load `-load-pass-plugin` plugins after parsing the command line, so a loaded plugin's options are no longer accepted as ordinary options.
+  Pass them with `-plugin-arg=<plugin>,<arg>` (see below).
+
 * `opt` and `llc` accept `-plugin-arg=<plugin>,<arg>`, which passes `<arg>` to the new `PassPluginLibraryInfo::ParseArguments` callback of the pass plugin named `<plugin>`.
   A plugin that defines `cl::opt` has to call `cl::ParseCommandLineOptions` itself inside `ParseArguments`.
   `LLVM_PLUGIN_API_VERSION` is now 3.
 
-* `opt` and `llc` load `-load-pass-plugin` plugins after parsing the command line, so a loaded plugin's options are no longer accepted as ordinary options.
-  Pass them with `-plugin-arg=<plugin>,<arg>`.
+* `PassPluginLibraryInfo::PreCodeGenCallback` now matches the parameters of the
+  new `llvm::runCodeGenPipeline()`.
+  This is also covered by the `LLVM_PLUGIN_API_VERSION` bump to 3.
 
 * llvm-offload-binary can now compress packaged binaries using zstd or zlib.
 
@@ -608,6 +618,8 @@ Makes programs 10x faster by doing Special New Thing.
   return values that were actually in a different set. Both methods are now fixed
   so that they are limited to the registers within the register set. Scripts
   using these methods may have to be updated as a result.
+* `SBInitializationOptions` carries process-wide options to a new
+  `SBDebugger::Initialize` overload.
 
 #### Windows
 

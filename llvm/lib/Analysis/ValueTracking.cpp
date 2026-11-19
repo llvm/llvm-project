@@ -844,8 +844,16 @@ bool llvm::willNotFreeBetween(const Instruction *Assume,
     assert((!DT || DT->dominates(AssumeBB, CurBB)) &&
            "Blocks between Assume and CtxI must be dominated by AssumeBB");
 
-    if (pred_empty(CurBB))
-      return false;
+    if (pred_empty(CurBB)) {
+      // Reaching the entry block means there is a path to CtxI that does not
+      // pass through Assume.
+      if (CurBB->isEntryBlock())
+        return false;
+
+      // CurBB is unreachable (for example, emptied by SimplifyCFG but not yet
+      // removed), so nothing in it can execute a free.
+      continue;
+    }
 
     // If CurBB == CtxBB (due to a loop backedge targeting CtxBB), check
     // instructions from CtxIter to the end of CtxBB (instructions before
@@ -5392,8 +5400,9 @@ computeKnownFPClassForFAddSub(const Operator *Op, const APInt &DemandedElts,
       (InterestedClasses & KnownFPClass::OrderedLessThanZeroMask) != fcNone;
   bool WantNaN = (InterestedClasses & fcNan) != fcNone;
   bool WantNegZero = (InterestedClasses & fcNegZero) != fcNone;
+  bool WantSubnormal = (InterestedClasses & fcSubnormal) != fcNone;
 
-  if (!WantNaN && !WantNegative && !WantNegZero)
+  if (!WantNaN && !WantNegative && !WantNegZero && !WantSubnormal)
     return;
 
   FPClassTest InterestedSrcs = InterestedClasses;
@@ -5412,7 +5421,7 @@ computeKnownFPClassForFAddSub(const Operator *Op, const APInt &DemandedElts,
 
   if ((WantNaN && KnownRHS.isKnownNeverNaN()) ||
       (WantNegative && KnownRHS.cannotBeOrderedLessThanZero()) || WantNegZero ||
-      !IsAdd) {
+      WantSubnormal || !IsAdd) {
 
     // FIXME: Context function should always be passed in separately
     const Function *F = cast<Instruction>(Op)->getFunction();
@@ -5430,6 +5439,11 @@ computeKnownFPClassForFAddSub(const Operator *Op, const APInt &DemandedElts,
       if (!Self) {
         computeKnownFPClass(LHS, DemandedElts, InterestedSrcs, KnownLHS, Q,
                             Depth + 1);
+      }
+
+      if (const APFloat *CRHS; IsAdd && match(RHS, m_APFloat(CRHS))) {
+        Known = KnownFPClass::fadd(KnownLHS, *CRHS, RM, Mode);
+        return;
       }
 
       Known = IsAdd ? KnownFPClass::fadd(KnownLHS, KnownRHS, RM, Mode)
@@ -5948,11 +5962,11 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
                           KnownSrc, Q, Depth + 1);
 
       const Function *F = II->getFunction();
-      DenormalMode DenormMode =
-          F ? F->getDenormalMode(
-                  II->getType()->getScalarType()->getFltSemantics())
-            : DenormalMode::getDynamic();
-      Known = KnownFPClass::canonicalize(KnownSrc, DenormMode);
+      const fltSemantics &Flt =
+          II->getType()->getScalarType()->getFltSemantics();
+      DenormalMode Mode =
+          F ? F->getDenormalMode(Flt) : DenormalMode::getDynamic();
+      Known = KnownFPClass::canonicalize(KnownSrc, Flt, Mode);
       break;
     }
     case Intrinsic::vector_reduce_fmax:
@@ -11015,7 +11029,8 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
         computeConstantRange(SI->getTrueValue(), ForSigned, SQ, Depth + 1);
     ConstantRange CRFalse =
         computeConstantRange(SI->getFalseValue(), ForSigned, SQ, Depth + 1);
-    CR = CRTrue.unionWith(CRFalse);
+    CR = CRTrue.unionWith(CRFalse, ForSigned ? ConstantRange::Signed
+                                             : ConstantRange::Unsigned);
     CR = CR.intersectWith(getRangeForSelectPattern(*SI, SQ.IIQ));
   } else if (auto *TI = dyn_cast<TruncInst>(V)) {
     ConstantRange SrcCR =

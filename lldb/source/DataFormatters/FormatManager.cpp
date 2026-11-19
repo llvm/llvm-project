@@ -577,20 +577,15 @@ FormatManager::GetTypeForCache(ValueObject &valobj,
 
 std::vector<lldb::LanguageType>
 FormatManager::GetCandidateLanguages(lldb::LanguageType lang_type) {
-  switch (lang_type) {
-  case lldb::eLanguageTypeC:
-  case lldb::eLanguageTypeC89:
-  case lldb::eLanguageTypeC99:
-  case lldb::eLanguageTypeC11:
-  case lldb::eLanguageTypeC_plus_plus:
-  case lldb::eLanguageTypeC_plus_plus_03:
-  case lldb::eLanguageTypeC_plus_plus_11:
-  case lldb::eLanguageTypeC_plus_plus_14:
-    return {lldb::eLanguageTypeC_plus_plus, lldb::eLanguageTypeObjC};
-  default:
-    return {lang_type};
-  }
-  llvm_unreachable("Fully covered switch");
+  std::vector<lldb::LanguageType> candidates;
+  Language::ForEach([&](Language *language) {
+    for (lldb::LanguageType candidate :
+         language->GetFormatterLanguages(lang_type))
+      if (!llvm::is_contained(candidates, candidate))
+        candidates.push_back(candidate);
+    return IterationAction::Continue;
+  });
+  return candidates;
 }
 
 LanguageCategory *
