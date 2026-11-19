@@ -8176,6 +8176,121 @@ static bool shouldSinkVScale(Value *Op, SmallVectorImpl<Use *> &Ops) {
   return false;
 }
 
+/// Match an expression of scaled vscale splats, recording each operand's chain
+/// before its use. E.g.
+///  %vscale = call i64 @llvm.vscale.i64()
+///  %step = shl i64 %vscale, 2
+///  %step.trunc = trunc i64 %step to i32
+///  %insert = insertelement <vscale x 4 x i32> poison, i32 %step.trunc, i64 0
+///  %splat = shufflevector <vscale x 4 x i32> %insert,
+///                         <vscale x 4 x i32> poison,
+///                         <vscale x 4 x i32> zeroinitializer
+///  %next = add <vscale x 4 x i32> %z, %splat
+/// which will become INCW after ISel.
+static std::optional<int64_t>
+getSplatVScaleMultiplier(Value *Op, unsigned MaxMultiplier,
+                         SmallVectorImpl<Use *> &Ops, unsigned MaxDepth) {
+  if (!MaxDepth)
+    return std::nullopt;
+  --MaxDepth;
+
+  // LV or CSE might chain the vscale splats.
+  // E.g. splat(vscale x 2) + splat(vscale x 4) => splat(vscale x 6).
+  if (auto *Add = dyn_cast<BinaryOperator>(Op);
+      Add && Add->getOpcode() == Instruction::Add) {
+    auto LHS = getSplatVScaleMultiplier(Add->getOperand(0), MaxMultiplier, Ops,
+                                        MaxDepth);
+    if (!LHS)
+      return std::nullopt;
+    Ops.push_back(&Add->getOperandUse(0));
+    auto RHS = getSplatVScaleMultiplier(Add->getOperand(1), MaxMultiplier, Ops,
+                                        MaxDepth);
+    if (!RHS || std::abs(*LHS + *RHS) > MaxMultiplier)
+      return std::nullopt;
+    Ops.push_back(&Add->getOperandUse(1));
+    return *LHS + *RHS;
+  }
+
+  Value *Scalar;
+  if (!match(Op, m_Splat(m_Value(Scalar))))
+    return std::nullopt;
+
+  // Optionally match Scalar as trunc(elt)
+  auto *Trunc = dyn_cast<TruncInst>(Scalar);
+  if (Trunc)
+    Scalar = Trunc->getOperand(0);
+
+  // Optionally match Scalar as (sub 0, elt)
+  BinaryOperator *Neg = nullptr;
+  if (Value *NegatedScalar; isa<BinaryOperator>(Scalar) &&
+                            match(Scalar, m_Neg(m_Value(NegatedScalar)))) {
+    Neg = cast<BinaryOperator>(Scalar);
+    Scalar = NegatedScalar;
+  }
+
+  // Now match Scalar as (VScale x Multiplier) or VScale
+  uint64_t Multiplier = 1;
+  bool IsNegative = Neg != nullptr;
+  Value *VScale = Scalar;
+  ConstantInt *Imm;
+  if (match(Scalar, m_Shl(m_Value(), m_ConstantInt(Imm)))) {
+    if (Imm->getValue().ugt(Log2_32(MaxMultiplier)))
+      return std::nullopt;
+    Multiplier = uint64_t(1) << Imm->getZExtValue();
+    VScale = cast<Instruction>(Scalar)->getOperand(0);
+  } else if (match(Scalar, m_Mul(m_Value(), m_ConstantInt(Imm)))) {
+    Multiplier = Imm->getValue().abs().getLimitedValue();
+    IsNegative ^= Imm->isNegative();
+    VScale = cast<Instruction>(Scalar)->getOperand(0);
+  }
+
+  if (Multiplier > MaxMultiplier)
+    return std::nullopt;
+
+  // Finally, reconstruct the chain to sink.
+  if (match(VScale, m_ZExt(m_VScale())))
+    Ops.push_back(&cast<Instruction>(VScale)->getOperandUse(0));
+  else if (!match(VScale, m_VScale()))
+    return std::nullopt;
+  if (VScale != Scalar)
+    Ops.push_back(&cast<Instruction>(Scalar)->getOperandUse(0));
+  if (Neg)
+    Ops.push_back(&Neg->getOperandUse(1));
+  if (Trunc)
+    Ops.push_back(&Trunc->getOperandUse(0));
+  auto *Shuffle = cast<ShuffleVectorInst>(Op);
+  auto *Insert = cast<InsertElementInst>(Shuffle->getOperand(0));
+  Ops.push_back(&Insert->getOperandUse(1));
+  Ops.push_back(&Shuffle->getOperandUse(0));
+  return IsNegative ? -int64_t(Multiplier) : int64_t(Multiplier);
+}
+
+/// Sink expressions of scaled vscale splats that fold into vector INC/DEC.
+static bool shouldSinkSplatVScale(Value *Op, SmallVectorImpl<Use *> &Ops) {
+  auto *VT = dyn_cast<ScalableVectorType>(Op->getType());
+  if (!VT || !VT->getElementType()->isIntegerTy())
+    return false;
+
+  // DEC/INC support h, w and d elements.
+  unsigned EltBits = VT->getScalarSizeInBits();
+  unsigned NumElts = VT->getMinNumElements();
+  if (!is_contained({16U, 32U, 64U}, EltBits) ||
+      NumElts != AArch64::SVEBitsPerBlock / EltBits)
+    return false;
+
+  // DEC/INC support an immediate in [1, 16]
+  const unsigned MaxScale = 16 * NumElts;
+  SmallVector<Use *, 16> SplatOps;
+  auto Scale = getSplatVScaleMultiplier(Op, MaxScale, SplatOps, /*MaxDepth=*/4);
+  if (!Scale || std::abs(*Scale) < NumElts || *Scale % NumElts != 0)
+    return false;
+
+  // Note that CodeGenPrepare clones each instruction in the chain, so it can
+  // duplicate an instruciton if it appears multiple times.
+  Ops.append(SplatOps);
+  return true;
+}
+
 static bool isFNeg(Value *Op) {
   // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
   return match(Op, m_FNegOrFSubNegZero(m_Value()));
@@ -8336,9 +8451,20 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(Instruction *I,
     }
     break;
   }
-  case Instruction::GetElementPtr:
   case Instruction::Add:
   case Instruction::Sub:
+    if (ST->isSVEorStreamingSVEAvailable()) {
+      // Only the RHS of a subtraction can fold into an INC/DEC instruction.
+      unsigned FirstOp = I->getOpcode() == Instruction::Sub ? 1 : 0;
+      for (unsigned Op = FirstOp; Op < I->getNumOperands(); ++Op) {
+        if (shouldSinkSplatVScale(I->getOperand(Op), Ops)) {
+          Ops.push_back(&I->getOperandUse(Op));
+          return true;
+        }
+      }
+    }
+    [[fallthrough]];
+  case Instruction::GetElementPtr:
     // Sink vscales closer to uses for better isel
     for (unsigned Op = 0; Op < I->getNumOperands(); ++Op) {
       if (shouldSinkVScale(I->getOperand(Op), Ops)) {

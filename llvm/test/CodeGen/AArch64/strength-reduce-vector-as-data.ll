@@ -50,38 +50,33 @@ middle.block:
 define void @init_array_of_ptrs_to_structs_interleave4(ptr noalias %arc_ptrs, ptr %arc_new, i64 %num_arcs) #0 {
 ; CHECK-LABEL: init_array_of_ptrs_to_structs_interleave4:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cntd x8
-; CHECK-NEXT:    mov w9, #2147483647 // =0x7fffffff
-; CHECK-NEXT:    cnth x10
-; CHECK-NEXT:    mov z0.d, x8
-; CHECK-NEXT:    cntw x8
-; CHECK-NEXT:    inch x9
-; CHECK-NEXT:    mov z1.d, x8
-; CHECK-NEXT:    cntd x8, all, mul #3
-; CHECK-NEXT:    index z2.d, #0, #1
-; CHECK-NEXT:    mov z3.d, x8
-; CHECK-NEXT:    mov z4.d, x10
-; CHECK-NEXT:    mov z5.d, x1
-; CHECK-NEXT:    mov z6.d, #72 // =0x48
-; CHECK-NEXT:    and x8, x9, x2
+; CHECK-NEXT:    mov w8, #2147483647 // =0x7fffffff
+; CHECK-NEXT:    index z0.d, #0, #1
+; CHECK-NEXT:    mov z1.d, x1
+; CHECK-NEXT:    inch x8
+; CHECK-NEXT:    mov z2.d, #72 // =0x48
 ; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    and x8, x8, x2
 ; CHECK-NEXT:    sub x8, x8, x2
 ; CHECK-NEXT:  .LBB1_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    add z7.d, z2.d, z0.d
-; CHECK-NEXT:    add z16.d, z2.d, z1.d
-; CHECK-NEXT:    movprfx z18, z5
-; CHECK-NEXT:    mla z18.d, p0/m, z2.d, z6.d
-; CHECK-NEXT:    add z17.d, z2.d, z3.d
+; CHECK-NEXT:    mov z3.d, z0.d
+; CHECK-NEXT:    mov z4.d, z0.d
+; CHECK-NEXT:    movprfx z6, z1
+; CHECK-NEXT:    mla z6.d, p0/m, z0.d, z2.d
+; CHECK-NEXT:    mov z5.d, z0.d
 ; CHECK-NEXT:    inch x8
-; CHECK-NEXT:    add z2.d, z2.d, z4.d
-; CHECK-NEXT:    mad z7.d, p0/m, z6.d, z5.d
-; CHECK-NEXT:    mad z16.d, p0/m, z6.d, z5.d
-; CHECK-NEXT:    mad z17.d, p0/m, z6.d, z5.d
-; CHECK-NEXT:    str z18, [x0]
-; CHECK-NEXT:    str z7, [x0, #1, mul vl]
-; CHECK-NEXT:    str z16, [x0, #2, mul vl]
-; CHECK-NEXT:    str z17, [x0, #3, mul vl]
+; CHECK-NEXT:    incd z0.d, all, mul #4
+; CHECK-NEXT:    incd z3.d
+; CHECK-NEXT:    incd z4.d, all, mul #2
+; CHECK-NEXT:    incd z5.d, all, mul #3
+; CHECK-NEXT:    str z6, [x0]
+; CHECK-NEXT:    mad z3.d, p0/m, z2.d, z1.d
+; CHECK-NEXT:    mad z4.d, p0/m, z2.d, z1.d
+; CHECK-NEXT:    mad z5.d, p0/m, z2.d, z1.d
+; CHECK-NEXT:    str z3, [x0, #1, mul vl]
+; CHECK-NEXT:    str z4, [x0, #2, mul vl]
+; CHECK-NEXT:    str z5, [x0, #3, mul vl]
 ; CHECK-NEXT:    incb x0, all, mul #4
 ; CHECK-NEXT:    cbnz x8, .LBB1_1
 ; CHECK-NEXT:  // %bb.2: // %exit
@@ -137,29 +132,28 @@ exit:
 define void @init_offset_array(i64 %0, ptr %1, ptr nofree writeonly captures(none) %2) #0 {
 ; CHECK-LABEL: init_offset_array:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    index z0.d, x0, #-1
 ; CHECK-NEXT:    decb x2
-; CHECK-NEXT:    neg x8, x8
 ; CHECK-NEXT:    cmp x0, #1
-; CHECK-NEXT:    mov z2.d, x1
-; CHECK-NEXT:    mov z1.d, x8
-; CHECK-NEXT:    mov z3.d, #56 // =0x38
+; CHECK-NEXT:    cntd x8
+; CHECK-NEXT:    mov z1.d, x1
+; CHECK-NEXT:    mov z2.d, #56 // =0x38
 ; CHECK-NEXT:    csinc x9, x0, xzr, hi
+; CHECK-NEXT:    neg x8, x8
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    and x8, x9, x8
 ; CHECK-NEXT:    add x9, x2, #8
 ; CHECK-NEXT:  .LBB2_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movprfx z4, z0
-; CHECK-NEXT:    sub z4.d, z4.d, #1 // =0x1
+; CHECK-NEXT:    movprfx z3, z0
+; CHECK-NEXT:    sub z3.d, z3.d, #1 // =0x1
 ; CHECK-NEXT:    decd x8
-; CHECK-NEXT:    add z0.d, z0.d, z1.d
-; CHECK-NEXT:    movprfx z5, z2
-; CHECK-NEXT:    mla z5.d, p0/m, z4.d, z3.d
-; CHECK-NEXT:    fmov x10, d4
-; CHECK-NEXT:    rev z5.d, z5.d
-; CHECK-NEXT:    st1d { z5.d }, p0, [x9, x10, lsl #3]
+; CHECK-NEXT:    decd z0.d
+; CHECK-NEXT:    movprfx z4, z1
+; CHECK-NEXT:    mla z4.d, p0/m, z3.d, z2.d
+; CHECK-NEXT:    fmov x10, d3
+; CHECK-NEXT:    rev z4.d, z4.d
+; CHECK-NEXT:    st1d { z4.d }, p0, [x9, x10, lsl #3]
 ; CHECK-NEXT:    cbnz x8, .LBB2_1
 ; CHECK-NEXT:  // %bb.2: // %exit
 ; CHECK-NEXT:    ret
@@ -202,16 +196,15 @@ exit:
 define void @init_offset_array_interleave4(i64 %0, ptr %1, ptr nofree writeonly captures(none) %2) #0 {
 ; CHECK-LABEL: init_offset_array_interleave4:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cntd x8
+; CHECK-NEXT:    cnth x8
+; CHECK-NEXT:    cntd x9
 ; CHECK-NEXT:    mov x12, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    cnth x9
-; CHECK-NEXT:    mov z0.d, x8
-; CHECK-NEXT:    neg x8, x8
-; CHECK-NEXT:    index z3.d, x0, #-1
+; CHECK-NEXT:    neg x10, x8
+; CHECK-NEXT:    neg x8, x9
+; CHECK-NEXT:    index z0.d, x0, #-1
 ; CHECK-NEXT:    incd x12
 ; CHECK-NEXT:    add x8, x8, #1
 ; CHECK-NEXT:    cmp x0, #1
-; CHECK-NEXT:    neg x10, x9
 ; CHECK-NEXT:    mov x9, x8
 ; CHECK-NEXT:    decd x8
 ; CHECK-NEXT:    cntw x13
@@ -227,31 +220,34 @@ define void @init_offset_array_interleave4(i64 %0, ptr %1, ptr nofree writeonly 
 ; CHECK-NEXT:    sub x12, x14, x12
 ; CHECK-NEXT:  .LBB3_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    sub z4.d, z3.d, z0.d
+; CHECK-NEXT:    movprfx z3, z0
 ; CHECK-NEXT:    sub z3.d, z3.d, #1 // =0x1
+; CHECK-NEXT:    decd z0.d
 ; CHECK-NEXT:    dech x10
-; CHECK-NEXT:    sub z5.d, z4.d, z0.d
-; CHECK-NEXT:    mad z4.d, p0/m, z2.d, z1.d
-; CHECK-NEXT:    movprfx z7, z1
-; CHECK-NEXT:    mla z7.d, p0/m, z3.d, z2.d
+; CHECK-NEXT:    movprfx z4, z1
+; CHECK-NEXT:    mla z4.d, p0/m, z0.d, z2.d
+; CHECK-NEXT:    decd z0.d
+; CHECK-NEXT:    movprfx z6, z1
+; CHECK-NEXT:    mla z6.d, p0/m, z3.d, z2.d
 ; CHECK-NEXT:    fmov x13, d3
-; CHECK-NEXT:    sub z6.d, z5.d, z0.d
-; CHECK-NEXT:    mad z5.d, p0/m, z2.d, z1.d
+; CHECK-NEXT:    movprfx z5, z1
+; CHECK-NEXT:    mla z5.d, p0/m, z0.d, z2.d
+; CHECK-NEXT:    decd z0.d
 ; CHECK-NEXT:    sub z4.d, z4.d, #56 // =0x38
-; CHECK-NEXT:    rev z3.d, z7.d
+; CHECK-NEXT:    rev z3.d, z6.d
 ; CHECK-NEXT:    add x13, x2, x13, lsl #3
-; CHECK-NEXT:    movprfx z16, z1
-; CHECK-NEXT:    mla z16.d, p0/m, z6.d, z2.d
+; CHECK-NEXT:    movprfx z7, z1
+; CHECK-NEXT:    mla z7.d, p0/m, z0.d, z2.d
+; CHECK-NEXT:    decd z0.d
 ; CHECK-NEXT:    sub z5.d, z5.d, #56 // =0x38
 ; CHECK-NEXT:    rev z4.d, z4.d
 ; CHECK-NEXT:    st1d { z3.d }, p0, [x13, x9, lsl #3]
-; CHECK-NEXT:    sub z3.d, z6.d, z0.d
-; CHECK-NEXT:    sub z16.d, z16.d, #56 // =0x38
+; CHECK-NEXT:    sub z7.d, z7.d, #56 // =0x38
 ; CHECK-NEXT:    rev z5.d, z5.d
 ; CHECK-NEXT:    st1d { z4.d }, p0, [x13, x8, lsl #3]
-; CHECK-NEXT:    rev z7.d, z16.d
+; CHECK-NEXT:    rev z6.d, z7.d
 ; CHECK-NEXT:    st1d { z5.d }, p0, [x13, x11, lsl #3]
-; CHECK-NEXT:    st1d { z7.d }, p0, [x13, x12, lsl #3]
+; CHECK-NEXT:    st1d { z6.d }, p0, [x13, x12, lsl #3]
 ; CHECK-NEXT:    cbnz x10, .LBB3_1
 ; CHECK-NEXT:  // %bb.2: // %exit
 ; CHECK-NEXT:    ret
