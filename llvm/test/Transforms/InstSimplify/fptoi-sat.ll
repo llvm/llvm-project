@@ -610,3 +610,166 @@ define <2 x i32> @fptoui_f32_to_i32_vec() {
   %r = call <2 x i32> @llvm.fptoui.sat.v2i32.v2f32(<2 x float> <float 42.5, float -42.5>)
   ret <2 x i32> %r
 }
+
+define i32 @fptosi_sat_select_ord(float %a) {
+; CHECK-LABEL: @fptosi_sat_select_ord(
+; CHECK-NEXT:    [[NOT_NAN:%.*]] = fcmp ord float [[A:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[CVT:%.*]] = call i32 @llvm.fptosi.sat.i32.f32(float [[A]])
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[NOT_NAN]], i32 [[CVT]], i32 0
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %not.nan = fcmp ord float %a, 0.000000e+00
+  %cvt = call i32 @llvm.fptosi.sat.i32.f32(float %a)
+  %r = select i1 %not.nan, i32 %cvt, i32 0
+  ret i32 %r
+}
+
+define i32 @fptoui_sat_select_uno(float %a) {
+; CHECK-LABEL: @fptoui_sat_select_uno(
+; CHECK-NEXT:    [[IS_NAN:%.*]] = fcmp uno float [[A:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[CVT:%.*]] = call i32 @llvm.fptoui.sat.i32.f32(float [[A]])
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[IS_NAN]], i32 0, i32 [[CVT]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %is.nan = fcmp uno float %a, 0.000000e+00
+  %cvt = call i32 @llvm.fptoui.sat.i32.f32(float %a)
+  %r = select i1 %is.nan, i32 0, i32 %cvt
+  ret i32 %r
+}
+
+define i32 @fptoui_sat_select_ord_negzero(float %a) {
+; CHECK-LABEL: @fptoui_sat_select_ord_negzero(
+; CHECK-NEXT:    [[NOT_NAN:%.*]] = fcmp ord float [[A:%.*]], -0.000000e+00
+; CHECK-NEXT:    [[CVT:%.*]] = call i32 @llvm.fptoui.sat.i32.f32(float [[A]])
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[NOT_NAN]], i32 [[CVT]], i32 0
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %not.nan = fcmp ord float %a, -0.000000e+00
+  %cvt = call i32 @llvm.fptoui.sat.i32.f32(float %a)
+  %r = select i1 %not.nan, i32 %cvt, i32 0
+  ret i32 %r
+}
+
+define <2 x i32> @fptosi_sat_select_uno_vec(<2 x float> %a) {
+; CHECK-LABEL: @fptosi_sat_select_uno_vec(
+; CHECK-NEXT:    [[IS_NAN:%.*]] = fcmp uno <2 x float> [[A:%.*]], zeroinitializer
+; CHECK-NEXT:    [[CVT:%.*]] = call <2 x i32> @llvm.fptosi.sat.v2i32.v2f32(<2 x float> [[A]])
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[IS_NAN]], <2 x i32> zeroinitializer, <2 x i32> [[CVT]]
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %is.nan = fcmp uno <2 x float> %a, zeroinitializer
+  %cvt = call <2 x i32> @llvm.fptosi.sat.v2i32.v2f32(<2 x float> %a)
+  %r = select <2 x i1> %is.nan, <2 x i32> zeroinitializer, <2 x i32> %cvt
+  ret <2 x i32> %r
+}
+
+define <2 x i32> @fptoui_sat_select_ord_vec_poison(<2 x float> %a) {
+; CHECK-LABEL: @fptoui_sat_select_ord_vec_poison(
+; CHECK-NEXT:    [[NOT_NAN:%.*]] = fcmp ord <2 x float> [[A:%.*]], zeroinitializer
+; CHECK-NEXT:    [[CVT:%.*]] = call <2 x i32> @llvm.fptoui.sat.v2i32.v2f32(<2 x float> [[A]])
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[NOT_NAN]], <2 x i32> [[CVT]], <2 x i32> <i32 0, i32 poison>
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %not.nan = fcmp ord <2 x float> %a, zeroinitializer
+  %cvt = call <2 x i32> @llvm.fptoui.sat.v2i32.v2f32(<2 x float> %a)
+  %r = select <2 x i1> %not.nan, <2 x i32> %cvt, <2 x i32> <i32 0, i32 poison>
+  ret <2 x i32> %r
+}
+
+; Negative: select arms are swapped
+define i32 @neg_fptosi_sat_select_ord_swapped_arms(float %a) {
+; CHECK-LABEL: @neg_fptosi_sat_select_ord_swapped_arms(
+; CHECK-NEXT:    [[NOT_NAN:%.*]] = fcmp ord float [[A:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[CVT:%.*]] = call i32 @llvm.fptosi.sat.i32.f32(float [[A]])
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[NOT_NAN]], i32 0, i32 [[CVT]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %not.nan = fcmp ord float %a, 0.000000e+00
+  %cvt = call i32 @llvm.fptosi.sat.i32.f32(float %a)
+  %r = select i1 %not.nan, i32 0, i32 %cvt
+  ret i32 %r
+}
+
+; Negative: select arms are swapped
+define i32 @neg_fptoui_sat_select_uno_swapped_arms(float %a) {
+; CHECK-LABEL: @neg_fptoui_sat_select_uno_swapped_arms(
+; CHECK-NEXT:    [[IS_NAN:%.*]] = fcmp uno float [[A:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[CVT:%.*]] = call i32 @llvm.fptoui.sat.i32.f32(float [[A]])
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[IS_NAN]], i32 [[CVT]], i32 0
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %is.nan = fcmp uno float %a, 0.000000e+00
+  %cvt = call i32 @llvm.fptoui.sat.i32.f32(float %a)
+  %r = select i1 %is.nan, i32 %cvt, i32 0
+  ret i32 %r
+}
+
+; Negative: one lane of the other arm is not zero
+define <2 x i32> @neg_fptoui_sat_select_ord_vec_nonzero_lane(<2 x float> %a) {
+; CHECK-LABEL: @neg_fptoui_sat_select_ord_vec_nonzero_lane(
+; CHECK-NEXT:    [[NOT_NAN:%.*]] = fcmp ord <2 x float> [[A:%.*]], zeroinitializer
+; CHECK-NEXT:    [[CVT:%.*]] = call <2 x i32> @llvm.fptoui.sat.v2i32.v2f32(<2 x float> [[A]])
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[NOT_NAN]], <2 x i32> [[CVT]], <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %not.nan = fcmp ord <2 x float> %a, zeroinitializer
+  %cvt = call <2 x i32> @llvm.fptoui.sat.v2i32.v2f32(<2 x float> %a)
+  %r = select <2 x i1> %not.nan, <2 x i32> %cvt, <2 x i32> <i32 0, i32 1>
+  ret <2 x i32> %r
+}
+
+; Negative: fcmp also checks a different value for NaN
+define i32 @neg_fptosi_sat_select_ord_other_operand(float %a, float %b) {
+; CHECK-LABEL: @neg_fptosi_sat_select_ord_other_operand(
+; CHECK-NEXT:    [[NOT_NAN:%.*]] = fcmp ord float [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[CVT:%.*]] = call i32 @llvm.fptosi.sat.i32.f32(float [[A]])
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[NOT_NAN]], i32 [[CVT]], i32 0
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %not.nan = fcmp ord float %a, %b
+  %cvt = call i32 @llvm.fptosi.sat.i32.f32(float %a)
+  %r = select i1 %not.nan, i32 %cvt, i32 0
+  ret i32 %r
+}
+
+; Negative: conversion uses a different value than the one checked
+define i32 @neg_fptoui_sat_select_uno_other_value(float %a, float %b) {
+; CHECK-LABEL: @neg_fptoui_sat_select_uno_other_value(
+; CHECK-NEXT:    [[IS_NAN:%.*]] = fcmp uno float [[A:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[CVT:%.*]] = call i32 @llvm.fptoui.sat.i32.f32(float [[B:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[IS_NAN]], i32 0, i32 [[CVT]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %is.nan = fcmp uno float %a, 0.000000e+00
+  %cvt = call i32 @llvm.fptoui.sat.i32.f32(float %b)
+  %r = select i1 %is.nan, i32 0, i32 %cvt
+  ret i32 %r
+}
+
+; Negative: oeq with zero is not a NaN check
+define i32 @neg_fptosi_sat_select_oeq_zero(float %a) {
+; CHECK-LABEL: @neg_fptosi_sat_select_oeq_zero(
+; CHECK-NEXT:    [[IS_ZERO:%.*]] = fcmp oeq float [[A:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[CVT:%.*]] = call i32 @llvm.fptosi.sat.i32.f32(float [[A]])
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[IS_ZERO]], i32 [[CVT]], i32 0
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %is.zero = fcmp oeq float %a, 0.000000e+00
+  %cvt = call i32 @llvm.fptosi.sat.i32.f32(float %a)
+  %r = select i1 %is.zero, i32 %cvt, i32 0
+  ret i32 %r
+}
+
+; Negative: fptosi without sat returns poison for NaN
+define i32 @neg_fptosi_select_ord(float %a) {
+; CHECK-LABEL: @neg_fptosi_select_ord(
+; CHECK-NEXT:    [[NOT_NAN:%.*]] = fcmp ord float [[A:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[CVT:%.*]] = fptosi float [[A]] to i32
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[NOT_NAN]], i32 [[CVT]], i32 0
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %not.nan = fcmp ord float %a, 0.000000e+00
+  %cvt = fptosi float %a to i32
+  %r = select i1 %not.nan, i32 %cvt, i32 0
+  ret i32 %r
+}
