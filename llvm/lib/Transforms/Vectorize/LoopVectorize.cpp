@@ -5180,6 +5180,20 @@ bool LoopVectorizationPlanner::planForEpilogueTF() {
     return false;
   }
 
+  // MaxFactors isn't validated against the epilogue VF (see TODO above), so
+  // check explicitly that the target supports the loop's reductions for a
+  // scalable epilogue VF.
+  if (EpilogueVectorizationForceVF.isScalable() &&
+      !all_of(Legal->getReductionVars(), [&](const auto &Reduction) {
+        return TTI.isLegalToVectorizeReduction(Reduction.second,
+                                               EpilogueVectorizationForceVF);
+      })) {
+    reportVectorizationInfo("Scalable tail-folded epilogue is not supported "
+                            "for the reduction operations found in this loop",
+                            "InvalidTailFoldedEpilogue", ORE, OrigLoop);
+    return false;
+  }
+
   if (EpilogueTfCM.getTailFoldingStyle() !=
       TailFoldingStyle::DataAndControlFlow) {
     reportVectorizationInfo("Right now tail-folded epilogue is supported only "

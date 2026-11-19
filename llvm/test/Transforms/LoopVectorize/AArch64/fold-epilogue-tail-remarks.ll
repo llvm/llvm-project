@@ -13,6 +13,12 @@
 ; RUN: -force-tail-folding-style=data-and-control < %s 2>&1 | FileCheck %s \
 ; RUN: --check-prefix=CHECK-INVALID-COSTS
 
+; RUN: opt -S -p loop-vectorize -mattr=+sve -force-vector-width=16 \
+; RUN: -epilogue-tail-folding-policy=prefer-fold-tail \
+; RUN: -epilogue-vectorization-force-VF="vscale x 4" --disable-output \
+; RUN: -debug-only=loop-vectorize -pass-remarks-analysis=loop-vectorize \
+; RUN: %s 2>&1 | FileCheck %s --check-prefix=CHECK-FIXED-SCALABLE-VFs
+
 target triple = "aarch64-linux-gnu"
 
 define void @uniform_load_store_no_mask(ptr %s, ptr %cfg, i64 %n) {
@@ -54,6 +60,28 @@ loop:
 
 exit:
   ret float %max
+}
+
+define i32 @mul_redc_scalable(ptr %src, i64 %n) {
+; CHECK-FIXED-SCALABLE-VFs-LABEL: Checking a loop in 'mul_redc_scalable'
+; CHECK-FIXED-SCALABLE-VFs: LV: epilogue tail-folding is enabled
+; CHECK-FIXED-SCALABLE-VFs: remark: <unknown>:0:0: Scalable tail-folded epilogue is not supported for the reduction operations found in this loop
+; CHECK-FIXED-SCALABLE-VFs-NOT: LV: Tail-folded epilogue VPlan is created
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %red = phi i32 [ 1, %entry ], [ %mul, %loop ]
+  %gep = getelementptr inbounds i32, ptr %src, i64 %iv
+  %load = load i32, ptr %gep, align 4
+  %mul = mul i32 %red, %load
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret i32 %mul
 }
 
 define void @alloca(ptr %vla, i64 %N) {
