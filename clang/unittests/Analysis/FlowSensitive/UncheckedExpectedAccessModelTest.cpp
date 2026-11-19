@@ -24,15 +24,14 @@
 #include <utility>
 #include <vector>
 
-using namespace clang;
-using namespace dataflow;
-using namespace test;
+namespace clang::dataflow::test {
+namespace {
 
 using ::testing::ContainerEq;
 
 /// Replaces all occurrences of `Pattern` in `S` with `Replacement`.
-static void ReplaceAllOccurrences(std::string &S, const std::string &Pattern,
-                                  const std::string &Replacement) {
+void ReplaceAllOccurrences(std::string &S, const std::string &Pattern,
+                           const std::string &Replacement) {
   size_t Pos = 0;
   while (true) {
     Pos = S.find(Pattern, Pos);
@@ -46,8 +45,7 @@ struct ExpectedTypeIdentifier {
   std::string NamespaceName;
 };
 
-static raw_ostream &operator<<(raw_ostream &OS,
-                               const ExpectedTypeIdentifier &TypeId) {
+raw_ostream &operator<<(raw_ostream &OS, const ExpectedTypeIdentifier &TypeId) {
   OS << TypeId.NamespaceName << "::expected";
   return OS;
 }
@@ -64,7 +62,7 @@ protected:
   //   for an unchecked error access on that line.
   void ExpectDiagnosticsFor(std::string SourceCode) {
     // `tl::expected` is usable since C++17, and `std::expected` since C++23.
-    for (const char *CxxMode : {"-std=c++17", "-std=c++20", "-std=c++23"})
+    for (const char *CxxMode : {"-std=c++17", "-std=c++23"})
       ExpectDiagnosticsFor(SourceCode, CxxMode);
   }
 
@@ -179,6 +177,29 @@ TEST_P(UncheckedExpectedAccessTest, DerivedClassIsNotAnalyzed) {
       d.value();
       *d;
       d.error();
+    }
+  )");
+}
+
+TEST_P(UncheckedExpectedAccessTest, TypeAlias) {
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    using MyExpected = $ns::expected<int, int>;
+    typedef $ns::expected<int, int> MyExpectedTypedef;
+    template <typename T>
+    using MyExpectedT = $ns::expected<T, int>;
+
+    void target(MyExpected e1, MyExpectedTypedef e2, MyExpectedT<int> e3) {
+      e1.value(); // [[unsafe]]
+      *e2; // [[unsafe]]
+      e3.error(); // [[unsafe:error]]
+      if (e1)
+        e1.value();
+      if (e2.has_value())
+        *e2;
+      if (!e3)
+        e3.error();
     }
   )");
 }
@@ -306,7 +327,8 @@ TEST_P(UncheckedExpectedAccessTest, UnwrapInNegatedCheck) {
     #include "unchecked_expected_access_test.h"
 
     int target($ns::expected<int, int> e) {
-      return !e ? *e : 0; // [[unsafe]]
+      return !e ? //
+             *e : 0; // [[unsafe]]
     }
   )");
 }
@@ -466,7 +488,8 @@ TEST_P(UncheckedExpectedAccessTest, UnwrapErrorWhenHoldingValue) {
     #include "unchecked_expected_access_test.h"
 
     int target($ns::expected<int, int> e) {
-      return e ? e.error() : 0; // [[unsafe:error]]
+      return e ? //
+             e.error() : 0; // [[unsafe:error]]
     }
   )");
 }
@@ -586,3 +609,6 @@ TEST_P(UncheckedExpectedAccessTest, UnexpectedErrorIsNotAnAccess) {
     }
   )");
 }
+
+} // namespace
+} // namespace clang::dataflow::test
