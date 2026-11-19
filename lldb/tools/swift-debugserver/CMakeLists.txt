@@ -18,5 +18,6 @@ if(PROJECT_IS_TOP_LEVEL)
 endif()
 
 add_compile_options("$<$<COMPILE_LANGUAGE:Swift>:-explicit-module-build>")
+add_compile_options("$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Wwarning EmbeddedRestrictions>")
 
 add_subdirectory(Sources)
