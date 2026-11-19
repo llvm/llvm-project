@@ -545,11 +545,6 @@ bool llvm::isLibFreeFunction(const Function *F, const LibFunc TLIFn) {
 }
 
 Value *llvm::getFreedOperand(const CallBase *CB, const TargetLibraryInfo *TLI) {
-  // Exit early for functions which don't return void. The allockind("free")
-  // attribute requires this, and it's much cheaper to check that TLI.
-  if (!CB->getType()->isVoidTy())
-    return nullptr;
-
   if (const Function *Callee = getCalledFunction(CB)) {
     LibFunc TLIFn = TLI ? TLI->getLibFunc(*Callee) : NotLibFunc;
     if (TLIFn != NotLibFunc && TLI->has(TLIFn) &&
