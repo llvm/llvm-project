@@ -24,5 +24,6 @@ namespace llvm {}
 namespace clang {
 class DeclContextLookupResult {
   static int *const SingleElementDummyList;
+  static int *get() { return SingleElementDummyList; }
 };
 } // namespace clang
