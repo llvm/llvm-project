@@ -358,10 +358,25 @@ void WebAssemblyMCInstLower::lower(const MachineInstr *MI,
     OutMI.addOperand(MCOp);
   }
 
-  if (!WasmKeepRegisters)
+  if (!WasmKeepRegisters) {
     removeRegisterOperands(MI, OutMI);
-  else if (Desc.variadicOpsAreDefs())
+    switch (MI->getOpcode()) {
+    case WebAssembly::SELECT_FUNCREF:
+    case WebAssembly::SELECT_EXTERNREF:
+    case WebAssembly::SELECT_EXNREF:
+      // The untyped select is only valid for numeric and vector types, so
+      // emit the typed one, which names the type of its operands.
+      OutMI.setOpcode(WebAssembly::SELECT_T_S);
+      OutMI.addOperand(MCOperand::createImm(1));
+      OutMI.addOperand(MCOperand::createImm(static_cast<uint8_t>(
+          WebAssembly::regClassToValType(Desc.operands()[0].RegClass))));
+      break;
+    default:
+      break;
+    }
+  } else if (Desc.variadicOpsAreDefs()) {
     OutMI.insert(OutMI.begin(), MCOperand::createImm(MI->getNumExplicitDefs()));
+  }
 }
 
 static void removeRegisterOperands(const MachineInstr *MI, MCInst &OutMI) {
