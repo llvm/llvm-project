@@ -1607,19 +1607,22 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     Checker.checkSourceOverread(/*SrcArgIdx=*/0, /*SizeArgIdx=*/2);
     break;
   }
-  case Builtin::BIfread: {
+  case Builtin::BIfread:
+  case Builtin::BIfread_unlocked: {
     DiagID = diag::warn_fortify_source_overflow;
     AccessSize = Checker.ComputeExplicitObjectSizeArgumentProduct(1, 2);
     BufferSize = Checker.ComputeSizeArgument(0);
     break;
   }
-  case Builtin::BIfwrite: {
+  case Builtin::BIfwrite:
+  case Builtin::BIfwrite_unlocked: {
     DiagID = diag::warn_fortify_source_overread;
     AccessSize = Checker.ComputeExplicitObjectSizeArgumentProduct(1, 2);
     BufferSize = Checker.ComputeSizeArgument(0);
     break;
   }
-  case Builtin::BIfgets: {
+  case Builtin::BIfgets:
+  case Builtin::BIfgets_unlocked: {
     AccessSize = Checker.EvaluateIntegerArgument(1);
 
     if (AccessSize && AccessSize->isNegative()) {

@@ -569,6 +569,10 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   `explicit_bzero` is called with a size argument larger than the destination
   buffer.
 
+- `-Wfortify-source` now diagnoses calls to `fread_unlocked`,
+  `fwrite_unlocked`, and `fgets_unlocked` when the requested size exceeds the
+  corresponding buffer (or is negative for `fgets_unlocked`).
+
 - The `cannot overload a member function` diagnostic now describes the previous
   declaration first, matching the order in which the declarations appear in the
   source. (#GH219803)
