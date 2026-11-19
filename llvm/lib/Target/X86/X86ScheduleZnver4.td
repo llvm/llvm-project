@@ -573,14 +573,7 @@ def Zn4WritePDEP_PEXT : SchedWriteRes<[Zn4ALU1]> {
 def : InstRW<[Zn4WritePDEP_PEXT], (instrs PDEP32rr, PDEP64rr,
                                           PEXT32rr, PEXT64rr)>;
 
-defm : Zn4WriteResIntPair<WriteADC, [Zn4ALU0123], 1, [4], 1>; // Integer ALU + flags op.
-
-def Zn4WriteADC8mr_SBB8mr : SchedWriteRes<[Zn4AGU012, Zn4Load, Zn4ALU0123, Zn4Store]> {
-  let Latency = 1;
-  let ReleaseAtCycles = [1, 1, 7, 1];
-  let NumMicroOps = 1;
-}
-def : InstRW<[Zn4WriteADC8mr_SBB8mr], (instrs ADC8mr, SBB8mr)>;
+defm : Zn4WriteResIntPair<WriteADC, [Zn4ALU0123], 1, [1], 1>; // Integer ALU + flags op.
 
 // This is for simple LEAs with one or two input operands.
 defm : Zn4WriteResInt<WriteLEA, [Zn4AGU012], 1, [1], 1>;     // LEA instructions can't fold loads.
