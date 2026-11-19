@@ -146,7 +146,7 @@ public:
                           const SDLoc &dl, SelectionDAG &DAG,
                           SmallVectorImpl<SDValue> &InVals,
                           const SmallVectorImpl<SDValue> &OutVals,
-                          SDValue Callee, uint32_t *RegMask) const;
+                          SDValue Callee) const;
 
   SDValue LowerSETCC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVSELECT(SDValue Op, SelectionDAG &DAG) const;

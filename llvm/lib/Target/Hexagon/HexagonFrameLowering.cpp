@@ -1825,12 +1825,7 @@ MachineBasicBlock::iterator HexagonFrameLowering::insertCSRSpillsInBlock(
       // Add live in registers. We treat eh_return callee saved register r0 - r3
       // specially. They are not really callee saved registers as they are not
       // supposed to be killed.
-      // A register that is live into the function (e.g. an HLX argument of a
-      // preserve_hlx function) is still read after the spill.
-      bool IsLiveIn = any_of(MF.getRegInfo().liveins(), [&](const auto &LI) {
-        return HRI.regsOverlap(LI.first, Reg);
-      });
-      bool IsKill = !HRI.isEHReturnCalleeSaveReg(Reg) && !IsLiveIn;
+      bool IsKill = !HRI.isEHReturnCalleeSaveReg(Reg);
       int FI = I.getFrameIdx();
       const TargetRegisterClass *RC = HRI.getMinimalPhysRegClass(Reg);
       HII.storeRegToStackSlot(MBB, MI, Reg, IsKill, FI, RC, Register());

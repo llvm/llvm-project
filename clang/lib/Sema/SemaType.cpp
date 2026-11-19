@@ -38,6 +38,7 @@
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaHLSL.h"
+#include "clang/Sema/SemaHexagon.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/Template.h"
@@ -8457,6 +8458,14 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
 
   const FunctionType *fn = unwrapped.get();
   CallingConv CCOld = fn->getCallConv();
+
+  // preserve_hlx functions cannot pass or return HLX vectors, as HLX vectors
+  // are passed in the registers they preserve.
+  if (CC == CC_HexagonPreserveHLX && S.Hexagon().hasHLXVectorInSignature(fn)) {
+    S.Diag(attr.getLoc(), diag::err_hlx_invalid_attribute) << attr;
+    attr.setInvalid();
+    return true;
+  }
   Attr *CCAttr = getCCTypeAttr(S.Context, attr);
 
   if (CCOld != CC) {

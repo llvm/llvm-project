@@ -7000,16 +7000,13 @@ def HexagonPreserveHLXDocs : Documentation {
   let Heading = "preserve_hlx";
   let Content = [{
 On Hexagon with HLX enabled, the ``preserve_hlx`` calling convention makes a
-function preserve the HLX vector registers (``L0``-``L15``), so callers do not
-need to save HLX values around calls to it. The exception is the registers that
-hold an HLX vector return value. It maps to the LLVM ``hexagon_preserve_hlx``
-calling convention.
+function preserve all HLX vector registers (``L0``-``L15``), so callers do not
+need to save any HLX values around calls to it. It maps to the LLVM
+``hexagon_preserve_hlx`` calling convention.
 
-A ``preserve_hlx`` function may have HLX vector types in its signature. They use
-the same registers as in any function with HLX types: arguments are passed in
-``L0``-``L11`` (vector pairs in ``LL0``-``LL5``) and a return value in ``L0`` (a
-vector pair in ``LL0``). The callee preserves the argument registers, but not
-the return value registers.
+Because HLX vector arguments and return values are passed in HLX registers, it
+is an error to use ``preserve_hlx`` on a function whose return type or any
+parameter type is an HLX vector type.
 
 .. code-block:: c
 
