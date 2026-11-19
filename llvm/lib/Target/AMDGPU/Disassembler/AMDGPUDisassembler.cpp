@@ -1255,8 +1255,8 @@ bool AMDGPUDisassembler::convertWMMAInst(MCInst &MI) const {
   int FmtBIdx =
       AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::matrix_b_fmt);
 
-  unsigned FmtA = MI.getOperand(FmtAIdx).getImm();
-  unsigned FmtB = MI.getOperand(FmtBIdx).getImm();
+  uint64_t FmtA = MI.getOperand(FmtAIdx).getImm();
+  uint64_t FmtB = MI.getOperand(FmtBIdx).getImm();
 
   const AMDGPU::MFMA_F8F6F4_Info *AdjustedRegClassOpcode =
       AMDGPU::getWMMA_F8F6F4_WithFormatArgs(FmtA, FmtB, MI.getOpcode());
