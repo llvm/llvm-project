@@ -421,7 +421,6 @@ private:
   uint32_t operandSegmentSizesLegacyIndex = 0;
   uint32_t resultSegmentSizesLegacyIndex = 0;
 };
-
 } // namespace
 
 void OpOrAdaptorHelper::computeAttrMetadata() {
@@ -794,7 +793,6 @@ private:
   // The headers required by the op definition beyond those of the declaration.
   SmallVector<StringRef> requiredDefIncludes;
 };
-
 } // namespace
 
 // Populate the format context `ctx` with substitutions of attributes, operands
@@ -3824,6 +3822,9 @@ void OpEmitter::genVerifier() {
   ERROR_IF_PRUNED(implMethod, "verifyInvariantsImpl", op);
   auto &implBody = implMethod->body();
   populateSubstitutions(emitHelper, verifyCtx);
+  // Value verifiers may add a temporary $_self binding. Traits refer to the
+  // whole operation and must not inherit a binding to the last checked value.
+  FmtContext traitCtx = verifyCtx;
   genPropertyVerifier(emitHelper, verifyCtx, implBody, staticVerifierEmitter);
   genAttributeVerifier(emitHelper, verifyCtx, implBody, staticVerifierEmitter);
   genOperandResultVerifier(implBody, op.getOperands(), "operand");
@@ -3831,10 +3832,15 @@ void OpEmitter::genVerifier() {
 
   for (auto &trait : op.getTraits()) {
     if (auto *t = dyn_cast<tblgen::PredTrait>(&trait)) {
+      FmtOrigin origin =
+          FmtOrigin::at(t->getDef().getLoc(), "trait predicate")
+              .withUse(op.getLoc(),
+                       "operation '" + op.getOperationName() + "'");
+      std::string predicate =
+          tgfmtOrFatal(origin, t->getPredTemplate(), traitCtx);
       implBody << tgfmt("  if (!($0))\n    "
                         "return emitOpError(\"failed to verify that $1\");\n",
-                        &verifyCtx, tgfmt(t->getPredTemplate(), &verifyCtx),
-                        t->getSummary());
+                        &traitCtx, predicate, t->getSummary());
     }
   }
 
