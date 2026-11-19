@@ -27,6 +27,7 @@ lpad:                                             ; preds = %entry
 
 ; X64: .seh_handlerdata
 ; X64-NEXT: .Lmain$parent_frame_offset = 32
+; X64-NEXT: .Lmain$parent_frame_align_mask = -1
 ; X64-NEXT: .long   (.Llsda_end0-.Llsda_begin0)/16 # Number of call sites
 ; X64-NEXT: .Llsda_begin0:
 ; X64-NEXT: .long   .Ltmp0@IMGREL # LabelStart
