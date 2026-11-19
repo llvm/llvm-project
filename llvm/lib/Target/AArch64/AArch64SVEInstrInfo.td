@@ -2223,25 +2223,30 @@ let Predicates = [HasSVE_or_SME] in {
   defm TRN1_PPP : sve_int_perm_bin_perm_pp<0b100, "trn1", AArch64trn1, int_aarch64_sve_trn1_b16, int_aarch64_sve_trn1_b32, int_aarch64_sve_trn1_b64>;
   defm TRN2_PPP : sve_int_perm_bin_perm_pp<0b101, "trn2", AArch64trn2, int_aarch64_sve_trn2_b16, int_aarch64_sve_trn2_b32, int_aarch64_sve_trn2_b64>;
 
-  // Select TRNs with a zero vector for deinterleave and zero-extension.
-  multiclass unzipAndZeroExtPat<ValueType DstTy, ValueType SrcTy, ValueType SplatTy, int Mask, dag Zero,
-                                Instruction TRN1, Instruction TRN2> {
-    def : Pat<(DstTy (and (AArch64uzp1
-                            (AArch64uunpklo SrcTy:$src),
-                            (AArch64uunpkhi SrcTy:$src)),
-                            (splat_vector (SplatTy Mask)))),
-              (TRN1 ZPR:$src, Zero)>;
-    def : Pat<(DstTy (and (AArch64uzp2
-                            (AArch64uunpklo SrcTy:$src),
-                            (AArch64uunpkhi SrcTy:$src)),
-                            (splat_vector (SplatTy Mask)))),
-              (TRN2 ZPR:$src, Zero)>;
-  }
-  multiclass unzipAndZeroExtPats<dag Zero> {
-    defm : unzipAndZeroExtPat<nxv8i16, nxv16i8, i32, 0xff, Zero, TRN1_ZZZ_B, TRN2_ZZZ_B>;
-    defm : unzipAndZeroExtPat<nxv4i32, nxv8i16, i32, 0xffff, Zero, TRN1_ZZZ_H, TRN2_ZZZ_H>;
-    defm : unzipAndZeroExtPat<nxv2i64, nxv4i32, i64, 0xffffffff, Zero, TRN1_ZZZ_S, TRN2_ZZZ_S>;
-  }
+} // End HasSVE_or_SME
+
+// Select TRNs with a zero vector for deinterleave and zero-extension.
+multiclass unzipAndZeroExtPat<ValueType DstTy, ValueType SrcTy, ValueType SplatTy,
+                            int Mask, dag Zero, Instruction TRN1, Instruction TRN2> {
+  def : Pat<(DstTy (and (AArch64uzp1
+                          (AArch64uunpklo SrcTy:$src),
+                          (AArch64uunpkhi SrcTy:$src)),
+                          (splat_vector (SplatTy Mask)))),
+            (TRN1 ZPR:$src, Zero)>;
+  def : Pat<(DstTy (and (AArch64uzp2
+                          (AArch64uunpklo SrcTy:$src),
+                          (AArch64uunpkhi SrcTy:$src)),
+                          (splat_vector (SplatTy Mask)))),
+            (TRN2 ZPR:$src, Zero)>;
+}
+
+multiclass unzipAndZeroExtPats<dag Zero> {
+  defm : unzipAndZeroExtPat<nxv8i16, nxv16i8, i32, 0xff, Zero, TRN1_ZZZ_B, TRN2_ZZZ_B>;
+  defm : unzipAndZeroExtPat<nxv4i32, nxv8i16, i32, 0xffff, Zero, TRN1_ZZZ_H, TRN2_ZZZ_H>;
+  defm : unzipAndZeroExtPat<nxv2i64, nxv4i32, i64, 0xffffffff, Zero, TRN1_ZZZ_S, TRN2_ZZZ_S>;
+}
+
+let Predicates = [HasSVE_or_SME] in {
   defm : unzipAndZeroExtPats<(DUP_ZI_B 0, 0)>;
 
   // Extract lo/hi halves of legal predicate types.
