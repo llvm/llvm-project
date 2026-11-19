@@ -13,6 +13,7 @@
 
 #include "llvm/Support/KnownBits.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/bit.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -797,6 +798,44 @@ KnownBits KnownBits::abs(bool IntMinIsPoison) const {
   }
 
   return KnownAbs;
+}
+
+KnownBits KnownBits::ctlz(bool ZeroIsPoison) const {
+  unsigned BitWidth = getBitWidth();
+  if (isUnknown()) {
+    // Every count from zero through MaxCount is possible.
+    unsigned MaxCount = BitWidth - ZeroIsPoison;
+    KnownBits Result(BitWidth);
+    Result.Zero.setBitsFrom(llvm::bit_width(MaxCount));
+    return Result;
+  }
+
+  unsigned MinLZ = countMinLeadingZeros();
+  unsigned MaxLZ = countMaxLeadingZeros();
+  unsigned KnownOne = ~0u;
+  unsigned PossibleOne = 0;
+
+  // Any bit that may be 1 and has no known 1 above it can be the
+  // highest set bit. Join the counts for exactly those positions because
+  // [MinLZ, MaxLZ] may contain impossible counts.
+  for (unsigned Count = MinLZ; Count <= MaxLZ && Count < BitWidth; ++Count) {
+    if (!Zero[BitWidth - Count - 1]) {
+      KnownOne &= Count;
+      PossibleOne |= Count;
+    }
+  }
+
+  // 0 has no highest set bit and is possible exactly when no 1 is known.
+  if (!ZeroIsPoison && MaxLZ == BitWidth) {
+    KnownOne &= BitWidth;
+    PossibleOne |= BitWidth;
+  }
+
+  // No defined result (in particular, ctlz(0, true)): choose 0.
+  if (KnownOne == ~0u)
+    return makeConstant(APInt(BitWidth, 0));
+
+  return KnownBits(~APInt(BitWidth, PossibleOne), APInt(BitWidth, KnownOne));
 }
 
 KnownBits KnownBits::reduceAdd(unsigned NumElts) const {

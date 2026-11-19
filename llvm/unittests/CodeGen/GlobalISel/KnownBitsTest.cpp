@@ -1862,6 +1862,61 @@ TEST_F(AArch64GISelMITest, TestKnownBitsAssertZext) {
   EXPECT_EQ(0xFFFFFFFFFFFFFFF8u, Res.Zero.getZExtValue());
 }
 
+TEST_F(AArch64GISelMITest, TestKnownBitsCTLZ) {
+  setUp();
+  if (!TM)
+    GTEST_SKIP();
+
+  GISelValueTracking Info(*MF);
+  for (unsigned SrcWidth : {8u, 32u}) {
+    LLT SrcTy = LLT::scalar(SrcWidth);
+    auto Src = B.buildTrunc(SrcTy, Copies[0]);
+    auto Mask = B.buildConstant(SrcTy, uint64_t(1) << (SrcWidth - 1));
+    auto Masked = B.buildAnd(SrcTy, Src, Mask);
+    auto One = B.buildConstant(SrcTy, uint64_t(1) << (SrcWidth - 3));
+    auto Sparse = B.buildOr(SrcTy, Masked, One);
+
+    // The only possible counts are 0 and 2, so bit 0 is known zero.
+    // Also exercise result types narrower and wider than the source type.
+    for (unsigned DstWidth : {8u, 32u, 64u}) {
+      for (unsigned Opcode :
+           {TargetOpcode::G_CTLZ, TargetOpcode::G_CTLZ_ZERO_POISON}) {
+        auto Count = B.buildInstr(Opcode, {LLT::scalar(DstWidth)}, {Sparse});
+        KnownBits Res = Info.getKnownBits(Count.getReg(0));
+        EXPECT_EQ(APInt(DstWidth, 0), Res.One);
+        EXPECT_EQ(~APInt(DstWidth, 2), Res.Zero);
+      }
+    }
+  }
+}
+
+TEST_F(AArch64GISelMITest, TestKnownBitsCTLZZeroPoison) {
+  setUp();
+  if (!TM)
+    GTEST_SKIP();
+
+  GISelValueTracking Info(*MF);
+  LLT SrcTy = LLT::scalar(8);
+  auto Src = B.buildTrunc(SrcTy, Copies[0]);
+  auto Mask = B.buildConstant(SrcTy, 0x20);
+  auto Masked = B.buildAnd(SrcTy, Src, Mask);
+
+  for (unsigned DstWidth : {8u, 32u, 64u}) {
+    LLT DstTy = LLT::scalar(DstWidth);
+    // The source is either 0x20 or zero, giving counts 2 or 8.
+    auto Count = B.buildCTLZ(DstTy, Masked);
+    KnownBits Res = Info.getKnownBits(Count.getReg(0));
+    EXPECT_EQ(APInt(DstWidth, 0), Res.One);
+    EXPECT_EQ(~APInt(DstWidth, 10), Res.Zero);
+
+    // Excluding zero leaves just the constant count 2.
+    auto PoisonCount = B.buildCTLZ_ZERO_POISON(DstTy, Masked);
+    KnownBits PoisonRes = Info.getKnownBits(PoisonCount.getReg(0));
+    EXPECT_EQ(APInt(DstWidth, 2), PoisonRes.One);
+    EXPECT_EQ(~APInt(DstWidth, 2), PoisonRes.Zero);
+  }
+}
+
 TEST_F(AArch64GISelMITest, TestKnownBitsCTPOP) {
   StringRef MIRString = R"(
    %src:_(s32) = COPY $w0

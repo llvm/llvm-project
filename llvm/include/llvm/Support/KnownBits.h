@@ -551,6 +551,11 @@ public:
   /// Compute known bits for the absolute value.
   LLVM_ABI KnownBits abs(bool IntMinIsPoison = false) const;
 
+  /// Compute known bits for count leading zeros. The result has the same bit
+  /// width as the input. Zero inputs return the bit width unless ZeroIsPoison
+  /// is true.
+  LLVM_ABI KnownBits ctlz(bool ZeroIsPoison = false) const;
+
   /// Compute known bits for horizontal add for a vector with NumElts
   /// elements, where each element has the known bits represented by this
   /// object.

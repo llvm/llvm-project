@@ -2815,6 +2815,73 @@ TEST_F(ComputeKnownBitsTest, KnownNonZeroShift) {
   expectKnownBits(/*zero*/ 1u, /*one*/ 0u);
 }
 
+TEST_F(ComputeKnownBitsTest, ComputeKnownCtlzSparse) {
+  parseAssembly(R"(
+    define i8 @test(i8 %x) {
+      %masked = and i8 %x, -128
+      %input = or i8 %masked, 32
+      %A = call i8 @llvm.ctlz.i8(i8 %input, i1 false)
+      ret i8 %A
+    }
+    declare i8 @llvm.ctlz.i8(i8, i1 immarg)
+  )");
+  // Counts {0, 2}, not the interval [0, 2].
+  expectKnownBits(/*zero*/ 0b1111'1101u, /*one*/ 0b0000'0000u);
+}
+
+TEST_F(ComputeKnownBitsTest, ComputeKnownCtlzZeroPossible) {
+  parseAssembly(R"(
+    define i8 @test(i8 %x) {
+      %input = and i8 %x, 32
+      %A = call i8 @llvm.ctlz.i8(i8 %input, i1 false)
+      ret i8 %A
+    }
+    declare i8 @llvm.ctlz.i8(i8, i1 immarg)
+  )");
+  // Counts {2, 8}.
+  expectKnownBits(/*zero*/ 0b1111'0101u, /*one*/ 0b0000'0000u);
+}
+
+TEST_F(ComputeKnownBitsTest, ComputeKnownCtlzZeroPoison) {
+  parseAssembly(R"(
+    define i8 @test(i8 %x) {
+      %input = and i8 %x, 32
+      %A = call i8 @llvm.ctlz.i8(i8 %input, i1 true)
+      ret i8 %A
+    }
+    declare i8 @llvm.ctlz.i8(i8, i1 immarg)
+  )");
+  expectKnownBits(/*zero*/ 0b1111'1101u, /*one*/ 0b0000'0010u);
+}
+
+TEST_F(ComputeKnownBitsTest, ComputeKnownCtlzRange) {
+  parseAssembly(R"(
+    define i8 @test(i8 %x) {
+      %masked = and i8 %x, -128
+      %input = or i8 %masked, 32
+      %A = call range(i8 2, 3) i8 @llvm.ctlz.i8(i8 %input, i1 false)
+      ret i8 %A
+    }
+    declare i8 @llvm.ctlz.i8(i8, i1 immarg)
+  )");
+  // Preserve facts from the range attribute as well as the input's bits.
+  expectKnownBits(/*zero*/ 0b1111'1101u, /*one*/ 0b0000'0010u);
+}
+
+TEST_F(ComputeKnownBitsTest, ComputeKnownCtlzConflictingRange) {
+  parseAssembly(R"(
+    define i8 @test(i8 %x) {
+      %masked = and i8 %x, -128
+      %input = or i8 %masked, 32
+      %A = call range(i8 1, 2) i8 @llvm.ctlz.i8(i8 %input, i1 false)
+      ret i8 %A
+    }
+    declare i8 @llvm.ctlz.i8(i8, i1 immarg)
+  )");
+  // Neither possible count (0 or 2) satisfies the return range.
+  expectKnownBits(/*zero*/ 0b0000'0000u, /*one*/ 0b0000'0000u);
+}
+
 TEST_F(ComputeKnownBitsTest, ComputeKnownFshl) {
   // fshl(....1111....0000, 00..1111........, 6)
   // = 11....000000..11

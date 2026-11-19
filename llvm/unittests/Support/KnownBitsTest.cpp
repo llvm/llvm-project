@@ -694,6 +694,64 @@ TEST(KnownBitsTest, UnaryExhaustive) {
       [](const APInt &N) { return N * N; }, /*CheckOptimality=*/false);
 }
 
+TEST(KnownBitsTest, CtlzExhaustive) {
+  for (bool ZeroIsPoison : {false, true}) {
+    testUnaryOpExhaustive(
+        "ctlz",
+        [=](const KnownBits &Known) { return Known.ctlz(ZeroIsPoison); },
+        [=](const APInt &N) -> std::optional<APInt> {
+          if (ZeroIsPoison && N.isZero())
+            return std::nullopt;
+          return APInt(N.getBitWidth(), N.countl_zero());
+        });
+  }
+}
+
+TEST(KnownBitsTest, Ctlz) {
+  for (unsigned Bits : {1, 3, 7, 8, 31, 32, 64, 65, 128}) {
+    KnownBits Known = KnownBits::makeConstant(APInt(Bits, 0));
+    EXPECT_EQ(Known.ctlz(), KnownBits::makeConstant(APInt(Bits, Bits)));
+    EXPECT_TRUE(Known.ctlz(/*ZeroIsPoison=*/true).isZero());
+
+    for (unsigned I = 0; I < Bits; ++I) {
+      Known = KnownBits::makeConstant(APInt::getOneBitSet(Bits, I));
+      KnownBits Expected = KnownBits::makeConstant(APInt(Bits, Bits - I - 1));
+      EXPECT_EQ(Known.ctlz(), Expected);
+      EXPECT_EQ(Known.ctlz(/*ZeroIsPoison=*/true), Expected);
+    }
+
+    // All unknown: join every count, including/excluding the zero input.
+    Known.resetAll();
+    for (bool ZeroIsPoison : {false, true}) {
+      KnownBits Expected = KnownBits::makeConstant(APInt(Bits, 0));
+      for (unsigned Count = 1; Count <= Bits - ZeroIsPoison; ++Count)
+        Expected =
+            Expected.intersectWith(KnownBits::makeConstant(APInt(Bits, Count)));
+      EXPECT_EQ(Known.ctlz(ZeroIsPoison), Expected);
+    }
+
+    if (Bits < 3)
+      continue;
+
+    // Only counts 0 and 2 are possible, so the low result bit stays zero.
+    Known = KnownBits::makeConstant(APInt::getOneBitSet(Bits, Bits - 3));
+    Known.Zero.clearBit(Bits - 1);
+    KnownBits Expected(Bits);
+    Expected.Zero = ~APInt(Bits, 2);
+    EXPECT_EQ(Known.ctlz(), Expected);
+    EXPECT_EQ(Known.ctlz(/*ZeroIsPoison=*/true), Expected);
+
+    // Zero input is possible alongside count 2.
+    Known = KnownBits::makeConstant(APInt(Bits, 0));
+    Known.Zero.clearBit(Bits - 3);
+    Expected = KnownBits::makeConstant(APInt(Bits, 2));
+    EXPECT_EQ(Known.ctlz(/*ZeroIsPoison=*/true), Expected);
+    Expected =
+        Expected.intersectWith(KnownBits::makeConstant(APInt(Bits, Bits)));
+    EXPECT_EQ(Known.ctlz(), Expected);
+  }
+}
+
 TEST(KnownBitsTest, NonZeroDenomSDiv) {
   KnownBits Num = KnownBits::makeConstant(APInt(4, -8, true));
 
