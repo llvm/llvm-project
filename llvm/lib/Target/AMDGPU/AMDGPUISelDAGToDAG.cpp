@@ -301,8 +301,8 @@ bool AMDGPUDAGToDAGISel::matchLoadD16FromBuildVector(SDNode *N) const {
 
   // Need to check for possible indirect dependencies on the other half of the
   // vector to avoid introducing a cycle.
-  if (LdHi && Hi.hasOneUse() && !LdHi->isPredecessorOf(Lo.getNode()) &&
-      !LoIsT16Load) {
+  if (LdHi && Hi.hasOneUse() && !LoIsT16Load &&
+      !LdHi->isPredecessorOf(Lo.getNode())) {
     SDVTList VTList = CurDAG->getVTList(VT, MVT::Other);
 
     SDValue TiedIn = CurDAG->getNode(ISD::SCALAR_TO_VECTOR, SDLoc(N), VT, Lo);
