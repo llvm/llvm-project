@@ -251,12 +251,11 @@ public:
   /// (elementary analysis step handled by `dispatchWorkItem`).
   const CFGBlock *getCurrBlock() const { return CurrBlock; }
 
-  /// Get the 'current' CFGBlock and the index of the currently analyzed
-  /// statement within that block. When the current work item is not the
-  /// analysis of a `CFGElement` (e.g. a block terminator is being analyzed),
-  /// the returned `ConstCFGElementRef` is invalid (cannot be dereferenced) is
-  /// still useful for e.g. distinguishing conjured symbols.
+  /// If the current analysis step is the analysis of a `CFGElement`, return a
+  /// reference to it; otherwise return a `ConstCFGElementRef` that cannot be
+  /// dereferenced, but can be used to e.g. distinguish conjured symbols.
   ConstCFGElementRef getCFGElementRef() const {
+    // CurrStmtIdx is nullopt e.g. when processing a block terminator.
     return {getCurrBlock(), CurrStmtIdx.value_or(UINT_MAX)};
   }
 
