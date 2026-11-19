@@ -15,6 +15,11 @@ Place a test by the *question it asks*, not by the kind of input file it uses:
 * **`object-formats/<format>/<arch>/`** (e.g. `object-formats/mach-o/arm64/`):
   Tests that a specific object format feature (e.g. a relocation, section, or
   directive) is handled correctly. These are written in assembly.
+* **`orc-rt-c/<header path>`** (e.g. `orc-rt-c/bedrock/host/posix/`): Tests
+  that JIT'd code can use a C API that the runtime provides. Each test lives
+  at the path of the header that declares the API under test, and is named
+  after it (e.g. `dlfcn-host.c` tests
+  `orc-rt-c/bedrock/host/posix/dlfcn-host.h`).
 
 The `jit-free-foundations/` rule is enforced: the `%{cc}`, `%{cxx}`, `%{mc}`,
 and `%{obj-jit}` substitutions are unavailable there.
@@ -67,7 +72,9 @@ Conventions:
   new lowering doesn't work under the runtime.
 * **Write freestanding sources.** Don't include system headers; declare any
   library functions you need yourself. This keeps tests usable when
-  cross-compiling for targets without a sysroot.
+  cross-compiling for targets without a sysroot. Tests under `orc-rt-c/` are
+  the exception: they include the header that declares the API under test
+  (using `%{orc-rt-cflags}`), along with any system headers it includes.
 
 For tests compiled from source:
 
@@ -133,6 +140,8 @@ int main(void) {
 * **`%{obj-jit}`**: Links and runs its inputs under ogre, using `llvm-jitlink`
   as the controller. Pass `-show-jit-result` to print `JIT result: <value>`.
 * **`%{ogre}`**: Path to the ogre executable.
+* **`%{orc-rt-cflags}`**: Header search paths for the runtime's headers, for
+  tests that compile JIT'd code against the APIs the runtime provides.
 * **`%{test-dylib}`**: Path to a minimal shared library
   (`test/Inputs/orc-rt-test-dylib.c`), for tests that load, search, and close
   a host library. Its functions return distinct values, so that a test can
@@ -163,6 +172,8 @@ the host:
   `aarch64` are aliases).
 * **`target-object-format=<coff|elf|mach-o>`**: The runtime's target object
   format.
+* **`target-posix`**: The runtime was built with its shared POSIX host
+  implementation, and provides the POSIX-only APIs.
 * **`orc-rt-log-backend-<backend>`**, **`orc-rt-log-level-<level>`**: The
   runtime was built with the given logging backend / level.
 
@@ -170,6 +181,9 @@ the host:
 need to repeat those requirements. Likewise, `object-formats/` requires
 `llvm-mc` and `llvm-jitlink`, and each `<format>/<arch>/` subdirectory
 requires the matching `target-object-format=` and `target-arch=` features.
+`orc-rt-c/` requires `orc-rt-cc` and `llvm-jitlink`, and subdirectories for
+system-specific APIs require the matching feature (e.g. `target-posix` for
+`posix/`).
 
 ## Running with a different compiler
 
