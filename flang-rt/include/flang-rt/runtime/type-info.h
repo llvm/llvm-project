@@ -344,8 +344,11 @@ private:
   bool noFinalizationNeeded_{false};
   bool noDefinedAssignment_{false};
   // F2023 enumeration type: the only data component is the INTEGER(4)
-  // ordinal.  These occupy what was formerly padding, so tables from older
-  // compilers read as zero (not an enumeration type).
+  // ordinal.  These occupy what was formerly tail padding, which older
+  // compilers emit zero-filled, so their tables read as "not an enumeration
+  // type".  Each object file has its own linkonce_odr copy of a type's table,
+  // so in a program mixing objects from older and newer compilers the range
+  // check depends on which copy the linker keeps.
   bool isEnumeration_{false};
   std::int32_t enumeratorCount_{0};
 };
