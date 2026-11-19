@@ -750,6 +750,58 @@ void TestCombinedAllocator(uptr premapped_heap = 0) {
     allocated.clear();
     a->SwallowCache(&cache);
   }
+
+  // A failing Reallocate() must keep p allocated. (uptr)-1 overflows the
+  // size-plus-alignment check inside Allocate(), which logs a warning.
+  {
+    const uptr kSize = 128;
+    char* p = reinterpret_cast<char*>(a->Allocate(&cache, kSize, 1));
+    ASSERT_NE(p, nullptr);
+    uptr* meta = reinterpret_cast<uptr*>(a->GetMetaData(p));
+    *meta = kSize;
+    internal_memset(p, 'x', kSize);
+
+    EXPECT_EQ(a->Reallocate(&cache, p, (uptr)-1, 1), nullptr);
+
+    // These hold even for a released chunk; the loop below is what detects it.
+    EXPECT_EQ(*reinterpret_cast<uptr*>(a->GetMetaData(p)), kSize);
+    EXPECT_EQ(p[0], 'x');
+    EXPECT_EQ(p[kSize - 1], 'x');
+
+    void* others[8];
+    for (uptr i = 0; i < ARRAY_SIZE(others); i++) {
+      others[i] = a->Allocate(&cache, kSize, 1);
+      EXPECT_NE(others[i], p);
+    }
+    for (uptr i = 0; i < ARRAY_SIZE(others); i++)
+      a->Deallocate(&cache, others[i]);
+
+    *meta = 0;
+    a->Deallocate(&cache, p);
+    a->SwallowCache(&cache);
+  }
+
+  // Same for the secondary, where a release unmaps the chunk. A regression
+  // leaves p unmapped, so assert ownership before reading through it.
+  {
+    const uptr kLarge = 1 << 20;
+    void* p = a->Allocate(&cache, kLarge, 1);
+    ASSERT_NE(p, nullptr);
+    if (!a->FromPrimary(p)) {
+      uptr* meta = reinterpret_cast<uptr*>(a->GetMetaData(p));
+      *meta = kLarge;
+
+      EXPECT_EQ(a->Reallocate(&cache, p, (uptr)-1, 1), nullptr);
+
+      ASSERT_TRUE(a->PointerIsMine(p));
+      EXPECT_EQ(a->GetBlockBegin(p), p);
+      EXPECT_EQ(*reinterpret_cast<uptr*>(a->GetMetaData(p)), kLarge);
+      *meta = 0;
+    }
+    a->Deallocate(&cache, p);
+    a->SwallowCache(&cache);
+  }
+
   a->DestroyCache(&cache);
   a->TestOnlyUnmap();
 }
