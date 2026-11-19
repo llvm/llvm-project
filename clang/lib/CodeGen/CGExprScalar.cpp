@@ -791,6 +791,12 @@ public:
     if (E->isStoredAsBoolean())
       return llvm::ConstantInt::get(ConvertType(E->getType()),
                                     E->getBoolValue());
+    if (E->isStoredAsStringLiteral()) {
+      auto Addr = CGF.CGM.GetAddrOfConstantStringFromLiteral(
+          E->createStringLiteral(CGF.getContext()));
+      return Builder.CreatePointerBitCastOrAddrSpaceCast(
+          Addr.getPointer(), ConvertType(E->getType()));
+    }
     assert(E->getType()->isIntegerType() && "not a scalar type trait");
     assert(E->getAPValue().isInt() && "APValue type not supported");
     return llvm::ConstantInt::get(ConvertType(E->getType()),

@@ -34,12 +34,15 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <cstddef>
 #include <cstring>
 #include <memory>
 #include <optional>
+#include <string>
 
 using namespace clang;
 
@@ -1903,6 +1906,8 @@ TypeTraitExpr::TypeTraitExpr(
   TypeTraitExprBits.IsBooleanTypeTrait = std::holds_alternative<bool>(Value);
   TypeTraitExprBits.IsComparisonResult =
       std::holds_alternative<ComparisonCategoryResult>(Value);
+  TypeTraitExprBits.IsStringLiteral = std::holds_alternative<APValue>(Value) &&
+                                      std::get<APValue>(Value).isArray();
   if (TypeTraitExprBits.IsBooleanTypeTrait)
     TypeTraitExprBits.Value = std::get<bool>(Value);
   else {
@@ -1923,8 +1928,9 @@ TypeTraitExpr::TypeTraitExpr(
   setDependence(computeDependence(this));
 
   assert((TypeTraitExprBits.IsBooleanTypeTrait || isValueDependent() ||
-          getAPValue().isInt() || getAPValue().isAbsent()) &&
-         "Only int values are supported by clang");
+          getAPValue().isInt() || getAPValue().isAbsent() ||
+          (isStoredAsStringLiteral() && getAPValue().isArray())) &&
+         "unexpected type trait value");
 }
 
 TypeTraitExpr::TypeTraitExpr(EmptyShell Empty, bool IsStoredAsBool)
@@ -1951,7 +1957,11 @@ TypeTraitExpr *TypeTraitExpr::Create(const ASTContext &C, QualType T,
                                      SourceLocation RParenLoc, APValue Value) {
   void *Mem =
       C.Allocate(totalSizeToAlloc<APValue, TypeSourceInfo *>(1, Args.size()));
-  return new (Mem) TypeTraitExpr(T, Loc, Kind, Args, RParenLoc, Value);
+  auto *E =
+      new (Mem) TypeTraitExpr(T, Loc, Kind, Args, RParenLoc, std::move(Value));
+  if (E->getTrailingObjects<APValue>()->needsCleanup())
+    C.addDestruction(E->getTrailingObjects<APValue>());
+  return E;
 }
 
 TypeTraitExpr *TypeTraitExpr::Create(const ASTContext &C, QualType T,
@@ -1964,12 +1974,47 @@ TypeTraitExpr *TypeTraitExpr::Create(const ASTContext &C, QualType T,
   return new (Mem) TypeTraitExpr(T, Loc, Kind, Args, RParenLoc, Value);
 }
 
+TypeTraitExpr *TypeTraitExpr::Create(const ASTContext &C, QualType T,
+                                     SourceLocation Loc, TypeTrait Kind,
+                                     ArrayRef<TypeSourceInfo *> Args,
+                                     SourceLocation RParenLoc,
+                                     StringRef Value) {
+  APValue Result(APValue::UninitArray(), Value.size(), Value.size());
+  for (auto [I, Char] : llvm::enumerate(Value))
+    Result.getArrayInitializedElt(I) =
+        APValue(C.MakeIntValue(static_cast<unsigned char>(Char), C.CharTy));
+  return Create(C, T, Loc, Kind, Args, RParenLoc, std::move(Result));
+}
+
 TypeTraitExpr *TypeTraitExpr::CreateDeserialized(const ASTContext &C,
                                                  bool IsStoredAsBool,
                                                  unsigned NumArgs) {
   void *Mem = C.Allocate(totalSizeToAlloc<APValue, TypeSourceInfo *>(
       IsStoredAsBool ? 0 : 1, NumArgs));
   return new (Mem) TypeTraitExpr(EmptyShell(), IsStoredAsBool);
+}
+
+std::string TypeTraitExpr::getStringValue() const {
+  assert(isStoredAsStringLiteral() && "not a string-valued type trait");
+  const APValue &Value = getAPValue();
+  assert(Value.isArray() && !Value.hasArrayFiller() &&
+         "expected a fully initialized string value");
+
+  std::string Str(Value.getArrayInitializedElts(), '\0');
+  for (auto [I, Char] : llvm::enumerate(Str))
+    Char = static_cast<char>(
+        Value.getArrayInitializedElt(I).getInt().getZExtValue());
+  return Str;
+}
+
+StringLiteral *
+TypeTraitExpr::createStringLiteral(const ASTContext &Context) const {
+  std::string Str = getStringValue();
+  llvm::APInt Size(Context.getTypeSize(Context.getSizeType()), Str.size() + 1);
+  QualType ArrayTy = Context.getConstantArrayType(
+      Context.CharTy.withConst(), Size, nullptr, ArraySizeModifier::Normal, 0);
+  return StringLiteral::Create(Context, Str, StringLiteralKind::Ordinary,
+                               /*Pascal=*/false, ArrayTy, getBeginLoc());
 }
 
 CXXReflectExpr::CXXReflectExpr(EmptyShell Empty)
