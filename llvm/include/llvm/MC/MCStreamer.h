@@ -299,10 +299,6 @@ protected:
   std::unique_ptr<MCLFIRewriter> LFIRewriter;
 
 public:
-  bool hasActiveWinCFI() const {
-    return CurrentWinFrameInfo && !CurrentWinFrameInfo->End;
-  }
-
   MCStreamer(const MCStreamer &) = delete;
   MCStreamer &operator=(const MCStreamer &) = delete;
   virtual ~MCStreamer();
