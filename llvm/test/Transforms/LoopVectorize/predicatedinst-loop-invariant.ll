@@ -22,33 +22,39 @@ define void @loop_invariant_store(ptr %p, i64 %a, i8 %b) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ule <4 x i32> [[VEC_IND]], splat (i32 8)
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp slt <4 x i32> [[VEC_IND]], splat (i32 2)
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP5]], <4 x i32> [[TMP3]], <4 x i32> [[TMP2]]
-; CHECK-NEXT:    [[TMP7:%.*]] = shl <4 x i32> [[PREDPHI]], splat (i32 8)
-; CHECK-NEXT:    [[TMP8:%.*]] = trunc <4 x i32> [[TMP7]] to <4 x i8>
 ; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <4 x i1> [[TMP4]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP16]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
-; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <4 x i8> [[TMP8]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[PREDPHI]], i64 0
+; CHECK-NEXT:    [[TMP8:%.*]] = shl i32 [[TMP7]], 8
+; CHECK-NEXT:    [[TMP17:%.*]] = trunc i32 [[TMP8]] to i8
 ; CHECK-NEXT:    store i8 [[TMP17]], ptr [[P]], align 1
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; CHECK:       [[PRED_STORE_CONTINUE]]:
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i1> [[TMP4]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP11]], label %[[PRED_STORE_IF3:.*]], label %[[PRED_STORE_CONTINUE4:.*]]
 ; CHECK:       [[PRED_STORE_IF3]]:
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i8> [[TMP8]], i64 1
+; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <4 x i32> [[PREDPHI]], i64 1
+; CHECK-NEXT:    [[TMP21:%.*]] = shl i32 [[TMP18]], 8
+; CHECK-NEXT:    [[TMP12:%.*]] = trunc i32 [[TMP21]] to i8
 ; CHECK-NEXT:    store i8 [[TMP12]], ptr [[P]], align 1
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE4]]
 ; CHECK:       [[PRED_STORE_CONTINUE4]]:
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i1> [[TMP4]], i64 2
 ; CHECK-NEXT:    br i1 [[TMP13]], label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6:.*]]
 ; CHECK:       [[PRED_STORE_IF5]]:
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x i8> [[TMP8]], i64 2
+; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <4 x i32> [[PREDPHI]], i64 2
+; CHECK-NEXT:    [[TMP23:%.*]] = shl i32 [[TMP22]], 8
+; CHECK-NEXT:    [[TMP14:%.*]] = trunc i32 [[TMP23]] to i8
 ; CHECK-NEXT:    store i8 [[TMP14]], ptr [[P]], align 1
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
 ; CHECK:       [[PRED_STORE_CONTINUE6]]:
 ; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x i1> [[TMP4]], i64 3
 ; CHECK-NEXT:    br i1 [[TMP15]], label %[[PRED_STORE_IF7:.*]], label %[[PRED_STORE_CONTINUE8]]
 ; CHECK:       [[PRED_STORE_IF7]]:
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i8> [[TMP8]], i64 3
+; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <4 x i32> [[PREDPHI]], i64 3
+; CHECK-NEXT:    [[TMP20:%.*]] = shl i32 [[TMP19]], 8
+; CHECK-NEXT:    [[TMP9:%.*]] = trunc i32 [[TMP20]] to i8
 ; CHECK-NEXT:    store i8 [[TMP9]], ptr [[P]], align 1
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE8]]
 ; CHECK:       [[PRED_STORE_CONTINUE8]]:
