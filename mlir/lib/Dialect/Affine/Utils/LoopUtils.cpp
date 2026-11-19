@@ -12,10 +12,12 @@
 
 #include "mlir/Dialect/Affine/LoopUtils.h"
 #include "mlir/Analysis/SliceAnalysis.h"
+#include "mlir/Dialect/Affine/Analysis/AffineAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "mlir/Dialect/Affine/Utils.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
@@ -1155,6 +1157,54 @@ LogicalResult mlir::affine::loopUnrollJamByFactor(AffineForOp forOp,
   if (!areInnerBoundsInvariant(forOp))
     return failure();
 
+  // Result-bearing target loops are only supported when all iter_args are
+  // unflagged scalar integer reductions. Compute their identities without
+  // mutating the IR.
+  SmallVector<LoopReduction> reductions;
+  SmallVector<TypedAttr> reductionIdentityAttrs(forOp.getNumIterOperands());
+  if (forOp.getNumIterOperands() > 0) {
+    getSupportedReductions(forOp, reductions);
+    if (reductions.size() != forOp.getNumIterOperands())
+      return failure();
+
+    OpBuilder attrBuilder(forOp.getContext());
+    for (const LoopReduction &reduction : reductions) {
+      unsigned pos = reduction.iterArgPosition;
+      Type resultType = forOp.getResult(pos).getType();
+      if (!isa<IntegerType>(resultType))
+        return failure();
+
+      Operation *combinerOp =
+          *forOp.getRegionIterArgs()[pos].getUsers().begin();
+      if (auto overflowOp =
+              dyn_cast<arith::ArithIntegerOverflowFlagsInterface>(combinerOp);
+          overflowOp && overflowOp.getOverflowAttr().getValue() !=
+                            arith::IntegerOverflowFlags::none)
+        return failure();
+
+      TypedAttr identity = arith::getIdentityValueAttr(
+          reduction.kind, resultType, attrBuilder, forOp.getLoc());
+      if (!identity)
+        return failure();
+      reductionIdentityAttrs[pos] = identity;
+    }
+  }
+
+  bool needsCleanup =
+      getLargestDivisorOfTripCount(forOp) % unrollJamFactor != 0;
+  if (needsCleanup) {
+    // Multi-result bounds cannot express the cleanup loop lower bound.
+    if (forOp.getLowerBoundMap().getNumResults() != 1 ||
+        forOp.getUpperBoundMap().getNumResults() != 1)
+      return failure();
+
+    AffineMap tripCountMap;
+    SmallVector<Value> tripCountOperands;
+    getTripCountMapAndOperands(forOp, &tripCountMap, &tripCountOperands);
+    if (!tripCountMap)
+      return failure();
+  }
+
   // Gather all sub-blocks to jam upon the loop being unrolled.
   JamBlockGatherer<AffineForOp> jbg;
   jbg.walk(forOp);
@@ -1167,21 +1217,9 @@ LogicalResult mlir::affine::loopUnrollJamByFactor(AffineForOp forOp,
       loopsWithIterArgs.push_back(aForOp);
   });
 
-  // Get supported reductions to be used for creating reduction ops at the end.
-  SmallVector<LoopReduction> reductions;
-  if (forOp.getNumIterOperands() > 0)
-    getSupportedReductions(forOp, reductions);
-
   // Generate the cleanup loop if trip count isn't a multiple of
   // unrollJamFactor.
-  if (getLargestDivisorOfTripCount(forOp) % unrollJamFactor != 0) {
-    // Loops where the lower bound is a max expression or the upper bound is
-    // a min expression and the trip count doesn't divide the unroll factor
-    // can't be unrolled since the lower bound of the cleanup loop in such cases
-    // cannot be expressed as an affine function or a max over affine functions.
-    if (forOp.getLowerBoundMap().getNumResults() != 1 ||
-        forOp.getUpperBoundMap().getNumResults() != 1)
-      return failure();
+  if (needsCleanup) {
     if (failed(generateCleanupLoopForUnroll(forOp, unrollJamFactor)))
       assert(false && "cleanup loop lower bound map for single result lower "
                       "and upper bound maps can always be determined");
@@ -1196,6 +1234,15 @@ LogicalResult mlir::affine::loopUnrollJamByFactor(AffineForOp forOp,
   // operands.
   SmallVector<AffineForOp, 4> newLoopsWithIterArgs;
   IRRewriter rewriter(forOp.getContext());
+  SmallVector<Value> reductionIdentities(reductionIdentityAttrs.size());
+  if (!reductionIdentityAttrs.empty()) {
+    rewriter.setInsertionPoint(forOp);
+    for (const LoopReduction &reduction : reductions) {
+      unsigned pos = reduction.iterArgPosition;
+      reductionIdentities[pos] = arith::ConstantOp::create(
+          rewriter, forOp.getLoc(), reductionIdentityAttrs[pos]);
+    }
+  }
   for (AffineForOp oldForOp : loopsWithIterArgs) {
     SmallVector<Value> dupIterOperands, dupYieldOperands;
     ValueRange oldIterOperands = oldForOp.getInits();
@@ -1204,13 +1251,16 @@ LogicalResult mlir::affine::loopUnrollJamByFactor(AffineForOp forOp,
         cast<AffineYieldOp>(oldForOp.getBody()->getTerminator()).getOperands();
     // Get additional iterOperands, iterArgs, and yield operands. We will
     // fix iterOperands and yield operands after cloning of sub-blocks.
+    bool forOpReplaced = oldForOp == forOp;
     for (unsigned i = unrollJamFactor - 1; i >= 1; --i) {
-      dupIterOperands.append(oldIterOperands.begin(), oldIterOperands.end());
+      if (forOpReplaced)
+        dupIterOperands.append(reductionIdentities);
+      else
+        dupIterOperands.append(oldIterOperands.begin(), oldIterOperands.end());
       dupYieldOperands.append(oldYieldOperands.begin(), oldYieldOperands.end());
     }
     // Create a new loop with additional iterOperands, iter_args and yield
     // operands. This new loop will take the loop body of the original loop.
-    bool forOpReplaced = oldForOp == forOp;
     AffineForOp newForOp =
         cast<AffineForOp>(*oldForOp.replaceWithAdditionalYields(
             rewriter, dupIterOperands, /*replaceInitOperandUsesInLoop=*/false,
@@ -1280,9 +1330,10 @@ LogicalResult mlir::affine::loopUnrollJamByFactor(AffineForOp forOp,
         // The `i`th duplication of an old iterOperand or yield op operand
         // needs to be replaced with a mapped value from `operandMaps[i - 1]`
         // if such mapped value exists.
-        newForOp.setOperand(numControlOperands + i * oldNumIterOperands + j,
-                            operandMaps[i - 1].lookupOrDefault(
-                                newForOp.getOperand(numControlOperands + j)));
+        if (newForOp != forOp)
+          newForOp.setOperand(numControlOperands + i * oldNumIterOperands + j,
+                              operandMaps[i - 1].lookupOrDefault(
+                                  newForOp.getOperand(numControlOperands + j)));
         yieldOp.setOperand(
             i * oldNumYieldOperands + j,
             operandMaps[i - 1].lookupOrDefault(yieldOp.getOperand(j)));
