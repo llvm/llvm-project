@@ -828,7 +828,7 @@ void Rematerializer::extendToNewUsers(RegisterIdx RegIdx,
     // Derive register lanes read by that user.
     LaneBitmask RegMask;
     for (MachineOperand &MO : UserMI->all_uses()) {
-      if (MO.getReg() == DefReg) {
+      if (MO.getReg() == DefReg && !MO.isUndef()) {
         unsigned SubIdx = MO.getSubReg();
         if (SubIdx == 0) {
           RegMask = FullLaneMask;
@@ -837,6 +837,8 @@ void Rematerializer::extendToNewUsers(RegisterIdx RegIdx,
         RegMask |= TRI.getSubRegIndexLaneMask(SubIdx);
       }
     }
+    if (RegMask.none())
+      continue;
 
     if (RegMask != FullLaneMask) {
       // Refine sub-ranges to be able to track the mask for that user.
