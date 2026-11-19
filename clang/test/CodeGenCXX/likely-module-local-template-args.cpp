@@ -1,24 +1,34 @@
 // RUN: rm -rf %t
 // RUN: split-file %s %t
-// RUN: %clang_cc1 -triple arm64-apple-macosx14.0.0 -std=c++20 -emit-llvm -fmodule-local-hints -o - %t/main.cpp | FileCheck %s
-// RUN: %clang_cc1 -triple arm64-apple-macosx14.0.0 -std=c++20 -emit-llvm -o - %t/main.cpp | FileCheck %s --check-prefix=NOHINTS
+// RUN: %clang_cc1 -triple arm64-apple-macosx14.0.0 -std=c++20 -emit-llvm -o - %t/main.cpp | FileCheck %s
+// RUN: %clang_cc1 -triple arm64-apple-macosx14.0.0 -std=c++20 -emit-llvm -fno-module-local-hints -o - %t/main.cpp | FileCheck %s --check-prefix=NOHINTS
 
 //--- hdr.h
 struct HdrStruct {};
+enum class HdrEnum { X };
 template <class T> int hdr_size(T) { return sizeof(T); }
+template <class T> int hdr_ty() { return 1; }
 template <class F> int hdr_call(F f) { return f(); }
 template <int (*F)()> int hdr_callp() { return F(); }
 template <template <class> class C> int hdr_tt() { return sizeof(C<int>); }
 template <class... Ts> int hdr_pack(Ts...) { return sizeof...(Ts); }
+template <class T> int hdr_inner(T) {
+  return [] { return (int)sizeof(T); }();
+}
 template <class T> struct HdrBox {
   T t;
   int get() { return sizeof(t); }
+  struct Inner {
+    int f() { return sizeof(T); }
+  };
 };
+template <class T> struct HdrWrap {};
 
 //--- main.cpp
 #include "hdr.h"
 
 struct Local {};
+enum class LocalEnum { A };
 int local_fn() { return 1; }
 template <class T> struct LocalBox { T t; };
 inline int main_inline() { return hdr_call([] { return 2; }); }
@@ -28,6 +38,22 @@ int use() {
          hdr_size(HdrBox<Local>()) + main_inline() + hdr_callp<local_fn>() +
          hdr_tt<LocalBox>() + hdr_pack(1, Local()) + HdrBox<Local>().get() +
          hdr_size(HdrStruct()) + HdrBox<int>().get();
+}
+
+int use_more() {
+  return
+      // Types looked through: enum, array, reference, function, member
+      // pointer, and nested class template specializations.
+      hdr_ty<LocalEnum>() + hdr_ty<Local[2]>() + hdr_ty<Local &>() +
+      hdr_ty<int(Local)>() + hdr_ty<int Local::*>() +
+      hdr_ty<Local HdrStruct::*>() + hdr_ty<HdrWrap<HdrBox<Local>>>() +
+      // A lambda and a nested class's member in a header template instantiated
+      // with a main-file class.
+      hdr_inner(Local()) + HdrBox<Local>::Inner().f() +
+      // Header-only arguments, never marked.
+      hdr_ty<HdrEnum>() + hdr_ty<int HdrStruct::*>() +
+      hdr_ty<HdrWrap<HdrBox<int>>>() +
+      hdr_inner(HdrStruct()) + HdrBox<int>::Inner().f();
 }
 
 // A plain function, never marked.
@@ -54,6 +80,27 @@ int use() {
 // Instantiations with only header and builtin types are never marked.
 // CHECK-DAG: define linkonce_odr {{.*}} @_Z8hdr_sizeI9HdrStructEiT_({{.*}}) #[[OFF]]
 // CHECK-DAG: define linkonce_odr {{.*}} @_ZN6HdrBoxIiE3getEv({{.*}}) #[[OFF]]
+
+// Explicit type arguments from main.cpp, looked through compound types.
+// CHECK-DAG: define linkonce_odr {{.*}} @_Z6hdr_tyI9LocalEnumEiv() #[[ON]]
+// CHECK-DAG: define linkonce_odr {{.*}} @_Z6hdr_tyIA2_5LocalEiv() #[[ON]]
+// CHECK-DAG: define linkonce_odr {{.*}} @_Z6hdr_tyIR5LocalEiv() #[[ON]]
+// CHECK-DAG: define linkonce_odr {{.*}} @_Z6hdr_tyIFi5LocalEEiv() #[[ON]]
+// CHECK-DAG: define linkonce_odr {{.*}} @_Z6hdr_tyIM5LocaliEiv() #[[ON]]
+// CHECK-DAG: define linkonce_odr {{.*}} @_Z6hdr_tyIM9HdrStruct5LocalEiv() #[[ON]]
+// CHECK-DAG: define linkonce_odr {{.*}} @_Z6hdr_tyI7HdrWrapI6HdrBoxI5LocalEEEiv() #[[ON]]
+
+// A lambda inside, and a nested class's member of, a header template
+// instantiated with a main.cpp class.
+// CHECK-DAG: define linkonce_odr {{.*}} @_ZZ9hdr_innerI5LocalEiT_ENKUlvE_clEv({{.*}}) #[[ON]]
+// CHECK-DAG: define linkonce_odr {{.*}} @_ZN6HdrBoxI5LocalE5Inner1fEv({{.*}}) #[[ON]]
+
+// The same shapes with only header and builtin arguments.
+// CHECK-DAG: define linkonce_odr {{.*}} @_Z6hdr_tyI7HdrEnumEiv() #[[OFF]]
+// CHECK-DAG: define linkonce_odr {{.*}} @_Z6hdr_tyIM9HdrStructiEiv() #[[OFF]]
+// CHECK-DAG: define linkonce_odr {{.*}} @_Z6hdr_tyI7HdrWrapI6HdrBoxIiEEEiv() #[[OFF]]
+// CHECK-DAG: define linkonce_odr {{.*}} @_ZZ9hdr_innerI9HdrStructEiT_ENKUlvE_clEv({{.*}}) #[[OFF]]
+// CHECK-DAG: define linkonce_odr {{.*}} @_ZN6HdrBoxIiE5Inner1fEv({{.*}}) #[[OFF]]
 
 // CHECK: attributes #[[OFF]] = {
 // CHECK-NOT: likely_module_local
