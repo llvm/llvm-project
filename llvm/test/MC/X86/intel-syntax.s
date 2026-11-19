@@ -692,7 +692,7 @@ fxrstor64 [rax]
 // CHECK: movq _g0(,%rsi,4), %rax
 mov rbx, qword ptr [_g0]
 mov rcx, qword ptr [_g0 + 8]
-mov rax, QWORD PTR _g0[rbp + 1 + (2 * 5) - 3 + 1<<1]
+mov rax, QWORD PTR _g0[rbp + (1 + (2 * 5) - 3 + 1<<1)]
 mov rax, QWORD PTR _g0[rsi*4]
 
 "?half@?0??bar@@YAXXZ@4NA":
@@ -919,3 +919,18 @@ lea eax, [esp+eax]
 vpgatherdq ymm0, [rdi+xmm1], ymm2
 // CHECK: vpgatherdq      %ymm2, (%rdi,%xmm1), %ymm0
 vpgatherdq ymm0, [xmm1+rdi], ymm2
+
+// CHECK: movq $_foo-_bar, %rax
+mov rax, offset _foo - _bar
+// CHECK: addl $_GLOBAL_OFFSET_TABLE_+(.Ltmp0-.L0$pb), %eax
+add eax, offset _GLOBAL_OFFSET_TABLE_+(.Ltmp0-.L0$pb)
+// CHECK: movl _foo-_bar(%rbx), %eax
+mov eax, [rbx + _foo - _bar]
+// CHECK: movl -_foo(%rbx), %eax
+mov eax, [rbx - _foo]
+// CHECK: movl -_foo+4(%rbx), %eax
+mov eax, [rbx + 4 - _foo]
+// CHECK: movl _foo*2, %eax
+mov eax, [_foo * 2]
+// CHECK: movl arr+i, %eax
+mov eax, DWORD PTR arr[i]
