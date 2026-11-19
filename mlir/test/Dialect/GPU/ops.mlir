@@ -17,6 +17,20 @@ module attributes {gpu.container_module} {
     return
   }
 
+  // CHECK-LABEL: func @launch_calling_convention(
+  // CHECK-SAME: %{{.*}}: index, %[[VALUE0:[^, ]+]]: i32, %[[VALUE1:[^, ]+]]: f32)
+  func.func @launch_calling_convention(%sz : index, %value0 : i32, %value1 : f32) {
+    // CHECK: gpu.launch blocks({{.*}}) threads({{.*}}) calling_convention(%[[VALUE0]] : i32 {test.attr = 42 : i32}, %[[VALUE1]] : f32)
+    gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %sz, %grid_y = %sz, %grid_z = %sz)
+               threads(%tx, %ty, %tz) in (%block_x = %sz, %block_y = %sz, %block_z = %sz)
+               calling_convention(%value0 : i32 {test.attr = 42 : i32}, %value1 : f32) {
+      "use"(%value0) : (i32) -> ()
+      "use"(%value1) : (f32) -> ()
+      gpu.terminator
+    }
+    return
+  }
+
   // CHECK-LABEL:func @launch_cooperative(%{{.*}}: index)
   func.func @launch_cooperative(%sz : index) {
     // CHECK: gpu.launch blocks(%{{.*}}, %{{.*}}, %{{.*}}) in (%{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}) threads(%{{.*}}, %{{.*}}, %{{.*}}) in (%{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}) cooperative

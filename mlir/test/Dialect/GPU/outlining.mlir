@@ -60,6 +60,33 @@ func.func @launch() {
 
 // -----
 
+// CHECK-LABEL: func @launch_calling_convention(
+// CHECK-SAME: %[[EXPLICIT0:.*]]: i32, %[[EXPLICIT1:.*]]: f32, %[[IMPLICIT:.*]]: memref<?xf32>)
+func.func @launch_calling_convention(%explicit0 : i32, %explicit1 : f32,
+                                     %implicit : memref<?xf32>) {
+  %dim = arith.constant 1 : index
+  // CHECK: gpu.launch_func @launch_calling_convention_kernel::@launch_calling_convention_kernel
+  // CHECK-SAME: args(%[[EXPLICIT0]] : i32, %[[EXPLICIT1]] : f32, %[[IMPLICIT]] : memref<?xf32>)
+  gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %dim, %grid_y = %dim,
+                                       %grid_z = %dim)
+             threads(%tx, %ty, %tz) in (%block_x = %dim, %block_y = %dim,
+                                        %block_z = %dim)
+             calling_convention(%explicit0 : i32 {test.attr0},
+                                %explicit1 : f32 {test.attr1 = 42 : i32}) {
+    "use"(%explicit0, %explicit1) : (i32, f32) -> ()
+    %value = memref.load %implicit[%tx] : memref<?xf32>
+    "use"(%value) : (f32) -> ()
+    gpu.terminator
+  }
+  return
+}
+
+// CHECK-LABEL: gpu.module @launch_calling_convention_kernel
+// CHECK-NEXT: gpu.func @launch_calling_convention_kernel
+// CHECK-SAME: (%[[KERNEL_EXPLICIT0:.*]]: i32 {test.attr0}, %[[KERNEL_EXPLICIT1:.*]]: f32 {test.attr1 = 42 : i32}, %[[KERNEL_IMPLICIT:.*]]: memref<?xf32>)
+
+// -----
+
 // Verify that we can outline a CFG
 // CHECK-LABEL:  gpu.func @launchCFG_kernel(
 // CHECK: cf.br
