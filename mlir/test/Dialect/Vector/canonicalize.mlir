@@ -1062,6 +1062,49 @@ func.func @fold_extract_shuffle(%a : vector<8xf32>, %b : vector<8xf32>)
 
 // -----
 
+// Multi-dimensional extraction of scalar from 2D shuffle
+// CHECK-LABEL: @fold_extract_shuffle_multidim
+//  CHECK-SAME:   %[[A:.*]]: vector<2x4xf32>, %[[B:.*]]: vector<2x4xf32>
+//   CHECK-NOT:   vector.shuffle
+//       CHECK:   vector.extract %[[A]][1, 3] : f32 from vector<2x4xf32>
+//       CHECK:   vector.extract %[[B]][0, 2] : f32 from vector<2x4xf32>
+func.func @fold_extract_shuffle_multidim(%a : vector<2x4xf32>, %b : vector<2x4xf32>) -> (f32, f32) {
+  %shuffle = vector.shuffle %a, %b [1, 2] : vector<2x4xf32>, vector<2x4xf32>
+  %e0 = vector.extract %shuffle[0, 3] : f32 from vector<2x4xf32>
+  %e1 = vector.extract %shuffle[1, 2] : f32 from vector<2x4xf32>
+  return %e0, %e1 : f32, f32
+}
+
+// -----
+
+// Multi-dimensional extraction of subvector from 2D shuffle
+// CHECK-LABEL: @fold_extract_shuffle_subvector
+//  CHECK-SAME:   %[[A:.*]]: vector<2x4xf32>, %[[B:.*]]: vector<2x4xf32>
+//   CHECK-NOT:   vector.shuffle
+//       CHECK:   vector.extract %[[B]][1] : vector<4xf32> from vector<2x4xf32>
+func.func @fold_extract_shuffle_subvector(%a : vector<2x4xf32>, %b : vector<2x4xf32>) -> vector<4xf32> {
+  %shuffle = vector.shuffle %a, %b [0, 3] : vector<2x4xf32>, vector<2x4xf32>
+  %e = vector.extract %shuffle[1] : vector<4xf32> from vector<2x4xf32>
+  return %e : vector<4xf32>
+}
+
+// -----
+
+// Extraction from 0-D vector shuffle
+// CHECK-LABEL: @fold_extract_shuffle_0d
+//  CHECK-SAME:   %[[A:.*]]: vector<f32>, %[[B:.*]]: vector<f32>
+//   CHECK-NOT:   vector.shuffle
+//       CHECK:   vector.extract %[[B]][] : f32 from vector<f32>
+//       CHECK:   vector.extract %[[A]][] : f32 from vector<f32>
+func.func @fold_extract_shuffle_0d(%a : vector<f32>, %b : vector<f32>) -> (f32, f32) {
+  %shuffle = vector.shuffle %a, %b [1, 0] : vector<f32>, vector<f32>
+  %e0 = vector.extract %shuffle[0] : f32 from vector<2xf32>
+  %e1 = vector.extract %shuffle[1] : f32 from vector<2xf32>
+  return %e0, %e1 : f32, f32
+}
+
+// -----
+
 // CHECK-LABEL: func @fold_extract_shapecast
 //  CHECK-SAME: (%[[A0:.*]]: vector<5x1x3x2xf32>, %[[A1:.*]]: vector<8x4x2xf32>
 //       CHECK:   %[[R0:.*]] = vector.extract %[[A0]][1, 0, 1, 1] : f32 from vector<5x1x3x2xf32>
