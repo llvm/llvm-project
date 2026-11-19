@@ -552,6 +552,18 @@ static T cachedLookup(Type t, DenseMap<Type, T> &cache,
   return result.first->second;
 }
 
+bool mlir::DataLayout::hasTypeEntry(Type type) const {
+  checkValid();
+  if (!originalLayout)
+    return false;
+  return cachedLookup<bool>(type, typeEntries, [&](Type ty) {
+    return llvm::any_of(
+        originalLayout.getEntries(), [ty](DataLayoutEntryInterface entry) {
+          return llvm::dyn_cast_if_present<Type>(entry.getKey()) == ty;
+        });
+  });
+}
+
 llvm::TypeSize mlir::DataLayout::getTypeSize(Type t) const {
   checkValid();
   return cachedLookup<llvm::TypeSize>(t, sizes, [&](Type ty) {
