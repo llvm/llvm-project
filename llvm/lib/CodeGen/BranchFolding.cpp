@@ -19,6 +19,7 @@
 #include "BranchFolding.h"
 #include "CodeGenOptions.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -191,6 +192,36 @@ void BranchFolder::RemoveDeadBlock(MachineBasicBlock *MBB) {
     MLI->removeBlock(MBB);
   MF->erase(MBB);
   EHScopeMembership.erase(MBB);
+}
+
+bool BranchFolder::RemoveUnreachableBlocks(MachineFunction &MF) {
+  df_iterator_default_set<MachineBasicBlock *> Reachable;
+  for (MachineBasicBlock &MBB : MF) {
+    if (!MBB.isEntryBlock() && !MBB.isEHPad() &&
+        !MBB.isMachineBlockAddressTaken())
+      continue;
+    for (MachineBasicBlock *BB : depth_first_ext(&MBB, Reachable))
+      (void)BB;
+  }
+
+  SmallVector<MachineBasicBlock *, 4> Dead;
+  for (MachineBasicBlock &MBB : MF)
+    if (!Reachable.contains(&MBB))
+      Dead.push_back(&MBB);
+  if (Dead.empty())
+    return false;
+
+  // Drop edges out of dead blocks first: every predecessor of a dead block is
+  // dead, so afterwards all of them have no predecessors.
+  for (MachineBasicBlock *MBB : Dead)
+    while (!MBB->succ_empty())
+      MBB->removeSuccessor(MBB->succ_end() - 1);
+
+  for (MachineBasicBlock *MBB : Dead) {
+    RemoveDeadBlock(MBB);
+    ++NumDeadBlocks;
+  }
+  return true;
 }
 
 bool BranchFolder::OptimizeFunction(MachineFunction &MF,
@@ -1277,6 +1308,7 @@ bool BranchFolder::OptimizeBranches(MachineFunction &MF) {
     }
   }
 
+  MadeChange |= RemoveUnreachableBlocks(MF);
   return MadeChange;
 }
 
