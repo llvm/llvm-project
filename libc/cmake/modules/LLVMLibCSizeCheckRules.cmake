@@ -38,15 +38,8 @@ function(_libc_size_check_dump_macros output_file)
     list(APPEND cmd "--target=${CMAKE_CXX_COMPILER_TARGET}")
   endif()
   separate_arguments(cxx_flags NATIVE_COMMAND "${CMAKE_CXX_FLAGS}")
-  list(APPEND cmd ${cxx_flags})
-  foreach(opt IN LISTS ARGN)
-    if(opt MATCHES "^SHELL:(.*)$")
-      separate_arguments(shell_opts NATIVE_COMMAND "${CMAKE_MATCH_1}")
-      list(APPEND cmd ${shell_opts})
-    else()
-      list(APPEND cmd ${opt})
-    endif()
-  endforeach()
+  _libc_size_check_expand_options(options ${ARGN})
+  list(APPEND cmd ${cxx_flags} ${options})
   list(APPEND cmd -dM -E -x c++ /dev/null)
   get_filename_component(output_dir ${output_file} DIRECTORY)
   file(MAKE_DIRECTORY ${output_dir})
@@ -158,4 +151,110 @@ function(add_libc_object_size_check name)
   if(object_targets)
     add_dependencies(${name} ${object_targets})
   endif()
+endfunction()
+
+# Expands "SHELL:" prefixed options into separate arguments.
+function(_libc_size_check_expand_options output_var)
+  set(result "")
+  foreach(opt IN LISTS ARGN)
+    if(opt MATCHES "^SHELL:(.*)$")
+      separate_arguments(shell_opts NATIVE_COMMAND "${CMAKE_MATCH_1}")
+      list(APPEND result ${shell_opts})
+    else()
+      list(APPEND result ${opt})
+    endif()
+  endforeach()
+  set(${output_var} ${result} PARENT_SCOPE)
+endfunction()
+
+# Adds a report of the size of minimal programs that call the functions in
+# `PROBES` and are linked against the archives in `ARCHIVE_TARGETS`. The
+# report is informational: the target only fails if the probes cannot be
+# built at all. Probes that need the compiler runtime builtins are skipped
+# when no builtins library is available.
+#
+# Usage:
+#   add_libc_size_probes(
+#     <name>
+#     PROBES <probe list file>
+#     MANIFEST <object manifest of add_libc_object_size_check>
+#     ARCHIVE_TARGETS <libc archive targets>
+#   )
+function(add_libc_size_probes name)
+  cmake_parse_arguments(
+    "SIZE_PROBES"
+    "" # Optional arguments
+    "PROBES;MANIFEST" # Single value arguments
+    "ARCHIVE_TARGETS" # Multi value arguments
+    ${ARGN}
+  )
+
+  set(flags "")
+  if(CMAKE_C_COMPILER_TARGET)
+    list(APPEND flags "--target=${CMAKE_C_COMPILER_TARGET}")
+  endif()
+  separate_arguments(c_flags NATIVE_COMMAND "${CMAKE_C_FLAGS}")
+  _libc_size_check_expand_options(default_options ${LIBC_COMPILE_OPTIONS_DEFAULT})
+  list(APPEND flags ${c_flags} ${default_options})
+  _libc_size_check_expand_options(link_flags ${LIBC_LINK_OPTIONS_DEFAULT})
+  if(LLVM_USE_LINKER)
+    list(APPEND link_flags "-fuse-ld=${LLVM_USE_LINKER}")
+  endif()
+
+  # Use the same compiler runtime builtins as the hermetic tests.
+  set(builtins "")
+  set(builtins_target "")
+  if(LIBC_TEST_BUILTINS_LIBRARY)
+    set(builtins ${LIBC_TEST_BUILTINS_LIBRARY})
+  elseif(LIBC_TEST_BUILTINS_TARGET)
+    set(builtins "$<TARGET_FILE:${LIBC_TEST_BUILTINS_TARGET}>")
+    set(builtins_target ${LIBC_TEST_BUILTINS_TARGET})
+  else()
+    execute_process(
+      COMMAND ${CMAKE_C_COMPILER} ${flags} ${link_flags} -print-libgcc-file-name
+      OUTPUT_VARIABLE libgcc_file
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+      RESULT_VARIABLE result
+      ERROR_QUIET
+    )
+    if(result EQUAL 0 AND EXISTS "${libgcc_file}")
+      set(builtins ${libgcc_file})
+    else()
+      message(STATUS "libc size probes: no compiler runtime builtins library "
+        "found; probes that need it will be skipped. Set "
+        "LIBC_TEST_BUILTINS_LIBRARY or LIBC_TEST_BUILTINS_TARGET to link them.")
+    endif()
+  endif()
+
+  set(probe_args "")
+  foreach(flag IN LISTS flags)
+    list(APPEND probe_args "--cflag=${flag}")
+  endforeach()
+  foreach(flag IN LISTS link_flags)
+    list(APPEND probe_args "--ldflag=${flag}")
+  endforeach()
+  foreach(archive IN LISTS SIZE_PROBES_ARCHIVE_TARGETS)
+    list(APPEND probe_args "--archive=$<TARGET_FILE:${archive}>")
+  endforeach()
+
+  add_custom_target(
+    ${name}
+    COMMAND
+      ${Python3_EXECUTABLE} ${LIBC_SIZE_CHECK_SCRIPT} probes
+      --probes ${SIZE_PROBES_PROBES}
+      --manifest ${SIZE_PROBES_MANIFEST}
+      --work-dir ${CMAKE_CURRENT_BINARY_DIR}/${name}
+      --cc ${CMAKE_C_COMPILER}
+      ${probe_args}
+      "--builtins=${builtins}"
+      --nm ${LIBC_SIZE_CHECK_NM}
+      --readelf ${LIBC_SIZE_CHECK_READELF}
+      --json ${CMAKE_CURRENT_BINARY_DIR}/${name}.json
+      --markdown ${CMAKE_CURRENT_BINARY_DIR}/${name}.md
+    DEPENDS ${SIZE_PROBES_PROBES} ${SIZE_PROBES_MANIFEST} ${LIBC_SIZE_CHECK_SCRIPT}
+    COMMENT "Linking libc size probes"
+    USES_TERMINAL
+    VERBATIM
+  )
+  add_dependencies(${name} ${SIZE_PROBES_ARCHIVE_TARGETS} ${builtins_target})
 endfunction()
