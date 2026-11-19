@@ -102,9 +102,10 @@ uint64_t AMDGPUABIInfo::numRegsForType(QualType Ty) const {
   if (const auto *RD = Ty->getAsRecordDecl()) {
     assert(!RD->hasFlexibleArrayMember());
 
-    if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD))
+    if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
       for (const CXXBaseSpecifier &Base : CXXRD->bases())
         NumRegs += numRegsForType(Base.getType());
+    }
 
     for (const FieldDecl *Field : RD->fields()) {
       QualType FieldTy = Field->getType();
