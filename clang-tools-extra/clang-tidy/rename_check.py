@@ -275,7 +275,9 @@ def main() -> None:
 
     old_module_path = os.path.join(clang_tidy_path, old_module)
     new_module_path = os.path.join(clang_tidy_path, new_module)
-    checkers_path = os.path.join(clang_tidy_path, "..", "test", "clang-tidy", "checkers")
+    checkers_path = os.path.join(
+        clang_tidy_path, "..", "test", "clang-tidy", "checkers"
+    )
     old_test_dir = os.path.join(checkers_path, old_module, old_name)
     new_test_dir = os.path.join(checkers_path, new_module, new_name)
     move_test_dir = old_test_dir != new_test_dir and os.path.isdir(old_test_dir)
