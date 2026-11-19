@@ -22,9 +22,9 @@ define i64 @foo0(<2 x i64> %a) nounwind {
 ;
 ; CHECK-GI-LABEL: foo0:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov.d x8, v0[1]
-; CHECK-GI-NEXT:    fmov x9, d0
-; CHECK-GI-NEXT:    add x0, x9, x8
+; CHECK-GI-NEXT:    fmov x8, d0
+; CHECK-GI-NEXT:    mov.d x9, v0[1]
+; CHECK-GI-NEXT:    add x0, x8, x9
 ; CHECK-GI-NEXT:    ret
   %lane0.i = extractelement <2 x i64> %a, i32 0
   %lane1.i = extractelement <2 x i64> %a, i32 1
@@ -41,9 +41,9 @@ define i64 @foo0_or(<2 x i64> %a) nounwind {
 ;
 ; CHECK-GI-LABEL: foo0_or:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov.d x8, v0[1]
-; CHECK-GI-NEXT:    fmov x9, d0
-; CHECK-GI-NEXT:    orr x0, x9, x8
+; CHECK-GI-NEXT:    fmov x8, d0
+; CHECK-GI-NEXT:    mov.d x9, v0[1]
+; CHECK-GI-NEXT:    orr x0, x8, x9
 ; CHECK-GI-NEXT:    ret
   %lane0.i = extractelement <2 x i64> %a, i32 0
   %lane1.i = extractelement <2 x i64> %a, i32 1

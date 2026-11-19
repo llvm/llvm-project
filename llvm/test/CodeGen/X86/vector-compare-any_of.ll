@@ -1262,8 +1262,8 @@ define {i32, i1} @test_v16i8_muti_uses(<16 x i8> %x, <16 x i8>%y, <16 x i8> %z) 
 ; AVX512-NEXT:    vpcmpeqb %xmm1, %xmm0, %k0
 ; AVX512-NEXT:    vpcmpeqb %xmm1, %xmm2, %k1
 ; AVX512-NEXT:    kunpckwd %k0, %k1, %k0
-; AVX512-NEXT:    kortestd %k0, %k0
 ; AVX512-NEXT:    kmovd %k0, %eax
+; AVX512-NEXT:    kortestd %k0, %k0
 ; AVX512-NEXT:    sete %dl
 ; AVX512-NEXT:    retq
   %t1 = icmp eq <16 x i8> %x, %y

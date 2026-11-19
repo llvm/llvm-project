@@ -24,13 +24,13 @@ define void @test_mismatched_setcc(<4 x i22> %l, <4 x i22> %r, ptr %addr) {
 ; CHECK-GI-NEXT:    cmeq v0.4s, v0.4s, v1.4s
 ; CHECK-GI-NEXT:    mov w8, v0.s[1]
 ; CHECK-GI-NEXT:    mov w9, v0.s[2]
-; CHECK-GI-NEXT:    fmov w11, s0
-; CHECK-GI-NEXT:    mov w10, v0.s[3]
+; CHECK-GI-NEXT:    fmov w10, s0
+; CHECK-GI-NEXT:    mov w11, v0.s[3]
 ; CHECK-GI-NEXT:    and w8, w8, #0x1
-; CHECK-GI-NEXT:    bfi w11, w8, #1, #31
+; CHECK-GI-NEXT:    bfi w10, w8, #1, #31
 ; CHECK-GI-NEXT:    and w8, w9, #0x1
-; CHECK-GI-NEXT:    and w9, w10, #0x1
-; CHECK-GI-NEXT:    orr w8, w11, w8, lsl #2
+; CHECK-GI-NEXT:    and w9, w11, #0x1
+; CHECK-GI-NEXT:    orr w8, w10, w8, lsl #2
 ; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #3
 ; CHECK-GI-NEXT:    strb w8, [x0]
 ; CHECK-GI-NEXT:    ret

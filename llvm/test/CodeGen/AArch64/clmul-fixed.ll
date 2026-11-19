@@ -328,98 +328,98 @@ define <2 x i64> @clmul_v2i64_neon(<2 x i64> %x, <2 x i64> %y) {
 ; CHECK-NEON-NEXT:    and v1.16b, v1.16b, v5.16b
 ; CHECK-NEON-NEXT:    and v0.16b, v0.16b, v4.16b
 ; CHECK-NEON-NEXT:    fmov x10, d6
-; CHECK-NEON-NEXT:    fmov x5, d7
-; CHECK-NEON-NEXT:    fmov x18, d16
-; CHECK-NEON-NEXT:    fmov x16, d17
+; CHECK-NEON-NEXT:    fmov x4, d7
+; CHECK-NEON-NEXT:    fmov x5, d16
+; CHECK-NEON-NEXT:    fmov x3, d17
 ; CHECK-NEON-NEXT:    fmov x19, d18
 ; CHECK-NEON-NEXT:    fmov x20, d19
-; CHECK-NEON-NEXT:    mov x15, v6.d[1]
-; CHECK-NEON-NEXT:    mov x13, v17.d[1]
-; CHECK-NEON-NEXT:    mov x14, v18.d[1]
-; CHECK-NEON-NEXT:    mul x9, x5, x10
+; CHECK-NEON-NEXT:    mov x14, v6.d[1]
+; CHECK-NEON-NEXT:    mov x12, v17.d[1]
+; CHECK-NEON-NEXT:    mov x13, v18.d[1]
+; CHECK-NEON-NEXT:    mul x9, x4, x10
 ; CHECK-NEON-NEXT:    mov x25, v19.d[1]
 ; CHECK-NEON-NEXT:    fmov x30, d1
 ; CHECK-NEON-NEXT:    fmov x23, d0
-; CHECK-NEON-NEXT:    mov x12, v7.d[1]
-; CHECK-NEON-NEXT:    mov x3, v16.d[1]
-; CHECK-NEON-NEXT:    mul x8, x16, x18
+; CHECK-NEON-NEXT:    mov x17, v7.d[1]
+; CHECK-NEON-NEXT:    mov x1, v16.d[1]
+; CHECK-NEON-NEXT:    mul x8, x3, x5
 ; CHECK-NEON-NEXT:    mov x6, v1.d[1]
 ; CHECK-NEON-NEXT:    mov x11, v0.d[1]
-; CHECK-NEON-NEXT:    mul x17, x20, x19
-; CHECK-NEON-NEXT:    mul x22, x16, x10
+; CHECK-NEON-NEXT:    mul x15, x20, x19
+; CHECK-NEON-NEXT:    mul x22, x3, x10
 ; CHECK-NEON-NEXT:    stp x8, x9, [sp] // 16-byte Folded Spill
-; CHECK-NEON-NEXT:    mul x8, x25, x14
+; CHECK-NEON-NEXT:    mul x8, x25, x13
 ; CHECK-NEON-NEXT:    ldp d1, d0, [sp] // 16-byte Folded Reload
-; CHECK-NEON-NEXT:    fmov d6, x17
-; CHECK-NEON-NEXT:    mul x9, x13, x15
+; CHECK-NEON-NEXT:    fmov d6, x15
+; CHECK-NEON-NEXT:    mul x9, x12, x14
 ; CHECK-NEON-NEXT:    fmov d17, x22
-; CHECK-NEON-NEXT:    mul x4, x23, x30
+; CHECK-NEON-NEXT:    mul x2, x23, x30
 ; CHECK-NEON-NEXT:    mov v6.d[1], x8
-; CHECK-NEON-NEXT:    mul x21, x5, x19
+; CHECK-NEON-NEXT:    mul x21, x4, x19
 ; CHECK-NEON-NEXT:    mov v17.d[1], x9
 ; CHECK-NEON-NEXT:    mul x27, x20, x30
-; CHECK-NEON-NEXT:    fmov d7, x4
-; CHECK-NEON-NEXT:    mul x28, x23, x18
+; CHECK-NEON-NEXT:    fmov d7, x2
+; CHECK-NEON-NEXT:    mul x28, x23, x5
 ; CHECK-NEON-NEXT:    fmov d16, x21
 ; CHECK-NEON-NEXT:    ldp x22, x21, [sp, #80] // 16-byte Folded Reload
-; CHECK-NEON-NEXT:    mul x29, x5, x18
+; CHECK-NEON-NEXT:    mul x29, x4, x5
 ; CHECK-NEON-NEXT:    fmov d18, x27
-; CHECK-NEON-NEXT:    mul x5, x5, x30
+; CHECK-NEON-NEXT:    mul x4, x4, x30
 ; CHECK-NEON-NEXT:    fmov d19, x28
 ; CHECK-NEON-NEXT:    ldp x28, x27, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEON-NEXT:    mul x30, x16, x30
+; CHECK-NEON-NEXT:    mul x30, x3, x30
 ; CHECK-NEON-NEXT:    fmov d20, x29
-; CHECK-NEON-NEXT:    mul x18, x20, x18
-; CHECK-NEON-NEXT:    fmov d24, x5
+; CHECK-NEON-NEXT:    mul x5, x20, x5
+; CHECK-NEON-NEXT:    fmov d24, x4
 ; CHECK-NEON-NEXT:    mul x20, x20, x10
 ; CHECK-NEON-NEXT:    fmov d21, x30
 ; CHECK-NEON-NEXT:    ldp x29, x30, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEON-NEXT:    mul x16, x16, x19
-; CHECK-NEON-NEXT:    fmov d26, x18
+; CHECK-NEON-NEXT:    mul x3, x3, x19
+; CHECK-NEON-NEXT:    fmov d26, x5
 ; CHECK-NEON-NEXT:    mul x19, x23, x19
 ; CHECK-NEON-NEXT:    fmov d22, x20
 ; CHECK-NEON-NEXT:    mul x10, x23, x10
-; CHECK-NEON-NEXT:    fmov d25, x16
-; CHECK-NEON-NEXT:    mul x1, x12, x15
+; CHECK-NEON-NEXT:    fmov d25, x3
+; CHECK-NEON-NEXT:    mul x18, x17, x14
 ; CHECK-NEON-NEXT:    fmov d23, x19
 ; CHECK-NEON-NEXT:    ldp x20, x19, [sp, #96] // 16-byte Folded Reload
-; CHECK-NEON-NEXT:    mul x2, x13, x3
+; CHECK-NEON-NEXT:    mul x0, x12, x1
 ; CHECK-NEON-NEXT:    fmov d27, x10
-; CHECK-NEON-NEXT:    mul x0, x11, x6
-; CHECK-NEON-NEXT:    mov v0.d[1], x1
-; CHECK-NEON-NEXT:    mul x7, x12, x14
-; CHECK-NEON-NEXT:    mov v1.d[1], x2
+; CHECK-NEON-NEXT:    mul x16, x11, x6
+; CHECK-NEON-NEXT:    mov v0.d[1], x18
+; CHECK-NEON-NEXT:    mul x7, x17, x13
+; CHECK-NEON-NEXT:    mov v1.d[1], x0
 ; CHECK-NEON-NEXT:    mul x24, x25, x6
-; CHECK-NEON-NEXT:    mov v7.d[1], x0
-; CHECK-NEON-NEXT:    mul x26, x11, x3
+; CHECK-NEON-NEXT:    mov v7.d[1], x16
+; CHECK-NEON-NEXT:    mul x26, x11, x1
 ; CHECK-NEON-NEXT:    mov v16.d[1], x7
 ; CHECK-NEON-NEXT:    eor v0.16b, v1.16b, v0.16b
-; CHECK-NEON-NEXT:    mul x23, x12, x3
+; CHECK-NEON-NEXT:    mul x23, x17, x1
 ; CHECK-NEON-NEXT:    mov v18.d[1], x24
 ; CHECK-NEON-NEXT:    eor v1.16b, v6.16b, v7.16b
-; CHECK-NEON-NEXT:    mul x12, x12, x6
+; CHECK-NEON-NEXT:    mul x17, x17, x6
 ; CHECK-NEON-NEXT:    mov v19.d[1], x26
 ; CHECK-NEON-NEXT:    eor v6.16b, v17.16b, v16.16b
-; CHECK-NEON-NEXT:    mul x6, x13, x6
+; CHECK-NEON-NEXT:    mul x6, x12, x6
 ; CHECK-NEON-NEXT:    eor v0.16b, v0.16b, v1.16b
 ; CHECK-NEON-NEXT:    mov v20.d[1], x23
 ; CHECK-NEON-NEXT:    ldp x24, x23, [sp, #64] // 16-byte Folded Reload
-; CHECK-NEON-NEXT:    mul x3, x25, x3
-; CHECK-NEON-NEXT:    mov v24.d[1], x12
+; CHECK-NEON-NEXT:    mul x1, x25, x1
+; CHECK-NEON-NEXT:    mov v24.d[1], x17
 ; CHECK-NEON-NEXT:    eor v7.16b, v18.16b, v19.16b
 ; CHECK-NEON-NEXT:    and v0.16b, v0.16b, v3.16b
-; CHECK-NEON-NEXT:    mul x25, x25, x15
+; CHECK-NEON-NEXT:    mul x25, x25, x14
 ; CHECK-NEON-NEXT:    mov v21.d[1], x6
-; CHECK-NEON-NEXT:    mul x13, x13, x14
+; CHECK-NEON-NEXT:    mul x12, x12, x13
 ; CHECK-NEON-NEXT:    eor v1.16b, v6.16b, v7.16b
-; CHECK-NEON-NEXT:    mov v26.d[1], x3
-; CHECK-NEON-NEXT:    mul x8, x11, x14
+; CHECK-NEON-NEXT:    mov v26.d[1], x1
+; CHECK-NEON-NEXT:    mul x8, x11, x13
 ; CHECK-NEON-NEXT:    mov v22.d[1], x25
 ; CHECK-NEON-NEXT:    eor v16.16b, v21.16b, v20.16b
 ; CHECK-NEON-NEXT:    and v1.16b, v1.16b, v2.16b
-; CHECK-NEON-NEXT:    mul x9, x11, x15
+; CHECK-NEON-NEXT:    mul x9, x11, x14
 ; CHECK-NEON-NEXT:    ldp x26, x25, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEON-NEXT:    mov v25.d[1], x13
+; CHECK-NEON-NEXT:    mov v25.d[1], x12
 ; CHECK-NEON-NEXT:    orr v0.16b, v1.16b, v0.16b
 ; CHECK-NEON-NEXT:    mov v23.d[1], x8
 ; CHECK-NEON-NEXT:    mov v27.d[1], x9
@@ -1787,26 +1787,26 @@ define <2 x i128> @clmul_v2i128_neon_zext(<2 x i64> %x, <2 x i64> %y) {
 ; CHECK-AES-NEXT:    mov x8, v0.d[1]
 ; CHECK-AES-NEXT:    mov x9, v1.d[1]
 ; CHECK-AES-NEXT:    mov d2, v1.d[1]
-; CHECK-AES-NEXT:    mov d3, v0.d[1]
-; CHECK-AES-NEXT:    pmull v0.1q, v0.1d, v1.1d
 ; CHECK-AES-NEXT:    rbit x11, x11
 ; CHECK-AES-NEXT:    rbit x10, x10
 ; CHECK-AES-NEXT:    rbit x8, x8
-; CHECK-AES-NEXT:    fmov d4, x11
-; CHECK-AES-NEXT:    fmov d5, x10
+; CHECK-AES-NEXT:    fmov d3, x11
+; CHECK-AES-NEXT:    fmov d4, x10
 ; CHECK-AES-NEXT:    rbit x9, x9
-; CHECK-AES-NEXT:    fmov d6, x8
-; CHECK-AES-NEXT:    fmov x0, d0
-; CHECK-AES-NEXT:    pmull v1.1q, v3.1d, v2.1d
+; CHECK-AES-NEXT:    fmov d5, x8
+; CHECK-AES-NEXT:    pmull v3.1q, v4.1d, v3.1d
+; CHECK-AES-NEXT:    fmov d4, x9
 ; CHECK-AES-NEXT:    pmull v4.1q, v5.1d, v4.1d
-; CHECK-AES-NEXT:    fmov d5, x9
-; CHECK-AES-NEXT:    pmull v5.1q, v6.1d, v5.1d
-; CHECK-AES-NEXT:    fmov x2, d1
-; CHECK-AES-NEXT:    fmov x8, d4
-; CHECK-AES-NEXT:    fmov x9, d5
+; CHECK-AES-NEXT:    mov d5, v0.d[1]
+; CHECK-AES-NEXT:    pmull v0.1q, v0.1d, v1.1d
+; CHECK-AES-NEXT:    fmov x8, d3
+; CHECK-AES-NEXT:    pmull v1.1q, v5.1d, v2.1d
+; CHECK-AES-NEXT:    fmov x9, d4
 ; CHECK-AES-NEXT:    rbit x8, x8
+; CHECK-AES-NEXT:    fmov x0, d0
 ; CHECK-AES-NEXT:    lsr x1, x8, #1
 ; CHECK-AES-NEXT:    rbit x9, x9
+; CHECK-AES-NEXT:    fmov x2, d1
 ; CHECK-AES-NEXT:    lsr x3, x9, #1
 ; CHECK-AES-NEXT:    ret
   %zextx = zext <2 x i64> %x to <2 x i128>

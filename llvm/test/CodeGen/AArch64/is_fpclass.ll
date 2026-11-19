@@ -364,13 +364,14 @@ define i1 @not_isfinite_f128(fp128 %x) {
 ; CHECK-GI-NEXT:    eor x10, x9, #0x7fff000000000000
 ; CHECK-GI-NEXT:    orr x10, x11, x10
 ; CHECK-GI-NEXT:    cmp x10, #0
-; CHECK-GI-NEXT:    cset w10, eq
-; CHECK-GI-NEXT:    cmp x11, #0
-; CHECK-GI-NEXT:    cset w11, hi
+; CHECK-GI-NEXT:    fmov x10, d0
+; CHECK-GI-NEXT:    cset w11, eq
+; CHECK-GI-NEXT:    cmp x10, #0
+; CHECK-GI-NEXT:    cset w10, hi
 ; CHECK-GI-NEXT:    cmp x9, x8
 ; CHECK-GI-NEXT:    cset w8, hi
-; CHECK-GI-NEXT:    csel w8, w11, w8, eq
-; CHECK-GI-NEXT:    orr w0, w10, w8
+; CHECK-GI-NEXT:    csel w8, w10, w8, eq
+; CHECK-GI-NEXT:    orr w0, w11, w8
 ; CHECK-GI-NEXT:    ret
 ;
 ; CHECK-NOFP-LABEL: not_isfinite_f128:

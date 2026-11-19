@@ -439,13 +439,13 @@ define <4 x i64> @v4i64(<4 x i64> %d, <4 x i64> %e) {
 ; CHECK-SD-NEXT:    mov x10, v2.d[1]
 ; CHECK-SD-NEXT:    mov x11, v0.d[1]
 ; CHECK-SD-NEXT:    mov x13, v3.d[1]
-; CHECK-SD-NEXT:    mov x14, v1.d[1]
 ; CHECK-SD-NEXT:    mul x8, x9, x8
 ; CHECK-SD-NEXT:    fmov x9, d3
 ; CHECK-SD-NEXT:    mul x10, x11, x10
 ; CHECK-SD-NEXT:    mul x9, x12, x9
+; CHECK-SD-NEXT:    mov x12, v1.d[1]
 ; CHECK-SD-NEXT:    fmov d0, x8
-; CHECK-SD-NEXT:    mul x11, x14, x13
+; CHECK-SD-NEXT:    mul x11, x12, x13
 ; CHECK-SD-NEXT:    mov v0.d[1], x10
 ; CHECK-SD-NEXT:    fmov d1, x9
 ; CHECK-SD-NEXT:    mov v1.d[1], x11
@@ -458,14 +458,14 @@ define <4 x i64> @v4i64(<4 x i64> %d, <4 x i64> %e) {
 ; CHECK-GI-NEXT:    fmov x12, d3
 ; CHECK-GI-NEXT:    mov x10, v0.d[1]
 ; CHECK-GI-NEXT:    mov x11, v2.d[1]
-; CHECK-GI-NEXT:    mov x13, v1.d[1]
-; CHECK-GI-NEXT:    mov x14, v3.d[1]
+; CHECK-GI-NEXT:    mov x13, v3.d[1]
 ; CHECK-GI-NEXT:    mul x8, x8, x9
 ; CHECK-GI-NEXT:    fmov x9, d1
 ; CHECK-GI-NEXT:    mul x10, x10, x11
 ; CHECK-GI-NEXT:    mul x9, x9, x12
+; CHECK-GI-NEXT:    mov x12, v1.d[1]
 ; CHECK-GI-NEXT:    fmov d0, x8
-; CHECK-GI-NEXT:    mul x11, x13, x14
+; CHECK-GI-NEXT:    mul x11, x12, x13
 ; CHECK-GI-NEXT:    mov v0.d[1], x10
 ; CHECK-GI-NEXT:    fmov d1, x9
 ; CHECK-GI-NEXT:    mov v1.d[1], x11

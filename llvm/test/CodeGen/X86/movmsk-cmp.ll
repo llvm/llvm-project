@@ -4546,11 +4546,11 @@ define i32 @pr67287(<2 x i64> %broadcast.splatinsert25) {
 ; KNL-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
 ; KNL-NEXT:    vptestnmq %zmm0, %zmm0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    testb $3, %al
+; KNL-NEXT:    sete %al
 ; KNL-NEXT:    kmovw %k0, %ecx
-; KNL-NEXT:    testb $3, %cl
-; KNL-NEXT:    sete %cl
-; KNL-NEXT:    notb %al
-; KNL-NEXT:    testb %al, %cl
+; KNL-NEXT:    notb %cl
+; KNL-NEXT:    testb %cl, %al
 ; KNL-NEXT:    jne .LBB97_2
 ; KNL-NEXT:  # %bb.1:
 ; KNL-NEXT:    movw $0, 0

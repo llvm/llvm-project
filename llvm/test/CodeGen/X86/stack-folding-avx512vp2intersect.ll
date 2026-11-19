@@ -37,9 +37,9 @@ define void @stack_fold_vp2intersectq(ptr %a, <8 x i64> %b, ptr nocapture %m0, p
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    vmovdqa64 (%rdi), %zmm0
 ; CHECK-NEXT:    vp2intersectq {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %k0 # 64-byte Folded Reload
+; CHECK-NEXT:    kmovw %k0, %eax
+; CHECK-NEXT:    movb %al, (%rsi)
 ; CHECK-NEXT:    kmovw %k1, %eax
-; CHECK-NEXT:    kmovw %k0, %ecx
-; CHECK-NEXT:    movb %cl, (%rsi)
 ; CHECK-NEXT:    movb %al, (%rdx)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -63,9 +63,9 @@ define void @stack_fold_vp2intersectd_256(ptr %a, <8 x i32> %b, ptr nocapture %m
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    vmovdqa (%rdi), %ymm0
 ; CHECK-NEXT:    vp2intersectd {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %k0 # 32-byte Folded Reload
+; CHECK-NEXT:    kmovw %k0, %eax
+; CHECK-NEXT:    movb %al, (%rsi)
 ; CHECK-NEXT:    kmovw %k1, %eax
-; CHECK-NEXT:    kmovw %k0, %ecx
-; CHECK-NEXT:    movb %cl, (%rsi)
 ; CHECK-NEXT:    movb %al, (%rdx)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq

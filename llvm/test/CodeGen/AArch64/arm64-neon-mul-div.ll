@@ -1909,16 +1909,16 @@ define <2 x i64> @srem2x64(<2 x i64> %A, <2 x i64> %B) {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    fmov x8, d0
 ; CHECK-GI-NEXT:    fmov x9, d1
-; CHECK-GI-NEXT:    mov x10, v1.d[1]
-; CHECK-GI-NEXT:    mov x11, v0.d[1]
+; CHECK-GI-NEXT:    mov x10, v0.d[1]
+; CHECK-GI-NEXT:    mov x11, v1.d[1]
 ; CHECK-GI-NEXT:    sdiv x8, x8, x9
-; CHECK-GI-NEXT:    sdiv x11, x11, x10
+; CHECK-GI-NEXT:    sdiv x10, x10, x11
 ; CHECK-GI-NEXT:    fmov d1, x8
-; CHECK-GI-NEXT:    mov v1.d[1], x11
-; CHECK-GI-NEXT:    fmov x11, d1
+; CHECK-GI-NEXT:    mov v1.d[1], x10
+; CHECK-GI-NEXT:    fmov x10, d1
 ; CHECK-GI-NEXT:    mov x8, v1.d[1]
-; CHECK-GI-NEXT:    mul x9, x11, x9
-; CHECK-GI-NEXT:    mul x8, x8, x10
+; CHECK-GI-NEXT:    mul x9, x10, x9
+; CHECK-GI-NEXT:    mul x8, x8, x11
 ; CHECK-GI-NEXT:    fmov d1, x9
 ; CHECK-GI-NEXT:    mov v1.d[1], x8
 ; CHECK-GI-NEXT:    sub v0.2d, v0.2d, v1.2d
@@ -2013,37 +2013,37 @@ define <8 x i8> @urem8x8(<8 x i8> %A, <8 x i8> %B) {
 ; CHECK-GI-NEXT:    mov d5, v1.d[1]
 ; CHECK-GI-NEXT:    fmov w8, s0
 ; CHECK-GI-NEXT:    fmov w9, s3
-; CHECK-GI-NEXT:    mov w10, v0.s[1]
-; CHECK-GI-NEXT:    mov w11, v0.s[2]
-; CHECK-GI-NEXT:    mov w12, v0.s[3]
-; CHECK-GI-NEXT:    mov w14, v2.s[1]
-; CHECK-GI-NEXT:    mov w15, v2.s[2]
-; CHECK-GI-NEXT:    mov w16, v2.s[3]
-; CHECK-GI-NEXT:    udiv w8, w8, w9
-; CHECK-GI-NEXT:    mov w9, v3.s[1]
-; CHECK-GI-NEXT:    udiv w9, w10, w9
-; CHECK-GI-NEXT:    mov w10, v3.s[2]
-; CHECK-GI-NEXT:    udiv w10, w11, w10
-; CHECK-GI-NEXT:    mov w11, v3.s[3]
+; CHECK-GI-NEXT:    mov w10, v3.s[1]
+; CHECK-GI-NEXT:    mov w11, v3.s[2]
+; CHECK-GI-NEXT:    mov w12, v3.s[3]
 ; CHECK-GI-NEXT:    ushll2 v3.4s, v1.8h, #0
+; CHECK-GI-NEXT:    udiv w8, w8, w9
+; CHECK-GI-NEXT:    mov w9, v0.s[1]
 ; CHECK-GI-NEXT:    fmov w13, s3
-; CHECK-GI-NEXT:    udiv w11, w12, w11
-; CHECK-GI-NEXT:    fmov w12, s2
-; CHECK-GI-NEXT:    udiv w12, w12, w13
-; CHECK-GI-NEXT:    mov w13, v3.s[1]
-; CHECK-GI-NEXT:    udiv w13, w14, w13
-; CHECK-GI-NEXT:    mov w14, v3.s[2]
-; CHECK-GI-NEXT:    fmov s4, w12
-; CHECK-GI-NEXT:    udiv w14, w15, w14
-; CHECK-GI-NEXT:    mov w15, v3.s[3]
+; CHECK-GI-NEXT:    mov w14, v3.s[1]
+; CHECK-GI-NEXT:    mov w15, v3.s[2]
+; CHECK-GI-NEXT:    mov w16, v3.s[3]
+; CHECK-GI-NEXT:    udiv w9, w9, w10
+; CHECK-GI-NEXT:    mov w10, v0.s[2]
 ; CHECK-GI-NEXT:    fmov s3, w8
-; CHECK-GI-NEXT:    mov v4.h[1], w13
+; CHECK-GI-NEXT:    udiv w10, w10, w11
+; CHECK-GI-NEXT:    mov w11, v0.s[3]
 ; CHECK-GI-NEXT:    mov v3.h[1], w9
+; CHECK-GI-NEXT:    udiv w11, w11, w12
+; CHECK-GI-NEXT:    fmov w12, s2
 ; CHECK-GI-NEXT:    mov v3.h[2], w10
-; CHECK-GI-NEXT:    udiv w8, w16, w15
-; CHECK-GI-NEXT:    mov v4.h[2], w14
+; CHECK-GI-NEXT:    udiv w12, w12, w13
+; CHECK-GI-NEXT:    mov w13, v2.s[1]
 ; CHECK-GI-NEXT:    mov v3.h[3], w11
 ; CHECK-GI-NEXT:    umlsl v0.4s, v3.4h, v1.4h
+; CHECK-GI-NEXT:    udiv w13, w13, w14
+; CHECK-GI-NEXT:    mov w14, v2.s[2]
+; CHECK-GI-NEXT:    fmov s4, w12
+; CHECK-GI-NEXT:    udiv w14, w14, w15
+; CHECK-GI-NEXT:    mov w15, v2.s[3]
+; CHECK-GI-NEXT:    mov v4.h[1], w13
+; CHECK-GI-NEXT:    udiv w8, w15, w16
+; CHECK-GI-NEXT:    mov v4.h[2], w14
 ; CHECK-GI-NEXT:    mov v4.h[3], w8
 ; CHECK-GI-NEXT:    umlsl v2.4s, v4.4h, v5.4h
 ; CHECK-GI-NEXT:    uzp1 v0.8h, v0.8h, v2.8h
@@ -2173,77 +2173,77 @@ define <16 x i8> @urem16x8(<16 x i8> %A, <16 x i8> %B) {
 ; CHECK-GI-NEXT:    mov d19, v1.d[1]
 ; CHECK-GI-NEXT:    fmov w8, s2
 ; CHECK-GI-NEXT:    fmov w9, s5
-; CHECK-GI-NEXT:    mov w12, v2.s[3]
-; CHECK-GI-NEXT:    mov w16, v4.s[3]
-; CHECK-GI-NEXT:    fmov w17, s6
-; CHECK-GI-NEXT:    udiv w10, w8, w9
-; CHECK-GI-NEXT:    mov w8, v5.s[1]
-; CHECK-GI-NEXT:    mov w9, v2.s[1]
-; CHECK-GI-NEXT:    udiv w11, w9, w8
-; CHECK-GI-NEXT:    mov w8, v5.s[2]
-; CHECK-GI-NEXT:    mov w9, v2.s[2]
-; CHECK-GI-NEXT:    udiv w9, w9, w8
-; CHECK-GI-NEXT:    mov w8, v5.s[3]
-; CHECK-GI-NEXT:    ushll2 v5.4s, v3.8h, #0
-; CHECK-GI-NEXT:    fmov w13, s5
-; CHECK-GI-NEXT:    udiv w8, w12, w8
-; CHECK-GI-NEXT:    fmov w12, s4
-; CHECK-GI-NEXT:    udiv w14, w12, w13
-; CHECK-GI-NEXT:    mov w12, v5.s[1]
-; CHECK-GI-NEXT:    mov w13, v4.s[1]
-; CHECK-GI-NEXT:    udiv w15, w13, w12
-; CHECK-GI-NEXT:    mov w12, v5.s[2]
-; CHECK-GI-NEXT:    mov w13, v4.s[2]
-; CHECK-GI-NEXT:    fmov s7, w14
-; CHECK-GI-NEXT:    udiv w13, w13, w12
 ; CHECK-GI-NEXT:    mov w12, v5.s[3]
+; CHECK-GI-NEXT:    fmov w17, s6
+; CHECK-GI-NEXT:    mov w18, v6.s[1]
+; CHECK-GI-NEXT:    mov w0, v6.s[2]
+; CHECK-GI-NEXT:    mov w1, v6.s[3]
+; CHECK-GI-NEXT:    ushll2 v6.4s, v1.8h, #0
+; CHECK-GI-NEXT:    udiv w10, w8, w9
+; CHECK-GI-NEXT:    mov w8, v2.s[1]
+; CHECK-GI-NEXT:    mov w9, v5.s[1]
+; CHECK-GI-NEXT:    fmov w2, s6
+; CHECK-GI-NEXT:    mov w3, v6.s[1]
+; CHECK-GI-NEXT:    mov w4, v6.s[2]
+; CHECK-GI-NEXT:    mov w5, v6.s[3]
+; CHECK-GI-NEXT:    udiv w11, w8, w9
+; CHECK-GI-NEXT:    mov w8, v2.s[2]
+; CHECK-GI-NEXT:    mov w9, v5.s[2]
+; CHECK-GI-NEXT:    ushll2 v5.4s, v3.8h, #0
+; CHECK-GI-NEXT:    fmov s6, w10
+; CHECK-GI-NEXT:    fmov w13, s5
+; CHECK-GI-NEXT:    mov w16, v5.s[3]
+; CHECK-GI-NEXT:    udiv w9, w8, w9
+; CHECK-GI-NEXT:    mov w8, v2.s[3]
+; CHECK-GI-NEXT:    mov v6.h[1], w11
+; CHECK-GI-NEXT:    udiv w8, w8, w12
+; CHECK-GI-NEXT:    fmov w12, s4
+; CHECK-GI-NEXT:    mov v6.h[2], w9
+; CHECK-GI-NEXT:    udiv w14, w12, w13
+; CHECK-GI-NEXT:    mov w12, v4.s[1]
+; CHECK-GI-NEXT:    mov w13, v5.s[1]
+; CHECK-GI-NEXT:    mov v6.h[3], w8
+; CHECK-GI-NEXT:    umlsl v2.4s, v6.4h, v3.4h
+; CHECK-GI-NEXT:    udiv w15, w12, w13
+; CHECK-GI-NEXT:    mov w12, v4.s[2]
+; CHECK-GI-NEXT:    mov w13, v5.s[2]
 ; CHECK-GI-NEXT:    ushll2 v5.8h, v0.16b, #0
-; CHECK-GI-NEXT:    mov v7.h[1], w15
+; CHECK-GI-NEXT:    fmov s7, w14
 ; CHECK-GI-NEXT:    ushll v0.4s, v5.4h, #0
 ; CHECK-GI-NEXT:    ushll2 v5.4s, v5.8h, #0
-; CHECK-GI-NEXT:    mov w18, v0.s[1]
-; CHECK-GI-NEXT:    mov w0, v0.s[2]
-; CHECK-GI-NEXT:    mov w1, v0.s[3]
-; CHECK-GI-NEXT:    mov w3, v5.s[1]
-; CHECK-GI-NEXT:    mov w4, v5.s[2]
-; CHECK-GI-NEXT:    mov w5, v5.s[3]
-; CHECK-GI-NEXT:    udiv w12, w16, w12
+; CHECK-GI-NEXT:    udiv w13, w12, w13
+; CHECK-GI-NEXT:    mov w12, v4.s[3]
+; CHECK-GI-NEXT:    mov v7.h[1], w15
+; CHECK-GI-NEXT:    udiv w12, w12, w16
 ; CHECK-GI-NEXT:    fmov w16, s0
 ; CHECK-GI-NEXT:    mov v7.h[2], w13
 ; CHECK-GI-NEXT:    udiv w16, w16, w17
-; CHECK-GI-NEXT:    mov w17, v6.s[1]
+; CHECK-GI-NEXT:    mov w17, v0.s[1]
 ; CHECK-GI-NEXT:    mov v7.h[3], w12
 ; CHECK-GI-NEXT:    umlsl v4.4s, v7.4h, v18.4h
-; CHECK-GI-NEXT:    udiv w17, w18, w17
-; CHECK-GI-NEXT:    mov w18, v6.s[2]
+; CHECK-GI-NEXT:    udiv w17, w17, w18
+; CHECK-GI-NEXT:    mov w18, v0.s[2]
 ; CHECK-GI-NEXT:    fmov s16, w16
-; CHECK-GI-NEXT:    udiv w18, w0, w18
-; CHECK-GI-NEXT:    mov w0, v6.s[3]
-; CHECK-GI-NEXT:    ushll2 v6.4s, v1.8h, #0
+; CHECK-GI-NEXT:    udiv w18, w18, w0
+; CHECK-GI-NEXT:    mov w0, v0.s[3]
 ; CHECK-GI-NEXT:    mov v16.h[1], w17
-; CHECK-GI-NEXT:    fmov w2, s6
-; CHECK-GI-NEXT:    udiv w0, w1, w0
+; CHECK-GI-NEXT:    udiv w0, w0, w1
 ; CHECK-GI-NEXT:    fmov w1, s5
 ; CHECK-GI-NEXT:    mov v16.h[2], w18
 ; CHECK-GI-NEXT:    udiv w1, w1, w2
-; CHECK-GI-NEXT:    mov w2, v6.s[1]
+; CHECK-GI-NEXT:    mov w2, v5.s[1]
 ; CHECK-GI-NEXT:    mov v16.h[3], w0
 ; CHECK-GI-NEXT:    umlsl v0.4s, v16.4h, v1.4h
-; CHECK-GI-NEXT:    udiv w2, w3, w2
-; CHECK-GI-NEXT:    mov w3, v6.s[2]
-; CHECK-GI-NEXT:    fmov s17, w1
-; CHECK-GI-NEXT:    udiv w3, w4, w3
-; CHECK-GI-NEXT:    mov w4, v6.s[3]
-; CHECK-GI-NEXT:    fmov s6, w10
-; CHECK-GI-NEXT:    mov v17.h[1], w2
-; CHECK-GI-NEXT:    mov v6.h[1], w11
-; CHECK-GI-NEXT:    mov v6.h[2], w9
-; CHECK-GI-NEXT:    udiv w10, w5, w4
-; CHECK-GI-NEXT:    mov v17.h[2], w3
-; CHECK-GI-NEXT:    mov v6.h[3], w8
-; CHECK-GI-NEXT:    umlsl v2.4s, v6.4h, v3.4h
-; CHECK-GI-NEXT:    mov v17.h[3], w10
 ; CHECK-GI-NEXT:    uzp1 v1.8h, v2.8h, v4.8h
+; CHECK-GI-NEXT:    udiv w2, w2, w3
+; CHECK-GI-NEXT:    mov w3, v5.s[2]
+; CHECK-GI-NEXT:    fmov s17, w1
+; CHECK-GI-NEXT:    udiv w3, w3, w4
+; CHECK-GI-NEXT:    mov w4, v5.s[3]
+; CHECK-GI-NEXT:    mov v17.h[1], w2
+; CHECK-GI-NEXT:    udiv w10, w4, w5
+; CHECK-GI-NEXT:    mov v17.h[2], w3
+; CHECK-GI-NEXT:    mov v17.h[3], w10
 ; CHECK-GI-NEXT:    umlsl v5.4s, v17.4h, v19.4h
 ; CHECK-GI-NEXT:    uzp1 v0.8h, v0.8h, v5.8h
 ; CHECK-GI-NEXT:    uzp1 v0.16b, v1.16b, v0.16b
@@ -2314,18 +2314,18 @@ define <4 x i16> @urem4x16(<4 x i16> %A, <4 x i16> %B) {
 ; CHECK-GI-NEXT:    ushll v2.4s, v1.4h, #0
 ; CHECK-GI-NEXT:    fmov w8, s0
 ; CHECK-GI-NEXT:    fmov w9, s2
-; CHECK-GI-NEXT:    mov w10, v0.s[1]
-; CHECK-GI-NEXT:    mov w11, v0.s[2]
-; CHECK-GI-NEXT:    mov w12, v0.s[3]
+; CHECK-GI-NEXT:    mov w10, v2.s[1]
+; CHECK-GI-NEXT:    mov w11, v2.s[2]
+; CHECK-GI-NEXT:    mov w12, v2.s[3]
 ; CHECK-GI-NEXT:    udiv w8, w8, w9
-; CHECK-GI-NEXT:    mov w9, v2.s[1]
-; CHECK-GI-NEXT:    udiv w9, w10, w9
-; CHECK-GI-NEXT:    mov w10, v2.s[2]
-; CHECK-GI-NEXT:    udiv w10, w11, w10
-; CHECK-GI-NEXT:    mov w11, v2.s[3]
+; CHECK-GI-NEXT:    mov w9, v0.s[1]
+; CHECK-GI-NEXT:    udiv w9, w9, w10
+; CHECK-GI-NEXT:    mov w10, v0.s[2]
 ; CHECK-GI-NEXT:    fmov s2, w8
+; CHECK-GI-NEXT:    udiv w10, w10, w11
+; CHECK-GI-NEXT:    mov w11, v0.s[3]
 ; CHECK-GI-NEXT:    mov v2.h[1], w9
-; CHECK-GI-NEXT:    udiv w8, w12, w11
+; CHECK-GI-NEXT:    udiv w8, w11, w12
 ; CHECK-GI-NEXT:    mov v2.h[2], w10
 ; CHECK-GI-NEXT:    mov v2.h[3], w8
 ; CHECK-GI-NEXT:    umlsl v0.4s, v2.4h, v1.4h
@@ -2389,37 +2389,37 @@ define <8 x i16> @urem8x16(<8 x i16> %A, <8 x i16> %B) {
 ; CHECK-GI-NEXT:    mov d5, v1.d[1]
 ; CHECK-GI-NEXT:    fmov w8, s2
 ; CHECK-GI-NEXT:    fmov w9, s3
-; CHECK-GI-NEXT:    mov w10, v2.s[1]
-; CHECK-GI-NEXT:    mov w11, v2.s[2]
-; CHECK-GI-NEXT:    mov w12, v2.s[3]
-; CHECK-GI-NEXT:    mov w14, v0.s[1]
-; CHECK-GI-NEXT:    mov w15, v0.s[2]
-; CHECK-GI-NEXT:    mov w16, v0.s[3]
-; CHECK-GI-NEXT:    udiv w8, w8, w9
-; CHECK-GI-NEXT:    mov w9, v3.s[1]
-; CHECK-GI-NEXT:    udiv w9, w10, w9
-; CHECK-GI-NEXT:    mov w10, v3.s[2]
-; CHECK-GI-NEXT:    udiv w10, w11, w10
-; CHECK-GI-NEXT:    mov w11, v3.s[3]
+; CHECK-GI-NEXT:    mov w10, v3.s[1]
+; CHECK-GI-NEXT:    mov w11, v3.s[2]
+; CHECK-GI-NEXT:    mov w12, v3.s[3]
 ; CHECK-GI-NEXT:    ushll2 v3.4s, v1.8h, #0
+; CHECK-GI-NEXT:    udiv w8, w8, w9
+; CHECK-GI-NEXT:    mov w9, v2.s[1]
 ; CHECK-GI-NEXT:    fmov w13, s3
-; CHECK-GI-NEXT:    udiv w11, w12, w11
-; CHECK-GI-NEXT:    fmov w12, s0
-; CHECK-GI-NEXT:    udiv w12, w12, w13
-; CHECK-GI-NEXT:    mov w13, v3.s[1]
-; CHECK-GI-NEXT:    udiv w13, w14, w13
-; CHECK-GI-NEXT:    mov w14, v3.s[2]
-; CHECK-GI-NEXT:    fmov s4, w12
-; CHECK-GI-NEXT:    udiv w14, w15, w14
-; CHECK-GI-NEXT:    mov w15, v3.s[3]
+; CHECK-GI-NEXT:    mov w14, v3.s[1]
+; CHECK-GI-NEXT:    mov w15, v3.s[2]
+; CHECK-GI-NEXT:    mov w16, v3.s[3]
+; CHECK-GI-NEXT:    udiv w9, w9, w10
+; CHECK-GI-NEXT:    mov w10, v2.s[2]
 ; CHECK-GI-NEXT:    fmov s3, w8
-; CHECK-GI-NEXT:    mov v4.h[1], w13
+; CHECK-GI-NEXT:    udiv w10, w10, w11
+; CHECK-GI-NEXT:    mov w11, v2.s[3]
 ; CHECK-GI-NEXT:    mov v3.h[1], w9
+; CHECK-GI-NEXT:    udiv w11, w11, w12
+; CHECK-GI-NEXT:    fmov w12, s0
 ; CHECK-GI-NEXT:    mov v3.h[2], w10
-; CHECK-GI-NEXT:    udiv w8, w16, w15
-; CHECK-GI-NEXT:    mov v4.h[2], w14
+; CHECK-GI-NEXT:    udiv w12, w12, w13
+; CHECK-GI-NEXT:    mov w13, v0.s[1]
 ; CHECK-GI-NEXT:    mov v3.h[3], w11
 ; CHECK-GI-NEXT:    umlsl v2.4s, v3.4h, v1.4h
+; CHECK-GI-NEXT:    udiv w13, w13, w14
+; CHECK-GI-NEXT:    mov w14, v0.s[2]
+; CHECK-GI-NEXT:    fmov s4, w12
+; CHECK-GI-NEXT:    udiv w14, w14, w15
+; CHECK-GI-NEXT:    mov w15, v0.s[3]
+; CHECK-GI-NEXT:    mov v4.h[1], w13
+; CHECK-GI-NEXT:    udiv w8, w15, w16
+; CHECK-GI-NEXT:    mov v4.h[2], w14
 ; CHECK-GI-NEXT:    mov v4.h[3], w8
 ; CHECK-GI-NEXT:    umlsl v0.4s, v4.4h, v5.4h
 ; CHECK-GI-NEXT:    uzp1 v0.8h, v2.8h, v0.8h
@@ -2581,16 +2581,16 @@ define <2 x i64> @urem2x64(<2 x i64> %A, <2 x i64> %B) {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    fmov x8, d0
 ; CHECK-GI-NEXT:    fmov x9, d1
-; CHECK-GI-NEXT:    mov x10, v1.d[1]
-; CHECK-GI-NEXT:    mov x11, v0.d[1]
+; CHECK-GI-NEXT:    mov x10, v0.d[1]
+; CHECK-GI-NEXT:    mov x11, v1.d[1]
 ; CHECK-GI-NEXT:    udiv x8, x8, x9
-; CHECK-GI-NEXT:    udiv x11, x11, x10
+; CHECK-GI-NEXT:    udiv x10, x10, x11
 ; CHECK-GI-NEXT:    fmov d1, x8
-; CHECK-GI-NEXT:    mov v1.d[1], x11
-; CHECK-GI-NEXT:    fmov x11, d1
+; CHECK-GI-NEXT:    mov v1.d[1], x10
+; CHECK-GI-NEXT:    fmov x10, d1
 ; CHECK-GI-NEXT:    mov x8, v1.d[1]
-; CHECK-GI-NEXT:    mul x9, x11, x9
-; CHECK-GI-NEXT:    mul x8, x8, x10
+; CHECK-GI-NEXT:    mul x9, x10, x9
+; CHECK-GI-NEXT:    mul x8, x8, x11
 ; CHECK-GI-NEXT:    fmov d1, x9
 ; CHECK-GI-NEXT:    mov v1.d[1], x8
 ; CHECK-GI-NEXT:    sub v0.2d, v0.2d, v1.2d

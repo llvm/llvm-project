@@ -1,0 +1,187 @@
+# REQUIRES: asserts
+
+# RUN: llc -filetype=null %s -mtriple=aarch64 -passes=machine-scheduler -misched-print-dags 2>&1 | FileCheck %s
+
+# CopyConstrain adds weak edges that order the other uses of a copy's source
+# before the copy, hoping that the register coalescer can then eliminate it.
+# Check which copies get the edges.
+
+---
+# %acc is live around the loop and redefined by the copy, so the copy is a
+# candidate for constraining. But it is between register banks, so it can never
+# be coalesced and no edges are added.
+name: fpr_to_gpr_copy
+body: |
+  ; CHECK-LABEL: fpr_to_gpr_copy
+  ; CHECK: SU(0): STRWui %acc
+  ; CHECK-NOT: Ord  Latency=0 Weak
+  bb.0:
+    successors: %bb.1
+    liveins: $q0, $x0
+
+    %acc:gpr32 = MOVi32imm 0
+
+  bb.1:
+    successors: %bb.1, %bb.2
+    liveins: $q0, $x0
+
+    STRWui %acc, $x0, 0
+    %0:fpr128 = ADDv4i32 $q0, $q0
+    %1:gpr32 = UMOVvi32 %0, 1
+    STRWui %1, $x0, 1
+    %acc:gpr32 = COPY %0.ssub
+    CBNZX $x0, %bb.1
+    B %bb.2
+
+  bb.2:
+    RET_ReallyLR
+...
+---
+# Likewise for a GPR to FPR copy.
+name: gpr_to_fpr_copy
+body: |
+  ; CHECK-LABEL: gpr_to_fpr_copy
+  ; CHECK: SU(0): STRDui %acc
+  ; CHECK-NOT: Ord  Latency=0 Weak
+  bb.0:
+    successors: %bb.1
+    liveins: $x0, $x1
+
+    %acc:fpr64 = FMOVDi 112
+
+  bb.1:
+    successors: %bb.1, %bb.2
+    liveins: $x0, $x1
+
+    STRDui %acc, $x0, 0
+    %0:gpr64 = ADDXrr $x1, $x1
+    %1:gpr64 = ORRXrs %0, %0, 0
+    STRXui %1, $x0, 1
+    %acc:fpr64 = COPY %0
+    CBNZX $x0, %bb.1
+    B %bb.2
+
+  bb.2:
+    RET_ReallyLR
+...
+---
+# A copy within a register bank can be coalesced, so it is constrained: the
+# other use of the source is ordered before the copy.
+name: gpr_to_gpr_copy
+body: |
+  ; CHECK-LABEL: gpr_to_gpr_copy
+  ; CHECK: SU([[USE:[0-9]+]]): %{{[0-9]+}}:gpr64 = ORRXrs
+  ; CHECK: Successors:
+  ; CHECK: SU([[COPY:[0-9]+]]): Ord  Latency=0 Weak
+  ; CHECK: SU([[COPY]]): %acc:gpr64 = COPY
+  bb.0:
+    successors: %bb.1
+    liveins: $x0, $x1
+
+    %acc:gpr64 = MOVi64imm 0
+
+  bb.1:
+    successors: %bb.1, %bb.2
+    liveins: $x0, $x1
+
+    STRXui %acc, $x0, 0
+    %0:gpr64 = ADDXrr $x1, $x1
+    %1:gpr64 = ORRXrs %0, %0, 0
+    STRXui %1, $x0, 1
+    %acc:gpr64 = COPY %0
+    CBNZX $x0, %bb.1
+    B %bb.2
+
+  bb.2:
+    RET_ReallyLR
+...
+---
+# Likewise for an FPR to FPR copy.
+name: fpr_to_fpr_copy
+body: |
+  ; CHECK-LABEL: fpr_to_fpr_copy
+  ; CHECK: SU([[USE:[0-9]+]]): %{{[0-9]+}}:fpr128 = ADDv4i32 %{{[0-9]+}}:fpr128, %{{[0-9]+}}:fpr128
+  ; CHECK: Successors:
+  ; CHECK: SU([[COPY:[0-9]+]]): Ord  Latency=0 Weak
+  ; CHECK: SU([[COPY]]): %acc:fpr128 = COPY
+  bb.0:
+    successors: %bb.1
+    liveins: $q0, $x0
+
+    %acc:fpr128 = MOVIv2d_ns 0
+
+  bb.1:
+    successors: %bb.1, %bb.2
+    liveins: $q0, $x0
+
+    STRQui %acc, $x0, 0
+    %0:fpr128 = ADDv4i32 $q0, $q0
+    %1:fpr128 = ADDv4i32 %0, %0
+    STRQui %1, $x0, 1
+    %acc:fpr128 = COPY %0
+    CBNZX $x0, %bb.1
+    B %bb.2
+
+  bb.2:
+    RET_ReallyLR
+...
+---
+# A sub-register copy within a register bank can also be coalesced.
+name: fpr_subreg_to_fpr_copy
+body: |
+  ; CHECK-LABEL: fpr_subreg_to_fpr_copy
+  ; CHECK: SU([[USE:[0-9]+]]): %{{[0-9]+}}:fpr128 = ADDv4i32 %{{[0-9]+}}:fpr128, %{{[0-9]+}}:fpr128
+  ; CHECK: Successors:
+  ; CHECK: SU([[COPY:[0-9]+]]): Ord  Latency=0 Weak
+  ; CHECK: SU([[COPY]]): %acc:fpr64 = COPY
+  bb.0:
+    successors: %bb.1
+    liveins: $q0, $x0
+
+    %acc:fpr64 = FMOVDi 112
+
+  bb.1:
+    successors: %bb.1, %bb.2
+    liveins: $q0, $x0
+
+    STRDui %acc, $x0, 0
+    %0:fpr128 = ADDv4i32 $q0, $q0
+    %1:fpr128 = ADDv4i32 %0, %0
+    STRQui %1, $x0, 1
+    %acc:fpr64 = COPY %0.dsub
+    CBNZX $x0, %bb.1
+    B %bb.2
+
+  bb.2:
+    RET_ReallyLR
+...
+---
+# Likewise for a GPR sub-register copy.
+name: gpr_subreg_to_gpr_copy
+body: |
+  ; CHECK-LABEL: gpr_subreg_to_gpr_copy
+  ; CHECK: SU([[USE:[0-9]+]]): %{{[0-9]+}}:gpr64 = ORRXrs
+  ; CHECK: Successors:
+  ; CHECK: SU([[COPY:[0-9]+]]): Ord  Latency=0 Weak
+  ; CHECK: SU([[COPY]]): %acc:gpr32 = COPY
+  bb.0:
+    successors: %bb.1
+    liveins: $x0, $x1
+
+    %acc:gpr32 = MOVi32imm 0
+
+  bb.1:
+    successors: %bb.1, %bb.2
+    liveins: $x0, $x1
+
+    STRWui %acc, $x0, 0
+    %0:gpr64 = ADDXrr $x1, $x1
+    %1:gpr64 = ORRXrs %0, %0, 0
+    STRXui %1, $x0, 1
+    %acc:gpr32 = COPY %0.sub_32
+    CBNZX $x0, %bb.1
+    B %bb.2
+
+  bb.2:
+    RET_ReallyLR
+...

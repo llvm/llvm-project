@@ -13,13 +13,13 @@
 ;
 ; NOOPT: vmov	[[A:d[0-9]+]], r0, r1
 ; NOOPT-NEXT: vmov	[[B:d[0-9]+]], r2, r3
-; Move the low part of B into a register.
+; Move the low and high parts of A and B into registers.
 ; Unfortunately, we cannot express that the 's' register is the low
 ; part of B, i.e., sIdx == BIdx x 2. E.g., B = d1, B_low = s2.
-; NOOPT-NEXT: vmov	[[B_LOW:r[0-9]+]], s{{[0-9]+}}
 ; NOOPT-NEXT: vmov	[[B_HIGH:r[0-9]+]], s{{[0-9]+}}
-; NOOPT-NEXT: vmov	[[A_LOW:r[0-9]+]], s{{[0-9]+}}
 ; NOOPT-NEXT: vmov	[[A_HIGH:r[0-9]+]], s{{[0-9]+}}
+; NOOPT-NEXT: vmov	[[B_LOW:r[0-9]+]], s{{[0-9]+}}
+; NOOPT-NEXT: vmov	[[A_LOW:r[0-9]+]], s{{[0-9]+}}
 ; NOOPT-NEXT: udiv	[[RES_LOW:r[0-9]+]], [[A_LOW]], [[B_LOW]]
 ; NOOPT-NEXT: vmov.32	[[RES:d[0-9]+]][0], [[RES_LOW]]
 ; NOOPT-NEXT: udiv	[[RES_HIGH:r[0-9]+]], [[A_HIGH]], [[B_HIGH]]

@@ -300,24 +300,24 @@ define <8 x i16> @shuffle_v8i16_i32_mask(<8 x i16> %v, <8 x i32> %mask) nounwind
 ; BE-NEXT:    mov x10, sp
 ; BE-NEXT:    rev64 v2.4s, v2.4s
 ; BE-NEXT:    str q0, [sp]
+; BE-NEXT:    mov x11, sp
 ; BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
 ; BE-NEXT:    fmov w9, s1
 ; BE-NEXT:    mov w8, v1.s[1]
-; BE-NEXT:    mov w11, v1.s[2]
 ; BE-NEXT:    bfi x10, x9, #1, #3
-; BE-NEXT:    mov x9, sp
-; BE-NEXT:    bfi x9, x8, #1, #3
+; BE-NEXT:    mov w9, v1.s[2]
+; BE-NEXT:    bfi x11, x8, #1, #3
 ; BE-NEXT:    mov w8, v1.s[3]
 ; BE-NEXT:    ext v1.16b, v2.16b, v2.16b, #8
 ; BE-NEXT:    ldr h0, [x10]
-; BE-NEXT:    ld1 { v0.h }[1], [x9]
-; BE-NEXT:    mov x9, sp
-; BE-NEXT:    bfi x9, x11, #1, #3
-; BE-NEXT:    fmov w10, s1
-; BE-NEXT:    ld1 { v0.h }[2], [x9]
+; BE-NEXT:    mov x10, sp
+; BE-NEXT:    ld1 { v0.h }[1], [x11]
+; BE-NEXT:    bfi x10, x9, #1, #3
 ; BE-NEXT:    mov x9, sp
 ; BE-NEXT:    bfi x9, x8, #1, #3
 ; BE-NEXT:    mov w8, v1.s[1]
+; BE-NEXT:    ld1 { v0.h }[2], [x10]
+; BE-NEXT:    fmov w10, s1
 ; BE-NEXT:    ld1 { v0.h }[3], [x9]
 ; BE-NEXT:    mov x9, sp
 ; BE-NEXT:    bfi x9, x10, #1, #3
@@ -502,10 +502,10 @@ define <8 x i32> @shuffle_v8i32(<8 x i32> %v, <8 x i32> %mask) nounwind {
 ; LE:       // %bb.0:
 ; LE-NEXT:    sub sp, sp, #272
 ; LE-NEXT:    mov w8, v2.s[1]
-; LE-NEXT:    mov w10, v3.s[1]
+; LE-NEXT:    mov w11, v3.s[1]
 ; LE-NEXT:    add x14, sp, #64
 ; LE-NEXT:    fmov w15, s2
-; LE-NEXT:    fmov w11, s3
+; LE-NEXT:    fmov w10, s3
 ; LE-NEXT:    str x29, [sp, #256] // 8-byte Spill
 ; LE-NEXT:    stp q0, q1, [sp]
 ; LE-NEXT:    mov w9, v3.s[2]
@@ -515,13 +515,13 @@ define <8 x i32> @shuffle_v8i32(<8 x i32> %v, <8 x i32> %mask) nounwind {
 ; LE-NEXT:    add x16, sp, #128
 ; LE-NEXT:    and x8, x8, #0x7
 ; LE-NEXT:    stp q0, q1, [sp, #64]
-; LE-NEXT:    and x10, x10, #0x7
+; LE-NEXT:    and x11, x11, #0x7
 ; LE-NEXT:    stp q0, q1, [sp, #96]
 ; LE-NEXT:    add x8, x14, x8, lsl #2
 ; LE-NEXT:    and x14, x15, #0x7
 ; LE-NEXT:    stp q0, q1, [sp, #128]
 ; LE-NEXT:    mov x15, sp
-; LE-NEXT:    and x11, x11, #0x7
+; LE-NEXT:    and x10, x10, #0x7
 ; LE-NEXT:    stp q0, q1, [sp, #160]
 ; LE-NEXT:    and x13, x13, #0x7
 ; LE-NEXT:    and x9, x9, #0x7
@@ -531,22 +531,22 @@ define <8 x i32> @shuffle_v8i32(<8 x i32> %v, <8 x i32> %mask) nounwind {
 ; LE-NEXT:    ldr s0, [x15, x14, lsl #2]
 ; LE-NEXT:    add x14, sp, #32
 ; LE-NEXT:    add x15, sp, #224
-; LE-NEXT:    add x10, x14, x10, lsl #2
-; LE-NEXT:    ldr s1, [x15, x11, lsl #2]
-; LE-NEXT:    mov w11, v3.s[3]
+; LE-NEXT:    add x11, x14, x11, lsl #2
+; LE-NEXT:    ldr s1, [x15, x10, lsl #2]
+; LE-NEXT:    mov w10, v3.s[3]
 ; LE-NEXT:    ld1 { v0.s }[1], [x8]
 ; LE-NEXT:    add x8, x16, x13, lsl #2
-; LE-NEXT:    ld1 { v1.s }[1], [x10]
-; LE-NEXT:    add x10, sp, #96
-; LE-NEXT:    add x9, x10, x9, lsl #2
-; LE-NEXT:    add x10, sp, #192
+; LE-NEXT:    ld1 { v1.s }[1], [x11]
+; LE-NEXT:    add x11, sp, #96
+; LE-NEXT:    add x9, x11, x9, lsl #2
+; LE-NEXT:    add x11, sp, #192
 ; LE-NEXT:    ld1 { v0.s }[2], [x8]
 ; LE-NEXT:    and x8, x12, #0x7
 ; LE-NEXT:    ld1 { v1.s }[2], [x9]
-; LE-NEXT:    and x9, x11, #0x7
-; LE-NEXT:    add x11, sp, #160
-; LE-NEXT:    add x8, x10, x8, lsl #2
-; LE-NEXT:    add x9, x11, x9, lsl #2
+; LE-NEXT:    and x9, x10, #0x7
+; LE-NEXT:    add x10, sp, #160
+; LE-NEXT:    add x8, x11, x8, lsl #2
+; LE-NEXT:    add x9, x10, x9, lsl #2
 ; LE-NEXT:    ld1 { v0.s }[3], [x8]
 ; LE-NEXT:    ld1 { v1.s }[3], [x9]
 ; LE-NEXT:    add sp, sp, #272
@@ -557,53 +557,53 @@ define <8 x i32> @shuffle_v8i32(<8 x i32> %v, <8 x i32> %mask) nounwind {
 ; BE-NEXT:    sub sp, sp, #272
 ; BE-NEXT:    rev64 v3.4s, v3.4s
 ; BE-NEXT:    rev64 v2.4s, v2.4s
-; BE-NEXT:    add x8, sp, #32
 ; BE-NEXT:    str x29, [sp, #256] // 8-byte Spill
-; BE-NEXT:    add x10, sp, #224
 ; BE-NEXT:    stp q0, q1, [sp]
-; BE-NEXT:    ldr x29, [sp, #256] // 8-byte Reload
+; BE-NEXT:    add x14, sp, #224
+; BE-NEXT:    add x9, sp, #32
 ; BE-NEXT:    stp q0, q1, [sp, #32]
+; BE-NEXT:    add x16, sp, #128
+; BE-NEXT:    ldr x29, [sp, #256] // 8-byte Reload
+; BE-NEXT:    stp q0, q1, [sp, #64]
 ; BE-NEXT:    ext v3.16b, v3.16b, v3.16b, #8
 ; BE-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
-; BE-NEXT:    stp q0, q1, [sp, #64]
 ; BE-NEXT:    stp q0, q1, [sp, #96]
 ; BE-NEXT:    stp q0, q1, [sp, #128]
 ; BE-NEXT:    stp q0, q1, [sp, #160]
-; BE-NEXT:    mov w9, v3.s[1]
-; BE-NEXT:    mov w13, v2.s[1]
-; BE-NEXT:    fmov w16, s3
-; BE-NEXT:    mov w12, v2.s[2]
 ; BE-NEXT:    stp q0, q1, [sp, #192]
-; BE-NEXT:    mov w15, v3.s[2]
+; BE-NEXT:    mov w8, v3.s[1]
+; BE-NEXT:    mov w12, v2.s[1]
+; BE-NEXT:    fmov w13, s3
+; BE-NEXT:    fmov w11, s2
 ; BE-NEXT:    stp q0, q1, [sp, #224]
-; BE-NEXT:    mov w11, v2.s[3]
-; BE-NEXT:    mov w14, v3.s[3]
-; BE-NEXT:    and x16, x16, #0x7
-; BE-NEXT:    and x9, x9, #0x7
-; BE-NEXT:    ldr s0, [x10, x16, lsl #2]
-; BE-NEXT:    and x10, x13, #0x7
-; BE-NEXT:    add x8, x8, x9, lsl #2
-; BE-NEXT:    fmov w9, s2
+; BE-NEXT:    mov w10, v2.s[2]
+; BE-NEXT:    mov w15, v3.s[2]
+; BE-NEXT:    and x13, x13, #0x7
+; BE-NEXT:    and x8, x8, #0x7
+; BE-NEXT:    ldr s0, [x14, x13, lsl #2]
+; BE-NEXT:    and x12, x12, #0x7
 ; BE-NEXT:    add x13, sp, #64
-; BE-NEXT:    mov x16, sp
-; BE-NEXT:    add x10, x13, x10, lsl #2
-; BE-NEXT:    add x13, sp, #128
-; BE-NEXT:    and x15, x15, #0x7
-; BE-NEXT:    ld1 { v0.s }[1], [x8]
-; BE-NEXT:    and x8, x12, #0x7
-; BE-NEXT:    and x9, x9, #0x7
-; BE-NEXT:    add x8, x13, x8, lsl #2
-; BE-NEXT:    and x12, x14, #0x7
-; BE-NEXT:    ldr s1, [x16, x9, lsl #2]
+; BE-NEXT:    and x11, x11, #0x7
+; BE-NEXT:    mov x14, sp
+; BE-NEXT:    add x8, x9, x8, lsl #2
+; BE-NEXT:    ldr s1, [x14, x11, lsl #2]
+; BE-NEXT:    add x12, x13, x12, lsl #2
+; BE-NEXT:    mov w11, v3.s[3]
+; BE-NEXT:    mov w13, v2.s[3]
 ; BE-NEXT:    add x9, sp, #96
-; BE-NEXT:    add x9, x9, x15, lsl #2
-; BE-NEXT:    ld1 { v1.s }[1], [x10]
+; BE-NEXT:    and x14, x15, #0x7
+; BE-NEXT:    ld1 { v0.s }[1], [x8]
+; BE-NEXT:    and x8, x10, #0x7
+; BE-NEXT:    ld1 { v1.s }[1], [x12]
+; BE-NEXT:    add x9, x9, x14, lsl #2
+; BE-NEXT:    add x8, x16, x8, lsl #2
 ; BE-NEXT:    add x10, sp, #160
+; BE-NEXT:    and x11, x11, #0x7
 ; BE-NEXT:    ld1 { v0.s }[2], [x9]
 ; BE-NEXT:    add x9, sp, #192
-; BE-NEXT:    add x10, x10, x12, lsl #2
 ; BE-NEXT:    ld1 { v1.s }[2], [x8]
-; BE-NEXT:    and x8, x11, #0x7
+; BE-NEXT:    and x8, x13, #0x7
+; BE-NEXT:    add x10, x10, x11, lsl #2
 ; BE-NEXT:    add x8, x9, x8, lsl #2
 ; BE-NEXT:    ld1 { v0.s }[3], [x10]
 ; BE-NEXT:    ld1 { v1.s }[3], [x8]

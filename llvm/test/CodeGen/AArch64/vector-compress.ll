@@ -494,32 +494,32 @@ define <4 x i32> @test_compress_knownbits_zext_v4i16_4i32(<4 x i16> %vec, <4 x i
 ; CHECK-NEXT:    str q2, [sp]
 ; CHECK-NEXT:    and.16b v3, v1, v3
 ; CHECK-NEXT:    mov.s w8, v1[1]
-; CHECK-NEXT:    mov.s w9, v1[2]
-; CHECK-NEXT:    mov.s w10, v1[3]
-; CHECK-NEXT:    fmov w11, s1
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov.s w10, v1[2]
+; CHECK-NEXT:    mov.s w11, v1[3]
 ; CHECK-NEXT:    addv.4s s1, v3
-; CHECK-NEXT:    and x16, x11, #0x1
+; CHECK-NEXT:    and x16, x9, #0x1
+; CHECK-NEXT:    bfi x14, x9, #2, #1
 ; CHECK-NEXT:    and x8, x8, #0x1
-; CHECK-NEXT:    bfi x14, x11, #2, #1
 ; CHECK-NEXT:    add x8, x16, x8
-; CHECK-NEXT:    and x9, x9, #0x1
 ; CHECK-NEXT:    and x10, x10, #0x1
-; CHECK-NEXT:    fmov w11, s1
-; CHECK-NEXT:    add x9, x8, x9
+; CHECK-NEXT:    and x11, x11, #0x1
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    add x10, x8, x10
 ; CHECK-NEXT:    mov w16, #3 ; =0x3
-; CHECK-NEXT:    add x10, x9, x10
+; CHECK-NEXT:    add x11, x10, x11
 ; CHECK-NEXT:    orr x8, x12, x8, lsl #2
-; CHECK-NEXT:    bfi x15, x9, #2, #2
-; CHECK-NEXT:    cmp x10, #3
-; CHECK-NEXT:    bfi x13, x11, #2, #2
-; CHECK-NEXT:    mov.s w11, v0[3]
-; CHECK-NEXT:    csel x9, x10, x16, lo
+; CHECK-NEXT:    bfi x15, x10, #2, #2
+; CHECK-NEXT:    cmp x11, #3
+; CHECK-NEXT:    bfi x13, x9, #2, #2
+; CHECK-NEXT:    mov.s w9, v0[3]
+; CHECK-NEXT:    csel x10, x11, x16, lo
 ; CHECK-NEXT:    ldr w13, [x13]
 ; CHECK-NEXT:    str s0, [sp]
 ; CHECK-NEXT:    st1.s { v0 }[1], [x14]
 ; CHECK-NEXT:    st1.s { v0 }[2], [x8]
-; CHECK-NEXT:    orr x8, x12, x9, lsl #2
-; CHECK-NEXT:    csel w9, w11, w13, hi
+; CHECK-NEXT:    orr x8, x12, x10, lsl #2
+; CHECK-NEXT:    csel w9, w9, w13, hi
 ; CHECK-NEXT:    st1.s { v0 }[3], [x15]
 ; CHECK-NEXT:    str w9, [x8]
 ; CHECK-NEXT:    ldr q0, [sp], #16
@@ -550,32 +550,32 @@ define <4 x i32> @test_compress_numsignbits_sext_v4i16_4i32(<4 x i16> %vec, <4 x
 ; CHECK-NEXT:    str q2, [sp]
 ; CHECK-NEXT:    and.16b v3, v1, v3
 ; CHECK-NEXT:    mov.s w8, v1[1]
-; CHECK-NEXT:    mov.s w9, v1[2]
-; CHECK-NEXT:    mov.s w10, v1[3]
-; CHECK-NEXT:    fmov w11, s1
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov.s w10, v1[2]
+; CHECK-NEXT:    mov.s w11, v1[3]
 ; CHECK-NEXT:    addv.4s s1, v3
-; CHECK-NEXT:    and x16, x11, #0x1
+; CHECK-NEXT:    and x16, x9, #0x1
+; CHECK-NEXT:    bfi x14, x9, #2, #1
 ; CHECK-NEXT:    and x8, x8, #0x1
-; CHECK-NEXT:    bfi x14, x11, #2, #1
 ; CHECK-NEXT:    add x8, x16, x8
-; CHECK-NEXT:    and x9, x9, #0x1
 ; CHECK-NEXT:    and x10, x10, #0x1
-; CHECK-NEXT:    fmov w11, s1
-; CHECK-NEXT:    add x9, x8, x9
+; CHECK-NEXT:    and x11, x11, #0x1
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    add x10, x8, x10
 ; CHECK-NEXT:    mov w16, #3 ; =0x3
-; CHECK-NEXT:    add x10, x9, x10
+; CHECK-NEXT:    add x11, x10, x11
 ; CHECK-NEXT:    orr x8, x12, x8, lsl #2
-; CHECK-NEXT:    bfi x15, x9, #2, #2
-; CHECK-NEXT:    cmp x10, #3
-; CHECK-NEXT:    bfi x13, x11, #2, #2
-; CHECK-NEXT:    mov.s w11, v0[3]
-; CHECK-NEXT:    csel x9, x10, x16, lo
+; CHECK-NEXT:    bfi x15, x10, #2, #2
+; CHECK-NEXT:    cmp x11, #3
+; CHECK-NEXT:    bfi x13, x9, #2, #2
+; CHECK-NEXT:    mov.s w9, v0[3]
+; CHECK-NEXT:    csel x10, x11, x16, lo
 ; CHECK-NEXT:    ldr w13, [x13]
 ; CHECK-NEXT:    str s0, [sp]
 ; CHECK-NEXT:    st1.s { v0 }[1], [x14]
 ; CHECK-NEXT:    st1.s { v0 }[2], [x8]
-; CHECK-NEXT:    orr x8, x12, x9, lsl #2
-; CHECK-NEXT:    csel w9, w11, w13, hi
+; CHECK-NEXT:    orr x8, x12, x10, lsl #2
+; CHECK-NEXT:    csel w9, w9, w13, hi
 ; CHECK-NEXT:    st1.s { v0 }[3], [x15]
 ; CHECK-NEXT:    str w9, [x8]
 ; CHECK-NEXT:    ldr q0, [sp], #16

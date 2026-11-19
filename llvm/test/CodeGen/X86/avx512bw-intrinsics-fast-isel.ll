@@ -555,9 +555,9 @@ define i64 @test_mm512_test_epi8_mask(<8 x i64> %__A, <8 x i64> %__B) {
 ; X86-LABEL: test_mm512_test_epi8_mask:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    vptestmb %zmm0, %zmm1, %k0
-; X86-NEXT:    kshiftrq $32, %k0, %k1
 ; X86-NEXT:    kmovd %k0, %eax
-; X86-NEXT:    kmovd %k1, %edx
+; X86-NEXT:    kshiftrq $32, %k0, %k0
+; X86-NEXT:    kmovd %k0, %edx
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
 ;
@@ -649,9 +649,9 @@ define i64 @test_mm512_testn_epi8_mask(<8 x i64> %__A, <8 x i64> %__B) {
 ; X86-LABEL: test_mm512_testn_epi8_mask:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    vptestnmb %zmm0, %zmm1, %k0
-; X86-NEXT:    kshiftrq $32, %k0, %k1
 ; X86-NEXT:    kmovd %k0, %eax
-; X86-NEXT:    kmovd %k1, %edx
+; X86-NEXT:    kshiftrq $32, %k0, %k0
+; X86-NEXT:    kmovd %k0, %edx
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
 ;

@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MachineScheduler.h"
+#include "RegisterCoalescer.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
@@ -2647,6 +2648,12 @@ void CopyConstrain::constrainLocalCopy(SUnit *CopySU, ScheduleDAGMILive *DAG) {
   const MachineOperand &DstOp = Copy->getOperand(0);
   Register DstReg = DstOp.getReg();
   if (!DstReg.isVirtual() || DstOp.isDead())
+    return;
+
+  // A copy that the coalescer can never eliminate, such as a copy between
+  // register banks, gains nothing from the edges below.
+  CoalescerPair CP(*DAG->TRI);
+  if (!CP.setRegisters(Copy))
     return;
 
   // Check if either the dest or source is local. If it's live across a back

@@ -774,10 +774,10 @@ define <3 x double> @v3f128_double(<3 x fp128> %a, <3 x fp128> %b, <3 x double> 
 ; CHECK-GI-NEXT:    bic x8, x20, x8
 ; CHECK-GI-NEXT:    ldp x20, x19, [sp, #160] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    orr x8, x9, x8
-; CHECK-GI-NEXT:    bic v1.16b, v3.16b, v1.16b
-; CHECK-GI-NEXT:    and v0.16b, v2.16b, v0.16b
+; CHECK-GI-NEXT:    and v1.16b, v2.16b, v1.16b
 ; CHECK-GI-NEXT:    fmov d2, x8
-; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-GI-NEXT:    bic v0.16b, v3.16b, v0.16b
+; CHECK-GI-NEXT:    orr v0.16b, v1.16b, v0.16b
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    add sp, sp, #176

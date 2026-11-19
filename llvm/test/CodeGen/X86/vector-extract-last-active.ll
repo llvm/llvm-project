@@ -349,9 +349,6 @@ define i32 @extract_last_active_v3i32(<3 x i32> %a, <3 x i1> %c) nounwind {
 ; AVX512-LABEL: extract_last_active_v3i32:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vmovdqa %xmm0, -{{[0-9]+}}(%rsp)
-; AVX512-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vpinsrb $1, %esi, %xmm0, %xmm0
-; AVX512-NEXT:    vpinsrb $2, %edx, %xmm0, %xmm0
 ; AVX512-NEXT:    kmovd %edx, %k0
 ; AVX512-NEXT:    kmovd %edi, %k1
 ; AVX512-NEXT:    korw %k0, %k1, %k0
@@ -361,7 +358,10 @@ define i32 @extract_last_active_v3i32(<3 x i32> %a, <3 x i1> %c) nounwind {
 ; AVX512-NEXT:    andb $1, %cl
 ; AVX512-NEXT:    xorl %eax, %eax
 ; AVX512-NEXT:    cmpb $1, %cl
+; AVX512-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vpinsrb $1, %esi, %xmm0, %xmm0
 ; AVX512-NEXT:    sbbl %eax, %eax
+; AVX512-NEXT:    vpinsrb $2, %edx, %xmm0, %xmm0
 ; AVX512-NEXT:    vpmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
 ; AVX512-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
 ; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0

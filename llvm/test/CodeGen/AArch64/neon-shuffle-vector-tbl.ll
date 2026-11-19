@@ -819,17 +819,17 @@ define <4 x i32> @no_for_shuffle_int_vector(<4 x i32> %src, <4 x i32> %mask) {
 ; CHECK-GI-NEXT:    ldr s1, [x10, w9, uxtw #2]
 ; CHECK-GI-NEXT:    add x9, sp, #16
 ; CHECK-GI-NEXT:    str q0, [sp, #16]
-; CHECK-GI-NEXT:    mov.s w10, v2[2]
 ; CHECK-GI-NEXT:    ldr s3, [x9, w8, uxtw #2]
-; CHECK-GI-NEXT:    add x8, sp, #32
+; CHECK-GI-NEXT:    mov.s w8, v2[2]
+; CHECK-GI-NEXT:    add x9, sp, #32
 ; CHECK-GI-NEXT:    str q0, [sp, #32]
-; CHECK-GI-NEXT:    mov.s w9, v2[3]
 ; CHECK-GI-NEXT:    mov.s v1[1], v3[0]
-; CHECK-GI-NEXT:    ldr s2, [x8, w10, uxtw #2]
-; CHECK-GI-NEXT:    add x8, sp, #48
+; CHECK-GI-NEXT:    ldr s3, [x9, w8, uxtw #2]
+; CHECK-GI-NEXT:    mov.s w8, v2[3]
+; CHECK-GI-NEXT:    add x9, sp, #48
 ; CHECK-GI-NEXT:    str q0, [sp, #48]
-; CHECK-GI-NEXT:    add x8, x8, w9, uxtw #2
-; CHECK-GI-NEXT:    mov.s v1[2], v2[0]
+; CHECK-GI-NEXT:    mov.s v1[2], v3[0]
+; CHECK-GI-NEXT:    add x8, x9, w8, uxtw #2
 ; CHECK-GI-NEXT:    ld1.s { v1 }[3], [x8]
 ; CHECK-GI-NEXT:    mov.16b v0, v1
 ; CHECK-GI-NEXT:    add sp, sp, #64

@@ -3176,17 +3176,17 @@ define <2 x i64> @smul_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-GI-NEXT:    fmov x9, d0
 ; CHECK-GI-NEXT:    fmov x10, d1
 ; CHECK-GI-NEXT:    adrp x8, .LCPI95_0
-; CHECK-GI-NEXT:    mov d2, v1.d[1]
-; CHECK-GI-NEXT:    mov d3, v0.d[1]
-; CHECK-GI-NEXT:    mov x13, v1.d[1]
-; CHECK-GI-NEXT:    mov x14, v0.d[1]
+; CHECK-GI-NEXT:    mov d2, v0.d[1]
+; CHECK-GI-NEXT:    mov d3, v1.d[1]
+; CHECK-GI-NEXT:    mov x13, v0.d[1]
+; CHECK-GI-NEXT:    mov x14, v1.d[1]
 ; CHECK-GI-NEXT:    umulh x11, x9, x10
 ; CHECK-GI-NEXT:    asr x12, x10, #63
-; CHECK-GI-NEXT:    fmov x15, d2
-; CHECK-GI-NEXT:    madd x11, x9, x12, x11
-; CHECK-GI-NEXT:    fmov x12, d3
+; CHECK-GI-NEXT:    fmov x15, d3
 ; CHECK-GI-NEXT:    ldr q3, [x8, :lo12:.LCPI95_0]
-; CHECK-GI-NEXT:    mul x13, x14, x13
+; CHECK-GI-NEXT:    madd x11, x9, x12, x11
+; CHECK-GI-NEXT:    fmov x12, d2
+; CHECK-GI-NEXT:    mul x13, x13, x14
 ; CHECK-GI-NEXT:    asr x14, x15, #63
 ; CHECK-GI-NEXT:    umulh x16, x12, x15
 ; CHECK-GI-NEXT:    madd x14, x12, x14, x16
@@ -3631,29 +3631,29 @@ define <3 x i64> @smul_v3i64(<3 x i64> %a, <3 x i64> %b) {
 ; CHECK-GI-NEXT:    fmov x9, d3
 ; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-GI-NEXT:    // kill: def $d4 killed $d4 def $q4
-; CHECK-GI-NEXT:    fmov x12, d4
+; CHECK-GI-NEXT:    fmov x12, d1
 ; CHECK-GI-NEXT:    mov v6.16b, v0.16b
 ; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    mov v3.d[1], v4.d[0]
 ; CHECK-GI-NEXT:    umulh x10, x8, x9
 ; CHECK-GI-NEXT:    asr x11, x9, #63
-; CHECK-GI-NEXT:    asr x14, x12, #63
 ; CHECK-GI-NEXT:    mov v6.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    fmov x15, d3
 ; CHECK-GI-NEXT:    madd x10, x8, x11, x10
-; CHECK-GI-NEXT:    fmov x11, d1
+; CHECK-GI-NEXT:    fmov x11, d4
 ; CHECK-GI-NEXT:    asr x8, x8, #63
-; CHECK-GI-NEXT:    umulh x13, x11, x12
+; CHECK-GI-NEXT:    umulh x13, x12, x11
+; CHECK-GI-NEXT:    asr x14, x11, #63
 ; CHECK-GI-NEXT:    madd x8, x8, x9, x10
 ; CHECK-GI-NEXT:    mov x10, v0.d[1]
-; CHECK-GI-NEXT:    madd x9, x11, x14, x13
+; CHECK-GI-NEXT:    madd x9, x12, x14, x13
 ; CHECK-GI-NEXT:    fmov x14, d0
 ; CHECK-GI-NEXT:    mov x13, v3.d[1]
-; CHECK-GI-NEXT:    asr x11, x11, #63
+; CHECK-GI-NEXT:    asr x12, x12, #63
 ; CHECK-GI-NEXT:    mul x14, x14, x15
 ; CHECK-GI-NEXT:    fmov d3, x8
 ; CHECK-GI-NEXT:    mul x10, x10, x13
-; CHECK-GI-NEXT:    madd x9, x11, x12, x9
+; CHECK-GI-NEXT:    madd x9, x12, x11, x9
 ; CHECK-GI-NEXT:    fmov x11, d2
 ; CHECK-GI-NEXT:    fmov x12, d5
 ; CHECK-GI-NEXT:    fmov d0, x14
@@ -3863,24 +3863,24 @@ define <4 x i64> @umul_v4i64(<4 x i64> %a, <4 x i64> %b) {
 ; CHECK-GI-NEXT:    fmov x9, d2
 ; CHECK-GI-NEXT:    fmov x13, d1
 ; CHECK-GI-NEXT:    fmov x14, d3
-; CHECK-GI-NEXT:    mov x10, v2.d[1]
-; CHECK-GI-NEXT:    mov x11, v0.d[1]
-; CHECK-GI-NEXT:    mov x15, v3.d[1]
-; CHECK-GI-NEXT:    mov x17, v1.d[1]
+; CHECK-GI-NEXT:    mov x10, v0.d[1]
+; CHECK-GI-NEXT:    mov x11, v2.d[1]
+; CHECK-GI-NEXT:    mov x16, v1.d[1]
+; CHECK-GI-NEXT:    mov x17, v3.d[1]
 ; CHECK-GI-NEXT:    umulh x12, x8, x9
-; CHECK-GI-NEXT:    umulh x16, x13, x14
-; CHECK-GI-NEXT:    umulh x18, x11, x10
+; CHECK-GI-NEXT:    umulh x15, x13, x14
+; CHECK-GI-NEXT:    umulh x18, x10, x11
 ; CHECK-GI-NEXT:    fmov d2, x12
-; CHECK-GI-NEXT:    umulh x0, x17, x15
-; CHECK-GI-NEXT:    fmov d3, x16
+; CHECK-GI-NEXT:    umulh x0, x16, x17
+; CHECK-GI-NEXT:    fmov d3, x15
 ; CHECK-GI-NEXT:    mul x8, x8, x9
 ; CHECK-GI-NEXT:    mov v2.d[1], x18
-; CHECK-GI-NEXT:    mul x9, x11, x10
+; CHECK-GI-NEXT:    mul x9, x10, x11
 ; CHECK-GI-NEXT:    mov v3.d[1], x0
 ; CHECK-GI-NEXT:    mul x10, x13, x14
 ; CHECK-GI-NEXT:    fmov d4, x8
 ; CHECK-GI-NEXT:    cmtst v2.2d, v2.2d, v2.2d
-; CHECK-GI-NEXT:    mul x11, x17, x15
+; CHECK-GI-NEXT:    mul x11, x16, x17
 ; CHECK-GI-NEXT:    cmtst v3.2d, v3.2d, v3.2d
 ; CHECK-GI-NEXT:    mov v4.d[1], x9
 ; CHECK-GI-NEXT:    fmov d5, x10
@@ -3940,7 +3940,7 @@ define <4 x i64> @smul_v4i64(<4 x i64> %a, <4 x i64> %b) {
 ; CHECK-GI-NEXT:    mov d5, v2.d[1]
 ; CHECK-GI-NEXT:    fmov x8, d0
 ; CHECK-GI-NEXT:    fmov x9, d2
-; CHECK-GI-NEXT:    mov x1, v1.d[1]
+; CHECK-GI-NEXT:    mov x1, v3.d[1]
 ; CHECK-GI-NEXT:    asr x15, x8, #63
 ; CHECK-GI-NEXT:    fmov x11, d4
 ; CHECK-GI-NEXT:    fmov x12, d5
@@ -3964,30 +3964,30 @@ define <4 x i64> @smul_v4i64(<4 x i64> %a, <4 x i64> %b) {
 ; CHECK-GI-NEXT:    asr x17, x13, #63
 ; CHECK-GI-NEXT:    fmov d4, x10
 ; CHECK-GI-NEXT:    umulh x14, x12, x13
-; CHECK-GI-NEXT:    madd x18, x15, x0, x18
-; CHECK-GI-NEXT:    mov x0, v0.d[1]
-; CHECK-GI-NEXT:    asr x15, x15, #63
+; CHECK-GI-NEXT:    mul x8, x8, x9
+; CHECK-GI-NEXT:    mov x9, v1.d[1]
 ; CHECK-GI-NEXT:    mov v4.d[1], x11
 ; CHECK-GI-NEXT:    madd x14, x12, x17, x14
-; CHECK-GI-NEXT:    mov x17, v2.d[1]
-; CHECK-GI-NEXT:    mul x8, x8, x9
-; CHECK-GI-NEXT:    mov x9, v3.d[1]
-; CHECK-GI-NEXT:    mul x17, x0, x17
-; CHECK-GI-NEXT:    mul x0, x12, x13
-; CHECK-GI-NEXT:    asr x12, x12, #63
+; CHECK-GI-NEXT:    madd x17, x15, x0, x18
+; CHECK-GI-NEXT:    mov x18, v0.d[1]
+; CHECK-GI-NEXT:    mov x0, v2.d[1]
+; CHECK-GI-NEXT:    asr x15, x15, #63
 ; CHECK-GI-NEXT:    fmov d2, x8
 ; CHECK-GI-NEXT:    adrp x8, .LCPI107_0
-; CHECK-GI-NEXT:    mul x9, x1, x9
+; CHECK-GI-NEXT:    mul x9, x9, x1
 ; CHECK-GI-NEXT:    ldr q6, [x8, :lo12:.LCPI107_0]
+; CHECK-GI-NEXT:    mul x18, x18, x0
+; CHECK-GI-NEXT:    mul x0, x12, x13
+; CHECK-GI-NEXT:    asr x12, x12, #63
 ; CHECK-GI-NEXT:    madd x12, x12, x13, x14
-; CHECK-GI-NEXT:    mov v2.d[1], x17
+; CHECK-GI-NEXT:    mov v2.d[1], x18
+; CHECK-GI-NEXT:    madd x13, x15, x16, x17
 ; CHECK-GI-NEXT:    fmov d3, x0
-; CHECK-GI-NEXT:    madd x13, x15, x16, x18
-; CHECK-GI-NEXT:    mov v3.d[1], x9
-; CHECK-GI-NEXT:    sshl v7.2d, v2.2d, v6.2d
 ; CHECK-GI-NEXT:    fmov d5, x12
-; CHECK-GI-NEXT:    cmeq v4.2d, v4.2d, v7.2d
+; CHECK-GI-NEXT:    sshl v7.2d, v2.2d, v6.2d
+; CHECK-GI-NEXT:    mov v3.d[1], x9
 ; CHECK-GI-NEXT:    mov v5.d[1], x13
+; CHECK-GI-NEXT:    cmeq v4.2d, v4.2d, v7.2d
 ; CHECK-GI-NEXT:    sshl v6.2d, v3.2d, v6.2d
 ; CHECK-GI-NEXT:    mvn v4.16b, v4.16b
 ; CHECK-GI-NEXT:    cmeq v5.2d, v5.2d, v6.2d
