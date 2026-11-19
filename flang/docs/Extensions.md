@@ -403,6 +403,17 @@ print *, is_contiguous(a(::2))                   ! prints T in Flang
   and defined as `ERROR_UNIT` in the intrinsic `ISO_FORTRAN_ENV` module.
 * Objects in blank COMMON may be initialized.
 * Initialization of COMMON blocks outside of BLOCK DATA subprograms.
+* Differently named COMMON blocks in different scoping units may share a
+  binding label, provided that every block sharing the global identifier
+  has that binding label.  They share storage because the binding label
+  determines their object name.  This extends Fortran 2023 8.10.2.4 and
+  19.2, which associate COMMON blocks by Fortran name and require distinct
+  entities to have distinct global identifiers.  A default `BIND(C)` label
+  counts as a binding label; an empty or all-blank `NAME=` does not.
+  Collisions with differently named unbound blocks, other global entities,
+  or another COMMON block in the same scoping unit remain errors.
+  `-pedantic` or `-Wcommon-block-binding-label` enables a portability warning
+  for this extension.
 * A named COMMON block may be redundantly initialized (via `DATA`
   statements or declaration initializers) in more than one program
   unit, with a portability warning, provided that every appearance
