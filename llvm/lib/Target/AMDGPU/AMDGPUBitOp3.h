@@ -212,8 +212,7 @@ public:
     if (!Built)
       build(*BB->getParent());
     auto It = Blocks.find(Val);
-    return It != Blocks.end() &&
-           any_of(It->second, [&](const BasicBlock *B) { return B != BB; });
+    return It != Blocks.end() && any_of(It->second, llvm::not_equal_to(BB));
   }
 };
 
