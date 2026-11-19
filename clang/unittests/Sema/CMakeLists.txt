@@ -11,6 +11,7 @@ add_distinct_clang_unittest(SemaTests
   SemaLookupTest.cpp
   SemaModuleTest.cpp
   SemaNoloadLookupTest.cpp
+  SemaConstraintAdmitTest.cpp
   CLANG_LIBS
   clangAST
   clangASTMatchers

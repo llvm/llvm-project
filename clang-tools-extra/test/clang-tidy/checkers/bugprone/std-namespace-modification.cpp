@@ -297,3 +297,71 @@ template <typename T>
 struct std::hash<Bar<T>> // Should not warn as this specialization depends on a user-defined type.
 {};
 // gh183752 end
+
+// Structured binding support: std::tuple_size and std::tuple_element.
+namespace tuple_like {
+struct Pair {};
+
+template <unsigned N>
+struct Region {};
+} // namespace tuple_like
+
+using PairAlias = tuple_like::Pair;
+
+namespace std {
+// no-warning: specialized for a program-defined type.
+template <>
+struct tuple_size<tuple_like::Pair> : integral_constant<__SIZE_TYPE__, 2> {};
+
+template <>
+struct tuple_element<0, tuple_like::Pair> {
+  using type = int;
+};
+
+// no-warning: specialized for a program-defined template.
+template <unsigned N>
+struct tuple_size<tuple_like::Region<N>>
+    : integral_constant<__SIZE_TYPE__, 2> {};
+
+template <__SIZE_TYPE__ I, unsigned N>
+struct tuple_element<I, tuple_like::Region<N>> {
+  using type = int;
+};
+
+// no-warning: cv-qualifiers do not change the program-defined type.
+template <>
+struct tuple_size<const tuple_like::Pair> : tuple_size<tuple_like::Pair> {};
+
+// no-warning: the alias refers to a program-defined type.
+template <>
+struct tuple_element<1, PairAlias> {
+  using type = int;
+};
+} // namespace std
+
+namespace std {
+// CHECK-MESSAGES: :[[@LINE+3]]:8: warning: modification of 'std' namespace
+// CHECK-MESSAGES: :[[@LINE-2]]:11: note: 'std' namespace opened here
+template <>
+struct tuple_size<int> : integral_constant<__SIZE_TYPE__, 2> {};
+
+// CHECK-MESSAGES: :[[@LINE+2]]:8: warning: modification of 'std' namespace
+template <>
+struct tuple_element<0, int> {
+  using type = int;
+};
+
+// CHECK-MESSAGES: :[[@LINE+2]]:8: warning: modification of 'std' namespace
+template <>
+struct tuple_size<std::io_errc> : integral_constant<__SIZE_TYPE__, 1> {};
+
+// CHECK-MESSAGES: :[[@LINE+2]]:8: warning: modification of 'std' namespace
+template <__SIZE_TYPE__ I>
+struct tuple_element<I, std::io_errc> {
+  using type = int;
+};
+
+// CHECK-MESSAGES: :[[@LINE+2]]:8: warning: modification of 'std' namespace
+template <class T>
+struct tuple_size<T[3]> : integral_constant<__SIZE_TYPE__, 3> {};
+} // namespace std

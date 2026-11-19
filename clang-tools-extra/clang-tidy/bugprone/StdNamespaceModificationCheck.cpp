@@ -9,6 +9,7 @@
 #include "StdNamespaceModificationCheck.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchersInternal.h"
+#include "clang/Sema/Sema.h"
 
 using namespace clang;
 using namespace clang::ast_matchers;
@@ -134,6 +135,16 @@ void clang::tidy::bugprone::StdNamespaceModificationCheck::check(
   // Skip compiler-generated implicit declarations (e.g. std::align_val_t).
   if (D->isImplicit())
     return;
+
+  // A partial specialization of a standard library template depends on a
+  // program-defined type if its constraints admit only such types. This needs
+  // Sema; without it, keep warning.
+  if (const auto *PSD = dyn_cast<ClassTemplatePartialSpecializationDecl>(D);
+      PSD && isa<NamespaceDecl>(PSD->getDeclContext())) {
+    if (Sema *S = getSema();
+        S && !S->constraintsAdmitNonProgramDefinedType(PSD))
+      return;
+  }
 
   diag(D->getLocation(),
        "modification of %0 namespace can result in undefined behavior")
