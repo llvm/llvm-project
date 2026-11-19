@@ -24,7 +24,8 @@ define i32 @or_hi_build_vector_lo_zext(i16 %lo, i16 %hi) {
 ; GFX10-LABEL: or_hi_build_vector_lo_zext:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
+; GFX10-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX10-NEXT:    v_or_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-TRUE16-LABEL: or_hi_build_vector_lo_zext:
@@ -36,7 +37,9 @@ define i32 @or_hi_build_vector_lo_zext(i16 %lo, i16 %hi) {
 ; GFX11-FAKE16-LABEL: or_hi_build_vector_lo_zext:
 ; GFX11-FAKE16:       ; %bb.0:
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FAKE16-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
+; GFX11-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-FAKE16-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-GISEL-LABEL: or_hi_build_vector_lo_zext:
@@ -87,7 +90,8 @@ define i32 @or_lo_zext_hi_build_vector(i16 %lo, i16 %hi) {
 ; GFX10-LABEL: or_lo_zext_hi_build_vector:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
+; GFX10-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX10-NEXT:    v_or_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-TRUE16-LABEL: or_lo_zext_hi_build_vector:
@@ -99,7 +103,9 @@ define i32 @or_lo_zext_hi_build_vector(i16 %lo, i16 %hi) {
 ; GFX11-FAKE16-LABEL: or_lo_zext_hi_build_vector:
 ; GFX11-FAKE16:       ; %bb.0:
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FAKE16-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
+; GFX11-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-FAKE16-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-GISEL-LABEL: or_lo_zext_hi_build_vector:
