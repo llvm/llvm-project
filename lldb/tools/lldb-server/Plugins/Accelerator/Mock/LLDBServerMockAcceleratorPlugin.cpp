@@ -136,6 +136,15 @@ LLDBServerMockAcceleratorPlugin::BreakpointWasHit(
         std::nullopt, "mock_gpu_accelerator_connect"};
     actions.breakpoints.push_back(std::move(connect_bp));
 
+    if (GetMockEnvSetting("LLDB_MOCK_ACCELERATOR_WAIT_FOR_RESUME", "0") ==
+        "1") {
+      AcceleratorBreakpointInfo wait_for_resume_bp;
+      wait_for_resume_bp.identifier = kBreakpointIDWaitForResume;
+      wait_for_resume_bp.by_name = AcceleratorBreakpointByName{
+          std::nullopt, "mock_gpu_accelerator_wait_for_resume"};
+      actions.breakpoints.push_back(std::move(wait_for_resume_bp));
+    }
+
     response.actions = std::move(actions);
     break;
   }
@@ -154,6 +163,19 @@ LLDBServerMockAcceleratorPlugin::BreakpointWasHit(
     AcceleratorActions actions = GetNewAcceleratorAction();
     actions.session_name = "Mock Accelerator Session";
     actions.connect_info = CreateConnection();
+    response.actions = std::move(actions);
+    break;
+  }
+  case kBreakpointIDWaitForResume: {
+    ProcessMockAccelerator *process = GetAcceleratorProcess();
+    if (!process)
+      return llvm::createStringError("no mock accelerator process");
+
+    response.disable_bp = true;
+    response.auto_resume_native = false;
+    AcceleratorActions actions = GetNewAcceleratorAction();
+    actions.stop_id = process->GetStopID();
+    actions.wait_for_accelerator_process_to_resume = true;
     response.actions = std::move(actions);
     break;
   }

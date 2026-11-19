@@ -847,6 +847,11 @@ uint32_t NativeProcessProtocol::GetStopID() const {
   return m_stop_id;
 }
 
+uint32_t NativeProcessProtocol::GetNextStopID() const {
+  std::lock_guard<std::recursive_mutex> guard(m_state_mutex);
+  return m_stop_id + (StateIsRunningState(m_state) ? 1 : 0);
+}
+
 void NativeProcessProtocol::DoStopIDBumped(uint32_t /* newBumpId */) {
   // Default implementation does nothing.
 }

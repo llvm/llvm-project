@@ -122,12 +122,6 @@ llvm::json::Value toJSON(const AcceleratorConnectionInfo &data);
 /// - Breakpoint hits: when a native breakpoint requested by a plugin is hit,
 ///   the AcceleratorBreakpointHitResponse contains an AcceleratorActions that
 ///   can request additional breakpoints or other actions.
-///
-/// In future patches, AcceleratorActions will also be returned:
-/// - When the native process stops (via NativeProcessIsStopping), allowing
-///   plugins to react to arbitrary stop events.
-/// - Via accelerator stop reply packets, enabling plugins to inject actions
-///   into the native process asynchronously.
 struct AcceleratorActions {
   AcceleratorActions() = default;
   AcceleratorActions(llvm::StringRef plugin_name, int64_t action_id)

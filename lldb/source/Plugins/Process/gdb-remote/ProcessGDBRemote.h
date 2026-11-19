@@ -10,6 +10,8 @@
 #define LLDB_SOURCE_PLUGINS_PROCESS_GDB_REMOTE_PROCESSGDBREMOTE_H
 
 #include <atomic>
+#include <chrono>
+#include <condition_variable>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -43,6 +45,7 @@
 #include "GDBRemoteRegisterContext.h"
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/Support/Error.h"
 
 namespace lldb_private {
 namespace process_gdb_remote {
@@ -113,6 +116,8 @@ public:
 
   // Process Control
   Status WillResume() override;
+
+  void DidResume() override;
 
   bool SupportsReverseDirection() override;
 
@@ -516,6 +521,48 @@ protected:
                                MemoryRegionInfo &region_info) override;
 
 private:
+  friend class ProcessGDBRemoteSyncStateTest;
+
+  /// Tracks a server stop reply until that same stop has successfully resumed.
+  /// Accelerator actions use the server's stop identifier because LLDB's
+  /// public process state can be published later on another thread.
+  class SyncState {
+  public:
+    void Reset();
+    void Cancel();
+    void SetStopped(uint32_t stop_id);
+    void PrepareToResume();
+    void SetResumed();
+
+    llvm::Error WaitForResume(uint32_t stop_id,
+                              std::chrono::steady_clock::duration timeout);
+
+  private:
+    enum class State { Unknown, Stopped, Running };
+
+    struct PendingResume {
+      uint64_t stop_generation;
+      uint64_t resume_generation;
+    };
+
+    /// Stop identifiers are monotonically increasing modulo 2^32. Their
+    /// distance is expected to remain less than half of that range.
+    static int32_t CompareStopIDs(uint32_t lhs, uint32_t rhs) {
+      return static_cast<int32_t>(lhs - rhs);
+    }
+
+    std::mutex m_mutex;
+    std::condition_variable m_cv;
+    std::optional<uint32_t> m_stop_id;
+    State m_state = State::Unknown;
+    uint64_t m_stop_generation = 0;
+    uint64_t m_resume_generation = 0;
+    uint64_t m_completed_resume_generation = 0;
+    uint64_t m_cancel_generation = 0;
+    bool m_cancelled = false;
+    std::optional<PendingResume> m_pending_resume;
+  };
+
   // For ProcessGDBRemote only
   std::string m_partial_profile_data;
   std::map<uint64_t, uint32_t> m_thread_id_to_used_usec_map;
@@ -540,9 +587,13 @@ private:
   /// Remove the breakpoints associated with thread creation from the Target.
   void RemoveNewThreadBreakpoints();
 
-  /// Handle a set of actions requested by an accelerator plugin. Currently this
-  /// only sets the breakpoints requested in \a actions.
+  /// Handle a set of actions requested by an accelerator plugin.
   llvm::Error HandleAcceleratorActions(const AcceleratorActions &actions);
+
+  /// Find the gdb-remote process for the accelerator target associated with
+  /// \p plugin_name in this CPU target's CPU-and-accelerators group.
+  llvm::Expected<std::shared_ptr<ProcessGDBRemote>>
+  GetAcceleratorProcess(llvm::StringRef plugin_name);
 
   /// Set the breakpoints requested by an accelerator plugin as internal
   /// breakpoints with a callback that notifies the plugin when they are hit.
@@ -566,12 +617,12 @@ private:
                                 lldb::user_id_t break_id,
                                 lldb::user_id_t break_loc_id);
 
-  /// Tracks the last action identifier handled per accelerator plugin so the
-  /// same actions are not processed more than once. Accelerator actions can
-  /// arrive in a stop reply packet, and if the debugger re-requests the stop
-  /// reply with a '?' packet we can be handed the same actions again; this
-  /// guards against handling them (e.g. setting the same breakpoints) twice.
+  /// Tracks the last action identifier handled per accelerator plugin. A
+  /// plugin can repeat its current actions in initialization or breakpoint-hit
+  /// responses, so this prevents repeating their side effects.
   std::map<std::string, int64_t> m_processed_accelerator_actions;
+
+  SyncState m_accelerator_sync_state;
 
   // ContinueDelegate interface
   void HandleAsyncStdout(llvm::StringRef out) override;

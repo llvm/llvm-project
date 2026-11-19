@@ -3015,8 +3015,12 @@ If omitted, `wait_for_accelerator_process_to_resume` defaults to false. JSON
 decoding accepts both fields independently; clients must check that `stop_id`
 is present when executing a wait request.
 
-These fields define the protocol schema. A subsequent client change will act
-on them; adding the fields does not yet synchronize process execution.
+The client identifies the accelerator process associated with `plugin_name`
+and waits until that process has resumed from `stop_id`. Observing a later
+stop identifier also completes the wait, because the process necessarily
+resumed from the requested stop before reaching the later one. The wait fails
+if the action has no `stop_id`, no matching accelerator process exists, the
+connection is torn down, or the packet timeout expires.
 
 **Priority To Implement:** Required for hardware accelerator debugging
 support. Not needed for non-hardware-accelerator debugging.

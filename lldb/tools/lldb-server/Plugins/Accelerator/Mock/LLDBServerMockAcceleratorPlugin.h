@@ -62,6 +62,9 @@ private:
   // Breakpoint on the dedicated "mock_gpu_accelerator_connect" hook; only the
   // connection test defines that function. See BreakpointWasHit for the hit.
   static constexpr int64_t kBreakpointIDConnect = 4;
+  // Breakpoint used to make the native client wait until the mock accelerator
+  // resumes from its current stop.
+  static constexpr int64_t kBreakpointIDWaitForResume = 5;
 
   // The mock accelerator server runs on its own main loop and thread so its
   // packets don't contend with the native process. Populated by
