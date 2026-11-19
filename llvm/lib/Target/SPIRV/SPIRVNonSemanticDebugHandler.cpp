@@ -151,6 +151,21 @@ static uint32_t mapCompositeTypeTag(unsigned Tag) {
   }
 }
 
+static std::optional<uint32_t> mapTypeQualifierTag(unsigned Tag) {
+  switch (Tag) {
+  case dwarf::DW_TAG_const_type:
+    return 0;
+  case dwarf::DW_TAG_volatile_type:
+    return 1;
+  case dwarf::DW_TAG_restrict_type:
+    return 2;
+  case dwarf::DW_TAG_atomic_type:
+    return 3;
+  default:
+    return std::nullopt;
+  }
+}
+
 static const MachineInstr *
 findLastFunctionOpVariableDeclaration(const MachineFunction &MF,
                                       SPIRV::ModuleAnalysisInfo &MAI) {
@@ -1047,30 +1062,9 @@ auto SPIRVNonSemanticDebugHandler::emitDebugTypePointer(
 auto SPIRVNonSemanticDebugHandler::emitDebugTypeQualifier(
     const DIDerivedType *QT, SPIRV::ModuleAnalysisInfo &MAI)
     -> EmitResult<PreparedScope> {
-  // Type Qualifier values from the NonSemantic.Shader.DebugInfo.100 spec.
-  enum : uint32_t {
-    ConstType = 0,
-    VolatileType = 1,
-    RestrictType = 2,
-    AtomicType = 3
-  };
-  uint32_t Qualifier;
-  switch (QT->getTag()) {
-  case dwarf::DW_TAG_const_type:
-    Qualifier = ConstType;
-    break;
-  case dwarf::DW_TAG_volatile_type:
-    Qualifier = VolatileType;
-    break;
-  case dwarf::DW_TAG_restrict_type:
-    Qualifier = RestrictType;
-    break;
-  case dwarf::DW_TAG_atomic_type:
-    Qualifier = AtomicType;
-    break;
-  default:
-    llvm_unreachable("not a qualified type");
-  }
+  std::optional<uint32_t> Qualifier = mapTypeQualifierTag(QT->getTag());
+  if (!Qualifier)
+    return EmitResult<PreparedScope>::unsupported();
 
   // No base type (e.g. const void): use DebugInfoNone, as for pointers.
   MCRegister BaseReg = CachedDebugInfoNoneReg;
@@ -1082,7 +1076,7 @@ auto SPIRVNonSemanticDebugHandler::emitDebugTypeQualifier(
   }
 
   MCRegister QualifierReg =
-      emitOpConstantI32(Qualifier, getOrEmitOpTypeInt32Reg(MAI), MAI);
+      emitOpConstantI32(*Qualifier, getOrEmitOpTypeInt32Reg(MAI), MAI);
   return EmitResult<PreparedScope>::emitted(PreparedScope{
       SPIRV::NonSemanticExtInst::DebugTypeQualifier, {BaseReg, QualifierReg}});
 }

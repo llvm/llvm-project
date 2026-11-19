@@ -465,7 +465,8 @@ private:
   /// Build \c DebugTypeQualifier for the const, volatile, restrict or atomic
   /// type \p QT. Uses \c DebugInfoNone as Base Type when \p QT has none.
   ///
-  /// \returns The base's status if it fails.
+  /// \returns Unsupported when \p QT's tag has no Type Qualifier value.
+  /// The base's status if it fails.
   EmitResult<PreparedScope>
   emitDebugTypeQualifier(const DIDerivedType *QT,
                          SPIRV::ModuleAnalysisInfo &MAI);
