@@ -349,17 +349,37 @@
 #define DEFINE_AEABI_FUNCTION_ALIAS(aeabi_name, name)
 #endif
 
+// clang-format off
+#if (defined(__aarch64__) || defined(__arm64ec__)) && defined(__ELF__)
+#define VARIANT_PCS(name) .variant_pcs name SEPARATOR
+#else
+#define VARIANT_PCS(name)
+#endif
+
 #ifdef __ELF__
 #define END_COMPILERRT_FUNCTION(name)                                          \
   .size SYMBOL_NAME(name), . - SYMBOL_NAME(name)
 #define END_COMPILERRT_OUTLINE_FUNCTION(name)                                  \
   CFI_END SEPARATOR                                                            \
   .size SYMBOL_NAME(name), . - SYMBOL_NAME(name)
+#define DEFINE_COMPILERRT_OUTLINE_FUNCTION_ALIAS(name, target)                 \
+  .globl FUNC_SYMBOL(SYMBOL_NAME(name)) SEPARATOR                              \
+  SYMBOL_IS_FUNC(SYMBOL_NAME(name)) SEPARATOR                                  \
+  VARIANT_PCS(FUNC_SYMBOL(SYMBOL_NAME(name)))                                  \
+  DECLARE_SYMBOL_VISIBILITY(name)                                              \
+  .set FUNC_SYMBOL(SYMBOL_NAME(name)), FUNC_SYMBOL(target) SEPARATOR           \
+  .size FUNC_SYMBOL(SYMBOL_NAME(name)), . - FUNC_SYMBOL(target)
 #else
 #define END_COMPILERRT_FUNCTION(name)
 #define END_COMPILERRT_OUTLINE_FUNCTION(name)                                  \
   CFI_END
+#define DEFINE_COMPILERRT_OUTLINE_FUNCTION_ALIAS(name, target)                 \
+  .globl FUNC_SYMBOL(SYMBOL_NAME(name)) SEPARATOR                              \
+  SYMBOL_IS_FUNC(SYMBOL_NAME(name)) SEPARATOR                                  \
+  DECLARE_SYMBOL_VISIBILITY(name)                                              \
+  .set FUNC_SYMBOL(SYMBOL_NAME(name)), FUNC_SYMBOL(target)
 #endif
+// clang-format on
 
 #ifdef __arm__
 #include "int_endianness.h"

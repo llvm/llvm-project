@@ -53,6 +53,8 @@ def SMEABI_PreserveMost_From_X0 : LibcallCallingConv<[{CallingConv::AArch64_SME_
 def SMEABI_PreserveMost_From_X1 : LibcallCallingConv<[{CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1}]>;
 def SMEABI_PreserveMost_From_X2 : LibcallCallingConv<[{CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2}]>;
 def AARCH64_VECTORCALL : LibcallCallingConv<[{CallingConv::AArch64_VectorCall}]>;
+def AARCH64_OUTLINE_ATOMICS_PRESERVEMOST
+    : LibcallCallingConv<[{CallingConv::AArch64_Outline_Atomics_PreserveMost}]>;
 
 
 // Return type or argument type of library calls.

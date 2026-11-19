@@ -665,6 +665,13 @@ def FeatureSMEF16F8F16 : ExtensionWithMArch<"sme-f16f8f16", "SME_F16F8F16", "FEA
 def FeatureOutlineAtomics : SubtargetFeature<"outline-atomics", "OutlineAtomics", "true",
   "Enable out of line atomics to support LSE instructions">;
 
+def FeatureOutlineAtomicsPreserveMost
+    : SubtargetFeature<"outline-atomics-preserve-most",
+                       "OutlineAtomicsPreserveMost", "true",
+                       "Use a preserve-most calling convention for out-of-line "
+                       "atomic helper calls",
+                       [], InlineIgnore>;
+
 def FeatureFMV : SubtargetFeature<"fmv", "HasFMV", "true",
   "Enable Function Multi Versioning support.">;
 

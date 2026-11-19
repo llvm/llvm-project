@@ -78,6 +78,11 @@ void SMEAttrs::addKnownFunctionAttrs(StringRef FuncName,
   RTLIB::LibcallImpl Impl = RTLCI.getSupportedLibcallImpl(FuncName);
   if (Impl == RTLIB::Unsupported)
     return;
+  if (RTLCI.getLibcallImplCallingConv(Impl) ==
+      CallingConv::AArch64_Outline_Atomics_PreserveMost) {
+    set(SMEAttrs::SM_Compatible | SMEAttrs::ZA_State_Agnostic);
+    return;
+  }
   unsigned KnownAttrs = SMEAttrs::Normal;
   RTLIB::Libcall LC = RTLCI.getLibcallFromImpl(Impl);
   switch (LC) {

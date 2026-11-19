@@ -87,6 +87,24 @@
 // RUN: %clang --target=aarch64-unknown-managarm-mlibc -rtlib=libgcc \
 // RUN: -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-OUTLINE-ATOMICS-ON %s
 
+// RUN: %clang --target=aarch64-linux-gnu -rtlib=compiler-rt -moutline-atomics-preserve-most \
+// RUN: -### -c %s 2>&1 | FileCheck \
+// RUN: -check-prefixes=CHECK-OUTLINE-ATOMICS-ON,CHECK-OUTLINE-ATOMICS-PRESERVE-MOST %s
+
+// RUN: %clang --target=aarch64-linux-gnu -moutline-atomics -moutline-atomics-preserve-most \
+// RUN: -mno-outline-atomics-preserve-most -### -c %s 2>&1 | FileCheck \
+// RUN: -check-prefixes=CHECK-OUTLINE-ATOMICS-ON,CHECK-NO-OUTLINE-ATOMICS-PRESERVE-MOST %s
+
+// RUN: %clang --target=aarch64-unknown-fuchsia -moutline-atomics-preserve-most \
+// RUN: -### -c %s 2>&1 | FileCheck \
+// RUN: -check-prefixes=CHECK-OUTLINE-ATOMICS-ON,CHECK-OUTLINE-ATOMICS-PRESERVE-MOST %s
+
+// RUN: %clang --target=aarch64-unknown-fuchsia -moutline-atomics-preserve-most \
+// RUN: -mno-outline-atomics-preserve-most -### -c %s 2>&1 | FileCheck \
+// RUN: -check-prefixes=CHECK-OUTLINE-ATOMICS-ON,CHECK-NO-OUTLINE-ATOMICS-PRESERVE-MOST %s
+
 // CHECK-OUTLINE-ATOMICS-ON: "-target-feature" "+outline-atomics"
 // CHECK-OUTLINE-ATOMICS-OFF-NOT: "-target-feature" "+outline-atomics"
 // CHECK-NO-OUTLINE-ATOMICS: "-target-feature" "-outline-atomics"
+// CHECK-OUTLINE-ATOMICS-PRESERVE-MOST: "-target-feature" "+outline-atomics-preserve-most"
+// CHECK-NO-OUTLINE-ATOMICS-PRESERVE-MOST: "-target-feature" "-outline-atomics-preserve-most"

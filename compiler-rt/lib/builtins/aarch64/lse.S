@@ -116,6 +116,15 @@ HIDDEN(___aarch64_have_lse_atomics)
 #endif
 
 #define NAME(BASE) GLUE4(__aarch64_, BASE, SIZE, SUFF)
+#if !defined(__arm64ec__)
+// Note: lse.S routines only clobber x0-x4, x15-x17, and nzcv, satisfying both
+// the AAPCS64 and aarch64_outline_atomics_preservemost calling conventions.
+#define PRESERVEMOST_NAME(BASE) GLUE2(NAME(BASE), _preservemost)
+#define DEFINE_PRESERVEMOST_ALIAS(BASE)                                        \
+  DEFINE_COMPILERRT_OUTLINE_FUNCTION_ALIAS(PRESERVEMOST_NAME(BASE), NAME(BASE))
+#else
+#define DEFINE_PRESERVEMOST_ALIAS(BASE)
+#endif
 #if MODEL == 5
 // Drop A for _sync functions.
 #define LDXR GLUE3(ld, xr, S)
@@ -194,6 +203,7 @@ DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(NAME(cas))
         ret
 #endif
 END_COMPILERRT_OUTLINE_FUNCTION(NAME(cas))
+DEFINE_PRESERVEMOST_ALIAS(cas)
 #endif // L_cas
 
 #ifdef L_swp
@@ -215,6 +225,7 @@ DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(NAME(swp))
         BARRIER
         ret
 END_COMPILERRT_OUTLINE_FUNCTION(NAME(swp))
+DEFINE_PRESERVEMOST_ALIAS(swp)
 #endif // L_swp
 
 #if defined(L_ldadd) || defined(L_ldclr) ||                                    \
@@ -260,6 +271,7 @@ DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(NAME(LDNM))
         BARRIER
         ret
 END_COMPILERRT_OUTLINE_FUNCTION(NAME(LDNM))
+DEFINE_PRESERVEMOST_ALIAS(LDNM)
 #endif // L_ldadd L_ldclr L_ldeor L_ldset
 
 NO_EXEC_STACK_DIRECTIVE

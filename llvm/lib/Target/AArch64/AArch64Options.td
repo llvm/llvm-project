@@ -232,6 +232,8 @@ defm : BoolField<"aarch64-use-tbi", "false",
   "Assume that top byte of an address is ignored">;
 defm : OptionalBoolField<"sve-use-scalar-inc-vl",
   "Prefer add+cnt over addvl/inc/dec">;
+defm : OptionalBoolField<"aarch64-outline-atomics-preserve-most",
+  "Use a preserve-most calling convention for out-of-line atomic helper calls">;
 defm : ValueField<"sve-vscale-for-tuning", "std::optional<unsigned>", "std::nullopt",
   "Force a vscale for tuning factor for SVE">;
 
