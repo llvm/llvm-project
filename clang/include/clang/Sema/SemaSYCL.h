@@ -72,6 +72,10 @@ public:
   void CheckSYCLExternalFunctionDecl(FunctionDecl *FD);
   void CheckSYCLEntryPointFunctionDecl(FunctionDecl *FD);
 
+  /// Checks a call to __builtin_sycl_dynamic_local_memory and sets its type.
+  /// Returns true on error.
+  bool checkBuiltinDynamicLocalMemory(CallExpr *TheCall);
+
   /// Builds an expression for the lookup of a 'sycl_kernel_launch' template
   /// with 'KernelName' as an explicit template argument. Lookup is performed
   /// as if from the first statement of the body of 'FD' and thus requires

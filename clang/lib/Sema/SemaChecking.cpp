@@ -4227,6 +4227,10 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     }
     break;
   }
+  case Builtin::BI__builtin_sycl_dynamic_local_memory:
+    if (SYCL().checkBuiltinDynamicLocalMemory(TheCall))
+      return ExprError();
+    break;
   case Builtin::BI__builtin_bswapg:
     if (BuiltinBswapg(*this, TheCall))
       return ExprError();

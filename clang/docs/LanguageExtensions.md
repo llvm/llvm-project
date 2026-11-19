@@ -4414,6 +4414,23 @@ builtin, the mangler emits their usual pattern without any special treatment.
 constexpr const char * __builtin_sycl_unique_stable_name( type-id );
 ```
 
+### `__builtin_sycl_dynamic_local_memory`
+
+`__builtin_sycl_dynamic_local_memory()` returns a pointer to the start of the
+dynamic local memory block of the current work-group. It is intended for use by
+the SYCL runtime library, e.g. to implement local accessors, and not by user
+code.
+
+The builtin is only available in SYCL mode. In device compilation, all calls
+within a work-group return a pointer to the same block. In host compilation, it
+returns a null pointer. No alignment is guaranteed for the returned pointer.
+
+**Syntax**:
+
+```c++
+unsigned char [[clang::sycl_local]] *__builtin_sycl_dynamic_local_memory();
+```
+
 ### `__builtin_popcountg`
 
 `__builtin_popcountg` returns the number of 1 bits in the argument. The
