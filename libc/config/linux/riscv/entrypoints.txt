@@ -432,6 +432,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.stat.mknod
     libc.src.sys.stat.mknodat
     libc.src.sys.stat.stat
+    libc.src.sys.stat.statx
     libc.src.sys.stat.umask
     libc.src.sys.stat.utimensat
 
@@ -445,6 +446,11 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # sys/time.h entrypoints
     libc.src.sys.time.utimes
+
+    # sys/timerfd.h entrypoints
+    libc.src.sys.timerfd.timerfd_create
+    libc.src.sys.timerfd.timerfd_gettime
+    libc.src.sys.timerfd.timerfd_settime
 
     # sys/sysinfo.h entrypoints
     libc.src.sys.sysinfo.sysinfo
@@ -569,6 +575,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.symlinkat
     libc.src.unistd.sync
     libc.src.unistd.syncfs
+    libc.src.unistd.syscall
     libc.src.unistd.tcgetpgrp
     libc.src.unistd.tcsetpgrp
     libc.src.unistd.truncate
@@ -579,6 +586,8 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # wchar.h entrypoints
     libc.src.wchar.btowc
+    libc.src.wchar.swprintf
+    libc.src.wchar.vswprintf
     libc.src.wchar.wcscasecmp
     libc.src.wchar.wcsncasecmp
     libc.src.wchar.wcslen
@@ -1439,6 +1448,10 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.dirent.scandir
     libc.src.dirent.fdopendir
 
+    # net/if.h entrypoints
+    libc.src.net.if.if_freenameindex
+    libc.src.net.if.if_nameindex
+
     # pthread.h entrypoints
     libc.src.pthread.__pthread_cleanup_pop
     libc.src.pthread.__pthread_cleanup_push
@@ -1479,6 +1492,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_equal
     libc.src.pthread.pthread_exit
     libc.src.pthread.pthread_getattr_np
+    libc.src.pthread.pthread_getcpuclockid
     libc.src.pthread.pthread_getname_np
     libc.src.pthread.pthread_getschedparam
     libc.src.pthread.pthread_getspecific
@@ -1602,11 +1616,15 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.getc_unlocked
     libc.src.stdio.getchar
     libc.src.stdio.getchar_unlocked
+    libc.src.stdio.getdelim
+    libc.src.stdio.getline
     libc.src.stdio.pclose
     libc.src.stdio.perror
     libc.src.stdio.popen
     libc.src.stdio.putc
+    libc.src.stdio.putc_unlocked
     libc.src.stdio.putchar
+    libc.src.stdio.putchar_unlocked
     libc.src.stdio.puts
     libc.src.stdio.rewind
     libc.src.stdio.setbuf
@@ -1727,6 +1745,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.localtime
     libc.src.time.localtime_r
     libc.src.time.mktime
+    libc.src.time.timegm
     libc.src.time.clock_nanosleep
     libc.src.time.nanosleep
     libc.src.time.strftime
@@ -1749,7 +1768,6 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.locale.uselocale
 
     # unistd.h entrypoints
-    libc.src.unistd.__llvm_libc_syscall
     libc.src.unistd._exit
     libc.src.unistd.confstr
     libc.src.unistd.environ
@@ -1837,10 +1855,6 @@ if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
       libc.src.libintl.ngettext_l
       libc.src.libintl.textdomain
 
-      # net/if.h entrypoints
-      libc.src.net.if.if_freenameindex
-      libc.src.net.if.if_nameindex
-
       # netdb.h entrypoints
       libc.src.netdb.freeaddrinfo
       libc.src.netdb.gai_strerror
@@ -1869,9 +1883,6 @@ if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
       libc.src.unistd.setresuid
       libc.src.unistd.setreuid
       libc.src.unistd.setuid
-
-      # wchar.h entrypoints
-      libc.src.wchar.swprintf
     )
   endif()
 endif()

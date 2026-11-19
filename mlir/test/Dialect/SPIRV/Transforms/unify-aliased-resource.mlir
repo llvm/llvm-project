@@ -750,3 +750,39 @@ spirv.module Logical GLSL450 {
 // CHECK-SAME: %[[PTR:.+]]: !spirv.ptr<vector<4xf32>, StorageBuffer>, %[[VALUE:.+]]: vector<4xf32>)
 // CHECK-NOT: spirv.AccessChain
 // CHECK: spirv.Store "StorageBuffer" %[[PTR]], %[[VALUE]] : vector<4xf32>
+
+// -----
+
+// CHECK-LABEL: spirv.func @load_vec2(
+// CHECK: %[[LOAD:.+]] = spirv.Load "StorageBuffer" {{.*}} : vector<2xi32>
+// CHECK-NEXT: %[[CAST:.+]] = spirv.Bitcast %[[LOAD]] : vector<2xi32> to vector<2xf32>
+// CHECK-NEXT: spirv.ReturnValue %[[CAST]] : vector<2xf32>
+spirv.module Logical GLSL450 requires #spirv.vce<v1.3, [Shader, Linkage, Float64, Int64], []> {
+  spirv.GlobalVariable @canonical bind(0, 0) {aliased} : !spirv.ptr<!spirv.struct<(!spirv.rtarray<vector<2xi32>, stride=8> [0])>, StorageBuffer>
+  spirv.GlobalVariable @view bind(0, 0) {aliased} : !spirv.ptr<!spirv.struct<(!spirv.rtarray<vector<2xf32>, stride=8> [0])>, StorageBuffer>
+  spirv.func @load_vec2(%index: i32) -> vector<2xf32> "None" {
+    %c0 = spirv.Constant 0 : i32
+    %addr = spirv.mlir.addressof @view : !spirv.ptr<!spirv.struct<(!spirv.rtarray<vector<2xf32>, stride=8> [0])>, StorageBuffer>
+    %ptr = spirv.AccessChain %addr[%c0, %index] : !spirv.ptr<!spirv.struct<(!spirv.rtarray<vector<2xf32>, stride=8> [0])>, StorageBuffer>, i32, i32 -> !spirv.ptr<vector<2xf32>, StorageBuffer>
+    %value = spirv.Load "StorageBuffer" %ptr : vector<2xf32>
+    spirv.ReturnValue %value : vector<2xf32>
+  }
+}
+
+// -----
+
+// CHECK-LABEL: spirv.func @load_vec4_i64_index(
+// CHECK: %[[LOAD:.+]] = spirv.Load "StorageBuffer" {{.*}} : vector<4xi32>
+// CHECK-NEXT: %[[CAST:.+]] = spirv.Bitcast %[[LOAD]] : vector<4xi32> to vector<4xf32>
+// CHECK-NEXT: spirv.ReturnValue %[[CAST]] : vector<4xf32>
+spirv.module Logical GLSL450 requires #spirv.vce<v1.3, [Shader, Linkage, Float64, Int64], []> {
+  spirv.GlobalVariable @canonical bind(0, 0) {aliased} : !spirv.ptr<!spirv.struct<(!spirv.rtarray<vector<4xi32>, stride=16> [0])>, StorageBuffer>
+  spirv.GlobalVariable @view bind(0, 0) {aliased} : !spirv.ptr<!spirv.struct<(!spirv.rtarray<vector<4xf32>, stride=16> [0])>, StorageBuffer>
+  spirv.func @load_vec4_i64_index(%index: i64) -> vector<4xf32> "None" {
+    %c0 = spirv.Constant 0 : i64
+    %addr = spirv.mlir.addressof @view : !spirv.ptr<!spirv.struct<(!spirv.rtarray<vector<4xf32>, stride=16> [0])>, StorageBuffer>
+    %ptr = spirv.AccessChain %addr[%c0, %index] : !spirv.ptr<!spirv.struct<(!spirv.rtarray<vector<4xf32>, stride=16> [0])>, StorageBuffer>, i64, i64 -> !spirv.ptr<vector<4xf32>, StorageBuffer>
+    %value = spirv.Load "StorageBuffer" %ptr : vector<4xf32>
+    spirv.ReturnValue %value : vector<4xf32>
+  }
+}

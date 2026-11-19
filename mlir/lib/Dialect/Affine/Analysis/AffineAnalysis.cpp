@@ -741,7 +741,7 @@ void mlir::affine::getDependenceComponents(
             srcAccess, dstAccess, d, /*dependenceConstraints=*/nullptr,
             &depComps);
         if (hasDependence(result))
-          depCompsVec->push_back(depComps);
+          depCompsVec->push_back(std::move(depComps));
       }
     }
   }

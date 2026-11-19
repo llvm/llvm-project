@@ -891,17 +891,16 @@ static void genDataOperandOperations(
             /*loadAllocatableAndPointerComponent=*/false);
     LLVM_DEBUG(llvm::dbgs() << __func__ << "\n"; info.dump(llvm::dbgs()));
 
-    // If the input value is optional and is not a descriptor, we use the
-    // rawInput directly.
+    // An OPTIONAL whose base is not an acc pointer-like or mappable type
+    // (e.g. a fir.boxchar for CHARACTER(*)) is mapped through its raw address.
     // For privatization, absent OPTIONAL are illegal as per OpenACC 3.3
     // section 2.17.1 and the descriptor must be used to drive the creation of
     // the temporary and the copy.
-    mlir::Value baseAddr = (!isPrivate &&
-                            (fir::unwrapRefType(info.addr.getType()) !=
-                             fir::unwrapRefType(info.rawInput.getType())) &&
-                            info.isPresent)
-                               ? info.rawInput
-                               : info.addr;
+    mlir::Value baseAddr = info.addr;
+    if (!isPrivate && info.isPresent &&
+        !mlir::isa<mlir::acc::PointerLikeType, mlir::acc::MappableType>(
+            baseAddr.getType()))
+      baseAddr = info.rawInput;
 
     Op op = createDataEntryOp<Op>(
         builder, operandLocation, baseAddr, asFortran, bounds, structured,
@@ -2214,9 +2213,29 @@ void AccDataMap::remapDataOperandSymbols(
       assert(!llvm::isa<fir::BaseBoxType>(hostType) &&
              "box type mismatch between compute region variable and "
              "hlfir.declare input unexpected");
-      if (Fortran::semantics::IsOptional(symbol))
-        TODO(loc, "remapping OPTIONAL symbol in OpenACC compute region");
-      auto rawValue = fir::BoxAddrOp::create(builder, loc, hostType, value);
+      mlir::Value rawValue;
+      if (Fortran::semantics::IsOptional(symbol)) {
+        // An absent OPTIONAL is a null descriptor: fir.box_addr must not
+        // read it.
+        mlir::Value box = value;
+        mlir::Value isPresent =
+            fir::IsPresentOp::create(builder, loc, builder.getI1Type(), box);
+        rawValue =
+            builder.genIfOp(loc, {hostType}, isPresent, /*withElseRegion=*/true)
+                .genThen([&]() {
+                  mlir::Value addr =
+                      fir::BoxAddrOp::create(builder, loc, hostType, box);
+                  fir::ResultOp::create(builder, loc, addr);
+                })
+                .genElse([&]() {
+                  mlir::Value absent =
+                      fir::AbsentOp::create(builder, loc, hostType);
+                  fir::ResultOp::create(builder, loc, absent);
+                })
+                .getResults()[0];
+      } else {
+        rawValue = fir::BoxAddrOp::create(builder, loc, hostType, value);
+      }
       mapper.map(hostInput, rawValue);
     } else {
       assert(!llvm::isa<fir::BaseBoxType>(hostType) &&

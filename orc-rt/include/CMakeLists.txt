@@ -56,6 +56,7 @@ set(ORC_RT_HEADERS
     orc-rt/support/MemoryFlags.h
     orc-rt/support/Proxy.h
     orc-rt/support/RTTI.h
+    orc-rt/support/RemoteSymbolLookupSet.h
     orc-rt/support/StringPool.h
     orc-rt/support/SymbolLookupFlags.h
     orc-rt/support/SymbolLookupResult.h

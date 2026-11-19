@@ -505,6 +505,10 @@ void ARMTargetLowering::addMVEVectorTypes(bool HasMVEFP) {
   setOperationAction(ISD::TRUNCATE, MVT::v16i16, Custom);
 }
 
+static bool hasNativeAtomics(const ARMSubtarget &ST) {
+  return ST.hasAnyDataBarrier() && (!ST.isThumb() || ST.hasV8MBaselineOps());
+}
+
 const ARMBaseTargetMachine &ARMTargetLowering::getTM() const {
   return static_cast<const ARMBaseTargetMachine &>(getTargetMachine());
 }
@@ -1107,8 +1111,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
   // ARMv6 Thumb1 (except for CPUs that support dmb / dsb) and earlier use
   // the default expansion.
   InsertFencesForAtomic = false;
-  if (Subtarget->hasAnyDataBarrier() &&
-      (!Subtarget->isThumb() || Subtarget->hasV8MBaselineOps())) {
+  if (hasNativeAtomics(*Subtarget)) {
     // ATOMIC_FENCE needs custom lowering; the others should have been expanded
     // to ldrex/strex loops already.
     setOperationAction(ISD::ATOMIC_FENCE,     MVT::Other, Custom);
@@ -1139,12 +1142,8 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
          ISD::ATOMIC_LOAD_XOR, ISD::ATOMIC_LOAD_NAND, ISD::ATOMIC_LOAD_MIN,
          ISD::ATOMIC_LOAD_MAX, ISD::ATOMIC_LOAD_UMIN, ISD::ATOMIC_LOAD_UMAX},
         {MVT::i8, MVT::i16, MVT::i32, MVT::i64}, LibCall);
-    // Mark ATOMIC_LOAD and ATOMIC_STORE custom so we can handle the
-    // Unordered/Monotonic case.
-    if (!InsertFencesForAtomic) {
-      setOperationAction(ISD::ATOMIC_LOAD, MVT::i32, Custom);
-      setOperationAction(ISD::ATOMIC_STORE, MVT::i32, Custom);
-    }
+    setOperationAction({ISD::ATOMIC_LOAD, ISD::ATOMIC_STORE}, MVT::i64,
+                       LibCall);
   }
 
   // Compute supported atomic widths.
@@ -6821,9 +6820,9 @@ static SDValue LowerVSETCC(SDValue Op, SelectionDAG &DAG,
     // Detect VTST (Vector Test Bits) = icmp ne (and (op0, op1), zero).
     if (ST->hasNEON() && Opc == ARMCC::EQ) {
       SDValue AndOp;
-      if (ISD::isBuildVectorAllZeros(Op1.getNode()))
+      if (ISD::isBuildVectorAllZeros(Op1))
         AndOp = Op0;
-      else if (ISD::isBuildVectorAllZeros(Op0.getNode()))
+      else if (ISD::isBuildVectorAllZeros(Op0))
         AndOp = Op1;
 
       // Ignore bitconvert.
@@ -6846,7 +6845,7 @@ static SDValue LowerVSETCC(SDValue Op, SelectionDAG &DAG,
 
   // If one of the operands is a constant vector zero, attempt to fold the
   // comparison to a specialized compare-against-zero form.
-  if (ISD::isBuildVectorAllZeros(Op0.getNode()) &&
+  if (ISD::isBuildVectorAllZeros(Op0) &&
       (Opc == ARMCC::GE || Opc == ARMCC::GT || Opc == ARMCC::EQ ||
        Opc == ARMCC::NE)) {
     if (Opc == ARMCC::GE)
@@ -6857,7 +6856,7 @@ static SDValue LowerVSETCC(SDValue Op, SelectionDAG &DAG,
   }
 
   SDValue Result;
-  if (ISD::isBuildVectorAllZeros(Op1.getNode()) &&
+  if (ISD::isBuildVectorAllZeros(Op1) &&
       (Opc == ARMCC::GE || Opc == ARMCC::GT || Opc == ARMCC::LE ||
        Opc == ARMCC::LT || Opc == ARMCC::NE || Opc == ARMCC::EQ))
     Result = DAG.getNode(ARMISD::VCMPZ, dl, CmpVT, Op0,
@@ -9935,9 +9934,8 @@ SDValue ARMTargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG,
 }
 
 static bool isZeroVector(SDValue N) {
-  return (ISD::isBuildVectorAllZeros(N.getNode()) ||
-          (N->getOpcode() == ARMISD::VMOVIMM &&
-           isNullConstant(N->getOperand(0))));
+  return (ISD::isBuildVectorAllZeros(N) || (N->getOpcode() == ARMISD::VMOVIMM &&
+                                            isNullConstant(N->getOperand(0))));
 }
 
 static SDValue LowerMLOAD(SDValue Op, SelectionDAG &DAG) {
@@ -10112,16 +10110,6 @@ static SDValue LowerVecReduceMinMax(SDValue Op, SelectionDAG &DAG,
     Res = DAG.getNode(Extend, dl, Op.getValueType(), Res);
   }
   return Res;
-}
-
-static SDValue LowerAtomicLoadStore(SDValue Op, SelectionDAG &DAG) {
-  if (isStrongerThanMonotonic(cast<AtomicSDNode>(Op)->getSuccessOrdering()))
-    // Acquire/Release load/store is not legal for targets without a dmb or
-    // equivalent available.
-    return SDValue();
-
-  // Monotonic load/store is legal for all targets.
-  return Op;
 }
 
 static void ReplaceREADCYCLECOUNTER(SDNode *N,
@@ -10504,9 +10492,6 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::VECREDUCE_SMIN:
   case ISD::VECREDUCE_SMAX:
     return LowerVecReduceMinMax(Op, DAG, Subtarget);
-  case ISD::ATOMIC_LOAD:
-  case ISD::ATOMIC_STORE:
-    return LowerAtomicLoadStore(Op, DAG);
   case ISD::SDIVREM:
   case ISD::UDIVREM:       return LowerDivRem(Op, DAG);
   case ISD::DYNAMIC_STACKALLOC:
@@ -17585,10 +17570,10 @@ static SDValue PerformVECREDUCE_ADDCombine(SDNode *N, SelectionDAG &DAG,
       return ExtendIfNeeded(A, ExtendCode);
     return SDValue();
   };
-  auto IsPredVADDV = [&](MVT RetTy, unsigned ExtendCode,
-                         ArrayRef<MVT> ExtTypes, SDValue &Mask) {
+  auto IsPredVADDV = [&](MVT RetTy, unsigned ExtendCode, ArrayRef<MVT> ExtTypes,
+                         SDValue &Mask) {
     if (ResVT != RetTy || N0->getOpcode() != ISD::VSELECT ||
-        !ISD::isBuildVectorAllZeros(N0->getOperand(2).getNode()))
+        !ISD::isBuildVectorAllZeros(N0->getOperand(2)))
       return SDValue();
     Mask = N0->getOperand(0);
     SDValue Ext = N0->getOperand(1);
@@ -17640,7 +17625,7 @@ static SDValue PerformVECREDUCE_ADDCombine(SDNode *N, SelectionDAG &DAG,
     // N0 = select Mask, Mul, 0
     // vecreduce.add N0
     if (ResVT != RetTy || N0->getOpcode() != ISD::VSELECT ||
-        !ISD::isBuildVectorAllZeros(N0->getOperand(2).getNode()))
+        !ISD::isBuildVectorAllZeros(N0->getOperand(2)))
       return false;
     Mask = N0->getOperand(0);
     SDValue Mul = N0->getOperand(1);
@@ -18507,10 +18492,10 @@ static SDValue PerformMinMaxCombine(SDNode *N, SelectionDAG &DAG,
       SaturateC = APInt(16, (1 << 7) - 1, true);
 
     APInt MinC, MaxC;
-    if (!ISD::isConstantSplatVector(Min->getOperand(1).getNode(), MinC) ||
+    if (!ISD::isConstantSplatVector(Min->getOperand(1), MinC) ||
         MinC != SaturateC)
       return false;
-    if (!ISD::isConstantSplatVector(Max->getOperand(1).getNode(), MaxC) ||
+    if (!ISD::isConstantSplatVector(Max->getOperand(1), MaxC) ||
         MaxC != ~SaturateC)
       return false;
     return true;
@@ -18550,7 +18535,7 @@ static SDValue PerformMinMaxCombine(SDNode *N, SelectionDAG &DAG,
       SaturateC = APInt(16, (1 << 8) - 1, true);
 
     APInt MinC;
-    if (!ISD::isConstantSplatVector(Min->getOperand(1).getNode(), MinC) ||
+    if (!ISD::isConstantSplatVector(Min->getOperand(1), MinC) ||
         MinC != SaturateC)
       return false;
     return true;
@@ -21851,17 +21836,23 @@ Instruction *ARMTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
 // anything for those.
 TargetLoweringBase::AtomicExpansionKind
 ARMTargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
-  bool has64BitAtomicStore;
+  bool has64BitLLSC;
   if (Subtarget->isMClass())
-    has64BitAtomicStore = false;
+    has64BitLLSC = false;
   else if (Subtarget->isThumb())
-    has64BitAtomicStore = Subtarget->hasV7Ops();
+    has64BitLLSC = Subtarget->hasV7Ops();
   else
-    has64BitAtomicStore = Subtarget->hasV6Ops();
+    has64BitLLSC = Subtarget->hasV6Ops();
 
   unsigned Size = SI->getValueOperand()->getType()->getPrimitiveSizeInBits();
-  return Size == 64 && has64BitAtomicStore ? AtomicExpansionKind::Expand
-                                           : AtomicExpansionKind::None;
+  if (Size == 64 && has64BitLLSC)
+    return AtomicExpansionKind::Expand;
+
+  if (Size <= 32 && !hasNativeAtomics(*Subtarget) && !InsertFencesForAtomic &&
+      isReleaseOrStronger(SI->getOrdering()))
+    return AtomicExpansionKind::Expand;
+
+  return AtomicExpansionKind::None;
 }
 
 // Loads and stores less than 64-bits are already atomic; ones above that
@@ -21873,17 +21864,23 @@ ARMTargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
 // sections A8.8.72-74 LDRD)
 TargetLowering::AtomicExpansionKind
 ARMTargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
-  bool has64BitAtomicLoad;
+  bool has64BitLLSC;
   if (Subtarget->isMClass())
-    has64BitAtomicLoad = false;
+    has64BitLLSC = false;
   else if (Subtarget->isThumb())
-    has64BitAtomicLoad = Subtarget->hasV7Ops();
+    has64BitLLSC = Subtarget->hasV7Ops();
   else
-    has64BitAtomicLoad = Subtarget->hasV6Ops();
+    has64BitLLSC = Subtarget->hasV6Ops();
 
   unsigned Size = LI->getType()->getPrimitiveSizeInBits();
-  return (Size == 64 && has64BitAtomicLoad) ? AtomicExpansionKind::LLOnly
-                                            : AtomicExpansionKind::None;
+  if (Size == 64 && has64BitLLSC)
+    return AtomicExpansionKind::LLOnly;
+
+  if (Size <= 32 && !hasNativeAtomics(*Subtarget) && !InsertFencesForAtomic &&
+      isAcquireOrStronger(LI->getOrdering()))
+    return AtomicExpansionKind::CmpXChg;
+
+  return AtomicExpansionKind::None;
 }
 
 // For the real atomic operations, we have ldrex/strex up to 32 bits,
@@ -21944,8 +21941,26 @@ bool ARMTargetLowering::shouldInsertFencesForAtomic(
 }
 
 bool ARMTargetLowering::useLoadStackGuardNode(const Module &M) const {
+  if (Subtarget->isTargetFuchsia())
+    return TargetLowering::useLoadStackGuardNode(M);
   // ROPI/RWPI are not supported currently.
   return !Subtarget->isROPI() && !Subtarget->isRWPI();
+}
+
+Value *
+ARMTargetLowering::getIRStackGuard(IRBuilderBase &IRB,
+                                   const LibcallLoweringInfo &Libcalls) const {
+  // Fuchsia provides a fixed TLS slot for the stack cookie.
+  // <zircon/tls.h> defines ZX_TLS_STACK_GUARD_OFFSET with this value.
+  if (Subtarget->isTargetFuchsia()) {
+    Module *M = IRB.getModule();
+    Function *ThreadPointerFunc = Intrinsic::getOrInsertDeclaration(
+        M, Intrinsic::thread_pointer, IRB.getPtrTy());
+    return IRB.CreateConstGEP1_32(IRB.getInt8Ty(),
+                                  IRB.CreateCall(ThreadPointerFunc), -0x10);
+  }
+
+  return TargetLowering::getIRStackGuard(IRB, Libcalls);
 }
 
 void ARMTargetLowering::insertSSPDeclarations(
@@ -22083,7 +22098,8 @@ Value *ARMTargetLowering::emitLoadLinked(IRBuilderBase &Builder, Type *ValueTy,
 
 void ARMTargetLowering::emitAtomicCmpXchgNoStoreLLBalance(
     IRBuilderBase &Builder) const {
-  if (!Subtarget->hasV7Ops())
+  if (!(Subtarget->isThumb() ? Subtarget->hasV7Clrex()
+                             : Subtarget->hasV6KOps()))
     return;
   Builder.CreateIntrinsic(Intrinsic::arm_clrex, {});
 }

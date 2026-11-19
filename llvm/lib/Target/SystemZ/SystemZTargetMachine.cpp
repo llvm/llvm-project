@@ -154,24 +154,35 @@ SystemZTargetMachine::~SystemZTargetMachine() = default;
 
 const SystemZSubtarget *
 SystemZTargetMachine::getSubtargetImpl(const Function &F) const {
-  Attribute CPUAttr = F.getFnAttribute("target-cpu");
-  Attribute TuneAttr = F.getFnAttribute("tune-cpu");
-  Attribute FSAttr = F.getFnAttribute("target-features");
+  AttributeSet FnAttrs = F.getAttributes().getFnAttrs();
+  const Module *M = F.getParent();
+  if (const SystemZSubtarget *ST = LastSubtarget.lookup(FnAttrs, M))
+    return ST;
+
+  SubtargetAttrs Attrs;
+  Attrs.CPU = FnAttrs.getAttribute("target-cpu");
+  Attrs.TuneCPU = FnAttrs.getAttribute("tune-cpu");
+  Attrs.FS = FnAttrs.getAttribute("target-features");
+  Attrs.SoftFloat = FnAttrs.getAttribute("use-soft-float");
+  Attrs.BackChain = FnAttrs.getAttribute("backchain");
+
+  if (const SystemZSubtarget *ST = LastSubtarget.lookup(FnAttrs, M, Attrs))
+    return ST;
 
   std::string CPU =
-      CPUAttr.isValid() ? CPUAttr.getValueAsString().str() : TargetCPU;
+      Attrs.CPU.isValid() ? Attrs.CPU.getValueAsString().str() : TargetCPU;
   std::string TuneCPU =
-      TuneAttr.isValid() ? TuneAttr.getValueAsString().str() : CPU;
+      Attrs.TuneCPU.isValid() ? Attrs.TuneCPU.getValueAsString().str() : CPU;
   std::string FS =
-      FSAttr.isValid() ? FSAttr.getValueAsString().str() : TargetFS;
+      Attrs.FS.isValid() ? Attrs.FS.getValueAsString().str() : TargetFS;
 
   // FIXME: This is related to the code below to reset the target options,
   // we need to know whether the soft float and backchain flags are set on the
   // function, so we can enable them as subtarget features.
-  bool SoftFloat = F.getFnAttribute("use-soft-float").getValueAsBool();
+  bool SoftFloat = Attrs.SoftFloat.getValueAsBool();
   if (SoftFloat)
     FS += FS.empty() ? "+soft-float" : ",+soft-float";
-  bool BackChain = F.hasFnAttribute("backchain");
+  bool BackChain = Attrs.BackChain.isValid();
   if (BackChain)
     FS += FS.empty() ? "+backchain" : ",+backchain";
 
@@ -181,6 +192,7 @@ SystemZTargetMachine::getSubtargetImpl(const Function &F) const {
                                            *this);
   }
 
+  LastSubtarget.set(FnAttrs, M, Attrs, I.get());
   return I.get();
 }
 
