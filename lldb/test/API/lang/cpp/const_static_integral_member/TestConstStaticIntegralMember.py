@@ -11,7 +11,6 @@ from lldbsuite.test import lldbutil
 class TestCase(TestBase):
     SHARED_BUILD_TESTCASE = False
 
-    @skipIf(debug_info=["pdb"], bugnumber="llvm.org/pr149498")  # Asserts in CodeGen
     @requireExpressionEvaluation
     def test(self):
         self.build()

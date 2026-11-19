@@ -34,6 +34,7 @@ struct AArch64O0PreLegalizerCombinerImplRuleConfig;
 struct AArch64PreLegalizerCombinerImplRuleConfig;
 struct AArch64PostLegalizerCombinerImplRuleConfig;
 struct AArch64PostLegalizerLoweringImplRuleConfig;
+struct SLSHardeningInserter;
 
 namespace llvm {
 
@@ -51,6 +52,7 @@ FunctionPass *createAArch64RedundantCopyEliminationPass();
 FunctionPass *createAArch64RedundantCondBranchPass();
 FunctionPass *createAArch64CondBrTuning();
 FunctionPass *createAArch64CompressJumpTablesPass();
+FunctionPass *createAArch64WinCFIPass();
 FunctionPass *createAArch64ConditionalCompares();
 FunctionPass *createAArch64AdvSIMDScalar();
 FunctionPass *createAArch64ISelDag(AArch64TargetMachine &TM,
@@ -79,7 +81,7 @@ FunctionPass *createAArch64CleanupLocalDynamicTLSPass();
 FunctionPass *createAArch64CollectLOHPass();
 Pass *createAArch64PredicateAsCounterLoopRewritesPass();
 FunctionPass *createSMEPeepholeOptPass();
-FunctionPass *createMachineSMEABIPass(CodeGenOptLevel);
+FunctionPass *createMachineSMEABIPass();
 FunctionPass *createAArch64SRLTDefineSuperRegsLegacyPass();
 Pass *createSVEShuffleOptsPass();
 InstructionSelector *
@@ -174,6 +176,7 @@ void initializeAArch64PredicateAsCounterLoopRewritesPass(PassRegistry &);
 void initializeAArch64BranchTargetsLegacyPass(PassRegistry &);
 void initializeAArch64CollectLOHLegacyPass(PassRegistry &);
 void initializeAArch64CompressJumpTablesLegacyPass(PassRegistry &);
+void initializeAArch64WinCFILegacyPass(PassRegistry &);
 void initializeAArch64CondBrTuningPass(PassRegistry &);
 void initializeAArch64ConditionOptimizerLegacyPass(PassRegistry &);
 void initializeAArch64ConditionalComparesLegacyPass(PassRegistry &);
@@ -276,6 +279,12 @@ public:
                         MachineFunctionAnalysisManager &MFAM);
 };
 
+class AArch64WinCFIPass : public RequiredPassInfoMixin<AArch64WinCFIPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
 class AArch64CompressJumpTablesPass
     : public OptionalPassInfoMixin<AArch64CompressJumpTablesPass> {
 public:
@@ -343,7 +352,13 @@ public:
 
 class AArch64SLSHardeningPass
     : public RequiredPassInfoMixin<AArch64SLSHardeningPass> {
+  std::unique_ptr<SLSHardeningInserter> Inserter;
+
 public:
+  AArch64SLSHardeningPass();
+  AArch64SLSHardeningPass(AArch64SLSHardeningPass &&);
+  ~AArch64SLSHardeningPass();
+
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
 };

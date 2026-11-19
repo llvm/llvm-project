@@ -37,17 +37,9 @@ enum class Frontend { LLVM, Flang, Clang };
 static void emitDirectivesConstexprImpl(const DirectiveLanguage &DirLang,
                                         raw_ostream &OS);
 
-static StringRef getVersionType(const DirectiveLanguage &DirLang) {
-  if (DirLang.getName() == "OpenMP")
-    return "Version";
-  return "unsigned";
-}
-
-static std::string getVersionValue(const DirectiveLanguage &DirLang,
-                                   StringRef V) {
-  if (DirLang.getName() == "OpenMP")
-    return V.str() + ".value()";
-  return V.str();
+static StringRef getVersionType(const DirectiveLanguage &DirLang,
+                                bool FullQual = false) {
+  return FullQual ? "llvm::directive::Version" : "directive::Version";
 }
 
 static StringRef getFESpelling(Frontend FE) {
@@ -288,8 +280,7 @@ static void emitDirectivesDecl(const RecordKeeper &Records, raw_ostream &OS) {
   OS << "#include \"llvm/ADT/STLExtras.h\"\n";
   OS << "#include \"llvm/ADT/StringRef.h\"\n";
   OS << "#include \"llvm/Frontend/Directive/Spelling.h\"\n";
-  if (DirLang.getName() == "OpenMP")
-    OS << "#include \"llvm/Frontend/OpenMP/OMPVersion.h\"\n";
+  OS << "#include \"llvm/Frontend/Directive/Version.h\"\n";
   OS << "#include \"llvm/Support/Compiler.h\"\n";
   OS << "#include <cstddef>\n"; // for size_t
   OS << "#include <utility>\n"; // for std::pair
@@ -412,10 +403,12 @@ orderSpellings(ArrayRef<Spelling::Value> Spellings) {
 static void generateGetName(ArrayRef<const Record *> Records, raw_ostream &OS,
                             StringRef Enum, const DirectiveLanguage &DirLang,
                             StringRef LangName, StringRef Prefix) {
+  StringRef VersionType = getVersionType(DirLang);
   std::string Qual = getQualifier(DirLang);
   OS << "\n";
   OS << "llvm::StringRef " << Qual << "get" << LangName << Enum << "Name("
-     << Qual << Enum << " Kind, " << getVersionType(DirLang) << " V) {\n";
+     << Qual << Enum << " Kind, " << getVersionType(DirLang, /*FullQual=*/true)
+     << " V) {\n";
   OS << "  switch (Kind) {\n";
   for (const Record *R : Records) {
     BaseRecord Rec(R);
@@ -432,12 +425,13 @@ static void generateGetName(ArrayRef<const Record *> Records, raw_ostream &OS,
       OS << "      static constexpr llvm::directive::Spelling " << SpellingsName
          << "[] = {\n";
       for (auto &S : Spellings) {
-        OS << "          {\"" << S.Name << "\", {" << S.Versions.Min << ", "
-           << S.Versions.Max << "}},\n";
+        OS << "          {\"" << S.Name << "\", {" << VersionType << "("
+           << S.Versions.Min.value() << "), " << VersionType << "("
+           << S.Versions.Max.value() << ")}},\n";
       }
       OS << "      };\n";
-      OS << "      return llvm::directive::FindName(" << SpellingsName << ", "
-         << getVersionValue(DirLang, "V") << ");\n";
+      OS << "      return llvm::directive::FindName(" << SpellingsName << ", V"
+         << ");\n";
       OS << "    }\n";
     }
   }
@@ -476,6 +470,7 @@ static void generateGetKind(ArrayRef<const Record *> Records, raw_ostream &OS,
      << "directive::VersionRange>>(Str)\n";
 
   directive::VersionRange All;
+  StringRef VersionType = getVersionType(DirLang);
 
   // When a given spelling maps to more than one enum kind, this function
   // will return one of them, but it's unspecified which one.
@@ -497,7 +492,8 @@ static void generateGetKind(ArrayRef<const Record *> Records, raw_ostream &OS,
       if (Versions.Min == All.Min && Versions.Max == All.Max)
         OS << "All})\n";
       else
-        OS << "{" << Versions.Min << ", " << Versions.Max << "}})\n";
+        OS << "{" << VersionType << "(" << Versions.Min.value() << "), "
+           << VersionType << "(" << Versions.Max.value() << ")}})\n";
     }
   }
   OS << "    .Default({" << DefaultName << ", All});\n";
@@ -585,8 +581,8 @@ static void generateIsAllowedClause(const DirectiveLanguage &DirLang,
 
   OS << "\n";
   OS << "bool " << Qual << "isAllowedClauseForDirective(" << Qual
-     << "Directive D, " << Qual << "Clause C, " << getVersionType(DirLang)
-     << " V) {\n";
+     << "Directive D, " << Qual << "Clause C, "
+     << getVersionType(DirLang, /*FullQual=*/true) << " V) {\n";
   OS << "  assert(unsigned(D) <= Directive_enumSize);\n";
   OS << "  assert(unsigned(C) <= Clause_enumSize);\n";
 
@@ -1460,6 +1456,7 @@ void emitDirectivesBasicImpl(const DirectiveLanguage &DirLang,
   StringRef CPrefix = DirLang.getClausePrefix();
 
   OS << "#include \"llvm/Frontend/Directive/Spelling.h\"\n";
+  OS << "#include \"llvm/Frontend/Directive/Version.h\"\n";
   OS << "#include \"llvm/Support/ErrorHandling.h\"\n";
   OS << "#include <utility>\n";
 

@@ -111,8 +111,10 @@ bool IncludeCleanerCheck::shouldIgnore(const include_cleaner::Header &H) {
       return R.match(H.standard().name());
     case include_cleaner::Header::Verbatim:
       return R.match(H.verbatim().trim("<>\""));
-    case include_cleaner::Header::Physical:
-      return R.match(H.physical().getFileEntry().tryGetRealPathName());
+    case include_cleaner::Header::Physical: {
+      const StringRef Path = H.physical().getFileEntry().tryGetRealPathName();
+      return R.match(Path) || R.match(llvm::sys::path::convert_to_slash(Path));
+    }
     }
     llvm_unreachable("Unknown Header kind.");
   });
@@ -201,10 +203,10 @@ void IncludeCleanerCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   const StringRef Code = SM->getBufferData(SM->getMainFileID());
-  auto FileStyle =
+  auto FileStyle = llvm::expectedToOptional(
       format::getStyle(format::DefaultFormatStyle, getCurrentMainFile(),
                        format::DefaultFallbackStyle, Code,
-                       &SM->getFileManager().getVirtualFileSystem());
+                       &SM->getFileManager().getVirtualFileSystem()));
   if (!FileStyle)
     FileStyle = format::getLLVMStyle();
 

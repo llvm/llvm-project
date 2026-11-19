@@ -188,6 +188,16 @@ void hexagon::getHexagonTargetFeatures(const Driver &D,
 
   handleHVXTargetFeatures(D, Args, Features, Cpu, HasHVX);
 
+  // HLX is available on v85 and later.
+  if (Arg *A = Args.getLastArg(options::OPT_mhexagon_hlx,
+                               options::OPT_mno_hexagon_hlx)) {
+    unsigned CpuVer = 0;
+    // getAsInteger returns 'true' on error.
+    if (Cpu.substr(1).getAsInteger(10, CpuVer) || CpuVer < 85)
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << A->getSpelling() << Cpu;
+  }
+
   if (HexagonToolChain::isAutoHVXEnabled(Args) && !HasHVX)
     D.Diag(diag::warn_drv_needs_hvx) << "auto-vectorization";
 }
@@ -236,6 +246,15 @@ void hexagon::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
     if (A->getOption().matches(options::OPT_mhexagon_hvx_ieee_fp))
       CmdArgs.push_back("-mhvx-ieee-fp");
   }
+
+  if (Args.hasFlag(options::OPT_mhexagon_hmx, options::OPT_mno_hexagon_hmx,
+                   false)) {
+    CmdArgs.push_back("-mhmx");
+  }
+
+  if (Args.hasFlag(options::OPT_mhexagon_hlx, options::OPT_mno_hexagon_hlx,
+                   false))
+    CmdArgs.push_back("-mhlx");
 
   if (auto G = toolchains::HexagonToolChain::getSmallDataThreshold(Args)) {
     CmdArgs.push_back(Args.MakeArgString("-gpsize=" + Twine(*G)));
@@ -918,6 +937,20 @@ void HexagonToolChain::addClangTargetOptions(const ArgList &DriverArgs,
   if (isAutoHVXEnabled(DriverArgs)) {
     CC1Args.push_back("-mllvm");
     CC1Args.push_back("-hexagon-autohvx");
+  }
+
+  if (Arg *A = DriverArgs.getLastArg(options::OPT_fhlx_vector_stack_limit_EQ)) {
+    unsigned Limit;
+    if (!DriverArgs.hasFlag(options::OPT_mhexagon_hlx,
+                            options::OPT_mno_hexagon_hlx, false)) {
+      getDriver().Diag(diag::err_drv_needs_hlx) << A->getSpelling();
+    } else if (StringRef(A->getValue()).getAsInteger(10, Limit)) {
+      getDriver().Diag(diag::err_drv_invalid_value)
+          << A->getAsString(DriverArgs) << A->getValue();
+    } else {
+      CC1Args.push_back(
+          DriverArgs.MakeArgString("-fhlx-vector-stack-limit=" + Twine(Limit)));
+    }
   }
 }
 

@@ -274,7 +274,6 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF,
     if (SrcMBB.isMachineBlockAddressTaken())
       DstMBB->setMachineBlockAddressTaken();
 
-    // FIXME: This is not serialized
     if (SrcMBB.hasLabelMustBeEmitted())
       DstMBB->setLabelMustBeEmitted();
 

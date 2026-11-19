@@ -154,5 +154,11 @@ ComparisonSetup::ComparisonSetup()
 SetSetup::SetSetup()
     : ParameterBatch(1), dst_buffer(ParameterBatch::buffer_size) {}
 
+SearchSetup::SearchSetup()
+    : ParameterBatch(1), src_buffer(ParameterBatch::buffer_size) {
+  // Fill with a non-matching byte so memchr scans all size_bytes.
+  memset(src_buffer.begin(), 0xF, buffer_size);
+}
+
 } // namespace libc_benchmarks
 } // namespace llvm

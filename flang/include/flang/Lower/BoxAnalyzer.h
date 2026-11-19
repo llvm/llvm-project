@@ -501,9 +501,10 @@ private:
               sym.GetUltimate()
                   .detailsIf<Fortran::semantics::ObjectEntityDetails>())
         if (objectDetails->init())
-          if (const auto *charExpr = std::get_if<
-                  Fortran::evaluate::Expr<Fortran::evaluate::SomeCharacter>>(
-                  &objectDetails->init()->u))
+          if (const auto *charExpr =
+                  std::get_if<Fortran::evaluate::Expr<Fortran::evaluate::Type<
+                      Fortran::common::TypeCategory::Character>>>(
+                      &objectDetails->init()->u))
             if (Fortran::semantics::MaybeSubscriptIntExpr expr =
                     charExpr->LEN())
               return {Fortran::evaluate::AsGenericExpr(std::move(*expr))};
