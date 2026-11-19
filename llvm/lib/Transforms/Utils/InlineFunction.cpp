@@ -1655,6 +1655,19 @@ static AttrBuilder IdentifyValidPoisonGeneratingAttributes(CallBase &CB) {
   return Valid;
 }
 
+// Preserve a no-infinity return constraint when the original call disappears.
+static void preserveNoInfReturn(CallBase &CB, ArrayRef<ReturnInst *> Returns) {
+  if ((CB.getRetNoFPClass() & fcInf) != fcInf)
+    return;
+
+  for (ReturnInst *RI : Returns) {
+    auto *SI = dyn_cast_if_present<SelectInst>(RI->getReturnValue());
+    if (SI && SI->getType()->isFloatingPointTy() && SI->hasOneUse() &&
+        SI->getParent() == RI->getParent())
+      SI->setHasNoInfs(true);
+  }
+}
+
 static void AddReturnAttributes(CallBase &CB, ValueToValueMapTy &VMap,
                                 ClonedCodeInfo &InlinedFunctionInfo) {
   AttrBuilder CallSiteValidUB = IdentifyValidUBGeneratingAttributes(CB);
@@ -2951,6 +2964,7 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
     // Clone return attributes on the callsite into the calls within the inlined
     // function which feed into its return value.
     AddReturnAttributes(CB, VMap, InlinedFunctionInfo);
+    preserveNoInfReturn(CB, Returns);
 
     // Clone attributes on the params of the callsite to calls within the
     // inlined function which use the same param.
