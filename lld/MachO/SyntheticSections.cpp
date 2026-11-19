@@ -1661,7 +1661,8 @@ void SymtabSection::finalizeContents() {
       if (auto *textOsec = dyn_cast<TextOutputSection>(osec))
         for (const ConcatInputSection *thunk : textOsec->getThunks())
           for (Defined *sym : thunk->symbols)
-            localSymbolsHandler(sym);
+            if (sym->includeInSymtab)
+              localSymbolsHandler(sym);
 
   emitStabs();
   uint32_t symtabIndex = stabs.size();

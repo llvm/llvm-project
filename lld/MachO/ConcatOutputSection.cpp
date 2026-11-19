@@ -185,8 +185,9 @@ void TextOutputSection::createThunk(const ConcatInputSection &isec,
   thunkInfo.sym = make<Defined>(
       thunkName, /*file=*/nullptr, thunkInfo.isec, /*value=*/0, thunkSize,
       /*isWeakDef=*/false, /*isExternal=*/false, /*isPrivateExtern=*/false,
-      /*includeInSymtab=*/true, /*isReferencedDynamically=*/false,
-      /*noDeadStrip=*/false, /*isWeakDefCanBeHidden=*/false);
+      /*includeInSymtab=*/!isPrivateLabel(funcSym->getName()),
+      /*isReferencedDynamically=*/false, /*noDeadStrip=*/false,
+      /*isWeakDefCanBeHidden=*/false);
   thunkInfo.sym->used = true;
   thunkInfo.sym->branchExtensionThunk = true;
   target->populateThunk(thunkInfo.isec, funcSym, r.getAddend());

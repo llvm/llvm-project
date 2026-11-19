@@ -11,9 +11,10 @@
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin %t/foo.s -o %t/foo.o
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin %t/bar.s -o %t/bar.o
 # RUN: %lld -arch arm64 -lSystem -o %t.out %t/foo.o %t/bar.o
-# RUN: llvm-objdump --syms %t.out | FileCheck %s
+# RUN: llvm-objdump --syms %t.out | FileCheck %s --implicit-check-not=l_late_private
 
-## Every thunk is a local symbol, whether its target is local or external.
+## Every thunk is a local symbol, whether its target is local or external,
+## except that thunks to linker-private labels have no symbol.
 # CHECK-LABEL: SYMBOL TABLE:
 # CHECK: l F __TEXT,__text _some_late_external.thunk.0
 # CHECK: l F __TEXT,__text _late_landing_local_fn.thunk.0
@@ -38,6 +39,9 @@ _early_landing_local_fn: ret
 .p2align 2
 _some_early_external: b _late_landing_local_fn
 
+.p2align 2
+_early_private_caller: b l_late_private
+
 ## 0x8000000 is 128 MiB, one more than the forward branch limit.
 ## Distribute that over two functions since our thunk insertion algorithm
 ## can't deal with a single function that's 128 MiB.
@@ -52,6 +56,8 @@ _spacer2:
 _late_jumping_local_fn: b _some_early_external
 .p2align 2
 _late_landing_local_fn: ret
+.p2align 2
+l_late_private: ret
 
 .globl _some_late_external
 .p2align 2
