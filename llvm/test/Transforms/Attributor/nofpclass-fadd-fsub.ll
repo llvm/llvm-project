@@ -664,7 +664,7 @@ define float @fadd_psub(float noundef %arg) {
 
 ; Positive subnormal + largest positive subnormal >= smallest positive normal.
 define float @fadd_psub_max(float nofpclass(nan inf zero nsub norm) %arg) {
-; CHECK-LABEL: define nofpclass(nan inf nzero nsub nnorm) float @fadd_psub_max(
+; CHECK-LABEL: define nofpclass(nan inf zero nsub nnorm) float @fadd_psub_max(
 ; CHECK-SAME: float nofpclass(nan inf zero nsub norm) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG]], f0x007FFFFF
 ; CHECK-NEXT:    ret float [[ADD]]
@@ -685,7 +685,7 @@ define float @fadd_nsub(float noundef %arg) {
 }
 
 define float @fadd_pinf(float noundef %arg) {
-; CHECK-LABEL: define noundef nofpclass(nzero) float @fadd_pinf(
+; CHECK-LABEL: define noundef nofpclass(zero sub) float @fadd_pinf(
 ; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG]], +inf
 ; CHECK-NEXT:    ret float [[ADD]]
@@ -695,7 +695,7 @@ define float @fadd_pinf(float noundef %arg) {
 }
 
 define float @fadd_ninf(float noundef %arg) {
-; CHECK-LABEL: define noundef nofpclass(nzero) float @fadd_ninf(
+; CHECK-LABEL: define noundef nofpclass(zero sub) float @fadd_ninf(
 ; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG]], -inf
 ; CHECK-NEXT:    ret float [[ADD]]
