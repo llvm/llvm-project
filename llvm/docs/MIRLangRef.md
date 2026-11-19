@@ -511,8 +511,8 @@ dead $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags, implicit-
 Note that subregister-index, register-class and type cannot be specified for
 physical registers. Additionally, tied-def can only be specified for a use.
 
-If a tied use and its def are the same virtual register, they must either use
-the same subregister index or both use no subregister.
+If a tied use and its def are the same virtual register, they must use the
+same subregister index.
 
 (register-flags)=
 

@@ -1,4 +1,4 @@
-# RUN: not --crash llc -mtriple=x86_64 -run-pass=none -filetype=null %s 2>&1 | FileCheck %s
+# RUN: not --crash llc -mtriple=x86_64 -run-pass=none -filetype=null %s 2>&1 | FileCheck %s --implicit-check-not="Bad machine code"
 # REQUIRES: x86-registered-target
 
 # A tied use and def of the same virtual register must agree on the subregister
@@ -20,7 +20,6 @@ body: |
     ; CHECK: - instruction: INLINEASM &"" [attdialect], $0:[regdef:GR32], def %2:gr32, $1:[reguse tiedto:$0], %2.sub_16bit:gr32(tied-def 3)
     INLINEASM &"", attdialect, regdef:GR32, def %2, reguse tiedto:$0, %2.sub_16bit(tied-def 3)
 
-    ; CHECK-NOT: Bad machine code
     undef %0.sub_8bit:gr32_abcd = ADD8rr %0.sub_8bit, %1, implicit-def dead $eflags
 
     RET64 implicit %0, implicit %2
