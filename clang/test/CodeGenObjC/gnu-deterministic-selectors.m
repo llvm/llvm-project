@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-freebsd -fobjc-runtime=gnustep-1.5 %s -emit-llvm -o - | FileCheck %s
 // RUN: %clang_cc1 -triple x86_64-unknown-freebsd -fobjc-runtime=gcc %s -emit-llvm -o - | FileCheck %s
+// RUN: %if x86-registered-target %{ %clang_cc1 -triple x86_64-apple-darwin -fobjc-runtime=gnustep-1.9 %s -emit-obj -o %t.gnustep.o %}
+// RUN: %if x86-registered-target %{ %clang_cc1 -triple x86_64-apple-darwin -fobjc-runtime=gcc %s -emit-obj -o %t.gcc.o %}
 
 // Check that these selectors are emitted in alphabetical order.
 // The order doesn't actually matter, only that it doesn't vary across runs.
