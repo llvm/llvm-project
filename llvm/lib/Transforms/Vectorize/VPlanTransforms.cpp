@@ -6563,9 +6563,6 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
 
 void VPlanTransforms::expandMaskBeforeFirst(VPlan &Plan, VPCostContext &Ctx,
                                             VFRange &Range) {
-  if (Range.Start.isScalar())
-    return;
-
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
@@ -6573,6 +6570,15 @@ void VPlanTransforms::expandMaskBeforeFirst(VPlan &Plan, VPCostContext &Ctx,
       if (!match(&R,
                  m_WidenIntrinsic<Intrinsic::mask_beforefirst>(m_VPValue(X))))
         continue;
+
+      VPBuilder Builder(&R);
+      if (Range.Start.isScalar()) {
+        R.getVPSingleValue()->replaceAllUsesWith(
+            Builder.createNot(X, R.getDebugLoc()));
+        R.eraseFromParent();
+        continue;
+      }
+
       auto *BeforeFirst = cast<VPWidenIntrinsicRecipe>(&R);
       Type *Ty = Plan.getVF().getScalarType();
       auto IsCheap = [&](ElementCount VF) {
@@ -6590,7 +6596,6 @@ void VPlanTransforms::expandMaskBeforeFirst(VPlan &Plan, VPCostContext &Ctx,
       if (LoopVectorizationPlanner::getDecisionAndClampRange(IsCheap, Range))
         continue;
 
-      VPBuilder Builder(BeforeFirst);
       DebugLoc DL = BeforeFirst->getDebugLoc();
       VPValue *FirstActive = Builder.createScalarZExtOrTrunc(
           Builder.createFirstActiveLane(X, DL), Ty, DL);
