@@ -457,7 +457,6 @@ body: |
 
 ---
 name: fmaxnm_fmaxnm_h
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: fmaxnm_fmaxnm_h
@@ -472,7 +471,6 @@ body: |
 ...
 ---
 name: fmaxnm_fminnm_h
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: fmaxnm_fminnm_h
@@ -487,7 +485,6 @@ body: |
 ...
 ---
 name: fminnm_fmaxnm_h
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: fminnm_fmaxnm_h
@@ -502,7 +499,6 @@ body: |
 ...
 ---
 name: fminnm_fminnm_h
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: fminnm_fminnm_h
@@ -517,7 +513,6 @@ body: |
 ...
 ---
 name: fmaxnm_fmaxnm_s
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: fmaxnm_fmaxnm_s
@@ -532,7 +527,6 @@ body: |
 ...
 ---
 name: fmaxnm_fminnm_s
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: fmaxnm_fminnm_s
@@ -547,7 +541,6 @@ body: |
 ...
 ---
 name: fminnm_fmaxnm_s
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: fminnm_fmaxnm_s
@@ -562,7 +555,6 @@ body: |
 ...
 ---
 name: fminnm_fminnm_s
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: fminnm_fminnm_s
@@ -577,7 +569,6 @@ body: |
 ...
 ---
 name: fmaxnm_fmaxnm_d
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: fmaxnm_fmaxnm_d
@@ -592,7 +583,6 @@ body: |
 ...
 ---
 name: fmaxnm_fminnm_d
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: fmaxnm_fminnm_d
@@ -607,7 +597,6 @@ body: |
 ...
 ---
 name: fminnm_fmaxnm_d
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: fminnm_fmaxnm_d
@@ -622,7 +611,6 @@ body: |
 ...
 ---
 name: fminnm_fminnm_d
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: fminnm_fminnm_d
@@ -637,7 +625,6 @@ body: |
 ...
 ---
 name: fmaxnm_fmaxnm_v4f16
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: fmaxnm_fmaxnm_v4f16
@@ -652,7 +639,6 @@ body: |
 ...
 ---
 name: fmaxnm_fminnm_v4f16
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: fmaxnm_fminnm_v4f16
@@ -667,7 +653,6 @@ body: |
 ...
 ---
 name: fminnm_fmaxnm_v4f16
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: fminnm_fmaxnm_v4f16
@@ -682,7 +667,6 @@ body: |
 ...
 ---
 name: fminnm_fminnm_v4f16
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: fminnm_fminnm_v4f16
@@ -697,7 +681,6 @@ body: |
 ...
 ---
 name: fmaxnm_fmaxnm_v8f16
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: fmaxnm_fmaxnm_v8f16
@@ -712,7 +695,6 @@ body: |
 ...
 ---
 name: fmaxnm_fminnm_v8f16
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: fmaxnm_fminnm_v8f16
@@ -727,7 +709,6 @@ body: |
 ...
 ---
 name: fminnm_fmaxnm_v8f16
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: fminnm_fmaxnm_v8f16
@@ -742,7 +723,6 @@ body: |
 ...
 ---
 name: fminnm_fminnm_v8f16
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: fminnm_fminnm_v8f16
@@ -757,7 +737,6 @@ body: |
 ...
 ---
 name: fmaxnm_fmaxnm_v2f32
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: fmaxnm_fmaxnm_v2f32
@@ -772,7 +751,6 @@ body: |
 ...
 ---
 name: fmaxnm_fminnm_v2f32
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: fmaxnm_fminnm_v2f32
@@ -787,7 +765,6 @@ body: |
 ...
 ---
 name: fminnm_fmaxnm_v2f32
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: fminnm_fmaxnm_v2f32
@@ -802,7 +779,6 @@ body: |
 ...
 ---
 name: fminnm_fminnm_v2f32
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: fminnm_fminnm_v2f32
@@ -817,7 +793,6 @@ body: |
 ...
 ---
 name: fmaxnm_fmaxnm_v4f32
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: fmaxnm_fmaxnm_v4f32
@@ -832,7 +807,6 @@ body: |
 ...
 ---
 name: fmaxnm_fminnm_v4f32
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: fmaxnm_fminnm_v4f32
@@ -847,7 +821,6 @@ body: |
 ...
 ---
 name: fminnm_fmaxnm_v4f32
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: fminnm_fmaxnm_v4f32
@@ -862,7 +835,6 @@ body: |
 ...
 ---
 name: fminnm_fminnm_v4f32
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: fminnm_fminnm_v4f32
@@ -877,7 +849,6 @@ body: |
 ...
 ---
 name: fmaxnm_fmaxnm_v2f64
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: fmaxnm_fmaxnm_v2f64
@@ -892,7 +863,6 @@ body: |
 ...
 ---
 name: fmaxnm_fminnm_v2f64
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: fmaxnm_fminnm_v2f64
@@ -907,7 +877,6 @@ body: |
 ...
 ---
 name: fminnm_fmaxnm_v2f64
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: fminnm_fmaxnm_v2f64
@@ -922,7 +891,6 @@ body: |
 ...
 ---
 name: fminnm_fminnm_v2f64
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: fminnm_fminnm_v2f64
@@ -953,7 +921,6 @@ body: |
 ---
 ## FMIN/FMAX and FMINNM/FMAXNM should not be mixed
 name: fmax_fminnm_mixed
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: fmax_fminnm_mixed
