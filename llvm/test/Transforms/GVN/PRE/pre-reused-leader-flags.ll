@@ -428,3 +428,250 @@ join:
   %r = mul i64 %a, 3
   ret i64 %r
 }
+
+; Commutative operand ordering: the root `and` is commutative, so the leader
+; %ra = and(%a, %b) and the reference %r = and(%c0, %c1) have the same value
+; number despite the swapped operand order. %a's true partner is the plain
+; icmp %c1, so its samesign flag must be dropped even though the swapped
+; positional pairing would pair it with %c0/%c1 in the wrong order.
+; https://github.com/llvm/llvm-project/issues/241590
+define i1 @commutative_swap_samesign(i1 %c, i64 %x, i64 %y, i1 %p, i1 %q) {
+; CHECK-LABEL: define i1 @commutative_swap_samesign(
+; CHECK-SAME: i1 [[C:%.*]], i64 [[X:%.*]], i64 [[Y:%.*]], i1 [[P:%.*]], i1 [[Q:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br i1 [[C]], label %[[PA:.*]], label %[[PB:.*]]
+; CHECK:       [[PA]]:
+; CHECK-NEXT:    [[A:%.*]] = icmp ult i64 [[X]], [[Y]]
+; CHECK-NEXT:    [[B:%.*]] = and i1 [[P]], [[Q]]
+; CHECK-NEXT:    [[RA:%.*]] = and i1 [[A]], [[B]]
+; CHECK-NEXT:    br label %[[JOIN:.*]]
+; CHECK:       [[PB]]:
+; CHECK-NEXT:    [[B2:%.*]] = and i1 [[P]], [[Q]]
+; CHECK-NEXT:    [[A2:%.*]] = icmp ult i64 [[X]], [[Y]]
+; CHECK-NEXT:    [[RB:%.*]] = and i1 [[A2]], [[B2]]
+; CHECK-NEXT:    br label %[[JOIN]]
+; CHECK:       [[JOIN]]:
+; CHECK-NEXT:    [[R_PRE_PHI:%.*]] = phi i1 [ [[RB]], %[[PB]] ], [ [[RA]], %[[PA]] ]
+; CHECK-NEXT:    [[C0_PRE_PHI:%.*]] = phi i1 [ [[B2]], %[[PB]] ], [ [[B]], %[[PA]] ]
+; CHECK-NEXT:    [[C1:%.*]] = icmp ult i64 [[X]], [[Y]]
+; CHECK-NEXT:    ret i1 [[R_PRE_PHI]]
+;
+entry:
+  br i1 %c, label %pA, label %pB
+
+pA:
+  %a = icmp samesign ult i64 %x, %y
+  %b = and i1 %p, %q
+  %ra = and i1 %a, %b
+  br label %join
+
+pB:
+  %b2 = and i1 %p, %q
+  %a2 = icmp ult i64 %x, %y
+  %rb = and i1 %a2, %b2
+  br label %join
+
+join:
+  %c0 = and i1 %p, %q
+  %c1 = icmp ult i64 %x, %y
+  %r = and i1 %c0, %c1
+  ret i1 %r
+}
+
+; A `mul nsw` and an extractvalue of a with.overflow intrinsic share a value
+; number (GVN synthesizes the binary operator expression), but they are
+; structurally unrelated: the leader's nsw has no counterpart in the reference
+; chain and must be dropped from the leader instruction itself.
+declare { i64, i1 } @llvm.umul.with.overflow.i64(i64, i64)
+
+define i64 @woc_mismatch_depth1(i1 %c, i64 %x, i64 %y) {
+; CHECK-LABEL: define i64 @woc_mismatch_depth1(
+; CHECK-SAME: i1 [[C:%.*]], i64 [[X:%.*]], i64 [[Y:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br i1 [[C]], label %[[PA:.*]], label %[[PB:.*]]
+; CHECK:       [[PA]]:
+; CHECK-NEXT:    [[MA:%.*]] = mul i64 [[X]], [[Y]]
+; CHECK-NEXT:    [[VA:%.*]] = add i64 [[MA]], 1
+; CHECK-NEXT:    [[DOTPRE:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 [[X]], i64 [[Y]])
+; CHECK-NEXT:    br label %[[JOIN:.*]]
+; CHECK:       [[PB]]:
+; CHECK-NEXT:    [[WOB:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 [[X]], i64 [[Y]])
+; CHECK-NEXT:    [[EVB:%.*]] = extractvalue { i64, i1 } [[WOB]], 0
+; CHECK-NEXT:    [[VB:%.*]] = add i64 [[EVB]], 1
+; CHECK-NEXT:    br label %[[JOIN]]
+; CHECK:       [[JOIN]]:
+; CHECK-NEXT:    [[R_PRE_PHI:%.*]] = phi i64 [ [[VB]], %[[PB]] ], [ [[VA]], %[[PA]] ]
+; CHECK-NEXT:    [[EV_PRE_PHI:%.*]] = phi i64 [ [[EVB]], %[[PB]] ], [ [[MA]], %[[PA]] ]
+; CHECK-NEXT:    [[WO_PRE_PHI:%.*]] = phi { i64, i1 } [ [[WOB]], %[[PB]] ], [ [[DOTPRE]], %[[PA]] ]
+; CHECK-NEXT:    ret i64 [[R_PRE_PHI]]
+;
+entry:
+  br i1 %c, label %pA, label %pB
+
+pA:
+  %mA = mul nsw i64 %x, %y
+  %va = add i64 %mA, 1
+  br label %join
+
+pB:
+  %woB = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 %x, i64 %y)
+  %evB = extractvalue { i64, i1 } %woB, 0
+  %vb = add i64 %evB, 1
+  br label %join
+
+join:
+  %wo = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 %x, i64 %y)
+  %ev = extractvalue { i64, i1 } %wo, 0
+  %r = add i64 %ev, 1
+  ret i64 %r
+}
+
+; Nested commutative expressions with mixed flags: both levels are swapped
+; between leader and reference. The samesign on %a (true partner %c1 is plain)
+; must be dropped two levels down, while the nsw on %b (true partner %cm is
+; also nsw) must be kept.
+define i64 @nested_commutative_mixed(i1 %c, i64 %x, i64 %y, i64 %z, i64 %q) {
+; CHECK-LABEL: define i64 @nested_commutative_mixed(
+; CHECK-SAME: i1 [[C:%.*]], i64 [[X:%.*]], i64 [[Y:%.*]], i64 [[Z:%.*]], i64 [[Q:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br i1 [[C]], label %[[PA:.*]], label %[[PB:.*]]
+; CHECK:       [[PA]]:
+; CHECK-NEXT:    [[A:%.*]] = icmp ult i64 [[X]], [[Y]]
+; CHECK-NEXT:    [[AZ:%.*]] = zext i1 [[A]] to i64
+; CHECK-NEXT:    [[B:%.*]] = mul nsw i64 [[X]], [[Z]]
+; CHECK-NEXT:    [[N1:%.*]] = add i64 [[AZ]], [[B]]
+; CHECK-NEXT:    [[RA:%.*]] = add i64 [[N1]], [[Q]]
+; CHECK-NEXT:    br label %[[JOIN:.*]]
+; CHECK:       [[PB]]:
+; CHECK-NEXT:    [[A2:%.*]] = icmp ult i64 [[X]], [[Y]]
+; CHECK-NEXT:    [[A2Z:%.*]] = zext i1 [[A2]] to i64
+; CHECK-NEXT:    [[B2:%.*]] = mul nsw i64 [[X]], [[Z]]
+; CHECK-NEXT:    [[N2:%.*]] = add i64 [[B2]], [[A2Z]]
+; CHECK-NEXT:    [[RB:%.*]] = add i64 [[Q]], [[N2]]
+; CHECK-NEXT:    br label %[[JOIN]]
+; CHECK:       [[JOIN]]:
+; CHECK-NEXT:    [[R_PRE_PHI:%.*]] = phi i64 [ [[RB]], %[[PB]] ], [ [[RA]], %[[PA]] ]
+; CHECK-NEXT:    [[M1_PRE_PHI:%.*]] = phi i64 [ [[N2]], %[[PB]] ], [ [[N1]], %[[PA]] ]
+; CHECK-NEXT:    [[CM_PRE_PHI:%.*]] = phi i64 [ [[B2]], %[[PB]] ], [ [[B]], %[[PA]] ]
+; CHECK-NEXT:    [[C1Z_PRE_PHI:%.*]] = phi i64 [ [[A2Z]], %[[PB]] ], [ [[AZ]], %[[PA]] ]
+; CHECK-NEXT:    [[C1:%.*]] = icmp ult i64 [[X]], [[Y]]
+; CHECK-NEXT:    ret i64 [[R_PRE_PHI]]
+;
+entry:
+  br i1 %c, label %pA, label %pB
+
+pA:
+  %a = icmp samesign ult i64 %x, %y
+  %az = zext i1 %a to i64
+  %b = mul nsw i64 %x, %z
+  %n1 = add i64 %az, %b
+  %ra = add i64 %n1, %q
+  br label %join
+
+pB:
+  %a2 = icmp ult i64 %x, %y
+  %a2z = zext i1 %a2 to i64
+  %b2 = mul nsw i64 %x, %z
+  %n2 = add i64 %b2, %a2z
+  %rb = add i64 %q, %n2
+  br label %join
+
+join:
+  %c1 = icmp ult i64 %x, %y
+  %c1z = zext i1 %c1 to i64
+  %cm = mul nsw i64 %x, %z
+  %m1 = add i64 %cm, %c1z
+  %r = add i64 %q, %m1
+  ret i64 %r
+}
+
+; Same-opcode commutative swap: the root `and i1` is commutative and PRE-able,
+; its icmp operands are never PRE'd. The leader order is (A, B), the reference
+; order is (B, A); %a's samesign must be dropped via its true partner %c1.
+define i1 @same_opcode_swap_icmp(i1 %c, i64 %x, i64 %y, i64 %z, i64 %w) {
+; CHECK-LABEL: define i1 @same_opcode_swap_icmp(
+; CHECK-SAME: i1 [[C:%.*]], i64 [[X:%.*]], i64 [[Y:%.*]], i64 [[Z:%.*]], i64 [[W:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br i1 [[C]], label %[[PA:.*]], label %[[PB:.*]]
+; CHECK:       [[PA]]:
+; CHECK-NEXT:    [[A:%.*]] = icmp ult i64 [[X]], [[Y]]
+; CHECK-NEXT:    [[B:%.*]] = icmp ult i64 [[Z]], [[W]]
+; CHECK-NEXT:    [[RA:%.*]] = and i1 [[A]], [[B]]
+; CHECK-NEXT:    br label %[[JOIN:.*]]
+; CHECK:       [[PB]]:
+; CHECK-NEXT:    [[A2:%.*]] = icmp ult i64 [[X]], [[Y]]
+; CHECK-NEXT:    [[B2:%.*]] = icmp ult i64 [[Z]], [[W]]
+; CHECK-NEXT:    [[RB:%.*]] = and i1 [[A2]], [[B2]]
+; CHECK-NEXT:    br label %[[JOIN]]
+; CHECK:       [[JOIN]]:
+; CHECK-NEXT:    [[R_PRE_PHI:%.*]] = phi i1 [ [[RB]], %[[PB]] ], [ [[RA]], %[[PA]] ]
+; CHECK-NEXT:    [[C2:%.*]] = icmp samesign ult i64 [[Z]], [[W]]
+; CHECK-NEXT:    [[C1:%.*]] = icmp ult i64 [[X]], [[Y]]
+; CHECK-NEXT:    ret i1 [[R_PRE_PHI]]
+;
+entry:
+  br i1 %c, label %pA, label %pB
+
+pA:
+  %a = icmp samesign ult i64 %x, %y
+  %b = icmp ult i64 %z, %w
+  %ra = and i1 %a, %b
+  br label %join
+
+pB:
+  %a2 = icmp ult i64 %x, %y
+  %b2 = icmp ult i64 %z, %w
+  %rb = and i1 %a2, %b2
+  br label %join
+
+join:
+  %c2 = icmp samesign ult i64 %z, %w
+  %c1 = icmp ult i64 %x, %y
+  %r = and i1 %c2, %c1
+  ret i1 %r
+}
+
+; Precision control: every swapped operand pair has the same flags on both
+; sides, so all of them must be kept.
+define i64 @swapped_kept(i1 %c, i64 %x, i64 %y, i64 %z) {
+; CHECK-LABEL: define i64 @swapped_kept(
+; CHECK-SAME: i1 [[C:%.*]], i64 [[X:%.*]], i64 [[Y:%.*]], i64 [[Z:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br i1 [[C]], label %[[PA:.*]], label %[[PB:.*]]
+; CHECK:       [[PA]]:
+; CHECK-NEXT:    [[MA:%.*]] = mul nsw i64 [[X]], [[Y]]
+; CHECK-NEXT:    [[NA:%.*]] = mul nsw i64 [[X]], [[Z]]
+; CHECK-NEXT:    [[RA:%.*]] = add i64 [[MA]], [[NA]]
+; CHECK-NEXT:    br label %[[JOIN:.*]]
+; CHECK:       [[PB]]:
+; CHECK-NEXT:    [[MB:%.*]] = mul nsw i64 [[X]], [[Y]]
+; CHECK-NEXT:    [[NB:%.*]] = mul nsw i64 [[X]], [[Z]]
+; CHECK-NEXT:    [[RB:%.*]] = add i64 [[NB]], [[MB]]
+; CHECK-NEXT:    br label %[[JOIN]]
+; CHECK:       [[JOIN]]:
+; CHECK-NEXT:    [[R_PRE_PHI:%.*]] = phi i64 [ [[RB]], %[[PB]] ], [ [[RA]], %[[PA]] ]
+; CHECK-NEXT:    [[NJ_PRE_PHI:%.*]] = phi i64 [ [[NB]], %[[PB]] ], [ [[NA]], %[[PA]] ]
+; CHECK-NEXT:    [[MJ_PRE_PHI:%.*]] = phi i64 [ [[MB]], %[[PB]] ], [ [[MA]], %[[PA]] ]
+; CHECK-NEXT:    ret i64 [[R_PRE_PHI]]
+;
+entry:
+  br i1 %c, label %pA, label %pB
+
+pA:
+  %ma = mul nsw i64 %x, %y
+  %na = mul nsw i64 %x, %z
+  %ra = add i64 %ma, %na
+  br label %join
+
+pB:
+  %mb = mul nsw i64 %x, %y
+  %nb = mul nsw i64 %x, %z
+  %rb = add i64 %nb, %mb
+  br label %join
+
+join:
+  %mj = mul nsw i64 %x, %y
+  %nj = mul nsw i64 %x, %z
+  %r = add i64 %nj, %mj
+  ret i64 %r
+}
