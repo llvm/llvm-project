@@ -26,8 +26,8 @@ CHECK-SYMS: 0000000000020004 {{.*}} __func.cold.0
 CHECK-SYMS: 0000000000020004 {{.*}} _Zfunc.cold.0
 
 CHECK-NOT:  BOLT-ERROR: parent function not found for __func.cold.0
-CHECK:      BOLT-INFO: marking __func.cold.0/3(*4) as a fragment of __func/4(*3)
+CHECK:      BOLT-INFO: marking __func.cold.0/3(*4) as a fragment of _Zfunc(*3)
 CHECK-NEXT: BOLT-INFO: marking __func.cold.0/1(*2) as a fragment of __func/1(*2)
 CHECK-NEXT: BOLT-INFO: marking __func.cold.0/2(*2) as a fragment of __func/2(*2)
 CHECK-NEXT: BOLT-INFO: marking __func.cold.0/3(*4) as a fragment of __func/3(*2)
-CHECK-NEXT: BOLT-INFO: marking __func.cold.0/4(*2) as a fragment of __func/4(*3)
+CHECK-NEXT: BOLT-INFO: marking __func.cold.0/4(*2) as a fragment of _Zfunc(*3)

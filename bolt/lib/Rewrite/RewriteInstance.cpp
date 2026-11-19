@@ -1055,14 +1055,20 @@ void RewriteInstance::discoverFileObjects() {
       return AMarker && !BMarker;
     }
 
-    const auto AType = cantFail(A.Symbol.getType());
-    const auto BType = cantFail(B.Symbol.getType());
-    if (AType == SymbolRef::ST_Function && BType != SymbolRef::ST_Function)
-      return true;
-    if (BType == SymbolRef::ST_Debug && AType != SymbolRef::ST_Debug)
-      return true;
-
-    return false;
+    // For multiple symbols at the same address, the priority order is as
+    // follows: Global function(0), Non-global function(1), Other global
+    // symbol(2), Other non-global symbol(3), Global debug symbol(4), Non-global
+    // debug symbol(5)
+    auto GetPriority = [](const SymbolRef &Symbol) {
+      const auto Type = cantFail(Symbol.getType());
+      const bool IsGlobal = cantFail(Symbol.getFlags()) & SymbolRef::SF_Global;
+      if (Type == SymbolRef::ST_Function)
+        return IsGlobal ? 0 : 1;
+      if (Type == SymbolRef::ST_Debug)
+        return IsGlobal ? 4 : 5;
+      return IsGlobal ? 2 : 3;
+    };
+    return GetPriority(A.Symbol) < GetPriority(B.Symbol);
   };
   llvm::stable_sort(SortedSymbols, CompareSymbols);
 
