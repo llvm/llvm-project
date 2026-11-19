@@ -221,6 +221,11 @@ public:
     return category_language == valobj_language;
   }
 
+  /// Returns the options that this language adds to the commands that
+  /// evaluate expressions, or nullptr.
+  virtual std::unique_ptr<OptionGroupLanguageExpression>
+  CreateExpressionOptions();
+
   virtual std::unique_ptr<TypeScavenger> GetTypeScavenger();
 
   virtual const char *GetLanguageSpecificTypeLookupHelp();
