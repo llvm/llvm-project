@@ -529,7 +529,6 @@ static void buildDefCFAReg(MachineBasicBlock &MBB,
 
 void SystemZELFFrameLowering::emitPrologue(MachineFunction &MF,
                                            MachineBasicBlock &MBB) const {
-  assert(&MF.front() == &MBB && "Shrink-wrapping not yet supported");
   const SystemZSubtarget &STI = MF.getSubtarget<SystemZSubtarget>();
   const SystemZTargetLowering &TLI = *STI.getTargetLowering();
   MachineFrameInfo &MFFrame = MF.getFrameInfo();
@@ -670,12 +669,6 @@ void SystemZELFFrameLowering::emitPrologue(MachineFunction &MF,
 
     // Add CFI for the new frame location.
     buildDefCFAReg(MBB, MBBI, DL, SystemZ::R11D, ZII);
-
-    // Mark the FramePtr as live at the beginning of every block except
-    // the entry block.  (We'll have marked R11 as live on entry when
-    // saving the GPRs.)
-    for (MachineBasicBlock &MBBJ : llvm::drop_begin(MF))
-      MBBJ.addLiveIn(SystemZ::R11D);
   }
 
   // Skip over the FPR/VR saves.
@@ -719,18 +712,31 @@ void SystemZELFFrameLowering::emitPrologue(MachineFunction &MF,
 
 void SystemZELFFrameLowering::emitEpilogue(MachineFunction &MF,
                                            MachineBasicBlock &MBB) const {
-  MachineBasicBlock::iterator MBBI = MBB.getLastNonDebugInstr();
   auto *ZII =
       static_cast<const SystemZInstrInfo *>(MF.getSubtarget().getInstrInfo());
   SystemZMachineFunctionInfo *ZFI = MF.getInfo<SystemZMachineFunctionInfo>();
   MachineFrameInfo &MFFrame = MF.getFrameInfo();
 
+  // A shrink-wrapped epilogue can be inserted into a block without a return
+  // instruction. Insert before the first terminator, or after the
+  // non-debug instruction when the block has no terminator.
+  MachineBasicBlock::iterator MBBI = MBB.end();
+  DebugLoc DL;
+  if (!MBB.empty()) {
+    MBBI = MBB.getFirstTerminator();
+    if (MBBI == MBB.end())
+      MBBI = MBB.getLastNonDebugInstr();
+
+    if (MBBI != MBB.end()) {
+      DL = MBBI->getDebugLoc();
+      if (!MBBI->isTerminator())
+        MBBI = std::next(MBBI);
+    }
+  }
+
   // See SystemZELFFrameLowering::emitPrologue
   if (MF.getFunction().getCallingConv() == CallingConv::GHC)
     return;
-
-  // Skip the return instruction.
-  assert(MBBI->isReturn() && "Can only insert epilogue into returning blocks");
 
   uint64_t StackSize = MFFrame.getStackSize();
   if (ZFI->getRestoreGPRRegs().LowGPR) {
@@ -740,7 +746,6 @@ void SystemZELFFrameLowering::emitEpilogue(MachineFunction &MF,
       llvm_unreachable("Expected to see callee-save register restore code");
 
     unsigned AddrOpNo = 2;
-    DebugLoc DL = MBBI->getDebugLoc();
     uint64_t Offset = StackSize + MBBI->getOperand(AddrOpNo + 1).getImm();
     unsigned NewOpcode = ZII->getOpcodeForOffset(Opcode, Offset);
 
@@ -758,7 +763,6 @@ void SystemZELFFrameLowering::emitEpilogue(MachineFunction &MF,
     MBBI->setDesc(ZII->get(NewOpcode));
     MBBI->getOperand(AddrOpNo + 1).ChangeToImmediate(Offset);
   } else if (StackSize) {
-    DebugLoc DL = MBBI->getDebugLoc();
     emitIncrement(MBB, MBBI, DL, SystemZ::R15D, StackSize, ZII);
   }
 }
@@ -1545,6 +1549,66 @@ void SystemZXPLINKFrameLowering::processFunctionBeforeFrameFinalized(
     RS->addScavengingFrameIndex(MFFrame.CreateSpillStackObject(8, Align(8)));
     RS->addScavengingFrameIndex(MFFrame.CreateSpillStackObject(8, Align(8)));
   }
+}
+
+bool SystemZELFFrameLowering::enableShrinkWrapping(
+    const MachineFunction &MF) const {
+  const Function &F = MF.getFunction();
+  const SystemZSubtarget &Subtarget = MF.getSubtarget<SystemZSubtarget>();
+
+  // GHC calling convention does not use standard prologue/epilogue.
+  if (F.getCallingConv() == CallingConv::GHC)
+    return false;
+
+  // mcount instrumentation must be called at the function entry.
+  if (F.hasFnAttribute("systemz-instrument-function-entry"))
+    return false;
+
+  // Backchain setup currently assumes %r1 is free at the entry block.
+  // TODO: Investigate if we need to generalise the temp reg handling.
+  // Right now we just disable shrink-wrapping if Backchain is enabled
+  if (Subtarget.hasBackChain())
+    return false;
+
+  // stack probing uses %r0/%r1 scratch registers.
+  if (Subtarget.getTargetLowering()->hasInlineStackProbe(MF))
+    return false;
+
+  return true;
+}
+
+bool SystemZELFFrameLowering::canUseAsPrologue(
+    const MachineBasicBlock &MBB) const {
+  const MachineFunction &MF = *MBB.getParent();
+
+  // Keep the varargs prologue in the entry block so incoming GPRs are saved
+  // before they can be clobbered.
+  if (MF.getFunction().isVarArg())
+    return &MBB == &MF.front();
+
+  // If CC is live into MBB, prologue instructions (e.g. AGHI/AGFI for stack
+  // adjustments) will clobber CC.
+  if (MBB.isLiveIn(SystemZ::CC))
+    return false;
+
+  return true;
+}
+
+bool SystemZELFFrameLowering::canUseAsEpilogue(
+    const MachineBasicBlock &MBB) const {
+  // If epilogue instructions (such as AGHI/AGFI) clobber CC,
+  // we cannot insert the epilogue here if CC is needed by or after the
+  // terminators.
+  for (const MachineInstr &MI : MBB.terminators()) {
+    if (MI.readsRegister(SystemZ::CC, /*TRI=*/nullptr))
+      return false;
+  }
+  for (const MachineBasicBlock *Succ : MBB.successors()) {
+    if (Succ->isLiveIn(SystemZ::CC))
+      return false;
+  }
+
+  return true;
 }
 
 // Determines the size of the frame, and creates the deferred spill objects.
