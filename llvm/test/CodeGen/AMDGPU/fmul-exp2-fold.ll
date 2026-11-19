@@ -2,7 +2,6 @@
 ; RUN: llc -mtriple=amdgpu9.00-amd-amdpal < %s | FileCheck -check-prefix=GFX9 %s
 ; RUN: llc -mtriple=amdgpu10.10-amd-amdpal < %s | FileCheck -check-prefix=GFX1010 %s
 ; RUN: llc -mtriple=amdgpu10.30-amd-amdpal < %s | FileCheck -check-prefix=GFX1030 %s
-; RUN: llc -mtriple=amdgpu11.50-amd-amdpal < %s | FileCheck -check-prefix=GFX1150 %s
 ; RUN: llc -mtriple=amdgpu12.00-amd-amdpal < %s | FileCheck -check-prefix=GFX12 %s
 
 ; Fold a constant multiply of exp2/exp/pow into the exponent:
@@ -29,13 +28,6 @@ define amdgpu_ps float @exp2_fmul_const(float %a, float %b) #0 {
 ; GFX1030-NEXT:    v_fmaak_f32 v0, v0, v1, 0x40149a78
 ; GFX1030-NEXT:    v_exp_f32_e32 v0, v0
 ; GFX1030-NEXT:    ; return to shader part epilog
-;
-; GFX1150-LABEL: exp2_fmul_const:
-; GFX1150:       ; %bb.0:
-; GFX1150-NEXT:    v_fmaak_f32 v0, v0, v1, 0x40149a78
-; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1150-NEXT:    v_exp_f32_e32 v0, v0
-; GFX1150-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-LABEL: exp2_fmul_const:
 ; GFX12:       ; %bb.0:
@@ -69,13 +61,6 @@ define amdgpu_ps float @exp2_fmul_const_half(float %a, float %b) #0 {
 ; GFX1030-NEXT:    v_fma_f32 v0, v0, v1, -1.0
 ; GFX1030-NEXT:    v_exp_f32_e32 v0, v0
 ; GFX1030-NEXT:    ; return to shader part epilog
-;
-; GFX1150-LABEL: exp2_fmul_const_half:
-; GFX1150:       ; %bb.0:
-; GFX1150-NEXT:    v_fma_f32 v0, v0, v1, -1.0
-; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1150-NEXT:    v_exp_f32_e32 v0, v0
-; GFX1150-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-LABEL: exp2_fmul_const_half:
 ; GFX12:       ; %bb.0:
@@ -128,19 +113,6 @@ define amdgpu_ps float @exp2_fmul_const_ieee(float %a, float %b) {
 ; GFX1030-NEXT:    v_ldexp_f32 v0, v0, v1
 ; GFX1030-NEXT:    ; return to shader part epilog
 ;
-; GFX1150-LABEL: exp2_fmul_const_ieee:
-; GFX1150:       ; %bb.0:
-; GFX1150-NEXT:    v_fmaak_f32 v0, v0, v1, 0x40149a78
-; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GFX1150-NEXT:    v_cmp_gt_f32_e32 vcc_lo, 0xc2fc0000, v0
-; GFX1150-NEXT:    v_cndmask_b32_e64 v1, 0, 0x42800000, vcc_lo
-; GFX1150-NEXT:    v_add_f32_e32 v0, v0, v1
-; GFX1150-NEXT:    v_cndmask_b32_e64 v1, 0, 0xffffffc0, vcc_lo
-; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(TRANS32_DEP_1)
-; GFX1150-NEXT:    v_exp_f32_e32 v0, v0
-; GFX1150-NEXT:    v_ldexp_f32 v0, v0, v1
-; GFX1150-NEXT:    ; return to shader part epilog
-;
 ; GFX12-LABEL: exp2_fmul_const_ieee:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_fmaak_f32 v0, v0, v1, 0x40149a78
@@ -187,14 +159,6 @@ define amdgpu_ps <2 x float> @exp2_v2f32(<2 x float> %a, <2 x float> %b) #0 {
 ; GFX1030-NEXT:    v_exp_f32_e32 v1, v1
 ; GFX1030-NEXT:    ; return to shader part epilog
 ;
-; GFX1150-LABEL: exp2_v2f32:
-; GFX1150:       ; %bb.0:
-; GFX1150-NEXT:    v_dual_fmaak_f32 v0, v0, v2, 0x40149a78 :: v_dual_fmaak_f32 v1, v1, v3, 0x40149a78
-; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1150-NEXT:    v_exp_f32_e32 v0, v0
-; GFX1150-NEXT:    v_exp_f32_e32 v1, v1
-; GFX1150-NEXT:    ; return to shader part epilog
-;
 ; GFX12-LABEL: exp2_v2f32:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_dual_fmaak_f32 v0, v0, v2, 0x40149a78 :: v_dual_fmaak_f32 v1, v1, v3, 0x40149a78
@@ -229,14 +193,6 @@ define amdgpu_ps float @exp_fmul_const(float %x) #0 {
 ; GFX1030-NEXT:    v_fmaak_f32 v0, s0, v0, 0x40149a78
 ; GFX1030-NEXT:    v_exp_f32_e32 v0, v0
 ; GFX1030-NEXT:    ; return to shader part epilog
-;
-; GFX1150-LABEL: exp_fmul_const:
-; GFX1150:       ; %bb.0:
-; GFX1150-NEXT:    s_mov_b32 s0, 0x3fb8aa3b
-; GFX1150-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1150-NEXT:    v_fmaak_f32 v0, s0, v0, 0x40149a78
-; GFX1150-NEXT:    v_exp_f32_e32 v0, v0
-; GFX1150-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-LABEL: exp_fmul_const:
 ; GFX12:       ; %bb.0:
@@ -289,21 +245,6 @@ define amdgpu_ps float @exp_fmul_const_ieee(float %x) {
 ; GFX1030-NEXT:    v_ldexp_f32 v0, v0, v1
 ; GFX1030-NEXT:    ; return to shader part epilog
 ;
-; GFX1150-LABEL: exp_fmul_const_ieee:
-; GFX1150:       ; %bb.0:
-; GFX1150-NEXT:    s_mov_b32 s0, 0x3fb8aa3b
-; GFX1150-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1150-NEXT:    v_fmaak_f32 v0, s0, v0, 0x40149a78
-; GFX1150-NEXT:    v_cmp_gt_f32_e32 vcc_lo, 0xc2fc0000, v0
-; GFX1150-NEXT:    v_cndmask_b32_e64 v1, 0, 0x42800000, vcc_lo
-; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX1150-NEXT:    v_add_f32_e32 v0, v0, v1
-; GFX1150-NEXT:    v_cndmask_b32_e64 v1, 0, 0xffffffc0, vcc_lo
-; GFX1150-NEXT:    v_exp_f32_e32 v0, v0
-; GFX1150-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
-; GFX1150-NEXT:    v_ldexp_f32 v0, v0, v1
-; GFX1150-NEXT:    ; return to shader part epilog
-;
 ; GFX12-LABEL: exp_fmul_const_ieee:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_mov_b32 s0, 0x3fb8aa3b
@@ -348,16 +289,6 @@ define amdgpu_ps float @pow_const(float %x) #0 {
 ; GFX1030-NEXT:    v_exp_f32_e32 v0, v0
 ; GFX1030-NEXT:    ; return to shader part epilog
 ;
-; GFX1150-LABEL: pow_const:
-; GFX1150:       ; %bb.0:
-; GFX1150-NEXT:    v_log_f32_e32 v0, v0
-; GFX1150-NEXT:    s_mov_b32 s0, 0x400ccccd
-; GFX1150-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instid1(SALU_CYCLE_1)
-; GFX1150-NEXT:    v_fmaak_f32 v0, s0, v0, 0xbfdef2bc
-; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1150-NEXT:    v_exp_f32_e32 v0, v0
-; GFX1150-NEXT:    ; return to shader part epilog
-;
 ; GFX12-LABEL: pow_const:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_log_f32_e32 v0, v0
@@ -399,16 +330,6 @@ define amdgpu_ps float @pow_const_ieee(float %x) {
 ; GFX1030-NEXT:    v_exp_f32_e32 v0, v0
 ; GFX1030-NEXT:    ; return to shader part epilog
 ;
-; GFX1150-LABEL: pow_const_ieee:
-; GFX1150:       ; %bb.0:
-; GFX1150-NEXT:    v_log_f32_e32 v0, v0
-; GFX1150-NEXT:    s_mov_b32 s0, 0x400ccccd
-; GFX1150-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instid1(SALU_CYCLE_1)
-; GFX1150-NEXT:    v_fmaak_f32 v0, s0, v0, 0xbfdef2bc
-; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1150-NEXT:    v_exp_f32_e32 v0, v0
-; GFX1150-NEXT:    ; return to shader part epilog
-;
 ; GFX12-LABEL: pow_const_ieee:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_log_f32_e32 v0, v0
@@ -448,14 +369,6 @@ define amdgpu_ps float @pow_var_exponent(float %x, float %y) #0 {
 ; GFX1030-NEXT:    v_exp_f32_e32 v0, v0
 ; GFX1030-NEXT:    ; return to shader part epilog
 ;
-; GFX1150-LABEL: pow_var_exponent:
-; GFX1150:       ; %bb.0:
-; GFX1150-NEXT:    v_log_f32_e32 v0, v0
-; GFX1150-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1150-NEXT:    v_fma_dx9_zero_f32 v0, v0, v1, 0xbfdef2bc
-; GFX1150-NEXT:    v_exp_f32_e32 v0, v0
-; GFX1150-NEXT:    ; return to shader part epilog
-;
 ; GFX12-LABEL: pow_var_exponent:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_log_f32_e32 v0, v0
@@ -492,14 +405,6 @@ define amdgpu_ps float @pow_zero_exponent(float %x) #0 {
 ; GFX1030-NEXT:    v_fma_legacy_f32 v0, v0, 0, 0xbfdef2bc
 ; GFX1030-NEXT:    v_exp_f32_e32 v0, v0
 ; GFX1030-NEXT:    ; return to shader part epilog
-;
-; GFX1150-LABEL: pow_zero_exponent:
-; GFX1150:       ; %bb.0:
-; GFX1150-NEXT:    v_log_f32_e32 v0, v0
-; GFX1150-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1150-NEXT:    v_fma_dx9_zero_f32 v0, v0, 0, 0xbfdef2bc
-; GFX1150-NEXT:    v_exp_f32_e32 v0, v0
-; GFX1150-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-LABEL: pow_zero_exponent:
 ; GFX12:       ; %bb.0:
@@ -539,16 +444,6 @@ define amdgpu_ps float @pow_ninf(float %x) #0 {
 ; GFX1030-NEXT:    v_exp_f32_e32 v0, v0
 ; GFX1030-NEXT:    ; return to shader part epilog
 ;
-; GFX1150-LABEL: pow_ninf:
-; GFX1150:       ; %bb.0:
-; GFX1150-NEXT:    v_log_f32_e32 v0, v0
-; GFX1150-NEXT:    s_mov_b32 s0, 0x400ccccd
-; GFX1150-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instid1(SALU_CYCLE_1)
-; GFX1150-NEXT:    v_fmaak_f32 v0, s0, v0, 0xbfdef2bc
-; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1150-NEXT:    v_exp_f32_e32 v0, v0
-; GFX1150-NEXT:    ; return to shader part epilog
-;
 ; GFX12-LABEL: pow_ninf:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_log_f32_e32 v0, v0
@@ -587,13 +482,6 @@ define amdgpu_ps float @exp2_fmul_const_uniform(float inreg %a, float inreg %b) 
 ; GFX1030-NEXT:    v_exp_f32_e32 v0, v0
 ; GFX1030-NEXT:    ; return to shader part epilog
 ;
-; GFX1150-LABEL: exp2_fmul_const_uniform:
-; GFX1150:       ; %bb.0:
-; GFX1150-NEXT:    s_fmaak_f32 s0, s0, s1, 0x40149a78
-; GFX1150-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
-; GFX1150-NEXT:    v_exp_f32_e32 v0, s0
-; GFX1150-NEXT:    ; return to shader part epilog
-;
 ; GFX12-LABEL: exp2_fmul_const_uniform:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_fmaak_f32 s0, s0, s1, 0x40149a78
@@ -631,14 +519,6 @@ define amdgpu_ps float @exp_fmul_const_uniform(float inreg %x) #0 {
 ; GFX1030-NEXT:    v_fmaak_f32 v0, s0, v0, 0x40149a78
 ; GFX1030-NEXT:    v_exp_f32_e32 v0, v0
 ; GFX1030-NEXT:    ; return to shader part epilog
-;
-; GFX1150-LABEL: exp_fmul_const_uniform:
-; GFX1150:       ; %bb.0:
-; GFX1150-NEXT:    s_mov_b32 s1, 0x3fb8aa3b
-; GFX1150-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_3)
-; GFX1150-NEXT:    s_fmaak_f32 s0, s0, s1, 0x40149a78
-; GFX1150-NEXT:    v_exp_f32_e32 v0, s0
-; GFX1150-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-LABEL: exp_fmul_const_uniform:
 ; GFX12:       ; %bb.0:
@@ -680,16 +560,6 @@ define amdgpu_ps float @pow_const_uniform(float inreg %x) #0 {
 ; GFX1030-NEXT:    v_fmaak_f32 v0, s0, v0, 0xbfdef2bc
 ; GFX1030-NEXT:    v_exp_f32_e32 v0, v0
 ; GFX1030-NEXT:    ; return to shader part epilog
-;
-; GFX1150-LABEL: pow_const_uniform:
-; GFX1150:       ; %bb.0:
-; GFX1150-NEXT:    v_log_f32_e32 v0, s0
-; GFX1150-NEXT:    v_mov_b32_e32 v1, 0xbfdef2bc
-; GFX1150-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instid1(VALU_DEP_1)
-; GFX1150-NEXT:    v_fmac_f32_e32 v1, 0x400ccccd, v0
-; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1150-NEXT:    v_exp_f32_e32 v0, v1
-; GFX1150-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-LABEL: pow_const_uniform:
 ; GFX12:       ; %bb.0:
@@ -736,14 +606,6 @@ define amdgpu_ps half @exp2_f16(half %a, half %b) #0 {
 ; GFX1030-NEXT:    v_mul_f16_e32 v0, 0x4500, v0
 ; GFX1030-NEXT:    ; return to shader part epilog
 ;
-; GFX1150-LABEL: exp2_f16:
-; GFX1150:       ; %bb.0:
-; GFX1150-NEXT:    v_mul_f16_e32 v0.l, v0.l, v1.l
-; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(TRANS32_DEP_1)
-; GFX1150-NEXT:    v_exp_f16_e32 v0.l, v0.l
-; GFX1150-NEXT:    v_mul_f16_e32 v0.l, 0x4500, v0.l
-; GFX1150-NEXT:    ; return to shader part epilog
-;
 ; GFX12-LABEL: exp2_f16:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_mul_f16_e32 v0.l, v0.l, v1.l
@@ -780,14 +642,6 @@ define amdgpu_ps float @exp2_fmul_const_2(float %a, float %b) #0 {
 ; GFX1030-NEXT:    v_add_f32_e32 v0, v0, v0
 ; GFX1030-NEXT:    ; return to shader part epilog
 ;
-; GFX1150-LABEL: exp2_fmul_const_2:
-; GFX1150:       ; %bb.0:
-; GFX1150-NEXT:    v_mul_f32_e32 v0, v0, v1
-; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(TRANS32_DEP_1)
-; GFX1150-NEXT:    v_exp_f32_e32 v0, v0
-; GFX1150-NEXT:    v_add_f32_e32 v0, v0, v0
-; GFX1150-NEXT:    ; return to shader part epilog
-;
 ; GFX12-LABEL: exp2_fmul_const_2:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_mul_f32_e32 v0, v0, v1
@@ -820,13 +674,6 @@ define amdgpu_ps float @exp2_one_const(float %a, float %b) #0 {
 ; GFX1030-NEXT:    v_mul_f32_e32 v0, v0, v1
 ; GFX1030-NEXT:    v_exp_f32_e32 v0, v0
 ; GFX1030-NEXT:    ; return to shader part epilog
-;
-; GFX1150-LABEL: exp2_one_const:
-; GFX1150:       ; %bb.0:
-; GFX1150-NEXT:    v_mul_f32_e32 v0, v0, v1
-; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1150-NEXT:    v_exp_f32_e32 v0, v0
-; GFX1150-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-LABEL: exp2_one_const:
 ; GFX12:       ; %bb.0:
@@ -862,14 +709,6 @@ define amdgpu_ps float @exp2_var_scale(float %a, float %b, float %c) #0 {
 ; GFX1030-NEXT:    v_exp_f32_e32 v0, v0
 ; GFX1030-NEXT:    v_mul_f32_e32 v0, v0, v2
 ; GFX1030-NEXT:    ; return to shader part epilog
-;
-; GFX1150-LABEL: exp2_var_scale:
-; GFX1150:       ; %bb.0:
-; GFX1150-NEXT:    v_mul_f32_e32 v0, v0, v1
-; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(TRANS32_DEP_1)
-; GFX1150-NEXT:    v_exp_f32_e32 v0, v0
-; GFX1150-NEXT:    v_mul_f32_e32 v0, v0, v2
-; GFX1150-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-LABEL: exp2_var_scale:
 ; GFX12:       ; %bb.0:
@@ -907,14 +746,6 @@ define amdgpu_ps float @exp2_no_reassoc(float %a, float %b) #0 {
 ; GFX1030-NEXT:    v_mul_f32_e32 v0, 0x40a00000, v0
 ; GFX1030-NEXT:    ; return to shader part epilog
 ;
-; GFX1150-LABEL: exp2_no_reassoc:
-; GFX1150:       ; %bb.0:
-; GFX1150-NEXT:    v_mul_f32_e32 v0, v0, v1
-; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(TRANS32_DEP_1)
-; GFX1150-NEXT:    v_exp_f32_e32 v0, v0
-; GFX1150-NEXT:    v_mul_f32_e32 v0, 0x40a00000, v0
-; GFX1150-NEXT:    ; return to shader part epilog
-;
 ; GFX12-LABEL: exp2_no_reassoc:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_mul_f32_e32 v0, v0, v1
@@ -951,14 +782,6 @@ define amdgpu_ps float @exp2_outer_no_afn(float %a, float %b) #0 {
 ; GFX1030-NEXT:    v_mul_f32_e32 v0, 0x40a00000, v0
 ; GFX1030-NEXT:    ; return to shader part epilog
 ;
-; GFX1150-LABEL: exp2_outer_no_afn:
-; GFX1150:       ; %bb.0:
-; GFX1150-NEXT:    v_mul_f32_e32 v0, v0, v1
-; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(TRANS32_DEP_1)
-; GFX1150-NEXT:    v_exp_f32_e32 v0, v0
-; GFX1150-NEXT:    v_mul_f32_e32 v0, 0x40a00000, v0
-; GFX1150-NEXT:    ; return to shader part epilog
-;
 ; GFX12-LABEL: exp2_outer_no_afn:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_mul_f32_e32 v0, v0, v1
@@ -994,14 +817,6 @@ define amdgpu_ps float @exp2_no_afn(float %a, float %b) #0 {
 ; GFX1030-NEXT:    v_exp_f32_e32 v0, v0
 ; GFX1030-NEXT:    v_mul_f32_e32 v0, 0x40a00000, v0
 ; GFX1030-NEXT:    ; return to shader part epilog
-;
-; GFX1150-LABEL: exp2_no_afn:
-; GFX1150:       ; %bb.0:
-; GFX1150-NEXT:    v_mul_f32_e32 v0, v0, v1
-; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(TRANS32_DEP_1)
-; GFX1150-NEXT:    v_exp_f32_e32 v0, v0
-; GFX1150-NEXT:    v_mul_f32_e32 v0, 0x40a00000, v0
-; GFX1150-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-LABEL: exp2_no_afn:
 ; GFX12:       ; %bb.0:
@@ -1042,15 +857,6 @@ define amdgpu_ps float @exp2_multi_use(float %a, float %b, ptr addrspace(1) %out
 ; GFX1030-NEXT:    v_mul_f32_e32 v0, 0x40a00000, v1
 ; GFX1030-NEXT:    global_store_dword v[2:3], v1, off
 ; GFX1030-NEXT:    ; return to shader part epilog
-;
-; GFX1150-LABEL: exp2_multi_use:
-; GFX1150:       ; %bb.0:
-; GFX1150-NEXT:    v_mul_f32_e32 v0, v0, v1
-; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(TRANS32_DEP_1)
-; GFX1150-NEXT:    v_exp_f32_e32 v1, v0
-; GFX1150-NEXT:    v_mul_f32_e32 v0, 0x40a00000, v1
-; GFX1150-NEXT:    global_store_b32 v[2:3], v1, off
-; GFX1150-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-LABEL: exp2_multi_use:
 ; GFX12:       ; %bb.0:
@@ -1097,17 +903,6 @@ define amdgpu_ps float @pow_multi_use(float %x, ptr addrspace(1) %out) #0 {
 ; GFX1030-NEXT:    global_store_dword v[1:2], v3, off
 ; GFX1030-NEXT:    ; return to shader part epilog
 ;
-; GFX1150-LABEL: pow_multi_use:
-; GFX1150:       ; %bb.0:
-; GFX1150-NEXT:    v_log_f32_e32 v0, v0
-; GFX1150-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1150-NEXT:    v_mul_dx9_zero_f32_e32 v0, 0x400ccccd, v0
-; GFX1150-NEXT:    v_exp_f32_e32 v3, v0
-; GFX1150-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
-; GFX1150-NEXT:    v_mul_f32_e32 v0, 0x3e991687, v3
-; GFX1150-NEXT:    global_store_b32 v[1:2], v3, off
-; GFX1150-NEXT:    ; return to shader part epilog
-;
 ; GFX12-LABEL: pow_multi_use:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_log_f32_e32 v0, v0
@@ -1151,15 +946,6 @@ define amdgpu_ps float @exp2_inner_multi_use(float %a, float %b, ptr addrspace(1
 ; GFX1030-NEXT:    v_mul_f32_e32 v0, 0x40a00000, v0
 ; GFX1030-NEXT:    ; return to shader part epilog
 ;
-; GFX1150-LABEL: exp2_inner_multi_use:
-; GFX1150:       ; %bb.0:
-; GFX1150-NEXT:    v_mul_f32_e32 v1, v0, v1
-; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(TRANS32_DEP_1)
-; GFX1150-NEXT:    v_exp_f32_e32 v0, v1
-; GFX1150-NEXT:    v_mul_f32_e32 v0, 0x40a00000, v0
-; GFX1150-NEXT:    global_store_b32 v[2:3], v1, off
-; GFX1150-NEXT:    ; return to shader part epilog
-;
 ; GFX12-LABEL: exp2_inner_multi_use:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_mul_f32_e32 v1, v0, v1
@@ -1198,14 +984,6 @@ define amdgpu_ps float @exp2_inner_no_contract(float %a, float %b) #0 {
 ; GFX1030-NEXT:    v_mul_f32_e32 v0, 0x40a00000, v0
 ; GFX1030-NEXT:    ; return to shader part epilog
 ;
-; GFX1150-LABEL: exp2_inner_no_contract:
-; GFX1150:       ; %bb.0:
-; GFX1150-NEXT:    v_mul_f32_e32 v0, v0, v1
-; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(TRANS32_DEP_1)
-; GFX1150-NEXT:    v_exp_f32_e32 v0, v0
-; GFX1150-NEXT:    v_mul_f32_e32 v0, 0x40a00000, v0
-; GFX1150-NEXT:    ; return to shader part epilog
-;
 ; GFX12-LABEL: exp2_inner_no_contract:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_mul_f32_e32 v0, v0, v1
@@ -1238,13 +1016,6 @@ define amdgpu_ps float @exp2_no_inner_fmul(float %a) #0 {
 ; GFX1030-NEXT:    v_exp_f32_e32 v0, v0
 ; GFX1030-NEXT:    v_mul_f32_e32 v0, 0x40a00000, v0
 ; GFX1030-NEXT:    ; return to shader part epilog
-;
-; GFX1150-LABEL: exp2_no_inner_fmul:
-; GFX1150:       ; %bb.0:
-; GFX1150-NEXT:    v_exp_f32_e32 v0, v0
-; GFX1150-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
-; GFX1150-NEXT:    v_mul_f32_e32 v0, 0x40a00000, v0
-; GFX1150-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-LABEL: exp2_no_inner_fmul:
 ; GFX12:       ; %bb.0:
@@ -1279,14 +1050,6 @@ define amdgpu_ps float @exp_no_contract(float %x) #0 {
 ; GFX1030-NEXT:    v_exp_f32_e32 v0, v0
 ; GFX1030-NEXT:    v_mul_f32_e32 v0, 0x40a00000, v0
 ; GFX1030-NEXT:    ; return to shader part epilog
-;
-; GFX1150-LABEL: exp_no_contract:
-; GFX1150:       ; %bb.0:
-; GFX1150-NEXT:    v_mul_f32_e32 v0, 0x3fb8aa3b, v0
-; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(TRANS32_DEP_1)
-; GFX1150-NEXT:    v_exp_f32_e32 v0, v0
-; GFX1150-NEXT:    v_mul_f32_e32 v0, 0x40a00000, v0
-; GFX1150-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-LABEL: exp_no_contract:
 ; GFX12:       ; %bb.0:
@@ -1325,16 +1088,6 @@ define amdgpu_ps float @pow_no_contract(float %x) #0 {
 ; GFX1030-NEXT:    v_exp_f32_e32 v0, v0
 ; GFX1030-NEXT:    v_mul_f32_e32 v0, 0x3e991687, v0
 ; GFX1030-NEXT:    ; return to shader part epilog
-;
-; GFX1150-LABEL: pow_no_contract:
-; GFX1150:       ; %bb.0:
-; GFX1150-NEXT:    v_log_f32_e32 v0, v0
-; GFX1150-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1150-NEXT:    v_mul_dx9_zero_f32_e32 v0, 0x400ccccd, v0
-; GFX1150-NEXT:    v_exp_f32_e32 v0, v0
-; GFX1150-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
-; GFX1150-NEXT:    v_mul_f32_e32 v0, 0x3e991687, v0
-; GFX1150-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-LABEL: pow_no_contract:
 ; GFX12:       ; %bb.0:
@@ -1382,18 +1135,6 @@ define amdgpu_ps float @exp10_fmul_const(float %x) #0 {
 ; GFX1030-NEXT:    v_mul_f32_e32 v0, 0x40a00000, v0
 ; GFX1030-NEXT:    ; return to shader part epilog
 ;
-; GFX1150-LABEL: exp10_fmul_const:
-; GFX1150:       ; %bb.0:
-; GFX1150-NEXT:    v_mul_f32_e32 v1, 0x3a2784bc, v0
-; GFX1150-NEXT:    v_mul_f32_e32 v0, 0x40549000, v0
-; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1150-NEXT:    v_exp_f32_e32 v1, v1
-; GFX1150-NEXT:    v_exp_f32_e32 v0, v0
-; GFX1150-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1150-NEXT:    v_mul_f32_e32 v0, v0, v1
-; GFX1150-NEXT:    v_mul_f32_e32 v0, 0x40a00000, v0
-; GFX1150-NEXT:    ; return to shader part epilog
-;
 ; GFX12-LABEL: exp10_fmul_const:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_mul_f32_e32 v1, 0x3a2784bc, v0
@@ -1433,14 +1174,6 @@ define amdgpu_ps float @exp2_neg_const(float %a, float %b) #0 {
 ; GFX1030-NEXT:    v_mul_f32_e32 v0, 0xc0a00000, v0
 ; GFX1030-NEXT:    ; return to shader part epilog
 ;
-; GFX1150-LABEL: exp2_neg_const:
-; GFX1150:       ; %bb.0:
-; GFX1150-NEXT:    v_mul_f32_e32 v0, v0, v1
-; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(TRANS32_DEP_1)
-; GFX1150-NEXT:    v_exp_f32_e32 v0, v0
-; GFX1150-NEXT:    v_mul_f32_e32 v0, 0xc0a00000, v0
-; GFX1150-NEXT:    ; return to shader part epilog
-;
 ; GFX12-LABEL: exp2_neg_const:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_mul_f32_e32 v0, v0, v1
@@ -1477,14 +1210,6 @@ define amdgpu_ps float @exp2_zero_const(float %a, float %b) #0 {
 ; GFX1030-NEXT:    v_mul_f32_e32 v0, 0, v0
 ; GFX1030-NEXT:    ; return to shader part epilog
 ;
-; GFX1150-LABEL: exp2_zero_const:
-; GFX1150:       ; %bb.0:
-; GFX1150-NEXT:    v_mul_f32_e32 v0, v0, v1
-; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(TRANS32_DEP_1)
-; GFX1150-NEXT:    v_exp_f32_e32 v0, v0
-; GFX1150-NEXT:    v_mul_f32_e32 v0, 0, v0
-; GFX1150-NEXT:    ; return to shader part epilog
-;
 ; GFX12-LABEL: exp2_zero_const:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_mul_f32_e32 v0, v0, v1
@@ -1519,14 +1244,6 @@ define amdgpu_ps float @exp2_inf_const(float %a, float %b) #0 {
 ; GFX1030-NEXT:    v_exp_f32_e32 v0, v0
 ; GFX1030-NEXT:    v_mul_f32_e32 v0, 0x7f800000, v0
 ; GFX1030-NEXT:    ; return to shader part epilog
-;
-; GFX1150-LABEL: exp2_inf_const:
-; GFX1150:       ; %bb.0:
-; GFX1150-NEXT:    v_mul_f32_e32 v0, v0, v1
-; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(TRANS32_DEP_1)
-; GFX1150-NEXT:    v_exp_f32_e32 v0, v0
-; GFX1150-NEXT:    v_mul_f32_e32 v0, 0x7f800000, v0
-; GFX1150-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-LABEL: exp2_inf_const:
 ; GFX12:       ; %bb.0:
@@ -1563,14 +1280,6 @@ define amdgpu_ps float @exp2_denorm_const(float %a, float %b) #0 {
 ; GFX1030-NEXT:    v_mul_f32_e32 v0, 0x400000, v0
 ; GFX1030-NEXT:    ; return to shader part epilog
 ;
-; GFX1150-LABEL: exp2_denorm_const:
-; GFX1150:       ; %bb.0:
-; GFX1150-NEXT:    v_mul_f32_e32 v0, v0, v1
-; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(TRANS32_DEP_1)
-; GFX1150-NEXT:    v_exp_f32_e32 v0, v0
-; GFX1150-NEXT:    v_mul_f32_e32 v0, 0x400000, v0
-; GFX1150-NEXT:    ; return to shader part epilog
-;
 ; GFX12-LABEL: exp2_denorm_const:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_mul_f32_e32 v0, v0, v1
@@ -1583,10 +1292,5 @@ define amdgpu_ps float @exp2_denorm_const(float %a, float %b) #0 {
   %r = fmul reassoc contract afn float %e, 0x3800000000000000
   ret float %r
 }
-declare float @llvm.exp.f32(float)
-declare float @llvm.exp2.f32(float)
-declare float @llvm.exp10.f32(float)
-declare half @llvm.exp2.f16(half)
-declare <2 x float> @llvm.exp2.v2f32(<2 x float>)
-declare float @llvm.pow.f32(float, float)
+
 attributes #0 = { denormal_fpenv(float: preservesign) }
