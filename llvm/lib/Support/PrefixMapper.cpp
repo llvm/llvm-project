@@ -1,0 +1,166 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Prefix mapping utility.
+///
+//===----------------------------------------------------------------------===//
+
+#include "llvm/Support/PrefixMapper.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringExtras.h"
+
+using namespace llvm;
+
+std::optional<MappedPrefix>
+MappedPrefix::getFromJoined(StringRef JoinedMapping) {
+  auto Equals = JoinedMapping.find('=');
+  if (Equals == StringRef::npos)
+    return std::nullopt;
+  StringRef Old = JoinedMapping.substr(0, Equals);
+  StringRef New = JoinedMapping.substr(Equals + 1);
+  return MappedPrefix{Old, New};
+}
+
+template <bool StopOnInvalid, class StringT>
+static std::optional<StringRef>
+transformJoinedImpl(ArrayRef<StringT> JoinedMappings,
+                    SmallVectorImpl<MappedPrefix> &Mappings) {
+  size_t OriginalSize = Mappings.size();
+  for (StringRef Joined : JoinedMappings) {
+    if (std::optional<MappedPrefix> Split =
+            MappedPrefix::getFromJoined(Joined)) {
+      Mappings.push_back(*Split);
+      continue;
+    }
+    if (!StopOnInvalid)
+      continue;
+    Mappings.resize(OriginalSize);
+    return Joined;
+  }
+  return std::nullopt;
+}
+
+static Error makeErrorForInvalidJoin(std::optional<StringRef> Joined) {
+  if (!Joined)
+    return Error::success();
+  return createStringError(inconvertibleErrorCode(),
+                           "invalid prefix map: '" + *Joined + "'");
+}
+
+Error MappedPrefix::transformJoined(ArrayRef<StringRef> Joined,
+                                    SmallVectorImpl<MappedPrefix> &Split) {
+  return makeErrorForInvalidJoin(
+      transformJoinedImpl</*StopOnInvalid*/ true>(Joined, Split));
+}
+
+Error MappedPrefix::transformJoined(ArrayRef<std::string> Joined,
+                                    SmallVectorImpl<MappedPrefix> &Split) {
+  return makeErrorForInvalidJoin(
+      transformJoinedImpl</*StopOnInvalid*/ true>(Joined, Split));
+}
+
+void MappedPrefix::transformJoinedIfValid(
+    ArrayRef<StringRef> Joined, SmallVectorImpl<MappedPrefix> &Split) {
+  transformJoinedImpl</*StopOnInvalid*/ false>(Joined, Split);
+}
+
+void MappedPrefix::transformJoinedIfValid(
+    ArrayRef<std::string> Joined, SmallVectorImpl<MappedPrefix> &Split) {
+  transformJoinedImpl</*StopOnInvalid*/ false>(Joined, Split);
+}
+
+void MappedPrefix::transformPairs(
+    ArrayRef<std::pair<std::string, std::string>> Pairs,
+    SmallVectorImpl<MappedPrefix> &Split) {
+  for (auto &Pair : Pairs) {
+    Split.push_back(MappedPrefix{Pair.first, Pair.second});
+  }
+}
+
+std::optional<StringRef>
+PrefixMapper::mapImpl(StringRef Path, SmallVectorImpl<char> &Storage) const {
+  for (const MappedPrefix &Map : Mappings) {
+    StringRef Old = Map.Old;
+    StringRef New = Map.New;
+    if (!sys::path::starts_with(Path, Old, PathStyle))
+      continue;
+    StringRef Suffix = Path.drop_front(Old.size());
+    if (Suffix.empty())
+      return New; // Exact match.
+
+    Storage.assign(New.begin(), New.end());
+    sys::path::append(Storage, PathStyle, Suffix);
+    return StringRef(Storage.begin(), Storage.size());
+  }
+  return std::nullopt;
+}
+
+bool PrefixMapper::map(StringRef Path, SmallVectorImpl<char> &NewPath) const {
+  NewPath.clear();
+  std::optional<StringRef> Mapped = mapImpl(Path, NewPath);
+  if (!NewPath.empty())
+    return true;
+  bool Modified = Mapped.has_value();
+  if (!Mapped)
+    Mapped = Path;
+  NewPath.assign(Mapped->begin(), Mapped->end());
+  return Modified;
+}
+
+bool PrefixMapper::map(StringRef Path, std::string &NewPath) const {
+  SmallString<256> Storage;
+  std::optional<StringRef> Mapped = mapImpl(Path, Storage);
+  NewPath = Mapped ? Mapped->str() : Path.str();
+  return Mapped.has_value();
+}
+
+std::string PrefixMapper::mapToString(StringRef Path) const {
+  SmallString<256> Storage;
+  std::optional<StringRef> Mapped = mapImpl(Path, Storage);
+  return Mapped ? Mapped->str() : Path.str();
+}
+
+bool PrefixMapper::mapInPlace(SmallVectorImpl<char> &Path) const {
+  SmallString<256> Storage;
+  std::optional<StringRef> Mapped =
+      mapImpl(StringRef(Path.begin(), Path.size()), Storage);
+  if (!Mapped)
+    return false;
+  if (Storage.empty())
+    Path.assign(Mapped->begin(), Mapped->end());
+  else
+    Storage.swap(Path);
+  return true;
+}
+
+bool PrefixMapper::mapInPlace(std::string &Path) const {
+  SmallString<256> Storage;
+  std::optional<StringRef> Mapped = mapImpl(Path, Storage);
+  if (!Mapped)
+    return false;
+  Path.assign(Mapped->begin(), Mapped->size());
+  return true;
+}
+
+void PrefixMapper::sort() {
+  // Compare characters the way sys::path::starts_with() matches them, so that
+  // a mapping sorts before every mapping whose Old is a prefix of its Old.
+  auto Normalize = [this](char C) -> unsigned char {
+    if (sys::path::is_separator(C, PathStyle))
+      return '/';
+    return sys::path::is_style_windows(PathStyle) ? toLower(C) : C;
+  };
+  std::stable_sort(
+      Mappings.begin(), Mappings.end(),
+      [&](const MappedPrefix &LHS, const MappedPrefix &RHS) {
+        return std::lexicographical_compare(
+            RHS.Old.begin(), RHS.Old.end(), LHS.Old.begin(), LHS.Old.end(),
+            [&](char A, char B) { return Normalize(A) < Normalize(B); });
+      });
+}

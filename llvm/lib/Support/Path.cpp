@@ -507,12 +507,11 @@ void replace_extension(SmallVectorImpl<char> &path, const Twine &extension,
   path.append(ext.begin(), ext.end());
 }
 
-static bool starts_with(StringRef Path, StringRef Prefix,
-                        Style style = Style::native) {
-  // Windows prefix matching : case and separator insensitive
+bool starts_with(StringRef Path, StringRef Prefix, Style style) {
+  if (Path.size() < Prefix.size())
+    return false;
   if (is_style_windows(style)) {
-    if (Path.size() < Prefix.size())
-      return false;
+    // Windows prefix matching : case and separator insensitive
     for (size_t I = 0, E = Prefix.size(); I != E; ++I) {
       bool SepPath = is_separator(Path[I], style);
       bool SepPrefix = is_separator(Prefix[I], style);
@@ -521,9 +520,14 @@ static bool starts_with(StringRef Path, StringRef Prefix,
       if (!SepPath && toLower(Path[I]) != toLower(Prefix[I]))
         return false;
     }
-    return true;
+  } else if (!Path.starts_with(Prefix)) {
+    return false;
   }
-  return Path.starts_with(Prefix);
+
+  // Only match whole path components.
+  return Prefix.empty() || Path.size() == Prefix.size() ||
+         is_separator(Prefix.back(), style) ||
+         is_separator(Path[Prefix.size()], style);
 }
 
 bool replace_path_prefix(SmallVectorImpl<char> &Path, StringRef OldPrefix,
@@ -535,15 +539,10 @@ bool replace_path_prefix(SmallVectorImpl<char> &Path, StringRef OldPrefix,
   if (!starts_with(OrigPath, OldPrefix, style))
     return false;
 
-  // If prefixes have the same size we can simply copy the new one over.
-  if (OldPrefix.size() == NewPrefix.size()) {
-    llvm::copy(NewPrefix, Path.begin());
-    return true;
-  }
-
   StringRef RelPath = OrigPath.substr(OldPrefix.size());
-  SmallString<256> NewPath;
-  (Twine(NewPrefix) + RelPath).toVector(NewPath);
+  SmallString<256> NewPath(NewPrefix);
+  if (!RelPath.empty())
+    append(NewPath, style, RelPath);
   Path.swap(NewPath);
   return true;
 }

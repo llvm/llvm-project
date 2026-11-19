@@ -174,7 +174,33 @@ LLVM_ABI void replace_extension(SmallVectorImpl<char> &path,
                                 const Twine &extension,
                                 Style style = Style::native);
 
+/// Check whether a path starts with a prefix, matching whole path components.
+///
+/// \a Prefix matches if it is empty, ends with a separator, or is followed in
+/// \a Path by a separator or the end of the path.
+///
+/// @code
+///   /old, /old => true
+///   /old/foo, /old => true
+///   /old/foo, /old/ => true
+///   /oldfoo, /old => false
+///   /old, /old/ => false
+///   foo, <empty> => true
+/// @endcode
+///
+/// @param Path The path to check.
+/// @param Prefix The path prefix to look for.
+/// @param style The style used to match the prefix. Exact match using
+/// Posix style, case/separator insensitive match for Windows style.
+/// @result true if \a Path starts with \a Prefix.
+LLVM_ABI bool starts_with(StringRef Path, StringRef Prefix,
+                          Style style = Style::native);
+
 /// Replace matching path prefix with another path.
+///
+/// \a OldPrefix is matched with \a starts_with(), so only whole path
+/// components are replaced. The rest of \a Path is joined to \a NewPrefix with
+/// \a append().
 ///
 /// @code
 ///   /foo, /old, /new => /foo
@@ -182,19 +208,23 @@ LLVM_ABI void replace_extension(SmallVectorImpl<char> &path,
 ///   /old, /old/, /new => /old
 ///   /old/foo, /old, /new => /new/foo
 ///   /old/foo, /old/, /new => /new/foo
+///   /old/foo, /old, /new/ => /new/foo
 ///   /old/foo, /old/, /new/ => /new/foo
 ///   /oldfoo, /old, /new => /oldfoo
 ///   /foo, <empty>, /new => /new/foo
 ///   /foo, <empty>, new => new/foo
+///   foo, <empty>, new => new/foo
 ///   /old/foo, /old, <empty> => /foo
+///   /old/foo, /old/, <empty> => foo
 /// @endcode
 ///
 /// @param Path If \a Path starts with \a OldPrefix modify to instead
 ///        start with \a NewPrefix.
 /// @param OldPrefix The path prefix to strip from \a Path.
 /// @param NewPrefix The path prefix to replace \a NewPrefix with.
-/// @param style The style used to match the prefix. Exact match using
-/// Posix style, case/separator insensitive match for Windows style.
+/// @param style The style used to match the prefix and join the rest of the
+/// path. Exact match using Posix style, case/separator insensitive match for
+/// Windows style.
 /// @result true if \a Path begins with OldPrefix
 LLVM_ABI bool replace_path_prefix(SmallVectorImpl<char> &Path,
                                   StringRef OldPrefix, StringRef NewPrefix,

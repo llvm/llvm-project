@@ -2042,10 +2042,13 @@ TEST(Support, ReplacePathPrefix) {
   SmallString<64> Path2("/old/foo");
   SmallString<64> Path3("/oldnew/foo");
   SmallString<64> Path4("C:\\old/foo\\bar");
+  SmallString<64> Path5("foo");
   SmallString<64> OldPrefix("/old");
   SmallString<64> OldPrefixSep("/old/");
-  SmallString<64> OldPrefixWin("c:/oLD/F");
+  SmallString<64> OldPrefixWin("c:/oLD/FOO");
+  SmallString<64> OldPrefixWinPartial("c:/oLD/F");
   SmallString<64> NewPrefix("/new");
+  SmallString<64> NewPrefixSep("/new/");
   SmallString<64> NewPrefix2("/longernew");
   SmallString<64> EmptyPrefix("");
   bool Found;
@@ -2074,14 +2077,22 @@ TEST(Support, ReplacePathPrefix) {
   Found = path::replace_path_prefix(Path, OldPrefixSep, EmptyPrefix);
   EXPECT_TRUE(Found);
   EXPECT_EQ(Path, "foo");
+  Path = Path2;
+  Found = path::replace_path_prefix(Path, OldPrefixSep, NewPrefix);
+  EXPECT_TRUE(Found);
+  EXPECT_EQ(Path, "/new/foo");
+  Path = Path2;
+  Found = path::replace_path_prefix(Path, OldPrefix, NewPrefixSep);
+  EXPECT_TRUE(Found);
+  EXPECT_EQ(Path, "/new/foo");
   Path = Path3;
   Found = path::replace_path_prefix(Path, OldPrefix, NewPrefix);
+  EXPECT_FALSE(Found);
+  EXPECT_EQ(Path, "/oldnew/foo");
+  Path = Path5;
+  Found = path::replace_path_prefix(Path, EmptyPrefix, NewPrefix);
   EXPECT_TRUE(Found);
-  EXPECT_EQ(Path, "/newnew/foo");
-  Path = Path3;
-  Found = path::replace_path_prefix(Path, OldPrefix, NewPrefix2);
-  EXPECT_TRUE(Found);
-  EXPECT_EQ(Path, "/longernewnew/foo");
+  EXPECT_EQ(Path, "/new/foo");
   Path = Path1;
   Found = path::replace_path_prefix(Path, EmptyPrefix, NewPrefix);
   EXPECT_TRUE(Found);
@@ -2102,12 +2113,40 @@ TEST(Support, ReplacePathPrefix) {
   Found = path::replace_path_prefix(Path, OldPrefixWin, NewPrefix,
                                     path::Style::windows);
   EXPECT_TRUE(Found);
-  EXPECT_EQ(Path, "/newoo\\bar");
+  EXPECT_EQ(Path, "/new\\bar");
+  Path = Path4;
+  Found = path::replace_path_prefix(Path, OldPrefixWinPartial, NewPrefix,
+                                    path::Style::windows);
+  EXPECT_FALSE(Found);
+  EXPECT_EQ(Path, "C:\\old/foo\\bar");
   Path = Path4;
   Found = path::replace_path_prefix(Path, OldPrefixWin, NewPrefix,
                                     path::Style::posix);
   EXPECT_FALSE(Found);
   EXPECT_EQ(Path, "C:\\old/foo\\bar");
+}
+
+TEST(Support, StartsWith) {
+  auto Posix = path::Style::posix;
+  EXPECT_TRUE(path::starts_with("/old", "/old", Posix));
+  EXPECT_TRUE(path::starts_with("/old/foo", "/old", Posix));
+  EXPECT_TRUE(path::starts_with("/old/foo", "/old/", Posix));
+  EXPECT_TRUE(path::starts_with("/old//foo", "/old", Posix));
+  EXPECT_TRUE(path::starts_with("/old", "", Posix));
+  EXPECT_TRUE(path::starts_with("old", "", Posix));
+  EXPECT_TRUE(path::starts_with("", "", Posix));
+  EXPECT_FALSE(path::starts_with("/oldfoo", "/old", Posix));
+  EXPECT_FALSE(path::starts_with("/old", "/old/", Posix));
+  EXPECT_FALSE(path::starts_with("/old", "/old/foo", Posix));
+  EXPECT_FALSE(path::starts_with("/OLD/foo", "/old", Posix));
+  EXPECT_FALSE(path::starts_with("/old\\foo", "/old", Posix));
+
+  auto Windows = path::Style::windows;
+  EXPECT_TRUE(path::starts_with("C:\\Old\\foo", "c:/old", Windows));
+  EXPECT_TRUE(path::starts_with("C:\\Old/foo", "c:/old\\", Windows));
+  EXPECT_TRUE(path::starts_with("c:/old", "C:\\OLD", Windows));
+  EXPECT_FALSE(path::starts_with("C:\\Oldfoo", "c:/old", Windows));
+  EXPECT_FALSE(path::starts_with("C:\\Old", "c:/old/", Windows));
 }
 
 TEST_F(FileSystemTest, OpenFileForRead) {
