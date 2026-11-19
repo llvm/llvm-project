@@ -11,6 +11,7 @@ define void @test(i32 %start) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[START:%.*]], -1
 ; CHECK-NEXT:    [[LOOP_EXIT_COND:%.*]] = icmp slt i32 [[TMP0]], 11
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[START]] to i64
+; CHECK-NEXT:    [[LOOP_EXIT_COND:%.*]] = icmp slt i32 [[TMP0]], 11
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    br label [[LOOP]]
