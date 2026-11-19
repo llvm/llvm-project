@@ -240,6 +240,10 @@ namespace cwg2351 { // cwg2351: 20
   template void i<void>();
   template const void i<const void>();
 
+  template <class T>
+  void f(T) { void{}; }
+  void g() { f(1); }
+
   static_assert((void({}), true), "");
   // since-cxx11-error@-1 {{cannot initialize non-class type 'void' with a parenthesized initializer list}}
 #else
