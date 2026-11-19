@@ -12568,7 +12568,7 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
   // make the placeholder type dependent since it won't be deduced until the
   // definition is instantiated. We do this here because it needs to happen
   // for implicitly instantiated member functions/member function templates.
-  if (getLangOpts().CPlusPlus14 &&
+  if ((getLangOpts().CPlusPlus14 || getLangOpts().HLSL) &&
       (NewFD->isDependentContext() &&
        NewFD->getReturnType()->isUndeducedType())) {
     const FunctionProtoType *FPT =
@@ -17036,7 +17036,7 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body, bool IsInstantiation,
         FD->setBody(Body);
       FD->setWillHaveBody(false);
 
-      if (getLangOpts().CPlusPlus14) {
+      if (getLangOpts().CPlusPlus14 || getLangOpts().HLSL) {
         if (!FD->isInvalidDecl() && Body && !FD->isDependentContext() &&
             FD->getReturnType()->isUndeducedType()) {
           // For a function with a deduced result type to return void,
