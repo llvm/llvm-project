@@ -8,13 +8,13 @@ define void @compress_store(ptr writeonly noalias %dst, ptr readonly %src, i32 %
 ; CHECK-LABEL: 'compress_store'
 ; CHECK:  Cost of 3 for VF vscale x 1: WIDEN-INTRINSIC vp<[[VP8:%[0-9]+]]> = call llvm.vp.merge(ir<true>, ir<%cmp>, ir<false>, vp<%evl>)
 ; CHECK:  Cost of 4 for VF vscale x 1: WIDEN-INTRINSIC vp<[[VP10:%[0-9]+]]> = call llvm.masked.compressstore(ir<%load.src>, vp<[[VP9:%[0-9]+]]>, vp<[[VP8]]>) (!vplan.execution.frequency 9223372036854775807 (50%, estimated))
-; CHECK:  Cost of 6 for VF vscale x 1: EMIT vp<%handled.lanes> = num-active-lanes vp<[[VP8]]>
+; CHECK:  Cost of 1 for VF vscale x 1: EMIT vp<%handled.lanes> = num-active-lanes vp<[[VP8]]>
 ; CHECK:  Cost of 3 for VF vscale x 2: WIDEN-INTRINSIC vp<[[VP8]]> = call llvm.vp.merge(ir<true>, ir<%cmp>, ir<false>, vp<%evl>)
 ; CHECK:  Cost of 4 for VF vscale x 2: WIDEN-INTRINSIC vp<[[VP10]]> = call llvm.masked.compressstore(ir<%load.src>, vp<[[VP9]]>, vp<[[VP8]]>) (!vplan.execution.frequency 9223372036854775807 (50%, estimated))
-; CHECK:  Cost of 9 for VF vscale x 2: EMIT vp<%handled.lanes> = num-active-lanes vp<[[VP8]]>
+; CHECK:  Cost of 1 for VF vscale x 2: EMIT vp<%handled.lanes> = num-active-lanes vp<[[VP8]]>
 ; CHECK:  Cost of 3 for VF vscale x 4: WIDEN-INTRINSIC vp<[[VP8]]> = call llvm.vp.merge(ir<true>, ir<%cmp>, ir<false>, vp<%evl>)
 ; CHECK:  Cost of 7 for VF vscale x 4: WIDEN-INTRINSIC vp<[[VP10]]> = call llvm.masked.compressstore(ir<%load.src>, vp<[[VP9]]>, vp<[[VP8]]>) (!vplan.execution.frequency 9223372036854775807 (50%, estimated))
-; CHECK:  Cost of 14 for VF vscale x 4: EMIT vp<%handled.lanes> = num-active-lanes vp<[[VP8]]>
+; CHECK:  Cost of 1 for VF vscale x 4: EMIT vp<%handled.lanes> = num-active-lanes vp<[[VP8]]>
 ;
 ; NEEDS-SPLIT-LABEL: 'compress_store'
 ; NEEDS-SPLIT:  Cost of 6 for VF vscale x 128: WIDEN-INTRINSIC vp<[[VP8:%[0-9]+]]> = call llvm.vp.merge(ir<true>, ir<%cmp>, ir<false>, vp<%evl>)
@@ -52,13 +52,13 @@ define void @expand_load(ptr noalias %dst, ptr readonly %src, i32 %c, i64 %n) {
 ; CHECK-LABEL: 'expand_load'
 ; CHECK:  Cost of 3 for VF vscale x 1: WIDEN-INTRINSIC vp<[[VP8:%[0-9]+]]> = call llvm.vp.merge(ir<true>, ir<%cmp>, ir<false>, vp<%evl>)
 ; CHECK:  Cost of 6 for VF vscale x 1: WIDEN-INTRINSIC vp<[[VP10:%[0-9]+]]> = call llvm.masked.expandload(vp<[[VP9:%[0-9]+]]>, vp<[[VP8]]>, ir<poison>.1) (!vplan.execution.frequency 9223372036854775807 (50%, estimated))
-; CHECK:  Cost of 6 for VF vscale x 1: EMIT vp<%handled.lanes> = num-active-lanes vp<[[VP8]]>
+; CHECK:  Cost of 1 for VF vscale x 1: EMIT vp<%handled.lanes> = num-active-lanes vp<[[VP8]]>
 ; CHECK:  Cost of 3 for VF vscale x 2: WIDEN-INTRINSIC vp<[[VP8]]> = call llvm.vp.merge(ir<true>, ir<%cmp>, ir<false>, vp<%evl>)
 ; CHECK:  Cost of 6 for VF vscale x 2: WIDEN-INTRINSIC vp<[[VP10]]> = call llvm.masked.expandload(vp<[[VP9]]>, vp<[[VP8]]>, ir<poison>.1) (!vplan.execution.frequency 9223372036854775807 (50%, estimated))
-; CHECK:  Cost of 9 for VF vscale x 2: EMIT vp<%handled.lanes> = num-active-lanes vp<[[VP8]]>
+; CHECK:  Cost of 1 for VF vscale x 2: EMIT vp<%handled.lanes> = num-active-lanes vp<[[VP8]]>
 ; CHECK:  Cost of 3 for VF vscale x 4: WIDEN-INTRINSIC vp<[[VP8]]> = call llvm.vp.merge(ir<true>, ir<%cmp>, ir<false>, vp<%evl>)
 ; CHECK:  Cost of 13 for VF vscale x 4: WIDEN-INTRINSIC vp<[[VP10]]> = call llvm.masked.expandload(vp<[[VP9]]>, vp<[[VP8]]>, ir<poison>.1) (!vplan.execution.frequency 9223372036854775807 (50%, estimated))
-; CHECK:  Cost of 14 for VF vscale x 4: EMIT vp<%handled.lanes> = num-active-lanes vp<[[VP8]]>
+; CHECK:  Cost of 1 for VF vscale x 4: EMIT vp<%handled.lanes> = num-active-lanes vp<[[VP8]]>
 ;
 ; NEEDS-SPLIT-LABEL: 'expand_load'
 ; NEEDS-SPLIT:  Cost of 6 for VF vscale x 128: WIDEN-INTRINSIC vp<[[VP8:%[0-9]+]]> = call llvm.vp.merge(ir<true>, ir<%cmp>, ir<false>, vp<%evl>)
