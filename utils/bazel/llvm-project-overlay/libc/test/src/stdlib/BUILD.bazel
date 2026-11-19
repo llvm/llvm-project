@@ -306,6 +306,16 @@ libc_test(
 )
 
 libc_test(
+    name = "strtof128_test",
+    srcs = ["strtof128_test.cpp"],
+    deps = [
+        "//libc/src/__support:uint128",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/stdlib:strtof128",
+    ],
+)
+
+libc_test(
     name = "strtod_test",
     srcs = ["strtod_test.cpp"],
     deps = [
