@@ -390,7 +390,7 @@ public:
     return cir::VectorType::get(isExtended
                                     ? getExtendedIntTy(elementTy, isSigned)
                                     : getTruncatedIntTy(elementTy, isSigned),
-                                vt.getSize());
+                                vt.getSize(), vt.getKind());
   }
 
   // Fetch the type representing a pointer to unsigned int8 values.

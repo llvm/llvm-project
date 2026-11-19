@@ -54,7 +54,7 @@ int8_t test_sveorv_s8(svbool_t pg, svint8_t op) MODE_ATTR
 int16_t test_sveorv_s16(svbool_t pg, svint16_t op) MODE_ATTR
 {
 // CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
-// CIR-SAME:          -> !cir.vector<[8] x !cir.int<u, 1>>
+// CIR-SAME:          -> !cir.vector<[8] x !cir.int<u, 1>, sve_predicate>
 // CIR:           %[[RES:.*]] = cir.call_llvm_intrinsic "aarch64.sve.eorv" %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:          -> !s16i
 
@@ -70,7 +70,7 @@ int16_t test_sveorv_s16(svbool_t pg, svint16_t op) MODE_ATTR
 int32_t test_sveorv_s32(svbool_t pg, svint32_t op) MODE_ATTR
 {
 // CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
-// CIR-SAME:          -> !cir.vector<[4] x !cir.int<u, 1>>
+// CIR-SAME:          -> !cir.vector<[4] x !cir.int<u, 1>, sve_predicate>
 // CIR:           %[[RES:.*]] = cir.call_llvm_intrinsic "aarch64.sve.eorv" %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:          -> !s32i
 
@@ -86,7 +86,7 @@ int32_t test_sveorv_s32(svbool_t pg, svint32_t op) MODE_ATTR
 int64_t test_sveorv_s64(svbool_t pg, svint64_t op) MODE_ATTR
 {
 // CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
-// CIR-SAME:          -> !cir.vector<[2] x !cir.int<u, 1>>
+// CIR-SAME:          -> !cir.vector<[2] x !cir.int<u, 1>, sve_predicate>
 // CIR:           %[[RES:.*]] = cir.call_llvm_intrinsic "aarch64.sve.eorv" %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:          -> !s64i
 
@@ -115,7 +115,7 @@ uint8_t test_sveorv_u8(svbool_t pg, svuint8_t op) MODE_ATTR
 uint16_t test_sveorv_u16(svbool_t pg, svuint16_t op) MODE_ATTR
 {
 // CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
-// CIR-SAME:          -> !cir.vector<[8] x !cir.int<u, 1>>
+// CIR-SAME:          -> !cir.vector<[8] x !cir.int<u, 1>, sve_predicate>
 // CIR:           %[[RES:.*]] = cir.call_llvm_intrinsic "aarch64.sve.eorv" %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:          -> !u16i
 
@@ -131,7 +131,7 @@ uint16_t test_sveorv_u16(svbool_t pg, svuint16_t op) MODE_ATTR
 uint32_t test_sveorv_u32(svbool_t pg, svuint32_t op) MODE_ATTR
 {
 // CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
-// CIR-SAME:          -> !cir.vector<[4] x !cir.int<u, 1>>
+// CIR-SAME:          -> !cir.vector<[4] x !cir.int<u, 1>, sve_predicate>
 // CIR:           %[[RES:.*]] = cir.call_llvm_intrinsic "aarch64.sve.eorv" %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:          -> !u32i
 
@@ -147,7 +147,7 @@ uint32_t test_sveorv_u32(svbool_t pg, svuint32_t op) MODE_ATTR
 uint64_t test_sveorv_u64(svbool_t pg, svuint64_t op) MODE_ATTR
 {
 // CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
-// CIR-SAME:          -> !cir.vector<[2] x !cir.int<u, 1>>
+// CIR-SAME:          -> !cir.vector<[2] x !cir.int<u, 1>, sve_predicate>
 // CIR:           %[[RES:.*]] = cir.call_llvm_intrinsic "aarch64.sve.eorv" %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:          -> !u64i
 
