@@ -87,13 +87,13 @@ lpad:
   ret void
 }
 
-; CHECK: !{i64 {{-?[0-9]+}}, i64 [[H1:[0-9]+]], !"selfloop_calls"}
-; CHECK: !{i64 {{-?[0-9]+}}, i64 [[H1]], !"selfloop_invokes"}
+; CHECK: !{i64 {{-?[0-9]+}}, i64 [[H1:[0-9]+]], !"selfloop_calls", i8 0}
+; CHECK: !{i64 {{-?[0-9]+}}, i64 [[H1]], !"selfloop_invokes", i8 0}
 
-; CHECK: !{i64 {{-?[0-9]+}}, i64 [[H2:[0-9]+]], !"prefix_then_loop_calls"}
-; CHECK: !{i64 {{-?[0-9]+}}, i64 [[H2]], !"prefix_then_loop_invokes"}
+; CHECK: !{i64 {{-?[0-9]+}}, i64 [[H2:[0-9]+]], !"prefix_then_loop_calls", i8 0}
+; CHECK: !{i64 {{-?[0-9]+}}, i64 [[H2]], !"prefix_then_loop_invokes", i8 0}
 
 ; FIXME: The invoke form needs two blocks where the call form needs one, so
 ; the hashes cannot match yet. Hardcoded so a future fix fails this test.
-; CHECK: !{i64 {{-?[0-9]+}}, i64 562986241617760, !"twocall_loop_calls"}
-; CHECK: !{i64 {{-?[0-9]+}}, i64 563004266919717, !"twocall_loop_invokes"}
+; CHECK: !{i64 {{-?[0-9]+}}, i64 562986241617760, !"twocall_loop_calls", i8 0}
+; CHECK: !{i64 {{-?[0-9]+}}, i64 563004266919717, !"twocall_loop_invokes", i8 0}
