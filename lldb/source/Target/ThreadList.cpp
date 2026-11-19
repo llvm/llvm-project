@@ -508,11 +508,10 @@ bool ThreadList::WillResume(RunDirection &direction) {
 
   collection::iterator pos, end = m_threads.end();
 
-  // Clear tracking state from the previous stop and pop any leftover
-  // StepOverBreakpoint plans. This gives us a clean slate: plans will be
+  // Pop any leftover StepOverBreakpoint plans and clear the tracking state
+  // from the previous stop. This gives us a clean slate: plans will be
   // recreated fresh by SetupToStepOverBreakpointIfNeeded below, and the
   // batching logic will recompute deferred state from scratch.
-  m_threads_stepping_over_bp.clear();
   for (const auto &thread_sp : m_threads) {
     ThreadPlan *plan = thread_sp->GetCurrentPlan();
     if (plan && plan->GetKind() == ThreadPlan::eKindStepOverBreakpoint) {
@@ -522,14 +521,17 @@ bool ThreadList::WillResume(RunDirection &direction) {
       // would change the StopOthers scan result and cause other threads
       // to lose their breakpoint stop reason.
       if (bp_plan->GetDeferReenableBreakpointSite()) {
-        // Suppress the re-enable side effect in DidPop(), the breakpoint
-        // may still be disabled from the previous batch, and we don't want
-        // to toggle it. The new plans will handle re-enable correctly.
-        bp_plan->SetReenabledBreakpointSite();
+        // A thread still at the breakpoint hasn't run its step yet, and gets
+        // a new plan when it resumes. Suppress the re-enable side effect in
+        // DidPop() for it, so that the breakpoint, which may still be
+        // disabled from the previous batch, isn't toggled.
+        if (!bp_plan->IsPlanStale())
+          bp_plan->SetReenabledBreakpointSite();
         thread_sp->DiscardPlan();
       }
     }
   }
+  m_threads_stepping_over_bp.clear();
 
   // Go through the threads and see if any thread wants to run just itself.
   // if so then pick one and run it.
