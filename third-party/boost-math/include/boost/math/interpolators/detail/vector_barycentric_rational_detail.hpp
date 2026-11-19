@@ -8,6 +8,7 @@
 #ifndef BOOST_MATH_INTERPOLATORS_VECTOR_BARYCENTRIC_RATIONAL_DETAIL_HPP
 #define BOOST_MATH_INTERPOLATORS_VECTOR_BARYCENTRIC_RATIONAL_DETAIL_HPP
 
+#include <cstdint>
 #include <cmath>
 #include <vector>
 #include <utility> // for std::move
@@ -64,22 +65,22 @@ void vector_barycentric_rational_imp<TimeContainer, SpaceContainer>::calculate_w
 {
     using Real = typename TimeContainer::value_type;
     using std::abs;
-    int64_t n = t_.size();
+    std::int64_t n = t_.size();
     w_.resize(n, Real(0));
-    for(int64_t k = 0; k < n; ++k)
+    for(std::int64_t k = 0; k < n; ++k)
     {
-        int64_t i_min = (std::max)(k - static_cast<int64_t>(approximation_order), static_cast<int64_t>(0));
-        int64_t i_max = k;
+        std::int64_t i_min = (std::max)(k - static_cast<std::int64_t>(approximation_order), static_cast<std::int64_t>(0));
+        std::int64_t i_max = k;
         if (k >= n - (std::ptrdiff_t)approximation_order)
         {
             i_max = n - approximation_order - 1;
         }
 
-        for(int64_t i = i_min; i <= i_max; ++i)
+        for(std::int64_t i = i_min; i <= i_max; ++i)
         {
             Real inv_product = 1;
-            int64_t j_max = (std::min)(static_cast<int64_t>(i + approximation_order), static_cast<int64_t>(n - 1));
-            for(int64_t j = i; j <= j_max; ++j)
+            std::int64_t j_max = (std::min)(static_cast<std::int64_t>(i + approximation_order), static_cast<std::int64_t>(n - 1));
+            for(std::int64_t j = i; j <= j_max; ++j)
             {
                 if (j == k)
                 {

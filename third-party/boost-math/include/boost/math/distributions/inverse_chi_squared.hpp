@@ -289,7 +289,7 @@ BOOST_MATH_GPU_ENABLED inline RealType mean(const inverse_chi_squared_distributi
    if(df <= 2)
       return policies::raise_domain_error<RealType>(
          function,
-         "inverse Chi-Squared distribution only has a mode for degrees of freedom > 2, but got degrees of freedom = %1%.",
+         "inverse Chi-Squared distribution only has a mean for degrees of freedom > 2, but got degrees of freedom = %1%.",
          df, Policy());
   return (df * scale) / (df - 2);
 } // mean

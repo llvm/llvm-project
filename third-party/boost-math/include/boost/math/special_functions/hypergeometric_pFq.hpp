@@ -58,12 +58,22 @@ namespace boost {
          BOOST_MATH_STD_USING
 
          long long scale = 0;
+         static const char* function = "boost::math::hypergeometric_pFq<%1%>(%1%,%1%,%1%)";
          std::pair<value_type, value_type> r = boost::math::detail::hypergeometric_pFq_checked_series_impl(aj, bj, value_type(z), pol, boost::math::detail::iteration_terminator(boost::math::policies::get_max_series_iterations<forwarding_policy>()), scale);
-         r.first *= exp(Real(scale));
-         r.second *= exp(Real(scale));
+         //
+         // Overflow check:
+         //
+         if (static_cast<Real>(scale) > tools::log_max_value<Real>())
+             return (r.first < 0 ? -1 : 1) * policies::raise_overflow_error<Real, Policy>(function, nullptr, pol);
+         Real mul = exp(Real(scale));
+         if(fabs(r.first) > 1)
+             if(tools::max_value<Real>() / fabs(r.first) < mul)
+                 return (r.first < 0 ? -1 : 1) * policies::raise_overflow_error<Real, Policy>(function, nullptr, pol);
+         r.first *= mul;
+         r.second *= mul;
          if (p_abs_error)
             *p_abs_error = static_cast<Real>(r.second) * boost::math::tools::epsilon<Real>();
-         return policies::checked_narrowing_cast<result_type, Policy>(r.first, "boost::math::hypergeometric_pFq<%1%>(%1%,%1%,%1%)");
+         return policies::checked_narrowing_cast<result_type, Policy>(r.first, function);
       }
 
       template <class Seq, class Real>

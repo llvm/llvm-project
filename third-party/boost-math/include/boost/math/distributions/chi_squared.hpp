@@ -103,7 +103,7 @@ BOOST_MATH_GPU_ENABLED RealType pdf(const chi_squared_distribution<RealType, Pol
 
    constexpr auto function = "boost::math::pdf(const chi_squared_distribution<%1%>&, %1%)";
 
-   if(false == detail::check_df(
+   if(!detail::check_df(
          function, degrees_of_freedom, &error_result, Policy()))
       return error_result;
 
@@ -142,7 +142,7 @@ BOOST_MATH_GPU_ENABLED inline RealType cdf(const chi_squared_distribution<RealTy
    RealType error_result;
    constexpr auto function = "boost::math::cdf(const chi_squared_distribution<%1%>&, %1%)";
 
-   if(false == detail::check_df(
+   if(!detail::check_df(
          function, degrees_of_freedom, &error_result, Policy()))
       return error_result;
 
@@ -180,7 +180,7 @@ BOOST_MATH_GPU_ENABLED inline RealType cdf(const complemented2_type<chi_squared_
    constexpr auto function = "boost::math::cdf(const chi_squared_distribution<%1%>&, %1%)";
    // Error check:
    RealType error_result;
-   if(false == detail::check_df(
+   if(!detail::check_df(
          function, degrees_of_freedom, &error_result, Policy()))
       return error_result;
 
@@ -201,8 +201,7 @@ BOOST_MATH_GPU_ENABLED inline RealType quantile(const complemented2_type<chi_squ
    constexpr auto function = "boost::math::quantile(const chi_squared_distribution<%1%>&, %1%)";
    // Error check:
    RealType error_result;
-   if(false == (
-     detail::check_df(function, degrees_of_freedom, &error_result, Policy())
+   if (!(detail::check_df(function, degrees_of_freedom, &error_result, Policy())
      && detail::check_probability(function, q, &error_result, Policy()))
      )
     return error_result;
@@ -310,9 +309,8 @@ BOOST_MATH_GPU_ENABLED RealType chi_squared_distribution<RealType, Policy>::find
    constexpr auto function = "boost::math::chi_squared_distribution<%1%>::find_degrees_of_freedom(%1%,%1%,%1%,%1%,%1%)";
    // Check for domain errors:
    RealType error_result;
-   if(false ==
-     detail::check_probability(function, alpha, &error_result, Policy())
-     && detail::check_probability(function, beta, &error_result, Policy()))
+   if(!(detail::check_probability(function, alpha, &error_result, Policy())
+     && detail::check_probability(function, beta, &error_result, Policy())))
    { // Either probability is outside 0 to 1.
       return error_result;
    }

@@ -14,7 +14,7 @@
 #pragma once
 #endif
 
-#ifndef __CUDACC_RTC__
+#ifndef BOOST_MATH_HAS_NVRTC
 
 #include <boost/math/tools/config.hpp>
 #include <boost/math/special_functions/math_fwd.hpp>
@@ -234,7 +234,7 @@ BOOST_MATH_GPU_ENABLED T sign(T z)
 } // namespace math
 } // namespace boost
 
-#endif // __CUDACC_RTC__
+#endif // BOOST_MATH_HAS_NVRTC
 
 #endif // BOOST_MATH_TOOLS_SIGN_HPP
 

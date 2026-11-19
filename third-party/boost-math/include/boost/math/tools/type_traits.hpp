@@ -52,7 +52,6 @@ using cuda::std::is_member_pointer;
 // Type properties
 using cuda::std::is_const;
 using cuda::std::is_volatile;
-using cuda::std::is_trivial;
 using cuda::std::is_trivially_copyable;
 using cuda::std::is_standard_layout;
 using cuda::std::is_empty;
@@ -199,7 +198,6 @@ using std::is_member_pointer;
 // Type properties
 using std::is_const;
 using std::is_volatile;
-using std::is_trivial;
 using std::is_trivially_copyable;
 using std::is_standard_layout;
 using std::is_empty;
@@ -379,9 +377,6 @@ BOOST_MATH_INLINE_CONSTEXPR bool is_const_v = boost::math::is_const<T>::value;
 
 template <typename T>
 BOOST_MATH_INLINE_CONSTEXPR bool is_volatile_v = boost::math::is_volatile<T>::value;
-
-template <typename T>
-BOOST_MATH_INLINE_CONSTEXPR bool is_trivial_v = boost::math::is_trivial<T>::value;
 
 template <typename T>
 BOOST_MATH_INLINE_CONSTEXPR bool is_trivially_copyable_v = boost::math::is_trivially_copyable<T>::value;
