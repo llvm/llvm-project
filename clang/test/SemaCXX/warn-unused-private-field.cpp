@@ -396,8 +396,7 @@ class Slab {
  public:
   static constexpr auto offset() { return __builtin_offsetof(Slab, node_); }
  private:
-  // FIXME: false positive.
-  int node_; // expected-warning {{private field 'node_' is not used}}
+  int node_;
 };
 auto kOff = Slab<0>::offset();
 } // namespace offsetof_template
