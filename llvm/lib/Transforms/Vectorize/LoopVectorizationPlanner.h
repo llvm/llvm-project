@@ -850,6 +850,13 @@ public:
   bool isLegalGatherOrScatter(bool IsLoad, Type *ScalarTy, Align Alignment,
                               ElementCount VF) const;
 
+  /// Returns true if a predicated load (if \p IsLoad) or store can be
+  /// vectorized without scalarization, either as a masked consecutive access
+  /// (if \p IsConsecutive) or as a gather/scatter for \p VF.
+  bool canMaskAccess(bool IsLoad, Type *ScalarTy, Align Alignment,
+                     unsigned AddressSpace, bool IsConsecutive,
+                     ElementCount VF) const;
+
   /// Split reductions into those that happen in the loop, and those that
   /// happen outside. In-loop reductions are collected into InLoopReductions.
   void collectInLoopReductions();

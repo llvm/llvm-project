@@ -3347,72 +3347,86 @@ hasOnlySpeculatableSideEffects(const VPRecipeBase &R) {
 static VPValue *skipAccessesIfAnyLaneExits(VPBasicBlock *Header,
                                            VPBasicBlock *Latch,
                                            VPBasicBlock::iterator AfterExitCond,
-                                           const VFSelectionContext &Config) {
+                                           const VFSelectionContext &Config,
+                                           OptimizationRemarkEmitter *ORE) {
   if (Header->getSingleSuccessor() != Latch)
     return nullptr;
 
   VPlan &Plan = *Header->getPlan();
   // Match the load/store checks in
   // LoopVectorizationCostModel::isScalarWithPredication.
-  auto IsMaskable = [&](VPInstruction *MemI) {
+  auto IsMaskableLoadOrStore = [&](VPRecipeBase &R) {
+    auto *MemI = dyn_cast<VPInstruction>(&R);
+    if (!MemI || !is_contained({Instruction::Load, Instruction::Store},
+                               MemI->getOpcode())) {
+      assert((!R.mayReadOrWriteMemory() ||
+              match(&R, m_Intrinsic<Intrinsic::pseudoprobe>())) &&
+             "legality only accepts loads, stores and pseudo probes accessing "
+             "memory");
+      return true;
+    }
     Instruction *I = MemI->getUnderlyingInstr();
     Type *ScalarTy = getLoadStoreType(I);
     if (hasIrregularType(ScalarTy, Plan.getDataLayout()))
       return false;
     bool IsLoad = MemI->getOpcode() == Instruction::Load;
-    Align Alignment = getLoadStoreAlignment(I);
     std::optional<int64_t> Stride =
         vputils::getConstantStride(MemI->getOperand(IsLoad ? 0 : 1), ScalarTy,
                                    Config.getPSE(), Config.getLoop());
-    if ((Stride == 1 || Stride == -1) &&
-        Config.isLegalMaskedLoadOrStore(IsLoad, ScalarTy, Alignment,
-                                        getLoadStoreAddressSpace(I)))
-      return true;
     // The VF is not known yet. Conservatively allow masking if gather/scatter
     // is supported for the scalar type.
-    return Config.isLegalGatherOrScatter(IsLoad, ScalarTy, Alignment,
-                                         ElementCount::getFixed(1));
+    return Config.canMaskAccess(
+        IsLoad, ScalarTy, getLoadStoreAlignment(I), getLoadStoreAddressSpace(I),
+        Stride == 1 || Stride == -1, ElementCount::getFixed(1));
   };
+  // If any load/store can be masked prefer masking.
+  if (all_of(concat<VPRecipeBase>(make_range(AfterExitCond, Header->end()),
+                                  *Latch),
+             IsMaskableLoadOrStore))
+    return nullptr;
 
-  // Visit users before their operands, skipping the latch terminator.
-  SetVector<VPRecipeBase *> Skipped;
-  bool CanMask = true;
+  // Collect the recipes after the exit condition in the header and before the
+  // latch terminator, to be moved to a block that is bypassed if any lane
+  // exits. Recipes with users outside ToSkip (e.g. the IV increment, or
+  // live-outs) stay and always execute, so bail out if one of them accesses
+  // memory.
+  SetVector<VPRecipeBase *> ToSkip;
   for (VPRecipeBase &R : concat<VPRecipeBase>(
            drop_begin(reverse(*Latch)),
            reverse(make_range(AfterExitCond, Header->end())))) {
     auto *Def = cast<VPSingleDefRecipe>(&R);
-    if (any_of(Def->users(), [&Skipped](VPUser *U) {
-          return !Skipped.contains(cast<VPRecipeBase>(U));
+    if (any_of(Def->users(), [&ToSkip](VPUser *U) {
+          return !ToSkip.contains(cast<VPRecipeBase>(U));
         })) {
-      if (R.mayReadOrWriteMemory())
+      if (R.mayReadOrWriteMemory()) {
+        reportVectorizationInfo(
+            "Cannot skip memory operations after the early exit with users "
+            "outside the skipped code; masking instead",
+            "EarlyExitSideEffectsCannotSkip", ORE, Config.getLoop(),
+            dyn_cast_if_present<Instruction>(Def->getUnderlyingValue()));
         return nullptr;
+      }
       assert(hasOnlySpeculatableSideEffects(R) &&
              "legality only accepts recipes with side effects that are safe "
              "to speculate");
       continue;
     }
-    Skipped.insert(&R);
-    auto *MemI = dyn_cast<VPInstruction>(&R);
-    if (MemI && is_contained({Instruction::Load, Instruction::Store},
-                             MemI->getOpcode()))
-      CanMask &= IsMaskable(MemI);
+    ToSkip.insert(&R);
   }
-  if (CanMask)
-    return nullptr;
 
   VPBasicBlock *SkippedVPBB = Plan.createVPBasicBlock("vector.body.skippable");
   VPBlockUtils::connectBlocks(Header, SkippedVPBB);
   VPBlockUtils::connectBlocks(SkippedVPBB, Latch);
-  // Skipped is in reverse program order, so prepending restores it.
-  for (VPRecipeBase *R : Skipped)
+  // ToSkip is in reverse program order, so prepending restores it.
+  for (VPRecipeBase *R : ToSkip)
     R->moveBefore(SkippedVPBB->begin());
   // Move the remaining latch recipes to the header and branch on AnyOf.
   // VPPredicator preserves this branch, avoiding masks for the skipped recipes.
   while (&Latch->front() != Latch->getTerminator())
     Latch->front().moveBefore(Header->end());
-  VPValue *AnyExit = Latch->getTerminator()->getOperand(0);
-  VPBuilder(Header).createNaryOp(VPInstruction::BranchOnCond, AnyExit);
-  return AnyExit;
+  VPValue *AnyOfEarlyExit = Latch->getTerminator()->getOperand(0);
+  VPBuilder(Header).createNaryOp(VPInstruction::BranchOnCond, AnyOfEarlyExit);
+  return AnyOfEarlyExit;
 }
 
 /// Update \p Plan to mask memory operations in the loop based on whether the
@@ -3604,8 +3618,8 @@ static bool handleUncountableExitsWithSideEffects(
          "Expected BranchOnCond terminator for MiddleVPBB");
   VPBuilder MiddleBuilder(MiddleVPBB->getTerminator());
   VPValue *NumCompletedLanes;
-  if (VPValue *AnyExit =
-          skipAccessesIfAnyLaneExits(HeaderVPBB, LatchVPBB, InsertIt, Config)) {
+  if (VPValue *AnyExit = skipAccessesIfAnyLaneExits(HeaderVPBB, LatchVPBB,
+                                                    InsertIt, Config, ORE)) {
     // The scalar loop re-executes the whole vector iteration if any lane exits.
     NumCompletedLanes =
         MiddleBuilder.createSelect(AnyExit, Zero, &Plan.getVFxUF());
@@ -3703,7 +3717,7 @@ bool VPlanTransforms::handleUncountableEarlyExits(
   auto [HeaderVPBB, LatchVPBB] = VPBlockUtils::getPlainCFGHeaderAndLatch(Plan);
 
   if (loopHasStores(HeaderVPBB))
-    Style = UncountableExitStyle::MaskedHandleExitInScalarLoop;
+    Style = UncountableExitStyle::SideEffectsInScalarLoop;
 
   // Dereferenceability is checked separately for uncountable exit loops with
   // stores, as only the loads contributing to the exit condition need to
@@ -3826,7 +3840,7 @@ bool VPlanTransforms::handleUncountableEarlyExits(
                             {IsAnyExitTaken, IsLatchExitTaken}, LatchDL);
   LatchVPBB->clearSuccessors();
 
-  if (Style == UncountableExitStyle::MaskedHandleExitInScalarLoop) {
+  if (Style == UncountableExitStyle::SideEffectsInScalarLoop) {
     // If handling the exiting lane in the scalar loop, combine the exit
     // conditions into a single BranchOnCond.
     LatchVPBB->setSuccessors({MiddleVPBB, MiddleVPBB, HeaderVPBB});

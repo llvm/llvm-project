@@ -84,12 +84,13 @@ enum class UncountableExitStyle {
   /// reached, or an early exitblock to determine which exit was taken.
   ReadOnly,
   /// All memory operations other than the load(s) required to determine whether
-  /// an uncountable exit occurre will be masked based on that condition. If an
+  /// an uncountable exit occurred will be masked based on that condition. If an
   /// uncountable exit is taken, then all lanes before the exiting lane will
   /// complete, leaving just the final lane to execute in the scalar tail.
   /// If masking is not legal, try to skip these memory operations when any lane
-  /// exits, leaving all lanes to execute in the scalar tail.
-  MaskedHandleExitInScalarLoop,
+  /// exits, leaving all lanes before the exiting lane to execute in the scalar
+  /// tail.
+  SideEffectsInScalarLoop,
 };
 
 /// VPBlockBase is the building block of the Hierarchical Control-Flow Graph.
