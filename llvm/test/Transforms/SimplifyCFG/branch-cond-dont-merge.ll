@@ -59,8 +59,8 @@ define void @merge_cbranches(i32 %V) {
 ; CHECK-NEXT:    [[DIVERGENT_COND:%.*]] = icmp ne i32 [[V:%.*]], 0
 ; CHECK-NEXT:    [[UNIFORM_COND:%.*]] = call i1 @uniform_result(i1 [[DIVERGENT_COND]])
 ; CHECK-NEXT:    [[DIVERGENT_COND_NOT:%.*]] = xor i1 [[DIVERGENT_COND]], true
-; CHECK-NEXT:    [[BRMERGE:%.*]] = select i1 [[UNIFORM_COND]], i1 true, i1 [[DIVERGENT_COND_NOT]]
-; CHECK-NEXT:    br i1 [[BRMERGE]], label [[EXIT:%.*]], label [[BB3:%.*]], !prof [[PROF2:![0-9]+]]
+; CHECK-NEXT:    [[BRMERGE:%.*]] = select i1 [[UNIFORM_COND]], i1 true, i1 [[DIVERGENT_COND_NOT]], !prof [[PROF2:![0-9]+]]
+; CHECK-NEXT:    br i1 [[BRMERGE]], label [[EXIT:%.*]], label [[BB3:%.*]], !prof [[PROF3:![0-9]+]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    br label [[EXIT]]
@@ -82,7 +82,6 @@ exit:
 define void @uint32_overflow_test(i1 %arg, i1 %arg1) {
 ; CHECK-LABEL: @uint32_overflow_test(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[BRMERGE:%.*]] = select i1 [[ARG:%.*]], i1 true, i1 [[ARG1:%.*]]
 ; CHECK-NEXT:    ret void
 ;
 bb:
