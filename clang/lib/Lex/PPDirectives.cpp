@@ -3982,7 +3982,16 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
         return std::nullopt;
       Result.MaybeLimitParam =
           PPEmbedParameterLimit{*Limit, {ParamStartLoc, CurTok.getLocation()}};
-    } else if (Parameter == "clang::offset") {
+    } else if (Parameter == "offset" || Parameter == "clang::offset") {
+      // The unprefixed spelling of the parameter is standard in C++2d
+      // ([cpp.embed.param.offset]); 'clang::offset' is the older spelling of
+      // the same parameter and is accepted everywhere without a diagnostic.
+      if (Parameter == "offset") {
+        if (LangOpts.CPlusPlus)
+          DiagCompat(ParamStartLoc, diag_compat::cxx29_pp_embed_offset);
+        else
+          Diag(ParamStartLoc, diag::ext_pp_embed_offset);
+      }
       if (Result.MaybeOffsetParam)
         Diag(CurTok, diag::err_pp_embed_dup_params) << Parameter;
 
