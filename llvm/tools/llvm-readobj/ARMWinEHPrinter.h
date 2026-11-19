@@ -185,7 +185,7 @@ class Decoder {
                             const object::SectionRef Section, uint64_t Offset,
                             unsigned Index, const RuntimeFunctionARM64 &Entry);
   bool dumpProcedureDataEntry(const object::COFFObjectFile &COFF,
-                              const object::SectionRef Section, unsigned Entry,
+                              const object::SectionRef Section, uint64_t Offset,
                               ArrayRef<uint8_t> Contents);
   void dumpProcedureData(const object::COFFObjectFile &COFF,
                          const object::SectionRef Section);
