@@ -150,7 +150,7 @@ bool TypeSetByHwMode::constrain(const TypeSetByHwMode &VTS) {
       unsigned M = I.first;
       if (M == DefaultMode || hasMode(M))
         continue;
-      Map.try_emplace(M, Map.at(DefaultMode));
+      Map.try_emplace(M, Map.begin()->second);
       Changed = true;
     }
   }

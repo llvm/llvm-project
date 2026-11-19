@@ -53,6 +53,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.pwd.getpwuid_r
     libc.src.pwd.setpwent
 
+    # sched.h entrypoints
+    libc.src.sched.unshare
+
     # string.h entrypoints
     libc.src.string.memccpy
     libc.src.string.memchr
@@ -211,6 +214,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     # stdio.h entrypoints
     libc.src.stdio.tmpfile
 
+    # sys/capability.h entrypoints
+    libc.src.sys.capability.capget
+    libc.src.sys.capability.capset
+
     # sys/eventfd.h entrypoints
     libc.src.sys.eventfd.eventfd
     libc.src.sys.eventfd.eventfd_read
@@ -225,13 +232,25 @@ set(TARGET_LIBC_ENTRYPOINTS
     # sys/ioctl.h entrypoints
     libc.src.sys.ioctl.ioctl
 
+    # sys/klog.h entrypoints
+    libc.src.sys.klog.klogctl
+
     # sys/mman.h entrypoints
     libc.src.sys.mman.memfd_create
     libc.src.sys.mman.mmap
     libc.src.sys.mman.munmap
 
+    # sys/mount.h entrypoints
+    libc.src.sys.mount.mount
+    libc.src.sys.mount.umount
+    libc.src.sys.mount.umount2
+
     # sys/prctl.h entrypoints
     libc.src.sys.prctl.prctl
+
+    # sys/swap.h entrypoints
+    libc.src.sys.swap.swapoff
+    libc.src.sys.swap.swapon
 
     # sys/sysinfo.h entrypoints
     # Disabled due to QEMU test failures.
@@ -352,6 +371,10 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.dirent.opendir
     libc.src.dirent.readdir
     libc.src.dirent.fdopendir
+
+    # langinfo.h entrypoints
+    libc.src.langinfo.nl_langinfo
+    libc.src.langinfo.nl_langinfo_l
 
     # unistd.h entrypoints
     libc.src.unistd.confstr

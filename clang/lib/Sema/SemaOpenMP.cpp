@@ -3767,6 +3767,9 @@ SemaOpenMP::DeclGroupPtrTy SemaOpenMP::ActOnOpenMPAllocateDirective(
     Vars.push_back(RefExpr);
     applyOMPAllocateAttribute(SemaRef, VD, AllocatorKind, Allocator, Alignment,
                               DE->getSourceRange());
+    // A jump over the allocation must be diagnosed, as for cleanup variables.
+    if (VD->hasLocalStorage())
+      SemaRef.setFunctionHasBranchProtectedScope();
   }
   if (Vars.empty())
     return nullptr;
@@ -24018,7 +24021,6 @@ ProcessOpenMPDoacrossClauseCommon(Sema &SemaRef, bool IsSource,
 
   SmallVector<Expr *, 8> Vars;
   DSAStackTy::OperatorOffsetTy OpsOffs;
-  llvm::APSInt DepCounter(/*BitWidth=*/32);
   llvm::APSInt TotalDepCount(/*BitWidth=*/32);
 
   if (const Expr *OrderedCountExpr =
@@ -24026,6 +24028,8 @@ ProcessOpenMPDoacrossClauseCommon(Sema &SemaRef, bool IsSource,
     TotalDepCount = OrderedCountExpr->EvaluateKnownConstInt(SemaRef.Context);
     TotalDepCount.setIsUnsigned(/*Val=*/true);
   }
+  llvm::APSInt DepCounter(TotalDepCount.getBitWidth(),
+                          TotalDepCount.isUnsigned());
 
   for (Expr *RefExpr : VarList) {
     assert(RefExpr && "NULL expr in OpenMP doacross clause.");

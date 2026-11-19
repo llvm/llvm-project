@@ -28,6 +28,7 @@ public:
                                   SDValue Chain, SDValue Dst, SDValue Src,
                                   SDValue Size, Align DstAlign, Align SrcAlign,
                                   bool isVolatile, bool AlwaysInline,
+                                  bool &IsTailCall,
                                   MachinePointerInfo DstPtrInfo,
                                   MachinePointerInfo SrcPtrInfo) const override;
 

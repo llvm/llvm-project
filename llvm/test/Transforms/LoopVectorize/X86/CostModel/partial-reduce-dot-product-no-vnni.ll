@@ -20,20 +20,20 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Without VNNI, the signed i16 dot product is a PMADDWD and an ADD.
 define i32 @dot_s16s16(ptr readonly %a, ptr readonly %b) {
 ; SSE2-LABEL: 'dot_s16s16'
-; SSE2:  Cost of 2 for VF 8: WIDEN ir<%sum.next> = add ir<%sum>, ir<%mul>
-; SSE2:  Cost of 2 for VF 8: WIDEN ir<%sum.next> = add ir<%sum>, ir<%mul>
+; SSE2:  Cost of 2 for VF 8: EXPRESSION vp<[[VP8:%[0-9]+]]> = ir<%sum> + partial.reduce.add (mul nsw (ir<%load.a> sext to i32), (ir<%load.b> sext to i32))
+; SSE2:  Cost of 2 for VF 8: EXPRESSION vp<[[VP8]]> = ir<%sum> + partial.reduce.add (mul nsw (ir<%load.a> sext to i32), (ir<%load.b> sext to i32))
 ;
 ; AVX1-LABEL: 'dot_s16s16'
-; AVX1:  Cost of 8 for VF 16: WIDEN ir<%sum.next> = add ir<%sum>, ir<%mul>
-; AVX1:  Cost of 8 for VF 16: WIDEN ir<%sum.next> = add ir<%sum>, ir<%mul>
+; AVX1:  Cost of 8 for VF 16: EXPRESSION vp<[[VP8:%[0-9]+]]> = ir<%sum> + partial.reduce.add (mul nsw (ir<%load.a> sext to i32), (ir<%load.b> sext to i32))
+; AVX1:  Cost of 8 for VF 16: EXPRESSION vp<[[VP8]]> = ir<%sum> + partial.reduce.add (mul nsw (ir<%load.a> sext to i32), (ir<%load.b> sext to i32))
 ;
 ; AVX2-LABEL: 'dot_s16s16'
-; AVX2:  Cost of 2 for VF 16: WIDEN ir<%sum.next> = add ir<%sum>, ir<%mul>
-; AVX2:  Cost of 2 for VF 16: WIDEN ir<%sum.next> = add ir<%sum>, ir<%mul>
+; AVX2:  Cost of 2 for VF 16: EXPRESSION vp<[[VP8:%[0-9]+]]> = ir<%sum> + partial.reduce.add (mul nsw (ir<%load.a> sext to i32), (ir<%load.b> sext to i32))
+; AVX2:  Cost of 2 for VF 16: EXPRESSION vp<[[VP8]]> = ir<%sum> + partial.reduce.add (mul nsw (ir<%load.a> sext to i32), (ir<%load.b> sext to i32))
 ;
 ; AVX512BW-LABEL: 'dot_s16s16'
-; AVX512BW:  Cost of 2 for VF 32: WIDEN ir<%sum.next> = add ir<%sum>, ir<%mul>
-; AVX512BW:  Cost of 2 for VF 32: WIDEN ir<%sum.next> = add ir<%sum>, ir<%mul>
+; AVX512BW:  Cost of 2 for VF 32: EXPRESSION vp<[[VP8:%[0-9]+]]> = ir<%sum> + partial.reduce.add (mul nsw (ir<%load.a> sext to i32), (ir<%load.b> sext to i32))
+; AVX512BW:  Cost of 2 for VF 32: EXPRESSION vp<[[VP8]]> = ir<%sum> + partial.reduce.add (mul nsw (ir<%load.a> sext to i32), (ir<%load.b> sext to i32))
 ;
 entry:
   br label %loop

@@ -974,7 +974,7 @@ private:
   /// presence of a cost for an instruction in the mapping indicates that the
   /// instruction will be scalarized when vectorizing with the associated
   /// vectorization factor. The entries are VF-ScalarCostTy pairs.
-  MapVector<ElementCount, ScalarCostsTy> InstsToScalarize;
+  DenseMap<ElementCount, ScalarCostsTy> InstsToScalarize;
 
   /// Holds the instructions known to be uniform after vectorization.
   /// The data is collected per VF.
@@ -3716,14 +3716,9 @@ bool LoopVectorizationCostModel::useEmulatedMaskMemRefHack(
 
 void LoopVectorizationCostModel::collectInstsToScalarize(ElementCount VF) {
   assert(VF.isVector() && "Expected VF >= 2");
-
-  // If we've already collected the instructions to scalarize or the predicated
-  // BBs after vectorization, there's nothing to do. Collection may already have
-  // occurred if we have a user-selected VF and are now computing the expected
-  // cost for interleaving.
-  if (InstsToScalarize.contains(VF) ||
-      PredicatedBBsAfterVectorization.contains(VF))
-    return;
+  assert(!InstsToScalarize.contains(VF) &&
+         !PredicatedBBsAfterVectorization.contains(VF) &&
+         "Routine expected to be called once per VF");
 
   // Initialize a mapping for VF in InstsToScalalarize. If we find that it's
   // not profitable to scalarize any instructions, the presence of VF in the
@@ -4917,6 +4912,15 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
            !TheLoop->contains(cast<Instruction>(U)->getParent());
   };
 
+  // Returns true if the address of interleaved access I is used by its group.
+  // VPlan uses the address of member 0 for store groups. For load groups, it
+  // may use the address of the insert position instead.
+  auto IsGroupAddress = [this](Instruction *I) {
+    auto *Group = getInterleavedAccessGroup(I);
+    return isa<StoreInst>(I) ? Group->getMember(0) == I
+                             : Group->getInsertPos() == I;
+  };
+
   LoopBlocksDFS DFS(TheLoop);
   DFS.perform(LI);
   for (BasicBlock *BB : reverse(make_range(DFS.beginRPO(), DFS.endRPO())))
@@ -4934,11 +4938,10 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
         DeadOps.push_back(&I);
 
       // For interleave groups, we only create a pointer for the start of the
-      // interleave group. Queue up addresses of group members except the insert
-      // position for further processing.
+      // interleave group. Queue up addresses of group members not used by the
+      // group for further processing.
       if (isAccessInterleaved(&I)) {
-        auto *Group = getInterleavedAccessGroup(&I);
-        if (Group->getInsertPos() == &I)
+        if (IsGroupAddress(&I))
           continue;
         Value *PointerOp = getLoadStorePointerOperand(&I);
         DeadInterleavePointerOps.push_back(PointerOp);
@@ -4954,11 +4957,11 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
   // by other dead computations.
   for (unsigned I = 0; I != DeadInterleavePointerOps.size(); ++I) {
     auto *Op = dyn_cast<Instruction>(DeadInterleavePointerOps[I]);
-    if (!Op || !TheLoop->contains(Op) || any_of(Op->users(), [this](User *U) {
+    if (!Op || !TheLoop->contains(Op) ||
+        any_of(Op->users(), [this, &IsGroupAddress](User *U) {
           Instruction *UI = cast<Instruction>(U);
           return !VecValuesToIgnore.contains(U) &&
-                 (!isAccessInterleaved(UI) ||
-                  getInterleavedAccessGroup(UI)->getInsertPos() == UI);
+                 (!isAccessInterleaved(UI) || IsGroupAddress(UI));
         }))
       continue;
     VecValuesToIgnore.insert(Op);

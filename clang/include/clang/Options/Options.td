@@ -3569,6 +3569,11 @@ defm clangir : BoolFOption<"clangir",
   BothFlags<[], [ClangOption, CC1Option], "">>;
 def emit_cir : Flag<["-"], "emit-cir">, Visibility<[ClangOption, CC1Option]>,
   Group<Action_Group>, HelpText<"Build ASTs and then lower to ClangIR">;
+def emit_cir_EQ : Joined<["-"], "emit-cir=">, Visibility<[CC1Option]>,
+  Group<Action_Group>, Values<"pristine">,
+  HelpText<"Build ASTs and then lower to ClangIR, stopping at the named "
+           "point (experimental). 'pristine' is CIRGen's output before any "
+           "ClangIR pass">;
 def emit_cir_bc : Flag<["-"], "emit-cir-bc">,
   Visibility<[CC1Option]>, Group<Action_Group>,
   HelpText<"Build ASTs and then emit ClangIR bytecode">;
@@ -3788,11 +3793,11 @@ def fexperimental_abi_lowering : Flag<["-"], "fexperimental-abi-lowering">,
   MarshallingInfoFlag<CodeGenOpts<"ExperimentalABILowering">>;
 
 defm module_local_hints : BoolFOption<"module-local-hints",
-  CodeGenOpts<"ModuleLocalHints">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option],
-          "Mark inline functions and template instantiations defined in the "
-          "main source file as likely_module_local">,
-  NegFlag<SetFalse>>;
+  CodeGenOpts<"ModuleLocalHints">, DefaultTrue,
+  PosFlag<SetTrue, [], [ClangOption], "Mark">,
+  NegFlag<SetFalse, [], [ClangOption, CC1Option], "Don't mark">,
+  BothFlags<[], [ClangOption], " inline functions and template instantiations "
+            "defined in the main source file as likely_module_local">>;
 
 def fmodules_embed_all_files : Joined<["-"], "fmodules-embed-all-files">,
   Visibility<[ClangOption, CC1Option, CLOption]>,
@@ -5820,19 +5825,19 @@ def msmall_int_abi_compat_EQ : Joined<["-"], "msmall-int-abi-compat=">,
   Group<m_Group>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"ABI compatibility for small integer arguments on X86: "
            "'platform' (High bits unspecified) | "
-           "'clang' (High bits zero/sign-extended) | "
+           "'clang-23' (High bits zero/sign-extended) | "
            "'both' (High bits extended in caller, "
            "extension not assumed in callee)">,
-  Values<"platform,clang,both">,
+  Values<"platform,clang-23,both">,
   NormalizedValuesScope<"CodeGenOptions::SmallIntABICompatKind">,
-  NormalizedValues<["Platform", "Clang", "Both"]>,
+  NormalizedValues<["Platform", "Clang23", "Both"]>,
   MarshallingInfoEnum<CodeGenOpts<"SmallIntABICompat">, "Both">,
   DocBrief<[{
 Specifies how small integer arguments are passed on the following platforms:
  * 32-bit x86 for operating systems other than Darwin and Playstation.
  * 64-bit x86 for operating systems other than Windows, Darwin and PlayStation.
 
-The value must be 'platform', 'clang', or 'both'. The default behavior is
+The value must be 'platform', 'clang-23', or 'both'. The default behavior is
 'both'.
 
 In the past, Clang passed promotable integer arguments (non-variadic arguments
@@ -5847,7 +5852,7 @@ If 'platform' is used, promotable integer arguments will not be extended by the
 caller. This is conformant with the platform psABI (such as the System V ABI),
 but may break compatibility with old Clang-built objects.
 
-If 'clang' is used, promotable integer arguments are extended by the caller,
+If 'clang-23' is used, promotable integer arguments are extended by the caller,
 and the callee assumes this extension has happend. This restores the previous
 (before version 24) behavior of Clang, but may be incompatible with other
 compilers like GCC following the platform ABI.
