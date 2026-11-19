@@ -1,0 +1,20 @@
+; All F contexts start out pending under parents that have not decided yet.
+; A context only becomes ready once its own parent context, not just some copy
+; of the parent function, has been expanded. If F were finished as soon as R
+; was processed, F would be merged into a standalone profile before R's late
+; base context arrives. Waiting for the concrete parent keeps F nested in R.
+
+; RUN: llvm-profgen --format=text --llvm-sample-profile=%S/Inputs/cs-preinline-scc-late-parent.prof --binary=%S/Inputs/cs-preinline-scc-nested.perfbin --output=%t
+; RUN: FileCheck %s --input-file %t
+
+; CHECK-NOT:  {{^}}_Z1Fm:
+; CHECK:      {{^}}_Z1Rm:10000051:51
+; CHECK-NEXT:  1: 51
+; CHECK-NEXT:  2: _Z1Fm:10000000
+; CHECK-NEXT:   1: 5000000
+; CHECK-NEXT:   3: 5000000 _Z1Gm:5000000
+; CHECK-NEXT:   !CFGChecksum: 281528181014178
+; CHECK-NEXT:   !Attributes: 2
+; CHECK-NOT:  {{^}}_Z1Fm:
+; CHECK:      {{^}}_Z1Gm:7000000:6000000
+; CHECK-NOT:  {{^}}_Z1Fm:

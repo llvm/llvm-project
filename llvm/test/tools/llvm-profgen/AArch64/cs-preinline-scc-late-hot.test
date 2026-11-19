@@ -1,0 +1,30 @@
+; G -> R -> F -> G is one SCC, and the pre-inliner processes R before G. When
+; R is processed, its only F context is the cold R:2 @ F, so F is not inlined.
+; The hot G:2 @ R context is pending until G decides; G does not inline R, so
+; G:2 @ R merges into the R base late. That late merge makes R:2 @ F hot, and
+; R has to be reconsidered so that F's 5,000,000 samples end up nested in R.
+
+; RUN: llvm-profgen --format=text --llvm-sample-profile=%S/Inputs/cs-preinline-scc-late-hot.prof --binary=%S/Inputs/cs-preinline-scc-nested.perfbin --output=%t --csspgo-preinliner-defer-pending-contexts=0
+; RUN: FileCheck %s --input-file %t --check-prefix=STOCK
+; RUN: llvm-profgen --format=text --llvm-sample-profile=%S/Inputs/cs-preinline-scc-late-hot.prof --binary=%S/Inputs/cs-preinline-scc-nested.perfbin --output=%t
+; RUN: FileCheck %s --input-file %t --check-prefix=DEFER
+
+; STOCK:      {{^}}_Z1Rm:5000052:51
+; STOCK-NEXT:  1: 51
+; STOCK-NEXT:  2: _Z1Fm:5000001
+; STOCK-NEXT:   1: 5000001
+; STOCK-NEXT:   !CFGChecksum: 281528181014178
+; STOCK-NEXT:   !Attributes: 2
+
+; DEFER:      {{^}}_Z1Fm:10000001:5000001
+; DEFER-NEXT:  1: 5000001
+; DEFER-NEXT:  3: _Z1Gm:5000000
+; DEFER:      {{^}}_Z1Rm:5000051:51
+; DEFER-NEXT:  1: 51
+; DEFER-NEXT:  2: _Z1Fm:5000000
+; DEFER-NEXT:   1: 5000000
+; DEFER-NEXT:   !CFGChecksum: 281528181014178
+; DEFER-NEXT:   !Attributes: 2
+; DEFER:      {{^}}_Z1Gm:2000000:1000000
+; DEFER-NEXT:  1: 1000000
+; DEFER-NEXT:  2: 50 _Z1Rm:50

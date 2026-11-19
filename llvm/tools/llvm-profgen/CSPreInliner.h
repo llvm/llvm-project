@@ -10,6 +10,7 @@
 #define LLVM_TOOLS_LLVM_PROFGEN_PGOINLINEADVISOR_H
 
 #include "ProfiledBinary.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/PriorityQueue.h"
 #include "llvm/ProfileData/ProfileCommon.h"
 #include "llvm/ProfileData/SampleProf.h"
@@ -76,15 +77,22 @@ public:
 
 private:
   bool getInlineCandidates(ProfiledCandidateQueue &CQueue,
-                           const FunctionSamples *FCallerContextSamples);
+                           const FunctionSamples *FCallerContextSamples,
+                           unsigned &InlinedSize);
   std::vector<FunctionId> buildTopDownOrder();
   void processFunction(FunctionId Name);
+  bool isPendingContext(FunctionSamples *CSamples, FunctionId Name);
+  FunctionSamples *getBaseSamplesForProcessing(FunctionId Name);
+  void mergeRemainingContexts(ArrayRef<FunctionId> Order);
   bool shouldInline(ProfiledInlineCandidate &Candidate);
   uint32_t getFuncSize(const ContextTrieNode *ContextNode);
   bool UseContextCost;
+  bool DeferPendingContexts;
   SampleContextTracker &ContextTracker;
   ProfiledBinary &Binary;
   ProfileSummary *Summary;
+  // Profiles whose children have been queued as inline candidates.
+  DenseSet<const FunctionSamples *> ExpandedProfiles;
 };
 
 } // end namespace sampleprof

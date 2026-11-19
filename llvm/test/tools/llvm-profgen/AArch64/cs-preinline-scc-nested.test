@@ -1,0 +1,29 @@
+; G -> R -> F -> G is one SCC, and the pre-inliner processes R, then F, then G.
+; R is processed before G, but that does not decide the G:2 @ R context; only
+; G can. So G:2 @ R waits for G, and G:2 @ R:2 @ F waits for its own parent
+; G:2 @ R. It may only merge into F once G has decided about G:2 @ R.
+
+; RUN: llvm-profgen --format=text --llvm-sample-profile=%S/Inputs/cs-preinline-scc-nested.prof --binary=%S/Inputs/cs-preinline-scc-nested.perfbin --output=%t --csspgo-preinliner-defer-pending-contexts=0
+; RUN: FileCheck %s --input-file %t --check-prefix=STOCK
+; RUN: llvm-profgen --format=text --llvm-sample-profile=%S/Inputs/cs-preinline-scc-nested.prof --binary=%S/Inputs/cs-preinline-scc-nested.perfbin --output=%t
+; RUN: FileCheck %s --input-file %t --check-prefix=DEFER
+
+; STOCK:      {{^}}_Z1Gm:2000000:1000000
+; STOCK-NEXT:  1: 1000000
+; STOCK-NEXT:  2: 1000000 _Z1Rm:1000000
+; STOCK-NEXT:  !CFGChecksum: 281479271677951
+
+; DEFER:      {{^}}_Z1Gm:2700200:1000000
+; DEFER-NEXT:  1: 1000000
+; DEFER-NEXT:  2: _Z1Rm:1700200
+; DEFER-NEXT:   1: 900000
+; DEFER-NEXT:   2: _Z1Fm:800200
+; DEFER-NEXT:    1: 800000
+; DEFER-NEXT:    3: 100 _Z1Gm:100
+; DEFER-NEXT:    !CFGChecksum: 281528181014178
+; DEFER-NEXT:    !Attributes: 2
+
+; Build (AArch64):
+;   clang++ -O2 -g -fpseudo-probe-for-profiling -fdebug-info-for-profiling \
+;     cs-preinline-scc-nested.cpp -o cs-preinline-scc-nested.perfbin
+; The same binary is used by cs-preinline-scc-late-*.test.

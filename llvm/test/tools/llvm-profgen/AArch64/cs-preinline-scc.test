@@ -1,0 +1,27 @@
+; evalC and arith call each other, so they form one SCC of the profiled call
+; graph. The pre-inliner processes arith first. Without deferral, merging the
+; arith base profile promotes the evalC:3 @ arith context away from evalC, and
+; evalC never sees arith as an inline candidate.
+
+; RUN: llvm-profgen --format=text --llvm-sample-profile=%S/Inputs/cs-preinline-scc.prof --binary=%S/Inputs/cs-preinline-scc.perfbin --output=%t --csspgo-preinliner-defer-pending-contexts=0
+; RUN: FileCheck %s --input-file %t --check-prefix=STOCK
+; RUN: llvm-profgen --format=text --llvm-sample-profile=%S/Inputs/cs-preinline-scc.prof --binary=%S/Inputs/cs-preinline-scc.perfbin --output=%t
+; RUN: FileCheck %s --input-file %t --check-prefix=DEFER
+
+; STOCK:      {{^}}_Z5evalCm:400020:100010
+; STOCK-NEXT:  1: 100010
+; STOCK-NEXT:  2: 60000
+; STOCK-NEXT:  3: 60000 _ZL5arithm.__uniq.36167262850491415085099609627404544707:60000
+; STOCK-NEXT:  4: 100010
+; STOCK-NEXT:  !CFGChecksum: 281528181014178
+
+; DEFER:      {{^}}_Z5evalCm:690020:150010
+; DEFER-NEXT:  1: 150010
+; DEFER-NEXT:  2: 90000
+; DEFER-NEXT:  4: 150010
+; DEFER-NEXT:  3: _ZL5arithm.__uniq.36167262850491415085099609627404544707:220000
+; DEFER:       !Attributes: 3
+
+; Build (AArch64):
+;   clang++ -O2 -g -fpseudo-probe-for-profiling -fdebug-info-for-profiling \
+;     -funique-internal-linkage-names cs-preinline-scc.cpp -o cs-preinline-scc.perfbin
