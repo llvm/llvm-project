@@ -4876,6 +4876,9 @@ ExprResult Sema::CheckVarOrConceptTemplateTemplateId(
     const TemplateArgumentListInfo *TemplateArgs) {
   TemplateTemplateParmDecl *Parameter =
       Template.getAsTemplateTemplateParmDecl();
+  if(!Parameter || Parameter->isInvalidDecl()){
+    return ExprError();
+  }
   assert(Parameter && "A variable template id without template?");
 
   if (Parameter->templateParameterKind() !=
