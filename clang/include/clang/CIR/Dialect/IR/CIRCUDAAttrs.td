@@ -86,8 +86,10 @@ def CIR_CUDAVarRegistrationInfoAttr : CIR_Attr<"CUDAVarRegistrationInfo", "cu.va
 def CIR_CUDAOffloadEntryAttr : CIR_Attr<"CUDAOffloadEntry", "cu.offload_entry"> {
   let summary = "Offloading entry for a kernel or device variable.";
   let description = [{
-    The arguments of `llvm::offloading::emitOffloadingEntry`, which emits the
-    entry during translation to LLVM IR. Used for -fgpu-rdc.
+    A kernel or device variable that the host registers with the offloading
+    runtime. Translation to LLVM IR emits it into the offloading entries
+    section, which the linker wrapper walks to register each entry after
+    device linking. Used for -fgpu-rdc.
   }];
   let parameters = (ins
     "uint16_t":$kind,
