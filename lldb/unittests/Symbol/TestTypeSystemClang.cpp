@@ -471,6 +471,7 @@ TEST_F(TestTypeSystemClang, TestIsEnumerationType) {
     EXPECT_TRUE(enum_type.IsEnumerationType(is_signed));
     EXPECT_TRUE(is_signed);
     EXPECT_FALSE(enum_type.IsIntegerType(is_signed));
+    EXPECT_TRUE(enum_type.IsScalarType());
   }
 
   // Scoped unsigned enum
@@ -485,6 +486,7 @@ TEST_F(TestTypeSystemClang, TestIsEnumerationType) {
     EXPECT_TRUE(enum_type.IsEnumerationType(is_signed));
     EXPECT_FALSE(is_signed);
     EXPECT_FALSE(enum_type.IsIntegerType(is_signed));
+    EXPECT_TRUE(enum_type.IsScalarType());
   }
 
   // Unscoped signed enum
@@ -499,6 +501,7 @@ TEST_F(TestTypeSystemClang, TestIsEnumerationType) {
     EXPECT_TRUE(enum_type.IsEnumerationType(is_signed));
     EXPECT_TRUE(is_signed);
     EXPECT_FALSE(enum_type.IsIntegerType(is_signed));
+    EXPECT_TRUE(enum_type.IsScalarType());
   }
 
   // Unscoped unsigned enum
@@ -513,6 +516,7 @@ TEST_F(TestTypeSystemClang, TestIsEnumerationType) {
     EXPECT_TRUE(enum_type.IsEnumerationType(is_signed));
     EXPECT_FALSE(is_signed);
     EXPECT_FALSE(enum_type.IsIntegerType(is_signed));
+    EXPECT_TRUE(enum_type.IsScalarType());
   }
 }
 
