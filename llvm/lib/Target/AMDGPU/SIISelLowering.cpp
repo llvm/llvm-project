@@ -15880,8 +15880,8 @@ SDValue SITargetLowering::performOrCombine(SDNode *N,
   //   (or (bitcast (v2i16 build_vector 0, Hi)), (zero_extend i16:Lo)) ->
   //     (bitcast (v2i16 build_vector Lo, Hi))
   //
-  // Restricted to GFX10+. On GFX9 the v_perm_b32 mask costs an extra s_mov_b32, which
-  // makes not worth it.
+  // Restricted to GFX10+. On GFX9 the v_perm_b32 mask costs an extra s_mov_b32,
+  // which makes not worth it.
   if (VT == MVT::i32 && AMDGPU::isGFX10Plus(*Subtarget)) {
     bool LHSIsHigh, RHSIsHigh;
     SDValue LHSHalf = getHalfOfPackedImmZeroAndI16(LHS, LHSIsHigh);
