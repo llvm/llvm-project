@@ -196,11 +196,9 @@ class SPIRVLegalizePointerCastImpl {
 
   // Traverses the aggregate type to find the first sub-type that matches
   // the TargetElemType's memory layout, optionally emitting a GEP intrinsic.
-  std::optional<std::pair<Value *, Type *>>
-  getPointerToFirstCompatibleType(IRBuilder<> &B, Value *BasePtr,
-                                  Type *PointerType, Type *TargetElemType,
-                                  bool IsInBounds,
-                                  bool AllowScalarWidening = false) {
+  std::optional<std::pair<Value *, Type *>> getPointerToFirstCompatibleType(
+      IRBuilder<> &B, Value *BasePtr, Type *PointerType, Type *TargetElemType,
+      bool IsInBounds, bool AllowScalarWidening = false) {
     Type *CurrentTy = GR->findDeducedElementType(BasePtr);
     assert(CurrentTy && "Could not deduce aggregate type");
     SmallVector<Value *, 8> Args{/* isInBounds= */ B.getInt1(IsInBounds),
