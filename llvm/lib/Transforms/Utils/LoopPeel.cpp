@@ -21,6 +21,7 @@
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
@@ -1221,6 +1222,9 @@ void llvm::peelLoop(Loop *L, unsigned PeelCount, bool PeelLast, LoopInfo *LI,
       Value *BTCValue =
           Expander.expandCodeFor(BTC, BTC->getType(), PreHeaderBR);
       IRBuilder<> B(PreHeaderBR);
+      if (!SE->loopHasNoAbnormalExits(L) &&
+          !isGuaranteedNotToBeUndefOrPoison(BTCValue, AC, PreHeaderBR, &DT))
+        BTCValue = B.CreateFreeze(BTCValue);
       Value *Cond =
           B.CreateICmpNE(BTCValue, ConstantInt::get(BTCValue->getType(), 0));
       auto *BI = B.CreateCondBr(Cond, NewPreHeader, InsertTop);

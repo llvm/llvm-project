@@ -9,14 +9,17 @@ define i32 @peel_last_with_trip_count_check_lcssa_phi(i32 %n) {
 ; CHECK-SAME: i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[N]], -1
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ne i32 [[SUB]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = freeze i32 [[SUB]]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ne i32 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[TMP0]], label %[[ENTRY_SPLIT:.*]], label %[[EXIT_PEEL_BEGIN:.*]]
 ; CHECK:       [[ENTRY_SPLIT]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV1:%.*]] = phi i32 [ 0, %[[ENTRY_SPLIT]] ], [ [[IV_NEXT1:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    call void @foo(i32 2)
-; CHECK-NEXT:    [[IV_NEXT1]] = add nuw i32 [[IV1]], 1
+; CHECK-NEXT:    [[C1:%.*]] = icmp eq i32 [[IV1]], [[SUB]]
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[C1]], i32 1, i32 2
+; CHECK-NEXT:    call void @foo(i32 [[SEL1]])
+; CHECK-NEXT:    [[IV_NEXT1]] = add i32 [[IV1]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[N]], 1
 ; CHECK-NEXT:    [[EC1:%.*]] = icmp ne i32 [[IV_NEXT1]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[EC1]], label %[[LOOP]], label %[[EXIT_PEEL_BEGIN_LOOPEXIT:.*]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -178,7 +181,8 @@ define i32 @peel_last_with_trip_count_check_lcssa_phi_cmp_not_invar2(i32 %n) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[N]], -2
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[TMP0]], 0
+; CHECK-NEXT:    [[TMP4:%.*]] = freeze i32 [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[TMP4]], 0
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[ENTRY_SPLIT:.*]], label %[[EXIT_PEEL_BEGIN:.*]]
 ; CHECK:       [[ENTRY_SPLIT]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
@@ -187,7 +191,7 @@ define i32 @peel_last_with_trip_count_check_lcssa_phi_cmp_not_invar2(i32 %n) {
 ; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[IV]], [[SUB]]
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C]], i32 1, i32 2
 ; CHECK-NEXT:    call void @foo(i32 [[SEL]])
-; CHECK-NEXT:    [[IV_NEXT1]] = add nuw i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT1]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[N]], 1
 ; CHECK-NEXT:    [[EC1:%.*]] = icmp ne i32 [[IV_NEXT1]], [[TMP2]]
 ; CHECK-NEXT:    br i1 [[EC1]], label %[[LOOP]], label %[[EXIT_PEEL_BEGIN_LOOPEXIT:.*]], !llvm.loop [[LOOP2:![0-9]+]]
@@ -236,14 +240,17 @@ define i32 @peel_last_with_trip_count_check_lcssa_phi_cmp_not_invar3(i32 %n) {
 ; CHECK-SAME: i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[N]], -1
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ne i32 [[SUB]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = freeze i32 [[SUB]]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ne i32 [[TMP3]], 0
 ; CHECK-NEXT:    br i1 [[TMP0]], label %[[ENTRY_SPLIT:.*]], label %[[EXIT_PEEL_BEGIN:.*]]
 ; CHECK:       [[ENTRY_SPLIT]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY_SPLIT]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    call void @foo(i32 2)
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw i32 [[IV]], 1
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[IV]], [[SUB]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C]], i32 1, i32 2
+; CHECK-NEXT:    call void @foo(i32 [[SEL]])
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[N]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp ne i32 [[IV_NEXT]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[EC]], label %[[LOOP]], label %[[EXIT_PEEL_BEGIN_LOOPEXIT:.*]], !llvm.loop [[LOOP3:![0-9]+]]
@@ -350,18 +357,20 @@ define void @peel_last_with_trip_count_check_nested_loop(i32 %n) {
 ; CHECK:       [[OUTER_HEADER_LOOPEXIT]]:
 ; CHECK-NEXT:    br label %[[OUTER_HEADER]]
 ; CHECK:       [[OUTER_HEADER]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[SUB]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = freeze i32 [[SUB]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[TMP3]], 0
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[OUTER_HEADER_SPLIT:.*]], label %[[OUTER_HEADER_LOOPEXIT_PEEL_BEGIN]]
 ; CHECK:       [[OUTER_HEADER_SPLIT]]:
 ; CHECK-NEXT:    br label %[[INNER_HEADER:.*]]
 ; CHECK:       [[INNER_HEADER]]:
 ; CHECK-NEXT:    [[IV1:%.*]] = phi i32 [ 0, %[[OUTER_HEADER_SPLIT]] ], [ [[IV_NEXT1]], %[[INNER_LATCH]] ]
-; CHECK-NEXT:    br i1 false, label %[[INNER_LATCH]], label %[[THEN:.*]]
+; CHECK-NEXT:    [[C1:%.*]] = icmp eq i32 [[IV1]], [[SUB]]
+; CHECK-NEXT:    br i1 [[C1]], label %[[INNER_LATCH]], label %[[THEN:.*]]
 ; CHECK:       [[THEN]]:
 ; CHECK-NEXT:    call void @foo(i32 1)
 ; CHECK-NEXT:    br label %[[INNER_LATCH]]
 ; CHECK:       [[INNER_LATCH]]:
-; CHECK-NEXT:    [[IV_NEXT1]] = add nuw i32 [[IV1]], 1
+; CHECK-NEXT:    [[IV_NEXT1]] = add i32 [[IV1]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[N]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT1:%.*]] = icmp eq i32 [[IV_NEXT1]], [[TMP2]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT1]], label %[[OUTER_HEADER_LOOPEXIT_PEEL_BEGIN_LOOPEXIT]], label %[[INNER_HEADER]], !llvm.loop [[LOOP4:![0-9]+]]
@@ -438,13 +447,17 @@ define void @peel_last_already_peeled_front_count_exceeds_max(i32 %n) {
 ; CHECK-SAME: i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[TMP0]], 0
+; CHECK-NEXT:    [[TMP4:%.*]] = freeze i32 [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[TMP4]], 0
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[ENTRY_SPLIT:.*]], label %[[EXIT_PEEL_BEGIN:.*]]
 ; CHECK:       [[ENTRY_SPLIT]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY_SPLIT]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    call void @foo(i32 2)
+; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[N]], -1
+; CHECK-NEXT:    [[C_LAST:%.*]] = icmp eq i32 [[IV]], [[SUB]]
+; CHECK-NEXT:    [[SEL_LAST:%.*]] = select i1 [[C_LAST]], i32 1, i32 2
+; CHECK-NEXT:    call void @foo(i32 [[SEL_LAST]])
 ; CHECK-NEXT:    [[C_FIRST:%.*]] = icmp ult i32 [[IV]], 2
 ; CHECK-NEXT:    [[SEL_FIRST:%.*]] = select i1 [[C_FIRST]], i32 10, i32 20
 ; CHECK-NEXT:    call void @foo(i32 [[SEL_FIRST]])
