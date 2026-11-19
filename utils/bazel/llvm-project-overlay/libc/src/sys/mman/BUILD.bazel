@@ -168,10 +168,9 @@ libc_function(
     srcs = ["linux/munlockall.cpp"],
     hdrs = ["munlockall.h"],
     deps = [
-        "//libc/hdr:sys_mman_macros",
         "//libc/src/__support:common",
         "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
+        "//libc/src/__support/OSUtil/linux/syscall_wrappers:munlockall",
         "//libc/src/__support/macros:config",
         "//libc/src/errno",
     ],
