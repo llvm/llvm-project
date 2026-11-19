@@ -42,6 +42,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 
@@ -1191,8 +1192,7 @@ bool ConstraintInfo::doesHold(CmpInst::Predicate Pred, Value *A, Value *B) {
     markDepthLimitHit();
     return false;
   }
-  ++DoesHoldDepth;
-  auto Cleanup = llvm::scope_exit([&]() { --DoesHoldDepth; });
+  SaveAndRestore DepthScope(DoesHoldDepth, DoesHoldDepth + 1);
 
   auto R = getConstraintForSolving(Pred, A, B);
   if (R.empty())
