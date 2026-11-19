@@ -1590,8 +1590,7 @@ define i32 @masked_add_assumed(i32 %x) {
 ; CHECK-NEXT:    [[BIT:%.*]] = and i32 [[X:%.*]], 8
 ; CHECK-NEXT:    [[ISSET:%.*]] = icmp ne i32 [[BIT]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[ISSET]])
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X]], 15
-; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[AND]], -8
+; CHECK-NEXT:    [[SUB:%.*]] = and i32 [[X]], 7
 ; CHECK-NEXT:    ret i32 [[SUB]]
 ;
   %bit = and i32 %x, 8
@@ -1607,8 +1606,7 @@ define i32 @masked_add_assumed_eq(i32 %x) {
 ; CHECK-NEXT:    [[BIT:%.*]] = and i32 [[X:%.*]], 8
 ; CHECK-NEXT:    [[ISSET:%.*]] = icmp ne i32 [[BIT]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[ISSET]])
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X]], 15
-; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[AND]], -8
+; CHECK-NEXT:    [[SUB:%.*]] = and i32 [[X]], 7
 ; CHECK-NEXT:    ret i32 [[SUB]]
 ;
   %bit = and i32 %x, 8
@@ -1624,8 +1622,7 @@ define i32 @masked_add_sub_form(i32 %x) {
 ; CHECK-NEXT:    [[BIT:%.*]] = and i32 [[X:%.*]], 8
 ; CHECK-NEXT:    [[ISSET:%.*]] = icmp ne i32 [[BIT]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[ISSET]])
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X]], 15
-; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[AND]], -8
+; CHECK-NEXT:    [[SUB:%.*]] = and i32 [[X]], 7
 ; CHECK-NEXT:    ret i32 [[SUB]]
 ;
   %bit = and i32 %x, 8
@@ -1652,8 +1649,7 @@ define i32 @masked_add_multiple_bits(i32 %x) {
 ; CHECK-NEXT:    [[BITS:%.*]] = and i32 [[X:%.*]], 48
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[BITS]], 48
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X]], 255
-; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[AND]], -48
+; CHECK-NEXT:    [[SUB:%.*]] = and i32 [[X]], 207
 ; CHECK-NEXT:    ret i32 [[SUB]]
 ;
   %bits = and i32 %x, 48
@@ -1666,8 +1662,7 @@ define i32 @masked_add_multiple_bits(i32 %x) {
 
 define i32 @masked_add_range_attr(i32 range(i32 -8, 0) %x) {
 ; CHECK-LABEL: @masked_add_range_attr(
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 12
-; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[AND]], -8
+; CHECK-NEXT:    [[SUB:%.*]] = and i32 [[X:%.*]], 4
 ; CHECK-NEXT:    ret i32 [[SUB]]
 ;
   %and = and i32 %x, 12
@@ -1677,8 +1672,7 @@ define i32 @masked_add_range_attr(i32 range(i32 -8, 0) %x) {
 
 define <2 x i32> @masked_add_vector_splat(<2 x i32> range(i32 -8, 0) %x) {
 ; CHECK-LABEL: @masked_add_vector_splat(
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[X:%.*]], splat (i32 12)
-; CHECK-NEXT:    [[SUB:%.*]] = add nsw <2 x i32> [[AND]], splat (i32 -8)
+; CHECK-NEXT:    [[SUB:%.*]] = and <2 x i32> [[X:%.*]], splat (i32 4)
 ; CHECK-NEXT:    ret <2 x i32> [[SUB]]
 ;
   %and = and <2 x i32> %x, <i32 12, i32 12>
@@ -1692,8 +1686,7 @@ define i32 @masked_add_guarded(i32 %x) {
 ; CHECK-NEXT:    [[ISSET_NOT:%.*]] = icmp eq i32 [[BIT]], 0
 ; CHECK-NEXT:    br i1 [[ISSET_NOT]], label [[IF_CLEAR:%.*]], label [[IF_SET:%.*]]
 ; CHECK:       if.set:
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X]], 15
-; CHECK-NEXT:    [[R:%.*]] = add nsw i32 [[AND]], -8
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[X]], 7
 ; CHECK-NEXT:    ret i32 [[R]]
 ; CHECK:       if.clear:
 ; CHECK-NEXT:    ret i32 -1
@@ -1717,8 +1710,7 @@ define i32 @masked_add_guarded_false_edge(i32 %x) {
 ; CHECK-NEXT:    [[NOTSET:%.*]] = icmp eq i32 [[BIT]], 0
 ; CHECK-NEXT:    br i1 [[NOTSET]], label [[IF_CLEAR:%.*]], label [[IF_SET:%.*]]
 ; CHECK:       if.set:
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X]], 15
-; CHECK-NEXT:    [[R:%.*]] = add nsw i32 [[AND]], -8
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[X]], 7
 ; CHECK-NEXT:    ret i32 [[R]]
 ; CHECK:       if.clear:
 ; CHECK-NEXT:    ret i32 -1
