@@ -89,6 +89,23 @@ entry:
   ret void
 }
 
+; Test ordering of loads relative to alloca in kernels using SLM
+; IR-LABEL: define spir_kernel void @use_kernel_alloca(
+; IR-NEXT: entry:
+; IR-NEXT: %a = alloca i32
+; IR-NEXT: %{{.*}} = call{{( addrspace\(9\))?}} i64 @llvm.spv.thread.id.in.group.i64(i32 0)
+; IR: call{{( addrspace\(9\))?}} void @llvm.spv.group.memory.barrier.with.group.sync()
+; IR-NEXT: %[[ALLOCA_LOCAL_PTR:.*]] = load ptr addrspace(3), ptr addrspace(3) @__spirv_dynamic_local_memory
+; IR-NEXT: %p0 = getelementptr i32, ptr addrspace(3) %[[ALLOCA_LOCAL_PTR]], i64 0
+define spir_kernel void @use_kernel_alloca(ptr addrspace(1) noundef %out) addrspace(9) #0 !kernel_arg_addr_space !0 {
+entry:
+  %a = alloca i32
+  %p0 = getelementptr i32, ptr addrspace(3) @buf, i64 0
+  %v0 = load i32, ptr addrspace(3) %p0
+  store i32 %v0, ptr addrspace(1) %out
+  ret void
+}
+
 ; Kernels that use the memory load the slot once, after storing the argument,
 ; and reuse the loaded pointer for every access.
 ; IR-LABEL: define spir_kernel void @use_kernel(

@@ -180,7 +180,7 @@ bool lowerDynamicLocalMemory(Module &M, const SPIRVTargetMachine &TM) {
     }
 
     for (auto &[F, Uses] : UsesOfGV) {
-      IRBuilder<> Builder(F->getEntryBlock().getFirstInsertionPt());
+      IRBuilder<> Builder(F->getEntryBlock().getFirstNonPHIOrAlloca());
       auto *LoadedSlot = Builder.CreateLoad(LocalPtrTy, Slot, "dyn_local_mem");
 
       for (Use *U : Uses)
