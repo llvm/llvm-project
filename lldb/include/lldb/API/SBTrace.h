@@ -24,6 +24,12 @@ public:
 
   lldb::SBTrace &operator=(const lldb::SBTrace &rhs);
 
+#ifndef SWIG
+  SBTrace(lldb::SBTrace &&rhs);
+
+  lldb::SBTrace &operator=(lldb::SBTrace &&rhs);
+#endif
+
   ~SBTrace();
 
   /// See SBDebugger::LoadTraceFromFile.

@@ -39,6 +39,16 @@ SBTrace &SBTrace::operator=(const SBTrace &rhs) {
   return *this;
 }
 
+SBTrace::SBTrace(SBTrace &&rhs)
+    : m_opaque_sp(std::move(rhs.m_opaque_sp)),
+      m_opaque_wp(std::move(rhs.m_opaque_wp)) {}
+
+SBTrace &SBTrace::operator=(SBTrace &&rhs) {
+  m_opaque_sp = std::move(rhs.m_opaque_sp);
+  m_opaque_wp = std::move(rhs.m_opaque_wp);
+  return *this;
+}
+
 SBTrace::~SBTrace() = default;
 
 SBTrace::SBTrace(const lldb::TraceSP &trace_sp) : m_opaque_sp(trace_sp) {

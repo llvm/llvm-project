@@ -30,6 +30,14 @@ SBTraceCursor &SBTraceCursor::operator=(const SBTraceCursor &rhs) {
   return *this;
 }
 
+SBTraceCursor::SBTraceCursor(SBTraceCursor &&rhs)
+    : m_opaque_sp(std::move(rhs.m_opaque_sp)) {}
+
+SBTraceCursor &SBTraceCursor::operator=(SBTraceCursor &&rhs) {
+  m_opaque_sp = std::move(rhs.m_opaque_sp);
+  return *this;
+}
+
 SBTraceCursor::~SBTraceCursor() = default;
 
 SBTraceCursor::SBTraceCursor(TraceCursorSP trace_cursor_sp)

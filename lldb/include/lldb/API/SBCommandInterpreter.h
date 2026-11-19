@@ -374,6 +374,12 @@ public:
 
   lldb::SBCommand &operator=(const lldb::SBCommand &rhs);
 
+#ifndef SWIG
+  SBCommand(lldb::SBCommand &&rhs);
+
+  lldb::SBCommand &operator=(lldb::SBCommand &&rhs);
+#endif
+
   ~SBCommand();
 
   explicit operator bool() const;
