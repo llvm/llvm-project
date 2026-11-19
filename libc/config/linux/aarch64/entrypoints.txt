@@ -289,6 +289,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.vsprintf
     libc.src.stdio.vasprintf
 
+    # sys/capability.h entrypoints
+    libc.src.sys.capability.capget
+    libc.src.sys.capability.capset
+
     # sys/epoll.h entrypoints
     libc.src.sys.epoll.epoll_create
     libc.src.sys.epoll.epoll_create1

@@ -1,4 +1,5 @@
 add_subdirectory(auxv)
+add_subdirectory(capability)
 add_subdirectory(epoll)
 add_subdirectory(eventfd)
 add_subdirectory(file)
