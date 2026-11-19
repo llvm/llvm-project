@@ -232,15 +232,11 @@ define amdgpu_ps <4 x float> @image_bvh_intersect_ray_a16(i32 inreg %node_ptr, f
 ; GFX10-GISEL:       ; %bb.0: ; %main_body
 ; GFX10-GISEL-NEXT:    s_mov_b32 s16, s9
 ; GFX10-GISEL-NEXT:    s_bfe_u32 s9, s5, 0x100010
-; GFX10-GISEL-NEXT:    s_and_b32 s5, s5, 0xffff
-; GFX10-GISEL-NEXT:    s_lshl_b32 s9, s9, 16
-; GFX10-GISEL-NEXT:    s_and_b32 s6, s6, 0xffff
-; GFX10-GISEL-NEXT:    s_or_b32 s5, s5, s9
-; GFX10-GISEL-NEXT:    s_lshl_b32 s9, s7, 16
-; GFX10-GISEL-NEXT:    s_bfe_u32 s7, s7, 0x100010
 ; GFX10-GISEL-NEXT:    s_lshl_b32 s8, s8, 16
-; GFX10-GISEL-NEXT:    s_or_b32 s6, s6, s9
-; GFX10-GISEL-NEXT:    s_or_b32 s7, s7, s8
+; GFX10-GISEL-NEXT:    s_pack_ll_b32_b16 s5, s5, s9
+; GFX10-GISEL-NEXT:    s_bfe_u32 s9, s7, 0x100010
+; GFX10-GISEL-NEXT:    s_pack_ll_b32_b16 s6, s6, s7
+; GFX10-GISEL-NEXT:    s_or_b32 s7, s9, s8
 ; GFX10-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX10-GISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX10-GISEL-NEXT:    v_mov_b32_e32 v2, s2
@@ -498,15 +494,11 @@ define amdgpu_ps <4 x float> @image_bvh64_intersect_ray_a16(i64 inreg %node_ptr,
 ; GFX10-GISEL:       ; %bb.0: ; %main_body
 ; GFX10-GISEL-NEXT:    s_mov_b32 s16, s10
 ; GFX10-GISEL-NEXT:    s_bfe_u32 s10, s6, 0x100010
-; GFX10-GISEL-NEXT:    s_and_b32 s6, s6, 0xffff
-; GFX10-GISEL-NEXT:    s_lshl_b32 s10, s10, 16
-; GFX10-GISEL-NEXT:    s_and_b32 s7, s7, 0xffff
-; GFX10-GISEL-NEXT:    s_or_b32 s6, s6, s10
-; GFX10-GISEL-NEXT:    s_lshl_b32 s10, s8, 16
-; GFX10-GISEL-NEXT:    s_bfe_u32 s8, s8, 0x100010
 ; GFX10-GISEL-NEXT:    s_lshl_b32 s9, s9, 16
-; GFX10-GISEL-NEXT:    s_or_b32 s7, s7, s10
-; GFX10-GISEL-NEXT:    s_or_b32 s8, s8, s9
+; GFX10-GISEL-NEXT:    s_pack_ll_b32_b16 s6, s6, s10
+; GFX10-GISEL-NEXT:    s_bfe_u32 s10, s8, 0x100010
+; GFX10-GISEL-NEXT:    s_pack_ll_b32_b16 s7, s7, s8
+; GFX10-GISEL-NEXT:    s_or_b32 s8, s10, s9
 ; GFX10-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX10-GISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX10-GISEL-NEXT:    v_mov_b32_e32 v2, s2
