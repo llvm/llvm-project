@@ -4592,7 +4592,7 @@ static void print_relative_method_list(uint32_t structSizeAndFlags,
     outs() << indent << "\t\t      name " << format("0x%" PRIx32, m.name);
     uint64_t relNameRefVA = p + offsetof(struct method_relative_t, name);
     uint64_t absNameRefVA = relNameRefVA + m.name;
-    outs() << " (" << format("0x%" PRIx32, absNameRefVA) << ")";
+    outs() << " (" << format("0x%" PRIx64, absNameRefVA) << ")";
 
     // since this is a relative list, absNameRefVA is the address of the
     // __objc_selrefs entry, so a pointer, not the actual name
@@ -4603,7 +4603,7 @@ static void print_relative_method_list(uint32_t structSizeAndFlags,
       if (left < pointerSize)
         outs() << indent << " (nameRefPtr extends past the end of the section)";
       else {
-        if (pointerSize == 64) {
+        if (pointerBits == 64) {
           uint64_t nameOff_64 = *reinterpret_cast<const uint64_t *>(nameRefPtr);
           if (info->O->isLittleEndian() != sys::IsLittleEndianHost)
             sys::swapByteOrder(nameOff_64);
@@ -4623,8 +4623,8 @@ static void print_relative_method_list(uint32_t structSizeAndFlags,
     outs() << indent << "\t\t     types " << format("0x%" PRIx32, m.types);
     uint64_t relTypesVA = p + offsetof(struct method_relative_t, types);
     uint64_t absTypesVA = relTypesVA + m.types;
-    outs() << " (" << format("0x%" PRIx32, absTypesVA) << ")";
-    name = get_pointer_32(absTypesVA, xoffset, left, xS, info);
+    outs() << " (" << format("0x%" PRIx64, absTypesVA) << ")";
+    name = get_pointer_64(absTypesVA, xoffset, left, xS, info);
     if (name != nullptr)
       outs() << format(" %.*s", left, name);
     outs() << "\n";
@@ -4632,7 +4632,7 @@ static void print_relative_method_list(uint32_t structSizeAndFlags,
     outs() << indent << "\t\t       imp " << format("0x%" PRIx32, m.imp);
     uint64_t relImpVA = p + offsetof(struct method_relative_t, imp);
     uint64_t absImpVA = relImpVA + m.imp;
-    outs() << " (" << format("0x%" PRIx32, absImpVA) << ")";
+    outs() << " (" << format("0x%" PRIx64, absImpVA) << ")";
     name = GuessSymbolName(absImpVA, info->AddrMap);
     if (name != nullptr)
       outs() << " " << name;

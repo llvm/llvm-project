@@ -512,7 +512,7 @@ module attributes {
   }
 
   // CHECK: cir.func{{.*}} @take_empty_over(%arg0: !s32i)
-  // CHECK:   %[[SLOT:.*]] = cir.alloca "coerce" align(4) : !cir.ptr<!rec_UEmptyOver>
+  // CHECK:   %[[SLOT:.*]] = cir.alloca "coerce" align(16) : !cir.ptr<!rec_UEmptyOver>
   // CHECK:   %[[CAST:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!rec_UEmptyOver> -> !cir.ptr<!s32i>
 
   // A union of nothing but an empty member classifies Ignore, the same as the

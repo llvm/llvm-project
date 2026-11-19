@@ -256,7 +256,7 @@ def DataMemberAttr : DialectAttribute<(attr
 def MethodAttr : DialectAttribute<(attr
   Ty<"cir::MethodType">:$type,
   StdOptionalAttribute<"mlir::FlatSymbolRefAttr">:$symbol,
-  OptionalInt<"uint64_t">:$vtable_offset
+  OptionalInt<"uint64_t">:$vtable_index
 )> {
   let cBuilder = "$_resultType::getChecked([&]() { return reader.emitError(); }, context, $_args)";
 }

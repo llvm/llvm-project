@@ -3494,6 +3494,8 @@ DWARFASTParserClang::GetDeclContextForBlock(const DWARFDIE &die) {
   if (!containing_function_with_abstract_origin) {
     return (clang::DeclContext *)ResolveBlockDIE(die);
   }
+  // Not every compiler gives a block an abstract origin. Infer the context
+  // from a child that has one.
   DWARFDIE child = FindFirstChildWithAbstractOrigin(
       die, containing_function_with_abstract_origin);
   CompilerDeclContext decl_context =

@@ -11,6 +11,7 @@ set(src_files
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Allocator.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Configuration.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Debug.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/FortranInterface.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Kernel.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/LibC.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Mapping.cpp

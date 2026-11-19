@@ -7,7 +7,7 @@ static inline __attribute__((always_inline)) void inlined(void) {
 }
 
 // Has an out-of-line copy and is also inlined into main.
-__attribute__((always_inline)) void both(void) {
+static inline __attribute__((always_inline)) void both(void) {
   static int total = 100;
   ++total;
   {
