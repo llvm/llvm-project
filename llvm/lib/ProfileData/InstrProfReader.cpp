@@ -1306,21 +1306,56 @@ bool IndexedInstrProfReader::hasFormat(const MemoryBuffer &DataBuffer) {
   return Magic == IndexedInstrProf::Magic;
 }
 
-const unsigned char *
+Expected<const unsigned char *>
 IndexedInstrProfReader::readSummary(IndexedInstrProf::ProfVersion Version,
                                     const unsigned char *Cur, bool UseCS) {
   using namespace IndexedInstrProf;
   using namespace support;
 
+  const unsigned char *BufferEnd =
+      (const unsigned char *)DataBuffer->getBufferEnd();
+
   if (Version >= IndexedInstrProf::Version4) {
+    // The summary starts with two uint64_t fields (NumSummaryFields and
+    // NumCutoffEntries). Make sure they can be read before trusting them.
+    if (Cur > BufferEnd || (uint64_t)(BufferEnd - Cur) < 2 * sizeof(uint64_t))
+      return make_error<InstrProfError>(instrprof_error::malformed,
+                                        "corrupted profile summary");
+
     const IndexedInstrProf::Summary *SummaryInLE =
         reinterpret_cast<const IndexedInstrProf::Summary *>(Cur);
     uint64_t NFields = endian::byte_swap<uint64_t>(
         SummaryInLE->NumSummaryFields, llvm::endianness::little);
     uint64_t NEntries = endian::byte_swap<uint64_t>(
         SummaryInLE->NumCutoffEntries, llvm::endianness::little);
-    uint32_t SummarySize =
-        IndexedInstrProf::Summary::getSize(NFields, NEntries);
+
+    // NFields and NEntries come from an untrusted file. Validate them before
+    // they are truncated to 32 bits by Summary::getSize() and before the
+    // computed size drives the byte-swap copy below: the fixed summary fields
+    // must be present, and the whole summary block must fit in the remaining
+    // buffer.
+    if (NFields < Summary::NumKinds || NFields > UINT32_MAX ||
+        NEntries > UINT32_MAX)
+      return make_error<InstrProfError>(
+          instrprof_error::malformed,
+          ("corrupted profile summary: NumSummaryFields = " + Twine(NFields) +
+           ", NumCutoffEntries = " + Twine(NEntries))
+              .str());
+    // Note: the unqualified name "Summary" would find the reader's
+    // ProfileSummary member, so the type must be qualified here.
+    uint64_t FullSummarySize = sizeof(IndexedInstrProf::Summary) +
+                               NEntries * sizeof(Summary::Entry) +
+                               NFields * sizeof(uint64_t);
+    if (FullSummarySize > UINT32_MAX ||
+        FullSummarySize > (uint64_t)(BufferEnd - Cur))
+      return make_error<InstrProfError>(
+          instrprof_error::malformed,
+          ("corrupted profile summary: summary size " + Twine(FullSummarySize) +
+           " exceeds remaining buffer size " +
+           Twine((uint64_t)(BufferEnd - Cur)))
+              .str());
+    uint32_t SummarySize = (uint32_t)FullSummarySize;
+
     std::unique_ptr<IndexedInstrProf::Summary> SummaryData =
         IndexedInstrProf::allocSummary(SummarySize);
 
@@ -1365,8 +1400,9 @@ Error IndexedInstrProfReader::readHeader() {
 
   const unsigned char *Start =
       (const unsigned char *)DataBuffer->getBufferStart();
+  const unsigned char *End = (const unsigned char *)DataBuffer->getBufferEnd();
   const unsigned char *Cur = Start;
-  if ((const unsigned char *)DataBuffer->getBufferEnd() - Cur < 24)
+  if (End - Cur < 24)
     return error(instrprof_error::truncated);
 
   auto HeaderOr = IndexedInstrProf::Header::readFromBuffer(Start);
@@ -1375,19 +1411,44 @@ Error IndexedInstrProfReader::readHeader() {
 
   const IndexedInstrProf::Header *Header = &HeaderOr.get();
   Cur += Header->size();
+  if (Cur > End)
+    return error(instrprof_error::truncated);
 
-  Cur = readSummary((IndexedInstrProf::ProfVersion)Header->Version, Cur,
-                    /* UseCS */ false);
-  if (Header->Version & VARIANT_MASK_CSIR_PROF)
-    Cur = readSummary((IndexedInstrProf::ProfVersion)Header->Version, Cur,
-                      /* UseCS */ true);
+  // Offset fields in the header come from an untrusted file. Check that
+  // [Offset, Offset + Size) lies within the buffer before dereferencing
+  // Start + Offset. Validating the offsets instead of forming pointers also
+  // avoids pointer arithmetic overflow.
+  const uint64_t BufferSize = (uint64_t)(End - Start);
+  auto OffsetRangeInBuffer = [BufferSize](uint64_t Offset, uint64_t Size) {
+    return Offset <= BufferSize && Size <= BufferSize - Offset;
+  };
+
+  Expected<const unsigned char *> CurOr =
+      readSummary((IndexedInstrProf::ProfVersion)Header->Version, Cur,
+                  /* UseCS */ false);
+  if (!CurOr)
+    return CurOr.takeError();
+  Cur = *CurOr;
+  if (Header->Version & VARIANT_MASK_CSIR_PROF) {
+    CurOr = readSummary((IndexedInstrProf::ProfVersion)Header->Version, Cur,
+                        /* UseCS */ true);
+    if (!CurOr)
+      return CurOr.takeError();
+    Cur = *CurOr;
+  }
   // Read the hash type and start offset.
   IndexedInstrProf::HashT HashType =
       static_cast<IndexedInstrProf::HashT>(Header->HashType);
   if (HashType > IndexedInstrProf::HashT::Last)
     return error(instrprof_error::unsupported_hash_type);
 
-  // The hash table with profile counts comes next.
+  // The hash table with profile counts comes next. Creating it immediately
+  // reads the number of buckets and entries (two 64-bit words, 4-byte
+  // aligned) at HashOffset, so validate the offset covers them.
+  if ((Header->HashOffset & 0x3) != 0 ||
+      !OffsetRangeInBuffer(Header->HashOffset, 2 * sizeof(uint64_t)))
+    return make_error<InstrProfError>(instrprof_error::malformed,
+                                      "corrupted profile hash table offset");
   auto IndexPtr = std::make_unique<InstrProfReaderIndex<OnDiskHashTableImplV3>>(
       Start + Header->HashOffset, Cur, Start, HashType, Header->Version);
 
@@ -1395,6 +1456,11 @@ Error IndexedInstrProfReader::readHeader() {
   // version is higher than 8 (when it was introduced).
   if (Header->getIndexedProfileVersion() >= 8 &&
       Header->Version & VARIANT_MASK_MEMPROF) {
+    // Deserialization starts by reading the 64-bit memprof version word at
+    // MemProfOffset.
+    if (!OffsetRangeInBuffer(Header->MemProfOffset, sizeof(uint64_t)))
+      return make_error<InstrProfError>(instrprof_error::malformed,
+                                        "corrupted memprof offset");
     if (Error E = MemProfReader.deserialize(Start, Header->MemProfOffset))
       return E;
   }
@@ -1402,6 +1468,10 @@ Error IndexedInstrProfReader::readHeader() {
   // BinaryIdOffset field in the header is only valid when the format version
   // is higher than 9 (when it was introduced).
   if (Header->getIndexedProfileVersion() >= 9) {
+    // Validate the offset before dereferencing it to read the size.
+    if (!OffsetRangeInBuffer(Header->BinaryIdOffset, sizeof(uint64_t)))
+      return make_error<InstrProfError>(instrprof_error::malformed,
+                                        "corrupted binary ids");
     const unsigned char *Ptr = Start + Header->BinaryIdOffset;
     // Read binary ids size.
     uint64_t BinaryIdsSize =
@@ -1411,35 +1481,44 @@ Error IndexedInstrProfReader::readHeader() {
           instrprof_error::bad_header,
           ("BinaryIdSize (" + Twine(BinaryIdsSize) + ") is not a multiple of 8")
               .str());
-    // Set the binary ids start.
-    BinaryIdsBuffer = ArrayRef<uint8_t>(Ptr, BinaryIdsSize);
-    if (Ptr > (const unsigned char *)DataBuffer->getBufferEnd())
+    // Validate that the binary ids themselves are in the buffer before
+    // exposing them. Ptr now points past the size field.
+    if (BinaryIdsSize > (uint64_t)(End - Ptr))
       return make_error<InstrProfError>(instrprof_error::malformed,
                                         "corrupted binary ids");
+    // Set the binary ids start.
+    BinaryIdsBuffer = ArrayRef<uint8_t>(Ptr, BinaryIdsSize);
   }
 
   if (Header->getIndexedProfileVersion() >= 12) {
+    // Validate the offset before dereferencing it to read the length.
+    if (!OffsetRangeInBuffer(Header->VTableNamesOffset, sizeof(uint64_t)))
+      return make_error<InstrProfError>(instrprof_error::truncated,
+                                        "corrupted vtable names offset");
+
     const unsigned char *Ptr = Start + Header->VTableNamesOffset;
 
     uint64_t CompressedVTableNamesLen =
         support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
 
     // Writer first writes the length of compressed string, and then the actual
-    // content.
-    const char *VTableNamePtr = (const char *)Ptr;
-    if (VTableNamePtr > DataBuffer->getBufferEnd())
-      return make_error<InstrProfError>(instrprof_error::truncated);
+    // content. Validate the content is in the buffer before exposing it. Ptr
+    // now points past the length field.
+    if (CompressedVTableNamesLen > (uint64_t)(End - Ptr))
+      return make_error<InstrProfError>(instrprof_error::truncated,
+                                        "corrupted vtable names");
 
-    VTableName = StringRef(VTableNamePtr, CompressedVTableNamesLen);
+    VTableName = StringRef((const char *)Ptr, CompressedVTableNamesLen);
   }
 
   if (Header->getIndexedProfileVersion() >= 10 &&
       Header->Version & VARIANT_MASK_TEMPORAL_PROF) {
+    // Expect at least two 64 bit fields: NumTraces, and TraceStreamSize
+    if (!OffsetRangeInBuffer(Header->TemporalProfTracesOffset,
+                             2 * sizeof(uint64_t)))
+      return error(instrprof_error::truncated);
     const unsigned char *Ptr = Start + Header->TemporalProfTracesOffset;
     const auto *PtrEnd = (const unsigned char *)DataBuffer->getBufferEnd();
-    // Expect at least two 64 bit fields: NumTraces, and TraceStreamSize
-    if (Ptr + 2 * sizeof(uint64_t) > PtrEnd)
-      return error(instrprof_error::truncated);
     const uint64_t NumTraces =
         support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
     TemporalProfTraceStreamSize =
@@ -1453,8 +1532,9 @@ Error IndexedInstrProfReader::readHeader() {
           support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
       const uint64_t NumFunctions =
           support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
-      // Expect at least NumFunctions 64 bit fields
-      if (Ptr + NumFunctions * sizeof(uint64_t) > PtrEnd)
+      // Expect at least NumFunctions 64 bit fields. Compare with a division
+      // to avoid overflowing NumFunctions * sizeof(uint64_t).
+      if (NumFunctions > (uint64_t)(PtrEnd - Ptr) / sizeof(uint64_t))
         return error(instrprof_error::truncated);
       for (unsigned j = 0; j < NumFunctions; j++) {
         const uint64_t NameRef =
