@@ -73,7 +73,7 @@ define void @nested_inf_loop_callbr(i32 %0, i32 %1) {
 ; OPT-NEXT:    callbr void asm "", ""()
 ; OPT-NEXT:            to label %[[BB1:.*]] []
 ; OPT:       [[BB1]]:
-; OPT-NEXT:    callbr void asm "", "v,!i"(i32 [[TMP0]])
+; OPT-NEXT:    callbr void asm "", "r,!i"(i32 [[TMP0]])
 ; OPT-NEXT:            to label %[[BB3:.*]] [label %BB2]
 ; OPT:       [[BB2:.*:]]
 ; OPT-NEXT:    callbr void asm "", ""()
@@ -81,7 +81,7 @@ define void @nested_inf_loop_callbr(i32 %0, i32 %1) {
 ; OPT:       [[BB4]]:
 ; OPT-NEXT:    br i1 true, label %[[TRANSITIONBLOCK:.*]], label %[[DUMMYRETURNBLOCK:.*]]
 ; OPT:       [[TRANSITIONBLOCK]]:
-; OPT-NEXT:    callbr void asm "", "v,!i"(i32 [[TMP1]])
+; OPT-NEXT:    callbr void asm "", "r,!i"(i32 [[TMP1]])
 ; OPT-NEXT:            to label %[[BB3]] [label %BB4]
 ; OPT:       [[BB3]]:
 ; OPT-NEXT:    callbr void asm "", ""()
@@ -97,6 +97,7 @@ define void @nested_inf_loop_callbr(i32 %0, i32 %1) {
 ; ISA-NEXT:  .LBB1_1: ; %BB1
 ; ISA-NEXT:    ; =>This Loop Header: Depth=1
 ; ISA-NEXT:    ; Child Loop BB1_4 Depth 2
+; ISA-NEXT:    v_readfirstlane_b32 s4, v0
 ; ISA-NEXT:    ;;#ASMSTART
 ; ISA-NEXT:    ;;#ASMEND
 ; ISA-NEXT:  .LBB1_2: ; %BB3
@@ -117,6 +118,7 @@ define void @nested_inf_loop_callbr(i32 %0, i32 %1) {
 ; ISA-NEXT:    ; Label of block must be emitted
 ; ISA-NEXT:  ; %bb.5: ; %TransitionBlock
 ; ISA-NEXT:    ; in Loop: Header=BB1_4 Depth=2
+; ISA-NEXT:    v_readfirstlane_b32 s4, v1
 ; ISA-NEXT:    ;;#ASMSTART
 ; ISA-NEXT:    ;;#ASMEND
 ; ISA-NEXT:  ; %bb.6: ; %TransitionBlock.target.BB3
@@ -130,13 +132,13 @@ BB:
   callbr void asm "", ""() to label %BB1 []
 
 BB1:
-  callbr void asm "", "v,!i"(i32 %0) to label %BB3 [label %BB2]
+  callbr void asm "", "r,!i"(i32 %0) to label %BB3 [label %BB2]
 
 BB2:
   callbr void asm "", ""() to label %BB4 []
 
 BB4:
-  callbr void asm "", "v,!i"(i32 %1) to label %BB3 [label %BB4]
+  callbr void asm "", "r,!i"(i32 %1) to label %BB3 [label %BB4]
 
 BB3:
   callbr void asm "", ""() to label %BB1 []
