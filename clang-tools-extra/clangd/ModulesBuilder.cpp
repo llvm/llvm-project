@@ -1157,6 +1157,14 @@ private:
   /// Runs GC once for the cache root owning a project root.
   void garbageCollectModuleCacheForProjectRoot(PathRef ProjectRoot);
 
+  /// Returns true if the published module file of a direct dependency of
+  /// `ModuleName` is newer than the published module file of `ModuleName`
+  /// itself. C++20 named modules don't record the signatures of the modules
+  /// they import, so the AST reader can't detect this kind of staleness.
+  bool hasNewerDependency(PathRef PublishedModuleFilePath,
+                          PathRef RequiredSource, PathRef ModuleUnitFileName,
+                          CachingProjectModules &MDB, const ThreadsafeFS& TFS);
+
   ModuleFileCache Cache;
   ObservedModuleFiles ObservedFiles;
   ModuleNameToSourceCache ProjectModulesCache;
@@ -1235,6 +1243,46 @@ void ModulesBuilder::ModulesBuilderImpl::getPrebuiltModuleFile(
   }
 }
 
+bool ModulesBuilder::ModulesBuilderImpl::hasNewerDependency(
+    PathRef PublishedModuleFilePath,
+    PathRef RequiredSource, PathRef ModuleUnitFileName,
+    CachingProjectModules &MDB, const ThreadsafeFS& TFS) {
+  std::vector<std::string> Deps = MDB.getRequiredModules(ModuleUnitFileName);
+  if (Deps.empty())
+    return false;
+
+  auto ErrOrStatus = TFS.view(std::nullopt)->status(PublishedModuleFilePath);
+  
+  // Without a published module file there is nothing to compare against, so
+  // treat any cached copy as stale.
+  if (!ErrOrStatus)
+    return true;
+
+  llvm::vfs::Status& Status = ErrOrStatus.get();
+  
+  const auto ModuleTime = Status.getLastModificationTime();
+
+  return llvm::any_of(Deps, [&](const std::string &Dep) {
+    std::string DepSource = MDB.getSourceForModuleName(Dep, RequiredSource);
+    if (DepSource.empty())
+      return false;
+    auto DepCmd = getCDB().getCompileCommand(DepSource);
+    if (!DepCmd)
+      return false;
+    const std::string DepPublishedPath = getPublishedModuleFilePath(
+        Dep, getModuleFilesDirectory(DepSource, *DepCmd, getCDB()));
+    auto ErrOrDepStatus = TFS.view(std::nullopt)->status(DepPublishedPath);
+    
+    // Dependencies that clangd didn't publish, like module files from the
+    // build system, are validated by the AST reader instead.
+    if (!ErrOrDepStatus)
+      return false;
+
+    llvm::vfs::Status& DepStatus = ErrOrDepStatus.get();
+    return DepStatus.getLastModificationTime() > ModuleTime;
+  });
+}
+
 llvm::Error ModulesBuilder::ModulesBuilderImpl::getOrBuildModuleFile(
     PathRef RequiredSource, StringRef ModuleName, const ThreadsafeFS &TFS,
     CachingProjectModules &MDB, ReusablePrerequisiteModules &BuiltModuleFiles) {
@@ -1267,6 +1315,7 @@ llvm::Error ModulesBuilder::ModulesBuilderImpl::getOrBuildModuleFile(
 
     std::string ReqFileName =
         MDB.getSourceForModuleName(ReqModuleName, RequiredSource);
+
     auto Cmd = getCDB().getCompileCommand(ReqFileName);
     if (!Cmd)
       return llvm::createStringError(
@@ -1284,11 +1333,15 @@ llvm::Error ModulesBuilder::ModulesBuilderImpl::getOrBuildModuleFile(
     auto SourceLock = ScopedModuleSourceLock::acquire(ReqFileName, getCDB());
     if (!SourceLock)
       return SourceLock.takeError();
+    
+    const bool DependencyRebuilt =
+        hasNewerDependency(PublishedModuleFilePath,
+                           RequiredSource, ReqFileName, MDB, TFS);
 
     std::shared_ptr<const ModuleFile> Cached =
         Cache.getModule(ReqModuleName, ReqFileName, CommandHash);
 
-    if (Cached) {
+    if (Cached && !DependencyRebuilt) {
       if (IsModuleFileUpToDate(Cached->getModuleFilePath(), BuiltModuleFiles,
                                TFS.view(std::nullopt))) {
         log("Reusing module {0} from {1}", ReqModuleName,
@@ -1296,11 +1349,14 @@ llvm::Error ModulesBuilder::ModulesBuilderImpl::getOrBuildModuleFile(
         BuiltModuleFiles.addModuleFile(std::move(Cached));
         continue;
       }
-      Cache.remove(ReqModuleName, ReqFileName, CommandHash);
     }
 
+    if (Cached)
+      Cache.remove(ReqModuleName, ReqFileName, CommandHash);
+
     if (llvm::sys::fs::exists(PublishedModuleFilePath)) {
-      if (IsModuleFileUpToDate(PublishedModuleFilePath, BuiltModuleFiles,
+      if (!DependencyRebuilt &&
+          IsModuleFileUpToDate(PublishedModuleFilePath, BuiltModuleFiles,
                                TFS.view(std::nullopt))) {
         log("Reusing persistent module {0} from {1}", ReqModuleName,
             PublishedModuleFilePath);
