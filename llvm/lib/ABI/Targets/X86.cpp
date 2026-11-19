@@ -659,7 +659,7 @@ X86_64TargetInfo::classifyArgumentType(const Type *Ty, unsigned FreeIntRegs,
             return ArgInfo::getConservativeExtend(Ty);
           }
           break;
-        case SmallIntABICompatKind::Clang:
+        case SmallIntABICompatKind::Clang23:
           return ArgInfo::getExtend(Ty);
         case SmallIntABICompatKind::Both:
           return ArgInfo::getConservativeExtend(Ty);

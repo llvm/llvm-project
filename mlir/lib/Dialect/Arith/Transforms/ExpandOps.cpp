@@ -379,10 +379,10 @@ struct F8E8M0ExtFOpConverter : public OpRewritePattern<arith::ExtFOp> {
                      : false;
     if (!NoNaN) {
       Value cF8NaN = createConst(op.getLoc(), i8Ty, 0xff, rewriter);
-      Value cF32NaN = createConst(op.getLoc(), i32Ty, 0xffffffff, rewriter);
+      Value cF32NaN = createConst(op.getLoc(), i32Ty, 0x7fc00000, rewriter);
       Value isNan =
           arith::CmpIOp::create(b, arith::CmpIPredicate::eq, bitcast, cF8NaN);
-      // select for NaNs
+      // select for NaNs: the quiet NaN, as the constant folder gives
       f32Bits = arith::SelectOp::create(b, isNan, cF32NaN, f32Bits);
     }
 
