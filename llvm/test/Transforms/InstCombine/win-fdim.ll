@@ -33,4 +33,4 @@ declare double @fdim(double, double) #0
 declare float @fdimf(float, float) #0
 declare fp128 @fdiml(fp128, fp128) #0
 
-attributes #0 = { memory(none) }
+attributes #0 = { memory(none) willreturn }
