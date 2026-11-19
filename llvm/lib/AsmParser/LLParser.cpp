@@ -6100,6 +6100,10 @@ bool LLParser::parseDILayerLocList(MDNode *&Result, bool IsDistinct) {
   return false;
 }
 
+bool LLParser::parseDIDbgLoc(MDNode *&Result, bool IsDistinct) {
+  llvm_unreachable("not implemented");
+}
+
 /// parseDIAssignID:
 ///   ::= distinct !DIAssignID()
 bool LLParser::parseDIAssignID(MDNode *&Result, bool IsDistinct) {

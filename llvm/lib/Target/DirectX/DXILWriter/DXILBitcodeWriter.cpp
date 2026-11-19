@@ -327,6 +327,10 @@ private:
                                    unsigned &Abbrev) {
     llvm_unreachable("DXIL cannot contain MDFunctionLocalContext Nodes");
   }
+  void writeDIDbgLoc(const DIDbgLoc *N, SmallVectorImpl<uint64_t> &Record,
+                     unsigned &Abbrev) {
+    llvm_unreachable("DXIL cannot contain DIDbgLoc Nodes");
+  }
   unsigned createMetadataStringsAbbrev();
   void writeMetadataStrings(ArrayRef<const Metadata *> Strings,
                             SmallVectorImpl<uint64_t> &Record);

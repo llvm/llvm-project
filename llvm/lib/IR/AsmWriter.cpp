@@ -2237,6 +2237,11 @@ static void writeMDFunctionLocalContext(raw_ostream &Out,
   Out << ")";
 }
 
+static void writeDIDbgLoc(raw_ostream &Out, const DIDbgLoc *DL,
+                          AsmWriterContext &WriterCtx) {
+  llvm_unreachable("not implemented");
+}
+
 static void writeDILocation(raw_ostream &Out, const DILocation *DL,
                             AsmWriterContext &WriterCtx) {
   Out << "!DILocation(";
