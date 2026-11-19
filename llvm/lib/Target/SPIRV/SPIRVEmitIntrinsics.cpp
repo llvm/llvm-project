@@ -775,6 +775,7 @@ static Type *getPointeeTypeByCallInst(StringRef DemangledName,
   // OpenCL get_fence only has void* overloads.
   if (OpIdx == 0 && (Name == "printf" || Name == "get_fence"))
     return IntegerType::getInt8Ty(CalledF->getContext());
+  // OpCaptureEventProfilingInfo requires Value to point to an 8-bit integer.
   if (OpIdx == 2 && (Name == "capture_event_profiling_info" ||
                      Name == "__spirv_CaptureEventProfilingInfo"))
     return IntegerType::getInt8Ty(CalledF->getContext());
