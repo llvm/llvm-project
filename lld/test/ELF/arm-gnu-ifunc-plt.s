@@ -45,7 +45,7 @@
 // DISASM-NEXT: Disassembly of section .plt:
 // DISASM-EMPTY:
 // DISASM-NEXT: <.plt>:
-// DISASM-NEXT:    20200:       str     lr, [sp, #-4]!
+// DISASM-NEXT:    20200:       push    {lr}
 // DISASM-NEXT:    20204:       add     lr, pc, #0, #12
 // DISASM-NEXT:    20208:       add     lr, lr, #32
 // DISASM-NEXT:    2020c:       ldr     pc, [lr, #236]!

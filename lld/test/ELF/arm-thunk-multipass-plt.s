@@ -80,7 +80,7 @@ preemptible2:
 // CHECK-PLT: Disassembly of section .plt:
 // CHECK-PLT-EMPTY:
 // CHECK-PLT-NEXT: 00d00020 <.plt>:
-// CHECK-PLT-NEXT:   d00020: str     lr, [sp, #-4]!
+// CHECK-PLT-NEXT:   d00020: push    {lr}
 // CHECK-PLT-NEXT:           add     lr, pc, #0, #12
 // CHECK-PLT-NEXT:           add     lr, lr, #32, #20
 // CHECK-PLT-NEXT:           ldr     pc, [lr, #148]!

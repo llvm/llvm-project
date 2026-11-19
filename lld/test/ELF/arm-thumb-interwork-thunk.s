@@ -290,7 +290,7 @@ _start:
 // CHECK-ARM-PLT: Disassembly of section .plt:
 // CHECK-ARM-PLT-EMPTY:
 // CHECK-ARM-PLT-NEXT: 00001610 <.plt>:
-// CHECK-ARM-PLT-NEXT:     1610:             str     lr, [sp, #-4]!
+// CHECK-ARM-PLT-NEXT:     1610:             push    {lr}
 // CHECK-ARM-PLT-NEXT:     1614:             add     lr, pc, #0, #12
 // CHECK-ARM-PLT-NEXT:     1618:             add     lr, lr, #0, #20
 // CHECK-ARM-PLT-NEXT:     161c:             ldr     pc, [lr, #672]!

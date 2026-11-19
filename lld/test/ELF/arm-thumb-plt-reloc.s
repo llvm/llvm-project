@@ -72,7 +72,7 @@ _start:
 // DSO: Disassembly of section .plt:
 // DSO-EMPTY:
 // DSO-NEXT: <.plt>:
-// DSO-NEXT:     10230:       e52de004        str     lr, [sp, #-4]!
+// DSO-NEXT:     10230:       e52de004        push    {lr}
 // (0x10234 + 8) + (0 RoR 12) + (32 RoR 20 = 0x20000) + 164 = 0x302e0 = .got.plt[2]
 // DSO-NEXT:     10234:       e28fe600        add     lr, pc, #0, #12
 // DSO-NEXT:     10238:       e28eea20        add     lr, lr, #32, #20
