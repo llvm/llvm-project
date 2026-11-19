@@ -1733,6 +1733,12 @@ void Sema::checkFortifiedLibcArgument(FunctionDecl *FD, CallExpr *TheCall) {
   // Operate on the raw two's-complement bit pattern so that negative literals
   // (which convert to large unsigned mode_t values) are caught.
   llvm::APInt RawValue = R.Val.getInt();
+  // 0777 requires 9 bits; a mode_t with 9 or fewer bits cannot have unused bits
+  // set outside 0777, and constructing the mask would assert for smaller
+  // widths.
+  constexpr unsigned MinBitWidthForPermissionsFlag = 10;
+  if (RawValue.getBitWidth() < MinBitWidthForPermissionsFlag)
+    return;
   llvm::APInt Mask(RawValue.getBitWidth(), 0777);
   llvm::APInt Extra = RawValue & ~Mask;
   if (Extra == 0)
