@@ -2,7 +2,7 @@
 // RUN:   -intrinsic-feature-prefix=test -intrinsic-feature-namespace=TestTarget \
 // RUN:   -I %p/../../include %s | FileCheck %s
 
-// Check that only overload types are stored, including every overload parameter.
+// Check that only the overload types are stored for each intrinsic.
 // CHECK-DAG: MVT::v4f32, // int_test_dependent_float
 // CHECK-DAG: MVT::i32, // int_test_dependent_scalar
 // CHECK-DAG: MVT::nxv4f32, // int_test_dependent_scalable
