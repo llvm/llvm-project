@@ -705,6 +705,15 @@ add_header_macro(
 )
 
 add_header_macro(
+  ar
+  ../libc/include/ar.yaml
+  ar.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-types.struct_ar_hdr
+)
+
+add_header_macro(
   elf
   ../libc/include/elf.yaml
   elf.h

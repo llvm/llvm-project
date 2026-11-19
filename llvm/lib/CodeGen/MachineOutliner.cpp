@@ -773,7 +773,9 @@ void MachineOutliner::findCandidates(
     InstructionMapper &Mapper,
     std::vector<std::unique_ptr<OutlinedFunction>> &FunctionList) {
   FunctionList.clear();
-  SuffixTree ST(Mapper.UnsignedVec, Opts->outliner_leaf_descendants);
+  // IllegalInstrNumber is decremented after assigning each unique separator.
+  SuffixTree ST(Mapper.UnsignedVec, Opts->outliner_leaf_descendants,
+                /*BoundaryStart=*/Mapper.IllegalInstrNumber + 1);
 
   // First, find all of the repeated substrings in the tree of minimum length
   // 2.
