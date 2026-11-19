@@ -15,6 +15,46 @@ void local_assign_both_span() {
   q = p;
 }
 
+void two_declarators_one_statement() {
+  int tmp;
+  int *p = new int[10], *q = new int[10]; // expected-warning{{'p' is an unsafe pointer used for buffer access}} expected-warning{{'q' is an unsafe pointer used for buffer access}}
+  tmp = p[4]; // expected-note{{used in buffer access here}}
+  tmp = q[4]; // expected-note{{used in buffer access here}}
+}
+
+void declarators_used_in_reverse_order() {
+  int tmp;
+  int *p = new int[10], *q = new int[10]; // expected-warning{{'p' is an unsafe pointer used for buffer access}} expected-warning{{'q' is an unsafe pointer used for buffer access}}
+  tmp = q[4]; // expected-note{{used in buffer access here}}
+  tmp = p[4]; // expected-note{{used in buffer access here}}
+}
+
+void three_declarators_one_statement() {
+  int tmp;
+  int *a = new int[10], k = 1, *b = new int[10]; // expected-warning{{'a' is an unsafe pointer used for buffer access}} expected-warning{{'b' is an unsafe pointer used for buffer access}}
+  tmp = a[k]; // expected-note{{used in buffer access here}}
+  tmp = b[k]; // expected-note{{used in buffer access here}}
+}
+
+void only_one_declarator_unsafe() {
+  int *p = new int[10], *q = new int[10]; // expected-warning{{'q' is an unsafe pointer used for buffer access}}
+  int tmp = q[4]; // expected-note{{used in buffer access here}}
+  *p = tmp;
+}
+
+int *global_p = nullptr, *global_q = nullptr; // expected-warning{{'global_p' is an unsafe pointer used for buffer access}} expected-warning{{'global_q' is an unsafe pointer used for buffer access}}
+void global_declarators() {
+  int tmp = global_p[4]; // expected-note{{used in buffer access here}}
+  tmp = global_q[4];     // expected-note{{used in buffer access here}}
+}
+
+// FIXME: The expanded parameters of a pack share their source locations, so
+// their uses are still reported under one warning.
+template <typename... T> void parameter_pack(T *...ps) { // expected-warning{{'ps' is an unsafe pointer used for buffer access}}
+  int tmp = (ps[4] + ...); // expected-note2{{used in buffer access here}}
+}
+template void parameter_pack<int, int>(int *, int *);
+
 void local_assign_rhs_span() {
   int tmp;
   int* p = new int[10];
