@@ -116,6 +116,8 @@ public:
   /// Check if Opcode corresponds to a call instruction that should be marked
   /// with the NOTOC relocation.
   bool isNoTOCCallInstr(const MCInst &MI) const;
+
+  void setLittleEndian(bool little_endian) { IsLittleEndian = little_endian; }
 };
 
 } // namespace llvm
