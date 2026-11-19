@@ -396,17 +396,16 @@ bool AMDGPUPostLegalizerCombinerImpl::matchCombine_s_mul_u64(
   return false;
 }
 
-void AMDGPUPostLegalizerCombinerImpl::applyUBFEToAnd(
-    MachineInstr &MI, unsigned WidthVal) const {
+void AMDGPUPostLegalizerCombinerImpl::applyUBFEToAnd(MachineInstr &MI,
+                                                     unsigned WidthVal) const {
   Register Dst = MI.getOperand(0).getReg();
   Register Src = MI.getOperand(2).getReg();
 
   LLT DstTy = MRI.getType(Dst);
   unsigned DstBits = DstTy.getSizeInBits();
 
-  APInt Mask = (WidthVal >= DstBits)
-                   ? APInt::getAllOnes(DstBits)
-                   : APInt::getLowBitsSet(DstBits, WidthVal);
+  APInt Mask = (WidthVal >= DstBits) ? APInt::getAllOnes(DstBits)
+                                     : APInt::getLowBitsSet(DstBits, WidthVal);
 
   B.setInstrAndDebugLoc(MI);
   auto MaskCst = B.buildConstant(DstTy, Mask);
