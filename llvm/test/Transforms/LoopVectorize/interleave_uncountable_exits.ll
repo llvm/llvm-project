@@ -94,8 +94,7 @@ define void @loop_contains_store_condition_load_has_single_user(ptr dereferencea
 ; VF1IC2-NEXT:    [[TMP8:%.*]] = freeze i1 [[TMP6]]
 ; VF1IC2-NEXT:    [[TMP9:%.*]] = freeze i1 [[TMP7]]
 ; VF1IC2-NEXT:    [[TMP10:%.*]] = xor i1 [[TMP8]], true
-; VF1IC2-NEXT:    [[TMP11:%.*]] = or i1 [[TMP9]], [[TMP8]]
-; VF1IC2-NEXT:    [[TMP12:%.*]] = xor i1 [[TMP11]], true
+; VF1IC2-NEXT:    [[TMP12:%.*]] = xor i1 [[TMP9]], true
 ; VF1IC2-NEXT:    br i1 [[TMP10]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; VF1IC2:       [[PRED_STORE_IF]]:
 ; VF1IC2-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw i16, ptr [[ARRAY]], i64 [[TMP0]]
