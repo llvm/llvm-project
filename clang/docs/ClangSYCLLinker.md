@@ -36,7 +36,7 @@ USAGE: clang-sycl-linker [options] <input bitcode files>
 
 OPTIONS:
   --arch=<arch>           The device architecture
-  --code=<code>           Specify a real device to compile ahead of time for. Can be repeated. Without it, a real --arch is compiled ahead of time and a virtual one is kept for just-in-time compilation.
+  --code=<device>         Specify a real device to compile ahead of time for. Can be repeated. Without it, a real --arch is compiled ahead of time and a virtual one is kept for just-in-time compilation.
   --dry-run               Print generated commands without running.
   -help-hidden            Display all available options
   -help                   Display available options (--help-hidden for more)

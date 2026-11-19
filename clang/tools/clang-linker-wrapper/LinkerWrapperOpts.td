@@ -81,7 +81,7 @@ def triple_EQ : Joined<["--"], "triple=">,
   Flags<[DeviceOnlyOption, HelpHidden]>, MetaVarName<"<triple>">,
   HelpText<"The device target triple">;
 def code_EQ : Joined<["--"], "code=">,
-  Flags<[DeviceOnlyOption, HelpHidden]>, MetaVarName<"<code>">,
+  Flags<[DeviceOnlyOption, HelpHidden]>, MetaVarName<"<device>">,
   HelpText<"A real device to compile an image ahead of time for">;
 def whole_program : Flag<["--"], "whole-program">,
   Flags<[DeviceOnlyOption, HelpHidden]>,

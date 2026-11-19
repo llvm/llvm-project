@@ -290,8 +290,8 @@ LLVM_ABI StringRef getOffloadKindName(OffloadKind Name);
 /// can be linked into the group of device images \p Requested.
 ///
 /// - A generic device image can be linked into any group.
-/// - Otherwise, both must list the same real devices in "code", and have the
-///   same architecture unless the group is generic.
+/// - Otherwise, both must have identical "code" lists, and the same
+///   architecture unless the group is generic.
 ///
 ///   Device image to add       Group to link it into              Result
 ///   (Provided)                (Requested)

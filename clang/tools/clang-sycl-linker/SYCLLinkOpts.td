@@ -48,7 +48,7 @@ def arch_EQ : Joined<["--", "-"], "arch=">,
               HelpText<"The device architecture">;
 def code_EQ : Joined<["--", "-"], "code=">,
               Flags<[LinkerOnlyOption]>,
-              MetaVarName<"<code>">,
+              MetaVarName<"<device>">,
               HelpText<"Specify a real device to compile ahead of time for. "
                        "Can be repeated. Without it, a real --arch is compiled "
                        "ahead of time and a virtual one is kept for "
