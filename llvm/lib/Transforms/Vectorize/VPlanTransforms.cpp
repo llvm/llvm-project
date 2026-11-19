@@ -6570,15 +6570,6 @@ void VPlanTransforms::expandMaskBeforeFirst(VPlan &Plan, VPCostContext &Ctx,
       if (!match(&R,
                  m_WidenIntrinsic<Intrinsic::mask_beforefirst>(m_VPValue(X))))
         continue;
-
-      VPBuilder Builder(&R);
-      DebugLoc DL = R.getDebugLoc();
-      if (Range.Start.isScalar()) {
-        R.getVPSingleValue()->replaceAllUsesWith(Builder.createNot(X, DL);
-        R.eraseFromParent();
-        continue;
-      }
-
       auto *BeforeFirst = cast<VPWidenIntrinsicRecipe>(&R);
       Type *Ty = Plan.getVF().getScalarType();
       auto IsCheap = [&](ElementCount VF) {
@@ -6593,9 +6584,12 @@ void VPlanTransforms::expandMaskBeforeFirst(VPlan &Plan, VPCostContext &Ctx,
                Ctx.TTI.getIntrinsicInstrCost(CttzElts, Ctx.CostKind) +
                    Ctx.TTI.getIntrinsicInstrCost(ActiveLaneMask, Ctx.CostKind);
       };
-      if (LoopVectorizationPlanner::getDecisionAndClampRange(IsCheap, Range))
+      if (!Range.Start.isScalar() &&
+          LoopVectorizationPlanner::getDecisionAndClampRange(IsCheap, Range))
         continue;
 
+      VPBuilder Builder(BeforeFirst);
+      DebugLoc DL = BeforeFirst->getDebugLoc();
       VPValue *FirstActive = Builder.createScalarZExtOrTrunc(
           Builder.createFirstActiveLane(X, DL), Ty, DL);
       VPValue *PartStart = Builder.createOverflowingOp(

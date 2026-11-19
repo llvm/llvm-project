@@ -93,8 +93,16 @@ define void @loop_contains_store_condition_load_has_single_user(ptr dereferencea
 ; VF1IC2-NEXT:    [[TMP7:%.*]] = icmp sgt i16 [[TMP5]], 500
 ; VF1IC2-NEXT:    [[TMP8:%.*]] = freeze i1 [[TMP6]]
 ; VF1IC2-NEXT:    [[TMP9:%.*]] = freeze i1 [[TMP7]]
-; VF1IC2-NEXT:    [[TMP10:%.*]] = xor i1 [[TMP8]], true
-; VF1IC2-NEXT:    [[TMP12:%.*]] = xor i1 [[TMP9]], true
+; VF1IC2-NEXT:    [[TMP22:%.*]] = icmp eq i1 [[TMP9]], false
+; VF1IC2-NEXT:    [[TMP11:%.*]] = zext i1 [[TMP22]] to i64
+; VF1IC2-NEXT:    [[TMP23:%.*]] = add i64 1, [[TMP11]]
+; VF1IC2-NEXT:    [[TMP24:%.*]] = icmp eq i1 [[TMP8]], false
+; VF1IC2-NEXT:    [[TMP25:%.*]] = zext i1 [[TMP24]] to i64
+; VF1IC2-NEXT:    [[TMP26:%.*]] = add i64 0, [[TMP25]]
+; VF1IC2-NEXT:    [[TMP27:%.*]] = icmp ne i64 [[TMP25]], 1
+; VF1IC2-NEXT:    [[TMP29:%.*]] = select i1 [[TMP27]], i64 [[TMP26]], i64 [[TMP23]]
+; VF1IC2-NEXT:    [[TMP10:%.*]] = icmp ult i64 0, [[TMP29]]
+; VF1IC2-NEXT:    [[TMP12:%.*]] = icmp ult i64 1, [[TMP29]]
 ; VF1IC2-NEXT:    br i1 [[TMP10]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; VF1IC2:       [[PRED_STORE_IF]]:
 ; VF1IC2-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw i16, ptr [[ARRAY]], i64 [[TMP0]]
@@ -117,14 +125,6 @@ define void @loop_contains_store_condition_load_has_single_user(ptr dereferencea
 ; VF1IC2-NEXT:    [[TMP21:%.*]] = or i1 [[TMP19]], [[TMP20]]
 ; VF1IC2-NEXT:    br i1 [[TMP21]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; VF1IC2:       [[MIDDLE_BLOCK]]:
-; VF1IC2-NEXT:    [[TMP22:%.*]] = icmp eq i1 [[TMP9]], false
-; VF1IC2-NEXT:    [[TMP23:%.*]] = zext i1 [[TMP22]] to i64
-; VF1IC2-NEXT:    [[TMP24:%.*]] = add i64 1, [[TMP23]]
-; VF1IC2-NEXT:    [[TMP25:%.*]] = icmp eq i1 [[TMP8]], false
-; VF1IC2-NEXT:    [[TMP26:%.*]] = zext i1 [[TMP25]] to i64
-; VF1IC2-NEXT:    [[TMP27:%.*]] = add i64 0, [[TMP26]]
-; VF1IC2-NEXT:    [[TMP28:%.*]] = icmp ne i64 [[TMP26]], 1
-; VF1IC2-NEXT:    [[TMP29:%.*]] = select i1 [[TMP28]], i64 [[TMP27]], i64 [[TMP24]]
 ; VF1IC2-NEXT:    [[TMP30:%.*]] = select i1 false, i64 [[TMP1]], i64 [[TMP0]]
 ; VF1IC2-NEXT:    [[TMP31:%.*]] = add i64 [[TMP30]], [[TMP29]]
 ; VF1IC2-NEXT:    [[TMP32:%.*]] = icmp eq i64 [[TMP31]], 20
