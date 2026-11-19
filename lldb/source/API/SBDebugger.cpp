@@ -68,6 +68,10 @@ using namespace lldb_private;
 
 static llvm::ManagedStatic<SystemLifetimeManager> g_debugger_lifetime;
 
+SBInputReader::SBInputReader() = default;
+
+SBInputReader::~SBInputReader() = default;
+
 SBError SBInputReader::Initialize(
     lldb::SBDebugger &sb_debugger,
     unsigned long (*callback)(void *, lldb::SBInputReader *,

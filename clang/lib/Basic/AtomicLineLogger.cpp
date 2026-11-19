@@ -54,7 +54,8 @@ static int openLogFile(StringRef Path) {
 #else
   int FD = -1;
   std::error_code EC = llvm::sys::fs::openFileForWrite(
-      Path, FD, llvm::sys::fs::CD_OpenAlways, llvm::sys::fs::OF_Append);
+      Path, FD, llvm::sys::fs::CD_OpenAlways,
+      llvm::sys::fs::OF_Append | llvm::sys::fs::OF_Text);
   if (EC) {
     llvm::errs() << "warning: unable to open log file '" << Path
                  << "': " << EC.message() << "\n";

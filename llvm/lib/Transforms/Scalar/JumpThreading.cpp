@@ -20,6 +20,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/CFG.h"
@@ -275,6 +276,7 @@ bool JumpThreadingPass::runImpl(Function &F_, FunctionAnalysisManager *FAM_,
   TTI = TTI_;
   LVI = LVI_;
   AA = AA_;
+  AC = FAM->getCachedResult<AssumptionAnalysis>(F_);
   DTU = std::move(DTU_);
   BFI = BFI_;
   BPI = BPI_;
@@ -2036,6 +2038,12 @@ static void remapSourceAtoms(ValueToValueMapTy &VM, BasicBlock::iterator Begin,
     RemapSourceAtom(&*It, VM);
 }
 
+/// Register \p New in \p AC if it is an assume.
+static void registerClonedAssume(Instruction &New, AssumptionCache &AC) {
+  if (auto *Assume = dyn_cast<AssumeInst>(&New))
+    AC.registerAssumption(Assume);
+}
+
 /// Clone instructions in range [BI, BE) to NewBB.  For PHI nodes, we only clone
 /// arguments that come from PredBB.  Return the map from the variables in the
 /// source basic block to the variables in the newly created basic block.
@@ -2104,6 +2112,8 @@ void JumpThreadingPass::cloneInstructions(ValueToValueMapTy &ValueMapping,
     New->setName(BI->getName());
     New->insertInto(NewBB, NewBB->end());
     ValueMapping[&*BI] = New;
+    if (AC)
+      registerClonedAssume(*New, *AC);
     adaptNoAliasScopes(New, ClonedScopes, ClonedDomains, "thread", Context);
 
     CloneAndRemapDbgInfo(New, &*BI);
@@ -2759,6 +2769,9 @@ bool JumpThreadingPass::duplicateCondBranchOnPHIIntoPred(
       for (unsigned i = 0, e = New->getNumOperands(); i != e; ++i)
         if (BasicBlock *SuccBB = dyn_cast<BasicBlock>(New->getOperand(i)))
           Updates.push_back({DominatorTree::Insert, PredBB, SuccBB});
+
+      if (AC)
+        registerClonedAssume(*New, *AC);
     }
   }
 

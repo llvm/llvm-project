@@ -1003,7 +1003,6 @@ private:
 
   ExecutionSession &ES;
   enum { Open, Closing, Closed } State = Open;
-  std::mutex GeneratorsMutex;
   SymbolTable Symbols;
   UnmaterializedInfosMap UnmaterializedInfos;
   MaterializingInfosMap MaterializingInfos;
