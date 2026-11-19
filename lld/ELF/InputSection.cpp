@@ -287,6 +287,18 @@ void InputSectionBase::parseCompressedHeader(Ctx &ctx) {
   compressedSize = size;
   size = hdr->ch_size;
   addralign = std::max<uint32_t>(hdr->ch_addralign, 1);
+
+  // SHF_ALLOC | SHF_COMPRESSED sections are valid in relocatable object files,
+  // e.g. `.debug_gdb_scripts` assembled with -gz. We decompress them eagerly
+  // because `compressedSize` lives in a union with `jumpInstrMod` and
+  // `relaxAux`, which relocation code reads for SHF_ALLOC sections. It is not
+  // sufficient to guard against SHF_COMPRESSED downstream because `compressed`
+  // may be cleared by copyRelocations or getErrorPlace before the section is
+  // written. Lazy decompression will therefore lead to a crash.
+  if (flags & SHF_ALLOC) {
+    decompress();
+    jumpInstrMod = nullptr;
+  }
 }
 
 InputSection *InputSectionBase::getLinkOrderDep() const {
@@ -1201,6 +1213,9 @@ void InputSection::relocate(Ctx &ctx, uint8_t *buf, uint8_t *bufEnd) {
     adjustSplitStackFunctionPrologues<ELFT>(ctx, buf, bufEnd);
 
   if (flags & SHF_ALLOC) {
+    // SHF_ALLOC sections are decompressed in parseCompressedHeader, which keeps
+    // `compressedSize` from aliasing `jumpInstrMod` or `relaxAux`.
+    assert(!compressed);
     ctx.target->relocateAlloc(*this, buf);
     return;
   }
