@@ -10,17 +10,7 @@ macros:
     macro_header: sys-sysmacros-macros.h
 enums: []
 objects: []
-functions:
-  - name: major
-    return_type: unsigned int
-    arguments:
-      - type: dev_t
-  - name: minor
-    return_type: unsigned int
-    arguments:
-      - type: dev_t
-  - name: makedev
-    return_type: dev_t
-    arguments:
-      - type: unsigned int
-      - type: unsigned int
+# The three are macros and nothing else, so that a caller with a variable of
+# the same name still reaches them. The functions are still in the library for
+# anything already linked against them.
+functions: []
