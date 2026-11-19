@@ -8,7 +8,6 @@ add_llvm_fuzzer(mlir-opt-fuzzer
 )
 mlir_target_link_libraries(mlir-opt-fuzzer
   PUBLIC
-  MLIRFuzzMutate
   MLIRIR
   MLIRPass
   MLIRRegisterAllDialects
