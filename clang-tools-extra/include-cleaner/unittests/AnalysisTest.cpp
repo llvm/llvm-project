@@ -445,6 +445,24 @@ TEST_F(AnalyzeTest, ImplicitOperatorNewDeleteNotUnused) {
   EXPECT_THAT(Results.Unused, testing::IsEmpty());
 }
 
+TEST_F(AnalyzeTest, ForwardDeclaredTypedefAggregateInit) {
+  Inputs.Code = R"cpp(
+#include "fwd.h"
+#include "def.h"
+
+static const Bar b = { 1 };
+)cpp";
+  Inputs.ExtraFiles["fwd.h"] = guard("typedef struct Foo Bar;");
+  Inputs.ExtraFiles["def.h"] = guard("struct Foo { int a; };");
+  TestAST AST(Inputs);
+  auto Decls = AST.context().getTranslationUnitDecl()->decls();
+  auto Results =
+      analyze(std::vector<Decl *>{Decls.begin(), Decls.end()},
+              PP.MacroReferences, PP.Includes, &PI, AST.preprocessor());
+  EXPECT_THAT(Results.Unused, testing::IsEmpty());
+  EXPECT_THAT(Results.Missing, testing::IsEmpty());
+}
+
 TEST(FixIncludes, Basic) {
   llvm::StringRef Code = R"cpp(#include "d.h"
 #include "a.h"
