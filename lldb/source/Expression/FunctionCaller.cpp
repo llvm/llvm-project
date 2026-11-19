@@ -289,7 +289,7 @@ bool FunctionCaller::FetchFunctionResults(ExecutionContext &exe_ctx,
   // FIXME: How does clang tell us there's no return value?  We need to handle
   // that case.
   // FIXME: Create our ThreadPlanCallFunction with the return CompilerType, and
-  // then use GetReturnValueObject
+  // then use GetReturnValue
   // to fetch the value.  That way we can fetch any values we need.
 
   Log *log(GetLog(LLDBLog::Expressions | LLDBLog::Step));

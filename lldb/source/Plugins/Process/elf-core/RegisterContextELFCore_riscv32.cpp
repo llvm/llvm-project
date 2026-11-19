@@ -38,17 +38,16 @@ static std::vector<uint32_t> CopyRegisterListToVector(const uint32_t *regs) {
 
 std::unique_ptr<RegisterContextELFCore_riscv32>
 RegisterContextELFCore_riscv32::Create(Thread &thread, const ArchSpec &arch,
-                                         const DataExtractor &gpregset,
-                                         llvm::ArrayRef<CoreNote> notes) {
+                                       const DataExtractor &gpregset,
+                                       llvm::ArrayRef<CoreNote> notes) {
   return std::unique_ptr<RegisterContextELFCore_riscv32>(
       new RegisterContextELFCore_riscv32(
-          thread, std::make_unique<RegisterInfoDynamic_riscv32>(arch),
-          gpregset, notes));
+          thread, std::make_unique<RegisterInfoDynamic_riscv32>(arch), gpregset,
+          notes));
 }
 
 RegisterContextELFCore_riscv32::RegisterContextELFCore_riscv32(
-    Thread &thread,
-    std::unique_ptr<RegisterInfoDynamic_riscv32> register_info,
+    Thread &thread, std::unique_ptr<RegisterInfoDynamic_riscv32> register_info,
     const DataExtractor &gpregset, llvm::ArrayRef<CoreNote> notes)
     : RegisterContext(thread, 0), m_reg_infos_up(std::move(register_info)) {
   // Compute the maximum register counts for GPR, FPR, and CSR.
@@ -162,8 +161,8 @@ RegisterContextELFCore_riscv32::GetRegisterSet(size_t set) {
   return m_reg_infos_up->GetRegisterSet(static_cast<uint32_t>(set));
 }
 
-bool RegisterContextELFCore_riscv32::ReadRegister(
-    const RegisterInfo *reg_info, RegisterValue &value) {
+bool RegisterContextELFCore_riscv32::ReadRegister(const RegisterInfo *reg_info,
+                                                  RegisterValue &value) {
   const lldb_private::RegisterInfo *dyn_reg_info;
   const uint8_t *src = nullptr;
   if ((dyn_reg_info = m_reg_infos_up->GetRegisterInfo(reg_info->name))) {
@@ -295,8 +294,8 @@ bool RegisterContextELFCore_riscv32::ReadRegister(
   }
 }
 
-bool RegisterContextELFCore_riscv32::WriteRegister(
-    const RegisterInfo *reg_info, const RegisterValue &value) {
+bool RegisterContextELFCore_riscv32::WriteRegister(const RegisterInfo *reg_info,
+                                                   const RegisterValue &value) {
   return false;
 }
 

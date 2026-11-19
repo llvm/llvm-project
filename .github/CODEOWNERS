@@ -10,6 +10,11 @@
 # This is independent of LLVM's own "maintainer" concept.
 # See https://llvm.org/docs/DeveloperPolicy.html#maintainers as well as the
 # Maintainers.md files in the the respective subproject directories.
+#
+# NOTE: Before editing this file, please familiarise yourself with the syntax:
+# * https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners#codeowners-syntax
+# In particular, note that "Order is important; the last matching pattern takes
+# the most precedence. ".
 
 /libc/ @llvm/reviewers-libc
 /libc/**/*math* @lntue
@@ -42,10 +47,12 @@
 /clang/include/clang/Lex/ @ChenMiaoi
 /clang/lib/Lex/ @ChenMiaoi
 
-/clang/include/clang/CIR @lanza @bcardosolopes @xlauko @andykaylor
-/clang/lib/CIR @lanza @bcardosolopes @xlauko @andykaylor
-/clang/lib/CIR/CodeGen/CIRGenBuiltinAArch64.cpp @lanza @bcardosolopes @xlauko @andykaylor @banach-space
-/clang/tools/cir-* @lanza @bcardosolopes @xlauko @andykaylor
+# ClangIR
+# Emeritus owner: @lanza
+/clang/include/clang/CIR @bcardosolopes @xlauko @andykaylor
+/clang/lib/CIR @bcardosolopes @xlauko @andykaylor
+/clang/lib/CIR/CodeGen/CIRGenBuiltinAArch64.cpp @bcardosolopes @xlauko @andykaylor @banach-space
+/clang/tools/cir-* @bcardosolopes @xlauko @andykaylor
 
 /clang/tools/clang-repl @vgvassilev
 /clang/include/clang/Interpreter @vgvassilev
@@ -179,7 +186,8 @@
 /llvm/test/CodeGen/SPIRV/debug-info/ @maarquitos14 @aobolensk @idubinov @MrSidims @AlexVlx @michalpaszkowski @alexander-shaposhnikov @farzonl @dnovillo @mgcarrasco
 
 # MLIR Sparsifier.
-/mlir/**/*SparseTensor*/ @aartbik @PeimingLiu @yinying-lisa-li @matthias-springer
+# Emeritus owner: @yinying-lisa-li
+/mlir/**/*SparseTensor*/ @aartbik @PeimingLiu @matthias-springer
 
 # MLIR NVGPU Dialect
 /mlir/**/NVGPU*/ @grypp
@@ -203,8 +211,9 @@
 /mlir/**/WasmSSA* @flemairen6 @lforg37
 
 # MLIR Python Bindings
-/mlir/test/python/ @ftynse @makslevental @stellaraccident @rolfmorel
-/mlir/python/ @ftynse @makslevental @stellaraccident @rolfmorel
+# Emeritus owner: @stellaraccident
+/mlir/test/python/ @ftynse @makslevental @rolfmorel
+/mlir/python/ @ftynse @makslevental @rolfmorel
 /mlir/lib/Bindings/Python @makslevental @rolfmorel
 /mlir/include/Bindings/Python @makslevental @rolfmorel
 
@@ -216,7 +225,8 @@
 /mlir/**/*IRDL* @moxinilian
 
 # BOLT
-/bolt/ @aaupov @maksfb @rafaelauler @ayermolo @yota9 @labrinea @yozhu @yavtuk
+# Emeritus owner: @yota9
+/bolt/ @aaupov @maksfb @rafaelauler @ayermolo @labrinea @yozhu @yavtuk
 
 # Bazel build system.
 /utils/bazel/ @rupprecht @keith @aaronmondal @googlewalt
@@ -284,8 +294,8 @@
 /openmp @mjklemm @TerryLWilmarth
 
 # Offloading runtime
-/offload/plugins-nextgen/common @jhuber6
-/offload/plugins-nextgen/amdgpu @jhuber6
+/offload/liboffload/plugins/common @jhuber6
+/offload/liboffload/plugins/amdgpu @jhuber6
 /openmp/device/ @jhuber6
 
 # GPU headers and tools

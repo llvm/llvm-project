@@ -301,7 +301,8 @@ Register HexagonInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
     case Hexagon::PS_vloadrq_ai:
     case Hexagon::PS_vloadrw_ai:
     case Hexagon::PS_vloadrw_nt_ai:
-    case Hexagon::PS_loadrl: {
+    case Hexagon::PS_loadrl:
+    case Hexagon::PS_loadrll: {
       const MachineOperand OpFI = MI.getOperand(1);
       if (!OpFI.isFI())
         return 0;
@@ -350,7 +351,8 @@ Register HexagonInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
     case Hexagon::STriw_ctr:
     case Hexagon::PS_vstorerq_ai:
     case Hexagon::PS_vstorerw_ai:
-    case Hexagon::PS_storerl: {
+    case Hexagon::PS_storerl:
+    case Hexagon::PS_storerll: {
       const MachineOperand &OpFI = MI.getOperand(0);
       if (!OpFI.isFI())
         return 0;
@@ -1033,6 +1035,12 @@ void HexagonInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
         .addImm(0)
         .addReg(SrcReg, KillFlag)
         .addMemOperand(MMO);
+  } else if (Hexagon::HlxLLRRegClass.hasSubClassEq(RC)) {
+    BuildMI(MBB, I, DL, get(Hexagon::PS_storerll))
+        .addFrameIndex(FI)
+        .addImm(0)
+        .addReg(SrcReg, KillFlag)
+        .addMemOperand(MMO);
   } else {
     llvm_unreachable("Unimplemented");
   }
@@ -1086,6 +1094,11 @@ void HexagonInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
       .addFrameIndex(FI).addImm(0).addMemOperand(MMO);
   } else if (Hexagon::HlxLRRegClass.hasSubClassEq(RC)) {
     BuildMI(MBB, I, DL, get(Hexagon::PS_loadrl), DestReg)
+        .addFrameIndex(FI)
+        .addImm(0)
+        .addMemOperand(MMO);
+  } else if (Hexagon::HlxLLRRegClass.hasSubClassEq(RC)) {
+    BuildMI(MBB, I, DL, get(Hexagon::PS_loadrll), DestReg)
         .addFrameIndex(FI)
         .addImm(0)
         .addMemOperand(MMO);
@@ -5054,6 +5067,55 @@ bool HexagonInstrInfo::isMIBefore(const MachineInstr *A,
       return false;
   }
   return false;
+}
+
+// Returns false if a call, or an instruction between MI and Second, changes a
+// register MI reads, so MI cannot be copied to just after Second.
+static bool canMoveDebugValue(MachineInstr &MI, MachineInstr &Second,
+                              const TargetRegisterInfo *TRI) {
+  for (MachineInstr &Between :
+       make_range(std::next(MI.getIterator()), Second.getIterator()))
+    for (const MachineOperand &MO : MI.debug_operands())
+      if (MO.isReg() && MO.getReg().isValid() &&
+          (Between.isCall() || Between.modifiesRegister(MO.getReg(), TRI)))
+        return false;
+  return true;
+}
+
+void HexagonInstrInfo::moveDependentDebugValues(MachineInstr &First,
+                                                MachineInstr &Second) const {
+  MachineBasicBlock &MBB = *Second.getParent();
+  MachineFunction &MF = *MBB.getParent();
+  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+  Register DefReg = First.getOperand(0).getReg();
+  auto Gap = make_range(std::next(First.getIterator()), Second.getIterator());
+
+  // The variables with a value that reads DefReg. All values of these
+  // variables are copied, so that their order holds.
+  SmallVector<const DILocalVariable *, 4> Vars;
+  for (MachineInstr &MI : Gap)
+    if (MI.isDebugValue() && !MI.isDebugEntryValue() &&
+        MI.readsRegister(DefReg, TRI) &&
+        !is_contained(Vars, MI.getDebugVariable()))
+      Vars.push_back(MI.getDebugVariable());
+
+  SmallVector<MachineInstr *, 8> Group;
+  for (MachineInstr &MI : Gap)
+    if (MI.isDebugValue() && is_contained(Vars, MI.getDebugVariable()))
+      Group.push_back(&MI);
+
+  bool CanMove = !Second.isTerminator();
+  for (MachineInstr *MI : Group)
+    CanMove = CanMove && canMoveDebugValue(*MI, Second, TRI);
+
+  // Computed once, so that the copies stay in order.
+  MachineBasicBlock::iterator FinalPos = std::next(Second.getIterator());
+  for (MachineInstr *MI : Group)
+    if (CanMove)
+      MBB.insert(FinalPos, MF.CloneMachineInstr(MI));
+  for (MachineInstr *MI : Group)
+    if (!MI->isDebugEntryValue() && MI->readsRegister(DefReg, TRI))
+      MI->setDebugValueUndef();
 }
 
 // Addressing mode relations.

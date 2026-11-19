@@ -6363,6 +6363,12 @@ InstructionCost X86TTIImpl::getPartialReductionCost(
       !TLI->isPartialReduceMLALegalOrCustom(Opc, AccLT.second, InputLT.second))
     return ExpandCost();
 
+  // Without VNNI, the signed i16 dot product is a PMADDWD and an ADD, which
+  // cost about the same.
+  if (Opc == ISD::PARTIAL_REDUCE_SMLA && InputTypeA->isIntegerTy(16) &&
+      !ST->hasVNNI() && !ST->hasAVXVNNI())
+    return 2 * getArithmeticInstrCost(Instruction::Add, AccVecTy, CostKind);
+
   return AccLT.first;
 }
 
@@ -8361,6 +8367,7 @@ bool X86TTIImpl::isProfitableToSinkOperands(Instruction *I,
 
 bool X86TTIImpl::useFastCCForInternalCall(Function &F) const {
   bool HasEGPR = ST->hasEGPR();
+  bool UseAPXFastCC = ST->useAPXFastCC();
   const TargetMachine &TM = getTLI()->getTargetMachine();
 
   for (User *U : F.users()) {
@@ -8368,7 +8375,9 @@ bool X86TTIImpl::useFastCCForInternalCall(Function &F) const {
     if (!CB || CB->getCalledOperand() != &F)
       continue;
     Function *CallerFunc = CB->getFunction();
-    if (TM.getSubtarget<X86Subtarget>(*CallerFunc).hasEGPR() != HasEGPR)
+    const X86Subtarget &CallerST = TM.getSubtarget<X86Subtarget>(*CallerFunc);
+    if (CallerST.hasEGPR() != HasEGPR ||
+        CallerST.useAPXFastCC() != UseAPXFastCC)
       return false;
   }
 

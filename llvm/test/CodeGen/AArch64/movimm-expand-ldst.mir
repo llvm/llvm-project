@@ -31,3 +31,4 @@ body:             |
     ; CHECK-NEXT: RET undef $lr, implicit $x0
     renamable $x0 = MOVi64imm -4550323095879417536
     RET_ReallyLR implicit $x0
+...

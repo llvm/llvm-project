@@ -91,11 +91,17 @@ static bool shouldConvertToRelLookupTable(LookupTableInfo &Info, Module &M,
 
   APInt Offset(IndexWidth, 0);
   uint64_t GVSize = GV.getGlobalSize(DL);
+  bool HasNonPoison = false;
   for (; Offset.ult(GVSize); Offset += Stride) {
     Constant *C =
         ConstantFoldLoadFromConst(GV.getInitializer(), ElemType, Offset, DL);
     if (!C)
       return false;
+
+    if (isa<PoisonValue>(C)) {
+      Info.Ptrs.push_back(C);
+      continue;
+    }
 
     GlobalValue *GVOp;
     APInt GVOffset;
@@ -126,8 +132,12 @@ static bool shouldConvertToRelLookupTable(LookupTableInfo &Info, Module &M,
     if (ShouldDropUnnamedAddr)
       GVOps.push_back(GlobalVarOp);
 
+    HasNonPoison = true;
     Info.Ptrs.push_back(C);
   }
+
+  if (!HasNonPoison)
+    return false;
 
   if (ShouldDropUnnamedAddr)
     for (auto *GVOp : GVOps)
@@ -156,6 +166,11 @@ static GlobalVariable *createRelLookupTable(LookupTableInfo &Info,
   SmallVector<Constant *, 64> RelLookupTableContents(Info.Ptrs.size());
 
   for (Constant *Element : Info.Ptrs) {
+    if (isa<PoisonValue>(Element)) {
+      RelLookupTableContents[Idx++] = PoisonValue::get(Int32Ty);
+      continue;
+    }
+
     Constant *Target = ConstantExpr::getPtrToInt(Element, IntPtrTy);
     Constant *Sub = ConstantExpr::getSub(Target, Base);
     Constant *RelOffset = ConstantExpr::getTrunc(Sub, Int32Ty);

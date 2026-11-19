@@ -13,9 +13,6 @@
 ...
 ---
 name:            t
-registers:
-  - { id: 0, class: gr32 }
-  - { id: 1, class: gr8 }
 body: |
   bb.0.entry:
     liveins: $edi, $eax
@@ -27,8 +24,8 @@ body: |
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:gr16 = REG_SEQUENCE [[EXTRACT_SUBREG]], %subreg.sub_8bit, [[EXTRACT_SUBREG]], %subreg.sub_8bit_hi
     ; CHECK-NEXT: $ax = COPY [[REG_SEQUENCE]]
     ; CHECK-NEXT: RET64 $ax
-    %0 = INSERT_SUBREG $edi, $al, %subreg.sub_8bit
-    %1 = EXTRACT_SUBREG $eax, %subreg.sub_8bit_hi
+    %0:gr32 = INSERT_SUBREG $edi, $al, %subreg.sub_8bit
+    %1:gr8 = EXTRACT_SUBREG $eax, %subreg.sub_8bit_hi
     %2:gr16 = REG_SEQUENCE %1, %subreg.sub_8bit, %1, %subreg.sub_8bit_hi
     $ax = COPY %2
     RET64 $ax
