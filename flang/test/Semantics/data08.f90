@@ -1,6 +1,8 @@
-! RUN: %flang_fc1 -fdebug-dump-symbols -pedantic %s 2>&1 | FileCheck %s \
-! RUN:   --check-prefixes=%if target={{.*-aix.*|sparc.*|s390x.*}} %{"CHECK","BE"%} \
-! RUN:                    %else %{"CHECK","LE"%}
+! The byte order of the target decides, not the one of the host.
+! RUN: %if x86-registered-target %{ %flang_fc1 -triple x86_64-unknown-linux-gnu \
+! RUN:   -fdebug-dump-symbols -pedantic %s 2>&1 | FileCheck %s --check-prefixes=CHECK,LE %}
+! RUN: %if systemz-registered-target %{ %flang_fc1 -triple s390x-unknown-linux-gnu \
+! RUN:   -fdebug-dump-symbols -pedantic %s 2>&1 | FileCheck %s --check-prefixes=CHECK,BE %}
 
 ! CHECK: DATA statement value initializes 'jx' of type 'INTEGER(4)' with CHARACTER
 ! CHECK: DATA statement value initializes 'jy' of type 'INTEGER(4)' with CHARACTER

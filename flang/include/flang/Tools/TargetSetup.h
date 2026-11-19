@@ -24,6 +24,8 @@ namespace Fortran::tools {
 
   const llvm::Triple &targetTriple{targetMachine.getTargetTriple()};
 
+  targetCharacteristics.set_isBigEndian(!targetTriple.isLittleEndian());
+
   if (targetTriple.getArch() == llvm::Triple::ArchType::x86_64) {
     targetCharacteristics.set_hasSubnormalFlushingControl(/*kind=*/3);
     targetCharacteristics.set_hasSubnormalFlushingControl(/*kind=*/4);
