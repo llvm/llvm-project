@@ -2474,6 +2474,7 @@ static bool replaceOverflowUses(WithOverflowInst *II,
   bool Changed = false;
   IRBuilder<> Builder(II->getIterator());
   Value *Res = nullptr;
+  unsigned NumDead = 0;
   for (User *U : make_early_inc_range(II->users())) {
     if (match(U, m_ExtractValue<0>(m_Value()))) {
       if (!Res)
@@ -2492,15 +2493,14 @@ static bool replaceOverflowUses(WithOverflowInst *II,
     if (U->use_empty()) {
       auto *I = cast<Instruction>(U);
       ToRemove.push_back(I);
-      I->setOperand(0, PoisonValue::get(II->getType()));
+      ++NumDead;
       Changed = true;
     }
   }
 
-  if (II->use_empty()) {
-    // Do not erase II here: the worklist may still hold Uses of II's operands.
-    for (Use &Arg : II->args())
-      Arg.set(PoisonValue::get(Arg->getType()));
+  // Do not erase II and its extracts here: the worklist may still hold Uses of
+  // II's operands. If only dead extracts use II, it is removed after them.
+  if (NumDead == II->getNumUses()) {
     ToRemove.push_back(II);
     Changed = true;
   }
