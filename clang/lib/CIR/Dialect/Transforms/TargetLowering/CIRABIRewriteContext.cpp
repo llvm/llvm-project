@@ -2500,10 +2500,16 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
   }
 
   if (hasResult && fc.returnInfo.kind == ArgKind::Ignore) {
-    // The new call returns void, but the original call's result may still
-    // have uses.  Substitute a poison constant of the original type so
-    // those uses remain well-formed without pretending we have a real
-    // value at the ABI boundary.
+    // An ignored result holds no data (an empty record), but its destination
+    // can share storage with other data: a [[no_unique_address]] member or an
+    // empty base may be laid out over another member. Storing the result
+    // would clobber that member, so drop the stores, like classic codegen
+    // ("An empty record can overlap other data" in CGCall.cpp).
+    for (mlir::Operation *user :
+         llvm::make_early_inc_range(call.getResult().getUsers()))
+      if (auto store = mlir::dyn_cast<cir::StoreOp>(user);
+          store && store.getValue() == call.getResult())
+        store->erase();
     if (!call.getResult().use_empty()) {
       builder.setInsertionPointAfter(newCall);
       mlir::Value poison =

@@ -262,8 +262,6 @@ module attributes {
   // CHECK: cir.call @take_mixed(%arg0) : (!s32i) -> !s32i
   // LLVM: define i32 @caller(i32 %{{.*}})
 
-  // A dropped return leaves the call with no result, so uses of it become
-  // poison rather than dangling.
   cir.func private @mk_empty() -> !rec_E requires_call_conv_lowering
   cir.func @caller_ret_empty() -> !s32i requires_call_conv_lowering {
     %0 = cir.call @mk_empty() : () -> !rec_E
@@ -275,8 +273,10 @@ module attributes {
 
   // CHECK: cir.func{{.*}} @caller_ret_empty() -> !s32i
   // CHECK:   cir.call @mk_empty() : () -> ()
-  // CHECK:   %[[POISON:.*]] = cir.const #cir.poison : !rec_E
-  // CHECK:   cir.store %[[POISON]], %{{.*}} : !rec_E, !cir.ptr<!rec_E>
+  // CHECK-NOT: cir.store
+  // CHECK:   cir.return
   // LLVM: define i32 @caller_ret_empty()
   // LLVM:   call void @mk_empty()
+  // LLVM-NOT: store
+  // LLVM:   ret i32 7
 }
