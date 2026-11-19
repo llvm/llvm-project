@@ -6453,6 +6453,11 @@ LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan, VFRange &Range,
   RUN_VPLAN_PASS(VPlanTransforms::makeMemOpWideningDecisions, *Plan, Range,
                  RecipeBuilder, CostCtx);
 
+  // Form interleave groups before scalarization decisions, so those see the
+  // group's single address use.
+  RUN_VPLAN_PASS(VPlanTransforms::createInterleaveGroups, *Plan,
+                 InterleaveGroups, PlanCM.isEpilogueAllowed());
+
   RUN_VPLAN_PASS(VPlanTransforms::makeScalarizationDecisions, *Plan, Range);
 
   // Widened calls may only use the first lane of some operands.
@@ -6476,7 +6481,7 @@ LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan, VFRange &Range,
                     VPReplicateRecipe, VPWidenLoadRecipe, VPWidenStoreRecipe,
                     VPWidenCallRecipe, VPWidenIntrinsicRecipe,
                     VPVectorPointerRecipe, VPVectorEndPointerRecipe,
-                    VPHistogramRecipe, VPInstruction>) &&
+                    VPHistogramRecipe, VPInterleaveRecipe, VPInstruction>) &&
         "Unexpected recipe");
     for (VPInstruction &VPI :
          make_early_inc_range(make_isa_range<VPInstruction>(*VPBB))) {
@@ -6551,12 +6556,6 @@ LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan, VFRange &Range,
                  Range);
   RUN_VPLAN_PASS(VPlanTransforms::convertToAbstractRecipes, *Plan, CostCtx,
                  Range);
-
-  // Interleave memory: for each Interleave Group we marked earlier as relevant
-  // for this VPlan, replace the Recipes widening its memory instructions with a
-  // single VPInterleaveRecipe at its insertion point.
-  RUN_VPLAN_PASS(VPlanTransforms::createInterleaveGroups, *Plan,
-                 InterleaveGroups, PlanCM.isEpilogueAllowed());
 
   // Convert memory recipes to strided access recipes if the strided access is
   // legal and profitable.
