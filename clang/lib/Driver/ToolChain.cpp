@@ -983,17 +983,7 @@ void ToolChain::addFortranRuntimeLibs(const ArgList &Args,
   // add the correct libraries to link against as dependents in the object
   // file.
   if (!getTriple().isKnownWindowsMSVCEnvironment()) {
-    StringRef F128LibName = getDriver().getFlangF128MathLibrary();
-    F128LibName.consume_front_insensitive("lib");
-    if (!F128LibName.empty()) {
-      bool AsNeeded = !getTriple().isOSAIX();
-      CmdArgs.push_back("-lflang_rt.quadmath");
-      if (AsNeeded)
-        addAsNeededOption(*this, Args, CmdArgs, /*as_needed=*/true);
-      CmdArgs.push_back(Args.MakeArgString("-l" + F128LibName));
-      if (AsNeeded)
-        addAsNeededOption(*this, Args, CmdArgs, /*as_needed=*/false);
-    }
+    CmdArgs.push_back("-lflang_rt.quadmath");
     addFlangRTLibPath(Args, CmdArgs);
 
     // needs libexecinfo for backtrace functions

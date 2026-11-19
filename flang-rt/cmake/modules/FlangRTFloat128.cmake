@@ -1,12 +1,8 @@
-#===-- cmake/modules/FlangCommon.txt ----------------------------===#
+#===-- cmake/modules/FlangRTFloat128.cmake ----------------------===#
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-#
-#===------------------------------------------------------------------------===#
-#
-# CMake definitions shared between Flang and Flang-RT
 #
 #===------------------------------------------------------------------------===#
 
@@ -14,10 +10,6 @@ include(CheckCSourceCompiles)
 include(CheckIncludeFile)
 include(CMakePushCheckState)
 
-# The out of tree builds of the compiler and the Fortran runtime
-# must use the same setting of FLANG_RUNTIME_F128_MATH_LIB
-# to be composable. Failure to synchronize this setting may result
-# in linking errors or fatal failures in F128 runtime functions.
 set(FLANG_RUNTIME_F128_MATH_LIB "" CACHE STRING
   "Specifies the target library used for implementing IEEE-754 128-bit float \
   math in F18 runtime, e.g. it might be libquadmath for targets where \

@@ -283,6 +283,40 @@ foreach(entry ${runtimes})
   list(APPEND RUNTIME_NAMES ${name})
 endforeach()
 
+function(runtime_get_real16_cmake_args target result)
+  set(${result} "" PARENT_SCOPE)
+  set(math_lib "${FLANG_RUNTIME_F128_MATH_LIB}")
+  foreach(arg IN LISTS ARGN)
+    if(arg MATCHES "^-DFORTRAN_SUPPORTS_REAL16(:[^=]+)?=")
+      return()
+    elseif(arg MATCHES "^-DFLANG_RUNTIME_F128_MATH_LIB(:[^=]+)?=(.*)$")
+      set(math_lib "${CMAKE_MATCH_2}")
+    endif()
+  endforeach()
+  if(DEFINED FORTRAN_SUPPORTS_REAL16)
+    set(${result} "-DFORTRAN_SUPPORTS_REAL16=${FORTRAN_SUPPORTS_REAL16}" PARENT_SCOPE)
+    return()
+  endif()
+
+  # fakeflang cannot probe REAL(16) before the bootstrap compiler exists.
+  if(math_lib OR target MATCHES "^(aarch64|x86_64)(-|$)")
+    set(${result} -DFORTRAN_SUPPORTS_REAL16=ON PARENT_SCOPE)
+  elseif(target STREQUAL LLVM_HOST_TRIPLE)
+    include(CheckCSourceCompiles)
+    check_c_source_compiles(
+      "#include <float.h>
+       #if LDBL_MANT_DIG != 113
+       #error LDBL_MANT_DIG != 113
+       #endif
+       int main() { return 0; }
+      "
+      HAVE_LDBL_MANT_DIG_113)
+    if(HAVE_LDBL_MANT_DIG_113)
+      set(${result} -DFORTRAN_SUPPORTS_REAL16=ON PARENT_SCOPE)
+    endif()
+  endif()
+endfunction()
+
 function(runtime_default_target)
   cmake_parse_arguments(ARG "" "" "DEPENDS;CMAKE_ARGS;PREFIXES;EXTRA_ARGS" ${ARGN})
 
@@ -340,6 +374,13 @@ function(runtime_default_target)
 
   set_enable_per_target_runtime_dir()
 
+  if("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES AND
+     "ENABLE_FORTRAN" IN_LIST ARG_EXTRA_ARGS AND TARGET flang-lazy)
+    runtime_get_real16_cmake_args("${LLVM_TARGET_TRIPLE}" real16_cmake_args
+      ${COMMON_CMAKE_ARGS} ${RUNTIMES_CMAKE_ARGS} ${ARG_CMAKE_ARGS})
+    list(APPEND ARG_CMAKE_ARGS ${real16_cmake_args})
+  endif()
+
   llvm_ExternalProject_Add(runtimes
                            ${CMAKE_CURRENT_SOURCE_DIR}/../../runtimes
                            DEPENDS ${ARG_DEPENDS}
@@ -393,6 +434,11 @@ function(runtime_register_target name)
       endforeach()
     endif()
   endforeach()
+
+  if("flang-rt" IN_LIST runtime_names AND TARGET flang-lazy AND
+     NOT "ENABLE_FORTRAN" IN_LIST ARG_EXTRA_ARGS)
+    list(APPEND ARG_EXTRA_ARGS ENABLE_FORTRAN)
+  endif()
 
   set(${name}_runtime_targets)
   foreach(runtime_name ${runtime_names})
@@ -463,6 +509,18 @@ function(runtime_register_target name)
   list(APPEND ${name}_extra_args -DLLVM_ENABLE_RUNTIMES=${LLVM_ENABLE_RUNTIMES_PASSTHROUGH})
   list(APPEND ${name}_extra_args -DLLVM_USE_LINKER=${LLVM_USE_LINKER})
   append_passthrough_options(${name}_extra_args RUNTIMES "${ARG_BASE_NAME};${name}")
+
+  if(ARG_BASE_NAME)
+    set(runtime_target_triple "${ARG_BASE_NAME}")
+  else()
+    set(runtime_target_triple "${name}")
+  endif()
+  if("flang-rt" IN_LIST runtime_names AND
+     "ENABLE_FORTRAN" IN_LIST ARG_EXTRA_ARGS AND TARGET flang-lazy)
+    runtime_get_real16_cmake_args("${runtime_target_triple}" real16_cmake_args
+      ${COMMON_CMAKE_ARGS} ${${name}_extra_args})
+    list(APPEND ${name}_extra_args ${real16_cmake_args})
+  endif()
 
   set_enable_per_target_runtime_dir()
 
@@ -681,16 +739,14 @@ if(build_runtimes)
   if(LLVM_LIBC_FULL_BUILD)
     list(APPEND extra_cmake_args "-DLLVM_LIBC_FULL_BUILD=ON")
   endif()
+  if(DEFINED FLANG_RUNTIME_F128_MATH_LIB)
+    list(APPEND extra_cmake_args
+      "-DFLANG_RUNTIME_F128_MATH_LIB=${FLANG_RUNTIME_F128_MATH_LIB}")
+  endif()
   if("flang" IN_LIST LLVM_ENABLE_PROJECTS)
     # Allow runtimes that can use it to access the Flang compiler
     if ("openmp" IN_LIST LLVM_ENABLE_RUNTIMES OR "flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
       list(APPEND extra_args ENABLE_FORTRAN)
-    endif()
-    # Ensure REAL(16) support in runtimes to be consistent with compiler
-    if(FLANG_RUNTIME_F128_MATH_LIB OR HAVE_LDBL_MANT_DIG_113)
-      list(APPEND extra_cmake_args "-DFORTRAN_SUPPORTS_REAL16=1")
-    else()
-      list(APPEND extra_cmake_args "-DFORTRAN_SUPPORTS_REAL16=0")
     endif()
   endif()
 

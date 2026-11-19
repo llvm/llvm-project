@@ -1,9 +1,9 @@
-! RUN: bbc -emit-fir %s -o - --math-runtime=fast | FileCheck --check-prefixes=ALL,FAST-%if flang-supports-f128-math %{F128%} %else %{F64%} %s
-! RUN: %flang_fc1 -emit-fir -mllvm -math-runtime=fast %s -o - | FileCheck --check-prefixes=ALL,FAST,FAST-%if flang-supports-f128-math %{F128%} %else %{F64%} %s
-! RUN: bbc -emit-fir %s -o - --math-runtime=relaxed | FileCheck --check-prefixes=ALL,RELAXED,RELAXED-%if flang-supports-f128-math %{F128%} %else %{F64%} %s
-! RUN: %flang_fc1 -emit-fir -mllvm -math-runtime=relaxed %s -o - | FileCheck --check-prefixes=ALL,RELAXED,RELAXED-%if flang-supports-f128-math %{F128%} %else %{F64%} %s
-! RUN: bbc -emit-fir %s -o - --math-runtime=precise | FileCheck --check-prefixes=ALL,PRECISE,PRECISE-%if flang-supports-f128-math %{F128%} %else %{F64%} %s
-! RUN: %flang_fc1 -emit-fir -mllvm -math-runtime=precise %s -o - | FileCheck --check-prefixes=ALL,PRECISE,PRECISE-%if flang-supports-f128-math %{F128%} %else %{F64%} %s
+! RUN: bbc -emit-fir %s -o - --math-runtime=fast | FileCheck --check-prefixes=ALL,FAST-%if flang-frontend-supports-f128 %{F128%} %else %{F64%} %s
+! RUN: %flang_fc1 -emit-fir -mllvm -math-runtime=fast %s -o - | FileCheck --check-prefixes=ALL,FAST,FAST-%if flang-frontend-supports-f128 %{F128%} %else %{F64%} %s
+! RUN: bbc -emit-fir %s -o - --math-runtime=relaxed | FileCheck --check-prefixes=ALL,RELAXED,RELAXED-%if flang-frontend-supports-f128 %{F128%} %else %{F64%} %s
+! RUN: %flang_fc1 -emit-fir -mllvm -math-runtime=relaxed %s -o - | FileCheck --check-prefixes=ALL,RELAXED,RELAXED-%if flang-frontend-supports-f128 %{F128%} %else %{F64%} %s
+! RUN: bbc -emit-fir %s -o - --math-runtime=precise | FileCheck --check-prefixes=ALL,PRECISE,PRECISE-%if flang-frontend-supports-f128 %{F128%} %else %{F64%} %s
+! RUN: %flang_fc1 -emit-fir -mllvm -math-runtime=precise %s -o - | FileCheck --check-prefixes=ALL,PRECISE,PRECISE-%if flang-frontend-supports-f128 %{F128%} %else %{F64%} %s
 
 function test_real4(x)
   real :: x, test_real4

@@ -68,7 +68,7 @@ list(APPEND CMAKE_MODULE_PATH
   )
 include(AddFlangRT)
 include(GetToolchainDirs)
-include(FlangCommon)
+include(FlangRTFloat128)
 include(HandleCompilerRT)
 include(ExtendPath)
 include(FlangRTIntrospection)

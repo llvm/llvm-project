@@ -489,7 +489,7 @@ if (FLANG_PARALLEL_COMPILE_JOBS)
 endif()
 
 include(AddFlang)
-include(FlangCommon)
+include(FindFlangQuadmath)
 include(GetClangResourceDir)
 
 get_clang_resource_dir(HEADER_BINARY_DIR PREFIX ${LLVM_LIBRARY_OUTPUT_INTDIR}/.. SUBDIR include)

@@ -1,4 +1,4 @@
-! RUN: bbc %s -o - | FileCheck %s --check-prefixes=CHECK,%if flang-supports-f128-math %{F128%} %else %{F64%}
+! RUN: bbc %s -o - | FileCheck %s --check-prefixes=CHECK,%if flang-frontend-supports-f128 %{F128%} %else %{F64%}
 
 ! CHECK-LABEL: sign_testi
 subroutine sign_testi(a, b, c)

@@ -1,6 +1,6 @@
 ! Test lowering of complex division according to options
 
-! REQUIRES: flang-supports-f128-math
+! REQUIRES: flang-frontend-supports-f128
 ! RUN: bbc -complex-range=full -emit-hlfir %s -o - | FileCheck %s --check-prefixes=CHECK,FULL
 ! RUN: bbc -complex-range=improved -emit-hlfir %s -o - | FileCheck %s --check-prefixes=CHECK,IMPRVD
 ! RUN: bbc -complex-range=basic -emit-hlfir %s -o - | FileCheck %s --check-prefixes=CHECK,BASIC

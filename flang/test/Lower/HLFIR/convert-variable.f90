@@ -1,5 +1,5 @@
 ! Test lowering of variables to fir.declare
-! RUN: bbc -emit-hlfir %s -o - | FileCheck %s --check-prefixes=CHECK,%if flang-supports-f128-math %{F128%} %else %{F64%}
+! RUN: bbc -emit-hlfir %s -o - | FileCheck %s --check-prefixes=CHECK,%if flang-frontend-supports-f128 %{F128%} %else %{F64%}
 
 subroutine scalar_numeric(x)
   integer :: x

@@ -1,4 +1,4 @@
-! REQUIRES: flang-supports-f128-math
+! REQUIRES: flang-frontend-supports-f128
 ! RUN: bbc -emit-fir %s -o - | FileCheck %s
 ! RUN: bbc --math-runtime=precise -emit-fir %s -o - | FileCheck %s --check-prefixes="PRECISE"
 ! RUN: %flang_fc1 -emit-fir %s -o - | FileCheck %s

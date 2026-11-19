@@ -1,5 +1,5 @@
 !REQUIRES: x86-registered-target
-!REQUIRES: flang-supports-f128-math
+!REQUIRES: flang-frontend-supports-f128
 !RUN: %flang_fc1 -emit-llvm -triple x86_64-unknown-linux-gnu %s -o - | FileCheck  %s
 
 ! Test ABI of indirect calls is properly implemented in the LLVM IR.
