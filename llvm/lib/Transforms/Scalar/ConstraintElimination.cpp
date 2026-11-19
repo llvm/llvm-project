@@ -366,12 +366,6 @@ struct Decomposition {
         Vars.emplace_back(Coefficient, Variable);
     return false;
   }
-
-  /// Returns a new decomposition with \p Variable replaced by \p Replacement.
-  /// Returns std::nullopt if a coefficient overflows, i.e. the decomposition is
-  /// invalid.
-  [[nodiscard]] std::optional<Decomposition>
-  substitute(Value *Variable, Value *Replacement, ConstraintInfo &Info) const;
 };
 
 /// Wrapper encapsulating separate constraint systems and corresponding value
@@ -638,57 +632,6 @@ static bool doesHoldInRange(ConstraintInfo &Info, Value *Op,
 
 enum class SignedBound { Upper, Lower };
 
-/// Splits the first signed min/max result in \p D (of type \p Ty, if provided)
-/// across its operands, and returns whether \p IsKnown holds for the
-/// substituted decompositions, or std::nullopt if \p D has no such min/max.
-///
-/// \p IsKnown tests a property that is monotonic in \p D: either an upper or
-/// lower \p Bound. D is an affine function of the min/max result with slope
-/// E.Coefficient. If the slope is positive, then D(max(a, b)) = max(D(a), D(b))
-/// and D(min(a, b)) = min(D(a), D(b)). If it is negative, max and min swap
-/// roles. An upper bound on a maximum holds if it holds on both sides, and a
-/// lower bound if it holds on either side.
-static std::optional<bool>
-splitSignedMinMax(const Decomposition &D, ConstraintInfo &Info, Type *Ty,
-                  SignedBound Bound,
-                  function_ref<bool(const Decomposition &)> IsKnown) {
-  for (const DecompEntry &E : D.Vars) {
-    auto *MM = dyn_cast<MinMaxIntrinsic>(E.Variable);
-    if (!MM || !MM->isSigned() || (Ty && MM->getType() != Ty))
-      continue;
-
-    bool IsMax =
-        (MM->getIntrinsicID() == Intrinsic::smax) == (E.Coefficient > 0);
-    bool IsAnd = (Bound == SignedBound::Upper) == IsMax;
-    auto IsOperandKnown = [&](Value *V) {
-      auto Side = D.substitute(E.Variable, V, Info);
-      return Side && !Side->canonicalize() && IsKnown(*Side);
-    };
-    if (IsOperandKnown(MM->getLHS()) != IsAnd)
-      return !IsAnd;
-    return IsOperandKnown(MM->getRHS());
-  }
-  return std::nullopt;
-}
-
-std::optional<Decomposition>
-Decomposition::substitute(Value *Variable, Value *Replacement,
-                          ConstraintInfo &Info) const {
-  Decomposition Result(Offset);
-  int64_t Coefficient = 0;
-  for (const DecompEntry &E : Vars) {
-    if (E.Variable != Variable)
-      Result.Vars.push_back(E);
-    else if (AddOverflow(Coefficient, E.Coefficient, Coefficient))
-      return std::nullopt;
-  }
-  Decomposition ReplacementDec =
-      decompose(Replacement, Info, /*IsSigned=*/true, Info.getDataLayout());
-  if (ReplacementDec.mul(Coefficient) || Result.add(ReplacementDec))
-    return std::nullopt;
-  return Result;
-}
-
 /// Returns true if \p Info implies that the value of \p D does not exceed the
 /// signed maximum of \p Ty (if \p Bound is Upper) or is not below the signed
 /// minimum of \p Ty (if \p Bound is Lower).
@@ -699,16 +642,40 @@ Decomposition::substitute(Value *Variable, Value *Replacement,
 /// intrinsic result in \p D is split across its respective operands, using the
 /// fact that the value of \p D is monotonic in it: for an upper bound on a
 /// maximum, both sides must be in range, while for a lower bound only one side
-/// must be.
+/// must be. \p D must be canonical.
 static bool isKnownWithinSignedRange(const Decomposition &D, SignedBound Bound,
                                      Type *Ty, ConstraintInfo &Info,
                                      unsigned Depth) {
   if (Depth != 0) {
-    if (auto Known = splitSignedMinMax(
-            D, Info, Ty, Bound, [&](const Decomposition &Side) {
-              return isKnownWithinSignedRange(Side, Bound, Ty, Info, Depth - 1);
-            }))
-      return *Known;
+    for (const DecompEntry &E : D.Vars) {
+      auto *MM = dyn_cast<MinMaxIntrinsic>(E.Variable);
+      if (!MM || !MM->isSigned() || MM->getType() != Ty)
+        continue;
+
+      // D is an affine function of the min/max result with slope
+      // E.Coefficient. If the slope is positive, then D(max(a, b)) = max(D(a),
+      // D(b)) and D(min(a, b)) = min(D(a), D(b)). If it is negative, max and
+      // min swap roles. An upper bound on a maximum holds if it holds on both
+      // sides, and a lower bound if it holds on either side.
+      bool IsMax =
+          (MM->getIntrinsicID() == Intrinsic::smax) == (E.Coefficient > 0);
+      bool IsAnd = (Bound == SignedBound::Upper) == IsMax;
+      // D is canonical, so E is the only entry for MM.
+      auto IsKnown = [&](Value *Op) {
+        Decomposition Side(D.Offset);
+        for (const DecompEntry &Other : D.Vars)
+          if (Other.Variable != MM)
+            Side.Vars.push_back(Other);
+        Decomposition OpDec =
+            decompose(Op, Info, /*IsSigned=*/true, Info.getDataLayout());
+        if (OpDec.mul(E.Coefficient) || Side.add(OpDec) || Side.canonicalize())
+          return false;
+        return isKnownWithinSignedRange(Side, Bound, Ty, Info, Depth - 1);
+      };
+      if (IsAnd ? IsKnown(MM->getLHS()) && IsKnown(MM->getRHS())
+                : IsKnown(MM->getLHS()) || IsKnown(MM->getRHS()))
+        return true;
+    }
   }
 
   if (!D.Vars.empty()) {
@@ -779,12 +746,6 @@ static bool isKnownNoSignedWrap(Instruction::BinaryOps Opcode, Value *Op0,
     return false;
 
   if (LHS.canonicalize())
-    return false;
-
-  if (LHS.Vars.size() > 1 && none_of(LHS.Vars, [](const DecompEntry &E) {
-        auto *MM = dyn_cast<MinMaxIntrinsic>(E.Variable);
-        return MM && MM->isSigned();
-      }))
     return false;
 
   constexpr unsigned MaxDepth = 2;
