@@ -13,45 +13,10 @@
 #include "clang/CIR/Dialect/OpenACC/CIROpenACCOpsInterfaces.h"
 
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
-#include "llvm/Support/ErrorHandling.h"
+#include "clang/CIR/Dialect/OpenACC/CIROpenACCUtils.h"
 
 using namespace mlir;
 using namespace cir;
-
-static std::optional<LangAddressSpace>
-getGlobalLangAddressSpace(Operation *op) {
-  auto langAS = dyn_cast_if_present<LangAddressSpaceAttr>(
-      cast<GlobalOp>(op).getAddrSpaceAttr());
-  if (!langAS)
-    return std::nullopt;
-  return langAS.getValue();
-}
-
-// Address spaces OpenACC treats as reachable from the device. This includes
-// memory that resides on the device and host memory the device can access
-// directly (`offload_global_host`).
-static bool isDeviceAccessibleAddressSpace(LangAddressSpace as) {
-  switch (as) {
-  case LangAddressSpace::OffloadPrivate:
-  case LangAddressSpace::OffloadLocal:
-  case LangAddressSpace::OffloadGlobal:
-  case LangAddressSpace::OffloadConstant:
-  case LangAddressSpace::OffloadGlobalDevice:
-  case LangAddressSpace::OffloadGlobalHost:
-    return true;
-  case LangAddressSpace::Default:
-  case LangAddressSpace::OffloadGeneric:
-    return false;
-  }
-  llvm_unreachable("unhandled CIR language address space");
-}
-
-// Address spaces whose storage OpenACC treats as residing on the device.
-static bool isDeviceResidentAddressSpace(LangAddressSpace as) {
-  if (as == LangAddressSpace::OffloadGlobalHost)
-    return false;
-  return isDeviceAccessibleAddressSpace(as);
-}
 
 SymbolRefAttr cir::acc::AddressOfGlobalModel::getSymbol(Operation *op) const {
   return cast<GetGlobalOp>(op).getNameAttr();
@@ -71,13 +36,15 @@ Region *cir::acc::GlobalVariableModel::getInitRegion(Operation *op) const {
 }
 
 bool cir::acc::GlobalVariableModel::isDeviceAccessible(Operation *op) const {
-  std::optional<LangAddressSpace> as = getGlobalLangAddressSpace(op);
-  return as && isDeviceAccessibleAddressSpace(*as);
+  auto lang = dyn_cast_if_present<LangAddressSpaceAttr>(
+      cast<GlobalOp>(op).getAddrSpaceAttr());
+  return lang && isDeviceAccessibleAddressSpace(lang.getValue());
 }
 
 bool cir::acc::GlobalVariableModel::isInDeviceMemory(Operation *op) const {
-  std::optional<LangAddressSpace> as = getGlobalLangAddressSpace(op);
-  return as && isDeviceResidentAddressSpace(*as);
+  auto lang = dyn_cast_if_present<LangAddressSpaceAttr>(
+      cast<GlobalOp>(op).getAddrSpaceAttr());
+  return lang && isDeviceResidentAddressSpace(lang.getValue());
 }
 
 // A leading '.' marks a symbol that is not a source identifier. The

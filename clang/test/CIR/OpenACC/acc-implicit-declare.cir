@@ -182,6 +182,30 @@ cir.func @test_host_visible_global() {
 
 // -----
 
+// Generic storage may name device memory, so it is device-accessible and the
+// reference stays in place.
+
+!s32i = !cir.int<s, 32>
+
+cir.global external lang_address_space(offload_generic) @ggeneric = #cir.int<0> : !s32i
+
+cir.func @test_generic_global() {
+  acc.serial {
+    %addr = cir.get_global @ggeneric : !cir.ptr<!s32i, lang_address_space(offload_generic)>
+    %val = cir.load %addr : !cir.ptr<!s32i, lang_address_space(offload_generic)>, !s32i
+    acc.yield
+  }
+  cir.return
+}
+
+// CHECK: cir.global external lang_address_space(offload_generic) @ggeneric =
+// CHECK-NOT: acc.declare
+// CHECK-LABEL: cir.func @test_generic_global
+// CHECK: acc.serial
+// CHECK: cir.get_global @ggeneric
+
+// -----
+
 // The constructor region of a global that is already declared is an
 // initialization region. Globals referenced from it are declared too.
 
