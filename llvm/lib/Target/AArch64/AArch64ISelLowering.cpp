@@ -30332,8 +30332,7 @@ performSetccMergeZeroCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
     return V;
 
   if (Cond == ISD::SETNE && isZerosVector(RHS) &&
-      (LHS->getOpcode() == ISD::SIGN_EXTEND ||
-       LHS->getOpcode() == ISD::ZERO_EXTEND) &&
+      ISD::isExtOpcode(LHS->getOpcode()) &&
       LHS->getOperand(0)->getValueType(0) == N->getValueType(0)) {
     //    setcc_merge_zero(
     //       pred, extend(setcc_merge_zero(pred, ...)), != splat(0))
