@@ -71,9 +71,9 @@ entry:
 ; OMITFP-LABEL: OUTLINED_FUNCTION_0:
 ; OMITFP:              .cfi_startproc
 ; OMITFP-NEXT: // %bb.0:
+; OMITFP-NEXT:         str     x30, [sp, #-16]!
 ; OMITFP-NEXT:         .cfi_def_cfa_offset 16
 ; OMITFP-NEXT:         .cfi_offset w30, -16
-; OMITFP-NEXT:         str     x30, [sp, #-16]!
 ; OMITFP-NEXT:         mov     w0, #1
 ; OMITFP-NEXT:         mov     w1, #2
 ; OMITFP-NEXT:         mov     w2, #3
@@ -87,9 +87,9 @@ entry:
 ; NOOMIT-LABEL: OUTLINED_FUNCTION_0:
 ; NOOMIT:              .cfi_startproc
 ; NOOMIT-NEXT: // %bb.0:
+; NOOMIT-NEXT:         str     x30, [sp, #-16]!
 ; NOOMIT-NEXT:         .cfi_def_cfa_offset 16
 ; NOOMIT-NEXT:         .cfi_offset w30, -16
-; NOOMIT-NEXT:         str     x30, [sp, #-16]!
 ; NOOMIT-NEXT:         mov     w0, #1
 ; NOOMIT-NEXT:         mov     w1, #2
 ; NOOMIT-NEXT:         mov     w2, #3
