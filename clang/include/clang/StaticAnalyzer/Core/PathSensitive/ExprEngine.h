@@ -754,7 +754,11 @@ public:
 
   /// Return the CFG element corresponding to the worklist element
   /// that is currently being processed by ExprEngine.
-  CFGElement getCurrentCFGElement() { return (*getCurrBlock())[*CurrStmtIdx]; }
+  CFGElement getCurrentCFGElement() {
+    assert(getCurrBlock() && "Not processing a block!");
+    assert(CurrStmtIdx.has_value() && "Not processing a CFGElement!");
+    return (*getCurrBlock())[*CurrStmtIdx];
+  }
 
   /// Create a new state in which the call return value is binded to the
   /// call origin expression.
