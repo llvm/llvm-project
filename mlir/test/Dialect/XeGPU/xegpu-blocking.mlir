@@ -853,3 +853,39 @@ gpu.module @test_kernel {
     gpu.return
   }
 }
+
+// -----
+// The unrolled dpas ops walk N in the outer loop and M in the inner loop, so
+// consecutive dpas ops use the same B block. Each result still goes to its own
+// C block.
+#a = #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [8, 1]>
+#b = #xegpu.layout<inst_data = [16, 16], lane_layout = [1, 16], lane_data = [16, 1]>
+#c = #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [8, 1]>
+gpu.module @test_kernel {
+  // CHECK-LABEL: gpu.func @dpas_unroll_order
+  // CHECK-DAG: %[[C0:.+]] = arith.constant 0 : index
+  // CHECK-DAG: %[[C8:.+]] = arith.constant 8 : index
+  // CHECK-DAG: %[[C16:.+]] = arith.constant 16 : index
+  // CHECK: %[[A0:.+]] = xegpu.load_nd %{{.+}}[%[[C0]], %[[C0]]] {{.*}} -> vector<8x16xf16>
+  // CHECK: %[[A1:.+]] = xegpu.load_nd %{{.+}}[%[[C8]], %[[C0]]] {{.*}} -> vector<8x16xf16>
+  // CHECK: %[[B0:.+]] = xegpu.load_nd %{{.+}}[%[[C0]], %[[C0]]] {{.*}} -> vector<16x16xf16>
+  // CHECK: %[[B1:.+]] = xegpu.load_nd %{{.+}}[%[[C0]], %[[C16]]] {{.*}} -> vector<16x16xf16>
+  // CHECK: %[[D00:.+]] = xegpu.dpas %[[A0]], %[[B0]]
+  // CHECK-NEXT: %[[D10:.+]] = xegpu.dpas %[[A1]], %[[B0]]
+  // CHECK-NEXT: %[[D01:.+]] = xegpu.dpas %[[A0]], %[[B1]]
+  // CHECK-NEXT: %[[D11:.+]] = xegpu.dpas %[[A1]], %[[B1]]
+  // CHECK: xegpu.store_nd %[[D00]], %{{.+}}[%[[C0]], %[[C0]]]
+  // CHECK: xegpu.store_nd %[[D01]], %{{.+}}[%[[C0]], %[[C16]]]
+  // CHECK: xegpu.store_nd %[[D10]], %{{.+}}[%[[C8]], %[[C0]]]
+  // CHECK: xegpu.store_nd %[[D11]], %{{.+}}[%[[C8]], %[[C16]]]
+  gpu.func @dpas_unroll_order(%A: memref<16x16xf16>, %B: memref<16x32xf16>, %C: memref<16x32xf32>) {
+    %a_tdesc = xegpu.create_nd_tdesc %A : memref<16x16xf16> -> !xegpu.tensor_desc<16x16xf16, #a>
+    %b_tdesc = xegpu.create_nd_tdesc %B : memref<16x32xf16> -> !xegpu.tensor_desc<16x32xf16, #b>
+    %c_tdesc = xegpu.create_nd_tdesc %C : memref<16x32xf32> -> !xegpu.tensor_desc<16x32xf32, #c>
+    %a = xegpu.load_nd %a_tdesc[0, 0] <{layout = #a}>: !xegpu.tensor_desc<16x16xf16, #a> -> vector<16x16xf16>
+    %b = xegpu.load_nd %b_tdesc[0, 0] <{layout = #b}>: !xegpu.tensor_desc<16x32xf16, #b> -> vector<16x32xf16>
+    %c = xegpu.dpas %a, %b <{layout_a = #a, layout_b = #b, layout_cd = #c}>: vector<16x16xf16>, vector<16x32xf16> -> vector<16x32xf32>
+    xegpu.store_nd %c, %c_tdesc[0, 0] <{layout = #c}>: vector<16x32xf32>, !xegpu.tensor_desc<16x32xf32, #c>
+    gpu.return
+  }
+}
