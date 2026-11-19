@@ -11,10 +11,12 @@ include "llvm/Option/LibraryOptions.td"
 def CodeGenOptions : OptionsStruct;
 
 // AggressiveAntiDepBreaker.cpp
+let Condition = AssertsOnly in {
 defm : ValueField<"agg-antidep-debugdiv", "int", "0",
   "Debug control for aggressive anti-dep breaker">;
 defm : ValueField<"agg-antidep-debugmod", "int", "0",
   "Debug control for aggressive anti-dep breaker">;
+}
 
 // BasicBlockMatchingAndInference.cpp
 defm : ValueField<"propeller-infer-threshold", "float", "0.6f",
@@ -305,10 +307,12 @@ defm : OptionalValueField<"break-anti-dependencies", "StringRef",
 // override the target.
 defm : OptionalBoolField<"post-RA-scheduler",
   "Enable scheduling after register allocation">;
+let Condition = AssertsOnly in {
 defm : ValueField<"postra-sched-debugdiv", "int", "0",
   "Debug control MBBs that are scheduled">;
 defm : ValueField<"postra-sched-debugmod", "int", "0",
   "Debug control MBBs that are scheduled">;
+}
 
 // PreISelIntrinsicLowering.cpp
 // Maximum bound of a memset with non-constant length for it to be expanded
