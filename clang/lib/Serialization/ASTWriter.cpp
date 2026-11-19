@@ -433,19 +433,25 @@ void TypeLocWriter::VisitDependentAddressSpaceTypeLoc(
 void TypeLocWriter::VisitDependentSizedExtVectorTypeLoc(
                                         DependentSizedExtVectorTypeLoc TL) {
   addSourceLocation(TL.getNameLoc());
+  addSourceLocation(TL.getAttrNameLoc());
+  Record.AddStmt(TL.getSizeExpr());
 }
 
 void TypeLocWriter::VisitVectorTypeLoc(VectorTypeLoc TL) {
   addSourceLocation(TL.getNameLoc());
+  addSourceLocation(TL.getAttrNameLoc());
+  Record.AddStmt(TL.getSizeExpr());
 }
 
 void TypeLocWriter::VisitDependentVectorTypeLoc(
     DependentVectorTypeLoc TL) {
   addSourceLocation(TL.getNameLoc());
+  addSourceLocation(TL.getAttrNameLoc());
+  Record.AddStmt(TL.getSizeExpr());
 }
 
 void TypeLocWriter::VisitExtVectorTypeLoc(ExtVectorTypeLoc TL) {
-  addSourceLocation(TL.getNameLoc());
+  VisitVectorTypeLoc(TL);
 }
 
 void TypeLocWriter::VisitConstantMatrixTypeLoc(ConstantMatrixTypeLoc TL) {
@@ -1534,6 +1540,13 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
     SmallString<128> CleanedSysroot(isysroot);
     PP.getFileManager().makeAbsolutePath(CleanedSysroot, /*Canonicalize=*/true);
     BaseDirectory.assign(CleanedSysroot.begin(), CleanedSysroot.end());
+  } else if (PP.getHeaderSearchInfo().getHeaderSearchOpts().PCHBaseDirIsCwd) {
+    // Reuse relocatable PCH prefix stripping, but leave the reader's base
+    // directory empty so relative paths resolve against the consumer's cwd.
+    // GeneratePCHAction rejects combining this with -relocatable-pch.
+    SmallString<128> BaseDir(".");
+    FileMgr.makeAbsolutePath(BaseDir, /*Canonicalize=*/true);
+    BaseDirectory.assign(BaseDir.begin(), BaseDir.end());
   }
 
   // Module map file

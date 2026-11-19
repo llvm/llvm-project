@@ -161,6 +161,6 @@ body:             |
   bb.0:
     liveins: $w0, $lr, $w8
     RET undef $lr
-
+...
 # CHECK-LABEL: name:            OUTLINED_FUNCTION_{{[0-9]}}
 # CHECK=LABEL: name:            OUTLINED_FUNCTION_{{[1-9]}}

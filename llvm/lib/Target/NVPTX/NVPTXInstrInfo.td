@@ -198,6 +198,9 @@ def hasCLMAD : SubtargetPredicate;
 def hasTcgen05InstSupport : SubtargetPredicate;
 def hasTensormapReplaceSupport : SubtargetPredicate;
 
+def hasTensormapAllocClassSupport
+  : PredAnd<[PTX95, PredOr<[SM90a, SM100f, SM110f, SM120f]>]>;
+
 // Checks Rubin family extensions support.
 //  - TMA S2G im2col_w mode support
 //  - tcgen05.commit shared mem A variants.
@@ -209,7 +212,7 @@ def hasRubinFamilySupport : PredOr<[SM107f]>;
 def hasSPCompress : PredOr<[SM107a]>;
 
 // Checks tcgen05.shift instruction support.
-def hasTcgen05ShiftSupport : PredOr<[SM100a, SM103a, SM110a]>;
+def hasTcgen05ShiftSupport : PredOr<[SM100a, SM103a, SM110a, SM107a]>;
 
 def hasTcgen05MMAScaleInputDImm : PredOr<[SM100f]>;
 def hasTcgen05MMAI8Kind : PredOr<[SM100a, SM110a]>;
@@ -996,7 +999,7 @@ def : Pat<(v2f16 (build_vector (f16 (fpround_oneuse f32:$lo)),
 // TODO: Missing slct
 
 multiclass SELP_PATTERN<string TypeStr, RegTyInfo t> {
-  let hasSideEffects = false, isSelect = 1 in
+  let hasSideEffects = false in
   def NAME : BasicNVPTXInst<(outs t.RC:$dst),
                 (ins t.RegOrImm:$a, t.RegOrImm:$b, B1Op:$p), "selp." # TypeStr>;
   def : Pat<(t.Ty (select i1:$p, t.Ty:$a, t.Ty:$b)),
@@ -1599,7 +1602,7 @@ def cond2cc : SDNodeXForm<cond, [{
 multiclass FSETP<RegTyInfo t, bit allow_ftz = true, list<Predicate> preds = []> {
   defvar ftz_str = !if(allow_ftz, "$ftz", "");
   defvar flags = !con((ins CmpMode:$cmp), !if(allow_ftz, (ins FTZFlagFor<t>.ret:$ftz), (ins)));
-  let hasSideEffects = false, isCompare = 1, isCommutable = 1 in
+  let hasSideEffects = false, isCompare = 1 in
     def NAME : BasicFlagsNVPTXInst<(outs B1:$dst), (ins t.SrcOp:$a, t.SrcOp:$b), flags,
         "setp.${cmp:FCmp}" # ftz_str # "." # t.PtxType>;
   def : Pat<(i1 (setcc t.Ty:$a, t.Ty:$b, cond:$cc)),
@@ -1607,7 +1610,7 @@ multiclass FSETP<RegTyInfo t, bit allow_ftz = true, list<Predicate> preds = []> 
 }
 
 multiclass ISETP<RegTyInfo t> {
-  let isCompare = 1, isCommutable = 1 in
+  let isCompare = 1 in
     def NAME : BasicFlagsNVPTXInst<(outs B1:$dst),
         (ins t.RegOrImm:$a, t.RegOrImm:$b), (ins CmpMode:$cmp),
         "setp.${cmp:ICmp}.${cmp:IType}" # t.Size>;
