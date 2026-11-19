@@ -7096,12 +7096,14 @@ experimental at this time.
 def PreserveNoneDocs : Documentation {
   let Category = DocCatCallingConvs;
   let Content = [{
-On X86-64 and AArch64 targets, this attribute changes the calling convention of a function.
+On X86-64, AArch64 and RISC-V targets, this attribute changes the calling convention of a function.
 The `preserve_none` calling convention tries to preserve as few general
 registers as possible. So all general registers are caller saved registers. It
-also uses more general registers to pass arguments. This attribute doesn't
-impact floating-point registers. `preserve_none`'s ABI is still unstable, and
-may be changed in the future.
+also uses more general registers to pass arguments. Arguments that the C
+calling convention passes in floating-point or vector registers are still
+passed in those registers; which floating-point registers the callee preserves
+is target-specific (see below).
+`preserve_none`'s ABI is still unstable, and may be changed in the future.
 
 - On X86-64, only RSP and RBP are preserved by the callee.
   Registers R12, R13, R14, R15, RDI, RSI, RDX, RCX, R8, R9, R11, and RAX now can
@@ -7112,6 +7114,21 @@ may be changed in the future.
   X8, X16-X19, SIMD and floating-point registers follow the AAPCS calling
   convention. X15 is not available for argument passing on Windows, but is
   used to pass arguments on other platforms.
+- On RISC-V, only ``ra``, ``s0`` (the frame pointer) and ``s1`` (the base
+  pointer) are preserved by the callee, in addition to ``sp``, ``gp`` and
+  ``tp``. The floating-point registers ``fs0``-``fs11`` are not preserved.
+  In non-variadic functions, everything the standard calling convention would
+  pass in ``a0``-``a7`` is passed in ``s2``-``s11`` followed by ``a0``-``a7``.
+  This includes floating-point arguments that are passed in integer registers
+  (soft-float ABIs, Zfinx/Zdinx, or once ``fa0``-``fa7`` are used up).
+  Arguments passed in ``fa0``-``fa7`` or in vector registers, return values,
+  variadic functions and the ILP32E and LP64E ABIs use the same registers as
+  the standard calling convention. ``s1`` and ``t0``-``t6`` are never used to
+  pass arguments. Whether an aggregate is passed directly, split between
+  integer and floating-point registers, or passed by reference is decided
+  exactly as in the standard calling convention, i.e. as if only the standard
+  integer argument registers (eight, or six in the ILP32E and LP64E ABIs) were
+  available.
   }];
 }
 

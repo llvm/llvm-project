@@ -599,6 +599,7 @@ RISCVTargetInfo::checkCallingConvention(CallingConv CC) const {
   default:
     return CCCR_Warning;
   case CC_C:
+  case CC_PreserveNone:
   case CC_RISCVVectorCall:
   case CC_RISCVVLSCall_32:
   case CC_RISCVVLSCall_64:

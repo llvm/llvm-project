@@ -236,6 +236,48 @@ static ArrayRef<MCPhysReg> getArgGPR32s(const RISCVABI::ABI ABI) {
   return ArrayRef(ArgIGPRs);
 }
 
+// Whether arguments are assigned using the preserve_none register order.
+// Variadic functions use the standard convention (va_arg expects the standard
+// layout), as do return values. The ILP32E/LP64E ABIs also use the standard
+// argument registers: with s0 and s1 excluded, RVE has no other callee-saved
+// GPRs to put arguments in.
+static bool usePreserveNoneArgGPRs(CallingConv::ID CC, bool IsVarArg,
+                                   const RISCVABI::ABI ABI) {
+  return CC == CallingConv::PreserveNone && !IsVarArg && !RISCVABI::isRVE(ABI);
+}
+
+// The GPRs used for passing arguments in the preserve_none calling
+// convention. Registers that are callee-saved in the standard convention come
+// first, so that a preserve_none function can call ordinary functions without
+// having to spill and reload its incoming arguments. The following are
+// deliberately not used:
+//  - ra (x1), sp (x2), gp (x3), tp (x4).
+//  - s0 (x8): the frame pointer, still callee-saved under preserve_none.
+//  - s1 (x9): the base pointer, still callee-saved under preserve_none. It is
+//    set up in the prologue of functions that realign the stack and have
+//    variable sized objects, which would clobber an incoming argument.
+//  - t0-t6: left as scratch registers for the prologue/epilogue, indirect
+//    tail-call targets (which can't live in an argument register), long
+//    calls/branches, the 'nest' parameter and Zicfilp landing pad labels.
+#define PRESERVE_NONE_ARG_GPRS(SUFFIX)                                         \
+  {RISCV::X18##SUFFIX, RISCV::X19##SUFFIX, RISCV::X20##SUFFIX,                 \
+   RISCV::X21##SUFFIX, RISCV::X22##SUFFIX, RISCV::X23##SUFFIX,                 \
+   RISCV::X24##SUFFIX, RISCV::X25##SUFFIX, RISCV::X26##SUFFIX,                 \
+   RISCV::X27##SUFFIX, RISCV::X10##SUFFIX, RISCV::X11##SUFFIX,                 \
+   RISCV::X12##SUFFIX, RISCV::X13##SUFFIX, RISCV::X14##SUFFIX,                 \
+   RISCV::X15##SUFFIX, RISCV::X16##SUFFIX, RISCV::X17##SUFFIX}
+static const MCPhysReg PreserveNoneArgGPRs[] = PRESERVE_NONE_ARG_GPRS();
+static const MCPhysReg PreserveNoneArgGPR16s[] = PRESERVE_NONE_ARG_GPRS(_H);
+static const MCPhysReg PreserveNoneArgGPR32s[] = PRESERVE_NONE_ARG_GPRS(_W);
+#undef PRESERVE_NONE_ARG_GPRS
+
+ArrayRef<MCPhysReg> RISCV::getArgGPRs(const RISCVSubtarget &STI,
+                                      CallingConv::ID CC, bool IsVarArg) {
+  if (usePreserveNoneArgGPRs(CC, IsVarArg, STI.getTargetABI()))
+    return ArrayRef(PreserveNoneArgGPRs);
+  return getArgGPRs(STI);
+}
+
 static ArrayRef<MCPhysReg> getFastCCArgGPRs(const RISCVABI::ABI ABI) {
   // The GPRs used for passing arguments in the FastCC, X5 and X6 might be used
   // for save-restore libcall, so we don't use them.
@@ -300,11 +342,10 @@ static bool CC_RISCVAssign2XLen(CCState &State, CCValAssign VA1,
                                 ISD::ArgFlagsTy ArgFlags1, unsigned ValNo2,
                                 MVT ValVT2, MVT LocVT2,
                                 ISD::ArgFlagsTy ArgFlags2,
-                                const RISCVSubtarget &Subtarget) {
+                                const RISCVSubtarget &Subtarget,
+                                ArrayRef<MCPhysReg> ArgGPRs) {
   unsigned XLen = Subtarget.getXLen();
   unsigned XLenInBytes = XLen / 8;
-
-  ArrayRef<MCPhysReg> ArgGPRs = RISCV::getArgGPRs(Subtarget);
 
   if (MCRegister Reg = State.AllocateReg(ArgGPRs)) {
     // At least one half can be passed via register.
@@ -447,6 +488,11 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
   if (IsDoubleFPABI)
     AllowFPRForF64 = !ArgFlags.isVarArg();
 
+  // preserve_none only changes which GPRs are used (and their order); FP and
+  // vector arguments use the same registers as the standard convention.
+  bool IsPreserveNone = !IsRet && usePreserveNoneArgGPRs(State.getCallingConv(),
+                                                         State.isVarArg(), ABI);
+
   if ((LocVT == MVT::f16 || LocVT == MVT::bf16) && AllowFPRForF16_F32) {
     if (MCRegister Reg = State.AllocateReg(ArgFPR16s)) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
@@ -469,20 +515,25 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
   }
 
   if (LocVT == MVT::f16 && Subtarget.hasStdExtZhinxmin()) {
-    if (MCRegister Reg = State.AllocateReg(getArgGPR16s(ABI))) {
+    if (MCRegister Reg =
+            State.AllocateReg(IsPreserveNone ? ArrayRef(PreserveNoneArgGPR16s)
+                                             : getArgGPR16s(ABI))) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
     }
   }
 
   if (LocVT == MVT::f32 && Subtarget.hasStdExtZfinx()) {
-    if (MCRegister Reg = State.AllocateReg(getArgGPR32s(ABI))) {
+    if (MCRegister Reg =
+            State.AllocateReg(IsPreserveNone ? ArrayRef(PreserveNoneArgGPR32s)
+                                             : getArgGPR32s(ABI))) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
     }
   }
 
-  ArrayRef<MCPhysReg> ArgGPRs = RISCV::getArgGPRs(Subtarget);
+  ArrayRef<MCPhysReg> ArgGPRs = IsPreserveNone ? ArrayRef(PreserveNoneArgGPRs)
+                                               : RISCV::getArgGPRs(Subtarget);
 
   // Zdinx use GPR without a bitcast when possible.
   if (LocVT == MVT::f64 && XLen == 64 && Subtarget.hasStdExtZdinx()) {
@@ -586,7 +637,7 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
     PendingLocs.clear();
     PendingArgFlags.clear();
     return CC_RISCVAssign2XLen(State, VA, AF, ValNo, ValVT, LocVT, ArgFlags,
-                               Subtarget);
+                               Subtarget, ArgGPRs);
   }
 
   // Split arguments might be passed indirectly, so keep track of the pending
