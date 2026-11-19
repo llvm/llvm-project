@@ -150,6 +150,7 @@ class DataLayout;
 class LLVMContext;
 class Pass;
 template <typename Fn> class function_ref;
+struct IPOOptions;
 struct AADepGraphNode;
 struct AADepGraph;
 struct Attributor;
@@ -469,10 +470,6 @@ struct DenseMapInfo<const AA::InstExclusionSetTy *>
   }
 };
 
-/// The value passed to the line option that defines the maximal initialization
-/// chain length.
-LLVM_ABI extern unsigned MaxInitializationChainLength;
-
 ///{
 enum class ChangeStatus {
   CHANGED,
@@ -555,7 +552,7 @@ struct AADepGraph {
   LLVM_ABI void viewGraph();
 
   /// Dump graph to file
-  LLVM_ABI void dumpGraph();
+  LLVM_ABI void dumpGraph(StringRef DotFileNamePrefix);
 
   /// Print dependency graph
   LLVM_ABI void print();
@@ -1539,6 +1536,8 @@ struct Attributor {
                       AttributorConfig Configuration);
 
   LLVM_ABI ~Attributor();
+
+  const IPOOptions &Opts;
 
   /// Run the analyses until a fixpoint is reached or enforced (timeout).
   ///
@@ -2631,6 +2630,7 @@ private:
 
   /// The current initialization chain length. Tracked to avoid stack overflows.
   unsigned InitializationChainLength = 0;
+  const unsigned MaxInitializationChainLength;
 
   /// Whether time trace scopes are recorded for every initialization and
   /// update.
@@ -4283,7 +4283,7 @@ struct AAAlign
   AAAlign(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
   static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
-    if (!IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+    if (!IRP.getAssociatedType()->isPointerTy())
       return false;
     return IRAttribute::isValidIRPositionForInit(A, IRP);
   }
@@ -4926,6 +4926,10 @@ template <typename MemberTy> struct PotentialValuesState : AbstractState {
   PotentialValuesState(bool IsValid)
       : IsValidState(IsValid), UndefIsContained(false) {}
 
+  PotentialValuesState(bool IsValid, unsigned MaxPotentialValues)
+      : IsValidState(IsValid), UndefIsContained(false),
+        MaxPotentialValues(MaxPotentialValues) {}
+
   bool isValidState() const override { return IsValidState.isValidState(); }
 
   bool isAtFixpoint() const override { return IsValidState.isAtFixpoint(); }
@@ -4965,17 +4969,9 @@ template <typename MemberTy> struct PotentialValuesState : AbstractState {
     return Set == RHS.getAssumedSet();
   }
 
-  /// Maximum number of potential values to be tracked.
-  /// This is set by -attributor-max-potential-values command line option
-  static unsigned MaxPotentialValues;
-
   /// Return empty set as the best state of potential values.
-  static PotentialValuesState getBestState() {
-    return PotentialValuesState(true);
-  }
-
   static PotentialValuesState getBestState(const PotentialValuesState &PVS) {
-    return getBestState();
+    return PotentialValuesState(true, PVS.MaxPotentialValues);
   }
 
   /// Return full set as the worst state of potential values.
@@ -5062,6 +5058,9 @@ private:
 
   /// Flag for undef value
   bool UndefIsContained;
+
+  /// Maximum number of potential values to be tracked.
+  unsigned MaxPotentialValues = std::numeric_limits<unsigned>::max();
 };
 
 struct DenormalFPMathState : public AbstractState {
@@ -5175,9 +5174,11 @@ LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
 ///
 /// For non constant integers see AAPotentialValues.
 struct AAPotentialConstantValues
-    : public StateWrapper<PotentialConstantIntValuesState, AbstractAttribute> {
-  using Base = StateWrapper<PotentialConstantIntValuesState, AbstractAttribute>;
-  AAPotentialConstantValues(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
+    : public StateWrapper<PotentialConstantIntValuesState, AbstractAttribute,
+                          bool, unsigned> {
+  using Base = StateWrapper<PotentialConstantIntValuesState, AbstractAttribute,
+                            bool, unsigned>;
+  LLVM_ABI AAPotentialConstantValues(const IRPosition &IRP, Attributor &A);
 
   static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
     if (!IRP.getAssociatedType()->isIntegerTy())

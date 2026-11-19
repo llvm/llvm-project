@@ -605,7 +605,18 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
     StringRef Val = A->getValue();
     if (Val == "atomic" || Val == "prefer-atomic")
       CmdArgs.push_back("-fprofile-update=atomic");
-    else if (Val != "single")
+    else if (Val == "single") {
+      if (SanArgs.needsTsanRt() &&
+          (PGOGenerateArg || CSPGOGenerateArg || ProfileGenerateArg)) {
+        // Under TSan, instrprof defaults to atomic counter updates to avoid
+        // data race reports on profile counters; override that default and
+        // warn.
+        D.Diag(diag::warn_drv_tsan_profile_update_single)
+            << A->getAsString(Args);
+        CmdArgs.push_back("-mllvm");
+        CmdArgs.push_back("-instrprof-atomic-counter-update-all=false");
+      }
+    } else
       D.Diag(diag::err_drv_unsupported_option_argument)
           << A->getSpelling() << Val;
   }
@@ -2443,6 +2454,14 @@ void Clang::AddHexagonTargetArgs(const ArgList &Args,
   }
   CmdArgs.push_back("-mllvm");
   CmdArgs.push_back("-machine-sink-split=0");
+
+  // Let debuggers find the caller's HLX vector stack pointer.
+  if (const Arg *A = Args.getLastArg(options::OPT_g_Group);
+      A && !A->getOption().matches(options::OPT_g0) &&
+      !A->getOption().matches(options::OPT_ggdb0)) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("-hexagon-save-parent-vsp");
+  }
 
   addQFloatBackendArg(getToolChain().getDriver(), Args, CmdArgs);
 }

@@ -4157,7 +4157,9 @@ bool TargetLowering::SimplifyDemandedVectorElts(
                                    Depth + 1))
       return true;
 
-    KnownZero = ZeroLHS & ZeroRHS;
+    // 0.0 / 0.0 and frem(0.0, 0.0) are NaN, not zero.
+    if (Opcode != ISD::FDIV && Opcode != ISD::FREM)
+      KnownZero = ZeroLHS & ZeroRHS;
     KnownUndef = getKnownUndefForVectorBinop(Op, TLO.DAG, UndefLHS, UndefRHS);
 
     // Attempt to avoid multi-use ops if we don't need anything from them.
@@ -14292,6 +14294,18 @@ SDValue TargetLowering::expandVECTOR_SHUFFLE_VAR(SDNode *Node,
   if (VecVT.isScalableVector())
     reportFatalUsageError(
         "Cannot expand vector_shuffle_var for scalable vectors.");
+
+  if (VecVT.getVectorNumElements() == 2) {
+    // Select between V and V with its lanes swapped.
+    EVT IdxVT = VecVT.changeVectorElementTypeToInteger();
+    SDValue Idx = DAG.getZExtOrTrunc(Mask, DL, IdxVT);
+    EVT CCVT =
+        getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), IdxVT);
+    SDValue Keep =
+        DAG.getSetCC(DL, CCVT, Idx, DAG.getStepVector(DL, IdxVT), ISD::SETEQ);
+    SDValue Swapped = DAG.getVectorShuffle(VecVT, DL, V, V, {1, 0});
+    return DAG.getNode(ISD::VSELECT, DL, VecVT, Keep, V, Swapped);
+  }
 
   // Res[i] = V[Mask[i]]. Out-of-range extracts are undefined, as required.
   MVT IdxVT = getVectorIdxTy(DAG.getDataLayout());
