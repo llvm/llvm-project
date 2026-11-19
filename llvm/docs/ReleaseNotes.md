@@ -236,6 +236,9 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to building LLVM
 
+* The minimum required CMake version to build LLVM has been raised from 3.20.0
+  to 3.31.0.
+
 * A new `LLVM_ENABLE_LZMA` option (`ON`, `OFF` or `FORCE_ON`; default `ON`)
   controls whether LLVM links liblzma for xz decompression. It replaces LLDB's
   `LLDB_ENABLE_LZMA`, which is deprecated: a monorepo build maps it onto
