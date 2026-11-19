@@ -10,6 +10,10 @@ lldb_tablegen(DynamicLoaderDarwinKernelEnums.inc -gen-lldb-option-enum-defs
   SOURCE DynamicLoaderDarwinKernelEnums.td
   TARGET LLDBPluginDynamicLoaderDarwinKernelEnumsGen)
 
+lldb_tablegen(DynamicLoaderDarwinKernelEnums.json -dump-json
+  SOURCE DynamicLoaderDarwinKernelEnums.td
+  TARGET LLDBPluginDynamicLoaderDarwinKernelEnumsJsonGen)
+
 lldb_tablegen(DynamicLoaderDarwinKernelProperties.json -dump-json
   SOURCE DynamicLoaderDarwinKernelProperties.td
   TARGET LLDBPluginDynamicLoaderDarwinKernelPropertiesJsonGen)

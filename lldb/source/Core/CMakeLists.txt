@@ -10,6 +10,10 @@ lldb_tablegen(DebuggerEnums.inc -gen-lldb-option-enum-defs
   SOURCE DebuggerEnums.td
   TARGET LLDBDebuggerEnumsGen)
 
+lldb_tablegen(DebuggerEnums.json -dump-json
+  SOURCE DebuggerEnums.td
+  TARGET LLDBDebuggerEnumsJsonGen)
+
 lldb_tablegen(CoreProperties.json -dump-json
   SOURCE CoreProperties.td
   TARGET LLDBCorePropertiesJsonGen)
