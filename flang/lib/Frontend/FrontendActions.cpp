@@ -934,12 +934,6 @@ static void generateMachineCodeOrAssemblyImpl(
                                    ? llvm::CodeGenFileType::AssemblyFile
                                    : llvm::CodeGenFileType::ObjectFile;
 
-  // Invoke pre-codegen callback from plugin, which might want to take over the
-  // entire code generation itself.
-  for (const std::unique_ptr<llvm::PassPlugin> &plugin : ci.getPassPlugins())
-    if (plugin->invokePreCodeGenCallback(llvmModule, tm, cgft, os))
-      return;
-
   std::unique_ptr<llvm::ToolOutputFile> dwoOS;
   if (!codeGenOpts.SplitDwarfOutput.empty()) {
     std::error_code ec;
@@ -951,6 +945,20 @@ static void generateMachineCodeOrAssemblyImpl(
       return;
     }
   }
+
+  // Invoke pre-codegen callback from plugin, which might want to take over the
+  // entire code generation itself.
+  for (const std::unique_ptr<llvm::PassPlugin> &plugin : ci.getPassPlugins()) {
+    if (plugin->invokePreCodeGenCallback(
+            tm, llvmModule, os, dwoOS ? &dwoOS->os() : nullptr, cgft,
+            /*DisableVerify=*/true, /*DisableSimplifyLibCalls=*/false,
+            /*MSI=*/nullptr, llvm::vfs::getRealFileSystem())) {
+      if (dwoOS)
+        dwoOS->keep();
+      return;
+    }
+  }
+
   llvm::Error codeGenError = runCodeGenPipeline(
       tm, llvmModule, os, dwoOS ? &dwoOS->os() : nullptr, cgft);
   if (codeGenError) {

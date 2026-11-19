@@ -1284,14 +1284,14 @@ define i1 @reduce_logical_and1(i1 %a, i32 %b, i32 %c) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[B:%.*]], 6
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[C:%.*]], [[B]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = and i1 [[CMP1]], [[CMP]]
-; CHECK-NEXT:    [[AND2:%.*]] = select i1 [[A:%.*]], i1 [[TMP0]], i1 false
+; CHECK-NEXT:    [[AND2:%.*]] = select i1 [[A:%.*]], i1 [[TMP0]], i1 false, !prof [[PROF2:![0-9]+]]
 ; CHECK-NEXT:    ret i1 [[AND2]]
 ;
 bb:
   %cmp = icmp slt i32 %b, 6
   %cmp1 = icmp sgt i32 %c, %b
-  %and1 = select i1 %a, i1 %cmp1, i1 false
-  %and2 = select i1 %and1, i1 %cmp, i1 false
+  %and1 = select i1 %a, i1 %cmp1, i1 false, !prof !1
+  %and2 = select i1 %and1, i1 %cmp, i1 false, !prof !2
   ret i1 %and2
 }
 
@@ -1333,14 +1333,14 @@ define i1 @reduce_logical_or1(i1 %a, i32 %b, i32 %c) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[B:%.*]], 6
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[C:%.*]], [[B]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = or i1 [[CMP1]], [[CMP]]
-; CHECK-NEXT:    [[AND2:%.*]] = select i1 [[A:%.*]], i1 true, i1 [[TMP0]]
+; CHECK-NEXT:    [[AND2:%.*]] = select i1 [[A:%.*]], i1 true, i1 [[TMP0]], !prof [[PROF2]]
 ; CHECK-NEXT:    ret i1 [[AND2]]
 ;
 bb:
   %cmp = icmp slt i32 %b, 6
   %cmp1 = icmp sgt i32 %c, %b
-  %and1 = select i1 %a, i1 true, i1 %cmp1
-  %and2 = select i1 %and1, i1 true, i1 %cmp
+  %and1 = select i1 %a, i1 true, i1 %cmp1, !prof !1
+  %and2 = select i1 %and1, i1 true, i1 %cmp, !prof !2
   ret i1 %and2
 }
 
@@ -1703,6 +1703,9 @@ define <2 x i1> @neg_test_logical_and_trunc_nuw_nsw_vec(<2 x i1> %c, <2 x i8> no
 }
 
 !0 = !{!"function_entry_count", i32 5260116}
+!1 = !{!"branch_weights", i32 3, i32 7}
+!2 = !{!"branch_weights", i32 9, i32 1}
 ;.
 ; CHECK: [[PROF1]] = !{!"unknown", !"instcombine"}
+; CHECK: [[PROF2]] = !{!"branch_weights", i32 3, i32 7}
 ;.

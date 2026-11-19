@@ -99,9 +99,9 @@ public:
                  StringRef CPU,
                  const std::vector<std::string> &FeaturesVec) const override;
 
-  std::optional<std::pair<unsigned, unsigned>>
-  getVScaleRange(const LangOptions &LangOpts, ArmStreamingKind Mode,
-                 llvm::StringMap<bool> *FeatureMap = nullptr) const override;
+  std::optional<std::pair<unsigned, unsigned>> getVScaleRange(
+      const LangOptions &LangOpts, ArmStreamingKind Mode,
+      const llvm::StringMap<bool> *FeatureMap = nullptr) const override;
 
   bool hasFeature(StringRef Feature) const override;
 
