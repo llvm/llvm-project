@@ -111,3 +111,124 @@ for.body:
 for.end:
   ret i64 %min.loc.next
 }
+
+; Ensure tailfolding also works when the reduction type differs from the
+; canonical IV.
+define i32 @argmin_trunc_iv(ptr %src) {
+; CHECK-LABEL: VPlan for loop in 'argmin_trunc_iv'
+; CHECK:  VPlan ' for UF>=1' {
+; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
+; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
+; CHECK-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
+; CHECK-NEXT:  Live-in ir<101> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<entry>:
+; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:    vp<[[VP3:%[0-9]+]]> = DERIVED-IV ir<1> + ir<101> * ir<1>
+; CHECK-NEXT:  Successor(s): vector loop
+; CHECK-EMPTY:
+; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP4:%[0-9]+]]> = CANONICAL-IV
+; CHECK-NEXT:  vp<[[VP5:%[0-9]+]]> = HEADER-MASK
+; CHECK-EMPTY:
+; CHECK-NEXT:    vector.body:
+; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<1>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%min.rdx> = phi (smin) ir<0>, vp<[[VP9:%[0-9]+]]>
+; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%min.idx> = phi (find-iv) ir<-2147483648>, ir<poison>
+; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%min.idx>.1 = phi (find-iv) ir<poison>.1, vp<[[VP10:%[0-9]+]]>
+; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = WIDEN-INDUCTION nuw ir<0>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:      ir<%iv>.1 = WIDEN-INDUCTION ir<1>, ir<1>, vp<[[VP0]]> (truncated to i32)
+; CHECK-NEXT:    Successor(s): vector.body.split
+; CHECK-EMPTY:
+; CHECK-NEXT:    vector.body.split:
+; CHECK-NEXT:      REPLICATE ir<%gep.src> = getelementptr ir<%src>, ir<%iv>
+; CHECK-NEXT:      REPLICATE ir<%l> = load ir<%gep.src>, vp<[[VP5]]>
+; CHECK-NEXT:      WIDEN ir<%min.cmp> = icmp slt ir<%l>, ir<%min.rdx>
+; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = select ir<%min.cmp>, vp<[[VP6]]>, ir<%min.idx>.1
+; CHECK-NEXT:      WIDEN-INTRINSIC ir<%min.rdx.next> = call llvm.smin(ir<%l>, ir<%min.rdx>)
+; CHECK-NEXT:      WIDEN ir<%iv.next> = add ir<%iv>, ir<1>
+; CHECK-NEXT:      CLONE ir<%ec> = icmp eq ir<%iv>, ir<101>
+; CHECK-NEXT:    Successor(s): vector.latch
+; CHECK-EMPTY:
+; CHECK-NEXT:    vector.latch:
+; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = not vp<[[VP5]]>
+; CHECK-NEXT:      EMIT vp<[[VP9]]> = select vp<[[VP5]]>, ir<%min.rdx.next>, ir<%min.rdx>
+; CHECK-NEXT:      EMIT vp<[[VP10]]> = select vp<[[VP5]]>, vp<[[VP7]]>, ir<%min.idx>.1
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP4]]>, vp<[[VP1]]>
+; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
+; CHECK-NEXT:    No successors
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Successor(s): middle.block
+; CHECK-EMPTY:
+; CHECK-NEXT:  middle.block:
+; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = compute-reduction-result (smin) vp<[[VP9]]>
+; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = icmp eq vp<[[VP9]]>, vp<[[VP12]]>
+; CHECK-NEXT:    EMIT vp<[[VP14:%[0-9]+]]> = select vp<[[VP13]]>, vp<[[VP10]]>, ir<-1>
+; CHECK-NEXT:    EMIT vp<[[VP15:%[0-9]+]]> = compute-reduction-result (umin) vp<[[VP14]]>
+; CHECK-NEXT:    vp<[[VP16:%[0-9]+]]> = DERIVED-IV ir<1> + vp<[[VP15]]> * ir<1>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP17:%[0-9]+]]> = trunc vp<[[VP16]]> to i32
+; CHECK-NEXT:    EMIT vp<[[VP18:%[0-9]+]]> = icmp eq vp<[[VP12]]>, ir<0>
+; CHECK-NEXT:    EMIT vp<[[VP19:%[0-9]+]]> = select vp<[[VP18]]>, ir<0>, vp<[[VP17]]>
+; CHECK-NEXT:    EMIT vp<[[VP20:%[0-9]+]]> = extract-last-part vp<[[VP12]]>
+; CHECK-NEXT:    EMIT vp<[[VP21:%[0-9]+]]> = extract-last-lane vp<[[VP20]]>
+; CHECK-NEXT:    EMIT vp<[[VP22:%[0-9]+]]> = extract-last-part vp<[[VP19]]>
+; CHECK-NEXT:    EMIT vp<[[VP23:%[0-9]+]]> = extract-last-lane vp<[[VP22]]>
+; CHECK-NEXT:    EMIT vp<[[VP24:%[0-9]+]]> = extract-last-part vp<[[VP19]]>
+; CHECK-NEXT:    EMIT vp<[[VP25:%[0-9]+]]> = extract-last-lane vp<[[VP24]]>
+; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<101>, vp<[[VP2]]>
+; CHECK-NEXT:    EMIT vp<[[VP26:%[0-9]+]]> = last-active-lane vp<[[VP5]]>
+; CHECK-NEXT:    EMIT vp<[[VP27:%[0-9]+]]> = extract-lane vp<[[VP26]]>, vp<[[VP12]]>
+; CHECK-NEXT:    EMIT vp<[[VP28:%[0-9]+]]> = last-active-lane vp<[[VP5]]>
+; CHECK-NEXT:    EMIT vp<[[VP29:%[0-9]+]]> = extract-lane vp<[[VP28]]>, vp<[[VP19]]>
+; CHECK-NEXT:    EMIT vp<[[VP30:%[0-9]+]]> = last-active-lane vp<[[VP5]]>
+; CHECK-NEXT:    EMIT vp<[[VP31:%[0-9]+]]> = extract-lane vp<[[VP30]]>, vp<[[VP19]]>
+; CHECK-NEXT:    EMIT branch-on-cond ir<true>
+; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<exit>:
+; CHECK-NEXT:    IR   %min.idx.next.lcssa = phi i32 [ %min.idx.next, %loop ] (extra operand: vp<[[VP19]]> from middle.block)
+; CHECK-NEXT:  No successors
+; CHECK-EMPTY:
+; CHECK-NEXT:  scalar.ph:
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP3]]>, middle.block ], [ ir<1>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.merge.rdx> = phi [ vp<[[VP12]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.merge.rdx>.1 = phi [ vp<[[VP19]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:  Successor(s): ir-bb<loop>
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<loop>:
+; CHECK-NEXT:    IR   %iv = phi i64 [ 1, %entry ], [ %iv.next, %loop ] (extra operand: vp<%bc.resume.val> from scalar.ph)
+; CHECK-NEXT:    IR   %min.rdx = phi i32 [ 0, %entry ], [ %min.rdx.next, %loop ] (extra operand: vp<%bc.merge.rdx> from scalar.ph)
+; CHECK-NEXT:    IR   %min.idx = phi i32 [ 0, %entry ], [ %min.idx.next, %loop ] (extra operand: vp<%bc.merge.rdx>.1 from scalar.ph)
+; CHECK-NEXT:    IR   %gep.src = getelementptr i32, ptr %src, i64 %iv
+; CHECK-NEXT:    IR   %l = load i32, ptr %gep.src, align 4
+; CHECK-NEXT:    IR   %min.cmp = icmp slt i32 %l, %min.rdx
+; CHECK-NEXT:    IR   %iv.trunc = trunc i64 %iv to i32
+; CHECK-NEXT:    IR   %min.idx.next = select i1 %min.cmp, i32 %iv.trunc, i32 %min.idx
+; CHECK-NEXT:    IR   %min.rdx.next = call i32 @llvm.smin.i32(i32 %l, i32 %min.rdx)
+; CHECK-NEXT:    IR   %iv.next = add i64 %iv, 1
+; CHECK-NEXT:    IR   %ec = icmp eq i64 %iv, 101
+; CHECK-NEXT:  No successors
+; CHECK-NEXT:  }
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 1, %entry ], [ %iv.next, %loop ]
+  %min.rdx = phi i32 [ 0, %entry ], [ %min.rdx.next, %loop ]
+  %min.idx = phi i32 [ 0, %entry ], [ %min.idx.next, %loop ]
+  %gep.src = getelementptr i32, ptr %src, i64 %iv
+  %l = load i32, ptr %gep.src, align 4
+  %min.cmp = icmp slt i32 %l, %min.rdx
+  %iv.trunc = trunc i64 %iv to i32
+  %min.idx.next = select i1 %min.cmp, i32 %iv.trunc, i32 %min.idx
+  %min.rdx.next = call i32 @llvm.smin.i32(i32 %l, i32 %min.rdx)
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv, 101
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret i32 %min.idx.next
+}
