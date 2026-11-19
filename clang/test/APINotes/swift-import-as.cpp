@@ -1,25 +1,48 @@
 // RUN: rm -rf %t && mkdir -p %t
-// RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -fsyntax-only -I %S/Inputs/Headers %s -x c++
-// RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter ImmortalRefType | FileCheck -check-prefix=CHECK-IMMORTAL %s
-// RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter RefCountedType | FileCheck -check-prefix=CHECK-REF-COUNTED %s
-// RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter RefCountedTypeWithDefaultConvention | FileCheck -check-prefix=CHECK-REF-COUNTED-DEFAULT %s
-// RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter OpaqueRefCountedType | FileCheck -check-prefix=CHECK-OPAQUE-REF-COUNTED %s
-// RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter NonCopyableType | FileCheck -check-prefix=CHECK-NON-COPYABLE %s
-// RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter CopyableType | FileCheck -check-prefix=CHECK-COPYABLE %s
-// RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter NonEscapableType | FileCheck -check-prefix=CHECK-NON-ESCAPABLE %s
-// RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter EscapableType | FileCheck -check-prefix=CHECK-ESCAPABLE %s
-// RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter EscapableAnnotatedInHeader | FileCheck -check-prefix=CHECK-ESCAPABLE-IN-HEADER %s
-// RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter NoncopyableAnnotatedInHeader | FileCheck -check-prefix=CHECK-NONCOPYABLE-IN-HEADER %s
-// RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter EscapabilityConflict | FileCheck -check-prefix=CHECK-ESCAPABILITY-CONFLICT %s
-// RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter functionReturningFrt__ | FileCheck -check-prefix=CHECK-FUNCTION-RETURNING-FRT %s
-// RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter functionReturningFrt_returns_unretained | FileCheck -check-prefix=CHECK-FUNCTION-RETURNING-FRT-UNRETAINED %s
-// RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter functionReturningFrt_returns_retained | FileCheck -check-prefix=CHECK-FUNCTION-RETURNING-FRT-RETAINED %s
-// RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter methodReturningFrt__ | FileCheck -check-prefix=CHECK-METHOD-RETURNING-FRT %s
-// RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter methodReturningFrt_returns_unretained | FileCheck -check-prefix=CHECK-METHOD-RETURNING-FRT-UNRETAINED %s
-// RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter methodReturningFrt_returns_retained | FileCheck -check-prefix=CHECK-METHOD-RETURNING-FRT-RETAINED %s
-// RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter WrappedOptions | FileCheck -check-prefix=CHECK-WRAPPED-OPTIONS %s
-// RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter NoncopyableWithDestroyType | FileCheck -check-prefix=CHECK-NONCOPYABLE-WITH-DESTROY %s
-// RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter ImportAsUnsafe | FileCheck -check-prefix=CHECK-IMPORT-AS-UNSAFE %s
+// RUN: %clang_cc1 -std=c++17 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -fsyntax-only -I %S/Inputs/Headers %s -x c++
+// RUN: %clang_cc1 -std=c++17 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter ImmortalRefType | FileCheck -check-prefix=CHECK-IMMORTAL %s
+// RUN: %clang_cc1 -std=c++17 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter RefCountedType | FileCheck -check-prefix=CHECK-REF-COUNTED %s
+// RUN: %clang_cc1 -std=c++17 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter RefCountedTypeWithDefaultConvention | FileCheck -check-prefix=CHECK-REF-COUNTED-DEFAULT %s
+// RUN: %clang_cc1 -std=c++17 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter OpaqueRefCountedType | FileCheck -check-prefix=CHECK-OPAQUE-REF-COUNTED %s
+// RUN: %clang_cc1 -std=c++17 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter NonCopyableType | FileCheck -check-prefix=CHECK-NON-COPYABLE %s
+// RUN: %clang_cc1 -std=c++17 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter CopyableType | FileCheck -check-prefix=CHECK-COPYABLE %s
+// RUN: %clang_cc1 -std=c++17 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter NonEscapableType | FileCheck -check-prefix=CHECK-NON-ESCAPABLE %s
+// RUN: %clang_cc1 -std=c++17 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter EscapableType | FileCheck -check-prefix=CHECK-ESCAPABLE %s
+// RUN: %clang_cc1 -std=c++17 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter EscapableAnnotatedInHeader | FileCheck -check-prefix=CHECK-ESCAPABLE-IN-HEADER %s
+// RUN: %clang_cc1 -std=c++17 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter NoncopyableAnnotatedInHeader | FileCheck -check-prefix=CHECK-NONCOPYABLE-IN-HEADER %s
+// RUN: %clang_cc1 -std=c++17 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter EscapabilityConflict | FileCheck -check-prefix=CHECK-ESCAPABILITY-CONFLICT %s
+// RUN: %clang_cc1 -std=c++17 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter functionReturningFrt__ | FileCheck -check-prefixes=CHECK-FUNCTION-RETURNING-FRT,CHECK-FUNCTION-RETURNING-FRT17 %s
+// RUN: %clang_cc1 -std=c++17 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter functionReturningFrt_returns_unretained | FileCheck -check-prefixes=CHECK-FUNCTION-RETURNING-FRT-UNRETAINED,CHECK-FUNCTION-RETURNING-FRT-UNRETAINED17 %s
+// RUN: %clang_cc1 -std=c++17 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter functionReturningFrt_returns_retained | FileCheck -check-prefixes=CHECK-FUNCTION-RETURNING-FRT-RETAINED,CHECK-FUNCTION-RETURNING-FRT-RETAINED17 %s
+// RUN: %clang_cc1 -std=c++17 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter methodReturningFrt__ | FileCheck -check-prefixes=CHECK-METHOD-RETURNING-FRT,CHECK-METHOD-RETURNING-FRT17 %s
+// RUN: %clang_cc1 -std=c++17 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter methodReturningFrt_returns_unretained | FileCheck -check-prefixes=CHECK-METHOD-RETURNING-FRT-UNRETAINED,CHECK-METHOD-RETURNING-FRT-UNRETAINED17 %s
+// RUN: %clang_cc1 -std=c++17 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter methodReturningFrt_returns_retained | FileCheck -check-prefixes=CHECK-METHOD-RETURNING-FRT-RETAINED,CHECK-METHOD-RETURNING-FRT-RETAINED17 %s
+// RUN: %clang_cc1 -std=c++17 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter WrappedOptions | FileCheck -check-prefix=CHECK-WRAPPED-OPTIONS %s
+// RUN: %clang_cc1 -std=c++17 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter NoncopyableWithDestroyType | FileCheck -check-prefix=CHECK-NONCOPYABLE-WITH-DESTROY %s
+// RUN: %clang_cc1 -std=c++17 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter ImportAsUnsafe | FileCheck -check-prefix=CHECK-IMPORT-AS-UNSAFE %s
+
+// RUN: rm -rf %t && mkdir -p %t
+// RUN: %clang_cc1 -std=c++20 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -fsyntax-only -I %S/Inputs/Headers %s -x c++
+// RUN: %clang_cc1 -std=c++20 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter ImmortalRefType | FileCheck -check-prefix=CHECK-IMMORTAL %s
+// RUN: %clang_cc1 -std=c++20 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter RefCountedType | FileCheck -check-prefix=CHECK-REF-COUNTED %s
+// RUN: %clang_cc1 -std=c++20 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter RefCountedTypeWithDefaultConvention | FileCheck -check-prefix=CHECK-REF-COUNTED-DEFAULT %s
+// RUN: %clang_cc1 -std=c++20 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter OpaqueRefCountedType | FileCheck -check-prefix=CHECK-OPAQUE-REF-COUNTED %s
+// RUN: %clang_cc1 -std=c++20 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter NonCopyableType | FileCheck -check-prefix=CHECK-NON-COPYABLE %s
+// RUN: %clang_cc1 -std=c++20 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter CopyableType | FileCheck -check-prefix=CHECK-COPYABLE %s
+// RUN: %clang_cc1 -std=c++20 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter NonEscapableType | FileCheck -check-prefix=CHECK-NON-ESCAPABLE %s
+// RUN: %clang_cc1 -std=c++20 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter EscapableType | FileCheck -check-prefix=CHECK-ESCAPABLE %s
+// RUN: %clang_cc1 -std=c++20 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter EscapableAnnotatedInHeader | FileCheck -check-prefix=CHECK-ESCAPABLE-IN-HEADER %s
+// RUN: %clang_cc1 -std=c++20 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter NoncopyableAnnotatedInHeader | FileCheck -check-prefix=CHECK-NONCOPYABLE-IN-HEADER %s
+// RUN: %clang_cc1 -std=c++20 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter EscapabilityConflict | FileCheck -check-prefix=CHECK-ESCAPABILITY-CONFLICT %s
+// RUN: %clang_cc1 -std=c++20 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter functionReturningFrt__ | FileCheck -check-prefixes=CHECK-FUNCTION-RETURNING-FRT,CHECK-FUNCTION-RETURNING-FRT20  %s
+// RUN: %clang_cc1 -std=c++20 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter functionReturningFrt_returns_unretained | FileCheck -check-prefixes=CHECK-FUNCTION-RETURNING-FRT-UNRETAINED,CHECK-FUNCTION-RETURNING-FRT-UNRETAINED20 %s
+// RUN: %clang_cc1 -std=c++20 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter functionReturningFrt_returns_retained | FileCheck -check-prefixes=CHECK-FUNCTION-RETURNING-FRT-RETAINED,CHECK-FUNCTION-RETURNING-FRT-RETAINED20 %s
+// RUN: %clang_cc1 -std=c++20 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter methodReturningFrt__ | FileCheck -check-prefixes=CHECK-METHOD-RETURNING-FRT,CHECK-METHOD-RETURNING-FRT20 %s
+// RUN: %clang_cc1 -std=c++20 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter methodReturningFrt_returns_unretained | FileCheck -check-prefixes=CHECK-METHOD-RETURNING-FRT-UNRETAINED,CHECK-METHOD-RETURNING-FRT-UNRETAINED20 %s
+// RUN: %clang_cc1 -std=c++20 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter methodReturningFrt_returns_retained | FileCheck -check-prefixes=CHECK-METHOD-RETURNING-FRT-RETAINED,CHECK-METHOD-RETURNING-FRT-RETAINED20 %s
+// RUN: %clang_cc1 -std=c++20 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter WrappedOptions | FileCheck -check-prefix=CHECK-WRAPPED-OPTIONS %s
+// RUN: %clang_cc1 -std=c++20 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter NoncopyableWithDestroyType | FileCheck -check-prefix=CHECK-NONCOPYABLE-WITH-DESTROY %s
+// RUN: %clang_cc1 -std=c++20 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter ImportAsUnsafe | FileCheck -check-prefix=CHECK-IMPORT-AS-UNSAFE %s
 
 #include <SwiftImportAs.h>
 
@@ -92,29 +115,35 @@
 // CHECK-ESCAPABILITY-CONFLICT: SwiftAttrAttr {{.+}} "~Escapable"
 
 // CHECK-FUNCTION-RETURNING-FRT: Dumping functionReturningFrt__:
-// CHECK-FUNCTION-RETURNING-FRT: FunctionDecl {{.+}} imported in SwiftImportAs functionReturningFrt__ 'ImmortalRefType *()'
+// CHECK-FUNCTION-RETURNING-FRT17: FunctionDecl {{.+}} imported in SwiftImportAs functionReturningFrt__ 'ImmortalRefType *()'
+// CHECK-FUNCTION-RETURNING-FRT20: FunctionDecl {{.+}} imported in SwiftImportAs hidden functionReturningFrt__ 'ImmortalRefType *()'
 // CHECK-FUNCTION-RETURNING-FRT-NOT: `-SwiftAttrAttr {{.+}} "returns_unretained"
 // CHECK-FUNCTION-RETURNING-FRT-NOT: `-SwiftAttrAttr {{.+}} "returns_retained"
 
 // CHECK-FUNCTION-RETURNING-FRT-UNRETAINED: Dumping functionReturningFrt_returns_unretained:
-// CHECK-FUNCTION-RETURNING-FRT-UNRETAINED: FunctionDecl {{.+}} imported in SwiftImportAs functionReturningFrt_returns_unretained 'ImmortalRefType *()'
+// CHECK-FUNCTION-RETURNING-FRT-UNRETAINED17: FunctionDecl {{.+}} imported in SwiftImportAs functionReturningFrt_returns_unretained 'ImmortalRefType *()'
+// CHECK-FUNCTION-RETURNING-FRT-UNRETAINED20: FunctionDecl {{.+}} imported in SwiftImportAs hidden functionReturningFrt_returns_unretained 'ImmortalRefType *()'
 // CHECK-FUNCTION-RETURNING-FRT-UNRETAINED: `-SwiftAttrAttr {{.+}} "returns_unretained"
 
 // CHECK-FUNCTION-RETURNING-FRT-RETAINED: Dumping functionReturningFrt_returns_retained:
-// CHECK-FUNCTION-RETURNING-FRT-RETAINED: FunctionDecl {{.+}} imported in SwiftImportAs functionReturningFrt_returns_retained 'ImmortalRefType *()'
+// CHECK-FUNCTION-RETURNING-FRT-RETAINED17: FunctionDecl {{.+}} imported in SwiftImportAs functionReturningFrt_returns_retained 'ImmortalRefType *()'
+// CHECK-FUNCTION-RETURNING-FRT-RETAINED20: FunctionDecl {{.+}} imported in SwiftImportAs hidden functionReturningFrt_returns_retained 'ImmortalRefType *()'
 // CHECK-FUNCTION-RETURNING-FRT-RETAINED: `-SwiftAttrAttr {{.+}} "returns_retained"
 
 // CHECK-METHOD-RETURNING-FRT: Dumping ImmortalRefType::methodReturningFrt__:
-// CHECK-METHOD-RETURNING-FRT: CXXMethodDecl {{.+}} imported in SwiftImportAs methodReturningFrt__ 'ImmortalRefType *()'
+// CHECK-METHOD-RETURNING-FRT17: CXXMethodDecl {{.+}} imported in SwiftImportAs methodReturningFrt__ 'ImmortalRefType *()'
+// CHECK-METHOD-RETURNING-FRT20: CXXMethodDecl {{.+}} imported in SwiftImportAs hidden methodReturningFrt__ 'ImmortalRefType *()'
 // CHECK-METHOD-RETURNING-FRT-NOT: `-SwiftAttrAttr {{.+}} "returns_unretained"
 // CHECK-METHOD-RETURNING-FRT-NOT: `-SwiftAttrAttr {{.+}} "returns_retained"
 
 // CHECK-METHOD-RETURNING-FRT-UNRETAINED: Dumping ImmortalRefType::methodReturningFrt_returns_unretained:
-// CHECK-METHOD-RETURNING-FRT-UNRETAINED: CXXMethodDecl {{.+}} imported in SwiftImportAs methodReturningFrt_returns_unretained 'ImmortalRefType *()'
+// CHECK-METHOD-RETURNING-FRT-UNRETAINED17: CXXMethodDecl {{.+}} imported in SwiftImportAs methodReturningFrt_returns_unretained 'ImmortalRefType *()'
+// CHECK-METHOD-RETURNING-FRT-UNRETAINED20: CXXMethodDecl {{.+}} imported in SwiftImportAs hidden methodReturningFrt_returns_unretained 'ImmortalRefType *()'
 // CHECK-METHOD-RETURNING-FRT-UNRETAINED: `-SwiftAttrAttr {{.+}} "returns_unretained"
 
 // CHECK-METHOD-RETURNING-FRT-RETAINED: Dumping ImmortalRefType::methodReturningFrt_returns_retained:
-// CHECK-METHOD-RETURNING-FRT-RETAINED: CXXMethodDecl {{.+}} imported in SwiftImportAs methodReturningFrt_returns_retained 'ImmortalRefType *()'
+// CHECK-METHOD-RETURNING-FRT-RETAINED17: CXXMethodDecl {{.+}} imported in SwiftImportAs methodReturningFrt_returns_retained 'ImmortalRefType *()'
+// CHECK-METHOD-RETURNING-FRT-RETAINED20: CXXMethodDecl {{.+}} imported in SwiftImportAs hidden methodReturningFrt_returns_retained 'ImmortalRefType *()'
 // CHECK-METHOD-RETURNING-FRT-RETAINED: `-SwiftAttrAttr {{.+}} "returns_retained"
 
 // CHECK-WRAPPED-OPTIONS: Dumping WrappedOptions
