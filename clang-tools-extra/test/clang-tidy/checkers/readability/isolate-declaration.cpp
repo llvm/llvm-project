@@ -25,9 +25,21 @@ void f2() {
       ;
   // CHECK-MESSAGES: [[@LINE-4]]:3: warning: multiple declarations in a single statement reduces readability
   // CHECK-FIXES: int /* here is a comment */ v1;
-  // CHECK-FIXES: int /* here is a comment */ // another comment
-  // CHECK-FIXES:     v2 = 42 // Ok, more comments
-  // CHECK-FIXES:     ;
+  // CHECK-FIXES:       // another comment
+  // CHECK-FIXES: int /* here is a comment */ v2 = 42 // Ok, more comments
+  // CHECK-FIXES:       ;
+  
+  int a, // comment a
+      b; // comment b
+  // CHECK-MESSAGES: [[@LINE-2]]:3: warning: multiple declarations in a single statement reduces readability
+  // CHECK-FIXES: int a; // comment a
+  // CHECK-FIXES: int b; // comment b
+  
+  int t, /* comment t */
+      v; /* comment v */
+  // CHECK-MESSAGES: [[@LINE-2]]:3: warning: multiple declarations in a single statement reduces readability
+  // CHECK-FIXES: int t; /* comment t */
+  // CHECK-FIXES: int v; /* comment v */
 
   auto int1 = 42, int2 = 0, int3 = 43;
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: multiple declarations in a single statement reduces readability
