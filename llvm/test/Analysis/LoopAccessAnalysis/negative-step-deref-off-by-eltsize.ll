@@ -126,9 +126,8 @@ exit.done:
 ; The top i32 read at byte 13 covers [13, 17), but deref(16) only
 ; guarantees [0, 16) — bytes at/after 16 may or may not be dereferenceable.
 ;
-; TODO: High is computed as Start + EltSize (17) unconditionally, so it is past
-; the deref region and may wrap. getStartAndEndForAccess should saturate it when
-; it cannot prove that Start + EltSize does not wrap.
+; Start + EltSize (17) is past the deref region and may wrap, so High saturates
+; to the highest address. Low stays tight: 5 + %B is inside the region.
 ;
 ; Pseudocode:
 ;   // A, B: char *, 16 bytes dereferenceable each
@@ -151,10 +150,10 @@ define void @reverse_top_spills(ptr dereferenceable(16) %A, ptr dereferenceable(
 ; CHECK-NEXT:          %gep.A = getelementptr inbounds i8, ptr %A, i64 %iv
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
-; CHECK-NEXT:          (Low: (5 + %B)<nuw> High: (17 + %B))
+; CHECK-NEXT:          (Low: (5 + %B)<nuw> High: inttoptr (i64 -1 to ptr))
 ; CHECK-NEXT:            Member: {(13 + %B)<nuw>,+,-4}<nw><%loop>
 ; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: (5 + %A)<nuw> High: (17 + %A))
+; CHECK-NEXT:          (Low: (5 + %A)<nuw> High: inttoptr (i64 -1 to ptr))
 ; CHECK-NEXT:            Member: {(13 + %A)<nuw>,+,-4}<nw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
@@ -183,6 +182,57 @@ exit.early:
   ret void
 
 exit.done:
+  ret void
+}
+
+; As above, but without the early exit, so the backedge-taken count is exact.
+; The top read still spills past the deref region, but with an exact
+; backedge-taken count High stays Start + EltSize (17), as the end of a
+; non-negative step evaluated at an exact backedge-taken count does.
+;
+; Pseudocode:
+;   // A, B: char *, 16 bytes dereferenceable each
+;   for (i = 13; i >= 5; i -= 4)
+;     *(i32 *)(B + i) = *(i32 *)(A + i);   // bytes [13, 17), [9, 13), [5, 9)
+
+define void @reverse_top_spills_exact_btc(ptr dereferenceable(16) %A, ptr dereferenceable(16) %B) {
+; CHECK-LABEL: 'reverse_top_spills_exact_btc'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.B = getelementptr inbounds i8, ptr %B, i64 %iv
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %gep.A = getelementptr inbounds i8, ptr %A, i64 %iv
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: (5 + %B)<nuw> High: (17 + %B))
+; CHECK-NEXT:            Member: {(13 + %B)<nuw>,+,-4}<nw><%loop>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: (5 + %A)<nuw> High: (17 + %A))
+; CHECK-NEXT:            Member: {(13 + %A)<nuw>,+,-4}<nw><%loop>
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 13, %entry ], [ %iv.dec, %loop ]
+  %gep.A = getelementptr inbounds i8, ptr %A, i64 %iv
+  %gep.B = getelementptr inbounds i8, ptr %B, i64 %iv
+  %l = load i32, ptr %gep.A, align 1
+  store i32 %l, ptr %gep.B, align 1
+  %iv.dec = add nsw i64 %iv, -4
+  %ec = icmp eq i64 %iv, 5
+  br i1 %ec, label %exit, label %loop
+
+exit:
   ret void
 }
 
@@ -216,10 +266,10 @@ define void @reverse_inner_start_is_outer_addrec(ptr dereferenceable(64) %A, ptr
 ; CHECK-NEXT:          %gep.A = getelementptr inbounds i32, ptr %base, i64 %iv
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
-; CHECK-NEXT:          (Low: null High: (64 + %B))
+; CHECK-NEXT:          (Low: null High: inttoptr (i64 -1 to ptr))
 ; CHECK-NEXT:            Member: {(60 + %B),+,-4}<nw><%inner.header>
 ; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: null High: {(64 + %A)<nuw>,+,64}<nw><%outer.header>)
+; CHECK-NEXT:          (Low: null High: inttoptr (i64 -1 to ptr))
 ; CHECK-NEXT:            Member: {{\{\{}}(60 + %A)<nuw>,+,64}<nuw><%outer.header>,+,-4}<nw><%inner.header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
@@ -420,10 +470,10 @@ define void @reverse_array_guarded_length(ptr %A, ptr %B, i32 %n) {
 ; CHECK-NEXT:          %gep.A = getelementptr inbounds nuw i32, ptr %data, i64 %iv.dec
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
-; CHECK-NEXT:          (Low: null High: ((4 * (zext i32 %n to i64))<nuw><nsw> + %B))
+; CHECK-NEXT:          (Low: null High: inttoptr (i64 -1 to ptr))
 ; CHECK-NEXT:            Member: {(-4 + (4 * (zext i32 %n to i64))<nuw><nsw> + %B),+,-4}<nw><%loop.header>
 ; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: null High: (16 + (4 * (zext i32 %n to i64))<nuw><nsw> + %A))
+; CHECK-NEXT:          (Low: null High: inttoptr (i64 -1 to ptr))
 ; CHECK-NEXT:            Member: {(12 + (4 * (zext i32 %n to i64))<nuw><nsw> + %A),+,-4}<nw><%loop.header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
