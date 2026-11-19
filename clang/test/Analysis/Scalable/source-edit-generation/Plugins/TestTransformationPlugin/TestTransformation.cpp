@@ -42,7 +42,7 @@ public:
   using Transformation::Transformation;
 
   void HandleTranslationUnit(ASTContext &Ctx) override {
-    bool SuiteIsNonEmpty = Suite.getIdTable().count() > 0;
+    bool SuiteIsNonEmpty = AnalysisRes.getIdTable().count() > 0;
     Visitor V{*this, Ctx, SuiteIsNonEmpty};
     V.TraverseDecl(Ctx.getTranslationUnitDecl());
   }
