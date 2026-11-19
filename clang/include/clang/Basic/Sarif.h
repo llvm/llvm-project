@@ -74,6 +74,7 @@ private:
 
   std::optional<uint32_t> Index;
   std::string URI;
+  std::optional<std::string> UriBaseId;
 
   SarifArtifactLocation() = delete;
   explicit SarifArtifactLocation(const std::string &URI) : URI(URI) {}
@@ -85,6 +86,11 @@ public:
 
   SarifArtifactLocation setIndex(uint32_t Idx) {
     Index = Idx;
+    return *this;
+  }
+
+  SarifArtifactLocation setUriBaseId(llvm::StringRef BaseId) {
+    UriBaseId = BaseId.str();
     return *this;
   }
 };
@@ -332,9 +338,10 @@ class SarifResult {
   std::string HostedViewerURI;
   llvm::SmallDenseMap<StringRef, std::string, 4> PartialFingerprints;
   llvm::SmallVector<CharSourceRange, 8> Locations;
-  llvm::SmallVector<CharSourceRange, 8> RelatedLocations;
+  llvm::SmallVector<std::pair<CharSourceRange, std::string>> RelatedLocations;
   llvm::SmallVector<ThreadFlow, 8> ThreadFlows;
   std::optional<SarifResultLevel> LevelOverride;
+  llvm::StringMap<std::string> Properties;
 
   SarifResult() = delete;
   explicit SarifResult(uint32_t RuleIdx) : RuleIdx(RuleIdx) {}
@@ -373,7 +380,8 @@ public:
     return *this;
   }
 
-  SarifResult addRelatedLocations(llvm::ArrayRef<CharSourceRange> DiagLocs) {
+  SarifResult addRelatedLocations(llvm::ArrayRef<CharSourceRange> DiagLocs,
+                                  llvm::StringRef Message = "") {
 #ifndef NDEBUG
     for (const auto &Loc : DiagLocs) {
       assert(
@@ -381,7 +389,8 @@ public:
           "SARIF RelatedLocations require character granular source ranges!");
     }
 #endif
-    RelatedLocations.append(DiagLocs.begin(), DiagLocs.end());
+    for (const CharSourceRange &Loc : DiagLocs)
+      RelatedLocations.emplace_back(Loc, Message.str());
     return *this;
   }
 
@@ -395,11 +404,42 @@ public:
     return *this;
   }
 
+  SarifResult addProperty(llvm::StringRef Key, llvm::StringRef Value) {
+    Properties[Key] = Value.str();
+    return *this;
+  }
+
   SarifResult addPartialFingerprint(llvm::StringRef key,
                                     llvm::StringRef value) {
     PartialFingerprints[key] = value;
     return *this;
   }
+};
+
+/// A SARIF uriBaseId object that defines a base URI for relative path
+/// resolution. It enables expressing file URIs relative to known locations
+/// (e.g., "PROJROOT", "SRCROOT") to reduce redundancy and improve portability
+/// of SARIF documents.
+///
+/// Reference: <a href="https://docs.oasis-open.org/sarif/sarif/v2.1.0/os/sarif-v2.1.0-os.html#_Toc34317431">SARIF<pre>uriBaseId</pre></a>
+class SarifUriBase {
+  friend class clang::SarifDocumentWriter;
+
+  // Absolute; parent chains are derived when emitted.
+  std::string URI;
+
+public:
+  SarifUriBase setURI(llvm::StringRef BaseURI) {
+    URI = BaseURI.str();
+    return *this;
+  }
+
+  /// Finds longest matching base URI and returns the relative portion.
+  /// Sets ParentId to matched base identifier.
+  static StringRef
+  remapUriToBaseUri(StringRef FileURI,
+                    const llvm::StringMap<SarifUriBase> &OriginalUriBaseIds,
+                    StringRef &ParentId);
 };
 
 /// This class handles creating a valid SARIF document given various input
@@ -447,8 +487,13 @@ private:
   createThreadFlows(const llvm::ArrayRef<ThreadFlow> ThreadFlows);
 
   /// Add the given \ref CharSourceRange to the SARIF document as a physical
-  /// location, with its corresponding artifact.
-  llvm::json::Object createPhysicalLocation(const CharSourceRange &R);
+  /// location, with its corresponding artifact. Returns std::nullopt if \p R
+  /// is invalid or does not map to a file.
+  std::optional<llvm::json::Object>
+  createPhysicalLocation(const CharSourceRange &R);
+
+  llvm::json::Object createOriginalUriBaseIds(
+      const llvm::StringMap<SarifUriBase> &OriginalUriBaseIds) const;
 
 public:
   SarifDocumentWriter() = delete;
@@ -463,7 +508,9 @@ public:
   /// Each run requires specifying the tool that is generating reporting items.
   void createRun(const llvm::StringRef ShortToolName,
                  const llvm::StringRef LongToolName,
-                 const llvm::StringRef ToolVersion = CLANG_VERSION_STRING);
+                 const llvm::StringRef ToolVersion = CLANG_VERSION_STRING,
+                 const llvm::StringRef InformationUri =
+                     "https://clang.llvm.org/docs/UsersManual.html");
 
   /// If there is a current run, end it.
   ///
@@ -505,6 +552,10 @@ public:
 
   static std::string fileNameToURI(llvm::StringRef Filename);
 
+  void setOriginalUriBaseIds(llvm::StringMap<SarifUriBase> BaseURIs) {
+    OriginalUriBaseIds = std::move(BaseURIs);
+  }
+
 private:
   /// Source Manager to use for the current SARIF document.
   const SourceManager &SourceMgr;
@@ -537,6 +588,10 @@ private:
   /// by a URI. A common example for clang's case would be files named by
   /// filesystem paths.
   llvm::StringMap<detail::SarifArtifact> CurrentArtifacts;
+
+  /// Map of uriBaseId -> SarifUriBase for relative path computation. This is
+  /// used to express artifact URIs relative to known project locations.
+  llvm::StringMap<SarifUriBase> OriginalUriBaseIds;
 };
 } // namespace clang
 

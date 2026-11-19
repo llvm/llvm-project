@@ -184,6 +184,15 @@ An overview of all the command-line options:
     --experimental-custom-checks     - Enable experimental clang-query based
                                        custom checks.
                                        see https://clang.llvm.org/extra/clang-tidy/QueryBasedCustomChecks.html.
+    --experimental-sarif-base-uri=<id>=<path|uri> - Used with --experimental-sarif-export to
+                                       define a SARIF base URI as <id>=<path|uri>.
+                                       Paths are converted to file URIs. Values with
+                                       '://' are used verbatim. Artifact locations
+                                       under a base are written relative to it, all
+                                       others keep their absolute URI. Can be repeated.
+    --experimental-sarif-export=<filename> - File in which to store diagnostics in SARIF format.
+                                       Use '-' to write to stdout instead of the usual
+                                       diagnostic output.
     --explain-config                 - For each enabled check explains, where it is
                                        enabled, i.e. in clang-tidy binary, command
                                        line or a specific configuration file.
