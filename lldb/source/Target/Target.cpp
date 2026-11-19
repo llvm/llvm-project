@@ -3247,6 +3247,12 @@ Target::StopHookSP Target::CreateStopHook(StopHook::StopHookKind kind,
     m_internal_stop_hooks.push_back(stop_hook_sp);
   else
     m_stop_hooks[new_uid] = stop_hook_sp;
+
+  if (!internal) {
+    std::lock_guard<std::mutex> guard(m_module_added_hooks.mutex);
+    if (m_module_added_hooks.collecting)
+      m_module_added_hooks.stop_hooks.push_back(stop_hook_sp);
+  }
   return stop_hook_sp;
 }
 
@@ -3309,6 +3315,51 @@ Target::GetStopHooks(bool internal) const {
   return stop_hooks;
 }
 
+void Target::RunCollectedInitialStopHooks() {
+  std::vector<StopHookSP> stop_hooks;
+  std::vector<HookSP> hooks;
+  {
+    std::lock_guard<std::mutex> guard(m_module_added_hooks.mutex);
+    stop_hooks = std::exchange(m_module_added_hooks.stop_hooks, {});
+    hooks = std::exchange(m_module_added_hooks.hooks, {});
+  }
+
+  // Without a stopped process that this thread can read, these run with the
+  // others at the initial stop or the next stop. While we gain control of a
+  // process, its state may already say stopped, but its run lock doesn't let
+  // us read it until the initial stop, which runs these hooks. An expression
+  // or a utility function, such as the one that loads a library for "process
+  // load", runs the process without a new natural stop.
+  if (m_suppress_stop_hooks || !m_process_sp ||
+      m_process_sp->GetState() != eStateStopped ||
+      m_process_sp->GetModIDRef().IsRunningExpression())
+    return;
+  {
+    // Only check the run lock: a hook may resume the process, which takes the
+    // run lock as a writer.
+    Process::StopLocker stop_locker;
+    if (!stop_locker.TryLock(&m_process_sp->GetRunLock()))
+      return;
+  }
+
+  // Only run the ones added with --at-initial-stop, that weren't deleted or
+  // disabled since.
+  llvm::erase_if(stop_hooks, [this](const StopHookSP &hook) {
+    return !hook->IsActive() || !hook->GetRunAtInitialStop() ||
+           !m_stop_hooks.count(hook->GetID());
+  });
+  llvm::erase_if(hooks, [this](const HookSP &hook) {
+    return !hook->IsEnabled() || !hook->FiresOn(Hook::kProcessStop) ||
+           !hook->GetRunAtInitialStop() || !m_hooks.count(hook->GetID());
+  });
+  if (stop_hooks.empty() && hooks.empty())
+    return;
+
+  // This is the first stop these hooks see, so like at the initial stop, they
+  // run on the first thread if no thread stopped for a reason.
+  RunStopHooksAtCurrentStop(stop_hooks, hooks, /*at_initial_stop=*/true);
+}
+
 bool Target::RunStopHooks(bool at_initial_stop) {
   if (m_suppress_stop_hooks)
     return false;
@@ -3357,6 +3408,32 @@ bool Target::RunStopHooks(bool at_initial_stop) {
   if (last_natural_stop != 0 && m_latest_stop_hook_id == last_natural_stop)
     return false;
 
+  StopHooksVote vote = RunStopHooksAtCurrentStop(
+      active_hooks, active_unified_hooks, at_initial_stop);
+  if (vote == StopHooksVote::AlreadyContinued)
+    return true;
+
+  // Resume if at least one hook asked to continue and none asked to stay
+  // stopped.
+  if (vote == StopHooksVote::Continue) {
+    Log *log = GetLog(LLDBLog::Process);
+    Status error = m_process_sp->PrivateResume();
+    if (error.Success()) {
+      LLDB_LOG(log, "Resuming from RunStopHooks");
+      return true;
+    } else {
+      LLDB_LOG(log, "Resuming from RunStopHooks failed: {0}", error);
+      return false;
+    }
+  }
+
+  return false;
+}
+
+Target::StopHooksVote
+Target::RunStopHooksAtCurrentStop(llvm::ArrayRef<StopHookSP> active_hooks,
+                                  llvm::ArrayRef<HookSP> active_unified_hooks,
+                                  bool at_initial_stop) {
   std::vector<ExecutionContext> exc_ctx_with_reasons;
 
   ThreadList &cur_threadlist = m_process_sp->GetThreadList();
@@ -3384,11 +3461,11 @@ bool Target::RunStopHooks(bool at_initial_stop) {
           thread_to_use_sp->GetStackFrameAtIndex(0).get());
       num_exe_ctx = 1;
     } else {
-      return false;
+      return StopHooksVote::Stop;
     }
   }
 
-  m_latest_stop_hook_id = last_natural_stop;
+  m_latest_stop_hook_id = m_process_sp->GetModIDRef().GetLastNaturalStopID();
 
   StreamSP output_sp = m_debugger.GetAsyncOutputStream();
   llvm::scope_exit on_exit([output_sp] { output_sp->Flush(); });
@@ -3465,7 +3542,7 @@ bool Target::RunStopHooks(bool at_initial_stop) {
         // FIXME: if we are doing non-stop mode for real, we would have to
         // check that OUR thread was restarted, otherwise we should keep
         // processing stop hooks.
-        return true;
+        return StopHooksVote::AlreadyContinued;
       }
     }
   }
@@ -3512,26 +3589,14 @@ bool Target::RunStopHooks(bool at_initial_stop) {
                           "  Consider using '-G true' to make "
                           "stop hooks auto-continue.\n",
                           cur_hook_sp->GetID());
-        return true;
+        return StopHooksVote::AlreadyContinued;
       }
     }
   }
 
-  // Resume iff at least one hook requested to continue and no hook asked to
-  // stop.
-  if (requested_continue && !should_stop) {
-    Log *log = GetLog(LLDBLog::Process);
-    Status error = m_process_sp->PrivateResume();
-    if (error.Success()) {
-      LLDB_LOG(log, "Resuming from RunStopHooks");
-      return true;
-    } else {
-      LLDB_LOG(log, "Resuming from RunStopHooks failed: {0}", error);
-      return false;
-    }
-  }
-
-  return false;
+  if (requested_continue && !should_stop)
+    return StopHooksVote::Continue;
+  return StopHooksVote::Stop;
 }
 
 TargetProperties &Target::GetGlobalProperties() {
@@ -4894,6 +4959,11 @@ Target::HookSP Target::CreateHook(Hook::HookKind kind) {
     break;
   }
   m_hooks[new_uid] = hook_sp;
+  {
+    std::lock_guard<std::mutex> guard(m_module_added_hooks.mutex);
+    if (m_module_added_hooks.collecting)
+      m_module_added_hooks.hooks.push_back(hook_sp);
+  }
   return hook_sp;
 }
 

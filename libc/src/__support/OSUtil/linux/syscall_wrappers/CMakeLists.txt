@@ -2661,3 +2661,43 @@ add_header_library(
     libc.src.__support.error_or
     libc.src.__support.macros.config
 )
+
+add_header_library(
+  timerfd_create
+  HDRS
+    timerfd_create.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  timerfd_gettime
+  HDRS
+    timerfd_gettime.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.hdr.types.struct_itimerspec
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  timerfd_settime
+  HDRS
+    timerfd_settime.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.hdr.types.struct_itimerspec
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)

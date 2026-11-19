@@ -6,10 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "InterpreterTestFixture.h"
+
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Interpreter/Interpreter.h"
-#include "clang/Lex/PreprocessorOptions.h"
 #include "llvm/Support/Error.h"
 #include "gtest/gtest.h"
 
@@ -17,15 +18,6 @@ using namespace llvm;
 using namespace clang;
 
 namespace {
-
-// Usually FrontendAction takes the raw pointers and wraps them back into
-// unique_ptrs in InitializeFileRemapping()
-static void cleanupRemappedFileBuffers(CompilerInstance &CI) {
-  for (const auto &RB : CI.getPreprocessorOpts().RemappedFileBuffers) {
-    delete RB.second;
-  }
-  CI.getPreprocessorOpts().clearRemappedFiles();
-}
 
 TEST(IncrementalCompilerBuilder, SetCompilerArgs) {
   std::vector<const char *> ClangArgv = {"-Xclang", "-ast-dump-all"};

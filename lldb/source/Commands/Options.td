@@ -1990,10 +1990,12 @@ let Command = "target stop_hook add" in {
       : Option<"at-initial-stop", "I">,
         Arg<"Boolean">,
         Desc<"Whether the stop-hook will trigger when lldb ${i}nitially gains "
-             "control of the process. For a process launch, this initial stop "
-             "may happen very early on - before the loader has run. You can "
-             "use this option if you do not want some stop-hooks to run then. "
-             "Defaults to true.">;
+             "control of the process: when an attach completes, when a core "
+             "file has loaded, or at a launch's entry stop, which happens "
+             "before the loader has run, even when the launch doesn't stop "
+             "there. If a module's __lldb_module_added_to_target adds the "
+             "stop-hook with this option while the process is stopped, it also "
+             "runs at that stop. Defaults to false.">;
   def target_stop_hook_add_one_shot
       : Option<"one-shot", "O">,
         Arg<"Boolean">,
@@ -2088,7 +2090,11 @@ let Command = "target hook add" in {
       : Option<"at-initial-stop", "I">,
         Arg<"Boolean">,
         Desc<"Whether the stop handler will trigger when lldb ${I}nitially "
-             "gains control of the process. Defaults to true.">;
+             "gains control of the process: when an attach completes, when a "
+             "core file has loaded, or at a launch's entry stop. If a module's "
+             "__lldb_module_added_to_target adds the hook with this option "
+             "while the process is stopped, its stop handler also runs at that "
+             "stop. Defaults to false.">;
 }
 
 let Command = "target hook modify" in {
