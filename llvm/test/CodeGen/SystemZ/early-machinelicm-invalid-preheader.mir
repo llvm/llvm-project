@@ -1,0 +1,69 @@
+# RUN: llc -mtriple=s390x-linux-gnu -mcpu=z15 -run-pass=early-machinelicm -verify-machineinstrs -o - %s | FileCheck %s
+
+# Test that early-machinelicm does not treat a block with a conditional
+# terminator as a valid preheader and hoist instructions into the middle of a
+# live flag range.
+
+--- |
+  target datalayout = "E-m:e-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64"
+  target triple = "s390x-unknown-linux-gnu"
+
+  @func_7_p_9 = external dso_local global i64, align 8
+  @g_1929_1 = external dso_local global i8, align 2
+
+  define dso_local void @func_7(i16 noundef signext %p_10) {
+    ret void
+  }
+...
+---
+name:            func_7
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: func_7
+  ; CHECK:       bb.0:
+  ; CHECK-NOT:     XIFMux
+  ; CHECK:         CGHSI killed %{{[0-9]+}}, 0, 0, implicit-def $cc
+  ; CHECK-NOT:     XIFMux
+  ; CHECK-NEXT:    BRC 14, 6, %bb.1, implicit $cc
+  ; CHECK-NEXT:    J %bb.1
+  bb.0:
+    successors: %bb.1(0x80000000)
+    liveins: $r2d
+
+    %1:gr64bit = COPY $r2d
+    %2:grx32bit = COPY %1.subreg_l32
+    %3:addr64bit = LARL @func_7_p_9
+    CGHSI killed %3, 0, 0, implicit-def $cc
+    BRC 14, 6, %bb.1, implicit $cc
+    J %bb.1
+
+  ; CHECK:       bb.1:
+  bb.1:
+    successors: %bb.2(0x30000000), %bb.1(0x50000000)
+
+    %4:addr64bit = LARL @g_1929_1
+    CLI killed %4, 0, 0, implicit-def $cc
+    BRC 14, 6, %bb.1, implicit $cc
+    J %bb.2
+
+  ; CHECK:       bb.2:
+  ; CHECK:         %{{[0-9]+}}:grx32bit = XIFMux %{{[0-9]+}}, 4294967295, implicit-def dead $cc
+  bb.2:
+    successors: %bb.3(0x80000000)
+
+    %5:grx32bit = XIFMux %2, 4294967295, implicit-def dead $cc
+    %7:gr64bit = IMPLICIT_DEF
+    %6:gr64bit = INSERT_SUBREG %7, killed %5, %subreg.subreg_l32
+    %8:gr64bit = IMPLICIT_DEF
+    %0:gr64bit = RISBGN %8, killed %6, 63, 191, 33
+
+  ; CHECK:       bb.3:
+  bb.3:
+    successors: %bb.3(0x7c000000), %bb.1(0x04000000)
+
+    $r2d = COPY %0
+    %9:addr64bit = LARL @g_1929_1
+    CLI killed %9, 0, 0, implicit-def $cc
+    BRC 14, 8, %bb.3, implicit $cc
+    J %bb.1
+...
