@@ -44,7 +44,7 @@ static llvm::StringRef getExpectedTypeName(const CXXRecordDecl &RD) {
                                                : "tl::expected";
 }
 
-// Classes derived from `std::expected` or `tl::expected` are deliberately not
+// Classes derived from the expected class are deliberately not
 // supported.
 static bool isExpectedType(QualType Ty) {
   const CXXRecordDecl *RD = Ty->getAsCXXRecordDecl();
@@ -75,7 +75,7 @@ StorageLocation &locForHasValue(const RecordStorageLocation &ExpectedLoc) {
 
 /// Returns the symbolic value that represents the "has_value" property of the
 /// expected at `ExpectedLoc`. Returns null if `ExpectedLoc` is null or is not
-/// the location of a `std::expected` or `tl::expected` object (e.g. of a
+/// the location of a supported expected object (e.g. of a
 /// derived class object).
 BoolValue *getHasValue(Environment &Env, RecordStorageLocation *ExpectedLoc) {
   if (ExpectedLoc == nullptr || !isExpectedType(ExpectedLoc->getType()))
@@ -114,9 +114,6 @@ diagnoseAccess(SourceLocation AccessLoc, UncheckedExpectedAccessKind Kind,
                const RecordStorageLocation *ExpectedLoc,
                const Environment &Env) {
   if (ExpectedLoc != nullptr) {
-    // Accesses through classes derived from an expected are not modeled.
-    if (!isExpectedType(ExpectedLoc->getType()))
-      return {};
     if (auto *HasValueVal = Env.get<BoolValue>(locForHasValue(*ExpectedLoc))) {
       // The value may only be accessed if the expected holds a value, and the
       // error only if it does not.

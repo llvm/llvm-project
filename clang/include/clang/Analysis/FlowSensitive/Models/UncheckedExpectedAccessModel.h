@@ -64,7 +64,7 @@ enum class UncheckedExpectedAccessKind : int {
 struct UncheckedExpectedAccessDiagnostic {
   SourceLocation Loc;
   UncheckedExpectedAccessKind Kind;
-  /// The accessed type, either "std::expected" or "tl::expected".
+  /// The accessed type, e.g. "std::expected".
   llvm::StringRef TypeName;
 };
 
