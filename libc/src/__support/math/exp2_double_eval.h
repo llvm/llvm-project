@@ -82,7 +82,7 @@ LIBC_ALWAYS_INLINE double exp2(double x) {
   int hi = static_cast<int32_t>(k_bits >> 19) >> (13 + EXP_N_BITS);
   unsigned idx = static_cast<unsigned>(k_bits >> 32) & EXP_MASK;
 
-  double dx = fputil::multiply_add(kd, -EXP_SCALE_INV, x); // exact
+  double dx = fputil::sub_multiply(x, kd, EXP_SCALE_INV); // exact
 
 #ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   double u = dx * LOG_2_DD.hi;

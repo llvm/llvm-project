@@ -6946,7 +6946,8 @@ static void checkMixedPrecision(Loop *L, OptimizationRemarkEmitter *ORE) {
 
 /// For loops with uncountable early exits, find the cost of doing work when
 /// exiting the loop early, such as calculating the final exit values of
-/// variables used outside the loop.
+/// variables used outside the loop. The loop leaves through at most one of the
+/// vector.early.exit blocks, so return the maximum of their costs.
 /// TODO: This is currently overly pessimistic because the loop may not take
 /// the early exit, but better to keep this conservative for now. In future,
 /// it might be possible to relax this by using branch probabilities.
@@ -6961,7 +6962,7 @@ static InstructionCost calculateEarlyExitCost(VPCostContext &CostCtx,
       if (PredVPBB != Plan.getMiddleBlock()) {
         LLVM_DEBUG(dbgs() << "Calculating cost of work in exit block "
                           << PredVPBB->getName() << ":\n");
-        Cost += PredVPBB->cost(VF, CostCtx);
+        Cost = std::max(Cost, PredVPBB->cost(VF, CostCtx));
       }
     }
   }
@@ -7005,11 +7006,12 @@ static bool isOutsideLoopWorkProfitable(GeneratedRTChecks &Checks,
   if (ScalarC == 0)
     return true;
 
-  InstructionCost TotalCost = RtC;
-  // Add on the cost of any work required in the vector early exit block, if
-  // one exists.
-  TotalCost += calculateEarlyExitCost(CostCtx, Plan, VF.Width);
-  TotalCost += Plan.getMiddleBlock()->cost(VF.Width, CostCtx);
+  // The vector loop is left through either a vector.early.exit block or the
+  // middle block, so add the cost of the more expensive of the two.
+  InstructionCost EarlyExitCost =
+      calculateEarlyExitCost(CostCtx, Plan, VF.Width);
+  InstructionCost MiddleCost = Plan.getMiddleBlock()->cost(VF.Width, CostCtx);
+  InstructionCost TotalCost = RtC + std::max(EarlyExitCost, MiddleCost);
 
   // First, compute the minimum iteration count required so that the vector
   // loop outperforms the scalar loop.
@@ -7022,11 +7024,11 @@ static bool isOutsideLoopWorkProfitable(GeneratedRTChecks &Checks,
   //  The total cost of the vector loop is
   //    TotalCost + VecC * (TC / VF) + EpiC
   //  where
-  //  * TotalCost is the sum of the costs cost of
+  //  * TotalCost is the sum of the costs of
   //    - the generated runtime checks, i.e. RtC
-  //    - performing any additional work in the vector.early.exit block for
-  //      loops with uncountable early exits.
-  //    - the middle block, if ExpectedTC <=  VF.Width.
+  //    - the most expensive way of leaving the vector loop, i.e. the maximum
+  //      of the costs of the middle block and, for loops with uncountable
+  //      early exits, the vector.early.exit blocks.
   //  * VecC is the cost of a single vector iteration.
   //  * TC is the actual trip count of the loop
   //  * VF is the vectorization factor

@@ -16,7 +16,7 @@
 #include "CIRGenCleanup.h"
 #include "CIRGenFunction.h"
 #include "CIRGenFunctionInfo.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
 #include "mlir/IR/Attributes.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/CIR/ABIArgInfo.h"
@@ -1374,6 +1374,11 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
       assert(!cir::MissingFeatures::lowerAggregateLoadStore());
       cirCallArgs[argNo] = builder.createLoad(argLoc, src);
     }
+
+    if (CodeGenUtils::isArgumentMaybeUndef(
+            targetDecl, funcInfo.getNumRequiredArgs(), argNo))
+      cirCallArgs[argNo] =
+          cir::FreezeOp::create(builder, loc, cirCallArgs[argNo]);
   }
 
   const CIRGenCallee &concreteCallee = callee.prepareConcreteCallee(*this);

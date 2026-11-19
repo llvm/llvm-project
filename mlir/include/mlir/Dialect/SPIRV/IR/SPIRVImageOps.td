@@ -37,6 +37,11 @@ class SPIRV_MSOperandIs<string operand, list<string> values, string transform="$
   SPIRV_ValuesAreContained<operand, values, transform, "ImageSamplingInfo", "getSamplingInfo"> 
 >;
 
+class SPIRV_ArrayedOperandIs<string operand, list<string> values, string transform="$_self"> : PredOpTrait<
+  "the Arrayed operand of the underlying image type must be " # !interleave(values, " or "),
+  SPIRV_ValuesAreContained<operand, values, transform, "ImageArrayedInfo", "getArrayedInfo">
+>;
+
 class SPIRV_DimIs<string operand, list<string> values, string transform="$_self"> : PredOpTrait<
   "the Dim operand of the underlying image must be " # !interleave(values, " or "),
   SPIRV_ValuesAreContained<operand, values, transform, "Dim", "getDim">
@@ -510,7 +515,8 @@ def SPIRV_ImageSampleImplicitLodOp : SPIRV_Op<"ImageSampleImplicitLod",
 // -----
 
 def SPIRV_ImageSampleProjDrefImplicitLodOp : SPIRV_Op<"ImageSampleProjDrefImplicitLod",
-    [SPIRV_DimIsNot<"sampled_image", ["Buffer"], SPIRV_SampledImageTransform.result>,
+    [SPIRV_DimIs<"sampled_image", ["Dim1D", "Dim2D", "Dim3D", "Rect"], SPIRV_SampledImageTransform.result>,
+     SPIRV_ArrayedOperandIs<"sampled_image", ["NonArrayed"], SPIRV_SampledImageTransform.result>,
      SPIRV_MSOperandIs<"sampled_image", ["SingleSampled"], SPIRV_SampledImageTransform.result>,
      TypesMatchWith<"type of 'result' matches image type of 'sampled_image'",
                     "sampled_image", "result",

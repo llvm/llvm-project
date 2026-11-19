@@ -72,6 +72,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVInsertVSETVLILegacyPass(*PR);
   initializeRISCVInsertReadWriteCSRLegacyPass(*PR);
   initializeRISCVInsertWriteVXRMLegacyPass(*PR);
+  initializeRISCVLandingPadSetupLegacyPass(*PR);
   initializeRISCVDAGToDAGISelLegacyPass(*PR);
   initializeRISCVMoveMergeLegacyPass(*PR);
   initializeRISCVPushPopOptLegacyPass(*PR);
@@ -111,6 +112,8 @@ RISCVTargetMachine::RISCVTargetMachine(const Target &T, const Triple &TT,
           Options.MCOptions.LibraryOptions)),
       TLOF(createTLOF(TT)) {
   initAsmInfo();
+
+  LLT::setUseExtended(true);
 
   // RISC-V supports the MachineOutliner.
   setMachineOutliner(true);

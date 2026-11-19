@@ -5736,13 +5736,10 @@ def mkernel : Flag<["-"], "mkernel">, Group<m_Group>;
 def mlinker_version_EQ : Joined<["-"], "mlinker-version=">, Group<m_Group>,
   Flags<[NoXarchOption]>;
 } // let Flags = [TargetSpecific]
-def mllvm : Separate<["-"], "mllvm">,
+def mllvm : SeparateOrEq<["-"], "mllvm">, Flags<[RenderSeparate]>,
   Visibility<[ClangOption, CC1Option, CC1AsOption, CLOption, DXCOption, FC1Option, FlangOption]>,
   HelpText<"Additional arguments to forward to LLVM's option processing">,
   MarshallingInfoStringVector<FrontendOpts<"LLVMArgs">>;
-def : Joined<["-"], "mllvm=">,
-  Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>, Alias<mllvm>,
-  HelpText<"Alias for -mllvm">, MetaVarName<"<arg>">;
 def mmlir : Separate<["-"], "mmlir">,
   Visibility<[ClangOption, CC1Option, FC1Option, FlangOption]>,
   HelpText<"Additional arguments to forward to MLIR's option processing">,
@@ -5823,19 +5820,19 @@ def msmall_int_abi_compat_EQ : Joined<["-"], "msmall-int-abi-compat=">,
   Group<m_Group>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"ABI compatibility for small integer arguments on X86: "
            "'platform' (High bits unspecified) | "
-           "'clang' (High bits zero/sign-extended) | "
+           "'clang-23' (High bits zero/sign-extended) | "
            "'both' (High bits extended in caller, "
            "extension not assumed in callee)">,
-  Values<"platform,clang,both">,
+  Values<"platform,clang-23,both">,
   NormalizedValuesScope<"CodeGenOptions::SmallIntABICompatKind">,
-  NormalizedValues<["Platform", "Clang", "Both"]>,
+  NormalizedValues<["Platform", "Clang23", "Both"]>,
   MarshallingInfoEnum<CodeGenOpts<"SmallIntABICompat">, "Both">,
   DocBrief<[{
 Specifies how small integer arguments are passed on the following platforms:
  * 32-bit x86 for operating systems other than Darwin and Playstation.
  * 64-bit x86 for operating systems other than Windows, Darwin and PlayStation.
 
-The value must be 'platform', 'clang', or 'both'. The default behavior is
+The value must be 'platform', 'clang-23', or 'both'. The default behavior is
 'both'.
 
 In the past, Clang passed promotable integer arguments (non-variadic arguments
@@ -5850,7 +5847,7 @@ If 'platform' is used, promotable integer arguments will not be extended by the
 caller. This is conformant with the platform psABI (such as the System V ABI),
 but may break compatibility with old Clang-built objects.
 
-If 'clang' is used, promotable integer arguments are extended by the caller,
+If 'clang-23' is used, promotable integer arguments are extended by the caller,
 and the callee assumes this extension has happend. This restores the previous
 (before version 24) behavior of Clang, but may be incompatible with other
 compilers like GCC following the platform ABI.
@@ -7186,11 +7183,9 @@ def _compile : Flag<["--"], "compile">, Alias<c>;
 def _constant_cfstrings : Flag<["--"], "constant-cfstrings">;
 def _debug_EQ : Joined<["--"], "debug=">, Alias<g_Flag>;
 def _debug : Flag<["--"], "debug">, Alias<g_Flag>;
-def _define_macro_EQ : Joined<["--"], "define-macro=">, Alias<D>;
-def _define_macro : Separate<["--"], "define-macro">, Alias<D>;
+def _define_macro : SeparateOrEq<["--"], "define-macro">, Alias<D>;
 def _dependencies : Flag<["--"], "dependencies">, Alias<M>;
-def _dyld_prefix_EQ : Joined<["--"], "dyld-prefix=">;
-def _dyld_prefix : Separate<["--"], "dyld-prefix">, Alias<_dyld_prefix_EQ>;
+def _dyld_prefix_EQ : SeparateOrEq<["--"], "dyld-prefix">;
 def _encoding_EQ : Joined<["--"], "encoding=">, Alias<fencoding_EQ>;
 def _encoding : Separate<["--"], "encoding">, Alias<fencoding_EQ>;
 def : Joined<["--"], "entry=">, Alias<e>;
@@ -7217,8 +7212,7 @@ def _include_with_prefix_before : Separate<["--"], "include-with-prefix-before">
 def _include_with_prefix_EQ : Joined<["--"], "include-with-prefix=">, Alias<iwithprefix>;
 def _include_with_prefix : Separate<["--"], "include-with-prefix">, Alias<iwithprefix>;
 def _include_EQ : Joined<["--"], "include=">, Alias<include_>;
-def _language_EQ : Joined<["--"], "language=">, Alias<x>;
-def _language : Separate<["--"], "language">, Alias<x>;
+def _language : SeparateOrEq<["--"], "language">, Alias<x>;
 def _library_directory_EQ : Joined<["--"], "library-directory=">, Alias<L>;
 def _library_directory : Separate<["--"], "library-directory">, Alias<L>;
 def _no_line_commands : Flag<["--"], "no-line-commands">, Alias<P>;
@@ -7232,8 +7226,7 @@ def _optimize_EQ : Joined<["--"], "optimize=">, Alias<O>;
 def _optimize : Flag<["--"], "optimize">, Alias<O>;
 def _output_class_directory_EQ : Joined<["--"], "output-class-directory=">, Alias<foutput_class_dir_EQ>;
 def _output_class_directory : Separate<["--"], "output-class-directory">, Alias<foutput_class_dir_EQ>;
-def _output_EQ : Joined<["--"], "output=">, Alias<o>;
-def _output : Separate<["--"], "output">, Alias<o>;
+def _output : SeparateOrEq<["--"], "output">, Alias<o>;
 def _param : Separate<["--"], "param">, Group<CompileOnly_Group>;
 def _param_EQ : Joined<["--"], "param=">, Alias<_param>;
 def _precompile : Flag<["--"], "precompile">, Flags<[NoXarchOption]>,
@@ -7266,8 +7259,7 @@ def _stdlib : Separate<["--"], "stdlib">, Alias<stdlib_EQ>;
 def _cstdlib : Separate<["--"], "cstdlib">, Alias<cstdlib_EQ>;
 def _target_help : Flag<["--"], "target-help">;
 def _trace_includes : Flag<["--"], "trace-includes">, Alias<H>;
-def _undefine_macro_EQ : Joined<["--"], "undefine-macro=">, Alias<U>;
-def _undefine_macro : Separate<["--"], "undefine-macro">, Alias<U>;
+def _undefine_macro : SeparateOrEq<["--"], "undefine-macro">, Alias<U>;
 def _unsigned_char : Flag<["--"], "unsigned-char">, Alias<funsigned_char>;
 def _user_dependencies : Flag<["--"], "user-dependencies">, Alias<MM>;
 def _verbose : Flag<["--"], "verbose">, Alias<v>;
@@ -7400,6 +7392,11 @@ def mhexagon_scs_reg : Joined<["-"], "mscs-reg=">,
   HelpText<"Register holding the shadow call stack pointer: one of the "
            "callee-saved registers r16-r27, default r18 (Hexagon only). "
            "The chosen register must also be reserved with -ffixed-<reg>.">;
+def fhlx_vector_stack_limit_EQ : Joined<["-"], "fhlx-vector-stack-limit=">,
+  Group<m_Group>, Visibility<[ClangOption, CC1Option]>, MetaVarName<"<bytes>">,
+  HelpText<"Report an error if a function needs more than <bytes> bytes of "
+           "HLX vector stack (Hexagon only, requires -mhlx)">,
+  MarshallingInfoInt<CodeGenOpts<"HLXVectorStackLimit">, "UINT_MAX">;
 } // let Flags = [TargetSpecific]
 def mmemops : Flag<["-"], "mmemops">, Group<m_hexagon_Features_Group>,
   Visibility<[ClangOption, CC1Option]>,
