@@ -989,3 +989,37 @@ latch:
 exit:
   ret void
 }
+
+define void @latch_cmp_bound_is_backedge_value_of_phi(i64 %n, i64 %s) {
+; CHECK-LABEL: define void @latch_cmp_bound_is_backedge_value_of_phi(
+; CHECK-SAME: i64 [[N:%.*]], i64 [[S:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[POS:%.*]] = icmp sgt i64 [[N]], 0
+; CHECK-NEXT:    br i1 [[POS]], label %[[LOOP:.*]], label %[[EXIT:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[Q:%.*]] = phi i64 [ [[S]], %[[ENTRY]] ], [ [[N]], %[[LOOP]] ]
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[I]], [[N]]
+; CHECK-NEXT:    call void @use(i1 [[C]])
+; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
+; CHECK-NEXT:    [[CONT:%.*]] = icmp sgt i64 [[N]], [[I_NEXT]]
+; CHECK-NEXT:    br i1 [[CONT]], label %[[LOOP]], label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %pos = icmp sgt i64 %n, 0
+  br i1 %pos, label %loop, label %exit
+
+loop:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %loop ]
+  %q = phi i64 [ %s, %entry ], [ %n, %loop ]
+  %c = icmp slt i64 %i, %n
+  call void @use(i1 %c)
+  %i.next = add nuw nsw i64 %i, 1
+  %cont = icmp sgt i64 %n, %i.next
+  br i1 %cont, label %loop, label %exit
+
+exit:
+  ret void
+}
