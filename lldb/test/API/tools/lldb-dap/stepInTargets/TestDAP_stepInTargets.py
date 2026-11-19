@@ -11,8 +11,6 @@ from lldbsuite.test.tools.lldb_dap.types import LaunchArgs, StepInTargetsArgs
 class TestDAP_stepInTargets(DAPTestCaseBase):
     @skipIf(archs=no_match(["x86_64"]))
     # InstructionControlFlowKind for ARM is not supported yet.
-    # On Windows, lldb-dap seems to ignore targetId when stepping into functions.
-    # For more context, see https://github.com/llvm/llvm-project/issues/98509.
     def test_basic(self):
         """
         Tests the basic stepping in targets with directly calls.
