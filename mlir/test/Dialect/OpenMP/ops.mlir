@@ -1130,6 +1130,28 @@ omp.declare_mapper @my_mapper_iterated : !llvm.struct<"my_iter_type", (i32)> {
   omp.declare_mapper.info map_iterated(%it : !omp.iterated<!llvm.ptr>)
 }
 
+// CHECK-LABEL: omp_map_info_has_attach_ptr
+// CHECK-SAME: (%[[ARG0:.*]]: !llvm.ptr, %[[ARG1:.*]]: !llvm.ptr, %[[ARG2:.*]]: !llvm.ptr)
+func.func @omp_map_info_has_attach_ptr(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: !llvm.ptr) -> () {
+  %lb = llvm.mlir.constant(0 : i64) : i64
+  %ub = llvm.mlir.constant(9 : i64) : i64
+  %stride = llvm.mlir.constant(1 : i64) : i64
+  %start = llvm.mlir.constant(0 : i64) : i64
+  // CHECK: %[[BOUNDS:.*]] = omp.map.bounds
+  %bounds = omp.map.bounds lower_bound(%lb : i64) upper_bound(%ub : i64) stride(%stride : i64) start_idx(%start : i64)
+
+  // CHECK: %[[PTEE:.*]] = omp.map.info var_ptr(%[[ARG0]] : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%[[ARG1]] : !llvm.ptr, i32) bounds(%[[BOUNDS]]) name("pointee") has_attach_ptr(true) -> !llvm.ptr
+  %ptee = omp.map.info var_ptr(%arg0 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%arg1 : !llvm.ptr, i32) bounds(%bounds) name("pointee") has_attach_ptr(true) -> !llvm.ptr
+
+  // CHECK: %[[DEFAULT_FALSE:.*]] = omp.map.info var_ptr(%[[ARG1]] : !llvm.ptr, i32) map_clauses(attach, ref_ptr, ref_ptee) capture(ByRef) var_ptr_ptr(%[[ARG2]] : !llvm.ptr, i32) name("attach") -> !llvm.ptr
+  %default_false = omp.map.info var_ptr(%arg1 : !llvm.ptr, i32) map_clauses(attach, ref_ptr, ref_ptee) capture(ByRef) var_ptr_ptr(%arg2 : !llvm.ptr, i32) name("attach") -> !llvm.ptr
+
+  // CHECK: %[[EXPLICIT_FALSE:.*]] = omp.map.info var_ptr(%[[ARG2]] : !llvm.ptr, !llvm.struct<"my_type", (i32)>) map_clauses(to) capture(ByRef) mapper(@my_mapper) members(%[[PTEE]], %[[DEFAULT_FALSE]] : [0], [1] : !llvm.ptr, !llvm.ptr) name("parent") partial_map(true) -> !llvm.ptr
+  %explicit_false = omp.map.info var_ptr(%arg2 : !llvm.ptr, !llvm.struct<"my_type", (i32)>) map_clauses(to) capture(ByRef) mapper(@my_mapper) members(%ptee, %default_false : [0], [1] : !llvm.ptr, !llvm.ptr) name("parent") partial_map(true) has_attach_ptr(false) -> !llvm.ptr
+
+  return
+}
+
 // CHECK-LABEL: func @wsloop_reduction
 func.func @wsloop_reduction(%lb : index, %ub : index, %step : index) {
   %c1 = arith.constant 1 : i32
