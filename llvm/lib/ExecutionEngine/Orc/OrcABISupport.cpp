@@ -1243,5 +1243,133 @@ void OrcLoongArch64::writeIndirectStubsBlock(
   }
 }
 
+void OrcSystemZ::writeResolverCode(char *ResolverWorkingMem,
+                                   ExecutorAddr ResolverTargetAddress,
+                                   ExecutorAddr ReentryFnAddr,
+                                   ExecutorAddr ReentryCtxAddr) {
+  // Frame: 168 bytes below the incoming %r15.
+  //   0..159(%r15):   outgoing area for the reenter call
+  //   160(%r15):      landing address returned by reenter
+  //   184..287(%r15): caller's register save area, %r2..%r14
+  //   296..327(%r15): caller's register save area, %f0/%f2/%f4/%f6
+  //
+  // On entry %r1 = trampoline + 8 and %r14 = original caller's return address.
+  // reenter(%r2 = ReentryCtxAddr, %r3 = trampoline address = %r1 - 8).
+  //
+  // %r0 and %r1 are scratch and are not saved.
+  //
+  // Lctx is at 0x58 and lgrl is at 0x22: (0x58 - 0x22) / 2 = 0x1b.
+  // Lfn  is at 0x60 and lgrl is at 0x28: (0x60 - 0x28) / 2 = 0x1c.
+  //
+  // TODO: %v24-%v31 (vector argument registers) are not saved. Lazy calls to
+  // functions that take vector arguments will receive corrupted values.
+
+  const uint8_t ResolverCode[] = {
+      0xa7, 0xfb, 0xff, 0x58,             // 0x00: aghi  %r15, -168
+      0xeb, 0x2e, 0xf0, 0xb8, 0x00, 0x24, // 0x04: stmg  %r2, %r14, 184(%r15)
+      0x60, 0x00, 0xf1, 0x28,             // 0x0a: std   %f0, 296(%r15)
+      0x60, 0x20, 0xf1, 0x30,             // 0x0e: std   %f2, 304(%r15)
+      0x60, 0x40, 0xf1, 0x38,             // 0x12: std   %f4, 312(%r15)
+      0x60, 0x60, 0xf1, 0x40,             // 0x16: std   %f6, 320(%r15)
+      0xb9, 0x04, 0x00, 0x31,             // 0x1a: lgr   %r3, %r1
+      0xa7, 0x3b, 0xff, 0xf8,             // 0x1e: aghi  %r3, -8
+      0xc4, 0x28, 0x00, 0x00, 0x00, 0x1b, // 0x22: lgrl  %r2, Lctx
+      0xc4, 0x18, 0x00, 0x00, 0x00, 0x1c, // 0x28: lgrl  %r1, Lfn
+      0x0d, 0xe1,                         // 0x2e: basr  %r14, %r1
+      0xe3, 0x20, 0xf0, 0xa0, 0x00, 0x24, // 0x30: stg   %r2, 160(%r15)
+      0x68, 0x00, 0xf1, 0x28,             // 0x36: ld    %f0, 296(%r15)
+      0x68, 0x20, 0xf1, 0x30,             // 0x3a: ld    %f2, 304(%r15)
+      0x68, 0x40, 0xf1, 0x38,             // 0x3e: ld    %f4, 312(%r15)
+      0x68, 0x60, 0xf1, 0x40,             // 0x42: ld    %f6, 320(%r15)
+      0xe3, 0x10, 0xf0, 0xa0, 0x00, 0x04, // 0x46: lg    %r1, 160(%r15)
+      0xeb, 0x2e, 0xf0, 0xb8, 0x00, 0x04, // 0x4c: lmg   %r2, %r14, 184(%r15)
+      0xa7, 0xfb, 0x00, 0xa8,             // 0x52: aghi  %r15, 168
+      0x07, 0xf1,                         // 0x56: br    %r1
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 0x58: Lctx
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 0x60: Lfn
+  };
+
+  static_assert(sizeof(ResolverCode) == ResolverCodeSize,
+                "ResolverCodeSize does not match resolver code size");
+
+  const unsigned ReentryCtxAddrOffset = 0x58;
+  const unsigned ReentryFnAddrOffset = 0x60;
+
+  memcpy(ResolverWorkingMem, ResolverCode, sizeof(ResolverCode));
+  memcpy(ResolverWorkingMem + ReentryCtxAddrOffset, &ReentryCtxAddr,
+         sizeof(uint64_t));
+  memcpy(ResolverWorkingMem + ReentryFnAddrOffset, &ReentryFnAddr,
+         sizeof(uint64_t));
+}
+
+void OrcSystemZ::writeTrampolines(char *TrampolineBlockWorkingMem,
+                                  ExecutorAddr TrampolineBlockTargetAddress,
+                                  ExecutorAddr ResolverAddr,
+                                  unsigned NumTrampolines) {
+  // Each trampoline is 8 bytes:
+  //   +0: lgrl %r1, Lptr    c4 18 xx xx xx xx
+  //   +6: basr %r1, %r1     0d 11
+  //
+  // basr reads the branch target from %r1 before writing the return address
+  // (trampoline + 8) into %r1. The resolver receives %r1 = trampoline + 8 and
+  // %r14 still holds the original caller's return address.
+  //
+  // lgrl displacement = (Lptr - lgrl_addr) / 2, stored big-endian in +2..+5.
+
+  const unsigned PtrOffset = alignTo(NumTrampolines * TrampolineSize, 8);
+  memcpy(TrampolineBlockWorkingMem + PtrOffset, &ResolverAddr,
+         sizeof(uint64_t));
+
+  uint8_t *Trampolines = reinterpret_cast<uint8_t *>(TrampolineBlockWorkingMem);
+
+  for (unsigned I = 0; I < NumTrampolines; ++I) {
+    uint8_t *T = Trampolines + I * TrampolineSize;
+    int32_t HWOffset = ((int32_t)PtrOffset - (int32_t)(I * TrampolineSize)) / 2;
+
+    T[0] = 0xc4;
+    T[1] = 0x18;
+    T[2] = (HWOffset >> 24) & 0xff;
+    T[3] = (HWOffset >> 16) & 0xff;
+    T[4] = (HWOffset >> 8) & 0xff;
+    T[5] = HWOffset & 0xff;
+    T[6] = 0x0d;
+    T[7] = 0x11;
+  }
+}
+
+void OrcSystemZ::writeIndirectStubsBlock(
+    char *StubsBlockWorkingMem, ExecutorAddr StubsBlockTargetAddress,
+    ExecutorAddr PointersBlockTargetAddress, unsigned NumStubs) {
+  // Each stub is 8 bytes:
+  //   +0: lgrl %r1, ptr_I   c4 18 xx xx xx xx
+  //   +6: br   %r1          07 f1
+  //
+  // lgrl displacement = (ptr_I - stub) / 2, stored big-endian in +2..+5.
+
+  assert(stubAndPointerRangesOk<OrcSystemZ>(
+             StubsBlockTargetAddress, PointersBlockTargetAddress, NumStubs) &&
+         "PointersBlock is out of range");
+
+  uint8_t *Stub = reinterpret_cast<uint8_t *>(StubsBlockWorkingMem);
+
+  for (unsigned I = 0; I < NumStubs; ++I) {
+    uint8_t *S = Stub + I * StubSize;
+    ExecutorAddr LgrlAddr = StubsBlockTargetAddress + I * StubSize;
+    ExecutorAddr PtrAddr = PointersBlockTargetAddress + I * PointerSize;
+    int32_t HWOffset =
+        (int32_t)(((int64_t)PtrAddr.getValue() - (int64_t)LgrlAddr.getValue()) /
+                  2);
+
+    S[0] = 0xc4;
+    S[1] = 0x18;
+    S[2] = (HWOffset >> 24) & 0xff;
+    S[3] = (HWOffset >> 16) & 0xff;
+    S[4] = (HWOffset >> 8) & 0xff;
+    S[5] = HWOffset & 0xff;
+    S[6] = 0x07;
+    S[7] = 0xf1;
+  }
+}
+
 } // End namespace orc.
 } // End namespace llvm.
