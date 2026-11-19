@@ -269,7 +269,7 @@ public:
   }
 
   void enqueueStmtNodes(ExplodedNodeSet Nodes) {
-    assert(CurrStmtIdx && "enqueueing stmt nodes is only valid in a statement");
+    assert(CurrStmtIdx && "This is only valid when analyzing a CFGElement!");
     for (ExplodedNode *N : Nodes)
       Engine.enqueueStmtNode(N, getCurrBlock(), *CurrStmtIdx);
   }
