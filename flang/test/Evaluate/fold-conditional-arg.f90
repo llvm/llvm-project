@@ -179,6 +179,13 @@ module m
       ieee_support_flag(x=(flag ? r4a : r4b), flag=ieee_invalid) .eqv. &
       ieee_support_flag(ieee_invalid, r4a)
 
+  ! IS_CONTIGUOUS folds when every consequent-arg is known to be contiguous,
+  ! or every one is known not to be (F2023 15.5.2.3 p4).
+  real(4) :: v1(10), v2(10)
+  logical, parameter :: test_is_contiguous = is_contiguous((flag ? v1 : v2))
+  logical, parameter :: test_is_not_contiguous = &
+      .not. is_contiguous((flag ? v1(::2) : flag2 ? v2(::3) : v1(2::2)))
+
 contains
 
   ! Non-intrinsic (user-defined) function calls with conditional args.

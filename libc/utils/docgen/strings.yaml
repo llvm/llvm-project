@@ -1,3 +1,9 @@
+posix: posix-2024
+types:
+  locale_t:
+    in-latest-posix: ''
+  size_t:
+    in-latest-posix: ''
 functions:
   bcmp:
     removed-in-posix-2008: ''

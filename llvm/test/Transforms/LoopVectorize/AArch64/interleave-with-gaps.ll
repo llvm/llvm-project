@@ -8,7 +8,7 @@ target triple = "aarch64-linux-gnu"
 ; Original loop has trip count 17, but contains interleave groups with gaps, so
 ; the last iteration must execute in the scalar loop. Thus the vector loop can
 ; only execute up to 16 iterations.
-define i64 @vector_loop_with_remaining_iterations(ptr %src, ptr noalias %dst, i32 %x) #0 {
+define i64 @vector_loop_with_remaining_iterations(ptr %src, ptr noalias %dst, i32 %x) #0 vscale_range(1,16) {
 ; CHECK-NOTF-LABEL: define i64 @vector_loop_with_remaining_iterations(
 ; CHECK-NOTF-SAME: ptr [[SRC:%.*]], ptr noalias [[DST:%.*]], i32 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NOTF-NEXT:  [[ENTRY:.*:]]
@@ -113,7 +113,7 @@ exit:
 ; Original loop has trip count 17, but contains interleave groups with gaps, so
 ; the last iteration must execute in the scalar loop. Thus the vector loop can
 ; only execute up to 16 iterations.
-define i64 @main_vector_loop_fixed_with_no_remaining_iterations(ptr %src, ptr noalias %dst, i32 %x) #0 {
+define i64 @main_vector_loop_fixed_with_no_remaining_iterations(ptr %src, ptr noalias %dst, i32 %x) #0 vscale_range(1,16) {
 ; CHECK-NOTF-LABEL: define i64 @main_vector_loop_fixed_with_no_remaining_iterations(
 ; CHECK-NOTF-SAME: ptr [[SRC:%.*]], ptr noalias [[DST:%.*]], i32 [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NOTF-NEXT:  [[ENTRY:.*:]]
@@ -216,7 +216,7 @@ exit:
 }
 
 ; Test case for https://github.com/llvm/llvm-project/issues/149726.
-define void @main_vector_loop_fixed_single_vector_iteration_with_runtime_checks(ptr noalias %A, ptr noalias %B, ptr noalias %C, ptr noalias %D, ptr noalias %E, ptr noalias %F, ptr noalias %G, ptr noalias %H, ptr noalias %I, ptr noalias %J, ptr noalias %K, ptr %L) #1 {
+define void @main_vector_loop_fixed_single_vector_iteration_with_runtime_checks(ptr noalias %A, ptr noalias %B, ptr noalias %C, ptr noalias %D, ptr noalias %E, ptr noalias %F, ptr noalias %G, ptr noalias %H, ptr noalias %I, ptr noalias %J, ptr noalias %K, ptr %L) #1 vscale_range(1,16) {
 ; CHECK-NOTF-LABEL: define void @main_vector_loop_fixed_single_vector_iteration_with_runtime_checks(
 ; CHECK-NOTF-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]], ptr noalias [[D:%.*]], ptr noalias [[E:%.*]], ptr noalias [[F:%.*]], ptr noalias [[G:%.*]], ptr noalias [[H:%.*]], ptr noalias [[I:%.*]], ptr noalias [[J:%.*]], ptr noalias [[K:%.*]], ptr [[L:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NOTF-NEXT:  [[ENTRY:.*:]]
@@ -290,25 +290,66 @@ define void @main_vector_loop_fixed_single_vector_iteration_with_runtime_checks(
 ; CHECK-TF-NEXT:  [[ENTRY:.*:]]
 ; CHECK-TF-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK-TF:       [[VECTOR_PH]]:
-; CHECK-TF-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-TF-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 3
-; CHECK-TF-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 0, i64 8)
-; CHECK-TF-NEXT:    [[TRIP_COUNT_MINUS_VF:%.*]] = call i64 @llvm.usub.sat.i64(i64 8, i64 [[TMP1]])
-; CHECK-TF-NEXT:    [[TMP2:%.*]] = call <vscale x 8 x i64> @llvm.stepvector.nxv8i64()
-; CHECK-TF-NEXT:    [[TMP3:%.*]] = mul <vscale x 8 x i64> [[TMP2]], splat (i64 2)
-; CHECK-TF-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP1]], 1
-; CHECK-TF-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 8 x i64> poison, i64 [[TMP4]], i64 0
-; CHECK-TF-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 8 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
 ; CHECK-TF-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-TF:       [[VECTOR_BODY]]:
-; CHECK-TF-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-TF-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 8 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], %[[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-TF-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 8 x i64> [ [[TMP3]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-TF-NEXT:    [[WIDE_GEP:%.*]] = getelementptr i64, ptr [[J]], <vscale x 8 x i64> [[VEC_IND]]
-; CHECK-TF-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 8 x i64> @llvm.masked.gather.nxv8i64.nxv8p0(<vscale x 8 x ptr> align 8 [[WIDE_GEP]], <vscale x 8 x i1> [[ACTIVE_LANE_MASK]], <vscale x 8 x i64> poison)
-; CHECK-TF-NEXT:    [[TMP5:%.*]] = trunc <vscale x 8 x i64> [[WIDE_MASKED_GATHER]] to <vscale x 8 x i16>
-; CHECK-TF-NEXT:    [[WIDE_GEP1:%.*]] = getelementptr i16, ptr [[K]], <vscale x 8 x i64> [[VEC_IND]]
-; CHECK-TF-NEXT:    call void @llvm.masked.scatter.nxv8i16.nxv8p0(<vscale x 8 x i16> [[TMP5]], <vscale x 8 x ptr> align 2 [[WIDE_GEP1]], <vscale x 8 x i1> [[ACTIVE_LANE_MASK]])
+; CHECK-TF-NEXT:    [[WIDE_GEP:%.*]] = getelementptr [8 x i8], ptr [[J]], <8 x i64> <i64 0, i64 2, i64 4, i64 6, i64 8, i64 10, i64 12, i64 14>
+; CHECK-TF-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <8 x i64> @llvm.masked.gather.v8i64.v8p0(<8 x ptr> align 8 [[WIDE_GEP]], <8 x i1> splat (i1 true), <8 x i64> poison)
+; CHECK-TF-NEXT:    [[TMP0:%.*]] = trunc <8 x i64> [[WIDE_MASKED_GATHER]] to <8 x i16>
+; CHECK-TF-NEXT:    br i1 true, label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
+; CHECK-TF:       [[PRED_STORE_IF]]:
+; CHECK-TF-NEXT:    [[TMP1:%.*]] = extractelement <8 x i16> [[TMP0]], i64 0
+; CHECK-TF-NEXT:    store i16 [[TMP1]], ptr [[K]], align 2
+; CHECK-TF-NEXT:    br label %[[PRED_STORE_CONTINUE]]
+; CHECK-TF:       [[PRED_STORE_CONTINUE]]:
+; CHECK-TF-NEXT:    br i1 true, label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2:.*]]
+; CHECK-TF:       [[PRED_STORE_IF1]]:
+; CHECK-TF-NEXT:    [[TMP2:%.*]] = getelementptr i16, ptr [[K]], i64 2
+; CHECK-TF-NEXT:    [[TMP3:%.*]] = extractelement <8 x i16> [[TMP0]], i64 1
+; CHECK-TF-NEXT:    store i16 [[TMP3]], ptr [[TMP2]], align 2
+; CHECK-TF-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
+; CHECK-TF:       [[PRED_STORE_CONTINUE2]]:
+; CHECK-TF-NEXT:    br i1 true, label %[[PRED_STORE_IF3:.*]], label %[[PRED_STORE_CONTINUE4:.*]]
+; CHECK-TF:       [[PRED_STORE_IF3]]:
+; CHECK-TF-NEXT:    [[TMP4:%.*]] = getelementptr i16, ptr [[K]], i64 4
+; CHECK-TF-NEXT:    [[TMP5:%.*]] = extractelement <8 x i16> [[TMP0]], i64 2
+; CHECK-TF-NEXT:    store i16 [[TMP5]], ptr [[TMP4]], align 2
+; CHECK-TF-NEXT:    br label %[[PRED_STORE_CONTINUE4]]
+; CHECK-TF:       [[PRED_STORE_CONTINUE4]]:
+; CHECK-TF-NEXT:    br i1 true, label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6:.*]]
+; CHECK-TF:       [[PRED_STORE_IF5]]:
+; CHECK-TF-NEXT:    [[TMP6:%.*]] = getelementptr i16, ptr [[K]], i64 6
+; CHECK-TF-NEXT:    [[TMP7:%.*]] = extractelement <8 x i16> [[TMP0]], i64 3
+; CHECK-TF-NEXT:    store i16 [[TMP7]], ptr [[TMP6]], align 2
+; CHECK-TF-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
+; CHECK-TF:       [[PRED_STORE_CONTINUE6]]:
+; CHECK-TF-NEXT:    br i1 true, label %[[PRED_STORE_IF7:.*]], label %[[PRED_STORE_CONTINUE8:.*]]
+; CHECK-TF:       [[PRED_STORE_IF7]]:
+; CHECK-TF-NEXT:    [[TMP8:%.*]] = getelementptr i16, ptr [[K]], i64 8
+; CHECK-TF-NEXT:    [[TMP9:%.*]] = extractelement <8 x i16> [[TMP0]], i64 4
+; CHECK-TF-NEXT:    store i16 [[TMP9]], ptr [[TMP8]], align 2
+; CHECK-TF-NEXT:    br label %[[PRED_STORE_CONTINUE8]]
+; CHECK-TF:       [[PRED_STORE_CONTINUE8]]:
+; CHECK-TF-NEXT:    br i1 true, label %[[PRED_STORE_IF9:.*]], label %[[PRED_STORE_CONTINUE10:.*]]
+; CHECK-TF:       [[PRED_STORE_IF9]]:
+; CHECK-TF-NEXT:    [[TMP10:%.*]] = getelementptr i16, ptr [[K]], i64 10
+; CHECK-TF-NEXT:    [[TMP11:%.*]] = extractelement <8 x i16> [[TMP0]], i64 5
+; CHECK-TF-NEXT:    store i16 [[TMP11]], ptr [[TMP10]], align 2
+; CHECK-TF-NEXT:    br label %[[PRED_STORE_CONTINUE10]]
+; CHECK-TF:       [[PRED_STORE_CONTINUE10]]:
+; CHECK-TF-NEXT:    br i1 true, label %[[PRED_STORE_IF11:.*]], label %[[PRED_STORE_CONTINUE12:.*]]
+; CHECK-TF:       [[PRED_STORE_IF11]]:
+; CHECK-TF-NEXT:    [[TMP12:%.*]] = getelementptr i16, ptr [[K]], i64 12
+; CHECK-TF-NEXT:    [[TMP13:%.*]] = extractelement <8 x i16> [[TMP0]], i64 6
+; CHECK-TF-NEXT:    store i16 [[TMP13]], ptr [[TMP12]], align 2
+; CHECK-TF-NEXT:    br label %[[PRED_STORE_CONTINUE12]]
+; CHECK-TF:       [[PRED_STORE_CONTINUE12]]:
+; CHECK-TF-NEXT:    br i1 true, label %[[PRED_STORE_IF13:.*]], label %[[PRED_STORE_CONTINUE14:.*]]
+; CHECK-TF:       [[PRED_STORE_IF13]]:
+; CHECK-TF-NEXT:    [[TMP14:%.*]] = getelementptr i16, ptr [[K]], i64 14
+; CHECK-TF-NEXT:    [[TMP15:%.*]] = extractelement <8 x i16> [[TMP0]], i64 7
+; CHECK-TF-NEXT:    store i16 [[TMP15]], ptr [[TMP14]], align 2
+; CHECK-TF-NEXT:    br label %[[PRED_STORE_CONTINUE14]]
+; CHECK-TF:       [[PRED_STORE_CONTINUE14]]:
 ; CHECK-TF-NEXT:    store i64 0, ptr [[A]], align 8
 ; CHECK-TF-NEXT:    store i64 0, ptr [[B]], align 8
 ; CHECK-TF-NEXT:    store i64 0, ptr [[C]], align 8
@@ -319,12 +360,7 @@ define void @main_vector_loop_fixed_single_vector_iteration_with_runtime_checks(
 ; CHECK-TF-NEXT:    store i64 0, ptr [[H]], align 8
 ; CHECK-TF-NEXT:    store i64 0, ptr [[I]], align 8
 ; CHECK-TF-NEXT:    store i64 0, ptr [[L]], align 8
-; CHECK-TF-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 [[INDEX]], i64 [[TRIP_COUNT_MINUS_VF]])
-; CHECK-TF-NEXT:    [[TMP6:%.*]] = extractelement <vscale x 8 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
-; CHECK-TF-NEXT:    [[TMP7:%.*]] = xor i1 [[TMP6]], true
-; CHECK-TF-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 8 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
-; CHECK-TF-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP1]]
-; CHECK-TF-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-TF-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; CHECK-TF:       [[MIDDLE_BLOCK]]:
 ; CHECK-TF-NEXT:    br label %[[EXIT:.*]]
 ; CHECK-TF:       [[EXIT]]:
@@ -369,7 +405,7 @@ exit:
 ;   rdx += a[i][3];
 ; }
 ;
-define i32 @load_factor_4_with_gap(i64 %n, ptr noalias %a) {
+define i32 @load_factor_4_with_gap(i64 %n, ptr noalias %a) vscale_range(1,16) {
 ; CHECK-NOTF-LABEL: define i32 @load_factor_4_with_gap(
 ; CHECK-NOTF-SAME: i64 [[N:%.*]], ptr noalias [[A:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CHECK-NOTF-NEXT:  [[ITER_CHECK:.*]]:
@@ -525,7 +561,7 @@ define i32 @load_factor_4_with_gap(i64 %n, ptr noalias %a) {
 ; CHECK-TF-NEXT:    [[TMP10:%.*]] = extractelement <vscale x 4 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-TF-NEXT:    [[TMP11:%.*]] = xor i1 [[TMP10]], true
 ; CHECK-TF-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP1]]
-; CHECK-TF-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-TF-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK-TF:       [[MIDDLE_BLOCK]]:
 ; CHECK-TF-NEXT:    [[TMP12:%.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[TMP9]])
 ; CHECK-TF-NEXT:    br label %[[EXIT:.*]]
@@ -565,7 +601,7 @@ exit:
 ;   a[i][3] = i;
 ; }
 ;
-define void @store_factor_4_with_gap(i32 %n, ptr noalias %a) {
+define void @store_factor_4_with_gap(i32 %n, ptr noalias %a) vscale_range(1,16) {
 ; CHECK-NOTF-LABEL: define void @store_factor_4_with_gap(
 ; CHECK-NOTF-SAME: i32 [[N:%.*]], ptr noalias [[A:%.*]]) #[[ATTR2]] {
 ; CHECK-NOTF-NEXT:  [[ENTRY:.*]]:
@@ -675,7 +711,7 @@ exit:
 ;   // No access a[i][3]
 ; }
 ;
-define i32 @load_factor_4_with_tail_gap(i64 %n, ptr noalias %a) {
+define i32 @load_factor_4_with_tail_gap(i64 %n, ptr noalias %a) vscale_range(1,16) {
 ; CHECK-NOTF-LABEL: define i32 @load_factor_4_with_tail_gap(
 ; CHECK-NOTF-SAME: i64 [[N:%.*]], ptr noalias [[A:%.*]]) #[[ATTR2]] {
 ; CHECK-NOTF-NEXT:  [[ITER_CHECK:.*]]:
@@ -861,7 +897,7 @@ exit:
 ;   // No access a[i][3]
 ; }
 ;
-define void @store_factor_4_with_tail_gap(i32 %n, ptr noalias %a) {
+define void @store_factor_4_with_tail_gap(i32 %n, ptr noalias %a) vscale_range(1,16) {
 ; CHECK-NOTF-LABEL: define void @store_factor_4_with_tail_gap(
 ; CHECK-NOTF-SAME: i32 [[N:%.*]], ptr noalias [[A:%.*]]) #[[ATTR2]] {
 ; CHECK-NOTF-NEXT:  [[ENTRY:.*]]:
@@ -972,7 +1008,7 @@ exit:
 ;   rdx += a[i][3];
 ; }
 ;
-define i32 @load_factor_4_with_gap_reverse(i64 %n, ptr noalias %a) {
+define i32 @load_factor_4_with_gap_reverse(i64 %n, ptr noalias %a) vscale_range(1,16) {
 ; CHECK-NOTF-LABEL: define i32 @load_factor_4_with_gap_reverse(
 ; CHECK-NOTF-SAME: i64 [[N:%.*]], ptr noalias [[A:%.*]]) #[[ATTR2]] {
 ; CHECK-NOTF-NEXT:  [[ENTRY:.*]]:
@@ -1003,16 +1039,16 @@ define i32 @load_factor_4_with_gap_reverse(i64 %n, ptr noalias %a) {
 ; CHECK-NOTF-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [16 x i8], ptr [[A]], i64 [[TMP5]]
 ; CHECK-NOTF-NEXT:    [[TMP7:%.*]] = sub nuw nsw i64 [[TMP3]], 1
 ; CHECK-NOTF-NEXT:    [[TMP8:%.*]] = mul i64 [[TMP7]], -4
-; CHECK-NOTF-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[TMP6]], i64 [[TMP8]]
+; CHECK-NOTF-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP6]], i64 [[TMP8]]
 ; CHECK-NOTF-NEXT:    [[TMP10:%.*]] = mul i64 -4, [[TMP3]]
 ; CHECK-NOTF-NEXT:    [[TMP11:%.*]] = add i64 [[TMP8]], [[TMP10]]
-; CHECK-NOTF-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[TMP6]], i64 [[TMP11]]
+; CHECK-NOTF-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP6]], i64 [[TMP11]]
 ; CHECK-NOTF-NEXT:    [[TMP13:%.*]] = mul i64 -8, [[TMP3]]
 ; CHECK-NOTF-NEXT:    [[TMP14:%.*]] = add i64 [[TMP8]], [[TMP13]]
-; CHECK-NOTF-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i32, ptr [[TMP6]], i64 [[TMP14]]
+; CHECK-NOTF-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP6]], i64 [[TMP14]]
 ; CHECK-NOTF-NEXT:    [[TMP16:%.*]] = mul i64 -12, [[TMP3]]
 ; CHECK-NOTF-NEXT:    [[TMP17:%.*]] = add i64 [[TMP8]], [[TMP16]]
-; CHECK-NOTF-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i32, ptr [[TMP6]], i64 [[TMP17]]
+; CHECK-NOTF-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP6]], i64 [[TMP17]]
 ; CHECK-NOTF-NEXT:    [[WIDE_VEC:%.*]] = load <vscale x 16 x i32>, ptr [[TMP9]], align 4
 ; CHECK-NOTF-NEXT:    [[STRIDED_VEC:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave4.nxv16i32(<vscale x 16 x i32> [[WIDE_VEC]])
 ; CHECK-NOTF-NEXT:    [[TMP19:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[STRIDED_VEC]], 0
@@ -1083,7 +1119,7 @@ define i32 @load_factor_4_with_gap_reverse(i64 %n, ptr noalias %a) {
 ; CHECK-NOTF-NEXT:    [[VEC_PHI26:%.*]] = phi <4 x i32> [ [[TMP47]], %[[VEC_EPILOG_PH]] ], [ [[TMP53:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NOTF-NEXT:    [[TMP48:%.*]] = sub i64 [[N]], [[INDEX25]]
 ; CHECK-NOTF-NEXT:    [[TMP49:%.*]] = getelementptr inbounds nuw [16 x i8], ptr [[A]], i64 [[TMP48]]
-; CHECK-NOTF-NEXT:    [[TMP50:%.*]] = getelementptr inbounds i32, ptr [[TMP49]], i64 -12
+; CHECK-NOTF-NEXT:    [[TMP50:%.*]] = getelementptr inbounds i8, ptr [[TMP49]], i64 -48
 ; CHECK-NOTF-NEXT:    [[WIDE_VEC27:%.*]] = load <16 x i32>, ptr [[TMP50]], align 4
 ; CHECK-NOTF-NEXT:    [[STRIDED_VEC28:%.*]] = shufflevector <16 x i32> [[WIDE_VEC27]], <16 x i32> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
 ; CHECK-NOTF-NEXT:    [[REVERSE29:%.*]] = shufflevector <4 x i32> [[STRIDED_VEC28]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
@@ -1191,7 +1227,7 @@ exit:
 ;   a[i][3] = i;
 ; }
 ;
-define void @store_factor_4_with_gap_reverse(i64 %n, ptr noalias %a) {
+define void @store_factor_4_with_gap_reverse(i64 %n, ptr noalias %a) vscale_range(1,16) {
 ; CHECK-NOTF-LABEL: define void @store_factor_4_with_gap_reverse(
 ; CHECK-NOTF-SAME: i64 [[N:%.*]], ptr noalias [[A:%.*]]) #[[ATTR2]] {
 ; CHECK-NOTF-NEXT:  [[ENTRY:.*:]]
@@ -1322,7 +1358,7 @@ exit:
 ;   // No access a[i][3]
 ; }
 ;
-define i32 @load_factor_4_with_tail_gap_reverse(i64 %n, ptr noalias %a) {
+define i32 @load_factor_4_with_tail_gap_reverse(i64 %n, ptr noalias %a) vscale_range(1,16) {
 ; CHECK-NOTF-LABEL: define i32 @load_factor_4_with_tail_gap_reverse(
 ; CHECK-NOTF-SAME: i64 [[N:%.*]], ptr noalias [[A:%.*]]) #[[ATTR2]] {
 ; CHECK-NOTF-NEXT:  [[ENTRY:.*]]:
@@ -1483,7 +1519,7 @@ exit:
 ;   // No access a[i][3]
 ; }
 ;
-define void @store_factor_4_with_tail_gap_reverse(i64 %n, ptr noalias %a) {
+define void @store_factor_4_with_tail_gap_reverse(i64 %n, ptr noalias %a) vscale_range(1,16) {
 ; CHECK-NOTF-LABEL: define void @store_factor_4_with_tail_gap_reverse(
 ; CHECK-NOTF-SAME: i64 [[N:%.*]], ptr noalias [[A:%.*]]) #[[ATTR2]] {
 ; CHECK-NOTF-NEXT:  [[ENTRY:.*:]]
@@ -1605,8 +1641,8 @@ exit:
 
 
 
-attributes #0 = { "target-cpu"="neoverse-512tvb" }
-attributes #1 = { "target-cpu"="grace" }
+attributes #0 = { "target-cpu"="neoverse-512tvb" vscale_range(1,16) }
+attributes #1 = { "target-cpu"="grace" vscale_range(1,16) }
 
 !0 = distinct !{!0, !1, !2}
 !1 = !{!"llvm.loop.mustprogress"}

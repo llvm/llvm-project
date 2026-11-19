@@ -12,7 +12,6 @@
 
 #include "MCTargetDesc/RISCVBaseInfo.h"
 #include "llvm/CodeGen/CallingConvLower.h"
-#include "llvm/IR/Function.h"
 
 namespace llvm {
 
@@ -31,8 +30,5 @@ ArrayRef<MCPhysReg> getArgFPRs(const RISCVSubtarget &STI);
 ArrayRef<MCPhysReg> getArgVRs(const RISCVSubtarget &STI);
 
 } // end namespace RISCV
-
-void checkRISCVStateCall(const Function &Caller, const GlobalValue *Callee);
-void checkRISCVStateCall(const Function &Caller, StringRef CalleeName);
 
 } // end namespace llvm

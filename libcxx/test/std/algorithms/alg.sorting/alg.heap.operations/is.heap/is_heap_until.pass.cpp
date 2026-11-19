@@ -17,6 +17,7 @@
 #include <cassert>
 #include <iterator>
 
+#include "../heap_helpers.h"
 #include "test_macros.h"
 #include "test_iterators.h"
 
@@ -24,6 +25,13 @@
 TEST_CONSTEXPR bool test_constexpr() {
     int ia[] = {0, 0, 0, 0, 1, 0};
     int ib[] = {0, 0, 0, 1, 1, 1};
+
+    assert(!satisfies_heap_property(std::begin(ia), std::end(ia)));
+    assert(!satisfies_heap_property(std::begin(ib), std::end(ib)));
+
+    assert(satisfies_heap_property(std::begin(ia), ia + 4));
+    assert(satisfies_heap_property(std::begin(ib), ib + 3));
+
     return    (std::is_heap_until(std::begin(ia), std::end(ia)) == ia+4)
            && (std::is_heap_until(std::begin(ib), std::end(ib)) == ib+3);
     }

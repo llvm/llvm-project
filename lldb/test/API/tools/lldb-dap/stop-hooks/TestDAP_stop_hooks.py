@@ -15,7 +15,7 @@ class TestDAP_stop_hooks(DAPTestCaseBase):
         program = self.getBuildArtifact("a.out")
         session = self.build_and_create_session()
         launch_args = LaunchArgs(
-            program, preRunCommands=["target stop-hook add -o help"]
+            program, preRunCommands=["target stop-hook add -I true -o help"]
         )
         with session.configure(launch_args) as ctx:
             breakpoint_ids = session.resolve_function_breakpoints(["main"])

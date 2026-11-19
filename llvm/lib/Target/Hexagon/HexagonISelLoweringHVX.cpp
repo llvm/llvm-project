@@ -3913,6 +3913,7 @@ HexagonTargetLowering::LowerHvxOperation(SDValue Op, SelectionDAG &DAG) const {
       return Op;
     }
     case ISD::INTRINSIC_VOID:          return Op;
+    case ISD::INTRINSIC_W_CHAIN:       return Op;
     case ISD::INTRINSIC_WO_CHAIN:      return LowerHvxIntrinsic(Op, DAG);
     case ISD::MLOAD:
     case ISD::MSTORE:                  return LowerHvxMaskedOp(Op, DAG);

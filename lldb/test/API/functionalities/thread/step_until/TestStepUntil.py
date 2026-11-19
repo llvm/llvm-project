@@ -40,18 +40,12 @@ class StepUntilTestCase(TestBase):
         )
         self.assertTrue(break_before, VALID_BREAKPOINT)
 
-        # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple(args, None, self.get_process_working_directory())
-
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        # The stop reason of the thread should be breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint(process, break_before)
-
-        if len(threads) != 1:
-            self.fail("Failed to stop at first breakpoint in main.")
-
-        thread = threads[0]
+        launch_info = target.GetLaunchInfo()
+        launch_info.SetArguments(args, True)
+        launch_info.SetWorkingDirectory(self.get_process_working_directory())
+        _, _, thread, _ = lldbutil.run_to_breakpoint_do_run(
+            self, target, break_before, launch_info
+        )
         return thread
 
     def do_until(self, args, until_lines, expected_linenum):

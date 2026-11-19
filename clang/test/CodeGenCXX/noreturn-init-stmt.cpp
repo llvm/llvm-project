@@ -9,7 +9,7 @@ bool check(const T &);
 int pick(const T &);
 
 // CHECK-LABEL: define dso_local noundef i32 @_Z4testb(
-// CHECK-SAME: i1 noundef zeroext [[COND:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK-SAME: i1 noundef [[COND:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[COND_ADDR:%.*]] = alloca i8, align 1
@@ -51,7 +51,7 @@ int test(bool cond) {
 }
 
 // CHECK-LABEL: define dso_local noundef i32 @_Z11test_switchb(
-// CHECK-SAME: i1 noundef zeroext [[COND:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: i1 noundef [[COND:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[COND_ADDR:%.*]] = alloca i8, align 1
