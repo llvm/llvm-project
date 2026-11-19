@@ -605,7 +605,18 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
     StringRef Val = A->getValue();
     if (Val == "atomic" || Val == "prefer-atomic")
       CmdArgs.push_back("-fprofile-update=atomic");
-    else if (Val != "single")
+    else if (Val == "single") {
+      if (SanArgs.needsTsanRt() &&
+          (PGOGenerateArg || CSPGOGenerateArg || ProfileGenerateArg)) {
+        // Under TSan, instrprof defaults to atomic counter updates to avoid
+        // data race reports on profile counters; override that default and
+        // warn.
+        D.Diag(diag::warn_drv_tsan_profile_update_single)
+            << A->getAsString(Args);
+        CmdArgs.push_back("-mllvm");
+        CmdArgs.push_back("-instrprof-atomic-counter-update-all=false");
+      }
+    } else
       D.Diag(diag::err_drv_unsupported_option_argument)
           << A->getSpelling() << Val;
   }
@@ -2444,6 +2455,14 @@ void Clang::AddHexagonTargetArgs(const ArgList &Args,
   CmdArgs.push_back("-mllvm");
   CmdArgs.push_back("-machine-sink-split=0");
 
+  // Let debuggers find the caller's HLX vector stack pointer.
+  if (const Arg *A = Args.getLastArg(options::OPT_g_Group);
+      A && !A->getOption().matches(options::OPT_g0) &&
+      !A->getOption().matches(options::OPT_ggdb0)) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("-hexagon-save-parent-vsp");
+  }
+
   addQFloatBackendArg(getToolChain().getDriver(), Args, CmdArgs);
 }
 
@@ -4030,7 +4049,8 @@ static void RenderHLSLOptions(const Driver &D, const ArgList &Args,
       options::OPT_fhlsl_spv_use_unknown_image_format,
       options::OPT_fhlsl_spv_use_legacy_buffer_matrix_order,
       options::OPT_fhlsl_spv_enable_maximal_reconvergence,
-      options::OPT_fhlsl_spv_preserve_interface};
+      options::OPT_fhlsl_spv_preserve_interface,
+      options::OPT_fhlsl_spv_support_nonzero_base_instance};
   if (!types::isHLSL(InputType))
     return;
   for (const auto &Arg : ForwardedArguments)
@@ -6957,6 +6977,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (Args.hasArg(options::OPT_relocatable_pch))
     CmdArgs.push_back("-relocatable-pch");
+  Args.AddLastArg(CmdArgs, options::OPT_fpch_base_dir_is_cwd);
 
   if (const Arg *A = Args.getLastArg(options::OPT_fcf_runtime_abi_EQ)) {
     static const char *kCFABIs[] = {
@@ -7465,6 +7486,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   Args.addOptOutFlag(CmdArgs, options::OPT_mstack_arg_probe,
                      options::OPT_mno_stack_arg_probe);
+
+  if (Arg *A = Args.getLastArg(options::OPT_msmall_int_abi_compat_EQ))
+    A->render(Args, CmdArgs);
 
   if (Arg *A = Args.getLastArg(options::OPT_mrestrict_it,
                                options::OPT_mno_restrict_it)) {

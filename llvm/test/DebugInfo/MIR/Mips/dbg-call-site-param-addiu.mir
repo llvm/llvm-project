@@ -131,3 +131,4 @@ body:             |
     PseudoReturn undef $r31, implicit $r2, debug-location !18 {
       $r29 = ADDiu $r29, 24
     }
+...
