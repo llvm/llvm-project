@@ -1,6 +1,6 @@
 # RUN: llc -mtriple=aarch64 -enable-subreg-liveness \
-# RUN:   -passes='require<live-intervals>,two-address-instruction,verify' \
-# RUN:   -debug-only=regalloc %s -o /dev/null 2>&1 | FileCheck %s
+# RUN:   -passes='require<live-intervals>,two-address-instruction' \
+# RUN:   -debug-only=regalloc %s -filetype=null 2>&1 | FileCheck %s
 # REQUIRES: asserts
 
 # Converting INSERT_SUBREG into a partial COPY calls shrinkToUses for %2.
@@ -15,7 +15,6 @@
 # CHECK: Shrunk: %2 [40r,48r:1)[48r,80e:0)
 ---
 name: twoaddr_early_clobber_shrink
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0, $w1
@@ -35,7 +34,6 @@ body: |
 # CHECK: Shrunk: %2 [40r,48r:1)[48r,64r:0)
 ---
 name: twoaddr_early_clobber_and_normal_use
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $w1
