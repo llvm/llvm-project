@@ -9,10 +9,6 @@
 // NetBSD does not support LC_COLLATE at the moment
 // XFAIL: netbsd
 
-// Bionic aliases named locales like "en_US.UTF-8" to "C.UTF-8" without localized
-// tables; teach localization.py to detect this or add ICU-backed facets.
-// XFAIL: LIBCXX-ANDROID-FIXME
-
 // <locale>
 
 // template <class charT> class collate_byname

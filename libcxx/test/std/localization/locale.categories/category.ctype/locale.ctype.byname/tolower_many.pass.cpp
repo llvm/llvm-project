@@ -9,10 +9,6 @@
 // REQUIRES: locale.en_US.UTF-8
 // XFAIL: win32-broken-utf8-wchar-ctype
 
-// Bionic aliases named locales like "en_US.UTF-8" to "C.UTF-8" without localized
-// tables; teach localization.py to detect this or add ICU-backed facets.
-// XFAIL: LIBCXX-ANDROID-FIXME
-
 // <locale>
 
 // template <class charT> class ctype_byname;

@@ -13,10 +13,6 @@
 // iter_type put(iter_type s, bool intl, ios_base& f, char_type fill,
 //               const string_type& units) const;
 
-// Bionic aliases named locales like "en_US.UTF-8" to "C.UTF-8" without localized
-// tables; teach localization.py to detect this or add ICU-backed facets.
-// XFAIL: LIBCXX-ANDROID-FIXME
-
 // REQUIRES: locale.en_US.UTF-8
 
 #include <locale>
