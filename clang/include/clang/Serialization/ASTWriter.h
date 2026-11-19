@@ -435,7 +435,7 @@ private:
   DeclUpdateMap DeclUpdatesLazy;
 
   /// Convert non-lazy updates into lazy updates if we're in reduced BMI.
-  void prepareLazyUpdates();
+  void prepareLazyUpdates(ASTContext &Context);
   /// Apply lazy update if the update is touched during the writing process.
   void getLazyUpdates(const Decl *D);
 
