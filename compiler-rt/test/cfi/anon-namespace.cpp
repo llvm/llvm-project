@@ -23,10 +23,15 @@
 // RUN: %clangxx -o %t5 %t1.o %t2.o
 // RUN: %run %t5 2>&1 | FileCheck --check-prefix=NCFI %s
 
-// RUN: %clangxx_cfi_diag -c -DTU1 -o %t1.o %s
-// RUN: %clangxx_cfi_diag -c -DTU2 -o %t2.o %S/../cfi/anon-namespace.cpp
-// RUN: %clangxx_cfi_diag -o %t6 %t1.o %t2.o
+// RUN: %clangxx_cfi_diag -fno-whole-program-vtables -c -DTU1 -o %t1.o %s
+// RUN: %clangxx_cfi_diag -fno-whole-program-vtables -c -DTU2 -o %t2.o %S/../cfi/anon-namespace.cpp
+// RUN: %clangxx_cfi_diag -fno-whole-program-vtables -o %t6 %t1.o %t2.o
 // RUN: %run %t6 2>&1 | FileCheck --check-prefix=CFI-DIAG %s
+
+// RUN: %clangxx_cfi_diag -c -DTU1 -DB32 -o %t1.o %s
+// RUN: %clangxx_cfi_diag -c -DTU2 -DB32 -o %t2.o %S/../cfi/anon-namespace.cpp
+// RUN: %clangxx_cfi_diag -o %t7 %t1.o %t2.o
+// RUN: %run %t7 2>&1 | FileCheck --check-prefix=CFI-DIAG %s
 
 // Tests that the CFI mechanism treats classes in the anonymous namespace in
 // different translation units as having distinct identities. This is done by
