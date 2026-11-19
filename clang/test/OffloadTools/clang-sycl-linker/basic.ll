@@ -176,6 +176,14 @@
 ; RUN:   | FileCheck %s --check-prefix=CODE-NO-IGCA
 ; CODE-NO-IGCA: error: --code requires an IGCA target in --arch
 ;
+; Check that --code does not accept an empty Intel GPU name.
+; RUN: not clang-sycl-linker --dry-run -arch=igca_30r --code= %t/input1.bc -o %t/code-empty.out 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=CODE-EMPTY
+; CODE-EMPTY: error: '--code=' has an empty Intel GPU name
+; RUN: not clang-sycl-linker --dry-run -arch=igca_30r --code=xe-mtl-u, %t/input1.bc -o %t/code-empty.out 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=CODE-EMPTY-ITEM
+; CODE-EMPTY-ITEM: error: '--code=xe-mtl-u,' has an empty Intel GPU name
+;
 ; Check that the output file must be specified.
 ; RUN: not clang-sycl-linker --dry-run %t/input1.bc %t/input2.bc 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=NOOUTPUT

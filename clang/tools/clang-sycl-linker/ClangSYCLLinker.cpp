@@ -1132,6 +1132,11 @@ int main(int argc, char **argv) {
         "'"));
   if (Args.hasArg(OPT_code_EQ) && !OA.isIntelIGCA())
     reportError(createStringError("--code requires an IGCA target in --arch"));
+  // Each --code value is an Intel GPU name, or a comma-separated list of them.
+  for (StringRef Code : Args.getAllArgValues(OPT_code_EQ))
+    if (llvm::is_contained(llvm::split(Code, ','), StringRef()))
+      reportError(createStringError("'--code=" + Code +
+                                    "' has an empty Intel GPU name"));
 
   // Get the input buffers to pass to the linking stage.
   auto ResolvedInputsOrErr = getInput(Args);
