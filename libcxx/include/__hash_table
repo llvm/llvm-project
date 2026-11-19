@@ -638,7 +638,7 @@ public:
   typedef const value_type& const_reference;
   typedef typename __alloc_traits::pointer pointer;
   typedef typename __alloc_traits::const_pointer const_pointer;
-  using size_type = __unordered_container_size_type<allocator_type>;
+  using size_type       = __unordered_container_size_type<allocator_type>;
   using difference_type = ptrdiff_t;
 
 public:

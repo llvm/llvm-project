@@ -943,9 +943,9 @@ template <class _InputIterator,
 unordered_set(_InputIterator,
               _InputIterator,
               __unordered_container_size_type<_Allocator> = 0,
-              _Hash                                            = _Hash(),
-              _Pred                                            = _Pred(),
-              _Allocator                                       = _Allocator())
+              _Hash                                       = _Hash(),
+              _Pred                                       = _Pred(),
+              _Allocator                                  = _Allocator())
     -> unordered_set<__iterator_value_type<_InputIterator>, _Hash, _Pred, _Allocator>;
 
 #    if _LIBCPP_STD_VER >= 23
@@ -960,9 +960,9 @@ template <ranges::input_range _Range,
 unordered_set(from_range_t,
               _Range&&,
               __unordered_container_size_type<_Allocator> = 0,
-              _Hash                                            = _Hash(),
-              _Pred                                            = _Pred(),
-              _Allocator                                       = _Allocator())
+              _Hash                                       = _Hash(),
+              _Pred                                       = _Pred(),
+              _Allocator                                  = _Allocator())
     -> unordered_set<ranges::range_value_t<_Range>, _Hash, _Pred, _Allocator>; // C++23
 #    endif
 
@@ -976,8 +976,8 @@ template <class _Tp,
           class            = enable_if_t<__is_allocator_v<_Allocator>>>
 unordered_set(initializer_list<_Tp>,
               __unordered_container_size_type<_Allocator> = 0,
-              _Hash                                            = _Hash(),
-              _Pred                                            = _Pred(),
+              _Hash                                       = _Hash(),
+              _Pred                                       = _Pred(),
               _Allocator = _Allocator()) -> unordered_set<_Tp, _Hash, _Pred, _Allocator>;
 
 template <class _InputIterator,
@@ -1549,8 +1549,8 @@ unordered_multiset(
     _InputIterator,
     _InputIterator,
     __unordered_container_size_type<_Allocator> = 0,
-    _Hash                                            = _Hash(),
-    _Pred                                            = _Pred(),
+    _Hash                                       = _Hash(),
+    _Pred                                       = _Pred(),
     _Allocator = _Allocator()) -> unordered_multiset<__iterator_value_type<_InputIterator>, _Hash, _Pred, _Allocator>;
 
 #    if _LIBCPP_STD_VER >= 23
@@ -1566,8 +1566,8 @@ unordered_multiset(
     from_range_t,
     _Range&&,
     __unordered_container_size_type<_Allocator> = 0,
-    _Hash                                            = _Hash(),
-    _Pred                                            = _Pred(),
+    _Hash                                       = _Hash(),
+    _Pred                                       = _Pred(),
     _Allocator = _Allocator()) -> unordered_multiset<ranges::range_value_t<_Range>, _Hash, _Pred, _Allocator>; // C++23
 #    endif
 
@@ -1581,8 +1581,8 @@ template <class _Tp,
           class            = enable_if_t<__is_allocator_v<_Allocator>>>
 unordered_multiset(initializer_list<_Tp>,
                    __unordered_container_size_type<_Allocator> = 0,
-                   _Hash                                            = _Hash(),
-                   _Pred                                            = _Pred(),
+                   _Hash                                       = _Hash(),
+                   _Pred                                       = _Pred(),
                    _Allocator = _Allocator()) -> unordered_multiset<_Tp, _Hash, _Pred, _Allocator>;
 
 template <class _InputIterator,
