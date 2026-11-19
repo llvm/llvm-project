@@ -780,11 +780,6 @@ public:
     return Imm.Val;
   }
 
-  void setImm(int64_t Val) {
-    assert(isImm());
-    Imm.Val = Val;
-  }
-
   ImmTy getImmTy() const {
     assert(isImm());
     return Imm.Type;

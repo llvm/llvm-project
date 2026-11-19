@@ -50,9 +50,9 @@ struct KernelLaunchInfoTy {
   const char *Name = nullptr;
   /// The program this kernel belongs to.
   const ProgramTy *Program = nullptr;
-  uint32_t MaxNumThreads = 0;
-  uint32_t PreferredNumThreads = 0;
-  uint32_t ReductionDataSize = 0;
+  uint64_t MaxNumThreads = 0;
+  uint64_t PreferredNumThreads = 0;
+  uint64_t ReductionDataSize = 0;
   uint32_t StaticBlockMemSize = 0;
   llvm::omp::OMPTgtExecModeFlags Mode = llvm::omp::OMP_TGT_EXEC_MODE_BARE;
 
@@ -359,11 +359,11 @@ struct DeviceTy {
 
   /// Return the maximum number of threads per team this device supports,
   /// further limited by OMP_TEAMS_THREAD_LIMIT if the user set it.
-  uint32_t getThreadLimit() const;
+  uint64_t getThreadLimit() const;
 
   /// Return the number of threads per team to use when the user does not
   /// request one.
-  uint32_t getDefaultNumThreads() const {
+  uint64_t getDefaultNumThreads() const {
     return GeometryProps.DefaultNumThreads;
   }
 

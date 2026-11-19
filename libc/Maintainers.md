@@ -56,6 +56,10 @@ This file is a list of the [maintainers](https://llvm.org/docs/DeveloperPolicy.h
 - Victor Campos
 - victor.campos@arm.com (email), [vhscampos](https://github.com/vhscampos) (github)
 
+## Arm64EC
+- Daniel Paoliello
+- danpao@microsoft.com (email), [dpaoliello](https://github.com/dpaoliello) (github)
+
 ## Hexagon
 - Kushal Pal
 - kushpal@qti.qualcomm.com (email), [quic-k](https://github.com/quic-k) (github)

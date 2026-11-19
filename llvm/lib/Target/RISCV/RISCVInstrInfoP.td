@@ -2311,6 +2311,17 @@ class PatPSSh1SAddPair<RVInst Inst, ValueType vt>
     : Pat<(vt (saddsat (saturating_shl1 (vt GPRPair:$rs1)), (vt GPRPair:$rs2))),
           (Inst GPRPair:$rs1, GPRPair:$rs2)>;
 
+// A bitwise merge whose mask selects every other element is a ppaireo.
+// merge is (~mask & op1) | (mask & op2). OddMask has all bits of the odd
+// elements set. EvenMask is its complement.
+multiclass PatMergeToPPaireo<ValueType vt, int OddMask, int EvenMask,
+                             Instruction Inst> {
+  def : Pat<(vt (riscv_merge (vt OddMask), GPR:$rs1, GPR:$rs2)),
+            (Inst GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(vt (riscv_merge (vt EvenMask), GPR:$rs2, GPR:$rs1)),
+            (Inst GPR:$rs1, GPR:$rs2)>;
+}
+
 let Predicates = [HasStdExtP] in {
 
   def : PatGpr<abs, ABS>;
@@ -2685,6 +2696,10 @@ let append Predicates = [IsRV32] in {
   // 32-bit "Q-format" multiplication patterns
   def : PatGprGpr<riscv_mulq, MULQ, i32>;
   def : PatGprGpr<riscv_mulqr, MULQR, i32>;
+
+  // Selectin ppaireo from merge.
+  defm : PatMergeToPPaireo<i32, -65536, 65535, PPAIREO_H>;
+  defm : PatMergeToPPaireo<i32, -16711936, 16711935, PPAIREO_B>;
 
   // Packed multiplication with horizontal addition patterns.
   def : PatHorizontalMulAdd<riscv_pm4add, PM4ADDA_B, i32, v4i8>;
@@ -3472,6 +3487,12 @@ let append Predicates = [IsRV64] in {
                  zexti16:$rs1),
             (PPAIRE_H zexti16:$rs1,
                       (XLenVT (PPAIRE_B zexti8:$op1rs1, GPR:$op1rs2)))>;
+
+  // Selectin ppaireo from merge.
+  defm : PatMergeToPPaireo<i64, -4294967296, 4294967295, PPAIREO_W>;
+  defm : PatMergeToPPaireo<i64, -281470681808896, 281470681808895, PPAIREO_H>;
+  defm : PatMergeToPPaireo<i64, -71777214294589696, 71777214294589695,
+                           PPAIREO_B>;
 
   // Basic 32-bit arithmetic patterns
   def : PatGprGpr<add, PADD_W, v2i32>;

@@ -40,6 +40,10 @@ llvm_config.add_tool_substitutions(
 # controller. Tests that use it must be gated on the llvm-jitlink feature.
 ogre = os.path.join(config.orc_rt_obj_root, "tools", "ogre", "ogre")
 config.substitutions.append(("%{ogre}", ogre))
+
+# %{test-dylib} is the path to a minimal shared library (test/Inputs/
+# orc-rt-test-dylib.c), for tests that load, search, and close a host library.
+config.substitutions.append(("%{test-dylib}", config.orc_rt_test_dylib))
 llvm_jitlink = llvm_config.use_llvm_tool("llvm-jitlink")
 if llvm_jitlink:
     config.available_features.add("llvm-jitlink")

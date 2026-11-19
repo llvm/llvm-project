@@ -63,9 +63,9 @@ void PluginManager::init() {
   ODBG(ODT_Init) << "RTLs loaded!";
 }
 
-void PluginManager::deinit() {
-  TIMESCOPE();
-  ODBG(ODT_Deinit) << "Unloading RTLs...";
+void PluginManager::deinitDevices() {
+  if (DevicesDeinitialized.exchange(true))
+    return;
 
   auto ExclusiveDevicesAccessor = getExclusiveDevicesAccessor();
   for (DeviceTy &Device : devices(ExclusiveDevicesAccessor)) {
@@ -75,7 +75,16 @@ void PluginManager::deinit() {
   }
 
   Platforms.clear();
+}
+
+void PluginManager::deinit() {
+  TIMESCOPE();
+  ODBG(ODT_Deinit) << "Unloading RTLs...";
+
+  deinitDevices();
+
   if (LibOffloadInitialized) {
+    LibOffloadInitialized = false;
     if (auto Err = olShutDown())
       REPORT() << "Failed to denitialize liboffload: " << Err->Details;
   }
@@ -516,16 +525,16 @@ int PluginManager::loadImagesOntoDevice(DeviceTy &Device) {
             // Max = Config.Max > 0 ? min(Config.Max, Device.Max) : Device.Max,
             // further clamped to the kernel function's own driver-reported
             // maximum.
-            uint32_t DeviceThreadLimit = Device.getThreadLimit();
-            LaunchInfo.MaxNumThreads =
-                std::min(Cfg.MaxThreads > 0 ? std::min(uint32_t(Cfg.MaxThreads),
-                                                       DeviceThreadLimit)
-                                            : DeviceThreadLimit,
-                         KernelMaxThreads);
-            uint32_t DefaultNumThreads = Device.getDefaultNumThreads();
+            uint64_t DeviceThreadLimit = Device.getThreadLimit();
+            LaunchInfo.MaxNumThreads = std::min<uint64_t>(
+                Cfg.MaxThreads > 0
+                    ? std::min<uint64_t>(Cfg.MaxThreads, DeviceThreadLimit)
+                    : DeviceThreadLimit,
+                KernelMaxThreads);
+            uint64_t DefaultNumThreads = Device.getDefaultNumThreads();
             LaunchInfo.PreferredNumThreads =
                 Cfg.MinThreads > 0
-                    ? std::max(Cfg.MinThreads, int32_t(DefaultNumThreads))
+                    ? std::max<uint64_t>(Cfg.MinThreads, DefaultNumThreads)
                     : DefaultNumThreads;
 
             Device.setKernelLaunchInfo(DeviceEntry.Address, LaunchInfo);

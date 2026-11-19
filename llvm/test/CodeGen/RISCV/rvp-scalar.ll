@@ -3256,6 +3256,85 @@ define i64 @wsuba_sext_chain_rev(i64 %acc, i32 %a, i32 %b) nounwind {
   ret i64 %sum
 }
 
+define i64 @waddau_zero_acc(i32 %a, i32 %b) nounwind {
+; RV32-LABEL: waddau_zero_acc:
+; RV32:       # %bb.0:
+; RV32-NEXT:    li a2, 0
+; RV32-NEXT:    li a3, 0
+; RV32-NEXT:    waddau a2, a0, a1
+; RV32-NEXT:    mvd a0, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: waddau_zero_acc:
+; RV64:       # %bb.0:
+; RV64-NEXT:    zext.w a0, a0
+; RV64-NEXT:    pm2adda.w a0, zero, zero
+; RV64-NEXT:    add.uw a0, a1, a0
+; RV64-NEXT:    ret
+  %za = zext i32 %a to i64
+  %zb = zext i32 %b to i64
+  %m = call i64 @llvm.riscv.pm2adda.i64.v2i32(i64 %za, <2 x i32> zeroinitializer, <2 x i32> zeroinitializer)
+  %r = add i64 %m, %zb
+  ret i64 %r
+}
+
+define i64 @wsubau_zero_acc() nounwind {
+; RV32-LABEL: wsubau_zero_acc:
+; RV32:       # %bb.0:
+; RV32-NEXT:    li a0, 0
+; RV32-NEXT:    li a2, 2
+; RV32-NEXT:    li a1, 0
+; RV32-NEXT:    wsubau a0, a2, zero
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: wsubau_zero_acc:
+; RV64:       # %bb.0:
+; RV64-NEXT:    li a0, 2
+; RV64-NEXT:    pm2suba.w a0, zero, zero
+; RV64-NEXT:    ret
+  %r = call i64 @llvm.riscv.pm2suba.i64.v2i32(i64 2, <2 x i32> zeroinitializer, <2 x i32> zeroinitializer)
+  ret i64 %r
+}
+
+define i64 @wadda_zero_acc(i32 %a) nounwind {
+; RV32-LABEL: wadda_zero_acc:
+; RV32:       # %bb.0:
+; RV32-NEXT:    li a2, 0
+; RV32-NEXT:    li a3, 0
+; RV32-NEXT:    wadda a2, a0, zero
+; RV32-NEXT:    wsubau a2, zero, zero
+; RV32-NEXT:    mvd a0, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: wadda_zero_acc:
+; RV64:       # %bb.0:
+; RV64-NEXT:    sext.w a0, a0
+; RV64-NEXT:    pm2suba.w a0, zero, zero
+; RV64-NEXT:    ret
+  %sa = sext i32 %a to i64
+  %r = call i64 @llvm.riscv.pm2suba.i64.v2i32(i64 %sa, <2 x i32> zeroinitializer, <2 x i32> zeroinitializer)
+  ret i64 %r
+}
+
+define i64 @wsuba_zero_acc(i32 %a) nounwind {
+; RV32-LABEL: wsuba_zero_acc:
+; RV32:       # %bb.0:
+; RV32-NEXT:    li a2, 0
+; RV32-NEXT:    li a3, 0
+; RV32-NEXT:    wsuba a2, zero, a0
+; RV32-NEXT:    mvd a0, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: wsuba_zero_acc:
+; RV64:       # %bb.0:
+; RV64-NEXT:    sext.w a0, a0
+; RV64-NEXT:    neg a0, a0
+; RV64-NEXT:    ret
+  %sa = sext i32 %a to i64
+  %r = sub i64 0, %sa
+  ret i64 %r
+}
+
 define i64 @waddu(i32 %a, i32 %b) nounwind {
 ; RV32-LABEL: waddu:
 ; RV32:       # %bb.0:
