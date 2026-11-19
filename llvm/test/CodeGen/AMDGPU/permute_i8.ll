@@ -1502,11 +1502,7 @@ define hidden void @sdiv_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1,
 ; GFX10-NEXT:    v_mul_f32_e32 v2, v11, v2
 ; GFX10-NEXT:    v_mul_f32_e32 v1, v1, v3
 ; GFX10-NEXT:    v_mul_f32_e32 v0, v0, v10
-; GFX10-NEXT:    v_trunc_f32_e32 v3, v12
-; GFX10-NEXT:    v_trunc_f32_e32 v2, v2
-; GFX10-NEXT:    v_trunc_f32_e32 v1, v1
-; GFX10-NEXT:    v_trunc_f32_e32 v0, v0
-; GFX10-NEXT:    v_cvt_i32_f32_e32 v3, v3
+; GFX10-NEXT:    v_cvt_i32_f32_e32 v3, v12
 ; GFX10-NEXT:    v_cvt_i32_f32_sdwa v2, v2 dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:DWORD
 ; GFX10-NEXT:    v_cvt_i32_f32_e32 v1, v1
 ; GFX10-NEXT:    v_cvt_i32_f32_sdwa v0, v0 dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:DWORD
@@ -1549,11 +1545,7 @@ define hidden void @sdiv_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1,
 ; GFX9-NEXT:    v_mul_f32_e32 v2, v2, v3
 ; GFX9-NEXT:    v_mul_f32_e32 v1, v1, v10
 ; GFX9-NEXT:    v_mul_f32_e32 v0, v0, v11
-; GFX9-NEXT:    v_trunc_f32_e32 v3, v12
-; GFX9-NEXT:    v_trunc_f32_e32 v2, v2
-; GFX9-NEXT:    v_trunc_f32_e32 v1, v1
-; GFX9-NEXT:    v_trunc_f32_e32 v0, v0
-; GFX9-NEXT:    v_cvt_i32_f32_e32 v3, v3
+; GFX9-NEXT:    v_cvt_i32_f32_e32 v3, v12
 ; GFX9-NEXT:    v_cvt_i32_f32_e32 v1, v1
 ; GFX9-NEXT:    v_cvt_i32_f32_sdwa v0, v0 dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:DWORD
 ; GFX9-NEXT:    v_cvt_i32_f32_sdwa v2, v2 dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:DWORD
@@ -1797,27 +1789,23 @@ define hidden void @srem_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1,
 ; GFX10-NEXT:    v_add_nc_u32_e32 v10, 1, v10
 ; GFX10-NEXT:    v_add_nc_u32_e32 v11, 1, v11
 ; GFX10-NEXT:    v_lshrrev_b32_e32 v14, 16, v4
+; GFX10-NEXT:    v_lshrrev_b32_e32 v15, 8, v4
 ; GFX10-NEXT:    v_mul_f32_e32 v0, v1, v0
 ; GFX10-NEXT:    v_mul_f32_e32 v1, v3, v2
 ; GFX10-NEXT:    v_mul_f32_e32 v2, v10, v12
 ; GFX10-NEXT:    v_mul_f32_e32 v3, v11, v13
-; GFX10-NEXT:    v_lshrrev_b32_e32 v10, 8, v4
-; GFX10-NEXT:    v_trunc_f32_e32 v0, v0
-; GFX10-NEXT:    v_trunc_f32_e32 v1, v1
-; GFX10-NEXT:    v_trunc_f32_e32 v2, v2
-; GFX10-NEXT:    v_trunc_f32_e32 v3, v3
-; GFX10-NEXT:    v_lshrrev_b32_e32 v11, 24, v4
+; GFX10-NEXT:    v_lshrrev_b32_e32 v10, 24, v4
 ; GFX10-NEXT:    v_cvt_i32_f32_e32 v0, v0
 ; GFX10-NEXT:    v_cvt_i32_f32_e32 v1, v1
 ; GFX10-NEXT:    v_cvt_i32_f32_e32 v2, v2
 ; GFX10-NEXT:    v_cvt_i32_f32_e32 v3, v3
 ; GFX10-NEXT:    v_mul_lo_u32 v0, v0, v4
-; GFX10-NEXT:    v_mul_lo_u32 v1, v1, v10
+; GFX10-NEXT:    v_mul_lo_u32 v1, v1, v15
 ; GFX10-NEXT:    v_mul_lo_u32 v2, v2, v14
-; GFX10-NEXT:    v_mul_lo_u32 v3, v3, v11
+; GFX10-NEXT:    v_mul_lo_u32 v3, v3, v10
 ; GFX10-NEXT:    v_sub_nc_u32_e32 v0, v14, v0
 ; GFX10-NEXT:    v_sub_nc_u32_sdwa v1, v9, v1 dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:BYTE_3 src1_sel:DWORD
-; GFX10-NEXT:    v_sub_nc_u32_e32 v2, v11, v2
+; GFX10-NEXT:    v_sub_nc_u32_e32 v2, v10, v2
 ; GFX10-NEXT:    v_sub_nc_u32_sdwa v3, v9, v3 dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; GFX10-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX10-NEXT:    v_or_b32_sdwa v1, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
@@ -1859,10 +1847,6 @@ define hidden void @srem_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1,
 ; GFX9-NEXT:    v_mul_f32_e32 v11, v11, v12
 ; GFX9-NEXT:    v_mul_f32_e32 v3, v17, v3
 ; GFX9-NEXT:    v_mul_f32_e32 v12, v15, v13
-; GFX9-NEXT:    v_trunc_f32_e32 v2, v2
-; GFX9-NEXT:    v_trunc_f32_e32 v11, v11
-; GFX9-NEXT:    v_trunc_f32_e32 v3, v3
-; GFX9-NEXT:    v_trunc_f32_e32 v12, v12
 ; GFX9-NEXT:    v_cvt_i32_f32_e32 v2, v2
 ; GFX9-NEXT:    v_cvt_i32_f32_e32 v11, v11
 ; GFX9-NEXT:    v_cvt_i32_f32_e32 v3, v3
@@ -2116,10 +2100,6 @@ define hidden void @udiv(ptr addrspace(1) %in0, ptr addrspace(1) %in1, i8 %elt, 
 ; GFX10-NEXT:    v_mul_f32_e32 v2, v3, v2
 ; GFX10-NEXT:    v_mul_f32_e32 v3, v11, v13
 ; GFX10-NEXT:    v_mul_f32_e32 v1, v1, v10
-; GFX10-NEXT:    v_trunc_f32_e32 v0, v0
-; GFX10-NEXT:    v_trunc_f32_e32 v2, v2
-; GFX10-NEXT:    v_trunc_f32_e32 v3, v3
-; GFX10-NEXT:    v_trunc_f32_e32 v1, v1
 ; GFX10-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX10-NEXT:    v_cvt_u32_f32_sdwa v2, v2 dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:DWORD
 ; GFX10-NEXT:    v_cvt_u32_f32_e32 v3, v3
@@ -2164,10 +2144,6 @@ define hidden void @udiv(ptr addrspace(1) %in0, ptr addrspace(1) %in1, i8 %elt, 
 ; GFX9-NEXT:    v_mul_f32_e32 v2, v13, v2
 ; GFX9-NEXT:    v_mul_f32_e32 v3, v10, v3
 ; GFX9-NEXT:    v_mul_f32_e32 v1, v1, v11
-; GFX9-NEXT:    v_trunc_f32_e32 v0, v0
-; GFX9-NEXT:    v_trunc_f32_e32 v2, v2
-; GFX9-NEXT:    v_trunc_f32_e32 v3, v3
-; GFX9-NEXT:    v_trunc_f32_e32 v1, v1
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v3, v3
 ; GFX9-NEXT:    v_cvt_u32_f32_sdwa v1, v1 dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:DWORD
@@ -2278,29 +2254,25 @@ define hidden void @urem_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1,
 ; GFX10-NEXT:    v_add_nc_u32_e32 v1, 1, v1
 ; GFX10-NEXT:    v_add_nc_u32_e32 v10, 1, v10
 ; GFX10-NEXT:    v_lshrrev_b32_e32 v12, 16, v4
+; GFX10-NEXT:    v_lshrrev_b32_e32 v13, 8, v4
 ; GFX10-NEXT:    v_mul_f32_e32 v0, v1, v0
 ; GFX10-NEXT:    v_mul_f32_e32 v11, v1, v11
 ; GFX10-NEXT:    v_mul_f32_e32 v1, v1, v2
 ; GFX10-NEXT:    v_mul_f32_e32 v2, v10, v3
-; GFX10-NEXT:    v_lshrrev_b32_e32 v3, 8, v4
-; GFX10-NEXT:    v_trunc_f32_e32 v0, v0
-; GFX10-NEXT:    v_trunc_f32_e32 v10, v11
-; GFX10-NEXT:    v_trunc_f32_e32 v1, v1
-; GFX10-NEXT:    v_trunc_f32_e32 v2, v2
-; GFX10-NEXT:    v_lshrrev_b32_e32 v11, 24, v4
+; GFX10-NEXT:    v_lshrrev_b32_e32 v3, 24, v4
 ; GFX10-NEXT:    v_cvt_u32_f32_e32 v0, v0
-; GFX10-NEXT:    v_cvt_u32_f32_e32 v10, v10
+; GFX10-NEXT:    v_cvt_u32_f32_e32 v10, v11
 ; GFX10-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; GFX10-NEXT:    v_cvt_u32_f32_e32 v2, v2
 ; GFX10-NEXT:    v_mul_lo_u32 v0, v0, v4
-; GFX10-NEXT:    v_mul_lo_u32 v10, v10, v3
+; GFX10-NEXT:    v_mul_lo_u32 v10, v10, v13
 ; GFX10-NEXT:    v_mul_lo_u32 v1, v1, v12
-; GFX10-NEXT:    v_mul_lo_u32 v2, v2, v11
-; GFX10-NEXT:    v_sub_nc_u32_e32 v0, v3, v0
-; GFX10-NEXT:    v_sub_nc_u32_sdwa v10, v3, v10 dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; GFX10-NEXT:    v_sub_nc_u32_e32 v1, v3, v1
+; GFX10-NEXT:    v_mul_lo_u32 v2, v2, v3
+; GFX10-NEXT:    v_sub_nc_u32_e32 v0, v13, v0
+; GFX10-NEXT:    v_sub_nc_u32_sdwa v3, v13, v10 dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; GFX10-NEXT:    v_sub_nc_u32_e32 v1, v13, v1
 ; GFX10-NEXT:    v_sub_nc_u32_sdwa v2, v9, v2 dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; GFX10-NEXT:    v_or_b32_sdwa v0, v0, v10 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; GFX10-NEXT:    v_or_b32_sdwa v0, v0, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX10-NEXT:    v_or_b32_sdwa v1, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX10-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
 ; GFX10-NEXT:    v_perm_b32 v1, v4, v9, 0x2050505
@@ -2337,10 +2309,6 @@ define hidden void @urem_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1,
 ; GFX9-NEXT:    v_mul_f32_e32 v3, v15, v3
 ; GFX9-NEXT:    v_mul_f32_e32 v11, v15, v11
 ; GFX9-NEXT:    v_mul_f32_e32 v13, v13, v14
-; GFX9-NEXT:    v_trunc_f32_e32 v2, v2
-; GFX9-NEXT:    v_trunc_f32_e32 v3, v3
-; GFX9-NEXT:    v_trunc_f32_e32 v11, v11
-; GFX9-NEXT:    v_trunc_f32_e32 v13, v13
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v2, v2
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v3, v3
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v11, v11
