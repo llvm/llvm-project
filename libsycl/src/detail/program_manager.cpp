@@ -174,7 +174,7 @@ void ProgramAndKernelManager::unregisterFatBin(const void *BinaryStart,
 static bool isImageCompatible(const DeviceImageManager &Image,
                               const DeviceImpl &Device) {
   if (!(Image.getTargetArch() == DeviceBinaryArchSPIRV64 &&
-        Device.getBackend() == sycl::backend::level_zero))
+        Device.getBackend() == sycl::backend::ext_oneapi_level_zero))
     return false;
 
   bool IsValid{};
