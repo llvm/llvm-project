@@ -443,6 +443,20 @@ spirv.func @vector_times_scalar(%vector: vector<4xf32>, %scalar: f32) "None" {
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.Dot
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @dot
+//  CHECK-SAME: %[[A:.*]]: vector<4xf32>, %[[B:.*]]: vector<4xf32>
+spirv.func @dot(%a: vector<4xf32>, %b: vector<4xf32>) "None" {
+  // CHECK: %[[MUL:.*]] = llvm.fmul %[[A]], %[[B]] : vector<4xf32>
+  // CHECK: %[[START:.*]] = llvm.mlir.constant(-0.000000e+00 : f32) : f32
+  // CHECK: llvm.intr.vector.reduce.fadd(%[[START]], %[[MUL]]) : (f32, vector<4xf32>) -> f32
+  %0 = spirv.Dot %a, %b : vector<4xf32> -> f32
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.SNegate
 //===----------------------------------------------------------------------===//
 
