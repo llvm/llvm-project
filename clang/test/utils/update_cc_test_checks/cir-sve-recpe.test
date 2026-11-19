@@ -6,7 +6,7 @@
 # RUN: rm -rf %t && mkdir %t
 # RUN: cp %S/../../CodeGen/AArch64/lit.local.cfg %t/lit.local.cfg
 # RUN: cp %S/Inputs/cir-sve-recpe.c %t/test.c
-# RUN: %update_cc_test_checks --version 6 --lit-features cir-enabled --body-prefixes LLVM,CIR --normalize-local-names --filter-out "cir\.(alloca|store|load|return)" %t/test.c
+# RUN: %update_cc_test_checks --version 6 --body-prefixes LLVM,CIR --normalize-local-names --filter-out "cir\.(alloca|store|load|return)" %t/test.c
 # RUN: diff -u %S/Inputs/cir-sve-recpe.c.expected %t/test.c
 
 ## The generated checks must hold against the real output of every pipeline.

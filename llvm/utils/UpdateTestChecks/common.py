@@ -712,67 +712,6 @@ def find_run_lines(test, lines):
     return run_lines
 
 
-LIT_DEFINE_RE = re.compile(
-    r"^\s*(?://|[;#])\s*(?:RE)?DEFINE:\s*(%\{[^}]+\})\s*=\s*(.*?)\s*$"
-)
-LIT_IF_RE = re.compile(
-    r"%if\s+(.*?)\s*%\{(.*?)%\}(?:\s*%else\s*%\{(.*?)%\})?"
-)
-# Expansion rounds before giving up, in case a definition refers to itself.
-MAX_LIT_DEFINE_ROUNDS = 10
-
-
-def expand_lit_defines(run_lines, input_lines):
-    """Expand lit "DEFINE: %{name} = value" substitutions in RUN lines.
-
-    REDEFINE is treated like DEFINE: the last value of a name is used for every
-    RUN line, not just the ones after it.
-    """
-    defs = {}
-    for line in input_lines:
-        m = LIT_DEFINE_RE.match(line)
-        if m:
-            defs[m.group(1)] = m.group(2)
-    out = []
-    for l in run_lines:
-        # Definitions may refer to other definitions, so expand until stable.
-        for _ in range(MAX_LIT_DEFINE_ROUNDS):
-            new = l
-            for name, value in defs.items():
-                new = new.replace(name, value)
-            if new == l:
-                break
-            l = new
-        else:
-            warn("DEFINE substitutions did not settle, check for a cycle: " + l)
-        out.append(l)
-    return out
-
-
-def expand_lit_ifs(run_lines, features):
-    """Resolve "%if <cond> %{ A %} [%else %{ B %}]" in RUN lines.
-
-    `features` are the available lit features. RUN lines that become empty are
-    dropped.
-    """
-    lit_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "lit")
-    if lit_dir not in sys.path:
-        sys.path.insert(0, lit_dir)
-    from lit.BooleanExpression import BooleanExpression
-
-    def pick(m):
-        enabled = BooleanExpression.evaluate(m.group(1), features)
-        taken = m.group(2) if enabled else m.group(3)
-        return (taken or "").strip()
-
-    out = []
-    for l in run_lines:
-        l = LIT_IF_RE.sub(pick, l)
-        if l.strip():
-            out.append(l)
-    return out
-
-
 def get_triple_from_march(march):
     triples = {
         "amdgcn": "amdgcn",
@@ -921,6 +860,7 @@ IR_LOCAL_RE = re.compile(r"%(?:[\w.$-]+|\"[^\"]*\")")
 IR_ATTR_GROUP_RE = re.compile(r"^attributes #\d+ = \{.*\}\n", re.M)
 IR_METADATA_RE = re.compile(r"^!(?:\d+|llvm\.[\w.]+) = .*\n", re.M)
 IR_LABEL_RE = re.compile(r"^([\w.$-]+):", re.M)
+IR_ENTRY_REF_RE = re.compile(r"%entry(?![\w.$-])")
 
 
 def normalize_local_names(ir):
@@ -929,9 +869,9 @@ def normalize_local_names(ir):
     Classic CodeGen and CIR emit the same code with different names, for
     example %op.addr in one and %0 in the other. This function:
       - drops the "entry:" label when nothing jumps to it,
-      - renames arguments and instructions to %0, %1, ... in the order they
-        first appear,
-      - keeps other block labels and named types as they are,
+      - renames arguments, instructions and numbered block labels to %0, %1,
+        ... in the order they first appear,
+      - keeps named block labels and named types as they are,
       - removes the "attributes #N = {...}" and "!N = ..." lines at the end
         of the module, because the two paths emit different ones.
 
@@ -945,19 +885,31 @@ def normalize_local_names(ir):
 
     def normalize(m):
         body = m.group(0)
-        labels = {"%" + l for l in IR_LABEL_RE.findall(body)}
-        if "%entry" in labels and body.count("%entry") == 0:
+        labels = set(IR_LABEL_RE.findall(body))
+        if "entry" in labels and not IR_ENTRY_REF_RE.search(body):
             body = re.sub(r"^entry:.*\n", "", body, count=1, flags=re.M)
-            labels.discard("%entry")
+            labels.discard("entry")
+        # Numbered labels (and the unnamed entry block) share their numbers
+        # with values, so they are renumbered from the same counter.
+        named_labels = {"%" + l for l in labels if not l.isdigit()}
         names = {}
+
+        def number(name):
+            return str(names.setdefault(name, len(names)))
 
         def rename(n):
             name = n.group(0)
-            if name in labels or name in types:
+            if name in named_labels or name in types:
                 return name
-            return "%" + str(names.setdefault(name, len(names)))
+            return "%" + number(name)
 
-        return IR_LOCAL_RE.sub(rename, body)
+        def rename_label(n):
+            if n.group(1).isdigit():
+                return number("%" + n.group(1)) + ":"
+            return n.group(0)
+
+        body = IR_LOCAL_RE.sub(rename, body)
+        return IR_LABEL_RE.sub(rename_label, body)
 
     return IR_FUNC_DEF_RE.sub(normalize, ir)
 

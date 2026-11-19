@@ -257,12 +257,6 @@ def config():
         choices=["none", "smart", "all"],
         help="Check global entries (global variables, metadata, attribute sets, ...) for functions",
     )
-    parser.add_argument(
-        "--lit-features",
-        default="",
-        help="Comma-separated lit features to treat as available when resolving "
-        "%%if in RUN lines (e.g. cir-enabled). Others are unavailable.",
-    )
     # Keep this order: it is the order of the options in UTC_ARGS notes.
     cir.add_arguments(parser)
     parser.add_argument(
@@ -382,24 +376,12 @@ def update_test(ti: common.TestInfo):
         "%S": os.path.dirname(ti.path),
     }
 
-    # Construct the RUN lines the way lit does, taking into account the DEFINE
-    # and %if substitutions:
-    #   - DEFINE gives a name to a piece of text. With
-    #       // DEFINE: %{optimize} = opt -passes=mem2reg -S
-    #     "... | %{optimize} | FileCheck" becomes
-    #     "... | opt -passes=mem2reg -S | FileCheck".
-    #   - %if keeps a RUN line only when its feature is on. With
-    #       // RUN: %if cir-enabled %{ clang -fclangir ... %}
-    #     the line becomes "clang -fclangir ..." with --lit-features cir-enabled,
-    #     and is dropped without it.
-    #   - Shortcuts like %clang_cc1_cg_arm64_sve are read from lit.local.cfg.
-    run_lines = common.expand_lit_defines(ti.run_lines, ti.input_lines)
-    features = [f for f in ti.args.lit_features.split(",") if f]
-    run_lines = common.expand_lit_ifs(run_lines, features)
+    # Besides the built-in %clang substitutions, RUN lines may use shortcuts
+    # defined in the test's lit.local.cfg.
     subst = dict(SUBST)
     subst.update(get_local_substitutions(ti.path))
-    for l in run_lines:
-        commands = [cmd.strip() for cmd in l.split("|")]
+    for l in ti.run_lines:
+        commands = [cmd.strip() for cmd in common.unwrap_lit_if(l).split("|")]
 
         triple_in_cmd = None
         m = common.TRIPLE_ARG_RE.search(commands[0])

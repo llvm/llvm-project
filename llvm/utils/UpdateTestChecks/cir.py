@@ -95,17 +95,24 @@ def select_run_lines(args, path, run_list):
         # A prefix can be shared between formats, but its globals can't.
         args.check_globals = "none"
     if any(all(p in body_prefixes for p in i[0]) for i in filecheck_run_list):
-        # Without a label prefix there is nothing to share bodies under. Generate
-        # LLVM IR checks only. CIR prefixes then stay out of the prefix set, which
-        # leaves any existing CIR checks in the test untouched.
-        common.warn(
-            "A RUN line has no label prefix for --body-prefixes: "
-            "generating LLVM IR checks only and skipping CIR RUN lines",
+        # Without a label prefix there is nothing to share bodies under.
+        # Skipping these RUN lines would leave their checks stale.
+        common.error(
+            "a RUN line has only body prefixes; add a label prefix (e.g. C) "
+            "to every RUN line that uses --body-prefixes",
             test_file=path,
         )
-        run_list = [i for i in run_list if not emits_cir(i[1])]
-        args.body_prefixes = ""
-        body_prefixes = []
+        sys.exit(1)
+    if body_prefixes and any(
+        not any(p in body_prefixes for p in i[0]) for i in filecheck_run_list
+    ):
+        # Such a RUN line would only get -LABEL lines: its body goes unchecked.
+        common.error(
+            "a RUN line has no body prefix; add one of {} to every RUN line "
+            "when using --body-prefixes".format(body_prefixes),
+            test_file=path,
+        )
+        sys.exit(1)
     return run_list, body_prefixes
 
 
@@ -169,10 +176,14 @@ def add_split_checks(
             b and str(b) == str(first) and b.args_and_sig == first.args_and_sig
             for b in bodies
         ):
-            common.warn(
-                "Prefix {} has conflicting bodies for {}".format(prefix, sorted(names))
+            # The RUN lines sharing this prefix disagree (e.g. classic codegen
+            # and CIR lowering differ). Skipping the body would hide exactly the
+            # divergence the shared prefix is meant to catch.
+            common.error(
+                "prefix {} has conflicting bodies for {}; use a separate prefix "
+                "for the RUN lines that differ".format(prefix, sorted(names))
             )
-            continue
+            sys.exit(1)
 
         vars_seen = {}
         global_vars_seen = global_vars_seen_dict.setdefault(prefix, {})
