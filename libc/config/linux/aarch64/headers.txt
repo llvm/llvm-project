@@ -60,6 +60,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.sys_file
     libc.include.sys_inotify
     libc.include.sys_ioctl
+    libc.include.sys_klog
     libc.include.sys_mman
     libc.include.sys_mount
     libc.include.sys_param

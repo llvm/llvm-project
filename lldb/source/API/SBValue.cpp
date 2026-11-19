@@ -1112,8 +1112,8 @@ void SBValue::SetSP(const lldb::ValueObjectSP &sp,
 void SBValue::SetSP(const lldb::ValueObjectSP &sp,
                     lldb::DynamicValueType use_dynamic, bool use_synthetic,
                     const char *name) {
-  m_opaque_sp =
-      std::make_shared<ValueImpl>(sp, use_dynamic, use_synthetic, name);
+  m_opaque_sp = std::make_shared<ValueImpl>(sp, use_dynamic, use_synthetic,
+                                            llvm::StringRef(name).str());
 }
 
 bool SBValue::GetExpressionPath(SBStream &description) {

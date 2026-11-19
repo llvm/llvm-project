@@ -1886,6 +1886,15 @@ public:
              const bool AllocImmediately = false, void *HstPteeBase = nullptr,
              void *HstPteeBegin = nullptr,
              bool IsCorrespondingPointerInit = false) {
+    // Nothing to allocate or transfer for an empty private object (size 0),
+    // e.g., a zero-length array or an empty struct. Pass a null pointer as the
+    // kernel argument.
+    if (ArgSize == 0) {
+      ODBG(ODT_Mapping) << "Private argument " << HstPtr
+                        << " has size 0 - pushing null target argument";
+      TgtPtr = nullptr;
+      return OFFLOAD_SUCCESS;
+    }
     // If the argument is not first-private, or its size is greater than a
     // predefined threshold, we will allocate memory and issue the transfer
     // immediately.
