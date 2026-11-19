@@ -25,7 +25,7 @@
 // CIR-FLATO0:       cir.alloca "this" {{.*}} : !cir.ptr<!cir.ptr<!rec_S>, target_address_space(5)>
 
 // CIR-FLATO1-LABEL: cir.func {{.*}} @_Z2f1i
-// CIR-FLATO1:       cir.alloca "__ret_operand_tmp" align(4) : !cir.ptr<!s32i>
+// CIR-FLATO1:       cir.alloca "__ret_operand_tmp" align(4) : !cir.ptr<!s32i, target_address_space(5)>
 // CIR-FLATO1:       cir.alloca "__cleanup_dest_slot" align(4) cleanup_dest_slot : !cir.ptr<!s32i, target_address_space(5)>
 // CIR-FLATO1:       cir.alloca "__retval" align(4) : !cir.ptr<!rec_S1, target_address_space(5)>
 // CIR-FLATO1:       cir.alloca "a" align(4) init : !cir.ptr<!s32i, target_address_space(5)>
@@ -42,7 +42,7 @@
 // LLVM:         alloca ptr, align 8, addrspace(5)
 
 // Everything is optimized away but make sure verifiers agree with the lowering.
-// LLVMOPT-LABED: define {{.*}} i32 @_Z2f1i(i32 noundef returned %0)
+// LLVMOPT-LABEL: define {{.*}} i32 @_Z2f1i(i32 noundef returned %0)
 // LLVMOPT-NEXT:     ret i32 %0
 
 struct S {
