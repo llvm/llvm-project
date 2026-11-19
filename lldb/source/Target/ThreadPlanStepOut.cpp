@@ -427,6 +427,15 @@ bool ThreadPlanStepOut::ShouldStop(Event *event_ptr) {
       CalculateReturnValue();
       SetPlanComplete();
     } else {
+      // We should delete our original step out to breakpoint here, since it
+      // has served its purpose, and will just cause unnecessary stops if the
+      // function we were returning immediately from gets called on the way out
+      // of any of the functions we step out further past.
+      if (m_return_bp_id != LLDB_INVALID_BREAK_ID) {
+        GetTarget().RemoveBreakpointByID(m_return_bp_id);
+        m_return_bp_id = LLDB_INVALID_BREAK_ID;
+      }
+
       m_step_out_further_plan_sp =
           QueueStepOutFromHerePlan(m_flags, eFrameCompareOlder, m_status);
       done = false;
