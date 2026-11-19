@@ -72,8 +72,8 @@
 /mlir/include/mlir/IR/Properties.td @krzysz00
 
 # MLIR Interfaces.
-/mlir/include/mlir/Interfaces/TilingInterface.* @MaheshRavishankar @nicolasvasilache
-/mlir/lib/Interfaces/TilingInterface.* @MaheshRavishankar @nicolasvasilache
+/mlir/include/mlir/Interfaces/TilingInterface.* @MaheshRavishankar
+/mlir/lib/Interfaces/TilingInterface.* @MaheshRavishankar
 /mlir/include/mlir/Interfaces/ValueBoundsOpInterface.* @matthias-springer
 /mlir/lib/Interfaces/ValueBoundsOpInterface.* @matthias-springer
 /mlir/**/ValueBoundsOpInterfaceImpl.* @matthias-springer
@@ -133,38 +133,38 @@
 /mlir/**/DataLayoutInterfaces.* @rolfmorel
 
 # Linalg Dialect in MLIR.
-/mlir/include/mlir/Dialect/Linalg @dcaballe @nicolasvasilache @rengolin
-/mlir/lib/Dialect/Linalg @dcaballe @nicolasvasilache @rengolin
-/mlir/lib/Dialect/Linalg/Transforms/DecomposeLinalgOps.cpp @MaheshRavishankar @nicolasvasilache
-/mlir/lib/Dialect/Linalg/Transforms/DropUnitDims.cpp @dcaballe @MaheshRavishankar @nicolasvasilache
-/mlir/lib/Dialect/Linalg/Transforms/ElementwiseOpFusion.cpp @MaheshRavishankar @nicolasvasilache
-/mlir/lib/Dialect/Linalg/Transforms/DataLayoutPropagation.cpp @nicolasvasilache
-/mlir/lib/Dialect/Linalg/Transforms/Transforms.cpp @dcaballe @nicolasvasilache
-/mlir/lib/Dialect/Linalg/Transforms/Vectorization.cpp @banach-space @dcaballe @nicolasvasilache @Groverkss
+/mlir/include/mlir/Dialect/Linalg @dcaballe @rengolin
+/mlir/lib/Dialect/Linalg @dcaballe @rengolin
+/mlir/lib/Dialect/Linalg/Transforms/DecomposeLinalgOps.cpp @MaheshRavishankar
+/mlir/lib/Dialect/Linalg/Transforms/DropUnitDims.cpp @dcaballe @MaheshRavishankar
+/mlir/lib/Dialect/Linalg/Transforms/ElementwiseOpFusion.cpp @MaheshRavishankar
+/mlir/lib/Dialect/Linalg/Transforms/DataLayoutPropagation.cpp
+/mlir/lib/Dialect/Linalg/Transforms/Transforms.cpp @dcaballe
+/mlir/lib/Dialect/Linalg/Transforms/Vectorization.cpp @banach-space @dcaballe @Groverkss
 
 # MemRef Dialect in MLIR.
-/mlir/lib/Dialect/MemRef/Transforms/EmulateNarrowType.cpp @MaheshRavishankar @nicolasvasilache
+/mlir/lib/Dialect/MemRef/Transforms/EmulateNarrowType.cpp @MaheshRavishankar
 
 # Vector Dialect in MLIR.
-/mlir/**/*Neon* @banach-space @dcaballe @nicolasvasilache
-/mlir/**/*SME* @banach-space @dcaballe @nicolasvasilache
-/mlir/**/*SVE* @banach-space @dcaballe @nicolasvasilache
-/mlir/**/*VectorInterfaces* @dcaballe @nicolasvasilache
-/mlir/**/*VectorToSCF* @banach-space @dcaballe @matthias-springer @nicolasvasilache
-/mlir/**/*VectorToLLVM* @banach-space @dcaballe @nicolasvasilache
-/mlir/**/*X86* @aartbik @dcaballe @nicolasvasilache @adam-smnk
-/mlir/include/mlir/Dialect/Vector @banach-space @dcaballe @nicolasvasilache @Groverkss
+/mlir/**/*Neon* @banach-space @dcaballe
+/mlir/**/*SME* @banach-space @dcaballe
+/mlir/**/*SVE* @banach-space @dcaballe
+/mlir/**/*VectorInterfaces* @dcaballe
+/mlir/**/*VectorToSCF* @banach-space @dcaballe @matthias-springer
+/mlir/**/*VectorToLLVM* @banach-space @dcaballe
+/mlir/**/*X86* @aartbik @dcaballe @adam-smnk
+/mlir/include/mlir/Dialect/Vector @banach-space @dcaballe @Groverkss
 /mlir/include/mlir/Dialect/Vector/IR @kuhar
-/mlir/lib/Dialect/Vector @banach-space @dcaballe @nicolasvasilache @Groverkss
-/mlir/lib/Dialect/Vector/Transforms/* @banach-space @dcaballe @nicolasvasilache
+/mlir/lib/Dialect/Vector @banach-space @dcaballe @Groverkss
+/mlir/lib/Dialect/Vector/Transforms/* @banach-space @dcaballe
 /mlir/**/*EmulateNarrowType* @dcaballe
 
 # Presburger library in MLIR
 /mlir/**/*Presburger* @Groverkss @Superty
 
 # Tensor Dialect in MLIR.
-/mlir/lib/Dialect/Tensor/IR/TensorTilingInterfaceImpl.cpp @nicolasvasilache
-/mlir/lib/Dialect/Tensor/Transforms/* @nicolasvasilache
+/mlir/lib/Dialect/Tensor/IR/TensorTilingInterfaceImpl.cpp
+/mlir/lib/Dialect/Tensor/Transforms/*
 
 # Transform Dialect in MLIR.
 /mlir/include/mlir/Dialect/Transform/* @ftynse @nicolasvasilache @rolfmorel
