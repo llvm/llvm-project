@@ -1,0 +1,400 @@
+# Generated from
+
+# $ clang-cl /Z7 -fuse-ld=lld line-tables-only.cpp /GS- -gline-tables-only /link /nodefaultlib /entry:main
+# $ cat line-tables-only.cpp
+# static int stopHere() {
+#   int i = 0;
+#   return 123 + i;
+# }
+# 
+# __forceinline int inlineme_too(int x) {
+#   stopHere();
+#   return x + 1;
+# }
+# 
+# static __forceinline int inlineme(int x, int y) {
+#   return inlineme_too(x) + inlineme_too(y);
+# }
+# 
+# static int foo() { return inlineme(1, 2); }
+# 
+# int callme() { return foo(); }
+# 
+# int main() { return callme(); }
+
+---
+PdbStream:
+  Age:             1
+  Guid:            '{AA6FA289-1B12-4763-4C4C-44205044422E}'
+  Signature:       2859442825
+  Features:        [ VC140 ]
+  Version:         VC70
+DbiStream:
+  VerHeader:       V70
+  Age:             1
+  BuildNumber:     36363
+  PdbDllVersion:   0
+  PdbDllRbld:      0
+  Flags:           0
+  MachineType:     Amd64
+  Modules:
+    - Module:          '/tmp/line-tables-only-abcdef1234567890abcdef12345.obj'
+      ObjFile:         '/tmp/line-tables-only-abcdef1234567890abcdef12345.obj'
+      SourceFiles:
+        - '/tmp/line-tables-only.cpp'
+      Subsections:
+        - !InlineeLines
+          HasExtraFiles:   false
+          Sites:
+            - FileName:        '/tmp/line-tables-only.cpp'
+              LineNum:         11
+              Inlinee:         4096
+            - FileName:        '/tmp/line-tables-only.cpp'
+              LineNum:         6
+              Inlinee:         4097
+        - !Lines
+          CodeSize:        15
+          Flags:           [  ]
+          RelocOffset:     0
+          RelocSegment:    1
+          Blocks:
+            - FileName:        '/tmp/line-tables-only.cpp'
+              Lines:
+                - Offset:          0
+                  LineStart:       17
+                  IsStatement:     false
+                  EndDelta:        0
+              Columns:         []
+        - !Lines
+          CodeSize:        75
+          Flags:           [  ]
+          RelocOffset:     16
+          RelocSegment:    1
+          Blocks:
+            - FileName:        '/tmp/line-tables-only.cpp'
+              Lines:
+                - Offset:          0
+                  LineStart:       15
+                  IsStatement:     false
+                  EndDelta:        0
+                - Offset:          70
+                  LineStart:       15
+                  IsStatement:     false
+                  EndDelta:        0
+              Columns:         []
+        - !Lines
+          CodeSize:        23
+          Flags:           [  ]
+          RelocOffset:     96
+          RelocSegment:    1
+          Blocks:
+            - FileName:        '/tmp/line-tables-only.cpp'
+              Lines:
+                - Offset:          0
+                  LineStart:       19
+                  IsStatement:     false
+                  EndDelta:        0
+              Columns:         []
+        - !Lines
+          CodeSize:        18
+          Flags:           [  ]
+          RelocOffset:     128
+          RelocSegment:    1
+          Blocks:
+            - FileName:        '/tmp/line-tables-only.cpp'
+              Lines:
+                - Offset:          0
+                  LineStart:       1
+                  IsStatement:     false
+                  EndDelta:        0
+                - Offset:          1
+                  LineStart:       2
+                  IsStatement:     false
+                  EndDelta:        0
+                - Offset:          9
+                  LineStart:       3
+                  IsStatement:     false
+                  EndDelta:        0
+              Columns:         []
+        - !FileChecksums
+          Checksums:
+            - FileName:        '/tmp/line-tables-only.cpp'
+              Kind:            MD5
+              Checksum:        DA90A4DC4D87B7A01995315F2BE7BDC7
+      Modi:
+        Signature:       4
+        Records:
+          - Kind:            S_OBJNAME
+            ObjNameSym:
+              Signature:       0
+              ObjectName:      '/tmp/line-tables-only-abcdef1234567890abcdef12345.obj'
+          - Kind:            S_COMPILE3
+            Compile3Sym:
+              Flags:           [  ]
+              Language:        Cpp
+              Machine:         X64
+              FrontendMajor:   24
+              FrontendMinor:   0
+              FrontendBuild:   0
+              FrontendQFE:     0
+              BackendMajor:    24000
+              BackendMinor:    0
+              BackendBuild:    0
+              BackendQFE:      0
+              Version:         'clang version 00.0.0git (------------------------------------------------------------------------------------)'
+          - Kind:            S_GPROC32
+            ProcSym:
+              PtrParent:       0
+              PtrEnd:          288
+              PtrNext:         0
+              CodeSize:        15
+              DbgStart:        0
+              DbgEnd:          0
+              FunctionType:    0
+              Offset:          0
+              Segment:         1
+              Flags:           [ IsNoInline, HasOptimizedDebugInfo ]
+              DisplayName:     callme
+          - Kind:            S_FRAMEPROC
+            FrameProcSym:
+              TotalFrameBytes: 40
+              PaddingFrameBytes: 0
+              OffsetToPadding: 0
+              BytesOfCalleeSavedRegisters: 0
+              OffsetOfExceptionHandler: 0
+              SectionIdOfExceptionHandler: 0
+              Flags:           [ SafeBuffers ]
+              LocalFramePtrReg: StackPtr
+              ParamFramePtrReg: StackPtr
+          - Kind:            S_END
+            ScopeEndSym:     {}
+          - Kind:            S_LPROC32
+            ProcSym:
+              PtrParent:       0
+              PtrEnd:          464
+              PtrNext:         0
+              CodeSize:        75
+              DbgStart:        0
+              DbgEnd:          0
+              FunctionType:    0
+              Offset:          16
+              Segment:         1
+              Flags:           [ IsNoInline, HasOptimizedDebugInfo ]
+              DisplayName:     foo
+          - Kind:            S_FRAMEPROC
+            FrameProcSym:
+              TotalFrameBytes: 56
+              PaddingFrameBytes: 0
+              OffsetToPadding: 0
+              BytesOfCalleeSavedRegisters: 0
+              OffsetOfExceptionHandler: 0
+              SectionIdOfExceptionHandler: 0
+              Flags:           [ SafeBuffers ]
+              LocalFramePtrReg: StackPtr
+              ParamFramePtrReg: StackPtr
+          - Kind:            S_INLINEES
+            CallerSym:
+              FuncID:          [ 4096 ]
+          - Kind:            S_INLINESITE
+            InlineSiteSym:
+              PtrParent:       292
+              PtrEnd:          460
+              Inlinee:         4096
+              AnnotationData:  [ 6, 2, 3, 20, 4, 50, 0, 0 ]
+          - Kind:            S_INLINESITE
+            InlineSiteSym:
+              PtrParent:       380
+              PtrEnd:          428
+              Inlinee:         4097
+              AnnotationData:  [ 6, 2, 3, 28, 11, 37, 4, 11 ]
+          - Kind:            S_INLINESITE_END
+            ScopeEndSym:     {}
+          - Kind:            S_INLINESITE
+            InlineSiteSym:
+              PtrParent:       380
+              PtrEnd:          456
+              Inlinee:         4097
+              AnnotationData:  [ 6, 2, 3, 52, 11, 41, 4, 7 ]
+          - Kind:            S_INLINESITE_END
+            ScopeEndSym:     {}
+          - Kind:            S_INLINESITE_END
+            ScopeEndSym:     {}
+          - Kind:            S_END
+            ScopeEndSym:     {}
+          - Kind:            S_GPROC32
+            ProcSym:
+              PtrParent:       0
+              PtrEnd:          544
+              PtrNext:         0
+              CodeSize:        23
+              DbgStart:        0
+              DbgEnd:          0
+              FunctionType:    0
+              Offset:          96
+              Segment:         1
+              Flags:           [ IsNoInline, HasOptimizedDebugInfo ]
+              DisplayName:     main
+          - Kind:            S_FRAMEPROC
+            FrameProcSym:
+              TotalFrameBytes: 40
+              PaddingFrameBytes: 0
+              OffsetToPadding: 0
+              BytesOfCalleeSavedRegisters: 0
+              OffsetOfExceptionHandler: 0
+              SectionIdOfExceptionHandler: 0
+              Flags:           [ SafeBuffers ]
+              LocalFramePtrReg: StackPtr
+              ParamFramePtrReg: StackPtr
+          - Kind:            S_END
+            ScopeEndSym:     {}
+          - Kind:            S_LPROC32
+            ProcSym:
+              PtrParent:       0
+              PtrEnd:          628
+              PtrNext:         0
+              CodeSize:        18
+              DbgStart:        0
+              DbgEnd:          0
+              FunctionType:    0
+              Offset:          128
+              Segment:         1
+              Flags:           [ IsNoInline, HasOptimizedDebugInfo ]
+              DisplayName:     stopHere
+          - Kind:            S_FRAMEPROC
+            FrameProcSym:
+              TotalFrameBytes: 8
+              PaddingFrameBytes: 0
+              OffsetToPadding: 0
+              BytesOfCalleeSavedRegisters: 0
+              OffsetOfExceptionHandler: 0
+              SectionIdOfExceptionHandler: 0
+              Flags:           [ SafeBuffers ]
+              LocalFramePtrReg: StackPtr
+              ParamFramePtrReg: StackPtr
+          - Kind:            S_END
+            ScopeEndSym:     {}
+  SectionHeaders:
+    - Name:            .text
+      VirtualSize:     146
+      VirtualAddress:  4096
+      SizeOfRawData:   512
+      PointerToRawData: 1024
+      PointerToRelocations: 0
+      PointerToLinenumbers: 0
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      Characteristics: 1610612768
+    - Name:            .rdata
+      VirtualSize:     120
+      VirtualAddress:  8192
+      SizeOfRawData:   512
+      PointerToRawData: 1536
+      PointerToRelocations: 0
+      PointerToLinenumbers: 0
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      Characteristics: 1073741888
+    - Name:            .pdata
+      VirtualSize:     48
+      VirtualAddress:  12288
+      SizeOfRawData:   512
+      PointerToRawData: 2048
+      PointerToRelocations: 0
+      PointerToLinenumbers: 0
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      Characteristics: 1073741888
+  SectionContribs:
+    Version:         Ver60
+    Items:
+      - ISect:           1
+        Offset:          0
+        Size:            146
+        Characteristics: 1615855648
+        Imod:            0
+        DataCrc:         4019629118
+        RelocCrc:        0
+        ISectCoff:       0
+      - ISect:           2
+        Offset:          0
+        Size:            28
+        Characteristics: 1073741888
+        Imod:            1
+        DataCrc:         0
+        RelocCrc:        0
+        ISectCoff:       0
+      - ISect:           2
+        Offset:          28
+        Size:            58
+        Characteristics: 1073741888
+        Imod:            1
+        DataCrc:         0
+        RelocCrc:        0
+        ISectCoff:       0
+      - ISect:           2
+        Offset:          88
+        Size:            32
+        Characteristics: 1076887616
+        Imod:            0
+        DataCrc:         1716330164
+        RelocCrc:        0
+        ISectCoff:       0
+      - ISect:           3
+        Offset:          0
+        Size:            48
+        Characteristics: 1076887616
+        Imod:            0
+        DataCrc:         2052418443
+        RelocCrc:        0
+        ISectCoff:       0
+TpiStream:
+  Version:         VC80
+  Records:         []
+IpiStream:
+  Version:         VC80
+  Records:
+    - Kind:            LF_FUNC_ID
+      FuncId:
+        ParentScope:     0
+        FunctionType:    0
+        Name:            inlineme
+    - Kind:            LF_FUNC_ID
+      FuncId:
+        ParentScope:     0
+        FunctionType:    0
+        Name:            inlineme_too
+    - Kind:            LF_FUNC_ID
+      FuncId:
+        ParentScope:     0
+        FunctionType:    0
+        Name:            callme
+    - Kind:            LF_FUNC_ID
+      FuncId:
+        ParentScope:     0
+        FunctionType:    0
+        Name:            foo
+    - Kind:            LF_FUNC_ID
+      FuncId:
+        ParentScope:     0
+        FunctionType:    0
+        Name:            main
+    - Kind:            LF_FUNC_ID
+      FuncId:
+        ParentScope:     0
+        FunctionType:    0
+        Name:            stopHere
+PublicsStream:
+  Records:
+    - Kind:            S_PUB32
+      PublicSym32:
+        Flags:           [ Function ]
+        Offset:          96
+        Segment:         1
+        Name:            main
+    - Kind:            S_PUB32
+      PublicSym32:
+        Flags:           [ Function ]
+        Offset:          0
+        Segment:         1
+        Name:            '?callme@@YAHXZ'
+...

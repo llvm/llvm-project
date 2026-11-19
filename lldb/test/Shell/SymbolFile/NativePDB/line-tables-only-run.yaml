@@ -1,0 +1,117 @@
+# REQUIRES: system-windows, target-x86_64
+
+# Check that lldb can generate a backtrace when fed with a PDB without locals or function types.
+
+# RUN: mkdir -p %t.dir
+# RUN: llvm-pdbutil yaml2pdb %p/Inputs/line-tables-only-pdb.yaml --pdb=%t.dir/line-tables-only.pdb
+# RUN: yaml2obj %s -o %t.dir/line-tables-only.exe
+
+# RUN: %lldb %t.dir/line-tables-only.exe -o 'b line-tables-only.cpp:3' -o r -o bt -o q | FileCheck %s
+
+# CHECK:      (lldb) target create
+# CHECK-NEXT: Current executable set to '{{.*}}' (x86_64).
+# CHECK-NEXT: (lldb) b line-tables-only.cpp:3
+# CHECK-NEXT: Breakpoint 1: where = {{.*}}.exe`stopHere + 9 at line-tables-only.cpp:3
+# CHECK-NEXT: (lldb) r
+# CHECK-NEXT: Process {{.*}} launched: '{{.*}}' (x86_64)
+# CHECK-NEXT: Process {{.*}} stopped
+# CHECK-NEXT: * thread #1, stop reason = breakpoint 1.1
+# CHECK-NEXT:        frame #0: {{.*}} {{.*}}.exe`stopHere at line-tables-only.cpp:3
+# CHECK-NEXT: (lldb) bt
+# CHECK-NEXT: * thread #1, stop reason = breakpoint 1.1
+# CHECK-NEXT:    * frame #{{[0-9]+}}: {{.*}}.exe`stopHere at line-tables-only.cpp:3
+# CHECK-NEXT:      frame #{{[0-9]+}}: {{.*}}.exe`inlineme_too at line-tables-only.cpp:7 [inlined]
+# CHECK-NEXT:      frame #{{[0-9]+}}: {{.*}}.exe`inlineme at line-tables-only.cpp:12 [inlined]
+# CHECK-NEXT:      frame #{{[0-9]+}}: {{.*}}.exe`foo at line-tables-only.cpp:15
+# CHECK-NEXT:      frame #{{[0-9]+}}: {{.*}}.exe`int callme(void) at line-tables-only.cpp:17
+# CHECK-NEXT:      frame #{{[0-9]+}}: {{.*}}.exe`main at line-tables-only.cpp:19
+
+--- !COFF
+OptionalHeader:
+  AddressOfEntryPoint: 4192
+  ImageBase:       5368709120
+  SectionAlignment: 4096
+  FileAlignment:   512
+  MajorOperatingSystemVersion: 6
+  MinorOperatingSystemVersion: 0
+  MajorImageVersion: 0
+  MinorImageVersion: 0
+  MajorSubsystemVersion: 6
+  MinorSubsystemVersion: 0
+  Subsystem:       IMAGE_SUBSYSTEM_WINDOWS_CUI
+  DLLCharacteristics: [ IMAGE_DLL_CHARACTERISTICS_HIGH_ENTROPY_VA, IMAGE_DLL_CHARACTERISTICS_DYNAMIC_BASE, IMAGE_DLL_CHARACTERISTICS_NX_COMPAT, IMAGE_DLL_CHARACTERISTICS_TERMINAL_SERVER_AWARE ]
+  SizeOfStackReserve: 1048576
+  SizeOfStackCommit: 4096
+  SizeOfHeapReserve: 1048576
+  SizeOfHeapCommit: 4096
+  ExportTable:
+    RelativeVirtualAddress: 0
+    Size:            0
+  ImportTable:
+    RelativeVirtualAddress: 0
+    Size:            0
+  ResourceTable:
+    RelativeVirtualAddress: 0
+    Size:            0
+  ExceptionTable:
+    RelativeVirtualAddress: 12288
+    Size:            48
+  CertificateTable:
+    RelativeVirtualAddress: 0
+    Size:            0
+  BaseRelocationTable:
+    RelativeVirtualAddress: 0
+    Size:            0
+  Debug:
+    RelativeVirtualAddress: 8192
+    Size:            28
+  Architecture:
+    RelativeVirtualAddress: 0
+    Size:            0
+  GlobalPtr:
+    RelativeVirtualAddress: 0
+    Size:            0
+  TlsTable:
+    RelativeVirtualAddress: 0
+    Size:            0
+  LoadConfigTable:
+    RelativeVirtualAddress: 0
+    Size:            0
+  BoundImport:
+    RelativeVirtualAddress: 0
+    Size:            0
+  IAT:
+    RelativeVirtualAddress: 0
+    Size:            0
+  DelayImportDescriptor:
+    RelativeVirtualAddress: 0
+    Size:            0
+  ClrRuntimeHeader:
+    RelativeVirtualAddress: 0
+    Size:            0
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [ IMAGE_FILE_EXECUTABLE_IMAGE, IMAGE_FILE_LARGE_ADDRESS_AWARE ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  4096
+    VirtualSize:     146
+    SectionData:     4883EC28E807000000904883C428C3904883EC38C744242C02000000C7442428010000008B44242889442434E84F0000008B44243483C001894424248B44242C89442430E8370000008B4424248B4C243083C10101C84883C438C30F1F4400004883EC28C744242400000000E88FFFFFFF904883C428C3660F1F84000000000050C7442404000000008B44240483C07B59C3
+    SizeOfRawData:   512
+  - Name:            .rdata
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  8192
+    VirtualSize:     120
+    SectionData:     000000008141E26A00000000020000003A0000001C2000001C0600005253445389A26FAA121B63474C4C44205044422E010000002F746D702F6C696E652D7461626C65732D6F6E6C792E70646200000000000000000000000104010004420000010401000462000001040100044200000101010001020000
+    SizeOfRawData:   512
+  - Name:            .pdata
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  12288
+    VirtualSize:     48
+    SectionData:     001000000F10000058200000101000005B10000060200000601000007710000068200000801000009210000070200000
+    SizeOfRawData:   512
+symbols:         []
+...
+
+
