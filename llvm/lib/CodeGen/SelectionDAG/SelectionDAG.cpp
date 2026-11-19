@@ -5700,6 +5700,7 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
                                                     UndefPoisonKind Kind,
                                                     unsigned Depth) const {
   unsigned Opcode = Op.getOpcode();
+  unsigned NumElts = DemandedElts.getBitWidth();
 
   // Early out for FREEZE.
   if (Opcode == ISD::FREEZE)
@@ -5889,8 +5890,8 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
   case ISD::VECTOR_SHUFFLE: {
     APInt DemandedLHS, DemandedRHS;
     auto *SVN = cast<ShuffleVectorSDNode>(Op);
-    if (!getShuffleDemandedElts(DemandedElts.getBitWidth(), SVN->getMask(),
-                                DemandedElts, DemandedLHS, DemandedRHS,
+    if (!getShuffleDemandedElts(NumElts, SVN->getMask(), DemandedElts,
+                                DemandedLHS, DemandedRHS,
                                 /*AllowUndefElts=*/false))
       return false;
     if (!DemandedLHS.isZero() &&
@@ -5953,17 +5954,39 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
   case ISD::LOAD: {
     // If we're loading an unindexed constant pool, check if the constant
     // contains poison/undef - skip ANYEXT loads.
-    // TODO: DemandedElts and type size mismatch handling.
+    // TODO: type size mismatch handling.
     auto *LD = cast<LoadSDNode>(Op);
     if (ISD::isUNINDEXEDLoad(LD) && !ISD::isEXTLoad(LD)) {
       if (const Constant *Cst = TLI->getTargetConstantFromLoad(LD)) {
-        // TODO: expose isGuaranteedNotToBeUndefOrPoison(UndefPoisonKind)
-        if (includesPoison(Kind) && includesUndef(Kind))
-          return ::isGuaranteedNotToBeUndefOrPoison(Cst);
-        if (includesPoison(Kind))
-          return ::isGuaranteedNotToBePoison(Cst);
-        assert(includesUndef(Kind) && "UndefOnly expected");
-        return ::isGuaranteedNotToBeUndef(Cst);
+        EVT VT = Op.getValueType();
+        Type *CstTy = Cst->getType();
+
+        auto IsSafe = [Kind](const Constant *C) -> bool {
+          // TODO: expose isGuaranteedNotToBeUndefOrPoison(UndefPoisonKind)
+          if (includesPoison(Kind) && includesUndef(Kind))
+            return ::isGuaranteedNotToBeUndefOrPoison(C);
+          if (includesPoison(Kind))
+            return ::isGuaranteedNotToBePoison(C);
+          assert(includesUndef(Kind) && "UndefOnly expected");
+          return ::isGuaranteedNotToBeUndef(C);
+        };
+
+        // If Cst matches VT vector dimensions, then check per-element.
+        if (CstTy->isVectorTy() && VT.isFixedLengthVector() &&
+            VT.getSizeInBits() == CstTy->getPrimitiveSizeInBits() &&
+            VT.getScalarSizeInBits() == CstTy->getScalarSizeInBits()) {
+          for (unsigned I = 0; I != NumElts; ++I) {
+            if (!DemandedElts[I])
+              continue;
+            if (Constant *Elt = Cst->getAggregateElement(I)) {
+              if (IsSafe(Elt))
+                continue;
+            }
+            return false;
+          }
+        } else {
+          return IsSafe(Cst);
+        }
       }
     }
     break;
@@ -9074,6 +9097,9 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
            "VECTOR_SHUFFLE_VAR mask must be a vector of integers.");
     assert(VT.getVectorElementCount() == MaskVT.getVectorElementCount() &&
            "VECTOR_SHUFFLE_VAR mask has the wrong number of elements.");
+    // The only in-range index is 0; any other index gives poison.
+    if (VT.getVectorElementCount().isScalar())
+      return N1;
     break;
   }
   case ISD::EXTRACT_SUBVECTOR: {
@@ -10402,10 +10428,16 @@ SDValue SelectionDAG::getMemcpy(
   // Then check to see if we should lower the memcpy with target-specific
   // code. If the target chooses to do this, this is the next best.
   if (TSI) {
+    bool IsTailCall = OverrideTailCall.value_or(isInTailCallPositionWrapper(
+                          CI, this, /*AllowReturnsFirstArg=*/false)) &&
+                      !hasSwiftErrorArg();
+    [[maybe_unused]] SDValue OldRoot = getRoot();
     SDValue Result = TSI->EmitTargetCodeForMemcpy(
         *this, dl, Chain, Dst, Src, Size, DstAlign, SrcAlign, isVol,
-        AlwaysInline, DstPtrInfo, SrcPtrInfo);
-    if (Result.getNode())
+        AlwaysInline, IsTailCall, DstPtrInfo, SrcPtrInfo);
+    assert((Result.getNode() || !IsTailCall || getRoot() != OldRoot) &&
+           "target declined without clearing IsTailCall");
+    if (Result.getNode() || IsTailCall)
       return Result;
   }
 
@@ -10539,10 +10571,16 @@ SDValue SelectionDAG::getMemmove(SDValue Chain, const SDLoc &dl, SDValue Dst,
   // Then check to see if we should lower the memmove with target-specific
   // code. If the target chooses to do this, this is the next best.
   if (TSI) {
+    bool IsTailCall = OverrideTailCall.value_or(isInTailCallPositionWrapper(
+                          CI, this, /*AllowReturnsFirstArg=*/false)) &&
+                      !hasSwiftErrorArg();
+    [[maybe_unused]] SDValue OldRoot = getRoot();
     SDValue Result = TSI->EmitTargetCodeForMemmove(
-        *this, dl, Chain, Dst, Src, Size, DstAlign, SrcAlign, isVol, DstPtrInfo,
-        SrcPtrInfo);
-    if (Result.getNode())
+        *this, dl, Chain, Dst, Src, Size, DstAlign, SrcAlign, isVol, IsTailCall,
+        DstPtrInfo, SrcPtrInfo);
+    assert((Result.getNode() || !IsTailCall || getRoot() != OldRoot) &&
+           "target declined without clearing IsTailCall");
+    if (Result.getNode() || IsTailCall)
       return Result;
   }
 
@@ -10655,9 +10693,16 @@ SDValue SelectionDAG::getMemset(SDValue Chain, const SDLoc &dl, SDValue Dst,
   // Then check to see if we should lower the memset with target-specific
   // code. If the target chooses to do this, this is the next best.
   if (TSI) {
+    bool IsTailCall =
+        isInTailCallPositionWrapper(CI, this, /*AllowReturnsFirstArg=*/false) &&
+        !hasSwiftErrorArg();
+    [[maybe_unused]] SDValue OldRoot = getRoot();
     SDValue Result = TSI->EmitTargetCodeForMemset(
-        *this, dl, Chain, Dst, Src, Size, Alignment, isVol, AlwaysInline, DstPtrInfo);
-    if (Result.getNode())
+        *this, dl, Chain, Dst, Src, Size, Alignment, isVol, AlwaysInline,
+        IsTailCall, DstPtrInfo);
+    assert((Result.getNode() || !IsTailCall || getRoot() != OldRoot) &&
+           "target declined without clearing IsTailCall");
+    if (Result.getNode() || IsTailCall)
       return Result;
   }
 
@@ -12480,8 +12525,10 @@ SDNode *SelectionDAG::UpdateNodeOperands(SDNode *N, SDValue Op) {
 
   // See if the modified node already exists.
   FoldingSetInsertToken InsertToken;
-  if (SDNode *Existing = FindModifiedNodeSlot(N, Op, InsertToken))
+  if (SDNode *Existing = FindModifiedNodeSlot(N, Op, InsertToken)) {
+    Existing->intersectFlagsWith(N->getFlags());
     return Existing;
+  }
 
   // Nope it doesn't.  Remove the node from its current place in the maps.
   if (InsertToken)
@@ -12507,8 +12554,10 @@ SDNode *SelectionDAG::UpdateNodeOperands(SDNode *N, SDValue Op1, SDValue Op2) {
 
   // See if the modified node already exists.
   FoldingSetInsertToken InsertToken;
-  if (SDNode *Existing = FindModifiedNodeSlot(N, Op1, Op2, InsertToken))
+  if (SDNode *Existing = FindModifiedNodeSlot(N, Op1, Op2, InsertToken)) {
+    Existing->intersectFlagsWith(N->getFlags());
     return Existing;
+  }
 
   // Nope it doesn't.  Remove the node from its current place in the maps.
   if (InsertToken)
@@ -12560,8 +12609,10 @@ UpdateNodeOperands(SDNode *N, ArrayRef<SDValue> Ops) {
 
   // See if the modified node already exists.
   FoldingSetInsertToken InsertToken;
-  if (SDNode *Existing = FindModifiedNodeSlot(N, Ops, InsertToken))
+  if (SDNode *Existing = FindModifiedNodeSlot(N, Ops, InsertToken)) {
+    Existing->intersectFlagsWith(N->getFlags());
     return Existing;
+  }
 
   // Nope it doesn't.  Remove the node from its current place in the maps.
   if (InsertToken)

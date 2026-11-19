@@ -21,6 +21,7 @@ class TestInlinedFunctionStatic(TestBase):
 
     # Clang emits no CodeView record for a static variable of an inlined function.
     @skipIf(debug_info=["pdb"])
+    @skipIf(compiler="clang", compiler_version=["<", "24.0"])
     def test(self):
         self.build()
         source = lldb.SBFileSpec("main.c")

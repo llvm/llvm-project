@@ -44,9 +44,7 @@ using namespace llvm::opt;
 
 static bool canExecute(llvm::vfs::FileSystem &VFS, StringRef Path) {
   auto Status = VFS.status(Path);
-  if (!Status)
-    return false;
-  return (Status->getPermissions() & llvm::sys::fs::perms::all_exe) != 0;
+  return Status && Status->isExecutable();
 }
 
 // Try to find Exe from a Visual Studio distribution.  This first tries to find
