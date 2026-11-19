@@ -39,6 +39,16 @@ define void @amx_direct() {
   ret void
 }
 
+; Both kinds is fine if the compiler configures neither; the user switches.
+define void @both_direct() {
+; CHECK-LABEL: name:            both_direct
+; CHECK:         amxProgModel:    DirectReg
+; CHECK:         aceProgModel:    DirectReg
+  call void @llvm.x86.tilezero(i8 1)
+  call void @llvm.x86.acev1.tilezero(i8 1)
+  ret void
+}
+
 declare void @llvm.x86.acev1.tilezero(i8)
 declare <16 x float> @llvm.x86.acev1.tcvtrowd2ps(i8, i32)
 declare <32 x bfloat> @llvm.x86.acev1.tcvtrowps2bf16h(i8, i32)

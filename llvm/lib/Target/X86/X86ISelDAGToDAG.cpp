@@ -180,7 +180,18 @@ namespace {
 
       // OptFor[Min]Size are used in pattern predicates that isel is matching.
       OptForMinSize = MF.getFunction().hasMinSize();
-      return SelectionDAGISel::runOnMachineFunction(MF);
+      bool Changed = SelectionDAGISel::runOnMachineFunction(MF);
+
+      // The models arrive in any order, so check for a mix after selection.
+      const X86MachineFunctionInfo *MFI = MF.getInfo<X86MachineFunctionInfo>();
+      bool HasAMX = MFI->getAMXProgModel() != AMXProgModelEnum::None;
+      bool HasACE = MFI->getACEProgModel() != ACEProgModelEnum::ACE_None;
+      if ((MFI->getAMXProgModel() == AMXProgModelEnum::ManagedRA && HasACE) ||
+          (MFI->getACEProgModel() == ACEProgModelEnum::ACE_ManagedRA && HasAMX))
+        MF.getFunction().getContext().emitError(
+            MF.getName() + ": Failed to config tile register, AMX and ACE "
+                           "tiles need different configurations");
+      return Changed;
     }
 
     void emitFunctionEntryCode() override;

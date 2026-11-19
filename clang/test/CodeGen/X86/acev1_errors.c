@@ -146,6 +146,20 @@ void test_scale_group_helpers(__m512i i) {
   _tile_op4mxbf8_ps(0, i, i, _MM_ACE_SCALE_B(4)); // expected-error {{scale group argument must have bits 2, 5, 6, and 7 clear}}
 }
 
+void test_scale_group_struct_api(__acetile *t, __m512i i, unsigned char s) {
+  // The struct API uses the internal builtins, where the group is argument 3.
+  __tile_ace_top4mxhf8ps(t, i, i, 0x04);  // expected-error {{scale group argument must have bits 2, 5, 6, and 7 clear}}
+  __tile_ace_top4mxbhf8ps(t, i, i, 0x20); // expected-error {{scale group argument must have bits 2, 5, 6, and 7 clear}}
+  __tile_ace_top4mxhbf8ps(t, i, i, 0x40); // expected-error {{scale group argument must have bits 2, 5, 6, and 7 clear}}
+  __tile_ace_top4mxbf8ps(t, i, i, 0x80);  // expected-error {{scale group argument must have bits 2, 5, 6, and 7 clear}}
+  __tile_ace_top4mxbssps(t, i, i, 0xFF);  // expected-error {{scale group argument must have bits 2, 5, 6, and 7 clear}}
+
+  // The group is immarg, so a run-time one used to reach the IR verifier.
+  __tile_ace_top4mxbf8ps(t, i, i, s); // expected-error {{argument to '__builtin_ia32_top4mxbf8ps_internal' must be a constant integer}}
+
+  __tile_ace_top4mxbf8ps(t, i, i, _MM_ACE_SCALE_A(1) | _MM_ACE_SCALE_B(2));
+}
+
 #ifdef __cplusplus
 // A dependent index is only known once the template is instantiated.
 template <int N> void test_dependent_row_index() {

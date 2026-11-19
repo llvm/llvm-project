@@ -5,8 +5,6 @@
 
 // Tests that the ACE v1 intrinsics require the acev1 target feature.
 
-// feature-no-diagnostics
-
 #include <immintrin.h>
 
 void test_needs_acev1(__m512bh bf, __m512i i) {
@@ -27,4 +25,10 @@ void test_needs_acev1(__m512bh bf, __m512i i) {
   _bsr0_insertfull(i, i); // nofeature-error {{always_inline function '_bsr0_insertfull' requires target feature 'acev1'}}
   _bsr0_inserth(i); // nofeature-error {{always_inline function '_bsr0_inserth' requires target feature 'acev1'}}
   _bsr0_insertl(i); // nofeature-error {{always_inline function '_bsr0_insertl' requires target feature 'acev1'}}
+}
+
+// ACE spells TILEZERO itself, so the AMX one needs amx-tile even on ACE.
+void test_amx_tilezero_needs_amx_tile(void) {
+  __builtin_ia32_tilezero(0); // feature-error {{'__builtin_ia32_tilezero' needs target feature amx-tile}}
+  __builtin_ia32_tilezero_internal(16, 64); // feature-error {{'__builtin_ia32_tilezero_internal' needs target feature amx-tile}}
 }
