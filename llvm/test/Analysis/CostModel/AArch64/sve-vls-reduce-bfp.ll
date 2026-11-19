@@ -34,7 +34,7 @@ define void @reduce_fadd_128b_types() #0 {
 ;
 ; VSCALE-FROM-2-LABEL: 'reduce_fadd_128b_types'
 ; VSCALE-FROM-2-NEXT:  Cost Model: Found costs of RThru:54 CodeSize:23 Lat:46 SizeLat:30 for: %fadd_v8bf16_strict = call bfloat @llvm.vector.reduce.fadd.v8bf16(bfloat 0.000000e+00, <8 x bfloat> poison)
-; VSCALE-FROM-2-NEXT:  Cost Model: Found costs of RThru:39 CodeSize:27 Lat:33 SizeLat:27 for: %fadd_v8bf16_fast = call fast bfloat @llvm.vector.reduce.fadd.v8bf16(bfloat 0.000000e+00, <8 x bfloat> poison)
+; VSCALE-FROM-2-NEXT:  Cost Model: Found costs of RThru:63 CodeSize:27 Lat:33 SizeLat:27 for: %fadd_v8bf16_fast = call fast bfloat @llvm.vector.reduce.fadd.v8bf16(bfloat 0.000000e+00, <8 x bfloat> poison)
 ; VSCALE-FROM-2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %fadd_v8bf16_strict = call bfloat @llvm.vector.reduce.fadd.v8bf16(bfloat 0.0, <8 x bfloat> poison)
@@ -61,7 +61,7 @@ define void @reduce_fadd_256b_types() #0 {
 ;
 ; VSCALE-FROM-2-LABEL: 'reduce_fadd_256b_types'
 ; VSCALE-FROM-2-NEXT:  Cost Model: Found costs of RThru:108 CodeSize:46 Lat:92 SizeLat:60 for: %fadd_v16bf16_strict = call bfloat @llvm.vector.reduce.fadd.v16bf16(bfloat 0.000000e+00, <16 x bfloat> poison)
-; VSCALE-FROM-2-NEXT:  Cost Model: Found costs of RThru:60 CodeSize:44 Lat:52 SizeLat:44 for: %fadd_v16bf16_fast = call fast bfloat @llvm.vector.reduce.fadd.v16bf16(bfloat 0.000000e+00, <16 x bfloat> poison)
+; VSCALE-FROM-2-NEXT:  Cost Model: Found costs of RThru:92 CodeSize:44 Lat:52 SizeLat:44 for: %fadd_v16bf16_fast = call fast bfloat @llvm.vector.reduce.fadd.v16bf16(bfloat 0.000000e+00, <16 x bfloat> poison)
 ; VSCALE-FROM-2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %fadd_v16bf16_strict = call bfloat @llvm.vector.reduce.fadd.v16bf16(bfloat 0.0, <16 x bfloat> poison)
@@ -88,12 +88,12 @@ define void @reduce_fadd_512b_types() #0 {
 ;
 ; VSCALE-2-LABEL: 'reduce_fadd_512b_types'
 ; VSCALE-2-NEXT:  Cost Model: Found costs of RThru:216 CodeSize:92 Lat:184 SizeLat:120 for: %fadd_v32bf16_strict = call bfloat @llvm.vector.reduce.fadd.v32bf16(bfloat 0.000000e+00, <32 x bfloat> poison)
-; VSCALE-2-NEXT:  Cost Model: Found costs of RThru:100 CodeSize:77 Lat:87 SizeLat:77 for: %fadd_v32bf16_fast = call fast bfloat @llvm.vector.reduce.fadd.v32bf16(bfloat 0.000000e+00, <32 x bfloat> poison)
+; VSCALE-2-NEXT:  Cost Model: Found costs of RThru:150 CodeSize:77 Lat:87 SizeLat:77 for: %fadd_v32bf16_fast = call fast bfloat @llvm.vector.reduce.fadd.v32bf16(bfloat 0.000000e+00, <32 x bfloat> poison)
 ; VSCALE-2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; VSCALE-FROM-4-LABEL: 'reduce_fadd_512b_types'
 ; VSCALE-FROM-4-NEXT:  Cost Model: Found costs of RThru:216 CodeSize:92 Lat:184 SizeLat:120 for: %fadd_v32bf16_strict = call bfloat @llvm.vector.reduce.fadd.v32bf16(bfloat 0.000000e+00, <32 x bfloat> poison)
-; VSCALE-FROM-4-NEXT:  Cost Model: Found costs of RThru:96 CodeSize:77 Lat:87 SizeLat:77 for: %fadd_v32bf16_fast = call fast bfloat @llvm.vector.reduce.fadd.v32bf16(bfloat 0.000000e+00, <32 x bfloat> poison)
+; VSCALE-FROM-4-NEXT:  Cost Model: Found costs of RThru:137 CodeSize:77 Lat:87 SizeLat:77 for: %fadd_v32bf16_fast = call fast bfloat @llvm.vector.reduce.fadd.v32bf16(bfloat 0.000000e+00, <32 x bfloat> poison)
 ; VSCALE-FROM-4-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %fadd_v32bf16_strict = call bfloat @llvm.vector.reduce.fadd.v32bf16(bfloat 0.0, <32 x bfloat> poison)
