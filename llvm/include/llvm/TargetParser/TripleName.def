@@ -87,6 +87,7 @@ TRIPLE_OS(ChipStar, "chipstar", "Generic")
 TRIPLE_OS(Firmware, "firmware", "Generic")
 TRIPLE_OS(QURT, "qurt", "Generic")
 TRIPLE_OS(H2, "h2", "Generic")
+TRIPLE_OS(NintendoOS, "nn", "NintendoOS")
 
 #undef TRIPLE_OS
 #undef TRIPLE_OS_ALIAS
@@ -201,6 +202,7 @@ TRIPLE_VENDOR(SCEI, "scei")
 TRIPLE_VENDOR_ALIAS(SCEI, "sie")
 TRIPLE_VENDOR(SUSE, "suse")
 TRIPLE_VENDOR(Meta, "meta")
+TRIPLE_VENDOR(Nintendo, "nintendo")
 
 #undef TRIPLE_VENDOR
 #undef TRIPLE_VENDOR_ALIAS

@@ -173,6 +173,9 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
     case llvm::Triple::NetBSD:
       return std::make_unique<NetBSDTargetInfo<AArch64leTargetInfo>>(Triple,
                                                                      Opts);
+    case llvm::Triple::NintendoOS:
+      return std::make_unique<NintendoOSTargetInfo<AArch64leTargetInfo>>(Triple,
+                                                                         Opts);
     case llvm::Triple::OpenBSD:
       return std::make_unique<OpenBSDTargetInfo<AArch64leTargetInfo>>(Triple,
                                                                       Opts);
@@ -241,6 +244,9 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
       return std::make_unique<RTEMSTargetInfo<ARMleTargetInfo>>(Triple, Opts);
     case llvm::Triple::Haiku:
       return std::make_unique<HaikuTargetInfo<ARMleTargetInfo>>(Triple, Opts);
+    case llvm::Triple::NintendoOS:
+      return std::make_unique<NintendoOSTargetInfo<ARMleTargetInfo>>(Triple,
+                                                                     Opts);
     case llvm::Triple::Win32:
       switch (Triple.getEnvironment()) {
       case llvm::Triple::Cygnus:
