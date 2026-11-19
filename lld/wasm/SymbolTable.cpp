@@ -267,10 +267,11 @@ DefinedFunction *SymbolTable::addSyntheticFunction(StringRef name,
 // added if there is an undefine reference to it, or if it is explicitly
 // exported via the --export flag.  Otherwise we don't add the symbol and return
 // nullptr.
-DefinedData *SymbolTable::addOptionalDataSymbol(StringRef name,
-                                                uint64_t value) {
+DefinedData *SymbolTable::addOptionalDataSymbol(StringRef name, uint64_t value,
+                                                bool force) {
   Symbol *s = find(name);
-  if (!s && (ctx.arg.exportAll || ctx.arg.exportedSymbols.contains(name)))
+  if (!s &&
+      (force || ctx.arg.exportAll || ctx.arg.exportedSymbols.contains(name)))
     s = insertName(name).first;
   else if (!s || s->isDefined())
     return nullptr;
@@ -301,9 +302,11 @@ DefinedGlobal *SymbolTable::addSyntheticGlobal(StringRef name, uint32_t flags,
 }
 
 DefinedGlobal *SymbolTable::addOptionalGlobalSymbol(StringRef name,
-                                                    InputGlobal *global) {
+                                                    InputGlobal *global,
+                                                    bool force) {
   Symbol *s = find(name);
-  if (!s && (ctx.arg.exportAll || ctx.arg.exportedSymbols.contains(name)))
+  if (!s &&
+      (force || ctx.arg.exportAll || ctx.arg.exportedSymbols.contains(name)))
     s = insertName(name).first;
   else if (!s || s->isDefined())
     return nullptr;
