@@ -1724,7 +1724,8 @@ void GISelValueTracking::computeKnownFPClass(Register R,
 
     DenormalMode Mode =
         MF->getDenormalMode(getFltSemanticForLLT(DstTy.getScalarType()));
-    Known = KnownFPClass::minMaxLike(KnownLHS, KnownRHS, Kind, Mode);
+    const bool HasNSZ = MI.getFlag(MachineInstr::MIFlag::FmNsz);
+    Known = KnownFPClass::minMaxLike(KnownLHS, KnownRHS, Kind, Mode, HasNSZ);
     break;
   }
   case TargetOpcode::G_FCANONICALIZE: {

@@ -427,7 +427,8 @@ public:
 
   LLVM_ABI static KnownFPClass minMaxLike(const KnownFPClass &LHS,
                                           const KnownFPClass &RHS,
-                                          MinMaxKind Kind, DenormalMode Mode);
+                                          MinMaxKind Kind, DenormalMode Mode,
+                                          bool MayBeNSZ = true);
 
   /// Apply the canonicalize intrinsic to this value.
   LLVM_ABI static KnownFPClass canonicalize(const KnownFPClass &Src,
