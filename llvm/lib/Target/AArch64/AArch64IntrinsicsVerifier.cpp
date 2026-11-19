@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64.h"
+#include "AArch64IntrinsicFeatureInfo.h"
 #include "AArch64Subtarget.h"
 #include "AArch64TargetMachine.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -15,9 +16,9 @@
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GuardedIntrinsicInfo.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstrTypes.h"
-#include "llvm/IR/IntrinsicFeatureGuard.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/Type.h"
@@ -31,8 +32,6 @@ using namespace llvm;
 #define DEBUG_TYPE "aarch64-intrinsics-verifier"
 
 namespace {
-
-#include "AArch64GenIntrinsicFeatureChecks.inc"
 
 // A streaming-compatible function can enter streaming mode with SME. These
 // features are the minimum implied by SME and are available in that mode.
@@ -73,7 +72,7 @@ static bool matchesSignature(const IntrinsicInst &Call,
                              const IntrinsicFeatureVariant &V) {
   if (V.AppliesToAllTypes)
     return true;
-  FunctionType *Expected = getAArch64IntrinsicFunctionType(
+  FunctionType *Expected = getAArch64GuardedIntrinsicInfo().getFunctionType(
       Call.getContext(), Call.getIntrinsicID(), V);
   FunctionType *Actual = Call.getFunctionType();
   if (Actual->getNumParams() != Expected->getNumParams() ||
@@ -91,7 +90,7 @@ static bool matchesSignature(const IntrinsicInst &Call,
 static bool hasFeatures(const IntrinsicFeatureGuard &Guard,
                         const FeatureBitset &Available) {
   for (const FeatureBitset &Required :
-       getAArch64IntrinsicFeatureAlternatives(Guard)) {
+       getAArch64GuardedIntrinsicInfo().getAlternatives(Guard)) {
     if ((Available & Required) == Required)
       return true;
   }
@@ -109,8 +108,9 @@ struct IntrinsicCheckResult {
 static IntrinsicCheckResult checkIntrinsic(const IntrinsicInst &II,
                                            const AArch64Subtarget &ST) {
   IntrinsicCheckResult Result;
+  const GuardedIntrinsicInfo &Info = getAArch64GuardedIntrinsicInfo();
   ArrayRef<IntrinsicFeatureVariant> Variants =
-      getAArch64IntrinsicVariants(II.getIntrinsicID());
+      Info.getVariants(II.getIntrinsicID());
   if (Variants.empty())
     return Result;
   Result.HasGuards = true;
@@ -129,10 +129,8 @@ static IntrinsicCheckResult checkIntrinsic(const IntrinsicInst &II,
     Result.FoundSignature = true;
     // AArch64 uses guard 0 for non-streaming mode and guard 1 for
     // streaming mode.
-    const IntrinsicFeatureGuard &NonStreamingGuard =
-        getAArch64IntrinsicFeatureGuard(V, 0);
-    const IntrinsicFeatureGuard &StreamingGuard =
-        getAArch64IntrinsicFeatureGuard(V, 1);
+    const IntrinsicFeatureGuard &NonStreamingGuard = Info.getGuard(V, 0);
+    const IntrinsicFeatureGuard &StreamingGuard = Info.getGuard(V, 1);
     if ((!Streaming || BothModes) &&
         !hasFeatures(NonStreamingGuard, Available)) {
       Result.Failed = &NonStreamingGuard;
