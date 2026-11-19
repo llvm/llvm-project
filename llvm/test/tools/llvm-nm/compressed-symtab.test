@@ -1,0 +1,30 @@
+# REQUIRES: zlib
+## Test that llvm-nm can read symbols when .symtab and .strtab have SHF_COMPRESSED.
+
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-nm %t | FileCheck %s
+
+# CHECK:      0000000000000020 T global_sym
+# CHECK-NEXT: 0000000000000010 t local_sym
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:  .text
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+  - Name:    .symtab
+    Type:    SHT_SYMTAB
+    Flags:   [ SHF_COMPRESSED ]
+    Link:    .strtab
+    EntSize: 0x18
+    Info:    2
+    Content: 010000000000000048000000000000000800000000000000789c6360c00e18819809480a40f92c509a1b888580e20a503e0794060008bc005f
+  - Name:    .strtab
+    Type:    SHT_STRTAB
+    Flags:   [ SHF_COMPRESSED ]
+    Content: 010000000000000016000000000000000100000000000000789c63c8c94f4ecc892faecc6548cfc94f8232015a8007ed

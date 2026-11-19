@@ -14,6 +14,7 @@
 #define LLVM_OBJECT_ELF_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -280,6 +281,8 @@ private:
   StringRef Buf;
   std::vector<Elf_Shdr> FakeSections;
   SmallString<0> FakeSectionStrings;
+
+  mutable DenseMap<const Elf_Shdr *, std::vector<uint8_t>> DecompressedSections;
 
   // When the number of program headers is >= PN_XNUM, the actual number is
   // contained in the sh_info field of the section header at index 0.
@@ -573,6 +576,8 @@ public:
   template <typename T>
   Expected<ArrayRef<T>> getSectionContentsAsArray(const Elf_Shdr &Sec) const;
   Expected<ArrayRef<uint8_t>> getSectionContents(const Elf_Shdr &Sec) const;
+  Expected<ArrayRef<uint8_t>>
+  getDecompressedSectionContents(const Elf_Shdr &Sec) const;
   Expected<ArrayRef<uint8_t>> getSegmentContents(const Elf_Phdr &Phdr) const;
 
   /// Returns a vector of BBAddrMap structs corresponding to each function
@@ -691,6 +696,22 @@ ELFFile<ELFT>::getSectionContentsAsArray(const Elf_Shdr &Sec) const {
     return createError("section " + getSecIndexForError(*this, Sec) +
                        " has invalid sh_entsize: expected " + Twine(sizeof(T)) +
                        ", but got " + Twine(Sec.sh_entsize));
+
+  if ((Sec.sh_flags & ELF::SHF_COMPRESSED) && Sec.sh_type == ELF::SHT_SYMTAB &&
+      std::is_same_v<T, Elf_Sym>) {
+    Expected<ArrayRef<uint8_t>> DecompressedOrErr =
+        getDecompressedSectionContents(Sec);
+    if (!DecompressedOrErr)
+      return DecompressedOrErr.takeError();
+    if (DecompressedOrErr->size() % sizeof(T))
+      return createError("section " + getSecIndexForError(*this, Sec) +
+                         " has an invalid sh_size (" +
+                         Twine(DecompressedOrErr->size()) +
+                         ") which is not a multiple of its sh_entsize (" +
+                         Twine(Sec.sh_entsize) + ")");
+    return ArrayRef(reinterpret_cast<const T *>(DecompressedOrErr->data()),
+                    DecompressedOrErr->size() / sizeof(T));
+  }
 
   uintX_t Offset = Sec.sh_offset;
   uintX_t Size = Sec.sh_size;
@@ -1339,10 +1360,10 @@ ELFFile<ELFT>::getStringTable(const Elf_Shdr &Section,
                                   getHeader().e_machine, Section.sh_type)))
       return std::move(E);
 
-  auto V = getSectionContentsAsArray<char>(Section);
+  auto V = getDecompressedSectionContents(Section);
   if (!V)
     return V.takeError();
-  ArrayRef<char> Data = *V;
+  StringRef Data = toStringRef(*V);
   if (Data.empty())
     return createError("SHT_STRTAB string table section " +
                        getSecIndexForError(*this, Section) + " is empty");
@@ -1350,7 +1371,7 @@ ELFFile<ELFT>::getStringTable(const Elf_Shdr &Section,
     return createError("SHT_STRTAB string table section " +
                        getSecIndexForError(*this, Section) +
                        " is non-null terminated");
-  return StringRef(Data.begin(), Data.size());
+  return Data;
 }
 
 template <class ELFT>
@@ -1383,6 +1404,12 @@ ELFFile<ELFT>::getSHNDXTable(const Elf_Shdr &Section,
         " section (expected SHT_SYMTAB/SHT_DYNSYM)");
 
   uint64_t Syms = SymTable.sh_size / sizeof(Elf_Sym);
+  if (SymTable.sh_flags & ELF::SHF_COMPRESSED) {
+    auto SymsOrErr = symbols(&SymTable);
+    if (!SymsOrErr)
+      return SymsOrErr.takeError();
+    Syms = SymsOrErr->size();
+  }
   if (V.size() != Syms)
     return createError("SHT_SYMTAB_SHNDX has " + Twine(V.size()) +
                        " entries, but the symbol table associated has " +

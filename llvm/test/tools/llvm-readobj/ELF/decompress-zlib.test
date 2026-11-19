@@ -76,3 +76,69 @@ Sections:
     Type: SHT_PROGBITS
     Flags: [SHF_COMPRESSED]
     Content: 030000000000000004000000000000000000000000000000789c6360
+
+## Test dumping symbols when .symtab and .strtab are compressed with SHF_COMPRESSED.
+# RUN: yaml2obj --docnum=2 %s -o %t2
+# RUN: llvm-readelf --symbols %t2 | FileCheck %s --check-prefix=SYMTAB-GNU
+# RUN: llvm-readobj --symbols %t2 | FileCheck %s --check-prefix=SYMTAB-LLVM
+
+# SYMTAB-GNU:      Symbol table '.symtab' contains 3 entries:
+# SYMTAB-GNU-NEXT:    Num:    Value          Size Type    Bind   Vis       Ndx Name
+# SYMTAB-GNU-NEXT:      0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND
+# SYMTAB-GNU-NEXT:      1: 0000000000000010     4 FUNC    LOCAL  DEFAULT     1 local_sym
+# SYMTAB-GNU-NEXT:      2: 0000000000000020     8 FUNC    GLOBAL DEFAULT     1 global_sym
+
+# SYMTAB-LLVM:      Symbols [
+# SYMTAB-LLVM-NEXT:   Symbol {
+# SYMTAB-LLVM-NEXT:     Name:  (0)
+# SYMTAB-LLVM-NEXT:     Value: 0x0
+# SYMTAB-LLVM-NEXT:     Size: 0
+# SYMTAB-LLVM-NEXT:     Binding: Local (0x0)
+# SYMTAB-LLVM-NEXT:     Type: None (0x0)
+# SYMTAB-LLVM-NEXT:     Other: 0
+# SYMTAB-LLVM-NEXT:     Section: Undefined (0x0)
+# SYMTAB-LLVM-NEXT:   }
+# SYMTAB-LLVM-NEXT:   Symbol {
+# SYMTAB-LLVM-NEXT:     Name: local_sym (1)
+# SYMTAB-LLVM-NEXT:     Value: 0x10
+# SYMTAB-LLVM-NEXT:     Size: 4
+# SYMTAB-LLVM-NEXT:     Binding: Local (0x0)
+# SYMTAB-LLVM-NEXT:     Type: Function (0x2)
+# SYMTAB-LLVM-NEXT:     Other: 0
+# SYMTAB-LLVM-NEXT:     Section: .text (0x1)
+# SYMTAB-LLVM-NEXT:   }
+# SYMTAB-LLVM-NEXT:   Symbol {
+# SYMTAB-LLVM-NEXT:     Name: global_sym (11)
+# SYMTAB-LLVM-NEXT:     Value: 0x20
+# SYMTAB-LLVM-NEXT:     Size: 8
+# SYMTAB-LLVM-NEXT:     Binding: Global (0x1)
+# SYMTAB-LLVM-NEXT:     Type: Function (0x2)
+# SYMTAB-LLVM-NEXT:     Other: 0
+# SYMTAB-LLVM-NEXT:     Section: .text (0x1)
+# SYMTAB-LLVM-NEXT:   }
+# SYMTAB-LLVM-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Name:  .text
+    Type:  SHT_PROGBITS
+    Flags: [SHF_ALLOC, SHF_EXECINSTR]
+  - Name:    .symtab
+    Type:    SHT_SYMTAB
+    Flags:   [SHF_COMPRESSED]
+    Link:    .strtab
+    EntSize: 0x18
+    Info:    2
+    Content: 010000000000000048000000000000000800000000000000789c6360c00e18819809480a40f92c509a1b888580e20a503e0794060008bc005f
+  - Name:    .symtab_shndx
+    Type:    SHT_SYMTAB_SHNDX
+    Link:    .symtab
+    Entries: [ 0, 1, 1 ]
+  - Name:    .strtab
+    Type:    SHT_STRTAB
+    Flags:   [SHF_COMPRESSED]
+    Content: 010000000000000016000000000000000100000000000000789c63c8c94f4ecc892faecc6548cfc94f8232015a8007ed

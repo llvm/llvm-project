@@ -619,7 +619,7 @@ void ELFDumper<ELFT>::printSymbolsHelper(bool IsDynamic,
     Entries = Syms.size();
   } else if (DotSymtabSec) {
     std::tie(Syms, StrTable) = getSymtabAndStrtab();
-    Entries = DotSymtabSec->getEntityCount();
+    Entries = Syms.size();
   }
   if (Syms.empty())
     return;
