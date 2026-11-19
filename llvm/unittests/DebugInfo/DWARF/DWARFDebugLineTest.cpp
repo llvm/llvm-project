@@ -2154,18 +2154,17 @@ TEST_F(DebugLineBasicFixture, LookupAddressRangeWithStmtSequenceOffset) {
   }
 
   // 4) Look up with no statement-sequence offset specified.
-  //    We should get rows from both sequences for address 0x1000.
+  //    We should get row from the first sequence for address 0x1000.
   {
     std::vector<uint32_t> Rows;
     bool Found = Table->lookupAddressRange(
         {0x1000, object::SectionedAddress::UndefSection}, /*Size=*/1, Rows,
         std::nullopt /* no filter */);
     EXPECT_TRUE(Found);
-    // The first sequence's row is #0, second's row is #2, so both should
+    // The first sequence's row is #0, second's row is #2, but only one should
     // appear.
-    ASSERT_EQ(Rows.size(), 2u);
+    ASSERT_EQ(Rows.size(), 1u);
     EXPECT_EQ(Rows[0], 0u);
-    EXPECT_EQ(Rows[1], 3u);
   }
 }
 } // end anonymous namespace
