@@ -12730,7 +12730,14 @@ private:
       UsedAssumedInformation = true;
       return true;
     };
-    if (!AUO->forallUnderlyingObjects(IsLocallyInvariantLoadIfPointer))
+    // For an argument, look through call sites into the callers: a caller may
+    // overwrite the memory after the call. For other values, do not look into
+    // callees: memory that is not written in the callee may still be
+    // overwritten by the caller after the call returns.
+    AA::ValueScope Scope = getPositionKind() == IRP_ARGUMENT
+                               ? AA::Interprocedural
+                               : AA::Intraprocedural;
+    if (!AUO->forallUnderlyingObjects(IsLocallyInvariantLoadIfPointer, Scope))
       return indicatePessimisticFixpoint();
 
     if (const auto *CB = dyn_cast<CallBase>(&getAnchorValue())) {
