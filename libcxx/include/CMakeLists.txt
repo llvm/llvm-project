@@ -631,6 +631,7 @@ set(files
   __memory/ranges_destroy.h
   __memory/ranges_uninitialized_algorithms.h
   __memory/raw_storage_iterator.h
+  __memory/replacable_object.h
   __memory/shared_count.h
   __memory/shared_ptr.h
   __memory/swap_allocator.h

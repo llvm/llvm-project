@@ -416,7 +416,10 @@ module std {
     module for_each_n                             { header "__algorithm/for_each_n.h" }
     module for_each_n_segment                     { header "__algorithm/for_each_n_segment.h" }
     module for_each_segment                       { header "__algorithm/for_each_segment.h" }
-    module for_each                               { header "__algorithm/for_each.h" }
+    module for_each                               {
+      header "__algorithm/for_each.h"
+      export memory.replacable_object
+    }
     module generate_n                             { header "__algorithm/generate_n.h" }
     module generate                               { header "__algorithm/generate.h" }
     module half_positive                          { header "__algorithm/half_positive.h" }
@@ -1723,6 +1726,7 @@ module std {
       export std.algorithm.in_out_result
     }
     module raw_storage_iterator               { header "__memory/raw_storage_iterator.h" }
+    module replacable_object                  { header "__memory/replacable_object.h" }
     module shared_count                       { header "__memory/shared_count.h" }
     module shared_ptr                         {
       header "__memory/shared_ptr.h"
