@@ -276,7 +276,7 @@ bool JumpThreadingPass::runImpl(Function &F_, FunctionAnalysisManager *FAM_,
   TTI = TTI_;
   LVI = LVI_;
   AA = AA_;
-  AC = FAM ? FAM->getCachedResult<AssumptionAnalysis>(F_) : nullptr;
+  AC = FAM->getCachedResult<AssumptionAnalysis>(F_);
   DTU = std::move(DTU_);
   BFI = BFI_;
   BPI = BPI_;
