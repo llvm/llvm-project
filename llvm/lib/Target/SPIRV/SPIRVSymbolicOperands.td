@@ -1594,7 +1594,10 @@ defm WorldToObjectNV : BuiltInOperand<5331, 0, 0, [], [RayTracingNV]>;
 defm HitTNV : BuiltInOperand<5332, 0, 0, [], [RayTracingNV]>;
 defm HitKindNV : BuiltInOperand<5333, 0, 0, [], [RayTracingNV]>;
 defm IncomingRayFlagsNV : BuiltInOperand<5351, 0, 0, [], [RayTracingNV]>;
-defm DeviceBarrierValidINTEL : BuiltInOperand<6186, 0, 0, [SPV_INTEL_device_barrier], [DeviceBarrierINTEL]>;
+defm DeviceBarrierExecutionValidINTEL : BuiltInOperand<6186, 0, 0, [SPV_INTEL_device_barrier], [DeviceBarrierINTEL]>;
+// Old name, kept so __spirv_BuiltInDeviceBarrierValidINTEL is still recognized.
+// Requirements are looked up by value, so they come from the record above.
+defm DeviceBarrierValidINTEL : BuiltInOperand<6186, 0, 0, [], []>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define SelectionControl enum values and at the same time

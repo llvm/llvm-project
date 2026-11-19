@@ -1,3 +1,6 @@
+; DeviceBarrierValidINTEL is the old name of DeviceBarrierExecutionValidINTEL.
+; It is still accepted as an alias and lowers to the same BuiltIn.
+
 ; Test with typed pointers:
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_device_barrier %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_device_barrier %s -o - -filetype=obj | spirv-val %}
@@ -11,10 +14,10 @@
 
 ; CHECK-SPIRV-DAG: OpCapability DeviceBarrierINTEL
 ; CHECK-SPIRV-DAG: OpExtension "SPV_INTEL_device_barrier"
-; CHECK-SPIRV: OpDecorate %[[#Id:]] BuiltIn DeviceBarrierValidINTEL
+; CHECK-SPIRV: OpDecorate %[[#Id:]] BuiltIn DeviceBarrierExecutionValidINTEL
 ; CHECK-SPIRV: %[[#Id]] = {{OpVariable|OpUntypedVariableKHR}}
 
-; CHECK-ERROR: LLVM ERROR: DeviceBarrierValidINTEL built-in requires the following SPIR-V extension: SPV_INTEL_device_barrier
+; CHECK-ERROR: LLVM ERROR: DeviceBarrierExecutionValidINTEL built-in requires the following SPIR-V extension: SPV_INTEL_device_barrier
 
 target datalayout = "e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024"
 target triple = "spir-unknown-unknown"

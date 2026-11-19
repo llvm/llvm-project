@@ -168,7 +168,7 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
    * - ``SPV_INTEL_cache_controls``
      - Allows cache control information to be applied to memory access instructions.
    * - ``SPV_INTEL_device_barrier``
-     - Allows ``Device`` as the execution scope of ``OpControlBarrier`` and adds the ``DeviceBarrierValidINTEL`` built-in, which indicates whether executing such a barrier is defined.
+     - Allows ``Device`` as the execution scope of ``OpControlBarrier`` and adds the ``DeviceBarrierExecutionValidINTEL`` built-in, which indicates whether executing such a barrier is defined.
    * - ``SPV_INTEL_float_controls2``
      - Adds execution modes and decorations to control floating-point computations.
    * - ``SPV_INTEL_function_pointers``
