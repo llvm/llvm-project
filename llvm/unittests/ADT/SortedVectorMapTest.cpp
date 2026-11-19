@@ -120,6 +120,16 @@ TEST(SortedVectorMapTest, ReserveAndCapacity) {
   EXPECT_GE(Map.capacity(), 50u);
 }
 
+TEST(SortedVectorMapTest, Clear) {
+  SortedVectorMap<int, int> Map;
+  Map[2] = 20;
+  Map[1] = 10;
+  Map.clear();
+  EXPECT_TRUE(Map.empty());
+  Map[3] = 30;
+  EXPECT_THAT(Map, testing::ElementsAre(testing::Pair(3, 30)));
+}
+
 TEST(SortedVectorMapTest, Iterators) {
   SortedVectorMap<int, int> Map;
   Map[3] = 30;

@@ -116,7 +116,9 @@ static bool shouldConvertToRelLookupTable(LookupTableInfo &Info, Module &M,
     if (!GlobalVarOp || !GlobalVarOp->isConstant())
       return false;
 
-    if (!GlobalVarOp->hasLocalLinkage() || !GlobalVarOp->isDSOLocal() ||
+    // FIXME: This excludes declarations because the MachO writer rejects them
+    // on x86. They should be fine on ELF at least.
+    if (!GlobalVarOp->isStrongDefinitionForLinker() ||
         !GlobalVarOp->isImplicitDSOLocal())
       return false;
 
