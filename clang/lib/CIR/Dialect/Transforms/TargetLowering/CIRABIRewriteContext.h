@@ -66,7 +66,7 @@ public:
                   mlir::OpBuilder &builder) override;
 
   /// Expand a `cir.va_arg` into the x86-64 SysV register-save-area /
-  /// overflow-area sequence.
+  /// overflow-area sequence, or into a read from a pointer va_list's slots.
   mlir::LogicalResult rewriteVAArg(mlir::Operation *vaArgOp,
                                    const mlir::abi::ArgClassification &ac,
                                    mlir::OpBuilder &builder) override;

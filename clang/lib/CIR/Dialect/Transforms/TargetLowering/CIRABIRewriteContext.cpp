@@ -2778,6 +2778,50 @@ void advanceRegisterCursors(CIRBaseBuilderTy &b, mlir::Location loc,
   }
 }
 
+/// Whether \p ac reads the value in place from a buffer of slots, each
+/// ac.directAlign in size and alignment.
+bool isSlotFetch(const ArgClassification &ac) {
+  return ac.kind == ArgKind::Direct && !ac.coercedType && ac.directAlign &&
+         !ac.neededIntRegs && !ac.neededSseRegs;
+}
+
+/// Advances the pointer cursor at \p valist past the argument's slots and
+/// returns the argument's address, which is the old cursor.
+mlir::Value buildSlotAddrAndAdvance(CIRBaseBuilderTy &b, mlir::Location loc,
+                                    mlir::Value valist, mlir::Type resultTy,
+                                    uint64_t slotSize,
+                                    const mlir::DataLayout &dl) {
+  mlir::Value cur = b.createLoad(loc, valist);
+  mlir::Value bytePtr = b.createPtrBitcast(cur, b.getUIntNTy(8));
+  uint64_t stride =
+      llvm::alignTo(dl.getTypeAllocSize(resultTy).getFixedValue(), slotSize);
+  mlir::Value next =
+      b.createPtrStride(loc, bytePtr, b.getSignedInt(loc, stride, 32));
+  b.createStore(loc, b.createBitcast(next, cur.getType()), valist);
+  return bytePtr;
+}
+
+/// Replaces \p op's result with the value at \p addr, which is \p align
+/// aligned, and erases \p op.
+mlir::LogicalResult replaceVAArgResult(CIRBaseBuilderTy &b, cir::VAArgOp op,
+                                       mlir::Value addr, uint64_t align,
+                                       const mlir::DataLayout &dl) {
+  mlir::Location loc = op.getLoc();
+  mlir::Type resultTy = op.getType();
+  mlir::Value resultAddr = b.createPtrBitcast(addr, resultTy);
+  if (mlir::isa<cir::RecordType>(resultTy)) {
+    SmallPtrSet<mlir::Operation *, 1> noExceptions;
+    if (failed(rewireRecordUses(b, loc, op.getResult(), resultAddr, align, dl,
+                                noExceptions)))
+      return mlir::failure();
+  } else {
+    op.getResult().replaceAllUsesWith(
+        b.createAlignedLoad(loc, resultAddr, align));
+  }
+  op->erase();
+  return mlir::success();
+}
+
 } // namespace
 
 mlir::LogicalResult
@@ -2799,6 +2843,19 @@ CIRABIRewriteContext::rewriteVAArg(mlir::Operation *vaArgOp,
         createIgnoredValue(builder, loc, resultTy));
     op->erase();
     return mlir::success();
+  }
+
+  // A va_list that is a single pointer walks one buffer of fixed-size slots.
+  auto vaListTy = mlir::cast<cir::PointerType>(valist.getType()).getPointee();
+  if (mlir::isa<cir::PointerType>(vaListTy) && isSlotFetch(ac)) {
+    // A value smaller than its slot would sit right-adjusted on big-endian.
+    if (cirDataLayout.isBigEndian())
+      return reportVAArgNYI(op, "a slot on a big-endian target");
+    builder.setInsertionPoint(op);
+    uint64_t slotSize = ac.directAlign->value();
+    mlir::Value addr =
+        buildSlotAddrAndAdvance(builder, loc, valist, resultTy, slotSize, dl);
+    return replaceVAArgResult(builder, op, addr, slotSize, dl);
   }
 
   if (ac.kind == ArgKind::Indirect && !ac.byVal)
@@ -2912,17 +2969,6 @@ CIRABIRewriteContext::rewriteVAArg(mlir::Operation *vaArgOp,
   }
 
   // Every path above places the result at least this well aligned.
-  mlir::Value resultAddr = builder.createPtrBitcast(addr, resultTy);
-  uint64_t resultAlign = argumentAreaAlign(resultTy, module);
-  if (mlir::isa<cir::RecordType>(resultTy)) {
-    SmallPtrSet<mlir::Operation *, 1> noExceptions;
-    if (failed(rewireRecordUses(builder, loc, op.getResult(), resultAddr,
-                                resultAlign, dl, noExceptions)))
-      return mlir::failure();
-  } else {
-    op.getResult().replaceAllUsesWith(
-        builder.createAlignedLoad(loc, resultAddr, resultAlign));
-  }
-  op->erase();
-  return mlir::success();
+  return replaceVAArgResult(builder, op, addr,
+                            argumentAreaAlign(resultTy, module), dl);
 }
