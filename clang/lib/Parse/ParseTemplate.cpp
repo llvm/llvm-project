@@ -22,6 +22,25 @@
 #include "clang/Sema/Scope.h"
 using namespace clang;
 
+Parser::ReenterTemplateScopeRAII::ReenterTemplateScopeRAII(Parser &P,
+                                                           Decl *MaybeTemplated,
+                                                           bool Enter)
+    : Scopes(P), CurTemplateDepthTracker(P.TemplateParameterDepth) {
+  if (Enter)
+    CurTemplateDepthTracker.addDepth(
+        P.ReenterTemplateScopes(Scopes, MaybeTemplated));
+}
+
+Parser::ReenterTemplateScopeRAII::ReenterTemplateScopeRAII(Parser &P,
+                                                           const Declarator &D)
+    : Scopes(P), CurTemplateDepthTracker(P.TemplateParameterDepth) {
+  const auto *Params = D.getInventedTemplateParameterList();
+  if (Params && Params->getParam(0)->isImplicit()) {
+    Scopes.Enter(Scope::TemplateParamScope);
+    ++CurTemplateDepthTracker;
+  }
+}
+
 unsigned Parser::ReenterTemplateScopes(MultiParseScope &S, Decl *D) {
   return Actions.ActOnReenterTemplateScope(D, [&] {
     S.Enter(Scope::TemplateParamScope);

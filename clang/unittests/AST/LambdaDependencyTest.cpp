@@ -29,12 +29,7 @@ TEST(LambdaDependencyTest, NoexceptSpecifierOfAbbreviatedFunctionTemplate) {
   auto *Closure = Matcher.match(AST->getASTContext().getTranslationUnitDecl(),
                                 cxxRecordDecl(isLambda()));
   ASSERT_NE(nullptr, Closure);
-
-  // FIXME: This documents a flawed behavior: the closure type of a lambda that
-  // captures a dependent entity is not marked dependent, even though it should
-  // be.
-  // See: https://github.com/llvm/llvm-project/issues/233102
-  EXPECT_FALSE(Closure->isDependentType());
+  EXPECT_TRUE(Closure->isDependentType());
 }
 
 } // namespace
