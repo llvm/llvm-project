@@ -188,7 +188,7 @@ define i32 @extract_last_active_v2i32(<2 x i32> %a, <2 x i1> %c) nounwind {
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[3,3,3,3]
 ; SSE2-NEXT:    psrld $31, %xmm0
 ; SSE2-NEXT:    movq %xmm0, %rcx
-; SSE2-NEXT:    movzwl %cx, %ecx
+; SSE2-NEXT:    movl %ecx, %ecx
 ; SSE2-NEXT:    orl -24(%rsp,%rcx,4), %eax
 ; SSE2-NEXT:    retq
 ;
