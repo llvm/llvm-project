@@ -4585,12 +4585,6 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
     return mlir::LLVM::LLVMArrayType::get(ty, type.getSize());
   });
   converter.addConversion([&](cir::VectorType type) -> mlir::Type {
-    // Vector-of-_BitInt memory layout is not modeled here (the element would
-    // stay at its literal width); report a conversion failure rather than emit
-    // an unvalidated vector.
-    if (auto intTy = mlir::dyn_cast<cir::IntType>(type.getElementType());
-        intTy && intTy.isBitInt())
-      return {};
     const mlir::Type ty = converter.convertType(type.getElementType());
     if (!ty)
       return {};

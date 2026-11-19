@@ -1673,6 +1673,11 @@ mlir::LogicalResult cir::VectorType::verify(
     mlir::Type elementType, llvm::ElementCount size) {
   if (size.isZero())
     return emitError() << "the number of vector elements must be non-zero";
+  if (auto intTy = mlir::dyn_cast<cir::IntType>(elementType);
+      intTy && intTy.isBitInt() && !llvm::isPowerOf2_32(intTy.getWidth()))
+    return emitError() << "a _BitInt vector element type must have a "
+                          "power-of-2 width, got "
+                       << elementType;
   return success();
 }
 
