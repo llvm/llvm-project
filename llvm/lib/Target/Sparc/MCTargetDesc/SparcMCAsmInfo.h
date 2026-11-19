@@ -32,6 +32,7 @@ public:
 
 namespace Sparc {
 uint16_t parseSpecifier(StringRef name);
+uint16_t parseDataSpecifier(StringRef name);
 StringRef getSpecifierName(uint16_t S);
 } // namespace Sparc
 

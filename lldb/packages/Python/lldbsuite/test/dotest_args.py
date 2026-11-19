@@ -212,12 +212,6 @@ def create_parser():
         help='Run "setting set SETTING VALUE" before executing any test.',
     )
     group.add_argument(
-        "-y",
-        type=int,
-        metavar="count",
-        help="Specify the iteration count used to collect our benchmarks. An example is the number of times to do 'thread step-over' to measure stepping speed.",
-    )
-    group.add_argument(
         "-#",
         type=int,
         metavar="sharp",
@@ -247,6 +241,14 @@ def create_parser():
             "lldb-test-build.noindex" if sys.platform == "darwin" else "lldb-test-build"
         ),
         help="The root build directory for the tests. It will be removed before running.",
+    )
+    group.add_argument(
+        "--timeout",
+        dest="timeout",
+        metavar="Timeout in seconds",
+        type=float,
+        default=0,
+        help="The timeout lit is using to run this test, if any.",
     )
     group.add_argument(
         "--lldb-module-cache-dir",

@@ -70,13 +70,51 @@ func.func @test_multiple_casts() {
 
 // -----
 
+// Test with acc.map_info operation
+func.func @test_map_info_name() {
+  %0 = memref.alloca() : memref<10xf32>
+  %size = arith.constant 40 : i64
+
+  %1 = acc.map_info varPtr(%0 : memref<10xf32>) varType(tensor<10xf32>)
+      size(%size : i64) elementSize(4) name("mapped_data")
+      descKind(none) mapFlags(to) -> memref<10xf32>
+
+  // Mark with test attribute - should find name from the map_info operation
+  %2 = memref.cast %1 {test.var_name} : memref<10xf32> to memref<?xf32>
+
+  // CHECK: op=%{{.*}} = memref.cast %{{.*}} {test.var_name} : memref<10xf32> to memref<?xf32>
+  // CHECK-NEXT: getVariableName="mapped_data"
+
+  return
+}
+
+// -----
+
+// A global has no name of its own to state, so it goes by the symbol it is
+// addressed through.
+memref.global @global_data : memref<10xf32>
+
+func.func @test_global_symbol() {
+  %0 = memref.get_global @global_data : memref<10xf32>
+
+  // Mark with test attribute - should find the symbol of the global
+  %1 = memref.cast %0 {test.var_name} : memref<10xf32> to memref<?xf32>
+
+  // CHECK: op=%{{.*}} = memref.cast %{{.*}} {test.var_name} : memref<10xf32> to memref<?xf32>
+  // CHECK-NEXT: getVariableName="global_data"
+
+  return
+}
+
+// -----
+
 // Test with acc.copyin operation
 func.func @test_copyin_name() {
   // Create a memref
   %0 = memref.alloca() : memref<10xf32>
 
   // Create an acc.copyin operation with a name
-  %1 = acc.copyin varPtr(%0 : memref<10xf32>) -> memref<10xf32> {name = "input_data"}
+  %1 = acc.copyin varPtr(%0 : memref<10xf32>) name("input_data") -> memref<10xf32>
 
   // Mark with test attribute - should find name from copyin operation
   %2 = memref.cast %1 {test.var_name} : memref<10xf32> to memref<?xf32>

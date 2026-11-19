@@ -29,10 +29,10 @@
 
 define amdgpu_vs void @main(ptr addrspace(4) inreg %arg, ptr addrspace(4) inreg %arg1, ptr addrspace(4) inreg %arg2, ptr addrspace(4) inreg %arg3, ptr addrspace(4) inreg %arg4, i32 inreg %arg5, i32 inreg %arg6, i32 %arg7, i32 %arg8, i32 %arg9, i32 %arg10) #0 {
 bb:
-  %tmp11 = load <4 x i32>, ptr addrspace(4) %arg1, align 16, !tbaa !0
-  %tmp12 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp11, i32 0, i32 0)
-  %tmp13 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp11, i32 16, i32 0)
-  %tmp14 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp11, i32 32, i32 0)
+  %tmp11 = load ptr addrspace(8), ptr addrspace(4) %arg1, align 16, !tbaa !0
+  %tmp12 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %tmp11, i32 0, i32 0), !invariant.load !{}
+  %tmp13 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %tmp11, i32 16, i32 0), !invariant.load !{}
+  %tmp14 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %tmp11, i32 32, i32 0), !invariant.load !{}
   %tmp16 = load ptr addrspace(8), ptr addrspace(4) %arg4, align 16, !tbaa !0
   %tmp17 = add i32 %arg5, %arg7
   %tmp16.cast = bitcast ptr addrspace(8) %tmp16 to ptr addrspace(8)
@@ -486,7 +486,7 @@ bb157:                                            ; preds = %bb24
 declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #1
 declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #0
 
-declare float @llvm.amdgcn.s.buffer.load.f32(<4 x i32>, i32, i32) #1
+declare float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8), i32, i32) #1
 declare <4 x float> @llvm.amdgcn.struct.ptr.buffer.load.format.v4f32(ptr addrspace(8), i32, i32, i32, i32 immarg) #2
 
 attributes #0 = { nounwind }

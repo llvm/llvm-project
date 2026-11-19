@@ -21,7 +21,7 @@ define void @clmul_loop(ptr %a, ptr %b, ptr %c, i64 %n) {
 ; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK4]]
 ; CHECK-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -29,15 +29,15 @@ define void @clmul_loop(ptr %a, ptr %b, ptr %c, i64 %n) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i64, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i64, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i64, ptr [[C]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i64, ptr [[TMP2]], i64 2
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP2]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP2]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <2 x i64>, ptr [[TMP5]], align 8
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i64, ptr [[TMP3]], i64 2
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP3]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD6:%.*]] = load <2 x i64>, ptr [[TMP3]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD7:%.*]] = load <2 x i64>, ptr [[TMP6]], align 8
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <2 x i64> @llvm.clmul.v2i64(<2 x i64> [[WIDE_LOAD]], <2 x i64> [[WIDE_LOAD6]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <2 x i64> @llvm.clmul.v2i64(<2 x i64> [[WIDE_LOAD5]], <2 x i64> [[WIDE_LOAD7]])
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i64, ptr [[TMP4]], i64 2
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP4]], i64 16
 ; CHECK-NEXT:    store <2 x i64> [[TMP7]], ptr [[TMP4]], align 8
 ; CHECK-NEXT:    store <2 x i64> [[TMP8]], ptr [[TMP9]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4

@@ -17,6 +17,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
+#include "llvm/ExecutionEngine/Orc/Proxy.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimplePackedSerialization.h"
 #include "llvm/ExecutionEngine/Orc/Shared/VTuneSharedStructs.h"
 #include "llvm/Support/Compiler.h"
@@ -28,10 +29,7 @@ namespace orc {
 class LLVM_ABI VTuneSupportPlugin : public ObjectLinkingLayer::Plugin {
 public:
   VTuneSupportPlugin(ExecutorProcessControl &EPC, ExecutorAddr RegisterImplAddr,
-                     ExecutorAddr UnregisterImplAddr, bool EmitDebugInfo)
-      : EPC(EPC), RegisterVTuneImplAddr(RegisterImplAddr),
-        UnregisterVTuneImplAddr(UnregisterImplAddr),
-        EmitDebugInfo(EmitDebugInfo) {}
+                     ExecutorAddr UnregisterImplAddr, bool EmitDebugInfo);
 
   void modifyPassConfig(MaterializationResponsibility &MR,
                         jitlink::LinkGraph &G,
@@ -50,7 +48,7 @@ public:
 private:
   ExecutorProcessControl &EPC;
   ExecutorAddr RegisterVTuneImplAddr;
-  ExecutorAddr UnregisterVTuneImplAddr;
+  Proxy<void(VTuneUnloadedMethodIDs)> UnregisterVTuneImpl;
   std::mutex PluginMutex;
   uint64_t NextMethodID = 0;
   DenseMap<MaterializationResponsibility *, std::pair<uint64_t, uint64_t>>

@@ -556,16 +556,12 @@ void ManualDWARFIndex::Dump(Stream &s) {
 }
 
 bool ManualDWARFIndex::Decode(const DataExtractor &data,
-                              lldb::offset_t *offset_ptr,
-                              bool &signature_mismatch) {
-  signature_mismatch = false;
+                              lldb::offset_t *offset_ptr) {
   CacheSignature signature;
   if (!signature.Decode(data, offset_ptr))
     return false;
-  if (CacheSignature(m_dwarf->GetObjectFile()) != signature) {
-    signature_mismatch = true;
+  if (CacheSignature(m_dwarf->GetObjectFile()) != signature)
     return false;
-  }
   std::optional<IndexSet<NameToDIE>> set = DecodeIndexSet(data, offset_ptr);
   if (!set)
     return false;
@@ -617,11 +613,12 @@ std::string ManualDWARFIndex::GetCacheKey() {
 }
 
 bool ManualDWARFIndex::LoadFromCache() {
-  DataFileCache *cache = Module::GetIndexCache();
-  if (!cache)
-    return false;
   ObjectFile *objfile = m_dwarf->GetObjectFile();
   if (!objfile)
+    return false;
+  Module::LLDBIndexType type = Module::LLDBIndexType::eLLDBIndexTypeDwarfIndex;
+  DataFileCache *cache = Module::GetIndexCache(type);
+  if (!cache)
     return false;
   std::unique_ptr<llvm::MemoryBuffer> mem_buffer_up =
       cache->GetCachedData(GetCacheKey());
@@ -631,21 +628,23 @@ bool ManualDWARFIndex::LoadFromCache() {
                      mem_buffer_up->getBufferSize(),
                      endian::InlHostByteOrder(),
                      objfile->GetAddressByteSize());
-  bool signature_mismatch = false;
   lldb::offset_t offset = 0;
-  const bool result = Decode(data, &offset, signature_mismatch);
-  if (signature_mismatch)
+  const bool result = Decode(data, &offset);
+  // SaveToCache won't overwrite an existing cache file, so remove any file
+  // that can't be used or it will stop this index from being cached.
+  if (!result)
     cache->RemoveCacheFile(GetCacheKey());
   return result;
 }
 
 void ManualDWARFIndex::SaveToCache() {
-  DataFileCache *cache = Module::GetIndexCache();
-  if (!cache)
-    return; // Caching is not enabled.
   ObjectFile *objfile = m_dwarf->GetObjectFile();
   if (!objfile)
     return;
+  Module::LLDBIndexType type = Module::LLDBIndexType::eLLDBIndexTypeDwarfIndex;
+  DataFileCache *cache = Module::GetIndexCache(type);
+  if (!cache)
+    return; // Caching is not enabled.
   DataEncoder file(endian::InlHostByteOrder(), objfile->GetAddressByteSize());
   // Encode will return false if the object file doesn't have anything to make
   // a signature from.

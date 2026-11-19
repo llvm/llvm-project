@@ -25,15 +25,16 @@
 
 namespace llvm {
 
-class Type;
-class FunctionType;
-class Function;
-class LLVMContext;
-class Module;
+class APInt;
 class AttributeList;
 class AttributeSet;
-class raw_ostream;
 class Constant;
+class Function;
+class FunctionType;
+class LLVMContext;
+class Module;
+class raw_ostream;
+class Type;
 
 /// This namespace contains an enum with a value for every intrinsic/builtin
 /// function known by LLVM. The enum values are returned by
@@ -208,8 +209,8 @@ struct IITDescriptor {
     VecOfBitcastsToInt,
 
     // Partially dependent types. Overload index (self and of the overload
-    // type it depends on) in OverloadInfo.
-    VecOfAnyPtrsToElt,
+    // type it depends on) and any extra payload in OverloadInfo.
+    AnySameVecWidth,
 
   } Kind;
 
@@ -230,9 +231,9 @@ struct IITDescriptor {
     assert(Kind == Overloaded || Kind == Match || Kind == Extend ||
            Kind == Trunc || Kind == SameVecWidth || Kind == VecElement ||
            Kind == Subdivide2 || Kind == Subdivide4 ||
-           Kind == VecOfBitcastsToInt || Kind == VecOfAnyPtrsToElt ||
+           Kind == VecOfBitcastsToInt || Kind == AnySameVecWidth ||
            Kind == OneNthEltsVec);
-    // Overload index is packed into byte[0] of OverloadInfo.
+    // Overload index is packed into the low 4 bits of OverloadInfo.
     return OverloadInfo & 0xf;
   }
 
@@ -255,8 +256,15 @@ struct IITDescriptor {
   }
 
   unsigned getRefOverloadIndex() const {
-    assert(Kind == VecOfAnyPtrsToElt);
+    assert(Kind == AnySameVecWidth);
     return OverloadInfo >> 16;
+  }
+
+  // AnySameVecWidth uses the element constraint packed into bits [4:7] of
+  // OverloadInfo, leaving the low 4 bits for the overload index.
+  AnyKindElementConstraint getElementConstraint() const {
+    assert(Kind == AnySameVecWidth);
+    return (AnyKindElementConstraint)((OverloadInfo >> 4) & 0xf);
   }
 
   static IITDescriptor get(IITDescriptorKind K, unsigned Field) {
@@ -308,6 +316,14 @@ LLVM_ABI bool isSignatureValid(Function *F,
                                SmallVectorImpl<Type *> &OverloadTys,
                                raw_ostream &OS = nulls());
 
+/// Same as previous, but \p FT may omit exactly \p NumMissingTrailingParams
+/// trailing parameters. The omitted parameters must have concrete integer type
+/// so that all overload types can be resolved from the provided signature.
+LLVM_ABI bool isSignatureValid(Intrinsic::ID ID, FunctionType *FT,
+                               SmallVectorImpl<Type *> &OverloadTys,
+                               unsigned NumMissingTrailingParams,
+                               raw_ostream &OS = nulls());
+
 // Checks if the intrinsic name matches with its signature and if not
 // returns the declaration with the same signature and remangled name.
 // An existing GlobalValue with the wanted name but with a wrong prototype
@@ -326,6 +342,11 @@ LLVM_ABI void printImmArg(ID IID, unsigned ArgIdx, raw_ostream &OS,
                           const Constant *ImmArgVal);
 
 LLVM_ABI void printFPClassMask(raw_ostream &OS, const Constant *ImmArgVal);
+
+/// Returns true if \p Value satisfies the range constraints specified for
+/// argument \p ArgIdx of intrinsic \p IID.
+LLVM_ABI bool isImmArgValueInRangeSet(ID IID, unsigned ArgIdx,
+                                      const APInt &Value);
 
 } // namespace Intrinsic
 

@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Builder/MIFCommon.h"
-#include "flang/Lower/MultiImageFortran.h"
-#include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Dialect/MIF/MIFOps.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
@@ -29,10 +27,14 @@ std::string mif::getFullUniqName(mlir::Value addr) {
     return getFullUniqName(load.getMemref());
   else if (auto ba = mlir::dyn_cast<fir::BoxAddrOp>(op))
     return getFullUniqName(ba.getVal());
+  else if (auto c = mlir::dyn_cast<fir::ConvertOp>(op))
+    return getFullUniqName(c.getValue());
   else if (auto rb = mlir::dyn_cast<fir::ReboxOp>(op))
     return getFullUniqName(rb.getBox());
   else if (auto eb = mlir::dyn_cast<fir::EmboxOp>(op))
     return getFullUniqName(eb.getMemref());
+  else if (auto ac = mlir::dyn_cast<fir::ArrayCoorOp>(op))
+    return getFullUniqName(ac.getMemref());
   else if (auto ebc = mlir::dyn_cast<fir::EmboxCharOp>(op))
     return getFullUniqName(ebc.getMemref());
   else if (auto c = mlir::dyn_cast<fir::CoordinateOp>(op)) {

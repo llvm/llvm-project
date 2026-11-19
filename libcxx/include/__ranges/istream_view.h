@@ -66,9 +66,6 @@ public:
   using difference_type  = ptrdiff_t;
   using value_type       = _Val;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __iterator(basic_istream_view<_Val, _CharT, _Traits>& __parent) noexcept
-      : __parent_(std::addressof(__parent)) {}
-
   __iterator(const __iterator&)                  = delete;
   _LIBCPP_HIDE_FROM_ABI __iterator(__iterator&&) = default;
 
@@ -91,9 +88,14 @@ public:
 private:
   basic_istream_view<_Val, _CharT, _Traits>* __parent_;
 
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit __iterator(basic_istream_view<_Val, _CharT, _Traits>& __parent) noexcept
+      : __parent_(std::addressof(__parent)) {}
+
   _LIBCPP_HIDE_FROM_ABI constexpr basic_istream<_CharT, _Traits>* __get_parent_stream() const {
     return __parent_->__stream_;
   }
+
+  friend class basic_istream_view<_Val, _CharT, _Traits>;
 };
 
 template <class _Val>

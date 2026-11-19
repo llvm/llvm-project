@@ -32,10 +32,14 @@ namespace llvm {
 class MCSymbolGOFF;
 
 class SystemZHLASMAsmStreamer final : public MCAsmBaseStreamer {
+  // The full length of a line.
   constexpr static size_t InstLimit = 80;
+  // The column which contains the indicator that the line is continued.
   constexpr static size_t ContIndicatorColumn = 72;
+  // The start column of a contined line.
   constexpr static size_t ContStartColumn = 15;
   constexpr static size_t ContLen = ContIndicatorColumn - ContStartColumn;
+  constexpr static size_t MaxXLLen = 256;
   std::unique_ptr<formatted_raw_ostream> FOSOwner;
   formatted_raw_ostream &FOS;
   std::string Str;
@@ -72,6 +76,8 @@ public:
   void AddComment(const Twine &T, bool EOL = true) override;
 
   void emitBytes(StringRef Data) override;
+  void emitFill(const MCExpr &NumBytes, uint64_t FillValue,
+                SMLoc Loc = SMLoc()) override;
 
   void emitAlignmentDS(uint64_t ByteAlignment, std::optional<int64_t> Value,
                        unsigned ValueSize, unsigned MaxBytesToEmit);
@@ -101,7 +107,7 @@ public:
   bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override;
 
   void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
-                        Align ByteAlignment) override {}
+                        Align ByteAlignment) override;
 
   void emitZerofill(MCSection *Section, MCSymbol *Symbol = nullptr,
                     uint64_t Size = 0, Align ByteAlignment = Align(1),

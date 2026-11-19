@@ -86,20 +86,20 @@ void test_function(void) {
   // CHECK: call void asm sideeffect "", "~{r13}"()
   // CHECK: call void asm sideeffect "", "~{r14}"()
   // CHECK: call void asm sideeffect "", "~{r15}"()
-  // CHECK: INLINEASM &"", {{.*}} implicit-def early-clobber $pc
-  // CHECK: INLINEASM &"", {{.*}} implicit-def early-clobber $sp
-  // CHECK: INLINEASM &"", {{.*}} implicit-def early-clobber $sr
-  // CHECK: INLINEASM &"", {{.*}} implicit-def early-clobber $cg
-  // CHECK: INLINEASM &"", {{.*}} implicit-def early-clobber $r4
-  // CHECK: INLINEASM &"", {{.*}} implicit-def early-clobber $r5
-  // CHECK: INLINEASM &"", {{.*}} implicit-def early-clobber $r6
-  // CHECK: INLINEASM &"", {{.*}} implicit-def early-clobber $r7
-  // CHECK: INLINEASM &"", {{.*}} implicit-def early-clobber $r8
-  // CHECK: INLINEASM &"", {{.*}} implicit-def early-clobber $r9
-  // CHECK: INLINEASM &"", {{.*}} implicit-def early-clobber $r10
-  // CHECK: INLINEASM &"", {{.*}} implicit-def early-clobber $r11
-  // CHECK: INLINEASM &"", {{.*}} implicit-def early-clobber $r12
-  // CHECK: INLINEASM &"", {{.*}} implicit-def early-clobber $r13
-  // CHECK: INLINEASM &"", {{.*}} implicit-def early-clobber $r14
-  // CHECK: INLINEASM &"", {{.*}} implicit-def early-clobber $r15
+  // CHECK: INLINEASM &"", {{.*}} implicit-def dead early-clobber $pc
+  // CHECK: INLINEASM &"", {{.*}} implicit-def dead early-clobber $sp
+  // CHECK: INLINEASM &"", {{.*}} implicit-def dead early-clobber $sr
+  // CHECK: INLINEASM &"", {{.*}} implicit-def dead early-clobber $cg
+  // CHECK: INLINEASM &"", {{.*}} implicit-def dead early-clobber $r4
+  // CHECK: INLINEASM &"", {{.*}} implicit-def dead early-clobber $r5
+  // CHECK: INLINEASM &"", {{.*}} implicit-def dead early-clobber $r6
+  // CHECK: INLINEASM &"", {{.*}} implicit-def dead early-clobber $r7
+  // CHECK: INLINEASM &"", {{.*}} implicit-def dead early-clobber $r8
+  // CHECK: INLINEASM &"", {{.*}} implicit-def dead early-clobber $r9
+  // CHECK: INLINEASM &"", {{.*}} implicit-def dead early-clobber $r10
+  // CHECK: INLINEASM &"", {{.*}} implicit-def dead early-clobber $r11
+  // CHECK: INLINEASM &"", {{.*}} implicit-def dead early-clobber $r12
+  // CHECK: INLINEASM &"", {{.*}} implicit-def dead early-clobber $r13
+  // CHECK: INLINEASM &"", {{.*}} implicit-def dead early-clobber $r14
+  // CHECK: INLINEASM &"", {{.*}} implicit-def dead early-clobber $r15
 }

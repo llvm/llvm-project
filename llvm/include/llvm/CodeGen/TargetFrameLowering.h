@@ -34,6 +34,7 @@ enum Value {
   ScalableVector = 2,
   WasmLocal = 3,
   ScalablePredicateVector = 4,
+  AvrAlign = 5,
   NoAlloc = 255
 };
 }
@@ -191,6 +192,13 @@ public:
 
   /// Returns true if the target will correctly handle shrink wrapping.
   virtual bool enableShrinkWrapping(const MachineFunction &MF) const {
+    return false;
+  }
+
+  /// Returns true if Windows CFI shrink wrapping should be enabled by default.
+  /// Explicitly enabling shrink wrapping overrides this; mandatory restrictions
+  /// should be enforced by canUseAsPrologue() or canUseAsEpilogue().
+  virtual bool enableWindowsCFIShrinkWrapping(const MachineFunction &MF) const {
     return false;
   }
 

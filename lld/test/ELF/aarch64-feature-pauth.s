@@ -88,20 +88,21 @@
 # PACPLT-NEXT:     nop
 
 # RUN: not ld.lld tag1.o -z pauth-report=u 2>&1 | FileCheck --check-prefix=REPORT-ERR %s
-# REPORT-ERR:  error: unknown -z pauth-report= value: u{{$}}
+# REPORT-ERR:  error: unknown -z pauth-report= value 'u'
 # REPORT-EMPTY:
 
 #--- abi-tag-short.s
 
 .section ".note.gnu.property", "a"
 .long 4
-.long 20
+.long 24
 .long 5
 .asciz "GNU"
 .long 0xc0000001
 .long 12
 .quad 2
 .long 31
+.long 0
 
 #--- abi-tag-long.s
 

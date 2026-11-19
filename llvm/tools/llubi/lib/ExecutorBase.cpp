@@ -77,8 +77,10 @@ ExecutorBase::verifyMemAccess(const Pointer &Ptr, uint64_t AccessSize,
   // undefined behavior.
   if (IsStore ? MO->getState() != MemoryObjectState::Alive
               : MO->getState() == MemoryObjectState::Freed) {
+    SmallString<32> AddrStr;
+    Address.toStringUnsigned(AddrStr, 16);
     reportImmediateUB() << "Try to access a dead memory object at address 0x"
-                        << Twine::utohexstr(Address.getZExtValue()) << ".";
+                        << AddrStr << ".";
     return {};
   }
 
@@ -89,16 +91,18 @@ ExecutorBase::verifyMemAccess(const Pointer &Ptr, uint64_t AccessSize,
   }
 
   if (Address.countr_zero() < Log2(Alignment)) {
-    reportImmediateUB() << "Misaligned memory access. Address: 0x"
-                        << Twine::utohexstr(Address.getZExtValue())
+    SmallString<32> AddrStr;
+    Address.toStringUnsigned(AddrStr, 16);
+    reportImmediateUB() << "Misaligned memory access. Address: 0x" << AddrStr
                         << ", Required alignment: " << Alignment.value() << ".";
     return {};
   }
 
   if (AccessSize > MO->getSize() || Address.ult(MO->getAddress())) {
+    SmallString<32> AddrStr;
+    Address.toStringUnsigned(AddrStr, 16);
     reportImmediateUB() << "Memory access is out of bounds. Accessed size: "
-                        << AccessSize << ", Address: 0x"
-                        << Twine::utohexstr(Address.getZExtValue())
+                        << AccessSize << ", Address: 0x" << AddrStr
                         << ", Object base: 0x"
                         << Twine::utohexstr(MO->getAddress())
                         << ", Object size: " << MO->getSize() << ".";
@@ -108,9 +112,10 @@ ExecutorBase::verifyMemAccess(const Pointer &Ptr, uint64_t AccessSize,
   APInt Offset = Address - MO->getAddress();
 
   if (Offset.ugt(MO->getSize() - AccessSize)) {
+    SmallString<32> AddrStr;
+    Address.toStringUnsigned(AddrStr, 16);
     reportImmediateUB() << "Memory access is out of bounds. Accessed size: "
-                        << AccessSize << ", Address: 0x"
-                        << Twine::utohexstr(Address.getZExtValue())
+                        << AccessSize << ", Address: 0x" << AddrStr
                         << ", Object base: 0x"
                         << Twine::utohexstr(MO->getAddress())
                         << ", Object size: " << MO->getSize() << ".";

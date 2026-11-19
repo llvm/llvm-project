@@ -280,7 +280,7 @@ struct SCFTileAndFuseOptions {
   /// The tiling options used to control the tiling of the consumer.
   SCFTilingOptions tilingOptions;
   SCFTileAndFuseOptions &setTilingOptions(SCFTilingOptions options) {
-    tilingOptions = options;
+    tilingOptions = std::move(options);
     return *this;
   }
 
@@ -308,7 +308,7 @@ struct SCFTileAndFuseOptions {
     return ControlFnResult{};
   };
   SCFTileAndFuseOptions &setFusionControlFn(ControlFnTy controlFn) {
-    fusionControlFn = controlFn;
+    fusionControlFn = std::move(controlFn);
     return *this;
   }
 

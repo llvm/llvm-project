@@ -1,14 +1,13 @@
-add_custom_target(libc_semaphore_unittests)
-
 add_libc_test(
   semaphore_test
   SUITE
-    libc_semaphore_unittests
+    libc-semaphore-tests
   SRCS
     semaphore_test.cpp
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.fcntl_macros
+    libc.hdr.limits_macros
     libc.hdr.time_macros
     libc.hdr.types.struct_timespec
     libc.src.__support.time.clock_gettime

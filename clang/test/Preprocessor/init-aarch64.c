@@ -264,6 +264,7 @@
 // AARCH64-NEXT: #define __SHRT_WIDTH__ 16
 // AARCH64-NEXT: #define __SIG_ATOMIC_MAX__ 2147483647
 // AARCH64-NEXT: #define __SIG_ATOMIC_MIN__ (-__SIG_ATOMIC_MAX__ - 1)
+// AARCH64-NEXT: #define __SIG_ATOMIC_TYPE__ int
 // AARCH64-NEXT: #define __SIG_ATOMIC_WIDTH__ 32
 // AARCH64-NEXT: #define __SIZEOF_DOUBLE__ 8
 // AARCH64-NEXT: #define __SIZEOF_FLOAT__ 4
@@ -1169,3 +1170,6 @@
 // CMODEL_TINY: #define __AARCH64_CMODEL_TINY__ 1
 // CMODEL_SMALL: #define __AARCH64_CMODEL_SMALL__ 1
 // CMODEL_LARGE: #define __AARCH64_CMODEL_LARGE__ 1
+
+// RUN: %clang_cc1 -x c++ -E -dM -ffreestanding -triple=aarch64-unknown-none-elf < /dev/null | FileCheck -match-full-lines -check-prefix AARCH64-NONE-ELF-CXX %s
+// AARCH64-NONE-ELF-CXX: #define _GNU_SOURCE 1

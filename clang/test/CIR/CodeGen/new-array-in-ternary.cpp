@@ -56,27 +56,19 @@ DoubleAPFloat::DoubleAPFloat()
 // CIR-EH:         cir.store %[[FALSE_INIT]], %[[ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
 // CIR-EH:         %[[RESULT:.*]] = cir.ternary({{.*}}, true {
 // CIR-EH:           %[[NEW_RESULT:.*]] = cir.alloca "__new_result" {{.*}} : !cir.ptr<!cir.ptr<!rec_APFloat>>
-// CIR-EH:           %[[SPILL:.*]] = cir.alloca "tmp.exprcleanup" {{.*}} : !cir.ptr<!cir.ptr<!rec_APFloat>>
 // CIR-EH:           cir.call @_Znam
 // CIR-EH:           cir.cleanup.scope {
 // CIR-EH:             %[[TRUE:.*]] = cir.const #true
 // CIR-EH:             cir.store %[[TRUE]], %[[ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
-// CIR-EH:             cir.cleanup.scope {
-// CIR-EH:               %[[FALSE:.*]] = cir.const #false
-// CIR-EH:               cir.store %[[FALSE]], %[[ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
-// CIR-EH:               cir.store {{.*}} %{{.*}}, %[[SPILL]] : !cir.ptr<!rec_APFloat>, !cir.ptr<!cir.ptr<!rec_APFloat>>
-// CIR-EH:               cir.yield
-// CIR-EH:             } cleanup eh {
-// CIR-EH:               cir.call @_ZN7APFloatD1Ev
-// CIR-EH:             }
-// CIR-EH:             cir.yield
+// CIR-EH:             cir.store {{.*}} %{{.*}}, %[[NEW_RESULT]] : !cir.ptr<!rec_APFloat>, !cir.ptr<!cir.ptr<!rec_APFloat>>
+// CIR-EH-NOT:         cir.call @_ZN7APFloatD1Ev
 // CIR-EH:           } cleanup eh {
 // CIR-EH:             %[[IS_ACTIVE:.*]] = cir.load {{.*}} %[[ACTIVE]]
 // CIR-EH:             cir.if %[[IS_ACTIVE]] {
 // CIR-EH:               cir.call @_ZdaPvm
 // CIR-EH:             }
 // CIR-EH:           }
-// CIR-EH:           %[[RELOAD:.*]] = cir.load {{.*}} %[[SPILL]] : !cir.ptr<!cir.ptr<!rec_APFloat>>, !cir.ptr<!rec_APFloat>
+// CIR-EH:           %[[RELOAD:.*]] = cir.load {{.*}} %[[NEW_RESULT]] : !cir.ptr<!cir.ptr<!rec_APFloat>>, !cir.ptr<!rec_APFloat>
 // CIR-EH:           cir.yield %[[RELOAD]] : !cir.ptr<!rec_APFloat>
 // CIR-EH:         }, false {
 // CIR-EH:           %[[NULL:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!rec_APFloat>
@@ -96,7 +88,6 @@ DoubleAPFloat::DoubleAPFloat()
 // LLVM-EH:         %[[ALLOC:.*]] = call {{.*}} ptr @_Znam(i64 {{.*}} 8)
 // LLVMCIR-EH:      store i8 1, ptr %[[ACTIVE]]
 // OGCG-EH:         store i1 true, ptr %[[ACTIVE]]
-// LLVMCIR-EH:      store i8 0, ptr %[[ACTIVE]]
 // LLVM-EH:         br label %{{.*}}
 // LLVM-EH:       [[FALSE_BR]]:
 // LLVM-EH:         br label %{{.*}}
@@ -138,11 +129,11 @@ T &pickRef(bool b) {
 
 // CIR-EH-LABEL: cir.func {{.*}} @_Z7pickRefb
 // CIR-EH:         %[[RES:.*]] = cir.ternary({{.*}}, true {
-// CIR-EH:           %[[SPILL:.*]] = cir.alloca "tmp.exprcleanup" {{.*}} : !cir.ptr<!cir.ptr<!rec_T>>
+// CIR-EH:           %[[NEW_RESULT:.*]] = cir.alloca "__new_result" {{.*}} : !cir.ptr<!cir.ptr<!rec_T>>
 // CIR-EH:           cir.call @_Znam
 // CIR-EH:           cir.cleanup.scope {
 // CIR-EH:             cir.cleanup.scope {
-// CIR-EH:               cir.store {{.*}} %{{.*}}, %[[SPILL]] : !cir.ptr<!rec_T>, !cir.ptr<!cir.ptr<!rec_T>>
+// CIR-EH:               cir.store {{.*}} %{{.*}}, %{{.*}} : !cir.ptr<!rec_T>, !cir.ptr<!cir.ptr<!rec_T>>
 // CIR-EH:               cir.yield
 // CIR-EH:             } cleanup eh {
 // CIR-EH:               cir.call @_ZN1TD1Ev
@@ -151,7 +142,7 @@ T &pickRef(bool b) {
 // CIR-EH:           } cleanup eh {
 // CIR-EH:             cir.call @_ZdaPvm
 // CIR-EH:           }
-// CIR-EH:           %[[RELOAD:.*]] = cir.load {{.*}} %[[SPILL]] : !cir.ptr<!cir.ptr<!rec_T>>, !cir.ptr<!rec_T>
+// CIR-EH:           %[[RELOAD:.*]] = cir.load {{.*}} %[[NEW_RESULT]] : !cir.ptr<!cir.ptr<!rec_T>>, !cir.ptr<!rec_T>
 // CIR-EH:           cir.yield %[[RELOAD]] : !cir.ptr<!rec_T>
 // CIR-EH:         }, false {
 // CIR-EH:           %[[GREF:.*]] = cir.get_global @globalT : !cir.ptr<!rec_T>
@@ -171,7 +162,6 @@ T &pickRef(bool b) {
 // LLVM-EH:         %[[ALLOC:.*]] = call {{.*}} ptr @_Znam(i64 {{.*}} 10)
 // LLVMCIR-EH:      store i8 1, ptr %[[ACTIVE]]
 // OGCG-EH:         store i1 true, ptr %[[ACTIVE]]
-// LLVMCIR-EH:      store i8 0, ptr %[[ACTIVE]]
 // LLVM-EH:         br label %{{.*}}
 // LLVM-EH:       [[FALSE_BR]]:
 // LLVM-EH:         br label %{{.*}}

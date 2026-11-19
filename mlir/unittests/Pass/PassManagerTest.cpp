@@ -13,11 +13,18 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Diagnostics.h"
+#include "mlir/IR/Threading.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassInstrumentation.h"
 #include "gtest/gtest.h"
 
+#include <array>
+#include <atomic>
+#include <chrono>
+#include <condition_variable>
 #include <memory>
+#include <mutex>
+#include <thread>
 
 using namespace mlir;
 using namespace mlir::detail;
@@ -51,8 +58,8 @@ struct AnnotateFunctionPass
     auto &ga = getAnalysis<GenericAnalysis>();
     auto &sa = getAnalysis<OpSpecificAnalysis>();
 
-    op->setAttr("isFunc", builder.getBoolAttr(ga.isFunc));
-    op->setAttr("isSecret", builder.getBoolAttr(sa.isSecret));
+    op->setDiscardableAttr("isFunc", builder.getBoolAttr(ga.isFunc));
+    op->setDiscardableAttr("isSecret", builder.getBoolAttr(sa.isSecret));
   }
 };
 
@@ -96,11 +103,11 @@ struct AddAttrFunctionPass
   void runOnOperation() override {
     func::FuncOp op = getOperation();
     Builder builder(op->getParentOfType<ModuleOp>());
-    if (op->hasAttr("didProcess"))
-      op->setAttr("didProcessAgain", builder.getUnitAttr());
+    if (op->hasDiscardableAttr("didProcess"))
+      op->setDiscardableAttr("didProcessAgain", builder.getUnitAttr());
 
     // We always want to set this one.
-    op->setAttr("didProcess", builder.getUnitAttr());
+    op->setDiscardableAttr("didProcess", builder.getUnitAttr());
   }
 };
 
@@ -114,7 +121,7 @@ struct AddSecondAttrFunctionPass
   void runOnOperation() override {
     func::FuncOp op = getOperation();
     Builder builder(op->getParentOfType<ModuleOp>());
-    op->setAttr("didProcess2", builder.getUnitAttr());
+    op->setDiscardableAttr("didProcess2", builder.getUnitAttr());
   }
 };
 
@@ -215,6 +222,201 @@ TEST(PassManagerTest, PassInstrumentation) {
       EXPECT_EQ(counts.afterPassFailed, expected.afterPassFailed)
           << "failBefore=" << failBefore << ", failAfter=" << failAfter;
     }
+  }
+}
+
+// A worker keeps exclusive ownership of its state even while nested waits let
+// the same thread execute other tasks from the outer loop.
+TEST(PassManagerTest, ParallelWorkerOwnership) {
+  llvm::StdThreadPool pool(llvm::hardware_concurrency(4));
+  MLIRContext context(MLIRContext::Threading::DISABLED);
+  context.setThreadPool(pool);
+  std::vector<std::atomic<bool>> active(pool.getMaxConcurrency());
+  for (auto &flag : active)
+    flag = false;
+  std::atomic<unsigned> visits = 0;
+  auto indices = llvm::seq<unsigned>(0, 64);
+  EXPECT_TRUE(succeeded(failableParallelForEachWithWorkerId(
+      &context, indices.begin(), indices.end(), [&](unsigned, unsigned worker) {
+        EXPECT_LT(worker, active.size());
+        EXPECT_FALSE(active[worker].exchange(true));
+        auto inner = llvm::seq<unsigned>(0, 8);
+        EXPECT_TRUE(
+            succeeded(failableParallelForEach(&context, inner, [&](unsigned) {
+              ++visits;
+              return success();
+            })));
+        EXPECT_TRUE(active[worker].exchange(false));
+        return success();
+      })));
+  EXPECT_EQ(visits.load(), 64u * 8);
+  EXPECT_TRUE(failed(failableParallelForEachWithWorkerId(
+      &context, indices.begin(), indices.end(),
+      [&](unsigned, unsigned) { return failure(); })));
+  EXPECT_TRUE(succeeded(failableParallelForEachWithWorkerId(
+      &context, indices.begin(), indices.begin(), [&](unsigned, unsigned) {
+        ADD_FAILURE() << "empty range must not invoke the callback";
+        return failure();
+      })));
+
+  context.disableMultithreading();
+  unsigned serialVisits = 0;
+  EXPECT_TRUE(succeeded(failableParallelForEachWithWorkerId(
+      &context, indices.begin(), indices.end(), [&](unsigned, unsigned worker) {
+        EXPECT_EQ(worker, 0u);
+        ++serialVisits;
+        return success();
+      })));
+  EXPECT_EQ(serialVisits, 64u);
+  EXPECT_TRUE(failed(failableParallelForEachWithWorkerId(
+      &context, indices.begin(), indices.end(),
+      [&](unsigned, unsigned) { return failure(); })));
+}
+
+struct ConcurrentInstrumentation : PassInstrumentation {
+  bool isThreadSafe() const override { return true; }
+  std::mutex mutex;
+  std::condition_variable cv;
+  unsigned entered = 0;
+  unsigned overlapped = 0;
+
+  void runBeforePass(Pass *, Operation *) override {
+    std::unique_lock<std::mutex> lock(mutex);
+    ++entered;
+    cv.notify_all();
+    overlapped += cv.wait_for(lock, std::chrono::seconds(10),
+                              [&] { return entered == 2; });
+  }
+};
+
+TEST(PassManagerTest, ConcurrentInstrumentation) {
+  if (!llvm::llvm_is_multithreaded())
+    GTEST_SKIP();
+  PassInstrumentor instrumentor;
+  auto instrumentation = std::make_unique<ConcurrentInstrumentation>();
+  auto *ptr = instrumentation.get();
+  instrumentor.addInstrumentation(std::move(instrumentation));
+  std::thread first([&] { instrumentor.runBeforePass(nullptr, nullptr); });
+  std::thread second([&] { instrumentor.runBeforePass(nullptr, nullptr); });
+  first.join();
+  second.join();
+  EXPECT_EQ(ptr->entered, 2u);
+  EXPECT_EQ(ptr->overlapped, 2u);
+}
+
+// Non-atomic callback state remains protected, including when another
+// instrumentation opts into concurrent dispatch.
+TEST(PassManagerTest, SerializedInstrumentation) {
+  if (!llvm::llvm_is_multithreaded())
+    GTEST_SKIP();
+  struct Counter : PassInstrumentation {
+    Counter(bool threadSafe) : threadSafe(threadSafe) {}
+    bool threadSafe;
+    unsigned calls = 0;
+    bool isThreadSafe() const override { return threadSafe; }
+    void runBeforePass(Pass *, Operation *) override {
+      // Without serialization, this non-atomic read-modify-write would race.
+      // Yield between the read and write to increase the chance of a lost
+      // update, making the final count too small. ThreadSanitizer can also
+      // detect the race even if the final count happens to be correct.
+      unsigned previous = calls;
+      std::this_thread::yield();
+      calls = previous + 1;
+    }
+  };
+  PassInstrumentor instrumentor;
+  auto counter = std::make_unique<Counter>(false);
+  auto concurrent = std::make_unique<Counter>(true);
+  auto *counterPtr = counter.get();
+  auto *concurrentPtr = concurrent.get();
+  instrumentor.addInstrumentation(std::move(counter));
+  instrumentor.addInstrumentation(std::move(concurrent));
+  std::array<std::thread, 4> threads;
+  for (auto &thread : threads)
+    thread = std::thread([&] {
+      for (unsigned i = 0; i < 128; ++i)
+        instrumentor.runBeforePass(nullptr, nullptr);
+    });
+  for (auto &thread : threads)
+    thread.join();
+  EXPECT_EQ(counterPtr->calls, 512u);
+  EXPECT_EQ(concurrentPtr->calls, 512u);
+}
+
+TEST(PassManagerTest, CustomTimingManagerSerialization) {
+  struct CustomTimingManager : TimingManager {
+    std::atomic<bool> inCallback = false;
+    std::atomic<bool> overlap = false;
+
+    void observeCallback() {
+      if (inCallback.exchange(true))
+        overlap = true;
+      std::this_thread::yield();
+      inCallback = false;
+    }
+    std::optional<void *> rootTimer() override { return this; }
+    void startTimer(void *) override { observeCallback(); }
+    void stopTimer(void *) override { observeCallback(); }
+    void *nestTimer(void *, const void *,
+                    function_ref<std::string()>) override {
+      observeCallback();
+      return this;
+    }
+  };
+
+  llvm::StdThreadPool pool(llvm::hardware_concurrency(4));
+  MLIRContext context(MLIRContext::Threading::DISABLED);
+  context.setThreadPool(pool);
+  context.loadDialect<func::FuncDialect>();
+  Builder builder(&context);
+  OwningOpRef<ModuleOp> module(ModuleOp::create(builder.getUnknownLoc()));
+  for (unsigned i = 0; i < 64; ++i) {
+    auto func =
+        func::FuncOp::create(builder.getUnknownLoc(), "f" + std::to_string(i),
+                             builder.getFunctionType({}, {}));
+    func.setPrivate();
+    module->push_back(func);
+  }
+  auto timing = std::make_unique<CustomTimingManager>();
+  auto *timingPtr = timing.get();
+  auto pm = PassManager::on<ModuleOp>(&context);
+  pm.addNestedPass<func::FuncOp>(std::make_unique<AnnotateFunctionPass>());
+  pm.enableTiming(std::move(timing));
+  EXPECT_TRUE(succeeded(pm.run(module.get())));
+  EXPECT_FALSE(timingPtr->overlap.load());
+}
+
+TEST(PassManagerTest, NestedParallelTiming) {
+  llvm::StdThreadPool pool(llvm::hardware_concurrency(4));
+  MLIRContext context(MLIRContext::Threading::DISABLED);
+  context.setThreadPool(pool);
+  context.loadDialect<func::FuncDialect>();
+  Builder builder(&context);
+  auto module = ModuleOp::create(builder.getUnknownLoc());
+  OwningOpRef<ModuleOp> owner(module);
+  for (unsigned i = 0; i < 8; ++i) {
+    auto nested = ModuleOp::create(builder.getUnknownLoc());
+    module.push_back(nested);
+    for (unsigned j = 0; j < 8; ++j) {
+      auto func =
+          func::FuncOp::create(builder.getUnknownLoc(), "f" + std::to_string(j),
+                               builder.getFunctionType({}, {}));
+      func.setPrivate();
+      nested.push_back(func);
+    }
+  }
+  auto pm = PassManager::on<ModuleOp>(&context);
+  pm.nest<ModuleOp>().addNestedPass<func::FuncOp>(
+      std::make_unique<AnnotateFunctionPass>());
+  pm.enableTiming();
+  for (unsigned run = 0; run < 2; ++run) {
+    ASSERT_TRUE(succeeded(pm.run(module)));
+    unsigned processed = 0;
+    module.walk([&](func::FuncOp func) {
+      EXPECT_TRUE(func->hasDiscardableAttr("isFunc"));
+      ++processed;
+    });
+    EXPECT_EQ(processed, 64u);
   }
 }
 

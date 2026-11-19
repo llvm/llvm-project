@@ -8,7 +8,7 @@
 // without being widened to `[INT_MIN, INT_MAX]`.
 
 // CHECK-LABEL: func @bounded_acc_for
-// CHECK: test.reflect_bounds {smax = 10 : si32, smin = 0 : si32, umax = 10 : ui32, umin = 0 : ui32}
+// CHECK: test.reflect_bounds <umin = 0 : ui32, umax = 10 : ui32, smin = 0 : si32, smax = 10 : si32>
 func.func @bounded_acc_for(%n: i32) -> i32 {
   %c0 = arith.constant 0 : i32
   %c1 = arith.constant 1 : i32
@@ -28,7 +28,7 @@ func.func @bounded_acc_for(%n: i32) -> i32 {
 // CHECK-LABEL: func @bounded_acc_while
 // CHECK: %[[TRUE:.*]] = arith.constant true
 // CHECK: scf.condition(%[[TRUE]])
-// CHECK: test.reflect_bounds {smax = 10 : si32, smin = 0 : si32, umax = 10 : ui32, umin = 0 : ui32}
+// CHECK: test.reflect_bounds <umin = 0 : ui32, umax = 10 : ui32, smin = 0 : si32, smax = 10 : si32>
 func.func @bounded_acc_while() -> i32 {
   %c0 = arith.constant 0 : i32
   %c1 = arith.constant 1 : i32
@@ -48,7 +48,7 @@ func.func @bounded_acc_while() -> i32 {
 }
 
 // CHECK-LABEL: func @bounded_mask_for
-// CHECK: test.reflect_bounds {smax = 15 : si32, smin = 0 : si32, umax = 15 : ui32, umin = 0 : ui32}
+// CHECK: test.reflect_bounds <umin = 0 : ui32, umax = 15 : ui32, smin = 0 : si32, smax = 15 : si32>
 func.func @bounded_mask_for(%n: i32) -> i32 {
   %c0 = arith.constant 0 : i32
   %c1 = arith.constant 1 : i32

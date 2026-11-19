@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: no-threads
+// REQUIRES: can-test-hardening-assertions-extensive
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // <latch>
@@ -16,10 +17,6 @@
 
 // Make sure that calling count_down with a negative value or a value
 // higher than the internal counter triggers an assertion.
-
-// REQUIRES: has-unix-headers
-// REQUIRES: libcpp-hardening-mode={{extensive|debug}}
-// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 
 #include <latch>
 

@@ -28,18 +28,14 @@ namespace {
 class BlockFrequencyInfoTest : public testing::Test {
 protected:
   std::unique_ptr<BranchProbabilityInfo> BPI;
-  std::unique_ptr<DominatorTree> DT;
   std::unique_ptr<CycleInfo> CI;
-  std::unique_ptr<LoopInfo> LI;
   LLVMContext C;
 
   BlockFrequencyInfo buildBFI(Function &F) {
-    DT.reset(new DominatorTree(F));
-    LI.reset(new LoopInfo(*DT));
     CI.reset(new CycleInfo());
     CI->compute(F);
     BPI.reset(new BranchProbabilityInfo(F, *CI));
-    return BlockFrequencyInfo(F, *BPI, *LI);
+    return BlockFrequencyInfo(F, *BPI, *CI);
   }
   std::unique_ptr<Module> makeLLVMModule() {
     const char *ModuleStrig = "define i32 @f(i32 %x) {\n"

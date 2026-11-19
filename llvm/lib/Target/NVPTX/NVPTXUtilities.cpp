@@ -11,25 +11,29 @@
 //===----------------------------------------------------------------------===//
 
 #include "NVPTXUtilities.h"
-#include "NVPTX.h"
+#include "NVPTXSubtarget.h"
 #include "NVVMProperties.h"
+#include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Support/Alignment.h"
-#include "llvm/Support/CommandLine.h"
 #include <algorithm>
 
 using namespace llvm;
 
-static cl::opt<bool> ForceMinByValParamAlign(
-    "nvptx-force-min-byval-param-align", cl::Hidden,
-    cl::desc("NVPTX Specific: force 4-byte minimal alignment for byval"
-             " params of device functions."),
-    cl::init(false));
-
 Function *llvm::getMaybeBitcastedCallee(const CallBase *CB) {
   return dyn_cast<Function>(CB->getCalledOperand()->stripPointerCasts());
+}
+
+unsigned llvm::getFromTypeWidthForLoad(const MemSDNode *Mem) {
+  auto TotalWidth = Mem->getMemoryVT().getSizeInBits();
+  auto NumElts = Mem->getNumValues() - 1;
+  auto ElementBitWidth = TotalWidth / NumElts;
+  assert(isPowerOf2_32(ElementBitWidth) && ElementBitWidth >= 8 &&
+         ElementBitWidth <= 128 && TotalWidth <= 256 &&
+         "Invalid width for load");
+  return ElementBitWidth;
 }
 
 Align llvm::getPTXParamTypeAlign(Type *ArgTy, const DataLayout &DL) {
@@ -38,7 +42,8 @@ Align llvm::getPTXParamTypeAlign(Type *ArgTy, const DataLayout &DL) {
   return std::min(Align(128), DL.getABITypeAlign(ArgTy));
 }
 
-static Align getByValParamAlignFloor(const Function *F) {
+static Align getByValParamAlignFloor(const Function *F,
+                                     const LLVMContext &Ctx) {
   // Old ptx versions have a bug. When PTX code takes address of
   // byval parameter with alignment < 4, ptxas generates code to
   // spill argument into memory. Alas on sm_50+ ptxas generates
@@ -48,15 +53,16 @@ static Align getByValParamAlignFloor(const Function *F) {
   // ptxas > 9.0.
   // TODO: remove this after verifying the bug is not reproduced
   // on non-deprecated ptxas versions.
+  const NVPTXOptions &CLOpts = getNVPTXOptions(Ctx);
   const bool ShouldForceMinAlign =
-      ForceMinByValParamAlign && (!F || !isKernelFunction(*F));
+      CLOpts.force_min_byval_param_align && (!F || !isKernelFunction(*F));
   return ShouldForceMinAlign ? Align(4) : Align(1);
 }
 
 Align llvm::getDeviceByValParamAlign(const Function *F, Type *ArgTy,
                                      unsigned AttrIdx, const DataLayout &DL) {
   return std::max(getPTXParamAlign(F, ArgTy, AttrIdx, DL),
-                  getByValParamAlignFloor(F));
+                  getByValParamAlignFloor(F, ArgTy->getContext()));
 }
 
 Align llvm::getDeviceByValParamAlign(const CallBase *CB, Type *ArgTy,
@@ -71,7 +77,8 @@ Align llvm::getDeviceByValParamAlign(const CallBase *CB, Type *ArgTy,
         CB->getParamAlign(AttrIdx - AttributeList::FirstArgIndex).valueOrOne());
 
   return std::max(ParamAlign, getByValParamAlignFloor(
-                                  CB ? CB->getCalledFunction() : nullptr));
+                                  CB ? CB->getCalledFunction() : nullptr,
+                                  ArgTy->getContext()));
 }
 
 Align llvm::getPTXParamAlign(const Function *F, Type *Ty, unsigned AttrIdx,

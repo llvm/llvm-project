@@ -17,17 +17,17 @@ class NSDictionarySyntheticTestCase(TestBase):
         # Find the line number to break at.
         self.line = line_number("main.m", "// Set break point at this line.")
 
-    @skipUnlessDarwin
+    @requireDarwin
     def test_rdar11988289_with_run_command(self):
         """Test that NSDictionary reports its synthetic children properly."""
         self.build()
         self.run_tests()
 
-    @skipUnlessDarwin
+    @requireDarwin
     def test_rdar11988289_with_run_command_no_const(self):
         """Test that NSDictionary reports its synthetic children properly."""
         disable_constant_classes = {
-            "CFLAGS_EXTRAS": "-fno-constant-nsnumber-literals "
+            "TEST_CFLAGS_EXTRAS": "-fno-constant-nsnumber-literals "
             + "-fno-constant-nsarray-literals "
             + "-fno-constant-nsdictionary-literals",
         }

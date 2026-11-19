@@ -21,7 +21,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(pthread_id_np_t, pthread_getthreadid_np, ()) {
   // We assume that unique thread ID is an integer value of a pointer to TCB.
-  return reinterpret_cast<pthread_id_np_t>(self.attrib);
+  return reinterpret_cast<pthread_id_np_t>(current_thread().attrib);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

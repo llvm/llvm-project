@@ -51,13 +51,19 @@ __attribute__((visibility("protected"), used)) int x;
 
 // AMDGPU-LTO-TEMPS: clang{{.*}} --target=amdgpu10.30-amd-amdhsa -mcpu=gfx1030 {{.*}}-save-temps
 
+// RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run --save-temps \
+// RUN:   --linker-path=/usr/bin/ld %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=AMDGPU-SAVE-TEMPS-ASM
+
+// AMDGPU-SAVE-TEMPS-ASM-DAG: clang{{.*}} --target=amdgpu10.30-amd-amdhsa -mcpu=gfx1030 {{.*}}-Wl,--save-temps{{$}}
+// AMDGPU-SAVE-TEMPS-ASM-DAG: clang{{.*}} --target=amdgpu10.30-amd-amdhsa -mcpu=gfx1030 {{.*}}-Xlinker --lto-emit-asm{{$}}
+
 // RUN: llvm-offload-binary -o %t.out \
-// RUN:   --image=file=%t.spirv.bc,kind=sycl,triple=spirv64-unknown-unknown,arch=generic
+// RUN:   --image=file=%t.spirv.bc,kind=sycl,triple=spirv64-unknown-unknown,arch=foo
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o -fembed-offload-object=%t.out
 // RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
 // RUN:   --linker-path=/usr/bin/ld %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=SPIRV-LINK
 
-// SPIRV-LINK: clang{{.*}} -o {{.*}}.img -dumpdir a.out.spirv64..img. --target=spirv64-unknown-unknown {{.*}}.o --sycl-link -Xlinker -triple=spirv64-unknown-unknown -Xlinker -arch=
+// SPIRV-LINK: clang{{.*}} -o {{.*}}.img -dumpdir a.out.spirv64.foo.img. --target=spirv64-unknown-unknown -march=foo {{.*}}.o --sycl-link{{$}}
 
 // RUN: llvm-offload-binary -o %t.out \
 // RUN:   --image=file=%t.elf.o,kind=openmp,triple=x86_64-unknown-linux-gnu \
@@ -106,6 +112,20 @@ __attribute__((visibility("protected"), used)) int x;
 // CUDA: usr/bin/ld{{.*}} {{.*}}.openmp.image.{{.*}}.o {{.*}}.cuda.image.{{.*}}.o
 
 // RUN: llvm-offload-binary -o %t.out \
+// RUN:   --image=file=%t.elf.o,kind=openmp,triple=nvptx64-nvidia-cuda,arch=sm_70 \
+// RUN:   --image=file=%t.elf.o,kind=openacc,triple=nvptx64-nvidia-cuda,arch=sm_70
+// RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o \
+// RUN:   -fembed-offload-object=%t.out
+// RUN: clang-linker-wrapper --dry-run --host-triple=x86_64-unknown-linux-gnu \
+// RUN:   --linker-path=/usr/bin/ld %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=OPENMP-OPENACC
+
+// The device images are linked together, and the result is registered with both
+// runtimes.
+// OPENMP-OPENACC: clang{{.*}} -o {{.*}}.img -dumpdir a.out.nvptx64.sm_70.img. --target=nvptx64-nvidia-cuda -march=sm_70 {{.*}}.o {{.*}}.o
+// OPENMP-OPENACC-NOT: --target=nvptx64-nvidia-cuda
+// OPENMP-OPENACC: usr/bin/ld{{.*}} {{.*}}.openmp.image.{{.*}}.o {{.*}}.openacc.image.{{.*}}.o
+
+// RUN: llvm-offload-binary -o %t.out \
 // RUN:   --image=file=%t.elf.o,kind=cuda,triple=nvptx64-nvidia-cuda,arch=sm_80 \
 // RUN:   --image=file=%t.elf.o,kind=cuda,triple=nvptx64-nvidia-cuda,arch=sm_75 \
 // RUN:   --image=file=%t.elf.o,kind=cuda,triple=nvptx64-nvidia-cuda,arch=sm_70 \
@@ -131,7 +151,7 @@ __attribute__((visibility("protected"), used)) int x;
 
 // HIP: clang{{.*}} -o [[IMG_GFX90A:.+]] -dumpdir a.out.amdgpu9.0a.gfx90a.img. --target=amdgpu9.0a-amd-amdhsa -mcpu=gfx90a
 // HIP: clang{{.*}} -o [[IMG_GFX908:.+]] -dumpdir a.out.amdgpu9.08.gfx908.img. --target=amdgpu9.08-amd-amdhsa -mcpu=gfx908
-// HIP: clang-offload-bundler{{.*}}-type=o -bundle-align=4096 -compress -compression-level=6 -targets=host-x86_64-unknown-linux-gnu,hip-amdgpu9.0a-amd-amdhsa--gfx90a,hip-amdgpu9.08-amd-amdhsa--gfx908 -input={{/dev/null|NUL}} -input=[[IMG_GFX90A]] -input=[[IMG_GFX908]] -output={{.*}}.hipfb
+// HIP: clang-offload-bundler{{.*}}-type=o -bundle-align=4096 -compress -compression-level=6 -targets=host-x86_64-unknown-linux-gnu,hip-amdgcn-amd-amdhsa--gfx90a,hip-amdgcn-amd-amdhsa--gfx908 -input={{/dev/null|NUL}} -input=[[IMG_GFX90A]] -input=[[IMG_GFX908]] -output={{.*}}.hipfb
 
 // RUN: llvm-offload-binary -o %t.out \
 // RUN:   --image=file=%t.elf.o,kind=openmp,triple=amdgpu9.08-amd-amdhsa,arch=gfx908 \
@@ -168,6 +188,27 @@ __attribute__((visibility("protected"), used)) int x;
 // RUN:   --linker-path=/usr/bin/lld-link %t.o -libpath:./ -out:a.exe 2>&1 | FileCheck %s --check-prefix=COFF
 
 // COFF: "/usr/bin/lld-link" {{.*}}.o -libpath:./ -out:a.exe {{.*}}openmp.image.wrapper{{.*}}
+
+// RUN: rm -rf %t.dir && mkdir -p %t.dir
+// RUN: llvm-ar rcs %t.dir/foo.lib %t.o
+// RUN: llvm-ar rcs %t.dir/libbar.dll.a %t.o
+// RUN: clang-linker-wrapper --host-triple=x86_64-unknown-windows-msvc --dry-run \
+// RUN:   --linker-path=/usr/bin/lld-link %t.o -libpath:%t.dir foo.lib -out:a.exe 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=COFF-LIBRARY
+// RUN: clang-linker-wrapper --host-triple=x86_64-w64-windows-gnu --dry-run \
+// RUN:   --linker-path=/usr/bin/ld.lld %t.o -L%t.dir -lbar -o a.exe 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=COFF-LIBRARY
+
+// COFF-LIBRARY: clang{{.*}} --target=nvptx64-nvidia-cuda -march=sm_70 {{.*}}.o {{.*}}.o
+
+// RUN: clang-linker-wrapper --host-triple=x86_64-unknown-windows-msvc --dry-run \
+// RUN:   --linker-path=/usr/bin/lld-link -wholearchive:%t.dir/foo.lib -out:a.exe 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=COFF-WHOLE-ARCHIVE
+// RUN: clang-linker-wrapper --host-triple=x86_64-unknown-windows-msvc --dry-run \
+// RUN:   --linker-path=/usr/bin/lld-link -libpath:%t.dir -wholearchive:foo.lib -out:a.exe 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=COFF-WHOLE-ARCHIVE
+
+// COFF-WHOLE-ARCHIVE: clang{{.*}} --target=nvptx64-nvidia-cuda -march=sm_70 {{[^ ]*}}.o{{$}}
 
 // RUN: llvm-offload-binary -o %t-lib.out \
 // RUN:   --image=file=%t.elf.o,kind=openmp,triple=amdgpu9.0a-amd-amdhsa,arch=gfx90a
@@ -396,7 +437,7 @@ __attribute__((visibility("protected"), used)) int x;
 // RUN:   %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=RELOCATABLE-LINK-HIP
 
 // RELOCATABLE-LINK-HIP: clang{{.*}} -o {{.*}}.img -dumpdir a.out.amdgpu9.0a.gfx90a.img. --target=amdgpu9.0a-amd-amdhsa
-// RELOCATABLE-LINK-HIP: clang-offload-bundler{{.*}} -type=o -bundle-align=4096 -targets=host-x86_64-unknown-linux-gnu,hip-amdgpu9.0a-amd-amdhsa--gfx90a -input={{/dev/null|NUL}} -input={{.*}} -output={{.*}}
+// RELOCATABLE-LINK-HIP: clang-offload-bundler{{.*}} -type=o -bundle-align=4096 -targets=host-x86_64-unknown-linux-gnu,hip-amdgcn-amd-amdhsa--gfx90a -input={{/dev/null|NUL}} -input={{.*}} -output={{.*}}
 // RELOCATABLE-LINK-HIP: /usr/bin/ld.lld{{.*}}-r
 // RELOCATABLE-LINK-HIP: llvm-objcopy{{.*}}a.out --remove-section .llvm.offloading
 // RELOCATABLE-LINK-HIP: --rename-section llvm_offload_entries
@@ -413,6 +454,17 @@ __attribute__((visibility("protected"), used)) int x;
 // RELOCATABLE-LINK-CUDA: fatbinary{{.*}} -64 --create {{.*}}.fatbin --image3=kind=elf,sm=89,file={{.*}}.img
 // RELOCATABLE-LINK-CUDA: /usr/bin/ld.lld{{.*}}-r
 // RELOCATABLE-LINK-CUDA: llvm-objcopy{{.*}}a.out --remove-section .llvm.offloading
+
+// RUN: llvm-offload-binary -o %t.out \
+// RUN:   --image=file=%t.spirv.bc,kind=sycl,triple=spirv64-unknown-unknown,arch=generic
+// RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o -fembed-offload-object=%t.out
+// RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
+// RUN:   --linker-path=/usr/bin/ld.lld -r %t.o \
+// RUN:   -o a.out 2>&1 | FileCheck %s --check-prefix=RELOCATABLE-LINK-SYCL
+
+// RELOCATABLE-LINK-SYCL: clang{{.*}} -o {{.*}}.img -dumpdir a.out.spirv64..img. --target=spirv64-unknown-unknown {{.*}} --sycl-link
+// RELOCATABLE-LINK-SYCL: /usr/bin/ld.lld{{.*}}-r
+// RELOCATABLE-LINK-SYCL: llvm-objcopy{{.*}}a.out --remove-section .llvm.offloading
 
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o
 // RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \

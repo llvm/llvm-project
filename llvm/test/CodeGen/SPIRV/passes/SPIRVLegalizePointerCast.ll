@@ -75,4 +75,422 @@ entry:
   ret void
 }
 
+define spir_func void @narrowStore(<1 x float> %v) #0 {
+; CHECK-LABEL: define spir_func void @narrowStore(
+; CHECK-NOT: call {{.*}}@llvm.spv.ptrcast
+; CHECK: call float @llvm.spv.bitcast.f32.v1f32(<1 x float>
+; CHECK: call <4 x float> @llvm.spv.insertelt.v4f32.v4f32.f32.i32(<4 x float>
+entry:
+  store <1 x float> %v, ptr addrspace(10) @OUTV, align 4
+  ret void
+}
+
 attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
+
+@.str = private unnamed_addr constant [4 x i8] c"Buf\00", align 1
+
+declare target("spirv.VulkanBuffer", [0 x i8], 12, 0) @llvm.spv.resource.handlefrombinding(i32, i32, i32, i32, ptr)
+declare ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x i8], 12, 0), i32)
+
+; Byte-addressable buffer tests model HLSL ByteAddressBuffer layout ([0 x i8] handles,
+; typed load/store via getpointer byte offset). emit-intrinsics adds ptrcast; legalize-pointer-cast removes it.
+
+define void @byteBufferStore() {
+; CHECK-LABEL: define void @byteBufferStore(
+; CHECK-NOT: call {{.*}}@llvm.spv.ptrcast
+; CHECK: store i8 42, ptr addrspace(11)
+; CHECK: call ptr addrspace(11) @llvm.spv.resource.getpointer{{.*}} i32 1)
+; CHECK: store i8 0, ptr addrspace(11)
+entry:
+  %handle = tail call target("spirv.VulkanBuffer", [0 x i8], 12, 0) @llvm.spv.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str)
+  %ptr = call ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x i8], 12, 0) %handle, i32 0)
+  store i32 42, ptr addrspace(11) %ptr, align 4
+  ret void
+}
+
+define void @byteBufferLoad() {
+; CHECK-LABEL: define void @byteBufferLoad(
+; CHECK-NOT: call {{.*}}@llvm.spv.ptrcast
+; CHECK: load i8, ptr addrspace(11)
+; CHECK: call ptr addrspace(11) @llvm.spv.resource.getpointer{{.*}} i32 1)
+; CHECK: load i8, ptr addrspace(11)
+entry:
+  %handle = tail call target("spirv.VulkanBuffer", [0 x i8], 12, 0) @llvm.spv.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str)
+  %ptr = call ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x i8], 12, 0) %handle, i32 0)
+  %val = load i32, ptr addrspace(11) %ptr, align 4
+  ret void
+}
+
+@slot = internal global target("spirv.VulkanBuffer", [0 x i8], 12, 0) poison, align 8
+
+define void @byteBufferStoreViaLoadedHandle() {
+; CHECK-LABEL: define void @byteBufferStoreViaLoadedHandle(
+; CHECK-NOT: call {{.*}}@llvm.spv.ptrcast
+; CHECK: load target("spirv.VulkanBuffer", [0 x i8], 12, 0), ptr @slot
+; CHECK: store i8 42, ptr addrspace(11)
+; CHECK: call ptr addrspace(11) @llvm.spv.resource.getpointer{{.*}} i32 1)
+entry:
+  %handle = tail call target("spirv.VulkanBuffer", [0 x i8], 12, 0) @llvm.spv.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str)
+  store target("spirv.VulkanBuffer", [0 x i8], 12, 0) %handle, ptr @slot, align 8
+  %loaded = load target("spirv.VulkanBuffer", [0 x i8], 12, 0), ptr @slot, align 8
+  %ptr = call ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x i8], 12, 0) %loaded, i32 0)
+  store i32 42, ptr addrspace(11) %ptr, align 4
+  ret void
+}
+
+define void @byteBufferLoadViaLoadedHandle() {
+; CHECK-LABEL: define void @byteBufferLoadViaLoadedHandle(
+; CHECK-NOT: call {{.*}}@llvm.spv.ptrcast
+; CHECK: load target("spirv.VulkanBuffer", [0 x i8], 12, 0), ptr @slot
+; CHECK: load i8, ptr addrspace(11)
+; CHECK: call ptr addrspace(11) @llvm.spv.resource.getpointer{{.*}} i32 1)
+entry:
+  %handle = tail call target("spirv.VulkanBuffer", [0 x i8], 12, 0) @llvm.spv.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str)
+  store target("spirv.VulkanBuffer", [0 x i8], 12, 0) %handle, ptr @slot, align 8
+  %loaded = load target("spirv.VulkanBuffer", [0 x i8], 12, 0), ptr @slot, align 8
+  %ptr = call ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x i8], 12, 0) %loaded, i32 0)
+  %val = load i32, ptr addrspace(11) %ptr, align 4
+  ret void
+}
+
+define void @byteBufferStore4() {
+; CHECK-LABEL: define void @byteBufferStore4(
+; CHECK-NOT: call {{.*}}@llvm.spv.ptrcast
+; CHECK: store i8
+; CHECK: call ptr addrspace(11) @llvm.spv.resource.getpointer{{.*}} i32 4)
+entry:
+  %handle = tail call target("spirv.VulkanBuffer", [0 x i8], 12, 0) @llvm.spv.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str)
+  %ptr = call ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x i8], 12, 0) %handle, i32 0)
+  store <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr addrspace(11) %ptr, align 16
+  ret void
+}
+
+define void @byteBufferLoad4() {
+; CHECK-LABEL: define void @byteBufferLoad4(
+; CHECK-NOT: call {{.*}}@llvm.spv.ptrcast
+; CHECK: load i8, ptr addrspace(11)
+; CHECK: call ptr addrspace(11) @llvm.spv.resource.getpointer{{.*}} i32 4)
+; CHECK: call {{.*}}@llvm.spv.insertelt
+entry:
+  %handle = tail call target("spirv.VulkanBuffer", [0 x i8], 12, 0) @llvm.spv.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str)
+  %ptr = call ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x i8], 12, 0) %handle, i32 0)
+  %val = load <4 x i32>, ptr addrspace(11) %ptr, align 16
+  ret void
+}
+
+@outI8 = addrspace(10) global i8 zeroinitializer
+@outI32 = addrspace(10) global i32 zeroinitializer
+@outF = addrspace(10) global float zeroinitializer
+
+; Single-byte access uses RetagDirect (retag + typed access), not byte-wise
+; decomposition.
+
+define void @byteBufferStoreI8() {
+; CHECK-LABEL: define void @byteBufferStoreI8(
+; CHECK-NOT: call {{.*}}@llvm.spv.ptrcast
+; CHECK: store i8 42, ptr addrspace(11)
+; CHECK-NOT: call ptr addrspace(11) @llvm.spv.resource.getpointer{{.*}} i32 1)
+entry:
+  %handle = tail call target("spirv.VulkanBuffer", [0 x i8], 12, 0) @llvm.spv.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str)
+  %ptr = call ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x i8], 12, 0) %handle, i32 0)
+  store i8 42, ptr addrspace(11) %ptr, align 1
+  ret void
+}
+
+define void @byteBufferLoadI8() {
+; CHECK-LABEL: define void @byteBufferLoadI8(
+; CHECK-NOT: call {{.*}}@llvm.spv.ptrcast
+; CHECK: load i8, ptr addrspace(11)
+; CHECK-NOT: call ptr addrspace(11) @llvm.spv.resource.getpointer{{.*}} i32 1)
+; CHECK: store i8 {{.*}}, ptr addrspace(10) @outI8
+entry:
+  %handle = tail call target("spirv.VulkanBuffer", [0 x i8], 12, 0) @llvm.spv.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str)
+  %ptr = call ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x i8], 12, 0) %handle, i32 0)
+  %val = load i8, ptr addrspace(11) %ptr, align 1
+  store i8 %val, ptr addrspace(10) @outI8, align 1
+  ret void
+}
+
+; Non-constant getpointer offset forces dynamic add in gepByteOffset.
+
+define void @byteBufferStoreDynamicOffset(i32 %byteOff) {
+; CHECK-LABEL: define void @byteBufferStoreDynamicOffset(
+; CHECK-NOT: call {{.*}}@llvm.spv.ptrcast
+; CHECK: add i32 {{.*}}%byteOff, 1
+; CHECK: call ptr addrspace(11) @llvm.spv.resource.getpointer{{.*}} i32 {{%}}
+entry:
+  %handle = tail call target("spirv.VulkanBuffer", [0 x i8], 12, 0) @llvm.spv.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str)
+  %ptr = call ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x i8], 12, 0) %handle, i32 %byteOff)
+  store i32 42, ptr addrspace(11) %ptr, align 4
+  ret void
+}
+
+define void @byteBufferLoadDynamicOffset(i32 %byteOff) {
+; CHECK-LABEL: define void @byteBufferLoadDynamicOffset(
+; CHECK-NOT: call {{.*}}@llvm.spv.ptrcast
+; CHECK: add i32 {{.*}}%byteOff, 1
+; CHECK: load i8, ptr addrspace(11)
+; CHECK: store i32 {{.*}}, ptr addrspace(10) @outI32
+entry:
+  %handle = tail call target("spirv.VulkanBuffer", [0 x i8], 12, 0) @llvm.spv.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str)
+  %ptr = call ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x i8], 12, 0) %handle, i32 %byteOff)
+  %val = load i32, ptr addrspace(11) %ptr, align 4
+  store i32 %val, ptr addrspace(10) @outI32, align 4
+  ret void
+}
+
+; Float access exercises bitcast in byte-wise combine/decompose paths.
+
+define void @byteBufferStoreFloat() {
+; CHECK-LABEL: define void @byteBufferStoreFloat(
+; CHECK-NOT: call {{.*}}@llvm.spv.ptrcast
+; CHECK: store i8
+; CHECK: call ptr addrspace(11) @llvm.spv.resource.getpointer{{.*}} i32 3)
+entry:
+  %handle = tail call target("spirv.VulkanBuffer", [0 x i8], 12, 0) @llvm.spv.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str)
+  %ptr = call ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x i8], 12, 0) %handle, i32 0)
+  store float 1.000000e+00, ptr addrspace(11) %ptr, align 4
+  ret void
+}
+
+define void @byteBufferLoadFloat() {
+; CHECK-LABEL: define void @byteBufferLoadFloat(
+; CHECK-NOT: call {{.*}}@llvm.spv.ptrcast
+; CHECK: load i8, ptr addrspace(11)
+; CHECK: call float @llvm.spv.bitcast.f32.i32(i32 {{.*}})
+; CHECK: store float {{.*}}, ptr addrspace(10) @outF
+entry:
+  %handle = tail call target("spirv.VulkanBuffer", [0 x i8], 12, 0) @llvm.spv.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str)
+  %ptr = call ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x i8], 12, 0) %handle, i32 0)
+  %val = load float, ptr addrspace(11) %ptr, align 4
+  store float %val, ptr addrspace(10) @outF, align 4
+  ret void
+}
+
+@outI16 = addrspace(10) global i16 zeroinitializer, align 2
+@outV2I16 = addrspace(10) global <2 x i16> zeroinitializer, align 4
+
+; i16 access uses byte-wise decomposition (2 bytes).
+
+define void @byteBufferStoreI16() {
+; CHECK-LABEL: define void @byteBufferStoreI16(
+; CHECK-NOT: call {{.*}}@llvm.spv.ptrcast
+; CHECK: store i8 42, ptr addrspace(11)
+; CHECK: call ptr addrspace(11) @llvm.spv.resource.getpointer{{.*}} i32 1)
+; CHECK: store i8 0, ptr addrspace(11)
+entry:
+  %handle = tail call target("spirv.VulkanBuffer", [0 x i8], 12, 0) @llvm.spv.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str)
+  %ptr = call ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x i8], 12, 0) %handle, i32 0)
+  store i16 42, ptr addrspace(11) %ptr, align 2
+  ret void
+}
+
+define void @byteBufferLoadI16() {
+; CHECK-LABEL: define void @byteBufferLoadI16(
+; CHECK-NOT: call {{.*}}@llvm.spv.ptrcast
+; CHECK: load i8, ptr addrspace(11)
+; CHECK: zext i8 {{.*}} to i16
+; CHECK: call ptr addrspace(11) @llvm.spv.resource.getpointer{{.*}} i32 1)
+; CHECK: store i16 {{.*}}, ptr addrspace(10) @outI16
+entry:
+  %handle = tail call target("spirv.VulkanBuffer", [0 x i8], 12, 0) @llvm.spv.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str)
+  %ptr = call ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x i8], 12, 0) %handle, i32 0)
+  %val = load i16, ptr addrspace(11) %ptr, align 2
+  store i16 %val, ptr addrspace(10) @outI16, align 2
+  ret void
+}
+
+; <2 x i16> vector access decomposes per element (4 bytes total).
+
+define void @byteBufferStoreV2I16() {
+; CHECK-LABEL: define void @byteBufferStoreV2I16(
+; CHECK-NOT: call {{.*}}@llvm.spv.ptrcast
+; CHECK: trunc i16 {{.*}} to i8
+; CHECK: store i8 {{.*}}, ptr addrspace(11)
+; CHECK: call ptr addrspace(11) @llvm.spv.resource.getpointer{{.*}} i32 3)
+entry:
+  %handle = tail call target("spirv.VulkanBuffer", [0 x i8], 12, 0) @llvm.spv.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str)
+  %ptr = call ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x i8], 12, 0) %handle, i32 0)
+  store <2 x i16> <i16 1, i16 2>, ptr addrspace(11) %ptr, align 4
+  ret void
+}
+
+define void @byteBufferLoadV2I16() {
+; CHECK-LABEL: define void @byteBufferLoadV2I16(
+; CHECK-NOT: call {{.*}}@llvm.spv.ptrcast
+; CHECK: load i8, ptr addrspace(11)
+; CHECK: zext i8 {{.*}} to i16
+; CHECK: call {{.*}}@llvm.spv.insertelt
+; CHECK: call void @llvm.spv.store.v2i16.p10
+entry:
+  %handle = tail call target("spirv.VulkanBuffer", [0 x i8], 12, 0) @llvm.spv.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str)
+  %ptr = call ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x i8], 12, 0) %handle, i32 0)
+  %val = load <2 x i16>, ptr addrspace(11) %ptr, align 4
+  store <2 x i16> %val, ptr addrspace(10) @outV2I16, align 4
+  ret void
+}
+
+; Same base pointer, i32 then i16 typed accesses (distinct ptrcasts).
+
+define void @byteBufferMixedI32ThenI16Store() {
+; CHECK-LABEL: define void @byteBufferMixedI32ThenI16Store(
+; CHECK-NOT: call {{.*}}@llvm.spv.ptrcast
+; CHECK: store i8 1, ptr addrspace(11)
+; CHECK: call ptr addrspace(11) @llvm.spv.resource.getpointer{{.*}} i32 3)
+; CHECK: store i8 2, ptr addrspace(11)
+entry:
+  %handle = tail call target("spirv.VulkanBuffer", [0 x i8], 12, 0) @llvm.spv.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str)
+  %ptr = call ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x i8], 12, 0) %handle, i32 0)
+  store i32 1, ptr addrspace(11) %ptr, align 4
+  store i16 2, ptr addrspace(11) %ptr, align 2
+  ret void
+}
+
+define void @byteBufferMixedLoadI32ThenI16() {
+; CHECK-LABEL: define void @byteBufferMixedLoadI32ThenI16(
+; CHECK-NOT: call {{.*}}@llvm.spv.ptrcast
+; CHECK: zext i8 {{.*}} to i32
+; CHECK: call ptr addrspace(11) @llvm.spv.resource.getpointer{{.*}} i32 1)
+; CHECK: zext i8 {{.*}} to i16
+; CHECK: shl i16
+entry:
+  %handle = tail call target("spirv.VulkanBuffer", [0 x i8], 12, 0) @llvm.spv.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str)
+  %ptr = call ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x i8], 12, 0) %handle, i32 0)
+  %i32val = load i32, ptr addrspace(11) %ptr, align 4
+  %i16val = load i16, ptr addrspace(11) %ptr, align 2
+  store i32 %i32val, ptr addrspace(10) @outI32, align 4
+  store i16 %i16val, ptr addrspace(10) @outI16, align 2
+  ret void
+}
+
+; A constant workgroup array index can become an i8 GEP followed by a ptrcast.
+; Rebuild its byte offset as logical indices instead of byte-wise accesses.
+
+@WorkgroupValues = internal addrspace(3) global [257 x i32] zeroinitializer,
+  align 4
+
+define void @workgroupStore() {
+; CHECK-LABEL: define void @workgroupStore(
+; CHECK-NOT: call {{.*}}@llvm.spv.ptrcast
+; CHECK: %[[PTR:.*]] = call ptr addrspace(3) {{.*}}@llvm.spv.gep.p3.p3(
+; CHECK-SAME: i1 true, ptr addrspace(3) @WorkgroupValues, i32 0, i64 256)
+; CHECK: call void @llvm.spv.assign.ptr.type.p3(
+; CHECK-SAME: ptr addrspace(3) %[[PTR]], metadata i32 poison, i32 3)
+; CHECK: store i32 42, ptr addrspace(3) %[[PTR]], align 4
+entry:
+  store i32 42, ptr addrspace(3) getelementptr inbounds
+    (i8, ptr addrspace(3) @WorkgroupValues, i64 1024), align 4
+  ret void
+}
+
+@WorkgroupNested = internal addrspace(3) global [2 x [4 x i32]]
+  zeroinitializer, align 4
+@WorkgroupStruct = internal addrspace(3) global { i32, [4 x i32] }
+  zeroinitializer, align 4
+@WorkgroupVectors = internal addrspace(3) global [2 x <4 x i32>]
+  zeroinitializer, align 16
+@WorkgroupFloat = internal addrspace(3) global float 0.0, align 4
+
+; Offset 16 reaches an array. The scalar access needs one more zero index.
+define i32 @workgroupNested() {
+; CHECK-LABEL: define i32 @workgroupNested(
+; CHECK: %[[ARRAY:.*]] = call ptr addrspace(3) {{.*}}@llvm.spv.gep.p3.p3(i1 true, ptr addrspace(3) @WorkgroupNested, i32 0, i64 1)
+; CHECK: %[[STORE:.*]] = call ptr addrspace(3) {{.*}}@llvm.spv.gep.p3.p3(i1 true, ptr addrspace(3) %[[ARRAY]], i32 0, i32 0)
+; CHECK: store i32 42, ptr addrspace(3) %[[STORE]], align 4
+; CHECK: %[[LOAD:.*]] = call ptr addrspace(3) {{.*}}@llvm.spv.gep.p3.p3(i1 false, ptr addrspace(3) %[[ARRAY]], i32 0, i32 0)
+; CHECK: %[[VALUE:.*]] = load i32, ptr addrspace(3) %[[LOAD]], align 4
+; CHECK: ret i32 %[[VALUE]]
+entry:
+  store i32 42, ptr addrspace(3) getelementptr inbounds
+    (i8, ptr addrspace(3) @WorkgroupNested, i64 16), align 4
+  %value = load i32, ptr addrspace(3) getelementptr inbounds
+    (i8, ptr addrspace(3) @WorkgroupNested, i64 16), align 4
+  ret i32 %value
+}
+
+define i32 @workgroupStruct() {
+; CHECK-LABEL: define i32 @workgroupStruct(
+; CHECK: %[[PTR:.*]] = call ptr addrspace(3) {{.*}}@llvm.spv.gep.p3.p3(i1 true, ptr addrspace(3) @WorkgroupStruct, i32 0, i64 1, i64 1)
+; CHECK: store i32 42, ptr addrspace(3) %[[PTR]], align 4
+; CHECK: %[[VALUE:.*]] = load i32, ptr addrspace(3) %[[PTR]], align 4
+; CHECK: ret i32 %[[VALUE]]
+entry:
+  store i32 42, ptr addrspace(3) getelementptr inbounds
+    (i8, ptr addrspace(3) @WorkgroupStruct, i64 8), align 4
+  %value = load i32, ptr addrspace(3) getelementptr inbounds
+    (i8, ptr addrspace(3) @WorkgroupStruct, i64 8), align 4
+  ret i32 %value
+}
+
+define i32 @workgroupVectorElement() {
+; CHECK-LABEL: define i32 @workgroupVectorElement(
+; CHECK: %[[PTR:.*]] = call ptr addrspace(3) {{.*}}@llvm.spv.gep.p3.p3(i1 true, ptr addrspace(3) @WorkgroupVectors, i32 0, i64 1, i64 1)
+; CHECK: store i32 42, ptr addrspace(3) %[[PTR]], align 4
+; CHECK: %[[VALUE:.*]] = load i32, ptr addrspace(3) %[[PTR]], align 4
+; CHECK: ret i32 %[[VALUE]]
+entry:
+  store i32 42, ptr addrspace(3) getelementptr inbounds
+    (i8, ptr addrspace(3) @WorkgroupVectors, i64 20), align 4
+  %value = load i32, ptr addrspace(3) getelementptr inbounds
+    (i8, ptr addrspace(3) @WorkgroupVectors, i64 20), align 4
+  ret i32 %value
+}
+
+define float @workgroupReinterpret(float %value) {
+; CHECK-LABEL: define float @workgroupReinterpret(
+; CHECK: %[[PTR:.*]] = call ptr addrspace(3) {{.*}}@llvm.spv.gep.p3.p3(i1 true, ptr addrspace(3) @WorkgroupValues, i32 0, i64 1)
+; CHECK: %[[STORED:.*]] = call i32 @llvm.spv.bitcast.i32.f32(float %value)
+; CHECK: store atomic volatile i32 %[[STORED]], ptr addrspace(3) %[[PTR]] release, align 4
+; CHECK: %[[LOADED:.*]] = load atomic volatile i32, ptr addrspace(3) %[[PTR]] acquire, align 4
+; CHECK: %[[RESULT:.*]] = call float @llvm.spv.bitcast.f32.i32(i32 %[[LOADED]])
+; CHECK: ret float %[[RESULT]]
+entry:
+  store atomic volatile float %value, ptr addrspace(3) getelementptr inbounds
+    (i8, ptr addrspace(3) @WorkgroupValues, i64 4) release, align 4
+  %result = load atomic volatile float, ptr addrspace(3) getelementptr
+    inbounds (i8, ptr addrspace(3) @WorkgroupValues, i64 4) acquire, align 4
+  ret float %result
+}
+
+define i32 @workgroupReinterpretScalar(i32 %value) {
+; CHECK-LABEL: define i32 @workgroupReinterpretScalar(
+; CHECK: %[[STORED:.*]] = call float @llvm.spv.bitcast.f32.i32(i32 %value)
+; CHECK: store float %[[STORED]], ptr addrspace(3) @WorkgroupFloat, align 4
+; CHECK: %[[LOADED:.*]] = load float, ptr addrspace(3) @WorkgroupFloat, align 4
+; CHECK: %[[RESULT:.*]] = call i32 @llvm.spv.bitcast.i32.f32(float %[[LOADED]])
+; CHECK: ret i32 %[[RESULT]]
+entry:
+  store i32 %value, ptr addrspace(3) @WorkgroupFloat, align 4
+  %result = load i32, ptr addrspace(3) @WorkgroupFloat, align 4
+  ret i32 %result
+}
+
+define void @workgroupDynamic(i64 %index) {
+; CHECK-LABEL: define void @workgroupDynamic(
+; CHECK: %[[OFFSET:.*]] = shl i64 %index, 2
+; CHECK: %[[INDEX:.*]] = udiv i64 %[[OFFSET]], 4
+; CHECK: %[[PTR:.*]] = call ptr addrspace(3) {{.*}}@llvm.spv.gep.p3.p3(i1 true, ptr addrspace(3) @WorkgroupValues, i32 0, i64 %[[INDEX]])
+; CHECK: store i32 42, ptr addrspace(3) %[[PTR]], align 4
+entry:
+  %offset = shl i64 %index, 2
+  %ptr = getelementptr inbounds i8, ptr addrspace(3) @WorkgroupValues,
+    i64 %offset
+  store i32 42, ptr addrspace(3) %ptr, align 4
+  ret void
+}
+
+define void @workgroupNestedExpression() {
+; CHECK-LABEL: define void @workgroupNestedExpression(
+; CHECK: %[[VALUE:.*]] = load i32, ptr addrspace(3) {{%.*}}, align 4
+; CHECK: call ptr addrspace(3) {{.*}}@llvm.spv.gep.p3.p3(i1 true, ptr addrspace(3) {{%.*}}, i32 0, i64 1)
+; CHECK: store i32 %[[VALUE]], ptr addrspace(3) {{%.*}}, align 4
+entry:
+  %value = load i32, ptr addrspace(3) getelementptr inbounds inrange(0, 16)
+    ([2 x [4 x i32]], ptr addrspace(3) @WorkgroupNested, i64 0, i64 1),
+    align 4
+  store i32 %value, ptr addrspace(3) getelementptr inbounds
+    (i8, ptr addrspace(3) getelementptr inbounds inrange(0, 16)
+      ([2 x [4 x i32]], ptr addrspace(3) @WorkgroupNested, i64 0, i64 1),
+      i64 4), align 4
+  ret void
+}

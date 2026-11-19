@@ -27,7 +27,7 @@ void DurationUnnecessaryConversionCheck::registerMatchers(MatchFinder *Finder) {
 
     // Matcher which matches the current scale's factory with a `1` argument,
     // e.g. `absl::Seconds(1)`.
-    auto FactoryMatcher = ignoringElidableConstructorCall(
+    const auto FactoryMatcher = ignoringElidableConstructorCall(
         callExpr(callee(functionDecl(hasName(DurationFactory))),
                  hasArgument(0, ignoringImpCasts(integerLiteral(equals(1))))));
 

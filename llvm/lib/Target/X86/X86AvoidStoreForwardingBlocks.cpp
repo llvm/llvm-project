@@ -54,16 +54,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "x86-avoid-sfb"
 
-static cl::opt<bool> DisableX86AvoidStoreForwardBlocks(
-    "x86-disable-avoid-SFB", cl::Hidden,
-    cl::desc("X86: Disable Store Forwarding Blocks fixup."), cl::init(false));
-
-static cl::opt<unsigned> X86AvoidSFBInspectionLimit(
-    "x86-sfb-inspection-limit",
-    cl::desc("X86: Number of instructions backward to "
-             "inspect for store forwarding blocks."),
-    cl::init(20), cl::Hidden);
-
 namespace {
 
 using DisplacementSizeMap = std::map<int64_t, unsigned>;
@@ -294,10 +284,8 @@ static unsigned getYMMtoXMMStoreOpcode(unsigned StoreOpcode) {
 }
 
 static int getAddrOffset(const MachineInstr *MI) {
-  const MCInstrDesc &Descl = MI->getDesc();
-  int AddrOffset = X86II::getMemoryOperandNo(Descl.TSFlags);
-  assert(AddrOffset != -1 && "Expected Memory Operand");
-  AddrOffset += X86II::getOperandBias(Descl);
+  int AddrOffset = X86II::getMemoryOperandIdx(MI->getDesc());
+  assert(AddrOffset >= 0 && "Expected a memory operand");
   return AddrOffset;
 }
 
@@ -341,10 +329,9 @@ static bool isRelevantAddressingMode(MachineInstr *MI) {
 // and load instructions have enough instructions in between to
 // keep the core busy.
 static SmallVector<MachineInstr *, 2>
-findPotentialBlockers(MachineInstr *LoadInst) {
+findPotentialBlockers(MachineInstr *LoadInst, unsigned InspectionLimit) {
   SmallVector<MachineInstr *, 2> PotentialBlockers;
   unsigned BlockCount = 0;
-  const unsigned InspectionLimit = X86AvoidSFBInspectionLimit;
   for (auto PBInst = std::next(MachineBasicBlock::reverse_iterator(LoadInst)),
             E = LoadInst->getParent()->rend();
        PBInst != E; ++PBInst) {
@@ -394,7 +381,7 @@ void X86AvoidSFBImpl::buildCopy(MachineInstr *LoadInst, unsigned NLoadOpcode,
 
   Register Reg1 =
       MRI->createVirtualRegister(TII->getRegClass(TII->get(NLoadOpcode), 0));
-  MachineInstr *NewLoad =
+  [[maybe_unused]] MachineInstr *NewLoad =
       BuildMI(*MBB, LoadInst, LoadInst->getDebugLoc(), TII->get(NLoadOpcode),
               Reg1)
           .add(LoadBase)
@@ -404,8 +391,6 @@ void X86AvoidSFBImpl::buildCopy(MachineInstr *LoadInst, unsigned NLoadOpcode,
           .addReg(X86::NoRegister)
           .addMemOperand(
               MBB->getParent()->getMachineMemOperand(LMMO, Offset, Size));
-  if (LoadBase.isReg())
-    getBaseOperand(NewLoad).setIsKill(false);
   LLVM_DEBUG(NewLoad->dump());
   // If the load and store are consecutive, use the loadInst location to
   // reduce register pressure.
@@ -414,7 +399,7 @@ void X86AvoidSFBImpl::buildCopy(MachineInstr *LoadInst, unsigned NLoadOpcode,
                                 MBB->instr_begin());
   if (PrevInstrIt.getNodePtr() == LoadInst)
     StInst = LoadInst;
-  MachineInstr *NewStore =
+  [[maybe_unused]] MachineInstr *NewStore =
       BuildMI(*MBB, StInst, StInst->getDebugLoc(), TII->get(NStoreOpcode))
           .add(StoreBase)
           .addImm(1)
@@ -424,11 +409,6 @@ void X86AvoidSFBImpl::buildCopy(MachineInstr *LoadInst, unsigned NLoadOpcode,
           .addReg(Reg1)
           .addMemOperand(
               MBB->getParent()->getMachineMemOperand(SMMO, Offset, Size));
-  if (StoreBase.isReg())
-    getBaseOperand(NewStore).setIsKill(false);
-  MachineOperand &StoreSrcVReg = StoreInst->getOperand(X86::AddrNumOperands);
-  assert(StoreSrcVReg.isReg() && "Expected virtual register");
-  NewStore->getOperand(X86::AddrNumOperands).setIsKill(StoreSrcVReg.isKill());
   LLVM_DEBUG(NewStore->dump());
 }
 
@@ -486,31 +466,6 @@ void X86AvoidSFBImpl::buildCopies(int Size, MachineInstr *LoadInst,
     }
   }
   assert(Size == 0 && "Wrong size division");
-}
-
-static void updateKillStatus(MachineInstr *LoadInst, MachineInstr *StoreInst) {
-  MachineOperand &LoadBase = getBaseOperand(LoadInst);
-  MachineOperand &StoreBase = getBaseOperand(StoreInst);
-  auto *StorePrevNonDbgInstr =
-      prev_nodbg(MachineBasicBlock::instr_iterator(StoreInst),
-                 LoadInst->getParent()->instr_begin())
-          .getNodePtr();
-  if (LoadBase.isReg()) {
-    MachineInstr *LastLoad = LoadInst->getPrevNode();
-    // If the original load and store to xmm/ymm were consecutive
-    // then the partial copies were also created in
-    // a consecutive order to reduce register pressure,
-    // and the location of the last load is before the last store.
-    if (StorePrevNonDbgInstr == LoadInst)
-      LastLoad = LoadInst->getPrevNode()->getPrevNode();
-    getBaseOperand(LastLoad).setIsKill(LoadBase.isKill());
-  }
-  if (StoreBase.isReg()) {
-    MachineInstr *StInst = StoreInst;
-    if (StorePrevNonDbgInstr == LoadInst)
-      StInst = LoadInst;
-    getBaseOperand(StInst->getPrevNode()).setIsKill(StoreBase.isKill());
-  }
 }
 
 bool X86AvoidSFBImpl::alias(const MachineMemOperand &Op1,
@@ -657,8 +612,8 @@ removeRedundantBlockingStores(DisplacementSizeMap &BlockingStoresDispSizeMap) {
 bool X86AvoidSFBImpl::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
 
-  if (DisableX86AvoidStoreForwardBlocks ||
-      !MF.getSubtarget<X86Subtarget>().is64Bit())
+  const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
+  if (ST.getCLOpts().disable_avoid_SFB || !ST.is64Bit())
     return false;
 
   MRI = &MF.getRegInfo();
@@ -675,7 +630,7 @@ bool X86AvoidSFBImpl::runOnMachineFunction(MachineFunction &MF) {
     DisplacementSizeMap BlockingStoresDispSizeMap;
 
     SmallVector<MachineInstr *, 2> PotentialBlockers =
-        findPotentialBlockers(LoadInst);
+        findPotentialBlockers(LoadInst, ST.getCLOpts().sfb_inspection_limit);
     for (auto *PBInst : PotentialBlockers) {
       if (!isPotentialBlockingStoreInst(PBInst->getOpcode(),
                                         LoadInst->getOpcode()) ||
@@ -707,7 +662,6 @@ bool X86AvoidSFBImpl::runOnMachineFunction(MachineFunction &MF) {
     LLVM_DEBUG(dbgs() << "Replaced with:\n");
     removeRedundantBlockingStores(BlockingStoresDispSizeMap);
     breakBlockedCopies(LoadInst, StoreInst, BlockingStoresDispSizeMap);
-    updateKillStatus(LoadInst, StoreInst);
     ForRemoval.push_back(LoadInst);
     ForRemoval.push_back(StoreInst);
   }

@@ -15,6 +15,13 @@ else()
   set(TSAN_HAS_LIBCXX False)
 endif()
 
+if(COMPILER_RT_BUILD_PROFILE AND COMPILER_RT_HAS_PROFILE)
+  list(APPEND TSAN_TEST_DEPS profile)
+  set(TSAN_HAS_PROFILE True)
+else()
+  set(TSAN_HAS_PROFILE False)
+endif()
+
 set(TSAN_DYNAMIC_TEST_DEPS ${TSAN_TEST_DEPS})
 set(TSAN_TESTSUITES)
 set(TSAN_DYNAMIC_TESTSUITES)
@@ -132,7 +139,7 @@ endif()
 add_lit_testsuite(check-tsan "Running ThreadSanitizer tests"
   ${TSAN_TESTSUITES}
   DEPENDS ${TSAN_TEST_DEPS})
-set_target_properties(check-tsan PROPERTIES FOLDER "Compiler-RT Tests")
+set_target_properties(check-tsan PROPERTIES FOLDER "compiler-rt Tests")
 
 if(COMPILER_RT_TSAN_HAS_STATIC_RUNTIME)
   add_lit_testsuite(check-tsan-dynamic "Running the ThreadSanitizer tests with dynamic runtime"

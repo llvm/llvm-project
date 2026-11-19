@@ -7,7 +7,7 @@ define void @pipeline() {
 ; CHECK: fpm
 ; CHECK: seed-collection
 ; CHECK: rpm
-; CHECK: bottom-up-vec
+; CHECK: bundle-vec
 ; CHECK: tr-accept-or-revert
 ; CHECK-EMPTY:
   ret void

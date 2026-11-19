@@ -86,9 +86,7 @@ protected:
   class DeclLink {
     /// A pointer to a known latest declaration, either statically known or
     /// generationally updated as decls are added by an external source.
-    using KnownLatest =
-        LazyGenerationalUpdatePtr<const Decl *, Decl *,
-                                  &ExternalASTSource::CompleteRedeclChain>;
+    using KnownLatest = LazyGenerationalDeclPtr;
 
     /// We store a pointer to the ASTContext in the UninitializedLatest
     /// pointer, but to avoid circular type dependencies when we steal the low
@@ -188,6 +186,7 @@ protected:
 
 public:
   friend class ASTDeclMerger;
+  friend class ASTDeclUnmerger;
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
   friend class IncrementalParser;

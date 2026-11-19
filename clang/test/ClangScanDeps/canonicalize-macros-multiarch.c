@@ -1,7 +1,7 @@
 // Verify cc1 jobs from a multi-arch driver command perform identical macro
 // canonicalization.
 
-// REQUIRES: system-darwin
+// REQUIRES: system-darwin && target={{.*}}-{{darwin|macos}}{{.*}}
 // RUN: rm -rf %t
 // RUN: split-file %s %t
 // RUN: sed -e "s|DIR|%/t|g" %t/cdb.json.in > %t/cdb.json

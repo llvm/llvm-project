@@ -11,7 +11,8 @@
 
 #include <__config>
 #include <__iterator/back_insert_iterator.h>
-#include <__locale>
+#include <__locale_dir/locale.h>
+#include <__locale_dir/utf8_conversions.h>
 #include <string>
 
 #if _LIBCPP_HAS_LOCALIZATION

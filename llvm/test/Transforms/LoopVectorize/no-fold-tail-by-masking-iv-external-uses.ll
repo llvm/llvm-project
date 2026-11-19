@@ -22,7 +22,7 @@ define i32 @test(ptr %arr, i64 %n) {
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[TMP0]], 3
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N_RND_UP]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[IND_END:%.*]] = add i64 1, [[TMP0]]
@@ -128,8 +128,8 @@ done:
 
 !0 = distinct !{!0, !1, !2, !3}
 !1 = !{!"llvm.loop.unroll.disable"}
-!2 = !{!"llvm.loop.vectorize.predicate.enable", i1 true}
-!3 = !{!"llvm.loop.vectorize.enable", i1 true}
+!2 = !{!"llvm.loop.vectorize.predicate.enable"}
+!3 = !{!"llvm.loop.vectorize.enable"}
 ;.
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.unroll.disable"}

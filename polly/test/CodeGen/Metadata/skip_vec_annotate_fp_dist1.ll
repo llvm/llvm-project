@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -S '-passes=polly<no-default-opts>' -polly-annotate-metadata-vectorize < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -S '-passes=polly<no-default-opts>' -plugin-arg=Polly,-polly-annotate-metadata-vectorize < %s | FileCheck %s
 
 ; Verify that vectorize.enable metadata is NOT added for a loop with a dist=1
 ; dependence involving floating-point operations. This is a workaround for
@@ -14,7 +14,7 @@
 ; CHECK: polly.stmt.for.body:
 ; CHECK: br {{.*}} !llvm.loop [[POLLY_LOOP:![0-9]+]]
 ; CHECK: [[POLLY_LOOP]] = distinct !{[[POLLY_LOOP]],
-; CHECK-NOT: !"llvm.loop.vectorize.enable", i1 true
+; CHECK-NOT: !"llvm.loop.vectorize.enable"
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32"
 target triple = "aarch64-unknown-linux-gnu"

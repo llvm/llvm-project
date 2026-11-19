@@ -11,14 +11,15 @@
 define amdgpu_kernel void @indirect_call_known_no_special_inputs() {
 ; GFX9-LABEL: indirect_call_known_no_special_inputs:
 ; GFX9:       ; %bb.0: ; %bb
+; GFX9-NEXT:    v_mov_b32_e32 v3, 0
+; GFX9-NEXT:    v_mov_b32_e32 v4, 0
+; GFX9-NEXT:    global_load_ubyte v3, v[3:4], off
 ; GFX9-NEXT:    s_add_u32 flat_scratch_lo, s12, s17
 ; GFX9-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
 ; GFX9-NEXT:    s_add_u32 s0, s0, s17
 ; GFX9-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX9-NEXT:    s_mov_b32 s13, s15
 ; GFX9-NEXT:    s_mov_b32 s12, s14
-; GFX9-NEXT:    s_mov_b64 s[14:15], 0
-; GFX9-NEXT:    s_load_dword s17, s[14:15], 0x0
 ; GFX9-NEXT:    s_getpc_b64 s[14:15]
 ; GFX9-NEXT:    s_add_u32 s14, s14, wobble@gotpcrel32@lo+4
 ; GFX9-NEXT:    s_addc_u32 s15, s15, wobble@gotpcrel32@hi+12
@@ -28,17 +29,19 @@ define amdgpu_kernel void @indirect_call_known_no_special_inputs() {
 ; GFX9-NEXT:    s_load_dwordx2 s[20:21], s[18:19], 0x0
 ; GFX9-NEXT:    s_load_dwordx2 s[22:23], s[14:15], 0x0
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_and_b32 s14, 1, s17
-; GFX9-NEXT:    s_cmp_eq_u32 s14, 1
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
-; GFX9-NEXT:    s_cselect_b32 s19, s23, s21
-; GFX9-NEXT:    s_cselect_b32 s18, s22, s20
 ; GFX9-NEXT:    v_or3_b32 v31, v0, v1, v2
-; GFX9-NEXT:    s_mov_b32 s14, s16
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX9-NEXT:    s_mov_b32 s32, 0
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_readfirstlane_b32 s14, v3
+; GFX9-NEXT:    s_and_b32 s14, 1, s14
+; GFX9-NEXT:    s_cmp_eq_u32 s14, 1
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    s_cselect_b32 s19, s23, s21
+; GFX9-NEXT:    s_cselect_b32 s18, s22, s20
+; GFX9-NEXT:    s_mov_b32 s14, s16
 ; GFX9-NEXT:    s_swappc_b64 s[30:31], s[18:19]
 ; GFX9-NEXT:    s_endpgm
 ;

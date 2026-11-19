@@ -32,7 +32,7 @@ end subroutine
 ! Body assignment inside the loop body
 ! CHECK: hlfir.designate
 ! CHECK: hlfir.assign
-! CHECK: collapse = [3]
+! CHECK: collapse([3])
 
 ! -----
 
@@ -66,7 +66,7 @@ end subroutine
 ! CHECK: acc.loop
 ! CHECK: acc.yield
 ! Outer has collapse = [2]
-! CHECK: collapse = [2]
+! CHECK: collapse([2])
 
 ! -----
 
@@ -109,4 +109,4 @@ end subroutine
 ! CHECK: acc.loop
 ! CHECK: acc.yield
 ! Outer has collapse = [3]
-! CHECK: collapse = [3]
+! CHECK: collapse([3])

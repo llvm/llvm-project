@@ -2,6 +2,22 @@
 // RUN: not llvm-mc -triple=amdgpu13.10 %s 2>&1 | FileCheck %s -check-prefix=GFX13 --implicit-check-not=error: --strict-whitespace
 
 //===----------------------------------------------------------------------===//
+// VOPD dot2acc instructions are not supported.
+//===----------------------------------------------------------------------===//
+
+v_dual_dot2acc_f32_f16 v0, v1, v2 :: v_dual_add_f32 v3, v4, v5
+// GFX13: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1310): v_dual_dot2acc_f32_f16
+
+v_dual_add_f32 v0, v1, v2 :: v_dual_dot2acc_f32_f16 v3, v4, v5
+// GFX13: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+
+v_dual_dot2acc_f32_bf16 v0, v1, v2 :: v_dual_add_f32 v3, v4, v5
+// GFX13: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1310): v_dual_dot2acc_f32_bf16
+
+v_dual_add_f32 v0, v1, v2 :: v_dual_dot2acc_f32_bf16 v3, v4, v5
+// GFX13: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+
+//===----------------------------------------------------------------------===//
 // A VOPD instruction can use only one literal.
 //===----------------------------------------------------------------------===//
 

@@ -259,3 +259,45 @@ static_assert(copy_obj(Arr{}) == 0);
 static_assert(copy_obj(fake_tuple{}) == 12);
 static_assert(copy_obj(Triple{}) == 3);
 }
+
+namespace GH214160 {
+struct S {
+  int x, y;
+};
+
+template <typename = void>
+void f() {
+    ([&]{ auto [...tmp] = S{}; tmp; }(), ...);
+  // expected-error@-1 {{expression contains unexpanded parameter pack 'tmp'}}
+  // expected-error@-2 {{pack expansion does not contain any unexpanded parameter packs}}
+}
+
+template void f<void>();
+
+template <typename = void>
+void g() {
+  ([&]{ auto [...tmp] = S{}; ((void)tmp, ...); }(), ...);
+  // expected-error@-1 {{pack expansion does not contain any unexpanded parameter packs}}
+}
+
+template void g<void>();
+
+template <typename = void>
+void h() {
+  auto [...tmp] = S{};
+  ([&]{ (void)tmp; }(), ...);
+}
+
+template void h<void>();
+
+template <typename = void>
+void i() {
+  [] {
+    auto [...tmp] = S{};
+    ([&]{ (void)tmp; }(), ...);
+  }();
+}
+
+template void i<void>();
+
+} // namespace GH214160

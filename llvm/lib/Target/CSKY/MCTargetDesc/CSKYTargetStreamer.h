@@ -57,6 +57,8 @@ protected:
 
   unsigned ConstantCounter = 0;
 
+  bool EmittedTargetAttributes = false;
+
 public:
   CSKYTargetStreamer(MCStreamer &S);
 
@@ -64,7 +66,7 @@ public:
   virtual void emitAttribute(unsigned Attribute, unsigned Value);
   virtual void finishAttributeSection();
 
-  virtual void emitTargetAttributes(const MCSubtargetInfo &STI);
+  void emitTargetAttributes(const MCSubtargetInfo &STI, bool HardFloatABI);
   /// Add a new entry to the constant pool for the current section and return an
   /// MCExpr that can be used to refer to the constant pool location.
   const MCExpr *addConstantPoolEntry(const MCExpr *, SMLoc Loc,

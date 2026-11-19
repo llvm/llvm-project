@@ -1,0 +1,26 @@
+// RUN: cir-opt %s -cir-to-llvm -o - | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+!u16i = !cir.int<u, 16>
+
+module {
+  cir.func @fshl_scalar(%a : !s32i, %b : !s32i, %c : !s32i) -> !s32i {
+    %0 = cir.fshl %a, %b, %c : !s32i
+    // CHECK: llvm.intr.fshl(%{{.*}}, %{{.*}}, %{{.*}}) : (i32, i32, i32) -> i32
+    cir.return %0 : !s32i
+  }
+
+  cir.func @fshr_scalar(%a : !u16i, %b : !u16i, %c : !u16i) -> !u16i {
+    %0 = cir.fshr %a, %b, %c : !u16i
+    // CHECK: llvm.intr.fshr(%{{.*}}, %{{.*}}, %{{.*}}) : (i16, i16, i16) -> i16
+    cir.return %0 : !u16i
+  }
+
+  cir.func @fshl_vector(%a : !cir.vector<4 x !s32i>,
+                        %b : !cir.vector<4 x !s32i>,
+                        %c : !cir.vector<4 x !s32i>) -> !cir.vector<4 x !s32i> {
+    %0 = cir.fshl %a, %b, %c : !cir.vector<4 x !s32i>
+    // CHECK: llvm.intr.fshl(%{{.*}}, %{{.*}}, %{{.*}}) : (vector<4xi32>, vector<4xi32>, vector<4xi32>) -> vector<4xi32>
+    cir.return %0 : !cir.vector<4 x !s32i>
+  }
+}

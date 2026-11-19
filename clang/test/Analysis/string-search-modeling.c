@@ -1,5 +1,8 @@
 // The u"" and U"" string literals below need C11 or later. Pin the standard
 // because targets such as PS4 default to gnu99.
+//
+// Deliberately no -triple here: the expectations below must hold for every
+// target and host, including big-endian ones. See test_strchr_wide_string_global.
 // RUN: %clang_analyze_cc1 -std=c17 -verify %s \
 // RUN:   -analyzer-checker=core,unix \
 // RUN:   -analyzer-checker=debug.ExprInspection \
@@ -11,6 +14,8 @@
 // RUN:   -analyzer-checker=core,unix \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config eagerly-assume=false
+
+// REQUIRES: x86-registered-target
 
 typedef __SIZE_TYPE__ size_t;
 void *malloc(size_t size);
@@ -520,53 +525,31 @@ void test_strpbrk_accept_embedded_null(void) {
   clang_analyzer_eval(strpbrk("xb", "a\0b") == 0); // expected-warning {{TRUE}}
 }
 
-// --- Wide string cast to char*: resolved via raw bytes ---
+// --- Wide string cast to char*: not folded ---
+// A wide literal's AST storage holds its code units in host byte order, so its
+// raw bytes must not be interpreted as a target byte string. The checker bails
+// out on these and stays conservative, keeping both branches.
 const __CHAR16_TYPE__ wide_str_global[] = u"abc";
 void test_strchr_wide_string_global(void) {
-#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-  // LE: bytes are 'a',0,'b',0,... — CStr is "a", strchr finds 'a' at offset 0.
-  clang_analyzer_eval(strchr((const char *)wide_str_global, 'a') == (const char *)wide_str_global); // expected-warning {{TRUE}}
-#else
-  // BE: bytes are 0,'a',0,'b',... — first byte is null, CStr is empty.
-  clang_analyzer_eval(strchr((const char *)wide_str_global, 'a') == 0); // expected-warning {{TRUE}}
-#endif
+  clang_analyzer_eval(strchr((const char *)wide_str_global, 'a') == 0); // expected-warning {{TRUE}} expected-warning {{FALSE}}
 }
 
 void test_strchr_wide_string_local(void) {
   const __CHAR16_TYPE__ w[] = u"abc";
-#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-  // LE: same as global — finds 'a' at offset 0.
-  clang_analyzer_eval(strchr((const char *)w, 'a') == (const char *)w); // expected-warning {{TRUE}}
-#else
-  // BE: first byte is null, CStr is empty.
-  clang_analyzer_eval(strchr((const char *)w, 'a') == 0); // expected-warning {{TRUE}}
-#endif
+  clang_analyzer_eval(strchr((const char *)w, 'a') == 0); // expected-warning {{TRUE}} expected-warning {{FALSE}}
 }
 
 // --- Wide string with 4-byte characters (UTF-32) ---
 const __CHAR32_TYPE__ wide32_global[] = U"abc";
 void test_strchr_wide32_string(void) {
-#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-  // LE: U"abc" bytes are 'a',0,0,0,'b',0,0,0,...  CStr is "a".
-  clang_analyzer_eval(strchr((const char *)wide32_global, 'a') == (const char *)wide32_global); // expected-warning {{TRUE}}
-#else
-  // BE: bytes are 0,0,0,'a',... — first byte is null, CStr is empty.
-  clang_analyzer_eval(strchr((const char *)wide32_global, 'a') == 0); // expected-warning {{TRUE}}
-#endif
+  clang_analyzer_eval(strchr((const char *)wide32_global, 'a') == 0); // expected-warning {{TRUE}} expected-warning {{FALSE}}
 }
 
 // --- Wide string as needle argument ---
 const __CHAR16_TYPE__ wide_needle[] = u"lo";
 void test_strstr_wide_needle(void) {
   const char *s = "hello";
-#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-  // LE: u"lo" bytes are 'l',0,'o',0,0,0 — getCStr gives "l".
-  // strstr("hello", "l") finds 'l' at offset 2.
-  clang_analyzer_eval(strstr(s, (const char *)wide_needle) == s + 2); // expected-warning {{TRUE}}
-#else
-  // BE: bytes are 0,'l',0,'o',... — CStr is empty, strstr returns haystack.
-  clang_analyzer_eval(strstr(s, (const char *)wide_needle) == s); // expected-warning {{TRUE}}
-#endif
+  clang_analyzer_eval(strstr(s, (const char *)wide_needle) == 0); // expected-warning {{TRUE}} expected-warning {{FALSE}}
 }
 
 // --- Struct cast to char* ---

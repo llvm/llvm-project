@@ -34,26 +34,26 @@ class DwarfLinkerForBinaryRelocationMap {
 public:
   void init(DWARFContext &Context);
 
-  bool isInitialized() {
-    return StoredValidDebugInfoRelocsMap.getMemorySize() != 0;
-  }
+  bool isInitialized() { return !Units.empty(); }
 
   void addValidRelocs(RelocationMap &RM);
 
-  void updateAndSaveValidRelocs(bool IsDWARF5,
-                                std::vector<ValidReloc> &InRelocs,
+  /// Save \p InRelocs, moved by \p LinkedOffset into \p OutSection, for the
+  /// unit at \p UnitOffset in the input.
+  void updateAndSaveValidRelocs(RelocSectionKind OutSection,
+                                const std::vector<ValidReloc> &InRelocs,
                                 uint64_t UnitOffset, int64_t LinkedOffset);
 
-  void updateRelocationsWithUnitOffset(uint64_t OriginalUnitOffset,
-                                       uint64_t OutputUnitOffset);
-
-  /// Map compilation unit offset to the valid relocations to store
-  /// @{
-  DenseMap<uint64_t, std::vector<ValidReloc>> StoredValidDebugInfoRelocsMap;
-  DenseMap<uint64_t, std::vector<ValidReloc>> StoredValidDebugAddrRelocsMap;
-  /// @}
-
   DwarfLinkerForBinaryRelocationMap() = default;
+
+private:
+  struct UnitRelocs {
+    std::vector<ValidReloc> DebugInfo;
+    std::vector<ValidReloc> DebugAddr;
+  };
+
+  /// Map compilation unit offset to the valid relocations to store.
+  DenseMap<uint64_t, UnitRelocs> Units;
 };
 
 struct ObjectWithRelocMap {
@@ -128,6 +128,9 @@ private:
     /// Address ranges for symbols with sizes (used for assembly file support).
     RangesTy AddressRanges;
 
+    /// Sorted linked start addresses of the symbols with a known size.
+    std::vector<uint64_t> LinkedSymbolStarts;
+
     /// Returns list of valid relocations from \p Relocs,
     /// between \p StartOffset and \p NextOffset.
     ///
@@ -157,30 +160,45 @@ private:
         DebugMapObjectType = MachO::N_LIB;
         LibInstallName.emplace(DMO.getInstallName().value());
         const RelocationMap &RM = DMO.getRelocationMap().value();
-        for (const auto &Reloc : RM.relocations()) {
-          const auto *DebugMapEntry = DMO.lookupSymbol(Reloc.SymbolName);
-          if (!DebugMapEntry)
-            continue;
-          std::optional<uint64_t> ObjAddress;
-          ObjAddress.emplace(DebugMapEntry->getValue().ObjectAddress.value());
-          ValidDebugInfoRelocs.emplace_back(
-              Reloc.Offset, Reloc.Size, Reloc.Addend, Reloc.SymbolName,
-              SymbolMapping(ObjAddress, DebugMapEntry->getValue().BinaryAddress,
-                            DebugMapEntry->getValue().Size));
-          // FIXME: Support relocations debug_addr.
-        }
+        auto AddRelocs =
+            [&](iterator_range<RelocationMap::const_iterator> Relocs,
+                std::vector<ValidReloc> &ValidRelocs) {
+              for (const auto &Reloc : Relocs) {
+                const auto *DebugMapEntry = DMO.lookupSymbol(Reloc.SymbolName);
+                if (!DebugMapEntry)
+                  continue;
+                std::optional<uint64_t> ObjAddress;
+                ObjAddress.emplace(
+                    DebugMapEntry->getValue().ObjectAddress.value());
+                ValidRelocs.emplace_back(
+                    Reloc.Offset, Reloc.Size, Reloc.Addend, Reloc.SymbolName,
+                    SymbolMapping(ObjAddress,
+                                  DebugMapEntry->getValue().BinaryAddress,
+                                  DebugMapEntry->getValue().Size));
+              }
+              // The lookups walk the relocations by offset.
+              llvm::sort(ValidRelocs);
+            };
+        AddRelocs(RM.debugInfoRelocations(), ValidDebugInfoRelocs);
+        AddRelocs(RM.debugAddrRelocations(), ValidDebugAddrRelocs);
       } else {
         findValidRelocsInDebugSections(Obj, DMO);
       }
-      // Populate address ranges from debug map symbols that have sizes.
-      // This is used for assembly files where labels may not have high_pc.
+      // Only a sized symbol has a known extent. The ranges stand in for the
+      // high_pc that assembly files lack.
       for (const auto &Entry : DMO.symbols()) {
         const auto &Mapping = Entry.getValue();
-        if (Mapping.Size && Mapping.ObjectAddress)
+        if (!Mapping.Size)
+          continue;
+        LinkedSymbolStarts.push_back(Mapping.BinaryAddress);
+        if (Mapping.ObjectAddress)
           AddressRanges.insert(
               {*Mapping.ObjectAddress, *Mapping.ObjectAddress + Mapping.Size},
               int64_t(Mapping.BinaryAddress) - *Mapping.ObjectAddress);
       }
+      llvm::sort(LinkedSymbolStarts);
+      LinkedSymbolStarts.erase(llvm::unique(LinkedSymbolStarts),
+                               LinkedSymbolStarts.end());
     }
     ~AddressManager() override { clear(); }
 
@@ -230,24 +248,32 @@ private:
 
     bool needToSaveValidRelocs() override { return true; }
 
-    void updateAndSaveValidRelocs(bool IsDWARF5, uint64_t OriginalUnitOffset,
+    bool updateAndSaveValidRelocs(RelocSectionKind InSection,
+                                  RelocSectionKind OutSection,
+                                  uint64_t OriginalUnitOffset,
                                   int64_t LinkedOffset, uint64_t StartOffset,
                                   uint64_t EndOffset) override;
-
-    void updateRelocationsWithUnitOffset(uint64_t OriginalUnitOffset,
-                                         uint64_t OutputUnitOffset) override;
 
     void clear() override {
       ValidDebugInfoRelocs.clear();
       ValidDebugAddrRelocs.clear();
       AddressRanges.clear();
+      LinkedSymbolStarts.clear();
     }
 
-    std::optional<AssemblyRange>
-    getAssemblyRangeForAddress(uint64_t Addr) override {
+    std::optional<SymbolRange>
+    getSymbolRangeForAddress(uint64_t Addr) override {
       if (auto Range = AddressRanges.getRangeThatContains(Addr))
-        return AssemblyRange(Range->Range.start(), Range->Range.end());
+        return SymbolRange(Range->Range.start(), Range->Range.end());
       return std::nullopt;
+    }
+
+    std::optional<uint64_t>
+    getNextLinkedSymbolStart(uint64_t LinkedAddr) override {
+      auto It = llvm::lower_bound(LinkedSymbolStarts, LinkedAddr);
+      if (It == LinkedSymbolStarts.end())
+        return std::nullopt;
+      return *It;
     }
   };
 
@@ -255,12 +281,6 @@ private:
   /// \defgroup Helpers Various helper methods.
   ///
   /// @{
-  template <typename OutStreamer>
-  bool createStreamer(const Triple &TheTriple,
-                      typename OutStreamer::OutputFileType FileType,
-                      std::unique_ptr<OutStreamer> &Streamer,
-                      raw_fd_ostream &OutFile);
-
   /// Attempt to load a debug object from disk.
   ErrorOr<const object::ObjectFile &> loadObject(const DebugMapObject &Obj,
                                                  const Triple &triple);

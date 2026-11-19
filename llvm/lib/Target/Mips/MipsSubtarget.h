@@ -14,6 +14,7 @@
 #define LLVM_LIB_TARGET_MIPS_MIPSSUBTARGET_H
 
 #include "MCTargetDesc/MipsABIInfo.h"
+#include "MCTargetDesc/MipsMCOptions.h"
 #include "MipsFrameLowering.h"
 #include "MipsISelLowering.h"
 #include "MipsInstrInfo.h"
@@ -24,6 +25,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <bitset>
 
 #define GET_SUBTARGETINFO_HEADER
 #include "MipsGenSubtargetInfo.inc"
@@ -31,25 +33,48 @@
 namespace llvm {
 class StringRef;
 
-enum CompactBranchPolicy {
-  CB_Never,   ///< The policy 'never' may in some circumstances or for some
-              ///< ISAs not be absolutely adhered to.
-  CB_Optimal, ///< Optimal is the default and will produce compact branches
-              ///< when appropriate.
-  CB_Always   ///< 'always' may in some circumstances may not be
-              ///< absolutely adhered to, there may not be a corresponding
-              ///< compact form of a branch.
+enum class CompactBranchPolicy {
+  Never,   ///< The policy 'never' may in some circumstances or for some
+           ///< ISAs not be absolutely adhered to.
+  Optimal, ///< Optimal is the default and will produce compact branches
+           ///< when appropriate.
+  Always   ///< 'always' may in some circumstances may not be
+           ///< absolutely adhered to, there may not be a corresponding
+           ///< compact form of a branch.
 };
+} // namespace llvm
 
+#define OPTIONS_STRUCT_DECL
+#include "MipsOptions.inc"
+
+namespace llvm {
 class MipsTargetMachine;
 
 class MipsSubtarget : public MipsGenSubtargetInfo {
+  const MipsOptions &CLOpts;
+  const MipsMCOptions &MCCLOpts;
+
   virtual void anchor();
 
   enum MipsArchEnum {
     MipsDefault,
-    Mips1, Mips2, Mips32, Mips32r2, Mips32r3, Mips32r5, Mips32r6, Mips32Max,
-    Mips3, Mips4, Mips5, Mips64, Mips64r2, Mips64r3, Mips64r5, Mips64r6
+    NanoMips,
+    Mips1,
+    Mips2,
+    Mips32,
+    Mips32r2,
+    Mips32r3,
+    Mips32r5,
+    Mips32r6,
+    Mips32Max,
+    Mips3,
+    Mips4,
+    Mips5,
+    Mips64,
+    Mips64r2,
+    Mips64r3,
+    Mips64r5,
+    Mips64r6
   };
 
   enum class CPU { Others, P5600, I6400, I6500 };
@@ -111,6 +136,9 @@ class MipsSubtarget : public MipsGenSubtargetInfo {
   // IsGP64bit - General-purpose registers are 64 bits wide
   bool IsGP64bit;
 
+  // MIPS GPRs explicitly reserved through -ffixed-REG.
+  std::bitset<32> UserReservedGPR;
+
   // IsPTR64bit - Pointers are 64 bit wide
   bool IsPTR64bit;
 
@@ -128,9 +156,6 @@ class MipsSubtarget : public MipsGenSubtargetInfo {
 
   // FixR5900 - Enable R5900 short loop erratum fix.
   bool FixR5900;
-
-  // isLinux - Target system is Linux. Is false we consider ELFOS for now.
-  bool IsLinux;
 
   // UseSmallSection - Small section is used.
   bool UseSmallSection;
@@ -166,14 +191,6 @@ class MipsSubtarget : public MipsGenSubtargetInfo {
 
   // Has3D -- Supports Mips3D ASE.
   bool Has3D;
-
-  // Allow mixed Mips16 and Mips32 in one source file
-  bool AllowMixed16_32;
-
-  // Optimize for space by compiling all functions as Mips 16 unless
-  // it needs floating point. Functions needing floating point are
-  // compiled as Mips32
-  bool Os16;
 
   // HasMSA -- supports MSA ASE.
   bool HasMSA;
@@ -226,13 +243,9 @@ class MipsSubtarget : public MipsGenSubtargetInfo {
   /// The overridden stack alignment.
   MaybeAlign StackAlignOverride;
 
-  // We can override the determination of whether we are in mips16 mode
-  // as from the command line
-  enum {NoOverride, Mips16Override, NoMips16Override} OverrideMode;
-
   const MipsTargetMachine &TM;
 
-  Triple TargetTriple;
+  MipsABIInfo ABI;
 
   std::unique_ptr<const SelectionDAGTargetInfo> TSInfo;
   std::unique_ptr<const MipsInstrInfo> InstrInfo;
@@ -249,13 +262,20 @@ public:
   bool isABI_N64() const;
   bool isABI_N32() const;
   bool isABI_O32() const;
-  const MipsABIInfo &getABI() const;
+  bool isABI_P32() const;
+  const MipsABIInfo &getABI() const { return ABI; }
   bool isABI_FPXX() const { return isABI_O32() && IsFPXX; }
+
+  bool isGPRReservedByUser(unsigned GPR) const {
+    assert(GPR < UserReservedGPR.size() && "GPR number out of range");
+    return UserReservedGPR[GPR];
+  }
 
   /// This constructor initializes the data members to match that
   /// of the specified triple.
-  MipsSubtarget(const Triple &TT, StringRef CPU, StringRef FS, bool little,
-                const MipsTargetMachine &TM, MaybeAlign StackAlignOverride);
+  MipsSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
+                StringRef ABIName, bool little, const MipsTargetMachine &TM,
+                MaybeAlign StackAlignOverride);
 
   ~MipsSubtarget() override;
 
@@ -297,6 +317,7 @@ public:
   bool hasMips64r3() const { return MipsArchVersion >= Mips64r3; }
   bool hasMips64r5() const { return MipsArchVersion >= Mips64r5; }
   bool hasMips64r6() const { return MipsArchVersion >= Mips64r6; }
+  bool hasNanoMips() const { return MipsArchVersion == NanoMips; }
 
   bool hasCnMips() const { return HasCnMips; }
   bool hasCnMipsP() const { return HasCnMipsP; }
@@ -320,13 +341,10 @@ public:
     return (HasSym32 && isABI_N64()) || isABI_N32() || isABI_O32();
   }
   bool isSingleFloat() const { return IsSingleFloat; }
-  bool isTargetCOFF() const { return TargetTriple.isOSBinFormatCOFF(); }
-  bool isTargetELF() const { return TargetTriple.isOSBinFormatELF(); }
+  bool isTargetCOFF() const { return getTargetTriple().isOSBinFormatCOFF(); }
+  bool isTargetELF() const { return getTargetTriple().isOSBinFormatELF(); }
   bool hasVFPU() const { return HasVFPU; }
   bool inMips16Mode() const { return InMips16Mode; }
-  bool inMips16ModeDefault() const {
-    return InMips16Mode;
-  }
   // Hard float for mips16 means essentially to compile as soft float
   // but to use a runtime library for soft float that is written with
   // native mips32 floating point instructions (those runtime routines
@@ -358,7 +376,9 @@ public:
     return UseCompactBranches && hasMips32r6();
   }
 
-  bool hasStandardEncoding() const { return !InMips16Mode && !InMicroMipsMode; }
+  bool hasStandardEncoding() const {
+    return !InMips16Mode && !InMicroMipsMode && !hasNanoMips();
+  }
 
   bool useSoftFloat() const { return IsSoftFloat; }
 
@@ -366,26 +386,17 @@ public:
 
   bool useXGOT() const { return UseXGOT; }
 
-  bool enableLongBranchPass() const {
-    return hasStandardEncoding() || inMicroMipsMode() || allowMixed16_32();
-  }
-
   /// Features related to the presence of specific instructions.
   bool hasExtractInsert() const { return !inMips16Mode() && hasMips32r2(); }
   bool hasMTHC1() const { return hasMips32r2(); }
 
-  bool allowMixed16_32() const { return inMips16ModeDefault() |
-                                        AllowMixed16_32; }
-
-  bool os16() const { return Os16; }
-
-  bool isTargetWindows() const { return TargetTriple.isOSWindows(); }
+  bool isTargetWindows() const { return getTargetTriple().isOSWindows(); }
 
   bool isXRaySupported() const override { return true; }
 
   // for now constant islands are on for the whole compilation unit but we only
   // really use them if in addition we are in mips16 mode
-  static bool useConstantIslands();
+  bool useConstantIslands() const;
 
   Align getStackAlignment() const { return stackAlignment; }
 
@@ -404,12 +415,10 @@ public:
     return hasMips32r6() && !StrictAlign;
   }
 
-  // Set helper classes
-  void setHelperClassesMips16();
-  void setHelperClassesMipsSE();
-
   const SelectionDAGTargetInfo *getSelectionDAGInfo() const override;
 
+  const MipsOptions &getCLOpts() const { return CLOpts; }
+  const MipsMCOptions &getMCCLOpts() const { return MCCLOpts; }
   const MipsInstrInfo *getInstrInfo() const override { return InstrInfo.get(); }
   const TargetFrameLowering *getFrameLowering() const override {
     return FrameLowering.get();
@@ -435,6 +444,6 @@ public:
   const RegisterBankInfo *getRegBankInfo() const override;
   InstructionSelector *getInstructionSelector() const override;
 };
-} // End llvm namespace
+} // namespace llvm
 
 #endif

@@ -183,7 +183,7 @@ struct Test {
                              Iter2(std::begin(rhs)),
                              Iter2(std::end(rhs)),
                              Pred{}) == std::make_pair(Iter1(std::begin(lhs) + i), Iter2(std::begin(rhs) + i)));
-        lhs[i] = i;
+        lhs[i] = static_cast<int>(i);
       });
       assert(std::mismatch(policy, Iter1(std::begin(lhs)), Iter1(std::end(lhs)), Iter2(std::begin(rhs)), Pred{}) ==
              std::make_pair(Iter1(std::end(lhs)), Iter2(std::end(rhs))));

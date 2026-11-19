@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MetadataLoader.h"
+#include "BitReaderOptions.h"
 #include "ValueList.h"
 
 #include "llvm/ADT/APInt.h"
@@ -15,7 +16,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -41,7 +41,6 @@
 #include "llvm/IR/TrackingMDRef.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -53,7 +52,6 @@
 #include <deque>
 #include <iterator>
 #include <limits>
-#include <map>
 #include <optional>
 #include <string>
 #include <tuple>
@@ -67,17 +65,6 @@ using namespace llvm;
 STATISTIC(NumMDStringLoaded, "Number of MDStrings loaded");
 STATISTIC(NumMDNodeTemporary, "Number of MDNode::Temporary created");
 STATISTIC(NumMDRecordLoaded, "Number of Metadata records loaded");
-
-/// Flag whether we need to import full type definitions for ThinLTO.
-/// Currently needed for Darwin and LLDB.
-static cl::opt<bool> ImportFullTypeDefinitions(
-    "import-full-type-definitions", cl::init(false), cl::Hidden,
-    cl::desc("Import full type definitions for ThinLTO."));
-
-static cl::opt<bool> DisableLazyLoading(
-    "disable-ondemand-mds-loading", cl::init(false), cl::Hidden,
-    cl::desc("Force disable the lazy-loading on-demand of metadata when "
-             "loading bitcode for importing."));
 
 namespace {
 
@@ -243,8 +230,8 @@ void BitcodeReaderMetadataList::tryToResolveCycles() {
     return;
 
   // Give up on finding a full definition for any forward decls that remain.
-  for (const auto &Ref : OldTypeRefs.FwdDecls)
-    OldTypeRefs.Final.insert(Ref);
+  for (const auto &[UUID, CT] : OldTypeRefs.FwdDecls)
+    OldTypeRefs.Final.try_emplace(UUID, CT);
   OldTypeRefs.FwdDecls.clear();
 
   // Upgrade from old type ref arrays.  In strange cases, this could add to
@@ -398,6 +385,7 @@ static Error error(const Twine &Message) {
 }
 
 class MetadataLoader::MetadataLoaderImpl {
+  const BitReaderOptions &Opts;
   BitcodeReaderMetadataList MetadataList;
   BitcodeReaderValueList &ValueList;
   BitstreamCursor &Stream;
@@ -462,6 +450,10 @@ class MetadataLoader::MetadataLoaderImpl {
 
   bool StripTBAA = false;
   bool HasSeenOldLoopTags = false;
+
+  /// Rebuilt alias scopes and domains, so that upgraded domains get reused
+  /// correctly and to memoize.
+  DenseMap<MDNode *, MDNode *> UpgradedAliasScopes;
   bool NeedUpgradeToDIGlobalVariableExpression = false;
   bool NeedDeclareExpressionUpgrade = false;
 
@@ -768,7 +760,8 @@ public:
   MetadataLoaderImpl(BitstreamCursor &Stream, Module &TheModule,
                      BitcodeReaderValueList &ValueList,
                      MetadataLoaderCallbacks Callbacks, bool IsImporting)
-      : MetadataList(TheModule.getContext(), Stream.SizeInBytes()),
+      : Opts(getBitReaderOptions(TheModule.getContext())),
+        MetadataList(TheModule.getContext(), Stream.SizeInBytes()),
         ValueList(ValueList), Stream(Stream), Context(TheModule.getContext()),
         TheModule(TheModule), Callbacks(std::move(Callbacks)),
         IsImporting(IsImporting) {}
@@ -799,6 +792,10 @@ public:
   }
 
   bool hasSeenOldLoopTags() const { return HasSeenOldLoopTags; }
+
+  MDNode *upgradeAliasScopeList(MDNode *ScopeList) {
+    return UpgradeAliasScopeList(*ScopeList, UpgradedAliasScopes);
+  }
 
   Error parseMetadataAttachment(Function &F,
                                 ArrayRef<Instruction *> InstructionList);
@@ -996,6 +993,7 @@ MetadataLoader::MetadataLoaderImpl::lazyLoadModuleMetadataBlock() {
       case bitc::METADATA_LABEL:
       case bitc::METADATA_EXPRESSION:
       case bitc::METADATA_OBJC_PROPERTY:
+      case bitc::METADATA_PROPERTY:
       case bitc::METADATA_IMPORTED_ENTITY:
       case bitc::METADATA_GLOBAL_VAR_EXPR:
       case bitc::METADATA_GENERIC_SUBRANGE:
@@ -1119,7 +1117,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseMetadata(bool ModuleLevel) {
   // We lazy-load module-level metadata: we build an index for each record, and
   // then load individual record as needed, starting with the named metadata.
   if (ModuleLevel && IsImporting && MetadataList.empty() &&
-      !DisableLazyLoading) {
+      Opts.ondemand_mds_loading) {
     auto SuccessOrErr = lazyLoadModuleMetadataBlock();
     if (!SuccessOrErr)
       return SuccessOrErr.takeError();
@@ -1472,8 +1470,8 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_LOCATION: {
-    // 5: inlinedAt, 6: isImplicit, 8: Key Instructions fields.
-    if (Record.size() != 5 && Record.size() != 6 && Record.size() != 8)
+    // 5: inlinedAt, 6: isImplicit, 8: Key Instructions fields, 9: irlayers.
+    if (Record.size() < 5 || Record.size() == 7 || Record.size() > 9)
       return error("Invalid record");
 
     IsDistinct = Record[0];
@@ -1482,12 +1480,44 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     Metadata *Scope = getMD(Record[3]);
     Metadata *InlinedAt = getMDOrNull(Record[4]);
     bool ImplicitCode = Record.size() >= 6 && Record[5];
-    uint64_t AtomGroup = Record.size() == 8 ? Record[6] : 0;
-    uint8_t AtomRank = Record.size() == 8 ? Record[7] : 0;
+    uint64_t AtomGroup = Record.size() >= 8 ? Record[6] : 0;
+    uint8_t AtomRank = Record.size() >= 8 ? Record[7] : 0;
+    Metadata *IRLayers = Record.size() >= 9 ? getMDOrNull(Record[8]) : nullptr;
     MetadataList.assignValue(
-        GET_OR_DISTINCT(DILocation, (Context, Line, Column, Scope, InlinedAt,
-                                     ImplicitCode, AtomGroup, AtomRank)),
+        GET_OR_DISTINCT(DILocation,
+                        (Context, Line, Column, Scope, InlinedAt, ImplicitCode,
+                         AtomGroup, AtomRank, IRLayers)),
         NextMetadataNo);
+    NextMetadataNo++;
+    break;
+  }
+  case bitc::METADATA_LAYERLOC: {
+    if (Record.size() != 5)
+      return error("Invalid record");
+
+    IsDistinct = Record[0];
+    unsigned Line = Record[1];
+    unsigned Column = Record[2];
+    Metadata *File = getMD(Record[3]);
+    // Read the kind opaquely and let the verifier report a bad type, as the
+    // other DI readers do: an unchecked cast would assert on malformed bitcode.
+    MDString *Kind = dyn_cast_if_present<MDString>(getMD(Record[4]));
+    MetadataList.assignValue(
+        GET_OR_DISTINCT(DILayerLoc, (Context, Kind, File, Line, Column)),
+        NextMetadataNo);
+    NextMetadataNo++;
+    break;
+  }
+  case bitc::METADATA_LAYERLOCLIST: {
+    if (Record.empty())
+      return error("Invalid record");
+
+    IsDistinct = Record[0];
+    SmallVector<Metadata *, 4> Elts;
+    for (unsigned I = 1, E = Record.size(); I != E; ++I)
+      Elts.push_back(getMD(Record[I]));
+    MetadataList.assignValue(GET_OR_DISTINCT(DILayerLocList, (Context, Elts)),
+                             NextMetadataNo);
     NextMetadataNo++;
     break;
   }
@@ -1654,25 +1684,36 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_STRING_TYPE: {
-    if (Record.size() > 9 || Record.size() < 8)
+    if (Record.size() > 10 || Record.size() < 8)
       return error("Invalid record");
 
     IsDistinct = Record[0] & 1;
     bool SizeIsMetadata = Record[0] & 2;
-    bool SizeIs8 = Record.size() == 8;
-    // StringLocationExp (i.e. Record[5]) is added at a later time
-    // than the other fields. The code here enables backward compatibility.
-    Metadata *StringLocationExp = SizeIs8 ? nullptr : getMDOrNull(Record[5]);
-    unsigned Offset = SizeIs8 ? 5 : 6;
+    // StringLocationExp (i.e. Record[5]) was added at a later time
+    // than most of the other fields, and CharType (Record[9]) was
+    // added even later.
+    // The code here enables backward compatibility.
+    Metadata *StringLocationExp = nullptr;
+    Metadata *CharType = nullptr;
+
+    bool StringLocPresent = Record.size() > 8;
+    size_t SizeOffset = StringLocPresent ? 6 : 5;
+
     Metadata *SizeInBits =
-        getMetadataOrConstant(SizeIsMetadata, Record[Offset]);
+        getMetadataOrConstant(SizeIsMetadata, Record[SizeOffset]);
+    if (StringLocPresent) {
+      StringLocationExp = getMDOrNull(Record[5]);
+    }
+    if (Record.size() == 10) {
+      CharType = getMDOrNull(Record[9]);
+    }
 
     MetadataList.assignValue(
         GET_OR_DISTINCT(DIStringType,
                         (Context, Record[1], getMDString(Record[2]),
                          getMDOrNull(Record[3]), getMDOrNull(Record[4]),
-                         StringLocationExp, SizeInBits, Record[Offset + 1],
-                         Record[Offset + 2])),
+                         StringLocationExp, SizeInBits, Record[SizeOffset + 1],
+                         Record[SizeOffset + 2], CharType)),
         NextMetadataNo);
     NextMetadataNo++;
     break;
@@ -1791,7 +1832,8 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     // We always import full definitions for anonymous composite types,
     // as without a name, debuggers cannot easily resolve a declaration
     // to its definition.
-    if (IsImporting && !ImportFullTypeDefinitions && Identifier && Name &&
+    if (IsImporting && !Opts.import_full_type_definitions && Identifier &&
+        Name &&
         (Tag == dwarf::DW_TAG_enumeration_type ||
          Tag == dwarf::DW_TAG_class_type ||
          Tag == dwarf::DW_TAG_structure_type ||
@@ -2416,6 +2458,20 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     NextMetadataNo++;
     break;
   }
+  case bitc::METADATA_PROPERTY: {
+    if (Record.size() != 6)
+      return error("Invalid record");
+
+    IsDistinct = Record[0];
+    MetadataList.assignValue(
+        GET_OR_DISTINCT(DIProperty, (Context, getMDString(Record[1]),
+                                     getMDOrNull(Record[2]), Record[3],
+                                     getDITypeRefOrNull(Record[4]),
+                                     getMDOrNull(Record[5]))),
+        NextMetadataNo);
+    NextMetadataNo++;
+    break;
+  }
   case bitc::METADATA_IMPORTED_ENTITY: {
     if (Record.size() < 6 || Record.size() > 8)
       return error("Invalid DIImportedEntity record");
@@ -2634,7 +2690,15 @@ Error MetadataLoader::MetadataLoaderImpl::parseMetadataAttachment(
         if (I->second == LLVMContext::MD_tbaa) {
           assert(!MD->isTemporary() && "should load MDs before attachments");
           MD = UpgradeTBAANode(*MD);
+        } else if (I->second == LLVMContext::MD_tbaa_struct) {
+          assert(!MD->isTemporary() && "should load MDs before attachments");
+          MD = UpgradeTBAAStructNode(*MD);
         }
+
+        if (I->second == LLVMContext::MD_alias_scope ||
+            I->second == LLVMContext::MD_noalias)
+          MD = upgradeAliasScopeList(MD);
+
         Inst->setMetadata(I->second, MD);
       }
       break;
@@ -2751,4 +2815,8 @@ void MetadataLoader::shrinkTo(unsigned N) { return Pimpl->shrinkTo(N); }
 
 void MetadataLoader::upgradeDebugIntrinsics(Function &F) {
   return Pimpl->upgradeDebugIntrinsics(F);
+}
+
+MDNode *MetadataLoader::upgradeAliasScopeList(MDNode *ScopeList) {
+  return Pimpl->upgradeAliasScopeList(ScopeList);
 }

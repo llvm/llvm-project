@@ -67,26 +67,10 @@ bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallTypeScript(
 }
 
 python::PythonObject
-lldb_private::python::SWIGBridge::LLDBSwigPythonCreateSyntheticProvider(
+lldb_private::python::SWIGBridge::LLDBSwigPythonCreateCommandObject(
     const char *python_class_name, const char *session_dictionary_name,
-    const lldb::ValueObjectSP &valobj_sp) {
+    lldb::DebuggerSP debugger_sp) {
   return python::PythonObject();
-}
-
-size_t lldb_private::python::SWIGBridge::LLDBSwigPython_CalculateNumChildren(
-    PyObject *implementor, uint32_t max) {
-  return 0;
-}
-
-PyObject *lldb_private::python::SWIGBridge::LLDBSwigPython_GetChildAtIndex(
-    PyObject *implementor, uint32_t idx) {
-  return nullptr;
-}
-
-uint32_t
-lldb_private::python::SWIGBridge::LLDBSwigPython_GetIndexOfChildWithName(
-    PyObject *implementor, const char *child_name) {
-  return 0;
 }
 
 void *
@@ -182,23 +166,6 @@ lldb_private::python::LLDBSWIGPython_CastPyObjectToSBTarget(PyObject *data) {
 lldb::ValueObjectSP
 lldb_private::python::SWIGBridge::LLDBSWIGPython_GetValueObjectSPFromSBValue(
     void *data) {
-  return nullptr;
-}
-
-bool lldb_private::python::SWIGBridge::
-    LLDBSwigPython_UpdateSynthProviderInstance(PyObject *implementor) {
-  return false;
-}
-
-bool lldb_private::python::SWIGBridge::
-    LLDBSwigPython_MightHaveChildrenSynthProviderInstance(
-        PyObject *implementor) {
-  return false;
-}
-
-PyObject *
-lldb_private::python::SWIGBridge::LLDBSwigPython_GetValueSynthProviderInstance(
-    PyObject *implementor) {
   return nullptr;
 }
 

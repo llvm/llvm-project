@@ -40,8 +40,8 @@ func.func @transfer_read_write_1d(%A : memref<?xf32>, %base: index) -> vector<17
 //  CHECK-SAME: (!llvm.ptr, i64) -> !llvm.ptr, f32
 //
 // 6. Rewrite as a masked read.
-//       CHECK: %[[loaded:.*]] = llvm.intr.masked.load %[[gep]], %[[mask]],
-//  CHECK-SAME: %[[PASS_THROUGH]] {alignment = 4 : i32} :
+//       CHECK: %[[loaded:.*]] = llvm.intr.masked.load(%[[gep]], %[[mask]],
+//  CHECK-SAME: %[[PASS_THROUGH]]), alignment(4) :
 //  CHECK-SAME: -> vector<17xf32>
 //
 // 1. Let dim be the memref dimension, compute the in-bound index (dim - offset)
@@ -61,8 +61,8 @@ func.func @transfer_read_write_1d(%A : memref<?xf32>, %base: index) -> vector<17
 //  CHECK-SAME: (!llvm.ptr, i64) -> !llvm.ptr, f32
 //
 // 4. Rewrite as a masked write.
-//       CHECK: llvm.intr.masked.store %[[loaded]], %[[gep_b]], %[[mask_b]]
-//  CHECK-SAME: {alignment = 4 : i32} :
+//       CHECK: llvm.intr.masked.store(%[[loaded]], %[[gep_b]], %[[mask_b]])
+//  CHECK-SAME: , alignment(4) :
 //  CHECK-SAME: vector<17xf32>, vector<17xi1> into !llvm.ptr
 
 func.func @transfer_read_write_1d_scalable(%A : memref<?xf32>, %base: index) -> vector<[17]xf32> {
@@ -104,8 +104,8 @@ func.func @transfer_read_write_1d_scalable(%A : memref<?xf32>, %base: index) -> 
 //  CHECK-SAME: (!llvm.ptr, i64) -> !llvm.ptr, f32
 //
 // 6. Rewrite as a masked read.
-//       CHECK: %[[loaded:.*]] = llvm.intr.masked.load %[[gep]], %[[mask]],
-//  CHECK-SAME: %[[PASS_THROUGH]] {alignment = 4 : i32} :
+//       CHECK: %[[loaded:.*]] = llvm.intr.masked.load(%[[gep]], %[[mask]],
+//  CHECK-SAME: %[[PASS_THROUGH]]), alignment(4) :
 //  CHECK-SAME: -> vector<[17]xf32>
 //
 // 1. Let dim be the memref dimension, compute the in-bound index (dim - offset)
@@ -128,8 +128,8 @@ func.func @transfer_read_write_1d_scalable(%A : memref<?xf32>, %base: index) -> 
 //  CHECK-SAME: (!llvm.ptr, i64) -> !llvm.ptr, f32
 //
 // 5. Rewrite as a masked write.
-//       CHECK: llvm.intr.masked.store %[[loaded]], %[[gep_b]], %[[mask_b]]
-//  CHECK-SAME: {alignment = 4 : i32} :
+//       CHECK: llvm.intr.masked.store(%[[loaded]], %[[gep_b]], %[[mask_b]])
+//  CHECK-SAME: , alignment(4) :
 //  CHECK-SAME: vector<[17]xf32>, vector<[17]xi1> into !llvm.ptr
 
 // -----
@@ -149,10 +149,10 @@ func.func @transfer_read_write_index_1d(%A : memref<?xindex>, %base: index) -> v
 //       CHECK: %[[SPLAT:.*]] = arith.constant dense<7> : vector<17xindex>
 //       CHECK: %{{.*}} = builtin.unrealized_conversion_cast %[[SPLAT]] : vector<17xindex> to vector<17xi64>
 
-//       CHECK: %[[loaded:.*]] = llvm.intr.masked.load %{{.*}}, %{{.*}}, %{{.*}} {alignment = 8 : i32} :
+//       CHECK: %[[loaded:.*]] = llvm.intr.masked.load(%{{.*}}, %{{.*}}, %{{.*}}), alignment(8) :
 //  CHECK-SAME: (!llvm.ptr, vector<17xi1>, vector<17xi64>) -> vector<17xi64>
 
-//       CHECK: llvm.intr.masked.store %[[loaded]], %{{.*}}, %{{.*}} {alignment = 8 : i32} :
+//       CHECK: llvm.intr.masked.store(%[[loaded]], %{{.*}}, %{{.*}}), alignment(8) :
 //  CHECK-SAME: vector<17xi64>, vector<17xi1> into !llvm.ptr
 
 func.func @transfer_read_write_index_1d_scalable(%A : memref<?xindex>, %base: index) -> vector<[17]xindex> {
@@ -170,10 +170,10 @@ func.func @transfer_read_write_index_1d_scalable(%A : memref<?xindex>, %base: in
 //       CHECK: %[[SPLAT:.*]] = arith.constant dense<7> : vector<[17]xindex>
 //       CHECK: %{{.*}} = builtin.unrealized_conversion_cast %[[SPLAT]] : vector<[17]xindex> to vector<[17]xi64>
 
-//       CHECK: %[[loaded:.*]] = llvm.intr.masked.load %{{.*}}, %{{.*}}, %{{.*}} {alignment = 8 : i32} :
+//       CHECK: %[[loaded:.*]] = llvm.intr.masked.load(%{{.*}}, %{{.*}}, %{{.*}}), alignment(8) :
 //  CHECK-SAME: (!llvm.ptr, vector<[17]xi1>, vector<[17]xi64>) -> vector<[17]xi64>
 
-//       CHECK: llvm.intr.masked.store %[[loaded]], %{{.*}}, %{{.*}} {alignment = 8 : i32} :
+//       CHECK: llvm.intr.masked.store(%[[loaded]], %{{.*}}, %{{.*}}), alignment(8) :
 //  CHECK-SAME: vector<[17]xi64>, vector<[17]xi1> into !llvm.ptr
 
 // -----
@@ -302,7 +302,7 @@ func.func @transfer_read_1d_inbounds(%A : memref<?xf32>, %base: index) -> vector
 //  CHECK-SAME: (!llvm.ptr, i64) -> !llvm.ptr, f32
 //
 // 2. Rewrite as a load.
-//       CHECK: %[[loaded:.*]] = llvm.load %[[gep]] {alignment = 4 : i64} : !llvm.ptr -> vector<17xf32>
+//       CHECK: %[[loaded:.*]] = llvm.load %[[gep]] <alignment = 4> : !llvm.ptr -> vector<17xf32>
 
 func.func @transfer_read_1d_inbounds_scalable(%A : memref<?xf32>, %base: index) -> vector<[17]xf32> {
   %f7 = arith.constant 7.0: f32
@@ -318,7 +318,7 @@ func.func @transfer_read_1d_inbounds_scalable(%A : memref<?xf32>, %base: index) 
 //  CHECK-SAME: (!llvm.ptr, i64) -> !llvm.ptr, f32
 //
 // 2. Rewrite as a load.
-//       CHECK: %[[loaded:.*]] = llvm.load %[[gep]] {alignment = 4 : i64} : !llvm.ptr -> vector<[17]xf32>
+//       CHECK: %[[loaded:.*]] = llvm.load %[[gep]] <alignment = 4> : !llvm.ptr -> vector<[17]xf32>
 
 // -----
 
@@ -326,10 +326,10 @@ func.func @transfer_read_1d_inbounds_scalable(%A : memref<?xf32>, %base: index) 
 // CHECK: %[[mask1:.*]] = arith.constant dense<[false, false, true, false, true]>
 // CHECK: %[[cmpi:.*]] = arith.cmpi sgt
 // CHECK: %[[mask2:.*]] = arith.andi %[[cmpi]], %[[mask1]]
-// CHECK: %[[r:.*]] = llvm.intr.masked.load %{{.*}}, %[[mask2]]
+// CHECK: %[[r:.*]] = llvm.intr.masked.load(%{{.*}}, %[[mask2]]
 // CHECK: %[[cmpi_1:.*]] = arith.cmpi sgt
 // CHECK: %[[mask3:.*]] = arith.andi %[[cmpi_1]], %[[mask1]]
-// CHECK: llvm.intr.masked.store %[[r]], %{{.*}}, %[[mask3]]
+// CHECK: llvm.intr.masked.store(%[[r]], %{{.*}}, %[[mask3]])
 // CHECK: return %[[r]]
 func.func @transfer_read_write_1d_mask(%A : memref<?xf32>, %base : index) -> vector<5xf32> {
   %m = arith.constant dense<[0, 0, 1, 0, 1]> : vector<5xi1>
@@ -343,10 +343,10 @@ func.func @transfer_read_write_1d_mask(%A : memref<?xf32>, %base : index) -> vec
 // CHECK-SAME: %[[mask:[a-zA-Z0-9]*]]: vector<[5]xi1>
 // CHECK: %[[cmpi:.*]] = arith.cmpi slt
 // CHECK: %[[mask1:.*]] = arith.andi %[[cmpi]], %[[mask]]
-// CHECK: %[[r:.*]] = llvm.intr.masked.load %{{.*}}, %[[mask1]]
+// CHECK: %[[r:.*]] = llvm.intr.masked.load(%{{.*}}, %[[mask1]]
 // CHECK: %[[cmpi_1:.*]] = arith.cmpi slt
 // CHECK: %[[mask2:.*]] = arith.andi %[[cmpi_1]], %[[mask]]
-// CHECK: llvm.intr.masked.store %[[r]], %{{.*}}, %[[mask2]]
+// CHECK: llvm.intr.masked.store(%[[r]], %{{.*}}, %[[mask2]])
 // CHECK: return %[[r]]
 func.func @transfer_read_write_1d_mask_scalable(%A : memref<?xf32>, %base : index, %m : vector<[5]xi1>) -> vector<[5]xf32> {
   %f7 = arith.constant 7.0: f32

@@ -96,7 +96,7 @@ void MisplacedOperatorInStrlenInAllocCheck::check(
       CharSourceRange::getTokenRange(BinOp->getRHS()->getSourceRange()),
       *Result.SourceManager, getLangOpts());
 
-  auto Hint = FixItHint::CreateReplacement(
+  const auto Hint = FixItHint::CreateReplacement(
       StrLen->getSourceRange(),
       (StrLenBegin + LHSText + StrLenEnd + " + " + RHSText).str());
 

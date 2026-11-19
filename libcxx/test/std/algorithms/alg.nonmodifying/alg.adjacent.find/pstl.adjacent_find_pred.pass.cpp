@@ -109,7 +109,7 @@ struct Test {
         a[i] = a[i - 1] + 42;
         assert(std::adjacent_find(policy, Iter(std::begin(a)), Iter(std::end(a)), Pred{}) ==
                Iter(std::begin(a) + i - 1));
-        a[i] = i;
+        a[i] = static_cast<int>(i);
       });
     }
   }

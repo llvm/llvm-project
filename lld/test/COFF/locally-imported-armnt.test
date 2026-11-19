@@ -1,0 +1,104 @@
+## On ARMNT a locally imported function pointer must have its low bit set; a data pointer must not.
+
+# RUN: split-file %s %t.dir
+
+# RUN: yaml2obj %t.dir/code.yaml -o %t1.obj
+# RUN: lld-link /out:%t1.exe /entry:main /subsystem:console /base:0x400000 %t1.obj
+# RUN: llvm-objdump -s %t1.exe | FileCheck --check-prefix=CODE %s
+# RUN: llvm-readobj --coff-basereloc %t1.exe | FileCheck --check-prefix=CODEREL %s
+
+# CODE:      Contents of section .text:
+# CODE-NEXT: 401000 704700bf 00200000
+# CODE:      Contents of section .rdata:
+## Unadjusted this reads 00104000, and it is the only line here that fails without the fix.
+# CODE-NEXT: 402000 01104000
+
+# CODEREL:      BaseReloc [
+# CODEREL-NEXT:   Entry {
+# CODEREL-NEXT:     Type: HIGHLOW
+# CODEREL-NEXT:     Address: 0x2000
+# CODEREL-NEXT:   }
+
+# RUN: yaml2obj %t.dir/data.yaml -o %t2.obj
+# RUN: lld-link /out:%t2.exe /entry:main /subsystem:console /base:0x400000 %t2.obj
+# RUN: llvm-objdump -s %t2.exe | FileCheck --check-prefix=DATA %s
+# RUN: llvm-readobj --coff-basereloc %t2.exe | FileCheck --check-prefix=DATAREL %s
+
+# DATA:      Contents of section .text:
+# DATA-NEXT: 401000 704700bf 04200000
+# DATA:      Contents of section .rdata:
+# DATA-NEXT: 402000 2a000000 00204000
+
+# DATAREL:      BaseReloc [
+# DATAREL-NEXT:   Entry {
+# DATAREL-NEXT:     Type: HIGHLOW
+# DATAREL-NEXT:     Address: 0x2004
+# DATAREL-NEXT:   }
+
+#--- code.yaml
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_ARMNT
+  Characteristics: []
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     704700BF00000000
+    Relocations:
+      - VirtualAddress:  4
+        SymbolName:      __imp_main
+        Type:            IMAGE_REL_ARM_ADDR32NB
+symbols:
+  - Name:            main
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            __imp_main
+    Value:           0
+    SectionNumber:   0
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+...
+
+#--- data.yaml
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_ARMNT
+  Characteristics: []
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     704700BF00000000
+    Relocations:
+      - VirtualAddress:  4
+        SymbolName:      __imp_mydata
+        Type:            IMAGE_REL_ARM_ADDR32NB
+  - Name:            .rdata
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     2A000000
+symbols:
+  - Name:            main
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            mydata
+    Value:           0
+    SectionNumber:   2
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            __imp_mydata
+    Value:           0
+    SectionNumber:   0
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+...

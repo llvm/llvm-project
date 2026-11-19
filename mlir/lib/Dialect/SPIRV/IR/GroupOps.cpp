@@ -22,28 +22,11 @@ namespace mlir::spirv {
 
 template <typename OpTy>
 static LogicalResult verifyGroupNonUniformArithmeticOp(Operation *groupOp) {
-  GroupOperation operation =
-      groupOp
-          ->getAttrOfType<GroupOperationAttr>(
-              OpTy::getGroupOperationAttrName(groupOp->getName()))
-          .getValue();
+  GroupOperation operation = cast<OpTy>(groupOp).getGroupOperation();
   if (operation == GroupOperation::ClusteredReduce &&
       groupOp->getNumOperands() == 1)
     return groupOp->emitOpError("cluster size operand must be provided for "
                                 "'ClusteredReduce' group operation");
-  if (groupOp->getNumOperands() > 1) {
-    Operation *sizeOp = groupOp->getOperand(1).getDefiningOp();
-    int32_t clusterSize = 0;
-
-    // TODO: support specialization constant here.
-    if (failed(extractValueFromConstOp(sizeOp, clusterSize)))
-      return groupOp->emitOpError(
-          "cluster size operand must come from a constant op");
-
-    if (!llvm::isPowerOf2_32(clusterSize))
-      return groupOp->emitOpError(
-          "cluster size operand must be a power of two");
-  }
   return success();
 }
 
@@ -233,25 +216,6 @@ LogicalResult GroupNonUniformLogicalOrOp::verify() {
 
 LogicalResult GroupNonUniformLogicalXorOp::verify() {
   return verifyGroupNonUniformArithmeticOp<GroupNonUniformLogicalXorOp>(*this);
-}
-
-//===----------------------------------------------------------------------===//
-// spirv.GroupNonUniformRotateKHR
-//===----------------------------------------------------------------------===//
-
-LogicalResult GroupNonUniformRotateKHROp::verify() {
-  if (Value clusterSizeVal = getClusterSize()) {
-    mlir::Operation *defOp = clusterSizeVal.getDefiningOp();
-    int32_t clusterSize = 0;
-
-    if (failed(extractValueFromConstOp(defOp, clusterSize)))
-      return emitOpError("cluster size operand must come from a constant op");
-
-    if (!llvm::isPowerOf2_32(clusterSize))
-      return emitOpError("cluster size operand must be a power of two");
-  }
-
-  return success();
 }
 
 } // namespace mlir::spirv

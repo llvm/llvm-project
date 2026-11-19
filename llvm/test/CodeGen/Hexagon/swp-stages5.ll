@@ -73,5 +73,6 @@ for.end:
 
 attributes #0 = { nounwind }
 
-!0 = !{!"omnipotent char", !1}
+!0 = !{!2, !2, i64 0}
 !1 = !{!"Simple C/C++ TBAA"}
+!2 = !{!"omnipotent char", !1}

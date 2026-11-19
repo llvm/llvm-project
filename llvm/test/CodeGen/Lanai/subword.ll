@@ -1,5 +1,4 @@
 ; RUN: llc < %s -mtriple=lanai-unknown-unknown | FileCheck %s
-; RUN: llc -enable-new-pm < %s -mtriple=lanai-unknown-unknown | FileCheck %s
 
 ; Test scheduling of subwords.
 

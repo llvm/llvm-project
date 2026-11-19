@@ -5,10 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+#include <algorithm>
 #include <cassert>
 #include <memory>
 
 #include "Dataflow.h"
+#include "clang/AST/Expr.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LoanPropagation.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Loans.h"
@@ -18,70 +20,12 @@
 #include "clang/Analysis/CFG.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/ImmutableList.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace clang::lifetimes::internal {
-
-// Prepass to find persistent origins. An origin is persistent if it is
-// referenced in more than one basic block.
-static llvm::BitVector computePersistentOrigins(const FactManager &FactMgr,
-                                                const CFG &C) {
-  llvm::TimeTraceScope("ComputePersistentOrigins");
-  unsigned NumOrigins = FactMgr.getOriginMgr().getNumOrigins();
-  llvm::BitVector PersistentOrigins(NumOrigins);
-
-  llvm::SmallVector<const CFGBlock *> OriginToFirstSeenBlock(NumOrigins,
-                                                             nullptr);
-  for (const CFGBlock *B : C) {
-    for (const Fact *F : FactMgr.getFacts(B)) {
-      auto CheckOrigin = [&](OriginID OID) {
-        if (PersistentOrigins.test(OID.Value))
-          return;
-        auto &FirstSeenBlock = OriginToFirstSeenBlock[OID.Value];
-        if (FirstSeenBlock == nullptr)
-          FirstSeenBlock = B;
-        if (FirstSeenBlock != B) {
-          // We saw this origin in more than one block.
-          PersistentOrigins.set(OID.Value);
-        }
-      };
-
-      switch (F->getKind()) {
-      case Fact::Kind::Issue:
-        CheckOrigin(F->getAs<IssueFact>()->getOriginID());
-        break;
-      case Fact::Kind::OriginFlow: {
-        const auto *OF = F->getAs<OriginFlowFact>();
-        CheckOrigin(OF->getDestOriginID());
-        CheckOrigin(OF->getSrcOriginID());
-        break;
-      }
-      case Fact::Kind::Use:
-        for (const OriginList *Cur = F->getAs<UseFact>()->getUsedOrigins(); Cur;
-             Cur = Cur->peelOuterOrigin())
-          CheckOrigin(Cur->getOuterOriginID());
-        break;
-      case Fact::Kind::KillOrigin:
-        CheckOrigin(F->getAs<KillOriginFact>()->getKilledOrigin());
-        break;
-      case Fact::Kind::OriginEscapes:
-        // An escaping origin is read at the exit block but defined earlier, so
-        // it spans blocks and must participate in joins.
-        CheckOrigin(F->getAs<OriginEscapesFact>()->getEscapedOriginID());
-        break;
-      case Fact::Kind::MovedOrigin:
-      case Fact::Kind::Expire:
-      case Fact::Kind::TestPoint:
-      case Fact::Kind::InvalidateOrigin:
-        break;
-      }
-    }
-  }
-  return PersistentOrigins;
-}
 
 namespace {
 
@@ -139,7 +83,7 @@ public:
                LoanSet::Factory &LoanSetFactory)
       : DataflowAnalysis(C, AC, F), OriginLoanMapFactory(OriginLoanMapFactory),
         LoanSetFactory(LoanSetFactory),
-        PersistentOrigins(computePersistentOrigins(F, C)) {}
+        PersistentOrigins(F.getPersistentOrigins()) {}
 
   using Base::transfer;
 
@@ -148,8 +92,9 @@ public:
   Lattice getInitialState() { return Lattice{}; }
 
   /// Merges two lattices by taking the union of loans for each origin.
-  /// Only persistent origins are joined; block-local origins are discarded.
   Lattice join(Lattice A, Lattice B) {
+    assert(A.BlockLocalOrigins.isEmpty() && B.BlockLocalOrigins.isEmpty() &&
+           "block-local origins must not reach a block boundary");
     OriginLoanMap JoinedOrigins = utils::join(
         A.PersistentOrigins, B.PersistentOrigins, OriginLoanMapFactory,
         [&](const LoanSet *S1, const LoanSet *S2) {
@@ -164,6 +109,14 @@ public:
         // branch, the loan set can be carried over as-is.
         utils::JoinKind::Asymmetric);
     return Lattice(JoinedOrigins, OriginLoanMapFactory.getEmptyMap());
+  }
+
+  /// Block-local origins are not referenced outside the block that computed
+  /// them, so they are dropped here rather than propagated to adjacent blocks.
+  /// Dropping them at the boundary (instead of in `join`) also covers edges
+  /// where `join` is never called, such as blocks with a single predecessor.
+  Lattice transferAtBlockExit(Lattice L) {
+    return Lattice(L.PersistentOrigins, OriginLoanMapFactory.getEmptyMap());
   }
 
   /// A new loan is issued to the origin. Old loans are erased.
@@ -225,12 +178,20 @@ public:
     using SearchState = std::pair<const CFGBlock *, OriginID>;
     struct DFSNode {
       SearchState CurrState;
-      llvm::SmallVector<OriginID> OriginFlowChain;
+      llvm::ImmutableList<OriginID> OriginFlowChain;
     };
 
     llvm::SmallVector<DFSNode> PendingStates;
     llvm::SmallSet<SearchState, 16> VistedStates;
-    PendingStates.push_back({{EndBlock, StartOID}, {}});
+    llvm::ImmutableList<OriginID>::Factory OriginFlowChainFactory;
+    PendingStates.push_back(
+        {{EndBlock, StartOID}, OriginFlowChainFactory.getEmptyList()});
+
+    // The loans held at StartPoint cannot come from later flows, so the first
+    // scan starts there. A loop may lead back to StartPoint's block; that visit
+    // is its previous iteration, which ran entirely before StartPoint, so scan
+    // the whole block.
+    ProgramPoint ScanFrom = StartPoint;
 
     // DFS loop to trace loan backwards through CFG
     while (!PendingStates.empty()) {
@@ -239,15 +200,22 @@ public:
 
       // Trace origins within the current block
       const auto [BuildResult, Complete] =
-          buildOriginFlowChain(CurrBlock, CurrOID, TargetLoan);
+          buildOriginFlowChain(CurrBlock, CurrOID, TargetLoan, ScanFrom);
+      ScanFrom = nullptr;
       if (!BuildResult.empty()) {
-        CurrNode.OriginFlowChain.append(BuildResult);
+        for (OriginID OID : BuildResult)
+          CurrNode.OriginFlowChain =
+              OriginFlowChainFactory.add(OID, CurrNode.OriginFlowChain);
         CurrOID = BuildResult.back();
       }
 
       // If we found the IssueFact, we're done
-      if (Complete)
-        return CurrNode.OriginFlowChain;
+      if (Complete) {
+        llvm::SmallVector<OriginID> Result(CurrNode.OriginFlowChain.begin(),
+                                           CurrNode.OriginFlowChain.end());
+        std::reverse(Result.begin(), Result.end());
+        return Result;
+      }
 
       // Only explore predecessor blocks where the target loan is present in the
       // current origin.
@@ -259,8 +227,8 @@ public:
       }
     }
 
-    llvm_unreachable(
-        "buildOriginFlowChain did not reach IssueFact for TargetLoan");
+    llvm_unreachable("Could not reconstruct origin flow. Search finished "
+                     "without reaching IssueFact");
   }
 
   llvm::SmallVector<OriginID> buildOriginFlowChain(const UseFact *UF,
@@ -269,13 +237,46 @@ public:
     for (const OriginList *Cur = UF->getUsedOrigins(); Cur;
          Cur = Cur->peelOuterOrigin())
       if (getLoans(Cur->getOuterOriginID(), UF).contains(TargetLoan))
-        return buildOriginFlowChain(UF, Cur->getOuterOriginID(), TargetLoan,
-                                    Cfg);
+        return dropLeadingLoads(
+            Cur->getOuterOriginID(),
+            buildOriginFlowChain(UF, Cur->getOuterOriginID(), TargetLoan, Cfg));
 
     return {};
   }
 
+  llvm::SmallVector<OriginID> buildOriginFlowChain(const OriginEscapesFact *OEF,
+                                                   const LoanID TargetLoan,
+                                                   const CFG *Cfg) const {
+    OriginID OID = OEF->getEscapedOriginID();
+    if (!getLoans(OID, OEF).contains(TargetLoan))
+      return {};
+    return dropLeadingLoads(OID,
+                            buildOriginFlowChain(OEF, OID, TargetLoan, Cfg));
+  }
+
 private:
+  /// An expression's origin only receives loans from its subexpressions, so
+  /// until the chain reaches a declaration it is inside the expression the
+  /// chain starts from. Casts there just load its variable, so drop them.
+  llvm::SmallVector<OriginID>
+  dropLeadingLoads(OriginID StartOID, llvm::SmallVector<OriginID> Chain) const {
+    const OriginManager &OM = FactMgr.getOriginMgr();
+    // When the chain starts from a declaration, e.g. field `p_` read by a
+    // member call, the leading casts come from the write that stored the loan
+    // in it, such as `p` loaded in `p_ = p`. They name the alias, so keep them.
+    if (!OM.getOrigin(StartOID).getExpr())
+      return Chain;
+    auto FirstDecl = llvm::find_if(
+        Chain, [&](OriginID OID) { return !OM.getOrigin(OID).getExpr(); });
+    Chain.erase(std::remove_if(Chain.begin(), FirstDecl,
+                               [&](OriginID OID) {
+                                 return isa<ImplicitCastExpr>(
+                                     OM.getOrigin(OID).getExpr());
+                               }),
+                FirstDecl);
+    return Chain;
+  }
+
   /// Returns true if the origin is persistent (referenced in multiple blocks).
   bool isPersistent(OriginID OID) const {
     return PersistentOrigins.test(OID.Value);
@@ -299,19 +300,26 @@ private:
 
   /// Builds the chain of origins through which a loan has propagated.
   ///
-  /// This procedure operates strictly within a single Block. Starting from the
-  /// last fact of the Block, it traces backwards through OriginFlowFacts to
-  /// identify the sequence of origins through which the loan flowed.
+  /// This procedure operates strictly within a single Block. Starting from
+  /// \p ScanFrom, or from the last fact of the Block if it is null, it traces
+  /// backwards through OriginFlowFacts to identify the sequence of origins
+  /// through which the loan flowed.
   ///
   /// Returns (chain, true) if the target loan origin is found during the
   /// traversal, otherwise returns (chain, false).
   std::pair<llvm::SmallVector<OriginID>, bool>
   buildOriginFlowChain(const CFGBlock *Block, const OriginID StartOID,
-                       const LoanID TargetLoan) const {
+                       const LoanID TargetLoan, ProgramPoint ScanFrom) const {
     OriginID CurrOID = StartOID;
     llvm::SmallVector<OriginID> OriginFlowChain;
 
-    for (const Fact *F : llvm::reverse(FactMgr.getFacts(Block))) {
+    auto Facts = llvm::reverse(FactMgr.getFacts(Block));
+    auto Begin = Facts.begin();
+    if (ScanFrom) {
+      Begin = llvm::find(Facts, ScanFrom);
+      assert(Begin != Facts.end() && "ScanFrom must be in Block");
+    }
+    for (const Fact *F : llvm::make_range(Begin, Facts.end())) {
       if (const auto *IF = F->getAs<IssueFact>())
         if (IF->getLoanID() == TargetLoan && IF->getOriginID() == CurrOID)
           return {OriginFlowChain, true};
@@ -333,10 +341,9 @@ private:
 
   OriginLoanMap::Factory &OriginLoanMapFactory;
   LoanSet::Factory &LoanSetFactory;
-  /// Boolean vector indexed by origin ID. If true, the origin appears in
-  /// multiple basic blocks and must participate in join operations. If false,
-  /// the origin is block-local and can be discarded at block boundaries.
-  llvm::BitVector PersistentOrigins;
+  /// Origins referenced from more than one basic block; see
+  /// `FactManager::getPersistentOrigins`.
+  const llvm::BitVector &PersistentOrigins;
 };
 } // namespace
 
@@ -366,7 +373,11 @@ llvm::SmallVector<OriginID> LoanPropagationAnalysis::buildOriginFlowChain(
 }
 
 llvm::SmallVector<OriginID> LoanPropagationAnalysis::buildOriginFlowChain(
-    const UseFact *UF, const LoanID TargetLoan, const CFG *Cfg) const {
-  return PImpl->buildOriginFlowChain(UF, TargetLoan, Cfg);
+    const Fact *F, const LoanID TargetLoan, const CFG *Cfg) const {
+  if (const auto *UF = llvm::dyn_cast<UseFact>(F))
+    return PImpl->buildOriginFlowChain(UF, TargetLoan, Cfg);
+  if (const auto *OEF = llvm::dyn_cast<OriginEscapesFact>(F))
+    return PImpl->buildOriginFlowChain(OEF, TargetLoan, Cfg);
+  llvm_unreachable("Unhandled Fact type");
 }
 } // namespace clang::lifetimes::internal

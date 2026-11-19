@@ -14,9 +14,9 @@
 func.func @block_redundant_seq_gang_private(%arg0: memref<32xi32>) {
   %c32_pw = arith.constant 32 : index
   %c1_pw = arith.constant 1 : index
-  %par_bx = acc.par_width %c32_pw {par_dim = #acc.par_dim<block_x>}
-  %par_ty = acc.par_width %c1_pw {par_dim = #acc.par_dim<thread_y>}
-  %par_tx = acc.par_width %c32_pw {par_dim = #acc.par_dim<thread_x>}
+  %par_bx = acc.par_width %c32_pw par_dim(#acc.par_dim<block_x>)
+  %par_ty = acc.par_width %c1_pw par_dim(#acc.par_dim<thread_y>)
+  %par_tx = acc.par_width %c32_pw par_dim(#acc.par_dim<thread_x>)
   acc.kernel_environment {
     %priv = acc.privatize : () -> !acc.private_type<memref<32xi32>>
     acc.compute_region launch(%grid = %par_bx, %worker = %par_ty, %block = %par_tx)
@@ -51,7 +51,7 @@ func.func @block_redundant_seq_gang_private(%arg0: memref<32xi32>) {
       } {acc.par_dims = #acc<par_dims[sequential]>,
          acc.gpu_block_redundant = #acc.gpu_block_redundant}
       acc.yield
-    } {origin = "acc.parallel"}
+    } <{origin = "acc.parallel"}>
   }
   return
 }

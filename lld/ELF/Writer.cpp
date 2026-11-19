@@ -24,6 +24,7 @@
 #include "lld/Common/Arrays.h"
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/Filesystem.h"
+#include "lld/Common/Parallel.h"
 #include "lld/Common/Strings.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -130,8 +131,8 @@ static Defined *addOptionalRegular(Ctx &ctx, StringRef name, SectionBase *sec,
     return nullptr;
 
   ctx.synthesizedSymbols.push_back(s);
-  s->resolve(ctx, Defined{ctx, ctx.internalFile, StringRef(), STB_GLOBAL,
-                          stOther, STT_NOTYPE, val,
+  s->resolve(ctx, Defined{ctx.internalFile, StringRef(), STB_GLOBAL, stOther,
+                          STT_NOTYPE, val,
                           /*size=*/0, sec});
   s->isUsedInRegularObj = true;
   return cast<Defined>(s);
@@ -143,7 +144,7 @@ void elf::addReservedSymbols(Ctx &ctx) {
   if (ctx.arg.emachine == EM_MIPS) {
     auto addAbsolute = [&](StringRef name) {
       Symbol *sym =
-          ctx.symtab->addSymbol(Defined{ctx, ctx.internalFile, name, STB_GLOBAL,
+          ctx.symtab->addSymbol(Defined{ctx.internalFile, name, STB_GLOBAL,
                                         STV_HIDDEN, STT_NOTYPE, 0, 0, nullptr});
       sym->isUsedInRegularObj = true;
       return cast<Defined>(sym);
@@ -196,7 +197,7 @@ void elf::addReservedSymbols(Ctx &ctx) {
     if (ctx.arg.emachine == EM_PPC64)
       gotOff = 0x8000;
 
-    s->resolve(ctx, Defined{ctx, ctx.internalFile, StringRef(), STB_GLOBAL,
+    s->resolve(ctx, Defined{ctx.internalFile, StringRef(), STB_GLOBAL,
                             STV_HIDDEN, STT_NOTYPE, gotOff, /*size=*/0,
                             ctx.out.elfHeader.get()});
     ctx.sym.globalOffsetTable = cast<Defined>(s);
@@ -365,10 +366,14 @@ template <class ELFT> void Writer<ELFT>::run() {
     if (errCount(ctx))
       return;
 
-    // With -o -, write to lld::outs() (the stdoutOS argument of
+    // Capture output for the embedded unoptimized dynamic debugging relocatable
+    // link.
+    // Otherwise, with -o -, write to lld::outs() (the stdoutOS argument of
     // link()) instead of committing the buffer, which would write to the
     // process's stdout.
-    if (ctx.arg.outputFile == "-") {
+    if (ctx.inDynDbgLink)
+      ctx.dynDbgOutput = std::move(buffer);
+    else if (ctx.arg.outputFile == "-") {
       ctx.e.outs() << StringRef(
           reinterpret_cast<const char *>(buffer->getBufferStart()),
           buffer->getBufferSize());
@@ -437,7 +442,7 @@ bool elf::includeInSymtab(Ctx &ctx, const Symbol &b) {
     assert(sec->isLive());
 
     if (auto *s = dyn_cast<MergeInputSection>(sec))
-      return s->getSectionPiece(d->value).live;
+      return d->isSection() || s->getSectionPiece(d->value).live;
     return true;
   }
   return b.hasFlag(USED) || !ctx.arg.gcSections;
@@ -452,7 +457,7 @@ static void demoteAndCopyLocalSymbols(Ctx &ctx) {
   llvm::TimeTraceScope timeScope("Add local symbols");
   auto symsVec =
       std::make_unique<SmallVector<Symbol *, 0>[]>(ctx.objectFiles.size());
-  parallelFor(0, ctx.objectFiles.size(), [&](size_t i) {
+  parallelForFineGrained(ctx.objectFiles.size(), [&](size_t i) {
     DenseMap<SectionBase *, size_t> sectionIndexMap;
     for (Symbol *b : ctx.objectFiles[i]->getLocalSymbols()) {
       assert(b->isLocal() && "should have been caught in initializeSymbols()");
@@ -478,8 +483,8 @@ static void demoteAndCopyLocalSymbols(Ctx &ctx) {
         llvm::none_of(syms, [](Symbol *s) { return s->isFile(); })) {
       InputFile *file = ctx.objectFiles[i];
       ctx.in.symTab->addSymbol(
-          makeDefined(ctx, file, sys::path::filename(file->getName()),
-                      STB_LOCAL, /*stOther=*/0, STT_FILE, /*value=*/0,
+          makeDefined(file, sys::path::filename(file->getName()), STB_LOCAL,
+                      /*stOther=*/0, STT_FILE, /*value=*/0,
                       /*size=*/0, nullptr));
     }
     for (Symbol *sym : syms)
@@ -525,7 +530,7 @@ template <class ELFT> void Writer<ELFT>::addSectionSymbols() {
     // Set the symbol to be relative to the output section so that its st_value
     // equals the output section address. Note, there may be a gap between the
     // start of the output section and isec.
-    ctx.in.symTab->addSymbol(makeDefined(ctx, isec->file, "", STB_LOCAL,
+    ctx.in.symTab->addSymbol(makeDefined(isec->file, "", STB_LOCAL,
                                          /*stOther=*/0, STT_SECTION,
                                          /*value=*/0, /*size=*/0, &osec));
   }
@@ -1500,6 +1505,13 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
   llvm::TimeTraceScope timeScope("Finalize address dependent content");
   AArch64Err843419Patcher a64p(ctx);
   ARMErr657417Patcher a32p(ctx);
+
+  // Transforms that move input sections without reading addresses go here.
+  // After the first assignAddresses, only the loop below may change layout.
+  if (ctx.arg.randomizeSectionPadding)
+    randomizeSectionPadding(ctx);
+  if (ctx.arg.branchToBranch)
+    ctx.target->relaxCFIJumpTables();
   ctx.script->assignAddresses();
 
   // .ARM.exidx and SHF_LINK_ORDER do not require precise addresses, but they
@@ -1512,12 +1524,6 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
     resolveShfLinkOrder();
   };
   finalizeOrderDependentContent();
-
-  if (ctx.arg.randomizeSectionPadding)
-    randomizeSectionPadding(ctx);
-
-  if (ctx.arg.branchToBranch)
-    ctx.target->relaxCFIJumpTables();
 
   // Iterate until a fixed point is reached, skipping relocatable links since
   // the final addresses are unavailable.
@@ -1579,7 +1585,7 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
       changed |= ctx.in.relrDyn->updateAllocSize(ctx);
     if (ctx.in.relrAuthDyn)
       changed |= ctx.in.relrAuthDyn->updateAllocSize(ctx);
-    if (ctx.in.relrAuthDyn && ctx.in.dynamic && ctx.in.dynamic->getParent()) {
+    if (ctx.in.dynamic && ctx.in.dynamic->getParent()) {
       size_t oldSize = ctx.in.dynamic->getSize();
       finalizeSynthetic(ctx, ctx.in.dynamic.get());
       changed |= (oldSize != ctx.in.dynamic->getSize());
@@ -1618,8 +1624,7 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
       // Spilling can change relative section order.
       finalizeOrderDependentContent();
     }
-    // If updateAllocSize reported errors (e.g. "unknown FDE size encoding" for
-    // ctx.in.ehFrameHdr), break to avoid duplicate diagnostics from the loop.
+    // Break to avoid duplicate diagnostics from the loop.
     if (errCount(ctx))
       break;
   }
@@ -1747,6 +1752,23 @@ template <class ELFT> void Writer<ELFT>::optimizeBasicBlockJumps() {
       is->trim();
 }
 
+// Sections that finalizeAddressDependentContent may add to.
+static bool mayGrowLate(Ctx &ctx, SyntheticSection *sec) {
+  // relaxOnce may add GOT entries that need relative relocations.
+  if (ctx.arg.isPic && ctx.in.got && ctx.in.got->hasDeferredEntries &&
+      sec == (ctx.in.relrDyn
+                  ? static_cast<SyntheticSection *>(ctx.in.relrDyn.get())
+                  : ctx.in.relaDyn.get()))
+    return true;
+  if (sec != ctx.in.relaDyn.get())
+    return false;
+  // Relocations may move here from .relr.auth.dyn.
+  if (ctx.in.relrAuthDyn && ctx.in.relrAuthDyn->isNeeded())
+    return true;
+  // PPC64PILongBranchThunk adds a relative relocation for its .branch_lt entry.
+  return ctx.in.ppc64LongBranchTarget && ctx.arg.picThunk;
+}
+
 // In order to allow users to manipulate linker-synthesized sections,
 // we had to add synthetic sections to the input section list early,
 // even before we make decisions whether they are needed. This allows
@@ -1758,7 +1780,8 @@ template <class ELFT> void Writer<ELFT>::optimizeBasicBlockJumps() {
 //
 // To deal with the above problem, this function is called after
 // scanRelocations is called to remove synthetic sections that turn
-// out to be empty.
+// out to be empty. It runs before finalizeAddressDependentContent, which may
+// add to a section mayGrowLate reports.
 static void removeUnusedSyntheticSections(Ctx &ctx) {
   // All input synthetic sections that can be empty are placed after
   // all regular ones. Reverse iterate to find the first synthetic section
@@ -1773,17 +1796,13 @@ static void removeUnusedSyntheticSections(Ctx &ctx) {
   auto end =
       std::remove_if(start, ctx.inputSections.end(), [&](InputSectionBase *s) {
         auto *sec = cast<SyntheticSection>(s);
-        if (sec->getParent() && sec->isNeeded())
-          return false;
-        // .relr.auth.dyn relocations may be moved to .rela.dyn in
-        // finalizeAddressDependentContent, making .rela.dyn no longer empty.
-        // Conservatively keep .rela.dyn. .relr.auth.dyn can be made empty, but
-        // we would fail to remove it here.
-        if (ctx.arg.emachine == EM_AARCH64 && ctx.arg.relrPackDynRelocs &&
-            sec == ctx.in.relaDyn.get() && ctx.in.relrAuthDyn &&
-            ctx.in.relrAuthDyn->isNeeded())
+        if ((sec->getParent() && sec->isNeeded()) || mayGrowLate(ctx, sec))
           return false;
         unused.insert(sec);
+        // LinkerScript::discard clears the parent. Losing later additions to
+        // such a section is intended.
+        if (sec->getParent())
+          ctx.removedSyntheticSections.push_back(sec);
         return true;
       });
   ctx.inputSections.erase(end, ctx.inputSections.end());
@@ -1823,7 +1842,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     // https://sourceware.org/ml/binutils/2002-03/msg00360.html
     if (ctx.in.dynamic->parent) {
       Symbol *s = ctx.symtab->addSymbol(Defined{
-          ctx, ctx.internalFile, "_DYNAMIC", STB_WEAK, STV_HIDDEN, STT_NOTYPE,
+          ctx.internalFile, "_DYNAMIC", STB_WEAK, STV_HIDDEN, STT_NOTYPE,
           /*value=*/0, /*size=*/0, ctx.in.dynamic.get()});
       s->isUsedInRegularObj = true;
     }
@@ -1865,7 +1884,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
       // define _TLS_MODULE_BASE_ relative to the first TLS section.
       Symbol *s = ctx.symtab->find("_TLS_MODULE_BASE_");
       if (s && s->isUndefined()) {
-        s->resolve(ctx, Defined{ctx, ctx.internalFile, StringRef(), STB_GLOBAL,
+        s->resolve(ctx, Defined{ctx.internalFile, StringRef(), STB_GLOBAL,
                                 STV_HIDDEN, STT_TLS, /*value=*/0, 0,
                                 /*section=*/nullptr});
         ctx.sym.tlsModuleBase = cast<Defined>(s);
@@ -1905,7 +1924,39 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     // that we can correctly decide if a dynamic relocation is needed. This is
     // called after processSymbolAssignments() because it needs to know whether
     // a linker-script-defined symbol is absolute.
-    scanRelocations<ELFT>(ctx);
+    scanRelocations(ctx);
+
+    // Process symbols referenced by the embedded unoptimized part of dynamic
+    // debugging. Report references to undefined symbols and ensure that
+    // references to shared symbols have PLT/GOT entries as appropriate.
+    if (ctx.hasDynDbg) {
+      InputSection *unknownSec = make<InputSection>(
+          ctx.internalFile, dynDbgSecName, 0, 0, 0, 0, ArrayRef<uint8_t>());
+      for (Symbol *sym : ctx.symtab->getSymbols()) {
+        if (!sym->isDynDbgRef)
+          continue;
+
+        if (sym->isUndefined()) {
+          // Report against the referencing dynamic debugging section when the
+          // symbol's file has one.
+          auto *dbgObj = dyn_cast<ObjFile<ELFT>>(sym->file);
+          InputSectionBase *isec = dbgObj && dbgObj->dynDbgSec
+                                       ? dbgObj->dynDbgSec.get()
+                                       : unknownSec;
+          maybeReportUndefined(ctx, cast<Undefined>(*sym), *isec, 0);
+          continue;
+        }
+
+        // Ensure there are PLT/GOT entries for references to shared symbols.
+        if (sym->isShared() && sym->isUsedInRegularObj && sym->dsoDefined) {
+          if (sym->isFunc())
+            sym->setFlags(NEEDS_PLT);
+          else if (sym->isObject())
+            sym->setFlags(NEEDS_GOT);
+        }
+      }
+    }
+
     reportUndefinedSymbols(ctx);
     postScanRelocations(ctx);
 
@@ -2116,6 +2167,10 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   //    sometimes using forward symbol declarations. We want to set the correct
   //    values. They also might change after adding the thunks.
   finalizeAddressDependentContent();
+
+  // A section dropped as unneeded must have stayed unneeded.
+  assert(llvm::none_of(ctx.removedSyntheticSections,
+                       [](SyntheticSection *sec) { return sec->isNeeded(); }));
 
   // All information needed for OutputSection part of Map file is available.
   if (errCount(ctx))
@@ -2530,7 +2585,8 @@ template <class ELFT> void Writer<ELFT>::fixSectionAlignments() {
 // Compute an in-file position for a given section. The file offset must be the
 // same with its virtual address modulo the page size, so that the loader can
 // load executables without any address adjustment.
-static uint64_t computeFileOffset(Ctx &ctx, OutputSection *os, uint64_t off) {
+static uint64_t computeFileOffset(Ctx &ctx, OutputSection *os, uint64_t off,
+                                  PhdrEntry *nobitsLoad) {
   // The first section in a PT_LOAD has to have congruent offset and address
   // modulo the maximum page size.
   if (os->ptLoad && os->ptLoad->firstSec == os)
@@ -2545,6 +2601,12 @@ static uint64_t computeFileOffset(Ctx &ctx, OutputSection *os, uint64_t off) {
   // If the section is not in a PT_LOAD, we just have to align it.
   if (!os->ptLoad)
      return alignToPowerOf2(off, os->addralign);
+
+  // An empty section after a NOBITS section in the same PT_LOAD has no file
+  // contents either. Skip the formula below, which would reserve file bytes
+  // for the NOBITS section and inflate p_filesz.
+  if (os->size == 0 && os->ptLoad == nobitsLoad)
+    return off;
 
   // If two sections share the same PT_LOAD the file offset is calculated
   // using this formula: Off2 = Off1 + (VA2 - VA1).
@@ -2589,13 +2651,16 @@ template <class ELFT> void Writer<ELFT>::assignFileOffsets() {
 
   // Layout SHF_ALLOC sections before non-SHF_ALLOC sections. A non-SHF_ALLOC
   // will not occupy file offsets contained by a PT_LOAD.
+  PhdrEntry *nobitsLoad = nullptr;
   for (OutputSection *sec : ctx.outputSections) {
     if (!(sec->flags & SHF_ALLOC))
       continue;
-    off = computeFileOffset(ctx, sec, off);
+    off = computeFileOffset(ctx, sec, off, nobitsLoad);
     sec->offset = off;
     if (sec->type != SHT_NOBITS)
       off += sec->size;
+    else if (sec->ptLoad)
+      nobitsLoad = sec->ptLoad;
 
     // If this is a last section of the last executable segment and that
     // segment is the last loadable segment, align the offset of the
@@ -2860,8 +2925,8 @@ template <class ELFT> void Writer<ELFT>::openFile() {
   unsigned flags = 0;
   if (!ctx.arg.relocatable)
     flags |= FileOutputBuffer::F_executable;
-  if (ctx.arg.mmapOutputFile)
-    flags |= FileOutputBuffer::F_mmap;
+  if (!ctx.arg.mmapOutputFile)
+    flags |= FileOutputBuffer::F_in_memory;
   Expected<std::unique_ptr<FileOutputBuffer>> bufferOrErr =
       FileOutputBuffer::create(ctx.arg.outputFile, fileSize, flags);
 

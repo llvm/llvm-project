@@ -183,6 +183,13 @@ StringRef llvm::object::getELFRelocationTypeName(uint32_t Machine,
       break;
     }
     break;
+  case ELF::EM_NANOMIPS:
+    switch (Type) {
+#include "llvm/BinaryFormat/ELFRelocs/NanoMips.def"
+    default:
+      break;
+    }
+    break;
   default:
     break;
   }
@@ -248,6 +255,8 @@ uint32_t llvm::object::getELFRelativeRelocationType(uint32_t Machine) {
     break;
   case ELF::EM_LOONGARCH:
     return ELF::R_LARCH_RELATIVE;
+  case ELF::EM_NANOMIPS:
+    return ELF::R_NANOMIPS_RELATIVE;
   default:
     break;
   }
@@ -336,6 +345,7 @@ StringRef llvm::object::getELFSectionTypeName(uint32_t Machine, unsigned Type) {
     STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_JT_SIZES)
     STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_CFI_JUMP_TABLE)
     STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_CALL_GRAPH);
+    STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_DYNDBG_ELF);
     STRINGIFY_ENUM_CASE(ELF, SHT_GNU_SFRAME);
     STRINGIFY_ENUM_CASE(ELF, SHT_GNU_ATTRIBUTES);
     STRINGIFY_ENUM_CASE(ELF, SHT_GNU_HASH);

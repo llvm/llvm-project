@@ -30,11 +30,11 @@ public:
   void writeGotHeader(uint8_t *buf) const override;
   void writePlt(uint8_t *buf, const Symbol &sym,
                 uint64_t pltEntryAddr) const override;
-  template <class ELFT, class RelTy>
+  template <class RelTy>
   void scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
                        unsigned shard);
   void scanSection(InputSectionBase &sec, unsigned shard) override {
-    elf::scanSection1<SPARCV9, ELF64BE>(*this, sec, shard);
+    elf::scanSection1<ELF64BE>(*this, sec, shard);
   }
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
@@ -47,6 +47,7 @@ SPARCV9::SPARCV9(Ctx &ctx) : TargetInfo(ctx) {
   pltRel = R_SPARC_JMP_SLOT;
   relativeRel = R_SPARC_RELATIVE;
   symbolicRel = R_SPARC_64;
+  tlsGotRel = R_SPARC_TLS_TPOFF64;
   gotHeaderEntriesNum = 1;
   pltEntrySize = 32;
   pltHeaderSize = 4 * pltEntrySize;
@@ -98,7 +99,7 @@ int64_t SPARCV9::getImplicitAddend(const uint8_t *buf, RelType type) const {
   }
 }
 
-template <class ELFT, class RelTy>
+template <class RelTy>
 void SPARCV9::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
                               unsigned shard) {
   RelocScan rs(ctx, &sec, shard);
@@ -106,16 +107,17 @@ void SPARCV9::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
   for (auto it = rels.begin(); it != rels.end(); ++it) {
     const RelTy &rel = *it;
     uint32_t symIdx = rel.getSymbol(false);
-    Symbol &sym = sec.getFile<ELFT>()->getSymbol(symIdx);
+    Symbol &sym = sec.file->getSymbol(symIdx);
     uint64_t offset = rel.r_offset;
     RelType type = rel.getType(false);
     if (sym.isUndefined() && symIdx != 0 &&
         rs.maybeReportUndefined(cast<Undefined>(sym), offset))
       continue;
-    int64_t addend = rs.getAddend<ELFT>(rel, type);
+    int64_t addend = rs.getAddend(rel, type);
     RelExpr expr;
     switch (type) {
     case R_SPARC_NONE:
+    case R_SPARC_TLS_IE_ADD:
       continue;
 
     // Absolute relocations:
@@ -166,6 +168,20 @@ void SPARCV9::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
       expr = R_GOT_OFF;
       break;
 
+    // Optimize the GOT load to an add of the symbol's GOT-relative address if
+    // applicable. Exclude absolute symbol, which can be arbitrarily far. %l7
+    // points at .got, which must be retained.
+    case R_SPARC_GOTDATA_OP_HIX22:
+    case R_SPARC_GOTDATA_OP_LOX10:
+    case R_SPARC_GOTDATA_OP:
+      if (sym.isPreemptible || isAbsolute(sym)) {
+        expr = R_GOT_OFF;
+      } else {
+        ctx.in.got->hasGotOffRel.store(true, std::memory_order_relaxed);
+        expr = R_GOTREL;
+      }
+      break;
+
     // TLS LE relocations:
     case R_SPARC_TLS_LE_HIX22:
     case R_SPARC_TLS_LE_LOX10:
@@ -173,6 +189,19 @@ void SPARCV9::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
         continue;
       expr = R_TPREL;
       break;
+
+    // TLS IE relocations. In an executable, a non-preemptible symbol is
+    // optimized to Local Exec: the add becomes an xor and the load becomes a
+    // register move.
+    case R_SPARC_TLS_IE_HI22:
+    case R_SPARC_TLS_IE_LO10:
+      rs.handleTlsIe(R_GOT_OFF, type, offset, addend, sym);
+      continue;
+    case R_SPARC_TLS_IE_LD:
+    case R_SPARC_TLS_IE_LDX:
+      if (!ctx.arg.shared && !sym.isPreemptible)
+        sec.addReloc({R_TPREL, type, offset, addend, &sym});
+      continue;
 
     default:
       Err(ctx) << getErrorLoc(ctx, sec.content().data() + offset)
@@ -322,6 +351,49 @@ void SPARCV9::relocate(uint8_t *loc, const Relocation &rel,
     // T-simm13
     write32be(loc, (read32be(loc) & ~0x00001fff) | (val & 0x000003ff) | 0x1C00);
     break;
+  case R_SPARC_GOTDATA_OP_HIX22: {
+    // V-imm22. sethi encodes the complement of a negative value, which the
+    // paired xor undoes, so the encodable range is 33 bits.
+    checkInt(ctx, loc, val, 33, rel);
+    uint64_t v = int64_t(val) < 0 ? ~val : val;
+    write32be(loc, (read32be(loc) & ~0x003fffff) | ((v >> 10) & 0x003fffff));
+    break;
+  }
+  case R_SPARC_GOTDATA_OP_LOX10:
+    // T-simm13. Only a negative value needs the sign extension bits.
+    write32be(loc, (read32be(loc) & ~0x00001fff) | (val & 0x000003ff) |
+                       (int64_t(val) < 0 ? 0x1c00 : 0));
+    break;
+  case R_SPARC_GOTDATA_OP:
+    // ldx [%rs1 + %rs2], %rd -> add %rs1, %rs2, %rd
+    if (rel.expr == R_GOTREL)
+      write32be(loc, (read32be(loc) & 0x3e07c01f) | 0x80000000);
+    break;
+  case R_SPARC_TLS_IE_HI22: {
+    // T-imm22. Local Exec encodes the complement, as R_SPARC_TLS_LE_HIX22 does.
+    uint64_t v = rel.expr == R_TPREL ? ~val : val;
+    write32be(loc, (read32be(loc) & ~0x003fffff) | ((v >> 10) & 0x003fffff));
+    break;
+  }
+  case R_SPARC_TLS_IE_LO10:
+    if (rel.expr == R_TPREL)
+      // add %rs1, imm, %rd -> xor %rs1, imm, %rd, T-simm13.
+      write32be(loc, (read32be(loc) & ~0x00001fff) | 0x80182000 |
+                         (val & 0x000003ff) | 0x1c00);
+    else
+      // T-simm10
+      write32be(loc, (read32be(loc) & ~0x000003ff) | (val & 0x000003ff));
+    break;
+  case R_SPARC_TLS_IE_LD:
+  case R_SPARC_TLS_IE_LDX: {
+    // ld/ldx [%rs1 + %rs2], %rd -> mov %rs2, %rd, or nop if the move is
+    // redundant. Only reached when the sequence is optimized to Local Exec.
+    uint32_t insn = read32be(loc);
+    write32be(loc, ((insn >> 25) & 0x1f) == (insn & 0x1f)
+                       ? 0x01000000
+                       : 0x80100000 | (insn & 0x3e00001f));
+    break;
+  }
   default:
     llvm_unreachable("unknown relocation");
   }

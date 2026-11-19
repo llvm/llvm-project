@@ -13,7 +13,7 @@ define void @test_replicate_addrspacecast(ptr noalias %src, ptr noalias %dst, i6
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds ptr, ptr [[SRC]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i64 2
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x ptr>, ptr [[TMP0]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x ptr>, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = addrspacecast <2 x ptr> [[WIDE_LOAD]] to <2 x ptr addrspace(1)>
@@ -21,7 +21,7 @@ define void @test_replicate_addrspacecast(ptr noalias %src, ptr noalias %dst, i6
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint <2 x ptr addrspace(1)> [[TMP2]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint <2 x ptr addrspace(1)> [[TMP3]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[TMP6]], i64 2
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[TMP6]], i64 16
 ; CHECK-NEXT:    store <2 x i64> [[TMP4]], ptr [[TMP6]], align 8
 ; CHECK-NEXT:    store <2 x i64> [[TMP5]], ptr [[TMP7]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -61,13 +61,13 @@ define void @test_replicate_ptrtoaddr(ptr noalias %src, ptr noalias %dst, i64 %n
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds ptr, ptr [[SRC]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i64 2
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x ptr>, ptr [[TMP0]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x ptr>, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoaddr <2 x ptr> [[WIDE_LOAD]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoaddr <2 x ptr> [[WIDE_LOAD1]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[TMP4]], i64 2
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[TMP4]], i64 16
 ; CHECK-NEXT:    store <2 x i64> [[TMP2]], ptr [[TMP4]], align 8
 ; CHECK-NEXT:    store <2 x i64> [[TMP3]], ptr [[TMP5]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -123,7 +123,7 @@ define void @replicate_sext(i32 %N, ptr %dst, ptr %src) #0 {
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP0]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[TMP0]], 3
 ; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i32 [[N_MOD_VF]], 0
 ; CHECK-NEXT:    [[TMP19:%.*]] = select i1 [[TMP18]], i32 4, i32 [[N_MOD_VF]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP0]], [[TMP19]]
@@ -140,9 +140,9 @@ define void @replicate_sext(i32 %N, ptr %dst, ptr %src) #0 {
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <16 x i32> [[WIDE_VEC]], <16 x i32> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
 ; CHECK-NEXT:    [[STRIDED_VEC9:%.*]] = shufflevector <16 x i32> [[WIDE_VEC]], <16 x i32> poison, <4 x i32> <i32 1, i32 5, i32 9, i32 13>
 ; CHECK-NEXT:    [[TMP25:%.*]] = sext <4 x i32> [[VEC_IND]] to <4 x i64>
-; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr i32, ptr [[DST]], <4 x i64> [[TMP25]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> [[STRIDED_VEC]], <4 x ptr> align 4 [[TMP27]], <4 x i1> splat (i1 true)), !alias.scope [[META7:![0-9]+]], !noalias [[META4]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> [[STRIDED_VEC9]], <4 x ptr> align 4 [[TMP27]], <4 x i1> splat (i1 true)), !alias.scope [[META7]], !noalias [[META4]]
+; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr [4 x i8], ptr [[DST]], <4 x i64> [[TMP25]]
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> [[STRIDED_VEC]], <4 x ptr> align 4 [[WIDE_GEP]], <4 x i1> splat (i1 true)), !alias.scope [[META7:![0-9]+]], !noalias [[META4]]
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> [[STRIDED_VEC9]], <4 x ptr> align 4 [[WIDE_GEP]], <4 x i1> splat (i1 true)), !alias.scope [[META7]], !noalias [[META4]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 12)
 ; CHECK-NEXT:    [[TMP26:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
@@ -211,7 +211,7 @@ define i16 @bitcast_half_to_i16(ptr %src, ptr %dst, i64 %n) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[N]], 16
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 16
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 15
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -219,7 +219,7 @@ define i16 @bitcast_half_to_i16(ptr %src, ptr %dst, i64 %n) {
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <8 x i16> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi <8 x i16> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr half, ptr [[SRC]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr half, ptr [[TMP0]], i64 8
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i64 16
 ; CHECK-NEXT:    [[LOAD:%.*]] = load <8 x half>, ptr [[TMP0]], align 2
 ; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <8 x half>, ptr [[TMP1]], align 2
 ; CHECK-NEXT:    [[FADD:%.*]] = fadd <8 x half> [[LOAD]], zeroinitializer
@@ -242,9 +242,9 @@ define i16 @bitcast_half_to_i16(ptr %src, ptr %dst, i64 %n) {
 ; CHECK:       [[VEC_EPILOG_PH]]:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i16 [ [[TMP9]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NEXT:    [[N_MOD_VF4:%.*]] = urem i64 [[N]], 4
+; CHECK-NEXT:    [[N_MOD_VF4:%.*]] = and i64 [[N]], 3
 ; CHECK-NEXT:    [[N_VEC5:%.*]] = sub i64 [[N]], [[N_MOD_VF4]]
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x i16> zeroinitializer, i16 [[BC_MERGE_RDX]], i32 0
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x i16> zeroinitializer, i16 [[BC_MERGE_RDX]], i64 0
 ; CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX6:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT9:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
@@ -263,11 +263,11 @@ define i16 @bitcast_half_to_i16(ptr %src, ptr %dst, i64 %n) {
 ; CHECK-NEXT:    br i1 [[CMP_N10]], label %[[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC5]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX11:%.*]] = phi i16 [ [[TMP16]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP9]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX10:%.*]] = phi i16 [ [[TMP16]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP9]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[RDX:%.*]] = phi i16 [ [[BC_MERGE_RDX11]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[OR:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RDX:%.*]] = phi i16 [ [[BC_MERGE_RDX10]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[OR:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr half, ptr [[SRC]], i64 [[IV]]
 ; CHECK-NEXT:    [[LOAD1:%.*]] = load half, ptr [[GEP]], align 2
 ; CHECK-NEXT:    [[FADD1:%.*]] = fadd half [[LOAD1]], 0.000000e+00

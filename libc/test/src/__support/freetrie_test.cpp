@@ -132,3 +132,19 @@ TEST(LlvmLibcFreeTrie, Remove) {
   EXPECT_EQ(trie.find_best_fit(large.inner_size())->block().addr(),
             large.addr());
 }
+
+TEST(LlvmLibcFreeTrie, ConstructorWithRoot) {
+  FreeTrie::Node *root = nullptr;
+  FreeTrie trie({0, 4096}, root);
+  EXPECT_TRUE(trie.empty());
+  EXPECT_EQ(trie.root(), static_cast<FreeTrie::Node *>(nullptr));
+
+  byte mem[1024];
+  optional<BlockRef> maybeBlock = BlockRef::init(mem);
+  ASSERT_TRUE(maybeBlock.has_value());
+  BlockRef block = *maybeBlock;
+  trie.push(block);
+
+  EXPECT_FALSE(trie.empty());
+  EXPECT_NE(trie.root(), static_cast<FreeTrie::Node *>(nullptr));
+}

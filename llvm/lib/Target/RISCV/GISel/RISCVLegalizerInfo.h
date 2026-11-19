@@ -26,7 +26,11 @@ class RISCVSubtarget;
 class RISCVLegalizerInfo : public LegalizerInfo {
   const RISCVSubtarget &STI;
   const unsigned XLen;
+  // Any-scalar XLen type, used in legality rules where it matches both i and f
+  // types of that size.
   const LLT sXLen;
+  // Integer XLen type, used when building new instructions.
+  const LLT iXLen;
 
 public:
   RISCVLegalizerInfo(const RISCVSubtarget &ST);
@@ -39,12 +43,12 @@ public:
 
 private:
   bool shouldBeInConstantPool(const APInt &APImm, bool ShouldOptForSize) const;
-  bool legalizeShlAshrLshr(MachineInstr &MI, MachineIRBuilder &MIRBuilder,
-                           GISelChangeObserver &Observer) const;
 
   bool legalizeBitreverse(MachineInstr &MI, MachineIRBuilder &MIB) const;
   bool legalizeBRJT(MachineInstr &MI, MachineIRBuilder &MIRBuilder) const;
   bool legalizeVAStart(MachineInstr &MI, MachineIRBuilder &MIRBuilder) const;
+  bool legalizeReadCounter(MachineInstr &MI, MachineIRBuilder &MIRBuilder,
+                           GISelChangeObserver &Observer) const;
   bool legalizeVScale(MachineInstr &MI, MachineIRBuilder &MIB) const;
   bool legalizeExt(MachineInstr &MI, MachineIRBuilder &MIRBuilder) const;
   bool legalizeSplatVector(MachineInstr &MI, MachineIRBuilder &MIB) const;

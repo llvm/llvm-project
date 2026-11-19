@@ -3,7 +3,7 @@
 
 !s32i = !cir.int<s, 32>
 !s64i = !cir.int<s, 64>
-!rec_Pair = !cir.struct<"Pair" {!s32i, !s32i}>
+!rec_Pair = !cir.struct<"Pair" {data !s32i, data !s32i}>
 
 #coerce_pair_return_to_i64 = {
   return = { kind = "direct", coerced_type = !s64i },
@@ -22,7 +22,7 @@ module attributes {
 } {
 
   cir.func @returns_pair() -> !rec_Pair
-      attributes { test_classify = #coerce_pair_return_to_i64 } {
+      requires_call_conv_lowering attributes { test_classify = #coerce_pair_return_to_i64 } {
     %0 = cir.const #cir.zero : !rec_Pair
     cir.return %0 : !rec_Pair
   }
@@ -37,7 +37,7 @@ module attributes {
   // CHECK:        cir.return %[[COERCED]] : !s64i
 
   cir.func @caller() -> !s32i
-      attributes { test_classify = #caller_ret_i32 } {
+      requires_call_conv_lowering attributes { test_classify = #caller_ret_i32 } {
     %0 = cir.call @returns_pair() : () -> !rec_Pair
     %1 = cir.alloca "r" align(4) : !cir.ptr<!rec_Pair>
     cir.store %0, %1 : !rec_Pair, !cir.ptr<!rec_Pair>
@@ -51,7 +51,8 @@ module attributes {
   // CHECK:        %[[RET:.*]] = cir.call @returns_pair() : () -> !s64i
   // CHECK:        cir.store %[[RET]], %{{.*}} : !s64i, !cir.ptr<!s64i>
   // CHECK:        %[[RCAST:.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!s64i> -> !cir.ptr<!rec_Pair>
-  // CHECK:        %[[REC:.*]] = cir.load %[[RCAST]] : !cir.ptr<!rec_Pair>, !rec_Pair
+  // CHECK:        %[[R:.*]] = cir.alloca "r" {{.*}} : !cir.ptr<!rec_Pair>
+  // CHECK:        cir.copy %[[RCAST]] align(8) to %[[R]] align(4) : !cir.ptr<!rec_Pair>
   // CHECK:        %[[MEMBER:.*]] = cir.get_member %{{.*}}[0] {name = "first"} : !cir.ptr<!rec_Pair> -> !cir.ptr<!s32i>
 
 }

@@ -159,6 +159,9 @@ public:
   Result operator()(const DescriptorInquiry &x) const {
     return visitor_(x.base());
   }
+  Result operator()(const RankOneBoundElement &x) const {
+    return visitor_(x.base());
+  }
 
   // Calls
   Result operator()(const SpecificIntrinsic &) const {

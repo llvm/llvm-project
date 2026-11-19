@@ -3,7 +3,7 @@
 ! Test declare reduction without initializer clause for intrinsic types.
 ! Without an initializer, the private variable should be zero-initialized.
 
-! CHECK-DAG: omp.declare_reduction @_QQFchar_max_byref_c8x10 : !fir.ref<!fir.char<1,10>>
+! CHECK-DAG: omp.declare_reduction @_QQFchar_max_byref_c8x10 byref_element_type({{.*}}) : !fir.ref<!fir.char<1,10>>
 ! CHECK:       init {
 ! CHECK:       %[[CHZERO:.*]] = fir.zero_bits !fir.char<1,10>
 ! CHECK:       fir.store %[[CHZERO]]

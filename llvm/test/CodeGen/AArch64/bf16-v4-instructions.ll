@@ -921,8 +921,7 @@ define <4 x i1> @test_fcmp_one(<4 x bfloat> %a, <4 x bfloat> %b) #0 {
 ; CHECK-CVT-SD-NEXT:    shll v0.4s, v0.4h, #16
 ; CHECK-CVT-SD-NEXT:    fcmgt v2.4s, v0.4s, v1.4s
 ; CHECK-CVT-SD-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
-; CHECK-CVT-SD-NEXT:    orr v0.16b, v0.16b, v2.16b
-; CHECK-CVT-SD-NEXT:    xtn v0.4h, v0.4s
+; CHECK-CVT-SD-NEXT:    addhn v0.4h, v0.4s, v2.4s
 ; CHECK-CVT-SD-NEXT:    ret
 ;
 ; CHECK-BF16-SD-LABEL: test_fcmp_one:
@@ -931,8 +930,7 @@ define <4 x i1> @test_fcmp_one(<4 x bfloat> %a, <4 x bfloat> %b) #0 {
 ; CHECK-BF16-SD-NEXT:    shll v0.4s, v0.4h, #16
 ; CHECK-BF16-SD-NEXT:    fcmgt v2.4s, v0.4s, v1.4s
 ; CHECK-BF16-SD-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
-; CHECK-BF16-SD-NEXT:    orr v0.16b, v0.16b, v2.16b
-; CHECK-BF16-SD-NEXT:    xtn v0.4h, v0.4s
+; CHECK-BF16-SD-NEXT:    addhn v0.4h, v0.4s, v2.4s
 ; CHECK-BF16-SD-NEXT:    ret
 ;
 ; CHECK-CVT-GI-LABEL: test_fcmp_one:
@@ -1097,8 +1095,7 @@ define <4 x i1> @test_fcmp_ord(<4 x bfloat> %a, <4 x bfloat> %b) #0 {
 ; CHECK-CVT-SD-NEXT:    shll v0.4s, v0.4h, #16
 ; CHECK-CVT-SD-NEXT:    fcmge v2.4s, v0.4s, v1.4s
 ; CHECK-CVT-SD-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
-; CHECK-CVT-SD-NEXT:    orr v0.16b, v0.16b, v2.16b
-; CHECK-CVT-SD-NEXT:    xtn v0.4h, v0.4s
+; CHECK-CVT-SD-NEXT:    addhn v0.4h, v0.4s, v2.4s
 ; CHECK-CVT-SD-NEXT:    ret
 ;
 ; CHECK-BF16-SD-LABEL: test_fcmp_ord:
@@ -1107,8 +1104,7 @@ define <4 x i1> @test_fcmp_ord(<4 x bfloat> %a, <4 x bfloat> %b) #0 {
 ; CHECK-BF16-SD-NEXT:    shll v0.4s, v0.4h, #16
 ; CHECK-BF16-SD-NEXT:    fcmge v2.4s, v0.4s, v1.4s
 ; CHECK-BF16-SD-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
-; CHECK-BF16-SD-NEXT:    orr v0.16b, v0.16b, v2.16b
-; CHECK-BF16-SD-NEXT:    xtn v0.4h, v0.4s
+; CHECK-BF16-SD-NEXT:    addhn v0.4h, v0.4s, v2.4s
 ; CHECK-BF16-SD-NEXT:    ret
 ;
 ; CHECK-CVT-GI-LABEL: test_fcmp_ord:
@@ -2402,7 +2398,7 @@ define <4 x bfloat> @test_powi(<4 x bfloat> %a, i32 %b) #0 {
 ; CHECK-BF16-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-BF16-GI-NEXT:    add sp, sp, #96
 ; CHECK-BF16-GI-NEXT:    ret
-  %r = call <4 x bfloat> @llvm.powi.v4bf16.v4i32(<4 x bfloat> %a, i32 %b)
+  %r = call <4 x bfloat> @llvm.powi.v4bf16.i32(<4 x bfloat> %a, i32 %b)
   ret <4 x bfloat> %r
 }
 
@@ -7194,13 +7190,6 @@ define bfloat @test_reduce_fmul_fast(<4 x bfloat> %b) #0 {
 ; CHECK-CVT-GI-NEXT:    fmul v0.2s, v0.2s, v1.2s
 ; CHECK-CVT-GI-NEXT:    mov s1, v0.s[1]
 ; CHECK-CVT-GI-NEXT:    fmul s0, s0, s1
-; CHECK-CVT-GI-NEXT:    fmov w9, s0
-; CHECK-CVT-GI-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-CVT-GI-NEXT:    add w9, w9, w8
-; CHECK-CVT-GI-NEXT:    add w9, w9, w10
-; CHECK-CVT-GI-NEXT:    lsr w9, w9, #16
-; CHECK-CVT-GI-NEXT:    fmov s0, w9
-; CHECK-CVT-GI-NEXT:    shll v0.4s, v0.4h, #16
 ; CHECK-CVT-GI-NEXT:    fmov w9, s0
 ; CHECK-CVT-GI-NEXT:    ubfx w10, w9, #16, #1
 ; CHECK-CVT-GI-NEXT:    add w8, w9, w8

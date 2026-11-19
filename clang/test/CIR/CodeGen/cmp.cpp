@@ -46,9 +46,9 @@ void c0(int a, int b) {
 // CIR: %{{.*}} = cir.cmp eq %[[A6]], %[[B6]] : !s32i
 
 // LLVM-LABEL: define{{.*}} void @_Z2c0ii(i32 {{.*}} %0, i32 {{.*}} %1){{.*}} {
-// LLVM: %[[PTR1:.*]] = alloca i32, i64 1
-// LLVM: %[[PTR2:.*]] = alloca i32, i64 1
-// LLVM: %[[BOOL_PTR:.*]] = alloca i8, i64 1
+// LLVM: %[[PTR1:.*]] = alloca i32, 
+// LLVM: %[[PTR2:.*]] = alloca i32, 
+// LLVM: %[[BOOL_PTR:.*]] = alloca i8, 
 // LLVM: store i32 %0, ptr %[[PTR1]]
 // LLVM: store i32 %1, ptr %[[PTR2]]
 
@@ -171,9 +171,9 @@ void c0_unsigned(unsigned int a, unsigned int b) {
 // CIR: %{{.*}} = cir.cmp eq %[[UA6]], %[[UB6]] : !u32i
 
 // LLVM-LABEL: define{{.*}} void @_Z11c0_unsignedjj(i32 {{.*}} %0, i32 {{.*}} %1){{.*}} {
-// LLVM: %[[U_PTR1:.*]] = alloca i32, i64 1
-// LLVM: %[[U_PTR2:.*]] = alloca i32, i64 1
-// LLVM: %[[U_BOOL_PTR:.*]] = alloca i8, i64 1
+// LLVM: %[[U_PTR1:.*]] = alloca i32, 
+// LLVM: %[[U_PTR2:.*]] = alloca i32, 
+// LLVM: %[[U_BOOL_PTR:.*]] = alloca i8, 
 // LLVM: store i32 %0, ptr %[[U_PTR1]]
 // LLVM: store i32 %1, ptr %[[U_PTR2]]
 

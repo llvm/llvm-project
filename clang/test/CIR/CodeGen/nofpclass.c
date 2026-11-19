@@ -17,7 +17,7 @@ double add(double a, double b) { return a + b; }
 // LLVM: define {{.*}} nofpclass(nan inf) double @add(double noundef nofpclass(nan inf) %{{.*}}, double noundef nofpclass(nan inf) %{{.*}})
 
 _Complex double ret_complex(void) { return 1.0 + 2.0i; }
-// CIR: cir.func {{.*}} @ret_complex() -> (!cir.complex<!cir.double> {llvm.nofpclass = 519 : i64})
+// CIR: cir.func {{.*}} @ret_complex() -> (!rec_anon_struct {llvm.nofpclass = 519 : i64})
 // LLVM: define {{.*}} nofpclass(nan inf) { double, double } @ret_complex()
 
 int non_fp(int x) { return x; }

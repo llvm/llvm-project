@@ -13,8 +13,8 @@ define zeroext i8 @rolb(i8 zeroext %a, i8 zeroext %b) nounwind {
 ; CHECK-NEXT:    move.b (11,%sp), %d0
 ; CHECK-NEXT:    move.b (7,%sp), %d1
 ; CHECK-NEXT:    rol.b %d0, %d1
-; CHECK-NEXT:    move.l %d1, %d0
-; CHECK-NEXT:    and.l #255, %d0
+; CHECK-NEXT:    moveq #0, %d0
+; CHECK-NEXT:    move.b %d1, %d0
 ; CHECK-NEXT:    rts
   %1 = tail call i8 @llvm.fshl.i8(i8 %a, i8 %a, i8 %b)
   ret i8 %1
@@ -26,8 +26,8 @@ define zeroext i16 @rolw(i16 zeroext %a, i16 zeroext %b) nounwind {
 ; CHECK-NEXT:    move.w (10,%sp), %d0
 ; CHECK-NEXT:    move.w (6,%sp), %d1
 ; CHECK-NEXT:    rol.w %d0, %d1
-; CHECK-NEXT:    move.l %d1, %d0
-; CHECK-NEXT:    and.l #65535, %d0
+; CHECK-NEXT:    moveq #0, %d0
+; CHECK-NEXT:    move.w %d1, %d0
 ; CHECK-NEXT:    rts
   %1 = tail call i16 @llvm.fshl.i16(i16 %a, i16 %a, i16 %b)
   ret i16 %1
@@ -62,7 +62,9 @@ define zeroext i16 @roliw(i16 zeroext %a) nounwind {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    move.w (6,%sp), %d0
 ; CHECK-NEXT:    rol.w #5, %d0
-; CHECK-NEXT:    and.l #65535, %d0
+; CHECK-NEXT:    swap %d0
+; CHECK-NEXT:    clr.w %d0
+; CHECK-NEXT:    swap %d0
 ; CHECK-NEXT:    rts
   %1 = tail call i16 @llvm.fshl.i16(i16 %a, i16 %a, i16 5)
   ret i16 %1
@@ -75,5 +77,16 @@ define i32 @rolil(i32 %a) nounwind {
 ; CHECK-NEXT:    rol.l #7, %d0
 ; CHECK-NEXT:    rts
   %1 = tail call i32 @llvm.fshl.i32(i32 %a, i32 %a, i32 7)
+  ret i32 %1
+}
+
+; Rotating 16 bits should lower to SWAP
+define i32 @rolswap(i32 %a) nounwind {
+; CHECK-LABEL: rolswap:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    move.l (4,%sp), %d0
+; CHECK-NEXT:    swap %d0
+; CHECK-NEXT:    rts
+  %1 = tail call i32 @llvm.fshl.i32(i32 %a, i32 %a, i32 16)
   ret i32 %1
 }

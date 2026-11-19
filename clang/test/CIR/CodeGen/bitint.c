@@ -21,8 +21,8 @@ __int128 int128_var;
 signed _BitInt(256) bitint256_var;
 signed _BitInt(254) bitint254_var;
 
-// CIR: cir.global external @bitint128_var = #cir.int<0> : !s128i_bitint {alignment = 8 : i64}
-// CIR: cir.global external @int128_var = #cir.int<0> : !s128i {alignment = 16 : i64}
+// CIR: cir.global external @bitint128_var = #cir.int<0> : !s128i_bitint align(8)
+// CIR: cir.global external @int128_var = #cir.int<0> : !s128i align(16)
 // CIR: cir.global external @bitint256_var = #cir.int<0> : !s256i_bitint
 // CIR: cir.global external @bitint254_var = #cir.int<0> : !cir.int<s, 254, bitint>
 
@@ -53,8 +53,9 @@ void take_unsigned_bitint(unsigned _BitInt(64) x) {}
 // OGCG: define {{.*}} void @take_unsigned_bitint(i64 {{.*}})
 
 void take_bitint_254(signed _BitInt(254) x) {}
-// CIR: cir.func {{.*}} @take_bitint_254(%arg0: !cir.int<s, 254, bitint>
-// LLVM: define {{.*}} void @take_bitint_254(i254 {{.*}})
+// CIR: cir.func {{.*}} @take_bitint_254(%arg0: !cir.ptr<!cir.int<s, 254, bitint>>
+// CIR-SAME: {llvm.align = 8 : i64, llvm.byval = !cir.int<s, 254, bitint>, llvm.noundef}
+// LLVM: define {{.*}} void @take_bitint_254(ptr noundef byval(i256) align 8 {{.*}})
 // OGCG: define {{.*}} void @take_bitint_254(ptr noundef byval(i256) align 8 {{.*}})
 
 // Regular __int128 should NOT have the bitint flag.

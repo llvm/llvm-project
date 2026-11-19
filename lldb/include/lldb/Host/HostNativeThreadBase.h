@@ -10,6 +10,7 @@
 #define LLDB_HOST_HOSTNATIVETHREADBASE_H
 
 #include "lldb/Utility/Status.h"
+#include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-types.h"
 
@@ -36,6 +37,7 @@ public:
   virtual bool IsJoinable() const;
   virtual void Reset();
   virtual bool EqualsThread(lldb::thread_t thread) const;
+  virtual StructuredData::ObjectSP GetExtendedInfo() const;
   lldb::thread_t Release();
 
   lldb::thread_t GetSystemHandle() const;

@@ -17,6 +17,7 @@
 
 #include "benchmark/benchmark.h"
 #include "common.h"
+#include "test_macros.h"
 
 int main(int argc, char** argv) {
   auto std_nth_element = [](auto first, auto nth, auto last) { return std::nth_element(first, nth, last); };
@@ -34,7 +35,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto nth_element, auto generate_data) {
       benchmark::RegisterBenchmark(
           name,
-          [nth_element, generate_data](auto& st) {
+          [nth_element, generate_data](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size          = st.range(0);
             constexpr std::size_t BatchSize = 32;
             using ValueType                 = typename Container::value_type;

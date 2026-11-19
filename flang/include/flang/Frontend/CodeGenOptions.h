@@ -20,6 +20,7 @@
 #include "llvm/Frontend/Debug/Options.h"
 #include "llvm/Frontend/Driver/CodeGenOptions.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Target/TargetOptions.h"
 #include <memory>
@@ -230,6 +231,9 @@ public:
     /// TODO: Implemention of other values as needed. In Clang, "CX_Promoted"
     /// is implemented. (See clang/Basic/LangOptions.h)
   };
+
+  /// The kind of name table (accelerator table) the debug info asks for.
+  enum class DebugNameTableKind { None, Default, GNU, Apple };
 
   // Define accessors/mutators for code generation options of enumeration type.
 #define CODEGENOPT(Name, Bits, Default)

@@ -54,13 +54,17 @@
 #error "wrong value for __cpp_placeholder_variables"
 #endif
 
+#if check(pp_embed, 202502, 202502, 202502, 202502, 202502, 202502, 202502)
+#error "wrong value for __cpp_pp_embed"
+#endif
+
 #if check(trivial_relocatability, 202502, 202502, 202502, 202502, 202502, 202502, 202502)
 #error "wrong value for __cpp_trivial_relocatability"
 #endif
 
 // --- C++23 features ---
 
-#if check(auto_cast, 0, 0, 0, 0, 0, 202110, 202110)
+#if check(auto_cast, 202110, 202110, 202110, 202110, 202110, 202110, 202110)
 #error "wrong value for __cpp_auto_cast"
 #endif
 

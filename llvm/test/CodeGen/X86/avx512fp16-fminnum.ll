@@ -32,10 +32,9 @@ define half @test_intrinsic_fminh(half %x, half %y) {
 define <2 x half> @test_intrinsic_fmin_v2f16(<2 x half> %x, <2 x half> %y) {
 ; HasVL-LABEL: test_intrinsic_fmin_v2f16:
 ; HasVL:       # %bb.0:
-; HasVL-NEXT:    vminph %xmm0, %xmm1, %xmm2 # encoding: [0x62,0xf5,0x74,0x08,0x5d,0xd0]
-; HasVL-NEXT:    vcmpunordph %xmm0, %xmm0, %k1 # encoding: [0x62,0xf3,0x7c,0x08,0xc2,0xc8,0x03]
-; HasVL-NEXT:    vmovdqu16 %xmm1, %xmm2 {%k1} # encoding: [0x62,0xf1,0xff,0x09,0x6f,0xd1]
-; HasVL-NEXT:    vmovdqa %xmm2, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0xc2]
+; HasVL-NEXT:    vcmpordph %xmm0, %xmm0, %k1 # encoding: [0x62,0xf3,0x7c,0x08,0xc2,0xc8,0x07]
+; HasVL-NEXT:    vminph %xmm0, %xmm1, %xmm1 {%k1} # encoding: [0x62,0xf5,0x74,0x09,0x5d,0xc8]
+; HasVL-NEXT:    vmovaps %xmm1, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x28,0xc1]
 ; HasVL-NEXT:    retq # encoding: [0xc3]
 ;
 ; NOVL-LABEL: test_intrinsic_fmin_v2f16:
@@ -110,10 +109,9 @@ define <2 x half> @test_intrinsic_fmin_v2f16(<2 x half> %x, <2 x half> %y) {
 define <4 x half> @test_intrinsic_fmin_v4f16(<4 x half> %x, <4 x half> %y) {
 ; HasVL-LABEL: test_intrinsic_fmin_v4f16:
 ; HasVL:       # %bb.0:
-; HasVL-NEXT:    vminph %xmm0, %xmm1, %xmm2 # encoding: [0x62,0xf5,0x74,0x08,0x5d,0xd0]
-; HasVL-NEXT:    vcmpunordph %xmm0, %xmm0, %k1 # encoding: [0x62,0xf3,0x7c,0x08,0xc2,0xc8,0x03]
-; HasVL-NEXT:    vmovdqu16 %xmm1, %xmm2 {%k1} # encoding: [0x62,0xf1,0xff,0x09,0x6f,0xd1]
-; HasVL-NEXT:    vmovdqa %xmm2, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0xc2]
+; HasVL-NEXT:    vcmpordph %xmm0, %xmm0, %k1 # encoding: [0x62,0xf3,0x7c,0x08,0xc2,0xc8,0x07]
+; HasVL-NEXT:    vminph %xmm0, %xmm1, %xmm1 {%k1} # encoding: [0x62,0xf5,0x74,0x09,0x5d,0xc8]
+; HasVL-NEXT:    vmovaps %xmm1, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x28,0xc1]
 ; HasVL-NEXT:    retq # encoding: [0xc3]
 ;
 ; NOVL-LABEL: test_intrinsic_fmin_v4f16:
@@ -188,10 +186,9 @@ define <4 x half> @test_intrinsic_fmin_v4f16(<4 x half> %x, <4 x half> %y) {
 define <8 x half> @test_intrinsic_fmin_v8f16(<8 x half> %x, <8 x half> %y) {
 ; HasVL-LABEL: test_intrinsic_fmin_v8f16:
 ; HasVL:       # %bb.0:
-; HasVL-NEXT:    vminph %xmm0, %xmm1, %xmm2 # encoding: [0x62,0xf5,0x74,0x08,0x5d,0xd0]
-; HasVL-NEXT:    vcmpunordph %xmm0, %xmm0, %k1 # encoding: [0x62,0xf3,0x7c,0x08,0xc2,0xc8,0x03]
-; HasVL-NEXT:    vmovdqu16 %xmm1, %xmm2 {%k1} # encoding: [0x62,0xf1,0xff,0x09,0x6f,0xd1]
-; HasVL-NEXT:    vmovdqa %xmm2, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0xc2]
+; HasVL-NEXT:    vcmpordph %xmm0, %xmm0, %k1 # encoding: [0x62,0xf3,0x7c,0x08,0xc2,0xc8,0x07]
+; HasVL-NEXT:    vminph %xmm0, %xmm1, %xmm1 {%k1} # encoding: [0x62,0xf5,0x74,0x09,0x5d,0xc8]
+; HasVL-NEXT:    vmovaps %xmm1, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x28,0xc1]
 ; HasVL-NEXT:    retq # encoding: [0xc3]
 ;
 ; NOVL-LABEL: test_intrinsic_fmin_v8f16:
@@ -266,10 +263,9 @@ define <8 x half> @test_intrinsic_fmin_v8f16(<8 x half> %x, <8 x half> %y) {
 define <16 x half> @test_intrinsic_fmin_v16f16(<16 x half> %x, <16 x half> %y) {
 ; HasVL-LABEL: test_intrinsic_fmin_v16f16:
 ; HasVL:       # %bb.0:
-; HasVL-NEXT:    vminph %ymm0, %ymm1, %ymm2 # encoding: [0x62,0xf5,0x74,0x28,0x5d,0xd0]
-; HasVL-NEXT:    vcmpunordph %ymm0, %ymm0, %k1 # encoding: [0x62,0xf3,0x7c,0x28,0xc2,0xc8,0x03]
-; HasVL-NEXT:    vmovdqu16 %ymm1, %ymm2 {%k1} # encoding: [0x62,0xf1,0xff,0x29,0x6f,0xd1]
-; HasVL-NEXT:    vmovdqa %ymm2, %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0xc2]
+; HasVL-NEXT:    vcmpordph %ymm0, %ymm0, %k1 # encoding: [0x62,0xf3,0x7c,0x28,0xc2,0xc8,0x07]
+; HasVL-NEXT:    vminph %ymm0, %ymm1, %ymm1 {%k1} # encoding: [0x62,0xf5,0x74,0x29,0x5d,0xc8]
+; HasVL-NEXT:    vmovaps %ymm1, %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xfc,0x28,0xc1]
 ; HasVL-NEXT:    retq # encoding: [0xc3]
 ;
 ; NOVL-LABEL: test_intrinsic_fmin_v16f16:
@@ -408,10 +404,9 @@ define <16 x half> @test_intrinsic_fmin_v16f16(<16 x half> %x, <16 x half> %y) {
 define <32 x half> @test_intrinsic_fmin_v32f16(<32 x half> %x, <32 x half> %y) {
 ; CHECK-LABEL: test_intrinsic_fmin_v32f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vminph %zmm0, %zmm1, %zmm2 # encoding: [0x62,0xf5,0x74,0x48,0x5d,0xd0]
-; CHECK-NEXT:    vcmpunordph %zmm0, %zmm0, %k1 # encoding: [0x62,0xf3,0x7c,0x48,0xc2,0xc8,0x03]
-; CHECK-NEXT:    vmovdqu16 %zmm1, %zmm2 {%k1} # encoding: [0x62,0xf1,0xff,0x49,0x6f,0xd1]
-; CHECK-NEXT:    vmovdqa64 %zmm2, %zmm0 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xc2]
+; CHECK-NEXT:    vcmpordph %zmm0, %zmm0, %k1 # encoding: [0x62,0xf3,0x7c,0x48,0xc2,0xc8,0x07]
+; CHECK-NEXT:    vminph %zmm0, %zmm1, %zmm1 {%k1} # encoding: [0x62,0xf5,0x74,0x49,0x5d,0xc8]
+; CHECK-NEXT:    vmovaps %zmm1, %zmm0 # encoding: [0x62,0xf1,0x7c,0x48,0x28,0xc1]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %z = call <32 x half> @llvm.minnum.v32f16(<32 x half> %x, <32 x half> %y) readnone
   ret <32 x half> %z

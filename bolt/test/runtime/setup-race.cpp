@@ -3,7 +3,7 @@
 // when libstdcxx.so invokes global constructors that call malloc.
 
 // REQUIRES: system-linux
-// RUN: %clangxx %cxxflags -Wl,-q %s -o %t.exe -D_GNU_SOURCE -g
+// RUN: %clangxx %cxxflags -Wl,-q %s -o %t.exe -D_GNU_SOURCE -g -ldl -lpthread
 // RUN: llvm-bolt -instrument %t.exe -o %t.bolt.exe
 // RUN: %t.bolt.exe
 

@@ -293,6 +293,7 @@ constexpr inline enc_data all_encoding_data[] = {
     {3, "ISO_646.irv:1991"},
     {3, "cp367"},
     {3, "csASCII"},
+    {3, "ASCII"},
     {3, "iso-ir-6"},
     {3, "us"},
     {4, "ISO-8859-1"},

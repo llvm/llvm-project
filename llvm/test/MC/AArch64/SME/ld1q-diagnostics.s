@@ -35,7 +35,7 @@ ld1q {za0h.q[w16, 0]}, p0/z, [x0]
 // Invalid vector select offset (expected: 0)
 
 ld1q {za0h.q[w12]}, p0/z, [x0]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be 0.
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // CHECK-NEXT: ld1q {za0h.q[w12]}, p0/z, [x0]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

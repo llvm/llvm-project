@@ -90,6 +90,9 @@ static llvm::json::Value toJSON(const StoppedReason &SR) {
   case eStoppedReasonInstructionBreakpoint:
     return "instruction breakpoint";
   }
+
+  assert(false && "invalid StopReason");
+  return "";
 }
 
 llvm::json::Value toJSON(const StoppedEventBody &SEB) {
@@ -108,6 +111,36 @@ llvm::json::Value toJSON(const StoppedEventBody &SEB) {
   if (!SEB.hitBreakpointIds.empty())
     Result.insert({"hitBreakpointIds", SEB.hitBreakpointIds});
 
+  return Result;
+}
+
+llvm::json::Value toJSON(const ProgressStartEventBody &PSB) {
+  llvm::json::Object Result{{"progressId", PSB.progressId},
+                            {"title", PSB.title}};
+  if (PSB.message)
+    Result.insert({"message", *PSB.message});
+  if (PSB.requestId)
+    Result.insert({"requestId", *PSB.requestId});
+  if (PSB.percentage)
+    Result.insert({"percentage", *PSB.percentage});
+  if (PSB.cancellable)
+    Result.insert({"cancellable", *PSB.cancellable});
+  return Result;
+}
+
+llvm::json::Value toJSON(const ProgressUpdateEventBody &PUB) {
+  llvm::json::Object Result{{"progressId", PUB.progressId}};
+  if (PUB.message)
+    Result.insert({"message", *PUB.message});
+  if (PUB.percentage)
+    Result.insert({"percentage", *PUB.percentage});
+  return Result;
+}
+
+llvm::json::Value toJSON(const ProgressEndEventBody &PEB) {
+  llvm::json::Object Result{{"progressId", PEB.progressId}};
+  if (PEB.message)
+    Result.insert({"message", *PEB.message});
   return Result;
 }
 

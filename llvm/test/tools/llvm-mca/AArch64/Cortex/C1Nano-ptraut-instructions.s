@@ -68,79 +68,104 @@
 # CHECK-NEXT:  1      2     1.00    *             U     ldrab	xzr, [sp, #-4096]!
 
 # CHECK:      Resources:
-# CHECK-NEXT: [0]   - C1NanoUnitALU0
-# CHECK-NEXT: [1]   - C1NanoUnitALU1
-# CHECK-NEXT: [2]   - C1NanoUnitB
-# CHECK-NEXT: [3]   - C1NanoUnitDiv
-# CHECK-NEXT: [4]   - C1NanoUnitLd1
-# CHECK-NEXT: [5]   - C1NanoUnitLdSt
-# CHECK-NEXT: [6]   - C1NanoUnitMAC
-# CHECK-NEXT: [7]   - C1NanoUnitPAC
-# CHECK-NEXT: [8]   - C1NanoUnitVALU0
-# CHECK-NEXT: [9]   - C1NanoUnitVALU1
-# CHECK-NEXT: [10]  - C1NanoUnitVMAC0
-# CHECK-NEXT: [11]  - C1NanoUnitVMAC1
-# CHECK-NEXT: [12]  - C1NanoUnitVMC
+# CHECK-NEXT: [0.0] - C1NanoUnit3CMEPERMF
+# CHECK-NEXT: [0.1] - C1NanoUnit3CMEPERMF
+# CHECK-NEXT: [0.2] - C1NanoUnit3CMEPERMF
+# CHECK-NEXT: [1.0] - C1NanoUnit5CMEVXALU
+# CHECK-NEXT: [1.1] - C1NanoUnit5CMEVXALU
+# CHECK-NEXT: [1.2] - C1NanoUnit5CMEVXALU
+# CHECK-NEXT: [1.3] - C1NanoUnit5CMEVXALU
+# CHECK-NEXT: [1.4] - C1NanoUnit5CMEVXALU
+# CHECK-NEXT: [2]   - C1NanoUnitALU0
+# CHECK-NEXT: [3]   - C1NanoUnitALU1
+# CHECK-NEXT: [4]   - C1NanoUnitB
+# CHECK-NEXT: [5]   - C1NanoUnitCMELD
+# CHECK-NEXT: [6]   - C1NanoUnitCMEMC
+# CHECK-NEXT: [7]   - C1NanoUnitCMEMML0
+# CHECK-NEXT: [8]   - C1NanoUnitCMEMML1
+# CHECK-NEXT: [9]   - C1NanoUnitCMEPERMF
+# CHECK-NEXT: [10]  - C1NanoUnitCMEPERMS
+# CHECK-NEXT: [11]  - C1NanoUnitCMEPF
+# CHECK-NEXT: [12.0] - C1NanoUnitCMERNMRET
+# CHECK-NEXT: [12.1] - C1NanoUnitCMERNMRET
+# CHECK-NEXT: [12.2] - C1NanoUnitCMERNMRET
+# CHECK-NEXT: [13]  - C1NanoUnitCMEST
+# CHECK-NEXT: [14]  - C1NanoUnitCMEVX0ALU
+# CHECK-NEXT: [15]  - C1NanoUnitCMEVX0FPDOT
+# CHECK-NEXT: [16]  - C1NanoUnitCMEVX0MUL
+# CHECK-NEXT: [17]  - C1NanoUnitCMEVX1ALU
+# CHECK-NEXT: [18]  - C1NanoUnitCMEVX1FPDOT
+# CHECK-NEXT: [19]  - C1NanoUnitCMEVX1MUL
+# CHECK-NEXT: [20]  - C1NanoUnitDiv
+# CHECK-NEXT: [21]  - C1NanoUnitLd1
+# CHECK-NEXT: [22]  - C1NanoUnitLdSt
+# CHECK-NEXT: [23]  - C1NanoUnitMAC
+# CHECK-NEXT: [24]  - C1NanoUnitPAC
+# CHECK-NEXT: [25]  - C1NanoUnitVALU0
+# CHECK-NEXT: [26]  - C1NanoUnitVALU1
+# CHECK-NEXT: [27]  - C1NanoUnitVMAC0
+# CHECK-NEXT: [28]  - C1NanoUnitVMAC1
+# CHECK-NEXT: [29]  - C1NanoUnitVMC
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]
-# CHECK-NEXT:  -      -     10.00   -      -      -      -     56.00   -      -      -      -      -
+# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [1.2]  [1.3]  [1.4]  [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [12.2] [13]   [14]   [15]   [16]   [17]   [18]   [19]   [20]   [21]   [22]   [23]   [24]   [25]   [26]   [27]   [28]   [29]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     56.00   -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -     pacia1716
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -     pacib1716
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -     autia1716
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -     autib1716
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -     paciaz
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -     paciasp
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -     pacibz
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -     pacibsp
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -     autiaz
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -     autiasp
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -     autibz
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -     autibsp
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -     pacia	x0, x1
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -     autia	x0, x1
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -     pacda	x0, x1
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -     autda	x0, x1
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -     pacib	x0, x1
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -     autib	x0, x1
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -     pacdb	x0, x1
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -     autdb	x0, x1
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -     pacga	x0, x1, x2
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -     paciza	x0
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -     autiza	x0
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -     pacdza	x0
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -     autdza	x0
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -     pacizb	x0
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -     autizb	x0
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -     pacdzb	x0
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -     autdzb	x0
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -     xpaci	x0
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -     xpacd	x0
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -     xpaclri
-# CHECK-NEXT:  -      -     1.00    -      -      -      -     1.00    -      -      -      -      -     braa	x0, x1
-# CHECK-NEXT:  -      -     1.00    -      -      -      -     1.00    -      -      -      -      -     brab	x0, x1
-# CHECK-NEXT:  -      -     1.00    -      -      -      -     1.00    -      -      -      -      -     blraa	x0, x1
-# CHECK-NEXT:  -      -     1.00    -      -      -      -     1.00    -      -      -      -      -     blrab	x0, x1
-# CHECK-NEXT:  -      -     1.00    -      -      -      -     1.00    -      -      -      -      -     braaz	x0
-# CHECK-NEXT:  -      -     1.00    -      -      -      -     1.00    -      -      -      -      -     brabz	x0
-# CHECK-NEXT:  -      -     1.00    -      -      -      -     1.00    -      -      -      -      -     blraaz	x0
-# CHECK-NEXT:  -      -     1.00    -      -      -      -     1.00    -      -      -      -      -     blrabz	x0
-# CHECK-NEXT:  -      -     1.00    -      -      -      -     1.00    -      -      -      -      -     retaa
-# CHECK-NEXT:  -      -     1.00    -      -      -      -     1.00    -      -      -      -      -     retab
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -     ldraa	x0, [x1, #4088]
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -     ldraa	x0, [x1, #-4096]
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -     ldrab	x0, [x1, #4088]
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -     ldrab	x0, [x1, #-4096]
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -     ldraa	x0, [x1, #4088]!
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -     ldraa	x0, [x1, #-4096]!
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -     ldrab	x0, [x1, #4088]!
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -     ldrab	x0, [x1, #-4096]!
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -     ldraa	x0, [x1]
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -     ldrab	x0, [x1]
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -     ldraa	x0, [x1, #0]!
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -     ldrab	x0, [x1, #0]!
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -     ldraa	xzr, [sp, #-4096]!
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -     ldrab	xzr, [sp, #-4096]!
+# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [1.2]  [1.3]  [1.4]  [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [12.2] [13]   [14]   [15]   [16]   [17]   [18]   [19]   [20]   [21]   [22]   [23]   [24]   [25]   [26]   [27]   [28]   [29]   Instructions:
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     pacia1716
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     pacib1716
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     autia1716
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     autib1716
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     paciaz
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     paciasp
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     pacibz
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     pacibsp
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     autiaz
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     autiasp
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     autibz
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     autibsp
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     pacia	x0, x1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     autia	x0, x1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     pacda	x0, x1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     autda	x0, x1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     pacib	x0, x1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     autib	x0, x1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     pacdb	x0, x1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     autdb	x0, x1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     pacga	x0, x1, x2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     paciza	x0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     autiza	x0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     pacdza	x0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     autdza	x0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     pacizb	x0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     autizb	x0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     pacdzb	x0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     autdzb	x0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     xpaci	x0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     xpacd	x0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     xpaclri
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     braa	x0, x1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     brab	x0, x1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     blraa	x0, x1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     blrab	x0, x1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     braaz	x0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     brabz	x0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     blraaz	x0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     blrabz	x0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     retaa
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     retab
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     ldraa	x0, [x1, #4088]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     ldraa	x0, [x1, #-4096]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     ldrab	x0, [x1, #4088]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     ldrab	x0, [x1, #-4096]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     ldraa	x0, [x1, #4088]!
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     ldraa	x0, [x1, #-4096]!
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     ldrab	x0, [x1, #4088]!
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     ldrab	x0, [x1, #-4096]!
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     ldraa	x0, [x1]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     ldrab	x0, [x1]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     ldraa	x0, [x1, #0]!
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     ldrab	x0, [x1, #0]!
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     ldraa	xzr, [sp, #-4096]!
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     ldrab	xzr, [sp, #-4096]!

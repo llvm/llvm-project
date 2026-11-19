@@ -1,20 +1,15 @@
-// Show that the ALWAYS map-type modifier on the outer map clause should be
-// propagated to the entries pushed by a user-defined mapper, using no target
-// construct at all: the device data is inspected with omp_get_mapped_ptr() and
+// Show that the ALWAYS map-type modifier on the outer map clause is propagated
+// to the entries pushed by a user-defined mapper, using no target construct at
+// all: the device data is inspected with omp_get_mapped_ptr() and
 // omp_target_memcpy(), so what is checked is purely the data-motion done by
 // `target enter data`.
 //
 // The mapper transfers s.y. We pre-map s.y so that it already has a device copy
 // with a nonzero reference count, and set that copy to a known value. Without
-// ALWAYS, the `to` of the second `enter data` is suppressed (a present,
-// ref-counted entry is not copied), so the host's 111 does not reach the
-// device. ALWAYS must force the copy -- but only if ALWAYS is propagated from
-// the outer clause to the mapper's s.y entry.
-//
-// FIXME: ALWAYS is not propagated to the mapper's entries yet, so the transfer
-// is currently suppressed and the device copy still reads as 0 (its pre-set
-// value). Once ALWAYS is propagated:
-//   EXPECTED: device s.y = 111
+// ALWAYS, the `to` of the second `enter data` would be suppressed (a present,
+// ref-counted entry is not copied), so the host's 111 would not reach the
+// device. ALWAYS forces the copy, which only happens if ALWAYS is propagated
+// from the outer clause to the mapper's s.y entry.
 
 // RUN: %libomptarget-compile-run-and-check-generic
 
@@ -48,13 +43,12 @@ int main() {
 
 #pragma omp target enter data map(always, to : s)
 
-  // ALWAYS should force s.y to the device even though it is already mapped
-  // (ref count > 0), but the modifier is not propagated yet, so the transfer
-  // does not happen.
+  // ALWAYS forces s.y to the device even though it is already mapped
+  // (ref count > 0).
   int dev_y_val = -1;
   omp_target_memcpy(&dev_y_val, dev_y, sizeof(int), 0, 0, host, dev);
 
-  printf("device s.y = %d\n", dev_y_val); // CHECK: device s.y = 0
+  printf("device s.y = %d\n", dev_y_val); // CHECK: device s.y = 111
 
 #pragma omp target exit data map(delete : s.y)
 }

@@ -52,6 +52,11 @@ constexpr typedef int Bar; // expected-error {{typedef cannot be constexpr}}
 void f3(constexpr register int P1) { // expected-error {{function parameter cannot be constexpr}}
   constexpr register int V9 = 0;
   constexpr register auto V10 = 0.0;
+  // FIXME: The constexpr diagnostic calls a later _Thread_local "previous".
+  // Prefer "'_Thread_local' used with 'constexpr'".
+  constexpr register _Thread_local int V10a = 0;
+  // expected-error@-1 {{previous 'register' declaration specifier}}
+  // expected-error@-2 {{previous '_Thread_local' declaration specifier}}
 }
 
 constexpr thread_local int V11 = 38; // expected-error {{cannot combine with previous '_Thread_local' declaration specifier}}
@@ -470,3 +475,6 @@ struct S2 {
 const struct S2 s2[2] = {{{"foo"}, 1}, [0].L[2] = 'x'}; // expected-warning {{initializer partially overrides prior initialization of this subobject}} \
                                                         // expected-note {{previous initialization is here}}
 static_assert(s2[0].L[2] == 'x');// expected-warning {{folding it to a constant is a GNU extension}}
+
+x y; // expected-error{{unknown type name 'x'}}
+constexpr int *p = (int*){y};

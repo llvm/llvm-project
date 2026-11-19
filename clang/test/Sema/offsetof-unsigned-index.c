@@ -34,7 +34,9 @@ _Static_assert(__builtin_offsetof(struct BigStruct, data[(uint16_t)32768]) == 32
 struct NegIdxStruct { int a; int x[1]; };
 _Static_assert(__builtin_offsetof(struct NegIdxStruct, x[-1]) == 0, ""); // expected-error {{not an integral constant expression}}
 
-// __uint128_t indices >= 0x8000000000000000 must be rejected.
+// __uint128_t indices >= 0x8000000000000000 must be rejected: this value has
+// bit 63 set, so getActiveBits() > 63, which our guard treats as too large
+// for a signed 64-bit offset index.
 _Static_assert(__builtin_offsetof(struct NegIdxStruct, x[(__uint128_t)0x8000000000000000]) == 0, ""); // expected-error {{not an integral constant expression}}
 
 // Small __uint128_t values that fit in int64_t must work correctly.

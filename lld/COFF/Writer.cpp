@@ -267,7 +267,7 @@ private:
   void sortBySectionOrder(std::vector<Chunk *> &chunks);
   void fixPartialSectionChars(StringRef name, uint32_t chars);
   bool fixGnuImportChunks();
-  void fixTlsAlignment();
+  void fixTlsAlignment(SymbolTable &symtab);
   PartialSection *createPartialSection(StringRef name, uint32_t outChars);
   PartialSection *findPartialSection(StringRef name, uint32_t outChars);
 
@@ -491,12 +491,14 @@ bool Writer::createThunks(OutputSection *os, int margin) {
   DenseMap<uint64_t, Defined *> lastThunks;
   DenseMap<std::pair<ObjFile *, Defined *>, uint32_t> thunkSymtabIndices;
   size_t thunksSize = 0;
-  // Recheck Chunks.size() each iteration, since we can insert more
-  // elements into it.
-  for (size_t i = 0; i != os->chunks.size(); ++i) {
-    SectionChunk *sc = dyn_cast<SectionChunk>(os->chunks[i]);
+  // Append thunks without repeatedly shifting the remaining chunks.
+  std::vector<Chunk *> newChunks;
+  newChunks.reserve(os->chunks.size());
+  for (Chunk *c : os->chunks) {
+    newChunks.push_back(c);
+    SectionChunk *sc = dyn_cast<SectionChunk>(c);
     if (!sc) {
-      auto chunk = cast<NonSectionChunk>(os->chunks[i]);
+      auto chunk = cast<NonSectionChunk>(c);
       if (uint32_t size = chunk->extendRanges()) {
         thunksSize += size;
         addressesChanged = true;
@@ -504,7 +506,6 @@ bool Writer::createThunks(OutputSection *os, int margin) {
       continue;
     }
     MachineTypes machine = sc->getMachine();
-    size_t thunkInsertionSpot = i + 1;
 
     // Try to get a good enough estimate of where new thunks will be placed.
     // Offset this by the size of the new thunks added so far, to make the
@@ -540,8 +541,7 @@ bool Writer::createThunks(OutputSection *os, int margin) {
         Chunk *thunkChunk = thunk->getChunk();
         thunkChunk->setRVA(
             thunkInsertionRVA); // Estimate of where it will be located.
-        os->chunks.insert(os->chunks.begin() + thunkInsertionSpot, thunkChunk);
-        thunkInsertionSpot++;
+        newChunks.push_back(thunkChunk);
         thunksSize += thunkChunk->getSize();
         thunkInsertionRVA += thunkChunk->getSize();
         addressesChanged = true;
@@ -586,6 +586,7 @@ bool Writer::createThunks(OutputSection *os, int margin) {
 
     sc->setRelocs(newRelocs);
   }
+  os->chunks.swap(newChunks);
   return addressesChanged;
 }
 
@@ -815,7 +816,7 @@ void Writer::run() {
     // Fix up the alignment in the TLS Directory's characteristic field,
     // if a specific alignment value is needed
     if (tlsAlignment)
-      fixTlsAlignment();
+      ctx.forEachSymtab([&](SymbolTable &symtab) { fixTlsAlignment(symtab); });
   }
 
   if (!ctx.config.pdbPath.empty() && ctx.config.debug) {
@@ -2940,6 +2941,24 @@ void Writer::createDynamicRelocs() {
                              LOAD_CONFIG_TABLE * sizeof(data_directory) +
                              offsetof(data_directory, Size),
                          ctx.symtab.loadConfigSize);
+
+  auto nativeTlsUsed =
+      dyn_cast_or_null<Defined>(ctx.hybridSymtab->findUnderscore("_tls_used"));
+  auto ecTlsUsed =
+      dyn_cast_or_null<Defined>(ctx.symtab.findUnderscore("_tls_used"));
+  if (nativeTlsUsed || ecTlsUsed) {
+    ctx.dynamicRelocs->add(IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE, sizeof(uint32_t),
+                           dataDirOffset64 +
+                               TLS_TABLE * sizeof(data_directory) +
+                               offsetof(data_directory, RelativeVirtualAddress),
+                           Arm64XRelocVal(ecTlsUsed));
+    if (!nativeTlsUsed || !ecTlsUsed)
+      ctx.dynamicRelocs->add(
+          IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE, sizeof(uint32_t),
+          dataDirOffset64 + TLS_TABLE * sizeof(data_directory) +
+              offsetof(data_directory, Size),
+          ecTlsUsed ? sizeof(coff_tls_directory64) : 0);
+  }
 }
 
 PartialSection *Writer::createPartialSection(StringRef name,
@@ -2958,9 +2977,9 @@ PartialSection *Writer::findPartialSection(StringRef name, uint32_t outChars) {
   return nullptr;
 }
 
-void Writer::fixTlsAlignment() {
+void Writer::fixTlsAlignment(SymbolTable &symtab) {
   Defined *tlsSym =
-      dyn_cast_or_null<Defined>(ctx.symtab.findUnderscore("_tls_used"));
+      dyn_cast_or_null<Defined>(symtab.findUnderscore("_tls_used"));
   if (!tlsSym)
     return;
 

@@ -15,34 +15,12 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSectionELF.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetMachine.h"
 using namespace llvm;
 
-static cl::opt<unsigned>
-SSThreshold("mips-ssection-threshold", cl::Hidden,
-            cl::desc("Small data and bss section threshold size (default=8)"),
-            cl::init(8));
-
-static cl::opt<bool>
-LocalSData("mlocal-sdata", cl::Hidden,
-           cl::desc("MIPS: Use gp_rel for object-local data."),
-           cl::init(true));
-
-static cl::opt<bool>
-ExternSData("mextern-sdata", cl::Hidden,
-            cl::desc("MIPS: Use gp_rel for data that is not defined by the "
-                     "current object."),
-            cl::init(true));
-
-static cl::opt<bool>
-EmbeddedData("membedded-data", cl::Hidden,
-             cl::desc("MIPS: Try to allocate variables in the following"
-                      " sections if possible: .rodata, .sdata, .data ."),
-             cl::init(false));
-
-void MipsTargetObjectFile::Initialize(MCContext &Ctx, const TargetMachine &TM){
-  TargetLoweringObjectFileELF::Initialize(Ctx, TM);
+void MipsTargetObjectFile::initialize(MCContext &Ctx, const TargetMachine &TM,
+                                      const Module &M) {
+  TargetLoweringObjectFileELF::initialize(Ctx, TM, M);
 
   SmallDataSection = getContext().getELFSection(
       ".sdata", ELF::SHT_PROGBITS,
@@ -51,37 +29,35 @@ void MipsTargetObjectFile::Initialize(MCContext &Ctx, const TargetMachine &TM){
   SmallBSSSection = getContext().getELFSection(".sbss", ELF::SHT_NOBITS,
                                                ELF::SHF_WRITE | ELF::SHF_ALLOC |
                                                    ELF::SHF_MIPS_GPREL);
-  this->TM = &static_cast<const MipsTargetMachine &>(TM);
 }
 
 // A address must be loaded from a small section if its size is less than the
 // small section size threshold. Data in this section must be addressed using
 // gp_rel operator.
-static bool IsInSmallSection(uint64_t Size) {
+static bool isInSmallSection(const MipsOptions &CLOpts, uint64_t Size) {
   // gcc has traditionally not treated zero-sized objects as small data, so this
   // is effectively part of the ABI.
-  return Size > 0 && Size <= SSThreshold;
+  return Size > 0 && Size <= CLOpts.ssection_threshold;
 }
 
 /// Return true if this global address should be placed into small data/bss
 /// section.
 bool MipsTargetObjectFile::IsGlobalInSmallSection(
-    const GlobalObject *GO, const TargetMachine &TM) const {
+    const GlobalObject *GO) const {
   // We first check the case where global is a declaration, because finding
   // section kind using getKindForGlobal() is only allowed for global
   // definitions.
   if (GO->isDeclaration() || GO->hasAvailableExternallyLinkage())
-    return IsGlobalInSmallSectionImpl(GO, TM);
+    return IsGlobalInSmallSectionImpl(GO);
 
-  return IsGlobalInSmallSection(GO, TM, getKindForGlobal(GO, TM));
+  return IsGlobalInSmallSection(GO, getKindForGlobal(GO, *TM));
 }
 
 /// Return true if this global address should be placed into small data/bss
 /// section.
-bool MipsTargetObjectFile::
-IsGlobalInSmallSection(const GlobalObject *GO, const TargetMachine &TM,
-                       SectionKind Kind) const {
-  return IsGlobalInSmallSectionImpl(GO, TM) &&
+bool MipsTargetObjectFile::IsGlobalInSmallSection(const GlobalObject *GO,
+                                                  SectionKind Kind) const {
+  return IsGlobalInSmallSectionImpl(GO) &&
          (Kind.isData() || Kind.isBSS() || Kind.isCommon() ||
           Kind.isReadOnly());
 }
@@ -89,16 +65,10 @@ IsGlobalInSmallSection(const GlobalObject *GO, const TargetMachine &TM,
 /// Return true if this global address should be placed into small data/bss
 /// section. This method does all the work, except for checking the section
 /// kind.
-bool MipsTargetObjectFile::
-IsGlobalInSmallSectionImpl(const GlobalObject *GO,
-                           const TargetMachine &TM) const {
-  const MipsSubtarget &Subtarget =
-      *static_cast<const MipsTargetMachine &>(TM).getSubtargetImpl();
-
-  // Return if small section is not available.
-  if (!Subtarget.useSmallSection())
-    return false;
-
+bool MipsTargetObjectFile::IsGlobalInSmallSectionImpl(
+    const GlobalObject *GO) const {
+  const MipsOptions &CLOpts =
+      static_cast<const MipsTargetMachine *>(TM)->getCLOpts();
   // Only global variables, not functions.
   const GlobalVariable *GVA = dyn_cast<GlobalVariable>(GO);
   if (!GVA)
@@ -120,17 +90,25 @@ IsGlobalInSmallSectionImpl(const GlobalObject *GO,
     return false;
   }
 
+  // Implicit global placement follows the default subtarget, independently of
+  // the features of the functions that reference the global. Explicit small
+  // sections above also allow GP-relative accesses from functions that enable
+  // them when the default subtarget does not.
+  if (!UseSmallSection)
+    return false;
+
   // Enforce -mlocal-sdata.
-  if (!LocalSData && GVA->hasLocalLinkage())
+  if (!CLOpts.mlocal_sdata && GVA->hasLocalLinkage())
     return false;
 
   // Enforce -mextern-sdata.
-  if (!ExternSData && ((GVA->hasExternalLinkage() && GVA->isDeclaration()) ||
-                       GVA->hasCommonLinkage()))
+  if (!CLOpts.mextern_sdata &&
+      ((GVA->hasExternalLinkage() && GVA->isDeclaration()) ||
+       GVA->hasCommonLinkage()))
     return false;
 
   // Enforce -membedded-data.
-  if (EmbeddedData && GVA->isConstant())
+  if (CLOpts.membedded_data && GVA->isConstant())
     return false;
 
   Type *Ty = GVA->getValueType();
@@ -141,8 +119,7 @@ IsGlobalInSmallSectionImpl(const GlobalObject *GO,
   if (!Ty->isSized())
     return false;
 
-  return IsInSmallSection(
-      GVA->getDataLayout().getTypeAllocSize(Ty));
+  return isInSmallSection(CLOpts, GVA->getDataLayout().getTypeAllocSize(Ty));
 }
 
 MCSection *MipsTargetObjectFile::SelectSectionForGlobal(
@@ -151,31 +128,35 @@ MCSection *MipsTargetObjectFile::SelectSectionForGlobal(
   // sections?
 
   // Handle Small Section classification here.
-  if (Kind.isBSS() && IsGlobalInSmallSection(GO, TM, Kind))
-    return SmallBSSSection;
-  if (Kind.isData() && IsGlobalInSmallSection(GO, TM, Kind))
-    return SmallDataSection;
-  if (Kind.isReadOnly() && IsGlobalInSmallSection(GO, TM, Kind))
-    return SmallDataSection;
+  if (IsGlobalInSmallSection(GO, Kind)) {
+    if (Kind.isBSS())
+      return SmallBSSSection;
+    if (Kind.isData() || Kind.isReadOnly())
+      return SmallDataSection;
+  }
 
   // Otherwise, we work the same as ELF.
   return TargetLoweringObjectFileELF::SelectSectionForGlobal(GO, Kind, TM);
 }
 
 /// Return true if this constant should be placed into small data section.
-bool MipsTargetObjectFile::IsConstantInSmallSection(
-    const DataLayout &DL, const Constant *CN, const TargetMachine &TM) const {
-  return (static_cast<const MipsTargetMachine &>(TM)
-              .getSubtargetImpl()
-              ->useSmallSection() &&
-          LocalSData && IsInSmallSection(DL.getTypeAllocSize(CN->getType())));
+bool MipsTargetObjectFile::IsConstantInSmallSection(const DataLayout &DL,
+                                                    const Constant *CN,
+                                                    const Function *F) const {
+  bool UseSmallSection =
+      F ? TM->getSubtarget<MipsSubtarget>(*F).useSmallSection()
+        : this->UseSmallSection;
+  const MipsOptions &CLOpts =
+      static_cast<const MipsTargetMachine *>(TM)->getCLOpts();
+  return UseSmallSection && CN && CLOpts.mlocal_sdata &&
+         isInSmallSection(CLOpts, DL.getTypeAllocSize(CN->getType()));
 }
 
 /// Return true if this constant should be placed into small data section.
 MCSection *MipsTargetObjectFile::getSectionForConstant(
     const DataLayout &DL, SectionKind Kind, const Constant *C, Align &Alignment,
     const Function *F) const {
-  if (IsConstantInSmallSection(DL, C, *TM))
+  if (IsConstantInSmallSection(DL, C, F))
     return SmallDataSection;
 
   // Otherwise, we work the same as ELF.

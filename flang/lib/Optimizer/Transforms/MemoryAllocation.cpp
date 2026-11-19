@@ -15,6 +15,7 @@
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/Support/CommandLine.h"
 
 namespace fir {
 #define GEN_PASS_DEF_MEMORYALLOCATIONOPT
@@ -25,6 +26,12 @@ namespace fir {
 
 // Number of elements in an array does not determine where it is allocated.
 static constexpr std::size_t unlimitedArraySize = ~static_cast<std::size_t>(0);
+
+static llvm::cl::opt<std::size_t> arrayStackAllocationThreshold(
+    "fstack-array-size",
+    llvm::cl::desc("place all array allocations more than <size> elements on "
+                   "the heap (memory-allocation-opt pass only)"),
+    llvm::cl::init(unlimitedArraySize), llvm::cl::Hidden);
 
 /// Return `true` if this allocation is to remain on the stack (`fir.alloca`).
 /// Otherwise the allocation should be moved to the heap (`fir.allocmem`).
@@ -58,17 +65,7 @@ keepStackAllocation(fir::AllocaOp alloca,
 
 static mlir::Value genAllocmem(mlir::OpBuilder &builder, fir::AllocaOp alloca,
                                bool deallocPointsDominateAlloc) {
-  mlir::Type varTy = alloca.getInType();
-  auto unpackName = [](std::optional<llvm::StringRef> opt) -> llvm::StringRef {
-    if (opt)
-      return *opt;
-    return {};
-  };
-  llvm::StringRef uniqName = unpackName(alloca.getUniqName());
-  llvm::StringRef bindcName = unpackName(alloca.getBindcName());
-  auto heap = fir::AllocMemOp::create(builder, alloca.getLoc(), varTy, uniqName,
-                                      bindcName, alloca.getTypeparams(),
-                                      alloca.getShape());
+  fir::AllocMemOp heap = fir::createAllocMemFromAlloca(builder, alloca);
   LLVM_DEBUG(llvm::dbgs() << "memory allocation opt: replaced " << alloca
                           << " with " << heap << '\n');
   return heap;
@@ -114,6 +111,8 @@ public:
       options.dynamicArrayOnHeap = dynamicArrayOnHeap;
     if (maxStackArraySize != unlimitedArraySize)
       options.maxStackArraySize = maxStackArraySize;
+    else if (arrayStackAllocationThreshold != unlimitedArraySize)
+      options.maxStackArraySize = arrayStackAllocationThreshold;
   }
 
   void runOnOperation() override {

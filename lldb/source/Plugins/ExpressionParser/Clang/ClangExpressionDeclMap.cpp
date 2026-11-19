@@ -603,6 +603,7 @@ addr_t ClangExpressionDeclMap::GetSymbolAddress(Target &target,
     case eSymbolTypeObjCClass:
     case eSymbolTypeObjCMetaClass:
     case eSymbolTypeObjCIVar:
+    case eSymbolTypeASTFile:
       symbol_load_addr = sym_address.GetLoadAddress(&target);
       break;
     }
@@ -1328,9 +1329,11 @@ bool ClangExpressionDeclMap::LookupFunction(
         found_function_with_type_info = true;
       } else if (sym_ctx.symbol) {
         const Symbol *symbol = sym_ctx.symbol;
-        if (target && symbol->GetType() == eSymbolTypeReExported) {
-          symbol = symbol->ResolveReExportedSymbol(*target);
-          if (symbol == nullptr)
+        if (target) {
+          if (Symbol *actual =
+                  symbol->ResolveReExportedSymbol(*target, sym_ctx.module_sp))
+            symbol = actual;
+          else if (symbol->GetType() == eSymbolTypeReExported)
             continue;
         }
 

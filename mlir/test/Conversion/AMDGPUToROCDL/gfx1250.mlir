@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --convert-amdgpu-to-rocdl=chipset=gfx1250 --split-input-file --verify-diagnostics \
+// RUN: mlir-opt %s --convert-amdgpu-to-rocdl=arch=amdgpu12.50-amd-amdhsa --split-input-file --verify-diagnostics \
 // RUN: | FileCheck %s
 
 // CHECK-LABEL: @scaled_ext_packed_matrix_fp4
@@ -846,6 +846,25 @@ func.func @make_gather_dma_descriptor(%base: !amdgpu.tdm_gather_base<i32, i16>, 
 
   // CHECK: %[[DGROUPS:.+]] = builtin.unrealized_conversion_cast %[[DGROUP0]], %[[DGROUP1]], %[[DGROUP2]], %[[DGROUP3]]
   %descriptor = amdgpu.make_gather_dma_descriptor %base[%indices] globalSize [128, 64] globalStride [64, 1] sharedSize [128, 64] : !amdgpu.tdm_gather_base<i32, i16>, vector<13xi16> -> !amdgpu.tdm_descriptor
+  func.return %descriptor : !amdgpu.tdm_descriptor
+}
+
+// CHECK-LABEL: func @make_gather_dma_descriptor_i32
+// CHECK-SAME: (%[[BASE:.+]]: !amdgpu.tdm_gather_base<i32, i32>, %[[INDICES:.+]]: vector<5xi32>)
+func.func @make_gather_dma_descriptor_i32(%base: !amdgpu.tdm_gather_base<i32, i32>, %indices: vector<5xi32>) -> !amdgpu.tdm_descriptor {
+  // CHECK: %[[IDX0:.+]] = llvm.extractelement %[[INDICES]][{{.*}}] : vector<5xi32>
+  // CHECK: %[[IDX1:.+]] = llvm.extractelement %[[INDICES]][{{.*}}] : vector<5xi32>
+  // CHECK: %[[IDX2:.+]] = llvm.extractelement %[[INDICES]][{{.*}}] : vector<5xi32>
+  // CHECK: %[[IDX3:.+]] = llvm.extractelement %[[INDICES]][{{.*}}] : vector<5xi32>
+  // CHECK-NEXT: %[[DGROUP2_INIT:.+]] = llvm.mlir.poison : vector<4xi32>
+  // CHECK-NEXT: %[[DGROUP2_0:.+]] = llvm.insertelement %[[IDX0]], %[[DGROUP2_INIT]][{{.*}}]
+  // CHECK-NEXT: %[[DGROUP2_1:.+]] = llvm.insertelement %[[IDX1]], %[[DGROUP2_0]][{{.*}}]
+  // CHECK-NEXT: %[[DGROUP2_2:.+]] = llvm.insertelement %[[IDX2]], %[[DGROUP2_1]][{{.*}}]
+  // CHECK-NEXT: %[[DGROUP2:.+]] = llvm.insertelement %[[IDX3]], %[[DGROUP2_2]][{{.*}}]
+  // CHECK-NEXT: %[[IDX4:.+]] = llvm.extractelement %[[INDICES]][{{.*}}] : vector<5xi32>
+  // CHECK-NEXT: %[[DGROUP3_INIT:.+]] = llvm.mlir.poison : vector<4xi32>
+  // CHECK-NEXT: %[[DGROUP3:.+]] = llvm.insertelement %[[IDX4]], %[[DGROUP3_INIT]][{{.*}}]
+  %descriptor = amdgpu.make_gather_dma_descriptor %base[%indices] globalSize [128, 64] globalStride [64, 1] sharedSize [128, 64] : !amdgpu.tdm_gather_base<i32, i32>, vector<5xi32> -> !amdgpu.tdm_descriptor
   func.return %descriptor : !amdgpu.tdm_descriptor
 }
 

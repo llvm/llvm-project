@@ -24,12 +24,12 @@ define i32 @caller_tail(i32 %i) nounwind {
 ; CHECK-CF-RV32-LABEL: caller_tail:
 ; CHECK-CF-RV32:       # %bb.0: # %entry
 ; CHECK-CF-RV32-NEXT:    lpad 0
-; CHECK-CF-RV32-NEXT:    tail callee_tail
+; CHECK-CF-RV32-NEXT:    tail callee_tail, t2
 ;
 ; CHECK-CF-RV64-LABEL: caller_tail:
 ; CHECK-CF-RV64:       # %bb.0: # %entry
 ; CHECK-CF-RV64-NEXT:    lpad 0
-; CHECK-CF-RV64-NEXT:    tail callee_tail
+; CHECK-CF-RV64-NEXT:    tail callee_tail, t2
 ;
 ; CHECK-CF-RV32-LARGE-LABEL: caller_tail:
 ; CHECK-CF-RV32-LARGE:       # %bb.0: # %entry
@@ -640,7 +640,7 @@ define void @caller_indirect_args() nounwind {
 ; CHECK-CF-RV64-NEXT:    lui a1, 16383
 ; CHECK-CF-RV64-NEXT:    slli a1, a1, 36
 ; CHECK-CF-RV64-NEXT:    li a0, 0
-; CHECK-CF-RV64-NEXT:    tail callee_indirect_args
+; CHECK-CF-RV64-NEXT:    tail callee_indirect_args, t2
 ;
 ; CHECK-CF-RV32-LARGE-LABEL: caller_indirect_args:
 ; CHECK-CF-RV32-LARGE:       # %bb.0: # %entry
@@ -701,12 +701,12 @@ define void @caller_weak() nounwind {
 ; CHECK-CF-RV32-LABEL: caller_weak:
 ; CHECK-CF-RV32:       # %bb.0: # %entry
 ; CHECK-CF-RV32-NEXT:    lpad 0
-; CHECK-CF-RV32-NEXT:    tail callee_weak
+; CHECK-CF-RV32-NEXT:    tail callee_weak, t2
 ;
 ; CHECK-CF-RV64-LABEL: caller_weak:
 ; CHECK-CF-RV64:       # %bb.0: # %entry
 ; CHECK-CF-RV64-NEXT:    lpad 0
-; CHECK-CF-RV64-NEXT:    tail callee_weak
+; CHECK-CF-RV64-NEXT:    tail callee_weak, t2
 ;
 ; CHECK-CF-RV32-LARGE-LABEL: caller_weak:
 ; CHECK-CF-RV32-LARGE:       # %bb.0: # %entry
@@ -1110,63 +1110,38 @@ entry:
   ret void
 }
 
-; Do not tail call optimize if caller uses structret semantics.
+; A caller using structret semantics does not prevent tail call optimization.
 declare void @callee_nostruct()
 define void @caller_struct(ptr sret(%struct.A) %a) nounwind {
 ; CHECK-LABEL: caller_struct:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    call callee_nostruct
-; CHECK-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    tail callee_nostruct
 ;
 ; CHECK-CF-RV32-LABEL: caller_struct:
 ; CHECK-CF-RV32:       # %bb.0: # %entry
 ; CHECK-CF-RV32-NEXT:    lpad 0
-; CHECK-CF-RV32-NEXT:    addi sp, sp, -16
-; CHECK-CF-RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; CHECK-CF-RV32-NEXT:    call callee_nostruct
-; CHECK-CF-RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; CHECK-CF-RV32-NEXT:    addi sp, sp, 16
-; CHECK-CF-RV32-NEXT:    ret
+; CHECK-CF-RV32-NEXT:    tail callee_nostruct, t2
 ;
 ; CHECK-CF-RV64-LABEL: caller_struct:
 ; CHECK-CF-RV64:       # %bb.0: # %entry
 ; CHECK-CF-RV64-NEXT:    lpad 0
-; CHECK-CF-RV64-NEXT:    addi sp, sp, -16
-; CHECK-CF-RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; CHECK-CF-RV64-NEXT:    call callee_nostruct
-; CHECK-CF-RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; CHECK-CF-RV64-NEXT:    addi sp, sp, 16
-; CHECK-CF-RV64-NEXT:    ret
+; CHECK-CF-RV64-NEXT:    tail callee_nostruct, t2
 ;
 ; CHECK-CF-RV32-LARGE-LABEL: caller_struct:
 ; CHECK-CF-RV32-LARGE:       # %bb.0: # %entry
 ; CHECK-CF-RV32-LARGE-NEXT:    lpad 0
-; CHECK-CF-RV32-LARGE-NEXT:    addi sp, sp, -16
-; CHECK-CF-RV32-LARGE-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; CHECK-CF-RV32-LARGE-NEXT:  .Lpcrel_hi15:
 ; CHECK-CF-RV32-LARGE-NEXT:    auipc a0, %pcrel_hi(.LCPI12_0)
 ; CHECK-CF-RV32-LARGE-NEXT:    lw t2, %pcrel_lo(.Lpcrel_hi15)(a0)
-; CHECK-CF-RV32-LARGE-NEXT:    jalr t2
-; CHECK-CF-RV32-LARGE-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; CHECK-CF-RV32-LARGE-NEXT:    addi sp, sp, 16
-; CHECK-CF-RV32-LARGE-NEXT:    ret
+; CHECK-CF-RV32-LARGE-NEXT:    jr t2
 ;
 ; CHECK-CF-RV64-LARGE-LABEL: caller_struct:
 ; CHECK-CF-RV64-LARGE:       # %bb.0: # %entry
 ; CHECK-CF-RV64-LARGE-NEXT:    lpad 0
-; CHECK-CF-RV64-LARGE-NEXT:    addi sp, sp, -16
-; CHECK-CF-RV64-LARGE-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-CF-RV64-LARGE-NEXT:  .Lpcrel_hi15:
 ; CHECK-CF-RV64-LARGE-NEXT:    auipc a0, %pcrel_hi(.LCPI12_0)
 ; CHECK-CF-RV64-LARGE-NEXT:    ld t2, %pcrel_lo(.Lpcrel_hi15)(a0)
-; CHECK-CF-RV64-LARGE-NEXT:    jalr t2
-; CHECK-CF-RV64-LARGE-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; CHECK-CF-RV64-LARGE-NEXT:    addi sp, sp, 16
-; CHECK-CF-RV64-LARGE-NEXT:    ret
+; CHECK-CF-RV64-LARGE-NEXT:    jr t2
 entry:
   tail call void @callee_nostruct()
   ret void
@@ -1264,13 +1239,13 @@ define i32 @duplicate_returns(i32 %a, i32 %b) nounwind {
 ; CHECK-CF-RV32-NEXT:  # %bb.2: # %if.else4
 ; CHECK-CF-RV32-NEXT:    bge a1, a0, .LBB14_6
 ; CHECK-CF-RV32-NEXT:  # %bb.3: # %if.then6
-; CHECK-CF-RV32-NEXT:    tail test2
+; CHECK-CF-RV32-NEXT:    tail test2, t2
 ; CHECK-CF-RV32-NEXT:  .LBB14_4: # %if.then
-; CHECK-CF-RV32-NEXT:    tail test
+; CHECK-CF-RV32-NEXT:    tail test, t2
 ; CHECK-CF-RV32-NEXT:  .LBB14_5: # %if.then2
-; CHECK-CF-RV32-NEXT:    tail test1
+; CHECK-CF-RV32-NEXT:    tail test1, t2
 ; CHECK-CF-RV32-NEXT:  .LBB14_6: # %if.else8
-; CHECK-CF-RV32-NEXT:    tail test3
+; CHECK-CF-RV32-NEXT:    tail test3, t2
 ;
 ; CHECK-CF-RV64-LABEL: duplicate_returns:
 ; CHECK-CF-RV64:       # %bb.0: # %entry
@@ -1283,13 +1258,13 @@ define i32 @duplicate_returns(i32 %a, i32 %b) nounwind {
 ; CHECK-CF-RV64-NEXT:  # %bb.2: # %if.else4
 ; CHECK-CF-RV64-NEXT:    bge a1, a0, .LBB14_6
 ; CHECK-CF-RV64-NEXT:  # %bb.3: # %if.then6
-; CHECK-CF-RV64-NEXT:    tail test2
+; CHECK-CF-RV64-NEXT:    tail test2, t2
 ; CHECK-CF-RV64-NEXT:  .LBB14_4: # %if.then
-; CHECK-CF-RV64-NEXT:    tail test
+; CHECK-CF-RV64-NEXT:    tail test, t2
 ; CHECK-CF-RV64-NEXT:  .LBB14_5: # %if.then2
-; CHECK-CF-RV64-NEXT:    tail test1
+; CHECK-CF-RV64-NEXT:    tail test1, t2
 ; CHECK-CF-RV64-NEXT:  .LBB14_6: # %if.else8
-; CHECK-CF-RV64-NEXT:    tail test3
+; CHECK-CF-RV64-NEXT:    tail test3, t2
 ;
 ; CHECK-CF-RV32-LARGE-LABEL: duplicate_returns:
 ; CHECK-CF-RV32-LARGE:       # %bb.0: # %entry

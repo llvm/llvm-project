@@ -5,10 +5,21 @@
 define void @bitset_udiv64_const_tc(ptr %words, ptr %out) {
 ; CHECK-LABEL: 'bitset_udiv64_const_tc'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.out = getelementptr inbounds i8, ptr %out, i64 %iv
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %gep.words = getelementptr inbounds i8, ptr %words, i64 %div
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: %out High: (441 + %out))
+; CHECK-NEXT:            Member: {%out,+,1}<nuw><%loop>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: %words High: (7 + %words))
+; CHECK-NEXT:            Member: (({0,+,1}<nuw><nsw><%loop> /u 64) + %words)<nuw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -39,10 +50,21 @@ exit:
 define void @bitset_udiv64_symbolic_tc(ptr %words, ptr %out, i64 %N) {
 ; CHECK-LABEL: 'bitset_udiv64_symbolic_tc'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.out = getelementptr inbounds i8, ptr %out, i64 %iv
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %gep.words = getelementptr inbounds i8, ptr %words, i64 %div
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: %out High: (%N + %out))
+; CHECK-NEXT:            Member: {%out,+,1}<nuw><%loop>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: %words High: (1 + ((-1 + %N) /u 64) + %words))
+; CHECK-NEXT:            Member: (({0,+,1}<nuw><nsw><%loop> /u 64) + %words)<nuw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -73,10 +95,21 @@ exit:
 define void @udiv3_symbolic_tc(ptr %a, ptr %b, i64 %N) {
 ; CHECK-LABEL: 'udiv3_symbolic_tc'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.b = getelementptr inbounds i8, ptr %b, i64 %iv
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %gep.a = getelementptr inbounds i8, ptr %a, i64 %div
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: %b High: (%N + %b))
+; CHECK-NEXT:            Member: {%b,+,1}<nuw><%loop>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: %a High: (1 + ((-1 + %N) /u 3) + %a))
+; CHECK-NEXT:            Member: (({0,+,1}<nuw><nsw><%loop> /u 3) + %a)<nuw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -105,10 +138,21 @@ exit:
 define void @udiv_invariant_divisor(ptr %a, ptr %b, i64 %N, i64 %d) {
 ; CHECK-LABEL: 'udiv_invariant_divisor'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.b = getelementptr inbounds i8, ptr %b, i64 %iv
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %gep.a = getelementptr inbounds i8, ptr %a, i64 %div
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: %b High: (%N + %b))
+; CHECK-NEXT:            Member: {%b,+,1}<nuw><%loop>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: %a High: (1 + ((-1 + %N) /u %d) + %a))
+; CHECK-NEXT:            Member: (({0,+,1}<nuw><nsw><%loop> /u %d) + %a)<nuw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -227,6 +271,51 @@ exit:
   ret void
 }
 
+; AddRec with NUW and symbolic step.
+define void @symbolic_step_nuw_udiv(ptr %a, ptr %b, i64 %N, i64 %s) {
+; CHECK-LABEL: 'symbolic_step_nuw_udiv'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.b = getelementptr inbounds i8, ptr %b, i64 %iv
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %gep.a = getelementptr inbounds i8, ptr %a, i64 %div
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: %b High: (%N + %b))
+; CHECK-NEXT:            Member: {%b,+,1}<nuw><%loop>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: %a High: (1 + (((-1 + %N) * %s) /u 64) + %a))
+; CHECK-NEXT:            Member: (({0,+,%s}<nuw><%loop> /u 64) + %a)<nuw>
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %j = phi i64 [ 0, %entry ], [ %j.next, %loop ]
+  %div = lshr i64 %j, 6
+  %gep.a = getelementptr inbounds i8, ptr %a, i64 %div
+  %la = load i8, ptr %gep.a, align 1
+  %gep.b = getelementptr inbounds i8, ptr %b, i64 %iv
+  store i8 %la, ptr %gep.b, align 1
+  %iv.next = add nuw nsw i64 %iv, 1
+  %j.next = add nuw i64 %j, %s
+  %ec = icmp eq i64 %iv.next, %N
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 define void @staircase_self_dependence(ptr %a) {
 ; CHECK-LABEL: 'staircase_self_dependence'
 ; CHECK-NEXT:    loop:
@@ -266,10 +355,21 @@ exit:
 define void @bitset_i64_word(ptr %words, ptr %out, i64 %N) {
 ; CHECK-LABEL: 'bitset_i64_word'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.out = getelementptr inbounds i64, ptr %out, i64 %iv
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %gep.words = getelementptr inbounds i64, ptr %words, i64 %div
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: %out High: ((8 * %N) + %out))
+; CHECK-NEXT:            Member: {%out,+,8}<nuw><%loop>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: %words High: (8 + (8 * ((-1 + %N) /u 64))<nuw><nsw> + %words))
+; CHECK-NEXT:            Member: ((8 * ({0,+,1}<nuw><nsw><%loop> /u 64))<nuw><nsw> + %words)<nuw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -297,10 +397,21 @@ exit:
 define void @scaled_const_udiv(ptr %a, ptr %b, i64 %N) {
 ; CHECK-LABEL: 'scaled_const_udiv'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.b = getelementptr inbounds i32, ptr %b, i64 %iv
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %gep.a = getelementptr inbounds i32, ptr %a, i64 %scaled
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: %b High: ((4 * %N) + %b))
+; CHECK-NEXT:            Member: {%b,+,4}<nuw><%loop>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: %a High: (4 + (12 * ((-1 + %N) /u 64))<nuw><nsw> + %a))
+; CHECK-NEXT:            Member: ((12 * ({0,+,1}<nuw><nsw><%loop> /u 64))<nuw><nsw> + %a)<nuw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -326,6 +437,8 @@ exit:
   ret void
 }
 
+; The scale %k has unknown sign, so the pointer expression is not known to be
+; nuw and no bounds can be formed.
 define void @scaled_unconstrained_may_wrap(ptr %a, ptr %b, i64 %N, i64 %k) {
 ; CHECK-LABEL: 'scaled_unconstrained_may_wrap'
 ; CHECK-NEXT:    loop:
@@ -358,13 +471,60 @@ exit:
   ret void
 }
 
-define void @offset_const_udiv(ptr %a, ptr %b, i64 %N) {
-; CHECK-LABEL: 'offset_const_udiv'
+; The GEP is marked nuw, so the pointer expression is nuw even though the
+; scaled offset itself may wrap. The product must not be treated as monotonic:
+; %k is non-negative, but (%iv /u 64) * %k can wrap and is then not
+; non-decreasing.
+define void @scaled_nuw_gep_mul_may_wrap(ptr %a, ptr %b, i64 %N, i64 range(i64 0, 4611686018427387904) %k) {
+; CHECK-LABEL: 'scaled_nuw_gep_mul_may_wrap'
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Report: cannot identify array bounds
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %div = lshr i64 %iv, 6
+  %scaled = mul i64 %div, %k
+  %gep.a = getelementptr nuw i8, ptr %a, i64 %scaled
+  %la = load i8, ptr %gep.a, align 1
+  %gep.b = getelementptr inbounds i8, ptr %b, i64 %iv
+  store i8 %la, ptr %gep.b, align 1
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %N
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @offset_const_udiv(ptr %a, ptr %b, i64 %N) {
+; CHECK-LABEL: 'offset_const_udiv'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.b = getelementptr inbounds i8, ptr %b, i64 %iv
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %gep.a = getelementptr inbounds i8, ptr %a, i64 %off
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: %b High: (%N + %b))
+; CHECK-NEXT:            Member: {%b,+,1}<nuw><%loop>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: (7 + %a) High: (8 + ((-1 + %N) /u 64) + %a))
+; CHECK-NEXT:            Member: (7 + ({0,+,1}<nuw><nsw><%loop> /u 64) + %a)<nuw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -384,6 +544,745 @@ loop:
   store i8 %la, ptr %gep.b, align 1
   %iv.next = add nuw nsw i64 %iv, 1
   %ec = icmp eq i64 %iv.next, %N
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; The displacement is loop-invariant but the staircase term decreases, so the
+; sum is not monotonic.
+define void @offset_decreasing_udiv(ptr %a, ptr %b, i64 %N, i64 %M) {
+; CHECK-LABEL: 'offset_decreasing_udiv'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %sub = sub nuw i64 %M, %iv
+  %div = lshr i64 %sub, 6
+  %off = add nuw nsw i64 %div, 7
+  %gep.a = getelementptr inbounds i8, ptr %a, i64 %off
+  %la = load i8, ptr %gep.a, align 1
+  %gep.b = getelementptr inbounds i8, ptr %b, i64 %iv
+  store i8 %la, ptr %gep.b, align 1
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %N
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; The product is nuw, but the sum it scales is not: (%iv /u 64) + %o may wrap
+; and is then not non-decreasing.
+define void @offset_nested_in_mul_may_wrap(ptr %a, ptr %b, i64 %N, i64 %o, i64 %m) {
+; CHECK-LABEL: 'offset_nested_in_mul_may_wrap'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %div = lshr i64 %iv, 6
+  %off = add i64 %div, %o
+  %scaled = mul nuw i64 %off, %m
+  %gep.a = getelementptr nuw i8, ptr %a, i64 %scaled
+  %la = load i8, ptr %gep.a, align 1
+  %gep.b = getelementptr inbounds i8, ptr %b, i64 %iv
+  store i8 %la, ptr %gep.b, align 1
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %N
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; The pointer operand of the address computation is an AddRec in the *outer*
+; loop, which is invariant in the inner loop being analyzed.
+define void @nested_outer_addrec_base_udiv(ptr %a, ptr %b, i64 %N) {
+; CHECK-LABEL: 'nested_outer_addrec_base_udiv'
+; CHECK-NEXT:    inner:
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.b = getelementptr inbounds i8, ptr %b, i64 %j
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %gep.a = getelementptr inbounds i8, ptr %base, i64 %div
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: %b High: (%N + %b))
+; CHECK-NEXT:            Member: {%b,+,1}<nuw><%inner>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: {%a,+,1}<nuw><%outer.header> High: {(1 + ((-1 + %N) /u 64) + %a),+,1}<nw><%outer.header>)
+; CHECK-NEXT:            Member: (({0,+,1}<nuw><nsw><%inner> /u 64) + {%a,+,1}<nuw><%outer.header>)<nuw>
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+; CHECK-NEXT:    outer.header:
+; CHECK-NEXT:      Report: loop is not the innermost loop
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  br label %outer.header
+
+outer.header:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %outer.latch ]
+  %base = getelementptr inbounds i8, ptr %a, i64 %i
+  br label %inner
+
+inner:
+  %j = phi i64 [ 0, %outer.header ], [ %j.next, %inner ]
+  %div = lshr i64 %j, 6
+  %gep.a = getelementptr inbounds i8, ptr %base, i64 %div
+  %la = load i8, ptr %gep.a, align 1
+  %gep.b = getelementptr inbounds i8, ptr %b, i64 %j
+  store i8 %la, ptr %gep.b, align 1
+  %j.next = add nuw nsw i64 %j, 1
+  %ec = icmp eq i64 %j.next, %N
+  br i1 %ec, label %outer.latch, label %inner
+
+outer.latch:
+  %i.next = add nuw nsw i64 %i, 1
+  %ec.outer = icmp eq i64 %i.next, 100
+  br i1 %ec.outer, label %exit, label %outer.header
+
+exit:
+  ret void
+}
+
+; Same as above, but the pointer operand is an AddRec in the loop being
+; analyzed, so it is not loop-invariant and no bounds can be formed.
+define void @nested_inner_addrec_base_udiv(ptr %a, ptr %b, i64 %N) {
+; CHECK-LABEL: 'nested_inner_addrec_base_udiv'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  br label %loop
+
+loop:
+  %j = phi i64 [ 0, %entry ], [ %j.next, %loop ]
+  %p = phi ptr [ %a, %entry ], [ %p.next, %loop ]
+  %div = lshr i64 %j, 6
+  %gep.a = getelementptr inbounds i8, ptr %p, i64 %div
+  %la = load i8, ptr %gep.a, align 1
+  %gep.b = getelementptr inbounds i8, ptr %b, i64 %j
+  store i8 %la, ptr %gep.b, align 1
+  %p.next = getelementptr inbounds i8, ptr %p, i64 8
+  %j.next = add nuw nsw i64 %j, 1
+  %ec = icmp eq i64 %j.next, %N
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @bitset_udiv_neg_4_symbolic_tc(ptr %words, ptr %out, i64 %N) {
+; CHECK-LABEL: 'bitset_udiv_neg_4_symbolic_tc'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.out = getelementptr inbounds i8, ptr %out, i64 %iv
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %gep.words = getelementptr inbounds i8, ptr %words, i64 %div
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: %out High: (%N + %out))
+; CHECK-NEXT:            Member: {%out,+,1}<nuw><%loop>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: %words High: (1 + ((-1 + %N) /u -4) + %words))
+; CHECK-NEXT:            Member: (({0,+,1}<nuw><nsw><%loop> /u -4) + %words)<nuw>
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %div = udiv i64 %iv, -4
+  %gep.words = getelementptr inbounds i8, ptr %words, i64 %div
+  %w = load i8, ptr %gep.words, align 1
+  %gep.out = getelementptr inbounds i8, ptr %out, i64 %iv
+  %v = load i8, ptr %gep.out, align 1
+  %inc = add i8 %v, %w
+  store i8 %inc, ptr %gep.out, align 1
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %N
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; Same shape as @bitset_udiv64_symbolic_tc, but the offset's start value is
+; symbolic, so SCEV cannot prove the start bound is <=u the end bound, even
+; though the offset is monotonic.
+define void @bitset_udiv64_symbolic_start_and_tc(ptr %words, ptr %out, i64 %N, i64 %start) {
+; CHECK-LABEL: 'bitset_udiv64_symbolic_start_and_tc'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.out = getelementptr inbounds i8, ptr %out, i64 %iv
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %gep.words = getelementptr inbounds i8, ptr %words, i64 %div
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: (%start + %out) High: (%N + %out))
+; CHECK-NEXT:            Member: {(%start + %out),+,1}<nw><%loop>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: ((%start /u 64) + %words) High: (1 + ((-1 + %N) /u 64) + %words))
+; CHECK-NEXT:            Member: (({%start,+,1}<nuw><nsw><%loop> /u 64) + %words)<nuw>
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %start, %entry ], [ %iv.next, %loop ]
+  %div = lshr i64 %iv, 6
+  %gep.words = getelementptr inbounds i8, ptr %words, i64 %div
+  %w = load i8, ptr %gep.words, align 1
+  %gep.out = getelementptr inbounds i8, ptr %out, i64 %iv
+  %v = load i8, ptr %gep.out, align 1
+  %inc = add i8 %v, %w
+  store i8 %inc, ptr %gep.out, align 1
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %N
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; B[i] = A[umin(i + 1, N - 1)]: umin of non-decreasing operands.
+define void @umin_clamp(ptr %a, ptr %b, i64 %N) {
+; CHECK-LABEL: 'umin_clamp'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  %n.sub = add i64 %N, -1
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.next = add nuw nsw i64 %iv, 1
+  %idx = call i64 @llvm.umin.i64(i64 %iv.next, i64 %n.sub)
+  %gep.a = getelementptr inbounds nuw i8, ptr %a, i64 %idx
+  %la = load i8, ptr %gep.a, align 1
+  %gep.b = getelementptr inbounds i8, ptr %b, i64 %iv
+  store i8 %la, ptr %gep.b, align 1
+  %ec = icmp eq i64 %iv.next, %N
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; B[i] = A[umax(i, k)]: umax of non-decreasing operands.
+define void @umax_clamp(ptr %a, ptr %b, i64 %N, i64 %k) {
+; CHECK-LABEL: 'umax_clamp'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %idx = call i64 @llvm.umax.i64(i64 %iv, i64 %k)
+  %gep.a = getelementptr inbounds nuw i8, ptr %a, i64 %idx
+  %la = load i8, ptr %gep.a, align 1
+  %gep.b = getelementptr inbounds i8, ptr %b, i64 %iv
+  store i8 %la, ptr %gep.b, align 1
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %N
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; One umin operand decreases, so the umin is not monotonic.
+define void @umin_decreasing_op(ptr %a, ptr %b, i64 %N, i64 %M) {
+; CHECK-LABEL: 'umin_decreasing_op'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %sub = sub nuw i64 %M, %iv
+  %idx = call i64 @llvm.umin.i64(i64 %iv, i64 %sub)
+  %gep.a = getelementptr inbounds nuw i8, ptr %a, i64 %idx
+  %la = load i8, ptr %gep.a, align 1
+  %gep.b = getelementptr inbounds i8, ptr %b, i64 %iv
+  store i8 %la, ptr %gep.b, align 1
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %N
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; B[i] = A[smax(i - 1, 0)]: signed non-decreasing and never negative.
+define void @smax_clamp_i64(ptr %a, ptr %b, i64 %N) {
+; CHECK-LABEL: 'smax_clamp_i64'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.sub = add nsw i64 %iv, -1
+  %idx = call i64 @llvm.smax.i64(i64 %iv.sub, i64 0)
+  %gep.a = getelementptr inbounds nuw i8, ptr %a, i64 %idx
+  %la = load i8, ptr %gep.a, align 1
+  %gep.b = getelementptr inbounds i8, ptr %b, i64 %iv
+  store i8 %la, ptr %gep.b, align 1
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %N
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; Same as @smax_clamp_i64 with i32 elements, so the offset is
+; (4 * (0 smax {-1,+,1}<nsw>))<nuw>.
+define void @smax_clamp_i64_i32_elts(ptr %a, ptr %b, i64 %N) {
+; CHECK-LABEL: 'smax_clamp_i64_i32_elts'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.sub = add nsw i64 %iv, -1
+  %idx = call i64 @llvm.smax.i64(i64 %iv.sub, i64 0)
+  %gep.a = getelementptr inbounds nuw i32, ptr %a, i64 %idx
+  %la = load i32, ptr %gep.a, align 4
+  %gep.b = getelementptr inbounds i32, ptr %b, i64 %iv
+  store i32 %la, ptr %gep.b, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %N
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; Same as above with an i32 index, zero-extended to i64.
+define void @smax_clamp_i32(ptr %a, ptr %b, i32 %N) {
+; CHECK-LABEL: 'smax_clamp_i32'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.sub = add nsw i32 %iv, -1
+  %max = call i32 @llvm.smax.i32(i32 %iv.sub, i32 0)
+  %idx = zext i32 %max to i64
+  %gep.a = getelementptr inbounds nuw i8, ptr %a, i64 %idx
+  %la = load i8, ptr %gep.a, align 1
+  %iv.ext = zext i32 %iv to i64
+  %gep.b = getelementptr inbounds i8, ptr %b, i64 %iv.ext
+  store i8 %la, ptr %gep.b, align 1
+  %iv.next = add nuw nsw i32 %iv, 1
+  %ec = icmp eq i32 %iv.next, %N
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; B[i] = A[smin(smax(i - 1, 0), 255)] with an i32 index.
+define void @smin_smax_clamp_i32(ptr %a, ptr %b, i32 %N) {
+; CHECK-LABEL: 'smin_smax_clamp_i32'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.sub = add nsw i32 %iv, -1
+  %max = call i32 @llvm.smax.i32(i32 %iv.sub, i32 0)
+  %min = call i32 @llvm.smin.i32(i32 %max, i32 255)
+  %idx = zext i32 %min to i64
+  %gep.a = getelementptr inbounds nuw i8, ptr %a, i64 %idx
+  %la = load i8, ptr %gep.a, align 1
+  %iv.ext = zext i32 %iv to i64
+  %gep.b = getelementptr inbounds i8, ptr %b, i64 %iv.ext
+  store i8 %la, ptr %gep.b, align 1
+  %iv.next = add nuw nsw i32 %iv, 1
+  %ec = icmp eq i32 %iv.next, %N
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; B[i] = A[smin(i, k)] with an i32 index: %k's range makes it non-negative.
+define void @smin_clamp_range(ptr %a, ptr %b, i32 %N, i32 range(i32 0, 1000) %k) {
+; CHECK-LABEL: 'smin_clamp_range'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %min = call i32 @llvm.smin.i32(i32 %iv, i32 %k)
+  %idx = zext i32 %min to i64
+  %gep.a = getelementptr inbounds nuw i8, ptr %a, i64 %idx
+  %la = load i8, ptr %gep.a, align 1
+  %iv.ext = zext i32 %iv to i64
+  %gep.b = getelementptr inbounds i8, ptr %b, i64 %iv.ext
+  store i8 %la, ptr %gep.b, align 1
+  %iv.next = add nuw nsw i32 %iv, 1
+  %ec = icmp eq i32 %iv.next, %N
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; N - i decreases, so smax(N - i, 0) is not monotonic.
+define void @smax_decreasing_op(ptr %a, ptr %b, i32 %N) {
+; CHECK-LABEL: 'smax_decreasing_op'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %sub = sub nsw i32 %N, %iv
+  %max = call i32 @llvm.smax.i32(i32 %sub, i32 0)
+  %idx = zext i32 %max to i64
+  %gep.a = getelementptr inbounds nuw i8, ptr %a, i64 %idx
+  %la = load i8, ptr %gep.a, align 1
+  %iv.ext = zext i32 %iv to i64
+  %gep.b = getelementptr inbounds i8, ptr %b, i64 %iv.ext
+  store i8 %la, ptr %gep.b, align 1
+  %iv.next = add nuw nsw i32 %iv, 1
+  %ec = icmp eq i32 %iv.next, %N
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; smax(i - 1, %k) may be negative, which zext turns into a large offset.
+define void @smax_may_be_negative(ptr %a, ptr %b, i32 %N, i32 %k) {
+; CHECK-LABEL: 'smax_may_be_negative'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.sub = add nsw i32 %iv, -1
+  %max = call i32 @llvm.smax.i32(i32 %iv.sub, i32 %k)
+  %idx = zext i32 %max to i64
+  %gep.a = getelementptr inbounds nuw i8, ptr %a, i64 %idx
+  %la = load i8, ptr %gep.a, align 1
+  %iv.ext = zext i32 %iv to i64
+  %gep.b = getelementptr inbounds i8, ptr %b, i64 %iv.ext
+  store i8 %la, ptr %gep.b, align 1
+  %iv.next = add nuw nsw i32 %iv, 1
+  %ec = icmp eq i32 %iv.next, %N
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; The i32 IV only has nuw, so smax(i, 1) drops to 1 above INT_MAX.
+define void @smax_iv_nuw_only(ptr %a, ptr %b, i32 %N) {
+; CHECK-LABEL: 'smax_iv_nuw_only'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %max = call i32 @llvm.smax.i32(i32 %iv, i32 1)
+  %idx = zext i32 %max to i64
+  %gep.a = getelementptr inbounds nuw i8, ptr %a, i64 %idx
+  %la = load i8, ptr %gep.a, align 1
+  %iv.ext = zext i32 %iv to i64
+  %gep.b = getelementptr inbounds i8, ptr %b, i64 %iv.ext
+  store i8 %la, ptr %gep.b, align 1
+  %iv.next = add nuw i32 %iv, 1
+  %ec = icmp eq i32 %iv.next, %N
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; The i32 IV %j may wrap from INT_MAX to INT_MIN, so smax(%j, 0) decreases.
+define void @smax_may_wrap(ptr %a, ptr %b, i64 %N, i32 %start) {
+; CHECK-LABEL: 'smax_may_wrap'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %j = phi i32 [ %start, %entry ], [ %j.next, %loop ]
+  %max = call i32 @llvm.smax.i32(i32 %j, i32 0)
+  %idx = zext i32 %max to i64
+  %gep.a = getelementptr inbounds nuw i8, ptr %a, i64 %idx
+  %la = load i8, ptr %gep.a, align 1
+  %gep.b = getelementptr inbounds i8, ptr %b, i64 %iv
+  store i8 %la, ptr %gep.b, align 1
+  %iv.next = add nuw nsw i64 %iv, 1
+  %j.next = add i32 %j, 1
+  %ec = icmp eq i64 %iv.next, %N
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; The i32 IV %j may wrap from UINT_MAX to 0, so zext(umin(%j, %k)) decreases.
+define void @umin_zext_may_wrap(ptr %a, ptr %b, i64 %N, i32 %start, i32 %k) {
+; CHECK-LABEL: 'umin_zext_may_wrap'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %j = phi i32 [ %start, %entry ], [ %j.next, %loop ]
+  %min = call i32 @llvm.umin.i32(i32 %j, i32 %k)
+  %idx = zext i32 %min to i64
+  %gep.a = getelementptr inbounds nuw i8, ptr %a, i64 %idx
+  %la = load i8, ptr %gep.a, align 1
+  %gep.b = getelementptr inbounds i8, ptr %b, i64 %iv
+  store i8 %la, ptr %gep.b, align 1
+  %iv.next = add nuw nsw i64 %iv, 1
+  %j.next = add i32 %j, 1
+  %ec = icmp eq i64 %iv.next, %N
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; umin(i, %k) is only unsigned non-decreasing, so the smax may drop to 0.
+define void @smax_umin_not_monotonic(ptr %a, ptr %b, i32 %N, i32 %k) {
+; CHECK-LABEL: 'smax_umin_not_monotonic'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %min = call i32 @llvm.umin.i32(i32 %iv, i32 %k)
+  %max = call i32 @llvm.smax.i32(i32 %min, i32 0)
+  %idx = zext i32 %max to i64
+  %gep.a = getelementptr inbounds nuw i8, ptr %a, i64 %idx
+  %la = load i8, ptr %gep.a, align 1
+  %iv.ext = zext i32 %iv to i64
+  %gep.b = getelementptr inbounds i8, ptr %b, i64 %iv.ext
+  store i8 %la, ptr %gep.b, align 1
+  %iv.next = add nuw i32 %iv, 1
+  %ec = icmp eq i32 %iv.next, %N
   br i1 %ec, label %exit, label %loop
 
 exit:

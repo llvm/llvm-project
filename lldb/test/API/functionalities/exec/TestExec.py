@@ -8,7 +8,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@skipIfWasm  # no exec() on WebAssembly
+@requireNotWasm("no exec() on WebAssembly")
 class ExecTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
@@ -21,7 +21,7 @@ class ExecTestCase(TestBase):
     )  # this exec test has problems on ios systems
     @expectedFailureNetBSD
     @skipIfAsan  # rdar://problem/43756823
-    @skipIfWindows
+    @requirePOSIX
     def test_hitting_exec(self):
         self.do_test(False)
 
@@ -34,33 +34,26 @@ class ExecTestCase(TestBase):
     )  # this exec test has problems on ios systems
     @expectedFailureNetBSD
     @skipIfAsan  # rdar://problem/43756823
-    @skipIfWindows
+    @requirePOSIX
     def test_skipping_exec(self):
         self.do_test(True)
 
     def do_test(self, skip_exec):
         self.build()
-        exe = self.getBuildArtifact("a.out")
         secondprog = self.getBuildArtifact("secondprog")
-
-        # Create the target
-        target = self.dbg.CreateTarget(exe)
 
         lldbutil.install_to_target(self, secondprog)
 
-        # Create any breakpoints we need
-        breakpoint1 = target.BreakpointCreateBySourceRegex(
-            "Set breakpoint 1 here", lldb.SBFileSpec("main.c", False)
+        # The stop reason of the thread should be breakpoint.
+        target, process, thread, _ = lldbutil.run_to_source_breakpoint(
+            self, "Set breakpoint 1 here", lldb.SBFileSpec("main.c", False)
         )
-        self.assertTrue(breakpoint1, VALID_BREAKPOINT)
+
+        # Create any breakpoints we need
         breakpoint2 = target.BreakpointCreateBySourceRegex(
             "Set breakpoint 2 here", lldb.SBFileSpec("secondprog.cpp", False)
         )
         self.assertTrue(breakpoint2, VALID_BREAKPOINT)
-
-        # Launch the process
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        self.assertTrue(process, PROCESS_IS_VALID)
 
         if self.TraceOn():
             self.runCmd("settings show target.process.stop-on-exec", check=False)
@@ -75,19 +68,10 @@ class ExecTestCase(TestBase):
             # Execute the cleanup function during test case tear down.
             self.addTearDownHook(cleanup)
 
-        # The stop reason of the thread should be breakpoint.
-        self.assertState(
-            process.GetState(), lldb.eStateStopped, STOPPED_DUE_TO_BREAKPOINT
-        )
-
-        threads = lldbutil.get_threads_stopped_at_breakpoint(process, breakpoint1)
-        self.assertEqual(len(threads), 1)
-
         # We had a deadlock tearing down the TypeSystemMap on exec, but only if some
         # expression had been evaluated.  So make sure we do that here so the teardown
         # is not trivial.
 
-        thread = threads[0]
         value = thread.frames[0].EvaluateExpression("1 + 2")
         self.assertTrue(value.IsValid(), "Expression evaluated successfully")
         int_value = value.GetValueAsSigned()
@@ -135,7 +119,7 @@ class ExecTestCase(TestBase):
     )  # this exec test has problems on ios systems
     @expectedFailureNetBSD
     @skipIfAsan  # rdar://problem/43756823
-    @skipIfWindows
+    @requirePOSIX
     def test_correct_thread_plan_state_before_exec(self):
         """
         In this test we make sure that the Thread* cache in the ThreadPlans

@@ -29,6 +29,33 @@ define ptr @local_decl() {
   ret ptr @local_decl
 }
 
+; An available_externally function imported from another module. Its body must
+; remain the target of direct calls so that the inliner can still see it; only
+; address-taken uses are redirected to the jump table entry.
+define available_externally dso_local i8 @imported_a() {
+  ret i8 3
+}
+
+define i8 @use_imported_a() {
+  %x = call i8 @imported_a()
+  ret i8 %x
+}
+
+define ptr @addr_imported_a() {
+  ret ptr @imported_a
+}
+
+; A non-dso_local available_externally function may be preempted at run time,
+; so it is left alone.
+define available_externally i8 @imported_b() {
+  ret i8 4
+}
+
+define i8 @use_imported_b() {
+  %x = call i8 @imported_b()
+  ret i8 %x
+}
+
 declare void @external()
 declare extern_weak void @external_weak()
 
@@ -48,8 +75,24 @@ declare extern_weak void @external_weak()
 ; CHECK-NEXT:   call ptr @local_decl()
 ; CHECK-NEXT:   ret ptr @local_decl.cfi_jt
 
+; CHECK:      define available_externally hidden i8 @imported_a.cfi()
+; CHECK-NEXT:   ret i8 3
+
+; CHECK:      define i8 @use_imported_a()
+; CHECK-NEXT:   call i8 @imported_a.cfi()
+
+; CHECK:      define ptr @addr_imported_a()
+; CHECK-NEXT:   ret ptr @imported_a
+
+; CHECK:      define available_externally i8 @imported_b()
+; CHECK-NEXT:   ret i8 4
+
+; CHECK:      define i8 @use_imported_b()
+; CHECK-NEXT:   call i8 @imported_b()
+
 ; CHECK: declare void @external()
 ; CHECK: declare extern_weak void @external_weak()
 ; CHECK: declare i8 @local_a()
+; CHECK: declare dso_local i8 @imported_a()
 ; CHECK: declare hidden void @external.cfi_jt()
 ; CHECK: declare hidden void @external_weak.cfi_jt()

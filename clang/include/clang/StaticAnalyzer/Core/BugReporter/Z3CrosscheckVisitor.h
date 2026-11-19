@@ -15,6 +15,7 @@
 #define LLVM_CLANG_STATICANALYZER_CORE_BUGREPORTER_Z3CROSSCHECKVISITOR_H
 
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporterVisitors.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/RangedConstraintManager.h"
 
 namespace clang::ento {
 
@@ -37,7 +38,7 @@ public:
                                    BugReporterContext &BRC,
                                    PathSensitiveBugReport &BR) override;
 
-  void finalizeVisitor(BugReporterContext &BRC, const ExplodedNode *EndPathNode,
+  void finalizeVisitor(const ExplodedNode *EndPathNode, BugReporterContext &BRC,
                        PathSensitiveBugReport &BR) override;
 
 private:

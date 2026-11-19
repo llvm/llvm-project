@@ -734,7 +734,7 @@ llvm.func @subranges(%arg: !llvm.ptr) {
 #sty1 = #llvm.di_string_type<tag = DW_TAG_string_type, name = "character(*)",
  sizeInBits = 32, alignInBits = 8, stringLength = #var,
  stringLengthExp = <[DW_OP_push_object_address, DW_OP_plus_uconst(8)]>,
- stringLocationExp = <[DW_OP_push_object_address, DW_OP_deref]>>
+ stringLocationExp = <[DW_OP_push_object_address, DW_OP_deref]>, charType = #bt>
 #var1 = #llvm.di_local_variable<scope = #sp, name = "str1", type = #sty1>
 #sty2 = #llvm.di_string_type<tag = DW_TAG_string_type>
 #var2 = #llvm.di_local_variable<scope = #sp, name = "str2", type = #sty2>
@@ -748,8 +748,9 @@ llvm.func @string_ty(%arg0: !llvm.ptr) {
 #loc1 = loc("test.f90":1:1)
 #loc2 = loc(fused<#sp>[#loc1])
 
-// CHECK-DAG: !DIStringType(name: "character(*)", stringLength: ![[VAR:[0-9]+]], stringLengthExpression: !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 8), stringLocationExpression: !DIExpression(DW_OP_push_object_address, DW_OP_deref), size: 32, align: 8)
+// CHECK-DAG: !DIStringType(name: "character(*)", stringLength: ![[VAR:[0-9]+]], stringLengthExpression: !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 8), stringLocationExpression: !DIExpression(DW_OP_push_object_address, DW_OP_deref), size: 32, align: 8, charType: ![[CHARTYPE:[0-9]+]])
 // CHECK-DAG: ![[VAR]] = !DILocalVariable(name: "string_size"{{.*}} flags: DIFlagArtificial)
+// CHECK-DAG: ![[CHARTYPE]] = !DIBasicType(name: "int", size: 32)
 // CHECK-DAG: !DIStringType()
 // -----
 
@@ -870,6 +871,50 @@ llvm.func @fn_cu_import_cycle() {
 
 // -----
 
+#file = #llvm.di_file<"dialect.mlir" in "/test/">
+#cu = #llvm.di_compile_unit<
+  id = distinct[0]<>, sourceLanguage = #llvm.di_source_language_name<
+    language = DW_LANG_C, dialect = DW_LLVM_LANG_DIALECT_simt>, file = #file,
+  isOptimized = false, emissionKind = Full
+>
+#sp_ty = #llvm.di_subroutine_type<callingConvention = DW_CC_normal>
+#sp = #llvm.di_subprogram<
+  compileUnit = #cu, scope = #file, name = "fn_cu_dialect",
+  file = #file, line = 1, scopeLine = 1, subprogramFlags = Definition,
+  type = #sp_ty
+>
+
+// CHECK-LABEL: define void @fn_cu_dialect()
+llvm.func @fn_cu_dialect() {
+  llvm.return
+} loc(fused<#sp>["dialect.mlir":1:1])
+
+// CHECK-DAG: !DICompileUnit({{.*}}dialect: DW_LLVM_LANG_DIALECT_simt)
+
+// -----
+
+#file = #llvm.di_file<"language-name.cpp" in "/test/">
+#cu = #llvm.di_compile_unit<
+  id = distinct[0]<>, sourceLanguage = #llvm.di_source_language_name<
+    name = DW_LNAME_C_plus_plus, version = 202002,
+    dialect = DW_LLVM_LANG_DIALECT_simt>, file = #file,
+  isOptimized = false, emissionKind = Full
+>
+#sp_ty = #llvm.di_subroutine_type<callingConvention = DW_CC_normal>
+#sp = #llvm.di_subprogram<
+  compileUnit = #cu, scope = #file, name = "fn_cu_source_language_name",
+  file = #file, line = 1, scopeLine = 1, subprogramFlags = Definition,
+  type = #sp_ty
+>
+
+// CHECK-LABEL: define void @fn_cu_source_language_name()
+// CHECK-DAG: ![[LNAME_CU:[0-9]+]] = distinct !DICompileUnit(sourceLanguageName: DW_LNAME_C_plus_plus, sourceLanguageVersion: 202002, file: !{{[0-9]+}}, isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, dialect: DW_LLVM_LANG_DIALECT_simt)
+llvm.func @fn_cu_source_language_name() {
+  llvm.return
+} loc(fused<#sp>["language-name.cpp":1:1])
+
+// -----
+
 #di_file  = #llvm.di_file<"foo.mlir" in "/tmp">
 #di_cu    = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #di_file, isOptimized = false, emissionKind = Full>
 #di_uint8 = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "uint8", sizeInBits = 8, encoding = DW_ATE_unsigned>
@@ -898,3 +943,59 @@ llvm.func @variant_part_emission(%arg0: i32) {
   llvm.intr.dbg.value #di_local = %arg0 : i32 loc(#loc)
   llvm.return loc(#loc)
 } loc(#loc)
+
+// -----
+
+// CHECK-LABEL: define void @recursive_variant_part
+// CHECK: ![[VARIANT:[0-9]+]] = distinct !DICompositeType(tag: DW_TAG_variant_part, elements: ![[ELEMENTS:[0-9]+]])
+// CHECK: ![[ELEMENTS]] = !{![[MEMBER:[0-9]+]]}
+// CHECK: ![[MEMBER]] = !DIDerivedType(tag: DW_TAG_member, scope: ![[VARIANT]], baseType: null)
+
+#recursive_variant_file = #llvm.di_file<"a.rs" in "">
+#recursive_variant_self = #llvm.di_composite_type<recId = distinct[106]<>, isRecSelf = true>
+#recursive_variant_member = #llvm.di_derived_type<tag = DW_TAG_member, scope = #recursive_variant_self>
+#recursive_variant_type = #llvm.di_composite_type<recId = distinct[106]<>, tag = DW_TAG_variant_part, elements = #recursive_variant_member>
+#recursive_variant_subroutine = #llvm.di_subroutine_type<types = #recursive_variant_type>
+#recursive_variant_cu = #llvm.di_compile_unit<id = distinct[107]<>, sourceLanguage = DW_LANG_C, file = #recursive_variant_file, emissionKind = Full>
+#recursive_variant_sp = #llvm.di_subprogram<id = distinct[108]<>, compileUnit = #recursive_variant_cu, file = #recursive_variant_file, subprogramFlags = "Definition", type = #recursive_variant_subroutine>
+#recursive_variant_loc = loc(fused<#recursive_variant_sp>[unknown])
+
+module {
+  llvm.func @recursive_variant_part() {
+    llvm.return
+  } loc(#recursive_variant_loc)
+}
+
+// -----
+
+// CHECK-LABEL: define void @enum_emission()
+// CHECK: !DICompositeType(tag: DW_TAG_enumeration_type, name: "Color"{{.*}}elements: ![[ELEMENTS:[0-9]+]])
+// CHECK: ![[ELEMENTS]] = !{![[E0:[0-9]+]], ![[E1:[0-9]+]], ![[E2:[0-9]+]], ![[E3:[0-9]+]], ![[E4:[0-9]+]], ![[E5:[0-9]+]], ![[E6:[0-9]+]]}
+// CHECK-DAG: ![[E0]] = !DIEnumerator(name: "zero", value: 0)
+// CHECK-DAG: ![[E1]] = !DIEnumerator(name: "thirty", value: 30)
+// CHECK-DAG: ![[E2]] = !DIEnumerator(name: "neg_one", value: -1)
+// CHECK-DAG: ![[E3]] = !DIEnumerator(name: "u64_max", value: 18446744073709551615, isUnsigned: true)
+// CHECK-DAG: ![[E4]] = !DIEnumerator(name: "i128_min", value: -170141183460469231731687303715884105728)
+// CHECK-DAG: ![[E5]] = !DIEnumerator(name: "u132", value: 2722258935367507707706996859454145691648, isUnsigned: true)
+// CHECK-DAG: ![[E6]] = !DIEnumerator(name: "", value: 0)
+
+#enum_file = #llvm.di_file<"enum.mlir" in "/">
+#enum_cu = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #enum_file, isOptimized = false, emissionKind = Full>
+#enum_int = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "int", sizeInBits = 32, encoding = DW_ATE_signed>
+#enum0 = #llvm.di_enumerator<name = "zero", value = 0 : i64>
+#enum1 = #llvm.di_enumerator<name = "thirty", value = 30 : i64>
+#enum2 = #llvm.di_enumerator<name = "neg_one", value = -1 : i64>
+#enum3 = #llvm.di_enumerator<name = "u64_max", value = -1 : i64, isUnsigned = true>
+#enum4 = #llvm.di_enumerator<name = "i128_min", value = -170141183460469231731687303715884105728 : i128>
+#enum5 = #llvm.di_enumerator<name = "u132", value = -2722258935367507707706996859454145691648 : i132, isUnsigned = true>
+#enum6 = #llvm.di_enumerator<value = 0 : i64>
+#enum_comp = #llvm.di_composite_type<tag = DW_TAG_enumeration_type, name = "Color", file = #enum_file, line = 1, baseType = #enum_int, sizeInBits = 32, alignInBits = 32, elements = #enum0, #enum1, #enum2, #enum3, #enum4, #enum5, #enum6>
+#enum_subroutine = #llvm.di_subroutine_type<types = #enum_comp>
+#enum_sp = #llvm.di_subprogram<id = distinct[1]<>, compileUnit = #enum_cu, scope = #enum_file, name = "enum_emission", file = #enum_file, subprogramFlags = Definition, type = #enum_subroutine>
+#enum_loc = loc(fused<#enum_sp>["enum.mlir":1:1])
+
+module {
+  llvm.func @enum_emission() {
+    llvm.return
+  } loc(#enum_loc)
+}

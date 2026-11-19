@@ -18,6 +18,7 @@
 #include "clang/AST/Decl.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 
 namespace clang {
@@ -47,16 +48,34 @@ class VarBypassDetector {
   llvm::DenseMap<const Stmt *, unsigned> ToScopes;
   // Set of variables which were bypassed by some jump.
   llvm::DenseSet<const VarDecl *> Bypasses;
+  // Map from a bypassing jump (goto/asm goto/switch) to the variable
+  // declarations it bypasses. Used to reinitialize those variables at the jump.
+  llvm::DenseMap<const Stmt *, llvm::SmallSetVector<const VarDecl *, 4>>
+      BypassedVarsAtSource;
   // If true assume that all variables are being bypassed.
   bool AlwaysBypassed = false;
 
 public:
   void Init(CodeGenModule &CGM, const Stmt *Body);
 
-  /// Returns true if the variable declaration was by bypassed by any goto or
-  /// switch statement.
+  /// Returns true if the variable declaration was bypassed by any goto, asm
+  /// goto, or switch statement.
   bool IsBypassed(const VarDecl *D) const {
     return AlwaysBypassed || Bypasses.contains(D);
+  }
+
+  /// Returns true if jump sources cannot be determined (e.g. computed gotos),
+  /// so all variables must be treated as bypassed.
+  bool isAlwaysBypassed() const { return AlwaysBypassed; }
+
+  /// Returns the variables bypassed by jumps from the given source statement,
+  /// or nullptr if it bypasses none.
+  const llvm::SmallSetVector<const VarDecl *, 4> *
+  getBypassedVarsForSource(const Stmt *Source) const {
+    auto It = BypassedVarsAtSource.find(Source);
+    if (It == BypassedVarsAtSource.end())
+      return nullptr;
+    return &It->second;
   }
 
 private:
@@ -65,7 +84,7 @@ private:
   bool BuildScopeInformation(CodeGenModule &CGM, const Stmt *S,
                              unsigned &origParentScope);
   void Detect();
-  void Detect(unsigned From, unsigned To);
+  void Detect(unsigned From, unsigned To, const Stmt *Source);
 };
 }
 }

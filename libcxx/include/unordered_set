@@ -591,7 +591,7 @@ template <class _Value, class _Hash, class _Pred, class _Alloc>
 class unordered_multiset;
 
 template <class _Value, class _Hash = hash<_Value>, class _Pred = equal_to<_Value>, class _Alloc = allocator<_Value> >
-class unordered_set {
+class _LIBCPP_WARN_UNUSED unordered_set {
 public:
   // types
   typedef _Value key_type;
@@ -1100,13 +1100,7 @@ unordered_set<_Value, _Hash, _Pred, _Alloc>::unordered_set(const unordered_set& 
 
 template <class _Value, class _Hash, class _Pred, class _Alloc>
 unordered_set<_Value, _Hash, _Pred, _Alloc>::unordered_set(unordered_set&& __u, const allocator_type& __a)
-    : __table_(std::move(__u.__table_), __a) {
-  if (__a != __u.get_allocator()) {
-    iterator __i = __u.begin();
-    while (__u.size() != 0)
-      __table_.__emplace_unique(std::move(__u.__table_.remove(__i++)->__get_value()));
-  }
-}
+    : __table_(std::move(__u.__table_), __a) {}
 
 template <class _Value, class _Hash, class _Pred, class _Alloc>
 unordered_set<_Value, _Hash, _Pred, _Alloc>::unordered_set(initializer_list<value_type> __il) {
@@ -1201,7 +1195,7 @@ struct __container_traits<unordered_set<_Value, _Hash, _Pred, _Alloc> > {
 };
 
 template <class _Value, class _Hash = hash<_Value>, class _Pred = equal_to<_Value>, class _Alloc = allocator<_Value> >
-class unordered_multiset {
+class _LIBCPP_WARN_UNUSED unordered_multiset {
 public:
   // types
   typedef _Value key_type;
@@ -1715,13 +1709,7 @@ unordered_multiset<_Value, _Hash, _Pred, _Alloc>::unordered_multiset(
 template <class _Value, class _Hash, class _Pred, class _Alloc>
 unordered_multiset<_Value, _Hash, _Pred, _Alloc>::unordered_multiset(
     unordered_multiset&& __u, const allocator_type& __a)
-    : __table_(std::move(__u.__table_), __a) {
-  if (__a != __u.get_allocator()) {
-    iterator __i = __u.begin();
-    while (__u.size() != 0)
-      __table_.__emplace_multi(std::move(__u.__table_.remove(__i++)->__get_value()));
-  }
-}
+    : __table_(std::move(__u.__table_), __a) {}
 
 template <class _Value, class _Hash, class _Pred, class _Alloc>
 unordered_multiset<_Value, _Hash, _Pred, _Alloc>::unordered_multiset(initializer_list<value_type> __il) {
@@ -1836,14 +1824,8 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 20
-#    include <cmath>
-#    include <concepts>
-#    include <cstdlib>
-#    include <functional>
-#    include <iterator>
-#    include <stdexcept>
-#    include <type_traits>
+#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 23
+#    include <optional>
 #  endif
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
