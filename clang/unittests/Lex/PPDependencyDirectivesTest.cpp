@@ -191,6 +191,16 @@ TEST_F(PPDependencyDirectivesTest, HeaderNamesStartingWithCompoundTokens) {
                      "#if __has_include(<<>)\n"
                      "#include <<>\n"
                      "#endif\n"
+                     "#define HEADER \"=\"\n"
+                     "#define HAS_INCLUDE(x) __has_include(x)\n"
+                     "#if HAS_INCLUDE(HEADER)\n"
+                     "#include HEADER\n"
+                     "#endif\n"
+                     "#define EMPTY\n"
+                     "#define NAME =\n"
+                     "#if __has_include(EMPTY <NAME>)\n"
+                     "#include EMPTY <NAME>\n"
+                     "#endif\n"
                      "#include \\\n<=>";
 
   SmallVector<dependency_directives_scan::Token> Tokens;
@@ -246,12 +256,14 @@ TEST_F(PPDependencyDirectivesTest, HeaderNamesStartingWithCompoundTokens) {
   PP.EnterMainSourceFile();
   PP.LexTokensUntilEOF();
 
+  EXPECT_FALSE(Diags.hasErrorOccurred());
   SmallVector<std::string> IncludedFilesSlash;
   for (StringRef IncludedFile : IncludedFiles)
     IncludedFilesSlash.push_back(
         llvm::sys::path::convert_to_slash(IncludedFile));
   SmallVector<std::string> ExpectedIncludes{
-      "/source/main.c", "/source/=", "/source/<", "/source/="};
+      "/source/main.c", "/source/=", "/source/<",
+      "/source/=",      "/source/=", "/source/="};
   EXPECT_EQ(IncludedFilesSlash, ExpectedIncludes);
 }
 
