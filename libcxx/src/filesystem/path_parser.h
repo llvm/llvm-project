@@ -9,6 +9,7 @@
 #ifndef PATH_PARSER_H
 #define PATH_PARSER_H
 
+#include <__algorithm/ranges_contains.h>
 #include <__config>
 #include <__utility/unreachable.h>
 #include <cstddef>
@@ -19,14 +20,14 @@
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
-inline bool isSeparator(path::value_type C) {
-  if (C == '/')
-    return true;
 #ifdef _WIN32
-  if (C == '\\')
-    return true;
+constexpr path::value_type separators[] = {'\\', '/'};
+#else
+constexpr path::value_type separators[] = {'/'};
 #endif
-  return false;
+
+inline bool isSeparator(path::value_type C) {
+  return std::ranges::contains(separators, C);
 }
 
 inline bool isDriveLetter(path::value_type C) { return (C >= 'a' && C <= 'z') || (C >= 'A' && C <= 'Z'); }
@@ -287,6 +288,10 @@ private:
       return nullptr;
     const int Inc = P < End ? 1 : -1;
     P += Inc;
+    if constexpr (std::size(separators) == 1) {
+      if (Inc > 0)
+        return std::find(P, End, separators[0]);
+    }
     while (P != End && !isSeparator(*P))
       P += Inc;
     if (P == End && Inc < 0) {
