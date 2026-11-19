@@ -114,6 +114,10 @@ diagnoseAccess(SourceLocation AccessLoc, UncheckedExpectedAccessKind Kind,
                const RecordStorageLocation *ExpectedLoc,
                const Environment &Env) {
   if (ExpectedLoc != nullptr) {
+    // The matchers only check the class of the called accessor, but the object
+    // may be of a derived class, whose location has no "has_value" field.
+    if (!isExpectedType(ExpectedLoc->getType()))
+      return {};
     if (auto *HasValueVal = Env.get<BoolValue>(locForHasValue(*ExpectedLoc))) {
       // The value may only be accessed if the expected holds a value, and the
       // error only if it does not.
