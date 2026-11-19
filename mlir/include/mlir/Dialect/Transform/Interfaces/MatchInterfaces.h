@@ -201,13 +201,13 @@ LogicalResult verifyTransformMatchDimsOp(Operation *op, ArrayRef<int64_t> raw,
 /// Populates `result` with the positional identifiers relative to `maxNumber`.
 /// If `isAll` is set, the result will contain all numbers from `0` to
 /// `maxNumber - 1` inclusive regardless of `rawList`. Otherwise, negative
-/// values from `rawList` are  are interpreted as counting backwards from
-/// `maxNumber`, i.e., `-1` is interpreted a `maxNumber - 1`, while positive
+/// values from `rawList` are interpreted as counting backwards from
+/// `maxNumber`, i.e., `-1` is interpreted as `maxNumber - 1`, while positive
 /// numbers remain as is. If `isInverted` is set, populates `result` with those
 /// values from the `0` to `maxNumber - 1` inclusive range that don't appear in
 /// `rawList`. If `rawList` contains values that are greater than or equal to
 /// `maxNumber` or less than `-maxNumber`, produces a silenceable error at the
-/// given location. `maxNumber` must be positive. If `rawList` contains
+/// given location. `maxNumber` must be non-negative. If `rawList` contains
 /// duplicate numbers or numbers that become duplicate after negative value
 /// remapping, emits a silenceable error.
 DiagnosedSilenceableFailure
