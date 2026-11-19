@@ -434,17 +434,21 @@ void SLSHardeningInserter::convertBLRToBL(
   DebugLoc DL = BLR.getDebugLoc();
 
   MachineFunction &MF = *MBBI->getMF();
-  MCContext &Context = MBB.getParent()->getContext();
   const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
 
   auto ThunkName = createThunkName(Kind, Xn, Xm);
-  MCSymbol *Sym = Context.getOrCreateSymbol(ThunkName);
 
   if (!Thunks.get(Kind.Id, Xn, Xm)) {
     StringRef TargetAttrs = Kind.NeedsPAuth ? "+pauth" : "";
     Thunks.set(Kind.Id, Xn, Xm);
     createThunkFunction(MMI, ThunkName, ComdatThunks, TargetAttrs);
   }
+
+  // Refer to the thunk by its function's symbol, so that the call carries the
+  // same global prefix as the thunk's label (a leading '_' on Mach-O).
+  const Function *ThunkFn = MMI.getModule()->getFunction(ThunkName);
+  assert(ThunkFn && "SLS BLR thunk was not created");
+  MCSymbol *Sym = MF.getTarget().getSymbol(ThunkFn);
 
   MachineInstr *BL = BuildMI(MBB, MBBI, DL, TII->get(AArch64::BL)).addSym(Sym);
 
