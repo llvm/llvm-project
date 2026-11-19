@@ -705,6 +705,15 @@ add_header_macro(
 )
 
 add_header_macro(
+  ar
+  ../libc/include/ar.yaml
+  ar.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-types.struct_ar_hdr
+)
+
+add_header_macro(
   elf
   ../libc/include/elf.yaml
   elf.h
@@ -1057,6 +1066,7 @@ add_header_macro(
     .llvm_libc_common_h
     .llvm-libc-macros.sys_timerfd_macros
     .llvm-libc-macros.time_macros
+    .llvm-libc-types.struct_itimerspec
 )
 
 add_header_macro(
@@ -1243,6 +1253,7 @@ add_header_macro(
     .llvm-libc-types.struct_sockaddr_in6
     .llvm-libc-types.struct_in_addr
     .llvm-libc-types.struct_in6_addr
+    .llvm-libc-types.struct_in6_pktinfo
     .llvm-libc-types.struct_ip_mreq
     .llvm-libc-types.struct_ip_mreq_source
     .llvm-libc-types.struct_ip_mreqn
@@ -1254,11 +1265,21 @@ add_header_macro(
 )
 
 add_header_macro(
+  netinet_ip
+  ../libc/include/netinet/ip.yaml
+  netinet/ip.h
+  DEPENDS
+    .llvm-libc-types.struct_iphdr
+    .llvm_libc_common_h
+)
+
+add_header_macro(
   netinet_tcp
   ../libc/include/netinet/tcp.yaml
   netinet/tcp.h
   DEPENDS
     .llvm-libc-macros.netinet_tcp_macros
+    .llvm-libc-types.struct_tcp_info
     .llvm_libc_common_h
 )
 
@@ -1295,6 +1316,9 @@ add_header_macro(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-macros.arpa_nameser_macros
+    .llvm-libc-types.ns_class
+    .llvm-libc-types.ns_sect
+    .llvm-libc-types.ns_type
 )
 
 add_header_macro(

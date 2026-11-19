@@ -23,6 +23,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CodeGenOptions.h"
 #include "MIRVRegNamerUtils.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
@@ -36,11 +37,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "mir-canonicalizer"
-
-static cl::opt<unsigned>
-    CanonicalizeFunctionNumber("canon-nth-function", cl::Hidden, cl::init(~0u),
-                               cl::value_desc("N"),
-                               cl::desc("Function number to canonicalize."));
 
 namespace {
 
@@ -392,8 +388,9 @@ static bool runOnBasicBlock(MachineBasicBlock *MBB,
 bool MIRCanonicalizer::runOnMachineFunction(MachineFunction &MF) {
 
   static unsigned functionNum = 0;
-  if (CanonicalizeFunctionNumber != ~0U) {
-    if (CanonicalizeFunctionNumber != functionNum++)
+  const CodeGenOptions &Opts = getCodeGenOptions(MF);
+  if (Opts.mir_canonicalizer_nth_function != ~0U) {
+    if (Opts.mir_canonicalizer_nth_function != functionNum++)
       return false;
     LLVM_DEBUG(dbgs() << "\n Canonicalizing Function " << MF.getName()
                       << "\n";);
@@ -414,7 +411,7 @@ bool MIRCanonicalizer::runOnMachineFunction(MachineFunction &MF) {
   unsigned BBNum = 0;
   bool Changed = false;
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  VRegRenamer Renamer(MRI);
+  VRegRenamer Renamer(Opts, MRI);
   for (auto *MBB : RPOList)
     Changed |= runOnBasicBlock(MBB, BBNum++, Renamer);
 
