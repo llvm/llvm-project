@@ -189,3 +189,27 @@ body: |
   bb.0:
     S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_abc
 ...
+
+;--- vmcnt-negative-zero.mir
+# RUN: not llc %t/vmcnt-negative-zero.mir -mtriple=amdgpu9.00 -run-pass=none -filetype=null 2>&1 | FileCheck %t/vmcnt-negative-zero.mir --strict-whitespace --match-full-lines
+---
+# CHECK:error: {{.*}} expected non-negative integer counter number
+# CHECK-NEXT:    S_WAITCNT .Vmcnt_-0
+# CHECK-NEXT:                     ^
+name: VmcntNegativeZero
+body: |
+  bb.0:
+    S_WAITCNT .Vmcnt_-0
+...
+
+;--- vmcnt-exceeds-32-bits.mir
+# RUN: not llc %t/vmcnt-exceeds-32-bits.mir -mtriple=amdgpu9.00 -run-pass=none -filetype=null 2>&1 | FileCheck %t/vmcnt-exceeds-32-bits.mir --strict-whitespace --match-full-lines
+---
+# CHECK:error: {{.*}} expected non-negative integer counter number
+# CHECK-NEXT:    S_WAITCNT .Vmcnt_4294967296
+# CHECK-NEXT:                     ^
+name: VmcntExceeds32Bits
+body: |
+  bb.0:
+    S_WAITCNT .Vmcnt_4294967296
+...
