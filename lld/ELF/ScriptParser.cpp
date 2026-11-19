@@ -300,6 +300,10 @@ void ScriptParser::readDefsym() {
   Expr e = readExpr();
   if (!atEOF())
     setError("EOF expected, but got " + next());
+  // Symbols defined with --defsym are treated as defined before linker script
+  // commands are processed, so that e.g. they take precedence over a PROVIDE
+  // directive (GNU ld compatible).
+  ctx.script->defsymSymbols.insert(name);
   auto *cmd = make<SymbolAssignment>(name, e, 0, curBuf.filename.str());
   ctx.script->sectionCommands.push_back(cmd);
 }
