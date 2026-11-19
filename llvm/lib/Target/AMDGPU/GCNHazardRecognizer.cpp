@@ -207,8 +207,7 @@ bool GCNHazardRecognizer::hasCoExecWindowModel() const {
   // gfx1251 and gfx12.5-generic report the same co-execution hazard features
   // but have different WMMA latencies, so they need their own slot patterns
   // before they can be modeled here.
-  if (ST.hasWMMACoexecutionHazards() && ST.hasTransCoexecutionHazard() &&
-      AMDGPU::isGFX1250(ST))
+  if (ST.hasCoExecWindowModel())
     return true;
 
   if (ST.hasGFX950Insts() &&
