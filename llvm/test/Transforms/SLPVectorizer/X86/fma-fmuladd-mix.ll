@@ -151,7 +151,8 @@ define void @fmuladd_fma_copyable_4f64() {
 ; FMA-NEXT:    [[TMP8:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; FMA-NEXT:    [[TMP9:%.*]] = shufflevector <4 x double> [[TMP7]], <4 x double> [[TMP8]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
 ; FMA-NEXT:    [[TMP10:%.*]] = call <4 x double> @llvm.fma.v4f64(<4 x double> [[TMP6]], <4 x double> [[TMP9]], <4 x double> [[TMP3]])
-; FMA-NEXT:    store <4 x double> [[TMP10]], ptr @dst64, align 8
+; FMA-NEXT:    [[TMP11:%.*]] = shufflevector <4 x double> [[TMP10]], <4 x double> [[TMP3]], <4 x i32> <i32 0, i32 1, i32 6, i32 3>
+; FMA-NEXT:    store <4 x double> [[TMP11]], ptr @dst64, align 8
 ; FMA-NEXT:    ret void
 ;
   %a0 = load double, ptr @srcA64, align 8

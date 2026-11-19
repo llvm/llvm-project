@@ -173,12 +173,16 @@ operator=(const SBBreakpointName &rhs) {
 bool SBBreakpointName::operator==(const lldb::SBBreakpointName &rhs) {
   LLDB_INSTRUMENT_VA(this, rhs);
 
+  if (!m_impl_up || !rhs.m_impl_up)
+    return m_impl_up == rhs.m_impl_up;
   return *m_impl_up == *rhs.m_impl_up;
 }
 
 bool SBBreakpointName::operator!=(const lldb::SBBreakpointName &rhs) {
   LLDB_INSTRUMENT_VA(this, rhs);
 
+  if (!m_impl_up || !rhs.m_impl_up)
+    return m_impl_up != rhs.m_impl_up;
   return *m_impl_up != *rhs.m_impl_up;
 }
 

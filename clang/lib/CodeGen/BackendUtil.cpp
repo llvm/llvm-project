@@ -1274,16 +1274,19 @@ void EmitAssemblyHelper::RunCodegenPipeline(
   // this also adds codegenerator level optimization passes.
   CodeGenFileType CGFT = getCodeGenFileType(Action);
 
-  // Invoke pre-codegen callback from plugin, which might want to take over the
-  // entire code generation itself.
-  for (const std::unique_ptr<llvm::PassPlugin> &Plugin : CI.getPassPlugins()) {
-    if (Plugin->invokePreCodeGenCallback(*TheModule, *TM, CGFT, *OS))
-      return;
-  }
-
   if (!CodeGenOpts.SplitDwarfOutput.empty()) {
     DwoOS = openOutputFile(CodeGenOpts.SplitDwarfOutput);
     if (!DwoOS)
+      return;
+  }
+
+  // Invoke pre-codegen callback from plugin, which might want to take over the
+  // entire code generation itself.
+  for (const std::unique_ptr<llvm::PassPlugin> &Plugin : CI.getPassPlugins()) {
+    if (Plugin->invokePreCodeGenCallback(
+            *TM, *TheModule, *OS, DwoOS ? &DwoOS->os() : nullptr, CGFT,
+            !CodeGenOpts.VerifyModule, /*DisableSimplifyLibCalls=*/false,
+            /*MSI=*/nullptr, CI.getVirtualFileSystemPtr()))
       return;
   }
 

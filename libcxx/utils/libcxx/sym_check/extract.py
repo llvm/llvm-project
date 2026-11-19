@@ -151,6 +151,10 @@ class ReadElfExtractor(object):
     def process_syms(self, sym_list):
         new_syms = []
         for s in sym_list:
+            # GNU readelf prints STT_GNU_IFUNC as "<OS specific>: 10" instead of
+            # "IFUNC" unless EI_OSABI is GNU or FreeBSD which is not the case for
+            # Android.
+            s = s.replace("<OS specific>: 10", "IFUNC")
             parts = s.split()
             if not parts:
                 continue
@@ -163,11 +167,16 @@ class ReadElfExtractor(object):
                 "type": parts[3],
                 "is_defined": (parts[6] != "UND"),
             }
-            assert new_sym["type"] in ["OBJECT", "FUNC", "NOTYPE", "TLS"]
+            assert new_sym["type"] in ["OBJECT", "FUNC", "IFUNC", "NOTYPE", "TLS"]
             if new_sym["name"] in extract_ignore_names:
                 continue
             if new_sym["type"] == "NOTYPE":
                 continue
+            if new_sym["type"] == "IFUNC":
+                # Switching between IFUNC and FUNC is not an ABI break since
+                # callers cannot tell the difference, so record IFUNC as FUNC
+                # to avoid false positives when diffing symbol lists.
+                new_sym["type"] = "FUNC"
             if new_sym["type"] == "FUNC":
                 del new_sym["size"]
             new_syms += [new_sym]

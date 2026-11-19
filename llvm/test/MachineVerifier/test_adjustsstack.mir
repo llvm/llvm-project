@@ -12,12 +12,10 @@
 ---
 name: foo
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: gpr32 }
 body: |
   bb.0 (%ir-block.0):
     ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
-    %0 = COPY $wzr
+    %0:gpr32 = COPY $wzr
     $w0 = COPY %0
     BL @bar, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $w0, implicit-def $sp, implicit-def $w0
     ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp

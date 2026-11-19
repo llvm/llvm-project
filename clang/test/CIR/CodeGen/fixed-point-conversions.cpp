@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -ffixed-point -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s --check-prefix=CIR
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -ffixed-point -fclangir -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --input-file=%t-cir.ll %s --check-prefix=LLVM
+// RUN: FileCheck --input-file=%t-cir.ll %s --check-prefixes=LLVM,LLVMCIR
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -ffixed-point -emit-llvm %s -o %t.ll
-// RUN: FileCheck --input-file=%t.ll %s --check-prefix=LLVM
+// RUN: FileCheck --input-file=%t.ll %s --check-prefixes=LLVM,OGCG
 
 extern "C" {
 
@@ -658,9 +658,10 @@ int accum_to_int(_Accum a) {
 // CIR-NEXT: cir.return %[[LOAD_RET]] : !s32i
 // LLVM-LABEL: @ufract_to_int
 // LLVM: %[[LOAD_ARG:.*]] = load i16, ptr %{{.*}}, align 2
-// LLVM: %[[SHIFT:.*]] = lshr i16 %[[LOAD_ARG]], 16
-// LLVM: %[[CAST:.*]] = zext i16 %[[SHIFT]] to i32
-// LLVM: ret i32 %{{.*}}
+// LLVMCIR: %[[SHIFT:.*]] = lshr i16 %[[LOAD_ARG]], 16
+// LLVMCIR: %[[CAST:.*]] = zext i16 %[[SHIFT]] to i32
+// LLVMCIR: ret i32 %{{.*}}
+// OGCG: ret i32 0
 int ufract_to_int(unsigned _Fract f) {
   return f;
 }
@@ -794,9 +795,10 @@ unsigned int accum_to_uint(_Accum a) {
 // CIR-NEXT: cir.return %[[LOAD_RET]] : !u32i
 // LLVM-LABEL: @ufract_to_uint
 // LLVM: %[[LOAD_ARG:.*]] = load i16, ptr %{{.*}}, align 2
-// LLVM: %[[SHIFT:.*]] = lshr i16 %[[LOAD_ARG]], 16
-// LLVM: %[[CAST:.*]] = zext i16 %[[SHIFT]] to i32
-// LLVM: ret i32 %{{.*}}
+// LLVMCIR: %[[SHIFT:.*]] = lshr i16 %[[LOAD_ARG]], 16
+// LLVMCIR: %[[CAST:.*]] = zext i16 %[[SHIFT]] to i32
+// LLVMCIR: ret i32 %{{.*}}
+// OGCG: ret i32 0
 unsigned int ufract_to_uint(unsigned _Fract f) {
   return f;
 }

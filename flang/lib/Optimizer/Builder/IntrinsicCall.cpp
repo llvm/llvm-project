@@ -50,7 +50,7 @@
 #include "flang/Runtime/entry-names.h"
 #include "flang/Runtime/iostat-consts.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMFloatIntrinsicOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
@@ -306,6 +306,12 @@ static constexpr IntrinsicHandler handlers[]{
     {"etime",
      &I::genEtime,
      {{{"values", asBox}, {"time", asBox}}},
+     /*isElemental=*/false},
+    {"event_query",
+     &I::genEventQuery,
+     {{{"event", asAddr},
+       {"count", asAddr},
+       {"stat", asAddr, handleDynamicOptional}}},
      /*isElemental=*/false},
     {"execute_command_line",
      &I::genExecuteCommandLine,
@@ -4033,6 +4039,21 @@ IntrinsicLibrary::genEtime(std::optional<mlir::Type> resultType,
     return {};
   }
   return {};
+}
+
+// EVENT_QUERY
+void IntrinsicLibrary::genEventQuery(llvm::ArrayRef<fir::ExtendedValue> args) {
+  checkCoarrayEnabled(loc, options);
+  assert(args.size() == 3);
+
+  mlir::Value eventVarPtr = fir::getBase(args[0]);
+  mlir::Value count = fir::getBase(args[1]);
+  mlir::Value stat = fir::getBase(args[2]);
+
+  mlir::Type countTy = fir::unwrapPassByRefType(count.getType());
+  mlir::Value res =
+      mif::EventQueryOp::create(builder, loc, countTy, eventVarPtr, stat);
+  fir::StoreOp::create(builder, loc, res, count);
 }
 
 // EXIT
