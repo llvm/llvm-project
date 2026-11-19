@@ -2,15 +2,18 @@
 !llvm.dbg.cu = !{!2, !6}
 !llvm.gcov = !{!3}
 !llvm.module.flags = !{!7}
+!llvm.other.md = !{!8}
 
 !1 = !DIFile(filename: "path/to/file", directory: "/path/to/dir")
 ; The first CU is used for the line table, the second one is a module skeleton
 ; and should be stripped.
 ; CHECK: !llvm.dbg.cu = !{![[CU:[0-9]+]]}
+; CHECK: !llvm.other.md = !{![[OTHER:[0-9]+]]}
 ; CHECK: ![[CU]] = distinct !DICompileUnit({{.*}}"abc.debug"{{.*}}LineTablesOnly
 ; CHECK-NOT: retainedTypes:
 ; CHECK-SAME: )
 ; CHECK-NOT: DICompositeType
+; CHECK: ![[OTHER]] = distinct !{null, i32 8}
 !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang",
                              isOptimized: true, flags: "-O2", runtimeVersion: 2,
                              splitDebugFilename: "abc.debug", emissionKind: FullDebug,
@@ -22,3 +25,4 @@
                              splitDebugFilename: "abc.dwo", emissionKind: FullDebug,
                              dwoId: 1234)
 !7 = !{i32 1, !"Debug Info Version", i32 3}
+!8 = distinct !{null, i32 8}
