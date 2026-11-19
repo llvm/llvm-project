@@ -4,9 +4,8 @@
 ; RUN:   -vplan-print-after=narrowInductionTruncates %s 2>&1 | FileCheck %s
 
 ; The truncated IV is only used by the addresses of an interleave group, so
-; only its first lane is needed.
-; TODO: Keep it single scalar instead of narrowing it to a truncated wide
-; induction.
+; only its first lane is needed and it is kept single scalar instead of being
+; narrowed to a truncated wide induction.
 define void @trunc_iv_only_used_by_group_address(ptr noalias %src, ptr noalias %dst) {
 ; CHECK-LABEL: VPlan for loop in 'trunc_iv_only_used_by_group_address'
 ; CHECK:  VPlan ' for UF>=1' {
@@ -26,11 +25,12 @@ define void @trunc_iv_only_used_by_group_address(ptr noalias %src, ptr noalias %
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      ir<%iv>.1 = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]> (truncated to i32)
-; CHECK-NEXT:      EMIT ir<%gep.0> = getelementptr inbounds ir<%src>, ir<%iv>.1, ir<0>
-; CHECK-NEXT:      EMIT ir<%gep.1> = getelementptr inbounds ir<%src>, ir<%iv>.1, ir<1>
-; CHECK-NEXT:      WIDEN ir<%l.0> = load ir<%gep.0>, align 4
-; CHECK-NEXT:      WIDEN ir<%l.1> = load ir<%gep.1>, align 4
+; CHECK-NEXT:      EMIT-SCALAR ir<%t> = trunc ir<%iv> to i32
+; CHECK-NEXT:      CLONE ir<%gep.0> = getelementptr inbounds ir<%src>, ir<%t>, ir<0>
+; CHECK-NEXT:      CLONE ir<%gep.1> = getelementptr inbounds ir<%src>, ir<%t>, ir<1>
+; CHECK-NEXT:      INTERLEAVE-GROUP with factor 2, ir<%gep.0>
+; CHECK-NEXT:        ir<%l.0> = load from index 0
+; CHECK-NEXT:        ir<%l.1> = load from index 1
 ; CHECK-NEXT:      EMIT ir<%add> = add ir<%l.0>, ir<%l.1>
 ; CHECK-NEXT:      CLONE ir<%gep.dst> = getelementptr inbounds ir<%dst>, ir<%iv>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.dst>, ir<1>
