@@ -441,6 +441,12 @@ Error TextInstrProfReader::readNextRecord(NamedInstrProfRecord &Record) {
     uint64_t Count;
     if ((Line++)->getAsInteger(10, Count))
       return error(instrprof_error::malformed, "count is invalid");
+    // Only the entry count (index 0) may hold the reserved pseudo-hot and
+    // pseudo-warm values. Internal counters above the maximum count value
+    // would trip assertions in the profile summary builders.
+    if (I > 0 && Count > getInstrMaxCountValue())
+      return error(instrprof_error::malformed,
+                   "internal counter value exceeds the maximum count value");
     Record.Counts.push_back(Count);
   }
 
