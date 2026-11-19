@@ -198,9 +198,9 @@ define <vscale x 1 x i8> @vadd_vv_mask_negative(<vscale x 1 x i8> %0, <vscale x 
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vadd.vv v11, v8, v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vadd.vv v9, v8, v8, v0.t
+; CHECK-NEXT:    vadd.vv v9, v8, v11, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v10
-; CHECK-NEXT:    vadd.vv v8, v9, v11, v0.t
+; CHECK-NEXT:    vadd.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i8> @llvm.riscv.vadd.mask.nxv1i8.nxv1i8(
@@ -239,12 +239,12 @@ define <vscale x 4 x i32> @vadd_vv_mask_chain_different_masks(<vscale x 4 x i32>
 ; CHECK-NEXT:    vmsgtu.vi v0, v10, 2
 ; CHECK-NEXT:    vmv2r.v v12, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, tu, mu
-; CHECK-NEXT:    vadd.vv v12, v16, v14, v0.t
+; CHECK-NEXT:    vadd.vv v12, v14, v20, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vmsgtu.vi v0, v10, 1
 ; CHECK-NEXT:    vmv2r.v v14, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, tu, mu
-; CHECK-NEXT:    vadd.vv v14, v12, v20, v0.t
+; CHECK-NEXT:    vadd.vv v14, v16, v12, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vmsne.vi v0, v10, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, tu, mu
@@ -299,10 +299,10 @@ define <vscale x 4 x i32> @vadd_vv_mask_chain_different_mask_args(<vscale x 4 x 
 ; CHECK-NEXT:    vadd.vv v22, v10, v8, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v18
 ; CHECK-NEXT:    vmv2r.v v10, v8
-; CHECK-NEXT:    vadd.vv v10, v14, v12, v0.t
+; CHECK-NEXT:    vadd.vv v10, v12, v22, v0.t
 ; CHECK-NEXT:    vmv2r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v0, v19
-; CHECK-NEXT:    vadd.vv v12, v10, v22, v0.t
+; CHECK-NEXT:    vadd.vv v12, v14, v10, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v20
 ; CHECK-NEXT:    vadd.vv v8, v16, v12, v0.t
 ; CHECK-NEXT:    ret

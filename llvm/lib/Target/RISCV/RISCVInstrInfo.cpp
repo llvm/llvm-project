@@ -2351,6 +2351,28 @@ bool RISCVInstrInfo::areRVVInstsReassociable(const MachineInstr &Root,
 
   // Mask
   if (RISCVII::usesMaskPolicy(TSFlags)) {
+    // Masks are virtual registers until the copies into V0 are created, and
+    // instruction selection gives each masked instruction its own COPY of the
+    // mask. Compare the virtual registers the masks were copied from, but stop
+    // at a copy from a physical register, which can hold different values at
+    // different points.
+    auto getMaskSource = [&](Register Reg) {
+      while (Reg.isVirtual()) {
+        const MachineInstr *Def = MRI->getVRegDef(Reg);
+        if (!Def || !Def->isCopy() || !Def->getOperand(1).getReg().isVirtual())
+          break;
+        Reg = Def->getOperand(1).getReg();
+      }
+      return Reg;
+    };
+    // In masked pseudos the mask operand immediately precedes VL.
+    unsigned MaskOpIdx = RISCVII::getVLOpNum(Desc) - 1;
+    Register RootMask = Root.getOperand(MaskOpIdx).getReg();
+    Register PrevMask = Prev.getOperand(MaskOpIdx).getReg();
+    if ((RootMask.isVirtual() || PrevMask.isVirtual()) &&
+        getMaskSource(RootMask) != getMaskSource(PrevMask))
+      return false;
+
     const MachineBasicBlock *MBB = Root.getParent();
     const MachineBasicBlock::const_reverse_iterator It1(&Root);
     const MachineBasicBlock::const_reverse_iterator It2(&Prev);
