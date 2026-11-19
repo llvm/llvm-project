@@ -48,6 +48,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/ShrinkWrap.h"
+#include "CodeGenOptions.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetVector.h"
@@ -78,7 +79,6 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -94,13 +94,6 @@ STATISTIC(NumFunc, "Number of functions");
 STATISTIC(NumCandidates, "Number of shrink-wrapping candidates");
 STATISTIC(NumCandidatesDropped,
           "Number of shrink-wrapping candidates dropped because of frequency");
-
-static cl::opt<cl::boolOrDefault>
-EnableShrinkWrapOpt("enable-shrink-wrap", cl::Hidden,
-                    cl::desc("enable the shrink-wrapping pass"));
-static cl::opt<bool> EnablePostShrinkWrapOpt(
-    "enable-shrink-wrap-region-split", cl::init(true), cl::Hidden,
-    cl::desc("enable splitting of the restore block if possible"));
 
 namespace {
 
@@ -311,12 +304,13 @@ bool ShrinkWrapImpl::useOrDefCSROrFI(const MachineInstr &MI, RegScavenger *RS,
   ///
   auto IsKnownNonStackPtr = [](MachineMemOperand *Op) {
     if (Op->getValue()) {
-      const Value *UO = getUnderlyingObject(Op->getValue());
-      if (!UO)
-        return false;
-      if (auto *Arg = dyn_cast<Argument>(UO))
-        return !Arg->hasPassPointeeByValueCopyAttr();
-      return isa<GlobalValue>(UO);
+      SmallVector<const Value *, 2> Objs;
+      getUnderlyingObjects(Op->getValue(), Objs);
+      return !Objs.empty() && all_of(Objs, [](const Value *UO) {
+        if (auto *Arg = dyn_cast<Argument>(UO))
+          return !Arg->hasPassPointeeByValueCopyAttr();
+        return isa<GlobalValue>(UO);
+      });
     }
     if (const PseudoSourceValue *PSV = Op->getPseudoValue())
       return PSV->isJumpTable() || PSV->isConstantPool();
@@ -583,7 +577,7 @@ bool ShrinkWrapImpl::checkIfRestoreSplittable(
 
 bool ShrinkWrapImpl::postShrinkWrapping(bool HasCandidate, MachineFunction &MF,
                                         RegScavenger *RS) {
-  if (!EnablePostShrinkWrapOpt)
+  if (!getCodeGenOptions(MF).shrink_wrap_region_split)
     return false;
 
   MachineBasicBlock *InitSave = nullptr;
@@ -1039,27 +1033,28 @@ PreservedAnalyses ShrinkWrapPass::run(MachineFunction &MF,
 bool ShrinkWrapImpl::isShrinkWrapEnabled(const MachineFunction &MF) {
   const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
 
-  switch (EnableShrinkWrapOpt) {
-  case cl::boolOrDefault::BOU_UNSET:
+  switch (getCodeGenOptions(MF).shrink_wrap) {
+  case BoolOrDefault::Default:
     return TFI->enableShrinkWrapping(MF) &&
            // Windows with CFI has some limitations that make it impossible
            // to use shrink-wrapping.
-           !MF.getTarget().getMCAsmInfo().usesWindowsCFI() &&
+           !MF.usesWindowsUnwindInfo() &&
            // Sanitizers look at the value of the stack at the location
            // of the crash. Since a crash can happen anywhere, the
            // frame must be lowered before anything else happen for the
            // sanitizers to be able to get a correct stack frame.
            !(MF.getFunction().hasFnAttribute(Attribute::SanitizeAddress) ||
              MF.getFunction().hasFnAttribute(Attribute::SanitizeThread) ||
+             MF.getFunction().hasFnAttribute(Attribute::SanitizeConcurrency) ||
              MF.getFunction().hasFnAttribute(Attribute::SanitizeMemory) ||
              MF.getFunction().hasFnAttribute(Attribute::SanitizeType) ||
              MF.getFunction().hasFnAttribute(Attribute::SanitizeHWAddress));
   // If EnableShrinkWrap is set, it takes precedence on whatever the
   // target sets. The rational is that we assume we want to test
   // something related to shrink-wrapping.
-  case cl::boolOrDefault::BOU_TRUE:
+  case BoolOrDefault::True:
     return true;
-  case cl::boolOrDefault::BOU_FALSE:
+  case BoolOrDefault::False:
     return false;
   }
   llvm_unreachable("Invalid shrink-wrapping state");

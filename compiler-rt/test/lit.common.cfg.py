@@ -377,6 +377,7 @@ tool_symbolizer_path_list = [
     "MSAN_SYMBOLIZER_PATH",
     "LSAN_SYMBOLIZER_PATH",
     "UBSAN_SYMBOLIZER_PATH",
+    "CSAN_SYMBOLIZER_PATH",
 ]
 
 if config.have_disable_symbolizer_path_search:
@@ -591,6 +592,33 @@ if config.target_os == "Darwin":
 
     config.darwin_os_version = darwin_os_version
 
+    # For simulators, darwin_os_version above is the host's. The simulator
+    # runtime's version is in SIMULATOR_RUNTIME_VERSION inside the simulator.
+    if config.apple_platform.endswith("sim"):
+        sim_os_version = None
+        sim_version = lit_config.run_command_cached(
+            [
+                config.darwin_run_wrapper,
+                "/bin/sh",
+                "-c",
+                "echo $SIMULATOR_RUNTIME_VERSION",
+            ],
+            text=True,
+            allow_failure=True,
+        )
+        if sim_version and re.fullmatch(r"\d+(\.\d+){1,2}", sim_version.strip()):
+            parts = tuple(int(x) for x in sim_version.strip().split("."))
+            sim_os_version = parts + (0,) * (3 - len(parts))
+
+        if sim_os_version is None:
+            lit_config.warning(
+                "Could not determine OS version of the simulator runtime"
+            )
+        # 27.0-27.2 simulators cannot interpose certain calls from the shared
+        # cache (e.g. memcpy/memcmp/strlen), so ASan cannot intercept them.
+        elif (27, 0, 0) <= sim_os_version < (27, 3, 0):
+            config.available_features.add("iossim-dyld-interpose-bug")
+
     # Detect x86_64h
     output = lit_config.run_command_cached(
         os_detection_prefix + ["sysctl", "hw.cpusubtype"], text=True, allow_failure=True
@@ -696,7 +724,7 @@ if config.android:
             % (adb, android_api_level_str)
         )
     android_api_level = min(android_api_level, int(config.android_api_level))
-    for required in [26, 28, 29, 30]:
+    for required in [26, 28, 29, 30, 34, 37]:
         if android_api_level >= required:
             config.available_features.add("android-%s" % required)
     # FIXME: Replace with appropriate version when availible.
@@ -743,6 +771,7 @@ if config.target_os == "Linux" and not config.android:
         for required in [
             (2, 19),
             (2, 27),
+            (2, 28),
             (2, 30),
             (2, 33),
             (2, 34),

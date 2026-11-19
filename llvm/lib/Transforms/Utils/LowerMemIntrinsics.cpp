@@ -15,6 +15,7 @@
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
@@ -143,7 +144,7 @@ insertLoopExpansion(Instruction *InsertBefore, Value *Len,
       InsertBefore, BBNamePrefix + "-post-expansion");
   Function *ParentFunc = PreLoopBB->getParent();
   LLVMContext &Ctx = PreLoopBB->getContext();
-  const DebugLoc &DbgLoc = InsertBefore->getStableDebugLoc();
+  const DebugLoc &DbgLoc = InsertBefore->getDebugLoc();
   IRBuilder<> PreLoopBuilder(PreLoopBB->getTerminator());
   PreLoopBuilder.SetCurrentDebugLocation(DbgLoc);
 
@@ -695,7 +696,7 @@ static void createMemMoveLoopUnknownSize(Instruction *InsertBefore,
       ConstantInt::get(ILengthType, ResidualLoopOpSize);
   ConstantInt *Zero = ConstantInt::get(ILengthType, 0);
 
-  const DebugLoc &DbgLoc = InsertBefore->getStableDebugLoc();
+  const DebugLoc &DbgLoc = InsertBefore->getDebugLoc();
   IRBuilder<> PLBuilder(InsertBefore);
   PLBuilder.SetCurrentDebugLocation(DbgLoc);
 
@@ -962,7 +963,7 @@ static void createMemMoveLoopKnownSize(Instruction *InsertBefore,
   ConstantInt *LoopBound = ConstantInt::get(ILengthType, BytesCopiedInLoop);
   ConstantInt *CILoopOpSize = ConstantInt::get(ILengthType, LoopOpSize);
 
-  const DebugLoc &DbgLoc = InsertBefore->getStableDebugLoc();
+  const DebugLoc &DbgLoc = InsertBefore->getDebugLoc();
   IRBuilder<> PLBuilder(InsertBefore);
   PLBuilder.SetCurrentDebugLocation(DbgLoc);
 
@@ -1137,6 +1138,20 @@ static Value *createMemSetSplat(const DataLayout &DL, IRBuilderBase &B,
   // type.
   Result = B.CreateBitCast(Result, DstType, "setvalue.splat.cast");
   return Result;
+}
+
+static Value *createBoundedMemSetSplat(IRBuilderBase &B, Value *SetValue,
+                                       uint64_t Size) {
+  if (Size == 1)
+    return SetValue;
+  if (Size <= 8) {
+    Type *IntTy = B.getIntNTy(Size * 8);
+    return B.CreateMul(
+        B.CreateZExt(SetValue, IntTy, "setvalue.zext"),
+        ConstantInt::get(IntTy, APInt::getSplat(Size * 8, APInt(8, 1))),
+        "setvalue.splat");
+  }
+  return B.CreateVectorSplat(Size, SetValue, "setvalue.splat");
 }
 
 static void
@@ -1455,7 +1470,7 @@ bool llvm::expandMemMoveAsLoop(MemMoveInst *Memmove,
   bool SrcIsVolatile = Memmove->isVolatile();
   bool DstIsVolatile = SrcIsVolatile;
   IRBuilder<> CastBuilder(Memmove);
-  CastBuilder.SetCurrentDebugLocation(Memmove->getStableDebugLoc());
+  CastBuilder.SetCurrentDebugLocation(Memmove->getDebugLoc());
 
   unsigned SrcAS = SrcAddr->getType()->getPointerAddressSpace();
   unsigned DstAS = DstAddr->getType()->getPointerAddressSpace();
@@ -1532,6 +1547,159 @@ void llvm::expandMemSetAsLoop(MemSetInst *Memset,
 void llvm::expandMemSetAsLoop(MemSetInst *MemSet,
                               const TargetTransformInfo &TTI) {
   expandMemSetAsLoop(MemSet, &TTI);
+}
+
+static MDNode *
+getBoundedMemSetBranchWeights(uint64_t Size,
+                              ArrayRef<InstrProfValueData> MemSetPrefixSum,
+                              LLVMContext &Context, Function &F) {
+  if (MemSetPrefixSum.empty() || ProfcheckDisableMetadataFixes)
+    return getExplicitlyUnknownBranchWeightsIfProfiled(F, DEBUG_TYPE);
+  auto *LowerBound = lower_bound(
+      MemSetPrefixSum, Size,
+      [&](const InstrProfValueData &A, uint64_t B) { return A.Value < B; });
+  uint64_t LowerBoundCount = 0;
+  if (LowerBound != MemSetPrefixSum.begin()) {
+    --LowerBound;
+    LowerBoundCount = LowerBound->Count;
+  }
+  auto *UpperBound = lower_bound(
+      MemSetPrefixSum, Size * 2,
+      [](const InstrProfValueData &A, uint64_t B) { return A.Value < B; });
+  uint64_t UpperBoundCount = 0;
+  if (UpperBound != MemSetPrefixSum.begin()) {
+    --UpperBound;
+    UpperBoundCount = UpperBound->Count;
+  }
+  uint64_t TrueWeight = UpperBoundCount - LowerBoundCount;
+  uint64_t FalseWeight = LowerBoundCount;
+  if (TrueWeight == 0 && FalseWeight == 0)
+    return getExplicitlyUnknownBranchWeightsIfProfiled(F, DEBUG_TYPE);
+  MDNode *BranchWeights = MDBuilder(Context).createBranchWeights(
+      fitWeights({TrueWeight, FalseWeight}));
+  return BranchWeights;
+}
+
+void llvm::expandBoundedMemSet(MemSetInst *MemSet, uint64_t MinLen,
+                               uint64_t MaxLen, const KnownBits &LenKnown) {
+  assert(MinLen <= MaxLen && "Invalid length bounds");
+  assert(!MemSet->isVolatile() && "Cannot split a volatile memset");
+
+  // Known bits make the length a multiple of MinStoreSize, so no smaller store
+  // is needed, and a length below it can only be zero.
+  uint64_t MinStoreSize = uint64_t(1)
+                          << std::min(LenKnown.countMinTrailingZeros(), 63u);
+  if (MaxLen < MinStoreSize)
+    return;
+
+  Value *Dst = MemSet->getRawDest();
+  Value *Len = MemSet->getLength();
+  Value *SetValue = MemSet->getValue();
+  Type *LenTy = Len->getType();
+  Align DstAlign = MemSet->getDestAlign().valueOrOne();
+  Align TailAlign = commonAlignment(DstAlign, MinStoreSize);
+
+  // Branch to the largest power-of-two Size not exceeding Len. A length in
+  // [Size, 2 * Size] is covered by a store of Size bytes at the start and one
+  // at the end, which may overlap. E.g. for a length of 0, 4, 8 or 12:
+  //
+  //     %len.ge8 = icmp uge i64 %len, 8
+  //     br i1 %len.ge8, label %memset_store8, label %memset_lt8
+  //   memset_store8:                 ; length 8 or 12
+  //     store i64 0, ptr %dst
+  //     %tail.off = sub i64 %len, 8
+  //     %tail = getelementptr inbounds i8, ptr %dst, i64 %tail.off
+  //     store i64 0, ptr %tail       ; <<< may overlap!
+  //     br label %memset_done
+  //   memset_lt8:
+  //     %len.ge4 = icmp uge i64 %len, 4
+  //     br i1 %len.ge4, label %memset_store4, label %memset_done
+  //   memset_store4:                 ; length 4, so no tail store
+  //     store i32 0, ptr %dst
+  //     br label %memset_done
+  //
+  // And for a length in [0, 16] with no known bits:
+  //
+  //     %len.ge16 = icmp uge i64 %len, 16
+  //     br i1 %len.ge16, label %memset_store16, label %memset_lt16
+  //   memset_store16:                ; length 16, so no tail store
+  //     store <16 x i8> zeroinitializer, ptr %dst
+  //     br label %memset_done
+  //   memset_lt16:
+  //     %len.ge8 = icmp uge i64 %len, 8
+  //     br i1 %len.ge8, label %memset_store8, label %memset_lt8
+  //   memset_store8:                 ; length 8 to 15
+  //     store i64 0, ptr %dst
+  //     %tail.off = sub i64 %len, 8
+  //     %tail = getelementptr inbounds i8, ptr %dst, i64 %tail.off
+  //     store i64 0, ptr %tail       ; <<< may overlap!
+  //     br label %memset_done
+  //   ...
+  //   memset_lt2:
+  //     %len.ge1 = icmp uge i64 %len, 1
+  //     br i1 %len.ge1, label %memset_store1, label %memset_done
+  //   memset_store1:                 ; length 1
+  //     store i8 0, ptr %dst
+  //     br label %memset_done
+  uint64_t TopSize = llvm::bit_floor(MaxLen);
+  Instruction *InsertBefore = MemSet;
+  uint64_t TotalCount = 0;
+  SmallVector<InstrProfValueData> ProfData = getValueProfDataFromInst(
+      *MemSet, InstrProfValueKind::IPVK_MemOPSize,
+      /*MaxNumValueData=*/std::numeric_limits<uint32_t>::max(), TotalCount);
+  llvm::sort(ProfData,
+             [](const InstrProfValueData &A, const InstrProfValueData &B) {
+               return A.Value < B.Value;
+             });
+  SmallVector<InstrProfValueData> MemSetPrefixSum;
+  uint64_t TotalSeenWeight = 0;
+  for (const InstrProfValueData &SizeWeight : ProfData) {
+    if (SizeWeight.Value > MaxLen || SizeWeight.Value < MinLen ||
+        (SizeWeight.Value != 0 && SizeWeight.Value < MinStoreSize))
+      continue;
+    TotalSeenWeight = SaturatingAdd(SizeWeight.Count, TotalSeenWeight);
+    MemSetPrefixSum.push_back({SizeWeight.Value, TotalSeenWeight});
+  }
+  for (uint64_t Size = TopSize; Size >= MinStoreSize; Size /= 2) {
+    Instruction *StoreBefore = InsertBefore;
+    if (MinLen < Size) {
+      IRBuilder<> B(InsertBefore);
+      Value *Cond = B.CreateICmpUGE(Len, ConstantInt::get(LenTy, Size),
+                                    "len.ge" + Twine(Size));
+      MDNode *BranchWeights = getBoundedMemSetBranchWeights(
+          Size, MemSetPrefixSum, B.getContext(), *MemSet->getFunction());
+      if (Size == MinStoreSize) {
+        StoreBefore =
+            SplitBlockAndInsertIfThen(Cond, InsertBefore, false, BranchWeights);
+      } else {
+        Instruction *ElseTerm;
+        SplitBlockAndInsertIfThenElse(Cond, InsertBefore, &StoreBefore,
+                                      &ElseTerm, BranchWeights);
+        ElseTerm->getParent()->setName("memset_lt" + Twine(Size));
+        InsertBefore = ElseTerm;
+      }
+      StoreBefore->getParent()->setName("memset_store" + Twine(Size));
+    }
+
+    // Do the Size-sized store
+    IRBuilder<> B(StoreBefore);
+    Value *Val = createBoundedMemSetSplat(B, SetValue, Size);
+    B.CreateAlignedStore(Val, Dst, DstAlign);
+
+    // The possibly-overlapping "remainder" store
+    uint64_t MaxLenForSize = Size == TopSize ? MaxLen : 2 * Size - MinStoreSize;
+    if (MaxLenForSize > Size) {
+      Value *TailOff =
+          B.CreateSub(Len, ConstantInt::get(LenTy, Size), "tail.off");
+      Value *TailPtr = B.CreateInBoundsGEP(B.getInt8Ty(), Dst, TailOff, "tail");
+      B.CreateAlignedStore(Val, TailPtr, TailAlign);
+    }
+
+    if (MinLen >= Size)
+      break;
+  }
+
+  MemSet->getParent()->setName("memset_done");
 }
 
 void llvm::expandMemSetPatternAsLoop(MemSetPatternInst *Memset,

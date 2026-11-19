@@ -2,6 +2,8 @@
 // RUN:   -triple dxil-pc-shadermodel6.6-library %s -emit-llvm-only \
 // RUN:   -disable-llvm-passes -verify
 
+using namespace hlsl;
+
 // InterlockedAnd is provided as a set of address-space-qualified overloads
 // (groupshared/device, {int,uint,int64_t,uint64_t}, 2-arg/3-arg).
 
@@ -39,8 +41,14 @@ void struct_dest(int v) {
 
 void mismatched_orig_type(int v) {
   uint orig;
-  InterlockedAnd(gs_i32, v, orig); // expected-error{{no matching function for call to 'InterlockedAnd'}}
-  // expected-note@*:* 16 {{candidate function}}
+  InterlockedAnd(gs_i32, v, orig);
+  // expected-warning@-1{{implicit conversion changes signedness: 'int' to 'uint'}}
+}
+
+void float_orig_type(int v) {
+  float orig;
+  InterlockedAnd(gs_i32, v, orig);
+  // expected-warning@-1{{implicit conversion from 'int' to 'float' may lose precision}}
 }
 
 void direct_too_few() {

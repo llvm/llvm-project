@@ -18,10 +18,7 @@ name:            test_and_i1
 alignment:       16
 legalized:       false
 regBankSelected: false
-registers:
-  - { id: 0, class: _, preferred-register: '' }
-  - { id: 1, class: _, preferred-register: '' }
-  - { id: 2, class: _, preferred-register: '' }
+tracksRegLiveness: false
 body:             |
   bb.1 (%ir-block.0):
     ; CHECK-LABEL: name: test_and_i1
@@ -32,9 +29,9 @@ body:             |
     ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[AND]](s8)
     ; CHECK-NEXT: $eax = COPY [[ANYEXT]](s32)
     ; CHECK-NEXT: RET 0
-    %0(s32) = COPY $edx
-    %1(s1) = G_TRUNC %0(s32)
-    %2(s1) = G_AND %1, %1
+    %0:_(s32) = COPY $edx
+    %1:_(s1) = G_TRUNC %0(s32)
+    %2:_(s1) = G_AND %1, %1
     %3:_(s32) = G_ANYEXT %2
     $eax = COPY %3
     RET 0
@@ -44,10 +41,7 @@ name:            test_and_i8
 alignment:       16
 legalized:       false
 regBankSelected: false
-registers:
-  - { id: 0, class: _, preferred-register: '' }
-  - { id: 1, class: _, preferred-register: '' }
-  - { id: 2, class: _, preferred-register: '' }
+tracksRegLiveness: false
 body:             |
   bb.1 (%ir-block.0):
     ; CHECK-LABEL: name: test_and_i8
@@ -57,9 +51,9 @@ body:             |
     ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[AND]](s8)
     ; CHECK-NEXT: $eax = COPY [[ANYEXT]](s32)
     ; CHECK-NEXT: RET 0
-    %0(s32) = COPY $edx
-    %1(s8) = G_TRUNC %0(s32)
-    %2(s8) = G_AND %1, %1
+    %0:_(s32) = COPY $edx
+    %1:_(s8) = G_TRUNC %0(s32)
+    %2:_(s8) = G_AND %1, %1
     %3:_(s32) = G_ANYEXT %2
     $eax = COPY %3
     RET 0
@@ -69,10 +63,7 @@ name:            test_and_i16
 alignment:       16
 legalized:       false
 regBankSelected: false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
+tracksRegLiveness: false
 body:             |
   bb.1 (%ir-block.0):
     ; CHECK-LABEL: name: test_and_i16
@@ -82,9 +73,9 @@ body:             |
     ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[AND]](s16)
     ; CHECK-NEXT: $eax = COPY [[ANYEXT]](s32)
     ; CHECK-NEXT: RET 0
-    %0(s32) = COPY $edx
-    %1(s16) = G_TRUNC %0(s32)
-    %2(s16) = G_AND %1, %1
+    %0:_(s32) = COPY $edx
+    %1:_(s16) = G_TRUNC %0(s32)
+    %2:_(s16) = G_AND %1, %1
     %3:_(s32) = G_ANYEXT %2
     $eax = COPY %3
     RET 0
@@ -94,10 +85,7 @@ name:            test_and_i27
 alignment:       16
 legalized:       false
 regBankSelected: false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
+tracksRegLiveness: false
 body:             |
   bb.1 (%ir-block.0):
     ; CHECK-LABEL: name: test_and_i27
@@ -105,9 +93,9 @@ body:             |
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[COPY]]
     ; CHECK-NEXT: $eax = COPY [[AND]](s32)
     ; CHECK-NEXT: RET 0
-    %0(s32) = COPY $edx
-    %1(s27) = G_TRUNC %0(s32)
-    %2(s27) = G_AND %1, %1
+    %0:_(s32) = COPY $edx
+    %1:_(s27) = G_TRUNC %0(s32)
+    %2:_(s27) = G_AND %1, %1
     %3:_(s32) = G_ANYEXT %2
     $eax = COPY %3
     RET 0
@@ -117,10 +105,7 @@ name:            test_and_i32
 alignment:       16
 legalized:       false
 regBankSelected: false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
+tracksRegLiveness: false
 body:             |
   bb.1 (%ir-block.0):
     ; CHECK-LABEL: name: test_and_i32
@@ -129,9 +114,9 @@ body:             |
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[DEF]], [[DEF1]]
     ; CHECK-NEXT: $eax = COPY [[AND]](s32)
     ; CHECK-NEXT: RET 0
-    %0(s32) = IMPLICIT_DEF
-    %1(s32) = IMPLICIT_DEF
-    %2(s32) = G_AND %0, %1
+    %0:_(s32) = IMPLICIT_DEF
+    %1:_(s32) = IMPLICIT_DEF
+    %2:_(s32) = G_AND %0, %1
     $eax = COPY %2
     RET 0
 ...
@@ -140,10 +125,7 @@ name:            test_and_i42
 alignment:       16
 legalized:       false
 regBankSelected: false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
+tracksRegLiveness: false
 body:             |
   bb.1 (%ir-block.0):
     ; X64-LABEL: name: test_and_i42
@@ -160,9 +142,9 @@ body:             |
     ; X86-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[AND]](s32), [[AND1]](s32)
     ; X86-NEXT: $rax = COPY [[MV]](s64)
     ; X86-NEXT: RET 0
-    %0(s64) = COPY $rdx
-    %1(s42) = G_TRUNC %0(s64)
-    %2(s42) = G_AND %1, %1
+    %0:_(s64) = COPY $rdx
+    %1:_(s42) = G_TRUNC %0(s64)
+    %2:_(s42) = G_AND %1, %1
     %3:_(s64) = G_ANYEXT %2
     $rax = COPY %3
     RET 0
@@ -172,10 +154,7 @@ name:            test_and_i64
 alignment:       16
 legalized:       false
 regBankSelected: false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
+tracksRegLiveness: false
 body:             |
   bb.1 (%ir-block.0):
     ; X64-LABEL: name: test_and_i64
@@ -194,9 +173,9 @@ body:             |
     ; X86-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[AND]](s32), [[AND1]](s32)
     ; X86-NEXT: $rax = COPY [[MV]](s64)
     ; X86-NEXT: RET 0
-    %0(s64) = IMPLICIT_DEF
-    %1(s64) = IMPLICIT_DEF
-    %2(s64) = G_AND %0, %1
+    %0:_(s64) = IMPLICIT_DEF
+    %1:_(s64) = IMPLICIT_DEF
+    %2:_(s64) = G_AND %0, %1
     $rax = COPY %2
     RET 0
 ...

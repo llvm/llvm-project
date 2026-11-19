@@ -22,6 +22,7 @@
 #include "llvm/ADT/iterator.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/Config/abi-breaking.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
@@ -492,7 +493,9 @@ class TargetRegisterInfo;
     LLVM_ABI void ComputeHeight();
   };
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const SUnit &SU);
+#endif
 
   /// Returns true if the specified SDep is equivalent except for latency.
   inline bool SDep::overlaps(const SDep &Other) const {
@@ -632,8 +635,10 @@ class TargetRegisterInfo;
     virtual void dump() const = 0;
     void dumpNodeName(const SUnit &SU) const;
 
+#if !defined(NDEBUG) && LLVM_ENABLE_ABI_BREAKING_CHECKS
     /// Returns a label for an SUnit node in a visualization of the ScheduleDAG.
     virtual std::string getGraphNodeLabel(const SUnit *SU) const = 0;
+#endif
 
     /// Returns a label for the region of code covered by the DAG.
     virtual std::string getDAGName() const = 0;
@@ -749,6 +754,9 @@ class TargetRegisterInfo;
     std::vector<int> Node2Index;
     /// a set of nodes visited during a DFS traversal.
     BitVector Visited;
+    /// A worklist for use during traversals. Retained after traversals so must
+    /// be cleared before use.
+    std::vector<const SUnit *> WorkList;
     /// Cache of reachability queries. {A, B} -> true if B is reachable from A.
     /// The keys are SUnit NodeNums.
     DenseMap<std::pair<int, int>, bool> Reachable;

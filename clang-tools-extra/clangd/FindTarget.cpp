@@ -454,8 +454,7 @@ public:
         // specializations of template template parameters aren't instantiated
         // into decls, so they must refer to the parameter itself.
         else if (const auto *Parm =
-                     llvm::dyn_cast_or_null<TemplateTemplateParmDecl>(
-                         TST->getTemplateName().getAsTemplateDecl()))
+                     TST->getTemplateName().getAsTemplateTemplateParmDecl())
           Outer.add(Parm, Flags);
         // class template specializations have a (specialized) CXXRecordDecl.
         else if (const CXXRecordDecl *RD = TST->getAsCXXRecordDecl())

@@ -591,11 +591,11 @@ void DiagnosticsEngine::setDiagSuppressionMapping(llvm::MemoryBuffer &Input) {
 bool WarningsSpecialCaseList::isDiagSuppressed(diag::kind DiagId,
                                                SourceLocation DiagLoc,
                                                const SourceManager &SM) const {
-  PresumedLoc PLoc = SM.getPresumedLoc(DiagLoc);
-  if (!PLoc.isValid())
-    return false;
   const Section *DiagSection = DiagToSection.lookup(DiagId);
   if (!DiagSection)
+    return false;
+  PresumedLoc PLoc = SM.getPresumedLoc(DiagLoc);
+  if (!PLoc.isValid())
     return false;
 
   StringRef F = llvm::sys::path::remove_leading_dotslash(PLoc.getFilename());

@@ -61,7 +61,7 @@ the `-run-pass` option to it. In order to test the post register allocation
 pseudo instruction expansion pass on X86-64, a run line like the one shown
 below can be used:
 
-    `# RUN: llc -o - %s -mtriple=x86_64-- -run-pass=postrapseudos | FileCheck %s`
+    `# RUN: llc -o - %s -mtriple=x86_64-- -run-pass=post-ra-pseudos | FileCheck %s`
 
 The MIR files are target dependent, so they have to be placed in the
 target-specific test directories (`lib/CodeGen/TARGETNAME`). They also need to
@@ -79,13 +79,12 @@ Tests are more accessible and future proof when simplified:
   as well with default values. Typical candidates for this are: `alignment:`,
   `exposesReturnsTwice`, `legalized`, `regBankSelected`, `selected`.
   The whole `frameInfo` section is often unnecessary if there is no special
-  frame usage in the function. `tracksRegLiveness` on the other hand is often
-  necessary for some passes that care about block livein lists.
+  frame usage in the function.
 
 - The (global) `liveins:` list is typically only interesting for early
   instruction selection passes and can be removed when testing later passes.
-  The per-block `liveins:` on the other hand are necessary if
-  `tracksRegLiveness` is true.
+  The per-block `liveins:` on the other hand are necessary unless you
+  explicitly set `tracksRegLiveness` to false.
 
 - Branch probability data in block `successors:` lists can be dropped if the
   test doesn't depend on it. Example:
@@ -173,11 +172,10 @@ of such a YAML document:
 ```text
  ---
  name:            inc
- tracksRegLiveness: true
  liveins:
    - { reg: '$rdi' }
  callSites:
-   - { bb: 0, offset: 3, fwdArgRegs:
+   - { bb: '%bb.0', offset: 3, fwdArgRegs:
        - { arg: 0, reg: '$edi' } }
  body: |
    bb.0.entry:
@@ -202,6 +200,9 @@ the function's machine basic blocks and their machine instructions.
 
 The attribute `callSites` is a representation of call site information which
 keeps track of call instructions and registers used to transfer call arguments.
+Each entry names the block of its call with a block reference, `bb`, and gives
+the call's position in that block, counting instructions in bundles, as
+`offset`.
 
 ## Machine Instructions Format Reference
 
@@ -309,8 +310,8 @@ one list by the parser.
 #### Miscellaneous Attributes
 
 The attributes `IsAddressTaken`, `IsLandingPad`,
-`IsInlineAsmBrIndirectTarget` and `Alignment` can be specified in parentheses
-after the block's definition:
+`IsInlineAsmBrIndirectTarget`, `LabelMustBeEmitted` and `Alignment` can be
+specified in parentheses after the block's definition:
 
 ```text
 bb.0.entry (address-taken):
@@ -320,6 +321,8 @@ bb.2.else (align 4):
 bb.3(landing-pad, align 4):
   <instructions>
 bb.4 (inlineasm-br-indirect-target):
+  <instructions>
+bb.5 (label-must-be-emitted):
   <instructions>
 ```
 

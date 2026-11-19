@@ -28,6 +28,7 @@ def GLSL_std_450 : InstructionSet<1>;
 def SPV_AMD_shader_trinary_minmax : InstructionSet<2>;
 def NonSemantic_Shader_DebugInfo_100 : InstructionSet<3>;
 def NonSemantic_AuxData : InstructionSet<4>;
+def NonSemantic_DebugBreak : InstructionSet<5>;
 
 // Define various builtin groups
 def BuiltinGroup : GenericEnum {
@@ -209,6 +210,17 @@ class NonSemanticExtInst<string name, bits<32> value> {
   bits<32> Value = value;
 }
 
+def NonSemanticDebugBreakExtInst : GenericEnum {
+  let FilterClass = "NonSemanticDebugBreakExtInst";
+  let NameField = "Name";
+  let ValueField = "Value";
+}
+class NonSemanticDebugBreakExtInst<string name, bits<32> value> {
+  string Name = name;
+  bits<32> Value = value;
+}
+def : NonSemanticDebugBreakExtInst<"DebugBreak", 1>;
+def : ExtendedBuiltin<"DebugBreak", NonSemantic_DebugBreak, 1>;
 // Multiclass used to define at the same time both a demangled builtin record
 // and a corresponding extended builtin record.
 multiclass DemangledExtendedBuiltin<string name, InstructionSet set, int number, bits<8> minNumArgs = 1, bits<8> maxNumArgs = 3> {
@@ -645,6 +657,10 @@ defm : DemangledNativeBuiltin<"s_atomic_fetch_min_explicit", OpenCL_std, Atomic,
 defm : DemangledNativeBuiltin<"s_atomic_fetch_max_explicit", OpenCL_std, Atomic, 3, 4, OpAtomicSMax>;
 defm : DemangledNativeBuiltin<"u_atomic_fetch_min_explicit", OpenCL_std, Atomic, 3, 4, OpAtomicUMin>;
 defm : DemangledNativeBuiltin<"u_atomic_fetch_max_explicit", OpenCL_std, Atomic, 3, 4, OpAtomicUMax>;
+defm : DemangledNativeBuiltin<"fatomic_fetch_min", OpenCL_std, Atomic, 2, 4, OpAtomicFMinEXT>;
+defm : DemangledNativeBuiltin<"fatomic_fetch_max", OpenCL_std, Atomic, 2, 4, OpAtomicFMaxEXT>;
+defm : DemangledNativeBuiltin<"fatomic_fetch_min_explicit", OpenCL_std, Atomic, 3, 4, OpAtomicFMinEXT>;
+defm : DemangledNativeBuiltin<"fatomic_fetch_max_explicit", OpenCL_std, Atomic, 3, 4, OpAtomicFMaxEXT>;
 defm : DemangledNativeBuiltin<"s_atom_min", OpenCL_std, Atomic, 2, 2, OpAtomicSMin>;
 defm : DemangledNativeBuiltin<"s_atom_max", OpenCL_std, Atomic, 2, 2, OpAtomicSMax>;
 defm : DemangledNativeBuiltin<"u_atom_min", OpenCL_std, Atomic, 2, 2, OpAtomicUMin>;
@@ -686,6 +702,7 @@ defm : DemangledNativeBuiltin<"__sub_group_commit_write_pipe", OpenCL_std, Pipe,
 // Barrier builtin records:
 defm : DemangledNativeBuiltin<"barrier", OpenCL_std, Barrier, 1, 3, OpControlBarrier>;
 defm : DemangledNativeBuiltin<"work_group_barrier", OpenCL_std, Barrier, 1, 3, OpControlBarrier>;
+defm : DemangledNativeBuiltin<"sub_group_barrier", OpenCL_std, Barrier, 1, 2, OpControlBarrier>;
 defm : DemangledNativeBuiltin<"__spirv_ControlBarrier", OpenCL_std, Barrier, 3, 3, OpControlBarrier>;
 
 // ICarryBorrow builtin record:
@@ -759,6 +776,10 @@ defm : DemangledNativeBuiltin<"__spirv_Store", OpenCL_std, LoadStore, 2, 4, OpSt
 defm : DemangledNativeBuiltin<"to_global", OpenCL_std, CastToPtr, 1, 1, OpGenericCastToPtrExplicit>;
 defm : DemangledNativeBuiltin<"to_local", OpenCL_std, CastToPtr, 1, 1, OpGenericCastToPtrExplicit>;
 defm : DemangledNativeBuiltin<"to_private", OpenCL_std, CastToPtr, 1, 1, OpGenericCastToPtrExplicit>;
+defm : DemangledNativeBuiltin<"get_fence", OpenCL_std, CastToPtr, 1, 1, OpGenericPtrMemSemantics>;
+defm : DemangledNativeBuiltin<"__to_global", OpenCL_std, CastToPtr, 1, 1, OpGenericCastToPtrExplicit>;
+defm : DemangledNativeBuiltin<"__to_local", OpenCL_std, CastToPtr, 1, 1, OpGenericCastToPtrExplicit>;
+defm : DemangledNativeBuiltin<"__to_private", OpenCL_std, CastToPtr, 1, 1, OpGenericCastToPtrExplicit>;
 defm : DemangledNativeBuiltin<"__spirv_GenericCastToPtr_ToGlobal", OpenCL_std, CastToPtr, 2, 2, OpGenericCastToPtr>;
 defm : DemangledNativeBuiltin<"__spirv_GenericCastToPtr_ToLocal", OpenCL_std, CastToPtr, 2, 2, OpGenericCastToPtr>;
 defm : DemangledNativeBuiltin<"__spirv_GenericCastToPtr_ToPrivate", OpenCL_std, CastToPtr, 2, 2, OpGenericCastToPtr>;

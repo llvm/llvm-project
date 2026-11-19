@@ -1,6 +1,6 @@
 // RUN: cir-opt %s -verify-diagnostics -split-input-file
 
-// 'static_local_guard' and 'static_local_info' are only meaningful together:
+// 'dynamic_init_guard' and 'dynamic_init_info' are only meaningful together:
 // the guard drives lowering, which reads the info. The GlobalOp verifier
 // rejects either without the other, guarding the static-local lowering path
 // against hand-written or serialized .cir that would otherwise crash lowering
@@ -9,8 +9,8 @@
 !s32i = !cir.int<s, 32>
 
 module {
-  // expected-error@+1 {{'static_local_guard' and 'static_local_info' must be present together}}
-  cir.global "private" internal static_local_guard<"_ZGVZ1fvE1x"> @_ZZ1fvE1x : !s32i
+  // expected-error@+1 {{'dynamic_init_guard' and 'dynamic_init_info' must be present together}}
+  cir.global "private" internal dynamic_init_guard<"_ZGVZ1fvE1x"> @_ZZ1fvE1x : !s32i
 }
 
 // -----
@@ -18,7 +18,7 @@ module {
 !s32i = !cir.int<s, 32>
 
 module {
-  // expected-error@+1 {{'static_local_guard' and 'static_local_info' must be present together}}
+  // expected-error@+1 {{'dynamic_init_guard' and 'dynamic_init_info' must be present together}}
   cir.global "private" internal @_ZZ1fvE1x : !s32i
-    static_local_info<local = true, tls = none, is_inline = false, tsk = undeclared>
+    dynamic_init_info<local = true, tls = none, is_inline = false, tsk = undeclared>
 }

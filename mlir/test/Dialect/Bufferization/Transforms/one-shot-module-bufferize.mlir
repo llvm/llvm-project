@@ -51,7 +51,12 @@ func.func private @foo(%t : tensor<?xf32>) -> (f32, tensor<?xf32>, f32)
 // CHECK: func.func @call_to_unknown_tensor_returning_func(
 // CHECK-SAME: %[[arg0:.*]]: memref<?xf32, strided<[?], offset: ?>>) {
 func.func @call_to_unknown_tensor_returning_func(%t : tensor<?xf32>) {
-  // CHECK: call @foo(%[[arg0]]) : (memref<?xf32, strided<[?], offset: ?>>) -> (f32, memref<?xf32, strided<[?], offset: ?>>, f32)
+  // The result may be read-only and alias the argument. Conservatively copy the
+  // argument before a call that may write to it.
+  // CHECK: %[[copy:.*]] = memref.alloc(%{{.*}}) alignment = 64 : memref<?xf32>
+  // CHECK: memref.copy %[[arg0]], %[[copy]]
+  // CHECK: %[[cast:.*]] = memref.cast %[[copy]] : memref<?xf32> to memref<?xf32, strided<[?], offset: ?>>
+  // CHECK: call @foo(%[[cast]]) : (memref<?xf32, strided<[?], offset: ?>>) -> (f32, memref<?xf32, strided<[?], offset: ?>>, f32)
   call @foo(%t) : (tensor<?xf32>) -> (f32, tensor<?xf32>, f32)
   return
 }
@@ -771,11 +776,15 @@ func.func @foo(%t: tensor<5xf32>) -> tensor<5xf32> {
 
 // -----
 
-// Two functions calling each other recursively.
+// Two functions calling each other recursively. Unknown result writability and
+// aliasing require conservative copies of potentially written arguments.
 
 // CHECK-LABEL: func.func @foo(
 //  CHECK-SAME:     %[[arg0:.*]]: memref<5xf32, strided<[?], offset: ?>>) -> memref<5xf32, strided<[?], offset: ?>> {
-//       CHECK:   %[[call:.*]] = call @bar(%[[arg0]]) : (memref<5xf32, strided<[?], offset: ?>>) -> memref<5xf32, strided<[?], offset: ?>>
+//       CHECK:   %[[copy:.*]] = memref.alloc() alignment = 64 : memref<5xf32>
+//       CHECK:   memref.copy %[[arg0]], %[[copy]]
+//       CHECK:   %[[cast:.*]] = memref.cast %[[copy]] : memref<5xf32> to memref<5xf32, strided<[?], offset: ?>>
+//       CHECK:   %[[call:.*]] = call @bar(%[[cast]]) : (memref<5xf32, strided<[?], offset: ?>>) -> memref<5xf32, strided<[?], offset: ?>>
 //       CHECK:   return %[[call]]
 //       CHECK: }
 func.func @foo(%t: tensor<5xf32>) -> tensor<5xf32> {
@@ -785,7 +794,10 @@ func.func @foo(%t: tensor<5xf32>) -> tensor<5xf32> {
 
 // CHECK-LABEL: func.func @bar(
 //  CHECK-SAME:     %[[arg0:.*]]: memref<5xf32, strided<[?], offset: ?>>) -> memref<5xf32, strided<[?], offset: ?>> {
-//       CHECK:   %[[call:.*]] = call @foo(%[[arg0]]) : (memref<5xf32, strided<[?], offset: ?>>) -> memref<5xf32, strided<[?], offset: ?>>
+//       CHECK:   %[[copy:.*]] = memref.alloc() alignment = 64 : memref<5xf32>
+//       CHECK:   memref.copy %[[arg0]], %[[copy]]
+//       CHECK:   %[[cast:.*]] = memref.cast %[[copy]] : memref<5xf32> to memref<5xf32, strided<[?], offset: ?>>
+//       CHECK:   %[[call:.*]] = call @foo(%[[cast]]) : (memref<5xf32, strided<[?], offset: ?>>) -> memref<5xf32, strided<[?], offset: ?>>
 //       CHECK:   return %[[call]]
 //       CHECK: }
 func.func @bar(%t: tensor<5xf32>) -> tensor<5xf32>{
@@ -851,7 +863,9 @@ func.func @ranked_return_via_unranked_call(%arg0: tensor<64x20x40xf32>) -> tenso
   // CHECK: return %[[cast2]]
   return %b : tensor<64x20x40xf32>
 }
-func.func private @relu_unranked(tensor<*xf32>) -> tensor<*xf32>
+// Avoid requiring a copy of an unranked argument when the external function's
+// potentially aliasing result is not known to be writable.
+func.func private @relu_unranked(%t: tensor<*xf32> {bufferization.access = "read"}) -> tensor<*xf32>
 
 
 // -----

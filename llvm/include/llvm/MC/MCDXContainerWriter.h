@@ -28,6 +28,8 @@ public:
   Triple::ObjectFormatType getFormat() const override {
     return Triple::DXContainer;
   }
+  /// Whether to omit the part named \p SectionName from the container.
+  virtual bool shouldSkipSection(StringRef SectionName) const { return false; }
   static bool classof(const MCObjectTargetWriter *W) {
     return W->getFormat() == Triple::DXContainer;
   }

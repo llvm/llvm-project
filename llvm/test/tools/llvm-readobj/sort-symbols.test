@@ -22,6 +22,7 @@
 # CHECK: Format: Mach-O 64-bit x86-64
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x1000007

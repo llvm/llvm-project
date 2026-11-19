@@ -10,7 +10,7 @@ define <4 x float> @test(i64 %0) {
 ; CHECK-NEXT:    [[TMP13:%.*]] = sitofp i64 [[TMP0]] to float
 ; CHECK-NEXT:    [[TMP14:%.*]] = sitofp i64 0 to float
 ; CHECK-NEXT:    [[TMP5:%.*]] = sitofp <4 x i32> [[TMP2]] to <4 x float>
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x float> <float 0.000000e+00, float 0.000000e+00, float undef, float undef>, float [[TMP13]], i64 2
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x float> <float 0.000000e+00, float 0.000000e+00, float poison, float poison>, float [[TMP13]], i64 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> [[TMP8]], float [[TMP14]], i64 3
 ; CHECK-NEXT:    [[TMP6:%.*]] = fadd <4 x float> [[TMP4]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = fcmp ogt <4 x float> [[TMP6]], zeroinitializer

@@ -14,6 +14,7 @@
 #include "lldb/Core/DumpRegisterValue.h"
 #include "lldb/Core/Module.h"
 #include "lldb/DataFormatters/DataVisualization.h"
+#include "lldb/DataFormatters/DumpValueObjectOptions.h"
 #include "lldb/DataFormatters/FormatClasses.h"
 #include "lldb/DataFormatters/FormatManager.h"
 #include "lldb/DataFormatters/TypeSummary.h"
@@ -41,7 +42,6 @@
 #include "lldb/Utility/AnsiTerminal.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/CompletionRequest.h"
-#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -1004,9 +1004,12 @@ bool FormatEntity::Formatter::DumpValue(Stream &s,
     llvm::StringRef special_directions;
     if (close_bracket_index != llvm::StringRef::npos &&
         subpath.size() > close_bracket_index) {
-      ConstString additional_data(subpath.drop_front(close_bracket_index + 1));
-      special_directions_stream.Printf("${%svar%s", do_deref_pointer ? "*" : "",
-                                       additional_data.GetCString());
+      llvm::StringRef additional_data(
+          subpath.drop_front(close_bracket_index + 1));
+      special_directions_stream
+          << "${"
+          << llvm::formatv("{0}var{1}", do_deref_pointer ? "*" : "",
+                           additional_data);
 
       if (entry.fmt != eFormatDefault) {
         const char format_char =
@@ -1535,10 +1538,20 @@ bool FormatEntity::Formatter::Format(const Entry &entry, Stream &s,
       if (thread) {
         StopInfoSP stop_info_sp = thread->GetStopInfo();
         if (stop_info_sp && stop_info_sp->IsValid()) {
-          ValueObjectSP return_valobj_sp =
-              StopInfo::GetReturnValueObject(stop_info_sp);
+          ThreadPlanReturnValue return_value =
+              StopInfo::GetReturnValue(stop_info_sp);
+          ValueObjectSP return_valobj_sp;
+          if (auto *returned = std::get_if<ReturnedValue>(&return_value))
+            return_valobj_sp = returned->valobj_sp;
+          else if (auto *thrown = std::get_if<ThrownError>(&return_value))
+            return_valobj_sp = thrown->valobj_sp;
           if (return_valobj_sp) {
-            if (llvm::Error error = return_valobj_sp->Dump(s)) {
+            DumpValueObjectOptions options;
+            if (return_valobj_sp->IsDynamic())
+              options.SetUseDynamicType(eDynamicCanRunTarget);
+            if (return_valobj_sp->DoesProvideSyntheticValue())
+              options.SetUseSyntheticValue(true);
+            if (llvm::Error error = return_valobj_sp->Dump(s, options)) {
               s << "error: " << toString(std::move(error));
               return false;
             }

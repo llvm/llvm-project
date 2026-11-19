@@ -19,6 +19,11 @@
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Runtime/entry-names.h"
+#include "mlir/Dialect/LLVMIR/LLVMAggregateOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMConstantOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMConversionOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMMemoryOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMVectorOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 
@@ -687,8 +692,11 @@ static mlir::Value genAtomBinOp(fir::FirOpBuilder &builder, mlir::Location &loc,
                                 mlir::Value arg1) {
   auto llvmPointerType = mlir::LLVM::LLVMPointerType::get(builder.getContext());
   arg0 = builder.createConvert(loc, llvmPointerType, arg0);
-  return mlir::LLVM::AtomicRMWOp::create(builder, loc, binOp, arg0, arg1,
-                                         mlir::LLVM::AtomicOrdering::seq_cst);
+  bool ignoreDenormalMode = binOp == mlir::LLVM::AtomicBinOp::fadd;
+  return mlir::LLVM::AtomicRMWOp::create(
+      builder, loc, binOp, arg0, arg1, mlir::LLVM::AtomicOrdering::seq_cst,
+      /*syncscope=*/llvm::StringRef(), /*alignment=*/0, /*isVolatile=*/false,
+      /*ignoreDenormalMode=*/ignoreDenormalMode);
 }
 
 // ATOMICADD
@@ -991,7 +999,8 @@ CUDAIntrinsicLibrary::genBarrierArrive(mlir::Type resultType,
   mlir::Value barrier = convertPtrToNVVMSpace(
       builder, loc, args[0], mlir::NVVM::NVVMMemorySpace::Shared);
   return mlir::NVVM::MBarrierArriveOp::create(builder, loc, resultType, barrier,
-                                              /*count=*/nullptr)
+                                              /*count=*/nullptr,
+                                              /*multicastMask=*/nullptr)
       .getResult(0);
 }
 
@@ -1271,11 +1280,18 @@ CUDAIntrinsicLibrary::genLDXXFunc(mlir::Type resultType,
   mlir::Type refResTy = fir::ReferenceType::get(resTy);
   mlir::FunctionType ftype =
       mlir::FunctionType::get(arg.getContext(), {refResTy, refResTy}, {});
-  auto funcOp = builder.createFunction(loc, fctName, ftype);
+  auto intrinsicAttr = fir::FortranProcedureFlagsEnumAttr::get(
+      builder.getContext(), fir::FortranProcedureFlagsEnum::intrinsic);
+  mlir::func::FuncOp funcOp = builder.getNamedFunction(fctName);
+  if (!funcOp) {
+    funcOp = builder.createFunction(loc, fctName, ftype);
+    funcOp->setAttr(fir::getFortranProcedureFlagsAttrName(), intrinsicAttr);
+  }
   llvm::SmallVector<mlir::Value> funcArgs;
   funcArgs.push_back(res);
   funcArgs.push_back(arg);
-  fir::CallOp::create(builder, loc, funcOp, funcArgs);
+  auto call = fir::CallOp::create(builder, loc, funcOp, funcArgs);
+  call.setProcedureAttrsAttr(intrinsicAttr);
   mlir::Value ext =
       builder.createIntegerConstant(loc, builder.getIndexType(), extent);
   return fir::ArrayBoxValue(res, {ext});

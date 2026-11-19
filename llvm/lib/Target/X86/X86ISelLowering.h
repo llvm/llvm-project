@@ -197,6 +197,7 @@ namespace llvm {
     /// given node type. e.g. On x86 i16 is legal, but undesirable since i16
     /// instruction encodings are longer and some i16 instructions are slow.
     bool isTypeDesirableForOp(unsigned Opc, EVT VT) const override;
+    bool isTypeDesirableForOp(SDNode *N, EVT VT) const override;
 
     /// Return true if the target has native support for the
     /// specified value type and it is 'desirable' to use the type. e.g. On x86
@@ -527,11 +528,9 @@ namespace llvm {
                             const CallBase &I, MachineFunction &MF,
                             unsigned Intrinsic) const override;
 
-    /// Returns true if the target can instruction select the
-    /// specified FP immediate natively. If false, the legalizer will
-    /// materialize the FP immediate as a load from a constant pool.
-    bool isFPImmLegal(const APFloat &Imm, EVT VT,
-                      bool ForCodeSize) const override;
+    /// Returns how to materialize the specified FP immediate.
+    FPImmAction getFPImmAction(const APFloat &Imm, EVT VT,
+                               bool ForCodeSize) const override;
 
     /// Targets can use this to indicate that they only support *some*
     /// VECTOR_SHUFFLE operations, those with specific masks. By default, if a
@@ -709,6 +708,10 @@ namespace llvm {
     bool isInlineAsmTargetBranch(const SmallVectorImpl<StringRef> &AsmStrs,
                                  unsigned OpNo) const override;
 
+    // An x86 address can use a symbol as its displacement, which the asm
+    // printer prints for a call target, e.g. "call foo@PLT".
+    bool supportsInlineAsmFuncOperands() const override { return true; }
+
     SDValue visitMaskedLoad(SelectionDAG &DAG, const SDLoc &DL, SDValue Chain,
                             MachineMemOperand *MMO, SDValue &NewLoad,
                             SDValue Ptr, SDValue PassThru,
@@ -742,6 +745,10 @@ namespace llvm {
         return EVT::getIntegerVT(Context, 96);
       return TargetLoweringBase::getTypeToTransformTo(Context, VT);
     }
+
+    /// Return true if \p VT has the rsqrt* based estimate of the square root,
+    /// or of its reciprocal if \p Reciprocal is set.
+    bool hasSqrtEstimate(EVT VT, bool Reciprocal) const;
 
   protected:
     std::pair<const TargetRegisterClass *, uint8_t>
@@ -909,6 +916,7 @@ namespace llvm {
     shouldExpandLogicAtomicRMWInIR(const AtomicRMWInst *AI) const;
     void emitBitTestAtomicRMWIntrinsic(AtomicRMWInst *AI) const override;
     void emitCmpArithAtomicRMWIntrinsic(AtomicRMWInst *AI) const override;
+    void emitExpandAtomicRMW(AtomicRMWInst *AI) const override;
 
     LoadInst *
     lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const override;
@@ -917,7 +925,7 @@ namespace llvm {
       return false;
     }
 
-    bool needsCmpXchgNb(Type *MemType) const;
+    bool needsCmpXchgNb(unsigned OpWidth) const;
 
     void SetupEntryBlockForSjLj(MachineInstr &MI, MachineBasicBlock *MBB,
                                 MachineBasicBlock *DispatchBB, int FI) const;

@@ -1,4 +1,4 @@
-//===-- FirAliasTagOpInterface.cpp ----------------------------------===//
+//===-- FirAliasTagOpInterface.cpp ----------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Dialect/FirAliasTagOpInterface.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 
 #include "flang/Optimizer/Dialect/FirAliasTagOpInterface.cpp.inc"
 

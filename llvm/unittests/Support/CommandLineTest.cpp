@@ -14,6 +14,7 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
@@ -435,6 +436,92 @@ TEST(CommandLineTest, TokenizeConfigFile10) {
 TEST(CommandLineTest, TokenizeConfigFile11) {
   const char *Input = "\\\r\nabc";
   const char *const Output[] = { "abc" };
+  testCommandLineTokenizer(cl::tokenizeConfigFile, Input, Output);
+}
+
+TEST(CommandLineTest, TokenizeConfigFileTrailingComment) {
+  const char *Input = "-c # comment\n";
+  const char *const Output[] = {"-c"};
+  testCommandLineTokenizer(cl::tokenizeConfigFile, Input, Output);
+}
+
+TEST(CommandLineTest, TokenizeConfigFileTrailingCommentNoNewline) {
+  const char *Input = "-c # comment";
+  const char *const Output[] = {"-c"};
+  testCommandLineTokenizer(cl::tokenizeConfigFile, Input, Output);
+}
+
+TEST(CommandLineTest, TokenizeConfigFileLineAfterComment) {
+  const char *Input = "-a # comment\n-b\n";
+  const char *const Output[] = {"-a", "-b"};
+  testCommandLineTokenizer(cl::tokenizeConfigFile, Input, Output);
+}
+
+TEST(CommandLineTest, TokenizeConfigFileNoContinuationInComment) {
+  // A backslash-newline inside a comment is not a continuation.
+  const char *Input = "-c # comment \\\n-d\n";
+  const char *const Output[] = {"-c", "-d"};
+  testCommandLineTokenizer(cl::tokenizeConfigFile, Input, Output);
+}
+
+TEST(CommandLineTest, TokenizeConfigFileHashNotAtTokenStart) {
+  // '#' not preceded by whitespace is not a comment.
+  const char *Input = "-DFOO=1#2\n";
+  const char *const Output[] = {"-DFOO=1#2"};
+  testCommandLineTokenizer(cl::tokenizeConfigFile, Input, Output);
+}
+
+TEST(CommandLineTest, TokenizeConfigFileHashInQuotes) {
+  const char *Input = "-DFOO=\"a # b\" # comment\n";
+  const char *const Output[] = {"-DFOO=a # b"};
+  testCommandLineTokenizer(cl::tokenizeConfigFile, Input, Output);
+}
+
+TEST(CommandLineTest, TokenizeConfigFileHashAfterClosingQuote) {
+  const char *Input = "-DFOO=\"a\"#b\n";
+  const char *const Output[] = {"-DFOO=a#b"};
+  testCommandLineTokenizer(cl::tokenizeConfigFile, Input, Output);
+}
+
+TEST(CommandLineTest, TokenizeConfigFileNewlineEndsQuote) {
+  // A literal newline ends the line even inside a quoted string.
+  const char *Input = "-DA=\"x\n-DB=y\n";
+  const char *const Output[] = {"-DA=x", "-DB=y"};
+  testCommandLineTokenizer(cl::tokenizeConfigFile, Input, Output);
+}
+
+TEST(CommandLineTest, TokenizeConfigFileEscapedHash) {
+  const char *Input = "-c \\#comment\n";
+  const char *const Output[] = {"-c", "#comment"};
+  testCommandLineTokenizer(cl::tokenizeConfigFile, Input, Output);
+}
+
+TEST(CommandLineTest, TokenizeConfigFileCommentAfterContinuationWithSpace) {
+  // The splice keeps the preceding whitespace in effect, so the '#' begins a
+  // token and starts a comment.
+  const char *Input = "-c \\\n# comment\n";
+  const char *const Output[] = {"-c"};
+  testCommandLineTokenizer(cl::tokenizeConfigFile, Input, Output);
+}
+
+TEST(CommandLineTest, TokenizeConfigFileHashAfterContinuationNoSpace) {
+  // No whitespace before the splice: '#' continues the token (cf.
+  // TokenizeConfigFile4).
+  const char *Input = "abc\\\n#comment\n";
+  const char *const Output[] = {"abc#comment"};
+  testCommandLineTokenizer(cl::tokenizeConfigFile, Input, Output);
+}
+
+TEST(CommandLineTest, TokenizeConfigFileCommentAfterContinuationWithOption) {
+  const char *Input = "-c \\\noption # comment\n";
+  const char *const Output[] = {"-c", "option"};
+  testCommandLineTokenizer(cl::tokenizeConfigFile, Input, Output);
+}
+
+TEST(CommandLineTest, TokenizeConfigFileHashesInFlagNotComment) {
+  // None of the '#'s in -### begins a token.
+  const char *Input = "-### # comment\n";
+  const char *const Output[] = {"-###"};
   testCommandLineTokenizer(cl::tokenizeConfigFile, Input, Output);
 }
 
@@ -2254,13 +2341,14 @@ TEST(CommandLineTest, HelpWithEmptyCategory) {
 // Records the arguments it is handed. -library-int takes a separate value and
 // rejects "bad".
 struct TestLibrary final : cl::LibraryOptions {
-  std::vector<std::string> Args;
+  mutable std::vector<std::string> Args;
   void forEachOption(
       function_ref<void(StringRef, StringRef, StringRef)> Fn) const override {
     Fn("library-flag", "", "A flag");
     Fn("library-int", " <int>", "");
   }
-  Error parse(ArrayRef<const char *> Argv, unsigned &Consumed) override {
+  Error parse(void *, ArrayRef<const char *> Argv, unsigned &Consumed,
+              BumpPtrAllocator &) const override {
     Consumed = 1;
     Args.push_back(Argv[0]);
     if (StringRef(Argv[0]).ltrim('-') != "library-int")
@@ -2273,39 +2361,47 @@ struct TestLibrary final : cl::LibraryOptions {
       return createStringError("bad value");
     return Error::success();
   }
-  void reset() override { Args.clear(); }
+  const void *getDefault() const override { return nullptr; }
+  void *copyDefault(BumpPtrAllocator &) const override { return nullptr; }
 };
 
 TEST(CommandLineTest, LibraryOptions) {
   cl::ResetCommandLineParser();
   TestLibrary L;
   cl::addLibraryOptions(L);
+  cl::LibraryOptionsContext C;
 
   // A library's options suffice to parse.
   const char *Only[] = {"prog", "-library-flag"};
-  EXPECT_TRUE(cl::ParseCommandLineOptions(std::size(Only), Only, StringRef(),
-                                          &llvm::nulls()));
+  EXPECT_TRUE(
+      cl::parseCommandLineOptions(C, Only, StringRef(), &llvm::nulls()));
   EXPECT_THAT(L.Args, testing::ElementsAre("-library-flag"));
-  cl::ResetAllOptionOccurrences();
+  L.Args.clear();
+
+  // ParseCommandLineOptions, which takes no context, does not recognize them.
+  std::string Unknown;
+  raw_string_ostream UnknownOS(Unknown);
+  EXPECT_FALSE(cl::ParseCommandLineOptions(std::size(Only), Only, StringRef(),
+                                           &UnknownOS));
+  EXPECT_THAT(Unknown, testing::HasSubstr(
+                           "Unknown command line argument '-library-flag'"));
   EXPECT_TRUE(L.Args.empty());
 
   StackOption<int> Local("local");
   const char *Args[] = {"prog", "--library-int", "4", "-local=3",
                         "-library-flag"};
-  EXPECT_TRUE(cl::ParseCommandLineOptions(std::size(Args), Args, StringRef(),
-                                          &llvm::nulls()));
+  EXPECT_TRUE(
+      cl::parseCommandLineOptions(C, Args, StringRef(), &llvm::nulls()));
   EXPECT_EQ(Local, 3);
   EXPECT_THAT(L.Args,
               testing::ElementsAre("--library-int", "4", "-library-flag"));
-  cl::ResetAllOptionOccurrences();
 
   // A rejected value is still consumed.
   std::string Errs;
   raw_string_ostream OS(Errs);
   const char *Bad[] = {"prog", "-library-int", "bad", "-local=1",
                        "-library-int"};
-  EXPECT_FALSE(
-      cl::ParseCommandLineOptions(std::size(Bad), Bad, StringRef(), &OS));
+  EXPECT_FALSE(cl::parseCommandLineOptions(C, Bad, StringRef(), &OS));
   EXPECT_EQ(Local, 1);
   EXPECT_EQ(Errs, "prog: bad value\nprog: missing value\n");
   cl::ResetCommandLineParser();
@@ -2317,8 +2413,8 @@ TEST(CommandLineTest, LibraryOptionsHelp) {
   cl::addLibraryOptions(L);
   StackOption<int> Local("local", cl::desc("A cl::opt"));
   const char *Args[] = {"prog"};
-  cl::ParseCommandLineOptions(std::size(Args), Args, StringRef(),
-                              &llvm::nulls());
+  cl::LibraryOptionsContext C;
+  cl::parseCommandLineOptions(C, Args, StringRef(), &llvm::nulls());
 
   // Library options are aligned with cl::'s. Options without help text are not
   // listed.
@@ -2338,6 +2434,14 @@ TEST(CommandLineTest, LibraryOptionsHelp) {
   std::string Visible = interceptStdout(
       [] { cl::PrintHelpMessage(/*Hidden=*/false, /*Categorized=*/false); });
   EXPECT_EQ(std::string::npos, Visible.find("Library options")) << Visible;
+
+  // After a parse without a context, which does not recognize them, they are
+  // not listed.
+  cl::ParseCommandLineOptions(std::size(Args), Args, StringRef(),
+                              &llvm::nulls());
+  Hidden = interceptStdout(
+      [] { cl::PrintHelpMessage(/*Hidden=*/true, /*Categorized=*/false); });
+  EXPECT_EQ(std::string::npos, Hidden.find("Library options")) << Hidden;
   cl::ResetCommandLineParser();
 }
 
@@ -2351,8 +2455,9 @@ TEST(CommandLineTest, LibraryOptionsRegisteredWhileParsing) {
                                 }));
 
   const char *Args[] = {"prog", "-load=plugin", "-library-flag"};
-  EXPECT_TRUE(cl::ParseCommandLineOptions(std::size(Args), Args, StringRef(),
-                                          &llvm::nulls()));
+  cl::LibraryOptionsContext C;
+  EXPECT_TRUE(
+      cl::parseCommandLineOptions(C, Args, StringRef(), &llvm::nulls()));
   EXPECT_THAT(L.Args, testing::ElementsAre("-library-flag"));
   cl::ResetCommandLineParser();
 }

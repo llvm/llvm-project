@@ -13,7 +13,7 @@
 
 #include "llvm/Remarks/YAMLRemarkSerializer.h"
 #include "llvm/Remarks/Remark.h"
-#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
 #include <optional>
 
 using namespace llvm;
@@ -170,10 +170,10 @@ static void emitVersion(raw_ostream &OS) {
 
 static void emitExternalFile(raw_ostream &OS, StringRef Filename) {
   // Emit the null-terminated absolute path to the remark file.
-  SmallString<128> FilenameBuf = Filename;
-  sys::fs::make_absolute(FilenameBuf);
-  assert(!FilenameBuf.empty() && "The filename can't be empty.");
-  OS.write(FilenameBuf.data(), FilenameBuf.size());
+  assert(!Filename.empty() && "The filename can't be empty.");
+  assert((Filename == "-" || sys::path::is_absolute(Filename)) &&
+         "The remarks filename must be absolute.");
+  OS.write(Filename.data(), Filename.size());
   OS.write('\0');
 }
 
