@@ -245,6 +245,15 @@ int FunctionComparator::cmpInstMetadata(Instruction const *L,
   SmallVector<std::pair<unsigned, MDNode *>> MDL, MDR;
   L->getAllMetadataOtherThanDebugLoc(MDL);
   R->getAllMetadataOtherThanDebugLoc(MDR);
+
+  // TBAA is generalized by MergeFunctions when merging instead.
+  auto IsTBAA = [](const std::pair<unsigned, MDNode *> &MD) {
+    return MD.first == LLVMContext::MD_tbaa ||
+           MD.first == LLVMContext::MD_tbaa_struct;
+  };
+  erase_if(MDL, IsTBAA);
+  erase_if(MDR, IsTBAA);
+
   if (MDL.size() > MDR.size())
     return 1;
   else if (MDL.size() < MDR.size())
