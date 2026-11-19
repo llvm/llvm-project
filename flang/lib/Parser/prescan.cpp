@@ -1633,8 +1633,9 @@ const char *Prescanner::GetFreeFormContinuationLine(
           }
         }
         // In OpenMP conditional continuation lines, space or ampersand are
-        // optional.
-        if (*p == '!' ||
+        // optional. A comment, possibly preceded by blanks, means this is
+        // not a continuation line.
+        if (*SkipWhiteSpace(p) == '!' ||
             (*p != '&' && !IsSpaceOrTab(p) && !InOpenMPConditionalLine())) {
           return nullptr;
         }
@@ -1993,18 +1994,17 @@ Prescanner::IsCompilerDirectiveSentinel(
         n || !(IsLetter(*p) || *p == '$' || *p == '@')) {
       if (lineKind != LineKind::Continuation && j == 1 && sentinel[0] == '$' &&
           n == 0 && *p != '\n' && *p != '&') {
-        // OpenMP conditional compilation line sentinels have to be
-        // immediately followed by a space or new line on initial lines.
-        // In free form continuation lines, the space is optional, and the
-        // sentinel may or may not be followed by &.
+        // Unless this is a free form continuation line, an OpenMP
+        // conditional compilation sentinel ("!$") has to be immediately
+        // followed by a blank (space or tab), an ampersand, or the end of
+        // the line. Free form continuation lines are handled after the loop.
         break;
       }
-      if (*p == '!') {
-        return std::nullopt;
-      }
-      sentinel[j] = '\0';
-      if (const char *sp{IsCompilerDirectiveSentinel(sentinel, j)}) {
-        return std::make_pair(sp, p);
+      if (*p != '!') {
+        sentinel[j] = '\0';
+        if (const char *sp{IsCompilerDirectiveSentinel(sentinel, j)}) {
+          return std::make_pair(sp, p);
+        }
       }
       break;
     } else {
@@ -2013,9 +2013,10 @@ Prescanner::IsCompilerDirectiveSentinel(
   }
   if (!inFixedForm_ && lineKind == LineKind::Continuation && j >= 1 &&
       sentinel[0] == '$') {
+    // In free form continuation lines, the blank after an OpenMP conditional
+    // compilation sentinel is optional (OpenMP 6.0, 5.3.1). This is only
+    // considered after all other sentinels have been tried.
     if (const char *sp{IsCompilerDirectiveSentinel("$", 1)}) {
-      // This is a free form OpenMP conditional compilation sentinel with the
-      // space omitted.
       return std::make_pair(sp, originalP + 1);
     }
   }
@@ -2029,7 +2030,13 @@ auto Prescanner::IsCompilerDirectiveSentinelAfterKeywordMacro(const char *p,
     TokenSequence expansion{ExpandKeywordMacro(*name, provenance)};
     expansion.Put("\n", 1, provenance); // termination
     CharBlock block{expansion.ToLowerCase().ToCharBlock()};
-    if (auto maybePair{IsCompilerDirectiveSentinel(block.begin(), lineKind)}) {
+    // The line kind is not passed here: on continuation lines, it would
+    // allow the OpenMP conditional compilation sentinel to be immediately
+    // followed by text (e.g., "$x"), which would then be lost.
+    // This happens because the payload offset returned here is the length
+    // of the macro name, so any text following the sentinel in the expansion
+    // is lost.
+    if (auto maybePair{IsCompilerDirectiveSentinel(block.begin())}) {
       return LineClassification{
           LineClassification::Kind::CompilerDirectiveAfterMacroExpansion,
           name->size(), maybePair->first};

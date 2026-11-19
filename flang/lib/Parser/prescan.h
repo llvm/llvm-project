@@ -88,7 +88,7 @@ public:
   std::optional<CharBlock> GetKeywordMacroName(const char *) const;
   TokenSequence ExpandKeywordMacro(CharBlock, Provenance) const;
 
-  enum class LineKind { Unknown, Initial, Continuation };
+  enum class LineKind { Unknown, Continuation };
   const char *IsCompilerDirectiveSentinel(const char *, std::size_t) const;
   const char *IsCompilerDirectiveSentinel(CharBlock) const;
   // 'first' is the sentinel, 'second' is beginning of payload

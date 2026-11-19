@@ -109,3 +109,42 @@ subroutine cond_comment()
 !$!comment
 !$ + 4
 end subroutine
+
+! Same as above, but with blanks between the sentinel and the comment.
+! CHECK-LABEL: {{SUBROUTINE|subroutine}} cond_comment_blanks
+! CHECK-OMP: i=7_4
+subroutine cond_comment_blanks()
+!$ i = 1 &
+!$ !comment
+!$	!comment
+!$ + 6
+end subroutine
+
+! Digits following the sentinel on a continuation line.
+! CHECK-LABEL: {{SUBROUTINE|subroutine}} digits
+! CHECK-OMP: i=1234_4
+! CHECK-NO-OMP: i=12_4
+subroutine digits()
+  i = 12&
+!$34&
+  &+0
+end subroutine
+
+! A name longer than any sentinel following the sentinel on a continuation
+! line.
+! CHECK-LABEL: {{SUBROUTINE|subroutine}} longname
+! CHECK-OMP: i=1_4+abcdefghij
+! CHECK-NO-OMP: i=1_4{{$}}
+subroutine longname()
+  integer :: abcdefghij
+  i = 1 &
+!$+abcdefghij &
+  + 0
+end subroutine
+
+! A digit following the sentinel on an initial line: this is a comment.
+! CHECK-LABEL: {{SUBROUTINE|subroutine}} initial_digit
+! CHECK-OMP-NOT: k=7_4
+subroutine initial_digit()
+!$1 k = 7
+end subroutine
