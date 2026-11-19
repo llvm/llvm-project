@@ -50,6 +50,9 @@ convertCastingOp(ConversionPatternRewriter &rewriter,
 
   Type convertedElementType = newTy.getElementType();
   Type oldElementType = op.getType().getElementType();
+  if (!oldElementType.isIntOrFloat() || !convertedElementType.isIntOrFloat())
+    return rewriter.notifyMatchFailure(
+        op, "only integer or float element types are supported");
   int srcBits = oldElementType.getIntOrFloatBitWidth();
   int dstBits = convertedElementType.getIntOrFloatBitWidth();
   if (dstBits % srcBits != 0) {
@@ -234,6 +237,10 @@ struct ConvertMemRefAllocation final : OpConversionPattern<OpTy> {
     OpFoldResult zero = rewriter.getIndexAttr(0);
 
     // Get linearized type.
+    if (!currentType.getElementType().isIntOrFloat() ||
+        !newResultType.getElementType().isIntOrFloat())
+      return rewriter.notifyMatchFailure(
+          op, "only integer or float element types are supported");
     int srcBits = currentType.getElementType().getIntOrFloatBitWidth();
     int dstBits = newResultType.getElementType().getIntOrFloatBitWidth();
     SmallVector<OpFoldResult> sizes = op.getMixedSizes();
@@ -331,6 +338,9 @@ struct ConvertMemRefLoad final : OpConversionPattern<memref::LoadOp> {
     auto convertedType = cast<MemRefType>(adaptor.getMemref().getType());
     auto convertedElementType = convertedType.getElementType();
     auto oldElementType = op.getMemRefType().getElementType();
+    if (!oldElementType.isIntOrFloat() || !convertedElementType.isIntOrFloat())
+      return rewriter.notifyMatchFailure(
+          op, "only integer or float element types are supported");
     int srcBits = oldElementType.getIntOrFloatBitWidth();
     int dstBits = convertedElementType.getIntOrFloatBitWidth();
     if (dstBits % srcBits != 0) {
@@ -601,6 +611,9 @@ struct ConvertMemRefSubview final : OpConversionPattern<memref::SubViewOp> {
     Location loc = subViewOp.getLoc();
     Type convertedElementType = newTy.getElementType();
     Type oldElementType = subViewOp.getType().getElementType();
+    if (!oldElementType.isIntOrFloat() || !convertedElementType.isIntOrFloat())
+      return rewriter.notifyMatchFailure(
+          subViewOp, "only integer or float element types are supported");
     int srcBits = oldElementType.getIntOrFloatBitWidth();
     int dstBits = convertedElementType.getIntOrFloatBitWidth();
     if (dstBits % srcBits != 0)
