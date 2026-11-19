@@ -119,8 +119,8 @@ struct Object {
   void addSymbols(ArrayRef<Symbol> NewSymbols);
   Error removeSymbols(function_ref<Expected<bool>(const Symbol &)> ToRemove);
 
-  // Set the Referenced field on all Symbols, based on relocations in
-  // all sections.
+  // Set the Referenced field on all Symbols based on relocations and other
+  // section data containing semantic symbol references, such as .sxdata.
   Error markSymbols();
 
   ArrayRef<Section> getSections() const { return Sections; }
