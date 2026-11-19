@@ -93,7 +93,7 @@ void FsetposChecker::checkPreCall(const CallEvent &Call,
     if (FPosFileVal.isUnknown())
       return;
     if (FPosFileVal.isUndef() || FPosFileVal != FileVal) {
-      if (ExplodedNode *N = C.generateErrorNode()) {
+      if (ExplodedNode *N = C.addSink()) {
         SmallString<100> Str;
         llvm::raw_svector_ostream Os(Str);
         Os << "Position argument to 'fsetpos' ";
