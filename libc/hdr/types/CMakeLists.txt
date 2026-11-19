@@ -1453,3 +1453,15 @@ add_proxy_header_library(
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.eventfd_t
 )
+
+add_proxy_header_library(
+  cap_user_header_t
+  HDRS
+    cap_user_header_t.h
+)
+
+add_proxy_header_library(
+  cap_user_data_t
+  HDRS
+    cap_user_data_t.h
+)

@@ -2701,3 +2701,31 @@ add_header_library(
     libc.src.__support.error_or
     libc.src.__support.macros.config
 )
+
+add_header_library(
+  capget
+  HDRS
+    capget.h
+  DEPENDS
+    libc.hdr.types.cap_user_data_t
+    libc.hdr.types.cap_user_header_t
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  capset
+  HDRS
+    capset.h
+  DEPENDS
+    libc.hdr.types.cap_user_data_t
+    libc.hdr.types.cap_user_header_t
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)

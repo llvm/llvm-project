@@ -211,6 +211,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     # stdio.h entrypoints
     libc.src.stdio.tmpfile
 
+    # sys/capability.h entrypoints
+    libc.src.sys.capability.capget
+    libc.src.sys.capability.capset
+
     # sys/eventfd.h entrypoints
     libc.src.sys.eventfd.eventfd
     libc.src.sys.eventfd.eventfd_read
