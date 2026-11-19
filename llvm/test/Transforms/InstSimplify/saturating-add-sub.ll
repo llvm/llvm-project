@@ -9,6 +9,7 @@ declare <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8>, <2 x i8>)
 declare <2 x i9> @llvm.uadd.sat.v2i9(<2 x i9>, <2 x i9>)
 
 declare i8 @llvm.sadd.sat.i8(i8, i8)
+declare i32 @llvm.sadd.sat.i32(i32, i32)
 declare <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8>, <2 x i8>)
 
 declare i8 @llvm.usub.sat.i8(i8, i8)
@@ -654,6 +655,35 @@ define i1 @sadd_icmp_op1_neg_unknown(i8 %a) {
   %b = call i8 @llvm.sadd.sat.i8(i8 %a, i8 -10)
   %c = icmp slt i8 %b, 117
   ret i1 %c
+}
+
+define i1 @sadd_icmp_sge_nonnegative_constant(i32 %x) {
+; CHECK-LABEL: @sadd_icmp_sge_nonnegative_constant(
+; CHECK-NEXT:    ret i1 true
+;
+  %s = call i32 @llvm.sadd.sat.i32(i32 %x, i32 1)
+  %cmp = icmp sge i32 %s, %x
+  ret i1 %cmp
+}
+
+define i1 @sadd_icmp_sle_nonpositive_constant(i32 %x) {
+; CHECK-LABEL: @sadd_icmp_sle_nonpositive_constant(
+; CHECK-NEXT:    ret i1 true
+;
+  %s = call i32 @llvm.sadd.sat.i32(i32 1, i32 %x)
+  %cmp = icmp sle i32 %x, %s
+  ret i1 %cmp
+}
+
+define i1 @sadd_icmp_sge_negative_constant(i32 %x) {
+; CHECK-LABEL: @sadd_icmp_sge_negative_constant(
+; CHECK-NEXT:    [[S:%.*]] = call i32 @llvm.sadd.sat.i32(i32 [[X:%.*]], i32 -1)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i32 [[S]], [[X]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %s = call i32 @llvm.sadd.sat.i32(i32 %x, i32 -1)
+  %cmp = icmp sge i32 %s, %x
+  ret i1 %cmp
 }
 
 define i1 @usub_icmp_op0_known(i8 %a) {
