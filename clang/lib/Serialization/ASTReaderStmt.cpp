@@ -2946,6 +2946,8 @@ void ASTStmtReader::VisitOMPDispatchDirective(OMPDispatchDirective *D) {
   VisitStmt(D);
   VisitOMPExecutableDirective(D);
   D->setTargetCallLoc(Record.readSourceLocation());
+  D->setUnsupportedVariantArgs(
+      static_cast<OMPDispatchDirective::VariantArgsKind>(Record.readInt()));
 }
 
 void ASTStmtReader::VisitOMPMaskedDirective(OMPMaskedDirective *D) {

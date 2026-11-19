@@ -881,6 +881,19 @@ public:
       Visit(C);
   }
 
+  void VisitOMPDispatchDirective(const OMPDispatchDirective *Node) {
+    VisitOMPExecutableDirective(Node);
+    // The alternative forms of the associated statement selected by the
+    // 'novariants' and 'nocontext' clauses are built by Sema, and are not
+    // children of the directive.
+    if (Traversal == TK_IgnoreUnlessSpelledInSource)
+      return;
+    if (const Stmt *S = Node->getNoVariantsStmt())
+      Visit(S, "novariants");
+    if (const Stmt *S = Node->getNoContextStmt())
+      Visit(S, "nocontext");
+  }
+
   void VisitOpenACCConstructStmt(const OpenACCConstructStmt *Node) {
     for (const auto *C : Node->clauses())
       Visit(C);

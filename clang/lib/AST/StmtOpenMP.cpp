@@ -1913,20 +1913,23 @@ OMPInteropDirective *OMPInteropDirective::CreateEmpty(const ASTContext &C,
 
 OMPDispatchDirective *OMPDispatchDirective::Create(
     const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
-    ArrayRef<OMPClause *> Clauses, Stmt *AssociatedStmt,
-    SourceLocation TargetCallLoc) {
+    ArrayRef<OMPClause *> Clauses, Stmt *AssociatedStmt, Stmt *NoVariantsStmt,
+    Stmt *NoContextStmt, SourceLocation TargetCallLoc,
+    VariantArgsKind UnsupportedVariantArgs) {
   auto *Dir = createDirective<OMPDispatchDirective>(
-      C, Clauses, AssociatedStmt, /*NumChildren=*/0, StartLoc, EndLoc);
+      C, Clauses, AssociatedStmt, NumChildren, StartLoc, EndLoc);
   Dir->setTargetCallLoc(TargetCallLoc);
+  Dir->setUnsupportedVariantArgs(UnsupportedVariantArgs);
+  Dir->setNoVariantsStmt(NoVariantsStmt);
+  Dir->setNoContextStmt(NoContextStmt);
   return Dir;
 }
 
 OMPDispatchDirective *OMPDispatchDirective::CreateEmpty(const ASTContext &C,
                                                         unsigned NumClauses,
                                                         EmptyShell) {
-  return createEmptyDirective<OMPDispatchDirective>(C, NumClauses,
-                                                    /*HasAssociatedStmt=*/true,
-                                                    /*NumChildren=*/0);
+  return createEmptyDirective<OMPDispatchDirective>(
+      C, NumClauses, /*HasAssociatedStmt=*/true, NumChildren);
 }
 
 OMPMaskedDirective *OMPMaskedDirective::Create(const ASTContext &C,
