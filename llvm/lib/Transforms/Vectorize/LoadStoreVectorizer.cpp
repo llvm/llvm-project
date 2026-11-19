@@ -204,6 +204,25 @@ Type *getChainElemTy(ArrayRef<ChainElem> C, LLVMContext &Ctx,
                       << *HomogeneousScalarTy << "\n");
     return HomogeneousScalarTy;
   }
+  // A pointer cannot be recovered from a byte lane without a
+  // `bitcast <N x bM> to ptr`, which codegen does not yet handle. For chains
+  // containing a pointer, fall back to an integer lane of the same width:
+  // CreateBitPreservingCastChain then recovers the pointer with inttoptr,
+  // which is what this pass did before byte types were introduced. The lane
+  // width still comes from the GCD, so such chains vectorize at least as well
+  // as they did then -- the old code used C.front()'s scalar size instead.
+  //
+  // TODO: Drop this and use a byte lane unconditionally once byte-vector to
+  // pointer bitcasts work end to end.
+  if (any_of(C, [](const ChainElem &E) {
+        return getLoadStoreType(E.Inst)->getScalarType()->isPointerTy();
+      })) {
+    LLVM_DEBUG(dbgs() << "LSV: chain contains a pointer; using integer element "
+                         "type i"
+                      << GCDSize << "\n");
+    return Type::getIntNTy(Ctx, GCDSize);
+  }
+
   LLVM_DEBUG(dbgs() << "LSV: using normalized byte element type b" << GCDSize
                     << "\n");
   return Type::getByteNTy(Ctx, GCDSize);

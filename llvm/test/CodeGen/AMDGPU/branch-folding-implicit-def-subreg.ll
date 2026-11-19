@@ -761,10 +761,10 @@ define amdgpu_kernel void @f1(ptr addrspace(1) %arg, ptr addrspace(1) %arg1, i64
   ; GFX90A-NEXT:   renamable $sgpr29 = S_CSELECT_B32 1, 0, implicit $scc
   ; GFX90A-NEXT:   renamable $vgpr4 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
   ; GFX90A-NEXT:   renamable $vgpr10 = COPY renamable $sgpr27, implicit $exec
-  ; GFX90A-NEXT:   renamable $vgpr16_vgpr17 = DS_READ_B64_gfx9 killed renamable $vgpr10, 0, 0, implicit $exec :: (load (s64) from %ir.5, addrspace 3)
+  ; GFX90A-NEXT:   renamable $vgpr16_vgpr17 = DS_READ_B64_gfx9 killed renamable $vgpr10, 0, 0, implicit $exec :: (load (s64) from %ir.3, addrspace 3)
   ; GFX90A-NEXT:   renamable $vgpr10_vgpr11 = DS_READ_B64_gfx9 killed renamable $vgpr4, 0, 0, implicit $exec :: (load (s64) from `ptr addrspace(3) null`, addrspace 3)
   ; GFX90A-NEXT:   renamable $vgpr4 = COPY renamable $sgpr28, implicit $exec
-  ; GFX90A-NEXT:   renamable $vgpr18_vgpr19 = DS_READ_B64_gfx9 killed renamable $vgpr4, 0, 0, implicit $exec :: (load (s64) from %ir.6, addrspace 3)
+  ; GFX90A-NEXT:   renamable $vgpr18_vgpr19 = DS_READ_B64_gfx9 killed renamable $vgpr4, 0, 0, implicit $exec :: (load (s64) from %ir.4, addrspace 3)
   ; GFX90A-NEXT:   renamable $sgpr46_sgpr47 = S_LSHR_B64 renamable $sgpr24_sgpr25, 1, implicit-def dead $scc
   ; GFX90A-NEXT:   renamable $vgpr14_vgpr15 = V_LSHRREV_B64_e64 1, $vgpr16_vgpr17, implicit $exec
   ; GFX90A-NEXT:   dead renamable $sgpr24_sgpr25 = S_AND_B64 renamable $sgpr12_sgpr13, $exec, implicit-def $scc
@@ -818,13 +818,13 @@ define amdgpu_kernel void @f1(ptr addrspace(1) %arg, ptr addrspace(1) %arg1, i64
   ; GFX90A-NEXT:   renamable $vgpr0 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
   ; GFX90A-NEXT:   renamable $vgpr24_vgpr25 = DS_READ_B64_gfx9 killed renamable $vgpr0, 0, 0, implicit $exec :: (load (s64) from `ptr addrspace(3) null`, addrspace 3)
   ; GFX90A-NEXT:   renamable $vgpr0 = COPY renamable $sgpr29, implicit $exec
-  ; GFX90A-NEXT:   renamable $vgpr22_vgpr23 = DS_READ_B64_gfx9 killed renamable $vgpr0, 0, 0, implicit $exec :: (load (s64) from %ir.423, addrspace 3)
+  ; GFX90A-NEXT:   renamable $vgpr22_vgpr23 = DS_READ_B64_gfx9 killed renamable $vgpr0, 0, 0, implicit $exec :: (load (s64) from %ir.420, addrspace 3)
   ; GFX90A-NEXT:   renamable $vgpr0 = COPY renamable $sgpr27, implicit $exec
-  ; GFX90A-NEXT:   renamable $vgpr4_vgpr5 = DS_READ_B64_gfx9 killed renamable $vgpr0, 0, 0, implicit $exec :: (load (s64) from %ir.5, addrspace 3)
+  ; GFX90A-NEXT:   renamable $vgpr4_vgpr5 = DS_READ_B64_gfx9 killed renamable $vgpr0, 0, 0, implicit $exec :: (load (s64) from %ir.3, addrspace 3)
   ; GFX90A-NEXT:   renamable $vgpr0 = COPY renamable $sgpr30, implicit $exec
-  ; GFX90A-NEXT:   renamable $vgpr20_vgpr21 = DS_READ_B64_gfx9 killed renamable $vgpr0, 0, 0, implicit $exec :: (load (s64) from %ir.424, addrspace 3)
+  ; GFX90A-NEXT:   renamable $vgpr20_vgpr21 = DS_READ_B64_gfx9 killed renamable $vgpr0, 0, 0, implicit $exec :: (load (s64) from %ir.421, addrspace 3)
   ; GFX90A-NEXT:   renamable $vgpr0 = COPY renamable $sgpr28, implicit $exec
-  ; GFX90A-NEXT:   renamable $vgpr26_vgpr27 = DS_READ_B64_gfx9 killed renamable $vgpr0, 0, 0, implicit $exec :: (load (s64) from %ir.6, addrspace 3)
+  ; GFX90A-NEXT:   renamable $vgpr26_vgpr27 = DS_READ_B64_gfx9 killed renamable $vgpr0, 0, 0, implicit $exec :: (load (s64) from %ir.4, addrspace 3)
   ; GFX90A-NEXT:   renamable $sgpr30_sgpr31 = S_MOV_B64 -1
   ; GFX90A-NEXT:   S_BRANCH %bb.3
   ; GFX90A-NEXT: {{  $}}
@@ -948,13 +948,13 @@ define amdgpu_kernel void @f1(ptr addrspace(1) %arg, ptr addrspace(1) %arg1, i64
   ; GFX90A-NEXT:   renamable $vgpr5 = COPY renamable $vgpr13, implicit $exec
   ; GFX90A-NEXT:   DS_WRITE_B64_gfx9 renamable $vgpr13, renamable $vgpr12_vgpr13, 0, 0, implicit $exec :: (store (s64) into `ptr addrspace(3) null`, addrspace 3)
   ; GFX90A-NEXT:   renamable $vgpr10 = COPY killed renamable $sgpr27, implicit $exec
-  ; GFX90A-NEXT:   DS_WRITE_B64_gfx9 renamable $vgpr10, killed renamable $vgpr26_vgpr27, 0, 0, implicit $exec :: (store (s64) into %ir.5, addrspace 3)
+  ; GFX90A-NEXT:   DS_WRITE_B64_gfx9 renamable $vgpr10, killed renamable $vgpr26_vgpr27, 0, 0, implicit $exec :: (store (s64) into %ir.3, addrspace 3)
   ; GFX90A-NEXT:   renamable $vgpr11 = COPY killed renamable $sgpr28, implicit $exec
-  ; GFX90A-NEXT:   DS_WRITE_B64_gfx9 killed renamable $vgpr11, killed renamable $vgpr22_vgpr23, 0, 0, implicit $exec :: (store (s64) into %ir.6, addrspace 3)
+  ; GFX90A-NEXT:   DS_WRITE_B64_gfx9 killed renamable $vgpr11, killed renamable $vgpr22_vgpr23, 0, 0, implicit $exec :: (store (s64) into %ir.4, addrspace 3)
   ; GFX90A-NEXT:   DS_WRITE_B64_gfx9 renamable $vgpr13, killed renamable $vgpr24_vgpr25, 0, 0, implicit $exec :: (store (s64) into `ptr addrspace(3) null`, addrspace 3)
-  ; GFX90A-NEXT:   DS_WRITE_B64_gfx9 renamable $vgpr10, killed renamable $vgpr20_vgpr21, 0, 0, implicit $exec :: (store (s64) into %ir.5, addrspace 3)
+  ; GFX90A-NEXT:   DS_WRITE_B64_gfx9 renamable $vgpr10, killed renamable $vgpr20_vgpr21, 0, 0, implicit $exec :: (store (s64) into %ir.3, addrspace 3)
   ; GFX90A-NEXT:   DS_WRITE_B64_gfx9 renamable $vgpr13, killed renamable $vgpr14_vgpr15, 0, 0, implicit $exec :: (store (s64) into `ptr addrspace(3) null`, addrspace 3)
-  ; GFX90A-NEXT:   DS_WRITE_B64_gfx9 killed renamable $vgpr10, killed renamable $vgpr18_vgpr19, 0, 0, implicit $exec :: (store (s64) into %ir.5, addrspace 3)
+  ; GFX90A-NEXT:   DS_WRITE_B64_gfx9 killed renamable $vgpr10, killed renamable $vgpr18_vgpr19, 0, 0, implicit $exec :: (store (s64) into %ir.3, addrspace 3)
   ; GFX90A-NEXT:   DS_WRITE_B64_gfx9 killed renamable $vgpr13, killed renamable $vgpr4_vgpr5, 0, 0, implicit $exec :: (store (s64) into `ptr addrspace(3) null`, addrspace 3)
   ; GFX90A-NEXT:   BUFFER_STORE_DWORD_OFFSET killed renamable $vgpr3, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 4, 0, 0, implicit $exec :: (store (s32) into `ptr addrspace(5) null` + 4, basealign 8, addrspace 5)
   ; GFX90A-NEXT:   BUFFER_STORE_DWORD_OFFSET killed renamable $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec :: (store (s32) into `ptr addrspace(5) null`, align 8, addrspace 5)

@@ -31,7 +31,7 @@ define amdgpu_kernel void @uniform_trunc_i16_to_i1(ptr addrspace(1) %out, i16 %x
   ; GCN-NEXT:   $scc = COPY [[S_OR_B64_]]
   ; GCN-NEXT:   [[S_CSELECT_B32_:%[0-9]+]]:sreg_32 = S_CSELECT_B32 1, 0, implicit $scc
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[S_CSELECT_B32_]]
-  ; GCN-NEXT:   BUFFER_STORE_BYTE_OFFSET [[COPY9]], [[REG_SEQUENCE1]], 0, 0, 0, 0, implicit $exec :: (store (s8) into %ir.2, addrspace 1)
+  ; GCN-NEXT:   BUFFER_STORE_BYTE_OFFSET [[COPY9]], [[REG_SEQUENCE1]], 0, 0, 0, 0, implicit $exec :: (store (s8) into %ir.3, addrspace 1)
   ; GCN-NEXT:   S_ENDPGM 0
   %setcc = icmp slt i16 %x, 0
   %select = select i1 %setcc, i1 true, i1 %z
@@ -89,7 +89,7 @@ define amdgpu_kernel void @uniform_trunc_i32_to_i1(ptr addrspace(1) %out, i32 %x
   ; GCN-NEXT:   $scc = COPY [[S_OR_B64_]]
   ; GCN-NEXT:   [[S_CSELECT_B32_:%[0-9]+]]:sreg_32 = S_CSELECT_B32 1, 0, implicit $scc
   ; GCN-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[S_CSELECT_B32_]]
-  ; GCN-NEXT:   BUFFER_STORE_BYTE_OFFSET [[COPY10]], [[REG_SEQUENCE1]], 0, 0, 0, 0, implicit $exec :: (store (s8) into %ir.2, addrspace 1)
+  ; GCN-NEXT:   BUFFER_STORE_BYTE_OFFSET [[COPY10]], [[REG_SEQUENCE1]], 0, 0, 0, 0, implicit $exec :: (store (s8) into %ir.3, addrspace 1)
   ; GCN-NEXT:   S_ENDPGM 0
   %setcc = icmp slt i32 %x, 0
   %select = select i1 %setcc, i1 true, i1 %z
@@ -146,7 +146,7 @@ define amdgpu_kernel void @uniform_trunc_i64_to_i1(ptr addrspace(1) %out, i64 %x
   ; GCN-NEXT:   $scc = COPY [[S_OR_B64_]]
   ; GCN-NEXT:   [[S_CSELECT_B32_:%[0-9]+]]:sreg_32 = S_CSELECT_B32 1, 0, implicit $scc
   ; GCN-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[S_CSELECT_B32_]]
-  ; GCN-NEXT:   BUFFER_STORE_BYTE_OFFSET [[COPY10]], [[REG_SEQUENCE1]], 0, 0, 0, 0, implicit $exec :: (store (s8) into %ir.2, addrspace 1)
+  ; GCN-NEXT:   BUFFER_STORE_BYTE_OFFSET [[COPY10]], [[REG_SEQUENCE1]], 0, 0, 0, 0, implicit $exec :: (store (s8) into %ir.3, addrspace 1)
   ; GCN-NEXT:   S_ENDPGM 0
   %setcc = icmp slt i64 %x, 0
   %select = select i1 %setcc, i1 true, i1 %z

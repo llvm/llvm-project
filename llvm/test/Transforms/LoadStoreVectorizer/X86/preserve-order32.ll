@@ -16,11 +16,10 @@ define void @preserve_order_32(ptr noalias %buff) #0 {
 ; CHECK-LABEL: define void @preserve_order_32(
 ; CHECK-SAME: ptr noalias [[BUFF:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x b32>, ptr [[BUFF]], align 8
-; CHECK-NEXT:    [[BUFF_INT1:%.*]] = extractelement <2 x b32> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast b32 [[BUFF_INT1]] to i32
-; CHECK-NEXT:    [[BUFF_P2:%.*]] = extractelement <2 x b32> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b32 [[BUFF_P2]] to ptr
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[BUFF]], align 8
+; CHECK-NEXT:    [[BUFF_INT1:%.*]] = extractelement <2 x i32> [[TMP0]], i32 0
+; CHECK-NEXT:    [[BUFF_P2:%.*]] = extractelement <2 x i32> [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = inttoptr i32 [[BUFF_P2]] to ptr
 ; CHECK-NEXT:    [[BUFF_VAL:%.*]] = load i8, ptr [[TMP2]], align 1
 ; CHECK-NEXT:    store i8 0, ptr [[TMP2]], align 8
 ; CHECK-NEXT:    ret void
