@@ -4712,7 +4712,8 @@ MachineSDNode *X86DAGToDAGISel::emitPCMPESTR(unsigned ROpc, unsigned MOpc,
 
 bool X86DAGToDAGISel::selectBMI2ShiftAmount(SDValue N, unsigned Width,
                                             SDValue &Amt) {
-  // Keep a shared truncate for expanded wide shifts to avoid extending live ranges.
+  // Keep a shared truncate for expanded wide shifts to avoid extending live
+  // ranges.
   if (N.getOpcode() != ISD::AND && !N.hasOneUse())
     return false;
 
