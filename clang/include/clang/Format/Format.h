@@ -1292,6 +1292,8 @@ struct FormatStyle {
   ///   AttributeMacros: [__capability, __output, __unused]
   /// \endcode
   ///
+  /// Entries that are not plain identifiers are regular expressions matched
+  /// against identifiers, e.g. `DEBUG_WRITE.*`.
   /// \version 12
   std::vector<std::string> AttributeMacros;
 
@@ -3170,6 +3172,9 @@ struct FormatStyle {
   /// \endcode
   ///
   /// For example: BOOST_FOREACH.
+  ///
+  /// Entries that are not plain identifiers are regular expressions matched
+  /// against identifiers, e.g. `DEBUG_WRITE.*`.
   /// \version 3.7
   std::vector<std::string> ForEachMacros;
 
@@ -3193,6 +3198,9 @@ struct FormatStyle {
   ///
   /// For example:
   /// [KJ_IF_MAYBE](https://github.com/capnproto/capnproto/blob/master/kjdoc/tour.md#maybes)
+  ///
+  /// Entries that are not plain identifiers are regular expressions matched
+  /// against identifiers, e.g. `DEBUG_WRITE.*`.
   /// \version 13
   std::vector<std::string> IfMacros;
 
@@ -4078,6 +4086,9 @@ struct FormatStyle {
   /// \endcode
   ///
   /// For example: TESTSUITE
+  ///
+  /// Entries that are not plain identifiers are regular expressions matched
+  /// against identifiers, e.g. `DEBUG_WRITE.*`.
   /// \version 9
   std::vector<std::string> NamespaceMacros;
 
@@ -5973,6 +5984,9 @@ struct FormatStyle {
   ///   unsigned char data = 'x';
   ///   emit signal(data); // Now it's fine again.
   /// \endcode
+  ///
+  /// Entries that are not plain identifiers are regular expressions matched
+  /// against identifiers, e.g. `DEBUG_WRITE.*`.
   /// \version 12
   std::vector<std::string> StatementAttributeLikeMacros;
 
@@ -5983,6 +5997,9 @@ struct FormatStyle {
   /// of such cases.
   ///
   /// For example: Q_UNUSED
+  ///
+  /// Entries that are not plain identifiers are regular expressions matched
+  /// against identifiers, e.g. `DEBUG_WRITE.*`.
   /// \version 8
   std::vector<std::string> StatementMacros;
 
@@ -6077,6 +6094,9 @@ struct FormatStyle {
   /// \endcode
   ///
   /// For example: OpenSSL STACK_OF, BSD LIST_ENTRY.
+  ///
+  /// Entries that are not plain identifiers are regular expressions matched
+  /// against identifiers, e.g. `DEBUG_WRITE.*`.
   /// \version 9
   std::vector<std::string> TypenameMacros;
 
@@ -6142,6 +6162,9 @@ struct FormatStyle {
   /// \endcode
   ///
   /// For example: BOOST_PP_STRINGIZE
+  ///
+  /// Entries that are not plain identifiers are regular expressions matched
+  /// against identifiers, e.g. `DEBUG_WRITE.*`.
   /// \version 11
   std::vector<std::string> WhitespaceSensitiveMacros;
 

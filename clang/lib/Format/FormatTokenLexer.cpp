@@ -39,40 +39,22 @@ FormatTokenLexer::FormatTokenLexer(
                                 LangOpts);
   Lex->SetKeepWhitespaceMode(true);
 
-  for (const std::string &ForEachMacro : Style.ForEachMacros) {
-    auto Identifier = &IdentTable.get(ForEachMacro);
-    Macros.insert({Identifier, TT_ForEachMacro});
-  }
-  for (const std::string &IfMacro : Style.IfMacros) {
-    auto Identifier = &IdentTable.get(IfMacro);
-    Macros.insert({Identifier, TT_IfMacro});
-  }
-  for (const std::string &AttributeMacro : Style.AttributeMacros) {
-    auto Identifier = &IdentTable.get(AttributeMacro);
-    Macros.insert({Identifier, TT_AttributeMacro});
-  }
-  for (const std::string &StatementMacro : Style.StatementMacros) {
-    auto Identifier = &IdentTable.get(StatementMacro);
-    Macros.insert({Identifier, TT_StatementMacro});
-  }
-  for (const std::string &TypenameMacro : Style.TypenameMacros) {
-    auto Identifier = &IdentTable.get(TypenameMacro);
-    Macros.insert({Identifier, TT_TypenameMacro});
-  }
-  for (const std::string &NamespaceMacro : Style.NamespaceMacros) {
-    auto Identifier = &IdentTable.get(NamespaceMacro);
-    Macros.insert({Identifier, TT_NamespaceMacro});
-  }
-  for (const std::string &WhitespaceSensitiveMacro :
-       Style.WhitespaceSensitiveMacros) {
-    auto Identifier = &IdentTable.get(WhitespaceSensitiveMacro);
-    Macros.insert({Identifier, TT_UntouchableMacroFunc});
-  }
-  for (const std::string &StatementAttributeLikeMacro :
-       Style.StatementAttributeLikeMacros) {
-    auto Identifier = &IdentTable.get(StatementAttributeLikeMacro);
-    Macros.insert({Identifier, TT_StatementAttributeLikeMacro});
-  }
+  auto addMacros = [&](ArrayRef<std::string> Names, TokenType Type) {
+    for (const StringRef Name : Names)
+      if (!llvm::Regex::isLiteralERE(Name))
+        MacroPatterns.emplace_back(llvm::Regex(Name), Type);
+      else
+        Macros.try_emplace(&IdentTable.get(Name), Type);
+  };
+
+  addMacros(Style.ForEachMacros, TT_ForEachMacro);
+  addMacros(Style.IfMacros, TT_IfMacro);
+  addMacros(Style.AttributeMacros, TT_AttributeMacro);
+  addMacros(Style.StatementMacros, TT_StatementMacro);
+  addMacros(Style.TypenameMacros, TT_TypenameMacro);
+  addMacros(Style.NamespaceMacros, TT_NamespaceMacro);
+  addMacros(Style.WhitespaceSensitiveMacros, TT_UntouchableMacroFunc);
+  addMacros(Style.StatementAttributeLikeMacros, TT_StatementAttributeLikeMacro);
 
   for (const auto &Macro : Style.MacrosSkippedByRemoveParentheses)
     MacrosSkippedByRemoveParentheses.insert(&IdentTable.get(Macro));
@@ -1494,17 +1476,31 @@ FormatToken *FormatTokenLexer::getNextToken() {
 
   if (IsCpp) {
     auto *Identifier = FormatTok->Tok.getIdentifierInfo();
-    auto it = Macros.find(Identifier);
-    if ((Tokens.empty() || !Tokens.back()->Tok.getIdentifierInfo() ||
-         Tokens.back()->Tok.getIdentifierInfo()->getPPKeywordID() !=
-             tok::pp_define) &&
-        it != Macros.end()) {
-      FormatTok->setType(it->second);
-      if (it->second == TT_IfMacro) {
-        // The lexer token currently has type tok::kw_unknown. However, for this
-        // substitution to be treated correctly in the TokenAnnotator, faking
-        // the tok value seems to be needed. Not sure if there's a more elegant
-        // way.
+    const bool NotDefineName =
+        Tokens.empty() || !Tokens.back()->Tok.getIdentifierInfo() ||
+        Tokens.back()->Tok.getIdentifierInfo()->getPPKeywordID() !=
+            tok::pp_define;
+    std::optional<TokenType> MacroType;
+    if (Identifier && NotDefineName) {
+      if (const auto It = Macros.find(Identifier); It != Macros.end()) {
+        MacroType = It->second;
+      } else if (FormatTok->is(tok::identifier) && !MacroPatterns.empty()) {
+        for (const auto &[Re, Type] : MacroPatterns) {
+          if (Re.match(Identifier->getName())) {
+            MacroType = Type;
+            break;
+          }
+        }
+        Macros.try_emplace(Identifier, MacroType);
+      }
+    }
+    if (MacroType) {
+      FormatTok->setType(*MacroType);
+      if (*MacroType == TT_IfMacro) {
+        // The lexer token currently has type tok::kw_unknown. However, for
+        // this substitution to be treated correctly in the TokenAnnotator,
+        // faking the tok value seems to be needed. Not sure if there's a more
+        // elegant way.
         FormatTok->Tok.setKind(tok::kw_if);
       }
     } else if (FormatTok->is(tok::identifier)) {

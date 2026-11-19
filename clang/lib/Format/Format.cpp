@@ -1110,6 +1110,22 @@ struct ScalarEnumerationTraits<
   }
 };
 
+static void validateMacroPatterns(IO &Io, StringRef Key,
+                                  ArrayRef<std::string> Names) {
+  if (Io.outputting())
+    return;
+  std::string Error;
+  for (const StringRef Name : Names) {
+    if (llvm::Regex::isLiteralERE(Name))
+      continue;
+    llvm::Regex Re(Name);
+    if (!Re.isValid(Error)) {
+      Io.setError("Invalid regex pattern in " + Key + ": " + Name + " (" +
+                  Error + ")");
+    }
+  }
+}
+
 template <> struct MappingTraits<FormatStyle> {
   static void mapping(IO &IO, FormatStyle &Style) {
     // When reading, read the language first, we need it for getPredefinedStyle.
@@ -1568,6 +1584,17 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.WhitespaceSensitiveMacros);
     IO.mapOptional("WrapNamespaceBodyWithEmptyLines",
                    Style.WrapNamespaceBodyWithEmptyLines);
+
+    validateMacroPatterns(IO, "AttributeMacros", Style.AttributeMacros);
+    validateMacroPatterns(IO, "ForEachMacros", Style.ForEachMacros);
+    validateMacroPatterns(IO, "IfMacros", Style.IfMacros);
+    validateMacroPatterns(IO, "NamespaceMacros", Style.NamespaceMacros);
+    validateMacroPatterns(IO, "StatementAttributeLikeMacros",
+                          Style.StatementAttributeLikeMacros);
+    validateMacroPatterns(IO, "StatementMacros", Style.StatementMacros);
+    validateMacroPatterns(IO, "TypenameMacros", Style.TypenameMacros);
+    validateMacroPatterns(IO, "WhitespaceSensitiveMacros",
+                          Style.WhitespaceSensitiveMacros);
 
     // If AlwaysBreakAfterDefinitionReturnType was specified but
     // BreakAfterReturnType was not, initialize the latter from the former for
