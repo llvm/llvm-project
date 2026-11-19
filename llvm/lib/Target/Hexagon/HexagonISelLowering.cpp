@@ -694,8 +694,8 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   // Handle result values, copying them out of physregs into vregs that we
   // return.
-  return LowerCallResult(Chain, Glue, CallConv, IsVarArg, Ins, dl, DAG,
-                         InVals, OutVals, Callee);
+  return LowerCallResult(Chain, Glue, CallConv, IsVarArg, Ins, dl, DAG, InVals,
+                         OutVals, Callee);
 }
 
 /// Returns true by value, base pointer and offset pointer and addressing
