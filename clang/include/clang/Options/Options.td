@@ -3569,6 +3569,11 @@ defm clangir : BoolFOption<"clangir",
   BothFlags<[], [ClangOption, CC1Option], "">>;
 def emit_cir : Flag<["-"], "emit-cir">, Visibility<[ClangOption, CC1Option]>,
   Group<Action_Group>, HelpText<"Build ASTs and then lower to ClangIR">;
+def emit_cir_EQ : Joined<["-"], "emit-cir=">, Visibility<[CC1Option]>,
+  Group<Action_Group>, Values<"pristine">,
+  HelpText<"Build ASTs and then lower to ClangIR, stopping at the named "
+           "point (experimental). 'pristine' is CIRGen's output before any "
+           "ClangIR pass">;
 def emit_cir_bc : Flag<["-"], "emit-cir-bc">,
   Visibility<[CC1Option]>, Group<Action_Group>,
   HelpText<"Build ASTs and then emit ClangIR bytecode">;
