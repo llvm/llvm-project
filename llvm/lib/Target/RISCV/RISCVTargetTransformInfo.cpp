@@ -2624,8 +2624,7 @@ InstructionCost RISCVTTIImpl::getExtendedReductionCost(
       LT.second.isVectorOf(MVT::i1)) {
     // Represent vector_reduce_add(ZExt(<i1 vector>)) as
     // ZExtOrTrunc(ctpop(bitcast <i1 vector> to in)).
-    return LT.first *
-           getRISCVInstructionCost(RISCV::VCPOP_M, LT.second, CostKind);
+    return getRISCVInstructionCost(RISCV::VCPOP_M, LT.second, CostKind);
   }
 
   if (ResTy->getScalarSizeInBits() != 2 * LT.second.getScalarSizeInBits())
