@@ -9,6 +9,7 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
 #include "mlir/IR/SymbolTable.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include <utility>
 
 using namespace mlir;
@@ -149,6 +150,8 @@ bool DeadnessCache::isOpTriviallyDead(Operation *root) {
       isa<SymbolOpInterface>(root))
     return false;
 
+  if (!pending.empty())
+    flushInvalidations();
   auto cachedRoot = cache.find(root);
   if (cachedRoot != cache.end())
     return cachedRoot->second == State::Dead;
@@ -156,17 +159,102 @@ bool DeadnessCache::isOpTriviallyDead(Operation *root) {
   return wouldOpBeTriviallyDeadImpl(root, &cache);
 }
 
-void DeadnessCache::invalidate(Operation *op) {
-  op->walk([&](Operation *nested) { cache.erase(nested); });
-  invalidateAncestors(op);
+void DeadnessCache::enqueue(Invalidation request) {
+  if (!pending.insert(request))
+    cancelled.erase(request);
 }
 
-void DeadnessCache::invalidateAncestors(Operation *op) {
-  // An ancestor may report nested effects through its own effect interface,
-  // without querying the intermediate cache entries. A missing entry cannot
-  // stop invalidation of its ancestors.
-  for (Operation *parent = op; parent; parent = parent->getParentOp())
-    cache.erase(parent);
+void DeadnessCache::cancel(Invalidation request) {
+  if (!pending.contains(request))
+    return;
+  cancelled.insert(request);
+  if (cancelled.size() >= pending.size() - cancelled.size())
+    removeCancelled();
+}
+
+void DeadnessCache::removeCancelled() {
+  if (cancelled.empty())
+    return;
+  pending.remove_if(
+      [&](Invalidation entry) { return cancelled.contains(entry); });
+  cancelled.clear();
+}
+
+void DeadnessCache::scheduleInvalidation(Operation *op) {
+  // An empty cache has no stale entries. The next query computes effects from
+  // the current IR, so skip queuing a redundant subtree walk.
+  if (cache.empty())
+    return;
+  // An uncached leaf can affect only its ancestors. Siblings can share the
+  // same request even if they are all erased before the next query.
+  if (op->getNumRegions() || cache.contains(op))
+    enqueue(OpRequest(op, /*subtree=*/true));
+  else if (Operation *parent = op->getParentOp())
+    scheduleAncestorInvalidation(parent);
+}
+
+void DeadnessCache::scheduleAncestorInvalidation(Operation *op) {
+  if (!cache.empty())
+    enqueue(OpRequest(op, /*subtree=*/false));
+}
+
+void DeadnessCache::scheduleBlockInvalidation(Block *block) {
+  if (cache.empty())
+    return;
+  enqueue(block);
+  if (Operation *parent = block->getParentOp())
+    scheduleAncestorInvalidation(parent);
+}
+
+void DeadnessCache::notifyBlockErased(Block *block) {
+  cancel(block);
+  if (Operation *parent = block->getParentOp())
+    scheduleAncestorInvalidation(parent);
+}
+
+void DeadnessCache::notifyOperationErased(Operation *op) {
+  cancel(OpRequest(op, /*subtree=*/true));
+  cancel(OpRequest(op, /*subtree=*/false));
+  cache.erase(op);
+  if (Operation *parent = op->getParentOp())
+    scheduleAncestorInvalidation(parent);
+}
+
+void DeadnessCache::flushInvalidations() {
+  removeCancelled();
+  // Process newly appended requests in the same pass.
+  for (size_t i = 0; i < pending.size(); ++i) {
+    Invalidation request = pending[i];
+    if (auto *block = dyn_cast<Block *>(request)) {
+      for (Operation &op : *block)
+        enqueue(OpRequest(&op, /*subtree=*/true));
+      continue;
+    }
+    OpRequest opRequest = cast<OpRequest>(request);
+    Operation *op = opRequest.getPointer();
+    if (!opRequest.getInt())
+      cache.erase(op);
+    if (Operation *parent = op->getParentOp())
+      scheduleAncestorInvalidation(parent);
+  }
+
+  // Each operation request covers a subtree. Skip nested roots that have
+  // their own request so overlapping walks visit each body once.
+  for (Invalidation request : pending) {
+    if (isa<Block *>(request))
+      continue;
+    OpRequest opRequest = cast<OpRequest>(request);
+    if (!opRequest.getInt())
+      continue;
+    Operation *root = opRequest.getPointer();
+    root->walk<WalkOrder::PreOrder>([&](Operation *op) {
+      if (op != root && pending.contains(OpRequest(op, /*subtree=*/true)))
+        return WalkResult::skip();
+      cache.erase(op);
+      return WalkResult::advance();
+    });
+  }
+  pending.clear();
 }
 
 template <typename EffectTy>

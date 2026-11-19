@@ -16,6 +16,10 @@
 
 #include "mlir/IR/OpDefinition.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Twine.h"
 #include <cstdint>
 
@@ -548,9 +552,8 @@ bool isOpTriviallyDead(Operation *op);
 /// Note: Terminators and symbols are never considered to be trivially dead.
 bool wouldOpBeTriviallyDead(Operation *op);
 
-/// A cache for repeated deadness queries on nested operations. All changes to
-/// an operation or its nested IR must invalidate that operation. Moves must
-/// also invalidate the old parent. Invalidate operations before erasing them.
+/// A cache for repeated deadness queries on nested operations. Report erasure
+/// of scheduled operations and blocks before destroying them.
 class DeadnessCache {
 public:
   enum class State : uint8_t { Alive, Dead };
@@ -559,14 +562,44 @@ public:
   /// symbols cannot be erased. Uses are checked on every query.
   bool isOpTriviallyDead(Operation *op);
 
-  /// Invalidate the operation, its descendants, and its ancestors.
-  void invalidate(Operation *op);
+  /// Report a change to this operation or its nested IR. For a move, report
+  /// the previous parent operation with scheduleAncestorInvalidation.
+  void scheduleInvalidation(Operation *op);
 
-  /// Invalidate the operation and its ancestors, preserving descendant entries.
-  void invalidateAncestors(Operation *op);
+  /// Invalidate the cached effects of this operation and its ancestors.
+  void scheduleAncestorInvalidation(Operation *op);
+
+  /// Report a change to a block and its contents. For a move, report the
+  /// previous parent operation with scheduleAncestorInvalidation.
+  void scheduleBlockInvalidation(Block *block);
+
+  /// Call before an empty block is detached and destroyed.
+  void notifyBlockErased(Block *block);
+
+  /// Call once for each erased operation before it is detached or destroyed.
+  /// Report descendants before their parent.
+  void notifyOperationErased(Operation *op);
 
 private:
+  // The bit distinguishes a full operation subtree from an owner whose
+  // children are unchanged. A block request covers its current contents.
+  using OpRequest = llvm::PointerIntPair<Operation *, 1, bool>;
+  using Invalidation = llvm::PointerUnion<OpRequest, Block *>;
+  void enqueue(Invalidation request);
+  void cancel(Invalidation request);
+  void removeCancelled();
+  void flushInvalidations();
+
   DenseMap<Operation *, State> cache;
+
+  // Removing individual requests from the SetVector can make bulk IR erasure
+  // quadratic. Mark requests for erased IR in `cancelled` and remove them in
+  // one pass before the flush dereferences any queued pointers. Compact the
+  // queue earlier if at least half its entries are cancelled to bound its size
+  // between queries. If new IR reuses an address with a cancelled request,
+  // enqueue clears the mark so the flush processes the new request.
+  llvm::SetVector<Invalidation> pending;
+  DenseSet<Invalidation> cancelled;
 };
 
 /// Returns true if the given operation is free of memory effects.
