@@ -63,6 +63,10 @@ Improvements and New Features
 
 - ``basic_filebuf`` now supports files larger than 2GB on 32-bit AIX and 32-bit glibc targets.
 
+- ``std::stable_sort`` and ``std::ranges::stable_sort`` now sort in place with a block merge sort based on WikiSort.
+  They no longer allocate memory outside of constant evaluation, and they call the comparison ``O(N log(N))`` times
+  regardless of how much memory is available.
+
 Deprecations and Removals
 -------------------------
 
