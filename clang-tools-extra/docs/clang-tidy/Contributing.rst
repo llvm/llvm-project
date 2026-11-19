@@ -164,7 +164,8 @@ If we want to create a `readability-awesome-function-names`, we would run:
 The ``add_new_check.py`` script will:
   * create the class for your check inside the specified module's directory and
     register it in the module and in the build system;
-  * create a lit test file in the ``test/clang-tidy/`` directory;
+  * create a lit test file at
+    ``test/clang-tidy/checkers/<module>/<check>/test.<ext>``;
   * create a documentation file and include it into the
     ``docs/clang-tidy/checks/list.md``.
 
@@ -581,6 +582,22 @@ generator, use the command:
 
   $ ninja check-clang-tools
 
+Use the following Ninja targets for a module or for a check with its own test
+directory.
+
+.. code-block:: console
+
+  $ ninja check-clang-extra-clang-tidy-checkers-<module>
+  $ ninja check-clang-extra-clang-tidy-checkers-<module>-<check>
+
+For example, these commands run the ``readability`` module and the
+``readability-redundant-control-flow`` check, respectively.
+
+.. code-block:: console
+
+  $ ninja check-clang-extra-clang-tidy-checkers-readability
+  $ ninja check-clang-extra-clang-tidy-checkers-readability-redundant-control-flow
+
 :program:`clang-tidy` checks can be tested using either unit tests or
 `lit`_ tests. Unit tests may be more convenient to test complex replacements
 with strict checks. `Lit`_ tests allow using partial text matching and regular
@@ -611,9 +628,13 @@ must have an associated CHECK in that file. Or, you can use ``CHECK-NOTES:``
 instead, if you want to **also** ensure that all the notes are checked.
 
 To use the ``check_clang_tidy.py`` script, put a .cpp file with the
-appropriate ``RUN`` line in the ``test/clang-tidy`` directory. Use
-``CHECK-MESSAGES:`` and ``CHECK-FIXES:`` lines to write checks against
+appropriate ``RUN`` line in ``test/clang-tidy/checkers/<module>/<check>/``.
+For checks using the flat layout, add new tests alongside the existing files.
+Use ``CHECK-MESSAGES:`` and ``CHECK-FIXES:`` lines to write checks against
 diagnostic messages and fixed code.
+
+Use ``test.<ext>`` for a general test and descriptive names such as
+``macros.cpp`` for individual scenarios.
 
 It's advised to make the checks as specific as possible to avoid checks
 matching incorrect parts of the input. Use ``[[@LINE+X]]``/``[[@LINE-X]]``
@@ -690,10 +711,9 @@ hints. The most frequent pitfalls are macros and templates:
    some macro expansions/template instantiations, but easily break some other
    expansions/instantiations.
 
-If you need multiple files to exercise all the aspects of your check, it is
-recommended you place them in a subdirectory named for the check under the
-``Inputs`` directory for the module containing your check. This keeps the
-test directory from getting cluttered.
+Place private fixtures in the check's ``Inputs`` directory. For checks using
+the flat layout, use the module's ``Inputs/<check>`` directory. Shared fixtures
+can stay in the module's ``Inputs`` directory.
 
 If you need to validate how your check interacts with system header files, a
 set of simulated system header files is located in the
