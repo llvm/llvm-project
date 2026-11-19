@@ -3068,17 +3068,8 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
 
   // Lambda to consolidate common handling for fp-contract
   auto restoreFPContractState = [&]() {
-    // CUDA and HIP don't rely on the frontend to pass an ffp-contract option.
-    // For other targets, if the state has been changed by one of the
-    // unsafe-math umbrella options a subsequent -fno-fast-math or
-    // -fno-unsafe-math-optimizations option reverts to the last value seen for
-    // the -ffp-contract option or "on" if we have not seen the -ffp-contract
-    // option. If we have not seen an unsafe-math option or -ffp-contract,
-    // we leave the FPContract state unchanged.
     if (!UseFrontendFPContractDefault && FPContractFallback)
       FPContract = *FPContractFallback;
-    // In this case, we're reverting to the last explicit fp-contract option
-    // or the platform default
     LastFpContractOverrideOption = "";
   };
 
