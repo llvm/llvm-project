@@ -619,6 +619,10 @@ unsigned TargetTransformInfo::getRegUsageForType(Type *Ty) const {
   return TTIImpl->getRegUsageForType(Ty);
 }
 
+bool TargetTransformInfo::shouldThreadThroughTwoBasicBlocks() const {
+  return TTIImpl->shouldThreadThroughTwoBasicBlocks();
+}
+
 bool TargetTransformInfo::shouldBuildLookupTables() const {
   return TTIImpl->shouldBuildLookupTables();
 }
