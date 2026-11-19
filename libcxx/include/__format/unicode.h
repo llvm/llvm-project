@@ -465,7 +465,6 @@ private:
   }
 
   [[nodiscard]] constexpr bool __evaluate_GB11_emoji(char32_t __next_code_point, __EGC_property __next_property) {
->>>>>>> a49e20ef8d00 ([libc++][format] Fix GB9c Indic_Conjunct_Break grapheme cluster boundary)
     switch (__GB11_emoji_state_) {
     case __GB11_emoji_state::__Extended_Pictographic:
       if (__next_property == __EGC_property::__Extend) {
