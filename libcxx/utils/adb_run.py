@@ -187,7 +187,9 @@ def run_command(args: argparse.Namespace) -> int:
                     tmp_stdin.write(stdin_bytes)
                     local_stdin = tmp_stdin.name
                 try:
-                    remote_stdin = f"{REMOTE_BASE_DIR}/stdin-{local_dir_hash}-{os.getpid()}"
+                    remote_stdin = (
+                        f"{REMOTE_BASE_DIR}/stdin-{local_dir_hash}-{os.getpid()}"
+                    )
                     run_adb_sync_command(["adb", "push", local_stdin, remote_stdin])
                     run_adb_sync_command(["adb", "shell", "chmod", "644", remote_stdin])
                 finally:

@@ -84,7 +84,6 @@ static void hard_link_count_increments_test()
 }
 #endif
 
-
 static void hard_link_count_error_cases()
 {
     static_test_env static_env;

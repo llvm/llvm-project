@@ -6,7 +6,15 @@
 #
 # ===----------------------------------------------------------------------===##
 
-from libcxx.test.dsl import Feature, programSucceeds, hasAnyLocale, programOutput, testMacros, AddSubstitution, compilerMacros
+from libcxx.test.dsl import (
+    Feature,
+    programSucceeds,
+    hasAnyLocale,
+    programOutput,
+    testMacros,
+    AddSubstitution,
+    compilerMacros,
+)
 import re
 
 features = [

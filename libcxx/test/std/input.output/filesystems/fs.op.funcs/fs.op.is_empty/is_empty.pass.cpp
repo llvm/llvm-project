@@ -112,7 +112,6 @@ static void test_directory_access_denied()
     TEST_THROWS_TYPE(filesystem_error, is_empty(dir));
 }
 
-
 #ifndef TEST_HAS_NO_FIFOS
 static void test_fifo_fails()
 {

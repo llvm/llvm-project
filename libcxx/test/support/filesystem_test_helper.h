@@ -325,8 +325,8 @@ struct scoped_test_env
 #  define TEST_HAS_NO_SOCKETS
 #endif
 
-  // Some platforms doesn't support socket files so we shouldn't even
-  // allow tests to call this unguarded.
+    // Some platforms doesn't support socket files so we shouldn't even
+    // allow tests to call this unguarded.
 #ifndef TEST_HAS_NO_SOCKETS
     std::string create_socket(std::string file) {
       file = sanitize_path(std::move(file));
