@@ -550,3 +550,18 @@ namespace InvalidBaseClass {
   };
   static_assert(__builtin_bit_cast(char, E()) == 0); // expected-error {{not an integral constant expression}}
 }
+
+namespace InvalidRecord {
+  template <class To, class From>
+  constexpr To cast(const From& from) {
+    __builtin_bit_cast(To, from); // expected-warning {{expression result unused}}
+  }
+
+  struct S { // expected-note {{definition of 'InvalidRecord::S' is not complete until the closing '}'}}
+    S s;  // expected-error {{field has incomplete type 'S'}}
+    enum E { e } E;
+  };
+
+  static_assert(cast<S>((char)42).E == S::E::e); // expected-error {{static assertion expression is not an integral constant expression}}
+                                                 // expected-note@-1 {{in instantiation of function template specialization 'InvalidRecord::cast<InvalidRecord::S, char>' requested here}}
+}
