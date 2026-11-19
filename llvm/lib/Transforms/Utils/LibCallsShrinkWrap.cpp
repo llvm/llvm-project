@@ -149,6 +149,9 @@ bool LibCallsShrinkWrap::performCallDomainErrorOnly(CallInst *CI,
   case LibFunc_sin:  // DomainError: (x == +inf || x == -inf)
   case LibFunc_sinf: // Same as sin
   case LibFunc_sinl: // Same as sin
+  case LibFunc_tan:  // DomainError: (x == +inf || x == -inf)
+  case LibFunc_tanf: // Same as tan
+  case LibFunc_tanl: // Same as tan
   {
     ++NumWrappedTwoCond;
     Cond = createOrCond(CI, CmpInst::FCMP_OEQ, INFINITY, CmpInst::FCMP_OEQ,
