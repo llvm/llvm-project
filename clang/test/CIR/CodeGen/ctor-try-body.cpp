@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fexceptions -fcxx-exceptions -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s --check-prefix=CIR
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fexceptions -fcxx-exceptions -fclangir -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --input-file=%t-cir.ll %s --check-prefix=LLVM,LLVMCIR
+// RUN: FileCheck --input-file=%t-cir.ll %s --check-prefix=LLVM
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fexceptions -fcxx-exceptions -emit-llvm %s -o %t.ll
-// RUN: FileCheck --input-file=%t.ll %s --check-prefix=LLVM,OGCG
+// RUN: FileCheck --input-file=%t.ll %s --check-prefix=LLVM
 
 void mayThrow();
 
@@ -57,11 +57,10 @@ S::S() try : S(1) {
 // LLVM: [[CLEANUP_LPAD]]:
 // LLVM:   landingpad { ptr, i32 }
 // LLVM:     cleanup
-// LLVMCIR:   call void @__cxa_end_catch()
-// OGCG:   invoke void @__cxa_end_catch()
-// LLVM:   resume { ptr, i32 }
-// LLVM: [[UNREACHABLE_DEST]]:
-// LLVM:   unreachable
+// LLVM:   invoke void @__cxa_end_catch()
+// LLVM-DAG:   resume { ptr, i32 }
+// LLVM-DAG: [[UNREACHABLE_DEST]]:
+// LLVM-NEXT:   unreachable
 
 struct Throws {
   Throws(int) {}
@@ -119,11 +118,10 @@ Throws::Throws() try : Throws(1) {
 // LLVM: [[CLEANUP_LPAD]]:
 // LLVM:   landingpad { ptr, i32 }
 // LLVM:     cleanup
-// LLVMCIR:   call void @__cxa_end_catch()
-// OGCG:   invoke void @__cxa_end_catch()
-// LLVM:   resume { ptr, i32 }
-// LLVM: [[UNREACHABLE_DEST]]:
-// LLVM:   unreachable
+// LLVM:   invoke void @__cxa_end_catch()
+// LLVM-DAG:   resume { ptr, i32 }
+// LLVM-DAG: [[UNREACHABLE_DEST]]:
+// LLVM-NEXT:   unreachable
 
 struct Ctor {
   Ctor();
@@ -198,8 +196,7 @@ struct HasThings : Base {
 // LLVM: [[CLEANUP_LPAD]]:
 // LLVM:   landingpad { ptr, i32 }
 // LLVM:     cleanup
-// LLVMCIR:   call void @__cxa_end_catch()
-// OGCG:   invoke void @__cxa_end_catch()
+// LLVM:   invoke void @__cxa_end_catch()
 };
 
 void foo() {

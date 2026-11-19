@@ -135,6 +135,7 @@ private:
   cir::FuncOp personalityFunc;
   cir::FuncOp beginCatchFunc;
   cir::FuncOp endCatchFunc;
+  llvm::SmallPtrSet<mlir::Operation *, 8> unwindEndCatches;
   cir::FuncOp getExceptionPtrFunc;
   cir::FuncOp clangCallTerminateFunc;
   cir::FuncOp cxaThrowFunc;
@@ -390,6 +391,15 @@ static void collectReachableDispatches(
 
 /// Lower all EH operations in a single function.
 mlir::LogicalResult ItaniumEHLowering::lowerFunc(cir::FuncOp funcOp) {
+  unwindEndCatches.clear();
+  funcOp.walk([&](cir::EndCatchOp endOp) {
+    for (mlir::Operation *prev = endOp->getPrevNode(); prev;
+         prev = prev->getPrevNode())
+      if (mlir::isa<cir::BeginCleanupOp>(prev)) {
+        unwindEndCatches.insert(endOp);
+        break;
+      }
+  });
   if (funcOp.isDeclaration())
     return mlir::success();
 
@@ -642,11 +652,22 @@ mlir::LogicalResult ItaniumEHLowering::lowerEhInitiate(
              llvm::make_early_inc_range(op.getCatchToken().getUses())) {
           if (auto endOp =
                   mlir::dyn_cast<cir::EndCatchOp>(tokenUsers.getOwner())) {
+            bool onUnwindPath = unwindEndCatches.contains(endOp);
             builder.setInsertionPoint(endOp);
-            cir::CallOp::create(builder, endOp.getLoc(),
-                                mlir::FlatSymbolRefAttr::get(endCatchFunc),
-                                voidType, mlir::ValueRange{});
+            auto call =
+                cir::CallOp::create(builder, endOp.getLoc(),
+                                    mlir::FlatSymbolRefAttr::get(endCatchFunc),
+                                    voidType, mlir::ValueRange{});
+            mlir::Location endLoc = endOp.getLoc();
             endOp.erase();
+            if (onUnwindPath) {
+              ensureClangCallTerminate(endLoc);
+              mlir::Block *terminateBlock = buildTerminateBlock(
+                  call->getParentOfType<cir::FuncOp>(), endLoc);
+              mlir::IRRewriter rewriter(builder);
+              cir::replaceCallWithTryCall(call, terminateBlock, endLoc,
+                                          rewriter);
+            }
           }
         }
 

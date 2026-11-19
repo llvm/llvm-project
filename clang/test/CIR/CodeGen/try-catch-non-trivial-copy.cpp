@@ -179,7 +179,7 @@ int test_non_trivial_exception_copy() {
 // CIR-AFTER-EHABI:         %{{.*}}, %{{.*}} = cir.eh.inflight_exception cleanup
 // CIR-AFTER-EHABI:         cir.call @_ZN11MyExceptionD1Ev(%{{.*}}) nothrow
 // CIR-AFTER-EHABI:         cir.call @__cxa_end_catch() : () -> ()
-// CIR-AFTER-EHABI:         cir.call @__cxa_end_catch() : () -> ()
+// CIR-AFTER-EHABI:         cir.try_call @__cxa_end_catch() ^bb{{[0-9]+}}, ^[[T1E_END_TERM:bb[0-9]+]] : () -> ()
 // CIR-AFTER-EHABI:         cir.resume.flat %{{.*}}
 
 // Outer dispatch's resume.
@@ -187,6 +187,11 @@ int test_non_trivial_exception_copy() {
 // CIR-AFTER-EHABI:         cir.resume.flat %{{.*}}, %{{.*}}
 
 // CIR-AFTER-EHABI:         cir.return %{{.*}} : !s32i
+
+// CIR-AFTER-EHABI:       ^[[T1E_END_TERM]]:
+// CIR-AFTER-EHABI:         %{{.*}}, %{{.*}} = cir.eh.inflight_exception catch_all
+// CIR-AFTER-EHABI:         cir.call @__clang_call_terminate(%{{.*}}) nothrow {noreturn} : (!cir.ptr<!void>) -> ()
+// CIR-AFTER-EHABI:         cir.unreachable
 
 // Terminate landing pad.
 // CIR-AFTER-EHABI:       ^[[T1E_TERM]]:
@@ -237,12 +242,19 @@ int test_non_trivial_exception_copy() {
 // LLVM:                 cleanup
 // LLVM:         call void @_ZN11MyExceptionD1Ev(
 // LLVM:         call void @__cxa_end_catch()
-// LLVM:         call void @__cxa_end_catch()
+// LLVM:         invoke void @__cxa_end_catch()
+// LLVM-NEXT:            to label %{{.*}} unwind label %[[T1L_END_TERM:.*]]
 // LLVM:         resume { ptr, i32 }
 
 // LLVM:       [[T1L_RESUME]]:
 // LLVM:         resume { ptr, i32 }
 // LLVM:         ret i32
+
+// LLVM:       [[T1L_END_TERM]]:
+// LLVM:         landingpad { ptr, i32 }
+// LLVM:                 catch ptr null
+// LLVM:         call void @__clang_call_terminate(
+// LLVM:         unreachable
 
 // LLVM:       [[T1L_TERM]]:
 // LLVM:         landingpad { ptr, i32 }
