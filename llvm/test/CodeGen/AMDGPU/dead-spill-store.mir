@@ -1,0 +1,149 @@
+# RUN: llc -mtriple=amdgpu7.00-amd-amdhsa -passes='greedy<sgpr>' \
+# RUN:   -stress-regalloc=3 -o - %s | FileCheck %s
+
+# Greedy inserts an adjacent save/restore for the initial value, with both
+# temporaries assigned to the same SGPR. Forwarding makes the initial save
+# dead: the next access stores the updated value. Keep that save and reload.
+# The input contains no stack accesses.
+--- |
+  define void @adjacent_dead_save() { ret void }
+  declare void @callee()
+  define void @call_dead_save() { ret void }
+  define void @changed_exec() { ret void }
+  define void @dead_slot() { ret void }
+...
+---
+name: adjacent_dead_save
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: adjacent_dead_save
+    ; CHECK: SI_SPILL_S32_SAVE {{%[0-9]+}}, {{%stack\.[0-9]+}}
+    ; CHECK-NEXT: [[INITIAL:%[0-9]+]]:sgpr_32 = S_ADD_I32 $sgpr48, $sgpr49
+    ; CHECK-NEXT: [[UPDATED:%[0-9]+]]:sgpr_32 = COPY [[INITIAL]]
+    ; CHECK-NEXT: [[UPDATED]]:sgpr_32 = S_ADD_I32 [[UPDATED]], 1
+    ; CHECK-NEXT: SI_SPILL_S32_SAVE [[UPDATED]], [[SLOT:%stack\.[0-9]+]]
+    ; CHECK: [[RELOADED:%[0-9]+]]:sgpr_32 = SI_SPILL_S32_RESTORE [[SLOT]]
+    ; CHECK-NEXT: S_ADD_I32 {{.*}}, [[RELOADED]]
+    ; CHECK-NOT: [[SLOT]]
+    liveins: $sgpr48, $sgpr49
+    %0:sgpr_32 = S_ADD_I32 $sgpr48, $sgpr49, implicit-def dead $scc
+    %1:sgpr_32 = S_ADD_I32 $sgpr48, $sgpr49, implicit-def dead $scc
+    %2:sgpr_32 = S_ADD_I32 $sgpr48, $sgpr49, implicit-def dead $scc
+    %1:sgpr_32 = S_ADD_I32 %1, 1, implicit-def dead $scc
+    %2:sgpr_32 = S_ADD_I32 %2, 1, implicit-def dead $scc
+    %2:sgpr_32 = S_ADD_I32 %2, 1, implicit-def dead $scc
+    %1:sgpr_32 = S_ADD_I32 %1, 1, implicit-def dead $scc
+    %3:sgpr_32 = S_ADD_I32 $sgpr48, $sgpr49, implicit-def dead $scc
+    %3:sgpr_32 = S_ADD_I32 %3, 1, implicit-def dead $scc
+    %0:sgpr_32 = S_ADD_I32 %0, %1, implicit-def dead $scc
+    %0:sgpr_32 = S_ADD_I32 %0, %2, implicit-def dead $scc
+    %0:sgpr_32 = S_ADD_I32 %0, %3, implicit-def dead $scc
+    $sgpr0 = COPY %0
+    SI_RETURN implicit $sgpr0
+...
+
+# Calls are assumed to preserve EXEC, which the spill pseudos read.
+---
+name: call_dead_save
+tracksRegLiveness: true
+frameInfo:
+  adjustsStack: true
+  hasCalls: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: call_dead_save
+    ; CHECK: SI_SPILL_S32_SAVE {{%[0-9]+}}, {{%stack\.[0-9]+}}
+    ; CHECK-NEXT: [[INITIAL:%[0-9]+]]:sgpr_32 = S_ADD_I32 $sgpr48, $sgpr49
+    ; CHECK-NEXT: [[UPDATED:%[0-9]+]]:sgpr_32 = COPY [[INITIAL]]
+    ; CHECK-NEXT: [[UPDATED]]:sgpr_32 = S_ADD_I32 [[UPDATED]], 1
+    ; CHECK-NEXT: SI_SPILL_S32_SAVE [[UPDATED]], [[SLOT:%stack\.[0-9]+]]
+    ; CHECK: [[RELOADED:%[0-9]+]]:sgpr_32 = SI_SPILL_S32_RESTORE [[SLOT]]
+    ; CHECK-NEXT: S_ADD_I32 {{.*}}, [[RELOADED]]
+    ; CHECK-NOT: [[SLOT]]
+    liveins: $sgpr32, $sgpr48, $sgpr49
+    ADJCALLSTACKUP 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
+    dead $sgpr30_sgpr31 = SI_CALL undef $sgpr16_sgpr17, @callee, csr_amdgpu
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
+    %0:sgpr_32 = S_ADD_I32 $sgpr48, $sgpr49, implicit-def dead $scc
+    %1:sgpr_32 = S_ADD_I32 $sgpr48, $sgpr49, implicit-def dead $scc
+    %2:sgpr_32 = S_ADD_I32 $sgpr48, $sgpr49, implicit-def dead $scc
+    %1:sgpr_32 = S_ADD_I32 %1, 1, implicit-def dead $scc
+    %2:sgpr_32 = S_ADD_I32 %2, 1, implicit-def dead $scc
+    %2:sgpr_32 = S_ADD_I32 %2, 1, implicit-def dead $scc
+    %1:sgpr_32 = S_ADD_I32 %1, 1, implicit-def dead $scc
+    %3:sgpr_32 = S_ADD_I32 $sgpr48, $sgpr49, implicit-def dead $scc
+    %3:sgpr_32 = S_ADD_I32 %3, 1, implicit-def dead $scc
+    %0:sgpr_32 = S_ADD_I32 %0, %1, implicit-def dead $scc
+    %0:sgpr_32 = S_ADD_I32 %0, %2, implicit-def dead $scc
+    %0:sgpr_32 = S_ADD_I32 %0, %3, implicit-def dead $scc
+    $sgpr0 = COPY %0
+    SI_RETURN implicit $sgpr0
+...
+
+# Changes to EXEC conservatively block dead-store cleanup, even though the
+# adjacent restore still forwards. Both saves and the later reload remain.
+---
+name: changed_exec
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: changed_exec
+    ; CHECK: SI_SPILL_S32_SAVE {{%[0-9]+}}, {{%stack\.[0-9]+}}
+    ; CHECK-NEXT: [[INITIAL:%[0-9]+]]:sgpr_32 = S_ADD_I32 $sgpr48, $sgpr49
+    ; CHECK-NEXT: SI_SPILL_S32_SAVE [[INITIAL]], [[SLOT:%stack\.[0-9]+]]
+    ; CHECK-NEXT: [[UPDATED:%[0-9]+]]:sgpr_32 = COPY [[INITIAL]]
+    ; CHECK-NEXT: [[UPDATED]]:sgpr_32 = S_ADD_I32 [[UPDATED]], 1
+    ; CHECK-NEXT: SI_SPILL_S32_SAVE [[UPDATED]], [[SLOT]]
+    ; CHECK-NEXT: $exec = S_MOV_B64 -1
+    ; CHECK: = SI_SPILL_S32_RESTORE [[SLOT]]
+    liveins: $sgpr48, $sgpr49
+    %0:sgpr_32 = S_ADD_I32 $sgpr48, $sgpr49, implicit-def dead $scc
+    %1:sgpr_32 = S_ADD_I32 $sgpr48, $sgpr49, implicit-def dead $scc
+    %2:sgpr_32 = S_ADD_I32 $sgpr48, $sgpr49, implicit-def dead $scc
+    %1:sgpr_32 = S_ADD_I32 %1, 1, implicit-def dead $scc
+    %2:sgpr_32 = S_ADD_I32 %2, 1, implicit-def dead $scc
+    %2:sgpr_32 = S_ADD_I32 %2, 1, implicit-def dead $scc
+    %1:sgpr_32 = S_ADD_I32 %1, 1, implicit-def dead $scc
+    %3:sgpr_32 = S_ADD_I32 $sgpr48, $sgpr49, implicit-def dead $scc
+    %3:sgpr_32 = S_ADD_I32 %3, 1, implicit-def dead $scc
+    $exec = S_MOV_B64 -1
+    %0:sgpr_32 = S_ADD_I32 %0, %1, implicit-def dead $scc
+    %0:sgpr_32 = S_ADD_I32 %0, %2, implicit-def dead $scc
+    %0:sgpr_32 = S_ADD_I32 %0, %3, implicit-def dead $scc
+    $sgpr0 = COPY %0
+    SI_RETURN implicit $sgpr0
+...
+
+# %2 is spilled around each update in its chain. Every restore of its slot
+# directly follows a save to that slot, so all restores are forwarded and the
+# saves become dead. Once the saves are removed, the unused slot is removed.
+---
+name: dead_slot
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr48, $sgpr49
+    ; CHECK-LABEL: name: dead_slot
+    ; CHECK: stack:
+    ; CHECK-NOT: id: 1,
+    ; CHECK: body:
+    ; CHECK-NOT: %stack.1
+    ; CHECK: SI_RETURN
+    %0:sgpr_32 = S_ADD_I32 $sgpr48, $sgpr49, implicit-def dead $scc
+    %1:sgpr_32 = S_ADD_I32 $sgpr48, $sgpr49, implicit-def dead $scc
+    %2:sgpr_32 = S_ADD_I32 $sgpr48, $sgpr49, implicit-def dead $scc
+    %3:sgpr_32 = S_ADD_I32 $sgpr48, $sgpr49, implicit-def dead $scc
+    %0:sgpr_32 = S_ADD_I32 %0, 1, implicit-def dead $scc
+    %2:sgpr_32 = S_ADD_I32 %2, %2, implicit-def dead $scc
+    %3:sgpr_32 = S_ADD_I32 %3, 1, implicit-def dead $scc
+    %3:sgpr_32 = S_ADD_I32 %3, 1, implicit-def dead $scc
+    %2:sgpr_32 = S_ADD_I32 %2, %1, implicit-def dead $scc
+    %3:sgpr_32 = S_ADD_I32 %3, %3, implicit-def dead $scc
+    %2:sgpr_32 = S_ADD_I32 %2, %3, implicit-def dead $scc
+    %0:sgpr_32 = S_ADD_I32 %0, %1, implicit-def dead $scc
+    %0:sgpr_32 = S_ADD_I32 %0, %2, implicit-def dead $scc
+    %0:sgpr_32 = S_ADD_I32 %0, %3, implicit-def dead $scc
+    $sgpr0 = COPY %0
+    SI_RETURN implicit $sgpr0
+...
