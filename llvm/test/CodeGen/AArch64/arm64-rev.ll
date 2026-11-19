@@ -679,11 +679,10 @@ entry:
 define i64 @test_rev16_x_hwbyteswaps_complex2(i64 %a) nounwind {
 ; CHECK-SD-LABEL: test_rev16_x_hwbyteswaps_complex2:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    lsr x8, x0, #8
-; CHECK-SD-NEXT:    lsr x9, x0, #48
+; CHECK-SD-NEXT:    lsl x8, x0, #8
+; CHECK-SD-NEXT:    and x9, x0, #0xff00ff00ff00ff00
 ; CHECK-SD-NEXT:    lsr x10, x0, #32
-; CHECK-SD-NEXT:    and x8, x8, #0xff00ff00ff00ff
-; CHECK-SD-NEXT:    bfi x8, x9, #56, #8
+; CHECK-SD-NEXT:    bfxil x8, x9, #8, #56
 ; CHECK-SD-NEXT:    lsr x9, x0, #16
 ; CHECK-SD-NEXT:    bfi x8, x10, #40, #8
 ; CHECK-SD-NEXT:    bfi x8, x9, #24, #8
