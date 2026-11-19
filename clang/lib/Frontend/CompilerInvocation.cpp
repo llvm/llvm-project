@@ -348,6 +348,7 @@ static void denormalizeStringImpl(ArgumentConsumer Consumer,
                                   const Twine &Value) {
   switch (OptClass) {
   case Option::SeparateClass:
+  case Option::SeparateOrEqClass:
   case Option::JoinedOrSeparateClass:
   case Option::JoinedAndSeparateClass:
     Consumer(Spelling);
@@ -494,6 +495,7 @@ static void denormalizeStringVector(ArgumentConsumer Consumer,
   }
   case Option::JoinedClass:
   case Option::SeparateClass:
+  case Option::SeparateOrEqClass:
   case Option::JoinedOrSeparateClass:
     for (const std::string &Value : Values)
       denormalizeString(Consumer, SpellingOffset, OptClass, TableIndex, Value);
@@ -663,6 +665,16 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
       Warnings.insert(Warnings.begin(), "vector-conversion");
     if (!llvm::is_contained(Warnings, "matrix-conversion"))
       Warnings.insert(Warnings.begin(), "matrix-conversion");
+
+    // HLSL booleans in memory are i32; any non-zero value is true.
+    // Use icmp-ne rather than truncation to avoid InstCombine rewriting
+    // trunc i32 to i1 into an illegal wide <N x i1> bitcast (issue #140824).
+    if (Args.hasArg(OPT_load_bool_from_mem) &&
+        CodeGenOpts.getLoadBoolFromMem() !=
+            CodeGenOptions::BoolFromMem::NonZero)
+      Diags.Report(diag::warn_hlsl_bool_from_mem)
+          << Args.getLastArg(OPT_load_bool_from_mem)->getValue();
+    CodeGenOpts.setLoadBoolFromMem(CodeGenOptions::BoolFromMem::NonZero);
   }
 
   // When these options are used, the compiler is allowed to apply
@@ -4737,7 +4749,7 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
     } else
       Diags.Report(diag::err_drv_hlsl_unsupported_target) << T.str();
 
-    if (Opts.LangStd < LangStandard::lang_hlsl202x) {
+    if (Opts.LangStd < LangStandard::lang_hlsl2021) {
       const LangStandard &Requested =
           LangStandard::getLangStandardForKind(Opts.LangStd);
       const LangStandard &Recommended =

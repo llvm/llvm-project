@@ -75,6 +75,9 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// determineCalleeSaves().
   bool HasStackFrame = false;
 
+  /// SEH_StartProc/SEH_EndProc pseudos own the function's unwind boundaries.
+  bool HasExplicitWinCFIRanges = false;
+
   /// Amount of stack frame size, not including callee-saved registers.
   uint64_t LocalStackSize = 0;
 
@@ -211,6 +214,12 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// extended record.
   bool HasSwiftAsyncContext = false;
 
+  /// Whether this function makes a non-tail call, on Windows, to a function
+  /// that pops its own stack arguments. The unwinder gives the SP after that
+  /// pop, which isn't the SP our unwind info describes if we reserved the
+  /// argument area in the prologue, so we must be found via the frame pointer.
+  bool HasWinCallToCalleePopFunction = false;
+
   /// The stack slot where the Swift asynchronous context is stored.
   int SwiftAsyncContextFrameIdx = std::numeric_limits<int>::max();
 
@@ -315,6 +324,11 @@ public:
 
   bool hasStackFrame() const { return HasStackFrame; }
   void setHasStackFrame(bool s) { HasStackFrame = s; }
+
+  bool hasExplicitWinCFIRanges() const { return HasExplicitWinCFIRanges; }
+  void setHasExplicitWinCFIRanges(bool Value) {
+    HasExplicitWinCFIRanges = Value;
+  }
 
   bool isStackRealigned() const { return StackRealigned; }
   void setStackRealigned(bool s) { StackRealigned = s; }
@@ -600,6 +614,13 @@ public:
   }
   bool hasSwiftAsyncContext() const { return HasSwiftAsyncContext; }
 
+  void setHasWinCallToCalleePopFunction(bool Has) {
+    HasWinCallToCalleePopFunction = Has;
+  }
+  bool hasWinCallToCalleePopFunction() const {
+    return HasWinCallToCalleePopFunction;
+  }
+
   void setSwiftAsyncContextFrameIdx(int FI) {
     SwiftAsyncContextFrameIdx = FI;
   }
@@ -632,6 +653,7 @@ struct AArch64FunctionInfo final : public yaml::MachineFunctionInfo {
   std::optional<uint64_t> StackSizePPR;
   std::optional<bool> HasStackFrame;
   std::optional<bool> HasStreamingModeChanges;
+  bool HasExplicitWinCFIRanges = false;
 
   AArch64FunctionInfo() = default;
   AArch64FunctionInfo(const llvm::AArch64FunctionInfo &MFI);
@@ -647,6 +669,8 @@ template <> struct MappingTraits<AArch64FunctionInfo> {
     YamlIO.mapOptional("stackSizePPR", MFI.StackSizePPR);
     YamlIO.mapOptional("hasStackFrame", MFI.HasStackFrame);
     YamlIO.mapOptional("hasStreamingModeChanges", MFI.HasStreamingModeChanges);
+    YamlIO.mapOptional("hasExplicitWinCFIRanges", MFI.HasExplicitWinCFIRanges,
+                       false);
   }
 };
 

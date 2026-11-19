@@ -17,6 +17,7 @@
 ## Then we deleted the LC_ID_DYLIB command from the file.
 
 !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x01000007

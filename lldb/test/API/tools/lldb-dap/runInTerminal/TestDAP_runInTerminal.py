@@ -62,6 +62,32 @@ class TestDAP_runInTerminal(DAPTestCaseBase):
         session.continue_to_exit()
 
     @skipIfAsan
+    def test_similar_target_and_adapter_options(self):
+        """
+        Tests that the program gets arguments that are similar to lldb-dap options,
+        such as "--version", instead of the runInTerminal launcher using them.
+        """
+        program = self.getBuildArtifact("a.out")
+        session = self.build_and_create_session()
+
+        echo_args = ["--launch-target", "--version", "--", "other", "--help"]
+        process_event = session.launch(
+            LaunchArgs(
+                program,
+                console=Console.INTEGRATED_TERMINAL,
+                args=["echo", *echo_args],
+            )
+        )
+        session.verify_process_exited(after=process_event)
+
+        # Verify the program echoed each argument.
+        output = session.get_stdout().splitlines()
+        self.assertEqual(len(echo_args), len(output), output)
+
+        for arg, line in zip(echo_args, output):
+            self.assertEqual(f"echoed: {arg}", line, f"for {arg=}")
+
+    @skipIfAsan
     def test_launch_with_object_env(self):
         """
         Tests the "runInTerminal" reverse request. It makes sure that the IDE can
@@ -91,13 +117,16 @@ class TestDAP_runInTerminal(DAPTestCaseBase):
                 env=["FOO=bar"],
             )
         )
-        session.ensure_initialized()
         session.verify_configuration_done(expected_success=False)
 
         response = launch_handle.error()
         response_body = self.expect_not_none(response.body)
         error_msg = self.expect_not_none(response_body.error)
         self.assertIn(f"'{program}' does not exist", error_msg.format)
+
+        # Verify we never received an initialized event.
+        with self.assertRaises(TimeoutError):
+            session.wait_for_earliest_event(InitializedEvent, timeout=0)
 
     def test_client_missing_run_in_terminal_feature(self):
         program = self.getBuildArtifact("a.out")

@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fopenmp -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
-// RUN: %clang_cc1 -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t-offload.cir
+// RUN: %clang_cc1 -fopenmp -fopenmp-targets=amdgpu-amd-amdhsa -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t-offload.cir
 // RUN: FileCheck --input-file=%t-offload.cir %s -check-prefix=CIR
 // RUN: %clang_cc1 -fopenmp -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --input-file=%t-cir.ll %s -check-prefixes=LLVM,LLVMCIR
@@ -74,3 +74,6 @@ void complex_ops(float _Complex *c, float _Complex v) {
 // OGCG:   store float %{{.*}}, ptr %{{.*}}
 // OGCG:   %[[REAL:.*]] = load float, ptr %{{.*}}
 // OGCG:   %[[INC:.*]] = fadd float %[[REAL]], 1.000000e+00
+
+int call(int (*fp)(int)) { return fp(1); }
+// LLVM: call{{.*}}i32 %{{.*}}(i32 noundef 1)

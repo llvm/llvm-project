@@ -80,8 +80,15 @@ void llvm::computeSignatureVTs(const FunctionType *Ty,
     Params.push_back(PtrVT);
   }
 
-  for (auto *Param : Ty->params())
+  std::optional<size_t> SwiftAsyncIdx;
+  for (auto [I, Param] : enumerate(Ty->params())) {
+    if (TargetFunc && TargetFunc->hasParamAttribute(I, Attribute::SwiftAsync))
+      SwiftAsyncIdx = Params.size();
     computeLegalValueVTs(ContextFunc, TM, Param, Params);
+  }
+  // ABI contract: the async context must always be available in local 0.
+  if (SwiftAsyncIdx)
+    WebAssembly::moveToFront(Params, *SwiftAsyncIdx);
   if (Ty->isVarArg())
     Params.push_back(PtrVT);
 
@@ -107,7 +114,7 @@ void llvm::computeSignatureVTs(const FunctionType *Ty,
       Params.push_back(PtrVT);
     if (TargetFunc->getCallingConv() == CallingConv::SwiftTail &&
         !HasSwiftAsyncArg)
-      Params.push_back(PtrVT);
+      Params.insert(Params.begin(), PtrVT);
   }
 }
 

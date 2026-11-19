@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -cl-std=CL2.0 -fclangir -emit-cir %s -o %t-amdgcn.cir
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -cl-std=CL2.0 -fclangir -emit-cir %s -o %t-amdgcn.cir
 // RUN: FileCheck --input-file=%t-amdgcn.cir %s -check-prefix=CIR-AMDGCN
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -cl-std=CL2.0 -fclangir -emit-llvm %s -o %t-amdgcn-cir.ll
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -cl-std=CL2.0 -fclangir -emit-llvm %s -o %t-amdgcn-cir.ll
 // RUN: FileCheck --input-file=%t-amdgcn-cir.ll %s -check-prefix=LLVM-AMDGCN
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -cl-std=CL2.0 -emit-llvm %s -o %t-amdgcn.ll
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -cl-std=CL2.0 -emit-llvm %s -o %t-amdgcn.ll
 // RUN: FileCheck --input-file=%t-amdgcn.ll %s -check-prefix=LLVM-AMDGCN
 // RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -cl-std=CL2.0 -fclangir -emit-cir %s -o %t-nvptx.cir
 // RUN: FileCheck --input-file=%t-nvptx.cir %s -check-prefix=CIR-NVPTX

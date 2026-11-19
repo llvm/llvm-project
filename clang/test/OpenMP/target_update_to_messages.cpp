@@ -161,6 +161,8 @@ int main(int argc, char **argv) {
   int *m;
   int **BB, *offset;
   int ***BBB;
+  S8 s8v, *s8p = &s8v;
+  int *S8::*s8mp = &S8::ptr;
 
 #pragma omp target update to // expected-error {{expected '(' after 'to'}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
 #pragma omp target update to( // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{expected expression}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
@@ -209,6 +211,8 @@ int main(int argc, char **argv) {
 #pragma omp target update to(*(x+*(y+*(**BB+BBB)+s7.i))) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
 #pragma omp target update to(*(m+(m))) // expected-error {{invalid operands to binary expression ('int *' and 'int *')}}
 #pragma omp target update to(*(1+y+y)) // expected-error {{indirection requires pointer operand ('int' invalid)}}
+#pragma omp target update to(s8p->*s8mp) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}} le51-error {{expected addressable lvalue in 'to' clause}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+#pragma omp target update to((s8p->*s8mp)[:1]) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}} le51-error {{expected addressable lvalue in 'to' clause}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
   {}
   return tmain<int, 3>(argc)+tmain<from, 4>(argc); // expected-note {{in instantiation of function template specialization 'tmain<int, 3>' requested here}} expected-note {{in instantiation of function template specialization 'tmain<int, 4>' requested here}}
 }

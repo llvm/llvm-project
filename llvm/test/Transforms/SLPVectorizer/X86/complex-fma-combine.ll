@@ -9,7 +9,8 @@ define <2 x float> @fma_f32(ptr %A, float %B) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = fmul <2 x float> [[TMP0]], splat (float 2.000000e+00)
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> <float poison, float -0.000000e+00>, float [[B]], i64 0
 ; CHECK-NEXT:    [[RETVAL_SROA_0_0_VEC_INSERT_I6:%.*]] = fadd <2 x float> [[TMP2]], [[TMP1]]
-; CHECK-NEXT:    ret <2 x float> [[RETVAL_SROA_0_0_VEC_INSERT_I6]]
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x float> [[RETVAL_SROA_0_0_VEC_INSERT_I6]], <2 x float> [[TMP1]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    ret <2 x float> [[TMP4]]
 ;
 entry:
   %0 = load <2 x float>, ptr %A, align 4

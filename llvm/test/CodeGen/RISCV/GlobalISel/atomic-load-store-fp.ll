@@ -574,6 +574,7 @@ define void @atomic_store_f32_unordered(ptr %a, float %b) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sext.w a1, a1
 ; RV64I-NEXT:    li a2, 0
 ; RV64I-NEXT:    call __atomic_store_4
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
@@ -611,6 +612,7 @@ define void @atomic_store_f32_monotonic(ptr %a, float %b) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sext.w a1, a1
 ; RV64I-NEXT:    li a2, 0
 ; RV64I-NEXT:    call __atomic_store_4
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
@@ -631,8 +633,8 @@ define void @atomic_store_f32_release(ptr %a, float %b) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    li a2, 3
 ; RV32I-NEXT:    fmv.x.w a1, fa0
+; RV32I-NEXT:    li a2, 3
 ; RV32I-NEXT:    call __atomic_store_4
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
@@ -655,6 +657,7 @@ define void @atomic_store_f32_release(ptr %a, float %b) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sext.w a1, a1
 ; RV64I-NEXT:    li a2, 3
 ; RV64I-NEXT:    call __atomic_store_4
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
@@ -732,8 +735,8 @@ define void @atomic_store_f32_seq_cst(ptr %a, float %b) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    li a2, 5
 ; RV32I-NEXT:    fmv.x.w a1, fa0
+; RV32I-NEXT:    li a2, 5
 ; RV32I-NEXT:    call __atomic_store_4
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
@@ -757,6 +760,7 @@ define void @atomic_store_f32_seq_cst(ptr %a, float %b) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sext.w a1, a1
 ; RV64I-NEXT:    li a2, 5
 ; RV64I-NEXT:    call __atomic_store_4
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
@@ -779,8 +783,8 @@ define void @atomic_store_f32_seq_cst(ptr %a, float %b) nounwind {
 ;
 ; RV32IA-WMO-TRAILING-FENCE-LABEL: atomic_store_f32_seq_cst:
 ; RV32IA-WMO-TRAILING-FENCE:       # %bb.0:
-; RV32IA-WMO-TRAILING-FENCE-NEXT:    fence rw, w
 ; RV32IA-WMO-TRAILING-FENCE-NEXT:    fmv.x.w a1, fa0
+; RV32IA-WMO-TRAILING-FENCE-NEXT:    fence rw, w
 ; RV32IA-WMO-TRAILING-FENCE-NEXT:    sw a1, 0(a0)
 ; RV32IA-WMO-TRAILING-FENCE-NEXT:    fence rw, rw
 ; RV32IA-WMO-TRAILING-FENCE-NEXT:    ret
@@ -794,8 +798,8 @@ define void @atomic_store_f32_seq_cst(ptr %a, float %b) nounwind {
 ;
 ; RV64IA-WMO-TRAILING-FENCE-LABEL: atomic_store_f32_seq_cst:
 ; RV64IA-WMO-TRAILING-FENCE:       # %bb.0:
-; RV64IA-WMO-TRAILING-FENCE-NEXT:    fence rw, w
 ; RV64IA-WMO-TRAILING-FENCE-NEXT:    fmv.x.w a1, fa0
+; RV64IA-WMO-TRAILING-FENCE-NEXT:    fence rw, w
 ; RV64IA-WMO-TRAILING-FENCE-NEXT:    sw a1, 0(a0)
 ; RV64IA-WMO-TRAILING-FENCE-NEXT:    fence rw, rw
 ; RV64IA-WMO-TRAILING-FENCE-NEXT:    ret
@@ -1045,8 +1049,8 @@ define void @atomic_store_f64_seq_cst(ptr %a, double %b) nounwind {
 ;
 ; RV64IA-WMO-TRAILING-FENCE-LABEL: atomic_store_f64_seq_cst:
 ; RV64IA-WMO-TRAILING-FENCE:       # %bb.0:
-; RV64IA-WMO-TRAILING-FENCE-NEXT:    fence rw, w
 ; RV64IA-WMO-TRAILING-FENCE-NEXT:    fmv.x.d a1, fa0
+; RV64IA-WMO-TRAILING-FENCE-NEXT:    fence rw, w
 ; RV64IA-WMO-TRAILING-FENCE-NEXT:    sd a1, 0(a0)
 ; RV64IA-WMO-TRAILING-FENCE-NEXT:    fence rw, rw
 ; RV64IA-WMO-TRAILING-FENCE-NEXT:    ret

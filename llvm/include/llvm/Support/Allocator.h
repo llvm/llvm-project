@@ -64,7 +64,7 @@ LLVM_ABI void printBumpPtrAllocatorStats(unsigned NumSlabs, size_t TotalMemory);
 /// rounded up to a multiple of MinAlign so the fast path can skip realigning
 /// CurPtr when the requested alignment is no greater than MinAlign.
 template <typename AllocatorT = MallocAllocator, size_t SlabSize = 4096,
-          size_t SizeThreshold = SlabSize, size_t GrowthDelay = 128,
+          size_t SizeThreshold = SlabSize, size_t GrowthDelay = 8,
           size_t MinAlign = std::min<size_t>(8, alignof(std::max_align_t))>
 class BumpPtrAllocatorImpl
     : public AllocatorBase<BumpPtrAllocatorImpl<
@@ -455,7 +455,7 @@ public:
   }
 
   /// Allocate space for an array of objects without constructing them.
-  T *Allocate(size_t num = 1) {
+  LLVM_NO_SANITIZE_CFI_UNRELATED_CAST T *Allocate(size_t num = 1) {
     // Slabs are max_align_t-aligned and every size is a multiple of alignof(T),
     // so the bump pointer is already alignof(T)-aligned. Request alignment 1 so
     // the fast path skips realigning CurPtr; over-aligned T still needs it.

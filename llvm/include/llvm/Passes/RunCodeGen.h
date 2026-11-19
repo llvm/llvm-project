@@ -10,16 +10,19 @@
 #define LLVM_PASSES_RUN_CODEGEN_H
 
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
 
+// PassPlugin::invokePreCodeGenCallback() wants to match the parameter list
 LLVM_ABI Error runCodeGenPipeline(
     TargetMachine &TM, Module &M, raw_pwrite_stream &OS,
     raw_pwrite_stream *DwoOS, CodeGenFileType CGFT, bool DisableVerify = true,
     bool DisableSimplifyLibCalls = false,
+    const ModuleSummaryIndex *MSI = nullptr,
     IntrusiveRefCntPtr<vfs::FileSystem> VFS = vfs::getRealFileSystem());
 
 } // namespace llvm

@@ -21,7 +21,8 @@
 # RUN: ld.lld -pie --eh-frame-hdr -z pack-relative-relocs -T 3.lds a.o -o out3
 # RUN: llvm-objdump -s -j .eh_frame_hdr out3 | FileCheck %s --check-prefix=CHECK3
 
-## Case 4: Two FDEs share a PC. The table keeps one entry.
+## Case 4: Two FDEs share a PC. The table keeps one entry and, like the sdata4
+## table, reserves room for every live FDE.
 # RUN: ld.lld --eh-frame-hdr -T 1.lds dup.o -o out4
 # RUN: llvm-objdump -s -j .eh_frame_hdr out4 | FileCheck %s --check-prefix=CHECK4
 
@@ -42,8 +43,9 @@
 # CHECK3:      011c033c 2c000000 00000000 02000000
 # CHECK3-NEXT: 00800000 01000000 48000000 00000000
 # CHECK4:      section .eh_frame_hdr:
-# CHECK4-NEXT: 011c033c 1c000000 00000000 01000000
-# CHECK4-NEXT: 00100000 01000000 58000000 00000000
+# CHECK4-NEXT: 011c033c 2c000000 00000000 01000000
+# CHECK4-NEXT: 00100000 01000000 68000000 00000000
+# CHECK4-NEXT: 00000000 00000000 00000000 00000000
 # CHECK4-EMPTY:
 
 ## A corrupted .eh_frame reports exactly one error (not duplicated by the loop).

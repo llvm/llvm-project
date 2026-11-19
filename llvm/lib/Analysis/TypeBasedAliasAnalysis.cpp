@@ -100,6 +100,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
+#include "AnalysisOptions.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/MemoryLocation.h"
@@ -113,17 +114,10 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <cstdint>
 
 using namespace llvm;
-
-// A handy option for disabling TBAA functionality. The same effect can also be
-// achieved by stripping the !tbaa tags from IR, but this option is sometimes
-// more convenient.
-static cl::opt<bool> EnableTBAA("enable-tbaa", cl::init(true), cl::Hidden);
 
 namespace {
 
@@ -456,16 +450,16 @@ static const MDNode *getLeastCommonType(const MDNode *A, const MDNode *B) {
   SmallSetVector<const MDNode *, 4> PathA;
   TBAANode TA(A);
   while (TA.getNode()) {
-    if (!PathA.insert(TA.getNode()))
-      report_fatal_error("Cycle found in TBAA metadata.");
+    [[maybe_unused]] bool Inserted = PathA.insert(TA.getNode());
+    assert(Inserted && "Cycle found in TBAA metadata.");
     TA = TA.getParent();
   }
 
   SmallSetVector<const MDNode *, 4> PathB;
   TBAANode TB(B);
   while (TB.getNode()) {
-    if (!PathB.insert(TB.getNode()))
-      report_fatal_error("Cycle found in TBAA metadata.");
+    [[maybe_unused]] bool Inserted = PathB.insert(TB.getNode());
+    assert(Inserted && "Cycle found in TBAA metadata.");
     TB = TB.getParent();
   }
 
@@ -681,14 +675,19 @@ bool TypeBasedAAResult::Aliases(const MDNode *A, const MDNode *B) const {
   return matchAccessTags(A, B);
 }
 
+TypeBasedAAResult::TypeBasedAAResult(const LLVMContext &C,
+                                     bool UsingTypeSanitizer)
+    : Opts(getAnalysisOptions(C)), UsingTypeSanitizer(UsingTypeSanitizer) {}
+
 bool TypeBasedAAResult::shouldUseTBAA() const {
-  return EnableTBAA && !UsingTypeSanitizer;
+  return Opts.enable_tbaa && !UsingTypeSanitizer;
 }
 
 AnalysisKey TypeBasedAA::Key;
 
 TypeBasedAAResult TypeBasedAA::run(Function &F, FunctionAnalysisManager &AM) {
-  return TypeBasedAAResult(F.hasFnAttribute(Attribute::SanitizeType));
+  return TypeBasedAAResult(F.getContext(),
+                           F.hasFnAttribute(Attribute::SanitizeType));
 }
 
 char TypeBasedAAWrapperPass::ID = 0;
@@ -702,7 +701,8 @@ ImmutablePass *llvm::createTypeBasedAAWrapperPass() {
 TypeBasedAAWrapperPass::TypeBasedAAWrapperPass() : ImmutablePass(ID) {}
 
 bool TypeBasedAAWrapperPass::doInitialization(Module &M) {
-  Result.reset(new TypeBasedAAResult(/*UsingTypeSanitizer=*/false));
+  Result.reset(
+      new TypeBasedAAResult(M.getContext(), /*UsingTypeSanitizer=*/false));
   return false;
 }
 

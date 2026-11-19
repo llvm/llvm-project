@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -O0 -triple=x86_64-apple-darwin -target-cpu skylake-avx512 -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -O0 -triple=x86_64-apple-darwin -target-cpu skylake-avx512 -emit-llvm -o - -Wall -Werror | FileCheck %s %}
 // This test checks basic inline assembly recognition of k0-k7 registers for avx512.
 
 void test_basic_inline_asm_with_k_regs(void) {
