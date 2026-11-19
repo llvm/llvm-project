@@ -1089,3 +1089,32 @@ entry:
   %r = icmp slt i64 %a, -5
   ret i1 %r
 }
+
+define i1 @smin_plus_smax_second_split(i32 noundef %a, i32 noundef %b, i32 noundef %c, i32 noundef %d, i32 noundef %e) {
+; CHECK-LABEL: define i1 @smin_plus_smax_second_split
+; CHECK-SAME: (i32 noundef [[A:%.*]], i32 noundef [[B:%.*]], i32 noundef [[C:%.*]], i32 noundef [[D:%.*]], i32 noundef [[E:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[AC:%.*]] = add nsw i32 [[A]], [[C]]
+; CHECK-NEXT:    [[AC_E:%.*]] = icmp sle i32 [[AC]], [[E]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[AC_E]])
+; CHECK-NEXT:    [[AD:%.*]] = add nsw i32 [[A]], [[D]]
+; CHECK-NEXT:    [[AD_E:%.*]] = icmp sle i32 [[AD]], [[E]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[AD_E]])
+; CHECK-NEXT:    [[M1:%.*]] = call i32 @llvm.smin.i32(i32 [[A]], i32 [[B]])
+; CHECK-NEXT:    [[M2:%.*]] = call i32 @llvm.smax.i32(i32 [[C]], i32 [[D]])
+; CHECK-NEXT:    [[S:%.*]] = add nsw i32 [[M1]], [[M2]]
+; CHECK-NEXT:    ret i1 true
+;
+entry:
+  %ac = add nsw i32 %a, %c
+  %ac.e = icmp sle i32 %ac, %e
+  call void @llvm.assume(i1 %ac.e)
+  %ad = add nsw i32 %a, %d
+  %ad.e = icmp sle i32 %ad, %e
+  call void @llvm.assume(i1 %ad.e)
+  %m1 = call i32 @llvm.smin.i32(i32 %a, i32 %b)
+  %m2 = call i32 @llvm.smax.i32(i32 %c, i32 %d)
+  %s = add nsw i32 %m1, %m2
+  %r = icmp sle i32 %s, %e
+  ret i1 %r
+}
