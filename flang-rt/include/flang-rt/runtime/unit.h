@@ -102,6 +102,16 @@ using OpenFileClass = PseudoOpenFile;
 using FileFrameClass = FileFrame<ExternalFileUnit, 256>;
 #endif // defined(RT_USE_PSEUDO_FILE_UNIT)
 
+// Reads the 4-byte record marker at a file offset; false if it can't be read.
+using RecordMarkerReader = bool (*)(
+    void *context, std::int64_t offset, std::int32_t &marker);
+
+// Returns the offset of the first header of the sequential unformatted record
+// that ends at endOffset, or -1 if its markers are inconsistent.  For
+// BACKSPACE.
+RT_API_ATTRS std::int64_t FindUnformattedRecordStart(
+    std::int64_t endOffset, RecordMarkerReader, void *context);
+
 class ExternalFileUnit : public ConnectionState,
                          public OpenFileClass,
                          public FileFrameClass {
@@ -225,7 +235,7 @@ private:
   RT_API_ATTRS void CommitWrites();
   RT_API_ATTRS bool CheckDirectAccess(IoErrorHandler &);
   RT_API_ATTRS void HitEndOnRead(IoErrorHandler &);
-  RT_API_ATTRS std::uint32_t ReadHeaderOrFooter(std::int64_t frameOffset);
+  RT_API_ATTRS void ResetSequentialUnformattedStream();
 
   Lock lock_;
 
@@ -241,6 +251,10 @@ private:
   // manage the frame and the current record therein separately.
   std::int64_t frameOffsetInFile_{0};
   std::size_t recordOffsetInFrame_{0}; // of currentRecordNumber
+  std::int64_t unformattedDiskExtent_{0};
+  std::int64_t streamReadPos_{0};
+  std::size_t streamReadRemain_{0};
+  bool streamRead_{false};
   bool swapEndianness_{false};
   bool createdForInternalChildIo_{false};
   common::BitSet<64> asyncIdAvailable_[maxAsyncIds / 64];
