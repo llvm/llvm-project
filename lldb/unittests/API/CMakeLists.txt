@@ -12,6 +12,10 @@ add_lldb_unittest(APITests
   SBProtocolServerTest.cpp
   SBProgressTest.cpp
   SBTypeCategoryTest.cpp
+  SBTypeFilterTest.cpp
+  SBTypeFormatTest.cpp
+  SBTypeNameSpecifierTest.cpp
+  SBTypeSummaryTest.cpp
   SBTypeSyntheticTest.cpp
 
   SBAPITEST
