@@ -2310,11 +2310,11 @@ mlir::Value ScalarExprEmitter::emitMul(const BinOpInfo &ops) {
       ops.compType->isSignedIntegerOrEnumerationType()) {
     switch (cgf.getLangOpts().getSignedOverflowBehavior()) {
     case LangOptions::SOB_Defined:
-      if (!cgf.sanOpts.has(SanitizerKind::SignedIntegerOverflow))
+      if (!cgf.sanOpts.has(SanitizerKind::SignedIntegerOverflowArith))
         return builder.createMul(loc, ops.lhs, ops.rhs);
       [[fallthrough]];
     case LangOptions::SOB_Undefined:
-      if (!cgf.sanOpts.has(SanitizerKind::SignedIntegerOverflow))
+      if (!cgf.sanOpts.has(SanitizerKind::SignedIntegerOverflowArith))
         return builder.createNSWMul(loc, ops.lhs, ops.rhs);
       [[fallthrough]];
     case LangOptions::SOB_Trapping:
@@ -2498,11 +2498,11 @@ mlir::Value ScalarExprEmitter::emitAdd(const BinOpInfo &ops) {
       ops.compType->isSignedIntegerOrEnumerationType()) {
     switch (cgf.getLangOpts().getSignedOverflowBehavior()) {
     case LangOptions::SOB_Defined:
-      if (!cgf.sanOpts.has(SanitizerKind::SignedIntegerOverflow))
+      if (!cgf.sanOpts.has(SanitizerKind::SignedIntegerOverflowArith))
         return builder.createAdd(loc, ops.lhs, ops.rhs);
       [[fallthrough]];
     case LangOptions::SOB_Undefined:
-      if (!cgf.sanOpts.has(SanitizerKind::SignedIntegerOverflow))
+      if (!cgf.sanOpts.has(SanitizerKind::SignedIntegerOverflowArith))
         return builder.createNSWAdd(loc, ops.lhs, ops.rhs);
       [[fallthrough]];
     case LangOptions::SOB_Trapping:
@@ -2550,12 +2550,12 @@ mlir::Value ScalarExprEmitter::emitSub(const BinOpInfo &ops) {
         ops.compType->isSignedIntegerOrEnumerationType()) {
       switch (cgf.getLangOpts().getSignedOverflowBehavior()) {
       case LangOptions::SOB_Defined: {
-        if (!cgf.sanOpts.has(SanitizerKind::SignedIntegerOverflow))
+        if (!cgf.sanOpts.has(SanitizerKind::SignedIntegerOverflowArith))
           return builder.createSub(loc, ops.lhs, ops.rhs);
         [[fallthrough]];
       }
       case LangOptions::SOB_Undefined:
-        if (!cgf.sanOpts.has(SanitizerKind::SignedIntegerOverflow))
+        if (!cgf.sanOpts.has(SanitizerKind::SignedIntegerOverflowArith))
           return builder.createNSWSub(loc, ops.lhs, ops.rhs);
         [[fallthrough]];
       case LangOptions::SOB_Trapping:

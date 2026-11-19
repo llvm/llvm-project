@@ -1414,13 +1414,24 @@ static bool parseDiagnosticLevelMask(StringRef FlagName,
   return Success;
 }
 
+/// The driver expands sanitizer groups, so cc1 only accepts single sanitizers,
+/// and the groups that used to be single sanitizers.
+static bool isFormerSingleSanitizer(StringRef Name) {
+  // Split into signed-integer-overflow-arith and
+  // signed-integer-overflow-divide.
+  return Name == "signed-integer-overflow";
+}
+
 static void parseSanitizerKinds(StringRef FlagName,
                                 const std::vector<std::string> &Sanitizers,
                                 DiagnosticsEngine &Diags, SanitizerSet &S) {
   for (const auto &Sanitizer : Sanitizers) {
-    SanitizerMask K = parseSanitizerValue(Sanitizer, /*AllowGroups=*/false);
+    bool IsGroup = isFormerSingleSanitizer(Sanitizer);
+    SanitizerMask K = parseSanitizerValue(Sanitizer, /*AllowGroups=*/IsGroup);
     if (K == SanitizerMask())
       Diags.Report(diag::err_drv_invalid_value) << FlagName << Sanitizer;
+    else if (IsGroup)
+      S.Mask |= expandSanitizerGroups(K) & ~K;
     else
       S.set(K, true);
   }
@@ -1438,7 +1449,9 @@ parseSanitizerWeightedKinds(StringRef FlagName,
                             DiagnosticsEngine &Diags) {
   SanitizerMaskCutoffs Cutoffs;
   for (const auto &Sanitizer : Sanitizers) {
-    if (!parseSanitizerWeightedValue(Sanitizer, /*AllowGroups=*/false, Cutoffs))
+    bool AllowGroups =
+        isFormerSingleSanitizer(StringRef(Sanitizer).split('=').first);
+    if (!parseSanitizerWeightedValue(Sanitizer, AllowGroups, Cutoffs))
       Diags.Report(diag::err_drv_invalid_value) << FlagName << Sanitizer;
   }
   return Cutoffs;
