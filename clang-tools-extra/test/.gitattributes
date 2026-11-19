@@ -15,3 +15,4 @@ clang-apply-replacements/Inputs/crlf/crlf.cpp -text
 clang-apply-replacements/Inputs/crlf/crlf.cpp.expected -text
 clang-tidy/checkers/modernize/Inputs/macro-to-enum/crlf.cpp -text
 clang-tidy/checkers/modernize/Inputs/macro-to-enum/crlf.cpp.expected -text
+clang-tidy/infrastructure/nolint-crlf.cpp -text

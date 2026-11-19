@@ -21,6 +21,10 @@ namespace llvm {
 template <typename T> class SmallVectorImpl;
 } // namespace llvm
 
+namespace clang {
+class LangOptions;
+} // namespace clang
+
 namespace clang::tidy {
 
 /// This class is used to locate NOLINT comments in the file being analyzed, to
@@ -35,7 +39,8 @@ public:
   bool shouldSuppress(DiagnosticsEngine::Level DiagLevel,
                       const Diagnostic &Diag, StringRef DiagName,
                       SmallVectorImpl<tooling::Diagnostic> &NoLintErrors,
-                      bool AllowIO, bool EnableNoLintBlocks);
+                      bool AllowIO, bool EnableNoLintBlocks,
+                      const LangOptions *LangOpts = nullptr);
 
 private:
   class Impl;

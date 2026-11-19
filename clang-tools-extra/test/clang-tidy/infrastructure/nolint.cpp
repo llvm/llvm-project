@@ -133,4 +133,55 @@ int array2[10];  // NOLINT(cppcoreguidelines-avoid-c-arrays)
 int array3[10];  // NOLINT(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
 int array4[10];  // NOLINT(*-avoid-c-arrays)
 
-// CHECK-MESSAGES: Suppressed 36 warnings (36 NOLINT)
+// String literals must not act as NOLINT directives:
+class StrLit1 { StrLit1(int x); }; const char *SL1 = "NOLINT";
+// CHECK-MESSAGES: :[[@LINE-1]]:17: warning: single-argument constructors must be marked explicit
+
+class StrLit2 { StrLit2(int x); }; const char *SL2 = "NOLINT(google-explicit-constructor)";
+// CHECK-MESSAGES: :[[@LINE-1]]:17: warning: single-argument constructors must be marked explicit
+
+// Raw string literals must not act as NOLINT directives:
+class RawStrLit1 { RawStrLit1(int x); }; const char *RSL1 = R"(NOLINT)";
+// CHECK-MESSAGES: :[[@LINE-1]]:20: warning: single-argument constructors must be marked explicit
+
+class RawStrLit2 { RawStrLit2(int x); }; const char *RSL2 = R"(NOLINT(google-explicit-constructor))";
+// CHECK-MESSAGES: :[[@LINE-1]]:20: warning: single-argument constructors must be marked explicit
+
+// NOLINTNEXTLINE in string literals must not suppress subsequent lines:
+const char *SLNL = "NOLINTNEXTLINE";
+class StrLitNextLine { StrLitNextLine(int x); };
+// CHECK-MESSAGES: :[[@LINE-1]]:24: warning: single-argument constructors must be marked explicit
+
+const char *RSLNL = R"(NOLINTNEXTLINE(google-explicit-constructor))";
+class RawStrLitNextLine { RawStrLitNextLine(int x); };
+// CHECK-MESSAGES: :[[@LINE-1]]:27: warning: single-argument constructors must be marked explicit
+
+// NOLINTBEGIN/NOLINTEND inside string literals must not suppress:
+const char *SLB = "NOLINTBEGIN";
+class StrLitBlock { StrLitBlock(int x); };
+// CHECK-MESSAGES: :[[@LINE-1]]:21: warning: single-argument constructors must be marked explicit
+const char *SLE = "NOLINTEND";
+
+const char *RSLB = R"(NOLINTBEGIN(google-explicit-constructor))";
+class RawStrLitBlock { RawStrLitBlock(int x); };
+// CHECK-MESSAGES: :[[@LINE-1]]:24: warning: single-argument constructors must be marked explicit
+const char *RSLE = R"(NOLINTEND(google-explicit-constructor))";
+
+// Genuine block comments must continue to suppress:
+class BlockNolint { BlockNolint(int x); }; /* NOLINT */
+/* NOLINT(google-explicit-constructor) */ class BlockNolint2 { BlockNolint2(int x); };
+
+// Multiline block comments with directives:
+/*
+   NOLINTNEXTLINE(google-explicit-constructor) */
+class MultilineBlockNextLine { MultilineBlockNextLine(int x); };
+
+/*
+   NOLINTBEGIN(google-explicit-constructor)
+*/
+class BlockBeginEnd { BlockBeginEnd(int x); };
+/*
+   NOLINTEND(google-explicit-constructor)
+*/
+
+// CHECK-MESSAGES: Suppressed 40 warnings (40 NOLINT)
