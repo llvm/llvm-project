@@ -785,10 +785,6 @@ genrule(
     cmd_bat = "(for /f \"usebackq delims=\" %l in (\"$(SRCS)\") do @>>$(OUTS) echo _%l)",
 )
 
-# Create a shared library using linkshared=True for liblldb. This uses
-# cc_binary instead of cc_shared_library since the latter expects you to
-# re-export all transitive dependencies vs them being relinked into other
-# binaries.
 cc_shared_library(
     name = "lldb{}".format(PACKAGE_VERSION),
     additional_linker_inputs = select({

@@ -25,6 +25,6 @@ def llvm_libxml2_exports():
     applies to @libxml2.
     """
     return select({
-        Label("//third-party:llvm_libxml2_from_source"): [str(Label("@libxml2//:xml2"))],
+        Label("//third-party:llvm_libxml2_from_source_no_dylib"): [str(Label("@libxml2//:xml2"))],
         "//conditions:default": [],
     })
