@@ -161,61 +161,6 @@ LogicalResult transform::ApplyGPUPromoteShuffleToAMDGPUPatternsOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// ApplyUnrollVectorsSubgroupMmaOp
-//===----------------------------------------------------------------------===//
-
-/// Returns the target vector size for the target operation based on the native
-/// vector size specified with `m`, `n`, and `k`.
-static std::optional<SmallVector<int64_t>>
-getSubgroupMmaNativeVectorSize(Operation *op, int64_t m, int64_t n, int64_t k) {
-  if (auto contract = dyn_cast<vector::ContractionOp>(op)) {
-    int64_t contractRank = contract.getIteratorTypes().size();
-    if (contractRank < 3)
-      return std::nullopt;
-    SmallVector<int64_t> nativeSize(contractRank - 3, 1);
-    nativeSize.append({m, n, k});
-    return nativeSize;
-  }
-  if (auto writeOp = dyn_cast<vector::TransferWriteOp>(op)) {
-    int64_t writeRank = writeOp.getVectorType().getRank();
-    if (writeRank < 2)
-      return std::nullopt;
-    SmallVector<int64_t> nativeSize(writeRank - 2, 1);
-    nativeSize.append({m, n});
-    return nativeSize;
-  }
-  if (auto readOp = dyn_cast<vector::TransferReadOp>(op)) {
-    // Transfer read ops may need different shapes based on how they are being
-    // used. For simplicity just match the shape used by the extract strided op.
-    VectorType sliceType;
-    for (Operation *users : op->getUsers()) {
-      auto extract = dyn_cast<vector::ExtractStridedSliceOp>(users);
-      if (!extract)
-        return std::nullopt;
-      auto vecType = cast<VectorType>(extract.getResult().getType());
-      if (sliceType && sliceType != vecType)
-        return std::nullopt;
-      sliceType = vecType;
-    }
-    return llvm::to_vector(sliceType.getShape());
-  }
-  return std::nullopt;
-}
-
-void transform::ApplyUnrollVectorsSubgroupMmaOp::populatePatterns(
-    RewritePatternSet &patterns) {
-  int64_t m = getM();
-  int64_t n = getN();
-  int64_t k = getK();
-  auto nativeShapeFn =
-      [m, n, k](Operation *op) -> std::optional<SmallVector<int64_t>> {
-    return getSubgroupMmaNativeVectorSize(op, m, n, k);
-  };
-  vector::populateVectorUnrollPatterns(
-      patterns, vector::UnrollVectorOptions().setNativeShapeFn(nativeShapeFn));
-}
-
-//===----------------------------------------------------------------------===//
 // EliminateBarriersOp
 //===----------------------------------------------------------------------===//
 
