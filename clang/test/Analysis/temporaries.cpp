@@ -1254,13 +1254,13 @@ struct Obj {
 };
 
 Obj inner() {
-  // This is stack frame #2 (displayed as LC2 in the conjured symbol dump)
+  // This is stack frame #2 (displayed as LC2 in the conjured symbol dump).
   Obj o;
   return o;
 }
 
 Obj outer() {
-  // This is stack frame #1 (would be displayed as LC1)
+  // This is stack frame #1 (would be displayed as LC1).
   return inner();
 }
 } // namespace stack_frame_of_return_from_top
