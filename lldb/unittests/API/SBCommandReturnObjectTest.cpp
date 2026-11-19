@@ -33,8 +33,21 @@ TEST_F(SBCommandReturnObjectTest, SetErrorIgnoresSuccess) {
   success.Clear();
   ASSERT_TRUE(success.IsValid());
   ASSERT_TRUE(success.Success());
-  result.SetStatus(eReturnStatusSuccessFinishResult);
+  result.SetStatus(eReturnStatusSuccessContinuingNoResult);
   result.SetError(success, "fallback");
-  EXPECT_TRUE(result.Succeeded());
+  EXPECT_EQ(result.GetStatus(), eReturnStatusSuccessContinuingNoResult);
   EXPECT_EQ(result.GetErrorSize(), 0u);
+}
+
+TEST_F(SBCommandReturnObjectTest, SetErrorSuccessResetsFailure) {
+  SBCommandReturnObject result;
+  SBError failure("boom");
+  result.SetError(failure);
+  ASSERT_FALSE(result.Succeeded());
+
+  SBError success("cleared");
+  success.Clear();
+  result.SetError(success);
+  EXPECT_EQ(result.GetStatus(), eReturnStatusSuccessFinishResult);
+  EXPECT_NE(std::string(result.GetError()).find("boom"), std::string::npos);
 }
