@@ -549,7 +549,7 @@ define void@sext_sub_nsw_for_address(ptr %base, i64 %n, ptr %src) #0 {
 ; CHECK-NEXT:    [[TMP13:%.*]] = or i1 [[TMP11]], [[TMP12]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = sub i64 0, [[MUL_RESULT]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[TMP14]]
-; CHECK-NEXT:    [[TMP16:%.*]] = icmp ugt ptr [[TMP15]], [[BASE]]
+; CHECK-NEXT:    [[TMP16:%.*]] = icmp sgt ptr [[TMP15]], [[BASE]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = or i1 [[TMP16]], [[MUL_OVERFLOW]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = or i1 [[TMP5]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = or i1 [[TMP18]], [[TMP13]]
