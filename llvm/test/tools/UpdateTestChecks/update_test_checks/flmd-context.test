@@ -1,0 +1,12 @@
+# Verify that update_test_checks can generate checks for an
+# !MDFunctionLocalContext, which is printed across multiple lines.
+# RUN: cp -f %S/Inputs/flmd-context.ll %t.ll && %update_test_checks %t.ll --version 6 --check-globals smart
+# RUN: diff -u %t.ll %S/Inputs/flmd-context.ll.expected
+
+# Verify script is idempotent
+# RUN: %update_test_checks %t.ll --version 6 --check-globals smart
+# RUN: diff -u %t.ll %S/Inputs/flmd-context.ll.expected
+
+# Verify it also works for check-globals all
+# RUN: cp -f %S/Inputs/flmd-context.ll %t.ll && %update_test_checks %t.ll --version 6 --check-globals all
+# RUN: diff -u %t.ll %S/Inputs/flmd-context.ll.all.expected
