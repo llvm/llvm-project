@@ -86,6 +86,7 @@ def ULLong : FuncArgType;
 def UInt128 : FuncArgType;
 def SizeT : FuncArgType;    // size_t.
 def SSizeT : FuncArgType;   // POSIX ssize_t.
+def WChar : FuncArgType;    // wchar_t.
 defvar AlignValT = SizeT;  // std::align_val_t.
 def CmpResult : FuncArgType; // libgcc_cmp_return.
 def Half : FuncArgType;     // IEEE half.

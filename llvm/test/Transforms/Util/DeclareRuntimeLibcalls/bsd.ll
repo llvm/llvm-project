@@ -550,6 +550,7 @@
 ; LINUX-NEXT: declare float @truncf(float) [[NOMEM_ATTRS]]
 ; LINUX-NEXT: declare fp128 @truncf128(fp128) [[NOMEM_ATTRS]]
 ; LINUX-NEXT: declare x86_fp80 @truncl(x86_fp80) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare ptr @wmemset(ptr, i32, i64)
 ; LINUX-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; LINUX-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 ; LINUX-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
@@ -1051,6 +1052,7 @@
 ; FREEBSD-NEXT: declare double @trunc(double) [[NOMEM_ATTRS]]
 ; FREEBSD-NEXT: declare float @truncf(float) [[NOMEM_ATTRS]]
 ; FREEBSD-NEXT: declare x86_fp80 @truncl(x86_fp80) [[NOMEM_ATTRS]]
+; FREEBSD-NEXT: declare ptr @wmemset(ptr, i32, i64)
 ; FREEBSD-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; FREEBSD-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 ; FREEBSD-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
@@ -1552,6 +1554,7 @@
 ; OPENBSD-NEXT: declare double @trunc(double) [[NOMEM_ATTRS]]
 ; OPENBSD-NEXT: declare float @truncf(float) [[NOMEM_ATTRS]]
 ; OPENBSD-NEXT: declare x86_fp80 @truncl(x86_fp80) [[NOMEM_ATTRS]]
+; OPENBSD-NEXT: declare ptr @wmemset(ptr, i32, i64)
 ; OPENBSD-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; OPENBSD-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 ; OPENBSD-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }

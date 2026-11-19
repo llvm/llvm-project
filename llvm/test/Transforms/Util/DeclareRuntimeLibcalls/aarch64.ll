@@ -595,6 +595,7 @@
 ; LINUX-NEXT: declare double @trunc(double) [[NOMEM_ATTRS]]
 ; LINUX-NEXT: declare float @truncf(float) [[NOMEM_ATTRS]]
 ; LINUX-NEXT: declare fp128 @truncl(fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare ptr @wmemset(ptr, i32, i64)
 ; LINUX-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; LINUX-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 ; LINUX-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
@@ -1135,6 +1136,7 @@
 ; DARWIN-NEXT: declare float @tgammaf(float) [[SQRT_ATTRS]]
 ; DARWIN-NEXT: declare double @trunc(double) [[NOMEM_ATTRS]]
 ; DARWIN-NEXT: declare float @truncf(float) [[NOMEM_ATTRS]]
+; DARWIN-NEXT: declare ptr @wmemset(ptr, i32, i64)
 ; DARWIN-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; DARWIN-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 ; DARWIN-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
@@ -1669,6 +1671,7 @@
 ; WINMSVC-NEXT: declare float @tgammaf(float) [[SQRT_ATTRS]]
 ; WINMSVC-NEXT: declare double @trunc(double) [[NOMEM_ATTRS]]
 ; WINMSVC-NEXT: declare float @truncf(float) [[NOMEM_ATTRS]]
+; WINMSVC-NEXT: declare ptr @wmemset(ptr, i16, i64)
 ; WINMSVC-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; WINMSVC-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 ; WINMSVC-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
@@ -2206,6 +2209,7 @@
 ; MINGW-NEXT: declare float @tgammaf(float) [[SQRT_ATTRS]]
 ; MINGW-NEXT: declare double @trunc(double) [[NOMEM_ATTRS]]
 ; MINGW-NEXT: declare float @truncf(float) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare ptr @wmemset(ptr, i16, i64)
 ; MINGW-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; MINGW-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 ; MINGW-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
@@ -2804,6 +2808,7 @@
 ; ANDROID-NEXT: declare double @trunc(double) [[NOMEM_ATTRS]]
 ; ANDROID-NEXT: declare float @truncf(float) [[NOMEM_ATTRS]]
 ; ANDROID-NEXT: declare fp128 @truncl(fp128) [[NOMEM_ATTRS]]
+; ANDROID-NEXT: declare ptr @wmemset(ptr, i32, i64)
 ; ANDROID-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; ANDROID-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 ; ANDROID-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
