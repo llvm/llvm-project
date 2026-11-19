@@ -611,7 +611,9 @@ if config.target_os == "Darwin":
             sim_os_version = parts + (0,) * (3 - len(parts))
 
         if sim_os_version is None:
-            lit_config.warning("Could not determine OS version of the simulator runtime")
+            lit_config.warning(
+                "Could not determine OS version of the simulator runtime"
+            )
         # 27.0-27.2 simulators cannot interpose certain calls from the shared
         # cache (e.g. memcpy/memcmp/strlen), so ASan cannot intercept them.
         elif (27, 0, 0) <= sim_os_version < (27, 3, 0):
