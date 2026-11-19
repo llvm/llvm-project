@@ -797,3 +797,42 @@ func.func @nested_region_outside_loop_use() {
 
 // CHECK: scf.execute_region
 // CHECK-NEXT: "test.foo"(%[[RES]])
+
+// -----
+
+// Test that %v, used by a latch predecessor (^bb3) and outside the inner loop
+// (^bb5), gets properly forwarded out of the loop.
+
+func.func @escaping_value_used_by_latch_predecessor(%cond: i1, %arg: i32) -> i32 {
+  cf.br ^bb0
+^bb0:
+  cf.br ^bb1(%arg, %arg : i32, i32)
+^bb1(%0: i32, %1: i32):
+  cf.cond_br %cond, ^bb2, ^bb6
+^bb2:
+  %v = arith.cmpi eq, %arg, %arg : i32
+  cf.cond_br %cond, ^bb3, ^bb5
+^bb3:
+  cf.cond_br %v, ^bb0, ^bb4(%arg : i32)
+^bb4(%2: i32):
+  cf.br ^bb1(%arg, %arg : i32, i32)
+^bb5:
+  cf.cond_br %v, ^bb0, ^bb6
+^bb6:
+  return %arg : i32
+}
+
+// CHECK-LABEL: func @escaping_value_used_by_latch_predecessor
+// CHECK-SAME: %[[COND:[[:alnum:]]+]]
+// CHECK-SAME: %[[ARG:[[:alnum:]]+]]
+// CHECK: scf.while
+// CHECK:   %[[INNER:.*]]:6 = scf.while
+// CHECK:     %[[IF:.*]]:7 = scf.if %[[COND]]
+// CHECK:       %[[V:.*]] = arith.cmpi eq, %[[ARG]], %[[ARG]]
+// CHECK:       scf.if %[[V]]
+// CHECK:       scf.yield %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %[[V]]
+// CHECK:     scf.condition(%{{.*}}) %[[IF]]#0, %[[IF]]#1, %[[IF]]#6, %[[IF]]#2, %[[IF]]#3, %[[IF]]#4
+// CHECK:   scf.index_switch
+// CHECK:   default
+// CHECK:     scf.if %[[INNER]]#2
+// CHECK: return %[[ARG]]
