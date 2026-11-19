@@ -664,6 +664,8 @@ defm lto_known_safe_vtables : EEq<"lto-known-safe-vtables",
 def lto_obj_path_eq: JJ<"lto-obj-path=">;
 def lto_sample_profile: JJ<"lto-sample-profile=">,
   HelpText<"Sample profile file path">;
+def lto_memprof_profile: JJ<"lto-memprof-profile=">,
+  HelpText<"Memory profile file path">;
 defm lto_validate_all_vtables_have_type_infos: BB<"lto-validate-all-vtables-have-type-infos",
   "Validate that all vtables have type infos for LTO link",
   "Do not validate that all vtables have type infos for LTO link">;

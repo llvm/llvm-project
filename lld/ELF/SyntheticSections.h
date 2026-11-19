@@ -35,11 +35,16 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Threading.h"
+#include <array>
 
 namespace lld::elf {
 class Defined;
 struct PhdrEntry;
 class SymbolTableBaseSection;
+
+// Compute the stable identifier for a MemProf-instrumented shared object
+// before LTO optimization starts.
+std::optional<std::array<uint8_t, 16>> computeMemProfModuleId(Ctx &ctx);
 
 // Section for .eh_frame.
 class EhFrameSection final : public SyntheticSection {
@@ -161,6 +166,18 @@ public:
 
 private:
   uint8_t *hashBuf;
+};
+
+// The identifier derived from the translation units linked into a
+// MemProf-instrumented shared object.
+class MemProfModuleIdSection final : public SyntheticSection {
+public:
+  MemProfModuleIdSection(Ctx &, llvm::ArrayRef<uint8_t> moduleId);
+  void writeTo(uint8_t *buf) override;
+  size_t getSize() const override { return 36; }
+
+private:
+  std::array<uint8_t, 16> moduleId;
 };
 
 // BssSection is used to reserve space for copy relocations and common symbols.

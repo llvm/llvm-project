@@ -490,6 +490,12 @@ struct IndexedMemProfRecord {
 // mapped to functions using this GUID.
 LLVM_ABI GlobalValue::GUID getGUID(const StringRef FunctionName);
 
+// Returns the GUID for the function name qualified by the stable MemProf
+// module ID. This distinguishes equal function names in different profiled
+// shared objects.
+LLVM_ABI GlobalValue::GUID getGUID(const StringRef FunctionName,
+                                   ArrayRef<uint8_t> ModuleId);
+
 // Holds call site information with frame contents inline.
 struct CallSiteInfo {
   // The frames in the call stack
