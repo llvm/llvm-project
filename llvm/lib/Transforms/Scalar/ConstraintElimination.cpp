@@ -604,18 +604,23 @@ static bool doesHoldInRange(ConstraintInfo &Info, Value *Op,
 
 static bool isKnownNoWrap(Value *V, ConstraintInfo &Info, bool Signed);
 
-/// Returns D if \p X is D udiv W, D lshr W or D sdiv C for a constant C >= 1,
-/// for a sub D = Z - \p Y, and nullptr otherwise. X <=u D holds for udiv and
-/// lshr, and for sdiv if D >=s 0, which is reported in \p IsSDiv.
-static BinaryOperator *getBoundingSub(Value *X, Value *Y, bool &IsSDiv) {
-  BinaryOperator *D;
-  const APInt *C;
-  IsSDiv = match(X, m_SDiv(m_BinOp(D), m_APInt(C))) && C->sge(1);
-  if ((IsSDiv || match(X, m_CombineOr(m_UDiv(m_BinOp(D), m_Value()),
-                                      m_LShr(m_BinOp(D), m_Value())))) &&
-      match(D, m_Sub(m_Value(), m_Specific(Y))))
-    return D;
-  return nullptr;
+/// Returns true if \p X <=u D for a sub D = Z - \p Y, and D does not wrap
+/// unsigned, so that X + Y does not wrap unsigned.
+static bool isBoundedByNoWrapSub(Value *X, Value *Y, ConstraintInfo &Info) {
+  Value *D = nullptr;
+  Value *SDiv = nullptr;
+  auto BoundingSub = m_Value(D, m_Sub(m_Value(), m_Specific(Y)));
+  if (!match(X,
+             m_CombineOr(
+                 m_LShr(BoundingSub, m_Value()), m_UDiv(BoundingSub, m_Value()),
+                 m_Value(SDiv, m_SDiv(BoundingSub, m_StrictlyPositive())))))
+    return false;
+
+  if (!isKnownNoWrap(D, Info, /*Signed=*/false))
+    return false;
+
+  // D sdiv C <=u D only holds for D >=s 0.
+  return !SDiv || Info.isKnownNonNegative(D);
 }
 
 /// Returns true if \p Opcode applied to \p Op0 and \p Op1 with \p NoWrapFlags
@@ -630,14 +635,10 @@ static bool isKnownNoWrap(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
 
   // X + Y does not wrap unsigned if X <=u D for D = Z - Y, and D does not wrap
   // unsigned.
-  if (Opcode == Instruction::Add && !Signed)
-    for (auto [X, Y] : {std::pair(Op0, Op1), std::pair(Op1, Op0)}) {
-      bool IsSDiv;
-      if (BinaryOperator *D = getBoundingSub(X, Y, IsSDiv))
-        if (isKnownNoWrap(D, Info, /*Signed=*/false) &&
-            (!IsSDiv || Info.isKnownNonNegative(D)))
-          return true;
-    }
+  if (Opcode == Instruction::Add && !Signed &&
+      (isBoundedByNoWrapSub(Op0, Op1, Info) ||
+       isBoundedByNoWrapSub(Op1, Op0, Info)))
+    return true;
 
   if (Opcode == Instruction::Sub) {
     // Op0 - Op1 does not wrap unsigned if Op0 >=u Op1.
