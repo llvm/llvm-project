@@ -7363,7 +7363,8 @@ Speculation::Speculatability ScaledContractOp::getSpeculatability() {
 
 namespace {
 /// Iteration space of a decomposed scaled contraction where block scaled dims
-/// are expanded at scaling block boundaries.
+/// are expanded at scaling block boundaries. The epilogue, i.e., the scaling
+/// and the final accumulation, iterates over the dims which are not contracted.
 struct ExpandedScaledContract {
   /// Expanded shape of each original dim. Empty if the dim is not expanded.
   SmallVector<SmallVector<int64_t>> expandedShapes;
@@ -7400,14 +7401,6 @@ struct ExpandedScaledContract {
 /// range.
 static bool isUniformScale(int64_t loopRange, int64_t blockSize) {
   return !ShapedType::isDynamic(loopRange) && loopRange <= blockSize;
-}
-
-/// Returns the floating-point type used for the contraction, the scaling, and
-/// the accumulation, which is at least f32.
-static FloatType getScalingComputeType(ScaledContractOp op) {
-  auto outType =
-      cast<FloatType>(getElementTypeOrSelf(op.getDpsInitOperand(0)->get()));
-  return outType.getWidth() > 32 ? outType : Float32Type::get(op.getContext());
 }
 
 /// Returns true if all operand dims indexed by the iteration dim are static.
@@ -7694,7 +7687,10 @@ ScaledContractOp::decomposeOperation(OpBuilder &b) {
   SmallVector<OpOperand *> scales = getScaleOperands();
   OpOperand *output = getDpsInitOperand(0);
   TypeFn castSignedness = getCast();
-  FloatType computeType = getScalingComputeType(*this);
+  // Intermediate values use at least f32 such that narrow outputs are rounded
+  // only once.
+  auto outType = cast<FloatType>(getElementTypeOrSelf(output->get()));
+  FloatType computeType = outType.getWidth() > 32 ? outType : b.getF32Type();
 
   // Sizes of dims which are not expanded are taken from the first data operand
   // or output indexed by the dim.

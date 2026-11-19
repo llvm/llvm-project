@@ -488,7 +488,7 @@ module attributes {transform.with_named_sequence} {
 
 // MXFP4 block scaling of the reduction dim - the reduction dim is expanded at
 // scaling block boundaries; the contraction reduces within scaling blocks, the
-// scaling block results are scaled in place and then reduced into the output.
+// partial results are scaled in place and then reduced into the output.
 
 func.func @scaled_contract_mxfp4(
     %A: tensor<8x64xf4E2M1FN>, %sA: tensor<8x2xf8E8M0FNU>,
@@ -945,7 +945,7 @@ func.func @negative_scaled_contract_partial_block(
   return %D : tensor<8x4xf32>
 }
 
-// Scaling block sizes of the reduction dim which do not divide each other.
+// Scaling blocks of the reduction dim which do not nest.
 // CHECK-LABEL: func @negative_scaled_contract_incompatible_blocks
 //  CHECK-NEXT:   linalg.scaled_contract
 func.func @negative_scaled_contract_incompatible_blocks(
