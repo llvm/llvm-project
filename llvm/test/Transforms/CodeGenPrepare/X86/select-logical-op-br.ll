@@ -9,15 +9,10 @@ target triple = "x86_64-unknown-unknown"
 define i32 @logical_or_br(i32 %a, i32 %b) {
 ; CHECK-LABEL: define i32 @logical_or_br(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[OR_FROZEN:%.*]] = freeze i32 [[A]]
-; CHECK-NEXT:    [[C1:%.*]] = icmp ugt i32 [[OR_FROZEN]], 10
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[C1:%.*]] = icmp ugt i32 [[A]], 10
 ; CHECK-NEXT:    [[C2:%.*]] = icmp ugt i32 [[B]], 20
-; CHECK-NEXT:    br i1 [[C1]], label %[[SELECT_END:.*]], label %[[T1:.*]], !prof [[PROF0:![0-9]+]]
-; CHECK:       [[T1]]:
-; CHECK-NEXT:    br label %[[SELECT_END]]
-; CHECK:       [[SELECT_END]]:
-; CHECK-NEXT:    [[OR:%.*]] = phi i1 [ true, %[[ENTRY]] ], [ [[C2]], %[[T1]] ]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[C1]], i1 true, i1 [[C2]], !prof [[PROF0:![0-9]+]]
 ; CHECK-NEXT:    br i1 [[OR]], label %[[T:.*]], label %[[F:.*]], !prof [[PROF0]]
 ; CHECK:       [[T]]:
 ; CHECK-NEXT:    ret i32 1
@@ -40,15 +35,10 @@ f:
 define i32 @logical_and_br(i32 %a, i32 %b) {
 ; CHECK-LABEL: define i32 @logical_and_br(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[AND_FROZEN:%.*]] = freeze i32 [[A]]
-; CHECK-NEXT:    [[C1:%.*]] = icmp ugt i32 [[AND_FROZEN]], 10
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[C1:%.*]] = icmp ugt i32 [[A]], 10
 ; CHECK-NEXT:    [[C2:%.*]] = icmp ugt i32 [[B]], 20
-; CHECK-NEXT:    br i1 [[C1]], label %[[SELECT_END:.*]], label %[[T1:.*]], !prof [[PROF0]]
-; CHECK:       [[T1]]:
-; CHECK-NEXT:    br label %[[SELECT_END]]
-; CHECK:       [[SELECT_END]]:
-; CHECK-NEXT:    [[AND:%.*]] = phi i1 [ [[C2]], %[[ENTRY]] ], [ false, %[[T1]] ]
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[C1]], i1 [[C2]], i1 false, !prof [[PROF0]]
 ; CHECK-NEXT:    br i1 [[AND]], label %[[T:.*]], label %[[F:.*]], !prof [[PROF0]]
 ; CHECK:       [[T]]:
 ; CHECK-NEXT:    ret i32 1
@@ -72,22 +62,12 @@ f:
 define i32 @logical_and_chain_br(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: define i32 @logical_and_chain_br(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[AND1_FROZEN:%.*]] = freeze i32 [[A]]
-; CHECK-NEXT:    [[C1:%.*]] = icmp ugt i32 [[AND1_FROZEN]], 10
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[C1:%.*]] = icmp ugt i32 [[A]], 10
 ; CHECK-NEXT:    [[C2:%.*]] = icmp ugt i32 [[B]], 20
-; CHECK-NEXT:    br i1 [[C1]], label %[[SELECT_END:.*]], label %[[SELECT_FALSE:.*]], !prof [[PROF0]]
-; CHECK:       [[SELECT_FALSE]]:
-; CHECK-NEXT:    br label %[[SELECT_END]]
-; CHECK:       [[SELECT_END]]:
-; CHECK-NEXT:    [[AND1:%.*]] = phi i1 [ [[C2]], %[[ENTRY]] ], [ false, %[[SELECT_FALSE]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ugt i32 [[C]], 30
-; CHECK-NEXT:    [[AND2_FROZEN:%.*]] = freeze i1 [[AND1]]
-; CHECK-NEXT:    br i1 [[AND2_FROZEN]], label %[[SELECT_END1:.*]], label %[[T1:.*]], !prof [[PROF0]]
-; CHECK:       [[T1]]:
-; CHECK-NEXT:    br label %[[SELECT_END1]]
-; CHECK:       [[SELECT_END1]]:
-; CHECK-NEXT:    [[AND2:%.*]] = phi i1 [ [[TMP0]], %[[SELECT_END]] ], [ false, %[[T1]] ]
+; CHECK-NEXT:    [[AND1:%.*]] = select i1 [[C1]], i1 [[C2]], i1 false, !prof [[PROF0]]
+; CHECK-NEXT:    [[AND2:%.*]] = select i1 [[AND1]], i1 [[TMP0]], i1 false, !prof [[PROF0]]
 ; CHECK-NEXT:    br i1 [[AND2]], label %[[T:.*]], label %[[F:.*]], !prof [[PROF0]]
 ; CHECK:       [[T]]:
 ; CHECK-NEXT:    ret i32 1
@@ -113,15 +93,10 @@ f:
 define i32 @logical_or_or_br(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: define i32 @logical_or_or_br(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[OR1_FROZEN:%.*]] = freeze i32 [[A]]
-; CHECK-NEXT:    [[C1:%.*]] = icmp ugt i32 [[OR1_FROZEN]], 10
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[C1:%.*]] = icmp ugt i32 [[A]], 10
 ; CHECK-NEXT:    [[C2:%.*]] = icmp ugt i32 [[B]], 20
-; CHECK-NEXT:    br i1 [[C1]], label %[[SELECT_END:.*]], label %[[SELECT_FALSE:.*]], !prof [[PROF0]]
-; CHECK:       [[SELECT_FALSE]]:
-; CHECK-NEXT:    br label %[[SELECT_END]]
-; CHECK:       [[SELECT_END]]:
-; CHECK-NEXT:    [[OR1:%.*]] = phi i1 [ true, %[[ENTRY]] ], [ [[C2]], %[[SELECT_FALSE]] ]
+; CHECK-NEXT:    [[OR1:%.*]] = select i1 [[C1]], i1 true, i1 [[C2]], !prof [[PROF0]]
 ; CHECK-NEXT:    [[C3:%.*]] = icmp ugt i32 [[C]], 30
 ; CHECK-NEXT:    [[OR2:%.*]] = or i1 [[C3]], [[OR1]]
 ; CHECK-NEXT:    br i1 [[OR2]], label %[[T:.*]], label %[[F:.*]], !prof [[PROF0]]
@@ -472,16 +447,11 @@ f:
 define i32 @logical_or_br_cond_shared(i32 %a, i32 %b) {
 ; CHECK-LABEL: define i32 @logical_or_br_cond_shared(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[OR_FROZEN:%.*]] = freeze i32 [[A]]
-; CHECK-NEXT:    [[C1:%.*]] = icmp ugt i32 [[OR_FROZEN]], 10
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[C1:%.*]] = icmp ugt i32 [[A]], 10
 ; CHECK-NEXT:    [[C2:%.*]] = icmp ugt i32 [[B]], 20
-; CHECK-NEXT:    br i1 [[C1]], label %[[SELECT_END:.*]], label %[[SELECT_FALSE:.*]], !prof [[PROF0]]
-; CHECK:       [[SELECT_FALSE]]:
-; CHECK-NEXT:    br label %[[SELECT_END]]
-; CHECK:       [[SELECT_END]]:
-; CHECK-NEXT:    [[OR:%.*]] = phi i1 [ true, %[[ENTRY]] ], [ [[C2]], %[[SELECT_FALSE]] ]
-; CHECK-NEXT:    [[V:%.*]] = phi i32 [ [[A]], %[[ENTRY]] ], [ [[B]], %[[SELECT_FALSE]] ]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[C1]], i1 true, i1 [[C2]], !prof [[PROF0]]
+; CHECK-NEXT:    [[V:%.*]] = select i1 [[C1]], i32 [[A]], i32 [[B]]
 ; CHECK-NEXT:    br i1 [[OR]], label %[[T:.*]], label %[[F:.*]], !prof [[PROF0]]
 ; CHECK:       [[T]]:
 ; CHECK-NEXT:    ret i32 [[V]]
@@ -516,12 +486,7 @@ define i32 @logical_and_or_br_weighted(i32 %a, i32 %b, i32 %c) {
 ; CHECK:       [[SELECT_END]]:
 ; CHECK-NEXT:    [[AND:%.*]] = phi i1 [ [[C2]], %[[ENTRY]] ], [ false, %[[SELECT_FALSE]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ugt i32 [[C]], 30
-; CHECK-NEXT:    [[OR_FROZEN:%.*]] = freeze i1 [[AND]]
-; CHECK-NEXT:    br i1 [[OR_FROZEN]], label %[[SELECT_END1:.*]], label %[[SELECT_FALSE2:.*]], !prof [[PROF0]]
-; CHECK:       [[SELECT_FALSE2]]:
-; CHECK-NEXT:    br label %[[SELECT_END1]]
-; CHECK:       [[SELECT_END1]]:
-; CHECK-NEXT:    [[OR:%.*]] = phi i1 [ true, %[[SELECT_END]] ], [ [[TMP0]], %[[SELECT_FALSE2]] ]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[AND]], i1 true, i1 [[TMP0]], !prof [[PROF0]]
 ; CHECK-NEXT:    br i1 [[OR]], label %[[T:.*]], label %[[F:.*]], !prof [[PROF0]]
 ; CHECK:       [[T]]:
 ; CHECK-NEXT:    ret i32 1
@@ -577,17 +542,12 @@ exit:
 define i32 @logical_or_br_cond_shared_expensive_before(i32 %a, i32 %b) {
 ; CHECK-LABEL: define i32 @logical_or_br_cond_shared_expensive_before(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[C1:%.*]] = icmp ugt i32 [[A]], 10
 ; CHECK-NEXT:    [[E:%.*]] = call i32 @expensive.i32(i32 [[A]], i32 [[B]], i32 [[B]])
 ; CHECK-NEXT:    [[V:%.*]] = select i1 [[C1]], i32 [[E]], i32 [[B]]
 ; CHECK-NEXT:    [[C2:%.*]] = icmp ugt i32 [[B]], 20
-; CHECK-NEXT:    [[OR_FROZEN:%.*]] = freeze i1 [[C1]]
-; CHECK-NEXT:    br i1 [[OR_FROZEN]], label %[[SELECT_END:.*]], label %[[T:.*]], !prof [[PROF0]]
-; CHECK:       [[T]]:
-; CHECK-NEXT:    br label %[[SELECT_END]]
-; CHECK:       [[SELECT_END]]:
-; CHECK-NEXT:    [[OR:%.*]] = phi i1 [ true, %[[ENTRY]] ], [ [[C2]], %[[T]] ]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[C1]], i1 true, i1 [[C2]], !prof [[PROF0]]
 ; CHECK-NEXT:    br i1 [[OR]], label %[[T1:.*]], label %[[F:.*]], !prof [[PROF0]]
 ; CHECK:       [[T1]]:
 ; CHECK-NEXT:    ret i32 [[V]]
@@ -613,14 +573,9 @@ f:
 define i32 @logical_or_br_const_cond(i32 %b) {
 ; CHECK-LABEL: define i32 @logical_or_br_const_cond(
 ; CHECK-SAME: i32 [[B:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[C2:%.*]] = icmp ugt i32 [[B]], 20
-; CHECK-NEXT:    [[OR_FROZEN:%.*]] = freeze i1 false
-; CHECK-NEXT:    br i1 [[OR_FROZEN]], label %[[SELECT_END:.*]], label %[[SELECT_FALSE:.*]], !prof [[PROF0]]
-; CHECK:       [[SELECT_FALSE]]:
-; CHECK-NEXT:    br label %[[SELECT_END]]
-; CHECK:       [[SELECT_END]]:
-; CHECK-NEXT:    [[OR:%.*]] = phi i1 [ true, %[[ENTRY]] ], [ [[C2]], %[[SELECT_FALSE]] ]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 false, i1 true, i1 [[C2]], !prof [[PROF0]]
 ; CHECK-NEXT:    br i1 [[OR]], label %[[T:.*]], label %[[F:.*]], !prof [[PROF0]]
 ; CHECK:       [[T]]:
 ; CHECK-NEXT:    ret i32 1
