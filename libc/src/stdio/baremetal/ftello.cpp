@@ -27,7 +27,7 @@ LLVM_LIBC_FUNCTION(off_t, ftello, (::FILE * stream)) {
     libc_errno = EINVAL;
     return static_cast<off_t>(-1);
   }
-  off_t offset;
+  off_t offset = 0;
   int result = __llvm_libc_stdio_seek(stream, &offset, SEEK_CUR);
   if (result < 0) {
     libc_errno = static_cast<int>(-result);
