@@ -52,6 +52,10 @@ infrastructure are described first, followed by tool-specific sections.
 
 ### Potentially Breaking Changes
 
+- Improved {doc}`bugprone-unused-return-value
+  <clang-tidy/checks/bugprone/unused-return-value>` check by changing the
+  default of the `AllowCastToVoid` option from `false` to `true`.
+
 - The deprecated `zircon` clang-tidy module has been removed. Users of
   `zircon-temporary-objects` should migrate to {doc}`fuchsia-temporary-objects
   <clang-tidy/checks/fuchsia/temporary-objects>`.
