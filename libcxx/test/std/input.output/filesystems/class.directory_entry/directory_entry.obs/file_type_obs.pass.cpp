@@ -9,10 +9,6 @@
 // REQUIRES: can-create-symlinks
 // UNSUPPORTED: c++03, c++11, c++14
 
-// Starting in Android N (API 24), SELinux policy prevents the shell user from
-// creating a hard link.
-// XFAIL: LIBCXX-ANDROID-FIXME && !android-device-api=23
-
 // <filesystem>
 
 // class directory_entry
@@ -67,7 +63,9 @@ static void test_without_ec() {
   scoped_test_env env;
   path f = env.create_file("foo", 42);
   path d = env.create_dir("dir");
+#ifndef TEST_HAS_NO_HARDLINKS
   path hl = env.create_hardlink("foo", "hl");
+#endif
   auto test_path = [=](const path &p) {
     directory_entry e(p);
     file_status st = status(p);
@@ -87,7 +85,9 @@ static void test_without_ec() {
   };
   test_path(f);
   test_path(d);
+#ifndef TEST_HAS_NO_HARDLINKS
   test_path(hl);
+#endif
 #ifndef TEST_HAS_NO_FIFOS
   path fifo = env.create_fifo("fifo");
   test_path(fifo);
@@ -103,7 +103,9 @@ static void test_with_ec() {
   scoped_test_env env;
   path f = env.create_file("foo", 42);
   path d = env.create_dir("dir");
+#ifndef TEST_HAS_NO_HARDLINKS
   path hl = env.create_hardlink("foo", "hl");
+#endif
   auto test_path = [=](const path &p) {
     directory_entry e(p);
     std::error_code status_ec = GetTestEC();
@@ -151,7 +153,9 @@ static void test_with_ec() {
   };
   test_path(f);
   test_path(d);
+#ifndef TEST_HAS_NO_HARDLINKS
   test_path(hl);
+#endif
 #ifndef TEST_HAS_NO_FIFOS
   path fifo = env.create_fifo("fifo");
   test_path(fifo);

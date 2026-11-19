@@ -13,10 +13,6 @@
 // against a built library that doesn't contain 0aa637b2037d.
 // XFAIL: using-built-library-before-llvm-13
 
-// Starting in Android N (API 24), SELinux policy prevents the shell user from
-// creating a hard link.
-// XFAIL: LIBCXX-ANDROID-FIXME && !android-device-api=23
-
 // <filesystem>
 
 // class directory_entry
@@ -76,11 +72,15 @@ static void basic() {
     assert(!ec);
   }
   env.create_file("file", 99);
+  std::uintmax_t expect = 1;
+#ifndef TEST_HAS_NO_HARDLINKS
   env.create_hardlink("file", "hl");
+  expect = 2;
+#endif
   {
     directory_entry ent(sym);
     std::error_code ec = GetTestEC();
-    assert(ent.hard_link_count(ec) == 2);
+    assert(ent.hard_link_count(ec) == expect);
     assert(!ec);
   }
 }

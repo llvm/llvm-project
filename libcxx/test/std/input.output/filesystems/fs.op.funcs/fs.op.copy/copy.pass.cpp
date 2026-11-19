@@ -10,10 +10,6 @@
 // UNSUPPORTED: c++03, c++11, c++14
 // UNSUPPORTED: no-filesystem
 
-// Starting in Android N (API 24), SELinux policy prevents the shell user from
-// creating a FIFO file.
-// XFAIL: LIBCXX-ANDROID-FIXME && !android-device-api=23
-
 // <filesystem>
 
 // void copy(const path& from, const path& to);
@@ -174,6 +170,7 @@ static void from_is_regular_file()
         assert(is_symlink(dest));
         assert(equivalent(file, canonical(dest)));
     }
+#ifndef TEST_HAS_NO_HARDLINKS
     { // create hard link to file
         const path dest = env.make_env_path("hardlink");
         assert(hard_link_count(file) == 1);
@@ -183,6 +180,7 @@ static void from_is_regular_file()
         assert(exists(dest));
         assert(hard_link_count(file) == 2);
     }
+#endif
     { // is_directory(t)
         const path dest_dir = env.create_dir("dest_dir");
         const path expect_dest = dest_dir / file.filename();

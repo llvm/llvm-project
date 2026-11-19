@@ -296,6 +296,7 @@ struct scoped_test_env
                                        true);
     }
 
+#ifndef TEST_HAS_NO_HARDLINKS
     std::string create_hardlink(fs::path source_path, fs::path to_path) {
         std::string source = source_path.string();
         std::string to = to_path.string();
@@ -305,6 +306,7 @@ struct scoped_test_env
         assert(ret == 0);
         return to;
     }
+#endif
 
 #if defined(_WIN32) && !defined(TEST_HAS_NO_FIFOS)
 #  define TEST_HAS_NO_FIFOS

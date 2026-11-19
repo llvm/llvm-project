@@ -10,10 +10,6 @@
 // UNSUPPORTED: c++03, c++11, c++14
 // UNSUPPORTED: no-filesystem
 
-// Starting in Android N (API 24), SELinux policy prevents the shell user from
-// creating a hard link.
-// XFAIL: LIBCXX-ANDROID-FIXME && !android-device-api=23
-
 // <filesystem>
 
 // bool equivalent(path const& lhs, path const& rhs);
@@ -91,6 +87,7 @@ static void equivalent_reports_error_if_input_dne() {
   }
 }
 
+#ifndef TEST_HAS_NO_HARDLINKS
 static void equivalent_hardlink_succeeds() {
   scoped_test_env env;
   path const file = env.create_file("file", 42);
@@ -100,6 +97,7 @@ static void equivalent_hardlink_succeeds() {
   assert(equivalent(file, hl2));
   assert(equivalent(hl1, hl2));
 }
+#endif // TEST_HAS_NO_HARDLINKS
 
 #ifndef TEST_HAS_NO_FIFOS
 static void equivalent_is_other_succeeds() {
@@ -120,7 +118,9 @@ int main(int, char**) {
   signature_test();
   equivalent_test();
   equivalent_reports_error_if_input_dne();
+#ifndef TEST_HAS_NO_HARDLINKS
   equivalent_hardlink_succeeds();
+#endif
 #ifndef TEST_HAS_NO_FIFOS
   equivalent_is_other_succeeds();
 #endif

@@ -88,6 +88,48 @@ def _hasNoFifos(cfg):
     return not sourceBuilds(cfg, program) or not programSucceeds(cfg, program)
 
 
+def _hasNoHardlinks(cfg):
+    if "TEST_HAS_NO_FILESYSTEM" in testMacros(cfg):
+        return True
+    if "_WIN32" in compilerMacros(cfg):
+        return False
+    program = """
+        #include <fcntl.h>
+        #include <stdio.h>
+        #include <stdlib.h>
+        #include <string.h>
+        #include <unistd.h>
+        int main(int, char** argv) {
+          size_t n = strlen(argv[0]) + 8;
+          char* src = (char*)malloc(n);
+          char* dst = (char*)malloc(n);
+          if (!src || !dst) {
+            free(src);
+            free(dst);
+            return 1;
+          }
+          snprintf(src, n, "%s.hlsrc", argv[0]);
+          snprintf(dst, n, "%s.hldst", argv[0]);
+          unlink(src);
+          unlink(dst);
+          int fd = open(src, O_CREAT | O_WRONLY, 0666);
+          if (fd < 0) {
+            free(src);
+            free(dst);
+            return 1;
+          }
+          close(fd);
+          int res = link(src, dst);
+          unlink(src);
+          unlink(dst);
+          free(src);
+          free(dst);
+          return res == 0 ? 0 : 1;
+        }
+    """
+    return not sourceBuilds(cfg, program) or not programSucceeds(cfg, program)
+
+
 features = [
     Feature(
         name="diagnose-if-support",
@@ -349,6 +391,11 @@ features = [
         name="has-no-fifos",
         when=_hasNoFifos,
         actions=[AddCompileFlag("-DTEST_HAS_NO_FIFOS")],
+    ),
+    Feature(
+        name="has-no-hardlinks",
+        when=_hasNoHardlinks,
+        actions=[AddCompileFlag("-DTEST_HAS_NO_HARDLINKS")],
     ),
     Feature(
         name="has-splitfile",
