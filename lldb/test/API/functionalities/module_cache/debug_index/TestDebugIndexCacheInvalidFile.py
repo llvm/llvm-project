@@ -46,9 +46,10 @@ class DebugIndexCacheInvalidFileTestCase(TestBase):
         # only test in this file.
         self.cache_dir = os.path.join(self.getBuildDir(), "lldb-module-cache")
         self.runCmd(
-            'settings set symbols.lldb-index-cache-path "%s"' % (self.cache_dir)
+            'settings set symbols.lldb-index-cache.path "%s"' % (self.cache_dir)
         )
-        self.runCmd("settings set symbols.enable-lldb-index-cache true")
+        self.runCmd("settings set symbols.lldb-index-cache.type.symtab true")
+        self.runCmd("settings set symbols.lldb-index-cache.type.dwarf-index true")
         obj_path = self.getBuildArtifact("main.o")
         self.yaml2obj(os.path.join(self.getSourceDir(), "exe.yaml"), obj_path)
 

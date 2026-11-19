@@ -20,7 +20,7 @@ class ModuleCacheCorefileMemoryModuleTestCase(TestBase):
         # which latches the path on first use.
         self.cache_dir = os.path.join(self.getBuildDir(), "lldb-module-cache")
         self.runCmd(
-            'settings set -g symbols.lldb-index-cache-path "%s"' % self.cache_dir
+            'settings set -g symbols.lldb-index-cache.path "%s"' % self.cache_dir
         )
 
     def get_symtab_cache_files(self, basename):
@@ -43,7 +43,7 @@ class ModuleCacheCorefileMemoryModuleTestCase(TestBase):
         # Enable the index cache for the live session as a positive control:
         # it shows that this cache path and glob do find the binary's symbol
         # table when it is cached.
-        self.runCmd("settings set -g symbols.enable-lldb-index-cache true")
+        self.runCmd("settings set -g symbols.lldb-index-cache.type.symtab true")
 
         target, process, _, _ = lldbutil.run_to_source_breakpoint(
             self, "// break here", lldb.SBFileSpec("main.cpp")
@@ -86,9 +86,9 @@ class ModuleCacheCorefileMemoryModuleTestCase(TestBase):
         if os.path.exists(dsym):
             shutil.rmtree(dsym)
 
-        self.runCmd("settings set -g symbols.enable-lldb-index-cache false")
+        self.runCmd("settings set -g symbols.lldb-index-cache.type.symtab false")
         self.runCmd(
-            "settings set -g symbols.enable-lldb-index-cache-memory-modules true"
+            "settings set -g symbols.lldb-index-cache.type.memory-module-symtab true"
         )
 
         target = self.dbg.CreateTarget(None)

@@ -17,8 +17,9 @@
 // and it is always available.
 // RUN: rm -rf %t.lldb-index-cache
 // RUN: %lldb \
-// RUN:   -O 'settings set symbols.enable-lldb-index-cache true' \
-// RUN:   -O 'settings set symbols.lldb-index-cache-path %t.lldb-index-cache' \
+// RUN:   -O 'settings set symbols.lldb-index-cache.type.symtab true' \
+// RUN:   -O 'settings set symbols.lldb-index-cache.type.dwarf-index true' \
+// RUN:   -O 'settings set symbols.lldb-index-cache.path %t.lldb-index-cache' \
 // RUN:   -O 'settings set target.preload-symbols false' \
 // RUN:   -o "script lldb.target.modules[0].FindTypes('::A').GetTypeAtIndex(0)" \
 // RUN:   -o "statistics dump" \
@@ -31,8 +32,9 @@
 // have a backlink to the skeleton compile unit. This test verifies that we
 // don't crash and that we can find types when using .dwp files.
 // RUN: %lldb \
-// RUN:   -O 'settings set symbols.enable-lldb-index-cache true' \
-// RUN:   -O 'settings set symbols.lldb-index-cache-path %t.lldb-index-cache' \
+// RUN:   -O 'settings set symbols.lldb-index-cache.type.symtab true' \
+// RUN:   -O 'settings set symbols.lldb-index-cache.type.dwarf-index true' \
+// RUN:   -O 'settings set symbols.lldb-index-cache.path %t.lldb-index-cache' \
 // RUN:   -O 'settings set target.preload-symbols false' \
 // RUN:   -o "script lldb.target.modules[0].FindTypes('::A').GetTypeAtIndex(0)" \
 // RUN:   -o "statistics dump" \
@@ -80,8 +82,9 @@
 // and it is always available.
 // RUN: rm -rf %t.lldb-index-cache
 // RUN: %lldb \
-// RUN:   -O 'settings set symbols.enable-lldb-index-cache true' \
-// RUN:   -O 'settings set symbols.lldb-index-cache-path %t.lldb-index-cache' \
+// RUN:   -O 'settings set symbols.lldb-index-cache.type.symtab true' \
+// RUN:   -O 'settings set symbols.lldb-index-cache.type.dwarf-index true' \
+// RUN:   -O 'settings set symbols.lldb-index-cache.path %t.lldb-index-cache' \
 // RUN:   -O 'settings set target.preload-symbols false' \
 // RUN:   -o "script lldb.target.modules[0].FindTypes('::A').GetTypeAtIndex(0)" \
 // RUN:   -o "statistics dump" \
@@ -94,8 +97,9 @@
 // have a backlink to the skeleton compile unit. This test verifies that we
 // don't crash and that we can find types when using .dwp files.
 // RUN: %lldb \
-// RUN:   -O 'settings set symbols.enable-lldb-index-cache true' \
-// RUN:   -O 'settings set symbols.lldb-index-cache-path %t.lldb-index-cache' \
+// RUN:   -O 'settings set symbols.lldb-index-cache.type.symtab true' \
+// RUN:   -O 'settings set symbols.lldb-index-cache.type.dwarf-index true' \
+// RUN:   -O 'settings set symbols.lldb-index-cache.path %t.lldb-index-cache' \
 // RUN:   -O 'settings set target.preload-symbols false' \
 // RUN:   -o "script lldb.target.modules[0].FindTypes('::A').GetTypeAtIndex(0)" \
 // RUN:   -o "statistics dump" \

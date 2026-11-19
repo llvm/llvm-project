@@ -93,8 +93,16 @@ static constexpr OptionEnumValueElement g_shared_cache_use_enum_values[] = {
 class ModuleListProperties : public Properties {
   mutable llvm::sys::RWMutex m_symlink_paths_mutex;
   PathMappingList m_symlink_paths;
+  /// The "symbols.lldb-index-cache" settings.
+  lldb::OptionValuePropertiesSP m_index_cache_sp;
+  /// The "symbols.lldb-index-cache.type" settings.
+  lldb::OptionValuePropertiesSP m_index_cache_type_sp;
 
   void UpdateSymlinkMappings();
+
+  /// Make the deprecated "symbols.*lldb-index-cache*" settings set their
+  /// replacements in "symbols.lldb-index-cache".
+  void ForwardDeprecatedIndexCacheSettings();
 
 public:
   ModuleListProperties();
@@ -104,10 +112,10 @@ public:
   bool GetEnableExternalLookup() const;
   bool SetEnableExternalLookup(bool new_value);
   lldb::SymbolSharedCacheUse GetSharedCacheBinaryLoading() const;
-  bool GetEnableLLDBIndexCache() const;
-  bool SetEnableLLDBIndexCache(bool new_value);
-  bool GetEnableLLDBIndexCacheMemoryModules() const;
-  bool SetEnableLLDBIndexCacheMemoryModules(bool new_value);
+  bool GetLLDBIndexCacheForceDisable() const;
+  bool GetLLDBIndexCacheTypeSymtab() const;
+  bool GetLLDBIndexCacheTypeDwarfIndex() const;
+  bool GetLLDBIndexCacheTypeMemoryModuleSymtab() const;
   uint64_t GetLLDBIndexCacheMaxByteSize();
   uint64_t GetLLDBIndexCacheMaxPercent();
   uint64_t GetLLDBIndexCacheExpirationDays();

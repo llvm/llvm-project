@@ -1724,22 +1724,28 @@ std::string Module::GetCacheKey() {
 }
 
 DataFileCache *Module::GetIndexCache(LLDBIndexType type) {
+  ModuleListProperties &properties =
+      ModuleList::GetGlobalModuleListProperties();
+  if (properties.GetLLDBIndexCacheForceDisable())
+    return nullptr;
   bool lldb_index_enabled = false;
-  if (ModuleList::GetGlobalModuleListProperties().GetEnableLLDBIndexCache() &&
-      (type == eLLDBIndexTypeSymtab || type == eLLDBIndexTypeDwarfIndex))
-    lldb_index_enabled = true;
-  if (ModuleList::GetGlobalModuleListProperties()
-          .GetEnableLLDBIndexCacheMemoryModules() &&
-      type == eLLDBIndexTypeMemoryModuleSymtab)
-    lldb_index_enabled = true;
+  switch (type) {
+  case eLLDBIndexTypeSymtab:
+    lldb_index_enabled = properties.GetLLDBIndexCacheTypeSymtab();
+    break;
+  case eLLDBIndexTypeDwarfIndex:
+    lldb_index_enabled = properties.GetLLDBIndexCacheTypeDwarfIndex();
+    break;
+  case eLLDBIndexTypeMemoryModuleSymtab:
+    lldb_index_enabled = properties.GetLLDBIndexCacheTypeMemoryModuleSymtab();
+    break;
+  }
   if (!lldb_index_enabled)
     return nullptr;
   // NOTE: intentional leak so we don't crash if global destructor chain gets
   // called as other threads still use the result of this function
   static DataFileCache *g_data_file_cache =
-      new DataFileCache(ModuleList::GetGlobalModuleListProperties()
-                            .GetLLDBIndexCachePath()
-                            .GetPath());
+      new DataFileCache(properties.GetLLDBIndexCachePath().GetPath());
   return g_data_file_cache;
 }
 

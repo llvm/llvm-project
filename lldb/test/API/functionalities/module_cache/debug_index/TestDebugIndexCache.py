@@ -47,9 +47,10 @@ class DebugIndexCacheTestcase(TestBase):
 
     def enable_lldb_index_cache(self):
         self.runCmd(
-            'settings set symbols.lldb-index-cache-path "%s"' % (self.cache_dir)
+            'settings set symbols.lldb-index-cache.path "%s"' % (self.cache_dir)
         )
-        self.runCmd("settings set symbols.enable-lldb-index-cache true")
+        self.runCmd("settings set symbols.lldb-index-cache.type.symtab true")
+        self.runCmd("settings set symbols.lldb-index-cache.type.dwarf-index true")
 
     @no_debug_info_test
     def test_with_caching_enabled(self):

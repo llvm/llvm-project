@@ -75,6 +75,51 @@ enum {
 #include "CorePropertiesEnum.inc"
 };
 
+#define LLDB_PROPERTIES_modulelist_index_cache
+#include "CoreProperties.inc"
+
+enum {
+#define LLDB_PROPERTIES_modulelist_index_cache
+#include "CorePropertiesEnum.inc"
+};
+
+#define LLDB_PROPERTIES_modulelist_index_cache_type
+#include "CoreProperties.inc"
+
+enum {
+#define LLDB_PROPERTIES_modulelist_index_cache_type
+#include "CorePropertiesEnum.inc"
+};
+
+/// Set the settings at \a replacement_idxs in \a replacements to the value of
+/// the deprecated setting at \a deprecated_idx in \a deprecated. If the
+/// deprecated setting was cleared, clear its replacements too.
+template <typename T>
+void ForwardDeprecatedSetting(const OptionValueProperties &deprecated,
+                              uint32_t deprecated_idx,
+                              const OptionValueProperties &replacements,
+                              llvm::ArrayRef<uint32_t> replacement_idxs) {
+  OptionValueSP deprecated_sp =
+      deprecated.GetPropertyValueAtIndex(deprecated_idx, nullptr);
+  if (!deprecated_sp)
+    return;
+  std::optional<T> value;
+  if (deprecated_sp->OptionWasSet())
+    value = deprecated_sp->GetValueAs<T>();
+  for (uint32_t idx : replacement_idxs) {
+    OptionValueSP replacement_sp =
+        replacements.GetPropertyValueAtIndex(idx, nullptr);
+    if (!replacement_sp)
+      continue;
+    if (value) {
+      replacement_sp->SetValueAs(*value);
+      replacement_sp->SetOptionWasSet();
+    } else {
+      replacement_sp->Clear();
+    }
+  }
+}
+
 } // namespace
 
 ModuleListProperties::ModuleListProperties() {
@@ -83,12 +128,80 @@ ModuleListProperties::ModuleListProperties() {
   m_collection_sp->SetValueChangedCallback(ePropertySymLinkPaths,
                                            [this] { UpdateSymlinkMappings(); });
 
+  m_index_cache_sp =
+      std::make_shared<OptionValueProperties>("lldb-index-cache");
+  m_index_cache_sp->Initialize(g_modulelist_index_cache_properties_def);
+  m_collection_sp->AppendProperty(
+      "lldb-index-cache",
+      "Settings for caching data from modules on disk, for improved "
+      "performance in subsequent debug sessions.",
+      /*is_global=*/true, m_index_cache_sp);
+
+  m_index_cache_type_sp = std::make_shared<OptionValueProperties>("type");
+  m_index_cache_type_sp->Initialize(
+      g_modulelist_index_cache_type_properties_def);
+  m_index_cache_sp->AppendProperty("type",
+                                   "Settings for which kinds of data from "
+                                   "modules are cached on disk.",
+                                   /*is_global=*/true, m_index_cache_type_sp);
+
+  ForwardDeprecatedIndexCacheSettings();
+
+  // Make the platform's cache directory the default, so that clearing the
+  // setting goes back to it.
   llvm::SmallString<128> path;
   if (llvm::sys::path::cache_directory(path)) {
     llvm::sys::path::append(path, "lldb");
     llvm::sys::path::append(path, "IndexCache");
-    lldbassert(SetLLDBIndexCachePath(FileSpec(path)));
+    OptionValueFileSpec *path_value =
+        m_index_cache_sp->GetPropertyAtIndexAsOptionValueFileSpec(
+            ePropertyIndexCachePath);
+    lldbassert(path_value);
+    if (path_value) {
+      path_value->SetDefaultValue(FileSpec(path));
+      path_value->SetCurrentValue(FileSpec(path), /*set_value_was_set=*/false);
+    }
   }
+}
+
+void ModuleListProperties::ForwardDeprecatedIndexCacheSettings() {
+  m_collection_sp->SetValueChangedCallback(
+      ePropertyEnableLLDBIndexCache, [this] {
+        ForwardDeprecatedSetting<bool>(
+            *m_collection_sp, ePropertyEnableLLDBIndexCache,
+            *m_index_cache_type_sp,
+            {ePropertyIndexCacheTypeSymtab, ePropertyIndexCacheTypeDwarfIndex});
+      });
+  m_collection_sp->SetValueChangedCallback(
+      ePropertyEnableLLDBIndexCacheMemoryModules, [this] {
+        ForwardDeprecatedSetting<bool>(
+            *m_collection_sp, ePropertyEnableLLDBIndexCacheMemoryModules,
+            *m_index_cache_type_sp,
+            {ePropertyIndexCacheTypeMemoryModuleSymtab});
+      });
+  m_collection_sp->SetValueChangedCallback(ePropertyLLDBIndexCachePath, [this] {
+    ForwardDeprecatedSetting<FileSpec>(
+        *m_collection_sp, ePropertyLLDBIndexCachePath, *m_index_cache_sp,
+        {ePropertyIndexCachePath});
+  });
+  m_collection_sp->SetValueChangedCallback(
+      ePropertyLLDBIndexCacheMaxByteSize, [this] {
+        ForwardDeprecatedSetting<uint64_t>(
+            *m_collection_sp, ePropertyLLDBIndexCacheMaxByteSize,
+            *m_index_cache_sp, {ePropertyIndexCacheMaxByteSize});
+      });
+  m_collection_sp->SetValueChangedCallback(
+      ePropertyLLDBIndexCacheMaxPercent, [this] {
+        ForwardDeprecatedSetting<uint64_t>(
+            *m_collection_sp, ePropertyLLDBIndexCacheMaxPercent,
+            *m_index_cache_sp, {ePropertyIndexCacheMaxPercent});
+      });
+  m_collection_sp->SetValueChangedCallback(
+      ePropertyLLDBIndexCacheExpirationDays, [this] {
+        ForwardDeprecatedSetting<uint64_t>(
+            *m_collection_sp, ePropertyLLDBIndexCacheExpirationDays,
+            *m_index_cache_sp, {ePropertyIndexCacheExpirationDays});
+      });
 }
 
 bool ModuleListProperties::GetEnableExternalLookup() const {
@@ -130,53 +243,55 @@ bool ModuleListProperties::SetClangModulesCachePath(const FileSpec &path) {
 }
 
 FileSpec ModuleListProperties::GetLLDBIndexCachePath() const {
-  const uint32_t idx = ePropertyLLDBIndexCachePath;
-  return GetPropertyAtIndexAs<FileSpec>(idx, {});
+  return m_index_cache_sp
+      ->GetPropertyAtIndexAs<FileSpec>(ePropertyIndexCachePath)
+      .value_or(FileSpec());
 }
 
 bool ModuleListProperties::SetLLDBIndexCachePath(const FileSpec &path) {
-  const uint32_t idx = ePropertyLLDBIndexCachePath;
-  return SetPropertyAtIndex(idx, path);
+  return m_index_cache_sp->SetPropertyAtIndex(ePropertyIndexCachePath, path);
 }
 
-bool ModuleListProperties::GetEnableLLDBIndexCache() const {
-  const uint32_t idx = ePropertyEnableLLDBIndexCache;
-  return GetPropertyAtIndexAs<bool>(
-      idx, g_modulelist_properties[idx].default_uint_value != 0);
+bool ModuleListProperties::GetLLDBIndexCacheForceDisable() const {
+  const uint32_t idx = ePropertyIndexCacheForceDisable;
+  return m_index_cache_sp->GetPropertyAtIndexAs<bool>(idx).value_or(
+      g_modulelist_index_cache_properties[idx].default_uint_value != 0);
 }
 
-bool ModuleListProperties::SetEnableLLDBIndexCache(bool new_value) {
-  return SetPropertyAtIndex(ePropertyEnableLLDBIndexCache, new_value);
+bool ModuleListProperties::GetLLDBIndexCacheTypeSymtab() const {
+  const uint32_t idx = ePropertyIndexCacheTypeSymtab;
+  return m_index_cache_type_sp->GetPropertyAtIndexAs<bool>(idx).value_or(
+      g_modulelist_index_cache_type_properties[idx].default_uint_value != 0);
 }
 
-bool ModuleListProperties::GetEnableLLDBIndexCacheMemoryModules() const {
-  const uint32_t idx = ePropertyEnableLLDBIndexCacheMemoryModules;
-  return GetPropertyAtIndexAs<bool>(
-      idx, g_modulelist_properties[idx].default_uint_value != 0);
+bool ModuleListProperties::GetLLDBIndexCacheTypeDwarfIndex() const {
+  const uint32_t idx = ePropertyIndexCacheTypeDwarfIndex;
+  return m_index_cache_type_sp->GetPropertyAtIndexAs<bool>(idx).value_or(
+      g_modulelist_index_cache_type_properties[idx].default_uint_value != 0);
 }
 
-bool ModuleListProperties::SetEnableLLDBIndexCacheMemoryModules(
-    bool new_value) {
-  return SetPropertyAtIndex(ePropertyEnableLLDBIndexCacheMemoryModules,
-                            new_value);
+bool ModuleListProperties::GetLLDBIndexCacheTypeMemoryModuleSymtab() const {
+  const uint32_t idx = ePropertyIndexCacheTypeMemoryModuleSymtab;
+  return m_index_cache_type_sp->GetPropertyAtIndexAs<bool>(idx).value_or(
+      g_modulelist_index_cache_type_properties[idx].default_uint_value != 0);
 }
 
 uint64_t ModuleListProperties::GetLLDBIndexCacheMaxByteSize() {
-  const uint32_t idx = ePropertyLLDBIndexCacheMaxByteSize;
-  return GetPropertyAtIndexAs<uint64_t>(
-      idx, g_modulelist_properties[idx].default_uint_value);
+  const uint32_t idx = ePropertyIndexCacheMaxByteSize;
+  return m_index_cache_sp->GetPropertyAtIndexAs<uint64_t>(idx).value_or(
+      g_modulelist_index_cache_properties[idx].default_uint_value);
 }
 
 uint64_t ModuleListProperties::GetLLDBIndexCacheMaxPercent() {
-  const uint32_t idx = ePropertyLLDBIndexCacheMaxPercent;
-  return GetPropertyAtIndexAs<uint64_t>(
-      idx, g_modulelist_properties[idx].default_uint_value);
+  const uint32_t idx = ePropertyIndexCacheMaxPercent;
+  return m_index_cache_sp->GetPropertyAtIndexAs<uint64_t>(idx).value_or(
+      g_modulelist_index_cache_properties[idx].default_uint_value);
 }
 
 uint64_t ModuleListProperties::GetLLDBIndexCacheExpirationDays() {
-  const uint32_t idx = ePropertyLLDBIndexCacheExpirationDays;
-  return GetPropertyAtIndexAs<uint64_t>(
-      idx, g_modulelist_properties[idx].default_uint_value);
+  const uint32_t idx = ePropertyIndexCacheExpirationDays;
+  return m_index_cache_sp->GetPropertyAtIndexAs<uint64_t>(idx).value_or(
+      g_modulelist_index_cache_properties[idx].default_uint_value);
 }
 
 void ModuleListProperties::UpdateSymlinkMappings() {

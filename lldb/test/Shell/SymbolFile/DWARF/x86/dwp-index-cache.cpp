@@ -24,8 +24,9 @@
 // and it is always available.
 // RUN: rm -rf %t.lldb-index-cache
 // RUN: %lldb \
-// RUN:   -O 'settings set symbols.enable-lldb-index-cache true' \
-// RUN:   -O 'settings set symbols.lldb-index-cache-path %t.lldb-index-cache' \
+// RUN:   -O 'settings set symbols.lldb-index-cache.type.symtab true' \
+// RUN:   -O 'settings set symbols.lldb-index-cache.type.dwarf-index true' \
+// RUN:   -O 'settings set symbols.lldb-index-cache.path %t.lldb-index-cache' \
 // RUN:   -O 'settings set target.preload-symbols true' \
 // RUN:   %t.nonames -b
 
@@ -45,8 +46,9 @@
 // and it is always available.
 // RUN: rm -rf %t.lldb-index-cache
 // RUN: %lldb \
-// RUN:   -O 'settings set symbols.enable-lldb-index-cache true' \
-// RUN:   -O 'settings set symbols.lldb-index-cache-path %t.lldb-index-cache' \
+// RUN:   -O 'settings set symbols.lldb-index-cache.type.symtab true' \
+// RUN:   -O 'settings set symbols.lldb-index-cache.type.dwarf-index true' \
+// RUN:   -O 'settings set symbols.lldb-index-cache.path %t.lldb-index-cache' \
 // RUN:   -O 'settings set target.preload-symbols true' \
 // RUN:   %t.somenames -b
 

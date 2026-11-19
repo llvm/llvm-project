@@ -30,26 +30,32 @@ let Definition = "modulelist", Path = "symbols" in {
   def EnableLLDBIndexCache: Property<"enable-lldb-index-cache", "Boolean">,
     Global,
     DefaultFalse,
+    Deprecated<"use 'symbols.lldb-index-cache.type.symtab' and 'symbols.lldb-index-cache.type.dwarf-index' instead">,
     Desc<"Enable caching for debug sessions in LLDB. LLDB can cache data for each module for improved performance in subsequent debug sessions.  Modules read out of memory are cached (enabled by default) via the symbols.enable-lldb-index-cache-memory-modules setting.">;
   def EnableLLDBIndexCacheMemoryModules: Property<"enable-lldb-index-cache-memory-modules", "Boolean">,
     Global,
     DefaultTrue,
+    Deprecated<"use 'symbols.lldb-index-cache.type.memory-module-symtab' instead">,
     Desc<"Enable symbol table caching for memory-read binaries. LLDB can cache the symbol table memory-read binaries, for improved performance in subsequent debug sessions.">;
   def LLDBIndexCachePath: Property<"lldb-index-cache-path", "FileSpec">,
     Global,
     DefaultStringValue<"">,
+    Deprecated<"use 'symbols.lldb-index-cache.path' instead">,
     Desc<"The path to the LLDB index cache directory.">;
   def LLDBIndexCacheMaxByteSize: Property<"lldb-index-cache-max-byte-size", "UInt64">,
     Global,
     DefaultUnsignedValue<0>,
+    Deprecated<"use 'symbols.lldb-index-cache.max-byte-size' instead">,
     Desc<"The maximum size for the LLDB index cache directory in bytes. A value over the amount of available space on the disk will be reduced to the amount of available space. A value of 0 disables the absolute size-based pruning.">;
   def LLDBIndexCacheMaxPercent: Property<"lldb-index-cache-max-percent", "UInt64">,
     Global,
     DefaultUnsignedValue<0>,
+    Deprecated<"use 'symbols.lldb-index-cache.max-percent' instead">,
     Desc<"The maximum size for the cache directory in terms of percentage of the available space on the disk. Set to 100 to indicate no limit, 50 to indicate that the cache size will not be left over half the available disk space. A value over 100 will be reduced to 100. A value of 0 disables the percentage size-based pruning.">;
   def LLDBIndexCacheExpirationDays: Property<"lldb-index-cache-expiration-days", "UInt64">,
     Global,
     DefaultUnsignedValue<7>,
+    Deprecated<"use 'symbols.lldb-index-cache.expiration-days' instead">,
     Desc<"The expiration time in days for a file. When a file hasn't been accessed for the specified amount of days, it is removed from the cache. A value of 0 disables the expiration-based pruning.">;
   def LoadSymbolOnDemand: Property<"load-on-demand", "Boolean">,
     Global,
@@ -59,6 +65,44 @@ let Definition = "modulelist", Path = "symbols" in {
     Global,
     DefaultUnsignedValue<4096>,
     Desc<"The maximum number of formatted function names to cache. A value of 0 disables the cache.">;
+}
+
+let Definition = "modulelist_index_cache", Path = "symbols.lldb-index-cache" in {
+  def IndexCacheForceDisable: Property<"force-disable", "Boolean">,
+    Global,
+    DefaultFalse,
+    Desc<"Disable all caching of module data on disk, whatever the symbols.lldb-index-cache.type settings are. When this is set, LLDB will not create, read from, or write to the cache directory.">;
+  def IndexCachePath: Property<"path", "FileSpec">,
+    Global,
+    DefaultStringValue<"">,
+    Desc<"The path to the LLDB index cache directory.">;
+  def IndexCacheMaxByteSize: Property<"max-byte-size", "UInt64">,
+    Global,
+    DefaultUnsignedValue<0>,
+    Desc<"The maximum size for the LLDB index cache directory in bytes. A value over the amount of available space on the disk will be reduced to the amount of available space. A value of 0 disables the absolute size-based pruning.">;
+  def IndexCacheMaxPercent: Property<"max-percent", "UInt64">,
+    Global,
+    DefaultUnsignedValue<0>,
+    Desc<"The maximum size for the cache directory in terms of percentage of the available space on the disk. Set to 100 to indicate no limit, 50 to indicate that the cache size will not be left over half the available disk space. A value over 100 will be reduced to 100. A value of 0 disables the percentage size-based pruning.">;
+  def IndexCacheExpirationDays: Property<"expiration-days", "UInt64">,
+    Global,
+    DefaultUnsignedValue<7>,
+    Desc<"The expiration time in days for a file. When a file hasn't been accessed for the specified amount of days, it is removed from the cache. A value of 0 disables the expiration-based pruning.">;
+}
+
+let Definition = "modulelist_index_cache_type", Path = "symbols.lldb-index-cache.type" in {
+  def IndexCacheTypeSymtab: Property<"symtab", "Boolean">,
+    Global,
+    DefaultFalse,
+    Desc<"Cache the symbol tables of modules read from files, for improved performance in subsequent debug sessions.">;
+  def IndexCacheTypeDwarfIndex: Property<"dwarf-index", "Boolean">,
+    Global,
+    DefaultFalse,
+    Desc<"Cache the indexes that LLDB builds for DWARF debug info that has no accelerator tables, for improved performance in subsequent debug sessions.">;
+  def IndexCacheTypeMemoryModuleSymtab: Property<"memory-module-symtab", "Boolean">,
+    Global,
+    DefaultTrue,
+    Desc<"Cache the symbol tables of modules read out of process memory, for improved performance in subsequent debug sessions.">;
 }
 
 let Definition = "diagnostics", Path = "diagnostics" in {

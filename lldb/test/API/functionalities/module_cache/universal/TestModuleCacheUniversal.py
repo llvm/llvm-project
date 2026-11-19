@@ -18,9 +18,9 @@ class ModuleCacheTestcaseUniversal(TestBase):
         # Set the lldb module cache directory to a directory inside the build
         # artifacts directory so no other tests are interfered with.
         self.runCmd(
-            'settings set symbols.lldb-index-cache-path "%s"' % (self.cache_dir)
+            'settings set symbols.lldb-index-cache.path "%s"' % (self.cache_dir)
         )
-        self.runCmd("settings set symbols.enable-lldb-index-cache true")
+        self.runCmd("settings set symbols.lldb-index-cache.type.symtab true")
 
     def get_module_cache_files(self, basename):
         module_file_glob = os.path.join(self.cache_dir, "llvmcache-*%s*" % (basename))

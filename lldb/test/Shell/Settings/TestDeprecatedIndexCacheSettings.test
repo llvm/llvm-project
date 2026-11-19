@@ -1,0 +1,70 @@
+# The symbols.*lldb-index-cache* settings were replaced by the settings in
+# symbols.lldb-index-cache. The old settings are deprecated, but setting one
+# warns with the name of its replacement, and sets the replacement.
+
+# RUN: %lldb -x -b \
+# RUN:   -o 'settings set symbols.enable-lldb-index-cache true' \
+# RUN:   -o 'settings set symbols.enable-lldb-index-cache-memory-modules false' \
+# RUN:   -o 'settings set symbols.lldb-index-cache-path /tmp/lldb-index-cache-test' \
+# RUN:   -o 'settings set symbols.lldb-index-cache-max-byte-size 1024' \
+# RUN:   -o 'settings set symbols.lldb-index-cache-max-percent 50' \
+# RUN:   -o 'settings set symbols.lldb-index-cache-expiration-days 3' \
+# RUN:   -o 'settings show symbols.lldb-index-cache' \
+# RUN:   2>&1 | FileCheck %s --check-prefix=SET
+# SET-NOT: error:
+# SET: warning: setting 'symbols.enable-lldb-index-cache' is deprecated and may be removed in a future release; use 'symbols.lldb-index-cache.type.symtab' and 'symbols.lldb-index-cache.type.dwarf-index' instead
+# SET: warning: setting 'symbols.enable-lldb-index-cache-memory-modules' is deprecated and may be removed in a future release; use 'symbols.lldb-index-cache.type.memory-module-symtab' instead
+# SET: warning: setting 'symbols.lldb-index-cache-path' is deprecated and may be removed in a future release; use 'symbols.lldb-index-cache.path' instead
+# SET: warning: setting 'symbols.lldb-index-cache-max-byte-size' is deprecated and may be removed in a future release; use 'symbols.lldb-index-cache.max-byte-size' instead
+# SET: warning: setting 'symbols.lldb-index-cache-max-percent' is deprecated and may be removed in a future release; use 'symbols.lldb-index-cache.max-percent' instead
+# SET: warning: setting 'symbols.lldb-index-cache-expiration-days' is deprecated and may be removed in a future release; use 'symbols.lldb-index-cache.expiration-days' instead
+# SET-NOT: error:
+# SET: symbols.lldb-index-cache.expiration-days (unsigned) = 3
+# SET-NEXT: symbols.lldb-index-cache.force-disable (boolean) = false
+# SET-NEXT: symbols.lldb-index-cache.max-byte-size (unsigned) = 1024
+# SET-NEXT: symbols.lldb-index-cache.max-percent (unsigned) = 50
+# SET-NEXT: symbols.lldb-index-cache.path (file) = "/tmp/lldb-index-cache-test"
+# SET-NEXT: symbols.lldb-index-cache.type.dwarf-index (boolean) = true
+# SET-NEXT: symbols.lldb-index-cache.type.memory-module-symtab (boolean) = false
+# SET-NEXT: symbols.lldb-index-cache.type.symtab (boolean) = true
+
+# Setting a deprecated setting to its default value still sets its
+# replacements.
+# RUN: %lldb -x -b \
+# RUN:   -o 'settings set symbols.lldb-index-cache.type.symtab true' \
+# RUN:   -o 'settings set symbols.lldb-index-cache.type.dwarf-index true' \
+# RUN:   -o 'settings set symbols.enable-lldb-index-cache false' \
+# RUN:   -o 'settings show symbols.lldb-index-cache.type' \
+# RUN:   2>&1 | FileCheck %s --check-prefix=DEFAULT
+# DEFAULT: symbols.lldb-index-cache.type.dwarf-index (boolean) = false
+# DEFAULT: symbols.lldb-index-cache.type.symtab (boolean) = false
+
+# Clearing a deprecated setting clears its replacements too.
+# RUN: %lldb -x -b \
+# RUN:   -o 'settings set symbols.enable-lldb-index-cache true' \
+# RUN:   -o 'settings set symbols.lldb-index-cache-expiration-days 3' \
+# RUN:   -o 'settings clear symbols.enable-lldb-index-cache' \
+# RUN:   -o 'settings clear symbols.lldb-index-cache-expiration-days' \
+# RUN:   -o 'settings show -c symbols' \
+# RUN:   2>&1 | FileCheck %s --check-prefix=CLEAR
+# CLEAR: (lldb) settings show -c symbols
+# CLEAR-NOT: lldb-index-cache
+
+# The replacements are what "settings show" lists. The deprecated settings are
+# hidden while they have their default value, and the default cache directory
+# isn't shown as a change.
+# RUN: %lldb -x -b -o 'settings show symbols' -o 'settings show -c symbols' \
+# RUN:   2>&1 | FileCheck %s --check-prefix=SHOW
+# SHOW: (lldb) settings show symbols
+# SHOW-NOT: (deprecated)
+# SHOW: symbols.lldb-index-cache.expiration-days (unsigned) = 7
+# SHOW-NEXT: symbols.lldb-index-cache.force-disable (boolean) = false
+# SHOW-NEXT: symbols.lldb-index-cache.max-byte-size (unsigned) = 0
+# SHOW-NEXT: symbols.lldb-index-cache.max-percent (unsigned) = 0
+# SHOW-NEXT: symbols.lldb-index-cache.path (file) =
+# SHOW-NEXT: symbols.lldb-index-cache.type.dwarf-index (boolean) = false
+# SHOW-NEXT: symbols.lldb-index-cache.type.memory-module-symtab (boolean) = true
+# SHOW-NEXT: symbols.lldb-index-cache.type.symtab (boolean) = false
+# SHOW-NOT: (deprecated)
+# SHOW: (lldb) settings show -c symbols
+# SHOW-NOT: lldb-index-cache
