@@ -193,6 +193,21 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  strtof128
+  SRCS
+    strtof128.cpp
+  HDRS
+    strtof128.h
+  DEPENDS
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.str_to_float
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   strtod
   SRCS
     strtod.cpp

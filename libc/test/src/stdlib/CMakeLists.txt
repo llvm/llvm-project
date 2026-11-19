@@ -77,6 +77,19 @@ add_fp_unittest(
     libc.test.UnitTest.ErrnoCheckingTest
 )
 
+add_libc_test(
+  strtof128_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    strtof128_test.cpp
+  DEPENDS
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.uint128
+    libc.src.stdlib.strtof128
+    libc.test.UnitTest.ErrnoCheckingTest
+)
+
 add_header_library(
   strtol_test_support
   HDRS
