@@ -187,6 +187,26 @@ mlir::ParseResult AddOp::parse(mlir::OpAsmParser &parser,
 void AddOp::print(mlir::OpAsmPrinter &p) { printBinaryOp(p, *this); }
 
 //===----------------------------------------------------------------------===//
+// DivOp: reuse binary-op build/parse/print helpers, same pattern as AddOp/MulOp
+//===----------------------------------------------------------------------===//
+
+void DivOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                   mlir::Value lhs, mlir::Value rhs) {
+  state.addTypes(UnrankedTensorType::get(builder.getF64Type()));
+  state.addOperands({lhs, rhs});
+}
+
+mlir::ParseResult DivOp::parse(mlir::OpAsmParser &parser,
+                                mlir::OperationState &result) {
+  return parseBinaryOp(parser, result);
+}
+
+void DivOp::print(mlir::OpAsmPrinter &printer) {
+  printBinaryOp(printer, *this);
+}
+
+
+//===----------------------------------------------------------------------===//
 // FuncOp
 //===----------------------------------------------------------------------===//
 
