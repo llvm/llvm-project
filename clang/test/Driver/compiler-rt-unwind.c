@@ -6,9 +6,10 @@
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:   | FileCheck --check-prefix=RTLIB-GCC %s
 // RTLIB-GCC: "-lgcc"
+// RTLIB-GCC: "--push-state"
 // RTLIB-GCC-SAME: "--as-needed"
 // RTLIB-GCC-SAME: "-lgcc_s"
-// RTLIB-GCC-SAME: "--no-as-needed"
+// RTLIB-GCC-SAME: "--pop-state"
 //
 // RUN: %clangxx -### %s 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -rtlib=libgcc --unwindlib=platform \
@@ -28,9 +29,10 @@
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:   | FileCheck --check-prefix=RTLIB-GCC-UNWINDLIB-COMPILER-RT %s
 // RTLIB-GCC-UNWINDLIB-COMPILER-RT: "-lgcc"
+// RTLIB-GCC-UNWINDLIB-COMPILER-RT-SAME: "--push-state"
 // RTLIB-GCC-UNWINDLIB-COMPILER-RT-SAME: "--as-needed"
 // RTLIB-GCC-UNWINDLIB-COMPILER-RT-SAME: "-lunwind"
-// RTLIB-GCC-UNWINDLIB-COMPILER-RT-SAME: "--no-as-needed"
+// RTLIB-GCC-UNWINDLIB-COMPILER-RT-SAME: "--pop-state"
 //
 // RUN: not %clang -### %s 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -rtlib=libgcc --unwindlib=libunwind \
@@ -63,9 +65,10 @@
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:   | FileCheck --check-prefix=RTLIB-COMPILER-RT-UNWINDLIB-COMPILER-RT %s
 // RTLIB-COMPILER-RT-UNWINDLIB-COMPILER-RT: "{{.*}}libclang_rt.builtins.a"
+// RTLIB-COMPILER-RT-UNWINDLIB-COMPILER-RT-SAME: "--push-state"
 // RTLIB-COMPILER-RT-UNWINDLIB-COMPILER-RT-SAME: "--as-needed"
 // RTLIB-COMPILER-RT-UNWINDLIB-COMPILER-RT-SAME: "-lunwind"
-// RTLIB-COMPILER-RT-UNWINDLIB-COMPILER-RT-SAME: "--no-as-needed"
+// RTLIB-COMPILER-RT-UNWINDLIB-COMPILER-RT-SAME: "--pop-state"
 //
 // RUN: %clang -### %s 2>&1   \
 // RUN:     --target=x86_64-unknown-linux -rtlib=compiler-rt --unwindlib=libgcc \
