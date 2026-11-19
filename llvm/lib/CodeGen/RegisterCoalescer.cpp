@@ -3401,9 +3401,9 @@ void JoinVals::pruneSubRegValues(
         SmallVector<SlotIndex, 8> EndPoints;
         LIS->pruneValue(S, Def, &EndPoints);
         DidPrune = true;
-        // Mark value number as unused.
+        // Remove the value number.
         if (ValueOut->def == Def)
-          ValueOut->markUnused();
+          S.removeValNo(ValueOut);
 
         if (V.Identical && S.Query(OtherDef).valueOutOrDead()) {
           // If V is identical to V.OtherVNI (and S was live at OtherDef),

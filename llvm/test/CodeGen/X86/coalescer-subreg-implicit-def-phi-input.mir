@@ -6,7 +6,7 @@
 # bb.1 reach the use in bb.5, so the high-byte subrange is live through bb.3.
 
 # INTERVALS-LABEL: Live intervals for machine function: recompute_after_subreg_implicit_def:
-# INTERVALS: %1 [48r,240B:0)[256r,288B:1)[288B,320r:2) 0@48r 1@256r 2@288B-phi  L0000000000000001 [48r,96B:0)[176B,208r:0) 0@48r  L0000000000000002 [48r,240B:0)[256r,288B:1)[288B,320r:3) 0@48r 1@256r 2@x 3@288B-phi  weight:
+# INTERVALS: %1 [48r,240B:0)[256r,288B:1)[288B,320r:2) 0@48r 1@256r 2@288B-phi  L0000000000000001 [48r,96B:0)[176B,208r:0) 0@48r  L0000000000000002 [48r,240B:0)[256r,288B:1)[288B,320r:2) 0@48r 1@256r 2@288B-phi  weight:
 
 ---
 name: recompute_after_subreg_implicit_def

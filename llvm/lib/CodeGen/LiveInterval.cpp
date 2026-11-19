@@ -684,7 +684,7 @@ void LiveRange::join(LiveRange &Other,
   unsigned NumValNos = 0;
   for (unsigned i = 0; i < NumNewVals; ++i) {
     VNInfo *VNI = NewVNInfo[i];
-    if (VNI) {
+    if (VNI && !VNI->isUnused()) {
       if (NumValNos >= NumVals)
         valnos.push_back(VNI);
       else
@@ -692,8 +692,7 @@ void LiveRange::join(LiveRange &Other,
       VNI->id = NumValNos++;  // Renumber val#.
     }
   }
-  if (NumNewVals < NumVals)
-    valnos.resize(NumNewVals);  // shrinkify
+  valnos.resize(NumValNos);
 
   // Okay, now insert the RHS live segments into the LHS.
   LiveRangeUpdater Updater(this);
