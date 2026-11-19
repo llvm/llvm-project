@@ -1860,12 +1860,13 @@ __kmp_invoke_microtask:
 
 	// First, save ra and fp
 	addi	sp, sp, -16
+	.cfi_def_cfa_offset 16
 	sd	ra, 8(sp)
+	.cfi_offset	ra, -8
 	sd	fp, 0(sp)
+	.cfi_offset	fp, -16
 	addi	fp, sp, 16
 	.cfi_def_cfa	fp, 0
-	.cfi_offset	ra, -8
-	.cfi_offset	fp, -16
 
 	// Compute the dynamic stack size:
 	//
@@ -1956,9 +1957,13 @@ __kmp_invoke_microtask:
 	addi	a0, zero, 1
 
 	addi	sp, fp, -16
+	.cfi_def_cfa sp, 16
 	ld	fp, 0(sp)
+	.cfi_restore fp
 	ld	ra, 8(sp)
+	.cfi_restore ra
 	addi	sp, sp, 16
+	.cfi_def_cfa_offset 0
 	ret
 .Lfunc_end0:
 	.size	__kmp_invoke_microtask, .Lfunc_end0-__kmp_invoke_microtask

@@ -1,0 +1,32 @@
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+# REQUIRES: linux, riscv64-target-arch, rv64-cfi-llvm
+# RUN: %clang %libomp-cfi-flags -I %S/../../src -march=rv64g -mabi=lp64d -mno-relax -c %S/../../src/z_Linux_asm.S -o %t.o
+# RUN: %libomp-dwarfdump --eh-frame %t.o | %libomp-cfi-check %s --check-prefixes=CHECK,RV64
+# RUN: %clang %libomp-cfi-flags -I %S/../../src -march=rv64gc -mabi=lp64d -mno-relax -c %S/../../src/z_Linux_asm.S -o %t.c.o
+# RUN: %libomp-dwarfdump --eh-frame %t.c.o | %libomp-cfi-check %s --check-prefixes=CHECK,RV64C
+
+# The RV64 assembly file contains only __kmp_invoke_microtask. Compile the real
+# source with the build's kmp_config.h, so its FDE is unambiguous. Disabling
+# relaxation keeps the instruction lengths predictable for this compile-only test.
+# Check the rule at each frame-changing instruction boundary. The epilogue PCs
+# are relative to the FDE end to accommodate both OMPT configurations.
+# CHECK: FDE cie={{[0-9a-f]+}} pc={{0+}}...[[#%x,END:]]
+# CHECK: 0x0: CFA=X2{{$}}
+# RV64-NEXT: 0x4: CFA=X2+16{{$}}
+# RV64-NEXT: 0x8: CFA=X2+16: X1=[CFA-8]{{$}}
+# RV64-NEXT: 0xc: CFA=X2+16: X1=[CFA-8], X8=[CFA-16]{{$}}
+# RV64-NEXT: 0x10: CFA=X8: X1=[CFA-8], X8=[CFA-16]{{$}}
+# RV64C-NEXT: 0x2: CFA=X2+16{{$}}
+# RV64C-NEXT: 0x4: CFA=X2+16: X1=[CFA-8]{{$}}
+# RV64C-NEXT: 0x6: CFA=X2+16: X1=[CFA-8], X8=[CFA-16]{{$}}
+# RV64C-NEXT: 0x8: CFA=X8: X1=[CFA-8], X8=[CFA-16]{{$}}
+# RV64-NEXT: 0x[[#END-16]]: CFA=X2+16: X1=[CFA-8], X8=[CFA-16]{{$}}
+# RV64-NEXT: 0x[[#END-12]]: CFA=X2+16: X1=[CFA-8]{{$}}
+# RV64-NEXT: 0x[[#END-8]]: CFA=X2+16{{$}}
+# RV64-NEXT: 0x[[#END-4]]: CFA=X2{{$}}
+# RV64C-NEXT: 0x[[#END-8]]: CFA=X2+16: X1=[CFA-8], X8=[CFA-16]{{$}}
+# RV64C-NEXT: 0x[[#END-6]]: CFA=X2+16: X1=[CFA-8]{{$}}
+# RV64C-NEXT: 0x[[#END-4]]: CFA=X2+16{{$}}
+# RV64C-NEXT: 0x[[#END-2]]: CFA=X2{{$}}
+# CHECK-NOT: FDE
