@@ -30,6 +30,7 @@
 #include "polly/Support/ScopHelper.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/RegionInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Dominators.h"
@@ -243,9 +244,19 @@ static bool generateCode(Scop &S, IslAstInfo &AI, LoopInfo &LI,
   // parameters they reference. Afterwards, for the remaining parameters that
   // might reference the hoisted loads. Finally, build the runtime check
   // that might reference both hoisted loads as well as parameters.
-  // If the hoisting fails we have to bail and execute the original code.
+  // If the hoisting fails or AST expressions exceed signed 64-bit integer
+  // bitwidth, we have to bail and execute the original code.
   Builder.SetInsertPoint(SplitBlock->getTerminator()->getIterator());
-  if (!NodeBuilder.preloadInvariantLoads()) {
+  bool HasExceedingWidth = NodeBuilder.hasExceedingBitWidth(AstRoot);
+  if (HasExceedingWidth) {
+    POLLY_DEBUG(dbgs() << "Polly: Bailout due to AST expression exceeding 64-bit "
+                          "integer arithmetic\n");
+    OptimizationRemarkEmitter ORE(&S.getFunction());
+    ORE.emit(OptimizationRemarkMissed(DEBUG_TYPE, "ExpressionOverflow",
+                                      SplitBlock->getTerminator())
+             << "Bailing out: AST expression exceeds 64-bit integer arithmetic");
+  }
+  if (HasExceedingWidth || !NodeBuilder.preloadInvariantLoads()) {
     // Patch the introduced branch condition to ensure that we always execute
     // the original SCoP.
     auto *FalseI1 = Builder.getFalse();

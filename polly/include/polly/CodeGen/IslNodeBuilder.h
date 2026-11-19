@@ -103,6 +103,10 @@ public:
   /// Preload all memory loads that are invariant.
   bool preloadInvariantLoads();
 
+  /// Check if the AST node or any of its subnodes/expressions exceed signed
+  /// 64-bit integer arithmetic bitwidth.
+  bool hasExceedingBitWidth(isl::ast_node Node) const;
+
   /// Finalize code generation.
   ///
   /// @see BlockGenerator::finalizeSCoP(Scop &S)
