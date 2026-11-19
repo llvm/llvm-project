@@ -315,22 +315,24 @@ exit:
   ret void
 }
 
+; There is no benefit in versioning a single-iteration loop for unit stride.
 define double @single_iteration_unknown_stride(i32 %x, ptr %y, i1 %cond) {
 ; CHECK-LABEL: 'single_iteration_unknown_stride'
 ; CHECK-NEXT:    loop.body:
-; CHECK-NEXT:      Memory dependences are safe
+; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:  Unsafe indirect dependence.
 ; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        IndirectUnsafe:
+; CHECK-NEXT:            %load11 = load double, ptr %gep10, align 8 ->
+; CHECK-NEXT:            store double %load11, ptr %y, align 8
+; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
-; CHECK-NEXT:      Equal predicate: %x == 1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
-; CHECK-NEXT:      [PSE] %gep10 = getelementptr double, ptr %gep8, i64 %mul:
-; CHECK-NEXT:        {(8 + %y),+,(8 * (sext i32 %x to i64))<nsw>}<nw><%loop.body>
-; CHECK-NEXT:        --> {(8 + %y),+,8}<nw><%loop.body>
 ;
 entry:
   br i1 %cond, label %noloop.exit, label %loop.ph
