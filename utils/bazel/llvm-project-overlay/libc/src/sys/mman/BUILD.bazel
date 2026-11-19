@@ -140,11 +140,10 @@ libc_function(
     srcs = ["linux/msync.cpp"],
     hdrs = ["msync.h"],
     deps = [
-        "//libc/hdr:sys_mman_macros",
         "//libc/hdr/types:size_t",
         "//libc/src/__support:common",
         "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
+        "//libc/src/__support/OSUtil/linux/syscall_wrappers:msync",
         "//libc/src/__support/macros:config",
         "//libc/src/errno",
     ],
