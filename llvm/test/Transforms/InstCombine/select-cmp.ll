@@ -654,10 +654,7 @@ define i1 @test_select_inverse_samesign_both_rhsc_same_sign(i64 %x, i64 %y, i1 %
 
 define i1 @test_select_inverse_samesign_both_rhsc_diff_sign(i64 %x, i64 %y, i1 %cond) {
 ; CHECK-LABEL: @test_select_inverse_samesign_both_rhsc_diff_sign(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp samesign slt i64 [[X:%.*]], 0
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp samesign sgt i64 [[X]], -1
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], i1 [[CMP1]], i1 [[CMP2]]
-; CHECK-NEXT:    ret i1 [[SEL]]
+; CHECK-NEXT:    ret i1 false
 ;
   %cmp1 = icmp samesign slt i64 %x, 0
   %cmp2 = icmp samesign sgt i64 %x, -1

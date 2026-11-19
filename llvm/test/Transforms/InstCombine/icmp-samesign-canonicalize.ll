@@ -52,8 +52,7 @@ define i1 @uge_smin(i8 %x) {
 define i1 @sge_zero_sign_crossing(i8 %x) {
 ; CHECK-LABEL: define i1 @sge_zero_sign_crossing(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign sge i8 [[X]], 0
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %cmp = icmp samesign sge i8 %x, 0
   ret i1 %cmp
@@ -62,8 +61,7 @@ define i1 @sge_zero_sign_crossing(i8 %x) {
 define i1 @sle_minus_one_sign_crossing(i8 %x) {
 ; CHECK-LABEL: define i1 @sle_minus_one_sign_crossing(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign sle i8 [[X]], -1
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %cmp = icmp samesign sle i8 %x, -1
   ret i1 %cmp
