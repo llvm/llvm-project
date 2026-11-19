@@ -31,6 +31,7 @@
 #include <new>
 #include <utility>
 
+#include "count_new.h"
 #include "operator_hijacker.h"
 #include "test_macros.h"
 #include "types.h"
@@ -467,6 +468,25 @@ int main(int, char**) {
     check_size_overflow<int[]>(max);
     check_size_overflow<int[]>(max / sizeof(int) + 2);
     check_size_overflow<int[][3]>(max / sizeof(int[3]) + 2);
+  }
+
+  // Check that we don't over-allocate (e.g. by multiplying by the control block size instead of sizeof(T)).
+  if (!globalMemCounter.disable_checking) {
+    constexpr std::size_t n = 1024;
+    {
+      globalMemCounter.reset();
+      std::shared_ptr<char[]> ptr = std::make_shared<char[]>(n);
+      assert(globalMemCounter.checkNewCalledEq(1));
+      assert(globalMemCounter.last_new_size >= n);
+      assert(globalMemCounter.last_new_size <= n + 256);
+    }
+    {
+      globalMemCounter.reset();
+      std::shared_ptr<char[]> ptr = std::make_shared<char[]>(n, 'a');
+      assert(globalMemCounter.checkNewCalledEq(1));
+      assert(globalMemCounter.last_new_size >= n);
+      assert(globalMemCounter.last_new_size <= n + 256);
+    }
   }
 
   return 0;

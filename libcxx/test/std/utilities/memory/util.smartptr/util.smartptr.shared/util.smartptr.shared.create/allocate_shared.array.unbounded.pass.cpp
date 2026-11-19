@@ -37,6 +37,37 @@
 #include "test_macros.h"
 #include "types.h"
 
+template <class T>
+class ByteCountingAllocator {
+  std::size_t* bytes_ = nullptr;
+
+  template <class U>
+  friend class ByteCountingAllocator;
+
+public:
+  using value_type = T;
+
+  explicit ByteCountingAllocator(std::size_t* bytes) : bytes_(bytes) {}
+
+  template <class U>
+  ByteCountingAllocator(const ByteCountingAllocator<U>& other) noexcept : bytes_(other.bytes_) {}
+
+  T* allocate(std::size_t n) {
+    *bytes_ += n * sizeof(T);
+    return std::allocator<T>().allocate(n);
+  }
+
+  void deallocate(T* p, std::size_t n) noexcept {
+    *bytes_ -= n * sizeof(T);
+    std::allocator<T>().deallocate(p, n);
+  }
+
+  template <class U>
+  friend bool operator==(const ByteCountingAllocator& a, const ByteCountingAllocator<U>& b) noexcept {
+    return a.bytes_ == b.bytes_;
+  }
+};
+
 template <class T, class ...Args>
 concept CanAllocateShared = requires(Args&& ...args) {
   { std::allocate_shared<T>(std::forward<Args>(args)...) } -> std::same_as<std::shared_ptr<T>>;
@@ -499,6 +530,24 @@ int main(int, char**) {
 
     // Also check with an allocator that isn't std::allocator
     check_size_overflow<int[]>(min_allocator<int[]>(), max);
+  }
+
+  // Check that we don't over-allocate (e.g. by multiplying by the control block size instead of sizeof(T)).
+  {
+    constexpr std::size_t n = 1024;
+    std::size_t bytes       = 0;
+    {
+      std::shared_ptr<char[]> ptr = std::allocate_shared<char[]>(ByteCountingAllocator<char[]>(&bytes), n);
+      assert(bytes >= n);
+      assert(bytes <= n + 256);
+    }
+    assert(bytes == 0);
+    {
+      std::shared_ptr<char[]> ptr = std::allocate_shared<char[]>(ByteCountingAllocator<char[]>(&bytes), n, 'a');
+      assert(bytes >= n);
+      assert(bytes <= n + 256);
+    }
+    assert(bytes == 0);
   }
 
   return 0;
