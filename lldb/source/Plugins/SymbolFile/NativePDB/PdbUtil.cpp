@@ -198,13 +198,17 @@ CVTagRecord CVTagRecord::create(CVType type) {
   assert(IsTagRecord(type) && "type is not a tag record!");
   switch (type.kind()) {
   case LF_CLASS:
+  case LF_CLASS2:
   case LF_STRUCTURE:
-  case LF_INTERFACE: {
+  case LF_STRUCTURE2:
+  case LF_INTERFACE:
+  case LF_INTERFACE2: {
     ClassRecord cr;
     llvm::cantFail(TypeDeserializer::deserializeAs<ClassRecord>(type, cr));
     return CVTagRecord(std::move(cr));
   }
-  case LF_UNION: {
+  case LF_UNION:
+  case LF_UNION2: {
     UnionRecord ur;
     llvm::cantFail(TypeDeserializer::deserializeAs<UnionRecord>(type, ur));
     return CVTagRecord(std::move(ur));
@@ -220,8 +224,7 @@ CVTagRecord CVTagRecord::create(CVType type) {
 }
 
 CVTagRecord::CVTagRecord(ClassRecord &&c)
-    : cvclass(std::move(c)),
-      m_kind(cvclass.Kind == TypeRecordKind::Struct ? Struct : Class) {}
+    : cvclass(std::move(c)), m_kind(cvclass.isStruct() ? Struct : Class) {}
 CVTagRecord::CVTagRecord(UnionRecord &&u)
     : cvunion(std::move(u)), m_kind(Union) {}
 CVTagRecord::CVTagRecord(EnumRecord &&e) : cvenum(std::move(e)), m_kind(Enum) {}
@@ -290,9 +293,13 @@ PDB_SymType lldb_private::npdb::CVTypeToPDBType(TypeLeafKind kind) {
   case LF_BINTERFACE:
     return PDB_SymType::BaseInterface;
   case LF_CLASS:
+  case LF_CLASS2:
   case LF_STRUCTURE:
+  case LF_STRUCTURE2:
   case LF_INTERFACE:
+  case LF_INTERFACE2:
   case LF_UNION:
+  case LF_UNION2:
     return PDB_SymType::UDT;
   case LF_POINTER:
     return PDB_SymType::PointerType;
@@ -499,11 +506,15 @@ bool lldb_private::npdb::IsForwardRefUdt(CVType cvt) {
   EnumRecord er;
   switch (cvt.kind()) {
   case LF_CLASS:
+  case LF_CLASS2:
   case LF_STRUCTURE:
+  case LF_STRUCTURE2:
   case LF_INTERFACE:
+  case LF_INTERFACE2:
     llvm::cantFail(TypeDeserializer::deserializeAs<ClassRecord>(cvt, cr));
     return cr.isForwardRef();
   case LF_UNION:
+  case LF_UNION2:
     llvm::cantFail(TypeDeserializer::deserializeAs<UnionRecord>(cvt, ur));
     return ur.isForwardRef();
   case LF_ENUM:
@@ -517,8 +528,11 @@ bool lldb_private::npdb::IsForwardRefUdt(CVType cvt) {
 bool lldb_private::npdb::IsTagRecord(llvm::codeview::CVType cvt) {
   switch (cvt.kind()) {
   case LF_CLASS:
+  case LF_CLASS2:
   case LF_STRUCTURE:
+  case LF_STRUCTURE2:
   case LF_UNION:
+  case LF_UNION2:
   case LF_ENUM:
     return true;
   default:
@@ -529,8 +543,11 @@ bool lldb_private::npdb::IsTagRecord(llvm::codeview::CVType cvt) {
 bool lldb_private::npdb::IsClassStructUnion(llvm::codeview::CVType cvt) {
   switch (cvt.kind()) {
   case LF_CLASS:
+  case LF_CLASS2:
   case LF_STRUCTURE:
+  case LF_STRUCTURE2:
   case LF_UNION:
+  case LF_UNION2:
     return true;
   default:
     return false;
@@ -568,13 +585,17 @@ lldb_private::npdb::TranslateMemberAccess(MemberAccess access) {
 TypeIndex lldb_private::npdb::GetFieldListIndex(CVType cvt) {
   switch (cvt.kind()) {
   case LF_CLASS:
+  case LF_CLASS2:
   case LF_STRUCTURE:
-  case LF_INTERFACE: {
+  case LF_STRUCTURE2:
+  case LF_INTERFACE:
+  case LF_INTERFACE2: {
     ClassRecord cr;
     cantFail(TypeDeserializer::deserializeAs<ClassRecord>(cvt, cr));
     return cr.FieldList;
   }
-  case LF_UNION: {
+  case LF_UNION:
+  case LF_UNION2: {
     UnionRecord ur;
     cantFail(TypeDeserializer::deserializeAs<UnionRecord>(cvt, ur));
     return ur.FieldList;
@@ -1184,10 +1205,14 @@ size_t lldb_private::npdb::GetSizeOfType(PdbTypeSymId id,
   case LF_ARRAY:
     return GetSizeOfTypeInternal<ArrayRecord>(cvt);
   case LF_CLASS:
+  case LF_CLASS2:
   case LF_STRUCTURE:
+  case LF_STRUCTURE2:
   case LF_INTERFACE:
+  case LF_INTERFACE2:
     return GetSizeOfTypeInternal<ClassRecord>(cvt);
   case LF_UNION:
+  case LF_UNION2:
     return GetSizeOfTypeInternal<UnionRecord>(cvt);
   case LF_BITFIELD: {
     BitFieldRecord record;
