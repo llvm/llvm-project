@@ -89,6 +89,8 @@ public:
 
     ExprId &operator*() const { return table[idx]; }
     Iterator &operator++() {
+      // Advance by increasing step sizes (triangular probing) rather than
+      // sequentially; visiting buckets out of order is intentional.
       ++step;
       idx = (idx + step) & mask();
       return *this;

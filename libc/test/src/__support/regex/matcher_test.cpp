@@ -812,7 +812,7 @@ TEST(LlvmLibcRegexMatcherTest, AnchorNullabilityMaskAndInvalidIds) {
   ExprId chain = *bol;
   for (size_t i = 0; i < 9995; ++i) {
     auto next = pool.make_concat(*bol, chain);
-    ASSERT_TRUE(next.has_value());
+    ASSERT_TRUE(next.has_value()) << "iteration " << i;
     chain = *next;
   }
   EXPECT_FALSE(nullable(chain, 0, pool));
