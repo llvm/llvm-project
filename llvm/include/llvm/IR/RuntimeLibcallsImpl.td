@@ -98,6 +98,9 @@ def FP128 : FuncArgType;
 def PPCFP128 : FuncArgType;
 def Floating : FuncArgType; // Any floating type.
 def Ptr : FuncArgType;      // Any pointer type.
+// C structs, lowered to IR types according to the target's C ABI.
+def CFltPair : FuncArgType; // struct { float, float }
+def CDblPair : FuncArgType; // struct { double, double }
 def AllocaPtr : FuncArgType; // Pointer in the alloca address space.
 def Struct : FuncArgType;   // Any struct type.
 def Ellip : FuncArgType;    // The ellipsis (...).
@@ -168,14 +171,20 @@ def ArgOrErrnoMemWriteOnly : MemoryEffects<NoModRef> {
 }
 
 def ErrnoMemWriteOnly : MemoryEffects<NoModRef> { let ErrnoMem = Mod; }
-def InaccessibleOrErrnoMem : MemoryEffects<NoModRef> {
+def InaccessibleMemOrErrnoWrite : MemoryEffects<NoModRef> {
   let InaccessibleMem = ModRef;
-  let ErrnoMem = ModRef;
+  let ErrnoMem = Mod;
 }
 
 def InaccessibleOrArgMem : MemoryEffects<NoModRef> {
   let ArgMem = ModRef;
   let InaccessibleMem = ModRef;
+}
+
+def InaccessibleOrArgMemOrErrnoWrite : MemoryEffects<NoModRef> {
+  let ArgMem = ModRef;
+  let InaccessibleMem = ModRef;
+  let ErrnoMem = Mod;
 }
 
 class ValueAttr<list<AttrProperty> props, string expr>

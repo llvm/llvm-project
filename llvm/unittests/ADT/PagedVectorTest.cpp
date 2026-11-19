@@ -318,4 +318,37 @@ TEST(PagedVectorTest, FunctionalityTest) {
   EXPECT_EQ(V.size(), 0ULL);
   EXPECT_EQ(V.capacity(), 0ULL);
 }
+
+struct PolymorphicElem {
+  int Value = -1;
+  PolymorphicElem() = default;
+  explicit PolymorphicElem(int V) : Value(V) {}
+  PolymorphicElem(const PolymorphicElem &) = default;
+  PolymorphicElem &operator=(const PolymorphicElem &) = default;
+  virtual ~PolymorphicElem() = default;
+  virtual int get() const { return Value; }
+};
+
+TEST(PagedVectorTest, PolymorphicElementTest) {
+  BumpPtrAllocator Alloc;
+  void *Dirty = Alloc.Allocate(256, 8);
+  std::memset(Dirty, 0x5A, 256);
+  Alloc.Reset();
+
+  PagedVector<PolymorphicElem, 4> V(&Alloc);
+  V.resize(8);
+  EXPECT_EQ(0LL, std::distance(V.materialized_begin(), V.materialized_end()));
+
+  V[0] = PolymorphicElem(10);
+  V[5] = PolymorphicElem(50);
+  EXPECT_EQ(10, V[0].get());
+  EXPECT_EQ(-1, V[1].get());
+  EXPECT_EQ(50, V[5].get());
+  EXPECT_EQ(8LL, std::distance(V.materialized_begin(), V.materialized_end()));
+
+  V.resize(4);
+  EXPECT_EQ(10, V[0].get());
+  V.clear();
+  EXPECT_TRUE(V.empty());
+}
 } // namespace llvm

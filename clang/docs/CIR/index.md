@@ -39,6 +39,7 @@ pipeline viewer is convenient for following along.
 ABILowering
 CleanupAndEHDesign
 CodeDuplication
+EmitPoints
 ```
 
 ## RFCs

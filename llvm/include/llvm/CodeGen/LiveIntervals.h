@@ -225,9 +225,11 @@ public:
   /// uses, and it doesn't remove dead defs.
   /// Dead PHIDef values are marked as unused. New dead machine instructions
   /// are added to the dead vector. Returns true if the interval may have been
-  /// separated into multiple connected components.
+  /// separated into multiple connected components. Only the subranges
+  /// overlapping \p SubRangeMask are shrunk.
   LLVM_ABI bool shrinkToUses(LiveInterval *li,
-                             SmallVectorImpl<MachineInstr *> *dead = nullptr);
+                             SmallVectorImpl<MachineInstr *> *dead = nullptr,
+                             LaneBitmask SubRangeMask = LaneBitmask::getAll());
 
   /// Specialized version of
   /// shrinkToUses(LiveInterval *li, SmallVectorImpl<MachineInstr*> *dead)
