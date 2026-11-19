@@ -18,17 +18,19 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-// [conv.general]/3 says "E is convertible to T" whenever "T t=E;" is well-formed.
+// [conv.general]/3 says "E is convertible to T" whenever "T t = E;" is well-formed.
 // We can't test for that, but we can test implicit convertibility by passing it
-// to a function. Notice that __is_core_convertible<void,void> is false,
-// and __is_core_convertible<immovable-type,immovable-type> is true in C++17 and later.
+// to a function. Notice that __is_core_convertible<void, void> is false,
+// and __is_core_convertible<immovable-type, immovable-type> is true in C++17 and later.
+// Also note that `T t = E;` is never well-formed when T is an array or function type.
 
 template <class _Tp, class _Up, class = void>
 inline const bool __is_core_convertible_v = false;
 
 template <class _Tp, class _Up>
 inline const bool
-    __is_core_convertible_v<_Tp, _Up, decltype(static_cast<void (*)(_Up)>(0)(static_cast<_Tp (*)()>(0)()))> = true;
+    __is_core_convertible_v<_Tp, _Up, decltype(static_cast<void (*)(_Up)>(0)(static_cast<_Tp (*)()>(0)()))> =
+        !__is_array(_Up) && !__is_function(_Up);
 
 template <class _Tp, class _Up>
 using __is_core_convertible _LIBCPP_NODEBUG = integral_constant<bool, __is_core_convertible_v<_Tp, _Up> >;
