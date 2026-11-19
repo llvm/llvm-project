@@ -2206,6 +2206,15 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "codegen_cl_options_gen",
+    strip_include_prefix = "lib/CodeGen",
+    tbl_outs = {"lib/CodeGen/CodeGenCLOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = "//llvm:llvm-tblgen",
+    td_file = "lib/CodeGen/CodeGenCLOptions.td",
+    deps = ["//llvm:OptParserTdFiles"],
+)
+
 cc_library(
     name = "codegen",
     srcs = glob(
@@ -2233,6 +2242,7 @@ cc_library(
         ":basic_riscv_andes_vector_builtin_cg_gen",
         ":basic_riscv_sifive_vector_builtin_cg_gen",
         ":basic_riscv_vector_builtin_cg_gen",
+        ":codegen_cl_options_gen",
         ":codegen_utils",
         ":driver",
         ":frontend",
@@ -2268,6 +2278,7 @@ cc_library(
         "//llvm:MC",
         "//llvm:ObjCARC",
         "//llvm:Object",
+        "//llvm:Option",
         "//llvm:Passes",
         "//llvm:Plugins",
         "//llvm:ProfileData",
