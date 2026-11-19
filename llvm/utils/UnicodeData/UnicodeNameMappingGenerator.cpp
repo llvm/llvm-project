@@ -321,11 +321,12 @@ private:
     }
     if (N->Parent && N->Parent->Children.size() == 1 && !N->Parent->Value &&
         (N->Parent->Name.size() + N->Name.size() <= 32)) {
-      N->Parent->Value = N->Value;
-      N->Parent->Name += N->Name;
-      N->Parent->Children = std::move(N->Children);
-      for (std::unique_ptr<Node> &c : N->Parent->Children) {
-        c->Parent = N->Parent;
+      Node* Parent = N->Parent;
+      Parent->Value = N->Value;
+      Parent->Name += N->Name;
+      Parent->Children = std::move(N->Children);
+      for (std::unique_ptr<Node> &c : Parent->Children) {
+        c->Parent = Parent;
       }
     }
   }
