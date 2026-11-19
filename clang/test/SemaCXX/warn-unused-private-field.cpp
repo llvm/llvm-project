@@ -388,3 +388,17 @@ void test2() {
   (void)i;
 }
 } // namespace warn_unused_template
+
+#if __cplusplus >= 201402L
+namespace offsetof_template {
+template <int>
+class Slab {
+ public:
+  static constexpr auto offset() { return __builtin_offsetof(Slab, node_); }
+ private:
+  // FIXME: false positive.
+  int node_; // expected-warning {{private field 'node_' is not used}}
+};
+auto kOff = Slab<0>::offset();
+} // namespace offsetof_template
+#endif
