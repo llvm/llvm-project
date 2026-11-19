@@ -40,6 +40,8 @@ defm : BoolField<"spirv-debug-lexical-block-discriminator-scope", "false",
   "Use a DebugLexicalBlockDiscriminator as a DebugScope">;
 defm : BoolField<"spirv-debug-scope-forward-refs", "true",
   "Forward-reference debug scopes when SPV_KHR_relaxed_extended_instruction is enabled; disable to drop the cycle instead">;
+defm : BoolField<"spirv-debug-declare-untyped-variable", "false",
+  "Accept an OpUntypedVariableKHR as DebugDeclare's Variable operand (not allowed by NonSemantic.Shader.DebugInfo)">;
 
 // SPIRVPrepareFunctions.cpp
 // As with cl::ValueOptional, a bare flag is accepted and allows nothing.
