@@ -805,7 +805,9 @@ private:
   void addLoopExit(const Stmt *LoopStmt);
   void addAutomaticObjHandling(LocalScope::const_iterator B,
                                LocalScope::const_iterator E, Stmt *S);
-  void addAutomaticObjDestruction(llvm::iterator_range<LocalScope::const_iterator> R, Stmt *S);
+  void
+  addAutomaticObjDestruction(llvm::iterator_range<LocalScope::const_iterator> R,
+                             Stmt *S);
   void addScopeExitHandling(LocalScope::const_iterator B,
                             LocalScope::const_iterator E, Stmt *S);
   void addImplicitDtorsForDestructor(const CXXDestructorDecl *DD);
@@ -1982,8 +1984,8 @@ void CFGBuilder::addAutomaticObjHandling(LocalScope::const_iterator B,
 /// Add CFG elements corresponding to call destructor and end of lifetime
 /// of all automatic variables with trivial and non-trivial destructors in
 /// range [B, E). This includes AutomaticObjectDtor and LifetimeEnds elements.
-void CFGBuilder::addAutomaticObjDestruction(llvm::iterator_range<LocalScope::const_iterator> R,
-                                            Stmt *S) {
+void CFGBuilder::addAutomaticObjDestruction(
+    llvm::iterator_range<LocalScope::const_iterator> R, Stmt *S) {
   if (!BuildOpts.AddImplicitDtors && !BuildOpts.AddLifetime)
     return;
 
