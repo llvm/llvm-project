@@ -21,6 +21,7 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Target/TargetMachine.h"
 
 #define DEBUG_TYPE "codegen-common"
 
@@ -244,6 +245,41 @@ static MachineOperand *getSalvageOpsForTrunc(const MachineRegisterInfo &MRI,
   return &Trunc.getOperand(1);
 }
 
+static bool isNoopAddrSpaceCast(const MachineFunction &MF, LLT SrcTy,
+                                LLT DstTy) {
+  return SrcTy.getSizeInBits() == DstTy.getSizeInBits() &&
+         MF.getTarget().isNoopAddrSpaceCast(MF.getDataLayout(),
+                                            SrcTy.getAddressSpace(),
+                                            DstTy.getAddressSpace());
+}
+
+// A no-op cast, or a pair of casts whose ends are the same type or no-op
+// castable to each other, yields the original pointer.
+static MachineOperand *
+getSalvageOpsForAddrSpaceCast(const MachineRegisterInfo &MRI,
+                              MachineInstr &Cast) {
+  assert(Cast.getOpcode() == TargetOpcode::G_ADDRSPACE_CAST &&
+         "Must be a G_ADDRSPACE_CAST");
+
+  const MachineFunction &MF = *Cast.getMF();
+  LLT DstTy = MRI.getType(Cast.getOperand(0).getReg());
+  MachineOperand &Src = Cast.getOperand(1);
+  if (isNoopAddrSpaceCast(MF, MRI.getType(Src.getReg()), DstTy))
+    return &Src;
+
+  if (!Src.getReg().isVirtual())
+    return nullptr;
+  MachineInstr *SrcCast = MRI.getVRegDef(Src.getReg());
+  if (!SrcCast || SrcCast->getOpcode() != TargetOpcode::G_ADDRSPACE_CAST)
+    return nullptr;
+
+  MachineOperand &Orig = SrcCast->getOperand(1);
+  LLT OrigTy = MRI.getType(Orig.getReg());
+  if (OrigTy != DstTy && !isNoopAddrSpaceCast(MF, OrigTy, DstTy))
+    return nullptr;
+  return &Orig;
+}
+
 static MachineOperand *salvageDebugInfoImpl(const MachineRegisterInfo &MRI,
                                             MachineInstr &MI,
                                             SmallVectorImpl<uint64_t> &Ops) {
@@ -252,6 +288,8 @@ static MachineOperand *salvageDebugInfoImpl(const MachineRegisterInfo &MRI,
     return getSalvageOpsForTrunc(MRI, MI, Ops);
   case TargetOpcode::COPY:
     return getSalvageOpsForCopy(MRI, MI);
+  case TargetOpcode::G_ADDRSPACE_CAST:
+    return getSalvageOpsForAddrSpaceCast(MRI, MI);
   default:
     return nullptr;
   }
@@ -272,9 +310,6 @@ void llvm::salvageDebugInfoForDbgValue(const MachineRegisterInfo &MRI,
     // operands; all of them are rewritten the first time it is seen.
     if (!Visited.insert(DbgMI).second)
       continue;
-    if (DbgMI->isIndirectDebugValue()) {
-      continue;
-    }
 
     Register Reg = DefMO->getReg();
     assert(DbgMI->hasDebugOperandForReg(Reg) &&
@@ -285,6 +320,9 @@ void llvm::salvageDebugInfoForDbgValue(const MachineRegisterInfo &MRI,
     SmallVector<uint64_t, 16> Ops;
     auto Op0 = salvageDebugInfoImpl(MRI, MI, Ops);
     if (!Op0)
+      continue;
+    // Ops would apply to the address, not the value it points to.
+    if (DbgMI->isIndirectDebugValue() && !Ops.empty())
       continue;
 
     SmallVector<MachineOperand *, 2> LocMOs(

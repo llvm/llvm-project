@@ -1,0 +1,161 @@
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -run-pass=legalizer %s -o - | FileCheck %s
+
+# A dead addrspacecast is salvaged to the original pointer, including for
+# indirect DBG_VALUEs, if it is a target no-op cast or ends a pair of casts that
+# returns to the original type or a no-op castable address space.
+
+--- |
+  define void @round_trip_indirect() !dbg !4 { ret void }
+  define void @round_trip_direct() !dbg !7 { ret void }
+  define void @single_cast() !dbg !10 { ret void }
+  define void @round_trip_narrow() !dbg !13 { ret void }
+  define void @cast_chain() !dbg !16 { ret void }
+  define void @noop_cast() !dbg !19 { ret void }
+  define void @noop_chain() !dbg !22 { ret void }
+
+  !llvm.module.flags = !{!0}
+  !llvm.dbg.cu = !{!1}
+  !0 = !{i32 2, !"Debug Info Version", i32 3}
+  !1 = distinct !DICompileUnit(language: DW_LANG_C11, file: !2, emissionKind: FullDebug)
+  !2 = !DIFile(filename: "t.c", directory: "/")
+  !3 = !DISubroutineType(types: !{null})
+  !4 = distinct !DISubprogram(name: "round_trip_indirect", scope: !2, file: !2, type: !3, spFlags: DISPFlagDefinition, unit: !1)
+  !5 = !DILocalVariable(name: "x", scope: !4, file: !2)
+  !6 = !DILocation(line: 1, scope: !4)
+  !7 = distinct !DISubprogram(name: "round_trip_direct", scope: !2, file: !2, type: !3, spFlags: DISPFlagDefinition, unit: !1)
+  !8 = !DILocalVariable(name: "y", scope: !7, file: !2)
+  !9 = !DILocation(line: 2, scope: !7)
+  !10 = distinct !DISubprogram(name: "single_cast", scope: !2, file: !2, type: !3, spFlags: DISPFlagDefinition, unit: !1)
+  !11 = !DILocalVariable(name: "z", scope: !10, file: !2)
+  !12 = !DILocation(line: 3, scope: !10)
+  !13 = distinct !DISubprogram(name: "round_trip_narrow", scope: !2, file: !2, type: !3, spFlags: DISPFlagDefinition, unit: !1)
+  !14 = !DILocalVariable(name: "u", scope: !13, file: !2)
+  !15 = !DILocation(line: 4, scope: !13)
+  !16 = distinct !DISubprogram(name: "cast_chain", scope: !2, file: !2, type: !3, spFlags: DISPFlagDefinition, unit: !1)
+  !17 = !DILocalVariable(name: "v", scope: !16, file: !2)
+  !18 = !DILocation(line: 5, scope: !16)
+  !19 = distinct !DISubprogram(name: "noop_cast", scope: !2, file: !2, type: !3, spFlags: DISPFlagDefinition, unit: !1)
+  !20 = !DILocalVariable(name: "s", scope: !19, file: !2)
+  !21 = !DILocation(line: 6, scope: !19)
+  !22 = distinct !DISubprogram(name: "noop_chain", scope: !2, file: !2, type: !3, spFlags: DISPFlagDefinition, unit: !1)
+  !23 = !DILocalVariable(name: "t", scope: !22, file: !2)
+  !24 = !DILocation(line: 7, scope: !22)
+...
+
+# CHECK-LABEL: name: round_trip_indirect
+# CHECK:       %ptr:_(p5) = COPY $vgpr0
+# CHECK:       DBG_VALUE %ptr(p5), 0, !{{[0-9]+}}, !DIExpression()
+---
+name:            round_trip_indirect
+body:             |
+  bb.0:
+    liveins: $vgpr0
+    %ptr:_(p5) = COPY $vgpr0
+    %flat:_(p0) = G_ADDRSPACE_CAST %ptr(p5)
+    %back:_(p5) = G_ADDRSPACE_CAST %flat(p0)
+    DBG_VALUE %back(p5), 0, !5, !DIExpression(), debug-location !6
+    %val:_(i32) = G_LOAD %flat(p0) :: (load (i32))
+    $vgpr0 = COPY %val(i32)
+    SI_RETURN implicit $vgpr0
+...
+
+# CHECK-LABEL: name: round_trip_direct
+# CHECK:       %ptr:_(p5) = COPY $vgpr0
+# CHECK:       DBG_VALUE %ptr(p5), $noreg, !{{[0-9]+}}, !DIExpression()
+---
+name:            round_trip_direct
+body:             |
+  bb.0:
+    liveins: $vgpr0
+    %ptr:_(p5) = COPY $vgpr0
+    %flat:_(p0) = G_ADDRSPACE_CAST %ptr(p5)
+    %back:_(p5) = G_ADDRSPACE_CAST %flat(p0)
+    DBG_VALUE %back(p5), $noreg, !8, !DIExpression(), debug-location !9
+    %val:_(i32) = G_LOAD %flat(p0) :: (load (i32))
+    $vgpr0 = COPY %val(i32)
+    SI_RETURN implicit $vgpr0
+...
+
+# A single cast changes the pointer representation, so it is not salvaged.
+# CHECK-LABEL: name: single_cast
+# CHECK:       DBG_VALUE $noreg, 0, !{{[0-9]+}}, !DIExpression()
+---
+name:            single_cast
+body:             |
+  bb.0:
+    liveins: $vgpr0
+    %ptr:_(p5) = COPY $vgpr0
+    %flat:_(p0) = G_ADDRSPACE_CAST %ptr(p5)
+    DBG_VALUE %flat(p0), 0, !11, !DIExpression(), debug-location !12
+    SI_RETURN
+...
+
+# Like IR, a round trip through a narrower address space is a no-op.
+# CHECK-LABEL: name: round_trip_narrow
+# CHECK:       %ptr:_(p0) = COPY $vgpr0_vgpr1
+# CHECK:       DBG_VALUE %ptr(p0), 0, !{{[0-9]+}}, !DIExpression()
+---
+name:            round_trip_narrow
+body:             |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+    %ptr:_(p0) = COPY $vgpr0_vgpr1
+    %local:_(p3) = G_ADDRSPACE_CAST %ptr(p0)
+    %back:_(p0) = G_ADDRSPACE_CAST %local(p3)
+    DBG_VALUE %back(p0), 0, !14, !DIExpression(), debug-location !15
+    %val:_(i32) = G_LOAD %local(p3) :: (load (i32), addrspace 3)
+    $vgpr0 = COPY %val(i32)
+    SI_RETURN implicit $vgpr0
+...
+
+# private -> flat -> local does not return to the original address space.
+# CHECK-LABEL: name: cast_chain
+# CHECK:       DBG_VALUE $noreg, 0, !{{[0-9]+}}, !DIExpression()
+---
+name:            cast_chain
+body:             |
+  bb.0:
+    liveins: $vgpr0
+    %ptr:_(p5) = COPY $vgpr0
+    %flat:_(p0) = G_ADDRSPACE_CAST %ptr(p5)
+    %local:_(p3) = G_ADDRSPACE_CAST %flat(p0)
+    DBG_VALUE %local(p3), 0, !17, !DIExpression(), debug-location !18
+    %val:_(i32) = G_LOAD %flat(p0) :: (load (i32))
+    $vgpr0 = COPY %val(i32)
+    SI_RETURN implicit $vgpr0
+...
+
+# global -> flat keeps the pointer bits, so a single cast is salvaged.
+# CHECK-LABEL: name: noop_cast
+# CHECK:       %ptr:_(p1) = COPY $vgpr0_vgpr1
+# CHECK:       DBG_VALUE %ptr(p1), 0, !{{[0-9]+}}, !DIExpression()
+---
+name:            noop_cast
+body:             |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+    %ptr:_(p1) = COPY $vgpr0_vgpr1
+    %flat:_(p0) = G_ADDRSPACE_CAST %ptr(p1)
+    DBG_VALUE %flat(p0), 0, !20, !DIExpression(), debug-location !21
+    %val:_(i32) = G_LOAD %ptr(p1) :: (load (i32), addrspace 1)
+    $vgpr0 = COPY %val(i32)
+    SI_RETURN implicit $vgpr0
+...
+
+# global -> local -> constant: global and constant are no-op castable.
+# CHECK-LABEL: name: noop_chain
+# CHECK:       %ptr:_(p1) = COPY $vgpr0_vgpr1
+# CHECK:       DBG_VALUE %ptr(p1), 0, !{{[0-9]+}}, !DIExpression()
+---
+name:            noop_chain
+body:             |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+    %ptr:_(p1) = COPY $vgpr0_vgpr1
+    %local:_(p3) = G_ADDRSPACE_CAST %ptr(p1)
+    %const:_(p4) = G_ADDRSPACE_CAST %local(p3)
+    DBG_VALUE %const(p4), 0, !23, !DIExpression(), debug-location !24
+    %val:_(i32) = G_LOAD %local(p3) :: (load (i32), addrspace 3)
+    $vgpr0 = COPY %val(i32)
+    SI_RETURN implicit $vgpr0
+...
