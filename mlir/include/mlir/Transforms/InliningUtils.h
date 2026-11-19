@@ -86,8 +86,7 @@ public:
   virtual void processInlinedCallBlocks(
       Operation *call, iterator_range<Region::iterator> inlinedBlocks) const;
 
-  virtual bool allowSingleBlockOptimization(
-      iterator_range<Region::iterator> inlinedBlocks) const;
+  virtual bool allowSingleBlockOptimization(Block *inlinedBlock) const;
 };
 
 //===----------------------------------------------------------------------===//

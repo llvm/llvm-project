@@ -2627,6 +2627,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   //   vdpbf16ps (AVX512-BF16)
   //   vdpphps (AVX10.2)
   // 512-bit shapes are split in two when only the VEX encoding is available.
+  // Without VNNI, the signed i16 dot product uses pmaddwd + paddd instead.
   if (!Subtarget.useSoftFloat()) {
     bool HasVNNI = Subtarget.hasVNNI() || Subtarget.hasAVXVNNI();
     bool HasVNNIINT8 = Subtarget.hasAVXVNNIINT8() || Subtarget.hasAVX10_2();
@@ -2641,6 +2642,12 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       if (HasVNNI) {
         setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SUMLA, AccVT, I8VT,
                                   Custom);
+        setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SMLA, AccVT, I16VT,
+                                  Custom);
+      } else if (Subtarget.hasSSE2() &&
+                 (AccVT != MVT::v16i32 || Subtarget.useBWIRegs())) {
+        // Mark v8i32 on SSE targets too, as the combines only check the types
+        // after one step of type legalization.
         setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SMLA, AccVT, I16VT,
                                   Custom);
       }
@@ -34785,10 +34792,15 @@ static SDValue LowerCVTPS2PH(SDValue Op, SelectionDAG &DAG) {
 static SDValue LowerPREFETCH(SDValue Op, const X86Subtarget &Subtarget,
                              SelectionDAG &DAG) {
   unsigned IsData = Op.getConstantOperandVal(4);
+  unsigned RW = Op.getConstantOperandVal(2);
+  unsigned Locality = Op.getConstantOperandVal(3);
 
-  // We don't support non-data prefetch without PREFETCHI.
-  // Just preserve the chain.
-  if (!IsData && !Subtarget.hasPREFETCHI())
+  // PREFETCHI only supports instruction read prefetch with T0 (locality 3)
+  // or T1 (locality 2) hints in 64-bit mode. If PREFETCHI is not supported,
+  // or if the instruction prefetch is a write or has locality not in {2, 3},
+  // drop it and preserve the chain.
+  if (!IsData && (!Subtarget.hasPREFETCHI() || !Subtarget.is64Bit() ||
+                  RW != 0 || (Locality != 2 && Locality != 3)))
     return Op.getOperand(0);
 
   return Op;
@@ -34923,7 +34935,7 @@ static SDValue LowerPARTIAL_REDUCE_FMLA(SDValue Op,
 }
 
 /// Lower an i8 x i8 -> i32 or i16 x i16 -> i32 partial reduction to the
-/// matching VNNI dot product.
+/// matching VNNI dot product, or to PMADDWD for i16 x i16 -> i32 without VNNI.
 static SDValue LowerPARTIAL_REDUCE_MLA(SDValue Op,
                                        const X86Subtarget &Subtarget,
                                        SelectionDAG &DAG) {
@@ -34933,6 +34945,22 @@ static SDValue LowerPARTIAL_REDUCE_MLA(SDValue Op,
   SDValue LHS = Op.getOperand(1);
   SDValue RHS = Op.getOperand(2);
   bool IsI8 = LHS.getSimpleValueType().getScalarType() == MVT::i8;
+
+  // Without VNNI, PMADDWD sign extends the i16 elements, multiplies them and
+  // adds each adjacent pair of products into an i32 lane. The partial
+  // reduction doesn't fix which products are added together, so add the
+  // accumulator to that. Like VPDPWSSD, the i32 sums wrap.
+  if (Op.getOpcode() == ISD::PARTIAL_REDUCE_SMLA && !IsI8 &&
+      !Subtarget.hasVNNI() && !Subtarget.hasAVXVNNI()) {
+    auto PMADDWDBuilder = [](SelectionDAG &DAG, const SDLoc &DL,
+                             ArrayRef<SDValue> Ops) {
+      MVT ResVT = MVT::getVectorVT(MVT::i32, Ops[0].getValueSizeInBits() / 32);
+      return DAG.getNode(X86ISD::VPMADDWD, DL, ResVT, Ops[0], Ops[1]);
+    };
+    SDValue MAdd =
+        SplitOpsAndApply(DAG, Subtarget, DL, VT, {LHS, RHS}, PMADDWDBuilder);
+    return DAG.getNode(ISD::ADD, DL, VT, Acc, MAdd);
+  }
 
   // Pick the instruction, and whether the 512-bit EVEX and the VEX encodings
   // exist for it.
@@ -45619,6 +45647,15 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
           else {
             MVT ShufSVT = MVT::getFloatingPointVT(VT.getScalarSizeInBits());
             MVT ShufVT = HalfVT.changeVectorElementType(ShufSVT);
+            // VPERMILPD selects with bit#1 of the index vector, so scale the
+            // f64 mask elts (VPERMV masks hold plain element indices).
+            if (VT.getScalarSizeInBits() == 64) {
+              SmallVector<int, 8> ShufMask;
+              for (int MaskElt : Mask)
+                ShufMask.push_back(MaskElt < 0 ? MaskElt : MaskElt * 2);
+              M = getConstVector(ShufMask, MVT::getVectorVT(MVT::i64, HalfElts),
+                                 TLO.DAG, DL, /*IsMask=*/true);
+            }
             Ext = TLO.DAG.getNode(X86ISD::VPERMILPV, DL, ShufVT,
                                   TLO.DAG.getBitcast(ShufVT, V), M);
             Ext = TLO.DAG.getBitcast(HalfVT, Ext);

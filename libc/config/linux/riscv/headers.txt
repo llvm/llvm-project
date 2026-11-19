@@ -1,5 +1,6 @@
 set(TARGET_PUBLIC_HEADERS
     libc.include.alloca
+    libc.include.ar
     libc.include.arpa_inet
     libc.include.arpa_nameser
     libc.include.assert
