@@ -7004,9 +7004,8 @@ function preserve all HLX vector registers (``L0``-``L15``), so callers do not
 need to save any HLX values around calls to it. It maps to the LLVM
 ``hexagon_preserve_hlx`` calling convention.
 
-Because HLX vector arguments and return values are passed in HLX registers, it
-is an error to use ``preserve_hlx`` on a function whose return type or any
-parameter type is an HLX vector type.
+HLX vector arguments are passed as with the default calling convention and are
+also preserved. Registers holding an HLX vector return value are not preserved.
 
 .. code-block:: c
 

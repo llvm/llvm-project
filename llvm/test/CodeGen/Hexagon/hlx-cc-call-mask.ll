@@ -27,6 +27,22 @@ define void @call_preserve_hlx() {
   ret void
 }
 
+; Indirect calls use the mask of the call's calling convention.
+; CHECK-LABEL: name: call_fp_hlxcc
+; HLX: J2_callr {{.*}}, hexagoncsr_hlx,
+; NOHLX: J2_callr {{.*}}, hexagoncsr,
+define void @call_fp_hlxcc(ptr %fp) {
+  call hexagon_hlxcc void %fp()
+  ret void
+}
+
+; CHECK-LABEL: name: call_fp_preserve_hlx
+; CHECK: J2_callr {{.*}}, hexagoncsr_preservehlx,
+define void @call_fp_preserve_hlx(ptr %fp) {
+  call hexagon_preserve_hlx void %fp()
+  ret void
+}
+
 declare void @c_callee()
 declare hexagon_hlxcc void @hlxcc_callee()
 declare hexagon_preserve_hlx void @preserve_hlx_callee()

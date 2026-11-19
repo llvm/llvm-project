@@ -17,3 +17,10 @@ void g(int *a) { f(a); }
 // C: define dso_local hexagon_preserve_hlx void @h(
 // CXX: define dso_local hexagon_preserve_hlx void @_Z1hPi(
 void __attribute__((preserve_hlx)) h(int *a) { f(a); }
+
+// Calls through a function pointer use the calling convention of its type.
+// C-LABEL: define dso_local void @call_fp(
+// C: call hexagon_preserve_hlx void %{{.*}}(
+// CXX-LABEL: define dso_local void @_Z7call_fp
+// CXX: call hexagon_preserve_hlx void %{{.*}}(
+void call_fp(void (*fp)(int *) __attribute__((preserve_hlx)), int *a) { fp(a); }
