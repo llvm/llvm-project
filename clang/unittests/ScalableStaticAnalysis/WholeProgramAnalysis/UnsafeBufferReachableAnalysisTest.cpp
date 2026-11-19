@@ -1012,4 +1012,56 @@ TEST_F(UnsafeBufferReachableAnalysisTest,
                         }));
 }
 
+// Seeding the type-constrained slot p pulls in none of its family (C3 wins
+// over C4): p itself is excluded, so the siblings x and y stay safe.
+TEST_F(UnsafeBufferReachableAnalysisTest,
+       FamilyClosureTypeConstrainedStarterIsInert) {
+  auto Reachables = familyClosure(
+      /* Methods */ {{'B', /*Params=*/{'p'}, /*Ret=*/{}, /*Overrides=*/{}},
+                     {'X', /*Params=*/{'x'}, /*Ret=*/{}, /*Overrides=*/{'B'}},
+                     {'Y', /*Params=*/{'y'}, /*Ret=*/{}, /*Overrides=*/{'B'}}},
+      /* Starters */ {{'p', 1}},
+      /* EdgeLayout */ {},
+      /* Constrained */ {'p'}, __LINE__);
+
+  EXPECT_EQ(Reachables, (std::set<Node>{}));
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Type-constraint tests (C3) over the pointer-flow graph
+////////////////////////////////////////////////////////////////////////////////
+
+// A type-constrained starter is not unsafe, and neither is anything it flows
+// to: (a,1) -> (b,1) with a constrained => {}.
+TEST_F(UnsafeBufferReachableAnalysisTest, TypeConstrainedStarter) {
+  auto Reachables = familyClosure(
+      /* Methods */ {}, /* Starters */ {{'a', 1}},
+      /* EdgeLayout */ {{{'a', 1}, {'b', 1}}},
+      /* Constrained */ {'a'}, __LINE__);
+
+  EXPECT_EQ(Reachables, (std::set<Node>{}));
+}
+
+// A type-constrained node blocks propagation through it:
+// (a,1) -> (c,1) -> (b,1) with c constrained => {(a,1)}.
+TEST_F(UnsafeBufferReachableAnalysisTest, TypeConstrainedMidChain) {
+  auto Reachables = familyClosure(
+      /* Methods */ {}, /* Starters */ {{'a', 1}},
+      /* EdgeLayout */ {{{'a', 1}, {'c', 1}}, {{'c', 1}, {'b', 1}}},
+      /* Constrained */ {'c'}, __LINE__);
+
+  EXPECT_EQ(Reachables, (std::set<Node>{{'a', 1}}));
+}
+
+// A type-constrained sink is never reached:
+// (a,1) -> (b,1) with b constrained => {(a,1)}.
+TEST_F(UnsafeBufferReachableAnalysisTest, TypeConstrainedSink) {
+  auto Reachables = familyClosure(
+      /* Methods */ {}, /* Starters */ {{'a', 1}},
+      /* EdgeLayout */ {{{'a', 1}, {'b', 1}}},
+      /* Constrained */ {'b'}, __LINE__);
+
+  EXPECT_EQ(Reachables, (std::set<Node>{{'a', 1}}));
+}
+
 } // namespace
