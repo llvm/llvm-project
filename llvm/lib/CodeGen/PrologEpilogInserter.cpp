@@ -926,12 +926,14 @@ void PEIImpl::calculateFrameObjectOffsets(MachineFunction &MF) {
       continue;
 
     int64_t CSOffset = MFI.getObjectOffset(FI);
-    if (StackGrowsDown)
-      CSOffset = -CSOffset;
     if (CSOffset == 0)
       AdjustStackOffset(MFI, FI, StackGrowsDown, Offset, MaxAlign);
-    else
-      Offset = std::max(CSOffset, Offset); // Target already allocated offset.
+    else {
+      // Target already allocated offset. Note: Upward growing stacks could be
+      // supported like they are for fixed objects above (if ever needed).
+      assert(CSOffset < 0 && StackGrowsDown && "Expected stack to grow down");
+      Offset = std::max(-CSOffset, Offset);
+    }
   }
 
   assert(MaxAlign == MFI.getMaxAlign() &&
