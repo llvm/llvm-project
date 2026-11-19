@@ -34,6 +34,18 @@
 // CHECK-LTO-NOT: warning: argument unused during compilation: '-fembed-bitcode'
 // CHECK-LTO-NOT: -cc1
 // CHECK-LTO-NOT: -fembed-bitcode=all
+
+// RUN: %clang --target=x86_64-unknown-linux-gnu -c %s -flto -ffat-lto-objects -fembed-bitcode -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-FAT-LTO --implicit-check-not=-fembed-bitcode
+// RUN: %clang --target=x86_64-unknown-linux-gnu -c %s -flto=full -ffat-lto-objects -fembed-bitcode -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-FAT-LTO --implicit-check-not=-fembed-bitcode
+// RUN: %clang --target=x86_64-unknown-linux-gnu -c %s -flto=thin -ffat-lto-objects -fembed-bitcode -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-FAT-LTO --implicit-check-not=-fembed-bitcode
+// CHECK-FAT-LTO: "-cc1"
+// CHECK-FAT-LTO-SAME: "-emit-obj"
+// CHECK-FAT-LTO-SAME: "-flto={{full|thin}}"
+// CHECK-FAT-LTO-SAME: "-ffat-lto-objects"
+
 // RUN: touch %t.o
 // RUN: %clang  -target armv7-apple-darwin -miphoneos-version-min=6.0 %t.o -fembed-bitcode  -fembed-bitcode-marker -mlinker-version=277  2>&1 -### | FileCheck %s -check-prefix=CHECK-LTO-MARKER-277
 // RUN: %clang  -target armv7-apple-darwin -miphoneos-version-min=6.0 %t.o -fembed-bitcode  -fembed-bitcode-marker -mlinker-version=278  2>&1 -### | FileCheck %s -check-prefix=CHECK-LTO-MARKER-278
