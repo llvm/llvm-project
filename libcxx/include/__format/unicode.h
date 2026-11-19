@@ -427,43 +427,6 @@ private:
     return true; // GB999
   }
 
-  [[nodiscard]] constexpr bool
-  __evaluate_GB9c_indic_conjunct_break(char32_t __next_code_point, __EGC_property __next_property) {
-    __inCB_property __break = __indic_conjunct_break::__get_property(__next_code_point);
-    if (__break == __inCB_property::__none) {
-      __active_rule_ = __rule::__none;
-      return __evaluate_none(__next_code_point, __next_property);
-    }
-
-    switch (__GB9c_indic_conjunct_break_state_) {
-    case __GB9c_indic_conjunct_break_state::__Consonant:
-      if (__break == __inCB_property::__Extend) {
-        return false;
-      }
-      if (__break == __inCB_property::__Linker) {
-        __GB9c_indic_conjunct_break_state_ = __GB9c_indic_conjunct_break_state::__Linker;
-        return false;
-      }
-      __active_rule_ = __rule::__none;
-      return __evaluate_none(__next_code_point, __next_property);
-
-    case __GB9c_indic_conjunct_break_state::__Linker:
-      if (__break == __inCB_property::__Extend) {
-        return false;
-      }
-      if (__break == __inCB_property::__Linker) {
-        return false;
-      }
-      if (__break == __inCB_property::__Consonant) {
-        __GB9c_indic_conjunct_break_state_ = __GB9c_indic_conjunct_break_state::__Consonant;
-        return false;
-      }
-      __active_rule_ = __rule::__none;
-      return __evaluate_none(__next_code_point, __next_property);
-    }
-    __libcpp_unreachable();
-  }
-
   [[nodiscard]] constexpr bool __evaluate_GB11_emoji(char32_t __next_code_point, __EGC_property __next_property) {
     switch (__GB11_emoji_state_) {
     case __GB11_emoji_state::__Extended_Pictographic:
