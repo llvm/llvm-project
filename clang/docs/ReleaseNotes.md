@@ -450,6 +450,32 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 ### Modified Compiler Flags
 
+- **Behavior change:** `clang-cl`'s `/GS` (on by default) now uses MSVC's
+  buffer heuristic instead of `-fstack-protector-strong`, so it protects
+  different functions. MSVC decides from the declared type of each stack object
+  whether it is a "GS buffer"; `-fstack-protector-strong` additionally protects
+  any function that takes the address of a local, which MSVC does not. Because
+  passing a local by pointer is so common, `clang-cl` used to put a stack cookie
+  in many functions where MSVC does not.
+
+  **What this means for security:** a function whose only locals are scalars,
+  pointers, small structs or classes with constructors or destructors no longer
+  gets a stack cookie just because their address is passed on. If a callee
+  writes past the end of such a local through the pointer (for example
+  `int x; read(fd, &x, len);` with `len > sizeof(x)`), the overflow is no longer
+  detected by that function's cookie. MSVC has the same limitation. In the
+  other direction, objects MSVC treats as buffers that
+  `-fstack-protector-strong` did not (an array of pointers, for example) are
+  now protected.
+
+  **To keep the previous behavior:**
+  - for a whole translation unit, pass `/clang:-fstack-protector-strong`;
+  - for individual functions, mark them `__declspec(strict_gs_check)`, which
+    now gives that function `-fstack-protector-strong`'s full rule under `/GS`.
+
+  `/GS-`, and `-fstack-protector-strong` used directly with `clang`, are not
+  affected.
+
 - All options of the `-fzero-call-used-regs` compiler flag are now allowed on RISC-V.
 
 - `-ftrivial-auto-var-init=` now initializes variables whose declaration is
