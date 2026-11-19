@@ -31,6 +31,10 @@ class CIRDataLayout {
   /// #cir.bitint_spec entry.
   uint64_t bitIntMaxAlignBits = 0;
 
+  /// TargetInfo::getMaxVectorAlign(), in bits, from the module's
+  /// #cir.vector_spec entry, or 0 when there is no entry.
+  uint64_t vectorMaxAlignBits = 0;
+
   /// The module whose cir.record_layouts entries give record alignments.
   mlir::ModuleOp module;
 

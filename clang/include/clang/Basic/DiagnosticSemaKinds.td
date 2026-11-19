@@ -2662,7 +2662,8 @@ def warn_unsequenced_mod_mod : Warning<
 def warn_unsequenced_mod_use : Warning<
   "unsequenced modification and access to %0">, InGroup<Unsequenced>;
 def warn_unsequenced_use_use_volatile : Warning<
-  "unsequenced accesses to volatile qualified %0">, InGroup<Unsequenced>;
+  "unsequenced accesses to volatile qualified %0">,
+  InGroup<UnsequencedVolatile>;
 
 def select_initialized_entity_kind : TextSubstitution<
   "%select{copying variable|copying parameter|initializing template parameter|"
@@ -8341,6 +8342,12 @@ def err_unexpected_interface : Error<
 def err_ref_non_value : Error<"%0 does not refer to a value">;
 def err_ref_vm_type : Error<
   "cannot refer to declaration with a variably modified type inside block">;
+def err_vm_type_from_enclosing_function : Error<
+  "variably modified type %0 cannot be used in a "
+  "%select{local class|block}1 because its size is evaluated in an "
+  "enclosing function">;
+def note_vm_type_size_evaluated_here : Note<
+  "size expression is evaluated here">;
 def err_ref_flexarray_type : Error<
   "cannot refer to declaration of structure variable with flexible array member "
   "inside block">;
@@ -11162,6 +11169,12 @@ def warn_lifetime_safety_lifetimebound_violation
       InGroup<LifetimeSafetyLifetimeboundViolation>,
       DefaultIgnore;
 
+def warn_lifetime_safety_capture_by_violation
+    : Warning<"%0 is captured by %select{this object|global storage}1 but is "
+              "not marked [[clang::lifetime_capture_by_%select{this|global}1]]">,
+      InGroup<LifetimeSafetyCaptureByViolation>,
+      DefaultIgnore;
+
 def warn_lifetime_safety_intra_tu_misplaced_lifetimebound
     : Warning<"'lifetimebound' attribute on this definition is not visible to callers before the definition; add it to the declaration instead">,
       InGroup<LifetimeSafetyIntraTUMisplacedLifetimebound>,
@@ -13850,6 +13863,8 @@ def err_hlsl_builtin_resource_coordinate_dimension_mismatch : Error<
   "builtin %0 resource coordinate dimension mismatch: expected %1, found %2">;
 
 // HLSL Diagnostics
+def err_hlsl_exceptions : Error<"cannot use '%select{throw|try}0' in HLSL">;
+def err_hlsl_mult_inheritance : Error<"HLSL does not support multiple inheritance">;
 def err_hlsl_cstor_dstor : Error<"HLSL does not support constructors or destructors">;
 def err_hlsl_langstd_unimplemented : Error<"support for HLSL language version %0 is incomplete">;
 def err_hlsl_attr_unsupported_in_stage : Error<"attribute %0 is unsupported in '%1' shaders, requires %select{|one of the following: }2%3">;
