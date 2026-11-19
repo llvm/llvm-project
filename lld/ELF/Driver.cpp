@@ -2508,13 +2508,24 @@ static void handleUndefinedGlob(Ctx &ctx, StringRef arg) {
 
   // Calling sym->extract() in the loop is not safe because it may add new
   // symbols to the symbol table, invalidating the current iterator.
-  SmallVector<Symbol *, 0> syms;
-  for (Symbol *sym : ctx.symtab->getSymbols())
-    if (!sym->isPlaceholder() && pat->match(sym->getName()))
-      syms.push_back(sym);
+  ArrayRef<Symbol *> allSyms = ctx.symtab->getSymbols();
+  constexpr size_t chunkSize = 4096;
+  size_t numChunks = (allSyms.size() + chunkSize - 1) / chunkSize;
+  SmallVector<SmallVector<Symbol *, 0>, 0> matches(numChunks);
+  parallelFor(0, numChunks, [&](size_t chunk) {
+    size_t begin = chunk * chunkSize;
+    size_t end = std::min(begin + chunkSize, allSyms.size());
+    auto &out = matches[chunk];
+    for (size_t i = begin; i != end; ++i) {
+      Symbol *sym = allSyms[i];
+      if (!sym->isPlaceholder() && pat->match(sym->getName()))
+        out.push_back(sym);
+    }
+  });
 
-  for (Symbol *sym : syms)
-    handleUndefined(ctx, sym, "--undefined-glob");
+  for (const auto &chunk : matches)
+    for (Symbol *sym : chunk)
+      handleUndefined(ctx, sym, "--undefined-glob");
 }
 
 static void handleLibcall(Ctx &ctx, StringRef name) {
@@ -3330,8 +3341,11 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
     handleUndefined(ctx, sym, "--entry");
 
   // Handle the `--undefined-glob <pattern>` options.
-  for (StringRef pat : args::getStrings(args, OPT_undefined_glob))
-    handleUndefinedGlob(ctx, pat);
+  {
+    llvm::TimeTraceScope timeScope("Handle undefined glob");
+    for (StringRef pat : args::getStrings(args, OPT_undefined_glob))
+      handleUndefinedGlob(ctx, pat);
+  }
 
   // After potential archive member extraction involving ENTRY and
   // -u/--undefined-glob, check whether PROVIDE symbols should be defined (the
