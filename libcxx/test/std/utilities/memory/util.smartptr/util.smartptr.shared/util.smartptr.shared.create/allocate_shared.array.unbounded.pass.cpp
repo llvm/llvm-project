@@ -538,12 +538,14 @@ int main(int, char**) {
     std::size_t bytes       = 0;
     {
       std::shared_ptr<char[]> ptr = std::allocate_shared<char[]>(ByteCountingAllocator<char[]>(&bytes), n);
+      DoNotOptimize(ptr.get());
       assert(bytes >= n);
       assert(bytes <= n + 256);
     }
     assert(bytes == 0);
     {
       std::shared_ptr<char[]> ptr = std::allocate_shared<char[]>(ByteCountingAllocator<char[]>(&bytes), n, 'a');
+      DoNotOptimize(ptr.get());
       assert(bytes >= n);
       assert(bytes <= n + 256);
     }

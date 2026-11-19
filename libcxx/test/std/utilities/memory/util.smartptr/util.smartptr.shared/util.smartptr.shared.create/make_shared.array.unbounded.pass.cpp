@@ -476,6 +476,7 @@ int main(int, char**) {
     {
       globalMemCounter.reset();
       std::shared_ptr<char[]> ptr = std::make_shared<char[]>(n);
+      DoNotOptimize(ptr.get());
       assert(globalMemCounter.checkNewCalledEq(1));
       assert(globalMemCounter.last_new_size >= n);
       assert(globalMemCounter.last_new_size <= n + 256);
@@ -483,6 +484,7 @@ int main(int, char**) {
     {
       globalMemCounter.reset();
       std::shared_ptr<char[]> ptr = std::make_shared<char[]>(n, 'a');
+      DoNotOptimize(ptr.get());
       assert(globalMemCounter.checkNewCalledEq(1));
       assert(globalMemCounter.last_new_size >= n);
       assert(globalMemCounter.last_new_size <= n + 256);
