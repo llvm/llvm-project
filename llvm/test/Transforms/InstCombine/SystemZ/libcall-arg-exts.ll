@@ -12,7 +12,7 @@ declare fp128 @exp2l(fp128)
 define double @fun1(i32 %x) {
 ; CHECK-LABEL: define double @fun1(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[LDEXP:%.*]] = call double @ldexp(double 1.000000e+00, i32 [[X]])
+; CHECK-NEXT:    [[LDEXP:%.*]] = call double @ldexp(double 1.000000e+00, i32 signext [[X]])
 ; CHECK-NEXT:    ret double [[LDEXP]]
 ;
   %conv = sitofp i32 %x to double
@@ -23,7 +23,7 @@ define double @fun1(i32 %x) {
 define float @fun2(i32 %x) {
 ; CHECK-LABEL: define float @fun2(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[LDEXPF:%.*]] = call float @ldexpf(float 1.000000e+00, i32 [[X]])
+; CHECK-NEXT:    [[LDEXPF:%.*]] = call float @ldexpf(float 1.000000e+00, i32 signext [[X]])
 ; CHECK-NEXT:    ret float [[LDEXPF]]
 ;
   %conv = sitofp i32 %x to float
@@ -35,7 +35,7 @@ define fp128 @fun3(i8 zeroext %x) {
 ; CHECK-LABEL: define fp128 @fun3(
 ; CHECK-SAME: i8 zeroext [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[X]] to i32
-; CHECK-NEXT:    [[LDEXPL:%.*]] = call fp128 @ldexpl(fp128 1.000000e+00, i32 [[TMP1]])
+; CHECK-NEXT:    [[LDEXPL:%.*]] = call fp128 @ldexpl(fp128 1.000000e+00, i32 signext [[TMP1]])
 ; CHECK-NEXT:    ret fp128 [[LDEXPL]]
 ;
   %conv = uitofp i8 %x to fp128
@@ -48,7 +48,7 @@ define fp128 @fun3(i8 zeroext %x) {
 declare ptr @__memccpy_chk(ptr, ptr, i32, i64, i64)
 define ptr @fun4() {
 ; CHECK-LABEL: define ptr @fun4() {
-; CHECK-NEXT:    [[MEMCCPY:%.*]] = call ptr @memccpy(ptr nonnull @a, ptr nonnull @b, i32 0, i64 60)
+; CHECK-NEXT:    [[MEMCCPY:%.*]] = call ptr @memccpy(ptr nonnull @a, ptr nonnull @b, i32 signext 0, i64 60)
 ; CHECK-NEXT:    ret ptr [[MEMCCPY]]
 ;
   %ret = call ptr @__memccpy_chk(ptr @a, ptr @b, i32 0, i64 60, i64 -1)
@@ -61,7 +61,7 @@ declare i32 @fputs(ptr, ptr)
 define void @fun5(ptr %fp) {
 ; CHECK-LABEL: define void @fun5(
 ; CHECK-SAME: ptr [[FP:%.*]]) {
-; CHECK-NEXT:    [[FPUTC:%.*]] = call i32 @fputc(i32 65, ptr [[FP]])
+; CHECK-NEXT:    [[FPUTC:%.*]] = call i32 @fputc(i32 signext 65, ptr [[FP]])
 ; CHECK-NEXT:    ret void
 ;
   call i32 @fputs(ptr @A, ptr %fp)
@@ -72,7 +72,7 @@ define void @fun5(ptr %fp) {
 declare i32 @puts(ptr)
 define void @fun6() {
 ; CHECK-LABEL: define void @fun6() {
-; CHECK-NEXT:    [[PUTCHAR:%.*]] = call i32 @putchar(i32 10)
+; CHECK-NEXT:    [[PUTCHAR:%.*]] = call i32 @putchar(i32 signext 10)
 ; CHECK-NEXT:    ret void
 ;
   call i32 @puts(ptr @empty)
@@ -84,7 +84,7 @@ declare ptr @strstr(ptr, ptr)
 define ptr @fun7(ptr %str) {
 ; CHECK-LABEL: define ptr @fun7(
 ; CHECK-SAME: ptr [[STR:%.*]]) {
-; CHECK-NEXT:    [[STRCHR:%.*]] = call ptr @strchr(ptr noundef nonnull dereferenceable(1) [[STR]], i32 97)
+; CHECK-NEXT:    [[STRCHR:%.*]] = call ptr @strchr(ptr noundef nonnull dereferenceable(1) [[STR]], i32 signext 97)
 ; CHECK-NEXT:    ret ptr [[STRCHR]]
 ;
   %ret = call ptr @strstr(ptr %str, ptr @.str1)
@@ -98,7 +98,7 @@ declare ptr @strchr(ptr, i32)
 define void @fun8(i32 %chr) {
 ; CHECK-LABEL: define void @fun8(
 ; CHECK-SAME: i32 [[CHR:%.*]]) {
-; CHECK-NEXT:    [[MEMCHR:%.*]] = call ptr @memchr(ptr noundef nonnull dereferenceable(1) @hello, i32 [[CHR]], i64 14)
+; CHECK-NEXT:    [[MEMCHR:%.*]] = call ptr @memchr(ptr noundef nonnull dereferenceable(1) @hello, i32 signext [[CHR]], i64 14)
 ; CHECK-NEXT:    store ptr [[MEMCHR]], ptr @chp, align 8
 ; CHECK-NEXT:    ret void
 ;

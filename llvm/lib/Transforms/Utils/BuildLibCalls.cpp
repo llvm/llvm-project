@@ -1521,6 +1521,21 @@ void llvm::markRegisterParameterAttributes(Function *F) {
   }
 }
 
+static void inheritABIAttributesFromCallee(CallBase *CB) {
+  Function *F = CB->getCalledFunction();
+  assert(F && "Cannot be indirect call");
+
+  auto CopyAtIndex = [&](unsigned Index) {
+    for (Attribute Attr : F->getAttributes().getAttributes(Index))
+      if (Attr.hasKindAsEnum() && Attribute::isABIAttr(Attr.getKindAsEnum()))
+        CB->addAttributeAtIndex(Index, Attr);
+  };
+
+  CopyAtIndex(AttributeList::ReturnIndex);
+  for (unsigned I = 0; I < F->arg_size(); I++)
+    CopyAtIndex(AttributeList::FirstArgIndex + I);
+}
+
 FunctionCallee llvm::getOrInsertLibFunc(Module *M, const TargetLibraryInfo &TLI,
                                         LibFunc TheLibFunc, FunctionType *T,
                                         AttributeList AttributeList) {
@@ -1700,6 +1715,7 @@ static Value *emitLibCall(LibFunc TheLibFunc, Type *ReturnType,
   FunctionCallee Callee = getOrInsertLibFunc(M, *TLI, TheLibFunc, FuncType);
   inferNonMandatoryLibFuncAttrs(M, FuncName, *TLI);
   CallInst *CI = B.CreateCall(Callee, Operands, FuncName);
+  inheritABIAttributesFromCallee(CI);
   if (const Function *F =
           dyn_cast<Function>(Callee.getCallee()->stripPointerCasts()))
     CI->setCallingConv(F->getCallingConv());
@@ -1793,6 +1809,7 @@ Value *llvm::emitMemCpyChk(Value *Dst, Value *Src, Value *Len, Value *ObjSize,
       AttributeList::get(M->getContext(), AS), VoidPtrTy,
       VoidPtrTy, VoidPtrTy, SizeTTy, SizeTTy);
   CallInst *CI = B.CreateCall(MemCpy, {Dst, Src, Len, ObjSize});
+  inheritABIAttributesFromCallee(CI);
   if (const Function *F =
           dyn_cast<Function>(MemCpy.getCallee()->stripPointerCasts()))
     CI->setCallingConv(F->getCallingConv());
@@ -1969,6 +1986,7 @@ static Value *emitUnaryFloatFnCallHelper(Value *Op, LibFunc TheLibFunc,
   // speculatable.
   CI->setAttributes(
       Attrs.removeFnAttribute(B.getContext(), Attribute::Speculatable));
+  inheritABIAttributesFromCallee(CI);
   if (const Function *F =
           dyn_cast<Function>(Callee.getCallee()->stripPointerCasts()))
     CI->setCallingConv(F->getCallingConv());
@@ -2017,6 +2035,7 @@ static Value *emitBinaryFloatFnCallHelper(Value *Op1, Value *Op2,
   // speculatable.
   CI->setAttributes(
       Attrs.removeFnAttribute(B.getContext(), Attribute::Speculatable));
+  inheritABIAttributesFromCallee(CI);
   if (const Function *F =
           dyn_cast<Function>(Callee.getCallee()->stripPointerCasts()))
     CI->setCallingConv(F->getCallingConv());
@@ -2117,6 +2136,7 @@ Value *llvm::emitHotColdSizeReturningNew(Value *Num, IRBuilderBase &B,
                                            Num->getType(), B.getInt8Ty());
   inferNonMandatoryLibFuncAttrs(M, Name, *TLI);
   CallInst *CI = B.CreateCall(Func, {Num, HotCold}, "sized_ptr");
+  inheritABIAttributesFromCallee(CI);
 
   if (const Function *F = dyn_cast<Function>(Func.getCallee()))
     CI->setCallingConv(F->getCallingConv());
@@ -2143,6 +2163,7 @@ Value *llvm::emitHotColdSizeReturningNewAligned(Value *Num, Value *Align,
                          Align->getType(), B.getInt8Ty());
   inferNonMandatoryLibFuncAttrs(M, Name, *TLI);
   CallInst *CI = B.CreateCall(Func, {Num, Align, HotCold}, "sized_ptr");
+  inheritABIAttributesFromCallee(CI);
 
   if (const Function *F = dyn_cast<Function>(Func.getCallee()))
     CI->setCallingConv(F->getCallingConv());
@@ -2162,6 +2183,7 @@ Value *llvm::emitHotColdNew(Value *Num, IRBuilderBase &B,
                                            Num->getType(), B.getInt8Ty());
   inferNonMandatoryLibFuncAttrs(M, Name, *TLI);
   CallInst *CI = B.CreateCall(Func, {Num, HotCold}, Name);
+  inheritABIAttributesFromCallee(CI);
 
   if (const Function *F =
           dyn_cast<Function>(Func.getCallee()->stripPointerCasts()))
@@ -2183,6 +2205,7 @@ Value *llvm::emitHotColdNewNoThrow(Value *Num, Value *NoThrow, IRBuilderBase &B,
                          NoThrow->getType(), B.getInt8Ty());
   inferNonMandatoryLibFuncAttrs(M, Name, *TLI);
   CallInst *CI = B.CreateCall(Func, {Num, NoThrow, HotCold}, Name);
+  inheritABIAttributesFromCallee(CI);
 
   if (const Function *F =
           dyn_cast<Function>(Func.getCallee()->stripPointerCasts()))
@@ -2204,6 +2227,7 @@ Value *llvm::emitHotColdNewAligned(Value *Num, Value *Align, IRBuilderBase &B,
                          Align->getType(), B.getInt8Ty());
   inferNonMandatoryLibFuncAttrs(M, Name, *TLI);
   CallInst *CI = B.CreateCall(Func, {Num, Align, HotCold}, Name);
+  inheritABIAttributesFromCallee(CI);
 
   if (const Function *F =
           dyn_cast<Function>(Func.getCallee()->stripPointerCasts()))
@@ -2226,6 +2250,7 @@ Value *llvm::emitHotColdNewAlignedNoThrow(Value *Num, Value *Align,
                          Align->getType(), NoThrow->getType(), B.getInt8Ty());
   inferNonMandatoryLibFuncAttrs(M, Name, *TLI);
   CallInst *CI = B.CreateCall(Func, {Num, Align, NoThrow, HotCold}, Name);
+  inheritABIAttributesFromCallee(CI);
 
   if (const Function *F =
           dyn_cast<Function>(Func.getCallee()->stripPointerCasts()))
