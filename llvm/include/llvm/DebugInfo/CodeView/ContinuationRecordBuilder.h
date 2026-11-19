@@ -38,7 +38,6 @@ class ContinuationRecordBuilder {
   void insertSegmentEnd(uint32_t Offset);
   CVType createSegmentRecord(uint32_t OffBegin, uint32_t OffEnd,
                              std::optional<TypeIndex> RefersTo);
-  void finishRecord();
 
 public:
   LLVM_ABI ContinuationRecordBuilder();
@@ -50,13 +49,6 @@ public:
   // supported types.  The method itself is ugly, so inlining it into the header
   // file clutters an otherwise straightforward interface.
   template <typename RecordType> void writeMemberType(RecordType &Record);
-
-  /// Finishes the record and returns its segments in the order they must be
-  /// committed to the type stream, assuming the segments will be assigned the
-  /// consecutive type indices \p Index, \p Index + 1, ... Only use this when
-  /// the segments are guaranteed to receive those indices; a type table that
-  /// deduplicates records should use the overload below instead.
-  LLVM_ABI std::vector<CVType> end(TypeIndex Index);
 
   /// Finishes the record and passes each of its segments to \p InsertSegment,
   /// in the order they must be committed to the type stream. \p InsertSegment
