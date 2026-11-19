@@ -86,6 +86,20 @@ define <16 x half> @test_ldnp_v16f16(ptr %A) {
   ret <16 x half> %lv
 }
 
+define <16 x bfloat> @test_ldnp_v16bf16(ptr %A) {
+; CHECK-LE-LABEL: test_ldnp_v16bf16:
+; CHECK-LE:       ; %bb.0:
+; CHECK-LE-NEXT:    ldnp q0, q1, [x0]
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: test_ldnp_v16bf16:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    ldp q0, q1, [x0]
+; CHECK-BE-NEXT:    ret
+  %lv = load <16 x bfloat>, ptr %A, align 8, !nontemporal !0
+  ret <16 x bfloat> %lv
+}
+
 define <32 x i8> @test_ldnp_v32i8(ptr %A) {
 ; CHECK-LE-LABEL: test_ldnp_v32i8:
 ; CHECK-LE:       ; %bb.0:
@@ -627,6 +641,21 @@ define <vscale x 20 x float> @test_ldnp_v20f32_vscale(ptr %A) {
 ; CHECK-BE-NEXT:    ret
   %lv = load<vscale x 20 x float>, ptr %A, align 8, !nontemporal !0
   ret <vscale x 20 x float> %lv
+}
+
+define <4 x double> @test_ldnp_v4f64_offset(ptr %A) {
+; CHECK-LE-LABEL: test_ldnp_v4f64_offset:
+; CHECK-LE:       ; %bb.0:
+; CHECK-LE-NEXT:    ldnp q0, q1, [x0, #32]
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: test_ldnp_v4f64_offset:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    ldp q0, q1, [x0, #32]
+; CHECK-BE-NEXT:    ret
+  %addr = getelementptr i8, ptr %A, i32 32
+  %lv = load <4 x double>, ptr %addr, align 8, !nontemporal !0
+  ret <4 x double> %lv
 }
 
 !0 = !{i32 1}
