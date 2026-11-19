@@ -30,6 +30,7 @@
 #include "GCNSubtarget.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/Analysis/InstructionSimplify.h"
@@ -1004,6 +1005,7 @@ void AMDGPUPromoteAllocaImpl::analyzePromoteToVector(AllocaAnalysis &AA) const {
   SmallDenseSet<
       std::tuple<Value *, ConstantInt *, ConstantInt *, ConstantInt *>, 4>
       DivergentIdxs;
+  SmallPtrSet<BasicBlock *, 2> DivergentAccessBlocks;
   unsigned NumDivergentAccesses = 0;
   unsigned NumNonDivergentAccesses = 0;
   for (auto *U : AA.Uses) {
@@ -1035,6 +1037,7 @@ void AMDGPUPromoteAllocaImpl::analyzePromoteToVector(AllocaAnalysis &AA) const {
       if (Idx && Idx->VarIndex && GetUI()->isDivergentAtUse(*U)) {
         DivergentIdxs.insert(
             {Idx->VarIndex, Idx->VarMul, Idx->VarShift, Idx->ConstIndex});
+        DivergentAccessBlocks.insert(Inst->getParent());
         ++NumDivergentAccesses;
       } else {
         ++NumNonDivergentAccesses;
@@ -1154,8 +1157,12 @@ void AMDGPUPromoteAllocaImpl::analyzePromoteToVector(AllocaAnalysis &AA) const {
   if (DivergentIdxs.empty())
     return;
 
-  // Every access uses the same divergent index, so no `cmp`/`cndmask` chain;
-  if (DivergentIdxs.size() == 1 && NumNonDivergentAccesses == 0)
+  // Every access uses the same divergent index, so no `cmp`/`cndmask` chain
+  // remains; however this only holds if the vector value is never merged
+  // by a phi.
+  if (DivergentIdxs.size() == 1 && NumNonDivergentAccesses == 0 &&
+      DivergentAccessBlocks.size() == 1 &&
+      !LI.getLoopFor(*DivergentAccessBlocks.begin()))
     return;
 
   // Check if removing memory access is worth extra `cmp`/`cndmask`

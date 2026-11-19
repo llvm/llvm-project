@@ -560,4 +560,177 @@ define void @divergent_same_var_index_different_offsets(ptr addrspace(1) %in, pt
   ret void
 }
 
+; Every access uses the same divergent index, but the vector is carried around
+; a loop and becomes a phi, not promoted.
+
+define void @same_divergent_index_loop(ptr addrspace(1) %out, i32 %n) #0 {
+; DEFAULT-LABEL: define void @same_divergent_index_loop(
+; DEFAULT-SAME: ptr addrspace(1) [[OUT:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
+; DEFAULT-NEXT:  [[ENTRY:.*]]:
+; DEFAULT-NEXT:    [[ID:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
+; DEFAULT-NEXT:    [[IDX:%.*]] = and i32 [[ID]], 15
+; DEFAULT-NEXT:    [[ALLOCA:%.*]] = alloca [16 x i32], align 4, addrspace(5)
+; DEFAULT-NEXT:    [[GEP:%.*]] = getelementptr inbounds [16 x i32], ptr addrspace(5) [[ALLOCA]], i32 0, i32 [[IDX]]
+; DEFAULT-NEXT:    store i32 0, ptr addrspace(5) [[GEP]], align 4
+; DEFAULT-NEXT:    br label %[[LOOP:.*]]
+; DEFAULT:       [[LOOP]]:
+; DEFAULT-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
+; DEFAULT-NEXT:    [[V:%.*]] = load i32, ptr addrspace(5) [[GEP]], align 4
+; DEFAULT-NEXT:    [[V2:%.*]] = add i32 [[V]], [[I]]
+; DEFAULT-NEXT:    store i32 [[V2]], ptr addrspace(5) [[GEP]], align 4
+; DEFAULT-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
+; DEFAULT-NEXT:    [[C:%.*]] = icmp ult i32 [[I_NEXT]], [[N]]
+; DEFAULT-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT:.*]]
+; DEFAULT:       [[EXIT]]:
+; DEFAULT-NEXT:    [[R:%.*]] = load i32, ptr addrspace(5) [[GEP]], align 4
+; DEFAULT-NEXT:    store i32 [[R]], ptr addrspace(1) [[OUT]], align 4
+; DEFAULT-NEXT:    ret void
+;
+; RATIO1-LABEL: define void @same_divergent_index_loop(
+; RATIO1-SAME: ptr addrspace(1) [[OUT:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
+; RATIO1-NEXT:  [[ENTRY:.*]]:
+; RATIO1-NEXT:    [[ID:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
+; RATIO1-NEXT:    [[IDX:%.*]] = and i32 [[ID]], 15
+; RATIO1-NEXT:    [[ALLOCA:%.*]] = alloca [16 x i32], align 4, addrspace(5)
+; RATIO1-NEXT:    [[GEP:%.*]] = getelementptr inbounds [16 x i32], ptr addrspace(5) [[ALLOCA]], i32 0, i32 [[IDX]]
+; RATIO1-NEXT:    store i32 0, ptr addrspace(5) [[GEP]], align 4
+; RATIO1-NEXT:    br label %[[LOOP:.*]]
+; RATIO1:       [[LOOP]]:
+; RATIO1-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
+; RATIO1-NEXT:    [[V:%.*]] = load i32, ptr addrspace(5) [[GEP]], align 4
+; RATIO1-NEXT:    [[V2:%.*]] = add i32 [[V]], [[I]]
+; RATIO1-NEXT:    store i32 [[V2]], ptr addrspace(5) [[GEP]], align 4
+; RATIO1-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
+; RATIO1-NEXT:    [[C:%.*]] = icmp ult i32 [[I_NEXT]], [[N]]
+; RATIO1-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT:.*]]
+; RATIO1:       [[EXIT]]:
+; RATIO1-NEXT:    [[R:%.*]] = load i32, ptr addrspace(5) [[GEP]], align 4
+; RATIO1-NEXT:    store i32 [[R]], ptr addrspace(1) [[OUT]], align 4
+; RATIO1-NEXT:    ret void
+;
+; RATIO32-LABEL: define void @same_divergent_index_loop(
+; RATIO32-SAME: ptr addrspace(1) [[OUT:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
+; RATIO32-NEXT:  [[ENTRY:.*]]:
+; RATIO32-NEXT:    [[ID:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
+; RATIO32-NEXT:    [[IDX:%.*]] = and i32 [[ID]], 15
+; RATIO32-NEXT:    [[ALLOCA:%.*]] = freeze <16 x i32> poison
+; RATIO32-NEXT:    [[TMP0:%.*]] = insertelement <16 x i32> [[ALLOCA]], i32 0, i32 [[IDX]]
+; RATIO32-NEXT:    br label %[[LOOP:.*]]
+; RATIO32:       [[LOOP]]:
+; RATIO32-NEXT:    [[PROMOTEALLOCA:%.*]] = phi <16 x i32> [ [[TMP0]], %[[ENTRY]] ], [ [[TMP2:%.*]], %[[LOOP]] ]
+; RATIO32-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
+; RATIO32-NEXT:    [[TMP1:%.*]] = extractelement <16 x i32> [[PROMOTEALLOCA]], i32 [[IDX]]
+; RATIO32-NEXT:    [[V2:%.*]] = add i32 [[TMP1]], [[I]]
+; RATIO32-NEXT:    [[TMP2]] = insertelement <16 x i32> [[PROMOTEALLOCA]], i32 [[V2]], i32 [[IDX]]
+; RATIO32-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
+; RATIO32-NEXT:    [[C:%.*]] = icmp ult i32 [[I_NEXT]], [[N]]
+; RATIO32-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT:.*]]
+; RATIO32:       [[EXIT]]:
+; RATIO32-NEXT:    [[TMP3:%.*]] = extractelement <16 x i32> [[TMP2]], i32 [[IDX]]
+; RATIO32-NEXT:    store i32 [[TMP3]], ptr addrspace(1) [[OUT]], align 4
+; RATIO32-NEXT:    ret void
+;
+entry:
+  %id = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %idx = and i32 %id, 15
+  %alloca = alloca [16 x i32], align 4, addrspace(5)
+  %gep = getelementptr inbounds [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 %idx
+  store i32 0, ptr addrspace(5) %gep
+  br label %loop
+
+loop:
+  %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
+  %v = load i32, ptr addrspace(5) %gep
+  %v2 = add i32 %v, %i
+  store i32 %v2, ptr addrspace(5) %gep
+  %i.next = add i32 %i, 1
+  %c = icmp ult i32 %i.next, %n
+  br i1 %c, label %loop, label %exit
+
+exit:
+  %r = load i32, ptr addrspace(5) %gep
+  store i32 %r, ptr addrspace(1) %out
+  ret void
+}
+
+; Same, with all accesses in a single block that is a self-loop.
+
+define void @same_divergent_index_self_loop(ptr addrspace(1) %out, i32 %n) #0 {
+; DEFAULT-LABEL: define void @same_divergent_index_self_loop(
+; DEFAULT-SAME: ptr addrspace(1) [[OUT:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
+; DEFAULT-NEXT:  [[ENTRY:.*]]:
+; DEFAULT-NEXT:    [[ID:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
+; DEFAULT-NEXT:    [[IDX:%.*]] = and i32 [[ID]], 15
+; DEFAULT-NEXT:    [[ALLOCA:%.*]] = alloca [16 x i32], align 4, addrspace(5)
+; DEFAULT-NEXT:    [[GEP:%.*]] = getelementptr inbounds [16 x i32], ptr addrspace(5) [[ALLOCA]], i32 0, i32 [[IDX]]
+; DEFAULT-NEXT:    br label %[[LOOP:.*]]
+; DEFAULT:       [[LOOP]]:
+; DEFAULT-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
+; DEFAULT-NEXT:    [[V:%.*]] = load i32, ptr addrspace(5) [[GEP]], align 4
+; DEFAULT-NEXT:    [[V2:%.*]] = add i32 [[V]], [[I]]
+; DEFAULT-NEXT:    store i32 [[V2]], ptr addrspace(5) [[GEP]], align 4
+; DEFAULT-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
+; DEFAULT-NEXT:    [[C:%.*]] = icmp ult i32 [[I_NEXT]], [[N]]
+; DEFAULT-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT:.*]]
+; DEFAULT:       [[EXIT]]:
+; DEFAULT-NEXT:    ret void
+;
+; RATIO1-LABEL: define void @same_divergent_index_self_loop(
+; RATIO1-SAME: ptr addrspace(1) [[OUT:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
+; RATIO1-NEXT:  [[ENTRY:.*]]:
+; RATIO1-NEXT:    [[ID:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
+; RATIO1-NEXT:    [[IDX:%.*]] = and i32 [[ID]], 15
+; RATIO1-NEXT:    [[ALLOCA:%.*]] = alloca [16 x i32], align 4, addrspace(5)
+; RATIO1-NEXT:    [[GEP:%.*]] = getelementptr inbounds [16 x i32], ptr addrspace(5) [[ALLOCA]], i32 0, i32 [[IDX]]
+; RATIO1-NEXT:    br label %[[LOOP:.*]]
+; RATIO1:       [[LOOP]]:
+; RATIO1-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
+; RATIO1-NEXT:    [[V:%.*]] = load i32, ptr addrspace(5) [[GEP]], align 4
+; RATIO1-NEXT:    [[V2:%.*]] = add i32 [[V]], [[I]]
+; RATIO1-NEXT:    store i32 [[V2]], ptr addrspace(5) [[GEP]], align 4
+; RATIO1-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
+; RATIO1-NEXT:    [[C:%.*]] = icmp ult i32 [[I_NEXT]], [[N]]
+; RATIO1-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT:.*]]
+; RATIO1:       [[EXIT]]:
+; RATIO1-NEXT:    ret void
+;
+; RATIO32-LABEL: define void @same_divergent_index_self_loop(
+; RATIO32-SAME: ptr addrspace(1) [[OUT:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
+; RATIO32-NEXT:  [[ENTRY:.*]]:
+; RATIO32-NEXT:    [[ID:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
+; RATIO32-NEXT:    [[IDX:%.*]] = and i32 [[ID]], 15
+; RATIO32-NEXT:    [[ALLOCA:%.*]] = freeze <16 x i32> poison
+; RATIO32-NEXT:    br label %[[LOOP:.*]]
+; RATIO32:       [[LOOP]]:
+; RATIO32-NEXT:    [[PROMOTEALLOCA:%.*]] = phi <16 x i32> [ [[ALLOCA]], %[[ENTRY]] ], [ [[TMP1:%.*]], %[[LOOP]] ]
+; RATIO32-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
+; RATIO32-NEXT:    [[TMP0:%.*]] = extractelement <16 x i32> [[PROMOTEALLOCA]], i32 [[IDX]]
+; RATIO32-NEXT:    [[V2:%.*]] = add i32 [[TMP0]], [[I]]
+; RATIO32-NEXT:    [[TMP1]] = insertelement <16 x i32> [[PROMOTEALLOCA]], i32 [[V2]], i32 [[IDX]]
+; RATIO32-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
+; RATIO32-NEXT:    [[C:%.*]] = icmp ult i32 [[I_NEXT]], [[N]]
+; RATIO32-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT:.*]]
+; RATIO32:       [[EXIT]]:
+; RATIO32-NEXT:    ret void
+;
+entry:
+  %id = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %idx = and i32 %id, 15
+  %alloca = alloca [16 x i32], align 4, addrspace(5)
+  %gep = getelementptr inbounds [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 %idx
+  br label %loop
+
+loop:
+  %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
+  %v = load i32, ptr addrspace(5) %gep
+  %v2 = add i32 %v, %i
+  store i32 %v2, ptr addrspace(5) %gep
+  %i.next = add i32 %i, 1
+  %c = icmp ult i32 %i.next, %n
+  br i1 %c, label %loop, label %exit
+
+exit:
+  ret void
+}
+
 attributes #0 = { nounwind "amdgpu-flat-work-group-size"="64,64" }
