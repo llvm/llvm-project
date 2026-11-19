@@ -6,6 +6,7 @@ set(LLVM_LINK_COMPONENTS Support)
 add_library(DynamicLibraryLib STATIC
   ExportedFuncs.cpp
   )
+llvm_apply_warning_options(DynamicLibraryLib)
 set_target_properties(DynamicLibraryLib PROPERTIES FOLDER "LLVM/Tests/Support")
 
 # extract_symbols.py relies on all its library arguments being in the same
@@ -36,6 +37,7 @@ function(dynlib_add_module NAME)
   add_library(${NAME} MODULE
     PipSqueak.cpp
     )
+  llvm_apply_warning_options(${NAME})
   set_target_properties(${NAME} PROPERTIES FOLDER "LLVM/Tests/Support")
 
   set_output_directory(${NAME}

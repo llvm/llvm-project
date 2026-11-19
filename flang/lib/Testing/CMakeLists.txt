@@ -10,6 +10,7 @@ add_library(NonGTestTesting EXCLUDE_FROM_ALL
     testing.cpp
     fp-testing.cpp
 )
+llvm_apply_warning_options(NonGTestTesting)
 set_target_properties(NonGTestTesting PROPERTIES FOLDER "Flang/Tests")
 
 if (LLVM_LINK_LLVM_DYLIB)

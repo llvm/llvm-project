@@ -386,6 +386,44 @@ macro(add_flag_if_supported flag name)
   append_if("CXX_SUPPORTS_${name}" "${flag}" CMAKE_CXX_FLAGS)
 endmacro()
 
+# LLVM's diagnostic policy is collected in LLVM_WARNING_OPTIONS_C/CXX instead of
+# CMAKE_<LANG>_FLAGS, which every target in the build tree would inherit. The
+# lists are applied to LLVM-owned targets by llvm_apply_warning_options().
+#
+#   llvm_add_warning_options(<C|CXX|ALL> <option>...)
+#
+# An option that is already present is moved to the end, because
+# target_compile_options() keeps only the first of duplicates while the last of
+# conflicting options (-Wno-foo ... -Wfoo) wins on the command line.
+macro(llvm_add_warning_options lang)
+  if (NOT "${lang}" MATCHES "^(C|CXX|ALL)$")
+    message(FATAL_ERROR "llvm_add_warning_options: language must be C, CXX or ALL, not '${lang}'")
+  endif()
+  foreach(_llvm_warning_opt ${ARGN})
+    if (NOT "${lang}" STREQUAL "CXX")
+      list(REMOVE_ITEM LLVM_WARNING_OPTIONS_C "${_llvm_warning_opt}")
+      list(APPEND LLVM_WARNING_OPTIONS_C "${_llvm_warning_opt}")
+    endif()
+    if (NOT "${lang}" STREQUAL "C")
+      list(REMOVE_ITEM LLVM_WARNING_OPTIONS_CXX "${_llvm_warning_opt}")
+      list(APPEND LLVM_WARNING_OPTIONS_CXX "${_llvm_warning_opt}")
+    endif()
+  endforeach()
+endmacro()
+
+# Like add_flag_if_supported, but adds a warning option to the per-target lists
+# instead of CMAKE_<LANG>_FLAGS.
+macro(llvm_add_warning_flag_if_supported flag name)
+  check_c_compiler_flag("-Werror ${flag}" "C_SUPPORTS_${name}")
+  if ("${C_SUPPORTS_${name}}")
+    llvm_add_warning_options(C "${flag}")
+  endif()
+  check_cxx_compiler_flag("-Werror ${flag}" "CXX_SUPPORTS_${name}")
+  if ("${CXX_SUPPORTS_${name}}")
+    llvm_add_warning_options(CXX "${flag}")
+  endif()
+endmacro()
+
 function(add_flag_or_print_warning flag name)
   check_c_compiler_flag("-Werror ${flag}" "C_SUPPORTS_${name}")
   check_cxx_compiler_flag("-Werror ${flag}" "CXX_SUPPORTS_${name}")
@@ -596,6 +634,9 @@ endif()
 option(LLVM_ENABLE_WARNINGS "Enable compiler warnings." ON)
 option(LLVM_ENABLE_WARNING_SUPPRESSIONS "Suppress compiler warnings." ON)
 
+set(LLVM_WARNING_OPTIONS_C "")
+set(LLVM_WARNING_OPTIONS_CXX "")
+
 if( MSVC )
 
   # Add definitions that make MSVC much less annoying.
@@ -628,7 +669,7 @@ if( MSVC )
   endif()
 
   if (LLVM_ENABLE_WERROR)
-    append("/WX" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+    llvm_add_warning_options(ALL /WX)
   endif (LLVM_ENABLE_WERROR)
 
   append("/Zc:inline" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
@@ -726,17 +767,21 @@ endif( MSVC )
 
 # Warnings-as-errors handling for GCC-compatible compilers:
 if ( LLVM_COMPILER_IS_GCC_COMPATIBLE )
-  append_if(LLVM_ENABLE_WERROR "-Werror" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
-  append_if(LLVM_ENABLE_WERROR "-Wno-error" CMAKE_REQUIRED_FLAGS)
+  if (LLVM_ENABLE_WERROR)
+    llvm_add_warning_options(ALL -Werror)
+    # Keep configure probes working when a project adds its own -Werror to
+    # CMAKE_<LANG>_FLAGS (e.g. OPENMP_ENABLE_WERROR).
+    append("-Wno-error" CMAKE_REQUIRED_FLAGS)
+  endif()
 endif( LLVM_COMPILER_IS_GCC_COMPATIBLE )
 
 # Specific default warnings-as-errors for compilers accepting GCC-compatible warning flags:
 if ( LLVM_COMPILER_IS_GCC_COMPATIBLE OR CMAKE_CXX_COMPILER_ID MATCHES "XL" )
-  append("-Werror=date-time" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+  llvm_add_warning_options(ALL -Werror=date-time)
 endif( LLVM_COMPILER_IS_GCC_COMPATIBLE OR CMAKE_CXX_COMPILER_ID MATCHES "XL" )
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  append("-Werror=unguarded-availability-new" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+  llvm_add_warning_options(ALL -Werror=unguarded-availability-new)
 endif()
 
 # Modules enablement for GCC-compatible compilers:
@@ -811,7 +856,7 @@ if (MSVC)
     # Put /W4 in front of all the -we flags. cl.exe doesn't care, but for
     # clang-cl having /W4 after the -we flags will re-enable the warnings
     # disabled by -we.
-    set(msvc_warning_flags "/W4 ${msvc_warning_flags}")
+    list(PREPEND msvc_warning_flags /W4)
     # CMake appends /W3 by default, and having /W3 followed by /W4 will result in
     # cl : Command line warning D9025 : overriding '/W3' with '/W4'.  Since this is
     # a command line warning and not a compiler warning, it cannot be suppressed except
@@ -824,71 +869,67 @@ if (MSVC)
     endif (LLVM_ENABLE_PEDANTIC)
   endif (LLVM_ENABLE_WARNINGS)
 
-  foreach(flag ${msvc_warning_flags})
-    append("${flag}" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
-  endforeach(flag)
+  llvm_add_warning_options(ALL ${msvc_warning_flags})
 endif (MSVC)
-
-if (NOT LLVM_ENABLE_WARNING_SUPPRESSIONS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
-  # Keep track of the flags before LLVM appends its default warnings
-  set(PRE_CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
-  set(PRE_CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-endif()
 
 if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
 
   # Don't add -Wall for clang-cl, because it maps -Wall to -Weverything for
   # MSVC compatibility.  /W4 is added above instead.
   if (NOT CLANG_CL)
-    append("-Wall" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+    llvm_add_warning_options(ALL -Wall)
   endif()
 
-  append("-Wextra -Wno-unused-parameter -Wwrite-strings" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
-  append("-Wcast-qual" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+  llvm_add_warning_options(ALL -Wextra -Wno-unused-parameter -Wwrite-strings)
+  llvm_add_warning_options(ALL -Wcast-qual)
 
   # Turn off missing field initializer warnings for gcc to avoid noise from
   # false positives with empty {}. Turn them on otherwise (they're off by
   # default for clang).
   if (CMAKE_COMPILER_IS_GNUCXX)
-    append("-Wno-missing-field-initializers" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+    llvm_add_warning_options(ALL -Wno-missing-field-initializers)
   else()
-    append("-Wmissing-field-initializers" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+    llvm_add_warning_options(ALL -Wmissing-field-initializers)
   endif()
 
   if (LLVM_ENABLE_PEDANTIC AND LLVM_COMPILER_IS_GCC_COMPATIBLE)
-    append("-pedantic" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
-    append("-Wno-long-long" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+    llvm_add_warning_options(ALL -pedantic)
+    llvm_add_warning_options(ALL -Wno-long-long)
 
     # GCC warns about redundant toplevel semicolons (enabled by -pedantic
     # above), while Clang doesn't. Enable the corresponding Clang option to
     # pick up on these even in builds with Clang.
-    add_flag_if_supported("-Wc++98-compat-extra-semi" CXX98_COMPAT_EXTRA_SEMI_FLAG)
+    llvm_add_warning_flag_if_supported("-Wc++98-compat-extra-semi" CXX98_COMPAT_EXTRA_SEMI_FLAG)
   endif()
 
-  append("-Wimplicit-fallthrough" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+  llvm_add_warning_options(ALL -Wimplicit-fallthrough)
 
   set(CXX_SUPPORTS_COVERED_SWITCH_DEFAULT_FLAG 0)
   if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     set(CXX_SUPPORTS_COVERED_SWITCH_DEFAULT_FLAG 1)
-    append("-Wcovered-switch-default" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+    llvm_add_warning_options(ALL -Wcovered-switch-default)
   endif()
-  append_if(USE_NO_UNINITIALIZED "-Wno-uninitialized" CMAKE_CXX_FLAGS)
-  append_if(USE_NO_MAYBE_UNINITIALIZED "-Wno-maybe-uninitialized" CMAKE_CXX_FLAGS)
+  if (USE_NO_UNINITIALIZED)
+    llvm_add_warning_options(CXX -Wno-uninitialized)
+  endif()
+  if (USE_NO_MAYBE_UNINITIALIZED)
+    llvm_add_warning_options(CXX -Wno-maybe-uninitialized)
+  endif()
 
   if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     # Disable -Wnonnull for GCC warning as it is emitting a lot of false positives.
-    append("-Wno-nonnull" CMAKE_CXX_FLAGS)
+    llvm_add_warning_options(CXX -Wno-nonnull)
 
     # Disable -Wclass-memaccess, a C++-only warning from GCC 8 that fires on
     # LLVM's ADT classes.
     if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 8.1)
-      append("-Wno-class-memaccess" CMAKE_CXX_FLAGS)
+      llvm_add_warning_options(CXX -Wno-class-memaccess)
     endif()
 
     # Disable -Wdangling-reference, a C++-only warning from GCC 13 that seems
     # to produce a large number of false positives.
     if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 13.1)
-      append("-Wno-dangling-reference" CMAKE_CXX_FLAGS)
+      llvm_add_warning_options(CXX -Wno-dangling-reference)
     endif()
 
     # Disable -Wredundant-move and -Wpessimizing-move on GCC>=9. GCC wants to
@@ -899,44 +940,44 @@ if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
     # -Wpessimizing-move, but they only fire when the types match exactly, so we
     # can keep them here.
     if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 9.1)
-      append("-Wno-redundant-move" CMAKE_CXX_FLAGS)
-      append("-Wno-pessimizing-move" CMAKE_CXX_FLAGS)
+      llvm_add_warning_options(CXX -Wno-redundant-move)
+      llvm_add_warning_options(CXX -Wno-pessimizing-move)
     endif()
 
     # Disable -Warray-bounds on GCC; this warning exists since a very long time,
     # but since GCC 11, it produces a lot of very noisy, seemingly false positive
     # warnings (potentially originating in libstdc++).
-    append("-Wno-array-bounds" CMAKE_CXX_FLAGS)
+    llvm_add_warning_options(CXX -Wno-array-bounds)
 
     # Disable -Wstringop-overread on GCC; this warning produces a number of very
     # noisy diagnostics when -Warray-bounds is disabled above; this option exists
     # since GCC 11.
     if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 11.1)
-      append("-Wno-stringop-overread" CMAKE_CXX_FLAGS)
+      llvm_add_warning_options(CXX -Wno-stringop-overread)
     endif()
 
     # Disable -Wdangling-pointer on GCC 12+; this warning produces false
     # positives for the RAII listener pattern (storing `this` in a constructor
     # that is cleaned up in the destructor).
     if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 12.1)
-      append("-Wno-dangling-pointer" CMAKE_CXX_FLAGS)
+      llvm_add_warning_options(CXX -Wno-dangling-pointer)
     endif()
 
     # Silence a false positive GCC -Wunused-but-set-parameter warning in
     # constexpr cases. See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=85827
     # for details
     if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "14.0")
-      append("-Wno-unused-but-set-parameter" CMAKE_CXX_FLAGS)
+      llvm_add_warning_options(CXX -Wno-unused-but-set-parameter)
     endif()
   endif()
 
   # The LLVM libraries have no stable C++ API, so -Wnoexcept-type is not useful.
-  append("-Wno-noexcept-type" CMAKE_CXX_FLAGS)
+  llvm_add_warning_options(CXX -Wno-noexcept-type)
 
   if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    append("-Wnon-virtual-dtor" CMAKE_CXX_FLAGS)
+    llvm_add_warning_options(CXX -Wnon-virtual-dtor)
   endif()
-  append("-Wdelete-non-virtual-dtor" CMAKE_CXX_FLAGS)
+  llvm_add_warning_options(CXX -Wdelete-non-virtual-dtor)
 
   # Enable -Wsuggest-override if it's available, and only if it doesn't
   # suggest adding 'override' to functions that are already marked 'final'
@@ -950,7 +991,9 @@ if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
                                int main() { return 0; }"
                               CXX_WSUGGEST_OVERRIDE_ALLOWS_ONLY_FINAL)
     set(CMAKE_REQUIRED_FLAGS ${OLD_CMAKE_REQUIRED_FLAGS})
-    append_if(CXX_WSUGGEST_OVERRIDE_ALLOWS_ONLY_FINAL "-Wsuggest-override" CMAKE_CXX_FLAGS)
+    if (CXX_WSUGGEST_OVERRIDE_ALLOWS_ONLY_FINAL)
+      llvm_add_warning_options(CXX -Wsuggest-override)
+    endif()
   endif()
 
   # Check if -Wcomment is OK with an // comment ending with '\' if the next
@@ -961,12 +1004,12 @@ if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
                           C_WCOMMENT_ALLOWS_LINE_WRAP)
   set(CMAKE_REQUIRED_FLAGS ${OLD_CMAKE_REQUIRED_FLAGS})
   if (NOT C_WCOMMENT_ALLOWS_LINE_WRAP)
-    append("-Wno-comment" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+    llvm_add_warning_options(ALL -Wno-comment)
   endif()
 
   # Enable -Wstring-conversion to catch misuse of string literals.
   if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    append("-Wstring-conversion" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+    llvm_add_warning_options(ALL -Wstring-conversion)
 
     # Disable -Wno-pass-failed flag, which reports failure to perform
     # optimizations suggested by pragmas. This warning is not relevant for LLVM
@@ -975,38 +1018,31 @@ if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
     # avoided (https://github.com/llvm/llvm-project/issues/157666).
     # This option has been available since Clang 3.5, and we do require a newer
     # version.
-    append("-Wno-pass-failed" CMAKE_CXX_FLAGS)
+    llvm_add_warning_options(CXX -Wno-pass-failed)
   endif()
 
   if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     # Disable the misleading indentation warning with GCC; GCC can
     # produce noisy notes about this getting disabled in large files.
     # See e.g. https://gcc.gnu.org/bugzilla/show_bug.cgi?id=89549
-    append("-Wno-misleading-indentation" CMAKE_CXX_FLAGS)
+    llvm_add_warning_options(CXX -Wno-misleading-indentation)
   else()
     # Prevent bugs that can happen with llvm's brace style.
-    add_flag_if_supported("-Wmisleading-indentation" MISLEADING_INDENTATION_FLAG)
+    llvm_add_warning_flag_if_supported("-Wmisleading-indentation" MISLEADING_INDENTATION_FLAG)
   endif()
 
   # Enable -Wctad-maybe-unsupported to catch unintended use of CTAD.
-  add_flag_if_supported("-Wctad-maybe-unsupported" CTAD_MAYBE_UNSUPPORTED_FLAG)
+  llvm_add_warning_flag_if_supported("-Wctad-maybe-unsupported" CTAD_MAYBE_UNSUPPORTED_FLAG)
 endif (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
 
 if (LLVM_COMPILER_IS_GCC_COMPATIBLE AND NOT LLVM_ENABLE_WARNINGS)
-  append("-w" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+  llvm_add_warning_options(ALL -w)
 endif()
 
 if (NOT LLVM_ENABLE_WARNING_SUPPRESSIONS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
-  # Strip the -Wno- flags from the substring of flags added by LLVM in this block
-  string(LENGTH "${PRE_CMAKE_C_FLAGS}" PRE_CMAKE_C_LEN)
-  string(SUBSTRING "${CMAKE_C_FLAGS}" ${PRE_CMAKE_C_LEN} -1 ADDED_CMAKE_C_FLAGS)
-  string(REGEX REPLACE "(^| +)-Wno-[a-zA-Z0-9_-]+" "" ADDED_CMAKE_C_FLAGS "${ADDED_CMAKE_C_FLAGS}")
-  set(CMAKE_C_FLAGS "${PRE_CMAKE_C_FLAGS}${ADDED_CMAKE_C_FLAGS}")
-
-  string(LENGTH "${PRE_CMAKE_CXX_FLAGS}" PRE_CMAKE_CXX_LEN)
-  string(SUBSTRING "${CMAKE_CXX_FLAGS}" ${PRE_CMAKE_CXX_LEN} -1 ADDED_CMAKE_CXX_FLAGS)
-  string(REGEX REPLACE "(^| +)-Wno-[a-zA-Z0-9_-]+" "" ADDED_CMAKE_CXX_FLAGS "${ADDED_CMAKE_CXX_FLAGS}")
-  set(CMAKE_CXX_FLAGS "${PRE_CMAKE_CXX_FLAGS}${ADDED_CMAKE_CXX_FLAGS}")
+  # Drop the -Wno- options LLVM selected.
+  list(FILTER LLVM_WARNING_OPTIONS_C EXCLUDE REGEX "^-Wno-[a-zA-Z0-9_-]+")
+  list(FILTER LLVM_WARNING_OPTIONS_CXX EXCLUDE REGEX "^-Wno-[a-zA-Z0-9_-]+")
 endif()
 
 macro(append_common_sanitizer_flags)
