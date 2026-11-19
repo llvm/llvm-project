@@ -61,9 +61,9 @@ enum FormatFlags : uint8_t {
   SPACE_PREFIX = 0x04,   // space
   ALTERNATE_FORM = 0x08, // #
   LEADING_ZEROES = 0x10, // 0
+  GROUP_DECIMALS = 0x20, // '
 
-  // These flags come from the GNU extensions which aren't yet implemented.
-  //  group_decimals = 0x20, // '
+  // This flag comes from the GNU extensions which aren't yet implemented.
   //  locale_digits = 0x40,  // I
 };
 
