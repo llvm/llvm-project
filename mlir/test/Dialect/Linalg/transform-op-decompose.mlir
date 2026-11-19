@@ -927,6 +927,24 @@ func.func @negative_scaled_contract_dynamic_reduction_block(
   return %D : tensor<8x4xf32>
 }
 
+// Block scaling of a reduction dim which is dynamic in one operand only.
+// CHECK-LABEL: func @negative_scaled_contract_partially_dynamic_reduction_block
+//  CHECK-NEXT:   linalg.scaled_contract
+func.func @negative_scaled_contract_partially_dynamic_reduction_block(
+    %A: tensor<8x64xf4E2M1FN>, %sA: tensor<8x2xf8E8M0FNU>,
+    %B: tensor<4x?xf4E2M1FN>, %sB: tensor<4x2xf8E8M0FNU>,
+    %C: tensor<8x4xf32>) -> tensor<8x4xf32> {
+  %D = linalg.scaled_contract
+      indexing_maps = [affine_map<(m, n, k) -> (m, k)>,
+                       affine_map<(m, n, k) -> (m, k floordiv 32)>,
+                       affine_map<(m, n, k) -> (n, k)>,
+                       affine_map<(m, n, k) -> (n, k floordiv 32)>,
+                       affine_map<(m, n, k) -> (m, n)>]
+      ins(%A, %sA, %B, %sB : tensor<8x64xf4E2M1FN>, tensor<8x2xf8E8M0FNU>, tensor<4x?xf4E2M1FN>, tensor<4x2xf8E8M0FNU>)
+      outs(%C : tensor<8x4xf32>) -> tensor<8x4xf32>
+  return %D : tensor<8x4xf32>
+}
+
 // Reduction dim size not divisible by the scaling block size.
 // CHECK-LABEL: func @negative_scaled_contract_partial_block
 //  CHECK-NEXT:   linalg.scaled_contract

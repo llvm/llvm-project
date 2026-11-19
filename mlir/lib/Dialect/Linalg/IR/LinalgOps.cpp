@@ -7076,16 +7076,6 @@ static std::pair<unsigned, int64_t> getScaleDimAndBlockSize(AffineExpr expr) {
           cast<AffineConstantExpr>(binExpr.getRHS()).getValue()};
 }
 
-/// Returns true if the op's region scales data with a scaling extension, which
-/// applies to floating-point data narrower than the output with an f8E8M0FNU
-/// scale.
-static bool usesScalingExtF(Type dataType, Type scaleType, Type outType) {
-  auto dataFloatType = dyn_cast<FloatType>(dataType);
-  auto outFloatType = dyn_cast<FloatType>(outType);
-  return dataFloatType && outFloatType && isa<Float8E8M0FNUType>(scaleType) &&
-         dataFloatType.getWidth() < outFloatType.getWidth();
-}
-
 SmallVector<utils::IteratorType> ScaledContractOp::getIteratorTypesArray() {
   AffineMap outAffineMap = getIndexingMapsArray().pop_back_val();
   // Infer iterator types based on the output.
@@ -7131,9 +7121,15 @@ void ScaledContractOp::regionBuilder(
   // TODO: Support fields with operators besides mult & add.
   Type outType = block.getArgument(4).getType();
 
-  // Build input data value scaling.
+  // Build input data value scaling. A scaling extension reduces its scale
+  // to f8E8M0, so it is used only for scales of that type. Other scales are
+  // applied by value.
   auto buildScaledValue = [&](Value data, Value scale) -> Value {
-    if (usesScalingExtF(data.getType(), scale.getType(), outType))
+    auto dataFloatType = dyn_cast<FloatType>(data.getType());
+    auto outFloatType = dyn_cast<FloatType>(outType);
+    if (dataFloatType && outFloatType &&
+        isa<Float8E8M0FNUType>(scale.getType()) &&
+        dataFloatType.getWidth() < outFloatType.getWidth())
       return arith::ScalingExtFOp::create(b, outType, data, scale,
                                           /*fastmath=*/nullptr);
     Value dataAtOutType = helper.buildTypeFn(castSignedness, outType, data);
@@ -7773,11 +7769,10 @@ ScaledContractOp::decomposeOperation(OpBuilder &b) {
             RegionBuilderHelper helper(nestedBuilder,
                                        *nestedBuilder.getInsertionBlock());
             // Scales are converted directly to the compute type.
-            Value partial = isInPlace ? args[2] : args[0];
-            ValueRange scaleArgs = args.drop_front(isInPlace ? 0 : 1);
+            Value partial = isInPlace ? args.back() : args.front();
             Value scaled =
                 helper.buildTypeFn(castSignedness, computeType, partial);
-            for (Value scale : scaleArgs.take_front(2)) {
+            for (Value scale : args.slice(isInPlace ? 0 : 1, 2)) {
               scaled = helper.buildBinaryFn(
                   BinaryFn::mul, scaled,
                   helper.buildTypeFn(castSignedness, computeType, scale));
