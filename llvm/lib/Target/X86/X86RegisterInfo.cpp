@@ -1130,9 +1130,11 @@ unsigned X86RegisterInfo::findDeadCallerSavedReg(
 
   LiveRegUnits LRU(*this);
   LRU.addLiveOuts(MBB);
-  LRU.stepBackward(*Term);
-  for (const MachineInstr &MI : instructionsWithoutDebug(MBBI, Term))
-    LRU.accumulate(MI);
+  for (auto I = std::next(Term); I != MBBI;) {
+    --I;
+    if (!I->isDebugInstr())
+      LRU.stepBackward(*I);
+  }
 
   const TargetRegisterClass &RC =
       Is64Bit ? X86::GR64_NOSPRegClass : X86::GR32_NOSPRegClass;
