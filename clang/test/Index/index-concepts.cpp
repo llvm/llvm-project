@@ -13,7 +13,7 @@ struct type_trait<int> {
 template <class T>
 requires (type_trait<T>::value)
 // CHECK: index-concepts.cpp:[[@LINE-1]]:10: ParenExpr= Extent=[[[@LINE-1]]:10 - [[@LINE-1]]:32]
-// CHECK: index-concepts.cpp:[[@LINE-2]]:11: DeclRefExpr= Extent=[[[@LINE-2]]:11 - [[@LINE-2]]:31]
+// CHECK: index-concepts.cpp:[[@LINE-2]]:11: DeclRefExpr=:5:23 Extent=[[[@LINE-2]]:11 - [[@LINE-2]]:31]
 // CHECK: index-concepts.cpp:[[@LINE-3]]:11: TemplateRef=type_trait:4:8 Extent=[[[@LINE-3]]:11 - [[@LINE-3]]:21]
 // CHECK: index-concepts.cpp:[[@LINE-4]]:22: TypeRef=T:13:17 Extent=[[[@LINE-4]]:22 - [[@LINE-4]]:23]
 void indexRequiresClause() {
@@ -22,7 +22,7 @@ void indexRequiresClause() {
 template<class T>
 requires (type_trait<T>::value)
 // CHECK: index-concepts.cpp:[[@LINE-1]]:10: ParenExpr= Extent=[[[@LINE-1]]:10 - [[@LINE-1]]:32]
-// CHECK: index-concepts.cpp:[[@LINE-2]]:11: DeclRefExpr= Extent=[[[@LINE-2]]:11 - [[@LINE-2]]:31]
+// CHECK: index-concepts.cpp:[[@LINE-2]]:11: DeclRefExpr=:5:23 Extent=[[[@LINE-2]]:11 - [[@LINE-2]]:31]
 // CHECK: index-concepts.cpp:[[@LINE-3]]:11: TemplateRef=type_trait:4:8 Extent=[[[@LINE-3]]:11 - [[@LINE-3]]:21]
 // CHECK: index-concepts.cpp:[[@LINE-4]]:22: TypeRef=T:22:16 Extent=[[[@LINE-4]]:22 - [[@LINE-4]]:23]
 class IndexRequiresClauseInClass {};
@@ -31,7 +31,7 @@ template <class T>
 concept Con1 = type_trait<T>::value;
 // CHECK: index-concepts.cpp:[[@LINE-1]]:9: ConceptDecl=Con1:[[@LINE-1]]:9 (Definition) Extent=[[[@LINE-2]]:1 - [[@LINE-1]]:36]
 // CHECK: index-concepts.cpp:[[@LINE-3]]:17: TemplateTypeParameter=T:[[@LINE-3]]:17 (Definition) Extent=[[[@LINE-3]]:11 - [[@LINE-3]]:18] [access=public]
-// CHECK: index-concepts.cpp:[[@LINE-3]]:16: DeclRefExpr= Extent=[[[@LINE-3]]:16 - [[@LINE-3]]:36]
+// CHECK: index-concepts.cpp:[[@LINE-3]]:16: DeclRefExpr=:5:23 Extent=[[[@LINE-3]]:16 - [[@LINE-3]]:36]
 // CHECK: index-concepts.cpp:[[@LINE-4]]:16: TemplateRef=type_trait:4:8 Extent=[[[@LINE-4]]:16 - [[@LINE-4]]:26]
 // CHECK: index-concepts.cpp:[[@LINE-5]]:27: TypeRef=T:30:17 Extent=[[[@LINE-5]]:27 - [[@LINE-5]]:28]
 
