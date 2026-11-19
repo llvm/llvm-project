@@ -151,6 +151,8 @@ static uint32_t mapCompositeTypeTag(unsigned Tag) {
   }
 }
 
+// Map a DWARF qualifier tag to a NonSemantic.Shader.DebugInfo Type Qualifier
+// value: Const 0, Volatile 1, Restrict 2, Atomic 3.
 static std::optional<uint32_t> mapTypeQualifierTag(unsigned Tag) {
   switch (Tag) {
   case dwarf::DW_TAG_const_type:
