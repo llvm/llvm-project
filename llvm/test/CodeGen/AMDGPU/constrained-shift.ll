@@ -283,3 +283,109 @@ define i32 @add_cshl(i32 %a, i32 %b) {
   %shl = shl i32 %add, %and
   ret i32 %shl
 }
+
+; Unsigned BFE extracting shift amount bits is redundant
+define i32 @ubfe_shl_i32(i32 %a, i32 %b) {
+; SDAG-LABEL: ubfe_shl_i32:
+; SDAG:       ; %bb.0:
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-NEXT:    v_lshlrev_b32_e32 v0, v1, v0
+; SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-LABEL: ubfe_shl_i32:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-NEXT:    v_bfe_u32 v1, v1, 0, 5
+; GISEL-NEXT:    v_lshlrev_b32_e32 v0, v1, v0
+; GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %amt = call i32 @llvm.amdgcn.ubfe.i32(i32 %b, i32 0, i32 5)
+  %shl = shl i32 %a, %amt
+  ret i32 %shl
+}
+
+define i32 @ubfe_lshr_i32(i32 %a, i32 %b) {
+; SDAG-LABEL: ubfe_lshr_i32:
+; SDAG:       ; %bb.0:
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-NEXT:    v_lshrrev_b32_e32 v0, v1, v0
+; SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-LABEL: ubfe_lshr_i32:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-NEXT:    v_bfe_u32 v1, v1, 0, 5
+; GISEL-NEXT:    v_lshrrev_b32_e32 v0, v1, v0
+; GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %amt = call i32 @llvm.amdgcn.ubfe.i32(i32 %b, i32 0, i32 5)
+  %lshr = lshr i32 %a, %amt
+  ret i32 %lshr
+}
+
+define i32 @ubfe_ashr_i32(i32 %a, i32 %b) {
+; SDAG-LABEL: ubfe_ashr_i32:
+; SDAG:       ; %bb.0:
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-NEXT:    v_ashrrev_i32_e32 v0, v1, v0
+; SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-LABEL: ubfe_ashr_i32:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-NEXT:    v_bfe_u32 v1, v1, 0, 5
+; GISEL-NEXT:    v_ashrrev_i32_e32 v0, v1, v0
+; GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %amt = call i32 @llvm.amdgcn.ubfe.i32(i32 %b, i32 0, i32 5)
+  %ashr = ashr i32 %a, %amt
+  ret i32 %ashr
+}
+
+define i64 @ubfe_shl_i64(i64 %a, i32 %b) {
+; SDAG-LABEL: ubfe_shl_i64:
+; SDAG:       ; %bb.0:
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-NEXT:    v_lshlrev_b64 v[0:1], v2, v[0:1]
+; SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-LABEL: ubfe_shl_i64:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-NEXT:    v_bfe_u32 v2, v2, 0, 6
+; GISEL-NEXT:    v_lshlrev_b64 v[0:1], v2, v[0:1]
+; GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %amt32 = call i32 @llvm.amdgcn.ubfe.i32(i32 %b, i32 0, i32 6)
+  %amt = zext i32 %amt32 to i64
+  %shl = shl i64 %a, %amt
+  ret i64 %shl
+}
+
+; BFE extracting more bits than needed (8 bits instead of 5) is still redundant
+define i32 @ubfe_shl_i32_wider(i32 %a, i32 %b) {
+; SDAG-LABEL: ubfe_shl_i32_wider:
+; SDAG:       ; %bb.0:
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-NEXT:    v_lshlrev_b32_e32 v0, v1, v0
+; SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-LABEL: ubfe_shl_i32_wider:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-NEXT:    v_lshlrev_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %amt = call i32 @llvm.amdgcn.ubfe.i32(i32 %b, i32 0, i32 8)
+  %shl = shl i32 %a, %amt
+  ret i32 %shl
+}
+
+; Signed BFE extracting shift amount bits is redundant
+; TODO: Signed BFE cannot be converted to an AND so shift code generation cannot eliminate them
+define i32 @sbfe_shl_i32(i32 %a, i32 %b) {
+; CHECK-LABEL: sbfe_shl_i32:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_bfe_i32 v1, v1, 0, 5
+; CHECK-NEXT:    v_lshlrev_b32_e32 v0, v1, v0
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %amt = call i32 @llvm.amdgcn.sbfe.i32(i32 %b, i32 0, i32 5)
+  %shl = shl i32 %a, %amt
+  ret i32 %shl
+}
