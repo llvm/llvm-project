@@ -6185,7 +6185,9 @@ let isPseudo = 1 in {
   def SEH_SetFP : Pseudo<(outs), (ins), []>, Sched<[]>;
   def SEH_AddFP : Pseudo<(outs), (ins i32imm:$offs), []>, Sched<[]>;
   def SEH_Nop : Pseudo<(outs), (ins), []>, Sched<[]>;
-  def SEH_PrologEnd : Pseudo<(outs), (ins), []>, Sched<[]>;
+  // Windows unwind range insertion supports only one physical prologue.
+  let isNotDuplicable = 1 in
+    def SEH_PrologEnd : Pseudo<(outs), (ins), []>, Sched<[]>;
   def SEH_EpilogStart : Pseudo<(outs), (ins), []>, Sched<[]>;
   def SEH_EpilogEnd : Pseudo<(outs), (ins), []>, Sched<[]>;
   def SEH_PACSignLR : Pseudo<(outs), (ins), []>, Sched<[]>;
