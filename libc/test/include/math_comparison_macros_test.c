@@ -43,4 +43,4 @@ TEST(math_comparison_macros) {
   EXPECT_TRUE(isunordered(1.0, __builtin_nan("")) == 1);
   EXPECT_TRUE(isunordered(1.0L, -1.0L) == 0);
 }
-#endif
+#endif // defined(isgreater) && ... && defined(isunordered)

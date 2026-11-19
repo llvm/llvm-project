@@ -24,7 +24,7 @@ class MathComparisonMacrosTest : public LIBC_NAMESPACE::testing::Test {
   DECLARE_SPECIAL_CONSTANTS(T)
 
 public:
-  void testComparisons() {
+  void testComparisons(bool check_ordered_qnan_fe_invalid = true) {
     const T neg_two = T(-2);
     const T neg_one = T(-1);
     const T pos_one = T(1);
@@ -73,6 +73,12 @@ public:
     for (T qnan : nans) {
       for (T v : vals) {
         LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
+        EXPECT_EQ(islessgreater(qnan, v), 0);
+        EXPECT_EQ(islessgreater(v, qnan), 0);
+        EXPECT_EQ(isunordered(qnan, v), 1);
+        EXPECT_EQ(isunordered(v, qnan), 1);
+        EXPECT_EQ(LIBC_NAMESPACE::fputil::test_except(FE_INVALID), 0);
+
         EXPECT_EQ(isgreater(qnan, v), 0);
         EXPECT_EQ(isgreater(v, qnan), 0);
         EXPECT_EQ(isgreaterequal(qnan, v), 0);
@@ -81,11 +87,10 @@ public:
         EXPECT_EQ(isless(v, qnan), 0);
         EXPECT_EQ(islessequal(qnan, v), 0);
         EXPECT_EQ(islessequal(v, qnan), 0);
-        EXPECT_EQ(islessgreater(qnan, v), 0);
-        EXPECT_EQ(islessgreater(v, qnan), 0);
-        EXPECT_EQ(isunordered(qnan, v), 1);
-        EXPECT_EQ(isunordered(v, qnan), 1);
-        EXPECT_EQ(LIBC_NAMESPACE::fputil::test_except(FE_INVALID), 0);
+        if (check_ordered_qnan_fe_invalid)
+          EXPECT_EQ(LIBC_NAMESPACE::fputil::test_except(FE_INVALID), 0);
+        else
+          LIBC_NAMESPACE::fputil::clear_except(FE_INVALID);
       }
     }
 
@@ -98,27 +103,48 @@ public:
   }
 };
 
+#if defined(LIBC_COMPILER_IS_CLANG) && defined(LIBC_TYPES_HAS_NATIVE_FLOAT128)
+// LLVM's SelectionDAG softens ordered fp128 predicates (fcmp ogt/oge/olt/ole)
+// directly to __gttf2/__getf2/__lttf2/__letf2, which raise FE_INVALID on quiet
+// NaNs when linked against libgcc.
+constexpr bool CLANG_F128_SOFTFP_SIGNALS_QNAN = true;
+#else
+constexpr bool CLANG_F128_SOFTFP_SIGNALS_QNAN = false;
+#endif // defined(LIBC_COMPILER_IS_CLANG) &&
+       // defined(LIBC_TYPES_HAS_NATIVE_FLOAT128)
+
 using LlvmLibcMathComparisonMacrosFloatTest = MathComparisonMacrosTest<float>;
 TEST_F(LlvmLibcMathComparisonMacrosFloatTest, All) { testComparisons(); }
 
 using LlvmLibcMathComparisonMacrosDoubleTest = MathComparisonMacrosTest<double>;
 TEST_F(LlvmLibcMathComparisonMacrosDoubleTest, All) { testComparisons(); }
 
+#ifdef LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128
+constexpr bool LONG_DOUBLE_SIGNALS_QNAN = CLANG_F128_SOFTFP_SIGNALS_QNAN;
+#else
+constexpr bool LONG_DOUBLE_SIGNALS_QNAN = false;
+#endif // LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128
+
 using LlvmLibcMathComparisonMacrosLongDoubleTest =
     MathComparisonMacrosTest<long double>;
-TEST_F(LlvmLibcMathComparisonMacrosLongDoubleTest, All) { testComparisons(); }
+TEST_F(LlvmLibcMathComparisonMacrosLongDoubleTest, All) {
+  testComparisons(/*check_ordered_qnan_fe_invalid=*/!LONG_DOUBLE_SIGNALS_QNAN);
+}
 
 #ifdef LIBC_TYPES_HAS_FLOAT16
 using LlvmLibcMathComparisonMacrosFloat16Test =
     MathComparisonMacrosTest<float16>;
 TEST_F(LlvmLibcMathComparisonMacrosFloat16Test, All) { testComparisons(); }
-#endif
+#endif // LIBC_TYPES_HAS_FLOAT16
 
-#ifdef LIBC_TYPES_HAS_FLOAT128
+#ifdef LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE
 using LlvmLibcMathComparisonMacrosFloat128Test =
     MathComparisonMacrosTest<float128>;
-TEST_F(LlvmLibcMathComparisonMacrosFloat128Test, All) { testComparisons(); }
-#endif
+TEST_F(LlvmLibcMathComparisonMacrosFloat128Test, All) {
+  testComparisons(
+      /*check_ordered_qnan_fe_invalid=*/!CLANG_F128_SOFTFP_SIGNALS_QNAN);
+}
+#endif // LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE
 
 TEST(LlvmLibcMathComparisonMacrosMixedTest, MixedTypes) {
   LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
