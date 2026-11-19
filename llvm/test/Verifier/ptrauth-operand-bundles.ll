@@ -20,9 +20,9 @@ define void @test_ptrauth_bundle(i64 %arg0, i32 %arg1, ptr %arg2) {
 ; CHECK-NEXT: call void %arg2() [ "ptrauth"(i32 42, i32 120) ]
   call void %arg2() [ "ptrauth"(i32 42, i32 120) ]
 
-; CHECK: Direct call cannot have a ptrauth bundle
-; CHECK-NEXT: call void @g() [ "ptrauth"(i32 42, i64 120) ]
-  call void @g() [ "ptrauth"(i32 42, i64 120) ]
+; Direct call carrying a ptrauth bundle is legal IR; the backend drops it.
+; CHECK-NOT: Direct call cannot have a ptrauth bundle
+  call void @g() [ "ptrauth"(i32 42, i64 120) ]      ; OK
 
 ; CHECK-NOT: call void
   call void %arg2() [ "ptrauth"(i32 42, i64 120) ]   ; OK
