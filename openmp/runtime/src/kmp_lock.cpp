@@ -676,7 +676,7 @@ int __kmp_test_ticket_lock(kmp_ticket_lock_t *lck, kmp_int32 gtid) {
                                                    std::memory_order_relaxed);
 
   if (std::atomic_load_explicit(&lck->lk.now_serving,
-                                std::memory_order_relaxed) == my_ticket) {
+                                std::memory_order_acquire) == my_ticket) {
     kmp_uint32 next_ticket = my_ticket + 1;
     if (std::atomic_compare_exchange_strong_explicit(
             &lck->lk.next_ticket, &my_ticket, next_ticket,
