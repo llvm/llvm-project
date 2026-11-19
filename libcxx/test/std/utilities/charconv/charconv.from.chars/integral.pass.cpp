@@ -16,11 +16,28 @@
 // constexpr from_chars_result from_chars(const char* first, const char* last,
 //                                        Integral& value, int base = 10)
 
+#include <cassert>
 #include <charconv>
 #include <system_error>
+#include <utility>
 
-#include "test_macros.h"
 #include "charconv_test_helpers.h"
+#include "test_macros.h"
+#include "type_algorithms.h"
+
+template <class, class... Args>
+constexpr bool has_from_chars_impl = false;
+
+template <class... Args>
+constexpr bool has_from_chars_impl<decltype((void)std::from_chars(std::declval<Args>()...)), Args...> = true;
+
+template <class... Args>
+constexpr bool has_from_chars = has_from_chars_impl<void, Args...>;
+
+static_assert(has_from_chars<char*, char*, int&>);
+static_assert(has_from_chars<char*, char*, int&, int>);
+static_assert(!has_from_chars<char*, char*, bool&>);
+static_assert(!has_from_chars<char*, char*, bool&, int>);
 
 struct test_basics
 {
@@ -154,7 +171,7 @@ TEST_CONSTEXPR_CXX23 bool test()
     types::for_each(types::integer_types(), test_basics());
     types::for_each(types::signed_integer_types(), test_signed());
 
-    return true;
+  return true;
 }
 
 int main(int, char**) {
