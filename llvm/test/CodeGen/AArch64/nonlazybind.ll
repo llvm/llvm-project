@@ -95,6 +95,51 @@ define void @test_laziness_tail() nounwind {
   ret void
 }
 
+declare hidden void @local() nonlazybind
+
+; A nonlazybind callee that is known to be DSO-local cannot be preempted, so
+; every selector calls it directly instead of through the GOT.
+define void @test_local() nounwind {
+; MACHO-LABEL: test_local:
+; MACHO:       ; %bb.0:
+; MACHO-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
+; MACHO-NEXT:    bl _local
+; MACHO-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
+; MACHO-NEXT:    ret
+;
+; MACHO-NORMAL-LABEL: test_local:
+; MACHO-NORMAL:       ; %bb.0:
+; MACHO-NORMAL-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
+; MACHO-NORMAL-NEXT:    bl _local
+; MACHO-NORMAL-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
+; MACHO-NORMAL-NEXT:    ret
+;
+; ELF-LABEL: test_local:
+; ELF:       // %bb.0:
+; ELF-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; ELF-NEXT:    bl local
+; ELF-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; ELF-NEXT:    ret
+  call void @local()
+  ret void
+}
+
+define void @test_local_tail() nounwind {
+; MACHO-LABEL: test_local_tail:
+; MACHO:       ; %bb.0:
+; MACHO-NEXT:    b _local
+;
+; MACHO-NORMAL-LABEL: test_local_tail:
+; MACHO-NORMAL:       ; %bb.0:
+; MACHO-NORMAL-NEXT:    b _local
+;
+; ELF-LABEL: test_local_tail:
+; ELF:       // %bb.0:
+; ELF-NEXT:    b local
+  tail call void @local()
+  ret void
+}
+
 declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg)
 
 !llvm.module.flags = !{!0}
