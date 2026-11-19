@@ -1582,6 +1582,18 @@ $ clang -include-pch test.h.pch -ignore-pch test.c -o test
 This option disables precompiled headers, overrides -emit-pch and -include-pch.
 test.h.pch is not generated and not used as a prefix header.
 
+#### Working-Directory-Relative PCH Files
+
+The `-fpch-base-dir-is-cwd` option serializes precompiled header input paths
+relative to the current working directory. This allows a build tree containing
+the PCH and its inputs to be moved, provided that the PCH is consumed from the
+corresponding working directory and the inputs retain the same relative layout.
+Paths outside the working directory remain absolute.
+
+Unlike `--relocatable-pch`, this option does not store a base directory or re-root
+paths using `-isysroot` when loading the PCH. The option is only needed when
+building the PCH and cannot be combined with `--relocatable-pch`.
+
 #### Relocatable PCH Files
 
 It is sometimes necessary to build a precompiled header from headers
@@ -2589,8 +2601,6 @@ if.end.icp:                                       ; preds = %if.false.orig_indir
   ret void
 ```
 
-This feature is temporarily ignored at the LLVM side when LTO is enabled.
-TODO: Update the comment when the LLVM side supports this feature for LTO.
 This feature is turned off by default.
 :::
 
@@ -2806,8 +2816,7 @@ file. Address-significance tables allow linkers to implement
 [safe ICF](https://research.google.com/pubs/archive/36912.pdf) without the false
 positives that can result from other implementation techniques such as
 relocation scanning. Address-significance tables are enabled by default
-on ELF targets when using the integrated assembler. This flag currently
-only has an effect on ELF targets.
+on ELF targets when using the integrated assembler.
 :::
 
 (funique_internal_linkage_names)=
@@ -3722,11 +3731,16 @@ it reads from `pathname/default.profdata`.
 
 :::{option} -fprofile-update[=<method>]
 
-Unless `-fsanitize=thread` is specified, the default is `single`, which
-uses non-atomic increments. The counters can be inaccurate under thread
-contention. `atomic` uses atomic increments which is accurate but has
-overhead. `prefer-atomic` will be transformed to `atomic` when supported
-by the target, or `single` otherwise.
+The default is `single`, which uses non-atomic increments. The counters can
+be inaccurate under thread contention. `atomic` uses atomic increments which
+is accurate but has overhead. `prefer-atomic` will be transformed to `atomic`
+when supported by the target, or `single` otherwise.
+
+When `-fsanitize=thread` is used with `-fprofile-instr-generate`,
+`-fprofile-generate` or `-fcs-profile-generate`, counter updates in
+functions instrumented by ThreadSanitizer default to `atomic`. Explicitly
+specifying `-fprofile-update=single` overrides this, and Clang emits a
+warning as non-atomic counter updates may be reported as data races.
 :::
 
 :::{option} -fprofile-continuous

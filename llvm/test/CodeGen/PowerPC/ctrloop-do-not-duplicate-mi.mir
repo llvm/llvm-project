@@ -79,23 +79,6 @@ hasEHScopes:     false
 hasEHFunclets:   false
 failsVerification: false
 tracksDebugUserValues: false
-registers:
-  - { id: 0, class: g8rc, preferred-register: '' }
-  - { id: 1, class: crbitrc, preferred-register: '' }
-  - { id: 2, class: g8rc, preferred-register: '' }
-  - { id: 3, class: g8rc, preferred-register: '' }
-  - { id: 4, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-  - { id: 5, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-  - { id: 6, class: crbitrc, preferred-register: '' }
-  - { id: 7, class: g8rc, preferred-register: '' }
-  - { id: 8, class: gprc, preferred-register: '' }
-  - { id: 9, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-  - { id: 10, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-  - { id: 11, class: crrc, preferred-register: '' }
-  - { id: 12, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-  - { id: 13, class: crbitrc, preferred-register: '' }
-  - { id: 14, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-  - { id: 15, class: gprc, preferred-register: '' }
 liveins:         []
 frameInfo:
   isFrameAddressTaken: false

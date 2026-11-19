@@ -23,8 +23,7 @@ void acc_init(int cond) {
   // CHECK-NEXT: acc.init if(%[[BOOL_CONV]])
 
 #pragma acc init if(1)
-  // CHECK-NEXT: %[[ONE_LITERAL:.*]] = cir.const #cir.int<1> : !s32i
-  // CHECK-NEXT: %[[ONE_TO_BOOL_CAST:.*]] = cir.cast int_to_bool %[[ONE_LITERAL]] : !s32i -> !cir.bool
+  // CHECK-NEXT: %[[ONE_TO_BOOL_CAST:.*]] = cir.const #true
   // CHECK-NEXT: %[[BOOL_CONV:.*]] = builtin.unrealized_conversion_cast %[[ONE_TO_BOOL_CAST]] : !cir.bool to i1
   // CHECK-NEXT: acc.init if(%[[BOOL_CONV]])
 
