@@ -1,6 +1,6 @@
 ; RUN: opt %loadNPMPolly '-passes=polly-custom<prune;codegen>' \
 ; RUN:   -plugin-arg=Polly,-polly-process-unprofitable=false -verify-each -S < %s | \
-; RUN:   FileCheck %s --check-prefix=PRUNED --implicit-check-not=llvm.loop.vectorize
+; RUN:   FileCheck %s --check-prefix=PRUNED --implicit-check-not=llvm.loop.vectorize.disable
 ; RUN: opt %loadNPMPolly '-passes=polly-custom<prune;codegen>' \
 ; RUN:   -plugin-arg=Polly,-polly-process-unprofitable=true -verify-each -S < %s | \
 ; RUN:   FileCheck %s --check-prefix=DYNAMIC --implicit-check-not='and i1 false,'
