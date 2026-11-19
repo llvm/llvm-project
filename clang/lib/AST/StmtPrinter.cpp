@@ -2441,6 +2441,11 @@ void StmtPrinter::VisitCXXBindTemporaryExpr(CXXBindTemporaryExpr *Node) {
   PrintExpr(Node->getSubExpr());
 }
 
+void StmtPrinter::VisitCoroutineSuspendParameterBypassExpr(
+    CoroutineSuspendParameterBypassExpr *Node) {
+  PrintExpr(Node->getSubExpr());
+}
+
 void StmtPrinter::VisitCXXTemporaryObjectExpr(CXXTemporaryObjectExpr *Node) {
   Node->getType().print(OS, Policy);
   if (Node->isStdInitListInitialization())
