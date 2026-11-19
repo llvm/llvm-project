@@ -35,10 +35,10 @@
 // LLVM:         alloca i32, align 4, addrspace(5)
 // LLVM:         alloca i8, align 1, addrspace(5)
 
-// LLVM-O0: define {{.*}} @_ZN1SD1Ev
+// LLVM-LABEL: define {{.*}} @_ZN1SD1Ev
 // LLVM:         alloca ptr, align 8, addrspace(5)
 
-// LLVM-O0: define {{.*}} @_ZN1SD2Ev
+// LLVM-LABEL: define {{.*}} @_ZN1SD2Ev
 // LLVM:         alloca ptr, align 8, addrspace(5)
 
 // Everything is optimized away but make sure verifiers agree with the lowering.
