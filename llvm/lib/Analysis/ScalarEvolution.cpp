@@ -14304,14 +14304,6 @@ ScalarEvolution::getLoopDisposition(const SCEV *S, const Loop *L) {
   return D;
 }
 
-bool llvm::onlyUnreachableSuccessors(const BasicBlock *BB, const Loop *L) {
-  for (const BasicBlock *Succ : successors(BB))
-    if (!L->contains(Succ) && (!isa<UnreachableInst>(Succ->getTerminator()) ||
-                               &Succ->front() != Succ->getTerminator()))
-      return false;
-  return true;
-}
-
 ScalarEvolution::LoopDisposition
 ScalarEvolution::computeLoopDisposition(const SCEV *S, const Loop *L) {
   switch (S->getSCEVType()) {

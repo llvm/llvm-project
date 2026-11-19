@@ -1551,19 +1551,13 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
   // Collect the blocks that need predication.
   for (BasicBlock *BB : TheLoop->blocks()) {
     // We support only branches and switch statements as terminators inside the
-    // loop. An exiting switch is supported only if its default leads to an
-    // unreachable-only block and all of its cases stay inside the loop.
-    if (const auto *Switch = dyn_cast<SwitchInst>(BB->getTerminator())) {
+    // loop.
+    if (isa<SwitchInst>(BB->getTerminator())) {
       if (TheLoop->isLoopExiting(BB)) {
-        bool AllCasesInLoop = all_of(Switch->cases(), [&](const auto &Case) {
-          return TheLoop->contains(Case.getCaseSuccessor());
-        });
-        if (!onlyUnreachableSuccessors(BB, TheLoop) || !AllCasesInLoop) {
-          reportVectorizationFailure("Loop contains an unsupported switch",
-                                     "LoopContainsUnsupportedSwitch", ORE,
-                                     TheLoop, BB->getTerminator());
-          return false;
-        }
+        reportVectorizationFailure("Loop contains an unsupported switch",
+                                   "LoopContainsUnsupportedSwitch", ORE,
+                                   TheLoop, BB->getTerminator());
+        return false;
       }
     } else if (!isa<UncondBrInst, CondBrInst>(BB->getTerminator())) {
       reportVectorizationFailure("Loop contains an unsupported terminator",

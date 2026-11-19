@@ -697,6 +697,10 @@ LLVM_ABI bool isMustProgress(const Loop *L);
 /// iterations.
 LLVM_ABI bool isFinite(const Loop *L);
 
+/// Returns true if every successor of \p BB outside \p L only contains
+/// `unreachable`.
+LLVM_ABI bool onlyUnreachableSuccessors(const BasicBlock *BB, const Loop *L);
+
 /// Return true if every cycle in the loop nest rooted at \p L is finite.
 /// This holds if \p L is finite by assumption, or if the nest has no
 /// irreducible cycles and every loop is either finite by assumption or
