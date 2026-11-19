@@ -1524,6 +1524,9 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
 
   CheckCXXDefaultArguments(Method);
 
+  // Check if we have to apply the extend_lifetimes disable pragma.
+  AddRangeBasedExtendLifetimesDisable(Method);
+
   // code_seg attribute on lambda apply to the method.
   if (Attr *A = getImplicitCodeSegOrSectionAttrForFunction(
           Method, /*IsDefinition=*/true))

@@ -1326,6 +1326,13 @@ void Sema::ActOnPragmaOptimize(bool On, SourceLocation PragmaLoc) {
     OptimizeOffPragmaLocation = PragmaLoc;
 }
 
+void Sema::ActOnPragmaExtendLifetimes(bool Enable, SourceLocation PragmaLoc) {
+  if (Enable)
+    ExtendLifetimesDisablePragmaLocation = SourceLocation();
+  else
+    ExtendLifetimesDisablePragmaLocation = PragmaLoc;
+}
+
 void Sema::ActOnPragmaMSOptimize(SourceLocation Loc, bool IsOn) {
   if (!CurContext->getRedeclContext()->isFileContext()) {
     Diag(Loc, diag::err_pragma_expected_file_scope) << "optimize";
@@ -1387,6 +1394,19 @@ void Sema::AddOptnoneAttributeIfNoConflicts(FunctionDecl *FD,
     FD->addAttr(OptimizeNoneAttr::CreateImplicit(Context, Loc));
   if (!FD->hasAttr<NoInlineAttr>())
     FD->addAttr(NoInlineAttr::CreateImplicit(Context, Loc));
+}
+
+void Sema::AddRangeBasedExtendLifetimesDisable(FunctionDecl *FD) {
+  if (ExtendLifetimesDisablePragmaLocation.isValid())
+    AddExtendLifetimesDisableAttribute(FD,
+                                       ExtendLifetimesDisablePragmaLocation);
+}
+
+void Sema::AddExtendLifetimesDisableAttribute(FunctionDecl *FD,
+                                              SourceLocation Loc) {
+  // Add the attribute only if it is not already present.
+  if (!FD->hasAttr<ExtendLifetimesDisableAttr>())
+    FD->addAttr(ExtendLifetimesDisableAttr::CreateImplicit(Context, Loc));
 }
 
 void Sema::AddImplicitMSFunctionNoBuiltinAttr(FunctionDecl *FD) {
