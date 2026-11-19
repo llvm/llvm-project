@@ -183,18 +183,18 @@ void SBDebugger::Initialize() {
 lldb::SBError SBDebugger::InitializeWithErrorHandling() {
   LLDB_INSTRUMENT();
 
-  SBError error;
-  if (auto e = g_debugger_lifetime->Initialize(
-          std::make_unique<SystemInitializerFull>())) {
-    error.SetError(Status::FromError(std::move(e)));
-  }
-  return error;
+  return Initialize(SBInitializationOptions());
 }
 
 lldb::SBError SBDebugger::Initialize(const SBInitializationOptions &options) {
   LLDB_INSTRUMENT_VA(options);
 
-  return InitializeWithErrorHandling();
+  SBError error;
+  if (auto e = g_debugger_lifetime->Initialize(
+          std::make_unique<SystemInitializerFull>(options.ref()))) {
+    error.SetError(Status::FromError(std::move(e)));
+  }
+  return error;
 }
 
 void SBDebugger::PrintStackTraceOnError() {
