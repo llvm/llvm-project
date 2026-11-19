@@ -17,3 +17,4 @@ int _longjmp;
 int siglongjmp;
 int strlcpy;
 int strlcat;
+int explicit_bzero;

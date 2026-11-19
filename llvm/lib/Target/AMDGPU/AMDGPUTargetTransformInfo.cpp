@@ -1015,6 +1015,21 @@ InstructionCost GCNTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
         Elts && Src->isIntegerTy(*Elts))
       return InstructionCost(MaskUnpackCostPerElt) * *Elts *
              getFullRateInstrCost();
+    // The generic code scalarizes a vector cast into element casts, which for
+    // a bitcast may pair elements of different sizes.
+    if (DL.getTypeSizeInBits(Src) == DL.getTypeSizeInBits(Dst)) {
+      // Integer and FP values share registers. A legalized vector may need its
+      // lanes repacked.
+      EVT SrcVT = TLI->getValueType(DL, Src);
+      EVT DstVT = TLI->getValueType(DL, Dst);
+      if (TLI->isTypeLegal(SrcVT) && TLI->isTypeLegal(DstVT))
+        return 0;
+      LLVMContext &Ctx = Src->getContext();
+      if (!SrcVT.isVector() && !DstVT.isVector() &&
+          TLI->getRegisterType(Ctx, SrcVT).getSizeInBits() ==
+              TLI->getRegisterType(Ctx, DstVT).getSizeInBits())
+        return 0;
+    }
   }
 
   // Each f32 lane is rounded and the halves are packed in pairs. A packed
@@ -1397,13 +1412,15 @@ bool GCNTTIImpl::isSourceOfDivergence(const Value *V) const {
 
   // Loads from the private and flat address spaces are divergent, because
   // threads can execute the load instruction with the same inputs and get
-  // different results.
+  // different results. So are loads from the VGPR address space, since each
+  // lane reads its own registers.
   //
   // All other loads are not divergent, because if threads issue loads with the
   // same arguments, they will always get the same result.
   if (const LoadInst *Load = dyn_cast<LoadInst>(V))
     return Load->getPointerAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS ||
-           Load->getPointerAddressSpace() == AMDGPUAS::FLAT_ADDRESS;
+           Load->getPointerAddressSpace() == AMDGPUAS::FLAT_ADDRESS ||
+           Load->getPointerAddressSpace() == AMDGPUAS::VGPR;
 
   // Atomics are divergent because they are executed sequentially: when an
   // atomic operation refers to the same address in each thread, then each
@@ -2145,29 +2162,6 @@ static unsigned getNumMemoryInsts(unsigned Bytes, unsigned MaxBytes,
   return NumInsts + llvm::popcount(Rem);
 }
 
-static unsigned getNumWidenedSMEMLoads(unsigned Bytes, uint64_t Alignment,
-                                       unsigned EltBytes, unsigned MaxBytes,
-                                       bool HasDwordx3) {
-  unsigned MaxPiece = EltBytes == 1 ? 8 : MaxBytes;
-  unsigned WideBytes = PowerOf2Ceil(Bytes);
-  unsigned NumWide = 0, SmallBytes = 0;
-  for (unsigned Off = 0; Off < Bytes;) {
-    unsigned Rem = Bytes - Off;
-    unsigned Span = Rem;
-    if (Rem <= Alignment)
-      Span = std::min<uint64_t>(Alignment, WideBytes - Off);
-    unsigned Piece = std::min(llvm::bit_floor(Span), MaxPiece);
-    if (Rem <= EltBytes)
-      Piece = 4;
-    if (Piece >= MaxBytes)
-      ++NumWide;
-    else
-      SmallBytes += std::max(Piece, 4u);
-    Off += Piece;
-  }
-  return NumWide + getNumMemoryInsts(SmallBytes, 32, HasDwordx3);
-}
-
 static bool hasUniformPointerOperand(const Instruction *I) {
   const auto *LI = dyn_cast_or_null<LoadInst>(I);
   if (!LI)
@@ -2262,12 +2256,6 @@ InstructionCost GCNTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
     // The last byte of a 7-byte remainder is not widened into the scalar load.
     if (!VecTy && Bytes % 4)
       return getNumMemoryInsts(Dwords * 4, 32, HasDwordx3) + (Bytes % 8 == 7);
-    if (Bytes % 4 || !TLI->isTypeLegal(EVT::getVectorVT(Src->getContext(),
-                                                        MVT::i32, Dwords))) {
-      unsigned EltBytes = Bytes % 4 ? EltBits / 8 : 4;
-      return getNumWidenedSMEMLoads(Bytes, Alignment.value(), EltBytes,
-                                    MaxBytes, HasDwordx3);
-    }
     if (!HasDwordx3 && Alignment >= 8 && Dwords % 4 == 3)
       ++Dwords;
     return getNumMemoryInsts(Dwords * 4, MaxBytes, HasDwordx3);

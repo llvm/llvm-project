@@ -18,7 +18,7 @@
 
 #pragma OPENCL EXTENSION cl_khr_byte_addressable_store : enable
 
-#define __CLC_ROUND_VEC1(out, in, ROUNDF) out = ROUNDF(in);
+#define __CLC_ROUND_VEC1(out, in, ROUNDF) out = (float)ROUNDF(in);
 #define __CLC_ROUND_VEC2(out, in, ROUNDF)                                      \
   __CLC_ROUND_VEC1(out.lo, in.lo, ROUNDF);                                     \
   __CLC_ROUND_VEC1(out.hi, in.hi, ROUNDF);
@@ -37,17 +37,17 @@
   __CLC_ROUND_VEC8(out.hi, in.hi, ROUNDF);
 
 #define __CLC_XFUNC_IMPL(SUFFIX, VEC_SIZE, TYPE, AS, ROUNDF)                   \
-  void _CLC_OVERLOAD vstore_half_##VEC_SIZE(TYPE, size_t, AS half *);          \
+  void _CLC_OVERLOAD vstore_half_##VEC_SIZE(__CLC_FLOATN, size_t, AS half *);  \
   _CLC_OVERLOAD _CLC_DEF void vstore_half##SUFFIX(TYPE vec, size_t offset,     \
                                                   AS half *mem) {              \
-    TYPE rounded_vec;                                                          \
+    __CLC_FLOATN rounded_vec;                                                  \
     __CLC_ROUND_VEC##VEC_SIZE(rounded_vec, vec, ROUNDF);                       \
     vstore_half_##VEC_SIZE(rounded_vec, offset, mem);                          \
   }                                                                            \
-  void _CLC_OVERLOAD vstorea_half_##VEC_SIZE(TYPE, size_t, AS half *);         \
+  void _CLC_OVERLOAD vstorea_half_##VEC_SIZE(__CLC_FLOATN, size_t, AS half *); \
   _CLC_OVERLOAD _CLC_DEF void vstorea_half##SUFFIX(TYPE vec, size_t offset,    \
                                                    AS half *mem) {             \
-    TYPE rounded_vec;                                                          \
+    __CLC_FLOATN rounded_vec;                                                  \
     __CLC_ROUND_VEC##VEC_SIZE(rounded_vec, vec, ROUNDF);                       \
     vstorea_half_##VEC_SIZE(rounded_vec, offset, mem);                         \
   }
@@ -133,6 +133,93 @@ _CLC_DEF _CLC_OVERLOAD float __clc_rte(float x) {
                  (grs == (1 << (shift - 1)) && last != 0) || (exp > 15);
   return roundup ? __clc_rti(x) : __clc_rtz(x);
 }
+
+#ifdef cl_khr_fp64
+_CLC_DEF _CLC_OVERLOAD double __clc_rtz(double x) {
+  /* Handle NaN corner case */
+  if (__clc_isnan(x))
+    return x;
+  /* RTZ does not produce Inf for large numbers */
+  if (__clc_fabs(x) > 65504.0 && !__clc_isinf(x))
+    return __clc_copysign(65504.0, x);
+
+  const ulong ux = __clc_as_ulong(x);
+  const int exp = (int)((ux >> 52) & 0x7ff) - 1023;
+  /* Handle range rounded to +- zero explicitly */
+  if (exp < -24)
+    return __clc_copysign(0.0, x);
+
+  /* Remove lower 42 bits to make sure the number is rounded down */
+  ulong mask = 0xfffffc0000000000UL;
+  /* Denormals cannot be flushed, and they use different bit for rounding */
+  if (exp < -14)
+    mask <<= __clc_min(-(exp + 14), 10);
+
+  return __clc_as_double(ux & mask);
+}
+
+_CLC_DEF _CLC_OVERLOAD double __clc_rti(double x) {
+  /* Handle NaN corner case */
+  if (__clc_isnan(x))
+    return x;
+
+  const double inf = __clc_copysign((double)INFINITY, x);
+  const ulong ux = __clc_as_ulong(x);
+
+  /* Handle +- infinity explicitly */
+  if (__clc_as_double(ux & 0x7fffffffffffffffUL) > 0x1.ffcp+15)
+    return inf;
+  /* Handle +- zero explicitly */
+  if ((ux & 0x7fffffffffffffffUL) == 0)
+    return __clc_copysign(0.0, x);
+
+  const int exp = (int)((ux >> 52) & 0x7ff) - 1023;
+  /* Handle range rounded to smallest half denormal explicitly */
+  if (exp < -24)
+    return __clc_copysign(0x1.0p-24, x);
+
+  /* Set lower 42 bits */
+  ulong mask = (1UL << 42) - 1UL;
+  /* Denormals cannot be flushed, and they use different bit for rounding */
+  if (exp < -14)
+    mask = (1UL << (42 + __clc_min(-(exp + 14), 10))) - 1UL;
+
+  const double next = __clc_nextafter(__clc_as_double(ux | mask), inf);
+  return ((ux & mask) == 0) ? x : next;
+}
+
+_CLC_DEF _CLC_OVERLOAD double __clc_rtn(double x) {
+  return ((__clc_as_ulong(x) & 0x8000000000000000UL) == 0) ? __clc_rtz(x)
+                                                           : __clc_rti(x);
+}
+
+_CLC_DEF _CLC_OVERLOAD double __clc_rtp(double x) {
+  return ((__clc_as_ulong(x) & 0x8000000000000000UL) == 0) ? __clc_rti(x)
+                                                           : __clc_rtz(x);
+}
+
+_CLC_DEF _CLC_OVERLOAD double __clc_rte(double x) {
+  /* Mantissa + implicit bit */
+  const ulong ux = __clc_as_ulong(x);
+  const ulong mantissa = (ux & 0xfffffffffffffUL) | (1UL << 52);
+  const int exp = (int)((ux >> 52) & 0x7ff) - 1023;
+  int shift = 42;
+  if (exp < -14) {
+    /* The default assumes lower 42 bits are rounded,
+     * but it might be more for denormals.
+     * Shifting beyond last == 0b, and gr == 00b is not necessary */
+    shift += __clc_min(-(exp + 14), 15);
+  }
+  const ulong mask = (1UL << shift) - 1UL;
+  const ulong grs = mantissa & mask;
+  const ulong last = mantissa & (1UL << shift);
+  /* IEEE round up rule is: grs > 100b or grs == 100b and last == 1.
+   * exp > 15 should round to inf. */
+  bool roundup = (grs > (1UL << (shift - 1))) ||
+                 (grs == (1UL << (shift - 1)) && last != 0) || (exp > 15);
+  return roundup ? __clc_rti(x) : __clc_rtz(x);
+}
+#endif // cl_khr_fp64
 
 #define __CLC_XFUNC(SUFFIX, VEC_SIZE, TYPE, AS)                                \
   __CLC_XFUNC_IMPL(SUFFIX, VEC_SIZE, TYPE, AS, __clc_rte)                      \

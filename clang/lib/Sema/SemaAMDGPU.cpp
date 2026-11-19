@@ -170,9 +170,7 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(const TargetInfo &TI,
   case AMDGPU::BI__builtin_amdgcn_global_prefetch: {
     // Only th (bits 0-2, not 7), scope (bits 3-4) and nv (bit 5) may be set.
     llvm::APSInt CPol;
-    if (SemaRef.BuiltinConstantArgRange(TheCall, /*ArgNum=*/1, /*Low=*/0,
-                                        /*High=*/63) ||
-        SemaRef.BuiltinConstantArg(TheCall, /*ArgNum=*/1, CPol))
+    if (SemaRef.BuiltinConstantArg(TheCall, /*ArgNum=*/1, CPol))
       return true;
     if ((CPol.getZExtValue() & 0x7) != 0x7)
       return false;
@@ -340,14 +338,6 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(const TargetInfo &TI,
   case AMDGPU::BI__builtin_amdgcn_image_sample_d_3d_v4f16_f32:
   case AMDGPU::BI__builtin_amdgcn_image_gather4_lz_2d_v4f32_f32:
   case AMDGPU::BI__builtin_amdgcn_image_gather4_lz_2d_v4f16_f32: {
-    StringRef FeatureList(
-        getASTContext().BuiltinInfo.getRequiredFeatures(BuiltinID));
-    if (!Builtin::evaluateRequiredTargetFeatures(FeatureList,
-                                                 CallerFeatureMap)) {
-      Diag(TheCall->getBeginLoc(), diag::err_builtin_needs_feature)
-          << FD->getDeclName() << FeatureList;
-      return false;
-    }
 
     unsigned ArgCount = TheCall->getNumArgs() - 1;
     llvm::APSInt Result;
@@ -417,14 +407,6 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(const TargetInfo &TI,
   case AMDGPU::BI__builtin_amdgcn_image_store_mip_3d_v4f16_i32:
   case AMDGPU::BI__builtin_amdgcn_image_store_mip_cube_v4f32_i32:
   case AMDGPU::BI__builtin_amdgcn_image_store_mip_cube_v4f16_i32: {
-    StringRef FeatureList(
-        getASTContext().BuiltinInfo.getRequiredFeatures(BuiltinID));
-    if (!Builtin::evaluateRequiredTargetFeatures(FeatureList,
-                                                 CallerFeatureMap)) {
-      Diag(TheCall->getBeginLoc(), diag::err_builtin_needs_feature)
-          << FD->getDeclName() << FeatureList;
-      return false;
-    }
 
     unsigned ArgCount = TheCall->getNumArgs() - 1;
     llvm::APSInt Result;

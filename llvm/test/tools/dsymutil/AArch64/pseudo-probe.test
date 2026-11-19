@@ -7,26 +7,26 @@
 # RUN: yaml2obj %t/b.yaml -o %t/b.o
 
 # RUN: dsymutil --linker classic -y %t/debug.map -oso-prepend-path=%t -o %t/classic.dSYM
-# RUN: od -t x1 %t/classic.dSYM/Contents/Resources/Profiling/pseudo_probes | FileCheck %s --check-prefix=PROBES
-# RUN: od -t x1 %t/classic.dSYM/Contents/Resources/Profiling/pseudo_probe_descs | FileCheck %s --check-prefix=DESCS
+# RUN: od -An -v -t x1 %t/classic.dSYM/Contents/Resources/Profiling/pseudo_probes | tr A-F a-f | FileCheck %s --check-prefix=PROBES
+# RUN: od -An -v -t x1 %t/classic.dSYM/Contents/Resources/Profiling/pseudo_probe_descs | tr A-F a-f | FileCheck %s --check-prefix=DESCS
 # RUN: wc -c < %t/classic.dSYM/Contents/Resources/Profiling/pseudo_probes | FileCheck %s --check-prefix=PROBES-SIZE
 # RUN: wc -c < %t/classic.dSYM/Contents/Resources/Profiling/pseudo_probe_descs | FileCheck %s --check-prefix=DESCS-SIZE
 
 # RUN: dsymutil --linker parallel -y %t/debug.map -oso-prepend-path=%t -o %t/parallel.dSYM
-# RUN: od -t x1 %t/parallel.dSYM/Contents/Resources/Profiling/pseudo_probes | FileCheck %s --check-prefix=PROBES
-# RUN: od -t x1 %t/parallel.dSYM/Contents/Resources/Profiling/pseudo_probe_descs | FileCheck %s --check-prefix=DESCS
+# RUN: od -An -v -t x1 %t/parallel.dSYM/Contents/Resources/Profiling/pseudo_probes | tr A-F a-f | FileCheck %s --check-prefix=PROBES
+# RUN: od -An -v -t x1 %t/parallel.dSYM/Contents/Resources/Profiling/pseudo_probe_descs | tr A-F a-f | FileCheck %s --check-prefix=DESCS
 # RUN: wc -c < %t/parallel.dSYM/Contents/Resources/Profiling/pseudo_probes | FileCheck %s --check-prefix=PROBES-SIZE
 # RUN: wc -c < %t/parallel.dSYM/Contents/Resources/Profiling/pseudo_probe_descs | FileCheck %s --check-prefix=DESCS-SIZE
 
-# PROBES:      0000000 0c c1 75 b9 c0 f1 b6 a8 05 00 00 20 5c 85 5e 09
-# PROBES-NEXT: 0000020 4b df 28 4e 01 80 0c 02 80 14 03 80 0c 04 80 08
-# PROBES-NEXT: 0000040 92 eb 5f fe e6 ae 2f ec 05 00 00 20 c7 16 fb 29
-# PROBES-NEXT: 0000060 29 8a d9 6a 01 80 0c 02 80 14 03 80 0c 04 80 08
+# PROBES:      0c c1 75 b9 c0 f1 b6 a8 05 00 00 20 5c 85 5e 09
+# PROBES-NEXT: 4b df 28 4e 01 80 0c 02 80 14 03 80 0c 04 80 08
+# PROBES-NEXT: 92 eb 5f fe e6 ae 2f ec 05 00 00 20 c7 16 fb 29
+# PROBES-NEXT: 29 8a d9 6a 01 80 0c 02 80 14 03 80 0c 04 80 08
 # PROBES-SIZE: 64
 
-# DESCS:      0000000 0c c1 75 b9 c0 f1 b6 a8 94 da 52 e8 10 00 00 00
-# DESCS-NEXT: 0000020 01 61 92 eb 5f fe e6 ae 2f ec 94 da 52 e8 10 00
-# DESCS-NEXT: 0000040 00 00 01 62
+# DESCS:      0c c1 75 b9 c0 f1 b6 a8 94 da 52 e8 10 00 00 00
+# DESCS-NEXT: 01 61 92 eb 5f fe e6 ae 2f ec 94 da 52 e8 10 00
+# DESCS-NEXT: 00 00 01 62
 # DESCS-SIZE: 36
 
 #--- debug.map

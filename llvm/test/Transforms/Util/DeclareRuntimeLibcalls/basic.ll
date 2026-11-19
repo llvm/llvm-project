@@ -33,6 +33,9 @@ define float @sinf(float %x) {
 
 ; CHECK: declare noalias noundef ptr @malloc(i64 noundef) [[MALLOC_ATTRS:#[0-9]+]]
 
+; CHECK: declare ptr @memcpy(ptr noalias returned writeonly, ptr noalias readonly, i64) [[ARGMEM_ATTRS:#[0-9]+]]
+; CHECK: declare ptr @memmove(ptr returned writeonly, ptr readonly, i64) [[ARGMEM_ATTRS]]
+; CHECK: declare ptr @memset(ptr returned writeonly, i32, i64) [[ARGMEM_WRITE_ATTRS]]
 
 ; CHECK: declare nofpclass(snan inf zero sub norm) double @nan(ptr readonly captures(none)) [[ARGMEM_READ_ATTRS:#[0-9]+]]
 ; CHECK: declare nofpclass(snan inf zero sub norm) float @nanf(ptr readonly captures(none)) [[ARGMEM_READ_ATTRS]]
@@ -74,5 +77,6 @@ define float @sinf(float %x) {
 ; CHECK: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
 ; CHECK: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
 ; CHECK: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
+; CHECK: attributes [[ARGMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ; CHECK: attributes [[ARGMEM_READ_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
 ; CHECK: attributes [[ARGMEM_ERRNO_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write, errnomem: write) }

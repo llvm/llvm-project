@@ -29,20 +29,41 @@ using namespace clang;
 typedef clang::analyze_format_string::SpecifierResult<PrintfSpecifier>
     PrintfSpecifierResult;
 
-//===----------------------------------------------------------------------===//
-// Methods for parsing format strings.
-//===----------------------------------------------------------------------===//
+namespace {
 
-using analyze_format_string::ParseNonPositionAmount;
+class PrintfFormatStringParser : analyze_format_string::FormatStringParser {
+public:
+  PrintfFormatStringParser(FormatStringHandler &H, const LangOptions &LO,
+                           const TargetInfo &Target, bool Warn,
+                           bool IsFreeBSDKPrintf)
+      : FormatStringParser(H, LO, Target, /*IsScanf=*/false), Warn(Warn),
+        IsFreeBSDKPrintf(IsFreeBSDKPrintf) {}
 
-static bool ParsePrecision(FormatStringHandler &H, PrintfSpecifier &FS,
-                           const char *Start, const char *&Beg, const char *E,
-                           unsigned *argIndex) {
+  PrintfSpecifierResult parseSpecifier(const char *&Beg, const char *E,
+                                       unsigned &argIndex) const;
+
+private:
+  bool parsePrecision(PrintfSpecifier &FS, const char *Start, const char *&Beg,
+                      const char *E, unsigned *argIndex) const;
+
+  bool parseObjCFlags(PrintfSpecifier &FS, const char *FlagBeg,
+                      const char *E) const;
+
+  bool Warn;
+  bool IsFreeBSDKPrintf;
+};
+
+} // namespace
+
+bool PrintfFormatStringParser::parsePrecision(PrintfSpecifier &FS,
+                                              const char *Start,
+                                              const char *&Beg, const char *E,
+                                              unsigned *argIndex) const {
   if (argIndex) {
-    FS.setPrecision(ParseNonPositionAmount(Beg, E, *argIndex));
+    FS.setPrecision(parseNonPositionAmount(Beg, E, *argIndex));
   } else {
-    const OptionalAmount Amt = ParsePositionAmount(
-        H, Start, Beg, E, analyze_format_string::PrecisionPos);
+    const OptionalAmount Amt =
+        parsePositionAmount(Start, Beg, E, analyze_format_string::PrecisionPos);
     if (Amt.isInvalid())
       return true;
     FS.setPrecision(Amt);
@@ -50,8 +71,9 @@ static bool ParsePrecision(FormatStringHandler &H, PrintfSpecifier &FS,
   return false;
 }
 
-static bool ParseObjCFlags(FormatStringHandler &H, PrintfSpecifier &FS,
-                           const char *FlagBeg, const char *E, bool Warn) {
+bool PrintfFormatStringParser::parseObjCFlags(PrintfSpecifier &FS,
+                                              const char *FlagBeg,
+                                              const char *E) const {
   StringRef Flag(FlagBeg, E - FlagBeg);
   // Currently there is only one flag.
   if (Flag == "tt") {
@@ -68,12 +90,9 @@ static bool ParseObjCFlags(FormatStringHandler &H, PrintfSpecifier &FS,
   return true;
 }
 
-static PrintfSpecifierResult
-ParsePrintfSpecifier(FormatStringHandler &H, const char *&Beg, const char *E,
-                     unsigned &argIndex, const LangOptions &LO,
-                     const TargetInfo &Target, bool Warn,
-                     bool isFreeBSDKPrintf) {
-
+PrintfSpecifierResult
+PrintfFormatStringParser::parseSpecifier(const char *&Beg, const char *E,
+                                         unsigned &argIndex) const {
   using namespace clang::analyze_format_string;
   using namespace clang::analyze_printf;
 
@@ -107,7 +126,7 @@ ParsePrintfSpecifier(FormatStringHandler &H, const char *&Beg, const char *E,
   }
 
   PrintfSpecifier FS;
-  if (ParseArgPosition(H, FS, Start, I, E))
+  if (parseArgPosition(FS, Start, I, E))
     return true;
 
   if (I == E) {
@@ -224,7 +243,7 @@ ParsePrintfSpecifier(FormatStringHandler &H, const char *&Beg, const char *E,
   }
 
   // Look for the field width (if any).
-  if (ParseFieldWidth(H, FS, Start, I, E,
+  if (parseFieldWidth(FS, Start, I, E,
                       FS.usesPositionalArg() ? nullptr : &argIndex))
     return true;
 
@@ -244,7 +263,7 @@ ParsePrintfSpecifier(FormatStringHandler &H, const char *&Beg, const char *E,
       return true;
     }
 
-    if (ParsePrecision(H, FS, Start, I, E,
+    if (parsePrecision(FS, Start, I, E,
                        FS.usesPositionalArg() ? nullptr : &argIndex))
       return true;
 
@@ -256,11 +275,11 @@ ParsePrintfSpecifier(FormatStringHandler &H, const char *&Beg, const char *E,
     }
   }
 
-  if (ParseVectorModifier(H, FS, I, E, LO))
+  if (parseVectorModifier(FS, I, E))
     return true;
 
   // Look for the length modifier.
-  if (ParseLengthModifier(FS, I, E, LO) && I == E) {
+  if (parseLengthModifier(FS, I, E) && I == E) {
     // No more characters left?
     if (Warn)
       H.HandleIncompleteSpecifier(Start, E - Start);
@@ -287,7 +306,7 @@ ParsePrintfSpecifier(FormatStringHandler &H, const char *&Beg, const char *E,
       }
       // Did we find the closing ']'?
       if (*I == ']') {
-        if (ParseObjCFlags(H, FS, flagStart, I, Warn))
+        if (parseObjCFlags(FS, flagStart, I))
           return true;
         ++I;
         break;
@@ -372,7 +391,7 @@ ParsePrintfSpecifier(FormatStringHandler &H, const char *&Beg, const char *E,
     break;
   // C23.
   case 'b':
-    if (isFreeBSDKPrintf)
+    if (IsFreeBSDKPrintf)
       k = ConversionSpecifier::FreeBSDbArg; // int followed by char *
     else
       k = ConversionSpecifier::bArg;
@@ -400,18 +419,18 @@ ParsePrintfSpecifier(FormatStringHandler &H, const char *&Beg, const char *E,
     k = ConversionSpecifier::PrintErrno;
     break;
   case 'r':
-    if (isFreeBSDKPrintf)
+    if (IsFreeBSDKPrintf)
       k = ConversionSpecifier::FreeBSDrArg; // int
     else if (LO.FixedPoint)
       k = ConversionSpecifier::rArg;
     break;
   case 'y':
-    if (isFreeBSDKPrintf)
+    if (IsFreeBSDKPrintf)
       k = ConversionSpecifier::FreeBSDyArg; // int
     break;
   // Apple-specific.
   case 'D':
-    if (isFreeBSDKPrintf)
+    if (IsFreeBSDKPrintf)
       k = ConversionSpecifier::FreeBSDDArg; // void * followed by char *
     else if (Target.getTriple().isOSDarwin())
       k = ConversionSpecifier::DArg;
@@ -465,7 +484,7 @@ ParsePrintfSpecifier(FormatStringHandler &H, const char *&Beg, const char *E,
 
   if (k == ConversionSpecifier::InvalidSpecifier) {
     unsigned Len = I - Start;
-    if (ParseUTF8InvalidSpecifier(Start, E, Len)) {
+    if (parseUTF8InvalidSpecifier(Start, E, Len)) {
       CS.setEndScanList(Start + Len);
       FS.setConversionSpecifier(CS);
     }
@@ -482,9 +501,9 @@ bool clang::analyze_format_string::ParsePrintfString(
   unsigned argIndex = 0;
 
   // Keep looking for a format specifier until we have exhausted the string.
+  PrintfFormatStringParser P(H, LO, Target, /*Warn=*/true, isFreeBSDKPrintf);
   while (I != E) {
-    const PrintfSpecifierResult &FSR = ParsePrintfSpecifier(
-        H, I, E, argIndex, LO, Target, true, isFreeBSDKPrintf);
+    const PrintfSpecifierResult &FSR = P.parseSpecifier(I, E, argIndex);
     // Did a fail-stop error of any kind occur when parsing the specifier?
     // If so, don't do any more processing.
     if (FSR.shouldStop())
@@ -510,9 +529,10 @@ bool clang::analyze_format_string::ParseFormatStringHasSArg(
 
   // Keep looking for a %s format specifier until we have exhausted the string.
   FormatStringHandler H;
+  PrintfFormatStringParser P(H, LO, Target, /*Warn=*/false,
+                             /*IsFreeBSDKPrintf=*/false);
   while (I != E) {
-    const PrintfSpecifierResult &FSR =
-        ParsePrintfSpecifier(H, I, E, argIndex, LO, Target, false, false);
+    const PrintfSpecifierResult &FSR = P.parseSpecifier(I, E, argIndex);
     // Did a fail-stop error of any kind occur when parsing the specifier?
     // If so, don't do any more processing.
     if (FSR.shouldStop())
@@ -536,9 +556,10 @@ bool clang::analyze_format_string::parseFormatStringHasFormattingSpecifiers(
   unsigned ArgIndex = 0;
   // Keep looking for a formatting specifier until we have exhausted the string.
   FormatStringHandler H;
+  PrintfFormatStringParser P(H, LO, Target, /*Warn=*/false,
+                             /*IsFreeBSDKPrintf=*/false);
   while (Begin != End) {
-    const PrintfSpecifierResult &FSR =
-        ParsePrintfSpecifier(H, Begin, End, ArgIndex, LO, Target, false, false);
+    const PrintfSpecifierResult &FSR = P.parseSpecifier(Begin, End, ArgIndex);
     if (FSR.shouldStop())
       break;
     if (FSR.hasValue())

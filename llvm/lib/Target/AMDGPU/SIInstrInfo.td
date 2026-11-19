@@ -59,6 +59,16 @@ def GFX10Gen         : GFXGen<isGFX10Only, "GFX10", "_gfx10", SIEncodingFamily.G
 // modifier behavior with dx10_enable.
 def AMDGPUclamp : SDNode<"AMDGPUISD::CLAMP", SDTFPUnaryOp>;
 
+// VGPR address space (13) load/store indexed by (byte offset >> 2).
+def SDTRegIdxLoad : SDTypeProfile<1, 1,
+    [SDTCisVT<1, i32>]>; // dword_index
+def SDTRegIdxStore : SDTypeProfile<0, 2,
+    [SDTCisVT<1, i32>]>; // data, dword_index
+def SIreg_load : SDNode<"AMDGPUISD::REG_LOAD", SDTRegIdxLoad,
+                        [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def SIreg_store : SDNode<"AMDGPUISD::REG_STORE", SDTRegIdxStore,
+                         [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+
 def SDTSBufferLoad : SDTypeProfile<1, 3,
     [                    // vdata
      SDTCisVT<1, v4i32>, // rsrc
@@ -1320,7 +1330,14 @@ def exp_vm : NamedBitOperand<"vm", "ExpVM", 1>;
 def exp_done : NamedBitOperand<"done", "Done", 1>;
 def exp_row_en : NamedBitOperand<"row_en", "RowEn", 1>;
 
-def FORMAT : CustomOperand<type=i8>;
+// The MTBUF format modifier, as in "s[0:3], s1 format:[BUF_FMT_32_FLOAT]".
+def format : CustomOperand<1, "Format", i8> {
+  let DefaultValue = "MTBUFFormat::getDefaultFormatEncoding(getSTI())";
+}
+
+// The legacy MTBUF format operand, as in "s[0:3], format:22, s1" or
+// "s[0:3], dfmt:15, nfmt:2, s1".
+def format_op : CustomOperand<0, "FormatOp", i8>;
 
 let PrintInHex = 1 in
 def DMask : NamedIntOperand<"dmask">;
