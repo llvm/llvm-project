@@ -3,6 +3,10 @@
 ! RUN: %flang_fc1 -fno-fast-real-mod -ffast-real-mod -emit-mlir -o - %s | FileCheck %s --check-prefixes=CHECK-FRM%if target=x86_64{{.*}} %{,CHECK-FRM-KIND10%}%if flang-supports-f128-math %{,CHECK-FRM-KIND16%}
 ! RUN: %flang_fc1 -ffast-math -emit-mlir -o - %s | FileCheck %s --check-prefixes=CHECK-FM%if target=x86_64{{.*}} %{,CHECK-FM-KIND10%}%if flang-supports-f128-math %{,CHECK-FM-KIND16%}
 ! RUN: %flang_fc1 -ffast-math -fno-fast-real-mod -emit-mlir -o - %s | FileCheck %s --check-prefixes=CHECK-NFRM%if target=x86_64{{.*}} %{,CHECK-NFRM-KIND10%}%if flang-supports-f128-math %{,CHECK-NFRM-KIND16%}
+! RUN: %flang_fc1 -ffast-real-mod -mllvm -fast-real-mod-trunc=math-trunc -emit-mlir -o - %s | FileCheck %s --check-prefixes=CHECK-FRM%if target=x86_64{{.*}} %{,CHECK-FRM-KIND10%}%if flang-supports-f128-math %{,CHECK-FRM-KIND16%}
+! RUN: %flang_fc1 -ffast-real-mod -mllvm -fast-real-mod-trunc=emulate-trunc -emit-mlir -o - %s | FileCheck %s --check-prefixes=CHECK-EMU%if target=x86_64{{.*}} %{,CHECK-FRM-KIND10%}%if flang-supports-f128-math %{,CHECK-FRM-KIND16%}
+! RUN: %flang_fc1 -ffast-math -mllvm -fast-real-mod-trunc=emulate-trunc -emit-mlir -o - %s | FileCheck %s --check-prefixes=CHECK-EMU%if target=x86_64{{.*}} %{,CHECK-FM-KIND10%}%if flang-supports-f128-math %{,CHECK-FM-KIND16%}
+! RUN: %flang_fc1 -ffast-math -fno-fast-real-mod -mllvm -fast-real-mod-trunc=emulate-trunc -emit-mlir -o - %s | FileCheck %s --check-prefixes=CHECK-NFRM%if target=x86_64{{.*}} %{,CHECK-NFRM-KIND10%}%if flang-supports-f128-math %{,CHECK-NFRM-KIND16%}
 
 ! CHECK-FM: module attributes {{{.*}}fir.fast_real_mod = true{{.*}}}
 ! CHECK-FRM: module attributes {{{.*}}fir.fast_real_mod = true{{.*}}}
@@ -17,9 +21,8 @@ subroutine mod_real4(r, a, p)
 ! CHECK-FRM: %[[A_LOAD:.*]] = fir.load %[[A]]
 ! CHECK-FRM: %[[P_LOAD:.*]] = fir.load %[[P]]
 ! CHECK-FRM: %[[DIV:.*]] = arith.divf %[[A_LOAD]], %[[P_LOAD]] fastmath<contract> : f32
-! CHECK-FRM: %[[CV1:.*]] = fir.convert %[[DIV]] : (f32) -> si32
-! CHECK-FRM: %[[CV2:.*]] = fir.convert %[[CV1]] : (si32) -> f32
-! CHECK-FRM: %[[MUL:.*]] = arith.mulf %[[CV2]], %[[P_LOAD]] fastmath<contract> : f32
+! CHECK-FRM: %[[TRUNC:.*]] = math.trunc %[[DIV]] fastmath<contract> : f32
+! CHECK-FRM: %[[MUL:.*]] = arith.mulf %[[TRUNC]], %[[P_LOAD]] fastmath<contract> : f32
 ! CHECK-FRM: %[[SUB:.*]] = arith.subf %[[A_LOAD]], %[[MUL]] fastmath<contract> : f32
 ! CHECK-FRM: fir.store %[[SUB]] to %[[R]] : !fir.ref<f32>
 ! CHECK-FM: %[[A:.*]] = fir.declare{{.*}}a"
@@ -28,11 +31,25 @@ subroutine mod_real4(r, a, p)
 ! CHECK-FM: %[[A_LOAD:.*]] = fir.load %[[A]]
 ! CHECK-FM: %[[P_LOAD:.*]] = fir.load %[[P]]
 ! CHECK-FM: %[[DIV:.*]] = arith.divf %[[A_LOAD]], %[[P_LOAD]] fastmath<fast> : f32
-! CHECK-FM: %[[CV1:.*]] = fir.convert %[[DIV]] : (f32) -> si32
-! CHECK-FM: %[[CV2:.*]] = fir.convert %[[CV1]] : (si32) -> f32
-! CHECK-FM: %[[MUL:.*]] = arith.mulf %[[CV2]], %[[P_LOAD]] fastmath<fast> : f32
+! CHECK-FM: %[[TRUNC:.*]] = math.trunc %[[DIV]] fastmath<fast> : f32
+! CHECK-FM: %[[MUL:.*]] = arith.mulf %[[TRUNC]], %[[P_LOAD]] fastmath<fast> : f32
 ! CHECK-FM: %[[SUB:.*]] = arith.subf %[[A_LOAD]], %[[MUL]] fastmath<fast> : f32
 ! CHECK-FM: fir.store %[[SUB]] to %[[R]] : !fir.ref<f32>
+! CHECK-EMU: %[[BOUND:.*]] = arith.constant 0x4B000000 : f32
+! CHECK-EMU: %[[A:.*]] = fir.declare{{.*}}a"
+! CHECK-EMU: %[[P:.*]] = fir.declare{{.*}}p"
+! CHECK-EMU: %[[R:.*]] = fir.declare{{.*}}r"
+! CHECK-EMU: %[[A_LOAD:.*]] = fir.load %[[A]]
+! CHECK-EMU: %[[P_LOAD:.*]] = fir.load %[[P]]
+! CHECK-EMU: %[[DIV:.*]] = arith.divf %[[A_LOAD]], %[[P_LOAD]] fastmath<{{contract|fast}}> : f32
+! CHECK-EMU: %[[ABS:.*]] = math.absf %[[DIV]] fastmath<{{contract|fast}}> : f32
+! CHECK-EMU: %[[CMP:.*]] = arith.cmpf olt, %[[ABS]], %[[BOUND]] fastmath<{{contract|fast}}> : f32
+! CHECK-EMU: %[[INT:.*]] = arith.fptosi %[[DIV]] : f32 to i32
+! CHECK-EMU: %[[FLT:.*]] = arith.sitofp %[[INT]] : i32 to f32
+! CHECK-EMU: %[[TRUNC:.*]] = arith.select %[[CMP]], %[[FLT]], %[[DIV]] : f32
+! CHECK-EMU: %[[MUL:.*]] = arith.mulf %[[TRUNC]], %[[P_LOAD]] fastmath<{{contract|fast}}> : f32
+! CHECK-EMU: %[[SUB:.*]] = arith.subf %[[A_LOAD]], %[[MUL]] fastmath<{{contract|fast}}> : f32
+! CHECK-EMU: fir.store %[[SUB]] to %[[R]] : !fir.ref<f32>
 ! CHECK-NFRM: fir.call @_FortranAModReal4(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}}: (f32, f32, !fir.ref<i8>, i32) -> f32
     r = mod(a, p)
 end subroutine mod_real4
@@ -47,9 +64,8 @@ subroutine mod_real8(r, a, p)
 ! CHECK-FRM: %[[A_LOAD:.*]] = fir.load %[[A]]
 ! CHECK-FRM: %[[P_LOAD:.*]] = fir.load %[[P]]
 ! CHECK-FRM: %[[DIV:.*]] = arith.divf %[[A_LOAD]], %[[P_LOAD]] fastmath<contract> : f64
-! CHECK-FRM: %[[CV1:.*]] = fir.convert %[[DIV]] : (f64) -> si64
-! CHECK-FRM: %[[CV2:.*]] = fir.convert %[[CV1]] : (si64) -> f64
-! CHECK-FRM: %[[MUL:.*]] = arith.mulf %[[CV2]], %[[P_LOAD]] fastmath<contract> : f64
+! CHECK-FRM: %[[TRUNC:.*]] = math.trunc %[[DIV]] fastmath<contract> : f64
+! CHECK-FRM: %[[MUL:.*]] = arith.mulf %[[TRUNC]], %[[P_LOAD]] fastmath<contract> : f64
 ! CHECK-FRM: %[[SUB:.*]] = arith.subf %[[A_LOAD]], %[[MUL]] fastmath<contract> : f64
 ! CHECK-FRM: fir.store %[[SUB]] to %[[R]] : !fir.ref<f64>
 ! CHECK-FM: %[[A:.*]] = fir.declare{{.*}}a"
@@ -58,11 +74,25 @@ subroutine mod_real8(r, a, p)
 ! CHECK-FM: %[[A_LOAD:.*]] = fir.load %[[A]]
 ! CHECK-FM: %[[P_LOAD:.*]] = fir.load %[[P]]
 ! CHECK-FM: %[[DIV:.*]] = arith.divf %[[A_LOAD]], %[[P_LOAD]] fastmath<fast> : f64
-! CHECK-FM: %[[CV1:.*]] = fir.convert %[[DIV]] : (f64) -> si64
-! CHECK-FM: %[[CV2:.*]] = fir.convert %[[CV1]] : (si64) -> f64
-! CHECK-FM: %[[MUL:.*]] = arith.mulf %[[CV2]], %[[P_LOAD]] fastmath<fast> : f64
+! CHECK-FM: %[[TRUNC:.*]] = math.trunc %[[DIV]] fastmath<fast> : f64
+! CHECK-FM: %[[MUL:.*]] = arith.mulf %[[TRUNC]], %[[P_LOAD]] fastmath<fast> : f64
 ! CHECK-FM: %[[SUB:.*]] = arith.subf %[[A_LOAD]], %[[MUL]] fastmath<fast> : f64
 ! CHECK-FM: fir.store %[[SUB]] to %[[R]] : !fir.ref<f64>
+! CHECK-EMU: %[[BOUND:.*]] = arith.constant 0x4330000000000000 : f64
+! CHECK-EMU: %[[A:.*]] = fir.declare{{.*}}a"
+! CHECK-EMU: %[[P:.*]] = fir.declare{{.*}}p"
+! CHECK-EMU: %[[R:.*]] = fir.declare{{.*}}r"
+! CHECK-EMU: %[[A_LOAD:.*]] = fir.load %[[A]]
+! CHECK-EMU: %[[P_LOAD:.*]] = fir.load %[[P]]
+! CHECK-EMU: %[[DIV:.*]] = arith.divf %[[A_LOAD]], %[[P_LOAD]] fastmath<{{contract|fast}}> : f64
+! CHECK-EMU: %[[ABS:.*]] = math.absf %[[DIV]] fastmath<{{contract|fast}}> : f64
+! CHECK-EMU: %[[CMP:.*]] = arith.cmpf olt, %[[ABS]], %[[BOUND]] fastmath<{{contract|fast}}> : f64
+! CHECK-EMU: %[[INT:.*]] = arith.fptosi %[[DIV]] : f64 to i64
+! CHECK-EMU: %[[FLT:.*]] = arith.sitofp %[[INT]] : i64 to f64
+! CHECK-EMU: %[[TRUNC:.*]] = arith.select %[[CMP]], %[[FLT]], %[[DIV]] : f64
+! CHECK-EMU: %[[MUL:.*]] = arith.mulf %[[TRUNC]], %[[P_LOAD]] fastmath<{{contract|fast}}> : f64
+! CHECK-EMU: %[[SUB:.*]] = arith.subf %[[A_LOAD]], %[[MUL]] fastmath<{{contract|fast}}> : f64
+! CHECK-EMU: fir.store %[[SUB]] to %[[R]] : !fir.ref<f64>
 ! CHECK-NFRM: fir.call @_FortranAModReal8(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}}: (f64, f64, !fir.ref<i8>, i32) -> f64
     r = mod(a, p)
 end subroutine mod_real8
@@ -78,9 +108,8 @@ subroutine mod_real10(r, a, p)
 ! CHECK-FRM-KIND10: %[[A_LOAD:.*]] = fir.load %[[A]]
 ! CHECK-FRM-KIND10: %[[P_LOAD:.*]] = fir.load %[[P]]
 ! CHECK-FRM-KIND10: %[[DIV:.*]] = arith.divf %[[A_LOAD]], %[[P_LOAD]] fastmath<contract> : f80
-! CHECK-FRM-KIND10: %[[CV1:.*]] = fir.convert %[[DIV]] : (f80) -> si80
-! CHECK-FRM-KIND10: %[[CV2:.*]] = fir.convert %[[CV1]] : (si80) -> f80
-! CHECK-FRM-KIND10: %[[MUL:.*]] = arith.mulf %[[CV2]], %[[P_LOAD]] fastmath<contract> : f80
+! CHECK-FRM-KIND10: %[[TRUNC:.*]] = math.trunc %[[DIV]] fastmath<contract> : f80
+! CHECK-FRM-KIND10: %[[MUL:.*]] = arith.mulf %[[TRUNC]], %[[P_LOAD]] fastmath<contract> : f80
 ! CHECK-FRM-KIND10: %[[SUB:.*]] = arith.subf %[[A_LOAD]], %[[MUL]] fastmath<contract> : f80
 ! CHECK-FRM-KIND10: fir.store %[[SUB]] to %[[R]] : !fir.ref<f80>
 ! CHECK-FM-KIND10: %[[A:.*]] = fir.declare{{.*}}a"
@@ -89,9 +118,8 @@ subroutine mod_real10(r, a, p)
 ! CHECK-FM-KIND10: %[[A_LOAD:.*]] = fir.load %[[A]]
 ! CHECK-FM-KIND10: %[[P_LOAD:.*]] = fir.load %[[P]]
 ! CHECK-FM-KIND10: %[[DIV:.*]] = arith.divf %[[A_LOAD]], %[[P_LOAD]] fastmath<fast> : f80
-! CHECK-FM-KIND10: %[[CV1:.*]] = fir.convert %[[DIV]] : (f80) -> si80
-! CHECK-FM-KIND10: %[[CV2:.*]] = fir.convert %[[CV1]] : (si80) -> f80
-! CHECK-FM-KIND10: %[[MUL:.*]] = arith.mulf %[[CV2]], %[[P_LOAD]] fastmath<fast> : f80
+! CHECK-FM-KIND10: %[[TRUNC:.*]] = math.trunc %[[DIV]] fastmath<fast> : f80
+! CHECK-FM-KIND10: %[[MUL:.*]] = arith.mulf %[[TRUNC]], %[[P_LOAD]] fastmath<fast> : f80
 ! CHECK-FM-KIND10: %[[SUB:.*]] = arith.subf %[[A_LOAD]], %[[MUL]] fastmath<fast> : f80
 ! CHECK-FM-KIND10: fir.store %[[SUB]] to %[[R]] : !fir.ref<f80>
 ! CHECK-NFRM-KIND10: fir.call @_FortranAModReal10(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}}: (f80, f80, !fir.ref<i8>, i32) -> f80
@@ -109,9 +137,8 @@ subroutine mod_real16(r, a, p)
 ! CHECK-FRM-KIND16: %[[A_LOAD:.*]] = fir.load %[[A]]
 ! CHECK-FRM-KIND16: %[[P_LOAD:.*]] = fir.load %[[P]]
 ! CHECK-FRM-KIND16: %[[DIV:.*]] = arith.divf %[[A_LOAD]], %[[P_LOAD]] fastmath<contract> : f128
-! CHECK-FRM-KIND16: %[[CV1:.*]] = fir.convert %[[DIV]] : (f128) -> si128
-! CHECK-FRM-KIND16: %[[CV2:.*]] = fir.convert %[[CV1]] : (si128) -> f128
-! CHECK-FRM-KIND16: %[[MUL:.*]] = arith.mulf %[[CV2]], %[[P_LOAD]] fastmath<contract> : f128
+! CHECK-FRM-KIND16: %[[TRUNC:.*]] = math.trunc %[[DIV]] fastmath<contract> : f128
+! CHECK-FRM-KIND16: %[[MUL:.*]] = arith.mulf %[[TRUNC]], %[[P_LOAD]] fastmath<contract> : f128
 ! CHECK-FRM-KIND16: %[[SUB:.*]] = arith.subf %[[A_LOAD]], %[[MUL]] fastmath<contract> : f128
 ! CHECK-FRM-KIND16: fir.store %[[SUB]] to %[[R]] : !fir.ref<f128>
 ! CHECK-FM-KIND16: %[[A:.*]] = fir.declare{{.*}}a"
@@ -120,9 +147,8 @@ subroutine mod_real16(r, a, p)
 ! CHECK-FM-KIND16: %[[A_LOAD:.*]] = fir.load %[[A]]
 ! CHECK-FM-KIND16: %[[P_LOAD:.*]] = fir.load %[[P]]
 ! CHECK-FM-KIND16: %[[DIV:.*]] = arith.divf %[[A_LOAD]], %[[P_LOAD]] fastmath<fast> : f128
-! CHECK-FM-KIND16: %[[CV1:.*]] = fir.convert %[[DIV]] : (f128) -> si128
-! CHECK-FM-KIND16: %[[CV2:.*]] = fir.convert %[[CV1]] : (si128) -> f128
-! CHECK-FM-KIND16: %[[MUL:.*]] = arith.mulf %[[CV2]], %[[P_LOAD]] fastmath<fast> : f128
+! CHECK-FM-KIND16: %[[TRUNC:.*]] = math.trunc %[[DIV]] fastmath<fast> : f128
+! CHECK-FM-KIND16: %[[MUL:.*]] = arith.mulf %[[TRUNC]], %[[P_LOAD]] fastmath<fast> : f128
 ! CHECK-FM-KIND16: %[[SUB:.*]] = arith.subf %[[A_LOAD]], %[[MUL]] fastmath<fast> : f128
 ! CHECK-FM-KIND16: fir.store %[[SUB]] to %[[R]] : !fir.ref<f128>
 ! CHECK-NFRM-KIND16: fir.call @_FortranAModReal16(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}}: (f128, f128, !fir.ref<i8>, i32) -> f128
