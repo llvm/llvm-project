@@ -69,24 +69,9 @@ Error L0QueueTy::dispatchLaunchKernel(ze_kernel_handle_t Kernel,
     void **ArgPtrs = KEnv.ArgPtrs;
     SmallVector<void *> ArgsWithDynMem;
 
-    // Check if there is any nullptr in ArgPtrs list.
-    // If we find such it must be an SLM argument. Valid kernel
-    // argument with nullptr value is a pointer to nullptr.
-    bool HasLocalArgs =
-        KEnv.ArgPtrs && KEnv.ArgSizes &&
-        std::any_of(KEnv.ArgPtrs, KEnv.ArgPtrs + KEnv.NumArgs,
-                    [](void *ArgPtr) { return ArgPtr == nullptr; });
-    if (KEnv.HasDynSharedMemoryArg || HasLocalArgs) {
+    if (KEnv.HasDynSharedMemoryArg) {
       ArgsWithDynMem.append(KEnv.ArgPtrs, KEnv.ArgPtrs + KEnv.NumArgs);
-      if (HasLocalArgs)
-        for (uint32_t KernelArg = 0; KernelArg < KEnv.NumArgs; ++KernelArg)
-          if (ArgsWithDynMem[KernelArg] == nullptr) {
-            // Nullptr here means it should be changed to a SLM size
-            // pointer.
-            ArgsWithDynMem[KernelArg] = &KEnv.ArgSizes[KernelArg];
-          }
-      if (KEnv.HasDynSharedMemoryArg)
-        ArgsWithDynMem.push_back(&DynSharedMemorySize);
+      ArgsWithDynMem.push_back(&DynSharedMemorySize);
       ArgPtrs = ArgsWithDynMem.data();
     }
 
