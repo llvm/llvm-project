@@ -390,8 +390,8 @@ define i32 @sdiv_constant_add_srai(i32 %a) nounwind {
 ; RV64-NEXT:    addi a1, a1, 1171
 ; RV64-NEXT:    mul a1, a2, a1
 ; RV64-NEXT:    srli a1, a1, 32
-; RV64-NEXT:    add a0, a1, a0
-; RV64-NEXT:    srliw a1, a0, 31
+; RV64-NEXT:    addw a0, a1, a0
+; RV64-NEXT:    srli a1, a0, 63
 ; RV64-NEXT:    sraiw a0, a0, 2
 ; RV64-NEXT:    add a0, a0, a1
 ; RV64-NEXT:    ret
@@ -419,8 +419,8 @@ define i32 @sdiv_constant_sub_srai(i32 %a) nounwind {
 ; RV64-NEXT:    addi a1, a1, -1171
 ; RV64-NEXT:    mul a1, a2, a1
 ; RV64-NEXT:    srli a1, a1, 32
-; RV64-NEXT:    sub a1, a1, a0
-; RV64-NEXT:    srliw a0, a1, 31
+; RV64-NEXT:    subw a1, a1, a0
+; RV64-NEXT:    srli a0, a1, 63
 ; RV64-NEXT:    sraiw a1, a1, 2
 ; RV64-NEXT:    add a0, a1, a0
 ; RV64-NEXT:    ret

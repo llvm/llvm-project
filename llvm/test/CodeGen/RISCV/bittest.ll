@@ -78,7 +78,7 @@ define signext i32 @bittest_31_i32(i32 signext %a) nounwind {
 ; RV64-LABEL: bittest_31_i32:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    not a0, a0
-; RV64-NEXT:    srliw a0, a0, 31
+; RV64-NEXT:    srli a0, a0, 63
 ; RV64-NEXT:    ret
   %shr = lshr i32 %a, 31
   %not = xor i32 %shr, -1
