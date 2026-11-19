@@ -1232,15 +1232,20 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         ISD::STRICT_FADD,
         ISD::STRICT_FSUB,
         ISD::STRICT_FMUL,
+        ISD::STRICT_FMA,
         ISD::STRICT_FDIV,
         ISD::STRICT_FSQRT,
-        ISD::STRICT_FMA,
         ISD::VECREDUCE_FADD,
         ISD::VECREDUCE_FMIN,
         ISD::VECREDUCE_FMAX,
         ISD::VECREDUCE_FMINIMUM,
         ISD::VECREDUCE_FMAXIMUM,
         ISD::FCANONICALIZE};
+
+    static const unsigned ZvfhminFMAOps[] = {ISD::FMA, ISD::STRICT_FMA};
+
+    // The f32 promotion remains the fallback for targets without vector f64.
+    // The exact f16 FMA fix is applied only when vector f64 is available.
 
     // TODO: Make more of these ops legal.
     static const unsigned ZvfbfaPromoteOps[] = {ISD::FDIV,
@@ -1403,10 +1408,19 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       // Custom split nxv32[b]f16 since nxv32[b]f32 is not legal.
       if (getLMUL(VT) == RISCVVType::LMUL_8) {
         setOperationAction(ZvfhminZvfbfminPromoteOps, VT, Custom);
+        setOperationAction(ZvfhminFMAOps, VT, Custom);
         setOperationAction(ZvfhminZvfbfminPromoteVPOps, VT, Custom);
       } else {
         MVT F32VecVT = MVT::getVectorVT(MVT::f32, VT.getVectorElementCount());
         setOperationPromotedToType(ZvfhminZvfbfminPromoteOps, VT, F32VecVT);
+        if (VT.getVectorElementType() == MVT::f16 &&
+            Subtarget.hasVInstructionsF64()) {
+          MVT F64VecVT = MVT::getVectorVT(MVT::f64, VT.getVectorElementCount());
+          if (F64VecVT == MVT::Other || !isTypeLegal(F64VecVT))
+            setOperationAction(ZvfhminFMAOps, VT, Custom);
+          else
+            setOperationPromotedToType(ZvfhminFMAOps, VT, F64VecVT);
+        }
         setOperationPromotedToType(ZvfhminZvfbfminPromoteVPOps, VT, F32VecVT);
       }
     };
@@ -1785,9 +1799,19 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                                 ISD::VECREDUCE_FMINIMUM, ISD::VECREDUCE_FADD},
                                VT, Custom);
             setOperationAction(ISD::SETCC, VT, Custom);
+            setOperationAction(ZvfhminFMAOps, VT, Custom);
             continue;
           }
           setOperationPromotedToType(ZvfhminZvfbfminPromoteOps, VT, F32VecVT);
+          if (VT.getVectorElementType() == MVT::f16 &&
+              Subtarget.hasVInstructionsF64()) {
+            MVT F64VecVT =
+                MVT::getVectorVT(MVT::f64, VT.getVectorElementCount());
+            if (F64VecVT == MVT::Other || !isTypeLegal(F64VecVT))
+              setOperationAction(ZvfhminFMAOps, VT, Custom);
+            else
+              setOperationPromotedToType(ZvfhminFMAOps, VT, F64VecVT);
+          }
           setOperationPromotedToType(ZvfhminZvfbfminPromoteVPOps, VT, F32VecVT);
           continue;
         }
@@ -8282,9 +8306,14 @@ static bool isPromotedOpNeedingSplit(SDValue Op,
         (!Subtarget.hasVInstructionsBF16() ||
          !llvm::is_contained(ZvfbfaOps, Op.getOpcode()))))
     return false;
-  // Need to split when the same width f32 vector type isn't legal.
-  return !TLI.isTypeLegal(
-      MVT::getVectorVT(MVT::f32, OpVT.getVectorElementCount()));
+  MVT PromoteEltVT = MVT::f32;
+  if (EltVT == MVT::f16 &&
+      (Op.getOpcode() == ISD::FMA || Op.getOpcode() == ISD::STRICT_FMA) &&
+      Subtarget.hasVInstructionsF64())
+    PromoteEltVT = MVT::f64;
+  MVT PromoteVT = MVT::getVectorVT(PromoteEltVT, OpVT.getVectorElementCount());
+  // Need to split when the promoted vector type is not legal.
+  return PromoteVT == MVT::Other || !TLI.isTypeLegal(PromoteVT);
 }
 
 static SDValue SplitVectorOp(SDValue Op, SelectionDAG &DAG) {
