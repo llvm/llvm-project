@@ -88,20 +88,19 @@ void ManualDWARFIndex::IndexImpl() {
   // Share one thread pool across operations to avoid the overhead of
   // recreating the threads.
   llvm::ThreadPoolTaskGroup task_group(Debugger::GetThreadPool());
-  // No more workers than units: a module with a few compile units (e.g. a GPU
+  // No more tasks than units: a module with a few compile units (e.g. a GPU
   // code object) would otherwise queue a task per pool thread, each with its
   // own IndexSet to allocate and merge, for every for_each_unit call.
-  const size_t num_threads = std::min<size_t>(
+  const size_t num_tasks = std::min<size_t>(
       Debugger::GetThreadPool().getMaxConcurrency(), units_to_index.size());
 
-  // With a single worker (one unit, e.g. a GPU code object, or a one-thread
+  // With a single task (one unit, e.g. a GPU code object, or a one-thread
   // pool) nothing runs in parallel, so do the work on this thread instead of
   // going through the pool.
-  const bool run_inline = num_threads == 1;
+  const bool run_inline = num_tasks == 1;
 
-  // Run a function for each compile unit in parallel using as many threads as
-  // are available. This is significantly faster than submiting a new task for
-  // each unit.
+  // Run a function for each compile unit in parallel using num_tasks tasks.
+  // This is significantly faster than submiting a new task for each unit.
   auto for_each_unit = [&](auto &&fn) {
     if (run_inline) {
       for (size_t i = 0; i < units_to_index.size(); ++i) {
@@ -121,7 +120,7 @@ void ManualDWARFIndex::IndexImpl() {
       }
     };
 
-    for (size_t i = 0; i < num_threads; ++i)
+    for (size_t i = 0; i < num_tasks; ++i)
       task_group.async(wrapper, i);
 
     task_group.wait();
@@ -140,7 +139,7 @@ void ManualDWARFIndex::IndexImpl() {
   });
 
   // Now index all DWARF unit in parallel.
-  std::vector<IndexSet<NameToDIE>> sets(num_threads);
+  std::vector<IndexSet<NameToDIE>> sets(num_tasks);
   for_each_unit(
       [this, dwp_dwarf, &sets](size_t worker_id, size_t, DWARFUnit *unit) {
         IndexUnit(*unit, dwp_dwarf, sets[worker_id]);
