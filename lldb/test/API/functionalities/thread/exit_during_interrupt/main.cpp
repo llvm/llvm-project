@@ -1,15 +1,12 @@
-#include <atomic>
 #include <chrono>
 #include <thread>
 
-std::atomic<bool> done(false);
-
 int main() {
   std::thread churner([] {
-    while (!done)
+    while (true)
       std::thread([] {}).join();
   });
-  while (!done)
+  while (true)
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
   churner.join();
   return 0;
