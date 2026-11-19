@@ -11,7 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "BPFRegisterInfo.h"
+#include "BPFCORE.h"
 #include "BPFSubtarget.h"
+#include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -19,6 +21,7 @@
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -142,4 +145,45 @@ bool BPFRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
 Register BPFRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   return BPF::R10;
+}
+
+// The coalescer can replace a copy of an LD_imm64 value with a new LD_imm64.
+// In a loop, this puts a hoisted LD_imm64 (two instruction slots) back into
+// the loop body. Keep the copy instead, unless the value is live across a
+// call: then it needs one of the four callee-saved registers.
+bool BPFRegisterInfo::shouldCoalesce(
+    MachineInstr *MI, const TargetRegisterClass *SrcRC, unsigned SubReg,
+    const TargetRegisterClass *DstRC, unsigned DstSubReg,
+    const TargetRegisterClass *NewRC, LiveIntervals &LIS) const {
+  if (!MI->isCopy())
+    return true;
+  const MachineRegisterInfo &MRI = MI->getMF()->getRegInfo();
+  Register DstReg = MI->getOperand(0).getReg();
+  Register SrcReg = MI->getOperand(1).getReg();
+  const MachineInstr *Def = MRI.getUniqueVRegDef(SrcReg);
+  if (!Def || Def->getOpcode() != BPF::LD_imm64)
+    return true;
+
+  // Leave CO-RE relocation globals to the default. BTFDebug emits most of them
+  // as a one-slot MOV_ri, which is as cheap as a copy. Enum value and BTF type
+  // id relocations stay LD_imm64, but they are rare in loops.
+  const MachineOperand &MO = Def->getOperand(1);
+  if (MO.isGlobal())
+    if (const auto *GV = dyn_cast<GlobalVariable>(MO.getGlobal()))
+      if (GV->hasAttribute(BPFCoreSharedInfo::AmaAttr) ||
+          GV->hasAttribute(BPFCoreSharedInfo::TypeIdAttr))
+        return true;
+
+  // The registers can join unless DstReg is written again while SrcReg is
+  // live.
+  const LiveInterval &SrcLI = LIS.getInterval(SrcReg);
+  if (none_of(MRI.def_instructions(DstReg), [&](const MachineInstr &DstDef) {
+        return &DstDef != MI &&
+               SrcLI.liveAt(LIS.getInstructionIndex(DstDef).getRegSlot());
+      }))
+    return true;
+
+  BitVector UsableRegs;
+  bool CrossesCall = LIS.checkRegMaskInterference(SrcLI, UsableRegs);
+  return CrossesCall;
 }
