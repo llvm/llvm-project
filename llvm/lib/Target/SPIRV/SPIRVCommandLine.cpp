@@ -160,6 +160,8 @@ static const StringMap<SPIRV::Extension::Extension> SPIRVExtensionMap = {
      SPIRV::Extension::Extension::SPV_KHR_float_controls2},
     {"SPV_INTEL_tensor_float32_conversion",
      SPIRV::Extension::Extension::SPV_INTEL_tensor_float32_conversion},
+    {"SPV_INTEL_rounded_divide_sqrt",
+     SPIRV::Extension::Extension::SPV_INTEL_rounded_divide_sqrt},
     {"SPV_KHR_bfloat16", SPIRV::Extension::Extension::SPV_KHR_bfloat16},
     {"SPV_EXT_relaxed_printf_string_address_space",
      SPIRV::Extension::Extension::SPV_EXT_relaxed_printf_string_address_space},
