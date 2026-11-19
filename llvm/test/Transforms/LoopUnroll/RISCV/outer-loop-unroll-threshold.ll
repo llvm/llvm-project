@@ -11,171 +11,24 @@
 define void @large_outer(ptr noalias %output, ptr %weights, ptr %bias, ptr %activation) {
 ; RV64-LABEL: define void @large_outer(
 ; RV64-SAME: ptr noalias [[OUTPUT:%.*]], ptr [[WEIGHTS:%.*]], ptr [[BIAS:%.*]], ptr [[ACTIVATION:%.*]]) #[[ATTR0:[0-9]+]] {
-; RV64-NEXT:  [[ENTRY:.*:]]
-; RV64-NEXT:    br label %[[FOR_BODY:.*]]
-; RV64:       [[FOR_BODY]]:
-; RV64-NEXT:    [[TMP0:%.*]] = load i32, ptr [[BIAS]], align 4
-; RV64-NEXT:    br label %[[FOR_BODY4:.*]]
-; RV64:       [[FOR_COND_CLEANUP3:.*]]:
-; RV64-NEXT:    [[ADD11_LCSSA:%.*]] = phi i32 [ [[ADD11:%.*]], %[[FOR_BODY4]] ]
-; RV64-NEXT:    store i32 [[ADD11_LCSSA]], ptr [[OUTPUT]], align 4
-; RV64-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[BIAS]], i64 1
-; RV64-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX_1]], align 4
-; RV64-NEXT:    [[INVARIANT_GEP_1:%.*]] = getelementptr inbounds i8, ptr [[WEIGHTS]], i64 1024
-; RV64-NEXT:    br label %[[FOR_BODY4_1:.*]]
-; RV64:       [[FOR_BODY4_1]]:
-; RV64-NEXT:    [[INDVARS_IV_1:%.*]] = phi i64 [ 0, %[[FOR_COND_CLEANUP3]] ], [ [[INDVARS_IV_NEXT_1:%.*]], %[[FOR_BODY4_1]] ]
-; RV64-NEXT:    [[SUM_025_1:%.*]] = phi i32 [ [[TMP1]], %[[FOR_COND_CLEANUP3]] ], [ [[ADD11_1:%.*]], %[[FOR_BODY4_1]] ]
-; RV64-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i8, ptr [[INVARIANT_GEP_1]], i64 [[INDVARS_IV_1]]
-; RV64-NEXT:    [[TMP2:%.*]] = load i8, ptr [[GEP_1]], align 1
-; RV64-NEXT:    [[CONV_1:%.*]] = sext i8 [[TMP2]] to i32
-; RV64-NEXT:    [[ARRAYIDX8_1:%.*]] = getelementptr inbounds nuw i8, ptr [[ACTIVATION]], i64 [[INDVARS_IV_1]]
-; RV64-NEXT:    [[TMP3:%.*]] = load i8, ptr [[ARRAYIDX8_1]], align 1
-; RV64-NEXT:    [[CONV9_1:%.*]] = zext i8 [[TMP3]] to i32
-; RV64-NEXT:    [[MUL10_1:%.*]] = mul nsw i32 [[CONV9_1]], [[CONV_1]]
-; RV64-NEXT:    [[ADD11_1]] = add nsw i32 [[MUL10_1]], [[SUM_025_1]]
-; RV64-NEXT:    [[INDVARS_IV_NEXT_1]] = add nuw nsw i64 [[INDVARS_IV_1]], 1
-; RV64-NEXT:    [[EXITCOND_NOT_1:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT_1]], 1024
-; RV64-NEXT:    br i1 [[EXITCOND_NOT_1]], label %[[FOR_COND_CLEANUP3_1:.*]], label %[[FOR_BODY4_1]], !llvm.loop [[LOOP0:![0-9]+]]
-; RV64:       [[FOR_COND_CLEANUP3_1]]:
-; RV64-NEXT:    [[ADD11_LCSSA_1:%.*]] = phi i32 [ [[ADD11_1]], %[[FOR_BODY4_1]] ]
-; RV64-NEXT:    [[ARRAYIDX13_1:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[OUTPUT]], i64 1
-; RV64-NEXT:    store i32 [[ADD11_LCSSA_1]], ptr [[ARRAYIDX13_1]], align 4
-; RV64-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[BIAS]], i64 2
-; RV64-NEXT:    [[TMP4:%.*]] = load i32, ptr [[ARRAYIDX_2]], align 4
-; RV64-NEXT:    [[INVARIANT_GEP_2:%.*]] = getelementptr inbounds i8, ptr [[WEIGHTS]], i64 2048
-; RV64-NEXT:    br label %[[FOR_BODY4_2:.*]]
-; RV64:       [[FOR_BODY4_2]]:
-; RV64-NEXT:    [[INDVARS_IV_2:%.*]] = phi i64 [ 0, %[[FOR_COND_CLEANUP3_1]] ], [ [[INDVARS_IV_NEXT_2:%.*]], %[[FOR_BODY4_2]] ]
-; RV64-NEXT:    [[SUM_025_2:%.*]] = phi i32 [ [[TMP4]], %[[FOR_COND_CLEANUP3_1]] ], [ [[ADD11_2:%.*]], %[[FOR_BODY4_2]] ]
-; RV64-NEXT:    [[GEP_2:%.*]] = getelementptr inbounds i8, ptr [[INVARIANT_GEP_2]], i64 [[INDVARS_IV_2]]
-; RV64-NEXT:    [[TMP5:%.*]] = load i8, ptr [[GEP_2]], align 1
-; RV64-NEXT:    [[CONV_2:%.*]] = sext i8 [[TMP5]] to i32
-; RV64-NEXT:    [[ARRAYIDX8_2:%.*]] = getelementptr inbounds nuw i8, ptr [[ACTIVATION]], i64 [[INDVARS_IV_2]]
-; RV64-NEXT:    [[TMP6:%.*]] = load i8, ptr [[ARRAYIDX8_2]], align 1
-; RV64-NEXT:    [[CONV9_2:%.*]] = zext i8 [[TMP6]] to i32
-; RV64-NEXT:    [[MUL10_2:%.*]] = mul nsw i32 [[CONV9_2]], [[CONV_2]]
-; RV64-NEXT:    [[ADD11_2]] = add nsw i32 [[MUL10_2]], [[SUM_025_2]]
-; RV64-NEXT:    [[INDVARS_IV_NEXT_2]] = add nuw nsw i64 [[INDVARS_IV_2]], 1
-; RV64-NEXT:    [[EXITCOND_NOT_2:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT_2]], 1024
-; RV64-NEXT:    br i1 [[EXITCOND_NOT_2]], label %[[FOR_COND_CLEANUP3_2:.*]], label %[[FOR_BODY4_2]], !llvm.loop [[LOOP0]]
-; RV64:       [[FOR_COND_CLEANUP3_2]]:
-; RV64-NEXT:    [[ADD11_LCSSA_2:%.*]] = phi i32 [ [[ADD11_2]], %[[FOR_BODY4_2]] ]
-; RV64-NEXT:    [[ARRAYIDX13_2:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[OUTPUT]], i64 2
-; RV64-NEXT:    store i32 [[ADD11_LCSSA_2]], ptr [[ARRAYIDX13_2]], align 4
-; RV64-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[BIAS]], i64 3
-; RV64-NEXT:    [[TMP7:%.*]] = load i32, ptr [[ARRAYIDX_3]], align 4
-; RV64-NEXT:    [[INVARIANT_GEP_3:%.*]] = getelementptr inbounds i8, ptr [[WEIGHTS]], i64 3072
-; RV64-NEXT:    br label %[[FOR_BODY4_3:.*]]
-; RV64:       [[FOR_BODY4_3]]:
-; RV64-NEXT:    [[INDVARS_IV_3:%.*]] = phi i64 [ 0, %[[FOR_COND_CLEANUP3_2]] ], [ [[INDVARS_IV_NEXT_3:%.*]], %[[FOR_BODY4_3]] ]
-; RV64-NEXT:    [[SUM_025_3:%.*]] = phi i32 [ [[TMP7]], %[[FOR_COND_CLEANUP3_2]] ], [ [[ADD11_3:%.*]], %[[FOR_BODY4_3]] ]
-; RV64-NEXT:    [[GEP_3:%.*]] = getelementptr inbounds i8, ptr [[INVARIANT_GEP_3]], i64 [[INDVARS_IV_3]]
-; RV64-NEXT:    [[TMP8:%.*]] = load i8, ptr [[GEP_3]], align 1
-; RV64-NEXT:    [[CONV_3:%.*]] = sext i8 [[TMP8]] to i32
-; RV64-NEXT:    [[ARRAYIDX8_3:%.*]] = getelementptr inbounds nuw i8, ptr [[ACTIVATION]], i64 [[INDVARS_IV_3]]
-; RV64-NEXT:    [[TMP9:%.*]] = load i8, ptr [[ARRAYIDX8_3]], align 1
-; RV64-NEXT:    [[CONV9_3:%.*]] = zext i8 [[TMP9]] to i32
-; RV64-NEXT:    [[MUL10_3:%.*]] = mul nsw i32 [[CONV9_3]], [[CONV_3]]
-; RV64-NEXT:    [[ADD11_3]] = add nsw i32 [[MUL10_3]], [[SUM_025_3]]
-; RV64-NEXT:    [[INDVARS_IV_NEXT_3]] = add nuw nsw i64 [[INDVARS_IV_3]], 1
-; RV64-NEXT:    [[EXITCOND_NOT_3:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT_3]], 1024
-; RV64-NEXT:    br i1 [[EXITCOND_NOT_3]], label %[[FOR_COND_CLEANUP3_3:.*]], label %[[FOR_BODY4_3]], !llvm.loop [[LOOP0]]
-; RV64:       [[FOR_COND_CLEANUP3_3]]:
-; RV64-NEXT:    [[ADD11_LCSSA_3:%.*]] = phi i32 [ [[ADD11_3]], %[[FOR_BODY4_3]] ]
-; RV64-NEXT:    [[ARRAYIDX13_3:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[OUTPUT]], i64 3
-; RV64-NEXT:    store i32 [[ADD11_LCSSA_3]], ptr [[ARRAYIDX13_3]], align 4
-; RV64-NEXT:    [[ARRAYIDX_4:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[BIAS]], i64 4
-; RV64-NEXT:    [[TMP10:%.*]] = load i32, ptr [[ARRAYIDX_4]], align 4
-; RV64-NEXT:    [[INVARIANT_GEP_4:%.*]] = getelementptr inbounds i8, ptr [[WEIGHTS]], i64 4096
-; RV64-NEXT:    br label %[[FOR_BODY4_4:.*]]
-; RV64:       [[FOR_BODY4_4]]:
-; RV64-NEXT:    [[INDVARS_IV_4:%.*]] = phi i64 [ 0, %[[FOR_COND_CLEANUP3_3]] ], [ [[INDVARS_IV_NEXT_4:%.*]], %[[FOR_BODY4_4]] ]
-; RV64-NEXT:    [[SUM_025_4:%.*]] = phi i32 [ [[TMP10]], %[[FOR_COND_CLEANUP3_3]] ], [ [[ADD11_4:%.*]], %[[FOR_BODY4_4]] ]
-; RV64-NEXT:    [[GEP_4:%.*]] = getelementptr inbounds i8, ptr [[INVARIANT_GEP_4]], i64 [[INDVARS_IV_4]]
-; RV64-NEXT:    [[TMP11:%.*]] = load i8, ptr [[GEP_4]], align 1
-; RV64-NEXT:    [[CONV_4:%.*]] = sext i8 [[TMP11]] to i32
-; RV64-NEXT:    [[ARRAYIDX8_4:%.*]] = getelementptr inbounds nuw i8, ptr [[ACTIVATION]], i64 [[INDVARS_IV_4]]
-; RV64-NEXT:    [[TMP12:%.*]] = load i8, ptr [[ARRAYIDX8_4]], align 1
-; RV64-NEXT:    [[CONV9_4:%.*]] = zext i8 [[TMP12]] to i32
-; RV64-NEXT:    [[MUL10_4:%.*]] = mul nsw i32 [[CONV9_4]], [[CONV_4]]
-; RV64-NEXT:    [[ADD11_4]] = add nsw i32 [[MUL10_4]], [[SUM_025_4]]
-; RV64-NEXT:    [[INDVARS_IV_NEXT_4]] = add nuw nsw i64 [[INDVARS_IV_4]], 1
-; RV64-NEXT:    [[EXITCOND_NOT_4:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT_4]], 1024
-; RV64-NEXT:    br i1 [[EXITCOND_NOT_4]], label %[[FOR_COND_CLEANUP3_4:.*]], label %[[FOR_BODY4_4]], !llvm.loop [[LOOP0]]
-; RV64:       [[FOR_COND_CLEANUP3_4]]:
-; RV64-NEXT:    [[ADD11_LCSSA_4:%.*]] = phi i32 [ [[ADD11_4]], %[[FOR_BODY4_4]] ]
-; RV64-NEXT:    [[ARRAYIDX13_4:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[OUTPUT]], i64 4
-; RV64-NEXT:    store i32 [[ADD11_LCSSA_4]], ptr [[ARRAYIDX13_4]], align 4
-; RV64-NEXT:    [[ARRAYIDX_5:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[BIAS]], i64 5
-; RV64-NEXT:    [[TMP13:%.*]] = load i32, ptr [[ARRAYIDX_5]], align 4
-; RV64-NEXT:    [[INVARIANT_GEP_5:%.*]] = getelementptr inbounds i8, ptr [[WEIGHTS]], i64 5120
-; RV64-NEXT:    br label %[[FOR_BODY4_5:.*]]
-; RV64:       [[FOR_BODY4_5]]:
-; RV64-NEXT:    [[INDVARS_IV_5:%.*]] = phi i64 [ 0, %[[FOR_COND_CLEANUP3_4]] ], [ [[INDVARS_IV_NEXT_5:%.*]], %[[FOR_BODY4_5]] ]
-; RV64-NEXT:    [[SUM_025_5:%.*]] = phi i32 [ [[TMP13]], %[[FOR_COND_CLEANUP3_4]] ], [ [[ADD11_5:%.*]], %[[FOR_BODY4_5]] ]
-; RV64-NEXT:    [[GEP_5:%.*]] = getelementptr inbounds i8, ptr [[INVARIANT_GEP_5]], i64 [[INDVARS_IV_5]]
-; RV64-NEXT:    [[TMP14:%.*]] = load i8, ptr [[GEP_5]], align 1
-; RV64-NEXT:    [[CONV_5:%.*]] = sext i8 [[TMP14]] to i32
-; RV64-NEXT:    [[ARRAYIDX8_5:%.*]] = getelementptr inbounds nuw i8, ptr [[ACTIVATION]], i64 [[INDVARS_IV_5]]
-; RV64-NEXT:    [[TMP15:%.*]] = load i8, ptr [[ARRAYIDX8_5]], align 1
-; RV64-NEXT:    [[CONV9_5:%.*]] = zext i8 [[TMP15]] to i32
-; RV64-NEXT:    [[MUL10_5:%.*]] = mul nsw i32 [[CONV9_5]], [[CONV_5]]
-; RV64-NEXT:    [[ADD11_5]] = add nsw i32 [[MUL10_5]], [[SUM_025_5]]
-; RV64-NEXT:    [[INDVARS_IV_NEXT_5]] = add nuw nsw i64 [[INDVARS_IV_5]], 1
-; RV64-NEXT:    [[EXITCOND_NOT_5:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT_5]], 1024
-; RV64-NEXT:    br i1 [[EXITCOND_NOT_5]], label %[[FOR_COND_CLEANUP3_5:.*]], label %[[FOR_BODY4_5]], !llvm.loop [[LOOP0]]
-; RV64:       [[FOR_COND_CLEANUP3_5]]:
-; RV64-NEXT:    [[ADD11_LCSSA_5:%.*]] = phi i32 [ [[ADD11_5]], %[[FOR_BODY4_5]] ]
-; RV64-NEXT:    [[ARRAYIDX13_5:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[OUTPUT]], i64 5
-; RV64-NEXT:    store i32 [[ADD11_LCSSA_5]], ptr [[ARRAYIDX13_5]], align 4
-; RV64-NEXT:    [[ARRAYIDX_6:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[BIAS]], i64 6
-; RV64-NEXT:    [[TMP16:%.*]] = load i32, ptr [[ARRAYIDX_6]], align 4
-; RV64-NEXT:    [[INVARIANT_GEP_6:%.*]] = getelementptr inbounds i8, ptr [[WEIGHTS]], i64 6144
+; RV64-NEXT:  [[FOR_COND_CLEANUP3_5:.*]]:
 ; RV64-NEXT:    br label %[[FOR_BODY4_6:.*]]
 ; RV64:       [[FOR_BODY4_6]]:
-; RV64-NEXT:    [[INDVARS_IV_6:%.*]] = phi i64 [ 0, %[[FOR_COND_CLEANUP3_5]] ], [ [[INDVARS_IV_NEXT_6:%.*]], %[[FOR_BODY4_6]] ]
-; RV64-NEXT:    [[SUM_025_6:%.*]] = phi i32 [ [[TMP16]], %[[FOR_COND_CLEANUP3_5]] ], [ [[ADD11_6:%.*]], %[[FOR_BODY4_6]] ]
-; RV64-NEXT:    [[GEP_6:%.*]] = getelementptr inbounds i8, ptr [[INVARIANT_GEP_6]], i64 [[INDVARS_IV_6]]
-; RV64-NEXT:    [[TMP17:%.*]] = load i8, ptr [[GEP_6]], align 1
-; RV64-NEXT:    [[CONV_6:%.*]] = sext i8 [[TMP17]] to i32
-; RV64-NEXT:    [[ARRAYIDX8_6:%.*]] = getelementptr inbounds nuw i8, ptr [[ACTIVATION]], i64 [[INDVARS_IV_6]]
-; RV64-NEXT:    [[TMP18:%.*]] = load i8, ptr [[ARRAYIDX8_6]], align 1
-; RV64-NEXT:    [[CONV9_6:%.*]] = zext i8 [[TMP18]] to i32
-; RV64-NEXT:    [[MUL10_6:%.*]] = mul nsw i32 [[CONV9_6]], [[CONV_6]]
-; RV64-NEXT:    [[ADD11_6]] = add nsw i32 [[MUL10_6]], [[SUM_025_6]]
-; RV64-NEXT:    [[INDVARS_IV_NEXT_6]] = add nuw nsw i64 [[INDVARS_IV_6]], 1
-; RV64-NEXT:    [[EXITCOND_NOT_6:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT_6]], 1024
-; RV64-NEXT:    br i1 [[EXITCOND_NOT_6]], label %[[FOR_COND_CLEANUP3_6:.*]], label %[[FOR_BODY4_6]], !llvm.loop [[LOOP0]]
-; RV64:       [[FOR_COND_CLEANUP3_6]]:
-; RV64-NEXT:    [[ADD11_LCSSA_6:%.*]] = phi i32 [ [[ADD11_6]], %[[FOR_BODY4_6]] ]
-; RV64-NEXT:    [[ARRAYIDX13_6:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[OUTPUT]], i64 6
-; RV64-NEXT:    store i32 [[ADD11_LCSSA_6]], ptr [[ARRAYIDX13_6]], align 4
-; RV64-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[BIAS]], i64 7
+; RV64-NEXT:    [[INDVARS_IV29:%.*]] = phi i64 [ 0, %[[FOR_COND_CLEANUP3_5]] ], [ [[INDVARS_IV_NEXT30_7:%.*]], %[[FOR_COND_CLEANUP3_14:.*]] ]
+; RV64-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[BIAS]], i64 [[INDVARS_IV29]]
 ; RV64-NEXT:    [[TMP19:%.*]] = load i32, ptr [[ARRAYIDX_7]], align 4
-; RV64-NEXT:    [[INVARIANT_GEP_7:%.*]] = getelementptr inbounds i8, ptr [[WEIGHTS]], i64 7168
+; RV64-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[INDVARS_IV29]], 10
+; RV64-NEXT:    [[INVARIANT_GEP_15:%.*]] = getelementptr inbounds i8, ptr [[WEIGHTS]], i64 [[TMP1]]
 ; RV64-NEXT:    br label %[[FOR_BODY4_7:.*]]
-; RV64:       [[FOR_BODY4_7]]:
-; RV64-NEXT:    [[INDVARS_IV_7:%.*]] = phi i64 [ 0, %[[FOR_COND_CLEANUP3_6]] ], [ [[INDVARS_IV_NEXT_7:%.*]], %[[FOR_BODY4_7]] ]
-; RV64-NEXT:    [[SUM_025_7:%.*]] = phi i32 [ [[TMP19]], %[[FOR_COND_CLEANUP3_6]] ], [ [[ADD11_7:%.*]], %[[FOR_BODY4_7]] ]
-; RV64-NEXT:    [[GEP_7:%.*]] = getelementptr inbounds i8, ptr [[INVARIANT_GEP_7]], i64 [[INDVARS_IV_7]]
-; RV64-NEXT:    [[TMP20:%.*]] = load i8, ptr [[GEP_7]], align 1
-; RV64-NEXT:    [[CONV_7:%.*]] = sext i8 [[TMP20]] to i32
-; RV64-NEXT:    [[ARRAYIDX8_7:%.*]] = getelementptr inbounds nuw i8, ptr [[ACTIVATION]], i64 [[INDVARS_IV_7]]
-; RV64-NEXT:    [[TMP21:%.*]] = load i8, ptr [[ARRAYIDX8_7]], align 1
-; RV64-NEXT:    [[CONV9_7:%.*]] = zext i8 [[TMP21]] to i32
-; RV64-NEXT:    [[MUL10_7:%.*]] = mul nsw i32 [[CONV9_7]], [[CONV_7]]
-; RV64-NEXT:    [[ADD11_7]] = add nsw i32 [[MUL10_7]], [[SUM_025_7]]
-; RV64-NEXT:    [[INDVARS_IV_NEXT_7]] = add nuw nsw i64 [[INDVARS_IV_7]], 1
-; RV64-NEXT:    [[EXITCOND_NOT_7:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT_7]], 1024
-; RV64-NEXT:    br i1 [[EXITCOND_NOT_7]], label %[[FOR_COND_CLEANUP3_7:.*]], label %[[FOR_BODY4_7]], !llvm.loop [[LOOP0]]
-; RV64:       [[FOR_COND_CLEANUP3_7]]:
-; RV64-NEXT:    [[ADD11_LCSSA_7:%.*]] = phi i32 [ [[ADD11_7]], %[[FOR_BODY4_7]] ]
-; RV64-NEXT:    [[ARRAYIDX13_7:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[OUTPUT]], i64 7
+; RV64:       [[FOR_COND_CLEANUP3_7:.*]]:
+; RV64-NEXT:    [[ADD11_LCSSA_7:%.*]] = phi i32 [ [[ADD11_15:%.*]], %[[FOR_BODY4_7]] ]
+; RV64-NEXT:    [[ARRAYIDX13_7:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[OUTPUT]], i64 [[INDVARS_IV29]]
 ; RV64-NEXT:    store i32 [[ADD11_LCSSA_7]], ptr [[ARRAYIDX13_7]], align 4
-; RV64-NEXT:    [[ARRAYIDX_8:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[BIAS]], i64 8
+; RV64-NEXT:    [[INDVARS_IV_NEXT30:%.*]] = add nuw nsw i64 [[INDVARS_IV29]], 1
+; RV64-NEXT:    [[ARRAYIDX_8:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[BIAS]], i64 [[INDVARS_IV_NEXT30]]
 ; RV64-NEXT:    [[TMP22:%.*]] = load i32, ptr [[ARRAYIDX_8]], align 4
-; RV64-NEXT:    [[INVARIANT_GEP_8:%.*]] = getelementptr inbounds i8, ptr [[WEIGHTS]], i64 8192
+; RV64-NEXT:    [[TMP3:%.*]] = shl nuw nsw i64 [[INDVARS_IV_NEXT30]], 10
+; RV64-NEXT:    [[INVARIANT_GEP_8:%.*]] = getelementptr inbounds i8, ptr [[WEIGHTS]], i64 [[TMP3]]
 ; RV64-NEXT:    br label %[[FOR_BODY4_8:.*]]
 ; RV64:       [[FOR_BODY4_8]]:
 ; RV64-NEXT:    [[INDVARS_IV_8:%.*]] = phi i64 [ 0, %[[FOR_COND_CLEANUP3_7]] ], [ [[INDVARS_IV_NEXT_8:%.*]], %[[FOR_BODY4_8]] ]
@@ -190,14 +43,16 @@ define void @large_outer(ptr noalias %output, ptr %weights, ptr %bias, ptr %acti
 ; RV64-NEXT:    [[ADD11_8]] = add nsw i32 [[MUL10_8]], [[SUM_025_8]]
 ; RV64-NEXT:    [[INDVARS_IV_NEXT_8]] = add nuw nsw i64 [[INDVARS_IV_8]], 1
 ; RV64-NEXT:    [[EXITCOND_NOT_8:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT_8]], 1024
-; RV64-NEXT:    br i1 [[EXITCOND_NOT_8]], label %[[FOR_COND_CLEANUP3_8:.*]], label %[[FOR_BODY4_8]], !llvm.loop [[LOOP0]]
+; RV64-NEXT:    br i1 [[EXITCOND_NOT_8]], label %[[FOR_COND_CLEANUP3_8:.*]], label %[[FOR_BODY4_8]], !llvm.loop [[LOOP0:![0-9]+]]
 ; RV64:       [[FOR_COND_CLEANUP3_8]]:
 ; RV64-NEXT:    [[ADD11_LCSSA_8:%.*]] = phi i32 [ [[ADD11_8]], %[[FOR_BODY4_8]] ]
-; RV64-NEXT:    [[ARRAYIDX13_8:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[OUTPUT]], i64 8
+; RV64-NEXT:    [[ARRAYIDX13_8:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[OUTPUT]], i64 [[INDVARS_IV_NEXT30]]
 ; RV64-NEXT:    store i32 [[ADD11_LCSSA_8]], ptr [[ARRAYIDX13_8]], align 4
-; RV64-NEXT:    [[ARRAYIDX_9:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[BIAS]], i64 9
+; RV64-NEXT:    [[INDVARS_IV_NEXT30_1:%.*]] = add nuw nsw i64 [[INDVARS_IV29]], 2
+; RV64-NEXT:    [[ARRAYIDX_9:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[BIAS]], i64 [[INDVARS_IV_NEXT30_1]]
 ; RV64-NEXT:    [[TMP25:%.*]] = load i32, ptr [[ARRAYIDX_9]], align 4
-; RV64-NEXT:    [[INVARIANT_GEP_9:%.*]] = getelementptr inbounds i8, ptr [[WEIGHTS]], i64 9216
+; RV64-NEXT:    [[TMP7:%.*]] = shl nuw nsw i64 [[INDVARS_IV_NEXT30_1]], 10
+; RV64-NEXT:    [[INVARIANT_GEP_9:%.*]] = getelementptr inbounds i8, ptr [[WEIGHTS]], i64 [[TMP7]]
 ; RV64-NEXT:    br label %[[FOR_BODY4_9:.*]]
 ; RV64:       [[FOR_BODY4_9]]:
 ; RV64-NEXT:    [[INDVARS_IV_9:%.*]] = phi i64 [ 0, %[[FOR_COND_CLEANUP3_8]] ], [ [[INDVARS_IV_NEXT_9:%.*]], %[[FOR_BODY4_9]] ]
@@ -215,11 +70,13 @@ define void @large_outer(ptr noalias %output, ptr %weights, ptr %bias, ptr %acti
 ; RV64-NEXT:    br i1 [[EXITCOND_NOT_9]], label %[[FOR_COND_CLEANUP3_9:.*]], label %[[FOR_BODY4_9]], !llvm.loop [[LOOP0]]
 ; RV64:       [[FOR_COND_CLEANUP3_9]]:
 ; RV64-NEXT:    [[ADD11_LCSSA_9:%.*]] = phi i32 [ [[ADD11_9]], %[[FOR_BODY4_9]] ]
-; RV64-NEXT:    [[ARRAYIDX13_9:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[OUTPUT]], i64 9
+; RV64-NEXT:    [[ARRAYIDX13_9:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[OUTPUT]], i64 [[INDVARS_IV_NEXT30_1]]
 ; RV64-NEXT:    store i32 [[ADD11_LCSSA_9]], ptr [[ARRAYIDX13_9]], align 4
-; RV64-NEXT:    [[ARRAYIDX_10:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[BIAS]], i64 10
+; RV64-NEXT:    [[INDVARS_IV_NEXT30_2:%.*]] = add nuw nsw i64 [[INDVARS_IV29]], 3
+; RV64-NEXT:    [[ARRAYIDX_10:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[BIAS]], i64 [[INDVARS_IV_NEXT30_2]]
 ; RV64-NEXT:    [[TMP28:%.*]] = load i32, ptr [[ARRAYIDX_10]], align 4
-; RV64-NEXT:    [[INVARIANT_GEP_10:%.*]] = getelementptr inbounds i8, ptr [[WEIGHTS]], i64 10240
+; RV64-NEXT:    [[TMP11:%.*]] = shl nuw nsw i64 [[INDVARS_IV_NEXT30_2]], 10
+; RV64-NEXT:    [[INVARIANT_GEP_10:%.*]] = getelementptr inbounds i8, ptr [[WEIGHTS]], i64 [[TMP11]]
 ; RV64-NEXT:    br label %[[FOR_BODY4_10:.*]]
 ; RV64:       [[FOR_BODY4_10]]:
 ; RV64-NEXT:    [[INDVARS_IV_10:%.*]] = phi i64 [ 0, %[[FOR_COND_CLEANUP3_9]] ], [ [[INDVARS_IV_NEXT_10:%.*]], %[[FOR_BODY4_10]] ]
@@ -237,11 +94,13 @@ define void @large_outer(ptr noalias %output, ptr %weights, ptr %bias, ptr %acti
 ; RV64-NEXT:    br i1 [[EXITCOND_NOT_10]], label %[[FOR_COND_CLEANUP3_10:.*]], label %[[FOR_BODY4_10]], !llvm.loop [[LOOP0]]
 ; RV64:       [[FOR_COND_CLEANUP3_10]]:
 ; RV64-NEXT:    [[ADD11_LCSSA_10:%.*]] = phi i32 [ [[ADD11_10]], %[[FOR_BODY4_10]] ]
-; RV64-NEXT:    [[ARRAYIDX13_10:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[OUTPUT]], i64 10
+; RV64-NEXT:    [[ARRAYIDX13_10:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[OUTPUT]], i64 [[INDVARS_IV_NEXT30_2]]
 ; RV64-NEXT:    store i32 [[ADD11_LCSSA_10]], ptr [[ARRAYIDX13_10]], align 4
-; RV64-NEXT:    [[ARRAYIDX_11:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[BIAS]], i64 11
+; RV64-NEXT:    [[INDVARS_IV_NEXT30_3:%.*]] = add nuw nsw i64 [[INDVARS_IV29]], 4
+; RV64-NEXT:    [[ARRAYIDX_11:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[BIAS]], i64 [[INDVARS_IV_NEXT30_3]]
 ; RV64-NEXT:    [[TMP31:%.*]] = load i32, ptr [[ARRAYIDX_11]], align 4
-; RV64-NEXT:    [[INVARIANT_GEP_11:%.*]] = getelementptr inbounds i8, ptr [[WEIGHTS]], i64 11264
+; RV64-NEXT:    [[TMP15:%.*]] = shl nuw nsw i64 [[INDVARS_IV_NEXT30_3]], 10
+; RV64-NEXT:    [[INVARIANT_GEP_11:%.*]] = getelementptr inbounds i8, ptr [[WEIGHTS]], i64 [[TMP15]]
 ; RV64-NEXT:    br label %[[FOR_BODY4_11:.*]]
 ; RV64:       [[FOR_BODY4_11]]:
 ; RV64-NEXT:    [[INDVARS_IV_11:%.*]] = phi i64 [ 0, %[[FOR_COND_CLEANUP3_10]] ], [ [[INDVARS_IV_NEXT_11:%.*]], %[[FOR_BODY4_11]] ]
@@ -259,11 +118,13 @@ define void @large_outer(ptr noalias %output, ptr %weights, ptr %bias, ptr %acti
 ; RV64-NEXT:    br i1 [[EXITCOND_NOT_11]], label %[[FOR_COND_CLEANUP3_11:.*]], label %[[FOR_BODY4_11]], !llvm.loop [[LOOP0]]
 ; RV64:       [[FOR_COND_CLEANUP3_11]]:
 ; RV64-NEXT:    [[ADD11_LCSSA_11:%.*]] = phi i32 [ [[ADD11_11]], %[[FOR_BODY4_11]] ]
-; RV64-NEXT:    [[ARRAYIDX13_11:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[OUTPUT]], i64 11
+; RV64-NEXT:    [[ARRAYIDX13_11:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[OUTPUT]], i64 [[INDVARS_IV_NEXT30_3]]
 ; RV64-NEXT:    store i32 [[ADD11_LCSSA_11]], ptr [[ARRAYIDX13_11]], align 4
-; RV64-NEXT:    [[ARRAYIDX_12:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[BIAS]], i64 12
+; RV64-NEXT:    [[INDVARS_IV_NEXT30_4:%.*]] = add nuw nsw i64 [[INDVARS_IV29]], 5
+; RV64-NEXT:    [[ARRAYIDX_12:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[BIAS]], i64 [[INDVARS_IV_NEXT30_4]]
 ; RV64-NEXT:    [[TMP34:%.*]] = load i32, ptr [[ARRAYIDX_12]], align 4
-; RV64-NEXT:    [[INVARIANT_GEP_12:%.*]] = getelementptr inbounds i8, ptr [[WEIGHTS]], i64 12288
+; RV64-NEXT:    [[TMP20:%.*]] = shl nuw nsw i64 [[INDVARS_IV_NEXT30_4]], 10
+; RV64-NEXT:    [[INVARIANT_GEP_12:%.*]] = getelementptr inbounds i8, ptr [[WEIGHTS]], i64 [[TMP20]]
 ; RV64-NEXT:    br label %[[FOR_BODY4_12:.*]]
 ; RV64:       [[FOR_BODY4_12]]:
 ; RV64-NEXT:    [[INDVARS_IV_12:%.*]] = phi i64 [ 0, %[[FOR_COND_CLEANUP3_11]] ], [ [[INDVARS_IV_NEXT_12:%.*]], %[[FOR_BODY4_12]] ]
@@ -281,11 +142,13 @@ define void @large_outer(ptr noalias %output, ptr %weights, ptr %bias, ptr %acti
 ; RV64-NEXT:    br i1 [[EXITCOND_NOT_12]], label %[[FOR_COND_CLEANUP3_12:.*]], label %[[FOR_BODY4_12]], !llvm.loop [[LOOP0]]
 ; RV64:       [[FOR_COND_CLEANUP3_12]]:
 ; RV64-NEXT:    [[ADD11_LCSSA_12:%.*]] = phi i32 [ [[ADD11_12]], %[[FOR_BODY4_12]] ]
-; RV64-NEXT:    [[ARRAYIDX13_12:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[OUTPUT]], i64 12
+; RV64-NEXT:    [[ARRAYIDX13_12:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[OUTPUT]], i64 [[INDVARS_IV_NEXT30_4]]
 ; RV64-NEXT:    store i32 [[ADD11_LCSSA_12]], ptr [[ARRAYIDX13_12]], align 4
-; RV64-NEXT:    [[ARRAYIDX_13:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[BIAS]], i64 13
+; RV64-NEXT:    [[INDVARS_IV_NEXT30_5:%.*]] = add nuw nsw i64 [[INDVARS_IV29]], 6
+; RV64-NEXT:    [[ARRAYIDX_13:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[BIAS]], i64 [[INDVARS_IV_NEXT30_5]]
 ; RV64-NEXT:    [[TMP37:%.*]] = load i32, ptr [[ARRAYIDX_13]], align 4
-; RV64-NEXT:    [[INVARIANT_GEP_13:%.*]] = getelementptr inbounds i8, ptr [[WEIGHTS]], i64 13312
+; RV64-NEXT:    [[TMP43:%.*]] = shl nuw nsw i64 [[INDVARS_IV_NEXT30_5]], 10
+; RV64-NEXT:    [[INVARIANT_GEP_13:%.*]] = getelementptr inbounds i8, ptr [[WEIGHTS]], i64 [[TMP43]]
 ; RV64-NEXT:    br label %[[FOR_BODY4_13:.*]]
 ; RV64:       [[FOR_BODY4_13]]:
 ; RV64-NEXT:    [[INDVARS_IV_13:%.*]] = phi i64 [ 0, %[[FOR_COND_CLEANUP3_12]] ], [ [[INDVARS_IV_NEXT_13:%.*]], %[[FOR_BODY4_13]] ]
@@ -303,11 +166,13 @@ define void @large_outer(ptr noalias %output, ptr %weights, ptr %bias, ptr %acti
 ; RV64-NEXT:    br i1 [[EXITCOND_NOT_13]], label %[[FOR_COND_CLEANUP3_13:.*]], label %[[FOR_BODY4_13]], !llvm.loop [[LOOP0]]
 ; RV64:       [[FOR_COND_CLEANUP3_13]]:
 ; RV64-NEXT:    [[ADD11_LCSSA_13:%.*]] = phi i32 [ [[ADD11_13]], %[[FOR_BODY4_13]] ]
-; RV64-NEXT:    [[ARRAYIDX13_13:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[OUTPUT]], i64 13
+; RV64-NEXT:    [[ARRAYIDX13_13:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[OUTPUT]], i64 [[INDVARS_IV_NEXT30_5]]
 ; RV64-NEXT:    store i32 [[ADD11_LCSSA_13]], ptr [[ARRAYIDX13_13]], align 4
-; RV64-NEXT:    [[ARRAYIDX_14:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[BIAS]], i64 14
+; RV64-NEXT:    [[INDVARS_IV_NEXT30_6:%.*]] = add nuw nsw i64 [[INDVARS_IV29]], 7
+; RV64-NEXT:    [[ARRAYIDX_14:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[BIAS]], i64 [[INDVARS_IV_NEXT30_6]]
 ; RV64-NEXT:    [[TMP40:%.*]] = load i32, ptr [[ARRAYIDX_14]], align 4
-; RV64-NEXT:    [[INVARIANT_GEP_14:%.*]] = getelementptr inbounds i8, ptr [[WEIGHTS]], i64 14336
+; RV64-NEXT:    [[TMP46:%.*]] = shl nuw nsw i64 [[INDVARS_IV_NEXT30_6]], 10
+; RV64-NEXT:    [[INVARIANT_GEP_14:%.*]] = getelementptr inbounds i8, ptr [[WEIGHTS]], i64 [[TMP46]]
 ; RV64-NEXT:    br label %[[FOR_BODY4_14:.*]]
 ; RV64:       [[FOR_BODY4_14]]:
 ; RV64-NEXT:    [[INDVARS_IV_14:%.*]] = phi i64 [ 0, %[[FOR_COND_CLEANUP3_13]] ], [ [[INDVARS_IV_NEXT_14:%.*]], %[[FOR_BODY4_14]] ]
@@ -322,18 +187,17 @@ define void @large_outer(ptr noalias %output, ptr %weights, ptr %bias, ptr %acti
 ; RV64-NEXT:    [[ADD11_14]] = add nsw i32 [[MUL10_14]], [[SUM_025_14]]
 ; RV64-NEXT:    [[INDVARS_IV_NEXT_14]] = add nuw nsw i64 [[INDVARS_IV_14]], 1
 ; RV64-NEXT:    [[EXITCOND_NOT_14:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT_14]], 1024
-; RV64-NEXT:    br i1 [[EXITCOND_NOT_14]], label %[[FOR_COND_CLEANUP3_14:.*]], label %[[FOR_BODY4_14]], !llvm.loop [[LOOP0]]
+; RV64-NEXT:    br i1 [[EXITCOND_NOT_14]], label %[[FOR_COND_CLEANUP3_14]], label %[[FOR_BODY4_14]], !llvm.loop [[LOOP0]]
 ; RV64:       [[FOR_COND_CLEANUP3_14]]:
 ; RV64-NEXT:    [[ADD11_LCSSA_14:%.*]] = phi i32 [ [[ADD11_14]], %[[FOR_BODY4_14]] ]
-; RV64-NEXT:    [[ARRAYIDX13_14:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[OUTPUT]], i64 14
+; RV64-NEXT:    [[ARRAYIDX13_14:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[OUTPUT]], i64 [[INDVARS_IV_NEXT30_6]]
 ; RV64-NEXT:    store i32 [[ADD11_LCSSA_14]], ptr [[ARRAYIDX13_14]], align 4
-; RV64-NEXT:    [[ARRAYIDX_15:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[BIAS]], i64 15
-; RV64-NEXT:    [[TMP43:%.*]] = load i32, ptr [[ARRAYIDX_15]], align 4
-; RV64-NEXT:    [[INVARIANT_GEP_15:%.*]] = getelementptr inbounds i8, ptr [[WEIGHTS]], i64 15360
-; RV64-NEXT:    br label %[[FOR_BODY4_15:.*]]
-; RV64:       [[FOR_BODY4_15]]:
-; RV64-NEXT:    [[INDVARS_IV_15:%.*]] = phi i64 [ 0, %[[FOR_COND_CLEANUP3_14]] ], [ [[INDVARS_IV_NEXT_15:%.*]], %[[FOR_BODY4_15]] ]
-; RV64-NEXT:    [[SUM_025_15:%.*]] = phi i32 [ [[TMP43]], %[[FOR_COND_CLEANUP3_14]] ], [ [[ADD11_15:%.*]], %[[FOR_BODY4_15]] ]
+; RV64-NEXT:    [[INDVARS_IV_NEXT30_7]] = add nuw nsw i64 [[INDVARS_IV29]], 8
+; RV64-NEXT:    [[EXITCOND32_NOT_7:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT30_7]], 16
+; RV64-NEXT:    br i1 [[EXITCOND32_NOT_7]], label %[[FOR_COND_CLEANUP3_15:.*]], label %[[FOR_BODY4_6]]
+; RV64:       [[FOR_BODY4_7]]:
+; RV64-NEXT:    [[INDVARS_IV_15:%.*]] = phi i64 [ 0, %[[FOR_BODY4_6]] ], [ [[INDVARS_IV_NEXT_15:%.*]], %[[FOR_BODY4_7]] ]
+; RV64-NEXT:    [[SUM_025_15:%.*]] = phi i32 [ [[TMP19]], %[[FOR_BODY4_6]] ], [ [[ADD11_15]], %[[FOR_BODY4_7]] ]
 ; RV64-NEXT:    [[GEP_15:%.*]] = getelementptr inbounds i8, ptr [[INVARIANT_GEP_15]], i64 [[INDVARS_IV_15]]
 ; RV64-NEXT:    [[TMP44:%.*]] = load i8, ptr [[GEP_15]], align 1
 ; RV64-NEXT:    [[CONV_15:%.*]] = sext i8 [[TMP44]] to i32
@@ -344,26 +208,9 @@ define void @large_outer(ptr noalias %output, ptr %weights, ptr %bias, ptr %acti
 ; RV64-NEXT:    [[ADD11_15]] = add nsw i32 [[MUL10_15]], [[SUM_025_15]]
 ; RV64-NEXT:    [[INDVARS_IV_NEXT_15]] = add nuw nsw i64 [[INDVARS_IV_15]], 1
 ; RV64-NEXT:    [[EXITCOND_NOT_15:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT_15]], 1024
-; RV64-NEXT:    br i1 [[EXITCOND_NOT_15]], label %[[FOR_COND_CLEANUP3_15:.*]], label %[[FOR_BODY4_15]], !llvm.loop [[LOOP0]]
+; RV64-NEXT:    br i1 [[EXITCOND_NOT_15]], label %[[FOR_COND_CLEANUP3_7]], label %[[FOR_BODY4_7]], !llvm.loop [[LOOP0]]
 ; RV64:       [[FOR_COND_CLEANUP3_15]]:
-; RV64-NEXT:    [[ADD11_LCSSA_15:%.*]] = phi i32 [ [[ADD11_15]], %[[FOR_BODY4_15]] ]
-; RV64-NEXT:    [[ARRAYIDX13_15:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[OUTPUT]], i64 15
-; RV64-NEXT:    store i32 [[ADD11_LCSSA_15]], ptr [[ARRAYIDX13_15]], align 4
 ; RV64-NEXT:    ret void
-; RV64:       [[FOR_BODY4]]:
-; RV64-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[FOR_BODY]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY4]] ]
-; RV64-NEXT:    [[SUM_025:%.*]] = phi i32 [ [[TMP0]], %[[FOR_BODY]] ], [ [[ADD11]], %[[FOR_BODY4]] ]
-; RV64-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[WEIGHTS]], i64 [[INDVARS_IV]]
-; RV64-NEXT:    [[TMP46:%.*]] = load i8, ptr [[GEP]], align 1
-; RV64-NEXT:    [[CONV:%.*]] = sext i8 [[TMP46]] to i32
-; RV64-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds nuw i8, ptr [[ACTIVATION]], i64 [[INDVARS_IV]]
-; RV64-NEXT:    [[TMP47:%.*]] = load i8, ptr [[ARRAYIDX8]], align 1
-; RV64-NEXT:    [[CONV9:%.*]] = zext i8 [[TMP47]] to i32
-; RV64-NEXT:    [[MUL10:%.*]] = mul nsw i32 [[CONV9]], [[CONV]]
-; RV64-NEXT:    [[ADD11]] = add nsw i32 [[MUL10]], [[SUM_025]]
-; RV64-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; RV64-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1024
-; RV64-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP3]], label %[[FOR_BODY4]], !llvm.loop [[LOOP0]]
 ;
 ; RV32-LABEL: define void @large_outer(
 ; RV32-SAME: ptr noalias [[OUTPUT:%.*]], ptr [[WEIGHTS:%.*]], ptr [[BIAS:%.*]], ptr [[ACTIVATION:%.*]]) #[[ATTR0:[0-9]+]] {
