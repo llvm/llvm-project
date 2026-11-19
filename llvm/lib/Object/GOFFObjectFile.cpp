@@ -539,9 +539,9 @@ GOFFObjectFile::getSymbolSection(DataRefImpl Symb) const {
         return section_iterator(SectionRef(Sec, this));
       }
     }
-    return createStringError(llvm::errc::invalid_argument,
-                             "No section found for ED symbol with id " +
-                                 std::to_string(Symb.d.a));
+    // An empty ED without labels is not a section (see the constructor), so
+    // there is no section for the symbol.
+    return section_iterator(SectionRef(Sec, this));
   }
 
   uint32_t SymEdId;

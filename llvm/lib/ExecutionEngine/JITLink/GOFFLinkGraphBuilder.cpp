@@ -67,10 +67,6 @@ Error GOFFLinkGraphBuilder::processSections() {
       return NameOrErr.takeError();
     }
 
-    // Skip empty sections.
-    if (Sec.getSize() == 0)
-      return Error::success();
-
     StringRef SectionName = *NameOrErr;
     DataRefImpl SecRawDataRef = Sec.getRawDataRefImpl();
     SmallString<16> UniqSectionName;
@@ -99,7 +95,7 @@ Error GOFFLinkGraphBuilder::processSections() {
     // Get or create the section in the graph.
     auto *GraphSec = G->findSectionByName(UniqSectionName);
     assert(!GraphSec && "Should be named unique");
-    GraphSec = &G->createSection(UniqSectionName, Prot);
+    GraphSec = &G->createSection(G->allocateName(UniqSectionName), Prot);
 
     if (GraphSec->getMemProt() != Prot)
       return make_error<JITLinkError>("MemProt should match");
@@ -159,16 +155,26 @@ Error GOFFLinkGraphBuilder::processSymbols() {
     if (!SectionOrErr)
       return SectionOrErr.takeError();
 
+    // An empty ED without labels is not a section in the object file, so
+    // there is no section to attach the symbol to.
     section_iterator SI = *SectionOrErr;
-    if (SI == Obj.section_end())
-      return make_error<JITLinkError>("Symbol section not found");
+    if (SI == Obj.section_end()) {
+      LLVM_DEBUG(dbgs() << "      skipped symbol in empty section\n");
+      continue;
+    }
 
     Expected<uint64_t> OffsetOrErr = Sym.getAddress();
     if (!OffsetOrErr)
       return OffsetOrErr.takeError();
 
+    // Debug sections are skipped in processSections(), so there is no block to
+    // attach the symbol to.
     uint32_t SecIndex = SI->getIndex();
     Block *B = getGraphBlock(SecIndex);
+    if (!B) {
+      LLVM_DEBUG(dbgs() << "      skipped symbol in section without block\n");
+      continue;
+    }
     uint64_t Offset = *OffsetOrErr;
     Linkage L =
         (Flags & object::SymbolRef::SF_Weak) ? Linkage::Weak : Linkage::Strong;

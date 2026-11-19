@@ -160,6 +160,11 @@ Error GOFFLinkGraphBuilder_systemz::processRelocations() {
     LLVM_DEBUG(dbgs() << " Relocations for section " << *SectionName << "\n");
 
     for (object::RelocationRef Relocation : Sec.relocations()) {
+      jitlink::Block *B = getGraphBlock(SecIndex);
+      if (!B)
+        return make_error<JITLinkError>("Relocation in empty section " +
+                                        *SectionName);
+
       object::SymbolRef Sym = *Relocation.getSymbol();
       auto TargetNameOrErr = Sym.getName();
       if (!TargetNameOrErr) {
@@ -170,14 +175,15 @@ Error GOFFLinkGraphBuilder_systemz::processRelocations() {
       Relocation.getTypeName(RelTypeName);
       uint64_t RelType = Relocation.getType();
       systemz::EdgeKind_systemz EK = getRelEdgeKind(RelType);
-      jitlink::Block *B = getGraphBlock(SecIndex);
-      assert(B && "Block not found");
 
       uint32_t TargetBlockOffset = Sec.getAddress() + Relocation.getOffset() -
                                    B->getAddress().getValue();
       uint32_t REsdId = Sym.getRawDataRefImpl().d.a;
       jitlink::Symbol *S = getGraphSymbol(REsdId);
-      assert(S && "Symbol not found");
+      if (!S)
+        return make_error<JITLinkError>(
+            "Relocation in section " + *SectionName + " targets symbol " +
+            *TargetNameOrErr + " which is not in the graph");
 
       LLVM_DEBUG({
         dbgs() << "    reloffset = " << format_hex(Relocation.getOffset(), 16)
