@@ -2,6 +2,8 @@
 // RUN:   dxil-pc-shadermodel6.6-library %s -emit-llvm -disable-llvm-passes -o - | \
 // RUN:   FileCheck %s --check-prefixes=CHECK,DXCHECK
 
+using namespace hlsl;
+
 // SPIR-V codegen for RasterizerOrderedByteAddressBuffer is not implemented
 // yet (asserts in clang/lib/CodeGen/Targets/SPIR.cpp on
 // `!ResAttrs.IsROV && "Rasterizer order views not implemented for SPIR-V yet"`).
