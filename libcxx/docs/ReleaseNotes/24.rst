@@ -63,6 +63,10 @@ Improvements and New Features
 
 - ``basic_filebuf`` now supports files larger than 2GB on 32-bit AIX and 32-bit glibc targets.
 
+- ``std::chrono::clock_time_conversion`` and ``std::chrono::clock_cast`` from P0355R7 have been implemented
+  (`Github <https://llvm.org/PR166050>`__). The conversions involving ``utc_clock`` are only available when
+  ``utc_clock`` is.
+
 Deprecations and Removals
 -------------------------
 
