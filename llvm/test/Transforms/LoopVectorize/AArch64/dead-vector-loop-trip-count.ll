@@ -52,9 +52,8 @@ exit:
   ret void
 }
 
-; The trip count is at most 12 via the loop guard, but VF * IC = 16.
-; TODO: The main vector loop is created although it can never execute.
-; CHECK: remark: <unknown>:0:0: vectorized loop (vectorization width: 4, interleaved count: 4)
+; The trip count is at most 12 via the loop guard.
+; CHECK: remark: <unknown>:0:0: vectorized loop (vectorization width: 4, interleaved count: 1)
 define void @tc_bounded_by_ult_guard(ptr %dst, i64 %n) {
 entry:
   %pre = icmp ult i64 %n, 13
@@ -73,8 +72,7 @@ exit:
 }
 
 ; The trip count is at most 23 via the loop guard, but VF * IC = 32.
-; TODO: The main vector loop is created although it can never execute.
-; CHECK: remark: <unknown>:0:0: vectorized loop (vectorization width: 8, interleaved count: 4)
+; CHECK: remark: <unknown>:0:0: vectorized loop (vectorization width: 8, interleaved count: 1)
 define void @tc_bounded_by_ult_guard_i16(ptr %dst, i64 %n) {
 entry:
   %pre = icmp ult i64 %n, 24
@@ -96,7 +94,7 @@ exit:
 ; profitable trip count.
 
 ; The trip count is at most 9, and the minimum profitable trip count is 10.
-; CHECK: remark: <unknown>:0:0: vectorized loop (vectorization width: 2, interleaved count: 4)
+; CHECK: remark: <unknown>:0:0: vectorized loop (vectorization width: 2, interleaved count: 2)
 ; CHECK-NEXT: remark: <unknown>:0:0: Created vector loop never executes due to insufficient trip count.
 define void @tc_below_min_profitable_tc(ptr %dst, ptr %a, ptr %b, ptr %c, i64 %n) {
 entry:
@@ -124,7 +122,7 @@ exit:
 }
 
 ; The trip count is at most 10, and the minimum profitable trip count is 10.
-; CHECK: remark: <unknown>:0:0: vectorized loop (vectorization width: 2, interleaved count: 4)
+; CHECK: remark: <unknown>:0:0: vectorized loop (vectorization width: 2, interleaved count: 2)
 define void @tc_may_be_min_profitable_tc(ptr %dst, ptr %a, ptr %b, ptr %c, i64 %n) {
 entry:
   %g = icmp ult i64 %n, 11
@@ -152,7 +150,7 @@ exit:
 
 ; A scalar epilogue is required by the interleave group for the strided load of
 ; %a.
-; CHECK: remark: <unknown>:0:0: vectorized loop (vectorization width: 2, interleaved count: 4)
+; CHECK: remark: <unknown>:0:0: vectorized loop (vectorization width: 2, interleaved count: 2)
 ; CHECK-NEXT: remark: <unknown>:0:0: Created vector loop never executes due to insufficient trip count.
 define void @tc_equal_min_profitable_tc_requires_scalar_epilogue(ptr %dst, ptr %a, ptr %b, ptr %c, i64 %n) {
 entry:

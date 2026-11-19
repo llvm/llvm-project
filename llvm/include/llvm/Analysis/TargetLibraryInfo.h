@@ -222,9 +222,10 @@ public:
   /// Return a pointer to a VecDesc object holding all info for the vector to
   /// scalar mapping of the unmasked fixed width vector function, called by
   /// \p CB with the vector of the vectorization factor elements as the first
-  /// argument. The scalarized call must match the prototypes of the library
-  /// functions, mapped to this vector function, and the mapping of a library
-  /// function is preferred. If no such mapping exists, return nullpointer.
+  /// argument. The call must match the prototype of the vector function and,
+  /// scalarized, the prototypes of the library functions, mapped to this vector
+  /// function. The mapping of a library function is preferred. If no such
+  /// mapping exists, return nullpointer.
   LLVM_ABI const VecDesc *getScalarizedMappingInfo(const CallBase &CB) const;
 
   /// Set to true iff i32 parameters to library functions should have signext
@@ -252,10 +253,6 @@ public:
   void setShouldSignExtI32Return(bool Val) {
     ShouldSignExtI32Return = Val;
   }
-
-  /// Returns the size of the wchar_t type in bytes.
-  /// This queries the 'wchar_size' metadata.
-  LLVM_ABI unsigned getWCharSize(const Module &M) const;
 
   /// Returns the size of the size_t type in bits.
   LLVM_ABI unsigned getSizeTSize(const Module &M) const;
@@ -475,16 +472,9 @@ public:
     return Impl->CustomNames.find(F)->second;
   }
 
-  static void initBoolExtensionsForTriple(bool &ShouldZExtBoolParam,
-                                          bool &ShouldZExtBoolReturn,
-                                          const Triple &T) {
-    ShouldZExtBoolParam = ShouldZExtBoolReturn = false;
-
-    if (!T.isAArch64() && !T.isOSDarwin()) {
-      ShouldZExtBoolParam = true;
-      ShouldZExtBoolReturn = true;
-    }
-  }
+  LLVM_ABI static void initBoolExtensionsForTriple(bool &ShouldZExtBoolParam,
+                                                   bool &ShouldZExtBoolReturn,
+                                                   const Triple &T);
 
   LLVM_ABI static void initExtensionsForTriple(bool &ShouldExtI32Param,
                                                bool &ShouldExtI32Return,
@@ -577,11 +567,6 @@ public:
       if (auto AK = getExtAttrForI32Return(Signed))
         AL = AL.addRetAttribute(*C, AK);
     return AL;
-  }
-
-  /// \copydoc TargetLibraryInfoImpl::getWCharSize()
-  unsigned getWCharSize(const Module &M) const {
-    return Impl->getWCharSize(M);
   }
 
   /// \copydoc TargetLibraryInfoImpl::getSizeTSize()

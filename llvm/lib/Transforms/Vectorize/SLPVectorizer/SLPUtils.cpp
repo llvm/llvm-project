@@ -18,7 +18,6 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
-#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
@@ -37,6 +36,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 
 #include <algorithm>
@@ -54,9 +54,16 @@ bool isConstant(Value *V) {
   return isa<Constant>(V) && !isa<ConstantExpr, GlobalValue>(V);
 }
 
-bool isBinOpIdentityConstant(const Value *V, unsigned Opcode) {
-  const auto *CI = dyn_cast<ConstantInt>(V);
-  return CI && ConstantExpr::getBinOpIdentity(Opcode, CI->getType()) == CI;
+Constant *getReassocIdentity(unsigned Opcode, Type *Ty, bool Negated) {
+  // Subtracting -0.0 turns a -0.0 total into +0.0.
+  if (Negated && Opcode == Instruction::FAdd)
+    Opcode = Instruction::FSub;
+  return ConstantExpr::getBinOpIdentity(Opcode, Ty, /*AllowRHSConstant=*/true);
+}
+
+bool isBinOpIdentityConstant(const Value *V, unsigned Opcode, bool Negated) {
+  return isa<ConstantInt, ConstantFP>(V) &&
+         V == getReassocIdentity(Opcode, V->getType(), Negated);
 }
 
 bool isUndefTolerantBinOp(const Value *V) {
@@ -194,8 +201,8 @@ Intrinsic::ID isEquivalentIntrinsicID(Intrinsic::ID LHS, Intrinsic::ID RHS) {
 bool isVectorizableArgMemCall(const CallInst *CI, const TargetLibraryInfo *TLI,
                               bool ReVec) {
   return !isa<IntrinsicInst>(CI) && CI->onlyAccessesArgMemory() &&
-         ((ReVec && TLI->getScalarizedMappingInfo(*CI)) ||
-          CI->hasFnAttr(VFABI::MappingsAttrName));
+         (CI->hasFnAttr(VFABI::MappingsAttrName) ||
+          (ReVec && TLI->getScalarizedMappingInfo(*CI)));
 }
 
 /// Returns true if the trailing arguments of the calls \p VL are the linear
@@ -209,6 +216,21 @@ static bool isLinearVariant(const VFInfo &Info, ArrayRef<Value *> VL,
   });
   if (FirstLinear == Params.end())
     return false;
+  // The vector function may require the aligned pointers. The linear arguments
+  // are passed by the first lane, the vector ones by all the lanes.
+  const DataLayout &DL = SE.getDataLayout();
+  for (const VFParameter &P : Params) {
+    if (P.Alignment == Align())
+      continue;
+    ArrayRef<Value *> Lanes =
+        P.ParamKind == VFParamKind::OMP_Linear ? VL.take_front() : VL;
+    if (any_of(Lanes, [&](Value *V) {
+          Value *Arg = cast<CallInst>(V)->getArgOperand(P.ParamPos);
+          return !Arg->getType()->isPointerTy() ||
+                 getKnownAlignment(Arg, DL) < P.Alignment;
+        }))
+      return false;
+  }
   for (const VFParameter &P : make_range(FirstLinear, Params.end())) {
     if (P.ParamKind != VFParamKind::OMP_Linear)
       return false;
@@ -217,9 +239,9 @@ static bool isLinearVariant(const VFInfo &Info, ArrayRef<Value *> VL,
       return false;
     const SCEV *Lane0SCEV = SE.getSCEV(Lane0Arg);
     for (auto [Lane, V] : enumerate(VL)) {
-      const auto *Diff = dyn_cast<SCEVConstant>(SE.getMinusSCEV(
-          SE.getSCEV(cast<CallInst>(V)->getArgOperand(P.ParamPos)), Lane0SCEV));
-      if (!Diff || Diff->getAPInt().trySExtValue() !=
+      std::optional<APInt> Diff = SE.computeConstantDifference(
+          SE.getSCEV(cast<CallInst>(V)->getArgOperand(P.ParamPos)), Lane0SCEV);
+      if (!Diff || Diff->trySExtValue() !=
                        static_cast<int64_t>(Lane * LaneVF) * P.LinearStepOrPos)
         return false;
     }
@@ -247,8 +269,10 @@ static const VFInfo *getPaddedVariant(ArrayRef<VFInfo> Mappings,
 
 std::optional<VFInfo> getCallVectorVariant(const CallInst *CI, unsigned VF,
                                            ArrayRef<Value *> VL,
-                                           ScalarEvolution *SE,
+                                           ScalarEvolution &SE,
                                            const TargetLibraryInfo *TLI) {
+  if (CI->isNoBuiltin())
+    return std::nullopt;
   // The calls of the vector function, processing LaneVF elements each, use the
   // vector function of the same scalar function for all the elements.
   unsigned LaneVF = 1;
@@ -264,27 +288,45 @@ std::optional<VFInfo> getCallVectorVariant(const CallInst *CI, unsigned VF,
       FunctionType *ScalarFTy = toScalarizedFunctionTy(CI->getFunctionType());
       if (std::optional<VFInfo> Info = VFABI::tryDemangleForVFABI(
               WideVD->getVectorFunctionABIVariantString(), ScalarFTy)) {
-        // The already declared wider vector function must match the variant.
-        const Function *WideF = CI->getModule()->getFunction(Info->VectorName);
-        if (!WideF || WideF->getFunctionType() ==
-                          VFABI::createFunctionType(*Info, ScalarFTy))
+        // The wider vector function, if declared, must be the external function
+        // matching the variant. Its name must not be taken by another global.
+        const GlobalValue *WideGV =
+            CI->getModule()->getNamedValue(Info->VectorName);
+        const auto *WideF = dyn_cast_if_present<Function>(WideGV);
+        if (!WideGV || (WideF && !WideF->hasLocalLinkage() &&
+                        WideF->getFunctionType() ==
+                            VFABI::createFunctionType(*Info, ScalarFTy)))
           Mappings.push_back(*Info);
       }
     }
-  } else {
+  } else if (canVectorizeTy(CI->getType()) &&
+             all_of(CI->getFunctionType()->params(),
+                    VectorType::isValidElementType)) {
+    // The vector variants are defined for the scalar functions of the
+    // vectorizable types only. The declared vector function must match the
+    // variant.
     Mappings = VFDatabase::getMappings(*CI);
+    erase_if(Mappings, [&](const VFInfo &Info) {
+      const Function *VecF = CI->getModule()->getFunction(Info.VectorName);
+      return !VecF ||
+             VecF->getFunctionType() !=
+                 VFABI::createFunctionType(Info, CI->getFunctionType());
+    });
   }
   if (Mappings.empty())
     return std::nullopt;
   // Each lane of the vector call accesses the memory through the linear
-  // pointers, so all the lanes must be the calls to the same function.
-  if (VL.size() * LaneVF == VF && all_of(VL, [&](Value *V) {
+  // pointers, so all the lanes must be the calls to the same function. The
+  // intrinsic calls are vectorized without the linear arguments.
+  if (VL.size() * LaneVF == VF &&
+      getVectorIntrinsicIDForCall(CI, TLI) == Intrinsic::not_intrinsic &&
+      all_of(VL, [&](Value *V) {
         auto *Call = dyn_cast<CallInst>(V);
         return Call && Call->getCalledFunction() == CI->getCalledFunction();
       })) {
     const auto *It = find_if(Mappings, [&](const VFInfo &Info) {
       return Info.Shape.VF == EC && !Info.isMasked() &&
-             isLinearVariant(Info, VL, LaneVF, *SE);
+             isLinearVariant(Info, VL, LaneVF, SE);
     });
     if (It != Mappings.end())
       return *It;
@@ -311,7 +353,7 @@ static unsigned getNumCallElements(ArrayRef<Value *> VL) {
 }
 
 unsigned getCallVariantPartVF(const CallInst *CI, ArrayRef<Value *> VL,
-                              ScalarEvolution *SE,
+                              ScalarEvolution &SE,
                               const TargetLibraryInfo *TLI) {
   if (getCallVectorVariant(CI, getNumCallElements(VL), VL, SE, TLI))
     return VL.size();
@@ -327,7 +369,7 @@ unsigned getCallVariantPartVF(const CallInst *CI, ArrayRef<Value *> VL,
 }
 
 unsigned getNumVectorCallArgs(const CallInst *CI, ArrayRef<Value *> VL,
-                              ScalarEvolution *SE,
+                              ScalarEvolution &SE,
                               const TargetLibraryInfo *TLI) {
   std::optional<VFInfo> Variant =
       getCallVectorVariant(CI, getNumCallElements(VL), VL, SE, TLI);
@@ -343,14 +385,13 @@ bool mayOverlapLinearPointers(const VFInfo &Variant, ArrayRef<Value *> VL,
                               BatchAAResults &BatchAA,
                               const TargetLibraryInfo *TLI) {
   SmallVector<unsigned> LinearPtrArgs;
-  for (const VFParameter &P : Variant.Shape.Parameters) {
+  for (const VFParameter &P : Variant.Shape.Parameters)
     if (P.ParamKind == VFParamKind::OMP_Linear &&
         cast<CallInst>(VL.front())
             ->getArgOperand(P.ParamPos)
             ->getType()
             ->isPointerTy())
       LinearPtrArgs.push_back(P.ParamPos);
-  }
   // The lanes of the variants without the linear pointers may be not calls.
   if (LinearPtrArgs.size() < 2)
     return false;
@@ -392,8 +433,10 @@ bool isCommutative(const Instruction *I, const Value *ValWithUses,
                       (Pred == ICmpInst::ICMP_EQ || Pred == ICmpInst::ICMP_NE))
                     return true;
                   // Commutative, if abs(sub nsw, true) or abs(sub, false).
+                  // A lane without wrap flags, like an or converted to sub,
+                  // does not clear nsw of the vector sub.
                   ConstantInt *Flag;
-                  auto *I = dyn_cast<BinaryOperator>(U.get());
+                  auto *I = dyn_cast<OverflowingBinaryOperator>(U.get());
                   return match(U.getUser(),
                                m_Intrinsic<Intrinsic::abs>(
                                    m_Specific(U.get()), m_ConstantInt(Flag))) &&
@@ -490,19 +533,8 @@ std::optional<unsigned> getExtractIndex(const Instruction *E) {
   assert((Opcode == Instruction::ExtractElement ||
           Opcode == Instruction::ExtractValue) &&
          "Expected extractelement or extractvalue instruction.");
-  if (Opcode == Instruction::ExtractElement) {
-    auto *CI = dyn_cast<ConstantInt>(E->getOperand(1));
-    if (!CI)
-      return std::nullopt;
-    // Check if the index is out of bound. We can get the source vector from
-    // operand 0.
-    unsigned Idx = CI->getZExtValue();
-    auto *EE = cast<ExtractElementInst>(E);
-    const unsigned VF = getNumElements(EE->getVectorOperandType());
-    if (Idx >= VF)
-      return std::nullopt;
-    return Idx;
-  }
+  if (Opcode == Instruction::ExtractElement)
+    return getInsertExtractIndex<ExtractElementInst>(E, /*Offset=*/0);
   auto *EI = cast<ExtractValueInst>(E);
   if (EI->getNumIndices() != 1)
     return std::nullopt;
@@ -1013,10 +1045,10 @@ bool doesInTreeUserNeedToExtract(Value *Scalar, Instruction *UserInst,
     CallInst *CI = cast<CallInst>(UserInst);
     Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
     return any_of(enumerate(CI->args()), [&](auto &&Arg) {
-      return (ID == Intrinsic::not_intrinsic
+      return Arg.value().get() == Scalar &&
+             (ID == Intrinsic::not_intrinsic
                   ? Arg.index() >= NumVecArgs
-                  : isVectorIntrinsicWithScalarOpAtArg(ID, Arg.index(), TTI)) &&
-             Arg.value().get() == Scalar;
+                  : isVectorIntrinsicWithScalarOpAtArg(ID, Arg.index(), TTI));
     });
   }
   default:
@@ -1864,6 +1896,56 @@ unsigned getLoopTripCount(const Loop *L, ScalarEvolution &SE,
     return Scale;
   }
   return LoopAwareTripCount;
+}
+
+bool areTwoInsertFromSameBuildVector(
+    InsertElementInst *VU, InsertElementInst *V,
+    function_ref<Value *(InsertElementInst *)> GetBaseOperand) {
+  // Instructions must be from the same basic blocks.
+  if (VU->getParent() != V->getParent())
+    return false;
+  // Checks if 2 insertelements are from the same buildvector.
+  if (VU->getType() != V->getType())
+    return false;
+  // Multiple used inserts are separate nodes.
+  if (!VU->hasOneUse() && !V->hasOneUse())
+    return false;
+  auto *IE1 = VU;
+  auto *IE2 = V;
+  std::optional<unsigned> Idx1 = getElementIndex(IE1);
+  std::optional<unsigned> Idx2 = getElementIndex(IE2);
+  if (Idx1 == std::nullopt || Idx2 == std::nullopt)
+    return false;
+  // Go through the vector operand of insertelement instructions trying to find
+  // either VU as the original vector for IE2 or V as the original vector for
+  // IE1.
+  SmallBitVector ReusedIdx(VU->getType()->getElementCount().getKnownMinValue());
+  bool IsReusedIdx = false;
+  do {
+    if (IE2 == VU && !IE1)
+      return VU->hasOneUse();
+    if (IE1 == V && !IE2)
+      return V->hasOneUse();
+    if (IE1 && IE1 != V) {
+      unsigned Idx1 = getElementIndex(IE1).value_or(*Idx2);
+      IsReusedIdx |= ReusedIdx.test(Idx1);
+      ReusedIdx.set(Idx1);
+      if ((IE1 != VU && !IE1->hasOneUse()) || IsReusedIdx)
+        IE1 = nullptr;
+      else
+        IE1 = dyn_cast_if_present<InsertElementInst>(GetBaseOperand(IE1));
+    }
+    if (IE2 && IE2 != VU) {
+      unsigned Idx2 = getElementIndex(IE2).value_or(*Idx1);
+      IsReusedIdx |= ReusedIdx.test(Idx2);
+      ReusedIdx.set(Idx2);
+      if ((IE2 != V && !IE2->hasOneUse()) || IsReusedIdx)
+        IE2 = nullptr;
+      else
+        IE2 = dyn_cast_if_present<InsertElementInst>(GetBaseOperand(IE2));
+    }
+  } while (!IsReusedIdx && (IE1 || IE2));
+  return false;
 }
 
 } // namespace llvm::slpvectorizer

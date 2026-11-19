@@ -49,6 +49,7 @@
 #include "clang/Sema/SemaBPF.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaHLSL.h"
+#include "clang/Sema/SemaHexagon.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaM68k.h"
 #include "clang/Sema/SemaMIPS.h"
@@ -7794,6 +7795,9 @@ ProcessDeclAttribute(Sema &S, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_BTFDeclTag:
     handleBTFDeclTagAttr(S, D, AL);
     break;
+  case ParsedAttr::AT_HexagonHLXVectorStackLimit:
+    S.Hexagon().handleHLXVectorStackLimitAttr(D, AL);
+    break;
   case ParsedAttr::AT_WebAssemblyExportName:
     S.Wasm().handleWebAssemblyExportNameAttr(D, AL);
     break;
@@ -7901,7 +7905,7 @@ ProcessDeclAttribute(Sema &S, Decl *D, const ParsedAttr &AL,
     S.SYCL().handleKernelAttr(D, AL);
     break;
   case ParsedAttr::AT_SYCLExternal:
-    handleSimpleAttribute<SYCLExternalAttr>(S, D, AL);
+    S.SYCL().handleSYCLExternalAttr(D, AL);
     break;
   case ParsedAttr::AT_SYCLKernelEntryPoint:
     S.SYCL().handleKernelEntryPointAttr(D, AL);
@@ -8303,6 +8307,9 @@ ProcessDeclAttribute(Sema &S, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_HLSLVkExtBuiltinOutput:
     S.HLSL().handleVkExtBuiltinOutputAttr(D, AL);
+    break;
+  case ParsedAttr::AT_HLSLVkBuiltIn:
+    S.HLSL().handleVkBuiltInAttr(D, AL);
     break;
   case ParsedAttr::AT_HLSLVkPushConstant:
     S.HLSL().handleVkPushConstantAttr(D, AL);

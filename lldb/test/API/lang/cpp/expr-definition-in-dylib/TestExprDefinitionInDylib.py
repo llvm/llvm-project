@@ -30,10 +30,11 @@ class ExprDefinitionInDylibTestCase(TestBase):
             self, "main.cpp", line_number("main.cpp", "return")
         )
 
-        process = target.LaunchSimple(None, env, self.get_process_working_directory())
-
-        self.assertIsNotNone(
-            lldbutil.get_one_thread_stopped_at_breakpoint_id(self.process(), breakpoint)
+        launch_info = target.GetLaunchInfo()
+        launch_info.SetEnvironmentEntries(env, False)
+        launch_info.SetWorkingDirectory(self.get_process_working_directory())
+        lldbutil.run_to_breakpoint_do_run(
+            self, target, target.FindBreakpointByID(breakpoint), launch_info
         )
 
         self.expect_expr("f.method()", result_value="-72", result_type="int")
@@ -101,10 +102,11 @@ class ExprDefinitionInDylibTestCase(TestBase):
             self, "main.cpp", line_number("main.cpp", "return")
         )
 
-        process = target.LaunchSimple(None, env, self.get_process_working_directory())
-
-        self.assertIsNotNone(
-            lldbutil.get_one_thread_stopped_at_breakpoint_id(self.process(), breakpoint)
+        launch_info = target.GetLaunchInfo()
+        launch_info.SetEnvironmentEntries(env, False)
+        launch_info.SetWorkingDirectory(self.get_process_working_directory())
+        lldbutil.run_to_breakpoint_do_run(
+            self, target, target.FindBreakpointByID(breakpoint), launch_info
         )
 
         self.expect_expr("f.method()", result_value="-72", result_type="int")

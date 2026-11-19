@@ -21,6 +21,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/StackColoring.h"
+#include "CodeGenOptions.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DepthFirstIterator.h"
@@ -52,7 +53,6 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -65,32 +65,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "stack-coloring"
-
-static cl::opt<bool>
-DisableColoring("no-stack-coloring",
-        cl::init(false), cl::Hidden,
-        cl::desc("Disable stack coloring"));
-
-/// The user may write code that uses allocas outside of the declared lifetime
-/// zone. This can happen when the user returns a reference to a local
-/// data-structure. We can detect these cases and decide not to optimize the
-/// code. If this flag is enabled, we try to save the user. This option
-/// is treated as overriding LifetimeStartOnFirstUse below.
-static cl::opt<bool>
-ProtectFromEscapedAllocas("protect-from-escaped-allocas",
-                          cl::init(false), cl::Hidden,
-                          cl::desc("Do not optimize lifetime zones that "
-                                   "are broken"));
-
-/// Enable enhanced dataflow scheme for lifetime analysis (treat first
-/// use of stack slot as start of slot lifetime, as opposed to looking
-/// for LIFETIME_START marker). See "Implementation notes" below for
-/// more info.
-static cl::opt<bool>
-LifetimeStartOnFirstUse("stackcoloring-lifetime-start-on-first-use",
-        cl::init(true), cl::Hidden,
-        cl::desc("Treat stack lifetimes as starting on first use, not on START marker."));
-
 
 STATISTIC(NumMarkerSeen,  "Number of lifetime markers found.");
 STATISTIC(StackSpaceSaved, "Number of bytes saved due to merging slots.");
@@ -379,6 +353,7 @@ namespace {
 /// StackColoring - A machine pass for merging disjoint stack allocations,
 /// marked by the LIFETIME_START and LIFETIME_END pseudo instructions.
 class StackColoring {
+  const CodeGenOptions &Opts;
   MachineFrameInfo *MFI = nullptr;
   MachineFunction *MF = nullptr;
 
@@ -435,7 +410,8 @@ class StackColoring {
   unsigned NumIterations;
 
 public:
-  StackColoring(SlotIndexes *Indexes) : Indexes(Indexes) {}
+  StackColoring(const CodeGenOptions &Opts, SlotIndexes *Indexes)
+      : Opts(Opts), Indexes(Indexes) {}
   bool run(MachineFunction &Func, bool OnlyRemoveMarkers = false);
 
 private:
@@ -466,7 +442,8 @@ private:
   /// Returns TRUE if we're using the first-use-begins-lifetime method for
   /// this slot (if FALSE, then the start marker is treated as start of lifetime).
   bool applyFirstUse(int Slot) {
-    if (!LifetimeStartOnFirstUse || ProtectFromEscapedAllocas)
+    if (!Opts.stackcoloring_lifetime_start_on_first_use ||
+        Opts.stackcoloring_protect_from_escaped_allocas)
       return false;
     if (ConservativeSlots.test(Slot))
       return false;
@@ -601,7 +578,8 @@ bool StackColoring::isLifetimeStartOrEnd(const MachineInstr &MI,
       isStart = true;
       return true;
     }
-  } else if (LifetimeStartOnFirstUse && !ProtectFromEscapedAllocas) {
+  } else if (Opts.stackcoloring_lifetime_start_on_first_use &&
+             !Opts.stackcoloring_protect_from_escaped_allocas) {
     if (!MI.isDebugInstr()) {
       bool found = false;
       for (const MachineOperand &MO : MI.operands()) {
@@ -927,17 +905,12 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
   // Keep a list of allocas which has been affected by the remap.
   SmallPtrSet<const AllocaInst*, 32> MergedAllocas;
 
-  for (const auto &SI : SlotRemap) {
-    const AllocaInst *From = MFI->getObjectAllocation(SI.first);
-    const AllocaInst *To = MFI->getObjectAllocation(SI.second);
+  for (const auto &[FromIdx, ToIdx] : SlotRemap) {
+    AllocaInst *From =
+        const_cast<AllocaInst *>(MFI->getObjectAllocation(FromIdx));
+    AllocaInst *To = const_cast<AllocaInst *>(MFI->getObjectAllocation(ToIdx));
     assert(To && From && "Invalid allocation object");
     Allocas[From] = To;
-
-    // If From is before wo, its possible that there is a use of From between
-    // them.
-    if (From->comesBefore(To))
-      const_cast<AllocaInst *>(To)->moveBefore(
-          const_cast<AllocaInst *>(From)->getIterator());
 
     // AA might be used later for instruction scheduling, and we need it to be
     // able to deduce the correct aliasing releationships between pointers
@@ -945,16 +918,15 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
     // The only safe way, without directly informing AA about the remapping
     // somehow, is to directly update the IR to reflect the change being made
     // here.
-    Instruction *Inst = const_cast<AllocaInst *>(To);
+
+    // If From is before wo, its possible that there is a use of From between
+    // them.
+    if (From->comesBefore(To))
+      To->moveBefore(From->getIterator());
+
     // Inherit maximum alignment.
     if (From->getAlign() > To->getAlign())
-      cast<AllocaInst>(Inst)->setAlignment(From->getAlign());
-    // Fix-up types.
-    if (From->getType() != To->getType()) {
-      BitCastInst *Cast = new BitCastInst(Inst, From->getType());
-      Cast->insertAfter(Inst->getIterator());
-      Inst = Cast;
-    }
+      To->setAlignment(From->getAlign());
 
     // We keep both slots to maintain AliasAnalysis metadata later.
     MergedAllocas.insert(From);
@@ -963,30 +935,23 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
     // Transfer the stack protector layout tag, but make sure that SSPLK_AddrOf
     // does not overwrite SSPLK_SmallArray or SSPLK_LargeArray, and make sure
     // that SSPLK_SmallArray does not overwrite SSPLK_LargeArray.
-    MachineFrameInfo::SSPLayoutKind FromKind
-        = MFI->getObjectSSPLayout(SI.first);
-    MachineFrameInfo::SSPLayoutKind ToKind = MFI->getObjectSSPLayout(SI.second);
+    MachineFrameInfo::SSPLayoutKind FromKind = MFI->getObjectSSPLayout(FromIdx);
+    MachineFrameInfo::SSPLayoutKind ToKind = MFI->getObjectSSPLayout(ToIdx);
     if (FromKind != MachineFrameInfo::SSPLK_None &&
         (ToKind == MachineFrameInfo::SSPLK_None ||
          (ToKind != MachineFrameInfo::SSPLK_LargeArray &&
           FromKind != MachineFrameInfo::SSPLK_AddrOf)))
-      MFI->setObjectSSPLayout(SI.second, FromKind);
+      MFI->setObjectSSPLayout(ToIdx, FromKind);
 
     // The new alloca might not be valid in a llvm.dbg.declare for this
     // variable, so poison out the use to make the verifier happy.
-    AllocaInst *FromAI = const_cast<AllocaInst *>(From);
-    if (FromAI->isUsedByMetadata())
-      ValueAsMetadata::handleRAUW(FromAI, PoisonValue::get(FromAI->getType()));
-    for (auto &Use : FromAI->uses()) {
-      if (BitCastInst *BCI = dyn_cast<BitCastInst>(Use.get()))
-        if (BCI->isUsedByMetadata())
-          ValueAsMetadata::handleRAUW(BCI, PoisonValue::get(BCI->getType()));
-    }
+    if (From->isUsedByMetadata())
+      ValueAsMetadata::handleRAUW(From, PoisonValue::get(From->getType()));
 
     // Note that this will not replace uses in MMOs (which we'll update below),
     // or anywhere else (which is why we won't delete the original
     // instruction).
-    FromAI->replaceAllUsesWith(Inst);
+    From->replaceAllUsesWith(To);
   }
 
   // Remap all instructions to the new stack slots.
@@ -1040,7 +1005,8 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
         bool TouchesMemory = I.mayLoadOrStore();
         // If we *don't* protect the user from escaped allocas, don't bother
         // validating the instructions.
-        if (!I.isDebugInstr() && TouchesMemory && ProtectFromEscapedAllocas) {
+        if (!I.isDebugInstr() && TouchesMemory &&
+            Opts.stackcoloring_protect_from_escaped_allocas) {
           SlotIndex Index = Indexes->getInstructionIndex(I);
           const LiveInterval *Interval = &*Intervals[FromSlot];
           assert(Interval->find(Index) != Interval->end() &&
@@ -1192,13 +1158,15 @@ void StackColoring::expungeSlotMap(DenseMap<int, int> &SlotRemap,
 }
 
 bool StackColoringLegacy::runOnMachineFunction(MachineFunction &MF) {
-  StackColoring SC(&getAnalysis<SlotIndexesWrapperPass>().getSI());
+  StackColoring SC(getCodeGenOptions(MF),
+                   &getAnalysis<SlotIndexesWrapperPass>().getSI());
   return SC.run(MF, skipFunction(MF.getFunction()));
 }
 
 PreservedAnalyses StackColoringPass::run(MachineFunction &MF,
                                          MachineFunctionAnalysisManager &MFAM) {
-  StackColoring SC(&MFAM.getResult<SlotIndexesAnalysis>(MF));
+  StackColoring SC(getCodeGenOptions(MF),
+                   &MFAM.getResult<SlotIndexesAnalysis>(MF));
   bool OnlyRemoveMarkers = MF.getFunction().hasOptNone() ||
                            shouldSkipOptimizationForOptBisect(MF.getFunction());
   if (SC.run(MF, OnlyRemoveMarkers)) {
@@ -1250,7 +1218,7 @@ bool StackColoring::run(MachineFunction &Func, bool OnlyRemoveMarkers) {
   // Don't continue because there are not enough lifetime markers, or the
   // stack is too small, or we are told not to optimize the slots, or
   // opt-bisect-limit is skipping this pass.
-  if (NumMarkers < 2 || TotalSize < 16 || DisableColoring ||
+  if (NumMarkers < 2 || TotalSize < 16 || !Opts.stack_coloring ||
       OnlyRemoveMarkers) {
     LLVM_DEBUG(dbgs() << "Will not try to merge slots.\n");
     return removeAllMarkers();
@@ -1274,7 +1242,7 @@ bool StackColoring::run(MachineFunction &Func, bool OnlyRemoveMarkers) {
 
   // Search for allocas which are used outside of the declared lifetime
   // markers.
-  if (ProtectFromEscapedAllocas)
+  if (Opts.stackcoloring_protect_from_escaped_allocas)
     removeInvalidSlotRanges();
 
   // Maps old slots to new slots.

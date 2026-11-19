@@ -1,3 +1,8 @@
+set(LLVM_TABLEGEN_PROJECT LLVM_HEADERS)
+set(LLVM_TARGET_DEFINITIONS IPOOptions.td)
+llvm_tablegen(IPOOptions.inc -gen-opt-parser-defs)
+add_public_tablegen_target(IPOOptionsTableGen)
+
 add_llvm_component_library(LLVMipo
   AlwaysInliner.cpp
   Annotation2Metadata.cpp
@@ -24,6 +29,7 @@ add_llvm_component_library(LLVMipo
   GlobalSplit.cpp
   HotColdSplitting.cpp
   IPO.cpp
+  IPOOptions.cpp
   InferFunctionAttrs.cpp
   Inliner.cpp
   Instrumentor.cpp
@@ -52,6 +58,7 @@ add_llvm_component_library(LLVMipo
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Transforms/IPO
 
   DEPENDS
+  IPOOptionsTableGen
   intrinsics_gen
   omp_gen
 
@@ -72,6 +79,7 @@ add_llvm_component_library(LLVMipo
   Demangle
   Linker
   Object
+  Option
   ProfileData
   Scalar
   Support
