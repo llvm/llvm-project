@@ -4786,6 +4786,11 @@ SelectionDAG and GlobalISel lower `bN` as the equi-sized integer scalar
 (`iN`/`sN`); backend passes do not see the byte type and do not preserve
 its bit-level semantics.
 
+On the ABI level, a byte type is treated like the equally-sized integer type,
+i.e., functions declared with one type can be called with the other type.
+This also applies in nested positions, e.g. for vectors of byte/integer type.
+Such a call behaves like an implicitly inserted `bitcast`.
+
 **Syntax:**
 
 ```
