@@ -8,9 +8,9 @@
 // RUN: cir-opt %t/combined.cir --verify-roundtrip -o /dev/null
 
 // COMBINE:      module attributes {cir.offload.container} {
-// COMBINE-NEXT:   module @host attributes {{{.*}}cir.offload.kind = #cir.offload<host>, cir.triple = "x86_64-unknown-linux-gnu"} {
+// COMBINE-NEXT:   module @host attributes {cir.lowering_options = #cir.lowering_options<{{.*}}cuda_is_device = false{{.*}}>, cir.offload.kind = #cir.offload<host>, cir.triple = "x86_64-unknown-linux-gnu"} {
 // COMBINE-NEXT:     cir.func{{.*}} @host_fn
-// COMBINE:        module @device_0 attributes {{{.*}}cir.offload.kind = #cir.offload<device>, cir.triple = "nvptx64-nvidia-cuda"} {
+// COMBINE:        module @device_0 attributes {cir.lowering_options = #cir.lowering_options<{{.*}}cuda_is_device = true{{.*}}>, cir.offload.kind = #cir.offload<device>, cir.triple = "nvptx64-nvidia-cuda"} {
 // COMBINE-NEXT:     cir.func{{.*}} @device_fn
 
 // The host module goes first whatever the input order; device modules keep
@@ -33,8 +33,8 @@
 // RUN:   %t/host-hip.cir \
 // RUN:   %t/device-gfx90a.cir | FileCheck %s --check-prefix=HIP
 
-// HIP:      module @host attributes {{{.*}}cir.offload.kind = #cir.offload<host>
-// HIP:      module @device_0 attributes {{{.*}}cir.offload.kind = #cir.offload<device>
+// HIP:      module @host attributes {cir.lowering_options = #cir.lowering_options<{{.*}}cuda_is_device = false, hip = true{{.*}}>, cir.offload.kind = #cir.offload<host>
+// HIP:      module @device_0 attributes {{{.*}}cir.lowering_options = #cir.lowering_options<{{.*}}cuda_is_device = true, hip = true{{.*}}>, cir.offload.kind = #cir.offload<device>
 
 // RUN: not cir-offload-merge %t/host.cir -o %t/out.cir 2>&1 | FileCheck %s --check-prefix=ERR-NO-MODE
 // ERR-NO-MODE: error: expected -combine
