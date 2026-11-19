@@ -1176,7 +1176,7 @@ LogicalResult mlir::coalescePerfectlyNestedSCFForLoops(scf::ForOp op) {
   return result;
 }
 
-void mlir::collapseParallelLoops(
+scf::ParallelOp mlir::collapseParallelLoops(
     RewriterBase &rewriter, scf::ParallelOp loops,
     ArrayRef<std::vector<unsigned>> combinedDimensions) {
   OpBuilder::InsertionGuard g(rewriter);
@@ -1227,8 +1227,8 @@ void mlir::collapseParallelLoops(
   // of the original induction value this represents. This is a normalized value
   // that is un-normalized already by the previous logic.
   auto newPloop = scf::ParallelOp::create(
-      rewriter, loc, lowerBounds, upperBounds, steps,
-      [&](OpBuilder &insideBuilder, Location, ValueRange ploopIVs) {
+      rewriter, loc, lowerBounds, upperBounds, steps, loops.getInitVals(),
+      [&](OpBuilder &insideBuilder, Location, ValueRange ploopIVs, ValueRange) {
         for (unsigned i = 0, e = combinedDimensions.size(); i < e; ++i) {
           Value previous = ploopIVs[i];
           unsigned numberCombinedDimensions = combinedDimensions[i].size();
@@ -1255,12 +1255,18 @@ void mlir::collapseParallelLoops(
         }
       });
 
-  // Replace the old loop with the new loop.
-  loops.getBody()->back().erase();
-  newPloop.getBody()->getOperations().splice(
-      Block::iterator(newPloop.getBody()->back()),
-      loops.getBody()->getOperations());
-  loops.erase();
+  // The builder inserts an empty scf.reduce only when there are no reductions.
+  // Drop that terminator and move the original one over with the body, so a
+  // loop with reductions keeps its scf.reduce and its results.
+  if (!newPloop.getBody()->empty()) {
+    if (auto reduceOp = dyn_cast<scf::ReduceOp>(newPloop.getBody()->back()))
+      rewriter.eraseOp(reduceOp);
+  }
+  newPloop.getBody()->getOperations().splice(newPloop.getBody()->end(),
+                                             loops.getBody()->getOperations());
+  // Replace uses of the results
+  rewriter.replaceOp(loops, newPloop);
+  return newPloop;
 }
 
 // Hoist the ops within `outer` that appear before `inner`.
