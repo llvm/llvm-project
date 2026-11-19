@@ -256,6 +256,10 @@ void TokenLexer::ExpandFunctionArguments() {
   // we install the newly expanded sequence as the new 'Tokens' list.
   bool MadeChange = false;
 
+  // Retain the existence of leading placemarkers even though they are not
+  // stored in ResultToks. They can supply the left operand of a later ##.
+  unsigned NumLeadingPlacemarkers = 0;
+
   std::optional<bool> CalledWithVariadicArguments;
 
   VAOptExpansionContext VCtx(PP);
@@ -333,6 +337,11 @@ void TokenLexer::ExpandFunctionArguments() {
 
         } else if (/*No tokens within VAOPT*/
                    ResultToks.size() == VCtx.getNumberOfTokensPriorToVAOpt()) {
+
+          if (ResultToks.empty() &&
+              !(I + 1 < E && Tokens[I + 1].is(tok::hashhash)))
+            ++NumLeadingPlacemarkers;
+
           // Treat VAOPT as a placemarker token.  Eat either the '##' before the
           // RHS/VAOPT (if one exists, suggesting that the LHS (if any) to that
           // hashhash was not a placemarker) or the '##'
@@ -502,6 +511,10 @@ void TokenLexer::ExpandFunctionArguments() {
         // We're creating a placeholder token. Usually this doesn't matter,
         // but it can affect paste behavior when at the start or end of a
         // __VA_OPT__.
+
+        if (ResultToks.empty())
+          ++NumLeadingPlacemarkers;
+
         if (NonEmptyPasteBefore) {
           // We're imagining a placeholder token is inserted here. If this is
           // the first token in a __VA_OPT__ after a ##, delete the ##.
@@ -595,12 +608,20 @@ void TokenLexer::ExpandFunctionArguments() {
       // (and we are still processing tokens within VA_OPT).  We handle the case
       // of removing the paste operator if __VA_OPT__ reduces to the notional
       // placemarker above when we encounter the closing paren of VA_OPT.
-      if (!VCtx.isInVAOpt() ||
-          ResultToks.size() > VCtx.getNumberOfTokensPriorToVAOpt())
-        ResultToks.pop_back();
-      else
-        VCtx.hasPlaceholderAfterHashhashAtStart();
+
+      // Keep an operator without a left operand so the check below can
+      // diagnose it, even when the right operand is also empty.
+      if (ResultToks.size() > 1 || NumLeadingPlacemarkers) {
+        if (!VCtx.isInVAOpt() ||
+            ResultToks.size() > VCtx.getNumberOfTokensPriorToVAOpt())
+          ResultToks.pop_back();
+        else
+          VCtx.hasPlaceholderAfterHashhashAtStart();
+      }
     }
+
+    if (ResultToks.empty() && !NonEmptyPasteBefore)
+      ++NumLeadingPlacemarkers;
 
     // If this is the __VA_ARGS__ token, and if the argument wasn't provided,
     // and if the macro had at least one real argument, and if the token before
@@ -614,6 +635,32 @@ void TokenLexer::ExpandFunctionArguments() {
 
   // If anything changed, install this as the new Tokens list.
   if (MadeChange) {
+
+    // A leading placemarker can be pasted with a following token. If that
+    // token is another paste operator, its operator role is retained.
+    unsigned NumLeadingPastes = 0;
+    while (NumLeadingPastes < ResultToks.size() && NumLeadingPlacemarkers &&
+           ResultToks[NumLeadingPastes].is(tok::hashhash)) {
+      ++NumLeadingPastes;
+      --NumLeadingPlacemarkers;
+    }
+    ResultToks.erase(ResultToks.begin(), ResultToks.begin() + NumLeadingPastes);
+
+    // Empty arguments can leave a paste operator without a left operand.
+    // Check after substitution so that placemarker processing has finished.
+    if (!ResultToks.empty() && ResultToks.front().is(tok::hashhash)) {
+      SourceManager &SM = PP.getSourceManager();
+      SourceLocation Loc = SM.createExpansionLoc(
+          ResultToks.front().getLocation(), ExpandLocStart, ExpandLocEnd, 2);
+      PP.Diag(Loc, diag::err_paste_at_start);
+
+      // Discard leading paste operators to recover without treating one as
+      // the left operand of another paste.
+      auto FirstOperand = llvm::find_if_not(
+          ResultToks, [](const Token &Tok) { return Tok.is(tok::hashhash); });
+      ResultToks.erase(ResultToks.begin(), FirstOperand);
+    }
+
     assert(!OwnsTokens && "This would leak if we already own the token list");
     // This is deleted in the dtor.
     NumTokens = ResultToks.size();
@@ -790,7 +837,14 @@ bool TokenLexer::pasteTokens(Token &LHSTok, ArrayRef<Token> TokenStream,
     PasteOpLoc = TokenStream[CurIdx].getLocation();
     if (TokenStream[CurIdx].is(tok::hashhash))
       ++CurIdx;
-    assert(!IsAtEnd() && "No token on the RHS of a paste operator!");
+
+    if (IsAtEnd()) {
+      SourceManager &SM = PP.getSourceManager();
+      SourceLocation Loc =
+          SM.createExpansionLoc(PasteOpLoc, ExpandLocStart, ExpandLocEnd, 2);
+      PP.Diag(Loc, diag::err_paste_at_end);
+      break;
+    }
 
     // Get the RHS token.
     const Token &RHS = TokenStream[CurIdx];
