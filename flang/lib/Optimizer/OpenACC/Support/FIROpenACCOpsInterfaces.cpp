@@ -301,6 +301,14 @@ void IndirectGlobalAccessModel<fir::UseStmtOp>::getReferencedSymbols(
       if (auto renameAttr = mlir::dyn_cast<fir::UseRenameAttr>(attr))
         symbols.push_back(renameAttr.getSymbol());
   }
+  if (auto commonBlockMembers = useStmtOp.getCommonBlockMembers()) {
+    for (auto attr : *commonBlockMembers)
+      if (auto member = mlir::dyn_cast<fir::UseCommonBlockMemberAttr>(attr)) {
+        symbols.push_back(member.getCommonBlock());
+        collectReferencedSymbolsForType(member.getFortranType(), op, symbols,
+                                        symbolTable);
+      }
+  }
 }
 
 template <>

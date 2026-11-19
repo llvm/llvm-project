@@ -251,6 +251,7 @@ public:
             std::get_if<std::list<parser::Only>>(&useStmt.u)}) {
       // USE mod, ONLY: list
       Fortran::semantics::PreservedUseStmt stmt{moduleName};
+      stmt.hasOnlyClause = true;
 
       for (const auto &only : *onlyList) {
         Fortran::common::visit(
@@ -263,7 +264,6 @@ public:
                             std::string localName{
                                 std::get<0>(names.t).source.ToString()};
                             stmt.renames.push_back(localName);
-                            stmt.hasOnlyWithRenames = true;
                           },
                           [&](const parser::Rename::Operators &) {
                             // Operator renames - not commonly needed for debug
