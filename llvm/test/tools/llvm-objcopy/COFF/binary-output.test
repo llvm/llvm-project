@@ -1,0 +1,102 @@
+## Write initialized section contents at their relative addresses, without PE
+## headers or file-alignment padding. Preserve gaps, but do not extend the
+## output for trailing BSS. Keep discardable data, but omit debug sections.
+# RUN: yaml2obj --docnum=1 %s -o %t.exe
+# RUN: llvm-objcopy -O binary %t.exe %t.bin
+# RUN: od -Ax -tx1 -v %t.bin | FileCheck %s --check-prefix=IMAGE
+# RUN: yaml2obj --docnum=1 -DMACHINE=IMAGE_FILE_MACHINE_I386 -DIMAGEBASE=0x400000 %s -o %t32.exe
+# RUN: llvm-objcopy --output-target=binary %t32.exe %t32.bin
+# RUN: cmp %t.bin %t32.bin
+
+# IMAGE:      000000 11 22 33 44 00 00 00 00 00 00 00 00 00 00 00 00
+# IMAGE-NEXT: 000010 55 66 77 88 00 00 00 00 00 00 00 00 00 00 00 00
+# IMAGE-NEXT: 000020 dd ee ff
+# IMAGE-NEXT: 000023
+
+## Selecting a section starts its contents at offset zero and preserves only
+## its virtual size, not its padded raw size.
+# RUN: llvm-objcopy -O binary -j .data %t.exe %t.data
+# RUN: od -Ax -tx1 -v %t.data | FileCheck %s --check-prefix=DATA
+# DATA:      000000 dd ee ff
+# DATA-NEXT: 000003
+
+## Apply section edits before writing the binary output.
+# RUN: llvm-objcopy -O binary -j .text --update-section .text=%t.data %t.exe %t.updated
+# RUN: cmp %t.data %t.updated
+
+## No initialized contents means an empty output, not an empty PE image.
+# RUN: llvm-objcopy -O binary -j .bss %t.exe %t.empty
+# RUN: wc -c < %t.empty | FileCheck %s --check-prefix=EMPTY
+# RUN: llvm-objcopy -O binary -j .missing %t.exe %t.empty
+# RUN: wc -c < %t.empty | FileCheck %s --check-prefix=EMPTY
+# EMPTY: 0
+
+--- !COFF
+header:
+  Machine: [[MACHINE=IMAGE_FILE_MACHINE_AMD64]]
+OptionalHeader:
+  ImageBase: [[IMAGEBASE=0x140000000]]
+  SectionAlignment: 16
+  FileAlignment: 16
+sections:
+  - Name: .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_EXECUTE ]
+    VirtualAddress: 0x1000
+    VirtualSize: 4
+    SectionData: '11223344'
+  - Name: .reloc
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_DISCARDABLE ]
+    VirtualAddress: 0x1010
+    VirtualSize: 4
+    SectionData: '55667788'
+  - Name: .data
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
+    VirtualAddress: 0x1020
+    VirtualSize: 3
+    SectionData: 'DDEEFF'
+  - Name: .bss
+    Characteristics: [ IMAGE_SCN_CNT_UNINITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
+    VirtualAddress: 0x1030
+    VirtualSize: 0x100
+  - Name: .debug_info
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_DISCARDABLE ]
+    VirtualSize: 4
+    SectionData: 'DEADBEEF'
+  - Name: .gnu_debuglink
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_DISCARDABLE ]
+    VirtualSize: 4
+    SectionData: 'DEADBEEF'
+symbols: []
+
+## Relocatable COFF objects use their raw section sizes. Do not assign new
+## addresses or apply relocations; later sections overwrite overlapping bytes.
+# RUN: yaml2obj --docnum=2 %s -o %t.obj
+# RUN: llvm-objcopy -O binary %t.obj %t.obj.bin
+# RUN: od -Ax -tx1 -v %t.obj.bin | FileCheck %s --check-prefix=OBJ
+# OBJ:      000000 aa bb 33 44
+# OBJ-NEXT: 000004
+
+--- !COFF
+header:
+  Machine: IMAGE_FILE_MACHINE_AMD64
+sections:
+  - Name: .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_EXECUTE ]
+    SectionData: '11223344'
+    Relocations:
+      - VirtualAddress: 0
+        SymbolName: target
+        Type: IMAGE_REL_AMD64_ADDR32
+  - Name: .data
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
+    SectionData: 'AABB'
+  - Name: .bss
+    Characteristics: [ IMAGE_SCN_CNT_UNINITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
+    SizeOfRawData: 16
+symbols:
+  - Name: target
+    Value: 0
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_NULL
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL
+    SectionNumber: 0

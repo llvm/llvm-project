@@ -21,6 +21,15 @@ namespace coff {
 
 struct Object;
 
+class BinaryWriter {
+  const Object &Obj;
+  raw_ostream &Out;
+
+public:
+  BinaryWriter(const Object &Obj, raw_ostream &Out) : Obj(Obj), Out(Out) {}
+  Error write();
+};
+
 class COFFWriter {
   Object &Obj;
   std::unique_ptr<WritableMemoryBuffer> Buf;
