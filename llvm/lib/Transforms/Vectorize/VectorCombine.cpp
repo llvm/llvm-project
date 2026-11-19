@@ -6570,10 +6570,9 @@ bool VectorCombine::foldDeinterleaveIntrinsics(Instruction &I) {
   Value *NewDeinterleave = Builder.CreateIntrinsic(
       Intrinsic::vector_deinterleave2, {NewVecTy}, {NewVecCast});
   for (auto [Idx, MergeInst] : enumerate(MergeInsts)) {
-    unsigned NewIdx = Idx;
     if (DL->isBigEndian())
-      NewIdx = 1 - NewIdx;
-    Value *NewField = Builder.CreateExtractValue(NewDeinterleave, NewIdx);
+      Idx ^= 1;
+    Value *NewField = Builder.CreateExtractValue(NewDeinterleave, Idx);
     NewField = Builder.CreateBitCast(NewField, MergeInst->getType());
     replaceValue(*MergeInst, *NewField);
   }

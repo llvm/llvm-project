@@ -9,16 +9,13 @@
 ; big-endian targets: the low half of the merged element must come from the
 ; second field there.
 
-declare { <4 x i32>, <4 x i32> } @llvm.vector.deinterleave2.v8i32(<8 x i32>)
-declare { <vscale x 8 x i32>, <vscale x 8 x i32> } @llvm.vector.deinterleave2.nxv16i32(<vscale x 16 x i32>)
-
 ; The low half of each merged element comes from field 0:
 ;   merge0 = (f0 & 65535) | (f1 << 16)
 ;   merge1 = (f1 & -65536) | (f0 >> 16)
 ; Folded on little-endian targets only.
 define void @deinterleave2_merge_v8i32(<8 x i32> %v, ptr %p, ptr %q) {
 ; LE-LABEL: define void @deinterleave2_merge_v8i32(
-; LE-SAME: <8 x i32> [[V:%.*]], ptr [[P:%.*]], ptr [[Q:%.*]]) #[[ATTR1:[0-9]+]] {
+; LE-SAME: <8 x i32> [[V:%.*]], ptr [[P:%.*]], ptr [[Q:%.*]]) #[[ATTR0:[0-9]+]] {
 ; LE-NEXT:    [[TMP1:%.*]] = bitcast <8 x i32> [[V]] to <16 x i16>
 ; LE-NEXT:    [[TMP2:%.*]] = call { <8 x i16>, <8 x i16> } @llvm.vector.deinterleave2.v16i16(<16 x i16> [[TMP1]])
 ; LE-NEXT:    [[TMP3:%.*]] = extractvalue { <8 x i16>, <8 x i16> } [[TMP2]], 0
@@ -30,7 +27,7 @@ define void @deinterleave2_merge_v8i32(<8 x i32> %v, ptr %p, ptr %q) {
 ; LE-NEXT:    ret void
 ;
 ; BE-LABEL: define void @deinterleave2_merge_v8i32(
-; BE-SAME: <8 x i32> [[V:%.*]], ptr [[P:%.*]], ptr [[Q:%.*]]) #[[ATTR1:[0-9]+]] {
+; BE-SAME: <8 x i32> [[V:%.*]], ptr [[P:%.*]], ptr [[Q:%.*]]) #[[ATTR0:[0-9]+]] {
 ; BE-NEXT:    [[D:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.vector.deinterleave2.v8i32(<8 x i32> [[V]])
 ; BE-NEXT:    [[F0:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[D]], 0
 ; BE-NEXT:    [[F1:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[D]], 1
@@ -64,7 +61,7 @@ define void @deinterleave2_merge_v8i32(<8 x i32> %v, ptr %p, ptr %q) {
 ; Folded on big-endian targets only.
 define void @deinterleave2_merge_swapped_v8i32(<8 x i32> %v, ptr %p, ptr %q) {
 ; LE-LABEL: define void @deinterleave2_merge_swapped_v8i32(
-; LE-SAME: <8 x i32> [[V:%.*]], ptr [[P:%.*]], ptr [[Q:%.*]]) #[[ATTR1]] {
+; LE-SAME: <8 x i32> [[V:%.*]], ptr [[P:%.*]], ptr [[Q:%.*]]) #[[ATTR0]] {
 ; LE-NEXT:    [[D:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.vector.deinterleave2.v8i32(<8 x i32> [[V]])
 ; LE-NEXT:    [[F0:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[D]], 0
 ; LE-NEXT:    [[F1:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[D]], 1
@@ -79,7 +76,7 @@ define void @deinterleave2_merge_swapped_v8i32(<8 x i32> %v, ptr %p, ptr %q) {
 ; LE-NEXT:    ret void
 ;
 ; BE-LABEL: define void @deinterleave2_merge_swapped_v8i32(
-; BE-SAME: <8 x i32> [[V:%.*]], ptr [[P:%.*]], ptr [[Q:%.*]]) #[[ATTR1]] {
+; BE-SAME: <8 x i32> [[V:%.*]], ptr [[P:%.*]], ptr [[Q:%.*]]) #[[ATTR0]] {
 ; BE-NEXT:    [[TMP1:%.*]] = bitcast <8 x i32> [[V]] to <16 x i16>
 ; BE-NEXT:    [[TMP2:%.*]] = call { <8 x i16>, <8 x i16> } @llvm.vector.deinterleave2.v16i16(<16 x i16> [[TMP1]])
 ; BE-NEXT:    [[TMP3:%.*]] = extractvalue { <8 x i16>, <8 x i16> } [[TMP2]], 1
@@ -107,7 +104,7 @@ define void @deinterleave2_merge_swapped_v8i32(<8 x i32> %v, ptr %p, ptr %q) {
 ; Same as above, but with scalable vectors.
 define void @deinterleave2_merge_nxv16i32(<vscale x 16 x i32> %v, ptr %p, ptr %q) {
 ; LE-LABEL: define void @deinterleave2_merge_nxv16i32(
-; LE-SAME: <vscale x 16 x i32> [[V:%.*]], ptr [[P:%.*]], ptr [[Q:%.*]]) #[[ATTR1]] {
+; LE-SAME: <vscale x 16 x i32> [[V:%.*]], ptr [[P:%.*]], ptr [[Q:%.*]]) #[[ATTR0]] {
 ; LE-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 16 x i32> [[V]] to <vscale x 32 x i16>
 ; LE-NEXT:    [[TMP2:%.*]] = call { <vscale x 16 x i16>, <vscale x 16 x i16> } @llvm.vector.deinterleave2.nxv32i16(<vscale x 32 x i16> [[TMP1]])
 ; LE-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 16 x i16>, <vscale x 16 x i16> } [[TMP2]], 0
@@ -119,7 +116,7 @@ define void @deinterleave2_merge_nxv16i32(<vscale x 16 x i32> %v, ptr %p, ptr %q
 ; LE-NEXT:    ret void
 ;
 ; BE-LABEL: define void @deinterleave2_merge_nxv16i32(
-; BE-SAME: <vscale x 16 x i32> [[V:%.*]], ptr [[P:%.*]], ptr [[Q:%.*]]) #[[ATTR1]] {
+; BE-SAME: <vscale x 16 x i32> [[V:%.*]], ptr [[P:%.*]], ptr [[Q:%.*]]) #[[ATTR0]] {
 ; BE-NEXT:    [[D:%.*]] = call { <vscale x 8 x i32>, <vscale x 8 x i32> } @llvm.vector.deinterleave2.nxv16i32(<vscale x 16 x i32> [[V]])
 ; BE-NEXT:    [[F0:%.*]] = extractvalue { <vscale x 8 x i32>, <vscale x 8 x i32> } [[D]], 0
 ; BE-NEXT:    [[F1:%.*]] = extractvalue { <vscale x 8 x i32>, <vscale x 8 x i32> } [[D]], 1
@@ -149,7 +146,7 @@ define void @deinterleave2_merge_nxv16i32(<vscale x 16 x i32> %v, ptr %p, ptr %q
 
 define void @deinterleave2_merge_swapped_nxv16i32(<vscale x 16 x i32> %v, ptr %p, ptr %q) {
 ; LE-LABEL: define void @deinterleave2_merge_swapped_nxv16i32(
-; LE-SAME: <vscale x 16 x i32> [[V:%.*]], ptr [[P:%.*]], ptr [[Q:%.*]]) #[[ATTR1]] {
+; LE-SAME: <vscale x 16 x i32> [[V:%.*]], ptr [[P:%.*]], ptr [[Q:%.*]]) #[[ATTR0]] {
 ; LE-NEXT:    [[D:%.*]] = call { <vscale x 8 x i32>, <vscale x 8 x i32> } @llvm.vector.deinterleave2.nxv16i32(<vscale x 16 x i32> [[V]])
 ; LE-NEXT:    [[F0:%.*]] = extractvalue { <vscale x 8 x i32>, <vscale x 8 x i32> } [[D]], 0
 ; LE-NEXT:    [[F1:%.*]] = extractvalue { <vscale x 8 x i32>, <vscale x 8 x i32> } [[D]], 1
@@ -164,7 +161,7 @@ define void @deinterleave2_merge_swapped_nxv16i32(<vscale x 16 x i32> %v, ptr %p
 ; LE-NEXT:    ret void
 ;
 ; BE-LABEL: define void @deinterleave2_merge_swapped_nxv16i32(
-; BE-SAME: <vscale x 16 x i32> [[V:%.*]], ptr [[P:%.*]], ptr [[Q:%.*]]) #[[ATTR1]] {
+; BE-SAME: <vscale x 16 x i32> [[V:%.*]], ptr [[P:%.*]], ptr [[Q:%.*]]) #[[ATTR0]] {
 ; BE-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 16 x i32> [[V]] to <vscale x 32 x i16>
 ; BE-NEXT:    [[TMP2:%.*]] = call { <vscale x 16 x i16>, <vscale x 16 x i16> } @llvm.vector.deinterleave2.nxv32i16(<vscale x 32 x i16> [[TMP1]])
 ; BE-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 16 x i16>, <vscale x 16 x i16> } [[TMP2]], 1
