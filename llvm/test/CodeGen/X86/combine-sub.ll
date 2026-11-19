@@ -30,12 +30,12 @@ define <4 x i32> @combine_vec_sub_self(<4 x i32> %a) {
 define <4 x i32> @combine_vec_sub_constant(<4 x i32> %x) {
 ; SSE-LABEL: combine_vec_sub_constant:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    psubd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    psubd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [0,1,2,3]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_sub_constant:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpsubd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpsubd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [0,1,2,3]
 ; AVX-NEXT:    retq
   %1 = sub <4 x i32> %x, <i32 0, i32 1, i32 2, i32 3>
   ret <4 x i32> %1

@@ -2424,13 +2424,19 @@ public:
   LogicalResult
   matchAndRewrite(spirv::ModuleOp spvModuleOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-
-    auto newModuleOp =
-        ModuleOp::create(rewriter, spvModuleOp.getLoc(), spvModuleOp.getName());
-    rewriter.inlineRegionBefore(spvModuleOp.getRegion(), newModuleOp.getBody());
-
-    // Remove the terminator block that was automatically added by builder
-    rewriter.eraseBlock(&newModuleOp.getBodyRegion().back());
+    // Create the module with an empty body region instead of using
+    // ModuleOp::create, which adds a body block that would have to be erased.
+    // If the conversion is rolled back, such a block is unlinked from the new
+    // op but never deleted.
+    OperationState state(spvModuleOp.getLoc(), ModuleOp::getOperationName());
+    if (std::optional<StringRef> name = spvModuleOp.getName())
+      state.addAttribute(SymbolTable::getSymbolAttrName(),
+                         rewriter.getStringAttr(*name));
+    state.addRegion();
+    auto newModuleOp = cast<ModuleOp>(rewriter.create(state));
+    rewriter.inlineRegionBefore(spvModuleOp.getRegion(),
+                                newModuleOp.getBodyRegion(),
+                                newModuleOp.getBodyRegion().end());
     rewriter.eraseOp(spvModuleOp);
     return success();
   }

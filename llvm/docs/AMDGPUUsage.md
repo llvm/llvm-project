@@ -2050,6 +2050,10 @@ supported for the `amdgcn` target.
   `alloca` is not visible while in a called function. Attempting to dereference
   a pointer to such memory in a called function is undefined behavior.
 
+  Pointers can be cast to and from the generic address space, which uses a
+  {ref}`synthetic aperture<amdgpu-synthetic-apertures>`; a generic pointer
+  obtained this way cannot be dereferenced.
+
 **Barrier**
 
 : This address space represents barrier IDs (introduced in GFX12) as addresses.
@@ -2105,6 +2109,10 @@ The following synthetic apertures are defined:
   - 1
   - `0x00000001`
   - Barrier
+* - VGPR
+  - 3
+  - `0x00000003`
+  - VGPR
 :::
 
 Converting a pointer to generic (64 bits) using synthetic apertures is done as follows:
@@ -3302,6 +3310,18 @@ Valid arguments for CFS Metadata are:
 The field indicates how much data is fetched on a cache miss. It is only supported
 on GFX13. GFX13 only honors it for load and atomic operations. GFX13 does not
 support a 32-byte fetch size so it treats CFS_32B the same as CFS_64B.
+
+(amdgpu_noclobber)=
+
+### '`amdgpu.noclobber`' Metadata
+
+Consider the writes that a `load` instruction L marked as `!amdgpu.noclobber`
+may see according to the {ref}`AMDGPU memory model<amdgpu-location-order>`.
+L returns `undef` if any of these writes does not happen-before the operation
+that dispatches the kernel executing L.
+
+This metadata can allow the AMDGPU compiler backend to emit scalar instead of
+vector load instructions.
 
 ## LLVM IR Attributes
 
