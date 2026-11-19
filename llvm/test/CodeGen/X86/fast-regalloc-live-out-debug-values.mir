@@ -160,7 +160,7 @@ body:             |
   ; CHECK: bb.2.for.body:
   ; CHECK:   successors: %bb.3(0x80000000)
   ; CHECK:   DBG_VALUE $rbp, 0, !18, !DIExpression(DW_OP_constu, 40, DW_OP_minus, DW_OP_deref), debug-location !22
-  ; CHECK:   $rax = MOV64rm $rbp, 1, $noreg, -40, $noreg :: (load (s64) from %stack.4)
+  ; CHECK:   $rax = MOV64rm $rbp, 1, $noreg, -40, $noreg, debug-location !32 :: (load (s64) from %stack.4)
   ; CHECK:   renamable $edx = MOV32rm $rbp, 1, $noreg, -12, $noreg, debug-location !32 :: (load (s32) from %ir.a.addr)
   ; CHECK:   renamable $rcx = MOVSX64rm32 $rbp, 1, $noreg, -28, $noreg, debug-location !36 :: (load (s32) from %ir.i)
   ; CHECK:   MOV32mr renamable $rax, 4, killed renamable $rcx, 0, $noreg, killed renamable $edx, debug-location !37 :: (store (s32) into %ir.arrayidx)

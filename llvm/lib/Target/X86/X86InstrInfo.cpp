@@ -4787,7 +4787,8 @@ void X86InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
   if (isAMXOpcode(Opc))
     loadStoreTileReg(MBB, MI, Opc, DestReg, FrameIdx);
   else
-    addFrameReference(BuildMI(MBB, MI, DebugLoc(), get(Opc), DestReg), FrameIdx)
+    addFrameReference(BuildMI(MBB, MI, MI->getDebugLoc(), get(Opc), DestReg),
+        FrameIdx)
         .setMIFlag(Flags);
 }
 
