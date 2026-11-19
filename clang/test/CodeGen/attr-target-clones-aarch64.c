@@ -260,23 +260,23 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 // CHECK-NEXT:    ret ptr @ftc_dup3.default
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: likely_module_local noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@ftc_inline2._Mfp16
 // CHECK-SAME: () #[[ATTR13:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 2
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: likely_module_local noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@ftc_inline2._MfcmaMsve2-bitperm
 // CHECK-SAME: () #[[ATTR14:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 2
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: likely_module_local noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@ftc_inline2.default
-// CHECK-SAME: () #[[ATTR4]] {
+// CHECK-SAME: () #[[ATTR15:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 2
 //
@@ -305,44 +305,44 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 // CHECK-NEXT:    ret ptr @ftc_inline2.default
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: likely_module_local noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@ftc_inline1._MrngMsimd
-// CHECK-SAME: () #[[ATTR15:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 1
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@ftc_inline1._Mrcpc
 // CHECK-SAME: () #[[ATTR16:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 1
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@ftc_inline1._Msve2-aesMwfxt
+// CHECK: Function Attrs: likely_module_local noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@ftc_inline1._Mrcpc
 // CHECK-SAME: () #[[ATTR17:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 1
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@ftc_inline3._Mbti
-// CHECK-SAME: () #[[ATTR8]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 3
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@ftc_inline3._MsbMsve
+// CHECK: Function Attrs: likely_module_local noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@ftc_inline1._Msve2-aesMwfxt
 // CHECK-SAME: () #[[ATTR18:[0-9]+]] {
 // CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 1
+//
+//
+// CHECK: Function Attrs: likely_module_local noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@ftc_inline3._Mbti
+// CHECK-SAME: () #[[ATTR19:[0-9]+]] {
+// CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 3
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: likely_module_local noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@ftc_inline3._MsbMsve
+// CHECK-SAME: () #[[ATTR20:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 3
+//
+//
+// CHECK: Function Attrs: likely_module_local noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@ftc_inline3.default
-// CHECK-SAME: () #[[ATTR4]] {
+// CHECK-SAME: () #[[ATTR15]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 3
 //
@@ -663,23 +663,23 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 // CHECK-MTE-BTI-NEXT:    ret ptr @ftc_dup3.default
 //
 //
-// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
+// CHECK-MTE-BTI: Function Attrs: likely_module_local noinline nounwind optnone
 // CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_inline2._Mfp16
 // CHECK-MTE-BTI-SAME: () #[[ATTR13:[0-9]+]] {
 // CHECK-MTE-BTI-NEXT:  entry:
 // CHECK-MTE-BTI-NEXT:    ret i32 2
 //
 //
-// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
+// CHECK-MTE-BTI: Function Attrs: likely_module_local noinline nounwind optnone
 // CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_inline2._MfcmaMsve2-bitperm
 // CHECK-MTE-BTI-SAME: () #[[ATTR14:[0-9]+]] {
 // CHECK-MTE-BTI-NEXT:  entry:
 // CHECK-MTE-BTI-NEXT:    ret i32 2
 //
 //
-// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
+// CHECK-MTE-BTI: Function Attrs: likely_module_local noinline nounwind optnone
 // CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_inline2.default
-// CHECK-MTE-BTI-SAME: () #[[ATTR4]] {
+// CHECK-MTE-BTI-SAME: () #[[ATTR15:[0-9]+]] {
 // CHECK-MTE-BTI-NEXT:  entry:
 // CHECK-MTE-BTI-NEXT:    ret i32 2
 //
@@ -708,44 +708,44 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 // CHECK-MTE-BTI-NEXT:    ret ptr @ftc_inline2.default
 //
 //
-// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
+// CHECK-MTE-BTI: Function Attrs: likely_module_local noinline nounwind optnone
 // CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_inline1._MrngMsimd
-// CHECK-MTE-BTI-SAME: () #[[ATTR15:[0-9]+]] {
-// CHECK-MTE-BTI-NEXT:  entry:
-// CHECK-MTE-BTI-NEXT:    ret i32 1
-//
-//
-// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
-// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_inline1._Mrcpc
 // CHECK-MTE-BTI-SAME: () #[[ATTR16:[0-9]+]] {
 // CHECK-MTE-BTI-NEXT:  entry:
 // CHECK-MTE-BTI-NEXT:    ret i32 1
 //
 //
-// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
-// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_inline1._Msve2-aesMwfxt
+// CHECK-MTE-BTI: Function Attrs: likely_module_local noinline nounwind optnone
+// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_inline1._Mrcpc
 // CHECK-MTE-BTI-SAME: () #[[ATTR17:[0-9]+]] {
 // CHECK-MTE-BTI-NEXT:  entry:
 // CHECK-MTE-BTI-NEXT:    ret i32 1
 //
 //
-// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
-// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_inline3._Mbti
-// CHECK-MTE-BTI-SAME: () #[[ATTR8]] {
-// CHECK-MTE-BTI-NEXT:  entry:
-// CHECK-MTE-BTI-NEXT:    ret i32 3
-//
-//
-// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
-// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_inline3._MsbMsve
+// CHECK-MTE-BTI: Function Attrs: likely_module_local noinline nounwind optnone
+// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_inline1._Msve2-aesMwfxt
 // CHECK-MTE-BTI-SAME: () #[[ATTR18:[0-9]+]] {
 // CHECK-MTE-BTI-NEXT:  entry:
+// CHECK-MTE-BTI-NEXT:    ret i32 1
+//
+//
+// CHECK-MTE-BTI: Function Attrs: likely_module_local noinline nounwind optnone
+// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_inline3._Mbti
+// CHECK-MTE-BTI-SAME: () #[[ATTR19:[0-9]+]] {
+// CHECK-MTE-BTI-NEXT:  entry:
 // CHECK-MTE-BTI-NEXT:    ret i32 3
 //
 //
-// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
+// CHECK-MTE-BTI: Function Attrs: likely_module_local noinline nounwind optnone
+// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_inline3._MsbMsve
+// CHECK-MTE-BTI-SAME: () #[[ATTR20:[0-9]+]] {
+// CHECK-MTE-BTI-NEXT:  entry:
+// CHECK-MTE-BTI-NEXT:    ret i32 3
+//
+//
+// CHECK-MTE-BTI: Function Attrs: likely_module_local noinline nounwind optnone
 // CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_inline3.default
-// CHECK-MTE-BTI-SAME: () #[[ATTR4]] {
+// CHECK-MTE-BTI-SAME: () #[[ATTR15]] {
 // CHECK-MTE-BTI-NEXT:  entry:
 // CHECK-MTE-BTI-NEXT:    ret i32 3
 //
@@ -774,9 +774,27 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 // CHECK-MTE-BTI-NEXT:    ret ptr @ftc_inline3.default
 //
 //.
-// CHECK: [[META0:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+// CHECK: [[META0:![0-9]+]] = !{i32 1, !"ptrauth-elf-got", i32 0}
+// CHECK: [[META1:![0-9]+]] = !{i32 1, !"ptrauth-init-fini", i32 0}
+// CHECK: [[META2:![0-9]+]] = !{i32 1, !"ptrauth-init-fini-address-discrimination", i32 0}
+// CHECK: [[META3:![0-9]+]] = !{i32 1, !"ptrauth-sign-personality", i32 0}
+// CHECK: [[META4:![0-9]+]] = !{i32 1, !"aarch64-elf-pauthabi-platform", i32 268435458}
+// CHECK: [[META5:![0-9]+]] = !{i32 1, !"aarch64-elf-pauthabi-version", i32 0}
+// CHECK: [[META6:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 //.
-// CHECK-NOFMV: [[META0:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+// CHECK-NOFMV: [[META0:![0-9]+]] = !{i32 1, !"ptrauth-elf-got", i32 0}
+// CHECK-NOFMV: [[META1:![0-9]+]] = !{i32 1, !"ptrauth-init-fini", i32 0}
+// CHECK-NOFMV: [[META2:![0-9]+]] = !{i32 1, !"ptrauth-init-fini-address-discrimination", i32 0}
+// CHECK-NOFMV: [[META3:![0-9]+]] = !{i32 1, !"ptrauth-sign-personality", i32 0}
+// CHECK-NOFMV: [[META4:![0-9]+]] = !{i32 1, !"aarch64-elf-pauthabi-platform", i32 268435458}
+// CHECK-NOFMV: [[META5:![0-9]+]] = !{i32 1, !"aarch64-elf-pauthabi-version", i32 0}
+// CHECK-NOFMV: [[META6:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 //.
-// CHECK-MTE-BTI: [[META0:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+// CHECK-MTE-BTI: [[META0:![0-9]+]] = !{i32 1, !"ptrauth-elf-got", i32 0}
+// CHECK-MTE-BTI: [[META1:![0-9]+]] = !{i32 1, !"ptrauth-init-fini", i32 0}
+// CHECK-MTE-BTI: [[META2:![0-9]+]] = !{i32 1, !"ptrauth-init-fini-address-discrimination", i32 0}
+// CHECK-MTE-BTI: [[META3:![0-9]+]] = !{i32 1, !"ptrauth-sign-personality", i32 0}
+// CHECK-MTE-BTI: [[META4:![0-9]+]] = !{i32 1, !"aarch64-elf-pauthabi-platform", i32 268435458}
+// CHECK-MTE-BTI: [[META5:![0-9]+]] = !{i32 1, !"aarch64-elf-pauthabi-version", i32 0}
+// CHECK-MTE-BTI: [[META6:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 //.

@@ -108,6 +108,15 @@ target triple = "x86_64-unknown-linux-gnu"
   ptr @.str.9
 ], align 16
 
+@table.with.poison = internal constant [4 x ptr] [
+  ptr @.str.8,
+  ptr poison,
+  ptr @.str.9,
+  ptr poison
+], align 16
+
+@table.all.poison = internal constant [4 x ptr] poison, align 16
+
 ;.
 ; CHECK: @.str = private unnamed_addr constant [5 x i8] c"zero\00", align 1
 ; CHECK: @.str.1 = private unnamed_addr constant [4 x i8] c"one\00", align 1
@@ -143,6 +152,8 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: @wrong.skip.table = internal constant [4 x ptr] [ptr null, ptr @.str.8, ptr null, ptr @.str.9], align 16
 ; CHECK: @table.multiple.load.uses.rel = internal unnamed_addr constant [2 x i32] [i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.8 to i64), i64 ptrtoint (ptr @table.multiple.load.uses.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.9 to i64), i64 ptrtoint (ptr @table.multiple.load.uses.rel to i64)) to i32)], align 4
 ; CHECK: @table.volatile = internal constant [2 x ptr] [ptr @.str.8, ptr @.str.9], align 16
+; CHECK: @table.with.poison.rel = internal unnamed_addr constant [4 x i32] [i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.8 to i64), i64 ptrtoint (ptr @table.with.poison.rel to i64)) to i32), i32 poison, i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.9 to i64), i64 ptrtoint (ptr @table.with.poison.rel to i64)) to i32), i32 poison], align 4
+; CHECK: @table.all.poison = internal constant [4 x ptr] poison, align 16
 ;.
 define ptr @external_linkage(i32 %cond) {
 ; CHECK-LABEL: define ptr @external_linkage(
@@ -457,6 +468,30 @@ define ptr @gep_volatile_load(i64 %index) {
 ;
   %gep = getelementptr inbounds [2 x ptr], ptr @table.volatile, i64 0, i64 %index
   %load = load volatile ptr, ptr %gep, align 8
+  ret ptr %load
+}
+
+define ptr @table_with_poison(i64 %index) {
+; CHECK-LABEL: define ptr @table_with_poison(
+; CHECK-SAME: i64 [[INDEX:%.*]]) {
+; CHECK-NEXT:    [[RELTABLE_SHIFT:%.*]] = shl i64 [[INDEX]], 2
+; CHECK-NEXT:    [[RELTABLE_INTRINSIC:%.*]] = call ptr @llvm.load.relative.i64(ptr @table.with.poison.rel, i64 [[RELTABLE_SHIFT]])
+; CHECK-NEXT:    ret ptr [[RELTABLE_INTRINSIC]]
+;
+  %gep = getelementptr ptr, ptr @table.with.poison, i64 %index
+  %load = load ptr, ptr %gep
+  ret ptr %load
+}
+
+define ptr @table_all_poison(i64 %index) {
+; CHECK-LABEL: define ptr @table_all_poison(
+; CHECK-SAME: i64 [[INDEX:%.*]]) {
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr ptr, ptr @table.all.poison, i64 [[INDEX]]
+; CHECK-NEXT:    [[RELTABLE_INTRINSIC:%.*]] = load ptr, ptr [[GEP]], align 8
+; CHECK-NEXT:    ret ptr [[RELTABLE_INTRINSIC]]
+;
+  %gep = getelementptr ptr, ptr @table.all.poison, i64 %index
+  %load = load ptr, ptr %gep
   ret ptr %load
 }
 
