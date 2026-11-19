@@ -249,18 +249,26 @@ static uint64_t constantBits(const APInt &Value, const DIBasicType *BT) {
                       BT);
 }
 
-// The DIBasicType that \p Ty resolves to through any typedefs, or null.
+// The DIBasicType that \p Ty resolves to through typedefs and through const,
+// volatile, restrict, and atomic qualifiers, or null.
 static const DIBasicType *stripToScalarType(const DIType *Ty) {
-  // A cv-qualified type gets no DebugType, so its variable has no
-  // DebugLocalVariable and its records are dropped.
-  //
-  // Since visitDIDerivedType accepts a cyclic typedef chain, this stops once it
+  // visitDIDerivedType accepts a cyclic typedef chain, so this stops once it
   // reaches an already seen type.
   SmallPtrSet<const DIDerivedType *, 4> Seen;
   while (const auto *DT = dyn_cast_or_null<DIDerivedType>(Ty)) {
-    if (DT->getTag() != dwarf::DW_TAG_typedef || !Seen.insert(DT).second)
+    switch (DT->getTag()) {
+    case dwarf::DW_TAG_typedef:
+    case dwarf::DW_TAG_const_type:
+    case dwarf::DW_TAG_volatile_type:
+    case dwarf::DW_TAG_restrict_type:
+    case dwarf::DW_TAG_atomic_type:
+      if (!Seen.insert(DT).second)
+        return nullptr;
+      Ty = DT->getBaseType();
+      break;
+    default:
       return nullptr;
-    Ty = DT->getBaseType();
+    }
   }
 
   const auto *BT = dyn_cast_or_null<DIBasicType>(Ty);
