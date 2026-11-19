@@ -951,6 +951,10 @@ struct GatherLowering : public OpRewritePattern<vector::GatherOp> {
     if (!srcTy)
       return rewriter.notifyMatchFailure(gatherOp, "Expects memref source");
 
+    if (gatherOp.getVectorType().isScalable())
+      return rewriter.notifyMatchFailure(gatherOp,
+                                         "Scalable vectors are not supported");
+
     Location loc = gatherOp.getLoc();
     VectorType vectorType = gatherOp.getVectorType();
 
@@ -985,6 +989,10 @@ struct ScatterLowering : public OpRewritePattern<vector::ScatterOp> {
     auto srcTy = dyn_cast<MemRefType>(scatterOp.getBase().getType());
     if (!srcTy)
       return rewriter.notifyMatchFailure(scatterOp, "Expects memref source");
+
+    if (scatterOp.getVectorType().isScalable())
+      return rewriter.notifyMatchFailure(scatterOp,
+                                         "Scalable vectors are not supported");
 
     Location loc = scatterOp.getLoc();
     auto meta = computeMemrefMeta(scatterOp, rewriter);

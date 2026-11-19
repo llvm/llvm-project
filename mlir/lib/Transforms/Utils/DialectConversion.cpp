@@ -2237,12 +2237,19 @@ void ConversionPatternRewriter::replaceAllUsesWith(Value from, ValueRange to) {
   impl->replaceValueUses(from, to, impl->currentTypeConverter);
 }
 
-void ConversionPatternRewriter::replaceUsesWithIf(
+bool ConversionPatternRewriter::replaceUsesWithIf(
     Value from, ValueRange to, function_ref<bool(OpOperand &)> functor,
     bool *allUsesReplaced) {
   assert(!allUsesReplaced &&
          "allUsesReplaced is not supported in a dialect conversion");
-  impl->replaceValueUses(from, to, impl->currentTypeConverter, functor);
+  bool replaced = false;
+  impl->replaceValueUses(from, to, impl->currentTypeConverter,
+                         [&](OpOperand &operand) {
+                           bool replace = functor(operand);
+                           replaced |= replace;
+                           return replace;
+                         });
+  return replaced;
 }
 
 Value ConversionPatternRewriter::getRemappedValue(Value key) {

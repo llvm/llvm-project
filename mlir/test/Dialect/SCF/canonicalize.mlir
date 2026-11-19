@@ -2731,3 +2731,85 @@ func.func @select_chain(%p: i1, %a: i32, %b: i32, %c: i32) -> i32 {
   return %y : i32
 }
 func.func private @consume_pair(i32, i32)
+
+// -----
+
+// bounds that look like ub < lb when read as signed must not erase an
+// unsigned scf.parallel. The unsigned trip count is 4.
+// CHECK-LABEL: func @unsigned_parallel_not_erased
+// CHECK-SAME: (%[[A:.*]]: memref<4xi64>)
+// CHECK-DAG: %[[LB:.*]] = arith.constant 9223372036854775806 : index
+// CHECK-DAG: %[[UB:.*]] = arith.constant -9223372036854775806 : index
+// CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
+// CHECK: scf.parallel unsigned (%[[I:.*]]) = (%[[LB]]) to (%[[UB]]) step (%[[C1]]) {
+// CHECK:   %[[OFF:.*]] = arith.subi %[[I]], %[[LB]] : index
+// CHECK:   %[[V:.*]] = arith.index_cast %[[OFF]] : index to i64
+// CHECK:   memref.store %[[V]], %[[A]][%[[OFF]]] : memref<4xi64>
+// CHECK:   scf.reduce
+func.func @unsigned_parallel_not_erased(%arg0: memref<4xi64>) {
+  %lb = arith.constant 9223372036854775806 : index
+  %ub = arith.constant -9223372036854775806 : index
+  %c1 = arith.constant 1 : index
+  scf.parallel unsigned (%i) = (%lb) to (%ub) step (%c1) {
+    %off = arith.subi %i, %lb : index
+    %v = arith.index_cast %off : index to i64
+    memref.store %v, %arg0[%off] : memref<4xi64>
+    scf.reduce
+  }
+  return
+}
+
+// -----
+
+// removing the single-iteration dim must keep `unsigned` on the rebuilt loop.
+// CHECK-LABEL: func @unsigned_parallel_single_iter_dim_keeps_unsigned
+// CHECK-SAME: (%[[A:.*]]: memref<4xi64>, %[[LB:.*]]: index, %[[UB:.*]]: index)
+// CHECK: %[[C1:.*]] = arith.constant 1 : index
+// CHECK-NOT: scf.parallel (%{{.*}}, %{{.*}})
+// CHECK: scf.parallel unsigned (%[[I:.*]]) = (%[[LB]]) to (%[[UB]]) step (%[[C1]]) {
+// CHECK:   %[[OFF:.*]] = arith.subi %[[I]], %[[LB]] : index
+// CHECK:   %[[V:.*]] = arith.index_cast %[[OFF]] : index to i64
+// CHECK:   memref.store %[[V]], %[[A]][%[[OFF]]] : memref<4xi64>
+func.func @unsigned_parallel_single_iter_dim_keeps_unsigned(
+    %arg0: memref<4xi64>, %lb: index, %ub: index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  scf.parallel unsigned (%k, %i) = (%c0, %lb) to (%c1, %ub) step (%c1, %c1) {
+    %off0 = arith.subi %i, %lb : index
+    %off = arith.addi %off0, %k : index
+    %v = arith.index_cast %off : index to i64
+    memref.store %v, %arg0[%off] : memref<4xi64>
+    scf.reduce
+  }
+  return
+}
+
+// -----
+
+// a signed outer loop and an unsigned inner loop must not be merged.
+// CHECK-LABEL: func @mixed_signedness_parallel_not_merged
+// CHECK-SAME: (%[[A:.*]]: memref<2x4xi64>, %[[LB:.*]]: index, %[[UB:.*]]: index)
+// CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
+// CHECK-DAG: %[[C2:.*]] = arith.constant 2 : index
+// CHECK: scf.parallel (%[[K:.*]]) = (%[[C0]]) to (%[[C2]]) step (%[[C1]]) {
+// CHECK:   scf.parallel unsigned (%[[I:.*]]) = (%[[LB]]) to (%[[UB]]) step (%[[C1]]) {
+// CHECK:     %[[OFF:.*]] = arith.subi %[[I]], %[[LB]] : index
+// CHECK:     %[[V:.*]] = arith.index_cast %[[OFF]] : index to i64
+// CHECK:     memref.store %[[V]], %[[A]][%[[K]], %[[OFF]]] : memref<2x4xi64>
+func.func @mixed_signedness_parallel_not_merged(
+    %arg0: memref<2x4xi64>, %lb: index, %ub: index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  scf.parallel (%k) = (%c0) to (%c2) step (%c1) {
+    scf.parallel unsigned (%i) = (%lb) to (%ub) step (%c1) {
+      %off = arith.subi %i, %lb : index
+      %v = arith.index_cast %off : index to i64
+      memref.store %v, %arg0[%k, %off] : memref<2x4xi64>
+      scf.reduce
+    }
+    scf.reduce
+  }
+  return
+}

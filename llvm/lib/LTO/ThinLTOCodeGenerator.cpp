@@ -192,7 +192,6 @@ static std::unique_ptr<Module> loadModuleFromInput(lto::InputFile *Input,
                                                    bool Lazy,
                                                    bool IsImporting) {
   auto &Mod = Input->getSingleBitcodeModule();
-  SMDiagnostic Err;
   Expected<std::unique_ptr<Module>> ModuleOrErr =
       Lazy ? Mod.getLazyModule(Context,
                                /* ShouldLazyLoadMetadata */ true, IsImporting)

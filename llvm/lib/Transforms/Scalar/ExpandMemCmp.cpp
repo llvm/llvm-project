@@ -626,7 +626,7 @@ void MemCmpExpansion::emitLoadCompareBlockMultipleLoads(unsigned BlockIndex,
   }
 }
 
-// This function creates the IR intructions for loading and comparing using the
+// This function creates the IR instructions for loading and comparing using the
 // given LoadSize. It loads the number of bytes specified by LoadSize from each
 // source of the memcmp parameters. It then does a subtract to see if there was
 // a difference in the loaded values. If a difference is found, it branches

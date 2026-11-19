@@ -1768,7 +1768,7 @@ void DeduplicatedCStringSection::finalizeContents() {
       },
       /*forceInputOrder=*/true);
 
-  // Like lexigraphical sort, except we read strings in reverse and take the
+  // Like lexicographical sort, except we read strings in reverse and take the
   // longest string first
   // TODO: We could improve performance by implementing our own sort that avoids
   // comparing characters we know to be the same. See
@@ -2048,7 +2048,7 @@ void InitOffsetsSection::setUp() {
       if (!attrs.hasAttr(RelocAttrBits::UNSIGNED))
         error(isec->getLocation(rel.offset) +
               ": unsupported relocation type: " + attrs.name);
-      if (rel.addend != 0)
+      if (rel.getAddend() != 0)
         error(isec->getLocation(rel.offset) +
               ": relocation addend is not representable in __init_offsets");
       if (isa<InputSection *>(rel.referent))
@@ -2075,6 +2075,9 @@ ObjCMethListSection::ObjCMethListSection()
 // create them early on here to ensure they are processed correctly by the lld
 // pipeline.
 void ObjCMethListSection::setUp() {
+  llvm::erase_if(inputs, [](const ConcatInputSection *isec) {
+    return isec->shouldOmitFromOutput();
+  });
   for (const ConcatInputSection *isec : inputs) {
     uint32_t structSizeAndFlags = 0, structCount = 0;
     readMethodListHeader(isec->data.data(), structSizeAndFlags, structCount);
@@ -2140,6 +2143,8 @@ void ObjCMethListSection::finalize() {
 void ObjCMethListSection::writeTo(uint8_t *bufStart) const {
   uint8_t *buf = bufStart;
   for (const ConcatInputSection *isec : inputs) {
+    assert(!isec->shouldOmitFromOutput() &&
+           "dead method list should have been dropped in setUp()");
     assert(buf - bufStart == std::ptrdiff_t(isec->outSecOff) &&
            "Writing at unexpected offset");
     uint32_t writtenSize = writeRelativeMethodList(isec, buf);
@@ -2203,7 +2208,7 @@ void ObjCMethListSection::writeRelativeOffsetForIsec(
     symVA = def->getVA();
   } else {
     auto *isec = cast<InputSection *>(reloc->referent);
-    symVA = isec->getVA(reloc->addend);
+    symVA = isec->getVA(reloc->getAddend());
   }
 
   uint32_t currentVA = isec->getVA() + outSecOff;

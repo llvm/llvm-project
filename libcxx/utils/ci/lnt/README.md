@@ -122,8 +122,13 @@ run-benchmarks --test-suite-commit <SHA1> --machine <MACHINE>                 \
 
 This will run the benchmarks (using the test suite at the specified `SHA1`) against the installation
 of libc++ at `PATH` (which is assumed to be libc++ as-of `SHA2`), and produce a LNT-ready JSON report.
-The results can then be submitted to a LNT instance with `submit-benchmarks` if desired (requires an
-API key).
+The results can then be submitted to a LNT instance if desired (requires an API key). This is done with
+the `lnt v5 submit` command from the `llvm-lnt` Python package, which reads one run per line:
+
+```
+pip install llvm-lnt
+jq -c . result.json | lnt v5 submit https://lnt.llvm.org --suite libcxx --token <TOKEN>
+```
 
 Note that `run-benchmarks` does not build anything: the library being benchmarked must have been built
 or installed beforehand. How to pick up that library is determined by `--test-config` and any Lit parameters

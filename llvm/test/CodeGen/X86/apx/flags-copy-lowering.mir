@@ -26,7 +26,7 @@ body:             |
     ; CHECK-NEXT: dead [[ADD8ri_ND:%[0-9]+]]:gr8 = ADD8ri_ND [[SETCCr]], 255, implicit-def $eflags
     ; CHECK-NEXT: [[ADC64ri32_ND:%[0-9]+]]:gr64 = ADC64ri32_ND [[ADD64rr_ND]], 42, implicit-def $eflags, implicit killed $eflags
     ; CHECK-NEXT: [[ADC64ri32_ND1:%[0-9]+]]:gr64 = ADC64ri32_ND [[ADC64ri32_ND]], 42, implicit-def $eflags, implicit $eflags
-    ; CHECK-NEXT: MOV64mr $rsp, 1, $noreg, -16, $noreg, killed [[ADC64ri32_ND1]]
+    ; CHECK-NEXT: MOV64mr $rsp, 1, $noreg, -16, $noreg, [[ADC64ri32_ND1]]
     ; CHECK-NEXT: RET 0
     %0:gr64 = COPY $rdi
     %1:gr64 = COPY $rsi
@@ -38,7 +38,7 @@ body:             |
     $eflags = COPY %3
     %4:gr64 = ADC64ri32_ND %2:gr64, 42, implicit-def $eflags, implicit $eflags
     %5:gr64 = ADC64ri32_ND %4:gr64, 42, implicit-def $eflags, implicit $eflags
-    MOV64mr $rsp, 1, $noreg, -16, $noreg, killed %5
+    MOV64mr $rsp, 1, $noreg, -16, $noreg, %5
 
     RET 0
 
@@ -60,7 +60,7 @@ body:             |
     ; CHECK-NEXT: dead [[ADD8ri_ND:%[0-9]+]]:gr8 = ADD8ri_ND [[SETCCr]], 255, implicit-def $eflags
     ; CHECK-NEXT: [[SBB64ri32_ND:%[0-9]+]]:gr64 = SBB64ri32_ND [[SUB64rr_ND]], 42, implicit-def $eflags, implicit killed $eflags
     ; CHECK-NEXT: [[SBB64ri32_ND1:%[0-9]+]]:gr64 = SBB64ri32_ND [[SBB64ri32_ND]], 42, implicit-def dead $eflags, implicit killed $eflags
-    ; CHECK-NEXT: MOV64mr $rsp, 1, $noreg, -16, $noreg, killed [[SBB64ri32_ND1]]
+    ; CHECK-NEXT: MOV64mr $rsp, 1, $noreg, -16, $noreg, [[SBB64ri32_ND1]]
     ; CHECK-NEXT: RET 0
     %0:gr64 = COPY $rdi
     %1:gr64 = COPY $rsi
@@ -72,7 +72,7 @@ body:             |
     $eflags = COPY %3
     %4:gr64 = SBB64ri32_ND %2:gr64, 42, implicit-def $eflags, implicit killed $eflags
     %5:gr64 = SBB64ri32_ND %4:gr64, 42, implicit-def dead $eflags, implicit killed $eflags
-    MOV64mr $rsp, 1, $noreg, -16, $noreg, killed %5
+    MOV64mr $rsp, 1, $noreg, -16, $noreg, %5
 
     RET 0
 
@@ -94,7 +94,7 @@ body:             |
     ; CHECK-NEXT: dead [[ADD8ri_ND:%[0-9]+]]:gr8 = ADD8ri_ND [[SETCCr]], 255, implicit-def $eflags
     ; CHECK-NEXT: [[RCL64r1_ND:%[0-9]+]]:gr64 = RCL64r1_ND [[ADD64rr_ND]], implicit-def $eflags, implicit killed $eflags
     ; CHECK-NEXT: [[RCL64r1_ND1:%[0-9]+]]:gr64 = RCL64r1_ND [[RCL64r1_ND]], implicit-def $eflags, implicit $eflags
-    ; CHECK-NEXT: MOV64mr $rsp, 1, $noreg, -16, $noreg, killed [[RCL64r1_ND1]]
+    ; CHECK-NEXT: MOV64mr $rsp, 1, $noreg, -16, $noreg, [[RCL64r1_ND1]]
     ; CHECK-NEXT: RET 0
     %0:gr64 = COPY $rdi
     %1:gr64 = COPY $rsi
@@ -106,7 +106,7 @@ body:             |
     $eflags = COPY %3
     %4:gr64 = RCL64r1_ND %2:gr64, implicit-def $eflags, implicit $eflags
     %5:gr64 = RCL64r1_ND %4:gr64, implicit-def $eflags, implicit $eflags
-    MOV64mr $rsp, 1, $noreg, -16, $noreg, killed %5
+    MOV64mr $rsp, 1, $noreg, -16, $noreg, %5
 
     RET 0
 
@@ -128,7 +128,7 @@ body:             |
     ; CHECK-NEXT: dead [[ADD8ri_ND:%[0-9]+]]:gr8 = ADD8ri_ND [[SETCCr]], 255, implicit-def $eflags
     ; CHECK-NEXT: [[RCR64r1_ND:%[0-9]+]]:gr64 = RCR64r1_ND [[ADD64rr_ND]], implicit-def $eflags, implicit killed $eflags
     ; CHECK-NEXT: [[RCR64r1_ND1:%[0-9]+]]:gr64 = RCR64r1_ND [[RCR64r1_ND]], implicit-def $eflags, implicit $eflags
-    ; CHECK-NEXT: MOV64mr $rsp, 1, $noreg, -16, $noreg, killed [[RCR64r1_ND1]]
+    ; CHECK-NEXT: MOV64mr $rsp, 1, $noreg, -16, $noreg, [[RCR64r1_ND1]]
     ; CHECK-NEXT: RET 0
     %0:gr64 = COPY $rdi
     %1:gr64 = COPY $rsi
@@ -140,7 +140,7 @@ body:             |
     $eflags = COPY %3
     %4:gr64 = RCR64r1_ND %2:gr64, implicit-def $eflags, implicit $eflags
     %5:gr64 = RCR64r1_ND %4:gr64, implicit-def $eflags, implicit $eflags
-    MOV64mr $rsp, 1, $noreg, -16, $noreg, killed %5
+    MOV64mr $rsp, 1, $noreg, -16, $noreg, %5
 
     RET 0
 
@@ -169,10 +169,10 @@ body:             |
     ; CHECK-NEXT: [[CMOV64rr_ND2:%[0-9]+]]:gr64 = CMOV64rr_ND [[COPY]], [[COPY1]], 5, implicit killed $eflags
     ; CHECK-NEXT: TEST8rr [[SETCCr2]], [[SETCCr2]], implicit-def $eflags
     ; CHECK-NEXT: [[CMOV64rr_ND3:%[0-9]+]]:gr64 = CMOV64rr_ND [[COPY]], [[COPY1]], 4, implicit killed $eflags
-    ; CHECK-NEXT: MOV64mr $rsp, 1, $noreg, -16, $noreg, killed [[CMOV64rr_ND]]
-    ; CHECK-NEXT: MOV64mr $rsp, 1, $noreg, -16, $noreg, killed [[CMOV64rr_ND1]]
-    ; CHECK-NEXT: MOV64mr $rsp, 1, $noreg, -16, $noreg, killed [[CMOV64rr_ND2]]
-    ; CHECK-NEXT: MOV64mr $rsp, 1, $noreg, -16, $noreg, killed [[CMOV64rr_ND3]]
+    ; CHECK-NEXT: MOV64mr $rsp, 1, $noreg, -16, $noreg, [[CMOV64rr_ND]]
+    ; CHECK-NEXT: MOV64mr $rsp, 1, $noreg, -16, $noreg, [[CMOV64rr_ND1]]
+    ; CHECK-NEXT: MOV64mr $rsp, 1, $noreg, -16, $noreg, [[CMOV64rr_ND2]]
+    ; CHECK-NEXT: MOV64mr $rsp, 1, $noreg, -16, $noreg, [[CMOV64rr_ND3]]
     ; CHECK-NEXT: RET 0
     %0:gr64 = COPY $rdi
     %1:gr64 = COPY $rsi
@@ -186,10 +186,10 @@ body:             |
     %4:gr64 = CMOV64rr_ND %0, %1, 2, implicit $eflags
     %5:gr64 = CMOV64rr_ND %0, %1, 4, implicit $eflags
     %6:gr64 = CMOV64rr_ND %0, %1, 5, implicit killed $eflags
-    MOV64mr $rsp, 1, $noreg, -16, $noreg, killed %3
-    MOV64mr $rsp, 1, $noreg, -16, $noreg, killed %4
-    MOV64mr $rsp, 1, $noreg, -16, $noreg, killed %5
-    MOV64mr $rsp, 1, $noreg, -16, $noreg, killed %6
+    MOV64mr $rsp, 1, $noreg, -16, $noreg, %3
+    MOV64mr $rsp, 1, $noreg, -16, $noreg, %4
+    MOV64mr $rsp, 1, $noreg, -16, $noreg, %5
+    MOV64mr $rsp, 1, $noreg, -16, $noreg, %6
 
     RET 0
 ...
@@ -217,10 +217,10 @@ body:             |
     ; CHECK-NEXT: [[CFCMOV64rr_ND:%[0-9]+]]:gr64 = CFCMOV64rr_ND [[COPY]], [[COPY1]], 5, implicit killed $eflags
     ; CHECK-NEXT: TEST8rr [[SETCCr2]], [[SETCCr2]], implicit-def $eflags
     ; CHECK-NEXT: [[CFCMOV64rr_ND1:%[0-9]+]]:gr64 = CFCMOV64rr_ND [[COPY]], [[COPY1]], 4, implicit killed $eflags
-    ; CHECK-NEXT: MOV64mr $rsp, 1, $noreg, -16, $noreg, killed [[CFCMOV64rr]]
-    ; CHECK-NEXT: MOV64mr $rsp, 1, $noreg, -16, $noreg, killed [[CFCMOV64rr1]]
-    ; CHECK-NEXT: MOV64mr $rsp, 1, $noreg, -16, $noreg, killed [[CFCMOV64rr_ND]]
-    ; CHECK-NEXT: MOV64mr $rsp, 1, $noreg, -16, $noreg, killed [[CFCMOV64rr_ND1]]
+    ; CHECK-NEXT: MOV64mr $rsp, 1, $noreg, -16, $noreg, [[CFCMOV64rr]]
+    ; CHECK-NEXT: MOV64mr $rsp, 1, $noreg, -16, $noreg, [[CFCMOV64rr1]]
+    ; CHECK-NEXT: MOV64mr $rsp, 1, $noreg, -16, $noreg, [[CFCMOV64rr_ND]]
+    ; CHECK-NEXT: MOV64mr $rsp, 1, $noreg, -16, $noreg, [[CFCMOV64rr_ND1]]
     ; CHECK-NEXT: RET 0
     %0:gr64 = COPY $rdi
     %1:gr64 = COPY $rsi
@@ -234,10 +234,10 @@ body:             |
     %4:gr64 = CFCMOV64rr %1, 2, implicit $eflags
     %5:gr64 = CFCMOV64rr_ND %0, %1, 4, implicit $eflags
     %6:gr64 = CFCMOV64rr_ND %0, %1, 5, implicit killed $eflags
-    MOV64mr $rsp, 1, $noreg, -16, $noreg, killed %3
-    MOV64mr $rsp, 1, $noreg, -16, $noreg, killed %4
-    MOV64mr $rsp, 1, $noreg, -16, $noreg, killed %5
-    MOV64mr $rsp, 1, $noreg, -16, $noreg, killed %6
+    MOV64mr $rsp, 1, $noreg, -16, $noreg, %3
+    MOV64mr $rsp, 1, $noreg, -16, $noreg, %4
+    MOV64mr $rsp, 1, $noreg, -16, $noreg, %5
+    MOV64mr $rsp, 1, $noreg, -16, $noreg, %6
 
     RET 0
 ...

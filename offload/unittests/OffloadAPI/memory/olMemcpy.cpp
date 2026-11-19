@@ -182,6 +182,57 @@ TEST_P(olMemcpyTest, SuccessDtoHSync) {
   ASSERT_SUCCESS(olMemFree(Context, Alloc));
 }
 
+TEST_P(olMemcpyTest, SuccessHtoDSyncLarge) {
+  // Larger than what a plugin writes directly, so this takes the regular path.
+  constexpr size_t Size = 1024 * 1024;
+  void *Alloc;
+  std::vector<uint8_t> Input(Size);
+  for (size_t I = 0; I < Size; ++I)
+    Input[I] = static_cast<uint8_t>(I);
+  std::vector<uint8_t> Output(Size, 0);
+
+  ASSERT_SUCCESS(
+      olMemAlloc(Context, Device, OL_ALLOC_TYPE_DEVICE, Size, &Alloc));
+  ASSERT_SUCCESS(olMemcpy(nullptr, Alloc, Device, Input.data(), Host, Size));
+  ASSERT_SUCCESS(olMemcpy(nullptr, Output.data(), Host, Alloc, Device, Size));
+  ASSERT_EQ(Input, Output);
+  ASSERT_SUCCESS(olMemFree(Context, Alloc));
+}
+
+TEST_P(olMemcpyTest, SuccessHtoDSyncWithPendingWork) {
+  // Synchronous copies to distinct allocations, while unrelated work is
+  // pending on a queue, must each be observed by the work enqueued after them.
+  constexpr size_t Size = 256;
+  constexpr int NumCopies = 16;
+  void *Allocs[NumCopies];
+  std::vector<uint8_t> Inputs[NumCopies];
+  std::vector<uint8_t> Outputs[NumCopies];
+  void *Pending;
+  std::vector<uint8_t> PendingInput(1024 * 1024, 7);
+  ASSERT_SUCCESS(olMemAlloc(Context, Device, OL_ALLOC_TYPE_DEVICE,
+                            PendingInput.size(), &Pending));
+  ASSERT_SUCCESS(olMemcpy(Queue, Pending, Device, PendingInput.data(), Host,
+                          PendingInput.size()));
+
+  for (int K = 0; K < NumCopies; ++K) {
+    ASSERT_SUCCESS(
+        olMemAlloc(Context, Device, OL_ALLOC_TYPE_DEVICE, Size, &Allocs[K]));
+    Inputs[K].assign(Size, static_cast<uint8_t>(K + 1));
+    Outputs[K].assign(Size, 0);
+    ASSERT_SUCCESS(
+        olMemcpy(nullptr, Allocs[K], Device, Inputs[K].data(), Host, Size));
+    ASSERT_SUCCESS(
+        olMemcpy(Queue, Outputs[K].data(), Host, Allocs[K], Device, Size));
+  }
+  ASSERT_SUCCESS(olSyncQueue(Queue));
+
+  for (int K = 0; K < NumCopies; ++K) {
+    ASSERT_EQ(Inputs[K], Outputs[K]);
+    ASSERT_SUCCESS(olMemFree(Context, Allocs[K]));
+  }
+  ASSERT_SUCCESS(olMemFree(Context, Pending));
+}
+
 TEST_P(olMemcpyTest, SuccessNullHostDevice) {
   constexpr size_t Size = 1024;
   void *Alloc;
@@ -287,6 +338,31 @@ TEST_P(olMemcpyGlobalTest, SuccessWrite) {
 
   ASSERT_SUCCESS(olMemFree(Context, DestMem));
   ASSERT_SUCCESS(olMemFree(Context, SourceMem));
+}
+
+TEST_P(olMemcpyGlobalTest, SuccessWriteSync) {
+  std::vector<uint32_t> Source(LaunchArgs.GroupSize.x);
+  for (uint32_t I = 0; I < Source.size(); I++)
+    Source[I] = I;
+
+  void *DestMem;
+  ASSERT_SUCCESS(olMemAlloc(Context, Device, OL_ALLOC_TYPE_MANAGED,
+                            LaunchArgs.GroupSize.x * sizeof(uint32_t),
+                            &DestMem));
+  void *ArgPtrs[] = {&DestMem};
+  size_t ArgSizes[] = {sizeof(DestMem)};
+
+  ASSERT_SUCCESS(olMemcpy(nullptr, Addr, Device, Source.data(), Host,
+                          Source.size() * sizeof(uint32_t)));
+  ASSERT_SUCCESS(olLaunchKernel(Queue, Device, ReadKernel, &LaunchArgs, nullptr,
+                                1, ArgPtrs, ArgSizes));
+  ASSERT_SUCCESS(olSyncQueue(Queue));
+
+  uint32_t *DestData = (uint32_t *)DestMem;
+  for (uint32_t I = 0; I < Source.size(); I++)
+    ASSERT_EQ(DestData[I], I);
+
+  ASSERT_SUCCESS(olMemFree(Context, DestMem));
 }
 
 TEST_P(olMemcpyGlobalTest, SuccessRead) {

@@ -129,9 +129,9 @@ body:             |
     successors: %bb.7(0x40000000), %bb.1(0x40000000)
   
     %5:g8rc_and_g8rc_nox0 = IMPLICIT_DEF
-    %0:g8rc = LWA 0, killed %5 :: (load (s32) from `ptr undef`)
+    %0:g8rc = LWA 0, %5 :: (load (s32) from `ptr undef`)
     %6:crbitrc = IMPLICIT_DEF
-    BC killed %6, %bb.7
+    BC %6, %bb.7
     B %bb.1
   
   bb.1._loop_40_loopHeader_:
@@ -164,7 +164,7 @@ body:             |
     successors: %bb.5(0x7c000000), %bb.2(0x04000000)
   
     %13:crbitrc = DecreaseCTR8loop 1, implicit-def dead $ctr8, implicit $ctr8
-    BCn killed %13, %bb.2
+    BCn %13, %bb.2
     B %bb.5
   
   bb.5._loop_44_do_:
@@ -177,7 +177,7 @@ body:             |
     successors: 
   
     %14:g8rc_and_g8rc_nox0 = IMPLICIT_DEF
-    STW8 %4, 0, killed %14 :: (store (s32) into `ptr undef`)
+    STW8 %4, 0, %14 :: (store (s32) into `ptr undef`)
   
   bb.7._label_42:
 

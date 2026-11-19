@@ -1365,6 +1365,39 @@ struct ExtractFromCollapseShape : public OpRewritePattern<tensor::ExtractOp> {
   }
 };
 
+/// Canonicalizes the pattern of the form
+///
+/// %tensor = tensor.generate %x {
+///   ^bb0(%arg0: index):
+///   <computation>
+///   yield %1 : index
+/// } : tensor<?xindex>
+/// %extracted_element = tensor.extract %tensor[%c0] : tensor<?xi32>
+///
+/// to just <computation> with %arg0 replaced by %c0. We only do this if the
+/// tensor.generate operation has no side-effects.
+struct ExtractFromTensorGenerate : public OpRewritePattern<tensor::ExtractOp> {
+  using OpRewritePattern<tensor::ExtractOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tensor::ExtractOp extract,
+                                PatternRewriter &rewriter) const final {
+    auto tensorFromElements = extract.getTensor().getDefiningOp<GenerateOp>();
+    if (!tensorFromElements || !wouldOpBeTriviallyDead(tensorFromElements))
+      return failure();
+
+    IRMapping mapping;
+    Block *body = &tensorFromElements.getBody().front();
+    mapping.map(body->getArguments(), extract.getIndices());
+    for (auto &op : body->without_terminator())
+      rewriter.clone(op, mapping);
+
+    auto yield = cast<YieldOp>(body->getTerminator());
+
+    rewriter.replaceOp(extract, mapping.lookupOrDefault(yield.getValue()));
+    return success();
+  }
+};
+
 } // namespace
 
 void ExtractOp::getAsmResultNames(
@@ -1409,6 +1442,9 @@ OpFoldResult ExtractOp::fold(FoldAdaptor adaptor) {
       return {};
   }
 
+  if (Value result = foldExtractAfterInsert(*this))
+    return result;
+
   // Collect the constant indices into the tensor.
   SmallVector<uint64_t, 8> indices;
   for (Attribute indice : adaptor.getIndices()) {
@@ -1444,15 +1480,12 @@ OpFoldResult ExtractOp::fold(FoldAdaptor adaptor) {
       return elementsAttr.getValues<Attribute>()[indices];
   }
 
-  if (Value result = foldExtractAfterInsert(*this))
-    return result;
-
   return {};
 }
 
 void ExtractOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
-  results.add<ExtractFromTensorCast>(context);
+  results.add<ExtractFromTensorCast, ExtractFromTensorGenerate>(context);
 }
 
 void mlir::tensor::populateFoldCollapseExtractPatterns(
@@ -1767,46 +1800,11 @@ struct StaticTensorGenerate : public OpRewritePattern<GenerateOp> {
     return success();
   }
 };
-
-/// Canonicalizes the pattern of the form
-///
-/// %tensor = tensor.generate %x {
-///   ^bb0(%arg0: index):
-///   <computation>
-///   yield %1 : index
-/// } : tensor<?xindex>
-/// %extracted_element = tensor.extract %tensor[%c0] : tensor<?xi32>
-///
-/// to just <computation> with %arg0 replaced by %c0. We only do this if the
-/// tensor.generate operation has no side-effects.
-struct ExtractFromTensorGenerate : public OpRewritePattern<tensor::ExtractOp> {
-  using OpRewritePattern<tensor::ExtractOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(tensor::ExtractOp extract,
-                                PatternRewriter &rewriter) const final {
-    auto tensorFromElements = extract.getTensor().getDefiningOp<GenerateOp>();
-    if (!tensorFromElements || !wouldOpBeTriviallyDead(tensorFromElements))
-      return failure();
-
-    IRMapping mapping;
-    Block *body = &tensorFromElements.getBody().front();
-    mapping.map(body->getArguments(), extract.getIndices());
-    for (auto &op : body->without_terminator())
-      rewriter.clone(op, mapping);
-
-    auto yield = cast<YieldOp>(body->getTerminator());
-
-    rewriter.replaceOp(extract, mapping.lookupOrDefault(yield.getValue()));
-    return success();
-  }
-};
-
 } // namespace
 
 void GenerateOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                              MLIRContext *context) {
-  // TODO: Move extract pattern to tensor::ExtractOp.
-  results.add<ExtractFromTensorGenerate, StaticTensorGenerate>(context);
+  results.add<StaticTensorGenerate>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2276,7 +2274,10 @@ struct ConvertToStaticExpandShape : public OpRewritePattern<ExpandShapeOp> {
 
         APInt cst;
         if (matchPattern(val, m_ConstantInt(&cst))) {
-          newOutputShape[outDim] = cst.getSExtValue();
+          int64_t dim = cst.getSExtValue();
+          if (dim < 0)
+            return failure();
+          newOutputShape[outDim] = dim;
         } else {
           dynamicOutputShape.push_back(val);
         }
@@ -4199,13 +4200,30 @@ struct FoldTensorCastProducerOp
   }
 };
 
+namespace {
+/// A splat of a scalar condition selects the same arm in every element.
+struct SelectSplatCondition : OpRewritePattern<arith::SelectOp> {
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(arith::SelectOp select,
+                                PatternRewriter &rewriter) const override {
+    auto splat = select.getCondition().getDefiningOp<SplatOp>();
+    if (!splat)
+      return failure();
+    rewriter.modifyOpInPlace(
+        select, [&] { select.getConditionMutable().assign(splat.getInput()); });
+    return success();
+  }
+};
+} // namespace
+
 //===----------------------------------------------------------------------===//
 // TensorDialect
 //===----------------------------------------------------------------------===//
 
 void TensorDialect::getCanonicalizationPatterns(
     RewritePatternSet &results) const {
-  results.add<FoldTensorCastProducerOp>(getContext());
+  results.add<FoldTensorCastProducerOp, SelectSplatCondition>(getContext());
 }
 
 //===----------------------------------------------------------------------===//

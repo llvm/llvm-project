@@ -315,7 +315,7 @@ struct PtrView {
     assert(Pointee && "Cannot check if null pointer was initialized");
     const Descriptor *Desc = getFieldDesc();
     assert(Desc);
-    if (Desc->isPrimitiveArray())
+    if (Offset != Base && Desc->isPrimitiveArray())
       return isElementInitialized(getIndex());
 
     if (Base == 0)

@@ -537,3 +537,86 @@ TEST_F(DeserializationTest, FunctionMalformedLabelFailure) {
   ASSERT_FALSE(deserialize());
   expectDiagnostic("OpLabel should only have result <id>");
 }
+
+//===----------------------------------------------------------------------===//
+// Switch
+//===----------------------------------------------------------------------===//
+
+TEST_F(DeserializationTest, SwitchInt64LiteralWordOrder) {
+  addHeader();
+  auto voidType = addVoidType();
+  auto intType = addIntType(64);
+  auto fnType = addFunctionType(voidType, {intType});
+  addFunction(voidType, fnType);
+  auto selectorID = nextID++;
+  addInstruction(spirv::Opcode::OpFunctionParameter, {intType, selectorID});
+  auto entryID = nextID++;
+  auto headerID = nextID++;
+  auto defaultID = nextID++;
+  auto caseID = nextID++;
+  auto mergeID = nextID++;
+  addInstruction(spirv::Opcode::OpLabel, {entryID});
+  addInstruction(spirv::Opcode::OpBranch, {headerID});
+  addInstruction(spirv::Opcode::OpLabel, {headerID});
+  addInstruction(
+      spirv::Opcode::OpSelectionMerge,
+      {mergeID, static_cast<uint32_t>(spirv::SelectionControl::None)});
+  // 64-bit literals span two words with the low-order word first:
+  // {1, 0} encodes 1, {0, 1} encodes 1 << 32, and {0xffffffff, 0xffffffff}
+  // encodes -1.
+  addInstruction(spirv::Opcode::OpSwitch,
+                 {selectorID, defaultID, 1, 0, caseID, 0, 1, caseID,
+                  0xffffffffu, 0xffffffffu, caseID});
+  addInstruction(spirv::Opcode::OpLabel, {defaultID});
+  addInstruction(spirv::Opcode::OpBranch, {mergeID});
+  addInstruction(spirv::Opcode::OpLabel, {caseID});
+  addInstruction(spirv::Opcode::OpBranch, {mergeID});
+  addInstruction(spirv::Opcode::OpLabel, {mergeID});
+  addReturn();
+  addFunctionEnd();
+
+  auto module = deserialize();
+  ASSERT_TRUE(module);
+  SmallVector<int64_t> literals;
+  module->walk([&](spirv::SwitchOp switchOp) {
+    for (APInt literal : switchOp.getLiterals()->getValues<APInt>())
+      literals.push_back(literal.getSExtValue());
+  });
+  EXPECT_THAT(literals,
+              ::testing::ElementsAre(1, static_cast<int64_t>(1) << 32, -1));
+}
+
+TEST_F(DeserializationTest, SwitchInt64LiteralOperandCountMismatch) {
+  addHeader();
+  auto voidType = addVoidType();
+  auto intType = addIntType(64);
+  auto fnType = addFunctionType(voidType, {intType});
+  addFunction(voidType, fnType);
+  auto selectorID = nextID++;
+  addInstruction(spirv::Opcode::OpFunctionParameter, {intType, selectorID});
+  auto entryID = nextID++;
+  auto headerID = nextID++;
+  auto defaultID = nextID++;
+  auto caseID = nextID++;
+  auto mergeID = nextID++;
+  addInstruction(spirv::Opcode::OpLabel, {entryID});
+  addInstruction(spirv::Opcode::OpBranch, {headerID});
+  addInstruction(spirv::Opcode::OpLabel, {headerID});
+  addInstruction(
+      spirv::Opcode::OpSelectionMerge,
+      {mergeID, static_cast<uint32_t>(spirv::SelectionControl::None)});
+  // A single-word literal is not valid for a 64-bit selector.
+  addInstruction(spirv::Opcode::OpSwitch, {selectorID, defaultID, 1, caseID});
+  addInstruction(spirv::Opcode::OpLabel, {defaultID});
+  addInstruction(spirv::Opcode::OpBranch, {mergeID});
+  addInstruction(spirv::Opcode::OpLabel, {caseID});
+  addInstruction(spirv::Opcode::OpBranch, {mergeID});
+  addInstruction(spirv::Opcode::OpLabel, {mergeID});
+  addReturn();
+  addFunctionEnd();
+
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic("OpSwitch must specify selector, default target and any "
+                   "number of literal and label <id> pairs, where each literal "
+                   "of a 64-bit selector spans 2 word(s)");
+}

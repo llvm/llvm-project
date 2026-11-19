@@ -511,8 +511,6 @@ unsigned DWARFVerifier::verifyUnitSection(const DWARFSection &S) {
   bool isUnitDWARF64 = false;
   bool isHeaderChainValid = true;
   bool hasDIE = DebugInfoData.isValidOffset(Offset);
-  DWARFUnitVector TypeUnitVector;
-  DWARFUnitVector CompileUnitVector;
   while (hasDIE) {
     if (!verifyUnitHeader(DebugInfoData, &Offset, UnitIdx, UnitType,
                           isUnitDWARF64)) {

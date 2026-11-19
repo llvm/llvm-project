@@ -517,16 +517,20 @@ namespace llvm {
       }
     }
 
+    /// Implement operator<<.
+    LLVM_ABI void print(raw_ostream &OS) const;
+
     /// This function returns value type as a string, e.g. "i32".
-    LLVM_ABI std::string getEVTString() const;
+    std::string getEVTString() const {
+      std::string S;
+      llvm::raw_string_ostream Stream(S);
+      print(Stream);
+      return S;
+    }
 
     /// Support for debugging, callable in GDB: VT.dump()
     LLVM_ABI void dump() const;
 
-    /// Implement operator<<.
-    void print(raw_ostream &OS) const {
-      OS << getEVTString();
-    }
 
     /// This method returns an LLVM type corresponding to the specified EVT.
     /// For integer types, this returns an unsigned type. Note that this will

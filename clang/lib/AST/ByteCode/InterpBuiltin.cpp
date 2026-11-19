@@ -2237,6 +2237,9 @@ static bool interp__builtin_load8(InterpState &S, CodePtr OpPC,
   if (!isReadable(Ptr) && !Ptr.isOnePastEnd())
     return false;
 
+  if (!Ptr.isReadablePointerType())
+    return false;
+
   if (IsAligned) {
     CharUnits RequiredAlign =
         S.getASTContext().getTypeAlignInChars(Call->getType());
@@ -2480,22 +2483,6 @@ static bool interp__builtin_memchr(InterpState &S, CodePtr OpPC,
 
   if (!isReadable(Ptr))
     return false;
-
-  if (ID == Builtin::BIstrchr || ID == Builtin::BI__builtin_strchr) {
-    int64_t DesiredTrunc;
-    if (S.getASTContext().CharTy->isSignedIntegerType())
-      DesiredTrunc =
-          Desired.trunc(S.getASTContext().getCharWidth()).getSExtValue();
-    else
-      DesiredTrunc =
-          Desired.trunc(S.getASTContext().getCharWidth()).getZExtValue();
-    // strchr compares directly to the passed integer, and therefore
-    // always fails if given an int that is not a char.
-    if (Desired != DesiredTrunc) {
-      S.Stk.push<Pointer>();
-      return true;
-    }
-  }
 
   uint64_t DesiredVal;
   if (ID == Builtin::BIwmemchr || ID == Builtin::BI__builtin_wmemchr ||
@@ -4789,6 +4776,13 @@ static bool interp_builtin_ia32_cvt_vector_to_int(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_meta_is_type(InterpState &S, CodePtr OpPC,
+                                         const CallExpr *) {
+  const Reflect &R = S.Stk.pop<Reflect>();
+  S.Stk.push<Boolean>(Boolean::from(R.getKind() == ReflectionKind::Type));
+  return true;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
                       uint32_t BuiltinID) {
   const InterpFrame *Frame = S.Current;
@@ -6946,6 +6940,10 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_cvttpd2dq256:
   case X86::BI__builtin_ia32_cvttps2dq256:
     return interp_builtin_ia32_cvt_vector_to_int(S, OpPC, Call);
+
+  case Builtin::BI__builtin_meta_is_type:
+    return interp__builtin_meta_is_type(S, OpPC, Call);
+
   default:
     return Invalid(S, OpPC);
   }

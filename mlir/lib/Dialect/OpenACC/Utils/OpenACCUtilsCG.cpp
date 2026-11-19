@@ -631,13 +631,21 @@ MapFlags computePrivatizeMapFlags(PrivatizeOp privatizeOp,
   if (!parDims)
     return flags;
 
-  for (GPUParallelDimAttr parDim : parDims.getArray()) {
-    if (policy.isGang(parDim))
-      flags = flags | MapFlags::gang_private;
-    else if (policy.isWorker(parDim))
-      flags = flags | MapFlags::worker_private;
-    else if (policy.isVector(parDim))
-      flags = flags | MapFlags::vector_private;
+  auto addLevelFlags = [&](ArrayRef<GPUParallelDimAttr> dims) {
+    for (GPUParallelDimAttr parDim : dims) {
+      if (policy.isGang(parDim))
+        flags = flags | MapFlags::gang_private;
+      else if (policy.isWorker(parDim))
+        flags = flags | MapFlags::worker_private;
+      else if (policy.isVector(parDim))
+        flags = flags | MapFlags::vector_private;
+    }
+  };
+  addLevelFlags(parDims.getArray());
+  // Ownership par_dims may be narrower than the dimensions the kernel indexes
+  // the storage by, so replicate across the active dimensions as well.
+  if (ActiveParDimsAttr activeParDims = getActiveParDimsAttr(privatizeOp)) {
+    addLevelFlags(activeParDims.getArray());
   }
   return flags;
 }

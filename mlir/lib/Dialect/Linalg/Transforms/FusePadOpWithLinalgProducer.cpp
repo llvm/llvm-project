@@ -19,7 +19,6 @@
 using namespace mlir;
 
 namespace {
-
 /// A sequence of operations
 ///
 /// ```mlir
@@ -78,6 +77,9 @@ struct FusePadOp : OpRewritePattern<tensor::PadOp> {
     // Fill the tensor with the pad value.
     // TODO: There is an option to fill only the boundaries. For now just
     // filling the whole tensor.
+    // Move the padding value defined inside the PadOp block to outside.
+    if (padValue.getParentBlock() == &padOp.getRegion().front())
+      rewriter.moveOpBefore(padValue.getDefiningOp(), padOp);
     auto fillTensor = linalg::FillOp::create(rewriter, loc, padValue,
                                              emptyTensor.getResult());
 

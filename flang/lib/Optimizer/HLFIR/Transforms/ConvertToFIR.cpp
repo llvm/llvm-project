@@ -195,7 +195,17 @@ public:
       // Use the runtime for simplicity. An optimization pass will be added to
       // inline array assignment when profitable.
       mlir::Value from = emboxRHS(rhsExv);
-      mlir::Value to = fir::getBase(builder.createBox(loc, lhsExv));
+      mlir::Value to;
+      // A nonallocable coarray has an allocable descriptor and reallocation
+      // must not happen so we want to have a descriptor without the
+      // “allocatable” attribute
+      if (fir::getBoxCorank(lhs.getType()) > 0 &&
+          lhsExv.getBoxOf<fir::BoxValue>()) {
+        fir::ExtendedValue readLhs =
+            fir::factory::readBoxValue(builder, loc, fir::getBase(lhsExv));
+        to = fir::getBase(builder.createBox(loc, readLhs));
+      } else
+        to = fir::getBase(builder.createBox(loc, lhsExv));
       // This is not a whole allocatable assignment: the runtime will not
       // reallocate and modify "toMutableBox" even if it is taking it by
       // reference.

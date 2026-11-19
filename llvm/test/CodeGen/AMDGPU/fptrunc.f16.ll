@@ -1421,7 +1421,6 @@ define <2 x half> @fptrunc_v2f64_to_v2f16(<2 x double> %a) {
 ; SI-GISEL-NEXT:    v_lshrrev_b32_e32 v2, 16, v3
 ; SI-GISEL-NEXT:    v_and_b32_e32 v2, 0x8000, v2
 ; SI-GISEL-NEXT:    v_or_b32_e32 v1, v2, v1
-; SI-GISEL-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; SI-GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; SI-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; SI-GISEL-NEXT:    v_or_b32_e32 v0, v0, v1
@@ -1595,9 +1594,7 @@ define <2 x half> @fptrunc_v2f64_to_v2f16(<2 x double> %a) {
 ; VI-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, v1, v8
 ; VI-GISEL-NEXT:    v_cndmask_b32_e32 v1, v2, v5, vcc
 ; VI-GISEL-NEXT:    v_and_b32_sdwa v2, v3, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; VI-GISEL-NEXT:    v_or_b32_e32 v1, v2, v1
-; VI-GISEL-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; VI-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; VI-GISEL-NEXT:    v_or_b32_sdwa v1, v2, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI-GISEL-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;

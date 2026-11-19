@@ -453,6 +453,23 @@ public:
   Expr<SubscriptInteger> &base() { return base_.value(); }
   int dimension() const { return dimension_; }
 
+  // Optional provenance.  When this element was produced by folding an
+  // UBOUND()/LBOUND() inquiry of an explicit-shape array whose shape came from
+  // a rank-1 array bound, record the originating array and bound side so the
+  // mod-file writer can serialize it as the real ubound(a,dim)/lbound(a,dim)
+  // intrinsic instead of the synthetic %ROBE spelling.
+  // Declaration-time elements carry no provenance.  Provenance is metadata for
+  // serialization only: it is excluded from operator== and hashing so that the
+  // builtin reuse/deduplication optimizations are unaffected.
+  const std::optional<NamedEntity> &originatingArray() const {
+    return originatingArray_;
+  }
+  bool isUpperBound() const { return isUpperBound_; }
+  void set_provenance(const NamedEntity &array, bool isUpper) {
+    originatingArray_ = array;
+    isUpperBound_ = isUpper;
+  }
+
   static constexpr int Rank() { return 0; } // always scalar
   static constexpr int Corank() { return 0; }
   bool operator==(const RankOneBoundElement &) const;
@@ -461,6 +478,8 @@ public:
 private:
   common::CopyableIndirection<Expr<SubscriptInteger>> base_;
   int dimension_{0}; // zero-based
+  std::optional<NamedEntity> originatingArray_;
+  bool isUpperBound_{false};
 };
 
 #define INSTANTIATE_VARIABLE_TEMPLATES \

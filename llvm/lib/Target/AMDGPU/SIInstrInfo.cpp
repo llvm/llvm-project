@@ -3135,7 +3135,7 @@ void SIInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
   auto I = MBB.end();
   auto &MCCtx = MF->getContext();
 
-  if (ST.useAddPC64Inst()) {
+  if (ST.useAddPCI64Inst()) {
     MCSymbol *Offset =
         MCCtx.createTempSymbol("offset", /*AlwaysAddSuffix=*/true);
     auto AddPC = BuildMI(MBB, I, DL, get(AMDGPU::S_ADD_PC_I64))
@@ -11012,6 +11012,8 @@ static bool isRenamedInGFX9(int Opcode) {
   case AMDGPU::V_MAD_F16_e64:
   case AMDGPU::V_MAD_U16_e64:
   case AMDGPU::V_MAD_I16_e64:
+  case AMDGPU::V_MAD_U16_gfx9_e64:
+  case AMDGPU::V_MAD_I16_gfx9_e64:
     return true;
   default:
     return false;

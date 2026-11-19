@@ -11,6 +11,7 @@
 #include "resolve-names.h"
 #include "flang/Common/restorer.h"
 #include "flang/Evaluate/fold.h"
+#include "flang/Evaluate/shape.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Parser/message.h"
 #include "flang/Parser/parsing.h"
@@ -60,7 +61,6 @@ static void PutBound(llvm::raw_ostream &, const Bound &);
 static void PutShapeSpec(llvm::raw_ostream &, const ShapeSpec &);
 static void PutShape(
     llvm::raw_ostream &, const ArraySpec &, char open, char close);
-static bool HasRankOneBound(const ArraySpec &);
 static void PutMapper(llvm::raw_ostream &, const Symbol &, SemanticsContext &);
 
 static llvm::raw_ostream &PutAttr(llvm::raw_ostream &, Attr);
@@ -101,6 +101,13 @@ private:
 
   template <typename T> void DoExpr(evaluate::Expr<T> expr) {
     for (const Symbol &symbol : evaluate::CollectSymbols(expr)) {
+      DoSymbol(symbol);
+    }
+    // A rank-1 bound element serialized through its ubound()/lbound()
+    // provenance names its originating array, which CollectSymbols() does not
+    // visit; declare that array too, ahead of the entity that inquires it.
+    for (const Symbol &symbol :
+        evaluate::CollectRankOneBoundProvenanceSymbols(expr)) {
       DoSymbol(symbol);
     }
   }
@@ -239,6 +246,10 @@ static void HarvestSymbolsNeededFromOtherModules(
   auto HarvestBound{[&](const Bound &bound) {
     if (const auto &expr{bound.GetExplicit()}) {
       for (SymbolRef ref : evaluate::CollectSymbols(*expr)) {
+        set.emplace(*ref);
+      }
+      for (SymbolRef ref :
+          evaluate::CollectRankOneBoundProvenanceSymbols(*expr)) {
         set.emplace(*ref);
       }
     }
@@ -1156,52 +1167,90 @@ void PutShapeSpec(llvm::raw_ostream &os, const ShapeSpec &x) {
   }
 }
 
-// Check whether any bound in an ArraySpec holds a RankOneBoundElement,
-// indicating the shape came from a rank-1 integer array expression.
-bool HasRankOneBound(const ArraySpec &shape) {
-  const auto &first{shape.front()};
-  if (auto lb{first.lbound().GetExplicit()}) {
-    if (evaluate::UnwrapExpr<evaluate::RankOneBoundElement>(*lb)) {
-      return true;
+// Every expression the module file writer prints must have a Fortran spelling.
+// A RankOneBoundElement without ubound()/lbound() provenance has none (its
+// debug rendering is the synthetic %ROBE marker, which the module file reader
+// cannot parse).  Such a raw element may live only in its own array's
+// ShapeSpec, which PutShape() unwraps whole; every other route to the file --
+// bounds, initializers, character lengths, and type parameters -- comes
+// through one of these checks.
+template <typename T>
+static void CheckWritableExpr(const evaluate::Expr<T> &expr) {
+  CHECK(!evaluate::ContainsUntaggedRankOneBoundElement(expr));
+}
+static void CheckWritableParamValue(const ParamValue &value) {
+  if (const auto &expr{value.GetExplicit()}) {
+    CheckWritableExpr(*expr);
+  }
+}
+// Character lengths and derived type parameters are printed by
+// DeclTypeSpec::AsFortran(), which diagnostics share, so they are checked here
+// on the writer's side rather than in the printer.
+static void CheckWritableType(const DeclTypeSpec &type) {
+  if (type.category() == DeclTypeSpec::Character) {
+    CheckWritableParamValue(type.characterTypeSpec().length());
+  } else if (const DerivedTypeSpec *derived{type.AsDerived()}) {
+    for (const auto &[keyword, value] : derived->rawParameters()) {
+      CheckWritableParamValue(value);
+    }
+    for (const auto &[name, value] : derived->parameters()) {
+      CheckWritableParamValue(value);
     }
   }
-  if (auto ub{first.ubound().GetExplicit()}) {
-    if (evaluate::UnwrapExpr<evaluate::RankOneBoundElement>(*ub)) {
-      return true;
+}
+
+// Writes one side (lower or upper) of a shape declared with a rank-1 bounds
+// array (ArraySpec::isFromRankOneBounds()) in the form it was declared.  A
+// side written as a scalar was broadcast to every dimension and is written
+// back as that scalar.  A side written as a rank-1 array is written back
+// whole: a non-constant base survives as a RankOneBoundElement in every
+// dimension and is written as that base; a constant base was folded into
+// per-dimension constants at declaration and is re-synthesized as a constant
+// array.
+static void PutRankOneBoundSide(
+    llvm::raw_ostream &os, const ArraySpec &shape, bool upper) {
+  auto boundOf{[upper](const ShapeSpec &spec) -> const Bound & {
+    return upper ? spec.ubound() : spec.lbound();
+  }};
+  const Bound &first{boundOf(shape.front())};
+  if (first.isColon()) {
+    return;
+  }
+  if (!(upper ? shape.uboundIsRankOne() : shape.lboundIsRankOne())) {
+    PutBound(os, first);
+    return;
+  }
+  if (const auto &expr{first.GetExplicit()}) {
+    if (const auto *robe{
+            evaluate::UnwrapExpr<evaluate::RankOneBoundElement>(*expr)}) {
+      CheckWritableExpr(robe->base());
+      robe->base().AsFortran(os);
+      return;
     }
   }
-  return false;
+  std::vector<evaluate::Scalar<evaluate::SubscriptInteger>> values;
+  for (const ShapeSpec &spec : shape) {
+    auto value{evaluate::ToInt64(boundOf(spec).GetExplicit())};
+    // A rank-1 side without a RankOneBoundElement is a folded constant array.
+    CHECK(value);
+    values.emplace_back(*value);
+  }
+  evaluate::Constant<evaluate::SubscriptInteger>{std::move(values),
+      evaluate::ConstantSubscripts{
+          static_cast<evaluate::ConstantSubscript>(shape.size())}}
+      .AsFortran(os);
 }
 
 void PutShape(
     llvm::raw_ostream &os, const ArraySpec &shape, char open, char close) {
   if (!shape.empty()) {
     os << open;
-    if (HasRankOneBound(shape)) {
-      // Rank-1 bounds: all ShapeSpecs share the same rank-1 expression
-      // wrapped in RankOneBoundElement. Extract the base expression from the
-      // first element and emit it whole so the mod file round-trips through
-      // the parser as an ExplicitShapeBoundsSpec.
-      const auto &first{shape.front()};
-      if (!first.lbound().isColon()) {
-        auto lb{first.lbound().GetExplicit()};
-        if (auto *robe =
-                evaluate::UnwrapExpr<evaluate::RankOneBoundElement>(*lb)) {
-          robe->base().AsFortran(os);
-        } else {
-          PutBound(os, first.lbound());
-        }
-      }
+    if (shape.isFromRankOneBounds()) {
+      // Rank-1 bounds: emit each side whole so the mod file round-trips
+      // through the parser as an ExplicitShapeBoundsSpec.
+      PutRankOneBoundSide(os, shape, /*upper=*/false);
       os << ':';
-      if (!first.ubound().isColon()) {
-        auto ub{first.ubound().GetExplicit()};
-        if (auto *robe =
-                evaluate::UnwrapExpr<evaluate::RankOneBoundElement>(*ub)) {
-          robe->base().AsFortran(os);
-        } else {
-          PutBound(os, first.ubound());
-        }
-      }
+      PutRankOneBoundSide(os, shape, /*upper=*/true);
     } else {
       bool first{true};
       for (const auto &shapeSpec : shape) {
@@ -1391,6 +1440,7 @@ void PutInit(llvm::raw_ostream &os, const Symbol &symbol, const MaybeExpr &init,
     if (unanalyzed) {
       parser::Unparse(os << assign, *unanalyzed, context.langOptions());
     } else if (init) {
+      CheckWritableExpr(*init);
       init->AsFortran(os << assign);
     }
   }
@@ -1398,6 +1448,7 @@ void PutInit(llvm::raw_ostream &os, const Symbol &symbol, const MaybeExpr &init,
 
 void PutInit(llvm::raw_ostream &os, const MaybeIntExpr &init) {
   if (init) {
+    CheckWritableExpr(*init);
     init->AsFortran(os << '=');
   }
 }
@@ -1408,6 +1459,7 @@ void PutBound(llvm::raw_ostream &os, const Bound &x) {
   } else if (x.isColon()) {
     os << ':';
   } else {
+    CheckWritableExpr(*x.GetExplicit());
     x.GetExplicit()->AsFortran(os);
   }
 }
@@ -1469,6 +1521,7 @@ llvm::raw_ostream &PutAttr(llvm::raw_ostream &os, Attr attr) {
 }
 
 llvm::raw_ostream &PutType(llvm::raw_ostream &os, const DeclTypeSpec &type) {
+  CheckWritableType(type);
   return PutLower(os, type.AsFortran());
 }
 

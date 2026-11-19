@@ -1508,6 +1508,9 @@ void CodeGenModule::Release() {
                             llvm::getExceptionModelName(ExceptionModel)));
   }
 
+  if (CodeGenOpts.getDebuggerTuning() != llvm::DebuggerKind::Default)
+    getModule().setDebuggerTuning(CodeGenOpts.getDebuggerTuning());
+
   if (getTriple().isOSzOS()) {
     getModule().addModuleFlag(llvm::Module::Warning,
                               "zos_product_major_version",

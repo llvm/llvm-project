@@ -74,6 +74,10 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
 
   SmallVector<const DIType *> DebugTypes;
 
+  // Compile unit whose enums list names each enum. DIBuilder gives a file-scope
+  // enum a null scope, so this list is the only record of its unit.
+  DenseMap<const DICompositeType *, const DICompileUnit *> EnumCompileUnits;
+
   // NonSemantic debug instruction result id per emitted scope.
   DenseMap<const DIScope *, MCRegister> DebugScopeRegs;
 
@@ -650,6 +654,21 @@ private:
   emitDebugTypeComposite(const DICompositeType *CT, MCRegister VoidTypeReg,
                          MCRegister I32TypeReg, MCRegister ExtInstSetReg,
                          SPIRV::ModuleAnalysisInfo &MAI);
+
+  /// Build \c DebugTypeEnum for the enumeration type \p ET. Operands: Name,
+  /// Underlying Type, Source, Line, Column, Parent, Size, Flags, then a Value
+  /// and Name pair per enumerator. Uses \c DebugInfoNone for Underlying Type
+  /// when \p ET has no base type, and drops an enumerator whose value does not
+  /// fit in a 32-bit integer.
+  ///
+  /// \returns An Emitted result when the operands are ready. An Unsupported
+  /// result, building nothing, if the size is 0 or does not fit in 32 bits.
+  /// If the base or Parent fail, it returns code for the one that failed.
+  EmitResult<PreparedScope> emitDebugTypeEnum(const DICompositeType *ET,
+                                              MCRegister VoidTypeReg,
+                                              MCRegister I32TypeReg,
+                                              MCRegister ExtInstSetReg,
+                                              SPIRV::ModuleAnalysisInfo &MAI);
 
   /// Build \c DebugTypedef for the typedef derived type \p TD (a \c
   /// DIDerivedType with \c DW_TAG_typedef). Operands: Name, Base Type, Source,

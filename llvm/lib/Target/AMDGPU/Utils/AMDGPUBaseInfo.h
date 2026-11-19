@@ -1674,8 +1674,8 @@ bool isInlinableLiteral64(int64_t Literal, bool HasInv2Pi);
 LLVM_READNONE
 bool isInlinableLiteral32(int32_t Literal, bool HasInv2Pi);
 
-LLVM_READNONE
-bool isInlinableLiteralBF16(int16_t Literal, bool HasInv2Pi);
+bool isInlinableLiteralBF16(int16_t Literal, bool HasInv2Pi,
+                            bool *IsBF16 = nullptr);
 
 LLVM_READNONE
 bool isInlinableLiteralFP16(int16_t Literal, bool HasInv2Pi);

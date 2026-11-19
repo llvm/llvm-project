@@ -152,10 +152,6 @@ void addOpenMPHostOffloadingArgs(const Compilation &C, const JobAction &JA,
                                  const llvm::opt::ArgList &Args,
                                  llvm::opt::ArgStringList &CmdArgs);
 
-void addHIPRuntimeLibArgs(const ToolChain &TC, Compilation &C,
-                          const llvm::opt::ArgList &Args,
-                          llvm::opt::ArgStringList &CmdArgs);
-
 void addAsNeededOption(const ToolChain &TC, const llvm::opt::ArgList &Args,
                        llvm::opt::ArgStringList &CmdArgs, bool as_needed);
 
@@ -267,7 +263,8 @@ void addOutlineAtomicsArgs(const Driver &D, const ToolChain &TC,
                            llvm::opt::ArgStringList &CmdArgs,
                            const llvm::Triple &Triple);
 void addOffloadCompressArgs(const llvm::opt::ArgList &TCArgs,
-                            llvm::opt::ArgStringList &CmdArgs);
+                            llvm::opt::ArgStringList &CmdArgs,
+                            bool EmitCompressionFormat = false);
 void addMCModel(const Driver &D, const llvm::opt::ArgList &Args,
                 const llvm::Triple &Triple,
                 const llvm::Reloc::Model &RelocationModel,

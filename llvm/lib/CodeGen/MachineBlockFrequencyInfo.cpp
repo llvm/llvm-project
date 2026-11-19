@@ -13,6 +13,7 @@
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/iterator.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BlockFrequencyInfoImpl.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
@@ -61,17 +62,6 @@ cl::opt<GVDAGType> ViewBlockLayoutWithBFI(
                           "display a graph using the real "
                           "profile count if available.")));
 
-// Command line option to specify the name of the function for CFG dump
-// Defined in Analysis/BlockFrequencyInfo.cpp:  -view-bfi-func-name=
-extern cl::opt<std::string> ViewBlockFreqFuncName;
-
-// Command line option to specify hot frequency threshold.
-// Defined in Analysis/BlockFrequencyInfo.cpp:  -view-hot-freq-perc=
-extern cl::opt<unsigned> ViewHotFreqPercent;
-
-// Command line option to specify the name of the function for block frequency
-// dump. Defined in Analysis/BlockFrequencyInfo.cpp.
-extern cl::opt<std::string> PrintBFIFuncName;
 } // namespace llvm
 
 static cl::opt<bool>
@@ -146,14 +136,16 @@ struct llvm::DOTGraphTraits<MachineBlockFrequencyInfo *>
 
   std::string getNodeAttributes(const MachineBasicBlock *Node,
                                 const MachineBlockFrequencyInfo *Graph) {
-    return MBFIDOTGraphTraitsBase::getNodeAttributes(Node, Graph,
-                                                     ViewHotFreqPercent);
+    return MBFIDOTGraphTraitsBase::getNodeAttributes(
+        Node, Graph,
+        getViewHotFreqPercent(Node->getParent()->getFunction().getContext()));
   }
 
   std::string getEdgeAttributes(const MachineBasicBlock *Node, EdgeIter EI,
                                 const MachineBlockFrequencyInfo *MBFI) {
     return MBFIDOTGraphTraitsBase::getEdgeAttributes(
-        Node, EI, MBFI, MBFI->getMBPI(), ViewHotFreqPercent);
+        Node, EI, MBFI, MBFI->getMBPI(),
+        getViewHotFreqPercent(Node->getParent()->getFunction().getContext()));
   }
 };
 
@@ -227,12 +219,15 @@ void MachineBlockFrequencyInfo::calculate(
   if (!MBFI)
     MBFI.reset(new ImplType);
   MBFI->calculate(F, MBPI, MCI);
+  const LLVMContext &Ctx = F.getFunction().getContext();
+  StringRef ViewFuncName = getViewBlockFreqFuncName(Ctx);
   if (ViewMachineBlockFreqPropagationDAG != GVDT_None &&
-      (ViewBlockFreqFuncName.empty() || F.getName() == ViewBlockFreqFuncName)) {
+      (ViewFuncName.empty() || F.getName() == ViewFuncName)) {
     view("MachineBlockFrequencyDAGS." + F.getName());
   }
+  StringRef PrintFuncName = getPrintBFIFuncName(Ctx);
   if (PrintMachineBlockFreq &&
-      (PrintBFIFuncName.empty() || F.getName() == PrintBFIFuncName)) {
+      (PrintFuncName.empty() || F.getName() == PrintFuncName)) {
     MBFI->print(dbgs());
   }
 }

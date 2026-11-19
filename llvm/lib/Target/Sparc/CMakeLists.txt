@@ -23,6 +23,7 @@ add_llvm_target(SparcCodeGen
   DelaySlotFiller.cpp
   LeonPasses.cpp
   SparcAsmPrinter.cpp
+  SparcCodeGenPassBuilder.cpp
   SparcInstrInfo.cpp
   SparcISelDAGToDAG.cpp
   SparcISelLowering.cpp
@@ -43,6 +44,7 @@ add_llvm_target(SparcCodeGen
   Core
   MC
   Option
+  Passes
   SelectionDAG
   SparcDesc
   SparcInfo

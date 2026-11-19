@@ -15,12 +15,12 @@ body:             |
 
     ; CHECK-LABEL: name: cr0_live_across_candidate
     ; CHECK:       %3:gprc = RLWINM %0, 0, 30, 30
-    ; CHECK:       %4:crrc = CMPWI killed %3, 0
+    ; CHECK:       %4:crrc = CMPWI %3, 0
     %0:gprc = COPY $r3
     %1:gprc = ANDI_rec %0, 1, implicit-def $cr0
     %2:crbitrc = COPY $cr0eq
     %3:gprc = RLWINM %0, 0, 30, 30
-    %4:crrc = CMPWI killed %3, 0
+    %4:crrc = CMPWI %3, 0
     %5:crbitrc = COPY %4.sub_eq
     %6:crbitrc = COPY $cr0gt
     %7:crbitrc = CRAND %2, %5
@@ -53,7 +53,7 @@ body:             |
     %2:crbitrc = COPY $cr0eq
     %3:crbitrc = COPY $cr0gt
     %4:gprc = RLWINM %0, 0, 30, 30
-    %5:crrc = CMPWI killed %4, 0
+    %5:crrc = CMPWI %4, 0
     %6:crbitrc = COPY %5.sub_eq
     %7:crbitrc = CRAND %2, %6
     %8:crbitrc = CRAND %7, %3

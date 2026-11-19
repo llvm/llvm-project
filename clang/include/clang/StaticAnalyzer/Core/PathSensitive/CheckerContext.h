@@ -250,24 +250,6 @@ public:
     return addTransitionImpl(State, true, Pred, Tag);
   }
 
-  /// Calls addSink, passing getPredecessor() (i.e. as the node that was
-  /// passed to the constructor of CheckerContext) to its 'Pred' argument.
-  ///
-  /// FIXME: This should be unified with addSink().
-  ExplodedNode *generateErrorNode(ProgramStateRef State = nullptr,
-                                  const ProgramPointTag *Tag = nullptr) {
-    return addSink(State, getPredecessor(), Tag);
-  }
-
-  /// Calls addSink, forwarding all argument without any difference.
-  ///
-  /// FIXME: This should be unified with addSink().
-  ExplodedNode *generateErrorNode(ProgramStateRef State,
-                                  ExplodedNode *Pred,
-                                  const ProgramPointTag *Tag = nullptr) {
-    return addSink(State, Pred, Tag);
-  }
-
   /// Creates a new ExplodedNode and adds it to the ExplodedGraph as a child of
   /// 'getPredecessor()', the node that was passed to the constructor of
   /// CheckerContext. The difference between this and 'addTransition' is that

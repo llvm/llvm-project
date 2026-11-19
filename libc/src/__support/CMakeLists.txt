@@ -7,6 +7,7 @@ add_header_library(
     libc_errno.h
   DEPENDS
     libc.hdr.errno_macros
+    libc.src.__support.macros.attributes
     libc.src.__support.macros.config
 )
 

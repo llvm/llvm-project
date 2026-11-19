@@ -226,10 +226,17 @@ public:
         if (Next[i + 1]->First->NewlinesBefore > 0)
           MergedLines = 0;
     }
-    for (unsigned i = 0; i <= MergedLines; ++i) {
-      if (cannotMergeMacroLine(Next[i])) {
-        MergedLines = 0;
-        break;
+    if (MergedLines > 0) {
+      bool MergingEmptyBlock = MergedLines == 1 &&
+                               Next[0]->endsWith(tok::l_brace) &&
+                               Next[1]->startsWith(tok::r_brace);
+      for (unsigned i = 0; i <= MergedLines; ++i) {
+        if (cannotMergeMacroLine(Next[i],
+                                 /*AllowMultiLine=*/i == 0 &&
+                                     MergingEmptyBlock)) {
+          MergedLines = 0;
+          break;
+        }
       }
     }
     if (!DryRun)
@@ -1052,9 +1059,10 @@ private:
           Tok = Tok->Next;
         } while (Tok);
 
-        // Last, check that the third line starts with a closing brace.
+        // Last, check that the third line starts with a closing brace at the
+        // same level as the opening line.
         Tok = I[2]->First;
-        if (Tok->isNot(tok::r_brace))
+        if (Tok->isNot(tok::r_brace) || I[2]->Level != Line.Level)
           return 0;
 
         // Don't merge "if (a) { .. } else {".
@@ -1151,10 +1159,12 @@ private:
     return false;
   }
 
-  bool cannotMergeMacroLine(const AnnotatedLine *Line) {
+  bool cannotMergeMacroLine(const AnnotatedLine *Line, bool AllowMultiLine) {
     assert(Line->First);
     if (Line->Last->MacroParent)
       return true;
+    if (AllowMultiLine)
+      return false;
     for (const FormatToken *Tok = Line->First; Tok; Tok = Tok->Next) {
       if (Tok->MacroParent && !Tok->Children.empty())
         return true;

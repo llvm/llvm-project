@@ -702,3 +702,33 @@ define i8 @kshiftr_v8i1_234567uu(<8 x i64> %x, <8 x i64> %y) {
   %e = bitcast <8 x i1> %d to i8
   ret i8 %e
 }
+
+define i16 @PR235657(<32 x i16> %a0) {
+; KNL-LABEL: PR235657:
+; KNL:       # %bb.0:
+; KNL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; KNL-NEXT:    vpcmpeqw %ymm1, %ymm0, %ymm0
+; KNL-NEXT:    vpmovsxwd %ymm0, %zmm0
+; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; KNL-NEXT:    kshiftrw $8, %k0, %k0
+; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    # kill: def $ax killed $ax killed $eax
+; KNL-NEXT:    vzeroupper
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: PR235657:
+; SKX:       # %bb.0:
+; SKX-NEXT:    vptestnmw %zmm0, %zmm0, %k0
+; SKX-NEXT:    kshiftrd $8, %k0, %k0
+; SKX-NEXT:    kmovd %k0, %eax
+; SKX-NEXT:    # kill: def $ax killed $ax killed $eax
+; SKX-NEXT:    vzeroupper
+; SKX-NEXT:    retq
+  %cmp = icmp eq <32 x i16> %a0, zeroinitializer
+  %bc = bitcast <32 x i1> %cmp to <2 x i16>
+  %conv = extractelement <2 x i16> %bc, i64 0
+  %mask = bitcast i16 %conv to <16 x i1>
+  %kshiftr = shufflevector <16 x i1> %mask, <16 x i1> zeroinitializer, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
+  %res = bitcast <16 x i1> %kshiftr to i16
+  ret i16 %res
+}

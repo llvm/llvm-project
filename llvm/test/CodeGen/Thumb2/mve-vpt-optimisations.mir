@@ -394,62 +394,42 @@ body:             |
   ; CHECK-NEXT:   [[MVE_VORR2:%[0-9]+]]:mqpr = MVE_VORR [[MVE_VORR1]], [[MVE_VORR1]], 1, [[MVE_VPNOT2]], $noreg, undef [[MVE_VORR2]]
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
-  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[MVE_VCMPs32_1:%[0-9]+]]:vccr = MVE_VCMPs32 [[DEF]], [[DEF1]], 10, 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VPNOT3:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VCMPs32_1]], 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VORR3:%[0-9]+]]:mqpr = MVE_VORR [[DEF]], [[DEF]], 1, [[MVE_VPNOT3]], $noreg, undef [[MVE_VORR3]]
   ; CHECK-NEXT:   [[MVE_VPNOT4:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VPNOT3]], 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VORR4:%[0-9]+]]:mqpr = MVE_VORR [[MVE_VORR3]], [[MVE_VORR3]], 1, [[MVE_VPNOT4]], $noreg, undef [[MVE_VORR4]]
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.3:
-  ; CHECK-NEXT:   [[MVE_VCMPs32_2:%[0-9]+]]:vccr = MVE_VCMPs32 [[DEF]], [[DEF1]], 10, 0, $noreg, $noreg
-  ; CHECK-NEXT:   [[MVE_VPNOT5:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VCMPs32_2]], 0, $noreg, $noreg
-  ; CHECK-NEXT:   [[MVE_VORR5:%[0-9]+]]:mqpr = MVE_VORR [[DEF]], [[DEF]], 1, [[MVE_VPNOT5]], $noreg, undef [[MVE_VORR5]]
-  ; CHECK-NEXT:   [[MVE_VPNOT6:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VPNOT5]], 0, $noreg, $noreg
-  ; CHECK-NEXT:   [[MVE_VORR6:%[0-9]+]]:mqpr = MVE_VORR [[MVE_VORR5]], [[MVE_VORR5]], 1, [[MVE_VPNOT6]], $noreg, undef [[MVE_VORR6]]
-  ; CHECK-NEXT:   [[MVE_VORR7:%[0-9]+]]:mqpr = MVE_VORR [[MVE_VORR6]], [[MVE_VORR6]], 1, [[MVE_VPNOT6]], $noreg, undef [[MVE_VORR7]]
+  ; CHECK-NEXT:   [[MVE_VORR5:%[0-9]+]]:mqpr = MVE_VORR [[MVE_VORR4]], [[MVE_VORR4]], 1, [[MVE_VPNOT4]], $noreg, undef [[MVE_VORR5]]
   ; CHECK-NEXT:   tBX_RET 14 /* CC::al */, $noreg, implicit [[DEF]]
   bb.0:
     ;
-    ; Tests that, if the result of the VCMP is killed before the
-    ; second VCMP (that will be converted into a VPNOT) is found,
-    ; the kill flag is removed.
+    ; Tests that the second VCMP is converted into a VPNOT when the result of
+    ; the first VCMP is used in between.
     ;
     %1:mqpr = IMPLICIT_DEF
     %2:mqpr = IMPLICIT_DEF
     %0:vccr = MVE_VCMPf16 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
-    %3:mqpr = MVE_VORR %1:mqpr, %2:mqpr, 1, killed %0, $noreg, undef %3
+    %3:mqpr = MVE_VORR %1:mqpr, %2:mqpr, 1, %0, $noreg, undef %3
     %4:vccr = MVE_VCMPf16 %1:mqpr, %2:mqpr, 11, 0, $noreg, $noreg
   bb.1:
     ;
-    ; Tests that, if the result of the VCMP that has been replaced with a
-    ; VPNOT is killed (before the insertion of the second VPNOT),
-    ; the kill flag is removed.
+    ; Tests that a VPNOT is inserted when the VCMP replaced with a VPNOT is
+    ; used again.
     ;
     %5:vccr = MVE_VCMPs32 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
     %6:vccr = MVE_VCMPs32 %2:mqpr, %1:mqpr, 12, 0, $noreg, $noreg
-    %7:mqpr = MVE_VORR %1:mqpr, %1:mqpr, 1, killed %6, $noreg, undef %7
+    %7:mqpr = MVE_VORR %1:mqpr, %1:mqpr, 1, %6, $noreg, undef %7
     %8:mqpr = MVE_VORR %7, %7, 1, %5, $noreg, undef %8
-  bb.2:
-    ;
-    ; Tests that the kill flag is removed when inserting a VPNOT for
-    ; an instruction.
-    ;
-    %9:vccr = MVE_VCMPs32 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
-    %10:vccr = MVE_VCMPs32 %2:mqpr, %1:mqpr, 12, 0, $noreg, $noreg
-    %11:mqpr = MVE_VORR %1:mqpr, %1:mqpr, 1, %10, $noreg, undef %11
-    %12:mqpr = MVE_VORR %11, %11, 1, killed %9, $noreg, undef %12
   bb.3:
     ;
-    ; Tests that the kill flag is correctly removed when replacing a use
-    ; of the opposite vccr, $noreg value with the last VPNOT's result
+    ; Tests that a later use of the opposite vccr value is replaced with the
+    ; last VPNOT's result.
     ;
     %13:vccr = MVE_VCMPs32 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
     %14:vccr = MVE_VCMPs32 %2:mqpr, %1:mqpr, 12, 0, $noreg, $noreg
     %15:mqpr = MVE_VORR %1:mqpr, %1:mqpr, 1, %14, $noreg, undef %15
     %16:mqpr = MVE_VORR %15, %15, 1, %13, $noreg, undef %16
-    %17:mqpr = MVE_VORR %16, %16, 1, killed %13, $noreg, undef %17
+    %17:mqpr = MVE_VORR %16, %16, 1, %13, $noreg, undef %17
     tBX_RET 14 /* CC::al */, $noreg, implicit %1:mqpr
 
 ...
@@ -650,11 +630,11 @@ body:             |
   bb.0:
     ; CHECK-LABEL: name: vpr_or_vccr_write_between_vcmps
     ; CHECK: [[MVE_VCMPs32_:%[0-9]+]]:vccr = MVE_VCMPs32 %1:mqpr, %2:mqpr, 12, 0, $noreg, $noreg
-    ; CHECK-NEXT: [[MVE_VPNOT:%[0-9]+]]:vccr = MVE_VPNOT killed [[MVE_VCMPs32_]], 0, $noreg, $noreg
+    ; CHECK-NEXT: [[MVE_VPNOT:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VCMPs32_]], 0, $noreg, $noreg
     ; CHECK-NEXT: [[MVE_VCMPs32_1:%[0-9]+]]:vccr = MVE_VCMPs32 %2:mqpr, %1:mqpr, 10, 0, $noreg, $noreg
     ; CHECK-NEXT: tBX_RET 14 /* CC::al */, $noreg, implicit %1:mqpr
     %0:vccr = MVE_VCMPs32 %1:mqpr, %2:mqpr, 12, 0, $noreg, $noreg
-    %3:vccr = MVE_VPNOT killed %0, 0, $noreg, $noreg
+    %3:vccr = MVE_VPNOT %0, 0, $noreg, $noreg
     %4:vccr = MVE_VCMPs32 %2:mqpr, %1:mqpr, 10, 0, $noreg, $noreg
     tBX_RET 14 /* CC::al */, $noreg, implicit %1:mqpr
 ...
@@ -721,7 +701,7 @@ body:             |
   ; CHECK-NEXT:   [[MVE_VORR19:%[0-9]+]]:mqpr = MVE_VORR [[DEF]], [[DEF]], 1, [[MVE_VPNOT13]], $noreg, undef [[MVE_VORR19]]
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4:
-  ; CHECK-NEXT:   [[VMSR_P0_:%[0-9]+]]:vccr = VMSR_P0 killed [[DEF2]], 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   [[VMSR_P0_:%[0-9]+]]:vccr = VMSR_P0 [[DEF2]], 14 /* CC::al */, $noreg
   ; CHECK-NEXT:   [[MVE_VPNOT14:%[0-9]+]]:vccr = MVE_VPNOT [[VMSR_P0_]], 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VORR20:%[0-9]+]]:mqpr = MVE_VORR [[MVE_VORR19]], [[MVE_VORR19]], 1, [[MVE_VPNOT14]], $noreg, undef [[MVE_VORR20]]
   ; CHECK-NEXT:   [[MVE_VPNOT15:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VPNOT14]], 0, $noreg, $noreg
@@ -790,7 +770,7 @@ body:             |
     ;
     ; Tests that the pass works with instructions other than vcmp.
     ;
-    %31:vccr = VMSR_P0 killed %32:gpr, 14 /* CC::al */, $noreg
+    %31:vccr = VMSR_P0 %32:gpr, 14 /* CC::al */, $noreg
     %33:vccr = MVE_VPNOT %31, 0, $noreg, $noreg
     %34:mqpr = MVE_VORR %30, %30, 1, %33, $noreg, undef %34
     %35:mqpr = MVE_VORR %34, %34, 1, %31, $noreg, undef %35
@@ -927,24 +907,14 @@ name:            spill_prevention_vpnot_reordering
 alignment:       4
 body:             |
   ; CHECK-LABEL: name: spill_prevention_vpnot_reordering
-  ; CHECK: bb.0:
-  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:mqpr = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:mqpr = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[MVE_VCMPs32_:%[0-9]+]]:vccr = MVE_VCMPs32 [[DEF]], [[DEF1]], 10, 0, $noreg, $noreg
-  ; CHECK-NEXT:   [[MVE_VORR:%[0-9]+]]:mqpr = MVE_VORR [[DEF]], [[DEF1]], 1, [[MVE_VCMPs32_]], $noreg, undef [[MVE_VORR]]
-  ; CHECK-NEXT:   [[MVE_VORR1:%[0-9]+]]:mqpr = MVE_VORR [[DEF1]], [[DEF]], 1, [[MVE_VCMPs32_]], $noreg, undef [[MVE_VORR1]]
-  ; CHECK-NEXT:   [[MVE_VPNOT:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VCMPs32_]], 0, $noreg, $noreg
-  ; CHECK-NEXT:   [[MVE_VORR2:%[0-9]+]]:mqpr = MVE_VORR [[MVE_VORR]], [[MVE_VORR1]], 1, [[MVE_VPNOT]], $noreg, undef [[MVE_VORR2]]
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   [[MVE_VCMPs32_1:%[0-9]+]]:vccr = MVE_VCMPs32 [[DEF]], [[DEF1]], 10, 0, $noreg, $noreg
-  ; CHECK-NEXT:   [[MVE_VORR3:%[0-9]+]]:mqpr = MVE_VORR [[DEF]], [[DEF1]], 1, [[MVE_VCMPs32_1]], $noreg, undef [[MVE_VORR3]]
-  ; CHECK-NEXT:   [[MVE_VORR4:%[0-9]+]]:mqpr = MVE_VORR [[DEF1]], [[DEF]], 1, [[MVE_VCMPs32_1]], $noreg, undef [[MVE_VORR4]]
-  ; CHECK-NEXT:   [[MVE_VPNOT1:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VCMPs32_1]], 0, $noreg, $noreg
-  ; CHECK-NEXT:   [[MVE_VORR5:%[0-9]+]]:mqpr = MVE_VORR [[MVE_VORR3]], [[MVE_VORR4]], 1, [[MVE_VPNOT1]], $noreg, undef [[MVE_VORR5]]
-  ; CHECK-NEXT:   tBX_RET 14 /* CC::al */, $noreg, implicit [[DEF]]
+  ; CHECK: [[DEF:%[0-9]+]]:mqpr = IMPLICIT_DEF
+  ; CHECK-NEXT: [[DEF1:%[0-9]+]]:mqpr = IMPLICIT_DEF
+  ; CHECK-NEXT: [[MVE_VCMPs32_:%[0-9]+]]:vccr = MVE_VCMPs32 [[DEF]], [[DEF1]], 10, 0, $noreg, $noreg
+  ; CHECK-NEXT: [[MVE_VORR:%[0-9]+]]:mqpr = MVE_VORR [[DEF]], [[DEF1]], 1, [[MVE_VCMPs32_]], $noreg, undef [[MVE_VORR]]
+  ; CHECK-NEXT: [[MVE_VORR1:%[0-9]+]]:mqpr = MVE_VORR [[DEF1]], [[DEF]], 1, [[MVE_VCMPs32_]], $noreg, undef [[MVE_VORR1]]
+  ; CHECK-NEXT: [[MVE_VPNOT:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VCMPs32_]], 0, $noreg, $noreg
+  ; CHECK-NEXT: [[MVE_VORR2:%[0-9]+]]:mqpr = MVE_VORR [[MVE_VORR]], [[MVE_VORR1]], 1, [[MVE_VPNOT]], $noreg, undef [[MVE_VORR2]]
+  ; CHECK-NEXT: tBX_RET 14 /* CC::al */, $noreg, implicit [[DEF]]
   ;
   ; Tests that the first VPNOT is moved down when the result of the VCMP is used
   ; before the first usage of the VPNOT's result.
@@ -957,14 +927,6 @@ body:             |
     %4:mqpr = MVE_VORR %1:mqpr, %2:mqpr, 1, %0, $noreg, undef %4
     %5:mqpr = MVE_VORR %2:mqpr, %1:mqpr, 1, %0, $noreg, undef %5
     %6:mqpr = MVE_VORR %4, %5, 1, %3, $noreg, undef %6
-
-  bb.1:
-    ; Test again with a "killed" flag to check if it's properly removed.
-    %7:vccr = MVE_VCMPs32 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
-    %8:vccr = MVE_VPNOT %7, 0, $noreg, $noreg
-    %9:mqpr = MVE_VORR %1:mqpr, %2:mqpr, 1, %7, $noreg, undef %9
-    %10:mqpr = MVE_VORR %2:mqpr, %1:mqpr, 1, killed %7, $noreg, undef %10
-    %11:mqpr = MVE_VORR %9, %10, 1, %8, $noreg, undef %11
     tBX_RET 14 /* CC::al */, $noreg, implicit %1:mqpr
 ...
 ---
@@ -982,7 +944,7 @@ body:             |
   ; CHECK-NEXT:   [[MVE_VORR:%[0-9]+]]:mqpr = MVE_VORR [[DEF]], [[DEF]], 1, [[MVE_VPNOT]], $noreg, undef [[MVE_VORR]]
   ; CHECK-NEXT:   [[MVE_VPNOT1:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VPNOT]], 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VORR1:%[0-9]+]]:mqpr = MVE_VORR [[MVE_VORR]], [[MVE_VORR]], 1, [[MVE_VPNOT1]], $noreg, undef [[MVE_VORR1]]
-  ; CHECK-NEXT:   [[VMSR_P0_:%[0-9]+]]:vccr = VMSR_P0 killed %7:gpr, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   [[VMSR_P0_:%[0-9]+]]:vccr = VMSR_P0 %7:gpr, 14 /* CC::al */, $noreg
   ; CHECK-NEXT:   [[MVE_VORR2:%[0-9]+]]:mqpr = MVE_VORR [[MVE_VORR1]], [[MVE_VORR1]], 1, [[MVE_VCMPs32_]], $noreg, undef [[MVE_VORR2]]
   ; CHECK-NEXT:   [[MVE_VORR3:%[0-9]+]]:mqpr = MVE_VORR [[MVE_VORR2]], [[MVE_VORR2]], 1, [[MVE_VPNOT]], $noreg, undef [[MVE_VORR3]]
   ; CHECK-NEXT: {{  $}}
@@ -1007,7 +969,7 @@ body:             |
     %3:vccr = MVE_VPNOT %0, 0, $noreg, $noreg
     %4:mqpr = MVE_VORR %1:mqpr, %1:mqpr, 1, %3, $noreg, undef %4
     %5:mqpr = MVE_VORR %4, %4, 1, %0, $noreg, undef %5
-    %6:vccr = VMSR_P0 killed %7:gpr, 14 /* CC::al */, $noreg
+    %6:vccr = VMSR_P0 %7:gpr, 14 /* CC::al */, $noreg
     %8:mqpr = MVE_VORR %5, %5, 1, %0, $noreg, undef %8
     %9:mqpr = MVE_VORR %8, %8, 1, %3, $noreg, undef %9
 
@@ -1032,15 +994,15 @@ body:             |
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:mqpr = IMPLICIT_DEF
     ; CHECK-NEXT: [[MVE_VORR:%[0-9]+]]:mqpr = MVE_VORR [[DEF]], [[DEF]], 1, [[COPY]], $noreg, undef [[MVE_VORR]]
     ; CHECK-NEXT: [[DEF1:%[0-9]+]]:mqpr = IMPLICIT_DEF
-    ; CHECK-NEXT: [[MVE_VORR1:%[0-9]+]]:mqpr = MVE_VORR [[DEF1]], [[DEF1]], 1, killed [[COPY]], $noreg, undef [[MVE_VORR1]]
+    ; CHECK-NEXT: [[MVE_VORR1:%[0-9]+]]:mqpr = MVE_VORR [[DEF1]], [[DEF1]], 1, [[COPY]], $noreg, undef [[MVE_VORR1]]
     ; CHECK-NEXT: tBX_RET 14 /* CC::al */, $noreg, implicit [[DEF1]]
     %0:tgpreven = t2MOVi 0, 14, $noreg, $noreg
     %1:vccr = COPY %0:tgpreven
     %2:mqpr = IMPLICIT_DEF
-    %3:mqpr = MVE_VORR %2:mqpr, %2:mqpr, 1, killed %1, $noreg, undef %3
+    %3:mqpr = MVE_VORR %2:mqpr, %2:mqpr, 1, %1, $noreg, undef %3
     %4:vccr = COPY %0:tgpreven
     %5:mqpr = IMPLICIT_DEF
-    %6:mqpr = MVE_VORR %5:mqpr, %5:mqpr, 1, killed %4, $noreg, undef %6
+    %6:mqpr = MVE_VORR %5:mqpr, %5:mqpr, 1, %4, $noreg, undef %6
     tBX_RET 14 /* CC::al */, $noreg, implicit %5:mqpr
 ...
 ---
@@ -1060,10 +1022,10 @@ body:             |
     %0:mqpr = COPY $q0
     %1:rgpr = t2MOVi 0, 14, $noreg, $noreg
     %2:vccr = COPY %1:rgpr
-    %3:mqpr = MVE_VHADDs8 %0:mqpr, %0:mqpr, 1, killed %2:vccr, $noreg, %0:mqpr
+    %3:mqpr = MVE_VHADDs8 %0:mqpr, %0:mqpr, 1, %2:vccr, $noreg, %0:mqpr
     %4:rgpr = t2MOVi16 65535, 14, $noreg
     %5:vccr = COPY %4:rgpr
-    %6:mqpr = MVE_VSLIimm8 %3:mqpr, %0:mqpr, 0, 1, killed %5:vccr, $noreg
+    %6:mqpr = MVE_VSLIimm8 %3:mqpr, %0:mqpr, 0, 1, %5:vccr, $noreg
     $q0 = COPY %6:mqpr
     tBX_RET 14, $noreg, implicit $q0
 ...

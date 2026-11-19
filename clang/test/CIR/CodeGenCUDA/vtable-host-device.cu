@@ -1,10 +1,10 @@
 #include "Inputs/cuda.h"
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -fcuda-is-device -fclangir -emit-cir %s -o - \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -x hip -fcuda-is-device -fclangir -emit-cir %s -o - \
 // RUN: | FileCheck %s --check-prefix=CIR-DEV --implicit-check-not=@_ZNK6Square4nameEv --implicit-check-not=@_ZN1C9host_onlyEv
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -fcuda-is-device -fclangir -emit-llvm %s -o - \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -x hip -fcuda-is-device -fclangir -emit-llvm %s -o - \
 // RUN: | FileCheck %s --check-prefix=DEV --implicit-check-not=@_ZNK6Square4nameEv --implicit-check-not=@_ZN1C9host_onlyEv
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -fcuda-is-device -emit-llvm %s -o - \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -x hip -fcuda-is-device -emit-llvm %s -o - \
 // RUN: | FileCheck %s --check-prefix=DEV --implicit-check-not=@_ZNK6Square4nameEv --implicit-check-not=@_ZN1C9host_onlyEv
 // RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -x cuda -fcuda-is-device -fclangir -emit-llvm %s -o - \
 // RUN: | FileCheck %s --check-prefix=DEV --implicit-check-not=@_ZNK6Square4nameEv --implicit-check-not=@_ZN1C9host_onlyEv

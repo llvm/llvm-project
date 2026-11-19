@@ -6,7 +6,7 @@ define amdgpu_ps void @uniform_fshr_i32(i32 inreg %lhs, i32 inreg %rhs, i32 inre
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    v_mov_b32_e32 v2, s2
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; CHECK-NEXT:    v_alignbit_b32 v2, s0, s1, v2
+; CHECK-NEXT:    v_alignbit_b32 v2, s0, s1, v2.l
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v2
 ; CHECK-NEXT:    s_add_co_i32 s0, s0, s0
 ; CHECK-NEXT:    s_wait_alu depctr_sa_sdst(0)
@@ -24,7 +24,7 @@ declare i32 @llvm.amdgcn.readfirstlane.i32(i32)
 define amdgpu_ps void @divergent_fshr_i32(i32 %lhs, i32 %rhs, i32 %amt, ptr %resptr) {
 ; CHECK-LABEL: divergent_fshr_i32:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    v_alignbit_b32 v0, v0, v1, v2
+; CHECK-NEXT:    v_alignbit_b32 v0, v0, v1, v2.l
 ; CHECK-NEXT:    flat_store_b32 v[3:4], v0
 ; CHECK-NEXT:    s_endpgm
   %result = call i32 @llvm.fshr.i32(i32 %lhs, i32 %rhs, i32 %amt)

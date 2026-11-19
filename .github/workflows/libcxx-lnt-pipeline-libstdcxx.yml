@@ -61,9 +61,9 @@ jobs:
     needs:
       - benchmark
     if: ${{ inputs.submit-lnt }}
-    uses: $/.github/workflows/libcxx-lnt-submit.yml
+    uses: $/.github/workflows/lnt-submit.yml
     with:
-      artifact-name: lnt-report
+      artifacts: lnt-report
       test-suite: libstdcxx
     secrets:
       LNT_SUBMISSION_TOKEN: ${{ secrets.LNT_SUBMISSION_TOKEN }}

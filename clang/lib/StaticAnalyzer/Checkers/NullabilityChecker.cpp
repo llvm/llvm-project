@@ -708,7 +708,7 @@ void NullabilityChecker::checkPreStmt(const ReturnStmt *S,
     if (NullReturnedFromNonnull.isEnabled() &&
         RetExprTypeLevelNullability != Nullability::Nonnull &&
         !InSuppressedMethodFamily) {
-      ExplodedNode *N = C.generateErrorNode(State);
+      ExplodedNode *N = C.addSink(State);
       if (!N)
         return;
 
@@ -805,7 +805,7 @@ void NullabilityChecker::checkPreCall(const CallEvent &Call,
         ArgExprTypeLevelNullability != Nullability::Nonnull &&
         RequiredNullability == Nullability::Nonnull &&
         isDiagnosableCall(Call)) {
-      ExplodedNode *N = C.generateErrorNode(State);
+      ExplodedNode *N = C.addSink(State);
       if (!N)
         return;
 
@@ -1288,7 +1288,7 @@ void NullabilityChecker::checkBind(SVal L, SVal V, const Stmt *S,
       ValNullability != Nullability::Nonnull &&
       ValueExprTypeLevelNullability != Nullability::Nonnull &&
       !isARCNilInitializedLocal(C, S)) {
-    ExplodedNode *N = C.generateErrorNode(State);
+    ExplodedNode *N = C.addSink(State);
     if (!N)
       return;
 

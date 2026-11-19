@@ -1369,10 +1369,14 @@ SubsumingPositionIterator::SubsumingPositionIterator(const IRPosition &IRP) {
     if (!CB->hasOperandBundles() || CanIgnoreOperandBundles(*CB)) {
       if (auto *Callee =
               dyn_cast_if_present<Function>(CB->getCalledOperand())) {
-        IRPositions.emplace_back(IRPosition::returned(*Callee));
+        // The returned position of the callee does not describe the call if
+        // the call uses a different return type.
+        bool SameType = Callee->getReturnType() == CB->getType();
+        if (SameType)
+          IRPositions.emplace_back(IRPosition::returned(*Callee));
         IRPositions.emplace_back(IRPosition::function(*Callee));
         for (const Argument &Arg : Callee->args())
-          if (Arg.hasReturnedAttr()) {
+          if (SameType && Arg.hasReturnedAttr()) {
             IRPositions.emplace_back(
                 IRPosition::callsite_argument(*CB, Arg.getArgNo()));
             IRPositions.emplace_back(
@@ -2521,11 +2525,14 @@ ChangeStatus Attributor::cleanupIR() {
                       << " instead of " << *OldV << "\n");
     U->set(NewV);
 
-    if (Instruction *I = dyn_cast<Instruction>(OldV)) {
+    // The new value may reference a function, e.g., if an argument is replaced
+    // by a function pointer, so the call graph of the user's function changes.
+    if (I)
       CGModifiedFunctions.insert(I->getFunction());
-      if (!isa<PHINode>(I) && !ToBeDeletedInsts.count(I) &&
-          isInstructionTriviallyDead(I))
-        DeadInsts.push_back(I);
+    if (Instruction *OldI = dyn_cast<Instruction>(OldV)) {
+      if (!isa<PHINode>(OldI) && !ToBeDeletedInsts.count(OldI) &&
+          isInstructionTriviallyDead(OldI))
+        DeadInsts.push_back(OldI);
     }
     if (isa<UndefValue>(NewV) && isa<CallBase>(U->getUser())) {
       auto *CB = cast<CallBase>(U->getUser());

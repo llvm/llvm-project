@@ -17,6 +17,7 @@
 #include "hdr/stdint_proxy.h"
 #include "hdr/types/size_t.h"
 #include "hdr/types/struct_ether_addr.h"
+#include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/span.h"
 #include "src/__support/common.h"
 #include "src/__support/ctype_utils.h"
@@ -42,6 +43,43 @@ LIBC_INLINE char *ether_ntoa_r(const struct ether_addr &addr,
     buf[pos++] = i < 5 ? ':' : '\0';
   }
   return buf.data();
+}
+
+/// Returns the value of the hexadecimal digit \p ch, or -1 if \p ch is not a
+/// hexadecimal digit.
+LIBC_INLINE constexpr int hex_digit_value(char ch) {
+  if (!internal::isalnum(ch))
+    return -1;
+  int val = internal::b36_char_to_int(ch);
+  return val < 16 ? val : -1;
+}
+
+/// Parses \p str as an Ethernet address in the colon-separated hexadecimal
+/// notation ("xx:xx:xx:xx:xx:xx"), where each octet consists of one or two
+/// hexadecimal digits. Like musl (but unlike glibc), trailing characters are
+/// not allowed. Returns nullopt if the string is not a valid address.
+LIBC_INLINE cpp::optional<struct ether_addr> ether_aton(const char *str) {
+  struct ether_addr addr;
+  for (size_t i = 0; i < 6; ++i) {
+    if (i > 0) {
+      if (*str != ':')
+        return cpp::nullopt;
+      ++str;
+    }
+    int val = hex_digit_value(*str);
+    if (val < 0)
+      return cpp::nullopt;
+    ++str;
+    int low = hex_digit_value(*str);
+    if (low >= 0) {
+      val = val << 4 | low;
+      ++str;
+    }
+    addr.ether_addr_octet[i] = static_cast<uint8_t>(val);
+  }
+  if (*str != '\0')
+    return cpp::nullopt;
+  return addr;
 }
 
 } // namespace net

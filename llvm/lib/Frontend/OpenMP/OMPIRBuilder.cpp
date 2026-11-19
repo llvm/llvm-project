@@ -10714,8 +10714,6 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
   auto *FnTy =
       FunctionType::get(Builder.getVoidTy(), Params, /* IsVarArg */ false);
 
-  SmallString<64> TyStr;
-  raw_svector_ostream Out(TyStr);
   Function *MapperFn =
       Function::Create(FnTy, GlobalValue::InternalLinkage, FuncName, M);
   MapperFn->addFnAttr(Attribute::NoInline);

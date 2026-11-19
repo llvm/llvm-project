@@ -1260,17 +1260,17 @@ MachineInstr *X86InstrInfo::convertToThreeAddressWithLEA(unsigned MIOpc,
   }
   CASE_NF(INC8r)
   CASE_NF(INC16r)
-    addRegOffset(MIB, InRegLEA, false, 1);
+    addRegOffset(MIB, InRegLEA, 1);
     break;
   CASE_NF(DEC8r)
   CASE_NF(DEC16r)
-    addRegOffset(MIB, InRegLEA, false, -1);
+    addRegOffset(MIB, InRegLEA, -1);
     break;
   CASE_NF(ADD8ri)
   CASE_NF(ADD16ri)
   case X86::ADD8ri_DB:
   case X86::ADD16ri_DB:
-    addRegOffset(MIB, InRegLEA, false, MI.getOperand(2).getImm());
+    addRegOffset(MIB, InRegLEA, MI.getOperand(2).getImm());
     break;
   CASE_NF(ADD8rr)
   CASE_NF(ADD16rr)
@@ -3695,6 +3695,15 @@ bool X86InstrInfo::canMakeTailCallConditional(
   if (TailCall.getOpcode() != X86::TCRETURNdi &&
       TailCall.getOpcode() != X86::TCRETURNdi64) {
     // Only direct calls can be done with a conditional branch.
+    return false;
+  }
+
+  if (TailCall.getCFIType()) {
+    // An indirect tail call that was lowered to a direct jump to an indirect
+    // thunk (e.g., __x86_indirect_thunk_r11 for retpolines) still carries a
+    // KCFI type, and must be preceded by a KCFI check of the call target. The
+    // check is emitted later, and cannot be made conditional, so folding the
+    // tail call into a conditional branch would silently drop it.
     return false;
   }
 
@@ -9607,7 +9616,7 @@ bool X86InstrInfo::setExecutionDomainCustom(MachineInstr &MI,
         lookupAVX512(MI.getOpcode(), dom, ReplaceableCustomAVX512LogicInstrs);
     assert(table && "Instruction not found in table?");
     // Don't change integer Q instructions to D instructions and
-    // use D intructions if we started with a PS instruction.
+    // use D instructions if we started with a PS instruction.
     if (Domain == 3 && (dom == 1 || table[3] == MI.getOpcode()))
       Domain = 4;
     MI.setDesc(get(table[Domain - 1]));

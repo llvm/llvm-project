@@ -34,6 +34,7 @@ class APInt;
 class Instruction;
 class IntrinsicInst;
 class Loop;
+class LoopInfo;
 class SCEV;
 class ScalarEvolution;
 class Type;
@@ -568,8 +569,8 @@ public:
   bool isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
                      const TargetTransformInfo::LSRCost &C2) const override;
 
-  bool isProfitableToSinkOperands(Instruction *I,
-                                  SmallVectorImpl<Use *> &Ops) const override;
+  bool isProfitableToSinkOperands(Instruction *I, SmallVectorImpl<Use *> &Ops,
+                                  const LoopInfo *LI) const override;
 
   bool enableAggressiveInterleaving(bool) const override {
     return ST->enableAggressiveInterleaving();

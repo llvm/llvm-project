@@ -156,9 +156,9 @@ body: |
     %y:vr = COPY $v9
     %mask:vmv0 = COPY $v0
     %add0:vr = PseudoVADD_VV_M1 $noreg, %x:vr, %y:vr, -1, 5, 3
-    %add1:vrnov0 = COPY killed %add:vr
+    %add1:vrnov0 = COPY %add:vr
     %or:vrnov0 = PseudoVOR_VV_M1 $noreg, %add1:vrnov0, %y:vr, -1, 5, 3
-    %merge:vrnov0 = PseudoVMERGE_VVM_M1 $noreg, %add1:vrnov0, killed %or:vrnov0, killed %mask:vmv0, -1, 5 /* e32 */
+    %merge:vrnov0 = PseudoVMERGE_VVM_M1 $noreg, %add1:vrnov0, %or:vrnov0, %mask:vmv0, -1, 5 /* e32 */
 
 ...
 ---

@@ -1960,6 +1960,11 @@ void SubtargetEmitter::emitSchedModelHelpers(const std::string &ClassName,
      << "::resolveVariantSchedClassImpl(SchedClass, MI, MCII, *this, CPUID);\n"
      << "} // " << ClassName << "::resolveVariantSchedClass\n\n";
 
+  OS << "std::unique_ptr<MCSubtargetInfo> " << ClassName
+     << "::clone() const {\n"
+     << "  return " << Target << "_MC::cloneSubtargetInfo(*this);\n"
+     << "} // " << ClassName << "::clone\n\n";
+
   STIPredicateExpander PE(Target, /*Indent=*/0);
   PE.setClassPrefix(ClassName);
   PE.setExpandDefinition(true);
@@ -2163,6 +2168,13 @@ void SubtargetEmitter::emitGenMCSubtargetInfo(raw_ostream &OS) {
      << "    const unsigned *OC, const unsigned *FP) :\n"
      << "      MCSubtargetInfo(TT, CPU, TuneCPU, FS, PN, PF, PD, PA, PSM,\n"
      << "                      WPR, WL, RA, IS, OC, FP) { }\n\n"
+     << "  explicit " << Target
+     << "GenMCSubtargetInfo(const MCSubtargetInfo &STI)\n"
+     << "      : MCSubtargetInfo(STI) {}\n\n"
+     << "  std::unique_ptr<MCSubtargetInfo> clone() const final {\n"
+     << "    return std::make_unique<" << Target
+     << "GenMCSubtargetInfo>(*this);\n"
+     << "  }\n\n"
      << "  unsigned resolveVariantSchedClass(unsigned SchedClass,\n"
      << "      const MCInst *MI, const MCInstrInfo *MCII,\n"
      << "      unsigned CPUID) const final {\n"
@@ -2176,6 +2188,14 @@ void SubtargetEmitter::emitGenMCSubtargetInfo(raw_ostream &OS) {
   }
   OS << "};\n";
   emitHwModeCheck(Target + "GenMCSubtargetInfo", OS, /*IsMC=*/true);
+  {
+    NamespaceEmitter NS(OS, (Target + Twine("_MC")).str());
+    OS << "std::unique_ptr<MCSubtargetInfo> cloneSubtargetInfo("
+       << "const MCSubtargetInfo &STI) {\n"
+       << "  return std::make_unique<" << Target
+       << "GenMCSubtargetInfo>(STI);\n"
+       << "}\n";
+  }
 }
 
 void SubtargetEmitter::emitMcInstrAnalysisPredicateFunctions(raw_ostream &OS) {
@@ -2276,7 +2296,9 @@ void SubtargetEmitter::emitHeader(raw_ostream &OS) {
     NamespaceEmitter MCNS(OS, (Target + Twine("_MC")).str());
     OS << "unsigned resolveVariantSchedClassImpl(unsigned SchedClass,"
        << " const MCInst *MI, const MCInstrInfo *MCII, "
-       << "const MCSubtargetInfo &STI, unsigned CPUID);\n";
+       << "const MCSubtargetInfo &STI, unsigned CPUID);\n"
+       << "std::unique_ptr<MCSubtargetInfo> cloneSubtargetInfo("
+       << "const MCSubtargetInfo &STI);\n";
     OS << "ArrayRef<unsigned> getVariantSchedClassTargets(unsigned SchedClass,"
        << " unsigned CPUID);\n";
   }
@@ -2284,6 +2306,7 @@ void SubtargetEmitter::emitHeader(raw_ostream &OS) {
      << "  explicit " << ClassName << "(const Triple &TT, StringRef CPU, "
      << "StringRef TuneCPU, StringRef FS);\n"
      << "public:\n"
+     << "  std::unique_ptr<MCSubtargetInfo> clone() const final;\n"
      << "  unsigned resolveSchedClass(unsigned SchedClass, "
      << " const MachineInstr *DefMI,"
      << " const TargetSchedModel *SchedModel) const final;\n"

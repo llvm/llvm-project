@@ -197,8 +197,15 @@ getProcedureDesignatorLoc(const Fortran::evaluate::ProcedureDesignator &proc,
   // To prevent this, it is up to the bridge to first declare all functions
   // defined in the translation unit before lowering any calls or procedure
   // designator references.
-  if (const Fortran::semantics::Symbol *symbol = proc.GetSymbol())
-    return converter.genLocation(symbol->name());
+  if (const Fortran::semantics::Symbol *symbol = proc.GetSymbol()) {
+    mlir::Location loc = converter.genLocation(symbol->name());
+    // Symbols created by semantics (e.g. the renaming USE added to access the
+    // specific procedure of a use-associated generic) have names that do not
+    // map to any source. Fall back to the ultimate symbol's location.
+    if (mlir::isa<mlir::UnknownLoc>(loc))
+      loc = converter.genLocation(symbol->GetUltimate().name());
+    return loc;
+  }
   // Use current location for intrinsics.
   return converter.getCurrentLocation();
 }

@@ -884,23 +884,11 @@ define void @store_atomic_vec2_bfloat(ptr %x, <2 x bfloat> %v) nounwind {
 ; CHECK-SSE2-O0-NEXT:    pextrw $1, %xmm0, %eax
 ; CHECK-SSE2-O0-NEXT:    movd %eax, %xmm0
 ; CHECK-SSE2-O0-NEXT:    pslld $16, %xmm0
-; CHECK-SSE2-O0-NEXT:    movd %xmm1, %ecx
-; CHECK-SSE2-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE2-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE2-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE2-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE2-O0-NEXT:    ucomiss %xmm1, %xmm1
-; CHECK-SSE2-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE2-O0-NEXT:    movd %xmm1, %eax
 ; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE2-O0-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm0, %ecx
-; CHECK-SSE2-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE2-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE2-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE2-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE2-O0-NEXT:    ucomiss %xmm0, %xmm0
-; CHECK-SSE2-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE2-O0-NEXT:    movd %xmm0, %eax
 ; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE2-O0-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
@@ -915,23 +903,11 @@ define void @store_atomic_vec2_bfloat(ptr %x, <2 x bfloat> %v) nounwind {
 ; CHECK-SSE4-O0-NEXT:    movaps %xmm1, %xmm0
 ; CHECK-SSE4-O0-NEXT:    pblendw {{.*#+}} xmm0 = xmm2[0],xmm0[1],xmm2[2],xmm0[3],xmm2[4],xmm0[5],xmm2[6],xmm0[7]
 ; CHECK-SSE4-O0-NEXT:    pslld $16, %xmm1
-; CHECK-SSE4-O0-NEXT:    movd %xmm1, %ecx
-; CHECK-SSE4-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE4-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE4-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE4-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE4-O0-NEXT:    ucomiss %xmm1, %xmm1
-; CHECK-SSE4-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE4-O0-NEXT:    movd %xmm1, %eax
 ; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE4-O0-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm0, %ecx
-; CHECK-SSE4-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE4-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE4-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE4-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE4-O0-NEXT:    ucomiss %xmm0, %xmm0
-; CHECK-SSE4-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE4-O0-NEXT:    movd %xmm0, %eax
 ; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE4-O0-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
@@ -1020,43 +996,19 @@ define void @store_atomic_vec4_bfloat(ptr %x, <4 x bfloat> %v) nounwind {
 ; CHECK-SSE2-O0-NEXT:    pextrw $1, %xmm2, %eax
 ; CHECK-SSE2-O0-NEXT:    movd %eax, %xmm2
 ; CHECK-SSE2-O0-NEXT:    pslld $16, %xmm2
-; CHECK-SSE2-O0-NEXT:    movd %xmm3, %ecx
-; CHECK-SSE2-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE2-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE2-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE2-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE2-O0-NEXT:    ucomiss %xmm3, %xmm3
-; CHECK-SSE2-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE2-O0-NEXT:    movd %xmm3, %eax
 ; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE2-O0-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm2, %ecx
-; CHECK-SSE2-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE2-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE2-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE2-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE2-O0-NEXT:    ucomiss %xmm2, %xmm2
-; CHECK-SSE2-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE2-O0-NEXT:    movd %xmm2, %eax
 ; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE2-O0-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm1, %ecx
-; CHECK-SSE2-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE2-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE2-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE2-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE2-O0-NEXT:    ucomiss %xmm1, %xmm1
-; CHECK-SSE2-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE2-O0-NEXT:    movd %xmm1, %eax
 ; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE2-O0-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm0, %ecx
-; CHECK-SSE2-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE2-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE2-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE2-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE2-O0-NEXT:    ucomiss %xmm0, %xmm0
-; CHECK-SSE2-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE2-O0-NEXT:    movd %xmm0, %eax
 ; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE2-O0-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
@@ -1078,43 +1030,19 @@ define void @store_atomic_vec4_bfloat(ptr %x, <4 x bfloat> %v) nounwind {
 ; CHECK-SSE4-O0-NEXT:    pextrw $2, %xmm1, %eax
 ; CHECK-SSE4-O0-NEXT:    movd %eax, %xmm1
 ; CHECK-SSE4-O0-NEXT:    pslld $16, %xmm1
-; CHECK-SSE4-O0-NEXT:    movd %xmm3, %ecx
-; CHECK-SSE4-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE4-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE4-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE4-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE4-O0-NEXT:    ucomiss %xmm3, %xmm3
-; CHECK-SSE4-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE4-O0-NEXT:    movd %xmm3, %eax
 ; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE4-O0-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm2, %ecx
-; CHECK-SSE4-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE4-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE4-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE4-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE4-O0-NEXT:    ucomiss %xmm2, %xmm2
-; CHECK-SSE4-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE4-O0-NEXT:    movd %xmm2, %eax
 ; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE4-O0-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm1, %ecx
-; CHECK-SSE4-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE4-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE4-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE4-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE4-O0-NEXT:    ucomiss %xmm1, %xmm1
-; CHECK-SSE4-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE4-O0-NEXT:    movd %xmm1, %eax
 ; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE4-O0-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm0, %ecx
-; CHECK-SSE4-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE4-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE4-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE4-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE4-O0-NEXT:    ucomiss %xmm0, %xmm0
-; CHECK-SSE4-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE4-O0-NEXT:    movd %xmm0, %eax
 ; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE4-O0-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
@@ -2677,163 +2605,67 @@ define void @store_atomic_vec16_bfloat_unaligned(ptr %x, <16 x bfloat> %v) nounw
 ; CHECK-SSE2-O0-NEXT:    pextrw $1, %xmm14, %eax
 ; CHECK-SSE2-O0-NEXT:    movd %eax, %xmm14
 ; CHECK-SSE2-O0-NEXT:    pslld $16, %xmm14
-; CHECK-SSE2-O0-NEXT:    movd %xmm15, %ecx
-; CHECK-SSE2-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE2-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE2-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE2-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE2-O0-NEXT:    ucomiss %xmm15, %xmm15
-; CHECK-SSE2-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE2-O0-NEXT:    movd %xmm15, %eax
 ; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE2-O0-NEXT:    movw %ax, (%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm14, %ecx
-; CHECK-SSE2-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE2-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE2-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE2-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE2-O0-NEXT:    ucomiss %xmm14, %xmm14
-; CHECK-SSE2-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE2-O0-NEXT:    movd %xmm14, %eax
 ; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm13, %ecx
-; CHECK-SSE2-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE2-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE2-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE2-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE2-O0-NEXT:    ucomiss %xmm13, %xmm13
-; CHECK-SSE2-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE2-O0-NEXT:    movd %xmm13, %eax
 ; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm12, %ecx
-; CHECK-SSE2-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE2-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE2-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE2-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE2-O0-NEXT:    ucomiss %xmm12, %xmm12
-; CHECK-SSE2-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE2-O0-NEXT:    movd %xmm12, %eax
 ; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm11, %ecx
-; CHECK-SSE2-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE2-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE2-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE2-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE2-O0-NEXT:    ucomiss %xmm11, %xmm11
-; CHECK-SSE2-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE2-O0-NEXT:    movd %xmm11, %eax
 ; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm10, %ecx
-; CHECK-SSE2-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE2-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE2-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE2-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE2-O0-NEXT:    ucomiss %xmm10, %xmm10
-; CHECK-SSE2-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE2-O0-NEXT:    movd %xmm10, %eax
 ; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm9, %ecx
-; CHECK-SSE2-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE2-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE2-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE2-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE2-O0-NEXT:    ucomiss %xmm9, %xmm9
-; CHECK-SSE2-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE2-O0-NEXT:    movd %xmm9, %eax
 ; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm8, %ecx
-; CHECK-SSE2-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE2-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE2-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE2-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE2-O0-NEXT:    ucomiss %xmm8, %xmm8
-; CHECK-SSE2-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE2-O0-NEXT:    movd %xmm8, %eax
 ; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm7, %ecx
-; CHECK-SSE2-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE2-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE2-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE2-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE2-O0-NEXT:    ucomiss %xmm7, %xmm7
-; CHECK-SSE2-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE2-O0-NEXT:    movd %xmm7, %eax
 ; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm6, %ecx
-; CHECK-SSE2-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE2-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE2-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE2-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE2-O0-NEXT:    ucomiss %xmm6, %xmm6
-; CHECK-SSE2-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE2-O0-NEXT:    movd %xmm6, %eax
 ; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm5, %ecx
-; CHECK-SSE2-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE2-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE2-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE2-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE2-O0-NEXT:    ucomiss %xmm5, %xmm5
-; CHECK-SSE2-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE2-O0-NEXT:    movd %xmm5, %eax
 ; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm4, %ecx
-; CHECK-SSE2-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE2-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE2-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE2-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE2-O0-NEXT:    ucomiss %xmm4, %xmm4
-; CHECK-SSE2-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE2-O0-NEXT:    movd %xmm4, %eax
 ; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm3, %ecx
-; CHECK-SSE2-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE2-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE2-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE2-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE2-O0-NEXT:    ucomiss %xmm3, %xmm3
-; CHECK-SSE2-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE2-O0-NEXT:    movd %xmm3, %eax
 ; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm2, %ecx
-; CHECK-SSE2-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE2-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE2-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE2-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE2-O0-NEXT:    ucomiss %xmm2, %xmm2
-; CHECK-SSE2-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE2-O0-NEXT:    movd %xmm2, %eax
 ; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm1, %ecx
-; CHECK-SSE2-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE2-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE2-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE2-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE2-O0-NEXT:    ucomiss %xmm1, %xmm1
-; CHECK-SSE2-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE2-O0-NEXT:    movd %xmm1, %eax
 ; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm0, %ecx
-; CHECK-SSE2-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE2-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE2-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE2-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE2-O0-NEXT:    ucomiss %xmm0, %xmm0
-; CHECK-SSE2-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE2-O0-NEXT:    movd %xmm0, %eax
 ; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
@@ -2893,163 +2725,67 @@ define void @store_atomic_vec16_bfloat_unaligned(ptr %x, <16 x bfloat> %v) nounw
 ; CHECK-SSE4-O0-NEXT:    pextrw $2, %xmm13, %eax
 ; CHECK-SSE4-O0-NEXT:    movd %eax, %xmm13
 ; CHECK-SSE4-O0-NEXT:    pslld $16, %xmm13
-; CHECK-SSE4-O0-NEXT:    movd %xmm15, %ecx
-; CHECK-SSE4-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE4-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE4-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE4-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE4-O0-NEXT:    ucomiss %xmm15, %xmm15
-; CHECK-SSE4-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE4-O0-NEXT:    movd %xmm15, %eax
 ; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE4-O0-NEXT:    movw %ax, (%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm14, %ecx
-; CHECK-SSE4-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE4-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE4-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE4-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE4-O0-NEXT:    ucomiss %xmm14, %xmm14
-; CHECK-SSE4-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE4-O0-NEXT:    movd %xmm14, %eax
 ; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm13, %ecx
-; CHECK-SSE4-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE4-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE4-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE4-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE4-O0-NEXT:    ucomiss %xmm13, %xmm13
-; CHECK-SSE4-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE4-O0-NEXT:    movd %xmm13, %eax
 ; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm12, %ecx
-; CHECK-SSE4-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE4-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE4-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE4-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE4-O0-NEXT:    ucomiss %xmm12, %xmm12
-; CHECK-SSE4-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE4-O0-NEXT:    movd %xmm12, %eax
 ; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm11, %ecx
-; CHECK-SSE4-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE4-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE4-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE4-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE4-O0-NEXT:    ucomiss %xmm11, %xmm11
-; CHECK-SSE4-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE4-O0-NEXT:    movd %xmm11, %eax
 ; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm10, %ecx
-; CHECK-SSE4-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE4-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE4-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE4-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE4-O0-NEXT:    ucomiss %xmm10, %xmm10
-; CHECK-SSE4-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE4-O0-NEXT:    movd %xmm10, %eax
 ; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm9, %ecx
-; CHECK-SSE4-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE4-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE4-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE4-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE4-O0-NEXT:    ucomiss %xmm9, %xmm9
-; CHECK-SSE4-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE4-O0-NEXT:    movd %xmm9, %eax
 ; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm8, %ecx
-; CHECK-SSE4-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE4-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE4-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE4-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE4-O0-NEXT:    ucomiss %xmm8, %xmm8
-; CHECK-SSE4-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE4-O0-NEXT:    movd %xmm8, %eax
 ; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm7, %ecx
-; CHECK-SSE4-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE4-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE4-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE4-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE4-O0-NEXT:    ucomiss %xmm7, %xmm7
-; CHECK-SSE4-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE4-O0-NEXT:    movd %xmm7, %eax
 ; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm6, %ecx
-; CHECK-SSE4-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE4-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE4-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE4-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE4-O0-NEXT:    ucomiss %xmm6, %xmm6
-; CHECK-SSE4-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE4-O0-NEXT:    movd %xmm6, %eax
 ; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm5, %ecx
-; CHECK-SSE4-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE4-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE4-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE4-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE4-O0-NEXT:    ucomiss %xmm5, %xmm5
-; CHECK-SSE4-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE4-O0-NEXT:    movd %xmm5, %eax
 ; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm4, %ecx
-; CHECK-SSE4-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE4-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE4-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE4-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE4-O0-NEXT:    ucomiss %xmm4, %xmm4
-; CHECK-SSE4-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE4-O0-NEXT:    movd %xmm4, %eax
 ; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm3, %ecx
-; CHECK-SSE4-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE4-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE4-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE4-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE4-O0-NEXT:    ucomiss %xmm3, %xmm3
-; CHECK-SSE4-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE4-O0-NEXT:    movd %xmm3, %eax
 ; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm2, %ecx
-; CHECK-SSE4-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE4-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE4-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE4-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE4-O0-NEXT:    ucomiss %xmm2, %xmm2
-; CHECK-SSE4-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE4-O0-NEXT:    movd %xmm2, %eax
 ; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm1, %ecx
-; CHECK-SSE4-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE4-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE4-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE4-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE4-O0-NEXT:    ucomiss %xmm1, %xmm1
-; CHECK-SSE4-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE4-O0-NEXT:    movd %xmm1, %eax
 ; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm0, %ecx
-; CHECK-SSE4-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE4-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE4-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE4-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE4-O0-NEXT:    ucomiss %xmm0, %xmm0
-; CHECK-SSE4-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE4-O0-NEXT:    movd %xmm0, %eax
 ; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
@@ -3490,163 +3226,67 @@ define void @store_atomic_vec16_bfloat_align(ptr %x, <16 x bfloat> %v) nounwind 
 ; CHECK-SSE2-O0-NEXT:    pextrw $1, %xmm14, %eax
 ; CHECK-SSE2-O0-NEXT:    movd %eax, %xmm14
 ; CHECK-SSE2-O0-NEXT:    pslld $16, %xmm14
-; CHECK-SSE2-O0-NEXT:    movd %xmm15, %ecx
-; CHECK-SSE2-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE2-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE2-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE2-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE2-O0-NEXT:    ucomiss %xmm15, %xmm15
-; CHECK-SSE2-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE2-O0-NEXT:    movd %xmm15, %eax
 ; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE2-O0-NEXT:    movw %ax, (%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm14, %ecx
-; CHECK-SSE2-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE2-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE2-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE2-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE2-O0-NEXT:    ucomiss %xmm14, %xmm14
-; CHECK-SSE2-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE2-O0-NEXT:    movd %xmm14, %eax
 ; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm13, %ecx
-; CHECK-SSE2-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE2-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE2-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE2-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE2-O0-NEXT:    ucomiss %xmm13, %xmm13
-; CHECK-SSE2-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE2-O0-NEXT:    movd %xmm13, %eax
 ; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm12, %ecx
-; CHECK-SSE2-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE2-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE2-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE2-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE2-O0-NEXT:    ucomiss %xmm12, %xmm12
-; CHECK-SSE2-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE2-O0-NEXT:    movd %xmm12, %eax
 ; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm11, %ecx
-; CHECK-SSE2-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE2-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE2-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE2-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE2-O0-NEXT:    ucomiss %xmm11, %xmm11
-; CHECK-SSE2-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE2-O0-NEXT:    movd %xmm11, %eax
 ; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm10, %ecx
-; CHECK-SSE2-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE2-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE2-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE2-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE2-O0-NEXT:    ucomiss %xmm10, %xmm10
-; CHECK-SSE2-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE2-O0-NEXT:    movd %xmm10, %eax
 ; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm9, %ecx
-; CHECK-SSE2-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE2-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE2-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE2-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE2-O0-NEXT:    ucomiss %xmm9, %xmm9
-; CHECK-SSE2-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE2-O0-NEXT:    movd %xmm9, %eax
 ; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm8, %ecx
-; CHECK-SSE2-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE2-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE2-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE2-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE2-O0-NEXT:    ucomiss %xmm8, %xmm8
-; CHECK-SSE2-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE2-O0-NEXT:    movd %xmm8, %eax
 ; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm7, %ecx
-; CHECK-SSE2-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE2-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE2-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE2-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE2-O0-NEXT:    ucomiss %xmm7, %xmm7
-; CHECK-SSE2-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE2-O0-NEXT:    movd %xmm7, %eax
 ; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm6, %ecx
-; CHECK-SSE2-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE2-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE2-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE2-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE2-O0-NEXT:    ucomiss %xmm6, %xmm6
-; CHECK-SSE2-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE2-O0-NEXT:    movd %xmm6, %eax
 ; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm5, %ecx
-; CHECK-SSE2-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE2-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE2-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE2-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE2-O0-NEXT:    ucomiss %xmm5, %xmm5
-; CHECK-SSE2-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE2-O0-NEXT:    movd %xmm5, %eax
 ; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm4, %ecx
-; CHECK-SSE2-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE2-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE2-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE2-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE2-O0-NEXT:    ucomiss %xmm4, %xmm4
-; CHECK-SSE2-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE2-O0-NEXT:    movd %xmm4, %eax
 ; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm3, %ecx
-; CHECK-SSE2-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE2-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE2-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE2-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE2-O0-NEXT:    ucomiss %xmm3, %xmm3
-; CHECK-SSE2-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE2-O0-NEXT:    movd %xmm3, %eax
 ; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm2, %ecx
-; CHECK-SSE2-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE2-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE2-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE2-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE2-O0-NEXT:    ucomiss %xmm2, %xmm2
-; CHECK-SSE2-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE2-O0-NEXT:    movd %xmm2, %eax
 ; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm1, %ecx
-; CHECK-SSE2-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE2-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE2-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE2-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE2-O0-NEXT:    ucomiss %xmm1, %xmm1
-; CHECK-SSE2-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE2-O0-NEXT:    movd %xmm1, %eax
 ; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm0, %ecx
-; CHECK-SSE2-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE2-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE2-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE2-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE2-O0-NEXT:    ucomiss %xmm0, %xmm0
-; CHECK-SSE2-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE2-O0-NEXT:    movd %xmm0, %eax
 ; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
@@ -3706,163 +3346,67 @@ define void @store_atomic_vec16_bfloat_align(ptr %x, <16 x bfloat> %v) nounwind 
 ; CHECK-SSE4-O0-NEXT:    pextrw $2, %xmm13, %eax
 ; CHECK-SSE4-O0-NEXT:    movd %eax, %xmm13
 ; CHECK-SSE4-O0-NEXT:    pslld $16, %xmm13
-; CHECK-SSE4-O0-NEXT:    movd %xmm15, %ecx
-; CHECK-SSE4-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE4-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE4-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE4-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE4-O0-NEXT:    ucomiss %xmm15, %xmm15
-; CHECK-SSE4-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE4-O0-NEXT:    movd %xmm15, %eax
 ; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE4-O0-NEXT:    movw %ax, (%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm14, %ecx
-; CHECK-SSE4-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE4-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE4-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE4-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE4-O0-NEXT:    ucomiss %xmm14, %xmm14
-; CHECK-SSE4-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE4-O0-NEXT:    movd %xmm14, %eax
 ; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm13, %ecx
-; CHECK-SSE4-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE4-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE4-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE4-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE4-O0-NEXT:    ucomiss %xmm13, %xmm13
-; CHECK-SSE4-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE4-O0-NEXT:    movd %xmm13, %eax
 ; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm12, %ecx
-; CHECK-SSE4-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE4-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE4-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE4-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE4-O0-NEXT:    ucomiss %xmm12, %xmm12
-; CHECK-SSE4-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE4-O0-NEXT:    movd %xmm12, %eax
 ; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm11, %ecx
-; CHECK-SSE4-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE4-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE4-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE4-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE4-O0-NEXT:    ucomiss %xmm11, %xmm11
-; CHECK-SSE4-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE4-O0-NEXT:    movd %xmm11, %eax
 ; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm10, %ecx
-; CHECK-SSE4-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE4-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE4-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE4-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE4-O0-NEXT:    ucomiss %xmm10, %xmm10
-; CHECK-SSE4-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE4-O0-NEXT:    movd %xmm10, %eax
 ; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm9, %ecx
-; CHECK-SSE4-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE4-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE4-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE4-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE4-O0-NEXT:    ucomiss %xmm9, %xmm9
-; CHECK-SSE4-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE4-O0-NEXT:    movd %xmm9, %eax
 ; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm8, %ecx
-; CHECK-SSE4-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE4-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE4-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE4-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE4-O0-NEXT:    ucomiss %xmm8, %xmm8
-; CHECK-SSE4-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE4-O0-NEXT:    movd %xmm8, %eax
 ; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm7, %ecx
-; CHECK-SSE4-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE4-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE4-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE4-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE4-O0-NEXT:    ucomiss %xmm7, %xmm7
-; CHECK-SSE4-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE4-O0-NEXT:    movd %xmm7, %eax
 ; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm6, %ecx
-; CHECK-SSE4-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE4-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE4-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE4-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE4-O0-NEXT:    ucomiss %xmm6, %xmm6
-; CHECK-SSE4-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE4-O0-NEXT:    movd %xmm6, %eax
 ; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm5, %ecx
-; CHECK-SSE4-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE4-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE4-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE4-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE4-O0-NEXT:    ucomiss %xmm5, %xmm5
-; CHECK-SSE4-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE4-O0-NEXT:    movd %xmm5, %eax
 ; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm4, %ecx
-; CHECK-SSE4-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE4-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE4-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE4-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE4-O0-NEXT:    ucomiss %xmm4, %xmm4
-; CHECK-SSE4-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE4-O0-NEXT:    movd %xmm4, %eax
 ; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm3, %ecx
-; CHECK-SSE4-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE4-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE4-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE4-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE4-O0-NEXT:    ucomiss %xmm3, %xmm3
-; CHECK-SSE4-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE4-O0-NEXT:    movd %xmm3, %eax
 ; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm2, %ecx
-; CHECK-SSE4-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE4-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE4-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE4-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE4-O0-NEXT:    ucomiss %xmm2, %xmm2
-; CHECK-SSE4-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE4-O0-NEXT:    movd %xmm2, %eax
 ; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm1, %ecx
-; CHECK-SSE4-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE4-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE4-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE4-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE4-O0-NEXT:    ucomiss %xmm1, %xmm1
-; CHECK-SSE4-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE4-O0-NEXT:    movd %xmm1, %eax
 ; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm0, %ecx
-; CHECK-SSE4-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE4-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE4-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE4-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE4-O0-NEXT:    ucomiss %xmm0, %xmm0
-; CHECK-SSE4-O0-NEXT:    cmovpl %ecx, %eax
+; CHECK-SSE4-O0-NEXT:    movd %xmm0, %eax
 ; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
 ; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)

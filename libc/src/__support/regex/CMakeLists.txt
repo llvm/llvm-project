@@ -54,16 +54,21 @@ add_object_library(
   SRCS
     regex_parser.cpp
   HDRS
+    regex_charclass.h
     regex_parser.h
   DEPENDS
     .regex_expr_pool
     libc.hdr.regex_macros
     libc.src.__support.alloc_checker
     libc.src.__support.CPP.array
+    libc.src.__support.CPP.bitset
     libc.src.__support.CPP.new
+    libc.src.__support.CPP.optional
     libc.src.__support.CPP.scope
     libc.src.__support.CPP.span
     libc.src.__support.CPP.string_view
+    libc.src.__support.ctype_utils
     libc.src.__support.error_or
+    libc.src.__support.macros.attributes
     libc.src.__support.macros.config
 )

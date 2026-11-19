@@ -522,116 +522,50 @@ void NVVM::FmaOp::lowerFmaToLLVMIR(Operation &op, LLVM::ModuleTranslation &mt,
                                    llvm::IRBuilderBase &builder) {
   auto thisOp = cast<NVVM::FmaOp>(op);
   mlir::NVVM::FPRoundingMode rndMode = thisOp.getRnd();
-  unsigned rndIndex = static_cast<unsigned>(rndMode) - 1; // 1-4 mapped to 0-3
-  mlir::NVVM::SaturationMode satMode = thisOp.getSat();
   bool isFTZ = thisOp.getFtz();
   bool isRelu = thisOp.getRelu();
-  bool isSat = satMode == NVVM::SaturationMode::SAT;
+  bool isSat = thisOp.getSat() == NVVM::SaturationMode::SAT;
   bool isOOB = thisOp.getOob();
 
   mlir::Type opType = thisOp.getRes().getType();
   llvm::Type *opTypeLLVM = mt.convertType(opType);
-  bool isVectorFma = opTypeLLVM->isVectorTy();
 
   llvm::Value *argA = mt.lookupValue(thisOp.getA());
   llvm::Value *argB = mt.lookupValue(thisOp.getB());
   llvm::Value *argC = mt.lookupValue(thisOp.getC());
 
-  static constexpr llvm::Intrinsic::ID f16IDs[] = {
-      llvm::Intrinsic::nvvm_fma_rn_f16,
-      llvm::Intrinsic::nvvm_fma_rn_f16x2,
-      llvm::Intrinsic::nvvm_fma_rn_ftz_f16,
-      llvm::Intrinsic::nvvm_fma_rn_ftz_f16x2,
-      llvm::Intrinsic::nvvm_fma_rn_sat_f16,
-      llvm::Intrinsic::nvvm_fma_rn_sat_f16x2,
-      llvm::Intrinsic::nvvm_fma_rn_ftz_sat_f16,
-      llvm::Intrinsic::nvvm_fma_rn_ftz_sat_f16x2,
-      llvm::Intrinsic::nvvm_fma_rn_relu_f16,
-      llvm::Intrinsic::nvvm_fma_rn_relu_f16x2,
-      llvm::Intrinsic::nvvm_fma_rn_ftz_relu_f16,
-      llvm::Intrinsic::nvvm_fma_rn_ftz_relu_f16x2};
-
-  static constexpr llvm::Intrinsic::ID bf16IDs[] = {
-      llvm::Intrinsic::nvvm_fma_rn_bf16, llvm::Intrinsic::nvvm_fma_rn_bf16x2,
-      llvm::Intrinsic::nvvm_fma_rn_relu_bf16,
-      llvm::Intrinsic::nvvm_fma_rn_relu_bf16x2};
-
-  static constexpr llvm::Intrinsic::ID f32IDs[] = {
-      llvm::Intrinsic::nvvm_fma_rn_f,
-      llvm::Intrinsic::nvvm_fma_rm_f,
-      llvm::Intrinsic::nvvm_fma_rp_f,
-      llvm::Intrinsic::nvvm_fma_rz_f,
-      llvm::Intrinsic::nvvm_fma_rn_sat_f,
-      llvm::Intrinsic::nvvm_fma_rm_sat_f,
-      llvm::Intrinsic::nvvm_fma_rp_sat_f,
-      llvm::Intrinsic::nvvm_fma_rz_sat_f,
-      llvm::Intrinsic::nvvm_fma_rn_ftz_f,
-      llvm::Intrinsic::nvvm_fma_rm_ftz_f,
-      llvm::Intrinsic::nvvm_fma_rp_ftz_f,
-      llvm::Intrinsic::nvvm_fma_rz_ftz_f,
-      llvm::Intrinsic::nvvm_fma_rn_ftz_sat_f,
-      llvm::Intrinsic::nvvm_fma_rm_ftz_sat_f,
-      llvm::Intrinsic::nvvm_fma_rp_ftz_sat_f,
-      llvm::Intrinsic::nvvm_fma_rz_ftz_sat_f,
-  };
-
-  static constexpr llvm::Intrinsic::ID f64IDs[] = {
-      llvm::Intrinsic::nvvm_fma_rn_d, llvm::Intrinsic::nvvm_fma_rm_d,
-      llvm::Intrinsic::nvvm_fma_rp_d, llvm::Intrinsic::nvvm_fma_rz_d};
-
-  auto fmaIntrinsic = [&](llvm::Intrinsic::ID IID,
-                          llvm::Type *retType) -> llvm::Value * {
-    return createScalarizedIntrinsicCall(
-        builder, IID, opTypeLLVM, {argA, argB, argC}, /*retType=*/retType);
-  };
-
-  // f16 + f16 -> f16 / vector<2xf16> + vector<2xf16> -> vector<2xf16>
-  if (opTypeLLVM->getScalarType()->isHalfTy()) {
-    llvm::Value *result;
-    if (isOOB) {
-      result = fmaIntrinsic(isRelu ? llvm::Intrinsic::nvvm_fma_rn_oob_relu
-                                   : llvm::Intrinsic::nvvm_fma_rn_oob,
-                            opTypeLLVM);
-    } else {
-      unsigned index =
-          (isRelu << 3) | (isSat << 2) | (isFTZ << 1) |
-          isVectorFma; // Op verifier ensures that this index is valid
-      result = fmaIntrinsic(f16IDs[index], opTypeLLVM);
-    }
-    mt.mapValue(thisOp.getRes(), result);
+  // The oob variants only support RN and take no rounding-mode operand.
+  if (isOOB) {
+    llvm::Intrinsic::ID id = isRelu ? llvm::Intrinsic::nvvm_fma_rn_oob_relu
+                                    : llvm::Intrinsic::nvvm_fma_rn_oob;
+    mt.mapValue(thisOp.getRes(), createIntrinsicCall(builder, id, opTypeLLVM,
+                                                     {argA, argB, argC}));
     return;
   }
 
-  // bf16 + bf16 -> bf16 / vector<2xbf16> + vector<2xbf16> -> vector<2xbf16>
-  if (opTypeLLVM->getScalarType()->isBFloatTy()) {
-    llvm::Value *result;
-    if (isOOB) {
-      result = fmaIntrinsic(isRelu ? llvm::Intrinsic::nvvm_fma_rn_oob_relu
-                                   : llvm::Intrinsic::nvvm_fma_rn_oob,
-                            opTypeLLVM);
-    } else {
-      unsigned index = (isRelu << 1) | isVectorFma;
-      result = fmaIntrinsic(bf16IDs[index], opTypeLLVM);
-    }
-    mt.mapValue(thisOp.getRes(), result);
+  static constexpr llvm::Intrinsic::ID fmaIDs[2][3] = {
+      {llvm::Intrinsic::nvvm_fma, llvm::Intrinsic::nvvm_fma_sat,
+       llvm::Intrinsic::nvvm_fma_relu},
+      {llvm::Intrinsic::nvvm_fma_ftz, llvm::Intrinsic::nvvm_fma_ftz_sat,
+       llvm::Intrinsic::nvvm_fma_ftz_relu}};
+
+  llvm::Intrinsic::ID id = fmaIDs[isFTZ][isSat ? 1 : (isRelu ? 2 : 0)];
+  llvm::Value *rnd = builder.getInt32(
+      static_cast<int>(getLLVMRoundingModeForFPArith(rndMode)));
+
+  // For f64 vector fma, and f32 vector fma with saturation, we need to
+  // scalarize the intrinsic call.
+  llvm::Type *scalarTypeLLVM = opTypeLLVM->getScalarType();
+  if (opTypeLLVM->isVectorTy() && (scalarTypeLLVM->isDoubleTy() ||
+                                   (isSat && scalarTypeLLVM->isFloatTy()))) {
+    mt.mapValue(thisOp.getRes(), createScalarizedIntrinsicCall(
+                                     builder, id, opTypeLLVM,
+                                     {argA, argB, argC, rnd}, scalarTypeLLVM));
     return;
   }
 
-  // f64 + f64 -> f64 / vector<2xf64> + vector<2xf64> -> vector<2xf64>
-  if (opTypeLLVM->getScalarType()->isDoubleTy()) {
-    mt.mapValue(thisOp.getRes(),
-                fmaIntrinsic(f64IDs[rndIndex], opTypeLLVM->getScalarType()));
-    return;
-  }
-
-  // f32 + f32 -> f32 / vector<2xf32> + vector<2xf32> -> vector<2xf32>
-  const unsigned numRndModes = 4; // RN, RM, RP, RZ
-  if (opTypeLLVM->getScalarType()->isFloatTy()) {
-    unsigned index = ((isFTZ << 1) | isSat) * numRndModes + rndIndex;
-    mt.mapValue(thisOp.getRes(),
-                fmaIntrinsic(f32IDs[index], opTypeLLVM->getScalarType()));
-    return;
-  }
+  mt.mapValue(thisOp.getRes(), createIntrinsicCall(builder, id, opTypeLLVM,
+                                                   {argA, argB, argC, rnd}));
 }
 
 // Returns the LLVM type the sp{de}compress intrinsics use for metadata: i32 for

@@ -2130,6 +2130,7 @@ def PAUTH_PROLOGUE : Pseudo<(outs), (ins), []>, Sched<[]> {
   // duplicated.
   let isNotDuplicable = 1;
 }
+
 // Insertion point of LR authentication code.
 // The RET terminator of the containing machine basic block may be replaced
 // with a combined RETA(A|B) instruction when rewriting this Pseudo.
@@ -2139,6 +2140,13 @@ def PAUTH_PROLOGUE : Pseudo<(outs), (ins), []>, Sched<[]> {
 // AArch64InstrInfo::createPauthEpilogueInstr method that adds an implicit-def
 // operand as needed.
 def PAUTH_EPILOGUE : Pseudo<(outs), (ins), []>, Sched<[]>;
+
+// Like PAUTH_EPILOGUE, but for use before the epilogue proper, where it
+// authenticates the return address in LR, which the epilogue then leaves alone.
+// The SP the return address was signed with must already be in X16, and the
+// signed return address in X17 if the authentication sequence works on that
+// (see AArch64PAuth::authenticatesLRViaX17), or else in LR.
+def PAUTH_EPILOGUE_ENTRY_SP : Pseudo<(outs), (ins), []>, Sched<[]>;
 }
 
 // These pointer authentication instructions require armv8.3a
@@ -3801,6 +3809,11 @@ def EMITBKEY : Pseudo<(outs), (ins), []>, Sched<[]> {}
 // Pseudo instruction to tell the streamer to emit a 'G' character into the
 // augmentation string.
 def EMITMTETAGGED : Pseudo<(outs), (ins), []>, Sched<[]> {}
+
+// Pseudo instruction to tell the streamer to emit an 'N' character into the
+// augmentation string, indicating that non hint-space FEAT_PAuth_LR
+// instructions are used for signing/authenticating the return address.
+def EMITNONHINTED : Pseudo<(outs), (ins), []>, Sched<[]> {}
 
 // FIXME: maybe the scratch register used shouldn't be fixed to X1?
 // FIXME: can "hasSideEffects be dropped?
@@ -6124,6 +6137,10 @@ def F128CSEL : Pseudo<(outs FPR128:$Rd),
 //===----------------------------------------------------------------------===//
 // Instructions used for emitting unwind opcodes on ARM64 Windows.
 //===----------------------------------------------------------------------===//
+let isMeta = 1, hasSideEffects = 1, mayLoad = 0, mayStore = 0, Size = 0 in {
+  def SEH_EndC : Pseudo<(outs), (ins), []>, Sched<[]>;
+}
+
 let isPseudo = 1 in {
   def SEH_StackAlloc : Pseudo<(outs), (ins i32imm:$size), []>, Sched<[]>;
   def SEH_SaveFPLR : Pseudo<(outs), (ins i32imm:$offs), []>, Sched<[]>;

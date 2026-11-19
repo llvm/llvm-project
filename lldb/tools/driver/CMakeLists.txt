@@ -29,9 +29,9 @@ if (UNIX AND "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
 endif()
 
 set(LLDB_DRIVER_LINK_LIBS
-  liblldb
   lldbHost
   lldbUtility
+  liblldb
 )
 
 add_lldb_tool(lldb

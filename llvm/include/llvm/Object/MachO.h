@@ -815,6 +815,8 @@ public:
     case MachO::TOOL_LD: return "ld";
     case MachO::TOOL_LLD:
       return "lld";
+    case MachO::TOOL_DSYMUTIL:
+      return "dsymutil";
     default:
       std::string ret;
       raw_string_ostream ss(ret);

@@ -213,7 +213,8 @@ static void AddMachOSysLibRoot(Compilation &C, const ArgList &Args,
   // --isysroot as the syslibroot.
   // We check `OPT__sysroot_EQ` directly instead of `getSysRoot` to make sure we
   // prioritise command line arguments over configuration of `DEFAULT_SYSROOT`.
-  if (const Arg *A = Args.getLastArg(options::OPT__sysroot_EQ)) {
+  if (const Arg *A = Args.getLastArg(options::OPT__sysroot_EQ);
+      A && !StringRef(A->getValue()).empty()) {
     CmdArgs.push_back("-syslibroot");
     CmdArgs.push_back(A->getValue());
   } else if (const Arg *A = Args.getLastArg(options::OPT_isysroot)) {

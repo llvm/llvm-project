@@ -952,7 +952,7 @@ class Compiler(ast.NodeVisitor):
     [x] String, integer, float, boolean, and None literals
     [x] Binary comparisons
     [x] Unary operators (-, +, ~)
-    [ ] Boolean operators
+    [x] Boolean operators (and, or, not)
     [x] Math operations (+, -, *, //, %, <<, >>, &, |, ^)
 
     # Unsupported Features
@@ -1119,6 +1119,36 @@ class Compiler(ast.NodeVisitor):
             self.visit(node.value)
         self._output("return")
 
+    def visit_BoolOp(self, node: ast.BoolOp) -> None:
+        """
+        Compile `and` / `or` with short-circuit evaluation. The result is
+        normalized to 0 or 1 (rather than one of the operands, as in Python).
+
+            a and b  =>  a { b 0 != } { 0 } ifelse
+            a or b   =>  a { 1 } { b 0 != } ifelse
+        """
+        if isinstance(node.op, ast.And):
+            prefix = "{"
+            suffix = "} { 0 } ifelse"
+        elif isinstance(node.op, ast.Or):
+            prefix = "{ 1 } {"
+            suffix = "} ifelse"
+        else:
+            raise CompilerError(
+                f"unknown boolean operator: {type(node.op).__name__}", node
+            )
+
+        # Each operand but the last opens a nested ifelse, which is closed after
+        # the last operand.
+        *operands, last = node.values
+        for value in operands:
+            self.visit(value)
+            self._output(prefix)
+        self.visit(last)
+        self._output("0 !=")
+        for _ in operands:
+            self._output(suffix)
+
     def visit_BinOp(self, node: ast.BinOp) -> None:
         if op := _BINOPS.get(type(node.op)):
             self.visit(node.left)
@@ -1148,6 +1178,10 @@ class Compiler(ast.NodeVisitor):
         elif isinstance(node.op, ast.Invert):
             self.visit(operand)
             self._output("~")
+        elif isinstance(node.op, ast.Not):
+            # Logical not; the bytecode `~` is a bitwise not.
+            self.visit(operand)
+            self._output("0 =")
         else:
             raise CompilerError("unsupported unary operator", node)
 
@@ -1459,6 +1493,7 @@ if __name__ == "__main__":
     ############################################################################
     # Tests.
     ############################################################################
+    import itertools
     import tempfile
     import unittest
 
@@ -1736,6 +1771,47 @@ if __name__ == "__main__":
             )
             self.assertEqual(interpret(methods["get_child_index"], [], [{}, "x"]), -1)
             self.assertEqual(interpret(methods["get_num_children"], [], [{}]), 5)
+
+        def test_boolean(self):
+            def run(expr, *args, valobj=None):
+                methods = self.compile_methods(
+                    f"""
+                    class Synthetic:
+                        def get_child_index(self, a, b, c):
+                            return {expr}
+                    """
+                )
+                data = [{"valobj": valobj}, *args]
+                return interpret(methods["get_child_index"], [], data)
+
+            # The result is normalized to 0 or 1, unlike Python's operands.
+            exprs = [
+                "a and b",
+                "a or b",
+                "not a",
+                "a and b and c",
+                "a or b or c",
+                "a and b or c",
+                "a or b and c",
+                "not (a or b)",
+                "a > 0 and b > 0 or a == 5",
+            ]
+            for a, b, c in itertools.product((0, 1, 2, 5), repeat=3):
+                for expr in exprs:
+                    self.assertEqual(
+                        run(expr, a, b, c), int(bool(eval(expr))), (expr, a, b, c)
+                    )
+
+            # The bytecode `~` is bitwise, `not` is logical.
+            self.assertEqual(run("not a", 1, 0, 0), 0)
+            self.assertEqual(run("~a", 1, 0, 0), -2)
+
+            # The right operand is not evaluated if the left decides the result.
+            # A valobj of None would raise if it were evaluated.
+            self.assertEqual(run("a and self.valobj.GetValueAsUnsigned()", 0, 0, 0), 0)
+            self.assertEqual(run("a or self.valobj.GetValueAsUnsigned()", 1, 0, 0), 1)
+            with self.assertRaises(AttributeError):
+                run("a and self.valobj.GetValueAsUnsigned()", 1, 0, 0)
 
         def test_fstring(self):
             def compile_fstring(expr):

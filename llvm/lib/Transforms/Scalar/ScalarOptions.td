@@ -311,7 +311,7 @@ defm : BoolField<"loop-predication-insert-assumes-of-predicated-guards-condition
 // profitability analysis to find other exiting blocks that have a much higher
 // probability of exiting the loop instead of loop exiting via latch. This value
 // should be greater than 1 for a sane profitability check.
-defm : ValueField<"loop-predication-latch-probability-scale", "float", "2.0",
+defm : ValueField<"loop-predication-latch-probability-scale", "float", "2.0f",
   "scale factor for the latch probability. Value should be greater than 1. Lower values are ignored">;
 defm : BoolField<"loop-predication-predicate-widenable-branches-to-deopt", "true",
   "Whether or not we should predicate guards expressed as widenable branches to deoptimize blocks">;
@@ -429,7 +429,7 @@ defm : ValueField<"unroll-threshold-default", "unsigned", "150",
 // LoopVersioningLICM.cpp
 // Threshold minimum allowed percentage for possible invariant instructions in a
 // loop.
-defm : ValueField<"licm-versioning-invariant-threshold", "float", "25",
+defm : ValueField<"licm-versioning-invariant-threshold", "float", "25.0f",
   "LoopVersioningLICM's minimum allowed percentage of possible invariant instructions per loop">;
 // Threshold for maximum allowed loop nest/depth.
 defm : ValueField<"licm-versioning-max-depth-threshold", "unsigned", "2",

@@ -325,7 +325,7 @@ let isTerminator = 1, isBarrier = 1, SchedRW = [WriteBranch] in {
 let isBranch = 1, isIndirectBranch = 1 in {
 def S_SETPC_B64 : SOP1_1  <"s_setpc_b64">;
 
-let SubtargetPredicate = HasAddPC64Inst in
+let SubtargetPredicate = HasSAddPCI64Inst in
 def S_ADD_PC_I64 : SOP1_1_REGIMM64 <"s_add_pc_i64">;
 } // End isBranch = 1, isIndirectBranch = 1
 

@@ -303,11 +303,11 @@ void UnwindInfoSectionImpl::prepareRelocations(ConcatInputSection *isec) {
       // in the GOT, use that to avoid creating a duplicate entry. All GOT
       // entries needed by non-unwind sections will have already been added
       // by this point.
-      Symbol *&s = personalityTable[{referentIsec, r.addend}];
+      Symbol *&s = personalityTable[{referentIsec, r.getAddend()}];
       if (s == nullptr) {
         Defined *const *gotEntry =
             llvm::find_if(referentIsec->symbols, [&](Defined const *d) {
-              return d->value == static_cast<uint64_t>(r.addend) &&
+              return d->value == static_cast<uint64_t>(r.getAddend()) &&
                      d->isInGot();
             });
         if (gotEntry != referentIsec->symbols.end()) {
@@ -316,7 +316,7 @@ void UnwindInfoSectionImpl::prepareRelocations(ConcatInputSection *isec) {
           // This runs after dead stripping, so the noDeadStrip argument does
           // not matter.
           s = make<Defined>("<internal>", /*file=*/nullptr, referentIsec,
-                            r.addend, /*size=*/0, /*isWeakDef=*/false,
+                            r.getAddend(), /*size=*/0, /*isWeakDef=*/false,
                             /*isExternal=*/false, /*isPrivateExtern=*/false,
                             /*includeInSymtab=*/true,
                             /*isReferencedDynamically=*/false,
@@ -326,7 +326,7 @@ void UnwindInfoSectionImpl::prepareRelocations(ConcatInputSection *isec) {
         }
       }
       r.referent = s;
-      r.addend = 0;
+      r.setAddend(0);
     }
   }
 }

@@ -33,6 +33,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BlockFrequencyInfoImpl.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/CodeGen/MBFIWrapper.h"
@@ -242,9 +243,6 @@ extern cl::opt<unsigned> ProfileLikelyProb;
 // -view-block-layout-with-bfi=
 extern cl::opt<GVDAGType> ViewBlockLayoutWithBFI;
 
-// Command line option to specify the name of the function for CFG dump
-// Defined in Analysis/BlockFrequencyInfo.cpp:  -view-bfi-func-name=
-extern cl::opt<std::string> ViewBlockFreqFuncName;
 } // namespace llvm
 
 namespace {
@@ -3666,9 +3664,10 @@ bool MachineBlockPlacement::run(MachineFunction &MF) {
   ChainAllocator.DestroyAll();
 
   // View the function.
+  StringRef ViewFuncName =
+      getViewBlockFreqFuncName(F->getFunction().getContext());
   if (ViewBlockLayoutWithBFI != GVDT_None &&
-      (ViewBlockFreqFuncName.empty() ||
-       F->getFunction().getName() == ViewBlockFreqFuncName)) {
+      (ViewFuncName.empty() || F->getFunction().getName() == ViewFuncName)) {
     if (RenumberBlocksBeforeView)
       MF.RenumberBlocks();
     MBFI->view("MBP." + MF.getName(), false);

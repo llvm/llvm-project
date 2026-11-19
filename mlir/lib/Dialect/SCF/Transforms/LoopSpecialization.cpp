@@ -103,9 +103,19 @@ static void specializeForLoopForUnrolling(ForOp op) {
   Value cond = arith::CmpIOp::create(b, op.getLoc(), arith::CmpIPredicate::eq,
                                      bound, constant);
   map.map(bound, constant);
-  auto ifOp = scf::IfOp::create(b, op.getLoc(), cond, /*withElseRegion=*/true);
-  ifOp.getThenBodyBuilder().clone(*op.getOperation(), map);
-  ifOp.getElseBodyBuilder().clone(*op.getOperation());
+  auto ifOp = scf::IfOp::create(b, op.getLoc(), op->getResultTypes(), cond,
+                                /*withElseRegion=*/true);
+
+  OpBuilder thenB = ifOp.getThenBodyBuilder();
+  Operation *thenLoop = thenB.clone(*op.getOperation(), map);
+  OpBuilder elseB = ifOp.getElseBodyBuilder();
+  Operation *elseLoop = elseB.clone(*op.getOperation());
+
+  if (op->getNumResults() > 0) {
+    scf::YieldOp::create(thenB, op.getLoc(), thenLoop->getResults());
+    scf::YieldOp::create(elseB, op.getLoc(), elseLoop->getResults());
+    op->replaceAllUsesWith(ifOp.getResults());
+  }
   op.erase();
 }
 

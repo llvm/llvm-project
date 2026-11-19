@@ -1306,7 +1306,6 @@ public:
     if (auto intTy = mlir::dyn_cast<cir::IntType>(attr.getType());
         intTy && intTy.isBitInt())
       return getBitIntStorageAttr(rewriter, attr, dataLayout);
-    llvm::APInt val = attr.getValue();
 
     return rewriter.getIntegerAttr(llvmType, attr.getValue());
   }

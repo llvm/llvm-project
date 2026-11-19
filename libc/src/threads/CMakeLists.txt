@@ -20,9 +20,9 @@ add_entrypoint_object(
   HDRS
     thrd_create.h
   DEPENDS
-    libc.src.__support.threads.thread
+    libc.hdr.errno_macros
     libc.include.threads
-    libc.src.errno.errno
+    libc.src.__support.threads.thread
 )
 
 add_entrypoint_object(

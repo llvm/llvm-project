@@ -643,7 +643,7 @@ struct MatchableInfo {
     if (int Cmp = Mnemonic.compare_insensitive(RHS.Mnemonic))
       return Cmp == -1;
 
-    // (Optionally) Order by the resultant instuctions size.
+    // (Optionally) Order by the resultant instructions size.
     // eg. for ARM thumb instructions smaller encodings should be preferred.
     if (PreferSmallerInstructions && ResInstSize != RHS.ResInstSize)
       return ResInstSize < RHS.ResInstSize;

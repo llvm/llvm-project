@@ -3046,7 +3046,6 @@ void CodeGenFunction::EmitPPCAIXMultiVersionResolver(
   // entry:
   llvm::BasicBlock *CurBlock = createBasicBlock("entry", Resolver);
 
-  SmallVector<std::pair<llvm::Value *, llvm::BasicBlock *>, 3> PhiArgs;
   for (const FMVResolverOption &RO : Options) {
     Builder.SetInsertPoint(CurBlock);
     // The 'default' or 'generic' case.

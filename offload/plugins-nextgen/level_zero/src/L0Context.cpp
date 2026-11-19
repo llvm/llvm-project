@@ -11,139 +11,123 @@
 //===----------------------------------------------------------------------===//
 
 #include "L0Context.h"
+#include "L0Device.h"
 #include "L0Plugin.h"
 
 namespace llvm::omp::target::plugin {
 
-/// Compose a driver version string from the packed value reported by
-/// zeDriverGetProperties. Used when zeIntelGetDriverVersionString is missing.
-static Expected<std::string>
-getDriverVersionFromProperties(ze_driver_handle_t zeDriver) {
-  ze_driver_properties_t DriverProperties{};
-  DriverProperties.stype = ZE_STRUCTURE_TYPE_DRIVER_PROPERTIES;
-  CALL_ZE_RET_ERROR(zeDriverGetProperties, zeDriver, &DriverProperties);
+using namespace error;
 
-  const uint32_t PackedVersion = DriverProperties.driverVersion;
-  return std::to_string((PackedVersion & 0xFF000000) >> 24) + "." +
-         std::to_string((PackedVersion & 0x00FF0000) >> 16) + "." +
-         std::to_string(PackedVersion & 0x0000FFFF);
+Error LevelZeroPluginContextTy::initAsyncInfoImpl(
+    GenericDeviceTy &Device, AsyncInfoWrapperTy &AsyncInfoWrapper) {
+  auto &L0Device = static_cast<L0DeviceTy &>(Device);
+  auto QueueOrErr = L0Device.getOrCreateQueue(AsyncInfoWrapper, this);
+  return QueueOrErr ? Plugin::success() : QueueOrErr.takeError();
 }
 
-L0ContextTy::L0ContextTy(LevelZeroPluginTy &Plugin, ze_driver_handle_t zeDriver,
-                         int32_t DriverId)
-    : Plugin(Plugin), zeDriver(zeDriver), DriverId(DriverId) {}
-
-L0ContextTy::~L0ContextTy() = default;
-
-Expected<std::string> L0ContextTy::tryGetIntelDriverVersion() {
-  size_t VersionSize = 0;
-  CALL_ZE_RET_ERROR(IntelGetDriverVersionString, zeDriver, nullptr,
-                    &VersionSize);
-  std::string Version(VersionSize, '\0');
-  CALL_ZE_RET_ERROR(IntelGetDriverVersionString, zeDriver, Version.data(),
-                    &VersionSize);
-  if (!Version.empty() && Version.back() == '\0')
-    Version.pop_back();
-  return Version;
-}
-
-Error L0ContextTy::init() {
-  auto CleanupOnError = [&]() {
-    if (zeContext) {
-      zeContextDestroy(zeContext);
-      zeContext = nullptr;
-    }
-  };
-  CALL_ZE_RET_ERROR(zeDriverGetApiVersion, zeDriver, &APIVersion);
-  ODBG(OLDT_Init) << "Driver API version is "
-                  << llvm::format(PRIx32, APIVersion);
-
-  ze_context_desc_t Desc{ZE_STRUCTURE_TYPE_CONTEXT_DESC, nullptr, 0};
-  CALL_ZE_RET_ERROR(zeContextCreate, zeDriver, &Desc, &zeContext);
-
-  const auto &Options = Plugin.getOptions();
-  bool UseCounterBasedEvents = Options.CommandMode == CommandModeTy::InOrder ||
-                               Options.CommandMode == CommandModeTy::Sync;
-  if (UseCounterBasedEvents)
-    ODBG(OLDT_Init) << "Using counter-based events for "
-                    << (Options.CommandMode == CommandModeTy::InOrder
-                            ? "InOrder"
-                            : "Sync")
-                    << " command mode";
-
-  if (auto Err = EventPool.init(zeContext, UseCounterBasedEvents,
-                                /* Flags */ 0)) {
-    CleanupOnError();
+Error LevelZeroPluginContextTy::deinit() {
+  if (auto Err = QueueCache.deinit())
     return Err;
-  }
-  if (auto Err = HostMemAllocator.initHostPool(*this, Plugin.getOptions(),
-                                               zeContext)) {
-    if (auto DeinitErr = EventPool.deinit())
-      Err = joinErrors(std::move(Err), std::move(DeinitErr));
-    CleanupOnError();
-    return Err;
-  }
-
-  ODBG(OLDT_Init) << "APIs supported by the context with dlopen: ";
-  ODBG(OLDT_Init) << "  zeCommandListAppendLaunchKernelWithArguments: "
-                  << (LaunchKernelWithArguments.available() ? "yes" : "no");
-  ODBG(OLDT_Init) << "  zeCommandListAppendHostFunction: "
-                  << (CommandListAppendHostFunction.available() ? "yes" : "no");
-  ODBG(OLDT_Init) << "  zeDriverGetDefaultContext: "
-                  << (DriverGetDefaultContext.available() ? "yes" : "no");
-
-  LaunchKernelWithArguments.loadExperimental(
-      zeDriver, "zeCommandListAppendLaunchKernelWithArguments");
-
-  CommandListAppendHostFunction.loadExperimental(
-      zeDriver, "zeCommandListAppendHostFunction");
-  if (!CommandListAppendHostFunction)
-    // Try again with a name used in compute runtime 25.35 to 25.48
-    CommandListAppendHostFunction.loadExperimental(
-        zeDriver, "zexCommandListAppendHostFunction");
-
-  DriverGetDefaultContext.loadExperimental(zeDriver,
-                                           "zeDriverGetDefaultContext");
-  IntelGetDriverVersionString.loadExperimental(zeDriver,
-                                               "zeIntelGetDriverVersionString");
-
-  ODBG(OLDT_Init) << "APIs supported by the context with added extensions: ";
-  ODBG(OLDT_Init) << "  zeCommandListAppendLaunchKernelWithArguments: "
-                  << (LaunchKernelWithArguments.available() ? "yes" : "no");
-  ODBG(OLDT_Init) << "  zeCommandListAppendHostFunction: "
-                  << (CommandListAppendHostFunction.available() ? "yes" : "no");
-  ODBG(OLDT_Init) << "  zeDriverGetDefaultContext: "
-                  << (DriverGetDefaultContext.available() ? "yes" : "no");
-
-  auto DriverVersionOrErr = IntelGetDriverVersionString.available()
-                                ? tryGetIntelDriverVersion()
-                                : getDriverVersionFromProperties(zeDriver);
-  if (!DriverVersionOrErr)
-    return DriverVersionOrErr.takeError();
-  DriverVersion = std::move(*DriverVersionOrErr);
-  ODBG(OLDT_Init) << "Driver version is " << DriverVersion;
-
-  DefaultUserCtx = std::make_unique<LevelZeroPluginContextTy>(
-      Plugin, /*Devices=*/llvm::ArrayRef<GenericDeviceTy *>{}, zeDriver,
-      zeContext, /*OwnsZeContext=*/false);
-
-  return Plugin::success();
-}
-
-Error L0ContextTy::deinit() {
-  // Release the default context (drains its queue cache) before zeContext.
-  if (DefaultUserCtx) {
-    if (auto Err = DefaultUserCtx->deinit())
+  // Tear down allocators before their ze_context.
+  for (auto &KV : DeviceAllocators)
+    if (auto Err = KV.second->deinit())
       return Err;
-    DefaultUserCtx.reset();
+  DeviceAllocators.clear();
+  if (HostAllocator) {
+    if (auto Err = HostAllocator->deinit())
+      return Err;
+    HostAllocator.reset();
   }
-  if (auto Err = EventPool.deinit())
-    return Err;
-  if (auto Err = HostMemAllocator.deinit())
-    return Err;
-  if (zeContext)
-    CALL_ZE_RET_ERROR(zeContextDestroy, zeContext);
+  if (OwnsZeContext && ZeContext) {
+    CALL_ZE_RET_ERROR(zeContextDestroy, ZeContext);
+    ZeContext = nullptr;
+    OwnsZeContext = false;
+  }
   return Plugin::success();
+}
+
+Error LevelZeroPluginContextTy::initAllocators() {
+  const auto &Options = static_cast<LevelZeroPluginTy &>(Plugin).getOptions();
+  for (auto *D : Devices) {
+    auto &L0Device = static_cast<L0DeviceTy &>(*D);
+    auto Alloc = std::make_unique<MemAllocatorTy>();
+    if (auto Err = Alloc->initDevicePools(L0Device, Options, ZeContext))
+      return Err;
+    DeviceAllocators.try_emplace(&L0Device, std::move(Alloc));
+  }
+  if (Devices.empty())
+    return Plugin::success();
+  auto &First = static_cast<L0DeviceTy &>(*Devices.front());
+  HostAllocator = std::make_unique<MemAllocatorTy>();
+  if (auto Err =
+          HostAllocator->initHostPool(First.getL0Driver(), Options, ZeContext))
+    return Err;
+  // Host MaxAllocSize = min over devices, matching L0DriverTy's driver pool.
+  for (auto *D : Devices)
+    HostAllocator->updateMaxAllocSize(static_cast<L0DeviceTy &>(*D));
+  return Plugin::success();
+}
+
+Expected<void *> LevelZeroPluginContextTy::allocateImpl(
+    GenericDeviceTy &Device, int64_t Size, void * /*HostPtr*/,
+    TargetAllocTy Kind, size_t Alignment, GenericProfilerTy * /*ProfilerPtr*/) {
+  MemAllocatorTy *Allocator = nullptr;
+  int32_t ResolvedKind = Kind;
+  if (Kind == TARGET_ALLOC_HOST) {
+    if (!HostAllocator)
+      return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                           "host allocator not initialized");
+    Allocator = HostAllocator.get();
+  } else {
+    if (ResolvedKind == TARGET_ALLOC_DEFAULT)
+      ResolvedKind = TARGET_ALLOC_DEVICE;
+    auto &L0Device = static_cast<L0DeviceTy &>(Device);
+    auto It = DeviceAllocators.find(&L0Device);
+    if (It == DeviceAllocators.end())
+      return Plugin::error(ErrorCode::INVALID_DEVICE,
+                           "device is not part of this context");
+    Allocator = It->second.get();
+  }
+  return Allocator->alloc(Size, Alignment, ResolvedKind, /*Offset=*/0,
+                          /*UserAlloc=*/true, /*DevMalloc=*/false,
+                          /*MemAdvice=*/
+                          std::numeric_limits<uint32_t>::max(),
+                          AllocOptionTy::ALLOC_OPT_NONE);
+}
+
+Error LevelZeroPluginContextTy::deallocateImpl(
+    GenericDeviceTy &Device, void *Ptr, TargetAllocTy Kind,
+    GenericProfilerTy * /*ProfilerPtr*/) {
+  if (Kind == TARGET_ALLOC_HOST) {
+    if (!HostAllocator)
+      return Plugin::error(ErrorCode::NOT_FOUND,
+                           "no host allocation tracked in this context");
+    return HostAllocator->dealloc(Ptr);
+  }
+  auto &L0Device = static_cast<L0DeviceTy &>(Device);
+  auto It = DeviceAllocators.find(&L0Device);
+  if (It == DeviceAllocators.end())
+    return Plugin::error(ErrorCode::INVALID_DEVICE,
+                         "device is not part of this context");
+  return It->second->dealloc(Ptr);
+}
+
+Expected<PluginAllocInfoTy>
+LevelZeroPluginContextTy::getAllocInfo(const void *Ptr) {
+  void *Raw = const_cast<void *>(Ptr);
+  for (const auto &[Device, Allocator] : DeviceAllocators) {
+    if (auto *Info = Allocator->getAllocInfo(Raw))
+      return PluginAllocInfoTy{Device, static_cast<TargetAllocTy>(Info->Kind),
+                               Info->Base, Info->ReqSize};
+  }
+  if (HostAllocator) {
+    if (auto *Info = HostAllocator->getAllocInfo(Raw))
+      return PluginAllocInfoTy{nullptr, static_cast<TargetAllocTy>(Info->Kind),
+                               Info->Base, Info->ReqSize};
+  }
+
+  return Plugin::error(error::ErrorCode::NOT_FOUND,
+                       "pointer is not a known allocation in this context");
 }
 
 } // namespace llvm::omp::target::plugin

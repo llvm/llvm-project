@@ -12,7 +12,7 @@
 ; CHECK: @llvm.amdgcn.kernel.k1_f0.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k1_f0.lds.t poison, align 2, !absolute_symbol [[META0]]
 ; CHECK: @llvm.amdgcn.kernel.kernel_lds.lds = internal addrspace(3) global %llvm.amdgcn.kernel.kernel_lds.lds.t poison, align 2, !absolute_symbol [[META0]]
 ; CHECK: @llvm.amdgcn.kernel.kernel_lds_recursion.lds = internal addrspace(3) global %llvm.amdgcn.kernel.kernel_lds_recursion.lds.t poison, align 2, !absolute_symbol [[META0]]
-; CHECK: @llvm.amdgcn.lds.offset.table = internal addrspace(4) constant [3 x [2 x ptr addrspace(3)]]
+; CHECK: @llvm.amdgcn.lds.offset.table = internal addrspace(4) constant [3 x [2 x ptr addrspace(3)]] {{\[\[}}2 x ptr addrspace(3)] [ptr addrspace(3) @llvm.amdgcn.kernel.k0_f0.lds, ptr addrspace(3) poison], [2 x ptr addrspace(3)] [ptr addrspace(3) @llvm.amdgcn.kernel.k1_f0.lds, ptr addrspace(3) getelementptr inbounds (i8, ptr addrspace(3) @llvm.amdgcn.kernel.k1_f0.lds, i32 2)], [2 x ptr addrspace(3)] [ptr addrspace(3) @llvm.amdgcn.kernel.kernel_lds_recursion.lds, ptr addrspace(3) getelementptr inbounds (i8, ptr addrspace(3) @llvm.amdgcn.kernel.kernel_lds_recursion.lds, i32 2)]]
 ;.
 define internal void @lds_use_through_indirect() {
 ; CHECK-LABEL: define internal void @lds_use_through_indirect(

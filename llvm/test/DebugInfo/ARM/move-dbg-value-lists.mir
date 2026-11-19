@@ -1,5 +1,5 @@
 # RUN: llc %s -start-after=arm-mve-vpt-opts -stop-after=arm-prera-ldst-opt -o - | FileCheck %s
-# CHECK: %5:rgpr = t2MOVCCr %3, killed %4, 0 /* CC::eq */, $cpsr, debug-location !16
+# CHECK: %5:rgpr = t2MOVCCr %3, %4, 0 /* CC::eq */, $cpsr, debug-location !16
 # CHECK-NEXT: DBG_VALUE 0, $noreg, !12, !DIExpression(), debug-location !16
 # CHECK-NEXT: DBG_VALUE 1, $noreg, !12, !DIExpression(), debug-location !16
 # CHECK-NEXT: DBG_VALUE_LIST !12, !DIExpression(), $noreg, $noreg, debug-location !16
@@ -49,7 +49,7 @@ body:             |
   bb.0.entry:
     %10:rgpr = COPY $r2
     %13:rgpr = t2MOV_ga_pcrel target-flags(arm-nonlazy) @backtrace_user.ctl_default, debug-location !95
-    %15:rgpr = t2MOVCCr %10, killed %13, 0 /* CC::eq */, $cpsr, debug-location !95
+    %15:rgpr = t2MOVCCr %10, %13, 0 /* CC::eq */, $cpsr, debug-location !95
     DBG_VALUE 0, $noreg, !60, !DIExpression(), debug-location !95
     %0:rgpr = t2LDRi12 %15, 0, 14 /* CC::al */, $noreg, debug-location !95 :: (load (s32) from %ir..backtrace_user.ctl_default, align 8)
     DBG_VALUE 1, $noreg, !60, !DIExpression(), debug-location !95

@@ -190,6 +190,6 @@ body:             |
     %4:gpr = COPY $x10
     %5:vr = PseudoVLE64_V_M1 undef $noreg, %3, 2, 6, 0
     %6:vr = PseudoVLE64_V_M1 undef $noreg, %4, 2, 6, 0
-    %7:vr = PseudoVADD_VV_M1 undef $noreg, killed %5, killed %6, 2, 6, 0
+    %7:vr = PseudoVADD_VV_M1 undef $noreg, %5, %6, 2, 6, 0
     PseudoSF_MM_F_F $t0, killed renamable $v8m8, killed renamable $v16m8, 7, %2:gprnox0, %2:gprnox0, %0:gprnox0, 4, 2, implicit $frm, implicit $vl, implicit $vtype
 ...

@@ -51,6 +51,7 @@ enum ImageKind : uint16_t {
   IMG_Fatbinary,
   IMG_PTX,
   IMG_SPIRV,
+  IMG_PISA,
   IMG_LAST,
 };
 

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/InlineOrder.h"
+#include "AnalysisOptions.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/GlobalsModRef.h"
@@ -16,29 +17,10 @@
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "inline-order"
-
-enum class InlinePriorityMode : int { Size, Cost, CostBenefit, ML };
-
-static cl::opt<InlinePriorityMode> UseInlinePriority(
-    "inline-priority-mode", cl::init(InlinePriorityMode::Size), cl::Hidden,
-    cl::desc("Choose the priority mode to use in module inline"),
-    cl::values(clEnumValN(InlinePriorityMode::Size, "size",
-                          "Use callee size priority."),
-               clEnumValN(InlinePriorityMode::Cost, "cost",
-                          "Use inline cost priority."),
-               clEnumValN(InlinePriorityMode::CostBenefit, "cost-benefit",
-                          "Use cost-benefit ratio."),
-               clEnumValN(InlinePriorityMode::ML, "ml", "Use ML.")));
-
-static cl::opt<int> ModuleInlinerTopPriorityThreshold(
-    "module-inliner-top-priority-threshold", cl::Hidden, cl::init(0),
-    cl::desc("The cost threshold for call sites that get inlined without the "
-             "cost-benefit analysis"));
 
 namespace {
 
@@ -114,15 +96,20 @@ public:
   CostBenefitPriority(const CallBase *CB, FunctionAnalysisManager &FAM,
                       const InlineParams &Params) {
     auto IC = getInlineCostWrapper(const_cast<CallBase &>(*CB), FAM, Params);
+    int StaticBonusApplied = 0;
     if (IC.isVariable()) {
       Cost = IC.getCost();
       StaticBonusApplied = IC.getStaticBonusApplied();
       CostBenefit = IC.getCostBenefit();
     } else {
       Cost = IC.isNever() ? INT_MAX : INT_MIN;
-      StaticBonusApplied = 0;
       CostBenefit = std::nullopt;
     }
+    // We add back StaticBonusApplied to determine whether we expect the caller
+    // to shrink (even if we don't delete the callee).
+    ReducesCallerSize =
+        Cost + StaticBonusApplied < getAnalysisOptions(*CB->getCaller())
+                                        .module_inliner_top_priority_threshold;
   }
 
   static bool isMoreDesirable(const CostBenefitPriority &P1,
@@ -139,18 +126,11 @@ public:
     //    prioritize those call sites with higher benefit-to-cost ratios.
     //
     // 3. Remaining call sites are prioritized according to their costs.
-
-    // We add back StaticBonusApplied to determine whether we expect the caller
-    // to shrink (even if we don't delete the callee).
-    bool P1ReducesCallerSize =
-        P1.Cost + P1.StaticBonusApplied < ModuleInlinerTopPriorityThreshold;
-    bool P2ReducesCallerSize =
-        P2.Cost + P2.StaticBonusApplied < ModuleInlinerTopPriorityThreshold;
-    if (P1ReducesCallerSize || P2ReducesCallerSize) {
+    if (P1.ReducesCallerSize || P2.ReducesCallerSize) {
       // If one reduces the caller size while the other doesn't, then return
       // true iff P1 reduces the caller size.
-      if (P1ReducesCallerSize != P2ReducesCallerSize)
-        return P1ReducesCallerSize;
+      if (P1.ReducesCallerSize != P2.ReducesCallerSize)
+        return P1.ReducesCallerSize;
 
       // If they both reduce the caller size, pick the one with the smaller
       // cost.
@@ -178,7 +158,7 @@ public:
 
 private:
   int Cost = INT_MAX;
-  int StaticBonusApplied = 0;
+  bool ReducesCallerSize = false;
   std::optional<CostBenefitPair> CostBenefit;
 };
 
@@ -277,7 +257,7 @@ std::unique_ptr<InlineOrder>
 llvm::getDefaultInlineOrder(FunctionAnalysisManager &FAM,
                             const InlineParams &Params,
                             ModuleAnalysisManager &MAM, Module &M) {
-  switch (UseInlinePriority) {
+  switch (getAnalysisOptions(M).inline_priority_mode) {
   case InlinePriorityMode::Size:
     LLVM_DEBUG(dbgs() << "    Current used priority: Size priority ---- \n");
     return std::make_unique<PriorityInlineOrder<SizePriority>>(FAM, Params);

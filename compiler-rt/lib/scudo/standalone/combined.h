@@ -139,7 +139,9 @@ public:
     SizeClassAllocatorT &SizeClassAllocator;
   };
 
-  typedef GlobalQuarantine<QuarantineCallback, void> QuarantineT;
+  typedef GlobalQuarantine<QuarantineCallback, void,
+                           AllocatorConfig::getQuarantineDisabled()>
+      QuarantineT;
   typedef typename QuarantineT::CacheT QuarantineCacheT;
 
   void init() {
@@ -564,7 +566,7 @@ public:
                  !isAligned(reinterpret_cast<uptr>(Ptr), DeleteAlignment)))
       reportDeleteAlignmentMismatch(Ptr, DeleteAlignment);
 
-    quarantineOrDeallocateChunk(Options, TaggedPtr, &Header, Size);
+    quarantineOrDeallocateChunk(Options, TaggedPtr, Ptr, &Header, Size);
   }
 
   void *reallocate(void *OldPtr, uptr NewSize, uptr Alignment = MinAlignment) {
@@ -665,7 +667,8 @@ public:
                        useMemoryTagging<AllocatorConfig>(Options);
       memcpy(NewPtr, OldTaggedPtr,
              Min(NewSize, ExactSize ? OldSize : UsableSize));
-      quarantineOrDeallocateChunk(Options, OldTaggedPtr, &Header, OldSize);
+      quarantineOrDeallocateChunk(Options, OldTaggedPtr, OldPtr, &Header,
+                                  OldSize);
     }
     return NewPtr;
   }
@@ -1221,7 +1224,7 @@ private:
   GlobalStats Stats;
   PrimaryT Primary;
   SecondaryT Secondary;
-  QuarantineT Quarantine;
+  [[no_unique_address]] QuarantineT Quarantine;
   TSDRegistryT TSDRegistry;
   pthread_once_t PostInitNonce = PTHREAD_ONCE_INIT;
 
@@ -1493,9 +1496,8 @@ private:
   }
 
   void quarantineOrDeallocateChunk(const Options &Options, void *TaggedPtr,
-                                   Chunk::UnpackedHeader *Header,
+                                   void *Ptr, Chunk::UnpackedHeader *Header,
                                    uptr Size) NO_THREAD_SAFETY_ANALYSIS {
-    void *Ptr = getHeaderTaggedPointer(TaggedPtr);
     // If the quarantine is disabled, the actual size of a chunk is 0 or larger
     // than the maximum allowed, we return a chunk directly to the backend.
     // This purposefully underflows for Size == 0.

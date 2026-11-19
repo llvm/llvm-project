@@ -39,6 +39,7 @@ static_library("Support") {
     "AArch64BuildAttributes.cpp",
     "ABIBreak.cpp",
     "AMDGPUMetadata.cpp",
+    "AMDGPUPrintf.cpp",
     "APFixedPoint.cpp",
     "APFloat.cpp",
     "APInt.cpp",

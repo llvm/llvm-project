@@ -95,6 +95,8 @@ static const StringMap<SPIRV::Extension::Extension> SPIRVExtensionMap = {
     {"SPV_KHR_shader_draw_parameters",
      SPIRV::Extension::Extension::SPV_KHR_shader_draw_parameters},
     {"SPV_KHR_ray_tracing", SPIRV::Extension::Extension::SPV_KHR_ray_tracing},
+    {"SPV_KHR_storage_buffer_storage_class",
+     SPIRV::Extension::Extension::SPV_KHR_storage_buffer_storage_class},
     {"SPV_KHR_uniform_group_instructions",
      SPIRV::Extension::Extension::SPV_KHR_uniform_group_instructions},
     {"SPV_KHR_no_integer_wrap_decoration",

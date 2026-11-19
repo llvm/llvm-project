@@ -558,7 +558,13 @@ enum PlatformType {
 };
 
 // Values for tools enum in build_tool_version.
-enum { TOOL_CLANG = 1, TOOL_SWIFT = 2, TOOL_LD = 3, TOOL_LLD = 4 };
+enum {
+  TOOL_CLANG = 1,
+  TOOL_SWIFT = 2,
+  TOOL_LD = 3,
+  TOOL_LLD = 4,
+  TOOL_DSYMUTIL = 5
+};
 
 // Structs from <mach-o/loader.h>
 

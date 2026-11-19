@@ -101,11 +101,8 @@ TEST(TargetOptionsTest, SubtargetCopyPreservesHwMode) {
     ASSERT_NE(TST->getHwModeSet(), 0u);
     MCContext Ctx(TT, TM->getMCAsmInfo(), TM->getMCRegisterInfo(), *TST);
     MCSubtargetInfo &TSTCopy = Ctx.getSubtargetCopy(*TST);
-    // FIXME: MCContext::getSubtargetCopy invokes the base MCSubtargetInfo copy
-    // constructor, resetting the vtable to MCSubtargetInfo and losing the
-    // <Target>GenSubtargetInfo overrides for getHwMode() and getHwModeSet().
-    EXPECT_NE(TSTCopy.getHwMode(), TST->getHwMode());
-    EXPECT_NE(TSTCopy.getHwModeSet(), TST->getHwModeSet());
+    EXPECT_EQ(TSTCopy.getHwMode(), TST->getHwMode());
+    EXPECT_EQ(TSTCopy.getHwModeSet(), TST->getHwModeSet());
   }
 }
 

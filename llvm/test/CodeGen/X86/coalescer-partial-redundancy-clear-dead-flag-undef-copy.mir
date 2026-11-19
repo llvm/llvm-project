@@ -40,8 +40,8 @@ body:             |
   bb.1:
     %1:gr32 = COPY undef %0
     dead %1:gr32 = XOR32ri %1, 1, implicit-def dead $eflags
-    dead %2:gr32 = MOV32rr killed %0
-    %0:gr32 = COPY killed undef %1
+    dead %2:gr32 = MOV32rr %0
+    %0:gr32 = COPY undef %1
     JMP_1 %bb.1
 
 ...

@@ -193,6 +193,19 @@ void BPFDAGToDAGISel::Select(SDNode *Node) {
   switch (Opcode) {
   default:
     break;
+  case ISD::POISON:
+  case ISD::UNDEF: {
+    // IMPLICIT_DEF leaves the register as it is. The verifier rejects a read
+    // of a register that was not written, no matter what is done with the
+    // value.
+    EVT VT = Node->getValueType(0);
+    if (VT != MVT::i64 && VT != MVT::i32)
+      break;
+    CurDAG->SelectNodeTo(Node, VT == MVT::i64 ? BPF::MOV_ri : BPF::MOV_ri_32,
+                         VT, CurDAG->getTargetConstant(0, SDLoc(Node), VT));
+    return;
+  }
+
   case BPFISD::LOAD_STACK_ARG: {
     SDValue Chain = Node->getOperand(0);
     auto *CN = cast<ConstantSDNode>(Node->getOperand(1));

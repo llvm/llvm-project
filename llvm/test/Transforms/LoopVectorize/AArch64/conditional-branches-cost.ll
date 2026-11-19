@@ -284,83 +284,15 @@ define void @latch_branch_cost(ptr %dst) {
 ;
 ; PRED-LABEL: define void @latch_branch_cost(
 ; PRED-SAME: ptr [[DST:%.*]]) {
-; PRED-NEXT:  [[ENTRY:.*:]]
-; PRED-NEXT:    br label %[[VECTOR_PH:.*]]
-; PRED:       [[VECTOR_PH]]:
+; PRED-NEXT:  [[VECTOR_PH:.*]]:
 ; PRED-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; PRED:       [[VECTOR_BODY]]:
-; PRED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE14:.*]] ]
-; PRED-NEXT:    [[VEC_IND:%.*]] = phi <8 x i8> [ <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_STORE_CONTINUE14]] ]
-; PRED-NEXT:    [[TMP0:%.*]] = icmp ule <8 x i8> [[VEC_IND]], splat (i8 99)
-; PRED-NEXT:    [[TMP1:%.*]] = extractelement <8 x i1> [[TMP0]], i64 0
-; PRED-NEXT:    br i1 [[TMP1]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
-; PRED:       [[PRED_STORE_IF]]:
+; PRED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
 ; PRED-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[DST]], i64 [[INDEX]]
 ; PRED-NEXT:    store i8 0, ptr [[TMP3]], align 1
-; PRED-NEXT:    br label %[[PRED_STORE_CONTINUE]]
-; PRED:       [[PRED_STORE_CONTINUE]]:
-; PRED-NEXT:    [[TMP4:%.*]] = extractelement <8 x i1> [[TMP0]], i64 1
-; PRED-NEXT:    br i1 [[TMP4]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2:.*]]
-; PRED:       [[PRED_STORE_IF1]]:
-; PRED-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], 1
-; PRED-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP5]]
-; PRED-NEXT:    store i8 0, ptr [[TMP6]], align 1
-; PRED-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
-; PRED:       [[PRED_STORE_CONTINUE2]]:
-; PRED-NEXT:    [[TMP7:%.*]] = extractelement <8 x i1> [[TMP0]], i64 2
-; PRED-NEXT:    br i1 [[TMP7]], label %[[PRED_STORE_IF3:.*]], label %[[PRED_STORE_CONTINUE4:.*]]
-; PRED:       [[PRED_STORE_IF3]]:
-; PRED-NEXT:    [[TMP8:%.*]] = add i64 [[INDEX]], 2
-; PRED-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP8]]
-; PRED-NEXT:    store i8 0, ptr [[TMP9]], align 1
-; PRED-NEXT:    br label %[[PRED_STORE_CONTINUE4]]
-; PRED:       [[PRED_STORE_CONTINUE4]]:
-; PRED-NEXT:    [[TMP10:%.*]] = extractelement <8 x i1> [[TMP0]], i64 3
-; PRED-NEXT:    br i1 [[TMP10]], label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6:.*]]
-; PRED:       [[PRED_STORE_IF5]]:
-; PRED-NEXT:    [[TMP11:%.*]] = add i64 [[INDEX]], 3
-; PRED-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP11]]
-; PRED-NEXT:    store i8 0, ptr [[TMP24]], align 1
-; PRED-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
-; PRED:       [[PRED_STORE_CONTINUE6]]:
-; PRED-NEXT:    [[TMP12:%.*]] = extractelement <8 x i1> [[TMP0]], i64 4
-; PRED-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[EXIT:.*]]
-; PRED:       [[MIDDLE_BLOCK]]:
-; PRED-NEXT:    [[TMP13:%.*]] = add i64 [[INDEX]], 4
-; PRED-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP13]]
-; PRED-NEXT:    store i8 0, ptr [[TMP14]], align 1
-; PRED-NEXT:    br label %[[EXIT]]
-; PRED:       [[EXIT]]:
-; PRED-NEXT:    [[TMP15:%.*]] = extractelement <8 x i1> [[TMP0]], i64 5
-; PRED-NEXT:    br i1 [[TMP15]], label %[[PRED_STORE_IF9:.*]], label %[[PRED_STORE_CONTINUE10:.*]]
-; PRED:       [[PRED_STORE_IF9]]:
-; PRED-NEXT:    [[TMP16:%.*]] = add i64 [[INDEX]], 5
-; PRED-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP16]]
-; PRED-NEXT:    store i8 0, ptr [[TMP17]], align 1
-; PRED-NEXT:    br label %[[PRED_STORE_CONTINUE10]]
-; PRED:       [[PRED_STORE_CONTINUE10]]:
-; PRED-NEXT:    [[TMP18:%.*]] = extractelement <8 x i1> [[TMP0]], i64 6
-; PRED-NEXT:    br i1 [[TMP18]], label %[[PRED_STORE_IF11:.*]], label %[[PRED_STORE_CONTINUE12:.*]]
-; PRED:       [[PRED_STORE_IF11]]:
-; PRED-NEXT:    [[TMP19:%.*]] = add i64 [[INDEX]], 6
-; PRED-NEXT:    [[TMP20:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP19]]
-; PRED-NEXT:    store i8 0, ptr [[TMP20]], align 1
-; PRED-NEXT:    br label %[[PRED_STORE_CONTINUE12]]
-; PRED:       [[PRED_STORE_CONTINUE12]]:
-; PRED-NEXT:    [[TMP21:%.*]] = extractelement <8 x i1> [[TMP0]], i64 7
-; PRED-NEXT:    br i1 [[TMP21]], label %[[PRED_STORE_IF13:.*]], label %[[PRED_STORE_CONTINUE14]]
-; PRED:       [[PRED_STORE_IF13]]:
-; PRED-NEXT:    [[TMP22:%.*]] = add i64 [[INDEX]], 7
-; PRED-NEXT:    [[TMP23:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP22]]
-; PRED-NEXT:    store i8 0, ptr [[TMP23]], align 1
-; PRED-NEXT:    br label %[[PRED_STORE_CONTINUE14]]
-; PRED:       [[PRED_STORE_CONTINUE14]]:
-; PRED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; PRED-NEXT:    [[VEC_IND_NEXT]] = add nuw <8 x i8> [[VEC_IND]], splat (i8 8)
-; PRED-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT]], 104
-; PRED-NEXT:    br i1 [[TMP25]], label %[[MIDDLE_BLOCK1:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
-; PRED:       [[MIDDLE_BLOCK1]]:
-; PRED-NEXT:    br label %[[EXIT1:.*]]
+; PRED-NEXT:    [[TMP5]] = add i64 [[INDEX]], 1
+; PRED-NEXT:    [[EC:%.*]] = icmp eq i64 [[TMP5]], 100
+; PRED-NEXT:    br i1 [[EC]], label %[[EXIT1:.*]], label %[[VECTOR_BODY]]
 ; PRED:       [[EXIT1]]:
 ; PRED-NEXT:    ret void
 ;
@@ -780,10 +712,7 @@ define void @test_conditional_interleave_group (ptr noalias %src.1, ptr noalias 
 ; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT10:%.*]] = insertelement <8 x float> poison, float [[TMP19]], i64 0
 ; DEFAULT-NEXT:    [[BROADCAST_SPLAT11:%.*]] = shufflevector <8 x float> [[BROADCAST_SPLATINSERT10]], <8 x float> poison, <8 x i32> zeroinitializer
 ; DEFAULT-NEXT:    [[TMP20:%.*]] = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> [[BROADCAST_SPLAT11]], <8 x float> zeroinitializer, <8 x float> [[TMP18]])
-; DEFAULT-NEXT:    [[TMP21:%.*]] = load float, ptr [[SRC_3]], align 4
-; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT12:%.*]] = insertelement <8 x float> poison, float [[TMP21]], i64 0
-; DEFAULT-NEXT:    [[BROADCAST_SPLAT13:%.*]] = shufflevector <8 x float> [[BROADCAST_SPLATINSERT12]], <8 x float> poison, <8 x i32> zeroinitializer
-; DEFAULT-NEXT:    [[TMP22:%.*]] = fcmp ogt <8 x float> [[TMP20]], [[BROADCAST_SPLAT13]]
+; DEFAULT-NEXT:    [[TMP22:%.*]] = fcmp ogt <8 x float> [[TMP20]], [[BROADCAST_SPLAT11]]
 ; DEFAULT-NEXT:    [[TMP23:%.*]] = getelementptr { [4 x float] }, ptr [[DST]], <8 x i64> [[VEC_IND]]
 ; DEFAULT-NEXT:    [[TMP24:%.*]] = extractelement <8 x i1> [[TMP22]], i64 0
 ; DEFAULT-NEXT:    br i1 [[TMP24]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
@@ -933,10 +862,7 @@ define void @test_conditional_interleave_group (ptr noalias %src.1, ptr noalias 
 ; PRED-NEXT:    [[BROADCAST_SPLATINSERT10:%.*]] = insertelement <8 x float> poison, float [[TMP22]], i64 0
 ; PRED-NEXT:    [[BROADCAST_SPLAT11:%.*]] = shufflevector <8 x float> [[BROADCAST_SPLATINSERT10]], <8 x float> poison, <8 x i32> zeroinitializer
 ; PRED-NEXT:    [[TMP23:%.*]] = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> [[BROADCAST_SPLAT11]], <8 x float> zeroinitializer, <8 x float> [[TMP21]])
-; PRED-NEXT:    [[TMP24:%.*]] = load float, ptr [[SRC_3]], align 4
-; PRED-NEXT:    [[BROADCAST_SPLATINSERT12:%.*]] = insertelement <8 x float> poison, float [[TMP24]], i64 0
-; PRED-NEXT:    [[BROADCAST_SPLAT13:%.*]] = shufflevector <8 x float> [[BROADCAST_SPLATINSERT12]], <8 x float> poison, <8 x i32> zeroinitializer
-; PRED-NEXT:    [[TMP25:%.*]] = fcmp ogt <8 x float> [[TMP23]], [[BROADCAST_SPLAT13]]
+; PRED-NEXT:    [[TMP25:%.*]] = fcmp ogt <8 x float> [[TMP23]], [[BROADCAST_SPLAT11]]
 ; PRED-NEXT:    [[TMP26:%.*]] = select <8 x i1> [[ACTIVE_LANE_MASK]], <8 x i1> [[TMP25]], <8 x i1> zeroinitializer
 ; PRED-NEXT:    [[TMP27:%.*]] = getelementptr { [4 x float] }, ptr [[DST]], <8 x i64> [[VEC_IND]]
 ; PRED-NEXT:    [[TMP28:%.*]] = extractelement <8 x i1> [[TMP26]], i64 0
@@ -1193,8 +1119,8 @@ define void @pred_udiv_select_cost(ptr %A, ptr %B, ptr %C, i64 %n, i8 %y) #1 {
 ; DEFAULT-LABEL: define void @pred_udiv_select_cost(
 ; DEFAULT-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], i64 [[N:%.*]], i8 [[Y:%.*]]) #[[ATTR1]] {
 ; DEFAULT-NEXT:  [[ENTRY:.*:]]
-; DEFAULT-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A]] to i64
 ; DEFAULT-NEXT:    [[C1:%.*]] = ptrtoaddr ptr [[C]] to i64
+; DEFAULT-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A]] to i64
 ; DEFAULT-NEXT:    [[B3:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; DEFAULT-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
 ; DEFAULT-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()

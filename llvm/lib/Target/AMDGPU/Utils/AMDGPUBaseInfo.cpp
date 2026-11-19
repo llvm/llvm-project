@@ -2960,12 +2960,16 @@ bool isInlinableLiteral32(int32_t Literal, bool HasInv2Pi) {
          (Val == 0x3e22f983 && HasInv2Pi);
 }
 
-bool isInlinableLiteralBF16(int16_t Literal, bool HasInv2Pi) {
+bool isInlinableLiteralBF16(int16_t Literal, bool HasInv2Pi, bool *IsBF16) {
   if (!HasInv2Pi)
     return false;
+  if (IsBF16)
+    *IsBF16 = false;
   if (isInlinableIntLiteral(Literal))
     return true;
   uint16_t Val = static_cast<uint16_t>(Literal);
+  if (IsBF16)
+    *IsBF16 = true;
   return Val == 0x3F00 || // 0.5
          Val == 0xBF00 || // -0.5
          Val == 0x3F80 || // 1.0

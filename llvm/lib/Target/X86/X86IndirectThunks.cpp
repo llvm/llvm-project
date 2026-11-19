@@ -227,8 +227,7 @@ void RetpolineThunkInserter::populateThunk(MachineFunction &MF) {
   // Insert return address clobber
   const unsigned MovOpc = Is64Bit ? X86::MOV64mr : X86::MOV32mr;
   const Register SPReg = Is64Bit ? X86::RSP : X86::ESP;
-  addRegOffset(BuildMI(CallTarget, DebugLoc(), TII->get(MovOpc)), SPReg, false,
-               0)
+  addRegOffset(BuildMI(CallTarget, DebugLoc(), TII->get(MovOpc)), SPReg, 0)
       .addReg(ThunkReg);
 
   CallTarget->back().setPreInstrSymbol(MF, TargetSym);

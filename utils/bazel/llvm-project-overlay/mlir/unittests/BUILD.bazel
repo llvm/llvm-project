@@ -344,6 +344,7 @@ cc_test(
         "//mlir:SideEffectInterfaces",
         "//mlir:TransformUtils",
         "//mlir:Transforms",
+        "//mlir/test:TestDialect",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
     ],

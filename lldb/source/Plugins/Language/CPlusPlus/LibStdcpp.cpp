@@ -353,8 +353,49 @@ lldb_private::formatters::LibStdcppSharedPtrSyntheticFrontEndCreator(
                     : nullptr);
 }
 
+static ValueObjectSP GetReferenceCountPointer(ValueObject &parent,
+                                              bool is_atomic_child) {
+  ValueObjectSP refcount_sp = parent.GetChildMemberWithName("_M_refcount");
+  if (!refcount_sp)
+    return nullptr;
+
+  if (!is_atomic_child)
+    return refcount_sp->GetChildMemberWithName("_M_pi");
+
+  ValueObjectSP val_sp = refcount_sp->GetChildMemberWithName("_M_val");
+  if (!val_sp || !val_sp->GetCompilerType())
+    return nullptr;
+
+  // May be a scalar value depending on libstdc++ version
+  if (!val_sp->GetCompilerType().IsScalarType()) {
+    val_sp = val_sp->GetChildMemberWithName("_M_i");
+    if (!val_sp)
+      return nullptr;
+  }
+
+  // Extract and align the raw value
+  bool is_success = false;
+  uint64_t raw_val = val_sp->GetValueAsUnsigned(0, &is_success);
+  if (!is_success || raw_val == 0)
+    return nullptr;
+  // Clear the least significant bit. See
+  // https://github.com/gcc-mirror/gcc/blob/releases/gcc-15.2.0/libstdc%2B%2B-v3/include/bits/shared_ptr_atomic.h#L465
+  raw_val &= ~1ULL;
+
+  // Get the pointer type
+  CompilerType ref_count_ptr_type =
+      refcount_sp->GetCompilerType().GetDirectNestedTypeWithName("pointer");
+  if (!ref_count_ptr_type)
+    return nullptr;
+
+  return ValueObject::CreateValueObjectFromAddress(
+      "", raw_val, parent.GetExecutionContextRef(), ref_count_ptr_type,
+      /*do_deref=*/false);
+}
+
 bool lldb_private::formatters::LibStdcppSmartPointerSummaryProvider(
-    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options,
+    bool is_atomic_child) {
   ValueObjectSP valobj_sp(valobj.GetNonSyntheticValue());
   if (!valobj_sp)
     return false;
@@ -365,7 +406,7 @@ bool lldb_private::formatters::LibStdcppSmartPointerSummaryProvider(
 
   DumpCxxSmartPtrPointerSummary(stream, *ptr_sp, options);
 
-  ValueObjectSP pi_sp = valobj_sp->GetChildAtNamePath({"_M_refcount", "_M_pi"});
+  ValueObjectSP pi_sp = GetReferenceCountPointer(*valobj_sp, is_atomic_child);
   if (!pi_sp)
     return false;
 

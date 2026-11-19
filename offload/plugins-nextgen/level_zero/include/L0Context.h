@@ -13,207 +13,79 @@
 #ifndef OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0CONTEXT_H
 #define OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0CONTEXT_H
 
-#include "APIHelpers.h"
-#include "L0Compat.h"
-#include "L0Defs.h"
-#include "L0Event.h"
 #include "L0Memory.h"
-#include "level_zero/ze_api.h"
-
-#include <atomic>
+#include "L0Queue.h"
+#include "PluginInterface.h"
 
 namespace llvm::omp::target::plugin {
 
-class LevelZeroPluginTy;
-class LevelZeroPluginContextTy;
+class L0DeviceTy;
 
-// Helper for managing Level Zero APIs.
-// It provides two interfaces - by default it tries to call the function
-// directly - either through dlopen or directly linked (see L0DynWrapper.cpp).
-// It is also possible to call through an internal function pointer, which
-// can be populated using `loadExperimental` using
-// `zeDriverGetExtensionFunctionAddress`.
-// `addFallbackFunction`. It was implemented in order to support different
-// versions of level zero software stack and different kinds of drivers.
-template <auto Fn, auto UnsupportedValue = ZE_RESULT_ERROR_UNSUPPORTED_FEATURE>
-class ZeDispatcher {
+/// Plugin-side context for Level Zero. Owns a ze_context_handle_t that is
+/// scoped to the set of devices grouped by the user through olCreateContext.
+class LevelZeroPluginContextTy final : public PluginContextTy {
 public:
-  constexpr ZeDispatcher() = default;
+  LevelZeroPluginContextTy(GenericPluginTy &Plugin,
+                           llvm::ArrayRef<GenericDeviceTy *> Devices,
+                           ze_driver_handle_t Driver,
+                           ze_context_handle_t ZeContext, bool OwnsZeContext)
+      : PluginContextTy(Plugin, Devices), Driver(Driver), ZeContext(ZeContext),
+        OwnsZeContext(OwnsZeContext), QueueCache(*this) {}
 
-  [[nodiscard]]
-  bool available() const {
-    return api_helper::canCall<Fn>() || ExperimentalFallbackPtr != nullptr;
+  ~LevelZeroPluginContextTy() override = default;
+
+  Error deinit() override;
+
+  ze_driver_handle_t getZeDriver() const { return Driver; }
+  ze_context_handle_t getZeContext() const { return ZeContext; }
+
+  Error initAsyncInfoImpl(GenericDeviceTy &Device,
+                          AsyncInfoWrapperTy &AsyncInfoWrapper) override;
+
+  llvm::Expected<void *> allocateImpl(GenericDeviceTy &Device, int64_t Size,
+                                      void *HostPtr, TargetAllocTy Kind,
+                                      size_t Alignment,
+                                      GenericProfilerTy *ProfilerPtr) override;
+  llvm::Error deallocateImpl(GenericDeviceTy &Device, void *Ptr,
+                             TargetAllocTy Kind,
+                             GenericProfilerTy *ProfilerPtr) override;
+  Expected<PluginAllocInfoTy> getAllocInfo(const void *Ptr) override;
+
+  Expected<void *> getNativeHandle() override { return ZeContext; }
+
+  /// Get kernel indirect access flags from all allocators in this context.
+  ze_kernel_indirect_access_flags_t getIndirectFlags() {
+    ze_kernel_indirect_access_flags_t Flags = 0;
+    for (auto &[Device, Allocator] : DeviceAllocators)
+      Flags |= Allocator->getIndirectFlags();
+    if (HostAllocator)
+      Flags |= HostAllocator->getIndirectFlags();
+    return Flags;
   }
 
-  explicit operator bool() const { return available(); }
+  /// Initialize per-plugin-context memory allocators. Runs the pool
+  /// probe L0 calls up-front so the first user allocation is not delayed.
+  Error initAllocators();
 
-  template <typename... Args> decltype(auto) operator()(Args &&...ArgsList) {
-    // Need to cast the type to avoid mismatch of return type deduction
-    using ReturnTy = std::invoke_result_t<decltype(Fn), Args...>;
-
-    if (!api_helper::canCall<Fn>() ||
-        AvailableButUnsupported.load(std::memory_order_relaxed)) {
-      if (ExperimentalFallbackPtr != nullptr) {
-        return ExperimentalFallbackPtr(std::forward<Args>(ArgsList)...);
-      }
-
-      return static_cast<ReturnTy>(UnsupportedValue);
-    }
-
-    auto Ret = Fn(std::forward<Args>(ArgsList)...);
-
-    if (Ret == UnsupportedValue) {
-      AvailableButUnsupported.store(true, std::memory_order_relaxed);
-
-      if (ExperimentalFallbackPtr != nullptr)
-        return ExperimentalFallbackPtr(std::forward<Args>(ArgsList)...);
-    }
-
-    return Ret;
+  /// Pop an idle queue for \p Device from the cache, or create a new one.
+  Expected<L0QueueTy *> takeCachedQueue(L0DeviceTy *Device) {
+    return QueueCache.getQueue(*Device);
   }
 
-  bool loadExperimental(ze_driver_handle_t zeDriver, const char *FuncName) {
-    ze_result_t Result = ZE_RESULT_SUCCESS;
-    CALL_ZE(Result, zeDriverGetExtensionFunctionAddress, zeDriver, FuncName,
-            reinterpret_cast<void **>(&ExperimentalFallbackPtr));
-
-    if (Result != ZE_RESULT_SUCCESS || ExperimentalFallbackPtr == nullptr) {
-      ODBG(OLDT_ZeDispatcher) << "Failed to load experimental variant of "
-                              << __PRETTY_FUNCTION__ << "using: " << FuncName;
-      return false;
-    }
-
-    ODBG(OLDT_ZeDispatcher) << "Loaded experimental variant of "
-                            << __PRETTY_FUNCTION__ << " using: " << FuncName;
-    return true;
-  }
+  /// Return an idle queue to the cache.
+  void returnCachedQueue(L0QueueTy *Queue) { QueueCache.releaseQueue(Queue); }
 
 private:
-  std::atomic<bool> AvailableButUnsupported = false;
-  decltype(Fn) ExperimentalFallbackPtr = nullptr;
-};
+  ze_driver_handle_t Driver;
+  ze_context_handle_t ZeContext;
+  bool OwnsZeContext;
 
-/// Driver and context-specific resources. We assume a single context per
-/// driver.
-class L0ContextTy {
-  /// The plugin that created this context.
-  LevelZeroPluginTy &Plugin;
+  L0QueueCacheTy QueueCache;
 
-  /// Level Zero Driver handle.
-  ze_driver_handle_t zeDriver = nullptr;
-
-  uint32_t DriverId;
-
-  /// Common Level Zero context.
-  ze_context_handle_t zeContext = nullptr;
-
-  /// API version supported by the Level Zero driver.
-  ze_api_version_t APIVersion = ZE_API_VERSION_CURRENT;
-
-  /// Version of the Level Zero driver.
-  std::string DriverVersion;
-
-  Expected<std::string> tryGetIntelDriverVersion();
-
-  /// Imported external pointers. Track this only for user-directed
-  /// imports/releases.
-  llvm::DenseMap<uintptr_t, size_t> ImportedPtrs;
-
-  /// Common event pool.
-  EventPoolTy EventPool;
-
-  /// Host Memory allocator for this driver.
-  MemAllocatorTy HostMemAllocator;
-
-  /// Default plugin-side context used by the libomptarget path.
-  std::unique_ptr<LevelZeroPluginContextTy> DefaultUserCtx;
-
-public:
-  /// Named constants for checking the imported external pointer regions.
-  static constexpr int32_t ImportNotExist = -1;
-  static constexpr int32_t ImportUnknown = 0;
-  static constexpr int32_t ImportExist = 1;
-
-  /// Create context, initialize event pool and extension functions.
-  L0ContextTy(LevelZeroPluginTy &Plugin, ze_driver_handle_t zeDriver,
-              int32_t DriverId);
-
-  L0ContextTy(const L0ContextTy &) = delete;
-  L0ContextTy(L0ContextTy &&) = delete;
-  L0ContextTy &operator=(const L0ContextTy &) = delete;
-  L0ContextTy &operator=(const L0ContextTy &&) = delete;
-
-  /// Release resources.
-  ~L0ContextTy();
-
-  Error init();
-  Error deinit();
-
-  LevelZeroPluginTy &getPlugin() const { return Plugin; }
-
-  /// Add imported external pointer region.
-  void addImported(void *Ptr, size_t Size) {
-    (void)ImportedPtrs.try_emplace(reinterpret_cast<uintptr_t>(Ptr), Size);
-  }
-
-  /// Remove imported external pointer region.
-  void removeImported(void *Ptr) {
-    (void)ImportedPtrs.erase(reinterpret_cast<uintptr_t>(Ptr));
-  }
-  /// Check if imported regions contain the specified region.
-  int32_t checkImported(void *Ptr, size_t Size) const {
-    uintptr_t LB = reinterpret_cast<uintptr_t>(Ptr);
-    uintptr_t UB = LB + Size;
-    // We do not expect a large number of user-directed imports, so use simple
-    // logic.
-    for (auto &I : ImportedPtrs) {
-      uintptr_t ILB = I.first;
-      uintptr_t IUB = ILB + I.second;
-      if (LB >= ILB && UB <= IUB)
-        return ImportExist;
-      if ((LB >= ILB && LB < IUB) || (UB > ILB && UB <= IUB))
-        return ImportUnknown;
-    }
-    return ImportNotExist;
-  }
-
-  ze_driver_handle_t getZeDriver() const { return zeDriver; }
-
-  uint32_t getDriverId() const { return DriverId; }
-
-  /// Return context associated with the driver.
-  ze_context_handle_t getZeContext() const { return zeContext; }
-
-  /// Return the default plugin-side context used by the libomptarget path.
-  LevelZeroPluginContextTy &getDefaultUserCtx() const {
-    return *DefaultUserCtx;
-  }
-
-  /// Return driver API version.
-  ze_api_version_t getDriverAPIVersion() const { return APIVersion; }
-
-  /// Return driver version.
-  const std::string &getDriverVersion() const { return DriverVersion; }
-
-  /// Return the event pool of this driver.
-  EventPoolTy &getEventPool() { return EventPool; }
-  const EventPoolTy &getEventPool() const { return EventPool; }
-
-  bool supportsLargeMem() const {
-    // Large memory support is available since API version 1.1.
-    return getDriverAPIVersion() >= ZE_API_VERSION_1_1;
-  }
-
-  const MemAllocatorTy &getHostMemAllocator() const { return HostMemAllocator; }
-  MemAllocatorTy &getHostMemAllocator() { return HostMemAllocator; }
-
-  std::atomic<bool> AppendLaunchKernelWithArgsSupported = true;
-
-  ZeDispatcher<zeCommandListAppendLaunchKernelWithArguments>
-      LaunchKernelWithArguments;
-  ZeDispatcher<zeCommandListAppendHostFunction> CommandListAppendHostFunction;
-  ZeDispatcher<zeDriverGetDefaultContext, nullptr> DriverGetDefaultContext;
-  ZeDispatcher<zeIntelGetDriverVersionString> IntelGetDriverVersionString;
+  /// Per-plugin-context allocators; scoped to this context's ze_context.
+  llvm::DenseMap<L0DeviceTy *, std::unique_ptr<MemAllocatorTy>>
+      DeviceAllocators;
+  std::unique_ptr<MemAllocatorTy> HostAllocator;
 };
 
 } // namespace llvm::omp::target::plugin

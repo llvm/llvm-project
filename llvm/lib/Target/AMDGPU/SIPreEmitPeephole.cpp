@@ -928,6 +928,8 @@ bool SIPreEmitPeephole::run(MachineFunction &MF, MachineLoopInfo *LoopInfo) {
     for (MachineInstr *MI : InstrsToUnpack) {
       performF32Unpacking(*MI);
     }
+    if (!InstrsToUnpack.empty())
+      Changed = true;
   }
 
   return Changed;

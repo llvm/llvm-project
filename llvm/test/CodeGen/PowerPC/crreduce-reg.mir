@@ -20,7 +20,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:g8rc_and_g8rc_nox0 = PHI [[LD]], %bb.0, %3, %bb.3, %4, %bb.2
   ; CHECK-NEXT:   [[LBZ:%[0-9]+]]:gprc = LBZ 0, [[PHI]] :: (load (s8))
-  ; CHECK-NEXT:   [[CMPWI:%[0-9]+]]:crrc = CMPWI killed [[LBZ]], 0
+  ; CHECK-NEXT:   [[CMPWI:%[0-9]+]]:crrc = CMPWI [[LBZ]], 0
   ; CHECK-NEXT:   [[ADDI8_:%[0-9]+]]:g8rc = nuw ADDI8 [[PHI]], 1
   ; CHECK-NEXT:   STD [[ADDI8_]], 0, [[COPY]] :: (store (s64))
   ; CHECK-NEXT:   [[LBZ1:%[0-9]+]]:gprc = LBZ 1, [[PHI]] :: (load (s8))
@@ -30,8 +30,8 @@ body:             |
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   successors: %bb.1(0x55555555), %bb.2(0x2aaaaaab)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[CMPWI1:%[0-9]+]]:crrc = CMPWI killed [[LBZ1]], 0
-  ; CHECK-NEXT:   BC killed [[CMPWI1]].sub_eq, %bb.1
+  ; CHECK-NEXT:   [[CMPWI1:%[0-9]+]]:crrc = CMPWI [[LBZ1]], 0
+  ; CHECK-NEXT:   BC [[CMPWI1]].sub_eq, %bb.1
   ; CHECK-NEXT:   B %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
@@ -49,13 +49,13 @@ body:             |
   bb.1:
     %2:g8rc_and_g8rc_nox0 = PHI %1, %bb.0, %3, %bb.1, %4, %bb.2
     %5:gprc = LBZ 0, %2 :: (load (s8))
-    %6:crrc = CMPWI killed %5, 0
+    %6:crrc = CMPWI %5, 0
     %3:g8rc = nuw ADDI8 %2, 1
     STD %3, 0, %0 :: (store (s64))
     %7:gprc = LBZ 1, %2 :: (load (s8))
-    %8:crrc = CMPWI killed %7, 0
+    %8:crrc = CMPWI %7, 0
     %9:crbitrc = CRAND %8.sub_eq, %6.sub_lt
-    BC killed %9, %bb.1
+    BC %9, %bb.1
     B %bb.2
 
   bb.2:

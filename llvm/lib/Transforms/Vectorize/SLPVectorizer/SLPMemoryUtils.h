@@ -58,6 +58,11 @@ public:
                   const DataLayout &DL, ScalarEvolution &SE,
                   bool StrictCheck = false, bool CheckType = true);
 
+  /// llvm::sortPtrAccesses() with the cached pointer distances.
+  bool sortPtrAccesses(ArrayRef<Value *> VL, Type *ElemTy, const DataLayout &DL,
+                       ScalarEvolution &SE,
+                       SmallVectorImpl<unsigned> &SortedIndices);
+
   /// Cached llvm::isGuaranteedNotToBePoison().
   bool isGuaranteedNotToBePoison(const Value *V, AssumptionCache *AC);
 

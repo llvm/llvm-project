@@ -119,7 +119,6 @@ add_llvm_component_library(LLVMCodeGen
   LiveRegMatrix.cpp
   LiveRegUnits.cpp
   LiveStacks.cpp
-  LiveVariables.cpp
   CodeGenTargetMachineImpl.cpp
   LocalStackSlotAllocation.cpp
   LoopTraversal.cpp

@@ -781,8 +781,8 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
     }
     QualType SubExprTy = SubExpr->getType();
     OptPrimType FromT = classify(SubExprTy);
-    // Casts from integer/vector to vector.
-    if (E->getType()->isVectorType())
+    // Casts between vectors and integers of the same same size.
+    if (ETy->isVectorType() || SubExprTy->isVectorType())
       return this->emitBuiltinBitCast(E);
 
     OptPrimType ToT = classify(E->getType());
@@ -1310,7 +1310,9 @@ bool Compiler<Emitter>::VisitImaginaryLiteral(const ImaginaryLiteral *E) {
     return false;
   if (!this->emitInitElem(SubExprT, 0, SubExpr))
     return false;
-  return this->visitArrayElemInit(1, SubExpr, SubExprT);
+  if (!this->visitArrayElemInit(1, SubExpr, SubExprT))
+    return false;
+  return this->emitFinishInit(E);
 }
 
 template <class Emitter>
@@ -1884,7 +1886,7 @@ bool Compiler<Emitter>::VisitComplexBinOp(const BinaryOperator *E) {
         return this->emitPopPtr(E);
     }
   }
-  return true;
+  return this->emitFinishInit(E);
 }
 
 template <class Emitter>
@@ -5994,8 +5996,15 @@ bool Compiler<Emitter>::visitAPValue(const APValue &Val, PrimType ValType,
     APValue::LValueBase Base = Val.getLValueBase();
     QualType EntryType;
     if (const Expr *BaseExpr = Base.dyn_cast<const Expr *>()) {
-      if (!this->visit(BaseExpr))
-        return false;
+      // Try to avoid evaluating the BaseExpr multiple times.
+      if (UnsignedOrNone GlobalIndex = P.getGlobal(BaseExpr);
+          GlobalIndex && P.isGlobalInitialized(*GlobalIndex)) {
+        if (!this->emitGetPtrGlobal(*GlobalIndex, Info))
+          return false;
+      } else {
+        if (!this->visit(BaseExpr))
+          return false;
+      }
       EntryType = BaseExpr->getType();
     } else if (const auto *VD = Base.dyn_cast<const ValueDecl *>()) {
       if (!this->visitDeclRef(VD, Info.asExpr()))
@@ -6400,6 +6409,7 @@ static bool isTrivialMemoryOperation(const CXXMethodDecl *MD) {
     return false;
   if (!MD->isCopyAssignmentOperator() && !MD->isMoveAssignmentOperator())
     return false;
+  assert(!MD->getParent()->isInvalidDecl());
   return MD->getParent()->isUnion() ||
          (MD->isTrivial() && isReadByLvalueToRvalueConversion(MD->getParent()));
 }
@@ -6434,6 +6444,11 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
              this->emitPopPtr(E);
     }
   }
+
+  // Don't generate code for method with invalid parent decls.
+  if (const auto *MD = dyn_cast_if_present<CXXMethodDecl>(FuncDecl);
+      MD && MD->getParent()->isInvalidDecl())
+    return false;
 
   LocalScope<Emitter> CallScope(this, ScopeKind::Call);
   ArrayRef<const Expr *> Args(E->getArgs(), E->getNumArgs());
@@ -7261,13 +7276,13 @@ bool Compiler<Emitter>::visitCXXForRangeStmt(const CXXForRangeStmt *S) {
 template <class Emitter>
 bool Compiler<Emitter>::visitBreakStmt(const BreakStmt *S) {
   if (LabelInfoStack.empty())
-    return false;
+    return this->emitInvalidTargetLabel(/*IsContinue=*/false, S);
 
   OptLabelTy TargetLabel = std::nullopt;
-  const Stmt *TargetLoop = S->getNamedLoopOrSwitch();
   const VariableScope<Emitter> *BreakScope = nullptr;
 
-  if (!TargetLoop) {
+  if (!S->isNamed()) {
+
     for (const auto &LI : llvm::reverse(LabelInfoStack)) {
       if (LI.BreakLabel) {
         TargetLabel = *LI.BreakLabel;
@@ -7276,6 +7291,12 @@ bool Compiler<Emitter>::visitBreakStmt(const BreakStmt *S) {
       }
     }
   } else {
+    const Stmt *TargetLoop = S->getNamedLoopOrSwitch();
+    // May be null if the named loop is outside of the
+    // current evaluation context, i.e. not a valid target.
+    if (!TargetLoop)
+      return this->emitInvalidTargetLabel(/*IsContinue=*/false, S);
+
     for (const auto &LI : LabelInfoStack) {
       if (LI.Name == TargetLoop) {
         TargetLabel = *LI.BreakLabel;
@@ -7301,13 +7322,12 @@ bool Compiler<Emitter>::visitBreakStmt(const BreakStmt *S) {
 template <class Emitter>
 bool Compiler<Emitter>::visitContinueStmt(const ContinueStmt *S) {
   if (LabelInfoStack.empty())
-    return false;
+    return this->emitInvalidTargetLabel(/*IsContinue=*/true, S);
 
   OptLabelTy TargetLabel = std::nullopt;
-  const Stmt *TargetLoop = S->getNamedLoopOrSwitch();
   const VariableScope<Emitter> *ContinueScope = nullptr;
 
-  if (!TargetLoop) {
+  if (!S->isNamed()) {
     for (const auto &LI : llvm::reverse(LabelInfoStack)) {
       if (LI.ContinueLabel) {
         TargetLabel = *LI.ContinueLabel;
@@ -7316,6 +7336,12 @@ bool Compiler<Emitter>::visitContinueStmt(const ContinueStmt *S) {
       }
     }
   } else {
+    const Stmt *TargetLoop = S->getNamedLoopOrSwitch();
+    // May be null if the named loop is outside of the
+    // current evaluation context, i.e. not a valid target.
+    if (!TargetLoop)
+      return this->emitInvalidTargetLabel(/*IsContinue=*/true, S);
+
     for (auto LI : LabelInfoStack) {
       if (LI.Name == TargetLoop) {
         TargetLabel = *LI.ContinueLabel;

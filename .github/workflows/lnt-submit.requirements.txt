@@ -1,0 +1,6 @@
+# Convert this file into a lock file by running:
+#
+# pip install pip-tools
+# pip-compile --generate-hashes --output-file=lnt-submit.requirements.lock.txt lnt-submit.requirements.txt
+
+llvm-lnt==0.4.20

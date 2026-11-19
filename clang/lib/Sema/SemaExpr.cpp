@@ -7734,12 +7734,12 @@ Sema::BuildCompoundLiteralExpr(SourceLocation LParenLoc, TypeSourceInfo *TInfo,
     // constant context.
     auto CheckElement = [&](Expr *Init) -> Expr * {
       if (Init->isTypeDependent() || Init->isValueDependent())
-        return ConstantExpr::Create(Context, Init);
+        return Init;
       if (DeferImmediate) {
         ImmediateCallVisitor V(Context);
         V.TraverseStmt(Init);
         if (V.HasImmediateCalls)
-          return ConstantExpr::Create(Context, Init);
+          return Init;
       }
       Expr::EvalResult Eval;
       if (!Init->EvaluateAsConstantExpr(Eval, Context,
@@ -18381,12 +18381,14 @@ Sema::VerifyIntegerConstantExpression(Expr *E, llvm::APSInt *Result,
   // Circumvent ICE checking in C++11 to avoid evaluating the expression twice
   // in the non-ICE case.
   if (!getLangOpts().CPlusPlus11 && E->isIntegerConstantExpr(Context)) {
+
+    if (!Result)
+      return E;
+
     SmallVector<PartialDiagnosticAt, 8> Notes;
-    if (Result)
-      *Result = E->EvaluateKnownConstIntCheckOverflow(Context, &Notes);
+    *Result = E->EvaluateKnownConstIntCheckOverflow(Context, &Notes);
     if (!isa<ConstantExpr>(E))
-      E = Result ? ConstantExpr::Create(Context, E, APValue(*Result))
-                 : ConstantExpr::Create(Context, E);
+      E = ConstantExpr::Create(Context, E, APValue(*Result));
 
     if (Notes.empty())
       return E;
@@ -18433,7 +18435,7 @@ Sema::VerifyIntegerConstantExpression(Expr *E, llvm::APSInt *Result,
       EvalResult.Val.isInt() && !EvalResult.HasSideEffects &&
       (!getLangOpts().CPlusPlus || !EvalResult.HasUndefinedBehavior);
 
-  if (!isa<ConstantExpr>(E))
+  if (Folded && !isa<ConstantExpr>(E))
     E = ConstantExpr::Create(Context, E, EvalResult.Val);
 
   // For -fms-compatibility mode we relax some requirements
