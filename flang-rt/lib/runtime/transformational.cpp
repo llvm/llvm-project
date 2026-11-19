@@ -19,10 +19,13 @@
 #include "flang/Runtime/transformational.h"
 #include "copy.h"
 #include "flang-rt/runtime/descriptor.h"
+#include "flang-rt/runtime/numeric-templates.h"
 #include "flang-rt/runtime/terminator.h"
 #include "flang-rt/runtime/tools.h"
 #include "flang-rt/runtime/type-info.h"
 #include "flang/Common/float128.h"
+#include "flang/Common/real.h"
+#include <cmath>
 
 namespace Fortran::runtime {
 
@@ -148,7 +151,7 @@ static inline RT_API_ATTRS std::size_t AllocateBesselResult(Descriptor &result,
     extent[j] = 0;
   }
   if (n1 <= n2) {
-    extent[0] = n2 - n1 + 1;
+    extent[0] = static_cast<SubscriptValue>(n2) - n1 + 1;
   }
 
   std::size_t elementLen{Descriptor::BytesFor(CAT, KIND)};
@@ -164,10 +167,114 @@ static inline RT_API_ATTRS std::size_t AllocateBesselResult(Descriptor &result,
   return elementLen;
 }
 
+// Orders are 64-bit here: n1 and n2 span the whole 32-bit range.
+using BesselOrder = std::int64_t;
+
+// Computes J(k, x) for k in [lo, hi] with Miller's algorithm: recur down from
+// an arbitrary seed at order start >= hi (start > |x|), rescaling to avoid
+// overflow, and normalize with J(0) + 2 * sum(J(2k)) = 1. Returns false if x
+// is too small to recur without overflow.
+template <typename T, typename ELT>
+static RT_API_ATTRS bool MillerBesselJn(BesselOrder lo, BesselOrder hi,
+    BesselOrder start, T x, T minNormal, ELT elt) {
+  T absX{x < 0 ? -x : x};
+  // growth bounds |J(n-1)| / max(|J(n)|, |J(n+1)|).
+  T growth{2 * static_cast<T>(start) / absX + 2};
+  // Keep |J| below 1 / minNormal so that the rescale factor stays normal
+  // (a subnormal one is flushed to zero under FTZ).
+  T limit{1 / (minNormal * (growth + 2))};
+  if (!(limit > 1)) {
+    return false;
+  }
+  T twoOverX{2 / x};
+  T jp1{0}, j{1}, evenSum{0};
+  BesselOrder top{hi}; // stored orders above top are zero
+  if (start == hi) {
+    elt(start) = j;
+  }
+  if ((start & 1) == 0) {
+    evenSum += 2 * j;
+  }
+  for (BesselOrder n{start}; n >= 1; --n) {
+    T jm{twoOverX * n * j - jp1}; // J(n-1)
+    jp1 = j;
+    j = jm;
+    if ((jm < 0 ? -jm : jm) > limit) {
+      T inv{1 / jm};
+      // Stored orders shrink as k grows: once one underflows, zero the rest
+      // and never revisit them.
+      for (BesselOrder k{n > lo ? n : lo}; k <= top; ++k) {
+        if ((elt(k) *= inv) == 0) {
+          for (BesselOrder m{k + 1}; m <= top; ++m) {
+            elt(m) = 0;
+          }
+          top = k - 1;
+        }
+      }
+      evenSum *= inv;
+      jp1 *= inv;
+      j = jm * inv;
+    }
+    if (n - 1 >= lo && n - 1 <= hi) {
+      elt(n - 1) = j;
+    }
+    if (n - 1 == 0) {
+      evenSum += j;
+    } else if (((n - 1) & 1) == 0) {
+      evenSum += 2 * j;
+    }
+  }
+  for (BesselOrder k{lo}; k <= top; ++k) {
+    elt(k) /= evenSum;
+  }
+  return true;
+}
+
+// Miller's starting order for results up to order n.
+static inline RT_API_ATTRS BesselOrder MillerStart(BesselOrder n) {
+  return n + 16 + static_cast<BesselOrder>(std::sqrt(160.0 * n));
+}
+
+// True if |J(n, x)| <= |x/2|^n / n! rounds to zero for every n >= nMin >= 1,
+// using ln(n!) >= n ln(n) - n + 1. Evaluated in double, with a margin.
+template <int KIND, typename T>
+static inline RT_API_ATTRS bool BesselJnUnderflows(BesselOrder nMin, T absX) {
+  if (nMin < 1) {
+    return false;
+  }
+  double ax{static_cast<double>(absX)};
+  if (absX != 0 && !(ax >= MinValue<53, double>::get())) {
+    return false; // NaN, or too small for a normal double
+  }
+  constexpr common::RealCharacteristics real{common::PrecisionOfRealKind(KIND)};
+  // ln of half the least positive subnormal, minus a safety margin.
+  constexpr double ln2{0.6931471805599453};
+  constexpr double lnZero{
+      (1.0 - real.exponentBias - real.binaryPrecision - 2) * ln2};
+  double n{static_cast<double>(nMin)};
+  return ax == 0 || n * (std::log(ax / (2 * n)) + 1) - 1 < lnZero;
+}
+
+// For |x| this small, J(k, x) = (x/2)^k / k! to working precision.
+template <typename T, typename ELT>
+static RT_API_ATTRS void TinyXBesselJn(
+    BesselOrder lo, BesselOrder hi, T x, ELT elt) {
+  T term{1};
+  for (BesselOrder k{0}; k <= hi; ++k) {
+    if (k > 0) {
+      term *= x / 2 / k;
+    }
+    if (k >= lo) {
+      elt(k) = term;
+    }
+  }
+}
+
 template <TypeCategory CAT, int KIND>
 static inline RT_API_ATTRS void DoBesselJn(Descriptor &result, int32_t n1,
     int32_t n2, CppTypeFor<CAT, KIND> x, CppTypeFor<CAT, KIND> bn2,
     CppTypeFor<CAT, KIND> bn2_1, const char *sourceFile, int line) {
+  using T = CppTypeFor<CAT, KIND>;
   Terminator terminator{sourceFile, line};
   AllocateBesselResult<CAT, KIND>(result, n1, n2, terminator, "BESSEL_JN");
 
@@ -182,17 +289,93 @@ static inline RT_API_ATTRS void DoBesselJn(Descriptor &result, int32_t n1,
   for (int j{0}; j < maxRank; ++j) {
     at[j] = 0;
   }
+  auto elt{[&](BesselOrder k) -> T & {
+    at[0] = k - n1 + 1;
+    return *result.Element<T>(at);
+  }};
+  const T minNormal{MinValue<common::PrecisionOfRealKind(KIND), T>::get()};
+  T absX{x < 0 ? -x : x};
 
-  // if n2 >= n1, there will be at least one element in the result.
-  at[0] = n2 - n1 + 1;
-  *result.Element<CppTypeFor<CAT, KIND>>(at) = bn2;
-
-  if (n2 == n1) {
+  // Skip the O(n2) work below when every order in the result underflows.
+  BesselOrder minOrder{0};
+  if (n1 >= 0) {
+    minOrder = n1;
+  } else if (n2 < 0) {
+    minOrder = -static_cast<BesselOrder>(n2);
+  }
+  if (BesselJnUnderflows<KIND>(minOrder, absX)) {
+    for (BesselOrder k{n1}; k <= n2; ++k) {
+      elt(k) = 0;
+    }
     return;
   }
 
-  at[0] = n2 - n1;
-  *result.Element<CppTypeFor<CAT, KIND>>(at) = bn2_1;
+  if (n1 < 0) {
+    // J(-k, x) = (-1)^k * J(k, x). Recursing down from the caller's anchors
+    // into negative orders is unstable, so compute J(0..maxOrder) and reflect.
+    BesselOrder maxOrder{-static_cast<BesselOrder>(n1)};
+    if (n2 > maxOrder) {
+      maxOrder = n2;
+    }
+    T *j{static_cast<T *>(
+        AllocateMemoryOrCrash(terminator, (maxOrder + 1) * sizeof(T)))};
+    auto jElt{[&](BesselOrder k) -> T & { return j[k]; }};
+    if (absX > maxOrder || x != x) {
+      // Every order is below |x|, where recursion is stable both ways: start
+      // from the anchors as J(a) and J(a + 1) with a >= 0.
+      BesselOrder a{n2 >= 1 ? n2 - 1 : -static_cast<BesselOrder>(n2)};
+      T ja{n2 >= 1 ? bn2_1 : (a & 1) ? -bn2 : bn2};
+      T ja1{n2 >= 1 ? bn2 : (a & 1) ? bn2_1 : -bn2_1};
+      T twoOverX{2 / x};
+      T lo1{ja1}, lo0{ja};
+      for (BesselOrder k{a}; k >= 0; --k) {
+        if (k <= maxOrder) {
+          j[k] = lo0;
+        }
+        T next{twoOverX * k * lo0 - lo1}; // J(k-1)
+        lo1 = lo0;
+        lo0 = next;
+      }
+      T up0{ja}, up1{ja1};
+      for (BesselOrder k{a + 1}; k <= maxOrder; ++k) {
+        j[k] = up1;
+        T next{twoOverX * k * up1 - up0}; // J(k+1)
+        up0 = up1;
+        up1 = next;
+      }
+    } else {
+      if (!MillerBesselJn(
+              0, maxOrder, MillerStart(maxOrder), x, minNormal, jElt)) {
+        TinyXBesselJn(0, maxOrder, x, jElt);
+      }
+    }
+    for (BesselOrder k{n1}; k <= n2; ++k) {
+      elt(k) = k >= 0 ? j[k] : ((-k) & 1) ? -j[-k] : j[-k];
+    }
+    FreeMemory(j);
+    return;
+  }
+
+  // if n2 >= n1, there will be at least one element in the result.
+  elt(n2) = bn2;
+  if (n2 == n1) {
+    return;
+  }
+  elt(n2 - 1) = bn2_1;
+
+  // If J(n2, x) is zero (or flushed to zero) or J(n2 - 1, x) is subnormal,
+  // the recursion below loses the lower orders (e.g. BESSEL_JN(1, 10000, 1.0)
+  // would be all zeros). A nonzero subnormal J(n2, x) alone is harmless.
+  if (n2 - n1 >= 2 && absX < n2 &&
+      (bn2 == 0 || (bn2_1 < minNormal && bn2_1 > -minNormal))) {
+    if (!MillerBesselJn(n1, n2, MillerStart(n2), x, minNormal, elt)) {
+      TinyXBesselJn(n1, n2, x, elt);
+    }
+    // Keep the caller's more accurate values for the top two orders.
+    elt(n2) = bn2;
+    elt(n2 - 1) = bn2_1;
+    return;
+  }
 
   // Bessel functions of the first kind are stable for a backward recursion
   // (see https://dlmf.nist.gov/10.74.iv and https://dlmf.nist.gov/10.6.E1).
@@ -203,15 +386,12 @@ static inline RT_API_ATTRS void DoBesselJn(Descriptor &result, int32_t n1,
   //
   //     J(n, x) = (2.0 / x) * (n + 1) * J(n+1, x) - J(n+2, x)
   //
-  CppTypeFor<CAT, KIND> bn_2 = bn2;
-  CppTypeFor<CAT, KIND> bn_1 = bn2_1;
-  CppTypeFor<CAT, KIND> twoOverX = 2.0 / x;
+  T bn_2 = bn2;
+  T bn_1 = bn2_1;
+  T twoOverX = 2.0 / x;
   for (int n{n2 - 2}; n >= n1; --n) {
     auto bn = twoOverX * (n + 1) * bn_1 - bn_2;
-
-    at[0] = n - n1 + 1;
-    *result.Element<CppTypeFor<CAT, KIND>>(at) = bn;
-
+    elt(n) = bn;
     bn_2 = bn_1;
     bn_1 = bn;
   }
