@@ -1,0 +1,47 @@
+# A pair refill provides IEEE values in v3:v2. The later qf32 definition of
+# v2 shadows only the low half, so the pair consumer must convert and restore
+# v3 without touching v2.
+
+# RUN: llc -mtriple=hexagon -mcpu=hexagonv79 \
+# RUN:   -mattr=+hvxv79,+hvx-length128B -run-pass=handle-qfp-spills-refills \
+# RUN:   -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=V79
+# RUN: llc -mtriple=hexagon -mcpu=hexagonv81 \
+# RUN:   -mattr=+hvxv81,+hvx-length128B -run-pass=handle-qfp-spills-refills \
+# RUN:   -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=V81
+
+# V79:      renamable $v2 = V6_vadd_qf32_mix
+# V79-NOT:  $v2 = V6_vadd_sf
+# V79:      $v3 = V6_vadd_sf
+# V79-NEXT: renamable $v8 = V6_vconv_hf_qf32 renamable $w1
+# V79-NEXT: $v3 = V6_vconv_sf_qf32
+# V79-NOT:  $v2 = V6_vconv_sf_qf32
+
+# V81:      renamable $v2 = V6_vadd_qf32_mix
+# V81-NOT:  $v2 = V6_vconv_qf32_sf
+# V81:      $v3 = V6_vconv_qf32_sf
+# V81-NEXT: renamable $v8 = V6_vconv_hf_qf32 renamable $w1
+# V81-NEXT: $v3 = V6_vconv_sf_qf32
+# V81-NOT:  $v2 = V6_vconv_sf_qf32
+
+--- |
+  define void @partial_pair_refill() {
+    ret void
+  }
+...
+---
+name: partial_pair_refill
+tracksRegLiveness: true
+frameInfo:
+  stackSize: 256
+  maxAlignment: 128
+stack:
+  - { id: 0, type: spill-slot, offset: 0, size: 256, alignment: 128 }
+body: |
+  bb.0:
+    liveins: $r31, $v4, $v10
+
+    renamable $w1 = PS_vloadrw_ai %stack.0, 0 :: (load (s2048) from %stack.0, align 128)
+    renamable $v2 = V6_vadd_qf32_mix killed renamable $v10, renamable $v4
+    renamable $v8 = V6_vconv_hf_qf32 renamable $w1
+    PS_jmpret killed $r31, implicit-def $pc
+...
