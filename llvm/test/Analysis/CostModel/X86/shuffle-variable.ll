@@ -258,29 +258,13 @@ define void @test_vXi32_vXi32(<2 x i32> %src64, <4 x i32> %src128, <8 x i32> %sr
 }
 
 define void @test_vXi16_vXi16(<2 x i16> %src32, <4 x i16> %src64, <8 x i16> %src128, <16 x i16> %src256, <32 x i16> %src512, <64 x i16> %src1024, <2 x i16> %idx32, <4 x i16> %idx64, <8 x i16> %idx128, <16 x i16> %idx256, <32 x i16> %idx512, <64 x i16> %idx1024) {
-; SSE2-LABEL: 'test_vXi16_vXi16'
-; SSE2-NEXT:  Cost Model: Found costs of 8 for: %V32 = call <2 x i16> @llvm.vector.shuffle.v2i16.v2i16(<2 x i16> %src32, <2 x i16> %idx32)
-; SSE2-NEXT:  Cost Model: Found costs of 16 for: %V64 = call <4 x i16> @llvm.vector.shuffle.v4i16.v4i16(<4 x i16> %src64, <4 x i16> %idx64)
-; SSE2-NEXT:  Cost Model: Found costs of 39 for: %V128 = call <8 x i16> @llvm.vector.shuffle.v8i16.v8i16(<8 x i16> %src128, <8 x i16> %idx128)
-; SSE2-NEXT:  Cost Model: Found costs of 78 for: %V256 = call <16 x i16> @llvm.vector.shuffle.v16i16.v16i16(<16 x i16> %src256, <16 x i16> %idx256)
-; SSE2-NEXT:  Cost Model: Found costs of 156 for: %V512 = call <32 x i16> @llvm.vector.shuffle.v32i16.v32i16(<32 x i16> %src512, <32 x i16> %idx512)
-; SSE2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
-;
-; SSSE3-LABEL: 'test_vXi16_vXi16'
-; SSSE3-NEXT:  Cost Model: Found costs of 8 for: %V32 = call <2 x i16> @llvm.vector.shuffle.v2i16.v2i16(<2 x i16> %src32, <2 x i16> %idx32)
-; SSSE3-NEXT:  Cost Model: Found costs of 16 for: %V64 = call <4 x i16> @llvm.vector.shuffle.v4i16.v4i16(<4 x i16> %src64, <4 x i16> %idx64)
-; SSSE3-NEXT:  Cost Model: Found costs of 39 for: %V128 = call <8 x i16> @llvm.vector.shuffle.v8i16.v8i16(<8 x i16> %src128, <8 x i16> %idx128)
-; SSSE3-NEXT:  Cost Model: Found costs of 78 for: %V256 = call <16 x i16> @llvm.vector.shuffle.v16i16.v16i16(<16 x i16> %src256, <16 x i16> %idx256)
-; SSSE3-NEXT:  Cost Model: Found costs of 156 for: %V512 = call <32 x i16> @llvm.vector.shuffle.v32i16.v32i16(<32 x i16> %src512, <32 x i16> %idx512)
-; SSSE3-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
-;
-; SSE42-LABEL: 'test_vXi16_vXi16'
-; SSE42-NEXT:  Cost Model: Found costs of 8 for: %V32 = call <2 x i16> @llvm.vector.shuffle.v2i16.v2i16(<2 x i16> %src32, <2 x i16> %idx32)
-; SSE42-NEXT:  Cost Model: Found costs of 16 for: %V64 = call <4 x i16> @llvm.vector.shuffle.v4i16.v4i16(<4 x i16> %src64, <4 x i16> %idx64)
-; SSE42-NEXT:  Cost Model: Found costs of 32 for: %V128 = call <8 x i16> @llvm.vector.shuffle.v8i16.v8i16(<8 x i16> %src128, <8 x i16> %idx128)
-; SSE42-NEXT:  Cost Model: Found costs of 64 for: %V256 = call <16 x i16> @llvm.vector.shuffle.v16i16.v16i16(<16 x i16> %src256, <16 x i16> %idx256)
-; SSE42-NEXT:  Cost Model: Found costs of 128 for: %V512 = call <32 x i16> @llvm.vector.shuffle.v32i16.v32i16(<32 x i16> %src512, <32 x i16> %idx512)
-; SSE42-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+; SSE-LABEL: 'test_vXi16_vXi16'
+; SSE-NEXT:  Cost Model: Found costs of 8 for: %V32 = call <2 x i16> @llvm.vector.shuffle.v2i16.v2i16(<2 x i16> %src32, <2 x i16> %idx32)
+; SSE-NEXT:  Cost Model: Found costs of 16 for: %V64 = call <4 x i16> @llvm.vector.shuffle.v4i16.v4i16(<4 x i16> %src64, <4 x i16> %idx64)
+; SSE-NEXT:  Cost Model: Found costs of 32 for: %V128 = call <8 x i16> @llvm.vector.shuffle.v8i16.v8i16(<8 x i16> %src128, <8 x i16> %idx128)
+; SSE-NEXT:  Cost Model: Found costs of 64 for: %V256 = call <16 x i16> @llvm.vector.shuffle.v16i16.v16i16(<16 x i16> %src256, <16 x i16> %idx256)
+; SSE-NEXT:  Cost Model: Found costs of 128 for: %V512 = call <32 x i16> @llvm.vector.shuffle.v32i16.v32i16(<32 x i16> %src512, <32 x i16> %idx512)
+; SSE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; XOP-LABEL: 'test_vXi16_vXi16'
 ; XOP-NEXT:  Cost Model: Found costs of 8 for: %V32 = call <2 x i16> @llvm.vector.shuffle.v2i16.v2i16(<2 x i16> %src32, <2 x i16> %idx32)
@@ -399,4 +383,3 @@ define void @test_vXi8_vXi8(<2 x i8> %src16, <4 x i8> %src32, <8 x i8> %src64, <
 ; AVX512F: {{.*}}
 ; AVX512VBMI: {{.*}}
 ; CHECK: {{.*}}
-; SSE: {{.*}}

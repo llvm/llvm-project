@@ -19,7 +19,7 @@ define void @replication_i1_stride2() nounwind "min-legal-vector-width"="256" {
 ; SSE2-LABEL: 'replication_i1_stride2'
 ; SSE2-NEXT:  Cost Model: Found costs of 4 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <2 x i32> zeroinitializer
 ; SSE2-NEXT:  Cost Model: Found costs of 8 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
-; SSE2-NEXT:  Cost Model: Found costs of 16 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <8 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3>
+; SSE2-NEXT:  Cost Model: Found costs of 9 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <8 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3>
 ; SSE2-NEXT:  Cost Model: Found costs of 32 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <16 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3, i32 4, i32 4, i32 5, i32 5, i32 6, i32 6, i32 7, i32 7>
 ; SSE2-NEXT:  Cost Model: Found costs of 63 for: %vf16 = shufflevector <16 x i1> undef, <16 x i1> poison, <32 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3, i32 4, i32 4, i32 5, i32 5, i32 6, i32 6, i32 7, i32 7, i32 8, i32 8, i32 9, i32 9, i32 10, i32 10, i32 11, i32 11, i32 12, i32 12, i32 13, i32 13, i32 14, i32 14, i32 15, i32 15>
 ; SSE2-NEXT:  Cost Model: Found costs of 126 for: %vf32 = shufflevector <32 x i1> undef, <32 x i1> poison, <64 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3, i32 4, i32 4, i32 5, i32 5, i32 6, i32 6, i32 7, i32 7, i32 8, i32 8, i32 9, i32 9, i32 10, i32 10, i32 11, i32 11, i32 12, i32 12, i32 13, i32 13, i32 14, i32 14, i32 15, i32 15, i32 16, i32 16, i32 17, i32 17, i32 18, i32 18, i32 19, i32 19, i32 20, i32 20, i32 21, i32 21, i32 22, i32 22, i32 23, i32 23, i32 24, i32 24, i32 25, i32 25, i32 26, i32 26, i32 27, i32 27, i32 28, i32 28, i32 29, i32 29, i32 30, i32 30, i32 31, i32 31>
@@ -30,7 +30,7 @@ define void @replication_i1_stride2() nounwind "min-legal-vector-width"="256" {
 ; SSE3-LABEL: 'replication_i1_stride2'
 ; SSE3-NEXT:  Cost Model: Found costs of 4 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <2 x i32> zeroinitializer
 ; SSE3-NEXT:  Cost Model: Found costs of 8 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
-; SSE3-NEXT:  Cost Model: Found costs of 16 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <8 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3>
+; SSE3-NEXT:  Cost Model: Found costs of 9 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <8 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3>
 ; SSE3-NEXT:  Cost Model: Found costs of 32 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <16 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3, i32 4, i32 4, i32 5, i32 5, i32 6, i32 6, i32 7, i32 7>
 ; SSE3-NEXT:  Cost Model: Found costs of 63 for: %vf16 = shufflevector <16 x i1> undef, <16 x i1> poison, <32 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3, i32 4, i32 4, i32 5, i32 5, i32 6, i32 6, i32 7, i32 7, i32 8, i32 8, i32 9, i32 9, i32 10, i32 10, i32 11, i32 11, i32 12, i32 12, i32 13, i32 13, i32 14, i32 14, i32 15, i32 15>
 ; SSE3-NEXT:  Cost Model: Found costs of 126 for: %vf32 = shufflevector <32 x i1> undef, <32 x i1> poison, <64 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3, i32 4, i32 4, i32 5, i32 5, i32 6, i32 6, i32 7, i32 7, i32 8, i32 8, i32 9, i32 9, i32 10, i32 10, i32 11, i32 11, i32 12, i32 12, i32 13, i32 13, i32 14, i32 14, i32 15, i32 15, i32 16, i32 16, i32 17, i32 17, i32 18, i32 18, i32 19, i32 19, i32 20, i32 20, i32 21, i32 21, i32 22, i32 22, i32 23, i32 23, i32 24, i32 24, i32 25, i32 25, i32 26, i32 26, i32 27, i32 27, i32 28, i32 28, i32 29, i32 29, i32 30, i32 30, i32 31, i32 31>
@@ -41,7 +41,7 @@ define void @replication_i1_stride2() nounwind "min-legal-vector-width"="256" {
 ; SSSE3-LABEL: 'replication_i1_stride2'
 ; SSSE3-NEXT:  Cost Model: Found costs of 4 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <2 x i32> zeroinitializer
 ; SSSE3-NEXT:  Cost Model: Found costs of 8 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
-; SSSE3-NEXT:  Cost Model: Found costs of 16 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <8 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3>
+; SSSE3-NEXT:  Cost Model: Found costs of 9 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <8 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3>
 ; SSSE3-NEXT:  Cost Model: Found costs of 32 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <16 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3, i32 4, i32 4, i32 5, i32 5, i32 6, i32 6, i32 7, i32 7>
 ; SSSE3-NEXT:  Cost Model: Found costs of 63 for: %vf16 = shufflevector <16 x i1> undef, <16 x i1> poison, <32 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3, i32 4, i32 4, i32 5, i32 5, i32 6, i32 6, i32 7, i32 7, i32 8, i32 8, i32 9, i32 9, i32 10, i32 10, i32 11, i32 11, i32 12, i32 12, i32 13, i32 13, i32 14, i32 14, i32 15, i32 15>
 ; SSSE3-NEXT:  Cost Model: Found costs of 126 for: %vf32 = shufflevector <32 x i1> undef, <32 x i1> poison, <64 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3, i32 4, i32 4, i32 5, i32 5, i32 6, i32 6, i32 7, i32 7, i32 8, i32 8, i32 9, i32 9, i32 10, i32 10, i32 11, i32 11, i32 12, i32 12, i32 13, i32 13, i32 14, i32 14, i32 15, i32 15, i32 16, i32 16, i32 17, i32 17, i32 18, i32 18, i32 19, i32 19, i32 20, i32 20, i32 21, i32 21, i32 22, i32 22, i32 23, i32 23, i32 24, i32 24, i32 25, i32 25, i32 26, i32 26, i32 27, i32 27, i32 28, i32 28, i32 29, i32 29, i32 30, i32 30, i32 31, i32 31>
@@ -195,7 +195,7 @@ define void @replication_i1_stride2() nounwind "min-legal-vector-width"="256" {
 define void @replication_i1_stride3() nounwind "min-legal-vector-width"="256" {
 ; SSE2-LABEL: 'replication_i1_stride3'
 ; SSE2-NEXT:  Cost Model: Found costs of 7 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <3 x i32> zeroinitializer
-; SSE2-NEXT:  Cost Model: Found costs of 14 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <6 x i32> <i32 0, i32 0, i32 0, i32 1, i32 1, i32 1>
+; SSE2-NEXT:  Cost Model: Found costs of 7 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <6 x i32> <i32 0, i32 0, i32 0, i32 1, i32 1, i32 1>
 ; SSE2-NEXT:  Cost Model: Found costs of 28 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <12 x i32> <i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3>
 ; SSE2-NEXT:  Cost Model: Found costs of 55 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <24 x i32> <i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7>
 ; SSE2-NEXT:  Cost Model: Found costs of 109 for: %vf16 = shufflevector <16 x i1> undef, <16 x i1> poison, <48 x i32> <i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 8, i32 8, i32 8, i32 9, i32 9, i32 9, i32 10, i32 10, i32 10, i32 11, i32 11, i32 11, i32 12, i32 12, i32 12, i32 13, i32 13, i32 13, i32 14, i32 14, i32 14, i32 15, i32 15, i32 15>
@@ -206,7 +206,7 @@ define void @replication_i1_stride3() nounwind "min-legal-vector-width"="256" {
 ;
 ; SSE3-LABEL: 'replication_i1_stride3'
 ; SSE3-NEXT:  Cost Model: Found costs of 7 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <3 x i32> zeroinitializer
-; SSE3-NEXT:  Cost Model: Found costs of 14 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <6 x i32> <i32 0, i32 0, i32 0, i32 1, i32 1, i32 1>
+; SSE3-NEXT:  Cost Model: Found costs of 7 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <6 x i32> <i32 0, i32 0, i32 0, i32 1, i32 1, i32 1>
 ; SSE3-NEXT:  Cost Model: Found costs of 28 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <12 x i32> <i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3>
 ; SSE3-NEXT:  Cost Model: Found costs of 55 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <24 x i32> <i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7>
 ; SSE3-NEXT:  Cost Model: Found costs of 109 for: %vf16 = shufflevector <16 x i1> undef, <16 x i1> poison, <48 x i32> <i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 8, i32 8, i32 8, i32 9, i32 9, i32 9, i32 10, i32 10, i32 10, i32 11, i32 11, i32 11, i32 12, i32 12, i32 12, i32 13, i32 13, i32 13, i32 14, i32 14, i32 14, i32 15, i32 15, i32 15>
@@ -217,7 +217,7 @@ define void @replication_i1_stride3() nounwind "min-legal-vector-width"="256" {
 ;
 ; SSSE3-LABEL: 'replication_i1_stride3'
 ; SSSE3-NEXT:  Cost Model: Found costs of 7 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <3 x i32> zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found costs of 14 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <6 x i32> <i32 0, i32 0, i32 0, i32 1, i32 1, i32 1>
+; SSSE3-NEXT:  Cost Model: Found costs of 7 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <6 x i32> <i32 0, i32 0, i32 0, i32 1, i32 1, i32 1>
 ; SSSE3-NEXT:  Cost Model: Found costs of 28 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <12 x i32> <i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3>
 ; SSSE3-NEXT:  Cost Model: Found costs of 55 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <24 x i32> <i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7>
 ; SSSE3-NEXT:  Cost Model: Found costs of 109 for: %vf16 = shufflevector <16 x i1> undef, <16 x i1> poison, <48 x i32> <i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 8, i32 8, i32 8, i32 9, i32 9, i32 9, i32 10, i32 10, i32 10, i32 11, i32 11, i32 11, i32 12, i32 12, i32 12, i32 13, i32 13, i32 13, i32 14, i32 14, i32 14, i32 15, i32 15, i32 15>
@@ -372,7 +372,7 @@ define void @replication_i1_stride3() nounwind "min-legal-vector-width"="256" {
 define void @replication_i1_stride4() nounwind "min-legal-vector-width"="256" {
 ; SSE2-LABEL: 'replication_i1_stride4'
 ; SSE2-NEXT:  Cost Model: Found costs of 8 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <4 x i32> zeroinitializer
-; SSE2-NEXT:  Cost Model: Found costs of 16 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1>
+; SSE2-NEXT:  Cost Model: Found costs of 9 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1>
 ; SSE2-NEXT:  Cost Model: Found costs of 32 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3>
 ; SSE2-NEXT:  Cost Model: Found costs of 63 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <32 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7>
 ; SSE2-NEXT:  Cost Model: Found costs of 125 for: %vf16 = shufflevector <16 x i1> undef, <16 x i1> poison, <64 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7, i32 8, i32 8, i32 8, i32 8, i32 9, i32 9, i32 9, i32 9, i32 10, i32 10, i32 10, i32 10, i32 11, i32 11, i32 11, i32 11, i32 12, i32 12, i32 12, i32 12, i32 13, i32 13, i32 13, i32 13, i32 14, i32 14, i32 14, i32 14, i32 15, i32 15, i32 15, i32 15>
@@ -383,7 +383,7 @@ define void @replication_i1_stride4() nounwind "min-legal-vector-width"="256" {
 ;
 ; SSE3-LABEL: 'replication_i1_stride4'
 ; SSE3-NEXT:  Cost Model: Found costs of 8 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <4 x i32> zeroinitializer
-; SSE3-NEXT:  Cost Model: Found costs of 16 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1>
+; SSE3-NEXT:  Cost Model: Found costs of 9 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1>
 ; SSE3-NEXT:  Cost Model: Found costs of 32 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3>
 ; SSE3-NEXT:  Cost Model: Found costs of 63 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <32 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7>
 ; SSE3-NEXT:  Cost Model: Found costs of 125 for: %vf16 = shufflevector <16 x i1> undef, <16 x i1> poison, <64 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7, i32 8, i32 8, i32 8, i32 8, i32 9, i32 9, i32 9, i32 9, i32 10, i32 10, i32 10, i32 10, i32 11, i32 11, i32 11, i32 11, i32 12, i32 12, i32 12, i32 12, i32 13, i32 13, i32 13, i32 13, i32 14, i32 14, i32 14, i32 14, i32 15, i32 15, i32 15, i32 15>
@@ -394,7 +394,7 @@ define void @replication_i1_stride4() nounwind "min-legal-vector-width"="256" {
 ;
 ; SSSE3-LABEL: 'replication_i1_stride4'
 ; SSSE3-NEXT:  Cost Model: Found costs of 8 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <4 x i32> zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found costs of 16 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1>
+; SSSE3-NEXT:  Cost Model: Found costs of 9 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1>
 ; SSSE3-NEXT:  Cost Model: Found costs of 32 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3>
 ; SSSE3-NEXT:  Cost Model: Found costs of 63 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <32 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7>
 ; SSSE3-NEXT:  Cost Model: Found costs of 125 for: %vf16 = shufflevector <16 x i1> undef, <16 x i1> poison, <64 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7, i32 8, i32 8, i32 8, i32 8, i32 9, i32 9, i32 9, i32 9, i32 10, i32 10, i32 10, i32 10, i32 11, i32 11, i32 11, i32 11, i32 12, i32 12, i32 12, i32 12, i32 13, i32 13, i32 13, i32 13, i32 14, i32 14, i32 14, i32 14, i32 15, i32 15, i32 15, i32 15>
@@ -548,7 +548,7 @@ define void @replication_i1_stride4() nounwind "min-legal-vector-width"="256" {
 
 define void @replication_i1_stride5() nounwind "min-legal-vector-width"="256" {
 ; SSE2-LABEL: 'replication_i1_stride5'
-; SSE2-NEXT:  Cost Model: Found costs of 13 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <5 x i32> zeroinitializer
+; SSE2-NEXT:  Cost Model: Found costs of 6 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <5 x i32> zeroinitializer
 ; SSE2-NEXT:  Cost Model: Found costs of 26 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <10 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; SSE2-NEXT:  Cost Model: Found costs of 51 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <20 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3>
 ; SSE2-NEXT:  Cost Model: Found costs of 101 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <40 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7, i32 7>
@@ -559,7 +559,7 @@ define void @replication_i1_stride5() nounwind "min-legal-vector-width"="256" {
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; SSE3-LABEL: 'replication_i1_stride5'
-; SSE3-NEXT:  Cost Model: Found costs of 13 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <5 x i32> zeroinitializer
+; SSE3-NEXT:  Cost Model: Found costs of 6 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <5 x i32> zeroinitializer
 ; SSE3-NEXT:  Cost Model: Found costs of 26 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <10 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; SSE3-NEXT:  Cost Model: Found costs of 51 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <20 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3>
 ; SSE3-NEXT:  Cost Model: Found costs of 101 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <40 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7, i32 7>
@@ -570,7 +570,7 @@ define void @replication_i1_stride5() nounwind "min-legal-vector-width"="256" {
 ; SSE3-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; SSSE3-LABEL: 'replication_i1_stride5'
-; SSSE3-NEXT:  Cost Model: Found costs of 13 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <5 x i32> zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found costs of 6 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <5 x i32> zeroinitializer
 ; SSSE3-NEXT:  Cost Model: Found costs of 26 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <10 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; SSSE3-NEXT:  Cost Model: Found costs of 51 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <20 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3>
 ; SSSE3-NEXT:  Cost Model: Found costs of 101 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <40 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7, i32 7>
@@ -725,7 +725,7 @@ define void @replication_i1_stride5() nounwind "min-legal-vector-width"="256" {
 
 define void @replication_i1_stride6() nounwind "min-legal-vector-width"="256" {
 ; SSE2-LABEL: 'replication_i1_stride6'
-; SSE2-NEXT:  Cost Model: Found costs of 14 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <6 x i32> zeroinitializer
+; SSE2-NEXT:  Cost Model: Found costs of 7 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <6 x i32> zeroinitializer
 ; SSE2-NEXT:  Cost Model: Found costs of 28 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <12 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; SSE2-NEXT:  Cost Model: Found costs of 55 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <24 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
 ; SSE2-NEXT:  Cost Model: Found costs of 109 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <48 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
@@ -736,7 +736,7 @@ define void @replication_i1_stride6() nounwind "min-legal-vector-width"="256" {
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; SSE3-LABEL: 'replication_i1_stride6'
-; SSE3-NEXT:  Cost Model: Found costs of 14 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <6 x i32> zeroinitializer
+; SSE3-NEXT:  Cost Model: Found costs of 7 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <6 x i32> zeroinitializer
 ; SSE3-NEXT:  Cost Model: Found costs of 28 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <12 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; SSE3-NEXT:  Cost Model: Found costs of 55 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <24 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
 ; SSE3-NEXT:  Cost Model: Found costs of 109 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <48 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
@@ -747,7 +747,7 @@ define void @replication_i1_stride6() nounwind "min-legal-vector-width"="256" {
 ; SSE3-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; SSSE3-LABEL: 'replication_i1_stride6'
-; SSSE3-NEXT:  Cost Model: Found costs of 14 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <6 x i32> zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found costs of 7 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <6 x i32> zeroinitializer
 ; SSSE3-NEXT:  Cost Model: Found costs of 28 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <12 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; SSSE3-NEXT:  Cost Model: Found costs of 55 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <24 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
 ; SSSE3-NEXT:  Cost Model: Found costs of 109 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <48 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
@@ -902,7 +902,7 @@ define void @replication_i1_stride6() nounwind "min-legal-vector-width"="256" {
 
 define void @replication_i1_stride7() nounwind "min-legal-vector-width"="256" {
 ; SSE2-LABEL: 'replication_i1_stride7'
-; SSE2-NEXT:  Cost Model: Found costs of 15 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <7 x i32> zeroinitializer
+; SSE2-NEXT:  Cost Model: Found costs of 8 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <7 x i32> zeroinitializer
 ; SSE2-NEXT:  Cost Model: Found costs of 30 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <14 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; SSE2-NEXT:  Cost Model: Found costs of 59 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <28 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
 ; SSE2-NEXT:  Cost Model: Found costs of 117 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <56 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
@@ -913,7 +913,7 @@ define void @replication_i1_stride7() nounwind "min-legal-vector-width"="256" {
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; SSE3-LABEL: 'replication_i1_stride7'
-; SSE3-NEXT:  Cost Model: Found costs of 15 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <7 x i32> zeroinitializer
+; SSE3-NEXT:  Cost Model: Found costs of 8 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <7 x i32> zeroinitializer
 ; SSE3-NEXT:  Cost Model: Found costs of 30 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <14 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; SSE3-NEXT:  Cost Model: Found costs of 59 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <28 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
 ; SSE3-NEXT:  Cost Model: Found costs of 117 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <56 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
@@ -924,7 +924,7 @@ define void @replication_i1_stride7() nounwind "min-legal-vector-width"="256" {
 ; SSE3-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; SSSE3-LABEL: 'replication_i1_stride7'
-; SSSE3-NEXT:  Cost Model: Found costs of 15 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <7 x i32> zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found costs of 8 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <7 x i32> zeroinitializer
 ; SSSE3-NEXT:  Cost Model: Found costs of 30 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <14 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; SSSE3-NEXT:  Cost Model: Found costs of 59 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <28 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
 ; SSSE3-NEXT:  Cost Model: Found costs of 117 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <56 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
@@ -1079,7 +1079,7 @@ define void @replication_i1_stride7() nounwind "min-legal-vector-width"="256" {
 
 define void @replication_i1_stride8() nounwind "min-legal-vector-width"="256" {
 ; SSE2-LABEL: 'replication_i1_stride8'
-; SSE2-NEXT:  Cost Model: Found costs of 16 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <8 x i32> zeroinitializer
+; SSE2-NEXT:  Cost Model: Found costs of 9 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <8 x i32> zeroinitializer
 ; SSE2-NEXT:  Cost Model: Found costs of 32 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; SSE2-NEXT:  Cost Model: Found costs of 63 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <32 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
 ; SSE2-NEXT:  Cost Model: Found costs of 125 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <64 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
@@ -1090,7 +1090,7 @@ define void @replication_i1_stride8() nounwind "min-legal-vector-width"="256" {
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; SSE3-LABEL: 'replication_i1_stride8'
-; SSE3-NEXT:  Cost Model: Found costs of 16 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <8 x i32> zeroinitializer
+; SSE3-NEXT:  Cost Model: Found costs of 9 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <8 x i32> zeroinitializer
 ; SSE3-NEXT:  Cost Model: Found costs of 32 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; SSE3-NEXT:  Cost Model: Found costs of 63 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <32 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
 ; SSE3-NEXT:  Cost Model: Found costs of 125 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <64 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
@@ -1101,7 +1101,7 @@ define void @replication_i1_stride8() nounwind "min-legal-vector-width"="256" {
 ; SSE3-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; SSSE3-LABEL: 'replication_i1_stride8'
-; SSSE3-NEXT:  Cost Model: Found costs of 16 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <8 x i32> zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found costs of 9 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <8 x i32> zeroinitializer
 ; SSSE3-NEXT:  Cost Model: Found costs of 32 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; SSSE3-NEXT:  Cost Model: Found costs of 63 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <32 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
 ; SSSE3-NEXT:  Cost Model: Found costs of 125 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <64 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>

@@ -258,22 +258,12 @@ entry:
 define i64 @bitmask_8xi64(ptr nocapture noundef readonly %src) {
 ; SSE2-LABEL: @bitmask_8xi64(
 ; SSE2-NEXT:  entry:
-; SSE2-NEXT:    [[TMP0:%.*]] = load <6 x i64>, ptr [[SRC:%.*]], align 8
-; SSE2-NEXT:    [[TMP1:%.*]] = icmp ne <6 x i64> [[TMP0]], zeroinitializer
-; SSE2-NEXT:    [[TMP2:%.*]] = icmp eq <6 x i64> [[TMP0]], zeroinitializer
-; SSE2-NEXT:    [[TMP3:%.*]] = shufflevector <6 x i1> [[TMP1]], <6 x i1> [[TMP2]], <6 x i32> <i32 0, i32 7, i32 8, i32 9, i32 10, i32 11>
-; SSE2-NEXT:    [[TMP4:%.*]] = select <6 x i1> [[TMP3]], <6 x i64> <i64 1, i64 0, i64 0, i64 0, i64 0, i64 0>, <6 x i64> <i64 0, i64 2, i64 4, i64 8, i64 16, i64 32>
-; SSE2-NEXT:    [[ARRAYIDX_6:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 6
-; SSE2-NEXT:    [[TMP5:%.*]] = load i64, ptr [[ARRAYIDX_6]], align 8
-; SSE2-NEXT:    [[TOBOOL_NOT_6:%.*]] = icmp eq i64 [[TMP5]], 0
-; SSE2-NEXT:    [[OR_6:%.*]] = select i1 [[TOBOOL_NOT_6]], i64 0, i64 64
-; SSE2-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 7
-; SSE2-NEXT:    [[TMP6:%.*]] = load i64, ptr [[ARRAYIDX_7]], align 8
-; SSE2-NEXT:    [[TOBOOL_NOT_7:%.*]] = icmp eq i64 [[TMP6]], 0
-; SSE2-NEXT:    [[OR_7:%.*]] = select i1 [[TOBOOL_NOT_7]], i64 0, i64 128
-; SSE2-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vector.reduce.or.v6i64(<6 x i64> [[TMP4]])
-; SSE2-NEXT:    [[OP_RDX:%.*]] = or i64 [[TMP7]], [[OR_6]]
-; SSE2-NEXT:    [[MASK_1_7:%.*]] = or i64 [[OP_RDX]], [[OR_7]]
+; SSE2-NEXT:    [[TMP0:%.*]] = load <8 x i64>, ptr [[SRC:%.*]], align 8
+; SSE2-NEXT:    [[TMP1:%.*]] = icmp ne <8 x i64> [[TMP0]], zeroinitializer
+; SSE2-NEXT:    [[TMP2:%.*]] = icmp eq <8 x i64> [[TMP0]], zeroinitializer
+; SSE2-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i1> [[TMP1]], <8 x i1> [[TMP2]], <8 x i32> <i32 0, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; SSE2-NEXT:    [[TMP4:%.*]] = select <8 x i1> [[TMP3]], <8 x i64> <i64 1, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0>, <8 x i64> <i64 0, i64 2, i64 4, i64 8, i64 16, i64 32, i64 64, i64 128>
+; SSE2-NEXT:    [[MASK_1_7:%.*]] = call i64 @llvm.vector.reduce.or.v8i64(<8 x i64> [[TMP4]])
 ; SSE2-NEXT:    ret i64 [[MASK_1_7]]
 ;
 ; SSE4-LABEL: @bitmask_8xi64(

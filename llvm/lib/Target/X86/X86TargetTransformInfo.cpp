@@ -5641,10 +5641,12 @@ InstructionCost X86TTIImpl::getScalarizationOverhead(
   }
 
   if (Insert) {
-    // Pre-SSE41, LowerBuildVectorv8i16 only uses PINSRW for up to 4 elements,
-    // otherwise it uses the MOVD+PUNPCK sequence costed below.
+    // Pre-SSE41, a build vector of more than 4 loaded i16 elements uses the
+    // MOVD+PUNPCK sequence costed below. Other i16 inserts keep the PINSRW
+    // cost, as masked op scalarization and interleave costs also get here.
     if ((MScalarTy == MVT::i16 && ST->hasSSE2() &&
-         DemandedElts.popcount() <= 4) ||
+         (VIC != TTI::VectorInstrContext::Load ||
+          DemandedElts.popcount() <= 4)) ||
         (MScalarTy.isInteger() && ST->hasSSE41()) ||
         (MScalarTy == MVT::f32 && ST->hasSSE41())) {
       // For types we can insert directly, insertion into 128-bit sub vectors is

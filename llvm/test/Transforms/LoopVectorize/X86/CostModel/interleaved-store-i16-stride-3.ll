@@ -14,19 +14,19 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define void @test() {
 ; SSE2-LABEL: 'test'
-; SSE2:  Cost of 23 for VF 2: INTERLEAVE-GROUP with factor 3, ir<%out0>
+; SSE2:  Cost of 16 for VF 2: INTERLEAVE-GROUP with factor 3, ir<%out0>
 ; SSE2:    store ir<%v> to index 0
 ; SSE2:    store ir<%v1> to index 1
 ; SSE2:    store ir<%v2> to index 2
-; SSE2:  Cost of 40 for VF 4: INTERLEAVE-GROUP with factor 3, ir<%out0>
+; SSE2:  Cost of 26 for VF 4: INTERLEAVE-GROUP with factor 3, ir<%out0>
 ; SSE2:    store ir<%v> to index 0
 ; SSE2:    store ir<%v1> to index 1
 ; SSE2:    store ir<%v2> to index 2
-; SSE2:  Cost of 79 for VF 8: INTERLEAVE-GROUP with factor 3, ir<%out0>
+; SSE2:  Cost of 51 for VF 8: INTERLEAVE-GROUP with factor 3, ir<%out0>
 ; SSE2:    store ir<%v> to index 0
 ; SSE2:    store ir<%v1> to index 1
 ; SSE2:    store ir<%v2> to index 2
-; SSE2:  Cost of 158 for VF 16: INTERLEAVE-GROUP with factor 3, ir<%out0>
+; SSE2:  Cost of 102 for VF 16: INTERLEAVE-GROUP with factor 3, ir<%out0>
 ; SSE2:    store ir<%v> to index 0
 ; SSE2:    store ir<%v1> to index 1
 ; SSE2:    store ir<%v2> to index 2
