@@ -398,9 +398,9 @@
 ; CHECK-NEXT: declare i32 @lround(double) [[SQRT_ATTRS]]
 ; CHECK-NEXT: declare i32 @lroundf(float) [[SQRT_ATTRS]]
 ; CHECK-NEXT: declare noalias noundef ptr @malloc(i32 noundef) [[MALLOC_ATTRS:#[0-9]+]]
-; CHECK-NEXT: declare ptr @memcpy(ptr, ptr, i32)
-; CHECK-NEXT: declare ptr @memmove(ptr, ptr, i32)
-; CHECK-NEXT: declare ptr @memset(ptr, i32, i32)
+; CHECK-NEXT: declare ptr @memcpy(ptr noalias returned writeonly, ptr noalias readonly, i32) [[ARGMEM_ATTRS:#[0-9]+]]
+; CHECK-NEXT: declare ptr @memmove(ptr returned writeonly, ptr readonly, i32) [[ARGMEM_ATTRS]]
+; CHECK-NEXT: declare ptr @memset(ptr returned writeonly, i32, i32) [[ARGMEM_WRITE_ATTRS]]
 ; CHECK-NEXT: declare double @modf(double, ptr noalias nonnull writeonly align 8 dereferenceable(8)) [[ARGMEM_WRITE_ATTRS]]
 ; CHECK-NEXT: declare float @modff(float, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
 ; CHECK-NEXT: declare nofpclass(snan inf zero sub norm) double @nan(ptr readonly captures(none)) [[ARGMEM_READ_ATTRS:#[0-9]+]]
@@ -446,6 +446,7 @@
 ; CHECK-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
 ; CHECK-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
 ; CHECK-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
+; CHECK-NEXT: attributes [[ARGMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ; CHECK-NEXT: attributes [[ARGMEM_READ_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
 ; CHECK-NEXT: attributes [[ARGMEM_ERRNO_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write, errnomem: write) }
 
@@ -842,9 +843,9 @@
 ; LINUX-NEXT: declare i32 @lround(double) [[SQRT_ATTRS]]
 ; LINUX-NEXT: declare i32 @lroundf(float) [[SQRT_ATTRS]]
 ; LINUX-NEXT: declare noalias noundef ptr @malloc(i32 noundef) [[MALLOC_ATTRS:#[0-9]+]]
-; LINUX-NEXT: declare ptr @memcpy(ptr, ptr, i32)
-; LINUX-NEXT: declare ptr @memmove(ptr, ptr, i32)
-; LINUX-NEXT: declare ptr @memset(ptr, i32, i32)
+; LINUX-NEXT: declare ptr @memcpy(ptr noalias returned writeonly, ptr noalias readonly, i32) [[ARGMEM_ATTRS:#[0-9]+]]
+; LINUX-NEXT: declare ptr @memmove(ptr returned writeonly, ptr readonly, i32) [[ARGMEM_ATTRS]]
+; LINUX-NEXT: declare ptr @memset(ptr returned writeonly, i32, i32) [[ARGMEM_WRITE_ATTRS]]
 ; LINUX-NEXT: declare double @modf(double, ptr noalias nonnull writeonly align 8 dereferenceable(8)) [[ARGMEM_WRITE_ATTRS]]
 ; LINUX-NEXT: declare float @modff(float, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
 ; LINUX-NEXT: declare nofpclass(snan inf zero sub norm) double @nan(ptr readonly captures(none)) [[ARGMEM_READ_ATTRS:#[0-9]+]]
@@ -892,5 +893,6 @@
 ; LINUX-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
 ; LINUX-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
 ; LINUX-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
+; LINUX-NEXT: attributes [[ARGMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ; LINUX-NEXT: attributes [[ARGMEM_READ_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
 ; LINUX-NEXT: attributes [[ARGMEM_ERRNO_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write, errnomem: write) }

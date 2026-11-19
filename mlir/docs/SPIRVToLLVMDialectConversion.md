@@ -367,6 +367,8 @@ vector         | `spirv.CompositeInsert`  | `llvm.insertelement`
 non-vector     | `spirv.CompositeExtract` | `llvm.extractvalue`
 non-vector     | `spirv.CompositeInsert`  | `llvm.insertvalue`
 
+`spirv.CopyObject` is replaced with its converted operand.
+
 ### `spirv.EntryPoint` and `spirv.ExecutionMode`
 
 First of all, it is important to note that there is no direct representation of
@@ -717,6 +719,9 @@ As well as:
 corresponding `branch_weights` attribute of `llvm.cond_br`. When translated to
 proper LLVM, `branch_weights` are converted into LLVM metadata associated with
 the conditional branch.
+
+`spirv.Switch` is mapped to `llvm.switch`. Case literals are rebuilt with the
+signless selector type.
 
 ### `spirv.FunctionCall`
 

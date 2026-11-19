@@ -24,13 +24,6 @@ liveins:
   - { reg: '$r0' }
   - { reg: '$r1' }
   - { reg: '$l0' }
-registers:
-  - { id: 0, class: hlxlr }
-  - { id: 1, class: hlxlr }
-  - { id: 2, class: hlxlr }
-  - { id: 4, class: hlxlr }
-  - { id: 5, class: intregs }
-  - { id: 6, class: intregs }
 body:             |
   bb.0:
     liveins: $r0, $r1, $l0
