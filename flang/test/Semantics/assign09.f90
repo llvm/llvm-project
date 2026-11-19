@@ -27,7 +27,10 @@ program test
   intToRealProcPtr => float
   !ERROR: 'float' is not an unrestricted specific intrinsic procedure
   call sub1(float)
+  ! A restricted specific intrinsic retains its procedure interface, allowing
+  ! subsequent compatibility checks for actual procedure arguments.
   !ERROR: 'float' is not an unrestricted specific intrinsic procedure
+  !ERROR: Actual procedure argument has interface incompatible with dummy argument 'p=': incompatible dummy argument #1: incompatible dummy data object types: INTEGER(4) vs REAL(4)
   call sub2(float)
   !ERROR: 'float' is not an unrestricted specific intrinsic procedure
   call sub3(float)

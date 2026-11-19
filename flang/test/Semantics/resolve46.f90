@@ -57,6 +57,9 @@ end subroutine
 ! A restricted specific intrinsic used in a procedure pointer assignment
 ! must be diagnosed even without an explicit INTRINSIC statement.
 subroutine testRestrictedSpecificWithoutIntrinsicStmt1
+  !ERROR: The left-hand side of a pointer assignment is not definable
+  !ERROR: 'u' is not a pointer
+  !ERROR: In assignment to object pointer 'u', the target 'llt' is a procedure designator
   !ERROR: 'llt' is not an unrestricted specific intrinsic procedure
   u => llt
 end subroutine
@@ -87,4 +90,14 @@ end subroutine
 subroutine testRestrictedSpecificCallWithoutIntrinsicStmt
   logical :: result
   result = llt('a', 'b')
+end subroutine
+
+! A restricted specific intrinsic with a numeric result must still form a
+! procedure designator so that subsequent pointer assignment checks are run.
+subroutine testRestrictedSpecificWithInvalidPointerAssignment
+  !ERROR: The left-hand side of a pointer assignment is not definable
+  !ERROR: 'u' is not a pointer
+  !ERROR: In assignment to object pointer 'u', the target 'amin0' is a procedure designator
+  !ERROR: 'amin0' is not an unrestricted specific intrinsic procedure
+  u => amin0
 end subroutine
