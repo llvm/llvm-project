@@ -66,8 +66,6 @@ llvm_config.feature_config([("--assertion-mode", {"ON": "asserts"})])
 config.targets = frozenset(config.targets_to_build.split())
 for arch in config.targets_to_build.split():
     config.available_features.add(arch.lower() + "-registered-target")
-if config.flang_test_has_llvm_lto:
-    config.available_features.add("llvm-lto")
 
 # To modify the default target triple for flang tests.
 if config.flang_test_triple:
