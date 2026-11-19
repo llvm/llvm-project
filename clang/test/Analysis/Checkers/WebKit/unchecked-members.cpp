@@ -27,10 +27,10 @@ namespace members {
   template <typename S>
   struct FooTmpl {
     S* e;
-// expected-warning@-1{{Member variable 'e' (of 'members::FooTmpl<CheckedObj>') is a raw pointer to CheckedPtr-capable type 'CheckedObj'}}
   };
 
   void forceTmplToInstantiate(FooTmpl<CheckedObj>) { }
+  // expected-warning@-1{{Member variable 'e' (of 'members::FooTmpl<CheckedObj>') is a raw pointer to CheckedPtr-capable type 'CheckedObj'}}
 
 } // namespace members
 
@@ -46,10 +46,10 @@ namespace unions {
   template<class T>
   union FooTmpl {
     T* a;
-    // expected-warning@-1{{Member variable 'a' (of 'unions::FooTmpl<CheckedObj>') is a raw pointer to CheckedPtr-capable type 'CheckedObj'}}
   };
 
   void forceTmplToInstantiate(FooTmpl<CheckedObj>) { }
+  // expected-warning@-1{{Member variable 'a' (of 'unions::FooTmpl<CheckedObj>') is a raw pointer to CheckedPtr-capable type 'CheckedObj'}}
 
 } // namespace unions
 
@@ -72,9 +72,9 @@ namespace ptr_to_ptr_to_checked_ptr_capable {
   template <typename T>
   struct TemplateList {
     T** elements;
-    // expected-warning@-1{{Member variable 'elements' (of 'ptr_to_ptr_to_checked_ptr_capable::TemplateList<CheckedObj>') contains a raw pointer to CheckedPtr-capable type 'CheckedObj'}}
   };
   TemplateList<CheckedObj> list;
+  // expected-warning@-1{{Member variable 'elements' (of 'ptr_to_ptr_to_checked_ptr_capable::TemplateList<CheckedObj>') contains a raw pointer to CheckedPtr-capable type 'CheckedObj'}}
 
   struct SafeList {
     CheckedPtr<CheckedObj>* elements;
