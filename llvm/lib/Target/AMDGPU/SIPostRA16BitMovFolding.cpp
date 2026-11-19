@@ -109,12 +109,21 @@ void SIPostRA16BitMovFolding::clearKillsBetween(MachineInstr &Begin,
                                                 MachineInstr &End,
                                                 MCRegister Reg) const {
   assert(Reg && "Expected a register source");
-  for (MachineInstr &MI :
-       drop_begin(make_range(Begin.getIterator(), End.getIterator()))) {
+  for (MachineInstr &MI : make_range(std::next(End.getReverseIterator()),
+                                     Begin.getReverseIterator())) {
+    if (MI.isDebugInstr())
+      continue;
+
+    bool ReadsReg = false;
     for (MachineOperand &MO : MI.uses()) {
-      if (MO.isReg() && MO.isKill() && TRI->regsOverlap(MO.getReg(), Reg))
-        MO.setIsKill(false);
+      if (!MO.isReg() || !MO.readsReg() || !TRI->regsOverlap(MO.getReg(), Reg))
+        continue;
+      ReadsReg = true;
+      MO.setIsKill(false);
     }
+
+    if (ReadsReg)
+      return;
   }
 }
 
@@ -230,11 +239,11 @@ bool SIPostRA16BitMovFolding::mergeSingleMovB16Pair(MachineInstr &Lo,
       return false;
     unsigned MaskHiSrc = HiSrcIsHi ? 0x0706 : 0x0504;
     unsigned MaskLoSrc = LoSrcIsHi ? 0x0302 : 0x0100;
+    clearKillsBetween(FirstMI, Selected, FirstSrc16);
     BuildMI(MBB, Selected, DL, TII->get(AMDGPU::V_PERM_B32_e64), Dst32)
         .addReg(HiSrc32)
         .addReg(LoSrc32)
         .addImm((MaskHiSrc << 16) | MaskLoSrc);
-    clearKillsBetween(FirstMI, Selected, FirstSrc16);
     Lo.eraseFromParent();
     Hi.eraseFromParent();
     return true;
@@ -262,13 +271,13 @@ bool SIPostRA16BitMovFolding::mergeSingleMovB16Pair(MachineInstr &Lo,
   // Pattern: v_mov_b16 v0.h, 0  +  v_mov_b16 v0.l, v2.l/s2
   //   => v_and_b32 v0, 0x0000ffff, v2/s2
   if (HiSrcIsImm && HiImm == 0 && !LoSrcIsImm && !LoSrcIsHi) {
+    if (FirstSrc16)
+      clearKillsBetween(FirstMI, Selected, FirstSrc16);
     BuildMI(MBB, Selected, DL,
             TII->get(Usevop2 ? AMDGPU::V_AND_B32_e32 : AMDGPU::V_AND_B32_e64),
             Dst32)
         .addImm(0x0000ffff)
         .addReg(LoSrc32);
-    if (FirstSrc16)
-      clearKillsBetween(FirstMI, Selected, FirstSrc16);
     Lo.eraseFromParent();
     Hi.eraseFromParent();
     return true;
@@ -277,14 +286,14 @@ bool SIPostRA16BitMovFolding::mergeSingleMovB16Pair(MachineInstr &Lo,
   // Pattern: v_mov_b16 v0.h, 0  +  v_mov_b16 v0.l, v2.h
   //   => v_lshrrev_b32 v0, 16, v2
   if (HiSrcIsImm && HiImm == 0 && !LoSrcIsImm && LoSrcIsHi) {
+    if (FirstSrc16)
+      clearKillsBetween(FirstMI, Selected, FirstSrc16);
     BuildMI(MBB, Selected, DL,
             TII->get(Usevop2 ? AMDGPU::V_LSHRREV_B32_e32
                              : AMDGPU::V_LSHRREV_B32_e64),
             Dst32)
         .addImm(16)
         .addReg(LoSrc32);
-    if (FirstSrc16)
-      clearKillsBetween(FirstMI, Selected, FirstSrc16);
     Lo.eraseFromParent();
     Hi.eraseFromParent();
     return true;
@@ -293,14 +302,14 @@ bool SIPostRA16BitMovFolding::mergeSingleMovB16Pair(MachineInstr &Lo,
   // Pattern: v_mov_b16 v0.l, 0  +  v_mov_b16 v0.h, v2.l/s2
   //   => v_lshlrev_b32 v0, 16, v2/s2
   if (LoSrcIsImm && LoImm == 0 && !HiSrcIsImm && !HiSrcIsHi) {
+    if (FirstSrc16)
+      clearKillsBetween(FirstMI, Selected, FirstSrc16);
     BuildMI(MBB, Selected, DL,
             TII->get(Usevop2 ? AMDGPU::V_LSHLREV_B32_e32
                              : AMDGPU::V_LSHLREV_B32_e64),
             Dst32)
         .addImm(16)
         .addReg(HiSrc32);
-    if (FirstSrc16)
-      clearKillsBetween(FirstMI, Selected, FirstSrc16);
     Lo.eraseFromParent();
     Hi.eraseFromParent();
     return true;
@@ -309,13 +318,13 @@ bool SIPostRA16BitMovFolding::mergeSingleMovB16Pair(MachineInstr &Lo,
   // Pattern: v_mov_b16 v0.l, 0  +  v_mov_b16 v0.h, v2.h
   //   => v_and_b32 v0, 0xffff0000, v2
   if (LoSrcIsImm && LoImm == 0 && !HiSrcIsImm && HiSrcIsHi) {
+    if (FirstSrc16)
+      clearKillsBetween(FirstMI, Selected, FirstSrc16);
     BuildMI(MBB, Selected, DL,
             TII->get(Usevop2 ? AMDGPU::V_AND_B32_e32 : AMDGPU::V_AND_B32_e64),
             Dst32)
         .addImm(0xffff0000)
         .addReg(HiSrc32);
-    if (FirstSrc16)
-      clearKillsBetween(FirstMI, Selected, FirstSrc16);
     Lo.eraseFromParent();
     Hi.eraseFromParent();
     return true;
