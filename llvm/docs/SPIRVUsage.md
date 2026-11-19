@@ -413,8 +413,10 @@ Not all runtimes support the same APIs for this purpose. OpenCL and Level Zero
 runtimes only allow the size of such objects to be specified through kernel
 arguments in the `Workgroup` storage class. For this reason, the SPIR-V backend
 implements an additional pass that lowers unsized external arrays to an
-OpenCL-compatible trailing kernel argument. When a module containing such an
-object is lowered, all operations on the array are translated into indirect reads
+OpenCL-compatible trailing `ptr addrspace(3)` argument on every kernel in the
+lowered module, including kernels that do not use dynamic local memory.
+When a module containing such an object is lowered, all operations on the array
+are translated into indirect reads
 and writes through a global slot containing a pointer to a `Workgroup` memory area.
 Whenever a kernel from the module is run, the global slot is initialized with the
 value passed through the trailing kernel argument. Runtimes can detect whether

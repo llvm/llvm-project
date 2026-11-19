@@ -298,7 +298,7 @@ TEST_P(olLaunchKernelLocalMemReductionTest, Success) {
 
 TEST_P(olLaunchKernelLocalMemGroupsTest, Success) {
   // Test using much more DynSharedMemory, checks if the memory
-  // is not reused by different programs in single kernel.
+  // is not reused by different work-groups in a single kernel.
   constexpr uint32_t WordsPerThread = 16;
   LaunchArgs.NumGroups.x = 256;
   LaunchArgs.DynSharedMemory =
