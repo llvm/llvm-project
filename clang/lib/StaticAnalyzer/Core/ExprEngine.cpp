@@ -952,7 +952,7 @@ void ExprEngine::processEndWorklist() {
 
 void ExprEngine::processCFGElement(const CFGElement E, ExplodedNode *Pred,
                                    unsigned StmtIdx) {
-  SaveAndRestore CurrSISave(CurrStmtIdx, std::optional(StmtIdx));
+  SaveAndRestore CurrStmtIDSave{CurrStmtIdx, std::optional(StmtIdx)};
 
   switch (E.getKind()) {
     case CFGElement::Statement:

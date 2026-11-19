@@ -370,7 +370,7 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
   // stay the same within a single call to dispatchWorkItem.
   resetCurrStackFrameAndBlock();
   setCurrStackFrameAndBlock(CallerSF, CalleeSF->getCallSiteBlock());
-  SaveAndRestore CBISave(CurrStmtIdx, std::optional(CalleeSF->getIndex()));
+  SaveAndRestore CalleeStmtIDSave{CurrStmtIdx, std::optional(CalleeSF->getIndex())};
 
   for (ExplodedNode *N : CleanedNodes) {
     // Step 4: Generate the CallExitEnd node.
