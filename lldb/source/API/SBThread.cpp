@@ -230,15 +230,14 @@ SBThread::GetStopReasonExtendedBacktraces(InstrumentationRuntimeType type) {
 
   ProcessSP process_sp = exe_ctx->GetProcessSP();
 
-  StopInfoSP stop_info = exe_ctx->GetThreadPtr()->GetStopInfo();
-  StructuredData::ObjectSP info = stop_info->GetExtendedInfo();
-  if (!info)
-    return threads;
-
-  // The instrumentation runtime might have been disabled since the stop.
   InstrumentationRuntimeSP runtime_sp =
       process_sp->GetInstrumentationRuntime(type);
   if (!runtime_sp)
+    return threads;
+
+  StopInfoSP stop_info = exe_ctx->GetThreadPtr()->GetStopInfo();
+  StructuredData::ObjectSP info = stop_info->GetExtendedInfo();
+  if (!info)
     return threads;
 
   threads = runtime_sp->GetBacktracesFromExtendedStopInfo(info);
