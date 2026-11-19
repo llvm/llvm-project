@@ -37,7 +37,7 @@ def XeGPUPropagateLayout : Pass<"xegpu-propagate-layout"> {
       Propagate the `sg_layout` and `sg_data` fields of the layout attribute.
       Default values are selected to align with hardware.
   }];
-  let dependentDialects = ["memref::MemRefDialect", "vector::VectorDialect"];
+  let dependentDialects = ["memref::MemRefDialect", "vector::VectorDialect", "xegpu::XeGPUDialect"];
   let options = [Option<
     "printOnly", "print-analysis-only", "bool",
     /*default=*/"false",
