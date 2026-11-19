@@ -17,8 +17,10 @@
 //  iN __aarch64_ldeorN_ORDER(iN val, iN *ptr)
 //  iN __aarch64_ldsetN_ORDER(iN val, iN *ptr)
 //
-// Routines may modify temporary registers tmp0, tmp1, tmp2,
-// return value x0 and the flags only.
+// Routines modify only temporary registers tmp0, tmp1, tmp2 (x15-x17),
+// return value x0 (x0-x1 for cas16), and the flags. Non-Arm64EC builds also
+// export `*_preservemost` aliases for ORDER != 'sync' when the assembler
+// supports `.variant_pcs` (or when targeting a non-ELF object format).
 
 #if defined(__aarch64__) || defined(__arm64ec__)
 
@@ -116,6 +118,25 @@ HIDDEN(___aarch64_have_lse_atomics)
 #endif
 
 #define NAME(BASE) GLUE4(__aarch64_, BASE, SIZE, SUFF)
+#if !defined(__arm64ec__) && MODEL != 5 &&                                     \
+    (!defined(__ELF__) || defined(HAS_ASM_VARIANT_PCS))
+// Every non-sync routine in this file modifies at most its argument/return
+// registers (x0-x4, with x0-x1 used for 16-byte CAS returns), scratch registers
+// tmp0-tmp2 (x15-x17), and NZCV, and executes only streaming-compatible scalar
+// instructions without touching SIMD/SVE registers or SME ZA/ZT0 state (any
+// future changes, including to cas16's LL/SC loop, must stay within that set).
+// Export zero-overhead `*_preservemost` aliases at the same entry points for
+// callers using the `aarch64_outline_atomics_preservemost` calling convention.
+// Arm64EC is excluded because calls may traverse x64 emulation thunks that
+// clobber additional registers, ELF targets require assembler support for
+// `.variant_pcs`, and MODEL == 5 (`_sync`) is a legacy libgcc entry point not
+// used by LLVM's outline-atomic libcalls.
+#define PRESERVEMOST_NAME(BASE) GLUE2(NAME(BASE), _preservemost)
+#define DEFINE_PRESERVEMOST_ALIAS(BASE)                                        \
+  DEFINE_COMPILERRT_OUTLINE_FUNCTION_ALIAS(PRESERVEMOST_NAME(BASE), NAME(BASE))
+#else
+#define DEFINE_PRESERVEMOST_ALIAS(BASE)
+#endif
 #if MODEL == 5
 // Drop A for _sync functions.
 #define LDXR GLUE3(ld, xr, S)
@@ -194,6 +215,7 @@ DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(NAME(cas))
         ret
 #endif
 END_COMPILERRT_OUTLINE_FUNCTION(NAME(cas))
+DEFINE_PRESERVEMOST_ALIAS(cas)
 #endif // L_cas
 
 #ifdef L_swp
@@ -215,6 +237,7 @@ DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(NAME(swp))
         BARRIER
         ret
 END_COMPILERRT_OUTLINE_FUNCTION(NAME(swp))
+DEFINE_PRESERVEMOST_ALIAS(swp)
 #endif // L_swp
 
 #if defined(L_ldadd) || defined(L_ldclr) ||                                    \
@@ -260,6 +283,7 @@ DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(NAME(LDNM))
         BARRIER
         ret
 END_COMPILERRT_OUTLINE_FUNCTION(NAME(LDNM))
+DEFINE_PRESERVEMOST_ALIAS(LDNM)
 #endif // L_ldadd L_ldclr L_ldeor L_ldset
 
 NO_EXEC_STACK_DIRECTIVE

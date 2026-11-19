@@ -42,6 +42,12 @@ asm(\".arch armv8-a+lse\");
 asm(\"cas w0, w1, [x2]\");
 ")
 
+builtin_check_c_compiler_source(COMPILER_RT_HAS_ASM_VARIANT_PCS
+"
+void foo(void) {}
+asm(\".variant_pcs foo\");
+")
+
 builtin_check_c_compiler_source(COMPILER_RT_HAS_AARCH64_SME
 "
 void foo(void)  __arm_streaming_compatible {

@@ -349,17 +349,50 @@
 #define DEFINE_AEABI_FUNCTION_ALIAS(aeabi_name, name)
 #endif
 
+// clang-format off
+// On AArch64 ELF, functions using a non-standard calling convention must be
+// marked with STO_AARCH64_VARIANT_PCS so the static linker sets
+// DT_AARCH64_VARIANT_PCS if the symbol is referenced through a PLT, preventing
+// lazy PLT resolution from clobbering registers preserved by the convention.
+#if defined(__aarch64__) && defined(__ELF__)
+#define VARIANT_PCS(name) .variant_pcs name SEPARATOR
+#else
+#define VARIANT_PCS(name)
+#endif
+
+// DEFINE_COMPILERRT_OUTLINE_FUNCTION_ALIAS(name, target) defines a function
+// alias to an outline-atomic helper defined via
+// DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(target), and must immediately
+// follow END_COMPILERRT_OUTLINE_FUNCTION(target) so `. - FUNC_SYMBOL(target)`
+// computes the full function size on ELF. Unlike `target`, which
+// DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED defines without
+// __USER_LABEL_PREFIX__, `name` applies SYMBOL_NAME(name) to match standard
+// C/LLVM symbol mangling (e.g., a leading underscore on Mach-O) and marks the
+// alias .variant_pcs on AArch64 ELF.
 #ifdef __ELF__
 #define END_COMPILERRT_FUNCTION(name)                                          \
   .size SYMBOL_NAME(name), . - SYMBOL_NAME(name)
 #define END_COMPILERRT_OUTLINE_FUNCTION(name)                                  \
   CFI_END SEPARATOR                                                            \
   .size SYMBOL_NAME(name), . - SYMBOL_NAME(name)
+#define DEFINE_COMPILERRT_OUTLINE_FUNCTION_ALIAS(name, target)                 \
+  .globl FUNC_SYMBOL(SYMBOL_NAME(name)) SEPARATOR                              \
+  SYMBOL_IS_FUNC(SYMBOL_NAME(name)) SEPARATOR                                  \
+  VARIANT_PCS(FUNC_SYMBOL(SYMBOL_NAME(name)))                                  \
+  DECLARE_SYMBOL_VISIBILITY(name)                                              \
+  .set FUNC_SYMBOL(SYMBOL_NAME(name)), FUNC_SYMBOL(target) SEPARATOR           \
+  .size FUNC_SYMBOL(SYMBOL_NAME(name)), . - FUNC_SYMBOL(target)
 #else
 #define END_COMPILERRT_FUNCTION(name)
 #define END_COMPILERRT_OUTLINE_FUNCTION(name)                                  \
   CFI_END
+#define DEFINE_COMPILERRT_OUTLINE_FUNCTION_ALIAS(name, target)                 \
+  .globl FUNC_SYMBOL(SYMBOL_NAME(name)) SEPARATOR                              \
+  SYMBOL_IS_FUNC(SYMBOL_NAME(name)) SEPARATOR                                  \
+  DECLARE_SYMBOL_VISIBILITY(name)                                              \
+  .set FUNC_SYMBOL(SYMBOL_NAME(name)), FUNC_SYMBOL(target)
 #endif
+// clang-format on
 
 #ifdef __arm__
 #include "int_endianness.h"

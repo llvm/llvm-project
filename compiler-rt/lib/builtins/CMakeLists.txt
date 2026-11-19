@@ -1137,6 +1137,7 @@ else ()
   endif()
 
   append_list_if(COMPILER_RT_HAS_ASM_LSE HAS_ASM_LSE BUILTIN_DEFS)
+  append_list_if(COMPILER_RT_HAS_ASM_VARIANT_PCS HAS_ASM_VARIANT_PCS BUILTIN_DEFS)
 
   foreach (arch ${BUILTIN_SUPPORTED_ARCH})
     if (CAN_TARGET_${arch})
@@ -1170,6 +1171,12 @@ else ()
         endif()
       endif()
       append_list_if(COMPILER_RT_HAS_${arch}_FLOAT16 -DCOMPILER_RT_HAS_FLOAT16 BUILTIN_CFLAGS_${arch})
+      if ("${arch}" MATCHES "arm64|aarch64" AND NOT COMPILER_RT_HAS_ASM_VARIANT_PCS)
+        try_compile_only(COMPILER_RT_HAS_${arch}_ASM_VARIANT_PCS
+                         SOURCE "void foo(void) {}\nasm(\".variant_pcs foo\");"
+                         FLAGS ${TARGET_${arch}_CFLAGS})
+        append_list_if(COMPILER_RT_HAS_${arch}_ASM_VARIANT_PCS -DHAS_ASM_VARIANT_PCS BUILTIN_CFLAGS_${arch})
+      endif()
       check_c_source_compiles("__bf16 foo(__bf16 x) { return x; }
                                int main(void) { return 0; }"
                               COMPILER_RT_HAS_${arch}_BFLOAT16)
