@@ -668,7 +668,7 @@ define amdgpu_kernel void @test_pow_half(ptr addrspace(1) nocapture %a) {
 ; GCN-POSTLINK-NEXT:    [[TMP15:%.*]] = select fast i1 [[DOTNOT1]], float [[TMP13]], float +qnan
 ; GCN-POSTLINK-NEXT:    [[TMP16:%.*]] = fcmp fast oeq float [[TMP]], 0.000000e+00
 ; GCN-POSTLINK-NEXT:    [[TMP17:%.*]] = tail call fast float @llvm.copysign.f32(float 0.000000e+00, float [[TMP]])
-; GCN-POSTLINK-NEXT:    [[TMP19:%.*]] = select i1 [[TMP11]], float [[TMP17]], float 0.000000e+00
+; GCN-POSTLINK-NEXT:    [[TMP19:%.*]] = select ninf i1 [[TMP11]], float [[TMP17]], float 0.000000e+00
 ; GCN-POSTLINK-NEXT:    [[TMP20:%.*]] = select fast i1 [[TMP16]], float [[TMP19]], float [[TMP15]]
 ; GCN-POSTLINK-NEXT:    store float [[TMP20]], ptr addrspace(1) [[A]], align 4
 ; GCN-POSTLINK-NEXT:    ret void
@@ -724,7 +724,7 @@ define amdgpu_kernel void @test_pow_mhalf(ptr addrspace(1) nocapture %a) {
 ; GCN-POSTLINK-NEXT:    [[TMP15:%.*]] = select fast i1 [[DOTNOT1]], float [[TMP13]], float +qnan
 ; GCN-POSTLINK-NEXT:    [[TMP16:%.*]] = fcmp fast oeq float [[TMP]], 0.000000e+00
 ; GCN-POSTLINK-NEXT:    [[TMP17:%.*]] = tail call fast float @llvm.copysign.f32(float 0.000000e+00, float [[TMP]])
-; GCN-POSTLINK-NEXT:    [[TMP21:%.*]] = select i1 [[TMP11]], float [[TMP17]], float 0.000000e+00
+; GCN-POSTLINK-NEXT:    [[TMP21:%.*]] = select ninf i1 [[TMP11]], float [[TMP17]], float 0.000000e+00
 ; GCN-POSTLINK-NEXT:    [[TMP22:%.*]] = select fast i1 [[TMP16]], float [[TMP21]], float [[TMP15]]
 ; GCN-POSTLINK-NEXT:    store float [[TMP22]], ptr addrspace(1) [[A]], align 4
 ; GCN-POSTLINK-NEXT:    ret void
