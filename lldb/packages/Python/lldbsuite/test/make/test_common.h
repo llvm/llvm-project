@@ -20,3 +20,7 @@
 #else
 #define LLVM_PRETTY_FUNCTION LLVM_PRETTY_FUNCTION
 #endif
+
+// Force the compiler to emit a declaration (and its debug info) even if it is
+// unreferenced or has internal linkage.
+#define LLDB_TEST_USED __attribute__((used))

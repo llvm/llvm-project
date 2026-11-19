@@ -189,6 +189,20 @@ BitIntSpecAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 }
 
 //===----------------------------------------------------------------------===//
+// VectorSpecAttr definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+VectorSpecAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                       uint32_t maxAlign) {
+  // TargetInfo::getMaxVectorAlign() is a power of two, at least the char
+  // width, when the target imposes a cap. Char width is 8 bits.
+  if (maxAlign < 8 || !llvm::isPowerOf2_32(maxAlign))
+    return emitError() << "max_align must be a power of two of at least 8";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // BitFieldDeclAttr definitions
 //===----------------------------------------------------------------------===//
 
@@ -767,10 +781,10 @@ DataMemberAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 LogicalResult MethodAttr::verify(function_ref<InFlightDiagnostic()> emitError,
                                  cir::MethodType type,
                                  std::optional<FlatSymbolRefAttr> symbol,
-                                 std::optional<uint64_t> vtable_offset) {
-  if (symbol.has_value() && vtable_offset.has_value())
+                                 std::optional<uint64_t> vtable_index) {
+  if (symbol.has_value() && vtable_index.has_value())
     return emitError()
-           << "at most one of symbol and vtable_offset can be present "
+           << "at most one of symbol and vtable_index can be present "
               "in #cir.method";
 
   return success();
@@ -802,30 +816,30 @@ Attribute MethodAttr::parse(AsmParser &parser, Type odsType) {
     return get(ty, symbol);
   }
 
-  // Parse a uint64 that represents the vtable offset.
-  std::uint64_t vtableOffset = 0;
-  if (parser.parseKeyword("vtable_offset"))
+  // Parse a uint64 that represents the vtable index.
+  std::uint64_t vtableIndex = 0;
+  if (parser.parseKeyword("vtable_index"))
     return {};
   if (parser.parseEqual())
     return {};
-  if (parser.parseInteger(vtableOffset))
+  if (parser.parseInteger(vtableIndex))
     return {};
 
   if (parser.parseGreater())
     return {};
 
-  return get(ty, vtableOffset);
+  return get(ty, vtableIndex);
 }
 
 void MethodAttr::print(AsmPrinter &printer) const {
   auto symbol = getSymbol();
-  auto vtableOffset = getVtableOffset();
+  auto vtableIndex = getVtableIndex();
 
   printer << '<';
   if (symbol.has_value()) {
     printer << *symbol;
-  } else if (vtableOffset.has_value()) {
-    printer << "vtable_offset = " << *vtableOffset;
+  } else if (vtableIndex.has_value()) {
+    printer << "vtable_index = " << *vtableIndex;
   } else {
     printer << "null";
   }
@@ -991,7 +1005,7 @@ cir::ConstVectorAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 
 LogicalResult cir::VTableAttr::verify(
     llvm::function_ref<mlir::InFlightDiagnostic()> emitError, mlir::Type type,
-    mlir::ArrayAttr data) {
+    mlir::ArrayAttr data, mlir::ArrayAttr addressPoints) {
   auto sTy = mlir::dyn_cast_if_present<cir::RecordType>(type);
   if (!sTy)
     return emitError() << "expected !cir.struct or !cir.union type result";
@@ -1001,10 +1015,29 @@ LogicalResult cir::VTableAttr::verify(
   if (cir::ConstRecordAttr::verify(emitError, type, data).failed())
     return failure();
 
-  for (const auto &element : data.getAsRange<mlir::Attribute>()) {
+  if (addressPoints.size() != data.size())
+    return emitError() << "expected one address point for each vtable, got "
+                       << addressPoints.size() << " for " << data.size()
+                       << " vtables";
+
+  for (const auto &[idx, element] :
+       llvm::enumerate(data.getAsRange<mlir::Attribute>())) {
     const auto &constArrayAttr = mlir::dyn_cast<cir::ConstArrayAttr>(element);
     if (!constArrayAttr)
       return emitError() << "expected constant array subtype";
+
+    auto arrayTy = mlir::cast<cir::ArrayType>(constArrayAttr.getType());
+    auto addressPoint =
+        mlir::dyn_cast<cir::AddressPointAttr>(addressPoints[idx]);
+    if (!addressPoint)
+      return emitError() << "expected an address point for vtable " << idx;
+    if (addressPoint.getIndex() != static_cast<int32_t>(idx))
+      return emitError() << "address point " << idx << " refers to vtable "
+                         << addressPoint.getIndex();
+    if (addressPoint.getOffset() < 0 ||
+        static_cast<uint64_t>(addressPoint.getOffset()) > arrayTy.getSize())
+      return emitError() << "address point offset " << addressPoint.getOffset()
+                         << " is out of range of vtable " << idx;
 
     LogicalResult eltTypeCheck = success();
     auto arrayElts = mlir::cast<ArrayAttr>(constArrayAttr.getElts());

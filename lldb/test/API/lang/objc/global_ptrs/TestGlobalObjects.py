@@ -32,17 +32,7 @@ class TestObjCGlobalVar(TestBase):
             g_obj_ptr.GetValueAsUnsigned(10), 0, "g_obj_ptr is initially null"
         )
 
-        # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        # The stop reason of the thread should be breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint(process, bkpt)
-        if len(threads) != 1:
-            self.fail("Failed to stop at breakpoint 1.")
-
-        thread = threads[0]
+        lldbutil.run_to_breakpoint_do_run(self, target, bkpt)
 
         dyn_value = g_obj_ptr.GetDynamicValue(lldb.eDynamicCanRunTarget)
         self.assertTrue(dyn_value.GetError().Success(), "Dynamic value is valid")

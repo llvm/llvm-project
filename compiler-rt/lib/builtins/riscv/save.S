@@ -222,5 +222,5 @@ END_COMPILERRT_FUNCTION(__riscv_save_0)
 #endif
 
 #else
-# error "xlen must be 32 or 64 for save-restore implementation
+# error "xlen must be 32 or 64 for save-restore implementation"
 #endif

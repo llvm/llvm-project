@@ -883,7 +883,7 @@ public:
     if (bkpt->GetTargetSP() != target_sp)
       return false;
     lldb::break_id_t bp_id = bkpt->GetID();
-    if (!llvm::is_contained(m_break_ids, bp_id))
+    if (llvm::is_contained(m_break_ids, bp_id))
       return false;
 
     m_break_ids.push_back(bkpt->GetID());
@@ -918,6 +918,19 @@ private:
 SBBreakpointList::SBBreakpointList(SBTarget &target)
     : m_opaque_sp(new SBBreakpointListImpl(target.GetSP())) {
   LLDB_INSTRUMENT_VA(this, target);
+}
+
+SBBreakpointList::SBBreakpointList(const SBBreakpointList &rhs)
+    : m_opaque_sp(rhs.m_opaque_sp) {
+  LLDB_INSTRUMENT_VA(this, rhs);
+}
+
+SBBreakpointList &SBBreakpointList::operator=(const SBBreakpointList &rhs) {
+  LLDB_INSTRUMENT_VA(this, rhs);
+
+  if (this != &rhs)
+    m_opaque_sp = rhs.m_opaque_sp;
+  return *this;
 }
 
 SBBreakpointList::~SBBreakpointList() = default;

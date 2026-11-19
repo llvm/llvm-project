@@ -196,6 +196,9 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setLoadExtAction(ISD::EXTLOAD, MVT::v3f32, MVT::v3bf16, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::v4f32, MVT::v4f16, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::v4f32, MVT::v4bf16, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::v5f32, MVT::v5f16, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::v6f32, MVT::v6f16, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::v7f32, MVT::v7f16, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::v8f32, MVT::v8f16, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::v8f32, MVT::v8bf16, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::v16f32, MVT::v16f16, Expand);
@@ -322,7 +325,9 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setTruncStoreAction(MVT::v3f32, MVT::v3f16, Expand);
   setTruncStoreAction(MVT::v4f32, MVT::v4bf16, Expand);
   setTruncStoreAction(MVT::v4f32, MVT::v4f16, Expand);
+  setTruncStoreAction(MVT::v5f32, MVT::v5f16, Expand);
   setTruncStoreAction(MVT::v6f32, MVT::v6f16, Expand);
+  setTruncStoreAction(MVT::v7f32, MVT::v7f16, Expand);
   setTruncStoreAction(MVT::v8f32, MVT::v8bf16, Expand);
   setTruncStoreAction(MVT::v8f32, MVT::v8f16, Expand);
   setTruncStoreAction(MVT::v16f32, MVT::v16bf16, Expand);
