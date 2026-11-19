@@ -508,27 +508,27 @@ define <4 x i8> @add_acq_rel_v4i8_global_cta(ptr addrspace(1) %addr, <4 x i8> %v
 ; SM90-NEXT:    ld.relaxed.cta.global.b32 %r18, [%rd1];
 ; SM90-NEXT:    prmt.b32 %r3, %r2, 0, 0x7773U;
 ; SM90-NEXT:    cvt.u16.u32 %rs1, %r3;
-; SM90-NEXT:    prmt.b32 %r6, %r2, 0, 0x7772U;
-; SM90-NEXT:    cvt.u16.u32 %rs4, %r6;
-; SM90-NEXT:    prmt.b32 %r10, %r2, 0, 0x7771U;
-; SM90-NEXT:    cvt.u16.u32 %rs7, %r10;
-; SM90-NEXT:    prmt.b32 %r13, %r2, 0, 0x7770U;
-; SM90-NEXT:    cvt.u16.u32 %rs10, %r13;
 ; SM90-NEXT:  $L__BB18_1: // %atomicrmw.start
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    prmt.b32 %r4, %r18, 0, 0x7773U;
 ; SM90-NEXT:    cvt.u16.u32 %rs2, %r4;
 ; SM90-NEXT:    add.s16 %rs3, %rs2, %rs1;
 ; SM90-NEXT:    cvt.u32.u16 %r5, %rs3;
+; SM90-NEXT:    prmt.b32 %r6, %r2, 0, 0x7772U;
+; SM90-NEXT:    cvt.u16.u32 %rs4, %r6;
 ; SM90-NEXT:    prmt.b32 %r7, %r18, 0, 0x7772U;
 ; SM90-NEXT:    cvt.u16.u32 %rs5, %r7;
 ; SM90-NEXT:    add.s16 %rs6, %rs5, %rs4;
 ; SM90-NEXT:    cvt.u32.u16 %r8, %rs6;
 ; SM90-NEXT:    prmt.b32 %r9, %r8, %r5, 0x3340U;
+; SM90-NEXT:    prmt.b32 %r10, %r2, 0, 0x7771U;
+; SM90-NEXT:    cvt.u16.u32 %rs7, %r10;
 ; SM90-NEXT:    prmt.b32 %r11, %r18, 0, 0x7771U;
 ; SM90-NEXT:    cvt.u16.u32 %rs8, %r11;
 ; SM90-NEXT:    add.s16 %rs9, %rs8, %rs7;
 ; SM90-NEXT:    cvt.u32.u16 %r12, %rs9;
+; SM90-NEXT:    prmt.b32 %r13, %r2, 0, 0x7770U;
+; SM90-NEXT:    cvt.u16.u32 %rs10, %r13;
 ; SM90-NEXT:    prmt.b32 %r14, %r18, 0, 0x7770U;
 ; SM90-NEXT:    cvt.u16.u32 %rs11, %r14;
 ; SM90-NEXT:    add.s16 %rs12, %rs11, %rs10;
@@ -1080,27 +1080,27 @@ define <4 x i8> @sub_acq_rel_v4i8_global_cta(ptr addrspace(1) %addr, <4 x i8> %v
 ; SM90-NEXT:    ld.relaxed.cta.global.b32 %r18, [%rd1];
 ; SM90-NEXT:    prmt.b32 %r3, %r2, 0, 0x7773U;
 ; SM90-NEXT:    cvt.u16.u32 %rs1, %r3;
-; SM90-NEXT:    prmt.b32 %r6, %r2, 0, 0x7772U;
-; SM90-NEXT:    cvt.u16.u32 %rs4, %r6;
-; SM90-NEXT:    prmt.b32 %r10, %r2, 0, 0x7771U;
-; SM90-NEXT:    cvt.u16.u32 %rs7, %r10;
-; SM90-NEXT:    prmt.b32 %r13, %r2, 0, 0x7770U;
-; SM90-NEXT:    cvt.u16.u32 %rs10, %r13;
 ; SM90-NEXT:  $L__BB34_1: // %atomicrmw.start
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    prmt.b32 %r4, %r18, 0, 0x7773U;
 ; SM90-NEXT:    cvt.u16.u32 %rs2, %r4;
 ; SM90-NEXT:    sub.s16 %rs3, %rs2, %rs1;
 ; SM90-NEXT:    cvt.u32.u16 %r5, %rs3;
+; SM90-NEXT:    prmt.b32 %r6, %r2, 0, 0x7772U;
+; SM90-NEXT:    cvt.u16.u32 %rs4, %r6;
 ; SM90-NEXT:    prmt.b32 %r7, %r18, 0, 0x7772U;
 ; SM90-NEXT:    cvt.u16.u32 %rs5, %r7;
 ; SM90-NEXT:    sub.s16 %rs6, %rs5, %rs4;
 ; SM90-NEXT:    cvt.u32.u16 %r8, %rs6;
 ; SM90-NEXT:    prmt.b32 %r9, %r8, %r5, 0x3340U;
+; SM90-NEXT:    prmt.b32 %r10, %r2, 0, 0x7771U;
+; SM90-NEXT:    cvt.u16.u32 %rs7, %r10;
 ; SM90-NEXT:    prmt.b32 %r11, %r18, 0, 0x7771U;
 ; SM90-NEXT:    cvt.u16.u32 %rs8, %r11;
 ; SM90-NEXT:    sub.s16 %rs9, %rs8, %rs7;
 ; SM90-NEXT:    cvt.u32.u16 %r12, %rs9;
+; SM90-NEXT:    prmt.b32 %r13, %r2, 0, 0x7770U;
+; SM90-NEXT:    cvt.u16.u32 %rs10, %r13;
 ; SM90-NEXT:    prmt.b32 %r14, %r18, 0, 0x7770U;
 ; SM90-NEXT:    cvt.u16.u32 %rs11, %r14;
 ; SM90-NEXT:    sub.s16 %rs12, %rs11, %rs10;
@@ -1297,7 +1297,6 @@ define <4 x i16> @sub_acq_rel_v4i16_global_cta(ptr addrspace(1) %addr, <4 x i16>
 ; SM90-NEXT:    mov.b64 {_, %r6}, %rd2;
 ; SM90-NEXT:    cvt.u32.u64 %r5, %rd2;
 ; SM90-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM90-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
 ; SM90-NEXT:  $L__BB38_1: // %atomicrmw.start
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    mov.b32 {%rs3, %rs4}, %r5;
@@ -1305,6 +1304,7 @@ define <4 x i16> @sub_acq_rel_v4i16_global_cta(ptr addrspace(1) %addr, <4 x i16>
 ; SM90-NEXT:    sub.s16 %rs6, %rs3, %rs1;
 ; SM90-NEXT:    mov.b32 %r3, {%rs6, %rs5};
 ; SM90-NEXT:    cvt.u64.u32 %rd3, %r3;
+; SM90-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
 ; SM90-NEXT:    mov.b32 {%rs9, %rs10}, %r6;
 ; SM90-NEXT:    sub.s16 %rs11, %rs10, %rs8;
 ; SM90-NEXT:    sub.s16 %rs12, %rs9, %rs7;
@@ -1349,7 +1349,6 @@ define <8 x i16> @sub_acq_rel_v8i16_global_cta(ptr addrspace(1) %addr, <8 x i16>
 ; SM90-NEXT:    mov.b64 {_, %r10}, %rd2;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM90-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM90-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
 ; SM90-NEXT:  $L__BB39_1: // %atomicrmw.start
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    mov.b32 {%rs3, %rs4}, %r9;
@@ -1357,6 +1356,7 @@ define <8 x i16> @sub_acq_rel_v8i16_global_cta(ptr addrspace(1) %addr, <8 x i16>
 ; SM90-NEXT:    sub.s16 %rs6, %rs3, %rs1;
 ; SM90-NEXT:    mov.b32 %r5, {%rs6, %rs5};
 ; SM90-NEXT:    cvt.u64.u32 %rd4, %r5;
+; SM90-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
 ; SM90-NEXT:    mov.b32 {%rs9, %rs10}, %r10;
 ; SM90-NEXT:    sub.s16 %rs11, %rs10, %rs8;
 ; SM90-NEXT:    sub.s16 %rs12, %rs9, %rs7;
@@ -3828,7 +3828,6 @@ define <2 x i8> @max_acq_rel_v2i8_global_cta(ptr addrspace(1) %addr, <2 x i8> %v
 ; SM90-NEXT:    mov.b32 {%rs5, %rs6}, %r4;
 ; SM90-NEXT:    cvt.s16.s8 %rs7, %rs6;
 ; SM90-NEXT:    cvt.s16.s8 %rs8, %rs5;
-; SM90-NEXT:    mov.b32 %r11, {%rs8, %rs7};
 ; SM90-NEXT:  $L__BB113_1: // %atomicrmw.start
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    shr.u32 %r8, %r18, %r1;
@@ -3836,6 +3835,7 @@ define <2 x i8> @max_acq_rel_v2i8_global_cta(ptr addrspace(1) %addr, <2 x i8> %v
 ; SM90-NEXT:    bfe.s32 %r9, %r8, 8, 8;
 ; SM90-NEXT:    cvt.s8.s32 %rs4, %r9;
 ; SM90-NEXT:    mov.b32 %r10, {%rs3, %rs4};
+; SM90-NEXT:    mov.b32 %r11, {%rs8, %rs7};
 ; SM90-NEXT:    max.s16x2 %r12, %r10, %r11;
 ; SM90-NEXT:    mov.b32 {%rs9, %rs10}, %r12;
 ; SM90-NEXT:    shl.b16 %rs11, %rs10, 8;
@@ -3871,11 +3871,11 @@ define <4 x i8> @max_acq_rel_v4i8_global_cta(ptr addrspace(1) %addr, <4 x i8> %v
 ; SM90-NEXT:    fence.release.cta;
 ; SM90-NEXT:    ld.relaxed.cta.global.b32 %r26, [%rd1];
 ; SM90-NEXT:    prmt.b32 %r3, %r2, 0, 0x8880U;
-; SM90-NEXT:    prmt.b32 %r5, %r2, 0, 0x9991U;
 ; SM90-NEXT:  $L__BB114_1: // %atomicrmw.start
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    prmt.b32 %r4, %r26, 0, 0x8880U;
 ; SM90-NEXT:    setp.gt.s32 %p1, %r4, %r3;
+; SM90-NEXT:    prmt.b32 %r5, %r2, 0, 0x9991U;
 ; SM90-NEXT:    prmt.b32 %r6, %r26, 0, 0x9991U;
 ; SM90-NEXT:    setp.gt.s32 %p2, %r6, %r5;
 ; SM90-NEXT:    prmt.b32 %r7, %r2, 0, 0xaaa2U;
@@ -4435,7 +4435,6 @@ define <2 x i8> @min_acq_rel_v2i8_global_cta(ptr addrspace(1) %addr, <2 x i8> %v
 ; SM90-NEXT:    mov.b32 {%rs5, %rs6}, %r4;
 ; SM90-NEXT:    cvt.s16.s8 %rs7, %rs6;
 ; SM90-NEXT:    cvt.s16.s8 %rs8, %rs5;
-; SM90-NEXT:    mov.b32 %r11, {%rs8, %rs7};
 ; SM90-NEXT:  $L__BB129_1: // %atomicrmw.start
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    shr.u32 %r8, %r18, %r1;
@@ -4443,6 +4442,7 @@ define <2 x i8> @min_acq_rel_v2i8_global_cta(ptr addrspace(1) %addr, <2 x i8> %v
 ; SM90-NEXT:    bfe.s32 %r9, %r8, 8, 8;
 ; SM90-NEXT:    cvt.s8.s32 %rs4, %r9;
 ; SM90-NEXT:    mov.b32 %r10, {%rs3, %rs4};
+; SM90-NEXT:    mov.b32 %r11, {%rs8, %rs7};
 ; SM90-NEXT:    min.s16x2 %r12, %r10, %r11;
 ; SM90-NEXT:    mov.b32 {%rs9, %rs10}, %r12;
 ; SM90-NEXT:    shl.b16 %rs11, %rs10, 8;
@@ -4478,11 +4478,11 @@ define <4 x i8> @min_acq_rel_v4i8_global_cta(ptr addrspace(1) %addr, <4 x i8> %v
 ; SM90-NEXT:    fence.release.cta;
 ; SM90-NEXT:    ld.relaxed.cta.global.b32 %r26, [%rd1];
 ; SM90-NEXT:    prmt.b32 %r3, %r2, 0, 0x8880U;
-; SM90-NEXT:    prmt.b32 %r5, %r2, 0, 0x9991U;
 ; SM90-NEXT:  $L__BB130_1: // %atomicrmw.start
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    prmt.b32 %r4, %r26, 0, 0x8880U;
 ; SM90-NEXT:    setp.le.s32 %p1, %r4, %r3;
+; SM90-NEXT:    prmt.b32 %r5, %r2, 0, 0x9991U;
 ; SM90-NEXT:    prmt.b32 %r6, %r26, 0, 0x9991U;
 ; SM90-NEXT:    setp.le.s32 %p2, %r6, %r5;
 ; SM90-NEXT:    prmt.b32 %r7, %r2, 0, 0xaaa2U;
@@ -5080,11 +5080,11 @@ define <4 x i8> @umax_acq_rel_v4i8_global_cta(ptr addrspace(1) %addr, <4 x i8> %
 ; SM90-NEXT:    fence.release.cta;
 ; SM90-NEXT:    ld.relaxed.cta.global.b32 %r18, [%rd1];
 ; SM90-NEXT:    prmt.b32 %r3, %r2, 0, 0x7770U;
-; SM90-NEXT:    prmt.b32 %r5, %r2, 0, 0x7771U;
 ; SM90-NEXT:  $L__BB146_1: // %atomicrmw.start
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    prmt.b32 %r4, %r18, 0, 0x7770U;
 ; SM90-NEXT:    setp.gt.u32 %p1, %r4, %r3;
+; SM90-NEXT:    prmt.b32 %r5, %r2, 0, 0x7771U;
 ; SM90-NEXT:    prmt.b32 %r6, %r18, 0, 0x7771U;
 ; SM90-NEXT:    setp.gt.u32 %p2, %r6, %r5;
 ; SM90-NEXT:    prmt.b32 %r7, %r2, 0, 0x7772U;
@@ -5658,11 +5658,11 @@ define <4 x i8> @umin_acq_rel_v4i8_global_cta(ptr addrspace(1) %addr, <4 x i8> %
 ; SM90-NEXT:    fence.release.cta;
 ; SM90-NEXT:    ld.relaxed.cta.global.b32 %r18, [%rd1];
 ; SM90-NEXT:    prmt.b32 %r3, %r2, 0, 0x7770U;
-; SM90-NEXT:    prmt.b32 %r5, %r2, 0, 0x7771U;
 ; SM90-NEXT:  $L__BB162_1: // %atomicrmw.start
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    prmt.b32 %r4, %r18, 0, 0x7770U;
 ; SM90-NEXT:    setp.le.u32 %p1, %r4, %r3;
+; SM90-NEXT:    prmt.b32 %r5, %r2, 0, 0x7771U;
 ; SM90-NEXT:    prmt.b32 %r6, %r18, 0, 0x7771U;
 ; SM90-NEXT:    setp.le.u32 %p2, %r6, %r5;
 ; SM90-NEXT:    prmt.b32 %r7, %r2, 0, 0x7772U;
@@ -6198,7 +6198,6 @@ define <2 x i8> @uinc_wrap_acq_rel_v2i8_global_cta(ptr addrspace(1) %addr, <2 x 
 ; SM90-NEXT:    shl.b32 %r7, 65535, %r1;
 ; SM90-NEXT:    not.b32 %r2, %r7;
 ; SM90-NEXT:    ld.relaxed.cta.global.b32 %r17, [%rd1];
-; SM90-NEXT:    mov.b32 {%rs6, %rs7}, %r4;
 ; SM90-NEXT:  $L__BB177_1: // %atomicrmw.start
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    shr.u32 %r8, %r17, %r1;
@@ -6208,6 +6207,7 @@ define <2 x i8> @uinc_wrap_acq_rel_v2i8_global_cta(ptr addrspace(1) %addr, <2 x 
 ; SM90-NEXT:    and.b16 %rs5, %rs3, 255;
 ; SM90-NEXT:    mov.b32 %r10, 65537;
 ; SM90-NEXT:    add.s16x2 %r11, %r9, %r10;
+; SM90-NEXT:    mov.b32 {%rs6, %rs7}, %r4;
 ; SM90-NEXT:    setp.ge.u16 %p1, %rs4, %rs7;
 ; SM90-NEXT:    setp.ge.u16 %p2, %rs5, %rs6;
 ; SM90-NEXT:    mov.b32 {%rs8, %rs9}, %r11;
@@ -6246,8 +6246,6 @@ define <4 x i8> @uinc_wrap_acq_rel_v4i8_global_cta(ptr addrspace(1) %addr, <4 x 
 ; SM90-NEXT:    ld.param::func.b64 %rd1, [uinc_wrap_acq_rel_v4i8_global_cta_param_0];
 ; SM90-NEXT:    fence.release.cta;
 ; SM90-NEXT:    ld.relaxed.cta.global.b32 %r22, [%rd1];
-; SM90-NEXT:    prmt.b32 %r7, %r2, 0, 0x7770U;
-; SM90-NEXT:    prmt.b32 %r8, %r2, 0, 0x7771U;
 ; SM90-NEXT:  $L__BB178_1: // %atomicrmw.start
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    prmt.b32 %r3, %r22, 0, 0x7770U;
@@ -6262,7 +6260,9 @@ define <4 x i8> @uinc_wrap_acq_rel_v4i8_global_cta(ptr addrspace(1) %addr, <4 x 
 ; SM90-NEXT:    prmt.b32 %r6, %r22, 0, 0x7773U;
 ; SM90-NEXT:    cvt.u16.u32 %rs7, %r6;
 ; SM90-NEXT:    add.s16 %rs8, %rs7, 1;
+; SM90-NEXT:    prmt.b32 %r7, %r2, 0, 0x7770U;
 ; SM90-NEXT:    setp.ge.u32 %p1, %r3, %r7;
+; SM90-NEXT:    prmt.b32 %r8, %r2, 0, 0x7771U;
 ; SM90-NEXT:    setp.ge.u32 %p2, %r4, %r8;
 ; SM90-NEXT:    prmt.b32 %r9, %r2, 0, 0x7772U;
 ; SM90-NEXT:    setp.ge.u32 %p3, %r5, %r9;
@@ -6487,7 +6487,6 @@ define <4 x i16> @uinc_wrap_acq_rel_v4i16_global_cta(ptr addrspace(1) %addr, <4 
 ; SM90-NEXT:    mov.b64 {_, %r9}, %rd2;
 ; SM90-NEXT:    cvt.u32.u64 %r8, %rd2;
 ; SM90-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
-; SM90-NEXT:    mov.b32 {%rs5, %rs6}, %r1;
 ; SM90-NEXT:  $L__BB182_1: // %atomicrmw.start
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    cvt.u64.u32 %rd3, %r8;
@@ -6500,6 +6499,7 @@ define <4 x i16> @uinc_wrap_acq_rel_v4i16_global_cta(ptr addrspace(1) %addr, <4 
 ; SM90-NEXT:    mov.b32 {%rs3, %rs4}, %r9;
 ; SM90-NEXT:    setp.ge.u16 %p1, %rs3, %rs1;
 ; SM90-NEXT:    setp.ge.u16 %p2, %rs4, %rs2;
+; SM90-NEXT:    mov.b32 {%rs5, %rs6}, %r1;
 ; SM90-NEXT:    mov.b32 {%rs7, %rs8}, %r8;
 ; SM90-NEXT:    setp.ge.u16 %p3, %rs7, %rs5;
 ; SM90-NEXT:    setp.ge.u16 %p4, %rs8, %rs6;
@@ -6548,7 +6548,6 @@ define <8 x i16> @uinc_wrap_acq_rel_v8i16_global_cta(ptr addrspace(1) %addr, <8 
 ; SM90-NEXT:    mov.b64 {_, %r15}, %rd2;
 ; SM90-NEXT:    cvt.u32.u64 %r14, %rd2;
 ; SM90-NEXT:    mov.b32 {%rs1, %rs2}, %r4;
-; SM90-NEXT:    mov.b32 {%rs5, %rs6}, %r3;
 ; SM90-NEXT:  $L__BB183_1: // %atomicrmw.start
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    cvt.u64.u32 %rd4, %r14;
@@ -6567,6 +6566,7 @@ define <8 x i16> @uinc_wrap_acq_rel_v8i16_global_cta(ptr addrspace(1) %addr, <8 
 ; SM90-NEXT:    mov.b32 {%rs3, %rs4}, %r17;
 ; SM90-NEXT:    setp.ge.u16 %p1, %rs3, %rs1;
 ; SM90-NEXT:    setp.ge.u16 %p2, %rs4, %rs2;
+; SM90-NEXT:    mov.b32 {%rs5, %rs6}, %r3;
 ; SM90-NEXT:    mov.b32 {%rs7, %rs8}, %r16;
 ; SM90-NEXT:    setp.ge.u16 %p3, %rs7, %rs5;
 ; SM90-NEXT:    setp.ge.u16 %p4, %rs8, %rs6;
@@ -7043,7 +7043,6 @@ define <2 x i8> @udec_wrap_acq_rel_v2i8_global_cta(ptr addrspace(1) %addr, <2 x 
 ; SM90-NEXT:    shl.b32 %r7, 65535, %r1;
 ; SM90-NEXT:    not.b32 %r2, %r7;
 ; SM90-NEXT:    ld.relaxed.cta.global.b32 %r14, [%rd1];
-; SM90-NEXT:    mov.b32 {%rs8, %rs9}, %r4;
 ; SM90-NEXT:  $L__BB193_1: // %atomicrmw.start
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    shr.u32 %r8, %r14, %r1;
@@ -7054,6 +7053,7 @@ define <2 x i8> @udec_wrap_acq_rel_v2i8_global_cta(ptr addrspace(1) %addr, <2 x 
 ; SM90-NEXT:    add.s16 %rs7, %rs3, -1;
 ; SM90-NEXT:    setp.eq.b16 %p1, %rs5, 0;
 ; SM90-NEXT:    setp.eq.b16 %p2, %rs4, 0;
+; SM90-NEXT:    mov.b32 {%rs8, %rs9}, %r4;
 ; SM90-NEXT:    setp.gt.u16 %p3, %rs5, %rs9;
 ; SM90-NEXT:    setp.gt.u16 %p4, %rs4, %rs8;
 ; SM90-NEXT:    selp.b16 %rs10, %rs8, %rs7, %p4;
@@ -7093,8 +7093,6 @@ define <4 x i8> @udec_wrap_acq_rel_v4i8_global_cta(ptr addrspace(1) %addr, <4 x 
 ; SM90-NEXT:    ld.param::func.b64 %rd1, [udec_wrap_acq_rel_v4i8_global_cta_param_0];
 ; SM90-NEXT:    fence.release.cta;
 ; SM90-NEXT:    ld.relaxed.cta.global.b32 %r26, [%rd1];
-; SM90-NEXT:    prmt.b32 %r7, %r2, 0, 0x7770U;
-; SM90-NEXT:    prmt.b32 %r8, %r2, 0, 0x7771U;
 ; SM90-NEXT:  $L__BB194_1: // %atomicrmw.start
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    prmt.b32 %r3, %r26, 0, 0x7770U;
@@ -7113,7 +7111,9 @@ define <4 x i8> @udec_wrap_acq_rel_v4i8_global_cta(ptr addrspace(1) %addr, <4 x 
 ; SM90-NEXT:    setp.eq.b32 %p2, %r4, 0;
 ; SM90-NEXT:    setp.eq.b32 %p3, %r5, 0;
 ; SM90-NEXT:    setp.eq.b32 %p4, %r6, 0;
+; SM90-NEXT:    prmt.b32 %r7, %r2, 0, 0x7770U;
 ; SM90-NEXT:    setp.gt.u32 %p5, %r3, %r7;
+; SM90-NEXT:    prmt.b32 %r8, %r2, 0, 0x7771U;
 ; SM90-NEXT:    setp.gt.u32 %p6, %r4, %r8;
 ; SM90-NEXT:    prmt.b32 %r9, %r2, 0, 0x7772U;
 ; SM90-NEXT:    setp.gt.u32 %p7, %r5, %r9;
@@ -7328,7 +7328,6 @@ define <2 x i16> @udec_wrap_acq_rel_v2i16_global_cta(ptr addrspace(1) %addr, <2 
 ; SM90-NEXT:    ld.param::func.b64 %rd1, [udec_wrap_acq_rel_v2i16_global_cta_param_0];
 ; SM90-NEXT:    fence.release.cta;
 ; SM90-NEXT:    ld.relaxed.cta.global.b32 %r4, [%rd1];
-; SM90-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
 ; SM90-NEXT:  $L__BB197_1: // %atomicrmw.start
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    mov.b32 {%rs1, %rs2}, %r4;
@@ -7336,6 +7335,7 @@ define <2 x i16> @udec_wrap_acq_rel_v2i16_global_cta(ptr addrspace(1) %addr, <2 
 ; SM90-NEXT:    add.s16 %rs4, %rs2, -1;
 ; SM90-NEXT:    setp.eq.b16 %p1, %rs1, 0;
 ; SM90-NEXT:    setp.eq.b16 %p2, %rs2, 0;
+; SM90-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
 ; SM90-NEXT:    setp.gt.u16 %p3, %rs1, %rs5;
 ; SM90-NEXT:    setp.gt.u16 %p4, %rs2, %rs6;
 ; SM90-NEXT:    selp.b16 %rs7, %rs6, %rs4, %p4;
@@ -7370,8 +7370,6 @@ define <4 x i16> @udec_wrap_acq_rel_v4i16_global_cta(ptr addrspace(1) %addr, <4 
 ; SM90-NEXT:    ld.relaxed.cta.global.b64 %rd2, [%rd1];
 ; SM90-NEXT:    mov.b64 {_, %r6}, %rd2;
 ; SM90-NEXT:    cvt.u32.u64 %r5, %rd2;
-; SM90-NEXT:    mov.b32 {%rs9, %rs10}, %r2;
-; SM90-NEXT:    mov.b32 {%rs11, %rs12}, %r1;
 ; SM90-NEXT:  $L__BB198_1: // %atomicrmw.start
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    cvt.u64.u32 %rd3, %r5;
@@ -7388,8 +7386,10 @@ define <4 x i16> @udec_wrap_acq_rel_v4i16_global_cta(ptr addrspace(1) %addr, <4 
 ; SM90-NEXT:    setp.eq.b16 %p2, %rs2, 0;
 ; SM90-NEXT:    setp.eq.b16 %p3, %rs5, 0;
 ; SM90-NEXT:    setp.eq.b16 %p4, %rs6, 0;
+; SM90-NEXT:    mov.b32 {%rs9, %rs10}, %r2;
 ; SM90-NEXT:    setp.gt.u16 %p5, %rs1, %rs9;
 ; SM90-NEXT:    setp.gt.u16 %p6, %rs2, %rs10;
+; SM90-NEXT:    mov.b32 {%rs11, %rs12}, %r1;
 ; SM90-NEXT:    setp.gt.u16 %p7, %rs5, %rs11;
 ; SM90-NEXT:    setp.gt.u16 %p8, %rs6, %rs12;
 ; SM90-NEXT:    selp.b16 %rs13, %rs12, %rs8, %p8;
@@ -7438,8 +7438,6 @@ define <8 x i16> @udec_wrap_acq_rel_v8i16_global_cta(ptr addrspace(1) %addr, <8 
 ; SM90-NEXT:    cvt.u32.u64 %r11, %rd3;
 ; SM90-NEXT:    mov.b64 {_, %r10}, %rd2;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
-; SM90-NEXT:    mov.b32 {%rs17, %rs18}, %r4;
-; SM90-NEXT:    mov.b32 {%rs19, %rs20}, %r3;
 ; SM90-NEXT:  $L__BB199_1: // %atomicrmw.start
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    cvt.u64.u32 %rd4, %r9;
@@ -7470,8 +7468,10 @@ define <8 x i16> @udec_wrap_acq_rel_v8i16_global_cta(ptr addrspace(1) %addr, <8 
 ; SM90-NEXT:    setp.eq.b16 %p6, %rs10, 0;
 ; SM90-NEXT:    setp.eq.b16 %p7, %rs13, 0;
 ; SM90-NEXT:    setp.eq.b16 %p8, %rs14, 0;
+; SM90-NEXT:    mov.b32 {%rs17, %rs18}, %r4;
 ; SM90-NEXT:    setp.gt.u16 %p9, %rs1, %rs17;
 ; SM90-NEXT:    setp.gt.u16 %p10, %rs2, %rs18;
+; SM90-NEXT:    mov.b32 {%rs19, %rs20}, %r3;
 ; SM90-NEXT:    setp.gt.u16 %p11, %rs5, %rs19;
 ; SM90-NEXT:    setp.gt.u16 %p12, %rs6, %rs20;
 ; SM90-NEXT:    mov.b32 {%rs21, %rs22}, %r2;
@@ -7977,13 +7977,13 @@ define <2 x i8> @usub_cond_acq_rel_v2i8_global_cta(ptr addrspace(1) %addr, <2 x 
 ; SM90-NEXT:    shl.b32 %r7, 65535, %r1;
 ; SM90-NEXT:    not.b32 %r2, %r7;
 ; SM90-NEXT:    ld.relaxed.cta.global.b32 %r14, [%rd1];
-; SM90-NEXT:    mov.b32 {%rs6, %rs7}, %r4;
 ; SM90-NEXT:  $L__BB209_1: // %atomicrmw.start
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    shr.u32 %r8, %r14, %r1;
 ; SM90-NEXT:    cvt.u16.u32 %rs3, %r8;
 ; SM90-NEXT:    and.b16 %rs4, %rs3, 255;
 ; SM90-NEXT:    shr.u16 %rs5, %rs3, 8;
+; SM90-NEXT:    mov.b32 {%rs6, %rs7}, %r4;
 ; SM90-NEXT:    setp.ge.u16 %p1, %rs5, %rs7;
 ; SM90-NEXT:    setp.ge.u16 %p2, %rs4, %rs6;
 ; SM90-NEXT:    sub.s16 %rs8, %rs5, %rs7;
@@ -8024,13 +8024,12 @@ define <4 x i8> @usub_cond_acq_rel_v4i8_global_cta(ptr addrspace(1) %addr, <4 x 
 ; SM90-NEXT:    fence.release.cta;
 ; SM90-NEXT:    ld.relaxed.cta.global.b32 %r22, [%rd1];
 ; SM90-NEXT:    prmt.b32 %r3, %r2, 0, 0x7770U;
-; SM90-NEXT:    prmt.b32 %r5, %r2, 0, 0x7771U;
-; SM90-NEXT:    cvt.u16.u32 %rs3, %r5;
 ; SM90-NEXT:    cvt.u16.u32 %rs4, %r3;
 ; SM90-NEXT:  $L__BB210_1: // %atomicrmw.start
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    prmt.b32 %r4, %r22, 0, 0x7770U;
 ; SM90-NEXT:    setp.ge.u32 %p1, %r4, %r3;
+; SM90-NEXT:    prmt.b32 %r5, %r2, 0, 0x7771U;
 ; SM90-NEXT:    prmt.b32 %r6, %r22, 0, 0x7771U;
 ; SM90-NEXT:    setp.ge.u32 %p2, %r6, %r5;
 ; SM90-NEXT:    prmt.b32 %r7, %r2, 0, 0x7772U;
@@ -8041,6 +8040,7 @@ define <4 x i8> @usub_cond_acq_rel_v4i8_global_cta(ptr addrspace(1) %addr, <4 x 
 ; SM90-NEXT:    setp.ge.u32 %p4, %r10, %r9;
 ; SM90-NEXT:    cvt.u16.u32 %rs1, %r9;
 ; SM90-NEXT:    cvt.u16.u32 %rs2, %r7;
+; SM90-NEXT:    cvt.u16.u32 %rs3, %r5;
 ; SM90-NEXT:    cvt.u16.u32 %rs5, %r4;
 ; SM90-NEXT:    sub.s16 %rs6, %rs5, %rs4;
 ; SM90-NEXT:    cvt.u16.u32 %rs7, %r6;
@@ -8275,7 +8275,6 @@ define <4 x i16> @usub_cond_acq_rel_v4i16_global_cta(ptr addrspace(1) %addr, <4 
 ; SM90-NEXT:    mov.b64 {_, %r6}, %rd2;
 ; SM90-NEXT:    cvt.u32.u64 %r5, %rd2;
 ; SM90-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
-; SM90-NEXT:    mov.b32 {%rs5, %rs6}, %r1;
 ; SM90-NEXT:  $L__BB214_1: // %atomicrmw.start
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    cvt.u64.u32 %rd3, %r5;
@@ -8285,6 +8284,7 @@ define <4 x i16> @usub_cond_acq_rel_v4i16_global_cta(ptr addrspace(1) %addr, <4 
 ; SM90-NEXT:    mov.b32 {%rs3, %rs4}, %r6;
 ; SM90-NEXT:    setp.ge.u16 %p1, %rs3, %rs1;
 ; SM90-NEXT:    setp.ge.u16 %p2, %rs4, %rs2;
+; SM90-NEXT:    mov.b32 {%rs5, %rs6}, %r1;
 ; SM90-NEXT:    mov.b32 {%rs7, %rs8}, %r5;
 ; SM90-NEXT:    setp.ge.u16 %p3, %rs7, %rs5;
 ; SM90-NEXT:    setp.ge.u16 %p4, %rs8, %rs6;
@@ -8335,7 +8335,6 @@ define <8 x i16> @usub_cond_acq_rel_v8i16_global_cta(ptr addrspace(1) %addr, <8 
 ; SM90-NEXT:    mov.b64 {_, %r10}, %rd2;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM90-NEXT:    mov.b32 {%rs1, %rs2}, %r4;
-; SM90-NEXT:    mov.b32 {%rs5, %rs6}, %r3;
 ; SM90-NEXT:  $L__BB215_1: // %atomicrmw.start
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    cvt.u64.u32 %rd4, %r9;
@@ -8349,6 +8348,7 @@ define <8 x i16> @usub_cond_acq_rel_v8i16_global_cta(ptr addrspace(1) %addr, <8 
 ; SM90-NEXT:    mov.b32 {%rs3, %rs4}, %r12;
 ; SM90-NEXT:    setp.ge.u16 %p1, %rs3, %rs1;
 ; SM90-NEXT:    setp.ge.u16 %p2, %rs4, %rs2;
+; SM90-NEXT:    mov.b32 {%rs5, %rs6}, %r3;
 ; SM90-NEXT:    mov.b32 {%rs7, %rs8}, %r11;
 ; SM90-NEXT:    setp.ge.u16 %p3, %rs7, %rs5;
 ; SM90-NEXT:    setp.ge.u16 %p4, %rs8, %rs6;
@@ -9011,7 +9011,6 @@ define <2 x i8> @usub_sat_acq_rel_v2i8_global_cta(ptr addrspace(1) %addr, <2 x i
 ; SM90-NEXT:    shl.b32 %r7, 65535, %r1;
 ; SM90-NEXT:    not.b32 %r2, %r7;
 ; SM90-NEXT:    ld.relaxed.cta.global.b32 %r17, [%rd1];
-; SM90-NEXT:    mov.b32 {%rs7, %rs8}, %r4;
 ; SM90-NEXT:  $L__BB225_1: // %atomicrmw.start
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    shr.u32 %r8, %r17, %r1;
@@ -9021,6 +9020,7 @@ define <2 x i8> @usub_sat_acq_rel_v2i8_global_cta(ptr addrspace(1) %addr, <2 x i
 ; SM90-NEXT:    and.b32 %r10, %r9, 16711935;
 ; SM90-NEXT:    max.u16x2 %r11, %r10, %r4;
 ; SM90-NEXT:    mov.b32 {%rs5, %rs6}, %r11;
+; SM90-NEXT:    mov.b32 {%rs7, %rs8}, %r4;
 ; SM90-NEXT:    sub.s16 %rs9, %rs5, %rs7;
 ; SM90-NEXT:    sub.s16 %rs10, %rs6, %rs8;
 ; SM90-NEXT:    shl.b16 %rs11, %rs10, 8;
@@ -9057,12 +9057,6 @@ define <4 x i8> @usub_sat_acq_rel_v4i8_global_cta(ptr addrspace(1) %addr, <4 x i
 ; SM90-NEXT:    ld.relaxed.cta.global.b32 %r18, [%rd1];
 ; SM90-NEXT:    prmt.b32 %r3, %r2, 0, 0x7773U;
 ; SM90-NEXT:    cvt.u16.u32 %rs1, %r3;
-; SM90-NEXT:    prmt.b32 %r6, %r2, 0, 0x7772U;
-; SM90-NEXT:    cvt.u16.u32 %rs5, %r6;
-; SM90-NEXT:    prmt.b32 %r10, %r2, 0, 0x7771U;
-; SM90-NEXT:    cvt.u16.u32 %rs9, %r10;
-; SM90-NEXT:    prmt.b32 %r13, %r2, 0, 0x7770U;
-; SM90-NEXT:    cvt.u16.u32 %rs13, %r13;
 ; SM90-NEXT:  $L__BB226_1: // %atomicrmw.start
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    prmt.b32 %r4, %r18, 0, 0x7773U;
@@ -9070,17 +9064,23 @@ define <4 x i8> @usub_sat_acq_rel_v4i8_global_cta(ptr addrspace(1) %addr, <4 x i
 ; SM90-NEXT:    max.u16 %rs3, %rs2, %rs1;
 ; SM90-NEXT:    sub.s16 %rs4, %rs3, %rs1;
 ; SM90-NEXT:    cvt.u32.u16 %r5, %rs4;
+; SM90-NEXT:    prmt.b32 %r6, %r2, 0, 0x7772U;
+; SM90-NEXT:    cvt.u16.u32 %rs5, %r6;
 ; SM90-NEXT:    prmt.b32 %r7, %r18, 0, 0x7772U;
 ; SM90-NEXT:    cvt.u16.u32 %rs6, %r7;
 ; SM90-NEXT:    max.u16 %rs7, %rs6, %rs5;
 ; SM90-NEXT:    sub.s16 %rs8, %rs7, %rs5;
 ; SM90-NEXT:    cvt.u32.u16 %r8, %rs8;
 ; SM90-NEXT:    prmt.b32 %r9, %r8, %r5, 0x3340U;
+; SM90-NEXT:    prmt.b32 %r10, %r2, 0, 0x7771U;
+; SM90-NEXT:    cvt.u16.u32 %rs9, %r10;
 ; SM90-NEXT:    prmt.b32 %r11, %r18, 0, 0x7771U;
 ; SM90-NEXT:    cvt.u16.u32 %rs10, %r11;
 ; SM90-NEXT:    max.u16 %rs11, %rs10, %rs9;
 ; SM90-NEXT:    sub.s16 %rs12, %rs11, %rs9;
 ; SM90-NEXT:    cvt.u32.u16 %r12, %rs12;
+; SM90-NEXT:    prmt.b32 %r13, %r2, 0, 0x7770U;
+; SM90-NEXT:    cvt.u16.u32 %rs13, %r13;
 ; SM90-NEXT:    prmt.b32 %r14, %r18, 0, 0x7770U;
 ; SM90-NEXT:    cvt.u16.u32 %rs14, %r14;
 ; SM90-NEXT:    max.u16 %rs15, %rs14, %rs13;
@@ -9291,7 +9291,6 @@ define <4 x i16> @usub_sat_acq_rel_v4i16_global_cta(ptr addrspace(1) %addr, <4 x
 ; SM90-NEXT:    mov.b64 {_, %r8}, %rd2;
 ; SM90-NEXT:    cvt.u32.u64 %r7, %rd2;
 ; SM90-NEXT:    mov.b32 {%rs3, %rs4}, %r1;
-; SM90-NEXT:    mov.b32 {%rs9, %rs10}, %r2;
 ; SM90-NEXT:  $L__BB230_1: // %atomicrmw.start
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    max.u16x2 %r3, %r7, %r1;
@@ -9302,6 +9301,7 @@ define <4 x i16> @usub_sat_acq_rel_v4i16_global_cta(ptr addrspace(1) %addr, <4 x
 ; SM90-NEXT:    cvt.u64.u32 %rd3, %r4;
 ; SM90-NEXT:    max.u16x2 %r5, %r8, %r2;
 ; SM90-NEXT:    mov.b32 {%rs7, %rs8}, %r5;
+; SM90-NEXT:    mov.b32 {%rs9, %rs10}, %r2;
 ; SM90-NEXT:    sub.s16 %rs11, %rs8, %rs10;
 ; SM90-NEXT:    sub.s16 %rs12, %rs7, %rs9;
 ; SM90-NEXT:    mov.b32 %r6, {%rs12, %rs11};
@@ -9345,7 +9345,6 @@ define <8 x i16> @usub_sat_acq_rel_v8i16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM90-NEXT:    mov.b64 {_, %r14}, %rd2;
 ; SM90-NEXT:    cvt.u32.u64 %r13, %rd2;
 ; SM90-NEXT:    mov.b32 {%rs3, %rs4}, %r1;
-; SM90-NEXT:    mov.b32 {%rs9, %rs10}, %r2;
 ; SM90-NEXT:  $L__BB231_1: // %atomicrmw.start
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    max.u16x2 %r5, %r13, %r1;
@@ -9356,6 +9355,7 @@ define <8 x i16> @usub_sat_acq_rel_v8i16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM90-NEXT:    cvt.u64.u32 %rd4, %r6;
 ; SM90-NEXT:    max.u16x2 %r7, %r14, %r2;
 ; SM90-NEXT:    mov.b32 {%rs7, %rs8}, %r7;
+; SM90-NEXT:    mov.b32 {%rs9, %rs10}, %r2;
 ; SM90-NEXT:    sub.s16 %rs11, %rs8, %rs10;
 ; SM90-NEXT:    sub.s16 %rs12, %rs7, %rs9;
 ; SM90-NEXT:    mov.b32 %r8, {%rs12, %rs11};
@@ -20196,27 +20196,27 @@ define <4 x i8> @add_monotonic_v4i8_global_cta(ptr addrspace(1) %addr, <4 x i8> 
 ; SM90-NEXT:    ld.relaxed.cta.global.b32 %r18, [%rd1];
 ; SM90-NEXT:    prmt.b32 %r3, %r2, 0, 0x7773U;
 ; SM90-NEXT:    cvt.u16.u32 %rs1, %r3;
-; SM90-NEXT:    prmt.b32 %r6, %r2, 0, 0x7772U;
-; SM90-NEXT:    cvt.u16.u32 %rs4, %r6;
-; SM90-NEXT:    prmt.b32 %r10, %r2, 0, 0x7771U;
-; SM90-NEXT:    cvt.u16.u32 %rs7, %r10;
-; SM90-NEXT:    prmt.b32 %r13, %r2, 0, 0x7770U;
-; SM90-NEXT:    cvt.u16.u32 %rs10, %r13;
 ; SM90-NEXT:  $L__BB338_1: // %atomicrmw.start
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    prmt.b32 %r4, %r18, 0, 0x7773U;
 ; SM90-NEXT:    cvt.u16.u32 %rs2, %r4;
 ; SM90-NEXT:    add.s16 %rs3, %rs2, %rs1;
 ; SM90-NEXT:    cvt.u32.u16 %r5, %rs3;
+; SM90-NEXT:    prmt.b32 %r6, %r2, 0, 0x7772U;
+; SM90-NEXT:    cvt.u16.u32 %rs4, %r6;
 ; SM90-NEXT:    prmt.b32 %r7, %r18, 0, 0x7772U;
 ; SM90-NEXT:    cvt.u16.u32 %rs5, %r7;
 ; SM90-NEXT:    add.s16 %rs6, %rs5, %rs4;
 ; SM90-NEXT:    cvt.u32.u16 %r8, %rs6;
 ; SM90-NEXT:    prmt.b32 %r9, %r8, %r5, 0x3340U;
+; SM90-NEXT:    prmt.b32 %r10, %r2, 0, 0x7771U;
+; SM90-NEXT:    cvt.u16.u32 %rs7, %r10;
 ; SM90-NEXT:    prmt.b32 %r11, %r18, 0, 0x7771U;
 ; SM90-NEXT:    cvt.u16.u32 %rs8, %r11;
 ; SM90-NEXT:    add.s16 %rs9, %rs8, %rs7;
 ; SM90-NEXT:    cvt.u32.u16 %r12, %rs9;
+; SM90-NEXT:    prmt.b32 %r13, %r2, 0, 0x7770U;
+; SM90-NEXT:    cvt.u16.u32 %rs10, %r13;
 ; SM90-NEXT:    prmt.b32 %r14, %r18, 0, 0x7770U;
 ; SM90-NEXT:    cvt.u16.u32 %rs11, %r14;
 ; SM90-NEXT:    add.s16 %rs12, %rs11, %rs10;
@@ -20422,27 +20422,27 @@ define <4 x i8> @add_acquire_v4i8_global_cta(ptr addrspace(1) %addr, <4 x i8> %v
 ; SM90-NEXT:    ld.relaxed.cta.global.b32 %r18, [%rd1];
 ; SM90-NEXT:    prmt.b32 %r3, %r2, 0, 0x7773U;
 ; SM90-NEXT:    cvt.u16.u32 %rs1, %r3;
-; SM90-NEXT:    prmt.b32 %r6, %r2, 0, 0x7772U;
-; SM90-NEXT:    cvt.u16.u32 %rs4, %r6;
-; SM90-NEXT:    prmt.b32 %r10, %r2, 0, 0x7771U;
-; SM90-NEXT:    cvt.u16.u32 %rs7, %r10;
-; SM90-NEXT:    prmt.b32 %r13, %r2, 0, 0x7770U;
-; SM90-NEXT:    cvt.u16.u32 %rs10, %r13;
 ; SM90-NEXT:  $L__BB342_1: // %atomicrmw.start
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    prmt.b32 %r4, %r18, 0, 0x7773U;
 ; SM90-NEXT:    cvt.u16.u32 %rs2, %r4;
 ; SM90-NEXT:    add.s16 %rs3, %rs2, %rs1;
 ; SM90-NEXT:    cvt.u32.u16 %r5, %rs3;
+; SM90-NEXT:    prmt.b32 %r6, %r2, 0, 0x7772U;
+; SM90-NEXT:    cvt.u16.u32 %rs4, %r6;
 ; SM90-NEXT:    prmt.b32 %r7, %r18, 0, 0x7772U;
 ; SM90-NEXT:    cvt.u16.u32 %rs5, %r7;
 ; SM90-NEXT:    add.s16 %rs6, %rs5, %rs4;
 ; SM90-NEXT:    cvt.u32.u16 %r8, %rs6;
 ; SM90-NEXT:    prmt.b32 %r9, %r8, %r5, 0x3340U;
+; SM90-NEXT:    prmt.b32 %r10, %r2, 0, 0x7771U;
+; SM90-NEXT:    cvt.u16.u32 %rs7, %r10;
 ; SM90-NEXT:    prmt.b32 %r11, %r18, 0, 0x7771U;
 ; SM90-NEXT:    cvt.u16.u32 %rs8, %r11;
 ; SM90-NEXT:    add.s16 %rs9, %rs8, %rs7;
 ; SM90-NEXT:    cvt.u32.u16 %r12, %rs9;
+; SM90-NEXT:    prmt.b32 %r13, %r2, 0, 0x7770U;
+; SM90-NEXT:    cvt.u16.u32 %rs10, %r13;
 ; SM90-NEXT:    prmt.b32 %r14, %r18, 0, 0x7770U;
 ; SM90-NEXT:    cvt.u16.u32 %rs11, %r14;
 ; SM90-NEXT:    add.s16 %rs12, %rs11, %rs10;
@@ -20651,27 +20651,27 @@ define <4 x i8> @add_release_v4i8_global_cta(ptr addrspace(1) %addr, <4 x i8> %v
 ; SM90-NEXT:    ld.relaxed.cta.global.b32 %r18, [%rd1];
 ; SM90-NEXT:    prmt.b32 %r3, %r2, 0, 0x7773U;
 ; SM90-NEXT:    cvt.u16.u32 %rs1, %r3;
-; SM90-NEXT:    prmt.b32 %r6, %r2, 0, 0x7772U;
-; SM90-NEXT:    cvt.u16.u32 %rs4, %r6;
-; SM90-NEXT:    prmt.b32 %r10, %r2, 0, 0x7771U;
-; SM90-NEXT:    cvt.u16.u32 %rs7, %r10;
-; SM90-NEXT:    prmt.b32 %r13, %r2, 0, 0x7770U;
-; SM90-NEXT:    cvt.u16.u32 %rs10, %r13;
 ; SM90-NEXT:  $L__BB346_1: // %atomicrmw.start
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    prmt.b32 %r4, %r18, 0, 0x7773U;
 ; SM90-NEXT:    cvt.u16.u32 %rs2, %r4;
 ; SM90-NEXT:    add.s16 %rs3, %rs2, %rs1;
 ; SM90-NEXT:    cvt.u32.u16 %r5, %rs3;
+; SM90-NEXT:    prmt.b32 %r6, %r2, 0, 0x7772U;
+; SM90-NEXT:    cvt.u16.u32 %rs4, %r6;
 ; SM90-NEXT:    prmt.b32 %r7, %r18, 0, 0x7772U;
 ; SM90-NEXT:    cvt.u16.u32 %rs5, %r7;
 ; SM90-NEXT:    add.s16 %rs6, %rs5, %rs4;
 ; SM90-NEXT:    cvt.u32.u16 %r8, %rs6;
 ; SM90-NEXT:    prmt.b32 %r9, %r8, %r5, 0x3340U;
+; SM90-NEXT:    prmt.b32 %r10, %r2, 0, 0x7771U;
+; SM90-NEXT:    cvt.u16.u32 %rs7, %r10;
 ; SM90-NEXT:    prmt.b32 %r11, %r18, 0, 0x7771U;
 ; SM90-NEXT:    cvt.u16.u32 %rs8, %r11;
 ; SM90-NEXT:    add.s16 %rs9, %rs8, %rs7;
 ; SM90-NEXT:    cvt.u32.u16 %r12, %rs9;
+; SM90-NEXT:    prmt.b32 %r13, %r2, 0, 0x7770U;
+; SM90-NEXT:    cvt.u16.u32 %rs10, %r13;
 ; SM90-NEXT:    prmt.b32 %r14, %r18, 0, 0x7770U;
 ; SM90-NEXT:    cvt.u16.u32 %rs11, %r14;
 ; SM90-NEXT:    add.s16 %rs12, %rs11, %rs10;

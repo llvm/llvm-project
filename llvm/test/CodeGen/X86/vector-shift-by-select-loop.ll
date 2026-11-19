@@ -359,15 +359,21 @@ define void @vector_variable_shift_left_loop(ptr nocapture %arr, ptr nocapture r
 ; XOP-NEXT:    vinsertf128 $1, %xmm1, %ymm1, %ymm1
 ; XOP-NEXT:    xorl %ecx, %ecx
 ; XOP-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; XOP-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; XOP-NEXT:    vextractf128 $1, %ymm1, %xmm4
 ; XOP-NEXT:    .p2align 4
 ; XOP-NEXT:  .LBB0_4: # %vector.body
 ; XOP-NEXT:    # =>This Inner Loop Header: Depth=1
+; XOP-NEXT:    vmovq {{.*#+}} xmm3 = mem[0],zero
+; XOP-NEXT:    vmovq {{.*#+}} xmm4 = mem[0],zero
 ; XOP-NEXT:    vmovq {{.*#+}} xmm5 = mem[0],zero
 ; XOP-NEXT:    vmovq {{.*#+}} xmm6 = mem[0],zero
-; XOP-NEXT:    vmovq {{.*#+}} xmm7 = mem[0],zero
-; XOP-NEXT:    vmovq {{.*#+}} xmm8 = mem[0],zero
+; XOP-NEXT:    vpcomeqb %xmm2, %xmm3, %xmm3
+; XOP-NEXT:    vpmovsxbd %xmm3, %xmm7
+; XOP-NEXT:    vpshufd {{.*#+}} xmm3 = xmm3[1,1,1,1]
+; XOP-NEXT:    vpmovsxbd %xmm3, %xmm3
+; XOP-NEXT:    vpcomeqb %xmm2, %xmm4, %xmm4
+; XOP-NEXT:    vpmovsxbd %xmm4, %xmm8
+; XOP-NEXT:    vpshufd {{.*#+}} xmm4 = xmm4[1,1,1,1]
+; XOP-NEXT:    vpmovsxbd %xmm4, %xmm4
 ; XOP-NEXT:    vpcomeqb %xmm2, %xmm5, %xmm5
 ; XOP-NEXT:    vpmovsxbd %xmm5, %xmm9
 ; XOP-NEXT:    vpshufd {{.*#+}} xmm5 = xmm5[1,1,1,1]
@@ -376,38 +382,32 @@ define void @vector_variable_shift_left_loop(ptr nocapture %arr, ptr nocapture r
 ; XOP-NEXT:    vpmovsxbd %xmm6, %xmm10
 ; XOP-NEXT:    vpshufd {{.*#+}} xmm6 = xmm6[1,1,1,1]
 ; XOP-NEXT:    vpmovsxbd %xmm6, %xmm6
-; XOP-NEXT:    vpcomeqb %xmm2, %xmm7, %xmm7
-; XOP-NEXT:    vpmovsxbd %xmm7, %xmm11
-; XOP-NEXT:    vpshufd {{.*#+}} xmm7 = xmm7[1,1,1,1]
-; XOP-NEXT:    vpmovsxbd %xmm7, %xmm7
-; XOP-NEXT:    vpcomeqb %xmm2, %xmm8, %xmm8
-; XOP-NEXT:    vpmovsxbd %xmm8, %xmm12
-; XOP-NEXT:    vpshufd {{.*#+}} xmm8 = xmm8[1,1,1,1]
-; XOP-NEXT:    vpmovsxbd %xmm8, %xmm8
-; XOP-NEXT:    vblendvps %xmm5, %xmm3, %xmm4, %xmm5
-; XOP-NEXT:    vpshld %xmm5, 16(%rdi,%rcx,4), %xmm5
+; XOP-NEXT:    vextractf128 $1, %ymm0, %xmm11
+; XOP-NEXT:    vextractf128 $1, %ymm1, %xmm12
+; XOP-NEXT:    vblendvps %xmm3, %xmm11, %xmm12, %xmm3
+; XOP-NEXT:    vpshld %xmm3, 16(%rdi,%rcx,4), %xmm3
+; XOP-NEXT:    vblendvps %xmm7, %xmm0, %xmm1, %xmm7
+; XOP-NEXT:    vpshld %xmm7, (%rdi,%rcx,4), %xmm7
+; XOP-NEXT:    vblendvps %xmm4, %xmm11, %xmm12, %xmm4
+; XOP-NEXT:    vpshld %xmm4, 48(%rdi,%rcx,4), %xmm4
+; XOP-NEXT:    vblendvps %xmm8, %xmm0, %xmm1, %xmm8
+; XOP-NEXT:    vpshld %xmm8, 32(%rdi,%rcx,4), %xmm8
+; XOP-NEXT:    vblendvps %xmm5, %xmm11, %xmm12, %xmm5
+; XOP-NEXT:    vpshld %xmm5, 80(%rdi,%rcx,4), %xmm5
 ; XOP-NEXT:    vblendvps %xmm9, %xmm0, %xmm1, %xmm9
-; XOP-NEXT:    vpshld %xmm9, (%rdi,%rcx,4), %xmm9
-; XOP-NEXT:    vblendvps %xmm6, %xmm3, %xmm4, %xmm6
-; XOP-NEXT:    vpshld %xmm6, 48(%rdi,%rcx,4), %xmm6
+; XOP-NEXT:    vpshld %xmm9, 64(%rdi,%rcx,4), %xmm9
+; XOP-NEXT:    vblendvps %xmm6, %xmm11, %xmm12, %xmm6
+; XOP-NEXT:    vpshld %xmm6, 112(%rdi,%rcx,4), %xmm6
 ; XOP-NEXT:    vblendvps %xmm10, %xmm0, %xmm1, %xmm10
-; XOP-NEXT:    vpshld %xmm10, 32(%rdi,%rcx,4), %xmm10
-; XOP-NEXT:    vblendvps %xmm7, %xmm3, %xmm4, %xmm7
-; XOP-NEXT:    vpshld %xmm7, 80(%rdi,%rcx,4), %xmm7
-; XOP-NEXT:    vblendvps %xmm11, %xmm0, %xmm1, %xmm11
-; XOP-NEXT:    vpshld %xmm11, 64(%rdi,%rcx,4), %xmm11
-; XOP-NEXT:    vblendvps %xmm8, %xmm3, %xmm4, %xmm8
-; XOP-NEXT:    vpshld %xmm8, 112(%rdi,%rcx,4), %xmm8
-; XOP-NEXT:    vblendvps %xmm12, %xmm0, %xmm1, %xmm12
-; XOP-NEXT:    vpshld %xmm12, 96(%rdi,%rcx,4), %xmm12
-; XOP-NEXT:    vmovdqu %xmm9, (%rdi,%rcx,4)
-; XOP-NEXT:    vmovdqu %xmm5, 16(%rdi,%rcx,4)
-; XOP-NEXT:    vmovdqu %xmm10, 32(%rdi,%rcx,4)
-; XOP-NEXT:    vmovdqu %xmm6, 48(%rdi,%rcx,4)
-; XOP-NEXT:    vmovdqu %xmm11, 64(%rdi,%rcx,4)
-; XOP-NEXT:    vmovdqu %xmm7, 80(%rdi,%rcx,4)
-; XOP-NEXT:    vmovdqu %xmm12, 96(%rdi,%rcx,4)
-; XOP-NEXT:    vmovdqu %xmm8, 112(%rdi,%rcx,4)
+; XOP-NEXT:    vpshld %xmm10, 96(%rdi,%rcx,4), %xmm10
+; XOP-NEXT:    vmovdqu %xmm7, (%rdi,%rcx,4)
+; XOP-NEXT:    vmovdqu %xmm3, 16(%rdi,%rcx,4)
+; XOP-NEXT:    vmovdqu %xmm8, 32(%rdi,%rcx,4)
+; XOP-NEXT:    vmovdqu %xmm4, 48(%rdi,%rcx,4)
+; XOP-NEXT:    vmovdqu %xmm9, 64(%rdi,%rcx,4)
+; XOP-NEXT:    vmovdqu %xmm5, 80(%rdi,%rcx,4)
+; XOP-NEXT:    vmovdqu %xmm10, 96(%rdi,%rcx,4)
+; XOP-NEXT:    vmovdqu %xmm6, 112(%rdi,%rcx,4)
 ; XOP-NEXT:    addq $32, %rcx
 ; XOP-NEXT:    cmpq %rcx, %rdx
 ; XOP-NEXT:    jne .LBB0_4
