@@ -263,26 +263,31 @@ getVectorLoweringShape(EVT VectorEVT, const NVPTXSubtarget &STI,
   return std::pair(NumElts / NPerReg, MVT::getVectorVT(EltVT, NPerReg));
 }
 
-/// ComputePTXValueVTs - For the given Type \p Ty, returns the set of primitive
-/// legal-ish MVTs that compose it. Unlike ComputeValueVTs, this will legalize
-/// the types as required by the calling convention (with special handling for
-/// i8s).
-/// NOTE: This is a band-aid for code that expects ComputeValueVTs to return the
-/// same number of types as the Ins/Outs arrays in LowerFormalArguments,
-/// LowerCall, and LowerReturn.
+// Compute the types and byte offsets used to access parameter memory.
+// Ordinary values are split into their calling-convention register pieces.
 static void ComputePTXValueVTs(const TargetLowering &TLI, const DataLayout &DL,
                                LLVMContext &Ctx, CallingConv::ID CallConv,
                                Type *Ty, SmallVectorImpl<EVT> &ValueVTs,
                                SmallVectorImpl<uint64_t> &Offsets,
-                               uint64_t StartingOffset = 0) {
+                               bool KeepBoolVectors = false) {
   SmallVector<EVT, 16> TempVTs;
   SmallVector<uint64_t, 16> TempOffsets;
   ComputeValueVTs(TLI, DL, Ty, TempVTs, /*MemVTs=*/nullptr, &TempOffsets,
-                  StartingOffset);
+                  /*StartingOffset=*/0);
 
   for (const auto [VT, Off] : zip(TempVTs, TempOffsets)) {
     MVT RegisterVT = TLI.getRegisterTypeForCallingConv(Ctx, CallConv, VT);
     unsigned NumRegs = TLI.getNumRegistersForCallingConv(Ctx, CallConv, VT);
+
+    // A Boolean vector occupies one packed field in parameter memory.
+    // Its lanes are separate register values in Ins and Outs.
+    if (KeepBoolVectors && VT.isFixedLengthVectorOf(MVT::i1)) {
+      assert(RegisterVT == MVT::i1 && NumRegs == VT.getVectorNumElements() &&
+             "Expected one register per Boolean lane");
+      ValueVTs.push_back(VT);
+      Offsets.push_back(Off);
+      continue;
+    }
 
     // Since we actually can load/store b8, we need to ensure that we'll use
     // the original sized type for any i8s or i8 vectors.
@@ -296,10 +301,7 @@ static void ComputePTXValueVTs(const TargetLowering &TLI, const DataLayout &DL,
                "Expected v4i8, v2i16, or i16 for i8 RegisterVT");
     }
 
-    // TODO: This is horribly incorrect for cases where the vector elements are
-    // not a multiple of bytes (ex i1) and legal or i8. However, this problem
-    // has existed for as long as NVPTX has and no one has complained, so we'll
-    // leave it for now.
+    // TODO: Handle non-byte-sized vector elements on the remaining paths.
     for (unsigned I : seq(NumRegs)) {
       ValueVTs.push_back(RegisterVT);
       Offsets.push_back(Off + I * RegisterVT.getStoreSize());
@@ -438,49 +440,77 @@ static unsigned canMergeParamLoadStoresStartingAt(
   return NumElts;
 }
 
-// Return the number of registers in each load or store. When argument parts
-// are available, keep the registers of each packed Boolean vector together.
-template <typename T, typename Part = ISD::InputArg>
-static SmallVector<unsigned, 16>
-VectorizePTXValueVTs(const SmallVectorImpl<EVT> &ValueVTs,
-                     const SmallVectorImpl<T> &Offsets, Align ParamAlignment,
-                     bool IsVAArg = false, ArrayRef<Part> Parts = {}) {
-  SmallVector<unsigned, 16> VectorInfo;
-  const auto GetBoolVectorWidth = [&](unsigned I) -> unsigned {
-    if (Parts.empty())
-      return 0;
-    EVT VT = Parts[I].ArgVT;
-    return VT.isFixedLengthVectorOf(MVT::i1) ? VT.getVectorNumElements() : 0;
-  };
-
-  const auto GetNumElts = [&](unsigned I) -> unsigned {
-    if (unsigned Width = GetBoolVectorWidth(I)) {
-      assert(Width <= ValueVTs.size() - I &&
-             "Too few argument parts for packed Boolean vector");
-      return Width;
-    }
-    if (IsVAArg)
-      return 1;
-    for (const unsigned AccessSize : {16, 8, 4, 2}) {
-      const unsigned NumElts = canMergeParamLoadStoresStartingAt(
-          I, AccessSize, ValueVTs, Offsets, ParamAlignment);
-      assert((NumElts == 1 || NumElts == 2 || NumElts == 4) &&
-             "Unexpected vectorization size");
-      if (NumElts != 1 && none_of(seq(I + 1, I + NumElts), GetBoolVectorWidth))
-        return NumElts;
-    }
+// Choose a single scalar or vector access for consecutive memory pieces.
+template <typename OffsetT>
+static unsigned getNumPartsForAccess(unsigned I,
+                                     const SmallVectorImpl<EVT> &VTs,
+                                     const SmallVectorImpl<OffsetT> &Offsets,
+                                     Align ParamAlign, bool IsVAArg = false) {
+  if (IsVAArg)
     return 1;
-  };
-
-  // Check what we can vectorize using 128/64/32-bit accesses.
-  for (unsigned I = 0, E = ValueVTs.size(); I != E;) {
-    const unsigned NumElts = GetNumElts(I);
-    VectorInfo.push_back(NumElts);
-    I += NumElts;
+  for (unsigned Size : {16, 8, 4, 2}) {
+    unsigned N =
+        canMergeParamLoadStoresStartingAt(I, Size, VTs, Offsets, ParamAlign);
+    if (N != 1)
+      return N;
   }
-  assert(std::accumulate(VectorInfo.begin(), VectorInfo.end(), 0u) ==
-         ValueVTs.size());
-  return VectorInfo;
+  return 1;
+}
+
+// Return values still use one memory piece per register.
+static SmallVector<unsigned, 16>
+VectorizePTXValueVTs(const SmallVectorImpl<EVT> &VTs,
+                     const SmallVectorImpl<uint64_t> &Offsets,
+                     Align ParamAlign) {
+  SmallVector<unsigned, 16> Groups;
+  for (unsigned I = 0; I != VTs.size();) {
+    unsigned N = getNumPartsForAccess(I, VTs, Offsets, ParamAlign);
+    Groups.push_back(N);
+    I += N;
+  }
+  return Groups;
+}
+
+namespace {
+// One memory access and the range of Ins or Outs that it transfers.
+// VT is the type of each ordinary piece, or the whole packed Boolean vector.
+struct PTXParamAccess {
+  EVT VT;
+  uint64_t Offset;
+  unsigned FirstReg;
+  unsigned NumRegs;
+};
+} // namespace
+
+static SmallVector<PTXParamAccess, 16>
+computePTXParamAccesses(const TargetLowering &TLI, const DataLayout &DL,
+                        LLVMContext &Ctx, CallingConv::ID CallConv, Type *Ty,
+                        Align ParamAlign, unsigned ExpectedNumRegs,
+                        bool IsVAArg = false) {
+  SmallVector<EVT, 16> VTs;
+  SmallVector<uint64_t, 16> Offsets;
+  ComputePTXValueVTs(TLI, DL, Ctx, CallConv, Ty, VTs, Offsets,
+                     /*KeepBoolVectors=*/true);
+
+  SmallVector<PTXParamAccess, 16> Accesses;
+  unsigned FirstReg = 0;
+  for (unsigned I = 0; I != VTs.size();) {
+    EVT VT = VTs[I];
+    unsigned NumParts = 1;
+    unsigned NumRegs;
+    if (VT.isFixedLengthVectorOf(MVT::i1)) {
+      NumRegs = VT.getVectorNumElements();
+    } else {
+      NumParts = getNumPartsForAccess(I, VTs, Offsets, ParamAlign, IsVAArg);
+      NumRegs = NumParts;
+    }
+    Accesses.push_back({VT, Offsets[I], FirstReg, NumRegs});
+    FirstReg += NumRegs;
+    I += NumParts;
+  }
+  assert(FirstReg == ExpectedNumRegs &&
+         "Parameter accesses must cover all register pieces");
+  return Accesses;
 }
 
 // NVPTXTargetLowering Constructor.
@@ -1433,10 +1463,14 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       SmallVector<TypeSize, 4> Offsets;
       ComputeValueVTs(*this, DL, ETy, ValueVTs, &MemVTs, &Offsets);
 
-      unsigned J = 0;
-      const auto VI = VectorizePTXValueVTs(MemVTs, Offsets, ArgAlign, IsVAArg);
-      for (const unsigned NumElts : VI) {
-        EVT LoadVT = getVectorizedVT(MemVTs[J], NumElts, Ctx);
+      for (unsigned J = 0; J != MemVTs.size();) {
+        // Keep the padding bits at the end of each field.
+        const EVT MemVT = MemVTs[J];
+        const unsigned NumElts =
+            MemVT.isByteSized()
+                ? getNumPartsForAccess(J, MemVTs, Offsets, ArgAlign, IsVAArg)
+                : 1;
+        EVT LoadVT = getVectorizedVT(MemVT, NumElts, Ctx);
         Align SrcAlign = commonAlignment(BaseSrcAlign, Offsets[J]);
         SDValue SrcAddr = DAG.getObjectPtrOffset(dl, SrcPtr, Offsets[J]);
         SDValue SrcLoad =
@@ -1457,13 +1491,6 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       if (IsVAArg)
         VAOffset += TySize;
     } else {
-      SmallVector<EVT, 16> VTs;
-      SmallVector<uint64_t, 16> Offsets;
-      ComputePTXValueVTs(*this, DL, Ctx, CLI.CallConv, Arg.Ty, VTs, Offsets,
-                         VAOffset);
-      assert(VTs.size() == Offsets.size() && "Size mismatch");
-      assert(VTs.size() == ArgOuts.size() && "Size mismatch");
-
       // PTX Interoperability Guide 3.3(A): [Integer] Values shorter
       // than 32-bits are sign extended or zero extended, depending on
       // whether they are signed or unsigned types. This case applies
@@ -1471,43 +1498,41 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       const bool ExtendIntegerParam =
           Arg.Ty->isIntegerTy() && DL.getTypeAllocSizeInBits(Arg.Ty) < 32;
 
-      const auto GetStoredValue = [&](const unsigned I) {
+      const auto GetStoredValue = [&](unsigned I, EVT VT) {
         SDValue StVal = ArgOutVals[I];
         assert(promoteScalarIntegerPTX(StVal.getValueType()) ==
                    StVal.getValueType() &&
                "OutVal type should always be legal");
 
-        const EVT VTI = promoteScalarIntegerPTX(VTs[I]);
+        const EVT VTI = promoteScalarIntegerPTX(VT);
         const EVT StoreVT =
             ExtendIntegerParam ? MVT::i32 : (VTI == MVT::i1 ? MVT::i8 : VTI);
 
         return correctParamType(StVal, StoreVT, ArgOuts[I].Flags, DAG, dl);
       };
 
-      unsigned J = 0;
-      const auto VI =
-          VectorizePTXValueVTs(VTs, Offsets, ArgAlign, IsVAArg, ArgOuts);
-      for (const unsigned NumElts : VI) {
-        const EVT ArgVT = ArgOuts[J].ArgVT;
-        const bool IsPacked = ArgVT.isFixedLengthVectorOf(MVT::i1);
-        const EVT EltVT = IsPacked ? ArgVT : promoteScalarIntegerPTX(VTs[J]);
+      assert((IsVAArg || VAOffset == 0) &&
+             "VAOffset must be 0 for non-VA args");
+      const auto Accesses =
+          computePTXParamAccesses(*this, DL, Ctx, CLI.CallConv, Arg.Ty,
+                                  ArgAlign, ArgOuts.size(), IsVAArg);
+      for (const PTXParamAccess &Access : Accesses) {
+        const bool IsPacked = Access.VT.isFixedLengthVectorOf(MVT::i1);
 
-        unsigned Offset;
+        uint64_t Offset = Access.Offset;
         if (IsVAArg) {
           // TODO: We may need to support vector types that can be passed
           // as scalars in variadic arguments.
-          assert((NumElts == 1 || IsPacked) &&
+          assert((Access.NumRegs == 1 || IsPacked) &&
                  "Vectorization should be disabled for vaargs.");
 
-          // Align each part of the variadic argument to their type.
+          // Align each variadic argument piece to its type.
+          const EVT EltVT = promoteScalarIntegerPTX(Access.VT);
           VAOffset = alignTo(VAOffset, DAG.getEVTAlign(EltVT));
           Offset = VAOffset;
 
           const EVT TheStoreType = ExtendIntegerParam ? MVT::i32 : EltVT;
           VAOffset += DL.getTypeAllocSize(TheStoreType.getTypeForEVT(Ctx));
-        } else {
-          assert(VAOffset == 0 && "VAOffset must be 0 for non-VA args");
-          Offset = Offsets[J];
         }
 
         SDValue Ptr =
@@ -1519,17 +1544,18 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
         SDValue Val =
             IsPacked
-                ? DAG.getBuildVector(ArgVT, dl, ArgOutVals.slice(J, NumElts))
-                : getBuildVectorizedValue(NumElts, dl, DAG, [&](unsigned K) {
-                    return GetStoredValue(J + K);
-                  });
+                ? DAG.getBuildVector(
+                      Access.VT, dl,
+                      ArgOutVals.slice(Access.FirstReg, Access.NumRegs))
+                : getBuildVectorizedValue(
+                      Access.NumRegs, dl, DAG, [&](unsigned K) {
+                        return GetStoredValue(Access.FirstReg + K, Access.VT);
+                      });
 
         SDValue StoreParam = DAG.getStore(
             ArgDeclare, dl, Val, Ptr,
             MachinePointerInfo(NVPTX::AddressSpace::DeviceParam), CurrentAlign);
         CallPrereqs.push_back(StoreParam);
-
-        J += NumElts;
       }
     }
   }
@@ -4391,30 +4417,21 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
       }
       InVals.push_back(P);
     } else {
-      SmallVector<EVT, 16> VTs;
-      SmallVector<uint64_t, 16> Offsets;
-      ComputePTXValueVTs(*this, DL, Ctx, CallConv, Ty, VTs, Offsets);
-      assert(VTs.size() == ArgIns.size() && "Size mismatch");
-      assert(VTs.size() == Offsets.size() && "Size mismatch");
-
       const Align ArgAlign = getPTXParamAlign(
           &F, Ty, Arg.getArgNo() + AttributeList::FirstArgIndex, DL);
 
-      unsigned I = 0;
-      const auto VI = VectorizePTXValueVTs(VTs, Offsets, ArgAlign,
-                                           /*IsVAArg=*/false, ArgIns);
-      for (const unsigned NumElts : VI) {
-        const EVT ArgVT = ArgIns[I].ArgVT;
-        const bool IsPacked = ArgVT.isFixedLengthVectorOf(MVT::i1);
-        // Scalar i1 values use byte loads. Boolean vectors keep their own type.
-        const EVT LoadVT = VTs[I] == MVT::i1 && !IsPacked ? MVT::i8 : VTs[I];
-        const EVT VecVT =
-            IsPacked ? ArgVT : getVectorizedVT(LoadVT, NumElts, Ctx);
+      const auto Accesses = computePTXParamAccesses(
+          *this, DL, Ctx, CallConv, Ty, ArgAlign, ArgIns.size());
+      for (const auto &[VT, Offset, I, NumElts] : Accesses) {
+        const bool IsPacked = VT.isFixedLengthVectorOf(MVT::i1);
+        const EVT LoadVT = IsPacked ? VT.getVectorElementType()
+                                    : (VT == MVT::i1 ? MVT::i8 : VT);
+        const EVT VecVT = IsPacked ? VT : getVectorizedVT(LoadVT, NumElts, Ctx);
 
-        SDValue VecAddr = DAG.getObjectPtrOffset(
-            dl, ArgSymbol, TypeSize::getFixed(Offsets[I]));
+        SDValue VecAddr =
+            DAG.getObjectPtrOffset(dl, ArgSymbol, TypeSize::getFixed(Offset));
 
-        const Align PartAlign = commonAlignment(ArgAlign, Offsets[I]);
+        const Align PartAlign = commonAlignment(ArgAlign, Offset);
         const unsigned AS = IsKernel ? NVPTX::AddressSpace::EntryParam
                                      : NVPTX::AddressSpace::DeviceParam;
         SDValue P = DAG.getLoad(VecVT, dl, Root, VecAddr,
@@ -4429,7 +4446,6 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
                                  DAG, dl);
           InVals.push_back(Elt);
         }
-        I += NumElts;
       }
     }
   }
