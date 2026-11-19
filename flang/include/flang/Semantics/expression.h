@@ -533,6 +533,7 @@ public:
         std::get<std::optional<parser::ScalarIntConstantExpr>>(x.t)};
     return !init || !parser::IsBOZLiteral(*init);
   }
+  bool Pre(const parser::AllocateShapeSpecListOrBounds &);
   bool Pre(const parser::DataStmtObject &);
   void Post(const parser::DataStmtObject &);
   bool Pre(const parser::DataImpliedDo &);

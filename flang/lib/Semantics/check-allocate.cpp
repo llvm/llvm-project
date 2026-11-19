@@ -48,19 +48,36 @@ public:
       const parser::Allocation &alloc, AllocateCheckerInfo &info)
       : allocateInfo_{info}, allocation_{alloc},
         allocateObject_{std::get<parser::AllocateObject>(alloc.t)},
+        allocateShapeSpecList_{ShapeSpecList(alloc)},
+        hasAllocateShapeBoundsSpec_{HasShapeBoundsSpec(alloc)},
         allocateShapeSpecRank_{ShapeSpecRank(alloc)},
         allocateCoarraySpecRank_{CoarraySpecRank(alloc)} {}
 
   bool RunChecks(SemanticsContext &context);
 
 private:
-  bool hasAllocateShapeSpecList() const { return allocateShapeSpecRank_ != 0; }
+  // True when any shape specification appears, whether as an
+  // allocate-shape-spec-list or as an allocate-shape-bounds-spec.
+  bool hasAllocateShapeSpecList() const {
+    return hasAllocateShapeBoundsSpec_ || allocateShapeSpecRank_ != 0;
+  }
   bool hasAllocateCoarraySpec() const { return allocateCoarraySpecRank_ != 0; }
   bool RunCoarrayRelatedChecks(SemanticsContext &) const;
 
+  static const std::list<parser::AllocateShapeSpec> *ShapeSpecList(
+      const parser::Allocation &allocation) {
+    return std::get_if<std::list<parser::AllocateShapeSpec>>(
+        &std::get<parser::AllocateShapeSpecListOrBounds>(allocation.t).u);
+  }
+
+  static bool HasShapeBoundsSpec(const parser::Allocation &allocation) {
+    return std::holds_alternative<parser::AllocateShapeBoundsSpec>(
+        std::get<parser::AllocateShapeSpecListOrBounds>(allocation.t).u);
+  }
+
   static int ShapeSpecRank(const parser::Allocation &allocation) {
-    return static_cast<int>(
-        std::get<std::list<parser::AllocateShapeSpec>>(allocation.t).size());
+    const auto *shapeSpecs{ShapeSpecList(allocation)};
+    return shapeSpecs ? static_cast<int>(shapeSpecs->size()) : 0;
   }
 
   static int CoarraySpecRank(const parser::Allocation &allocation) {
@@ -92,6 +109,9 @@ private:
   AllocateCheckerInfo &allocateInfo_;
   const parser::Allocation &allocation_;
   const parser::AllocateObject &allocateObject_;
+  // Null when the shape is given by an allocate-shape-bounds-spec.
+  const std::list<parser::AllocateShapeSpec> *allocateShapeSpecList_{nullptr};
+  const bool hasAllocateShapeBoundsSpec_{false};
   const int allocateShapeSpecRank_{0};
   const int allocateCoarraySpecRank_{0};
   const parser::Name &name_{parser::GetLastName(allocateObject_)};
@@ -614,6 +634,12 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
         }
       }
     } else {
+      if (hasAllocateShapeBoundsSpec_) {
+        // F2023 allocate-shape-bounds-spec
+        context.Say(
+            name_.source, "rank-1 integer array bounds in ALLOCATE"_todo_en_US);
+        return false;
+      }
       // explicit shape-spec-list
       if (allocateShapeSpecRank_ != rank_) {
         context
@@ -626,8 +652,7 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
           allocateInfo_.sourceExprShape->size() ==
               static_cast<std::size_t>(allocateShapeSpecRank_)) {
         std::size_t j{0};
-        for (const auto &shapeSpec :
-            std::get<std::list<parser::AllocateShapeSpec>>(allocation_.t)) {
+        for (const auto &shapeSpec : *allocateShapeSpecList_) {
           if (j >= allocateInfo_.sourceExprShape->size()) {
             break;
           }
