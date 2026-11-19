@@ -1,0 +1,53 @@
+{
+  "persistent_llc_flags": ["-O3"],
+  "llc_flags": [
+    {
+      "flag": "amdgpu-1",
+      "type": "uint",
+      "range": {
+        "low": 1,
+        "high": 1e6,
+        "step": 1e2,
+        "distribution": "logarithmic"
+      }
+    },
+    {
+      "flag": "amdgpu-2",
+      "type": "value",
+      "range": {
+        "choice": ["A", "B", "C"]
+      }
+    },
+    {
+      "flag": "amdgpu-3",
+      "type": "boolean"
+    },
+    {
+      "flag": "amdgpu-4",
+      "type": "string",
+      "range": {
+        "choice": ["X", "Y", "Z"]
+      }
+    },
+    {
+      "flag": "amdgpu-5",
+      "type": "int",
+      "range": {
+        "low": 0,
+        "high": 100,
+        "step": 5,
+        "distribution": "uniform"
+      }
+    },
+    {
+      "flag": "amdgpu-6",
+      "type": "number",
+      "range": {
+        "low": -1e6,
+        "high": 1e6,
+        "step": 1e4,
+        "distribution": "uniform"
+      }
+    }
+  ]
+}
