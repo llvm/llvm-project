@@ -130,6 +130,49 @@ def _hasNoHardlinks(cfg):
     return not sourceBuilds(cfg, program) or not programSucceeds(cfg, program)
 
 
+def _hasNoSockets(cfg):
+    if "TEST_HAS_NO_FILESYSTEM" in testMacros(cfg):
+        return True
+    if any(m in compilerMacros(cfg) for m in ("_WIN32", "__APPLE__", "__FreeBSD__")):
+        return True
+    program = """
+        #include <stdio.h>
+        #include <stdlib.h>
+        #include <string.h>
+        #include <sys/socket.h>
+        #include <sys/un.h>
+        #include <unistd.h>
+        int main(int, char** argv) {
+          const char* slash = strrchr(argv[0], '/');
+          if (slash && slash != argv[0]) {
+            size_t len = (size_t)(slash - argv[0]);
+            char* dir = (char*)malloc(len + 1);
+            if (!dir)
+              return 1;
+            memcpy(dir, argv[0], len);
+            dir[len] = '\\0';
+            int rc = chdir(dir);
+            free(dir);
+            if (rc != 0)
+              return 1;
+          }
+          struct sockaddr_un addr;
+          memset(&addr, 0, sizeof(addr));
+          addr.sun_family = AF_UNIX;
+          strcpy(addr.sun_path, "test.sock");
+          unlink(addr.sun_path);
+          int fd = socket(AF_UNIX, SOCK_STREAM, 0);
+          if (fd < 0)
+            return 1;
+          int res = bind(fd, (const struct sockaddr*)&addr, sizeof(addr));
+          close(fd);
+          unlink(addr.sun_path);
+          return res == 0 ? 0 : 1;
+        }
+    """
+    return not sourceBuilds(cfg, program) or not programSucceeds(cfg, program)
+
+
 features = [
     Feature(
         name="diagnose-if-support",
@@ -396,6 +439,11 @@ features = [
         name="has-no-hardlinks",
         when=_hasNoHardlinks,
         actions=[AddCompileFlag("-DTEST_HAS_NO_HARDLINKS")],
+    ),
+    Feature(
+        name="has-no-sockets",
+        when=_hasNoSockets,
+        actions=[AddCompileFlag("-DTEST_HAS_NO_SOCKETS")],
     ),
     Feature(
         name="has-splitfile",

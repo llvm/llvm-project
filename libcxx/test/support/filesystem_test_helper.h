@@ -321,9 +321,13 @@ struct scoped_test_env
     }
 #endif
 
+#if (defined(__FreeBSD__) || defined(__APPLE__) || defined(_WIN32)) && !defined(TEST_HAS_NO_SOCKETS)
+#  define TEST_HAS_NO_SOCKETS
+#endif
+
   // Some platforms doesn't support socket files so we shouldn't even
   // allow tests to call this unguarded.
-#if !defined(__FreeBSD__) && !defined(__APPLE__) && !defined(_WIN32)
+#ifndef TEST_HAS_NO_SOCKETS
     std::string create_socket(std::string file) {
       file = sanitize_path(std::move(file));
 

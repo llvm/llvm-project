@@ -129,7 +129,7 @@ static void symlink_status_file_types_test()
 #ifndef _WIN32
         {static_env.CharFile, file_type::character},
 #endif
-#if !defined(__APPLE__) && !defined(__FreeBSD__) && !defined(_WIN32) // No support for domain sockets
+#ifndef TEST_HAS_NO_SOCKETS
         {env.create_socket("socket"), file_type::socket},
 #endif
 #ifndef TEST_HAS_NO_FIFOS
