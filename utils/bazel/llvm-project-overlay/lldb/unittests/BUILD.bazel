@@ -18,6 +18,7 @@ licenses(["notice"])
 # input into this package's Inputs/ directory, where it sits next to the test
 # binaries in the runfiles tree.
 _TEST_INPUTS = {
+    "DAPTests": glob(["DAP/Inputs/*"]),
     "HostCommonTests": glob(["Host/common/Inputs/*"]),
     "LLDBMinidumpTests": glob(["Process/minidump/Inputs/*"]),
     "ObjectFileELFTests": glob(["ObjectFile/ELF/Inputs/*"]),
@@ -104,6 +105,25 @@ cc_library(
     ],
 )
 
+# Like CMake's lldbSBUtilityHelpers, this uses the SB API through the shared
+# liblldb, so only the SBAPITEST tests below may depend on it.
+cc_library(
+    name = "lldbSBUtilityHelpers",
+    testonly = True,
+    srcs = ["SBTestingSupport/SBTestUtilities.cpp"],
+    hdrs = ["SBTestingSupport/SBTestUtilities.h"],
+    includes = ["."],
+    deps = [
+        ":lldbUtilityHelpers",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:liblldb.wrapper",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//third-party/unittest:gtest",
+    ],
+)
+
 # Unit tests.
 
 cc_test(
@@ -161,6 +181,29 @@ cc_test(
     ],
 )
 
+# Like CMake's SBAPITEST, this only uses the SB API, through the shared
+# liblldb.
+cc_test(
+    name = "APITests",
+    srcs = glob(["API/*.cpp"]),
+    target_compatible_with = select({
+        # CMake skips the tests that link liblldb on Windows, where that does
+        # not work for the unit tests.
+        "@platforms//os:windows": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
+    deps = [
+        ":lldbSBUtilityHelpers",
+        ":lldbUtilityHelpers",
+        "//lldb:Headers",
+        "//lldb:liblldb.wrapper",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
 cc_test(
     name = "ArchitectureRISCVTests",
     srcs = glob(["Architecture/RISCV/*.cpp"]),
@@ -207,6 +250,39 @@ cc_test(
 # CMake means to build the ARM sources when the ARM target is built, but its
 # list(APPEND) is missing the list name, so it never does. They pass, so build
 # them here.
+# Like CMake's SBAPITEST, this links the shared liblldb for the SB API, next to
+# static copies of the lldb-dap library and lldb's Host and Utility libraries.
+cc_test(
+    name = "DAPTests",
+    srcs = glob([
+        "DAP/**/*.cpp",
+        "DAP/**/*.h",
+    ]),
+    data = ["Inputs/" + src.rsplit("/", 1)[1] for src in _TEST_INPUTS["DAPTests"]],
+    # The Handler/ tests include TestBase.h from the directory above.
+    includes = ["DAP"],
+    target_compatible_with = select({
+        # CMake skips the tests that link liblldb on Windows, where that does
+        # not work for the unit tests.
+        "@platforms//os:windows": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
+    deps = [
+        ":lldbHostHelpers",
+        ":lldbUtilityHelpers",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:Utility",
+        "//lldb:liblldb.wrapper",
+        "//lldb:lldbDAP",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
 cc_test(
     name = "DisassemblerTests",
     srcs = glob([
@@ -606,6 +682,25 @@ cc_test(
 )
 
 cc_test(
+    name = "LLDBMCPTests",
+    srcs = glob(["tools/lldb-mcp/*.cpp"]),
+    deps = [
+        ":lldbHostHelpers",
+        ":lldbUtilityHelpers",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:ProtocolMCP",
+        "//lldb:Utility",
+        "//lldb:lldbMCPMultiplexer",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
     name = "LLDBMinidumpTests",
     srcs = glob(["Process/minidump/*.cpp"]),
     data = ["Inputs/" + src.rsplit("/", 1)[1] for src in _TEST_INPUTS["LLDBMinidumpTests"]],
@@ -976,6 +1071,17 @@ cc_test(
         "//llvm:Support",
         "//llvm:TestingSupport",
         "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "ProcessWasmTests",
+    srcs = glob(["Process/wasm/*.cpp"]),
+    deps = [
+        "//lldb:Headers",
+        "//lldb/source/Plugins:PluginProcessWasm",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
     ],
