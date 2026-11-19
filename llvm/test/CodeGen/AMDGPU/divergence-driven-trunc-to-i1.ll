@@ -17,18 +17,18 @@ define amdgpu_kernel void @uniform_trunc_i16_to_i1(ptr addrspace(1) %out, i16 %x
   ; GCN-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 16
   ; GCN-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32 = S_LSHL_B32 [[S_LOAD_DWORD_IMM]], [[S_MOV_B32_2]], implicit-def dead $scc
   ; GCN-NEXT:   [[S_LSHR_B32_:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[S_LOAD_DWORD_IMM]], [[S_MOV_B32_2]], implicit-def dead $scc
-  ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY [[S_LSHR_B32_]]
-  ; GCN-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 1, [[COPY3]], implicit-def dead $scc
+  ; GCN-NEXT:   [[FREEZE:%[0-9]+]]:sreg_32 = FREEZE [[S_LSHR_B32_]]
+  ; GCN-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 1, [[FREEZE]], implicit-def dead $scc
   ; GCN-NEXT:   S_CMP_EQ_U32 [[S_AND_B32_]], 1, implicit-def $scc
-  ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sreg_64 = COPY $scc
+  ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sreg_64 = COPY $scc
   ; GCN-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 0
   ; GCN-NEXT:   S_CMP_LT_I32 [[S_LSHL_B32_]], [[S_MOV_B32_3]], implicit-def $scc
-  ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sreg_64 = COPY $scc
-  ; GCN-NEXT:   [[S_OR_B64_:%[0-9]+]]:sreg_64 = S_OR_B64 [[COPY5]], [[COPY4]], implicit-def dead $scc
+  ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sreg_64 = COPY $scc
+  ; GCN-NEXT:   [[S_OR_B64_:%[0-9]+]]:sreg_64 = S_OR_B64 [[COPY4]], [[COPY3]], implicit-def dead $scc
   ; GCN-NEXT:   $scc = COPY [[S_OR_B64_]]
   ; GCN-NEXT:   [[S_CSELECT_B32_:%[0-9]+]]:sreg_32 = S_CSELECT_B32 1, 0, implicit $scc
-  ; GCN-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[S_CSELECT_B32_]]
-  ; GCN-NEXT:   BUFFER_STORE_BYTE_OFFSET [[COPY6]], [[REG_SEQUENCE]], 0, 0, 0, 0, implicit $exec :: (store (s8) into %ir.out.load, addrspace 1)
+  ; GCN-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[S_CSELECT_B32_]]
+  ; GCN-NEXT:   BUFFER_STORE_BYTE_OFFSET [[COPY5]], [[REG_SEQUENCE]], 0, 0, 0, 0, implicit $exec :: (store (s8) into %ir.out.load, addrspace 1)
   ; GCN-NEXT:   S_ENDPGM 0
   %setcc = icmp slt i16 %x, 0
   %select = select i1 %setcc, i1 true, i1 %z
@@ -71,20 +71,20 @@ define amdgpu_kernel void @uniform_trunc_i32_to_i1(ptr addrspace(1) %out, i32 %x
   ; GCN-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 61440
   ; GCN-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
   ; GCN-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[S_MOV_B32_1]], %subreg.sub2, [[S_MOV_B32_]], %subreg.sub3
-  ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sreg_64 = COPY [[S_LOAD_DWORDX2_IMM1]]
-  ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY [[COPY3]].sub0
-  ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY [[COPY3]].sub1
-  ; GCN-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 1, [[COPY5]], implicit-def dead $scc
+  ; GCN-NEXT:   [[FREEZE:%[0-9]+]]:sreg_64 = FREEZE [[S_LOAD_DWORDX2_IMM1]]
+  ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY [[FREEZE]].sub0
+  ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY [[FREEZE]].sub1
+  ; GCN-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 1, [[COPY4]], implicit-def dead $scc
   ; GCN-NEXT:   S_CMP_EQ_U32 [[S_AND_B32_]], 1, implicit-def $scc
-  ; GCN-NEXT:   [[COPY6:%[0-9]+]]:sreg_64 = COPY $scc
+  ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sreg_64 = COPY $scc
   ; GCN-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-  ; GCN-NEXT:   S_CMP_LT_I32 [[COPY4]], [[S_MOV_B32_2]], implicit-def $scc
-  ; GCN-NEXT:   [[COPY7:%[0-9]+]]:sreg_64 = COPY $scc
-  ; GCN-NEXT:   [[S_OR_B64_:%[0-9]+]]:sreg_64 = S_OR_B64 [[COPY7]], [[COPY6]], implicit-def dead $scc
+  ; GCN-NEXT:   S_CMP_LT_I32 [[COPY3]], [[S_MOV_B32_2]], implicit-def $scc
+  ; GCN-NEXT:   [[COPY6:%[0-9]+]]:sreg_64 = COPY $scc
+  ; GCN-NEXT:   [[S_OR_B64_:%[0-9]+]]:sreg_64 = S_OR_B64 [[COPY6]], [[COPY5]], implicit-def dead $scc
   ; GCN-NEXT:   $scc = COPY [[S_OR_B64_]]
   ; GCN-NEXT:   [[S_CSELECT_B32_:%[0-9]+]]:sreg_32 = S_CSELECT_B32 1, 0, implicit $scc
-  ; GCN-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[S_CSELECT_B32_]]
-  ; GCN-NEXT:   BUFFER_STORE_BYTE_OFFSET [[COPY8]], [[REG_SEQUENCE]], 0, 0, 0, 0, implicit $exec :: (store (s8) into %ir.out.load, addrspace 1)
+  ; GCN-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[S_CSELECT_B32_]]
+  ; GCN-NEXT:   BUFFER_STORE_BYTE_OFFSET [[COPY7]], [[REG_SEQUENCE]], 0, 0, 0, 0, implicit $exec :: (store (s8) into %ir.out.load, addrspace 1)
   ; GCN-NEXT:   S_ENDPGM 0
   %setcc = icmp slt i32 %x, 0
   %select = select i1 %setcc, i1 true, i1 %z
@@ -129,18 +129,18 @@ define amdgpu_kernel void @uniform_trunc_i64_to_i1(ptr addrspace(1) %out, i64 %x
   ; GCN-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
   ; GCN-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY3]], %subreg.sub1, [[S_MOV_B32_1]], %subreg.sub2, [[S_MOV_B32_]], %subreg.sub3
   ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub3
-  ; GCN-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORD_IMM]]
-  ; GCN-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 1, [[COPY6]], implicit-def dead $scc
+  ; GCN-NEXT:   [[FREEZE:%[0-9]+]]:sreg_32 = FREEZE [[S_LOAD_DWORD_IMM]]
+  ; GCN-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 1, [[FREEZE]], implicit-def dead $scc
   ; GCN-NEXT:   S_CMP_EQ_U32 [[S_AND_B32_]], 1, implicit-def $scc
-  ; GCN-NEXT:   [[COPY7:%[0-9]+]]:sreg_64 = COPY $scc
+  ; GCN-NEXT:   [[COPY6:%[0-9]+]]:sreg_64 = COPY $scc
   ; GCN-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 0
   ; GCN-NEXT:   S_CMP_LT_I32 [[COPY5]], [[S_MOV_B32_2]], implicit-def $scc
-  ; GCN-NEXT:   [[COPY8:%[0-9]+]]:sreg_64 = COPY $scc
-  ; GCN-NEXT:   [[S_OR_B64_:%[0-9]+]]:sreg_64 = S_OR_B64 [[COPY8]], [[COPY7]], implicit-def dead $scc
+  ; GCN-NEXT:   [[COPY7:%[0-9]+]]:sreg_64 = COPY $scc
+  ; GCN-NEXT:   [[S_OR_B64_:%[0-9]+]]:sreg_64 = S_OR_B64 [[COPY7]], [[COPY6]], implicit-def dead $scc
   ; GCN-NEXT:   $scc = COPY [[S_OR_B64_]]
   ; GCN-NEXT:   [[S_CSELECT_B32_:%[0-9]+]]:sreg_32 = S_CSELECT_B32 1, 0, implicit $scc
-  ; GCN-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[S_CSELECT_B32_]]
-  ; GCN-NEXT:   BUFFER_STORE_BYTE_OFFSET [[COPY9]], [[REG_SEQUENCE1]], 0, 0, 0, 0, implicit $exec :: (store (s8) into %ir.2, addrspace 1)
+  ; GCN-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[S_CSELECT_B32_]]
+  ; GCN-NEXT:   BUFFER_STORE_BYTE_OFFSET [[COPY8]], [[REG_SEQUENCE1]], 0, 0, 0, 0, implicit $exec :: (store (s8) into %ir.2, addrspace 1)
   ; GCN-NEXT:   S_ENDPGM 0
   %setcc = icmp slt i64 %x, 0
   %select = select i1 %setcc, i1 true, i1 %z

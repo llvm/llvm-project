@@ -173,7 +173,10 @@ entry:
 ; OPT-LABEL: define i64 @ptr_alloca_bitcast
 
 ; GCN-NOT: buffer_
-; GCN: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN: ; freeze: $sgpr4_sgpr5
+; GCN-NEXT: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT: v_mov_b32_e32 v0, s4
+; GCN-NEXT: v_mov_b32_e32 v1, s5
 ; GCN-NEXT: s_setpc_b64
 
 
