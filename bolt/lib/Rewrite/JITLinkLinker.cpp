@@ -59,16 +59,7 @@ void reassignSectionAddress(jitlink::LinkGraph &LG,
   auto *JLSection = LG.findSectionByName(BinSection.getSectionID());
   assert(JLSection && "cannot find section in LinkGraph");
 
-  auto BlockAddress = Address;
-  for (auto *Block : JITLinkLinker::orderedBlocks(*JLSection)) {
-    // FIXME it would seem to make sense to align here. However, in
-    // non-relocation mode, we simply use the original address of functions
-    // which might not be aligned with the minimum alignment used by
-    // BinaryFunction (2). Example failing test when aligning:
-    // bolt/test/X86/addr32.s
-    Block->setAddress(orc::ExecutorAddr(BlockAddress));
-    BlockAddress += Block->getSize();
-  }
+  JITLinkLinker::assignBlockAddresses(*JLSection, Address);
 }
 
 } // anonymous namespace
@@ -235,6 +226,17 @@ size_t JITLinkLinker::sectionSize(const jitlink::Section &Section) {
   }
 
   return Size;
+}
+
+void JITLinkLinker::assignBlockAddresses(jitlink::Section &Section,
+                                         uint64_t Address) {
+  uint64_t BlockOffset = 0;
+  for (auto *Block : orderedBlocks(Section)) {
+    // Mirror the memory manager's section-relative packing.
+    BlockOffset = jitlink::alignToBlock(BlockOffset, *Block);
+    Block->setAddress(orc::ExecutorAddr(Address + BlockOffset));
+    BlockOffset += Block->getSize();
+  }
 }
 
 } // namespace bolt
