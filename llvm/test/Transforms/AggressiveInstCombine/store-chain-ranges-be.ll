@@ -15,7 +15,6 @@ define void @contiguous(ptr %p, i16 %x, i16 %y) {
 ; CHECK-NEXT:    [[KEEP_FIRST:%.*]] = and i16 [[OLD]], 255
 ; CHECK-NEXT:    [[INSERT_FIRST:%.*]] = and i16 [[X]], -256
 ; CHECK-NEXT:    [[FIRST:%.*]] = or disjoint i16 [[KEEP_FIRST]], [[INSERT_FIRST]]
-; CHECK-NEXT:    store i16 [[FIRST]], ptr [[P]], align 1
 ; CHECK-NEXT:    [[KEEP_SECOND:%.*]] = and i16 [[FIRST]], -129
 ; CHECK-NEXT:    [[INSERT_SECOND:%.*]] = and i16 [[Y]], 128
 ; CHECK-NEXT:    [[SECOND:%.*]] = or disjoint i16 [[KEEP_SECOND]], [[INSERT_SECOND]]
@@ -43,7 +42,6 @@ define void @low_nine_bits(ptr %p, ptr noalias %q, i16 %x) {
 ; CHECK-NEXT:    [[BYTE_KEEP:%.*]] = and i16 [[OLD]], 255
 ; CHECK-NEXT:    [[BYTE_INSERT:%.*]] = and i16 [[X]], -256
 ; CHECK-NEXT:    [[FIRST:%.*]] = or disjoint i16 [[BYTE_KEEP]], [[BYTE_INSERT]]
-; CHECK-NEXT:    store i16 [[FIRST]], ptr [[P]], align 2
 ; CHECK-NEXT:    store i16 [[X]], ptr [[Q]], align 2
 ; CHECK-NEXT:    [[BIT_KEEP:%.*]] = and i16 [[FIRST]], -129
 ; CHECK-NEXT:    [[BIT_INSERT:%.*]] = and i16 [[X]], 128
@@ -73,13 +71,10 @@ define void @whole_access_update(ptr %p, i16 %x, i16 %seed) {
 ; CHECK-NEXT:    [[LOW_INSERT:%.*]] = and i16 [[X]], -256
 ; CHECK-NEXT:    [[LOW:%.*]] = or disjoint i16 [[LOW_KEEP]], [[LOW_INSERT]]
 ; CHECK-NEXT:    store i16 [[LOW]], ptr [[P]], align 1
-; CHECK-NEXT:    [[FULL_KEEP:%.*]] = and i16 [[LOW]], 0
-; CHECK-NEXT:    [[FULL:%.*]] = or disjoint i16 [[FULL_KEEP]], [[SEED]]
-; CHECK-NEXT:    store i16 [[FULL]], ptr [[P]], align 1
-; CHECK-NEXT:    [[BIT_KEEP:%.*]] = and i16 [[FULL]], -129
+; CHECK-NEXT:    store i16 [[SEED]], ptr [[P]], align 1
+; CHECK-NEXT:    [[BIT_KEEP:%.*]] = and i16 [[SEED]], -129
 ; CHECK-NEXT:    [[BIT_INSERT:%.*]] = and i16 [[X]], 128
 ; CHECK-NEXT:    [[BIT:%.*]] = or disjoint i16 [[BIT_KEEP]], [[BIT_INSERT]]
-; CHECK-NEXT:    store i16 [[BIT]], ptr [[P]], align 1
 ; CHECK-NEXT:    [[HIGH_KEEP:%.*]] = and i16 [[BIT]], -65
 ; CHECK-NEXT:    [[HIGH_INSERT:%.*]] = and i16 [[X]], 64
 ; CHECK-NEXT:    [[HIGH:%.*]] = or disjoint i16 [[HIGH_KEEP]], [[HIGH_INSERT]]
@@ -116,7 +111,6 @@ define void @overlapping_updates(ptr %p, i16 %x, i16 %y) {
 ; CHECK-NEXT:    [[FIRST_KEEP:%.*]] = and i16 [[OLD]], -129
 ; CHECK-NEXT:    [[FIRST_INSERT:%.*]] = and i16 [[X]], 128
 ; CHECK-NEXT:    [[FIRST:%.*]] = or disjoint i16 [[FIRST_KEEP]], [[FIRST_INSERT]]
-; CHECK-NEXT:    store i16 [[FIRST]], ptr [[P]], align 1
 ; CHECK-NEXT:    [[LOW_KEEP:%.*]] = and i16 [[FIRST]], 255
 ; CHECK-NEXT:    [[LOW_INSERT:%.*]] = and i16 [[X]], -256
 ; CHECK-NEXT:    [[LOW:%.*]] = or disjoint i16 [[LOW_KEEP]], [[LOW_INSERT]]
@@ -124,7 +118,6 @@ define void @overlapping_updates(ptr %p, i16 %x, i16 %y) {
 ; CHECK-NEXT:    [[NEXT_KEEP:%.*]] = and i16 [[LOW]], -129
 ; CHECK-NEXT:    [[NEXT_INSERT:%.*]] = and i16 [[Y]], 128
 ; CHECK-NEXT:    [[NEXT:%.*]] = or disjoint i16 [[NEXT_KEEP]], [[NEXT_INSERT]]
-; CHECK-NEXT:    store i16 [[NEXT]], ptr [[P]], align 1
 ; CHECK-NEXT:    [[NEXT_LOW_KEEP:%.*]] = and i16 [[NEXT]], 255
 ; CHECK-NEXT:    [[NEXT_LOW_INSERT:%.*]] = and i16 [[Y]], -256
 ; CHECK-NEXT:    [[NEXT_LOW:%.*]] = or disjoint i16 [[NEXT_LOW_KEEP]], [[NEXT_LOW_INSERT]]
@@ -163,14 +156,16 @@ define void @subchain_access_range(ptr %p, i32 %x, i16 %y, i16 %seed) {
 ; CHECK-NEXT:    [[UPPER_KEEP:%.*]] = and i32 [[OLD_WIDE]], -65281
 ; CHECK-NEXT:    [[UPPER_INSERT:%.*]] = and i32 [[X]], 65280
 ; CHECK-NEXT:    [[TMP6:%.*]] = or disjoint i32 [[UPPER_KEEP]], [[UPPER_INSERT]]
-; CHECK-NEXT:    store i32 [[TMP6]], ptr [[P]], align 1
-; CHECK-NEXT:    [[FULL_KEEP:%.*]] = and i16 [[OLD]], 0
-; CHECK-NEXT:    [[FULL:%.*]] = or disjoint i16 [[FULL_KEEP]], [[SEED]]
-; CHECK-NEXT:    store i16 [[FULL]], ptr [[P]], align 1
-; CHECK-NEXT:    [[LOW_KEEP:%.*]] = and i16 [[FULL]], 255
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze i32 [[TMP6]]
+; CHECK-NEXT:    [[TMP2:%.*]] = freeze i16 [[SEED]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP1]], 65535
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i16 [[TMP2]] to i32
+; CHECK-NEXT:    [[TMP5:%.*]] = shl i32 [[TMP4]], 16
+; CHECK-NEXT:    [[TMP7:%.*]] = or disjoint i32 [[TMP3]], [[TMP5]]
+; CHECK-NEXT:    store i32 [[TMP7]], ptr [[P]], align 1
+; CHECK-NEXT:    [[LOW_KEEP:%.*]] = and i16 [[SEED]], 255
 ; CHECK-NEXT:    [[LOW_INSERT:%.*]] = and i16 [[Y]], -256
 ; CHECK-NEXT:    [[LOW:%.*]] = or disjoint i16 [[LOW_KEEP]], [[LOW_INSERT]]
-; CHECK-NEXT:    store i16 [[LOW]], ptr [[P]], align 1
 ; CHECK-NEXT:    [[BIT_KEEP:%.*]] = and i16 [[LOW]], -129
 ; CHECK-NEXT:    [[BIT_INSERT:%.*]] = and i16 [[Y]], 128
 ; CHECK-NEXT:    [[BIT:%.*]] = or disjoint i16 [[BIT_KEEP]], [[BIT_INSERT]]
@@ -208,7 +203,6 @@ define void @gap_after_two_bytes(ptr %p, i32 %x) {
 ; CHECK-NEXT:    [[FIRST_KEEP:%.*]] = and i32 [[OLD]], 16777215
 ; CHECK-NEXT:    [[FIRST_INSERT:%.*]] = and i32 [[X]], -16777216
 ; CHECK-NEXT:    [[FIRST:%.*]] = or disjoint i32 [[FIRST_KEEP]], [[FIRST_INSERT]]
-; CHECK-NEXT:    store i32 [[FIRST]], ptr [[P]], align 4
 ; CHECK-NEXT:    [[SECOND_KEEP:%.*]] = and i32 [[FIRST]], -16711681
 ; CHECK-NEXT:    [[SECOND_INSERT:%.*]] = and i32 [[X]], 16711680
 ; CHECK-NEXT:    [[SECOND:%.*]] = or disjoint i32 [[SECOND_KEEP]], [[SECOND_INSERT]]
@@ -242,10 +236,8 @@ define void @interleaved_updates(ptr %p) {
 ; CHECK-NEXT:    [[OLD:%.*]] = load i16, ptr [[P]], align 2
 ; CHECK-NEXT:    [[HIGH1_KEEP:%.*]] = and i16 [[OLD]], -65
 ; CHECK-NEXT:    [[HIGH1:%.*]] = or disjoint i16 [[HIGH1_KEEP]], 64
-; CHECK-NEXT:    store i16 [[HIGH1]], ptr [[P]], align 2
 ; CHECK-NEXT:    [[LOW1_KEEP:%.*]] = and i16 [[HIGH1]], -16385
 ; CHECK-NEXT:    [[LOW1:%.*]] = or disjoint i16 [[LOW1_KEEP]], 16384
-; CHECK-NEXT:    store i16 [[LOW1]], ptr [[P]], align 2
 ; CHECK-NEXT:    [[HIGH0_KEEP:%.*]] = and i16 [[LOW1]], -129
 ; CHECK-NEXT:    [[HIGH0:%.*]] = or disjoint i16 [[HIGH0_KEEP]], 128
 ; CHECK-NEXT:    store i16 [[HIGH0]], ptr [[P]], align 2
@@ -278,18 +270,14 @@ define void @overlap_after_gap(ptr %p, i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[LO_KEEP:%.*]] = and i32 [[OLD]], 268435455
 ; CHECK-NEXT:    [[LO_INSERT:%.*]] = and i32 [[X]], -268435456
 ; CHECK-NEXT:    [[LO:%.*]] = or disjoint i32 [[LO_KEEP]], [[LO_INSERT]]
-; CHECK-NEXT:    store i32 [[LO]], ptr [[P]], align 4
 ; CHECK-NEXT:    [[HI_KEEP:%.*]] = and i32 [[LO]], -251658241
 ; CHECK-NEXT:    [[HI_INSERT:%.*]] = and i32 [[X]], 251658240
 ; CHECK-NEXT:    [[HI:%.*]] = or disjoint i32 [[HI_KEEP]], [[HI_INSERT]]
 ; CHECK-NEXT:    store i32 [[HI]], ptr [[P]], align 4
-; CHECK-NEXT:    [[FULL_KEEP:%.*]] = and i32 [[HI]], 0
-; CHECK-NEXT:    [[FULL:%.*]] = or disjoint i32 [[FULL_KEEP]], [[Y]]
-; CHECK-NEXT:    store i32 [[FULL]], ptr [[P]], align 4
-; CHECK-NEXT:    [[FIRST_KEEP:%.*]] = and i32 [[FULL]], 16777215
+; CHECK-NEXT:    store i32 [[Y]], ptr [[P]], align 4
+; CHECK-NEXT:    [[FIRST_KEEP:%.*]] = and i32 [[Y]], 16777215
 ; CHECK-NEXT:    [[FIRST_INSERT:%.*]] = and i32 [[X]], -16777216
 ; CHECK-NEXT:    [[FIRST:%.*]] = or disjoint i32 [[FIRST_KEEP]], [[FIRST_INSERT]]
-; CHECK-NEXT:    store i32 [[FIRST]], ptr [[P]], align 4
 ; CHECK-NEXT:    [[SECOND_KEEP:%.*]] = and i32 [[FIRST]], -16711681
 ; CHECK-NEXT:    [[SECOND_INSERT:%.*]] = and i32 [[X]], 16711680
 ; CHECK-NEXT:    [[SECOND:%.*]] = or disjoint i32 [[SECOND_KEEP]], [[SECOND_INSERT]]
@@ -345,11 +333,9 @@ define void @crossing_updates(ptr %p, i16 %x, i16 %y) {
 ; CHECK-NEXT:    [[A_KEEP:%.*]] = and i16 [[OLD]], -3841
 ; CHECK-NEXT:    [[A_INSERT:%.*]] = and i16 [[X]], 3840
 ; CHECK-NEXT:    [[A:%.*]] = or disjoint i16 [[A_KEEP]], [[A_INSERT]]
-; CHECK-NEXT:    store i16 [[A]], ptr [[P]], align 2
 ; CHECK-NEXT:    [[B_KEEP:%.*]] = and i16 [[A]], -241
 ; CHECK-NEXT:    [[B_INSERT:%.*]] = and i16 [[X]], 240
 ; CHECK-NEXT:    [[B:%.*]] = or disjoint i16 [[B_KEEP]], [[B_INSERT]]
-; CHECK-NEXT:    store i16 [[B]], ptr [[P]], align 2
 ; CHECK-NEXT:    [[C_KEEP:%.*]] = and i16 [[B]], 4095
 ; CHECK-NEXT:    [[C_INSERT:%.*]] = and i16 [[X]], -4096
 ; CHECK-NEXT:    [[C:%.*]] = or disjoint i16 [[C_KEEP]], [[C_INSERT]]
@@ -357,7 +343,6 @@ define void @crossing_updates(ptr %p, i16 %x, i16 %y) {
 ; CHECK-NEXT:    [[D_KEEP:%.*]] = and i16 [[C]], -961
 ; CHECK-NEXT:    [[D_INSERT:%.*]] = and i16 [[Y]], 960
 ; CHECK-NEXT:    [[D:%.*]] = or disjoint i16 [[D_KEEP]], [[D_INSERT]]
-; CHECK-NEXT:    store i16 [[D]], ptr [[P]], align 2
 ; CHECK-NEXT:    [[E_KEEP:%.*]] = and i16 [[D]], -61
 ; CHECK-NEXT:    [[E_INSERT:%.*]] = and i16 [[Y]], 60
 ; CHECK-NEXT:    [[E:%.*]] = or disjoint i16 [[E_KEEP]], [[E_INSERT]]
@@ -388,9 +373,8 @@ define void @crossing_updates(ptr %p, i16 %x, i16 %y) {
   ret void
 }
 
-; Negative tests
-
 ; The final i8 store covers only one byte of the earlier i16 store.
+; FIXME: Reduce the cost of packing the two bytes.
 define void @mixed_width_disjoint_or(ptr %p, i16 %x, i8 %y) {
 ; CHECK-LABEL: define void @mixed_width_disjoint_or(
 ; CHECK-SAME: ptr [[P:%.*]], i16 [[X:%.*]], i8 [[Y:%.*]]) {
@@ -399,11 +383,16 @@ define void @mixed_width_disjoint_or(ptr %p, i16 %x, i8 %y) {
 ; CHECK-NEXT:    [[WIDE_KEEP:%.*]] = and i16 [[OLD_WORD]], -129
 ; CHECK-NEXT:    [[WIDE_INSERT:%.*]] = and i16 [[X]], 128
 ; CHECK-NEXT:    [[WIDE:%.*]] = or disjoint i16 [[WIDE_KEEP]], [[WIDE_INSERT]]
-; CHECK-NEXT:    store i16 [[WIDE]], ptr [[P]], align 1
 ; CHECK-NEXT:    [[NARROW_KEEP:%.*]] = and i8 [[OLD_BYTE]], -16
 ; CHECK-NEXT:    [[NARROW_INSERT:%.*]] = and i8 [[Y]], 15
 ; CHECK-NEXT:    [[NARROW:%.*]] = or disjoint i8 [[NARROW_KEEP]], [[NARROW_INSERT]]
-; CHECK-NEXT:    store i8 [[NARROW]], ptr [[P]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze i16 [[WIDE]]
+; CHECK-NEXT:    [[TMP2:%.*]] = freeze i8 [[NARROW]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and i16 [[TMP1]], 255
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i8 [[TMP2]] to i16
+; CHECK-NEXT:    [[TMP5:%.*]] = shl i16 [[TMP4]], 8
+; CHECK-NEXT:    [[TMP6:%.*]] = or disjoint i16 [[TMP3]], [[TMP5]]
+; CHECK-NEXT:    store i16 [[TMP6]], ptr [[P]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %old.word = load i16, ptr %p, align 1
@@ -419,6 +408,8 @@ define void @mixed_width_disjoint_or(ptr %p, i16 %x, i8 %y) {
   store i8 %narrow, ptr %p, align 1
   ret void
 }
+
+; Negative tests
 
 ; The i8 store gets its kept bits from the high byte of the i16 load.
 ; The disjoint OR still needs an available i8 value for this access.

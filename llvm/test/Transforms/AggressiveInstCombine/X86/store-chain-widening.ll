@@ -12,22 +12,41 @@ target triple = "x86_64-unknown-linux-gnu"
 ; The tag reload and the store at offset 8 can stay between the original
 ; stores. The second tag update supplies the final tag for the widened store.
 define void @pack_word_and_tag(ptr noalias writable sret(%cell) align 8 initializes((0, 4), (8, 16)) %p, i32 %word, i8 %bits, ptr %payload) {
-; CHECK-LABEL: define void @pack_word_and_tag(
-; CHECK-SAME: ptr noalias writable sret([[CELL:%.*]]) align 8 initializes((0, 4), (8, 16)) [[P:%.*]], i32 [[WORD:%.*]], i8 [[BITS:%.*]], ptr [[PAYLOAD:%.*]]) {
-; CHECK-NEXT:    [[TAG_PTR:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 4
-; CHECK-NEXT:    [[PAYLOAD_PTR:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
-; CHECK-NEXT:    store i32 [[WORD]], ptr [[P]], align 4
-; CHECK-NEXT:    store ptr [[PAYLOAD]], ptr [[PAYLOAD_PTR]], align 8
-; CHECK-NEXT:    [[OLD:%.*]] = load i8, ptr [[TAG_PTR]], align 4
-; CHECK-NEXT:    [[KEEP_FIRST:%.*]] = and i8 [[OLD]], -2
-; CHECK-NEXT:    [[INSERT_FIRST:%.*]] = and i8 [[BITS]], 1
-; CHECK-NEXT:    [[FIRST:%.*]] = or disjoint i8 [[KEEP_FIRST]], [[INSERT_FIRST]]
-; CHECK-NEXT:    store i8 [[FIRST]], ptr [[TAG_PTR]], align 4
-; CHECK-NEXT:    [[KEEP_SECOND:%.*]] = and i8 [[FIRST]], -3
-; CHECK-NEXT:    [[INSERT_SECOND:%.*]] = and i8 [[BITS]], 2
-; CHECK-NEXT:    [[SECOND:%.*]] = or disjoint i8 [[KEEP_SECOND]], [[INSERT_SECOND]]
-; CHECK-NEXT:    store i8 [[SECOND]], ptr [[TAG_PTR]], align 4
-; CHECK-NEXT:    ret void
+; LE-LABEL: define void @pack_word_and_tag(
+; LE-SAME: ptr noalias writable sret([[CELL:%.*]]) align 8 initializes((0, 4), (8, 16)) [[P:%.*]], i32 [[WORD:%.*]], i8 [[BITS:%.*]], ptr [[PAYLOAD:%.*]]) {
+; LE-NEXT:    [[TAG_PTR:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 4
+; LE-NEXT:    [[PAYLOAD_PTR:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
+; LE-NEXT:    store ptr [[PAYLOAD]], ptr [[PAYLOAD_PTR]], align 8
+; LE-NEXT:    [[OLD:%.*]] = load i8, ptr [[TAG_PTR]], align 4
+; LE-NEXT:    [[KEEP_FIRST:%.*]] = and i8 [[OLD]], -2
+; LE-NEXT:    [[INSERT_FIRST:%.*]] = and i8 [[BITS]], 1
+; LE-NEXT:    [[FIRST:%.*]] = or disjoint i8 [[KEEP_FIRST]], [[INSERT_FIRST]]
+; LE-NEXT:    [[KEEP_SECOND:%.*]] = and i8 [[FIRST]], -3
+; LE-NEXT:    [[INSERT_SECOND:%.*]] = and i8 [[BITS]], 2
+; LE-NEXT:    [[SECOND:%.*]] = or disjoint i8 [[KEEP_SECOND]], [[INSERT_SECOND]]
+; LE-NEXT:    [[TMP1:%.*]] = load b64, ptr [[P]], align 8
+; LE-NEXT:    [[TMP2:%.*]] = bitinsert b64 [[TMP1]], i32 [[WORD]], i32 0
+; LE-NEXT:    [[TMP3:%.*]] = bitinsert b64 [[TMP2]], i8 [[SECOND]], i32 32
+; LE-NEXT:    store b64 [[TMP3]], ptr [[P]], align 8
+; LE-NEXT:    ret void
+;
+; BE-LABEL: define void @pack_word_and_tag(
+; BE-SAME: ptr noalias writable sret([[CELL:%.*]]) align 8 initializes((0, 4), (8, 16)) [[P:%.*]], i32 [[WORD:%.*]], i8 [[BITS:%.*]], ptr [[PAYLOAD:%.*]]) {
+; BE-NEXT:    [[TAG_PTR:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 4
+; BE-NEXT:    [[PAYLOAD_PTR:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
+; BE-NEXT:    store ptr [[PAYLOAD]], ptr [[PAYLOAD_PTR]], align 8
+; BE-NEXT:    [[OLD:%.*]] = load i8, ptr [[TAG_PTR]], align 4
+; BE-NEXT:    [[KEEP_FIRST:%.*]] = and i8 [[OLD]], -2
+; BE-NEXT:    [[INSERT_FIRST:%.*]] = and i8 [[BITS]], 1
+; BE-NEXT:    [[FIRST:%.*]] = or disjoint i8 [[KEEP_FIRST]], [[INSERT_FIRST]]
+; BE-NEXT:    [[KEEP_SECOND:%.*]] = and i8 [[FIRST]], -3
+; BE-NEXT:    [[INSERT_SECOND:%.*]] = and i8 [[BITS]], 2
+; BE-NEXT:    [[SECOND:%.*]] = or disjoint i8 [[KEEP_SECOND]], [[INSERT_SECOND]]
+; BE-NEXT:    [[TMP1:%.*]] = load b64, ptr [[P]], align 8
+; BE-NEXT:    [[TMP2:%.*]] = bitinsert b64 [[TMP1]], i32 [[WORD]], i32 32
+; BE-NEXT:    [[TMP3:%.*]] = bitinsert b64 [[TMP2]], i8 [[SECOND]], i32 24
+; BE-NEXT:    store b64 [[TMP3]], ptr [[P]], align 8
+; BE-NEXT:    ret void
 ;
   %tag.ptr = getelementptr inbounds i8, ptr %p, i64 4
   %payload.ptr = getelementptr inbounds i8, ptr %p, i64 8
@@ -46,14 +65,25 @@ define void @pack_word_and_tag(ptr noalias writable sret(%cell) align 8 initiali
 }
 
 define void @pack_one_masked_tag(ptr noalias writable sret(%cell) align 8 %p, i32 %word, i8 %bits) {
-; CHECK-LABEL: define void @pack_one_masked_tag(
-; CHECK-SAME: ptr noalias writable sret([[CELL:%.*]]) align 8 [[P:%.*]], i32 [[WORD:%.*]], i8 [[BITS:%.*]]) {
-; CHECK-NEXT:    store i32 [[WORD]], ptr [[P]], align 8
-; CHECK-NEXT:    [[TAG_PTR:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 4
-; CHECK-NEXT:    [[KEEP:%.*]] = and i8 [[BITS]], -4
-; CHECK-NEXT:    [[TAG:%.*]] = or disjoint i8 [[KEEP]], 1
-; CHECK-NEXT:    store i8 [[TAG]], ptr [[TAG_PTR]], align 4
-; CHECK-NEXT:    ret void
+; LE-LABEL: define void @pack_one_masked_tag(
+; LE-SAME: ptr noalias writable sret([[CELL:%.*]]) align 8 [[P:%.*]], i32 [[WORD:%.*]], i8 [[BITS:%.*]]) {
+; LE-NEXT:    [[KEEP:%.*]] = and i8 [[BITS]], -4
+; LE-NEXT:    [[TAG:%.*]] = or disjoint i8 [[KEEP]], 1
+; LE-NEXT:    [[TMP1:%.*]] = load b64, ptr [[P]], align 8
+; LE-NEXT:    [[TMP2:%.*]] = bitinsert b64 [[TMP1]], i32 [[WORD]], i32 0
+; LE-NEXT:    [[TMP3:%.*]] = bitinsert b64 [[TMP2]], i8 [[TAG]], i32 32
+; LE-NEXT:    store b64 [[TMP3]], ptr [[P]], align 8
+; LE-NEXT:    ret void
+;
+; BE-LABEL: define void @pack_one_masked_tag(
+; BE-SAME: ptr noalias writable sret([[CELL:%.*]]) align 8 [[P:%.*]], i32 [[WORD:%.*]], i8 [[BITS:%.*]]) {
+; BE-NEXT:    [[KEEP:%.*]] = and i8 [[BITS]], -4
+; BE-NEXT:    [[TAG:%.*]] = or disjoint i8 [[KEEP]], 1
+; BE-NEXT:    [[TMP1:%.*]] = load b64, ptr [[P]], align 8
+; BE-NEXT:    [[TMP2:%.*]] = bitinsert b64 [[TMP1]], i32 [[WORD]], i32 32
+; BE-NEXT:    [[TMP3:%.*]] = bitinsert b64 [[TMP2]], i8 [[TAG]], i32 24
+; BE-NEXT:    store b64 [[TMP3]], ptr [[P]], align 8
+; BE-NEXT:    ret void
 ;
   store i32 %word, ptr %p, align 8
   %tag.ptr = getelementptr inbounds i8, ptr %p, i64 4
@@ -367,6 +397,3 @@ define void @captured_alloca_before_zero_fill(ptr %save, i32 %word, i8 %bits) {
   call void @llvm.memset.p0.i64(ptr align 1 %fill.ptr, i8 0, i64 3, i1 false)
   ret void
 }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; BE: {{.*}}
-; LE: {{.*}}
