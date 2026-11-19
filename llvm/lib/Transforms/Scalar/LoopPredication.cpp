@@ -196,6 +196,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/GuardUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
@@ -889,6 +890,12 @@ bool LoopPredication::isLoopProfitableToPredicate() {
   auto ComputeBranchProbability =
       [&](const BasicBlock *ExitingBlock,
           const BasicBlock *ExitBlock) -> BranchProbability {
+    // Like BranchProbabilityInfo, treat exits to deopt or unreachable as never
+    // taken. Keep the profile of the latch exit, which other exits are compared
+    // against.
+    if (ExitingBlock != LatchBlock &&
+        IsBlockFollowedByDeoptOrUnreachable(ExitBlock))
+      return BranchProbability::getZero();
     auto *Term = ExitingBlock->getTerminator();
     unsigned NumSucc = Term->getNumSuccessors();
     if (MDNode *ProfileData = getValidBranchWeightMDNode(*Term)) {
