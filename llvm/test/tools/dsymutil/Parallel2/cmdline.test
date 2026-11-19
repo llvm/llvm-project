@@ -1,0 +1,37 @@
+## dsymutil --linker=parallel2 does its own option handling.
+## It warns about every option that is not yet implemented.
+
+RUN: touch %t
+RUN: dsymutil --linker=parallel2 %t 2>&1 | count 0
+RUN: dsymutil -linker parallel2 %t 2>&1 | count 0
+RUN: dsymutil --linker=parallel2 %t -o %t.dSYM --flat -j 2 --verbose -y \
+RUN:   --oso-prepend-path=%p --dump-debug-map --no-odr --accelerator=Dwarf \
+RUN:   2>&1 | FileCheck %s --check-prefix=WARN \
+RUN:   --implicit-check-not=warning:
+RUN: not dsymutil --linker=parallel2 %t.missing 2>&1 \
+RUN:   | FileCheck %s --check-prefix=MISSING
+RUN: not dsymutil --linker=parallel2 2>&1 | FileCheck %s --check-prefix=NOINPUT
+RUN: not dsymutil --linker=parallel2 %t %t 2>&1 \
+RUN:   | FileCheck %s --check-prefix=NOINPUT
+RUN: dsymutil --linker=parallel2 --frobnicate %t 2>&1 \
+RUN:   | FileCheck %s --check-prefix=UNKNOWN --implicit-check-not=warning:
+RUN: not dsymutil --linker=parallel3 %t 2>&1 \
+RUN:   | FileCheck %s --check-prefix=INVALID
+
+WARN:      warning: '-o' not yet implemented by --linker=parallel2
+WARN-NEXT: warning: '--flat' not yet implemented by --linker=parallel2
+WARN-NEXT: warning: '-j' not yet implemented by --linker=parallel2
+WARN-NEXT: warning: '--verbose' not yet implemented by --linker=parallel2
+WARN-NEXT: warning: '-y' not yet implemented by --linker=parallel2
+WARN-NEXT: warning: '--oso-prepend-path' not yet implemented by --linker=parallel2
+WARN-NEXT: warning: '--dump-debug-map' not yet implemented by --linker=parallel2
+WARN-NEXT: warning: '--no-odr' not yet implemented by --linker=parallel2
+WARN-NEXT: warning: '--accelerator' not yet implemented by --linker=parallel2
+
+MISSING: error: {{.*}}.missing: {{[Nn]}}o such file or directory
+NOINPUT: error: expected exactly one input file
+UNKNOWN: warning: ignoring unknown option: --frobnicate
+
+## At the moment, parallel2 doesn't work. Once it works, i'll replace parallel,
+## so don't list parallel2 in help output.
+INVALID: error: invalid DWARF linker type specified: 'parallel3'. Supported values are 'classic', 'parallel'.

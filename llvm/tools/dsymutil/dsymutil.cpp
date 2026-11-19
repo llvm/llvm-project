@@ -17,6 +17,7 @@
 #include "DwarfLinkerForBinary.h"
 #include "LinkUtils.h"
 #include "MachOUtils.h"
+#include "Parallel2/Driver.h"
 #include "Reproducer.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
@@ -719,6 +720,10 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
     cl::PrintVersionMessage();
     return EXIT_SUCCESS;
   }
+
+  // The parallel2 linker has its own entry point.
+  if (Args.getLastArgValue(OPT_linker) == "parallel2")
+    return dsymutil::parallel2::link(Args);
 
   auto OptionsOrErr = getOptions(Args);
   if (!OptionsOrErr) {
