@@ -23,7 +23,7 @@
 #include <algorithm>
 #include <vector>
 
-namespace llvm::omp::target::plugin {
+namespace llvm::offload::plugin {
 
 /// common methods
 
@@ -289,4 +289,4 @@ Error L0QueueCacheTy::deinit() {
   return AllErrors;
 }
 
-} // namespace llvm::omp::target::plugin
+} // namespace llvm::offload::plugin

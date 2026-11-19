@@ -13,7 +13,7 @@
 #include "L0Memory.h"
 #include "L0Device.h"
 
-namespace llvm::omp::target::plugin {
+namespace llvm::offload::plugin {
 
 static const char *allocKindToStr(int32_t Kind) {
   switch (Kind) {
@@ -699,4 +699,4 @@ Error MemAllocatorTy::deallocFromL0(void *Ptr) {
   return Plugin::success();
 }
 
-} // namespace llvm::omp::target::plugin
+} // namespace llvm::offload::plugin
