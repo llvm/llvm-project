@@ -936,8 +936,7 @@ void HexagonPostRAHandleQFP::collectQFPStackRefill(
 }
 
 std::optional<bool> HexagonPostRAHandleQFP::doesDefReachSubRegUse(
-    NodeAddr<DefNode *> RegDef, NodeAddr<StmtNode *> UseStmt,
-    Register SubReg) {
+    NodeAddr<DefNode *> RegDef, NodeAddr<StmtNode *> UseStmt, Register SubReg) {
   NodeAddr<RefNode *> Nearest =
       LV->getNearestAliasedRef(RegisterRef(SubReg), UseStmt);
   if (!Nearest.Id)
@@ -945,13 +944,12 @@ std::optional<bool> HexagonPostRAHandleQFP::doesDefReachSubRegUse(
 
   // A non-phi definition is the value present in this subregister at the use.
   // Do not walk beyond it to an older pair definition.
-  if (DFG->IsDef(Nearest) &&
-      !(Nearest.Addr->getFlags() & NodeAttrs::PhiRef))
+  if (DFG->IsDef(Nearest) && !(Nearest.Addr->getFlags() & NodeAttrs::PhiRef))
     return Nearest.Id == RegDef.Id;
 
   NodeSet Visited, Defs;
-  const auto &P = LV->getAllReachingDefsRec(RegisterRef(SubReg), Nearest,
-                                             Visited, Defs);
+  const auto &P =
+      LV->getAllReachingDefsRec(RegisterRef(SubReg), Nearest, Visited, Defs);
   if (!P.second)
     return std::nullopt;
   return P.first.count(RegDef.Id) != 0;
