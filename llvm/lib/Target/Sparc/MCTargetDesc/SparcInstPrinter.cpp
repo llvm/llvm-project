@@ -222,25 +222,35 @@ bool SparcInstPrinter::printGetPCX(const MCInst *MI, unsigned opNum,
   return true;
 }
 
-void SparcInstPrinter::printMembarTag(const MCInst *MI, int opNum,
-                                      const MCSubtargetInfo &STI,
-                                      raw_ostream &O) {
+static void printBarrierTag(const MCInst *MI, int opNum, raw_ostream &O,
+                            unsigned ValidMask) {
   static const char *const TagNames[] = {
-      "#LoadLoad",  "#StoreLoad", "#LoadStore", "#StoreStore",
-      "#Lookaside", "#MemIssue",  "#Sync"};
+      "#LoadLoad", "#StoreLoad", "#LoadStore", "#StoreStore",  "#Lookaside",
+      "#MemIssue", "#Sync",      nullptr,      "#WriteCombine"};
 
   unsigned Imm = MI->getOperand(opNum).getImm();
-
-  if (Imm > 127) {
+  if (Imm & ~ValidMask) {
     O << Imm;
     return;
   }
 
   ListSeparator LS(" | ");
   for (unsigned i = 0; i < std::size(TagNames); i++) {
-    if (Imm & (1 << i))
+    if ((Imm & (1 << i)) && TagNames[i])
       O << LS << TagNames[i];
   }
+}
+
+void SparcInstPrinter::printMembarTag(const MCInst *MI, int opNum,
+                                      const MCSubtargetInfo &STI,
+                                      raw_ostream &O) {
+  printBarrierTag(MI, opNum, O, SparcBarrier::MembarMask);
+}
+
+void SparcInstPrinter::printLeonStbarTag(const MCInst *MI, int opNum,
+                                         const MCSubtargetInfo &STI,
+                                         raw_ostream &O) {
+  printBarrierTag(MI, opNum, O, SparcBarrier::LeonStbarMask);
 }
 
 void SparcInstPrinter::printASITag(const MCInst *MI, int opNum,

@@ -266,7 +266,8 @@ def : Processor<"gr740", LEON4Itineraries,
 
 // LEON 5 generic
 def : ProcessorModel<"leon5", LEON5Model,
-                     [FeatureLeon, LeonCASA, LeonCycleCounter, FeaturePWRPSR]>;
+                     [FeatureLeon, LeonCASA, LeonCycleCounter, FeaturePWRPSR,
+                      LeonStbarOptions]>;
 
 //===----------------------------------------------------------------------===//
 // Declare the target which we are implementing
