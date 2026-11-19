@@ -3377,8 +3377,6 @@ public:
         if (Current && Current->is(TT_TrailingCommaVaOptRParen))
           TrailingCommaRParen = Current;
         next();
-        if (TrailingCommaRParen)
-          break;
       } else {
         // Operator found.
         if (CurrentPrecedence == Precedence) {
