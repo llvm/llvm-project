@@ -40,10 +40,9 @@ add_libc_test(
     unshare_test.cpp
   DEPENDS
     libc.hdr.errno_macros
-    libc.hdr.sched_macros
-    libc.src.__support.libc_errno
     libc.src.sched.unshare
     libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 
 add_libc_test(
