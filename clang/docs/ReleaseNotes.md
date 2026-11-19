@@ -468,7 +468,7 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   extensions. `-fspv-extension=all` restores the previous behavior.
 
 - `-fdevirtualize-speculatively` can now also be used to enable speculative
-  devirtualization when using LTO, with the exception of Distributed ThinLTO.
+  devirtualization when using LTO.
 
 ### Removed Compiler Flags
 
@@ -643,6 +643,23 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   note: returned here
   int* p(int *in [[clang::noescape]]) { return in; }
                                                ^~
+  ```
+
+- Added `-Wlifetime-safety-capture-by-violation` to detect a parameter that the
+  body captures by the enclosing object or by global storage, while none of its
+  `[[clang::lifetime_capture_by]]` attributes names that entity or `unknown`.
+  For example:
+
+  ```c++
+  struct Cap { const int *p; };
+  struct S {
+    const int *field;
+    // warning: 'x' is captured by this object but is not marked
+    // [[clang::lifetime_capture_by_this]]
+    void store(Cap &c, const int &x [[clang::lifetime_capture_by(c)]]) {
+      field = &x;
+    }
+  };
   ```
 
 - Added `-Wlifetime-safety-dangling-field` to detect dangling field references
@@ -860,7 +877,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   (#GH227392)
 - Clang will now no longer assert or miscompile on a constructor that has more than 65535 base and member initializers. (#GH219366)
 
-- `-Wunsequenced` now diagnoses unsequenced volatile accesses.
+- `-Wunsequenced` now diagnoses unsequenced volatile accesses. This can be
+  disabled separately with `-Wno-unsequenced-volatile`.
 
 ### Improvements to Clang's time-trace
 
@@ -892,9 +910,11 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed an ICE that occurred when a structured binding pack is expanded outside the lambda where it was declared. (#GH214160)
 - Fixed a crash when a statement expression in the initializer of a new-expression starts with a loop or a label. (#GH175427)
 - Fixed a crash in an implicit assignment operator when a `noreturn` member or base `operator=` is followed by trivially copyable members. (#GH111612)
+- Fixed a crash when a block in a default member initializer captures `this` and the class is aggregate-initialized outside of its member functions. (#GH229323)
 - Fixed a bug where a stray closing curley brace in an OpenMP/OpenACC pragma could cause pragma parsing issues when inside of a member function. (#GH214195)
 - Fixed a bug where preprocessor directives following comments were not correctly recognized when using -C. (#GH48361)
 - Fixed a crash when declaring a member template within a local class inside an OpenMP region. (#GH216052)
+- Fixed a crash when a variably modified type whose size is evaluated in an enclosing function was used in a local class or a block. Such uses are now diagnosed, and a lambda now captures the size of such a type. (#GH55686)
 - Fixed a crash when an OpenMP `copyprivate` clause names a non-static data member that is not private in the
   enclosing context, which is now diagnosed, a data member inside a member function template, or a structured
   binding. (#GH217893)
@@ -1484,6 +1504,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 #### CUDA Support
 
+- Fixed argument-dependent lookup for CUDA and HIP kernel launches, including
+  calls to kernels declared as hidden friends. (#GH45327)
+
 - Fixed missing diagnostics for wrong-side functions reached through constructor
   and member initializers, as well as inherited constructors. (#GH118415)
 
@@ -1630,6 +1653,9 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   normalize `cfi-icall` and `kcfi` function type metadata, leaving C++ class
   vtable, member-pointer, and `-fexperimental-call-graph-section` metadata
   canonical so whole-program devirtualization works reliably. (#GH242466)
+- `-fsanitize=alloc-token` now also infers the allocated type from a placement
+  `new` into the result of an untyped allocation call, e.g. `new (malloc(n)) T`
+  or `void *p = malloc(n); new (p) T;`.
 
 ### Python Binding Changes
 

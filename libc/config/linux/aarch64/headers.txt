@@ -1,5 +1,6 @@
 set(TARGET_PUBLIC_HEADERS
     libc.include.alloca
+    libc.include.ar
     libc.include.arpa_inet
     libc.include.arpa_nameser
     libc.include.assert
@@ -32,6 +33,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.net_if
     libc.include.netinet_ether
     libc.include.netinet_in
+    libc.include.netinet_ip
     libc.include.netinet_tcp
     libc.include.netinet_udp
     libc.include.poll

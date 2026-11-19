@@ -143,6 +143,18 @@ int omp_get_initial_device(void);
 
 void *llvm_omp_target_dynamic_shared_alloc();
 
+/// Dynamic groupprivate memory
+///
+///{
+void *omp_get_dyn_gprivate_ptr(size_t Offset, omp_access_t AccessGroup);
+
+void *omp_get_dyn_gprivate_nofb_ptr(size_t Offset, omp_access_t AccessGroup);
+
+size_t omp_get_dyn_gprivate_size(omp_access_t AccessGroup);
+
+omp_memspace_handle_t omp_get_dyn_gprivate_memspace(omp_access_t AccessGroup);
+///}
+
 /// Synchronization
 ///
 ///{

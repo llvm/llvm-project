@@ -17,14 +17,14 @@ define amdgpu_kernel void @eggs(i1 %arg, ptr addrspace(1) %arg1, ptr %arg2, ptr 
 ; CHECK-NEXT:  ; %bb.1: ; %bb10
 ; CHECK-NEXT:    global_load_dwordx2 v[8:9], v0, s[12:13]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    v_and_b32_e32 v0, 0xff, v8
-; CHECK-NEXT:    v_bfe_u32 v1, v8, 8, 8
-; CHECK-NEXT:    v_bfe_u32 v2, v8, 16, 8
-; CHECK-NEXT:    v_lshrrev_b32_e32 v3, 24, v8
-; CHECK-NEXT:    v_and_b32_e32 v4, 0xff, v9
-; CHECK-NEXT:    v_bfe_u32 v5, v9, 8, 8
-; CHECK-NEXT:    v_bfe_u32 v7, v9, 16, 8
-; CHECK-NEXT:    v_lshrrev_b32_e32 v6, 24, v9
+; CHECK-NEXT:    v_and_b32_e32 v7, 0xff, v8
+; CHECK-NEXT:    v_bfe_u32 v6, v8, 8, 8
+; CHECK-NEXT:    v_bfe_u32 v5, v8, 16, 8
+; CHECK-NEXT:    v_lshrrev_b32_e32 v4, 24, v8
+; CHECK-NEXT:    v_and_b32_e32 v3, 0xff, v9
+; CHECK-NEXT:    v_bfe_u32 v2, v9, 8, 8
+; CHECK-NEXT:    v_bfe_u32 v1, v9, 16, 8
+; CHECK-NEXT:    v_lshrrev_b32_e32 v0, 24, v9
 ; CHECK-NEXT:    s_branch .LBB0_3
 ; CHECK-NEXT:  .LBB0_2:
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
@@ -32,8 +32,8 @@ define amdgpu_kernel void @eggs(i1 %arg, ptr addrspace(1) %arg1, ptr %arg2, ptr 
 ; CHECK-NEXT:    v_mov_b32_e32 v3, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v4, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v5, 0
-; CHECK-NEXT:    v_mov_b32_e32 v7, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v6, 0
+; CHECK-NEXT:    v_mov_b32_e32 v7, 0
 ; CHECK-NEXT:  .LBB0_3: ; %bb41
 ; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x48
 ; CHECK-NEXT:    v_pk_mov_b32 v[8:9], s[14:15], s[14:15] op_sel:[0,1]
@@ -51,8 +51,8 @@ define amdgpu_kernel void @eggs(i1 %arg, ptr addrspace(1) %arg1, ptr %arg2, ptr 
 ; CHECK-NEXT:    flat_store_byte v[18:19], v5
 ; CHECK-NEXT:    flat_store_byte v[20:21], v7
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    v_pk_mov_b32 v[0:1], s[0:1], s[0:1] op_sel:[0,1]
-; CHECK-NEXT:    flat_store_byte v[0:1], v6
+; CHECK-NEXT:    v_pk_mov_b32 v[2:3], s[0:1], s[0:1] op_sel:[0,1]
+; CHECK-NEXT:    flat_store_byte v[2:3], v0
 ; CHECK-NEXT:    s_endpgm
 bb:
   br i1 %arg, label %bb10, label %bb41
