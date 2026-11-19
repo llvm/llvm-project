@@ -19,7 +19,7 @@ define amdgpu_kernel void @reserved_wwm_vgpr_not_in_alloc_order(i32 %arg6, i1 %a
 ; CHECK-NEXT:    s_load_dword s8, s[4:5], 0x10
 ; CHECK-NEXT:    s_load_dwordx4 s[16:19], s[4:5], 0x20
 ; CHECK-NEXT:    s_load_dword s9, s[4:5], 0x30
-; CHECK-NEXT:    s_mov_b64 s[54:55], -1
+; CHECK-NEXT:    s_load_dword s28, s[4:5], 0x90
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_bitcmp1_b32 s21, 0
 ; CHECK-NEXT:    s_cselect_b64 s[2:3], -1, 0
@@ -36,23 +36,22 @@ define amdgpu_kernel void @reserved_wwm_vgpr_not_in_alloc_order(i32 %arg6, i1 %a
 ; CHECK-NEXT:    s_cselect_b64 s[36:37], -1, 0
 ; CHECK-NEXT:    s_bitcmp1_b32 s9, 0
 ; CHECK-NEXT:    s_cselect_b64 s[38:39], -1, 0
-; CHECK-NEXT:    s_mov_b64 s[52:53], 0
+; CHECK-NEXT:    s_mov_b64 s[54:55], -1
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_bitcmp1_b32 s8, 0
 ; CHECK-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x60
-; CHECK-NEXT:    s_load_dword s28, s[4:5], 0x90
 ; CHECK-NEXT:    s_cselect_b64 s[40:41], -1, 0
-; CHECK-NEXT:    v_accvgpr_write_b32 a1, 0
-; CHECK-NEXT:    v_accvgpr_write_b32 a2, 0
-; CHECK-NEXT:    v_accvgpr_write_b32 a3, 0
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_bitcmp1_b32 s28, 0
 ; CHECK-NEXT:    s_mov_b32 s28, 0
 ; CHECK-NEXT:    s_cselect_b64 s[42:43], -1, 0
-; CHECK-NEXT:    s_lshl_b32 s21, s21, 1
+; CHECK-NEXT:    s_lshl_b32 s44, s21, 1
 ; CHECK-NEXT:    s_mov_b32 s29, s28
 ; CHECK-NEXT:    s_mov_b32 s30, s28
 ; CHECK-NEXT:    s_mov_b32 s31, s28
+; CHECK-NEXT:    s_mov_b64 s[52:53], 0
+; CHECK-NEXT:    v_accvgpr_write_b32 a1, 0
+; CHECK-NEXT:    v_accvgpr_write_b32 a2, 0
+; CHECK-NEXT:    v_accvgpr_write_b32 a3, 0
 ; CHECK-NEXT:    v_accvgpr_write_b32 a4, 0
 ; CHECK-NEXT:    v_accvgpr_write_b32 a5, 0
 ; CHECK-NEXT:    v_accvgpr_write_b32 a6, 0
@@ -89,8 +88,6 @@ define amdgpu_kernel void @reserved_wwm_vgpr_not_in_alloc_order(i32 %arg6, i1 %a
 ; CHECK-NEXT:    v_accvgpr_write_b32 a17, s29
 ; CHECK-NEXT:    v_accvgpr_write_b32 a18, s30
 ; CHECK-NEXT:    v_accvgpr_write_b32 a19, s31
-; CHECK-NEXT:    v_accvgpr_write_b32 a24, s21
-; CHECK-NEXT:    v_accvgpr_write_b32 a25, s22
 ; CHECK-NEXT:    s_mov_b64 s[60:61], 0
 ; CHECK-NEXT:    s_mov_b64 s[58:59], 0
 ; CHECK-NEXT:    s_mov_b64 s[56:57], 0
@@ -104,6 +101,8 @@ define amdgpu_kernel void @reserved_wwm_vgpr_not_in_alloc_order(i32 %arg6, i1 %a
 ; CHECK-NEXT:    s_mov_b32 s62, s28
 ; CHECK-NEXT:    s_mov_b32 s63, s28
 ; CHECK-NEXT:    s_mov_b32 s65, s28
+; CHECK-NEXT:    v_accvgpr_write_b32 a24, s44
+; CHECK-NEXT:    v_accvgpr_write_b32 a25, s22
 ; CHECK-NEXT:  .LBB0_1: ; %bbl97
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    s_and_b64 s[52:53], s[52:53], exec
@@ -123,6 +122,7 @@ define amdgpu_kernel void @reserved_wwm_vgpr_not_in_alloc_order(i32 %arg6, i1 %a
 ; CHECK-NEXT:    s_and_b64 s[52:53], s[58:59], exec
 ; CHECK-NEXT:    s_mov_b64 s[44:45], s[54:55]
 ; CHECK-NEXT:    v_mov_b32_e32 v4, 0
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_cselect_b32 s52, s11, 0
 ; CHECK-NEXT:    s_cselect_b32 s53, s10, 0
 ; CHECK-NEXT:    s_cselect_b32 s54, s9, 0
