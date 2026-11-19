@@ -49,8 +49,6 @@
 
 using namespace llvm;
 
-static mc::RegisterMCToolOptions MOF;
-
 static cl::OptionCategory MCCategory("MC Options");
 
 static cl::opt<std::string> InputFilename(cl::Positional,
@@ -397,7 +395,8 @@ int main(int argc, char **argv) {
 
   cl::HideUnrelatedOptions({&MCCategory, &getColorCategory()});
   cl::LibraryOptionsContext LibraryOptions;
-  cl::parseCommandLineOptions(LibraryOptions, ArrayRef(argv, argc),
+  cl::parseCommandLineOptions(LibraryOptions, mc::getToolOptions(),
+                              ArrayRef(argv, argc),
                               "llvm machine code playground\n");
 
   if (TimeTrace)
@@ -414,7 +413,6 @@ int main(int argc, char **argv) {
   });
 
   MCTargetOptions MCOptions = mc::getMCTargetOptions(LibraryOptions);
-  MCOptions.LibraryOptions = &LibraryOptions;
   MCOptions.CompressDebugSections = CompressDebugSections.getValue();
   MCOptions.ShowMCInst = ShowInst;
   MCOptions.AsmVerbose = true;

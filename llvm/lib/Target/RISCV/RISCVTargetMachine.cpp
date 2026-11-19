@@ -72,6 +72,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVInsertVSETVLILegacyPass(*PR);
   initializeRISCVInsertReadWriteCSRLegacyPass(*PR);
   initializeRISCVInsertWriteVXRMLegacyPass(*PR);
+  initializeRISCVLandingPadSetupLegacyPass(*PR);
   initializeRISCVDAGToDAGISelLegacyPass(*PR);
   initializeRISCVMoveMergeLegacyPass(*PR);
   initializeRISCVPushPopOptLegacyPass(*PR);
@@ -112,6 +113,8 @@ RISCVTargetMachine::RISCVTargetMachine(const Target &T, const Triple &TT,
       TLOF(createTLOF(TT)) {
   initAsmInfo();
 
+  LLT::setUseExtended(true);
+
   // RISC-V supports the MachineOutliner.
   setMachineOutliner(true);
   setSupportsDefaultOutlining(true);
@@ -127,25 +130,34 @@ RISCVTargetMachine::RISCVTargetMachine(const Target &T, const Triple &TT,
 
 const RISCVSubtarget *
 RISCVTargetMachine::getSubtargetImpl(const Function &F) const {
-  Attribute CPUAttr = F.getFnAttribute("target-cpu");
-  Attribute TuneAttr = F.getFnAttribute("tune-cpu");
-  Attribute FSAttr = F.getFnAttribute("target-features");
+  AttributeSet FnAttrs = F.getAttributes().getFnAttrs();
+  const Module *M = F.getParent();
+  if (const RISCVSubtarget *ST = LastSubtarget.lookup(FnAttrs, M))
+    return ST;
 
-  std::string CPU =
-      CPUAttr.isValid() ? CPUAttr.getValueAsString().str() : TargetCPU;
-  std::string TuneCPU =
-      TuneAttr.isValid() ? TuneAttr.getValueAsString().str() : CPU;
-  std::string FS =
-      FSAttr.isValid() ? FSAttr.getValueAsString().str() : TargetFS;
+  SubtargetAttrs Attrs;
+  Attrs.CPU = FnAttrs.getAttribute("target-cpu");
+  Attrs.TuneCPU = FnAttrs.getAttribute("tune-cpu");
+  Attrs.FS = FnAttrs.getAttribute("target-features");
+  Attrs.VScaleRange = FnAttrs.getAttribute(Attribute::VScaleRange);
+
+  if (const RISCVSubtarget *ST = LastSubtarget.lookup(FnAttrs, M, Attrs))
+    return ST;
+
+  StringRef CPU =
+      Attrs.CPU.isValid() ? Attrs.CPU.getValueAsString() : TargetCPU;
+  StringRef TuneCPU =
+      Attrs.TuneCPU.isValid() ? Attrs.TuneCPU.getValueAsString() : CPU;
+  StringRef FS = Attrs.FS.isValid() ? Attrs.FS.getValueAsString() : TargetFS;
 
   unsigned RVVBitsMin = CLOpts.v_vector_bits_min.value_or(-1);
   unsigned RVVBitsMax = CLOpts.v_vector_bits_max.value_or(0);
 
-  Attribute VScaleRangeAttr = F.getFnAttribute(Attribute::VScaleRange);
-  if (VScaleRangeAttr.isValid()) {
+  if (Attrs.VScaleRange.isValid()) {
     if (!CLOpts.v_vector_bits_min)
-      RVVBitsMin = VScaleRangeAttr.getVScaleRangeMin() * RISCV::RVVBitsPerBlock;
-    std::optional<unsigned> VScaleMax = VScaleRangeAttr.getVScaleRangeMax();
+      RVVBitsMin =
+          Attrs.VScaleRange.getVScaleRangeMin() * RISCV::RVVBitsPerBlock;
+    std::optional<unsigned> VScaleMax = Attrs.VScaleRange.getVScaleRangeMax();
     if (VScaleMax.has_value() && !CLOpts.v_vector_bits_max)
       RVVBitsMax = *VScaleMax * RISCV::RVVBitsPerBlock;
   }
@@ -186,6 +198,7 @@ RISCVTargetMachine::getSubtargetImpl(const Function &F) const {
     I = std::make_unique<RISCVSubtarget>(
         TargetTriple, CPU, TuneCPU, FS, ABIName, RVVBitsMin, RVVBitsMax, *this);
   }
+  LastSubtarget.set(FnAttrs, M, Attrs, I.get());
   return I.get();
 }
 
