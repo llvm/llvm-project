@@ -4888,6 +4888,9 @@ void X86FrameLowering::spillFPBP(MachineFunction &MF) const {
     MI = *(std::prev(TermMI));
 
     while (MI != ME) {
+      MI = skipDebugInstructionsForward(MI, ME, /*SkipPseudoOp=*/false);
+      if (MI == ME)
+        break;
       // Skip frame setup/destroy instructions.
       // Skip Invoke (call inside try block) instructions.
       // Skip instructions handled by target.
@@ -4931,6 +4934,13 @@ void X86FrameLowering::spillFPBP(MachineFunction &MF) const {
           BPLive = true;
 
         DefMI = MI++;
+        // Frame-index debug values are later resolved SP-relative without
+        // accounting for the temporary pushes, so keep them outside the
+        // save/restore range.
+        while (MI != ME && MI->isDebugInstr() &&
+               none_of(MI->operands(),
+                       [](const MachineOperand &MO) { return MO.isFI(); }))
+          ++MI;
       } while ((MI != ME) &&
                (FPLive || BPLive ||
                 isFPBPAccess(*MI, FP, BP, TRI, AccessFP, AccessBP)));
