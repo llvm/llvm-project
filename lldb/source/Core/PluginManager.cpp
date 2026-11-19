@@ -2703,13 +2703,21 @@ static llvm::Error SetInstrumentationRuntimeEnabledInDebugger(
   if (!report_missing_processes)
     return errors;
 
+  // Make it clear that nothing was changed. The debugger domain only affects
+  // alive processes.
+  llvm::StringRef action = enable ? "enabled" : "disabled";
   if (!found_targets)
     errors = llvm::joinErrors(
-        std::move(errors), llvm::createStringError("debugger has no targets"));
+        std::move(errors),
+        llvm::createStringErrorV(
+            "debugger has no targets; the plugin was not {0} in any process",
+            action));
   else if (!found_alive_process)
     errors = llvm::joinErrors(
         std::move(errors),
-        llvm::createStringError("no alive processes in debugger"));
+        llvm::createStringErrorV("debugger has no alive processes; the plugin "
+                                 "was not {0} in any process",
+                                 action));
 
   return errors;
 }
@@ -2776,12 +2784,18 @@ llvm::Error PluginManager::SetInstrumentationRuntimePluginEnabled(
     if (auto E = instrumentation_runtime_ty.takeError())
       return E;
 
+    // Make it clear that nothing was changed. The target domain only affects
+    // the target's alive process.
+    llvm::StringRef action = enable ? "enabled" : "disabled";
     if (!target)
-      return llvm::createStringError("no target is selected");
+      return llvm::createStringErrorV(
+          "there is no current target; the plugin was not {0} in any process",
+          action);
     ProcessSP process_sp = target->GetProcessSP();
     if (!process_sp || !process_sp->IsAlive())
-      return llvm::createStringError(
-          "failed to find alive process for selected target");
+      return llvm::createStringErrorV(
+          "target has no alive process; the plugin was not {0} in any process",
+          action);
     return process_sp->SetInstrumentationRuntimeEnabled(
         *instrumentation_runtime_ty, enable);
   }
