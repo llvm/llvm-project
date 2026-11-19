@@ -2989,13 +2989,15 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
                                   Depth + 1))
         return I;
 
-      if ((DemandedMask & fcNegative) == DemandedMask) {
+      if ((DemandedMask & fcNegative) == DemandedMask &&
+          CI->getArgOperand(1) != ConstantFP::get(VTy, -1.0)) {
         // Roundabout way of replacing with fneg(fabs)
         CI->setOperand(1, ConstantFP::get(VTy, -1.0));
         return I;
       }
 
-      if ((DemandedMask & fcPositive) == DemandedMask) {
+      if ((DemandedMask & fcPositive) == DemandedMask &&
+          CI->getArgOperand(1) != ConstantFP::getZero(VTy)) {
         // Roundabout way of replacing with fabs
         CI->setOperand(1, ConstantFP::getZero(VTy));
         return I;
@@ -3017,13 +3019,15 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       if (FMF.noNaNs())
         KnownSign.knownNot(fcNan);
 
-      if (KnownSign.getSignBit() == false) {
+      if (KnownSign.getSignBit() == false &&
+          CI->getArgOperand(1) != ConstantFP::getZero(VTy)) {
         CI->dropUBImplyingAttrsAndMetadata();
         CI->setOperand(1, ConstantFP::getZero(VTy));
         return I;
       }
 
-      if (KnownSign.getSignBit() == true) {
+      if (KnownSign.getSignBit() == true &&
+          CI->getArgOperand(1) != ConstantFP::get(VTy, -1.0)) {
         CI->dropUBImplyingAttrsAndMetadata();
         CI->setOperand(1, ConstantFP::get(VTy, -1.0));
         return I;

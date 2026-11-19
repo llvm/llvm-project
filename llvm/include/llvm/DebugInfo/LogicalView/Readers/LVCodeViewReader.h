@@ -113,7 +113,6 @@ class LLVM_ABI LVCodeViewReader final : public LVBinaryReader {
   // Pathname to executable image.
   std::string ExePath;
 
-  LVOffset CurrentOffset = 0;
   int32_t CurrentModule = -1;
 
   using RelocMapTy = DenseMap<const llvm::object::coff_section *,

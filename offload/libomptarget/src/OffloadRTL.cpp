@@ -138,6 +138,9 @@ void deinitRuntime() {
     std::scoped_lock<std::mutex> TeardownLock(getTeardownMutex());
     delete PM;
     PM = nullptr;
+#ifdef OMPT_SUPPORT
+    llvm::omp::target::ompt::disconnectLibrary();
+#endif
   }
 
   RefCount--;
