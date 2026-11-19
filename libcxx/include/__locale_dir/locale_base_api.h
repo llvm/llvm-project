@@ -143,7 +143,9 @@
 #    include <__cstddef/size_t.h>
 #    include <__utility/forward.h>
 #    include <ctype.h>
-#    include <langinfo.h>
+#    if defined(_LIBCPP_BUILDING_LIBRARY)
+#      include <langinfo.h>
+#    endif
 #    include <string.h>
 #    include <time.h>
 #    if _LIBCPP_HAS_WIDE_CHARACTERS

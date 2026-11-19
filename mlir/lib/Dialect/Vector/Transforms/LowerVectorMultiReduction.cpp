@@ -266,7 +266,8 @@ public:
       Value vectorMask = maskableOp.getMaskingOp().getMask();
       auto maskCastedType = VectorType::get(
           vectorShape,
-          llvm::cast<VectorType>(vectorMask.getType()).getElementType());
+          llvm::cast<VectorType>(vectorMask.getType()).getElementType(),
+          scalableDims);
       newVectorMask = vector::ShapeCastOp::create(rewriter, loc, maskCastedType,
                                                   vectorMask);
     }

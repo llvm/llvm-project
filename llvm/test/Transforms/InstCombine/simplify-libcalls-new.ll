@@ -632,7 +632,7 @@ define void @size_returning_aligned_update_test() {
 ; HOTCOLD-LABEL: @new_alloc_token()
 define void @new_alloc_token() {
   ;; Attribute cold converted to __hot_cold_t cold value.
-  ; HOTCOLD: @_Znwm12__hot_cold_t(i64 10, i8 [[COLD]]), !alloc_token ![[ALLOC_TOKEN:[0-9]+]]
+  ; HOTCOLD: @_Znwm12__hot_cold_t(i64 10, i8 [[COLD]]) #{{[0-9]+}}, !alloc_token ![[ALLOC_TOKEN:[0-9]+]]
   %call = call ptr @_Znwm(i64 10) #0, !alloc_token !0
   call void @dummy(ptr %call)
   ret void

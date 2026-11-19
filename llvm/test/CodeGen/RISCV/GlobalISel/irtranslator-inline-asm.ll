@@ -25,8 +25,8 @@ define i32 @test_single_register_output() nounwind {
   ; CHECK-LABEL: name: test_single_register_output
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   INLINEASM &"", attdialect, regdef:GPRNoX0, def %0
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY %0
-  ; CHECK-NEXT:   $x10 = COPY [[COPY]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY %0
+  ; CHECK-NEXT:   $x10 = COPY [[COPY]](i32)
   ; CHECK-NEXT:   PseudoRET implicit $x10
   %1 = tail call i32 asm "", "=r"() nounwind
   ret i32 %1
@@ -36,10 +36,10 @@ define i32 @test_multiple_registers_output() nounwind {
   ; CHECK-LABEL: name: test_multiple_registers_output
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   INLINEASM &"", attdialect, regdef:GPRNoX0, def %0, regdef:GPRNoX0, def %1
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY %0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY %1
-  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[COPY1]]
-  ; CHECK-NEXT:   $x10 = COPY [[ADD]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY %0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY %1
+  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(i32) = G_ADD [[COPY]], [[COPY1]]
+  ; CHECK-NEXT:   $x10 = COPY [[ADD]](i32)
   ; CHECK-NEXT:   PseudoRET implicit $x10
   %1 = tail call { i32, i32 } asm "", "=r,=r"() nounwind
   %asmresult = extractvalue { i32, i32 } %1, 0
@@ -52,8 +52,8 @@ define i32 @test_specific_register_output_trunc() nounwind {
   ; CHECK-LABEL: name: test_specific_register_output_trunc
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   INLINEASM &"mov ${0:w}, 7", attdialect, regdef, implicit-def $x10
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
-  ; CHECK-NEXT:   $x10 = COPY [[COPY]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $x10
+  ; CHECK-NEXT:   $x10 = COPY [[COPY]](i32)
   ; CHECK-NEXT:   PseudoRET implicit $x10
   %1 = tail call i32 asm "mov ${0:w}, 7", "={x10}"() nounwind
   ret i32 %1
@@ -66,10 +66,10 @@ define zeroext i8 @test_register_output_trunc(ptr %src) nounwind {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
   ; CHECK-NEXT:   INLINEASM &"mov ${0:w}, 32", attdialect, regdef:GPRNoX0, def %1
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY %1
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY1]](s32)
-  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[TRUNC]](s8)
-  ; CHECK-NEXT:   $x10 = COPY [[ZEXT]](s32)
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY %1
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i8) = G_TRUNC [[COPY1]](i32)
+  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[TRUNC]](i8)
+  ; CHECK-NEXT:   $x10 = COPY [[ZEXT]](i32)
   ; CHECK-NEXT:   PseudoRET implicit $x10
   %1 = tail call i8 asm "mov ${0:w}, 32", "=r"() nounwind
   ret i8 %1
@@ -79,10 +79,10 @@ define i32 @asm_multiple_registers_early_clobber() nounwind {
   ; CHECK-LABEL: name: asm_multiple_registers_early_clobber
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   INLINEASM &"", attdialect, regdef-ec:GPRNoX0, def early-clobber %0, regdef-ec:GPRNoX0, def early-clobber %1
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY %0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY %1
-  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[COPY1]]
-  ; CHECK-NEXT:   $x10 = COPY [[ADD]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY %0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY %1
+  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(i32) = G_ADD [[COPY]], [[COPY1]]
+  ; CHECK-NEXT:   $x10 = COPY [[ADD]](i32)
   ; CHECK-NEXT:   PseudoRET implicit $x10
   %1 = tail call { i32, i32 } asm "", "=&r,=&r"() nounwind
   %asmresult = extractvalue { i32, i32 } %1, 0
@@ -107,8 +107,8 @@ define void @test_input_register_pointer(ptr %p) {
 define void @test_input_register_imm() {
   ; CHECK-LABEL: name: test_input_register_imm
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 42
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gprnox0 = COPY [[C]](s32)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 42
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gprnox0 = COPY [[C]](i32)
   ; CHECK-NEXT:   INLINEASM &"mov x0, $0", sideeffect attdialect, reguse:GPRNoX0, [[COPY]]
   ; CHECK-NEXT:   PseudoRET
   call void asm sideeffect "mov x0, $0", "r"(i32 42)
@@ -118,9 +118,9 @@ define void @test_input_register_imm() {
 define i32 @test_boolean_imm_ext() {
   ; CHECK-LABEL: name: test_boolean_imm_ext
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 1
   ; CHECK-NEXT:   INLINEASM &"#TEST 42 + ${0:c} - .\0A\09", sideeffect mayload attdialect, imm, 1
-  ; CHECK-NEXT:   $x10 = COPY [[C]](s32)
+  ; CHECK-NEXT:   $x10 = COPY [[C]](i32)
   ; CHECK-NEXT:   PseudoRET implicit $x10
   tail call void asm sideeffect "#TEST 42 + ${0:c} - .\0A\09", "i"(i1 true)
   ret i32 1
@@ -163,10 +163,10 @@ define zeroext i8 @test_input_register(ptr %src) nounwind {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gprnox0 = COPY [[COPY]](p0)
   ; CHECK-NEXT:   INLINEASM &"", attdialect, regdef:GPRNoX0, def %1, reguse:GPRNoX0, [[COPY1]]
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY %1
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY2]](s32)
-  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[TRUNC]](s8)
-  ; CHECK-NEXT:   $x10 = COPY [[ZEXT]](s32)
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY %1
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i8) = G_TRUNC [[COPY2]](i32)
+  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[TRUNC]](i8)
+  ; CHECK-NEXT:   $x10 = COPY [[ZEXT]](i32)
   ; CHECK-NEXT:   PseudoRET implicit $x10
   %1 = tail call i8 asm "", "=r,r"(ptr %src) nounwind
   ret i8 %1
@@ -179,8 +179,8 @@ define i32 @test_memory_constraint(ptr %a) nounwind {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
   ; CHECK-NEXT:   INLINEASM &"ldr $0, $1", mayload attdialect, regdef:GPRNoX0, def %1, mem:m, [[COPY]](p0)
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY %1
-  ; CHECK-NEXT:   $x10 = COPY [[COPY1]](s32)
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY %1
+  ; CHECK-NEXT:   $x10 = COPY [[COPY1]](i32)
   ; CHECK-NEXT:   PseudoRET implicit $x10
   %1 = tail call i32 asm "ldr $0, $1", "=r,*m"(ptr elementtype(i32) %a)
   ret i32 %1
@@ -189,14 +189,14 @@ define i32 @test_memory_constraint(ptr %a) nounwind {
 define i16 @test_anyext_input() {
   ; CHECK-LABEL: name: test_anyext_input
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 1
-  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[C]](s16)
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gprnox0 = COPY [[ANYEXT]](s32)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i16) = G_CONSTANT i16 1
+  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[C]](i16)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gprnox0 = COPY [[ANYEXT]](i32)
   ; CHECK-NEXT:   INLINEASM &"", sideeffect attdialect, regdef:GPRNoX0, def %0, reguse:GPRNoX0, [[COPY]]
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY %0
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
-  ; CHECK-NEXT:   [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[TRUNC]](s16)
-  ; CHECK-NEXT:   $x10 = COPY [[ANYEXT1]](s32)
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY %0
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[COPY1]](i32)
+  ; CHECK-NEXT:   [[ANYEXT1:%[0-9]+]]:_(i32) = G_ANYEXT [[TRUNC]](i16)
+  ; CHECK-NEXT:   $x10 = COPY [[ANYEXT1]](i32)
   ; CHECK-NEXT:   PseudoRET implicit $x10
   %1 = call i16 asm sideeffect "", "=r,r"(i16 1)
   ret i16 %1
@@ -205,14 +205,14 @@ define i16 @test_anyext_input() {
 define i16 @test_anyext_input_with_matching_constraint() {
   ; CHECK-LABEL: name: test_anyext_input_with_matching_constraint
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 1
-  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[C]](s16)
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gprnox0 = COPY [[ANYEXT]](s32)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i16) = G_CONSTANT i16 1
+  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[C]](i16)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gprnox0 = COPY [[ANYEXT]](i32)
   ; CHECK-NEXT:   INLINEASM &"", sideeffect attdialect, regdef:GPRNoX0, def %0, reguse tiedto:$0, [[COPY]](tied-def 3)
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY %0
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
-  ; CHECK-NEXT:   [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[TRUNC]](s16)
-  ; CHECK-NEXT:   $x10 = COPY [[ANYEXT1]](s32)
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY %0
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[COPY1]](i32)
+  ; CHECK-NEXT:   [[ANYEXT1:%[0-9]+]]:_(i32) = G_ANYEXT [[TRUNC]](i16)
+  ; CHECK-NEXT:   $x10 = COPY [[ANYEXT1]](i32)
   ; CHECK-NEXT:   PseudoRET implicit $x10
   %1 = call i16 asm sideeffect "", "=r,0"(i16 1)
   ret i16 %1
@@ -222,10 +222,11 @@ define float @test_multiple_register_outputs_same() #0 {
   ; CHECK-LABEL: name: test_multiple_register_outputs_same
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   INLINEASM &"mov $0, #0; mov $1, #0", attdialect, regdef:GPRNoX0, def %0, regdef:GPRNoX0, def %1
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY %0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY %1
-  ; CHECK-NEXT:   [[FADD:%[0-9]+]]:_(s32) = G_FADD [[COPY]], [[COPY1]]
-  ; CHECK-NEXT:   $x10 = COPY [[FADD]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(f32) = COPY %0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(f32) = COPY %1
+  ; CHECK-NEXT:   [[FADD:%[0-9]+]]:_(f32) = G_FADD [[COPY]], [[COPY1]]
+  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(i32) = G_BITCAST [[FADD]](f32)
+  ; CHECK-NEXT:   $x10 = COPY [[BITCAST]](i32)
   ; CHECK-NEXT:   PseudoRET implicit $x10
   %1 = call { float, float } asm "mov $0, #0; mov $1, #0", "=r,=r"()
   %asmresult = extractvalue { float, float } %1, 0
