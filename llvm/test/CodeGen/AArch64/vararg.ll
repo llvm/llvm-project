@@ -43,14 +43,12 @@ define i64 @vararg(...) #0 {
 ; CHECK-SD-NEXT:    str w8, [x29, #20]
 ; CHECK-SD-NEXT:    mov w8, #-64 // =0xffffffc0
 ; CHECK-SD-NEXT:    str w8, [x29, #16]
+; CHECK-SD-NEXT:    add x8, sp, #128
+; CHECK-SD-NEXT:    str x8, [x29, #8]
+; CHECK-SD-NEXT:    sub x8, x29, #8
+; CHECK-SD-NEXT:    str x8, [x29]
 ; CHECK-SD-NEXT:    add x8, x29, #16
 ; CHECK-SD-NEXT:    stur x8, [x29, #-8]
-; CHECK-SD-NEXT:    mov x8, sp
-; CHECK-SD-NEXT:    add x8, x8, #128
-; CHECK-SD-NEXT:    str x8, [x29, #8]
-; CHECK-SD-NEXT:    sub x8, x29, #72
-; CHECK-SD-NEXT:    add x8, x8, #64
-; CHECK-SD-NEXT:    str x8, [x29]
 ; CHECK-SD-NEXT:    mov w8, #1 // =0x1
 ; CHECK-SD-NEXT:    mov w0, w8
 ; CHECK-SD-NEXT:    .cfi_def_cfa wsp, 224
@@ -135,14 +133,12 @@ define i64 @vararg_many_gpr(i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6
 ; CHECK-SD-NEXT:    str w8, [x29, #20]
 ; CHECK-SD-NEXT:    mov w8, #-8 // =0xfffffff8
 ; CHECK-SD-NEXT:    str w8, [x29, #16]
+; CHECK-SD-NEXT:    add x8, sp, #128
+; CHECK-SD-NEXT:    str x8, [x29, #8]
+; CHECK-SD-NEXT:    sub x8, x29, #8
+; CHECK-SD-NEXT:    str x8, [x29]
 ; CHECK-SD-NEXT:    add x8, x29, #16
 ; CHECK-SD-NEXT:    stur x8, [x29, #-8]
-; CHECK-SD-NEXT:    mov x8, sp
-; CHECK-SD-NEXT:    add x8, x8, #128
-; CHECK-SD-NEXT:    str x8, [x29, #8]
-; CHECK-SD-NEXT:    sub x8, x29, #16
-; CHECK-SD-NEXT:    add x8, x8, #8
-; CHECK-SD-NEXT:    str x8, [x29]
 ; CHECK-SD-NEXT:    mov w8, #1 // =0x1
 ; CHECK-SD-NEXT:    mov w0, w8
 ; CHECK-SD-NEXT:    .cfi_def_cfa wsp, 160
@@ -220,14 +216,12 @@ define i64 @vararg_many_float(float %a1, float %a2, float %a3, float %a4, float 
 ; CHECK-SD-NEXT:    str w8, [x29, #20]
 ; CHECK-SD-NEXT:    mov w8, #-64 // =0xffffffc0
 ; CHECK-SD-NEXT:    str w8, [x29, #16]
+; CHECK-SD-NEXT:    add x8, sp, #16
+; CHECK-SD-NEXT:    str x8, [x29, #8]
+; CHECK-SD-NEXT:    add x8, sp, #88
+; CHECK-SD-NEXT:    str x8, [x29]
 ; CHECK-SD-NEXT:    add x8, x29, #16
 ; CHECK-SD-NEXT:    stur x8, [x29, #-8]
-; CHECK-SD-NEXT:    mov x8, sp
-; CHECK-SD-NEXT:    add x8, x8, #16
-; CHECK-SD-NEXT:    str x8, [x29, #8]
-; CHECK-SD-NEXT:    add x8, sp, #24
-; CHECK-SD-NEXT:    add x8, x8, #64
-; CHECK-SD-NEXT:    str x8, [x29]
 ; CHECK-SD-NEXT:    mov w8, #1 // =0x1
 ; CHECK-SD-NEXT:    mov w0, w8
 ; CHECK-SD-NEXT:    .cfi_def_cfa wsp, 112
@@ -310,14 +304,12 @@ define i64 @gpr1_fpr1(i32 %i, float %f, ...) #0 {
 ; CHECK-SD-NEXT:    str w8, [x29, #20]
 ; CHECK-SD-NEXT:    mov w8, #-56 // =0xffffffc8
 ; CHECK-SD-NEXT:    str w8, [x29, #16]
+; CHECK-SD-NEXT:    add x8, sp, #112
+; CHECK-SD-NEXT:    str x8, [x29, #8]
+; CHECK-SD-NEXT:    sub x8, x29, #8
+; CHECK-SD-NEXT:    str x8, [x29]
 ; CHECK-SD-NEXT:    add x8, x29, #16
 ; CHECK-SD-NEXT:    stur x8, [x29, #-8]
-; CHECK-SD-NEXT:    mov x8, sp
-; CHECK-SD-NEXT:    add x8, x8, #112
-; CHECK-SD-NEXT:    str x8, [x29, #8]
-; CHECK-SD-NEXT:    sub x8, x29, #64
-; CHECK-SD-NEXT:    add x8, x8, #56
-; CHECK-SD-NEXT:    str x8, [x29]
 ; CHECK-SD-NEXT:    mov w8, #1 // =0x1
 ; CHECK-SD-NEXT:    mov w0, w8
 ; CHECK-SD-NEXT:    .cfi_def_cfa wsp, 192

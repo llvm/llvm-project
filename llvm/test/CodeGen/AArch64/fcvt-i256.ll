@@ -37,12 +37,12 @@ define float @s256_to_f32(i256 %val) nounwind {
 ; CHECK-NEXT:    orr x14, x12, x13
 ; CHECK-NEXT:    add w9, w9, #128
 ; CHECK-NEXT:    cmp x14, #0
-; CHECK-NEXT:    csel w15, w8, w9, ne
+; CHECK-NEXT:    csel w14, w8, w9, ne
 ; CHECK-NEXT:    mov w8, #256 // =0x100
-; CHECK-NEXT:    sub w9, w8, w15
+; CHECK-NEXT:    sub w9, w8, w14
 ; CHECK-NEXT:    mov w8, #255 // =0xff
 ; CHECK-NEXT:    cmp w9, #25
-; CHECK-NEXT:    sub w8, w8, w15
+; CHECK-NEXT:    sub w8, w8, w14
 ; CHECK-NEXT:    b.lt .LBB0_10
 ; CHECK-NEXT:  // %bb.2: // %itofp-if-then4
 ; CHECK-NEXT:    cmp w9, #26
@@ -51,42 +51,41 @@ define float @s256_to_f32(i256 %val) nounwind {
 ; CHECK-NEXT:    cmp w9, #25
 ; CHECK-NEXT:    b.eq .LBB0_12
 ; CHECK-NEXT:  // %bb.4: // %itofp-sw-default
-; CHECK-NEXT:    mov w14, #230 // =0xe6
+; CHECK-NEXT:    mov w15, #230 // =0xe6
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    add x17, sp, #64
-; CHECK-NEXT:    sub w14, w14, w15
+; CHECK-NEXT:    sub w15, w15, w14
 ; CHECK-NEXT:    stp x10, x11, [sp, #64]
-; CHECK-NEXT:    ubfx x16, x14, #6, #2
+; CHECK-NEXT:    add x18, sp, #32
+; CHECK-NEXT:    ubfx x16, x15, #6, #2
 ; CHECK-NEXT:    stp x12, x13, [sp, #80]
 ; CHECK-NEXT:    add x16, x17, x16, lsl #3
 ; CHECK-NEXT:    stp q0, q0, [sp, #96]
 ; CHECK-NEXT:    ldp x16, x17, [x16]
 ; CHECK-NEXT:    stp x10, x11, [sp, #32]
-; CHECK-NEXT:    add w10, w15, #26
-; CHECK-NEXT:    mov x15, sp
+; CHECK-NEXT:    add w10, w14, #26
 ; CHECK-NEXT:    stp q0, q0, [sp]
-; CHECK-NEXT:    ubfx x18, x10, #6, #2
-; CHECK-NEXT:    add x15, x15, #32
+; CHECK-NEXT:    ubfx x14, x10, #6, #2
 ; CHECK-NEXT:    stp x12, x13, [sp, #48]
 ; CHECK-NEXT:    lsl x17, x17, #1
-; CHECK-NEXT:    sub x11, x15, x18, lsl #3
+; CHECK-NEXT:    sub x11, x18, x14, lsl #3
 ; CHECK-NEXT:    and x18, x10, #0x3f
 ; CHECK-NEXT:    ldp x13, x12, [x11, #16]
-; CHECK-NEXT:    ldp x11, x15, [x11]
-; CHECK-NEXT:    orr x12, x15, x12
+; CHECK-NEXT:    ldp x11, x14, [x11]
+; CHECK-NEXT:    orr x12, x14, x12
 ; CHECK-NEXT:    orr x11, x11, x13
-; CHECK-NEXT:    lsr x13, x15, #1
+; CHECK-NEXT:    lsr x13, x14, #1
 ; CHECK-NEXT:    orr x12, x11, x12
-; CHECK-NEXT:    mvn w15, w10
+; CHECK-NEXT:    mvn w14, w10
 ; CHECK-NEXT:    lsr x11, x11, #1
 ; CHECK-NEXT:    lsl x10, x12, x10
-; CHECK-NEXT:    lsr x12, x13, x15
+; CHECK-NEXT:    lsr x12, x13, x14
 ; CHECK-NEXT:    eor x13, x18, #0x3f
-; CHECK-NEXT:    and x15, x14, #0x3f
+; CHECK-NEXT:    and x14, x15, #0x3f
 ; CHECK-NEXT:    lsr x11, x11, x13
-; CHECK-NEXT:    eor x13, x15, #0x3f
+; CHECK-NEXT:    eor x13, x14, #0x3f
 ; CHECK-NEXT:    orr x10, x10, x12
-; CHECK-NEXT:    lsr x12, x16, x14
+; CHECK-NEXT:    lsr x12, x16, x15
 ; CHECK-NEXT:    lsl x13, x17, x13
 ; CHECK-NEXT:    orr x10, x10, x11
 ; CHECK-NEXT:    cmp x10, #0
@@ -125,12 +124,11 @@ define float @s256_to_f32(i256 %val) nounwind {
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB0_10: // %itofp-if-else
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    sub w9, w15, #232
-; CHECK-NEXT:    add x11, sp, #128
-; CHECK-NEXT:    ubfx x12, x9, #6, #2
+; CHECK-NEXT:    sub w9, w14, #232
 ; CHECK-NEXT:    str x10, [sp, #160]
-; CHECK-NEXT:    add x10, x11, #32
-; CHECK-NEXT:    sub x10, x10, x12, lsl #3
+; CHECK-NEXT:    ubfx x11, x9, #6, #2
+; CHECK-NEXT:    add x10, sp, #160
+; CHECK-NEXT:    sub x10, x10, x11, lsl #3
 ; CHECK-NEXT:    stp q0, q0, [sp, #128]
 ; CHECK-NEXT:    ldr x10, [x10]
 ; CHECK-NEXT:    lsl x10, x10, x9
@@ -169,12 +167,12 @@ define float @u256_to_f32(i256 %val) nounwind {
 ; CHECK-NEXT:    orr x10, x2, x3
 ; CHECK-NEXT:    add w9, w9, #128
 ; CHECK-NEXT:    cmp x10, #0
-; CHECK-NEXT:    csel w11, w8, w9, ne
+; CHECK-NEXT:    csel w10, w8, w9, ne
 ; CHECK-NEXT:    mov w8, #256 // =0x100
-; CHECK-NEXT:    sub w9, w8, w11
+; CHECK-NEXT:    sub w9, w8, w10
 ; CHECK-NEXT:    mov w8, #255 // =0xff
 ; CHECK-NEXT:    cmp w9, #25
-; CHECK-NEXT:    sub w8, w8, w11
+; CHECK-NEXT:    sub w8, w8, w10
 ; CHECK-NEXT:    b.lt .LBB1_10
 ; CHECK-NEXT:  // %bb.2: // %itofp-if-then4
 ; CHECK-NEXT:    cmp w9, #26
@@ -183,21 +181,20 @@ define float @u256_to_f32(i256 %val) nounwind {
 ; CHECK-NEXT:    cmp w9, #25
 ; CHECK-NEXT:    b.eq .LBB1_12
 ; CHECK-NEXT:  // %bb.4: // %itofp-sw-default
-; CHECK-NEXT:    mov w10, #230 // =0xe6
+; CHECK-NEXT:    mov w11, #230 // =0xe6
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    add x13, sp, #64
-; CHECK-NEXT:    sub w10, w10, w11
-; CHECK-NEXT:    add w11, w11, #26
-; CHECK-NEXT:    mov x14, sp
-; CHECK-NEXT:    ubfx x12, x10, #6, #2
-; CHECK-NEXT:    ubfx x15, x11, #6, #2
-; CHECK-NEXT:    add x14, x14, #32
+; CHECK-NEXT:    sub w11, w11, w10
+; CHECK-NEXT:    add w10, w10, #26
+; CHECK-NEXT:    add x15, sp, #32
+; CHECK-NEXT:    ubfx x12, x11, #6, #2
+; CHECK-NEXT:    ubfx x14, x10, #6, #2
 ; CHECK-NEXT:    stp x0, x1, [sp, #64]
-; CHECK-NEXT:    and x18, x11, #0x3f
-; CHECK-NEXT:    add x12, x13, x12, lsl #3
 ; CHECK-NEXT:    stp x2, x3, [sp, #80]
-; CHECK-NEXT:    sub x14, x14, x15, lsl #3
+; CHECK-NEXT:    and x18, x10, #0x3f
+; CHECK-NEXT:    add x12, x13, x12, lsl #3
 ; CHECK-NEXT:    stp q0, q0, [sp, #96]
+; CHECK-NEXT:    sub x14, x15, x14, lsl #3
 ; CHECK-NEXT:    ldp x12, x13, [x12]
 ; CHECK-NEXT:    stp x0, x1, [sp, #32]
 ; CHECK-NEXT:    stp q0, q0, [sp]
@@ -209,20 +206,20 @@ define float @u256_to_f32(i256 %val) nounwind {
 ; CHECK-NEXT:    orr x14, x14, x16
 ; CHECK-NEXT:    lsr x16, x17, #1
 ; CHECK-NEXT:    orr x15, x14, x15
-; CHECK-NEXT:    mvn w17, w11
+; CHECK-NEXT:    mvn w17, w10
 ; CHECK-NEXT:    lsr x14, x14, #1
-; CHECK-NEXT:    lsl x11, x15, x11
+; CHECK-NEXT:    lsl x10, x15, x10
 ; CHECK-NEXT:    lsr x15, x16, x17
 ; CHECK-NEXT:    eor x16, x18, #0x3f
-; CHECK-NEXT:    and x17, x10, #0x3f
+; CHECK-NEXT:    and x17, x11, #0x3f
 ; CHECK-NEXT:    lsr x14, x14, x16
-; CHECK-NEXT:    lsr x10, x12, x10
+; CHECK-NEXT:    lsr x11, x12, x11
 ; CHECK-NEXT:    eor x16, x17, #0x3f
-; CHECK-NEXT:    orr x11, x11, x15
+; CHECK-NEXT:    orr x10, x10, x15
 ; CHECK-NEXT:    lsl x12, x13, x16
-; CHECK-NEXT:    orr x11, x11, x14
-; CHECK-NEXT:    cmp x11, #0
-; CHECK-NEXT:    orr x10, x12, x10
+; CHECK-NEXT:    orr x10, x10, x14
+; CHECK-NEXT:    cmp x10, #0
+; CHECK-NEXT:    orr x10, x12, x11
 ; CHECK-NEXT:    cset w11, ne
 ; CHECK-NEXT:    orr x0, x10, x11
 ; CHECK-NEXT:  .LBB1_5: // %itofp-sw-epilog
@@ -250,12 +247,11 @@ define float @u256_to_f32(i256 %val) nounwind {
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB1_10: // %itofp-if-else
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    sub w9, w11, #232
-; CHECK-NEXT:    add x10, sp, #128
-; CHECK-NEXT:    ubfx x11, x9, #6, #2
-; CHECK-NEXT:    add x10, x10, #32
+; CHECK-NEXT:    sub w9, w10, #232
+; CHECK-NEXT:    add x11, sp, #160
+; CHECK-NEXT:    ubfx x10, x9, #6, #2
 ; CHECK-NEXT:    str x0, [sp, #160]
-; CHECK-NEXT:    sub x10, x10, x11, lsl #3
+; CHECK-NEXT:    sub x10, x11, x10, lsl #3
 ; CHECK-NEXT:    stp q0, q0, [sp, #128]
 ; CHECK-NEXT:    ldr x10, [x10]
 ; CHECK-NEXT:    lsl x10, x10, x9
@@ -284,22 +280,22 @@ define double @s256_to_f64(i256 %val) nounwind {
 ; CHECK-NEXT:    asr x8, x3, #63
 ; CHECK-NEXT:    eor x9, x0, x8
 ; CHECK-NEXT:    eor x10, x1, x8
-; CHECK-NEXT:    eor x11, x3, x8
-; CHECK-NEXT:    subs x13, x9, x8
+; CHECK-NEXT:    eor x12, x3, x8
+; CHECK-NEXT:    subs x11, x9, x8
 ; CHECK-NEXT:    eor x9, x2, x8
 ; CHECK-NEXT:    sbcs x10, x10, x8
-; CHECK-NEXT:    clz x14, x13
-; CHECK-NEXT:    sbcs x12, x9, x8
+; CHECK-NEXT:    clz x14, x11
+; CHECK-NEXT:    sbcs x13, x9, x8
 ; CHECK-NEXT:    add w14, w14, #64
-; CHECK-NEXT:    sbcs x11, x11, x8
-; CHECK-NEXT:    clz x8, x12
+; CHECK-NEXT:    sbcs x12, x12, x8
+; CHECK-NEXT:    clz x8, x13
 ; CHECK-NEXT:    add w8, w8, #64
-; CHECK-NEXT:    clz x9, x11
+; CHECK-NEXT:    clz x9, x12
 ; CHECK-NEXT:    csel w8, w9, w8, ne
 ; CHECK-NEXT:    clz x9, x10
 ; CHECK-NEXT:    cmp x10, #0
 ; CHECK-NEXT:    csel w9, w9, w14, ne
-; CHECK-NEXT:    orr x14, x12, x11
+; CHECK-NEXT:    orr x14, x13, x12
 ; CHECK-NEXT:    add w9, w9, #128
 ; CHECK-NEXT:    cmp x14, #0
 ; CHECK-NEXT:    csel w14, w8, w9, ne
@@ -320,53 +316,52 @@ define double @s256_to_f64(i256 %val) nounwind {
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    add x17, sp, #64
 ; CHECK-NEXT:    sub w15, w15, w14
-; CHECK-NEXT:    stp x13, x10, [sp, #64]
-; CHECK-NEXT:    mov x0, sp
+; CHECK-NEXT:    stp x11, x10, [sp, #64]
+; CHECK-NEXT:    add x1, sp, #32
 ; CHECK-NEXT:    ubfx x16, x15, #6, #2
-; CHECK-NEXT:    stp x12, x11, [sp, #80]
-; CHECK-NEXT:    add x0, x0, #32
+; CHECK-NEXT:    stp x13, x12, [sp, #80]
 ; CHECK-NEXT:    add x16, x17, x16, lsl #3
 ; CHECK-NEXT:    stp q0, q0, [sp, #96]
 ; CHECK-NEXT:    ldp x18, x17, [x16, #8]
 ; CHECK-NEXT:    ldr x16, [x16]
-; CHECK-NEXT:    stp x13, x10, [sp, #32]
-; CHECK-NEXT:    add w13, w14, #55
+; CHECK-NEXT:    stp x11, x10, [sp, #32]
+; CHECK-NEXT:    add w11, w14, #55
 ; CHECK-NEXT:    sub w14, w14, #202
-; CHECK-NEXT:    ubfx x1, x13, #6, #2
+; CHECK-NEXT:    ubfx x0, x11, #6, #2
 ; CHECK-NEXT:    stp q0, q0, [sp]
-; CHECK-NEXT:    and x2, x13, #0x3f
-; CHECK-NEXT:    stp x12, x11, [sp, #48]
-; CHECK-NEXT:    sub x10, x0, x1, lsl #3
+; CHECK-NEXT:    and x2, x11, #0x3f
+; CHECK-NEXT:    stp x13, x12, [sp, #48]
+; CHECK-NEXT:    sub x10, x1, x0, lsl #3
 ; CHECK-NEXT:    and x1, x15, #0x3f
 ; CHECK-NEXT:    eor x1, x1, #0x3f
-; CHECK-NEXT:    ldp x12, x11, [x10, #16]
+; CHECK-NEXT:    ldp x13, x12, [x10, #16]
 ; CHECK-NEXT:    ldp x10, x0, [x10]
-; CHECK-NEXT:    orr x11, x0, x11
-; CHECK-NEXT:    orr x10, x10, x12
-; CHECK-NEXT:    lsl x12, x17, #1
+; CHECK-NEXT:    orr x12, x0, x12
+; CHECK-NEXT:    orr x10, x10, x13
+; CHECK-NEXT:    lsl x13, x17, #1
 ; CHECK-NEXT:    lsr x17, x0, #1
-; CHECK-NEXT:    orr x11, x10, x11
-; CHECK-NEXT:    mvn w0, w13
+; CHECK-NEXT:    orr x12, x10, x12
+; CHECK-NEXT:    mvn w0, w11
 ; CHECK-NEXT:    lsr x10, x10, #1
-; CHECK-NEXT:    lsl x11, x11, x13
-; CHECK-NEXT:    lsl x12, x12, x14
-; CHECK-NEXT:    lsr x13, x17, x0
+; CHECK-NEXT:    lsl x11, x12, x11
+; CHECK-NEXT:    lsl x13, x13, x14
+; CHECK-NEXT:    lsr x12, x17, x0
 ; CHECK-NEXT:    eor x17, x2, #0x3f
 ; CHECK-NEXT:    lsl x0, x18, #1
 ; CHECK-NEXT:    lsr x10, x10, x17
 ; CHECK-NEXT:    lsr x17, x18, x15
-; CHECK-NEXT:    orr x11, x11, x13
-; CHECK-NEXT:    lsr x13, x16, x15
+; CHECK-NEXT:    orr x11, x11, x12
+; CHECK-NEXT:    lsr x12, x16, x15
 ; CHECK-NEXT:    lsl x14, x0, x1
 ; CHECK-NEXT:    orr x10, x11, x10
 ; CHECK-NEXT:    cmp x10, #0
-; CHECK-NEXT:    orr x10, x17, x12
-; CHECK-NEXT:    orr x11, x14, x13
+; CHECK-NEXT:    orr x11, x14, x12
+; CHECK-NEXT:    orr x10, x17, x13
 ; CHECK-NEXT:    cset w12, ne
-; CHECK-NEXT:    orr x13, x11, x12
+; CHECK-NEXT:    orr x11, x11, x12
 ; CHECK-NEXT:  .LBB2_5: // %itofp-sw-epilog
-; CHECK-NEXT:    ubfx w11, w13, #2, #1
-; CHECK-NEXT:    orr x11, x13, x11
+; CHECK-NEXT:    ubfx w12, w11, #2, #1
+; CHECK-NEXT:    orr x11, x11, x12
 ; CHECK-NEXT:    adds x11, x11, #1
 ; CHECK-NEXT:    adcs x10, x10, xzr
 ; CHECK-NEXT:    extr x12, x10, x11, #2
@@ -394,20 +389,19 @@ define double @s256_to_f64(i256 %val) nounwind {
 ; CHECK-NEXT:  .LBB2_8: // %itofp-if-else
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    sub w9, w14, #203
-; CHECK-NEXT:    stp x13, x10, [sp, #160]
-; CHECK-NEXT:    add x10, sp, #128
-; CHECK-NEXT:    ubfx x13, x9, #6, #2
-; CHECK-NEXT:    stp x12, x11, [sp, #176]
-; CHECK-NEXT:    add x10, x10, #32
-; CHECK-NEXT:    sub x10, x10, x13, lsl #3
+; CHECK-NEXT:    stp x11, x10, [sp, #160]
+; CHECK-NEXT:    ubfx x10, x9, #6, #2
+; CHECK-NEXT:    add x11, sp, #160
+; CHECK-NEXT:    stp x13, x12, [sp, #176]
+; CHECK-NEXT:    sub x10, x11, x10, lsl #3
 ; CHECK-NEXT:    stp q0, q0, [sp, #128]
 ; CHECK-NEXT:    ldr x10, [x10]
 ; CHECK-NEXT:    lsl x10, x10, x9
 ; CHECK-NEXT:    lsr x11, x10, #32
 ; CHECK-NEXT:    b .LBB2_6
 ; CHECK-NEXT:  .LBB2_9: // %itofp-sw-bb
-; CHECK-NEXT:    extr x10, x10, x13, #63
-; CHECK-NEXT:    lsl x13, x13, #1
+; CHECK-NEXT:    extr x10, x10, x11, #63
+; CHECK-NEXT:    lsl x11, x11, #1
 ; CHECK-NEXT:    b .LBB2_5
   %result = sitofp i256 %val to double
   ret double %result
@@ -454,15 +448,14 @@ define double @u256_to_f64(i256 %val) nounwind {
 ; CHECK-NEXT:    add w15, w10, #55
 ; CHECK-NEXT:    sub w11, w11, w10
 ; CHECK-NEXT:    add x13, sp, #64
-; CHECK-NEXT:    mov x16, sp
+; CHECK-NEXT:    ubfx x16, x15, #6, #2
 ; CHECK-NEXT:    ubfx x12, x11, #6, #2
-; CHECK-NEXT:    ubfx x17, x15, #6, #2
-; CHECK-NEXT:    add x16, x16, #32
+; CHECK-NEXT:    add x17, sp, #32
 ; CHECK-NEXT:    stp x0, x1, [sp, #64]
+; CHECK-NEXT:    stp x2, x3, [sp, #80]
+; CHECK-NEXT:    sub x16, x17, x16, lsl #3
 ; CHECK-NEXT:    sub w10, w10, #202
 ; CHECK-NEXT:    add x12, x13, x12, lsl #3
-; CHECK-NEXT:    stp x2, x3, [sp, #80]
-; CHECK-NEXT:    sub x16, x16, x17, lsl #3
 ; CHECK-NEXT:    stp q0, q0, [sp, #96]
 ; CHECK-NEXT:    ldp x14, x13, [x12, #8]
 ; CHECK-NEXT:    ldr x12, [x12]
@@ -520,12 +513,11 @@ define double @u256_to_f64(i256 %val) nounwind {
 ; CHECK-NEXT:  .LBB3_9: // %itofp-if-else
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    sub w9, w10, #203
-; CHECK-NEXT:    add x10, sp, #128
-; CHECK-NEXT:    ubfx x11, x9, #6, #2
-; CHECK-NEXT:    add x10, x10, #32
+; CHECK-NEXT:    add x11, sp, #160
+; CHECK-NEXT:    ubfx x10, x9, #6, #2
 ; CHECK-NEXT:    stp x0, x1, [sp, #160]
 ; CHECK-NEXT:    stp x2, x3, [sp, #176]
-; CHECK-NEXT:    sub x10, x10, x11, lsl #3
+; CHECK-NEXT:    sub x10, x11, x10, lsl #3
 ; CHECK-NEXT:    stp q0, q0, [sp, #128]
 ; CHECK-NEXT:    ldr x10, [x10]
 ; CHECK-NEXT:    lsl x10, x10, x9
@@ -586,13 +578,12 @@ define i256 @f32_to_s256(float %val) nounwind {
 ; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-SD-NEXT:    sub w10, w10, #150
 ; CHECK-SD-NEXT:    str x11, [sp, #32]
-; CHECK-SD-NEXT:    mov x11, sp
-; CHECK-SD-NEXT:    ubfx x12, x10, #6, #2
+; CHECK-SD-NEXT:    ubfx x11, x10, #6, #2
+; CHECK-SD-NEXT:    add x12, sp, #32
 ; CHECK-SD-NEXT:    str xzr, [sp, #56]
-; CHECK-SD-NEXT:    add x11, x11, #32
 ; CHECK-SD-NEXT:    and x16, x10, #0x3f
 ; CHECK-SD-NEXT:    mvn w2, w10
-; CHECK-SD-NEXT:    sub x11, x11, x12, lsl #3
+; CHECK-SD-NEXT:    sub x11, x12, x11, lsl #3
 ; CHECK-SD-NEXT:    eor x16, x16, #0x3f
 ; CHECK-SD-NEXT:    stur q0, [sp, #40]
 ; CHECK-SD-NEXT:    stp q0, q0, [sp]
@@ -804,13 +795,12 @@ define i256 @f32_to_u256(float %val) nounwind {
 ; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-SD-NEXT:    sub w9, w9, #150
 ; CHECK-SD-NEXT:    str x8, [sp, #32]
-; CHECK-SD-NEXT:    mov x8, sp
-; CHECK-SD-NEXT:    ubfx x10, x9, #6, #2
+; CHECK-SD-NEXT:    ubfx x8, x9, #6, #2
+; CHECK-SD-NEXT:    add x10, sp, #32
 ; CHECK-SD-NEXT:    str xzr, [sp, #56]
-; CHECK-SD-NEXT:    add x8, x8, #32
 ; CHECK-SD-NEXT:    and x13, x9, #0x3f
 ; CHECK-SD-NEXT:    mvn w17, w9
-; CHECK-SD-NEXT:    sub x8, x8, x10, lsl #3
+; CHECK-SD-NEXT:    sub x8, x10, x8, lsl #3
 ; CHECK-SD-NEXT:    eor x13, x13, #0x3f
 ; CHECK-SD-NEXT:    stur q0, [sp, #40]
 ; CHECK-SD-NEXT:    stp q0, q0, [sp]
@@ -936,13 +926,12 @@ define i256 @f64_to_s256(double %val) nounwind {
 ; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-SD-NEXT:    sub x10, x10, #1075
 ; CHECK-SD-NEXT:    str x11, [sp, #32]
-; CHECK-SD-NEXT:    mov x11, sp
-; CHECK-SD-NEXT:    ubfx x12, x10, #6, #2
+; CHECK-SD-NEXT:    ubfx x11, x10, #6, #2
+; CHECK-SD-NEXT:    add x12, sp, #32
 ; CHECK-SD-NEXT:    str xzr, [sp, #56]
-; CHECK-SD-NEXT:    add x11, x11, #32
 ; CHECK-SD-NEXT:    and x16, x10, #0x3f
 ; CHECK-SD-NEXT:    mvn w2, w10
-; CHECK-SD-NEXT:    sub x11, x11, x12, lsl #3
+; CHECK-SD-NEXT:    sub x11, x12, x11, lsl #3
 ; CHECK-SD-NEXT:    eor x16, x16, #0x3f
 ; CHECK-SD-NEXT:    stur q0, [sp, #40]
 ; CHECK-SD-NEXT:    stp q0, q0, [sp]
@@ -1152,13 +1141,12 @@ define i256 @f64_to_u256(double %val) nounwind {
 ; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-SD-NEXT:    sub x8, x8, #1075
 ; CHECK-SD-NEXT:    str x9, [sp, #32]
-; CHECK-SD-NEXT:    mov x9, sp
-; CHECK-SD-NEXT:    ubfx x10, x8, #6, #2
+; CHECK-SD-NEXT:    ubfx x9, x8, #6, #2
+; CHECK-SD-NEXT:    add x10, sp, #32
 ; CHECK-SD-NEXT:    str xzr, [sp, #56]
-; CHECK-SD-NEXT:    add x9, x9, #32
 ; CHECK-SD-NEXT:    and x13, x8, #0x3f
 ; CHECK-SD-NEXT:    mvn w17, w8
-; CHECK-SD-NEXT:    sub x9, x9, x10, lsl #3
+; CHECK-SD-NEXT:    sub x9, x10, x9, lsl #3
 ; CHECK-SD-NEXT:    eor x13, x13, #0x3f
 ; CHECK-SD-NEXT:    stur q0, [sp, #40]
 ; CHECK-SD-NEXT:    stp q0, q0, [sp]
@@ -1293,13 +1281,12 @@ define i256 @f32_to_s256_sat(float %val) nounwind {
 ; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-SD-NEXT:    sub w10, w10, #150
 ; CHECK-SD-NEXT:    str x11, [sp, #32]
-; CHECK-SD-NEXT:    mov x11, sp
-; CHECK-SD-NEXT:    ubfx x12, x10, #6, #2
+; CHECK-SD-NEXT:    ubfx x11, x10, #6, #2
+; CHECK-SD-NEXT:    add x12, sp, #32
 ; CHECK-SD-NEXT:    str xzr, [sp, #56]
-; CHECK-SD-NEXT:    add x11, x11, #32
 ; CHECK-SD-NEXT:    and x16, x10, #0x3f
 ; CHECK-SD-NEXT:    mvn w2, w10
-; CHECK-SD-NEXT:    sub x11, x11, x12, lsl #3
+; CHECK-SD-NEXT:    sub x11, x12, x11, lsl #3
 ; CHECK-SD-NEXT:    eor x16, x16, #0x3f
 ; CHECK-SD-NEXT:    stur q0, [sp, #40]
 ; CHECK-SD-NEXT:    stp q0, q0, [sp]
@@ -1544,13 +1531,12 @@ define i256 @f32_to_u256_sat(float %val) nounwind {
 ; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-SD-NEXT:    sub w8, w8, #150
 ; CHECK-SD-NEXT:    str x9, [sp, #32]
-; CHECK-SD-NEXT:    mov x9, sp
-; CHECK-SD-NEXT:    ubfx x10, x8, #6, #2
+; CHECK-SD-NEXT:    ubfx x9, x8, #6, #2
+; CHECK-SD-NEXT:    add x10, sp, #32
 ; CHECK-SD-NEXT:    str xzr, [sp, #56]
-; CHECK-SD-NEXT:    add x9, x9, #32
 ; CHECK-SD-NEXT:    and x13, x8, #0x3f
 ; CHECK-SD-NEXT:    mvn w17, w8
-; CHECK-SD-NEXT:    sub x9, x9, x10, lsl #3
+; CHECK-SD-NEXT:    sub x9, x10, x9, lsl #3
 ; CHECK-SD-NEXT:    eor x13, x13, #0x3f
 ; CHECK-SD-NEXT:    stur q0, [sp, #40]
 ; CHECK-SD-NEXT:    stp q0, q0, [sp]
@@ -1710,13 +1696,12 @@ define i256 @f64_to_s256_sat(double %val) nounwind {
 ; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-SD-NEXT:    sub x10, x10, #1075
 ; CHECK-SD-NEXT:    str x11, [sp, #32]
-; CHECK-SD-NEXT:    mov x11, sp
-; CHECK-SD-NEXT:    ubfx x12, x10, #6, #2
+; CHECK-SD-NEXT:    ubfx x11, x10, #6, #2
+; CHECK-SD-NEXT:    add x12, sp, #32
 ; CHECK-SD-NEXT:    str xzr, [sp, #56]
-; CHECK-SD-NEXT:    add x11, x11, #32
 ; CHECK-SD-NEXT:    and x16, x10, #0x3f
 ; CHECK-SD-NEXT:    mvn w2, w10
-; CHECK-SD-NEXT:    sub x11, x11, x12, lsl #3
+; CHECK-SD-NEXT:    sub x11, x12, x11, lsl #3
 ; CHECK-SD-NEXT:    eor x16, x16, #0x3f
 ; CHECK-SD-NEXT:    stur q0, [sp, #40]
 ; CHECK-SD-NEXT:    stp q0, q0, [sp]
@@ -1957,13 +1942,12 @@ define i256 @f64_to_u256_sat(double %val) nounwind {
 ; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-SD-NEXT:    sub x8, x8, #1075
 ; CHECK-SD-NEXT:    str x9, [sp, #32]
-; CHECK-SD-NEXT:    mov x9, sp
-; CHECK-SD-NEXT:    ubfx x10, x8, #6, #2
+; CHECK-SD-NEXT:    ubfx x9, x8, #6, #2
+; CHECK-SD-NEXT:    add x10, sp, #32
 ; CHECK-SD-NEXT:    str xzr, [sp, #56]
-; CHECK-SD-NEXT:    add x9, x9, #32
 ; CHECK-SD-NEXT:    and x13, x8, #0x3f
 ; CHECK-SD-NEXT:    mvn w17, w8
-; CHECK-SD-NEXT:    sub x9, x9, x10, lsl #3
+; CHECK-SD-NEXT:    sub x9, x10, x9, lsl #3
 ; CHECK-SD-NEXT:    eor x13, x13, #0x3f
 ; CHECK-SD-NEXT:    stur q0, [sp, #40]
 ; CHECK-SD-NEXT:    stp q0, q0, [sp]
