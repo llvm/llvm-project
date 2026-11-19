@@ -2541,6 +2541,7 @@ public:
 
   void enterCall(CallBase &CB) {
     Function *Callee = CB.getCalledFunction();
+    Function *Oracle = getSpeculativeLoadOracle(CB);
     // TODO: handle initializes
     auto &CalleeArgs = CurrentFrame->CalleeArgs;
     assert(CalleeArgs.empty() &&
@@ -2659,7 +2660,7 @@ public:
       handleAttributes(ArgTy, ArgVal, AttrsAtCallSite, AttrsAtCallee);
 
       // Handle captures
-      if (ArgVal.isPointer() && !CB.isByValArgument(I)) {
+      if (ArgVal.isPointer() && !CB.isByValArgument(I) && (!Oracle || I >= 3)) {
         CaptureInfo CI =
             AttrsAtCallSite.getCaptureInfo() & AttrsAtCallee.getCaptureInfo();
         if (CI != CaptureInfo::all()) {
@@ -2672,7 +2673,7 @@ public:
 
     CurrentFrame->ResolvedCallee = Callee;
     ArrayRef<AnyValue> Args = CalleeArgs;
-    if (Function *Oracle = getSpeculativeLoadOracle(CB)) {
+    if (Oracle) {
       Args = Args.drop_front(3);
       for (auto [Arg, ArgVal] :
            zip_equal(Oracle->args(), MutableArrayRef(CalleeArgs).drop_front(3)))
