@@ -33,10 +33,10 @@ static void promoteNameAllocas(ArrayRef<CallInst *> Intrinsics) {
     auto *LI = dyn_cast<LoadInst>(CI->getArgOperand(4));
     if (!LI)
       continue;
-    auto *AI = cast<AllocaInst>(LI->getPointerOperand());
-    if (!Seen.insert(AI).second)
+    auto *AI = dyn_cast<AllocaInst>(LI->getPointerOperand());
+    if (AI && !Seen.insert(AI).second)
       continue;
-    if (AI->isStaticAlloca() && isAllocaPromotable(AI))
+    if (AI && AI->isStaticAlloca() && isAllocaPromotable(AI))
       Allocas[CI->getFunction()].push_back(AI);
     else
       reportFatalInternalError("unresolvable SPIR-V resource name");
