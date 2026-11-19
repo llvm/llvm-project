@@ -1016,8 +1016,8 @@ std::shared_ptr<PathDiagnosticEventPiece>
 PathDiagnosticCallPiece::getCallEnterWithinCallerEvent() const {
   if (!callEnterWithin.asLocation().isValid())
     return nullptr;
-  if (Callee->isImplicit() || !Callee->hasBody())
-    return nullptr;
+  // if (Callee->isImplicit() || !Callee->hasBody())
+  //   return nullptr;
   if (const auto *MD = dyn_cast<CXXMethodDecl>(Callee))
     if (MD->isDefaulted())
       return nullptr;

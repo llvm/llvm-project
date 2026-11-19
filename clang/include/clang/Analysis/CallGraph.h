@@ -66,12 +66,6 @@ public:
     TraverseDecl(D);
   }
 
-  /// Determine if a declaration should be included in the graph.
-  static bool includeInGraph(const Decl *D);
-
-  /// Determine if a declaration should be included in the graph for the
-  /// purposes of being a callee. This is similar to includeInGraph except
-  /// it permits declarations, not just definitions.
   static bool includeCalleeInGraph(const Decl *D);
 
   /// Lookup the node for the given declaration.
@@ -115,7 +109,7 @@ public:
   bool VisitFunctionDecl(FunctionDecl *FD) override {
     // We skip function template definitions, as their semantics is
     // only determined when they are instantiated.
-    if (includeInGraph(FD) && FD->isThisDeclarationADefinition()) {
+    if (FD->isThisDeclarationADefinition() && includeCalleeInGraph(FD)) {
       // Add all blocks declared inside this function to the graph.
       addNodesForBlocks(FD);
       // If this function has external linkage, anything could call it.
@@ -128,7 +122,7 @@ public:
 
   /// Part of recursive declaration visitation.
   bool VisitObjCMethodDecl(ObjCMethodDecl *MD) override {
-    if (includeInGraph(MD)) {
+    if (MD->hasBody()) {
       addNodesForBlocks(MD);
       addNodeForDecl(MD, true);
     }
