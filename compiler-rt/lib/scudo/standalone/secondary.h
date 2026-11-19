@@ -324,6 +324,10 @@ public:
       Entry.MemMap.setMemoryPermission(Entry.CommitBase, Entry.CommitSize,
                                        MAP_NOACCESS);
       Entry.Flags |= CachedBlock::NoAccess;
+    } else if (Zero) {
+      // Make sure to zero outside of the lock.
+      memset(reinterpret_cast<void *>(Entry.CommitBase), 0, Entry.CommitSize);
+      Entry.Flags |= CachedBlock::Zeroed;
     }
 
     // Usually only one entry will be evicted from the cache.
@@ -351,11 +355,6 @@ public:
         // just unmap it.
         unmapCallBack(Entry.MemMap);
         break;
-      }
-
-      if (Zero && !Entry.isZero()) {
-        memset(reinterpret_cast<void *>(Entry.CommitBase), 0, Entry.CommitSize);
-        Entry.Flags |= CachedBlock::Zeroed;
       }
 
       if (!Config::getQuarantineDisabled() && Config::getQuarantineSize()) {
