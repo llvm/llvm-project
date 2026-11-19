@@ -1279,6 +1279,7 @@ add_header_macro(
   netinet/tcp.h
   DEPENDS
     .llvm-libc-macros.netinet_tcp_macros
+    .llvm-libc-types.struct_tcp_info
     .llvm_libc_common_h
 )
 
