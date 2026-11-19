@@ -117,6 +117,8 @@ static int PrintSupportedCPUs(std::string TargetStr, bool Tune = false) {
   llvm::Triple Triple(TargetStr);
 
   // RISC-V has different lists of names for -mcpu/-mtune and RV32/RV64.
+  // FIXME: Migrate other targets by using TargetInfo. This would fix similar
+  // issues like x86-32 vs x86-64.
   if (Triple.isRISCV()) {
     llvm::SmallVector<llvm::StringRef, 64> Values;
     if (Tune)
