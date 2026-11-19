@@ -2662,7 +2662,8 @@ def warn_unsequenced_mod_mod : Warning<
 def warn_unsequenced_mod_use : Warning<
   "unsequenced modification and access to %0">, InGroup<Unsequenced>;
 def warn_unsequenced_use_use_volatile : Warning<
-  "unsequenced accesses to volatile qualified %0">, InGroup<Unsequenced>;
+  "unsequenced accesses to volatile qualified %0">,
+  InGroup<UnsequencedVolatile>;
 
 def select_initialized_entity_kind : TextSubstitution<
   "%select{copying variable|copying parameter|initializing template parameter|"
@@ -8341,6 +8342,12 @@ def err_unexpected_interface : Error<
 def err_ref_non_value : Error<"%0 does not refer to a value">;
 def err_ref_vm_type : Error<
   "cannot refer to declaration with a variably modified type inside block">;
+def err_vm_type_from_enclosing_function : Error<
+  "variably modified type %0 cannot be used in a "
+  "%select{local class|block}1 because its size is evaluated in an "
+  "enclosing function">;
+def note_vm_type_size_evaluated_here : Note<
+  "size expression is evaluated here">;
 def err_ref_flexarray_type : Error<
   "cannot refer to declaration of structure variable with flexible array member "
   "inside block">;

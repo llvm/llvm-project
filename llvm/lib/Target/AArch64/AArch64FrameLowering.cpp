@@ -1005,11 +1005,6 @@ bool AArch64FrameLowering::enableWindowsCFIShrinkWrapping(
   if (F.hasFnAttribute(Attribute::Naked))
     return false;
 
-  // Dynamically realigned frames need stack-pointer recovery that is not yet
-  // supported by the split-range implementation.
-  if (Subtarget.getRegisterInfo()->hasStackRealignment(MF))
-    return false;
-
   // Signed return addresses need authentication-state handling across ranges
   // that is not yet implemented.
   if (MF.getInfo<AArch64FunctionInfo>()->getSignReturnAddressCondition() !=

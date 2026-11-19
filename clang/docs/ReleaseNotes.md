@@ -184,7 +184,7 @@ features cannot lower the translation-unit ABI level;
   * `-msmall-int-abi-compat=platform`: Compatible with platform ABI (and thus
     other compilers such as GCC), but not with old Clang-built objects. Does
     not extend in the caller and does not assume extension in the callee.
-  * `-msmall-int-abi-compat=clang`: Compatible with old Clang objects, but
+  * `-msmall-int-abi-compat=clang-23`: Compatible with old Clang objects, but
     potentially not the platform ABI. Extends in the caller and assumes
     extension in the callee.
   * `-msmall-int-abi-compat=both` (default): Compatible with both the platform
@@ -877,7 +877,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   (#GH227392)
 - Clang will now no longer assert or miscompile on a constructor that has more than 65535 base and member initializers. (#GH219366)
 
-- `-Wunsequenced` now diagnoses unsequenced volatile accesses.
+- `-Wunsequenced` now diagnoses unsequenced volatile accesses. This can be
+  disabled separately with `-Wno-unsequenced-volatile`.
 
 ### Improvements to Clang's time-trace
 
@@ -909,9 +910,11 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed an ICE that occurred when a structured binding pack is expanded outside the lambda where it was declared. (#GH214160)
 - Fixed a crash when a statement expression in the initializer of a new-expression starts with a loop or a label. (#GH175427)
 - Fixed a crash in an implicit assignment operator when a `noreturn` member or base `operator=` is followed by trivially copyable members. (#GH111612)
+- Fixed a crash when a block in a default member initializer captures `this` and the class is aggregate-initialized outside of its member functions. (#GH229323)
 - Fixed a bug where a stray closing curley brace in an OpenMP/OpenACC pragma could cause pragma parsing issues when inside of a member function. (#GH214195)
 - Fixed a bug where preprocessor directives following comments were not correctly recognized when using -C. (#GH48361)
 - Fixed a crash when declaring a member template within a local class inside an OpenMP region. (#GH216052)
+- Fixed a crash when a variably modified type whose size is evaluated in an enclosing function was used in a local class or a block. Such uses are now diagnosed, and a lambda now captures the size of such a type. (#GH55686)
 - Fixed a crash when an OpenMP `copyprivate` clause names a non-static data member that is not private in the
   enclosing context, which is now diagnosed, a data member inside a member function template, or a structured
   binding. (#GH217893)

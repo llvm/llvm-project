@@ -5820,19 +5820,19 @@ def msmall_int_abi_compat_EQ : Joined<["-"], "msmall-int-abi-compat=">,
   Group<m_Group>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"ABI compatibility for small integer arguments on X86: "
            "'platform' (High bits unspecified) | "
-           "'clang' (High bits zero/sign-extended) | "
+           "'clang-23' (High bits zero/sign-extended) | "
            "'both' (High bits extended in caller, "
            "extension not assumed in callee)">,
-  Values<"platform,clang,both">,
+  Values<"platform,clang-23,both">,
   NormalizedValuesScope<"CodeGenOptions::SmallIntABICompatKind">,
-  NormalizedValues<["Platform", "Clang", "Both"]>,
+  NormalizedValues<["Platform", "Clang23", "Both"]>,
   MarshallingInfoEnum<CodeGenOpts<"SmallIntABICompat">, "Both">,
   DocBrief<[{
 Specifies how small integer arguments are passed on the following platforms:
  * 32-bit x86 for operating systems other than Darwin and Playstation.
  * 64-bit x86 for operating systems other than Windows, Darwin and PlayStation.
 
-The value must be 'platform', 'clang', or 'both'. The default behavior is
+The value must be 'platform', 'clang-23', or 'both'. The default behavior is
 'both'.
 
 In the past, Clang passed promotable integer arguments (non-variadic arguments
@@ -5847,7 +5847,7 @@ If 'platform' is used, promotable integer arguments will not be extended by the
 caller. This is conformant with the platform psABI (such as the System V ABI),
 but may break compatibility with old Clang-built objects.
 
-If 'clang' is used, promotable integer arguments are extended by the caller,
+If 'clang-23' is used, promotable integer arguments are extended by the caller,
 and the callee assumes this extension has happend. This restores the previous
 (before version 24) behavior of Clang, but may be incompatible with other
 compilers like GCC following the platform ABI.
@@ -7392,6 +7392,11 @@ def mhexagon_scs_reg : Joined<["-"], "mscs-reg=">,
   HelpText<"Register holding the shadow call stack pointer: one of the "
            "callee-saved registers r16-r27, default r18 (Hexagon only). "
            "The chosen register must also be reserved with -ffixed-<reg>.">;
+def fhlx_vector_stack_limit_EQ : Joined<["-"], "fhlx-vector-stack-limit=">,
+  Group<m_Group>, Visibility<[ClangOption, CC1Option]>, MetaVarName<"<bytes>">,
+  HelpText<"Report an error if a function needs more than <bytes> bytes of "
+           "HLX vector stack (Hexagon only, requires -mhlx)">,
+  MarshallingInfoInt<CodeGenOpts<"HLXVectorStackLimit">, "UINT_MAX">;
 } // let Flags = [TargetSpecific]
 def mmemops : Flag<["-"], "mmemops">, Group<m_hexagon_Features_Group>,
   Visibility<[ClangOption, CC1Option]>,
