@@ -1118,3 +1118,167 @@ entry:
   %r = icmp sle i32 %s, %e
   ret i1 %r
 }
+
+define i1 @smax_plus_smin_first_split(i32 noundef %a, i32 noundef %b, i32 noundef %c, i32 noundef %d, i32 noundef %e) {
+; CHECK-LABEL: define i1 @smax_plus_smin_first_split
+; CHECK-SAME: (i32 noundef [[A:%.*]], i32 noundef [[B:%.*]], i32 noundef [[C:%.*]], i32 noundef [[D:%.*]], i32 noundef [[E:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[AC:%.*]] = add nsw i32 [[A]], [[C]]
+; CHECK-NEXT:    [[AC_E:%.*]] = icmp sle i32 [[AC]], [[E]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[AC_E]])
+; CHECK-NEXT:    [[AD:%.*]] = add nsw i32 [[A]], [[D]]
+; CHECK-NEXT:    [[AD_E:%.*]] = icmp sle i32 [[AD]], [[E]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[AD_E]])
+; CHECK-NEXT:    [[M1:%.*]] = call i32 @llvm.smin.i32(i32 [[A]], i32 [[B]])
+; CHECK-NEXT:    [[M2:%.*]] = call i32 @llvm.smax.i32(i32 [[C]], i32 [[D]])
+; CHECK-NEXT:    [[S:%.*]] = add nsw i32 [[M2]], [[M1]]
+; CHECK-NEXT:    ret i1 true
+;
+entry:
+  %ac = add nsw i32 %a, %c
+  %ac.e = icmp sle i32 %ac, %e
+  call void @llvm.assume(i1 %ac.e)
+  %ad = add nsw i32 %a, %d
+  %ad.e = icmp sle i32 %ad, %e
+  call void @llvm.assume(i1 %ad.e)
+  %m1 = call i32 @llvm.smin.i32(i32 %a, i32 %b)
+  %m2 = call i32 @llvm.smax.i32(i32 %c, i32 %d)
+  %s = add nsw i32 %m2, %m1
+  %r = icmp sle i32 %s, %e
+  ret i1 %r
+}
+
+define i1 @neg_smin_both_sides(i32 %a, i32 %b, i32 %e, i32 %f) {
+; CHECK-LABEL: define i1 @neg_smin_both_sides
+; CHECK-SAME: (i32 [[A:%.*]], i32 [[B:%.*]], i32 [[E:%.*]], i32 [[F:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[EA:%.*]] = sub nsw i32 [[E]], [[A]]
+; CHECK-NEXT:    [[EA_F:%.*]] = icmp sle i32 [[EA]], [[F]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[EA_F]])
+; CHECK-NEXT:    [[EB:%.*]] = sub nsw i32 [[E]], [[B]]
+; CHECK-NEXT:    [[EB_F:%.*]] = icmp sle i32 [[EB]], [[F]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[EB_F]])
+; CHECK-NEXT:    [[M:%.*]] = call i32 @llvm.smin.i32(i32 [[A]], i32 [[B]])
+; CHECK-NEXT:    [[S:%.*]] = sub nsw i32 [[E]], [[M]]
+; CHECK-NEXT:    ret i1 true
+;
+entry:
+  %ea = sub nsw i32 %e, %a
+  %ea.f = icmp sle i32 %ea, %f
+  call void @llvm.assume(i1 %ea.f)
+  %eb = sub nsw i32 %e, %b
+  %eb.f = icmp sle i32 %eb, %f
+  call void @llvm.assume(i1 %eb.f)
+  %m = call i32 @llvm.smin.i32(i32 %a, i32 %b)
+  %s = sub nsw i32 %e, %m
+  %r = icmp sle i32 %s, %f
+  ret i1 %r
+}
+
+define i1 @neg_smin_one_side(i32 %a, i32 %b, i32 %e, i32 %f) {
+; CHECK-LABEL: define i1 @neg_smin_one_side
+; CHECK-SAME: (i32 [[A:%.*]], i32 [[B:%.*]], i32 [[E:%.*]], i32 [[F:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[EA:%.*]] = sub nsw i32 [[E]], [[A]]
+; CHECK-NEXT:    [[EA_F:%.*]] = icmp sle i32 [[EA]], [[F]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[EA_F]])
+; CHECK-NEXT:    [[M:%.*]] = call i32 @llvm.smin.i32(i32 [[A]], i32 [[B]])
+; CHECK-NEXT:    [[S:%.*]] = sub nsw i32 [[E]], [[M]]
+; CHECK-NEXT:    [[R:%.*]] = icmp sle i32 [[S]], [[F]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+entry:
+  %ea = sub nsw i32 %e, %a
+  %ea.f = icmp sle i32 %ea, %f
+  call void @llvm.assume(i1 %ea.f)
+  %m = call i32 @llvm.smin.i32(i32 %a, i32 %b)
+  %s = sub nsw i32 %e, %m
+  %r = icmp sle i32 %s, %f
+  ret i1 %r
+}
+
+define i1 @neg_smax_one_side(i32 %a, i32 %b, i32 %e, i32 %f) {
+; CHECK-LABEL: define i1 @neg_smax_one_side
+; CHECK-SAME: (i32 [[A:%.*]], i32 [[B:%.*]], i32 [[E:%.*]], i32 [[F:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[EA:%.*]] = sub nsw i32 [[E]], [[A]]
+; CHECK-NEXT:    [[EA_F:%.*]] = icmp sle i32 [[EA]], [[F]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[EA_F]])
+; CHECK-NEXT:    [[M:%.*]] = call i32 @llvm.smax.i32(i32 [[A]], i32 [[B]])
+; CHECK-NEXT:    [[S:%.*]] = sub nsw i32 [[E]], [[M]]
+; CHECK-NEXT:    ret i1 true
+;
+entry:
+  %ea = sub nsw i32 %e, %a
+  %ea.f = icmp sle i32 %ea, %f
+  call void @llvm.assume(i1 %ea.f)
+  %m = call i32 @llvm.smax.i32(i32 %a, i32 %b)
+  %s = sub nsw i32 %e, %m
+  %r = icmp sle i32 %s, %f
+  ret i1 %r
+}
+
+define i1 @neg_smax_no_side(i32 %a, i32 %b, i32 %e, i32 %f) {
+; CHECK-LABEL: define i1 @neg_smax_no_side
+; CHECK-SAME: (i32 [[A:%.*]], i32 [[B:%.*]], i32 [[E:%.*]], i32 [[F:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[M:%.*]] = call i32 @llvm.smax.i32(i32 [[A]], i32 [[B]])
+; CHECK-NEXT:    [[S:%.*]] = sub nsw i32 [[E]], [[M]]
+; CHECK-NEXT:    [[R:%.*]] = icmp sle i32 [[S]], [[F]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+entry:
+  %m = call i32 @llvm.smax.i32(i32 %a, i32 %b)
+  %s = sub nsw i32 %e, %m
+  %r = icmp sle i32 %s, %f
+  ret i1 %r
+}
+
+define i1 @smax_twice_both_sides(i32 %a, i32 %b, i32 %e) {
+; CHECK-LABEL: define i1 @smax_twice_both_sides
+; CHECK-SAME: (i32 [[A:%.*]], i32 [[B:%.*]], i32 [[E:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[AA:%.*]] = add nsw i32 [[A]], [[A]]
+; CHECK-NEXT:    [[AA_E:%.*]] = icmp sle i32 [[AA]], [[E]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[AA_E]])
+; CHECK-NEXT:    [[BB:%.*]] = add nsw i32 [[B]], [[B]]
+; CHECK-NEXT:    [[BB_E:%.*]] = icmp sle i32 [[BB]], [[E]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[BB_E]])
+; CHECK-NEXT:    [[M:%.*]] = call i32 @llvm.smax.i32(i32 [[A]], i32 [[B]])
+; CHECK-NEXT:    [[S:%.*]] = add nsw i32 [[M]], [[M]]
+; CHECK-NEXT:    ret i1 true
+;
+entry:
+  %aa = add nsw i32 %a, %a
+  %aa.e = icmp sle i32 %aa, %e
+  call void @llvm.assume(i1 %aa.e)
+  %bb = add nsw i32 %b, %b
+  %bb.e = icmp sle i32 %bb, %e
+  call void @llvm.assume(i1 %bb.e)
+  %m = call i32 @llvm.smax.i32(i32 %a, i32 %b)
+  %s = add nsw i32 %m, %m
+  %r = icmp sle i32 %s, %e
+  ret i1 %r
+}
+
+define i1 @smax_twice_one_side(i32 %a, i32 %b, i32 %e) {
+; CHECK-LABEL: define i1 @smax_twice_one_side
+; CHECK-SAME: (i32 [[A:%.*]], i32 [[B:%.*]], i32 [[E:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[AA:%.*]] = add nsw i32 [[A]], [[A]]
+; CHECK-NEXT:    [[AA_E:%.*]] = icmp sle i32 [[AA]], [[E]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[AA_E]])
+; CHECK-NEXT:    [[M:%.*]] = call i32 @llvm.smax.i32(i32 [[A]], i32 [[B]])
+; CHECK-NEXT:    [[S:%.*]] = add nsw i32 [[M]], [[M]]
+; CHECK-NEXT:    [[R:%.*]] = icmp sle i32 [[S]], [[E]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+entry:
+  %aa = add nsw i32 %a, %a
+  %aa.e = icmp sle i32 %aa, %e
+  call void @llvm.assume(i1 %aa.e)
+  %m = call i32 @llvm.smax.i32(i32 %a, i32 %b)
+  %s = add nsw i32 %m, %m
+  %r = icmp sle i32 %s, %e
+  ret i1 %r
+}
