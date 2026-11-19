@@ -7351,30 +7351,35 @@ static SrcType getSrcType(SDValue Op, SelectionDAG &DAG, EVT VT,
   return SrcType::UNPACK;
 }
 
-SDValue widdenSrc(SDValue Op, SrcType SrcTy, EVT EltVT, EVT VT, EVT WidenVT,
-                  SelectionDAG &DAG, const TargetLowering &TLI) {
-  if (SrcTy == SrcType::NO_UNPACK || SrcTy == SrcType::CONST) {
-    // Widening is materialized with INSERT_SUBVECTOR / EXTRACT_SUBVECTOR.
-    // This avoid the assertion of `EltSize * 8 == EltVT.getFixedSizeInBits()`
-    // in SplitVecRes_INSERT_SUBVECTOR->TLI.getVectorSubVecPointer
-    if (!EltVT.getSizeInBits().isKnownMultipleOf(8) &&
-        TLI.getTypeAction(*DAG.getContext(), WidenVT) ==
-            TargetLowering::TypeSplitVector)
-      return SDValue();
+static bool canWidenSelectOperand(SDValue Op, SrcType SrcTy, EVT WidenVT,
+                                  const SelectionDAG &DAG) {
+  EVT VT = Op.getValueType();
+  if (SrcTy == SrcType::NORM_LOAD)
+    return cast<LoadSDNode>(Op)->isSimple() &&
+           DAG.getDataLayout().isLittleEndian() &&
+           WidenVT.getStoreSize() == VT.getStoreSize();
 
+  // WidenVector uses INSERT_SUBVECTOR, which cannot be split at a
+  // sub-byte element offset.
+  EVT EltVT = VT.getVectorElementType();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  return EltVT.getSizeInBits().isKnownMultipleOf(8) ||
+         TLI.getTypeAction(*DAG.getContext(), WidenVT) !=
+             TargetLowering::TypeSplitVector;
+}
+
+static SDValue widenSelectOperand(SDValue Op, SrcType SrcTy, EVT WidenVT,
+                                  SelectionDAG &DAG) {
+  if (SrcTy != SrcType::NORM_LOAD)
     return DAG.WidenVector(Op, SDLoc(Op));
-  } else if (SrcTy == SrcType::NORM_LOAD) {
-    auto *LD = cast<LoadSDNode>(Op);
-    if (LD->isSimple() && WidenVT.getStoreSize() == VT.getStoreSize()) {
-      SDValue NewLD =
-          DAG.getLoad(WidenVT, SDLoc(Op), LD->getChain(), LD->getBasePtr(),
-                      LD->getPointerInfo(), LD->getAlign(),
-                      LD->getMemOperand()->getFlags(), LD->getAAInfo());
-      DAG.ReplaceAllUsesOfValueWith(SDValue(LD, 1), NewLD.getValue(1));
-      return NewLD;
-    }
-  }
-  return SDValue();
+
+  auto *LD = cast<LoadSDNode>(Op);
+  SDValue NewLD =
+      DAG.getLoad(WidenVT, SDLoc(Op), LD->getChain(), LD->getBasePtr(),
+                  LD->getPointerInfo(), LD->getAlign(),
+                  LD->getMemOperand()->getFlags(), LD->getAAInfo());
+  DAG.ReplaceAllUsesOfValueWith(SDValue(LD, 1), NewLD.getValue(1));
+  return NewLD;
 }
 
 /// Try to convert
@@ -7408,20 +7413,20 @@ static SDValue castIntVectorSelect(SDNode *N, SelectionDAG &DAG,
   if (TrueTy == SrcType::UNPACK || FalseTy == SrcType::UNPACK)
     return SDValue();
 
-  // Widen vector to power of 2
-  if (needWiden) {
-    TrueVal = widdenSrc(TrueVal, TrueTy, EltVT, ResultVT, WidenVT, DAG, TLI);
-    if (TrueVal == SDValue())
-      return SDValue();
-
-    FalseVal = widdenSrc(FalseVal, FalseTy, EltVT, ResultVT, WidenVT, DAG, TLI);
-    if (FalseVal == SDValue())
-      return SDValue();
-  }
+  if (needWiden && (!canWidenSelectOperand(TrueVal, TrueTy, WidenVT, DAG) ||
+                    !canWidenSelectOperand(FalseVal, FalseTy, WidenVT, DAG)))
+    return SDValue();
 
   EVT NewVT = findWiderLegalIntVectorVT(DAG, TLI, WidenVT, N->getOpcode());
   if (NewVT == EVT())
     return SDValue();
+
+  // Widening a load redirects its chain users. Only do this once we know the
+  // original select will be replaced.
+  if (needWiden) {
+    TrueVal = widenSelectOperand(TrueVal, TrueTy, WidenVT, DAG);
+    FalseVal = widenSelectOperand(FalseVal, FalseTy, WidenVT, DAG);
+  }
 
   SDValue NewTrue = DAG.getBitcast(NewVT, TrueVal);
   SDValue NewFalse = DAG.getBitcast(NewVT, FalseVal);

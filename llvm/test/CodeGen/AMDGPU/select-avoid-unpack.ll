@@ -2587,6 +2587,146 @@ define void @v_select_v7i4_param(i1 %cond, <7 x i4> %x, ptr addrspace(3) %y) {
   store <7 x i4> %vMasked, ptr addrspace(3) %y, align 16
   ret void
 }
+
+define void @chain_v7i4(ptr addrspace(1) %pa, ptr addrspace(1) %pb, ptr addrspace(1) %out, i1 %c) {
+; SI-LABEL: chain_v7i4:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    s_mov_b32 s6, 0
+; SI-NEXT:    s_mov_b32 s7, 0xf000
+; SI-NEXT:    s_mov_b32 s4, s6
+; SI-NEXT:    s_mov_b32 s5, s6
+; SI-NEXT:    buffer_load_dword v7, v[0:1], s[4:7], 0 addr64
+; SI-NEXT:    buffer_load_dword v2, v[2:3], s[4:7], 0 addr64 glc
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    v_and_b32_e32 v3, 1, v6
+; SI-NEXT:    v_mov_b32_e32 v6, -1
+; SI-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v3
+; SI-NEXT:    buffer_store_dword v6, v[0:1], s[4:7], 0 addr64
+; SI-NEXT:    v_cndmask_b32_e32 v0, v2, v7, vcc
+; SI-NEXT:    buffer_store_dword v0, v[4:5], s[4:7], 0 addr64
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: chain_v7i4:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    flat_load_dword v7, v[0:1]
+; VI-NEXT:    flat_load_dword v2, v[2:3] glc
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_mov_b32_e32 v3, -1
+; VI-NEXT:    v_and_b32_e32 v6, 1, v6
+; VI-NEXT:    flat_store_dword v[0:1], v3
+; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v6
+; VI-NEXT:    v_mov_b32_e32 v8, 15
+; VI-NEXT:    v_lshrrev_b32_e32 v0, 20, v7
+; VI-NEXT:    v_lshrrev_b32_e32 v1, 20, v2
+; VI-NEXT:    v_lshlrev_b32_e32 v3, 4, v7
+; VI-NEXT:    v_lshlrev_b32_e32 v10, 4, v2
+; VI-NEXT:    v_lshlrev_b32_e32 v13, 12, v7
+; VI-NEXT:    v_lshlrev_b32_e32 v15, 12, v2
+; VI-NEXT:    v_bfe_u32 v9, v7, 8, 4
+; VI-NEXT:    v_bfe_u32 v11, v2, 8, 4
+; VI-NEXT:    v_and_b32_e32 v12, 15, v7
+; VI-NEXT:    v_and_b32_e32 v14, 15, v2
+; VI-NEXT:    v_alignbit_b32 v0, v0, v7, 16
+; VI-NEXT:    v_alignbit_b32 v1, v1, v2, 16
+; VI-NEXT:    v_and_b32_e32 v3, 0xf0000, v3
+; VI-NEXT:    v_and_b32_e32 v10, 0xf0000, v10
+; VI-NEXT:    v_and_b32_e32 v13, 0xf0000, v13
+; VI-NEXT:    v_and_b32_e32 v15, 0xf0000, v15
+; VI-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; VI-NEXT:    v_or_b32_e32 v1, v9, v3
+; VI-NEXT:    v_or_b32_e32 v3, v11, v10
+; VI-NEXT:    v_or_b32_e32 v6, v12, v13
+; VI-NEXT:    v_or_b32_e32 v9, v14, v15
+; VI-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
+; VI-NEXT:    v_cndmask_b32_e32 v3, v9, v6, vcc
+; VI-NEXT:    v_cndmask_b32_e32 v2, v2, v7, vcc
+; VI-NEXT:    v_and_b32_sdwa v7, v0, v8 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; VI-NEXT:    v_lshrrev_b32_e32 v6, 12, v3
+; VI-NEXT:    v_and_b32_e32 v3, 15, v3
+; VI-NEXT:    v_and_b32_e32 v8, 15, v1
+; VI-NEXT:    v_or_b32_e32 v3, v3, v6
+; VI-NEXT:    v_lshlrev_b32_e32 v6, 8, v8
+; VI-NEXT:    v_lshrrev_b32_e32 v1, 4, v1
+; VI-NEXT:    v_or_b32_e32 v3, v3, v6
+; VI-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
+; VI-NEXT:    v_or_b32_e32 v1, v3, v1
+; VI-NEXT:    v_and_b32_e32 v0, 0xf00000, v0
+; VI-NEXT:    v_or_b32_e32 v1, v1, v7
+; VI-NEXT:    v_or_b32_e32 v0, v1, v0
+; VI-NEXT:    v_and_b32_e32 v1, 0xf000000, v2
+; VI-NEXT:    v_or_b32_e32 v0, v0, v1
+; VI-NEXT:    v_and_b32_e32 v0, 0xfffffff, v0
+; VI-NEXT:    flat_store_dword v[4:5], v0
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: chain_v7i4:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    global_load_dword v7, v[0:1], off
+; GFX9-NEXT:    global_load_dword v8, v[2:3], off glc
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v2, 15
+; GFX9-NEXT:    v_mov_b32_e32 v3, -1
+; GFX9-NEXT:    global_store_dword v[0:1], v3, off
+; GFX9-NEXT:    s_mov_b32 s4, 0x5040100
+; GFX9-NEXT:    v_and_b32_e32 v6, 1, v6
+; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v6
+; GFX9-NEXT:    v_lshrrev_b32_e32 v3, 4, v7
+; GFX9-NEXT:    v_lshrrev_b32_e32 v10, 8, v7
+; GFX9-NEXT:    v_and_b32_sdwa v11, v7, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX9-NEXT:    v_lshrrev_b32_e32 v12, 24, v8
+; GFX9-NEXT:    v_and_b32_e32 v13, 15, v8
+; GFX9-NEXT:    v_lshrrev_b32_e32 v14, 4, v8
+; GFX9-NEXT:    v_lshrrev_b16_e32 v15, 12, v8
+; GFX9-NEXT:    v_lshrrev_b32_e32 v16, 8, v8
+; GFX9-NEXT:    v_and_b32_sdwa v2, v8, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX9-NEXT:    v_lshrrev_b32_e32 v8, 20, v8
+; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 24, v7
+; GFX9-NEXT:    v_and_b32_e32 v1, 15, v7
+; GFX9-NEXT:    v_lshrrev_b16_e32 v9, 12, v7
+; GFX9-NEXT:    v_lshrrev_b32_e32 v7, 20, v7
+; GFX9-NEXT:    v_and_b32_e32 v3, 15, v3
+; GFX9-NEXT:    v_and_b32_e32 v10, 15, v10
+; GFX9-NEXT:    v_and_b32_e32 v14, 15, v14
+; GFX9-NEXT:    v_and_b32_e32 v16, 15, v16
+; GFX9-NEXT:    v_and_b32_e32 v8, 15, v8
+; GFX9-NEXT:    v_and_b32_e32 v7, 15, v7
+; GFX9-NEXT:    v_perm_b32 v2, v8, v2, s4
+; GFX9-NEXT:    v_perm_b32 v8, v9, v10, s4
+; GFX9-NEXT:    v_perm_b32 v9, v15, v16, s4
+; GFX9-NEXT:    v_perm_b32 v1, v3, v1, s4
+; GFX9-NEXT:    v_perm_b32 v3, v14, v13, s4
+; GFX9-NEXT:    v_perm_b32 v7, v7, v11, s4
+; GFX9-NEXT:    v_cndmask_b32_e32 v6, v9, v8, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v2, v2, v7, vcc
+; GFX9-NEXT:    v_lshrrev_b32_e32 v3, 12, v1
+; GFX9-NEXT:    v_lshrrev_b32_e32 v7, 4, v6
+; GFX9-NEXT:    v_and_b32_e32 v6, 15, v6
+; GFX9-NEXT:    v_and_or_b32 v1, v1, 15, v3
+; GFX9-NEXT:    v_lshlrev_b32_e32 v3, 8, v6
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, v12, v0, vcc
+; GFX9-NEXT:    v_lshlrev_b32_e32 v8, 4, v2
+; GFX9-NEXT:    v_or3_b32 v1, v1, v3, v7
+; GFX9-NEXT:    v_and_b32_e32 v6, 0xf00000, v8
+; GFX9-NEXT:    v_lshl_or_b32 v1, v2, 16, v1
+; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 24, v0
+; GFX9-NEXT:    v_or3_b32 v0, v1, v6, v0
+; GFX9-NEXT:    v_and_b32_e32 v0, 0xfffffff, v0
+; GFX9-NEXT:    global_store_dword v[4:5], v0, off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+  %a = load <7 x i4>, ptr addrspace(1) %pa
+  %b = load volatile <7 x i4>, ptr addrspace(1) %pb
+  store i32 -1, ptr addrspace(1) %pa
+  %s = select i1 %c, <7 x i4> %a, <7 x i4> %b
+  store <7 x i4> %s, ptr addrspace(1) %out
+  ret void
+}
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; GCN: {{.*}}
 ; GFX89: {{.*}}
