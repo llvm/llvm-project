@@ -116,3 +116,75 @@ bb6:                                              ; preds = %bb6, %bb
 bb10:                                             ; preds = %bb6, %bb
   ret void
 }
+
+define i8 @cmp_samesign_simplify_common_addend(i8 %a, i8 %b) {
+; CHECK-LABEL: 'cmp_samesign_simplify_common_addend'
+; CHECK-NEXT:  Classifying expressions for: @cmp_samesign_simplify_common_addend
+; CHECK-NEXT:    %sum = add nuw i8 %a, 16
+; CHECK-NEXT:    --> (16 + %a)<nuw> U: [16,0) S: [16,0)
+; CHECK-NEXT:    %sum.1 = add nuw i8 %b, 16
+; CHECK-NEXT:    --> (16 + %b)<nuw> U: [16,0) S: [16,0)
+; CHECK-NEXT:    %iv = phi i8 [ %a, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {%a,+,1}<nsw><%loop> U: full-set S: full-set Exits: (-1 + ((1 + %a) smax %b)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add nsw i8 %iv, 1
+; CHECK-NEXT:    --> {(1 + %a),+,1}<nsw><%loop> U: full-set S: full-set Exits: ((1 + %a) smax %b) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %rv = phi i8 [ 0, %entry ], [ %iv, %loop ]
+; CHECK-NEXT:    --> %rv U: full-set S: full-set
+; CHECK-NEXT:  Determining loop execution counts for: @cmp_samesign_simplify_common_addend
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (-1 * %a) + ((1 + %a) smax %b))
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i8 -1
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (-1 * %a) + ((1 + %a) smax %b))
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %sum = add nuw i8 %a, 16
+  %sum.1 = add nuw i8 %b, 16
+  %c = icmp samesign ult i8 %sum, %sum.1
+  br i1 %c, label %loop, label %exit
+
+loop:
+  %iv = phi i8 [ %a, %entry ], [ %iv.next, %loop ]
+  %iv.next = add nsw i8 %iv, 1
+  %c.1 = icmp slt i8 %iv.next, %b
+  br i1 %c.1, label %loop, label %exit
+
+exit:
+  %rv = phi i8 [ 0, %entry ], [ %iv, %loop ]
+  ret i8 %rv
+}
+
+define i8 @cmp_samesign_simplify_common_addend_both_nuw_nsw(i8 %a, i8 %b) {
+; CHECK-LABEL: 'cmp_samesign_simplify_common_addend_both_nuw_nsw'
+; CHECK-NEXT:  Classifying expressions for: @cmp_samesign_simplify_common_addend_both_nuw_nsw
+; CHECK-NEXT:    %sum = add nuw nsw i8 %a, 16
+; CHECK-NEXT:    --> (16 + %a)<nuw><nsw> U: [16,0) S: [-112,-128)
+; CHECK-NEXT:    %sum.1 = add nuw nsw i8 %b, 16
+; CHECK-NEXT:    --> (16 + %b)<nuw><nsw> U: [16,0) S: [-112,-128)
+; CHECK-NEXT:    %iv = phi i8 [ %a, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {%a,+,1}<nsw><%loop> U: full-set S: full-set Exits: (-1 + %b) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add nsw i8 %iv, 1
+; CHECK-NEXT:    --> {(1 + %a),+,1}<nsw><%loop> U: full-set S: full-set Exits: %b LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %rv = phi i8 [ 0, %entry ], [ %iv, %loop ]
+; CHECK-NEXT:    --> %rv U: full-set S: full-set
+; CHECK-NEXT:  Determining loop execution counts for: @cmp_samesign_simplify_common_addend_both_nuw_nsw
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (-1 * %a) + %b)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i8 -1
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (-1 * %a) + %b)
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %sum = add nuw nsw i8 %a, 16
+  %sum.1 = add nuw nsw i8 %b, 16
+  %c = icmp samesign ult i8 %sum, %sum.1
+  br i1 %c, label %loop, label %exit
+
+loop:
+  %iv = phi i8 [ %a, %entry ], [ %iv.next, %loop ]
+  %iv.next = add nsw i8 %iv, 1
+  %c.1 = icmp slt i8 %iv.next, %b
+  br i1 %c.1, label %loop, label %exit
+
+exit:
+  %rv = phi i8 [ 0, %entry ], [ %iv, %loop ]
+  ret i8 %rv
+}

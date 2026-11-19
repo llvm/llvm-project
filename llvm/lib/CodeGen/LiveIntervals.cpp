@@ -584,16 +584,19 @@ void LiveIntervals::extendSegmentsToUses(LiveRange &Segments,
 }
 
 bool LiveIntervals::shrinkToUses(LiveInterval *li,
-                                 SmallVectorImpl<MachineInstr*> *dead) {
+                                 SmallVectorImpl<MachineInstr *> *dead,
+                                 LaneBitmask SubRangeMask) {
   LLVM_DEBUG(dbgs() << "Shrink: " << *li << '\n');
   assert(li->reg().isVirtual() && "Can only shrink virtual registers");
 
   // Shrink subregister live ranges.
-  if (li->hasSubRanges()) {
+  if (li->hasSubRanges() && SubRangeMask.any()) {
     SubRangeUseList Uses;
     collectSubRangeUses(li->reg(), Uses);
     bool NeedsCleanup = false;
     for (LiveInterval::SubRange &S : li->subranges()) {
+      if ((S.LaneMask & SubRangeMask).none())
+        continue;
       shrinkSubRangeToUses(S, li->reg(), Uses);
       if (S.empty())
         NeedsCleanup = true;

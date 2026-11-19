@@ -159,6 +159,7 @@ add_libc_test(
     libc.src.stdio.ferror
     libc.src.stdio.fflush
     libc.src.stdio.fgetc
+    libc.src.stdio.fileno
     libc.src.stdio.fmemopen
     libc.src.stdio.fread
     libc.src.stdio.fseek
@@ -188,6 +189,7 @@ add_libc_test(
     libc.src.stdio.feof
     libc.src.stdio.ferror
     libc.src.stdio.fflush
+    libc.src.stdio.fileno
     libc.src.stdio.fopencookie
     libc.src.stdio.fread
     libc.src.stdio.fseek
@@ -524,6 +526,27 @@ add_libc_test(
 )
 
 add_libc_test(
+  putc_unlocked_test
+  SUITE
+    libc-stdio-tests
+  SRCS
+    putc_unlocked_test.cpp
+  DEPENDS
+    libc.hdr.stdio_macros
+    libc.src.__support.CPP.scope
+    libc.src.stdio.fclose
+    libc.src.stdio.ferror
+    libc.src.stdio.flockfile
+    libc.src.stdio.fopen
+    libc.src.stdio.fread
+    libc.src.stdio.funlockfile
+    libc.src.stdio.putc_unlocked
+    libc.src.string.memcmp
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
   putchar_unlocked_test
   SUITE
     libc-stdio-tests
@@ -733,6 +756,39 @@ add_libc_test(
     libc.src.__support.error_or
     libc.src.stdio.generic.getdelim_impl
     libc.src.string.memory_utils.inline_memcpy
+)
+
+add_libc_test(
+  getdelim_test
+  SUITE
+    libc-stdio-tests
+  SRCS
+    getdelim_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.func.free
+    libc.hdr.func.malloc
+    libc.hdr.stdio_macros
+    libc.hdr.types.FILE
+    libc.hdr.types.size_t
+    libc.hdr.types.ssize_t
+    libc.src.__support.CPP.scope
+    libc.src.__support.CPP.string_view
+    libc.src.__support.libc_errno
+    libc.src.stdio.clearerr
+    libc.src.stdio.fclose
+    libc.src.stdio.feof
+    libc.src.stdio.ferror
+    libc.src.stdio.fmemopen
+    libc.src.stdio.fopen
+    libc.src.stdio.fseek
+    libc.src.stdio.fwrite
+    libc.src.stdio.getdelim
+    libc.src.stdio.remove
+    libc.src.stdio.ungetc
+    libc.src.wchar.fwide
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 
 add_libc_test(
