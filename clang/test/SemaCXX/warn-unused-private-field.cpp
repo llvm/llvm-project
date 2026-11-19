@@ -401,3 +401,22 @@ class Slab {
 auto kOff = Slab<0>::offset();
 } // namespace offsetof_template
 #endif
+
+namespace friend_member_template {
+class Base {
+ public:
+  template <class T> T& Cast();
+};
+template <class T>
+class Holder : public Base {
+ public:
+  explicit Holder(T v) : value_(v) {}
+ private:
+  friend class Base;
+  // FIXME: false positive.
+  T value_; // expected-warning {{private field 'value_' is not used}}
+};
+template <class T>
+T& Base::Cast() { return static_cast<Holder<T>*>(this)->value_; }
+void make() { Holder<int> h(1); }
+} // namespace friend_member_template
