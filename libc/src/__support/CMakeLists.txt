@@ -320,6 +320,7 @@ add_header_library(
     libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.attributes
     libc.src.__support.macros.config
     libc.src.__support.macros.null_check
     libc.src.__support.macros.optimization
