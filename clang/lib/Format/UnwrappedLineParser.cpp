@@ -178,6 +178,7 @@ void UnwrappedLineParser::reset() {
   PP.IncludeGuard = getIncludeGuardState(Style.IndentPPDirectives);
   PP.IncludeGuardToken = nullptr;
   ParsedPPDirectives.clear();
+  TokenAfterIfWithConditionalElse = nullptr;
   Line.reset(new UnwrappedLine);
   CommentsBeforeNextToken.clear();
   FormatTok = nullptr;
@@ -2933,6 +2934,100 @@ static bool containsPPDirective(const UnwrappedLine &Line) {
       [](const UnwrappedLineNode &Node) { return Node.Tok->FirstAfterPPLine; });
 }
 
+// Returns whether an `else` in a skipped preprocessor branch may follow.
+bool UnwrappedLineParser::isFollowedByConditionalElse() const {
+  const FormatToken *Last = nullptr;
+  if (!Line->Tokens.empty()) {
+    Last = Line->Tokens.back().Tok;
+  } else {
+    for (const auto &PreviousLine : llvm::reverse(*CurrentLines)) {
+      if (!PreviousLine.InPPDirective && !PreviousLine.Tokens.empty()) {
+        Last = PreviousLine.Tokens.back().Tok;
+        break;
+      }
+    }
+  }
+  if (!Last)
+    return false;
+
+  const auto *It =
+      llvm::lower_bound(AllTokens, Last->Tok.getLocation(),
+                        [](const FormatToken *Tok, SourceLocation Loc) {
+                          return Tok->Tok.getLocation() < Loc;
+                        });
+  if (It == AllTokens.end() || *It != Last)
+    return false;
+
+  // Whether a branch is always taken, for each conditional entered since Last.
+  SmallVector<bool, 4> Conditionals;
+  size_t UnreachableDepth = 0;
+  bool IsFirstOnLine = false;
+  bool IsFirstAfterDirective = false;
+  for (++It; It != AllTokens.end(); ++It) {
+    const auto &Tok = **It;
+    if (Tok.HasUnescapedNewline)
+      IsFirstOnLine = true;
+    if (Tok.is(tok::comment))
+      continue;
+    if (Tok.is(tok::hash) && IsFirstOnLine) {
+      SmallVector<const FormatToken *, 4> Directive;
+      for (const auto *Next = std::next(It);
+           Next != AllTokens.end() && !(*Next)->HasUnescapedNewline; ++Next) {
+        if ((*Next)->isNot(tok::comment))
+          Directive.push_back(*Next);
+        It = Next;
+      }
+      if (!Directive.empty()) {
+        const auto &Keyword = *Directive.front();
+        const auto IsLiteral = [&](bool Value) {
+          if (Keyword.isNoneOf(tok::pp_if, tok::pp_elif) ||
+              Directive.size() != 2) {
+            return false;
+          }
+          const auto &Condition = *Directive[1];
+          return Value
+                     ? Condition.is(tok::kw_true) || Condition.TokenText == "1"
+                     : Condition.is(tok::kw_false) ||
+                           Condition.TokenText == "0";
+        };
+        if (Keyword.isOneOf(tok::pp_if, tok::pp_ifdef, tok::pp_ifndef)) {
+          Conditionals.push_back(IsLiteral(true));
+          if (UnreachableDepth == 0 && IsLiteral(false))
+            UnreachableDepth = Conditionals.size();
+        } else if (Keyword.is(tok::pp_endif)) {
+          if (Conditionals.size() == UnreachableDepth)
+            UnreachableDepth = 0;
+          if (!Conditionals.empty())
+            Conditionals.pop_back();
+        } else if (Keyword.isOneOf(tok::pp_else, tok::pp_elif, tok::pp_elifdef,
+                                   tok::pp_elifndef)) {
+          if (Conditionals.size() == UnreachableDepth)
+            UnreachableDepth = 0;
+          if (Conditionals.empty())
+            Conditionals.push_back(false);
+          if (UnreachableDepth == 0 &&
+              (Conditionals.back() || IsLiteral(false))) {
+            UnreachableDepth = Conditionals.size();
+          } else if (IsLiteral(true)) {
+            Conditionals.back() = true;
+          }
+        }
+      }
+      IsFirstAfterDirective = true;
+      continue;
+    }
+    IsFirstOnLine = false;
+    if (UnreachableDepth > 0)
+      continue;
+    if (IsFirstAfterDirective && Tok.is(tok::kw_else))
+      return true;
+    if (Conditionals.empty())
+      return false;
+    IsFirstAfterDirective = false;
+  }
+  return false;
+}
+
 void UnwrappedLineParser::parseUnbracedBody(bool CheckEOF) {
   FormatToken *Tok = nullptr;
 
@@ -2980,7 +3075,7 @@ void UnwrappedLineParser::parseUnbracedBody(bool CheckEOF) {
             return Node.Tok->FirstAfterPPLine;
           });
     }
-    if (EnclosesPPDirective)
+    if (EnclosesPPDirective || FormatTok == TokenAfterIfWithConditionalElse)
       LBraceTok->BraceCount = 0;
     else
       ++Tok->BraceCount;
@@ -3175,6 +3270,8 @@ FormatToken *UnwrappedLineParser::parseIfThenElse(IfStmtKind *IfKind,
       parseUnbracedBody(/*CheckEOF=*/true);
     }
   } else {
+    if (Style.InsertBraces && isFollowedByConditionalElse())
+      TokenAfterIfWithConditionalElse = FormatTok;
     KeepIfBraces = KeepIfBraces || IfBlockKind == IfStmtKind::IfElse;
     if (NeedsUnwrappedLine)
       addUnwrappedLine();
