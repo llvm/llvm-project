@@ -54,11 +54,10 @@ template<template<typename ...> class Instantiated, class ...CtrArgs>
 constexpr bool SFINAEs_away =
     decltype(SFINAEs_away_impl<Instantiated, CtrArgs...>(0))::value;
 
-// `SFINAEs_away_initializer_list` checks whether a container can deduce and construct from a braced-init-list
+// `SFINAEs_away_initializer_list` checks whether a container can be deduced and constructed from a braced-init-list
 // `{std::declval<Elem>()}` as its first argument.
-// This is necessary for map containers (e.g. `unordered_map`) where deduction guides take
-// `initializer_list<pair<Key, Value>>` while constructors take `initializer_list<pair<const Key, Value>>`,
-// which are not mutually convertible as named objects (LWG 3025).
+// This is necessary for map containers where deduction guides take `initializer_list<pair<Key, Value>>` while
+// constructors take `initializer_list<pair<const Key, Value>>`, which are not mutually convertible (LWG3025).
 
 template <template <typename...> class Instantiated, class Elem, class... CtrArgs>
 auto SFINAEs_away_initializer_list_impl(int)
