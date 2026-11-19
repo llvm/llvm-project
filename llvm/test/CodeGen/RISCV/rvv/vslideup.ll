@@ -2383,3 +2383,27 @@ entry:
 
   ret <vscale x 16 x bfloat> %a
 }
+
+define <vscale x 2 x i32> @vslideup_undef_source(<vscale x 2 x i32> %dst, iXLen %offset, iXLen %vl) {
+; CHECK-LABEL: vslideup_undef_source:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ret
+  %r = call <vscale x 2 x i32> @llvm.riscv.vslideup.nxv2i32.iXLen(<vscale x 2 x i32> %dst, <vscale x 2 x i32> undef, iXLen %offset, iXLen %vl, iXLen 2)
+  ret <vscale x 2 x i32> %r
+}
+
+define <vscale x 2 x i32> @vslideup_mask_undef_source(<vscale x 2 x i32> %dst, iXLen %offset, iXLen %vl, <vscale x 2 x i1> %mask) {
+; CHECK-LABEL: vslideup_mask_undef_source:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ret
+  %r = call <vscale x 2 x i32> @llvm.riscv.vslideup.mask.nxv2i32.iXLen(<vscale x 2 x i32> %dst, <vscale x 2 x i32> undef, iXLen %offset, <vscale x 2 x i1> %mask, iXLen %vl, iXLen 0)
+  ret <vscale x 2 x i32> %r
+}
+
+define <vscale x 2 x float> @vslideup_undef_source_float(<vscale x 2 x float> %dst, iXLen %offset, iXLen %vl) {
+; CHECK-LABEL: vslideup_undef_source_float:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ret
+  %r = call <vscale x 2 x float> @llvm.riscv.vslideup.nxv2f32.iXLen(<vscale x 2 x float> %dst, <vscale x 2 x float> undef, iXLen %offset, iXLen %vl, iXLen 2)
+  ret <vscale x 2 x float> %r
+}
