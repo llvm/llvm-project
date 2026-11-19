@@ -100,9 +100,10 @@ define <2 x i32> @select_bit_test_vector_result(<2 x i32> %g, <2 x i32> %v) {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_and_b32_e32 v0, 16, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
 ; GFX11-NEXT:    v_dual_cndmask_b32 v0, 0, v2 :: v_dual_and_b32 v1, 32, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v1
 ; GFX11-NEXT:    v_cndmask_b32_e32 v1, 0, v3, vcc_lo
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -147,6 +148,7 @@ define amdgpu_kernel void @select_bit_test_uniform(ptr addrspace(1) %out, i32 %g
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_b64 s[0:1], s[0:1], s[6:7]
 ; GFX11-NEXT:    s_cmp_lg_u32 s1, 0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_cselect_b32 s1, s3, 0
 ; GFX11-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX11-NEXT:    s_cselect_b32 s0, s2, 0
@@ -187,12 +189,12 @@ define i32 @select_bit_test_variable_mask(i32 %g, <2 x i32> %m, <2 x i32> %v) {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_and_b32_e32 v2, v0, v2
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v2
 ; GFX11-NEXT:    v_dual_cndmask_b32 v1, 0, v4 :: v_dual_and_b32 v0, v0, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
 ; GFX11-NEXT:    v_cndmask_b32_e32 v0, 0, v3, vcc_lo
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_xor_b32_e32 v0, v0, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %ins = insertelement <2 x i32> poison, i32 %g, i64 0

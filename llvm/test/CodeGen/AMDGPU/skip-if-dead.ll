@@ -199,6 +199,7 @@ define amdgpu_ps void @test_kill_depth_var_x2_same(float %x) #0 {
 ; GFX11-NEXT:    s_cbranch_scc0 .LBB4_2
 ; GFX11-NEXT:  ; %bb.1:
 ; GFX11-NEXT:    s_and_not1_b64 exec, exec, vcc
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_cmp_ngt_f32_e32 vcc, 0, v0
 ; GFX11-NEXT:    s_and_not1_b64 s[0:1], s[0:1], vcc
 ; GFX11-NEXT:    s_cbranch_scc0 .LBB4_2
@@ -275,6 +276,7 @@ define amdgpu_ps void @test_kill_depth_var_x2(float %x, float %y) #0 {
 ; GFX11-NEXT:    s_cbranch_scc0 .LBB5_2
 ; GFX11-NEXT:  ; %bb.1:
 ; GFX11-NEXT:    s_and_not1_b64 exec, exec, vcc
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_cmp_ngt_f32_e32 vcc, 0, v1
 ; GFX11-NEXT:    s_and_not1_b64 s[0:1], s[0:1], vcc
 ; GFX11-NEXT:    s_cbranch_scc0 .LBB5_2
@@ -489,6 +491,7 @@ define amdgpu_ps float @test_kill_control_flow(i32 inreg %arg) #0 {
 ; GFX11-LABEL: test_kill_control_flow:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_cmp_lg_u32 s0, 0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_cbranch_scc0 .LBB7_2
 ; GFX11-NEXT:  ; %bb.1: ; %exit
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 1.0
@@ -514,6 +517,7 @@ define amdgpu_ps float @test_kill_control_flow(i32 inreg %arg) #0 {
 ; GFX11-NEXT:    s_cbranch_scc0 .LBB7_4
 ; GFX11-NEXT:  ; %bb.3: ; %bb
 ; GFX11-NEXT:    s_and_not1_b64 exec, exec, vcc
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 1.0
 ; GFX11-NEXT:    s_branch .LBB7_5
 ; GFX11-NEXT:  .LBB7_4:
@@ -685,6 +689,7 @@ define amdgpu_ps void @test_kill_control_flow_remainder(i32 inreg %arg) #0 {
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    v_mov_b32_e32 v9, 0
 ; GFX11-NEXT:    s_cmp_lg_u32 s0, 0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_cbranch_scc0 .LBB8_2
 ; GFX11-NEXT:  ; %bb.1: ; %exit
 ; GFX11-NEXT:    global_store_b32 v[0:1], v9, off
@@ -878,6 +883,7 @@ define amdgpu_ps float @test_kill_control_flow_return(i32 inreg %arg) #0 {
 ; GFX11-NEXT:    s_cbranch_scc0 .LBB9_4
 ; GFX11-NEXT:  ; %bb.1: ; %entry
 ; GFX11-NEXT:    s_and_b64 exec, exec, s[2:3]
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX11-NEXT:    s_cbranch_scc0 .LBB9_3
@@ -1098,6 +1104,7 @@ define amdgpu_ps void @test_kill_divergent_loop(i32 %arg) #0 {
 ; GFX11-NEXT:    s_cbranch_vccnz .LBB10_1
 ; GFX11-NEXT:  .LBB10_3: ; %Flow
 ; GFX11-NEXT:    s_or_b64 exec, exec, s[2:3]
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 8
 ; GFX11-NEXT:    global_store_b32 v[0:1], v0, off dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
@@ -1245,6 +1252,7 @@ define amdgpu_ps void @phi_use_def_before_kill(float inreg %x, i32 inreg %y) #0 
 ; GFX11-NEXT:  ; %bb.1: ; %bb
 ; GFX11-NEXT:    s_and_not1_b64 exec, exec, vcc
 ; GFX11-NEXT:    s_cmp_lg_u32 s1, 0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_cbranch_scc0 .LBB11_3
 ; GFX11-NEXT:  ; %bb.2: ; %bb8
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 8
@@ -1658,11 +1666,12 @@ define amdgpu_ps void @cbranch_kill(i32 inreg %0, float %val0, float %val1) {
 ; GFX11-NEXT:  ; %bb.2: ; %kill
 ; GFX11-NEXT:    s_mov_b64 exec, 0
 ; GFX11-NEXT:  .LBB14_3: ; %Flow
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_or_saveexec_b64 s[0:1], s[2:3]
 ; GFX11-NEXT:    ; implicit-def: $vgpr2
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_xor_b64 exec, exec, s[0:1]
 ; GFX11-NEXT:  ; %bb.4: ; %live
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_mul_f32_e32 v2, v0, v1
 ; GFX11-NEXT:  ; %bb.5: ; %export
 ; GFX11-NEXT:    s_or_b64 exec, exec, s[0:1]
@@ -1831,6 +1840,7 @@ define amdgpu_ps void @complex_loop(i32 inreg %cmpa, i32 %cmpb, i32 %cmpc) {
 ; GFX11-LABEL: complex_loop:
 ; GFX11:       ; %bb.0: ; %.entry
 ; GFX11-NEXT:    s_cmp_lt_i32 s0, 1
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_cbranch_scc1 .LBB15_7
 ; GFX11-NEXT:  ; %bb.1: ; %.lr.ph
 ; GFX11-NEXT:    s_mov_b64 s[2:3], exec
@@ -1846,6 +1856,7 @@ define amdgpu_ps void @complex_loop(i32 inreg %cmpa, i32 %cmpb, i32 %cmpc) {
 ; GFX11-NEXT:    v_mov_b32_e32 v2, s6
 ; GFX11-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
 ; GFX11-NEXT:    s_and_not1_b64 exec, exec, s[0:1]
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_cbranch_execz .LBB15_6
 ; GFX11-NEXT:  .LBB15_3: ; %hdr
 ; GFX11-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -2060,6 +2071,7 @@ define amdgpu_ps void @scc_use_after_kill_inst(float inreg %x, i32 inreg %y) #0 
 ; GFX11-NEXT:  ; %bb.1: ; %bb
 ; GFX11-NEXT:    s_and_not1_b64 exec, exec, vcc
 ; GFX11-NEXT:    s_cmp_lg_u32 s1, 0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_cbranch_scc0 .LBB17_3
 ; GFX11-NEXT:  ; %bb.2: ; %bb8
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 8

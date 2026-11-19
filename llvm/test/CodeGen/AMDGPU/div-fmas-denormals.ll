@@ -35,6 +35,7 @@ define float @div_fmas_f32_flush_inputs(float %a, float %b, float %c) #1 {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_mov_b32 vcc_lo, 0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_div_fmas_f32 v0, v0, v1, v2
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %r = call float @llvm.amdgcn.div.fmas.f32(float %a, float %b, float %c, i1 false)
@@ -69,6 +70,7 @@ define float @div_fmas_f32_flush_all(float %a, float %b, float %c) #3 {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_mov_b32 vcc_lo, 0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_div_fmas_f32 v0, v0, v1, v2
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %r = call float @llvm.amdgcn.div.fmas.f32(float %a, float %b, float %c, i1 false)
@@ -87,6 +89,7 @@ define float @div_fmas_f32_dynamic_inputs(float %a, float %b, float %c) #4 {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_mov_b32 vcc_lo, 0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_div_fmas_f32 v0, v0, v1, v2
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %r = call float @llvm.amdgcn.div.fmas.f32(float %a, float %b, float %c, i1 false)
@@ -137,6 +140,7 @@ define double @div_fmas_f64_flush_inputs(double %a, double %b, double %c) #1 {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_mov_b32 vcc_lo, 0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_div_fmas_f64 v[0:1], v[0:1], v[2:3], v[4:5]
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %r = call double @llvm.amdgcn.div.fmas.f64(double %a, double %b, double %c, i1 false)
@@ -171,6 +175,7 @@ define double @div_fmas_f64_flush_all(double %a, double %b, double %c) #3 {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_mov_b32 vcc_lo, 0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_div_fmas_f64 v[0:1], v[0:1], v[2:3], v[4:5]
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %r = call double @llvm.amdgcn.div.fmas.f64(double %a, double %b, double %c, i1 false)
@@ -189,6 +194,7 @@ define double @div_fmas_f64_dynamic_inputs(double %a, double %b, double %c) #4 {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_mov_b32 vcc_lo, 0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_div_fmas_f64 v[0:1], v[0:1], v[2:3], v[4:5]
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %r = call double @llvm.amdgcn.div.fmas.f64(double %a, double %b, double %c, i1 false)
@@ -223,6 +229,7 @@ define float @div_fmas_f32_true(float %a, float %b, float %c) #0 {
 ; GFX11-SDAG:       ; %bb.0:
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    s_mov_b32 vcc_lo, -1
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    v_div_fmas_f32 v0, v0, v1, v2
 ; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -237,6 +244,7 @@ define float @div_fmas_f32_true(float %a, float %b, float %c) #0 {
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    s_mov_b32 vcc_lo, exec_lo
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    v_div_fmas_f32 v0, v0, v1, v2
 ; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %r = call float @llvm.amdgcn.div.fmas.f32(float %a, float %b, float %c, i1 true)
@@ -255,6 +263,7 @@ define double @div_fmas_f64_true(double %a, double %b, double %c) #0 {
 ; GFX11-SDAG:       ; %bb.0:
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    s_mov_b32 vcc_lo, -1
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    v_div_fmas_f64 v[0:1], v[0:1], v[2:3], v[4:5]
 ; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -269,6 +278,7 @@ define double @div_fmas_f64_true(double %a, double %b, double %c) #0 {
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    s_mov_b32 vcc_lo, exec_lo
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    v_div_fmas_f64 v[0:1], v[0:1], v[2:3], v[4:5]
 ; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %r = call double @llvm.amdgcn.div.fmas.f64(double %a, double %b, double %c, i1 true)

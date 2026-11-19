@@ -1588,6 +1588,7 @@ define amdgpu_kernel void @v_insertelement_v8bf16_dynamic(ptr addrspace(1) %out,
 ; GFX1250-NEXT:    s_pack_ll_b32_b16 s4, s4, s4
 ; GFX1250-NEXT:    s_lshl_b64 s[2:3], 0xffff, s2
 ; GFX1250-NEXT:    s_cmp_eq_u32 s5, 1
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
 ; GFX1250-NEXT:    s_cselect_b32 s6, s3, 0
 ; GFX1250-NEXT:    s_cselect_b32 s7, s2, 0
 ; GFX1250-NEXT:    s_cmp_eq_u32 s5, 0
@@ -2020,12 +2021,14 @@ define amdgpu_kernel void @v_insertelement_v16bf16_dynamic(ptr addrspace(1) %out
 ; GFX1250-NEXT:    s_pack_ll_b32_b16 s4, s4, s4
 ; GFX1250-NEXT:    s_lshl_b64 s[2:3], 0xffff, s2
 ; GFX1250-NEXT:    s_cmp_eq_u32 s5, 1
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
 ; GFX1250-NEXT:    s_cselect_b32 s6, s3, 0
 ; GFX1250-NEXT:    s_cselect_b32 s7, s2, 0
 ; GFX1250-NEXT:    s_cmp_eq_u32 s5, 0
 ; GFX1250-NEXT:    s_cselect_b32 s8, s3, 0
 ; GFX1250-NEXT:    s_cselect_b32 s9, s2, 0
 ; GFX1250-NEXT:    s_cmp_eq_u32 s5, 3
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
 ; GFX1250-NEXT:    s_cselect_b32 s10, s3, 0
 ; GFX1250-NEXT:    s_cselect_b32 s11, s2, 0
 ; GFX1250-NEXT:    s_cmp_eq_u32 s5, 2

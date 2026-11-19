@@ -12,10 +12,11 @@ define void @test_workgroup_id_x_non_kernel(ptr addrspace(1) %out) {
 ; GFX1250-SDAG-NEXT:    s_add_co_i32 s0, s0, 1
 ; GFX1250-SDAG-NEXT:    s_getreg_b32 s2, hwreg(HW_REG_IB_STS2, 6, 4)
 ; GFX1250-SDAG-NEXT:    s_mul_i32 s0, ttmp9, s0
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
+; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX1250-SDAG-NEXT:    s_add_co_i32 s1, s1, s0
 ; GFX1250-SDAG-NEXT:    s_cmp_eq_u32 s2, 0
 ; GFX1250-SDAG-NEXT:    s_cselect_b32 s0, ttmp9, s1
+; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX1250-SDAG-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
@@ -29,10 +30,11 @@ define void @test_workgroup_id_x_non_kernel(ptr addrspace(1) %out) {
 ; GFX1250-GISEL-NEXT:    s_add_co_i32 s0, s0, 1
 ; GFX1250-GISEL-NEXT:    s_getreg_b32 s2, hwreg(HW_REG_IB_STS2, 6, 4)
 ; GFX1250-GISEL-NEXT:    s_mul_i32 s0, ttmp9, s0
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX1250-GISEL-NEXT:    s_add_co_i32 s1, s1, s0
 ; GFX1250-GISEL-NEXT:    s_cmp_eq_u32 s2, 0
 ; GFX1250-GISEL-NEXT:    s_cselect_b32 s0, ttmp9, s1
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX1250-GISEL-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
@@ -137,8 +139,8 @@ define void @test_workgroup_id_y_non_kernel(ptr addrspace(1) %out) {
 ; GFX1250-SDAG-NEXT:    s_getreg_b32 s3, hwreg(HW_REG_IB_STS2, 6, 4)
 ; GFX1250-SDAG-NEXT:    s_add_co_i32 s2, s2, s0
 ; GFX1250-SDAG-NEXT:    s_cmp_eq_u32 s3, 0
+; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1250-SDAG-NEXT:    s_cselect_b32 s0, s1, s2
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX1250-SDAG-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
@@ -155,8 +157,8 @@ define void @test_workgroup_id_y_non_kernel(ptr addrspace(1) %out) {
 ; GFX1250-GISEL-NEXT:    s_getreg_b32 s3, hwreg(HW_REG_IB_STS2, 6, 4)
 ; GFX1250-GISEL-NEXT:    s_add_co_i32 s2, s2, s0
 ; GFX1250-GISEL-NEXT:    s_cmp_eq_u32 s3, 0
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1250-GISEL-NEXT:    s_cselect_b32 s0, s1, s2
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX1250-GISEL-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
@@ -264,8 +266,8 @@ define void @test_workgroup_id_z_non_kernel(ptr addrspace(1) %out) {
 ; GFX1250-SDAG-NEXT:    s_getreg_b32 s3, hwreg(HW_REG_IB_STS2, 6, 4)
 ; GFX1250-SDAG-NEXT:    s_add_co_i32 s2, s2, s0
 ; GFX1250-SDAG-NEXT:    s_cmp_eq_u32 s3, 0
+; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1250-SDAG-NEXT:    s_cselect_b32 s0, s1, s2
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX1250-SDAG-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
@@ -282,8 +284,8 @@ define void @test_workgroup_id_z_non_kernel(ptr addrspace(1) %out) {
 ; GFX1250-GISEL-NEXT:    s_getreg_b32 s3, hwreg(HW_REG_IB_STS2, 6, 4)
 ; GFX1250-GISEL-NEXT:    s_add_co_i32 s2, s2, s0
 ; GFX1250-GISEL-NEXT:    s_cmp_eq_u32 s3, 0
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1250-GISEL-NEXT:    s_cselect_b32 s0, s1, s2
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX1250-GISEL-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]

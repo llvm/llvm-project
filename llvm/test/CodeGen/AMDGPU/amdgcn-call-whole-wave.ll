@@ -288,6 +288,7 @@ define amdgpu_gfx_whole_wave i32 @tail_call_from_whole_wave(i1 %active, i32 %x, 
 ; DAGISEL-NEXT:    scratch_store_b32 off, v246, s32 offset:568
 ; DAGISEL-NEXT:    scratch_store_b32 off, v247, s32 offset:572
 ; DAGISEL-NEXT:    s_mov_b32 exec_lo, -1
+; DAGISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; DAGISEL-NEXT:    v_add_nc_u32_e32 v1, 13, v0
 ; DAGISEL-NEXT:    s_mov_b32 s37, good_callee@abs32@hi
 ; DAGISEL-NEXT:    s_mov_b32 s36, good_callee@abs32@lo
@@ -603,6 +604,7 @@ define amdgpu_gfx_whole_wave i32 @tail_call_from_whole_wave(i1 %active, i32 %x, 
 ; GISEL-NEXT:    scratch_store_b32 off, v246, s32 offset:568
 ; GISEL-NEXT:    scratch_store_b32 off, v247, s32 offset:572
 ; GISEL-NEXT:    s_mov_b32 exec_lo, -1
+; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GISEL-NEXT:    v_add_nc_u32_e32 v1, 13, v0
 ; GISEL-NEXT:    s_mov_b32 s36, good_callee@abs32@lo
 ; GISEL-NEXT:    s_mov_b32 s37, good_callee@abs32@hi

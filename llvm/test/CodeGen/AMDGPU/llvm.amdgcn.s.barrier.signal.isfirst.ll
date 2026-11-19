@@ -13,6 +13,7 @@ define i1 @func1() {
 ; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-NEXT:    s_cmp_eq_u32 0, 0
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_2)
 ; GFX12-SDAG-NEXT:    s_barrier_signal_isfirst -1
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-NEXT:    s_cselect_b32 s0, 1, 0
@@ -28,6 +29,7 @@ define i1 @func1() {
 ; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GISEL-NEXT:    s_cmp_eq_u32 0, 0
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_2)
 ; GFX12-GISEL-NEXT:    s_barrier_signal_isfirst -1
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GISEL-NEXT:    s_cselect_b32 s0, 1, 0
@@ -42,6 +44,7 @@ define i1 @func1() {
 ; GFX13-SDAG-NEXT:    s_wait_samplecnt 0x0
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    s_cmp_eq_u32 0, 0
+; GFX13-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_2)
 ; GFX13-SDAG-NEXT:    s_barrier_signal_isfirst -1
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    s_cselect_b32 s0, 1, 0
@@ -56,6 +59,7 @@ define i1 @func1() {
 ; GFX13-GISEL-NEXT:    s_wait_samplecnt 0x0
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    s_cmp_eq_u32 0, 0
+; GFX13-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_2)
 ; GFX13-GISEL-NEXT:    s_barrier_signal_isfirst -1
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    s_cselect_b32 s0, 1, 0
@@ -75,6 +79,7 @@ define i1 @signal_isfirst_same_barrier_wait() {
 ; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-NEXT:    s_cmp_eq_u32 0, 0
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_2)
 ; GFX12-SDAG-NEXT:    s_barrier_signal_isfirst -1
 ; GFX12-SDAG-NEXT:    s_barrier_wait -1
 ; GFX12-SDAG-NEXT:    s_cselect_b32 s0, 1, 0
@@ -90,6 +95,7 @@ define i1 @signal_isfirst_same_barrier_wait() {
 ; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GISEL-NEXT:    s_cmp_eq_u32 0, 0
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_2)
 ; GFX12-GISEL-NEXT:    s_barrier_signal_isfirst -1
 ; GFX12-GISEL-NEXT:    s_barrier_wait -1
 ; GFX12-GISEL-NEXT:    s_cselect_b32 s0, 1, 0
@@ -104,6 +110,7 @@ define i1 @signal_isfirst_same_barrier_wait() {
 ; GFX13-SDAG-NEXT:    s_wait_samplecnt 0x0
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    s_cmp_eq_u32 0, 0
+; GFX13-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_2)
 ; GFX13-SDAG-NEXT:    s_barrier_signal_isfirst -1
 ; GFX13-SDAG-NEXT:    s_barrier_wait -1
 ; GFX13-SDAG-NEXT:    s_cselect_b32 s0, 1, 0
@@ -118,6 +125,7 @@ define i1 @signal_isfirst_same_barrier_wait() {
 ; GFX13-GISEL-NEXT:    s_wait_samplecnt 0x0
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    s_cmp_eq_u32 0, 0
+; GFX13-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_2)
 ; GFX13-GISEL-NEXT:    s_barrier_signal_isfirst -1
 ; GFX13-GISEL-NEXT:    s_barrier_wait -1
 ; GFX13-GISEL-NEXT:    s_cselect_b32 s0, 1, 0
@@ -138,6 +146,7 @@ define i1 @signal_isfirst_different_barrier_wait() {
 ; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-NEXT:    s_cmp_eq_u32 0, 0
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
 ; GFX12-SDAG-NEXT:    s_barrier_signal_isfirst -1
 ; GFX12-SDAG-NEXT:    s_barrier_wait 0
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
@@ -154,6 +163,7 @@ define i1 @signal_isfirst_different_barrier_wait() {
 ; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GISEL-NEXT:    s_cmp_eq_u32 0, 0
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
 ; GFX12-GISEL-NEXT:    s_barrier_signal_isfirst -1
 ; GFX12-GISEL-NEXT:    s_barrier_wait 0
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
@@ -169,6 +179,7 @@ define i1 @signal_isfirst_different_barrier_wait() {
 ; GFX13-SDAG-NEXT:    s_wait_samplecnt 0x0
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    s_cmp_eq_u32 0, 0
+; GFX13-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
 ; GFX13-SDAG-NEXT:    s_barrier_signal_isfirst -1
 ; GFX13-SDAG-NEXT:    s_barrier_wait 0
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
@@ -184,6 +195,7 @@ define i1 @signal_isfirst_different_barrier_wait() {
 ; GFX13-GISEL-NEXT:    s_wait_samplecnt 0x0
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    s_cmp_eq_u32 0, 0
+; GFX13-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
 ; GFX13-GISEL-NEXT:    s_barrier_signal_isfirst -1
 ; GFX13-GISEL-NEXT:    s_barrier_wait 0
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0

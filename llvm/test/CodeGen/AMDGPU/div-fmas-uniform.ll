@@ -142,7 +142,7 @@ define float @uniform_true(float inreg %a, float inreg %b, float inreg %c) #0 {
 ; GFX1150-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1150-SDAG-NEXT:    v_dual_mov_b32 v0, s1 :: v_dual_mov_b32 v1, s2
 ; GFX1150-SDAG-NEXT:    s_mov_b32 vcc_lo, -1
-; GFX1150-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1150-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX1150-SDAG-NEXT:    v_div_fmas_f32 v0, s0, v0, v1
 ; GFX1150-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -151,7 +151,7 @@ define float @uniform_true(float inreg %a, float inreg %b, float inreg %c) #0 {
 ; GFX1150-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1150-GISEL-NEXT:    v_dual_mov_b32 v0, s1 :: v_dual_mov_b32 v1, s2
 ; GFX1150-GISEL-NEXT:    s_mov_b32 vcc_lo, exec_lo
-; GFX1150-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1150-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX1150-GISEL-NEXT:    v_div_fmas_f32 v0, s0, v0, v1
 ; GFX1150-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -189,7 +189,7 @@ define float @uniform_true(float inreg %a, float inreg %b, float inreg %c) #0 {
 ; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v0, s1 :: v_dual_mov_b32 v1, s2
 ; GFX1250-SDAG-NEXT:    s_mov_b32 vcc_lo, -1
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX1250-SDAG-NEXT:    v_div_fmas_f32 v0, s0, v0, v1
 ; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
@@ -199,7 +199,7 @@ define float @uniform_true(float inreg %a, float inreg %b, float inreg %c) #0 {
 ; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v0, s1 :: v_dual_mov_b32 v1, s2
 ; GFX1250-GISEL-NEXT:    s_mov_b32 vcc_lo, exec_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX1250-GISEL-NEXT:    v_div_fmas_f32 v0, s0, v0, v1
 ; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
 ;
@@ -208,7 +208,7 @@ define float @uniform_true(float inreg %a, float inreg %b, float inreg %c) #0 {
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    v_dual_mov_b32 v0, s1 :: v_dual_mov_b32 v1, s2
 ; GFX11-SDAG-NEXT:    s_mov_b32 vcc_lo, -1
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    v_div_fmas_f32 v0, s0, v0, v1
 ; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -217,7 +217,7 @@ define float @uniform_true(float inreg %a, float inreg %b, float inreg %c) #0 {
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    v_dual_mov_b32 v0, s1 :: v_dual_mov_b32 v1, s2
 ; GFX11-GISEL-NEXT:    s_mov_b32 vcc_lo, exec_lo
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    v_div_fmas_f32 v0, s0, v0, v1
 ; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %r = call float @llvm.amdgcn.div.fmas.f32(float %a, float %b, float %c, i1 true)
@@ -230,8 +230,9 @@ define float @uniform_runtime(float inreg %a, float inreg %b, float inreg %c, i1
 ; GFX1150-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1150-SDAG-NEXT:    v_dual_mov_b32 v0, s1 :: v_dual_mov_b32 v1, s2
 ; GFX1150-SDAG-NEXT:    s_bitcmp1_b32 s3, 0
+; GFX1150-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1150-SDAG-NEXT:    s_cselect_b32 vcc_lo, -1, 0
-; GFX1150-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1150-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX1150-SDAG-NEXT:    v_div_fmas_f32 v0, s0, v0, v1
 ; GFX1150-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -240,9 +241,10 @@ define float @uniform_runtime(float inreg %a, float inreg %b, float inreg %c, i1
 ; GFX1150-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1150-GISEL-NEXT:    v_dual_mov_b32 v0, s1 :: v_dual_mov_b32 v1, s2
 ; GFX1150-GISEL-NEXT:    s_and_b32 s1, s3, 1
-; GFX1150-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX1150-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1150-GISEL-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX1150-GISEL-NEXT:    s_cselect_b32 vcc_lo, exec_lo, 0
+; GFX1150-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX1150-GISEL-NEXT:    v_div_fmas_f32 v0, s0, v0, v1
 ; GFX1150-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -255,9 +257,9 @@ define float @uniform_runtime(float inreg %a, float inreg %b, float inreg %c, i1
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-NEXT:    v_dual_mov_b32 v0, s1 :: v_dual_mov_b32 v1, s2
 ; GFX12-SDAG-NEXT:    s_bitcmp1_b32 s3, 0
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX12-SDAG-NEXT:    s_cselect_b32 vcc_lo, -1, 0
 ; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-SDAG-NEXT:    v_div_fmas_f32 v0, s0, v0, v1
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -272,6 +274,7 @@ define float @uniform_runtime(float inreg %a, float inreg %b, float inreg %c, i1
 ; GFX12-GISEL-NEXT:    s_and_b32 s1, s3, 1
 ; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GISEL-NEXT:    s_cmp_lg_u32 s1, 0
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-GISEL-NEXT:    s_cselect_b32 vcc_lo, exec_lo, 0
 ; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GISEL-NEXT:    v_div_fmas_f32 v0, s0, v0, v1
@@ -283,8 +286,9 @@ define float @uniform_runtime(float inreg %a, float inreg %b, float inreg %c, i1
 ; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v0, s1 :: v_dual_mov_b32 v1, s2
 ; GFX1250-SDAG-NEXT:    s_bitcmp1_b32 s3, 0
+; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-SDAG-NEXT:    s_cselect_b32 vcc_lo, -1, 0
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX1250-SDAG-NEXT:    v_div_fmas_f32 v0, s0, v0, v1
 ; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
@@ -294,9 +298,10 @@ define float @uniform_runtime(float inreg %a, float inreg %b, float inreg %c, i1
 ; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v0, s1 :: v_dual_mov_b32 v1, s2
 ; GFX1250-GISEL-NEXT:    s_and_b32 s1, s3, 1
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1250-GISEL-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX1250-GISEL-NEXT:    s_cselect_b32 vcc_lo, exec_lo, 0
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX1250-GISEL-NEXT:    v_div_fmas_f32 v0, s0, v0, v1
 ; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
 ;
@@ -305,8 +310,9 @@ define float @uniform_runtime(float inreg %a, float inreg %b, float inreg %c, i1
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    v_dual_mov_b32 v0, s1 :: v_dual_mov_b32 v1, s2
 ; GFX11-SDAG-NEXT:    s_bitcmp1_b32 s3, 0
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    s_cselect_b32 vcc_lo, -1, 0
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    v_div_fmas_f32 v0, s0, v0, v1
 ; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -315,9 +321,10 @@ define float @uniform_runtime(float inreg %a, float inreg %b, float inreg %c, i1
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    v_dual_mov_b32 v0, s1 :: v_dual_mov_b32 v1, s2
 ; GFX11-GISEL-NEXT:    s_and_b32 s1, s3, 1
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX11-GISEL-NEXT:    s_cselect_b32 vcc_lo, exec_lo, 0
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    v_div_fmas_f32 v0, s0, v0, v1
 ; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %r = call float @llvm.amdgcn.div.fmas.f32(float %a, float %b, float %c, i1 %scale)
@@ -330,7 +337,7 @@ define float @uniform_flush_inputs(float inreg %a, float inreg %b, float inreg %
 ; GFX1150-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1150-NEXT:    v_dual_mov_b32 v0, s1 :: v_dual_mov_b32 v1, s2
 ; GFX1150-NEXT:    s_mov_b32 vcc_lo, 0
-; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX1150-NEXT:    v_div_fmas_f32 v0, s0, v0, v1
 ; GFX1150-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -354,7 +361,7 @@ define float @uniform_flush_inputs(float inreg %a, float inreg %b, float inreg %
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_dual_mov_b32 v0, s1 :: v_dual_mov_b32 v1, s2
 ; GFX1250-NEXT:    s_mov_b32 vcc_lo, 0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX1250-NEXT:    v_div_fmas_f32 v0, s0, v0, v1
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 ;
@@ -363,7 +370,7 @@ define float @uniform_flush_inputs(float inreg %a, float inreg %b, float inreg %
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s1 :: v_dual_mov_b32 v1, s2
 ; GFX11-NEXT:    s_mov_b32 vcc_lo, 0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_div_fmas_f32 v0, s0, v0, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %r = call float @llvm.amdgcn.div.fmas.f32(float %a, float %b, float %c, i1 false)
@@ -376,7 +383,7 @@ define float @uniform_dynamic_inputs(float inreg %a, float inreg %b, float inreg
 ; GFX1150-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1150-NEXT:    v_dual_mov_b32 v0, s1 :: v_dual_mov_b32 v1, s2
 ; GFX1150-NEXT:    s_mov_b32 vcc_lo, 0
-; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX1150-NEXT:    v_div_fmas_f32 v0, s0, v0, v1
 ; GFX1150-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -400,7 +407,7 @@ define float @uniform_dynamic_inputs(float inreg %a, float inreg %b, float inreg
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_dual_mov_b32 v0, s1 :: v_dual_mov_b32 v1, s2
 ; GFX1250-NEXT:    s_mov_b32 vcc_lo, 0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX1250-NEXT:    v_div_fmas_f32 v0, s0, v0, v1
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 ;
@@ -409,7 +416,7 @@ define float @uniform_dynamic_inputs(float inreg %a, float inreg %b, float inreg
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s1 :: v_dual_mov_b32 v1, s2
 ; GFX11-NEXT:    s_mov_b32 vcc_lo, 0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_div_fmas_f32 v0, s0, v0, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %r = call float @llvm.amdgcn.div.fmas.f32(float %a, float %b, float %c, i1 false)

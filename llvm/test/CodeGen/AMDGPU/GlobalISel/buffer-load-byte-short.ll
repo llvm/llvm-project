@@ -162,7 +162,7 @@ define amdgpu_ps void @test_buffer_load_u8_waterfall_rsrc(<4 x i32> %rsrc, i32 %
 ; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
 ; GFX12-NEXT:    v_cmp_eq_u64_e64 s1, s[6:7], v[2:3]
 ; GFX12-NEXT:    s_and_b32 s1, vcc_lo, s1
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_saveexec_b32 s1, s1
 ; GFX12-NEXT:    buffer_load_u8 v1, v4, s[4:7], s0 offen
 ; GFX12-NEXT:    ; implicit-def: $vgpr0
@@ -172,6 +172,7 @@ define amdgpu_ps void @test_buffer_load_u8_waterfall_rsrc(<4 x i32> %rsrc, i32 %
 ; GFX12-NEXT:    s_cbranch_execnz .LBB8_1
 ; GFX12-NEXT:  ; %bb.2:
 ; GFX12-NEXT:    s_mov_b32 exec_lo, s2
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b32 v0, v1, s[8:9]
@@ -196,9 +197,11 @@ define amdgpu_ps void @test_buffer_load_i8_waterfall_soffset(<4 x i32> inreg %rs
 ; GFX12-NEXT:    ; implicit-def: $vgpr1
 ; GFX12-NEXT:    ; implicit-def: $vgpr0
 ; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s7
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_execnz .LBB9_1
 ; GFX12-NEXT:  ; %bb.2:
 ; GFX12-NEXT:    s_mov_b32 exec_lo, s6
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b32 v0, v2, s[4:5]
@@ -235,9 +238,11 @@ define amdgpu_ps void @test_buffer_load_u16_waterfall_both(<4 x i32> %rsrc, i32 
 ; GFX12-NEXT:    ; implicit-def: $vgpr4
 ; GFX12-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s2
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_execnz .LBB10_1
 ; GFX12-NEXT:  ; %bb.2:
 ; GFX12-NEXT:    s_mov_b32 exec_lo, s8
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b32 v0, v1, s[0:1]

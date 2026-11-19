@@ -22,13 +22,14 @@ define amdgpu_kernel void @select_vectors_with_identical_lanes(i32 %a, i32 %b, i
 ; CHECK-NEXT:  .LBB0_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    s_cmp_eq_u32 s6, 7
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_cselect_b32 s4, s0, s1
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use s[4:7]
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_add_co_i32 s6, s6, 1
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_cmp_lt_u32 s6, s3
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB0_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    s_endpgm

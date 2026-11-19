@@ -506,6 +506,7 @@ define amdgpu_kernel void @ctpop_i64_in_br(ptr addrspace(1) %out, ptr addrspace(
 ; GFX12-NEXT:    s_mov_b32 s7, 0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB7_2
 ; GFX12-NEXT:  ; %bb.1: ; %else
 ; GFX12-NEXT:    s_load_b64 s[6:7], s[2:3], 0x8

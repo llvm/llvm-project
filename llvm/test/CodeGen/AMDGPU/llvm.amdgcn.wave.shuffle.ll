@@ -93,6 +93,7 @@ define float @test_wave_shuffle_float(float %val, i32 %idx) {
 ; GFX11-W64-NEXT:    s_xor_saveexec_b64 s[0:1], -1
 ; GFX11-W64-NEXT:    scratch_store_b32 off, v2, s32 ; 4-byte Folded Spill
 ; GFX11-W64-NEXT:    s_mov_b64 exec, s[0:1]
+; GFX11-W64-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-W64-NEXT:    v_lshlrev_b32_e32 v3, 2, v1
 ; GFX11-W64-NEXT:    ; kill: def $vgpr0 killed $vgpr0 killed $exec
 ; GFX11-W64-NEXT:    ; kill: def $vgpr3 killed $vgpr3 killed $exec
@@ -187,6 +188,7 @@ define float @test_wave_shuffle_float(float %val, i32 %idx) {
 ; GFX11-W64-GISEL-NEXT:    s_xor_saveexec_b64 s[0:1], -1
 ; GFX11-W64-GISEL-NEXT:    scratch_store_b32 off, v2, s32 ; 4-byte Folded Spill
 ; GFX11-W64-GISEL-NEXT:    s_mov_b64 exec, s[0:1]
+; GFX11-W64-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-W64-GISEL-NEXT:    v_lshlrev_b32_e32 v3, 2, v1
 ; GFX11-W64-GISEL-NEXT:    ; kill: def $vgpr0 killed $vgpr0 killed $exec
 ; GFX11-W64-GISEL-NEXT:    ; kill: def $vgpr3 killed $vgpr3 killed $exec

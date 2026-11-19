@@ -263,6 +263,7 @@ define i32 @lds_then_dma.tensor.wg(<4 x i32> inreg %D0, <8 x i32> inreg %D1, ptr
 ; CHECK-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_IB_STS2, 21, 4)
 ; CHECK-NEXT:    s_mov_b32 s5, 0xffff0000
 ; CHECK-NEXT:    s_cmp_eq_u32 s4, 15
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_4) | instid1(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_cselect_b32 s4, s5, 0xffff7fff
 ; CHECK-NEXT:    ds_load_b32 v0, v0
 ; CHECK-NEXT:    s_and_b32 s5, s16, 0xffff
@@ -287,6 +288,7 @@ define i32 @lds_then_dma.tensor.agent(<4 x i32> inreg %D0, <8 x i32> inreg %D1, 
 ; CHECK-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_IB_STS2, 21, 4)
 ; CHECK-NEXT:    s_mov_b32 s5, 0xffff0000
 ; CHECK-NEXT:    s_cmp_eq_u32 s4, 15
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_4) | instid1(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_cselect_b32 s4, s5, 0xffff7fff
 ; CHECK-NEXT:    ds_load_b32 v0, v0
 ; CHECK-NEXT:    s_and_b32 s5, s16, 0xffff
@@ -311,6 +313,7 @@ define i32 @lds_then_dma.tensor.system(<4 x i32> inreg %D0, <8 x i32> inreg %D1,
 ; CHECK-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_IB_STS2, 21, 4)
 ; CHECK-NEXT:    s_mov_b32 s5, 0xffff0000
 ; CHECK-NEXT:    s_cmp_eq_u32 s4, 15
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_4) | instid1(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_cselect_b32 s4, s5, 0xffff7fff
 ; CHECK-NEXT:    ds_load_b32 v0, v0
 ; CHECK-NEXT:    s_and_b32 s5, s16, 0xffff
@@ -398,6 +401,7 @@ define i32 @lds_then_dma.tensor.wg.partial(<4 x i32> inreg %D0, <8 x i32> inreg 
 ; CHECK-NEXT:    s_and_b32 s5, s16, 0xffff
 ; CHECK-NEXT:    s_and_b32 s4, s4, s16
 ; CHECK-NEXT:    s_cmp_eq_u32 s5, 0xffff
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_cselect_b32 s16, s4, s16
 ; CHECK-NEXT:    s_wait_dscnt 0x0
 ; CHECK-NEXT:    ds_load_b32 v1, v1
@@ -427,6 +431,7 @@ define i32 @lds_then_dma.tensor.agent.partial(<4 x i32> inreg %D0, <8 x i32> inr
 ; CHECK-NEXT:    s_and_b32 s5, s16, 0xffff
 ; CHECK-NEXT:    s_and_b32 s4, s4, s16
 ; CHECK-NEXT:    s_cmp_eq_u32 s5, 0xffff
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_cselect_b32 s16, s4, s16
 ; CHECK-NEXT:    s_wait_dscnt 0x0
 ; CHECK-NEXT:    ds_load_b32 v1, v1
@@ -456,6 +461,7 @@ define i32 @lds_then_dma.tensor.system.partial(<4 x i32> inreg %D0, <8 x i32> in
 ; CHECK-NEXT:    s_and_b32 s5, s16, 0xffff
 ; CHECK-NEXT:    s_and_b32 s4, s4, s16
 ; CHECK-NEXT:    s_cmp_eq_u32 s5, 0xffff
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_cselect_b32 s16, s4, s16
 ; CHECK-NEXT:    s_wait_dscnt 0x0
 ; CHECK-NEXT:    ds_load_b32 v1, v1

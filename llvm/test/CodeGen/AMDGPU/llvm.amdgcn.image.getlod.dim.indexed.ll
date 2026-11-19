@@ -6,6 +6,7 @@ define amdgpu_ps <4 x float> @getlod_1d(i32 inreg %rsrc, <4 x i32> inreg %samp, 
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    s_mov_b32 s5, exec_lo
 ; GFX13-NEXT:    s_wqm_b32 exec_lo, exec_lo
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX13-NEXT:    v_mov_b32_e32 v4, v0
 ; GFX13-NEXT:    s_and_b32 exec_lo, exec_lo, s5
 ; GFX13-NEXT:    s_mov_b32 s7, s4
@@ -25,6 +26,7 @@ define amdgpu_ps <4 x float> @getlod_1d_nonuniform(i32 %rsrc, <4 x i32> inreg %s
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    s_mov_b32 s4, exec_lo
 ; GFX13-NEXT:    s_wqm_b32 exec_lo, exec_lo
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX13-NEXT:    v_dual_mov_b32 v5, v1 :: v_dual_mov_b32 v4, v0
 ; GFX13-NEXT:    s_and_b32 exec_lo, exec_lo, s4
 ; GFX13-NEXT:    image_get_lod v[0:3], v5, rsrcidx(v4), s[0:3] dmask:0xf dim:SQ_RSRC_IMG_1D
@@ -40,6 +42,7 @@ define amdgpu_ps <2 x float> @getlod_2d(i32 inreg %rsrc, <4 x i32> inreg %samp, 
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    s_mov_b32 s5, exec_lo
 ; GFX13-NEXT:    s_wqm_b32 exec_lo, exec_lo
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX13-NEXT:    v_dual_mov_b32 v2, v1 :: v_dual_mov_b32 v3, v0
 ; GFX13-NEXT:    s_and_b32 exec_lo, exec_lo, s5
 ; GFX13-NEXT:    s_mov_b32 s7, s4

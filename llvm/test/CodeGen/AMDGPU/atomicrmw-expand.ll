@@ -422,11 +422,12 @@ define float @no_unsafe(ptr %addr, float %val) {
 ; GFX1100-NEXT:    buffer_gl0_inv
 ; GFX1100-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v4
 ; GFX1100-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1100-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
 ; GFX1100-NEXT:    s_cbranch_execnz .LBB3_1
 ; GFX1100-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX1100-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1100-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 ;
