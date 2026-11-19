@@ -1995,8 +1995,6 @@ protected:
     LLVM_PREFERRED_TYPE(bool)
     uint64_t IsVariadic : 1;
     LLVM_PREFERRED_TYPE(bool)
-    uint64_t CapturesCXXThis : 1;
-    LLVM_PREFERRED_TYPE(bool)
     uint64_t BlockMissingReturnType : 1;
     LLVM_PREFERRED_TYPE(bool)
     uint64_t IsConversionFromLambda : 1;
