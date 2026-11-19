@@ -88,19 +88,17 @@ exit:                              ; preds = %outer_loop_top
 define i32 @loop_shared_header(ptr %exe, i32 %exesz, i32 %headsize, i32 %min, i32 %wwprva, i32 %e_lfanew, ptr readonly %wwp, i32 %wwpsz, i16 zeroext %sects) local_unnamed_addr #0 {
 ; CHECK-LABEL: loop_shared_header:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    pushq %r15
 ; CHECK-NEXT:    pushq %r14
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    subq $16, %rsp
 ; CHECK-NEXT:    movl $1, %ebx
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB1_11
 ; CHECK-NEXT:  # %bb.1: # %if.end19
 ; CHECK-NEXT:    movl (%rax), %r15d
-; CHECK-NEXT:    leal (,%r15,4), %ebp
-; CHECK-NEXT:    movl %ebp, %r14d
+; CHECK-NEXT:    leal (,%r15,4), %r14d
 ; CHECK-NEXT:    movl $1, %esi
 ; CHECK-NEXT:    movq %r14, %rdi
 ; CHECK-NEXT:    callq cli_calloc@PLT
@@ -108,15 +106,15 @@ define i32 @loop_shared_header(ptr %exe, i32 %exesz, i32 %headsize, i32 %min, i3
 ; CHECK-NEXT:    testb %cl, %cl
 ; CHECK-NEXT:    jne .LBB1_11
 ; CHECK-NEXT:  # %bb.2: # %if.end50
-; CHECK-NEXT:    movq %rax, (%rsp) # 8-byte Spill
+; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    movq %rax, %rdi
 ; CHECK-NEXT:    movq %r14, %rdx
 ; CHECK-NEXT:    callq memcpy@PLT
-; CHECK-NEXT:    cmpl $4, %ebp
+; CHECK-NEXT:    cmpl $4, %r14d
 ; CHECK-NEXT:    jb .LBB1_16
 ; CHECK-NEXT:  # %bb.3: # %shared_preheader
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    movq (%rsp), %rcx # 8-byte Reload
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB1_4: # %outer_loop_header
 ; CHECK-NEXT:    # =>This Loop Header: Depth=1
@@ -161,11 +159,10 @@ define i32 @loop_shared_header(ptr %exe, i32 %exesz, i32 %headsize, i32 %min, i3
 ; CHECK-NEXT:    callq cli_dbgmsg@PLT
 ; CHECK-NEXT:  .LBB1_11: # %cleanup
 ; CHECK-NEXT:    movl %ebx, %eax
-; CHECK-NEXT:    addq $8, %rsp
+; CHECK-NEXT:    addq $16, %rsp
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %r14
 ; CHECK-NEXT:    popq %r15
-; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB1_15: # %wunpsect.exit.thread.loopexit389
 ; CHECK-NEXT:  .LBB1_16: # %wunpsect.exit.thread.loopexit391
