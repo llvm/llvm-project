@@ -1555,6 +1555,15 @@ define i32 @partial_reduce_if_else(ptr %a, ptr %b, ptr %cond, i64 %N) #0 {
 ; CHECK-TAILFOLD-LABEL: define i32 @partial_reduce_if_else(
 ; CHECK-TAILFOLD-NOT: llvm.vector.partial.reduce
 ; CHECK-TAILFOLD: call i32 @llvm.vector.reduce.add
+;
+; CHECK-TAILFOLD-EPILOGUE-LABEL: define i32 @partial_reduce_if_else(
+; CHECK-TAILFOLD-EPILOGUE-NOT: llvm.vector.partial.reduce
+; CHECK-TAILFOLD-EPILOGUE: call i32 @llvm.vector.reduce.add
+; CHECK-TAILFOLD-EPILOGUE: vec.epilog.vector.body:
+; CHECK-TAILFOLD-EPILOGUE: phi <8 x i1> [ %active.lane.mask.entry
+; CHECK-TAILFOLD-EPILOGUE-NOT: llvm.vector.partial.reduce
+; CHECK-TAILFOLD-EPILOGUE: call i32 @llvm.vector.reduce.add
+
 entry:
   br label %for.body
 
@@ -1601,6 +1610,15 @@ define i32 @partial_reduce_three_incoming(ptr %a, ptr %b, ptr %cond_a, ptr %cond
 ; CHECK-TAILFOLD-LABEL: define i32  @partial_reduce_three_incoming(
 ; CHECK-TAILFOLD-NOT: llvm.vector.partial.reduce
 ; CHECK-TAILFOLD: call i32 @llvm.vector.reduce.add
+;
+; CHECK-TAILFOLD-EPILOGUE-LABEL: define i32  @partial_reduce_three_incoming(
+; CHECK-TAILFOLD-EPILOGUE-NOT: llvm.vector.partial.reduce
+; CHECK-TAILFOLD-EPILOGUE: call i32 @llvm.vector.reduce.add
+; CHECK-TAILFOLD-EPILOGUE: vec.epilog.vector.body:
+; CHECK-TAILFOLD-EPILOGUE: phi <8 x i1> [ %active.lane.mask.entry
+; CHECK-TAILFOLD-EPILOGUE-NOT: llvm.vector.partial.reduce
+; CHECK-TAILFOLD-EPILOGUE: call i32 @llvm.vector.reduce.add
+
 entry:
   br label %for.body
 
@@ -1658,6 +1676,15 @@ define i32 @partial_reduce_mixed_scale_factor(ptr %a8, ptr %b16,
 ; CHECK-TAILFOLD-LABEL: define i32  @partial_reduce_mixed_scale_factor(
 ; CHECK-TAILFOLD-NOT: llvm.vector.partial.reduce
 ; CHECK-TAILFOLD: call i32 @llvm.vector.reduce.add
+;
+; CHECK-TAILFOLD-EPILOGUE-LABEL: define i32  @partial_reduce_mixed_scale_factor(
+; CHECK-TAILFOLD-EPILOGUE-NOT: llvm.vector.partial.reduce
+; CHECK-TAILFOLD-EPILOGUE: call i32 @llvm.vector.reduce.add
+; CHECK-TAILFOLD-EPILOGUE: vec.epilog.vector.body:
+; CHECK-TAILFOLD-EPILOGUE: phi <8 x i1> [ %active.lane.mask.entry
+; CHECK-TAILFOLD-EPILOGUE-NOT: llvm.vector.partial.reduce
+; CHECK-TAILFOLD-EPILOGUE: call i32 @llvm.vector.reduce.add
+
 entry:
   br label %for.body
 
@@ -1703,6 +1730,15 @@ define i32 @partial_reduce_bad_passthrough(ptr %src, ptr noalias %src_b,
 ; CHECK-TAILFOLD-LABEL: define i32  @partial_reduce_bad_passthrough(
 ; CHECK-TAILFOLD-NOT: llvm.vector.partial.reduce
 ; CHECK-TAILFOLD: call i32 @llvm.vector.reduce.add
+;
+; CHECK-TAILFOLD-EPILOGUE-LABEL: define i32  @partial_reduce_bad_passthrough(
+; CHECK-TAILFOLD-EPILOGUE-NOT: llvm.vector.partial.reduce
+; CHECK-TAILFOLD-EPILOGUE: call i32 @llvm.vector.reduce.add
+; CHECK-TAILFOLD-EPILOGUE: vec.epilog.vector.body:
+; CHECK-TAILFOLD-EPILOGUE: phi <8 x i1> [ %active.lane.mask.entry
+; CHECK-TAILFOLD-EPILOGUE-NOT: llvm.vector.partial.reduce
+; CHECK-TAILFOLD-EPILOGUE: call i32 @llvm.vector.reduce.add
+
 entry:
   br label %for.body
 

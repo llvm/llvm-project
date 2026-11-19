@@ -17,7 +17,7 @@
 ; RUN: -epilogue-tail-folding-policy=prefer-fold-tail \
 ; RUN: -epilogue-vectorization-force-VF="vscale x 4" --disable-output \
 ; RUN: -debug-only=loop-vectorize -pass-remarks-analysis=loop-vectorize \
-; RUN: %s 2>&1 | FileCheck %s --check-prefix=CHECK-FIXED-SCALABLE-VFs
+; RUN: %s 2>&1 | FileCheck %s --check-prefix=CHECK-FIXED-SCALABLE-VF
 
 target triple = "aarch64-linux-gnu"
 
@@ -63,10 +63,10 @@ exit:
 }
 
 define i32 @mul_redc_scalable(ptr %src, i64 %n) {
-; CHECK-FIXED-SCALABLE-VFs-LABEL: Checking a loop in 'mul_redc_scalable'
-; CHECK-FIXED-SCALABLE-VFs: LV: epilogue tail-folding is enabled
-; CHECK-FIXED-SCALABLE-VFs: remark: <unknown>:0:0: Scalable tail-folded epilogue is not supported for the reduction operations found in this loop
-; CHECK-FIXED-SCALABLE-VFs-NOT: LV: Tail-folded epilogue VPlan is created
+; CHECK-FIXED-SCALABLE-VF-LABEL: Checking a loop in 'mul_redc_scalable'
+; CHECK-FIXED-SCALABLE-VF: LV: epilogue tail-folding is enabled
+; CHECK-FIXED-SCALABLE-VF: remark: <unknown>:0:0: Scalable tail-folded epilogue is not supported for the reduction operations found in this loop
+; CHECK-FIXED-SCALABLE-VF-NOT: LV: Tail-folded epilogue VPlan is created
 entry:
   br label %loop
 
