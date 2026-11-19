@@ -406,14 +406,11 @@ define <4 x float> @shuffle_zip1(<4 x float> %arg) {
 ; CHECK-GI-LABEL: shuffle_zip1:
 ; CHECK-GI:       // %bb.0: // %bb
 ; CHECK-GI-NEXT:    fcmgt.4s v0, v0, #0.0
-; CHECK-GI-NEXT:    movi.2d v2, #0000000000000000
-; CHECK-GI-NEXT:    fmov.4s v3, #1.00000000
-; CHECK-GI-NEXT:    mov s1, v0[2]
-; CHECK-GI-NEXT:    dup.2s v0, v0[0]
-; CHECK-GI-NEXT:    dup.2s v1, v1[0]
-; CHECK-GI-NEXT:    mov.d v1[1], v0[0]
-; CHECK-GI-NEXT:    mov.16b v0, v1
-; CHECK-GI-NEXT:    bsl.16b v0, v3, v2
+; CHECK-GI-NEXT:    movi.2d v1, #0000000000000000
+; CHECK-GI-NEXT:    fmov.4s v2, #1.00000000
+; CHECK-GI-NEXT:    ext.16b v0, v0, v0, #4
+; CHECK-GI-NEXT:    trn2.4s v0, v0, v0
+; CHECK-GI-NEXT:    bsl.16b v0, v2, v1
 ; CHECK-GI-NEXT:    ret
 bb:
   %inst = fcmp olt <4 x float> zeroinitializer, %arg
@@ -437,13 +434,11 @@ define <4 x i32> @shuffle_zip2(<4 x i32> %arg) {
 ; CHECK-GI-LABEL: shuffle_zip2:
 ; CHECK-GI:       // %bb.0: // %bb
 ; CHECK-GI-NEXT:    movi.2d v1, #0000000000000000
-; CHECK-GI-NEXT:    movi.4s v2, #1
 ; CHECK-GI-NEXT:    cmhi.4s v0, v0, v1
-; CHECK-GI-NEXT:    mov s1, v0[2]
-; CHECK-GI-NEXT:    dup.2s v0, v0[0]
-; CHECK-GI-NEXT:    dup.2s v1, v1[0]
-; CHECK-GI-NEXT:    mov.d v1[1], v0[0]
-; CHECK-GI-NEXT:    and.16b v0, v1, v2
+; CHECK-GI-NEXT:    movi.4s v1, #1
+; CHECK-GI-NEXT:    ext.16b v0, v0, v0, #4
+; CHECK-GI-NEXT:    trn2.4s v0, v0, v0
+; CHECK-GI-NEXT:    and.16b v0, v0, v1
 ; CHECK-GI-NEXT:    ret
 bb:
   %inst = icmp ult <4 x i32> zeroinitializer, %arg
@@ -468,11 +463,9 @@ define <4 x i32> @shuffle_zip3(<4 x i32> %arg) {
 ; CHECK-GI:       // %bb.0: // %bb
 ; CHECK-GI-NEXT:    cmgt.4s v0, v0, #0
 ; CHECK-GI-NEXT:    movi.4s v1, #1
-; CHECK-GI-NEXT:    mov s2, v0[2]
-; CHECK-GI-NEXT:    dup.2s v0, v0[0]
-; CHECK-GI-NEXT:    dup.2s v2, v2[0]
-; CHECK-GI-NEXT:    mov.d v2[1], v0[0]
-; CHECK-GI-NEXT:    and.16b v0, v2, v1
+; CHECK-GI-NEXT:    ext.16b v0, v0, v0, #4
+; CHECK-GI-NEXT:    trn2.4s v0, v0, v0
+; CHECK-GI-NEXT:    and.16b v0, v0, v1
 ; CHECK-GI-NEXT:    ret
 bb:
   %inst = icmp slt <4 x i32> zeroinitializer, %arg

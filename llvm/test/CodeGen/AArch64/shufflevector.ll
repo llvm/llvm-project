@@ -198,22 +198,13 @@ define <2 x ptr> @shufflevector_v2p0_zeroes(<2 x ptr> %a, <2 x ptr> %b) {
 ; ===== Smaller/Larger Width Vectors with Legal Element Sizes =====
 
 define <2 x i1> @shufflevector_v2i1(<2 x i1> %a, <2 x i1> %b){
-; CHECK-SD-LABEL: shufflevector_v2i1:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-SD-NEXT:    mov v0.s[1], v1.s[1]
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: shufflevector_v2i1:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-GI-NEXT:    mov v0.s[0], v0.s[0]
-; CHECK-GI-NEXT:    mov v0.s[1], v1.s[1]
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: shufflevector_v2i1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    mov v0.s[1], v1.s[1]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ret
     %c = shufflevector <2 x i1> %a, <2 x i1> %b, <2 x i32> <i32 0, i32 3>
     ret <2 x i1> %c
 }

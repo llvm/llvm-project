@@ -92,6 +92,12 @@ struct LshrOfTruncOfLshr {
   LLT InnerShiftTy;
 };
 
+struct ShuffleRegsAndMask {
+  Register Src1;
+  Register Src2;
+  SmallVector<int> Mask;
+};
+
 using BuildFnTy = std::function<void(MachineIRBuilder &)>;
 
 using OperandBuildSteps =
@@ -678,6 +684,14 @@ public:
                                          MachineRegisterInfo &MRI,
                                          MachineIRBuilder &B,
                                          Register &UnmergeSrc) const;
+
+  LLVM_ABI bool
+  matchCombineBuildUnmergeToShuffle(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                    ShuffleRegsAndMask &ShuffleInfo) const;
+  LLVM_ABI void
+  applyCombineBuildUnmergeToShuffle(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                    MachineIRBuilder &B,
+                                    ShuffleRegsAndMask &ShuffleInfo) const;
 
   LLVM_ABI bool matchUseVectorTruncate(MachineInstr &MI,
                                        Register &MatchInfo) const;

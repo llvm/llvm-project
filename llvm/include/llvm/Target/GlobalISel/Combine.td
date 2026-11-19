@@ -1386,6 +1386,16 @@ def combine_build_unmerge : GICombineRule<
   (apply [{ Helper.applyCombineBuildUnmerge(*${root}, MRI, B, ${unmergeSrc}); }])
 >;
 
+// Transform build_vector(unmerge(src, 0), ... unmerge(src, n), undef, ..., undef)
+// => shuffle_vector(src, <mask>)
+def shuffle_regs_mask_matchinfo : GIDefMatchData<"ShuffleRegsAndMask">;
+def combine_build_unmerge_to_shuffle : GICombineRule<
+  (defs root:$root, shuffle_regs_mask_matchinfo:$unmergeSrc),
+  (match (G_BUILD_VECTOR $dst, GIVariadic<>:$unused):$root,
+         [{ return Helper.matchCombineBuildUnmergeToShuffle(*${root}, MRI, ${unmergeSrc}); }]),
+  (apply [{ Helper.applyCombineBuildUnmergeToShuffle(*${root}, MRI, B, ${unmergeSrc}); }])
+>;
+
 def merge_combines: GICombineGroup<[
   unmerge_anyext_build_vector,
   unmerge_merge,

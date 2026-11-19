@@ -4606,8 +4606,7 @@ define <3 x float> @stofp_v3i8_v3f32(<3 x i8> %a) {
 ; CHECK-NOFP16-GI-NEXT:    mov v0.h[2], w2
 ; CHECK-NOFP16-GI-NEXT:    shl v0.4h, v0.4h, #8
 ; CHECK-NOFP16-GI-NEXT:    sshr v0.4h, v0.4h, #8
-; CHECK-NOFP16-GI-NEXT:    mov v1.h[0], v0.h[2]
-; CHECK-NOFP16-GI-NEXT:    mov v1.h[1], v0.h[3]
+; CHECK-NOFP16-GI-NEXT:    ext v1.8b, v0.8b, v0.8b, #4
 ; CHECK-NOFP16-GI-NEXT:    sshll v0.4s, v0.4h, #0
 ; CHECK-NOFP16-GI-NEXT:    sshll v1.4s, v1.4h, #0
 ; CHECK-NOFP16-GI-NEXT:    mov v0.d[1], v1.d[0]
@@ -4621,8 +4620,7 @@ define <3 x float> @stofp_v3i8_v3f32(<3 x i8> %a) {
 ; CHECK-FP16-GI-NEXT:    mov v0.h[2], w2
 ; CHECK-FP16-GI-NEXT:    shl v0.4h, v0.4h, #8
 ; CHECK-FP16-GI-NEXT:    sshr v0.4h, v0.4h, #8
-; CHECK-FP16-GI-NEXT:    mov v1.h[0], v0.h[2]
-; CHECK-FP16-GI-NEXT:    mov v1.h[1], v0.h[3]
+; CHECK-FP16-GI-NEXT:    ext v1.8b, v0.8b, v0.8b, #4
 ; CHECK-FP16-GI-NEXT:    sshll v0.4s, v0.4h, #0
 ; CHECK-FP16-GI-NEXT:    sshll v1.4s, v1.4h, #0
 ; CHECK-FP16-GI-NEXT:    mov v0.d[1], v1.d[0]
@@ -4661,8 +4659,7 @@ define <3 x float> @utofp_v3i8_v3f32(<3 x i8> %a) {
 ; CHECK-NOFP16-GI-NEXT:    mov v0.h[1], w1
 ; CHECK-NOFP16-GI-NEXT:    mov v0.h[2], w2
 ; CHECK-NOFP16-GI-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NOFP16-GI-NEXT:    mov v1.h[0], v0.h[2]
-; CHECK-NOFP16-GI-NEXT:    mov v1.h[1], v0.h[3]
+; CHECK-NOFP16-GI-NEXT:    ext v1.8b, v0.8b, v0.8b, #4
 ; CHECK-NOFP16-GI-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-NOFP16-GI-NEXT:    ushll v1.4s, v1.4h, #0
 ; CHECK-NOFP16-GI-NEXT:    mov v0.d[1], v1.d[0]
@@ -4676,8 +4673,7 @@ define <3 x float> @utofp_v3i8_v3f32(<3 x i8> %a) {
 ; CHECK-FP16-GI-NEXT:    mov v0.h[1], w1
 ; CHECK-FP16-GI-NEXT:    mov v0.h[2], w2
 ; CHECK-FP16-GI-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-FP16-GI-NEXT:    mov v1.h[0], v0.h[2]
-; CHECK-FP16-GI-NEXT:    mov v1.h[1], v0.h[3]
+; CHECK-FP16-GI-NEXT:    ext v1.8b, v0.8b, v0.8b, #4
 ; CHECK-FP16-GI-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-FP16-GI-NEXT:    ushll v1.4s, v1.4h, #0
 ; CHECK-FP16-GI-NEXT:    mov v0.d[1], v1.d[0]
@@ -6621,8 +6617,7 @@ define <3 x half> @stofp_v3i8_v3f16(<3 x i8> %a) {
 ; CHECK-NOFP16-GI-NEXT:    mov v0.h[2], w2
 ; CHECK-NOFP16-GI-NEXT:    shl v0.4h, v0.4h, #8
 ; CHECK-NOFP16-GI-NEXT:    sshr v0.4h, v0.4h, #8
-; CHECK-NOFP16-GI-NEXT:    mov v1.h[0], v0.h[2]
-; CHECK-NOFP16-GI-NEXT:    mov v1.h[1], v0.h[3]
+; CHECK-NOFP16-GI-NEXT:    ext v1.8b, v0.8b, v0.8b, #4
 ; CHECK-NOFP16-GI-NEXT:    sshll v0.4s, v0.4h, #0
 ; CHECK-NOFP16-GI-NEXT:    sshll v1.4s, v1.4h, #0
 ; CHECK-NOFP16-GI-NEXT:    mov v0.d[1], v1.d[0]
@@ -6671,8 +6666,7 @@ define <3 x half> @utofp_v3i8_v3f16(<3 x i8> %a) {
 ; CHECK-NOFP16-GI-NEXT:    mov v0.h[1], w1
 ; CHECK-NOFP16-GI-NEXT:    mov v0.h[2], w2
 ; CHECK-NOFP16-GI-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NOFP16-GI-NEXT:    mov v1.h[0], v0.h[2]
-; CHECK-NOFP16-GI-NEXT:    mov v1.h[1], v0.h[3]
+; CHECK-NOFP16-GI-NEXT:    ext v1.8b, v0.8b, v0.8b, #4
 ; CHECK-NOFP16-GI-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-NOFP16-GI-NEXT:    ushll v1.4s, v1.4h, #0
 ; CHECK-NOFP16-GI-NEXT:    mov v0.d[1], v1.d[0]
