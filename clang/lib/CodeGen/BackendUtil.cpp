@@ -603,6 +603,8 @@ void EmitAssemblyHelper::CreateTargetMachine(bool MustCreateTM) {
     return;
   Options.MCOptions.LibraryOptions =
       &TheModule->getContext().getLibraryOptions();
+  Options.MCOptions.MachORelocatableDwarf |=
+      TheModule->isMachORelocatableDwarf();
   TM.reset(TheTarget->createTargetMachine(Triple, TargetOpts.CPU, FeaturesStr,
                                           Options, RM, CM, OptLevel));
   if (TM)

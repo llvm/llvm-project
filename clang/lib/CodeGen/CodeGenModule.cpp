@@ -1409,6 +1409,9 @@ void CodeGenModule::Release() {
   if (CodeGenOpts.Dwarf64)
     getModule().addModuleFlag(llvm::Module::Max, "DWARF64", 1);
 
+  if (CodeGenOpts.MachORelocatableDwarf)
+    getModule().addModuleFlag(llvm::Module::Max, "MachO Relocatable DWARF", 1);
+
   if (Context.getLangOpts().SemanticInterposition)
     // Require various optimization to respect semantic interposition.
     getModule().setSemanticInterposition(true);
