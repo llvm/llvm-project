@@ -369,6 +369,9 @@ non-vector     | `spirv.CompositeInsert`  | `llvm.insertvalue`
 
 `spirv.CopyObject` is replaced with its converted operand.
 
+`spirv.VectorExtractDynamic` and `spirv.VectorInsertDynamic` map to
+`llvm.extractelement` and `llvm.insertelement`.
+
 ### `spirv.EntryPoint` and `spirv.ExecutionMode`
 
 First of all, it is important to note that there is no direct representation of
@@ -708,7 +711,6 @@ As well as:
 *   spirv.SMod
 *   spirv.SpecConstant
 *   spirv.Unreachable
-*   spirv.VectorExtractDynamic
 
 ## Control flow conversion
 
