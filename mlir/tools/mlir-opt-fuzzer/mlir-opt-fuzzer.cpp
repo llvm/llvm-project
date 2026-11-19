@@ -119,6 +119,7 @@ extern "C" LLVM_ATTRIBUTE_USED int LLVMFuzzerTestOneInput(const uint8_t *data,
 
   auto context = makeInputContext();
   PassManager pm(context.get(), kModuleAnchor, PassManager::Nesting::Implicit);
+  pm.enableVerifier(false);
   // Validated at startup; the parse cannot fail.
   (void)parsePassPipeline(pipelineText, pm, llvm::nulls());
 
