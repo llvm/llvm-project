@@ -9,8 +9,8 @@
 ...
 
 # CHECK-LABEL: bb.4:
-# CHECK:         %1:gr64bit = nsw AGHIK %0, -4, implicit-def dead $cc
-# CHECK-NEXT:    CGHI %1, 0, implicit-def $cc
+# CHECK:         %3:gr64bit = nsw AGHIK %2, -4, implicit-def dead $cc
+# CHECK-NEXT:    CGHI %3, 0, implicit-def $cc
 # CHECK-NEXT:    BRC 14, 6, %bb.1, implicit $cc
 # CHECK-NEXT:    J %bb.5
 
@@ -18,11 +18,6 @@
 ---
 name:            fun
 alignment:       16
-registers:
-  - { id: 0, class: gr64bit }
-  - { id: 1, class: gr64bit }
-  - { id: 2, class: grx32bit }
-  - { id: 3, class: gr64bit }
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo: {}
