@@ -89,5 +89,241 @@ for.end:
   ret float %add
 }
 
+define float @cond_fadd(ptr noalias nocapture readonly %a, ptr noalias nocapture readonly %c, i64 %n) {
+; IF-EVL-LABEL: @cond_fadd(
+; IF-EVL-NEXT:  entry:
+; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
+; IF-EVL:       for.body:
+; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
+; IF-EVL-NEXT:    [[SUM:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ], [ [[SUM_NEXT:%.*]], [[FOR_INC]] ]
+; IF-EVL-NEXT:    [[ARRAYIDX_C:%.*]] = getelementptr inbounds i32, ptr [[C:%.*]], i64 [[IV]]
+; IF-EVL-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX_C]], align 4
+; IF-EVL-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[TMP0]], 0
+; IF-EVL-NEXT:    br i1 [[TOBOOL_NOT]], label [[FOR_INC]], label [[IF_THEN:%.*]]
+; IF-EVL:       if.then:
+; IF-EVL-NEXT:    [[ARRAYIDX_A:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[IV]]
+; IF-EVL-NEXT:    [[TMP1:%.*]] = load float, ptr [[ARRAYIDX_A]], align 4
+; IF-EVL-NEXT:    [[ADD:%.*]] = fadd float [[SUM]], [[TMP1]]
+; IF-EVL-NEXT:    br label [[FOR_INC]]
+; IF-EVL:       for.inc:
+; IF-EVL-NEXT:    [[SUM_NEXT]] = phi float [ [[SUM]], [[FOR_BODY]] ], [ [[ADD]], [[IF_THEN]] ]
+; IF-EVL-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N:%.*]]
+; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END:%.*]], label [[FOR_BODY]]
+; IF-EVL:       for.end:
+; IF-EVL-NEXT:    [[SUM_NEXT_LCSSA:%.*]] = phi float [ [[SUM_NEXT]], [[FOR_INC]] ]
+; IF-EVL-NEXT:    ret float [[SUM_NEXT_LCSSA]]
+;
+; NO-VP-LABEL: @cond_fadd(
+; NO-VP-NEXT:  entry:
+; NO-VP-NEXT:    br label [[FOR_BODY:%.*]]
+; NO-VP:       for.body:
+; NO-VP-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
+; NO-VP-NEXT:    [[SUM:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ], [ [[SUM_NEXT:%.*]], [[FOR_INC]] ]
+; NO-VP-NEXT:    [[ARRAYIDX_C:%.*]] = getelementptr inbounds i32, ptr [[C:%.*]], i64 [[IV]]
+; NO-VP-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX_C]], align 4
+; NO-VP-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[TMP0]], 0
+; NO-VP-NEXT:    br i1 [[TOBOOL_NOT]], label [[FOR_INC]], label [[IF_THEN:%.*]]
+; NO-VP:       if.then:
+; NO-VP-NEXT:    [[ARRAYIDX_A:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[IV]]
+; NO-VP-NEXT:    [[TMP1:%.*]] = load float, ptr [[ARRAYIDX_A]], align 4
+; NO-VP-NEXT:    [[ADD:%.*]] = fadd float [[SUM]], [[TMP1]]
+; NO-VP-NEXT:    br label [[FOR_INC]]
+; NO-VP:       for.inc:
+; NO-VP-NEXT:    [[SUM_NEXT]] = phi float [ [[SUM]], [[FOR_BODY]] ], [ [[ADD]], [[IF_THEN]] ]
+; NO-VP-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; NO-VP-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N:%.*]]
+; NO-VP-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END:%.*]], label [[FOR_BODY]]
+; NO-VP:       for.end:
+; NO-VP-NEXT:    [[SUM_NEXT_LCSSA:%.*]] = phi float [ [[SUM_NEXT]], [[FOR_INC]] ]
+; NO-VP-NEXT:    ret float [[SUM_NEXT_LCSSA]]
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
+  %sum = phi float [ 0.000000e+00, %entry ], [ %sum.next, %for.inc ]
+  %arrayidx.c = getelementptr inbounds i32, ptr %c, i64 %iv
+  %0 = load i32, ptr %arrayidx.c, align 4
+  %tobool.not = icmp eq i32 %0, 0
+  br i1 %tobool.not, label %for.inc, label %if.then
+
+if.then:
+  %arrayidx.a = getelementptr inbounds float, ptr %a, i64 %iv
+  %1 = load float, ptr %arrayidx.a, align 4
+  %add = fadd float %sum, %1
+  br label %for.inc
+
+for.inc:
+  %sum.next = phi float [ %sum, %for.body ], [ %add, %if.then ]
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %n
+  br i1 %exitcond.not, label %for.end, label %for.body
+
+for.end:
+  ret float %sum.next
+}
+
+define float @cond_fadd_nsz(ptr noalias nocapture readonly %a, ptr noalias nocapture readonly %c, i64 %n) {
+; IF-EVL-LABEL: @cond_fadd_nsz(
+; IF-EVL-NEXT:  entry:
+; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
+; IF-EVL:       for.body:
+; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
+; IF-EVL-NEXT:    [[SUM:%.*]] = phi float [ -0.000000e+00, [[ENTRY]] ], [ [[SUM_NEXT:%.*]], [[FOR_INC]] ]
+; IF-EVL-NEXT:    [[ARRAYIDX_C:%.*]] = getelementptr inbounds i32, ptr [[C:%.*]], i64 [[IV]]
+; IF-EVL-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX_C]], align 4
+; IF-EVL-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[TMP0]], 0
+; IF-EVL-NEXT:    br i1 [[TOBOOL_NOT]], label [[FOR_INC]], label [[IF_THEN:%.*]]
+; IF-EVL:       if.then:
+; IF-EVL-NEXT:    [[ARRAYIDX_A:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[IV]]
+; IF-EVL-NEXT:    [[TMP1:%.*]] = load float, ptr [[ARRAYIDX_A]], align 4
+; IF-EVL-NEXT:    [[ADD:%.*]] = fadd nsz float [[SUM]], [[TMP1]]
+; IF-EVL-NEXT:    br label [[FOR_INC]]
+; IF-EVL:       for.inc:
+; IF-EVL-NEXT:    [[SUM_NEXT]] = phi float [ [[SUM]], [[FOR_BODY]] ], [ [[ADD]], [[IF_THEN]] ]
+; IF-EVL-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N:%.*]]
+; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END:%.*]], label [[FOR_BODY]]
+; IF-EVL:       for.end:
+; IF-EVL-NEXT:    [[SUM_NEXT_LCSSA:%.*]] = phi float [ [[SUM_NEXT]], [[FOR_INC]] ]
+; IF-EVL-NEXT:    ret float [[SUM_NEXT_LCSSA]]
+;
+; NO-VP-LABEL: @cond_fadd_nsz(
+; NO-VP-NEXT:  entry:
+; NO-VP-NEXT:    br label [[FOR_BODY:%.*]]
+; NO-VP:       for.body:
+; NO-VP-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
+; NO-VP-NEXT:    [[SUM:%.*]] = phi float [ -0.000000e+00, [[ENTRY]] ], [ [[SUM_NEXT:%.*]], [[FOR_INC]] ]
+; NO-VP-NEXT:    [[ARRAYIDX_C:%.*]] = getelementptr inbounds i32, ptr [[C:%.*]], i64 [[IV]]
+; NO-VP-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX_C]], align 4
+; NO-VP-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[TMP0]], 0
+; NO-VP-NEXT:    br i1 [[TOBOOL_NOT]], label [[FOR_INC]], label [[IF_THEN:%.*]]
+; NO-VP:       if.then:
+; NO-VP-NEXT:    [[ARRAYIDX_A:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[IV]]
+; NO-VP-NEXT:    [[TMP1:%.*]] = load float, ptr [[ARRAYIDX_A]], align 4
+; NO-VP-NEXT:    [[ADD:%.*]] = fadd nsz float [[SUM]], [[TMP1]]
+; NO-VP-NEXT:    br label [[FOR_INC]]
+; NO-VP:       for.inc:
+; NO-VP-NEXT:    [[SUM_NEXT]] = phi float [ [[SUM]], [[FOR_BODY]] ], [ [[ADD]], [[IF_THEN]] ]
+; NO-VP-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; NO-VP-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N:%.*]]
+; NO-VP-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END:%.*]], label [[FOR_BODY]]
+; NO-VP:       for.end:
+; NO-VP-NEXT:    [[SUM_NEXT_LCSSA:%.*]] = phi float [ [[SUM_NEXT]], [[FOR_INC]] ]
+; NO-VP-NEXT:    ret float [[SUM_NEXT_LCSSA]]
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
+  %sum = phi float [ -0.000000e+00, %entry ], [ %sum.next, %for.inc ]
+  %arrayidx.c = getelementptr inbounds i32, ptr %c, i64 %iv
+  %0 = load i32, ptr %arrayidx.c, align 4
+  %tobool.not = icmp eq i32 %0, 0
+  br i1 %tobool.not, label %for.inc, label %if.then
+
+if.then:
+  %arrayidx.a = getelementptr inbounds float, ptr %a, i64 %iv
+  %1 = load float, ptr %arrayidx.a, align 4
+  %add = fadd nsz float %sum, %1
+  br label %for.inc
+
+for.inc:
+  %sum.next = phi float [ %sum, %for.body ], [ %add, %if.then ]
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %n
+  br i1 %exitcond.not, label %for.end, label %for.body
+
+for.end:
+  ret float %sum.next
+}
+
+define float @cond_fmuladd(ptr noalias nocapture readonly %a, ptr noalias nocapture readonly %b, ptr noalias nocapture readonly %c, i64 %n) {
+; IF-EVL-LABEL: @cond_fmuladd(
+; IF-EVL-NEXT:  entry:
+; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
+; IF-EVL:       for.body:
+; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
+; IF-EVL-NEXT:    [[SUM:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ], [ [[SUM_NEXT:%.*]], [[FOR_INC]] ]
+; IF-EVL-NEXT:    [[ARRAYIDX_C:%.*]] = getelementptr inbounds i32, ptr [[C:%.*]], i64 [[IV]]
+; IF-EVL-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX_C]], align 4
+; IF-EVL-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[TMP0]], 0
+; IF-EVL-NEXT:    br i1 [[TOBOOL_NOT]], label [[FOR_INC]], label [[IF_THEN:%.*]]
+; IF-EVL:       if.then:
+; IF-EVL-NEXT:    [[ARRAYIDX_A:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[IV]]
+; IF-EVL-NEXT:    [[TMP1:%.*]] = load float, ptr [[ARRAYIDX_A]], align 4
+; IF-EVL-NEXT:    [[ARRAYIDX_B:%.*]] = getelementptr inbounds float, ptr [[B:%.*]], i64 [[IV]]
+; IF-EVL-NEXT:    [[TMP2:%.*]] = load float, ptr [[ARRAYIDX_B]], align 4
+; IF-EVL-NEXT:    [[MULADD:%.*]] = tail call float @llvm.fmuladd.f32(float [[TMP1]], float [[TMP2]], float [[SUM]])
+; IF-EVL-NEXT:    br label [[FOR_INC]]
+; IF-EVL:       for.inc:
+; IF-EVL-NEXT:    [[SUM_NEXT]] = phi float [ [[SUM]], [[FOR_BODY]] ], [ [[MULADD]], [[IF_THEN]] ]
+; IF-EVL-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N:%.*]]
+; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END:%.*]], label [[FOR_BODY]]
+; IF-EVL:       for.end:
+; IF-EVL-NEXT:    [[SUM_NEXT_LCSSA:%.*]] = phi float [ [[SUM_NEXT]], [[FOR_INC]] ]
+; IF-EVL-NEXT:    ret float [[SUM_NEXT_LCSSA]]
+;
+; NO-VP-LABEL: @cond_fmuladd(
+; NO-VP-NEXT:  entry:
+; NO-VP-NEXT:    br label [[FOR_BODY:%.*]]
+; NO-VP:       for.body:
+; NO-VP-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
+; NO-VP-NEXT:    [[SUM:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ], [ [[SUM_NEXT:%.*]], [[FOR_INC]] ]
+; NO-VP-NEXT:    [[ARRAYIDX_C:%.*]] = getelementptr inbounds i32, ptr [[C:%.*]], i64 [[IV]]
+; NO-VP-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX_C]], align 4
+; NO-VP-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[TMP0]], 0
+; NO-VP-NEXT:    br i1 [[TOBOOL_NOT]], label [[FOR_INC]], label [[IF_THEN:%.*]]
+; NO-VP:       if.then:
+; NO-VP-NEXT:    [[ARRAYIDX_A:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[IV]]
+; NO-VP-NEXT:    [[TMP1:%.*]] = load float, ptr [[ARRAYIDX_A]], align 4
+; NO-VP-NEXT:    [[ARRAYIDX_B:%.*]] = getelementptr inbounds float, ptr [[B:%.*]], i64 [[IV]]
+; NO-VP-NEXT:    [[TMP2:%.*]] = load float, ptr [[ARRAYIDX_B]], align 4
+; NO-VP-NEXT:    [[MULADD:%.*]] = tail call float @llvm.fmuladd.f32(float [[TMP1]], float [[TMP2]], float [[SUM]])
+; NO-VP-NEXT:    br label [[FOR_INC]]
+; NO-VP:       for.inc:
+; NO-VP-NEXT:    [[SUM_NEXT]] = phi float [ [[SUM]], [[FOR_BODY]] ], [ [[MULADD]], [[IF_THEN]] ]
+; NO-VP-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; NO-VP-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N:%.*]]
+; NO-VP-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END:%.*]], label [[FOR_BODY]]
+; NO-VP:       for.end:
+; NO-VP-NEXT:    [[SUM_NEXT_LCSSA:%.*]] = phi float [ [[SUM_NEXT]], [[FOR_INC]] ]
+; NO-VP-NEXT:    ret float [[SUM_NEXT_LCSSA]]
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
+  %sum = phi float [ 0.000000e+00, %entry ], [ %sum.next, %for.inc ]
+  %arrayidx.c = getelementptr inbounds i32, ptr %c, i64 %iv
+  %0 = load i32, ptr %arrayidx.c, align 4
+  %tobool.not = icmp eq i32 %0, 0
+  br i1 %tobool.not, label %for.inc, label %if.then
+
+if.then:
+  %arrayidx.a = getelementptr inbounds float, ptr %a, i64 %iv
+  %1 = load float, ptr %arrayidx.a, align 4
+  %arrayidx.b = getelementptr inbounds float, ptr %b, i64 %iv
+  %2 = load float, ptr %arrayidx.b, align 4
+  %muladd = tail call float @llvm.fmuladd.f32(float %1, float %2, float %sum)
+  br label %for.inc
+
+for.inc:
+  %sum.next = phi float [ %sum, %for.body ], [ %muladd, %if.then ]
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %n
+  br i1 %exitcond.not, label %for.end, label %for.body
+
+for.end:
+  ret float %sum.next
+}
+
+declare float @llvm.fmuladd.f32(float, float, float)
+
 !0 = distinct !{!0, !1}
 !1 = !{!"llvm.loop.vectorize.enable"}
