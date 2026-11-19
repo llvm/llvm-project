@@ -1215,6 +1215,46 @@ TEST_F(ScalarEvolutionsTest, SCEVComputeConstantDifference) {
   });
 }
 
+TEST_F(ScalarEvolutionsTest, SCEVExtendNoWrapAdd) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(
+      R"(define void @foo(ptr %p, i1 %c, i32 %i0) {
+      entry:
+        br label %loop
+      loop:
+        %iv = phi i32 [ %i0, %entry ], [ %next, %loop ]
+        %offset0 = mul i32 %iv, 2
+        %offset1 = add nsw i32 %offset0, 1
+        %sindex0 = sext i32 %offset0 to i64
+        %sindex1 = sext i32 %offset1 to i64
+        %offset2 = add nuw i32 %offset0, 1
+        %uindex0 = zext i32 %offset0 to i64
+        %uindex1 = zext i32 %offset2 to i64
+        %next = add i32 %iv, 1
+        br i1 %c, label %loop, label %exit
+      exit:
+        ret void
+      })",
+      Err, C);
+
+  ASSERT_TRUE(M && "Could not parse module?");
+  ASSERT_TRUE(!verifyModule(*M) && "Must have been well formed!");
+
+  runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    const SCEV *SIndex0 = SE.getSCEV(getInstructionByName(F, "sindex0"));
+    const SCEV *SIndex1 = SE.getSCEV(getInstructionByName(F, "sindex1"));
+    const SCEV *UIndex0 = SE.getSCEV(getInstructionByName(F, "uindex0"));
+    const SCEV *UIndex1 = SE.getSCEV(getInstructionByName(F, "uindex1"));
+    const SCEV *One = SE.getOne(SIndex0->getType());
+
+    EXPECT_EQ(SIndex1, SE.getAddExpr(SIndex0, One, SCEV::FlagNSW));
+    EXPECT_EQ(UIndex1, SE.getAddExpr(UIndex0, One, SCEV::FlagNUW));
+    EXPECT_EQ(computeConstantDifference(SE, SIndex1, SIndex0), APInt(64, 1));
+    EXPECT_EQ(computeConstantDifference(SE, UIndex1, UIndex0), APInt(64, 1));
+  });
+}
+
 TEST_F(ScalarEvolutionsTest, SCEVrewriteUnknowns) {
   LLVMContext C;
   SMDiagnostic Err;
