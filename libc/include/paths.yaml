@@ -1,0 +1,44 @@
+header: paths.h
+standards:
+  - bsd
+macros:
+  - macro_name: _PATH_DEFPATH
+    macro_value: '"/usr/bin:/bin"'
+  - macro_name: _PATH_STDPATH
+    macro_value: '"/usr/bin:/bin:/usr/sbin:/sbin"'
+  - macro_name: _PATH_BSHELL
+    macro_value: '"/bin/sh"'
+  - macro_name: _PATH_CONSOLE
+    macro_value: '"/dev/console"'
+  - macro_name: _PATH_CSHELL
+    macro_value: '"/bin/csh"'
+  - macro_name: _PATH_DEV
+    macro_value: '"/dev/"'
+  - macro_name: _PATH_DEVNULL
+    macro_value: '"/dev/null"'
+  - macro_name: _PATH_KLOG
+    macro_value: '"/proc/kmsg"'
+  - macro_name: _PATH_MAILDIR
+    macro_value: '"/var/mail"'
+  - macro_name: _PATH_MAN
+    macro_value: '"/usr/share/man"'
+  - macro_name: _PATH_MNTTAB
+    macro_value: '"/etc/fstab"'
+  - macro_name: _PATH_MOUNTED
+    macro_value: '"/etc/mtab"'
+  - macro_name: _PATH_NOLOGIN
+    macro_value: '"/etc/nologin"'
+  - macro_name: _PATH_SENDMAIL
+    macro_value: '"/usr/sbin/sendmail"'
+  - macro_name: _PATH_SHELLS
+    macro_value: '"/etc/shells"'
+  - macro_name: _PATH_TTY
+    macro_value: '"/dev/tty"'
+  - macro_name: _PATH_TMP
+    macro_value: '"/tmp/"'
+  - macro_name: _PATH_VARDB
+    macro_value: '"/var/db/"'
+  - macro_name: _PATH_VARRUN
+    macro_value: '"/var/run/"'
+  - macro_name: _PATH_VARTMP
+    macro_value: '"/var/tmp/"'
