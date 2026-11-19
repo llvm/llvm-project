@@ -96,6 +96,14 @@ void test_s_memtime(global ulong* out)
     *out = __builtin_amdgcn_s_memtime();
 }
 
+// CHECK-LABEL: @test_s_wait_idle
+// CHECK: {{.*}}call{{.*}} void @llvm.amdgcn.s.wait.idle()
+void test_s_wait_idle()
+{
+  if (__builtin_amdgcn_is_invocable(__builtin_amdgcn_s_wait_idle))
+    __builtin_amdgcn_s_wait_idle();
+}
+
 // CHECK-LABEL: @test_groupstaticsize
 // CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.groupstaticsize()
 void test_groupstaticsize(global uint* out)

@@ -523,6 +523,7 @@ def __builtin_amdgcn_permlane16 : AMDGPUBuiltin<"unsigned int(unsigned int, unsi
 def __builtin_amdgcn_permlanex16 : AMDGPUBuiltin<"unsigned int(unsigned int, unsigned int, unsigned int, unsigned int, _Constant bool, _Constant bool)", [Const], "gfx10-insts">;
 def __builtin_amdgcn_mov_dpp8 : AMDGPUBuiltin<"unsigned int(unsigned int, _Constant unsigned int)", [Const, CustomTypeChecking], "gfx10-insts">;
 def __builtin_amdgcn_s_ttracedata_imm : AMDGPUBuiltin<"void(_Constant short)", [], "gfx10-insts">;
+def __builtin_amdgcn_s_wait_idle : AMDGPUBuiltin<"void()", [], "gfx10-insts">;
 
 //===----------------------------------------------------------------------===//
 // Raytracing builtins.

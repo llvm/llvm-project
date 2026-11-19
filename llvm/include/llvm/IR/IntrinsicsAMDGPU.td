@@ -2843,6 +2843,14 @@ def int_amdgcn_s_wait_event_export_ready :
                      IntrNoCallback, IntrNoFree]
 >;
 
+// Emit s_wait_idle instruction, which waits until all dependency and memory
+// counters reach 0.
+def int_amdgcn_s_wait_idle :
+  ClangBuiltin<"__builtin_amdgcn_s_wait_idle">,
+  Intrinsic<[], [], [IntrNoMem, IntrHasSideEffects, IntrWillReturn,
+                     IntrNoCallback, IntrNoFree]
+>;
+
 // WMMA (Wave Matrix Multiply-Accumulate) intrinsics
 //
 // These operations perform a matrix multiplication and accumulation of
