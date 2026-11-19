@@ -12,11 +12,14 @@
 __attribute__((target("sse2"))) int sse2_add(int x) { return x; }
 __attribute__((target("arch=haswell"))) int haswell_add(int x) { return x; }
 __attribute__((target("sse2"))) constexpr int sse2_const(int x) { return x; }
+// Features that are not valid for the host are diagnosed too.
+__attribute__((target("bogus"))) int bogus_feature(int x) { return x; }
 
 [[clang::sycl_external]] int direct(int x) {
-  // expected-error@+2 {{SYCL device code cannot call 'sse2_add', which requires the 'sse2' host feature}}
-  // expected-error@+1 {{SYCL device code cannot call 'haswell_add', which requires a 'haswell' host}}
-  return sse2_add(x) + haswell_add(x);
+  // expected-error@+3 {{SYCL device code cannot call 'sse2_add', which requires the 'sse2' host feature}}
+  // expected-error@+2 {{SYCL device code cannot call 'haswell_add', which requires a 'haswell' host}}
+  // expected-error@+1 {{SYCL device code cannot call 'bogus_feature', which requires the 'bogus' host feature}}
+  return sse2_add(x) + haswell_add(x) + bogus_feature(x);
 }
 
 inline int helper(int x) {

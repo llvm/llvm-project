@@ -4908,9 +4908,8 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
     if (const auto *TA = FD->getAttr<TargetAttr>())
       if (const TargetInfo *Aux = Context.getAuxTargetInfo()) {
         ParsedTargetAttr P = Aux->parseTargetAttr(TA->getFeaturesStr());
-        auto It = llvm::find_if(P.Features, [&](StringRef F) {
-          return F.consume_front("+") && Aux->isValidFeatureName(F);
-        });
+        auto It = llvm::find_if(P.Features,
+                                [](StringRef F) { return F.starts_with("+"); });
         if (It != P.Features.end())
           SYCL().DiagIfDeviceCode(Loc, diag::err_sycl_device_target_attr)
               << FD << 0 << StringRef(*It).drop_front();
