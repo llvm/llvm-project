@@ -182,7 +182,7 @@ environment variable `LIBOMPTARGET_DEVICE_RTL_DEBUG=<arg>`. Further, it is
 currently only supported for Nvidia targets as of July 2023. Alternatively, the
 environment variable `LIBOMPTARGET_DEBUG` can be set to debug both Nvidia and
 AMD GPU targets. For more information, see the
-[debugging instructions](https://openmp.llvm.org/design/Runtimes.html#debugging).
+[debugging instructions](design/Runtimes.md#debugging).
 The debugging instructions list the supported debugging arguments.
 :::
 
@@ -196,7 +196,7 @@ the target device. The optimization level can be set at runtime with
 `LIBOMPTARGET_JIT_OPT_LEVEL`, for instance,
 `LIBOMPTARGET_JIT_OPT_LEVEL=3` corresponding to optimizations level `-O3`.
 See the
-[OpenMP JIT details](https://openmp.llvm.org/design/Runtimes.html#libomptarget-jit-pre-opt-ir-module)
+[OpenMP JIT details](design/Runtimes.md#libomptarget-jit-pre-opt-ir-module)
 for instructions on extracting the embedded device code before or after the
 JIT and more.
 

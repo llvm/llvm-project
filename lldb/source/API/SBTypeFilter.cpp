@@ -88,9 +88,9 @@ const char *SBTypeFilter::GetExpressionPathAtIndex(uint32_t i) {
   if (!IsValid())
     return nullptr;
 
-  const char *item = m_opaque_sp->GetExpressionPathAtIndex(i);
-  if (item && *item == '.')
-    item++;
+  llvm::StringRef item = m_opaque_sp->GetExpressionPathAtIndex(i);
+  if (item.starts_with('.'))
+    item = item.drop_front();
   return ConstString(item).GetCString();
 }
 

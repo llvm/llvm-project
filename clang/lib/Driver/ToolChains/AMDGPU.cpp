@@ -667,7 +667,9 @@ void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   getToolChain().addProfileRTLibs(Args, CmdArgs);
-  addSanitizerRuntimes(getToolChain(), Args, CmdArgs, C);
+  // FIXME: Device ASan is provided by the ROCm device library, not compiler-rt.
+  if (!getToolChain().getSanitizerArgs(Args).needsAsanRt())
+    addSanitizerRuntimes(getToolChain(), Args, CmdArgs, C);
 
   if (Args.hasArg(options::OPT_stdlib))
     CmdArgs.append({"-lc", "-lm"});
@@ -1388,15 +1390,22 @@ SanitizerMask AMDGPUToolChain::getSupportedSanitizers(
       ToolChain::getSupportedSanitizers(BA, DeviceOffloadKind);
 
   // Address sanitizer is potentially supported, but depends on the exact target
-  // arch xnack support.
-  if (!BA || isXnackAvailable(getTriple(), BA.ArchName))
+  // arch XNACK support; for SPIR-V, the availability of XNACK is known at
+  // finalisation time.
+  if (!BA ||
+      (isXnackAvailable(getTriple(), BA.ArchName) || getTriple().isSPIRV()))
     SupportedMask |= SanitizerKind::Address;
+  // Watchpoint probes do not require xnack, but the runtime requires HSA.
+  if (getTriple().getOS() == llvm::Triple::AMDHSA)
+    SupportedMask |= SanitizerKind::Concurrency;
 
   return SupportedMask;
 }
 
 StringRef AMDGPUToolChain::getSanitizerRequirement(SanitizerMask Kinds,
                                                    BoundArch BA) const {
+  if (getTriple().isSPIRV())
+    return {};
   // Address sanitizer requires xnack+ feature
   if ((Kinds & SanitizerKind::Address) && BA &&
       !isXnackAvailable(getTriple(), BA.ArchName)) {

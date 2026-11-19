@@ -8,6 +8,7 @@
 
 #include "llvm/SandboxIR/Instruction.h"
 #include "llvm/SandboxIR/Function.h"
+#include "llvm/SandboxIR/Module.h"
 
 namespace llvm::sandboxir {
 
@@ -153,6 +154,17 @@ BasicBlock *Instruction::getParent() const {
   if (BB == nullptr)
     return nullptr;
   return cast<BasicBlock>(Ctx.getValue(BB));
+}
+
+IRBuilder<> &Instruction::setInsertPos(InsertPosition Pos) {
+  auto *WhereBB = Pos.getBasicBlock();
+  auto WhereIt = Pos.getIterator();
+  auto &Builder = WhereBB->getParent()->getParent()->getLLVMIRBuilder();
+  if (WhereIt != WhereBB->end())
+    Builder.SetInsertPoint((*Pos).getTopmostLLVMInstruction());
+  else
+    Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
+  return Builder;
 }
 
 bool Instruction::classof(const sandboxir::Value *From) {
@@ -1164,12 +1176,12 @@ SwitchInst::CaseHandleImpl<LLVMCaseItT, BlockT, ConstT>::getCaseSuccessor()
   return cast<BlockT>(Ctx.getValue(LLVMBB));
 }
 
-template class SwitchInst::CaseHandleImpl<llvm::SwitchInst::CaseIt, BasicBlock,
-                                          ConstantInt>;
+template class LLVM_EXPORT_TEMPLATE SwitchInst::CaseHandleImpl<
+    llvm::SwitchInst::CaseIt, BasicBlock, ConstantInt>;
 template class SwitchInst::CaseItImpl<llvm::SwitchInst::CaseIt, BasicBlock,
                                       ConstantInt>;
-template class SwitchInst::CaseHandleImpl<llvm::SwitchInst::ConstCaseIt,
-                                          const BasicBlock, const ConstantInt>;
+template class LLVM_EXPORT_TEMPLATE SwitchInst::CaseHandleImpl<
+    llvm::SwitchInst::ConstCaseIt, const BasicBlock, const ConstantInt>;
 template class SwitchInst::CaseItImpl<llvm::SwitchInst::ConstCaseIt,
                                       const BasicBlock, const ConstantInt>;
 

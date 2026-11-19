@@ -227,8 +227,6 @@ public:
 
   void VisitVAArgExpr(VAArgExpr *E);
   void VisitCXXParenListInitExpr(CXXParenListInitExpr *E);
-  void VisitCXXParenListOrInitListExpr(Expr *ExprToVisit, ArrayRef<Expr *> Args,
-                                       Expr *ArrayFiller);
 
   void EmitInitializationToLValue(Expr *E, LValue Address);
   void EmitNullInitializationToLValue(LValue Address);
@@ -792,9 +790,8 @@ void AggExprEmitter::VisitCompoundLiteralExpr(CompoundLiteralExpr *E) {
 
   if (Destruct)
     if (QualType::DestructionKind DtorKind = E->getType().isDestructedType())
-      CGF.pushLifetimeExtendedDestroy(
-          CGF.getCleanupKind(DtorKind), Slot.getAddress(), E->getType(),
-          CGF.getDestroyer(DtorKind), DtorKind & EHCleanup);
+      CGF.pushLifetimeExtendedDestroy(DtorKind, Slot.getAddress(),
+                                      E->getType());
 }
 
 /// Attempt to look through various unimportant expressions to find a

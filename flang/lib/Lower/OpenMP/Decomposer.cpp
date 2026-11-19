@@ -17,6 +17,7 @@
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Parser/provenance.h"
+#include "flang/Semantics/openmp-utils.h"
 #include "flang/Semantics/semantics.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -51,15 +52,22 @@ struct ConstructDecomposition {
   }
 
   // Given an object, return its base object if one exists.
-  std::optional<Object> getBaseObject(const Object &object) {
+  std::optional<Object> getBaseObject(const Object &object) const {
     return lower::omp::getBaseObject(object, semaCtx);
   }
 
   // Return the iteration variable of the associated loop if any.
-  std::optional<Object> getLoopIterVar() {
+  std::optional<Object> getLoopIterVar() const {
     if (semantics::Symbol *symbol = getIterationVariableSymbol(eval))
       return Object{symbol, /*designator=*/{}};
     return std::nullopt;
+  }
+
+  bool isClauseAllowedOnDirective(llvm::omp::Clause clauseId,
+                                  llvm::omp::Directive dirId,
+                                  llvm::omp::Version version) const {
+    return semantics::omp::IsClauseAllowedOnDirective(clauseId, dirId, version,
+                                                      &semaCtx);
   }
 
   semantics::SemanticsContext &semaCtx;

@@ -24,14 +24,14 @@
 #include "gtest/gtest.h"
 
 using namespace orc_rt;
-using orc_rt_test::CrossDylibTestError;
+using orc_rt::test::CrossDylibTestError;
 
 namespace {
 
 class UnrelatedError : public ErrorExtends<UnrelatedError, ErrorInfoBase> {
 public:
   static constexpr const char *RTTIName =
-      "orc_rt_test::RTTICrossDylibTest_UnrelatedError";
+      "orc_rt::test::RTTICrossDylibTest_UnrelatedError";
   std::string toString() const noexcept override { return {}; }
 };
 

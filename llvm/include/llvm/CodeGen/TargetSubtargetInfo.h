@@ -254,6 +254,10 @@ public:
   /// allocation.
   virtual bool enablePostRAMachineScheduler() const;
 
+  /// True if the subtarget should run a machine scheduler before PHI
+  /// elimination.
+  virtual bool enableSSAMachineScheduler() const;
+
   /// True if the subtarget should run the atomic expansion pass.
   virtual bool enableAtomicExpand() const;
 
@@ -333,12 +337,6 @@ public:
   /// Enable use of alias analysis during code generation (during MI
   /// scheduling, DAGCombine, etc.).
   virtual bool useAA() const;
-
-  /// \brief Sink addresses into blocks using GEP instructions rather than
-  /// pointer casts and arithmetic.
-  virtual bool addrSinkUsingGEPs() const {
-    return useAA();
-  }
 
   /// Enable the use of the early if conversion pass.
   virtual bool enableEarlyIfConversion() const { return false; }

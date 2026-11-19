@@ -49,8 +49,8 @@ $nt = comdat any
 ; MERGED: @lwt = internal unnamed_addr alias [1 x ptr], ptr @lwt_aliasee
 ; MERGED: @nlwt_nl = internal unnamed_addr alias [1 x ptr], ptr @nlwt_aliasee
 ; MERGED: {{@"?lwt_nl\.[^ ]+}} = hidden alias i32, ptr @lwt_nl
-; MERGED: {{@"?lwt\.[^ ]+}} = hidden alias [1 x ptr], ptr @lwt
-; MERGED: {{@"?nlwt_nl\.[^ ]+}} = hidden alias [1 x ptr], ptr @nlwt_nl
+; MERGED: {{@"?lwt\.[^ ]+}} = hidden alias [1 x ptr], ptr @lwt_aliasee
+; MERGED: {{@"?nlwt_nl\.[^ ]+}} = hidden alias [1 x ptr], ptr @nlwt_aliasee
 
 ; THIN: {{@"?lwt\.[^ ]+}} = external hidden global [1 x ptr]
 @lwt = internal unnamed_addr alias [1 x ptr], ptr @lwt_aliasee

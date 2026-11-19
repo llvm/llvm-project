@@ -74,6 +74,24 @@ __attribute__((amdgpu_num_sgpr(48)))
 __attribute__((amdgpu_num_vgpr(32)))
 __global__ void kernel_combined() {}
 
+// CIR: cir.func{{.*}} @_Z16kernel_lb_threadv(){{.*}}"cir.amdgpu-flat-work-group-size" = "1,256"
+// CIR-NOT: cir.amdgpu-waves-per-eu
+// LLVM: define{{.*}} void @_Z16kernel_lb_threadv(){{.*}} #[[LB_THREAD_ATTR:[0-9]+]]
+__launch_bounds__(256)
+__global__ void kernel_lb_thread() {}
+
+// CIR: cir.func{{.*}} @_Z15kernel_lb_wavesv(){{.*}}"cir.amdgpu-flat-work-group-size" = "1,128"{{.*}}"cir.amdgpu-waves-per-eu" = "4"
+// LLVM: define{{.*}} void @_Z15kernel_lb_wavesv(){{.*}} #[[LB_WAVES_ATTR:[0-9]+]]
+__launch_bounds__(128, 4)
+__global__ void kernel_lb_waves() {}
+
+// CIR: cir.func{{.*}} @_Z18kernel_lb_overridev(){{.*}}"cir.amdgpu-flat-work-group-size" = "32,64"{{.*}}"cir.amdgpu-waves-per-eu" = "3"
+// LLVM: define{{.*}} void @_Z18kernel_lb_overridev(){{.*}} #[[LB_OVERRIDE_ATTR:[0-9]+]]
+__attribute__((amdgpu_flat_work_group_size(32, 64)))
+__attribute__((amdgpu_waves_per_eu(3)))
+__launch_bounds__(128, 4)
+__global__ void kernel_lb_override() {}
+
 // Test: Device function should NOT have kernel attributes
 // CIR: cir.func{{.*}} @_Z9device_fnv()
 // CIR-NOT: cir.amdgpu-flat-work-group-size
@@ -88,6 +106,9 @@ __device__ void device_fn() {}
 // LLVM-DAG: attributes #[[SGPR_ATTR]] = {{.*}}"amdgpu-num-sgpr"="32"
 // LLVM-DAG: attributes #[[VGPR_ATTR]] = {{.*}}"amdgpu-num-vgpr"="64"
 // LLVM-DAG: attributes #[[MAX_WG_ATTR]] = {{.*}}"amdgpu-max-num-workgroups"="8,4,2"
+// LLVM-DAG: attributes #[[LB_THREAD_ATTR]] = {{.*}}"amdgpu-flat-work-group-size"="1,256"
+// LLVM-DAG: attributes #[[LB_WAVES_ATTR]] = {{.*}}"amdgpu-flat-work-group-size"="1,128"{{.*}}"amdgpu-waves-per-eu"="4"
+// LLVM-DAG: attributes #[[LB_OVERRIDE_ATTR]] = {{.*}}"amdgpu-flat-work-group-size"="32,64"{{.*}}"amdgpu-waves-per-eu"="3"
 // LLVM-DAG: attributes #[[COMBINED_ATTR]] = {{.*}}"amdgpu-flat-work-group-size"="256,256"{{.*}}"amdgpu-num-sgpr"="48"{{.*}}"amdgpu-num-vgpr"="32"{{.*}}"amdgpu-waves-per-eu"="1,2"
 
 // Test: amdgpu-expand-waitcnt-profiling is set on all functions when enabled

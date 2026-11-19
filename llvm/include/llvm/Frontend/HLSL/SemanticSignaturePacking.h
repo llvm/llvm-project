@@ -69,7 +69,7 @@ packSignatureStacked(MutableArrayRef<SemanticSignatureElement> Elements,
                      Triple::EnvironmentType ShaderStage, IOType IOTy);
 
 /// Packs eligible signature elements without moving previously placed
-/// elements.
+/// elements. Only StartRow and StartCol are modified.
 ///
 /// See llvm/docs/DirectX/SemanticSignatures.md#prefix-stable-packing for
 /// details.
@@ -104,6 +104,25 @@ packSignaturePrefixStable(MutableArrayRef<SemanticSignatureElement> Elements,
 LLVM_ABI Expected<unsigned>
 packSignatureIndexed(MutableArrayRef<SemanticSignatureElement> Elements,
                      Triple::EnvironmentType ShaderStage, IOType IOTy);
+
+/// Packs eligible signature elements in an optimized order by reordering
+/// elements into an optimal packing order and allowing clip/cull to share
+/// compatible rows. Only StartRow and StartCol are modified.
+///
+/// See llvm/docs/DirectX/SemanticSignatures.md#optimized-packing for details.
+///
+/// Returns the number of allocated rows, or zero if no elements were
+/// allocated. For geometry outputs this is the maximum extent of any stream,
+/// not the sum of their extents.
+///
+/// On failure, Elements are left partially packed: the elements preceding the
+/// one reported by the returned SignaturePackingError keep the locations
+/// they were assigned, while that element and the ones following it retain the
+/// unallocated row and column sentinels.
+LLVM_ABI Expected<unsigned>
+packSignatureOptimized(MutableArrayRef<SemanticSignatureElement> Elements,
+                       Triple::EnvironmentType ShaderStage, IOType IOTy,
+                       bool UseNative16BitTypes);
 
 } // namespace llvm::hlsl
 

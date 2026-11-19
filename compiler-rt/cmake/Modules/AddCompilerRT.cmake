@@ -41,6 +41,11 @@ function(add_compiler_rt_windows_version_resource_file OUT_VAR RESOURCE_VAR name
 endfunction()
 
 function(set_compiler_rt_windows_version_resource_properties name resource_file)
+  cmake_parse_arguments(ARG "" "FILE_DESCRIPTION" "" ${ARGN})
+  if(NOT DEFINED ARG_FILE_DESCRIPTION OR "${ARG_FILE_DESCRIPTION}" STREQUAL "")
+    set(ARG_FILE_DESCRIPTION "compiler-rt runtime")
+  endif()
+
   if(DEFINED PACKAGE_VERSION AND NOT "${PACKAGE_VERSION}" STREQUAL "")
     set(version_string "${PACKAGE_VERSION}")
   else()
@@ -58,6 +63,9 @@ function(set_compiler_rt_windows_version_resource_properties name resource_file)
                "RC_VERSION_FIELD_4=0"
                "RC_FILE_VERSION=\"${version_string}\""
                "RC_INTERNAL_NAME=\"${name}\""
+               "RC_FILE_DESCRIPTION=\"${ARG_FILE_DESCRIPTION}\""
+               "RC_COPYRIGHT=\"Copyright (c) LLVM contributors.\""
+               "RC_ORIGINAL_FILENAME=\"$<TARGET_FILE_NAME:${name}>\""
                "RC_PRODUCT_NAME=\"compiler-rt\""
                "RC_PRODUCT_VERSION=\"${version_string}\"")
 endfunction()
@@ -72,9 +80,10 @@ endfunction()
 #                                  CFLAGS <compile flags>
 #                                  DEFS <compile definitions>
 #                                  DEPS <dependencies>
+#                                  LINK_LIBS <linked libraries>
 #                                  ADDITIONAL_HEADERS <header files>)
 function(add_compiler_rt_object_libraries name)
-  cmake_parse_arguments(LIB "" "" "OS;ARCHS;SOURCES;CFLAGS;DEFS;DEPS;ADDITIONAL_HEADERS"
+  cmake_parse_arguments(LIB "" "" "OS;ARCHS;SOURCES;CFLAGS;DEFS;DEPS;LINK_LIBS;ADDITIONAL_HEADERS"
     ${ARGN})
   set(libnames)
   if(APPLE)
@@ -107,6 +116,9 @@ function(add_compiler_rt_object_libraries name)
     add_library(${libname} OBJECT ${LIB_SOURCES})
     if(LIB_DEPS)
       add_dependencies(${libname} ${LIB_DEPS})
+    endif()
+    if(LIB_LINK_LIBS)
+      target_link_libraries(${libname} PRIVATE ${LIB_LINK_LIBS})
     endif()
 
     # Strip out -msse3 if this isn't macOS.
@@ -201,7 +213,8 @@ endmacro()
 #                         PARENT_TARGET <convenience parent target>
 #                         ADDITIONAL_HEADERS <header files>
 #                         C_STANDARD <version>
-#                         CXX_STANDARD <version>)
+#                         CXX_STANDARD <version>
+#                         FILE_DESCRIPTION <description>)
 function(add_compiler_rt_runtime name type)
   if(NOT type MATCHES "^(OBJECT|STATIC|SHARED|MODULE)$")
     message(FATAL_ERROR
@@ -210,7 +223,7 @@ function(add_compiler_rt_runtime name type)
   endif()
   cmake_parse_arguments(LIB
     ""
-    "PARENT_TARGET;C_STANDARD;CXX_STANDARD"
+    "PARENT_TARGET;C_STANDARD;CXX_STANDARD;FILE_DESCRIPTION"
     "OS;ARCHS;SOURCES;CFLAGS;LINK_FLAGS;DEFS;DEPS;LINK_LIBS;OBJECT_LIBS;ADDITIONAL_HEADERS"
     ${ARGN})
   set(libnames)
@@ -345,13 +358,9 @@ function(add_compiler_rt_runtime name type)
   endif()
 
   foreach(libname ${libnames})
-    # If you are using a multi-configuration generator we don't generate
-    # per-library install rules, so we fall back to the parent target COMPONENT
-    if(CMAKE_CONFIGURATION_TYPES AND LIB_PARENT_TARGET)
-      set(COMPONENT_OPTION COMPONENT ${LIB_PARENT_TARGET})
-    else()
-      set(COMPONENT_OPTION COMPONENT ${libname})
-    endif()
+    get_compiler_rt_install_component(${libname} "${LIB_PARENT_TARGET}"
+                                      component)
+    set(COMPONENT_OPTION COMPONENT ${component})
 
     if(type STREQUAL "SHARED")
       list(APPEND LIB_DEFS COMPILER_RT_SHARED_LIB)
@@ -409,7 +418,7 @@ function(add_compiler_rt_runtime name type)
       add_library(${libname} ${type} ${sources_${libname}})
       if(windows_resource_file)
         set_compiler_rt_windows_version_resource_properties(${libname}
-          ${windows_resource_file})
+          ${windows_resource_file} FILE_DESCRIPTION "${LIB_FILE_DESCRIPTION}")
       endif()
       set_target_compile_flags(${libname} ${extra_cflags_${libname}})
       set_target_link_flags(${libname} ${extra_link_flags_${libname}})
@@ -454,7 +463,8 @@ function(add_compiler_rt_runtime name type)
         endif()
       endif()
       find_program(CODESIGN codesign)
-      if (APPLE AND NOT CMAKE_LINKER MATCHES ".*lld.*" AND CODESIGN)
+      get_filename_component(CLANG_LINKER_NAME "${CMAKE_LINKER}" NAME)
+      if (APPLE AND NOT CLANG_LINKER_NAME MATCHES "lld" AND CODESIGN)
         # Apple's linker signs the resulting dylib with an ad-hoc code signature in
         # most situations, except:
         # 1. Versions of ld64 prior to ld64-609 in Xcode 12 predate this behavior.
@@ -485,6 +495,7 @@ function(add_compiler_rt_runtime name type)
           COMMAND_EXPAND_LISTS
         )
       endif()
+      unset(CLANG_LINKER_NAME)
     endif()
 
     set(parent_target_arg)
@@ -612,7 +623,7 @@ function(add_compiler_rt_test test_suite test_name arch)
   add_dependencies(${test_suite} T${test_name})
 endfunction()
 
-macro(add_compiler_rt_script name)
+macro(add_compiler_rt_script name component)
   set(dst ${COMPILER_RT_EXEC_OUTPUT_DIR}/${name})
   set(src ${CMAKE_CURRENT_SOURCE_DIR}/${name})
   add_custom_command(OUTPUT ${dst}
@@ -620,9 +631,11 @@ macro(add_compiler_rt_script name)
     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src} ${dst}
     COMMENT "Copying ${name}...")
   add_custom_target(${name} DEPENDS ${dst})
+  add_dependencies(${component} ${name})
   install(FILES ${dst}
     PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
-    DESTINATION ${COMPILER_RT_INSTALL_BINARY_DIR})
+    DESTINATION ${COMPILER_RT_INSTALL_BINARY_DIR}
+    COMPONENT ${component})
 endmacro(add_compiler_rt_script src name)
 
 

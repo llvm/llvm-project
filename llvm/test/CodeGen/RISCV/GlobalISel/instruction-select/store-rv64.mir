@@ -6,7 +6,6 @@
 name:            store_i8_i64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $x10, $x11
@@ -18,9 +17,9 @@ body:            |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
     ; CHECK-NEXT: SB [[COPY]], [[COPY1]], 0 :: (store (s8))
     ; CHECK-NEXT: PseudoRET
-    %0:gprb(s64) = COPY $x10
+    %0:gprb(i64) = COPY $x10
     %1:gprb(p0) = COPY $x11
-    G_STORE %0(s64), %1(p0) :: (store (s8))
+    G_STORE %0(i64), %1(p0) :: (store (s8))
     PseudoRET
 
 ...
@@ -28,7 +27,6 @@ body:            |
 name:            store_i16_i64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $x10, $x11
@@ -40,9 +38,9 @@ body:            |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
     ; CHECK-NEXT: SH [[COPY]], [[COPY1]], 0 :: (store (s16))
     ; CHECK-NEXT: PseudoRET
-    %0:gprb(s64) = COPY $x10
+    %0:gprb(i64) = COPY $x10
     %1:gprb(p0) = COPY $x11
-    G_STORE %0(s64), %1(p0) :: (store (s16))
+    G_STORE %0(i64), %1(p0) :: (store (s16))
     PseudoRET
 
 ...
@@ -50,7 +48,6 @@ body:            |
 name:            store_i8_i16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $x10, $x11
@@ -62,10 +59,10 @@ body:            |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
     ; CHECK-NEXT: SB [[COPY]], [[COPY1]], 0 :: (store (s8))
     ; CHECK-NEXT: PseudoRET
-    %0:gprb(s64) = COPY $x10
+    %0:gprb(i64) = COPY $x10
     %1:gprb(p0) = COPY $x11
-    %2:gprb(s16) = G_TRUNC %0
-    G_STORE %2(s16), %1(p0) :: (store (s8))
+    %2:gprb(i16) = G_TRUNC %0
+    G_STORE %2(i16), %1(p0) :: (store (s8))
     PseudoRET
 
 ...
@@ -73,7 +70,6 @@ body:            |
 name:            store_i16_i16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $x10, $x11
@@ -85,10 +81,10 @@ body:            |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
     ; CHECK-NEXT: SH [[COPY]], [[COPY1]], 0 :: (store (s16))
     ; CHECK-NEXT: PseudoRET
-    %0:gprb(s64) = COPY $x10
+    %0:gprb(i64) = COPY $x10
     %1:gprb(p0) = COPY $x11
-    %2:gprb(s16) = G_TRUNC %0
-    G_STORE %2(s16), %1(p0) :: (store (s16))
+    %2:gprb(i16) = G_TRUNC %0
+    G_STORE %2(i16), %1(p0) :: (store (s16))
     PseudoRET
 
 ...
@@ -96,7 +92,6 @@ body:            |
 name:            store_i32_i64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $x10, $x11
@@ -108,9 +103,9 @@ body:            |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
     ; CHECK-NEXT: SW [[COPY]], [[COPY1]], 0 :: (store (s32))
     ; CHECK-NEXT: PseudoRET
-    %0:gprb(s64) = COPY $x10
+    %0:gprb(i64) = COPY $x10
     %1:gprb(p0) = COPY $x11
-    G_STORE %0(s64), %1(p0) :: (store (s32))
+    G_STORE %0(i64), %1(p0) :: (store (s32))
     PseudoRET
 
 ...
@@ -118,7 +113,6 @@ body:            |
 name:            store_i64_i64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $x10, $x11
@@ -130,9 +124,9 @@ body:            |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
     ; CHECK-NEXT: SD [[COPY]], [[COPY1]], 0 :: (store (s64))
     ; CHECK-NEXT: PseudoRET
-    %0:gprb(s64) = COPY $x10
+    %0:gprb(i64) = COPY $x10
     %1:gprb(p0) = COPY $x11
-    G_STORE %0(s64), %1(p0) :: (store (s64))
+    G_STORE %0(i64), %1(p0) :: (store (s64))
     PseudoRET
 
 ...
@@ -140,7 +134,6 @@ body:            |
 name:            store_p0
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $x10, $x11
@@ -162,7 +155,6 @@ body:            |
 name:            truncstore_i8_i32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x10, $x11
@@ -177,11 +169,11 @@ body:             |
     ; CHECK-NEXT: $x10 = COPY [[COPY2]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
-    %3:gprb(s64) = COPY $x11
-    %9:gprb(s32) = G_TRUNC %3(s64)
-    G_STORE %9(s32), %0(p0) :: (store (s8))
-    %7:gprb(s64) = G_CONSTANT i64 0
-    $x10 = COPY %7(s64)
+    %3:gprb(i64) = COPY $x11
+    %9:gprb(i32) = G_TRUNC %3(i64)
+    G_STORE %9(i32), %0(p0) :: (store (s8))
+    %7:gprb(i64) = G_CONSTANT i64 0
+    $x10 = COPY %7(i64)
     PseudoRET implicit $x10
 
 ...
@@ -189,7 +181,6 @@ body:             |
 name:            truncstore_i16_i32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x10, $x11
@@ -204,11 +195,11 @@ body:             |
     ; CHECK-NEXT: $x10 = COPY [[COPY2]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
-    %3:gprb(s64) = COPY $x11
-    %9:gprb(s32) = G_TRUNC %3(s64)
-    G_STORE %9(s32), %0(p0) :: (store (s16))
-    %7:gprb(s64) = G_CONSTANT i64 0
-    $x10 = COPY %7(s64)
+    %3:gprb(i64) = COPY $x11
+    %9:gprb(i32) = G_TRUNC %3(i64)
+    G_STORE %9(i32), %0(p0) :: (store (s16))
+    %7:gprb(i64) = G_CONSTANT i64 0
+    $x10 = COPY %7(i64)
     PseudoRET implicit $x10
 
 ...
@@ -216,7 +207,6 @@ body:             |
 name:            store_i32_i32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x10, $x11
@@ -231,11 +221,11 @@ body:             |
     ; CHECK-NEXT: $x10 = COPY [[COPY2]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
-    %3:gprb(s64) = COPY $x11
-    %9:gprb(s32) = G_TRUNC %3(s64)
-    G_STORE %9(s32), %0(p0) :: (store (s32))
-    %7:gprb(s64) = G_CONSTANT i64 0
-    $x10 = COPY %7(s64)
+    %3:gprb(i64) = COPY $x11
+    %9:gprb(i32) = G_TRUNC %3(i64)
+    G_STORE %9(i32), %0(p0) :: (store (s32))
+    %7:gprb(i64) = G_CONSTANT i64 0
+    $x10 = COPY %7(i64)
     PseudoRET implicit $x10
 
 ...
@@ -243,7 +233,6 @@ body:             |
 name:            store_fi_i64_i64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 stack:
   - { id: 0, offset: 0, size: 8, alignment: 8 }
@@ -258,9 +247,9 @@ body:            |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
     ; CHECK-NEXT: SD [[COPY]], %stack.0, 0 :: (store (s64))
     ; CHECK-NEXT: PseudoRET
-    %0:gprb(s64) = COPY $x10
+    %0:gprb(i64) = COPY $x10
     %1:gprb(p0) = G_FRAME_INDEX %stack.0
-    G_STORE %0(s64), %1(p0) :: (store (s64))
+    G_STORE %0(i64), %1(p0) :: (store (s64))
     PseudoRET
 
 ...
@@ -268,7 +257,6 @@ body:            |
 name:            store_fi_gep_i64_i64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 stack:
   - { id: 0, offset: 0, size: 16, alignment: 8 }
@@ -283,11 +271,11 @@ body:            |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
     ; CHECK-NEXT: SD [[COPY]], %stack.0, 8 :: (store (s64))
     ; CHECK-NEXT: PseudoRET
-    %0:gprb(s64) = COPY $x10
+    %0:gprb(i64) = COPY $x10
     %1:gprb(p0) = G_FRAME_INDEX %stack.0
-    %2:gprb(s64) = G_CONSTANT i64 8
-    %3:gprb(p0) = G_PTR_ADD %1(p0), %2(s64)
-    G_STORE %0(s64), %3(p0) :: (store (s64))
+    %2:gprb(i64) = G_CONSTANT i64 8
+    %3:gprb(p0) = G_PTR_ADD %1(p0), %2(i64)
+    G_STORE %0(i64), %3(p0) :: (store (s64))
     PseudoRET
 
 ...
@@ -295,7 +283,6 @@ body:            |
 name:            store_gep_i64_i64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $x10, $x11
@@ -307,11 +294,11 @@ body:            |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
     ; CHECK-NEXT: SD [[COPY]], [[COPY1]], 8 :: (store (s64))
     ; CHECK-NEXT: PseudoRET
-    %0:gprb(s64) = COPY $x10
+    %0:gprb(i64) = COPY $x10
     %1:gprb(p0) = COPY $x11
-    %2:gprb(s64) = G_CONSTANT i64 8
-    %3:gprb(p0) = G_PTR_ADD %1(p0), %2(s64)
-    G_STORE %0(s64), %3(p0) :: (store (s64))
+    %2:gprb(i64) = G_CONSTANT i64 8
+    %3:gprb(p0) = G_PTR_ADD %1(p0), %2(i64)
+    G_STORE %0(i64), %3(p0) :: (store (s64))
     PseudoRET
 
 ...

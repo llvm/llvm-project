@@ -220,3 +220,25 @@ define i32 @cluster_expression(ptr addrspace(3) %local) {
   %value = load i32, ptr addrspace(7) %p, align 4
   ret i32 %value
 }
+
+; A deferred AS3 operand needs a cast placed before the newly-cloned AS7 select.
+define i32 @mixed_deferred_select(ptr addrspace(3) %local, ptr addrspace(7) %cluster, i1 %cond) {
+; CHECK-LABEL: define i32 @mixed_deferred_select(
+; CHECK-SAME: ptr addrspace(3) [[LOCAL:%.*]], ptr addrspace(7) [[CLUSTER:%.*]], i1 [[COND:%.*]]) {
+; CHECK-NEXT:    [[OFFSET:%.*]] = getelementptr inbounds i32, ptr addrspace(3) [[LOCAL]], i64 1
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr addrspace(3) [[OFFSET]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspace(3) [[OFFSET]] to ptr addrspace(7)
+; CHECK-NEXT:    [[P:%.*]] = select i1 [[COND]], ptr addrspace(7) [[TMP1]], ptr addrspace(7) [[CLUSTER]]
+; CHECK-NEXT:    [[VAL_1:%.*]] = load i32, ptr addrspace(7) [[P]], align 4
+; CHECK-NEXT:    [[RV:%.*]] = add i32 [[VAL]], [[VAL_1]]
+; CHECK-NEXT:    ret i32 [[RV]]
+;
+  %lg = addrspacecast ptr addrspace(3) %local to ptr
+  %cg = addrspacecast ptr addrspace(7) %cluster to ptr
+  %offset = getelementptr inbounds i32, ptr %lg, i64 1
+  %val = load i32, ptr %offset, align 4
+  %p = select i1 %cond, ptr %offset, ptr %cg
+  %val.1 = load i32, ptr %p, align 4
+  %rv = add i32 %val, %val.1
+  ret i32 %rv
+}

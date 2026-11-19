@@ -9,13 +9,21 @@
 #ifndef LLDB_CORE_DEMANGLEDNAMEINFO_H
 #define LLDB_CORE_DEMANGLEDNAMEINFO_H
 
+#include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/Locked.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/Demangle/ItaniumDemangle.h"
 #include "llvm/Demangle/Utility.h"
 
 #include <cstddef>
+#include <optional>
+#include <random>
 #include <utility>
+#include <vector>
 
 namespace lldb_private {
+
+class Mangled;
 
 /// Stores information about where certain portions of a demangled
 /// function name begin and end.
@@ -130,6 +138,43 @@ struct DemangledNameInfo {
 
   /// Returns \c true if this object holds a valid suffix range.
   bool hasSuffix() const { return SuffixRange.second >= SuffixRange.first; }
+};
+
+/// A cache from mangled names to DemangledNameInfo.
+class DemangledNameInfoCache {
+public:
+  /// Calculates the DemangledNameInfo and caches the result.
+  ///
+  /// \return std::nullopt if no info could be computed for \c mangled.
+  std::optional<DemangledNameInfo> Get(const Mangled &mangled);
+
+  void Clear();
+
+  size_t GetMaxEntries() const;
+
+  size_t GetNumEntries() const;
+
+  /// Changes the maximum number of entries. A limit of 0 disables the cache.
+  void SetMaxEntries(size_t max_entries);
+
+private:
+  struct State {
+    /// Drops a random entry from the cache.
+    void EvictRandomEntry();
+
+    /// Maps a ConstString to its DemangledNameInfo.
+    /// Values can be empty if no name info could be computed for a name.
+    llvm::DenseMap<ConstString, std::optional<DemangledNameInfo>> infos;
+
+    /// The mangled names.
+    std::vector<ConstString> mangled_names;
+
+    std::minstd_rand rng;
+
+    size_t max_entries = 0;
+  };
+
+  Guarded<State> m_state;
 };
 
 /// An OutputBuffer which keeps a record of where certain parts of a

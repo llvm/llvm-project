@@ -8,11 +8,6 @@
 
 # Flang Fortran Standards Support
 
-```{contents}
----
-local:
----
-```
 
 This document summarizes Fortran standards support in Flang. The information is only provided as a guideline. The
 TODOs/Not Yet Implemented messages emitted by the compiler for unimplemented features should be treated as authoritative.
@@ -55,10 +50,10 @@ status of all important Fortran 2023 features. The table entries are based on th
 | Error conditions in collectives                            | P      | Experimental support via [PRIF](ParallelMultiImageFortranRuntime.md) |
 | Simple procedures                                          | N      | |
 | Using integer arrays to specify subscripts                 | N      | |
-| Using integer arrays to specify rank and bound of an array | N      | |
+| Using integer arrays to specify rank and bound of an array | P      | Explicit-shape declarations only; assumed-shape declarations, ALLOCATE (C947) and pointer assignment (C1020) with array bounds are not supported |
 | Using an integer constant to specify rank                  | Y      | |
 | Reduction specifier for do concurrent                      | P      | |
-| Enumerations                                               | N      | |
+| Enumerations                                               | P      | New non-interoperable ENUMERATION TYPE supported, named interoperable enum types not yet supported |
 
 ## Fortran 2018
 All features except those listed in the following table are supported. Almost all of the unsupported features are related to
@@ -76,7 +71,7 @@ the multi-image execution. The table entries are based on the document [The new 
 | Team arguments to other intrinsics                         | P      | Experimental support via [PRIF](ParallelMultiImageFortranRuntime.md) |
 | Coarrays allocated in teams                                | N      | Multi-image/Coarray feature |
 | Critical construct                                         | N      | Multi-image/Coarray feature |
-| Events                                                     | N      | Multi-image/Coarray feature |
+| Events                                                     | P      | Experimental support via [PRIF](ParallelMultiImageFortranRuntime.md) |
 | Intrinsic move_alloc extensions                            | P      | Multi-image/Coarray feature |
 | Detecting failed and stopped images                        | N      | Multi-image/Coarray feature |
 | New and enhanced atomic subroutines                        | N      | Multi-image/Coarray feature |

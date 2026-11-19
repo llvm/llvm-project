@@ -281,9 +281,9 @@ public:
   /// Extract a C string from \a *offset_ptr.
   ///
   /// Returns a pointer to a C String from the data at the offset pointed to
-  /// by \a offset_ptr. A variable length NULL terminated C string will be
+  /// by \a offset_ptr. A variable length null-terminated C string will be
   /// extracted and the \a offset_ptr will be updated with the offset of the
-  /// byte that follows the NULL terminator byte.
+  /// byte that follows the null terminator.
   ///
   /// \param[in,out] offset_ptr
   ///     A pointer to an offset within the data that will be advanced
@@ -303,7 +303,7 @@ public:
   ///
   /// Returns a pointer to a C String from the data at the offset pointed to
   /// by \a offset_ptr, with a field length of \a len.
-  /// A NULL terminated C string will be extracted and the \a offset_ptr
+  /// A null-terminated C string will be extracted and the \a offset_ptr
   /// will be updated with the offset of the byte that follows the fixed
   /// length field.
   ///
@@ -318,8 +318,8 @@ public:
   ///     A pointer to the C string value in the data. If the offset
   ///     pointed to by \a offset_ptr is out of bounds, or if the
   ///     offset plus the length of the field is out of bounds, or if
-  ///     the field does not contain a NULL terminator byte, nullptr will
-  ///     be returned.
+  ///     the field does not contain a null terminator, nullptr will be
+  ///     returned.
   const char *GetCStr(lldb::offset_t *offset_ptr, lldb::offset_t len) const;
 
   /// Extract \a length bytes from \a *offset_ptr.
@@ -338,7 +338,7 @@ public:
   ///
   /// \param[in] length
   ///     The optional length of a string to extract. If the value is
-  ///     zero, a NULL terminated C string will be extracted.
+  ///     zero, a null-terminated C string will be extracted.
   ///
   /// \return
   ///     A pointer to the bytes in this object's data if the offset
@@ -857,7 +857,7 @@ public:
 
   bool HasData() { return m_start && m_end && m_end - m_start > 0; }
 
-  /// Peek at a NUL terminated C string at \a offset.
+  /// Peek at a null-terminated C string at \a offset.
   ///
   /// The terminator must lie within the bounds of this object's data, so the
   /// returned string never extends past the end of the data. Its data() is a

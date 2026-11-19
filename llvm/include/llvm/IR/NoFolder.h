@@ -34,7 +34,7 @@ namespace llvm {
 
 /// NoFolder - Create "constants" (actually, instructions) with no folding.
 class LLVM_ABI NoFolder final : public IRBuilderFolder {
-  LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION();
+  LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION() override;
 
 public:
   explicit NoFolder() = default;
@@ -75,8 +75,8 @@ public:
     return nullptr;
   }
 
-  Value *FoldGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
-                 GEPNoWrapFlags NW) const override {
+  Value *FoldGEP(const DataLayout &, Type *Ty, Value *Ptr,
+                 ArrayRef<Value *> IdxList, GEPNoWrapFlags NW) const override {
     return nullptr;
   }
 
@@ -106,6 +106,14 @@ public:
 
   Value *FoldShuffleVector(Value *V1, Value *V2,
                            ArrayRef<int> Mask) const override {
+    return nullptr;
+  }
+
+  Value *FoldBitInsert(Value *Base, Value *Val, Value *Offset) const override {
+    return nullptr;
+  }
+
+  Value *FoldBitExtract(Type *Ty, Value *Src, Value *Offset) const override {
     return nullptr;
   }
 

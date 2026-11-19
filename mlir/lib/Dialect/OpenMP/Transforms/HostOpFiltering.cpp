@@ -13,7 +13,8 @@
 
 #include "mlir/Dialect/OpenMP/Transforms/Passes.h"
 
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMModuleOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMTerminatorOps.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
 
@@ -217,6 +218,8 @@ private:
       targetOp.setDependIteratedKindsAttr(nullptr);
       targetOp.getDeviceMutable().clear();
       targetOp.getDynGroupprivateSizeMutable().clear();
+      targetOp.setDynGroupprivateAccessGroupAttr(nullptr);
+      targetOp.setDynGroupprivateFallbackAttr(nullptr);
       targetOp.getIfExprMutable().clear();
       targetOp.getInReductionVarsMutable().clear();
       targetOp.setInReductionByrefAttr(nullptr);

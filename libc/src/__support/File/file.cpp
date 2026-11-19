@@ -13,19 +13,31 @@
 
 #include "file.h"
 
+#include "file_io_result.h"
+#include "file_mode.h"
 #include "hdr/errno_macros.h"
 #include "hdr/func/realloc.h"
+#include "hdr/stdint_proxy.h"
 #include "hdr/stdio_macros.h"
+#include "hdr/types/char32_t.h"
+#include "hdr/types/char8_t.h"
 #include "hdr/types/off_t.h"
+#include "hdr/types/wchar_t.h"
+#include "hdr/types/wint_t.h"
 #include "hdr/wchar_macros.h"
 #include "src/__support/CPP/new.h"
 #include "src/__support/CPP/span.h"
 #include "src/__support/alloc-checker.h"
 #include "src/__support/error_or.h"
+#include "src/__support/libc_assert.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/threads/mutex.h"
 #include "src/__support/wchar/character_converter.h"
+#include "src/__support/wchar/mbstate.h"
 #include "src/__support/wchar/wcrtomb.h"
 #include "src/string/memory_utils/inline_memcpy.h"
+
+#include <stddef.h>
 
 namespace LIBC_NAMESPACE_DECL {
 File *File::list_all = nullptr;
@@ -81,7 +93,11 @@ FileIOResult File::write_unlocked_impl(const void *data, size_t len) {
     return {0, EBADF};
   }
 
-  prev_op = FileOp::WRITE;
+  if (prev_op != FileOp::WRITE) {
+    pos = 0;
+    read_limit = 0;
+    prev_op = FileOp::WRITE;
+  }
 
   if (bufmode == _IONBF) { // unbuffered.
     size_t ret_val =
@@ -288,6 +304,28 @@ size_t File::copy_data_from_buf(uint8_t *data, size_t len) {
   return available_data;
 }
 
+FileIOResult File::read_from_platform(uint8_t *dst, size_t min_bytes,
+                                      size_t max_bytes) {
+  LIBC_ASSERT(min_bytes <= max_bytes);
+  size_t total_read = 0;
+  cpp::span<uint8_t> dstref(dst, max_bytes);
+  while (total_read < min_bytes) {
+    FileIOResult result = platform_read(this, dstref.data(), dstref.size());
+    size_t fetched_size = result.value;
+    LIBC_ASSERT(fetched_size <= dstref.size());
+    total_read += fetched_size;
+    if (result.has_error() || fetched_size == 0) {
+      if (result.has_error())
+        err = true;
+      else
+        eof = true;
+      return {total_read, result.error};
+    }
+    dstref = dstref.subspan(fetched_size);
+  }
+  return total_read;
+}
+
 FileIOResult File::read_unlocked_fbf(uint8_t *data, size_t len) {
   // Read data from the buffer first.
   size_t available_data = copy_data_from_buf(data, len);
@@ -297,36 +335,20 @@ FileIOResult File::read_unlocked_fbf(uint8_t *data, size_t len) {
   // Update the dataref to reflect that fact that we have already
   // copied |available_data| into |data|.
   size_t to_fetch = len - available_data;
-  cpp::span<uint8_t> dataref(static_cast<uint8_t *>(data) + available_data,
-                             to_fetch);
+  cpp::span<uint8_t> dataref(data + available_data, to_fetch);
 
   if (to_fetch > bufsize) {
-    FileIOResult result = platform_read(this, dataref.data(), to_fetch);
-    size_t fetched_size = result.value;
-    if (result.has_error() || fetched_size < to_fetch) {
-      if (!result.has_error())
-        eof = true;
-      else
-        err = true;
-      return {available_data + fetched_size, result.error};
-    }
-    return len;
+    FileIOResult result =
+        read_from_platform(dataref.data(), to_fetch, to_fetch);
+    return {available_data + result.value, result.error};
   }
 
   // Fetch and buffer another buffer worth of data.
-  FileIOResult result = platform_read(this, buf, bufsize);
-  size_t fetched_size = result.value;
-  read_limit += fetched_size;
-  size_t transfer_size = fetched_size >= to_fetch ? to_fetch : fetched_size;
-  inline_memcpy(dataref.data(), buf, transfer_size);
-  pos += transfer_size;
-  if (result.has_error() || fetched_size < to_fetch) {
-    if (!result.has_error())
-      eof = true;
-    else
-      err = true;
-  }
-  return {transfer_size + available_data, result.error};
+  FileIOResult result = read_from_platform(buf, to_fetch, bufsize);
+  read_limit = result.value;
+  pos = 0;
+  available_data += copy_data_from_buf(dataref.data(), to_fetch);
+  return {available_data, result.error};
 }
 
 FileIOResult File::read_unlocked_nbf(uint8_t *data, size_t len) {
@@ -336,17 +358,10 @@ FileIOResult File::read_unlocked_nbf(uint8_t *data, size_t len) {
     return available_data;
 
   // Directly copy the data into |data|.
-  cpp::span<uint8_t> dataref(static_cast<uint8_t *>(data) + available_data,
-                             len - available_data);
-  FileIOResult result = platform_read(this, dataref.data(), dataref.size());
-
-  if (result.has_error() || result < dataref.size()) {
-    if (!result.has_error())
-      eof = true;
-    else
-      err = true;
-  }
-  return {result + available_data, result.error};
+  size_t to_fetch = len - available_data;
+  FileIOResult result =
+      read_from_platform(data + available_data, to_fetch, to_fetch);
+  return {available_data + result.value, result.error};
 }
 
 int File::ungetc_unlocked(int c) {
@@ -393,20 +408,20 @@ int File::ungetc_unlocked(int c) {
     bufref[pos] = static_cast<unsigned char>(c);
   }
 
+  prev_op = FileOp::READ;
   eof = false; // There is atleast one character that can be read now.
   err = false; // This operation was a success.
   return c;
 }
 
-ErrorOr<int> File::seek(off_t offset, int whence) {
-  FileLock lock(this);
+ErrorOr<int> File::seek_unlocked(off_t offset, int whence) {
   if (prev_op == FileOp::WRITE && pos > 0) {
-
     FileIOResult buf_result = platform_write(this, buf, pos);
     if (buf_result.has_error() || buf_result.value < pos) {
       err = true;
       return Error(buf_result.error);
     }
+    pos = 0;
   } else if (prev_op == FileOp::READ && whence == SEEK_CUR) {
     // More data could have been read out from the platform file than was
     // required. So, we have to adjust the offset we pass to platform seek
@@ -429,18 +444,41 @@ ErrorOr<int> File::seek(off_t offset, int whence) {
   return 0;
 }
 
-ErrorOr<off_t> File::tell() {
-  FileLock lock(this);
-  auto seek_target = eof ? SEEK_END : SEEK_CUR;
+ErrorOr<off_t> File::tell_unlocked() {
+  int seek_target = (eof || (mode.is_append() && prev_op == FileOp::WRITE))
+                        ? SEEK_END
+                        : SEEK_CUR;
   auto result = platform_seek(this, 0, seek_target);
-  if (!result.has_value() || result.value() < 0)
+  if (!result.has_value())
     return Error(result.error());
-  off_t platform_offset = result.value();
-  if (prev_op == FileOp::READ)
-    return platform_offset - (read_limit - pos);
+  if (result.value() < 0)
+    return Error(EOVERFLOW);
+  const off_t platform_offset = result.value();
   if (prev_op == FileOp::WRITE)
-    return platform_offset + pos;
+    return platform_offset + static_cast<off_t>(pos);
+  if (prev_op == FileOp::READ)
+    return platform_offset - static_cast<off_t>(read_limit - pos);
   return platform_offset;
+}
+
+ErrorOr<File::Position> File::get_pos_unlocked() {
+  auto pos_result = tell_unlocked();
+  if (!pos_result.has_value())
+    return Error(pos_result.error());
+
+  return Position{
+      pos_result.value(),
+      orientation == Orientation::WIDE ? mbstate : internal::mbstate(),
+  };
+}
+
+ErrorOr<int> File::set_pos_unlocked(const Position &fpos) {
+  auto result = seek_unlocked(fpos.offset, SEEK_SET);
+  if (!result.has_value())
+    return Error(result.error());
+
+  mbstate = fpos.state;
+  return 0;
 }
 
 int File::flush_unlocked() {
@@ -508,6 +546,11 @@ int File::set_buffer(void *buffer, size_t size, int buffer_mode) {
     return EINVAL;
   }
 
+  // A buffer of no size cannot hold anything, so the stream is unbuffered
+  // whatever mode was asked for.
+  if (size == 0)
+    buffer_mode = _IONBF;
+
   if (buffer == nullptr && size != 0 && buffer_mode != _IONBF) {
     // We exclude the case of buffer_mode == _IONBF in this branch
     // because we don't need to allocate buffer in such a case.
@@ -539,7 +582,7 @@ int File::set_buffer(void *buffer, size_t size, int buffer_mode) {
     }
     own_buf = false;
   }
-  bufmode = buffer_mode;
+  bufmode = static_cast<int8_t>(buffer_mode);
   adjust_buf();
   return 0;
 }
@@ -673,6 +716,7 @@ ErrorOr<wint_t> File::ungetwc_unlocked(wint_t wc) {
     for (size_t i = 0; i < n; ++i)
       buf[pos + i] = static_cast<uint8_t>(mb_buf[i]);
   }
+  prev_op = FileOp::READ;
   eof = false;
   err = false;
   return wc;

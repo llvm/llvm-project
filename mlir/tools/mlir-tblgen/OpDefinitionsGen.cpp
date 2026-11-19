@@ -34,6 +34,7 @@
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
@@ -537,12 +538,18 @@ class OpEmitter {
       llvm::PointerUnion<const AttributeMetadata *, const NamedProperty *>;
 
 public:
+  // Emits the declaration of `op` to `os` and appends the headers declaring
+  // the traits and constraints it uses to `includes`.
   static void
   emitDecl(const Operator &op, raw_ostream &os,
-           const StaticVerifierFunctionEmitter &staticVerifierEmitter);
+           const StaticVerifierFunctionEmitter &staticVerifierEmitter,
+           SmallVectorImpl<StringRef> &includes);
+  // Emits the definition of `op` to `os` and appends the headers required by
+  // the definition beyond those of the declaration to `includes`.
   static void
   emitDef(const Operator &op, raw_ostream &os,
-          const StaticVerifierFunctionEmitter &staticVerifierEmitter);
+          const StaticVerifierFunctionEmitter &staticVerifierEmitter,
+          SmallVectorImpl<StringRef> &includes);
 
 private:
   OpEmitter(const Operator &op,
@@ -554,6 +561,16 @@ private:
 
   void emitDecl(raw_ostream &os);
   void emitDef(raw_ostream &os);
+
+  // Adds `trait` to the op class and records `cppIncludes` as headers required
+  // by the op declaration.
+  void addTrait(const Twine &trait, ArrayRef<StringRef> cppIncludes);
+  void addTrait(const tblgen::NativeTrait &trait);
+  void addTrait(const tblgen::InterfaceTrait &trait);
+
+  // Records the headers declaring the type and attribute constraints of the
+  // operands, results and attributes as required by the op declaration.
+  void addConstraintIncludes();
 
   // Generate methods for accessing the attribute names of this operation.
   void genAttrNameGetters();
@@ -770,6 +787,12 @@ private:
   // Keep track of the interface using declarations that have been generated to
   // avoid duplicates.
   llvm::StringSet<> interfaceUsingNames;
+
+  // The headers declaring the traits and constraints used by the op class.
+  SmallVector<StringRef> requiredIncludes;
+
+  // The headers required by the op definition beyond those of the declaration.
+  SmallVector<StringRef> requiredDefIncludes;
 };
 
 } // namespace
@@ -1019,6 +1042,7 @@ OpEmitter::OpEmitter(const Operator &op,
   verifyCtx.addSubst("_ctxt", "this->getOperation()->getContext()");
 
   genTraits();
+  addConstraintIncludes();
 
   // Generate C++ code for various op methods. The order here determines the
   // methods in the generated file.
@@ -1051,14 +1075,20 @@ OpEmitter::OpEmitter(const Operator &op,
 }
 void OpEmitter::emitDecl(
     const Operator &op, raw_ostream &os,
-    const StaticVerifierFunctionEmitter &staticVerifierEmitter) {
-  OpEmitter(op, staticVerifierEmitter).emitDecl(os);
+    const StaticVerifierFunctionEmitter &staticVerifierEmitter,
+    SmallVectorImpl<StringRef> &includes) {
+  OpEmitter emitter(op, staticVerifierEmitter);
+  emitter.emitDecl(os);
+  llvm::append_range(includes, emitter.requiredIncludes);
 }
 
 void OpEmitter::emitDef(
     const Operator &op, raw_ostream &os,
-    const StaticVerifierFunctionEmitter &staticVerifierEmitter) {
-  OpEmitter(op, staticVerifierEmitter).emitDef(os);
+    const StaticVerifierFunctionEmitter &staticVerifierEmitter,
+    SmallVectorImpl<StringRef> &includes) {
+  OpEmitter emitter(op, staticVerifierEmitter);
+  emitter.emitDef(os);
+  llvm::append_range(includes, emitter.requiredDefIncludes);
 }
 
 void OpEmitter::emitDecl(raw_ostream &os) {
@@ -1069,6 +1099,28 @@ void OpEmitter::emitDecl(raw_ostream &os) {
 void OpEmitter::emitDef(raw_ostream &os) {
   opClass.finalize();
   opClass.writeDefTo(os);
+}
+
+void OpEmitter::addTrait(const Twine &trait, ArrayRef<StringRef> cppIncludes) {
+  opClass.addTrait(trait);
+  llvm::append_range(requiredIncludes, cppIncludes);
+}
+
+void OpEmitter::addTrait(const tblgen::NativeTrait &trait) {
+  addTrait(trait.getFullyQualifiedTraitName(), trait.getCppIncludes());
+}
+
+void OpEmitter::addTrait(const tblgen::InterfaceTrait &trait) {
+  addTrait(trait.getFullyQualifiedTraitName(), trait.getCppIncludes());
+}
+
+void OpEmitter::addConstraintIncludes() {
+  for (const NamedTypeConstraint &operand : op.getOperands())
+    llvm::append_range(requiredIncludes, operand.constraint.getCppIncludes());
+  for (const NamedTypeConstraint &result : op.getResults())
+    llvm::append_range(requiredIncludes, result.constraint.getCppIncludes());
+  for (const NamedAttribute &namedAttr : op.getAttributes())
+    llvm::append_range(requiredIncludes, namedAttr.attr.getCppIncludes());
 }
 
 static void errorIfPruned(size_t line, Method *m, const Twine &methodName,
@@ -1399,17 +1451,10 @@ void OpEmitter::genPropertiesSupport() {
 
       setPropMethod << formatv(R"decl(
   {{
-    auto &propStorage = prop.{0};
     {1}
-    if (attr) {{
-      auto convertedAttr = ::llvm::dyn_cast<std::remove_reference_t<decltype(propStorage)>>(attr);
-      if (convertedAttr) {{
-        propStorage = convertedAttr;
-      } else {{
-        emitError() << "Invalid attribute `{0}` in property conversion: " << attr;
-        return ::mlir::failure();
-      }
-    }
+    if (::mlir::failed(::mlir::detail::setAttributeProperty(
+            prop.{0}, attr, "{0}", emitError)))
+      return ::mlir::failure();
   }
 )decl",
                                name, getAttr);
@@ -1446,15 +1491,10 @@ void OpEmitter::genPropertiesSupport() {
     const auto *namedAttr =
         llvm::dyn_cast_if_present<const AttributeMetadata *>(attrOrProp);
     StringRef name = namedAttr->attrName;
-    getPropMethod << formatv(R"decl(
-    {{
-      const auto &propStorage = prop.{0};
-      if (propStorage)
-        attrs.push_back(odsBuilder.getNamedAttr("{0}",
-                                       propStorage));
-    }
-)decl",
-                             name);
+    getPropMethod << formatv(
+        "    ::mlir::detail::appendAttributeProperty(attrs, \"{0}\", "
+        "prop.{0});\n",
+        name);
   }
   getPropMethod << R"decl(
   if (!attrs.empty())
@@ -1798,7 +1838,8 @@ void OpEmitter::genAttrGetters() {
   if (derivedAttrs.empty())
     return;
 
-  opClass.addTrait("::mlir::DerivedAttributeOpInterface::Trait");
+  addTrait("::mlir::DerivedAttributeOpInterface::Trait",
+           {"mlir/Interfaces/DerivedAttributeOpInterface.h"});
   // Generate helper method to query whether a named attribute is a derived
   // attribute. This enables, for example, avoiding adding an attribute that
   // overlaps with a derived attribute.
@@ -2108,8 +2149,13 @@ generateNamedOperandGetters(const Operator &op, Class &opClass,
                                     MethodParameter("unsigned", "index"));
   ERROR_IF_PRUNED(m, "getODSOperands", op);
   auto &body = m->body();
-  body << formatv(valueRangeReturnCode, rangeBeginCall,
-                  "getODSOperandIndexAndLength(index)");
+  if (isGenericAdaptorBase) {
+    body << formatv(valueRangeReturnCode, rangeBeginCall,
+                    "getODSOperandIndexAndLength(index)");
+  } else {
+    body << "  auto [start, length] = getODSOperandIndexAndLength(index);\n"
+            "  return getOperation()->getOperands().slice(start, length);\n";
+  }
 
   // Then we emit nicer named getter methods by redirecting to the "sink" getter
   // method.
@@ -2453,13 +2499,25 @@ void OpEmitter::genInlineCreateBody(
 
     nonBuilderStateArgs = ", " + nonBuilderStateArgs;
   }
-  if (cWithLoc)
+  // MSVC diagnoses deprecated calls even inside deprecated functions.
+  // Keep compatibility wrappers quiet without hiding warnings at call sites.
+  if (cWithLoc) {
+    if (deprecated)
+      cWithLoc->body() << "LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH\n";
     cWithLoc->body() << llvm::formatv(inlineCreateBody, locParamName,
                                       nonBuilderStateArgs,
                                       opClass.getClassName());
-  if (cImplicitLoc)
+    if (deprecated)
+      cWithLoc->body() << "LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP\n";
+  }
+  if (cImplicitLoc) {
+    if (deprecated)
+      cImplicitLoc->body() << "LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH\n";
     cImplicitLoc->body() << llvm::formatv(inlineCreateBodyImplicitLoc,
                                           nonBuilderStateArgs);
+    if (deprecated)
+      cImplicitLoc->body() << "LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP\n";
+  }
 }
 
 void OpEmitter::genSeparateArgParamBuilder() {
@@ -2485,6 +2543,15 @@ void OpEmitter::genSeparateArgParamBuilder() {
     genInlineCreateBody(paramList);
 
     auto &body = m->body();
+    // The no-result builder can reuse the collective builder. Both forms
+    // otherwise emit identical operand, attribute, and region handling.
+    if (paramKind == TypeParamKind::Separate && op.getNumResults() == 0) {
+      body << "  build(odsBuilder, odsState, ::mlir::TypeRange{}";
+      for (const MethodParameter &param : llvm::drop_begin(paramList, 2))
+        body << ", " << param.getName();
+      body << ");\n";
+      return;
+    }
     genCodeForAddingArgAndRegionForBuilder(body, inferredAttributes,
                                            /*isRawValueAttr=*/attrType ==
                                                AttrParamKind::UnwrappedValue);
@@ -2590,33 +2657,22 @@ void OpEmitter::genLegacyPropertiesBuilderHelper() {
   MethodBody &body = method->body();
   body << "  Properties &properties = " << builderOpStateProperties << ";\n"
        << "  populateDefaultProperties(" << builderOpState
-       << ".name, properties);\n"
-       << "  ::llvm::SmallVector<::mlir::NamedAttribute> "
-          "inherentAttributes;\n"
-       << "  for (const ::mlir::NamedAttribute &attr : attributes) {\n"
-       << "    ::llvm::StringRef name = attr.getName().getValue();\n"
-       << "    if (";
-  llvm::interleave(
-      inherentNames,
-      [&](StringRef name) { body << "name == \"" << name << "\""; },
-      [&] { body << " || "; });
-  body << ")\n"
-       << "      inherentAttributes.push_back(attr);\n"
-       << "    else\n"
-       << "      " << builderOpState << ".addAttribute(attr.getName(), "
-       << "attr.getValue());\n"
-       << "  }\n"
-       << "  if (inherentAttributes.empty())\n"
-       << "    return;\n";
-  // TODO: Use `PropertyKind<T>::unfreeze` to populate properties directly once
-  // it is available systematically, avoiding the DictionaryAttr conversion.
-  body << "  if (::mlir::failed(setPropertiesFromAttr(\n"
-       << "          properties,\n"
-       << "          ::mlir::DictionaryAttr::get(" << builderOpState
-       << ".getContext(), inherentAttributes),\n"
-       << "          [&]() { return ::mlir::emitError(" << builderOpState
-       << ".location); })))\n"
-       << "    ::llvm::report_fatal_error(\"Property conversion failed.\");\n";
+       << ".name, properties);\n";
+  if (!inherentNames.empty()) {
+    body << "  const ::llvm::StringRef inherentNames[] = {";
+    llvm::interleaveComma(inherentNames, body,
+                          [&](StringRef name) { body << '"' << name << '"'; });
+    body << "};\n";
+  }
+  body << "  ::mlir::detail::splitPropertiesAndDiscardableAttributes(\n"
+       << "      " << builderOpState << ", attributes, "
+       << (inherentNames.empty() ? "::llvm::ArrayRef<::llvm::StringRef>{}"
+                                 : "inherentNames")
+       << ", [&](::mlir::DictionaryAttr inherentAttrs) {\n"
+       << "        return setPropertiesFromAttr(properties, inherentAttrs,\n"
+       << "            [&]() { return ::mlir::emitError(" << builderOpState
+       << ".location); });\n"
+       << "      });\n";
 }
 
 void OpEmitter::genCodeForAddingPropertiesAndAttributes(
@@ -3265,6 +3321,17 @@ void OpEmitter::buildParamList(SmallVectorImpl<MethodParameter> &paramList,
 void OpEmitter::genCodeForAddingArgAndRegionForBuilder(
     MethodBody &body, llvm::StringSet<> &inferredAttributes,
     bool isRawValueAttr) {
+  bool needsProperties =
+      !op.getProperties().empty() ||
+      op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments");
+  for (const NamedTypeConstraint &operand : op.getOperands())
+    needsProperties |= operand.isVariadicOfVariadic();
+  for (const NamedAttribute &attr : op.getAttributes())
+    needsProperties |=
+        !attr.attr.isDerivedAttr() && !inferredAttributes.contains(attr.name);
+  if (needsProperties)
+    body << "  auto &odsProperties = " << builderOpStateProperties << ";\n";
+
   // Push all operands to the result.
   for (int i = 0, e = op.getNumOperands(); i < e; ++i) {
     std::string argName = getArgumentName(op, i);
@@ -3280,7 +3347,7 @@ void OpEmitter::genCodeForAddingArgAndRegionForBuilder(
            << "      rangeSegments.push_back(range.size());\n"
            << "    auto rangeAttr = " << odsBuilder
            << ".getDenseI32ArrayAttr(rangeSegments);\n";
-      body << "    " << builderOpStateProperties << "."
+      body << "    odsProperties."
            << operand.constraint.getVariadicOfVariadicSegmentSizeAttr()
            << " = rangeAttr;";
       body << "  }\n";
@@ -3318,7 +3385,7 @@ void OpEmitter::genCodeForAddingArgAndRegionForBuilder(
   if (op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments")) {
     body << "  ::llvm::copy(::llvm::ArrayRef<int32_t>({";
     emitSegment();
-    body << "}), " << builderOpStateProperties
+    body << "}), odsProperties"
          << ".operandSegmentSizes.begin());\n";
   }
 
@@ -3328,8 +3395,7 @@ void OpEmitter::genCodeForAddingArgAndRegionForBuilder(
     // interface type (used in the builder argument) to the storage type (used
     // in the state) is not necessarily trivial.
     std::string setterName = op.getSetterName(namedProp.name);
-    body << formatv("  {0}.{1}({2});\n", builderOpStateProperties, setterName,
-                    namedProp.name);
+    body << formatv("  odsProperties.{0}({1});\n", setterName, namedProp.name);
   }
   // Push all attributes to the result.
   for (const auto &namedAttr : op.getAttributes()) {
@@ -3353,12 +3419,10 @@ void OpEmitter::genCodeForAddingArgAndRegionForBuilder(
       // instance.
       FmtContext fctx;
       fctx.withBuilder("odsBuilder");
-      body << formatv("  {0}.{1} = {2};\n", builderOpStateProperties,
-                      namedAttr.name,
+      body << formatv("  odsProperties.{0} = {1};\n", namedAttr.name,
                       constBuildAttrFromParam(attr, fctx, namedAttr.name));
     } else {
-      body << formatv("  {0}.{1} = {1};\n", builderOpStateProperties,
-                      namedAttr.name);
+      body << formatv("  odsProperties.{0} = {0};\n", namedAttr.name);
     }
     if (emitNotNullCheck)
       body.unindent() << "  }\n";
@@ -3416,6 +3480,8 @@ void OpEmitter::genCanonicalizerDecls() {
   if (hasBody) {
     ERROR_IF_PRUNED(method, "getCanonicalizationPatterns", op);
     method->body() << "  results.add(canonicalize);\n";
+    // `RewritePatternSet::add` requires the complete type.
+    requiredDefIncludes.push_back("mlir/IR/PatternMatch.h");
   }
 }
 
@@ -3515,7 +3581,7 @@ void OpEmitter::genSideEffectInterfaceMethods() {
                                unsigned index, unsigned kind) {
     for (auto decorator : decorators)
       if (SideEffect *effect = dyn_cast<SideEffect>(&decorator)) {
-        opClass.addTrait(effect->getInterfaceTrait());
+        addTrait(effect->getInterfaceTrait(), effect->getCppIncludes());
         interfaceEffects[effect->getBaseEffectName()].push_back(
             EffectLocation{*effect, index, kind});
       }
@@ -4031,7 +4097,7 @@ void OpEmitter::genTraits() {
   for (const auto &trait : op.getTraits()) {
     if (auto *opTrait = dyn_cast<tblgen::NativeTrait>(&trait)) {
       if (opTrait->isStructuralOpTrait())
-        opClass.addTrait(opTrait->getFullyQualifiedTraitName());
+        addTrait(*opTrait);
     }
   }
 
@@ -4040,15 +4106,16 @@ void OpEmitter::genTraits() {
   opClass.addTrait("::mlir::OpTrait::OpInvariants");
 
   if (emitHelper.hasNonEmptyPropertiesStruct())
-    opClass.addTrait("::mlir::BytecodeOpInterface::Trait");
+    addTrait("::mlir::BytecodeOpInterface::Trait",
+             {"mlir/Bytecode/BytecodeOpInterface.h"});
 
   // Add the native and interface traits.
   for (const auto &trait : op.getTraits()) {
     if (auto *opTrait = dyn_cast<tblgen::NativeTrait>(&trait)) {
       if (!opTrait->isStructuralOpTrait())
-        opClass.addTrait(opTrait->getFullyQualifiedTraitName());
+        addTrait(*opTrait);
     } else if (auto *opTrait = dyn_cast<tblgen::InterfaceTrait>(&trait)) {
-      opClass.addTrait(opTrait->getFullyQualifiedTraitName());
+      addTrait(*opTrait);
     }
   }
 
@@ -4092,7 +4159,7 @@ void OpEmitter::genOpAsmInterface() {
   // Don't add the trait if none of the results have a valid name.
   if (llvm::all_of(resultNames, [](StringRef name) { return name.empty(); }))
     return;
-  opClass.addTrait("::mlir::OpAsmOpInterface::Trait");
+  addTrait("::mlir::OpAsmOpInterface::Trait", {"mlir/IR/OpImplementation.h"});
 
   // Generate the right accessor for the number of results.
   auto *method = opClass.addMethod(
@@ -4572,54 +4639,10 @@ void OpOperandAdaptorEmitter::emitDef(
   emitter.adaptor.writeDefTo(os);
 }
 
-/// Emit the class declarations or definitions for the given op defs.
-static void emitOpClasses(
-    const RecordKeeper &records, ArrayRef<const Record *> defs, raw_ostream &os,
-    const StaticVerifierFunctionEmitter &staticVerifierEmitter, bool emitDecl) {
-  if (defs.empty())
-    return;
-
-  for (auto *def : defs) {
-    Operator op(*def);
-    OpOrAdaptorHelper emitHelper(op, /*emitForOp=*/true);
-    if (emitDecl) {
-      {
-        NamespaceEmitter emitter(os, op.getCppNamespace());
-        os << formatv(opCommentHeader, op.getQualCppClassName(),
-                      "declarations");
-        OpOperandAdaptorEmitter::emitDecl(op, staticVerifierEmitter, os);
-        OpEmitter::emitDecl(op, os, staticVerifierEmitter);
-      }
-      // Emit the TypeID explicit specialization to have a single definition.
-      if (!op.getCppNamespace().empty()) {
-        os << "MLIR_DECLARE_EXPLICIT_TYPE_ID(" << op.getCppNamespace()
-           << "::" << op.getCppClassName() << ")\n";
-        if (emitHelper.hasNonEmptyPropertiesStruct())
-          os << "MLIR_DECLARE_EXPLICIT_TYPE_ID(" << op.getCppNamespace()
-             << "::detail::" << op.getCppClassName()
-             << "GenericAdaptorBase::Properties)\n";
-        os << "\n";
-      }
-    } else {
-      {
-        NamespaceEmitter emitter(os, op.getCppNamespace());
-        os << formatv(opCommentHeader, op.getQualCppClassName(), "definitions");
-        OpOperandAdaptorEmitter::emitDef(op, staticVerifierEmitter, os);
-        OpEmitter::emitDef(op, os, staticVerifierEmitter);
-      }
-      // Emit the TypeID explicit specialization to have a single definition.
-      if (!op.getCppNamespace().empty()) {
-        os << "MLIR_DEFINE_EXPLICIT_TYPE_ID(" << op.getCppNamespace()
-           << "::" << op.getCppClassName() << ")\n";
-        if (emitHelper.hasNonEmptyPropertiesStruct())
-          os << "MLIR_DEFINE_EXPLICIT_TYPE_ID(" << op.getCppNamespace()
-             << "::detail::" << op.getCppClassName()
-             << "GenericAdaptorBase::Properties)\n";
-        os << "\n";
-      }
-    }
-  }
-}
+/// Headers declaring the C++ constructs used by every generated op declaration.
+static constexpr StringRef opDeclBaseIncludes[] = {
+    "mlir/IR/OpDefinition.h",
+};
 
 /// Emit the declarations for the provided op classes.
 static void emitOpClassDecls(const RecordKeeper &records,
@@ -4640,9 +4663,52 @@ static void emitOpClassDecls(const RecordKeeper &records,
     return;
   StaticVerifierFunctionEmitter staticVerifierEmitter(os, records);
   staticVerifierEmitter.collectOpConstraints(defs);
-  emitOpClasses(records, defs, os, staticVerifierEmitter,
-                /*emitDecl=*/true);
+
+  // The required includes are only known once all declarations were
+  // generated, so buffer the declarations until the includes are emitted.
+  SmallVector<StringRef> includes(std::begin(opDeclBaseIncludes),
+                                  std::end(opDeclBaseIncludes));
+  std::string declarations;
+  raw_string_ostream declOs(declarations);
+  for (const Record *def : defs) {
+    Operator op(*def);
+    OpOrAdaptorHelper emitHelper(op, /*emitForOp=*/true);
+    {
+      NamespaceEmitter emitter(declOs, op.getCppNamespace());
+      declOs << formatv(opCommentHeader, op.getQualCppClassName(),
+                        "declarations");
+      OpOperandAdaptorEmitter::emitDecl(op, staticVerifierEmitter, declOs);
+      OpEmitter::emitDecl(op, declOs, staticVerifierEmitter, includes);
+    }
+    // Emit the TypeID explicit specialization to have a single definition.
+    if (!op.getCppNamespace().empty()) {
+      declOs << "MLIR_DECLARE_EXPLICIT_TYPE_ID(" << op.getCppNamespace()
+             << "::" << op.getCppClassName() << ")\n";
+      if (emitHelper.hasNonEmptyPropertiesStruct())
+        declOs << "MLIR_DECLARE_EXPLICIT_TYPE_ID(" << op.getCppNamespace()
+               << "::detail::" << op.getCppClassName()
+               << "GenericAdaptorBase::Properties)\n";
+      declOs << "\n";
+    }
+  }
+  tblgen::emitIncludes(os, includes);
+  os << declarations;
 }
+
+/// Headers declaring the C++ constructs used by every generated op definition,
+/// beyond those already included by the op declarations.
+static constexpr StringRef opDefBaseIncludes[] = {
+    // `::mlir::Builder`, `::mlir::OpBuilder`, `::mlir::ImplicitLocOpBuilder`.
+    "mlir/IR/Builders.h",
+    // `::mlir::DenseI32ArrayAttr`, `::mlir::DictionaryAttr`,
+    // `::mlir::StringAttr`, `::mlir::TypeAttr`.
+    "mlir/IR/BuiltinAttributes.h",
+    // `::mlir::FunctionType`.
+    "mlir/IR/BuiltinTypes.h",
+    // `::mlir::OpAsmParser`, `::mlir::OpAsmParser::UnresolvedOperand`,
+    // `::mlir::OpAsmPrinter`, `::mlir::detail::OperandParserStorage`.
+    "mlir/IR/OpImplementation.h",
+};
 
 /// Emit the definitions for the provided op classes.
 static void emitOpClassDefs(const RecordKeeper &records,
@@ -4651,24 +4717,117 @@ static void emitOpClassDefs(const RecordKeeper &records,
   if (defs.empty())
     return;
 
+  // The required includes are only known once all definitions were generated,
+  // so buffer the definitions until the includes are emitted.
+  SmallVector<StringRef> includes(std::begin(opDefBaseIncludes),
+                                  std::end(opDefBaseIncludes));
+  std::string definitions;
+  raw_string_ostream defOs(definitions);
+
   // Generate all of the locally instantiated methods first.
-  StaticVerifierFunctionEmitter staticVerifierEmitter(os, records,
+  StaticVerifierFunctionEmitter staticVerifierEmitter(defOs, records,
                                                       constraintPrefix);
-  os << formatv(opCommentHeader, "Local Utility Method", "Definitions");
+  defOs << formatv(opCommentHeader, "Local Utility Method", "Definitions");
   staticVerifierEmitter.collectOpConstraints(defs);
   staticVerifierEmitter.emitOpConstraints();
 
   // Emit the classes.
-  emitOpClasses(records, defs, os, staticVerifierEmitter,
-                /*emitDecl=*/false);
+  for (const Record *def : defs) {
+    Operator op(*def);
+    OpOrAdaptorHelper emitHelper(op, /*emitForOp=*/true);
+    {
+      NamespaceEmitter emitter(defOs, op.getCppNamespace());
+      defOs << formatv(opCommentHeader, op.getQualCppClassName(),
+                       "definitions");
+      OpOperandAdaptorEmitter::emitDef(op, staticVerifierEmitter, defOs);
+      OpEmitter::emitDef(op, defOs, staticVerifierEmitter, includes);
+    }
+    // Emit the TypeID explicit specialization to have a single definition.
+    if (!op.getCppNamespace().empty()) {
+      defOs << "MLIR_DEFINE_EXPLICIT_TYPE_ID(" << op.getCppNamespace()
+            << "::" << op.getCppClassName() << ")\n";
+      if (emitHelper.hasNonEmptyPropertiesStruct())
+        defOs << "MLIR_DEFINE_EXPLICIT_TYPE_ID(" << op.getCppNamespace()
+              << "::detail::" << op.getCppClassName()
+              << "GenericAdaptorBase::Properties)\n";
+      defOs << "\n";
+    }
+  }
+  tblgen::emitIncludes(os, includes);
+  os << definitions;
+}
+
+/// When generating the ops of an op partition, forward declare the ops of the
+/// other partitions, so that the declarations can refer to ops of any
+/// partition, like they could without partitions.
+static void
+emitOtherOpPartitionForwardDecls(ArrayRef<const Record *> otherPartitionDefs,
+                                 raw_ostream &os) {
+  for (const Record *def : otherPartitionDefs) {
+    Operator op(def);
+    NamespaceEmitter emitter(os, op.getCppNamespace());
+    os << "class " << op.getCppClassName() << ";\n";
+  }
+}
+
+/// Returns the dialects of the ops in `defs`, in order of first appearance.
+static SmallVector<Dialect> getOpDialects(ArrayRef<const Record *> defs) {
+  llvm::SetVector<const Record *> dialectDefs;
+  for (const Record *def : defs)
+    dialectDefs.insert(def->getValueAsDef("opDialect"));
+  return llvm::to_vector_of<Dialect>(dialectDefs);
+}
+
+/// Returns the sorted names of the op partitions within `dialect` where
+/// `defs` and `otherPartitionDefs` are all the dialect's operations.
+static SmallVector<StringRef>
+getAllOpPartitions(const Dialect &dialect, ArrayRef<const Record *> defs,
+                   ArrayRef<const Record *> otherPartitionDefs) {
+  llvm::SetVector<StringRef> partitions;
+  for (const Record *def :
+       concat<const Record *const>(defs, otherPartitionDefs))
+    if (def->getValueAsDef("opDialect") == dialect.getDef())
+      partitions.insert(getOpPartitionName(*def));
+
+  SmallVector<StringRef> result = partitions.takeVector();
+  llvm::sort(result);
+  return result;
+}
+
+/// Emit the declarations of the op registration hooks of every dialect with
+/// ops in the specified op partition: the hooks of all partitions of the
+/// dialect and the hook that calls them.
+static void emitOpPartitionRegistrationHookDecls(
+    ArrayRef<const Record *> defs, ArrayRef<const Record *> otherPartitionDefs,
+    raw_ostream &os) {
+  const char *const opRegistrationHook = "void {0}({1}::{2} *dialect);\n";
+  for (const Dialect &dialect : getOpDialects(defs)) {
+    DialectNamespaceEmitter ns(os, dialect);
+    os << formatv(opRegistrationHook, getOpRegistrationHookName(dialect),
+                  dialect.getCppNamespace(), dialect.getCppClassName());
+    for (StringRef partition :
+         getAllOpPartitions(dialect, defs, otherPartitionDefs))
+      os << formatv(opRegistrationHook,
+                    getOpRegistrationHookName(dialect, partition),
+                    dialect.getCppNamespace(), dialect.getCppClassName());
+  }
 }
 
 /// Emit op declarations for all op records.
 static bool emitOpDecls(const RecordKeeper &records, raw_ostream &os) {
   emitSourceFileHeader("Op Declarations", os, records);
 
-  std::vector<const Record *> defs = getRequestedOpDefinitions(records);
+  std::vector<const Record *> otherPartitionDefs;
+  std::vector<const Record *> defs =
+      getRequestedOpDefinitions(records, &otherPartitionDefs);
+  emitOtherOpPartitionForwardDecls(otherPartitionDefs, os);
   emitOpClassDecls(records, defs, os);
+
+  if (!getSpecifiedOpPartition().empty()) {
+    // Also emit partition registration hooks if partitons were requested.
+    emitOpPartitionRegistrationHookDecls(defs, otherPartitionDefs, os);
+    return false;
+  }
 
   // If we are generating sharded op definitions, emit the sharded op
   // registration hooks.
@@ -4731,11 +4890,82 @@ static void emitOpDefShard(const RecordKeeper &records,
   emitOpClassDefs(records, defs, os, indexStr);
 }
 
+/// Emit the definitions of the op registration hooks of the specified op
+/// partition for every dialect with ops in the partition. The first partition
+/// (sorted by name Lexicographically) is additionally responsible for emitting
+/// the dialect's top level 'register<Dialect>Operations' hook that dispatches
+/// to all other partitions' op registration hooks.
+static void
+emitOpPartitionRegistrationHookDefs(ArrayRef<const Record *> defs,
+                                    ArrayRef<const Record *> otherPartitionDefs,
+                                    raw_ostream &os) {
+  StringRef specifiedPartition = getSpecifiedOpPartition();
+  const char *const opRegistrationHook =
+      "void {0}::{1}({0}::{2} *dialect) {{\n";
+  for (const Dialect &dialect : getOpDialects(defs)) {
+    SmallVector<StringRef> partitions =
+        getAllOpPartitions(dialect, defs, otherPartitionDefs);
+
+    // Dialect's top-level registration hook. Should be called by users in the
+    // 'initialize' method.
+    if (partitions.front() == specifiedPartition) {
+      os << formatv(opCommentHeader, dialect.getCppClassName(),
+                    "Op Registration Hook")
+         << formatv(opRegistrationHook, dialect.getCppNamespace(),
+                    getOpRegistrationHookName(dialect),
+                    dialect.getCppClassName());
+
+      for (StringRef partition : partitions)
+        os << formatv("  {0}::{1}(dialect);\n", dialect.getCppNamespace(),
+                      getOpRegistrationHookName(dialect, partition));
+      os << "}\n";
+    }
+
+    os << formatv(opCommentHeader, dialect.getCppClassName(),
+                  (specifiedPartition + " Op Registration Hook").str())
+       << formatv(opRegistrationHook, dialect.getCppNamespace(),
+                  getOpRegistrationHookName(dialect, specifiedPartition),
+                  dialect.getCppClassName());
+
+    // The hooks register each op with a separate call instead of
+    // `addOperations<...>()`, whose single instantiation over all ops of a
+    // partition takes noticeably longer to compile.
+    for (const Record *def : defs)
+      if (def->getValueAsDef("opDialect") == dialect.getDef())
+        os << formatv(
+            "  ::mlir::RegisteredOperationName::insert<{0}>(*dialect);\n",
+            Operator(def).getQualCppClassName());
+    os << "}\n";
+  }
+}
+
+/// Returns the tag that makes the static verifier functions generated for the
+/// specified op partition unique, so that the definitions of several
+/// partitions can be included in one compilation unit. The partition name is
+/// prefixed with its length and the tag ends with `_`, so that the partition
+/// name and the file name that follows the tag cannot run together.
+static std::string getOpPartitionConstraintTag() {
+  StringRef partition = getSpecifiedOpPartition();
+  return std::to_string(partition.size()) + partition.str() + "_";
+}
+
 /// Emit op definitions for all op records.
 static bool emitOpDefs(const RecordKeeper &records, raw_ostream &os) {
   emitSourceFileHeader("Op Definitions", os, records);
 
-  std::vector<const Record *> defs = getRequestedOpDefinitions(records);
+  std::vector<const Record *> otherPartitionDefs;
+  std::vector<const Record *> defs =
+      getRequestedOpDefinitions(records, &otherPartitionDefs);
+
+  // If an op partition was specified, emit its class definitions and
+  // registration hooks.
+  if (!getSpecifiedOpPartition().empty()) {
+    IfDefEmitter scope(os, "GET_OP_CLASSES");
+    emitOpClassDefs(records, defs, os, getOpPartitionConstraintTag());
+    emitOpPartitionRegistrationHookDefs(defs, otherPartitionDefs, os);
+    return false;
+  }
+
   SmallVector<ArrayRef<const Record *>, 4> shardedDefs;
   shardOpDefinitions(defs, shardedDefs);
 

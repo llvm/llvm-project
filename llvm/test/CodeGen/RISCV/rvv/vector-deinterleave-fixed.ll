@@ -6,67 +6,116 @@
 ; Integers
 
 define {<16 x i1>, <16 x i1>} @vector_deinterleave_v16i1_v32i1(<32 x i1> %vec) {
-; CHECK-LABEL: vector_deinterleave_v16i1_v32i1:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vmerge.vim v9, v8, 1, v0
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
-; CHECK-NEXT:    vslidedown.vi v0, v0, 2
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vnsrl.wi v10, v9, 0
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vnsrl.wi v9, v9, 8
-; CHECK-NEXT:    vnsrl.wi v11, v8, 0
-; CHECK-NEXT:    vnsrl.wi v8, v8, 8
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; CHECK-NEXT:    vslideup.vi v10, v11, 8
-; CHECK-NEXT:    vslideup.vi v9, v8, 8
-; CHECK-NEXT:    vmsne.vi v0, v10, 0
-; CHECK-NEXT:    vmsne.vi v8, v9, 0
-; CHECK-NEXT:    ret
+; V-LABEL: vector_deinterleave_v16i1_v32i1:
+; V:       # %bb.0:
+; V-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; V-NEXT:    vmv.v.i v8, 0
+; V-NEXT:    vmerge.vim v9, v8, 1, v0
+; V-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
+; V-NEXT:    vslidedown.vi v0, v0, 2
+; V-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; V-NEXT:    vnsrl.wi v10, v9, 0
+; V-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; V-NEXT:    vmerge.vim v8, v8, 1, v0
+; V-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; V-NEXT:    vnsrl.wi v9, v9, 8
+; V-NEXT:    vnsrl.wi v11, v8, 0
+; V-NEXT:    vnsrl.wi v8, v8, 8
+; V-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; V-NEXT:    vslideup.vi v10, v11, 8
+; V-NEXT:    vslideup.vi v9, v8, 8
+; V-NEXT:    vmsne.vi v0, v10, 0
+; V-NEXT:    vmsne.vi v8, v9, 0
+; V-NEXT:    ret
+;
+; ZVZIP-LABEL: vector_deinterleave_v16i1_v32i1:
+; ZVZIP:       # %bb.0:
+; ZVZIP-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; ZVZIP-NEXT:    vmv.v.i v8, 0
+; ZVZIP-NEXT:    vmerge.vim v9, v8, 1, v0
+; ZVZIP-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
+; ZVZIP-NEXT:    vslidedown.vi v0, v0, 2
+; ZVZIP-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; ZVZIP-NEXT:    vunzipe.v v10, v9
+; ZVZIP-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; ZVZIP-NEXT:    vmerge.vim v8, v8, 1, v0
+; ZVZIP-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; ZVZIP-NEXT:    vunzipe.v v11, v8
+; ZVZIP-NEXT:    vunzipo.v v9, v9
+; ZVZIP-NEXT:    vunzipo.v v8, v8
+; ZVZIP-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; ZVZIP-NEXT:    vslideup.vi v10, v11, 8
+; ZVZIP-NEXT:    vslideup.vi v9, v8, 8
+; ZVZIP-NEXT:    vmsne.vi v0, v10, 0
+; ZVZIP-NEXT:    vmsne.vi v8, v9, 0
+; ZVZIP-NEXT:    ret
 %retval = call {<16 x i1>, <16 x i1>} @llvm.vector.deinterleave2.v32i1(<32 x i1> %vec)
 ret {<16 x i1>, <16 x i1>} %retval
 }
 
 define {<16 x i8>, <16 x i8>} @vector_deinterleave_v16i8_v32i8(<32 x i8> %vec) {
-; CHECK-LABEL: vector_deinterleave_v16i8_v32i8:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; CHECK-NEXT:    vnsrl.wi v10, v8, 0
-; CHECK-NEXT:    vnsrl.wi v11, v8, 8
-; CHECK-NEXT:    vmv.v.v v8, v10
-; CHECK-NEXT:    vmv.v.v v9, v11
-; CHECK-NEXT:    ret
+; V-LABEL: vector_deinterleave_v16i8_v32i8:
+; V:       # %bb.0:
+; V-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; V-NEXT:    vnsrl.wi v10, v8, 0
+; V-NEXT:    vnsrl.wi v11, v8, 8
+; V-NEXT:    vmv.v.v v8, v10
+; V-NEXT:    vmv.v.v v9, v11
+; V-NEXT:    ret
+;
+; ZVZIP-LABEL: vector_deinterleave_v16i8_v32i8:
+; ZVZIP:       # %bb.0:
+; ZVZIP-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; ZVZIP-NEXT:    vunzipe.v v10, v8
+; ZVZIP-NEXT:    vunzipo.v v11, v8
+; ZVZIP-NEXT:    vmv.v.v v8, v10
+; ZVZIP-NEXT:    vmv.v.v v9, v11
+; ZVZIP-NEXT:    ret
 %retval = call {<16 x i8>, <16 x i8>} @llvm.vector.deinterleave2.v32i8(<32 x i8> %vec)
 ret {<16 x i8>, <16 x i8>} %retval
 }
 
 define {<8 x i16>, <8 x i16>} @vector_deinterleave_v8i16_v16i16(<16 x i16> %vec) {
-; CHECK-LABEL: vector_deinterleave_v8i16_v16i16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vnsrl.wi v10, v8, 0
-; CHECK-NEXT:    vnsrl.wi v11, v8, 16
-; CHECK-NEXT:    vmv.v.v v8, v10
-; CHECK-NEXT:    vmv.v.v v9, v11
-; CHECK-NEXT:    ret
+; V-LABEL: vector_deinterleave_v8i16_v16i16:
+; V:       # %bb.0:
+; V-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; V-NEXT:    vnsrl.wi v10, v8, 0
+; V-NEXT:    vnsrl.wi v11, v8, 16
+; V-NEXT:    vmv.v.v v8, v10
+; V-NEXT:    vmv.v.v v9, v11
+; V-NEXT:    ret
+;
+; ZVZIP-LABEL: vector_deinterleave_v8i16_v16i16:
+; ZVZIP:       # %bb.0:
+; ZVZIP-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; ZVZIP-NEXT:    vunzipe.v v10, v8
+; ZVZIP-NEXT:    vunzipo.v v11, v8
+; ZVZIP-NEXT:    vmv.v.v v8, v10
+; ZVZIP-NEXT:    vmv.v.v v9, v11
+; ZVZIP-NEXT:    ret
 %retval = call {<8 x i16>, <8 x i16>} @llvm.vector.deinterleave2.v16i16(<16 x i16> %vec)
 ret {<8 x i16>, <8 x i16>} %retval
 }
 
 define {<4 x i32>, <4 x i32>} @vector_deinterleave_v4i32_vv8i32(<8 x i32> %vec) {
-; CHECK-LABEL: vector_deinterleave_v4i32_vv8i32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a0, 32
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vnsrl.wx v10, v8, a0
-; CHECK-NEXT:    vnsrl.wi v11, v8, 0
-; CHECK-NEXT:    vmv.v.v v8, v11
-; CHECK-NEXT:    vmv.v.v v9, v10
-; CHECK-NEXT:    ret
+; V-LABEL: vector_deinterleave_v4i32_vv8i32:
+; V:       # %bb.0:
+; V-NEXT:    li a0, 32
+; V-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; V-NEXT:    vnsrl.wx v10, v8, a0
+; V-NEXT:    vnsrl.wi v11, v8, 0
+; V-NEXT:    vmv.v.v v8, v11
+; V-NEXT:    vmv.v.v v9, v10
+; V-NEXT:    ret
+;
+; ZVZIP-LABEL: vector_deinterleave_v4i32_vv8i32:
+; ZVZIP:       # %bb.0:
+; ZVZIP-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; ZVZIP-NEXT:    vunzipe.v v10, v8
+; ZVZIP-NEXT:    vunzipo.v v11, v8
+; ZVZIP-NEXT:    vmv.v.v v8, v10
+; ZVZIP-NEXT:    vmv.v.v v9, v11
+; ZVZIP-NEXT:    ret
 %retval = call {<4 x i32>, <4 x i32>} @llvm.vector.deinterleave2.v8i32(<8 x i32> %vec)
 ret {<4 x i32>, <4 x i32>} %retval
 }
@@ -698,101 +747,168 @@ define {<2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2
 ; Floats
 
 define {<2 x half>, <2 x half>} @vector_deinterleave_v2f16_v4f16(<4 x half> %vec) {
-; CHECK-LABEL: vector_deinterleave_v2f16_v4f16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vnsrl.wi v10, v8, 0
-; CHECK-NEXT:    vnsrl.wi v9, v8, 16
-; CHECK-NEXT:    vmv1r.v v8, v10
-; CHECK-NEXT:    ret
+; V-LABEL: vector_deinterleave_v2f16_v4f16:
+; V:       # %bb.0:
+; V-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; V-NEXT:    vnsrl.wi v10, v8, 0
+; V-NEXT:    vnsrl.wi v9, v8, 16
+; V-NEXT:    vmv1r.v v8, v10
+; V-NEXT:    ret
+;
+; ZVZIP-LABEL: vector_deinterleave_v2f16_v4f16:
+; ZVZIP:       # %bb.0:
+; ZVZIP-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZVZIP-NEXT:    vunzipe.v v10, v8
+; ZVZIP-NEXT:    vunzipo.v v9, v8
+; ZVZIP-NEXT:    vmv1r.v v8, v10
+; ZVZIP-NEXT:    ret
 %retval = call {<2 x half>, <2 x half>} @llvm.vector.deinterleave2.v4f16(<4 x half> %vec)
 ret {<2 x half>, <2 x half>} %retval
 }
 
 define {<2 x bfloat>, <2 x bfloat>} @vector_deinterleave_v2bf16_v4bf16(<4 x bfloat> %vec) {
-; CHECK-LABEL: vector_deinterleave_v2bf16_v4bf16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vnsrl.wi v10, v8, 0
-; CHECK-NEXT:    vnsrl.wi v9, v8, 16
-; CHECK-NEXT:    vmv1r.v v8, v10
-; CHECK-NEXT:    ret
+; V-LABEL: vector_deinterleave_v2bf16_v4bf16:
+; V:       # %bb.0:
+; V-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; V-NEXT:    vnsrl.wi v10, v8, 0
+; V-NEXT:    vnsrl.wi v9, v8, 16
+; V-NEXT:    vmv1r.v v8, v10
+; V-NEXT:    ret
+;
+; ZVZIP-LABEL: vector_deinterleave_v2bf16_v4bf16:
+; ZVZIP:       # %bb.0:
+; ZVZIP-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZVZIP-NEXT:    vunzipe.v v10, v8
+; ZVZIP-NEXT:    vunzipo.v v9, v8
+; ZVZIP-NEXT:    vmv1r.v v8, v10
+; ZVZIP-NEXT:    ret
 %retval = call {<2 x bfloat>, <2 x bfloat>} @llvm.vector.deinterleave2.v4bf16(<4 x bfloat> %vec)
 ret {<2 x bfloat>, <2 x bfloat>} %retval
 }
 
 define {<4 x half>, <4 x half>} @vector_deinterleave_v4f16_v8f16(<8 x half> %vec) {
-; CHECK-LABEL: vector_deinterleave_v4f16_v8f16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vnsrl.wi v10, v8, 0
-; CHECK-NEXT:    vnsrl.wi v9, v8, 16
-; CHECK-NEXT:    vmv1r.v v8, v10
-; CHECK-NEXT:    ret
+; V-LABEL: vector_deinterleave_v4f16_v8f16:
+; V:       # %bb.0:
+; V-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; V-NEXT:    vnsrl.wi v10, v8, 0
+; V-NEXT:    vnsrl.wi v9, v8, 16
+; V-NEXT:    vmv1r.v v8, v10
+; V-NEXT:    ret
+;
+; ZVZIP-LABEL: vector_deinterleave_v4f16_v8f16:
+; ZVZIP:       # %bb.0:
+; ZVZIP-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; ZVZIP-NEXT:    vunzipe.v v10, v8
+; ZVZIP-NEXT:    vunzipo.v v9, v8
+; ZVZIP-NEXT:    vmv1r.v v8, v10
+; ZVZIP-NEXT:    ret
 %retval = call {<4 x half>, <4 x half>} @llvm.vector.deinterleave2.v8f16(<8 x half> %vec)
 ret {<4 x half>, <4 x half>} %retval
 }
 
 define {<4 x bfloat>, <4 x bfloat>} @vector_deinterleave_v4bf16_v8bf16(<8 x bfloat> %vec) {
-; CHECK-LABEL: vector_deinterleave_v4bf16_v8bf16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vnsrl.wi v10, v8, 0
-; CHECK-NEXT:    vnsrl.wi v9, v8, 16
-; CHECK-NEXT:    vmv1r.v v8, v10
-; CHECK-NEXT:    ret
+; V-LABEL: vector_deinterleave_v4bf16_v8bf16:
+; V:       # %bb.0:
+; V-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; V-NEXT:    vnsrl.wi v10, v8, 0
+; V-NEXT:    vnsrl.wi v9, v8, 16
+; V-NEXT:    vmv1r.v v8, v10
+; V-NEXT:    ret
+;
+; ZVZIP-LABEL: vector_deinterleave_v4bf16_v8bf16:
+; ZVZIP:       # %bb.0:
+; ZVZIP-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; ZVZIP-NEXT:    vunzipe.v v10, v8
+; ZVZIP-NEXT:    vunzipo.v v9, v8
+; ZVZIP-NEXT:    vmv1r.v v8, v10
+; ZVZIP-NEXT:    ret
 %retval = call {<4 x bfloat>, <4 x bfloat>} @llvm.vector.deinterleave2.v8bf16(<8 x bfloat> %vec)
 ret {<4 x bfloat>, <4 x bfloat>} %retval
 }
 
 define {<2 x float>, <2 x float>} @vector_deinterleave_v2f32_v4f32(<4 x float> %vec) {
-; CHECK-LABEL: vector_deinterleave_v2f32_v4f32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a0, 32
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vnsrl.wx v9, v8, a0
-; CHECK-NEXT:    vnsrl.wi v8, v8, 0
-; CHECK-NEXT:    ret
+; V-LABEL: vector_deinterleave_v2f32_v4f32:
+; V:       # %bb.0:
+; V-NEXT:    li a0, 32
+; V-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; V-NEXT:    vnsrl.wx v9, v8, a0
+; V-NEXT:    vnsrl.wi v8, v8, 0
+; V-NEXT:    ret
+;
+; ZVZIP-LABEL: vector_deinterleave_v2f32_v4f32:
+; ZVZIP:       # %bb.0:
+; ZVZIP-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; ZVZIP-NEXT:    vunzipe.v v10, v8
+; ZVZIP-NEXT:    vunzipo.v v9, v8
+; ZVZIP-NEXT:    vmv1r.v v8, v10
+; ZVZIP-NEXT:    ret
 %retval = call {<2 x float>, <2 x float>} @llvm.vector.deinterleave2.v4f32(<4 x float> %vec)
 ret {<2 x float>, <2 x float>} %retval
 }
 
 define {<8 x half>, <8 x half>} @vector_deinterleave_v8f16_v16f16(<16 x half> %vec) {
-; CHECK-LABEL: vector_deinterleave_v8f16_v16f16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vnsrl.wi v10, v8, 0
-; CHECK-NEXT:    vnsrl.wi v11, v8, 16
-; CHECK-NEXT:    vmv.v.v v8, v10
-; CHECK-NEXT:    vmv.v.v v9, v11
-; CHECK-NEXT:    ret
+; V-LABEL: vector_deinterleave_v8f16_v16f16:
+; V:       # %bb.0:
+; V-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; V-NEXT:    vnsrl.wi v10, v8, 0
+; V-NEXT:    vnsrl.wi v11, v8, 16
+; V-NEXT:    vmv.v.v v8, v10
+; V-NEXT:    vmv.v.v v9, v11
+; V-NEXT:    ret
+;
+; ZVZIP-LABEL: vector_deinterleave_v8f16_v16f16:
+; ZVZIP:       # %bb.0:
+; ZVZIP-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; ZVZIP-NEXT:    vunzipe.v v10, v8
+; ZVZIP-NEXT:    vunzipo.v v11, v8
+; ZVZIP-NEXT:    vmv.v.v v8, v10
+; ZVZIP-NEXT:    vmv.v.v v9, v11
+; ZVZIP-NEXT:    ret
 %retval = call {<8 x half>, <8 x half>} @llvm.vector.deinterleave2.v16f16(<16 x half> %vec)
 ret {<8 x half>, <8 x half>} %retval
 }
 
 define {<8 x bfloat>, <8 x bfloat>} @vector_deinterleave_v8bf16_v16bf16(<16 x bfloat> %vec) {
-; CHECK-LABEL: vector_deinterleave_v8bf16_v16bf16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vnsrl.wi v10, v8, 0
-; CHECK-NEXT:    vnsrl.wi v11, v8, 16
-; CHECK-NEXT:    vmv.v.v v8, v10
-; CHECK-NEXT:    vmv.v.v v9, v11
-; CHECK-NEXT:    ret
+; V-LABEL: vector_deinterleave_v8bf16_v16bf16:
+; V:       # %bb.0:
+; V-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; V-NEXT:    vnsrl.wi v10, v8, 0
+; V-NEXT:    vnsrl.wi v11, v8, 16
+; V-NEXT:    vmv.v.v v8, v10
+; V-NEXT:    vmv.v.v v9, v11
+; V-NEXT:    ret
+;
+; ZVZIP-LABEL: vector_deinterleave_v8bf16_v16bf16:
+; ZVZIP:       # %bb.0:
+; ZVZIP-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; ZVZIP-NEXT:    vunzipe.v v10, v8
+; ZVZIP-NEXT:    vunzipo.v v11, v8
+; ZVZIP-NEXT:    vmv.v.v v8, v10
+; ZVZIP-NEXT:    vmv.v.v v9, v11
+; ZVZIP-NEXT:    ret
 %retval = call {<8 x bfloat>, <8 x bfloat>} @llvm.vector.deinterleave2.v16bf16(<16 x bfloat> %vec)
 ret {<8 x bfloat>, <8 x bfloat>} %retval
 }
 
 define {<4 x float>, <4 x float>} @vector_deinterleave_v4f32_v8f32(<8 x float> %vec) {
-; CHECK-LABEL: vector_deinterleave_v4f32_v8f32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a0, 32
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vnsrl.wx v10, v8, a0
-; CHECK-NEXT:    vnsrl.wi v11, v8, 0
-; CHECK-NEXT:    vmv.v.v v8, v11
-; CHECK-NEXT:    vmv.v.v v9, v10
-; CHECK-NEXT:    ret
+; V-LABEL: vector_deinterleave_v4f32_v8f32:
+; V:       # %bb.0:
+; V-NEXT:    li a0, 32
+; V-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; V-NEXT:    vnsrl.wx v10, v8, a0
+; V-NEXT:    vnsrl.wi v11, v8, 0
+; V-NEXT:    vmv.v.v v8, v11
+; V-NEXT:    vmv.v.v v9, v10
+; V-NEXT:    ret
+;
+; ZVZIP-LABEL: vector_deinterleave_v4f32_v8f32:
+; ZVZIP:       # %bb.0:
+; ZVZIP-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; ZVZIP-NEXT:    vunzipe.v v10, v8
+; ZVZIP-NEXT:    vunzipo.v v11, v8
+; ZVZIP-NEXT:    vmv.v.v v8, v10
+; ZVZIP-NEXT:    vmv.v.v v9, v11
+; ZVZIP-NEXT:    ret
 %retval = call {<4 x float>, <4 x float>} @llvm.vector.deinterleave2.v8f32(<8 x float> %vec)
 ret  {<4 x float>, <4 x float>} %retval
 }

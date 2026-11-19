@@ -245,10 +245,6 @@ public:
     ShouldSignExtI32Return = Val;
   }
 
-  /// Returns the size of the wchar_t type in bytes.
-  /// This queries the 'wchar_size' metadata.
-  LLVM_ABI unsigned getWCharSize(const Module &M) const;
-
   /// Returns the size of the size_t type in bits.
   LLVM_ABI unsigned getSizeTSize(const Module &M) const;
 
@@ -464,43 +460,15 @@ public:
     return Impl->CustomNames.find(F)->second;
   }
 
-  static void initBoolExtensionsForTriple(bool &ShouldZExtBoolParam,
-                                          bool &ShouldZExtBoolReturn,
-                                          const Triple &T) {
-    ShouldZExtBoolParam = ShouldZExtBoolReturn = false;
+  LLVM_ABI static void initBoolExtensionsForTriple(bool &ShouldZExtBoolParam,
+                                                   bool &ShouldZExtBoolReturn,
+                                                   const Triple &T);
 
-    if (!T.isAArch64() && !T.isOSDarwin()) {
-      ShouldZExtBoolParam = true;
-      ShouldZExtBoolReturn = true;
-    }
-  }
-
-  static void initExtensionsForTriple(bool &ShouldExtI32Param,
-                                      bool &ShouldExtI32Return,
-                                      bool &ShouldSignExtI32Param,
-                                      bool &ShouldSignExtI32Return,
-                                      const Triple &T) {
-    ShouldExtI32Param     = ShouldExtI32Return     = false;
-    ShouldSignExtI32Param = ShouldSignExtI32Return = false;
-
-    // PowerPC64, Sparc64, SystemZ need signext/zeroext on i32 parameters and
-    // returns corresponding to C-level ints and unsigned ints.
-    if (T.isPPC64() || T.getArch() == Triple::sparcv9 ||
-        T.getArch() == Triple::systemz) {
-      ShouldExtI32Param = true;
-      ShouldExtI32Return = true;
-    }
-    // LoongArch, Mips, and riscv64, on the other hand, need signext on i32
-    // parameters corresponding to both signed and unsigned ints.
-    if (T.isLoongArch() || T.isMIPS() || T.isRISCV64()) {
-      ShouldSignExtI32Param = true;
-    }
-    // LoongArch and riscv64 need signext on i32 returns corresponding to both
-    // signed and unsigned ints.
-    if (T.isLoongArch() || T.isRISCV64()) {
-      ShouldSignExtI32Return = true;
-    }
-  }
+  LLVM_ABI static void initExtensionsForTriple(bool &ShouldExtI32Param,
+                                               bool &ShouldExtI32Return,
+                                               bool &ShouldSignExtI32Param,
+                                               bool &ShouldSignExtI32Return,
+                                               const Triple &T);
 
   /// Returns extension attribute kind to be used for i32 parameters
   /// corresponding to C-level int or unsigned int.  May be zeroext, signext,
@@ -521,6 +489,12 @@ public:
     bool ShouldZExtBoolParam, ShouldZExtBoolReturn;
     initBoolExtensionsForTriple(ShouldZExtBoolParam, ShouldZExtBoolReturn, T);
     return ShouldZExtBoolParam ? Attribute::ZExt : Attribute::None;
+  }
+
+  static Attribute::AttrKind getExtAttrForI8Param(bool Signed = true) {
+    // Return the extension attributes here even though nothing special is
+    // done in case any target needs something different in the future.
+    return Signed ? Attribute::SExt : Attribute::ZExt;
   }
 
   static Attribute::AttrKind getExtAttrForI32Param(const Triple &T,
@@ -581,11 +555,6 @@ public:
       if (auto AK = getExtAttrForI32Return(Signed))
         AL = AL.addRetAttribute(*C, AK);
     return AL;
-  }
-
-  /// \copydoc TargetLibraryInfoImpl::getWCharSize()
-  unsigned getWCharSize(const Module &M) const {
-    return Impl->getWCharSize(M);
   }
 
   /// \copydoc TargetLibraryInfoImpl::getSizeTSize()

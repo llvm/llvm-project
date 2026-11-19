@@ -14,7 +14,7 @@
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/Pass/Pass.h"
@@ -170,7 +170,8 @@ class CUFDeviceFuncTransform
     auto emptyStub = func::FuncOp::create(modBuilder, loc, funcOp.getName(),
                                           funcOp.getFunctionType());
     emptyStub.setVisibility(funcOp.getVisibility());
-    emptyStub->setAttrs(funcOp->getAttrs());
+    emptyStub->copyProperties(funcOp->getPropertiesStorage());
+    emptyStub->setDiscardableAttrs(funcOp->getDiscardableAttrDictionary());
     auto entryBlock = emptyStub.addEntryBlock();
     modBuilder.setInsertionPointToEnd(entryBlock);
     // Add a return operation at the end of the stub with the location of the

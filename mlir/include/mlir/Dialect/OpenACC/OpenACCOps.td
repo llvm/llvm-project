@@ -348,6 +348,7 @@ class OpenACC_Attr<string name, string attrMnemonic,
                    list<Trait> traits = [],
                    string baseCppClass = "::mlir::Attribute">
     : AttrDef<OpenACC_Dialect, name, traits, baseCppClass> {
+  let cppIncludes = ["mlir/Dialect/OpenACC/OpenACC.h"];
   let mnemonic = attrMnemonic;
 }
 
@@ -731,6 +732,7 @@ class OpenACC_DataEntryOp<string mnemonic, string clause,
           DefaultValuedAttr<OpenACC_DataClauseAttr, clause>:$dataClause,
           DefaultValuedAttr<BoolAttr, "true">:$structured,
           DefaultValuedAttr<BoolAttr, "false">:$implicit,
+          UnitAttr:$synthetic,
           DefaultValuedAttr<OpenACC_DataClauseModifierAttr,
             "mlir::acc::DataClauseModifier::none">:$modifiers,
           OptionalAttr<StrAttr>:$name,
@@ -763,6 +765,10 @@ class OpenACC_DataEntryOp<string mnemonic, string clause,
     counters (2.6.7).
     - `implicit`: Whether this is an implicitly generated operation, such as copies
     done to satisfy "Variables with Implicitly Determined Data Attributes" in 2.6.2.
+    - `synthetic`: Whether the implementation created this operation for its own
+    bookkeeping instead of to represent a data attribute of the program being
+    compiled. Unlike an `implicit` operation, it has no counterpart in that
+    program, so it is not described to the user.
     - `modifiers`: Keeps track of the data clause modifiers (eg zero, readonly, etc)
     - `name`: Holds the name of variable as specified in user clause (including bounds).
 
@@ -826,6 +832,7 @@ class OpenACC_DataEntryOp<string mnemonic, string clause,
       | `dataClause` `(` enum($dataClause) `)`
       | `structured` `(` $structured `)`
       | `implicit` `(` $implicit `)`
+      | `synthetic` $synthetic
       | `name` `(` $name `)`
     ) prop-dict `->` type($accVar) attr-dict
   }];
@@ -847,7 +854,8 @@ class OpenACC_DataEntryOp<string mnemonic, string clause,
           /*asyncOperandsDeviceType=*/nullptr,
           /*asyncOnly=*/nullptr, /*dataClause=*/nullptr,
           /*structured=*/$_builder.getBoolAttr(structured),
-          /*implicit=*/$_builder.getBoolAttr(implicit), /*modifiers=*/nullptr,
+          /*implicit=*/$_builder.getBoolAttr(implicit),
+          /*synthetic=*/nullptr, /*modifiers=*/nullptr,
           /*name=*/nullptr, /*recipe=*/nullptr);
       }]>,
     OpBuilder<(ins "::mlir::Value":$var,
@@ -865,7 +873,8 @@ class OpenACC_DataEntryOp<string mnemonic, string clause,
           /*asyncOperandsDeviceType=*/nullptr,
           /*asyncOnly=*/nullptr, /*dataClause=*/nullptr,
           /*structured=*/$_builder.getBoolAttr(structured),
-          /*implicit=*/$_builder.getBoolAttr(implicit), /*modifiers=*/nullptr,
+          /*implicit=*/$_builder.getBoolAttr(implicit),
+          /*synthetic=*/nullptr, /*modifiers=*/nullptr,
           /*name=*/$_builder.getStringAttr(name), /*recipe=*/nullptr);
       }]>,
     OpBuilder<(ins "::mlir::Type":$accVarType, "::mlir::Value":$var,
@@ -896,7 +905,8 @@ class OpenACC_DataEntryOp<string mnemonic, string clause,
         // Builder provided to simplify building after recipe operand was added.
         build($_builder, $_state, accVarType, var, varType, varPtrPtr, bounds,
               asyncOperands, asyncOperandsDeviceType, asyncOnly, dataClause,
-              structured, implicit, modifiers, name, /*recipe=*/nullptr);
+              structured, implicit, /*synthetic=*/false, modifiers, name,
+              /*recipe=*/nullptr);
       }]>,
     ];
 }
@@ -1130,6 +1140,7 @@ class OpenACC_DataExitOp<string mnemonic, string clause,
                        DefaultValuedAttr<OpenACC_DataClauseAttr,clause>:$dataClause,
                        DefaultValuedAttr<BoolAttr, "true">:$structured,
                        DefaultValuedAttr<BoolAttr, "false">:$implicit,
+                       UnitAttr:$synthetic,
                        DefaultValuedAttr<OpenACC_DataClauseModifierAttr,
                          "mlir::acc::DataClauseModifier::none">:$modifiers,
                        OptionalAttr<StrAttr>:$name));
@@ -1153,6 +1164,10 @@ class OpenACC_DataExitOp<string mnemonic, string clause,
     counters (2.6.7).
     - `implicit`: Whether this is an implicitly generated operation, such as copies
     done to satisfy "Variables with Implicitly Determined Data Attributes" in 2.6.2.
+    - `synthetic`: Whether the implementation created this operation for its own
+    bookkeeping instead of to represent a data attribute of the program being
+    compiled. Unlike an `implicit` operation, it has no counterpart in that
+    program, so it is not described to the user.
     - `modifiers`: Keeps track of the data clause modifiers (eg zero, always, etc)
     - `name`: Holds the name of variable as specified in user clause (including bounds).
 
@@ -1220,6 +1235,7 @@ class OpenACC_DataExitOpWithVarPtr<string mnemonic, string clause>
         `dataClause` `(` enum($dataClause) `)`
       | `structured` `(` $structured `)`
       | `implicit` `(` $implicit `)`
+      | `synthetic` $synthetic
       | `name` `(` $name `)`
     )
     prop-dict attr-dict
@@ -1240,7 +1256,8 @@ class OpenACC_DataExitOpWithVarPtr<string mnemonic, string clause>
           bounds, /*asyncOperands=*/{}, /*asyncOperandsDeviceType=*/nullptr,
           /*asyncOnly=*/nullptr, /*dataClause=*/nullptr,
           /*structured=*/$_builder.getBoolAttr(structured),
-          /*implicit=*/$_builder.getBoolAttr(implicit), /*modifiers=*/nullptr,
+          /*implicit=*/$_builder.getBoolAttr(implicit),
+          /*synthetic=*/nullptr, /*modifiers=*/nullptr,
           /*name=*/nullptr);
       }]>,
     OpBuilder<(ins "::mlir::Value":$accVar,
@@ -1258,7 +1275,8 @@ class OpenACC_DataExitOpWithVarPtr<string mnemonic, string clause>
           bounds, /*asyncOperands=*/{}, /*asyncOperandsDeviceType=*/nullptr,
           /*asyncOnly=*/nullptr, /*dataClause=*/nullptr,
           /*structured=*/$_builder.getBoolAttr(structured),
-          /*implicit=*/$_builder.getBoolAttr(implicit), /*modifiers=*/nullptr,
+          /*implicit=*/$_builder.getBoolAttr(implicit),
+          /*synthetic=*/nullptr, /*modifiers=*/nullptr,
           /*name=*/$_builder.getStringAttr(name));
       }]>,
     OpBuilder<(ins "::mlir::Value":$accVar, "::mlir::Value":$var,
@@ -1271,7 +1289,8 @@ class OpenACC_DataExitOpWithVarPtr<string mnemonic, string clause>
       [{
         build($_builder, $_state, accVar, var, varType, bounds,
           asyncOperands, asyncOperandsDeviceType, asyncOnly, dataClause,
-          structured, implicit, ::mlir::acc::DataClauseModifier::none, name);
+          structured, implicit, /*synthetic=*/false,
+          ::mlir::acc::DataClauseModifier::none, name);
       }]>,
     ];
 
@@ -1298,6 +1317,7 @@ class OpenACC_DataExitOpNoVarPtr<string mnemonic, string clause>
         `dataClause` `(` enum($dataClause) `)`
       | `structured` `(` $structured `)`
       | `implicit` `(` $implicit `)`
+      | `synthetic` $synthetic
       | `name` `(` $name `)`
     )
     prop-dict attr-dict
@@ -1312,7 +1332,8 @@ class OpenACC_DataExitOpNoVarPtr<string mnemonic, string clause>
           bounds, /*asyncOperands=*/{}, /*asyncOperandsDeviceType=*/nullptr,
           /*asyncOnly=*/nullptr, /*dataClause=*/nullptr,
           /*structured=*/$_builder.getBoolAttr(structured),
-          /*implicit=*/$_builder.getBoolAttr(implicit), /*modifiers=*/nullptr,
+          /*implicit=*/$_builder.getBoolAttr(implicit),
+          /*synthetic=*/nullptr, /*modifiers=*/nullptr,
           /*name=*/nullptr);
       }]>,
     OpBuilder<(ins "::mlir::Value":$accVar,
@@ -1324,7 +1345,8 @@ class OpenACC_DataExitOpNoVarPtr<string mnemonic, string clause>
           bounds, /*asyncOperands=*/{}, /*asyncOperandsDeviceType=*/nullptr,
           /*asyncOnly=*/nullptr, /*dataClause=*/nullptr,
           /*structured=*/$_builder.getBoolAttr(structured),
-          /*implicit=*/$_builder.getBoolAttr(implicit), /*modifiers=*/nullptr,
+          /*implicit=*/$_builder.getBoolAttr(implicit),
+          /*synthetic=*/nullptr, /*modifiers=*/nullptr,
           /*name=*/$_builder.getStringAttr(name));
       }]>,
     OpBuilder<(ins "::mlir::Value":$accVar, "::mlir::ValueRange":$bounds,
@@ -1336,7 +1358,8 @@ class OpenACC_DataExitOpNoVarPtr<string mnemonic, string clause>
       [{
         build($_builder, $_state, accVar, bounds, asyncOperands,
               asyncOperandsDeviceType, asyncOnly, dataClause, structured,
-              implicit, ::mlir::acc::DataClauseModifier::none, name);
+              implicit, /*synthetic=*/false,
+              ::mlir::acc::DataClauseModifier::none, name);
       }]>,
   ];
 
@@ -1761,7 +1784,7 @@ def OpenACC_ReductionRecipeOp
 def OpenACC_ParallelOp
     : OpenACC_Op<"parallel",
                  [AttrSizedOperandSegments, AutomaticAllocationScope,
-                  RecursiveMemoryEffects,
+                  HasParallelRegion, RecursiveMemoryEffects,
                   DeclareOpInterfaceMethods<ComputeRegionOpInterface>,
                   DeclareOpInterfaceMethods<RegionBranchOpInterface,
                                             ["getSuccessorInputs"]>,
@@ -2643,7 +2666,7 @@ def OpenACC_HostDataOp
 def OpenACC_LoopOp
     : OpenACC_Op<
           "loop", [AttrSizedOperandSegments, AutomaticAllocationScope,
-                   RecursiveMemoryEffects,
+                   HasParallelRegion, RecursiveMemoryEffects,
                    DeclareOpInterfaceMethods<ComputeRegionOpInterface>,
                    DeclareOpInterfaceMethods<LoopLikeOpInterface>,
                    DeclareOpInterfaceMethods<RegionBranchOpInterface,
@@ -2664,6 +2687,13 @@ def OpenACC_LoopOp
     such a representation makes sure no intermediate transformation such
     as Loop Invariant Code Motion breaks the property requested by the
     clause on the loop constructs.
+
+    The `tile` operands hold the sizes of the `tile` clause in source order.
+    As defined by the OpenACC specification (version 3.4, section 2.9.8), the
+    first size applies to the innermost associated loop and the last size to
+    the outermost one: with `n` sizes, the size at position `k` applies to
+    induction variable `n - 1 - k`. A size of `-1` represents `*`, an
+    implementation-defined tile size.
 
     Each `acc.loop` holds private and reduction operands which are the
     ssa values from the corresponding `acc.private` or `acc.reduction`
@@ -2804,10 +2834,11 @@ def OpenACC_LoopOp
     /// device_type.
     bool hasWorker(mlir::acc::DeviceType deviceType);
 
-    /// Return the values of the tile clause if present.
+    /// Return the values of the tile clause if present, in clause order: the
+    /// first value is the tile size of the innermost associated loop.
     mlir::Operation::operand_range getTileValues();
     /// Return the values of the tile clause for the given device_type if
-    /// present.
+    /// present, in clause order.
     mlir::Operation::operand_range
     getTileValues(mlir::acc::DeviceType deviceType);
 
@@ -2844,7 +2875,8 @@ def OpenACC_LoopOp
     void setCollapseForDeviceTypes(MLIRContext *, llvm::ArrayRef<DeviceType>,
                                    llvm::APInt);
     // Sets the tile values for this 'loop' for a set of DeviceTypes. All of the
-    // values should be integral constants, with the '*' represented as a '-1'.
+    // values should be integral constants in clause order, with the '*'
+    // represented as a '-1'.
     void setTileForDeviceTypes(MLIRContext *, llvm::ArrayRef<DeviceType>,
                                mlir::ValueRange);
 
@@ -3020,10 +3052,20 @@ def AtomicReadOp : OpenACC_Op<"atomic.read", [AtomicReadOpInterface]> {
 
     The operand `x` is the address from where the value is atomically read.
     The operand `v` is the address where the value is stored after reading.
+
+    The operation declares its memory effects per operand: it reads the
+    location designated by `x` and writes the location designated by `v`. It
+    declares no other effect, which models relaxed ordering: the access to the
+    location is atomic, but the operation creates no ordering relationship with
+    accesses to any other location, so those may be moved across it. OpenACC
+    leaves the ordering of the `atomic` construct unspecified - unlike OpenMP
+    it has no memory-ordering clause - so relaxed is the weakest reading
+    consistent with the specification and the one that permits the most
+    optimization.
   }];
 
-  let arguments = (ins OpenACC_PointerLikeType:$x,
-                       OpenACC_PointerLikeType:$v,
+  let arguments = (ins Arg<OpenACC_PointerLikeType, "address atomically read from", [MemRead]>:$x,
+                       Arg<OpenACC_PointerLikeType, "address storing read value", [MemWrite]>:$v,
                        TypeAttr:$element_type, Optional<I1>:$ifCond);
   let assemblyFormat = [{
     oilist(
@@ -3047,9 +3089,19 @@ def AtomicWriteOp : OpenACC_Op<"atomic.write",[AtomicWriteOpInterface]> {
     written w.r.t. multiple threads. The evaluation of `expr` need not be
     atomic w.r.t. the write to address. In general, the type(x) must
     dereference to type(expr).
+
+    The operation declares its memory effects per operand: it writes the
+    location designated by `x`. `expr` is a value rather than a location, so
+    it carries no effect. No other effect is declared, which models relaxed
+    ordering: the access to the location is atomic, but the operation creates
+    no ordering relationship with accesses to any other location, so those may
+    be moved across it. OpenACC leaves the ordering of the `atomic` construct
+    unspecified, so relaxed is the weakest reading consistent with the
+    specification and the one that permits the most optimization.
   }];
 
-  let arguments = (ins OpenACC_PointerLikeType:$x,
+  let arguments = (ins Arg<OpenACC_PointerLikeType,
+                           "address atomically written to", [MemWrite]>:$x,
                        AnyType:$expr,
                        Optional<I1>:$ifCond);
   let assemblyFormat = [{
@@ -3188,7 +3240,7 @@ def OpenACC_DeclareEnterOp : OpenACC_Op<"declare_enter",
     Example showing `acc declare create(a)`:
 
     ```mlir
-    %0 = acc.create varPtr(%a : !llvm.ptr) -> !llvm.ptr
+    %0 = acc.create varPtr(%a : !llvm.ptr) varType(i32) -> !llvm.ptr
     acc.declare_enter dataOperands(%0 : !llvm.ptr)
     ```
   }];
@@ -3220,9 +3272,9 @@ def OpenACC_DeclareExitOp : OpenACC_Op<"declare_exit",
     Example showing `acc declare device_resident(a)`:
 
     ```mlir
-    %0 = acc.getdeviceptr varPtr(%a : !llvm.ptr) -> !llvm.ptr {dataClause = #acc.data_clause<declare_device_resident>}
+    %0 = acc.getdeviceptr varPtr(%a : !llvm.ptr) varType(i32) dataClause(acc_declare_device_resident) -> !llvm.ptr
     acc.declare_exit dataOperands(%0 : !llvm.ptr)
-    acc.delete accPtr(%0 : !llvm.ptr) {dataClause = #acc.data_clause<declare_device_resident>}
+    acc.delete accPtr(%0 : !llvm.ptr) dataClause(acc_declare_device_resident)
     ```
   }];
 
@@ -3260,8 +3312,9 @@ def OpenACC_GlobalConstructorOp : OpenACC_Op<"global_ctor",
     }
     acc.global_ctor @acc_constructor {
       %0 = llvm.mlir.addressof @globalvar : !llvm.ptr
-      %1 = acc.create varPtr(%0 : !llvm.ptr) -> !llvm.ptr
+      %1 = acc.create varPtr(%0 : !llvm.ptr) varType(i32) -> !llvm.ptr
       acc.declare_enter dataOperands(%1 : !llvm.ptr)
+      acc.terminator
     }
     ```
   }];
@@ -3296,9 +3349,10 @@ def OpenACC_GlobalDestructorOp : OpenACC_Op<"global_dtor",
     }
     acc.global_dtor @acc_destructor {
       %0 = llvm.mlir.addressof @globalvar : !llvm.ptr
-      %1 = acc.getdeviceptr varPtr(%0 : !llvm.ptr) -> !llvm.ptr {dataClause = #acc.data_clause<create>}
+      %1 = acc.getdeviceptr varPtr(%0 : !llvm.ptr) varType(i32) dataClause(acc_create) -> !llvm.ptr
       acc.declare_exit dataOperands(%1 : !llvm.ptr)
-      acc.delete accPtr(%1 : !llvm.ptr) {dataClause = #acc.data_clause<create>}
+      acc.delete accPtr(%1 : !llvm.ptr) dataClause(acc_create)
+      acc.terminator
     }
     ```
   }];
@@ -3439,6 +3493,9 @@ def OpenACC_RoutineOp
 
     std::optional<::std::variant<mlir::SymbolRefAttr, mlir::StringAttr>> getBindNameValue();
     std::optional<::std::variant<mlir::SymbolRefAttr, mlir::StringAttr>> getBindNameValue(mlir::acc::DeviceType deviceType);
+
+    /// Return the effective bind name for a given target device type
+    std::optional<::std::variant<mlir::SymbolRefAttr, mlir::StringAttr>> getEffectiveBindName(mlir::acc::DeviceType targetDeviceType);
 
     // Add an entry to the 'seq' attribute for each additional device types.
     void addSeq(MLIRContext *, llvm::ArrayRef<DeviceType>);
@@ -3800,15 +3857,16 @@ def OpenACC_WaitOp : OpenACC_Op<"wait", [AttrSizedOperandSegments]> {
 }
 
 //===----------------------------------------------------------------------===//
-// acc_on_device runtime call
+// 3.2.15 acc_on_device
 //===----------------------------------------------------------------------===//
 
 def OpenACC_OnDeviceOp : OpenACC_Op<"on_device"> {
-  let summary = "acc_on_device intrinsic operation";
+  let summary = "call to the acc_on_device runtime function";
 
   let description = [{
-    Represents a call to the OpenACC `acc_on_device` runtime function.
-    Returns whether the current thread is executing on the given device type.
+    Represents a call to the OpenACC `acc_on_device` runtime function
+    (OpenACC 3.4, section 3.2.15). The result indicates whether execution is
+    on the given device type.
 
     Example:
 

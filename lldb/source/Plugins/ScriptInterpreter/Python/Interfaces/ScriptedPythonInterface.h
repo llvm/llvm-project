@@ -90,23 +90,32 @@ public:
           "scripted Interface python object '__class__.__module__' attribute "
           "is not a string");
 
-    llvm::StringRef py_obj_module_str_ref = py_obj_module_str.GetString();
-    PythonModule py_module = PythonModule::AddModule(py_obj_module_str_ref);
+    return GetModuleFile(py_obj_module_str.GetString());
+  }
+
+  /// The file the already imported \p module_name was loaded from, read from
+  /// its `__file__`. The caller must hold the GIL.
+  static llvm::Expected<FileSpec> GetModuleFile(llvm::StringRef module_name) {
+    using namespace python;
+
+    PythonModule py_module = PythonModule::AddModule(module_name);
     if (!py_module.IsValid())
-      return llvm::createStringError("failed to import '%s' module",
-                                     py_obj_module_str_ref.data());
+      return llvm::createStringError(
+          llvm::formatv("failed to import '{0}' module", module_name).str());
 
     PythonObject py_module_file = py_module.GetAttributeValue("__file__");
     if (!py_module_file.IsValid())
       return llvm::createStringError(
-          "module '%s' is missing '__file__' attribute",
-          py_obj_module_str_ref.data());
+          llvm::formatv("module '{0}' is missing '__file__' attribute",
+                        module_name)
+              .str());
 
     PythonString py_module_file_str = py_module_file.Str();
     if (!py_module_file_str.IsValid())
       return llvm::createStringError(
-          "module '%s.__file__' attribute is not a string",
-          py_obj_module_str_ref.data());
+          llvm::formatv("module '{0}.__file__' attribute is not a string",
+                        module_name)
+              .str());
 
     return FileSpec(py_module_file_str.GetString());
   }
@@ -169,6 +178,102 @@ public:
     return checker;
   }
 
+  /// Diagnose every abstract-method violation on \a obj_class at once.
+  ///
+  /// \a obj_class is a class object, whether resolved by name or taken from an
+  /// instance's `__class__`. Resolving it by name means this can run before any
+  /// instance exists (see CreatePluginObject), which uses it to reject a
+  /// malformed class without executing its `__init__`.
+  llvm::Error CheckAbstractMethods(const python::PythonObject &obj_class,
+                                   llvm::StringRef qualified_class_name) const {
+    Log *log = GetLog(LLDBLog::Script);
+
+    // Per-method diagnostics name the class the way Python does, unqualified.
+    python::PythonString obj_class_name =
+        obj_class.GetAttributeValue("__name__").AsType<python::PythonString>();
+    llvm::StringRef class_name = obj_class_name.IsValid()
+                                     ? obj_class_name.GetString()
+                                     : qualified_class_name;
+    auto create_error = [](llvm::StringLiteral format, auto &&...ts) {
+      return llvm::createStringError(
+          llvm::formatv(format.data(), std::forward<decltype(ts)>(ts)...)
+              .str());
+    };
+
+    auto checker_or_err = CheckAbstractMethodImplementation(obj_class);
+    if (!checker_or_err)
+      return checker_or_err.takeError();
+
+    llvm::Error abstract_method_errors = llvm::Error::success();
+    for (const auto &method_checker : *checker_or_err)
+      switch (method_checker.second.checker_case) {
+      case AbstractMethodCheckerCases::eNotImplemented:
+        abstract_method_errors = llvm::joinErrors(
+            std::move(abstract_method_errors),
+            create_error("abstract method {0}.{1} not implemented", class_name,
+                         method_checker.first));
+        break;
+      case AbstractMethodCheckerCases::eNotAllocated:
+        abstract_method_errors = llvm::joinErrors(
+            std::move(abstract_method_errors),
+            create_error("abstract method {0}.{1} not allocated", class_name,
+                         method_checker.first));
+        break;
+      case AbstractMethodCheckerCases::eNotCallable:
+        abstract_method_errors = llvm::joinErrors(
+            std::move(abstract_method_errors),
+            create_error("abstract method {0}.{1} not callable", class_name,
+                         method_checker.first));
+        break;
+      case AbstractMethodCheckerCases::eUnknownArgumentCount: {
+        const std::string *py_error =
+            std::get_if<std::string>(&method_checker.second.payload);
+        abstract_method_errors = llvm::joinErrors(
+            std::move(abstract_method_errors),
+            create_error(
+                "abstract method {0}.{1} has unknown argument count: {2}",
+                class_name, method_checker.first,
+                py_error ? *py_error : "<no further information>"));
+      } break;
+      case AbstractMethodCheckerCases::eInvalidArgumentCount: {
+        auto &payload_variant = method_checker.second.payload;
+        if (!std::holds_alternative<
+                AbstractMethodCheckerPayload::InvalidArgumentCountPayload>(
+                payload_variant)) {
+          abstract_method_errors = llvm::joinErrors(
+              std::move(abstract_method_errors),
+              create_error(
+                  "abstract method {0}.{1} has unexpected argument count",
+                  class_name, method_checker.first));
+        } else {
+          auto payload = std::get<
+              AbstractMethodCheckerPayload::InvalidArgumentCountPayload>(
+              payload_variant);
+          abstract_method_errors = llvm::joinErrors(
+              std::move(abstract_method_errors),
+              create_error("abstract method {0}.{1} has unexpected "
+                           "argument count (expected {2} but has {3})",
+                           class_name, method_checker.first,
+                           payload.required_argument_count,
+                           payload.actual_argument_count));
+        }
+      } break;
+      case AbstractMethodCheckerCases::eValid:
+        LLDB_LOG(log, "Abstract method {0}.{1} implemented & valid.",
+                 class_name, method_checker.first);
+        break;
+      }
+
+    if (abstract_method_errors) {
+      Status error = Status::FromError(std::move(abstract_method_errors));
+      LLDB_LOG(log, "Abstract method error in {0}:\n{1}", qualified_class_name,
+               error.AsCString());
+      return error.ToError();
+    }
+
+    return llvm::Error::success();
+  }
+
   template <typename... Args>
   llvm::Expected<StructuredData::GenericSP>
   CreatePluginObject(const ScriptedMetadata &scripted_metadata,
@@ -176,7 +281,6 @@ public:
     using namespace python;
     using Locker = ScriptInterpreterPythonImpl::Locker;
 
-    Log *log = GetLog(LLDBLog::Script);
     auto create_error = [](llvm::StringLiteral format, auto &&...ts) {
       return llvm::createStringError(
           llvm::formatv(format.data(), std::forward<decltype(ts)>(ts)...)
@@ -239,6 +343,9 @@ public:
         return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                        error_string);
       }
+
+      if (llvm::Error error = CheckAbstractMethods(init, class_name))
+        return std::move(error);
 
       llvm::Expected<PythonObject> expected_return_object =
           create_error("resulting object is not initialized");
@@ -309,83 +416,46 @@ public:
     PythonString obj_class_name =
         obj_class.GetAttributeValue("__name__").AsType<PythonString>();
 
-    auto checker_or_err = CheckAbstractMethodImplementation(obj_class);
-    if (!checker_or_err)
-      return checker_or_err.takeError();
-
-    llvm::Error abstract_method_errors = llvm::Error::success();
-    for (const auto &method_checker : *checker_or_err)
-      switch (method_checker.second.checker_case) {
-      case AbstractMethodCheckerCases::eNotImplemented:
-        abstract_method_errors = llvm::joinErrors(
-            std::move(abstract_method_errors),
-            std::move(create_error("abstract method {0}.{1} not implemented",
-                                   obj_class_name.GetString(),
-                                   method_checker.first)));
-        break;
-      case AbstractMethodCheckerCases::eNotAllocated:
-        abstract_method_errors = llvm::joinErrors(
-            std::move(abstract_method_errors),
-            std::move(create_error("abstract method {0}.{1} not allocated",
-                                   obj_class_name.GetString(),
-                                   method_checker.first)));
-        break;
-      case AbstractMethodCheckerCases::eNotCallable:
-        abstract_method_errors = llvm::joinErrors(
-            std::move(abstract_method_errors),
-            std::move(create_error("abstract method {0}.{1} not callable",
-                                   obj_class_name.GetString(),
-                                   method_checker.first)));
-        break;
-      case AbstractMethodCheckerCases::eUnknownArgumentCount: {
-        const std::string *py_error =
-            std::get_if<std::string>(&method_checker.second.payload);
-        abstract_method_errors = llvm::joinErrors(
-            std::move(abstract_method_errors),
-            std::move(create_error(
-                "abstract method {0}.{1} has unknown argument count: {2}",
-                obj_class_name.GetString(), method_checker.first,
-                py_error ? *py_error : "<no further information>")));
-      } break;
-      case AbstractMethodCheckerCases::eInvalidArgumentCount: {
-        auto &payload_variant = method_checker.second.payload;
-        if (!std::holds_alternative<
-                AbstractMethodCheckerPayload::InvalidArgumentCountPayload>(
-                payload_variant)) {
-          abstract_method_errors = llvm::joinErrors(
-              std::move(abstract_method_errors),
-              std::move(create_error(
-                  "abstract method {0}.{1} has unexpected argument count",
-                  obj_class_name.GetString(), method_checker.first)));
-        } else {
-          auto payload = std::get<
-              AbstractMethodCheckerPayload::InvalidArgumentCountPayload>(
-              payload_variant);
-          abstract_method_errors = llvm::joinErrors(
-              std::move(abstract_method_errors),
-              std::move(
-                  create_error("abstract method {0}.{1} has unexpected "
-                               "argument count (expected {2} but has {3})",
-                               obj_class_name.GetString(), method_checker.first,
-                               payload.required_argument_count,
-                               payload.actual_argument_count)));
-        }
-      } break;
-      case AbstractMethodCheckerCases::eValid:
-        LLDB_LOG(log, "Abstract method {0}.{1} implemented & valid.",
-                 obj_class_name.GetString(), method_checker.first);
-        break;
-      }
-
-    if (abstract_method_errors) {
-      Status error = Status::FromError(std::move(abstract_method_errors));
-      LLDB_LOG(log, "Abstract method error in {0}:\n{1}", class_name,
-               error.AsCString());
-      return error.ToError();
-    }
+    // We were handed an instance rather than building one, so there was no
+    // constructor to run the check ahead of; validate it now.
+    if (script_obj)
+      if (llvm::Error error =
+              CheckAbstractMethods(obj_class, obj_class_name.GetString()))
+        return std::move(error);
 
     m_object_instance_sp = StructuredData::GenericSP(
         new StructuredPythonObject(std::move(result)));
+
+    // An object handed over by the script wasn't built from the metadata,
+    // which may even describe its creator, so name it after its own class and
+    // don't attribute the metadata's arguments to it.
+    std::string qualified_class_name = script_obj ? "" : class_name.str();
+    PythonString obj_module_name =
+        obj_class.GetAttributeValue("__module__").AsType<PythonString>();
+    if (qualified_class_name.empty() && obj_module_name.IsValid())
+      qualified_class_name =
+          llvm::formatv("{0}.{1}", obj_module_name.GetString(),
+                        obj_class_name.GetString())
+              .str();
+
+    // Modules can be imported or reloaded without LLDB seeing it, so ask the
+    // class's module for its current file rather than remembering one.
+    FileSpec source_path;
+    if (obj_module_name.IsValid()) {
+      if (llvm::Expected<FileSpec> path_or_err =
+              GetModuleFile(obj_module_name.GetString()))
+        source_path = *path_or_err;
+      else
+        LLDB_LOG_ERROR(GetLog(LLDBLog::Script), path_or_err.takeError(),
+                       "failed to find the file defining {1}: {0}",
+                       qualified_class_name);
+    }
+    if (!script_obj)
+      m_scripted_metadata->SetSourcePath(source_path);
+    RegisterInstance(m_interpreter.GetScriptedInstanceRegistry(),
+                     std::move(qualified_class_name), std::move(source_path),
+                     script_obj ? nullptr : m_scripted_metadata->GetArgsSP());
+
     return m_object_instance_sp;
   }
 

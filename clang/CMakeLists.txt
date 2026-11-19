@@ -190,6 +190,12 @@ if(CLANG_ENABLE_LIBXML2)
   endif()
 endif()
 
+# Standalone builds don't inherit this flag from the llvm/CMakeLists, so set it
+# here.
+if(CLANG_BUILT_STANDALONE)
+  option(CLANG_ENABLE_CIR "Build ClangIR support into the compiler" OFF)
+endif()
+
 if(CLANG_ENABLE_CIR)
   if (CLANG_BUILT_STANDALONE)
     message(FATAL_ERROR
@@ -199,6 +205,10 @@ if(CLANG_ENABLE_CIR)
     message(FATAL_ERROR
       "Cannot build ClangIR without MLIR enabled")
   endif()
+  # Number of translation units the TableGen-generated CIR operation
+  # definitions are split into. Shared by the CIROps.td TableGen invocations
+  # and the MLIRCIR library sources.
+  set(CLANG_CIR_OP_SHARD_COUNT 8)
 endif()
 
 include(CheckIncludeFile)
@@ -362,7 +372,15 @@ set(CLANG_VENDOR_UTI "org.llvm.clang" CACHE STRING
 set(CLANG_PYTHON_BINDINGS_VERSIONS "" CACHE STRING
     "Python versions to install libclang python bindings for")
 
-set(CLANG_LINK_CLANG_DYLIB ${LLVM_LINK_LLVM_DYLIB} CACHE BOOL
+if(LLVM_LINK_LLVM_DYLIB AND NOT MSVC)
+  # We can't rely on default visibility with MSVC. libClang should have its own
+  # annotation (CLANG_ABI) and have its API properly annotated for exports on
+  # Windows too. See https://github.com/llvm/llvm-project/issues/238871
+  set(CLANG_LINK_CLANG_DYLIB_DEFAULT 1)
+else()
+  set(CLANG_LINK_CLANG_DYLIB_DEFAULT 0)
+endif()
+set(CLANG_LINK_CLANG_DYLIB ${CLANG_LINK_CLANG_DYLIB_DEFAULT} CACHE BOOL
     "Link tools against libclang-cpp.so")
 
 if (NOT LLVM_LINK_LLVM_DYLIB AND CLANG_LINK_CLANG_DYLIB)
@@ -412,7 +430,7 @@ configure_file(
 
 # Add appropriate flags for GCC
 if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-common -Woverloaded-virtual")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-common")
 
   # Enable -pedantic for Clang even if it's not enabled for LLVM.
   if (NOT LLVM_ENABLE_PEDANTIC)
@@ -426,10 +444,12 @@ endif ()
 
 # Determine HOST_LINK_VERSION on Darwin.
 set(HOST_LINK_VERSION "" CACHE STRING "Host linker version on Darwin")
-if (APPLE AND NOT HOST_LINK_VERSION AND NOT CMAKE_LINKER MATCHES ".*lld.*")
+get_filename_component(CLANG_LINKER_NAME "${CMAKE_LINKER}" NAME)
+if (APPLE AND NOT HOST_LINK_VERSION AND NOT CLANG_LINKER_NAME MATCHES "lld")
   get_darwin_linker_version(HOST_LINK_VERSION)
   set(HOST_LINK_VERSION "${HOST_LINK_VERSION}" CACHE STRING "Host linker version on Darwin" FORCE)
 endif()
+unset(CLANG_LINKER_NAME)
 if (HOST_LINK_VERSION)
   message(STATUS "Host linker version: ${HOST_LINK_VERSION}")
 endif()
@@ -750,13 +770,13 @@ if (CLANG_ENABLE_BOOTSTRAP)
     elseif(MSVC)
       add_dependencies(clang-bootstrap-deps llvm-lib)
       set(${CLANG_STAGE}_AR -DCMAKE_AR=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-lib)
-    elseif(NOT WIN32)
+    elseif((NOT WIN32) OR MINGW)
       add_dependencies(clang-bootstrap-deps llvm-ar llvm-ranlib)
-      if(NOT BOOTSTRAP_LLVM_ENABLE_LLD AND LLVM_BINUTILS_INCDIR)
+      if(NOT WIN32 AND NOT BOOTSTRAP_LLVM_ENABLE_LLD AND LLVM_BINUTILS_INCDIR)
         add_dependencies(clang-bootstrap-deps LLVMgold)
       endif()
-      set(${CLANG_STAGE}_AR -DCMAKE_AR=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-ar)
-      set(${CLANG_STAGE}_RANLIB -DCMAKE_RANLIB=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-ranlib)
+      set(${CLANG_STAGE}_AR -DCMAKE_AR=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-ar${CMAKE_EXECUTABLE_SUFFIX})
+      set(${CLANG_STAGE}_RANLIB -DCMAKE_RANLIB=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-ranlib${CMAKE_EXECUTABLE_SUFFIX})
     endif()
   endif()
 
@@ -815,9 +835,9 @@ if (CLANG_ENABLE_BOOTSTRAP)
     endif()
   endif()
 
-  set(C_COMPILER "clang")
-  set(CXX_COMPILER "clang++")
-  if(WIN32)
+  set(C_COMPILER "clang${CMAKE_EXECUTABLE_SUFFIX}")
+  set(CXX_COMPILER "clang++${CMAKE_EXECUTABLE_SUFFIX}")
+  if(WIN32 AND NOT MINGW)
     set(C_COMPILER "clang-cl.exe")
     set(CXX_COMPILER "clang-cl.exe")
   endif()
@@ -831,7 +851,7 @@ if (CLANG_ENABLE_BOOTSTRAP)
   # cmake requires CMAKE_LINKER to be specified if the compiler is MSVC-like,
   # otherwise it defaults the linker to be link.exe.
   if(BOOTSTRAP_LLVM_ENABLE_LLD)
-    if((WIN32 AND NOT BOOTSTRAP_CMAKE_SYSTEM_NAME) OR BOOTSTRAP_CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    if((NOT MINGW) AND ((WIN32 AND NOT BOOTSTRAP_CMAKE_SYSTEM_NAME) OR BOOTSTRAP_CMAKE_SYSTEM_NAME STREQUAL "Windows"))
       set(${CLANG_STAGE}_LINKER -DCMAKE_LINKER=${LLVM_RUNTIME_OUTPUT_INTDIR}/lld-link${CMAKE_EXECUTABLE_SUFFIX})
     endif()
   endif()

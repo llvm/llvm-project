@@ -149,6 +149,7 @@ add_header_library(
     .tcb
     .thread_attributes
     libc.hdr.stdint_proxy
+    libc.hdr.types.clockid_t
     libc.hdr.types.struct_sched_param
     libc.src.__support.common
     libc.src.__support.error_or
@@ -167,6 +168,7 @@ if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.thread)
       .cleanup_stack
       .mutex
       .${LIBC_TARGET_OS}.thread
+      libc.hdr.limits_macros
       libc.hdr.types.struct___pthread_cleanup_frame
       libc.src.__support.fixedvector
       libc.src.__support.CPP.array

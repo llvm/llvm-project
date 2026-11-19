@@ -5,9 +5,9 @@ declare float @llvm.sqrt.f32(float)
 
 ; The only negative value sqrt(x) can produce is -0.0, so the only negative
 ; value 1.0 / sqrt(x) can produce is -Inf.
-; TODO: Also infer that the result cannot be -0.0.
+; TODO: Also infer that the result cannot be positive-subnormal.
 define float @ret_inv_sqrt(float %x) {
-; CHECK-LABEL: define nofpclass(nsub nnorm) float @ret_inv_sqrt
+; CHECK-LABEL: define nofpclass(nzero nsub nnorm) float @ret_inv_sqrt
 ; CHECK-SAME: (float [[X:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    [[SQRT:%.*]] = call float @llvm.sqrt.f32(float [[X]]) #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    [[INV_SQRT:%.*]] = fdiv float 1.000000e+00, [[SQRT]]
@@ -63,9 +63,9 @@ define float @ret_sqrt_inv_not_infinity_not_zero(float nofpclass(inf zero) %x) {
 
 ; The only negative value sqrt(-x) can produce is -0.0, so the only positive
 ; value -1.0 / sqrt(-x) can produce is +Inf.
-; TODO: Also infer that the result cannot be +0.0.
+; TODO: Also infer that the result cannot be negative-subnormal.
 define float @ret_neg_inv_sqrt_neg(float %x) {
-; CHECK-LABEL: define nofpclass(psub pnorm) float @ret_neg_inv_sqrt_neg
+; CHECK-LABEL: define nofpclass(pzero psub pnorm) float @ret_neg_inv_sqrt_neg
 ; CHECK-SAME: (float [[X:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[NEG_X:%.*]] = fneg float [[X]]
 ; CHECK-NEXT:    [[SQRT:%.*]] = call float @llvm.sqrt.f32(float [[NEG_X]]) #[[ATTR2]]

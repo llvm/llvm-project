@@ -213,9 +213,10 @@ basic_ostream<_CharT, _Traits>::sentry::~sentry() {
     try {
 #  endif // _LIBCPP_HAS_EXCEPTIONS
       if (__os_.rdbuf()->pubsync() == -1)
-        __os_.setstate(ios_base::badbit);
+        __os_.__setstate_nothrow(ios_base::badbit);
 #  if _LIBCPP_HAS_EXCEPTIONS
     } catch (...) {
+      __os_.__setstate_nothrow(ios_base::badbit);
     }
 #  endif // _LIBCPP_HAS_EXCEPTIONS
   }

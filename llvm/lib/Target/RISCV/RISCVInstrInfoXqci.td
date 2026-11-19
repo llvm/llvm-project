@@ -1132,7 +1132,7 @@ let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in {
     let imm12 = imm14{13-2};
   }
 
-  def QC_INW : RVInstI<0b101, OPC_CUSTOM_0, (outs GPRNoX0:$rd),
+  def QC_INW : RVInstI<0b101, OPC_CUSTOM_0, (outs GPR:$rd),
                        (ins GPR:$rs1, uimm14lsb00_optional:$imm14),
                        "qc.inw", "$rd, ${imm14}(${rs1})"> {
     bits<14> imm14;

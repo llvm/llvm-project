@@ -17,17 +17,22 @@
 
 #include "BedrockTestUtils.h"
 #include "CommonTestUtils.h"
+#include "ErrorMatchers.h"
 
 #include <deque>
 #include <optional>
 #include <string>
 
 using namespace orc_rt;
+using namespace orc_rt::test;
+
+ORC_RT_C_DEFINE_CONTROLLER_HANDLER_TAG(
+    orc_rt_tag_test_inProcessControllerAccessTest);
 
 namespace {
 
-static orc_rt_ControllerHandlerTag testHandlerTag() {
-  return reinterpret_cast<orc_rt_ControllerHandlerTag>(uintptr_t{0xdeadbeef});
+static orc_rt_ControllerHandlerTag *testHandlerTag() {
+  return &orc_rt_tag_test_inProcessControllerAccessTest;
 }
 
 // A minimal stand-in for llvm::orc::InProcessEPC. Registers itself on the
@@ -38,7 +43,7 @@ public:
   using Connection = InProcessControllerAccess::Connection;
 
   using OnCallJITDispatchFn =
-      move_only_function<void(uint64_t CallId, orc_rt_ControllerHandlerTag T,
+      move_only_function<void(uint64_t CallId, orc_rt_ControllerHandlerTag *T,
                               WrapperFunctionBuffer ArgBytes)>;
   using OnReturnWrapperResultFn = move_only_function<void(
       uint64_t CallId, WrapperFunctionBuffer ResultBytes)>;
@@ -89,7 +94,7 @@ public:
 
 private:
   static void callJITDispatchEntry(void *IPEPC, uint64_t CallId,
-                                   orc_rt_ControllerHandlerTag T,
+                                   orc_rt_ControllerHandlerTag *T,
                                    orc_rt_WrapperFunctionBuffer ArgBytes) {
     auto *Self = static_cast<MockIPEPC *>(IPEPC);
     WrapperFunctionBuffer Buf(ArgBytes);
@@ -173,7 +178,7 @@ TEST(InProcessControllerAccessTest, OnConnectFailureIsReportedAndDetaches) {
   cantFail(std::move(Reported)); // force checked state
 
   Session S(mockExecutorProcessInfo(), noDispatch,
-            [&](Error E) { Reported = std::move(E); });
+            [&](Session &, Error E) noexcept { Reported = std::move(E); });
 
   S.attach<InProcessControllerAccess>(
       BootstrapInfo(S),
@@ -183,10 +188,8 @@ TEST(InProcessControllerAccessTest, OnConnectFailureIsReportedAndDetaches) {
         return make_error<StringError>("fake connect failure");
       });
 
-  if (Reported)
-    EXPECT_EQ(toString(std::move(Reported)), "fake connect failure");
-  else
-    ADD_FAILURE() << "Expected OnConnect error to be reported";
+  EXPECT_THAT_ERROR(std::move(Reported),
+                    FailedWithMessage("fake connect failure"));
 
   // A subsequent call to the controller should now fail with "no controller
   // attached" (i.e. the Session detached on the OnConnect error).
@@ -332,7 +335,9 @@ TEST(InProcessControllerAccessTest, BootstrapValuesExposeSubtargetFeatures) {
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   std::optional<std::string> Features;
   std::unique_ptr<MockIPEPC> Mock;
-  attachWithMock(S, Mock, cantFail(BootstrapInfo::CreateDefault(S)),
+  auto BI = BootstrapInfo::CreateDefault(S);
+  ASSERT_THAT_EXPECTED(BI, Succeeded());
+  attachWithMock(S, Mock, std::move(*BI),
                  [&](InProcessControllerAccess::BootstrapInfoAccess *BIA) {
                    const char *Name = nullptr;
                    const char *Bytes = nullptr;

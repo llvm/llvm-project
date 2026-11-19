@@ -16,12 +16,12 @@
 ; RUN: opt -S -passes=declare-runtime-libcalls -mtriple=arm-none-linux-gnueabi < %t/none.ll | FileCheck %s --check-prefix=SOFT
 
 ;--- hard.ll
-; HARD: declare arm_aapcs_vfpcc void @__addtf3(...)
+; HARD: declare arm_aapcs_vfpcc fp128 @__addtf3(fp128, fp128)
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"float-abi", !"hard"}
 
 ;--- soft.ll
-; SOFT: declare arm_aapcscc void @__addtf3(...)
+; SOFT: declare arm_aapcscc fp128 @__addtf3(fp128, fp128)
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"float-abi", !"soft"}
 

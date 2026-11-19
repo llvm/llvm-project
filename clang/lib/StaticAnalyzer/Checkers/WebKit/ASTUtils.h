@@ -50,27 +50,33 @@ class Expr;
 /// sub-expression and true.
 ///
 /// Calls \p callback for each origin the traversal reaches, passing the
-/// subexpression, whether the traversal recognized it as a safe origin, and
+/// subexpression, whether the traversal recognized it as a safe origin,
 /// whether the path to it passed through a temporary that dies at the end of
-/// the full-expression; in that case the origin's lifetime guarantee cannot
-/// be assumed to extend past the full-expression. Returns false if any of
-/// calls to callbacks returned false. Otherwise true.
+/// the full-expression (in that case the origin's lifetime guarantee cannot
+/// be assumed to extend past the full-expression), and whether the path to it
+/// followed at least one [[clang::lifetimebound]] edge. Returns false if any
+/// of calls to callbacks returned false. Otherwise true.
+///
+/// If \p FollowLifetimeBound is true, f(x [[clang::lifetimebound]])
+/// traverses into x.
 bool tryToFindPtrOrigin(
     const clang::Expr *E, bool StopAtFirstRefCountedObj,
+    bool FollowLifetimeBound,
     std::function<bool(const clang::CXXRecordDecl *)> isSafePtr,
     std::function<bool(const clang::QualType)> isSafePtrType,
     std::function<bool(const clang::Decl *)> isSafeGlobalDecl,
     std::function<bool(const clang::Expr *, bool /*IsSafe*/,
-                       bool /*OriginDependsOnFullExpressionTemporary*/)>
+                       bool /*OriginDependsOnFullExpressionTemporary*/,
+                       bool /*PtrIsLifetimeBoundToOrigin*/)>
         callback);
 
 /// For \p E referring to a ref-countable/-counted pointer/reference we return
-/// whether it's a safe call argument. Examples: function parameter or
-/// this-pointer. The logic relies on the set of recursive rules we enforce for
-/// WebKit codebase.
+/// whether the pointee outlives the current function call. Examples: function
+/// parameter or this-pointer. Outliving the call is not by itself sufficient
+/// evidence of safety for a model that checks for interior destruction.
 ///
-/// \returns Whether \p E is a safe call arugment.
-bool isASafeCallArg(const clang::Expr *E);
+/// \returns Whether the pointee of \p E outlives the current function call.
+bool originOutlivesCall(const clang::Expr *E);
 
 /// \returns true if E is nullptr or __null.
 bool isNullPtr(const clang::Expr *E);

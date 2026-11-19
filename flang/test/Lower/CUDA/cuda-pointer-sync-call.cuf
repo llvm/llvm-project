@@ -1,0 +1,97 @@
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+
+! A POINTER or ALLOCATABLE dummy argument may associate or allocate a device
+! global passed as the actual argument. The device copy of the descriptor must
+! be synchronized after the call.
+
+module m
+  real, device, pointer, dimension(:) :: dev_ptr
+  real, device, allocatable, dimension(:) :: dev_alloc
+contains
+  subroutine assoc(p, t)
+    real, device, pointer, dimension(:) :: p
+    real, device, target, dimension(:) :: t
+    p => t
+  end subroutine
+  subroutine look(p)
+    real, device, pointer, dimension(:), intent(in) :: p
+  end subroutine
+  subroutine alloc(a)
+    real, device, allocatable, dimension(:), intent(out) :: a
+    allocate(a(10))
+  end subroutine
+  subroutine look_alloc(a)
+    real, device, allocatable, dimension(:), intent(in) :: a
+  end subroutine
+  integer function fassoc(p, t)
+    real, device, pointer, dimension(:) :: p
+    real, device, target, dimension(:) :: t
+    p => t
+    fassoc = size(t)
+  end function
+  attributes(global) subroutine kern(p)
+    real, device, pointer, dimension(:) :: p
+  end subroutine
+  attributes(device) subroutine dev_callee(p)
+    real, device, pointer, dimension(:) :: p
+  end subroutine
+  attributes(device) subroutine dev_caller()
+    call dev_callee(dev_ptr)
+  end subroutine
+end module
+
+subroutine saved_local()
+  use m
+  real, device, allocatable, dimension(:), save :: saved_alloc
+  call alloc(saved_alloc)
+end subroutine
+
+subroutine use_assoc(t)
+  use m
+  real, device, target, dimension(:) :: t
+  call assoc(dev_ptr, t)
+end subroutine
+
+program test
+  use m
+  real, device, target, dimension(4) :: a_dev
+  real, device, pointer, dimension(:) :: local_ptr
+  integer :: n
+  call assoc(dev_ptr, a_dev)
+  call look(dev_ptr)
+  call alloc(dev_alloc)
+  call look_alloc(dev_alloc)
+  call assoc(local_ptr, a_dev)
+  n = fassoc(dev_ptr, a_dev)
+  call kern<<<1,1>>>(dev_ptr)
+end program
+
+! CHECK-LABEL: func.func @_QMmPdev_caller()
+! CHECK: fir.call @_QMmPdev_callee
+! CHECK-NOT: cuf.sync_descriptor
+! CHECK: return
+
+! CHECK-LABEL: func.func @_QPsaved_local()
+! CHECK: fir.call @_QMmPalloc
+! CHECK-NEXT: cuf.sync_descriptor @_QFsaved_localEsaved_alloc
+
+! CHECK-LABEL: func.func @_QPuse_assoc(
+! CHECK: fir.call @_QMmPassoc
+! CHECK-NEXT: cuf.sync_descriptor @_QMmEdev_ptr
+
+! CHECK-LABEL: func.func @_QQmain()
+! CHECK: fir.call @_QMmPassoc
+! CHECK-NEXT: cuf.sync_descriptor @_QMmEdev_ptr
+! CHECK: fir.call @_QMmPlook
+! CHECK-NOT: cuf.sync_descriptor
+! CHECK: fir.call @_QMmPalloc
+! CHECK-NEXT: cuf.sync_descriptor @_QMmEdev_alloc
+! CHECK: fir.call @_QMmPlook_alloc
+! CHECK-NOT: cuf.sync_descriptor
+! CHECK: fir.call @_QMmPassoc
+! CHECK-NOT: cuf.sync_descriptor
+! CHECK: fir.call @_QMmPfassoc
+! CHECK-NEXT: cuf.sync_descriptor @_QMmEdev_ptr
+! CHECK: cuf.kernel_launch @_QMmPkern
+! CHECK-NOT: cuf.sync_descriptor
+! CHECK: return
