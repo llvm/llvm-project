@@ -5533,13 +5533,14 @@ MachineInstr *CombinerHelper::buildUDivOrURemUsingMul(MachineInstr &MI) const {
   unsigned KnownLeadingZeros =
       VT ? VT->getKnownBits(LHS).countMinLeadingZeros() : 0;
 
-  // Allow s32 to be widened to s64 for divisors whose magic number needs 33
-  // bits, if a 64-bit G_UMULH is legal, as SelectionDAG does. For even
-  // divisors, only do it if zero-extending to s64 is free.
-  LLT WideTy = Ty.changeElementSize(64);
+  // Allow scalars to be widened to twice their size for divisors whose magic
+  // number needs one more bit, if G_UMULH is legal for the wider type.
+  // SelectionDAG only does this for i32. For even divisors, only do it if the
+  // zero-extension is free.
+  LLT WideTy = Ty.changeElementSize(EltBits * 2);
   LLVMContext &Ctx = MI.getMF()->getFunction().getContext();
-  const bool AllowWiden = Ty.isScalar() && EltBits == 32 &&
-                          isLegal({TargetOpcode::G_UMULH, {WideTy}});
+  const bool AllowWiden =
+      Ty.isScalar() && isLegal({TargetOpcode::G_UMULH, {WideTy}});
   const bool AllowEvenToWiden =
       AllowWiden && getTargetLowering().isZExtFree(Ty, WideTy, Ctx);
   bool UseWiden = false;

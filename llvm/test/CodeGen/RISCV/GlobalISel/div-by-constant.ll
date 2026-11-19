@@ -293,32 +293,17 @@ define i16 @udiv16_constant_no_add(i16 %a) nounwind {
 define i16 @udiv16_constant_add(i16 %a) nounwind {
 ; RV32IM-LABEL: udiv16_constant_add:
 ; RV32IM:       # %bb.0:
-; RV32IM-NEXT:    lui a1, 16
-; RV32IM-NEXT:    lui a2, 2
-; RV32IM-NEXT:    addi a1, a1, -1
-; RV32IM-NEXT:    addi a2, a2, 1171
-; RV32IM-NEXT:    and a3, a0, a1
-; RV32IM-NEXT:    mul a2, a3, a2
-; RV32IM-NEXT:    srli a2, a2, 16
-; RV32IM-NEXT:    sub a0, a0, a2
-; RV32IM-NEXT:    and a0, a0, a1
-; RV32IM-NEXT:    srli a0, a0, 1
-; RV32IM-NEXT:    add a0, a0, a2
-; RV32IM-NEXT:    srli a0, a0, 2
+; RV32IM-NEXT:    lui a1, 149798
+; RV32IM-NEXT:    slli a0, a0, 16
+; RV32IM-NEXT:    srli a0, a0, 16
+; RV32IM-NEXT:    mulhu a0, a0, a1
 ; RV32IM-NEXT:    ret
 ;
 ; RV32IMZB-LABEL: udiv16_constant_add:
 ; RV32IMZB:       # %bb.0:
-; RV32IMZB-NEXT:    lui a1, 2
-; RV32IMZB-NEXT:    addi a1, a1, 1171
-; RV32IMZB-NEXT:    zext.h a2, a0
-; RV32IMZB-NEXT:    mul a1, a2, a1
-; RV32IMZB-NEXT:    srli a1, a1, 16
-; RV32IMZB-NEXT:    sub a0, a0, a1
+; RV32IMZB-NEXT:    lui a1, 149798
 ; RV32IMZB-NEXT:    zext.h a0, a0
-; RV32IMZB-NEXT:    srli a0, a0, 1
-; RV32IMZB-NEXT:    add a0, a0, a1
-; RV32IMZB-NEXT:    srli a0, a0, 2
+; RV32IMZB-NEXT:    mulhu a0, a0, a1
 ; RV32IMZB-NEXT:    ret
 ;
 ; RV64IM-LABEL: udiv16_constant_add:
