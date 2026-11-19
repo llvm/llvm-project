@@ -938,6 +938,9 @@ AArch64FrameLowering::findScratchNonCalleeSaveRegister(MachineBasicBlock *MBB,
 bool AArch64FrameLowering::canUseAsPrologue(
     const MachineBasicBlock &MBB) const {
   const MachineFunction *MF = MBB.getParent();
+  if (MF->usesWindowsUnwindInfo() && !enableWindowsCFIShrinkWrapping(*MF))
+    return false;
+
   MachineBasicBlock *TmpMBB = const_cast<MachineBasicBlock *>(&MBB);
   const AArch64Subtarget &Subtarget = MF->getSubtarget<AArch64Subtarget>();
   const AArch64RegisterInfo *RegInfo = Subtarget.getRegisterInfo();
@@ -972,6 +975,46 @@ bool AArch64FrameLowering::canUseAsPrologue(
       windowsRequiresStackProbe(*MF, std::numeric_limits<uint64_t>::max()))
     if (!findScratchNonCalleeSaveRegister(TmpMBB, true).isValid())
       return false;
+
+  return true;
+}
+
+bool AArch64FrameLowering::enableWindowsCFIShrinkWrapping(
+    const MachineFunction &MF) const {
+  const Function &F = MF.getFunction();
+  const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
+
+  // The range-insertion pass currently runs only on Windows, not UEFI.
+  if (!Subtarget.isTargetWindows())
+    return false;
+
+  // Range insertion relies on SEH pseudos, which are emitted only when the
+  // function needs an unwind table entry.
+  if (!F.needsUnwindTableEntry())
+    return false;
+
+  // Splitting ranges does not yet preserve language-specific handler data.
+  if (F.hasPersonalityFn())
+    return false;
+
+  // Funclets have independent frames; range insertion assumes a single frame.
+  if (MF.hasEHFunclets())
+    return false;
+
+  // Naked functions do not have a compiler-generated prologue to shrink-wrap.
+  if (F.hasFnAttribute(Attribute::Naked))
+    return false;
+
+  // Dynamically realigned frames need stack-pointer recovery that is not yet
+  // supported by the split-range implementation.
+  if (Subtarget.getRegisterInfo()->hasStackRealignment(MF))
+    return false;
+
+  // Signed return addresses need authentication-state handling across ranges
+  // that is not yet implemented.
+  if (MF.getInfo<AArch64FunctionInfo>()->getSignReturnAddressCondition() !=
+      SignReturnAddress::None)
+    return false;
 
   return true;
 }
@@ -1137,6 +1180,15 @@ AArch64FrameLowering::insertSEH(MachineBasicBlock::iterator MBBI,
               .setMIFlag(Flag);
     break;
   }
+  case AArch64::STRQui:
+  case AArch64::LDRQui: {
+    unsigned Reg = RegInfo->getSEHRegNum(MBBI->getOperand(0).getReg());
+    MIB = BuildMI(MF, DL, TII.get(AArch64::SEH_SaveAnyRegQ))
+              .addImm(Reg)
+              .addImm(Imm * 16)
+              .setMIFlag(Flag);
+    break;
+  }
   case AArch64::STPQi:
   case AArch64::LDPQi: {
     unsigned Reg0 = RegInfo->getSEHRegNum(MBBI->getOperand(0).getReg());
@@ -1145,6 +1197,17 @@ AArch64FrameLowering::insertSEH(MachineBasicBlock::iterator MBBI,
               .addImm(Reg0)
               .addImm(Reg1)
               .addImm(Imm * 16)
+              .setMIFlag(Flag);
+    break;
+  }
+  case AArch64::LDRQpost:
+    Imm = -Imm;
+    [[fallthrough]];
+  case AArch64::STRQpre: {
+    unsigned Reg = RegInfo->getSEHRegNum(MBBI->getOperand(1).getReg());
+    MIB = BuildMI(MF, DL, TII.get(AArch64::SEH_SaveAnyRegQX))
+              .addImm(Reg)
+              .addImm(Imm)
               .setMIFlag(Flag);
     break;
   }
@@ -1567,7 +1630,7 @@ static bool produceCompactUnwindFrame(const AArch64FrameLowering &AFL,
 }
 
 static bool invalidateWindowsRegisterPairing(bool SpillExtendedVolatile,
-                                             unsigned SpillCount, unsigned Reg1,
+                                             int PairOffset, unsigned Reg1,
                                              unsigned Reg2, bool NeedsWinCFI,
                                              const TargetRegisterInfo *TRI) {
   // If we are generating register pairs for a Windows function that requires
@@ -1590,7 +1653,7 @@ static bool invalidateWindowsRegisterPairing(bool SpillExtendedVolatile,
   if (TRI->getEncodingValue(Reg2) == TRI->getEncodingValue(Reg1) + 1)
     return SpillExtendedVolatile
                ? !((Reg1 == AArch64::FP && Reg2 == AArch64::LR) ||
-                   (SpillCount % 2) == 0)
+                   (PairOffset % 16) == 0)
                : false;
 
   // If pairing a GPR with LR, the pair can be described by the save_lrpair
@@ -1606,12 +1669,12 @@ static bool invalidateWindowsRegisterPairing(bool SpillExtendedVolatile,
 /// LR and FP need to be allocated together when the frame needs to save
 /// the frame-record. This means any other register pairing with LR is invalid.
 static bool invalidateRegisterPairing(bool SpillExtendedVolatile,
-                                      unsigned SpillCount, unsigned Reg1,
+                                      int PairOffset, unsigned Reg1,
                                       unsigned Reg2, bool UsesWinAAPCS,
                                       bool NeedsWinCFI, bool NeedsFrameRecord,
                                       const TargetRegisterInfo *TRI) {
   if (UsesWinAAPCS)
-    return invalidateWindowsRegisterPairing(SpillExtendedVolatile, SpillCount,
+    return invalidateWindowsRegisterPairing(SpillExtendedVolatile, PairOffset,
                                             Reg1, Reg2, NeedsWinCFI, TRI);
 
   // If we need to store the frame record, don't pair any register
@@ -1851,30 +1914,26 @@ void computeCalleeSaveRegisterGroups(const AArch64FrameLowering &AFL,
     // Add the next reg to the pair if it is in the same register class.
     if (unsigned(i + RegInc) < Count && !HasCSHazardPadding) {
       MCRegister NextReg = CSI[i + RegInc].getReg();
-      unsigned SpillCount = NeedsWinCFI ? FirstReg - i : i;
       int Aligned = AlignOffset(ByteOffset, Scale);
       int PairOffset = IsWindows ? Aligned : Aligned + StackFillDir * 2 * Scale;
       bool PairFitsImmRange =
           PairOffset / Scale >= -64 && PairOffset / Scale <= 63;
       switch (RGI.Type) {
       case RegGroupInfo::GPR:
-        if (AArch64::GPR64RegClass.contains(NextReg) && PairFitsImmRange &&
-            !invalidateRegisterPairing(SpillExtendedVolatile, SpillCount,
-                                       RGI.Reg1, NextReg, IsWindows,
-                                       NeedsWinCFI, NeedsFrameRecord, TRI))
-          RGI.Reg2 = NextReg;
-        break;
       case RegGroupInfo::FPR64:
-        if (AArch64::FPR64RegClass.contains(NextReg) && PairFitsImmRange &&
-            !invalidateRegisterPairing(SpillExtendedVolatile, SpillCount,
+      case RegGroupInfo::FPR128: {
+        const TargetRegisterClass &SpillRC =
+            RGI.Type == RegGroupInfo::GPR     ? AArch64::GPR64RegClass
+            : RGI.Type == RegGroupInfo::FPR64 ? AArch64::FPR64RegClass
+                                              : AArch64::FPR128RegClass;
+
+        if (SpillRC.contains(NextReg) && PairFitsImmRange &&
+            !invalidateRegisterPairing(SpillExtendedVolatile, PairOffset,
                                        RGI.Reg1, NextReg, IsWindows,
                                        NeedsWinCFI, NeedsFrameRecord, TRI))
           RGI.Reg2 = NextReg;
         break;
-      case RegGroupInfo::FPR128:
-        if (AArch64::FPR128RegClass.contains(NextReg) && PairFitsImmRange)
-          RGI.Reg2 = NextReg;
-        break;
+      }
       case RegGroupInfo::PPR:
         break;
       case RegGroupInfo::ZPR: {
@@ -3561,10 +3620,15 @@ void TagStoreEdit::emitCode(MachineBasicBlock::iterator &InsertI,
       // but STGloop is way too unusual for that, and also it only
       // realistically happens in function epilogue. Also, STGloop is expanded
       // before that pass.
-      if (InsertI != MBB->end() &&
-          canMergeRegUpdate(InsertI, FrameReg, FrameRegOffset.getFixed() + Size,
+      auto UpdateI = skipDebugInstructionsForward(InsertI, MBB->end(),
+                                                  /*SkipPseudoOp=*/false);
+      if (UpdateI != MBB->end() &&
+          canMergeRegUpdate(UpdateI, FrameReg, FrameRegOffset.getFixed() + Size,
                             &TotalOffset)) {
-        UpdateInstr = &*InsertI++;
+        // Keep skipped debug instructions before the loop so debug values see
+        // the pre-update SP; only the tag stores move past them.
+        UpdateInstr = &*UpdateI++;
+        InsertI = UpdateI;
         LLVM_DEBUG(dbgs() << "Folding SP update into loop:\n  "
                           << *UpdateInstr);
       }

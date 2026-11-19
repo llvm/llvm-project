@@ -6,7 +6,6 @@
 name:            load_i8_i64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $x10
@@ -19,8 +18,8 @@ body:            |
     ; CHECK-NEXT: $x10 = COPY [[LBU]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
-    %1:gprb(s64) = G_LOAD %0(p0) :: (load (s8))
-    $x10 = COPY %1(s64)
+    %1:gprb(i64) = G_LOAD %0(p0) :: (load (s8))
+    $x10 = COPY %1(i64)
     PseudoRET implicit $x10
 
 ...
@@ -28,7 +27,6 @@ body:            |
 name:            load_i16_i64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $x10
@@ -41,8 +39,8 @@ body:            |
     ; CHECK-NEXT: $x10 = COPY [[LH]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
-    %1:gprb(s64) = G_LOAD %0(p0) :: (load (s16))
-    $x10 = COPY %1(s64)
+    %1:gprb(i64) = G_LOAD %0(p0) :: (load (s16))
+    $x10 = COPY %1(i64)
     PseudoRET implicit $x10
 
 ...
@@ -50,7 +48,6 @@ body:            |
 name:            load_i8_i16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $x10
@@ -63,9 +60,9 @@ body:            |
     ; CHECK-NEXT: $x10 = COPY [[LBU]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
-    %1:gprb(s16) = G_LOAD %0(p0) :: (load (s8))
-    %2:gprb(s64) = G_ANYEXT %1
-    $x10 = COPY %2(s64)
+    %1:gprb(i16) = G_LOAD %0(p0) :: (load (s8))
+    %2:gprb(i64) = G_ANYEXT %1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -73,7 +70,6 @@ body:            |
 name:            load_i16_i16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $x10
@@ -86,9 +82,9 @@ body:            |
     ; CHECK-NEXT: $x10 = COPY [[LH]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
-    %1:gprb(s16) = G_LOAD %0(p0) :: (load (s16))
-    %2:gprb(s64) = G_ANYEXT %1
-    $x10 = COPY %2(s64)
+    %1:gprb(i16) = G_LOAD %0(p0) :: (load (s16))
+    %2:gprb(i64) = G_ANYEXT %1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -96,7 +92,6 @@ body:            |
 name:            load_i32_i64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $x10
@@ -109,8 +104,8 @@ body:            |
     ; CHECK-NEXT: $x10 = COPY [[LW]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
-    %1:gprb(s64) = G_LOAD %0(p0) :: (load (s32))
-    $x10 = COPY %1(s64)
+    %1:gprb(i64) = G_LOAD %0(p0) :: (load (s32))
+    $x10 = COPY %1(i64)
     PseudoRET implicit $x10
 
 ...
@@ -118,7 +113,6 @@ body:            |
 name:            load_i64_i64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $x10
@@ -131,8 +125,8 @@ body:            |
     ; CHECK-NEXT: $x10 = COPY [[LD]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
-    %1:gprb(s64) = G_LOAD %0(p0) :: (load (s64))
-    $x10 = COPY %1(s64)
+    %1:gprb(i64) = G_LOAD %0(p0) :: (load (s64))
+    $x10 = COPY %1(i64)
     PseudoRET implicit $x10
 
 ...
@@ -140,7 +134,6 @@ body:            |
 name:            load_p0
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $x10
@@ -162,7 +155,6 @@ body:            |
 name:            zextload_i8_i64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $x10
@@ -175,8 +167,8 @@ body:            |
     ; CHECK-NEXT: $x10 = COPY [[LBU]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
-    %1:gprb(s64) = G_ZEXTLOAD %0(p0) :: (load (s8))
-    $x10 = COPY %1(s64)
+    %1:gprb(i64) = G_ZEXTLOAD %0(p0) :: (load (s8))
+    $x10 = COPY %1(i64)
     PseudoRET implicit $x10
 
 ...
@@ -184,7 +176,6 @@ body:            |
 name:            zextload_i16_i64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $x10
@@ -197,8 +188,8 @@ body:            |
     ; CHECK-NEXT: $x10 = COPY [[LHU]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
-    %1:gprb(s64) = G_ZEXTLOAD %0(p0) :: (load (s16))
-    $x10 = COPY %1(s64)
+    %1:gprb(i64) = G_ZEXTLOAD %0(p0) :: (load (s16))
+    $x10 = COPY %1(i64)
     PseudoRET implicit $x10
 
 ...
@@ -206,7 +197,6 @@ body:            |
 name:            zextload_i32_i64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $x10
@@ -219,8 +209,8 @@ body:            |
     ; CHECK-NEXT: $x10 = COPY [[LWU]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
-    %1:gprb(s64) = G_ZEXTLOAD %0(p0) :: (load (s32))
-    $x10 = COPY %1(s64)
+    %1:gprb(i64) = G_ZEXTLOAD %0(p0) :: (load (s32))
+    $x10 = COPY %1(i64)
     PseudoRET implicit $x10
 
 ...
@@ -228,7 +218,6 @@ body:            |
 name:            sextload_i8_i64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $x10
@@ -241,8 +230,8 @@ body:            |
     ; CHECK-NEXT: $x10 = COPY [[LB]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
-    %1:gprb(s64) = G_SEXTLOAD %0(p0) :: (load (s8))
-    $x10 = COPY %1(s64)
+    %1:gprb(i64) = G_SEXTLOAD %0(p0) :: (load (s8))
+    $x10 = COPY %1(i64)
     PseudoRET implicit $x10
 
 ...
@@ -250,7 +239,6 @@ body:            |
 name:            sextload_i16_i64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $x10
@@ -263,8 +251,8 @@ body:            |
     ; CHECK-NEXT: $x10 = COPY [[LH]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
-    %1:gprb(s64) = G_SEXTLOAD %0(p0) :: (load (s16))
-    $x10 = COPY %1(s64)
+    %1:gprb(i64) = G_SEXTLOAD %0(p0) :: (load (s16))
+    $x10 = COPY %1(i64)
     PseudoRET implicit $x10
 
 ...
@@ -272,7 +260,6 @@ body:            |
 name:            sextload_i32_i64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $x10
@@ -285,8 +272,8 @@ body:            |
     ; CHECK-NEXT: $x10 = COPY [[LW]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
-    %1:gprb(s64) = G_SEXTLOAD %0(p0) :: (load (s32))
-    $x10 = COPY %1(s64)
+    %1:gprb(i64) = G_SEXTLOAD %0(p0) :: (load (s32))
+    $x10 = COPY %1(i64)
     PseudoRET implicit $x10
 
 ...
@@ -294,7 +281,6 @@ body:            |
 name:            load_i8_i32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $x10
@@ -306,9 +292,9 @@ body:            |
     ; CHECK-NEXT: $x10 = COPY [[LBU]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
-    %9:gprb(s32) = G_LOAD %0(p0) :: (load (s8))
-    %5:gprb(s64) = G_ANYEXT %9(s32)
-    $x10 = COPY %5(s64)
+    %9:gprb(i32) = G_LOAD %0(p0) :: (load (s8))
+    %5:gprb(i64) = G_ANYEXT %9(i32)
+    $x10 = COPY %5(i64)
     PseudoRET implicit $x10
 
 ...
@@ -316,7 +302,6 @@ body:            |
 name:            load_i16_i32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $x10
@@ -328,9 +313,9 @@ body:            |
     ; CHECK-NEXT: $x10 = COPY [[LH]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
-    %9:gprb(s32) = G_LOAD %0(p0) :: (load (s16))
-    %5:gprb(s64) = G_ANYEXT %9(s32)
-    $x10 = COPY %5(s64)
+    %9:gprb(i32) = G_LOAD %0(p0) :: (load (s16))
+    %5:gprb(i64) = G_ANYEXT %9(i32)
+    $x10 = COPY %5(i64)
     PseudoRET implicit $x10
 
 ...
@@ -338,7 +323,6 @@ body:            |
 name:            load_i32_i32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $x10
@@ -350,9 +334,9 @@ body:            |
     ; CHECK-NEXT: $x10 = COPY [[LW]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
-    %9:gprb(s32) = G_LOAD %0(p0) :: (load (s32))
-    %5:gprb(s64) = G_ANYEXT %9(s32)
-    $x10 = COPY %5(s64)
+    %9:gprb(i32) = G_LOAD %0(p0) :: (load (s32))
+    %5:gprb(i64) = G_ANYEXT %9(i32)
+    $x10 = COPY %5(i64)
     PseudoRET implicit $x10
 
 ...
@@ -360,7 +344,6 @@ body:            |
 name:            load_fi_i64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 stack:
   - { id: 0, offset: 0, size: 8, alignment: 8 }
@@ -372,8 +355,8 @@ body:            |
     ; CHECK-NEXT: $x10 = COPY [[LD]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = G_FRAME_INDEX %stack.0
-    %1:gprb(s64) = G_LOAD %0(p0) :: (load (s64))
-    $x10 = COPY %1(s64)
+    %1:gprb(i64) = G_LOAD %0(p0) :: (load (s64))
+    $x10 = COPY %1(i64)
     PseudoRET implicit $x10
 
 ...
@@ -381,7 +364,6 @@ body:            |
 name:            load_fi_gep_i64_i64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 stack:
   - { id: 0, offset: 0, size: 16, alignment: 8 }
@@ -393,10 +375,10 @@ body:            |
     ; CHECK-NEXT: $x10 = COPY [[LD]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = G_FRAME_INDEX %stack.0
-    %1:gprb(s64) = G_CONSTANT i64 8
-    %2:gprb(p0) = G_PTR_ADD %0(p0), %1(s64)
-    %3:gprb(s64) = G_LOAD %2(p0) :: (load (s64))
-    $x10 = COPY %3(s64)
+    %1:gprb(i64) = G_CONSTANT i64 8
+    %2:gprb(p0) = G_PTR_ADD %0(p0), %1(i64)
+    %3:gprb(i64) = G_LOAD %2(p0) :: (load (s64))
+    $x10 = COPY %3(i64)
     PseudoRET implicit $x10
 
 ...
@@ -404,7 +386,6 @@ body:            |
 name:            load_gep_i64_i64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $x10
@@ -417,10 +398,10 @@ body:            |
     ; CHECK-NEXT: $x10 = COPY [[LD]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
-    %1:gprb(s64) = G_CONSTANT i64 8
-    %2:gprb(p0) = G_PTR_ADD %0(p0), %1(s64)
-    %3:gprb(s64) = G_LOAD %2(p0) :: (load (s64))
-    $x10 = COPY %3(s64)
+    %1:gprb(i64) = G_CONSTANT i64 8
+    %2:gprb(p0) = G_PTR_ADD %0(p0), %1(i64)
+    %3:gprb(i64) = G_LOAD %2(p0) :: (load (s64))
+    $x10 = COPY %3(i64)
     PseudoRET implicit $x10
 
 ...

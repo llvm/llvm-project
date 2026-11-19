@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -ffreestanding -triple x86_64-unknown-unknown -target-feature +rdpid -emit-llvm -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -ffreestanding -triple x86_64-unknown-unknown -target-feature +rdpid -emit-llvm -o - %s | FileCheck %s %}
 
 
 #include <immintrin.h>

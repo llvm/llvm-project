@@ -29,6 +29,7 @@ public:
 TEST_F(InstSizesTest, BufferLoadLdsIsNotOverSized) {
   StringRef MIR = R"MIR(
 name: buffer_load_lds
+tracksRegLiveness: false
 body: |
   bb.0:
     BUFFER_LOAD_DWORD_LDS_OFFEN $vgpr1, $sgpr8_sgpr9_sgpr10_sgpr11, 0, 0, 0, 0, 0, implicit $exec, implicit $m0

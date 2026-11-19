@@ -30,13 +30,10 @@ namespace llvm {
 
 class AssumptionCache;
 class BasicBlock;
-class CallInst;
 class DominatorTree;
 class Function;
-class InnerLoopVectorizer;
 class IRBuilderBase;
 class LoopInfo;
-class SCEV;
 class Type;
 class VFSelectionContext;
 class VPBasicBlock;
@@ -166,9 +163,6 @@ public:
   /// Returns an expression describing the lane index that can be used at
   /// runtime.
   Value *getAsRuntimeExpr(IRBuilderBase &Builder, const ElementCount &VF) const;
-
-  /// Returns the Kind of lane offset.
-  Kind getKind() const { return LaneKind; }
 
   /// Returns true if this is the first lane of the whole vector.
   bool isFirstLane() const { return Lane == 0 && LaneKind == Kind::First; }

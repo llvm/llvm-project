@@ -14,18 +14,18 @@
 #include "orc-rt/bedrock/sps/StandaloneMachOUnwindInfoRegistrarSPSCI.h"
 #include "orc-rt-internal/bedrock/sys/darwin/StandaloneMachOUnwindInfoRegistrar.h"
 
-namespace orc_rt::sps_ci {
+namespace orc_rt::sps::ci {
 
 ORC_RT_SPS_ALLOC_ACTION_IMPL(
     orc_rt_ci_aa_sps_MachOUnwindInfoRegistrar_registerSections,
     (SPSSequence<SPSExecutorAddrRange>, SPSExecutorAddr, SPSExecutorAddrRange,
      SPSExecutorAddrRange),
-    &StandaloneMachOUnwindInfoRegistrar::registerSections)
+    &sys::darwin::StandaloneMachOUnwindInfoRegistrar::registerSections)
 
 ORC_RT_SPS_ALLOC_ACTION_IMPL(
     orc_rt_ci_aa_sps_MachOUnwindInfoRegistrar_deregisterSections,
     (SPSSequence<SPSExecutorAddrRange>),
-    &StandaloneMachOUnwindInfoRegistrar::deregisterSections)
+    &sys::darwin::StandaloneMachOUnwindInfoRegistrar::deregisterSections)
 
 static std::pair<SymbolNameSpec, const void *>
     orc_rt_ci_StandaloneMachOUnwindInfoRegistrar_sps_interface[] = {
@@ -39,4 +39,4 @@ Error addStandaloneMachOUnwindInfoRegistrar(SimpleSymbolTable &ST) {
       orc_rt_ci_StandaloneMachOUnwindInfoRegistrar_sps_interface);
 }
 
-} // namespace orc_rt::sps_ci
+} // namespace orc_rt::sps::ci

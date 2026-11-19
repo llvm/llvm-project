@@ -27,6 +27,22 @@ For project-wide analysis, use a tool such as scan-build or CodeChecker to drive
 $ scan-build -sarif -o reports make
 ```
 
+## Unity builds
+
+In a unity build (also called a jumbo build or unified-sources build), a source
+file includes other source files. By default, the analyzer never treats
+functions in those included files as analysis entry points. Set
+`unitybuild-file-extensions` to a semicolon-separated list of extensions to
+allow analyzing functions in files with those extensions as entry points, when
+the files are included through other source files or headers. For example:
+
+```console
+$ clang --analyze -Xclang -analyzer-config -Xclang 'unitybuild-file-extensions=.c;.cc;.cpp;.cxx;.m;.mm' unified.cpp
+```
+
+Include the leading dot in each extension and quote the value so the shell does
+not interpret the semicolons as command separators.
+
 ## Comparison of CodeChecker and scan-build
 
 The static analyzer is by design a GUI tool originally intended to be consumed by the XCode IDE.
