@@ -883,7 +883,7 @@ public:
     if (bkpt->GetTargetSP() != target_sp)
       return false;
     lldb::break_id_t bp_id = bkpt->GetID();
-    if (!llvm::is_contained(m_break_ids, bp_id))
+    if (llvm::is_contained(m_break_ids, bp_id))
       return false;
 
     m_break_ids.push_back(bkpt->GetID());

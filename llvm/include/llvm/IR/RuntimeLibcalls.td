@@ -734,11 +734,27 @@ class MemCmpLibcall : RuntimeLibcall<Int, [Ptr, Ptr, SizeT]> {
 }
 
 def MEMCMP : MemCmpLibcall;
-def MEMCPY : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]>;
+def MEMCPY : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]> {
+  let FnAttrs = CommonFnAttrs;
+  let Memory = ArgMemOnly;
+  let ParamAttrs = [[NoAlias, Returned, WriteOnly],
+                    [NoAlias, ReadOnly]];
+}
+
 def MEMCPY_CHK : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT, SizeT]>;
-def MEMMOVE : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]>;
+def MEMMOVE : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]> {
+  let FnAttrs = CommonFnAttrs;
+  let Memory = ArgMemOnly;
+  let ParamAttrs = [[Returned, WriteOnly], [ReadOnly]];
+}
+
 def MEMMOVE_CHK : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT, SizeT]>;
-def MEMSET : RuntimeLibcall<Ptr, [Ptr, Int, SizeT]>;
+def MEMSET : RuntimeLibcall<Ptr, [Ptr, Int, SizeT]> {
+  let FnAttrs = CommonFnAttrs;
+  let Memory = ArgMemWriteOnly;
+  let ParamAttrs = [[Returned, WriteOnly]];
+}
+
 def MEMSET_CHK : RuntimeLibcall<Ptr, [Ptr, Int, SizeT, SizeT]>;
 class MallocLibcall<string family> : RuntimeLibcall<Ptr, [SizeT]> {
   let FnAttrs = [NoFree, NoUnwind, WillReturn,
@@ -989,6 +1005,26 @@ def SMEABI_SME_SAVE : RuntimeLibcall<Void, [Ptr]>;
 def SMEABI_SME_RESTORE : RuntimeLibcall<Void, [Ptr]>;
 
 // ARM EABI calls
+// The AEABI memory functions (RTABI section 5.3.4) return void, and
+// __aeabi_memset takes (dest, n, c).
+def AEABI_MEMCPY : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]> {
+  let FnAttrs = CommonFnAttrs;
+  let Memory = ArgMemOnly;
+  let ParamAttrs = [[NoAlias, WriteOnly], [NoAlias, ReadOnly]];
+}
+
+def AEABI_MEMMOVE : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]> {
+  let FnAttrs = CommonFnAttrs;
+  let Memory = ArgMemOnly;
+  let ParamAttrs = [[WriteOnly], [ReadOnly]];
+}
+
+def AEABI_MEMSET : RuntimeLibcall<Void, [Ptr, SizeT, Int]> {
+  let FnAttrs = CommonFnAttrs;
+  let Memory = ArgMemWriteOnly;
+  let ParamAttrs = [[WriteOnly]];
+}
+
 def AEABI_MEMCPY4 : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]>; // Align 4
 def AEABI_MEMCPY8 : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]>; // Align 8
 def AEABI_MEMMOVE4 : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]>;
@@ -2878,15 +2914,15 @@ def __aeabi_uidivmod : DivRemPairImpl<UDIVREM_I32>; //  CallingConv::ARM_AAPCS
 
 // Memory operations
 // RTABI chapter 4.3.4
-def __aeabi_memcpy : RuntimeLibcallImpl<MEMCPY>; // CallingConv::ARM_AAPCS
+def __aeabi_memcpy : RuntimeLibcallImpl<AEABI_MEMCPY>; // CallingConv::ARM_AAPCS
 def __aeabi_memcpy4 : RuntimeLibcallImpl<AEABI_MEMCPY4>;
 def __aeabi_memcpy8 : RuntimeLibcallImpl<AEABI_MEMCPY8>;
 
-def __aeabi_memmove : RuntimeLibcallImpl<MEMMOVE>; // CallingConv::ARM_AAPCS
+def __aeabi_memmove : RuntimeLibcallImpl<AEABI_MEMMOVE>; // CallingConv::ARM_AAPCS
 def __aeabi_memmove4 : RuntimeLibcallImpl<AEABI_MEMMOVE4>;
 def __aeabi_memmove8 : RuntimeLibcallImpl<AEABI_MEMMOVE8>;
 
-def __aeabi_memset : RuntimeLibcallImpl<MEMSET>; // CallingConv::ARM_AAPCS
+def __aeabi_memset : RuntimeLibcallImpl<AEABI_MEMSET>; // CallingConv::ARM_AAPCS
 def __aeabi_memset4 : RuntimeLibcallImpl<AEABI_MEMSET4>;
 def __aeabi_memset8 : RuntimeLibcallImpl<AEABI_MEMSET8>;
 
