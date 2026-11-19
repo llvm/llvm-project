@@ -1098,6 +1098,15 @@ public:
   LLVM_ABI bool matchSimplifyDemandedBits(MachineInstr &MI,
                                           BuildFnTy &MatchInfo) const;
 
+  /// Start demanded-bits analysis at a target instruction with all result bits
+  /// demanded. Requires a single scalar result and value tracking. Target
+  /// combine rules select the instructions to try; the target hook supplies
+  /// operand demands. Probes without changing MIR and records the rewrite in
+  /// \p MatchInfo on success.
+  LLVM_ABI bool
+  matchSimplifyDemandedBitsForTargetInstr(MachineInstr &MI,
+                                          BuildFnTy &MatchInfo) const;
+
 private:
   Register simplifyMultipleUseDemandedBits(Register R,
                                            const APInt &DemandedBits,

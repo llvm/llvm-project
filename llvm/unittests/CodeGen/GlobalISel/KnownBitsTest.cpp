@@ -1132,24 +1132,22 @@ TEST_F(AMDGPUGISelMITest, TestCvtPkF8DemandedBitsProbe) {
 
   GISelValueTracking Info(*MF);
   CombinerHelper Helper(Info, B, /*IsPreLegalize=*/false, &Info);
-  const TargetLowering &TLI = Helper.getTargetLowering();
-  KnownBits Known(32);
-  APInt Demanded = APInt::getAllOnes(32);
+  BuildFnTy Apply;
 
   std::string Before;
   raw_string_ostream BeforeOS(Before);
   MF->print(BeforeOS);
-  EXPECT_TRUE(TLI.simplifyDemandedBitsForTargetInstr(
-      Helper, *High, Demanded, Known, /*Depth=*/0, /*DoRewrite=*/false));
+  EXPECT_FALSE(Helper.matchSimplifyDemandedBitsForTargetInstr(*Src, Apply));
+  ASSERT_TRUE(Helper.matchSimplifyDemandedBitsForTargetInstr(*High, Apply));
   std::string After;
   raw_string_ostream AfterOS(After);
   MF->print(AfterOS);
   EXPECT_EQ(Before, After);
 
-  EXPECT_TRUE(TLI.simplifyDemandedBitsForTargetInstr(
-      Helper, *High, Demanded, Known, /*Depth=*/0, /*DoRewrite=*/true));
+  Helper.applyBuildFnNoErase(*High, Apply);
   EXPECT_EQ(TargetOpcode::G_IMPLICIT_DEF,
             MRI->getVRegDef(Low->getOperand(4).getReg())->getOpcode());
+  EXPECT_FALSE(Helper.matchSimplifyDemandedBitsForTargetInstr(*High, Apply));
 }
 
 TEST_F(AMDGPUGISelMITest, TestTargetKnownAlign) {

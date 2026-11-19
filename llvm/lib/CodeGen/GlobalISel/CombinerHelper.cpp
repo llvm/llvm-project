@@ -8968,6 +8968,32 @@ bool CombinerHelper::simplifyDemandedBits(MachineInstr &MI, unsigned OpNo,
                                   DoRewrite);
 }
 
+bool CombinerHelper::matchSimplifyDemandedBitsForTargetInstr(
+    MachineInstr &MI, BuildFnTy &MatchInfo) const {
+  if (!VT || MI.getNumExplicitDefs() != 1)
+    return false;
+
+  Register Dst = MI.getOperand(0).getReg();
+  if (!Dst.isVirtual())
+    return false;
+  LLT Ty = MRI.getType(Dst);
+  if (!Ty.isScalar())
+    return false;
+
+  APInt Demanded = APInt::getAllOnes(Ty.getScalarSizeInBits());
+  KnownBits Known(Demanded.getBitWidth());
+  if (!getTargetLowering().simplifyDemandedBitsForTargetInstr(
+          *this, MI, Demanded, Known, /*Depth=*/0, /*DoRewrite=*/false))
+    return false;
+
+  MatchInfo = [this, &MI, Demanded](MachineIRBuilder &) {
+    KnownBits K(Demanded.getBitWidth());
+    getTargetLowering().simplifyDemandedBitsForTargetInstr(
+        *this, MI, Demanded, K, /*Depth=*/0, /*DoRewrite=*/true);
+  };
+  return true;
+}
+
 bool CombinerHelper::matchSimplifyDemandedBits(MachineInstr &MI,
                                                BuildFnTy &MatchInfo) const {
   Register Dst = MI.getOperand(0).getReg();

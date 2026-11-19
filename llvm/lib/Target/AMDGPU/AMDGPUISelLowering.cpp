@@ -5865,6 +5865,12 @@ bool AMDGPUTargetLowering::SimplifyDemandedBitsForTargetNode(
   return false;
 }
 
+APInt AMDGPUTargetLowering::getCvtPkF8VDstInBits(const MachineInstr &MI) {
+  return MI.getOperand(CvtPkF8WordSelMIIdx).getImm()
+             ? APInt::getLowBitsSet(32, 16)
+             : APInt::getHighBitsSet(32, 16);
+}
+
 bool AMDGPUTargetLowering::simplifyDemandedBitsForTargetInstr(
     const CombinerHelper &Helper, MachineInstr &MI, const APInt &DemandedBits,
     KnownBits &Known, unsigned Depth, bool DoRewrite) const {
@@ -5879,15 +5885,11 @@ bool AMDGPUTargetLowering::simplifyDemandedBitsForTargetInstr(
     // Packed FP8/BF8 conversions write one 16-bit half of their result and
     // keep the other half from their tied destination input (vdst_in, the
     // intrinsic's old operand).
-    // Operands: result, intrinsic ID, src0, src1, vdst_in, word select.
-    const unsigned VDstInIdx = 4;
-    APInt VDstInBits = MI.getOperand(5).getImm()
-                           ? APInt::getLowBitsSet(32, 16)
-                           : APInt::getHighBitsSet(32, 16);
+    APInt VDstInBits = getCvtPkF8VDstInBits(MI);
     KnownBits KnownVDstIn(32);
-    bool Changed =
-        Helper.simplifyDemandedBits(MI, VDstInIdx, DemandedBits & VDstInBits,
-                                    KnownVDstIn, Depth + 1, DoRewrite);
+    bool Changed = Helper.simplifyDemandedBits(
+        MI, CvtPkF8VDstInMIIdx, DemandedBits & VDstInBits, KnownVDstIn,
+        Depth + 1, DoRewrite);
     // Nothing is known about the half the conversion writes.
     Known = KnownBits(32);
     Known.Zero = KnownVDstIn.Zero & VDstInBits;

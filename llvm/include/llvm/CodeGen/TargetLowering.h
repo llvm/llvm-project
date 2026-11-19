@@ -4699,8 +4699,9 @@ public:
   /// computeKnownBitsForTargetInstr.
   ///
   /// The generic caller has already checked the recursion depth and handled
-  /// multiple uses. A target combine may also call this hook directly at
-  /// depth zero with all result bits demanded to start operand analysis.
+  /// multiple uses. CombinerHelper::matchSimplifyDemandedBitsForTargetInstr
+  /// also calls this hook at depth zero with all result bits demanded to
+  /// start operand analysis from a target combine rule.
   virtual bool simplifyDemandedBitsForTargetInstr(
       const CombinerHelper &Helper, MachineInstr &MI, const APInt &DemandedBits,
       KnownBits &Known, unsigned Depth, bool DoRewrite) const {

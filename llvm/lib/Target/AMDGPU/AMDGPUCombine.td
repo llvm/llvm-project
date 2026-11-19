@@ -88,7 +88,8 @@ def intrinsic_demanded_bits_frags : GICombinePatFrag<
 def intrinsic_demanded_bits : GICombineRule<
   (defs root:$dst, build_fn_matchinfo:$matchinfo),
   (match (intrinsic_demanded_bits_frags $dst):$root,
-         [{ return matchIntrinsicDemandedBits(*${root}, ${matchinfo}); }]),
+         [{ return Helper.matchSimplifyDemandedBitsForTargetInstr(
+                     *${root}, ${matchinfo}); }]),
   (apply [{ Helper.applyBuildFnNoErase(*${root}, ${matchinfo}); }])>;
 
 def cvt_f32_ubyteN_matchdata : GIDefMatchData<"CvtF32UByteMatchInfo">;
