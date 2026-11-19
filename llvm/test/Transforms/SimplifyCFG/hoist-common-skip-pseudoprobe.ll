@@ -104,17 +104,10 @@ if.end:
 
 declare ptr @callee(ptr, i32, i32)
 
-define ptr @dont_hoist_musttail_past_pseudoprobe(ptr %a, i32 %b, i32 %c) {
-; CHECK-LABEL: @dont_hoist_musttail_past_pseudoprobe(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[C:%.*]], 0
-; CHECK-NEXT:    br i1 [[COND]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
-; CHECK:       if.then:
-; CHECK-NEXT:    call void @llvm.pseudoprobe(i64 3, i64 1, i32 0, i64 -1)
-; CHECK-NEXT:    [[CALL:%.*]] = musttail call ptr @callee(ptr [[A:%.*]], i32 [[B:%.*]], i32 [[C]])
-; CHECK-NEXT:    ret ptr [[CALL]]
-; CHECK:       if.else:
-; CHECK-NEXT:    call void @llvm.pseudoprobe(i64 3, i64 2, i32 0, i64 -1)
+define ptr @hoist_musttail_past_pseudoprobe(ptr %a, i32 %b, i32 %c) {
+; CHECK-LABEL: define ptr @hoist_musttail_past_pseudoprobe(
+; CHECK-SAME: ptr [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[CALL2:%.*]] = musttail call ptr @callee(ptr [[A]], i32 [[B]], i32 [[C]])
 ; CHECK-NEXT:    ret ptr [[CALL2]]
 ;
@@ -129,6 +122,37 @@ if.then:
 
 if.else:
   call void @llvm.pseudoprobe(i64 3, i64 2, i32 0, i64 -1)
+  %call2 = musttail call ptr @callee(ptr %a, i32 %b, i32 %c)
+  ret ptr %call2
+}
+
+; A real skipped instruction still prevents hoisting a musttail call.
+define ptr @dont_hoist_musttail_past_store(ptr %a, i32 %b, i32 %c) {
+; CHECK-LABEL: define ptr @dont_hoist_musttail_past_store(
+; CHECK-SAME: ptr [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[C]], 0
+; CHECK-NEXT:    br i1 [[COND]], label %[[IF_THEN:.*]], label %[[IF_ELSE:.*]]
+; CHECK:       [[IF_THEN]]:
+; CHECK-NEXT:    store volatile i32 1, ptr [[A]], align 4
+; CHECK-NEXT:    [[CALL:%.*]] = musttail call ptr @callee(ptr [[A]], i32 [[B]], i32 [[C]])
+; CHECK-NEXT:    ret ptr [[CALL]]
+; CHECK:       [[IF_ELSE]]:
+; CHECK-NEXT:    store volatile i32 2, ptr [[A]], align 4
+; CHECK-NEXT:    [[CALL2:%.*]] = musttail call ptr @callee(ptr [[A]], i32 [[B]], i32 [[C]])
+; CHECK-NEXT:    ret ptr [[CALL2]]
+;
+entry:
+  %cond = icmp eq i32 %c, 0
+  br i1 %cond, label %if.then, label %if.else
+
+if.then:
+  store volatile i32 1, ptr %a
+  %call = musttail call ptr @callee(ptr %a, i32 %b, i32 %c)
+  ret ptr %call
+
+if.else:
+  store volatile i32 2, ptr %a
   %call2 = musttail call ptr @callee(ptr %a, i32 %b, i32 %c)
   ret ptr %call2
 }
