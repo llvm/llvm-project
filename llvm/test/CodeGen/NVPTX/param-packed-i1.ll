@@ -218,3 +218,16 @@ define ptx_kernel void @returned_bits_v16i1(<16 x i1> %value, ptr addrspace(1) %
 }
 
 declare <16 x i1> @callee_v16i1(<16 x i1>)
+
+declare void @take_byval_v9_pair(ptr byval([2 x <9 x i1>]) align 4)
+
+; Copy two nine-lane vectors by value. The second vector needs bytes 2 and 3.
+; CHECK-LABEL: copy_byval_v9_pair(
+; CHECK: .b8 copy_byval_v9_pair_param_0[4]
+; CHECK: ld.param.b16 [[LAST:%[a-z0-9]+]], [copy_byval_v9_pair_param_0+2];
+; CHECK: st.param.b16 [param0+2], [[LAST]];
+; CHECK: call.uni take_byval_v9_pair, (param0);
+define void @copy_byval_v9_pair(ptr byval([2 x <9 x i1>]) align 4 %p) {
+  call void @take_byval_v9_pair(ptr byval([2 x <9 x i1>]) align 4 %p)
+  ret void
+}
