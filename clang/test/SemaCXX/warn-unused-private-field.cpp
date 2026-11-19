@@ -419,3 +419,23 @@ template <class T>
 T& Base::Cast() { return static_cast<Holder<T>*>(this)->value_; }
 void make() { Holder<int> h(1); }
 } // namespace friend_member_template
+
+#if __cplusplus >= 201703L
+namespace if_constexpr_template {
+template <class T>
+class Tracker {
+ public:
+  T Get() {
+    if constexpr (sizeof(T) == 8) {
+      x_ = 1;
+      return x_;
+    }
+    return 0;
+  }
+ private:
+  // FIXME: false positive.
+  long x_; // expected-warning {{private field 'x_' is not used}}
+};
+int f() { return Tracker<int>().Get(); }
+} // namespace if_constexpr_template
+#endif
