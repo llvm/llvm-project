@@ -27,6 +27,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -512,6 +513,11 @@ public:
 
   ScavengerTest() : MachineFunctionPass(ID) {}
 
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<MachineRegisterClassInfoWrapperPass>();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+
   bool runOnMachineFunction(MachineFunction &MF) override {
     const TargetSubtargetInfo &STI = MF.getSubtarget();
     const TargetFrameLowering &TFL = *STI.getFrameLowering();
@@ -520,7 +526,10 @@ public:
     // Let's hope that calling those outside of PrologEpilogueInserter works
     // well enough to initialize the scavenger with some emergency spillslots
     // for the target.
+    const RegisterClassInfo &RCI =
+        getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI();
     BitVector SavedRegs;
+    TFL.processFunctionBeforeCalleeSaves(MF, &RS, RCI);
     TFL.determineCalleeSaves(MF, SavedRegs, &RS);
     TFL.processFunctionBeforeFrameFinalized(MF, &RS);
 
@@ -534,5 +543,10 @@ public:
 
 char ScavengerTest::ID;
 
-INITIALIZE_PASS(ScavengerTest, "scavenger-test",
-                "Scavenge virtual registers inside basic blocks", false, false)
+INITIALIZE_PASS_BEGIN(ScavengerTest, "scavenger-test",
+                      "Scavenge virtual registers inside basic blocks", false,
+                      false)
+INITIALIZE_PASS_DEPENDENCY(MachineRegisterClassInfoWrapperPass)
+INITIALIZE_PASS_END(ScavengerTest, "scavenger-test",
+                    "Scavenge virtual registers inside basic blocks", false,
+                    false)
