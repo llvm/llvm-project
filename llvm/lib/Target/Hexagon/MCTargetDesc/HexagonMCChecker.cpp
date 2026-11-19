@@ -230,10 +230,12 @@ bool HexagonMCChecker::check(bool FullCheck) {
   bool chkValidTmpDst = FullCheck ? checkValidTmpDst() : true;
   bool chkLegalVecRegPair = checkLegalVecRegPair();
   bool ChkHVXAccum = checkHVXAccum();
+  bool ChkHVXRestrictions = checkHVXRestrictions();
   bool ChkHLX64BitRegUse = checkHLX64BitRegUse();
   bool chk = chkP && chkNV && chkR && chkRRO && chkS && chkSh && chkSl &&
              chkAXOK && chkCofMax1 && chkHWLoop && chkHMX && chkValidTmpDst &&
-             chkLegalVecRegPair && ChkHVXAccum && ChkHLX64BitRegUse;
+             chkLegalVecRegPair && ChkHVXAccum && ChkHVXRestrictions &&
+             ChkHLX64BitRegUse;
 
   return chk;
 }
@@ -842,6 +844,42 @@ bool HexagonMCChecker::checkLegalVecRegPair() {
     return false;
   }
   return true;
+}
+
+bool HexagonMCChecker::checkHVXRestrictions() {
+  bool PacketHasVS3SRC = false;
+  MCInst U;
+  bool PacketHasNonUnaryALU = false;
+  bool PacketHasVP = false;
+  for (const auto &I : HexagonMCInstrInfo::bundleInstructions(MCII, MCB)) {
+    if (HexagonMCInstrInfo::isHVXVS3SRC(MCII, I)) {
+      U = I;
+      PacketHasVS3SRC = true;
+    }
+    if (HexagonMCInstrInfo::isHVXALU2SRC(MCII, I))
+      PacketHasNonUnaryALU = true;
+    if (HexagonMCInstrInfo::getType(MCII, I) == HexagonII::TypeCVI_VP)
+      PacketHasVP = true;
+  }
+  if (!PacketHasVS3SRC)
+    return true;
+  bool ret = !PacketHasNonUnaryALU && !PacketHasVP;
+  if (!ret) {
+    reportError("invalid instruction packet: HVX resource use violation");
+    if (PacketHasNonUnaryALU)
+      reportNote(U.getLoc(), "This instruction cannot be paired with an HVX "
+                             "non-unary instruction");
+    if (PacketHasVP)
+      reportNote(U.getLoc(), "This instruction cannot be paired with an HVX "
+                             "permute instruction");
+    for (const auto &I : HexagonMCInstrInfo::bundleInstructions(MCII, MCB)) {
+      if (HexagonMCInstrInfo::isHVXALU2SRC(MCII, I))
+        reportNote(I.getLoc(), "HVX non-unary instruction");
+      if (HexagonMCInstrInfo::getType(MCII, I) == HexagonII::TypeCVI_VP)
+        reportNote(I.getLoc(), "HVX permute instruction");
+    }
+  }
+  return ret;
 }
 
 // Vd.tmp can't be accumulated
