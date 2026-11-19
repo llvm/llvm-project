@@ -191,6 +191,10 @@ filtered to only show the coverage for the files listed in *SOURCE*....
 *BIN* may be an executable, object file, dynamic library, or archive (thin or
 otherwise).
 
+Only the first *BIN* may be given as a positional argument; pass any others
+with `-object`. Positional arguments after the first are treated as *SOURCE*
+files.
+
 To use {program}`llvm-cov show`, you need a program that is compiled with
 instrumentation to emit profile and coverage data. To build such a program with
 `clang` use the `-fprofile-instr-generate` and `-fcoverage-mapping`
@@ -405,6 +409,10 @@ filtered to only show the coverage for the files listed in *SOURCE*....
 *BIN* may be an executable, object file, dynamic library, or archive (thin or
 otherwise).
 
+Only the first *BIN* may be given as a positional argument; pass any others
+with `-object`. Positional arguments after the first are treated as *SOURCE*
+files.
+
 If no source files are provided, a summary line is printed for each file in the
 coverage data. If any files are provided, summaries can be shown for each
 function in the listed files if the `-show-functions` option is enabled.
@@ -493,6 +501,10 @@ Mutually exclusive with -instr-profile.
 The {program}`llvm-cov export` command exports coverage data of the binaries
 *BIN*... using the profile data *PROFILE* in either JSON or lcov trace file
 format.
+
+Only the first *BIN* may be given as a positional argument; pass any others
+with `-object`. Positional arguments after the first are treated as *SOURCE*
+files.
 
 When exporting JSON, the regions, functions, branches, expansions, and
 summaries of the coverage data will be exported. When exporting an lcov trace
