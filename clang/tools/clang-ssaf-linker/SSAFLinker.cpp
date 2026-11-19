@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 //
 //  This file implements the SSAF entity linker tool. Its default behavior is to
-//  link N inputs (TU summaries, static libraries, and multi-arch static
-//  libraries) into one LU summary via the EntityLinker framework. It also
-//  provides the `static-library` subcommand for bundling TU summaries into a
-//  StaticLibrary, and the `multi-arch` subcommand for bundling StaticLibrary
-//  and SharedLibrary members (or existing multi-arch bundles) into
-//  MultiArchStaticLibrary or MultiArchSharedLibrary.
+//  link N inputs (TU summaries, static libraries, shared libraries, and
+//  multi-arch static and shared libraries) into one LU summary via the
+//  EntityLinker framework. It also provides the `static-library` subcommand for
+//  bundling TU summaries into a StaticLibrary, and the `multi-arch` subcommand
+//  for bundling StaticLibrary and SharedLibrary members (or existing multi-arch
+//  bundles) into MultiArchStaticLibrary or MultiArchSharedLibrary.
 //
 //===----------------------------------------------------------------------===//
 
@@ -60,8 +60,8 @@ cl::opt<std::string> TargetTriple(
     "target-triple",
     cl::desc(
         "Target triple of the link unit (defaults to the first input's; "
-        "required when the first input is a multi-arch static library with "
-        "several members)"),
+        "required when the first input is a multi-arch library with several "
+        "members)"),
     cl::value_desc("triple"), cl::cat(SsafLinkerCategory));
 
 // --verbose and --time apply to every subcommand.

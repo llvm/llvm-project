@@ -23,7 +23,7 @@
 // CHECK-NEXT:   -o <path>                - Output file path
 // CHECK-NEXT:   --print-all-options      - Print all option values after command line parsing
 // CHECK-NEXT:   --print-options          - Print non-default options after command line parsing
-// CHECK-NEXT:   --target-triple=<triple> - Target triple of the link unit (defaults to the first input's; required when the first input is a multi-arch static library with several members)
+// CHECK-NEXT:   --target-triple=<triple> - Target triple of the link unit (defaults to the first input's; required when the first input is a multi-arch library with several members)
 // CHECK-NEXT:   --time                   - Enable timing
 // CHECK-NEXT:   --verbose                - Enable verbose output
 // CHECK-NEXT:   --version                - Display the version of this program

@@ -8,6 +8,7 @@
 
 #include "clang/ScalableStaticAnalysis/Core/EntityLinker/EntityLinker.h"
 #include "clang/ScalableStaticAnalysis/Core/EntityLinker/EntitySummaryEncoding.h"
+#include "clang/ScalableStaticAnalysis/Core/EntityLinker/MultiArchSharedLibrary.h"
 #include "clang/ScalableStaticAnalysis/Core/EntityLinker/MultiArchStaticLibrary.h"
 #include "clang/ScalableStaticAnalysis/Core/EntityLinker/StaticLibrary.h"
 #include "clang/ScalableStaticAnalysis/Core/EntityLinker/TUSummaryEncoding.h"
@@ -48,6 +49,13 @@ static constexpr const char *FailedToInsertEntityIntoOutputSummary =
 static constexpr const char *DuplicateTUNamespace =
     "failed to link TU summary: duplicate {0}";
 
+static constexpr const char *DuplicateLUNamespace =
+    "failed to link shared library: duplicate {0}";
+
+static constexpr const char *LinkingIntoItself =
+    "failed to link shared library: {0} is the namespace of the link unit "
+    "being linked";
+
 static constexpr const char *LinkingStaticLibraryMember =
     "failed to link member {0} of static library {1}";
 
@@ -55,8 +63,11 @@ static constexpr const char *MismatchedTargetTriple =
     "target triple '{0}' of {1} does not match link unit target triple '{2}'";
 
 static constexpr const char *NoMemberForTargetTriple =
-    "multi-arch static library {0} has no member for target triple '{1}' "
-    "(available: {2})";
+    "multi-arch {0} {1} has no member for target triple '{2}' (available: {3})";
+
+static constexpr const char *StaticLibraryKindName = "static library";
+
+static constexpr const char *SharedLibraryKindName = "shared library";
 
 } // namespace ErrorMessages
 
@@ -79,11 +90,13 @@ clang::ssaf::resolveNamespace(const NestedBuildNamespace &LUNamespace,
   llvm_unreachable("Unhandled EntityLinkageType variant");
 }
 
-EntityId EntityLinker::resolveEntity(const EntityName &OldName,
-                                     const EntityLinkage &Linkage,
-                                     const NestedBuildNamespace &TUNamespace) {
-  NestedBuildNamespace NewNamespace = resolveNamespace(
-      Output.LUNamespace, TUNamespace, OldName.Namespace, Linkage.getLinkage());
+EntityId
+EntityLinker::resolveEntity(const EntityName &OldName,
+                            const EntityLinkage &Linkage,
+                            const NestedBuildNamespace &InputNamespace) {
+  NestedBuildNamespace NewNamespace =
+      resolveNamespace(Output.LUNamespace, InputNamespace, OldName.Namespace,
+                       Linkage.getLinkage());
 
   EntityName NewName(OldName.USR, OldName.Suffix, NewNamespace);
 
@@ -110,20 +123,21 @@ EntityId EntityLinker::resolveEntity(const EntityName &OldName,
 }
 
 std::map<EntityId, EntityId>
-EntityLinker::resolve(const TUSummaryEncoding &Summary) {
+EntityLinker::resolve(const EntityIdTable &IdTable,
+                      const std::map<EntityId, EntityLinkage> &LinkageTable,
+                      const NestedBuildNamespace &InputNamespace) {
   std::map<EntityId, EntityId> EntityResolutionTable;
 
-  Summary.IdTable.forEach([&](const EntityName &OldName, const EntityId OldId) {
-    auto Iter = Summary.LinkageTable.find(OldId);
-    if (Iter == Summary.LinkageTable.end()) {
+  IdTable.forEach([&](const EntityName &OldName, const EntityId OldId) {
+    auto Iter = LinkageTable.find(OldId);
+    if (Iter == LinkageTable.end()) {
       ErrorBuilder::fatal(ErrorMessages::MissingLinkageInformation,
                           ErrorMessages::EntityLinkerFatalErrorPrefix, OldId);
     }
 
     const EntityLinkage &Linkage = Iter->second;
 
-    EntityId NewId = resolveEntity(OldName, Linkage,
-                                   NestedBuildNamespace(Summary.TUNamespace));
+    EntityId NewId = resolveEntity(OldName, Linkage, InputNamespace);
 
     auto [_, Inserted] = EntityResolutionTable.insert({OldId, NewId});
     if (!Inserted) {
@@ -135,12 +149,14 @@ EntityLinker::resolve(const TUSummaryEncoding &Summary) {
   return EntityResolutionTable;
 }
 
-std::vector<EntitySummaryEncoding *>
-EntityLinker::merge(TUSummaryEncoding &Summary,
-                    const std::map<EntityId, EntityId> &EntityResolutionTable) {
+std::vector<EntitySummaryEncoding *> EntityLinker::merge(
+    std::map<SummaryName,
+             std::map<EntityId, std::unique_ptr<EntitySummaryEncoding>>> &Data,
+    const std::map<EntityId, EntityLinkage> &LinkageTable,
+    const std::map<EntityId, EntityId> &EntityResolutionTable) {
   std::vector<EntitySummaryEncoding *> PatchTargets;
 
-  for (auto &[SN, DataMap] : Summary.Data) {
+  for (auto &[SN, DataMap] : Data) {
     auto &OutputSummaryData = Output.Data[SN];
 
     for (auto &[OldId, ES] : DataMap) {
@@ -159,11 +175,11 @@ EntityLinker::merge(TUSummaryEncoding &Summary,
       } else {
         // Safe to retrieve linkage using .at since the resolve step ensures
         // linkage information is always present for every OldId.
-        auto Linkage = Summary.LinkageTable.at(OldId);
+        auto Linkage = LinkageTable.at(OldId);
 
         // Insertion should never fail for `None` and `Internal` linkage
         // entities because these entities will have different namespaces across
-        // TUs even if their names match.
+        // inputs even if their names match.
         if (Linkage.getLinkage() == EntityLinkageType::None ||
             Linkage.getLinkage() == EntityLinkageType::Internal) {
           ErrorBuilder::fatal(
@@ -194,9 +210,10 @@ EntityLinker::patch(const std::vector<EntitySummaryEncoding *> &PatchTargets,
   return llvm::Error::success();
 }
 
+template <typename NamespaceT>
 llvm::Error
 EntityLinker::checkTargetTriple(const llvm::Triple &TargetTriple,
-                                const BuildNamespace &InputNamespace) const {
+                                const NamespaceT &InputNamespace) const {
   if (TargetTriple != Output.TargetTriple) {
     return ErrorBuilder::create(std::errc::invalid_argument,
                                 ErrorMessages::MismatchedTargetTriple,
@@ -205,6 +222,34 @@ EntityLinker::checkTargetTriple(const llvm::Triple &TargetTriple,
         .build();
   }
   return llvm::Error::success();
+}
+
+template <typename MultiArchLibraryT>
+llvm::Error
+EntityLinker::linkMatchingMember(std::unique_ptr<MultiArchLibraryT> Library,
+                                 llvm::StringRef KindName) {
+  auto MatchingMember =
+      llvm::find_if(Library->Members, [this](const auto &Member) {
+        return Member->TargetTriple == Output.TargetTriple;
+      });
+
+  if (MatchingMember == Library->Members.end()) {
+    auto TargetTriples =
+        llvm::map_range(Library->Members, [](const auto &Member) {
+          return llvm::Triple::normalize(Member->TargetTriple.str());
+        });
+    std::string Available = Library->Members.empty()
+                                ? std::string("none")
+                                : llvm::join(TargetTriples, ", ");
+
+    return ErrorBuilder::create(std::errc::invalid_argument,
+                                ErrorMessages::NoMemberForTargetTriple,
+                                KindName, Library->Namespace,
+                                Output.TargetTriple, Available)
+        .build();
+  }
+
+  return link(std::move(Library->Members.extract(MatchingMember).value()));
 }
 
 llvm::Error EntityLinker::link(std::unique_ptr<TUSummaryEncoding> Summary) {
@@ -223,8 +268,11 @@ llvm::Error EntityLinker::link(std::unique_ptr<TUSummaryEncoding> Summary) {
 
   TUSummaryEncoding &SummaryRef = *Summary;
 
-  auto EntityResolutionTable = resolve(SummaryRef);
-  auto PatchTargets = merge(SummaryRef, EntityResolutionTable);
+  auto EntityResolutionTable =
+      resolve(SummaryRef.IdTable, SummaryRef.LinkageTable,
+              NestedBuildNamespace(SummaryRef.TUNamespace));
+  auto PatchTargets =
+      merge(SummaryRef.Data, SummaryRef.LinkageTable, EntityResolutionTable);
   return patch(PatchTargets, EntityResolutionTable);
 }
 
@@ -250,26 +298,44 @@ llvm::Error EntityLinker::link(std::unique_ptr<StaticLibrary> Library) {
 
 llvm::Error
 EntityLinker::link(std::unique_ptr<MultiArchStaticLibrary> Library) {
-  auto MatchingMember = llvm::find_if(
-      Library->Members, [this](const std::unique_ptr<StaticLibrary> &Member) {
-        return Member->TargetTriple == Output.TargetTriple;
-      });
+  return linkMatchingMember(std::move(Library),
+                            ErrorMessages::StaticLibraryKindName);
+}
 
-  if (MatchingMember == Library->Members.end()) {
-    auto TargetTriples = llvm::map_range(
-        Library->Members, [](const std::unique_ptr<StaticLibrary> &Member) {
-          return llvm::Triple::normalize(Member->TargetTriple.str());
-        });
-    std::string Available = Library->Members.empty()
-                                ? std::string("none")
-                                : llvm::join(TargetTriples, ", ");
+llvm::Error EntityLinker::link(std::unique_ptr<LUSummaryEncoding> Library) {
+  if (auto Err =
+          checkTargetTriple(Library->TargetTriple, Library->LUNamespace)) {
+    return Err;
+  }
 
+  if (Library->LUNamespace == Output.LUNamespace) {
     return ErrorBuilder::create(std::errc::invalid_argument,
-                                ErrorMessages::NoMemberForTargetTriple,
-                                Library->Namespace, Output.TargetTriple,
-                                Available)
+                                ErrorMessages::LinkingIntoItself,
+                                Library->LUNamespace)
         .build();
   }
 
-  return link(std::move(Library->Members.extract(MatchingMember).value()));
+  auto [_, Inserted] = ProcessedLUNamespaces.insert(Library->LUNamespace);
+  if (!Inserted) {
+    return ErrorBuilder::create(std::errc::invalid_argument,
+                                ErrorMessages::DuplicateLUNamespace,
+                                Library->LUNamespace)
+        .build();
+  }
+
+  LUSummaryEncoding &LibraryRef = *Library;
+
+  // Entities without external linkage were qualified by their TU and by the
+  // shared library when it was linked, so no further input namespace applies.
+  auto EntityResolutionTable = resolve(
+      LibraryRef.IdTable, LibraryRef.LinkageTable, NestedBuildNamespace());
+  auto PatchTargets =
+      merge(LibraryRef.Data, LibraryRef.LinkageTable, EntityResolutionTable);
+  return patch(PatchTargets, EntityResolutionTable);
+}
+
+llvm::Error
+EntityLinker::link(std::unique_ptr<MultiArchSharedLibrary> Library) {
+  return linkMatchingMember(std::move(Library),
+                            ErrorMessages::SharedLibraryKindName);
 }
