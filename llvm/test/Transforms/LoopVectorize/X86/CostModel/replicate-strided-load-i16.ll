@@ -15,9 +15,9 @@ define i16 @count_nonzero_strided(ptr %p, i64 %n) {
 ; SSE2:  Cost for VF 2: 11 (Estimated cost per lane: 5.5)
 ; SSE2:  Cost of 8 for VF 4: REPLICATE ir<%x> = load vp<%next.gep>
 ; SSE2:  Cost for VF 4: 15 (Estimated cost per lane: 3.75)
-; SSE2:  Cost of 16 for VF 8: REPLICATE ir<%x> = load vp<%next.gep>
-; SSE2:  Cost for VF 8: 23 (Estimated cost per lane: 2.88)
-; SSE2:  LV: Selecting VF: 8.
+; SSE2:  Cost of 23 for VF 8: REPLICATE ir<%x> = load vp<%next.gep>
+; SSE2:  Cost for VF 8: 30 (Estimated cost per lane: 3.75)
+; SSE2:  LV: Selecting VF: 4.
 ;
 ; SSE41-LABEL: 'count_nonzero_strided'
 ; SSE41:  LV: Scalar loop costs: 6.

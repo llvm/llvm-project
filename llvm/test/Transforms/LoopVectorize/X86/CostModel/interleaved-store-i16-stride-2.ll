@@ -20,10 +20,10 @@ define void @test() {
 ; SSE2:  Cost of 2 for VF 4: INTERLEAVE-GROUP with factor 2, ir<%out0>
 ; SSE2:    store ir<%v> to index 0
 ; SSE2:    store ir<%v1> to index 1
-; SSE2:  Cost of 34 for VF 8: INTERLEAVE-GROUP with factor 2, ir<%out0>
+; SSE2:  Cost of 48 for VF 8: INTERLEAVE-GROUP with factor 2, ir<%out0>
 ; SSE2:    store ir<%v> to index 0
 ; SSE2:    store ir<%v1> to index 1
-; SSE2:  Cost of 68 for VF 16: INTERLEAVE-GROUP with factor 2, ir<%out0>
+; SSE2:  Cost of 96 for VF 16: INTERLEAVE-GROUP with factor 2, ir<%out0>
 ; SSE2:    store ir<%v> to index 0
 ; SSE2:    store ir<%v1> to index 1
 ;

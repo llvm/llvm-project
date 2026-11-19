@@ -5,13 +5,29 @@ define i16 @test(i64 %0) {
 ; CHECK-LABEL: define i16 @test(
 ; CHECK-SAME: i64 [[TMP0:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i64> poison, i64 [[TMP0]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i64> [[TMP1]], <8 x i64> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne <8 x i64> [[TMP2]], zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <8 x i64> [[TMP2]], zeroinitializer
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <8 x i1> [[TMP3]], <8 x i1> [[TMP4]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 15>
-; CHECK-NEXT:    [[TMP9:%.*]] = select <8 x i1> [[TMP8]], <8 x i16> splat (i16 1), <8 x i16> <i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 2>
-; CHECK-NEXT:    [[TMP10:%.*]] = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> [[TMP9]])
+; CHECK-NEXT:    [[CMP12_NOT_NOT:%.*]] = icmp eq i64 [[TMP0]], 0
+; CHECK-NEXT:    [[CONV38:%.*]] = select i1 [[CMP12_NOT_NOT]], i16 1, i16 2
+; CHECK-NEXT:    [[CMP80:%.*]] = icmp ne i64 [[TMP0]], 0
+; CHECK-NEXT:    [[COND82:%.*]] = zext i1 [[CMP80]] to i16
+; CHECK-NEXT:    [[CONV89:%.*]] = add i16 [[CONV38]], [[COND82]]
+; CHECK-NEXT:    [[CMP96:%.*]] = icmp ne i64 [[TMP0]], 0
+; CHECK-NEXT:    [[COND98:%.*]] = zext i1 [[CMP96]] to i16
+; CHECK-NEXT:    [[CONV105:%.*]] = add i16 [[CONV89]], [[COND98]]
+; CHECK-NEXT:    [[CMP112:%.*]] = icmp ne i64 [[TMP0]], 0
+; CHECK-NEXT:    [[COND114:%.*]] = zext i1 [[CMP112]] to i16
+; CHECK-NEXT:    [[CONV121:%.*]] = add i16 [[CONV105]], [[COND114]]
+; CHECK-NEXT:    [[CMP128:%.*]] = icmp ne i64 [[TMP0]], 0
+; CHECK-NEXT:    [[COND130:%.*]] = zext i1 [[CMP128]] to i16
+; CHECK-NEXT:    [[CONV137:%.*]] = add i16 [[CONV121]], [[COND130]]
+; CHECK-NEXT:    [[CMP144:%.*]] = icmp ne i64 [[TMP0]], 0
+; CHECK-NEXT:    [[COND146:%.*]] = zext i1 [[CMP144]] to i16
+; CHECK-NEXT:    [[CONV153:%.*]] = add i16 [[CONV137]], [[COND146]]
+; CHECK-NEXT:    [[CMP160:%.*]] = icmp ne i64 [[TMP0]], 0
+; CHECK-NEXT:    [[COND162:%.*]] = zext i1 [[CMP160]] to i16
+; CHECK-NEXT:    [[CONV169:%.*]] = add i16 [[CONV153]], [[COND162]]
+; CHECK-NEXT:    [[CMP176:%.*]] = icmp ne i64 [[TMP0]], 0
+; CHECK-NEXT:    [[COND178:%.*]] = zext i1 [[CMP176]] to i16
+; CHECK-NEXT:    [[TMP10:%.*]] = add i16 [[CONV169]], [[COND178]]
 ; CHECK-NEXT:    ret i16 [[TMP10]]
 ;
 entry:

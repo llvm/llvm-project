@@ -5641,7 +5641,10 @@ InstructionCost X86TTIImpl::getScalarizationOverhead(
   }
 
   if (Insert) {
-    if ((MScalarTy == MVT::i16 && ST->hasSSE2()) ||
+    // Pre-SSE41, LowerBuildVectorv8i16 only uses PINSRW for up to 4 elements,
+    // otherwise it uses the MOVD+PUNPCK sequence costed below.
+    if ((MScalarTy == MVT::i16 && ST->hasSSE2() &&
+         DemandedElts.popcount() <= 4) ||
         (MScalarTy.isInteger() && ST->hasSSE41()) ||
         (MScalarTy == MVT::f32 && ST->hasSSE41())) {
       // For types we can insert directly, insertion into 128-bit sub vectors is

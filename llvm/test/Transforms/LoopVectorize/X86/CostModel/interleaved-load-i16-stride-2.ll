@@ -21,8 +21,8 @@ define void @test() {
 ; SSE2:  Cost of 8 for VF 4: INTERLEAVE-GROUP with factor 2, ir<%in0>
 ; SSE2:    ir<%v0> = load from index 0
 ; SSE2:    ir<%v1> = load from index 1
-; SSE2:  Cost of 16 for VF 8: REPLICATE ir<%v0> = load ir<%in0>
-; SSE2:  Cost of 32 for VF 16: REPLICATE ir<%v0> = load ir<%in0>
+; SSE2:  Cost of 23 for VF 8: REPLICATE ir<%v0> = load ir<%in0>
+; SSE2:  Cost of 46 for VF 16: REPLICATE ir<%v0> = load ir<%in0>
 ;
 ; AVX1-LABEL: 'test'
 ; AVX1:  LV: Found an estimated cost of 1 for VF 1 For instruction: %v0 = load i16, ptr %in0, align 2
