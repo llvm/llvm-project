@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_ASYNCQUEUE_H
-#define OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_ASYNCQUEUE_H
+#ifndef OFFLOAD_PLUGIN_LEVEL_ZERO_L0QUEUE_H
+#define OFFLOAD_PLUGIN_LEVEL_ZERO_L0QUEUE_H
 
 #include "L0Event.h"
 #include "PluginInterface.h"
@@ -22,7 +22,7 @@
 #include "L0CmdListManager.h"
 #include "L0Options.h"
 
-namespace llvm::omp::target::plugin {
+namespace llvm::offload::plugin {
 
 class L0DeviceTy;
 class LevelZeroPluginContextTy;
@@ -224,5 +224,5 @@ public:
   Error deinit();
 };
 
-} // namespace llvm::omp::target::plugin
-#endif // OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_ASYNCQUEUE_H
+} // namespace llvm::offload::plugin
+#endif // OFFLOAD_PLUGIN_LEVEL_ZERO_L0QUEUE_H
