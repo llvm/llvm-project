@@ -3286,6 +3286,78 @@ define <4 x float> @test_mfma_scale_f32_16x16x128_f8f6f4___constant_scale_1_0_a(
   ret <4 x float> %result
 }
 
+define <4 x float> @test_mfma_scale_f32_16x16x128_f8f6f4___constant_scale_127_127(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2) #2 {
+; GCN-LABEL: test_mfma_scale_f32_16x16x128_f8f6f4___constant_scale_127_127:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mfma_f32_16x16x128_f8f6f4 v[0:3], v[0:7], v[8:15], v[16:19]
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+;
+; AGPR-LABEL: test_mfma_scale_f32_16x16x128_f8f6f4___constant_scale_127_127:
+; AGPR:       ; %bb.0:
+; AGPR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; AGPR-NEXT:    v_accvgpr_write_b32 a0, v16
+; AGPR-NEXT:    v_accvgpr_write_b32 a1, v17
+; AGPR-NEXT:    v_accvgpr_write_b32 a2, v18
+; AGPR-NEXT:    v_accvgpr_write_b32 a3, v19
+; AGPR-NEXT:    s_nop 1
+; AGPR-NEXT:    v_mfma_f32_16x16x128_f8f6f4 a[0:3], v[0:7], v[8:15], a[0:3]
+; AGPR-NEXT:    s_nop 11
+; AGPR-NEXT:    v_accvgpr_read_b32 v0, a0
+; AGPR-NEXT:    v_accvgpr_read_b32 v1, a1
+; AGPR-NEXT:    v_accvgpr_read_b32 v2, a2
+; AGPR-NEXT:    v_accvgpr_read_b32 v3, a3
+; AGPR-NEXT:    s_setpc_b64 s[30:31]
+  %result = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4.v8i32.v8i32(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 0, i32 0, i32 0, i32 127, i32 0, i32 127)
+  ret <4 x float> %result
+}
+
+define <4 x float> @test_mfma_scale_f32_16x16x128_f8f6f4___constant_scale_127_127__opsel1(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2) #2 {
+; GCN-LABEL: test_mfma_scale_f32_16x16x128_f8f6f4___constant_scale_127_127__opsel1:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v20, 0x7f
+; GCN-NEXT:    s_nop 1
+; GCN-NEXT:    v_mfma_scale_f32_16x16x128_f8f6f4 v[0:3], v[0:7], v[8:15], v[16:19], v20, v20 op_sel:[1,1,0] op_sel_hi:[0,0,0]
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+;
+; AGPR-SDAG-LABEL: test_mfma_scale_f32_16x16x128_f8f6f4___constant_scale_127_127__opsel1:
+; AGPR-SDAG:       ; %bb.0:
+; AGPR-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; AGPR-SDAG-NEXT:    v_mov_b32_e32 v20, 0x7f
+; AGPR-SDAG-NEXT:    v_accvgpr_write_b32 a0, v16
+; AGPR-SDAG-NEXT:    v_accvgpr_write_b32 a1, v17
+; AGPR-SDAG-NEXT:    v_accvgpr_write_b32 a2, v18
+; AGPR-SDAG-NEXT:    v_accvgpr_write_b32 a3, v19
+; AGPR-SDAG-NEXT:    s_nop 1
+; AGPR-SDAG-NEXT:    v_mfma_scale_f32_16x16x128_f8f6f4 a[0:3], v[0:7], v[8:15], a[0:3], v20, v20 op_sel:[1,1,0] op_sel_hi:[0,0,0]
+; AGPR-SDAG-NEXT:    s_nop 11
+; AGPR-SDAG-NEXT:    v_accvgpr_read_b32 v0, a0
+; AGPR-SDAG-NEXT:    v_accvgpr_read_b32 v1, a1
+; AGPR-SDAG-NEXT:    v_accvgpr_read_b32 v2, a2
+; AGPR-SDAG-NEXT:    v_accvgpr_read_b32 v3, a3
+; AGPR-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; AGPR-GISEL-LABEL: test_mfma_scale_f32_16x16x128_f8f6f4___constant_scale_127_127__opsel1:
+; AGPR-GISEL:       ; %bb.0:
+; AGPR-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; AGPR-GISEL-NEXT:    v_accvgpr_write_b32 a0, v16
+; AGPR-GISEL-NEXT:    v_accvgpr_write_b32 a1, v17
+; AGPR-GISEL-NEXT:    v_accvgpr_write_b32 a2, v18
+; AGPR-GISEL-NEXT:    v_accvgpr_write_b32 a3, v19
+; AGPR-GISEL-NEXT:    v_mov_b32_e32 v16, 0x7f
+; AGPR-GISEL-NEXT:    s_nop 1
+; AGPR-GISEL-NEXT:    v_mfma_scale_f32_16x16x128_f8f6f4 a[0:3], v[0:7], v[8:15], a[0:3], v16, v16 op_sel:[1,1,0] op_sel_hi:[0,0,0]
+; AGPR-GISEL-NEXT:    s_nop 11
+; AGPR-GISEL-NEXT:    v_accvgpr_read_b32 v0, a0
+; AGPR-GISEL-NEXT:    v_accvgpr_read_b32 v1, a1
+; AGPR-GISEL-NEXT:    v_accvgpr_read_b32 v2, a2
+; AGPR-GISEL-NEXT:    v_accvgpr_read_b32 v3, a3
+; AGPR-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %result = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4.v8i32.v8i32(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 0, i32 0, i32 1, i32 127, i32 1, i32 127)
+  ret <4 x float> %result
+}
+
 ; --------------------------------------------------------------------
 ; Incorrect signature for format cases (IR vector too large)
 ; --------------------------------------------------------------------
