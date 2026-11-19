@@ -935,7 +935,7 @@ lldb::SBBreakpoint SBTarget::BreakpointCreateByNames(
                      symbol_language, module_list, comp_unit_list);
 
   return BreakpointCreateByNames(symbol_names, num_names, name_type_mask,
-                                 eLanguageTypeUnknown, 0, module_list,
+                                 symbol_language, 0, module_list,
                                  comp_unit_list);
 }
 
