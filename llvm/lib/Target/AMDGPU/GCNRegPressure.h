@@ -115,6 +115,35 @@ struct GCNRegPressure {
     return {Arch + ToArch + Flex, Acc + ToAcc};
   }
 
+  /// Peak ArchVGPR32 and AccVGPR32 pressure over a set of program points, after
+  /// distributing the AVGPR pressure of each point with getBankedVGPRNum().
+  struct BankedVGPRPeaks {
+    unsigned ArchVGPRs = 0;
+    unsigned AGPRs = 0;
+
+    void add(const GCNRegPressure &RP, unsigned ArchLimit, unsigned AccLimit) {
+      auto [Arch, Acc] = RP.getBankedVGPRNum(ArchLimit, AccLimit);
+      ArchVGPRs = std::max(ArchVGPRs, Arch);
+      AGPRs = std::max(AGPRs, Acc);
+    }
+
+    /// \returns the combined-file pressure. The banks use separate ranges of
+    /// the file, so this is the sum of both peaks.
+    unsigned getUnifiedVGPRNum() const {
+      return getBankedUnifiedVGPRNum(ArchVGPRs, AGPRs);
+    }
+  };
+
+  /// The banked peaks of two pressures compared by less(), and the limits their
+  /// vector register excess is measured against.
+  struct BankedComparison {
+    BankedVGPRPeaks Peaks;
+    BankedVGPRPeaks OtherPeaks;
+    unsigned ArchVGPRLimit;
+    unsigned AGPRLimit;
+    unsigned UnifiedVGPRLimit;
+  };
+
   unsigned getVGPRTuplesWeight() const {
     return std::max(Value[TOTAL_KINDS + VGPR] + Value[TOTAL_KINDS + AVGPR],
                     Value[TOTAL_KINDS + AGPR]);
@@ -168,8 +197,13 @@ struct GCNRegPressure {
   /// determine that SGPR pressure is not important)
   /// 4. Less raw register pressure (first preference to VGPR tuples if we
   /// determine that SGPR pressure is not important)
+  ///
+  /// If \p Banked is set, the vector register excess is measured from the
+  /// banked peaks in \p Banked, and the combined-file excess is compared before
+  /// the per-bank excess.
   bool less(const MachineFunction &MF, const GCNRegPressure &O,
-            unsigned MaxOccupancy = std::numeric_limits<unsigned>::max()) const;
+            unsigned MaxOccupancy = std::numeric_limits<unsigned>::max(),
+            const BankedComparison *Banked = nullptr) const;
 
   bool operator==(const GCNRegPressure &O) const { return Value == O.Value; }
 
