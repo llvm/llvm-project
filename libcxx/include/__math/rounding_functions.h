@@ -222,19 +222,22 @@ template <class _A1, __enable_if_t<is_integral<_A1>::value, int> = 0>
 
 // trunc
 
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI float trunc(float __x) _NOEXCEPT { return __builtin_trunc(__x); }
-
-template <class = int>
-[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI double trunc(double __x) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI float trunc(float __x) _NOEXCEPT {
   return __builtin_trunc(__x);
 }
 
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI long double trunc(long double __x) _NOEXCEPT {
+template <class = int>
+[[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI double trunc(double __x) _NOEXCEPT {
+  return __builtin_trunc(__x);
+}
+
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI long double
+trunc(long double __x) _NOEXCEPT {
   return __builtin_truncl(__x);
 }
 
 template <class _A1, __enable_if_t<is_integral<_A1>::value, int> = 0>
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI double trunc(_A1 __x) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI double trunc(_A1 __x) _NOEXCEPT {
   return __builtin_trunc((double)__x);
 }
 

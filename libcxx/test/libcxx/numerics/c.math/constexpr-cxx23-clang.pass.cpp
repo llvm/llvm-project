@@ -137,11 +137,11 @@ int main(int, char**) {
   ASSERT_NOT_CONSTEXPR_CXX23(std::llroundf(1.0f) == 1LL);
   ASSERT_NOT_CONSTEXPR_CXX23(std::llroundl(1.0L) == 1LL);
 
-  ASSERT_NOT_CONSTEXPR_CXX23(std::trunc(1.0f) == 1.0f);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::trunc(1.0) == 1.0);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::trunc(1.0L) == 1.0L);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::truncf(1.0f) == 1.0f);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::truncl(1.0L) == 1.0L);
+  ASSERT_CONSTEXPR_CXX23(std::trunc(1.0f) == 1.0f);
+  ASSERT_CONSTEXPR_CXX23(std::trunc(1.0) == 1.0);
+  ASSERT_CONSTEXPR_CXX23(std::trunc(1.0L) == 1.0L);
+  ASSERT_CONSTEXPR_CXX23(std::truncf(1.0f) == 1.0f);
+  ASSERT_CONSTEXPR_CXX23(std::truncl(1.0L) == 1.0L);
 
   ASSERT_NOT_CONSTEXPR_CXX23(std::fmod(1.5f, 1.0f) == 0.5f);
   ASSERT_NOT_CONSTEXPR_CXX23(std::fmod(1.5, 1.0) == 0.5);
