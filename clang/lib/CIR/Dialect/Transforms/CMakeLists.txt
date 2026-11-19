@@ -13,7 +13,6 @@ add_clang_library(MLIRCIRTransforms
   HoistAllocas.cpp
   LoweringPrepare.cpp
   GotoSolver.cpp
-  FunctionExitAnalysisPass.cpp
   IdiomRecognizer.cpp
   LibOpt.cpp
   RecordTypeConverter.cpp
@@ -40,7 +39,6 @@ add_clang_library(MLIRCIRTransforms
   MLIRTransformUtils
 
   MLIRCIR
-  MLIRCIRAnalysis
   MLIRCIRInterfaces
   MLIRCIRTargetLowering
   MLIROpenACCDialect

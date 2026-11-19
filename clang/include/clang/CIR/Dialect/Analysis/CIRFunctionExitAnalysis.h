@@ -58,6 +58,7 @@ struct FunctionExitResult {
 
 /// analyzeFunctionExits over the definitions `filter` accepts (all if null), in
 /// parallel when allowed: `filter` may run concurrently. In module order.
+/// Each result is also an analysis remark in the "function-exit" category.
 llvm::SmallVector<FunctionExitResult>
 analyzeFunctionExits(mlir::ModuleOp module,
                      llvm::function_ref<bool(cir::FuncOp)> filter = nullptr);

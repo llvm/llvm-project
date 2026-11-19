@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -I %S/../../SemaCXX -fclangir -emit-cir -clangir-disable-passes -Wno-return-type %s -o %t.cir
-// RUN: cir-opt %t.cir -cir-function-exit-analysis -o /dev/null 2>&1 | FileCheck %s
+// RUN: cir-opt %t.cir -test-cir-function-exit-analysis --remarks-filter=function-exit -o /dev/null 2>&1 | FileCheck %s
 
 // With exceptions, the coroutine body is wrapped in an implicit try whose
 // handler calls unhandled_exception(); leaving it is not flowing off.
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -I %S/../../SemaCXX -fcxx-exceptions -fexceptions -fclangir -emit-cir -clangir-disable-passes -Wno-return-type %s -o %t-eh.cir
-// RUN: cir-opt %t-eh.cir -cir-function-exit-analysis -o /dev/null 2>&1 | FileCheck %s --check-prefixes=CHECK,EH
+// RUN: cir-opt %t-eh.cir -test-cir-function-exit-analysis --remarks-filter=function-exit -o /dev/null 2>&1 | FileCheck %s --check-prefixes=CHECK,EH
 
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -I %S/../../SemaCXX -fsyntax-only -Wreturn-type -verify %s
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -I %S/../../SemaCXX -fcxx-exceptions -fexceptions -fsyntax-only -Wreturn-type -verify %s
@@ -72,18 +72,18 @@ struct std::coroutine_traits<void, T...> {
 
 [[noreturn]] void die();
 
-// CHECK-DAG: function-exit-coroutine.cpp:[[@LINE+1]]:1: remark: function exit: control leaves only by reaching the end of the body [must_reach_end]
+// CHECK-DAG: function-exit-coroutine.cpp:[[@LINE+1]]:1: remark: [Analysis] function-exit | Category:function-exit | Kind=must_reach_end, Remark="control leaves only by reaching the end of the body"
 int must_reach_end() {
   co_await a;
 } // expected-warning {{non-void coroutine does not return a value}}
 
-// CHECK-DAG: function-exit-coroutine.cpp:[[@LINE+1]]:1: remark: function exit: control reaches the end of the body on some paths [may_reach_end]
+// CHECK-DAG: function-exit-coroutine.cpp:[[@LINE+1]]:1: remark: [Analysis] function-exit | Category:function-exit | Kind=may_reach_end, Remark="control reaches the end of the body on some paths"
 int may_reach_end(bool b) {
   if (b)
     co_return 1;
 } // expected-warning {{non-void coroutine does not return a value in all control paths}}
 
-// CHECK-DAG: function-exit-coroutine.cpp:[[@LINE+1]]:1: remark: function exit: control returns but never reaches the end of the body [return_only]
+// CHECK-DAG: function-exit-coroutine.cpp:[[@LINE+1]]:1: remark: [Analysis] function-exit | Category:function-exit | Kind=return_only, Remark="control returns but never reaches the end of the body"
 int return_only(bool b) {
   if (b)
     co_return 1;
@@ -91,7 +91,7 @@ int return_only(bool b) {
   co_return 2;
 }
 
-// CHECK-DAG: function-exit-coroutine.cpp:[[@LINE+1]]:1: remark: function exit: control returns but never reaches the end of the body [return_only]
+// CHECK-DAG: function-exit-coroutine.cpp:[[@LINE+1]]:1: remark: [Analysis] function-exit | Category:function-exit | Kind=return_only, Remark="control returns but never reaches the end of the body"
 int return_only_if_else(bool b) {
   if (b)
     co_return 1;
@@ -99,19 +99,19 @@ int return_only_if_else(bool b) {
     co_return 2;
 }
 
-// CHECK-DAG: function-exit-coroutine.cpp:[[@LINE+1]]:1: remark: function exit: control never returns or reaches the end of the body [no_return]
+// CHECK-DAG: function-exit-coroutine.cpp:[[@LINE+1]]:1: remark: [Analysis] function-exit | Category:function-exit | Kind=no_return, Remark="control never returns or reaches the end of the body"
 int ends_in_noreturn() {
   co_await a;
   die();
 }
 
-// CHECK-DAG: function-exit-coroutine.cpp:[[@LINE+1]]:1: remark: function exit: control never returns or reaches the end of the body [no_return]
+// CHECK-DAG: function-exit-coroutine.cpp:[[@LINE+1]]:1: remark: [Analysis] function-exit | Category:function-exit | Kind=no_return, Remark="control never returns or reaches the end of the body"
 int infinite_loop() {
   for (;;)
     co_await a;
 }
 
-// CHECK-DAG: function-exit-coroutine.cpp:[[@LINE+1]]:1: remark: function exit: control reaches the end of the body on some paths [may_reach_end]
+// CHECK-DAG: function-exit-coroutine.cpp:[[@LINE+1]]:1: remark: [Analysis] function-exit | Category:function-exit | Kind=may_reach_end, Remark="control reaches the end of the body on some paths"
 int loop_breaks(int n) {
   while (n--) {
     if (n == 3)
@@ -120,12 +120,12 @@ int loop_breaks(int n) {
   }
 } // expected-warning {{non-void coroutine does not return a value in all control paths}}
 
-// CHECK-DAG: function-exit-coroutine.cpp:[[@LINE+1]]:1: remark: function exit: control leaves only by reaching the end of the body [must_reach_end]
+// CHECK-DAG: function-exit-coroutine.cpp:[[@LINE+1]]:1: remark: [Analysis] function-exit | Category:function-exit | Kind=must_reach_end, Remark="control leaves only by reaching the end of the body"
 long throwing_initial_resume() {
   co_await a;
 } // expected-warning {{non-void coroutine does not return a value}}
 
-// CHECK-DAG: function-exit-coroutine.cpp:[[@LINE+1]]:1: remark: function exit: control returns but never reaches the end of the body [return_only]
+// CHECK-DAG: function-exit-coroutine.cpp:[[@LINE+1]]:1: remark: [Analysis] function-exit | Category:function-exit | Kind=return_only, Remark="control returns but never reaches the end of the body"
 long throwing_initial_resume_returns(bool b) {
   if (b)
     co_return 1;
@@ -133,20 +133,20 @@ long throwing_initial_resume_returns(bool b) {
 }
 
 // The fall-through handler, return_void(), is the implicit co_return.
-// CHECK-DAG: function-exit-coroutine.cpp:[[@LINE+1]]:1: remark: function exit: control returns but never reaches the end of the body [return_only]
+// CHECK-DAG: function-exit-coroutine.cpp:[[@LINE+1]]:1: remark: [Analysis] function-exit | Category:function-exit | Kind=return_only, Remark="control returns but never reaches the end of the body"
 float return_void() {
   co_await a;
 }
 
 // Without return_void(), flowing off is undefined whatever the return type.
-// CHECK-DAG: function-exit-coroutine.cpp:[[@LINE+1]]:1: remark: function exit: control leaves only by reaching the end of the body [must_reach_end]
+// CHECK-DAG: function-exit-coroutine.cpp:[[@LINE+1]]:1: remark: [Analysis] function-exit | Category:function-exit | Kind=must_reach_end, Remark="control leaves only by reaching the end of the body"
 void void_without_return_void(int) {
   co_await a;
 } // expected-warning {{non-void coroutine does not return a value}}
 
-// CHECK-DAG: function-exit-coroutine.cpp:[[@LINE+1]]:1: remark: function exit: control returns but never reaches the end of the body [return_only]
+// CHECK-DAG: function-exit-coroutine.cpp:[[@LINE+1]]:1: remark: [Analysis] function-exit | Category:function-exit | Kind=return_only, Remark="control returns but never reaches the end of the body"
 int use_lambda() {
-  // CHECK-DAG: function-exit-coroutine.cpp:[[@LINE+1]]:{{[0-9]+}}: remark: function exit: control reaches the end of the body on some paths [may_reach_end]
+  // CHECK-DAG: function-exit-coroutine.cpp:[[@LINE+1]]:{{[0-9]+}}: remark: [Analysis] function-exit | Category:function-exit | Kind=may_reach_end, Remark="control reaches the end of the body on some paths"
   auto l = [](bool b) -> int {
     if (b)
       co_return 1;
@@ -157,7 +157,7 @@ int use_lambda() {
 
 #ifdef __EXCEPTIONS
 // A try written in the body is not the implicit one.
-// EH-DAG: function-exit-coroutine.cpp:[[@LINE+1]]:1: remark: function exit: control reaches the end of the body on some paths [may_reach_end]
+// EH-DAG: function-exit-coroutine.cpp:[[@LINE+1]]:1: remark: [Analysis] function-exit | Category:function-exit | Kind=may_reach_end, Remark="control reaches the end of the body on some paths"
 int user_try() {
   try {
     co_return 1;
@@ -165,7 +165,7 @@ int user_try() {
   }
 } // expected-warning {{non-void coroutine does not return a value in all control paths}}
 
-// EH-DAG: function-exit-coroutine.cpp:[[@LINE+1]]:1: remark: function exit: control returns but never reaches the end of the body [return_only]
+// EH-DAG: function-exit-coroutine.cpp:[[@LINE+1]]:1: remark: [Analysis] function-exit | Category:function-exit | Kind=return_only, Remark="control returns but never reaches the end of the body"
 int user_try_returns() {
   try {
     co_return 1;
@@ -174,7 +174,7 @@ int user_try_returns() {
   }
 }
 
-// EH-DAG: function-exit-coroutine.cpp:[[@LINE+1]]:1: remark: function exit: control never returns or reaches the end of the body [no_return]
+// EH-DAG: function-exit-coroutine.cpp:[[@LINE+1]]:1: remark: [Analysis] function-exit | Category:function-exit | Kind=no_return, Remark="control never returns or reaches the end of the body"
 int ends_in_throw() {
   co_await a;
   throw 1;

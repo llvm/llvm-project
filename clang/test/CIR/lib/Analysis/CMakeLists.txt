@@ -1,5 +1,6 @@
 add_clang_library(CIRTestAnalysis
   TestCIRAliasAnalysis.cpp
+  TestCIRFunctionExitAnalysis.cpp
 
   LINK_LIBS PUBLIC
   MLIRCIRAnalysis

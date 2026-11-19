@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir -clangir-disable-passes -Wno-return-type %s -o %t.cir
-// RUN: cir-opt %t.cir -cir-function-exit-analysis -o /dev/null 2>&1 | FileCheck %s
-// RUN: cir-opt %t.cir -cir-function-exit-analysis --mlir-disable-threading -o /dev/null 2>&1 | FileCheck %s
-// RUN: cir-opt %t.cir -cir-function-exit-analysis -o /dev/null 2>&1 | FileCheck %s --check-prefix=ALIAS
+// RUN: cir-opt %t.cir -test-cir-function-exit-analysis --remarks-filter=function-exit -o /dev/null 2>&1 | FileCheck %s
+// RUN: cir-opt %t.cir -test-cir-function-exit-analysis --remarks-filter=function-exit --mlir-disable-threading -o /dev/null 2>&1 | FileCheck %s
+// RUN: cir-opt %t.cir -test-cir-function-exit-analysis --remarks-filter=function-exit -o /dev/null 2>&1 | FileCheck %s --check-prefix=ALIAS
 
 // The warning annotations are what Sema's CFG-based check reports for the
 // same code, so both classifications are pinned to each other.
@@ -9,13 +9,13 @@
 
 _Noreturn void stop(void);
 
-// CHECK: function-exit.c:[[@LINE+1]]:1: remark: function exit: control reaches the end of the body on some paths [may_reach_end]
+// CHECK: function-exit.c:[[@LINE+1]]:1: remark: [Analysis] function-exit | Category:function-exit | Kind=may_reach_end, Remark="control reaches the end of the body on some paths"
 int may_reach_end(int x) {
   if (x)
     return 1;
 } // expected-warning {{non-void function does not return a value in all control paths}}
 
-// CHECK: function-exit.c:[[@LINE+1]]:1: remark: function exit: control returns but never reaches the end of the body [return_only]
+// CHECK: function-exit.c:[[@LINE+1]]:1: remark: [Analysis] function-exit | Category:function-exit | Kind=return_only, Remark="control returns but never reaches the end of the body"
 int while_one(int x) {
   while (1) {
     if (x)
@@ -23,7 +23,7 @@ int while_one(int x) {
   }
 }
 
-// CHECK: function-exit.c:[[@LINE+1]]:1: remark: function exit: control leaves only by reaching the end of the body [must_reach_end]
+// CHECK: function-exit.c:[[@LINE+1]]:1: remark: [Analysis] function-exit | Category:function-exit | Kind=must_reach_end, Remark="control leaves only by reaching the end of the body"
 int do_while_zero(int x) {
   do {
     if (x)
@@ -31,18 +31,18 @@ int do_while_zero(int x) {
   } while (0);
 } // expected-warning {{non-void function does not return a value}}
 
-// CHECK: function-exit.c:[[@LINE+1]]:1: remark: function exit: control never returns or reaches the end of the body [no_return]
+// CHECK: function-exit.c:[[@LINE+1]]:1: remark: [Analysis] function-exit | Category:function-exit | Kind=no_return, Remark="control never returns or reaches the end of the body"
 int only_noreturn_call(void) {
   stop();
 }
 
-// CHECK: function-exit.c:[[@LINE+1]]:1: remark: function exit: control never returns or reaches the end of the body [no_return]
+// CHECK: function-exit.c:[[@LINE+1]]:1: remark: [Analysis] function-exit | Category:function-exit | Kind=no_return, Remark="control never returns or reaches the end of the body"
 int goto_loop(void) {
 loop:
   goto loop;
 }
 
-// CHECK: function-exit.c:[[@LINE+1]]:1: remark: function exit: control returns but never reaches the end of the body [return_only]
+// CHECK: function-exit.c:[[@LINE+1]]:1: remark: [Analysis] function-exit | Category:function-exit | Kind=return_only, Remark="control returns but never reaches the end of the body"
 int computed_goto(int x) {
   void *target = x ? &&one : &&two;
   goto *target;
@@ -52,7 +52,7 @@ two:
   return 2;
 }
 
-// CHECK: function-exit.c:[[@LINE+1]]:1: remark: function exit: control reaches the end of the body on some paths [may_reach_end]
+// CHECK: function-exit.c:[[@LINE+1]]:1: remark: [Analysis] function-exit | Category:function-exit | Kind=may_reach_end, Remark="control reaches the end of the body on some paths"
 int computed_goto_to_end(int x) {
   void *target = x ? &&one : &&two;
   goto *target;
@@ -63,7 +63,7 @@ two:;
 
 // Like in the CFG, a label whose address is taken is reached only through a
 // reachable indirect goto, including addresses taken in static initializers.
-// CHECK: function-exit.c:[[@LINE+1]]:1: remark: function exit: control returns but never reaches the end of the body [return_only]
+// CHECK: function-exit.c:[[@LINE+1]]:1: remark: [Analysis] function-exit | Category:function-exit | Kind=return_only, Remark="control returns but never reaches the end of the body"
 int address_taken_without_indirect_goto(void) {
   void *p = &&l;
   (void)p;
@@ -71,7 +71,7 @@ int address_taken_without_indirect_goto(void) {
 l:;
 }
 
-// CHECK: function-exit.c:[[@LINE+1]]:1: remark: function exit: control returns but never reaches the end of the body [return_only]
+// CHECK: function-exit.c:[[@LINE+1]]:1: remark: [Analysis] function-exit | Category:function-exit | Kind=return_only, Remark="control returns but never reaches the end of the body"
 int dead_indirect_goto(void) {
   return 0;
   void *p = &&l;
@@ -79,7 +79,7 @@ int dead_indirect_goto(void) {
 l:;
 }
 
-// CHECK: function-exit.c:[[@LINE+1]]:1: remark: function exit: control reaches the end of the body on some paths [may_reach_end]
+// CHECK: function-exit.c:[[@LINE+1]]:1: remark: [Analysis] function-exit | Category:function-exit | Kind=may_reach_end, Remark="control reaches the end of the body on some paths"
 int static_table_indirect_goto(int i) {
   static void *table[] = {&&one, &&two};
   goto *table[i];
@@ -88,7 +88,7 @@ one:
 two:;
 } // expected-warning {{non-void function does not return a value in all control paths}}
 
-// CHECK: function-exit.c:[[@LINE+1]]:1: remark: function exit: control returns but never reaches the end of the body [return_only]
+// CHECK: function-exit.c:[[@LINE+1]]:1: remark: [Analysis] function-exit | Category:function-exit | Kind=return_only, Remark="control returns but never reaches the end of the body"
 int dead_goto(int x) {
   while (0) {
     goto out;
@@ -97,7 +97,7 @@ int dead_goto(int x) {
 out:;
 }
 
-// CHECK: function-exit.c:[[@LINE+1]]:1: remark: function exit: control returns but never reaches the end of the body [return_only]
+// CHECK: function-exit.c:[[@LINE+1]]:1: remark: [Analysis] function-exit | Category:function-exit | Kind=return_only, Remark="control returns but never reaches the end of the body"
 int constant_or(int x) {
   if (x == 1)
     return 1;
@@ -105,13 +105,13 @@ int constant_or(int x) {
     return 2;
 }
 
-// CHECK: function-exit.c:[[@LINE+1]]:1: remark: function exit: control reaches the end of the body on some paths [may_reach_end]
+// CHECK: function-exit.c:[[@LINE+1]]:1: remark: [Analysis] function-exit | Category:function-exit | Kind=may_reach_end, Remark="control reaches the end of the body on some paths"
 int nonconstant_or(int x) {
   if (x == 1 || x == 2)
     return 1;
 } // expected-warning {{non-void function does not return a value in all control paths}}
 
-// CHECK: function-exit.c:[[@LINE+1]]:1: remark: function exit: control returns but never reaches the end of the body [return_only]
+// CHECK: function-exit.c:[[@LINE+1]]:1: remark: [Analysis] function-exit | Category:function-exit | Kind=return_only, Remark="control returns but never reaches the end of the body"
 int assume_false(int x) {
   if (x)
     return 1;
@@ -119,7 +119,7 @@ int assume_false(int x) {
 }
 
 // A goto into the tail of the last scope reaches the end past its return.
-// CHECK: function-exit.c:[[@LINE+1]]:1: remark: function exit: control reaches the end of the body on some paths [may_reach_end]
+// CHECK: function-exit.c:[[@LINE+1]]:1: remark: [Analysis] function-exit | Category:function-exit | Kind=may_reach_end, Remark="control reaches the end of the body on some paths"
 int goto_into_trailing_scope(int x) {
   if (x)
     goto inside;
@@ -130,7 +130,7 @@ int goto_into_trailing_scope(int x) {
 } // expected-warning {{non-void function does not return a value in all control paths}}
 
 // A goto into the last statement reaches its end past the returns before.
-// CHECK: function-exit.c:[[@LINE+1]]:1: remark: function exit: control reaches the end of the body on some paths [may_reach_end]
+// CHECK: function-exit.c:[[@LINE+1]]:1: remark: [Analysis] function-exit | Category:function-exit | Kind=may_reach_end, Remark="control reaches the end of the body on some paths"
 int goto_into_trailing_switch(int x) {
   if (x > 1)
     goto inside;
@@ -143,7 +143,7 @@ int goto_into_trailing_switch(int x) {
   }
 } // expected-warning {{non-void function does not return a value in all control paths}}
 
-// CHECK: function-exit.c:[[@LINE+1]]:1: remark: function exit: control reaches the end of the body on some paths [may_reach_end]
+// CHECK: function-exit.c:[[@LINE+1]]:1: remark: [Analysis] function-exit | Category:function-exit | Kind=may_reach_end, Remark="control reaches the end of the body on some paths"
 int goto_past_noreturn_in_trailing_if(int x) {
   if (x > 1)
     goto inside;
@@ -157,7 +157,7 @@ int goto_past_noreturn_in_trailing_if(int x) {
   }
 } // expected-warning {{non-void function does not return a value in all control paths}}
 
-// CHECK: function-exit.c:[[@LINE+1]]:1: remark: function exit: control returns but never reaches the end of the body [return_only]
+// CHECK: function-exit.c:[[@LINE+1]]:1: remark: [Analysis] function-exit | Category:function-exit | Kind=return_only, Remark="control returns but never reaches the end of the body"
 int trailing_if_else_returns(int x) {
   if (x)
     return 1;
@@ -165,7 +165,7 @@ int trailing_if_else_returns(int x) {
     return 2;
 }
 
-// CHECK: function-exit.c:[[@LINE+1]]:1: remark: function exit: control reaches the end of the body on some paths [may_reach_end]
+// CHECK: function-exit.c:[[@LINE+1]]:1: remark: [Analysis] function-exit | Category:function-exit | Kind=may_reach_end, Remark="control reaches the end of the body on some paths"
 int trailing_loop_breaks(int x) {
   while (1) {
     if (x)

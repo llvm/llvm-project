@@ -20,6 +20,7 @@
 #include "clang/CIR/Dialect/Analysis/CIRFunctionExitAnalysis.h"
 
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/Remarks.h"
 #include "mlir/IR/Threading.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "clang/CIR/Dialect/Analysis/CIRConstantFolding.h"
@@ -574,6 +575,23 @@ llvm::StringRef cir::stringifyFunctionExitKind(FunctionExitKind kind) {
   llvm_unreachable("unknown FunctionExitKind");
 }
 
+/// A plain description of `kind`, for the remark.
+static llvm::StringRef describe(FunctionExitKind kind) {
+  switch (kind) {
+  case FunctionExitKind::Unknown:
+    return "the body could not be analyzed";
+  case FunctionExitKind::ReturnOnly:
+    return "control returns but never reaches the end of the body";
+  case FunctionExitKind::NoReturn:
+    return "control never returns or reaches the end of the body";
+  case FunctionExitKind::MayReachEnd:
+    return "control reaches the end of the body on some paths";
+  case FunctionExitKind::MustReachEnd:
+    return "control leaves only by reaching the end of the body";
+  }
+  llvm_unreachable("unknown FunctionExitKind");
+}
+
 static bool mayComplete(FuncOp func, mlir::Operation *op);
 
 /// Conservatively, whether control may get past `last` in `block` (the whole
@@ -680,8 +698,15 @@ cir::analyzeFunctionExits(mlir::ModuleOp module,
   });
 
   llvm::SmallVector<FunctionExitResult> results;
-  for (auto [func, kind] : llvm::zip_equal(funcs, kinds))
-    if (kind)
-      results.push_back({func, *kind});
+  for (auto [func, kind] : llvm::zip_equal(funcs, kinds)) {
+    if (!kind)
+      continue;
+    results.push_back({func, *kind});
+    mlir::remark::analysis(func.getLoc(),
+                           mlir::remark::RemarkOpts::name("function-exit")
+                               .category("function-exit"))
+        << mlir::remark::metric("Kind", stringifyFunctionExitKind(*kind))
+        << mlir::remark::add("{0}", describe(*kind));
+  }
   return results;
 }
