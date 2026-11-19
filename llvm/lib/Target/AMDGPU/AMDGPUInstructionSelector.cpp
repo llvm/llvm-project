@@ -4505,9 +4505,11 @@ struct BitOp3MIRView {
   // An AND with 0xff.
   bool isByteMask(Register R) const {
     const MachineInstr &Def = *MRI.getVRegDef(R);
+    if (Def.getOpcode() != TargetOpcode::G_AND)
+      return false;
     std::optional<ValueAndVReg> C =
         getIConstantVRegValWithLookThrough(Def.getOperand(2).getReg(), MRI);
-    return Def.getOpcode() == TargetOpcode::G_AND && C && C->Value == 0xff;
+    return C && C->Value == 0xff;
   }
 
   // A constant that is not an inline constant is encoded as a literal.
