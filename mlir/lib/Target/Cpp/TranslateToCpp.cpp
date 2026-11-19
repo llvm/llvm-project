@@ -124,7 +124,7 @@ namespace {
 /// Emitter that uses dialect specific emitters to emit C++ code.
 struct CppEmitter {
   explicit CppEmitter(raw_ostream &os, bool declareVariablesAtTop,
-                      StringRef fileId);
+                      StringRef fileId, bool emitIncludes);
 
   /// Emits attribute or returns failure.
   LogicalResult emitAttribute(Location loc, Attribute attr);
@@ -298,6 +298,9 @@ private:
 
   /// Only emit file ops whos id matches this value.
   std::string fileId;
+
+  /// Whether to emit include directives.
+  bool emitIncludes;
 
   /// Map from value to name of C++ variable that contain the name.
   ValueMapper valueMapper;
@@ -1567,9 +1570,10 @@ static LogicalResult printOperation(CppEmitter &emitter,
 }
 
 CppEmitter::CppEmitter(raw_ostream &os, bool declareVariablesAtTop,
-                       StringRef fileId)
+                       StringRef fileId, bool emitIncludes)
     : os(os), declareVariablesAtTop(declareVariablesAtTop),
-      fileId(fileId.str()), defaultValueMapperScope(valueMapper),
+      fileId(fileId.str()), emitIncludes(emitIncludes),
+      defaultValueMapperScope(valueMapper),
       defaultBlockMapperScope(blockMapper) {
   labelInScopeCount.push(0);
 }
@@ -1954,6 +1958,9 @@ LogicalResult CppEmitter::emitLabel(Block &block) {
 }
 
 LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
+  if (!emitIncludes && isa<emitc::IncludeOp>(op))
+    return success();
+
   LogicalResult status =
       llvm::TypeSwitch<Operation *, LogicalResult>(&op)
           // Builtin ops.
@@ -2152,7 +2159,7 @@ void CppEmitter::decreaseLoopNestingLevel() { loopNestingLevel--; }
 
 LogicalResult emitc::translateToCpp(Operation *op, raw_ostream &os,
                                     bool declareVariablesAtTop,
-                                    StringRef fileId) {
-  CppEmitter emitter(os, declareVariablesAtTop, fileId);
+                                    StringRef fileId, bool emitIncludes) {
+  CppEmitter emitter(os, declareVariablesAtTop, fileId, emitIncludes);
   return emitter.emitOperation(*op, /*trailingSemicolon=*/false);
 }
