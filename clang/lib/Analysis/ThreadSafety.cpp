@@ -47,7 +47,6 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/TrailingObjects.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -569,12 +568,6 @@ public:
   }
 
   Context getEmptyContext() { return ContextFactory.getEmptyMap(); }
-
-  /// If \p D has a definition in \p Ctx, return a context in which that
-  /// definition is cleared; otherwise return \p Ctx.
-  Context clearDefinitionIfSet(const NamedDecl *D, Context Ctx) {
-    return clearDefinition(D, Ctx);
-  }
 
   /// Return the next context after processing S.  This function is used by
   /// clients of the class to get the appropriate context when traversing the
@@ -1805,7 +1798,6 @@ class ThreadSafetyAnalyzer {
 
   ThreadSafetyHandler &Handler;
   const FunctionDecl *CurrentFunction;
-  ASTContext *ASTCtx = nullptr;
   LocalVariableMap LocalVarMap;
   // Maps constructed objects to `this` placeholder prior to initialization.
   llvm::SmallDenseMap<const Expr *, til::LiteralPtr *> ConstructedObjects;
@@ -3517,9 +3509,9 @@ static bool isConstPointeeParamType(QualType ParamType) {
 /// and collects the escaped local variables.
 class EscapedVarScanner {
 public:
-  EscapedVarScanner(const ASTContext &Ctx,
-                    llvm::SmallPtrSetImpl<const ValueDecl *> &EscapedVars)
-      : Ctx(Ctx), EscapedVars(EscapedVars) {}
+  explicit EscapedVarScanner(
+      llvm::SmallPtrSetImpl<const ValueDecl *> &EscapedVars)
+      : EscapedVars(EscapedVars) {}
 
   void visit(const Stmt *S, bool InNestedClosure, bool LValueIsSafe) {
     static constexpr unsigned MaxASTWalkDepth = 512;
@@ -3786,7 +3778,6 @@ private:
               /*LValueIsSafe=*/ConstRefInits.contains(Child));
   }
 
-  const ASTContext &Ctx;
   llvm::SmallPtrSetImpl<const ValueDecl *> &EscapedVars;
   llvm::SmallPtrSet<const DeclRefExpr *, 16> SafeDREs;
   unsigned Depth = 0;
@@ -3799,19 +3790,19 @@ private:
 /// glvalue is not used by an enclosing expression (or that are referenced
 /// inside a nested lambda or block).
 static void
-scanEscapedVars(const Stmt *Root, const ASTContext &Ctx,
+scanEscapedVars(const Stmt *Root,
                 llvm::SmallPtrSetImpl<const ValueDecl *> &EscapedVars) {
   if (!Root)
     return;
 
-  EscapedVarScanner Scanner(Ctx, EscapedVars);
+  EscapedVarScanner Scanner(EscapedVars);
   Scanner.visit(Root, /*InNestedClosure=*/false,
                 /*LValueIsSafe=*/isa<CompoundStmt>(Root));
 }
 
 void ThreadSafetyAnalyzer::markEscapedLocalVars(AnalysisDeclContext &AC) {
   llvm::SmallPtrSet<const ValueDecl *, 16> EscapedVars;
-  scanEscapedVars(AC.getBody(), *ASTCtx, EscapedVars);
+  scanEscapedVars(AC.getBody(), EscapedVars);
   for (const ValueDecl *VD : EscapedVars)
     LocalVarMap.addEscapedVar(VD);
 }
@@ -3833,7 +3824,6 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
 
   CFG *CFGraph = walker.getGraph();
   const NamedDecl *D = walker.getDecl();
-  ASTCtx = &AC.getASTContext();
   CurrentFunction = dyn_cast<FunctionDecl>(D);
 
   if (D->hasAttr<NoThreadSafetyAnalysisAttr>())
