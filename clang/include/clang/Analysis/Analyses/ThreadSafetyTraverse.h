@@ -402,8 +402,7 @@ private:
   bool CStyle;
 
 public:
-  PrettyPrinter(bool CS = true)
-      : CStyle(CS) {}
+  PrettyPrinter(bool CS = true) : CStyle(CS) {}
 
   static void print(const SExpr *E, StreamType &SS) {
     Self printer;
