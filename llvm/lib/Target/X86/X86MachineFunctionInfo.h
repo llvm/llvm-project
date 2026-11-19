@@ -145,6 +145,9 @@ class X86MachineFunctionInfo : public MachineFunctionInfo {
   /// The ACE programming model used in the function.
   ACEProgModelEnum ACEProgModel = ACEProgModelEnum::ACE_None;
 
+  /// True once a function using both ACE programming models has been reported.
+  bool ReportedACEProgModelMix = false;
+
   /// True if this function has a subset of CSRs that is handled explicitly via
   /// copies.
   bool IsSplitCSR = false;

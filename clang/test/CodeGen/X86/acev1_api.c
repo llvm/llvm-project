@@ -10,8 +10,10 @@
 // Test __acetile zero
 void test_tile_ace_zero(__acetile *dst) {
   // CHECK-LABEL: @test_tile_ace_zero
-  // CHECK: call x86_amx @llvm.x86.acev1.tilezero.internal
-  // CHECK: call <256 x i32> @llvm.x86.cast.tile.to.vector.v256i32(x86_amx {{%.*}})
+  // A tile is 64-byte aligned, so the store that lands it carries that too.
+  // CHECK: call x86_amx @llvm.x86.acev1.tilezero.internal(i16 16, i16 64)
+  // CHECK: %[[V:[^ ]+]] = call <256 x i32> @llvm.x86.cast.tile.to.vector.v256i32(x86_amx {{%.*}})
+  // CHECK: store <256 x i32> %[[V]], ptr %{{[^ ]+}}, align 64
   __tile_ace_zero(dst);
 }
 
@@ -64,9 +66,9 @@ void test_tile_ace_top2bf16ps(__acetile *dst, __m512bh src1, __m512bh src2) {
 void test_tile_ace_top4mxhf8ps(__acetile *dst, __m512i src1, __m512i src2) {
   // CHECK-LABEL: @test_tile_ace_top4mxhf8ps
   // CHECK-DAG: call x86_amx @llvm.x86.cast.vector.to.tile.v256i32(<256 x i32> {{%.*}})
-  // CHECK-DAG: call x86_amx @llvm.x86.acev1.top4mxhf8ps.internal(i16 16, i16 64, i8 5
+  // CHECK-DAG: call x86_amx @llvm.x86.acev1.top4mxhf8ps.internal(i16 16, i16 64, i8 10
   // CHECK-DAG: call <256 x i32> @llvm.x86.cast.tile.to.vector.v256i32(x86_amx {{%.*}})
-  __tile_ace_top4mxhf8ps(dst, src1, src2, 5);
+  __tile_ace_top4mxhf8ps(dst, src1, src2, 10);
 }
 
 // Test TOP4MXBHF8PS ACE API (BF8 x HF8 -> FP32 with BSR scaling)
@@ -82,9 +84,9 @@ void test_tile_ace_top4mxbhf8ps(__acetile *dst, __m512i src1, __m512i src2) {
 void test_tile_ace_top4mxhbf8ps(__acetile *dst, __m512i src1, __m512i src2) {
   // CHECK-LABEL: @test_tile_ace_top4mxhbf8ps
   // CHECK-DAG: call x86_amx @llvm.x86.cast.vector.to.tile.v256i32(<256 x i32> {{%.*}})
-  // CHECK-DAG: call x86_amx @llvm.x86.acev1.top4mxhbf8ps.internal(i16 16, i16 64, i8 7
+  // CHECK-DAG: call x86_amx @llvm.x86.acev1.top4mxhbf8ps.internal(i16 16, i16 64, i8 19
   // CHECK-DAG: call <256 x i32> @llvm.x86.cast.tile.to.vector.v256i32(x86_amx {{%.*}})
-  __tile_ace_top4mxhbf8ps(dst, src1, src2, 7);
+  __tile_ace_top4mxhbf8ps(dst, src1, src2, 19);
 }
 
 // Test TOP4MXBF8PS ACE API (BF8 x BF8 -> FP32 with BSR scaling)
@@ -108,21 +110,21 @@ void test_tile_ace_top4mxbssps(__acetile *dst, __m512i src1, __m512i src2) {
 // Test tile setrow (ACE-specific: ZMM to tile row)
 void test_tile_ace_setrow(__acetile *dst, __m512i src) {
   // CHECK-LABEL: @test_tile_ace_setrow
-  // CHECK: call x86_amx @llvm.x86.acev1.tilemovrowinsert.internal
+  // CHECK: call x86_amx @llvm.x86.acev1.tilemovrowinsert.internal(i16 16, i16 64, x86_amx {{%.*}}, <16 x i32> {{%.*}}, i32 {{%.*}})
   __tile_ace_setrow(dst, src, 0);
 }
 
 // Test tile setcol (ACE-specific: ZMM to tile column)
 void test_tile_ace_setcol(__acetile *dst, __m512i src) {
   // CHECK-LABEL: @test_tile_ace_setcol
-  // CHECK: call x86_amx @llvm.x86.acev1.tilemovcolinsert.internal
+  // CHECK: call x86_amx @llvm.x86.acev1.tilemovcolinsert.internal(i16 16, i16 64, x86_amx {{%.*}}, <16 x i32> {{%.*}}, i32 {{%.*}})
   __tile_ace_setcol(dst, src, 0);
 }
 
 // Test tile getrow (ACE-specific: tile row to ZMM)
 __m512i test_tile_ace_getrow(__acetile *src) {
   // CHECK-LABEL: @test_tile_ace_getrow
-  // CHECK: call <16 x i32> @llvm.x86.acev1.tilemovrowextract.internal
+  // CHECK: call <16 x i32> @llvm.x86.acev1.tilemovrowextract.internal(i16 16, i16 64, x86_amx {{%.*}}, i32 {{%.*}})
   return __tile_ace_getrow(src, 0);
 }
 
@@ -163,9 +165,12 @@ __m512h test_tile_ace_cvtrowps2phl(__acetile *src) {
 
 // Integration test: ACE computation workflow
 void test_ace_workflow(__m512i src1, __m512i src2) {
+  // The accumulator goes through memory, so the cast must feed the product.
   // CHECK-LABEL: @test_ace_workflow
-  // CHECK: call x86_amx @llvm.x86.acev1.tilezero.internal
-  // CHECK: call x86_amx @llvm.x86.acev1.top4buud.internal
+  // CHECK: call x86_amx @llvm.x86.acev1.tilezero.internal(i16 16, i16 64)
+  // CHECK: %[[ACCV:[^ ]+]] = load <256 x i32>, ptr %{{[^ ]+}}, align 64
+  // CHECK: %[[ACC:[^ ]+]] = call x86_amx @llvm.x86.cast.vector.to.tile.v256i32(<256 x i32> %[[ACCV]])
+  // CHECK: call x86_amx @llvm.x86.acev1.top4buud.internal(i16 16, i16 64, x86_amx %[[ACC]], <64 x i8> {{%.*}}, <64 x i8> {{%.*}})
   __acetile acc;
   __tile_ace_zero(&acc);
   __tile_ace_top4buud(&acc, src1, src2);

@@ -615,6 +615,13 @@ bool SemaX86::CheckBuiltinTileArguments(unsigned BuiltinID, CallExpr *TheCall) {
   case X86::BI__builtin_ia32_top4mxbssps:
     return CheckBuiltinTileArgumentsRange(TheCall, 0) ||
            CheckBuiltinScaleGroup(TheCall, 3);
+  // The internal forms take a tile value, not an ID, so only the group is left.
+  case X86::BI__builtin_ia32_top4mxhf8ps_internal:
+  case X86::BI__builtin_ia32_top4mxbhf8ps_internal:
+  case X86::BI__builtin_ia32_top4mxhbf8ps_internal:
+  case X86::BI__builtin_ia32_top4mxbf8ps_internal:
+  case X86::BI__builtin_ia32_top4mxbssps_internal:
+    return CheckBuiltinScaleGroup(TheCall, 2);
   case X86::BI__builtin_ia32_tdpbssd:
   case X86::BI__builtin_ia32_tdpbsud:
   case X86::BI__builtin_ia32_tdpbusd:

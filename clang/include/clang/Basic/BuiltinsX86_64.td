@@ -223,7 +223,7 @@ let Features = "amx-tile", Attributes = [NoThrow] in {
   def tilestored64_internal : X86Builtin<"void(unsigned short, unsigned short, void *, size_t, _Vector<256, int>)">;
 }
 
-let Features = "amx-tile|acev1", Attributes = [NoThrow] in {
+let Features = "amx-tile", Attributes = [NoThrow] in {
   def tilezero_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short)">;
 }
 
@@ -256,10 +256,14 @@ let Features = "amx-fp8", Attributes = [NoThrow] in {
   def tdphf8ps_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, unsigned short, _Vector<256, int>, _Vector<256, int>, _Vector<256, int>)">;
 }
 
+// These name no tile, so one spelling serves either palette, unlike TILEZERO.
 let Features = "amx-tile|acev1", Attributes = [NoThrow] in {
   def tile_loadconfig : X86Builtin<"void(void const *)">;
   def tile_storeconfig : X86Builtin<"void(void const *)">;
   def tilerelease : X86Builtin<"void()">;
+}
+
+let Features = "amx-tile", Attributes = [NoThrow] in {
   def tilezero : X86Builtin<"void(unsigned char)">;
 }
 
@@ -474,9 +478,9 @@ let Features = "acev1", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
 
 // Mixed precision internal.
 let Features = "acev1", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
-  def top4mxhf8ps_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, unsigned char, _Vector<256, int>, _Vector<64, char>, _Vector<64, char>)">;
-  def top4mxbhf8ps_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, unsigned char, _Vector<256, int>, _Vector<64, char>, _Vector<64, char>)">;
-  def top4mxhbf8ps_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, unsigned char, _Vector<256, int>, _Vector<64, char>, _Vector<64, char>)">;
-  def top4mxbf8ps_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, unsigned char, _Vector<256, int>, _Vector<64, char>, _Vector<64, char>)">;
-  def top4mxbssps_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, unsigned char, _Vector<256, int>, _Vector<64, char>, _Vector<64, char>)">;
+  def top4mxhf8ps_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, _Constant unsigned char, _Vector<256, int>, _Vector<64, char>, _Vector<64, char>)">;
+  def top4mxbhf8ps_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, _Constant unsigned char, _Vector<256, int>, _Vector<64, char>, _Vector<64, char>)">;
+  def top4mxhbf8ps_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, _Constant unsigned char, _Vector<256, int>, _Vector<64, char>, _Vector<64, char>)">;
+  def top4mxbf8ps_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, _Constant unsigned char, _Vector<256, int>, _Vector<64, char>, _Vector<64, char>)">;
+  def top4mxbssps_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, _Constant unsigned char, _Vector<256, int>, _Vector<64, char>, _Vector<64, char>)">;
 }

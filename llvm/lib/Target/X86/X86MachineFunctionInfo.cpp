@@ -40,13 +40,15 @@ void X86MachineFunctionInfo::anchor() { }
 
 void X86MachineFunctionInfo::setACEProgModel(const MachineFunction *MF,
                                              ACEProgModelEnum Model) {
-  // The two models need different configurations of the same tiles, so report
-  // a function using both rather than honour whichever model came last.
+  // The two models configure the same tiles differently, so reject a mix once.
   if (ACEProgModel != ACEProgModelEnum::ACE_None && ACEProgModel != Model) {
-    const Function &F = MF->getFunction();
-    F.getContext().diagnose(DiagnosticInfoUnsupported(
-        F, "ACE tile operations mix the macro and the managed programming "
-           "model; a function can use only one of them"));
+    if (!ReportedACEProgModelMix) {
+      ReportedACEProgModelMix = true;
+      const Function &F = MF->getFunction();
+      F.getContext().diagnose(DiagnosticInfoUnsupported(
+          F, "ACE tile operations mix the macro and the managed programming "
+             "model; a function can use only one of them"));
+    }
     return;
   }
   ACEProgModel = Model;
