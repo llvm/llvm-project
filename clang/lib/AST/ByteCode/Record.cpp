@@ -20,7 +20,7 @@ Record::Record(const RecordDecl *Decl, ArrayRef<Base> Bases,
       IsAnonymousUnion(IsUnion && Decl->isAnonymousStructOrUnion()),
       HasPtrField(HasPtrField) {
   for (const Base &B : this->Bases)
-    BaseMap[B.Decl] = &B;
+    BaseMap[cast<RecordDecl>(B.Decl->getFirstDecl())] = &B;
 }
 
 std::string Record::getName() const {
@@ -39,7 +39,7 @@ bool Record::hasTrivialDtor() const {
 }
 
 const Record::Field *Record::findField(unsigned Offset) const {
-  if (auto It = llvm::find_if(
+  if (const auto *It = llvm::find_if(
           Fields,
           [=](const Record::Field &F) -> bool { return F.Offset == Offset; });
       It != Fields.end())
@@ -48,23 +48,23 @@ const Record::Field *Record::findField(unsigned Offset) const {
 }
 
 const Record::Base *Record::getBase(const RecordDecl *RD) const {
-  auto It = BaseMap.find(RD);
+  auto It = BaseMap.find(cast<RecordDecl>(RD->getFirstDecl()));
   assert(It != BaseMap.end() && "Missing base");
   return It->second;
 }
 
 const Record::Base *Record::getBaseOrNull(const RecordDecl *RD) const {
-  return BaseMap.lookup(RD);
+  return BaseMap.lookup(cast<RecordDecl>(RD->getFirstDecl()));
 }
 
 const Record::Base *Record::getBase(QualType T) const {
   if (auto *RD = T->getAsCXXRecordDecl())
-    return BaseMap.lookup(RD);
+    return BaseMap.lookup(cast<RecordDecl>(RD->getFirstDecl()));
   return nullptr;
 }
 
 const Record::Base *Record::findBase(unsigned Offset) const {
-  if (auto It = llvm::find_if(
+  if (const auto *It = llvm::find_if(
           Bases,
           [=](const Record::Base &B) -> bool { return B.Offset == Offset; });
       It != Bases.end())
@@ -73,10 +73,10 @@ const Record::Base *Record::findBase(unsigned Offset) const {
 }
 
 const Record::Base *Record::findVirtualBase(const RecordDecl *FD) const {
-  if (auto *It = llvm::find_if(
+  if (const auto *It = llvm::find_if(
           VirtualBases,
           [=](const Record::Base &B) -> bool { return B.Decl == FD; });
-      It != Bases.end())
+      It != VirtualBases.end())
     return &*It;
   return nullptr;
 }

@@ -1,0 +1,69 @@
+# RUN: llc -mtriple=aarch64 -run-pass=aarch64-prelegalizer-combiner -denormal-fp-math=ieee %s -o - | FileCheck %s --check-prefix=IEEE
+# RUN: llc -mtriple=aarch64 -run-pass=aarch64-prelegalizer-combiner -denormal-fp-math=preserve-sign %s -o - | FileCheck %s --check-prefix=NONIEEE
+# RUN: llc -mtriple=aarch64 -run-pass=aarch64-prelegalizer-combiner -denormal-fp-math=positive-zero %s -o - | FileCheck %s --check-prefix=NONIEEE
+# RUN: llc -mtriple=aarch64 -run-pass=aarch64-prelegalizer-combiner -denormal-fp-math=dynamic %s -o - | FileCheck %s --check-prefix=NONIEEE
+# RUN: llc -mtriple=aarch64 -run-pass=aarch64-prelegalizer-combiner -denormal-fp-math=ieee -denormal-fp-math-f32=preserve-sign %s -o - | FileCheck %s --check-prefix=NONIEEE
+
+# Vector FP constant folding uses IEEE denormals. 0x36A0000000000000 is the
+# smallest f32 subnormal (2^-149). Adding it to itself is 2^-148 under IEEE,
+# but flush-to-zero treats both inputs as zero. Dynamic mode is also unknown,
+# so neither mode may fold. Scalar folds are intentionally unchanged.
+---
+name:            fadd_vector_denormal
+legalized:       true
+body:             |
+  bb.1.entry:
+    ; IEEE-LABEL: name: fadd_vector_denormal
+    ; IEEE: [[SUM:%[0-9]+]]:_(f32) = G_FCONSTANT float 2.802600e-45
+    ; IEEE-NEXT: %res:_(<2 x f32>) = G_BUILD_VECTOR [[SUM]](f32), [[SUM]](f32)
+    ; IEEE-NOT: G_FADD
+    ; NONIEEE-LABEL: name: fadd_vector_denormal
+    ; NONIEEE: %res:_(<2 x f32>) = G_FADD
+    ; NONIEEE-NOT: float 2.802600e-45
+    %denorm:_(f32) = G_FCONSTANT float 0x36A0000000000000
+    %av:_(<2 x f32>) = G_BUILD_VECTOR %denorm(f32), %denorm(f32)
+    %res:_(<2 x f32>) = G_FADD %av, %av
+    $d0 = COPY %res(<2 x f32>)
+    RET_ReallyLR implicit $d0
+
+...
+---
+name:            fneg_vector_denormal
+legalized:       true
+body:             |
+  bb.1.entry:
+    ; IEEE-LABEL: name: fneg_vector_denormal
+    ; IEEE: [[NEG:%[0-9]+]]:_(f32) = G_FCONSTANT float -1.401300e-45
+    ; IEEE-NEXT: %res:_(<2 x f32>) = G_BUILD_VECTOR [[NEG]](f32), [[NEG]](f32)
+    ; IEEE-NOT: G_FNEG
+    ; NONIEEE-LABEL: name: fneg_vector_denormal
+    ; NONIEEE: %res:_(<2 x f32>) = G_FNEG
+    ; NONIEEE-NOT: float -1.401300e-45
+    %denorm:_(f32) = G_FCONSTANT float 0x36A0000000000000
+    %av:_(<2 x f32>) = G_BUILD_VECTOR %denorm(f32), %denorm(f32)
+    %res:_(<2 x f32>) = G_FNEG %av
+    $d0 = COPY %res(<2 x f32>)
+    RET_ReallyLR implicit $d0
+
+...
+---
+name:            fma_vector_denormal
+legalized:       true
+body:             |
+  bb.1.entry:
+    ; IEEE-LABEL: name: fma_vector_denormal
+    ; IEEE: [[SUM:%[0-9]+]]:_(f32) = G_FCONSTANT float 2.802600e-45
+    ; IEEE-NEXT: %res:_(<2 x f32>) = G_BUILD_VECTOR [[SUM]](f32), [[SUM]](f32)
+    ; IEEE-NOT: G_FMA
+    ; NONIEEE-LABEL: name: fma_vector_denormal
+    ; NONIEEE: %res:_(<2 x f32>) = G_FMA
+    ; NONIEEE-NOT: float 2.802600e-45
+    %denorm:_(f32) = G_FCONSTANT float 0x36A0000000000000
+    %one:_(f32) = G_FCONSTANT float 1.0
+    %av:_(<2 x f32>) = G_BUILD_VECTOR %denorm(f32), %denorm(f32)
+    %bv:_(<2 x f32>) = G_BUILD_VECTOR %one(f32), %one(f32)
+    %res:_(<2 x f32>) = G_FMA %av, %bv, %av
+    $d0 = COPY %res(<2 x f32>)
+    RET_ReallyLR implicit $d0
+
+...

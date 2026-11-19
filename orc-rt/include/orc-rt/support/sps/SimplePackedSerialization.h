@@ -36,10 +36,12 @@
 
 #include "orc-rt/support/Error.h"
 #include "orc-rt/support/ExecutorAddress.h"
+#include "orc-rt/support/StringPool.h"
 #include "orc-rt/support/bit.h"
 #include "orc-rt/support/iterator_range.h"
 #include "orc-rt/support/span.h"
 
+#include <cassert>
 #include <cstring>
 #include <limits>
 #include <optional>
@@ -557,6 +559,28 @@ public:
       return false;
     S = {Data, static_cast<size_t>(Size)};
     return true;
+  }
+};
+
+/// Serialization for interned strings (StringPool::Ptr and WeakPtr).
+///
+/// Serializes the string's value, not the address of its pool entry, so the
+/// wire format is the same as for regular strings. Serialization only:
+/// interning requires a StringPool, which deserialization has no way to
+/// obtain. Deserialize to std::string and intern the result instead.
+template <typename PtrT>
+class SPSSerializationTraits<
+    SPSString, PtrT,
+    std::enable_if_t<std::is_base_of_v<StringPool::PtrBase, PtrT>>> {
+public:
+  static size_t size(const PtrT &S) {
+    assert(S && "Cannot serialize a null StringPool pointer");
+    return SPSArgList<SPSString>::size(*S);
+  }
+
+  static bool serialize(SPSOutputBuffer &OB, const PtrT &S) {
+    assert(S && "Cannot serialize a null StringPool pointer");
+    return SPSArgList<SPSString>::serialize(OB, *S);
   }
 };
 

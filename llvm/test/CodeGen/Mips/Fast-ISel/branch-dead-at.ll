@@ -8,13 +8,13 @@ define void @cond_br(i1 %c) {
   ; CHECK-LABEL: name: cond_br
   ; CHECK: bb.0 (%ir-block.0):
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK-NEXT:   liveins: $a0
+  ; CHECK-NEXT:   liveins: $r4
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32 = COPY $a0
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32 = COPY $r4
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr32 = COPY [[COPY]]
   ; CHECK-NEXT:   [[ANDi:%[0-9]+]]:gpr32 = ANDi [[COPY1]], 1
-  ; CHECK-NEXT:   BGTZ [[ANDi]], %bb.1, implicit-def dead $at
-  ; CHECK-NEXT:   B %bb.2, implicit-def dead $at
+  ; CHECK-NEXT:   BGTZ [[ANDi]], %bb.1, implicit-def dead $r1
+  ; CHECK-NEXT:   B %bb.2, implicit-def dead $r1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1 (%ir-block.1):
   ; CHECK-NEXT:   RetRA

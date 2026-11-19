@@ -58,13 +58,13 @@ class BuiltinDebugTrapTestCase(TestBase):
         # "global" is now 10.
         self.assertEqual(global_value.GetValueAsUnsigned(), 10)
 
-        # Change the handling of SIGILL on Linux - do not pass it to the
-        # inferior, but stop and notify lldb. If we don't do this, the
-        # inferior will receive the SIGILL and be terminated. On x86_64,
-        # __builtin_trap() emits UD2; on ARM it emits UDF — both generate
-        # SIGILL. AArch64 uses BRK #1 (SIGTRAP, already suppressed by
-        # default), so this is harmless there.
-        if platform == "linux":
+        # Change the handling of SIGILL on the platforms that report traps as
+        # signals (Linux, the BSDs) - do not pass it to the inferior, but stop
+        # and notify lldb. If we don't do this, the inferior will receive the
+        # SIGILL and be terminated. On x86_64, __builtin_trap() emits UD2; on
+        # ARM it emits UDF — both generate SIGILL. AArch64 uses BRK #1
+        # (SIGTRAP, already suppressed by default), so this is harmless there.
+        if platform_stop_reason == lldb.eStopReasonSignal:
             self.runCmd("process handle -p false SIGILL")
 
         # We should be at the same point as before -- cannot advance

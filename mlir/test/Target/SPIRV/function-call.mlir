@@ -1,4 +1,4 @@
-// RUN: mlir-translate -no-implicit-module -test-spirv-roundtrip %s | FileCheck %s
+// RUN: mlir-translate --no-implicit-module --split-input-file --test-spirv-roundtrip %s | FileCheck %s
 
 // RUN: %if spirv-tools %{ rm -rf %t %}
 // RUN: %if spirv-tools %{ mkdir %t %}
@@ -54,5 +54,26 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, VariablePointers
       %1 = spirv.IAdd %0, %one : i32
       spirv.Store "Function" %arg0, %1 : i32
       spirv.Return
+  }
+}
+
+// -----
+
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
+  spirv.func @callee() -> f32 "None" {
+    %0 = spirv.Constant 1.0 : f32
+    spirv.ReturnValue %0 : f32
+  }
+  // CHECK-LABEL: spirv.func @call_decorated
+  spirv.func @call_decorated() -> f32 "None" {
+    // CHECK: spirv.FunctionCall @callee() {relaxed_precision} : () -> f32
+    %0 = spirv.FunctionCall @callee() {relaxed_precision} : () -> f32
+    spirv.ReturnValue %0 : f32
+  }
+  // CHECK-LABEL: spirv.func @call_multi_decorated
+  spirv.func @call_multi_decorated() -> f32 "None" {
+    // CHECK: spirv.FunctionCall @callee() {no_contraction, relaxed_precision} : () -> f32
+    %0 = spirv.FunctionCall @callee() {no_contraction, relaxed_precision} : () -> f32
+    spirv.ReturnValue %0 : f32
   }
 }

@@ -51,13 +51,6 @@ STATISTIC(NumTransformedToWInstrs,
 STATISTIC(NumTransformedToNonWInstrs,
           "Number of instructions transformed to non-W-ops");
 
-static cl::opt<bool> EnableSExtWRemoval("riscv-sextw-removal",
-                                        cl::desc("Enable removal of sext.w"),
-                                        cl::init(true), cl::Hidden);
-static cl::opt<bool> EnableStripWSuffix("riscv-strip-w-suffix",
-                                        cl::desc("Enable strip W suffix"),
-                                        cl::init(true), cl::Hidden);
-
 namespace {
 
 class RISCVOptWInstrsImpl {
@@ -338,6 +331,7 @@ static bool hasAllNBitUsers(const MachineInstr &OrigMI,
       case RISCV::BSETI:
       case RISCV::BCLRI:
       case RISCV::BINVI:
+      case RISCV::PseudoMERGE:
         Worklist.emplace_back(UserMI, Bits);
         break;
 
@@ -593,6 +587,7 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
     case RISCV::PseudoCCORN:
     case RISCV::PseudoCCXNOR:
     case RISCV::PHI:
+    case RISCV::PseudoMERGE:
     case RISCV::MERGE:
     case RISCV::MVM:
     case RISCV::MVMN: {
@@ -624,6 +619,7 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
         B = 1;
         E = 4;
         break;
+      case RISCV::PseudoMERGE:
       case RISCV::MERGE:
       case RISCV::MVM:
       case RISCV::MVMN:
@@ -746,7 +742,7 @@ bool RISCVOptWInstrsImpl::removeSExtWInstrs(MachineFunction &MF,
                                             const RISCVInstrInfo &TII,
                                             const RISCVSubtarget &ST,
                                             MachineRegisterInfo &MRI) {
-  if (!EnableSExtWRemoval)
+  if (!ST.getCLOpts().sextw_removal)
     return false;
 
   bool MadeChange = false;
@@ -793,7 +789,6 @@ bool RISCVOptWInstrsImpl::removeSExtWInstrs(MachineFunction &MF,
 
       LLVM_DEBUG(dbgs() << "Removing redundant sign-extension\n");
       MRI.replaceRegWith(DstReg, SrcReg);
-      MRI.clearKillFlags(SrcReg);
       MI.eraseFromParent();
       ++NumRemovedSExtW;
       MadeChange = true;
@@ -809,7 +804,7 @@ bool RISCVOptWInstrsImpl::canonicalizeWSuffixes(MachineFunction &MF,
                                                 const RISCVInstrInfo &TII,
                                                 const RISCVSubtarget &ST,
                                                 MachineRegisterInfo &MRI) {
-  bool ShouldStripW = EnableStripWSuffix && !ST.preferWInst();
+  bool ShouldStripW = ST.getCLOpts().strip_w_suffix && !ST.preferWInst();
   bool ShouldPreferW = ST.preferWInst();
   bool MadeChange = false;
 

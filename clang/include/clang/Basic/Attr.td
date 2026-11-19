@@ -266,6 +266,7 @@ class DeclArgument<DeclNode kind, string name, bit opt = 0, bit fake = 0>
 //
 class OMPTraitInfoArgument<string name> : Argument<name, 0>;
 class VariadicOMPInteropInfoArgument<string name> : Argument<name, 0>;
+class VariadicOMPAdjustArgsDescriptorArgument<string name> : Argument<name, 0>;
 
 class TypeArgument<string name, bit opt = 0> : Argument<name, opt>;
 class UnsignedArgument<string name, bit opt = 0> : Argument<name, opt>;
@@ -481,6 +482,7 @@ def TargetAMDGPU : TargetArch<["amdgpu", "r600"]>;
 def TargetAnyArm : TargetArch<!listconcat(TargetARM.Arches, TargetAArch64.Arches)>;
 def TargetAVR : TargetArch<["avr"]>;
 def TargetBPF : TargetArch<["bpfel", "bpfeb"]>;
+def TargetHexagon : TargetArch<["hexagon"]>;
 def TargetLoongArch : TargetArch<["loongarch32", "loongarch64"]>;
 def TargetMips32 : TargetArch<["mips", "mipsel"]>;
 def TargetAnyMips : TargetArch<["mips", "mipsel", "mips64", "mips64el"]>;
@@ -2576,7 +2578,7 @@ def AMDGPUAvailableVisible : StmtAttr, TargetSpecificAttr<TargetAMDGPU> {
 def BPFPreserveAccessIndex : InheritableAttr,
                              TargetSpecificAttr<TargetBPF>  {
   let Spellings = [Clang<"preserve_access_index">];
-  let Subjects = SubjectList<[Record], ErrorDiag>;
+  let Subjects = SubjectList<[Record, Enum], ErrorDiag>;
   let Documentation = [BPFPreserveAccessIndexDocs];
   let LangOpts = [COnly];
 }
@@ -3693,6 +3695,14 @@ def RISCVVLSCC: DeclOrTypeAttr, TargetSpecificAttr<TargetRISCV> {
  let Documentation = [RISCVVLSCCDocs];
 }
 
+def HexagonHLXVectorStackLimit : InheritableAttr,
+                                 TargetSpecificAttr<TargetHexagon> {
+  let Spellings = [Clang<"hlx_vector_stack_limit">];
+  let Subjects = SubjectList<[Function]>;
+  let Args = [UnsignedArgument<"Limit">];
+  let Documentation = [HexagonHLXVectorStackLimitDocs];
+}
+
 def Target : InheritableAttr {
   let Spellings = [GCC<"target">];
   let Args = [StringArgument<"featuresStr">];
@@ -4215,7 +4225,7 @@ def AssertCapability : InheritableAttr {
                    GNU<"assert_exclusive_lock">,
                    GNU<"assert_shared_lock">];
   let Subjects = SubjectList<[Function, Var, Field]>;
-  let LateParsed = LateAttrParseStandard;
+  let LateParsed = LateAttrParseExperimentalExt;
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
   let InheritEvenIfAlreadyPresent = 1;
@@ -4234,7 +4244,7 @@ def AcquireCapability : InheritableAttr {
                    GNU<"exclusive_lock_function">,
                    GNU<"shared_lock_function">];
   let Subjects = SubjectList<[Function, Var, Field]>;
-  let LateParsed = LateAttrParseStandard;
+  let LateParsed = LateAttrParseExperimentalExt;
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
   let InheritEvenIfAlreadyPresent = 1;
@@ -4253,7 +4263,7 @@ def TryAcquireCapability : InheritableAttr {
                    GNU<"exclusive_trylock_function">,
                    GNU<"shared_trylock_function">];
   let Subjects = SubjectList<[Function, Var, Field]>;
-  let LateParsed = LateAttrParseStandard;
+  let LateParsed = LateAttrParseExperimentalExt;
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
   let InheritEvenIfAlreadyPresent = 1;
@@ -4272,7 +4282,7 @@ def ReleaseCapability : InheritableAttr {
                    Clang<"release_generic_capability", 0>,
                    Clang<"unlock_function", 0>];
   let Subjects = SubjectList<[Function, Var, Field]>;
-  let LateParsed = LateAttrParseStandard;
+  let LateParsed = LateAttrParseExperimentalExt;
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
   let InheritEvenIfAlreadyPresent = 1;
@@ -4294,7 +4304,7 @@ def RequiresCapability : InheritableAttr {
                    Clang<"shared_locks_required", 0>];
   let Args = [VariadicExprArgument<"Args">];
   let AcceptsExprPack = 1;
-  let LateParsed = LateAttrParseStandard;
+  let LateParsed = LateAttrParseExperimentalExt;
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
   let InheritEvenIfAlreadyPresent = 1;
@@ -4361,10 +4371,11 @@ def AcquiredBefore : InheritableAttr {
 def LockReturned : InheritableAttr {
   let Spellings = [GNU<"lock_returned">];
   let Args = [ExprArgument<"Arg">];
-  let LateParsed = LateAttrParseStandard;
+  let LateParsed = LateAttrParseExperimentalExt;
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
-  let Subjects = SubjectList<[Function]>;
+  let ParseArgsInFunctionScope = 1;
+  let Subjects = SubjectList<[Function, Var, Field]>;
   let Documentation = [Undocumented];
 }
 
@@ -4372,7 +4383,7 @@ def LocksExcluded : InheritableAttr {
   let Spellings = [GNU<"locks_excluded">];
   let Args = [VariadicExprArgument<"Args">];
   let AcceptsExprPack = 1;
-  let LateParsed = LateAttrParseStandard;
+  let LateParsed = LateAttrParseExperimentalExt;
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
   let InheritEvenIfAlreadyPresent = 1;
@@ -4705,12 +4716,16 @@ def MSVtorDisp : InheritableAttr {
 
 def InitSeg : Attr {
   let Spellings = [Pragma<"", "init_seg">];
-  let Args = [StringArgument<"Section">];
+  let Args = [StringArgument<"Section">,
+              DeclArgument<Function, "Func", /*optional=*/1>];
   let SemaHandler = 0;
   let Documentation = [InitSegDocs];
   let AdditionalMembers = [{
   void printPrettyPragma(raw_ostream &OS, const PrintingPolicy &Policy) const {
-    OS << " (" << getSection() << ')';
+    OS << " (" << getSection();
+    if (const auto *FD = getFunc())
+      OS << ", " << FD->getName();
+    OS << ')';
   }
   }];
 }
@@ -4950,9 +4965,7 @@ def OMPDeclareVariant : InheritableAttr {
   let Args = [
     ExprArgument<"VariantFuncRef">,
     OMPTraitInfoArgument<"TraitInfos">,
-    VariadicExprArgument<"AdjustArgsNothing">,
-    VariadicExprArgument<"AdjustArgsNeedDevicePtr">,
-    VariadicExprArgument<"AdjustArgsNeedDeviceAddr">,
+    VariadicOMPAdjustArgsDescriptorArgument<"AdjustArgs">,
     VariadicOMPInteropInfoArgument<"AppendArgs">,
   ];
   let AdditionalMembers = [{
@@ -5460,6 +5473,14 @@ def HLSLVkLocation : HLSLAnnotationAttr {
   let Subjects = SubjectList<[ParmVar, Field, Function], ErrorDiag>;
   let LangOpts = [HLSL];
   let Documentation = [HLSLVkLocationDocs];
+}
+
+def HLSLVkBuiltIn : HLSLAnnotationAttr, TargetSpecificAttr<TargetSPIRV> {
+  let Spellings = [CXX11<"vk", "builtin">];
+  let Args = [StringArgument<"BuiltIn">];
+  let Subjects = SubjectList<[ParmVar, Field, Function], ErrorDiag>;
+  let LangOpts = [HLSL];
+  let Documentation = [HLSLVkBuiltInDocs];
 }
 
 // `row_major` / `column_major` are HLSL keywords that select the in-memory

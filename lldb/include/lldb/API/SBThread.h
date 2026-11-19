@@ -91,7 +91,16 @@ public:
 
   size_t GetStopDescription(char *dst_or_null, size_t dst_len);
 
+  /// Get the value the function returned, if the thread stopped because it
+  /// stepped out of a function. Invalid if the function threw an error
+  /// instead. See GetStopErrorValue.
   SBValue GetStopReturnValue();
+
+  /// Get the error the function threw, if the thread stopped because it
+  /// stepped out of a function that threw instead of returning. Only
+  /// languages whose runtime can find thrown errors, such as Swift, report
+  /// one.
+  SBValue GetStopErrorValue();
 
   lldb::tid_t GetThreadID() const;
 
@@ -212,7 +221,7 @@ public:
 
   /// Similar to \a GetDescription() but the format of the description can be
   /// configured via the \p format parameter. See
-  /// https://lldb.llvm.org/use/formatting.html for more information on format
+  /// \lldbformatting for more information on format
   /// strings.
   ///
   /// \param[in] format

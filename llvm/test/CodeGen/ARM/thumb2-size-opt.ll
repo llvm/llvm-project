@@ -86,7 +86,7 @@ entry:
 define i32 @bundled_instruction(ptr %addr, ptr %addr2, i1 %tst) minsize {
 ; CHECK-LABEL: bundled_instruction:
 ; CHECK: itee ne
-; CHECK: ldmeq r3!, {{{r[0-9]+}}}
+; CHECK: ldmeq r{{[0-7]}}!, {{{r[0-9]+}}}
   br i1 %tst, label %true, label %false
 
 true:

@@ -11,8 +11,8 @@ define amdgpu_kernel void @_start() {
 ; CHECK-LABEL: _start:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_add_u32 flat_scratch_lo, s12, s17
-; CHECK-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
 ; CHECK-NEXT:    s_mov_b64 s[0:1], 0
+; CHECK-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
 ; CHECK-NEXT:  .LBB0_1: ; %dynamic-memcpy-expansion-main-body
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    s_getpc_b64 s[2:3]
@@ -39,7 +39,7 @@ define amdgpu_kernel void @_start() {
 ; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[2:5]
 ; CHECK-NEXT:    s_cbranch_vccnz .LBB0_1
 ; CHECK-NEXT:  ; %bb.2: ; %dynamic-memcpy-expansion-residual-cond
-; CHECK-NEXT:    s_cmp_eq_u64 13, 0
+; CHECK-NEXT:    s_cmp_eq_u32 13, 0
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB0_5
 ; CHECK-NEXT:  ; %bb.3: ; %dynamic-memcpy-expansion-residual-body.preheader
 ; CHECK-NEXT:    s_sub_u32 s4, 29, 13
