@@ -6212,6 +6212,18 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::VECTOR_COMPRESS:
     return false;
 
+  case ISD::VECREDUCE_AND:
+  case ISD::VECREDUCE_OR:
+  case ISD::VECREDUCE_XOR:
+  case ISD::VECREDUCE_SMIN:
+  case ISD::VECREDUCE_SMAX:
+  case ISD::VECREDUCE_UMIN:
+  case ISD::VECREDUCE_UMAX:
+    // If the result type is wider than the element type, the top bits are
+    // unspecified.
+    return Op.getValueType() !=
+           Op.getOperand(0).getValueType().getVectorElementType();
+
   default:
     // Allow the target to implement this method for its nodes.
     if (Opcode >= ISD::BUILTIN_OP_END || Opcode == ISD::INTRINSIC_WO_CHAIN ||

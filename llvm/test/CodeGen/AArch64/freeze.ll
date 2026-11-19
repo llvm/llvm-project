@@ -572,8 +572,7 @@ define i1 @freeze_vecreduce_and(<8 x i16> %a0) nounwind {
 ; CHECK-SD-NEXT:    fmov x8, d0
 ; CHECK-SD-NEXT:    and x8, x8, x8, lsr #32
 ; CHECK-SD-NEXT:    lsr x9, x8, #16
-; CHECK-SD-NEXT:    and w8, w8, w9
-; CHECK-SD-NEXT:    tst w8, #0xffff
+; CHECK-SD-NEXT:    tst w8, w9
 ; CHECK-SD-NEXT:    cset w0, eq
 ; CHECK-SD-NEXT:    ret
 ;
@@ -604,9 +603,9 @@ define i1 @freeze_vecreduce_or(<8 x i16> %a0) nounwind {
 ; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    fmov x8, d0
-; CHECK-SD-NEXT:    orr x8, x8, x8, lsr #32
-; CHECK-SD-NEXT:    lsr x9, x8, #16
+; CHECK-SD-NEXT:    lsr x9, x8, #32
 ; CHECK-SD-NEXT:    orr w8, w8, w9
+; CHECK-SD-NEXT:    orr w8, w8, w8, lsr #16
 ; CHECK-SD-NEXT:    tst w8, #0xffff
 ; CHECK-SD-NEXT:    cset w0, eq
 ; CHECK-SD-NEXT:    ret
@@ -638,9 +637,9 @@ define i1 @freeze_vecreduce_xor(<8 x i16> %a0) nounwind {
 ; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    fmov x8, d0
-; CHECK-SD-NEXT:    eor x8, x8, x8, lsr #32
-; CHECK-SD-NEXT:    lsr x9, x8, #16
+; CHECK-SD-NEXT:    lsr x9, x8, #32
 ; CHECK-SD-NEXT:    eor w8, w8, w9
+; CHECK-SD-NEXT:    eor w8, w8, w8, lsr #16
 ; CHECK-SD-NEXT:    tst w8, #0xffff
 ; CHECK-SD-NEXT:    cset w0, eq
 ; CHECK-SD-NEXT:    ret
@@ -670,7 +669,7 @@ define i1 @freeze_vecreduce_smin(<8 x i16> %a0) nounwind {
 ; CHECK-SD-LABEL: freeze_vecreduce_smin:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    sminv h0, v0.8h
-; CHECK-SD-NEXT:    umov w8, v0.h[0]
+; CHECK-SD-NEXT:    fmov w8, s0
 ; CHECK-SD-NEXT:    tst w8, #0xffff
 ; CHECK-SD-NEXT:    cset w0, eq
 ; CHECK-SD-NEXT:    ret
@@ -693,7 +692,7 @@ define i1 @freeze_vecreduce_smax(<8 x i16> %a0) nounwind {
 ; CHECK-SD-LABEL: freeze_vecreduce_smax:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    smaxv h0, v0.8h
-; CHECK-SD-NEXT:    umov w8, v0.h[0]
+; CHECK-SD-NEXT:    fmov w8, s0
 ; CHECK-SD-NEXT:    tst w8, #0xffff
 ; CHECK-SD-NEXT:    cset w0, eq
 ; CHECK-SD-NEXT:    ret
@@ -716,7 +715,7 @@ define i1 @freeze_vecreduce_umin(<8 x i16> %a0) nounwind {
 ; CHECK-SD-LABEL: freeze_vecreduce_umin:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    uminv h0, v0.8h
-; CHECK-SD-NEXT:    umov w8, v0.h[0]
+; CHECK-SD-NEXT:    fmov w8, s0
 ; CHECK-SD-NEXT:    tst w8, #0xffff
 ; CHECK-SD-NEXT:    cset w0, eq
 ; CHECK-SD-NEXT:    ret
@@ -739,7 +738,7 @@ define i1 @freeze_vecreduce_umax(<8 x i16> %a0) nounwind {
 ; CHECK-SD-LABEL: freeze_vecreduce_umax:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    umaxv h0, v0.8h
-; CHECK-SD-NEXT:    umov w8, v0.h[0]
+; CHECK-SD-NEXT:    fmov w8, s0
 ; CHECK-SD-NEXT:    tst w8, #0xffff
 ; CHECK-SD-NEXT:    cset w0, eq
 ; CHECK-SD-NEXT:    ret
