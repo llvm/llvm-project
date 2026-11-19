@@ -768,7 +768,8 @@ StmtResult Parser::ParseLabeledStatement(ParsedAttributes &Attrs,
   }
 
   // The label may have no statement following it
-  if (SubStmt.isUnset() && Tok.is(tok::r_brace)) {
+  if (SubStmt.isUnset() && Tok.is(tok::r_brace) &&
+      isCompoundStatementContext(StmtCtx)) {
     DiagnoseLabelAtEndOfCompoundStatement();
     SubStmt = Actions.ActOnNullStmt(ColonLoc);
   }
@@ -926,7 +927,7 @@ StmtResult Parser::ParseCaseStatement(ParsedStmtContext StmtCtx,
   // If we found a non-case statement, start by parsing it.
   StmtResult SubStmt;
 
-  if (Tok.is(tok::r_brace)) {
+  if (Tok.is(tok::r_brace) && isCompoundStatementContext(StmtCtx)) {
     // "switch (X) { case 4: }", is valid and is treated as if label was
     // followed by a null statement.
     DiagnoseLabelAtEndOfCompoundStatement();
@@ -975,7 +976,7 @@ StmtResult Parser::ParseDefaultStatement(ParsedStmtContext StmtCtx) {
 
   StmtResult SubStmt;
 
-  if (Tok.is(tok::r_brace)) {
+  if (Tok.is(tok::r_brace) && isCompoundStatementContext(StmtCtx)) {
     // "switch (X) {... default: }", is valid and is treated as if label was
     // followed by a null statement.
     DiagnoseLabelAtEndOfCompoundStatement();

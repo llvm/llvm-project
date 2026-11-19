@@ -7516,6 +7516,14 @@ public:
 
   void DiagnoseLabelAtEndOfCompoundStatement();
 
+  /// Whether a label in this context may be followed directly by the closing
+  /// brace, i.e. the label appears in a compound statement rather than as a
+  /// substatement such as the body of an 'if' or 'switch' without braces.
+  static bool isCompoundStatementContext(ParsedStmtContext StmtCtx) {
+    return (StmtCtx & ParsedStmtContext::AllowDeclarationsInC) !=
+           ParsedStmtContext();
+  }
+
   /// Consume any extra semi-colons resulting in null statements,
   /// returning true if any tok::semi were consumed.
   bool ConsumeNullStmt(StmtVector &Stmts);

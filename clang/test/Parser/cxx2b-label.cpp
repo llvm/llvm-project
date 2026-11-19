@@ -29,3 +29,21 @@ int test_label_in_switch(int v) {
 
     return 0;
 }
+
+// A label that is the substatement of a selection or iteration statement is
+// not at the end of a compound statement, so it still needs a statement.
+void test_label_as_substatement(int v) {
+  if (v) L1:
+} // expected-error {{expected statement}}
+
+void test_case_as_substatement(int v) {
+  switch (v) case 1:
+} // expected-error {{expected statement}}
+
+void test_default_as_substatement(int v) {
+  switch (v) default:
+} // expected-error {{expected statement}}
+
+void test_label_as_loop_body(int v) {
+  while (v) L2:
+} // expected-error {{expected statement}}

@@ -952,6 +952,7 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed conversion from `float` to `bool` in `__builtin_convertvector`. (#GH228649)
 - Fixed `-print-dependency-directives-minimized-source` output for object-like macros starting with '(' so that it is not incorrectly turned into a function-like macro.
 - Fixed an exponential time-increase bug when collecting argument dependent lookup candidates when the same type is used several times at each level.
+- Clang no longer accepts a label, `case` or `default` label with no following statement as the substatement of an `if`, `switch` or loop, such as `if (a) L: }`. A label may only be followed directly by `}` when it appears in a compound statement. (#GH237246)
 
 #### Bug Fixes to Compiler Builtins
 
