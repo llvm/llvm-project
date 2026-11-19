@@ -49,7 +49,7 @@ add_libc_test(
     libc.hdr.types.struct_sockaddr_in
     libc.hdr.types.struct_sockaddr_in6
     libc.hdr.types.struct_sockaddr_un
-    libc.src.arpa.inet.htonl
+    libc.src.__support.net.byte_order
     libc.src.sys.socket.socket
     libc.src.sys.socket.bind
     libc.src.sys.socket.getsockname

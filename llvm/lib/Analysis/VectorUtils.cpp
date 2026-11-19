@@ -59,6 +59,8 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   case Intrinsic::ssub_sat:
   case Intrinsic::uadd_sat:
   case Intrinsic::usub_sat:
+  case Intrinsic::sshl_sat:
+  case Intrinsic::ushl_sat:
   case Intrinsic::smul_fix:
   case Intrinsic::smul_fix_sat:
   case Intrinsic::umul_fix:

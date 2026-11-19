@@ -26,7 +26,7 @@ define float @fma_f32(float %a, float %b, float %c) {
 ; R6-O32-NEXT:    jr $ra
 ; R6-O32-NEXT:    maddf.s $f0, $f12, $f14
 ; R2: jal fmaf
-; SOFT: jal fmaf
+; SOFT: balc fmaf
 ; MMR6: balc fmaf
 ; CHECK: .end fma_f32
   %r = call float @llvm.fma.f32(float %a, float %b, float %c)
@@ -44,7 +44,7 @@ define float @msub_f32(float %a, float %b, float %c) {
 ; R6-O32-NEXT:    jr $ra
 ; R6-O32-NEXT:    msubf.s $f0, $f12, $f14
 ; R2: jal fmaf
-; SOFT: jal fmaf
+; SOFT: balc fmaf
 ; MMR6: balc fmaf
 ; CHECK: .end msub_f32
   %na = fneg float %a
@@ -63,7 +63,7 @@ define float @msub_commuted_f32(float %a, float %b, float %c) {
 ; R6-O32-NEXT:    jr $ra
 ; R6-O32-NEXT:    msubf.s $f0, $f14, $f12
 ; R2: jal fmaf
-; SOFT: jal fmaf
+; SOFT: balc fmaf
 ; MMR6: balc fmaf
 ; CHECK: .end msub_commuted_f32
   %nb = fneg float %b
@@ -84,8 +84,8 @@ define float @plain_f32(float %a, float %b, float %c) {
 ; R6-O32-NEXT:    jr $ra
 ; R6-O32-NEXT:    add.s $f0, $f0, $f1
 ; R2: madd.s
-; SOFT: jal __mulsf3
-; SOFT: jal __addsf3
+; SOFT: balc __mulsf3
+; SOFT: balc __addsf3
 ; MMR6: mul.s
 ; MMR6: add.s
 ; CHECK: .end plain_f32
@@ -107,8 +107,8 @@ define float @contract_f32(float %a, float %b, float %c) {
 ; R6-O32-NEXT:    jr $ra
 ; R6-O32-NEXT:    add.s $f0, $f0, $f1
 ; R2: madd.s
-; SOFT: jal __mulsf3
-; SOFT: jal __addsf3
+; SOFT: balc __mulsf3
+; SOFT: balc __addsf3
 ; MMR6: mul.s
 ; MMR6: add.s
 ; CHECK: .end contract_f32
@@ -122,7 +122,7 @@ define double @fma_f64(double %a, double %b, double %c) {
 ; MIR-LABEL: name: fma_f64
 ; MIR: nofpexcept MADDF_D
 ; SINGLE-LABEL: name: fma_f64
-; SINGLE: JAL &fma,
+; SINGLE: JAL_R6 &fma,
 ; R6-64:       # %bb.0:
 ; R6-64-NEXT:    mov.d $f0, $f14
 ; R6-64-NEXT:    jr $ra
@@ -132,7 +132,7 @@ define double @fma_f64(double %a, double %b, double %c) {
 ; R6-O32-NEXT:    jr $ra
 ; R6-O32-NEXT:    maddf.d $f0, $f12, $f14
 ; R2: jal fma{{$}}
-; SOFT: jal fma{{$}}
+; SOFT: balc fma{{$}}
 ; MMR6: balc fma{{$}}
 ; CHECK: .end fma_f64
   %r = call double @llvm.fma.f64(double %a, double %b, double %c)
@@ -150,7 +150,7 @@ define double @msub_f64(double %a, double %b, double %c) {
 ; R6-O32-NEXT:    jr $ra
 ; R6-O32-NEXT:    msubf.d $f0, $f12, $f14
 ; R2: jal fma{{$}}
-; SOFT: jal fma{{$}}
+; SOFT: balc fma{{$}}
 ; MMR6: balc fma{{$}}
 ; CHECK: .end msub_f64
   %na = fneg double %a
@@ -169,7 +169,7 @@ define double @msub_commuted_f64(double %a, double %b, double %c) {
 ; R6-O32-NEXT:    jr $ra
 ; R6-O32-NEXT:    msubf.d $f0, $f14, $f12
 ; R2: jal fma{{$}}
-; SOFT: jal fma{{$}}
+; SOFT: balc fma{{$}}
 ; MMR6: balc fma{{$}}
 ; CHECK: .end msub_commuted_f64
   %nb = fneg double %b
@@ -182,16 +182,15 @@ define double @msub_commuted_f64(double %a, double %b, double %c) {
 ; in assembly the first FMA executes in the call delay slot.
 define void @ordered_f32(float %a, float %b, float %c) strictfp {
 ; CHECK-LABEL: ordered_f32:
-; R6: jal observe
-; R6-NEXT: maddf.s
-; R6: msubf.s
+; R6: balc observe
+; R6-NEXT: msubf.s
 ; MIR-LABEL: name: ordered_f32
 ; MIR: :fgr32 = MADDF_S
-; MIR: JAL @observe
+; MIR: JAL_R6 @observe
 ; MIR: :fgr32 = MSUBF_S
 ; SINGLE-LABEL: name: ordered_f32
 ; SINGLE: :fgr32 = MADDF_S
-; SINGLE: JAL @observe
+; SINGLE: JAL_R6 @observe
 ; SINGLE: :fgr32 = MSUBF_S
 ; CHECK: .end ordered_f32
   %r0 = call float @llvm.experimental.constrained.fma.f32(float %a, float %b, float %c, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
@@ -203,17 +202,16 @@ define void @ordered_f32(float %a, float %b, float %c) strictfp {
 
 define void @ordered_f64(double %a, double %b, double %c) strictfp {
 ; CHECK-LABEL: ordered_f64:
-; R6: jal observe
-; R6-NEXT: maddf.d
-; R6: msubf.d
+; R6: balc observe
+; R6-NEXT: msubf.d
 ; MIR-LABEL: name: ordered_f64
 ; MIR: :fgr64 = MADDF_D
-; MIR: JAL @observe
+; MIR: JAL_R6 @observe
 ; MIR: :fgr64 = MSUBF_D
 ; SINGLE-LABEL: name: ordered_f64
-; SINGLE: JAL &fma,
-; SINGLE: JAL @observe
-; SINGLE: JAL &fma,
+; SINGLE: JAL_R6 &fma,
+; SINGLE: JAL_R6 @observe
+; SINGLE: JAL_R6 &fma,
 ; CHECK: .end ordered_f64
   %r0 = call double @llvm.experimental.constrained.fma.f64(double %a, double %b, double %c, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
   call void @observe()

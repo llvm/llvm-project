@@ -2707,10 +2707,17 @@ bool ScriptInterpreterPythonImpl::LoadScriptingModule(
   }
 
   // Finally, if we got a target passed in, then we should tell the new module
-  // about this target:
-  if (target_sp)
-    return SWIGBridge::LLDBSwigPythonCallModuleNewTarget(
+  // about this target. The target notes the stop hooks that
+  // __lldb_module_added_to_target adds, to run the ones added with
+  // --at-initial-stop once it returns (see
+  // Target::RunCollectedInitialStopHooks).
+  if (target_sp) {
+    const bool was_collecting = target_sp->SetCollectingHooks(true);
+    const bool success = SWIGBridge::LLDBSwigPythonCallModuleNewTarget(
         module_name.c_str(), m_dictionary_name.c_str(), target_sp);
+    target_sp->SetCollectingHooks(was_collecting);
+    return success;
+  }
 
   return true;
 }

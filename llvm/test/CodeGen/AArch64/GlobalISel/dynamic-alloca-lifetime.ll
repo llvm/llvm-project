@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple aarch64-unknown-unknown -global-isel \
-; RUN:     -no-stack-coloring=false -pass-remarks-missed=gisel* < %s \
+; RUN:     -stack-coloring=true -pass-remarks-missed=gisel* < %s \
 ; RUN:      2>&1 | FileCheck %s
 
 ; Same as the dynamic-alloca-lifetime.ll X86 test, which was used to fix a bug

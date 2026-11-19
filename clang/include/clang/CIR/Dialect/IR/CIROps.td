@@ -505,17 +505,11 @@ def CIR_DynamicCastOp : CIR_Op<"dyn_cast"> {
     cast operation. It is an optional `#cir.dyn_cast_info` attribute that is
     only present when the operation models a down-cast or a side-cast.
 
-    The `relative_layout` argument specifies whether the Itanium C++ ABI vtable
-    uses relative layout. It is only meaningful when the operation models a
-    cast-to-complete operation.
-
     Examples:
 
     ```
     %0 = cir.dyn_cast ptr %p : !cir.ptr<!rec_Base> -> !cir.ptr<!rec_Derived>
-    %1 = cir.dyn_cast ptr relative_layout %p : !cir.ptr<!rec_Base>
-              -> !cir.ptr<!rec_Derived>
-    %2 = cir.dyn_cast ref %r : !cir.ptr<!rec_Base> -> !cir.ptr<!rec_Derived>
+    %1 = cir.dyn_cast ref %r : !cir.ptr<!rec_Base> -> !cir.ptr<!rec_Derived>
               #cir.dyn_cast_info<
                 srcRtti = #cir.global_view<@_ZTI4Base> : !cir.ptr<!u8i>,
                 destRtti = #cir.global_view<@_ZTI7Derived> : !cir.ptr<!u8i>,
@@ -529,8 +523,7 @@ def CIR_DynamicCastOp : CIR_Op<"dyn_cast"> {
   let arguments = (ins
     CIR_DynamicCastKindAttr:$kind,
     CIR_PtrToRecordType:$src,
-    OptionalAttr<CIR_DynamicCastInfoAttr>:$info,
-    UnitAttr:$relative_layout
+    OptionalAttr<CIR_DynamicCastInfoAttr>:$info
   );
 
   let results = (outs
@@ -538,7 +531,7 @@ def CIR_DynamicCastOp : CIR_Op<"dyn_cast"> {
   );
 
   let assemblyFormat = [{
-    enum($kind) (`relative_layout` $relative_layout^)? $src
+    enum($kind) $src
     `:` qualified(type($src)) `->` qualified(type($result))
     (qualified($info)^)? attr-dict
   }];
@@ -1128,7 +1121,7 @@ def CIR_ReturnOp : CIR_Op<"return", [
 
 def CIR_IfOp : CIR_RegionBranchOpBase<"if", [
   RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments
-]> {
+], ["getEntrySuccessorRegions"]> {
   let summary = "the if-then-else operation";
   let description = [{
     The `cir.if` operation represents an if-then-else construct for
@@ -3876,6 +3869,82 @@ def CIR_VTableGetVirtualFnOp : CIR_Op<"vtable.get_virtual_fn", [
 }
 
 //===----------------------------------------------------------------------===//
+// VTableGetVirtualFnByOffsetOp
+//===----------------------------------------------------------------------===//
+
+def CIR_VTableGetVirtualFnByOffsetOp : CIR_Op<"vtable.get_virtual_fn_by_offset", [
+  MemoryEffects<[MemRead]>
+]> {
+  let summary = "Get a virtual function pointer from a vtable by its offset";
+  let description = [{
+    The `vtable.get_virtual_fn_by_offset` operation is the counterpart of
+    `cir.vtable.get_virtual_fn` for when the entry is only known at run time,
+    such as when calling through a pointer to member function. The entry is
+    identified by its `offset` operand, which is the distance in bytes of the
+    entry from the address point of the vtable, as it is stored in the
+    pointer to member function. How the entry is stored and read is decided
+    when the operation is lowered.
+
+    The `vptr` operand must be a `!cir.vptr` value, which would have been
+    returned by a previous call to `cir.vtable.get_vptr`.
+
+    The result is the pointer to the function.
+
+    Example:
+    ```
+    %4 = cir.load %3 : !cir.ptr<!cir.vptr>, !cir.vptr
+    %5 = cir.vtable.get_virtual_fn_by_offset %4[%offset : !s64i] : !cir.vptr
+                  -> !cir.ptr<!cir.func<(!cir.ptr<!rec_C>) -> !s32i>>
+    ```
+  }];
+
+  let arguments = (ins CIR_VPtrType:$vptr, CIR_IntType:$offset);
+  let results = (outs CIR_PtrToFunc:$result);
+
+  let assemblyFormat = [{
+    $vptr `[` $offset `:` qualified(type($offset)) `]` attr-dict
+    `:` qualified(type($vptr)) `->` qualified(type($result))
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// VTableGetOffsetOp
+//===----------------------------------------------------------------------===//
+
+def CIR_VTableGetOffsetOp : CIR_Op<"vtable.get_offset", [
+  MemoryEffects<[MemRead]>
+]> {
+  let summary = "Get an offset stored in a vtable";
+  let description = [{
+    The `vtable.get_offset` operation reads an offset that is stored in an
+    object's vtable, such as the offset of a virtual base class or a virtual
+    adjustment for a thunk, in an ABI independent way.
+
+    The `vptr` operand must be a `!cir.vptr` value, which would have been
+    returned by a previous call to `cir.vtable.get_vptr`. The `index` operand
+    is the index of the entry in the vtable, counted from the address point.
+    Entries that precede the address point have a negative index.
+
+    The result is the value of the offset, in bytes.
+
+    Example:
+    ```
+    %3 = cir.vtable.get_vptr %2 : !cir.ptr<!rec_D> -> !cir.ptr<!cir.vptr>
+    %4 = cir.load %3 : !cir.ptr<!cir.vptr>, !cir.vptr
+    %5 = cir.vtable.get_offset %4[-4] : !cir.vptr -> !s64i
+    ```
+  }];
+
+  let arguments = (ins CIR_VPtrType:$vptr, I64Attr:$index);
+  let results = (outs CIR_IntType:$result);
+
+  let assemblyFormat = [{
+    $vptr `[` $index `]` attr-dict
+    `:` qualified(type($vptr)) `->` qualified(type($result))
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // VTableGetEntryOp
 //===----------------------------------------------------------------------===//
 
@@ -5165,17 +5234,20 @@ def CIR_CoroutineOp : CIR_Op<"coroutine", [
 
     - `unwind`: TODO.
 
-    - `destroy`: destroys the coroutine frame (`coro.free` + `delete`).
-      Reached by an explicit `destroy()` call on a suspended handle, by
-      normal completion through `initial_suspend`, `final_suspend`, or
-      by an exception escaping the coroutine. Falls through to `exit`
-      except when reached due to an escaping exception, where it continues
-      propagating that exception instead.
+    - `destroy`: destroys the coroutine state: the promise, then the
+      parameter copies, then the coroutine frame (`coro.free` + `delete`).
+      Reached by an explicit `destroy()` call on a suspended handle, or by
+      normal completion through `initial_suspend` or `final_suspend`, and
+      falls through to `exit`. It runs the destructors unconditionally, so an
+      exception must not reach it. An exception from one of these destructors
+      still destroys the remaining parameter copies and frees the frame before
+      it leaves the op, through `cir.cleanup.scope` operations of kind `all`
+      around them.
 
     - `exit`: the shared return-to-caller path. Reached directly from any
       suspend point that isn't being destroyed (the coroutine is just
-      pausing), and from `destroy` when it was entered via ordinary
-      dispatch. Holds `coro.end` + the actual `cir.return`.
+      pausing), and from `destroy`. Holds `coro.end` + the actual
+      `cir.return`.
 
   }];
 
@@ -6780,48 +6852,33 @@ def CIR_VecReduceFMulOp : CIR_VecReduceAccFPOp<"fmul", "vector_reduce_fmul">;
 // VecCmpOp
 //===----------------------------------------------------------------------===//
 
-def CIR_VecCmpOp : CIR_Op<"vec.cmp",
-    !listconcat([SameTypeOperands], CIR_FenvOpTraits)> {
+def CIR_VecCmpOp : CIR_Op<"vec.cmp", [Pure, SameTypeOperands]> {
   let summary = "Compare two vectors";
   let description = [{
     The `cir.vec.cmp` operation does an element-wise comparison of two vectors
-    of the same type. The result is a vector of the same size as the operands
+    of the same non-fp type. The result is a vector of the same size as the operands
     whose element type is the signed integral type that is the same size as the
     element type of the operands. The values in the result are 0 or -1.
-
-    The optional `fenv` attribute describes constraints on the floating-point
-    handling of the operation. It is only valid for floating-point vector
-    comparisons.
 
     ```
     %eq = cir.vec.cmp(eq, %vec_a, %vec_b) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
     %lt = cir.vec.cmp(lt, %vec_a, %vec_b) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
-    %gt = cir.vec.cmp(gt, %va, %vb) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> fenv<>
     ```
   }];
 
   let arguments = (ins
     CIR_CmpOpKindAttr:$kind,
-    CIR_VectorType:$lhs,
-    CIR_VectorType:$rhs,
-    OptionalAttr<CIR_FenvAttr>:$fenv
+    CIR_VectorOfIntOrBoolType:$lhs,
+    CIR_VectorOfIntOrBoolType:$rhs
   );
 
   let results = (outs CIR_VectorType:$result);
 
   let assemblyFormat = [{
     `(` enum($kind) `,` $lhs `,` $rhs `)` `:` qualified(type($lhs)) `,`
-    qualified(type($result)) (`fenv` `` $fenv^)? attr-dict
+    qualified(type($result)) attr-dict
   }];
 
-  let builders = [
-    OpBuilder<(ins "mlir::Type":$result, "cir::CmpOpKind":$kind,
-                   "mlir::Value":$lhs, "mlir::Value":$rhs), [{
-      build($_builder, $_state, result, kind, lhs, rhs, cir::FenvAttr{});
-    }]>
-  ];
-
-  let hasVerifier = 1;
   let hasFolder = 1;
 }
 
