@@ -459,9 +459,11 @@ added in the future:
     The idea behind this convention is to support calls to runtime functions
     that don't need to call out to any other functions.
 
-    This calling convention, like the `PreserveMost` calling convention, will be
-    used by a future version of the Objective-C runtime and should be considered
-    experimental at this time.
+    This convention was created to optimize certain runtime calls to the
+    Objective-C runtime, but it is not limited to that runtime; it is also used
+    by other runtimes and libraries, such as the UBSan minimal runtime and
+    Apple's BrowserEngineCore framework. The current implementation supports
+    X86-64 and AArch64.
 
 "`preserve_nonecc`" - The `PreserveNone` calling convention
 :   This calling convention doesn't preserve any general registers. So all
