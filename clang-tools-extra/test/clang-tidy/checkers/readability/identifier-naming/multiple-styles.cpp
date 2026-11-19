@@ -2,7 +2,7 @@
 
 // RUN: rm -rf %theaders
 // RUN: mkdir %theaders
-// RUN: cp -R %S/Inputs/identifier-naming/. %theaders
+// RUN: cp -R %S/Inputs/styles/. %theaders
 
 // C++11 isn't explicitly required, but failing to specify a standard means the
 // check will run multiple times for different standards. This will cause the
@@ -19,7 +19,7 @@
 
 // On DISABLED run, everything should be made 'camelBack'.
 
-// RUN: cp -R %S/Inputs/identifier-naming/. %theaders
+// RUN: cp -R %S/Inputs/styles/. %theaders
 // RUN: %check_clang_tidy -check-suffixes=DISABLED,SHARED -std=c++11 %s \
 // RUN: readability-identifier-naming %t -- \
 // RUN:  -config='{ InheritParentConfig: false, CheckOptions: { \

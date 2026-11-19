@@ -89,8 +89,8 @@
 // RUN:   }}' \
 // RUN:   -header-filter='' \
 // RUN:   -- -fno-delayed-template-parsing -Dbad_macro \
-// RUN:   -I%S/Inputs/identifier-naming \
-// RUN:   -isystem %S/Inputs/identifier-naming/system
+// RUN:   -I%S/Inputs/styles \
+// RUN:   -isystem %S/Inputs/styles/system
 
 // clang-format off
 
