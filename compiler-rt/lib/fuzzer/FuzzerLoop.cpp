@@ -9,6 +9,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "FuzzerCorpus.h"
+#include "FuzzerFork.h"
 #include "FuzzerIO.h"
 #include "FuzzerInternal.h"
 #include "FuzzerMutate.h"
@@ -255,7 +256,7 @@ void Fuzzer::ExitCallback() {
 void Fuzzer::MaybeExitGracefully() {
   if (!F->GracefulExitRequested) return;
   Printf("==%lu== INFO: libFuzzer: exiting as requested\n", GetPid());
-  RmDirRecursive(TempPath("FuzzWithFork", ".dir"));
+  RmForkTempDir();
   F->PrintFinalStats();
   _Exit(0);
 }
@@ -269,7 +270,7 @@ void Fuzzer::InterruptCallback() {
   Printf("==%lu== libFuzzer: run interrupted; exiting\n", GetPid());
   PrintFinalStats();
   ScopedDisableMsanInterceptorChecks S; // RmDirRecursive may call opendir().
-  RmDirRecursive(TempPath("FuzzWithFork", ".dir"));
+  RmForkTempDir();
   // Stop right now, don't perform any at-exit actions.
   _Exit(Options.InterruptExitCode);
 }
