@@ -10435,8 +10435,7 @@ bool TargetLowering::expandUINT_TO_FP(SDNode *Node, SDValue &Result,
 
   // Only expand vector types if we have the appropriate vector bit operations.
   bool HasVectorUIntExpansion =
-      SrcVT.isVector() && SrcVT.getScalarType() == MVT::i64 &&
-      DstVT.getScalarType() == MVT::f64 &&
+      SrcVT.isVectorOf(MVT::i64) && DstVT.isVectorOf(MVT::f64) &&
       isOperationLegalOrCustom(ISD::SRL, SrcVT) &&
       isOperationLegalOrCustom(ISD::FADD, DstVT) &&
       isOperationLegalOrCustom(ISD::FSUB, DstVT) &&
@@ -10456,10 +10455,7 @@ bool TargetLowering::expandUINT_TO_FP(SDNode *Node, SDValue &Result,
     }
   }
 
-  if (SrcVT.getScalarType() != MVT::i64 || DstVT.getScalarType() != MVT::f64)
-    return false;
-
-  if (SrcVT.isVector() && !HasVectorUIntExpansion)
+  if (!HasVectorUIntExpansion && (SrcVT != MVT::i64 || DstVT != MVT::f64))
     return false;
 
   SDLoc dl(SDValue(Node, 0));
