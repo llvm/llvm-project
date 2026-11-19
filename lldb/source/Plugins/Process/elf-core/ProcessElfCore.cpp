@@ -1198,6 +1198,8 @@ ProcessElfCore::FindAddressForFileOffset(lldb::addr_t elf_header_addr,
         GetNTFileEntriesForMatchingPath(header_entry->path);
 
     for (const NT_FILE_Entry &entry : matching_entries) {
+      if (entry.start < elf_header_addr)
+        continue;
       if (auto result = entry.GetLoadAddressForFileOffset(file_offset))
         return result;
     }
