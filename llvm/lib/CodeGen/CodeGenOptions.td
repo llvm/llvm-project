@@ -211,11 +211,17 @@ defm : BoolField<"enable-linkonceodr-outlining", "false",
   "Enable the machine outliner on linkonceodr functions">;
 defm : BoolField<"global-outlining", "true",
   "Enable global outlining, which generates or uses the codegen data">;
+defm : BoolField<"machine-outliner-publish-unprofitable-candidates", "false",
+  "Publish locally unprofitable candidates to Machine Outliner CGData">;
 // Number of times to re-run the outliner. This is not the total number of runs
 // as the outliner will run at least one time. The default value is set to 0,
 // meaning the outliner will run one time and rerun zero times after that.
 defm : ValueField<"machine-outliner-reruns", "unsigned", "0",
   "Number of times to rerun the outliner after the initial outline">;
+// Chosen experimentally: longer sequences are rarely locally unprofitable, so
+// publishing them mostly adds build time.
+defm : ValueField<"machine-outliner-unprofitable-candidate-max-instrs", "unsigned", "3",
+  "Maximum instruction count for locally unprofitable candidates">;
 defm : ValueField<"outliner-benefit-threshold", "unsigned", "1",
   "The minimum size in bytes before an outlining candidate is accepted">;
 defm : BoolField<"outliner-leaf-descendants", "true",

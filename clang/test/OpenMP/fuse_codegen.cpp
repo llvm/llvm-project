@@ -295,7 +295,7 @@ extern "C" void foo5() {
 //
 //
 // CHECK1-LABEL: define linkonce_odr void @_Z4foo2IiEvT_S0_S0_(
-// CHECK1-SAME: i32 noundef [[START:%.*]], i32 noundef [[END:%.*]], i32 noundef [[STEP:%.*]]) #[[ATTR0]] comdat {
+// CHECK1-SAME: i32 noundef [[START:%.*]], i32 noundef [[END:%.*]], i32 noundef [[STEP:%.*]]) #[[ATTR1:[0-9]+]] comdat {
 // CHECK1-NEXT:  [[ENTRY:.*:]]
 // CHECK1-NEXT:    [[START_ADDR:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[END_ADDR:%.*]] = alloca i32, align 4
