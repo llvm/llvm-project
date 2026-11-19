@@ -293,6 +293,32 @@ XtensaTargetLowering::getFPImmAction(const APFloat &Imm, EVT VT,
   return FPImmAction::ConstantPool;
 }
 
+static bool basePtrContainsPCRelWrapper(SDValue Base, unsigned Depth = 0) {
+  if (Depth > 2)
+    return false;
+  unsigned Opc = Base.getOpcode();
+  if (Opc == XtensaISD::PCREL_WRAPPER)
+    return true;
+  // Literal-pool loads narrowed by DAGCombiner become
+  // (add (XtensaISD::PCREL_WRAPPER ...), <const offset>); those addresses
+  // are not selectable either (only L32R can read a literal, 32 bits).
+  if (Opc == ISD::ADD || Opc == ISD::OR) {
+    for (unsigned I = 0, E = Base.getNumOperands(); I != E; ++I)
+      if (basePtrContainsPCRelWrapper(Base.getOperand(I), Depth + 1))
+        return true;
+  }
+  return false;
+}
+
+bool XtensaTargetLowering::shouldReduceLoadWidth(
+    SDNode *Load, ISD::LoadExtType ExtTy, EVT NewVT,
+    std::optional<unsigned> ByteOffset) const {
+  auto *LD = dyn_cast<LoadSDNode>(Load);
+  if (LD && basePtrContainsPCRelWrapper(LD->getBasePtr()))
+    return false;
+  return TargetLowering::shouldReduceLoadWidth(Load, ExtTy, NewVT, ByteOffset);
+}
+
 //===----------------------------------------------------------------------===//
 // Inline asm support
 //===----------------------------------------------------------------------===//
