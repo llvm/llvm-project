@@ -22,5 +22,9 @@ void test_sqrt(double a1) {
     double l4 = fabs(a1);
     // CHECK-YES: call noundef i32 @__nv_abs(i32
     double l5 = abs((int)a1);
+    // CHECK-YES: call noundef float @__nv_nanf(ptr noundef
+    float l6 = nanf("");
+    // CHECK-YES: call noundef double @__nv_nan(ptr noundef
+    double l7 = nan("");
   }
 }

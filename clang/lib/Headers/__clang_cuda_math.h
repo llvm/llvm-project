@@ -201,6 +201,8 @@ __DEVICE__ int max(int __a, int __b) { return __nv_max(__a, __b); }
 __DEVICE__ int min(int __a, int __b) { return __nv_min(__a, __b); }
 __DEVICE__ double modf(double __a, double *__b) { return __nv_modf(__a, __b); }
 __DEVICE__ float modff(float __a, float *__b) { return __nv_modff(__a, __b); }
+__DEVICE__ float nanf(const char *__a) { return __nv_nanf(__a); }
+__DEVICE__ double nan(const char *__a) { return __nv_nan(__a); }
 __DEVICE__ double nearbyint(double __a) { return __builtin_nearbyint(__a); }
 __DEVICE__ float nearbyintf(float __a) { return __builtin_nearbyintf(__a); }
 __DEVICE__ double nextafter(double __a, double __b) {
