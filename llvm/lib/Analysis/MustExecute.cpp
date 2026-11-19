@@ -8,6 +8,7 @@
 
 #include "llvm/Analysis/MustExecute.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/InstructionSimplify.h"
@@ -723,6 +724,138 @@ MustBeExecutedContextExplorer::getMustBeExecutedPrevInstruction(
 
   LLVM_DEBUG(dbgs() << "\tNo join point found\n");
   return nullptr;
+}
+
+const Instruction *
+MustBeExecutedContextExplorer::getForwardStop(const Instruction *PP) {
+  const BasicBlock *BB = PP->getParent();
+  auto [It, Inserted] = NonTransferringMap.try_emplace(BB);
+  if (Inserted) {
+    for (const Instruction &I : *BB) {
+      if (!isGuaranteedToTransferExecutionToSuccessor(&I))
+        It->second.push_back(&I);
+    }
+  }
+  ArrayRef<const Instruction *> NonTransferring = It->second;
+  auto Stop = llvm::lower_bound(NonTransferring, PP,
+                                [](const Instruction *A, const Instruction *B) {
+                                  return A->comesBefore(B);
+                                });
+  return Stop == NonTransferring.end() ? nullptr : *Stop;
+}
+
+const BasicBlock *
+MustBeExecutedContextExplorer::getForwardNextBlock(const BasicBlock *BB) {
+  auto [It, Inserted] = ForwardNextBlockMap.try_emplace(BB);
+  if (Inserted) {
+    const Instruction *Term = BB->getTerminator();
+    if (Term->getNumSuccessors() == 1)
+      It->second = Term->getSuccessor(0);
+    else if (Term->getNumSuccessors() > 1)
+      It->second = findForwardJoinPoint(BB);
+  }
+  return It->second;
+}
+
+const BasicBlock *
+MustBeExecutedContextExplorer::getBackwardNextBlock(const BasicBlock *BB) {
+  auto [It, Inserted] = BackwardNextBlockMap.try_emplace(BB);
+  if (Inserted)
+    It->second = findBackwardJoinPoint(BB);
+  return It->second;
+}
+
+const MustBeExecutedContextExplorer::ForwardContextTy &
+MustBeExecutedContextExplorer::getForwardContext(const BasicBlock *BB) {
+  auto &Context = ForwardContextMap[BB];
+  if (!Context) {
+    Context = std::make_unique<ForwardContextTy>();
+    for (const BasicBlock *CurBB = getForwardNextBlock(BB); CurBB;) {
+      const Instruction *Stop = getForwardStop(&CurBB->front());
+      if (!Context->try_emplace(CurBB, Stop).second)
+        break;
+      CurBB = Stop ? nullptr : getForwardNextBlock(CurBB);
+    }
+  }
+  return *Context;
+}
+
+const MustBeExecutedContextExplorer::BackwardContextTy &
+MustBeExecutedContextExplorer::getBackwardContext(const BasicBlock *BB) {
+  auto &Context = BackwardContextMap[BB];
+  if (!Context) {
+    Context = std::make_unique<BackwardContextTy>();
+    for (const BasicBlock *CurBB = getBackwardNextBlock(BB);
+         CurBB && Context->insert(CurBB);)
+      CurBB = getBackwardNextBlock(CurBB);
+  }
+  return *Context;
+}
+
+bool MustBeExecutedContextExplorer::isInContextOf(const Instruction *I,
+                                                  const Instruction *PP) {
+  if (I == PP)
+    return true;
+  const BasicBlock *IBB = I->getParent();
+  const BasicBlock *PPBB = PP->getParent();
+  if (IBB->getParent() != PPBB->getParent())
+    return false;
+
+  if (ExploreCFGForward) {
+    // Forward, the context contains the instructions up to the first one that
+    // might not transfer execution. If there is none, it continues in the
+    // forward context of the next block.
+    const Instruction *Stop = getForwardStop(PP);
+    if (IBB == PPBB && PP->comesBefore(I) && (!Stop || !Stop->comesBefore(I)))
+      return true;
+    if (!Stop && ExploreInterBlock) {
+      const ForwardContextTy &Context = getForwardContext(PPBB);
+      auto It = Context.find(IBB);
+      if (It != Context.end() && (!It->second || !It->second->comesBefore(I)))
+        return true;
+    }
+  }
+
+  if (ExploreCFGBackward) {
+    // Backward, the context contains all prior instructions in the block and
+    // the backward context of the backward join point.
+    if (IBB == PPBB && I->comesBefore(PP))
+      return true;
+    if (ExploreInterBlock && getBackwardContext(PPBB).contains(IBB))
+      return true;
+  }
+  return false;
+}
+
+bool MustBeExecutedContextExplorer::checkForAllTerminatorsInContext(
+    const Instruction *PP, function_ref<bool(const Instruction *)> Pred) {
+  // Only the blocks of the forward and backward contexts of the block of PP
+  // can have terminators in the context.
+  SmallPtrSet<const BasicBlock *, 16> Visited;
+  auto CheckBlock = [&](const BasicBlock *BB) {
+    if (!Visited.insert(BB).second)
+      return true;
+    const Instruction *Term = BB->getTerminator();
+    return !isInContextOf(Term, PP) || Pred(Term);
+  };
+  const BasicBlock *PPBB = PP->getParent();
+  if (!CheckBlock(PPBB))
+    return false;
+  if (!ExploreInterBlock)
+    return true;
+  if (ExploreCFGForward && !getForwardStop(PP)) {
+    for (const auto &[BB, Stop] : getForwardContext(PPBB)) {
+      if (!CheckBlock(BB))
+        return false;
+    }
+  }
+  if (ExploreCFGBackward) {
+    for (const BasicBlock *BB : getBackwardContext(PPBB)) {
+      if (!CheckBlock(BB))
+        return false;
+    }
+  }
+  return true;
 }
 
 MustBeExecutedIterator::MustBeExecutedIterator(

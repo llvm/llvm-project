@@ -108,6 +108,9 @@ static Type customCreateType(PatternRewriter &rewriter) {
 static std::string customCreateStrAttr(PatternRewriter &rewriter) {
   return "test.str";
 }
+static Attribute customCreateNullAttr(PatternRewriter &rewriter) {
+  return Attribute();
+}
 
 /// Custom rewriter invoked from PDL.
 static void customRewriter(PatternRewriter &rewriter, Operation *root,
@@ -181,6 +184,8 @@ struct TestPDLByteCodePass
                                        customVariadicResultCreate);
     pdlPattern.registerRewriteFunction("type_creator", customCreateType);
     pdlPattern.registerRewriteFunction("str_creator", customCreateStrAttr);
+    pdlPattern.registerRewriteFunction("null_attr_creator",
+                                       customCreateNullAttr);
     pdlPattern.registerRewriteFunction("rewriter", customRewriter);
     patternList.add(std::move(pdlPattern));
 

@@ -142,6 +142,9 @@ const unsigned struct_kernel_stat64_sz = 0;
 #    elif defined(__alpha__)
 const unsigned struct_kernel_stat_sz = 80;
 const unsigned struct_kernel_stat64_sz = 136;
+#    elif defined(__hppa__)
+const unsigned struct_kernel_stat_sz = 104;
+const unsigned struct_kernel_stat64_sz = 104;
 #    endif
 struct __sanitizer_perf_event_attr {
   unsigned type;
@@ -237,7 +240,7 @@ struct __sanitizer_ipc_perm {
   unsigned __seq;
   u64 __unused1;
   u64 __unused2;
-#    elif defined(__sparc__)
+#    elif defined(__sparc__) || defined(__hppa__)
   unsigned mode;
   unsigned short __pad2;
   unsigned short __seq;
@@ -279,7 +282,7 @@ struct __sanitizer_shmid_ds {
   unsigned long __glibc_reserved1;
   unsigned long __glibc_reserved2;
 #    else
-#      ifndef __powerpc__
+#      if !defined(__powerpc__) && !defined(__hppa__)
   uptr shm_segsz;
 #      elif !defined(__powerpc64__)
   uptr __unused0;
@@ -302,7 +305,7 @@ struct __sanitizer_shmid_ds {
   uptr __unused3;
 #        endif
 #      endif
-#      ifdef __powerpc__
+#      if defined(__powerpc__) || defined(__hppa__)
   uptr shm_segsz;
 #      endif
   int shm_cpid;
@@ -627,7 +630,7 @@ typedef unsigned long long __sanitizer_eventfd_t;
 
 #  if SANITIZER_LINUX
 #    if defined(_LP64) || defined(__x86_64__) || defined(__powerpc__) || \
-        defined(__mips__) || defined(__hexagon__)
+        defined(__mips__) || defined(__hexagon__) || defined(__hppa__)
 typedef unsigned __sanitizer___kernel_uid_t;
 typedef unsigned __sanitizer___kernel_gid_t;
 #    else
@@ -640,7 +643,7 @@ typedef long long __sanitizer___kernel_off_t;
 typedef long __sanitizer___kernel_off_t;
 #    endif
 
-#    if defined(__powerpc__) || defined(__mips__)
+#    if defined(__powerpc__) || defined(__mips__) || defined(__hppa__)
 typedef unsigned int __sanitizer___kernel_old_uid_t;
 typedef unsigned int __sanitizer___kernel_old_gid_t;
 #    else
@@ -767,7 +770,7 @@ struct __sanitizer_sigaction {
 #    else
 #      if defined(__s390x__)
   int sa_resv;
-#      else
+#      elif !defined(__hppa__)
   __sanitizer_sigset_t sa_mask;
 #      endif
 #      if !defined(__mips__) || SANITIZER_MUSL
@@ -788,13 +791,14 @@ struct __sanitizer_sigaction {
 #        endif
 #      endif
 #    endif
-#    if (SANITIZER_LINUX || SANITIZER_HAIKU) && !defined(__alpha__)
+#    if (SANITIZER_LINUX || SANITIZER_HAIKU) && !defined(__alpha__) && \
+        !defined(__hppa__)
   void (*sa_restorer)();
 #    endif
 #    if defined(__mips__) && (SANITIZER_WORDSIZE == 32) && !SANITIZER_MUSL
   int sa_resv[1];
 #    endif
-#    if defined(__s390x__)
+#    if defined(__s390x__) || defined(__hppa__)
   __sanitizer_sigset_t sa_mask;
 #    endif
 };
@@ -820,6 +824,15 @@ struct __sanitizer_kernel_sigaction_t {
   };
   __sanitizer_kernel_sigset_t sa_mask;
   void (*sa_restorer)(void);
+};
+#  elif defined(__hppa__)
+struct __sanitizer_kernel_sigaction_t {
+  union {
+    void (*handler)(int signo);
+    void (*sigaction)(int signo, __sanitizer_siginfo* info, void* ctx);
+  };
+  unsigned long sa_flags;
+  __sanitizer_kernel_sigset_t sa_mask;
 };
 #  else
 struct __sanitizer_kernel_sigaction_t {
@@ -1087,6 +1100,12 @@ struct __sanitizer_cookie_io_functions_t {
 #    define IOC_NONE 1U
 #    define IOC_WRITE 4U
 #    define IOC_READ 2U
+#  elif defined(__hppa__)
+#    define IOC_SIZEBITS 14
+#    define IOC_DIRBITS 2
+#    define IOC_NONE 0U
+#    define IOC_WRITE 2U
+#    define IOC_READ 1U
 #  else
 #    define IOC_SIZEBITS 14
 #    define IOC_DIRBITS 2

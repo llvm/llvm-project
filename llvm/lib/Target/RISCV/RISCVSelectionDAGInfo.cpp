@@ -91,7 +91,8 @@ void RISCVSelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
 SDValue RISCVSelectionDAGInfo::EmitTargetCodeForMemset(
     SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
     SDValue Size, Align Alignment, bool isVolatile, bool AlwaysInline,
-    MachinePointerInfo DstPtrInfo) const {
+    bool &IsTailCall, MachinePointerInfo DstPtrInfo) const {
+  IsTailCall = false;
   const auto &Subtarget = DAG.getSubtarget<RISCVSubtarget>();
   // We currently do this only for Xqcilsm
   if (!Subtarget.hasVendorXqcilsm())
