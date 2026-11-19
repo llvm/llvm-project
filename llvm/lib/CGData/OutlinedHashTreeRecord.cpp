@@ -14,7 +14,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CGData/OutlinedHashTreeRecord.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/CGData/CodeGenData.h"
 #include "llvm/ObjectYAML/YAML.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"
@@ -52,6 +54,9 @@ struct OutlinedHashTreeFormat {
   static constexpr unsigned EntryChildOffsetFieldOffset = 8;
   static constexpr unsigned EntrySize = 16;
   static constexpr unsigned BlobAlign = 8;
+  static constexpr unsigned BlockAlign = 8;
+  static_assert(BlockHeaderSize % BlockAlign == 0 &&
+                EntrySize % BlockAlign == 0);
 };
 } // namespace
 
@@ -125,38 +130,74 @@ void OutlinedHashTreeRecord::serialize(raw_ostream &OS) const {
     Writer.write<uint8_t>(0);
 }
 
-void OutlinedHashTreeRecord::deserialize(const unsigned char *&Ptr) {
-  const unsigned char *BlobStart = Ptr;
-  uint64_t BlockRegionSize = endian::read<uint64_t, unaligned>(
+static Error malformed(const Twine &Message) {
+  return make_error<CGDataError>(cgdata_error::malformed, Message);
+}
+
+static Expected<uint64_t> readBlockSize(const unsigned char *BlobStart,
+                                        const unsigned char *End) {
+  size_t Size = End - BlobStart;
+  if (Size < Fmt::BlobHeaderSize)
+    return malformed("truncated outlined hash tree");
+  uint64_t BlockSize = endian::read<uint64_t, unaligned>(
       BlobStart + Fmt::BlockRegionSizeFieldOffset, endianness::little);
+  if (BlockSize > Size - Fmt::BlobHeaderSize ||
+      alignTo(Fmt::BlobHeaderSize + BlockSize, Fmt::BlobAlign) > Size)
+    return malformed("truncated outlined hash tree");
+  return BlockSize;
+}
+
+Error OutlinedHashTreeRecord::deserialize(const unsigned char *&Ptr,
+                                          const unsigned char *End) {
+  const unsigned char *BlobStart = Ptr;
+  Expected<uint64_t> BlockSize = readBlockSize(BlobStart, End);
+  if (!BlockSize)
+    return BlockSize.takeError();
+  uint32_t NumNodes =
+      endian::read<uint32_t, unaligned>(BlobStart, endianness::little);
   const unsigned char *BlockBase = BlobStart + Fmt::BlobHeaderSize;
-  HashTree = createInMemory(BlockBase);
+  auto TreeOrErr = createInMemory(BlockBase, *BlockSize, NumNodes);
+  if (!TreeOrErr)
+    return TreeOrErr.takeError();
+  HashTree = std::move(*TreeOrErr);
 
   // Advance Ptr past the blob, including the alignment padding serialize()
   // appended, so a concatenated merge loop lands on the next blob / the end.
-  size_t ContentSize = (BlockBase + BlockRegionSize) - BlobStart;
+  size_t ContentSize = (BlockBase + *BlockSize) - BlobStart;
   Ptr = BlobStart + alignTo(ContentSize, Fmt::BlobAlign);
+  return Error::success();
 }
 
-std::unique_ptr<OutlinedHashTree>
+Expected<std::unique_ptr<OutlinedHashTree>>
 OutlinedHashTreeRecord::createReadInPlace(std::shared_ptr<MemoryBuffer> Buffer,
                                           uint64_t BlobOffset) {
+  if (BlobOffset > Buffer->getBufferSize())
+    return malformed("truncated outlined hash tree");
   const auto *BlobStart =
       reinterpret_cast<const unsigned char *>(Buffer->getBufferStart()) +
       BlobOffset;
+  Expected<uint64_t> BlockSize = readBlockSize(
+      BlobStart,
+      reinterpret_cast<const unsigned char *>(Buffer->getBufferEnd()));
+  if (!BlockSize)
+    return BlockSize.takeError();
   uint32_t NumNodes =
       endian::read<uint32_t, unaligned>(BlobStart, endianness::little);
   const unsigned char *BlockBase = BlobStart + Fmt::BlobHeaderSize;
   return std::make_unique<OutlinedHashTree>(std::move(Buffer), BlockBase,
-                                            NumNodes);
+                                            *BlockSize, NumNodes);
 }
 
-void OutlinedHashTreeRecord::lazyDeserialize(
+Error OutlinedHashTreeRecord::lazyDeserialize(
     std::shared_ptr<MemoryBuffer> Buffer, uint64_t Offset) {
+  auto TreeOrErr = createReadInPlace(std::move(Buffer), Offset);
+  if (!TreeOrErr)
+    return TreeOrErr.takeError();
   // The read-in-place tree becomes the record's only tree; drop the empty
   // in-memory tree the constructor created.
   HashTree.reset();
-  ReadInPlaceHashTree = createReadInPlace(std::move(Buffer), Offset);
+  ReadInPlaceHashTree = std::move(*TreeOrErr);
+  return Error::success();
 }
 
 static uint32_t readU32(const unsigned char *P) {
@@ -166,11 +207,28 @@ static uint64_t readU64(const unsigned char *P) {
   return endian::read<uint64_t, unaligned>(P, endianness::little);
 }
 
+static std::optional<uint32_t> readNumSuccessors(const unsigned char *BlockBase,
+                                                 uint64_t BlockSize,
+                                                 uint64_t BlockOffset) {
+  if (BlockOffset > BlockSize || BlockSize - BlockOffset < Fmt::BlockHeaderSize)
+    return std::nullopt;
+  uint32_t NumSucc = readU32(BlockBase + BlockOffset + Fmt::NumSuccFieldOffset);
+  if (uint64_t(Fmt::EntrySize) * NumSucc >
+      BlockSize - BlockOffset - Fmt::BlockHeaderSize)
+    return std::nullopt;
+  return NumSucc;
+}
+
 std::optional<uint64_t>
-OutlinedHashTreeRecord::readSuccessor(const unsigned char *Block,
+OutlinedHashTreeRecord::readSuccessor(const unsigned char *BlockBase,
+                                      uint64_t BlockSize, uint64_t BlockOffset,
                                       stable_hash H) {
-  const unsigned char *Entries = Block + Fmt::BlockHeaderSize;
-  uint32_t Lo = 0, Hi = readU32(Block + Fmt::NumSuccFieldOffset);
+  std::optional<uint32_t> NumSucc =
+      readNumSuccessors(BlockBase, BlockSize, BlockOffset);
+  if (!NumSucc)
+    return std::nullopt;
+  const unsigned char *Entries = BlockBase + BlockOffset + Fmt::BlockHeaderSize;
+  uint32_t Lo = 0, Hi = *NumSucc;
   while (Lo < Hi) {
     uint32_t Mid = Lo + (Hi - Lo) / 2;
     const unsigned char *E = Entries + Fmt::EntrySize * Mid;
@@ -185,29 +243,63 @@ OutlinedHashTreeRecord::readSuccessor(const unsigned char *Block,
   return std::nullopt;
 }
 
-unsigned OutlinedHashTreeRecord::readTerminals(const unsigned char *Block) {
-  return readU32(Block + Fmt::TerminalsFieldOffset);
+unsigned OutlinedHashTreeRecord::readTerminals(const unsigned char *BlockBase,
+                                               uint64_t BlockSize,
+                                               uint64_t BlockOffset) {
+  // BlockOffset is read from a parent's entry in the input, so a malformed
+  // blob can put the block header outside the region.
+  if (BlockOffset > BlockSize || BlockSize - BlockOffset < Fmt::BlockHeaderSize)
+    return 0;
+  return readU32(BlockBase + BlockOffset + Fmt::TerminalsFieldOffset);
 }
 
-std::unique_ptr<MutableOutlinedHashTree>
-OutlinedHashTreeRecord::createInMemory(const unsigned char *BlockBase) {
+Expected<std::unique_ptr<MutableOutlinedHashTree>>
+OutlinedHashTreeRecord::createInMemory(const unsigned char *BlockBase,
+                                       uint64_t BlockSize, uint32_t NumNodes) {
   auto Tree = std::make_unique<MutableOutlinedHashTree>();
   HashNode &Root = *Tree->getRoot();
+  // To reject a block read twice (e.g. through a self edge) or overlapping
+  // another.
+  if (BlockSize / Fmt::BlockAlign >
+      std::numeric_limits<BitVector::size_type>::max())
+    return malformed("outlined hash tree too large");
+  if (BlockSize % Fmt::BlockAlign)
+    return malformed("outlined hash tree block region size misaligned");
+  BitVector Covered(BlockSize / Fmt::BlockAlign);
+  uint32_t NumBlocks = 0;
   // Iterative to avoid deep-chain stack overflow, in production the tree could
   // have very long single-child chains.
   SmallVector<std::pair<HashNode *, uint64_t>> Stack;
   Stack.emplace_back(&Root, uint64_t(0));
   while (!Stack.empty()) {
     auto [Node, Off] = Stack.pop_back_val();
-    const unsigned char *Block = BlockBase + Off;
-    uint32_t NumSucc = readU32(Block + Fmt::NumSuccFieldOffset);
-    if (unsigned T = readTerminals(Block))
+    std::optional<uint32_t> NumSucc =
+        readNumSuccessors(BlockBase, BlockSize, Off);
+    if (!NumSucc)
+      return malformed("outlined hash tree block out of bounds");
+    unsigned Begin = Off / Fmt::BlockAlign;
+    unsigned End =
+        (Off + Fmt::BlockHeaderSize + uint64_t(Fmt::EntrySize) * *NumSucc) /
+        Fmt::BlockAlign;
+    if (Covered.find_first_in(Begin, End) != -1)
+      return malformed("outlined hash tree block reached more than once");
+    Covered.set(Begin, End);
+    ++NumBlocks;
+    if (unsigned T = readTerminals(BlockBase, BlockSize, Off))
       Node->Terminals = T;
-    const unsigned char *Entries = Block + Fmt::BlockHeaderSize;
-    for (uint32_t K = 0; K < NumSucc; ++K) {
+    const unsigned char *Entries = BlockBase + Off + Fmt::BlockHeaderSize;
+    stable_hash PrevHash = 0;
+    for (uint32_t K = 0; K < *NumSucc; ++K) {
       const unsigned char *E = Entries + Fmt::EntrySize * K;
       stable_hash ChildHash = readU64(E + Fmt::EntryHashFieldOffset);
+      // Sorted and unique, as readSuccessor()'s binary search requires.
+      if (K && ChildHash <= PrevHash)
+        return malformed(
+            "outlined hash tree successors not sorted by unique hash");
+      PrevHash = ChildHash;
       uint64_t ChildOff = readU64(E + Fmt::EntryChildOffsetFieldOffset);
+      if (ChildOff % Fmt::BlockAlign)
+        return malformed("outlined hash tree block misaligned");
       auto Child = std::make_unique<HashNode>();
       Child->Hash = ChildHash;
       HashNode *ChildPtr = Child.get();
@@ -215,13 +307,15 @@ OutlinedHashTreeRecord::createInMemory(const unsigned char *BlockBase) {
       Stack.emplace_back(ChildPtr, ChildOff);
     }
   }
+  if (NumBlocks != NumNodes || !Covered.all())
+    return malformed("outlined hash tree blocks do not match the blob header");
   return Tree;
 }
 
-std::unique_ptr<MutableOutlinedHashTree>
+Expected<std::unique_ptr<MutableOutlinedHashTree>>
 OutlinedHashTreeRecord::createInMemory(std::unique_ptr<OutlinedHashTree> Tree) {
   if (Tree->isReadInPlace())
-    return createInMemory(Tree->BlockBase);
+    return createInMemory(Tree->BlockBase, Tree->BlockSize, Tree->NumNodes);
   // An in-memory tree is already a MutableOutlinedHashTree; move its nodes into
   // a fresh one so the caller gets the concrete mutable type back.
   auto InMemory = std::make_unique<MutableOutlinedHashTree>();

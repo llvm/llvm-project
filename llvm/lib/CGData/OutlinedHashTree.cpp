@@ -140,7 +140,7 @@ OutlinedHashTree::HashNodeCursor::getSuccessor(const OutlinedHashTree &Tree,
                                                stable_hash H) const {
   if (Tree.isReadInPlace()) {
     if (auto SuccessorOffset = OutlinedHashTreeRecord::readSuccessor(
-            Tree.BlockBase + BlockOffset, H))
+            Tree.BlockBase, Tree.BlockSize, BlockOffset, H))
       return HashNodeCursor(*SuccessorOffset);
     return std::nullopt;
   }
@@ -153,8 +153,8 @@ OutlinedHashTree::HashNodeCursor::getSuccessor(const OutlinedHashTree &Tree,
 std::optional<unsigned> OutlinedHashTree::HashNodeCursor::getTerminals(
     const OutlinedHashTree &Tree) const {
   if (Tree.isReadInPlace()) {
-    unsigned T =
-        OutlinedHashTreeRecord::readTerminals(Tree.BlockBase + BlockOffset);
+    unsigned T = OutlinedHashTreeRecord::readTerminals(
+        Tree.BlockBase, Tree.BlockSize, BlockOffset);
     if (!T)
       return std::nullopt;
     return T;

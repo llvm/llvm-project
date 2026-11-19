@@ -85,12 +85,15 @@ public:
     };
   };
 
-  /// Construct a tree read in place from a mapped blob: its block region begins
-  /// at \p BlockBase (the root block at its offset 0) inside \p Buffer, which
-  /// is kept alive for the tree's lifetime.
+  /// Construct a tree read in place from a mapped blob: its block region
+  /// begins at \p BlockBase (the root block at its offset 0) and spans
+  /// \p BlockSize bytes inside \p Buffer, which is kept alive for the
+  /// tree's lifetime.
   OutlinedHashTree(std::shared_ptr<MemoryBuffer> Buffer,
-                   const unsigned char *BlockBase, uint32_t NumNodes)
-      : Buffer(std::move(Buffer)), BlockBase(BlockBase), NumNodes(NumNodes) {}
+                   const unsigned char *BlockBase, uint64_t BlockSize,
+                   uint32_t NumNodes)
+      : Buffer(std::move(Buffer)), BlockBase(BlockBase), BlockSize(BlockSize),
+        NumNodes(NumNodes) {}
 
   virtual ~OutlinedHashTree() = default;
 
@@ -120,6 +123,7 @@ protected:
 private:
   std::shared_ptr<MemoryBuffer> Buffer;
   const unsigned char *BlockBase = nullptr;
+  uint64_t BlockSize = 0;
   uint32_t NumNodes = 0;
 };
 

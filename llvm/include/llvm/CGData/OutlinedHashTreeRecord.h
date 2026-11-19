@@ -18,6 +18,7 @@
 
 #include "llvm/CGData/OutlinedHashTree.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/Error.h"
 
 namespace llvm {
 
@@ -45,32 +46,36 @@ struct OutlinedHashTreeRecord {
   /// Serialize the outlined hash tree to a raw_ostream.
   LLVM_ABI void serialize(raw_ostream &OS) const;
   /// Deserialize the outlined hash tree from a raw_ostream.
-  LLVM_ABI void deserialize(const unsigned char *&Ptr);
+  LLVM_ABI Error deserialize(const unsigned char *&Ptr,
+                             const unsigned char *End);
   /// Lazily set up this record's tree to read in place from \p Buffer at
   /// \p Offset instead of deserializing it in memory.
-  LLVM_ABI void lazyDeserialize(std::shared_ptr<MemoryBuffer> Buffer,
-                                uint64_t Offset);
+  LLVM_ABI Error lazyDeserialize(std::shared_ptr<MemoryBuffer> Buffer,
+                                 uint64_t Offset);
 
   /// \returns a read-only tree that reads its nodes in place from \p Buffer
   /// starting at \p BlobOffset, keeping \p Buffer alive for the tree's
   /// lifetime.
-  LLVM_ABI static std::unique_ptr<OutlinedHashTree>
+  LLVM_ABI static Expected<std::unique_ptr<OutlinedHashTree>>
   createReadInPlace(std::shared_ptr<MemoryBuffer> Buffer, uint64_t BlobOffset);
 
   /// \returns a mutable, fully in-memory version of \p Tree: a read-in-place
   /// tree is materialized from its blob; a tree already in memory is taken
   /// over as-is.
-  LLVM_ABI static std::unique_ptr<MutableOutlinedHashTree>
+  LLVM_ABI static Expected<std::unique_ptr<MutableOutlinedHashTree>>
   createInMemory(std::unique_ptr<OutlinedHashTree> Tree);
 
   /// \returns the block offset of the successor reached by following \p H, or
-  /// std::nullopt if there is none. In-place readers over a single serialized
-  /// node block at \p Block (the block region base + the node's block offset).
+  /// std::nullopt if there is none or the block is out of bounds.
   LLVM_ABI static std::optional<uint64_t>
-  readSuccessor(const unsigned char *Block, stable_hash H);
+  readSuccessor(const unsigned char *BlockBase, uint64_t BlockSize,
+                uint64_t BlockOffset, stable_hash H);
 
-  /// \returns the terminal count stored at \p Block (0 if not a terminal).
-  LLVM_ABI static unsigned readTerminals(const unsigned char *Block);
+  /// \returns the terminal count of the block at \p BlockOffset (0 if not a
+  /// terminal or the block is out of bounds).
+  LLVM_ABI static unsigned readTerminals(const unsigned char *BlockBase,
+                                         uint64_t BlockSize,
+                                         uint64_t BlockOffset);
 
   /// Serialize the outlined hash tree to a YAML stream.
   LLVM_ABI void serializeYAML(yaml::Output &YOS) const;
@@ -101,8 +106,9 @@ struct OutlinedHashTreeRecord {
 private:
   /// \returns a mutable, in-memory tree built from the block region beginning
   /// at \p BlockBase (the root block at its offset 0).
-  static std::unique_ptr<MutableOutlinedHashTree>
-  createInMemory(const unsigned char *BlockBase);
+  static Expected<std::unique_ptr<MutableOutlinedHashTree>>
+  createInMemory(const unsigned char *BlockBase, uint64_t BlockSize,
+                 uint32_t NumNodes);
 
   /// \returns the held tree, whichever representation is in use.
   const OutlinedHashTree &tree() const {
