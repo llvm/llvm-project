@@ -602,7 +602,7 @@ getVectorCallCosts(CallInst *CI, Type *VecTy, const TargetTransformInfo &TTI,
   auto Shape = VFShape::get(CI->getFunctionType(),
                             ElementCount::getFixed(getNumElements(VecTy)),
                             false /*HasGlobalPred*/);
-  Function *VecFunc = VFDatabase(*CI).getVectorizedFunction(Shape);
+  Function *VecFunc = VFDatabase(*CI, &TTI).getVectorizedFunction(Shape);
   auto LibCost = InstructionCost::getInvalid();
   if (!CI->isNoBuiltin() && VecFunc) {
     // Calculate the cost of the vector library call.
