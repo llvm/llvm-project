@@ -88,19 +88,11 @@ bool MipsFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   const TargetRegisterInfo *TRI = STI.getRegisterInfo();
 
-  if (MF.disableFramePointerElim() || MFI.hasVarSizedObjects() ||
-      MFI.isFrameAddressTaken() || TRI->hasStackRealignment(MF))
-    return true;
-
   // Without a reserved call frame, SP moves around every call, so address
   // frame objects from FP instead.
-  // We calculate the MaxCallFrameSize at the end of ISel (see
-  // finalizeLowering), so the result should be stable for the whole post-ISel
-  // MIR pipeline.
-  if (MFI.isMaxCallFrameSizeComputed() && !hasReservedCallFrame(MF))
-    return true;
-
-  return false;
+  return MF.disableFramePointerElim() || MFI.hasVarSizedObjects() ||
+         MFI.isFrameAddressTaken() || TRI->hasStackRealignment(MF) ||
+         (MFI.isMaxCallFrameSizeComputed() && !hasReservedCallFrame(MF));
 }
 
 bool MipsFrameLowering::hasBP(const MachineFunction &MF) const {
