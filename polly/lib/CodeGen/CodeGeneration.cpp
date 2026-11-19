@@ -272,14 +272,12 @@ static bool generateCode(Scop &S, IslAstInfo &AI, LoopInfo &LI,
 
     Builder.GetInsertBlock()->getTerminator()->setOperand(0, RTC);
 
-    // The code below annotates the "llvm.loop.vectorize.enable" to false
-    // for the code flow taken when RTCs fail. Because we don't want the
-    // Loop Vectorizer to come in later and vectorize the original fall back
-    // loop when Polly is enabled. This avoids loop versioning on fallback
-    // loop by Loop Vectorizer. Don't do this when Polly's RTC value is
-    // false (due to code generation failure), as we are left with only one
-    // version of Loop. Also don't do this when the RTC is provably false
-    // at compile time, as we will always execute the fallback loop.
+    // The code below annotates the code flow taken when RTCs fail with
+    // "llvm.loop.vectorize.disable". We do this to avoid that the
+    // Loop Vectorizer comes in later and vectorizes the original fall back
+    // loop when Polly is enabled. If Polly's RTC value is known to be
+    // false (e.g. due to code generation failure), leave it eligible for
+    // vectorization as we are left with only one version of Loop.
     if (!computeKnownBits(RTC, DL).isZero()) {
       for (Loop *L : LI.getLoopsInPreorder()) {
         if (S.contains(L))
