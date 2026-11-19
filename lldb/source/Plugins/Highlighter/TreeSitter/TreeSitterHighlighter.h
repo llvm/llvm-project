@@ -57,7 +57,7 @@ private:
   };
 
   struct TSState {
-    TSState() = default;
+    TSState() {};
     TSState &operator=(const TSState &) = delete;
     TSState(const TSState &) = delete;
     ~TSState();

@@ -9,6 +9,10 @@ add_lldb_library(lldbTreeSitter
     ${TreeSitter_LIBRARY}
 )
 
+target_include_directories(lldbTreeSitter PUBLIC
+  ${TreeSitter_INCLUDE_DIR}
+)
+
 function(add_tree_sitter_grammar name source_dir binary_dir)
   set(TreeSitter_SOURCE_DIR ${source_dir}/${name})
   set(TreeSitter_BINARY_DIR ${binary_dir}/src)
