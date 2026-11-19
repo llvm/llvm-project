@@ -350,6 +350,9 @@ if(WIN32)
   add_custom_target(libomp-needed-def-file DEPENDS ${LIBOMP_GENERATED_DEF_FILE})
   set_target_properties(libomp-needed-def-file PROPERTIES FOLDER "OpenMP/Sourcegenning")
   add_dependencies(omp libomp-needed-def-file)
+  # Re-link when the exports change, even if no source files were rebuilt.
+  set_property(TARGET omp APPEND PROPERTY LINK_DEPENDS
+    ${CMAKE_CURRENT_BINARY_DIR}/${LIBOMP_GENERATED_DEF_FILE})
 
   # Create the main def file with ordinals to use for building the runtime dll to maintain backwards compatible exports order
   libomp_get_gdflags(LIBOMP_GDFLAGS)
@@ -367,6 +370,8 @@ if(WIN32)
     set(LIBOMP_IMP_LIB_TARGET ompimp)
     # Create the auxiliary def file without ordinals to use for building the import library to import by name
     set(LIBOMPIMP_GENERATED_DEF_FILE ${LIBOMP_LIB_NAME}.imp.def)
+    # Generate this file independently of ompimp: the Arm64EC build adds a
+    # copy target that depends on it.
     add_custom_target(libompimp-needed-def-file DEPENDS ${LIBOMPIMP_GENERATED_DEF_FILE})
     set_target_properties(libompimp-needed-def-file PROPERTIES FOLDER "OpenMP/Resources")
     add_custom_command(
@@ -376,13 +381,47 @@ if(WIN32)
               -o ${LIBOMPIMP_GENERATED_DEF_FILE} ${CMAKE_CURRENT_SOURCE_DIR}/dllexports
       DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/dllexports ${LIBOMP_TOOLS_DIR}/generate-def.py
     )
-    # while this merely generates an import library off a def file, CMAKE still requires it to have a "source" so feed it a dummy one,
-    # making it a .txt which CMAKE will filter out from the librarian (a .cpp will make lib.exe punt trying to resolve the .def symbols)
-    add_library(${LIBOMP_IMP_LIB_TARGET} STATIC kmp_dummy.txt)
-    set_target_properties(${LIBOMP_IMP_LIB_TARGET} PROPERTIES FOLDER "OpenMP/Libraries")
+    # Import libraries have no object files. Use a custom command so changes to
+    # the def file rebuild the archive; LINK_DEPENDS is ignored for STATIC targets.
+    set(LIBOMPIMP_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+    if(CMAKE_ARCHIVE_OUTPUT_DIRECTORY)
+      get_filename_component(LIBOMPIMP_OUTPUT_DIRECTORY
+        "${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}" ABSOLUTE BASE_DIR "${CMAKE_CURRENT_BINARY_DIR}")
+    endif()
+    if(CMAKE_CONFIGURATION_TYPES AND NOT LIBOMPIMP_OUTPUT_DIRECTORY MATCHES "\\$<")
+      string(APPEND LIBOMPIMP_OUTPUT_DIRECTORY "/$<CONFIG>")
+    endif()
+    separate_arguments(LIBOMPIMP_FLAGS NATIVE_COMMAND "${CMAKE_STATIC_LINKER_FLAGS}")
+    set(LIBOMPIMP_CONFIGURATIONS ${CMAKE_CONFIGURATION_TYPES} ${CMAKE_BUILD_TYPE})
+    list(REMOVE_DUPLICATES LIBOMPIMP_CONFIGURATIONS)
+    foreach(config IN LISTS LIBOMPIMP_CONFIGURATIONS)
+      string(TOUPPER "${config}" uppercase_config)
+      if(DEFINED CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${uppercase_config})
+        get_filename_component(config_dir "${CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${uppercase_config}}"
+          ABSOLUTE BASE_DIR "${CMAKE_CURRENT_BINARY_DIR}")
+        set(LIBOMPIMP_OUTPUT_DIRECTORY
+          "$<IF:$<CONFIG:${config}>,${config_dir},${LIBOMPIMP_OUTPUT_DIRECTORY}>")
+      endif()
+      separate_arguments(config_flags NATIVE_COMMAND "${CMAKE_STATIC_LINKER_FLAGS_${uppercase_config}}")
+      list(APPEND LIBOMPIMP_FLAGS "$<$<CONFIG:${config}>:${config_flags}>")
+    endforeach()
+    set(LIBOMPIMP_OUTPUT_FILE "${LIBOMPIMP_OUTPUT_DIRECTORY}/${LIBOMP_IMP_LIB_FILE}")
+    add_custom_command(
+      OUTPUT "${LIBOMPIMP_OUTPUT_FILE}"
+      COMMAND ${CMAKE_COMMAND} -E make_directory "${LIBOMPIMP_OUTPUT_DIRECTORY}"
+      COMMAND ${CMAKE_AR} /nologo ${LIBOMPIMP_FLAGS}
+        "$<TARGET_PROPERTY:${LIBOMP_IMP_LIB_TARGET},STATIC_LIBRARY_OPTIONS>" "/OUT:${LIBOMPIMP_OUTPUT_FILE}"
+      DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/${LIBOMPIMP_GENERATED_DEF_FILE}"
+        "$<TARGET_PROPERTY:${LIBOMP_IMP_LIB_TARGET},LINK_DEPENDS>"
+      COMMAND_EXPAND_LISTS
+      VERBATIM
+    )
+    add_custom_target(${LIBOMP_IMP_LIB_TARGET} DEPENDS "${LIBOMPIMP_OUTPUT_FILE}")
+    # Keep options and additional dependencies on the target for Arm64X.
     set_target_properties(${LIBOMP_IMP_LIB_TARGET} PROPERTIES
-        PREFIX "" SUFFIX "" OUTPUT_NAME "${LIBOMP_IMP_LIB_FILE}" LINKER_LANGUAGE ${LIBOMP_LINKER_LANGUAGE}
-        STATIC_LIBRARY_OPTIONS "${CMAKE_LINK_DEF_FILE_FLAG}${CMAKE_CURRENT_BINARY_DIR}/${LIBOMPIMP_GENERATED_DEF_FILE}")
+      FOLDER "OpenMP/Libraries"
+      ARCHIVE_OUTPUT_DIRECTORY "${LIBOMPIMP_OUTPUT_DIRECTORY}"
+      STATIC_LIBRARY_OPTIONS "${CMAKE_LINK_DEF_FILE_FLAG}${CMAKE_CURRENT_BINARY_DIR}/${LIBOMPIMP_GENERATED_DEF_FILE}")
     add_dependencies(${LIBOMP_IMP_LIB_TARGET} libompimp-needed-def-file)
     add_dependencies(omp ${LIBOMP_IMP_LIB_TARGET})
   endif()
@@ -421,7 +460,11 @@ if(WIN32)
   if(NOT LIBOMP_ENABLE_ARM64X OR LIBOMP_ARCH STREQUAL "aarch64")
     install(TARGETS omp ${export_to_llvmexports} RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT openmp)
   endif()
-  install(TARGETS ${LIBOMP_IMP_LIB_TARGET} ARCHIVE DESTINATION "${OPENMP_INSTALL_LIBDIR}" COMPONENT openmp)
+  if(MSVC)
+    install(FILES "${LIBOMPIMP_OUTPUT_FILE}" DESTINATION "${OPENMP_INSTALL_LIBDIR}" COMPONENT openmp)
+  else()
+    install(TARGETS ${LIBOMP_IMP_LIB_TARGET} ARCHIVE DESTINATION "${OPENMP_INSTALL_LIBDIR}" COMPONENT openmp)
+  endif()
   # Create aliases (regular copies) of the library for backwards compatibility
   set(LIBOMP_ALIASES "libiomp5md")
   foreach(alias IN LISTS LIBOMP_ALIASES)
