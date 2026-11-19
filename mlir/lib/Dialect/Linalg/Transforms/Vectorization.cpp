@@ -2778,8 +2778,10 @@ struct PadOpVectorizationWithTransferReadPattern
     auto padValue = padOp.getConstantPaddingValue();
     if (!padValue)
       return failure();
-    // Padding value of existing `xferOp` is unused.
-    if (xferOp.hasOutOfBoundsDim() || xferOp.getMask())
+    // Padding value of existing `xferOp` is unused. This includes a read under
+    // an enclosing vector.mask, where the padding is used by the masked-off
+    // lanes.
+    if (xferOp.hasOutOfBoundsDim() || xferOp.getMask() || xferOp.isMasked())
       return failure();
 
     rewriter.modifyOpInPlace(xferOp, [&]() {

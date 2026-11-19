@@ -31,7 +31,8 @@ static bool isContiguousXferOp(OpTy op) {
 /// vector.transfer_write or vector.store op.
 static bool isContiguousStore(Operation *write) {
   if (auto transferWrite = dyn_cast<vector::TransferWriteOp>(write))
-    return isContiguousXferOp(transferWrite) && !transferWrite.getMask();
+    return isContiguousXferOp(transferWrite) && !transferWrite.getMask() &&
+           !transferWrite.isMasked();
   // vector.store are always contiguous.
   return isa<vector::StoreOp>(write);
 }
