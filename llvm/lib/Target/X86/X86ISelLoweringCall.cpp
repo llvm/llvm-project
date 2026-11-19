@@ -67,6 +67,14 @@ static bool shouldDisableArgRegFromCSR(CallingConv::ID CC) {
   return CC == CallingConv::X86_RegCall;
 }
 
+static void disableRegFromRegMask(uint32_t *RegMask, MCPhysReg Reg,
+                                  const TargetRegisterInfo *TRI) {
+  for (MCPhysReg SuperReg : TRI->superregs_inclusive(Reg))
+    if (TRI->superregs(SuperReg).empty())
+      for (MCPhysReg SubReg : TRI->subregs_inclusive(SuperReg))
+        RegMask[SubReg / 32] &= ~(1u << (SubReg % 32));
+}
+
 static std::pair<MVT, unsigned>
 handleMaskRegisterForCallingConv(unsigned NumElts, CallingConv::ID CC,
                                  const X86Subtarget &Subtarget) {
@@ -1164,10 +1172,8 @@ SDValue X86TargetLowering::LowerCallResult(
 
     // In some calling conventions we need to remove the used registers
     // from the register mask.
-    if (RegMask) {
-      for (MCPhysReg SubReg : TRI->subregs_inclusive(VA.getLocReg()))
-        RegMask[SubReg / 32] &= ~(1u << (SubReg % 32));
-    }
+    if (RegMask)
+      disableRegFromRegMask(RegMask, VA.getLocReg(), TRI);
 
     // Report an error if there was an attempt to return FP values via XMM
     // registers.
@@ -2693,12 +2699,11 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     unsigned RegMaskSize = MachineOperand::getRegMaskSize(TRI->getNumRegs());
     memcpy(RegMask, Mask, sizeof(RegMask[0]) * RegMaskSize);
 
-    // Make sure all sub registers of the argument registers are reset
+    // Make sure all sub and super registers of the argument registers are reset
     // in the RegMask.
     if (ShouldDisableArgRegs) {
       for (auto const &RegPair : RegsToPass)
-        for (MCPhysReg SubReg : TRI->subregs_inclusive(RegPair.first))
-          RegMask[SubReg / 32] &= ~(1u << (SubReg % 32));
+        disableRegFromRegMask(RegMask, RegPair.first, TRI);
     }
 
     // Create the RegMask Operand according to our updated mask.

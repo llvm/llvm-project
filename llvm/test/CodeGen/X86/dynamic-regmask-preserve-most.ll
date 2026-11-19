@@ -68,3 +68,24 @@ define void @caller3(i64 %a0) nounwind {
 ; CHECK:    name: caller3
 ; CHECK:    CALL64pcrel32 @callee3, CustomRegMask($ah,$al,$ax,$bh,$bl,$bp,$bph,$bpl,$bx,$ch,$cl,$cx,$dh,$di,$dih,$dil,$dl,$dx,$eax,$ebp,$ebx,$ecx,$edi,$edx,$esi,$hax,$hbp,$hbx,$hcx,$hdi,$hdx,$hsi,$rax,$rbp,$rbx,$rcx,$rdi,$rdx,$rsi,$si,$sih,$sil,$r8,$r9,$r10,$r12,$r13,$r14,$r15,$r8b,$r9b,$r10b,$r12b,$r13b,$r14b,$r15b,$r8bh,$r9bh,$r10bh,$r12bh,$r13bh,$r14bh,$r15bh,$r8d,$r9d,$r10d,$r12d,$r13d,$r14d,$r15d,$r8w,$r9w,$r10w,$r12w,$r13w,$r14w,$r15w,$r8wh,$r9wh,$r10wh,$r12wh,$r13wh,$r14wh,$r15wh), implicit $rsp, implicit $ssp, implicit $rdi, implicit $rsi, implicit-def $rsp, implicit-def $ssp
 ; CHECK:    RET 0
+
+declare preserve_mostcc i32 @callee4(i32) nounwind;
+declare preserve_mostcc i8 @callee5(i8) nounwind;
+
+; Check that returning a subregister (%eax or %al) also removes superregisters
+; (%rax) and sibling subregisters (%ah) from CustomRegMask.
+define i32 @caller4(i32 %a0) nounwind {
+  %r = call preserve_mostcc i32 @callee4(i32 %a0)
+  ret i32 %r
+}
+; CHECK:    name: caller4
+; CHECK:    CALL64pcrel32 @callee4, CustomRegMask($bh,$bl,$bp,$bph,$bpl,$bx,$ch,$cl,$cx,$dh,$di,$dih,$dil,$dl,$dx,$ebp,$ebx,$ecx,$edi,$edx,$esi,$hbp,$hbx,$hcx,$hdi,$hdx,$hsi,$rbp,$rbx,$rcx,$rdi,$rdx,$rsi,$si,$sih,$sil,$r8,$r9,$r10,$r12,$r13,$r14,$r15,$r8b,$r9b,$r10b,$r12b,$r13b,$r14b,$r15b,$r8bh,$r9bh,$r10bh,$r12bh,$r13bh,$r14bh,$r15bh,$r8d,$r9d,$r10d,$r12d,$r13d,$r14d,$r15d,$r8w,$r9w,$r10w,$r12w,$r13w,$r14w,$r15w,$r8wh,$r9wh,$r10wh,$r12wh,$r13wh,$r14wh,$r15wh), implicit $rsp, implicit $ssp, implicit $edi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax
+; CHECK:    RET 0, $eax
+
+define i8 @caller5(i8 %a0) nounwind {
+  %r = call preserve_mostcc i8 @callee5(i8 %a0)
+  ret i8 %r
+}
+; CHECK:    name: caller5
+; CHECK:    CALL64pcrel32 @callee5, CustomRegMask($bh,$bl,$bp,$bph,$bpl,$bx,$ch,$cl,$cx,$dh,$di,$dih,$dil,$dl,$dx,$ebp,$ebx,$ecx,$edi,$edx,$esi,$hbp,$hbx,$hcx,$hdi,$hdx,$hsi,$rbp,$rbx,$rcx,$rdi,$rdx,$rsi,$si,$sih,$sil,$r8,$r9,$r10,$r12,$r13,$r14,$r15,$r8b,$r9b,$r10b,$r12b,$r13b,$r14b,$r15b,$r8bh,$r9bh,$r10bh,$r12bh,$r13bh,$r14bh,$r15bh,$r8d,$r9d,$r10d,$r12d,$r13d,$r14d,$r15d,$r8w,$r9w,$r10w,$r12w,$r13w,$r14w,$r15w,$r8wh,$r9wh,$r10wh,$r12wh,$r13wh,$r14wh,$r15wh), implicit $rsp, implicit $ssp, implicit $edi, implicit-def $rsp, implicit-def $ssp, implicit-def $al
+; CHECK:    RET 0, $al
