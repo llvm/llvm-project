@@ -945,8 +945,8 @@ defm : X86WriteResPairUnsupported<WriteFBlendZ>;
 
 defm : PdWriteResXMMPair<WriteFVarBlend,    [PdFPU1, PdFPXBR],  2>;
 defm : PdWriteResYMMPair<WriteFVarBlendY,   [PdFPU1, PdFPXBR],  2, [2, 2], 2>;
-defm : PdWriteResXMMPair<WriteFMaskBlendX, [PdFPU1, PdFPXBR],  2>;
-defm : PdWriteResYMMPair<WriteFMaskBlendY, [PdFPU1, PdFPXBR],  2, [2, 2], 2>;
+defm : X86WriteResPairUnsupported<WriteFMaskBlendX>;
+defm : X86WriteResPairUnsupported<WriteFMaskBlendY>;
 defm : X86WriteResPairUnsupported<WriteFMaskBlendZ>;
 
 defm : PdWriteResXMMPair<WriteFShuffle256,  [PdFPU01, PdFPFMA],  2, [1, 3], 2>;
@@ -1179,7 +1179,7 @@ defm : X86WriteResPairUnsupported<WriteBlendZ>;
 
 defm : PdWriteResXMMPair<WriteVarBlend,      [PdFPU1, PdFPXBR], 2>;
 defm : X86WriteResPairUnsupported<WriteVarBlendY>;
-defm : PdWriteResXMMPair<WriteMaskBlendX, [PdFPU1, PdFPXBR], 2>;
+defm : X86WriteResPairUnsupported<WriteMaskBlendX>;
 defm : X86WriteResPairUnsupported<WriteMaskBlendY>;
 defm : X86WriteResPairUnsupported<WriteMaskBlendZ>;
 

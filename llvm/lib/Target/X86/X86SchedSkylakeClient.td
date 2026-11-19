@@ -342,8 +342,8 @@ defm : SKLWriteResPair<WriteFBlendY, [SKLPort015], 1, [1], 1, 7>;
 defm : X86WriteResPairUnsupported<WriteFBlendZ>;
 defm : SKLWriteResPair<WriteFVarBlend, [SKLPort015], 2, [2], 2, 6>; // Fp vector variable blends.
 defm : SKLWriteResPair<WriteFVarBlendY,[SKLPort015], 2, [2], 2, 7>;
-defm : SKLWriteResPair<WriteFMaskBlendX, [SKLPort015], 2, [2], 2, 6>; // Fp vector masked blends.
-defm : SKLWriteResPair<WriteFMaskBlendY, [SKLPort015], 2, [2], 2, 7>;
+defm : X86WriteResPairUnsupported<WriteFMaskBlendX>; // Fp vector masked blends.
+defm : X86WriteResPairUnsupported<WriteFMaskBlendY>;
 defm : X86WriteResPairUnsupported<WriteFMaskBlendZ>;
 
 // FMA Scheduling helper class.
@@ -404,8 +404,8 @@ defm : SKLWriteResPair<WriteBlendY, [SKLPort5], 1, [1], 1, 7>;
 defm : X86WriteResPairUnsupported<WriteBlendZ>;
 defm : SKLWriteResPair<WriteVarBlend,  [SKLPort015], 2, [2], 2, 6>; // Vector variable blends.
 defm : SKLWriteResPair<WriteVarBlendY, [SKLPort015], 2, [2], 2, 6>;
-defm : SKLWriteResPair<WriteMaskBlendX, [SKLPort015], 2, [2], 2, 6>; // Vector masked blends.
-defm : SKLWriteResPair<WriteMaskBlendY, [SKLPort015], 2, [2], 2, 6>;
+defm : X86WriteResPairUnsupported<WriteMaskBlendX>; // Vector masked blends.
+defm : X86WriteResPairUnsupported<WriteMaskBlendY>;
 defm : X86WriteResPairUnsupported<WriteMaskBlendZ>;
 defm : SKLWriteResPair<WriteMPSAD,  [SKLPort5], 4, [2], 2, 6>; // Vector MPSAD.
 defm : SKLWriteResPair<WriteMPSADY, [SKLPort5], 4, [2], 2, 7>;

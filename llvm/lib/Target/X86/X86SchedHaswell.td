@@ -351,8 +351,8 @@ defm : HWWriteResPair<WriteFShuffle256, [HWPort5], 3, [1], 1, 7>;
 defm : HWWriteResPair<WriteFVarShuffle256, [HWPort5], 3, [1], 1, 7>;
 defm : HWWriteResPair<WriteFVarBlend,  [HWPort5], 2, [2], 2, 6>;
 defm : HWWriteResPair<WriteFVarBlendY, [HWPort5], 2, [2], 2, 7>;
-defm : HWWriteResPair<WriteFMaskBlendX, [HWPort5], 2, [2], 2, 6>;
-defm : HWWriteResPair<WriteFMaskBlendY, [HWPort5], 2, [2], 2, 7>;
+defm : X86WriteResPairUnsupported<WriteFMaskBlendX>;
+defm : X86WriteResPairUnsupported<WriteFMaskBlendY>;
 defm : HWWriteResPair<WriteFMaskBlendZ, [HWPort5], 2, [2], 2, 7>; // Unsupported = 1
 
 // Conversion between integer and float.
@@ -467,8 +467,8 @@ defm : HWWriteResPair<WriteVPMOV256, [HWPort5], 3, [1], 1, 7>;
 defm : HWWriteResPair<WriteVarShuffle256, [HWPort5], 3, [1], 1, 7>;
 defm : HWWriteResPair<WriteVarBlend,  [HWPort5], 2, [2], 2, 6>;
 defm : HWWriteResPair<WriteVarBlendY, [HWPort5], 2, [2], 2, 7>;
-defm : HWWriteResPair<WriteMaskBlendX, [HWPort5], 2, [2], 2, 6>;
-defm : HWWriteResPair<WriteMaskBlendY, [HWPort5], 2, [2], 2, 7>;
+defm : X86WriteResPairUnsupported<WriteMaskBlendX>;
+defm : X86WriteResPairUnsupported<WriteMaskBlendY>;
 defm : HWWriteResPair<WriteMaskBlendZ, [HWPort5], 2, [2], 2, 7>; // Unsupported = 1
 defm : HWWriteResPair<WriteMPSAD,  [HWPort0, HWPort5], 7, [1, 2], 3, 6>;
 defm : HWWriteResPair<WriteMPSADY, [HWPort0, HWPort5], 7, [1, 2], 3, 7>;
