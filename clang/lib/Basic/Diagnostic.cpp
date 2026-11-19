@@ -232,10 +232,10 @@ DiagnosticsEngine::DiagStateMap::File *
 DiagnosticsEngine::DiagStateMap::getFileUncached(SourceManager &SrcMgr,
                                                  FileID ID) const {
   // Get or insert the File for this ID.
-  auto [It, Inserted] = Files.try_emplace(ID);
+  auto [FilePtr, Inserted] = getOrInsertFile(ID);
   if (!Inserted)
-    return It->second.get();
-  auto &F = *(It->second = std::make_unique<File>());
+    return FilePtr;
+  auto &F = *FilePtr;
 
   // We created a new File; look up the diagnostic state at the start of it and
   // initialize it.
