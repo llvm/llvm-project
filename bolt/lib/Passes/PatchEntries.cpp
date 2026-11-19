@@ -90,50 +90,49 @@ Error PatchEntries::runOnFunctions(BinaryContext &BC) {
           !Function.needsPatch() && Function.getSize() < PatchThreshold)
         continue;
 
-      // List of patches for function entries. We either successfully patch
-      // all entries or, if we cannot patch one or more, do no patch any and
-      // mark the function as ignorable.
-      std::vector<Patch> PendingPatches;
+      // Store the index of where the current function's patches start.
+      const size_t FirstPatch = Patches.size();
 
       uint64_t NextValidByte = 0; // offset of the byte past the last patch
-      bool Success = Function.forEachEntryPoint([&](uint64_t Offset,
-                                                    const MCSymbol *Symbol) {
-        if (Offset < NextValidByte) {
-          if (opts::Verbosity >= 1)
-            BC.outs() << "BOLT-INFO: unable to patch entry point in "
-                      << Function << " at offset 0x" << Twine::utohexstr(Offset)
-                      << '\n';
-          return false;
-        }
+      bool Success = Function.forEachEntryPoint(
+          [&](uint64_t Offset, const MCSymbol *Symbol) {
+            if (Offset < NextValidByte) {
+              if (opts::Verbosity >= 1)
+                BC.outs() << "BOLT-INFO: unable to patch entry point in "
+                          << Function << " at offset 0x"
+                          << Twine::utohexstr(Offset) << '\n';
+              return false;
+            }
 
-        NextValidByte = Offset + PatchSize;
-        if (NextValidByte > Function.getMaxSize()) {
-          if (opts::Verbosity >= 1)
-            BC.outs() << "BOLT-INFO: function " << Function
-                      << " too small to patch its entry point\n";
-          return false;
-        }
+            NextValidByte = Offset + PatchSize;
+            if (NextValidByte > Function.getMaxSize()) {
+              if (opts::Verbosity >= 1)
+                BC.outs() << "BOLT-INFO: function " << Function
+                          << " too small to patch its entry point\n";
+              return false;
+            }
 
-        const uint64_t PatchAddress = Function.getAddress() + Offset;
-        Patch P{Symbol, PatchAddress};
+            const uint64_t PatchAddress = Function.getAddress() + Offset;
+            Patch P{Symbol, PatchAddress};
 
-        if (BC.isX86()) {
-          uint64_t OverwriteLength =
-              Function.getInstructionSequenceLength(Offset, PatchSize);
-          P.PaddingAfter = OverwriteLength - PatchSize;
-          assert(PendingPatches.empty() ||
-                 (PendingPatches.back().Address + PatchSize +
-                      PendingPatches.back().PaddingAfter <=
-                  PatchAddress) &&
+            if (BC.isX86()) {
+              uint64_t OverwriteLength =
+                  Function.getInstructionSequenceLength(Offset, PatchSize);
+              P.PaddingAfter = OverwriteLength - PatchSize;
+              assert((Patches.size() == FirstPatch ||
+                      Patches.back().Address + PatchSize +
+                              Patches.back().PaddingAfter <=
+                          PatchAddress) &&
                      "Entry point cannot overlap with instruction stream of "
                      "previous entrypoint.");
-        }
+            }
 
-        PendingPatches.emplace_back(P);
-        return true;
-      });
+            Patches.emplace_back(P);
+            return true;
+          });
 
       if (!Success) {
+        Patches.resize(FirstPatch);
         // If the original function entries cannot be patched, then we cannot
         // safely emit new function body.
         BC.errs() << "BOLT-WARNING: failed to patch entries in " << Function
@@ -145,8 +144,6 @@ Error PatchEntries::runOnFunctions(BinaryContext &BC) {
         NeedsRescan = true;
         continue;
       }
-
-      llvm::append_range(Patches, PendingPatches);
     }
   } while (NeedsRescan);
 
