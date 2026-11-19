@@ -267,6 +267,30 @@ void all_standalone(int flag) {
   }
 }
 
+// Equal scores keep the clause order, even if one selector is a superset
+// (OpenMP 6.0 [9.4]).
+// CHECK-LABEL: define {{.*}}void @_Z9tie_orderii(
+// CHECK-NOT:   load i32, ptr %b.addr
+// CHECK:       [[A:%.*]] = load i32, ptr %a.addr
+// CHECK-NEXT:  icmp ne i32 [[A]], 0
+// CHECK:       load i32, ptr %b.addr
+void tie_order(int a, int b) {
+#pragma omp metadirective when(user={condition(a)}: parallel) \
+    when(user={condition(b)}, implementation={vendor(llvm)}: single)
+  bar();
+}
+
+// OpenMP 6.0 [9.3]: a strict subset of another selector scores zero.
+// CHECK-LABEL: define {{.*}}void @_Z9same_condi(
+// CHECK:       br i1 %{{.*}}, label %[[FIRST:[a-z0-9.]+]], label %
+// CHECK:       [[FIRST]]:
+// CHECK-NEXT:  call {{.*}} @__kmpc_single(
+void same_cond(int x) {
+#pragma omp metadirective when(user={condition(x)}: parallel) \
+    when(user={condition(x)}, implementation={vendor(llvm)}: single)
+  bar();
+}
+
 // Instantiated template. Kept last: the instantiation may be emitted at the
 // end of the file.
 // CHECK-LABEL: define {{.*}}void @_Z4tmplIiEvT_(

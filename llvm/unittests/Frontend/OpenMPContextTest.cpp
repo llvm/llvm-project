@@ -523,4 +523,29 @@ TEST_F(OpenMPContextTest, ConstructOrderInStrictSubset) {
   }
 }
 
+TEST_F(OpenMPContextTest, OrderedVariantMatches) {
+  OMPContext Context(false, Triple("x86_64-unknown-linux"), Triple(), -1);
+  APInt Three(64, 3);
+  VariantMatchInfo Plain, Vendor, NoMatch, Scored;
+  Plain.addTrait(TraitProperty::user_condition_true, "");
+  Vendor.addTrait(TraitProperty::user_condition_true, "");
+  Vendor.addTrait(TraitProperty::implementation_vendor_llvm, "");
+  NoMatch.addTrait(TraitProperty::user_condition_false, "");
+  Scored.addTrait(TraitProperty::implementation_vendor_llvm, "", &Three);
+
+  // Plain and Scored are strict subsets of Vendor, so they score zero and
+  // keep their order. NoMatch is dropped.
+  SmallVector<VariantMatchInfo, 4> Candidates{Plain, Vendor, NoMatch, Scored};
+  EXPECT_EQ(getOrderedVariantMatchesForContext(Candidates, Context),
+            (SmallVector<unsigned>{1, 0, 3}));
+
+  // Same condition: Plain is a strict subset of Vendor and goes last.
+  SmallVector<VariantMatchInfo, 2> Pair{Plain, Vendor};
+  EXPECT_EQ(getOrderedVariantMatchesForContext(Pair, Context, {1, 1}),
+            (SmallVector<unsigned>{1, 0}));
+  // Different conditions: no subset, so ties keep their order.
+  EXPECT_EQ(getOrderedVariantMatchesForContext(Pair, Context, {1, 2}),
+            (SmallVector<unsigned>{0, 1}));
+}
+
 } // namespace

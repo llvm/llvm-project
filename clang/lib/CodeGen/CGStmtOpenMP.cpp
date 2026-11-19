@@ -2406,6 +2406,8 @@ void CodeGenFunction::EmitOMPMetaDirective(const OMPMetaDirective &S) {
   ArrayRef<Expr *> Conditions = S.conditions();
   SmallVector<llvm::omp::VariantMatchInfo, 4> VMIs;
   SmallVector<unsigned, 4> VariantIdx;
+  SmallVector<unsigned, 4> ConditionIds;
+  SmallVector<llvm::FoldingSetNodeID, 4> CondProfiles;
   std::optional<unsigned> Fallback;
   for (auto [I, TI] : llvm::enumerate(S.traitInfos())) {
     if (TI->Sets.empty()) {
@@ -2422,19 +2424,26 @@ void CodeGenFunction::EmitOMPMetaDirective(const OMPMetaDirective &S) {
           unsigned(llvm::omp::TraitProperty::user_condition_true));
     }
     VariantIdx.push_back(I);
+    // Identical conditions share an id; 0 means no condition.
+    unsigned Id = 0;
+    if (const Expr *Cond = Conditions[I]) {
+      llvm::FoldingSetNodeID Profile;
+      Cond->Profile(Profile, getContext(), /*Canonical=*/true);
+      auto *It = llvm::find(CondProfiles, Profile);
+      Id = std::distance(CondProfiles.begin(), It) + 1;
+      if (It == CondProfiles.end())
+        CondProfiles.push_back(Profile);
+    }
+    ConditionIds.push_back(Id);
   }
 
   llvm::BasicBlock *EndBB = createBasicBlock("omp.metadirective.end");
   SmallVector<llvm::BasicBlock *, 4> VariantBBs(Variants.size());
   for (llvm::BasicBlock *&BB : VariantBBs)
     BB = createBasicBlock("omp.metadirective.variant");
-  while (!VMIs.empty()) {
-    int Best = llvm::omp::getBestVariantMatchForContext(VMIs, OMPCtx);
-    if (Best < 0)
-      break;
-    unsigned I = VariantIdx[Best];
-    VMIs.erase(VMIs.begin() + Best);
-    VariantIdx.erase(VariantIdx.begin() + Best);
+  for (unsigned Idx : llvm::omp::getOrderedVariantMatchesForContext(
+           VMIs, OMPCtx, ConditionIds)) {
+    unsigned I = VariantIdx[Idx];
     // Without a condition the variant always applies; later ones never run.
     const Expr *Cond = Conditions[I];
     if (!Cond) {

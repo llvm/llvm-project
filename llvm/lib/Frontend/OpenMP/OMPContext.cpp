@@ -441,6 +441,36 @@ int llvm::omp::getBestVariantMatchForContext(
   return BestVMIIdx;
 }
 
+SmallVector<unsigned> llvm::omp::getOrderedVariantMatchesForContext(
+    const SmallVectorImpl<VariantMatchInfo> &VMIs, const OMPContext &Ctx,
+    ArrayRef<unsigned> ConditionIds) {
+  SmallVector<std::pair<APInt, unsigned>> Scores;
+  for (auto [Idx, VMI] : enumerate(VMIs)) {
+    SmallVector<unsigned, 8> ConstructMatches;
+    if (isVariantApplicableInContextHelper(
+            VMI, Ctx, &ConstructMatches,
+            /*DeviceOrImplementationSetOnly=*/false))
+      Scores.emplace_back(getVariantMatchScore(VMI, Ctx, ConstructMatches),
+                          Idx);
+  }
+  // OpenMP 6.0 [9.3]: a strict subset of another selector scores zero.
+  for (auto &Entry : Scores) {
+    unsigned Idx = Entry.second;
+    unsigned Cond = ConditionIds.empty() ? 0 : ConditionIds[Idx];
+    if (any_of(Scores, [&](const auto &Other) {
+          unsigned J = Other.second;
+          return J != Idx && (Cond == 0 || Cond == ConditionIds[J]) &&
+                 isStrictSubset(VMIs[Idx], VMIs[J]);
+        }))
+      Entry.first = APInt(64, 0);
+  }
+  // OpenMP 6.0 [9.4]: higher scores first; ties keep the clause order.
+  stable_sort(Scores, [](const auto &LHS, const auto &RHS) {
+    return LHS.first.ugt(RHS.first);
+  });
+  return to_vector(make_second_range(Scores));
+}
+
 TraitSet llvm::omp::getOpenMPContextTraitSetKind(StringRef S) {
   return StringSwitch<TraitSet>(S)
 #define OMP_TRAIT_SET(Enum, Str) .Case(Str, TraitSet::Enum)
