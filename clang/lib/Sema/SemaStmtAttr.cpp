@@ -770,6 +770,14 @@ static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
           << A << A.getRange();
     } else {
       S.DiagnoseUnknownAttribute(A);
+      // Retain a genuinely unknown attribute on the statement so tooling and
+      // plugins can recover it, mirroring the declaration path. This never
+      // emits an applicability diagnostic: an unrecognized attribute-token is
+      // ignored per [dcl.attr.grammar]/8
+      // (https://eel.is/c++draft/dcl.attr.grammar#8), so it is not "invalid on
+      // a statement". Limited to C++ [[...]] syntax for now.
+      if (A.getKind() == ParsedAttr::UnknownAttribute && A.isCXX11Attribute())
+        return S.CreateUnknownAttr(A);
     }
     return nullptr;
   }

@@ -9,6 +9,12 @@
 // Example clang plugin which adds an an annotation to file-scope declarations
 // with the 'example' attribute.
 //
+// Because the attribute is registered (ParsedAttrInfo), Clang parses its
+// arguments as expressions in context, and this plugin lowers them onto an
+// Expr-carrying attribute (AnnotateAttr). A dependent argument therefore
+// participates in template instantiation through the normal machinery, with no
+// special support -- see clang/test/Frontend/plugin-attribute-instantiation.cpp.
+//
 // This plugin is used by clang/test/Frontend/plugin-attribute tests.
 //
 //===----------------------------------------------------------------------===//
