@@ -158,4 +158,44 @@ __INT_LEAST16_TYPE__ stdc_load8_aligned_bes16(const unsigned char *);
 __INT_LEAST32_TYPE__ stdc_load8_aligned_bes32(const unsigned char *);
 __INT_LEAST64_TYPE__ stdc_load8_aligned_bes64(const unsigned char *);
 
+void stdc_store8_leu8(__UINT_LEAST8_TYPE__, unsigned char *);
+void stdc_store8_leu16(__UINT_LEAST16_TYPE__, unsigned char *);
+void stdc_store8_leu32(__UINT_LEAST32_TYPE__, unsigned char *);
+void stdc_store8_leu64(__UINT_LEAST64_TYPE__, unsigned char *);
+
+void stdc_store8_beu8(__UINT_LEAST8_TYPE__, unsigned char *);
+void stdc_store8_beu16(__UINT_LEAST16_TYPE__, unsigned char *);
+void stdc_store8_beu32(__UINT_LEAST32_TYPE__, unsigned char *);
+void stdc_store8_beu64(__UINT_LEAST64_TYPE__, unsigned char *);
+
+void stdc_store8_aligned_leu8(__UINT_LEAST8_TYPE__, unsigned char *);
+void stdc_store8_aligned_leu16(__UINT_LEAST16_TYPE__, unsigned char *);
+void stdc_store8_aligned_leu32(__UINT_LEAST32_TYPE__, unsigned char *);
+void stdc_store8_aligned_leu64(__UINT_LEAST64_TYPE__, unsigned char *);
+
+void stdc_store8_aligned_beu8(__UINT_LEAST8_TYPE__, unsigned char *);
+void stdc_store8_aligned_beu16(__UINT_LEAST16_TYPE__, unsigned char *);
+void stdc_store8_aligned_beu32(__UINT_LEAST32_TYPE__, unsigned char *);
+void stdc_store8_aligned_beu64(__UINT_LEAST64_TYPE__, unsigned char *);
+
+void stdc_store8_les8(__INT_LEAST8_TYPE__, unsigned char *);
+void stdc_store8_les16(__INT_LEAST16_TYPE__, unsigned char *);
+void stdc_store8_les32(__INT_LEAST32_TYPE__, unsigned char *);
+void stdc_store8_les64(__INT_LEAST64_TYPE__, unsigned char *);
+
+void stdc_store8_bes8(__INT_LEAST8_TYPE__, unsigned char *);
+void stdc_store8_bes16(__INT_LEAST16_TYPE__, unsigned char *);
+void stdc_store8_bes32(__INT_LEAST32_TYPE__, unsigned char *);
+void stdc_store8_bes64(__INT_LEAST64_TYPE__, unsigned char *);
+
+void stdc_store8_aligned_les8(__INT_LEAST8_TYPE__, unsigned char *);
+void stdc_store8_aligned_les16(__INT_LEAST16_TYPE__, unsigned char *);
+void stdc_store8_aligned_les32(__INT_LEAST32_TYPE__, unsigned char *);
+void stdc_store8_aligned_les64(__INT_LEAST64_TYPE__, unsigned char *);
+
+void stdc_store8_aligned_bes8(__INT_LEAST8_TYPE__, unsigned char *);
+void stdc_store8_aligned_bes16(__INT_LEAST16_TYPE__, unsigned char *);
+void stdc_store8_aligned_bes32(__INT_LEAST32_TYPE__, unsigned char *);
+void stdc_store8_aligned_bes64(__INT_LEAST64_TYPE__, unsigned char *);
+
 #endif

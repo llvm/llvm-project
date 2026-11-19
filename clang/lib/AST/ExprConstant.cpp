@@ -17192,25 +17192,29 @@ static bool getBuiltinAlignArguments(const CallExpr *E, EvalInfo &Info,
   return true;
 }
 
-// Implements the C2y §7.18.21 stdc_load8_* family: reads N bytes from
-// E->getArg(0) and assembles them per IsBE into a value of E's type. The
-// aligned_* variants additionally require the pointer to be aligned to the
-// natural alignment of E's type.
-static bool EvaluateStdcLoad8(EvalInfo &Info, const CallExpr *E, bool IsBE,
-                              bool IsAligned, APSInt &Result) {
+/// Evaluates PtrArg and checks that the bytes of a ValueTy it points to can be
+/// accessed with AK, then calls Fn(BytePtr, CharTy, Shift) for each byte in
+/// memory order. The aligned_* variants also require the pointer to be aligned
+/// to ValueTy. With N the bit width of ValueTy, the byte at Ptr[I] is placed at
+/// bit Shift of the value, where Shift is 8 * I for little-endian and
+/// 8 * (N/8 - I - 1) for big-endian. This matches the b_index mapping in
+/// §7.18.21 (loads) and the index sequence in §7.18.22 (stores).
+static bool ForEachStdcLoadStore8Byte(
+    EvalInfo &Info, const CallExpr *E, const Expr *PtrArg, QualType ValueTy,
+    AccessKinds AK, bool IsBE, bool IsAligned,
+    llvm::function_ref<bool(const LValue &, QualType, unsigned)> Fn) {
   LValue Ptr;
-  if (!EvaluatePointer(E->getArg(0), Ptr, Info))
+  if (!EvaluatePointer(PtrArg, Ptr, Info))
     return false;
 
-  if (!Ptr.checkNullPointerForFoldAccess(Info, E, AK_Read) ||
-      Ptr.Designator.Invalid)
+  if (!Ptr.checkNullPointerForFoldAccess(Info, E, AK) || Ptr.Designator.Invalid)
     return false;
 
   if (Ptr.Designator.isMostDerivedAnUnsizedArray())
     return false;
 
   if (IsAligned) {
-    CharUnits RequiredAlign = Info.Ctx.getTypeAlignInChars(E->getType());
+    CharUnits RequiredAlign = Info.Ctx.getTypeAlignInChars(ValueTy);
     CharUnits BaseAlignment = getBaseAlignment(Info, Ptr);
     CharUnits PtrAlign = BaseAlignment.alignmentAtOffset(Ptr.Offset);
     if (PtrAlign < RequiredAlign) {
@@ -17222,7 +17226,7 @@ static bool EvaluateStdcLoad8(EvalInfo &Info, const CallExpr *E, bool IsBE,
   }
 
   QualType CharTy = Ptr.Designator.getType(Info.Ctx);
-  unsigned ByteWidth = Info.Ctx.getTypeSize(E->getType()) / 8;
+  unsigned ByteWidth = Info.Ctx.getTypeSize(ValueTy) / 8;
   uint64_t RemainingElems = Ptr.Designator.validIndexAdjustments().second;
   if (ByteWidth > RemainingElems) {
     uint64_t ArrayIndex = Ptr.Designator.MostDerivedIsArrayElement
@@ -17233,25 +17237,58 @@ static bool EvaluateStdcLoad8(EvalInfo &Info, const CallExpr *E, bool IsBE,
     return false;
   }
 
-  // Load the bytes and assemble them per C2y §7.18.21:
-  // result = sum(b_index * 2^(8*index)) where b_index = ptr[index] (LE)
-  // or ptr[N/8 - index - 1] (BE).
-  uint64_t ResultBits = 0;
-  LValue BytePtr = Ptr;
   for (unsigned I = 0; I < ByteWidth; ++I) {
-    APValue ByteVal;
-    if (!handleLValueToRValueConversion(Info, E, CharTy, BytePtr, ByteVal))
-      return false;
     unsigned Shift = 8 * (IsBE ? ByteWidth - I - 1 : I);
-    ResultBits |= ByteVal.getInt().getZExtValue() << Shift;
-    if (I + 1 < ByteWidth)
-      if (!HandleLValueArrayAdjustment(Info, E, BytePtr, CharTy, 1))
-        return false;
+    if (!Fn(Ptr, CharTy, Shift))
+      return false;
+    if (I + 1 < ByteWidth &&
+        !HandleLValueArrayAdjustment(Info, E, Ptr, CharTy, 1))
+      return false;
   }
-
-  bool IsSigned = E->getType()->isSignedIntegerType();
-  Result = APSInt(APInt(ByteWidth * 8, ResultBits), !IsSigned);
   return true;
+}
+
+// Implements the C2y §7.18.21 stdc_load8_* family: reads N bytes from
+// E->getArg(0) and assembles them per IsBE into a value of E's type.
+static bool EvaluateStdcLoad8(EvalInfo &Info, const CallExpr *E, bool IsBE,
+                              bool IsAligned, APSInt &Result) {
+  QualType ResultTy = E->getType();
+  uint64_t ResultBits = 0;
+  if (!ForEachStdcLoadStore8Byte(
+          Info, E, E->getArg(0), ResultTy, AK_Read, IsBE, IsAligned,
+          [&](const LValue &BytePtr, QualType CharTy, unsigned Shift) {
+            APValue ByteVal;
+            if (!handleLValueToRValueConversion(Info, E, CharTy, BytePtr,
+                                                ByteVal))
+              return false;
+            ResultBits |= ByteVal.getInt().getZExtValue() << Shift;
+            return true;
+          }))
+    return false;
+
+  unsigned BitWidth = Info.Ctx.getTypeSize(ResultTy);
+  Result =
+      APSInt(APInt(BitWidth, ResultBits), !ResultTy->isSignedIntegerType());
+  return true;
+}
+
+// Implements the C2y §7.18.22 stdc_store8_* family: writes the N-bit value
+// E->getArg(0) to the bytes at E->getArg(1) per IsBE.
+static bool EvaluateStdcStore8(EvalInfo &Info, const CallExpr *E, bool IsBE,
+                               bool IsAligned) {
+  const Expr *ValueArg = E->getArg(0);
+  APSInt Value;
+  if (!EvaluateInteger(ValueArg, Value, Info))
+    return false;
+
+  uint64_t ValueBits = Value.getZExtValue();
+  return ForEachStdcLoadStore8Byte(
+      Info, E, E->getArg(1), ValueArg->getType(), AK_Assign, IsBE, IsAligned,
+      [&](const LValue &BytePtr, QualType CharTy, unsigned Shift) {
+        APValue ByteVal(APSInt(APInt(8, (ValueBits >> Shift) & 0xFF),
+                               !CharTy->isSignedIntegerType()));
+        return handleAssignment(Info, E, BytePtr, CharTy, ByteVal);
+      });
 }
 
 bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
@@ -22015,6 +22052,78 @@ public:
 
     case Builtin::BI__builtin_operator_delete:
       return HandleOperatorDeleteCall(Info, E);
+
+    case Builtin::BIstdc_store8_leu8:
+    case Builtin::BI__builtin_stdc_store8_leu8:
+    case Builtin::BIstdc_store8_leu16:
+    case Builtin::BI__builtin_stdc_store8_leu16:
+    case Builtin::BIstdc_store8_leu32:
+    case Builtin::BI__builtin_stdc_store8_leu32:
+    case Builtin::BIstdc_store8_leu64:
+    case Builtin::BI__builtin_stdc_store8_leu64:
+    case Builtin::BIstdc_store8_les8:
+    case Builtin::BI__builtin_stdc_store8_les8:
+    case Builtin::BIstdc_store8_les16:
+    case Builtin::BI__builtin_stdc_store8_les16:
+    case Builtin::BIstdc_store8_les32:
+    case Builtin::BI__builtin_stdc_store8_les32:
+    case Builtin::BIstdc_store8_les64:
+    case Builtin::BI__builtin_stdc_store8_les64:
+      return EvaluateStdcStore8(Info, E, /*IsBE=*/false, /*IsAligned=*/false);
+
+    case Builtin::BIstdc_store8_aligned_leu8:
+    case Builtin::BI__builtin_stdc_store8_aligned_leu8:
+    case Builtin::BIstdc_store8_aligned_leu16:
+    case Builtin::BI__builtin_stdc_store8_aligned_leu16:
+    case Builtin::BIstdc_store8_aligned_leu32:
+    case Builtin::BI__builtin_stdc_store8_aligned_leu32:
+    case Builtin::BIstdc_store8_aligned_leu64:
+    case Builtin::BI__builtin_stdc_store8_aligned_leu64:
+    case Builtin::BIstdc_store8_aligned_les8:
+    case Builtin::BI__builtin_stdc_store8_aligned_les8:
+    case Builtin::BIstdc_store8_aligned_les16:
+    case Builtin::BI__builtin_stdc_store8_aligned_les16:
+    case Builtin::BIstdc_store8_aligned_les32:
+    case Builtin::BI__builtin_stdc_store8_aligned_les32:
+    case Builtin::BIstdc_store8_aligned_les64:
+    case Builtin::BI__builtin_stdc_store8_aligned_les64:
+      return EvaluateStdcStore8(Info, E, /*IsBE=*/false, /*IsAligned=*/true);
+
+    case Builtin::BIstdc_store8_beu8:
+    case Builtin::BI__builtin_stdc_store8_beu8:
+    case Builtin::BIstdc_store8_beu16:
+    case Builtin::BI__builtin_stdc_store8_beu16:
+    case Builtin::BIstdc_store8_beu32:
+    case Builtin::BI__builtin_stdc_store8_beu32:
+    case Builtin::BIstdc_store8_beu64:
+    case Builtin::BI__builtin_stdc_store8_beu64:
+    case Builtin::BIstdc_store8_bes8:
+    case Builtin::BI__builtin_stdc_store8_bes8:
+    case Builtin::BIstdc_store8_bes16:
+    case Builtin::BI__builtin_stdc_store8_bes16:
+    case Builtin::BIstdc_store8_bes32:
+    case Builtin::BI__builtin_stdc_store8_bes32:
+    case Builtin::BIstdc_store8_bes64:
+    case Builtin::BI__builtin_stdc_store8_bes64:
+      return EvaluateStdcStore8(Info, E, /*IsBE=*/true, /*IsAligned=*/false);
+
+    case Builtin::BIstdc_store8_aligned_beu8:
+    case Builtin::BI__builtin_stdc_store8_aligned_beu8:
+    case Builtin::BIstdc_store8_aligned_beu16:
+    case Builtin::BI__builtin_stdc_store8_aligned_beu16:
+    case Builtin::BIstdc_store8_aligned_beu32:
+    case Builtin::BI__builtin_stdc_store8_aligned_beu32:
+    case Builtin::BIstdc_store8_aligned_beu64:
+    case Builtin::BI__builtin_stdc_store8_aligned_beu64:
+    case Builtin::BIstdc_store8_aligned_bes8:
+    case Builtin::BI__builtin_stdc_store8_aligned_bes8:
+    case Builtin::BIstdc_store8_aligned_bes16:
+    case Builtin::BI__builtin_stdc_store8_aligned_bes16:
+    case Builtin::BIstdc_store8_aligned_bes32:
+    case Builtin::BI__builtin_stdc_store8_aligned_bes32:
+    case Builtin::BIstdc_store8_aligned_bes64:
+    case Builtin::BI__builtin_stdc_store8_aligned_bes64:
+      return EvaluateStdcStore8(Info, E, /*IsBE=*/true, /*IsAligned=*/true);
 
     case Builtin::BIstdc_memreverse8:
     case Builtin::BI__builtin_stdc_memreverse8: {

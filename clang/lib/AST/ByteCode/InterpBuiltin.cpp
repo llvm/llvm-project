@@ -2240,15 +2240,20 @@ static bool interp__builtin_stdc_memreverse8(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-static bool interp__builtin_load8(InterpState &S, CodePtr OpPC,
-                                  const InterpFrame *Frame,
-                                  const CallExpr *Call, bool IsBigEndian,
-                                  bool IsAligned) {
-  Pointer Ptr = S.Stk.pop<Pointer>();
-
+/// Checks that the bytes of a ValueTy at Ptr can be accessed with AK, then
+/// calls Fn(BytePtr, ElemT, Shift) for each byte in memory order. The aligned_*
+/// variants also require Ptr to be aligned to ValueTy. With N the bit width of
+/// ValueTy, the byte at Ptr[I] is placed at bit Shift of the value, where
+/// Shift is 8 * I for little-endian and 8 * (N/8 - I - 1) for big-endian. This
+/// matches the b_index mapping in §7.18.21 (loads) and the index sequence in
+/// §7.18.22 (stores).
+static bool forEachLoad8Store8Byte(
+    InterpState &S, CodePtr OpPC, const CallExpr *Call, Pointer Ptr,
+    QualType ValueTy, AccessKinds AK, bool IsBigEndian, bool IsAligned,
+    llvm::function_ref<bool(const Pointer &, PrimType, unsigned)> Fn) {
   if (Ptr.isZero()) {
     S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_access_null)
-        << AK_Read;
+        << AK;
     return false;
   }
 
@@ -2259,8 +2264,7 @@ static bool interp__builtin_load8(InterpState &S, CodePtr OpPC,
     return false;
 
   if (IsAligned) {
-    CharUnits RequiredAlign =
-        S.getASTContext().getTypeAlignInChars(Call->getType());
+    CharUnits RequiredAlign = S.getASTContext().getTypeAlignInChars(ValueTy);
     CharUnits BaseAlignment = getBaseAlignment(S.getASTContext(), Ptr);
     std::optional<size_t> LayoutOffset =
         Ptr.computeLayoutOffset(S.getASTContext());
@@ -2289,7 +2293,7 @@ static bool interp__builtin_load8(InterpState &S, CodePtr OpPC,
   uint64_t ArraySize = Ptr.getNumElems();
   uint64_t RemainingElems = ArraySize - BaseIdx;
 
-  unsigned ByteWidth = S.getASTContext().getTypeSize(Call->getType()) / 8;
+  unsigned ByteWidth = S.getASTContext().getTypeSize(ValueTy) / 8;
   if (ByteWidth > RemainingElems) {
     uint64_t LastIndex = llvm::SaturatingAdd(BaseIdx, uint64_t(ByteWidth - 1));
     S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_array_index)
@@ -2300,32 +2304,66 @@ static bool interp__builtin_load8(InterpState &S, CodePtr OpPC,
   OptPrimType ElemT = S.getContext().classify(ElemTy);
   if (!ElemT || !isIntegerOrBoolType(*ElemT))
     return false;
-  uint64_t Result = 0;
+  assert((IsArray || ByteWidth == 1) &&
+         "non-array pointer, expected a 1-byte access");
 
-  if (IsArray) {
-    // C2y §7.18.21: result = sum(b_index * 2^(8*index)) for index in [0, N/8)
-    // where b_index = ptr[index] (LE) or ptr[N/8 - index - 1] (BE).
-    for (unsigned I = 0; I != ByteWidth; ++I) {
-      size_t SrcIdx = IsBigEndian ? (ByteWidth - I - 1) : I;
-      Pointer BytePtr = Ptr.atIndex(BaseIdx + SrcIdx);
-      if (!CheckLoad(S, OpPC, BytePtr, AK_Read))
-        return false;
-      INT_TYPE_SWITCH(*ElemT, {
-        Result |= BytePtr.load<T>().toAPSInt().getZExtValue() << (8 * I);
-      });
-    }
-  } else {
-    assert(ByteWidth == 1 && "non-array pointer, expected a 1-byte load");
-    if (!CheckLoad(S, OpPC, Ptr, AK_Read))
+  for (unsigned I = 0; I != ByteWidth; ++I) {
+    Pointer BytePtr = IsArray ? Ptr.atIndex(BaseIdx + I) : Ptr;
+    unsigned Shift = 8 * (IsBigEndian ? ByteWidth - I - 1 : I);
+    if (!Fn(BytePtr, *ElemT, Shift))
       return false;
-    INT_TYPE_SWITCH(*ElemT,
-                    { Result = Ptr.load<T>().toAPSInt().getZExtValue(); });
   }
-
-  bool IsSigned = Call->getType()->isSignedIntegerType();
-  pushInteger(S, APSInt(APInt(ByteWidth * 8, Result), !IsSigned),
-              Call->getType());
   return true;
+}
+
+static bool interp__builtin_load8(InterpState &S, CodePtr OpPC,
+                                  const InterpFrame *Frame,
+                                  const CallExpr *Call, bool IsBigEndian,
+                                  bool IsAligned) {
+  Pointer Ptr = S.Stk.pop<Pointer>();
+  QualType ResultTy = Call->getType();
+
+  uint64_t Result = 0;
+  if (!forEachLoad8Store8Byte(
+          S, OpPC, Call, Ptr, ResultTy, AK_Read, IsBigEndian, IsAligned,
+          [&](const Pointer &BytePtr, PrimType ElemT, unsigned Shift) {
+            if (!CheckLoad(S, OpPC, BytePtr, AK_Read))
+              return false;
+            INT_TYPE_SWITCH(ElemT, {
+              Result |= BytePtr.load<T>().toAPSInt().getZExtValue() << Shift;
+            });
+            return true;
+          }))
+    return false;
+
+  unsigned BitWidth = S.getASTContext().getTypeSize(ResultTy);
+  pushInteger(S,
+              APSInt(APInt(BitWidth, Result), !ResultTy->isSignedIntegerType()),
+              ResultTy);
+  return true;
+}
+
+static bool interp__builtin_store8(InterpState &S, CodePtr OpPC,
+                                   const InterpFrame *Frame,
+                                   const CallExpr *Call, bool IsBigEndian,
+                                   bool IsAligned) {
+  Pointer Ptr = S.Stk.pop<Pointer>();
+  QualType ValueTy = Call->getArg(0)->getType();
+  uint64_t ValueBits;
+  if (!popToUInt64(S, Call->getArg(0), ValueBits))
+    return false;
+
+  return forEachLoad8Store8Byte(
+      S, OpPC, Call, Ptr, ValueTy, AK_Assign, IsBigEndian, IsAligned,
+      [&](const Pointer &BytePtr, PrimType ElemT, unsigned Shift) {
+        if (!CheckStore(S, OpPC, BytePtr))
+          return false;
+        uint8_t Byte = ValueBits >> Shift;
+        FIXED_SIZE_INT_TYPE_SWITCH(ElemT,
+                                   { BytePtr.deref<T>() = T::from(Byte); });
+        BytePtr.initialize();
+        return true;
+      });
 }
 
 static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
@@ -4808,6 +4846,7 @@ static bool interp__builtin_meta_is_type(InterpState &S, CodePtr OpPC,
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
                       uint32_t BuiltinID) {
   const InterpFrame *Frame = S.Current;
+
   switch (BuiltinID) {
   case Builtin::BI__builtin_is_constant_evaluated:
     return interp__builtin_is_constant_evaluated(S, OpPC, Frame, Call);
@@ -5383,6 +5422,82 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BIstdc_load8_aligned_bes64:
     return interp__builtin_load8(S, OpPC, Frame, Call, /*IsBigEndian=*/true,
                                  /*IsAligned=*/true);
+
+  case Builtin::BIstdc_store8_leu8:
+  case Builtin::BI__builtin_stdc_store8_leu8:
+  case Builtin::BIstdc_store8_leu16:
+  case Builtin::BI__builtin_stdc_store8_leu16:
+  case Builtin::BIstdc_store8_leu32:
+  case Builtin::BI__builtin_stdc_store8_leu32:
+  case Builtin::BIstdc_store8_leu64:
+  case Builtin::BI__builtin_stdc_store8_leu64:
+  case Builtin::BIstdc_store8_les8:
+  case Builtin::BI__builtin_stdc_store8_les8:
+  case Builtin::BIstdc_store8_les16:
+  case Builtin::BI__builtin_stdc_store8_les16:
+  case Builtin::BIstdc_store8_les32:
+  case Builtin::BI__builtin_stdc_store8_les32:
+  case Builtin::BIstdc_store8_les64:
+  case Builtin::BI__builtin_stdc_store8_les64:
+    return interp__builtin_store8(S, OpPC, Frame, Call, /*IsBigEndian=*/false,
+                                  /*IsAligned=*/false);
+
+  case Builtin::BIstdc_store8_aligned_leu8:
+  case Builtin::BI__builtin_stdc_store8_aligned_leu8:
+  case Builtin::BIstdc_store8_aligned_leu16:
+  case Builtin::BI__builtin_stdc_store8_aligned_leu16:
+  case Builtin::BIstdc_store8_aligned_leu32:
+  case Builtin::BI__builtin_stdc_store8_aligned_leu32:
+  case Builtin::BIstdc_store8_aligned_leu64:
+  case Builtin::BI__builtin_stdc_store8_aligned_leu64:
+  case Builtin::BIstdc_store8_aligned_les8:
+  case Builtin::BI__builtin_stdc_store8_aligned_les8:
+  case Builtin::BIstdc_store8_aligned_les16:
+  case Builtin::BI__builtin_stdc_store8_aligned_les16:
+  case Builtin::BIstdc_store8_aligned_les32:
+  case Builtin::BI__builtin_stdc_store8_aligned_les32:
+  case Builtin::BIstdc_store8_aligned_les64:
+  case Builtin::BI__builtin_stdc_store8_aligned_les64:
+    return interp__builtin_store8(S, OpPC, Frame, Call, /*IsBigEndian=*/false,
+                                  /*IsAligned=*/true);
+
+  case Builtin::BIstdc_store8_beu8:
+  case Builtin::BI__builtin_stdc_store8_beu8:
+  case Builtin::BIstdc_store8_beu16:
+  case Builtin::BI__builtin_stdc_store8_beu16:
+  case Builtin::BIstdc_store8_beu32:
+  case Builtin::BI__builtin_stdc_store8_beu32:
+  case Builtin::BIstdc_store8_beu64:
+  case Builtin::BI__builtin_stdc_store8_beu64:
+  case Builtin::BIstdc_store8_bes8:
+  case Builtin::BI__builtin_stdc_store8_bes8:
+  case Builtin::BIstdc_store8_bes16:
+  case Builtin::BI__builtin_stdc_store8_bes16:
+  case Builtin::BIstdc_store8_bes32:
+  case Builtin::BI__builtin_stdc_store8_bes32:
+  case Builtin::BIstdc_store8_bes64:
+  case Builtin::BI__builtin_stdc_store8_bes64:
+    return interp__builtin_store8(S, OpPC, Frame, Call, /*IsBigEndian=*/true,
+                                  /*IsAligned=*/false);
+
+  case Builtin::BIstdc_store8_aligned_beu8:
+  case Builtin::BI__builtin_stdc_store8_aligned_beu8:
+  case Builtin::BIstdc_store8_aligned_beu16:
+  case Builtin::BI__builtin_stdc_store8_aligned_beu16:
+  case Builtin::BIstdc_store8_aligned_beu32:
+  case Builtin::BI__builtin_stdc_store8_aligned_beu32:
+  case Builtin::BIstdc_store8_aligned_beu64:
+  case Builtin::BI__builtin_stdc_store8_aligned_beu64:
+  case Builtin::BIstdc_store8_aligned_bes8:
+  case Builtin::BI__builtin_stdc_store8_aligned_bes8:
+  case Builtin::BIstdc_store8_aligned_bes16:
+  case Builtin::BI__builtin_stdc_store8_aligned_bes16:
+  case Builtin::BIstdc_store8_aligned_bes32:
+  case Builtin::BI__builtin_stdc_store8_aligned_bes32:
+  case Builtin::BIstdc_store8_aligned_bes64:
+  case Builtin::BI__builtin_stdc_store8_aligned_bes64:
+    return interp__builtin_store8(S, OpPC, Frame, Call, /*IsBigEndian=*/true,
+                                  /*IsAligned=*/true);
 
   case Builtin::BI__atomic_always_lock_free:
   case Builtin::BI__atomic_is_lock_free:
