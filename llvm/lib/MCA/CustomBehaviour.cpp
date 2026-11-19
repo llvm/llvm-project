@@ -43,6 +43,10 @@ CustomBehaviour::getEndViews(llvm::MCInstPrinter &IP,
   return std::vector<std::unique_ptr<View>>();
 }
 
+ArrayRef<MacroFusionPredicate> CustomBehaviour::getFusionPredicates() {
+  return {};
+}
+
 const llvm::StringRef LatencyInstrument::DESC_NAME = "LATENCY";
 
 bool InstrumentManager::supportsInstrumentType(StringRef Type) const {
