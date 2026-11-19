@@ -24,6 +24,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstVisitor.h"
@@ -2574,25 +2575,10 @@ SPIRVEmitIntrinsicsImpl::visitExtractElementInst(ExtractElementInst &I) {
   return NewI;
 }
 
-// Trace a vector Value to find which scalar value was inserted at a given
-// index. Walks backwards through insertelement chains. Returns nullptr if the
-// element cannot be determined statically.
-static Value *findInsertedElement(Value *Vec, unsigned TargetIdx) {
-  while (auto *IE = dyn_cast<InsertElementInst>(Vec)) {
-    auto *IdxC = dyn_cast<ConstantInt>(IE->getOperand(2));
-    if (!IdxC)
-      return nullptr;
-    if (IdxC->getZExtValue() == TargetIdx)
-      return IE->getOperand(1);
-    Vec = IE->getOperand(0);
-  }
-  return nullptr;
-}
-
 // Scalarize ptrtoint and inttoptr instructions operating on vectors of
 // pointers, since SPIR-V does not support vectors of pointers without
-// extensions. This must run before the main visitor loop to ensure
-// insertelement/extractelement chains are still in their original IR form.
+// extensions. Run before preprocessCompositeConstants so that
+// findScalarElement still sees constant vectors.
 void SPIRVEmitIntrinsicsImpl::scalarizeVectorPtrCasts(Function &F) {
   // If the extension for vector-of-pointers is available, no scalarization
   // is needed - the backend can handle them natively.
@@ -2614,7 +2600,7 @@ void SPIRVEmitIntrinsicsImpl::scalarizeVectorPtrCasts(Function &F) {
       Value *Result = PoisonValue::get(PTI->getType());
 
       for (unsigned Idx = 0; Idx < NumElems; ++Idx) {
-        Value *ElemPtr = findInsertedElement(PTI->getOperand(0), Idx);
+        Value *ElemPtr = findScalarElement(PTI->getOperand(0), Idx);
         if (!ElemPtr)
           ElemPtr = B.CreateExtractElement(PTI->getOperand(0), B.getInt32(Idx));
         Value *Conv = B.CreatePtrToInt(ElemPtr, ElemIntTy);
@@ -2631,11 +2617,10 @@ void SPIRVEmitIntrinsicsImpl::scalarizeVectorPtrCasts(Function &F) {
       // Only scalarize if all users are extractelement with constant index.
       // Other uses (e.g. masked.gather) need the vector-of-pointers and
       // should be handled by extension-specific lowering.
-      bool AllUsersExtract =
-          !ITP->use_empty() && llvm::all_of(ITP->users(), [&](User *U) {
-            auto *EE = dyn_cast<ExtractElementInst>(U);
-            return EE && isa<ConstantInt>(EE->getIndexOperand());
-          });
+      bool AllUsersExtract = llvm::all_of(ITP->users(), [&](User *U) {
+        auto *EE = dyn_cast<ExtractElementInst>(U);
+        return EE && isa<ConstantInt>(EE->getIndexOperand());
+      });
       if (!AllUsersExtract)
         continue;
 
@@ -2658,29 +2643,15 @@ void SPIRVEmitIntrinsicsImpl::scalarizeVectorPtrCasts(Function &F) {
     }
   }
 
-  for (Instruction *I : ToErase)
+  if (ToErase.empty())
+    return;
+  SmallVector<WeakTrackingVH, 8> MaybeDead;
+  for (Instruction *I : ToErase) {
+    for (Value *Op : I->operand_values())
+      MaybeDead.push_back(Op);
     I->eraseFromParent();
-
-  // Clean up dead insertelement chains that produced vectors of pointers
-  // (e.g. the chain feeding a now-erased ptrtoint). Use a worklist to
-  // handle chains where erasing one insert makes the previous one dead.
-  SmallVector<Instruction *, 8> DeadInsts;
-  for (Instruction &I : instructions(F)) {
-    if (!isa<InsertElementInst>(&I))
-      continue;
-    auto *VecTy = dyn_cast<FixedVectorType>(I.getType());
-    if (VecTy && VecTy->getElementType()->isPointerTy() && I.use_empty())
-      DeadInsts.push_back(&I);
   }
-  while (!DeadInsts.empty()) {
-    Instruction *I = DeadInsts.pop_back_val();
-    SmallVector<Value *, 4> Ops(I->operand_values());
-    I->eraseFromParent();
-    for (Value *Op : Ops)
-      if (auto *OpI = dyn_cast<Instruction>(Op);
-          OpI && OpI->use_empty() && isa<InsertElementInst>(OpI))
-        DeadInsts.push_back(OpI);
-  }
+  RecursivelyDeleteTriviallyDeadInstructionsPermissive(MaybeDead);
 }
 
 Instruction *SPIRVEmitIntrinsicsImpl::visitInsertValueInst(InsertValueInst &I) {
@@ -2796,11 +2767,11 @@ Instruction *SPIRVEmitIntrinsicsImpl::visitStoreInst(StoreInst &I) {
   auto *PtrOp = I.getPointerOperand();
 
   if (I.getValueOperand()->getType()->isAggregateType()) {
-    // It is possible that what used to be an ExtractValueInst has been
-    // replaced with a call to the spv_extractv intrinsic, and that said call
-    // hasn't had its return type replaced with i32 during the dedicated pass
-    // (because it was emitted later); we have to handle this here, because
-    // IRTranslator cannot deal with multi-register types at the moment.
+    // It is possible that what used to be an ExtractValueInst has been replaced
+    // with a call to the spv_extractv intrinsic, and that said call hasn't
+    // had its return type replaced with i32 during the dedicated pass (because
+    // it was emitted later); we have to handle this here, because IRTranslator
+    // cannot deal with multi-register types at the moment.
     CallBase *CB = dyn_cast<CallBase>(I.getValueOperand());
     assert(CB && CB->getIntrinsicID() == Intrinsic::spv_extractv &&
            "Unexpected argument of aggregate type, should be spv_extractv!");
@@ -4009,6 +3980,7 @@ bool SPIRVEmitIntrinsicsImpl::runOnFunction(Function &Func) {
   AggrConstTypes.clear();
   AggrStores.clear();
 
+  scalarizeVectorPtrCasts(Func);
   processParamTypesByFunHeader(CurrF, B);
 
   // Fix GEP result types ahead of inference, and simplify if possible.
@@ -4077,7 +4049,6 @@ bool SPIRVEmitIntrinsicsImpl::runOnFunction(Function &Func) {
     I.mutateType(I32Ty);
   }
 
-  scalarizeVectorPtrCasts(Func);
   preprocessBoolVectorBitcasts(Func);
   SmallVector<Instruction *> Worklist(
       llvm::make_pointer_range(instructions(Func)));

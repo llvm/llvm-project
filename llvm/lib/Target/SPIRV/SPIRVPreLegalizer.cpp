@@ -374,16 +374,10 @@ static SPIRVTypeInst propagateSPIRVType(MachineInstr *MI,
         }
         break;
       }
-      case TargetOpcode::G_PTRTOINT: {
-        LLT RegType = MRI.getType(Reg);
-        SpvType =
-            GR->getOrCreateSPIRVIntegerType(RegType.getScalarSizeInBits(), MIB);
-        if (RegType.isVector()) {
-          SpvType = GR->getOrCreateSPIRVVectorType(
-              SpvType, RegType.getNumElements(), MIB, true);
-        }
+      case TargetOpcode::G_PTRTOINT:
+        SpvType = GR->getOrCreateSPIRVIntegerType(
+            MRI.getType(Reg).getScalarSizeInBits(), MIB);
         break;
-      }
       case TargetOpcode::G_TRUNC:
       case TargetOpcode::G_ADDRSPACE_CAST:
       case TargetOpcode::G_PTR_ADD:

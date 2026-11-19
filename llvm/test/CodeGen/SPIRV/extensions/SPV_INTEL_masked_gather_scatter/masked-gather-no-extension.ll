@@ -1,8 +1,8 @@
 ; Test that llvm.masked.gather is scalarized into individual loads when the
-; SPV_INTEL_masked_gather_scatter extension is not enabled. The generic
-; ScalarizeMaskedMemIntrin pass handles this before SPIR-V-specific passes run.
+; SPV_INTEL_masked_gather_scatter extension is not enabled.
 
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 declare <4 x i32> @llvm.masked.gather.v4i32.v4p1(<4 x ptr addrspace(1)>, i32, <4 x i1>, <4 x i32>)
 
