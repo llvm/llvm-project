@@ -617,12 +617,6 @@ bool LiveIntervals::shrinkToUses(LiveInterval *li,
     const MachineInstr &UseMI = *MO.getParent();
     SlotIndex Idx =
         getInstructionIndex(UseMI).getRegSlot(MO.isEarlyClobberDefOrUse());
-    // Merge adjacent operands of the same instruction, keeping the latest use.
-    if (!WorkList.empty() &&
-        SlotIndex::isSameInstr(WorkList.back().first, Idx)) {
-      WorkList.back().first = std::max(WorkList.back().first, Idx);
-      continue;
-    }
     LiveQueryResult LRQ = li->Query(Idx);
     VNInfo *VNI = LRQ.valueIn();
     if (!VNI) {
@@ -632,6 +626,16 @@ bool LiveIntervals::shrinkToUses(LiveInterval *li,
           dbgs() << Idx << '\t' << UseMI
                  << "Warning: Instr claims to read non-existent value in "
                  << *li << '\n');
+      continue;
+    }
+    // An untied use may read a register redefined by an early-clobber def.
+    if (VNInfo *DefVNI = LRQ.valueDefined())
+      Idx = DefVNI->def;
+
+    // Merge adjacent operands of the same instruction, keeping the latest use.
+    if (!WorkList.empty() &&
+        SlotIndex::isSameInstr(WorkList.back().first, Idx)) {
+      WorkList.back().first = std::max(WorkList.back().first, Idx);
       continue;
     }
     WorkList.push_back(std::make_pair(Idx, VNI));
@@ -744,6 +748,10 @@ void LiveIntervals::shrinkSubRangeToUses(LiveInterval::SubRange &SR,
     // part of the subregister, so there is no real liverange at the use
     if (!VNI)
       continue;
+
+    // An untied use may read a register redefined by an early-clobber def.
+    if (VNInfo *DefVNI = LRQ.valueDefined())
+      Idx = DefVNI->def;
 
     WorkList.push_back(std::make_pair(Idx, VNI));
   }
