@@ -415,14 +415,14 @@ static void initializeX86ABICompatInfo(llvm::abi::X86ABICompatInfo &CompatInfo,
   CompatInfo.ClassifyUnnamedBitFields =
       Compat > LangOptions::ClangABI::Ver23 && !T.isPS();
   if (T.isOSDarwin() || T.isPS()) {
-    CompatInfo.SmallIntABICompat = llvm::abi::SmallIntABICompatKind::Clang;
+    CompatInfo.SmallIntABICompat = llvm::abi::SmallIntABICompatKind::Clang23;
   } else {
     switch (CGOpts.getSmallIntABICompat()) {
     case CodeGenOptions::SmallIntABICompatKind::Platform:
       CompatInfo.SmallIntABICompat = llvm::abi::SmallIntABICompatKind::Platform;
       break;
-    case CodeGenOptions::SmallIntABICompatKind::Clang:
-      CompatInfo.SmallIntABICompat = llvm::abi::SmallIntABICompatKind::Clang;
+    case CodeGenOptions::SmallIntABICompatKind::Clang23:
+      CompatInfo.SmallIntABICompat = llvm::abi::SmallIntABICompatKind::Clang23;
       break;
     case CodeGenOptions::SmallIntABICompatKind::Both:
       CompatInfo.SmallIntABICompat = llvm::abi::SmallIntABICompatKind::Both;
@@ -3494,7 +3494,7 @@ void CodeGenModule::SetCommonAttributes(GlobalDecl GD, llvm::GlobalValue *GV) {
 /// Get the feature delta from the default feature map for the given target CPU.
 static std::vector<std::string>
 getFeatureDeltaFromDefault(const CodeGenModule &CGM, StringRef TargetCPU,
-                           llvm::StringMap<bool> &FeatureMap) {
+                           const llvm::StringMap<bool> &FeatureMap) {
   llvm::StringMap<bool> DefaultFeatureMap;
   CGM.getTarget().initFeatureMap(
       DefaultFeatureMap, CGM.getContext().getDiagnostics(), TargetCPU, {});
@@ -3538,8 +3538,7 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
                                 llvm::join(CanonicalFeatures, ","));
   };
   if (TD || TV || SD || TC) {
-    llvm::StringMap<bool> FeatureMap;
-    getContext().getFunctionFeatureMap(FeatureMap, GD);
+    const auto &FeatureMap = getContext().getFunctionFeatureMap(GD);
 
     // Now add the target-cpu and target-features to the function.
     // While we populated the feature map above, we still need to
@@ -3581,14 +3580,7 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
     // Otherwise just add the existing target cpu and target features to the
     // function.
     if (SetTargetFeatures && getTarget().getTriple().isAMDGPU()) {
-      llvm::StringMap<bool> FeatureMap;
-      if (FD) {
-        getContext().getFunctionFeatureMap(FeatureMap, GD);
-      } else {
-        getTarget().initFeatureMap(FeatureMap, getContext().getDiagnostics(),
-                                   TargetCPU,
-                                   getTarget().getTargetOpts().Features);
-      }
+      const auto &FeatureMap = getContext().getFunctionFeatureMap(GD);
       Features = getFeatureDeltaFromDefault(*this, TargetCPU, FeatureMap);
     } else if (getTarget().getTriple().isSPIRV() &&
                getTarget().getTriple().getVendor() == llvm::Triple::AMD) {
