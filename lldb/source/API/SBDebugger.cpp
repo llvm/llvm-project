@@ -19,6 +19,7 @@
 #include "lldb/API/SBEvent.h"
 #include "lldb/API/SBFile.h"
 #include "lldb/API/SBFrame.h"
+#include "lldb/API/SBInitializationOptions.h"
 #include "lldb/API/SBListener.h"
 #include "lldb/API/SBProcess.h"
 #include "lldb/API/SBSourceManager.h"
@@ -186,9 +187,15 @@ void SBDebugger::Initialize() {
 lldb::SBError SBDebugger::InitializeWithErrorHandling() {
   LLDB_INSTRUMENT();
 
+  return Initialize(SBInitializationOptions());
+}
+
+lldb::SBError SBDebugger::Initialize(const SBInitializationOptions &options) {
+  LLDB_INSTRUMENT_VA(options);
+
   SBError error;
   if (auto e = g_debugger_lifetime->Initialize(
-          std::make_unique<SystemInitializerFull>())) {
+          std::make_unique<SystemInitializerFull>(options.ref()))) {
     error.SetError(Status::FromError(std::move(e)));
   }
   return error;
