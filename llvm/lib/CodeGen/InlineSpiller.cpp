@@ -1003,6 +1003,14 @@ void InlineSpiller::reMaterializeAll() {
 //===----------------------------------------------------------------------===//
 
 /// If MI is a load or store of StackSlot, it can be removed.
+///
+/// Reg is being spilled and StackSlot is its home, so an access that names Reg
+/// and targets StackSlot just copies the slot onto itself -- dropping it
+/// changes nothing, lane for lane, even when the slot is only partially spilled
+/// (Reg's live lanes already match the slot; the rest are dead on both sides).
+/// Such an access is only ever a leftover of hoistSpillInsideBB or
+/// foldMemoryOperand on a sibling copy sharing this slot, redundant with Reg's
+/// own spill, so no partial-spill guard is needed here.
 bool InlineSpiller::coalesceStackAccess(MachineInstr *MI, Register Reg) {
   int FI = 0;
   Register InstrReg = TII.isLoadFromStackSlot(*MI, FI);
@@ -1012,16 +1020,6 @@ bool InlineSpiller::coalesceStackAccess(MachineInstr *MI, Register Reg) {
 
   // We have a stack access. Is it the right register and slot?
   if (InstrReg != Reg || FI != StackSlot)
-    return false;
-
-  // This coalescing drops a stack access because it assumes the access covers
-  // the whole slot and the surrounding spill code already owns the complete
-  // value. A slot with partial spills breaks that assumption. A partial store
-  // writes only some of the bytes, so dropping it would lose the rest. The load
-  // side normally does not reach this point, because a reload defines a fresh
-  // vreg rather than Reg and the InstrReg != Reg check above returns first; the
-  // whole-slot bail stays here to keep the guard conservative.
-  if (HSpiller.hasPartialSpills(StackSlot))
     return false;
 
   if (!IsLoad)
@@ -1439,32 +1437,35 @@ void InlineSpiller::spillAroundUses(Register Reg) {
       if (SlotIndex::isSameInstr(Idx, VNI->def))
         Idx = VNI->def;
 
-    // Lanes live at this spill; a strict subset means a partial store.
+    // Lanes live at this spill; a strict subset means a partial def.
     LaneBitmask Lanes = getLiveSpillLanes(OldLI, Idx, MRI);
-
-    // Native lane-masked store for exactly these lanes? If not, the
-    // preservation path below emulates the partial store with a reload +
-    // full-width store.
     const TargetRegisterClass *RC = MRI.getRegClass(Reg);
-    bool HasNativePartialStore = Lanes != MRI.getMaxLaneMaskForVReg(Reg) &&
-                                 TII.canStoreRegToStackSlotWithLanes(RC, Lanes);
 
-    LaneBitmask KeepLanes;
-    if (HasNativePartialStore) {
-      // A native partial store writes only some lanes, so record the slot as
-      // partially spilled (see PartialSpillSlots).
-      if (RI.Writes && isRealSpill(MI, Reg))
-        HSpiller.markPartialSpillSlot(StackSlot);
-    } else if (RI.Writes && !RI.Reads && StackInt->liveAt(Idx.getBaseIndex())) {
-      // Uncovered is the lanes this write-only partial def does not write.
-      // KeepLanes is those of them the original is still live in, which must be
-      // preserved across the spill -- a full-width store here would clobber
-      // them.
-      LaneBitmask Uncovered = MRI.getMaxLaneMaskForVReg(Reg) & ~Lanes;
-      KeepLanes =
-          Uncovered & getLiveSpillLanes(LIS.getInterval(Original), Idx, MRI);
-    }
-    bool NeedsLanePreservation = KeepLanes.any();
+    // Lanes this partial def leaves unwritten but the original is still live
+    // in. A full-width store would clobber them and folding would drop them, so
+    // they must be preserved. Empty for a full def, or for an undef partial def
+    // whose uncovered lanes are dead -- those need only a plain full-width
+    // store.
+    LaneBitmask LiveUncovered;
+    if (RI.Writes && isRealSpill(MI, Reg))
+      LiveUncovered = (MRI.getMaxLaneMaskForVReg(Reg) & ~Lanes) &
+                      getLiveSpillLanes(LIS.getInterval(Original), Idx, MRI);
+
+    // Only uncovered live lanes need more than a plain full-width store. With a
+    // native lane-masked store we write just Lanes and mark the slot a
+    // patchwork (see PartialSpillSlots); without one we emulate the partial
+    // store with a preservation reload + full-width store that is kept
+    // unfolded.
+    bool NeedsNativePartialStore =
+        LiveUncovered.any() && TII.canStoreRegToStackSlotWithLanes(RC, Lanes);
+    // Preservation reloads the slot, so it is only valid for a write-only def
+    // when the slot already holds the original's value (else the reload reads a
+    // dead spill slot).
+    bool NeedsLanePreservation = LiveUncovered.any() &&
+                                 !NeedsNativePartialStore && !RI.Reads &&
+                                 StackInt->liveAt(Idx.getBaseIndex());
+    if (NeedsNativePartialStore)
+      HSpiller.markPartialSpillSlot(StackSlot);
 
     // Check for a sibling copy.
     Register SibReg = isCopyOfBundle(MI, Reg, TII);
@@ -1476,7 +1477,7 @@ void InlineSpiller::spillAroundUses(Register Reg) {
         continue;
       }
       if (RI.Writes) {
-        if (hoistSpillInsideBB(OldLI, MI, KeepLanes)) {
+        if (hoistSpillInsideBB(OldLI, MI, LiveUncovered)) {
           // This COPY is now dead, the value is already in the stack slot.
           MI.getOperand(0).setIsDead();
           DeadDefs.push_back(&MI);
@@ -1528,7 +1529,7 @@ void InlineSpiller::spillAroundUses(Register Reg) {
     if (RI.Writes)
       if (hasLiveDef) {
         LaneBitmask StoreMask =
-            HasNativePartialStore ? Lanes : LaneBitmask::getAll();
+            NeedsNativePartialStore ? Lanes : LaneBitmask::getAll();
         // Partial and full stores share one hook: a partial store writes only
         // the live lanes and preserves the rest of the shared slot, while a
         // full store is the ordinary full-width spill.
