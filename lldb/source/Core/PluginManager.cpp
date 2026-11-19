@@ -487,7 +487,7 @@ llvm::ArrayRef<PluginNamespace> PluginManager::GetPluginNamespaces() {
 
 llvm::json::Object PluginManager::GetJSON(llvm::StringRef pattern,
                                           lldb::DebuggerSP requesting_debugger,
-                                          lldb::TargetSP selected_target,
+                                          lldb::TargetSP target,
                                           lldb::PluginDomainKind domain) {
   llvm::json::Object plugin_stats;
 
@@ -501,7 +501,7 @@ llvm::json::Object PluginManager::GetJSON(llvm::StringRef pattern,
       llvm::json::Object plugin_json;
       plugin_json.try_emplace("name", plugin.name);
       llvm::Expected<bool> enabled =
-          IsPluginEnabled(plugin_ns, plugin, selected_target, domain);
+          IsPluginEnabled(plugin_ns, plugin, target, domain);
       if (enabled) {
         plugin_json.try_emplace("enabled", *enabled);
       } else {
@@ -537,7 +537,7 @@ bool PluginManager::MatchPluginName(llvm::StringRef pattern,
 
 llvm::Expected<bool> PluginManager::IsPluginEnabled(
     const PluginNamespace &plugin_ns, const RegisteredPluginInfo &plugin,
-    lldb::TargetSP selected_target, lldb::PluginDomainKind domain) {
+    lldb::TargetSP target, lldb::PluginDomainKind domain) {
   switch (domain) {
   case lldb::ePluginDomainKindGlobal:
     return plugin.enabled;
@@ -554,8 +554,7 @@ llvm::Expected<bool> PluginManager::IsPluginEnabled(
           plugin_ns.name);
     // Currently only instrumentation-runtime plugins support this domain.
     assert(plugin_ns.name == "instrumentation-runtime");
-    return IsInstrumentationRuntimePluginEnabled(plugin.name, selected_target,
-                                                 domain);
+    return IsInstrumentationRuntimePluginEnabled(plugin.name, target, domain);
   }
   llvm_unreachable("Unhandled domain");
 }
@@ -2717,7 +2716,7 @@ static llvm::Error SetInstrumentationRuntimeEnabledInDebugger(
 
 llvm::Error PluginManager::SetInstrumentationRuntimePluginEnabled(
     llvm::StringRef name, bool enable, Debugger &requesting_debugger,
-    lldb::TargetSP selected_target, PluginDomainKind domain) {
+    lldb::TargetSP target, PluginDomainKind domain) {
 
   auto GetInstrumentationRuntimeTy =
       [&]() -> llvm::Expected<lldb::InstrumentationRuntimeType> {
@@ -2777,9 +2776,9 @@ llvm::Error PluginManager::SetInstrumentationRuntimePluginEnabled(
     if (auto E = instrumentation_runtime_ty.takeError())
       return E;
 
-    if (!selected_target)
+    if (!target)
       return llvm::createStringError("no target is selected");
-    ProcessSP process_sp = selected_target->GetProcessSP();
+    ProcessSP process_sp = target->GetProcessSP();
     if (!process_sp || !process_sp->IsAlive())
       return llvm::createStringError(
           "failed to find alive process for selected target");

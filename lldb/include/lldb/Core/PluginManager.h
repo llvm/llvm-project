@@ -234,7 +234,8 @@ public:
   //
   // If querying the enablement of a plugin in \p domain fails then the
   // plugin's entry has an "error" key containing the error message instead
-  // of the "enabled" key.
+  // of the "enabled" key. When \p domain is the target domain the enablement
+  // is queried in \p target.
   //
   // If pattern is given it will be used to filter the plugins that are
   // are returned. The pattern filters the plugin names using the
@@ -242,7 +243,7 @@ public:
   static llvm::json::Object
   GetJSON(llvm::StringRef pattern = "",
           lldb::DebuggerSP requesting_debugger = nullptr,
-          lldb::TargetSP selected_target = nullptr,
+          lldb::TargetSP target = nullptr,
           lldb::PluginDomainKind domain =
               lldb::PluginDomainKind::ePluginDomainKindGlobal);
 
@@ -257,9 +258,10 @@ public:
                               const PluginNamespace &plugin_ns,
                               const RegisteredPluginInfo &plugin);
 
-  static llvm::Expected<bool> IsPluginEnabled(
-      const PluginNamespace &plugin_ns, const RegisteredPluginInfo &plugin,
-      lldb::TargetSP selected_target, lldb::PluginDomainKind domain);
+  static llvm::Expected<bool>
+  IsPluginEnabled(const PluginNamespace &plugin_ns,
+                  const RegisteredPluginInfo &plugin, lldb::TargetSP target,
+                  lldb::PluginDomainKind domain);
 
   // ABI
   static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
@@ -896,7 +898,7 @@ public:
   static llvm::StringRef PluginDomainKindToStr(lldb::PluginDomainKind kind);
   static llvm::Error SetInstrumentationRuntimePluginEnabled(
       llvm::StringRef name, bool enable, Debugger &requesting_debugger,
-      lldb::TargetSP selected_target, lldb::PluginDomainKind domain);
+      lldb::TargetSP target, lldb::PluginDomainKind domain);
   static llvm::Expected<bool>
   IsInstrumentationRuntimePluginEnabled(llvm::StringRef name,
                                         lldb::TargetSP target,

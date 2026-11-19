@@ -17,13 +17,22 @@ class UbsanPluginEnableDisableTestCase(TestBase):
         self.line_third_ubsan_issue = line_number("main.c", "// third ubsan issue")
         self.line_fourth_ubsan_issue = line_number("main.c", "// fourth ubsan issue")
 
-    def ubsan_plugin_is_enabled(self, domain: str, debugger=None):
+    def ubsan_plugin_is_enabled(self, domain: str, debugger=None, target=None):
         return self.plugin_is_enabled(
             "instrumentation-runtime",
             "UndefinedBehaviorSanitizer",
             domain=domain,
             debugger=debugger,
+            target=target,
         )
+
+    def run_cmd_with_target(self, cmd: str, target):
+        """Run cmd with target as its execution context (rather than the
+        selected target)."""
+        result = lldb.SBCommandReturnObject()
+        exe_ctx = lldb.SBExecutionContext(target)
+        self.dbg.GetCommandInterpreter().HandleCommand(cmd, exe_ctx, result)
+        self.assertTrue(result.Succeeded(), f'"{cmd}" failed: {result.GetError()}')
 
     def check_stopped_at_ubsan_issue(self, line_num, process=None):
         if process is None:
@@ -573,3 +582,86 @@ class UbsanPluginEnableDisableTestCase(TestBase):
             if other_process and other_process.IsValid():
                 other_process.Kill()
             lldb.SBDebugger.Destroy(other_dbg)
+
+    @skipUnlessUndefinedBehaviorSanitizer
+    @no_debug_info_test
+    def test_target_domain_uses_command_execution_context(self):
+        """Test that enabling/disabling the UBSan plugin in the target domain
+        acts on the target in the command's execution context rather than the
+        selected target. These differ when, for example, the command is run
+        from a breakpoint callback."""
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+
+        target = self.dbg.CreateTarget(exe)
+        self.assertTrue(target, VALID_TARGET)
+        self.registerSanitizerLibrariesWithTarget(target)
+        bp = target.BreakpointCreateByName("test_breakpoint_2")
+        self.assertTrue(bp.GetNumLocations() > 0)
+
+        other_target = self.dbg.CreateTarget(exe)
+        self.assertTrue(other_target, VALID_TARGET)
+        self.registerSanitizerLibrariesWithTarget(other_target)
+
+        # Launch a process in each target. Both should stop on the first UBSan
+        # issue.
+        working_dir = self.get_process_working_directory()
+        process = target.LaunchSimple(None, None, working_dir)
+        self.assertTrue(process, PROCESS_IS_VALID)
+        self.check_stopped_at_ubsan_issue(self.line_first_ubsan_issue, process=process)
+        other_process = other_target.LaunchSimple(None, None, working_dir)
+        self.assertTrue(other_process, PROCESS_IS_VALID)
+        self.check_stopped_at_ubsan_issue(
+            self.line_first_ubsan_issue, process=other_process
+        )
+
+        # Select the other target so that the selected target differs from the
+        # target in the execution context of the commands below.
+        self.dbg.SetSelectedTarget(other_target)
+
+        # Disable the plugin with `target` as the command's execution context.
+        self.run_cmd_with_target(
+            "plugin disable --domain target instrumentation-runtime.UndefinedBehaviorSanitizer",
+            target,
+        )
+        self.assertEqual(self.dbg.GetSelectedTarget(), other_target)
+
+        # The plugin should only be disabled in `target`.
+        self.assertFalse(self.ubsan_plugin_is_enabled(domain="target", target=target))
+        self.assertTrue(
+            self.ubsan_plugin_is_enabled(domain="target", target=other_target)
+        )
+        self.assertTrue(self.ubsan_plugin_is_enabled(domain="target"))
+
+        # Continue the other target's process. The plugin should still be
+        # enabled in it so it should stop on the second UBSan issue. Do this
+        # before the plugin is enabled below so that this also catches the
+        # plugin having been disabled in this process.
+        other_process.Continue()
+        self.check_stopped_at_ubsan_issue(
+            self.line_second_ubsan_issue, process=other_process
+        )
+
+        # Continue `target`'s process. The second and third UBSan issues should
+        # not cause instrumentation stops so the process should stop at
+        # test_breakpoint_2.
+        process.Continue()
+        self.check_stopped_at_breakpoint("test_breakpoint_2", process=process)
+
+        # Enable the plugin with `target` as the command's execution context.
+        self.run_cmd_with_target(
+            "plugin enable --domain target instrumentation-runtime.UndefinedBehaviorSanitizer",
+            target,
+        )
+        self.assertTrue(self.ubsan_plugin_is_enabled(domain="target", target=target))
+        self.assertTrue(
+            self.ubsan_plugin_is_enabled(domain="target", target=other_target)
+        )
+
+        # Continue `target`'s process. It should stop on the fourth UBSan issue
+        # and then exit cleanly.
+        process.Continue()
+        self.check_stopped_at_ubsan_issue(self.line_fourth_ubsan_issue, process=process)
+        process.Continue()
+        self.assertEqual(process.GetState(), lldb.eStateExited)
+        self.assertEqual(process.GetExitStatus(), 0)

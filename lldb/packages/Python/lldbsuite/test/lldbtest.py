@@ -1996,15 +1996,29 @@ class Base(unittest.TestCase):
         return json.loads(metrics_json)
 
     def plugin_is_enabled(
-        self, namespace: str, name: str, domain: str = "global", debugger=None
+        self,
+        namespace: str,
+        name: str,
+        domain: str = "global",
+        debugger=None,
+        target=None,
     ):
+        """Return whether the plugin is enabled in the given domain.
+
+        If target is given then the command is run with target as its
+        execution context. Otherwise the selected target is used.
+        """
         assert domain in {"global", "debugger", "target"}
         if debugger is None:
             debugger = self.dbg
         interp = debugger.GetCommandInterpreter()
         result = lldb.SBCommandReturnObject()
         cmd = f"plugin list --json --domain {domain} {namespace}.{name}"
-        interp.HandleCommand(cmd, result)
+        if target is None:
+            interp.HandleCommand(cmd, result)
+        else:
+            exe_ctx = lldb.SBExecutionContext(target)
+            interp.HandleCommand(cmd, exe_ctx, result)
         if not result.Succeeded():
             raise Exception(f'Failed to run "{cmd}": {result.GetError()}')
         output = result.GetOutput()

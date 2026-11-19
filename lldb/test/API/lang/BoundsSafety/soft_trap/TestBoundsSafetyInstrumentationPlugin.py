@@ -98,10 +98,22 @@ class BoundsSafetyTestSoftTrapPlugin(TestBase):
         self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonBreakpoint)
         self.assertEqual(thread.GetSelectedFrame().GetFunctionName(), func_name)
 
-    def bs_plugin_is_enabled(self, domain: str, debugger=None):
+    def bs_plugin_is_enabled(self, domain: str, debugger=None, target=None):
         return self.plugin_is_enabled(
-            "instrumentation-runtime", "BoundsSafety", domain=domain, debugger=debugger
+            "instrumentation-runtime",
+            "BoundsSafety",
+            domain=domain,
+            debugger=debugger,
+            target=target,
         )
+
+    def run_cmd_with_target(self, cmd: str, target):
+        """Run cmd with target as its execution context (rather than the
+        selected target)."""
+        result = lldb.SBCommandReturnObject()
+        exe_ctx = lldb.SBExecutionContext(target)
+        self.dbg.GetCommandInterpreter().HandleCommand(cmd, exe_ctx, result)
+        self.assertTrue(result.Succeeded(), f'"{cmd}" failed: {result.GetError()}')
 
     # Skip the tests on Windows because they fail due to the stop reason
     # being `eStopReasonNon` instead of the expected
@@ -697,3 +709,115 @@ class BoundsSafetyTestSoftTrapPlugin(TestBase):
             if other_process and other_process.IsValid():
                 other_process.Kill()
             lldb.SBDebugger.Destroy(other_dbg)
+
+    @skipIfWindows
+    @skipUnlessBoundsSafety
+    @no_debug_info_test
+    def test_call_minimal_target_domain_uses_command_execution_context(self):
+        """
+        Test that enabling/disabling the plugin in the target domain acts on
+        the target in the command's execution context rather than the selected
+        target on code built with -fbounds-safety-soft-traps=call-minimal.
+        These differ when, for example, the command is run from a breakpoint
+        callback.
+        """
+        self.build(make_targets=["soft-trap-test-minimal"])
+        self.test_target = self.createTestTarget()
+        bp = self.test_target.BreakpointCreateByName("test_breakpoint_2")
+        self.assertTrue(bp.GetNumLocations() > 0)
+        exe = self.getBuildArtifact("a.out")
+
+        other_target = self.dbg.CreateTarget(exe)
+        self.assertTrue(other_target, VALID_TARGET)
+
+        def launch_with_extra_soft_traps(target):
+            launch_info = target.GetLaunchInfo()
+            launch_info.SetWorkingDirectory(self.get_process_working_directory())
+            launch_info.SetEnvironmentEntries(["DO_EXTRA_SOFT_TRAPS=1"], True)
+            error = lldb.SBError()
+            process = target.Launch(launch_info, error)
+            self.assertSuccess(error)
+            self.assertTrue(process, PROCESS_IS_VALID)
+            return process
+
+        # Launch a process in each target. Both should stop on the first soft
+        # trap.
+        process = launch_with_extra_soft_traps(self.test_target)
+        self.check_state_soft_trap_minimal(
+            "Soft Bounds check failed: indexing above upper bound in 'buffer[2]'",
+            "main",
+            "main.c",
+            self.line_first_soft_trap,
+            process=process,
+        )
+        other_process = launch_with_extra_soft_traps(other_target)
+        self.check_state_soft_trap_minimal(
+            "Soft Bounds check failed: indexing above upper bound in 'buffer[2]'",
+            "main",
+            "main.c",
+            self.line_first_soft_trap,
+            process=other_process,
+        )
+
+        # Select the other target so that the selected target differs from the
+        # target in the execution context of the commands below.
+        self.dbg.SetSelectedTarget(other_target)
+
+        # Disable the plugin with `self.test_target` as the command's execution
+        # context.
+        self.run_cmd_with_target(
+            "plugin disable --domain target instrumentation-runtime.BoundsSafety",
+            self.test_target,
+        )
+        self.assertEqual(self.dbg.GetSelectedTarget(), other_target)
+
+        # The plugin should only be disabled in `self.test_target`.
+        self.assertFalse(
+            self.bs_plugin_is_enabled(domain="target", target=self.test_target)
+        )
+        self.assertTrue(self.bs_plugin_is_enabled(domain="target", target=other_target))
+        self.assertTrue(self.bs_plugin_is_enabled(domain="target"))
+
+        # Continue the other target's process. The plugin should still be
+        # enabled in it so it should stop on the second soft trap. Do this
+        # before the plugin is enabled below so that this also catches the
+        # plugin having been disabled in this process.
+        other_process.Continue()
+        self.check_state_soft_trap_minimal(
+            "Soft Bounds check failed: indexing below lower bound in 'buffer[-1]'",
+            "main",
+            "main.c",
+            self.line_second_soft_trap,
+            process=other_process,
+        )
+
+        # Continue `self.test_target`'s process. The second and third soft traps
+        # should not cause instrumentation stops so the process should stop at
+        # test_breakpoint_2.
+        process.Continue()
+        self.check_stopped_at_breakpoint("test_breakpoint_2", process=process)
+
+        # Enable the plugin with `self.test_target` as the command's execution
+        # context.
+        self.run_cmd_with_target(
+            "plugin enable --domain target instrumentation-runtime.BoundsSafety",
+            self.test_target,
+        )
+        self.assertTrue(
+            self.bs_plugin_is_enabled(domain="target", target=self.test_target)
+        )
+        self.assertTrue(self.bs_plugin_is_enabled(domain="target", target=other_target))
+
+        # Continue `self.test_target`'s process. It should stop on the fourth
+        # soft trap and then exit cleanly.
+        process.Continue()
+        self.check_state_soft_trap_minimal(
+            "Soft Bounds check failed: indexing below lower bound in 'buffer[-2]'",
+            "main",
+            "main.c",
+            self.line_fourth_soft_trap,
+            process=process,
+        )
+        process.Continue()
+        self.assertEqual(process.GetState(), lldb.eStateExited)
+        self.assertEqual(process.GetExitStatus(), 0)

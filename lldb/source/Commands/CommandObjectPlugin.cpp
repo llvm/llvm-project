@@ -87,8 +87,7 @@ static int ActOnMatchingPlugins(
 int SetEnableOnMatchingPlugins(const llvm::StringRef &pattern,
                                CommandReturnObject &result, bool enabled,
                                Debugger &requesting_debugger,
-                               lldb::TargetSP selected_target,
-                               PluginDomainKind domain) {
+                               lldb::TargetSP target, PluginDomainKind domain) {
   return ActOnMatchingPlugins(
       pattern, [&](const PluginNamespace &plugin_namespace,
                    const std::vector<RegisteredPluginInfo> &plugins) {
@@ -137,8 +136,7 @@ int SetEnableOnMatchingPlugins(const llvm::StringRef &pattern,
           }
           assert(plugin_namespace.GetSetEnabledAllDomainsFn().has_value());
           llvm::Error error = (*plugin_namespace.GetSetEnabledAllDomainsFn())(
-              plugin.name, enabled, requesting_debugger, selected_target,
-              domain);
+              plugin.name, enabled, requesting_debugger, target, domain);
 
           if (error) {
             result.AppendErrorWithFormatv("failed to {} plugin {}.{}: {}",
@@ -277,27 +275,28 @@ protected:
         patterns.push_back(command[i].ref());
 
     Debugger &requesting_debugger = GetDebugger();
-    TargetSP selected_target = GetCommandInterpreter().GetSelectedTarget();
+    // Use the target from this command's execution context rather than the
+    // `GetCommandInterpreter().GetSelectedTarget()`. They can differ when
+    // this command is run from a breakpoint callback.
+    TargetSP target = m_exe_ctx.GetTargetSP();
     if (m_options.m_json_format)
-      OutputJsonFormat(patterns, result, requesting_debugger, selected_target,
+      OutputJsonFormat(patterns, result, requesting_debugger, target,
                        m_options.m_domain);
     else
-      OutputTextFormat(patterns, result, requesting_debugger, selected_target,
+      OutputTextFormat(patterns, result, requesting_debugger, target,
                        m_options.m_domain);
   }
 
 private:
   void OutputJsonFormat(const std::vector<llvm::StringRef> &patterns,
                         CommandReturnObject &result,
-                        Debugger &requesting_debugger,
-                        lldb::TargetSP selected_target,
+                        Debugger &requesting_debugger, lldb::TargetSP target,
                         PluginDomainKind domain) {
     llvm::json::Object obj;
     bool found_empty = false;
     for (const llvm::StringRef pattern : patterns) {
       llvm::json::Object pat_obj = PluginManager::GetJSON(
-          pattern, requesting_debugger.shared_from_this(), selected_target,
-          domain);
+          pattern, requesting_debugger.shared_from_this(), target, domain);
       if (pat_obj.empty()) {
         found_empty = true;
         result.AppendErrorWithFormat(
@@ -336,8 +335,7 @@ private:
 
   void OutputTextFormat(const std::vector<llvm::StringRef> &patterns,
                         CommandReturnObject &result,
-                        Debugger &requesting_debugger,
-                        lldb::TargetSP selected_target,
+                        Debugger &requesting_debugger, lldb::TargetSP target,
                         PluginDomainKind domain) {
     for (const llvm::StringRef pattern : patterns) {
       int num_matching = ActOnMatchingPlugins(
@@ -346,7 +344,7 @@ private:
             result.AppendMessage(plugin_namespace.name);
             for (auto &plugin : plugins) {
               auto enabled = PluginManager::IsPluginEnabled(
-                  plugin_namespace, plugin, selected_target, domain);
+                  plugin_namespace, plugin, target, domain);
               if (llvm::Error E = enabled.takeError()) {
                 // Report the error and carry on so that the enablement of the
                 // other plugins is still reported. This uses the same format
@@ -374,7 +372,7 @@ private:
 
 static void DoPluginEnableDisable(Args &command, CommandReturnObject &result,
                                   bool enable, Debugger &requesting_debugger,
-                                  lldb::TargetSP selected_target,
+                                  lldb::TargetSP target,
                                   PluginDomainKind domain) {
   const char *name = enable ? "enable" : "disable";
   size_t argc = command.GetArgumentCount();
@@ -388,7 +386,7 @@ static void DoPluginEnableDisable(Args &command, CommandReturnObject &result,
   for (size_t i = 0; i < argc; ++i) {
     llvm::StringRef pattern = command[i].ref();
     int num_matching = SetEnableOnMatchingPlugins(
-        pattern, result, enable, requesting_debugger, selected_target, domain);
+        pattern, result, enable, requesting_debugger, target, domain);
 
     if (num_matching == 0) {
       result.AppendErrorWithFormat(
@@ -468,9 +466,11 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
+    // Use the target from this command's execution context rather than the
+    // `GetCommandInterpreter().GetSelectedTarget()`. They can differ when
+    // this command is run from a breakpoint callback.
     DoPluginEnableDisable(command, result, /*enable=*/true, GetDebugger(),
-                          GetCommandInterpreter().GetSelectedTarget(),
-                          m_options.m_domain);
+                          m_exe_ctx.GetTargetSP(), m_options.m_domain);
   }
 
   PluginDomainOptions m_options;
@@ -499,9 +499,11 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
+    // Use the target from this command's execution context rather than the
+    // `GetCommandInterpreter().GetSelectedTarget()`. They can differ when
+    // this command is run from a breakpoint callback.
     DoPluginEnableDisable(command, result, /*enable=*/false, GetDebugger(),
-                          GetCommandInterpreter().GetSelectedTarget(),
-                          m_options.m_domain);
+                          m_exe_ctx.GetTargetSP(), m_options.m_domain);
   }
 
   PluginDomainOptions m_options;
