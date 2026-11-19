@@ -58,6 +58,7 @@ public:
     LazyBool auto_apply_fixits;
     LazyBool suppress_persistent_result;
     bool cpp_ignore_context_qualifiers;
+    bool trap_on_exceptions;
   };
 
   CommandObjectExpression(CommandInterpreter &interpreter);
