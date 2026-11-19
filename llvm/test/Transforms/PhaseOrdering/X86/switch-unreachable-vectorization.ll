@@ -93,12 +93,48 @@ define void @test(i32 noundef %op, float noundef nofpclass(nan inf) %x, ptr noun
 ; O2-NEXT:    br i1 [[CMP_NOT]], label %[[SIMD_IF_END:.*]], label %[[OMP_INNER_FOR_COND_PREHEADER:.*]]
 ; O2:       [[OMP_INNER_FOR_COND_PREHEADER]]:
 ; O2-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[N]] to i64
+; O2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 17
+; O2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[OMP_INNER_FOR_BODY_PREHEADER:.*]], label %[[VECTOR_PH:.*]]
+; O2:       [[VECTOR_PH]]:
+; O2-NEXT:    [[TMP15:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 15
+; O2-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[TMP15]], 0
+; O2-NEXT:    [[TMP17:%.*]] = select i1 [[TMP16]], i64 16, i64 [[TMP15]]
+; O2-NEXT:    [[N_VEC:%.*]] = sub nsw i64 [[WIDE_TRIP_COUNT]], [[TMP17]]
+; O2-NEXT:    [[BROADCAST_SPLATINSERT11:%.*]] = insertelement <16 x float> poison, float [[X]], i64 0
+; O2-NEXT:    [[BROADCAST_SPLAT12:%.*]] = shufflevector <16 x float> [[BROADCAST_SPLATINSERT11]], <16 x float> poison, <16 x i32> zeroinitializer
+; O2-NEXT:    [[TMP18:%.*]] = fdiv fast <16 x float> splat (float 1.000000e+00), [[BROADCAST_SPLAT12]]
+; O2-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[OP]], 1
+; O2-NEXT:    [[TMP5:%.*]] = fneg fast <16 x float> [[BROADCAST_SPLAT12]]
+; O2-NEXT:    [[PREDPHI_P:%.*]] = select i1 [[TMP4]], <16 x float> [[TMP5]], <16 x float> [[BROADCAST_SPLAT12]]
+; O2-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[OP]], 2
+; O2-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[OP]], 3
+; O2-NEXT:    br label %[[VECTOR_BODY:.*]]
+; O2:       [[VECTOR_BODY]]:
+; O2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; O2-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[INPUT_1]], i64 [[INDEX]]
+; O2-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x float>, ptr [[TMP8]], align 4, !tbaa [[FLOAT_TBAA0:![0-9]+]], !llvm.access.group [[ACC_GRP4:![0-9]+]]
+; O2-NEXT:    [[TMP9:%.*]] = fmul fast <16 x float> [[WIDE_LOAD]], [[TMP18]]
+; O2-NEXT:    [[TMP10:%.*]] = fmul fast <16 x float> [[WIDE_LOAD]], [[BROADCAST_SPLAT12]]
+; O2-NEXT:    [[PREDPHI:%.*]] = fadd fast <16 x float> [[WIDE_LOAD]], [[PREDPHI_P]]
+; O2-NEXT:    [[PREDPHI13:%.*]] = select nsz i1 [[TMP6]], <16 x float> [[TMP10]], <16 x float> [[PREDPHI]]
+; O2-NEXT:    [[PREDPHI14:%.*]] = select nsz i1 [[TMP7]], <16 x float> [[TMP9]], <16 x float> [[PREDPHI13]]
+; O2-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[OUTPUT]], i64 [[INDEX]]
+; O2-NEXT:    store <16 x float> [[PREDPHI14]], ptr [[TMP11]], align 4, !tbaa [[FLOAT_TBAA0]], !llvm.access.group [[ACC_GRP4]]
+; O2-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[INPUT_2]], i64 [[INDEX]]
+; O2-NEXT:    [[WIDE_LOAD15:%.*]] = load <16 x float>, ptr [[TMP12]], align 4, !tbaa [[FLOAT_TBAA0]], !llvm.access.group [[ACC_GRP4]]
+; O2-NEXT:    [[TMP13:%.*]] = fadd fast <16 x float> [[WIDE_LOAD15]], [[PREDPHI14]]
+; O2-NEXT:    store <16 x float> [[TMP13]], ptr [[TMP11]], align 4, !tbaa [[FLOAT_TBAA0]], !llvm.access.group [[ACC_GRP4]]
+; O2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
+; O2-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; O2-NEXT:    br i1 [[TMP14]], label %[[OMP_INNER_FOR_BODY_PREHEADER]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; O2:       [[OMP_INNER_FOR_BODY_PREHEADER]]:
+; O2-NEXT:    [[INDVARS_IV_PH:%.*]] = phi i64 [ 0, %[[OMP_INNER_FOR_COND_PREHEADER]] ], [ [[N_VEC]], %[[VECTOR_BODY]] ]
 ; O2-NEXT:    [[TMP0:%.*]] = fdiv fast float 1.000000e+00, [[X]]
 ; O2-NEXT:    br label %[[OMP_INNER_FOR_BODY:.*]]
 ; O2:       [[OMP_INNER_FOR_BODY]]:
-; O2-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[OMP_INNER_FOR_COND_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[EXECUTE_OP_EXIT:.*]] ]
+; O2-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], %[[EXECUTE_OP_EXIT:.*]] ], [ [[INDVARS_IV_PH]], %[[OMP_INNER_FOR_BODY_PREHEADER]] ]
 ; O2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[INPUT_1]], i64 [[INDVARS_IV]]
-; O2-NEXT:    [[TMP1:%.*]] = load float, ptr [[ARRAYIDX]], align 4, !tbaa [[FLOAT_TBAA0:![0-9]+]], !llvm.access.group [[ACC_GRP4:![0-9]+]]
+; O2-NEXT:    [[TMP1:%.*]] = load float, ptr [[ARRAYIDX]], align 4, !tbaa [[FLOAT_TBAA0]], !llvm.access.group [[ACC_GRP4]]
 ; O2-NEXT:    switch i32 [[OP]], label %[[SW_EPILOG_I:.*]] [
 ; O2-NEXT:      i32 0, label %[[SW_BB_I:.*]]
 ; O2-NEXT:      i32 1, label %[[SW_BB1_I:.*]]
@@ -129,7 +165,7 @@ define void @test(i32 noundef %op, float noundef nofpclass(nan inf) %x, ptr noun
 ; O2-NEXT:    store float [[ADD12]], ptr [[ARRAYIDX7]], align 4, !tbaa [[FLOAT_TBAA0]], !llvm.access.group [[ACC_GRP4]]
 ; O2-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; O2-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
-; O2-NEXT:    br i1 [[EXITCOND_NOT]], label %[[SIMD_IF_END]], label %[[OMP_INNER_FOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; O2-NEXT:    br i1 [[EXITCOND_NOT]], label %[[SIMD_IF_END]], label %[[OMP_INNER_FOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; O2:       [[SIMD_IF_END]]:
 ; O2-NEXT:    ret void
 ;
@@ -188,13 +224,13 @@ define void @test(i32 noundef %op, float noundef nofpclass(nan inf) %x, ptr noun
 ; O3-NEXT:    [[MIN_EPILOG_ITERS_CHECK102:%.*]] = icmp eq i64 [[TMP0]], 0
 ; O3-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK102]], label %[[OMP_INNER_FOR_BODY_US23_PREHEADER]], label %[[VEC_EPILOG_PH103]], !prof [[PROF9:![0-9]+]]
 ; O3:       [[VEC_EPILOG_PH103]]:
-; O3-NEXT:    [[VEC_EPILOG_RESUME_VAL104:%.*]] = phi i64 [ [[N_VEC87]], %[[VEC_EPILOG_ITER_CHECK100]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK84]] ]
+; O3-NEXT:    [[VEC_EPILOG_RESUME_VAL99:%.*]] = phi i64 [ [[N_VEC87]], %[[VEC_EPILOG_ITER_CHECK100]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK84]] ]
 ; O3-NEXT:    [[N_VEC105:%.*]] = and i64 [[WIDE_TRIP_COUNT63]], 4294967292
 ; O3-NEXT:    [[BROADCAST_SPLATINSERT106:%.*]] = insertelement <4 x float> poison, float [[X]], i64 0
 ; O3-NEXT:    [[BROADCAST_SPLAT107:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT106]], <4 x float> poison, <4 x i32> zeroinitializer
 ; O3-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY108:.*]]
 ; O3:       [[VEC_EPILOG_VECTOR_BODY108]]:
-; O3-NEXT:    [[INDEX109:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL104]], %[[VEC_EPILOG_PH103]] ], [ [[INDEX_NEXT112:%.*]], %[[VEC_EPILOG_VECTOR_BODY108]] ]
+; O3-NEXT:    [[INDEX109:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL99]], %[[VEC_EPILOG_PH103]] ], [ [[INDEX_NEXT112:%.*]], %[[VEC_EPILOG_VECTOR_BODY108]] ]
 ; O3-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[INPUT_1]], i64 [[INDEX109]]
 ; O3-NEXT:    [[WIDE_LOAD110:%.*]] = load <4 x float>, ptr [[TMP12]], align 4, !tbaa [[FLOAT_TBAA0]], !llvm.access.group [[ACC_GRP4]]
 ; O3-NEXT:    [[TMP13:%.*]] = fmul fast <4 x float> [[WIDE_LOAD110]], [[BROADCAST_SPLAT107]]
@@ -254,13 +290,13 @@ define void @test(i32 noundef %op, float noundef nofpclass(nan inf) %x, ptr noun
 ; O3-NEXT:    [[MIN_EPILOG_ITERS_CHECK135:%.*]] = icmp eq i64 [[TMP18]], 0
 ; O3-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK135]], label %[[OMP_INNER_FOR_BODY_US11_PREHEADER]], label %[[VEC_EPILOG_PH136]], !prof [[PROF9]]
 ; O3:       [[VEC_EPILOG_PH136]]:
-; O3-NEXT:    [[VEC_EPILOG_RESUME_VAL137:%.*]] = phi i64 [ [[N_VEC120]], %[[VEC_EPILOG_ITER_CHECK133]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK117]] ]
+; O3-NEXT:    [[VEC_EPILOG_RESUME_VAL132:%.*]] = phi i64 [ [[N_VEC120]], %[[VEC_EPILOG_ITER_CHECK133]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK117]] ]
 ; O3-NEXT:    [[N_VEC138:%.*]] = and i64 [[WIDE_TRIP_COUNT63]], 4294967292
 ; O3-NEXT:    [[BROADCAST_SPLATINSERT139:%.*]] = insertelement <4 x float> poison, float [[X]], i64 0
 ; O3-NEXT:    [[BROADCAST_SPLAT140:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT139]], <4 x float> poison, <4 x i32> zeroinitializer
 ; O3-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY141:.*]]
 ; O3:       [[VEC_EPILOG_VECTOR_BODY141]]:
-; O3-NEXT:    [[INDEX142:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL137]], %[[VEC_EPILOG_PH136]] ], [ [[INDEX_NEXT145:%.*]], %[[VEC_EPILOG_VECTOR_BODY141]] ]
+; O3-NEXT:    [[INDEX142:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL132]], %[[VEC_EPILOG_PH136]] ], [ [[INDEX_NEXT145:%.*]], %[[VEC_EPILOG_VECTOR_BODY141]] ]
 ; O3-NEXT:    [[TMP30:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[INPUT_1]], i64 [[INDEX142]]
 ; O3-NEXT:    [[WIDE_LOAD143:%.*]] = load <4 x float>, ptr [[TMP30]], align 4, !tbaa [[FLOAT_TBAA0]], !llvm.access.group [[ACC_GRP4]]
 ; O3-NEXT:    [[TMP31:%.*]] = fsub fast <4 x float> [[WIDE_LOAD143]], [[BROADCAST_SPLAT140]]
@@ -320,13 +356,13 @@ define void @test(i32 noundef %op, float noundef nofpclass(nan inf) %x, ptr noun
 ; O3-NEXT:    [[MIN_EPILOG_ITERS_CHECK168:%.*]] = icmp eq i64 [[TMP36]], 0
 ; O3-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK168]], label %[[OMP_INNER_FOR_BODY_US_PREHEADER]], label %[[VEC_EPILOG_PH169]], !prof [[PROF9]]
 ; O3:       [[VEC_EPILOG_PH169]]:
-; O3-NEXT:    [[VEC_EPILOG_RESUME_VAL170:%.*]] = phi i64 [ [[N_VEC153]], %[[VEC_EPILOG_ITER_CHECK166]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK150]] ]
+; O3-NEXT:    [[VEC_EPILOG_RESUME_VAL165:%.*]] = phi i64 [ [[N_VEC153]], %[[VEC_EPILOG_ITER_CHECK166]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK150]] ]
 ; O3-NEXT:    [[N_VEC171:%.*]] = and i64 [[WIDE_TRIP_COUNT63]], 4294967292
 ; O3-NEXT:    [[BROADCAST_SPLATINSERT172:%.*]] = insertelement <4 x float> poison, float [[X]], i64 0
 ; O3-NEXT:    [[BROADCAST_SPLAT173:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT172]], <4 x float> poison, <4 x i32> zeroinitializer
 ; O3-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY174:.*]]
 ; O3:       [[VEC_EPILOG_VECTOR_BODY174]]:
-; O3-NEXT:    [[INDEX175:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL170]], %[[VEC_EPILOG_PH169]] ], [ [[INDEX_NEXT178:%.*]], %[[VEC_EPILOG_VECTOR_BODY174]] ]
+; O3-NEXT:    [[INDEX175:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL165]], %[[VEC_EPILOG_PH169]] ], [ [[INDEX_NEXT178:%.*]], %[[VEC_EPILOG_VECTOR_BODY174]] ]
 ; O3-NEXT:    [[TMP48:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[INPUT_1]], i64 [[INDEX175]]
 ; O3-NEXT:    [[WIDE_LOAD176:%.*]] = load <4 x float>, ptr [[TMP48]], align 4, !tbaa [[FLOAT_TBAA0]], !llvm.access.group [[ACC_GRP4]]
 ; O3-NEXT:    [[TMP49:%.*]] = fadd fast <4 x float> [[WIDE_LOAD176]], [[BROADCAST_SPLAT173]]
@@ -617,9 +653,11 @@ attributes #3 = { nounwind }
 ; O2: [[META2]] = !{!"omnipotent char", [[META3:![0-9]+]], i64 0}
 ; O2: [[META3]] = !{!"Simple C++ TBAA"}
 ; O2: [[ACC_GRP4]] = distinct !{}
-; O2: [[LOOP5]] = distinct !{[[LOOP5]], [[META6:![0-9]+]], [[META7:![0-9]+]]}
+; O2: [[LOOP5]] = distinct !{[[LOOP5]], [[META6:![0-9]+]], [[META7:![0-9]+]], [[META8:![0-9]+]]}
 ; O2: [[META6]] = !{!"llvm.loop.parallel_accesses", [[ACC_GRP4]]}
-; O2: [[META7]] = !{!"llvm.loop.vectorize.enable"}
+; O2: [[META7]] = !{!"llvm.loop.isvectorized", i32 1}
+; O2: [[META8]] = !{!"llvm.loop.unroll.runtime.disable"}
+; O2: [[LOOP9]] = distinct !{[[LOOP9]], [[META6]], [[META8]], [[META7]]}
 ;.
 ; O3: [[FLOAT_TBAA0]] = !{[[META1:![0-9]+]], [[META1]], i64 0}
 ; O3: [[META1]] = !{!"float", [[META2:![0-9]+]], i64 0}
