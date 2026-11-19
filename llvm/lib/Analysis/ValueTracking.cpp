@@ -659,6 +659,15 @@ static void computeKnownBitsMul(const Value *Op0, const Value *Op1, bool NSW,
     }
   }
 
+  // X * (X + C) with odd C is even: one of the two factors is even.
+  auto IsXPlusOdd = [&](const Value *A, const Value *X) {
+    return match(A, m_Add(m_Specific(X),
+                          m_CheckedInt([](const APInt &C) { return C[0]; }))) &&
+           isGuaranteedNotToBeUndef(X, Q.AC, Q.CtxI, Q.DT, Depth + 1);
+  };
+  if (IsXPlusOdd(Op0, Op1) || IsXPlusOdd(Op1, Op0))
+    Known.Zero.setBit(0);
+
   // Only make use of no-wrap flags if we failed to compute the sign bit
   // directly.  This matters if the multiplication always overflows, in
   // which case we prefer to follow the result of the direct computation,

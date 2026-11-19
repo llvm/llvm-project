@@ -2141,7 +2141,7 @@ define i32 @mul_x_xplus1_sdiv2(i32 noundef %x) {
 ; CHECK-LABEL: @mul_x_xplus1_sdiv2(
 ; CHECK-NEXT:    [[A:%.*]] = add i32 [[X:%.*]], 1
 ; CHECK-NEXT:    [[M:%.*]] = mul i32 [[A]], [[X]]
-; CHECK-NEXT:    [[D:%.*]] = sdiv i32 [[M]], 2
+; CHECK-NEXT:    [[D:%.*]] = ashr exact i32 [[M]], 1
 ; CHECK-NEXT:    ret i32 [[D]]
 ;
   %a = add i32 %x, 1
@@ -2154,7 +2154,7 @@ define i32 @mul_x_xplus3_commuted_sdiv2(i32 noundef %x) {
 ; CHECK-LABEL: @mul_x_xplus3_commuted_sdiv2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], 3
 ; CHECK-NEXT:    [[M:%.*]] = mul i32 [[X]], [[TMP1]]
-; CHECK-NEXT:    [[R:%.*]] = sdiv i32 [[M]], 2
+; CHECK-NEXT:    [[R:%.*]] = ashr exact i32 [[M]], 1
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = add i32 %x, 3
@@ -2195,7 +2195,7 @@ define i32 @mul_x_xminus1_sdiv2(i32 noundef %x) {
 ; CHECK-LABEL: @mul_x_xminus1_sdiv2(
 ; CHECK-NEXT:    [[A:%.*]] = add i32 [[X:%.*]], -1
 ; CHECK-NEXT:    [[M:%.*]] = mul i32 [[A]], [[X]]
-; CHECK-NEXT:    [[D:%.*]] = sdiv i32 [[M]], 2
+; CHECK-NEXT:    [[D:%.*]] = ashr exact i32 [[M]], 1
 ; CHECK-NEXT:    ret i32 [[D]]
 ;
   %a = add i32 %x, -1
@@ -2209,7 +2209,7 @@ define i32 @sq_plus_x_sdiv2(i32 noundef %x) {
 ; CHECK-LABEL: @sq_plus_x_sdiv2(
 ; CHECK-NEXT:    [[X1:%.*]] = add i32 [[X:%.*]], 1
 ; CHECK-NEXT:    [[M:%.*]] = mul i32 [[X]], [[X1]]
-; CHECK-NEXT:    [[D:%.*]] = sdiv i32 [[M]], 2
+; CHECK-NEXT:    [[D:%.*]] = ashr exact i32 [[M]], 1
 ; CHECK-NEXT:    ret i32 [[D]]
 ;
   %sq = mul i32 %x, %x
@@ -2222,7 +2222,7 @@ define <2 x i32> @mul_x_xplus1_sdiv2_vec(<2 x i32> noundef %x) {
 ; CHECK-LABEL: @mul_x_xplus1_sdiv2_vec(
 ; CHECK-NEXT:    [[A:%.*]] = add <2 x i32> [[X:%.*]], splat (i32 1)
 ; CHECK-NEXT:    [[M:%.*]] = mul <2 x i32> [[A]], [[X]]
-; CHECK-NEXT:    [[D:%.*]] = sdiv <2 x i32> [[M]], splat (i32 2)
+; CHECK-NEXT:    [[D:%.*]] = ashr exact <2 x i32> [[M]], splat (i32 1)
 ; CHECK-NEXT:    ret <2 x i32> [[D]]
 ;
   %a = add <2 x i32> %x, <i32 1, i32 1>
@@ -2249,7 +2249,7 @@ define i32 @mul_x_xminus3_sdiv2(i32 noundef %x) {
 ; CHECK-LABEL: @mul_x_xminus3_sdiv2(
 ; CHECK-NEXT:    [[A:%.*]] = add i32 [[X:%.*]], -3
 ; CHECK-NEXT:    [[M:%.*]] = mul i32 [[A]], [[X]]
-; CHECK-NEXT:    [[D:%.*]] = sdiv i32 [[M]], 2
+; CHECK-NEXT:    [[D:%.*]] = ashr exact i32 [[M]], 1
 ; CHECK-NEXT:    ret i32 [[D]]
 ;
   %a = add i32 %x, -3
@@ -2262,7 +2262,7 @@ define <2 x i32> @mul_x_xplus_nonsplat_odd_sdiv2(<2 x i32> noundef %x) {
 ; CHECK-LABEL: @mul_x_xplus_nonsplat_odd_sdiv2(
 ; CHECK-NEXT:    [[A:%.*]] = add <2 x i32> [[X:%.*]], <i32 1, i32 3>
 ; CHECK-NEXT:    [[M:%.*]] = mul <2 x i32> [[A]], [[X]]
-; CHECK-NEXT:    [[D:%.*]] = sdiv <2 x i32> [[M]], splat (i32 2)
+; CHECK-NEXT:    [[D:%.*]] = ashr exact <2 x i32> [[M]], splat (i32 1)
 ; CHECK-NEXT:    ret <2 x i32> [[D]]
 ;
   %a = add <2 x i32> %x, <i32 1, i32 3>
