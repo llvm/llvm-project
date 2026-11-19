@@ -2193,18 +2193,12 @@ define void @store_v13i32_divergent(ptr addrspace(13) %p, <13 x i32> %v) {
 ; GFX942-SDAG-LABEL: store_v13i32_divergent:
 ; GFX942-SDAG:       ; %bb.0:
 ; GFX942-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v17, v12
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v16, v11
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v15, v10
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v14, v9
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v9, v8
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v8, v7
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v7, v6
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v6, v5
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v5, v4
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v4, v3
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v3, v2
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v2, v1
+; GFX942-SDAG-NEXT:    v_pk_mov_b32 v[16:17], v[10:11], v[12:13] op_sel:[1,0]
+; GFX942-SDAG-NEXT:    v_pk_mov_b32 v[14:15], v[8:9], v[10:11] op_sel:[1,0]
+; GFX942-SDAG-NEXT:    v_pk_mov_b32 v[8:9], v[6:7], v[8:9] op_sel:[1,0]
+; GFX942-SDAG-NEXT:    v_pk_mov_b32 v[6:7], v[4:5], v[6:7] op_sel:[1,0]
+; GFX942-SDAG-NEXT:    v_pk_mov_b32 v[4:5], v[2:3], v[4:5] op_sel:[1,0]
+; GFX942-SDAG-NEXT:    v_pk_mov_b32 v[2:3], v[0:1], v[2:3] op_sel:[1,0]
 ; GFX942-SDAG-NEXT:    v_lshrrev_b32_e32 v0, 2, v0
 ; GFX942-SDAG-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX942-SDAG-NEXT:  .LBB16_1: ; =>This Inner Loop Header: Depth=1
@@ -2264,18 +2258,12 @@ define void @store_v13i32_divergent(ptr addrspace(13) %p, <13 x i32> %v) {
 ; GFX942-GISEL-LABEL: store_v13i32_divergent:
 ; GFX942-GISEL:       ; %bb.0:
 ; GFX942-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-GISEL-NEXT:    v_mov_b32_e32 v14, v1
-; GFX942-GISEL-NEXT:    v_mov_b32_e32 v15, v2
-; GFX942-GISEL-NEXT:    v_mov_b32_e32 v16, v3
-; GFX942-GISEL-NEXT:    v_mov_b32_e32 v17, v4
-; GFX942-GISEL-NEXT:    v_mov_b32_e32 v18, v5
-; GFX942-GISEL-NEXT:    v_mov_b32_e32 v19, v6
-; GFX942-GISEL-NEXT:    v_mov_b32_e32 v20, v7
-; GFX942-GISEL-NEXT:    v_mov_b32_e32 v21, v8
-; GFX942-GISEL-NEXT:    v_mov_b32_e32 v22, v9
-; GFX942-GISEL-NEXT:    v_mov_b32_e32 v23, v10
-; GFX942-GISEL-NEXT:    v_mov_b32_e32 v24, v11
-; GFX942-GISEL-NEXT:    v_mov_b32_e32 v25, v12
+; GFX942-GISEL-NEXT:    v_pk_mov_b32 v[14:15], v[0:1], v[2:3] op_sel:[1,0]
+; GFX942-GISEL-NEXT:    v_pk_mov_b32 v[16:17], v[2:3], v[4:5] op_sel:[1,0]
+; GFX942-GISEL-NEXT:    v_pk_mov_b32 v[18:19], v[4:5], v[6:7] op_sel:[1,0]
+; GFX942-GISEL-NEXT:    v_pk_mov_b32 v[20:21], v[6:7], v[8:9] op_sel:[1,0]
+; GFX942-GISEL-NEXT:    v_pk_mov_b32 v[22:23], v[8:9], v[10:11] op_sel:[1,0]
+; GFX942-GISEL-NEXT:    v_pk_mov_b32 v[24:25], v[10:11], v[12:13] op_sel:[1,0]
 ; GFX942-GISEL-NEXT:    v_lshrrev_b32_e32 v1, 2, v0
 ; GFX942-GISEL-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX942-GISEL-NEXT:  .LBB16_1: ; =>This Inner Loop Header: Depth=1

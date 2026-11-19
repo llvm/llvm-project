@@ -43,13 +43,13 @@ define amdgpu_kernel void @eggs(i1 %arg, ptr addrspace(1) %arg1, ptr %arg2, ptr 
 ; CHECK-NEXT:    v_pk_mov_b32 v[16:17], s[22:23], s[22:23] op_sel:[0,1]
 ; CHECK-NEXT:    v_pk_mov_b32 v[18:19], s[24:25], s[24:25] op_sel:[0,1]
 ; CHECK-NEXT:    v_pk_mov_b32 v[20:21], s[26:27], s[26:27] op_sel:[0,1]
-; CHECK-NEXT:    flat_store_byte v[8:9], v0
-; CHECK-NEXT:    flat_store_byte v[10:11], v1
-; CHECK-NEXT:    flat_store_byte v[12:13], v2
-; CHECK-NEXT:    flat_store_byte v[14:15], v3
-; CHECK-NEXT:    flat_store_byte v[16:17], v4
-; CHECK-NEXT:    flat_store_byte v[18:19], v5
-; CHECK-NEXT:    flat_store_byte v[20:21], v7
+; CHECK-NEXT:    flat_store_byte v[8:9], v7
+; CHECK-NEXT:    flat_store_byte v[10:11], v6
+; CHECK-NEXT:    flat_store_byte v[12:13], v5
+; CHECK-NEXT:    flat_store_byte v[14:15], v4
+; CHECK-NEXT:    flat_store_byte v[16:17], v3
+; CHECK-NEXT:    flat_store_byte v[18:19], v2
+; CHECK-NEXT:    flat_store_byte v[20:21], v1
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_pk_mov_b32 v[2:3], s[0:1], s[0:1] op_sel:[0,1]
 ; CHECK-NEXT:    flat_store_byte v[2:3], v0
