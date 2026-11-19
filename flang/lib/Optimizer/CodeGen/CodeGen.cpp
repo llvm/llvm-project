@@ -3264,6 +3264,35 @@ struct InsertOnRangeOpConversion
 } // namespace
 
 namespace {
+static bool isZeroConstant(mlir::Value v) {
+  std::optional<llvm::APInt> cst = fir::getIntIfConstant(v);
+  return cst && cst->isZero();
+}
+
+/// If \p extent is computed as max(x, 0), return x. Matches the
+/// `select(x > 0, x, 0)` built by fir::factory::genMaxWithZero and its
+/// canonical `arith.maxsi(x, 0)` form.
+static mlir::Value getExtentBeforeClampToZero(mlir::Value extent) {
+  mlir::Operation *def = extent.getDefiningOp();
+  if (!def)
+    return {};
+  if (auto max = mlir::dyn_cast<mlir::arith::MaxSIOp>(def)) {
+    if (isZeroConstant(max.getRhs()))
+      return max.getLhs();
+    if (isZeroConstant(max.getLhs()))
+      return max.getRhs();
+    return {};
+  }
+  auto select = mlir::dyn_cast<mlir::arith::SelectOp>(def);
+  if (!select || !isZeroConstant(select.getFalseValue()))
+    return {};
+  auto cmp = select.getCondition().getDefiningOp<mlir::arith::CmpIOp>();
+  if (!cmp || cmp.getPredicate() != mlir::arith::CmpIPredicate::sgt ||
+      cmp.getLhs() != select.getTrueValue() || !isZeroConstant(cmp.getRhs()))
+    return {};
+  return select.getTrueValue();
+}
+
 /// XArrayCoor is the address arithmetic on a dynamically shaped, sliced,
 /// shifted etc. array.
 /// (See the static restriction on coordinate_of.) array_coor determines the
@@ -3370,8 +3399,17 @@ struct XArrayCoorOpConversion
         offset = mlir::LLVM::AddOp::create(rewriter, loc, idxTy, sc, offset,
                                            indexFlags);
         // Compute next stride assuming contiguity of the base array
-        // (in element number).
-        auto nextExt = integerCast(loc, rewriter, idxTy, operands[shapeOffset]);
+        // (in element number). An element can only be addressed if the array
+        // is not empty, in which case an extent clamped as max(x, 0) equals x.
+        // Use x: the clamp only obscures the stride for SCEV-based analyses
+        // (delinearization), and the wrap flags remain valid since they already
+        // assume in-bounds subscripts.
+        mlir::Value extent = operands[shapeOffset];
+        if (mlir::Value rawExtent =
+                getExtentBeforeClampToZero(coor.getShape()[i]))
+          if (mlir::Value remapped = rewriter.getRemappedValue(rawExtent))
+            extent = remapped;
+        auto nextExt = integerCast(loc, rewriter, idxTy, extent);
         prevExt = mlir::LLVM::MulOp::create(rewriter, loc, idxTy, prevExt,
                                             nextExt, addMulFlags);
       }
