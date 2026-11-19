@@ -1435,6 +1435,7 @@ def make_ir_generalizer(version, no_meta_details):
             interlaced_with_previous=True,
         ),
         NamelessValue(r"DBG", "!", r"!dbg ", r"![0-9]+", None),
+        NamelessValue(r"FLMD", "!", r"!flmd ", r"![0-9]+", None),
         NamelessValue(r"DIASSIGNID", "!", r"!DIAssignID ", r"![0-9]+", None),
         NamelessValue(r"PROF", "!", r"!prof ", r"![0-9]+", None),
         NamelessValue(r"TBAA", "!", r"!tbaa ", r"![0-9]+", None),
@@ -2532,7 +2533,17 @@ def build_global_values_dictionary(glob_val_dict, raw_tool_output, prefixes, gin
             # Attach the substring's start index so that CHECK lines
             # can be sorted properly even if they are matched by different nameless values.
             # This is relevant for GLOB and GLOBNAMED since they may appear interlaced.
-            lines.append((m.start(), m.group(0)))
+            if not m.group(0).endswith('['):
+                lines.append((m.start(), [m.group(0)]))
+            else:
+                # For FLMD, we actually have many lines for a single entry, and must include all of them.
+                succeeding_text: str = raw_tool_output[m.start():]
+                entry_lines = []
+                for line in succeeding_text.splitlines():
+                    entry_lines.append(line)
+                    if line.endswith('])'):
+                        break
+                lines.append((m.start(), entry_lines))
 
         for prefix in prefixes:
             if glob_val_dict[prefix] is None:
@@ -2561,7 +2572,7 @@ def filter_globals_according_to_preference(
         # attribute sets are usually better checked by --check-attributes
         return []
 
-    def extract(line, nv):
+    def extract(lines, nv):
         p = (
             "^"
             + nv.ir_prefix
@@ -2571,8 +2582,12 @@ def filter_globals_according_to_preference(
             + nv.global_ir_rhs_regexp
             + ")"
         )
-        match = re.match(p, line)
-        return (match.group(1), re.findall(nv.ir_regexp, match.group(2)))
+        main_line = lines[0]
+        match = re.match(p, main_line)
+        found_matches = re.findall(nv.ir_regexp, match.group(2))
+        for extra_line in lines[1:]:
+            found_matches.extend(re.findall(nv.ir_regexp, extra_line))
+        return (match.group(1), found_matches)
 
     transitively_visible = set()
     contains_refs_to = {}
@@ -2588,17 +2603,17 @@ def filter_globals_according_to_preference(
         for x in contains_refs_to[var]:
             add(x)
 
-    for i, line in global_val_lines_w_index:
-        (var, refs) = extract(line, nameless_value)
+    for i, lines in global_val_lines_w_index:
+        (var, refs) = extract(lines, nameless_value)
         contains_refs_to[var] = refs
     for var, check_key in global_vars_seen:
         if check_key != nameless_value.check_key:
             continue
         add(var)
     return [
-        (i, line)
-        for i, line in global_val_lines_w_index
-        if extract(line, nameless_value)[0] in transitively_visible
+        (i, lines)
+        for i, lines in global_val_lines_w_index
+        if extract(lines, nameless_value)[0] in transitively_visible
     ]
 
 
@@ -2684,19 +2699,19 @@ def add_global_checks(
                     nameless_value,
                     global_check_setting,
                 )
-                for i, line in lines_w_index:
+                for i, lines in lines_w_index:
                     if _global_value_regex:
                         matched = False
                         for regex in _global_value_regex:
-                            if re.match("^@" + regex + " = ", line) or re.match(
-                                "^!" + regex + " = ", line
+                            if re.match("^@" + regex + " = ", lines[0]) or re.match(
+                                "^!" + regex + " = ", lines[0]
                             ):
                                 matched = True
                                 break
                         if not matched:
                             continue
-                    [new_line] = generalize_check_lines(
-                        [line],
+                    new_lines = generalize_check_lines(
+                        lines,
                         ginfo,
                         {},
                         global_vars_seen,
@@ -2704,9 +2719,13 @@ def add_global_checks(
                         preserve_names,
                         unstable_globals_only=True,
                     )
-                    new_line = filter_unstable_metadata(new_line)
-                    check_line = "%s %s: %s" % (comment_marker, checkprefix, new_line)
+                    new_lines[0] = filter_unstable_metadata(new_lines[0])
+                    check_line = "%s %s: %s" % (comment_marker, checkprefix, new_lines[0])
                     check_lines.append((i, check_line))
+                    for idx, new_line in enumerate(new_lines[1:]):
+                        check_line = "%s %s-NEXT: %s" % (comment_marker, checkprefix, new_line)
+                        # This is an incorrect idx in terms of actual file position, but correct in terms of ordering.
+                        check_lines.append((i + idx + 1, check_line))
                 if not check_lines:
                     continue
 
