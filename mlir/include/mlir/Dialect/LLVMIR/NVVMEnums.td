@@ -76,23 +76,15 @@ def SaturationModeAttr : EnumAttr<NVVM_Dialect, SaturationMode, "sat_mode"> {
 // Memory space, scope, ordering and proxy enums
 //===----------------------------------------------------------------------===//
 
-// Memory Space enum definitions
-/// Generic memory space identifier.
 def MemSpaceGeneric : I32EnumCase<"Generic", 0, "generic">;
-/// Global memory space identifier.
 def MemSpaceGlobal : I32EnumCase<"Global", 1, "global">;
-/// Shared memory space identifier.
 def MemSpaceShared : I32EnumCase<"Shared", 3, "shared">;
-/// Constant memory space identifier.
 def MemSpaceConstant : I32EnumCase<"Constant", 4, "constant">;
-/// Local memory space identifier.
 def MemSpaceLocal : I32EnumCase<"Local", 5, "local">;
 /// Tensor memory space identifier.
 /// Tensor memory is available only in arch-accelerated
 /// variants from sm100 onwards.
 def MemSpaceTensor : I32EnumCase<"Tensor", 6, "tensor">;
-/// Distributed shared memory space identifier.
-/// Distributed shared memory is available only in sm90+.
 def MemSpaceSharedCluster : I32EnumCase<"SharedCluster", 7, "shared_cluster">;
 
 def NVVMMemorySpace : I32Enum<"NVVMMemorySpace", "NVVM Memory Space",
@@ -101,7 +93,6 @@ def NVVMMemorySpace : I32Enum<"NVVMMemorySpace", "NVVM Memory Space",
                    MemSpaceSharedCluster]> {
   let cppNamespace = "::mlir::NVVM";
 }
-
 def NVVMMemorySpaceAttr : 
   EnumAttr<NVVM_Dialect, NVVMMemorySpace, "memory_space", [
     DeclareAttrInterfaceMethods<LLVM_LLVMAddrSpaceAttrInterface>,
@@ -122,8 +113,8 @@ def MemScopeKind : I32EnumAttr<"MemScopeKind", "NVVM Memory Scope kind",
 def MemScopeKindAttr : EnumAttr<NVVM_Dialect, MemScopeKind, "mem_scope">;
 
 // Attrs to disambiguate the cta or cluster space within shared memory
-def SharedSpaceCTA : I32EnumAttrCase<"shared_cta", 0, "cta">;
-def SharedSpaceCluster   : I32EnumAttrCase<"shared_cluster", 1, "cluster">;
+def SharedSpaceCTA     : I32EnumAttrCase<"shared_cta", 0, "cta">;
+def SharedSpaceCluster : I32EnumAttrCase<"shared_cluster", 1, "cluster">;
 def SharedSpace : I32EnumAttr<"SharedSpace", "Shared memory space",
   [SharedSpaceCTA, SharedSpaceCluster]> {
   let genSpecializedAttr = 0;
@@ -150,18 +141,17 @@ def MemOrderKind : I32EnumAttr<"MemOrderKind", "NVVM Memory Ordering kind",
 }
 def MemOrderKindAttr : EnumAttr<NVVM_Dialect, MemOrderKind, "mem_order">;
 
-def ProxyAlias : I32EnumAttrCase<"alias", 0, "alias">;
-def ProxyAsync   : I32EnumAttrCase<"async", 1, "async">;
-def ProxyAsyncGlobal   : I32EnumAttrCase<"async_global", 2, "async.global">;
-def ProxyAsyncShared   : I32EnumAttrCase<"async_shared", 3, "async.shared">;
-def ProxyTensorMap : I32EnumAttrCase<"TENSORMAP", 4, "tensormap">;
-def ProxyGeneric : I32EnumAttrCase<"GENERIC", 5, "generic">;
+def ProxyAlias       : I32EnumAttrCase<"alias", 0, "alias">;
+def ProxyAsync       : I32EnumAttrCase<"async", 1, "async">;
+def ProxyAsyncGlobal : I32EnumAttrCase<"async_global", 2, "async.global">;
+def ProxyAsyncShared : I32EnumAttrCase<"async_shared", 3, "async.shared">;
+def ProxyTensorMap   : I32EnumAttrCase<"TENSORMAP", 4, "tensormap">;
+def ProxyGeneric     : I32EnumAttrCase<"GENERIC", 5, "generic">;
 def ProxyKind : I32EnumAttr<"ProxyKind", "Proxy kind",
   [ProxyAlias, ProxyAsync, ProxyAsyncGlobal, ProxyAsyncShared, ProxyTensorMap, ProxyGeneric]> {
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::NVVM";
 }
-
 def ProxyKindAttr : EnumAttr<NVVM_Dialect, ProxyKind, "proxy_kind"> {
   let description = [{
     ProxyKind attribute represents a memory proxy which is an abstract label
@@ -174,7 +164,6 @@ def ProxyKindAttr : EnumAttr<NVVM_Dialect, ProxyKind, "proxy_kind"> {
 // Cache control enums
 //===----------------------------------------------------------------------===//
 
-// Cache Eviction Priority enum definitions
 def EvictNormal : I32EnumCase<"EvictNormal", 0, "evict_normal">;
 def EvictFirst : I32EnumCase<"EvictFirst", 1, "evict_first">;
 def EvictLast : I32EnumCase<"EvictLast", 2, "evict_last">;
@@ -187,7 +176,6 @@ def CacheEvictionPriority : I32Enum<"CacheEvictionPriority",
                                      EvictUnchanged, NoAllocate]> {
   let cppNamespace = "::mlir::NVVM";
 }
-
 def CacheEvictionPriorityAttr : EnumAttr<NVVM_Dialect, CacheEvictionPriority, 
                                          "cache_eviction_priority">;
 
@@ -197,7 +185,6 @@ def LoadCacheModifierCS : I32EnumAttrCase<"CS", 2, "cs">;
 def LoadCacheModifierLU : I32EnumAttrCase<"LU", 3, "lu">;
 def LoadCacheModifierCV : I32EnumAttrCase<"CV", 4, "cv">;
 
-/// Enum attribute of the different kinds.
 def LoadCacheModifierKind : I32EnumAttr<"LoadCacheModifierKind", 
                                 "NVVM load cache modifier kind",
   [LoadCacheModifierCA, LoadCacheModifierCG, LoadCacheModifierCS, 
@@ -210,7 +197,6 @@ def LoadCacheModifierKind : I32EnumAttr<"LoadCacheModifierKind",
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#id62)    
   }];
 }
-
 def LoadCacheModifierAttr : EnumAttr<NVVM_Dialect, LoadCacheModifierKind, "load_cache_modifier">;
 
 def PrefetchCacheLevelL1 : I32EnumCase<"L1", 0, "L1">;
@@ -221,7 +207,6 @@ def PrefetchCacheLevel : I32Enum<"PrefetchCacheLevel",
                                  [PrefetchCacheLevelL1, PrefetchCacheLevelL2]> {
   let cppNamespace = "::mlir::NVVM";
 }
-
 def PrefetchCacheLevelAttr : EnumAttr<NVVM_Dialect, PrefetchCacheLevel, "prefetch_cache_level">;
 
 //===----------------------------------------------------------------------===//
@@ -256,7 +241,6 @@ def ReductionKindXor  : I32EnumAttrCase<"XOR", 8, "xor">;
 def ReductionKindFmin : I32EnumAttrCase<"FMIN", 9, "fmin">;
 def ReductionKindFmax : I32EnumAttrCase<"FMAX", 10, "fmax">;
 
-/// Enum attribute of the different kinds.
 def ReductionKind : I32EnumAttr<"ReductionKind", "NVVM Reduction Kind attribute",
   [ReductionKindAdd, ReductionKindAnd, ReductionKindMax, ReductionKindMin,
    ReductionKindOr, ReductionKindUmax, ReductionKindUmin, ReductionKindXor,
@@ -264,11 +248,10 @@ def ReductionKind : I32EnumAttr<"ReductionKind", "NVVM Reduction Kind attribute"
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::NVVM";
 }
-
 def ReductionKindAttr : EnumAttr<NVVM_Dialect, ReductionKind, "reduction_kind">;
 
 def SetMaxRegisterActionIncrease : I32EnumAttrCase<"increase", 0>;
-def SetMaxRegisterActionDecrease   : I32EnumAttrCase<"decrease", 1>;
+def SetMaxRegisterActionDecrease : I32EnumAttrCase<"decrease", 1>;
 def SetMaxRegisterAction : I32EnumAttr<"SetMaxRegisterAction", "NVVM set max register action",
   [SetMaxRegisterActionDecrease, SetMaxRegisterActionIncrease]> {
   let genSpecializedAttr = 0;
@@ -281,7 +264,6 @@ def ShflKindUp   : I32EnumAttrCase<"up", 1>;
 def ShflKindDown : I32EnumAttrCase<"down", 2>;
 def ShflKindIdx  : I32EnumAttrCase<"idx", 3>;
 
-/// Enum attribute of the different shuffle kinds.
 def ShflKind : I32EnumAttr<"ShflKind", "NVVM shuffle kind",
   [ShflKindBfly, ShflKindUp, ShflKindDown, ShflKindIdx]> {
   let genSpecializedAttr = 0;
@@ -300,7 +282,6 @@ def VoteSyncKind : I32EnumAttr<"VoteSyncKind", "NVVM vote sync kind",
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::NVVM";
 }
-
 def VoteSyncKindAttr : EnumAttr<NVVM_Dialect, VoteSyncKind, "vote_sync_kind">;
 
 def MatchSyncKindAny : I32EnumAttrCase<"any", 0>;
@@ -311,7 +292,6 @@ def MatchSyncKind : I32EnumAttr<"MatchSyncKind", "NVVM match sync kind",
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::NVVM";
 }
-
 def MatchSyncKindAttr : EnumAttr<NVVM_Dialect, MatchSyncKind, "match_sync_kind">;
 
 def GridDepActionWait : I32EnumCase<"wait", 0>;
@@ -321,7 +301,6 @@ def GridDepActionKind : I32Enum<"GridDepActionKind", "Action kind for grid depen
   [GridDepActionWait, GridDepActionLaunchDependent]> {
   let cppNamespace = "::mlir::NVVM";
 }
-
 def GridDepActionAttr : EnumAttr<NVVM_Dialect, GridDepActionKind, "grid_dep_action">;
 
 def ClusterLaunchControlIsCanceled
@@ -340,7 +319,6 @@ def ClusterLaunchControlQueryType
       ClusterLaunchControlGetFirstCTAIDY, ClusterLaunchControlGetFirstCTAIDZ]> {
   let cppNamespace = "::mlir::NVVM";
 }
-
 def ClusterLaunchControlQueryTypeAttr
   : EnumAttr<NVVM_Dialect,
       ClusterLaunchControlQueryType, "cluster_launch_control_query_type">;
@@ -365,7 +343,6 @@ def PermuteMode : I32EnumAttr<"PermuteMode", "NVVM permute mode",
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::NVVM";
 }
-
 def PermuteModeAttr : EnumAttr<NVVM_Dialect, PermuteMode, "permute_mode">;
 
 def DotAccumulateUnsigned : I32EnumAttrCase<"UNSIGNED", 0, "unsigned">;
@@ -377,7 +354,6 @@ def DotAccumulateType : I32EnumAttr<"DotAccumulateType",
   let cppNamespace = "::mlir::NVVM";
   let genSpecializedAttr = 0;
 }
-
 def DotAccumulateTypeAttr : EnumAttr<NVVM_Dialect, DotAccumulateType, "dot_accumulate_type">;
 
 //===----------------------------------------------------------------------===//
@@ -417,7 +393,6 @@ def MMAKindAttr : EnumAttr<NVVM_Dialect, MMAKind, "mma_kind">;
 def MMALayoutRow : I32EnumAttrCase<"row", 0>;
 def MMALayoutCol : I32EnumAttrCase<"col", 1>;
 
-/// Enum attribute of the different matrix layout.
 def MMALayout : I32EnumAttr<"MMALayout", "NVVM MMA layout",
   [MMALayoutRow, MMALayoutCol]> {
   let genSpecializedAttr = 0;
@@ -458,7 +433,6 @@ def MMAFragA : I32EnumAttrCase<"a", 0>;
 def MMAFragB : I32EnumAttrCase<"b", 1>;
 def MMAFragC : I32EnumAttrCase<"c", 2>;
 
-/// Enum attribute of the different frag types.
 def MMAFrag: I32EnumAttr<"MMAFrag", "NVVM MMA frag type",
   [MMAFragA, MMAFragB, MMAFragC]> {
   let genSpecializedAttr = 0;
@@ -492,7 +466,6 @@ def ScaleVecSize : I32EnumAttr<
     let cppNamespace = "::mlir::NVVM";
     let genSpecializedAttr = 0;
 }
-
 def ScaleVecSizeAttr : EnumAttr<NVVM_Dialect, ScaleVecSize, "scale_vec_size">;
 
 def UE8M0 : I32EnumAttrCase<"UE8M0", 0, "ue8m0">;
@@ -506,12 +479,11 @@ def BlockScaleFormat : I32EnumAttr<
   let cppNamespace = "::mlir::NVVM";
   let genSpecializedAttr = 0;
 }
-
 def BlockScaleFormatAttr : EnumAttr<NVVM_Dialect, BlockScaleFormat, "block_scale_format">;
 
-def MMABlockScaleKindMXF8F6F4  : I32EnumAttrCase<"MXF8F6F4", 0, "mxf8f6f4">;
-def MMABlockScaleKindMXF4  : I32EnumAttrCase<"MXF4", 1, "mxf4">;
-def MMABlockScaleKindMXF4NVF4  : I32EnumAttrCase<"MXF4NVF4", 2, "mxf4nvf4">;
+def MMABlockScaleKindMXF8F6F4 : I32EnumAttrCase<"MXF8F6F4", 0, "mxf8f6f4">;
+def MMABlockScaleKindMXF4     : I32EnumAttrCase<"MXF4", 1, "mxf4">;
+def MMABlockScaleKindMXF4NVF4 : I32EnumAttrCase<"MXF4NVF4", 2, "mxf4nvf4">;
 
 def MMABlockScaleKind : I32EnumAttr<
   "MMABlockScaleKind",
@@ -520,7 +492,6 @@ def MMABlockScaleKind : I32EnumAttr<
     let cppNamespace = "::mlir::NVVM";
     let genSpecializedAttr = 0;
 }
-
 def MMABlockScaleKindAttr : EnumAttr<NVVM_Dialect, MMABlockScaleKind, "block_scale_kind"> {
   let description = [{
     The MMABlockScaleKind attribute describes the allowed set of types for matrix A and B in the *.mma.{sp}.block_scale Op. The following are supported types for each kind:
@@ -759,7 +730,6 @@ def Tcgen05LdStShape: I32EnumAttr<
   let cppNamespace = "::mlir::NVVM";
   let genSpecializedAttr = 0;
 }
-
 def Tcgen05LdStShapeAttr: EnumAttr<NVVM_Dialect, Tcgen05LdStShape, "tcgen05_ldst_shape">;
 
 def Tcgen05MMAKindF16          : I32EnumAttrCase<"F16",      0, "f16">;
@@ -781,7 +751,6 @@ def Tcgen05MMAKind : I32EnumAttr<
     let cppNamespace = "::mlir::NVVM";
     let genSpecializedAttr = 0;
 }
-
 def Tcgen05MMAKindAttr : EnumAttr<NVVM_Dialect, Tcgen05MMAKind, "tcgen05_mma_kind"> {
   let description = [{
     The Tcgen05MMAKind attribute describes the allowed set of types for matrix A and B in the tcgen05.mma Ops.
@@ -818,7 +787,6 @@ def Tcgen05MMACollectorOp : I32EnumAttr<
     let cppNamespace = "::mlir::NVVM";
     let genSpecializedAttr = 0;
 }
-
 def Tcgen05MMACollectorOpAttr : EnumAttr<NVVM_Dialect, Tcgen05MMACollectorOp, "tcgen05_mma_collectorop"> {
   let description = [{
     Tcgen05MMACollectorOp attribute specifies the collector buffer operations.
@@ -831,8 +799,8 @@ def Tcgen05MMACollectorOpAttr : EnumAttr<NVVM_Dialect, Tcgen05MMACollectorOp, "t
 }
 
 def Tcgen05MMABlockScaleDefault : I32EnumAttrCase<"DEFAULT", 0, "default">;
-def Tcgen05MMABlockScaleBlock16      : I32EnumAttrCase<"BLOCK16", 1, "block16">;
-def Tcgen05MMABlockScaleBlock32      : I32EnumAttrCase<"BLOCK32", 2, "block32">;
+def Tcgen05MMABlockScaleBlock16 : I32EnumAttrCase<"BLOCK16", 1, "block16">;
+def Tcgen05MMABlockScaleBlock32 : I32EnumAttrCase<"BLOCK32", 2, "block32">;
 
 def Tcgen05MMABlockScale
     : I32EnumAttr<"Tcgen05MMABlockScale",
@@ -842,7 +810,6 @@ def Tcgen05MMABlockScale
   let cppNamespace = "::mlir::NVVM";
   let genSpecializedAttr = 0;
 }
-
 def Tcgen05MMABlockScaleAttr : EnumAttr<NVVM_Dialect, Tcgen05MMABlockScale,
                                           "tcgen05_mma_block_scale">;
 
@@ -859,14 +826,12 @@ def Tcgen05MMACollectorBBuffer : I32EnumAttr<
     let cppNamespace = "::mlir::NVVM";
     let genSpecializedAttr = 0;
 }
-
 def Tcgen05MMACollectorBBufferAttr : EnumAttr<NVVM_Dialect, Tcgen05MMACollectorBBuffer, "tcgen05_mma_collectorb">;
 
 //===----------------------------------------------------------------------===//
 // Tensormap enums
 //===----------------------------------------------------------------------===//
 
-// Tensormap Field Kind Enum
 def TensormapGlobalAddressField : I32EnumCase<"GLOBAL_ADDRESS", 0, "global_address">;
 def TensormapRankField : I32EnumCase<"RANK", 1, "rank">;
 def TensormapBoxDimField : I32EnumCase<"BOX_DIM", 2, "box_dim">;
@@ -887,10 +852,8 @@ def TensormapField : I32Enum<"TensormapField", "NVVM Tensormap Field Kind",
    TensormapSwizzleAtomicityField, TensormapFillModeField]> {
     let cppNamespace = "::mlir::NVVM";
 }
-
 def TensormapFieldAttr : EnumAttr<NVVM_Dialect, TensormapField, "tensormap_field">;
 
-// Tensormap Elemtype Enum
 def TensormapElemtypeU8 : I32EnumCase<"U8", 0, "u8">;
 def TensormapElemtypeU16 : I32EnumCase<"U16", 1, "u16">;
 def TensormapElemtypeU32 : I32EnumCase<"U32", 2, "u32">;
@@ -919,10 +882,8 @@ def TensormapElemtype : I32Enum<"TensormapElemtype", "NVVM Tensormap Elemtype",
    TensormapElemtypeB4x16P64, TensormapElemtypeB6x16P32]> {
     let cppNamespace = "::mlir::NVVM";
 }
-
 def TensormapElemtypeAttr : EnumAttr<NVVM_Dialect, TensormapElemtype, "tensormap_elemtype">;
 
-// Tensormap Interleave Layout Enum
 def TensormapInterleaveLayoutNoInterleave : 
   I32EnumCase<"NO_INTERLEAVE", 0, "no_interleave">;
 def TensormapInterleaveLayoutB16 : I32EnumCase<"B16", 1, "b16">;
@@ -935,11 +896,9 @@ def TensormapInterleaveLayout :
    TensormapInterleaveLayoutB32]> {
     let cppNamespace = "::mlir::NVVM";
 }
-
 def TensormapInterleaveLayoutAttr : EnumAttr<NVVM_Dialect,   
   TensormapInterleaveLayout, "tensormap_interleave_layout">;
 
-// Tensormap Swizzle Mode Enum
 def TensormapSwizzleModeNoSwizzling : I32EnumCase<"NO_SWIZZLING", 0, "no_swizzling">;
 def TensormapSwizzleMode32B : I32EnumCase<"B32", 1, "b32">;
 def TensormapSwizzleMode64B : I32EnumCase<"B64", 2, "b64">;
@@ -954,11 +913,9 @@ def TensormapSwizzleMode : I32Enum<"TensormapSwizzleMode", "NVVM Tensormap Swizz
    TensormapSwizzleMode96B]> {
     let cppNamespace = "::mlir::NVVM";
 }
-
 def TensormapSwizzleModeAttr : EnumAttr<NVVM_Dialect,
   TensormapSwizzleMode, "tensormap_swizzle_mode">;
 
-// Tensormap Swizzle Atomicity Enum
 def TensormapSwizzleAtomicityB16 : I32EnumCase<"B16", 0, "b16">;
 def TensormapSwizzleAtomicityB32 : I32EnumCase<"B32", 1, "b32">;
 def TensormapSwizzleAtomicityB32FlipB8 : I32EnumCase<"B32_FLIP_8B", 2, "b32_flip_b8">;
@@ -971,11 +928,9 @@ def TensormapSwizzleAtomicity :
    TensormapSwizzleAtomicityB64]> {
     let cppNamespace = "::mlir::NVVM";
 }
-
 def TensormapSwizzleAtomicityAttr : EnumAttr<NVVM_Dialect,
   TensormapSwizzleAtomicity, "tensormap_swizzle_atomicity">;
 
-// Tensormap Fill Mode Enum
 def TensormapFillModeZeroFill : I32EnumCase<"ZERO", 0, "zero">;
 def TensormapFillModeOOBNaNFill : I32EnumCase<"OOB_NAN", 1, "oob_nan">;
 
@@ -983,7 +938,6 @@ def TensormapFillMode : I32Enum<"TensormapFillMode", "NVVM Tensormap Fill Mode",
   [TensormapFillModeZeroFill, TensormapFillModeOOBNaNFill]> {
     let cppNamespace = "::mlir::NVVM";
 }
-
 def TensormapFillModeAttr : EnumAttr<NVVM_Dialect,
   TensormapFillMode, "tensormap_fill_mode">;
 
