@@ -14,6 +14,7 @@
 #ifndef LLVM_ANALYSIS_LOOPACCESSANALYSIS_H
 #define LLVM_ANALYSIS_LOOPACCESSANALYSIS_H
 
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -601,6 +602,8 @@ public:
     Checks.clear();
     DiffChecks.clear();
     CheckingGroups.clear();
+    UnknownDepPtrPairs.clear();
+    UnknownDepCands = {};
   }
 
   /// Insert a pointer and calculate the start and end SCEVs.
@@ -657,6 +660,11 @@ public:
 
   /// Information about the pointers that may require checking.
   SmallVector<PointerInfo, 2> Pointers;
+
+  /// Set of unknown dependences that need runtime checks when retrying to
+  /// generate checks.
+  MemoryDepChecker::DepCandidates UnknownDepCands;
+  DenseSet<std::pair<const Value *, const Value *>> UnknownDepPtrPairs;
 
   /// Holds a partitioning of pointers into "check groups".
   SmallVector<RuntimeCheckingPtrGroup, 2> CheckingGroups;

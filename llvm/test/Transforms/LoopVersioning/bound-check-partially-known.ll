@@ -16,10 +16,9 @@ define void @bound_check_partially_known_1(i32 %N) {
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr @global, i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP0]], 256000
 ; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr @global, i64 [[TMP2]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr @global, [[SCEVGEP1]]
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[SCEVGEP]], [[SCEVGEP2]]
-; CHECK-NEXT:    [[BOUND13:%.*]] = icmp ult ptr getelementptr inbounds nuw (i8, ptr @global, i64 256000), [[SCEVGEP1]]
-; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND13]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr getelementptr inbounds nuw (i8, ptr @global, i64 256000), [[SCEVGEP1]]
+; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[LOOP_PH_LVER_ORIG:%.*]], label [[LOOP_PH:%.*]]
 ; CHECK:       loop.ph.lver.orig:
 ; CHECK-NEXT:    br label [[LOOP_LVER_ORIG:%.*]]
@@ -47,13 +46,13 @@ define void @bound_check_partially_known_1(i32 %N) {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd double [[L_0]], [[L_1]]
 ; CHECK-NEXT:    [[IV_N:%.*]] = add nuw nsw i64 [[IV]], [[N_EXT]]
 ; CHECK-NEXT:    [[GEP_0_IV_N:%.*]] = getelementptr inbounds [[STRUCT_FOO]], ptr @global, i64 0, i32 0, i64 [[IV_N]]
-; CHECK-NEXT:    store double [[ADD]], ptr [[GEP_0_IV_N]], align 8, !alias.scope [[META5:![0-9]+]], !noalias [[META7:![0-9]+]]
+; CHECK-NEXT:    store double [[ADD]], ptr [[GEP_0_IV_N]], align 8, !alias.scope [[META5:![0-9]+]], !noalias [[META3]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT]], [[N_EXT]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[EXIT_LOOPEXIT4:%.*]], label [[LOOP]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[EXIT_LOOPEXIT3:%.*]], label [[LOOP]]
 ; CHECK:       exit.loopexit:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       exit.loopexit4:
+; CHECK:       exit.loopexit3:
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
