@@ -4742,6 +4742,22 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
                                     SQ.getWithInstruction(&SI)))
     return replaceInstUsesWith(SI, V);
 
+  if (FMF.noInfs() && SelType->isFloatingPointTy()) {
+    // The constraint applies to the selected result. A nested select can
+    // inherit it when its only use is as an arm of this select.
+    bool Changed = false;
+    for (Value *Arm : {TrueVal, FalseVal}) {
+      auto *Inner = dyn_cast<SelectInst>(Arm);
+      if (!Inner || !Inner->hasOneUse() || Inner->hasNoInfs())
+        continue;
+      Inner->setHasNoInfs(true);
+      addToWorklist(Inner);
+      Changed = true;
+    }
+    if (Changed)
+      return &SI;
+  }
+
   if (Instruction *I = canonicalizeSelectToShuffle(SI))
     return I;
 
