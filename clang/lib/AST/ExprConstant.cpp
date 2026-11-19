@@ -4712,6 +4712,24 @@ static bool AreElementsOfSameArray(QualType ObjType,
   return CommonLength >= A.Entries.size() - IsArray;
 }
 
+/// GNU extension: a compound literal that is immediately read by an
+/// lvalue-to-rvalue conversion, possibly through '.' member access or
+/// __real/__imag, as in 'int x = (int){1};' or 'int y = (struct S){1}.a;', is
+/// not a read of the compound literal object; the value of its initializer is
+/// used directly. Returns that compound literal, if E is such an operand.
+const CompoundLiteralExpr *getDirectlyReadCompoundLiteral(const Expr *E) {
+  while (true) {
+    E = E->IgnoreParens();
+    if (const auto *ME = dyn_cast<MemberExpr>(E); ME && !ME->isArrow())
+      E = ME->getBase();
+    else if (const auto *UO = dyn_cast<UnaryOperator>(E);
+             UO && (UO->getOpcode() == UO_Real || UO->getOpcode() == UO_Imag))
+      E = UO->getSubExpr();
+    else
+      return dyn_cast<CompoundLiteralExpr>(E);
+  }
+}
+
 /// Find the complete object to which an LValue refers. \p DirectlyReadCLE is a
 /// compound literal that may be read; see getDirectlyReadCompoundLiteral.
 static CompleteObject
@@ -8745,25 +8763,6 @@ static bool diagnoseBPFPreserveAIEnumerator(EvalInfo &Info,
   Info.FFDiag(E, diag::note_constexpr_bpf_preserve_ai_enumerator)
       << ECD << EnumTy << E->getSourceRange();
   return true;
-}
-
-/// GNU extension: a compound literal that is immediately read by an
-/// lvalue-to-rvalue conversion, possibly through '.' member access or
-/// __real/__imag, as in 'int x = (int){1};' or 'int y = (struct S){1}.a;', is
-/// not a read of the compound literal object; the value of its initializer is
-/// used directly. Returns that compound literal, if E is such an operand.
-static const CompoundLiteralExpr *
-getDirectlyReadCompoundLiteral(const Expr *E) {
-  while (true) {
-    E = E->IgnoreParens();
-    if (const auto *ME = dyn_cast<MemberExpr>(E); ME && !ME->isArrow())
-      E = ME->getBase();
-    else if (const auto *UO = dyn_cast<UnaryOperator>(E);
-             UO && (UO->getOpcode() == UO_Real || UO->getOpcode() == UO_Imag))
-      E = UO->getSubExpr();
-    else
-      return dyn_cast<CompoundLiteralExpr>(E);
-  }
 }
 
 template <class Derived>

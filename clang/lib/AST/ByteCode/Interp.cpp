@@ -930,6 +930,22 @@ bool CheckLocalLoad(InterpState &S, CodePtr OpPC, const Block *B) {
   return true;
 }
 
+/// A compound literal with static storage duration can be modified unless it
+/// is const-qualified, so its value is not known.
+static bool CheckCompoundLiteral(InterpState &S, CodePtr OpPC, const Block *B) {
+  const auto *CLE =
+      dyn_cast_if_present<CompoundLiteralExpr>(B->getDescriptor()->asExpr());
+  if (!CLE || !CLE->hasStaticStorage() ||
+      CLE->getType().isConstant(S.getASTContext()))
+    return true;
+
+  S.FFDiag(S.Current->getLocation(OpPC),
+           diag::note_invalid_subexpr_in_const_expr)
+      << S.Current->getRange(OpPC);
+  S.Note(CLE->getExprLoc(), diag::note_declared_at);
+  return false;
+}
+
 bool CheckLoad(InterpState &S, CodePtr OpPC, PtrView Ptr, AccessKinds AK) {
   if (Ptr.isZero()) {
     SourceInfo Loc = S.Current->getSource(OpPC);
@@ -980,34 +996,8 @@ bool CheckLoad(InterpState &S, CodePtr OpPC, PtrView Ptr, AccessKinds AK) {
     return false;
   if (!CheckVolatile(S, OpPC, Ptr, AK))
     return false;
-
-  if (!Ptr.isArrayRoot()) {
-    // According to GCC info page:
-    //
-    // 6.28 Compound Literals
-    //
-    // As an optimization, G++ sometimes gives array compound literals
-    // longer lifetimes: when the array either appears outside a function or
-    // has a const-qualified type. If foo and its initializer had elements
-    // of type char *const rather than char *, or if foo were a global
-    // variable, the array would have static storage duration. But it is
-    // probably safest just to avoid the use of array compound literals in
-    // C++ code.
-    //
-    // Obey that rule by checking constness for converted array types.
-    const Descriptor *Desc = Ptr.getFieldDesc();
-    if (const auto *CLE =
-            dyn_cast_if_present<CompoundLiteralExpr>(Desc->asExpr())) {
-      if (QualType CLETy = CLE->getType();
-          CLETy->isArrayType() && !CLETy.isConstant(S.getASTContext())) {
-        S.FFDiag(S.Current->getLocation(OpPC),
-                 diag::note_invalid_subexpr_in_const_expr)
-            << S.Current->getRange(OpPC);
-        S.Note(CLE->getExprLoc(), diag::note_declared_at);
-        return false;
-      }
-    }
-  }
+  if (!CheckCompoundLiteral(S, OpPC, Ptr.block()))
+    return false;
   return true;
 }
 
@@ -1074,6 +1064,8 @@ bool CheckFinalLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
     if (!CheckTemporary(S, OpPC, Ptr.block(), AK_Read))
       return false;
     if (!CheckMutable(S, OpPC, Ptr.view()))
+      return false;
+    if (!CheckCompoundLiteral(S, OpPC, Ptr.block()))
       return false;
   }
   return true;
