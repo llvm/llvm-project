@@ -514,14 +514,14 @@ void X86FixupBWInstImpl::processBasicBlock(MachineFunction &MF,
         RedundantZExts.push_back(ZExt);
 
   for (MachineInstr *ZExt : RedundantZExts) {
-    auto ZExtDebugInstrNum = ZExt->peekDebugInstrNum();
+    unsigned ZExtDebugInstrNum = ZExt->peekDebugInstrNum();
     // If the zero extension has a debug instruction number, walk back to the
     // last instruction that writes any part of the 16-bit register. If it
     // writes all of it, redirect the number to that instruction; if it only
     // writes a part (al or ah), drop the number instead.
     if (ZExtDebugInstrNum != 0) {
-      auto *PrevInstr = ZExt->getPrevNode();
-      auto ZExtSrcReg16 = ZExt->getOperand(1).getReg();
+      MachineInstr *PrevInstr = ZExt->getPrevNode();
+      Register ZExtSrcReg16 = ZExt->getOperand(1).getReg();
       while (PrevInstr) {
         if (PrevInstr->modifiesRegister(ZExtSrcReg16, TRI)) {
           int Idx = PrevInstr->findRegisterDefOperandIdx(ZExtSrcReg16, TRI);
