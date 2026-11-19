@@ -10786,7 +10786,7 @@ public:
       CXXRecordDecl *ActingContext, Expr *From, QualType ToType,
       OverloadCandidateSet &CandidateSet, bool AllowObjCConversionOnExplicit,
       bool AllowExplicit, bool AllowResultConversion = true,
-      bool StrictPackMatch = false);
+      bool StrictPackMatch = false, bool AllowRValues = true);
 
   /// Adds a conversion function template specialization
   /// candidate to the overload set, using template argument deduction
@@ -10797,7 +10797,8 @@ public:
       FunctionTemplateDecl *FunctionTemplate, DeclAccessPair FoundDecl,
       CXXRecordDecl *ActingContext, Expr *From, QualType ToType,
       OverloadCandidateSet &CandidateSet, bool AllowObjCConversionOnExplicit,
-      bool AllowExplicit, bool AllowResultConversion = true);
+      bool AllowExplicit, bool AllowResultConversion = true,
+      bool AllowRValues = true);
 
   /// AddSurrogateCandidate - Adds a "surrogate" candidate function that
   /// converts the given @c Object to a function pointer via the
