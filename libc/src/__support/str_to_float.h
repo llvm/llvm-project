@@ -93,8 +93,8 @@ set_implicit_bit<long double>(fputil::FPBits<long double> &result) {
 // of Eisel-Lemire cannot handle anything longer than a double.
 template <class T, cpp::enable_if_t<sizeof(T) <= 8, int> = 0>
 LIBC_INLINE cpp::optional<ExpandedFloat<T>>
-eisel_lemire(ExpandedFloat<T> init_num,
-             RoundDirection round = RoundDirection::Nearest) {
+eisel_lemire_impl(ExpandedFloat<T> init_num,
+                  RoundDirection round = RoundDirection::Nearest) {
   using FPBits = typename fputil::FPBits<T>;
   using StorageType = typename FPBits::StorageType;
 
@@ -197,18 +197,10 @@ eisel_lemire(ExpandedFloat<T> init_num,
 
 template <class T, cpp::enable_if_t<(sizeof(T) > 8), int> = 0>
 LIBC_INLINE cpp::optional<ExpandedFloat<T>>
-eisel_lemire(ExpandedFloat<T> init_num,
-             RoundDirection round = RoundDirection::Nearest) {
+eisel_lemire_impl(ExpandedFloat<T> init_num,
+                  RoundDirection round = RoundDirection::Nearest) {
   using FPBits = typename fputil::FPBits<T>;
   using StorageType = typename FPBits::StorageType;
-
-  // TODO: Re-enable eisel-lemire for long double is double double once it's
-  // properly supported.
-#if defined(LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE)
-  if constexpr (cpp::is_same_v<T, long double>)
-    return cpp::nullopt;
-#endif
-
   UInt128 mantissa = init_num.mantissa;
   int32_t exp_10 = init_num.exponent;
 
@@ -321,6 +313,20 @@ eisel_lemire(ExpandedFloat<T> init_num,
   output.mantissa = static_cast<StorageType>(final_mantissa);
   output.exponent = exp_2;
   return output;
+}
+
+template <class T>
+LIBC_INLINE cpp::optional<ExpandedFloat<T>>
+eisel_lemire(ExpandedFloat<T> init_num,
+             RoundDirection round = RoundDirection::Nearest) {
+  // TODO: Re-enable eisel-lemire for long double is double double once it's
+  // properly supported.
+#if defined(LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE)
+  if constexpr (cpp::is_same_v<T, long double>)
+    return cpp::nullopt;
+  else
+#endif // LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
+    return eisel_lemire_impl(init_num, round);
 }
 
 // The nth item in POWERS_OF_TWO represents the greatest power of two less than
