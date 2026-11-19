@@ -1978,7 +1978,10 @@ struct ChainedReduction final : OpRewritePattern<vector::ReductionOp> {
       return failure();
 
     auto parentReduction = acc.getDefiningOp<vector::ReductionOp>();
-    if (!parentReduction)
+    if (!parentReduction || parentReduction.getKind() != op.getKind())
+      return failure();
+
+    if (parentReduction.getVector().getType() != op.getVector().getType())
       return failure();
 
     Location loc = op.getLoc();

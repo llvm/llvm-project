@@ -114,3 +114,33 @@ func.func @reduce_2x_zero_add_i32(%arg0: vector<8xi32>, %arg1: vector<8xi32>) ->
   %1 = vector.reduction <add>, %arg1, %0 : vector<8xi32> into i32
   return %1 : i32
 }
+
+// CHECK-LABEL: func.func @reduce_different_lengths(
+// CHECK:         %[[FIRST:.+]] = vector.reduction <add>, %{{.+}}, %{{.+}} : vector<1xi32> into i32
+// CHECK-NEXT:    %[[SECOND:.+]] = vector.reduction <add>, %{{.+}}, %[[FIRST]] : vector<8xi32> into i32
+// CHECK-NEXT:    return %[[SECOND]] : i32
+func.func @reduce_different_lengths(%a: vector<1xi32>, %b: vector<8xi32>, %init: i32) -> i32 {
+  %r0 = vector.reduction <add>, %a, %init : vector<1xi32> into i32
+  %r1 = vector.reduction <add>, %b, %r0 : vector<8xi32> into i32
+  return %r1 : i32
+}
+
+// CHECK-LABEL: func.func @reduce_different_scalability(
+// CHECK:         %[[FIRST:.+]] = vector.reduction <add>, %{{.+}}, %{{.+}} : vector<[4]xi32> into i32
+// CHECK-NEXT:    %[[SECOND:.+]] = vector.reduction <add>, %{{.+}}, %[[FIRST]] : vector<4xi32> into i32
+// CHECK-NEXT:    return %[[SECOND]] : i32
+func.func @reduce_different_scalability(%a: vector<[4]xi32>, %b: vector<4xi32>, %init: i32) -> i32 {
+  %r0 = vector.reduction <add>, %a, %init : vector<[4]xi32> into i32
+  %r1 = vector.reduction <add>, %b, %r0 : vector<4xi32> into i32
+  return %r1 : i32
+}
+
+// CHECK-LABEL: func.func @reduce_different_kinds(
+// CHECK:         %[[FIRST:.+]] = vector.reduction <mul>, %{{.+}}, %{{.+}} : vector<4xi32> into i32
+// CHECK-NEXT:    %[[SECOND:.+]] = vector.reduction <add>, %{{.+}}, %[[FIRST]] : vector<4xi32> into i32
+// CHECK-NEXT:    return %[[SECOND]] : i32
+func.func @reduce_different_kinds(%a: vector<4xi32>, %b: vector<4xi32>, %init: i32) -> i32 {
+  %r0 = vector.reduction <mul>, %a, %init : vector<4xi32> into i32
+  %r1 = vector.reduction <add>, %b, %r0 : vector<4xi32> into i32
+  return %r1 : i32
+}
