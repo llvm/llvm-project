@@ -25,9 +25,11 @@
 #  include <sched.h>
 #  include <signal.h>
 #  include <sys/mman.h>
+#  include <sys/resource.h>
 #  include <sys/stat.h>
 #  include <sys/thread.h>
 #  include <sys/types.h>
+#  include <sys/ucontext.h>
 #  include <sys/wait.h>
 #  include <time.h>
 #  include <unistd.h>
@@ -36,6 +38,7 @@
 #  include "sanitizer_common.h"
 #  include "sanitizer_file.h"
 #  include "sanitizer_libc.h"
+#  include "sanitizer_procmaps.h"
 
 extern char** environ;
 extern char** p_xargv;
@@ -196,6 +199,11 @@ uptr internal_getpid() {
   return _REAL(getpid);
 }
 
+static char* internal_getcwd(char* buf, uptr size) {
+  DEFINE__REAL(getcwd);
+  return _REAL(getcwd, buf, size);
+}
+
 int internal_sigaction(int signum, const void* act, void* oldact) {
   DEFINE__REAL(sigaction);
   return _REAL(sigaction, signum, static_cast<const struct sigaction*>(act),
@@ -282,6 +290,107 @@ uptr GetMaxVirtualAddress() {
 
 uptr GetMaxUserVirtualAddress() { return GetMaxVirtualAddress(); }
 
+void GetThreadStackTopAndBottom(bool at_initialization, uptr* stack_top,
+                                uptr* stack_bottom) {
+  CHECK(stack_top);
+  CHECK(stack_bottom);
+  if (at_initialization) {
+    // This is the main thread. Libpthread may not be initialized yet.
+    struct rlimit rl;
+    CHECK_EQ(getrlimit(RLIMIT_STACK, &rl), 0);
+
+    // Find the mapping that contains a stack variable.
+    MemoryMappingLayout proc_maps(/*cache_enabled*/ true);
+    if (proc_maps.Error()) {
+      *stack_top = *stack_bottom = 0;
+      return;
+    }
+    MemoryMappedSegment segment;
+    uptr prev_end = 0;
+    while (proc_maps.Next(&segment)) {
+      if ((uptr)&rl < segment.end)
+        break;
+      prev_end = segment.end;
+    }
+    CHECK((uptr)&rl >= segment.start && (uptr)&rl < segment.end);
+
+    // Get stacksize from rlimit, but clip it so that it does not overlap
+    // with other mappings.
+    uptr stacksize = rl.rlim_cur;
+    if (stacksize > segment.end - prev_end)
+      stacksize = segment.end - prev_end;
+    // When running with unlimited stack size, we still want to set some limit.
+    if (stacksize > kMaxThreadStackSize)
+      stacksize = kMaxThreadStackSize;
+    *stack_top = segment.end;
+    *stack_bottom = segment.end - stacksize;
+
+    // The stack segment ends at the end of the address space, so its end is
+    // one past the maximum address. Keep stack_top in range so that shadow
+    // address calculations are valid.
+    uptr max_addr = GetMaxUserVirtualAddress();
+    if (*stack_top == max_addr + 1)
+      *stack_top = max_addr;
+    else
+      CHECK_LE(*stack_top, max_addr);
+    return;
+  }
+  uptr stacksize = 0;
+  void* stackaddr = nullptr;
+  pthread_attr_t attr;
+  pthread_attr_init(&attr);
+  CHECK_EQ(pthread_getattr_np(pthread_self(), &attr), 0);
+  internal_pthread_attr_getstack(&attr, &stackaddr, &stacksize);
+  pthread_attr_destroy(&attr);
+
+  *stack_top = (uptr)stackaddr;
+  *stack_bottom = (uptr)stackaddr - stacksize;
+}
+
+void GetThreadStackAndTls(bool main, uptr* stk_begin, uptr* stk_end,
+                          uptr* tls_begin, uptr* tls_end) {
+  // FIXME: implement TLS bounds.
+  *tls_begin = 0;
+  *tls_end = 0;
+
+  uptr stack_top, stack_bottom;
+  GetThreadStackTopAndBottom(main, &stack_top, &stack_bottom);
+  *stk_begin = stack_bottom;
+  *stk_end = stack_top;
+}
+
+uptr ReadBinaryName(/*out*/ char* buf, uptr buf_len) {
+  if (buf_len == 0)
+    return 0;
+  buf[0] = '\0';
+  char** argv = GetArgv();
+  if (!argv || !argv[0])
+    return 0;
+
+  // AIX has no /proc/self/exe, so derive the path from argv[0]. It is either a
+  // path, which may be relative to the current directory, or a name found in
+  // PATH. The symbolizer needs an absolute path.
+  char* path = FindPathToBinary(argv[0]);
+  if (!path)
+    return 0;
+  uptr len = 0;
+  if (path[0] == '/') {
+    len = internal_snprintf(buf, buf_len, "%s", path);
+  } else if (internal_getcwd(buf, buf_len)) {
+    uptr cwd_len = internal_strlen(buf);
+    len = cwd_len +
+          internal_snprintf(buf + cwd_len, buf_len - cwd_len, "/%s", path);
+  } else {
+    buf[0] = '\0';
+  }
+  InternalFree(path);
+  return Min(len, buf_len - 1);
+}
+
+uptr ReadLongProcessName(/*out*/ char* buf, uptr buf_len) {
+  return ReadBinaryName(buf, buf_len);
+}
+
 void InitializePlatformCommonFlags(CommonFlags* cf) {}
 
 void InitializePlatformEarly() {}
@@ -336,12 +445,27 @@ SignalContext::WriteFlag SignalContext::GetWriteFlag() const {
 
 bool SignalContext::IsTrueFaultingAddress() const { return true; }
 
+void SignalContext::InitPcSpBp() {
+  ucontext_t* ucontext = static_cast<ucontext_t*>(context);
+  pc = ucontext->uc_mcontext.jmp_context.iar;
+  sp = ucontext->uc_mcontext.jmp_context.gpr[1];
+  // The PowerPC ABIs do not specify a frame pointer, but compilers use r31
+  // when one is needed.
+  bp = ucontext->uc_mcontext.jmp_context.gpr[31];
+}
+
 void SignalContext::DumpAllRegisters(void* context) {}
 
 char** GetEnviron() { return environ; }
 
 // p_xargv is set by the AIX C runtime to the argv passed to main.
 char** GetArgv() { return p_xargv; }
+
+void ListOfModules::init() {
+  clearOrInit();
+  MemoryMappingLayout memory_mapping(/*cache_enabled*/ false);
+  memory_mapping.DumpListOfModules(&modules_);
+}
 
 void ListOfModules::fallbackInit() { clear(); }
 
