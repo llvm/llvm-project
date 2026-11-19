@@ -426,6 +426,11 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
 
       if (!Args.hasArg(options::OPT_nolibc))
         CmdArgs.push_back("-lc");
+      // TODO: Linux (musl) ignores --rtlib and links
+      // -lclang_rt.builtins-hexagon, which does not match the packaged
+      // libclang_rt.builtins.a in <resource-dir>/lib/hexagon/<variant>. Use the
+      // same runtime selection and name as the other Hexagon targets, and
+      // update hexagon-toolchain-linux.c.
       CmdArgs.push_back("-lclang_rt.builtins-hexagon");
     }
     if (D.CCCIsCXX()) {
@@ -539,14 +544,10 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
       if (!Args.hasArg(options::OPT_nolibc))
         CmdArgs.push_back("-lc");
     }
-    if (HTC.GetCStdlibType(Args) == ToolChain::CST_Picolibc) {
-      if (HTC.GetRuntimeLibType(Args) == ToolChain::RLT_CompilerRT)
-        CmdArgs.push_back("-lclang_rt.builtins");
-      else
-        CmdArgs.push_back("-lgcc");
-    } else {
+    if (HTC.GetRuntimeLibType(Args) == ToolChain::RLT_CompilerRT)
+      CmdArgs.push_back("-lclang_rt.builtins");
+    else
       CmdArgs.push_back("-lgcc");
-    }
 
     CmdArgs.push_back("--end-group");
   }
@@ -728,22 +729,29 @@ void HexagonToolChain::getHexagonLibraryPaths(const ArgList &Args,
 
   bool IsPicolibc = GetCStdlibType(Args) == ToolChain::CST_Picolibc;
   const std::string CpuVer = GetTargetCPUVersion(Args).str();
+  // -shared also implies -pic for library search paths.
+  bool HasPICOrShared = HasPIC || Args.hasArg(options::OPT_shared);
+  // Base case (no G0/pic): v68. G0: v68-G0, plus -pic if PIC or shared.
+  std::string LibraryVariant = CpuVer;
+  if (HasG0) {
+    LibraryVariant += "-G0";
+    if (HasPICOrShared)
+      LibraryVariant += "-pic";
+  }
+
+  // Hexagon builtins are packaged with the compiler, in
+  // <resource-dir>/lib/hexagon/<cpu>[-G0][-pic], for every Hexagon target.
+  // Searched before the sysroot so the packaged copy wins.
+  SmallString<128> ResourceLibDir(D.ResourceDir);
+  llvm::sys::path::append(ResourceLibDir, "lib", "hexagon", LibraryVariant);
+  LibPaths.push_back(std::string(ResourceLibDir));
+
   for (auto &Dir : RootDirs) {
     std::string LibDir = Dir + "/lib";
     std::string LibDirCpu = LibDir + '/' + CpuVer;
     if (IsPicolibc) {
       // Flat layout: push only the single most-specific variant dir, then lib.
-      // Base case (no G0/pic): lib/v68, lib.
-      // -shared also implies -pic for Picolibc library search paths.
-      bool HasPICOrShared = HasPIC || Args.hasArg(options::OPT_shared);
-      if (HasG0) {
-        std::string Variant = CpuVer + "-G0";
-        if (HasPICOrShared)
-          Variant += "-pic";
-        LibPaths.push_back(LibDir + "/" + Variant);
-      } else {
-        LibPaths.push_back(LibDirCpu);
-      }
+      LibPaths.push_back(LibDir + "/" + LibraryVariant);
     } else {
       // Nested layout (non-Picolibc): lib/v68/G0/pic, lib/v68/G0
       if (HasG0) {
