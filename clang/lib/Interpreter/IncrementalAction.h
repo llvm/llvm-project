@@ -11,6 +11,7 @@
 
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Frontend/MultiplexConsumer.h"
+#include "llvm/ADT/SmallVector.h"
 
 namespace llvm {
 class LLVMContext;
@@ -21,6 +22,8 @@ namespace clang {
 
 class Interpreter;
 class CodeGenerator;
+class FunctionDecl;
+class InProcessPrintingASTConsumer;
 
 /// A custom action enabling the incremental processing functionality.
 ///
@@ -37,6 +40,10 @@ private:
   Interpreter &Interp;
   [[maybe_unused]] CompilerInstance &CI;
   std::unique_ptr<ASTConsumer> Consumer;
+
+  /// The consumer created by \p CreateASTConsumer, unless a custom one was
+  /// passed. Owned by the CompilerInstance.
+  InProcessPrintingASTConsumer *PrintingConsumer = nullptr;
 
   /// When CodeGen is created the first llvm::Module gets cached in many places
   /// and we must keep it alive.
@@ -75,15 +82,30 @@ public:
 
   /// Generate an LLVM module for the most recent parsed input.
   std::unique_ptr<llvm::Module> GenModule();
+
+  /// Undo the implicit instantiations of the most recent, failed input that
+  /// never reached the code generator.
+  void ForgetDroppedInstantiations();
 };
 
 class InProcessPrintingASTConsumer final : public MultiplexConsumer {
   Interpreter &Interp;
 
+  /// Function template instantiations that were not passed on because of
+  /// errors in the current input.
+  llvm::SmallVector<FunctionDecl *, 4> DroppedInstantiations;
+
 public:
   InProcessPrintingASTConsumer(std::unique_ptr<ASTConsumer> C, Interpreter &I);
 
   bool HandleTopLevelDecl(DeclGroupRef DGR) override;
+
+  /// Return the function template instantiations dropped because of errors in
+  /// the current input to their uninstantiated state. They stay in the AST
+  /// after the input is cleaned up, and otherwise Sema considers them as
+  /// instantiated in a later input, which then references a function that
+  /// the code generator never saw.
+  void ForgetDroppedInstantiations();
 };
 
 } // end namespace clang
