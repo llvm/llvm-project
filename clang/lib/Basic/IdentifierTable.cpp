@@ -345,6 +345,39 @@ bool IdentifierInfo::isCPlusPlusKeyword(const LangOptions &LangOpts) const {
   return !isKeyword(LangOptsNoCPP);
 }
 
+/// Returns true if the identifier is a standard C++ keyword in the specified
+/// language.
+bool IdentifierInfo::isStandardCPlusPlusKeyword(
+    const LangOptions &LangOpts) const {
+  if (!LangOpts.CPlusPlus || !isKeyword(LangOpts))
+    return false;
+  // No standard C++ keyword starts with an underscore; such keywords (e.g.
+  // '_Static_assert', '__inline') are C keywords or extensions.
+  if (getName().starts_with("_"))
+    return false;
+  // Keyword aliases (e.g. OpenCL 'kernel' for '__kernel') are never standard.
+  tok::TokenKind K = getTokenID();
+  const char *Spelling = tok::getKeywordSpelling(K);
+  if (!Spelling || getName() != Spelling)
+    return false;
+  // Check the keyword against a strictly conforming C++ configuration of the
+  // same language version, with every keyword-enabling extension turned off.
+  LangOptions StdOpts;
+  StdOpts.CPlusPlus = true;
+  StdOpts.CPlusPlus11 = LangOpts.CPlusPlus11;
+  StdOpts.CPlusPlus14 = LangOpts.CPlusPlus14;
+  StdOpts.CPlusPlus17 = LangOpts.CPlusPlus17;
+  StdOpts.CPlusPlus20 = LangOpts.CPlusPlus20;
+  StdOpts.CPlusPlus23 = LangOpts.CPlusPlus23;
+  StdOpts.CPlusPlus26 = LangOpts.CPlusPlus26;
+  StdOpts.Bool = true;
+  StdOpts.WChar = true;
+  StdOpts.Char8 = LangOpts.CPlusPlus20;
+  StdOpts.Coroutines = LangOpts.CPlusPlus20;
+  StdOpts.GNUKeywords = false;
+  return getTokenKwStatus(StdOpts, K) == KS_Enabled;
+}
+
 ReservedIdentifierStatus
 IdentifierInfo::isReserved(const LangOptions &LangOpts) const {
   StringRef Name = getName();

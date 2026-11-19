@@ -918,6 +918,23 @@ bool Preprocessor::HandleIdentifier(Token &Identifier) {
     HandlePoisonedIdentifier(Identifier);
   }
 
+  // Handle module contextual keywords. [cpp.pre]: whether 'module' or 'import'
+  // introduces a directive is decided before macro replacement, so a macro
+  // with that name is not expanded there. Defining such a macro is ill-formed
+  // ([cpp.replace.general]); diagnose it here, where it matters.
+  if (getLangOpts().CPlusPlusModules && CurLexer &&
+      !CurLexer->isLexingRawMode() && !CurLexer->isPragmaLexer() &&
+      !CurLexer->ParsingPreprocessorDirective &&
+      Identifier.isModuleContextualKeyword() &&
+      HandleModuleContextualKeyword(Identifier)) {
+    if (const MacroDefinition MD = getMacroDefinition(&II))
+      diagnoseContextualKeywordMacro(&II, MD.getMacroInfo(),
+                                     Identifier.getLocation());
+    HandleDirective(Identifier);
+    // With a fatal failure in the module loader, we abort parsing.
+    return hadModuleLoaderFatalFailure();
+  }
+
   // If this is a macro to be expanded, do it.
   if (const MacroDefinition MD = getMacroDefinition(&II)) {
     const auto *MI = MD.getMacroInfo();
@@ -962,17 +979,6 @@ bool Preprocessor::HandleIdentifier(Token &Identifier) {
   // like "#define TY typeof", "TY(1) x".
   if (II.isExtensionToken() && !DisableMacroExpansion)
     Diag(Identifier, diag::ext_token_used);
-
-  // Handle module contextual keywords.
-  if (getLangOpts().CPlusPlusModules && CurLexer &&
-      !CurLexer->isLexingRawMode() && !CurLexer->isPragmaLexer() &&
-      !CurLexer->ParsingPreprocessorDirective &&
-      Identifier.isModuleContextualKeyword() &&
-      HandleModuleContextualKeyword(Identifier)) {
-    HandleDirective(Identifier);
-    // With a fatal failure in the module loader, we abort parsing.
-    return hadModuleLoaderFatalFailure();
-  }
 
   return true;
 }
@@ -1102,6 +1108,22 @@ void Preprocessor::Lex(Token &Result) {
     if (OnToken)
       OnToken(Result);
   }
+}
+
+void Preprocessor::diagnoseContextualKeywordMacro(IdentifierInfo *II,
+                                                  const MacroInfo *MI,
+                                                  SourceLocation ExpandLoc) {
+  if (!MI)
+    return;
+  SourceLocation DefLoc = MI->getDefinitionLoc();
+  if (DefLoc.isInvalid() || SourceMgr.isInSystemHeader(DefLoc) ||
+      SourceMgr.isInPredefinedFile(DefLoc))
+    return;
+  if (!DiagnosedContextualKeywordMacros.insert(MI).second)
+    return;
+  Diag(DefLoc, diag::warn_pp_macro_hides_keyword);
+  if (ExpandLoc.isValid())
+    Diag(ExpandLoc, diag::note_macro_expansion_here) << II;
 }
 
 void Preprocessor::LexTokensUntilEOF(std::vector<Token> *Tokens) {
