@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef OFFLOAD_PLUGINS_NEXTGEN_COMMON_DEVICEOPTIONS_H
-#define OFFLOAD_PLUGINS_NEXTGEN_COMMON_DEVICEOPTIONS_H
+#ifndef OFFLOAD_PLUGIN_COMMON_DEVICEOPTIONS_H
+#define OFFLOAD_PLUGIN_COMMON_DEVICEOPTIONS_H
 
 #include "Shared/EnvironmentVar.h"
 
 #include "llvm/ADT/StringRef.h"
 
-namespace llvm::omp::target::plugin {
+namespace llvm::offload::plugin {
 
 /// A runtime option of a device. It holds the device default until the user
 /// overrides it through the environment variable \p EnvName.
@@ -39,6 +39,6 @@ template <typename T> struct DeviceOptionTy {
   T Value;
 };
 
-} // namespace llvm::omp::target::plugin
+} // namespace llvm::offload::plugin
 
-#endif // OFFLOAD_PLUGINS_NEXTGEN_COMMON_DEVICEOPTIONS_H
+#endif // OFFLOAD_PLUGIN_COMMON_DEVICEOPTIONS_H
