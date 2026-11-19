@@ -8,7 +8,6 @@ add_libc_test(
     swapon_swapoff_test.cpp
   DEPENDS
     libc.hdr.errno_macros
-    libc.hdr.sys_swap_macros
     libc.src.sys.swap.swapoff
     libc.src.sys.swap.swapon
     libc.test.UnitTest.ErrnoCheckingTest
