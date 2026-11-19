@@ -1746,11 +1746,109 @@ define noundef i32 @udiv-basic(i32 %a, i32 %b) {
 ; CHECK-LABEL: 'udiv-basic'
 ; CHECK-NEXT:  Classifying expressions for: @udiv-basic
 ; CHECK-NEXT:    %res = udiv exact i32 %a, %b
-; CHECK-NEXT:    --> (%a /u %b) U: full-set S: full-set
+; CHECK-NEXT:    --> (%a /u %b)<exact> U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @udiv-basic
 ;
   %res = udiv exact i32 %a, %b
   ret i32 %res
+}
+
+define i32 @udiv-exact-no-ub(i32 %a, i32 %b, i1 %c) {
+; CHECK-LABEL: 'udiv-exact-no-ub'
+; CHECK-NEXT:  Classifying expressions for: @udiv-exact-no-ub
+; CHECK-NEXT:    %res = udiv exact i32 %a, %b
+; CHECK-NEXT:    --> (%a /u %b) U: full-set S: full-set
+; CHECK-NEXT:    %sel = select i1 %c, i32 %res, i32 0
+; CHECK-NEXT:    --> %sel U: full-set S: full-set
+; CHECK-NEXT:  Determining loop execution counts for: @udiv-exact-no-ub
+;
+  %res = udiv exact i32 %a, %b
+  %sel = select i1 %c, i32 %res, i32 0
+  ret i32 %sel
+}
+
+define i32 @udiv-exact-gep-load(ptr %p, i64 %a, i64 %b) {
+; CHECK-LABEL: 'udiv-exact-gep-load'
+; CHECK-NEXT:  Classifying expressions for: @udiv-exact-gep-load
+; CHECK-NEXT:    %res = udiv exact i64 %a, %b
+; CHECK-NEXT:    --> (%a /u %b)<exact> U: full-set S: full-set
+; CHECK-NEXT:    %gep = getelementptr inbounds i32, ptr %p, i64 %res
+; CHECK-NEXT:    --> ((4 * (%a /u %b)<exact>)<nsw> + %p) U: full-set S: full-set
+; CHECK-NEXT:    %v = load i32, ptr %gep, align 4
+; CHECK-NEXT:    --> %v U: full-set S: full-set
+; CHECK-NEXT:  Determining loop execution counts for: @udiv-exact-gep-load
+;
+  %res = udiv exact i64 %a, %b
+  %gep = getelementptr inbounds i32, ptr %p, i64 %res
+  %v = load i32, ptr %gep
+  ret i32 %v
+}
+
+define void @udiv-exact-loop-header(i32 %b, i32 %n, ptr %p) {
+; CHECK-LABEL: 'udiv-exact-loop-header'
+; CHECK-NEXT:  Classifying expressions for: @udiv-exact-loop-header
+; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,-2147483648) S: [0,-2147483648) Exits: (-1 + %n) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %res = udiv exact i32 %iv, %b
+; CHECK-NEXT:    --> ({0,+,1}<nuw><nsw><%loop> /u %b)<exact> U: [0,-2147483648) S: [0,-2147483648) Exits: ((-1 + %n) /u %b) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %gep = getelementptr inbounds i32, ptr %p, i32 %res
+; CHECK-NEXT:    --> ((4 * ({0,+,1}<nuw><nsw><%loop> /u (zext i32 %b to i64)))<nuw><nsw> + %p)<nuw> U: full-set S: full-set Exits: ((4 * ((zext i32 (-1 + %n) to i64) /u (zext i32 %b to i64)))<nuw><nsw> + %p)<nuw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add nuw nsw i32 %iv, 1
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,-2147483648) S: [1,-2147483648) Exits: %n LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @udiv-exact-loop-header
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %n)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %n)
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  br label %loop
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %res = udiv exact i32 %iv, %b
+  %gep = getelementptr inbounds i32, ptr %p, i32 %res
+  store i32 0, ptr %gep
+  %iv.next = add nuw nsw i32 %iv, 1
+  %ec = icmp eq i32 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+exit:
+  ret void
+}
+
+define void @udiv-exact-cond-block(i32 %a, i32 %b, i32 %n, ptr %p) {
+; CHECK-LABEL: 'udiv-exact-cond-block'
+; CHECK-NEXT:  Classifying expressions for: @udiv-exact-cond-block
+; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.next, %latch ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,-2147483648) S: [0,-2147483648) Exits: (-1 + %n) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %res = udiv exact i32 %iv, %b
+; CHECK-NEXT:    --> ({0,+,1}<nuw><nsw><%loop> /u %b) U: [0,-2147483648) S: [0,-2147483648) Exits: ((-1 + %n) /u %b) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %gep = getelementptr inbounds i32, ptr %p, i32 %res
+; CHECK-NEXT:    --> ((4 * ({0,+,1}<nuw><nsw><%loop> /u (zext i32 %b to i64)))<nuw><nsw> + %p) U: full-set S: full-set Exits: ((4 * ((zext i32 (-1 + %n) to i64) /u (zext i32 %b to i64)))<nuw><nsw> + %p) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add nuw nsw i32 %iv, 1
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,-2147483648) S: [1,-2147483648) Exits: %n LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @udiv-exact-cond-block
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %n)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %n)
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  br label %loop
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %latch ]
+  %c = icmp ult i32 %iv, %a
+  br i1 %c, label %if, label %latch
+if:
+  %res = udiv exact i32 %iv, %b
+  %gep = getelementptr inbounds i32, ptr %p, i32 %res
+  store i32 0, ptr %gep
+  br label %latch
+latch:
+  %iv.next = add nuw nsw i32 %iv, 1
+  %ec = icmp eq i32 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+exit:
+  ret void
 }
 
 @gA = external global i32
