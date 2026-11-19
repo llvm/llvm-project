@@ -41,8 +41,10 @@ define amdgpu_ps void @uniform_pack_not_wmma_scale(i32 inreg %scale0, i32 inreg 
 ; CHECK-NEXT:    v_nop
 ; CHECK-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; CHECK-NEXT:    v_perm_b32 v0, s0, s1, 4
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; use v0
+; CHECK-NEXT:    ; use s0
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_endpgm
   %byte0 = and i32 %scale0, 255
@@ -53,7 +55,7 @@ define amdgpu_ps void @uniform_pack_not_wmma_scale(i32 inreg %scale0, i32 inreg 
   %pack01 = or i32 %byte0, %byte1.shift8
   %pack23 = or i32 %byte1.shift16, %byte1.shift24
   %pack = or i32 %pack01, %pack23
-  call void asm sideeffect "; use $0", "v"(i32 %pack)
+  call void asm sideeffect "; use $0", "s"(i32 %pack)
   ret void
 }
 
@@ -67,10 +69,10 @@ define amdgpu_ps <8 x float> @wmma_scale_src_extra_use(<16 x i32> %a, <16 x i32>
 ; CHECK-NEXT:    v_perm_b32 v40, s0, s1, 4
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; CHECK-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:31], v[32:39], v40, v40 matrix_a_fmt:MATRIX_FMT_BF8 matrix_b_fmt:MATRIX_FMT_BF8
+; CHECK-NEXT:    v_readfirstlane_b32 s0, v40
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; use v40
+; CHECK-NEXT:    ; use s0
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    v_nop
 ; CHECK-NEXT:    v_nop
 ; CHECK-NEXT:    v_nop
 ; CHECK-NEXT:    v_nop
@@ -88,7 +90,7 @@ define amdgpu_ps <8 x float> @wmma_scale_src_extra_use(<16 x i32> %a, <16 x i32>
   %pack01 = or i32 %byte0, %byte1.shift8
   %pack23 = or i32 %byte1.shift16, %byte1.shift24
   %pack = or i32 %pack01, %pack23
-  call void asm sideeffect "; use $0", "v"(i32 %pack)
+  call void asm sideeffect "; use $0", "s"(i32 %pack)
   %res = call <8 x float> @llvm.amdgcn.wmma.scale.f32.16x16x128.f8f6f4.v8f32.v16i32.v16i32(i32 1, <16 x i32> %a, i32 1, <16 x i32> %b, i16 0, <8 x float> %c, i32 0, i32 0, i32 %pack, i32 0, i32 0, i32 %pack, i1 false, i1 false)
   ret <8 x float> %res
 }
