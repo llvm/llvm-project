@@ -20,6 +20,7 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -139,6 +140,10 @@ namespace {
     SmallDenseSet<Register> RegSeen;
     SmallVector<unsigned, 8> RegPressure;
 
+    // Last uses of virtual registers that are not live out of the block
+    // currently scanned by InitRegPressure.
+    SmallPtrSet<const MachineOperand *, 16> BlockLocalLastUses;
+
     // Register pressure "limit" per register pressure set. If the pressure
     // is higher than the limit, then it's considered high.
     SmallVector<unsigned, 8> RegLimit;
@@ -231,6 +236,8 @@ namespace {
     void HoistOutOfLoop(MachineDomTreeNode *HeaderN, MachineLoop *CurLoop);
 
     void InitRegPressure(MachineBasicBlock *BB);
+
+    void computeBlockLocalLastUses(const MachineBasicBlock &MBB);
 
     SmallDenseMap<unsigned, int> calcRegisterCost(const MachineInstr *MI,
                                                   bool ConsiderSeen,
@@ -895,6 +902,26 @@ void MachineLICMImpl::HoistOutOfLoop(MachineDomTreeNode *HeaderN,
   }
 }
 
+/// Collect the last use of each virtual register whose uses are all in MBB.
+/// Without this, a multi-use register would be considered live out of MBB.
+void MachineLICMImpl::computeBlockLocalLastUses(const MachineBasicBlock &MBB) {
+  SmallDenseSet<Register, 16> Visited;
+  for (const MachineInstr &MI : llvm::reverse(MBB)) {
+    if (MI.isDebugInstr() || MI.isPHI())
+      continue;
+    for (const MachineOperand &MO : MI.uses()) {
+      if (!MO.isReg() || !MO.getReg().isVirtual() ||
+          !Visited.insert(MO.getReg()).second)
+        continue;
+      if (all_of(MRI->use_nodbg_instructions(MO.getReg()),
+                 [&MBB](const MachineInstr &UseMI) {
+                   return UseMI.getParent() == &MBB && !UseMI.isPHI();
+                 }))
+        BlockLocalLastUses.insert(&MO);
+    }
+  }
+}
+
 /// Find all virtual register references that are liveout of the preheader to
 /// initialize the starting "register pressure". Note this does not count live
 /// through (livein but not used) registers.
@@ -912,8 +939,10 @@ void MachineLICMImpl::InitRegPressure(MachineBasicBlock *BB) {
       InitRegPressure(*BB->pred_begin());
   }
 
+  computeBlockLocalLastUses(*BB);
   for (const MachineInstr &MI : *BB)
     UpdateRegPressure(&MI, /*ConsiderUnseenAsDef=*/true);
+  BlockLocalLastUses.clear();
 }
 
 /// Update estimate of register pressure after the specified instruction.
@@ -957,7 +986,8 @@ MachineLICMImpl::calcRegisterCost(const MachineInstr *MI, bool ConsiderSeen,
     if (MO.isDef())
       RCCost = W.RegWeight;
     else {
-      bool isKill = MRI->hasOneNonDBGUse(Reg);
+      bool isKill =
+          MRI->hasOneNonDBGUse(Reg) || BlockLocalLastUses.contains(&MO);
       if (isNew && !isKill && ConsiderUnseenAsDef)
         // Haven't seen this, it must be a livein.
         RCCost = W.RegWeight;

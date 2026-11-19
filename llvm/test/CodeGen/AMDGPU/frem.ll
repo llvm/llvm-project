@@ -3028,8 +3028,8 @@ define double @frem_f64(double %in1, double %in2) #0 {
 ; SI-NEXT:    v_add_i32_e32 v15, vcc, 26, v10
 ; SI-NEXT:    s_mov_b64 s[10:11], 0
 ; SI-NEXT:    s_mov_b32 s9, 0x432fffff
-; SI-NEXT:    v_mov_b32_e32 v10, 0
 ; SI-NEXT:    v_mov_b32_e32 v16, 0x43300000
+; SI-NEXT:    v_mov_b32_e32 v10, 0
 ; SI-NEXT:  .LBB6_5: ; %frem.loop_body
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    v_mov_b32_e32 v13, v7
@@ -14909,8 +14909,8 @@ define <2 x double> @frem_v2f64(<2 x double> %in1, <2 x double> %in2) #0 {
 ; SI-NEXT:    v_add_i32_e32 v19, vcc, 26, v14
 ; SI-NEXT:    s_mov_b64 s[10:11], 0
 ; SI-NEXT:    s_mov_b32 s9, 0x432fffff
-; SI-NEXT:    v_mov_b32_e32 v14, 0
 ; SI-NEXT:    v_mov_b32_e32 v20, 0x43300000
+; SI-NEXT:    v_mov_b32_e32 v14, 0
 ; SI-NEXT:  .LBB13_5: ; %frem.loop_body23
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    v_mov_b32_e32 v17, v11
@@ -15020,8 +15020,8 @@ define <2 x double> @frem_v2f64(<2 x double> %in1, <2 x double> %in2) #0 {
 ; SI-NEXT:    v_add_i32_e32 v21, vcc, 26, v16
 ; SI-NEXT:    s_mov_b64 s[10:11], 0
 ; SI-NEXT:    s_mov_b32 s9, 0x432fffff
-; SI-NEXT:    v_mov_b32_e32 v16, 0
 ; SI-NEXT:    v_mov_b32_e32 v22, 0x43300000
+; SI-NEXT:    v_mov_b32_e32 v16, 0
 ; SI-NEXT:  .LBB13_13: ; %frem.loop_body
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    v_mov_b32_e32 v19, v13
