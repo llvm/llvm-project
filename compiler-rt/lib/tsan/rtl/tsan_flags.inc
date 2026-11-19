@@ -119,3 +119,6 @@ TSAN_FLAG(const char*, adaptive_delay_max_atomic, "sleep_us=50",
 TSAN_FLAG(const char*, adaptive_delay_max_sync, "sleep_us=500",
           "Delay for sync operations: 'spin=N' (max N spins), 'yield', or "
           "'sleep_us=N' (max N>0 us sleep)")
+TSAN_FLAG(bool, relaxed_support, false,
+    "If set, slows relaxed access fast path and support fences and release"
+    "sequence in race detection.")
