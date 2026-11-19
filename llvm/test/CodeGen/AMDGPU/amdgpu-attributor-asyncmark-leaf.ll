@@ -13,4 +13,4 @@ define amdgpu_kernel void @asyncmark_kernel(ptr addrspace(1) %out) {
   ret void
 }
 
-; CHECK: attributes #[[ATTR]] = {{{.*}}"amdgpu-agpr-alloc"="0"
+; CHECK: attributes #[[ATTR]] = {{{.*}}"amdgpu-agpr-alloc"="0,0"
