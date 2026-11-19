@@ -244,6 +244,7 @@ libc_support_library(
         ":tcb",
         ":thread_attributes",
         "//libc/hdr:stdint_proxy",
+        "//libc/hdr/types:clockid_t",
         "//libc/hdr/types:struct_sched_param",
         "//libc/src/__support:error_or",
         "//libc/src/__support/CPP:atomic",
@@ -298,7 +299,7 @@ libc_support_library(
         ":mutex",
         ":thread_attributes",
         ":thread_headers",
-        "//libc:config_app_h",
+        "//libc/config:app_h",
         "//libc/hdr:errno_macros",
         "//libc/hdr:fcntl_macros",
         "//libc/hdr:sched_macros",
@@ -331,6 +332,7 @@ libc_support_library(
         "//libc/src/__support/OSUtil/linux/syscall_wrappers:write",
         "//libc/src/__support/macros:attributes",
         "//libc/src/__support/macros:config",
+        "//libc/src/__support/time:linux_cpu_clock",
     ],
 )
 
@@ -356,7 +358,7 @@ libc_support_library(
     }),
     deps = [
         ":tcb",
-        "//libc:config_app_h",
+        "//libc/config:app_h",
         "//libc/hdr:sys_mman_macros",
         "//libc/src/__support/OSUtil:syscall",
         "//libc/src/__support/OSUtil/linux/syscall_wrappers:exit",

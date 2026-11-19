@@ -15,6 +15,9 @@ namespace lldb_private {
 
 class Process;
 
+/// How the call frame addresses of two frames order them.
+enum class CFAComparison { Younger, Older, NoOpinion };
+
 class StackID {
 public:
   StackID() = default;
@@ -58,7 +61,9 @@ public:
   /// Returns true if this StackID corresponds to a frame younger (i.e. higher
   /// on the call stack) than `other`, and false otherwise (including when the
   /// frames are not comparable, in some cases where this can be detected).
-  bool IsYoungerThan(const StackID &other) const;
+  /// \p process and then its language runtimes get the first say, see
+  /// Process::CompareCFAs() and LanguageRuntime::CompareCFAs().
+  bool IsYoungerThan(const StackID &other, Process &process) const;
 
 protected:
   friend class StackFrame;

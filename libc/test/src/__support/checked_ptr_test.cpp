@@ -37,6 +37,8 @@ static_assert(!is_constructible_v<CheckedPtr<int>>);
 static_assert(is_convertible_v<nullptr_t, CheckedPtr<int>>);
 static_assert(is_convertible_v<nullptr_t, CheckedPtr<int[]>>);
 static_assert(!is_constructible_v<CheckedPtr<int>, const CheckedPtr<int> &>);
+static_assert(is_convertible_v<decltype(nullptr), CheckedPtr<int>>);
+static_assert(!is_convertible_v<int *, CheckedPtr<int>>);
 static_assert(is_constructible_v<bool, CheckedPtr<int> &>);
 static_assert(!is_constructible_v<bool, const CheckedPtr<int> &>);
 static_assert(is_constructible_v<bool, CheckedPtr<int[]> &>);

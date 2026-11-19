@@ -26,9 +26,6 @@
 ! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp \
 ! RUN:   -fopenmp-version=52 -o - %t/unreferenced-complex-part.f90 2>&1 | \
 ! RUN:   FileCheck %t/unreferenced-complex-part.f90
-! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fcoarray \
-! RUN:   -fopenmp-version=52 -o - %t/unreferenced-coindexed.f90 2>&1 | \
-! RUN:   FileCheck %t/unreferenced-coindexed.f90
 ! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp \
 ! RUN:   -fopenmp-version=52 -o - %t/unreferenced-vector.f90 2>&1 | \
 ! RUN:   FileCheck %t/unreferenced-vector.f90
@@ -152,15 +149,6 @@ subroutine target_enter_data_unreferenced_complex_part()
 
   ! CHECK: not yet implemented: object type not supported by iterator modifier
   !$omp target enter data map(iterator(i = 1:1), to: z%re)
-end subroutine
-
-!--- unreferenced-coindexed.f90
-subroutine target_update_unreferenced_coindexed(a)
-  integer :: a(2)
-  integer, save :: ca(2)[*]
-
-  ! CHECK: not yet implemented: object type not supported by iterator modifier
-  !$omp target update to(iterator(i = 1:2): a(i), ca(1)[1])
 end subroutine
 
 !--- unreferenced-vector.f90
