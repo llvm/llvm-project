@@ -562,6 +562,20 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
 
   IRB.SetInsertPoint(BasePointer->getNextNode());
 
+  // The debug info of every object moved here is anchored on the base pointer.
+  // Anchored on the SSA value itself, a dbg.declare becomes a DBG_VALUE, which
+  // describes the object only while that value stays in a register, and is
+  // tracked instruction by instruction. Keep the base pointer in a slot on the
+  // regular stack instead, and anchor the declarations on the slot: a
+  // declaration of a static alloca is a frame index for the whole function.
+  // The objects' dbg.values are anchored on it too, so each holds wherever the
+  // record places it.
+  // The slot is made with or without debug info, so that -g does not change
+  // the code generated.
+  AllocaInst *BaseSlot =
+      IRB.CreateAlloca(StackPtrTy, /*ArraySize=*/nullptr, "unsafe_stack_base");
+  IRB.CreateStore(BasePointer, BaseSlot);
+
   if (StackGuardSlot) {
     unsigned Offset = SSL.getObjectOffset(StackGuardSlot);
     Value *Off =
@@ -589,7 +603,8 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
                                       Arg->getName() + ".unsafe-byval");
 
     // Replace alloc with the new location.
-    replaceDbgDeclare(Arg, BasePointer, DIB, DIExpression::ApplyOffset,
+    replaceDbgDeclare(Arg, BaseSlot, DIB,
+                      DIExpression::DerefBefore | DIExpression::ApplyOffset,
                       -Offset);
     Arg->replaceAllUsesWith(NewArg);
     IRB.SetInsertPoint(cast<Instruction>(NewArg)->getNextNode());
@@ -601,8 +616,11 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
     IRB.SetInsertPoint(AI);
     unsigned Offset = SSL.getObjectOffset(AI);
 
-    replaceDbgDeclare(AI, BasePointer, DIB, DIExpression::ApplyOffset, -Offset);
-    replaceDbgValueForAlloca(AI, BasePointer, DIB, -Offset);
+    replaceDbgDeclare(AI, BaseSlot, DIB,
+                      DIExpression::DerefBefore | DIExpression::ApplyOffset,
+                      -Offset);
+    replaceDbgValueForAlloca(AI, BaseSlot, DIB, -Offset,
+                             DIExpression::DerefBefore);
 
     // Replace uses of the alloca with the new location.
     // Insert address calculation close to each use to work around PR27844.
