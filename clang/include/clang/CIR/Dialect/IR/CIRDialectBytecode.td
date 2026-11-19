@@ -49,6 +49,11 @@ class StdOptionalAttribute<string type> :
   WithPrinter<"writeStdOptionalAttribute($_writer, $_getter)",
   WithType   <"std::optional<" # type # ">">>>>;
 
+def OptionalType :
+  WithParser <"succeeded(readOptionalType($_reader, $_var))",
+  WithPrinter<"writeOptionalType($_writer, $_getter)",
+  WithType   <"mlir::Type", Type>>>;
+
 // A scoped enum as a validated varint; see readEnum.
 class EnumParam<string name> :
   WithParser<"succeeded(readEnum($_reader, $_var, cir::symbolize" # name # ", \"" # name # "\"))",
@@ -104,6 +109,15 @@ def BitfieldInfoAttr : DialectAttribute<(attr
   VarInt:$offset,
   Bool:$is_signed
 )>;
+
+def BitFieldDeclAttr : DialectAttribute<(attr
+  Type:$declared_type,
+  VarInt:$width,
+  Bool:$is_unnamed
+)> {
+  let cBuilder = "$_resultType::getChecked(" #
+                 "[&]() { return reader.emitError(); }, context, $_args)";
+}
 
 //===----------------------------------------------------------------------===//
 // Constants
@@ -256,10 +270,112 @@ def DataMemberAttr : DialectAttribute<(attr
 def MethodAttr : DialectAttribute<(attr
   Ty<"cir::MethodType">:$type,
   StdOptionalAttribute<"mlir::FlatSymbolRefAttr">:$symbol,
-  OptionalInt<"uint64_t">:$vtable_offset
+  OptionalInt<"uint64_t">:$vtable_index
 )> {
   let cBuilder = "$_resultType::getChecked([&]() { return reader.emitError(); }, context, $_args)";
 }
+
+//===----------------------------------------------------------------------===//
+// Types
+//===----------------------------------------------------------------------===//
+
+class CheckedDialectType<dag d> : DialectType<d> {
+  let cBuilder = "$_resultType::getChecked(" #
+                 "[&]() { return reader.emitError(); }, context, $_args)";
+}
+
+def IntType : CheckedDialectType<(type
+  CheckedUnsigned:$width,
+  Bool:$is_signed,
+  Bool:$is_bit_int
+)>;
+
+def SingleType : DialectType<(type)>;
+def DoubleType : DialectType<(type)>;
+def FP16Type : DialectType<(type)>;
+def BF16Type : DialectType<(type)>;
+def FP80Type : DialectType<(type)>;
+def FP128Type : DialectType<(type)>;
+def LongDoubleType : CheckedDialectType<(type
+  Type:$underlying
+)>;
+
+def BoolType : DialectType<(type)>;
+def VoidType : DialectType<(type)>;
+def VPtrType : DialectType<(type)>;
+
+def PointerType : CheckedDialectType<(type
+  Type:$pointee,
+  OptionalAttribute<"mlir::ptr::MemorySpaceAttrInterface">:$addrSpace
+)>;
+
+def ArrayType : CheckedDialectType<(type
+  Type:$elementType,
+  VarInt:$size
+)>;
+
+// Qualified, as the name is ambiguous with mlir::ComplexType otherwise.
+def ComplexType : CheckedDialectType<(type
+  Type:$elementType
+)> {
+  let cType = "::cir::ComplexType";
+}
+
+def FuncType : DialectType<(type
+  Array<Type>:$inputs,
+  // Null for a void function.
+  OptionalType:$optionalReturnType,
+  Bool:$varArg
+)> {
+  let cBuilder = "$_resultType::getChecked(" #
+                 "[&]() { return reader.emitError(); }, context, " #
+                 "llvm::ArrayRef<mlir::Type>(inputs), optionalReturnType, " #
+                 "varArg)";
+}
+
+// Qualified, as the name is ambiguous with mlir::VectorType otherwise.
+def VectorType : DialectType<(type
+  Type:$element_type,
+  WithGetter<"$_attrType.getSize().getKnownMinValue()",
+             CheckedUnsigned>:$size,
+  WithGetter<"$_attrType.isScalable()", Bool>:$scalable
+)> {
+  let cType = "::cir::VectorType";
+  let cBuilder = "$_resultType::getChecked(" #
+                 "[&]() { return reader.emitError(); }, element_type, " #
+                 "llvm::ElementCount::get(size, scalable))";
+}
+
+def MatrixType : CheckedDialectType<(type
+  Type:$element_type,
+  VarInt:$num_rows,
+  VarInt:$num_columns
+)>;
+
+def DataMemberType : CheckedDialectType<(type
+  Type:$member_ty,
+  Ty<"cir::RecordType">:$class_ty
+)>;
+
+def MethodType : DialectType<(type
+  Ty<"cir::FuncType">:$member_func_ty,
+  Ty<"cir::RecordType">:$class_ty
+)>;
+
+def BitFieldType : DialectType<(type
+  OptionalType:$storage_type,
+  Array<List<Attr<"cir::BitFieldDeclAttr">>>:$fields
+)> {
+  let cBuilder = "$_resultType::getChecked(" #
+                 "[&]() { return reader.emitError(); }, context, " #
+                 "storage_type, llvm::ArrayRef<cir::BitFieldDeclAttr>(fields))";
+}
+
+def CUDADeviceSurfaceType : DialectType<(type)>;
+def CUDADeviceTextureType : DialectType<(type)>;
+def EhTokenType : DialectType<(type)>;
+def CleanupTokenType : DialectType<(type)>;
+def CatchTokenType : DialectType<(type)>;
 
 def CIRDialectAttributes : DialectAttributes<"CIR"> {
   let elems = [
@@ -291,10 +407,43 @@ def CIRDialectAttributes : DialectAttributes<"CIR"> {
     ConstComplexAttr,
     DataMemberAttr,
     MethodAttr,
+    BitFieldDeclAttr,
     // APPEND ONLY. An entry's position in this list *is* its kind
     // discriminator on disk, so inserting one renumbers every entry after
     // it. No dialect version is recorded yet, so this is a same-revision
     // scheme, not a compatibility promise.
+  ];
+}
+
+def CIRDialectTypes : DialectTypes<"CIR"> {
+  let elems = [
+    IntType,
+    SingleType,
+    DoubleType,
+    FP16Type,
+    BF16Type,
+    FP80Type,
+    FP128Type,
+    LongDoubleType,
+    BoolType,
+    VoidType,
+    VPtrType,
+    PointerType,
+    ArrayType,
+    ComplexType,
+    FuncType,
+    VectorType,
+    MatrixType,
+    DataMemberType,
+    MethodType,
+    BitFieldType,
+    CUDADeviceSurfaceType,
+    CUDADeviceTextureType,
+    EhTokenType,
+    CleanupTokenType,
+    CatchTokenType,
+    // APPEND ONLY, as for the attributes. Types not listed here, including
+    // the mutable struct and union types, keep the assembly-format fallback.
   ];
 }
 

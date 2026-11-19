@@ -205,6 +205,13 @@ public:
   GetPossibleFormattersMatches(ValueObject &valobj,
                                lldb::DynamicValueType use_dynamic);
 
+  /// Returns the languages whose formatters apply to values of \p language,
+  /// in the order in which to consult them. FormatManager consults the
+  /// formatters of every language that a language plugin returns. By default,
+  /// the formatters of this language apply to its own values.
+  virtual std::vector<lldb::LanguageType>
+  GetFormatterLanguages(lldb::LanguageType language) const;
+
   virtual std::unique_ptr<TypeScavenger> GetTypeScavenger();
 
   virtual const char *GetLanguageSpecificTypeLookupHelp();

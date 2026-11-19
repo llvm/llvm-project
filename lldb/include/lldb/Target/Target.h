@@ -16,6 +16,7 @@
 #include <optional>
 #include <string>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 #include "lldb/Breakpoint/BreakpointList.h"
@@ -2013,6 +2014,34 @@ public:
 
   bool GetSuppressStopHooks() { return m_suppress_stop_hooks; }
 
+  /// Collect the stop hooks and hooks added while \p collecting is true. We
+  /// only collect while we call a module script's
+  /// __lldb_module_added_to_target for this target.
+  ///
+  /// \return
+  ///     The previous value.
+  bool SetCollectingHooks(bool collecting) {
+    std::lock_guard<std::mutex> guard(m_module_added_hooks.mutex);
+    return std::exchange(m_module_added_hooks.collecting, collecting);
+  }
+
+  bool IsCollectingHooks() const {
+    std::lock_guard<std::mutex> guard(m_module_added_hooks.mutex);
+    return m_module_added_hooks.collecting;
+  }
+
+  /// Run the collected stop hooks and hooks that were added with
+  /// --at-initial-stop if the process is stopped, and stop tracking them. A
+  /// module's __lldb_module_added_to_target adds such a hook to get hold of
+  /// the process as soon as there is one, so when the process already stopped,
+  /// the hook shouldn't wait for the next stop. Otherwise, the hook runs at the
+  /// initial stop or the next stop as usual, like the stop hooks that any
+  /// other script adds, including a module's __lldb_init_module.
+  ///
+  /// We don't resume the process, whatever the hooks ask: it already stopped,
+  /// and resuming it is up to the user.
+  void RunCollectedInitialStopHooks();
+
   bool RemoveStopHookByID(lldb::user_id_t uid);
 
   void RemoveAllStopHooks();
@@ -2125,6 +2154,25 @@ protected:
   /// nullptr when that policy bypasses the API mutex entirely.
   std::recursive_mutex *GetAPIMutexForCurrentPolicy();
 
+  /// What the stop hooks that ran at a stop ask us to do with the process.
+  enum class StopHooksVote {
+    /// No hook asked to continue, or one asked to stay stopped.
+    Stop,
+    /// At least one hook asked to continue, and none asked to stay stopped.
+    Continue,
+    /// A hook resumed the process itself.
+    AlreadyContinued,
+  };
+
+  /// Run \p active_hooks and \p active_unified_hooks at the process's current
+  /// stop, on each thread that stopped for a reason. An attach or a core file
+  /// may not say which thread stopped, so at the initial stop they run on the
+  /// first thread instead.
+  StopHooksVote
+  RunStopHooksAtCurrentStop(llvm::ArrayRef<StopHookSP> active_hooks,
+                            llvm::ArrayRef<HookSP> active_unified_hooks,
+                            bool at_initial_stop);
+
   /// Implementing of ModuleList::Notifier.
 
   void NotifyModuleAdded(const ModuleList &module_list,
@@ -2223,6 +2271,23 @@ protected:
   /// scripts again.
   llvm::SmallDenseSet<UUID> m_loaded_scripts;
   std::mutex m_loaded_scripts_mutex;
+  /// The stop hooks and hooks that a module's __lldb_module_added_to_target
+  /// adds for this target, collected while it runs, so we can run the ones
+  /// added with --at-initial-stop once it returns.
+  ///
+  /// One ModulesDidLoad call loads its modules' scripts one at a time, on the
+  /// calling thread, after reading their symbols in parallel. But the dynamic
+  /// loader on the private state thread and an SB API client, for example
+  /// with SBTarget::AddModule, can each load scripts for this target at the
+  /// same time, so the mutex guards the rest. We only hold it to update these
+  /// fields, never while calling out.
+  struct ModuleLoadedScriptHooks {
+    mutable std::mutex mutex;
+    bool collecting = false;
+    std::vector<StopHookSP> stop_hooks;
+    std::vector<HookSP> hooks;
+  };
+  ModuleLoadedScriptHooks m_module_added_hooks;
   bool m_is_dummy_target;
 
   typedef std::map<lldb::user_id_t, HookSP> HookCollection;

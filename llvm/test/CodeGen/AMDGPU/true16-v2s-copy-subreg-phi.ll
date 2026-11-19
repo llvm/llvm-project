@@ -20,10 +20,7 @@ define amdgpu_kernel void @cond_f16_load_phi(ptr addrspace(1) %p, half %h, i1 %c
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_bitcmp1_b32 s2, 16
 ; GFX1250-NEXT:    global_store_b32 v1, v1, s[0:1]
-; GFX1250-NEXT:    s_cselect_b32 s3, -1, 0
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-NEXT:    s_and_b32 vcc_lo, exec_lo, s3
-; GFX1250-NEXT:    s_cbranch_vccz .LBB0_2
+; GFX1250-NEXT:    s_cbranch_scc0 .LBB0_2
 ; GFX1250-NEXT:  ; %bb.1:
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    s_branch .LBB0_3
@@ -46,10 +43,7 @@ define amdgpu_kernel void @cond_f16_load_phi(ptr addrspace(1) %p, half %h, i1 %c
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_bitcmp1_b32 s2, 16
 ; GFX11-NEXT:    global_store_b32 v1, v1, s[0:1]
-; GFX11-NEXT:    s_cselect_b32 s3, -1, 0
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    s_and_b32 vcc_lo, exec_lo, s3
-; GFX11-NEXT:    s_cbranch_vccz .LBB0_2
+; GFX11-NEXT:    s_cbranch_scc0 .LBB0_2
 ; GFX11-NEXT:  ; %bb.1:
 ; GFX11-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX11-NEXT:    s_branch .LBB0_3

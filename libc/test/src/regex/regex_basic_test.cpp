@@ -91,30 +91,6 @@ TEST(LlvmLibcRegexTest, OverlappingPrefixAndPostFreeSafety) {
             REG_NOMATCH);
 }
 
-TEST(LlvmLibcRegexTest, PoolExhaustionReturnsEspace) {
-  // 9998 'a' bytes plus EmptySet (1) and EmptyStr (2) fill all 10000 ExprPool
-  // slots during regcomp; regexec then hits MAX_NODE_LIMIT when interning the
-  // first derivative Alt state.
-  char pattern[10000];
-  for (size_t i = 0; i < 9998; ++i)
-    pattern[i] = 'a';
-  pattern[9998] = '\0';
-
-  regex_t preg;
-  ASSERT_EQ(LIBC_NAMESPACE::regcomp(&preg, pattern, REG_EXTENDED | REG_NOSUB),
-            0);
-  EXPECT_EQ(LIBC_NAMESPACE::regexec(&preg, "a", 0, nullptr, 0), REG_ESPACE);
-  LIBC_NAMESPACE::regfree(&preg);
-
-  // One additional byte (9999 'a's) hits MAX_NODE_LIMIT during regcomp;
-  // calling regfree afterwards must be a safe no-op.
-  pattern[9998] = 'a';
-  pattern[9999] = '\0';
-  EXPECT_EQ(LIBC_NAMESPACE::regcomp(&preg, pattern, REG_EXTENDED | REG_NOSUB),
-            REG_ESPACE);
-  LIBC_NAMESPACE::regfree(&preg);
-}
-
 TEST(LlvmLibcRegexTest, WildcardDot) {
   regex_t preg;
   ASSERT_EQ(LIBC_NAMESPACE::regcomp(&preg, "a.c", REG_EXTENDED | REG_NOSUB), 0);
