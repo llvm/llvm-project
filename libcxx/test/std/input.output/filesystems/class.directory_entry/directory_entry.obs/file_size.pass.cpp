@@ -84,11 +84,13 @@ static void not_regular_file() {
   struct {
     const path p;
     std::errc expected_err;
-  } TestCases[] = {{env.create_dir("dir"), std::errc::is_a_directory},
+  } TestCases[] = {
+      {env.create_dir("dir"), std::errc::is_a_directory},
 #ifndef TEST_HAS_NO_FIFOS
-                   {env.create_fifo("fifo"), std::errc::not_supported},
+      {env.create_fifo("fifo"), std::errc::not_supported},
 #endif
-                   {env.create_directory_symlink("dir", "sym"), std::errc::is_a_directory}};
+      {env.create_directory_symlink("dir", "sym"), std::errc::is_a_directory},
+  };
 
   for (auto const& TC : TestCases) {
     const path& p = TC.p;

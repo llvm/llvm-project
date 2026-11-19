@@ -30,9 +30,9 @@
 #include "format_string.h"
 
 // For creating socket files
-#if !defined(__FreeBSD__) && !defined(__APPLE__) && !defined(_WIN32)
-# include <sys/socket.h>
-# include <sys/un.h>
+#ifndef TEST_HAS_NO_SOCKETS
+#  include <sys/socket.h>
+#  include <sys/un.h>
 #endif
 namespace fs = std::filesystem;
 

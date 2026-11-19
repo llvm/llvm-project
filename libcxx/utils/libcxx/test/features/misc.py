@@ -73,6 +73,8 @@ def _needsLibatomic(cfg):
 def _hasNoFifos(cfg):
     if "_WIN32" in compilerMacros(cfg) or "TEST_HAS_NO_FILESYSTEM" in testMacros(cfg):
         return True
+    if "__ANDROID__" not in compilerMacros(cfg):
+        return False
     program = """
         #include <stdio.h>
         #include <stdlib.h>
@@ -98,7 +100,7 @@ def _hasNoFifos(cfg):
 def _hasNoHardlinks(cfg):
     if "TEST_HAS_NO_FILESYSTEM" in testMacros(cfg):
         return True
-    if "_WIN32" in compilerMacros(cfg):
+    if "__ANDROID__" not in compilerMacros(cfg):
         return False
     program = """
         #include <fcntl.h>
@@ -142,6 +144,8 @@ def _hasNoSockets(cfg):
         return True
     if any(m in compilerMacros(cfg) for m in ("_WIN32", "__APPLE__", "__FreeBSD__")):
         return True
+    if "__ANDROID__" not in compilerMacros(cfg):
+        return False
     program = """
         #include <stdio.h>
         #include <stdlib.h>
