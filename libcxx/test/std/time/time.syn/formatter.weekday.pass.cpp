@@ -16,6 +16,9 @@
 // TODO FMT Investigate Windows issues.
 // XFAIL: msvc
 
+// OpenBSD only implements LC_CTYPE, so LC_TIME output in these locales is that of "C".
+// XFAIL: target={{.+}}-openbsd{{.*}}
+
 // REQUIRES: locale.fr_FR.UTF-8
 // REQUIRES: locale.ja_JP.UTF-8
 
