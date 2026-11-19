@@ -88,6 +88,9 @@ std::optional<Expr<SomeType>> NonPointerInitializationExpr(const Symbol &,
     Expr<SomeType> &&, FoldingContext &,
     const semantics::Scope *instantiation = nullptr);
 
+std::optional<Expr<SomeType>> ExpandScalarInitializer(
+    const Symbol &, const Expr<SomeType> &, FoldingContext &);
+
 // Check whether an expression is a specification expression
 // (10.1.11(2), C1010).  Constant expressions are always valid
 // specification expressions.
