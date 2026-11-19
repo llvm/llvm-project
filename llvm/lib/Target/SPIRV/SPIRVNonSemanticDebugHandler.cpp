@@ -894,6 +894,15 @@ auto SPIRVNonSemanticDebugHandler::getOrCreateDebugScope(const DIScope *S)
   return EmitResult<MCRegister>::emitted(Reg);
 }
 
+auto SPIRVNonSemanticDebugHandler::getOrCreateDebugTypeOrNone(const DIType *Ty)
+    -> EmitResult<MCRegister> {
+  if (Ty)
+    return getOrCreateDebugScope(Ty);
+  assert(CachedDebugInfoNoneReg.isValid() &&
+         "DebugInfoNone must be emitted before debug types");
+  return EmitResult<MCRegister>::emitted(CachedDebugInfoNoneReg);
+}
+
 auto SPIRVNonSemanticDebugHandler::emitDebugTypeBasic(
     const DIBasicType *BT, MCRegister I32TypeReg,
     SPIRV::ModuleAnalysisInfo &MAI) -> EmitResult<PreparedScope> {
@@ -1028,19 +1037,9 @@ auto SPIRVNonSemanticDebugHandler::emitDebugTypePointer(
   if (!PT->getDWARFAddressSpace().has_value())
     return EmitResult<PreparedScope>::unsupported();
 
-  MCRegister BaseReg;
-  if (const DIType *BaseTy = PT->getBaseType()) {
-    EmitResult<MCRegister> Base = getOrCreateDebugScope(BaseTy);
-    if (!Base)
-      return EmitResult<PreparedScope>::failure(Base);
-    BaseReg = *Base.Value;
-  } else {
-    // No getBaseType() (typical for void*): use DebugInfoNone as Base Type,
-    // same as SPIRV-LLVM-Translator (see issue #109287 and the DISABLED
-    // spirv-val run in debug-type-pointer.ll). spirv-val may still reject this
-    // encoding; see https://github.com/KhronosGroup/SPIRV-Registry/pull/287.
-    BaseReg = CachedDebugInfoNoneReg;
-  }
+  EmitResult<MCRegister> Base = getOrCreateDebugTypeOrNone(PT->getBaseType());
+  if (!Base)
+    return EmitResult<PreparedScope>::failure(Base);
 
   MCRegister I32TypeReg = getOrEmitOpTypeInt32Reg(MAI);
   MCRegister DebugTypePointerFlagsReg =
@@ -1055,25 +1054,21 @@ auto SPIRVNonSemanticDebugHandler::emitDebugTypePointer(
 
   return EmitResult<PreparedScope>::emitted(
       PreparedScope{SPIRV::NonSemanticExtInst::DebugTypePointer,
-                    {BaseReg, StorageClassReg, DebugTypePointerFlagsReg}});
+                    {*Base.Value, StorageClassReg, DebugTypePointerFlagsReg}});
 }
 
 auto SPIRVNonSemanticDebugHandler::emitDebugTypeQualifier(
     const DIDerivedType *QT, uint32_t Qualifier, SPIRV::ModuleAnalysisInfo &MAI)
     -> EmitResult<PreparedScope> {
-  // No base type (e.g. const void): use DebugInfoNone, as for pointers.
-  MCRegister BaseReg = CachedDebugInfoNoneReg;
-  if (const DIType *BaseTy = QT->getBaseType()) {
-    EmitResult<MCRegister> Base = getOrCreateDebugScope(BaseTy);
-    if (!Base)
-      return EmitResult<PreparedScope>::failure(Base);
-    BaseReg = *Base.Value;
-  }
+  EmitResult<MCRegister> Base = getOrCreateDebugTypeOrNone(QT->getBaseType());
+  if (!Base)
+    return EmitResult<PreparedScope>::failure(Base);
 
   MCRegister QualifierReg =
       emitOpConstantI32(Qualifier, getOrEmitOpTypeInt32Reg(MAI), MAI);
-  return EmitResult<PreparedScope>::emitted(PreparedScope{
-      SPIRV::NonSemanticExtInst::DebugTypeQualifier, {BaseReg, QualifierReg}});
+  return EmitResult<PreparedScope>::emitted(
+      PreparedScope{SPIRV::NonSemanticExtInst::DebugTypeQualifier,
+                    {*Base.Value, QualifierReg}});
 }
 
 auto SPIRVNonSemanticDebugHandler::emitDebugTypeFunctionForSubroutineType(
@@ -1308,14 +1303,9 @@ auto SPIRVNonSemanticDebugHandler::emitDebugFunction(
 auto SPIRVNonSemanticDebugHandler::mapDISignatureTypeToReg(
     const DIType *Ty, MCRegister VoidTypeReg, bool ReturnType)
     -> EmitResult<MCRegister> {
-  if (!Ty) {
-    if (ReturnType)
-      return EmitResult<MCRegister>::emitted(VoidTypeReg);
-    assert(CachedDebugInfoNoneReg.isValid() &&
-           "DebugInfoNone must be emitted before DISubroutineType operands");
-    return EmitResult<MCRegister>::emitted(CachedDebugInfoNoneReg);
-  }
-  return getOrCreateDebugScope(Ty);
+  if (!Ty && ReturnType)
+    return EmitResult<MCRegister>::emitted(VoidTypeReg);
+  return getOrCreateDebugTypeOrNone(Ty);
 }
 
 // NonSemantic.Shader.DebugInfo.100 debug operation encodings
@@ -1708,13 +1698,10 @@ auto SPIRVNonSemanticDebugHandler::emitDebugTypeEnum(
   if (Size == 0 || !isUInt<32>(Size))
     return EmitResult<PreparedScope>::unsupported();
 
-  MCRegister UnderlyingReg = CachedDebugInfoNoneReg;
-  if (const DIType *BaseTy = ET->getBaseType()) {
-    EmitResult<MCRegister> Base = getOrCreateDebugScope(BaseTy);
-    if (!Base)
-      return EmitResult<PreparedScope>::failure(Base);
-    UnderlyingReg = *Base.Value;
-  }
+  EmitResult<MCRegister> Underlying =
+      getOrCreateDebugTypeOrNone(ET->getBaseType());
+  if (!Underlying)
+    return EmitResult<PreparedScope>::failure(Underlying);
 
   EmitResult<MCRegister> Parent =
       resolveScope(ET->getScope(), EnumCompileUnits.lookup(ET));
@@ -1734,8 +1721,8 @@ auto SPIRVNonSemanticDebugHandler::emitDebugTypeEnum(
       emitOpConstantI32(static_cast<uint32_t>(Size), I32TypeReg, MAI);
   MCRegister FlagsReg = emitOpConstantI32(transDebugFlags(ET), I32TypeReg, MAI);
 
-  SmallVector<MCRegister> Ops = {NameReg, UnderlyingReg, SrcReg,  LineReg,
-                                 ColReg,  *Parent.Value, SizeReg, FlagsReg};
+  SmallVector<MCRegister> Ops = {NameReg, *Underlying.Value, SrcReg,  LineReg,
+                                 ColReg,  *Parent.Value,     SizeReg, FlagsReg};
 
   // Each Value is a 32-bit integer constant. Skip the Value and Name pair of an
   // enumerator whose value needs more bits. Otherwise, the truncation would

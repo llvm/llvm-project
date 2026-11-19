@@ -436,6 +436,10 @@ private:
   /// later walk can retry it.
   EmitResult<MCRegister> getOrCreateDebugScope(const DIScope *S);
 
+  /// Like \c getOrCreateDebugScope, but a null \p Ty (e.g. the base of a
+  /// \c void*) is Emitted as \c DebugInfoNone.
+  EmitResult<MCRegister> getOrCreateDebugTypeOrNone(const DIType *Ty);
+
   /// Build the instruction for \p S. Only \c getOrCreateDebugScope calls this
   /// and emits it.
   EmitResult<PreparedScope> emitDebugScope(const DIScope *S);
@@ -717,18 +721,8 @@ private:
                                              MCRegister ExtInstSetReg,
                                              SPIRV::ModuleAnalysisInfo &MAI);
 
-  /// Map a \c DISubroutineType::getTypeArray() element to an operand register
-  /// for
-  /// \c DebugTypeFunction. A non-null \p Ty is created through
-  /// \c getOrCreateDebugScope, and its status is returned. A null \p Ty is not
-  /// a \c getOrCreateDebugScope call and is always Emitted.
-  ///
-  /// LLVM encodes a void return as a null first element (and may use null in
-  /// later slots). NonSemantic \c DebugTypeFunction
-  /// requires a concrete return-type operand, so when \p ReturnType is true and
-  /// \p Ty is null, this returns \p VoidTypeReg (\c OpTypeVoid). When
-  /// \p ReturnType is false and \p Ty is null, this returns
-  /// \c CachedDebugInfoNoneReg (\c DebugInfoNone).
+  /// Map a subroutine type element to a \c DebugTypeFunction operand. A null
+  /// return type is void, so it maps to \p VoidTypeReg.
   EmitResult<MCRegister> mapDISignatureTypeToReg(const DIType *Ty,
                                                  MCRegister VoidTypeReg,
                                                  bool ReturnType);
