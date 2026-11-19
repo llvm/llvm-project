@@ -74,6 +74,12 @@ class RuntimeDyldELF : public RuntimeDyldImpl {
                               uint64_t Value, uint32_t Type, int64_t Addend,
                               SID SectionID);
 
+  bool resolveRISCVShortBranch(unsigned SectionID, relocation_iterator RelI,
+                               const RelocationValueRef &Value);
+
+  void resolveRISCVBranch(unsigned SectionID, const RelocationValueRef &Value,
+                          relocation_iterator RelI, StubMap &Stubs);
+
   unsigned getMaxStubSize() const override {
     if (Arch == Triple::aarch64 || Arch == Triple::aarch64_be)
       return 20; // movz; movk; movk; movk; br
@@ -93,12 +99,14 @@ class RuntimeDyldELF : public RuntimeDyldImpl {
       return 6; // 2-byte jmp instruction + 32-bit relative address
     else if (Arch == Triple::systemz)
       return 16;
+    else if (Arch == Triple::riscv64)
+      return 24; // auipc; ld; jalr; nop; 8-byte literal
     else
       return 0;
   }
 
   Align getStubAlignment() override {
-    if (Arch == Triple::systemz)
+    if (Arch == Triple::systemz || Arch == Triple::riscv64)
       return Align(8);
     else
       return Align(1);
