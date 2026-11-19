@@ -346,10 +346,10 @@ protected:
 
 private:
   /// Chipstar, Vulkan, and AMDHSA SPIRV triples shouldn't accept a -target-cpu,
-  /// but a SPIRV triple with an "unknown" OS and OpenCL should be able to.
+  /// but a SPIRV triple with an "unknown" OS should be able to.
   bool tripleAcceptsTargetCPU() const {
     llvm::Triple::OSType OS = getTriple().getOS();
-    return OS == llvm::Triple::UnknownOS || OS == llvm::Triple::OpenCL;
+    return OS == llvm::Triple::UnknownOS;
   }
 };
 
