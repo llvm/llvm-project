@@ -4391,8 +4391,8 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
     // form ABD before expanding ABS.
     if (ISD::isAbsOpcode(N1.getOpcode()) && N1.hasOneUse() &&
         !TLI.isOperationLegalOrCustom(N1.getOpcode(), VT)) {
-      if (!(TLI.isOperationLegal(ISD::SUB, VT) &&
-            TLI.isOperationLegal(ISD::SMIN, VT)))
+      if (!TLI.isOperationLegal(ISD::SUB, VT) ||
+          !TLI.isOperationLegal(ISD::SMIN, VT))
         if (SDValue ABD = foldABSToABD(N1.getNode(), SDLoc(N1.getNode()),
                                        /*IsNegated=*/true))
           return DAG.getNode(ISD::SUB, DL, VT, N0, ABD);
@@ -6081,7 +6081,7 @@ SDValue DAGCombiner::visitABD(SDNode *N) {
   if (sd_match(N, m_c_BinOp(ISD::ABDU, m_ZExt(m_Value(X)), m_Value(Y))) ||
       sd_match(N, m_c_BinOp(ISD::ABDS, m_SExt(m_Value(X)), m_Value(Y)))) {
     EVT SmallVT = X.getValueType();
-    // keep a legal type for a negated ABD if narrowing would introduce
+    // Keep a legal type for a negated ABD if narrowing would introduce
     // an illegal type and a zero extension before the negation.
     if ((!LegalOperations || hasOperation(Opcode, SmallVT)) &&
         (!IsNegated || !TLI.isTypeLegal(VT) || TLI.isTypeLegal(SmallVT))) {
@@ -12429,6 +12429,9 @@ SDValue DAGCombiner::foldABSToABD(SDNode *N, const SDLoc &DL, bool IsNegated) {
        Opc0 != ISD::SIGN_EXTEND_INREG)) {
 
     auto CreateZextedAbd = [&](unsigned AbdOpc) {
+      // Leave negated ABS on the existing expansion path when ABD has custom
+      // lowering. Forming ABD here can introduce a zero extension that prevents
+      // folding the negation into the target's expansion.
       if (IsNegated && TLI.isOperationCustom(AbdOpc, VT))
         return SDValue();
       if (IsAdd)
@@ -12469,6 +12472,7 @@ SDValue DAGCombiner::foldABSToABD(SDNode *N, const SDLoc &DL, bool IsNegated) {
   }
   unsigned ABDOpcode = (Opc0 == ISD::ZERO_EXTEND) ? ISD::ABDU : ISD::ABDS;
 
+  // Avoid interfering with custom ABD lowering for a negated ABS.
   if (IsNegated && TLI.isOperationCustom(ABDOpcode, VT))
     return SDValue();
 

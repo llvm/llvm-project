@@ -11836,9 +11836,8 @@ SDValue TargetLowering::expandABD(SDNode *N, SelectionDAG &DAG) const {
   // abdu with non-negative operands -> abs(sub)
   // The abdu case where the sub is nuw is handled in DAGCombine.
   // For scalars, only do this if ABS is legal/custom, otherwise the expansion
-  // of ABS is no better than the select/branchless expansion below. Vectors
-  // that can't use ABS directly are typically scalarized, where this form is
-  // still cheaper.
+  // of ABS is no better than the select/branchless expansion below. Retain the
+  // existing ABS-based expansion for vectors.
   bool PreferAbs = VT.isVector() || isOperationLegalOrCustom(ISD::ABS, VT);
   if (PreferAbs) {
     if (IsSigned) {
