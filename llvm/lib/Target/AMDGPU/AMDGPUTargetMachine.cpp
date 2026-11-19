@@ -745,18 +745,6 @@ bool AMDGPUTargetMachine::EnableLowerModuleLDS = true;
 
 AMDGPUTargetMachine::~AMDGPUTargetMachine() = default;
 
-StringRef AMDGPUTargetMachine::getGPUName(const Function &F) const {
-  Attribute GPUAttr = F.getFnAttribute("target-cpu");
-  return GPUAttr.isValid() ? GPUAttr.getValueAsString() : getTargetCPU();
-}
-
-StringRef AMDGPUTargetMachine::getFeatureString(const Function &F) const {
-  Attribute FSAttr = F.getFnAttribute("target-features");
-
-  return FSAttr.isValid() ? FSAttr.getValueAsString()
-                          : getTargetFeatureString();
-}
-
 llvm::ScheduleDAGInstrs *
 AMDGPUTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
   const GCNSubtarget &ST = C->MF->getSubtarget<GCNSubtarget>();
