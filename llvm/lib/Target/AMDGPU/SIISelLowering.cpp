@@ -15793,11 +15793,13 @@ static SDValue getHalfOfPackedImmZeroAndI16(SDValue V, bool &IsHigh) {
   if (BV.getOpcode() != ISD::BUILD_VECTOR || BV.getValueType() != MVT::v2i16)
     return SDValue();
 
-  if (isNullConstant(BV.getOperand(0))) {
+  if (isNullConstant(BV.getOperand(0)) &&
+      BV.getOperand(1).getValueType() == MVT::i16) {
     IsHigh = true;
     return BV.getOperand(1);
   }
-  if (isNullConstant(BV.getOperand(1))) {
+  if (isNullConstant(BV.getOperand(1)) &&
+      BV.getOperand(0).getValueType() == MVT::i16) {
     IsHigh = false;
     return BV.getOperand(0);
   }
@@ -15878,11 +15880,9 @@ SDValue SITargetLowering::performOrCombine(SDNode *N,
   //   (or (bitcast (v2i16 build_vector 0, Hi)), (zero_extend i16:Lo)) ->
   //     (bitcast (v2i16 build_vector Lo, Hi))
   //
-  // Restricted to true16: the build_vector selects to a free REG_SEQUENCE
-  // on true16 targets and to v_perm_b32 otherwise. The v_perm_b32 selector
-  // mask needs an extra s_mov_b32, which makes this more expensive
-  if (VT == MVT::i32 && isTypeLegal(MVT::v2i16) &&
-      Subtarget->useRealTrue16Insts()) {
+  // Restricted to GFX10+. On GFX9 the v_perm_b32 mask costs an extra s_mov_b32, which
+  // makes not worth it.
+  if (VT == MVT::i32 && AMDGPU::isGFX10Plus(*Subtarget)) {
     bool LHSIsHigh, RHSIsHigh;
     SDValue LHSHalf = getHalfOfPackedImmZeroAndI16(LHS, LHSIsHigh);
     SDValue RHSHalf = getHalfOfPackedImmZeroAndI16(RHS, RHSIsHigh);

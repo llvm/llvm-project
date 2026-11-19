@@ -754,22 +754,21 @@ define <128 x i4> @shuffle_v4i4_to_v128i4(<4 x i4> %arg) {
 ; GFX12-FAKE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s0, 0
-; GFX12-FAKE16-NEXT:    v_and_b32_e32 v2, 15, v4
+; GFX12-FAKE16-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v2, 15, v1
 ; GFX12-FAKE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s1, s0
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s2, s0
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s3, s0
 ; GFX12-FAKE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-FAKE16-NEXT:    v_dual_mov_b32 v6, s2 :: v_dual_and_b32 v3, 15, v3
-; GFX12-FAKE16-NEXT:    v_dual_mov_b32 v7, s3 :: v_dual_and_b32 v8, 15, v1
-; GFX12-FAKE16-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_lshlrev_b32 v2, 24, v2
-; GFX12-FAKE16-NEXT:    v_mov_b32_e32 v5, s1
-; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_2) | instid1(VALU_DEP_3)
-; GFX12-FAKE16-NEXT:    v_dual_mov_b32 v4, s0 :: v_dual_lshlrev_b32 v3, 16, v3
-; GFX12-FAKE16-NEXT:    v_dual_mov_b32 v9, s0 :: v_dual_mov_b32 v10, s0
-; GFX12-FAKE16-NEXT:    v_mov_b32_e32 v11, s0
-; GFX12-FAKE16-NEXT:    v_or3_b32 v8, v8, v3, v2
-; GFX12-FAKE16-NEXT:    v_dual_mov_b32 v2, v1 :: v_dual_mov_b32 v3, v1
+; GFX12-FAKE16-NEXT:    v_dual_mov_b32 v7, s3 :: v_dual_and_b32 v8, 15, v4
+; GFX12-FAKE16-NEXT:    v_dual_mov_b32 v5, s1 :: v_dual_mov_b32 v4, s0
+; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_2) | instid1(VALU_DEP_3)
+; GFX12-FAKE16-NEXT:    v_perm_b32 v3, v3, v2, 0x5040100
+; GFX12-FAKE16-NEXT:    v_dual_mov_b32 v2, v1 :: v_dual_mov_b32 v9, s0
+; GFX12-FAKE16-NEXT:    v_dual_mov_b32 v10, s0 :: v_dual_mov_b32 v11, s0
+; GFX12-FAKE16-NEXT:    v_lshl_or_b32 v8, v8, 24, v3
+; GFX12-FAKE16-NEXT:    v_mov_b32_e32 v3, v1
 ; GFX12-FAKE16-NEXT:    s_clause 0x3
 ; GFX12-FAKE16-NEXT:    scratch_store_b128 v0, v[4:7], off offset:48
 ; GFX12-FAKE16-NEXT:    scratch_store_b128 v0, v[4:7], off offset:32

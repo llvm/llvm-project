@@ -272,7 +272,8 @@ def combine_or_s64_s32 : GICombineRule<
 
 // (or (and i32:$x, 0xffff), (shl i32:$y, 16)) ->
 //   (bitcast (v2i16 build_vector (trunc $x), (trunc $y)))
-// On true16 the build_vector is a free REG_SEQUENCE of lo16/hi16 subregisters.
+// Restricted to GFX10+. On GFX9 the v_perm_b32 mask costs an extra s_mov_b32,
+// which makes not worth it.
 def or_pack_s16_frag : GICombinePatFrag<(outs root:$dst), (ins $x, $y),
   [(pattern (G_OR $dst, i32:$lo, i32:$hi),
             (G_AND i32:$lo, i32:$x, i32:$mask), (G_CONSTANT i32:$mask, 65535),
@@ -281,7 +282,7 @@ def or_pack_s16_frag : GICombinePatFrag<(outs root:$dst), (ins $x, $y),
             (G_AND i32:$lo, i32:$x, i32:$mask), (G_CONSTANT i32:$mask, 65535),
             (G_SHL i32:$hi, i32:$y, i32:$c16), (G_CONSTANT i32:$c16, 16))]>;
 
-let Predicates = [Predicate<"Subtarget->useRealTrue16Insts()">] in
+let Predicates = [isGFX10Plus] in
 def combine_or_pack_s16 : GICombineRule<
   (defs root:$dst),
   (match (or_pack_s16_frag $dst, i32:$x, i32:$y):$dst,
