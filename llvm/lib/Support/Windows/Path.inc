@@ -117,8 +117,8 @@ static auto pfnGetFileInformationByName = []() -> GetFileInformationByName_t {
   HMODULE kernelM = llvm::sys::windows::loadSystemModuleSecure(L"kernel32.dll");
   if (!kernelM)
     return nullptr;
-  return (GetFileInformationByName_t)(void *)::GetProcAddress(
-      kernelM, "GetFileInformationByName");
+  return reinterpret_cast<GetFileInformationByName_t>(
+      ::GetProcAddress(kernelM, "GetFileInformationByName"));
 }();
 
 using namespace llvm;
@@ -630,7 +630,7 @@ static std::error_code realPathFromHandle(HANDLE H,
 static bool isDiskDevice(ULONG DeviceType, ULONG Characteristics) {
   return (DeviceType == FILE_DEVICE_DISK ||
           DeviceType == FILE_DEVICE_DISK_FILE_SYSTEM) &&
-         !(Characteristics & (FILE_REMOVABLE_MEDIA | FILE_REMOTE_DEVICE));
+         Characteristics & (FILE_REMOVABLE_MEDIA | FILE_REMOTE_DEVICE) == 0;
 }
 
 static std::optional<bool> isDiskDevice(HANDLE Handle) {
