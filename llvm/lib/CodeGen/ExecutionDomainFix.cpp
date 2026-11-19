@@ -527,7 +527,7 @@ bool ExecutionDomainFixImpl::runOnMachineFunction(
   bool anyregs = false;
   const MachineRegisterInfo &MRI = mf.getRegInfo();
   for (unsigned Reg : *RC) {
-    if (MRI.isPhysRegUsed(Reg)) {
+    if (MRI.isPhysRegUsed(Reg, /*SkipRegMaskTest=*/true)) {
       anyregs = true;
       break;
     }

@@ -129,7 +129,6 @@ def isX86 : RuntimeLibcallAvailability<(all_of IsX86)>;
 
 def isAArch64 : RuntimeLibcallAvailability<(all_of IsAArch64)>;
 
-def isLongDoubleX87 : RuntimeLibcallAvailability<(all_of IsLongDoubleX87)>;
 def isLongDoubleF128 : RuntimeLibcallAvailability<(all_of IsLongDoubleF128)>;
 def isLongDoublePPCF128 : RuntimeLibcallAvailability<(all_of IsLongDoublePPCF128)>;
 def isLongDoubleWide : RuntimeLibcallAvailability<
@@ -137,8 +136,6 @@ def isLongDoubleWide : RuntimeLibcallAvailability<
 
 // The l-suffixed sincos exists only when hasSinCos and the long double type
 // matches the width.
-def isLongDoubleX87AndHasSinCos : RuntimeLibcallAvailability<
-  (all_of IsLongDoubleX87, (any_of IsGNUEnv, IsOSFuchsia, IsAndroid))>;
 def isLongDoubleF128AndHasSinCos : RuntimeLibcallAvailability<
   (all_of IsLongDoubleF128, (any_of IsGNUEnv, IsOSFuchsia, IsAndroid))>;
 def isLongDoubleWideAndHasSinCos : RuntimeLibcallAvailability<
@@ -397,9 +394,8 @@ foreach FPTy = [F32, F64, F80, F128, PPCF128] in {
   def CABS_#FPTy.Suffix : RuntimeLibcall<NoneType, []>;
 }
 
-foreach FPTy = [ "F32", "F64" ] in {
-  def SINCOS_STRET_#FPTy : RuntimeLibcall;
-}
+def SINCOS_STRET_F32 : RuntimeLibcall<CFltPair, [Flt]>;
+def SINCOS_STRET_F64 : RuntimeLibcall<CDblPair, [Dbl]>;
 
 foreach FPTy = [F32, F64, F80, F128, PPCF128] in {
   def POW_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
@@ -993,6 +989,11 @@ def SMEABI_SME_SAVE : RuntimeLibcall<Void, [Ptr]>;
 def SMEABI_SME_RESTORE : RuntimeLibcall<Void, [Ptr]>;
 
 // ARM EABI calls
+// The AEABI memory functions (RTABI section 5.3.4) return void, and
+// __aeabi_memset takes (dest, n, c).
+def AEABI_MEMCPY : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]>;
+def AEABI_MEMMOVE : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]>;
+def AEABI_MEMSET : RuntimeLibcall<Void, [Ptr, SizeT, Int]>;
 def AEABI_MEMCPY4 : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]>; // Align 4
 def AEABI_MEMCPY8 : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]>; // Align 8
 def AEABI_MEMMOVE4 : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]>;
@@ -2132,6 +2133,7 @@ def __exp10 : RuntimeLibcallImpl<EXP10_F64>;
 def __exp10f : RuntimeLibcallImpl<EXP10_F32>;
 def __sincos_stret : RuntimeLibcallImpl<SINCOS_STRET_F64>;
 def __sincosf_stret : RuntimeLibcallImpl<SINCOS_STRET_F32>;
+
 def __sincospi : RuntimeLibcallImpl<SINCOSPI_F64>;
 def __sincospif : RuntimeLibcallImpl<SINCOSPI_F32>;
 
@@ -2881,15 +2883,15 @@ def __aeabi_uidivmod : DivRemPairImpl<UDIVREM_I32>; //  CallingConv::ARM_AAPCS
 
 // Memory operations
 // RTABI chapter 4.3.4
-def __aeabi_memcpy : RuntimeLibcallImpl<MEMCPY>; // CallingConv::ARM_AAPCS
+def __aeabi_memcpy : RuntimeLibcallImpl<AEABI_MEMCPY>; // CallingConv::ARM_AAPCS
 def __aeabi_memcpy4 : RuntimeLibcallImpl<AEABI_MEMCPY4>;
 def __aeabi_memcpy8 : RuntimeLibcallImpl<AEABI_MEMCPY8>;
 
-def __aeabi_memmove : RuntimeLibcallImpl<MEMMOVE>; // CallingConv::ARM_AAPCS
+def __aeabi_memmove : RuntimeLibcallImpl<AEABI_MEMMOVE>; // CallingConv::ARM_AAPCS
 def __aeabi_memmove4 : RuntimeLibcallImpl<AEABI_MEMMOVE4>;
 def __aeabi_memmove8 : RuntimeLibcallImpl<AEABI_MEMMOVE8>;
 
-def __aeabi_memset : RuntimeLibcallImpl<MEMSET>; // CallingConv::ARM_AAPCS
+def __aeabi_memset : RuntimeLibcallImpl<AEABI_MEMSET>; // CallingConv::ARM_AAPCS
 def __aeabi_memset4 : RuntimeLibcallImpl<AEABI_MEMSET4>;
 def __aeabi_memset8 : RuntimeLibcallImpl<AEABI_MEMSET8>;
 
@@ -3874,8 +3876,7 @@ def X86Libm : LibcallLibrary<"libm",
   (add X86_F128_Libcalls,
        LibcallImpls<(add sincosf, sincos), hasSinCos_f32_f64>,
        // frexpl/ldexpl are available on Windows too.
-       LibcallImpls<(add frexpl, ldexpl), isLongDoubleWide>,
-       LibcallImpls<(add sincosl), isLongDoubleX87AndHasSinCos>), isX86>;
+       LibcallImpls<(add frexpl, ldexpl), isLongDoubleWide>), isX86>;
 
 def X86SystemLibrary
     : SystemRuntimeLibrary<isX86,
@@ -3884,8 +3885,6 @@ def X86SystemLibrary
 
 def : LibraryExclusion<"compiler-rt", isX86,
   !listconcat(WindowsDivRemMulLibcallOverrides, [__powitf2_f128])>;
-// x86 has no fp128 sincosl, only the x87 one.
-def : LibraryExclusion<"libm", isX86, [sincosl]>;
 def : LibraryExclusion<"libc", isX86, !listconcat(MemChkLibcalls, [bzero])>;
 
 //===----------------------------------------------------------------------===//

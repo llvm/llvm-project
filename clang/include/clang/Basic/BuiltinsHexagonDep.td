@@ -2314,3 +2314,19 @@ let Features = HVXV83.Features in {
   def V6_vsubuwwsat_dv : HexagonBuiltin<"_Vector<32, int>(_Vector<32, int>, _Vector<32, int>)">;
   def V6_vsubuwwsat_dv_128B : HexagonBuiltin<"_Vector<64, int>(_Vector<64, int>, _Vector<64, int>)">;
 }
+
+let Features = V68.Features in {
+  def M8_mxclracc_hf : HexagonBuiltin<"void()">;
+  def M8_mxmem2_bias : HexagonBuiltin<"void(void *)">;
+  def M8_mxmem2_st_bias : HexagonBuiltin<"void(void *)">;
+  def M8_mxmem_blk_sm_act_hf : HexagonBuiltin<"void(unsigned int, int)">;
+  def M8_mxmem_sm_act_hf : HexagonBuiltin<"void(unsigned int, int)">;
+  def M8_mxmem_wei_hf : HexagonBuiltin<"void(unsigned int, int)">;
+  def M8_mxmemdp_wei_hf : HexagonBuiltin<"void(unsigned int, int)">;
+  def M8_mxmems_blk_sm_act_hf : HexagonBuiltin<"void(unsigned int, int)">;
+}
+
+let Features = V73.Features in {
+  def M8_cvt_rs_hf : HexagonBuiltin<"void(int)">;
+  def M8_mxmem : HexagonBuiltin<"void(void *, int)">;
+}
