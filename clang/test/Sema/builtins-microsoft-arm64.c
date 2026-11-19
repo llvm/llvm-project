@@ -36,6 +36,11 @@ void check__svc(unsigned int x, double d, void *p, struct NonScalar s) {
   __svc(1, s); // expected-error {{2nd argument to '__svc' must have integer, floating-point, or pointer type}}
 }
 
+void check__clrex(unsigned char x) {
+  __clrex(16); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  __clrex(x); // expected-error {{argument to '__clrex' must be a constant integer}}
+}
+
 void check__getReg(void) {
   __getReg(-1); // expected-error-re {{argument value {{.*}} is outside the valid range}}
   __getReg(32); // expected-error-re {{argument value {{.*}} is outside the valid range}}

@@ -32,7 +32,142 @@ def int_aarch64_stlxp : Intrinsic<[llvm_i32_ty],
                                   [llvm_i64_ty, llvm_i64_ty, llvm_ptr_ty],
                                   [IntrNoFree, IntrWillReturn]>;
 
-def int_aarch64_clrex : Intrinsic<[]>;
+def int_aarch64_clrex : Intrinsic<[], [llvm_i32_ty]>;
+
+// CAS intrinsics — emit CAS* (no acquire/release) directly, regardless of the
+// LSE target feature. CAS{H,b} comparand/value use i32; CAS{X}uses i64.
+// IntrWillReturn is intentionally omitted: on a target without LSE the encoding
+// is UNDEFINED and may trap, so these calls are not guaranteed to return.
+def int_aarch64_cas8  : Intrinsic<[llvm_i32_ty],
+                                  [llvm_ptr_ty, llvm_i32_ty, llvm_i32_ty],
+                                  [IntrNoFree]>;
+def int_aarch64_cas16 : Intrinsic<[llvm_i32_ty],
+                                  [llvm_ptr_ty, llvm_i32_ty, llvm_i32_ty],
+                                  [IntrNoFree]>;
+def int_aarch64_cas32 : Intrinsic<[llvm_i32_ty],
+                                  [llvm_ptr_ty, llvm_i32_ty, llvm_i32_ty],
+                                  [IntrNoFree]>;
+def int_aarch64_cas64 : Intrinsic<[llvm_i64_ty],
+                                  [llvm_ptr_ty, llvm_i64_ty, llvm_i64_ty],
+                                  [IntrNoFree]>;
+
+// CASA intrinsics — emit CASA* (acquire, no release) directly, regardless of
+// the LSE target feature. Same type conventions as cas*.
+def int_aarch64_casa8  : Intrinsic<[llvm_i32_ty],
+                                   [llvm_ptr_ty, llvm_i32_ty, llvm_i32_ty],
+                                   [IntrNoFree]>;
+def int_aarch64_casa16 : Intrinsic<[llvm_i32_ty],
+                                   [llvm_ptr_ty, llvm_i32_ty, llvm_i32_ty],
+                                   [IntrNoFree]>;
+def int_aarch64_casa32 : Intrinsic<[llvm_i32_ty],
+                                   [llvm_ptr_ty, llvm_i32_ty, llvm_i32_ty],
+                                   [IntrNoFree]>;
+def int_aarch64_casa64 : Intrinsic<[llvm_i64_ty],
+                                   [llvm_ptr_ty, llvm_i64_ty, llvm_i64_ty],
+                                   [IntrNoFree]>;
+
+// CASL intrinsics — emit CASL* (release) directly, regardless of the LSE
+// target feature. Same type conventions as cas*.
+def int_aarch64_casl8  : Intrinsic<[llvm_i32_ty],
+                                   [llvm_ptr_ty, llvm_i32_ty, llvm_i32_ty],
+                                   [IntrNoFree]>;
+def int_aarch64_casl16 : Intrinsic<[llvm_i32_ty],
+                                   [llvm_ptr_ty, llvm_i32_ty, llvm_i32_ty],
+                                   [IntrNoFree]>;
+def int_aarch64_casl32 : Intrinsic<[llvm_i32_ty],
+                                   [llvm_ptr_ty, llvm_i32_ty, llvm_i32_ty],
+                                   [IntrNoFree]>;
+def int_aarch64_casl64 : Intrinsic<[llvm_i64_ty],
+                                   [llvm_ptr_ty, llvm_i64_ty, llvm_i64_ty],
+                                   [IntrNoFree]>;
+
+// CASAL intrinsics — emit CASAL* (acquire/release) directly, regardless of the LSE
+// target feature. Same type conventions as cas*.
+def int_aarch64_casal8  : Intrinsic<[llvm_i32_ty],
+                                    [llvm_ptr_ty, llvm_i32_ty, llvm_i32_ty],
+                                    [IntrNoFree]>;
+def int_aarch64_casal16 : Intrinsic<[llvm_i32_ty],
+                                    [llvm_ptr_ty, llvm_i32_ty, llvm_i32_ty],
+                                    [IntrNoFree]>;
+def int_aarch64_casal32 : Intrinsic<[llvm_i32_ty],
+                                    [llvm_ptr_ty, llvm_i32_ty, llvm_i32_ty],
+                                    [IntrNoFree]>;
+def int_aarch64_casal64 : Intrinsic<[llvm_i64_ty],
+                                    [llvm_ptr_ty, llvm_i64_ty, llvm_i64_ty],
+                                    [IntrNoFree]>;
+
+// SWP intrinsics — emit SWP* (no acquire/release) directly, regardless of the
+// LSE target feature. swp{b,h} value uses i32; swp64 uses i64.
+// IntrWillReturn is intentionally omitted: on a target without LSE the encoding
+// is UNDEFINED and may trap, so these calls are not guaranteed to return.
+def int_aarch64_swp8  : Intrinsic<[llvm_i32_ty],
+                                  [llvm_ptr_ty, llvm_i32_ty],
+                                  [IntrNoFree]>;
+def int_aarch64_swp16 : Intrinsic<[llvm_i32_ty],
+                                  [llvm_ptr_ty, llvm_i32_ty],
+                                  [IntrNoFree]>;
+def int_aarch64_swp32 : Intrinsic<[llvm_i32_ty],
+                                  [llvm_ptr_ty, llvm_i32_ty],
+                                  [IntrNoFree]>;
+def int_aarch64_swp64 : Intrinsic<[llvm_i64_ty],
+                                  [llvm_ptr_ty, llvm_i64_ty],
+                                  [IntrNoFree]>;
+
+// SWPA intrinsics — emit SWPA (acquire) directly, regardless of the LSE target
+def int_aarch64_swpa8  : Intrinsic<[llvm_i32_ty],
+                                   [llvm_ptr_ty, llvm_i32_ty],
+                                   [IntrNoFree]>;
+def int_aarch64_swpa16 : Intrinsic<[llvm_i32_ty],
+                                   [llvm_ptr_ty, llvm_i32_ty],
+                                   [IntrNoFree]>;
+def int_aarch64_swpa32 : Intrinsic<[llvm_i32_ty],
+                                   [llvm_ptr_ty, llvm_i32_ty],
+                                   [IntrNoFree]>;
+def int_aarch64_swpa64 : Intrinsic<[llvm_i64_ty],
+                                   [llvm_ptr_ty, llvm_i64_ty],
+                                   [IntrNoFree]>;
+
+// SWPL intrinsics — emit SWPL (release) directly, regardless of the LSE target
+def int_aarch64_swpl8  : Intrinsic<[llvm_i32_ty],
+                                   [llvm_ptr_ty, llvm_i32_ty],
+                                   [IntrNoFree]>;
+def int_aarch64_swpl16 : Intrinsic<[llvm_i32_ty],
+                                   [llvm_ptr_ty, llvm_i32_ty],
+                                   [IntrNoFree]>;
+def int_aarch64_swpl32 : Intrinsic<[llvm_i32_ty],
+                                   [llvm_ptr_ty, llvm_i32_ty],
+                                   [IntrNoFree]>;
+def int_aarch64_swpl64 : Intrinsic<[llvm_i64_ty],
+                                   [llvm_ptr_ty, llvm_i64_ty],
+                                   [IntrNoFree]>;
+
+// SWPAL intrinsics — emit SWPAL* (no acquire/release) directly, regardless of the
+// LSE target feature.
+def int_aarch64_swpal8  : Intrinsic<[llvm_i32_ty],
+                                    [llvm_ptr_ty, llvm_i32_ty],
+                                    [IntrNoFree]>;
+def int_aarch64_swpal16 : Intrinsic<[llvm_i32_ty],
+                                    [llvm_ptr_ty, llvm_i32_ty],
+                                    [IntrNoFree]>;
+def int_aarch64_swpal32 : Intrinsic<[llvm_i32_ty],
+                                    [llvm_ptr_ty, llvm_i32_ty],
+                                    [IntrNoFree]>;
+def int_aarch64_swpal64 : Intrinsic<[llvm_i64_ty],
+                                    [llvm_ptr_ty, llvm_i64_ty],
+                                    [IntrNoFree]>;
+
+// LDAPR intrinsics — emit LDAPR* directly, regardless of RCPC target feature.
+// LDAPRB/H/W return i32 (zero-extended into GPR32); LDAPRX returns i64.
+// IntrWillReturn is intentionally omitted: on a target without RCPC the encoding
+// is UNDEFINED and may trap, so these calls are not guaranteed to return.
+def int_aarch64_ldapr8  : Intrinsic<[llvm_i32_ty], [llvm_ptr_ty],
+                                    [IntrNoFree, IntrReadMem, IntrArgMemOnly]>;
+def int_aarch64_ldapr16 : Intrinsic<[llvm_i32_ty], [llvm_ptr_ty],
+                                    [IntrNoFree, IntrReadMem, IntrArgMemOnly]>;
+def int_aarch64_ldapr32 : Intrinsic<[llvm_i32_ty], [llvm_ptr_ty],
+                                    [IntrNoFree, IntrReadMem, IntrArgMemOnly]>;
+def int_aarch64_ldapr64 : Intrinsic<[llvm_i64_ty], [llvm_ptr_ty],
+                                    [IntrNoFree, IntrReadMem, IntrArgMemOnly]>;
 
 def int_aarch64_sdiv : DefaultAttrsIntrinsic<[llvm_anyint_ty], [LLVMMatchType<0>,
                                 LLVMMatchType<0>], [IntrNoMem]>;
