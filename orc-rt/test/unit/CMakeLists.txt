@@ -27,11 +27,11 @@ function(add_orc_rt_unittest test_name)
 endfunction()
 
 if (ORC_RT_TARGET_POSIX)
-  set(ORC_RT_SUPPORT_TEST_SYS_SOURCES
-    support/sys/ErrnoTest.cpp
+  set(ORC_RT_SUPPORT_TEST_HOST_SOURCES
+    support/host/ErrnoTest.cpp
   )
 else()
-  set(ORC_RT_SUPPORT_TEST_SYS_SOURCES)
+  set(ORC_RT_SUPPORT_TEST_HOST_SOURCES)
 endif()
 
 # SupportTests links the Support objects and nothing else, so a new
@@ -83,22 +83,22 @@ add_orc_rt_unittest(SupportTests
   support/sps/SPSWrapperFunctionTest.cpp
   support/sps/SimplePackedSerializationTest.cpp
 
-  ${ORC_RT_SUPPORT_TEST_SYS_SOURCES}
+  ${ORC_RT_SUPPORT_TEST_HOST_SOURCES}
 
   tools/OptionParserTest.cpp
 
   LINK_LIBS orc-rt-support-objects
   )
 
-# Per-system test helpers and tests, composed the way lib/ composes its
-# per-system implementations; see the note in lib/bedrock/CMakeLists.txt. Tests
-# of a per-system implementation live under sys/<system>/, mirroring lib/. Tests
-# of portable APIs live outside sys/ and reach the system through the helpers,
+# Per-host test helpers and tests, composed the way lib/ composes its per-host
+# implementations; see the note in lib/bedrock/CMakeLists.txt. Tests of a
+# per-host implementation live under host/<system>/, mirroring lib/. Tests of
+# portable APIs live outside host/ and reach the system through the helpers,
 # so they join a system's list only once it provides the helpers, and the
 # implementation under test.
 if (APPLE)
   set(ORC_RT_BEDROCK_TEST_APPLE_SOURCES
-    bedrock/sys/darwin/StandaloneMachOUnwindInfoRegistrarTest.cpp
+    bedrock/host/darwin/StandaloneMachOUnwindInfoRegistrarTest.cpp
     )
 else()
   set(ORC_RT_BEDROCK_TEST_APPLE_SOURCES)
@@ -128,8 +128,8 @@ add_orc_rt_unittest(BedrockTests
   bedrock/sps/SessionSPSCITest.cpp
   bedrock/sps/SimpleNativeMemoryMapSPSCITest.cpp
 
-  bedrock/sys/CPUFeaturesTest.cpp
-  bedrock/sys/TargetTripleTest.cpp
+  bedrock/host/CPUFeaturesTest.cpp
+  bedrock/host/TargetTripleTest.cpp
 
   ${ORC_RT_BEDROCK_TEST_APPLE_SOURCES}
 
@@ -154,8 +154,8 @@ if (ORC_RT_TARGET_POSIX)
 
     connect-socket/sps/SimpleRemoteCAOverSocketTest.cpp
 
-    connect-socket/sys/posix/SocketConnectorTest.cpp
-    connect-socket/sys/posix/SocketTestUtils.cpp
+    connect-socket/host/posix/SocketConnectorTest.cpp
+    connect-socket/host/posix/SocketTestUtils.cpp
 
     LINK_LIBS orc-rt-connect-socket-objects orc-rt-connect-objects
               orc-rt-bedrock-objects orc-rt-support-objects
@@ -165,10 +165,10 @@ if (ORC_RT_TARGET_POSIX)
     connect-tcp/TCPConnectorTest.cpp
     connect-tcp/TCPTest.cpp
 
-    connect-tcp/sys/posix/TCPCloseOnExecTest.cpp
-    connect-tcp/sys/posix/TCPTestUtils.cpp
+    connect-tcp/host/posix/TCPCloseOnExecTest.cpp
+    connect-tcp/host/posix/TCPTestUtils.cpp
 
-    connect-socket/sys/posix/SocketTestUtils.cpp
+    connect-socket/host/posix/SocketTestUtils.cpp
 
     LINK_LIBS orc-rt-connect-tcp-objects orc-rt-connect-socket-objects
               orc-rt-connect-objects orc-rt-bedrock-objects

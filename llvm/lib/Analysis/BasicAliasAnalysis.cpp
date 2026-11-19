@@ -254,17 +254,16 @@ CaptureComponents EarliestEscapeAnalysis::getCapturesBefore(
     if (!I)
       return false;
 
-    // Handle longjmp during re-entry.
-    if (callsReturnsTwiceFn())
-      return false;
-
     if (I == CaptureInst) {
-      if (OrAt)
+      if (OrAt || !isNotInCycle(I, &DT, LI, CI))
         return false;
-      return isNotInCycle(I, &DT, LI, CI);
+    } else if (isPotentiallyReachable(CaptureInst, I, nullptr, &DT, LI, CI)) {
+      return false;
     }
 
-    return !isPotentiallyReachable(CaptureInst, I, nullptr, &DT, LI, CI);
+    // Handle longjmp during re-entry. Checked last, as it scans the whole
+    // function the first time it is queried.
+    return !callsReturnsTwiceFn();
   };
   if (IsNotCapturedBefore())
     return CaptureComponents::None;
@@ -1693,6 +1692,13 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
       }
     }
   }
+
+  // aliasCheckRecursive() only looks through GEPs, phis and selects, and
+  // otherwise only refines accesses to the same underlying object. All other
+  // pairs are MayAlias without further queries, so don't cache them.
+  if (O1 != O2 && !isa<GEPOperator, PHINode, SelectInst>(V1) &&
+      !isa<GEPOperator, PHINode, SelectInst>(V2))
+    return AliasResult::MayAlias;
 
   // If one the accesses may be before the accessed pointer, canonicalize this
   // by using unknown after-pointer sizes for both accesses. This is

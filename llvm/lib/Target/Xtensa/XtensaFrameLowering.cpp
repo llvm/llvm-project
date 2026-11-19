@@ -29,8 +29,10 @@ using namespace llvm;
 #define UNITS_PER_WORD 4
 #define MIN_FRAME_SIZE (8 * UNITS_PER_WORD)
 
+// Both the windowed and the call0 ABI keep SP 16-byte aligned at calls, so
+// outgoing argument areas have to be a multiple of 16 bytes.
 XtensaFrameLowering::XtensaFrameLowering(const XtensaSubtarget &STI)
-    : TargetFrameLowering(TargetFrameLowering::StackGrowsDown, Align(4), 0,
+    : TargetFrameLowering(TargetFrameLowering::StackGrowsDown, Align(16), 0,
                           Align(4)),
       STI(STI), TII(*STI.getInstrInfo()), TRI(STI.getRegisterInfo()) {}
 

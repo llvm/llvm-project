@@ -4970,10 +4970,6 @@ template <typename MemberTy> struct PotentialValuesState : AbstractState {
   }
 
   /// Return empty set as the best state of potential values.
-  static PotentialValuesState getBestState() {
-    return PotentialValuesState(true);
-  }
-
   static PotentialValuesState getBestState(const PotentialValuesState &PVS) {
     return PotentialValuesState(true, PVS.MaxPotentialValues);
   }
