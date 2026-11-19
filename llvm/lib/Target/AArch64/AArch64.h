@@ -72,6 +72,7 @@ FunctionPass *createFalkorHWPFFixPass();
 FunctionPass *createFalkorMarkStridedAccessesPass();
 FunctionPass *createAArch64PointerAuthPass();
 FunctionPass *createAArch64BranchTargetsPass();
+FunctionPass *createAArch64HotpatchPaddingPass();
 FunctionPass *createAArch64CodeLayoutOptPass();
 FunctionPass *createAArch64MIPeepholeOptLegacyPass();
 FunctionPass *createAArch64PostCoalescerPass();
@@ -181,6 +182,7 @@ void initializeAArch64CondBrTuningPass(PassRegistry &);
 void initializeAArch64ConditionOptimizerLegacyPass(PassRegistry &);
 void initializeAArch64ConditionalComparesLegacyPass(PassRegistry &);
 void initializeAArch64DAGToDAGISelLegacyPass(PassRegistry &);
+void initializeAArch64HotpatchPaddingLegacyPass(PassRegistry &);
 void initializeAArch64DeadRegisterDefinitionsLegacyPass(PassRegistry &);
 void initializeAArch64ExpandPseudoLegacyPass(PassRegistry &);
 void initializeAArch64LoadStoreOptLegacyPass(PassRegistry &);
@@ -253,6 +255,13 @@ public:
 
 class AArch64BranchTargetsPass
     : public OptionalPassInfoMixin<AArch64BranchTargetsPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+class AArch64HotpatchPaddingPass
+    : public RequiredPassInfoMixin<AArch64HotpatchPaddingPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

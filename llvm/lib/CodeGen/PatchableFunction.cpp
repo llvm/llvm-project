@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 
@@ -65,7 +66,10 @@ bool PatchableFunction::run(MachineFunction &MF) {
     BuildMI(FirstMBB, FirstMBB.begin(), DebugLoc(),
             TII->get(TargetOpcode::PATCHABLE_FUNCTION_ENTER));
     return true;
-  } else if (MF.getFunction().hasFnAttribute("patchable-function")) {
+  } else if (MF.getFunction().hasFnAttribute("patchable-function") &&
+             // AArch64 pads the entry block later, once no pass can delete
+             // instructions from it.
+             !MF.getTarget().getTargetTriple().isAArch64()) {
 #ifndef NDEBUG
     Attribute PatchAttr = MF.getFunction().getFnAttribute("patchable-function");
     StringRef PatchType = PatchAttr.getValueAsString();
