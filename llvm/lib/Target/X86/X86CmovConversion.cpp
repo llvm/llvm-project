@@ -542,7 +542,7 @@ bool X86CmovConversionImpl::checkForProfitableCmovCandidates(
       // Avoid CMOV instruction which value is used as a pointer to load from.
       // This is another conservative check to avoid converting CMOV instruction
       // used with tree-search like algorithm, where the branch is unpredicted.
-      auto UIs = MRI->use_instructions(MI->defs().begin()->getReg());
+      auto UIs = MRI->use_nodbg_instructions(MI->defs().begin()->getReg());
       if (hasSingleElement(UIs)) {
         unsigned Op = UIs.begin()->getOpcode();
         if (Op == X86::MOV64rm || Op == X86::MOV32rm) {
