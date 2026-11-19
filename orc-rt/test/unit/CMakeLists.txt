@@ -176,18 +176,10 @@ if (ORC_RT_TARGET_POSIX)
     )
 endif()
 
-# Build a shared library for NativeDylibManager tests.
-add_library(NativeDylibManagerTestLib SHARED
-  Inputs/NativeDylibManagerTestLib.cpp)
-set_target_properties(NativeDylibManagerTestLib PROPERTIES
-  PREFIX ""
-  DEFINE_SYMBOL ORC_RT_TEST_DLL_EXPORTS
-  FOLDER "orc-rt/Tests")
-target_compile_options(NativeDylibManagerTestLib PRIVATE
-  ${ORC_RT_COMPILE_FLAGS})
+# The shared test library, built in test/Inputs.
 target_compile_definitions(BedrockTests PRIVATE
-  "NDM_TEST_LIB_PATH=\"$<TARGET_FILE:NativeDylibManagerTestLib>\"")
-add_dependencies(BedrockTests NativeDylibManagerTestLib)
+  "ORC_RT_TEST_DYLIB_PATH=\"$<TARGET_FILE:orc-rt-test-dylib>\"")
+add_dependencies(BedrockTests orc-rt-test-dylib)
 
 # Build a shared library for RTTICrossDylibTest. It links its own copy of the
 # runtime objects, giving it a LibraryID distinct from SupportTests's, so the
