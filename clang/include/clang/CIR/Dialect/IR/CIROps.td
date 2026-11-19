@@ -10611,6 +10611,7 @@ def CIR_AtomicFetchOp : CIR_Op<"atomic.fetch", [
     CIR_AtomicFetchKindAttr:$binop,
     Arg<CIR_MemOrderAttr, "memory order">:$mem_order,
     Arg<CIR_SyncScopeKindAttr, "synchronization scope">:$sync_scope,
+    OptionalAttr<I64Attr>:$alignment,
     UnitAttr:$is_volatile,
     UnitAttr:$fetch_first
   );
@@ -10620,6 +10621,7 @@ def CIR_AtomicFetchOp : CIR_Op<"atomic.fetch", [
     `syncscope` `(` enum($sync_scope) `)`
     (`fetch_first` $fetch_first^)?
     $ptr `,` $val
+    (`align` `(` $alignment^ `)`)?
     (`volatile` $is_volatile^)?
     `:` `(` qualified(type($ptr)) `,` qualified(type($val)) `)`
     `->` type($result) attr-dict
@@ -10667,6 +10669,7 @@ def CIR_AtomicXchgOp : CIR_Op<"atomic.xchg", [
     CIR_AnyType:$val,
     Arg<CIR_MemOrderAttr, "memory order">:$mem_order,
     CIR_SyncScopeKindAttr:$sync_scope,
+    OptionalAttr<I64Attr>:$alignment,
     UnitAttr:$is_volatile
   );
 
@@ -10675,6 +10678,7 @@ def CIR_AtomicXchgOp : CIR_Op<"atomic.xchg", [
     `syncscope` `(` enum($sync_scope) `)`
     (`volatile` $is_volatile^)?
     $ptr `,` $val
+    (`align` `(` $alignment^ `)`)?
     `:` functional-type(operands, results) attr-dict
   }];
 }
