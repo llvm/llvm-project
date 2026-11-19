@@ -293,12 +293,14 @@ define amdgpu_kernel void @test_call_untouched_ptr() {
 ; AMDGCN-LABEL: define amdgpu_kernel void @test_call_untouched_ptr(
 ; AMDGCN-SAME: ) #[[ATTR2]] {
 ; AMDGCN-NEXT:    [[PTR:%.*]] = call noalias align 4 ptr addrspace(1) @get_untouched_ptr() #[[ATTR10:[0-9]+]]
-; AMDGCN-NEXT:    [[VAL:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4, !invariant.load [[META0]]
+; AMDGCN-NEXT:    [[VAL:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4{{$}}
 ; AMDGCN-NEXT:    call void @clobber(i32 [[VAL]]) #[[ATTR7]]
 ; AMDGCN-NEXT:    ret void
 ;
   %ptr = call ptr addrspace(1) @get_untouched_ptr()
   %val = load i32, ptr addrspace(1) %ptr, align 4
+  ;; readonly+noalias on a declaration does not prove LangRef lifetime
+  ;; constrainedness; do not invent !invariant.load from Assumed CONSTRAINED.
   call void @clobber(i32 %val)
   ret void
 }
