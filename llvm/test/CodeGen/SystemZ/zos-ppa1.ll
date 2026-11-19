@@ -162,7 +162,7 @@ declare i32 @other(ptr, i32)
 ; CHECK-NEXT: * Length of Name
 ; CHECK-NEXT:  DC XL2'0007'
 ; CHECK-NEXT: * Name of Function
-; CHECK-NEXT: DC CE'nonleaf'
+; CHECK-NEXT:  DC CE'nonleaf'
 ; CHECK-NEXT:  DC 3XL1'00'
 ; CHECK-NEXT:  DC A(L#EPM_nonleaf_0-L#PPA1_nonleaf_0)
 ; CHECK-NEXT:  DS 0B
