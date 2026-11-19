@@ -9,6 +9,9 @@
 // NetBSD does not support LC_COLLATE at the moment
 // XFAIL: netbsd
 
+// Bionic aliases "en_US.UTF-8" to "C.UTF-8" without localized tables.
+// XFAIL: android
+
 // <locale>
 
 // template <class charT> class collate_byname

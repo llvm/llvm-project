@@ -6,15 +6,7 @@
 #
 # ===----------------------------------------------------------------------===##
 
-from libcxx.test.dsl import (
-    Feature,
-    programSucceeds,
-    hasAnyLocale,
-    programOutput,
-    testMacros,
-    AddSubstitution,
-    compilerMacros,
-)
+from libcxx.test.dsl import Feature, programSucceeds, hasAnyLocale, programOutput, testMacros, AddSubstitution
 import re
 
 features = [
@@ -68,8 +60,7 @@ for locale, alts in _locales.items():
     features.append(
         Feature(
             name="locale.{}".format(locale),
-            when=lambda cfg, alts=alts: "__BIONIC__" not in compilerMacros(cfg)
-            and hasAnyLocale(cfg, alts),
+            when=lambda cfg, alts=alts: hasAnyLocale(cfg, alts),
             actions=lambda cfg, locale=locale, alts=alts: _getLocaleFlagsAction(
                 cfg, locale, alts, _provide_locale_conversions[locale]
             )

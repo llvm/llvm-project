@@ -13,6 +13,9 @@
 // iter_type put(iter_type s, bool intl, ios_base& f, char_type fill,
 //               long double units) const;
 
+// Bionic aliases "en_US.UTF-8" to "C.UTF-8" without localized tables.
+// XFAIL: android
+
 // REQUIRES: locale.en_US.UTF-8
 
 #include <locale>

@@ -15,6 +15,9 @@
 // REQUIRES: locale.en_US.UTF-8
 // XFAIL: no-wide-characters
 
+// Bionic aliases "en_US.UTF-8" to "C.UTF-8" without localized tables.
+// XFAIL: android
+
 #include <locale>
 #include <string>
 #include <cassert>

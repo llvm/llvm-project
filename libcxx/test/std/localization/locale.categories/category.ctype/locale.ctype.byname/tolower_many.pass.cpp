@@ -9,6 +9,9 @@
 // REQUIRES: locale.en_US.UTF-8
 // XFAIL: win32-broken-utf8-wchar-ctype
 
+// Bionic aliases "en_US.UTF-8" to "C.UTF-8" without localized tables.
+// XFAIL: android
+
 // <locale>
 
 // template <class charT> class ctype_byname;

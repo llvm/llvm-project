@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Bionic aliases "en_US.UTF-8" to "C.UTF-8" without localized tables.
+// XFAIL: android
+
 // REQUIRES: locale.en_US.UTF-8
 
 // <locale>
