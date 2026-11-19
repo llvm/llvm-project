@@ -88,6 +88,17 @@ static VPIRMetadata getMetadataOf(VPRecipeBase *R) {
   return {};
 }
 
+/// Returns true if \p R is an unmasked load of an outer-loop plan whose address
+/// is the same for all lanes. All lanes then read the same value, and a single
+/// scalar load executes where the original one did. Only valid while converting
+/// VPInstructions to recipes in reverse post-order, when the address has
+/// already been converted.
+static bool isUniformLoadInOuterLoopPlan(VPRecipeBase &R) {
+  auto *VPI = dyn_cast<VPInstruction>(&R);
+  return VPI && VPI->getOpcode() == Instruction::Load && !VPI->isMasked() &&
+         vputils::isSingleScalar(VPI->getOperand(0));
+}
+
 bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
     VPlan &Plan, const TargetLibraryInfo &TLI, PredicatedScalarEvolution &PSE,
     Loop *OuterLoop) {
@@ -122,6 +133,15 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
         auto *Phi = cast<PHINode>(PhiR->getUnderlyingValue());
         NewRecipe = new VPWidenPHIRecipe(PhiR->operands(), PhiR->getDebugLoc(),
                                          Phi->getName());
+      } else if (isUniformLoadInOuterLoopPlan(Ingredient)) {
+        // Create a single-scalar VPReplicateRecipe for uniform loads.
+        assert(cast<LoadInst>(Inst)->isSimple() &&
+               "non-simple accesses are rejected by outer-loop legality");
+        auto *VPI = cast<VPInstruction>(&Ingredient);
+        NewRecipe = new VPReplicateRecipe(Inst, VPI->getOperand(0),
+                                          /*IsSingleScalar=*/true,
+                                          /*Mask=*/nullptr, *VPI, *VPI,
+                                          VPI->getDebugLoc());
       } else if (auto *VPI = dyn_cast<VPInstruction>(&Ingredient)) {
         assert(!isa<PHINode>(Inst) && "phis should be handled above");
         // Create VPWidenMemoryRecipe for loads and stores.
