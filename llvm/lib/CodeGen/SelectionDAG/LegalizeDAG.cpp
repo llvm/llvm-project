@@ -1540,7 +1540,10 @@ SDValue SelectionDAGLegalize::ExpandInsertToVectorThroughStack(SDValue Op) {
   // Freeze the index so we don't poison the clamping code we're about to emit.
   Idx = DAG.getFreeze(Idx);
 
-  Type *PartTy = PartVT.getTypeForEVT(*DAG.getContext());
+  // INSERT_VECTOR_ELT implicitly truncates an over-width scalar, so use the
+  // vector element type as the actual store type.
+  EVT PartMemVT = PartVT.isVector() ? PartVT : VecVT.getVectorElementType();
+  Type *PartTy = PartMemVT.getTypeForEVT(*DAG.getContext());
   Align PartAlignment = DAG.getDataLayout().getPrefTypeAlign(PartTy);
 
   // Then store the inserted part.

@@ -4502,8 +4502,13 @@ define i8 @PR244552(i1 %cond) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    pli.h a0, 255
-; RV32-NEXT:    sw a0, 12(sp)
+; RV32-NEXT:    addi a1, sp, 12
+; RV32-NEXT:    andi a0, a0, 1
+; RV32-NEXT:    sh1add a0, a0, a1
+; RV32-NEXT:    pli.h a1, 255
+; RV32-NEXT:    li a2, 4
+; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sh a2, 0(a0)
 ; RV32-NEXT:    lhu a0, 14(sp)
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    .cfi_def_cfa_offset 0
@@ -4513,8 +4518,13 @@ define i8 @PR244552(i1 %cond) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -16
 ; RV64-NEXT:    .cfi_def_cfa_offset 16
-; RV64-NEXT:    pli.w a0, 255
-; RV64-NEXT:    sd a0, 8(sp)
+; RV64-NEXT:    addi a1, sp, 8
+; RV64-NEXT:    andi a0, a0, 1
+; RV64-NEXT:    sh2add a0, a0, a1
+; RV64-NEXT:    pli.w a1, 255
+; RV64-NEXT:    li a2, 4
+; RV64-NEXT:    sd a1, 8(sp)
+; RV64-NEXT:    sw a2, 0(a0)
 ; RV64-NEXT:    lwu a0, 12(sp)
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    .cfi_def_cfa_offset 0
