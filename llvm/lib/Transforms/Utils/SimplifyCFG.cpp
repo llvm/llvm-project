@@ -99,7 +99,6 @@ namespace llvm {
 
 cl::opt<bool> RequireAndPreserveDomTree(
     "simplifycfg-require-and-preserve-domtree", cl::Hidden,
-
     cl::desc(
         "Temporary development switch used to gradually uplift SimplifyCFG "
         "into preserving DomTree,"));
@@ -225,6 +224,13 @@ STATISTIC(
 STATISTIC(NumTableCmpReuses, "Number of reused switch table lookup compares");
 STATISTIC(NumFoldValueComparisonIntoPredecessors,
           "Number of value comparisons folded into predecessor basic blocks");
+STATISTIC(NumFoldValueComparisonEphemeralClones,
+          "Number of value comparison folds that cloned ephemeral instructions "
+          "into successors");
+STATISTIC(
+    NumFoldValueComparisonEphemeralInstsCloned,
+    "Number of ephemeral instructions cloned into successors when folding "
+    "value comparisons into predecessors");
 STATISTIC(NumFoldBranchToCommonDest,
           "Number of branches folded into predecessor basic block");
 STATISTIC(
@@ -1526,6 +1532,10 @@ static void cloneInstsIntoSuccessors(BasicBlock *BB,
                                                 /*InsertAtHead=*/true));
     }
   }
+
+  uint64_t NumCloned = Insts.size() * Visited.size();
+  ++NumFoldValueComparisonEphemeralClones;
+  NumFoldValueComparisonEphemeralInstsCloned += NumCloned;
 }
 
 /// The specified terminator is a value equality comparison instruction
