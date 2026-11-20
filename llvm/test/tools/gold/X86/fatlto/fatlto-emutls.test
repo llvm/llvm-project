@@ -1,0 +1,33 @@
+;; With emulated TLS a thread-local variable X is __emutls_v.X in the native
+;; code of a fat LTO object but X in its bitcode. Check that gold pulls the
+;; archive member that defines X into LTO when the bitcode refers to X.
+; REQUIRES: x86_64-linux
+
+; RUN: rm -rf %t && split-file %s %t && cd %t
+; RUN: opt -passes='fatlto-pre-link<O2>' a.ll | llc -emulated-tls --filetype=obj -o a.o
+; RUN: opt -passes='fatlto-pre-link<O2>' main.ll | llc -emulated-tls --filetype=obj -o main.o
+; RUN: llvm-ar rcs a.a a.o
+; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext -shared \
+; RUN:   --plugin-opt=save-temps -o out main.o a.a
+; RUN: FileCheck %s < out.resolution.txt
+
+; CHECK:      main.o
+; CHECK-NEXT: -r=main.o,get,px
+; CHECK-NEXT: -r=main.o,x,
+; CHECK-NEXT: a.a.llvm.{{[0-9]+}}.a.ll
+; CHECK-NEXT: -r=a.a.llvm.{{[0-9]+}}.a.ll,x,px
+
+;--- a.ll
+target triple = "x86_64-unknown-linux-gnu"
+
+@x = thread_local global i32 1, align 4
+
+;--- main.ll
+target triple = "x86_64-unknown-linux-gnu"
+
+@x = external thread_local global i32, align 4
+
+define i32 @get() {
+  %v = load i32, ptr @x, align 4
+  ret i32 %v
+}
