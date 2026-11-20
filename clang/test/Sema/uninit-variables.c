@@ -585,7 +585,9 @@ void aggregate() {
 }
 
 // These builtins never read their arguments' values. Each uses its own
-// variable because only the first use of a variable is diagnosed.
+// variable because only the first use of a variable is diagnosed, and
+// infer_alloc_token gets an expression because a bare variable is not read
+// there even when the argument is evaluated.
 int unevaluated_builtin_args(void) {
   int a, b, c;
   char *p, *q;
