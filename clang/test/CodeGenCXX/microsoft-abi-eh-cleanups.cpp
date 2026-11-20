@@ -76,7 +76,7 @@ int HasDeactivatedCleanups() {
 // WIN32:   invoke x86_thiscallcc noundef ptr @"??0A@@QAE@XZ"
 // WIN32:   store i1 false, ptr %[[isactive]]
 //
-// WIN32:   invoke noundef i32 @"?TakesTwo@@YAHUA@@0@Z"(ptr inalloca([[argmem_ty]]) %[[argmem]])
+// WIN32:   invoke noundef i32 @"?TakesTwo@@YAHUA@@0@Z"(ptr inalloca([[argmem_ty]]) align 4 %[[argmem]])
 //        Destroy the two const ref temporaries.
 // WIN32:   call x86_thiscallcc void @"??1A@@QAE@XZ"({{.*}})
 // WIN32:   call x86_thiscallcc void @"??1A@@QAE@XZ"({{.*}})

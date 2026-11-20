@@ -46,6 +46,6 @@ out:;
 // CHECK: call noundef zeroext i1 @"?cond@@YA_NXZ"()
 // CHECK: br i1
 // CHECK: br label %out
-// CHECK: call void @"?inalloca@@YAXUFoo@@0@Z"(ptr inalloca(<{ %struct.Foo, %struct.Foo }>) %{{.*}})
+// CHECK: call void @"?inalloca@@YAXUFoo@@0@Z"(ptr inalloca(<{ %struct.Foo, %struct.Foo }>) align 4 %{{.*}})
 // CHECK: call void @llvm.stackrestore.p0(ptr %inalloca.save)
 // CHECK: out:

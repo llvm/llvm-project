@@ -21,20 +21,20 @@ void usage() {
 // DARWIN-NOT: inalloca(
 // LINUX-NOT: inalloca(
 
-// WINDOWS: define dso_local noundef i32 @"?bar@@YAHUFoo@@@Z"(ptr inalloca(<{ %struct.Foo }>) %0)
+// WINDOWS: define dso_local noundef i32 @"?bar@@YAHUFoo@@@Z"(ptr inalloca(<{ %struct.Foo }>) align 4 %0)
 // WINDOWS: %[[O:[0-9a-zA-Z]+]] = getelementptr inbounds nuw <{ %struct.Foo }>, ptr %0, i32 0, i32 0
 // WINDOWS: %[[X:[0-9a-zA-Z]+]] = getelementptr inbounds nuw %struct.Foo, ptr %[[O]], i32 0, i32 0
 // WINDOWS: %[[LOAD:[0-9a-zA-Z]+]] = load i32, ptr %[[X]]
 // WINDOWS: ret i32 %[[LOAD]]
 
-// WINDOWS: define dso_local noundef i32 @"?bar@@YAHUFoo@@@Z.sse4.2"(ptr inalloca(<{ %struct.Foo }>) %0)
+// WINDOWS: define dso_local noundef i32 @"?bar@@YAHUFoo@@@Z.sse4.2"(ptr inalloca(<{ %struct.Foo }>) align 4 %0)
 // WINDOWS: %[[O:[0-9a-zA-Z]+]] = getelementptr inbounds nuw <{ %struct.Foo }>, ptr %0, i32 0, i32 0
 // WINDOWS: %[[X:[0-9a-zA-Z]+]] = getelementptr inbounds nuw %struct.Foo, ptr %[[O]], i32 0, i32 0
 // WINDOWS: %[[LOAD:[0-9a-zA-Z]+]] = load i32, ptr %[[X]]
 // WINDOWS: %[[ADD:[0-9a-zA-Z]+]] = add nsw i32 %[[LOAD]], 1
 // WINDOWS: ret i32 %[[ADD]]
 
-// WINDOWS: define dso_local noundef i32 @"?bar@@YAHUFoo@@@Z.arch_ivybridge"(ptr inalloca(<{ %struct.Foo }>) %0)
+// WINDOWS: define dso_local noundef i32 @"?bar@@YAHUFoo@@@Z.arch_ivybridge"(ptr inalloca(<{ %struct.Foo }>) align 4 %0)
 // WINDOWS: %[[O:[0-9a-zA-Z]+]] = getelementptr inbounds nuw <{ %struct.Foo }>, ptr %0, i32 0, i32 0
 // WINDOWS: %[[X:[0-9a-zA-Z]+]] = getelementptr inbounds nuw %struct.Foo, ptr %[[O]], i32 0, i32 0
 // WINDOWS: %[[LOAD:[0-9a-zA-Z]+]] = load i32, ptr %[[X]]
@@ -44,7 +44,7 @@ void usage() {
 // WINDOWS: define dso_local void @"?usage@@YAXXZ"()
 // WINDOWS: %[[F:[0-9a-zA-Z]+]] = alloca %struct.Foo
 // WINDOWS: %[[ARGMEM:[0-9a-zA-Z]+]] = alloca inalloca <{ %struct.Foo }>
-// WINDOWS: %[[CALL:[0-9a-zA-Z]+]] = call noundef i32 @"?bar@@YAHUFoo@@@Z.resolver"(ptr inalloca(<{ %struct.Foo }>) %[[ARGMEM]])
+// WINDOWS: %[[CALL:[0-9a-zA-Z]+]] = call noundef i32 @"?bar@@YAHUFoo@@@Z.resolver"(ptr inalloca(<{ %struct.Foo }>) align 4 %[[ARGMEM]])
 
 // WINDOWS: define weak_odr dso_local i32 @"?bar@@YAHUFoo@@@Z.resolver"(ptr %0)
 // WINDOWS: %[[RET:[0-9a-zA-Z]+]] = musttail call i32 @"?bar@@YAHUFoo@@@Z.arch_ivybridge"(ptr %0)

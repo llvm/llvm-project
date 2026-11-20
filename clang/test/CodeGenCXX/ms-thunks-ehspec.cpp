@@ -20,8 +20,8 @@ class C : A, B {
 };
 C c;
 
-// CHECK-LABEL: define linkonce_odr dso_local x86_thiscallcc void @"?f@C@@G3AEXUNonTrivial@@@Z"(ptr noundef %this, ptr inalloca(<{ %struct.NonTrivial }>) %0)
+// CHECK-LABEL: define linkonce_odr dso_local x86_thiscallcc void @"?f@C@@G3AEXUNonTrivial@@@Z"(ptr noundef %this, ptr inalloca(<{ %struct.NonTrivial }>) align 4 %0)
 // CHECK-NOT: invoke
-// CHECK: musttail call x86_thiscallcc void @"?f@C@@EAEXUNonTrivial@@@Z"(ptr noundef %{{.*}}, ptr inalloca(<{ %struct.NonTrivial }>) %0)
+// CHECK: musttail call x86_thiscallcc void @"?f@C@@EAEXUNonTrivial@@@Z"(ptr noundef %{{.*}}, ptr inalloca(<{ %struct.NonTrivial }>) align 4 %0)
 // CHECK-NEXT:  ret void
 

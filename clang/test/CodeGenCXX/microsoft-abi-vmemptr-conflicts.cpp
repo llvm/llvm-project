@@ -94,7 +94,7 @@ void f(C *c) {
 
 // CHECK-LABEL: define dso_local void @"?f@cdecl_inalloca@@YAXPAUC@1@@Z"(ptr noundef %c)
 // CHECK: call void @"??_9C@cdecl_inalloca@@$BA@AA"(ptr {{[^,]*}} %{{.*}})
-// CHECK: call void @"??_9C@cdecl_inalloca@@$BA@AA"(ptr inalloca(<{ ptr, %"struct.cdecl_inalloca::Big" }>) %{{.*}})
+// CHECK: call void @"??_9C@cdecl_inalloca@@$BA@AA"(ptr inalloca(<{ ptr, %"struct.cdecl_inalloca::Big" }>) align 4 %{{.*}})
 
 // CHECK-LABEL: define linkonce_odr void @"??_9C@cdecl_inalloca@@$BA@AA"(ptr noundef %this, ...) {{.*}} comdat
 // CHECK: musttail call void (ptr, ...) %{{.*}}(ptr noundef %{{.*}}, ...)
