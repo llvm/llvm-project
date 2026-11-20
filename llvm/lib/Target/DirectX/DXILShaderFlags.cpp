@@ -198,8 +198,8 @@ bool checkIfStatusIsExtracted(const IntrinsicInst &II) {
   return false;
 }
 
-/// Returns true if the instruction LOD clamp of \p II, its last argument, may
-/// clamp the LOD: it is neither a constant zero nor undef.
+/// Returns true if the LOD clamp argument of \p II is neither constant zero
+/// nor undef.
 static bool hasLODClamp(const IntrinsicInst &II) {
   const Value *Clamp = II.getArgOperand(II.arg_size() - 1);
   if (const auto *C = dyn_cast<ConstantFP>(Clamp))
