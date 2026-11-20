@@ -15,7 +15,13 @@ namespace llvm::omp::target {
 
 /// Constants of the AMDGPU backend.
 struct AMDGPUConfig final : BackendConfig {
-  AMDGPUConfig() { DefaultGenericSPMDTeamsPerCU = 6; }
+  AMDGPUConfig() {
+    DefaultGenericSPMDTeamsPerCU = 6;
+    // Scalar reductions with many iterations prefer more waves, ones with
+    // fewer iterations or more memory traffic prefer less waves. 16 waves were
+    // never far from the best.
+    DefaultXTeamReductionWavesPerCU = 16;
+  }
 
   interop_spec_t
   selectInteropPreference(int32_t InteropType, int32_t NumPrefers,

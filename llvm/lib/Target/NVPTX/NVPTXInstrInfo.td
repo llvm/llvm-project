@@ -267,7 +267,7 @@ def hasFP16X2ToNarrowFPConversionSupport
   : PredAnd<[PTX91, PredOr<[SM100f, SM110f, SM120f]>]>;
 
 def hasS2F6X2ConversionSupport
-  : PredAnd<[PTX91, PredOr<[SM100a, SM103a, SM110a, SM120a, SM121a]>]>;
+  : PredAnd<[PTX91, PredOr<[SM100a, SM103a, SM107a, SM110a, SM120a, SM121a]>]>;
 
 // Checks support for conversions from narrow FP types to bf16x2.
 def hasNarrowFPToBF16x2ConversionSupport
@@ -999,7 +999,7 @@ def : Pat<(v2f16 (build_vector (f16 (fpround_oneuse f32:$lo)),
 // TODO: Missing slct
 
 multiclass SELP_PATTERN<string TypeStr, RegTyInfo t> {
-  let hasSideEffects = false, isSelect = 1 in
+  let hasSideEffects = false in
   def NAME : BasicNVPTXInst<(outs t.RC:$dst),
                 (ins t.RegOrImm:$a, t.RegOrImm:$b, B1Op:$p), "selp." # TypeStr>;
   def : Pat<(t.Ty (select i1:$p, t.Ty:$a, t.Ty:$b)),
@@ -1602,7 +1602,7 @@ def cond2cc : SDNodeXForm<cond, [{
 multiclass FSETP<RegTyInfo t, bit allow_ftz = true, list<Predicate> preds = []> {
   defvar ftz_str = !if(allow_ftz, "$ftz", "");
   defvar flags = !con((ins CmpMode:$cmp), !if(allow_ftz, (ins FTZFlagFor<t>.ret:$ftz), (ins)));
-  let hasSideEffects = false, isCompare = 1, isCommutable = 1 in
+  let hasSideEffects = false, isCompare = 1 in
     def NAME : BasicFlagsNVPTXInst<(outs B1:$dst), (ins t.SrcOp:$a, t.SrcOp:$b), flags,
         "setp.${cmp:FCmp}" # ftz_str # "." # t.PtxType>;
   def : Pat<(i1 (setcc t.Ty:$a, t.Ty:$b, cond:$cc)),
@@ -1610,7 +1610,7 @@ multiclass FSETP<RegTyInfo t, bit allow_ftz = true, list<Predicate> preds = []> 
 }
 
 multiclass ISETP<RegTyInfo t> {
-  let isCompare = 1, isCommutable = 1 in
+  let isCompare = 1 in
     def NAME : BasicFlagsNVPTXInst<(outs B1:$dst),
         (ins t.RegOrImm:$a, t.RegOrImm:$b), (ins CmpMode:$cmp),
         "setp.${cmp:ICmp}.${cmp:IType}" # t.Size>;

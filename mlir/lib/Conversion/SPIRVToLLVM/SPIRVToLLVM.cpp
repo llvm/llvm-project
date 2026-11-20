@@ -538,6 +538,94 @@ public:
   }
 };
 
+/// Returns true if `createCompositeConstant` can materialize `value`.
+static bool isSupportedCompositeValue(Attribute value) {
+  if (auto arrayAttr = dyn_cast<ArrayAttr>(value))
+    return llvm::all_of(arrayAttr, isSupportedCompositeValue);
+  return isa<IntegerAttr, FloatAttr, DenseElementsAttr, spirv::NullAttr>(value);
+}
+
+/// Requires `srcType` to convert to an LLVM type.
+static Value createCompositeConstant(Location loc, Attribute value,
+                                     Type srcType,
+                                     const TypeConverter &converter,
+                                     PatternRewriter &rewriter) {
+  Type dstType = converter.convertType(srcType);
+  auto arrayAttr = dyn_cast<ArrayAttr>(value);
+  // Poison would leave the only value of an empty struct undefined.
+  if (isa<spirv::NullAttr>(value) || (arrayAttr && arrayAttr.empty()))
+    return LLVM::ZeroOp::create(rewriter, loc, dstType);
+  if (auto intAttr = dyn_cast<IntegerAttr>(value))
+    return LLVM::ConstantOp::create(rewriter, loc, dstType, intAttr.getValue());
+  if (isa<FloatAttr>(value))
+    return LLVM::ConstantOp::create(rewriter, loc, dstType, value);
+
+  auto arrayType = dyn_cast<spirv::ArrayType>(srcType);
+  if (arrayAttr && arrayType && arrayType.getElementType().isIntOrFloat())
+    value = DenseElementsAttr::get(
+        RankedTensorType::get({arrayType.getNumElements()},
+                              arrayType.getElementType()),
+        arrayAttr.getValue());
+
+  if (auto denseAttr = dyn_cast<DenseElementsAttr>(value)) {
+    // LLVM expects signless integers and the shape of nested LLVM arrays.
+    // Floats keep their type even if it lowers to an integer, e.g. f8.
+    ShapedType shapedType = dyn_cast<VectorType>(dstType);
+    if (!shapedType) {
+      SmallVector<int64_t> shape;
+      Type elementType = dstType;
+      while (auto llvmArrayType = dyn_cast<LLVM::LLVMArrayType>(elementType)) {
+        shape.push_back(llvmArrayType.getNumElements());
+        elementType = llvmArrayType.getElementType();
+      }
+      shapedType = RankedTensorType::get(shape, elementType);
+    }
+    if (isa<FloatType>(denseAttr.getElementType()))
+      shapedType = shapedType.clone(denseAttr.getElementType());
+    else if (denseAttr.getElementType() != shapedType.getElementType())
+      denseAttr = cast<DenseIntElementsAttr>(denseAttr).mapValues(
+          shapedType.getElementType(), [](const APInt &v) { return v; });
+    return LLVM::ConstantOp::create(rewriter, loc, dstType,
+                                    denseAttr.reshape(shapedType));
+  }
+
+  auto compositeType = cast<spirv::CompositeType>(srcType);
+  Value result = LLVM::PoisonOp::create(rewriter, loc, dstType);
+  for (auto [idx, element] : llvm::enumerate(arrayAttr)) {
+    Value elementValue = createCompositeConstant(
+        loc, element, compositeType.getElementType(idx), converter, rewriter);
+    result =
+        LLVM::InsertValueOp::create(rewriter, loc, result, elementValue, idx);
+  }
+  return result;
+}
+
+/// Converts SPIR-V ConstantOp with array or struct type.
+class ConstantCompositePattern
+    : public SPIRVToLLVMConversion<spirv::ConstantOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::ConstantOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::ConstantOp constOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type srcType = constOp.getType();
+    Attribute value = constOp.getValue();
+    if (!isa<spirv::ArrayType, spirv::StructType>(srcType) ||
+        isa<spirv::NullAttr>(value))
+      return failure();
+    if (!getTypeConverter()->convertType(srcType))
+      return rewriter.notifyMatchFailure(constOp, "type conversion failed");
+    if (!isSupportedCompositeValue(value))
+      return rewriter.notifyMatchFailure(constOp, "unsupported value");
+
+    rewriter.replaceOp(constOp,
+                       createCompositeConstant(constOp.getLoc(), value, srcType,
+                                               *getTypeConverter(), rewriter));
+    return success();
+  }
+};
+
 class BitFieldSExtractPattern
     : public SPIRVToLLVMConversion<spirv::BitFieldSExtractOp> {
 public:
@@ -2279,11 +2367,8 @@ public:
   matchAndRewrite(spirv::VariableOp varOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto srcType = varOp.getType();
-    // Initialization is supported for scalars and vectors only.
     auto pointerTo = cast<spirv::PointerType>(srcType).getPointeeType();
     auto init = varOp.getInitializer();
-    if (init && !pointerTo.isIntOrFloat() && !isa<VectorType>(pointerTo))
-      return failure();
 
     auto dstType = getTypeConverter()->convertType(srcType);
     if (!dstType)
@@ -2424,13 +2509,19 @@ public:
   LogicalResult
   matchAndRewrite(spirv::ModuleOp spvModuleOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-
-    auto newModuleOp =
-        ModuleOp::create(rewriter, spvModuleOp.getLoc(), spvModuleOp.getName());
-    rewriter.inlineRegionBefore(spvModuleOp.getRegion(), newModuleOp.getBody());
-
-    // Remove the terminator block that was automatically added by builder
-    rewriter.eraseBlock(&newModuleOp.getBodyRegion().back());
+    // Create the module with an empty body region instead of using
+    // ModuleOp::create, which adds a body block that would have to be erased.
+    // If the conversion is rolled back, such a block is unlinked from the new
+    // op but never deleted.
+    OperationState state(spvModuleOp.getLoc(), ModuleOp::getOperationName());
+    if (std::optional<StringRef> name = spvModuleOp.getName())
+      state.addAttribute(SymbolTable::getSymbolAttrName(),
+                         rewriter.getStringAttr(*name));
+    state.addRegion();
+    auto newModuleOp = cast<ModuleOp>(rewriter.create(state));
+    rewriter.inlineRegionBefore(spvModuleOp.getRegion(),
+                                newModuleOp.getBodyRegion(),
+                                newModuleOp.getBodyRegion().end());
     rewriter.eraseOp(spvModuleOp);
     return success();
   }
@@ -2600,7 +2691,7 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       IComparePattern<spirv::ULessThanOp, LLVM::ICmpPredicate::ult>,
 
       // Constant op
-      ConstantScalarAndVectorPattern,
+      ConstantCompositePattern, ConstantScalarAndVectorPattern,
 
       // Control Flow ops
       BranchConversionPattern, BranchConditionalConversionPattern,
