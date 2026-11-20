@@ -13,17 +13,17 @@
 #include "sanitizer_platform.h"
 #if SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD || \
     SANITIZER_SOLARIS || SANITIZER_HAIKU
-#include "sanitizer_common.h"
-#include "sanitizer_stacktrace.h"
+#  include "sanitizer_common.h"
+#  include "sanitizer_stacktrace.h"
 
-#if SANITIZER_ANDROID
-#include <dlfcn.h>  // for dlopen()
-#endif
+#  if SANITIZER_ANDROID
+#    include <dlfcn.h>  // for dlopen()
+#  endif
 
-#if SANITIZER_FREEBSD
-#define _GNU_SOURCE  // to declare _Unwind_Backtrace() from <unwind.h>
-#endif
-#include <unwind.h>
+#  if SANITIZER_FREEBSD
+#    define _GNU_SOURCE  // to declare _Unwind_Backtrace() from <unwind.h>
+#  endif
+#  include <unwind.h>
 
 namespace __sanitizer {
 
@@ -46,28 +46,28 @@ typedef sptr (*unwind_backtrace_signal_arch_func)(
 acquire_my_map_info_list_func acquire_my_map_info_list;
 release_my_map_info_list_func release_my_map_info_list;
 unwind_backtrace_signal_arch_func unwind_backtrace_signal_arch;
-} // extern "C"
+}  // extern "C"
 
-#if defined(__arm__) && !SANITIZER_NETBSD
+#  if defined(__arm__) && !SANITIZER_NETBSD
 // NetBSD uses dwarf EH
-#define UNWIND_STOP _URC_END_OF_STACK
-#define UNWIND_CONTINUE _URC_NO_REASON
-#else
-#define UNWIND_STOP _URC_NORMAL_STOP
-#define UNWIND_CONTINUE _URC_NO_REASON
-#endif
+#    define UNWIND_STOP _URC_END_OF_STACK
+#    define UNWIND_CONTINUE _URC_NO_REASON
+#  else
+#    define UNWIND_STOP _URC_NORMAL_STOP
+#    define UNWIND_CONTINUE _URC_NO_REASON
+#  endif
 
 uptr Unwind_GetIP(struct _Unwind_Context *ctx) {
-#if defined(__arm__) && !SANITIZER_APPLE
+#  if defined(__arm__) && !SANITIZER_APPLE
   uptr val;
-  _Unwind_VRS_Result res = _Unwind_VRS_Get(ctx, _UVRSC_CORE,
-      15 /* r15 = PC */, _UVRSD_UINT32, &val);
+  _Unwind_VRS_Result res =
+      _Unwind_VRS_Get(ctx, _UVRSC_CORE, 15 /* r15 = PC */, _UVRSD_UINT32, &val);
   CHECK(res == _UVRSR_OK && "_Unwind_VRS_Get failed");
   // Clear the Thumb bit.
   return val & ~(uptr)1;
-#else
+#  else
   return (uptr)_Unwind_GetIP(ctx);
-#endif
+#  endif
 }
 
 struct UnwindTraceArg {
@@ -76,16 +76,18 @@ struct UnwindTraceArg {
 };
 
 _Unwind_Reason_Code Unwind_Trace(struct _Unwind_Context *ctx, void *param) {
-  UnwindTraceArg *arg = (UnwindTraceArg*)param;
+  UnwindTraceArg *arg = (UnwindTraceArg *)param;
   CHECK_LT(arg->stack->size, arg->max_depth);
   uptr pc = Unwind_GetIP(ctx);
   const uptr kPageSize = GetPageSizeCached();
   // Let's assume that any pointer in the 0th page (i.e. <0x1000 on i386 and
   // x86_64) is invalid and stop unwinding here.  If we're adding support for
   // a platform where this isn't true, we need to reconsider this check.
-  if (pc < kPageSize) return UNWIND_STOP;
+  if (pc < kPageSize)
+    return UNWIND_STOP;
   arg->stack->trace_buffer[arg->stack->size++] = pc;
-  if (arg->stack->size == arg->max_depth) return UNWIND_STOP;
+  if (arg->stack->size == arg->max_depth)
+    return UNWIND_STOP;
   return UNWIND_CONTINUE;
 }
 
@@ -122,11 +124,12 @@ void BufferedStackTrace::UnwindSlow(uptr pc, void *context, u32 max_depth) {
   CHECK(map);
   InternalMmapVector<backtrace_frame_t> frames(kStackTraceMax);
   // siginfo argument appears to be unused.
-  sptr res = unwind_backtrace_signal_arch(/* siginfo */ 0, context, map,
-                                          frames.data(),
-                                          /* ignore_depth */ 0, max_depth);
+  sptr res =
+      unwind_backtrace_signal_arch(/* siginfo */ 0, context, map, frames.data(),
+                                   /* ignore_depth */ 0, max_depth);
   release_my_map_info_list(map);
-  if (res < 0) return;
+  if (res < 0)
+    return;
   CHECK_LE((uptr)res, kStackTraceMax);
 
   size = 0;
