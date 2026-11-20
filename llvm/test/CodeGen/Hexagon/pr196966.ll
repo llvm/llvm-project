@@ -46,11 +46,9 @@ define void @pr196966(ptr %base) {
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     p0 = bitsclr(r0,#4)
 ; CHECK-NEXT:     if (p0.new) jump:t .LBB0_3
+; CHECK-NEXT:     if (!p0.new) r7:6 = memd(r29+#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:  // %bb.2: // %cond.store3
-; CHECK-NEXT:    {
-; CHECK-NEXT:     r7:6 = memd(r29+#0)
-; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r7:6 = extractu(r7:6,#16,#32)
 ; CHECK-NEXT:    }

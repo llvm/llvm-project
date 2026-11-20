@@ -75,12 +75,12 @@ define i64 @fptoui.sat.i64.f64(double %x) {
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     p2 = dfcmp.uo(r1:0,r5:4)
+; CHECK-NEXT:     r3 = mux(p0,r6,r9)
+; CHECK-NEXT:     r2 = mux(p0,r6,r8)
 ; CHECK-NEXT:     r1 = #-1
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     p1 = and(p1,!p2)
-; CHECK-NEXT:     r2 = mux(p0,r6,r8)
-; CHECK-NEXT:     r3 = mux(p0,r6,r9)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r0 = mux(p1,r1,r2)
@@ -126,14 +126,14 @@ define i32 @fptosi.sat.i32.f32(float %x) {
 ; CHECK-NEXT:     p1 = sfcmp.gt(r2,r0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
+; CHECK-NEXT:     p0 = sfcmp.uo(r0,r3)
 ; CHECK-NEXT:     p2 = sfcmp.uo(r2,r0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     p1 = or(p2,p1)
-; CHECK-NEXT:     p0 = sfcmp.uo(r0,r3)
+; CHECK-NEXT:     p2 = sfcmp.gt(r0,r3)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     p2 = sfcmp.gt(r0,r3)
 ; CHECK-NEXT:     p1 = sfcmp.uo(r0,r0)
 ; CHECK-NEXT:     if (p1) r1 = ##-2147483648
 ; CHECK-NEXT:    }

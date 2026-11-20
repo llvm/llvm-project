@@ -2,11 +2,11 @@
 ; Check that extract-element is handled.
 
 ; CHECK-LABEL: ext_00:
-; CHECK:     r[[R000:[0-9]+]] = and(r0,#3)
-; CHECK:     r[[R001:[0-9]+]] = vextract(v0,r0)
-; CHECK-DAG: r[[R002:[0-9]+]] = asl(r[[R000]],#3)
-; CHECK-DAG: r[[R003:[0-9]+]] = #8
-; CHECK:                   r0 = extractu(r[[R001]],r[[R003]]:[[R002]])
+; CHECK-DAG: r[[R000:[0-9]+]] = and(r0,#3)
+; CHECK-DAG: r[[R001:[0-9]+]] = #8
+; CHECK-DAG: r[[R002:[0-9]+]] = vextract(v0,r0)
+; CHECK:     r[[R003:[0-9]+]] = asl(r[[R000]],#3)
+; CHECK:                   r0 = extractu(r[[R002]],r[[R001]]:[[R003]])
 define i8 @ext_00(<64 x i8> %a0, i32 %a1) #0 {
 b2:
   %v3 = extractelement <64 x i8> %a0, i32 %a1
@@ -14,11 +14,11 @@ b2:
 }
 
 ; CHECK-LABEL: ext_10:
-; CHECK:     r[[R100:[0-9]+]] = and(r0,#3)
-; CHECK:     r[[R101:[0-9]+]] = vextract(v0,r0)
-; CHECK-DAG: r[[R102:[0-9]+]] = asl(r[[R100]],#3)
-; CHECK-DAG: r[[R103:[0-9]+]] = #8
-; CHECK:                   r0 = extractu(r[[R101]],r[[R103]]:[[R102]])
+; CHECK-DAG: r[[R100:[0-9]+]] = and(r0,#3)
+; CHECK-DAG: r[[R101:[0-9]+]] = #8
+; CHECK-DAG: r[[R102:[0-9]+]] = vextract(v0,r0)
+; CHECK:     r[[R103:[0-9]+]] = asl(r[[R100]],#3)
+; CHECK:                   r0 = extractu(r[[R102]],r[[R101]]:[[R103]])
 define i8 @ext_10(<128 x i8> %a0, i32 %a1) #1 {
 b2:
   %v3 = extractelement <128 x i8> %a0, i32 %a1

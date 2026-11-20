@@ -219,6 +219,7 @@ LLVMInitializeHexagonTarget() {
   initializeHexagonGenMemAbsolutePass(PR);
   initializeHexagonGenMuxPass(PR);
   initializeHexagonGlobalSchedulerPass(PR);
+  initializeHexagonGlobalSchedulerV2Pass(PR);
   initializeHLXExpandPseudosPass(PR);
   initializeHexagonLiveVariablesPass(PR);
   initializeHexagonHardwareLoopsPass(PR);
@@ -602,6 +603,7 @@ void HexagonPassConfig::addPreEmitPass() {
 
   if (!NoOpt) {
     // Global pull-up scheduler
+    addPass(createHexagonGlobalSchedulerV2());
     addPass(createHexagonGlobalScheduler());
 
     addPass(createHexagonLoopAlign());

@@ -124,11 +124,11 @@ define float @fast_div_f32(float %x, float %y) {
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r1 = sffixupd(r0,r1)
 ; CHECK-NEXT:     r6 = ##1065353216
+; CHECK-NEXT:     r3 = r2
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r5 -= sfmpy(r1,r4):lib
 ; CHECK-NEXT:     r0 = and(r2,##-2147483648)
-; CHECK-NEXT:     r3 = r2
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r4 += sfmpy(r5,r4):lib

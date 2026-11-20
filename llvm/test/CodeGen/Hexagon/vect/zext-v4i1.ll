@@ -11,12 +11,10 @@ define i32 @fred(ptr %a0, i32 %cond) #0 {
 ; CHECK:       // %bb.0: // %b0
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     p0 = cmp.eq(r1,#5); if (!p0.new) jump:t .LBB0_2
+; CHECK-NEXT:     r3:2 = combine(#0,#0)
+; CHECK-NEXT:     if (p0.new) r1:0 = memd(r0+#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:  // %bb.1: // %b2
-; CHECK-NEXT:    {
-; CHECK-NEXT:     r3:2 = combine(#0,#0)
-; CHECK-NEXT:     r1:0 = memd(r0+#0)
-; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     p0 = vcmph.eq(r1:0,r3:2)
 ; CHECK-NEXT:    }

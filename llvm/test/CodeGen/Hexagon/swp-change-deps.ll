@@ -4,8 +4,8 @@
 ; after removing dependences on a post-increment instructions of the
 ; base register.
 
-; CHECK: memh([[REG0:(r[0-9]+)]]+#0)
-; CHECK: memh([[REG0]]+#2)
+; CHECK-DAG: memh([[REG0:(r[0-9]+)]]+#0)
+; CHECK-DAG: memh([[REG0]]+#2)
 ; CHECK: loop0
 
 ; Function Attrs: nounwind readnone

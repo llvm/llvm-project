@@ -17,8 +17,8 @@
 ; CHECK-DAG: cfi_offset r17
 ; CHECK-DAG: cfi_offset r18
 ; CHECK-DAG: cfi_offset r19
-; CHECK: memd(r29+{{.*}}) = r17:16
-; CHECK: memd(r29+{{.*}}) = r19:18
+; CHECK-DAG: memd(r29+{{.*}}) = r17:16
+; CHECK-DAG: memd(r29+{{.*}}) = r19:18
 
 %s.0 = type { i32 }
 

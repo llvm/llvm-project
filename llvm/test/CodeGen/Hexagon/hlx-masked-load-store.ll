@@ -20,11 +20,10 @@ define void @masked_load(ptr %p, ptr %q, ptr %m) {
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     L0.h = mux(L0.h,L2.h,L1.h)
+; CHECK-NEXT:     mem(r1) = L0.new
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     L0.h = L0.h
 ; CHECK-NEXT:     jumpr r31
-; CHECK-NEXT:     mem(r1) = L0.new
 ; CHECK-NEXT:    }
   %v = load <1024 x i16>, ptr %m, align 2048
   %c = icmp slt <1024 x i16> %v, zeroinitializer
@@ -48,16 +47,12 @@ define void @masked_store(ptr %p, ptr %q, ptr %m) {
 ; CHECK-NEXT:     L2.tmp = mem(r0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     L15.h = L15.h
-; CHECK-NEXT:     L15.tmp = mem(r1)
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
 ; CHECK-NEXT:     L2.h = mux(L2.h,L15.h,L0.h)
+; CHECK-NEXT:     L15.tmp = mem(r1)
+; CHECK-NEXT:     mem(r0) = L2.new
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     L2.h = L2.h
 ; CHECK-NEXT:     jumpr r31
-; CHECK-NEXT:     mem(r0) = L2.new
 ; CHECK-NEXT:    }
   %v = load <1024 x i16>, ptr %m, align 2048
   %c = icmp slt <1024 x i16> %v, zeroinitializer
