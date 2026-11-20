@@ -989,3 +989,16 @@ define <2 x i32> @abs_unary_shuffle_ops(<2 x i32> %x) {
   %r = call <2 x i32> @llvm.abs(<2 x i32> %a, i1 false)
   ret <2 x i32> %r
 }
+
+define i32 @test_arbitrary_cmp(i32 %A, i1 %cmp) {
+; CHECK-LABEL: @test_arbitrary_cmp(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 0, [[A:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = select i1 [[CMP:%.*]], i32 [[TMP1]], i32 [[A]]
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+  %sext = sext i1 %cmp to i32
+  %xor = xor i32 %A, %sext
+  %zext = zext i1 %cmp to i32
+  %add = add i32 %xor, %zext
+  ret i32 %add
+}
