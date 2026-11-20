@@ -13,6 +13,7 @@
 
 #include "mlir/Dialect/OpenMP/Transforms/Passes.h"
 
+#include "mlir/Dialect/LLVMIR/LLVMConstantOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMModuleOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMTerminatorOps.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
@@ -34,7 +35,16 @@ using namespace mlir;
 /// This function identifies the operations that need this special handling.
 /// This includes cast-style operations to avoid losing information about the
 /// original source of an operand.
+///
+/// Poison and undef values are excluded. They stand for host values that are
+/// not known in the device module, such as results of host-only calls removed
+/// by function filtering, so they must be replaced by placeholders. Otherwise,
+/// a poison \c var_ptr would reach the kernel, since constants cannot be
+/// rewired to kernel arguments by target device codegen.
 static bool keepHostOpInDevice(Operation &op) {
+  if (isa<LLVM::PoisonOp, LLVM::UndefOp>(op))
+    return false;
+
   return isPure(&op) &&
          op.getDialect() ==
              op.getContext()->getLoadedDialect<LLVM::LLVMDialect>();
@@ -141,9 +151,9 @@ private:
   ///     - Values defined by block arguments are replaced by placeholders only
   ///       if they are not attached to the parent function. In that case, they
   ///       are passed unmodified.
-  ///     - Pure operations of the LLVM dialect are maintained, and any value
-  ///       operands they might have are also replaced by placeholders following
-  ///       the same rules.
+  ///     - Pure operations of the LLVM dialect, other than poison and undef,
+  ///       are maintained, and any value operands they might have are also
+  ///       replaced by placeholders following the same rules.
   ///     - Other values are replaced by new function arguments.
   ///   - \c omp.map.info operations associated to these target regions are
   ///     preserved. These are moved above all \c omp.target and sorted to
