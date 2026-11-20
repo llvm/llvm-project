@@ -307,36 +307,21 @@ void TextOutputSection::finalize() {
     if (!hasCallsite)
       continue;
 
-    auto processBranch = [&](Relocation &r) {
+    // Process relocs by ascending address, i.e., ascending offset within isec.
+    // parseRelocations() ensures they are in descending order.
+    assert(is_sorted(isec->relocs, [](Relocation &a, Relocation &b) {
+      return a.offset > b.offset;
+    }));
+    for (Relocation &r : reverse(isec->relocs)) {
       if (!target->hasAttr(r.type, RelocAttrBits::BRANCH))
-        return;
+        continue;
       if (isTargetKnownInRange(*isec, r))
-        return;
+        continue;
       if (auto *thunk = findThunkInRange(*isec, r)) {
         deferredBranchRedirects.emplace_back(isec, &r, thunk);
-        return;
+        continue;
       }
       branchesToProcess.emplace_back(isec, &r);
-    };
-    // Process relocs by ascending address, i.e., ascending offset within isec.
-    // Relocations in object files produced by `ld -r` are not in
-    // descending order.
-    auto byDescendingOffset = [](const Relocation *a, const Relocation *b) {
-      return a->offset > b->offset;
-    };
-    assert(!isec->relocsDescending ||
-           is_sorted(make_pointer_range(isec->relocs), byDescendingOffset));
-    if (isec->relocsDescending) {
-      for (auto &r : reverse(isec->relocs))
-        processBranch(r);
-    } else {
-      SmallVector<Relocation *, 0> sorted;
-      sorted.reserve(isec->relocs.size());
-      for (auto &r : isec->relocs)
-        sorted.push_back(&r);
-      llvm::stable_sort(sorted, byDescendingOffset);
-      for (auto *r : reverse(sorted))
-        processBranch(*r);
     }
   }
 

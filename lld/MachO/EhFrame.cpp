@@ -136,6 +136,5 @@ void EhRelocator::makeNegativePcRel(
 }
 
 void EhRelocator::commit() {
-  for (const auto &r : newRelocs)
-    isec->addReloc(r);
+  isec->relocs.insert(isec->relocs.end(), newRelocs.begin(), newRelocs.end());
 }

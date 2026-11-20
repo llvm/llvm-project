@@ -570,6 +570,8 @@ void ObjFile::parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
 
   Subsections &subsections = section.subsections;
   auto subsecIt = subsections.rbegin();
+  bool descending = true;
+  uint32_t prevOffset = UINT32_MAX;
   for (size_t i = 0; i < relInfos.size(); i++) {
     // Paired relocations serve as Mach-O's method for attaching a
     // supplemental datum to a primary relocation record. ELF does not
@@ -658,20 +660,24 @@ void ObjFile::parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
     // relocations in order, so let's take advantage of it. However, ld64 emits
     // unsorted relocations (in `-r` mode), so we have a fallback for that
     // uncommon case.
+    if (r.offset > prevOffset)
+      descending = false;
+    prevOffset = r.offset;
     InputSection *subsec;
-    while (subsecIt != subsections.rend() && subsecIt->offset > r.offset)
+    while (descending && subsecIt != subsections.rend() &&
+           subsecIt->offset > r.offset)
       ++subsecIt;
-    if (subsecIt == subsections.rend() ||
+    if (!descending || subsecIt == subsections.rend() ||
         subsecIt->offset + subsecIt->isec->getSize() <= r.offset) {
       subsec = findContainingSubsection(section, &r.offset);
       // Now that we know the relocs are unsorted, avoid trying the 'fast path'
       // for the other relocations.
-      subsecIt = subsections.rend();
+      descending = false;
     } else {
       subsec = subsecIt->isec;
       r.offset -= subsecIt->offset;
     }
-    subsec->addReloc(r);
+    subsec->relocs.push_back(r);
 
     if (isSubtrahend) {
       relocation_info minuendInfo = relInfos[++i];
@@ -694,9 +700,17 @@ void ObjFile::parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
             *sections[minuendInfo.r_symbolnum - 1], &referentOffset);
         p.setAddend(referentOffset);
       }
-      subsec->addReloc(p);
+      subsec->relocs.push_back(p);
     }
   }
+  // The branch extension algorithm relies on the descending order compilers
+  // emit, which relocations in object files produced by `ld -r` do not follow.
+  if (!descending)
+    for (const Subsection &subsection : subsections)
+      llvm::stable_sort(subsection.isec->relocs,
+                        [](const Relocation &a, const Relocation &b) {
+                          return a.offset > b.offset;
+                        });
 }
 
 // ld64 never turns these labels into named atoms or symbol table entries.

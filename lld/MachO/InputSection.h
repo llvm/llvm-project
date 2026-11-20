@@ -60,12 +60,6 @@ public:
   std::string getSourceLocation(uint64_t off) const;
   // Return the relocation at \p off, if it exists. This does a linear search.
   const Relocation *getRelocAt(uint32_t off) const;
-  // Append \p r, keeping relocsDescending up to date.
-  void addReloc(const Relocation &r) {
-    relocsDescending = relocs.empty() ||
-                       (relocsDescending && r.offset <= relocs.back().offset);
-    relocs.push_back(r);
-  }
   // Whether the data at \p off in this InputSection is live. isLive() and
   // markLive() are safe to call from several threads at once.
   virtual bool isLive(uint64_t off) const = 0;
@@ -77,12 +71,12 @@ protected:
   InputSection(Kind kind, const Section &section, ArrayRef<uint8_t> data,
                uint32_t align)
       : sectionKind(kind), keepUnique(false), hasAltEntry(false), isCold(false),
-        relocsDescending(false), align(align), data(data), section(section) {}
+        align(align), data(data), section(section) {}
 
   InputSection(const InputSection &rhs)
       : sectionKind(rhs.sectionKind), keepUnique(false), hasAltEntry(false),
-        isCold(rhs.isCold), relocsDescending(false), align(rhs.align),
-        data(rhs.data), section(rhs.section) {}
+        isCold(rhs.isCold), align(rhs.align), data(rhs.data),
+        section(rhs.section) {}
 
   Kind sectionKind;
 
@@ -103,9 +97,6 @@ public:
   // --bp-compression-sort), this flag is unset so that the priority-based
   // ordering takes precedence over cold partitioning.
   bool isCold : 1;
-  // Whether relocs are in descending order of offset, the order compilers
-  // emit them in.
-  bool relocsDescending : 1;
   uint32_t align = 1;
 
   OutputSection *parent = nullptr;
