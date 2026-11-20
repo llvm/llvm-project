@@ -2447,19 +2447,28 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
     if (getLangOpts().MicrosoftExt)
       DiagnoseAndSkipExtendedMicrosoftTypeAttributes();
 
+    // As for the first declarator, a function's parameters' late-parsed
+    // attributes are parsed once the function is declared.
+    D.setDeclarationLateAttrs(&LateParsedAttrs);
     ParseDeclarator(D);
 
     if (getLangOpts().HLSL)
       MaybeParseHLSLAnnotations(D);
 
-    if (!D.isInvalidType()) {
+    bool Declared = !D.isInvalidType();
+    Decl *ThisDecl = nullptr;
+    if (Declared) {
       // C++2a [dcl.decl]p1
       //    init-declarator:
       //	      declarator initializer[opt]
       //        declarator requires-clause
       if (Tok.is(tok::kw_requires))
         ParseTrailingRequiresClauseWithScope(D);
-      Decl *ThisDecl = ParseDeclarationAfterDeclarator(D, TemplateInfo);
+      ThisDecl = ParseDeclarationAfterDeclarator(D, TemplateInfo);
+    }
+    if (LateParsedAttrs.size() > 0)
+      ParseLexedAttributeList(LateParsedAttrs, ThisDecl, true, false);
+    if (Declared) {
       D.complete(ThisDecl);
       if (ThisDecl)
         DeclsInGroup.push_back(ThisDecl);

@@ -3393,7 +3393,8 @@ bool Sema::SubstParmTypes(
     SmallVectorImpl<QualType> &ParamTypes,
     SmallVectorImpl<ParmVarDecl *> *OutParams,
     ExtParameterInfoBuilder &ParamInfos, const QualType *OldParamTypes,
-    bool EvaluateConstraints) {
+    bool EvaluateConstraints, const FunctionDecl *Fn,
+    LateInstantiatedAttrVec *ParamAttrs) {
   // If there is a parameter with no ParmVarDecl to substitute, its type needs
   // to come from OldParamTypes instead.
   assert((OldParamTypes || !llvm::is_contained(Params, nullptr)) &&
@@ -3401,6 +3402,7 @@ bool Sema::SubstParmTypes(
   TemplateInstantiator Instantiator(*this, TemplateArgs, Loc,
                                     DeclarationName());
   Instantiator.setEvaluateConstraints(EvaluateConstraints);
+  Instantiator.deferFunctionParmAttrs(Fn, ParamAttrs);
   return Instantiator.TransformFunctionTypeParams(Loc, Params, OldParamTypes,
                                                   ExtParamInfos, ParamTypes,
                                                   OutParams, ParamInfos);
