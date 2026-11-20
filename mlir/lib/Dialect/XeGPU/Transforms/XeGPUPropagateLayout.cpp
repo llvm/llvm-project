@@ -613,6 +613,13 @@ void LayoutInfoPropagation::visitVectorReductionOp(
   if (!uArch)
     return;
 
+  if (layoutKind != xegpu::LayoutKind::Lane) {
+    markFailure(
+        reduction,
+        "Only lane layout assignment is supported for vector.reduction.");
+    return;
+  }
+
   auto requiredResLayoutAttr =
       xegpu::setupReductionResultLayout(layoutKind, sourceTy, uArch);
   xegpu::setTemporaryLayout(reduction->getResult(0), requiredResLayoutAttr);
