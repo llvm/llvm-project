@@ -3982,6 +3982,10 @@ public:
 
   unsigned countNewSelectNodes() const { return AllSelectNodes.size(); }
 
+  const SmallPtrSet<SelectInst *, 32> &newSelectNodes() const {
+    return AllSelectNodes;
+  }
+
   void destroyNewNodes(Type *CommonType) {
     // For safe erasing, replace the uses with dummy value first.
     auto *Dummy = PoisonValue::get(CommonType);
@@ -4025,10 +4029,14 @@ private:
   /// Common value among addresses
   Value *CommonValue = nullptr;
 
+  /// Lazily computes the dominator tree.
+  const std::function<const DominatorTree &()> getDTFn;
+
 public:
   AddressingModeCombiner(const DataLayout &DL, const CodeGenOptions &Opts,
-                         Value *OriginalValue)
-      : DL(DL), Opts(Opts), Original(OriginalValue) {}
+                         Value *OriginalValue,
+                         const std::function<const DominatorTree &()> &getDTFn)
+      : DL(DL), Opts(Opts), Original(OriginalValue), getDTFn(getDTFn) {}
 
   ~AddressingModeCombiner() { eraseCommonValueIfDead(); }
 
@@ -4201,6 +4209,22 @@ private:
     FillPlaceholders(Map, TraverseOrder, ST);
 
     if (!Opts.cgp_addr_sink_new_select && ST.countNewSelectNodes() > 0) {
+      ST.destroyNewNodes(CommonType);
+      return nullptr;
+    }
+
+    // New nodes are inserted at the original phis and selects, but the matcher
+    // only guarantees that combined fields dominate the memory instruction
+    // (e.g. a reused IV increment). Give up if a new node uses a value that
+    // does not dominate the use. Check before MatchPhiSet, which stops tracking
+    // the new phis it keeps.
+    const DominatorTree &DT = getDTFn();
+    auto UsesAreDominated = [&DT](const Instruction *I) {
+      return all_of(I->operands(),
+                    [&DT](const Use &U) { return DT.dominates(U.get(), U); });
+    };
+    if (!all_of(ST.newPhiNodes(), UsesAreDominated) ||
+        !all_of(ST.newSelectNodes(), UsesAreDominated)) {
       ST.destroyNewNodes(CommonType);
       return nullptr;
     }
@@ -5742,7 +5766,11 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
   // the graph are compatible.
   bool PhiOrSelectSeen = false;
   SmallVector<Instruction *, 16> AddrModeInsts;
-  AddressingModeCombiner AddrModes(*DL, Opts, Addr);
+  // Defer the query (and possible computation of) the dom tree to point of
+  // actual use.  It's expected that most address matches don't actually need
+  // the domtree.
+  auto getDTFn = [this]() -> const DominatorTree & { return getDT(); };
+  AddressingModeCombiner AddrModes(*DL, Opts, Addr, getDTFn);
   TypePromotionTransaction TPT(RemovedInsts);
   TypePromotionTransaction::ConstRestorationPt LastKnownGood =
       TPT.getRestorationPoint();
@@ -5781,10 +5809,6 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
     AddrModeInsts.clear();
     std::pair<AssertingVH<GetElementPtrInst>, int64_t> LargeOffsetGEP(nullptr,
                                                                       0);
-    // Defer the query (and possible computation of) the dom tree to point of
-    // actual use.  It's expected that most address matches don't actually need
-    // the domtree.
-    auto getDTFn = [this]() -> const DominatorTree & { return getDT(); };
     ExtAddrMode NewAddrMode = AddressingModeMatcher::Match(
         V, AccessTy, AddrSpace, MemoryInst, AddrModeInsts, *TLI, *LI, getDTFn,
         *TRI, InsertedInsts, PromotedInsts, TPT, LargeOffsetGEP, OptSize, PSI,
