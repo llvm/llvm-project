@@ -922,7 +922,7 @@ define i1 @test46_multiuse3(i32 %X, i32 %Y, i32 %Z) {
 ; CHECK-NEXT:    call void @use_i32(i32 [[A]])
 ; CHECK-NEXT:    [[B:%.*]] = ashr exact i32 [[Y]], [[Z]]
 ; CHECK-NEXT:    call void @use_i32(i32 [[B]])
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[A]], [[B]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %A = ashr exact i32 %X, %Z
