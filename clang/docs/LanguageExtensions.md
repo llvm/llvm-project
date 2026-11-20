@@ -893,6 +893,34 @@ void scatter(v8b mask, v8i val, v8i idx, int *ptr) {
 }
 ```
 
+## Speculative Loads
+
+### Oracle Functions
+
+Oracle functions must be denoted with the `[[clang::oracle_function]]` attribute:
+
+```c++
+[[clang::oracle_function]] static uint64_t oracle(uint64_t input) {
+  return input;
+}
+```
+
+Annotating a function as an oracle function implies several properties:
+
+* The function will never raise an exception.
+* The function does not synchronize with other threads.
+* The function will return.
+* The function only reads memory from its arguments.
+
+If the function violates one or more of these properties, the behavior is undefined. In addition to the above behavior requirements, there are also several more requirements on using the `[[clang::oracle_function]]` attribute:
+
+* It must be applied to a function definition.
+* The function definition must have internal linkage.
+* The function definition cannot be varidaic.
+* The function must return a 64-bit integer.
+
+Any violations of the properties immediately above will result in a compilation failure.
+
 ## Matrix Types
 
 Clang provides an extension for matrix types, which is currently being
