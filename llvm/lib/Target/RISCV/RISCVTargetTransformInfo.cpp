@@ -1774,6 +1774,15 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       }
       return LT.first * getRISCVInstructionCost(Op, LT.second, CostKind);
     }
+
+     // With Zbb, scalar saturating arithmetic uses an add/sub and
+    // one or two min/max instructions for clamping.
+    if (LT.second.isScalarInteger() && ST->hasStdExtZbb()) {
+      bool Signed = ICA.getID() == Intrinsic::sadd_sat ||
+                    ICA.getID() == Intrinsic::ssub_sat;
+      return LT.first * (Signed ? 3 : 2);
+    }
+
     break;
   }
   case Intrinsic::fma:
