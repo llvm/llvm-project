@@ -2426,7 +2426,7 @@ func.func @pooling_nwc_min_unsigned_i1(
 func.func @matmul_invalid_mixed_types(%t: tensor<?xf16>, %f: vector<4xf16>)
   -> (tensor<?xf16>, vector<4xf16>)
 {
-  // expected-warning @unknown {{could not cast operand of type 'f16' to 'vector<4xf16>'}}
+  // expected-warning @unknown 2 {{could not cast operand of type 'f16' to 'vector<4xf16>'}}
   // expected-error @below {{Cannot build binary Linalg operation: expects allComplex, allFloatingPoint, or allInteger, got 'vector<4xf16>' and 'f16'}}
   %0 = linalg.matmul ins(%t, %t : tensor<?xf16>, tensor<?xf16>)
                                 outs(%f : vector<4xf16>) -> tensor<?xf16>

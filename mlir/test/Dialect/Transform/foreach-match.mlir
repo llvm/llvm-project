@@ -81,9 +81,9 @@ module attributes { transform.with_named_sequence } {
 
 // -----
 
-// expected-remark @below {{op from within the matcher}}
+// expected-remark @below 2 {{op from within the matcher}}
 module attributes { transform.with_named_sequence } {
-  // expected-remark @below {{returned root}}
+  // expected-remark @below 2 {{returned root}}
   func.func @foo() {
     return
   }
@@ -101,7 +101,7 @@ module attributes { transform.with_named_sequence } {
       %root: !transform.any_op {transform.readonly},
       %param: !transform.param<i64> {transform.readonly}) -> (!transform.any_op, !transform.param<i64>) {
     transform.debug.emit_remark_at %root, "op from within the matcher" : !transform.any_op
-    // expected-remark @below {{param from within the matcher 42}}
+    // expected-remark @below 2 {{param from within the matcher 42}}
     transform.debug.emit_param_as_remark %param, "param from within the matcher" : !transform.param<i64>
     transform.yield %root, %param : !transform.any_op, !transform.param<i64>
   }

@@ -50,8 +50,8 @@ func.func @map_nested_forall_to_threads_excessive_threads(%x: memref<2 x 32 x f3
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
     %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-    // expected-error @below {{Trying to launch a GPU kernel with grid_dims = (1, 1, 1) block_dims = (1200, 9, 1). It is larger than the limits.}}
-    // expected-note @below {{"block_dims" is too large}}
+    // expected-error @below 2 {{Trying to launch a GPU kernel with grid_dims = (1, 1, 1) block_dims = (1200, 9, 1). It is larger than the limits.}}
+    // expected-note @below 2 {{"block_dims" is too large}}
     transform.gpu.map_nested_forall_to_threads %funcop block_dims = [1200, 9, 1] : (!transform.any_op) -> !transform.any_op
     transform.yield
   }

@@ -318,7 +318,7 @@ This handler is a wrapper around a llvm::SourceMgr that is used to verify that
 certain diagnostics have been emitted to the context. To use this handler,
 annotate your source file with expected diagnostics in the form of:
 
-*   `expected-(error|note|remark|warning)(-re)?(@([+-][0-9]+|above|below|unknown))?(:[0-9]+)? {{ message }}`
+*   `expected-(error|note|remark|warning)(-re)?(@([+-][0-9]+|above|below|unknown))?(:[0-9]+)?( [0-9]+)? {{ message }}`
 
 The provided `message` is a string expected to be contained within the generated
 diagnostic. The `-re` suffix may be used to enable regex matching within the
@@ -326,6 +326,7 @@ diagnostic. The `-re` suffix may be used to enable regex matching within the
 `{{` `}}` blocks. The regular expression matcher supports Extended POSIX regular
 expressions (ERE).
 An optional `:<col>` requires the diagnostic to be emitted at the given 1-based column.
+An optional positive integer count before `{{` specifies how many diagnostics the directive must match (default: 1).
 `expected-` must not be preceded by an alphanumeric
 character, hyphen, or underscore (so e.g. `unexpected-error` is ignored). A few
 examples are shown below:
