@@ -16,7 +16,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(const wchar_t *, wcschr, (const wchar_t *s, wchar_t c)) {
+LLVM_LIBC_FUNCTION(wchar_t *, wcschr, (const wchar_t *s, wchar_t c)) {
   LIBC_CRASH_ON_NULLPTR(s);
   return internal::wcschr(s, c);
 }

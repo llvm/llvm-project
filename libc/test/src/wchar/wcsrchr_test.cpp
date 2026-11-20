@@ -12,25 +12,25 @@
 
 TEST(LlvmLibcWCSRChrTest, FindsFirstCharacter) {
   // Should return pointer to original string since 'a' is the first character.
-  const wchar_t *src = L"abcde";
+  wchar_t src[] = L"abcde";
   ASSERT_EQ(LIBC_NAMESPACE::wcsrchr(src, L'a'), src);
 }
 
 TEST(LlvmLibcWCSRChrTest, FindsMiddleCharacter) {
   // Should return pointer to 'c'.
-  const wchar_t *src = L"abcde";
+  wchar_t src[] = L"abcde";
   ASSERT_EQ(LIBC_NAMESPACE::wcsrchr(src, L'c'), (src + 2));
 }
 
 TEST(LlvmLibcWCSRChrTest, FindsLastCharacterThatIsNotNullTerminator) {
   // Should return pointer to 'e'.
-  const wchar_t *src = L"abcde";
+  wchar_t src[] = L"abcde";
   ASSERT_EQ(LIBC_NAMESPACE::wcsrchr(src, L'e'), (src + 4));
 }
 
 TEST(LlvmLibcWCSRChrTest, FindsNullTerminator) {
   // Should return pointer to null terminator.
-  const wchar_t *src = L"abcde";
+  wchar_t src[] = L"abcde";
   ASSERT_EQ(LIBC_NAMESPACE::wcsrchr(src, L'\0'), (src + 5));
 }
 
@@ -46,13 +46,13 @@ TEST(LlvmLibcWCSRChrTest, ShouldFindLastOfDuplicates) {
   ASSERT_EQ((int)(LIBC_NAMESPACE::wcsrchr(src, L'1') - src), 7);
 
   // Should return pointer to the last 'X'
-  const wchar_t *dups = L"XXXXX";
+  wchar_t dups[] = L"XXXXX";
   ASSERT_EQ(LIBC_NAMESPACE::wcsrchr(dups, L'X'), dups + 4);
 }
 
 TEST(LlvmLibcWCSRChrTest, EmptyStringShouldOnlyMatchNullTerminator) {
   // Null terminator should match
-  const wchar_t *src = L"";
+  wchar_t src[] = L"";
   ASSERT_EQ(src, LIBC_NAMESPACE::wcsrchr(src, L'\0'));
   // All other characters should not match
   ASSERT_EQ(LIBC_NAMESPACE::wcsrchr(src, L'Z'), nullptr);

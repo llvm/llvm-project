@@ -17,10 +17,10 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
-LIBC_INLINE static const wchar_t *wcschr(const wchar_t *s, wchar_t c) {
+LIBC_INLINE static wchar_t *wcschr(const wchar_t *s, wchar_t c) {
   for (; *s && *s != c; ++s)
     ;
-  return (*s == c) ? s : nullptr;
+  return (*s == c) ? const_cast<wchar_t *>(s) : nullptr;
 }
 
 // bool should be true for wcscspn for complimentary span

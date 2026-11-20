@@ -98,7 +98,7 @@ functions:
   - name: wcschr
     standards:
       - stdc
-    return_type: const wchar_t *
+    return_type: wchar_t *
     arguments:
       - type: const wchar_t *
       - type: wchar_t
@@ -142,14 +142,14 @@ functions:
   - name: wcspbrk
     standards:
       - stdc
-    return_type: const wchar_t *
+    return_type: wchar_t *
     arguments:
       - type: const wchar_t *
       - type: const wchar_t *
   - name: wcsrchr
     standards:
       - stdc
-    return_type: const wchar_t *
+    return_type: wchar_t *
     arguments:
       - type: const wchar_t *
       - type: wchar_t
@@ -178,7 +178,7 @@ functions:
   - name: wmemchr
     standards:
       - stdc
-    return_type: const wchar_t *
+    return_type: wchar_t *
     arguments:
       - type: const wchar_t *
       - type: wchar_t
@@ -233,7 +233,7 @@ functions:
   - name: wcsstr
     standards:
       - stdc
-    return_type: const wchar_t *
+    return_type: wchar_t *
     arguments:
       - type: const wchar_t *
       - type: const wchar_t *
