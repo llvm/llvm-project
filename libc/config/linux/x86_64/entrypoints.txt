@@ -109,6 +109,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sched.sched_setparam
     libc.src.sched.sched_setscheduler
     libc.src.sched.sched_yield
+    libc.src.sched.unshare
 
     # string.h entrypoints
     libc.src.string.memccpy
@@ -278,6 +279,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.strfroml
     libc.src.stdlib.strtod
     libc.src.stdlib.strtof
+    libc.src.stdlib.strtof128
     libc.src.stdlib.strtol
     libc.src.stdlib.strtold
     libc.src.stdlib.strtoll
@@ -346,6 +348,9 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # sys/ipc.h entrypoints
     libc.src.sys.ipc.ftok
+
+    # sys/klog.h entrypoints
+    libc.src.sys.klog.klogctl
 
     # sys/mman.h entrypoints
     libc.src.sys.mman.madvise
@@ -452,6 +457,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     # sys/statvfs.h entrypoints
     libc.src.sys.statvfs.fstatvfs
     libc.src.sys.statvfs.statvfs
+
+    # sys/swap.h entrypoints
+    libc.src.sys.swap.swapoff
+    libc.src.sys.swap.swapon
 
     # sys/time.h entrypoints
     libc.src.sys.time.utimes

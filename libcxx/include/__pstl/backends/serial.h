@@ -120,8 +120,8 @@ struct __for_each<__serial_backend_tag, _ExecutionPolicy> {
   }
 };
 
-template <class _Backend, class _RawExecutionPolicy>
-struct __is_heap_until {
+template <class _ExecutionPolicy>
+struct __is_heap_until<__serial_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _RandomAccessIterator, class _Comp>
   _LIBCPP_HIDE_FROM_ABI optional<_RandomAccessIterator>
   operator()(_Policy&&, _RandomAccessIterator __first, _RandomAccessIterator __last, _Comp __comp) const noexcept {

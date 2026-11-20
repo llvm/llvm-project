@@ -134,8 +134,9 @@ static mlir::Value makeScopedAtomicRMW(CIRGenFunction &cgf,
   mlir::Value val = cgf.emitScalarExpr(expr->getArg(1));
   auto rmwi = cir::AtomicFetchOp::create(
       builder, cgf.getLoc(expr->getSourceRange()), destValue, val, kind,
-      cir::MemOrder::Relaxed, scope, /*is_volatile=*/false,
-      /*fetch_first=*/true);
+      cir::MemOrder::Relaxed, scope,
+      builder.getI64IntegerAttr(destAddr.getAlignment().getQuantity()),
+      /*is_volatile=*/false, /*fetch_first=*/true);
   return rmwi->getResult(0);
 }
 
@@ -148,7 +149,9 @@ static mlir::Value makeScopedAtomicXchg(CIRGenFunction &cgf,
   mlir::Value val = cgf.emitScalarExpr(expr->getArg(1));
   auto xchg = cir::AtomicXchgOp::create(
       builder, cgf.getLoc(expr->getSourceRange()), destValue, val,
-      cir::MemOrder::Relaxed, scope, /*is_volatile=*/false);
+      cir::MemOrder::Relaxed, scope,
+      builder.getI64IntegerAttr(destAddr.getAlignment().getQuantity()),
+      /*is_volatile=*/false);
   return xchg.getResult();
 }
 
