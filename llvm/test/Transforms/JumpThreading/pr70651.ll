@@ -2,7 +2,12 @@
 ; RUN: opt -S -passes=jump-threading < %s | FileCheck %s
 ; RUN: opt -S -passes=jump-threading -jump-threading-across-loop-headers < %s | FileCheck %s --check-prefix=THREAD-LOOP
 
-; FIXME: This is a miscompile if -jump-threading-across-loop-headers is enabled.
+; The value %sum takes on the loop back edge is the one computed by the previous
+; iteration, so %sum.next must not be substituted for it when folding the
+; comparison: that would compare values spanning two different iterations and
+; fold %cmp to %v.nonneg.  Only the first iteration may be peeled off, where the
+; incoming value is the constant 0.  See also
+; phi-translate-loop-carried-value.ll.
 define i64 @test(i64 %v) {
 ; CHECK-LABEL: define i64 @test(
 ; CHECK-SAME: i64 [[V:%.*]]) {
@@ -22,14 +27,19 @@ define i64 @test(i64 %v) {
 ; THREAD-LOOP-SAME: i64 [[V:%.*]]) {
 ; THREAD-LOOP-NEXT:  entry:
 ; THREAD-LOOP-NEXT:    [[V_NONNEG:%.*]] = icmp sgt i64 [[V]], -1
-; THREAD-LOOP-NEXT:    br label [[FOR_BODY:%.*]]
+; THREAD-LOOP-NEXT:    [[SUM_NEXT1:%.*]] = add i64 0, [[V]]
+; THREAD-LOOP-NEXT:    [[OVERFLOW2:%.*]] = icmp ult i64 [[SUM_NEXT1]], 0
+; THREAD-LOOP-NEXT:    [[CMP3:%.*]] = xor i1 [[V_NONNEG]], [[OVERFLOW2]]
+; THREAD-LOOP-NEXT:    br i1 [[CMP3]], label [[FOR_BODY:%.*]], label [[EXIT:%.*]]
 ; THREAD-LOOP:       for.body:
-; THREAD-LOOP-NEXT:    [[SUM:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[SUM_NEXT:%.*]], [[FOR_BODY]] ]
+; THREAD-LOOP-NEXT:    [[SUM:%.*]] = phi i64 [ [[SUM_NEXT1]], [[ENTRY:%.*]] ], [ [[SUM_NEXT:%.*]], [[FOR_BODY]] ]
 ; THREAD-LOOP-NEXT:    [[SUM_NEXT]] = add i64 [[SUM]], [[V]]
 ; THREAD-LOOP-NEXT:    [[OVERFLOW:%.*]] = icmp ult i64 [[SUM_NEXT]], [[SUM]]
-; THREAD-LOOP-NEXT:    br i1 [[V_NONNEG]], label [[FOR_BODY]], label [[EXIT:%.*]]
+; THREAD-LOOP-NEXT:    [[CMP:%.*]] = xor i1 [[V_NONNEG]], [[OVERFLOW]]
+; THREAD-LOOP-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[EXIT]]
 ; THREAD-LOOP:       exit:
-; THREAD-LOOP-NEXT:    ret i64 [[SUM]]
+; THREAD-LOOP-NEXT:    [[SUM4:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[SUM]], [[FOR_BODY]] ]
+; THREAD-LOOP-NEXT:    ret i64 [[SUM4]]
 ;
 entry:
   %v.nonneg = icmp sgt i64 %v, -1
