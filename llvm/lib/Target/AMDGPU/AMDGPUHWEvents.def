@@ -52,7 +52,10 @@ AMDGPU_HW_EVENT(VGPR_VMEM_READ,             29) /* read VGPR source in other VME
 AMDGPU_HW_EVENT(ASYNC_ACCESS,               30) /* access that uses ASYNC_CNT */
 AMDGPU_HW_EVENT(TENSOR_ACCESS,              31) /* access that uses TENSOR_CNT */
 
-AMDGPU_LAST_HW_EVENT(TENSOR_ACCESS)
+AMDGPU_HW_EVENT(VGPR_UNORDERED_READ,       32) /* unordered VALU VGPR read */
+AMDGPU_HW_EVENT(VGPR_UNORDERED_WRITE,      33) /* unordered VALU VGPR write */
+
+AMDGPU_LAST_HW_EVENT(VGPR_UNORDERED_WRITE)
 
 
 // clang-format on

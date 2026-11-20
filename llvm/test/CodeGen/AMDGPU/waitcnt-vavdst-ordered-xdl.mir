@@ -127,7 +127,7 @@ body: |
     ; CHECK-NEXT: $vgpr30 = V_MOV_B32_e32 $vgpr31, implicit $exec
     ; CHECK-NEXT: early-clobber $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11 = V_WMMA_F32_16X16X4_F32_w32_twoaddr $vgpr0_vgpr1, $vgpr2_vgpr3, 8, $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11, 0, 0, 0, 0, implicit $exec
     ; CHECK-NEXT: $vgpr25 = V_ADD_F32_e32 $vgpr28, $vgpr29, implicit $mode, implicit $exec
-    ; CHECK-NEXT: S_WAITCNT_DEPCTR .VaVdst_2
+    ; CHECK-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
     ; CHECK-NEXT: DS_WRITE_B32_gfx9 $vgpr24, $vgpr30, 0, 0, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0
     $vgpr30 = V_MOV_B32_e32 $vgpr31, implicit $exec

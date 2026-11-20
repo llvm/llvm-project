@@ -30,11 +30,36 @@ static HWEvents getExpertSchedulingEventType(const MachineInstr &Inst,
     if (TII.isXDL(Inst))
       return HWEvents::VGPR_XDL_READ | HWEvents::VGPR_XDL_WRITE;
 
+    const GCNSubtarget &ST = TII.getSubtarget();
+    const bool IsGFX125x = AMDGPU::isGFX1250(ST);
+    const unsigned Opcode = Inst.getOpcode();
+    DPMACCInstructionKind DPMACC = AMDGPU::getDPMACCInstructionKind(Opcode);
+    if (IsGFX125x) {
+      constexpr HWEvents Unordered =
+          HWEvents::VGPR_UNORDERED_READ | HWEvents::VGPR_UNORDERED_WRITE;
+      const bool IsMixedVOPD =
+          AMDGPU::isVOPD(Opcode) &&
+          AMDGPU::isDPMACCInstruction(AMDGPU::getVOPDComponents(Opcode).first);
+      if (TII.isWMMA(Inst) || IsMixedVOPD)
+        return Unordered;
+
+      if (DPMACC == DPMACCInstructionKind::PreGFX125x)
+        DPMACC = DPMACCInstructionKind::None;
+      if (DPMACC == DPMACCInstructionKind::FullRate64Ops &&
+          !ST.hasFullRate64Ops()) {
+        if (ST.getCPU() == "gfx12-5-generic")
+          return Unordered;
+        DPMACC = DPMACCInstructionKind::None;
+      }
+    }
+
+    // FP64 transcendentals complete with DP-MACC on gfx125x.
+    if (DPMACC != DPMACCInstructionKind::None &&
+        (IsGFX125x || !TII.isTRANS(Inst)))
+      return HWEvents::VGPR_DPMACC_READ | HWEvents::VGPR_DPMACC_WRITE;
+
     if (TII.isTRANS(Inst))
       return HWEvents::VGPR_TRANS_READ | HWEvents::VGPR_TRANS_WRITE;
-
-    if (AMDGPU::isDPMACCInstruction(Inst.getOpcode()))
-      return HWEvents::VGPR_DPMACC_READ | HWEvents::VGPR_DPMACC_WRITE;
 
     return HWEvents::VGPR_CSMACC_READ | HWEvents::VGPR_CSMACC_WRITE;
   }
