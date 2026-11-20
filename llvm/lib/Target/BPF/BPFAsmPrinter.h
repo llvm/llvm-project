@@ -11,6 +11,7 @@
 
 #include "BPFTargetMachine.h"
 #include "BTFDebug.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
@@ -28,6 +29,7 @@ public:
   StringRef getPassName() const override { return "BPF Assembly Printer"; }
   bool doInitialization(Module &M) override;
   bool doFinalization(Module &M) override;
+  void emitGlobalVariable(const GlobalVariable *GV) override;
   void printOperand(const MachineInstr *MI, int OpNum, raw_ostream &O);
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
                        const char *ExtraCode, raw_ostream &O) override;
@@ -44,6 +46,7 @@ private:
   BTFDebug *BTF;
   TargetMachine &TM;
   bool SawTrapCall = false;
+  SmallPtrSet<const GlobalValue *, 4> ReferencedGlobals;
 
   const BPFTargetMachine &getBTM() const;
 };
