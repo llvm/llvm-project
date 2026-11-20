@@ -30,3 +30,5 @@ At that stop, it votes on whether the process continues like any other stop
 hook, so one added with `--auto-continue true`, or whose `handle_stop` returns
 `False`, lets the process keep running. A one-shot stop hook is how a script can
 do something at the next stop and then get out of the way.
+[Shipping Debugging Support with a Binary](shipping-debugging-support-with-a-binary.md) shows a script that uses one to read the process once it
+stops.
