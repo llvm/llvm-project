@@ -259,11 +259,11 @@ entry:
 define void @takeAndStore_long_16(ptr noundef readonly captures(none) dead_on_return %0) {
 ; CHECK-LABEL: takeAndStore_long_16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lg %r0, 8(%r2)
+; CHECK-NEXT:    lg %r0, 0(%r2)
 ; CHECK-NEXT:    lgrl %r1, global_long_16@GOT
-; CHECK-NEXT:    lg %r2, 0(%r2)
-; CHECK-NEXT:    stg %r0, 8(%r1)
-; CHECK-NEXT:    stg %r2, 0(%r1)
+; CHECK-NEXT:    lg %r2, 8(%r2)
+; CHECK-NEXT:    stg %r0, 0(%r1)
+; CHECK-NEXT:    stg %r2, 8(%r1)
 ; CHECK-NEXT:    br %r14
 entry:
   %x = load <2 x i64>, ptr %0, align 16

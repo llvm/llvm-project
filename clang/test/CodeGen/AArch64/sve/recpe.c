@@ -1,13 +1,16 @@
 // REQUIRES: aarch64-registered-target
 
-// DEFINE: %{optimize} = opt -passes=mem2reg,tailcallelim -S
+// DEFINE: %{optimize} = opt -passes=mem2reg -S
 
-// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve                        -fclangir -emit-cir -disable-O0-optnone -o - %s                       | FileCheck %s --check-prefixes=C,CIR %}
-// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve -DSVE_OVERLOADED_FORMS -fclangir -emit-cir -disable-O0-optnone -o - %s                       | FileCheck %s --check-prefixes=C,CIR %}
+// CIR calling-convention lowering does not handle SVE scalable vector types
+// yet, so the -fclangir runs disable it. Remove
+// -fno-clangir-call-conv-lowering once those types are supported.
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve                        -fclangir -fno-clangir-call-conv-lowering -emit-cir -disable-O0-optnone -o - %s                       | FileCheck %s --check-prefixes=C,CIR %}
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve -DSVE_OVERLOADED_FORMS -fclangir -fno-clangir-call-conv-lowering -emit-cir -disable-O0-optnone -o - %s                       | FileCheck %s --check-prefixes=C,CIR %}
 
-// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve                        -fclangir -emit-llvm -disable-O0-optnone -o - %s        | %{optimize} | FileCheck %s --check-prefixes=C,LLVM %}
-// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve -DSVE_OVERLOADED_FORMS -fclangir -emit-llvm -disable-O0-optnone -o - %s        | %{optimize} | FileCheck %s --check-prefixes=C,LLVM %}
-// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve -DSVE_OVERLOADED_FORMS -fclangir -emit-llvm -disable-O0-optnone -o - -x c++ %s | %{optimize} | FileCheck %s --check-prefixes=CPP,LLVM %}
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve                        -fclangir -fno-clangir-call-conv-lowering -emit-llvm -disable-O0-optnone -o - %s        | %{optimize} | FileCheck %s --check-prefixes=C,LLVM %}
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve -DSVE_OVERLOADED_FORMS -fclangir -fno-clangir-call-conv-lowering -emit-llvm -disable-O0-optnone -o - %s        | %{optimize} | FileCheck %s --check-prefixes=C,LLVM %}
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve -DSVE_OVERLOADED_FORMS -fclangir -fno-clangir-call-conv-lowering -emit-llvm -disable-O0-optnone -o - -x c++ %s | %{optimize} | FileCheck %s --check-prefixes=CPP,LLVM %}
 
 // RUN:                   %clang_cc1_cg_arm64_sve                                  -emit-llvm -disable-O0-optnone -o - %s        | %{optimize} | FileCheck %s --check-prefixes=C,LLVM
 // RUN:                   %clang_cc1_cg_arm64_sve -DSVE_OVERLOADED_FORMS           -emit-llvm -disable-O0-optnone -o - %s        | %{optimize} | FileCheck %s --check-prefixes=C,LLVM
@@ -43,7 +46,7 @@ svfloat16_t test_svrecpe_f16(svfloat16_t op) MODE_ATTR
 // CIR:           cir.call_llvm_intrinsic "aarch64.sve.frecpe.x" %{{.*}} : (!cir.vector<[8] x !cir.f16>) -> !cir.vector<[8] x !cir.f16>
 
 // LLVM-SAME: <vscale x 8 x half> [[OP:%.*]])
-// LLVM:    [[TMP0:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.frecpe.x.nxv8f16(<vscale x 8 x half> [[OP]])
+// LLVM:    [[TMP0:%.*]] = call <vscale x 8 x half> @llvm.aarch64.sve.frecpe.x.nxv8f16(<vscale x 8 x half> [[OP]])
 // LLVM:    ret <vscale x 8 x half> [[TMP0]]
   return SVE_ACLE_FUNC(svrecpe,_f16,,)(op);
 }
@@ -55,7 +58,7 @@ svfloat32_t test_svrecpe_f32(svfloat32_t op) MODE_ATTR
 // CIR:           cir.call_llvm_intrinsic "aarch64.sve.frecpe.x" %{{.*}} : (!cir.vector<[4] x !cir.float>) -> !cir.vector<[4] x !cir.float>
 
 // LLVM-SAME: <vscale x 4 x float> [[OP:%.*]])
-// LLVM:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.frecpe.x.nxv4f32(<vscale x 4 x float> [[OP]])
+// LLVM:    [[TMP0:%.*]] = call <vscale x 4 x float> @llvm.aarch64.sve.frecpe.x.nxv4f32(<vscale x 4 x float> [[OP]])
 // LLVM:    ret <vscale x 4 x float> [[TMP0]]
   return SVE_ACLE_FUNC(svrecpe,_f32,,)(op);
 }
@@ -67,7 +70,7 @@ svfloat64_t test_svrecpe_f64(svfloat64_t op) MODE_ATTR
 // CIR:           cir.call_llvm_intrinsic "aarch64.sve.frecpe.x" %{{.*}} : (!cir.vector<[2] x !cir.double>) -> !cir.vector<[2] x !cir.double>
 
 // LLVM-SAME: <vscale x 2 x double> [[OP:%.*]])
-// LLVM:    [[TMP0:%.*]] = tail call <vscale x 2 x double> @llvm.aarch64.sve.frecpe.x.nxv2f64(<vscale x 2 x double> [[OP]])
+// LLVM:    [[TMP0:%.*]] = call <vscale x 2 x double> @llvm.aarch64.sve.frecpe.x.nxv2f64(<vscale x 2 x double> [[OP]])
 // LLVM:    ret <vscale x 2 x double> [[TMP0]]
   return SVE_ACLE_FUNC(svrecpe,_f64,,)(op);
 }

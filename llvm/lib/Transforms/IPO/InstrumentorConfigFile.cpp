@@ -147,7 +147,6 @@ bool readConfigFromJSON(InstrumentationConfig &IConf, StringRef InputFile,
     return false;
   }
   auto Buffer = std::move(BufferOrErr.get());
-  json::Path::Root NullRoot;
   auto Parsed = json::parse(Buffer->getBuffer());
   if (!Parsed) {
     Ctx.diagnose(DiagnosticInfoInstrumentation(
@@ -282,7 +281,7 @@ bool readConfigFromJSON(InstrumentationConfig &IConf, StringRef InputFile,
         } else {
           ValueMap[Name] = InnerObjIt.second.getAsBoolean().value_or(false);
         }
-        if (!IOOpts.contains(Name)) {
+        if (!IOOpts.contains(Name) && !Name.ends_with(".description")) {
           std::string Diag = "unrecognized JSON property '" + Name.str() +
                              "' in configuration for '" + IO->getName().str() +
                              "'";

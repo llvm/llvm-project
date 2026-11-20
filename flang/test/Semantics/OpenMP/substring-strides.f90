@@ -1,4 +1,6 @@
 ! RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=52
+! RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=60
+! RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=61
 
 ! Scalar character components remain substrings even with array-valued parents.
 ! Substring strides are invalid whether or not either bound is present.

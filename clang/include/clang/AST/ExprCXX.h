@@ -246,17 +246,17 @@ class CUDAKernelCallExpr final : public CallExpr {
 
   CUDAKernelCallExpr(Expr *Fn, CallExpr *Config, ArrayRef<Expr *> Args,
                      QualType Ty, ExprValueKind VK, SourceLocation RP,
-                     FPOptionsOverride FPFeatures, unsigned MinNumArgs);
+                     FPOptionsOverride FPFeatures, unsigned MinNumArgs,
+                     ADLCallKind UsesADL);
 
   CUDAKernelCallExpr(unsigned NumArgs, bool HasFPFeatures, EmptyShell Empty);
 
 public:
-  static CUDAKernelCallExpr *Create(const ASTContext &Ctx, Expr *Fn,
-                                    CallExpr *Config, ArrayRef<Expr *> Args,
-                                    QualType Ty, ExprValueKind VK,
-                                    SourceLocation RP,
-                                    FPOptionsOverride FPFeatures,
-                                    unsigned MinNumArgs = 0);
+  static CUDAKernelCallExpr *
+  Create(const ASTContext &Ctx, Expr *Fn, CallExpr *Config,
+         ArrayRef<Expr *> Args, QualType Ty, ExprValueKind VK,
+         SourceLocation RP, FPOptionsOverride FPFeatures,
+         unsigned MinNumArgs = 0, ADLCallKind UsesADL = NotADL);
 
   static CUDAKernelCallExpr *CreateEmpty(const ASTContext &Ctx,
                                          unsigned NumArgs, bool HasFPFeatures,
@@ -2713,11 +2713,11 @@ public:
   PseudoDestructorTypeStorage(TypeSourceInfo *Info);
 
   TypeSourceInfo *getTypeSourceInfo() const {
-    return Type.dyn_cast<TypeSourceInfo *>();
+    return dyn_cast<TypeSourceInfo *>(Type);
   }
 
   const IdentifierInfo *getIdentifier() const {
-    return Type.dyn_cast<const IdentifierInfo *>();
+    return dyn_cast<const IdentifierInfo *>(Type);
   }
 
   SourceLocation getLocation() const { return Location; }

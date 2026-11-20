@@ -6,6 +6,7 @@ without crashing.
 import os
 
 import lldb
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
 
@@ -13,6 +14,7 @@ from lldbsuite.test.lldbtest import *
 class TestFrameProviderWrappedFrameRegisterContext(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
+    @skipIfWasm  # Wasm locals don't live in registers
     def test_backtrace_with_forwarded_register_context(self):
         self.build()
         target, process, _, _ = lldbutil.run_to_source_breakpoint(
@@ -33,3 +35,9 @@ class TestFrameProviderWrappedFrameRegisterContext(TestBase):
         # which reads registers through the scripted frame's register context.
         # Checking the values, not just for a crash, proves the lookup worked.
         self.expect("bt", substrs=["compute(a=3, b=4)", "main"])
+
+        frame = process.GetSelectedThread().GetFrameAtIndex(0)
+        register = frame.GetRegisters().GetValueAtIndex(0).GetChildAtIndex(0)
+        register_name = register.GetName()
+        self.assertTrue(frame.GetValueForVariablePath("$" + register_name).IsValid())
+        self.expect("register read " + register_name, substrs=[register_name + " ="])

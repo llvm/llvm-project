@@ -120,8 +120,6 @@ public:
   void run(raw_ostream &OS);
 
 private:
-  using SearchTableEntry = std::pair<const Init *, int>;
-
   enum TypeContext {
     TypeInStaticStruct,
     TypeInTempStruct,
@@ -154,12 +152,6 @@ private:
     }
     PrintFatalError(Loc, Twine("invalid field type for field '") + Field.Name +
                              "'; expected: bit, bits, string, or code");
-  }
-
-  bool isIntrinsic(const Init *I) {
-    if (const auto *DI = dyn_cast<DefInit>(I))
-      return DI->getDef()->isSubClassOf("Intrinsic");
-    return false;
   }
 
   const CodeGenIntrinsic &getIntrinsic(const Init *I) {

@@ -4,7 +4,7 @@
 // RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -fcuda-is-device -fclangir \
 // RUN:   -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -fclangir \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fcuda-is-device -fclangir \
 // RUN:   -emit-llvm -x hip %s -o %t-hip-cir.ll
 // RUN: FileCheck --input-file=%t-hip-cir.ll %s -check-prefix=LLVM
 // RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -fcuda-is-device \

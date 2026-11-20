@@ -136,10 +136,10 @@ class SCEVExpander : public SCEVUseVisitor<SCEVExpander, Value *> {
   /// "expanded" form.
   bool LSRMode;
 
-  /// When true, rewrite any divisors of UDiv expressions that may be 0 to
+  /// When true, rewrite any divisors of UDiv/URem expressions that may be 0 to
   /// umax(Divisor, 1) to avoid introducing UB. If the divisor may be poison,
   /// freeze it first.
-  bool SafeUDivMode = false;
+  bool SafeDivisorMode;
 
   typedef IRBuilder<InstSimplifyFolder, IRBuilderCallbackInserter> BuilderType;
   BuilderType Builder;
@@ -191,11 +191,15 @@ class SCEVExpander : public SCEVUseVisitor<SCEVExpander, Value *> {
 
 public:
   /// Construct a SCEVExpander in "canonical" mode.
+  /// If \p SafeDivisorMode is true, UDiv/URem expressions are expanded such
+  /// that they cannot cause UB, by rewriting divisors that may be zero or
+  /// poison to umax(freeze(Divisor), 1).
   explicit SCEVExpander(ScalarEvolution &SE, const char *Name,
-                        bool PreserveLCSSA = true)
+                        bool PreserveLCSSA = true, bool SafeDivisorMode = false)
       : SE(SE), DL(SE.getDataLayout()), IVName(Name),
         PreserveLCSSA(PreserveLCSSA), IVIncInsertLoop(nullptr),
         IVIncInsertPos(nullptr), CanonicalMode(true), LSRMode(false),
+        SafeDivisorMode(SafeDivisorMode),
         Builder(SE.getModule(), InstSimplifyFolder(DL),
                 IRBuilderCallbackInserter(
                     [this](Instruction *I) { rememberInstruction(I); })) {
@@ -545,6 +549,10 @@ private:
   Value *visitMulExpr(SCEVUseT<const SCEVMulExpr *> S);
 
   Value *visitUDivExpr(SCEVUseT<const SCEVUDivExpr *> S);
+
+  /// Expand udiv/urem \p Divisor, as umax(freeze(Divisor), 1) in
+  /// SafeDivisorMode.
+  Value *expandDivisor(const SCEV *Divisor);
 
   Value *visitAddRecExpr(SCEVUseT<const SCEVAddRecExpr *> S);
 

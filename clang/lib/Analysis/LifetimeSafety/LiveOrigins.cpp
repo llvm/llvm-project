@@ -61,7 +61,7 @@ struct Lattice {
 
 static SourceLocation GetFactLoc(CausingFactType F) {
   if (const auto *UF = dyn_cast<const UseFact *>(F))
-    return UF->getUseExpr()->getExprLoc();
+    return UF->getUseSite().getLoc();
   if (const auto *OEF = dyn_cast<const OriginEscapesFact *>(F)) {
     if (auto *ReturnEsc = dyn_cast<ReturnEscapeFact>(OEF))
       return ReturnEsc->getReturnExpr()->getExprLoc();
@@ -69,6 +69,8 @@ static SourceLocation GetFactLoc(CausingFactType F) {
       return FieldEsc->getFieldDecl()->getLocation();
     if (auto *GlobalEsc = dyn_cast<GlobalEscapeFact>(OEF))
       return GlobalEsc->getGlobal()->getLocation();
+    if (auto *ThisEsc = dyn_cast<ThisEscapeFact>(OEF))
+      return ThisEsc->getLoc();
   }
   llvm_unreachable("unhandled causing fact in PointerUnion");
 }
@@ -158,8 +160,14 @@ public:
   }
 
   /// An escaping origin (e.g., via return) makes the origin live with definite
-  /// confidence, as it dominates this program point.
+  /// confidence, as it dominates this program point. Escapes through a
+  /// parameter are only used to verify annotations.
+  // FIXME: Keeping escapes through a parameter live would diagnose stack memory
+  // escaping through a reference parameter, e.g. `out = local_view;`. That
+  // needs a separate warning.
   Lattice transfer(Lattice In, const OriginEscapesFact &OEF) {
+    if (isa<ParamEscapeFact>(OEF))
+      return In;
     return addLive(In, OEF.getEscapedOriginID(),
                    LivenessInfo(&OEF, LivenessKind::Must));
   }
@@ -243,7 +251,7 @@ private:
 } // namespace
 
 // PImpl wrapper implementation
-class LiveOriginsAnalysis::Impl : public AnalysisImpl {
+class LiveOriginsAnalysis::Impl final : public AnalysisImpl {
   using AnalysisImpl::AnalysisImpl;
 };
 

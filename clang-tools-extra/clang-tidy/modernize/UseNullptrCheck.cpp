@@ -93,7 +93,9 @@ void UseNullptrCheck::registerMatchers(MatchFinder *Finder) {
       this);
 
   if (UseNullptrT)
-    Finder->addMatcher(typeLoc(loc(decltypeType(decltypeTypeNullptrLiteral())))
+    Finder->addMatcher(typeLoc(loc(decltypeType(decltypeTypeNullptrLiteral())),
+                               unless(hasParent(typedefNameDecl(hasAnyName(
+                                   "::nullptr_t", "::std::nullptr_t")))))
                            .bind("matchDecltypeNullptr"),
                        this);
 }

@@ -8,8 +8,10 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMConstantOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMConversionOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/OpenACC/Extensions/AllExtensions.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -23,7 +25,6 @@ using namespace mlir::acc;
 using namespace mlir::LLVM;
 
 namespace {
-
 /// Test model that attaches ReducibleType to IntegerType for testing purposes.
 /// This only implements a small subset of reduction operators to exercise the
 /// interface - a real implementation would handle all valid operators.
@@ -40,7 +41,6 @@ struct TestReducibleIntegerModel
     }
   }
 };
-
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -56,6 +56,9 @@ protected:
       IntegerType::attachInterface<TestReducibleIntegerModel>(*ctx);
     });
     context.appendDialectRegistry(registry);
+    DialectRegistry extensions;
+    acc::registerAllExtensions(extensions);
+    context.appendDialectRegistry(extensions);
     context
         .loadDialect<acc::OpenACCDialect, arith::ArithDialect,
                      memref::MemRefDialect, func::FuncDialect, LLVMDialect>();

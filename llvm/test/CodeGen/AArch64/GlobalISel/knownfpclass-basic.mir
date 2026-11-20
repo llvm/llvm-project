@@ -41,6 +41,7 @@ body:             |
 name:            FAbs
 body:             |
   bb.0:
+    liveins: $s0
   ; CHECK-LABEL: name: @FAbs
   ; CHECK-NEXT: %0:_ FPClasses:(all) SignBitKnown:?
   ; CHECK-NEXT: %1:_ FPClasses:(nan pinf pzero psub pnorm) SignBitKnown:0
@@ -63,6 +64,7 @@ body:             |
 name:            FSqrt
 body:             |
   bb.0:
+    liveins: $s0
   ; CHECK-LABEL: name: @FSqrt
   ; CHECK-NEXT: %0:_ FPClasses:(all) SignBitKnown:?
   ; CHECK-NEXT: %1:_ FPClasses:(nan pinf zero pnorm) SignBitKnown:?

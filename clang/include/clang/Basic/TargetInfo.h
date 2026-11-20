@@ -1039,7 +1039,7 @@ public:
   /// Returns target-specific min and max values VScale_Range.
   virtual std::optional<std::pair<unsigned, unsigned>>
   getVScaleRange(const LangOptions &LangOpts, ArmStreamingKind Mode,
-                 llvm::StringMap<bool> *FeatureMap = nullptr) const {
+                 const llvm::StringMap<bool> *FeatureMap = nullptr) const {
     return std::nullopt;
   }
   /// The __builtin_clz* and __builtin_ctz* built-in
@@ -1247,6 +1247,13 @@ public:
                                               unsigned RegSize,
                                               bool &HasSizeMismatch) const {
     HasSizeMismatch = false;
+    return true;
+  }
+
+  /// Returns whether the register RegName (a canonical GCC register name) can
+  /// hold a local register variable, i.e. it is not a status or pseudo register
+  /// that is only valid in a clobber list.
+  virtual bool validateLocalRegisterVariable(StringRef RegName) const {
     return true;
   }
 

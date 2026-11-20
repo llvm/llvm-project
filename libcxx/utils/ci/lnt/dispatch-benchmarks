@@ -259,22 +259,18 @@ def decide(items: Sequence[common.WorkItem],
 
 def workflow_inputs(args: argparse.Namespace, item: common.WorkItem) -> Dict[str, str]:
     """Return the inputs to dispatch the workflow with for a work item."""
-    inputs = {'commit': item.commit,
-              'lnt-machine': item.machine,
-              # Submitting to LNT is mandatory, since a run whose results are not recorded
-              # anywhere would be requested again on every future invocation. When run
-              # with --dry-run, this tool never actually dispatches the workflow with
-              # `submit-lnt: false`.
-              'submit-lnt': 'false' if args.dry_run else 'true'}
-    if args.lnt_url:
-        inputs['lnt-url'] = args.lnt_url
-    return inputs
+    return {'commit': item.commit,
+            'lnt-machine': item.machine,
+            # Submitting to LNT is mandatory, since a run whose results are not recorded
+            # anywhere would be requested again on every future invocation. When run
+            # with --dry-run, this tool never actually dispatches the workflow with
+            # `submit-lnt: false`.
+            'submit-lnt': 'false' if args.dry_run else 'true'}
 
 
 def report(args: argparse.Namespace, decisions: Sequence[Decision], runs: Runs) -> None:
     """Print a human-readable summary of what is about to be done."""
     out = sys.stderr
-    print(f'Submitting to: {args.lnt_url or "whatever the workflow defaults to"}', file=out)
     # One line per machine the plan is about, since capacity is per machine.
     for machine in sorted({d.item.machine for d in decisions}):
         in_flight = runs.in_flight_on(machine)
@@ -331,9 +327,6 @@ def main(argv: List[str]) -> int:
              'before it is given up on. This bounds the cost of a job that keeps dying before it '
              'can submit, since such a run leaves no trace in LNT and would otherwise be requested '
              'forever. It is counted per machine.')
-    parser.add_argument('--lnt-url', type=str, required=False,
-        help='The LNT instance the runs should submit to. By default the workflow submits to '
-             'whichever instance it defaults to.')
     parser.add_argument('--token', type=str, required=False, # no default to avoid printing the token in --help
         help='A Github token with write access to the repository, which is needed both to look at '
              'the existing runs and to request new ones. Defaults to the GITHUB_TOKEN environment '

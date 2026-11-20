@@ -345,7 +345,7 @@ define void @add_exit_value_differs_in_operand_use_flags(i64 %start, i64 %step, 
 ; CHECK-NEXT:    %iv.div = udiv i64 %iv, 3
 ; CHECK-NEXT:    --> ({%start,+,%step}<nuw><%loop> /u 3) U: [0,6148914691236517206) S: [0,6148914691236517206) Exits: (((%step * %n)<u nuw> + %start)<u nuw> /u 3) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %a = add i64 %iv.div, %end.div
-; CHECK-NEXT:    --> ((((%step * %n) + %start) /u 3) + ({%start,+,%step}<nuw><%loop> /u 3)) U: [0,-6148914691236517205) S: [0,-6148914691236517205) Exits: ((((%step * %n) + %start) /u 3) + (((%step * %n)<u nuw> + %start)<u nuw> /u 3)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> ((((%step * %n) + %start) /u 3) + ({%start,+,%step}<nuw><%loop> /u 3)) U: [0,-6148914691236517205) S: [0,-6148914691236517205) Exits: (2 * (((%step * %n) + %start) /u 3))<nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add nuw i64 %iv, %step
 ; CHECK-NEXT:    --> {(%start + %step),+,%step}<nw><%loop> U: full-set S: full-set Exits: (((1 + %n) * %step) + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i64 %i, 1

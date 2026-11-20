@@ -26,7 +26,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/XRay/Graph.h"
 #include "llvm/XRay/InstrumentationMap.h"
 #include "llvm/XRay/Trace.h"
 
