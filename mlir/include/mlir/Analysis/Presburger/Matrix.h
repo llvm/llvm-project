@@ -297,6 +297,17 @@ public:
   /// Returns the GCD of the columns of the specified row.
   DynamicAPInt normalizeRow(unsigned row);
 
+  /// Eliminates column `col` from the specified row using `pivot`, i.e.,
+  /// replaces the row by `a * row + b * pivot` where `a > 0` and `b` are the
+  /// smallest multipliers that make the entry at `col` zero. Since `a` is
+  /// positive, if the row and `pivot` are interpreted as constraints, this
+  /// preserves the meaning of the row (as an equality or inequality) wherever
+  /// `pivot` holds as an equality. Does nothing if the entry at `col` is
+  /// already zero. `pivot` must have a non-zero entry at `col` and must not be
+  /// a view of the specified row itself.
+  void eliminateColumnUsingRow(unsigned row, ArrayRef<DynamicAPInt> pivot,
+                               unsigned col);
+
   // Compute the determinant of the matrix (cubic time).
   // Stores the integer inverse of the matrix in the pointer
   // passed (if any). The pointer is unchanged if the inverse

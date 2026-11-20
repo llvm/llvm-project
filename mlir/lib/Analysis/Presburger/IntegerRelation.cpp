@@ -619,41 +619,6 @@ bool IntegerRelation::hasInvalidConstraint() const {
   return check(/*isEq=*/false);
 }
 
-/// Eliminate variable from constraint at `rowIdx` based on coefficient at
-/// pivotRow, pivotCol. Columns in range [elimColStart, pivotCol) will not be
-/// updated as they have already been eliminated.
-static void eliminateFromConstraint(IntegerRelation *constraints,
-                                    unsigned rowIdx, unsigned pivotRow,
-                                    unsigned pivotCol, unsigned elimColStart,
-                                    bool isEq) {
-  // Skip if equality 'rowIdx' if same as 'pivotRow'.
-  if (isEq && rowIdx == pivotRow)
-    return;
-  auto at = [&](unsigned i, unsigned j) -> DynamicAPInt {
-    return isEq ? constraints->atEq(i, j) : constraints->atIneq(i, j);
-  };
-  DynamicAPInt leadCoeff = at(rowIdx, pivotCol);
-  // Skip if leading coefficient at 'rowIdx' is already zero.
-  if (leadCoeff == 0)
-    return;
-  DynamicAPInt pivotCoeff = constraints->atEq(pivotRow, pivotCol);
-  int sign = (leadCoeff * pivotCoeff > 0) ? -1 : 1;
-  DynamicAPInt lcm = llvm::lcm(pivotCoeff, leadCoeff);
-  DynamicAPInt pivotMultiplier = sign * (lcm / abs(pivotCoeff));
-  DynamicAPInt rowMultiplier = lcm / abs(leadCoeff);
-
-  unsigned numCols = constraints->getNumCols();
-  for (unsigned j = 0; j < numCols; ++j) {
-    // Skip updating column 'j' if it was just eliminated.
-    if (j >= elimColStart && j < pivotCol)
-      continue;
-    DynamicAPInt v = pivotMultiplier * constraints->atEq(pivotRow, j) +
-                     rowMultiplier * at(rowIdx, j);
-    isEq ? constraints->atEq(rowIdx, j) = v
-         : constraints->atIneq(rowIdx, j) = v;
-  }
-}
-
 /// Returns the position of the variable that has the minimum <number of lower
 /// bounds> times <number of upper bounds> from the specified range of
 /// variables [start, end). It is often best to eliminate in the increasing
@@ -1098,19 +1063,9 @@ unsigned IntegerRelation::gaussianEliminateVars(unsigned posStart,
       continue;
     }
 
-    // Eliminate variable at 'pivotCol' from each equality row.
-    for (unsigned i = 0, e = getNumEqualities(); i < e; ++i) {
-      eliminateFromConstraint(this, i, *pivotRow, pivotCol, posStart,
-                              /*isEq=*/true);
-      equalities.normalizeRow(i);
-    }
-
-    // Eliminate variable at 'pivotCol' from each inequality row.
-    for (unsigned i = 0, e = getNumInequalities(); i < e; ++i) {
-      eliminateFromConstraint(this, i, *pivotRow, pivotCol, posStart,
-                              /*isEq=*/false);
-      inequalities.normalizeRow(i);
-    }
+    // Eliminate variable at 'pivotCol' from every other constraint.
+    eliminateVarUsingEquality(*pivotRow, pivotCol);
+    normalizeConstraintsByGCD();
     removeEquality(*pivotRow);
     gcdTightenInequalities();
   }
@@ -1156,13 +1111,15 @@ bool IntegerRelation::gaussianEliminate() {
       *pivotRow = nowDone;
     }
 
-    // Normalize all lower equations and all inequalities.
+    // Normalize all lower equations and all inequalities. Only rows other
+    // than the pivot row are modified, so this view of it stays valid.
+    ArrayRef<DynamicAPInt> pivot = equalities.getRow(*pivotRow);
     for (unsigned i = nowDone + 1; i < eqs; ++i) {
-      eliminateFromConstraint(this, i, *pivotRow, firstVar, 0, true);
+      equalities.eliminateColumnUsingRow(i, pivot, firstVar);
       equalities.normalizeRow(i);
     }
     for (unsigned i = 0, ineqs = getNumInequalities(); i < ineqs; ++i) {
-      eliminateFromConstraint(this, i, *pivotRow, firstVar, firstVar, false);
+      inequalities.eliminateColumnUsingRow(i, pivot, firstVar);
       inequalities.normalizeRow(i);
     }
     gcdTightenInequalities();
@@ -1261,6 +1218,111 @@ void IntegerRelation::removeRedundantConstraintsFromSimplex(
       equalities.copyRow(r, pos++);
   }
   equalities.resizeVertically(pos);
+}
+
+void IntegerRelation::eliminateVarUsingEquality(ArrayRef<DynamicAPInt> eq,
+                                                unsigned col) {
+  assert(col < getNumVars() && "column must be a variable");
+  for (unsigned i = 0, e = getNumEqualities(); i < e; ++i)
+    equalities.eliminateColumnUsingRow(i, eq, col);
+  for (unsigned i = 0, e = getNumInequalities(); i < e; ++i)
+    inequalities.eliminateColumnUsingRow(i, eq, col);
+}
+
+void IntegerRelation::eliminateVarUsingEquality(unsigned eqIdx, unsigned col) {
+  assert(eqIdx < getNumEqualities() && "equality index out of bounds");
+  assert(col < getNumVars() && "column must be a variable");
+  // Only rows other than the pivot row are modified, so this view of it stays
+  // valid.
+  ArrayRef<DynamicAPInt> eq = equalities.getRow(eqIdx);
+  for (unsigned i = 0, e = getNumEqualities(); i < e; ++i)
+    if (i != eqIdx)
+      equalities.eliminateColumnUsingRow(i, eq, col);
+  for (unsigned i = 0, e = getNumInequalities(); i < e; ++i)
+    inequalities.eliminateColumnUsingRow(i, eq, col);
+}
+
+/// Brings the equality rows of `eqs` that are not marked in `used` into a
+/// reduced form with respect to the columns in `cols`, processed in order: for
+/// each column, the first unused row with a non-zero coefficient in it becomes
+/// the pivot row of that column, the column is eliminated from all other rows,
+/// and the row is marked used. The pivot rows and columns are appended to
+/// `pivotRows` and `pivotCols`. Afterwards, no row other than its pivot row has
+/// a non-zero coefficient in any pivot column.
+static void reduceEqualityRows(IntMatrix &eqs, ArrayRef<unsigned> cols,
+                               llvm::SmallBitVector &used,
+                               SmallVectorImpl<unsigned> &pivotRows,
+                               SmallVectorImpl<unsigned> &pivotCols) {
+  for (unsigned col : cols) {
+    std::optional<unsigned> pivotRow;
+    for (unsigned r = 0, e = eqs.getNumRows(); r < e; ++r) {
+      if (!used[r] && eqs(r, col) != 0) {
+        pivotRow = r;
+        break;
+      }
+    }
+    if (!pivotRow)
+      continue;
+    // Only rows other than the pivot row are modified, so this view of the
+    // pivot row stays valid.
+    ArrayRef<DynamicAPInt> pivot = eqs.getRow(*pivotRow);
+    for (unsigned r = 0, e = eqs.getNumRows(); r < e; ++r) {
+      if (r == *pivotRow)
+        continue;
+      eqs.eliminateColumnUsingRow(r, pivot, col);
+      eqs.normalizeRow(r);
+    }
+    used[*pivotRow] = true;
+    pivotRows.emplace_back(*pivotRow);
+    pivotCols.emplace_back(col);
+  }
+}
+
+void IntegerRelation::reduceUsingEqualities(const IntegerRelation &eqs) {
+  assert(space.isCompatible(eqs.getSpace()) &&
+         getNumLocalVars() == eqs.getNumLocalVars() &&
+         "spaces (including locals) must match");
+  if (eqs.getNumEqualities() == 0)
+    return;
+
+  unsigned numVars = getNumVars();
+  unsigned numCols = getNumCols();
+
+  // Work on a copy of the equalities of `eqs`. We bring them into a reduced
+  // row echelon form where the pivot of each row is its last variable with a
+  // non-zero coefficient, and no other row has a non-zero coefficient in that
+  // column. Variables that do not occur in `this` are eliminated first and
+  // their pivot rows are dropped (projecting the equalities onto the variables
+  // involved in `this`), so that reducing `this` never introduces them.
+  IntMatrix ctxEqs = eqs.equalities;
+  llvm::SmallBitVector rowUsed(ctxEqs.getNumRows());
+  SmallVector<unsigned, 8> uninvolvedCols, involvedCols;
+  for (unsigned col : llvm::reverse(llvm::seq<unsigned>(0, numVars)))
+    (isColZero(col) ? uninvolvedCols : involvedCols).emplace_back(col);
+
+  SmallVector<unsigned, 8> pivotRows, pivotCols;
+  reduceEqualityRows(ctxEqs, uninvolvedCols, rowUsed, pivotRows, pivotCols);
+  // Drop the pivot rows of the uninvolved variables.
+  pivotRows.clear();
+  pivotCols.clear();
+  reduceEqualityRows(ctxEqs, involvedCols, rowUsed, pivotRows, pivotCols);
+
+  // Any unused row now has all-zero variable coefficients; a non-zero constant
+  // means the equalities of `eqs` are inconsistent.
+  for (unsigned r = 0, e = ctxEqs.getNumRows(); r < e; ++r) {
+    if (!rowUsed[r] && ctxEqs(r, numCols - 1) != 0) {
+      *this = getEmpty(getSpace());
+      return;
+    }
+  }
+
+  // Eliminate each pivot column from every constraint of `this`. Since the
+  // pivot rows are in reduced form, no pivot column is reintroduced.
+  for (auto [pivotRow, pivotCol] : llvm::zip_equal(pivotRows, pivotCols))
+    eliminateVarUsingEquality(ctxEqs.getRow(pivotRow), pivotCol);
+
+  removeTrivialRedundancy();
+  removeTrivialEqualities();
 }
 
 std::optional<DynamicAPInt> IntegerRelation::computeVolume() const {
@@ -1465,18 +1527,12 @@ void IntegerRelation::removeRedundantLocalVars() {
     if (i == e)
       break;
 
-    // Use the ith equality to simplify other equalities. If any changes
-    // are made to an equality constraint, it is normalized by GCD.
-    for (unsigned k = 0, t = getNumEqualities(); k < t; ++k) {
-      if (atEq(k, j) != 0) {
-        eliminateFromConstraint(this, k, i, j, j, /*isEq=*/true);
-        equalities.normalizeRow(k);
-      }
-    }
-
-    // Use the ith equality to simplify inequalities.
-    for (unsigned k = 0, t = getNumInequalities(); k < t; ++k)
-      eliminateFromConstraint(this, k, i, j, j, /*isEq=*/false);
+    // Use the ith equality to eliminate the local variable from every other
+    // constraint. Equalities are then normalized by GCD; this only affects
+    // the ones that changed, since the others are already normalized.
+    eliminateVarUsingEquality(i, j);
+    for (unsigned k = 0, t = getNumEqualities(); k < t; ++k)
+      equalities.normalizeRow(k);
 
     // Remove the ith equality and the found local variable.
     removeVar(j);
