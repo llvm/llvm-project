@@ -11,6 +11,7 @@ add_flang_library(FortranUtils
 
   DEPENDS
   FIRDialect
+  FIRDialectSupport
   FIRBuilder
   HLFIRDialect
 
