@@ -8,7 +8,7 @@
 // Use the umbrella header for -Wdocumentation.
 #include "lldb/API/LLDB.h"
 
-#include "TestingSupport/SubsystemRAII.h"
+#include "SBTestingSupport/SBTestUtilities.h"
 #include "lldb/API/SBBreakpoint.h"
 #include "lldb/API/SBBreakpointLocation.h"
 #include "lldb/API/SBDebugger.h"
@@ -20,16 +20,7 @@
 using namespace lldb_private;
 using namespace lldb;
 
-class BreakpointClearConditionTest : public ::testing::Test {
-public:
-  void SetUp() override {
-    m_sb_debugger = SBDebugger::Create(/*source_init_files=*/false);
-  };
-
-  void TearDown() override { SBDebugger::Destroy(m_sb_debugger); }
-  SBDebugger m_sb_debugger;
-  SubsystemRAII<lldb::SBDebugger> subsystems;
-};
+class BreakpointClearConditionTest : public SBDebuggerFixture {};
 
 template <typename T> void test_condition(T sb_object) {
   const char *in_cond_str = "Here is a condition";
@@ -52,8 +43,8 @@ TEST_F(BreakpointClearConditionTest, BreakpointClearConditionTest) {
   SBTarget sb_target;
   SBError error;
   sb_target =
-      m_sb_debugger.CreateTarget("", "x86_64-apple-macosx-", "remote-macosx",
-                                 /*add_dependent=*/false, error);
+      m_debugger.CreateTarget("", "x86_64-apple-macosx-", "remote-macosx",
+                              /*add_dependent=*/false, error);
 
   EXPECT_EQ(sb_target.IsValid(), true);
 

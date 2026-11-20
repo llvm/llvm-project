@@ -8,6 +8,7 @@
 
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
+#include "llvm/ADT/StringExtras.h"
 
 using namespace clang;
 using namespace clang::CodeGen;
@@ -49,11 +50,18 @@ public:
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                            CodeGen::CodeGenModule &GCM) const override {
-    if (GV->isDeclaration())
+    auto *Fn = dyn_cast<llvm::Function>(GV);
+    if (!Fn)
       return;
-    const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D);
-    if (!FD)
-      return;
+    // Declarations are not skipped: functions without a FunctionDecl, such as
+    // global initializers, get here before their body is emitted.
+    const auto *FD = dyn_cast_or_null<FunctionDecl>(D);
+    unsigned Limit = GCM.getCodeGenOpts().HLXVectorStackLimit;
+    if (const auto *Attr =
+            FD ? FD->getAttr<HexagonHLXVectorStackLimitAttr>() : nullptr)
+      Fn->addFnAttr("hlx-vector-stack-limit", llvm::utostr(Attr->getLimit()));
+    else if (Limit != UINT_MAX)
+      Fn->addFnAttr("hlx-vector-stack-limit", llvm::utostr(Limit));
   }
 };
 
@@ -149,6 +157,12 @@ ABIArgInfo HexagonABIInfo::classifyReturnType(QualType RetTy) const {
       assert(T.hasFeature("hvx-length64b") || T.hasFeature("hvx-length128b"));
       uint64_t VecSize = T.hasFeature("hvx-length64b") ? 64*8 : 128*8;
       if (Size == VecSize || Size == 2*VecSize)
+        return ABIArgInfo::getDirectInReg();
+    }
+    // HLX vectors are returned in HLX registers or register pairs.
+    if (T.hasFeature("hlx")) {
+      uint64_t VecSize = 2048 * 8;
+      if (Size == VecSize || Size == 2 * VecSize)
         return ABIArgInfo::getDirectInReg();
     }
     // Large vector types should be returned via memory.

@@ -69,18 +69,18 @@ struct RegisterObjectSections {
 };
 } // namespace llvm::orc::coff_sps_ci
 
-// Descriptors for the call-controller handlers that the COFF platform runtime
-// calls.
+// Specs for the call-controller handlers that the COFF platform runtime calls.
 namespace llvm::orc::coff_sps_handlers {
-struct LookupSymbol {
+struct LookupSymbol : sps::HandlerSpec<SPSExpected<SPSExecutorAddr>(
+                          SPSExecutorAddr, SPSString)> {
   static constexpr SymbolNameSpec Name =
       SymbolNameSpec::c("__orc_rt_coff_symbol_lookup_tag");
-  using SPSSig = SPSExpected<SPSExecutorAddr>(SPSExecutorAddr, SPSString);
 };
-struct PushInitializers {
+struct PushInitializers
+    : sps::HandlerSpec<SPSExpected<SPSCOFFJITDylibDepInfoMap>(
+          SPSExecutorAddr)> {
   static constexpr SymbolNameSpec Name =
       SymbolNameSpec::c("__orc_rt_coff_push_initializers_tag");
-  using SPSSig = SPSExpected<SPSCOFFJITDylibDepInfoMap>(SPSExecutorAddr);
 };
 } // namespace llvm::orc::coff_sps_handlers
 
@@ -672,11 +672,9 @@ void COFFPlatform::rt_lookupSymbol(SendSymbolAddressFn SendResult,
 Error COFFPlatform::associateRuntimeSupportFunctions(JITDylib &PlatformJD) {
   return ES.registerCallControllerHandlers(
       PlatformJD,
-      bindCallControllerHandler<
-          sps::HandlerSpec<coff_sps_handlers::LookupSymbol>>(
+      bindCallControllerHandler<coff_sps_handlers::LookupSymbol>(
           this, &COFFPlatform::rt_lookupSymbol),
-      bindCallControllerHandler<
-          sps::HandlerSpec<coff_sps_handlers::PushInitializers>>(
+      bindCallControllerHandler<coff_sps_handlers::PushInitializers>(
           this, &COFFPlatform::rt_pushInitializers));
 }
 
@@ -746,15 +744,13 @@ Error COFFPlatform::bootstrapCOFFRuntime(JITDylib &PlatformJD) {
   using sps::ProxySpec;
 
   PlatformBootstrapProxy PlatformBootstrap(
-      ProxySpec<PlatformBootstrapProxy,
-                coff_sps_ci::PlatformBootstrap>::dispatch,
+      ProxySpec<coff_sps_ci::PlatformBootstrap>::dispatch,
       orc_rt_coff_platform_bootstrap);
   RegisterJITDylibProxy RegisterJITDylib(
-      ProxySpec<RegisterJITDylibProxy, coff_sps_ci::RegisterJITDylib>::dispatch,
+      ProxySpec<coff_sps_ci::RegisterJITDylib>::dispatch,
       orc_rt_coff_register_jitdylib);
   RegisterObjectSectionsProxy RegisterObjectSections(
-      ProxySpec<RegisterObjectSectionsProxy,
-                coff_sps_ci::RegisterObjectSections>::dispatch,
+      ProxySpec<coff_sps_ci::RegisterObjectSections>::dispatch,
       orc_rt_coff_register_object_sections);
 
   // Call bootstrap functions

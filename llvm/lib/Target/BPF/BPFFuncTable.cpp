@@ -191,6 +191,7 @@ static bool runFuncTable(Module &M) {
                               "__bpf_func_table");
 
     IRBuilder<> B(CB);
+    B.disableGEPCanonicalization();
     Value *Idx = B.CreatePtrToInt(CB->getCalledOperand(), I64);
     Idx = B.CreateSub(Idx, ConstantInt::get(I64, R.First));
     Idx = B.CreateBinaryIntrinsic(Intrinsic::umin, Idx,

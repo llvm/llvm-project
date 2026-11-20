@@ -15,6 +15,17 @@ add_object_library(
     libc.src.__support.macros.config
 )
 
+add_header_library(
+  cpu_clock
+  HDRS
+    cpu_clock.h
+  DEPENDS
+    libc.hdr.types.clockid_t
+    libc.hdr.types.pid_t
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+)
+
 add_object_library(
   clock_settime
   HDRS

@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Register/Linux/RegisterInfoLinux_i386.h"
-#include "Register/Linux/RegisterInfoLinux_x86_64.h"
+#include "Plugins/Process/minidump/RegisterContextMinidump_ARM.h"
 #include "Plugins/Process/minidump/RegisterContextMinidump_x86_32.h"
 #include "Plugins/Process/minidump/RegisterContextMinidump_x86_64.h"
-#include "Plugins/Process/minidump/RegisterContextMinidump_ARM.h"
+#include "Register/Linux/RegisterInfoLinux_i386.h"
+#include "Register/Linux/RegisterInfoLinux_x86_64.h"
 #include "lldb/Utility/DataBuffer.h"
 #include "llvm/ADT/StringRef.h"
 #include "gtest/gtest.h"
