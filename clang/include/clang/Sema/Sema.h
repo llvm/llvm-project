@@ -14092,6 +14092,9 @@ public:
   /// substitute (a null entry of \p Params, as from a typedef'd function
   /// type), its type needs to come from \p OldParamTypes instead, which must
   /// then be passed, and \p OutParams gets null for it.
+  ///
+  /// If \p ParamAttrs is not null, the late-parsed attributes of the parameters
+  /// of \p Fn are deferred to it, as for SubstFunctionDeclType.
   bool SubstParmTypes(SourceLocation Loc, ArrayRef<ParmVarDecl *> Params,
                       const FunctionProtoType::ExtParameterInfo *ExtParamInfos,
                       const MultiLevelTemplateArgumentList &TemplateArgs,
@@ -14099,7 +14102,9 @@ public:
                       SmallVectorImpl<ParmVarDecl *> *OutParams,
                       ExtParameterInfoBuilder &ParamInfos,
                       const QualType *OldParamTypes = nullptr,
-                      bool EvaluateConstraints = true);
+                      bool EvaluateConstraints = true,
+                      const FunctionDecl *Fn = nullptr,
+                      LateInstantiatedAttrVec *ParamAttrs = nullptr);
 
   /// Substitute the given template arguments into the default argument.
   bool SubstDefaultArgument(SourceLocation Loc, ParmVarDecl *Param,

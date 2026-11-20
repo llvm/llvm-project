@@ -18,6 +18,11 @@ struct Holder {
 
 void put_later(void (*release)(int) RELEASE(mu),
                Mutex *mu);
+// Also on a later declarator of a declaration.
+void put_later_first(void (*release)(int) RELEASE(mu), Mutex *mu),
+    put_later_second(void (*release)(int) RELEASE(mu), Mutex *mu);
+int not_a_function,
+    put_later_after_var(void (*release)(int) RELEASE(mu), Mutex *mu);
 
 // In a lambda's parameter clause, it is an error without the flag.
 auto lambda = [](void (*release)(int) RELEASE(mu), // early-error{{use of undeclared identifier 'mu'}}
@@ -118,3 +123,14 @@ void use_nested_later(void (*cb)(void (*)(int), Mutex *)) { nested_later<int>(cb
 template <typename T>
 void nested_earlier(Mutex *mu, void (*cb)(void (*release)(T) RELEASE(mu))) {}
 void use_nested_earlier(Mutex *mu) { nested_earlier<int>(mu, nullptr); }
+
+// A later parameter shadows a name outside the function. Where the function has
+// a body, warn-thread-safety-analysis.cpp checks which one the attribute names.
+Mutex outer_mu;
+void shadows_later(void (*release)(int) RELEASE(outer_mu), Mutex *outer_mu);
+auto shadows_lambda = [](void (*release)(int) RELEASE(outer_mu),
+                         Mutex *outer_mu) {};
+struct ShadowsMember {
+  Mutex own;
+  void later(void (*release)(int) RELEASE(own), Mutex *own);
+};
