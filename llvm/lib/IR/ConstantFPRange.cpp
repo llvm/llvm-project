@@ -37,6 +37,7 @@ bool ConstantFPRange::isNaNOnly() const {
 
 ConstantFPRange::ConstantFPRange(const fltSemantics &Sem, bool IsFullSet)
     : Lower(Sem, APFloat::uninitialized), Upper(Sem, APFloat::uninitialized) {
+  assert(&Sem != &APFloat::PPCDoubleDouble() && "Unsupported FP semantics");
   Lower = APFloat::getInf(Sem, /*Negative=*/IsFullSet);
   Upper = APFloat::getInf(Sem, /*Negative=*/!IsFullSet);
   MayBeQNaN = IsFullSet;
@@ -46,6 +47,8 @@ ConstantFPRange::ConstantFPRange(const fltSemantics &Sem, bool IsFullSet)
 ConstantFPRange::ConstantFPRange(const APFloat &Value)
     : Lower(Value.getSemantics(), APFloat::uninitialized),
       Upper(Value.getSemantics(), APFloat::uninitialized) {
+  assert(&Value.getSemantics() != &APFloat::PPCDoubleDouble() &&
+         "Unsupported FP semantics");
   if (Value.isNaN()) {
     makeEmpty();
     bool IsSNaN = Value.isSignaling();
@@ -87,6 +90,8 @@ ConstantFPRange::ConstantFPRange(APFloat LowerVal, APFloat UpperVal,
       MayBeQNaN(MayBeQNaNVal), MayBeSNaN(MayBeSNaNVal) {
   assert(&Lower.getSemantics() == &Upper.getSemantics() &&
          "Should only use the same semantics");
+  assert(&Lower.getSemantics() != &APFloat::PPCDoubleDouble() &&
+         "Unsupported FP semantics");
   assert(!isNonCanonicalEmptySet(Lower, Upper) && "Non-canonical form");
 }
 
@@ -269,6 +274,9 @@ ConstantFPRange::makeSatisfyingFCmpRegion(FCmpInst::Predicate Pred,
 std::optional<ConstantFPRange>
 ConstantFPRange::makeExactFCmpRegion(FCmpInst::Predicate Pred,
                                      const APFloat &Other) {
+  // No support for PPCDoubleDouble.
+  if (&Other.getSemantics() == &APFloat::PPCDoubleDouble())
+    return std::nullopt;
   if ((Pred == FCmpInst::FCMP_UNE || Pred == FCmpInst::FCMP_ONE) &&
       !Other.isNaN())
     return std::nullopt;
