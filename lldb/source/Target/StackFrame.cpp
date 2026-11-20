@@ -22,6 +22,7 @@
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/Language.h"
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
@@ -756,8 +757,12 @@ ValueObjectSP StackFrame::LegacyGetValueForVariableExpressionPath(
       return valobj_sp;
   }
   if (!valobj_sp) {
-    error = Status::FromErrorStringWithFormatv(
-        "no variable named '{0}' found in this frame", name_const_string);
+    if (std::string message = GetMissingVariableDiagnostic(name_const_string);
+        !message.empty())
+      error = Status::FromErrorString(message.c_str());
+    else
+      error = Status::FromErrorStringWithFormatv(
+          "no variable named '{0}' found in this frame", name_const_string);
     return ValueObjectSP();
   }
 
@@ -1439,6 +1444,14 @@ SourceLanguage StackFrame::GetLanguage() {
   if (cu)
     return SourceLanguage{cu->GetLanguage()};
   return {};
+}
+
+std::string StackFrame::GetMissingVariableDiagnostic(llvm::StringRef name) {
+  Language *language = Language::FindPlugin(GetLanguage().AsLanguageType());
+  if (!language)
+    return {};
+  return language->GetMissingVariableDiagnostic(
+      name, GetSymbolContext(eSymbolContextModule | eSymbolContextFunction));
 }
 
 SourceLanguage StackFrame::GuessLanguage() {

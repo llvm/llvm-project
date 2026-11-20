@@ -376,3 +376,4 @@ body:             |
     %copy_assert_sext2:_(i32) = G_ASSERT_SEXT %copy_assert_sext1(i32), 16
     %copy_assert_sext3:_(i32) = G_ASSERT_SEXT %copy_assert_sext2(i32), 16
     G_BR %bb.0
+...

@@ -629,7 +629,8 @@ TEST(DenseMapCustomTest, InitFromIterator) {
     Values.emplace_back(i, CountCopyAndMove(i));
 
   CountCopyAndMove::ResetCounts();
-  DenseMap<int, CountCopyAndMove> Map(Values.begin(), Values.end());
+  [[maybe_unused]] DenseMap<int, CountCopyAndMove> Map(Values.begin(),
+                                                       Values.end());
   // Check that no move occurred
   EXPECT_EQ(0, CountCopyAndMove::TotalMoves());
   // Check that copy was called the expected number of times
@@ -1285,7 +1286,7 @@ TEST(DenseMapCustomTest, MoveConstructInvalidatesIterators) {
   DenseMap<int, int> M;
   M.try_emplace(1, 10);
   auto It = M.find(1);
-  DenseMap<int, int> Other = std::move(M);
+  [[maybe_unused]] DenseMap<int, int> Other = std::move(M);
   EXPECT_DEATH((void)It->second, "invalid iterator access");
 }
 
@@ -1293,7 +1294,7 @@ TEST(DenseMapCustomTest, MoveAssignInvalidatesIterators) {
   DenseMap<int, int> M;
   M.try_emplace(1, 10);
   auto It = M.find(1);
-  DenseMap<int, int> Other;
+  [[maybe_unused]] DenseMap<int, int> Other;
   Other = std::move(M);
   EXPECT_DEATH((void)It->second, "invalid iterator access");
 }
@@ -1400,6 +1401,69 @@ TEST(DenseMapCustomTest, SmallRemoveIf) {
     for (unsigned I = 1; I <= NumRehashKeys; ++I)
       EXPECT_EQ(I, Map.lookup(rehashTestKey(I)));
   }
+}
+
+struct PolymorphicBase {
+  int Value = 0;
+  PolymorphicBase() = default;
+  explicit PolymorphicBase(int V) : Value(V) {}
+  PolymorphicBase(const PolymorphicBase &) = default;
+  PolymorphicBase(PolymorphicBase &&) noexcept = default;
+  PolymorphicBase &operator=(const PolymorphicBase &) = default;
+  PolymorphicBase &operator=(PolymorphicBase &&) noexcept = default;
+  virtual ~PolymorphicBase() = default;
+  virtual int get() const { return Value; }
+  bool operator==(const PolymorphicBase &RHS) const {
+    return Value == RHS.Value;
+  }
+};
+
+struct PolymorphicDerived : PolymorphicBase {
+  using PolymorphicBase::PolymorphicBase;
+  int get() const override { return Value * 2; }
+};
+
+struct PolymorphicMapInfo {
+  static unsigned getHashValue(const PolymorphicBase &Val) {
+    return static_cast<unsigned>(Val.Value) * 37U;
+  }
+  static bool isEqual(const PolymorphicBase &LHS, const PolymorphicBase &RHS) {
+    return LHS == RHS;
+  }
+};
+
+TEST(DenseMapCustomTest, PolymorphicTypes) {
+  DenseMap<PolymorphicBase, PolymorphicBase, PolymorphicMapInfo> Map;
+  SmallDenseMap<PolymorphicBase, PolymorphicBase, 4, PolymorphicMapInfo>
+      SmallMap;
+  for (int I = 0; I < 16; ++I) {
+    Map.try_emplace(PolymorphicBase(I), I + 100);
+    SmallMap.try_emplace(PolymorphicBase(I), I + 100);
+  }
+  EXPECT_EQ(16u, Map.size());
+  EXPECT_EQ(16u, SmallMap.size());
+  EXPECT_EQ(105, Map.find(PolymorphicBase(5))->second.get());
+  EXPECT_EQ(105, SmallMap.find(PolymorphicBase(5))->second.get());
+
+  EXPECT_TRUE(Map.erase(PolymorphicBase(5)));
+  EXPECT_TRUE(SmallMap.erase(PolymorphicBase(5)));
+  EXPECT_FALSE(Map.contains(PolymorphicBase(5)));
+  EXPECT_FALSE(SmallMap.contains(PolymorphicBase(5)));
+
+  PolymorphicBase B(1);
+  PolymorphicDerived D(2);
+  DenseMap<PolymorphicBase *, PolymorphicBase *> PtrMap;
+  SmallDenseMap<PolymorphicBase *, PolymorphicBase *, 2> SmallPtrMap;
+  PtrMap.try_emplace(&B, &D);
+  PtrMap.try_emplace(&D, &B);
+  SmallPtrMap.try_emplace(&B, &D);
+  SmallPtrMap.try_emplace(&D, &B);
+
+  const PolymorphicBase *ConstB = &B;
+  EXPECT_EQ(4, PtrMap.lookup(ConstB)->get());
+  EXPECT_EQ(1, PtrMap.lookup(&D)->get());
+  EXPECT_EQ(4, SmallPtrMap.lookup(ConstB)->get());
+  EXPECT_EQ(1, SmallPtrMap.lookup(&D)->get());
 }
 
 } // namespace

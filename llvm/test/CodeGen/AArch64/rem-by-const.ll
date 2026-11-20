@@ -5,13 +5,13 @@
 define i8 @si8_7(i8 %a, i8 %b) {
 ; CHECK-SD-LABEL: si8_7:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    sxtb w8, w0
-; CHECK-SD-NEXT:    mov w9, #-109 // =0xffffff93
-; CHECK-SD-NEXT:    mul w8, w8, w9
+; CHECK-SD-NEXT:    sxtb w9, w0
+; CHECK-SD-NEXT:    mov w8, #-109 // =0xffffff93
+; CHECK-SD-NEXT:    mul w8, w9, w8
 ; CHECK-SD-NEXT:    add w8, w0, w8, lsr #8
-; CHECK-SD-NEXT:    sbfx w9, w8, #2, #6
-; CHECK-SD-NEXT:    and w8, w8, #0x80
-; CHECK-SD-NEXT:    add w8, w9, w8, lsr #7
+; CHECK-SD-NEXT:    sxtb w9, w8
+; CHECK-SD-NEXT:    ubfx w8, w8, #7, #1
+; CHECK-SD-NEXT:    add w8, w8, w9, asr #2
 ; CHECK-SD-NEXT:    sub w8, w8, w8, lsl #3
 ; CHECK-SD-NEXT:    add w0, w0, w8
 ; CHECK-SD-NEXT:    ret
@@ -60,33 +60,19 @@ entry:
 }
 
 define i8 @ui8_7(i8 %a, i8 %b) {
-; CHECK-SD-LABEL: ui8_7:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mov w8, #37 // =0x25
-; CHECK-SD-NEXT:    and w9, w0, #0xff
-; CHECK-SD-NEXT:    mul w8, w9, w8
-; CHECK-SD-NEXT:    lsr w8, w8, #8
-; CHECK-SD-NEXT:    sub w9, w0, w8
-; CHECK-SD-NEXT:    and w9, w9, #0xfe
-; CHECK-SD-NEXT:    add w8, w8, w9, lsr #1
-; CHECK-SD-NEXT:    lsr w8, w8, #2
-; CHECK-SD-NEXT:    sub w8, w8, w8, lsl #3
-; CHECK-SD-NEXT:    add w0, w0, w8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: ui8_7:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov w8, #37 // =0x25
-; CHECK-GI-NEXT:    and w9, w0, #0xff
-; CHECK-GI-NEXT:    mul w8, w9, w8
-; CHECK-GI-NEXT:    lsr w8, w8, #8
-; CHECK-GI-NEXT:    sub w9, w0, w8
-; CHECK-GI-NEXT:    ubfx w9, w9, #1, #7
-; CHECK-GI-NEXT:    add w8, w9, w8
-; CHECK-GI-NEXT:    lsr w8, w8, #2
-; CHECK-GI-NEXT:    sub w8, w8, w8, lsl #3
-; CHECK-GI-NEXT:    add w0, w0, w8
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: ui8_7:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w8, #37 // =0x25
+; CHECK-NEXT:    and w9, w0, #0xff
+; CHECK-NEXT:    mul w8, w9, w8
+; CHECK-NEXT:    lsr w8, w8, #8
+; CHECK-NEXT:    sub w9, w0, w8
+; CHECK-NEXT:    ubfx w9, w9, #1, #7
+; CHECK-NEXT:    add w8, w9, w8
+; CHECK-NEXT:    lsr w8, w8, #2
+; CHECK-NEXT:    sub w8, w8, w8, lsl #3
+; CHECK-NEXT:    add w0, w0, w8
+; CHECK-NEXT:    ret
 entry:
   %s = urem i8 %a, 7
   ret i8 %s
@@ -172,33 +158,19 @@ entry:
 }
 
 define i16 @ui16_7(i16 %a, i16 %b) {
-; CHECK-SD-LABEL: ui16_7:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mov w8, #9363 // =0x2493
-; CHECK-SD-NEXT:    and w9, w0, #0xffff
-; CHECK-SD-NEXT:    mul w8, w9, w8
-; CHECK-SD-NEXT:    lsr w8, w8, #16
-; CHECK-SD-NEXT:    sub w9, w0, w8
-; CHECK-SD-NEXT:    and w9, w9, #0xfffe
-; CHECK-SD-NEXT:    add w8, w8, w9, lsr #1
-; CHECK-SD-NEXT:    lsr w8, w8, #2
-; CHECK-SD-NEXT:    sub w8, w8, w8, lsl #3
-; CHECK-SD-NEXT:    add w0, w0, w8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: ui16_7:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov w8, #9363 // =0x2493
-; CHECK-GI-NEXT:    and w9, w0, #0xffff
-; CHECK-GI-NEXT:    mul w8, w9, w8
-; CHECK-GI-NEXT:    lsr w8, w8, #16
-; CHECK-GI-NEXT:    sub w9, w0, w8
-; CHECK-GI-NEXT:    ubfx w9, w9, #1, #15
-; CHECK-GI-NEXT:    add w8, w9, w8
-; CHECK-GI-NEXT:    lsr w8, w8, #2
-; CHECK-GI-NEXT:    sub w8, w8, w8, lsl #3
-; CHECK-GI-NEXT:    add w0, w0, w8
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: ui16_7:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w8, #9363 // =0x2493
+; CHECK-NEXT:    and w9, w0, #0xffff
+; CHECK-NEXT:    mul w8, w9, w8
+; CHECK-NEXT:    lsr w8, w8, #16
+; CHECK-NEXT:    sub w9, w0, w8
+; CHECK-NEXT:    ubfx w9, w9, #1, #15
+; CHECK-NEXT:    add w8, w9, w8
+; CHECK-NEXT:    lsr w8, w8, #2
+; CHECK-NEXT:    sub w8, w8, w8, lsl #3
+; CHECK-NEXT:    add w0, w0, w8
+; CHECK-NEXT:    ret
 entry:
   %s = urem i16 %a, 7
   ret i16 %s
@@ -2412,12 +2384,19 @@ define <2 x i64> @sv2i64_7(<2 x i64> %d, <2 x i64> %e) {
 ;
 ; CHECK-GI-LABEL: sv2i64_7:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    fmov x9, d0
-; CHECK-GI-NEXT:    mov w8, #7 // =0x7
-; CHECK-GI-NEXT:    mov x10, v0.d[1]
-; CHECK-GI-NEXT:    sdiv x9, x9, x8
-; CHECK-GI-NEXT:    sdiv x8, x10, x8
+; CHECK-GI-NEXT:    mov x8, #18725 // =0x4925
+; CHECK-GI-NEXT:    fmov x10, d0
+; CHECK-GI-NEXT:    mov x9, v0.d[1]
+; CHECK-GI-NEXT:    movk x8, #9362, lsl #16
+; CHECK-GI-NEXT:    movk x8, #37449, lsl #32
+; CHECK-GI-NEXT:    movk x8, #18724, lsl #48
+; CHECK-GI-NEXT:    smulh x10, x10, x8
+; CHECK-GI-NEXT:    smulh x8, x9, x8
+; CHECK-GI-NEXT:    asr x9, x10, #1
+; CHECK-GI-NEXT:    add x9, x9, x9, lsr #63
+; CHECK-GI-NEXT:    asr x8, x8, #1
 ; CHECK-GI-NEXT:    fmov d1, x9
+; CHECK-GI-NEXT:    add x8, x8, x8, lsr #63
 ; CHECK-GI-NEXT:    mov v1.d[1], x8
 ; CHECK-GI-NEXT:    adrp x8, .LCPI68_0
 ; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI68_0]
@@ -2462,12 +2441,22 @@ define <2 x i64> @sv2i64_100(<2 x i64> %d, <2 x i64> %e) {
 ;
 ; CHECK-GI-LABEL: sv2i64_100:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov x8, #55051 // =0xd70b
+; CHECK-GI-NEXT:    mov d1, v0.d[1]
 ; CHECK-GI-NEXT:    fmov x9, d0
-; CHECK-GI-NEXT:    mov w8, #100 // =0x64
-; CHECK-GI-NEXT:    mov x10, v0.d[1]
-; CHECK-GI-NEXT:    sdiv x9, x9, x8
-; CHECK-GI-NEXT:    sdiv x8, x10, x8
+; CHECK-GI-NEXT:    movk x8, #28835, lsl #16
+; CHECK-GI-NEXT:    movk x8, #2621, lsl #32
+; CHECK-GI-NEXT:    movk x8, #41943, lsl #48
+; CHECK-GI-NEXT:    smulh x10, x9, x8
+; CHECK-GI-NEXT:    fmov x11, d1
+; CHECK-GI-NEXT:    smulh x8, x11, x8
+; CHECK-GI-NEXT:    add x9, x10, x9
+; CHECK-GI-NEXT:    asr x9, x9, #6
+; CHECK-GI-NEXT:    add x8, x8, x11
+; CHECK-GI-NEXT:    add x9, x9, x9, lsr #63
+; CHECK-GI-NEXT:    asr x8, x8, #6
 ; CHECK-GI-NEXT:    fmov d1, x9
+; CHECK-GI-NEXT:    add x8, x8, x8, lsr #63
 ; CHECK-GI-NEXT:    mov v1.d[1], x8
 ; CHECK-GI-NEXT:    adrp x8, .LCPI69_0
 ; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI69_0]
