@@ -153,3 +153,13 @@ def E_IntegerType : TestType<"Integer"> {
 // DECL-NEXT: /// Return true if this is an unsigned integer type.
 // DECL-NEXT: bool isUnsigned() const { return getSignedness() == Unsigned; }
 }
+
+// The registration hook registers every type.
+// DEF: class TestDialect;
+// DEF-NEXT: {{\[\[}}maybe_unused{{\]\]}} static void registerTestDialectTypes(TestDialect *dialect) {
+// DEF-NEXT:   ::mlir::AbstractType::insert<SimpleAType>(*dialect);
+// DEF-NEXT:   ::mlir::AbstractType::insert<CompoundAType>(*dialect);
+// DEF-NEXT:   ::mlir::AbstractType::insert<IndexType>(*dialect);
+// DEF-NEXT:   ::mlir::AbstractType::insert<SingleParameterType>(*dialect);
+// DEF-NEXT:   ::mlir::AbstractType::insert<IntegerType>(*dialect);
+// DEF-NEXT: }
