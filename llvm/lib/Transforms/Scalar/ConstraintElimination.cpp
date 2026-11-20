@@ -387,7 +387,6 @@ public:
   }
 
   unsigned getNumDepthLimitHits() const { return NumDepthLimitHits; }
-  void markDepthLimitHit() { ++NumDepthLimitHits; }
 
   ConstraintInfo(const DataLayout &DL, ArrayRef<Value *> FunctionArgs)
       : UnsignedCS(FunctionArgs), SignedCS(FunctionArgs), DL(DL) {
@@ -1165,7 +1164,7 @@ bool ConstraintInfo::doesHold(CmpInst::Predicate Pred, Value *A, Value *B) {
   // operations. Cut off deep nesting to bound stack usage and compile time.
   if (DoesHoldDepth >= MaxDoesHoldDepth) {
     ++NumDoesHoldDepthLimitHit;
-    markDepthLimitHit();
+    ++NumDepthLimitHits;
     return false;
   }
   SaveAndRestore DepthScope(DoesHoldDepth, DoesHoldDepth + 1);
