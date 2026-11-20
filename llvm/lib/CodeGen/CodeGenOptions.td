@@ -442,9 +442,9 @@ defm : BoolField<"stress-sched", "false",
   "Stress test instruction scheduling">;
 
 // ScheduleDAGInstrs.cpp
-// Note: the following option might be used in tuning compile time vs output
-// quality. Setting it so large that it will never be reached means best-effort,
-// but may be slow.
+// Note: -dag-maps-huge-region and the -store-sequencing options might be used
+// in tuning compile time vs output quality. Setting -dag-maps-huge-region so
+// large that it will never be reached means best-effort, but may be slow.
 // FIXME(@cofibrant): Drop in favour of store-sequencing.
 // When the number of processed memops reaches this threshold, a reduction of
 // maps will be done.

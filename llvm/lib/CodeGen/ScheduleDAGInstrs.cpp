@@ -614,10 +614,6 @@ private:
     /// The memory operations in the frontier.
     SUList Stores, Loads;
 
-    /// Returns true if the next store should be promoted to a sequencing store
-    /// and false otherwise.
-    bool shouldUpdate(const CodeGenOptions &Opts) const;
-
     /// The number of memops in the frontier, excluding the sequencing store.
     unsigned size() const;
 
@@ -661,12 +657,6 @@ private:
     /// `true` if the frontier contains a load whose underlying objects escape
     /// #BaseObjects.
     bool SeenSequencingLoad = false;
-
-    /// Given a store instruction with underlying objects \p Objs, returns true
-    /// if the store should be promoted to a sequencing store and false
-    /// otherwise.
-    bool shouldUpdate(const CodeGenOptions &Opts,
-                      const UnderlyingObjectsVector &Objs) const;
 
     /// Returns true if any of \p Objs does not belong to #BaseObjects.
     bool escapesBaseObjects(const UnderlyingObjectsVector &Objs) const;
@@ -717,6 +707,16 @@ private:
   /// and clear the memop frontiers.
   void addBarrierMemoryDeps();
 
+  /// Returns true if the next store should be promoted to a sequencing store
+  /// in the frontier \p F and false otherwise.
+  bool shouldUpdate(const MemopFrontier &F) const;
+
+  /// Given a store instruction with underlying objects \p Objs, returns true
+  /// if the store should be promoted to a sequencing store in the frontier
+  /// \p UF and false otherwise.
+  bool shouldUpdate(const UnanalyzableMemopFrontier &UF,
+                    const UnderlyingObjectsVector &Objs) const;
+
   /// Promote the store \p SU to be a new sequencing store in the frontier \p F.
   /// If \p PreserveNoAliasLoads is true, loads in the frontier that do not
   /// alias with \p SU will be retained after promotion.
@@ -743,19 +743,19 @@ void ScheduleDAGDependencyBuilder::MemopFrontier::clear() {
   Loads.clear();
 }
 
-bool ScheduleDAGDependencyBuilder::MemopFrontier::shouldUpdate(
-    const CodeGenOptions &Opts) const {
+bool ScheduleDAGDependencyBuilder::shouldUpdate(const MemopFrontier &F) const {
   if (!Opts.store_sequencing)
     return false;
-  return size() >= Opts.store_sequencing_max_frontier_size;
+  return F.size() >= Opts.store_sequencing_max_frontier_size;
 }
 
-bool ScheduleDAGDependencyBuilder::UnanalyzableMemopFrontier::shouldUpdate(
-    const CodeGenOptions &Opts, const UnderlyingObjectsVector &Objs) const {
+bool ScheduleDAGDependencyBuilder::shouldUpdate(
+    const UnanalyzableMemopFrontier &UF,
+    const UnderlyingObjectsVector &Objs) const {
   if (!Opts.store_sequencing)
     return false;
-  return Frontier.shouldUpdate(Opts) || !Frontier.SequencingStore ||
-         SeenSequencingLoad || escapesBaseObjects(Objs);
+  return shouldUpdate(UF.Frontier) || !UF.Frontier.SequencingStore ||
+         UF.SeenSequencingLoad || UF.escapesBaseObjects(Objs);
 }
 
 bool ScheduleDAGDependencyBuilder::UnanalyzableMemopFrontier::
@@ -891,7 +891,7 @@ void ScheduleDAGDependencyBuilder::updateSequencingStore(
          "Only store instructions should be used as sequencing stores");
   // If the underlying MemopFrontier wants updating, we're over size and
   // therefore shouldn't try to preserve no alias loads.
-  bool ShouldPreserveNoAliasLoads = !UF.Frontier.shouldUpdate(Opts);
+  bool ShouldPreserveNoAliasLoads = !shouldUpdate(UF.Frontier);
   updateSequencingStore(UF.Frontier, SU,
                         /*PreserveNoAliasLoads=*/ShouldPreserveNoAliasLoads);
   UF.BaseObjects = std::move(Objs);
@@ -1091,7 +1091,7 @@ void ScheduleDAGDependencyBuilder::buildDeps() {
       for (auto &[_, AF] : AnalyzableFrontiers)
         addChainDependencies(SU, AF, IsStore);
 
-      if (IsStore && UnanalyzableFrontier.shouldUpdate(Opts, Objs)) {
+      if (IsStore && shouldUpdate(UnanalyzableFrontier, Objs)) {
         updateSequencingStore(UnanalyzableFrontier, SU, std::move(Objs));
       } else {
         if (!IsStore && UnanalyzableFrontier.escapesBaseObjects(Objs))
@@ -1113,7 +1113,7 @@ void ScheduleDAGDependencyBuilder::buildDeps() {
 
         MemopFrontier &Frontier = AnalyzableFrontiers[V];
 
-        if (IsStore && Frontier.shouldUpdate(Opts)) {
+        if (IsStore && shouldUpdate(Frontier)) {
           updateSequencingStore(Frontier, SU);
         } else {
           addChainDependencies(SU, Frontier, IsStore);
