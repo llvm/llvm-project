@@ -103,6 +103,26 @@ TEST_F(OpenACCOpsInterfacesTest, GlobalVariableOpInterfaceInitRegion) {
   EXPECT_EQ(globalVarIface.getInitRegion(), nullptr);
 }
 
+TEST_F(OpenACCOpsInterfacesTest,
+       GlobalVariableOpInterfaceInternalLinkageDefault) {
+  // memref.global does not override isInternalLinkage(), so the interface
+  // default applies.
+  auto memrefType = MemRefType::get({10}, builder.getF32Type());
+  OwningOpRef<memref::GlobalOp> globalOp = memref::GlobalOp::create(
+      builder, loc,
+      /*sym_name=*/builder.getStringAttr("linkage_default_global"),
+      /*sym_visibility=*/builder.getStringAttr("private"),
+      /*type=*/TypeAttr::get(memrefType),
+      /*initial_value=*/Attribute(),
+      /*constant=*/UnitAttr(),
+      /*alignment=*/IntegerAttr());
+
+  auto globalVarIface =
+      dyn_cast<GlobalVariableOpInterface>(globalOp->getOperation());
+  ASSERT_TRUE(globalVarIface != nullptr);
+  EXPECT_FALSE(globalVarIface.isInternalLinkage());
+}
+
 //===----------------------------------------------------------------------===//
 // AddressOfGlobalOpInterface Tests
 //===----------------------------------------------------------------------===//
