@@ -993,10 +993,9 @@ void CIRGenFunction::emitDelegateCallArg(CallArgList &args,
   }
 }
 
-static const CIRGenFunctionInfo &
-arrangeFreeFunctionLikeCall(CIRGenTypes &cgt, CIRGenModule &cgm,
-                            const CallArgList &args,
-                            const FunctionType *fnType) {
+static const CIRGenFunctionInfo &arrangeFreeFunctionLikeCall(
+    CIRGenTypes &cgt, const TargetCIRGenInfo &targetInfo,
+    const CallArgList &args, const FunctionType *fnType) {
 
   RequiredArgs required = RequiredArgs::All;
 
@@ -1008,9 +1007,10 @@ arrangeFreeFunctionLikeCall(CIRGenTypes &cgt, CIRGenModule &cgm,
     // actually holds.
     if (proto->isVariadic())
       required = RequiredArgs::getFromProtoWithExtraSlots(proto, 0);
-  } else if (cgm.getTargetCIRGenInfo().isNoProtoCallVariadic(
-                 cast<FunctionNoProtoType>(fnType)))
-    cgm.errorNYI("call to function without a prototype");
+  } else if (targetInfo.isNoProtoCallVariadic(
+                 cast<FunctionNoProtoType>(fnType))) {
+    required = RequiredArgs(args.size());
+  }
 
   SmallVector<CanQualType, 16> argTypes;
   for (const CallArg &arg : args)
@@ -1093,7 +1093,14 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeCXXMethodCall(
 const CIRGenFunctionInfo &
 CIRGenTypes::arrangeFreeFunctionCall(const CallArgList &args,
                                      const FunctionType *fnType) {
-  return arrangeFreeFunctionLikeCall(*this, cgm, args, fnType);
+  return arrangeFreeFunctionCall(args, fnType, cgm.getTargetCIRGenInfo());
+}
+
+const CIRGenFunctionInfo &
+CIRGenTypes::arrangeFreeFunctionCall(const CallArgList &args,
+                                     const FunctionType *fnType,
+                                     const TargetCIRGenInfo &targetInfo) {
+  return arrangeFreeFunctionLikeCall(*this, targetInfo, args, fnType);
 }
 
 const CIRGenFunctionInfo &
