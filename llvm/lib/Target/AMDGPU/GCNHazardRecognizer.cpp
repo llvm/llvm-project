@@ -443,17 +443,6 @@ static bool isSGetReg(unsigned Opcode) {
   return Opcode == AMDGPU::S_GETREG_B32 || Opcode == AMDGPU::S_GETREG_B32_const;
 }
 
-static bool isSSetReg(unsigned Opcode) {
-  switch (Opcode) {
-  case AMDGPU::S_SETREG_B32:
-  case AMDGPU::S_SETREG_B32_mode:
-  case AMDGPU::S_SETREG_IMM32_B32:
-  case AMDGPU::S_SETREG_IMM32_B32_mode:
-    return true;
-  }
-  return false;
-}
-
 static bool isRWLane(unsigned Opcode) {
   return Opcode == AMDGPU::V_READLANE_B32 || Opcode == AMDGPU::V_WRITELANE_B32;
 }
@@ -598,7 +587,7 @@ GCNHazardRecognizer::getHazardType(SUnit *SU, int Stalls) {
   if (isSGetReg(MI->getOpcode()) && checkGetRegHazards(MI) > 0)
     return HazardType;
 
-  if (isSSetReg(MI->getOpcode()) && checkSetRegHazards(MI) > 0)
+  if (SIInstrInfo::isSSetReg(MI->getOpcode()) && checkSetRegHazards(MI) > 0)
     return HazardType;
 
   if (isRFE(MI->getOpcode()) && checkRFEHazards(MI) > 0)
@@ -759,7 +748,7 @@ unsigned GCNHazardRecognizer::PreEmitNoopsCommon(MachineInstr *MI) const {
   if (isSGetReg(MI->getOpcode()))
     return std::max(WaitStates, checkGetRegHazards(MI));
 
-  if (isSSetReg(MI->getOpcode()))
+  if (SIInstrInfo::isSSetReg(MI->getOpcode()))
     return std::max(WaitStates, checkSetRegHazards(MI));
 
   if (isRFE(MI->getOpcode()))
@@ -1262,7 +1251,7 @@ int GCNHazardRecognizer::getWaitStatesSinceDef(unsigned Reg,
 int GCNHazardRecognizer::getWaitStatesSinceSetReg(IsHazardFn IsHazard,
                                                   int Limit) const {
   auto IsHazardFn = [IsHazard](const MachineInstr &MI) {
-    return isSSetReg(MI.getOpcode()) && IsHazard(MI);
+    return SIInstrInfo::isSSetReg(MI.getOpcode()) && IsHazard(MI);
   };
 
   return getWaitStatesSince(IsHazardFn, Limit);
@@ -4528,7 +4517,7 @@ bool GCNHazardRecognizer::fixScratchBaseForwardingHazard(MachineInstr *MI) {
 }
 
 bool GCNHazardRecognizer::fixSetRegMode(MachineInstr *MI) {
-  if (!isSSetReg(MI->getOpcode()) ||
+  if (!SIInstrInfo::isSSetReg(MI->getOpcode()) ||
       MI->getOperand(1).getImm() != AMDGPU::Hwreg::ID_MODE)
     return false;
 
