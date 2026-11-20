@@ -3,6 +3,7 @@ add_lldb_unittest(LLDBPlatformTests
   PlatformAppleSimulatorTest.cpp
   PlatformDarwinTest.cpp
   PlatformEmscriptenTest.cpp
+  PlatformGDBStubLauncherTest.cpp
   PlatformMacOSXTest.cpp
   PlatformRemoteDarwinDeviceTest.cpp
   PlatformSiginfoTest.cpp
@@ -15,6 +16,7 @@ add_lldb_unittest(LLDBPlatformTests
   LINK_LIBS
     lldbPluginPlatformEmscripten
     lldbPluginPlatformFreeBSD
+    lldbPluginPlatformGDBStubLauncher
     lldbPluginPlatformLinux
     lldbPluginPlatformMacOSX
     lldbPluginPlatformNetBSD

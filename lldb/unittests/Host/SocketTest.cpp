@@ -318,6 +318,18 @@ TEST_P(SocketTest, TCPListen0GetPort) {
   EXPECT_NE(sock.get()->GetLocalPortNumber(), 0);
 }
 
+TEST_F(SocketTest, TCPFindFreePort) {
+  llvm::Expected<uint16_t> port = TCPSocket::FindFreePort();
+  ASSERT_THAT_EXPECTED(port, llvm::Succeeded());
+  ASSERT_NE(*port, 0);
+
+  // The port is released on return, so it can be listened on.
+  llvm::Expected<std::unique_ptr<TCPSocket>> sock =
+      Socket::TcpListen(llvm::formatv("localhost:{0}", *port).str(), 5);
+  ASSERT_THAT_EXPECTED(sock, llvm::Succeeded());
+  EXPECT_EQ(sock.get()->GetLocalPortNumber(), *port);
+}
+
 TEST_P(SocketTest, TCPListen0GetListeningConnectionURI) {
   if (!HostSupportsProtocol())
     return;
