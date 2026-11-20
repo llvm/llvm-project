@@ -238,40 +238,52 @@ class PrepareForOMPOffloadPrivatizationPass
         if (isPrivatizedByValue)
           (void)LLVM::StoreOp::create(rewriter, loc, initializedVal, heapMem);
 
-        // clone origOp, replace all uses of varPtr with heapMem and
-        // erase origOp.
-        auto cloneModifyAndErase = [&](Operation *origOp) -> Operation * {
-          Operation *clonedOp = rewriter.clone(*origOp);
-          rewriter.replaceAllOpUsesWith(origOp, clonedOp);
-          rewriter.modifyOpInPlace(clonedOp, [&]() {
-            clonedOp->replaceUsesOfWith(varPtr, heapMem);
-          });
-          rewriter.eraseOp(origOp);
-          return clonedOp;
-        };
-
-        // Now that we have set up the heap-allocated copy of the private
-        // variable, rewrite all the uses of the original variable with
-        // the heap-allocated variable.
+        // Clone the target's maps in dependency order, including attachment
+        // maps that are not members of the descriptor map. Map address
+        // calculations can be shared with other maps or ordinary host code,
+        // so remap only the cloned operations and this target's map operands.
         rewriter.setInsertionPoint(targetOp);
-        mapInfoOp = cast<omp::MapInfoOp>(cloneModifyAndErase(mapInfoOp));
-        rewriter.setInsertionPoint(mapInfoOp);
+        IRMapping mapper;
+        mapper.map(varPtr, heapMem);
+        SmallVector<Operation *> originalOps;
+        auto cloneAndRemap = [&](Operation *op) {
+          rewriter.clone(*op, mapper);
+          originalOps.push_back(op);
+        };
+        auto remapMap = [&](auto &&self, omp::MapInfoOp map) -> void {
+          if (mapper.contains(map.getOperation()))
+            return;
+          for (Value member : map.getMembers())
+            self(self, cast<omp::MapInfoOp>(member.getDefiningOp()));
 
-        // Fix any members that may use varPtr to now use heapMem
-        for (auto member : mapInfoOp.getMembers()) {
-          auto memberMapInfoOp = cast<omp::MapInfoOp>(member.getDefiningOp());
-          if (!usesVarPtr(memberMapInfoOp))
-            continue;
-          memberMapInfoOp =
-              cast<omp::MapInfoOp>(cloneModifyAndErase(memberMapInfoOp));
-          rewriter.setInsertionPoint(memberMapInfoOp);
-
-          if (memberMapInfoOp.getVarPtrPtr()) {
-            Operation *varPtrPtrdefOp =
-                memberMapInfoOp.getVarPtrPtr().getDefiningOp();
-            rewriter.setInsertionPoint(cloneModifyAndErase(varPtrPtrdefOp));
+          if (map.getVarPtr() == varPtr) {
+            Value varPtrPtr = map.getVarPtrPtr();
+            if (varPtrPtr && !mapper.contains(varPtrPtr)) {
+              Operation *defOp = varPtrPtr.getDefiningOp();
+              if (defOp && usesVarPtr(defOp))
+                cloneAndRemap(defOp);
+            }
           }
-        }
+
+          if (llvm::any_of(map->getOperands(), [&](Value operand) {
+                return mapper.contains(operand);
+              }))
+            cloneAndRemap(map);
+        };
+        for (Value map : targetOp.getMapVars())
+          remapMap(remapMap, cast<omp::MapInfoOp>(map.getDefiningOp()));
+
+        SmallVector<Value> newMapVars;
+        for (Value map : targetOp.getMapVars())
+          newMapVars.push_back(mapper.lookupOrDefault(map));
+        rewriter.modifyOpInPlace(targetOp, [&]() {
+          targetOp.getMapVarsMutable().assign(newMapVars);
+        });
+        mapInfoOp =
+            cast<omp::MapInfoOp>(mapper.lookup(mapInfoOp.getOperation()));
+        for (Operation *op : llvm::reverse(originalOps))
+          if (op->use_empty())
+            rewriter.eraseOp(op);
 
         // If the type of the private variable is not a pointer,
         // which is typically the case with !fir.boxchar types, then
