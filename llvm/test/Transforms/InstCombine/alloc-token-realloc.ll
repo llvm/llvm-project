@@ -5,7 +5,7 @@ declare noalias ptr @malloc(i64) allockind("alloc,uninitialized")
 
 define ptr @test_realloc_null_alloc_token() {
 ; CHECK-LABEL: define ptr @test_realloc_null_alloc_token()
-; CHECK-NEXT: %malloc = call dereferenceable_or_null(16) ptr @malloc(i64 16), !alloc_token [[META:![0-9]+]]
+; CHECK-NEXT: %malloc = call align 4 dereferenceable_or_null(16) ptr @malloc(i64 16), !alloc_token [[META:![0-9]+]]
 ; CHECK-NEXT: ret ptr %malloc
   %call = call ptr @realloc(ptr null, i64 16), !alloc_token !0
   ret ptr %call

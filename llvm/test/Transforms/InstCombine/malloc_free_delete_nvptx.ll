@@ -22,7 +22,7 @@ define void @malloc_then_free_not_needed() {
 
 define void @malloc_then_free_needed() {
 ; CHECK-LABEL: @malloc_then_free_needed(
-; CHECK-NEXT:    [[A:%.*]] = call dereferenceable_or_null(4) ptr @malloc(i64 4)
+; CHECK-NEXT:    [[A:%.*]] = call align 4 dereferenceable_or_null(4) ptr @malloc(i64 4)
 ; CHECK-NEXT:    call void @user(ptr [[A]])
 ; CHECK-NEXT:    call void @free(ptr [[A]])
 ; CHECK-NEXT:    ret void
