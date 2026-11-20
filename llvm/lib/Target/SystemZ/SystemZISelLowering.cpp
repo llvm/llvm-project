@@ -5186,7 +5186,9 @@ SDValue SystemZTargetLowering::lowerPDEP(SDValue Op, SelectionDAG &DAG) const {
   }
 
   SDValue PopCount = DAG.getNode(ISD::CTPOP, DL, MVT::i64, Mask);
-  SDValue ShiftAmt = DAG.getNegative(PopCount, DL, MVT::i64);
+  SDValue ShiftAmt = DAG.getNode(ISD::AND, DL, MVT::i64,
+                                 DAG.getNegative(PopCount, DL, MVT::i64),
+                                 DAG.getConstant(63, DL, MVT::i64));
   SDValue ShiftedVal = DAG.getNode(ISD::SHL, DL, MVT::i64, Val, ShiftAmt);
   return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i64,
                      DAG.getTargetConstant(Intrinsic::s390_bdepg, DL, MVT::i32),
@@ -5215,7 +5217,9 @@ SDValue SystemZTargetLowering::lowerPEXT(SDValue Op, SelectionDAG &DAG) const {
   }
 
   SDValue PopCount = DAG.getNode(ISD::CTPOP, DL, MVT::i64, Mask);
-  SDValue ShiftAmt = DAG.getNegative(PopCount, DL, MVT::i64);
+  SDValue ShiftAmt = DAG.getNode(ISD::AND, DL, MVT::i64,
+                                 DAG.getNegative(PopCount, DL, MVT::i64),
+                                 DAG.getConstant(63, DL, MVT::i64));
   return DAG.getNode(ISD::SRL, DL, MVT::i64, Bext, ShiftAmt);
 }
 
