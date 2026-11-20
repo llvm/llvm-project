@@ -1731,15 +1731,16 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     if (!LT.second.isVector() && LT.second.isFloatingPoint() &&
         !TLI->isOperationLegal(ISD::FMINIMUM, LT.second) &&
         TLI->isOperationLegal(ISD::FMINIMUMNUM, LT.second)) {
-      InstructionCost Cost = LT.first;
+      Type *ScalarTy = RetTy->getScalarType();
+      InstructionCost Cost = 1;
       if (!ICA.getFlags().noNaNs()) {
         Type *CondTy = Type::getInt1Ty(RetTy->getContext());
-        Cost += getCmpSelInstrCost(Instruction::FCmp, RetTy, CondTy,
+        Cost += getCmpSelInstrCost(Instruction::FCmp, ScalarTy, CondTy,
                                    CmpInst::FCMP_UNO, CostKind) +
-                getCmpSelInstrCost(Instruction::Select, RetTy, CondTy,
+                getCmpSelInstrCost(Instruction::Select, ScalarTy, CondTy,
                                    CmpInst::BAD_FCMP_PREDICATE, CostKind);
       }
-      return Cost;
+      return Cost * LT.first;
     }
     break;
   }
