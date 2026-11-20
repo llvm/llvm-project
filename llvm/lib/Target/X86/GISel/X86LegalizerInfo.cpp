@@ -548,6 +548,15 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .widenScalarToNextPow2(1);
 
   // vector ops
+  // G_BUILD_VECTOR cannot be legalized by adding elements: the extra elements
+  // are padded with G_IMPLICIT_DEF (GMIR has no poison operand), and narrowing
+  // the widened vector back to the original type recreates the instruction
+  // being legalized, so the legalizer would never make progress. Those padded
+  // lanes are deleted right after by buildDeleteTrailingVectorElements, so
+  // they never reach the selector. Only exact native widths are
+  // custom-legalized (and only when all sources are constant); other vector
+  // types are left unsupported. Lowering non-constant build vectors is tracked
+  // by #143099.
   getActionDefinitionsBuilder(G_BUILD_VECTOR)
       .customIf([=](const LegalityQuery &Query) {
         return (HasSSE1 && typeInSet(0, {v4s32})(Query)) ||
@@ -556,11 +565,10 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
                (HasAVX512 &&
                 typeInSet(0, {v8s64, v16s32, v32s16, v64s8})(Query));
       })
-      .clampNumElements(0, v16s8, s8MaxVector)
-      .clampNumElements(0, v8s16, s16MaxVector)
-      .clampNumElements(0, v4s32, s32MaxVector)
-      .clampNumElements(0, v2s64, s64MaxVector)
-      .moreElementsToNextPow2(0);
+      .clampMaxNumElements(0, s8, s8MaxVector.getNumElements())
+      .clampMaxNumElements(0, s16, s16MaxVector.getNumElements())
+      .clampMaxNumElements(0, s32, s32MaxVector.getNumElements())
+      .clampMaxNumElements(0, s64, s64MaxVector.getNumElements());
 
   getActionDefinitionsBuilder({G_EXTRACT, G_INSERT})
       .legalIf([=](const LegalityQuery &Query) {
