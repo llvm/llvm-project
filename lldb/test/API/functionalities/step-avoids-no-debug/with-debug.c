@@ -8,6 +8,9 @@ int
 called_from_nodebug_actual(int some_value)
 {
   int return_value = 0;
+  if (some_value != 5)
+    return 0;
+
   return_value  = printf ("Length: %d.\n", some_value);
   return return_value; // Stop here and step out of me
 }
