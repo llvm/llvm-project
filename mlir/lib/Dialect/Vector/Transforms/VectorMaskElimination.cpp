@@ -24,6 +24,42 @@ namespace vector {
 using namespace mlir;
 using namespace mlir::vector;
 namespace {
+/// Attempts to resolve a CreateMaskOp to an all-false constant mask. A single
+/// nonpositive dimension makes the whole mask all-false.
+LogicalResult resolveAllFalseCreateMaskOp(IRRewriter &rewriter,
+                                          vector::CreateMaskOp createMaskOp) {
+  SmallVector<Value> unknownDims;
+  bool allFalse = false;
+  for (Value dimSize : createMaskOp.getOperands()) {
+    std::optional<int64_t> size = getConstantIntValue(dimSize);
+    if (!size)
+      size = getConstantVscaleMultiplier(dimSize);
+    if (size) {
+      if (*size <= 0) {
+        allFalse = true;
+        break;
+      }
+    } else {
+      unknownDims.push_back(dimSize);
+    }
+  }
+
+  if (!allFalse) {
+    ValueBoundsConstraintSet::Variable zero(rewriter.getIndexAttr(0));
+    allFalse = llvm::any_of(unknownDims, [&](Value dimSize) {
+      return ValueBoundsConstraintSet::compare(
+          dimSize, ValueBoundsConstraintSet::LE, zero);
+    });
+  }
+  if (!allFalse)
+    return failure();
+
+  auto allFalseMask = vector::ConstantMaskOp::create(
+      rewriter, createMaskOp.getLoc(), createMaskOp.getVectorType(),
+      ConstantMaskKind::AllFalse);
+  rewriter.replaceAllUsesWith(createMaskOp, allFalseMask);
+  return success();
+}
 
 /// Attempts to resolve a CreateMaskOp to an all-true constant mask. All-true
 /// masks can then be eliminated by simple folds. `vscaleRange` is required to
@@ -142,16 +178,18 @@ void eliminateVectorMasks(IRRewriter &rewriter, FunctionOpInterface function,
 
   OpBuilder::InsertionGuard g(rewriter);
 
-  // Build worklist so we can safely insert new ops in
-  // `resolveAllTrueCreateMaskOp()`.
+  // Build worklist so we can safely insert new ops in the `resolve*` helpers.
   SmallVector<vector::CreateMaskOp> worklist;
   function.walk([&](vector::CreateMaskOp createMaskOp) {
     worklist.push_back(createMaskOp);
   });
 
   rewriter.setInsertionPointToStart(&function.front());
-  for (auto mask : worklist)
-    (void)resolveAllTrueCreateMaskOp(rewriter, mask, vscaleRange);
+  for (auto mask : worklist) {
+    if (succeeded(resolveAllTrueCreateMaskOp(rewriter, mask, vscaleRange)))
+      continue;
+    (void)resolveAllFalseCreateMaskOp(rewriter, mask);
+  }
 }
 
 namespace {

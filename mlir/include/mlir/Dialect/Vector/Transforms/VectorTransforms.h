@@ -123,8 +123,8 @@ struct VscaleRange {
 };
 
 /// Attempts to eliminate redundant vector masks by replacing them with all-true
-/// constants at the top of the function (which results in the masks folding
-/// away).
+/// or all-false constants at the top of the function (which results in the
+/// masks folding away).
 /// `vscaleRange` is only needed to prove that a scalable mask dimension is
 /// all-true; without it, only fixed-size dimensions are considered.
 ///
