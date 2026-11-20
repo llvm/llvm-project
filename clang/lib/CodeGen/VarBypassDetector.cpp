@@ -70,43 +70,119 @@ void VarBypassDetector::Init(CodeGenModule &CGM, const Stmt *Body) {
 
 bool VarBypassDetector::BuildScopeInformation(CodeGenModule &CGM, QualType Ty,
                                               unsigned &ParentScope) {
+  // Mirrors CodeGenFunction::EmitVariablyModifiedType: walk variably modified
+  // types to find any evaluated VLA size expressions or typeof(expr) operands.
   while (!Ty.isNull() && Ty->isVariablyModifiedType()) {
     const Type *T = Ty.getTypePtr();
-    // Stop walking: CodeGenFunction::EmitVariablyModifiedType does not evaluate
-    // anything for these (e.g., typedefs are evaluated at their declaration and
-    // decltype operands are unevaluated).
-    if (isa<TypedefType, DecltypeType, AutoType,
-            DeducedTemplateSpecializationType, PackIndexingType>(T))
-      return true;
-    if (const auto *TOE = dyn_cast<TypeOfExprType>(T))
-      return BuildScopeInformation(CGM, TOE->getUnderlyingExpr(), ParentScope);
-    if (const auto *VAT = dyn_cast<VariableArrayType>(T)) {
+    switch (T->getTypeClass()) {
+#define TYPE(Class, Base)
+#define ABSTRACT_TYPE(Class, Base)
+#define NON_CANONICAL_TYPE(Class, Base)
+#define DEPENDENT_TYPE(Class, Base) case Type::Class:
+#define NON_CANONICAL_UNLESS_DEPENDENT_TYPE(Class, Base)
+#include "clang/AST/TypeNodes.inc"
+      llvm_unreachable("unexpected dependent type!");
+
+    // These types are never variably-modified.
+    case Type::Builtin:
+    case Type::Complex:
+    case Type::Vector:
+    case Type::ExtVector:
+    case Type::ConstantMatrix:
+    case Type::Record:
+    case Type::Enum:
+    case Type::Using:
+    case Type::TemplateSpecialization:
+    case Type::ObjCTypeParam:
+    case Type::ObjCObject:
+    case Type::ObjCInterface:
+    case Type::ObjCObjectPointer:
+    case Type::BitInt:
+    case Type::HLSLInlineSpirv:
+    case Type::PredefinedSugar:
+      llvm_unreachable("type class is never variably-modified!");
+
+    case Type::Adjusted:
+      Ty = cast<AdjustedType>(T)->getAdjustedType();
+      break;
+
+    case Type::Decayed:
+      Ty = cast<DecayedType>(T)->getPointeeType();
+      break;
+
+    case Type::Pointer:
+      Ty = cast<PointerType>(T)->getPointeeType();
+      break;
+
+    case Type::BlockPointer:
+      Ty = cast<BlockPointerType>(T)->getPointeeType();
+      break;
+
+    case Type::LValueReference:
+    case Type::RValueReference:
+      Ty = cast<ReferenceType>(T)->getPointeeType();
+      break;
+
+    case Type::MemberPointer:
+      Ty = cast<MemberPointerType>(T)->getPointeeType();
+      break;
+
+    case Type::ArrayParameter:
+    case Type::ConstantArray:
+    case Type::IncompleteArray:
+      Ty = cast<ArrayType>(T)->getElementType();
+      break;
+
+    case Type::VariableArray: {
+      const auto *VAT = cast<VariableArrayType>(T);
       if (const Expr *Size = VAT->getSizeExpr())
         if (!BuildScopeInformation(CGM, Size, ParentScope))
           return false;
       Ty = VAT->getElementType();
-      continue;
-    }
-    if (const auto *AT = dyn_cast<ArrayType>(T)) {
-      Ty = AT->getElementType();
-      continue;
-    }
-    if (QualType Pointee = T->getPointeeType(); !Pointee.isNull()) {
-      Ty = Pointee;
-      continue;
-    }
-    if (const auto *FT = dyn_cast<FunctionType>(T)) {
-      if (const auto *FPT = dyn_cast<FunctionProtoType>(FT))
-        for (QualType ParamTy : FPT->param_types())
-          if (!BuildScopeInformation(CGM, ParamTy, ParentScope))
-            return false;
-      Ty = FT->getReturnType();
-      continue;
-    }
-    QualType Desugared = Ty.getSingleStepDesugaredType(CGM.getContext());
-    if (Desugared == Ty)
       break;
-    Ty = Desugared;
+    }
+
+    case Type::FunctionProto:
+    case Type::FunctionNoProto:
+      Ty = cast<FunctionType>(T)->getReturnType();
+      break;
+
+    case Type::Paren:
+    case Type::TypeOf:
+    case Type::UnaryTransform:
+    case Type::Attributed:
+    case Type::BTFTagAttributed:
+    case Type::OverflowBehavior:
+    case Type::HLSLAttributedResource:
+    case Type::SubstTemplateTypeParm:
+    case Type::MacroQualified:
+    case Type::CountAttributed:
+    case Type::LateParsedAttr:
+      Ty = Ty.getSingleStepDesugaredType(CGM.getContext());
+      break;
+
+    case Type::Typedef:
+    case Type::Decltype:
+    case Type::Auto:
+    case Type::DeducedTemplateSpecialization:
+    case Type::PackIndexing:
+      // Stop walking: CodeGenFunction::EmitVariablyModifiedType does not
+      // evaluate anything for these (e.g., typedefs are evaluated at their
+      // declaration and decltype operands are unevaluated).
+      return true;
+
+    case Type::TypeOfExpr:
+      return BuildScopeInformation(
+          CGM, cast<TypeOfExprType>(T)->getUnderlyingExpr(), ParentScope);
+
+    case Type::Atomic:
+      Ty = cast<AtomicType>(T)->getValueType();
+      break;
+
+    case Type::Pipe:
+      Ty = cast<PipeType>(T)->getElementType();
+      break;
+    }
   }
   return true;
 }
