@@ -530,10 +530,10 @@ void call_non_builtins(FILE *fp) {
   non_c_linkage::fread_unlocked(dst, 2, 10, fp);
   non_c_linkage::fwrite_unlocked(dst, 2, 10, fp);
   non_c_linkage::fgets_unlocked(dst, 20, fp);
-  getlogin_r(dst, 20);
-  ttyname_r(0, dst, 20);
-  ptsname_r(0, dst, 20);
-  confstr(0, dst, 20);
+  non_c_linkage::getlogin_r(dst, 20);
+  non_c_linkage::ttyname_r(0, dst, 20);
+  non_c_linkage::ptsname_r(0, dst, 20);
+  non_c_linkage::confstr(0, dst, 20);
 }
 } // namespace non_c_linkage
 #endif
