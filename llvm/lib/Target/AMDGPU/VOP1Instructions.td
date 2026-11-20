@@ -836,18 +836,69 @@ class Cvt_PK_F32_F8_Pat_OpSel<SDPatternOperator node, int index,
          (inst_e32 $src))
 >;
 
-let SubtargetPredicate = HasCvtFP8ByteSel in {
+let SubtargetPredicate = HasCvtFP8ByteSel,
+    True16Predicate = UseFakeTrue16Insts in {
   foreach Index = [0, -1] in {
     def : Cvt_PK_F32_F8_Pat_OpSel<int_amdgcn_cvt_pk_f32_fp8, Index,
                                   V_CVT_PK_F32_FP8_fake16_e32, V_CVT_PK_F32_FP8_fake16_e64>;
     def : Cvt_PK_F32_F8_Pat_OpSel<int_amdgcn_cvt_pk_f32_bf8, Index,
                                   V_CVT_PK_F32_BF8_fake16_e32, V_CVT_PK_F32_BF8_fake16_e64>;
   }
-}
-
-let SubtargetPredicate = HasCvtFP8ByteSel in {
   def : Cvt_PK_F32_F8_Conv_Pat<AMDGPUcvt_pk_f32_fp8, V_CVT_PK_F32_FP8_fake16_e32>;
   def : Cvt_PK_F32_F8_Conv_Pat<AMDGPUcvt_pk_f32_bf8, V_CVT_PK_F32_BF8_fake16_e32>;
+}
+
+// With real True16 the source operand is 16 bits wide. Select the t16 forms so
+// the printed assembly can be parsed again.
+class Cvt_PK_F32_F8_Pat_t16<SDPatternOperator node, int index,
+    VOP1_Pseudo inst_e32, VOP3_Pseudo inst_e64> : GCNPat<
+    (v2f32 (DivergentBinFrag<node> i32:$src, index)),
+    !if (index,
+         (inst_e64 SRCMODS.OP_SEL_0,
+                   (i16 (EXTRACT_SUBREG VGPR_32:$src, hi16)), 0),
+         (inst_e32 (i16 (EXTRACT_SUBREG VGPR_32:$src, lo16))))
+>;
+
+class Cvt_PK_F32_F8_Uniform_Pat_t16<SDPatternOperator node, int index,
+    VOP1_Pseudo inst_e32, VOP3_Pseudo inst_e64> : GCNPat<
+    (v2f32 (UniformBinFrag<node> i32:$src, index)),
+    !if (index,
+         (inst_e64 SRCMODS.OP_SEL_0, (i16 (COPY $src)), 0),
+         (inst_e32 (i16 (COPY $src))))
+> {
+  // GlobalISel cannot tell uniform from divergent here.
+  let GISelShouldIgnore = 1;
+}
+
+multiclass Cvt_PK_F32_F8_Conv_Pat_t16<SDPatternOperator node,
+                                     VOP1_Pseudo inst> {
+  def : GCNPat<(v2f32 (DivergentUnaryFrag<node> i32:$src)),
+               (inst (i16 (EXTRACT_SUBREG VGPR_32:$src, lo16)))>;
+  let GISelShouldIgnore = 1 in
+  def : GCNPat<(v2f32 (UniformUnaryFrag<node> i32:$src)),
+               (inst (i16 (COPY $src)))>;
+}
+
+let SubtargetPredicate = HasCvtFP8ByteSel,
+    True16Predicate = UseRealTrue16Insts in {
+  foreach Index = [0, -1] in {
+    def : Cvt_PK_F32_F8_Pat_t16<int_amdgcn_cvt_pk_f32_fp8, Index,
+                                V_CVT_PK_F32_FP8_t16_e32,
+                                V_CVT_PK_F32_FP8_t16_e64>;
+    def : Cvt_PK_F32_F8_Pat_t16<int_amdgcn_cvt_pk_f32_bf8, Index,
+                                V_CVT_PK_F32_BF8_t16_e32,
+                                V_CVT_PK_F32_BF8_t16_e64>;
+    def : Cvt_PK_F32_F8_Uniform_Pat_t16<int_amdgcn_cvt_pk_f32_fp8, Index,
+                                        V_CVT_PK_F32_FP8_t16_e32,
+                                        V_CVT_PK_F32_FP8_t16_e64>;
+    def : Cvt_PK_F32_F8_Uniform_Pat_t16<int_amdgcn_cvt_pk_f32_bf8, Index,
+                                        V_CVT_PK_F32_BF8_t16_e32,
+                                        V_CVT_PK_F32_BF8_t16_e64>;
+  }
+  defm : Cvt_PK_F32_F8_Conv_Pat_t16<AMDGPUcvt_pk_f32_fp8,
+                                   V_CVT_PK_F32_FP8_t16_e32>;
+  defm : Cvt_PK_F32_F8_Conv_Pat_t16<AMDGPUcvt_pk_f32_bf8,
+                                   V_CVT_PK_F32_BF8_t16_e32>;
 }
 
 // FIXME-TRUE16: True16 versions of these instructions are untested.
