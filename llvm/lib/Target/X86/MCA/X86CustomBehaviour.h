@@ -33,6 +33,10 @@ class X86InstrPostProcess : public InstrPostProcess {
   /// do not model features of the stack engine like sync uops.
   void useStackEngine(Instruction &Inst, const MCInst &MCI);
 
+  /// Called within X86InstrPostProcess to populate stack-slot memory access
+  /// and SP/FP adjustment metadata for stack-slot alias tracking in LSUnit.
+  void setStackAccessInfo(Instruction &Inst, const MCInst &MCI);
+
 public:
   X86InstrPostProcess(const MCSubtargetInfo &STI, const MCInstrInfo &MCII)
       : InstrPostProcess(STI, MCII) {}

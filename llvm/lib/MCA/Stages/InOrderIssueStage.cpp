@@ -201,6 +201,8 @@ llvm::Error InOrderIssueStage::execute(InstRef &IR) {
   Instruction &IS = *IR.getInstruction();
   if (IS.isMemOp())
     IS.setLSUTokenID(LSU.dispatch(IR));
+  else
+    LSU.onInstructionDispatched(IR);
 
   if (llvm::Error E = tryIssue(IR))
     return E;
