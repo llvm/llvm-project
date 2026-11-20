@@ -2,6 +2,9 @@
 // RUN:   dxil-pc-shadermodel6.7-library %s -emit-llvm \
 // RUN:   -disable-llvm-passes -o - | FileCheck %s --check-prefixes=CHECK,DXIL
 // RUN: %clang_cc1 -finclude-default-header -triple \
+// RUN:   dxil-pc-shadermodel6.0-library %s -emit-llvm \
+// RUN:   -disable-llvm-passes -o - | FileCheck %s --check-prefixes=CHECK,DXIL
+// RUN: %clang_cc1 -finclude-default-header -triple \
 // RUN:   spirv-pc-vulkan-library %s -emit-llvm -disable-llvm-passes -o - | \
 // RUN:   FileCheck %s --check-prefixes=CHECK,SPIRV
 

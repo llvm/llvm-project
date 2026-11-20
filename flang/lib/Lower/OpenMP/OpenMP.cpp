@@ -55,7 +55,7 @@
 #include "flang/Support/OpenMP-utils.h"
 #include "flang/Utils/OpenMP.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMGeneralIntrinsicOps.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/Support/StateStack.h"
@@ -2451,16 +2451,17 @@ static void genScanClauses(lower::AbstractConverter &converter,
   cp.processExclusive(loc, clauseOps);
 }
 
-static void
-genSectionsClauses(lower::AbstractConverter &converter,
-                   semantics::SemanticsContext &semaCtx,
-                   const List<Clause> &clauses, mlir::Location loc,
-                   mlir::omp::SectionsOperands &clauseOps,
-                   llvm::SmallVectorImpl<Object> &reductionObjects) {
+static void genSectionsClauses(lower::AbstractConverter &converter,
+                               semantics::SemanticsContext &semaCtx,
+                               const List<Clause> &clauses, mlir::Location loc,
+                               mlir::omp::SectionsOperands &clauseOps,
+                               llvm::SmallVectorImpl<Object> &reductionObjects,
+                               bool &hasUserDefinedReduction) {
   ClauseProcessor cp(converter, semaCtx, clauses);
   cp.processAllocate(clauseOps);
   cp.processNowait(clauseOps);
-  cp.processReduction(loc, clauseOps, reductionObjects);
+  cp.processReduction(loc, clauseOps, reductionObjects,
+                      /*reductionVarCache=*/nullptr, &hasUserDefinedReduction);
   // TODO Support delayed privatization.
 }
 
@@ -2728,10 +2729,12 @@ genTaskgroupClauses(lower::AbstractConverter &converter,
                     semantics::SemanticsContext &semaCtx,
                     const List<Clause> &clauses, mlir::Location loc,
                     mlir::omp::TaskgroupOperands &clauseOps,
-                    llvm::SmallVectorImpl<Object> &taskReductionObjects) {
+                    llvm::SmallVectorImpl<Object> &taskReductionObjects,
+                    bool &hasUserDefinedReduction) {
   ClauseProcessor cp(converter, semaCtx, clauses);
   cp.processAllocate(clauseOps);
-  cp.processTaskReduction(loc, clauseOps, taskReductionObjects);
+  cp.processTaskReduction(loc, clauseOps, taskReductionObjects,
+                          &hasUserDefinedReduction);
 }
 
 static void genTaskloopClauses(
@@ -3665,8 +3668,9 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       std::get<std::list<parser::OpenMPConstruct>>(sectionsConstruct->t);
   mlir::omp::SectionsOperands clauseOps;
   llvm::SmallVector<Object> reductionObjects;
+  bool hasUserDefinedReduction = false;
   genSectionsClauses(converter, semaCtx, item->clauses, loc, clauseOps,
-                     reductionObjects);
+                     reductionObjects, hasUserDefinedReduction);
 
   auto &builder = converter.getFirOpBuilder();
 
@@ -3756,7 +3760,7 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       }))
     sectionsOp.setPrivateAssumeBoundedRecipeEffects(true);
 
-  if (!clauseOps.reductionVars.empty() &&
+  if (!hasUserDefinedReduction && !clauseOps.reductionVars.empty() &&
       llvm::all_of(clauseOps.reductionVars, [lpAlloca](mlir::Value variable) {
         // The generated conditional-lastprivate recipe only accesses the
         // intrinsic value and index fields of its accumulator, despite its
@@ -4367,6 +4371,7 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
                      converter, firOpBuilder, *typeSpec,
                      enableImplicitDefaultMapperAllocatableMembers)))) {
               if (!hasDefaultMapper) {
+                checkImplicitMapperComponents(converter, loc, *typeSpec);
                 if (auto recordType = mlir::dyn_cast_or_null<fir::RecordType>(
                         converter.genType(*typeSpec)))
                   mapperId = getOrGenImplicitDefaultDeclareMapper(
@@ -4728,8 +4733,9 @@ genTaskgroupOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
                ConstructQueue::const_iterator item) {
   mlir::omp::TaskgroupOperands clauseOps;
   llvm::SmallVector<Object> taskReductionObjects;
+  bool hasUserDefinedReduction = false;
   genTaskgroupClauses(converter, semaCtx, item->clauses, loc, clauseOps,
-                      taskReductionObjects);
+                      taskReductionObjects, hasUserDefinedReduction);
 
   ObjectEntryBlockArgs taskgroupArgs;
   taskgroupArgs.taskReduction.objects = taskReductionObjects;
@@ -4742,7 +4748,8 @@ genTaskgroupOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
           .setEntryBlockArgs(&taskgroupArgs),
       queue, item, clauseOps);
 
-  if (llvm::all_of(clauseOps.taskReductionVars, [](mlir::Value variable) {
+  if (!hasUserDefinedReduction &&
+      llvm::all_of(clauseOps.taskReductionVars, [](mlir::Value variable) {
         return canAssumeBoundedRecipeEffects(variable);
       }))
     taskgroupOp.setTaskReductionAssumeBoundedRecipeEffects(true);
@@ -6080,6 +6087,7 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
   for (const parser::OmpClause &clause : assumesConstruct.v.Clauses().v) {
     if (!std::holds_alternative<parser::OmpClause::NoOpenmp>(clause.u) &&
+        !std::holds_alternative<parser::OmpClause::NoParallelism>(clause.u) &&
         !std::holds_alternative<parser::OmpClause::Absent>(clause.u))
       TODO(converter.genLocation(clause.source),
            "assumption clauses on the assumes directive");
@@ -7204,7 +7212,35 @@ genOpenMPDeclareMapperImpl(lower::AbstractConverter &converter,
   List<Clause> clauses = makeClauses(construct.v.Clauses(), semaCtx);
   ClauseProcessor cp(converter, semaCtx, clauses);
   cp.processMap(loc, stmtCtx, clauseOps);
+  // Emit cleanups inside the mapper region, before its terminator.
+  stmtCtx.finalizeAndReset();
   mlir::omp::DeclareMapperInfoOp::create(firOpBuilder, loc, clauseOps);
+
+  // Values of the enclosing procedure are not available in the mapper region.
+  mlir::WalkResult usesOutsideValue = region.walk([&](mlir::Operation *op) {
+    for (mlir::Value operand : op->getOperands())
+      if (!region.isAncestor(operand.getParentRegion()))
+        return mlir::WalkResult::interrupt();
+    return mlir::WalkResult::advance();
+  });
+  if (usesOutsideValue.wasInterrupted())
+    TODO(loc, "declare mapper using a value from outside the mapper region");
+
+  // The mapper region must remain a single block once control flow is lowered.
+  // With an iterator modifier, intrinsic simplification may also add loops.
+  bool hasIterator = llvm::any_of(clauses, [](const Clause &clause) {
+    const auto *map = std::get_if<clause::Map>(&clause.u);
+    return map && std::get<std::optional<clause::Iterator>>(map->t).has_value();
+  });
+  for (mlir::Operation &op : region.front()) {
+    bool mayAddLoops =
+        hasIterator && mlir::isa<hlfir::hlfirDialect>(op.getDialect()) &&
+        !mlir::isa<hlfir::DeclareOp, hlfir::DesignateOp, hlfir::AssociateOp,
+                   hlfir::EndAssociateOp, hlfir::NoReassocOp>(op);
+    if (mayAddLoops ||
+        (op.getNumRegions() != 0 && !mlir::isa<mlir::omp::IteratorOp>(op)))
+      TODO(loc, "declare mapper with control flow");
+  }
 }
 
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
@@ -7315,7 +7351,7 @@ static bool isSupportedMetadirectiveLoopCompilerDirective(
       parser::CompilerDirective::ForceInline, parser::CompilerDirective::Inline,
       parser::CompilerDirective::NoInline,
       parser::CompilerDirective::InlineAlways, parser::CompilerDirective::IVDep,
-      parser::CompilerDirective::Simd>;
+      parser::CompilerDirective::Simd, parser::CompilerDirective::Align>;
 
   return common::visit(
       [](const auto &value) {

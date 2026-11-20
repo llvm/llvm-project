@@ -29,6 +29,7 @@ class IdivFxTest : public LIBC_NAMESPACE::testing::Test {
   static constexpr T min = FXRep::MIN();
   static constexpr T one_half = FXRep::ONE_HALF();
   static constexpr T one_fourth = FXRep::ONE_FOURTH();
+  static constexpr T eps = FXRep::EPS();
 
 public:
   typedef XType (*IdivFxFunc)(T, T);
@@ -64,6 +65,18 @@ public:
         EXPECT_EQ(func(-2.25, 1.0), static_cast<XType>(-2));
         EXPECT_EQ(func(2.25, -3.0), static_cast<XType>(0));
       }
+    }
+
+    // MIN / -EPS == 2^VALUE_LEN does not fit in the storage type of T, but it
+    // is representable (and thus well defined) if XType is wider than T. The
+    // neighbouring inputs must keep working.
+    if constexpr (is_signed && (sizeof(XType) > sizeof(T))) {
+      constexpr XType two_pow_value_len = static_cast<XType>(1)
+                                          << FXRep::VALUE_LEN;
+      EXPECT_EQ(func(min, -eps), two_pow_value_len);
+      EXPECT_EQ(func(min + eps, -eps), two_pow_value_len - 1);
+      EXPECT_EQ(func(min, -eps - eps), two_pow_value_len / 2);
+      EXPECT_EQ(func(max, -eps), -(two_pow_value_len - 1));
     }
   }
 

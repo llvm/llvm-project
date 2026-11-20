@@ -178,13 +178,15 @@ private:
 
 raw_ostream &operator<<(raw_ostream &OS, const MachineValueTypeSet &T);
 
-struct TypeSetByHwMode : public InfoByHwMode<MachineValueTypeSet> {
+struct TypeSetByHwMode
+    : public InfoByHwMode<MachineValueTypeSet,
+                          SortedVectorMap<unsigned, MachineValueTypeSet, 1>> {
   using SetType = MachineValueTypeSet;
 
   TypeSetByHwMode() = default;
   TypeSetByHwMode(const TypeSetByHwMode &VTS) = default;
   TypeSetByHwMode &operator=(const TypeSetByHwMode &) = default;
-  TypeSetByHwMode(MVT VT) : TypeSetByHwMode(ValueTypeByHwMode(VT)) {}
+  TypeSetByHwMode(MVT VT) { getOrCreate(DefaultMode).insert(VT); }
   TypeSetByHwMode(ArrayRef<ValueTypeByHwMode> VTList);
 
   SetType &getOrCreate(unsigned Mode) { return Map[Mode]; }

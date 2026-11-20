@@ -1166,21 +1166,27 @@ static TypedAttr createInitialValueForReduceOp(Operation *op, Type elementTy,
   if (isa<tosa::ReduceAnyOp>(op) && elementTy.isInteger(1))
     return rewriter.getIntegerAttr(elementTy, APInt::getZero(1));
 
-  if (isa<tosa::ArgMaxOp>(op) && isa<FloatType>(elementTy))
-    return rewriter.getFloatAttr(
-        elementTy,
-        getFloatMinMaxIdentity(cast<FloatType>(elementTy).getFloatSemantics(),
-                               /*negative=*/true, allowNonFinites));
+  if (isa<tosa::ArgMaxOp, tosa::ArgMinOp>(op) && isa<FloatType>(elementTy)) {
+    const bool isMax = isa<tosa::ArgMaxOp>(op);
+    const auto nanMode = isMax ? cast<tosa::ArgMaxOp>(op).getNanMode()
+                               : cast<tosa::ArgMinOp>(op).getNanMode();
+
+    auto floatTy = dyn_cast<FloatType>(elementTy);
+    const auto &semantics = floatTy.getFloatSemantics();
+
+    const bool useNaN = nanMode == NanPropagationMode::IGNORE &&
+                        APFloat::semanticsHasNaN(semantics);
+    const auto seed =
+        useNaN ? APFloat::getQNaN(semantics)
+               : getFloatMinMaxIdentity(semantics, /*negative=*/isMax,
+                                        allowNonFinites);
+
+    return rewriter.getFloatAttr(floatTy, seed);
+  }
 
   if (isa<tosa::ArgMaxOp>(op) && isa<IntegerType>(elementTy))
     return rewriter.getIntegerAttr(
         elementTy, APInt::getSignedMinValue(elementTy.getIntOrFloatBitWidth()));
-
-  if (isa<tosa::ArgMinOp>(op) && isa<FloatType>(elementTy))
-    return rewriter.getFloatAttr(
-        elementTy,
-        getFloatMinMaxIdentity(cast<FloatType>(elementTy).getFloatSemantics(),
-                               /*negative=*/false, allowNonFinites));
 
   if (isa<tosa::ArgMinOp>(op) && isa<IntegerType>(elementTy))
     return rewriter.getIntegerAttr(
@@ -2647,6 +2653,16 @@ struct TileConverter : public OpConversionPattern<tosa::TileOp> {
   LogicalResult
   matchAndRewrite(tosa::TileOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    SmallVector<int64_t> multiples;
+    if (failed(op.getConstantMultiples(multiples)))
+      return failure();
+
+    // Avoid constructing invalid tensor types when validation is skipped.
+    // Preserve the existing handling of -1 below.
+    if (llvm::any_of(multiples, [](int64_t v) { return v <= 0 && v != -1; }))
+      return rewriter.notifyMatchFailure(op,
+                                         "unsupported non-positive multiples");
+
     auto loc = op.getLoc();
     auto input = op.getInput1();
     auto inputTy = cast<ShapedType>(input.getType());
@@ -2654,10 +2670,6 @@ struct TileConverter : public OpConversionPattern<tosa::TileOp> {
     auto resultTy = cast<ShapedType>(op.getType());
     auto elementTy = inputTy.getElementType();
     int64_t rank = inputTy.getRank();
-
-    SmallVector<int64_t> multiples;
-    if (failed(op.getConstantMultiples(multiples)))
-      return failure();
 
     // Broadcast the newly added dimensions to their appropriate multiple.
     SmallVector<int64_t, 2> genericShape;
@@ -2814,10 +2826,16 @@ public:
             if (argOp.getNanMode() == NanPropagationMode::IGNORE) {
               // Only update index & value for non NaN values. If all
               // values are NaNs, the initial index will be return which is 0.
-              predicate = arith::CmpFOp::create(
+              Value comparison = arith::CmpFOp::create(
                   rewriter, nestedLoc,
-                  isMin ? arith::CmpFPredicate::OLT : arith::CmpFPredicate::OGT,
+                  isMin ? arith::CmpFPredicate::ULT : arith::CmpFPredicate::UGT,
                   newValue, oldValue);
+              Value newNonNaN = arith::CmpFOp::create(rewriter, nestedLoc,
+                                                      arith::CmpFPredicate::ORD,
+                                                      newValue, newValue);
+              predicate = arith::AndIOp::create(rewriter, nestedLoc,
+                                                rewriter.getI1Type(),
+                                                comparison, newNonNaN);
             } else {
               // Update value if either of the following is true:
               // - new value is smaller/bigger

@@ -87,6 +87,27 @@ exit:
   ret i32 %r
 }
 
+; !pcsections does not imply UB, so the speculated store keeps it.
+define void @speculated_store_keeps_pcsections(ptr %p, i32 %a, i32 %b, i1 %cond) {
+; CHECK-LABEL: @speculated_store_keeps_pcsections(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store i32 [[A:%.*]], ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[SPEC_STORE_SELECT:%.*]] = select i1 [[COND:%.*]], i32 [[B:%.*]], i32 [[A]]
+; CHECK-NEXT:    store i32 [[SPEC_STORE_SELECT]], ptr [[P]], align 4, !pcsections [[META10:![0-9]+]]
+; CHECK-NEXT:    ret void
+;
+entry:
+  store i32 %a, ptr %p
+  br i1 %cond, label %then, label %exit
+
+then:
+  store i32 %b, ptr %p, !pcsections !19
+  br label %exit
+
+exit:
+  ret void
+}
+
 !0 = !{!"Simple C/C++ TBAA"}
 !1 = !{!"int", !0}
 !2 = !{!1, !1, i64 0}
@@ -106,6 +127,9 @@ exit:
 !16 = distinct !{!16, i1 false}
 !17 = distinct !{!17, !16, !"noalias.b"}
 !18 = !{!17}
+
+!19 = !{!"section", !20}
+!20 = !{i32 1}
 ;.
 ; CHECK: [[TBAA0]] = !{[[META1:![0-9]+]], [[META1]], i64 0}
 ; CHECK: [[META1]] = !{!"int", [[META2:![0-9]+]]}
@@ -117,4 +141,6 @@ exit:
 ; CHECK: [[META7]] = distinct !{[[META7]], [[META8:![0-9]+]], !"noalias.a"}
 ; CHECK: [[META8]] = distinct !{[[META8]], i1 false}
 ; CHECK: [[META9]] = !{}
+; CHECK: [[META10]] = !{!"section", [[META11:![0-9]+]]}
+; CHECK: [[META11]] = !{i32 1}
 ;.

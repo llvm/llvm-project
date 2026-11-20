@@ -139,14 +139,12 @@ convertCharacter(StringRef Char, const llvm::TextEncodingConverter &Converter) {
 
 /// ProcessCharEscape - Parse a standard C escape sequence, which can occur in
 /// either a character or a string literal.
-static unsigned ProcessCharEscape(const char *ThisTokBegin,
-                                  const char *&ThisTokBuf,
-                                  const char *ThisTokEnd, bool &HadError,
-                                  FullSourceLoc Loc, unsigned CharWidth,
-                                  DiagnosticsEngine *Diags,
-                                  const LangOptions &Features,
-                                  StringLiteralEvalMethod EvalMethod,
-                                  llvm::TextEncodingConverter *Converter) {
+static unsigned ProcessCharEscape(
+    const char *ThisTokBegin, const char *&ThisTokBuf, const char *ThisTokEnd,
+    bool &HadError, FullSourceLoc Loc, unsigned CharWidth,
+    DiagnosticsEngine *Diags, const LangOptions &Features,
+    StringLiteralEvalMethod EvalMethod, llvm::TextEncodingConverter *Converter,
+    ConversionAction Action) {
   const char *EscapeBegin = ThisTokBuf;
   bool Delimited = false;
   bool EndDelimiterFound = false;
@@ -397,7 +395,8 @@ static unsigned ProcessCharEscape(const char *ThisTokBegin,
     else {
       Diag(Diags, Features, Loc, ThisTokBegin, EscapeBegin, ThisTokBuf,
            diag::err_exec_charset_conversion_failed)
-          << ErrorOrChar.getError().message();
+          << ErrorOrChar.getError().message()
+          << (Action == CA_ToLiteralEncodingForAsm ? 1 : 0);
       HadError = true;
     }
   }
@@ -807,7 +806,8 @@ static void EncodeUCNEscape(const char *ThisTokBegin, const char *&ThisTokBuf,
                             bool &HadError, FullSourceLoc Loc,
                             unsigned CharByteWidth, DiagnosticsEngine *Diags,
                             const LangOptions &Features,
-                            llvm::TextEncodingConverter *Converter) {
+                            llvm::TextEncodingConverter *Converter,
+                            ConversionAction Action) {
   typedef uint32_t UTF32;
   UTF32 UcnVal = 0;
   unsigned short UcnLen = 0;
@@ -904,7 +904,7 @@ static void EncodeUCNEscape(const char *ThisTokBegin, const char *&ThisTokBuf,
       ResultBuf = Cp + CpConv.size();
     } else {
       Diags->Report(Loc, diag::err_exec_charset_conversion_failed)
-          << EC.message();
+          << EC.message() << (Action == CA_ToLiteralEncodingForAsm ? 1 : 0);
       HadError = true;
     }
   }
@@ -1943,7 +1943,7 @@ CharLiteralParser::CharLiteralParser(const char *begin, const char *end,
           } else {
             HadError = true;
             PP.Diag(Loc, diag::err_exec_charset_conversion_failed)
-                << ErrorOrChar.message();
+                << ErrorOrChar.message() << 0;
           }
         }
       }
@@ -1968,7 +1968,7 @@ CharLiteralParser::CharLiteralParser(const char *begin, const char *end,
         EncodeUCNEscape(TokBegin, begin, end, ResultPtr, HadError,
                         FullSourceLoc(Loc, PP.getSourceManager()),
                         /*CharByteWidth=*/1u, &PP.getDiagnostics(),
-                        PP.getLangOpts(), Converter);
+                        PP.getLangOpts(), Converter, CA_ToLiteralEncoding);
         if (!HadError)
           *buffer_begin = *Cp;
       }
@@ -1976,11 +1976,11 @@ CharLiteralParser::CharLiteralParser(const char *begin, const char *end,
       continue;
     }
     unsigned CharWidth = getCharWidth(Kind, PP.getTargetInfo());
-    uint64_t result =
-        ProcessCharEscape(TokBegin, begin, end, HadError,
-                          FullSourceLoc(Loc, PP.getSourceManager()), CharWidth,
-                          &PP.getDiagnostics(), PP.getLangOpts(),
-                          StringLiteralEvalMethod::Evaluated, nullptr);
+    uint64_t result = ProcessCharEscape(
+        TokBegin, begin, end, HadError,
+        FullSourceLoc(Loc, PP.getSourceManager()), CharWidth,
+        &PP.getDiagnostics(), PP.getLangOpts(),
+        StringLiteralEvalMethod::Evaluated, nullptr, CA_NoConversion);
     *buffer_begin++ = result;
   }
 
@@ -2096,12 +2096,11 @@ StringLiteralParser::StringLiteralParser(ArrayRef<Token> StringToks,
       Target(PP.getTargetInfo()), Diags(&PP.getDiagnostics()),
       TE(&PP.getTextEncoding()), MaxTokenLength(0), SizeBound(0),
       CharByteWidth(0), Kind(tok::unknown), ResultPtr(ResultBuf.data()),
-      EvalMethod(EvalMethod), hadError(false), Pascal(false) {
-  init(StringToks, Action);
+      EvalMethod(EvalMethod), Action(Action), hadError(false), Pascal(false) {
+  init(StringToks);
 }
 
-void StringLiteralParser::init(ArrayRef<Token> StringToks,
-                               ConversionAction Action) {
+void StringLiteralParser::init(ArrayRef<Token> StringToks) {
   // The literal token may have come from an invalid source location (e.g. due
   // to a PCH error), in which case the token length will be 0.
   if (StringToks.empty() || StringToks[0].getLength() < 2)
@@ -2358,14 +2357,14 @@ void StringLiteralParser::init(ArrayRef<Token> StringToks,
           EncodeUCNEscape(ThisTokBegin, ThisTokBuf, ThisTokEnd, ResultPtr,
                           hadError,
                           FullSourceLoc(StringToks[i].getLocation(), SM),
-                          CharByteWidth, Diags, Features, Converter);
+                          CharByteWidth, Diags, Features, Converter, Action);
           continue;
         }
         // Otherwise, this is a non-UCN escape character.  Process it.
         unsigned ResultChar = ProcessCharEscape(
             ThisTokBegin, ThisTokBuf, ThisTokEnd, hadError,
             FullSourceLoc(StringToks[i].getLocation(), SM), CharByteWidth * 8,
-            Diags, Features, EvalMethod, Converter);
+            Diags, Features, EvalMethod, Converter, Action);
 
         if (CharByteWidth == 4) {
           // FIXME: Make the type of the result buffer correct instead of
@@ -2459,7 +2458,7 @@ bool StringLiteralParser::CopyStringFragment(
         if (Diags)
           Diags->Report(Tok.getLocation(),
                         diag::err_exec_charset_conversion_failed)
-              << EC.message();
+              << EC.message() << (Action == CA_ToLiteralEncodingForAsm ? 1 : 0);
         return true;
       }
     }
@@ -2582,7 +2581,7 @@ unsigned StringLiteralParser::getOffsetOfStringByte(const Token &Tok,
       ProcessCharEscape(SpellingStart, SpellingPtr, SpellingEnd, HadError,
                         FullSourceLoc(Tok.getLocation(), SM), CharByteWidth * 8,
                         Diags, Features, StringLiteralEvalMethod::Evaluated,
-                        /*TextEncoding=*/nullptr);
+                        /*TextEncoding=*/nullptr, CA_NoConversion);
       --ByteNo;
     }
     assert(!HadError && "This method isn't valid on erroneous strings");

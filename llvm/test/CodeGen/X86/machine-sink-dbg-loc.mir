@@ -69,18 +69,6 @@ isSSA:           true
 noVRegs:         false
 hasFakeUses:     false
 debugInstrRef:   true
-registers:
-  - { id: 0, class: gr32 }
-  - { id: 1, class: gr64 }
-  - { id: 2, class: gr32 }
-  - { id: 3, class: gr64 }
-  - { id: 4, class: gr32 }
-  - { id: 5, class: gr8 }
-  - { id: 6, class: gr32 }
-  - { id: 7, class: gr64 }
-  - { id: 8, class: gr64 }
-  - { id: 9, class: gr32 }
-  - { id: 10, class: gr8 }
 liveins:
   - { reg: '$rdi', virtual-reg: '%3' }
   - { reg: '$esi', virtual-reg: '%4' }
