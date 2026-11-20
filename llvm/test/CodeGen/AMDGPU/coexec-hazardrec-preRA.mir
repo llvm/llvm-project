@@ -4,19 +4,20 @@
 
 # REQUIRES: asserts
 
-# Tests use V_WMMA_SCALE_F32_16X16X128_F8F6F4 which has pattern 0EEIEEISVV
-# (10-cycle window, 8-cycle occupancy). The 'S' slot indicates scaled WMMA
-# can issue there (LD_SCALE rule).
+# Tests use V_WMMA_SCALE_F32_16X16X128_F8F6F4 which has pattern X0EEIEEIIVV
+# (11-cycle window, 8-cycle occupancy). The 'X' slot represents the LD_SCALE
+# micro-op cycle where nothing can coexecute. Scaled WMMA can issue at I slots
+# because their first micro-op (LD_SCALE) uses VALU.
 #
 # Co-execution window slots:
-#   Stage: 0  1  2  3  4  5  6  7  8  9
-#   Slot:  E0 E  E  I  E  E  I  S  V  V
+#   Stage: 0  1  2  3  4  5  6  7  8  9  10
+#   Slot:  X  E0 E  E  I  E  E  I  I  V  V
 #
-# E0 (stage 0): Control only (issue cycle)
-# E  (stages 1,2,4,5): MEM + SALU allowed, NO VALU/TRANS
-# I  (stages 3,6): MEM + SALU + VALU + TRANS allowed
-# S  (stage 7): Same as I, plus scaled WMMA can absorb here
-# V  (stages 8,9): MEM + SALU + WMMA allowed, NO VALU/TRANS
+# X  (stage 0): Nothing can coexecute (LD_SCALE micro-op)
+# E0 (stage 1): Control only (WMMA issue cycle)
+# E  (stages 2,3,5,6): MEM + SALU allowed, NO VALU/TRANS
+# I  (stages 4,7,8): MEM + SALU + VALU + TRANS allowed (scaled WMMA can issue here)
+# V  (stages 9,10): MEM + SALU + WMMA allowed, NO VALU/TRANS
 
 --- |
   define void @wmma_ds_salu_only() #0 { ret void }
@@ -33,9 +34,9 @@
 
 # DBG-LABEL: PreRA hazard recognizer: wmma_ds_salu_only
 # DBG: CoExec window complete:
-# DBG-NEXT:   Stages:    0 1 2 3 4 5 6 7 8 9
-# DBG-NEXT:   Slots:     0 E E I E E I S V V
-# DBG-NEXT:   Scheduled: 0 E E I E E I - V -
+# DBG-NEXT:   Stages:    0 1 2 3 4 5 6 7 8 9 0
+# DBG-NEXT:   Slots:     X 0 E E I E E I I V V
+# DBG-NEXT:   Scheduled: X - E E I E E I - V -
 ---
 name: wmma_ds_salu_only
 tracksRegLiveness: true
@@ -93,10 +94,10 @@ body: |
 ...
 
 # DBG-LABEL: PreRA hazard recognizer: wmma_valu_trans_only
-# DBG: CoExec window ended at stage 7:
-# DBG-NEXT:   Stages:    0 1 2 3 4 5 6 7 8 9
-# DBG-NEXT:   Slots:     0 E E I E E I S V V
-# DBG-NEXT:   Scheduled: 0 - - I - - I S . .
+# DBG: CoExec window ended at stage 8:
+# DBG-NEXT:   Stages:    0 1 2 3 4 5 6 7 8 9 0
+# DBG-NEXT:   Slots:     X 0 E E I E E I I V V
+# DBG-NEXT:   Scheduled: X - - - I - - I I . .
 ---
 name: wmma_valu_trans_only
 tracksRegLiveness: true
@@ -140,10 +141,10 @@ body: |
 ...
 
 # DBG-LABEL: PreRA hazard recognizer: wmma_valu_in_I_slots
-# DBG: CoExec window ended at stage 8:
-# DBG-NEXT:   Stages:    0 1 2 3 4 5 6 7 8 9
-# DBG-NEXT:   Slots:     0 E E I E E I S V V
-# DBG-NEXT:   Scheduled: 0 E E I E E I S V .
+# DBG: CoExec window ended at stage 9:
+# DBG-NEXT:   Stages:    0 1 2 3 4 5 6 7 8 9 0
+# DBG-NEXT:   Slots:     X 0 E E I E E I I V V
+# DBG-NEXT:   Scheduled: X - E E I E E I I V .
 ---
 name: wmma_valu_in_I_slots
 tracksRegLiveness: true
@@ -199,10 +200,10 @@ body: |
 ...
 
 # DBG-LABEL: PreRA hazard recognizer: wmma_trans_in_I_slots
-# DBG: CoExec window ended at stage 7:
-# DBG-NEXT:   Stages:    0 1 2 3 4 5 6 7 8 9
-# DBG-NEXT:   Slots:     0 E E I E E I S V V
-# DBG-NEXT:   Scheduled: 0 - - I - - I S . .
+# DBG: CoExec window ended at stage 8:
+# DBG-NEXT:   Stages:    0 1 2 3 4 5 6 7 8 9 0
+# DBG-NEXT:   Slots:     X 0 E E I E E I I V V
+# DBG-NEXT:   Scheduled: X - - - I - - I I . .
 ---
 name: wmma_trans_in_I_slots
 tracksRegLiveness: true
@@ -246,12 +247,13 @@ body: |
 ...
 
 # DBG-LABEL: PreRA hazard recognizer: wmma_chain_back_to_back
-# DBG: WMMA window started: 0EEIEEISVV (window=10)
-# The next WMMA of the chain issues in a vacant slot, which starts a new window.
+# DBG: WMMA window started: X0EEIEEIIVV (window=11)
+# With the scaled WMMA micro-op modeling (X slot at cycle 0 for LD_SCALE, XDL
+# from cycle 1-9), scaled WMMA can issue at I slots (because LD_SCALE uses VALU).
 # DBG: CoExec window interrupted at stage 8:
-# DBG-NEXT:   Stages:    0 1 2 3 4 5 6 7 8 9
-# DBG-NEXT:   Slots:     0 E E I E E I S V V
-# DBG-NEXT:   Scheduled: 0 - - - - - - - V .
+# DBG-NEXT:   Stages:    0 1 2 3 4 5 6 7 8 9 0
+# DBG-NEXT:   Slots:     X 0 E E I E E I I V V
+# DBG-NEXT:   Scheduled: X - - - - - - - I . .
 ---
 name: wmma_chain_back_to_back
 tracksRegLiveness: true
@@ -310,9 +312,9 @@ body: |
 
 # DBG-LABEL: PreRA hazard recognizer: wmma_mixed_ds_valu_trans
 # DBG: CoExec window complete:
-# DBG-NEXT:   Stages:    0 1 2 3 4 5 6 7 8 9
-# DBG-NEXT:   Slots:     0 E E I E E I S V V
-# DBG-NEXT:   Scheduled: 0 E E I E E I S - -
+# DBG-NEXT:   Stages:    0 1 2 3 4 5 6 7 8 9 0
+# DBG-NEXT:   Slots:     X 0 E E I E E I I V V
+# DBG-NEXT:   Scheduled: X - E E I E E I I - -
 ---
 name: wmma_mixed_ds_valu_trans
 tracksRegLiveness: true
@@ -437,13 +439,13 @@ body: |
 ...
 
 # Test 8: VALU blocked in V slots. Fill E and I slots with DS/VALU,
-# then extra VALU that cannot go in V slots (stages 8,9).
-# Only 2 I slots available (3,6) but 5 VALU - some VALU pushed past window.
+# then extra VALU that cannot go in V slots (stages 9,10).
+# Only 3 I slots available (4,7,8) but 5 VALU - some VALU pushed past window.
 # DBG-LABEL: PreRA hazard recognizer: wmma_valu_blocked_in_V_slot
 # DBG: CoExec window complete:
-# DBG-NEXT:   Stages:    0 1 2 3 4 5 6 7 8 9
-# DBG-NEXT:   Slots:     0 E E I E E I S V V
-# DBG-NEXT:   Scheduled: 0 E E I E - I S - -
+# DBG-NEXT:   Stages:    0 1 2 3 4 5 6 7 8 9 0
+# DBG-NEXT:   Slots:     X 0 E E I E E I I V V
+# DBG-NEXT:   Scheduled: X - E E I E - I I - -
 ---
 name: wmma_valu_blocked_in_V_slot
 tracksRegLiveness: true
