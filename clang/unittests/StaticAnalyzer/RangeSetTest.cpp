@@ -281,6 +281,55 @@ using IntTypes = ::testing::Types<int8_t, uint8_t, int16_t, uint16_t, int32_t,
                                   uint32_t, int64_t, uint64_t>;
 TYPED_TEST_SUITE(RangeSetTest, IntTypes, );
 
+using RangeSetWideCastTest = RangeSetTest<uint64_t>;
+
+TEST_F(RangeSetWideCastTest, TruncateWideIntervals) {
+  using llvm::APInt;
+  using llvm::APSInt;
+  // Build endpoints explicitly: the fixture's `uint64_t` parameter must not
+  // limit the source width.
+  auto Interval = [&](APInt From, APInt To, bool Unsigned = true) {
+    return F.add(F.getEmptySet(), Range(BVF.getValue(APSInt(From, Unsigned)),
+                                        BVF.getValue(APSInt(To, Unsigned))));
+  };
+  const APSIntType U64(64, true), S64(64, false), U128(128, true);
+  const APInt Zero128(128, 0);
+  const APInt Two64 = APInt::getOneBitSet(128, 64);
+  const APInt Max64 = APInt::getMaxValue(64);
+  const RangeSet Full64 = Interval(APInt(64, 0), Max64);
+
+  // A span wider than 64 bits covers the entire target range.
+  checkCastToImpl(Interval(Zero128, Two64), U64, Full64);
+  checkCastToImpl(Interval(APInt::getSignedMinValue(128),
+                           APInt::getSignedMaxValue(128), false),
+                  U64, Full64);
+  checkCastToImpl(Interval(-APInt(128, 1), Two64 - 1, false), U64, Full64);
+
+  // Check the boundary at exactly 2^64 consecutive values.
+  checkCastToImpl(Interval(Zero128, Two64 - 1), U64, Full64);
+  checkCastToImpl(Interval(Zero128, Two64 - 2), U64,
+                  Interval(APInt(64, 0), Max64 - 1));
+
+  // Wide endpoints alone do not imply a full target range.
+  const APInt High = APInt::getOneBitSet(128, 96);
+  checkCastToImpl(Interval(High + 3, High + 5), U64,
+                  Interval(APInt(64, 3), APInt(64, 5)));
+  checkCastToImpl(Interval(Two64 - 2, Two64 + 1), U64,
+                  F.unite(Interval(APInt(64, 0), APInt(64, 1)),
+                          Interval(Max64 - 1, Max64)));
+
+  const APInt Two63 = APInt::getOneBitSet(128, 63);
+  const APInt MinSigned = APInt::getSignedMinValue(64);
+  const APInt MaxSigned = APInt::getSignedMaxValue(64);
+  checkCastToImpl(Interval(Two63 - 2, Two63 + 1), S64,
+                  F.unite(Interval(MinSigned, MinSigned + 1, false),
+                          Interval(MaxSigned - 1, MaxSigned, false)));
+
+  // The destination can also be wider than 64 bits.
+  checkCastToImpl(Interval(APInt(256, 0), APInt::getOneBitSet(256, 128)), U128,
+                  Interval(Zero128, APInt::getMaxValue(128)));
+}
+
 TYPED_TEST(RangeSetTest, RangeSetNegateTest) {
   using TV = TestValues<TypeParam>;
   constexpr auto MIN = TV::MIN;

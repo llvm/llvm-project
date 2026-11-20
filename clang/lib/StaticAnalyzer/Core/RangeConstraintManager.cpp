@@ -715,25 +715,25 @@ RangeSet::ContainerType RangeSet::Factory::truncateTo(RangeSet What,
   using llvm::APSInt;
   ContainerType Result;
   ContainerType Dummy;
-  // CastRangeSize is an amount of all possible values of cast type.
-  // Example: `char` has 256 values; `short` has 65536 values.
-  // But in fact we use `amount of values` - 1, because
-  // we can't keep `amount of values of UINT64` inside uint64_t.
-  // E.g. 256 is an amount of all possible values of `char` and we can't keep
-  // it inside `char`.
-  // And it's OK, it's enough to do correct calculations.
-  uint64_t CastRangeSize = APInt::getMaxValue(Ty.getBitWidth()).getZExtValue();
+
+  // Difference of largest and smallest possible value in `Ty`.
+  const APInt CastRangeLength =
+      APInt::getLowBitsSet(What.getBitWidth(), Ty.getBitWidth());
   for (const Range &R : What) {
     // Get bounds of the given range.
     APSInt FromInt = R.From();
     APSInt ToInt = R.To();
-    // CurrentRangeSize is an amount of all possible values of the current
-    // range minus one.
-    uint64_t CurrentRangeSize = (ToInt - FromInt).getZExtValue();
-    // This is an optimization for a specific case when this Range covers
+
+    // This is a `W`-bit subtraction.
+    // For a valid range, the unsigned value of the result is the mathematical
+    // distance between the endpoints even when they are signed.
+    // Assigning to `APInt` drops the sign so that `uge()` below does not
+    // interpret an all-ones span as -1.
+    const APInt CurrentRangeLength = ToInt - FromInt;
+    // This is an optimization for a specific case when this `Range` covers
     // the whole range of the target type.
     Dummy.clear();
-    if (CurrentRangeSize >= CastRangeSize) {
+    if (CurrentRangeLength.uge(CastRangeLength)) {
       Dummy.emplace_back(ValueFactory.getMinValue(Ty),
                          ValueFactory.getMaxValue(Ty));
       Result = std::move(Dummy);
