@@ -144,6 +144,57 @@ body: |
     RET 0, $rax, $rdx
 ...
 ---
+# A "+rm" pair before a "+r" pair: the "+rm" pair is the only one that can be
+# folded, and folding its output moves the "+r" output after it. So unlike in
+# rm_before_tied and two_tied_rm, the output of the pair that stays tied moves
+# too, and both ends of its tie get new operand indices.
+#
+#   struct pair tied_rm_before_tied_r(long a, long b, long c, long d, long e,
+#                                     long f, long g) {
+#     asm volatile("" : "+rm"(a), "+r"(b) : "r"(c), "r"(d), "r"(e), "r"(f),
+#                                           "r"(g) : clobber, implicit-def dead early-clobber $rax, clobber, implicit-def dead early-clobber $rbx, clobber, implicit-def dead early-clobber $rbp, clobber, implicit-def dead early-clobber $r10, clobber, implicit-def dead early-clobber $r11, clobber, implicit-def dead early-clobber $r12, clobber, implicit-def dead early-clobber $r13, clobber, implicit-def dead early-clobber $r14, clobber, implicit-def dead early-clobber $r15BERS);
+#     return (struct pair){a, b};
+#   }
+name: tied_rm_before_tied_r
+tracksRegLiveness: true
+fixedStack:
+  - { id: 0, size: 8, alignment: 16, isImmutable: true }
+body: |
+  bb.0:
+    liveins: $rdi, $rsi, $rdx, $rcx, $r8, $r9
+    ; CHECK-LABEL: name: tied_rm_before_tied_r
+    ; CHECK: liveins: $rdi, $rsi, $rdx, $rcx, $r8, $r9
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: MOV64mr %stack.5, 1, $noreg, 0, $noreg, $rdi :: (store (s64) into %stack.5)
+    ; CHECK-NEXT: MOV64mr %stack.4, 1, $noreg, 0, $noreg, $rsi :: (store (s64) into %stack.4)
+    ; CHECK-NEXT: MOV64mr %stack.0, 1, $noreg, 0, $noreg, $rdx :: (store (s64) into %stack.0)
+    ; CHECK-NEXT: MOV64mr %stack.1, 1, $noreg, 0, $noreg, $rcx :: (store (s64) into %stack.1)
+    ; CHECK-NEXT: MOV64mr %stack.2, 1, $noreg, 0, $noreg, $r8 :: (store (s64) into %stack.2)
+    ; CHECK-NEXT: MOV64mr %stack.3, 1, $noreg, 0, $noreg, $r9 :: (store (s64) into %stack.3)
+    ; CHECK-NEXT: [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (load (s64) from %fixed-stack.0, align 16)
+    ; CHECK-NEXT: [[MOV64rm1:%[0-9]+]]:gr64 = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (load (s64) from %stack.0)
+    ; CHECK-NEXT: [[MOV64rm2:%[0-9]+]]:gr64 = MOV64rm %stack.1, 1, $noreg, 0, $noreg :: (load (s64) from %stack.1)
+    ; CHECK-NEXT: [[MOV64rm3:%[0-9]+]]:gr64 = MOV64rm %stack.2, 1, $noreg, 0, $noreg :: (load (s64) from %stack.2)
+    ; CHECK-NEXT: [[MOV64rm4:%[0-9]+]]:gr64 = MOV64rm %stack.3, 1, $noreg, 0, $noreg :: (load (s64) from %stack.3)
+    ; CHECK-NEXT: [[MOV64rm5:%[0-9]+]]:gr64 = MOV64rm %stack.4, 1, $noreg, 0, $noreg :: (load (s64) from %stack.4)
+    ; CHECK-NEXT: INLINEASM &"", sideeffect mayload maystore attdialect, mem:m ops:5, %stack.5, 1, $noreg, 0, $noreg, regdef:GR64, def [[MOV64rm5]], reguse:GR64, [[MOV64rm1]], reguse:GR64, [[MOV64rm2]], reguse:GR64, [[MOV64rm3]], reguse:GR64, [[MOV64rm4]], reguse:GR64, [[MOV64rm]], mem:m ops:5, %stack.5, 1, $noreg, 0, $noreg, reguse tiedto:$1, [[MOV64rm5]](tied-def 9), clobber, implicit-def dead early-clobber $rax, clobber, implicit-def dead early-clobber $rbx, clobber, implicit-def dead early-clobber $rbp, clobber, implicit-def dead early-clobber $r10, clobber, implicit-def dead early-clobber $r11, clobber, implicit-def dead early-clobber $r12, clobber, implicit-def dead early-clobber $r13, clobber, implicit-def dead early-clobber $r14, clobber, implicit-def dead early-clobber $r15 :: (load store (s64) on %stack.5)
+    ; CHECK-NEXT: MOV64mr %stack.4, 1, $noreg, 0, $noreg, [[MOV64rm5]] :: (store (s64) into %stack.4)
+    ; CHECK-NEXT: $rax = MOV64rm %stack.5, 1, $noreg, 0, $noreg :: (load (s64) from %stack.5)
+    ; CHECK-NEXT: $rdx = MOV64rm %stack.4, 1, $noreg, 0, $noreg :: (load (s64) from %stack.4)
+    ; CHECK-NEXT: RET 0, $rax, $rdx
+    %0:gr64 = COPY $rdi
+    %1:gr64 = COPY $rsi
+    %2:gr64 = COPY $rdx
+    %3:gr64 = COPY $rcx
+    %4:gr64 = COPY $r8
+    %5:gr64 = COPY $r9
+    %6:gr64 = MOV64rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (load (s64) from %fixed-stack.0, align 16)
+    INLINEASM &"", sideeffect attdialect, regdef:GR64 foldable, def %0, regdef:GR64, def %1, reguse:GR64, %2, reguse:GR64, %3, reguse:GR64, %4, reguse:GR64, %5, reguse:GR64, %6, reguse tiedto:$0, %0(tied-def 3), reguse tiedto:$1, %1(tied-def 5), clobber, implicit-def dead early-clobber $rax, clobber, implicit-def dead early-clobber $rbx, clobber, implicit-def dead early-clobber $rbp, clobber, implicit-def dead early-clobber $r10, clobber, implicit-def dead early-clobber $r11, clobber, implicit-def dead early-clobber $r12, clobber, implicit-def dead early-clobber $r13, clobber, implicit-def dead early-clobber $r14, clobber, implicit-def dead early-clobber $r15
+    $rax = COPY %0
+    $rdx = COPY %1
+    RET 0, $rax, $rdx
+...
+---
 # A read-write "+rm" operand on an uninitialized value: the tied input is
 # undef, so folding the pair writes the stack slot but doesn't read it. The
 # folded asm is "maystore" without "mayload" and has only a store memoperand.
