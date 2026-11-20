@@ -3534,7 +3534,7 @@ The AMDGPU backend supports the following calling conventions:
     Chain functions receive a stack pointer from their caller (in s32), similar to `amdgpu_gfx` functions. This points to the bottom of the stack.
     Referencing values on the caller's stack is undefined behaviour.
     If needed, the frame pointer is s33 and the base pointer is s34.
-    `inreg` arguments are allocated around s[32:34], i.e. they continue at s35 if they would otherwise land in one of s32 through s34.
+    `inreg` arguments are allocated in s0-s31 and then from s35 onwards, leaving s[32:34] reserved.
     The gap is always present, irrespective of whether or not the function ends up using a frame or a base pointer.
     On subtargets that use a scratch buffer descriptor (as opposed to `scratch_{load,store}_*` instructions), the scratch buffer descriptor is passed in s\[48:51\].
     This limits the SGPR / `inreg` arguments to the equivalent of 48 dwords; using more than that is not allowed.
