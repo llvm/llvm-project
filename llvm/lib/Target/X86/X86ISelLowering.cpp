@@ -11400,7 +11400,8 @@ static SDValue lowerShuffleAsBitMask(const SDLoc &DL, MVT VT, SDValue V1,
 
   MVT LogicVT = VT.changeTypeToInteger();
   SDValue VMask = getConstVector(VMaskOps, LogicVT, DAG, DL);
-  V = DAG.getBitcast(LogicVT, DAG.getFreeze(V, DemandedElts));
+  V = DAG.getFreeze(V, DemandedElts, UndefPoisonKind::PoisonOnly);
+  V = DAG.getBitcast(LogicVT, V);
   SDValue And = DAG.getNode(ISD::AND, DL, LogicVT, V, VMask);
   return DAG.getBitcast(VT, And);
 }
