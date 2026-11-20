@@ -4053,10 +4053,69 @@ static Value *foldBitmaskMul(Value *Op0, Value *Op1,
   return nullptr;
 }
 
+/// ((X + C) & -C) | (X & (C-1)) -> X + C, for power-of-two C.
+static Value *foldOrOfAddMaskWithLowBits(Value *Op0, Value *Op1,
+                                         InstCombiner::BuilderTy &Builder) {
+  Value *X;
+  BinaryOperator *Add = nullptr;
+  const APInt *C, *NegC, *LowMask;
+  bool AddIsResult = false;
+
+  // Match both the canonical form and the form with the add folded into the
+  // high mask. Poison is allowed in splat constants: a poison lane in any of
+  // the constants makes the original expression poison in that lane, so
+  // replacing it with the corresponding lane of X + C is a valid refinement.
+  auto MatchesAddMask = [&](Value *V) {
+    if (match(V,
+              m_c_And(m_CombineAnd(m_BinOp(Add),
+                                   m_c_Add(m_Value(X), m_APIntAllowPoison(C))),
+                      m_APIntAllowPoison(NegC)))) {
+      AddIsResult = true;
+      return true;
+    }
+    AddIsResult = false;
+    return match(
+        V, m_CombineAnd(m_BinOp(Add),
+                        m_c_Add(m_c_And(m_Value(X), m_APIntAllowPoison(NegC)),
+                                m_APIntAllowPoison(C))));
+  };
+  auto MatchesLowMask = [&](Value *V) {
+    return match(V, m_c_And(m_Specific(X), m_APIntAllowPoison(LowMask)));
+  };
+
+  Value *LowMaskOp = nullptr;
+  if (MatchesAddMask(Op0) && MatchesLowMask(Op1))
+    LowMaskOp = Op1;
+  else if (MatchesAddMask(Op1) && MatchesLowMask(Op0))
+    LowMaskOp = Op0;
+  else
+    return nullptr;
+
+  // Only the low-mask operand needs to be one-use. The high-mask value may
+  // have other users (e.g. the add result is also shifted), and keeping it
+  // alive while replacing the or with X + C does not increase the
+  // instruction count.
+  if (!LowMaskOp->hasOneUse())
+    return nullptr;
+
+  if (!C->isPowerOf2() || *NegC != -*C || *LowMask != *C - 1)
+    return nullptr;
+
+  // In the first form the matched add is already X + C, so reuse it (and its
+  // flags) instead of creating an identical instruction.
+  if (AddIsResult)
+    return Add;
+
+  return Builder.CreateAdd(X, ConstantInt::get(X->getType(), *C), "",
+                           Add->hasNoUnsignedWrap(), Add->hasNoSignedWrap());
+}
+
 Value *InstCombinerImpl::foldDisjointOr(Value *LHS, Value *RHS) {
   if (Value *Res = foldBitmaskMul(LHS, RHS, Builder))
     return Res;
   if (Value *Res = foldIntegerRepackThroughZExt(LHS, RHS, Builder))
+    return Res;
+  if (Value *Res = foldOrOfAddMaskWithLowBits(LHS, RHS, Builder))
     return Res;
 
   return nullptr;
