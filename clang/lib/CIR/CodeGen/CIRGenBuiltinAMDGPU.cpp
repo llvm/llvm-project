@@ -133,9 +133,9 @@ static mlir::Value emitAMDGPUAtomicRMW(CIRGenFunction &cgf,
     ptr = ptr.withElementType(builder, bf16VecTy);
   }
 
-  auto rmw = cir::AtomicFetchOp::create(builder, loc, ptr.emitRawPointer(), val,
-                                        binOp, order, scope, isVolatile,
-                                        /*fetch_first=*/true);
+  auto rmw = cir::AtomicFetchOp::create(
+      builder, loc, ptr.emitRawPointer(), val, binOp, order, scope,
+      /*alignment=*/nullptr, isVolatile, /*fetch_first=*/true);
   rmw->setAttr(cir::CIRDialect::getAMDGPURawAtomicAttrName(),
                builder.getUnitAttr());
   return builder.createBitcast(loc, rmw->getResult(0), origTy);

@@ -1236,6 +1236,9 @@ const unsigned TiedMax = 15;
 /// The tied def must be one of the first TiedMax operands on a normal
 /// instruction. INLINEASM instructions allow more tied defs.
 ///
+/// A tied use and def of the same virtual register must use the same
+/// subregister index.
+///
 void MachineInstr::tieOperands(unsigned DefIdx, unsigned UseIdx) {
   MachineOperand &DefMO = getOperand(DefIdx);
   MachineOperand &UseMO = getOperand(UseIdx);
