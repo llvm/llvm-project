@@ -388,9 +388,7 @@ define i8 @srem_XY_XZ_with_CY_gt_CZ_drop_nsw(i8 noundef %X) {
 define i8 @srem_XY_XZ_with_CY_gt_CZ_drop_nsw_commuted(i8 noundef %X) {
 ; CHECK-LABEL: @srem_XY_XZ_with_CY_gt_CZ_drop_nsw_commuted(
 ; CHECK-NEXT:    [[BO0:%.*]] = mul nsw i8 [[X:%.*]], 127
-; CHECK-NEXT:    [[BO1:%.*]] = shl nsw i8 [[X]], 7
-; CHECK-NEXT:    [[R:%.*]] = srem i8 [[BO0]], [[BO1]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[BO0]]
 ;
   %BO0 = mul nsw i8 %X, 127
   %BO1 = shl nsw i8 %X, 7
