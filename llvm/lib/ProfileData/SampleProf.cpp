@@ -303,19 +303,20 @@ LineLocation FunctionSamples::getCallSiteIdentifier(const DILocation *DIL,
 
 const FunctionSamples *FunctionSamples::findFunctionSamples(
     const DILocation *DIL, SampleProfileReaderItaniumRemapper *Remapper,
-    const HashKeyMap<DenseMap, FunctionId, FunctionId> *FuncNameToProfNameMap,
-    function_ref<const FunctionSamples *(const FunctionSamples &,
-                                         const LineLocation &,
-                                         const DISubprogram &, StringRef)>
-        Fallback) const {
+    const HashKeyMap<DenseMap, FunctionId, FunctionId> *FuncNameToProfNameMap)
+    const {
   assert(DIL);
-  SmallVector<std::pair<LineLocation, const DISubprogram *>, 10> S;
+  SmallVector<std::pair<LineLocation, StringRef>, 10> S;
 
   const DILocation *PrevDIL = DIL;
   for (DIL = DIL->getInlinedAt(); DIL; DIL = DIL->getInlinedAt()) {
+    // Use C++ linkage name if possible.
+    StringRef Name = PrevDIL->getScope()->getSubprogram()->getLinkageName();
+    if (Name.empty())
+      Name = PrevDIL->getScope()->getSubprogram()->getName();
     S.emplace_back(FunctionSamples::getCallSiteIdentifier(
                        DIL, FunctionSamples::ProfileIsFS),
-                   PrevDIL->getScope()->getSubprogram());
+                   Name);
     PrevDIL = DIL;
   }
 
@@ -323,16 +324,8 @@ const FunctionSamples *FunctionSamples::findFunctionSamples(
     return this;
   const FunctionSamples *FS = this;
   for (int i = S.size() - 1; i >= 0 && FS != nullptr; i--) {
-    const auto &[Loc, SP] = S[i];
-    // Use C++ linkage name if possible.
-    StringRef Name = SP->getLinkageName();
-    if (Name.empty())
-      Name = SP->getName();
-    const FunctionSamples *Inlinee =
-        FS->findFunctionSamplesAt(Loc, Name, Remapper, FuncNameToProfNameMap);
-    if (!Inlinee && Fallback)
-      Inlinee = Fallback(*FS, Loc, *SP, Name);
-    FS = Inlinee;
+    FS = FS->findFunctionSamplesAt(S[i].first, S[i].second, Remapper,
+                                   FuncNameToProfNameMap);
   }
   return FS;
 }

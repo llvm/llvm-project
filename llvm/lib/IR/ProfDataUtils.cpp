@@ -22,6 +22,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
@@ -414,4 +415,35 @@ void llvm::applyProfMetadataIfEnabled(
       setMetadataCallback(Inst);
     }
   }
+}
+
+// Keep a shared metadata tree instead of copying the accumulated hints at
+// every inline. Summary construction visits each node at most once per caller.
+static void appendSampleProfileImports(Function &F, MDNode *Pending) {
+  if (MDNode *Existing = F.getMetadata(SampleProfilePendingImports)) {
+    if (Existing == Pending)
+      return;
+    Pending = MDNode::get(F.getContext(), {Existing, Pending});
+  }
+  F.setMetadata(SampleProfilePendingImports, Pending);
+}
+
+void llvm::recordSampleProfileImports(Function &F) {
+  if (F.getImportGUIDs().empty())
+    return;
+  LLVMContext &C = F.getContext();
+  Metadata *Entry[] = {ConstantAsMetadata::get(ConstantInt::get(
+                           Type::getInt64Ty(C), F.getGUIDOrFallback())),
+                       F.getMetadata(LLVMContext::MD_prof)};
+  appendSampleProfileImports(F, MDNode::get(C, Entry));
+}
+
+void llvm::mergeSampleProfileImports(Function &Caller, const Function &Callee) {
+  if (MDNode *Pending = Callee.getMetadata(SampleProfilePendingImports))
+    appendSampleProfileImports(Caller, Pending);
+}
+
+void llvm::clearSampleProfileImports(Module &M) {
+  for (Function &F : M)
+    F.setMetadata(SampleProfilePendingImports, nullptr);
 }

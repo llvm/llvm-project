@@ -34,6 +34,24 @@ struct MDProfLabels {
 
 extern LLVM_ABI cl::opt<bool> ProfcheckDisableMetadataFixes;
 
+/// Pre-link import hints waiting for their original function to be deleted.
+/// Each entry is {callee GUID, function_entry_count metadata}. The latter
+/// already contains the import GUIDs, so the list need not be copied.
+inline constexpr StringLiteral SampleProfilePendingImports =
+    "sample.pending.imports";
+
+/// Remember F's import hints after pre-link sample annotation. Inlining copies
+/// these entries to callers; summary construction ignores entries whose callee
+/// still has a body, including F's own entry.
+LLVM_ABI void recordSampleProfileImports(Function &F);
+
+/// Carry the callee's pending entries through a successful inline.
+LLVM_ABI void mergeSampleProfileImports(Function &Caller,
+                                        const Function &Callee);
+
+/// Drop temporary entries once the module summary has consumed them.
+LLVM_ABI void clearSampleProfileImports(Module &M);
+
 /// Profile-based loop metadata that should be accessed only by using
 /// \c llvm::getLoopEstimatedTripCount and \c llvm::setLoopEstimatedTripCount.
 LLVM_ABI extern const char *LLVMLoopEstimatedTripCount;

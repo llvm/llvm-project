@@ -19,6 +19,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/FunctionAttrs.h"
@@ -313,6 +314,7 @@ void splitAndWriteThinLTOBitcode(
     ProfileSummaryInfo PSI(M);
     M.addModuleFlag(Module::Error, "ThinLTO", uint32_t(0));
     ModuleSummaryIndex Index = buildModuleSummaryIndex(M, nullptr, &PSI);
+    clearSampleProfileImports(M);
     WriteBitcodeToFile(M, OS, ShouldPreserveUseListOrder, &Index,
                        /*UnifiedLTO=*/false);
 
@@ -435,6 +437,8 @@ void splitAndWriteThinLTOBitcode(
   MergedM->addModuleFlag(Module::Error, "ThinLTO", uint32_t(0));
   ModuleSummaryIndex MergedMIndex =
       buildModuleSummaryIndex(*MergedM, nullptr, &PSI);
+  clearSampleProfileImports(M);
+  clearSampleProfileImports(*MergedM);
 
   SmallVector<char, 0> Buffer;
 
@@ -525,6 +529,8 @@ bool writeThinLTOBitcode(
   // be used in the backends, and use that in the minimized bitcode
   // produced for the full link.
   ModuleHash ModHash = {{0}};
+  if (Index)
+    clearSampleProfileImports(M);
   WriteBitcodeToFile(M, OS, ShouldPreserveUseListOrder, Index,
                      /*GenerateHash=*/true, &ModHash);
   // If a minimized bitcode module was requested for the thin link, only

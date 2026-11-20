@@ -14,6 +14,7 @@
 #include "llvm/Analysis/ModuleSummaryAnalysis.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 using namespace llvm;
@@ -22,6 +23,8 @@ PreservedAnalyses BitcodeWriterPass::run(Module &M, ModuleAnalysisManager &AM) {
   const ModuleSummaryIndex *Index =
       EmitSummaryIndex ? &(AM.getResult<ModuleSummaryIndexAnalysis>(M))
                        : nullptr;
+  if (Index)
+    clearSampleProfileImports(M);
   WriteBitcodeToFile(M, OS, ShouldPreserveUseListOrder, Index, EmitModuleHash);
 
   return PreservedAnalyses::all();

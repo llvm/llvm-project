@@ -46,6 +46,7 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
 #include "llvm/InitializePasses.h"
@@ -305,6 +306,7 @@ static void computeFunctionSummary(
     const Function &F, BlockFrequencyInfo *BFI, ProfileSummaryInfo *PSI,
     DominatorTree &DT, bool HasLocalsInUsedOrAsm,
     DenseSet<GlobalValue::GUID> &CantBePromoted, bool IsThinLTO,
+    const DenseSet<GlobalValue::GUID> &DefinedFunctions,
     std::function<const StackSafetyInfo *(const Function &F)> GetSSICallback) {
   // Summary not currently supported for anonymous functions, they should
   // have been named.
@@ -677,13 +679,36 @@ static void computeFunctionSummary(
   } else {
     Refs = RefEdges.takeVector();
   }
-  // Explicit add hot edges to enforce importing for designated GUIDs for
-  // sample PGO, to enable the same inlines as the profiled optimized binary.
-  for (auto &I : F.getImportGUIDs())
-    CallGraphEdges[Index.getOrInsertValueInfo(I)].updateHotness(
+  // Explicit import hints are critical edges. Pending hints belong to an
+  // inlined function and apply only after its standalone body is gone.
+  auto AddImport = [&](GlobalValue::GUID GUID) {
+    CallGraphEdges[Index.getOrInsertValueInfo(GUID)].updateHotness(
         Opts.force_summary_edges_cold == ForceSummaryHotness::All
             ? CalleeInfo::HotnessType::Cold
             : CalleeInfo::HotnessType::Critical);
+  };
+  for (auto GUID : F.getImportGUIDs())
+    AddImport(GUID);
+  if (MDNode *Pending = F.getMetadata(SampleProfilePendingImports)) {
+    SmallVector<MDNode *> Worklist = {Pending};
+    SmallPtrSet<MDNode *, 16> Visited;
+    while (!Worklist.empty()) {
+      MDNode *Entry = Worklist.pop_back_val();
+      if (!Visited.insert(Entry).second)
+        continue;
+      auto *GUID = mdconst::dyn_extract<ConstantInt>(Entry->getOperand(0));
+      if (!GUID) {
+        for (const MDOperand &Child : Entry->operands())
+          Worklist.push_back(cast<MDNode>(Child));
+        continue;
+      }
+      if (DefinedFunctions.contains(GUID->getZExtValue()))
+        continue;
+      auto *Prof = cast<MDNode>(Entry->getOperand(1));
+      for (const MDOperand &Import : drop_begin(Prof->operands(), 2))
+        AddImport(mdconst::extract<ConstantInt>(Import)->getZExtValue());
+    }
+  }
 
 #ifndef NDEBUG
   // Make sure that all calls we decided could not have memprof summaries get a
@@ -1046,6 +1071,12 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
           mdconst::extract_or_null<ConstantInt>(M.getModuleFlag("ThinLTO")))
     IsThinLTO = MD->getZExtValue();
 
+  // Build once: checking pending imports must not scan the module per entry.
+  DenseSet<GlobalValue::GUID> DefinedFunctions;
+  for (const Function &F : M)
+    if (!F.isDeclaration())
+      DefinedFunctions.insert(F.getGUID());
+
   // Compute summaries for all functions defined in module, and save in the
   // index.
   for (const auto &F : M) {
@@ -1069,7 +1100,8 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
 
     computeFunctionSummary(Opts, Index, M, F, BFI, PSI, DT,
                            !LocalsUsed.empty() || HasLocalInlineAsmSymbol,
-                           CantBePromoted, IsThinLTO, GetSSICallback);
+                           CantBePromoted, IsThinLTO, DefinedFunctions,
+                           GetSSICallback);
   }
 
   // Compute summaries for all variables defined in module, and save in the

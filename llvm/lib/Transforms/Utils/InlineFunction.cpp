@@ -2735,6 +2735,10 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
   assert(CalledFunc && !CalledFunc->isDeclaration() &&
          "CanInlineCallSite should have verified direct call to definition");
 
+  // InlineFunctionImpl is entered only after the inline has been accepted.
+  // Keep the original callee keys when forwarding entries from earlier inlines.
+  mergeSampleProfileImports(*Caller, *CalledFunc);
+
   // Determine if we are dealing with a call in an EHPad which does not unwind
   // to caller.
   bool EHPadForCallUnwindsLocally = false;
