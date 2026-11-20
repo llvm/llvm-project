@@ -21312,6 +21312,24 @@ static SDValue expandMulToNAFSequence(SDNode *N, SelectionDAG &DAG,
   return Result;
 }
 
+// Specially handle negative power of two cases as to avoid
+// overflow conditions.
+// X * (-2^N) -> sub (0, (shl X, C1))
+static SDValue expandMulByNegPowTwo(SDNode *N, SelectionDAG &DAG,
+                                    APInt APMulAmt) {
+  if (!APMulAmt.isNegatedPowerOf2())
+    return SDValue();
+
+  uint64_t MulAmt = APMulAmt.getZExtValue();
+  uint64_t MulAmtLowBit = MulAmt & (-MulAmt);
+  SDValue X = N->getOperand(0);
+  EVT VT = N->getValueType(0);
+  SDLoc DL(N);
+  SDValue ShiftAmt = DAG.getConstant(Log2_64(MulAmtLowBit), DL, VT);
+  SDValue Shift = DAG.getNode(ISD::SHL, DL, VT, X, ShiftAmt);
+  return DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), Shift);
+}
+
 // X * (2^N +/- 2^M) -> (add/sub (shl X, C1), (shl X, C2))
 static SDValue expandMulToAddOrSubOfShl(SDNode *N, SelectionDAG &DAG,
                                         uint64_t MulAmt) {
@@ -21340,16 +21358,8 @@ static SDValue expandMulToAddOrSubOfShl(SDNode *N, SelectionDAG &DAG,
   }
   EVT VT = N->getValueType(0);
   SDLoc DL(N);
-  SDValue Shift1;
-  // For negative power of two cases, Shift1 shifts left wider than the register
-  // width, inteding to zero out the register. However, the semantics of
-  // ISD::SHL stipulate that this is undef. Need to directly insert a `0`
-  // instead.
-  if (Log2_64(ShiftAmt1) >= N->getValueType(0).getScalarSizeInBits())
-    Shift1 = DAG.getConstant(0, DL, VT);
-  else
-    Shift1 = DAG.getNode(ISD::SHL, DL, VT, X,
-                         DAG.getConstant(Log2_64(ShiftAmt1), DL, VT));
+  SDValue Shift1 = DAG.getNode(ISD::SHL, DL, VT, X,
+                               DAG.getConstant(Log2_64(ShiftAmt1), DL, VT));
   SDValue Shift2 = DAG.getNode(ISD::SHL, DL, VT, X,
                                DAG.getConstant(Log2_64(MulAmtLowBit), DL, VT));
   return DAG.getNode(Op, DL, VT, Shift1, Shift2);
@@ -21518,6 +21528,8 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
     }
   }
 
+  if (SDValue V = expandMulByNegPowTwo(N, DAG, CNode->getAPIntValue()))
+    return V;
   if (SDValue V = expandMulToAddOrSubOfShl(N, DAG, MulAmt))
     return V;
 

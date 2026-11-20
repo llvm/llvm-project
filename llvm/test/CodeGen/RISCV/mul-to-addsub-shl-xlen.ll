@@ -12,8 +12,8 @@ define i32 @mul_opaque_32(i32 %x) {
 ;
 ; RV64-LABEL: mul_opaque_32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    lui a1, 917504
-; RV64-NEXT:    mulw a0, a0, a1
+; RV64-NEXT:    slli a0, a0, 29
+; RV64-NEXT:    negw a0, a0
 ; RV64-NEXT:    ret
   %k = bitcast i32 -536870912 to i32
   %r = mul i32 %x, %k
@@ -89,9 +89,8 @@ define i64 @mul_opaque_64_pt2(i64 %x) {
 ;
 ; RV64-LABEL: mul_opaque_64_pt2:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    li a1, -1
-; RV64-NEXT:    slli a1, a1, 61
-; RV64-NEXT:    mul a0, a0, a1
+; RV64-NEXT:    slli a0, a0, 61
+; RV64-NEXT:    neg a0, a0
 ; RV64-NEXT:    ret
   %k = bitcast i64 u0xE000000000000000 to i64
   %r = mul i64 %x, %k
