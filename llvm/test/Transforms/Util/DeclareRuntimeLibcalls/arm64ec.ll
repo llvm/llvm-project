@@ -110,7 +110,7 @@
 ; CHECK-NEXT: declare double @"#__adddf3"(double, double) [[NOMEM_ATTRS:#[0-9]+]]
 ; CHECK-NEXT: declare float @"#__addsf3"(float, float) [[NOMEM_ATTRS]]
 ; CHECK-NEXT: declare fp128 @"#__addtf3"(fp128, fp128) [[NOMEM_ATTRS]]
-; CHECK-NEXT: declare ptr @"#__arm_sc_memchr"(ptr, i32, i64)
+; CHECK-NEXT: declare ptr @"#__arm_sc_memchr"(ptr readonly, i32, i64) [[ARGMEM_READ_ATTRS:#[0-9]+]]
 ; CHECK-NEXT: declare ptr @"#__arm_sc_memcpy"(ptr, ptr, i64)
 ; CHECK-NEXT: declare ptr @"#__arm_sc_memmove"(ptr, ptr, i64)
 ; CHECK-NEXT: declare ptr @"#__arm_sc_memset"(ptr, i32, i64)
@@ -319,7 +319,7 @@
 ; CHECK-NEXT: declare double @"#__pow_finite"(double, double) [[ERRNO_ATTRS]]
 ; CHECK-NEXT: declare float @"#__powf_finite"(float, float) [[ERRNO_ATTRS]]
 ; CHECK-NEXT: declare fp128 @"#__powitf2"(fp128, i32) [[NOMEM_ATTRS]]
-; CHECK-NEXT: declare void @"#__security_check_cookie_arm64ec"(ptr)
+; CHECK-NEXT: declare void @"#__security_check_cookie_arm64ec"(ptr) [[NOUNWIND_ATTRS:#[0-9]+]]
 ; CHECK-NEXT: declare double @"#__subdf3"(double, double) [[NOMEM_ATTRS]]
 ; CHECK-NEXT: declare float @"#__subsf3"(float, float) [[NOMEM_ATTRS]]
 ; CHECK-NEXT: declare fp128 @"#__subtf3"(fp128, fp128) [[NOMEM_ATTRS]]
@@ -479,7 +479,7 @@
 ; CHECK-NEXT: declare ptr @"#memset"(ptr returned writeonly, i32, i64) [[ARGMEM_WRITE_ATTRS]]
 ; CHECK-NEXT: declare double @"#modf"(double, ptr noalias nonnull writeonly align 8 captures(none) dereferenceable(8)) [[ARGMEM_WRITE_ATTRS]]
 ; CHECK-NEXT: declare float @"#modff"(float, ptr noalias nonnull writeonly align 4 captures(none) dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
-; CHECK-NEXT: declare nofpclass(snan inf zero sub norm) double @"#nan"(ptr readonly captures(none)) [[ARGMEM_READ_ATTRS:#[0-9]+]]
+; CHECK-NEXT: declare nofpclass(snan inf zero sub norm) double @"#nan"(ptr readonly captures(none)) [[ARGMEM_READ_ATTRS]]
 ; CHECK-NEXT: declare nofpclass(snan inf zero sub norm) float @"#nanf"(ptr readonly captures(none)) [[ARGMEM_READ_ATTRS]]
 ; CHECK-NEXT: declare double @"#nearbyint"(double) [[NOMEM_ATTRS]]
 ; CHECK-NEXT: declare float @"#nearbyintf"(float) [[NOMEM_ATTRS]]
@@ -518,13 +518,14 @@
 ; CHECK-NEXT: attributes [[NORETURN_ONLY_ATTRS]] = { noreturn }
 ; CHECK-NEXT: attributes [[ATOMIC_ATTRS]] = { nocallback nofree nounwind willreturn }
 ; CHECK-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
+; CHECK-NEXT: attributes [[ARGMEM_READ_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
 ; CHECK-NEXT: attributes [[ERRNO_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 ; CHECK-NEXT: attributes [[ARGMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ; CHECK-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
 ; CHECK-NEXT: attributes [[CHK_ARGMEM_ATTRS]] = { nocallback nofree nosync nounwind memory(argmem: readwrite) }
 ; CHECK-NEXT: attributes [[CHK_ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind memory(argmem: write) }
+; CHECK-NEXT: attributes [[NOUNWIND_ATTRS]] = { nounwind }
 ; CHECK-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
 ; CHECK-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
 ; CHECK-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
-; CHECK-NEXT: attributes [[ARGMEM_READ_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
 ; CHECK-NEXT: attributes [[ARGMEM_ERRNO_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write, errnomem: write) }

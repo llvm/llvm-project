@@ -10,14 +10,14 @@
 ; AIX32-NEXT: declare i32 @_Unwind_RaiseException(ptr)
 ; AIX32-NEXT: declare void @_Unwind_Resume(ptr) [[NORETURN_ONLY_ATTRS:#[0-9]+]]
 ; AIX32-NEXT: declare void @___bzero(ptr writeonly captures(none), i32) [[ARGMEM_WRITE_ATTRS:#[0-9]+]]
-; AIX32-NEXT: declare ptr @___memccpy(ptr, ptr, i32, i32)
+; AIX32-NEXT: declare ptr @___memccpy(ptr noalias writeonly, ptr noalias readonly captures(none), i32, i32) [[ARGMEM_ATTRS:#[0-9]+]]
 ; AIX32-NEXT: declare i32 @___memcmp(ptr readonly captures(none), ptr readonly captures(none), i32) [[ARGMEM_READ_ATTRS:#[0-9]+]]
-; AIX32-NEXT: declare ptr @___memmove(ptr returned writeonly, ptr readonly, i32) [[ARGMEM_ATTRS:#[0-9]+]]
+; AIX32-NEXT: declare ptr @___memmove(ptr returned writeonly, ptr readonly, i32) [[ARGMEM_ATTRS]]
 ; AIX32-NEXT: declare ptr @___memset(ptr returned writeonly, i32, i32) [[ARGMEM_WRITE_ATTRS]]
-; AIX32-NEXT: declare i32 @___strcmp(ptr, ptr)
-; AIX32-NEXT: declare ptr @___strcpy(ptr, ptr)
+; AIX32-NEXT: declare i32 @___strcmp(ptr captures(none), ptr captures(none)) [[ARGMEM_READ_ATTRS]]
+; AIX32-NEXT: declare ptr @___strcpy(ptr noalias returned writeonly, ptr noalias readonly captures(none)) [[ARGMEM_ATTRS]]
 ; AIX32-NEXT: declare i32 @___strlen(ptr readonly captures(none)) [[ARGMEM_READ_ATTRS]]
-; AIX32-NEXT: declare ptr @___strstr(ptr, ptr)
+; AIX32-NEXT: declare ptr @___strstr(ptr, ptr captures(none)) [[ARGMEM_READ_ATTRS]]
 ; AIX32-NEXT: declare double @__adddf3(double, double) [[NOMEM_ATTRS:#[0-9]+]]
 ; AIX32-NEXT: declare fp128 @__addkf3(fp128, fp128) [[NOMEM_ATTRS]]
 ; AIX32-NEXT: declare float @__addsf3(float, float) [[NOMEM_ATTRS]]
@@ -559,8 +559,8 @@
 ; AIX32-NEXT: declare noalias noundef ptr @vec_realloc(ptr allocptr captures(none), i32 noundef) [[VEC_REALLOC_ATTRS:#[0-9]+]]
 ; AIX32-NEXT: attributes [[NORETURN_ONLY_ATTRS]] = { noreturn }
 ; AIX32-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
-; AIX32-NEXT: attributes [[ARGMEM_READ_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
 ; AIX32-NEXT: attributes [[ARGMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
+; AIX32-NEXT: attributes [[ARGMEM_READ_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
 ; AIX32-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; AIX32-NEXT: attributes [[ATOMIC_ATTRS]] = { nocallback nofree nounwind willreturn }
 ; AIX32-NEXT: attributes [[ERRNO_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
@@ -580,14 +580,14 @@
 ; AIX64-NEXT: declare signext i32 @_Unwind_RaiseException(ptr)
 ; AIX64-NEXT: declare void @_Unwind_Resume(ptr) [[NORETURN_ONLY_ATTRS:#[0-9]+]]
 ; AIX64-NEXT: declare void @___bzero64(ptr writeonly captures(none), i64) [[ARGMEM_WRITE_ATTRS:#[0-9]+]]
-; AIX64-NEXT: declare ptr @___memccpy64(ptr, ptr, i32 signext, i64)
+; AIX64-NEXT: declare ptr @___memccpy64(ptr noalias writeonly, ptr noalias readonly captures(none), i32 signext, i64) [[ARGMEM_ATTRS:#[0-9]+]]
 ; AIX64-NEXT: declare signext i32 @___memcmp64(ptr readonly captures(none), ptr readonly captures(none), i64) [[ARGMEM_READ_ATTRS:#[0-9]+]]
-; AIX64-NEXT: declare ptr @___memmove64(ptr returned writeonly, ptr readonly, i64) [[ARGMEM_ATTRS:#[0-9]+]]
+; AIX64-NEXT: declare ptr @___memmove64(ptr returned writeonly, ptr readonly, i64) [[ARGMEM_ATTRS]]
 ; AIX64-NEXT: declare ptr @___memset64(ptr returned writeonly, i32 signext, i64) [[ARGMEM_WRITE_ATTRS]]
-; AIX64-NEXT: declare signext i32 @___strcmp64(ptr, ptr)
-; AIX64-NEXT: declare ptr @___strcpy64(ptr, ptr)
+; AIX64-NEXT: declare signext i32 @___strcmp64(ptr captures(none), ptr captures(none)) [[ARGMEM_READ_ATTRS]]
+; AIX64-NEXT: declare ptr @___strcpy64(ptr noalias returned writeonly, ptr noalias readonly captures(none)) [[ARGMEM_ATTRS]]
 ; AIX64-NEXT: declare i64 @___strlen64(ptr readonly captures(none)) [[ARGMEM_READ_ATTRS]]
-; AIX64-NEXT: declare ptr @___strstr64(ptr, ptr)
+; AIX64-NEXT: declare ptr @___strstr64(ptr, ptr captures(none)) [[ARGMEM_READ_ATTRS]]
 ; AIX64-NEXT: declare double @__adddf3(double, double) [[NOMEM_ATTRS:#[0-9]+]]
 ; AIX64-NEXT: declare fp128 @__addkf3(fp128, fp128) [[NOMEM_ATTRS]]
 ; AIX64-NEXT: declare float @__addsf3(float, float) [[NOMEM_ATTRS]]
@@ -1133,8 +1133,8 @@
 ; AIX64-NEXT: declare noalias noundef ptr @vec_realloc(ptr allocptr captures(none), i64 noundef) [[VEC_REALLOC_ATTRS:#[0-9]+]]
 ; AIX64-NEXT: attributes [[NORETURN_ONLY_ATTRS]] = { noreturn }
 ; AIX64-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
-; AIX64-NEXT: attributes [[ARGMEM_READ_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
 ; AIX64-NEXT: attributes [[ARGMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
+; AIX64-NEXT: attributes [[ARGMEM_READ_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
 ; AIX64-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; AIX64-NEXT: attributes [[ATOMIC_ATTRS]] = { nocallback nofree nounwind willreturn }
 ; AIX64-NEXT: attributes [[ERRNO_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }

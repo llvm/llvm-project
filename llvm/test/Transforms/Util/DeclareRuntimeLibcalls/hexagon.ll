@@ -170,7 +170,7 @@
 ; CHECK-NEXT: declare float @__hexagon_fast_divsf3(float, float) [[NOMEM_ATTRS]]
 ; CHECK-NEXT: declare double @__hexagon_fast_muldf3(double, double) [[NOMEM_ATTRS]]
 ; CHECK-NEXT: declare double @__hexagon_fast_subdf3(double, double) [[NOMEM_ATTRS]]
-; CHECK-NEXT: declare void @__hexagon_memcpy_likely_aligned_min32bytes_mult8bytes(ptr, ptr, i32)
+; CHECK-NEXT: declare void @__hexagon_memcpy_likely_aligned_min32bytes_mult8bytes(ptr noalias writeonly, ptr noalias readonly, i32) [[ARGMEM_ATTRS:#[0-9]+]]
 ; CHECK-NEXT: declare i64 @__hexagon_moddi3(i64, i64) [[NOMEM_ATTRS]]
 ; CHECK-NEXT: declare i32 @__hexagon_modsi3(i32, i32) [[NOMEM_ATTRS]]
 ; CHECK-NEXT: declare double @__hexagon_muldf3(double, double) [[NOMEM_ATTRS]]
@@ -619,7 +619,7 @@
 ; LINUX-NEXT: declare float @__hexagon_fast_divsf3(float, float) [[NOMEM_ATTRS]]
 ; LINUX-NEXT: declare double @__hexagon_fast_muldf3(double, double) [[NOMEM_ATTRS]]
 ; LINUX-NEXT: declare double @__hexagon_fast_subdf3(double, double) [[NOMEM_ATTRS]]
-; LINUX-NEXT: declare void @__hexagon_memcpy_likely_aligned_min32bytes_mult8bytes(ptr, ptr, i32)
+; LINUX-NEXT: declare void @__hexagon_memcpy_likely_aligned_min32bytes_mult8bytes(ptr noalias writeonly, ptr noalias readonly, i32) [[ARGMEM_ATTRS:#[0-9]+]]
 ; LINUX-NEXT: declare i64 @__hexagon_moddi3(i64, i64) [[NOMEM_ATTRS]]
 ; LINUX-NEXT: declare i32 @__hexagon_modsi3(i32, i32) [[NOMEM_ATTRS]]
 ; LINUX-NEXT: declare double @__hexagon_muldf3(double, double) [[NOMEM_ATTRS]]
