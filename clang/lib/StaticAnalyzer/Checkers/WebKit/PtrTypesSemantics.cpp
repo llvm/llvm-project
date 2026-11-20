@@ -1016,6 +1016,27 @@ public:
               (CtorDecl->isMoveConstructor() &&
                RD->hasTrivialMoveConstructor()))
             return true;
+          // Sema synthesizes the body and inits() of a defaulted default
+          // constructor only once it is odr-used, so until then there is
+          // nothing to read; decide from what it would run instead. A field
+          // with an in-class initializer is constructed by that initializer
+          // rather than by its type's default constructor. Virtual bases are
+          // reached through the direct bases' own constructors.
+          if (CtorDecl->isDefaultConstructor() && !CtorDecl->isDeleted() &&
+              !CtorDecl->doesThisDeclarationHaveABody()) {
+            for (const FieldDecl *F : RD->fields()) {
+              if (const Expr *Init = F->getInClassInitializer()) {
+                if (!Visit(Init))
+                  return false;
+              } else if (!CanTriviallyConstruct(F->getType()))
+                return false;
+            }
+            for (const CXXBaseSpecifier &B : RD->bases()) {
+              if (!CanTriviallyConstruct(B.getType()))
+                return false;
+            }
+            return true;
+          }
         }
         if (DtorDecl)
           return CanTriviallyRunImplicitDtor(DtorDecl);
