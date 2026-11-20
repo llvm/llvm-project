@@ -30,6 +30,10 @@
 namespace cir::test {
 void registerTestCIRAliasAnalysisPass();
 } // namespace cir::test
+
+namespace mlir::test {
+void registerTestOpenACC();
+} // namespace mlir::test
 #endif
 
 struct CIRToLLVMPipelineOptions
@@ -47,6 +51,7 @@ int main(int argc, char **argv) {
 
 #ifdef CLANG_INCLUDE_TESTS
   cir::test::registerTestCIRAliasAnalysisPass();
+  mlir::test::registerTestOpenACC();
 #endif
   registry.insert<mlir::memref::MemRefDialect, mlir::LLVM::LLVMDialect>();
 

@@ -11,4 +11,5 @@ add_clang_library(CIROpenACCSupport
   MLIRIR
   MLIRCIR
   MLIROpenACCDialect
+  MLIROpenACCUtils
   )
