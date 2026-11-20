@@ -2095,10 +2095,9 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
 
   PD.DataVar = Data;
 
-  // Only native x64 and Arm64 PE images have been qualified. The triple
-  // parser also maps the "arm64x" spelling to aarch64. A composite ARM64X
-  // image is assembled at link time from ordinary Arm64 and Arm64EC inputs;
-  // it is not a supported final image even if a native input qualifies here.
+  // Emit the index for x64 and native Arm64 inputs only. Check the spelling:
+  // the triple parser also maps "arm64x" to aarch64. A composite ARM64X
+  // image can still include indexed inputs selected by the linker.
   if (DataSectionKind == IPSK_data && TT.isWindowsMSVCEnvironment() &&
       TT.isOSBinFormatCOFF() && M.getDataLayout().getPointerSizeInBits() == 64 &&
       (TT.getArch() == Triple::x86_64 || TT.getArchName() == "aarch64" ||

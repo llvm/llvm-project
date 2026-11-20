@@ -13,7 +13,8 @@
 
 #include "InstrProfiling.h"
 
-#if defined(_WIN64) && defined(_MSC_VER) && !defined(_M_ARM64EC) &&            \
+/* Arm64EC objects do not emit RVAs, but can link x64 objects that do. */
+#if defined(_WIN64) && defined(_MSC_VER) &&                                    \
     (defined(_M_X64) || defined(_M_ARM64))
 #define LPROF_COFF_RECORD_RVAS 1
 #endif
