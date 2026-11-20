@@ -83,48 +83,16 @@ void MappedPrefix::transformPairs(
   }
 }
 
-/// FIXME: Copy/pasted from llvm/lib/Support/Path.cpp.
-static bool startsWith(StringRef Path, StringRef Prefix,
-                       sys::path::Style PathStyle) {
-  if (PathStyle == sys::path::Style::posix ||
-      (PathStyle == sys::path::Style::native &&
-       sys::path::is_style_posix(sys::path::Style::native)))
-    return Path.starts_with(Prefix);
-
-  if (Path.size() < Prefix.size())
-    return false;
-
-  // Windows prefix matching : case and separator insensitive
-  for (size_t I = 0, E = Prefix.size(); I != E; ++I) {
-    bool SepPath = sys::path::is_separator(Path[I], PathStyle);
-    bool SepPrefix = sys::path::is_separator(Prefix[I], PathStyle);
-    if (SepPath != SepPrefix)
-      return false;
-    if (SepPath)
-      continue;
-    if (toLower(Path[I]) != toLower(Prefix[I]))
-      return false;
-  }
-  return true;
-}
-
 std::optional<StringRef>
 PrefixMapper::mapImpl(StringRef Path, SmallVectorImpl<char> &Storage) const {
   for (const MappedPrefix &Map : Mappings) {
     StringRef Old = Map.Old;
     StringRef New = Map.New;
-    if (!startsWith(Path, Old, PathStyle))
+    if (!sys::path::starts_with(Path, Old, PathStyle))
       continue;
     StringRef Suffix = Path.drop_front(Old.size());
     if (Suffix.empty())
       return New; // Exact match.
-
-    // Don't remap "/old-suffix" with mapping "/old=/new".
-    bool OldEndsWithSeparator =
-        !Old.empty() && sys::path::is_separator(Old.back(), PathStyle);
-    if (!OldEndsWithSeparator &&
-        !sys::path::is_separator(Suffix.front(), PathStyle))
-      continue;
 
     Storage.assign(New.begin(), New.end());
     sys::path::append(Storage, PathStyle, Suffix);
@@ -181,10 +149,18 @@ bool PrefixMapper::mapInPlace(std::string &Path) const {
 }
 
 void PrefixMapper::sort() {
-  // FIXME: Compare the way startsWith() matches, so that sorting is case- and
-  // separator-insensitive with a Windows path style.
-  std::stable_sort(Mappings.begin(), Mappings.end(),
-                   [](const MappedPrefix &LHS, const MappedPrefix &RHS) {
-                     return LHS.Old > RHS.Old;
-                   });
+  // Compare characters the way sys::path::starts_with() matches them, so that
+  // a mapping sorts before every mapping whose Old is a prefix of its Old.
+  auto Normalize = [this](char C) -> unsigned char {
+    if (sys::path::is_separator(C, PathStyle))
+      return '/';
+    return sys::path::is_style_windows(PathStyle) ? toLower(C) : C;
+  };
+  std::stable_sort(
+      Mappings.begin(), Mappings.end(),
+      [&](const MappedPrefix &LHS, const MappedPrefix &RHS) {
+        return std::lexicographical_compare(
+            RHS.Old.begin(), RHS.Old.end(), LHS.Old.begin(), LHS.Old.end(),
+            [&](char A, char B) { return Normalize(A) < Normalize(B); });
+      });
 }

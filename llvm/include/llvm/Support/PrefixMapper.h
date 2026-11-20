@@ -59,12 +59,11 @@ struct MappedPrefix {
 
 /// Remap path prefixes.
 ///
-/// Mappings are tried in order and the first match wins. A mapping only
-/// matches whole path components: \c Old must be followed by a separator or
-/// the end of the path, unless \c Old itself ends with a separator. For
-/// example, "/old=/new" remaps "/old" and "/old/a" but not "/old-a", and
-/// "/=/new" remaps every absolute path. With a Windows path style, matching is
-/// case- and separator-insensitive.
+/// Mappings are tried in order and the first match wins. A mapping applies to
+/// a path the same way as \a sys::path::replace_path_prefix(): \c Old is
+/// matched with \a sys::path::starts_with(), so "/old=/new" remaps "/old" and
+/// "/old/a" but not "/old-a", and "/=/new" remaps every absolute path. With a
+/// Windows path style, matching is case- and separator-insensitive.
 ///
 /// The rest of the path is joined to \c New with \a sys::path::append(): a
 /// separator is added if neither side has one, and leading separators are
@@ -113,10 +112,9 @@ public:
   /// A path-based reverse lexicographic sort, putting deeper paths first so
   /// that deeper paths are prioritized over their parent paths. For example,
   /// if both the source and build directories are remapped and one is nested
-  /// inside the other, the nested one will come first.
-  ///
-  /// FIXME: The comparison is case- and separator-sensitive, unlike matching
-  /// with a Windows path style.
+  /// inside the other, the nested one will come first. Paths are compared the
+  /// same way they are matched, so with a Windows path style "C:\a\b" comes
+  /// before "c:/a".
   ///
   /// FIXME: Should probably be done implicitly, maybe by moving to a std::set
   /// or std::map.

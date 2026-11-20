@@ -470,6 +470,13 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - `-fdevirtualize-speculatively` can now also be used to enable speculative
   devirtualization when using LTO.
 
+- `-fdebug-prefix-map`, `-fmacro-prefix-map`, `-fcoverage-prefix-map`, and
+  `-ffile-prefix-map` now only remap whole path components:
+  `-fdebug-prefix-map=/old=/new` no longer remaps `/old-a`. A separator is
+  added or dropped between the new prefix and the rest of the path as needed,
+  so `-fdebug-prefix-map=/old/=/new` remaps `/old/a` to `/new/a` instead of
+  `/newa`.
+
 ### Removed Compiler Flags
 
 ### Attribute Changes in Clang

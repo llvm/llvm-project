@@ -219,6 +219,29 @@ TEST(PrefixMapperTest, sort) {
   EXPECT_EQ("/4/x", PM.mapToString("/a/b/x"));
 }
 
+TEST(PrefixMapperTest, sortWindows) {
+  PrefixMapper PM(sys::path::Style::windows);
+  MappedPrefix Mappings[] = {
+      {"c:/a", "/1"},
+      {"C:\\A\\B", "/2"},
+      {"c:\\a", "/3"},
+      {"c:/a/b/c", "/4"},
+  };
+  PM.addRange(ArrayRef(Mappings));
+  EXPECT_EQ("/1\\B\\x", PM.mapToString("C:\\A\\B\\x"));
+
+  // Matching is case- and separator-insensitive, so sorting is too.
+  PM.sort();
+  MappedPrefix Expected[] = {
+      {"c:/a/b/c", "/4"},
+      {"C:\\A\\B", "/2"},
+      {"c:/a", "/1"},
+      {"c:\\a", "/3"},
+  };
+  EXPECT_EQ(ArrayRef(Expected), PM.getMappings());
+  EXPECT_EQ("/2\\x", PM.mapToString("C:\\A\\B\\x"));
+}
+
 static void checkPosix(sys::path::Style PathStyle) {
   PrefixMapperWrapper PM(PathStyle);
   MappedPrefix Mappings[] = {
@@ -368,6 +391,10 @@ TEST(PrefixMapperTest, mapSeparatorsPosix) {
       {{"/old", ""}, "/old", ""},
       {{"/old", ""}, "/old/a", "/a"},
       {{"/old/", ""}, "/old/a", "a"},
+
+      // Empty Old.
+      {{"", "/new"}, "/a", "/new/a"},
+      {{"", "new"}, "a", "new/a"},
   };
   checkSeparators(sys::path::Style::posix, Tests);
 }

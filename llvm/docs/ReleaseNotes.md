@@ -234,6 +234,14 @@ Makes programs 10x faster by doing Special New Thing.
   only to allow incremental migration of LLVM IR tests, and will be removed in
   the near future.
 
+* `sys::path::replace_path_prefix()` now only replaces whole path components:
+  `/old` no longer matches `/old-a`. The rest of the path is joined to the new
+  prefix with `sys::path::append()`, so replacing `/old/` with `/new` turns
+  `/old/a` into `/new/a` instead of `/newa`. The matching is available as
+  `sys::path::starts_with()`. This changes `llvm-mc -fdebug-prefix-map`,
+  `dsymutil --object-prefix-map`, and `--thinlto-prefix-replace` in LLD,
+  `llvm-lto`, and the gold plugin.
+
 ### Changes to building LLVM
 
 * The minimum required CMake version to build LLVM has been raised from 3.20.0
