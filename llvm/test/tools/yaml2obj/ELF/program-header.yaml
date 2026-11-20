@@ -121,6 +121,7 @@ ProgramHeaders:
   - Type:     PT_LOAD
     FirstSec: [[FIRST=<none>]]
     LastSec:  [[LAST=<none>]]
+    Content:  [[CONTENT=<none>]]
 
 ## Check we report an error when the index of the section specified by the "FirstSec" key
 ## is greater than the index of the section specified by the "LastSec" key.
@@ -143,6 +144,14 @@ ProgramHeaders:
 # RUN:   FileCheck %s --check-prefix=ONLY-FIRST-ERR
 
 # ONLY-FIRST-ERR: error: the "FirstSec" key can't be used without the "LastSec" key
+
+## Check that "Content" can't be used together with "FirstSec" or "LastSec",
+## since Content provides raw segment data and sections provide their own data.
+
+# RUN: not yaml2obj -DFIRST=".foo" -DLAST=".foo" -DCONTENT="DEADBEEF" --docnum=2 %s 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=CONTENT-WITH-SECS-ERR
+
+# CONTENT-WITH-SECS-ERR: error: "Content" can't be used with "FirstSec" or "LastSec"
 
 ## Check we create an empty segment when neither "FirstSec" nor "LastSec" are specified.
 
