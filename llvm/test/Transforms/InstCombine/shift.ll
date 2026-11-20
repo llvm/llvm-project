@@ -577,11 +577,11 @@ define i128 @test36(i128 %A, i128 %B) {
 
 define i64 @test37(i128 %A, i32 %B) {
 ; CHECK-LABEL: @test37(
-; CHECK-NEXT:    [[I22:%.*]] = zext i32 [[B:%.*]] to i128
-; CHECK-NEXT:    [[I23:%.*]] = shl nuw nsw i128 [[I22]], 32
-; CHECK-NEXT:    [[INS:%.*]] = or i128 [[I23]], [[A:%.*]]
-; CHECK-NEXT:    [[I46:%.*]] = trunc i128 [[INS]] to i64
-; CHECK-NEXT:    ret i64 [[I46]]
+; CHECK-NEXT:    [[I22:%.*]] = zext i32 [[B:%.*]] to i64
+; CHECK-NEXT:    [[I23:%.*]] = shl nuw i64 [[I22]], 32
+; CHECK-NEXT:    [[I46:%.*]] = trunc i128 [[INS:%.*]] to i64
+; CHECK-NEXT:    [[I47:%.*]] = or i64 [[I23]], [[I46]]
+; CHECK-NEXT:    ret i64 [[I47]]
 ;
   %i27 = shl i128 %A, 64
   %i22 = zext i32 %B to i128
