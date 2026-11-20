@@ -15,10 +15,12 @@
 #include "clang/Driver/Multilib.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/CodeGen.h"
+#include <optional>
 
 namespace clang {
 namespace driver {
@@ -36,6 +38,18 @@ struct OffloadJobsOpt {
 };
 
 OffloadJobsOpt parseOffloadJobs(const llvm::opt::ArgList &Args);
+
+bool ScanDirForExecutable(SmallString<128> &Dir, StringRef Name);
+
+void addPrefixDirs(const llvm::opt::ArgList &Args,
+                   SmallVectorImpl<std::string> &PrefixDirs);
+
+std::optional<std::string>
+findProgramInPrefixDirs(StringRef Name, ArrayRef<std::string> PrefixDirs);
+
+std::optional<std::string>
+resolveLdPath(StringRef LdPath,
+              llvm::function_ref<std::string(StringRef)> GetProgramPath);
 
 void addPathIfExists(const Driver &D, const Twine &Path,
                      ToolChain::path_list &Paths);

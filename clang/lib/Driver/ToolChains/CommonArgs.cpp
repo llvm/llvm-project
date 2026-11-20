@@ -82,6 +82,62 @@ OffloadJobsOpt tools::parseOffloadJobs(const ArgList &Args) {
   return {OffloadJobsOpt::Kind::Fixed, A, Val, unsigned(NumThreads)};
 }
 
+bool tools::ScanDirForExecutable(SmallString<128> &Dir, StringRef Name) {
+  llvm::sys::path::append(Dir, Name);
+  if (llvm::sys::fs::can_execute(Twine(Dir)))
+    return true;
+  llvm::sys::path::remove_filename(Dir);
+  return false;
+}
+
+void tools::addPrefixDirs(const ArgList &Args,
+                          SmallVectorImpl<std::string> &PrefixDirs) {
+  for (const Arg *A : Args.filtered(options::OPT_B)) {
+    A->claim();
+    PrefixDirs.push_back(A->getValue(0));
+  }
+  if (std::optional<std::string> CompilerPathValue =
+          llvm::sys::Process::GetEnv("COMPILER_PATH")) {
+    StringRef CompilerPath = *CompilerPathValue;
+    while (!CompilerPath.empty()) {
+      std::pair<StringRef, StringRef> Split =
+          CompilerPath.split(llvm::sys::EnvPathSeparator);
+      PrefixDirs.push_back(std::string(Split.first));
+      CompilerPath = Split.second;
+    }
+  }
+}
+
+std::optional<std::string>
+tools::findProgramInPrefixDirs(StringRef Name,
+                               ArrayRef<std::string> PrefixDirs) {
+  for (const auto &PrefixDir : PrefixDirs) {
+    if (llvm::sys::fs::is_directory(PrefixDir)) {
+      SmallString<128> P(PrefixDir);
+      if (ScanDirForExecutable(P, Name))
+        return std::string(P);
+    } else {
+      SmallString<128> P((PrefixDir + Name).str());
+      if (llvm::sys::fs::can_execute(Twine(P)))
+        return std::string(P);
+    }
+  }
+  return std::nullopt;
+}
+
+std::optional<std::string> tools::resolveLdPath(
+    StringRef LdPath,
+    llvm::function_ref<std::string(StringRef)> GetProgramPath) {
+  std::string Path(LdPath);
+  if (Path.empty())
+    return std::nullopt;
+  if (llvm::sys::path::parent_path(Path).empty())
+    Path = GetProgramPath(Path);
+  if (!llvm::sys::fs::can_execute(Path))
+    return std::nullopt;
+  return Path;
+}
+
 static bool useFramePointerForTargetByDefault(const llvm::opt::ArgList &Args,
                                               const llvm::Triple &Triple) {
   if (Args.hasArg(options::OPT_pg) && !Args.hasArg(options::OPT_mfentry))
