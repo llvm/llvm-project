@@ -22,7 +22,8 @@ void trailing(int count, int *buf __counted_by(count));
 // expected-error@+1{{count expression in function declaration may only reference function parameters}}
 void not_a_param(int *__counted_by(global_count) buf);
 
-// A count on a K&R parameter declaration is dropped.
+// A count on a K&R parameter declaration is ignored.
 // CHECK: FunctionDecl {{.*}} knr 'void (int, int *)'
-// expected-warning@+1{{a function definition without a prototype is deprecated}}
+// expected-warning@+2{{a function definition without a prototype is deprecated}}
+// expected-warning@+1{{'counted_by' attribute ignored}}
 void knr(count, buf) int count; int *__counted_by(count) buf; {}

@@ -12,6 +12,7 @@
 #define __sized_by_or_null(f)  __attribute__((sized_by_or_null(f)))
 
 typedef int *int_ptr;
+typedef void *void_ptr;
 int global_count;
 
 //==============================================================================
@@ -23,18 +24,39 @@ void back_ref_or_null(int count, int *__counted_by_or_null(count) buf);
 void back_ref_sized(int count, void *__sized_by(count) buf);
 void back_ref_sized_or_null(int count, void *__sized_by_or_null(count) buf);
 
-// Two pointers may share a count, but a pointer has only one.
+// Two pointers may share a count.
 void two_buffers(int count, int *__counted_by(count) a,
                  int *__counted_by(count) b);
-// expected-error@+1{{'counted_by' attribute cannot be applied to a pointer that already has a 'counted_by' attribute}}
-void repeated(int n, int m, int *buf __counted_by(n) __counted_by(m));
+void two_buffers_or_null(int count, int *__counted_by_or_null(count) a,
+                         int *__counted_by_or_null(count) b);
+void two_buffers_sized(int count, void *__sized_by(count) a,
+                       void *__sized_by(count) b);
+void two_buffers_sized_or_null(int count, void *__sized_by_or_null(count) a,
+                               void *__sized_by_or_null(count) b);
 
-// Written after the declarator, or in the declaration specifiers.
+// Written after the declarator.
 void trailing(int count, int *buf __counted_by(count));
+void trailing_or_null(int count, int *buf __counted_by_or_null(count));
+void trailing_sized(int count, void *buf __sized_by(count));
+void trailing_sized_or_null(int count, void *buf __sized_by_or_null(count));
+
+// Written in the declaration specifiers.
 void declspec(int count, int_ptr __counted_by(count) buf);
+void declspec_or_null(int count, int_ptr __counted_by_or_null(count) buf);
+void declspec_sized(int count, void_ptr __sized_by(count) buf);
+void declspec_sized_or_null(int count, void_ptr __sized_by_or_null(count) buf);
 
 // The C23 spelling is checked the same way.
 void c23_spelling(int count, int *[[clang::counted_by(count)]] buf);
+void c23_spelling_or_null(int count, int *[[clang::counted_by_or_null(count)]] buf);
+void c23_spelling_sized(int count, void *[[clang::sized_by(count)]] buf);
+void c23_spelling_sized_or_null(int count, void *[[clang::sized_by_or_null(count)]] buf);
+
+// A count on the outer pointer of a pointer to pointer.
+void nested_outer(int count, int **__counted_by(count) buf);
+void nested_outer_or_null(int count, int **__counted_by_or_null(count) buf);
+void nested_outer_sized(int count, int **__sized_by(count) buf);
+void nested_outer_sized_or_null(int count, int **__sized_by_or_null(count) buf);
 
 int sum(int count, int *__counted_by(count) buf) {
   int total = 0;
@@ -44,14 +66,39 @@ int sum(int count, int *__counted_by(count) buf) {
 }
 
 //==============================================================================
+// A pointer has only one count
+//==============================================================================
+
+// expected-error@+1{{'counted_by' attribute cannot be applied to a pointer that already has a 'counted_by' attribute}}
+void repeated(int n, int m, int *buf __counted_by(n) __counted_by(m));
+// expected-error@+1{{'counted_by_or_null' attribute cannot be applied to a pointer that already has a 'counted_by_or_null' attribute}}
+void repeated_or_null(int n, int m, int *buf __counted_by_or_null(n) __counted_by_or_null(m));
+// expected-error@+1{{'sized_by' attribute cannot be applied to a pointer that already has a 'sized_by' attribute}}
+void repeated_sized(int n, int m, void *buf __sized_by(n) __sized_by(m));
+// expected-error@+1{{'sized_by_or_null' attribute cannot be applied to a pointer that already has a 'sized_by_or_null' attribute}}
+void repeated_sized_or_null(int n, int m, void *buf __sized_by_or_null(n) __sized_by_or_null(m));
+
+//==============================================================================
 // The count is parsed where it is written
 //==============================================================================
 
 // expected-error@+1{{use of undeclared identifier 'count'}}
 void fwd_ref(int *__counted_by(count) buf, int count);
+// expected-error@+1{{use of undeclared identifier 'count'}}
+void fwd_ref_or_null(int *__counted_by_or_null(count) buf, int count);
+// expected-error@+1{{use of undeclared identifier 'count'}}
+void fwd_ref_sized(void *__sized_by(count) buf, int count);
+// expected-error@+1{{use of undeclared identifier 'count'}}
+void fwd_ref_sized_or_null(void *__sized_by_or_null(count) buf, int count);
 
 // eager-error@+1{{use of undeclared identifier 'count'}}
 void fwd_ref_trailing(int *buf __counted_by(count), int count);
+// eager-error@+1{{use of undeclared identifier 'count'}}
+void fwd_ref_trailing_or_null(int *buf __counted_by_or_null(count), int count);
+// eager-error@+1{{use of undeclared identifier 'count'}}
+void fwd_ref_trailing_sized(void *buf __sized_by(count), int count);
+// eager-error@+1{{use of undeclared identifier 'count'}}
+void fwd_ref_trailing_sized_or_null(void *buf __sized_by_or_null(count), int count);
 
 //==============================================================================
 // What the count may name
@@ -59,14 +106,40 @@ void fwd_ref_trailing(int *buf __counted_by(count), int count);
 
 // A parameter of the function, or of an enclosing function declarator.
 void inner(void (*cb)(int len, int *__counted_by(len) p));
+void inner_or_null(void (*cb)(int len, int *__counted_by_or_null(len) p));
+void inner_sized(void (*cb)(int len, void *__sized_by(len) p));
+void inner_sized_or_null(void (*cb)(int len, void *__sized_by_or_null(len) p));
 void outer(int n, void (*cb)(int *__counted_by(n) p));
+void outer_or_null(int n, void (*cb)(int *__counted_by_or_null(n) p));
+void outer_sized(int n, void (*cb)(void *__sized_by(n) p));
+void outer_sized_or_null(int n, void (*cb)(void *__sized_by_or_null(n) p));
 
 // expected-error@+1{{count expression in function declaration may only reference function parameters}}
 void not_a_param(int *__counted_by(global_count) buf);
+// expected-error@+1{{count expression in function declaration may only reference function parameters}}
+void not_a_param_or_null(int *__counted_by_or_null(global_count) buf);
+// expected-error@+1{{count expression in function declaration may only reference function parameters}}
+void not_a_param_sized(void *__sized_by(global_count) buf);
+// expected-error@+1{{count expression in function declaration may only reference function parameters}}
+void not_a_param_sized_or_null(void *__sized_by_or_null(global_count) buf);
+
 // expected-error@+1{{'counted_by' requires a non-boolean integer type argument}}
 void not_an_integer(float count, int *__counted_by(count) buf);
+// expected-error@+1{{'counted_by_or_null' requires a non-boolean integer type argument}}
+void not_an_integer_or_null(float count, int *__counted_by_or_null(count) buf);
+// expected-error@+1{{'sized_by' requires a non-boolean integer type argument}}
+void not_an_integer_sized(float count, void *__sized_by(count) buf);
+// expected-error@+1{{'sized_by_or_null' requires a non-boolean integer type argument}}
+void not_an_integer_sized_or_null(float count, void *__sized_by_or_null(count) buf);
+
 // expected-error@+1{{'counted_by' argument must be a simple declaration reference}}
 void not_a_reference(int count, int *__counted_by(count + 1) buf);
+// expected-error@+1{{'counted_by_or_null' argument must be a simple declaration reference}}
+void not_a_reference_or_null(int count, int *__counted_by_or_null(count + 1) buf);
+// expected-error@+1{{'sized_by' argument must be a simple declaration reference}}
+void not_a_reference_sized(int count, void *__sized_by(count + 1) buf);
+// expected-error@+1{{'sized_by_or_null' argument must be a simple declaration reference}}
+void not_a_reference_sized_or_null(int count, void *__sized_by_or_null(count + 1) buf);
 
 //==============================================================================
 // Not supported yet
@@ -74,11 +147,69 @@ void not_a_reference(int count, int *__counted_by(count + 1) buf);
 
 // expected-error@+1{{'counted_by' on arrays only applies to C99 flexible array members}}
 void array(int count, int arr[] __counted_by(count));
+// expected-error@+1{{'counted_by_or_null' only applies to pointers; did you mean to use 'counted_by'?}}
+void array_or_null(int count, int arr[] __counted_by_or_null(count));
+// expected-error@+1{{'sized_by' only applies to pointers; did you mean to use 'counted_by'?}}
+void array_sized(int count, int arr[] __sized_by(count));
+// expected-error@+1{{'sized_by_or_null' only applies to pointers; did you mean to use 'counted_by'?}}
+void array_sized_or_null(int count, int arr[] __sized_by_or_null(count));
 
 // expected-error@+1{{'counted_by' attribute on nested pointer type is not allowed}}
 void out(int count, int *__counted_by(count) *buf);
+// expected-error@+1{{'counted_by_or_null' attribute on nested pointer type is not allowed}}
+void out_or_null(int count, int *__counted_by_or_null(count) *buf);
+// expected-error@+1{{'sized_by' attribute on nested pointer type is not allowed}}
+void out_sized(int count, void *__sized_by(count) *buf);
+// expected-error@+1{{'sized_by_or_null' attribute on nested pointer type is not allowed}}
+void out_sized_or_null(int count, void *__sized_by_or_null(count) *buf);
+
+// The nesting is diagnosed before what the count names.
+// expected-error@+1{{'counted_by' attribute on nested pointer type is not allowed}}
+void nested_inner(int *__counted_by(global_count) *buf);
+// expected-error@+1{{'counted_by_or_null' attribute on nested pointer type is not allowed}}
+void nested_inner_or_null(int *__counted_by_or_null(global_count) *buf);
+// expected-error@+1{{'sized_by' attribute on nested pointer type is not allowed}}
+void nested_inner_sized(void *__sized_by(global_count) *buf);
+// expected-error@+1{{'sized_by_or_null' attribute on nested pointer type is not allowed}}
+void nested_inner_sized_or_null(void *__sized_by_or_null(global_count) *buf);
+
+// A count on the outer pointer still names a parameter.
+// expected-error@+1{{count expression in function declaration may only reference function parameters}}
+void nested_outer_global(int **__counted_by(global_count) buf);
+// expected-error@+1{{count expression in function declaration may only reference function parameters}}
+void nested_outer_global_or_null(int **__counted_by_or_null(global_count) buf);
+// expected-error@+1{{count expression in function declaration may only reference function parameters}}
+void nested_outer_global_sized(int **__sized_by(global_count) buf);
+// expected-error@+1{{count expression in function declaration may only reference function parameters}}
+void nested_outer_global_sized_or_null(int **__sized_by_or_null(global_count) buf);
+
 // expected-error@+1{{'counted_by' argument must be a simple declaration reference}}
 void deref(int *count, int *__counted_by(*count) buf);
+// expected-error@+1{{'counted_by_or_null' argument must be a simple declaration reference}}
+void deref_or_null(int *count, int *__counted_by_or_null(*count) buf);
+// expected-error@+1{{'sized_by' argument must be a simple declaration reference}}
+void deref_sized(int *count, void *__sized_by(*count) buf);
+// expected-error@+1{{'sized_by_or_null' argument must be a simple declaration reference}}
+void deref_sized_or_null(int *count, void *__sized_by_or_null(*count) buf);
+
+// expected-warning@+2{{a function definition without a prototype is deprecated}}
+// expected-warning@+1{{'counted_by' attribute ignored}}
+void knr(count, buf) int count; int *__counted_by(count) buf; {}
+// expected-warning@+2{{a function definition without a prototype is deprecated}}
+// expected-warning@+1{{'counted_by_or_null' attribute ignored}}
+void knr_or_null(count, buf) int count; int *__counted_by_or_null(count) buf; {}
+// expected-warning@+2{{a function definition without a prototype is deprecated}}
+// expected-warning@+1{{'sized_by' attribute ignored}}
+void knr_sized(count, buf) int count; void *__sized_by(count) buf; {}
+// expected-warning@+2{{a function definition without a prototype is deprecated}}
+// expected-warning@+1{{'sized_by_or_null' attribute ignored}}
+void knr_sized_or_null(count, buf) int count; void *__sized_by_or_null(count) buf; {}
 
 // expected-error@+1{{'counted_by' attribute on a function return type is not yet supported}}
 void cb_return(int len, int *__counted_by(len) (*cb)(void));
+// expected-error@+1{{'counted_by_or_null' attribute on a function return type is not yet supported}}
+void cb_return_or_null(int len, int *__counted_by_or_null(len) (*cb)(void));
+// expected-error@+1{{'sized_by' attribute on a function return type is not yet supported}}
+void cb_return_sized(int len, void *__sized_by(len) (*cb)(void));
+// expected-error@+1{{'sized_by_or_null' attribute on a function return type is not yet supported}}
+void cb_return_sized_or_null(int len, void *__sized_by_or_null(len) (*cb)(void));

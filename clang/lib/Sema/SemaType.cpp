@@ -9137,10 +9137,13 @@ static void HandleCountedByAttrOnType(TypeProcessingState &State,
     return;
 
   // Counts are not supported on K&R parameter declarations, which C23
-  // removed; drop the count.
+  // removed; ignore the count.
   const Declarator &D = State.getDeclarator();
-  if (D.getContext() == DeclaratorContext::KNRTypeList)
+  if (D.getContext() == DeclaratorContext::KNRTypeList) {
+    S.Diag(Attr.getLoc(), diag::warn_attribute_ignored) << Attr;
+    Attr.setInvalid();
     return;
+  }
 
   unsigned chunkIndex = State.getCurrentChunkIndex();
 
