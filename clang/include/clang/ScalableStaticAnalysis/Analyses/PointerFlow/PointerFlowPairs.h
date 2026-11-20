@@ -87,7 +87,7 @@ public:
   //     `BindingDecl`s are neither `VarDecl` nor `FieldDecl`.
 
   /// Match and collect pointer flow.
-  /// The macth function 'F' can be described by the following rules:
+  /// The match function 'F' can be described by the following rules:
   ///
   /// F(l = r)          := (l, r), if 'l' has a pointer/array type;
   ///                   := F(field_1, list_item_1), ..., if 'l' has a record
