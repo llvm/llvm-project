@@ -714,7 +714,6 @@ public:
     C = &(M.getContext());
     int LongSize = M.getDataLayout().getPointerSizeInBits();
     IntptrTy = Type::getIntNTy(*C, LongSize);
-    PtrTy = PointerType::getUnqual(*C);
     TargetTriple = M.getTargetTriple();
     Mapping =
         getShadowMapping(Opts, TargetTriple, LongSize, this->CompileKernel);
@@ -775,7 +774,6 @@ private:
   AsanDtorKind DestructorKind;
   AsanCtorKind ConstructorKind;
   Type *IntptrTy;
-  PointerType *PtrTy;
   LLVMContext *C;
   Triple TargetTriple;
   ShadowMapping Mapping;
