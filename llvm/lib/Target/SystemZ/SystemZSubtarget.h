@@ -124,6 +124,9 @@ public:
 
   // Returns TRUE if we are generating code for a s390x machine running zOS
   bool isTargetzOS() const { return TargetTriple.isOSzOS(); }
+
+  // Returns TRUE if we are generating code for a s390x machine running Linux
+  bool isTargetLinux() const { return TargetTriple.isOSLinux(); }
 };
 } // end namespace llvm
 
