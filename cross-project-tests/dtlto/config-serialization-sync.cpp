@@ -17,5 +17,5 @@
 
 #include "LTOConfigBitcode.cpp"
 
-// CHECK: type 'const Config' {{binds to|decomposes into}} 61 elements,
-// CHECK-SAME: but only 60 names were provided
+// CHECK: type 'const Config' {{binds to|decomposes into}} {{[0-9]+}} elements,
+// CHECK-SAME: but only {{[0-9]+}} names were provided

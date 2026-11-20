@@ -9,11 +9,14 @@
 #include "llvm/LTO/LTOConfigBitcode.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/LTO/TargetOptionsBitcode.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/raw_ostream.h"
@@ -27,7 +30,7 @@ using namespace llvm::lto;
 
 TEST(TargetOptionsBitcodeTest, RoundTripThroughBitcode) {
   TargetOptions Input;
-  Input.BinutilsVersion = {2, 41};
+  Input.MCOptions.BinutilsVersion = {2, 41};
   Input.FunctionSections = true;
   Input.DataSections = true;
   Input.GlobalISelAbort = GlobalISelAbortMode::DisableWithDiag;
@@ -36,7 +39,7 @@ TEST(TargetOptionsBitcodeTest, RoundTripThroughBitcode) {
       "v1\nf foo\nc 0 1\n", "basic-block-sections.profile");
   Input.EnableDefaultMachineVerifier = false;
   Input.StackUsageFile = "output.su";
-  Input.ExceptionModel = ExceptionHandling::Wasm;
+  Input.FunctionSplitting = FunctionSplittingMode::All;
   Input.MCOptions.ABIName = "test-abi";
   Input.MCOptions.OutputAsmVariant = 1;
   Input.MCOptions.IASSearchPaths = {"include/one", "include/two"};
@@ -60,7 +63,7 @@ TEST(TargetOptionsBitcodeTest, RoundTripThroughBitcode) {
   Expected<TargetOptions> Output = decodeTargetOptionsFromModule(**Parsed);
   ASSERT_THAT_EXPECTED(Output, Succeeded());
 
-  EXPECT_EQ(Output->BinutilsVersion, Input.BinutilsVersion);
+  EXPECT_EQ(Output->MCOptions.BinutilsVersion, Input.MCOptions.BinutilsVersion);
   EXPECT_TRUE(Output->FunctionSections);
   EXPECT_TRUE(Output->DataSections);
   EXPECT_EQ(Output->GlobalISelAbort, GlobalISelAbortMode::DisableWithDiag);
@@ -71,7 +74,7 @@ TEST(TargetOptionsBitcodeTest, RoundTripThroughBitcode) {
   EXPECT_EQ(Output->BBSectionsFuncListBuf->getBuffer(), "v1\nf foo\nc 0 1\n");
   EXPECT_FALSE(Output->EnableDefaultMachineVerifier);
   EXPECT_EQ(Output->StackUsageFile, "output.su");
-  EXPECT_EQ(Output->ExceptionModel, ExceptionHandling::Wasm);
+  EXPECT_EQ(Output->FunctionSplitting, FunctionSplittingMode::All);
   EXPECT_EQ(Output->MCOptions.ABIName, "test-abi");
   EXPECT_EQ(Output->MCOptions.OutputAsmVariant, 1u);
   EXPECT_EQ(Output->MCOptions.IASSearchPaths, Input.MCOptions.IASSearchPaths);
@@ -130,6 +133,12 @@ TEST(LTOConfigBitcodeTest, RoundTripThroughThinLTOSummaryIndex) {
   InputConfig.CPU = "summary-cpu";
   InputConfig.OptLevel = 3;
   InputConfig.Options.DataSections = true;
+  InputConfig.PTO.MergeFunctions = false;
+  InputConfig.PTO.MaxDevirtIterations = 0;
+  InputConfig.RemarksHotnessThreshold = std::nullopt;
+  StringRef Profile("profile\xFF\0", 9);
+  InputConfig.Options.BBSectionsFuncListBuf =
+      MemoryBuffer::getMemBufferCopy(Profile, "profile");
 
   SmallString<0> Storage;
   raw_svector_ostream OS(Storage);
@@ -139,15 +148,72 @@ TEST(LTOConfigBitcodeTest, RoundTripThroughThinLTOSummaryIndex) {
   MemoryBufferRef Buffer(StringRef(Storage.data(), Storage.size()),
                          "summary.thinlto.bc");
 
-  // Existing summary-index readers must accept the embedded metadata.
   ModuleSummaryIndex OutputIndex(/*HaveGVs=*/false);
   ASSERT_THAT_ERROR(readModuleSummaryIndex(Buffer, OutputIndex), Succeeded());
+
+  LLVMContext Ctx;
+  auto Parsed = parseBitcodeFile(Buffer, Ctx);
+  ASSERT_THAT_EXPECTED(Parsed, Succeeded());
+  auto *Metadata = (*Parsed)->getNamedMetadata(LTOConfigMetadataName);
+  ASSERT_TRUE(Metadata);
+  ASSERT_EQ(Metadata->getNumOperands(), 1u);
+  auto *Root = Metadata->getOperand(0);
+  ASSERT_EQ(Root->getNumOperands(), 1u);
+  auto *Text = dyn_cast<MDString>(Root->getOperand(0));
+  ASSERT_TRUE(Text);
+  auto JSON = json::parse(Text->getString());
+  ASSERT_THAT_EXPECTED(JSON, Succeeded());
+  ASSERT_TRUE(JSON->getAsObject());
+  EXPECT_EQ(JSON->getAsObject()->getString("CPU"), "summary-cpu");
 
   Expected<Config> OutputConfig = readLTOConfigFromSummaryIndex(Buffer);
   ASSERT_THAT_EXPECTED(OutputConfig, Succeeded());
   EXPECT_EQ(OutputConfig->CPU, "summary-cpu");
   EXPECT_EQ(OutputConfig->OptLevel, 3u);
   EXPECT_TRUE(OutputConfig->Options.DataSections);
+  EXPECT_EQ(OutputConfig->PTO.MergeFunctions, std::optional(false));
+  EXPECT_FALSE(OutputConfig->PTO.ForgetAllSCEVInLoopUnroll);
+  EXPECT_EQ(OutputConfig->PTO.MaxDevirtIterations, std::optional(0u));
+  EXPECT_EQ(OutputConfig->RemarksHotnessThreshold, std::nullopt);
+  ASSERT_TRUE(OutputConfig->Options.BBSectionsFuncListBuf);
+  EXPECT_EQ(OutputConfig->Options.BBSectionsFuncListBuf->getBuffer(), Profile);
+}
+
+TEST(LTOConfigBitcodeTest, ReadsLegacySummaryIndex) {
+  LLVMContext Ctx;
+  Module LegacyConfig("legacy", Ctx);
+  auto *CPU = MDNode::get(
+      Ctx, {MDString::get(Ctx, "CPU"), MDString::get(Ctx, "legacy-cpu")});
+  auto *Version =
+      ConstantAsMetadata::get(ConstantInt::get(Type::getInt32Ty(Ctx), 1));
+  LegacyConfig.getOrInsertNamedMetadata(LTOConfigMetadataName)
+      ->addOperand(MDNode::get(Ctx, {Version, CPU}));
+
+  ModuleSummaryIndex Index(/*HaveGVs=*/false);
+  SmallString<0> Storage;
+  raw_svector_ostream OS(Storage);
+  writeIndexToFile(Index, OS, nullptr, nullptr, &LegacyConfig);
+
+  auto Output = readLTOConfigFromSummaryIndex(
+      MemoryBufferRef(Storage, "legacy.thinlto.bc"));
+  ASSERT_THAT_EXPECTED(Output, Succeeded());
+  EXPECT_EQ(Output->CPU, "legacy-cpu");
+}
+
+TEST(LTOConfigBitcodeTest, InvalidJSONInSummaryIndex) {
+  LLVMContext Ctx;
+  Module InvalidConfig("invalid", Ctx);
+  InvalidConfig.getOrInsertNamedMetadata(LTOConfigMetadataName)
+      ->addOperand(MDNode::get(Ctx, MDString::get(Ctx, "{")));
+
+  ModuleSummaryIndex Index(/*HaveGVs=*/false);
+  SmallString<0> Storage;
+  raw_svector_ostream OS(Storage);
+  writeIndexToFile(Index, OS, nullptr, nullptr, &InvalidConfig);
+
+  EXPECT_THAT_EXPECTED(readLTOConfigFromSummaryIndexIfPresent(
+                           MemoryBufferRef(Storage, "invalid.thinlto.bc")),
+                       Failed());
 }
 
 TEST(LTOConfigBitcodeTest, ThinLTOSummaryIndexWithoutConfig) {

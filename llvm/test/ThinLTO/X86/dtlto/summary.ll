@@ -39,6 +39,7 @@ RUN: llvm-bcanalyzer -dump t1.1.*.native.o.thinlto.bc | FileCheck %s --check-pre
 RUN: llvm-bcanalyzer -dump t2.2.*.native.o.thinlto.bc | FileCheck %s --check-prefix=CONFIG
 
 ; CONFIG: <METADATA_BLOCK
+; CONFIG: \"Dtlto\":true
 ; CONFIG: record string = 'llvm.lto.config'
 ; CONFIG: </METADATA_BLOCK>
 

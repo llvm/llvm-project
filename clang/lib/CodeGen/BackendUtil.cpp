@@ -1343,11 +1343,13 @@ void EmitAssemblyHelper::emitAssembly(BackendAction Action,
     DwoOS->keep();
 }
 
-static void
-runThinLTOBackend(CompilerInstance &CI, ModuleSummaryIndex *CombinedIndex,
-                  llvm::Module *M, std::unique_ptr<raw_pwrite_stream> OS,
-                  std::string SampleProfile, std::string ProfileRemapping,
-                  BackendAction Action) {
+static void runThinLTOBackend(CompilerInstance &CI,
+                              ModuleSummaryIndex *CombinedIndex,
+                              MemoryBufferRef IndexBuffer, llvm::Module *M,
+                              std::unique_ptr<raw_pwrite_stream> OS,
+                              std::string SampleProfile,
+                              std::string ProfileRemapping,
+                              BackendAction Action) {
   DiagnosticsEngine &Diags = CI.getDiagnostics();
   const auto &CGOpts = CI.getCodeGenOpts();
   const auto &TOpts = CI.getTargetOpts();
@@ -1370,27 +1372,20 @@ runThinLTOBackend(CompilerInstance &CI, ModuleSummaryIndex *CombinedIndex,
                                               CGOpts.ObjectFilenameForDebug);
   };
 
-  ErrorOr<std::unique_ptr<MemoryBuffer>> IndexBuffer =
-      CI.getVirtualFileSystem().getBufferForFile(CGOpts.ThinLTOIndexFile);
-  if (!IndexBuffer) {
-    errs() << "Error loading LTO config from index file '"
-           << CGOpts.ThinLTOIndexFile
-           << "': " << IndexBuffer.getError().message() << '\n';
-    return;
-  }
   Expected<std::optional<lto::Config>> SerializedConf =
-      lto::readLTOConfigFromSummaryIndexIfPresent(
-          (*IndexBuffer)->getMemBufferRef());
+      lto::readLTOConfigFromSummaryIndexIfPresent(IndexBuffer);
   if (!SerializedConf) {
-    logAllUnhandledErrors(SerializedConf.takeError(), errs(),
-                          "Error loading LTO config from index file '" +
-                              CGOpts.ThinLTOIndexFile + "': ");
+    Diags.Report(diag::err_fe_error_backend)
+        << ("Error loading LTO config from index file '" +
+            CGOpts.ThinLTOIndexFile +
+            "': " + toString(SerializedConf.takeError()));
     return;
   }
 
   bool HasSerializedConf = SerializedConf->has_value();
   lto::Config Conf =
       HasSerializedConf ? std::move(**SerializedConf) : lto::Config();
+  Conf.LibraryOptions = &M->getContext().getLibraryOptions();
   if (CGOpts.SaveTempsFilePrefix != "") {
     if (Error E = Conf.addSaveTemps(CGOpts.SaveTempsFilePrefix + ".",
                                     /* UseInputModulePath */ false)) {
@@ -1423,10 +1418,14 @@ runThinLTOBackend(CompilerInstance &CI, ModuleSummaryIndex *CombinedIndex,
     // non-integrated assemblers don't recognize .cgprofile section.
     Conf.PTO.CallGraphProfile = !CGOpts.DisableIntegratedAS;
 
-  // Context sensitive profile.
-  if (CGOpts.hasProfileCSIRInstr()) {
-    Conf.RunCSIRInstr = true;
-    Conf.CSIRProfile = getProfileGenName(LibraryOptions, CGOpts);
+    // Context sensitive profile.
+    if (CGOpts.hasProfileCSIRInstr()) {
+      Conf.RunCSIRInstr = true;
+      Conf.CSIRProfile = getProfileGenName(*Conf.LibraryOptions, CGOpts);
+    } else if (CGOpts.hasProfileCSIRUse()) {
+      Conf.RunCSIRInstr = false;
+      Conf.CSIRProfile = CGOpts.ProfileInstrumentUsePath;
+    }
 
     Conf.ProfileRemapping = std::move(ProfileRemapping);
     Conf.DebugPassManager = CGOpts.DebugPassManager;
@@ -1438,6 +1437,9 @@ runThinLTOBackend(CompilerInstance &CI, ModuleSummaryIndex *CombinedIndex,
     Conf.SplitDwarfFile = CGOpts.SplitDwarfFile;
     Conf.SplitDwarfOutput = CGOpts.SplitDwarfOutput;
   }
+  // Use plugins selected by the compiler invocation. The index can contain
+  // filenames from the linker's process, which are only configuration data.
+  Conf.PassPluginFilenames.clear();
   for (auto &Plugin : CI.getPassPlugins())
     Conf.LoadedPassPlugins.push_back(Plugin.get());
   switch (Action) {
@@ -1577,26 +1579,30 @@ void clang::emitBackendOutput(CompilerInstance &CI, CodeGenOptions &CGOpts,
   if (!CGOpts.ThinLTOIndexFile.empty()) {
     // FIXME(sandboxing): Figure out how to support distributed indexing.
     auto BypassSandbox = sys::sandbox::scopedDisable();
-    // If we are performing a ThinLTO importing compile, load the function index
-    // into memory and pass it into runThinLTOBackend, which will run the
-    // function importer and invoke LTO passes.
-    std::unique_ptr<ModuleSummaryIndex> CombinedIndex;
-    if (Error E = llvm::getModuleSummaryIndexForFile(
-                      CGOpts.ThinLTOIndexFile,
-                      /*IgnoreEmptyThinLTOIndexFile*/ true)
-                      .moveInto(CombinedIndex)) {
+    ErrorOr<std::unique_ptr<MemoryBuffer>> IndexBuffer =
+        CGOpts.ThinLTOIndexFile == "-"
+            ? MemoryBuffer::getSTDIN()
+            : VFS->getBufferForFile(CGOpts.ThinLTOIndexFile);
+    auto ReportIndexError = [&](Error E) {
       logAllUnhandledErrors(std::move(E), errs(),
                             "Error loading index file '" +
                                 CGOpts.ThinLTOIndexFile + "': ");
+    };
+    if (!IndexBuffer) {
+      ReportIndexError(errorCodeToError(IndexBuffer.getError()));
       return;
     }
 
-    // A null CombinedIndex means we should skip ThinLTO compilation
-    // (LLVM will optionally ignore empty index files, returning null instead
-    // of an error).
-    if (CombinedIndex) {
-      if (!CombinedIndex->skipModuleByDistributedBackend()) {
-        runThinLTOBackend(CI, CombinedIndex.get(), M, std::move(OS),
+    // Empty index files skip ThinLTO processing.
+    if ((*IndexBuffer)->getBufferSize()) {
+      MemoryBufferRef Buffer = (*IndexBuffer)->getMemBufferRef();
+      auto CombinedIndex = llvm::getModuleSummaryIndex(Buffer);
+      if (!CombinedIndex) {
+        ReportIndexError(CombinedIndex.takeError());
+        return;
+      }
+      if (!(*CombinedIndex)->skipModuleByDistributedBackend()) {
+        runThinLTOBackend(CI, CombinedIndex->get(), Buffer, M, std::move(OS),
                           CGOpts.SampleProfileFile, CGOpts.ProfileRemappingFile,
                           Action);
         return;

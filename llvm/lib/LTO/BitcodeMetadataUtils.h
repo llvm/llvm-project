@@ -61,6 +61,8 @@ public:
 
   void putI32(StringRef Key, int32_t V) { putEntry(Key, getI32Value(Ctx, V)); }
 
+  void putU32(StringRef Key, uint32_t V) { putI32(Key, V); }
+
   void putI64(StringRef Key, uint64_t V) { putEntry(Key, getI64Value(Ctx, V)); }
 
   void putBool(StringRef Key, bool V) { putI32(Key, V ? 1 : 0); }
@@ -151,6 +153,10 @@ struct EntryApplier {
       return V.takeError();
     Setter(*V);
     return Error::success();
+  }
+
+  Error applyU32(function_ref<void(uint32_t)> Setter) {
+    return applyI32([&](int32_t V) { Setter(V); });
   }
 
   Error applyI64(function_ref<void(int64_t)> Setter) {

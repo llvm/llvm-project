@@ -5,10 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 // Utility for embedding serializable fields of lto::Config in LLVM IR bitcode
-// via module metadata. Intended for LTO / DTLTO configuration transport.
+// as JSON text in module metadata for LTO / DTLTO configuration transport.
 //
 // Non-serializable fields (callbacks, loaded plugin pointers, stream handles)
-// are omitted. See encodeLTOConfigToModule() documentation in the .cpp file.
+// are omitted. Readers also accept the previous structured metadata format.
 //
 //===----------------------------------------------------------------------===//
 
@@ -40,7 +40,7 @@ LLVM_ABI Error writeLTOConfigToFile(StringRef Path, const Config &Config);
 /// Read a Config from a file written by writeLTOConfigToFile().
 LLVM_ABI Expected<Config> readLTOConfigFromFile(StringRef Path);
 
-/// Write a ThinLTO summary index containing serialized Config metadata.
+/// Write a ThinLTO summary index containing Config as JSON metadata.
 LLVM_ABI Error writeIndexWithLTOConfigToFile(
     const ModuleSummaryIndex &Index, const Config &Config, raw_ostream &Out,
     const ModuleToSummariesForIndexTy *ModuleToSummariesForIndex = nullptr,

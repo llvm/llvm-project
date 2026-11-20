@@ -4,31 +4,14 @@
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-// Encodes serializable lto::Config fields as module metadata in bitcode.
-//
-// Layout:
-//   !llvm.lto.config = !{ !0 }
-//   !0 = !{ i32 <version>, !1, !2, ... }
-//   !1 = !{ !"<key>", <value> }
-//
-// Value kinds:
-//   - i32 / i64 ConstantInt for scalars
-//   - MDString for strings
-//   - MDNode list of MDStrings for vector<string>
-//   - nested MDNode for TargetOptions (via encodeTargetOptionsAsNode)
-//
-// Omitted fields (process-local / non-data):
-//   LoadedPassPlugins, PreCodeGenPassesHook, DiagHandler, ResolutionFile,
-//   PreOptModuleHook, PostPromoteModuleHook, PostInternalizeModuleHook,
-//   PostImportModuleHook, PostOptModuleHook, PreCodeGenModuleHook,
-//   CombinedIndexHook, GetSummaryIndexOutputStream, GetImportsListOutputArray,
-//   GetCacheKeyOutputString
+// Encodes serializable lto::Config fields as JSON text in module metadata.
+// Readers also accept the previous structured metadata format.
 //
 //===----------------------------------------------------------------------===//
 
 #include "llvm/LTO/LTOConfigBitcode.h"
 
-#include "BitcodeMetadataUtils.h"
+#include "JSONConfigUtils.h"
 
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
@@ -79,63 +62,57 @@ Expected<Config> readConfigBitcode(MemoryBufferRef Buffer) {
   return std::move(**Config);
 }
 
-void encodePipelineTuningOptions(MetadataWriter &Writer,
+void encodePipelineTuningOptions(JSONWriter &Writer,
                                  const PipelineTuningOptions &PTO) {
+  [[maybe_unused]] const auto &[LoopInterleaving, LoopVectorization,
+                                SLPVectorization, LoopUnrolling,
+                                LoopInterchange, LoopFusion,
+                                ForgetAllSCEVInLoopUnroll, LicmMssaOptCap,
+                                LicmMssaNoAccForPromotionCap, CallGraphProfile,
+                                UnifiedLTO, MergeFunctions, InlinerThreshold,
+                                MaxDevirtIterations, EagerlyInvalidateAnalyses,
+                                DevirtualizeSpeculatively] = PTO;
+
   Writer.putBool("pto.LoopInterleaving", PTO.LoopInterleaving);
   Writer.putBool("pto.LoopVectorization", PTO.LoopVectorization);
   Writer.putBool("pto.SLPVectorization", PTO.SLPVectorization);
   Writer.putBool("pto.LoopUnrolling", PTO.LoopUnrolling);
   Writer.putBool("pto.LoopInterchange", PTO.LoopInterchange);
   Writer.putBool("pto.LoopFusion", PTO.LoopFusion);
-  Writer.putBool("pto.ForgetAllSCEVInLoopUnroll",
-                 PTO.ForgetAllSCEVInLoopUnroll);
-  Writer.putI32("pto.LicmMssaOptCap", PTO.LicmMssaOptCap);
-  Writer.putI32("pto.LicmMssaNoAccForPromotionCap",
-                PTO.LicmMssaNoAccForPromotionCap);
+  if (PTO.ForgetAllSCEVInLoopUnroll)
+    Writer.putBool("pto.ForgetAllSCEVInLoopUnroll",
+                   *PTO.ForgetAllSCEVInLoopUnroll);
+  if (PTO.LicmMssaOptCap)
+    Writer.putU32("pto.LicmMssaOptCap", *PTO.LicmMssaOptCap);
+  if (PTO.LicmMssaNoAccForPromotionCap)
+    Writer.putU32("pto.LicmMssaNoAccForPromotionCap",
+                  *PTO.LicmMssaNoAccForPromotionCap);
   Writer.putBool("pto.CallGraphProfile", PTO.CallGraphProfile);
   Writer.putBool("pto.UnifiedLTO", PTO.UnifiedLTO);
-  Writer.putBool("pto.MergeFunctions", PTO.MergeFunctions);
+  if (PTO.MergeFunctions)
+    Writer.putBool("pto.MergeFunctions", *PTO.MergeFunctions);
   Writer.putI32("pto.InlinerThreshold", PTO.InlinerThreshold);
-  Writer.putBool("pto.EagerlyInvalidateAnalyses",
-                 PTO.EagerlyInvalidateAnalyses);
-  Writer.putBool("pto.DevirtualizeSpeculatively",
-                 PTO.DevirtualizeSpeculatively);
+  if (PTO.MaxDevirtIterations)
+    Writer.putU32("pto.MaxDevirtIterations", *PTO.MaxDevirtIterations);
+  if (PTO.EagerlyInvalidateAnalyses)
+    Writer.putBool("pto.EagerlyInvalidateAnalyses",
+                   *PTO.EagerlyInvalidateAnalyses);
+  if (PTO.DevirtualizeSpeculatively)
+    Writer.putBool("pto.DevirtualizeSpeculatively",
+                   *PTO.DevirtualizeSpeculatively);
 }
 
-void encodeRemarksHotnessThreshold(MetadataWriter &Writer,
-                                   const std::optional<uint64_t> &Threshold) {
-  int32_t Mode = 0;
-  uint64_t Value = 0;
-  if (!Threshold.has_value()) {
-    Mode = 2; // auto
-  } else if (*Threshold == 0) {
-    Mode = 0; // disabled
-  } else {
-    Mode = 1; // manual
-    Value = *Threshold;
-  }
-  LLVMContext &Ctx = Writer.getContext();
-  Metadata *Ops[] = {getI32Value(Ctx, Mode), getI64Value(Ctx, Value)};
-  Writer.putEntry("RemarksHotnessThreshold", MDNode::get(Ctx, Ops));
-}
-
-void encodeOptionalCodeModel(MetadataWriter &Writer,
-                             const std::optional<CodeModel::Model> &CodeModel) {
-  if (!CodeModel)
-    return;
-  Writer.putI32("CodeModel", static_cast<int32_t>(*CodeModel));
-}
-
-void encodeConfigFields(MetadataWriter &Writer, const Config &C) {
+void encodeConfigFields(JSONWriter &Writer, const Config &C) {
   // Keep this decomposition in sync with Config. It intentionally includes
   // non-serializable fields so that adding or removing any field produces a
   // compile error here. New fields must either be added to encodeConfigFields
   // and applyEntry or explicitly documented as non-serializable below.
   [[maybe_unused]] const auto
-      &[CPU, Options, MAttrs, MllvmArgs,
+      &[LibraryOptions, // Process-local pointer.
+        CPU, Options, MAttrs, MllvmArgs,
         LoadedPassPlugins, // Non-serializable process-local pointers.
         PassPluginFilenames,
-        PreCodeGenPassesHook, // Non-serializable callback.
+        PassBuilderCallback, // Non-serializable callback.
         RelocModel, CodeModel, CGOptLevel, CGFileType, OptLevel, VerifyEach,
         DisableVerify, Freestanding, CodeGenOnly, RunCSIRInstr, PGOWarnMismatch,
         HasWholeProgramVisibility, ValidateAllVtablesHaveTypeInfos,
@@ -153,24 +130,24 @@ void encodeConfigFields(MetadataWriter &Writer, const Config &C) {
         PreOptModuleHook, // Non-serializable callbacks.
         PostPromoteModuleHook, PostInternalizeModuleHook, PostImportModuleHook,
         PostOptModuleHook, PreCodeGenModuleHook, CombinedIndexHook,
-        GetSummaryIndexOutputStream, GetImportsListOutputArray,
-        GetCacheKeyOutputString] = C;
+        PostRegularLTOLinkHook, GetSummaryIndexOutputStream,
+        GetImportsListOutputArray, GetCacheKeyOutputString] = C;
 
   Writer.putString("CPU", C.CPU);
-  Writer.putNode("Options",
-                 encodeTargetOptionsAsNode(Writer.getContext(), C.Options));
+  Writer.putValue("Options", encodeTargetOptionsJSON(C.Options));
   Writer.putStringList("MAttrs", C.MAttrs);
   Writer.putStringList("MllvmArgs", C.MllvmArgs);
   Writer.putStringList("PassPluginFilenames", C.PassPluginFilenames);
 
-  Writer.putBool("RelocModel.HasValue", C.RelocModel.has_value());
-  if (C.RelocModel)
-    Writer.putI32("RelocModel", static_cast<int32_t>(*C.RelocModel));
-  encodeOptionalCodeModel(Writer, C.CodeModel);
+  Writer.putValue("RelocModel",
+                  C.RelocModel ? json::Value(static_cast<int>(*C.RelocModel))
+                               : json::Value(nullptr));
+  if (C.CodeModel)
+    Writer.putI32("CodeModel", static_cast<int32_t>(*C.CodeModel));
 
   Writer.putI32("CGOptLevel", static_cast<int32_t>(C.CGOptLevel));
   Writer.putI32("CGFileType", static_cast<int32_t>(C.CGFileType));
-  Writer.putI32("OptLevel", C.OptLevel);
+  Writer.putU32("OptLevel", C.OptLevel);
 
   Writer.putBool("VerifyEach", C.VerifyEach);
   Writer.putBool("DisableVerify", C.DisableVerify);
@@ -200,29 +177,91 @@ void encodeConfigFields(MetadataWriter &Writer, const Config &C) {
   Writer.putString("RemarksFilename", C.RemarksFilename);
   Writer.putString("RemarksPasses", C.RemarksPasses);
   Writer.putBool("RemarksWithHotness", C.RemarksWithHotness);
-  encodeRemarksHotnessThreshold(Writer, C.RemarksHotnessThreshold);
+  Writer.putValue("RemarksHotnessThreshold",
+                  json::toJSON(C.RemarksHotnessThreshold));
   Writer.putString("RemarksFormat", C.RemarksFormat);
   Writer.putBool("DebugPassManager", C.DebugPassManager);
   Writer.putString("StatsFile", C.StatsFile);
   Writer.putStringList("ThinLTOModulesToCompile", C.ThinLTOModulesToCompile);
   Writer.putBool("TimeTraceEnabled", C.TimeTraceEnabled);
-  Writer.putI32("TimeTraceGranularity", C.TimeTraceGranularity);
+  Writer.putU32("TimeTraceGranularity", C.TimeTraceGranularity);
   Writer.putBool("ShouldDiscardValueNames", C.ShouldDiscardValueNames);
   Writer.putBool("AddFSDiscriminator", C.AddFSDiscriminator);
 
   encodePipelineTuningOptions(Writer, C.PTO);
 }
 
-Error applyEntry(Config &C, StringRef Key, const MDNode &Entry) {
-  EntryApplier Applier{Entry, kEntryKind};
+Error decodeRelocModel(Config &C, EntryApplier Applier) {
+  return Applier.applyI32(
+      [&](int32_t V) { C.RelocModel = static_cast<Reloc::Model>(V); });
+}
 
+Error decodeRelocModel(Config &C, JSONEntryApplier Applier) {
+  if (Applier.Entry.getAsNull()) {
+    C.RelocModel.reset();
+    return Error::success();
+  }
+  return Applier.applyI32(
+      [&](int32_t V) { C.RelocModel = static_cast<Reloc::Model>(V); });
+}
+
+Expected<TargetOptions> decodeOptions(const MDNode &Entry) {
+  auto Node = getNodeField(Entry, kEntryKind);
+  if (!Node)
+    return Node.takeError();
+  return decodeTargetOptionsFromNode(*Node);
+}
+
+Expected<TargetOptions> decodeOptions(const json::Value &Entry) {
+  return decodeTargetOptionsJSON(Entry);
+}
+
+Error decodeRemarksHotnessThreshold(Config &C, const MDNode &Entry) {
+  auto Node = getNodeField(Entry, kEntryKind);
+  if (!Node)
+    return Node.takeError();
+  if ((*Node)->getNumOperands() != 2)
+    return metadataError("RemarksHotnessThreshold must have mode and value");
+  auto *Mode = mdconst::dyn_extract<ConstantInt>((*Node)->getOperand(0));
+  auto *Value = mdconst::dyn_extract<ConstantInt>((*Node)->getOperand(1));
+  if (!Mode || !Mode->getType()->isIntegerTy(32) || !Value ||
+      !Value->getType()->isIntegerTy(64))
+    return metadataError("malformed RemarksHotnessThreshold metadata");
+  switch (Mode->getZExtValue()) {
+  case 0:
+    C.RemarksHotnessThreshold = 0;
+    break;
+  case 1:
+    C.RemarksHotnessThreshold = Value->getZExtValue();
+    break;
+  case 2:
+    C.RemarksHotnessThreshold = std::nullopt;
+    break;
+  default:
+    return metadataError("invalid RemarksHotnessThreshold mode");
+  }
+  return Error::success();
+}
+
+Error decodeRemarksHotnessThreshold(Config &C, const json::Value &Entry) {
+  if (Entry.getAsNull()) {
+    C.RemarksHotnessThreshold.reset();
+    return Error::success();
+  }
+  auto Value = Entry.getAsUINT64();
+  if (!Value)
+    return metadataError(
+        "RemarksHotnessThreshold: expected an unsigned integer or null");
+  C.RemarksHotnessThreshold = *Value;
+  return Error::success();
+}
+
+template <typename ApplierT>
+Error applyEntry(Config &C, StringRef Key, ApplierT Applier) {
   if (Key == "CPU")
     return Applier.applyString([&](StringRef V) { C.CPU = V.str(); });
   if (Key == "Options") {
-    auto Node = getNodeField(Entry, kEntryKind);
-    if (!Node)
-      return Node.takeError();
-    auto Opt = decodeTargetOptionsFromNode(*Node);
+    auto Opt = decodeOptions(Applier.Entry);
     if (!Opt)
       return Opt.takeError();
     C.Options = std::move(*Opt);
@@ -239,13 +278,7 @@ Error applyEntry(Config &C, StringRef Key, const MDNode &Entry) {
       C.PassPluginFilenames = std::move(V);
     });
   if (Key == "RelocModel")
-    return Applier.applyI32(
-        [&](int32_t V) { C.RelocModel = static_cast<Reloc::Model>(V); });
-  if (Key == "RelocModel.HasValue")
-    return Applier.applyBool([&](bool V) {
-      if (!V)
-        C.RelocModel = std::nullopt;
-    });
+    return decodeRelocModel(C, Applier);
   if (Key == "CodeModel")
     return Applier.applyI32(
         [&](int32_t V) { C.CodeModel = static_cast<CodeModel::Model>(V); });
@@ -256,7 +289,7 @@ Error applyEntry(Config &C, StringRef Key, const MDNode &Entry) {
     return Applier.applyI32(
         [&](int32_t V) { C.CGFileType = static_cast<CodeGenFileType>(V); });
   if (Key == "OptLevel")
-    return Applier.applyI32([&](int32_t V) { C.OptLevel = V; });
+    return Applier.applyU32([&](uint32_t V) { C.OptLevel = V; });
 
   if (Key == "VerifyEach")
     return Applier.applyBool([&](bool V) { C.VerifyEach = V; });
@@ -319,32 +352,8 @@ Error applyEntry(Config &C, StringRef Key, const MDNode &Entry) {
     return Applier.applyString([&](StringRef V) { C.RemarksPasses = V.str(); });
   if (Key == "RemarksWithHotness")
     return Applier.applyBool([&](bool V) { C.RemarksWithHotness = V; });
-  if (Key == "RemarksHotnessThreshold") {
-    auto Node = getNodeField(Entry, kEntryKind);
-    if (!Node)
-      return Node.takeError();
-    if ((*Node)->getNumOperands() != 2)
-      return metadataError("RemarksHotnessThreshold must have mode and value");
-    auto *Mode = mdconst::dyn_extract<ConstantInt>((*Node)->getOperand(0));
-    auto *Value = mdconst::dyn_extract<ConstantInt>((*Node)->getOperand(1));
-    if (!Mode || !Mode->getType()->isIntegerTy(32) || !Value ||
-        !Value->getType()->isIntegerTy(64))
-      return metadataError("malformed RemarksHotnessThreshold metadata");
-    switch (Mode->getZExtValue()) {
-    case 0:
-      C.RemarksHotnessThreshold = 0;
-      break;
-    case 1:
-      C.RemarksHotnessThreshold = Value->getZExtValue();
-      break;
-    case 2:
-      C.RemarksHotnessThreshold = std::nullopt;
-      break;
-    default:
-      return metadataError("invalid RemarksHotnessThreshold mode");
-    }
-    return Error::success();
-  }
+  if (Key == "RemarksHotnessThreshold")
+    return decodeRemarksHotnessThreshold(C, Applier.Entry);
   if (Key == "RemarksFormat")
     return Applier.applyString([&](StringRef V) { C.RemarksFormat = V.str(); });
   if (Key == "DebugPassManager")
@@ -358,7 +367,7 @@ Error applyEntry(Config &C, StringRef Key, const MDNode &Entry) {
   if (Key == "TimeTraceEnabled")
     return Applier.applyBool([&](bool V) { C.TimeTraceEnabled = V; });
   if (Key == "TimeTraceGranularity")
-    return Applier.applyI32([&](int32_t V) { C.TimeTraceGranularity = V; });
+    return Applier.applyU32([&](uint32_t V) { C.TimeTraceGranularity = V; });
   if (Key == "ShouldDiscardValueNames")
     return Applier.applyBool([&](bool V) { C.ShouldDiscardValueNames = V; });
   if (Key == "AddFSDiscriminator")
@@ -381,10 +390,10 @@ Error applyEntry(Config &C, StringRef Key, const MDNode &Entry) {
     return Applier.applyBool(
         [&](bool V) { PTO.ForgetAllSCEVInLoopUnroll = V; });
   if (Key == "pto.LicmMssaOptCap")
-    return Applier.applyI32([&](int32_t V) { PTO.LicmMssaOptCap = V; });
+    return Applier.applyU32([&](uint32_t V) { PTO.LicmMssaOptCap = V; });
   if (Key == "pto.LicmMssaNoAccForPromotionCap")
-    return Applier.applyI32(
-        [&](int32_t V) { PTO.LicmMssaNoAccForPromotionCap = V; });
+    return Applier.applyU32(
+        [&](uint32_t V) { PTO.LicmMssaNoAccForPromotionCap = V; });
   if (Key == "pto.CallGraphProfile")
     return Applier.applyBool([&](bool V) { PTO.CallGraphProfile = V; });
   if (Key == "pto.UnifiedLTO")
@@ -393,6 +402,8 @@ Error applyEntry(Config &C, StringRef Key, const MDNode &Entry) {
     return Applier.applyBool([&](bool V) { PTO.MergeFunctions = V; });
   if (Key == "pto.InlinerThreshold")
     return Applier.applyI32([&](int32_t V) { PTO.InlinerThreshold = V; });
+  if (Key == "pto.MaxDevirtIterations")
+    return Applier.applyU32([&](uint32_t V) { PTO.MaxDevirtIterations = V; });
   if (Key == "pto.EagerlyInvalidateAnalyses")
     return Applier.applyBool(
         [&](bool V) { PTO.EagerlyInvalidateAnalyses = V; });
@@ -407,8 +418,36 @@ Expected<Config> decodeConfigFromRoot(const MDNode *Root) {
   return decodeVersionedMetadata<Config>(
       Root, kVersion, "lto config",
       [](Config &C, StringRef Key, const MDNode &Entry) {
-        return applyEntry(C, Key, Entry);
+        EntryApplier Applier{Entry, kEntryKind};
+        if (Key == "RelocModel.HasValue")
+          return Applier.applyBool([&](bool V) {
+            if (!V)
+              C.RelocModel.reset();
+          });
+        return applyEntry(C, Key, Applier);
       });
+}
+
+Expected<Config> decodeConfigJSON(StringRef Text) {
+  auto Value = json::parse(Text);
+  if (!Value)
+    return Value.takeError();
+  return decodeVersionedJSON<Config>(
+      *Value, kVersion, "lto config",
+      [](Config &C, StringRef Key, const json::Value &Entry) {
+        return applyEntry(C, Key, JSONEntryApplier{Entry, Key});
+      });
+}
+
+std::string serializeLTOConfig(const Config &Config) {
+  json::Object Object{{"Version", kVersion}};
+  JSONWriter Writer(Object);
+  encodeConfigFields(Writer, Config);
+
+  std::string Text;
+  raw_string_ostream OS(Text);
+  OS << json::Value(std::move(Object));
+  return Text;
 }
 
 } // namespace
@@ -419,12 +458,8 @@ bool lto::hasEncodedLTOConfig(const Module &M) {
 
 Error lto::encodeLTOConfigToModule(Module &M, const Config &Config) {
   LLVMContext &Ctx = M.getContext();
-  SmallVector<Metadata *, 64> Entries;
-  Entries.push_back(getI32Value(Ctx, kVersion));
-  MetadataWriter Writer(Entries, Ctx);
-  encodeConfigFields(Writer, Config);
-
-  MDNode *Root = MDNode::get(Ctx, Entries);
+  MDNode *Root =
+      MDNode::get(Ctx, MDString::get(Ctx, serializeLTOConfig(Config)));
   NamedMDNode *NMD = M.getOrInsertNamedMetadata(LTOConfigMetadataName);
   NMD->clearOperands();
   NMD->addOperand(Root);
@@ -435,7 +470,13 @@ Expected<Config> lto::decodeLTOConfigFromModule(const Module &M) {
   NamedMDNode *NMD = M.getNamedMetadata(LTOConfigMetadataName);
   if (!NMD || NMD->getNumOperands() == 0)
     return metadataError("missing lto config metadata");
-  return decodeConfigFromRoot(dyn_cast<MDNode>(NMD->getOperand(0)));
+  if (NMD->getNumOperands() != 1)
+    return metadataError("expected a single lto config metadata node");
+  const MDNode *Root = NMD->getOperand(0);
+  if (Root->getNumOperands() == 1)
+    if (auto *Text = dyn_cast_or_null<MDString>(Root->getOperand(0)))
+      return decodeConfigJSON(Text->getString());
+  return decodeConfigFromRoot(Root);
 }
 
 Error lto::writeLTOConfigToFile(StringRef Path, const Config &Config) {

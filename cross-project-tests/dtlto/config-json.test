@@ -1,0 +1,19 @@
+# The DTLTO shard records the linker's function-sections setting. The backend
+# should use that setting even when Clang's command line requests otherwise.
+
+RUN: rm -rf %t && split-file %s %t && cd %t
+RUN: %clang --target=x86_64-unknown-linux-gnu -flto=thin -c foo.c -o foo.bc
+RUN: touch placeholder.o
+RUN: llvm-lto2 run foo.bc -r=foo.bc,foo,px -o linked.o \
+RUN:   -dtlto-distributor=%python \
+RUN:   -dtlto-distributor-arg=%llvm_src_root/utils/dtlto/mock.py,placeholder.o \
+RUN:   -thinlto-emit-indexes -function-sections
+RUN: cp foo.1.*.native.o.thinlto.bc foo.thinlto.bc
+RUN: %clang -target x86_64-unknown-linux-gnu -fno-function-sections \
+RUN:   -x ir -c foo.bc -o backend.o -fthinlto-index=foo.thinlto.bc
+RUN: llvm-readobj --sections backend.o | FileCheck %s
+
+CHECK: Name: .text.foo
+
+#--- foo.c
+void foo(void) {}

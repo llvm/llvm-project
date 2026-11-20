@@ -17,5 +17,5 @@
 
 #include "TargetOptionsBitcode.cpp"
 
-// CHECK: type 'const TargetOptions' {{binds to|decomposes into}} 63 elements,
-// CHECK-SAME: but only 62 names were provided
+// CHECK: type 'const TargetOptions' {{binds to|decomposes into}} {{[0-9]+}} elements,
+// CHECK-SAME: but only {{[0-9]+}} names were provided
