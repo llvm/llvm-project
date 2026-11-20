@@ -66,8 +66,8 @@ define i32 @f() #0 {
 ; CHECK-PAUTHLR-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-PAUTHLR-NEXT:    and x30, x30, x16
 ; CHECK-PAUTHLR-NEXT:    csdb
-; CHECK-PAUTHLR-NEXT:    mov x1, sp
 ; CHECK-PAUTHLR-NEXT:    autiasppc .Ltmp0
+; CHECK-PAUTHLR-NEXT:    mov x1, sp
 ; CHECK-PAUTHLR-NEXT:    and x1, x1, x16
 ; CHECK-PAUTHLR-NEXT:    mov sp, x1
 ; CHECK-PAUTHLR-NEXT:    ret
@@ -90,8 +90,8 @@ define i32 @f() #0 {
 ; CHECK-PAUTH-PAUTHLR-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-PAUTH-PAUTHLR-NEXT:    and x30, x30, x16
 ; CHECK-PAUTH-PAUTHLR-NEXT:    csdb
-; CHECK-PAUTH-PAUTHLR-NEXT:    mov x1, sp
 ; CHECK-PAUTH-PAUTHLR-NEXT:    autiasppc .Ltmp0
+; CHECK-PAUTH-PAUTHLR-NEXT:    mov x1, sp
 ; CHECK-PAUTH-PAUTHLR-NEXT:    and x1, x1, x16
 ; CHECK-PAUTH-PAUTHLR-NEXT:    mov sp, x1
 ; CHECK-PAUTH-PAUTHLR-NEXT:    ret

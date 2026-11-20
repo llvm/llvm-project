@@ -13,7 +13,6 @@
 ...
 ---
 name:            memory_alignment
-tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
 body: |

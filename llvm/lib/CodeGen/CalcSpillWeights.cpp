@@ -173,6 +173,12 @@ bool VirtRegAuxInfo::allUsesAvailableAt(const MachineInstr *MI,
       return false;
     }
 
+    // A partial (non-undef) subregister def reads the other subregisters.
+    // A rematerialized copy defines a new register that contains undefined
+    // subregisters, so such instructions cannot be rematerialized.
+    if (MO.isDef())
+      return false;
+
     const LiveInterval &li = LIS.getInterval(MO.getReg());
     const VNInfo *OVNI = li.getVNInfoAt(OrigIdx);
     if (!OVNI)

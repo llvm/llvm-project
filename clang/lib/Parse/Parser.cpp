@@ -1567,8 +1567,11 @@ void Parser::ParseKNRParamDeclarations(Declarator &D) {
 ExprResult Parser::ParseAsmStringLiteral(bool ForAsmLabel) {
 
   ExprResult AsmString;
+  bool IsConstexpr = false;
   if (isTokenStringLiteral()) {
-    AsmString = ParseStringLiteralExpression();
+    AsmString = ParseStringLiteralExpression(/*AllowUserDefinedLiteral=*/false,
+                                             /*Unevaluated=*/false,
+                                             CA_ToLiteralEncodingForAsm);
     if (AsmString.isInvalid())
       return AsmString;
 
@@ -1580,6 +1583,7 @@ ExprResult Parser::ParseAsmStringLiteral(bool ForAsmLabel) {
     }
   } else if (!ForAsmLabel && getLangOpts().CPlusPlus11 &&
              Tok.is(tok::l_paren)) {
+    IsConstexpr = true;
     ParenParseOption ExprType = ParenParseOption::SimpleExpr;
     SourceLocation RParenLoc;
     ParsedType CastTy;
@@ -1599,7 +1603,8 @@ ExprResult Parser::ParseAsmStringLiteral(bool ForAsmLabel) {
         (getLangOpts().CPlusPlus11 && !ForAsmLabel) ? 0 : 1);
   }
 
-  return Actions.ActOnGCCAsmStmtString(AsmString.get(), ForAsmLabel);
+  return Actions.ActOnGCCAsmStmtString(AsmString.get(), ForAsmLabel,
+                                       IsConstexpr);
 }
 
 ExprResult Parser::ParseSimpleAsm(bool ForAsmLabel, SourceLocation *EndLoc) {
