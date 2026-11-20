@@ -269,8 +269,16 @@ void FactsGenerator::VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *DIE) {
 void FactsGenerator::handleCXXCtorInitializer(const CXXCtorInitializer *CII) {
   // Flows origins from the initializer expression to the field.
   // Example: `MyObj(std::string s) : view(s) {}`
-  if (const FieldDecl *FD = CII->getAnyMember())
+  if (const FieldDecl *FD = CII->getAnyMember()) {
     killAndFlowOrigin(*FD, *CII->getInit());
+    return;
+  }
+  // A base or delegating initializer initializes the object itself.
+  // Example: `Derived(std::string s) : BaseView(s) {}`
+  if (OriginList *InitList = getOriginsList(*CII->getInit()))
+    CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
+        (*FactMgr.getOriginMgr().getThisOrigins())->getOuterOriginID(),
+        InitList->getOuterOriginID(), /*KillDest=*/false));
 }
 
 void FactsGenerator::VisitCXXMemberCallExpr(const CXXMemberCallExpr *MCE) {
