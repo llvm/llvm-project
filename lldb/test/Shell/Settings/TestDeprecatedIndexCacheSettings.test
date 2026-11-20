@@ -23,7 +23,7 @@
 # SET-NEXT: symbols.lldb-index-cache.force-disable (boolean) = false
 # SET-NEXT: symbols.lldb-index-cache.max-byte-size (unsigned) = 1024
 # SET-NEXT: symbols.lldb-index-cache.max-percent (unsigned) = 50
-# SET-NEXT: symbols.lldb-index-cache.path (file) = "/tmp/lldb-index-cache-test"
+# SET-NEXT: symbols.lldb-index-cache.path (file) = "{{.*[/\\]}}tmp{{[/\\]}}lldb-index-cache-test"
 # SET-NEXT: symbols.lldb-index-cache.type.dwarf-index (boolean) = true
 # SET-NEXT: symbols.lldb-index-cache.type.memory-module-symtab (boolean) = false
 # SET-NEXT: symbols.lldb-index-cache.type.symtab (boolean) = true
