@@ -427,3 +427,19 @@ define void @srem() {
 
   ret void
 }
+
+define void @scalar() {
+; NEON-LABEL: 'scalar'
+; NEON-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = call i32 @llvm.masked.udiv.i32(i32 poison, i32 poison, i1 poison)
+; NEON-NEXT:  Cost Model: Found costs of 12 for: %I128 = call i128 @llvm.masked.sdiv.i128(i128 poison, i128 poison, i1 poison)
+; NEON-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+; SVE-LABEL: 'scalar'
+; SVE-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = call i32 @llvm.masked.udiv.i32(i32 poison, i32 poison, i1 poison)
+; SVE-NEXT:  Cost Model: Found costs of 12 for: %I128 = call i128 @llvm.masked.sdiv.i128(i128 poison, i128 poison, i1 poison)
+; SVE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+  %I32 = call i32 @llvm.masked.udiv.i32(i32 poison, i32 poison, i1 poison)
+  %I128 = call i128 @llvm.masked.sdiv.i128(i128 poison, i128 poison, i1 poison)
+  ret void
+}
