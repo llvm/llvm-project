@@ -191,9 +191,8 @@ public:
   friend class ASTDeclWriter;
   friend class IncrementalParser;
 
-  Redeclarable(const ASTContext &Ctx)
-      : RedeclLink(LatestDeclLink(Ctx)),
-        First(static_cast<decl_type *>(this)) {}
+  Redeclarable(const ASTContext &Ctx, decl_type *First)
+      : RedeclLink(LatestDeclLink(Ctx)), First(First) {}
 
   /// Return the previous declaration of this declaration or NULL if this
   /// is the first declaration.

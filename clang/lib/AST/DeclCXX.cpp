@@ -3365,7 +3365,7 @@ NamespaceDecl::NamespaceDecl(ASTContext &C, DeclContext *DC, bool Inline,
                              IdentifierInfo *Id, NamespaceDecl *PrevDecl,
                              bool Nested)
     : NamespaceBaseDecl(Namespace, DC, IdLoc, Id), DeclContext(Namespace),
-      redeclarable_base(C), LocStart(StartLoc) {
+      redeclarable_base(C, this), LocStart(StartLoc) {
   setInline(Inline);
   setNested(Nested);
   setPreviousDecl(PrevDecl);
@@ -3466,7 +3466,7 @@ void UsingShadowDecl::anchor() {}
 UsingShadowDecl::UsingShadowDecl(Kind K, ASTContext &C, DeclContext *DC,
                                  SourceLocation Loc, DeclarationName Name,
                                  BaseUsingDecl *Introducer, NamedDecl *Target)
-    : NamedDecl(K, DC, Loc, Name), redeclarable_base(C),
+    : NamedDecl(K, DC, Loc, Name), redeclarable_base(C, this),
       UsingOrNextShadow(Introducer) {
   if (Target) {
     assert(!isa<UsingShadowDecl>(Target));
@@ -3477,7 +3477,7 @@ UsingShadowDecl::UsingShadowDecl(Kind K, ASTContext &C, DeclContext *DC,
 
 UsingShadowDecl::UsingShadowDecl(Kind K, ASTContext &C, EmptyShell Empty)
     : NamedDecl(K, nullptr, SourceLocation(), DeclarationName()),
-      redeclarable_base(C) {}
+      redeclarable_base(C, this) {}
 
 UsingShadowDecl *UsingShadowDecl::CreateDeserialized(ASTContext &C,
                                                      GlobalDeclID ID) {
