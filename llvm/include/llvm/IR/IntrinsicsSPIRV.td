@@ -736,4 +736,20 @@ let TargetPrefix = "spv" in {
   def int_spv_packhalf2x16
       : DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_anyfloat_ty],
                               [IntrNoMem]>;
+
+  def int_spv_pack_u8
+      : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_any_vector_int_ty],
+                              [IntrNoMem]>;
+
+  def int_spv_pack_s8
+      : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_any_vector_int_ty],
+                              [IntrNoMem]>;
+
+  def int_spv_pack_clamp_u8
+      : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_any_vector_int_ty],
+                              [IntrNoMem]>;
+
+  def int_spv_pack_clamp_s8
+      : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_any_vector_int_ty],
+                              [IntrNoMem]>;
 }
