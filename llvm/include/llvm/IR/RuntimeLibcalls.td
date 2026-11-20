@@ -235,6 +235,11 @@ class PureLibcall<FuncArgType RetType, list<FuncArgType> ArgTypes>
   let Memory = NoMemory;
 }
 
+class NoUnwindLibcall<FuncArgType RetType, list<FuncArgType> ArgTypes = []>
+    : RuntimeLibcall<RetType, ArgTypes> {
+  let FnAttrs = [NoUnwind];
+}
+
 // Integer
 foreach IntTy = [TypeSuffix<"I16", Int16>, TypeSuffix<"I32", Int32>,
                  TypeSuffix<"I64", Int64>, TypeSuffix<"I128", Int128>] in {
@@ -879,8 +884,8 @@ def UNWIND_RESUME : RuntimeLibcall<Void, [Ptr]> {
 }
 
 def UNWIND_RAISE_EXCEPTION : RuntimeLibcall<Int, [Ptr]>;
-def UNWIND_REGISTER : RuntimeLibcall<Void, [Ptr]>;
-def UNWIND_UNREGISTER : RuntimeLibcall<Void, [Ptr]>;
+def UNWIND_REGISTER : NoUnwindLibcall<Void, [Ptr]>;
+def UNWIND_UNREGISTER : NoUnwindLibcall<Void, [Ptr]>;
 def UNWIND_GET_WASM_LPAD_CONTEXT : RuntimeLibcall<Ptr, []> {
   let FnAttrs = [NoUnwind];
 }
@@ -1030,24 +1035,24 @@ def STACK_SMASH_HANDLER : RuntimeLibcall<Void, [Ptr]> {
 }
 
 // Safe stack
-def SAFESTACK_POINTER_ADDRESS : RuntimeLibcall<Ptr, []>;
+def SAFESTACK_POINTER_ADDRESS : NoUnwindLibcall<Ptr>;
 
 // Really a global variable, not a function
 def SAFESTACK_UNSAFE_STACK_PTR
     : RuntimeLibcallVariable<AllocaPtr, /*threadLocal=*/true>;
 
 def STACK_PROBE : RuntimeLibcall<Void, []>;
-def SECURITY_CHECK_COOKIE : RuntimeLibcall<Void, [Ptr]>;
+def SECURITY_CHECK_COOKIE : NoUnwindLibcall<Void, [Ptr]>;
 
 // Deoptimization
 def DEOPTIMIZE : RuntimeLibcall<Void, [Ellip]>;
 
 // Return address
-def RETURN_ADDRESS : RuntimeLibcall<Ptr, [Int]>;
+def RETURN_ADDRESS : NoUnwindLibcall<Ptr, [Int]>;
 
 // GPU profiling
-def PROFILE_INSTRUMENT_GPU : RuntimeLibcall<Void, [Ptr, Ptr, UInt64]>;
-def PROFILE_SAMPLING_GPU : RuntimeLibcall<Int, [UInt32]>;
+def PROFILE_INSTRUMENT_GPU : NoUnwindLibcall<Void, [Ptr, Ptr, UInt64]>;
+def PROFILE_SAMPLING_GPU : NoUnwindLibcall<Int, [UInt32]>;
 
 // Clear cache
 def CLEAR_CACHE : RuntimeLibcall<Void, [Ptr, Ptr]>;
@@ -1057,10 +1062,10 @@ def RISCV_FLUSH_ICACHE : RuntimeLibcall<Int, [Ptr, Ptr, ULong]>;
 def ComplexF32 : StructFuncArgType<[Flt, Flt]>;
 def ComplexF64 : StructFuncArgType<[Dbl, Dbl]>;
 
-def MIPS16_RET_DC : RuntimeLibcall<Void, [ComplexF64]>;
-def MIPS16_RET_DF : RuntimeLibcall<Void, [Dbl]>;
-def MIPS16_RET_SC : RuntimeLibcall<Void, [ComplexF32]>;
-def MIPS16_RET_SF : RuntimeLibcall<Void, [Flt]>;
+def MIPS16_RET_DC : NoUnwindLibcall<Void, [ComplexF64]>;
+def MIPS16_RET_DF : NoUnwindLibcall<Void, [Dbl]>;
+def MIPS16_RET_SC : NoUnwindLibcall<Void, [ComplexF32]>;
+def MIPS16_RET_SF : NoUnwindLibcall<Void, [Flt]>;
 
 // Produce libcall impls for all float types. If provided, `rtbasename` should
 // contain a `<typesuffix>` that will be replaced with the `f`/`l`/`fX` suffix.
@@ -1090,14 +1095,14 @@ def SC_MEMCHR : RuntimeLibcall<Ptr, [Ptr, Int, SizeT]> {
 
 // AArch64 SME ABI calls
 def SMEState : StructFuncArgType<[UInt64, UInt64]>;
-def SMEABI_SME_STATE : RuntimeLibcall<SMEState, []>;
-def SMEABI_TPIDR2_SAVE : RuntimeLibcall<Void, []>;
-def SMEABI_ZA_DISABLE : RuntimeLibcall<Void, []>;
-def SMEABI_TPIDR2_RESTORE : RuntimeLibcall<Void, [Ptr]>;
-def SMEABI_GET_CURRENT_VG : RuntimeLibcall<UInt64, []>;
-def SMEABI_SME_STATE_SIZE : RuntimeLibcall<UInt64, []>;
-def SMEABI_SME_SAVE : RuntimeLibcall<Void, [Ptr]>;
-def SMEABI_SME_RESTORE : RuntimeLibcall<Void, [Ptr]>;
+def SMEABI_SME_STATE : NoUnwindLibcall<SMEState>;
+def SMEABI_TPIDR2_SAVE : NoUnwindLibcall<Void>;
+def SMEABI_ZA_DISABLE : NoUnwindLibcall<Void>;
+def SMEABI_TPIDR2_RESTORE : NoUnwindLibcall<Void, [Ptr]>;
+def SMEABI_GET_CURRENT_VG : NoUnwindLibcall<UInt64>;
+def SMEABI_SME_STATE_SIZE : NoUnwindLibcall<UInt64>;
+def SMEABI_SME_SAVE : NoUnwindLibcall<Void, [Ptr]>;
+def SMEABI_SME_RESTORE : NoUnwindLibcall<Void, [Ptr]>;
 
 // ARM EABI calls
 // The AEABI memory functions (RTABI section 5.3.4) return void, and
@@ -1267,10 +1272,10 @@ def CTERMID : RuntimeLibcall<Ptr, [Ptr]> {
   let ParamAttrs = [[CapturesNone, NoUndef]];
 }
 
-def CXA_ATEXIT : RuntimeLibcall<Int, [Ptr, Ptr, Ptr]>;
-def CXA_GUARD_ABORT : RuntimeLibcall<Void, [Ptr]>;
-def CXA_GUARD_ACQUIRE : RuntimeLibcall<Int, [Ptr]>;
-def CXA_GUARD_RELEASE : RuntimeLibcall<Void, [Ptr]>;
+def CXA_ATEXIT : NoUnwindLibcall<Int, [Ptr, Ptr, Ptr]>;
+def CXA_GUARD_ABORT : NoUnwindLibcall<Void, [Ptr]>;
+def CXA_GUARD_ACQUIRE : NoUnwindLibcall<Int, [Ptr]>;
+def CXA_GUARD_RELEASE : NoUnwindLibcall<Void, [Ptr]>;
 def CXA_THROW : RuntimeLibcall<Void, [Ptr, Ptr, Ptr]> {
   let FnAttrs = [Cold, NoReturn];
 }
