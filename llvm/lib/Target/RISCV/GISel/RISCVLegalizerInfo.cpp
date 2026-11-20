@@ -14,11 +14,13 @@
 #include "MCTargetDesc/RISCVMatInt.h"
 #include "RISCVMachineFunctionInfo.h"
 #include "RISCVSubtarget.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutor.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/CodeGen/LowLevelTypeUtils.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
@@ -760,13 +762,29 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .libcallFor(ST.is64Bit(), {{f128, s32}, {f128, s64}}) // FIXME RV32.
       .libcallFor(ST.is64Bit(), {{f32, s128}, {f64, s128}, {f128, s128}});
 
-  // FIXME: We can do custom inline expansion like SelectionDAG.
-  getActionDefinitionsBuilder({G_FCEIL, G_FFLOOR, G_FRINT, G_FNEARBYINT,
-                               G_INTRINSIC_TRUNC, G_INTRINSIC_ROUND,
-                               G_INTRINSIC_ROUNDEVEN})
+  // Without Zfa, round by converting to an integer and back, like
+  // SelectionDAG does.
+  getActionDefinitionsBuilder({G_FCEIL, G_FFLOOR, G_FRINT, G_INTRINSIC_TRUNC,
+                               G_INTRINSIC_ROUND, G_INTRINSIC_ROUNDEVEN})
       .legalFor(ST.hasStdExtZfa(), {f32})
       .legalFor(ST.hasStdExtZfa() && ST.hasStdExtD(), {f64})
       .legalFor(ST.hasStdExtZfa() && ST.hasStdExtZfh(), {f16})
+      // f16 extends exactly to f32, so round there. This also avoids needing
+      // f16 support in G_PHI.
+      .widenScalarIf(typeIs(0, f16), changeTo(0, f32))
+      .customFor(ST.hasStdExtF(), {f32})
+      // Rounding an f64 needs an integer that can hold every value below 2^52.
+      .customFor(ST.is64Bit() && ST.hasStdExtD(), {f64})
+      .libcallFor({f32, f64})
+      .libcallFor(ST.is64Bit(), {f128});
+
+  // G_FNEARBYINT must not raise the inexact exception, which the integer round
+  // trip does, so without Zfa it has to stay a libcall.
+  getActionDefinitionsBuilder(G_FNEARBYINT)
+      .legalFor(ST.hasStdExtZfa(), {f32})
+      .legalFor(ST.hasStdExtZfa() && ST.hasStdExtD(), {f64})
+      .legalFor(ST.hasStdExtZfa() && ST.hasStdExtZfh(), {f16})
+      .widenScalarIf(typeIs(0, f16), changeTo(0, f32))
       .libcallFor({f32, f64})
       .libcallFor(ST.is64Bit(), {f128});
 
@@ -1716,6 +1734,107 @@ static unsigned getRISCVWOpcode(unsigned Opcode) {
   }
 }
 
+bool RISCVLegalizerInfo::legalizeFpRound(
+    MachineInstr &MI, LegalizerHelper &Helper, MachineIRBuilder &MIRBuilder,
+    LostDebugLocObserver &LocObserver) const {
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+  LLT Ty = MRI.getType(Src);
+
+  // SelectionDAG keeps the libcall when optimizing for size.
+  if (MIRBuilder.getMF().getFunction().hasOptSize())
+    return Helper.libcall(MI, LocObserver) == LegalizerHelper::Legalized;
+
+  RISCVFPRndMode::RoundingMode FRM;
+  switch (MI.getOpcode()) {
+  case TargetOpcode::G_FCEIL:
+    FRM = RISCVFPRndMode::RUP;
+    break;
+  case TargetOpcode::G_FFLOOR:
+    FRM = RISCVFPRndMode::RDN;
+    break;
+  case TargetOpcode::G_FRINT:
+    FRM = RISCVFPRndMode::DYN;
+    break;
+  case TargetOpcode::G_INTRINSIC_TRUNC:
+    FRM = RISCVFPRndMode::RTZ;
+    break;
+  case TargetOpcode::G_INTRINSIC_ROUND:
+    FRM = RISCVFPRndMode::RMM;
+    break;
+  case TargetOpcode::G_INTRINSIC_ROUNDEVEN:
+    FRM = RISCVFPRndMode::RNE;
+    break;
+  default:
+    llvm_unreachable("Unexpected rounding opcode");
+  }
+
+  // Values with a magnitude of at least 2^(precision-1) have no fractional
+  // bits, so they are already rounded. NaN has to be passed through too.
+  const fltSemantics &Sem = getFltSemanticForLLT(Ty);
+  unsigned Precision = APFloat::semanticsPrecision(Sem);
+  APFloat MaxVal(Sem);
+  MaxVal.convertFromAPInt(APInt::getOneBitSet(Precision, Precision - 1),
+                          /*IsSigned=*/false, APFloat::rmNearestTiesToEven);
+
+  MachineBasicBlock *BB = MI.getParent();
+  MachineFunction &MF = *BB->getParent();
+  const BasicBlock *LLVMBB = BB->getBasicBlock();
+  DebugLoc DL = MI.getDebugLoc();
+
+  // Split BB so that only the values that need rounding are converted,
+  // mirroring emitFROUND in RISCVISelLowering.cpp. Converting the others would
+  // raise the invalid exception, since fcvt saturates out-of-range inputs.
+  MachineFunction::iterator It = std::next(BB->getIterator());
+  MachineBasicBlock *CvtMBB = MF.CreateMachineBasicBlock(LLVMBB);
+  MachineBasicBlock *DoneMBB = MF.CreateMachineBasicBlock(LLVMBB);
+  MF.insert(It, CvtMBB);
+  MF.insert(It, DoneMBB);
+
+  // Splice the instructions after MI into DoneMBB, notifying the observer about
+  // each moved instruction so CSEInfo stays consistent.
+  for (MachineBasicBlock::iterator I = std::next(MI.getIterator()),
+                                   E = BB->end();
+       I != E; ++I)
+    Helper.Observer.changingInstr(*I);
+  DoneMBB->splice(DoneMBB->begin(), BB,
+                  std::next(MachineBasicBlock::iterator(MI)), BB->end());
+  for (MachineInstr &MovedMI : DoneMBB->instrs())
+    Helper.Observer.changedInstr(MovedMI);
+  DoneMBB->transferSuccessorsAndUpdatePHIs(BB);
+  BB->addSuccessor(CvtMBB);
+  BB->addSuccessor(DoneMBB);
+  CvtMBB->addSuccessor(DoneMBB);
+
+  unsigned Flags = MI.getFlags() & MachineInstr::NoFPExcept;
+  auto Abs = MIRBuilder.buildFAbs(Ty, Src);
+  auto Max = MIRBuilder.buildFConstant(Ty, MaxVal);
+  // RISC-V G_FCMP results are XLen wide, and so are G_BRCOND conditions.
+  auto Cmp = MIRBuilder.buildFCmp(CmpInst::FCMP_OLT, iXLen, Abs, Max, Flags);
+  MIRBuilder.buildBrCond(Cmp, *CvtMBB);
+  MIRBuilder.buildBr(*DoneMBB);
+
+  MIRBuilder.setMBB(*CvtMBB);
+  auto Int =
+      MIRBuilder.buildInstr(RISCV::G_FCVT_X, {iXLen}, {Src}, Flags).addImm(FRM);
+  auto FP = MIRBuilder.buildSITOFP(Ty, Int).setMIFlags(Flags);
+  // Restore the sign bit so that -0.0 is preserved.
+  auto Rounded = MIRBuilder.buildFCopysign(Ty, FP, Src);
+  MIRBuilder.buildBr(*DoneMBB);
+
+  MI.eraseFromParent();
+
+  MIRBuilder.setInsertPt(*DoneMBB, DoneMBB->begin());
+  MIRBuilder.setDebugLoc(DL);
+  MIRBuilder.buildInstr(TargetOpcode::G_PHI, {Dst}, {})
+      .addUse(Src)
+      .addMBB(BB)
+      .addUse(Rounded.getReg(0))
+      .addMBB(CvtMBB);
+  return true;
+}
+
 bool RISCVLegalizerInfo::legalizeCustom(
     LegalizerHelper &Helper, MachineInstr &MI,
     LostDebugLocObserver &LocObserver) const {
@@ -1888,6 +2007,13 @@ bool RISCVLegalizerInfo::legalizeCustom(
     Helper.Observer.changedInstr(MI);
     return true;
   }
+  case TargetOpcode::G_FCEIL:
+  case TargetOpcode::G_FFLOOR:
+  case TargetOpcode::G_FRINT:
+  case TargetOpcode::G_INTRINSIC_TRUNC:
+  case TargetOpcode::G_INTRINSIC_ROUND:
+  case TargetOpcode::G_INTRINSIC_ROUNDEVEN:
+    return legalizeFpRound(MI, Helper, MIRBuilder, LocObserver);
   case TargetOpcode::G_READCYCLECOUNTER:
   case TargetOpcode::G_READSTEADYCOUNTER:
     return legalizeReadCounter(MI, MIRBuilder, Helper.Observer);
