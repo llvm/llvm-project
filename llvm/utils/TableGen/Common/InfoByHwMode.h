@@ -146,12 +146,6 @@ template <typename InfoT, typename MapT> struct InfoByHwMode {
     assert(isSimple());
     return Map.begin()->second;
   }
-  void makeSimple(unsigned Mode) {
-    assert(hasMode(Mode) || hasDefault());
-    InfoT I = get(Mode);
-    Map.clear();
-    Map.try_emplace(DefaultMode, I);
-  }
 
   const Record *getRecord() const { return Def; }
 

@@ -305,33 +305,6 @@ define zeroext i32 @test1(i64 %0, ptr %1) {
 ; CHECK-NEXT:    ld 2, 560(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    stdux 3, 12, 2
 ; CHECK-NEXT:    ld 2, 552(1) # 8-byte Folded Reload
-; CHECK-NEXT:    stdx 3, 12, 5
-; CHECK-NEXT:    stdx 3, 12, 6
-; CHECK-NEXT:    stdx 3, 12, 7
-; CHECK-NEXT:    stdx 3, 12, 8
-; CHECK-NEXT:    stdx 3, 12, 9
-; CHECK-NEXT:    stdx 3, 12, 10
-; CHECK-NEXT:    stdx 3, 12, 11
-; CHECK-NEXT:    stdx 3, 12, 30
-; CHECK-NEXT:    stdx 3, 12, 29
-; CHECK-NEXT:    stdx 3, 12, 28
-; CHECK-NEXT:    stdx 3, 12, 27
-; CHECK-NEXT:    stdx 3, 12, 26
-; CHECK-NEXT:    stdx 3, 12, 25
-; CHECK-NEXT:    stdx 3, 12, 24
-; CHECK-NEXT:    stdx 3, 12, 23
-; CHECK-NEXT:    stdx 3, 12, 4
-; CHECK-NEXT:    stdx 3, 12, 0
-; CHECK-NEXT:    stdx 3, 12, 22
-; CHECK-NEXT:    stdx 3, 12, 21
-; CHECK-NEXT:    stdx 3, 12, 20
-; CHECK-NEXT:    stdx 3, 12, 19
-; CHECK-NEXT:    stdx 3, 12, 18
-; CHECK-NEXT:    stdx 3, 12, 17
-; CHECK-NEXT:    stdx 3, 12, 16
-; CHECK-NEXT:    stdx 3, 12, 15
-; CHECK-NEXT:    stdx 3, 12, 14
-; CHECK-NEXT:    stdx 3, 12, 31
 ; CHECK-NEXT:    stdx 3, 12, 2
 ; CHECK-NEXT:    ld 2, 544(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    stdx 3, 12, 2
@@ -371,6 +344,33 @@ define zeroext i32 @test1(i64 %0, ptr %1) {
 ; CHECK-NEXT:    stdx 3, 12, 2
 ; CHECK-NEXT:    ld 2, 400(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    stdx 3, 12, 2
+; CHECK-NEXT:    stdx 3, 12, 5
+; CHECK-NEXT:    stdx 3, 12, 6
+; CHECK-NEXT:    stdx 3, 12, 7
+; CHECK-NEXT:    stdx 3, 12, 8
+; CHECK-NEXT:    stdx 3, 12, 9
+; CHECK-NEXT:    stdx 3, 12, 10
+; CHECK-NEXT:    stdx 3, 12, 11
+; CHECK-NEXT:    stdx 3, 12, 30
+; CHECK-NEXT:    stdx 3, 12, 29
+; CHECK-NEXT:    stdx 3, 12, 28
+; CHECK-NEXT:    stdx 3, 12, 27
+; CHECK-NEXT:    stdx 3, 12, 26
+; CHECK-NEXT:    stdx 3, 12, 25
+; CHECK-NEXT:    stdx 3, 12, 24
+; CHECK-NEXT:    stdx 3, 12, 23
+; CHECK-NEXT:    stdx 3, 12, 4
+; CHECK-NEXT:    stdx 3, 12, 0
+; CHECK-NEXT:    stdx 3, 12, 22
+; CHECK-NEXT:    stdx 3, 12, 21
+; CHECK-NEXT:    stdx 3, 12, 20
+; CHECK-NEXT:    stdx 3, 12, 19
+; CHECK-NEXT:    stdx 3, 12, 18
+; CHECK-NEXT:    stdx 3, 12, 17
+; CHECK-NEXT:    stdx 3, 12, 16
+; CHECK-NEXT:    stdx 3, 12, 15
+; CHECK-NEXT:    stdx 3, 12, 14
+; CHECK-NEXT:    stdx 3, 12, 31
 ; CHECK-NEXT:    bdnz .LBB0_2
 ; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    ld 12, 384(1) # 8-byte Folded Reload

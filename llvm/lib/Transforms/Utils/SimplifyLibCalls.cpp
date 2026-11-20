@@ -2025,8 +2025,20 @@ Value *LibCallSimplifier::optimizeNew(CallInst *CI, IRBuilderBase &B,
     return nullptr;
   }
 
-  if (auto *NewCI = dyn_cast_or_null<Instruction>(NewCall))
+  if (auto *NewCI = dyn_cast_or_null<CallInst>(NewCall)) {
     NewCI->copyMetadata(*CI);
+    mergeAttributesAndFlags(NewCI, *CI);
+    NewCI->removeFnAttr("memprof");
+    // Call-site speculatable is only valid if the new callee is speculatable.
+    NewCI->removeFnAttr(Attribute::Speculatable);
+    if (CI->arg_size() == NewCI->arg_size()) {
+      // The __hot_cold_t hint argument was replaced; drop any old range.
+      NewCI->removeParamAttr(NewCI->arg_size() - 1, Attribute::Range);
+    } else {
+      // Adding __hot_cold_t changes the signature, invalidating this attribute.
+      NewCI->removeFnAttr("alloc-variant-zeroed");
+    }
+  }
 
   return NewCall;
 }

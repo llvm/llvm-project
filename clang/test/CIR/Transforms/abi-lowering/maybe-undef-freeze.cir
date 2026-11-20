@@ -38,7 +38,11 @@
 module attributes {
   dlti.dl_spec = #dlti.dl_spec<
     #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
-    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>,
+  cir.record_layouts = {
+    Pair = #cir.record_layout<arg_passing_kind = cannot_pass_in_regs,
+                              has_trivial_dtor = true, record_align = 4>
+  }
 } {
 
   cir.func private @coerced(!rec_Pair)

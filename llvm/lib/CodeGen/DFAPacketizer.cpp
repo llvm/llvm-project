@@ -23,6 +23,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/DFAPacketizer.h"
+#include "CodeGenOptions.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -32,7 +33,6 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/MC/MCInstrDesc.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -43,9 +43,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "packets"
-
-static cl::opt<unsigned> InstrLimit("dfa-instr-limit", cl::Hidden,
-  cl::init(0), cl::desc("If present, stops packetizing after N instructions"));
 
 static unsigned InstrCount = 0;
 
@@ -169,12 +166,12 @@ void VLIWPacketizerList::PacketizeMIs(MachineBasicBlock *MBB,
   for (SUnit &SU : VLIWScheduler->SUnits)
     MIToSUnit[SU.getInstr()] = &SU;
 
-  bool LimitPresent = InstrLimit.getPosition();
+  std::optional<unsigned> InstrLimit = VLIWScheduler->Opts.dfa_instr_limit;
 
   // The main packetizer loop.
   for (; BeginItr != EndItr; ++BeginItr) {
-    if (LimitPresent) {
-      if (InstrCount >= InstrLimit) {
+    if (InstrLimit) {
+      if (InstrCount >= *InstrLimit) {
         EndItr = BeginItr;
         break;
       }

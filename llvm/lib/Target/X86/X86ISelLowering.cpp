@@ -11367,17 +11367,23 @@ static SDValue lowerShuffleWithPACK(const SDLoc &DL, MVT VT, SDValue V1,
 /// Try to emit a bitmask instruction for a shuffle.
 ///
 /// This handles cases where we can model a blend exactly as a bitmask due to
-/// one of the inputs being zeroable.
+/// one of the inputs being zeroable, and freezing the other to prevent
+/// AND(poison,0) -> poison folds.
 static SDValue lowerShuffleAsBitMask(const SDLoc &DL, MVT VT, SDValue V1,
                                      SDValue V2, ArrayRef<int> Mask,
                                      const APInt &Zeroable, SelectionDAG &DAG) {
   unsigned EltSizeInBIts = VT.getScalarSizeInBits();
   APInt Zero = APInt::getZero(EltSizeInBIts);
   APInt AllOnes = APInt::getAllOnes(EltSizeInBIts);
+  APInt DemandedElts = APInt::getAllOnes(Mask.size());
 
   SmallVector<APInt, 16> VMaskOps(Mask.size(), Zero);
   SDValue V;
   for (int I = 0, Size = Mask.size(); I != Size; ++I) {
+    if (Mask[I] < 0) {
+      DemandedElts.clearBit(I);
+      continue;
+    }
     if (Zeroable[I])
       continue;
     if (Mask[I] % Size != I)
@@ -11394,6 +11400,7 @@ static SDValue lowerShuffleAsBitMask(const SDLoc &DL, MVT VT, SDValue V1,
 
   MVT LogicVT = VT.changeTypeToInteger();
   SDValue VMask = getConstVector(VMaskOps, LogicVT, DAG, DL);
+  V = DAG.getFreeze(V, DemandedElts, UndefPoisonKind::PoisonOnly);
   V = DAG.getBitcast(LogicVT, V);
   SDValue And = DAG.getNode(ISD::AND, DL, LogicVT, V, VMask);
   return DAG.getBitcast(VT, And);
@@ -48077,32 +48084,24 @@ static SDValue combineBasicSADPattern(SDNode *Extract, SelectionDAG &DAG,
   if (!isPowerOf2_32(RootVT.getVectorNumElements()))
     return SDValue();
 
-  // The operand is expected to be zero extended from i8.
-  // In order to convert to i64 and above, additional any/zero/sign
-  // extend is expected.
-  // The zero extend from 32 bit has no mathematical effect on the result.
-  // Also the sign extend is basically zero extend
-  // (extends the sign bit which is zero).
-  // So it is correct to skip the sign/zero extend instruction.
-  if (Root.getOpcode() == ISD::SIGN_EXTEND ||
-      Root.getOpcode() == ISD::ZERO_EXTEND ||
-      Root.getOpcode() == ISD::ANY_EXTEND)
-    Root = Root.getOperand(0);
-
   // Check whether we have an vXi8 abdu pattern.
+  // The operand is expected to be zero extended from i8, for
+  // abs(sub(zext,zext)) patterns the sign extend is basically zero extend
+  // (extends the sign bit which is zero).
   // TODO: Just match ISD::ABDU once the DAG is topological sorted.
   SDValue Src0, Src1;
   if (!sd_match(
           Root,
-          m_AnyOf(
+          m_ZExtOrSelf(m_AnyOf(
               m_SpecificVectorElementVT(
                   MVT::i8, m_c_BinOp(ISD::ABDU, m_Value(Src0), m_Value(Src1))),
               m_SpecificVectorElementVT(
                   MVT::i8, m_Sub(m_UMax(m_Value(Src0), m_Value(Src1)),
                                  m_UMin(m_Deferred(Src0), m_Deferred(Src1)))),
-              m_Abs(m_Sub(
+              m_SExtOrSelf(m_Abs(m_Sub(
                   m_Value(Src0, m_ZExt(m_SpecificVectorElementVT(MVT::i8))),
-                  m_Value(Src1, m_ZExt(m_SpecificVectorElementVT(MVT::i8))))))))
+                  m_Value(Src1,
+                          m_ZExt(m_SpecificVectorElementVT(MVT::i8))))))))))
     return SDValue();
 
   // Create the SAD instruction.

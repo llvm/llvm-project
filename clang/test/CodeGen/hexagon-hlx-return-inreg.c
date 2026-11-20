@@ -1,4 +1,3 @@
-// REQUIRES: hexagon-registered-target
 // RUN: %clang_cc1 -triple hexagon -target-cpu hexagonv85 -target-feature +hlx \
 // RUN:   -emit-llvm %s -o - | FileCheck %s
 
