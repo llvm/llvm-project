@@ -747,18 +747,24 @@ void MemorySanitizer::createUserspaceApi(Module &M,
   IRBuilder<> IRB(M);
 
   // Create the callback.
-  // FIXME: this function should have "Cold" calling conv,
-  // which is not yet implemented.
+  AttrBuilder WarnAttrs(*C);
+  WarnAttrs.addAttribute(Attribute::NoUnwind);
+  WarnAttrs.addAttribute(Attribute::Cold);
+  if (!Recover)
+    WarnAttrs.addAttribute(Attribute::NoReturn);
   if (TrackOrigins) {
     StringRef WarningFnName = Recover ? "__msan_warning_with_origin"
                                       : "__msan_warning_with_origin_noreturn";
-    WarningFn = M.getOrInsertFunction(WarningFnName,
-                                      TLI.getAttrList(C, {0}, /*Signed=*/false),
-                                      IRB.getVoidTy(), IRB.getInt32Ty());
+    AttributeList WarnAL = TLI.getAttrList(C, {0}, /*Signed=*/false)
+                               .addFnAttributes(*C, WarnAttrs);
+    WarningFn = M.getOrInsertFunction(WarningFnName, WarnAL, IRB.getVoidTy(),
+                                      IRB.getInt32Ty());
   } else {
     StringRef WarningFnName =
         Recover ? "__msan_warning" : "__msan_warning_noreturn";
-    WarningFn = M.getOrInsertFunction(WarningFnName, IRB.getVoidTy());
+    AttributeList WarnAL =
+        AttributeList::get(*C, AttributeList::FunctionIndex, WarnAttrs);
+    WarningFn = M.getOrInsertFunction(WarningFnName, WarnAL, IRB.getVoidTy());
   }
 
   // Create the global TLS variables.
