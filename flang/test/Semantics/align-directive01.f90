@@ -25,12 +25,18 @@ module m
   !dir$ align(16) :: p
   !ERROR: !DIR$ ALIGN may not apply to named constant 'p'
   real, parameter :: p = 1.0
+  ! ALLOCATABLE and POINTER objects are not supported yet: the directive is
+  ! ignored with a warning, whichever way the attribute is given.
   !dir$ align(16) :: alloc
-  !ERROR: !DIR$ ALIGN is not yet supported for ALLOCATABLE or POINTER 'alloc'
+  !WARNING: !DIR$ ALIGN is not yet implemented for ALLOCATABLE or POINTER 'alloc' and was ignored [-Wignored-directive]
   real, allocatable :: alloc(:)
   !dir$ align(16) :: ptr
-  !ERROR: !DIR$ ALIGN is not yet supported for ALLOCATABLE or POINTER 'ptr'
+  !WARNING: !DIR$ ALIGN is not yet implemented for ALLOCATABLE or POINTER 'ptr' and was ignored [-Wignored-directive]
   real, pointer :: ptr(:)
+  !dir$ align(16) :: alloc_stmt
+  !WARNING: !DIR$ ALIGN is not yet implemented for ALLOCATABLE or POINTER 'alloc_stmt' and was ignored [-Wignored-directive]
+  real :: alloc_stmt(:)
+  allocatable :: alloc_stmt
   !dir$ align(16) :: bc
   !ERROR: !DIR$ ALIGN is not yet supported for BIND(C) variable 'bc'
   real, bind(c) :: bc
@@ -52,8 +58,8 @@ module m
     !ERROR: !DIR$ ALIGN is not supported for component 'comp', which is neither ALLOCATABLE nor POINTER
     real :: comp(8)
     !dir$ align(64) :: comp
-    !ERROR: !DIR$ ALIGN is not yet supported for ALLOCATABLE or POINTER 'acomp'
     real, allocatable :: acomp(:)
+    !WARNING: !DIR$ ALIGN is not yet implemented for ALLOCATABLE or POINTER 'acomp' and was ignored [-Wignored-directive]
     !dir$ align(64) :: acomp
     !ERROR: 'later' must be a previously declared component of this derived type to be aligned with !DIR$ ALIGN
     !dir$ align(64) :: later
@@ -67,10 +73,13 @@ module m
   !ERROR: 'sub' must be a variable to be aligned with !DIR$ ALIGN
   !dir$ align(64) :: sub
 contains
-  subroutine sub(d)
+  subroutine sub(d, ad)
     !dir$ align(64) :: d
     !ERROR: !DIR$ ALIGN may not apply to dummy argument 'd'
     real :: d(10)
+    !dir$ align(64) :: ad
+    !ERROR: !DIR$ ALIGN may not apply to dummy argument 'ad'
+    real, allocatable :: ad(:)
     !ERROR: 'ok_module' must be declared in this scoping unit to be aligned with !DIR$ ALIGN
     !dir$ align(64) :: ok_module
     !dir$ align(64) :: c1
@@ -92,6 +101,13 @@ contains
       !dir$ align(64) :: h
       h = 1.0
     end subroutine
+  end subroutine
+  subroutine in_block()
+    block
+      !dir$ align(64) :: ba
+      !WARNING: !DIR$ ALIGN is not yet implemented for ALLOCATABLE or POINTER 'ba' and was ignored [-Wignored-directive]
+      real, allocatable :: ba(:)
+    end block
   end subroutine
   function f()
     !dir$ align(64) :: f

@@ -12,6 +12,10 @@ module m
   !dir$ align(64) :: d
   real :: d
   common /blk/ d
+  ! Neither does an ALLOCATABLE or POINTER variable, which is not supported
+  ! yet.
+  !dir$ align(64) :: e
+  real, allocatable :: e(:)
 end
 
 !Expect: m.mod
@@ -22,5 +26,6 @@ end
 !!dir$ align(128) :: b
 !real(4)::c
 !real(4)::d
+!real(4),allocatable::e(:)
 !common/blk/d
 !end

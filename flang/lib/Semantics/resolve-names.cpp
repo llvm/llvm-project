@@ -11184,16 +11184,26 @@ void ResolveNamesVisitor::FinishSpecificationPart(
       }
     }
   }
-  // !DIR$ ALIGN cannot move an object whose placement is fixed by storage
-  // association. Warn and drop the request, so that neither lowering nor the
-  // module file sees it.
+  // Warn about a !DIR$ ALIGN request that is ignored and drop it, so that
+  // neither lowering nor the module file sees it: the placement of an object
+  // in COMMON or EQUIVALENCE storage is fixed by storage association, and
+  // the storage of an ALLOCATABLE or POINTER object is not aligned yet. A
+  // dummy argument or function result is an error, reported later.
   for (auto &pair : currScope()) {
     Symbol &symbol{*pair.second};
-    if (auto *object{symbol.detailsIf<ObjectEntityDetails>()}; object &&
-        object->alignment() &&
-        (FindCommonBlockContaining(symbol) || FindEquivalenceSet(symbol))) {
+    auto *object{symbol.detailsIf<ObjectEntityDetails>()};
+    if (!object || !object->alignment()) {
+      continue;
+    }
+    if (FindCommonBlockContaining(symbol) || FindEquivalenceSet(symbol)) {
       context().Warn(common::UsageWarning::IgnoredDirective, symbol.name(),
           "!DIR$ ALIGN is ignored for '%s' because it is in COMMON or EQUIVALENCE storage"_warn_en_US,
+          symbol.name());
+      object->set_alignment(std::nullopt);
+    } else if (IsAllocatableOrPointer(symbol) && !IsDummy(symbol) &&
+        !IsFunctionResult(symbol)) {
+      context().Warn(common::UsageWarning::IgnoredDirective, symbol.name(),
+          "!DIR$ ALIGN is not yet implemented for ALLOCATABLE or POINTER '%s' and was ignored"_warn_en_US,
           symbol.name());
       object->set_alignment(std::nullopt);
     }
@@ -11620,6 +11630,12 @@ void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
       if (!object) {
         SayWithDecl(name, *symbol,
             "'%s' must be a variable to be aligned with !DIR$ ALIGN"_err_en_US);
+      } else if (currScope().IsDerivedType() &&
+          IsAllocatableOrPointer(*symbol)) {
+        // The attributes of a declared component are final.
+        context().Warn(common::UsageWarning::IgnoredDirective, name.source,
+            "!DIR$ ALIGN is not yet implemented for ALLOCATABLE or POINTER '%s' and was ignored"_warn_en_US,
+            name.source);
       } else if (object->alignment() && *object->alignment() != value) {
         SayWithDecl(name, *symbol,
             "'%s' already has a different !DIR$ ALIGN alignment"_err_en_US);
