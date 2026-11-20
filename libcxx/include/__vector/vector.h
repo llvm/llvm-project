@@ -32,13 +32,10 @@
 #include <__iterator/reverse_iterator.h>
 #include <__iterator/wrap_iter.h>
 #include <__memory/addressof.h>
-#include <__memory/allocate_at_least.h>
 #include <__memory/allocator.h>
 #include <__memory/allocator_traits.h>
-#include <__memory/compressed_pair.h>
 #include <__memory/noexcept_move_assign_container.h>
 #include <__memory/pointer_traits.h>
-#include <__memory/swap_allocator.h>
 #include <__memory/temp_value.h>
 #include <__memory/uninitialized_algorithms.h>
 #include <__numeric/saturation_arithmetic.h>
@@ -47,21 +44,17 @@
 #include <__ranges/concepts.h>
 #include <__ranges/container_compatible_range.h>
 #include <__ranges/from_range.h>
-#include <__split_buffer>
 #include <__string/constexpr_c_functions.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_allocator.h>
 #include <__type_traits/is_constant_evaluated.h>
 #include <__type_traits/is_constructible.h>
-#include <__type_traits/is_nothrow_assignable.h>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/is_pointer.h>
 #include <__type_traits/is_relocatable.h>
 #include <__type_traits/is_same.h>
-#include <__type_traits/is_swappable.h>
 #include <__type_traits/is_trivially_copyable.h>
-#include <__type_traits/remove_const_ref.h>
 #include <__type_traits/type_identity.h>
 #include <__utility/assume.h>
 #include <__utility/declval.h>
@@ -69,9 +62,7 @@
 #include <__utility/forward.h>
 #include <__utility/is_pointer_in_range.h>
 #include <__utility/move.h>
-#include <__utility/pair.h>
 #include <__utility/scope_guard.h>
-#include <__utility/swap.h>
 #include <initializer_list>
 #include <limits>
 #include <stdexcept>
@@ -95,7 +86,6 @@ template <class _Tp, class _Allocator /* = allocator<_Tp> */>
 class _LIBCPP_WARN_UNUSED vector {
   using __base_type _LIBCPP_NODEBUG  = __vector_layout<_Tp, _Allocator>;
   using __bound_type _LIBCPP_NODEBUG = typename __base_type::__bound_type;
-  using _SplitBuffer _LIBCPP_NODEBUG = typename __base_type::_SplitBuffer;
 
 public:
   //
@@ -255,6 +245,18 @@ private:
 
   private:
     vector& __vec_;
+  };
+
+  class __destroy_range {
+    _LIBCPP_NO_UNIQUE_ADDRESS allocator_type __alloc_;
+    pointer __first_;
+    size_type __count_;
+
+  public:
+    _LIBCPP_CONSTEXPR_SINCE_CXX20 __destroy_range(allocator_type __alloc, pointer __first, size_type __count)
+        : __alloc_(__alloc), __first_(__first), __count_(__count) {}
+
+    void operator()() { std::__allocator_destroy(__alloc_, __first_, __first_ + __count_); }
   };
 
   using __emplace_back_result_t _LIBCPP_NODEBUG = _If<(_LIBCPP_STD_VER < 17), void, reference>;
@@ -518,9 +520,17 @@ public:
       if (__len <= static_cast<difference_type>(__layout_.__remaining_capacity())) {
         __construct_at_end(ranges::begin(__range), __len);
       } else {
-        _SplitBuffer __buffer(__recommend(size() + __len), size(), __layout_.__alloc());
-        __buffer.__construct_at_end_with_size(ranges::begin(__range), __len);
-        __layout_.__relocate(__buffer);
+        auto& __alloc     = __layout_.__alloc();
+        auto __size       = size();
+        auto __allocation = std::__allocate_unique(__alloc, __recommend(size() + __len));
+        auto __ptr        = std::__to_address(__allocation.get());
+        std::__uninitialized_allocator_copy_n(__alloc, ranges::begin(__range), __len, __ptr + __size);
+        auto __guard = std::__make_exception_guard([&] {
+          std::__allocator_destroy(__alloc, __ptr + __size, __ptr + __size + __len);
+        });
+        __relocate_elements_to(__allocation.get());
+        __guard.__complete();
+        __layout_.__reset_layout(std::move(__allocation), __size + __len);
       }
     } else {
       vector __buffer(__layout_.__alloc());
@@ -669,8 +679,7 @@ private:
 
     if (__n > max_size())
       this->__throw_length_error();
-    auto __allocation = std::__allocate_at_least(this->__layout_.__alloc(), __n);
-    __layout_.__set_layout(__allocation.ptr, 0, __allocation.count);
+    __layout_.__reset_layout(std::__allocate_unique(__layout_.__alloc(), __n), 0);
     __annotate_new(0);
   }
 
@@ -678,6 +687,32 @@ private:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI size_type __recommend(size_type __new_size) const;
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __construct_at_end(size_type __n);
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __construct_at_end(size_type __n, const_reference __x);
+
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 void __relocate_elements_to(pointer __result) {
+    std::__uninitialized_allocator_relocate(
+        __layout_.__alloc(),
+        std::__to_address(__layout_.__begin_ptr()),
+        std::__to_address(__layout_.__end_ptr()),
+        std::__to_address(__result));
+    __layout_.__set_bound_using_pointer(__layout_.__begin_ptr());
+  }
+
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 void
+  __relocate_and_split_elements_to(pointer __result, size_type __split_at, size_type __hole_size) {
+    auto& __alloc       = __layout_.__alloc();
+    auto* __in_ptr      = std::__to_address(__layout_.__begin_ptr());
+    auto* __out_ptr     = std::__to_address(__result);
+    auto* __split_point = __in_ptr + __split_at;
+
+    std::__uninitialized_allocator_relocate(__alloc, __in_ptr, __split_point, __out_ptr);
+    auto __guard = std::__make_exception_guard(__destroy_range(__alloc, __result, __split_at));
+
+    std::__uninitialized_allocator_relocate(
+        __alloc, __split_point, std::__to_address(__layout_.__end_ptr()), __out_ptr + __split_at + __hole_size);
+
+    __guard.__complete();
+    __layout_.__set_bound_using_pointer(__layout_.__begin_ptr());
+  }
 
   template <class _InputIterator>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __init_with_size(_InputIterator __first, size_type __n) {
@@ -1019,26 +1054,28 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::assign(size_type __n
 
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::reserve(size_type __n) {
-  if (__n > capacity()) {
-    if (__n > max_size())
-      this->__throw_length_error();
-    _SplitBuffer __v(__n, size(), this->__layout_.__alloc());
-    __layout_.__relocate(__v);
-  }
+  if (__n <= capacity())
+    return;
+  if (__n > max_size())
+    this->__throw_length_error();
+
+  auto __allocation = std::__allocate_unique(__layout_.__alloc(), __n);
+  auto __size       = size();
+  __relocate_elements_to(__allocation.get());
+  __layout_.__reset_layout(std::move(__allocation), __size);
 }
 
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::shrink_to_fit() _NOEXCEPT {
-  if (capacity() > size()) {
+  if (auto __size = size(); capacity() > __size) {
 #if _LIBCPP_HAS_EXCEPTIONS
     try {
 #endif // _LIBCPP_HAS_EXCEPTIONS
-      _SplitBuffer __v(size(), size(), this->__layout_.__alloc());
-      // The Standard mandates shrink_to_fit() does not increase the capacity.
-      // With equal capacity keep the existing buffer. This avoids extra work
-      // due to swapping the elements.
-      if (__v.capacity() < capacity())
-        __layout_.__relocate(__v);
+      auto __allocation = std::__allocate_unique(__layout_.__alloc(), __size);
+      if (__allocation.get_deleter().__count() < capacity()) {
+        __relocate_elements_to(__allocation.get());
+        __layout_.__reset_layout(std::move(__allocation), __size);
+      }
 #if _LIBCPP_HAS_EXCEPTIONS
     } catch (...) {
     }
@@ -1079,25 +1116,16 @@ vector<_Tp, _Alloc>::emplace_back(_Args&&... __args) {
       },
       [](vector& __self, _Args&&... __largs) static {
         __self.__annotate_delete();
-        auto __asan_guard  = std::__make_scope_guard([&] { __self.__annotate_new(__self.size()); });
-        auto& __alloc      = __self.__layout_.__alloc();
-        auto __size        = __self.size();
-        auto __allocation  = std::__allocate_at_least(__alloc, __self.__recommend(__size + 1));
-        auto __alloc_guard = std::__make_exception_guard([&] {
-          __alloc_traits::deallocate(__alloc, __allocation.ptr, __allocation.count);
-        });
-        auto __ptr         = std::__to_address(__allocation.ptr);
-        auto __old_begin   = __self.__layout_.__begin_ptr();
+        auto __asan_guard = std::__make_scope_guard([&] { __self.__annotate_new(__self.size()); });
+        auto& __alloc     = __self.__layout_.__alloc();
+        auto __size       = __self.size();
+        auto __allocation = std::__allocate_unique(__alloc, __self.__recommend(__size + 1));
+        auto __ptr        = std::__to_address(__allocation.get());
         __alloc_traits::construct(__alloc, __ptr + __size, std::forward<_Args>(__largs)...);
         auto __guard = std::__make_exception_guard([&] { __alloc_traits::destroy(__alloc, __ptr + __size); });
-        std::__uninitialized_allocator_relocate(
-            __alloc, std::__to_address(__old_begin), std::__to_address(__self.__layout_.__end_ptr()), __ptr);
+        __self.__relocate_elements_to(__allocation.get());
         __guard.__complete();
-        auto __old_cap = __self.capacity();
-        __self.__layout_.__set_layout(__allocation.ptr, __size + 1, __allocation.count);
-        __alloc_guard.__complete();
-        if ((__is_std_allocator_v<allocator_type> && !__libcpp_is_constant_evaluated()) || __old_begin)
-          __alloc_traits::deallocate(__alloc, __old_begin, __old_cap);
+        __self.__layout_.__reset_layout(std::move(__allocation), __size + 1);
       },
       *this,
       std::forward<_Args>(__args)...);
@@ -1134,42 +1162,57 @@ vector<_Tp, _Allocator>::emplace(const_iterator __position, _Args&&... __args) {
       __move_range(__p, __end, __p + 1);
       *__p = std::move(__tmp.get());
     }
+    return __make_iter(__p);
   } else {
-    _SplitBuffer __v(__recommend(size() + 1), __p - this->__layout_.__begin_ptr(), this->__layout_.__alloc());
-    __v.emplace_back(std::forward<_Args>(__args)...);
-    __p = __layout_.__relocate_with_pivot(__v, __p);
+    auto& __alloc     = __layout_.__alloc();
+    auto __allocation = std::__allocate_unique(__alloc, __recommend(size() + 1));
+    auto __offset     = __p - this->__layout_.__begin_ptr();
+    __alloc_traits::construct(
+        __alloc, std::__to_address(__allocation.get()) + __offset, std::forward<_Args>(__args)...);
+    auto __guard = std::__make_exception_guard([&] {
+      __alloc_traits::destroy(__alloc, std::__to_address(__allocation.get()) + __offset);
+    });
+    auto __size  = size();
+    __relocate_and_split_elements_to(__allocation.get(), __offset, 1);
+    __guard.__complete();
+    __layout_.__reset_layout(std::move(__allocation), __size + 1);
+    return begin() + __offset;
   }
-  return __make_iter(__p);
 }
 
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename vector<_Tp, _Allocator>::iterator
 vector<_Tp, _Allocator>::insert(const_iterator __position, size_type __n, const_reference __x) {
-  pointer __p = this->__layout_.__begin_ptr() + (__position - begin());
-  if (__n > 0) {
-    if (__n <= __layout_.__remaining_capacity()) {
-      size_type __old_n  = __n;
-      pointer __end      = __layout_.__end_ptr();
-      pointer __old_last = __end;
-      if (__n > static_cast<size_type>(__end - __p)) {
-        size_type __cx = __n - (__end - __p);
-        __construct_at_end(__cx, __x);
-        __n -= __cx;
-      }
-      if (__n > 0) {
-        __move_range(__p, __old_last, __p + __old_n);
-        const_pointer __xr = pointer_traits<const_pointer>::pointer_to(__x);
-        if (std::__is_pointer_in_range(std::__to_address(__p), std::__to_address(__end), std::addressof(__x)))
-          __xr += __old_n;
-        std::fill_n(__p, __n, *__xr);
-      }
-    } else {
-      _SplitBuffer __v(__recommend(size() + __n), __p - this->__layout_.__begin_ptr(), this->__layout_.__alloc());
-      __v.__construct_at_end(__n, __x);
-      __p = __layout_.__relocate_with_pivot(__v, __p);
+  auto __offset = (__position - begin());
+  if (__n <= __layout_.__remaining_capacity()) {
+    pointer __p        = this->__layout_.__begin_ptr() + __offset;
+    size_type __old_n  = __n;
+    pointer __end      = __layout_.__end_ptr();
+    pointer __old_last = __end;
+    if (__n > static_cast<size_type>(__end - __p)) {
+      size_type __cx = __n - (__end - __p);
+      __construct_at_end(__cx, __x);
+      __n -= __cx;
     }
+    if (__n > 0) {
+      __move_range(__p, __old_last, __p + __old_n);
+      const_pointer __xr = pointer_traits<const_pointer>::pointer_to(__x);
+      if (std::__is_pointer_in_range(std::__to_address(__p), std::__to_address(__end), std::addressof(__x)))
+        __xr += __old_n;
+      std::fill_n(__p, __n, *__xr);
+    }
+    return __make_iter(__p);
+  } else {
+    auto& __alloc     = __layout_.__alloc();
+    auto __allocation = std::__allocate_unique(__alloc, __recommend(size() + __n));
+    std::__uninitialized_allocator_fill_n(__alloc, __allocation.get() + __offset, __n, __x);
+    auto __guard    = std::__make_exception_guard(__destroy_range(__alloc, __allocation.get() + __offset, __n));
+    auto __new_size = size() + __n;
+    __relocate_and_split_elements_to(__allocation.get(), __offset, __n);
+    __guard.__complete();
+    __layout_.__reset_layout(std::move(__allocation), __new_size);
+    return __make_iter(__layout_.__begin_ptr() + __offset);
   }
-  return __make_iter(__p);
 }
 
 template <class _Tp, class _Allocator>
@@ -1182,73 +1225,75 @@ vector<_Tp, _Allocator>::__insert_with_sentinel(const_iterator __position, _Inpu
   for (; size() != capacity() && __first != __last; ++__first)
     __emplace_back_assume_capacity(*__first);
 
-  if (__first == __last)
+  if (__first == __last) {
     (void)std::rotate(__p, __old_last, __layout_.__end_ptr());
-  else {
-    _SplitBuffer __v(__layout_.__alloc());
-    pointer __end = __layout_.__end_ptr();
-    auto __guard  = std::__make_exception_guard(
-        _AllocatorDestroyRangeReverse<allocator_type, pointer>(__layout_.__alloc(), __old_last, __end));
-    __v.__construct_at_end_with_sentinel(std::move(__first), std::move(__last));
-    _SplitBuffer __merged(
-        __recommend(size() + __v.size()), __off, __layout_.__alloc()); // has `__off` positions available at the front
-    std::__uninitialized_allocator_relocate(
-        __layout_.__alloc(),
-        std::__to_address(__old_last),
-        std::__to_address(__layout_.__end_ptr()),
-        std::__to_address(__merged.end()));
-    __guard.__complete(); // Release the guard once objects in [__old_last_, __layout_.__end_ptr()) have been
-                          // successfully relocated.
-    __merged.__set_sentinel(__merged.end() + (__layout_.__end_ptr() - __old_last));
-    __layout_.__set_bound_using_pointer(__old_last);
-    std::__uninitialized_allocator_relocate(
-        __layout_.__alloc(),
-        std::__to_address(__v.begin()),
-        std::__to_address(__v.end()),
-        std::__to_address(__merged.end()));
-    __merged.__set_sentinel(__merged.size() + __v.size());
-    __v.__set_sentinel(__v.begin());
-    __p = __layout_.__relocate_with_pivot(__merged, __p);
+    return __make_iter(__p);
   }
-  return __make_iter(__p);
+
+  auto& __alloc = __layout_.__alloc();
+  vector __v(__layout_.__alloc());
+  pointer __end = __layout_.__end_ptr();
+  auto __guard  = std::__make_exception_guard(__destroy_range(__alloc, __old_last, __end - __old_last));
+  __v.__assign_with_sentinel(std::move(__first), std::move(__last));
+  auto __new_size   = size() + __v.size();
+  auto __allocation = std::__allocate_unique(__layout_.__alloc(), __recommend(__new_size));
+  std::__uninitialized_allocator_relocate(
+      __alloc,
+      std::__to_address(__old_last),
+      std::__to_address(__layout_.__end_ptr()),
+      std::__to_address(__allocation.get()) + __off);
+  __guard.__complete();
+  auto __tmp_count = __layout_.__end_ptr() - __old_last;
+  __layout_.__set_bound_using_pointer(__old_last);
+  auto __extra_insert_begin = __allocation.get() + __off + __tmp_count;
+  auto __hole_size          = __tmp_count + __v.size();
+  __v.__relocate_elements_to(__extra_insert_begin);
+  __relocate_and_split_elements_to(__allocation.get(), __off, __hole_size);
+  __layout_.__reset_layout(std::move(__allocation), __new_size);
+  return begin() + __off;
 }
 
 template <class _Tp, class _Allocator>
 template <class _AlgPolicy, class _Iterator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI typename vector<_Tp, _Allocator>::iterator
 vector<_Tp, _Allocator>::__insert_with_size(const_iterator __position, _Iterator __first, difference_type __n) {
-  pointer __p = this->__layout_.__begin_ptr() + (__position - begin());
-  if (__n > 0) {
-    if (__n <= static_cast<difference_type>(__layout_.__remaining_capacity())) {
-      pointer __end        = __layout_.__end_ptr();
-      pointer __old_last   = __end;
-      difference_type __dx = __end - __p;
-      if (__n > __dx) {
+  auto __offset = (__position - begin());
+  if (__n <= static_cast<difference_type>(__layout_.__remaining_capacity())) {
+    pointer __p          = this->__layout_.__begin_ptr() + __offset;
+    pointer __end        = __layout_.__end_ptr();
+    pointer __old_last   = __end;
+    difference_type __dx = __end - __p;
+    if (__n > __dx) {
 #if _LIBCPP_STD_VER >= 23
-        if constexpr (!forward_iterator<_Iterator>) {
-          __construct_at_end(std::move(__first), __n);
-          std::rotate(__p, __old_last, __end);
-        } else
+      if constexpr (!forward_iterator<_Iterator>) {
+        __construct_at_end(std::move(__first), __n);
+        std::rotate(__p, __old_last, __end);
+      } else
 #endif
-        {
-          _Iterator __m = std::next(__first, __dx);
-          __construct_at_end(__m, __n - __dx);
-          if (__dx > 0) {
-            __move_range(__p, __old_last, __p + __n);
-            __insert_assign_n_unchecked<_AlgPolicy>(__first, __dx, __p);
-          }
+      {
+        _Iterator __m = std::next(__first, __dx);
+        __construct_at_end(__m, __n - __dx);
+        if (__dx > 0) {
+          __move_range(__p, __old_last, __p + __n);
+          __insert_assign_n_unchecked<_AlgPolicy>(__first, __dx, __p);
         }
-      } else {
-        __move_range(__p, __old_last, __p + __n);
-        __insert_assign_n_unchecked<_AlgPolicy>(std::move(__first), __n, __p);
       }
     } else {
-      _SplitBuffer __v(__recommend(size() + __n), __p - this->__layout_.__begin_ptr(), this->__layout_.__alloc());
-      __v.__construct_at_end_with_size(std::move(__first), __n);
-      __p = __layout_.__relocate_with_pivot(__v, __p);
+      __move_range(__p, __old_last, __p + __n);
+      __insert_assign_n_unchecked<_AlgPolicy>(std::move(__first), __n, __p);
     }
+    return __make_iter(__p);
+  } else {
+    auto& __alloc     = __layout_.__alloc();
+    auto __new_size   = size() + __n;
+    auto __allocation = std::__allocate_unique(__alloc, __recommend(size() + __n));
+    std::__uninitialized_allocator_copy_n(__alloc, std::move(__first), __n, __allocation.get() + __offset);
+    auto __fill_guard = std::__make_exception_guard(__destroy_range(__alloc, __allocation.get() + __offset, __n));
+    __relocate_and_split_elements_to(__allocation.get(), __offset, __n);
+    __fill_guard.__complete();
+    __layout_.__reset_layout(std::move(__allocation), __new_size);
+    return __make_iter(__layout_.__begin_ptr() + __offset);
   }
-  return __make_iter(__p);
 }
 
 template <class _Tp, class _Allocator>
@@ -1258,9 +1303,14 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::resize(size_type __n
     if (__new_size <= capacity()) {
       __construct_at_end(__new_size - __current_size);
     } else {
-      _SplitBuffer __v(__recommend(__new_size), __current_size, __layout_.__alloc());
-      __v.__construct_at_end(__new_size - __current_size);
-      __layout_.__relocate(__v);
+      auto& __alloc     = __layout_.__alloc();
+      auto __size       = size();
+      auto __allocation = std::__allocate_unique(__alloc, __recommend(__new_size));
+      std::__uninitialized_allocator_value_construct_n(__alloc, __allocation.get() + __size, __new_size - __size);
+      auto __guard = std::__make_exception_guard(__destroy_range(__alloc, __allocation.get() + __size, __new_size));
+      __relocate_elements_to(__allocation.get());
+      __guard.__complete();
+      __layout_.__reset_layout(std::move(__allocation), __new_size);
     }
   } else if (__current_size > __new_size) {
     this->__destruct_at_end(this->__layout_.__begin_ptr() + __new_size);
@@ -1271,13 +1321,7 @@ template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::resize(size_type __new_size, const_reference __x) {
   size_type __current_size = size();
   if (__current_size < __new_size) {
-    if (__new_size <= capacity())
-      __construct_at_end(__new_size - __current_size, __x);
-    else {
-      _SplitBuffer __v(__recommend(__new_size), __current_size, __layout_.__alloc());
-      __v.__construct_at_end(__new_size - __current_size, __x);
-      __layout_.__relocate(__v);
-    }
+    insert(end(), __new_size - __current_size, __x);
   } else if (__current_size > __new_size) {
     this->__destruct_at_end(this->__layout_.__begin_ptr() + __new_size);
   }
