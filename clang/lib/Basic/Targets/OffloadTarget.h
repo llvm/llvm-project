@@ -22,6 +22,9 @@
 namespace clang {
 namespace targets {
 
+/// Base TargetInfo class for offload device targets. Targets inheriting this
+/// class obtain an offload architecture from the `-target-cpu` option, which
+/// is then accessible via getOffloadArch().
 class LLVM_LIBRARY_VISIBILITY OffloadTargetInfo : public TargetInfo {
 protected:
   OffloadArch DeviceArch = OffloadArch::getUnused();

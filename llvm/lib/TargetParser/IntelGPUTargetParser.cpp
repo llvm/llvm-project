@@ -201,9 +201,8 @@ StringRef llvm::IntelGPU::getIGCATargetName(IGCATarget T) {
 
 void llvm::IntelGPU::fillValidIGCATargetList(
     SmallVectorImpl<StringRef> &Values) {
-  // fillValidIGCATargetList is currently only used for diagnostics, similar to
-  // how other fillValid* functions are used. We can thus afford to generate
-  // this list here:
+  // Several devices share an IGCA target, so IGCATargetNames repeats names.
+  // Sort and drop the repeats.
   SmallVector<IGCATarget> Targets;
   for (const IGCATargetNameEntry &E : IGCATargetNames)
     if (IGCATarget T(E.Target, E.FeatureSet); T.isValid())

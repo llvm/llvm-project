@@ -30,8 +30,7 @@ protected:
     Triple TT("spirv64-unknown-unknown");
     std::string Error;
     const Target *T = TargetRegistry::lookupTarget(TT, Error);
-    if (!T)
-      GTEST_SKIP();
+    ASSERT_TRUE(T) << "SPIRV target not registered: " << Error;
     STI.reset(T->createMCSubtargetInfo(TT, "", ""));
     ASSERT_TRUE(STI);
   }
