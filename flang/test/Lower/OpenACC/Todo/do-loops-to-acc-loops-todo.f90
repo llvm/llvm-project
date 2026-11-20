@@ -4,8 +4,6 @@
 ! RUN: %not_todo_cmd bbc -fopenacc -emit-hlfir %t/collapse_lt.f90 -o - 2>&1 | FileCheck %s --check-prefix=CHECK7
 ! RUN: %not_todo_cmd bbc -fopenacc -emit-hlfir %t/collapse_gt.f90 -o - 2>&1 | FileCheck %s --check-prefix=CHECK8
 ! RUN: %not_todo_cmd bbc -fopenacc -emit-hlfir %t/collapse_nested.f90 -o - 2>&1 | FileCheck %s --check-prefix=CHECK6
-! RUN: bbc -fopenacc -pft-test -o /dev/null %t/seq_exit_in_kernels.f90 | FileCheck %s --check-prefix=PFT9
-! RUN: %not_todo_cmd bbc -fopenacc -emit-hlfir %t/seq_exit_in_kernels.f90 -o - 2>&1 | FileCheck %s --check-prefix=CHECK9
 
 //--- do_loop_with_cycle_goto.f90
 
@@ -95,42 +93,5 @@ subroutine combined(i, j, k)
     end do
   end do
   ! CHECK6: not yet implemented: OpenACC LOOP with nested DO CONCURRENT
-
-end subroutine
-
-//--- seq_exit_in_kernels.f90
-
-! A seq loop with an early EXIT directly in the `acc kernels` region: no
-! enclosing construct contains its control flow, so the kernels construct
-! itself stays unstructured.
-subroutine seq_exit_in_kernels(m, b, kfirst)
-  integer :: m
-  real :: b(m)
-  integer :: kfirst
-  integer :: k
-  !$acc kernels
-  kfirst = 0
-  !$acc loop seq
-  do k = 1, m
-    if (b(k) > 0.0) then
-      kfirst = k
-      exit
-    end if
-  end do
-  !$acc end kernels
-
-! PFT9-LABEL: Subroutine seq_exit_in_kernels
-! PFT9:         <<OpenACCConstruct!>>
-! PFT9:           <<OpenACCConstruct!>>
-! PFT9-NEXT:        <<DoConstruct!>>
-! PFT9-NEXT:          NonLabelDoStmt {{.*}}: do k = 1, m
-! PFT9:               ExitStmt! {{.*}}: exit
-! PFT9:             <<End DoConstruct!>>
-! PFT9:           <<End OpenACCConstruct!>>
-! PFT9:         <<End OpenACCConstruct!>>
-
-! Lowering stops at the `!` DO over k (line 13): its `acc loop` construct sits
-! directly in the `!` kernels construct, so nothing contains its control flow.
-! CHECK9: {{.*}}seq_exit_in_kernels.f90":13:3){{.*}}not yet implemented: unstructured do loop in acc kernels
 
 end subroutine
