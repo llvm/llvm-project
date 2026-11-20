@@ -13526,31 +13526,24 @@ static SubDwordPosition getSubDwordPosition(SelectionDAG &DAG,
                                             MemSDNode *MemOp) {
   SDLoc DL(MemOp);
   SDValue Ptr = MemOp->getBasePtr();
-  const MachineMemOperand *MMO = MemOp->getMemOperand();
   SubDwordPosition Pos;
 
-  // The bits start at (Ptr & 3) * 8. If the base of the memory operand is
-  // dword-aligned, its offset gives them, and the parts of a split access share
-  // the index of their dword. Otherwise the alignment of the access makes low
-  // bits of the address zero, and known bits may give the others. Failing that,
-  // Ptr << 3 will do, as the bit-field extract reads only its low 5 bits.
-  KnownBits Known;
-  if (MMO->getBaseAlign() >= Align(4)) {
-    const uint64_t LowBits = MMO->getOffset() & 3;
-    Known = KnownBits::makeConstant(APInt(2, LowBits));
-    Pos.Index = DAG.getNode(ISD::SUB, DL, MVT::i32, Ptr,
-                            DAG.getConstant(LowBits, DL, MVT::i32));
-  } else {
-    Known = DAG.computeKnownBits(Ptr).trunc(2);
-    const unsigned AlignBits = std::min(Log2(MemOp->getAlign()), 2u);
-    Known.Zero.setLowBits(AlignBits);
-    Known.One.clearLowBits(AlignBits);
-    Pos.Index = Ptr;
-  }
-  Pos.Index = DAG.getNode(ISD::SRL, DL, MVT::i32, Pos.Index,
+  // The bits start at (Ptr & 3) * 8. A known byte offset is taken off the
+  // address of the index, so that the parts of a split access share the index
+  // of their dword. Otherwise Ptr << 3 will do, as the bit-field extract reads
+  // only its low 5 bits.
+  std::optional<unsigned> Byte =
+      AMDGPU::getVGPRDwordByteOffset(*MemOp->getMemOperand(), [&] {
+        return DAG.computeKnownBits(Ptr).trunc(2);
+      });
+  SDValue DwordAddress = Byte
+                             ? DAG.getNode(ISD::SUB, DL, MVT::i32, Ptr,
+                                           DAG.getConstant(*Byte, DL, MVT::i32))
+                             : Ptr;
+  Pos.Index = DAG.getNode(ISD::SRL, DL, MVT::i32, DwordAddress,
                           DAG.getConstant(2, DL, MVT::i32));
-  if (Known.isConstant()) {
-    Pos.KnownBitOffset = Known.getConstant().getZExtValue() * 8;
+  if (Byte) {
+    Pos.KnownBitOffset = *Byte * 8;
     Pos.BitOffset = DAG.getConstant(*Pos.KnownBitOffset, DL, MVT::i32);
   } else {
     Pos.BitOffset = DAG.getNode(ISD::SHL, DL, MVT::i32, Ptr,
@@ -13576,6 +13569,8 @@ static SDValue lowerSubDwordLoadVGPR(LoadSDNode *Load,
   SDValue Bits = DAG.getNode(
       Opc, DL, MVT::i32, Dword, Pos.BitOffset,
       DAG.getConstant(Load->getMemoryVT().getSizeInBits(), DL, MVT::i32));
+  // Not a MERGE_VALUES, which nothing folds at -O0 and type legalization cannot
+  // promote for a half.
   DCI.CombineTo(Load, getSubDwordLoadValue(DCI, Load, Bits), Dword.getValue(1));
   return SDValue(Load, 0);
 }
@@ -13612,8 +13607,10 @@ static SDValue lowerSubDwordStoreVGPR(StoreSDNode *Store, SelectionDAG &DAG) {
                                          MachineMemOperand::MOLoad));
 }
 
-// Split a VGPR ("as memory") access of whole bytes in two, the first part as
-// wide as AMDGPU::getVGPRSplitPartSize allows. Each part is lowered again.
+// Split a VGPR ("as memory") access of whole bytes, all at once, into parts as
+// wide as AMDGPU::getVGPRSplitPartSize allows, and one narrower part for what
+// is left. Each part is lowered again. The parts of a volatile access stay in
+// order.
 static SDValue splitLoadStoreVGPR(MemSDNode *MemOp,
                                   TargetLowering::DAGCombinerInfo &DCI) {
   SelectionDAG &DAG = DCI.DAG;
@@ -13622,50 +13619,146 @@ static SDValue splitLoadStoreVGPR(MemSDNode *MemOp,
   SDLoc DL(MemOp);
   EVT MemVT = MemOp->getMemoryVT();
   const unsigned Bits = MemVT.getSizeInBits();
-  const unsigned LoBits = AMDGPU::getVGPRSplitPartSize(Bits, MemOp->getAlign());
-  const unsigned HiBits = Bits - LoBits;
+  const unsigned PartBits =
+      AMDGPU::getVGPRSplitPartSize(Bits, MemOp->getAlign());
+  const unsigned NumParts = Bits / PartBits;
+  const unsigned BodyBits = NumParts * PartBits;
+  const unsigned RestBits = Bits - BodyBits;
   EVT IntVT = EVT::getIntegerVT(Ctx, Bits);
-  EVT LoVT = EVT::getIntegerVT(Ctx, LoBits);
-  EVT HiVT = EVT::getIntegerVT(Ctx, HiBits);
-  SDValue LoPtr = MemOp->getBasePtr();
-  SDValue HiPtr =
-      DAG.getObjectPtrOffset(DL, LoPtr, TypeSize::getFixed(LoBits / 8));
+  EVT PartVT = EVT::getIntegerVT(Ctx, PartBits);
+  EVT BodyVT = NumParts == 1 ? PartVT : EVT::getVectorVT(Ctx, PartVT, NumParts);
   const MachineMemOperand *MMO = MemOp->getMemOperand();
-  MachineMemOperand *LoMMO = MF.getMachineMemOperand(MMO, 0, LoBits / 8);
-  MachineMemOperand *HiMMO =
-      MF.getMachineMemOperand(MMO, LoBits / 8, HiBits / 8);
-  SDValue ShiftAmt = DAG.getShiftAmountConstant(LoBits, IntVT, DL);
+  const bool InOrder = MMO->isVolatile();
+  SmallVector<SDValue, 16> Chains;
+
+  // The chain, address and memory operand of the part of \p PartBytes bytes at
+  // byte \p Offset.
+  auto getPartChain = [&]() {
+    return InOrder && !Chains.empty() ? Chains.back() : MemOp->getChain();
+  };
+  auto getPartPtr = [&](unsigned Offset) {
+    return DAG.getObjectPtrOffset(DL, MemOp->getBasePtr(),
+                                  TypeSize::getFixed(Offset));
+  };
+  auto getPartMMO = [&](unsigned Offset, unsigned PartBytes) {
+    return MF.getMachineMemOperand(MMO, Offset, PartBytes);
+  };
+  auto getChain = [&]() {
+    return InOrder ? Chains.back()
+                   : DAG.getNode(ISD::TokenFactor, DL, MVT::Other, Chains);
+  };
 
   if (auto *Load = dyn_cast<LoadSDNode>(MemOp)) {
     assert((Load->getExtensionType() == ISD::NON_EXTLOAD ||
             MemVT.isScalarInteger()) &&
            "only integer extending loads are formed");
-    SDValue Lo = DAG.getLoad(LoVT, DL, Load->getChain(), LoPtr, LoMMO);
-    SDValue Hi = DAG.getLoad(HiVT, DL, Load->getChain(), HiPtr, HiMMO);
+    SmallVector<SDValue, 16> Parts;
+    for (unsigned I = 0; I != NumParts; ++I) {
+      const unsigned Offset = I * PartBits / 8;
+      SDValue Part = DAG.getLoad(PartVT, DL, getPartChain(), getPartPtr(Offset),
+                                 getPartMMO(Offset, PartBits / 8));
+      Parts.push_back(Part);
+      Chains.push_back(Part.getValue(1));
+    }
     SDValue Value =
-        DAG.getNode(ISD::OR, DL, IntVT, DAG.getZExtOrTrunc(Lo, DL, IntVT),
-                    DAG.getNode(ISD::SHL, DL, IntVT,
-                                DAG.getZExtOrTrunc(Hi, DL, IntVT), ShiftAmt));
+        NumParts == 1 ? Parts[0] : DAG.getBuildVector(BodyVT, DL, Parts);
+    if (RestBits) {
+      EVT RestVT = EVT::getIntegerVT(Ctx, RestBits);
+      SDValue Rest =
+          DAG.getLoad(RestVT, DL, getPartChain(), getPartPtr(BodyBits / 8),
+                      getPartMMO(BodyBits / 8, RestBits / 8));
+      Chains.push_back(Rest.getValue(1));
+      EVT BodyIntVT = EVT::getIntegerVT(Ctx, BodyBits);
+      Value = DAG.getNode(
+          ISD::OR, DL, IntVT,
+          DAG.getZExtOrTrunc(DAG.getBitcast(BodyIntVT, Value), DL, IntVT),
+          DAG.getNode(ISD::SHL, DL, IntVT, DAG.getZExtOrTrunc(Rest, DL, IntVT),
+                      DAG.getShiftAmountConstant(BodyBits, IntVT, DL)));
+    }
     Value = getLoadExtOrTrunc(DAG, Load->getExtensionType(),
                               DAG.getBitcast(MemVT, Value), DL,
                               Load->getValueType(0));
-    SDValue Chain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other,
-                                Lo.getValue(1), Hi.getValue(1));
-    DCI.CombineTo(Load, Value, Chain);
+    DCI.CombineTo(Load, Value, getChain());
     return SDValue(Load, 0);
   }
 
   auto *Store = cast<StoreSDNode>(MemOp);
-  SDValue Value = DAG.getBitcast(IntVT, getStoredValueVGPR(DAG, Store));
-  SDValue Lo =
-      DAG.getStore(Store->getChain(), DL,
-                   DAG.getNode(ISD::TRUNCATE, DL, LoVT, Value), LoPtr, LoMMO);
-  SDValue Hi = DAG.getStore(
-      Store->getChain(), DL,
-      DAG.getNode(ISD::TRUNCATE, DL, HiVT,
-                  DAG.getNode(ISD::SRL, DL, IntVT, Value, ShiftAmt)),
-      HiPtr, HiMMO);
-  return DAG.getNode(ISD::TokenFactor, DL, MVT::Other, Lo, Hi);
+  SDValue Value = getStoredValueVGPR(DAG, Store);
+  SDValue Body = Value;
+  if (RestBits) {
+    Value = DAG.getBitcast(IntVT, Value);
+    Body =
+        DAG.getNode(ISD::TRUNCATE, DL, EVT::getIntegerVT(Ctx, BodyBits), Value);
+  }
+  Body = DAG.getBitcast(BodyVT, Body);
+  for (unsigned I = 0; I != NumParts; ++I) {
+    const unsigned Offset = I * PartBits / 8;
+    SDValue Part =
+        NumParts == 1 ? Body : DAG.getExtractVectorElt(DL, PartVT, Body, I);
+    Chains.push_back(DAG.getStore(getPartChain(), DL, Part, getPartPtr(Offset),
+                                  getPartMMO(Offset, PartBits / 8)));
+  }
+  if (RestBits) {
+    SDValue Rest = DAG.getNode(
+        ISD::TRUNCATE, DL, EVT::getIntegerVT(Ctx, RestBits),
+        DAG.getNode(ISD::SRL, DL, IntVT, Value,
+                    DAG.getShiftAmountConstant(BodyBits, IntVT, DL)));
+    Chains.push_back(DAG.getStore(getPartChain(), DL, Rest,
+                                  getPartPtr(BodyBits / 8),
+                                  getPartMMO(BodyBits / 8, RestBits / 8)));
+  }
+  return getChain();
+}
+
+// Lower a VGPR ("as memory") access of a type that is not a whole number of
+// bytes as one of its store size, with the extra bits zero, as LegalizeDAG does
+// in other address spaces.
+static SDValue lowerNonByteLoadStoreVGPR(MemSDNode *MemOp,
+                                         TargetLowering::DAGCombinerInfo &DCI) {
+  SelectionDAG &DAG = DCI.DAG;
+  LLVMContext &Ctx = *DAG.getContext();
+  SDLoc DL(MemOp);
+  EVT MemVT = MemOp->getMemoryVT();
+  EVT IntVT = EVT::getIntegerVT(Ctx, MemVT.getSizeInBits());
+  EVT StoreVT = EVT::getIntegerVT(Ctx, MemVT.getStoreSizeInBits());
+  MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
+      MemOp->getMemOperand(), 0, MemVT.getStoreSize());
+
+  if (auto *Store = dyn_cast<StoreSDNode>(MemOp)) {
+    SDValue Value = DAG.getZExtOrTrunc(
+        DAG.getBitcast(IntVT, getStoredValueVGPR(DAG, Store)), DL, StoreVT);
+    return DAG.getStore(Store->getChain(), DL, Value, Store->getBasePtr(), MMO);
+  }
+
+  auto *Load = cast<LoadSDNode>(MemOp);
+  assert((Load->getExtensionType() == ISD::NON_EXTLOAD ||
+          MemVT.isScalarInteger()) &&
+         "only integer extending loads are formed");
+  EVT VT = Load->getValueType(0);
+  SDValue Wide =
+      DAG.getLoad(StoreVT, DL, Load->getChain(), Load->getBasePtr(), MMO);
+  SDValue Value;
+  switch (Load->getExtensionType()) {
+  case ISD::NON_EXTLOAD:
+    Value = DAG.getBitcast(MemVT, DAG.getNode(ISD::TRUNCATE, DL, IntVT, Wide));
+    break;
+  case ISD::EXTLOAD:
+    Value = DAG.getAnyExtOrTrunc(Wide, DL, VT);
+    break;
+  case ISD::SEXTLOAD:
+    Value = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, VT,
+                        DAG.getAnyExtOrTrunc(Wide, DL, VT),
+                        DAG.getValueType(MemVT));
+    break;
+  case ISD::ZEXTLOAD:
+    // The extra bits are zero, as a store of the type writes them so.
+    Value =
+        DAG.getNode(ISD::AssertZext, DL, VT, DAG.getZExtOrTrunc(Wide, DL, VT),
+                    DAG.getValueType(MemVT));
+    break;
+  }
+  DCI.CombineTo(Load, Value, Wide.getValue(1));
+  return SDValue(Load, 0);
 }
 
 // Lower a VGPR ("as memory") load or store to REG_LOAD / REG_STORE nodes
@@ -13677,25 +13770,6 @@ SDValue SITargetLowering::lowerLoadStoreVGPR(SDValue Op,
   MemSDNode *MemOp = cast<MemSDNode>(Op);
   EVT MemVT = MemOp->getMemoryVT();
   unsigned BitWidth = MemVT.getSizeInBits();
-
-  // Each caller replaces the node, so this is diagnosed once. A load is
-  // replaced with CombineTo, as a MERGE_VALUES of a half is not folded at -O0
-  // and type legalization cannot promote one.
-  auto reportUnsupported = [&]() -> SDValue {
-    const Function &F = DAG.getMachineFunction().getFunction();
-    DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
-        F,
-        "unsupported access of VGPR 'as memory' address space (13); only "
-        "loads and stores of whole bytes are implemented",
-        DL.getDebugLoc()));
-    if (auto *Load = dyn_cast<LoadSDNode>(MemOp)) {
-      DCI.CombineTo(Load, DAG.getPOISON(Load->getValueType(0)),
-                    Load->getChain());
-      return SDValue(Load, 0);
-    }
-    return MemOp->getChain();
-  };
-
   auto *Store = dyn_cast<StoreSDNode>(MemOp);
 
   // Natural alignment keeps an 8- or 16-bit access inside one dword.
@@ -13707,7 +13781,7 @@ SDValue SITargetLowering::lowerLoadStoreVGPR(SDValue Op,
   }
 
   if (!MemVT.isByteSized())
-    return reportUnsupported();
+    return lowerNonByteLoadStoreVGPR(MemOp, DCI);
 
   // The index is the pointer >> 2, so any other access that is not a whole
   // number of dwords at dword alignment is split.

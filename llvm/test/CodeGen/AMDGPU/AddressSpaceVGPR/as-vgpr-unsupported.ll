@@ -1,39 +1,8 @@
 ; RUN: not llc -global-isel=0 -mtriple=amdgpu12.00-- -filetype=null < %s 2>&1 | FileCheck %s --implicit-check-not=error:
 ; RUN: not llc -global-isel=1 -mtriple=amdgpu12.00-- -filetype=null < %s 2>&1 | FileCheck %s --implicit-check-not=error:
 
-; Unimplemented accesses get a clean diagnostic on both selectors, not a
+; What is not implemented gets a clean diagnostic on both selectors, not a
 ; selection or legalization failure, or wrong code.
-
-; A type that is not a whole number of bytes is not implemented.
-; CHECK: error: {{.*}}in function load_i1 {{.*}}: unsupported access of VGPR 'as memory' address space (13); only loads and stores of whole bytes are implemented
-define i1 @load_i1(ptr addrspace(13) inreg %p) {
-  %x = load i1, ptr addrspace(13) %p
-  ret i1 %x
-}
-
-; CHECK: error: {{.*}}in function store_i1 {{.*}}: unsupported access of VGPR 'as memory' address space (13); only loads and stores of whole bytes are implemented
-define void @store_i1(ptr addrspace(13) inreg %p, i1 %v) {
-  store i1 %v, ptr addrspace(13) %p
-  ret void
-}
-
-; CHECK: error: {{.*}}in function load_i4 {{.*}}: unsupported access of VGPR 'as memory' address space (13); only loads and stores of whole bytes are implemented
-define i4 @load_i4(ptr addrspace(13) inreg %p) {
-  %x = load i4, ptr addrspace(13) %p
-  ret i4 %x
-}
-
-; CHECK: error: {{.*}}in function store_v4i1 {{.*}}: unsupported access of VGPR 'as memory' address space (13); only loads and stores of whole bytes are implemented
-define void @store_v4i1(ptr addrspace(13) inreg %p, <4 x i1> %v) {
-  store <4 x i1> %v, ptr addrspace(13) %p
-  ret void
-}
-
-; CHECK: error: {{.*}}in function load_i12 {{.*}}: unsupported access of VGPR 'as memory' address space (13); only loads and stores of whole bytes are implemented
-define i12 @load_i12(ptr addrspace(13) inreg %p) {
-  %x = load i12, ptr addrspace(13) %p
-  ret i12 %x
-}
 
 ; An alloca in VGPR "as memory" has no registers to live in, so one that
 ; reaches instruction selection is diagnosed rather than given a stack slot

@@ -3583,33 +3583,24 @@ static SubDwordPosition getSubDwordPosition(LegalizerHelper &Helper,
   MachineIRBuilder &B = Helper.MIRBuilder;
   const LLT I32 = LLT::integer(32);
   const Register Ptr = LdSt.getPointerReg();
-  const MachineMemOperand &MMO = LdSt.getMMO();
   auto PtrAsInt = B.buildPtrToInt(I32, Ptr);
   SubDwordPosition Pos;
 
-  // The bits start at (Ptr & 3) * 8. If the base of the memory operand is
-  // dword-aligned, its offset gives them, and the parts of a split access share
-  // the index of their dword. Otherwise the alignment of the access makes low
-  // bits of the address zero, and known bits may give the others. Failing that,
-  // the offset is (Ptr << 3) & 31.
-  KnownBits Known;
+  // The bits start at (Ptr & 3) * 8. A known byte offset is taken off the
+  // address of the index, so that the parts of a split access share the index
+  // of their dword. Otherwise the offset is (Ptr << 3) & 31.
+  std::optional<unsigned> Byte =
+      AMDGPU::getVGPRDwordByteOffset(LdSt.getMMO(), [&] {
+        return Helper.getValueTracking()->getKnownBits(Ptr).trunc(2);
+      });
   Register DwordAddress = PtrAsInt.getReg(0);
-  if (MMO.getBaseAlign() >= Align(4)) {
-    const uint64_t LowBits = MMO.getOffset() & 3;
-    Known = KnownBits::makeConstant(APInt(2, LowBits));
-    if (LowBits != 0) {
-      DwordAddress =
-          B.buildSub(I32, PtrAsInt, B.buildConstant(I32, LowBits)).getReg(0);
-    }
-  } else {
-    Known = Helper.getValueTracking()->getKnownBits(Ptr).trunc(2);
-    const unsigned AlignBits = std::min(Log2(LdSt.getAlign()), 2u);
-    Known.Zero.setLowBits(AlignBits);
-    Known.One.clearLowBits(AlignBits);
+  if (Byte.value_or(0) != 0) {
+    DwordAddress =
+        B.buildSub(I32, PtrAsInt, B.buildConstant(I32, *Byte)).getReg(0);
   }
   Pos.Index = B.buildLShr(I32, DwordAddress, B.buildConstant(I32, 2)).getReg(0);
-  if (Known.isConstant()) {
-    Pos.KnownBitOffset = Known.getConstant().getZExtValue() * 8;
+  if (Byte) {
+    Pos.KnownBitOffset = *Byte * 8;
     Pos.BitOffset = B.buildConstant(I32, *Pos.KnownBitOffset).getReg(0);
   } else {
     auto BitAddress = B.buildShl(I32, PtrAsInt, B.buildConstant(I32, 3));
@@ -3751,19 +3742,6 @@ static bool lowerLoadStoreVGPR(LegalizerHelper &Helper, GLoadStore &LdSt) {
   const unsigned MemSize = MMO.getMemoryType().getSizeInBits();
   const LLT I32 = LLT::integer(32);
 
-  auto reportUnsupported = [&]() {
-    const Function &F = B.getMF().getFunction();
-    F.getContext().diagnose(DiagnosticInfoUnsupported(
-        F,
-        "unsupported access of VGPR 'as memory' address space (13); only "
-        "loads and stores of whole bytes are implemented",
-        LdSt.getDebugLoc()));
-    if (!IsStore)
-      B.buildUndef(ValReg);
-    LdSt.eraseFromParent();
-    return true;
-  };
-
   // Natural alignment keeps an 8- or 16-bit access inside one dword.
   const bool IsSubDword = MemSize == 8 || MemSize == 16;
   if (IsSubDword && LdSt.getAlign() >= Align(MemSize / 8)) {
@@ -3774,8 +3752,16 @@ static bool lowerLoadStoreVGPR(LegalizerHelper &Helper, GLoadStore &LdSt) {
     return true;
   }
 
-  if (MemSize % 8 != 0)
-    return reportUnsupported();
+  // A type that is not a whole number of bytes is accessed as one of its store
+  // size, with the extra bits zero, as in other address spaces. A vector is
+  // made an integer first.
+  if (MemSize % 8 != 0) {
+    LegalizerHelper::LegalizeResult Res =
+        ValTy.isVector() ? Helper.bitcast(LdSt, 0, LLT::integer(ValSize))
+        : IsStore        ? Helper.lowerStore(cast<GStore>(LdSt))
+                         : Helper.lowerLoad(cast<GAnyLoad>(LdSt));
+    return Res == LegalizerHelper::Legalized;
+  }
 
   // The combiner turns an extension of a load into an extending load, and a
   // truncation of a stored value into a truncating store. Access the memory
@@ -3802,8 +3788,8 @@ static bool lowerLoadStoreVGPR(LegalizerHelper &Helper, GLoadStore &LdSt) {
   if (MemSize % 32 != 0 || LdSt.getAlign() < Align(4))
     return splitLoadStoreVGPR(Helper, LdSt);
 
-  if (MemSize != ValSize)
-    return reportUnsupported();
+  assert(MemSize == ValSize &&
+         "vector extending loads and truncating stores are not formed");
 
   // A width no VGPR tuple has is split, the widest part first, and each part is
   // legalized again. When there is no part, the access is first made one of

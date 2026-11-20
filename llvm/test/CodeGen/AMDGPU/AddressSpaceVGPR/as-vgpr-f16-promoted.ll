@@ -104,7 +104,6 @@ define half @load_f16_align1(ptr addrspace(13) inreg %p) {
 ; GFX7-SDAG-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX7-SDAG-NEXT:    v_bfe_u32 v1, v1, s6, v2
 ; GFX7-SDAG-NEXT:    v_and_b32_e64 v1, v1, s5
-; GFX7-SDAG-NEXT:    v_and_b32_e64 v1, v1, s5
 ; GFX7-SDAG-NEXT:    v_lshlrev_b32_e64 v1, s4, v1
 ; GFX7-SDAG-NEXT:    v_or_b32_e64 v0, v0, v1
 ; GFX7-SDAG-NEXT:    s_setpc_b64 s[30:31]

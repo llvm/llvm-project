@@ -16,6 +16,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/IR/DebugLoc.h"
+#include <optional>
 
 namespace llvm {
 
@@ -24,6 +25,7 @@ class AAResults;
 class DataLayout;
 class GlobalVariable;
 class Instruction;
+struct KnownBits;
 class LoadInst;
 class MachineFunction;
 class MemoryDef;
@@ -60,11 +62,19 @@ void copyMetadataForWidenedLoad(LoadInst &Dest, const LoadInst &Source);
 MachineMemOperand *getVGPRDwordMemOperand(MachineFunction &MF,
                                           MachineMemOperand::Flags Flags);
 
-// The width of the first part of a VGPR address space access of \p Bits bits
-// at \p Alignment that is neither a naturally aligned 8- or 16-bit one nor
-// whole dwords at dword alignment, when it is split: whole dwords if it is
+// The width of the parts of a VGPR address space access of \p Bits bits at
+// \p Alignment that is neither a naturally aligned 8- or 16-bit one nor whole
+// dwords at dword alignment, when it is split: whole dwords if it is
 // dword-aligned, otherwise a half or a byte, as the alignment allows.
 unsigned getVGPRSplitPartSize(unsigned Bits, Align Alignment);
+
+// The byte offset in its dword of an 8- or 16-bit VGPR address space access
+// with memory operand \p MMO, if it is known: the offset of the memory operand
+// if its base is dword-aligned, otherwise what the alignment of the access and
+// \p LowAddressBits, the known low two bits of the address, give.
+std::optional<unsigned>
+getVGPRDwordByteOffset(const MachineMemOperand &MMO,
+                       function_ref<KnownBits()> LowAddressBits);
 
 // If GV is a named-barrier return its type. Otherwise return nullptr.
 TargetExtType *isNamedBarrier(const GlobalVariable &GV);
