@@ -120,8 +120,8 @@ static void LoadRustFormatters(lldb::TypeCategoryImplSP rust_category_sp) {
 
   AddCXXSummary(rust_category_sp,
                 lldb_private::formatters::ContainerSizeSummaryProvider,
-                "Rust vector summary provider", "^alloc::vec::Vec<.+>(( )?&)?$",
-                summary_flags, true);
+                "Rust vector summary provider",
+                "^(alloc::([a-z_]+::)+)Vec<.+>$", summary_flags, true);
 
   SyntheticChildren::Flags synth_flags;
   synth_flags.SetCascades(true)
@@ -132,7 +132,7 @@ static void LoadRustFormatters(lldb::TypeCategoryImplSP rust_category_sp) {
   AddCXXSynthetic(rust_category_sp,
                   lldb_private::formatters::RustVectorSyntheticFrontEndCreator,
                   "Rust vector synthetic children",
-                  "^alloc::vec::Vec<.+>(( )?&)?$", synth_flags, true);
+                  "^(alloc::([a-z_]+::)+)Vec<.+>$", synth_flags, true);
 }
 
 lldb::TypeCategoryImplSP RustLanguage::GetFormatters() {
