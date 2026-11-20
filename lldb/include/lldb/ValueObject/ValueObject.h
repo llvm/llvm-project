@@ -27,6 +27,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 
 #include <functional>
@@ -588,7 +589,7 @@ public:
 
   AddrAndType GetPointerValue();
 
-  lldb::ValueObjectSP GetSyntheticChild(ConstString key) const;
+  lldb::ValueObjectSP GetSyntheticChild(llvm::StringRef key) const;
 
   lldb::ValueObjectSP GetSyntheticArrayMember(size_t index, bool can_create);
 
@@ -600,12 +601,12 @@ public:
 
   virtual lldb::ValueObjectSP
   GetSyntheticChildAtOffset(uint32_t offset, const CompilerType &type,
-                            bool can_create,
-                            ConstString name_const_str = ConstString());
+                            bool can_create, llvm::StringRef name = {});
 
-  virtual lldb::ValueObjectSP
-  GetSyntheticBase(uint32_t offset, const CompilerType &type, bool can_create,
-                   ConstString name_const_str = ConstString());
+  virtual lldb::ValueObjectSP GetSyntheticBase(uint32_t offset,
+                                               const CompilerType &type,
+                                               bool can_create,
+                                               llvm::StringRef name = {});
 
   virtual lldb::ValueObjectSP GetDynamicValue(lldb::DynamicValueType valueType);
 
@@ -1123,7 +1124,7 @@ protected:
   ValueObjectManager *m_manager = nullptr;
 
   ChildrenManager m_children;
-  std::map<ConstString, ValueObject *> m_synthetic_children;
+  llvm::StringMap<ValueObject *> m_synthetic_children;
 
   ValueObject *m_dynamic_value = nullptr;
   ValueObject *m_synthetic_value = nullptr;
@@ -1239,7 +1240,7 @@ protected:
   void ClearUserVisibleData(
       uint32_t items = ValueObject::eClearUserVisibleDataItemsAllStrings);
 
-  void AddSyntheticChild(ConstString key, ValueObject *valobj);
+  void AddSyntheticChild(llvm::StringRef key, ValueObject *valobj);
 
   DataExtractor &GetDataExtractor();
 

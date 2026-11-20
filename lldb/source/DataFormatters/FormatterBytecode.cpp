@@ -875,7 +875,7 @@ llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig,
         TYPE_CHECK(Object, String, Integer, Type);
         auto type = data.Pop<CompilerType>();
         auto offset = data.Pop<llvm::APSInt>().getLimitedValue(UINT32_MAX);
-        ConstString name(data.Pop<std::string>());
+        auto name = data.Pop<std::string>();
         POP_VALOBJ(valobj);
         data.Push(valobj->GetSyntheticChildAtOffset(offset, type, true, name));
         break;
