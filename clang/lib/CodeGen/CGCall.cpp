@@ -965,6 +965,8 @@ void CodeGenModule::computeABIInfoUsingLib(CGFunctionInfo &FI) {
     case ABIArgInfo::Extend:
       CheckSimple(Target.isSignExt(), Res.isSignExt(), "SignExt");
       CheckSimple(Target.isZeroExt(), Res.isZeroExt(), "ZeroExt");
+      CheckSimple(Target.isConservative(), Res.isConservative(),
+                  "Conservative");
       [[fallthrough]];
     case ABIArgInfo::Direct:
       CheckSimple(Target.getDirectAlign(), Res.getDirectAlign(), "DirectAlign");
@@ -1051,11 +1053,15 @@ ABIArgInfo CodeGenModule::convertABIArgInfo(const llvm::abi::ArgInfo &AbiInfo,
     // useFirstFieldIfTransparentUnion.  Passing the union type to
     // ABIArgInfo::getSignExtend would trip its integral-type assert.
     QualType ExtendType = useFirstFieldIfTransparentUnion(Type);
+    ABIArgInfo Res;
     if (AbiInfo.isSignExt())
-      return ABIArgInfo::getSignExtend(ExtendType, CoercedType);
-    if (AbiInfo.isZeroExt())
-      return ABIArgInfo::getZeroExtend(ExtendType, CoercedType);
-    return ABIArgInfo::getExtend(ExtendType, CoercedType);
+      Res = ABIArgInfo::getSignExtend(ExtendType, CoercedType);
+    else if (AbiInfo.isZeroExt())
+      Res = ABIArgInfo::getZeroExtend(ExtendType, CoercedType);
+    else
+      Res = ABIArgInfo::getNoExtend(cast<llvm::IntegerType>(CoercedType));
+    Res.setConservative(AbiInfo.isConservative());
+    return Res;
   }
   case llvm::abi::ArgInfo::Indirect: {
     CharUnits Alignment =
@@ -2264,27 +2270,6 @@ static void AddAttributesFromFunctionProtoType(ASTContext &Ctx,
     FuncAttrs.addAttribute("aarch64_out_zt0");
   if (FunctionType::getArmZT0State(SMEBits) == FunctionType::ARM_InOut)
     FuncAttrs.addAttribute("aarch64_inout_zt0");
-
-  unsigned RISCVBits = FPT->getRISCVAttributes();
-  switch (FunctionType::getRISCVXsfmmState(RISCVBits)) {
-  case FunctionType::RISCVNone:
-    break;
-  case FunctionType::RISCVIn:
-    FuncAttrs.addAttribute("riscv_in");
-    break;
-  case FunctionType::RISCVOut:
-    FuncAttrs.addAttribute("riscv_out");
-    break;
-  case FunctionType::RISCVInOut:
-    FuncAttrs.addAttribute("riscv_inout");
-    break;
-  case FunctionType::RISCVPreserves:
-    FuncAttrs.addAttribute("riscv_preserves");
-    break;
-  case FunctionType::RISCVNew:
-    FuncAttrs.addAttribute("riscv_new");
-    break;
-  }
 }
 
 static void AddAttributesFromOMPAssumes(llvm::AttrBuilder &FuncAttrs,
@@ -2407,9 +2392,6 @@ static void getTrivialDefaultFunctionAttributes(
                              CodeGenOptions::getFramePointerKindName(
                                  CodeGenOpts.getFramePointer()));
     }
-
-    if (CodeGenOpts.LessPreciseFPMAD)
-      FuncAttrs.addAttribute("less-precise-fpmad", "true");
 
     if (CodeGenOpts.NullPointerIsValid)
       FuncAttrs.addAttribute(llvm::Attribute::NullPointerIsValid);
@@ -2708,27 +2690,6 @@ static bool DetermineNoUndef(QualType QTy, CodeGenTypes &Types,
     return DetermineNoUndef(Array->getElementType(), Types, DL, AI, false);
 
   // TODO: Some structs may be `noundef`, in specific situations.
-  return false;
-}
-
-/// Check if the argument of a function has maybe_undef attribute.
-static bool IsArgumentMaybeUndef(const Decl *TargetDecl,
-                                 unsigned NumRequiredArgs, unsigned ArgNo) {
-  const auto *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl);
-  if (!FD)
-    return false;
-
-  // Assume variadic arguments do not have maybe_undef attribute.
-  if (ArgNo >= NumRequiredArgs)
-    return false;
-
-  // Check if argument has maybe_undef attribute.
-  if (ArgNo < FD->getNumParams()) {
-    const ParmVarDecl *Param = FD->getParamDecl(ArgNo);
-    if (Param && Param->hasAttr<MaybeUndefAttr>())
-      return true;
-  }
-
   return false;
 }
 
@@ -3065,6 +3026,7 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
 
   switch (RetAI.getKind()) {
   case ABIArgInfo::Extend:
+    assert(!RetAI.isConservative() && "Conservative return not supported");
     if (RetAI.isSignExt())
       RetAttrs.addAttribute(llvm::Attribute::SExt);
     else if (RetAI.isZeroExt())
@@ -3199,6 +3161,15 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
     }
   }
 
+  if (const auto *Fn = dyn_cast_if_present<FunctionDecl>(TargetDecl)) {
+    if (Fn->isReplaceableGlobalAllocationFunction() &&
+        Fn->getDeclName().isAnyOperatorDelete()) {
+      auto IRArgs = IRFunctionArgs.getIRArgs(0);
+      assert(IRArgs.second == 1 && "Expected only a single pointer to delete.");
+      ArgAttrs[IRArgs.first].addAttribute(llvm::Attribute::AllocatedPointer);
+    }
+  }
+
   unsigned ArgNo = 0;
   for (CGFunctionInfo::const_arg_iterator I = FI.arg_begin(), E = FI.arg_end();
        I != E; ++I, ++ArgNo) {
@@ -3225,12 +3196,16 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
     // sense to do it here because parameters are so messed up.
     switch (AI.getKind()) {
     case ABIArgInfo::Extend:
-      if (AI.isSignExt())
-        Attrs.addAttribute(llvm::Attribute::SExt);
-      else if (AI.isZeroExt())
-        Attrs.addAttribute(llvm::Attribute::ZExt);
-      else
-        Attrs.addAttribute(llvm::Attribute::NoExt);
+      // Under conservative extension, add sext/zext only on the call site; the
+      // callee does not get to assume extension.
+      if (AttrOnCallSite || !AI.isConservative()) {
+        if (AI.isSignExt())
+          Attrs.addAttribute(llvm::Attribute::SExt);
+        else if (AI.isZeroExt())
+          Attrs.addAttribute(llvm::Attribute::ZExt);
+        else
+          Attrs.addAttribute(llvm::Attribute::NoExt);
+      }
       [[fallthrough]];
     case ABIArgInfo::TargetSpecific:
     case ABIArgInfo::Direct:
@@ -4642,6 +4617,29 @@ void CodeGenFunction::EmitReturnValueCheck(llvm::Value *RV) {
   if (ReturnBlock.isValid() && ReturnBlock.getBlock()->use_empty())
     return;
 
+  if (SanOpts.has(SanitizerKind::Alignment)) {
+    if (const AllocAlignAttr *AA = CurCodeDecl->getAttr<AllocAlignAttr>()) {
+      if (isa<FunctionDecl>(CurCodeDecl)) {
+        unsigned PI = AA->getParamIndex().getLLVMIndex();
+        llvm::Value *Alignment = CurFn->getArg(PI);
+        emitReturnAlignmentAssumptionCheck(RV, FnRetTy, AA->getLocation(),
+                                           Alignment);
+      }
+    }
+    if (const AssumeAlignedAttr *AA =
+            CurCodeDecl->getAttr<AssumeAlignedAttr>()) {
+      llvm::Value *Alignment = EmitScalarExpr(AA->getAlignment());
+      llvm::ConstantInt *OffsetCI = nullptr;
+      if (Expr *Offset = AA->getOffset()) {
+        OffsetCI = cast<llvm::ConstantInt>(EmitScalarExpr(Offset));
+        if (OffsetCI->isNullValue()) // Canonicalize zero offset to no offset.
+          OffsetCI = nullptr;
+      }
+      emitReturnAlignmentAssumptionCheck(RV, FnRetTy, AA->getLocation(),
+                                         Alignment, OffsetCI);
+    }
+  }
+
   ReturnsNonNullAttr *RetNNAttr = nullptr;
   if (SanOpts.has(SanitizerKind::ReturnsNonnullAttribute))
     RetNNAttr = CurCodeDecl->getAttr<ReturnsNonNullAttr>();
@@ -5704,6 +5702,28 @@ public:
                     .getRValue(CGF)
                     .getScalarVal();
   }
+
+  [[nodiscard]] llvm::AttributeList
+  TryEmitAsCallSiteAttribute(const llvm::AttributeList &Attrs,
+                             const ClangToLLVMArgMapping &IRFunctionArgs) {
+    llvm::AttributeList NewAttrs = Attrs;
+    if (AA) {
+      auto [FirstIRArg, NumIRArgs] =
+          IRFunctionArgs.getIRArgs(AA->getParamIndex().getLLVMIndex());
+      if (NumIRArgs == 1)
+        NewAttrs = NewAttrs.addParamAttribute(CGF.getLLVMContext(), FirstIRArg,
+                                              llvm::Attribute::AllocAlign);
+    }
+    // NOTE: we shouldn't _need_ to emit this `align` attribute here, but there
+    // are some interesting cases where LLVM can manage to delete the arguments
+    // to a function that has the `alloc_align` attribute on it, and then the
+    // alignment gets lost. An example of this is the failure you'll get in
+    // clang/test/Headers/mm_malloc.c if this `align` is omitted, because
+    // _mm_malloc ends up getting its arguments turned into constants that get
+    // passed to posix_memalign, which we don't have logic to handle in LLVM.
+    return AbstractAssumeAlignedAttrEmitter<
+        AllocAlignAttr>::TryEmitAsCallSiteAttribute(NewAttrs);
+  }
 };
 
 } // namespace
@@ -5861,8 +5881,8 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     unsigned FirstIRArg, NumIRArgs;
     std::tie(FirstIRArg, NumIRArgs) = IRFunctionArgs.getIRArgs(ArgNo);
 
-    bool ArgHasMaybeUndefAttr =
-        IsArgumentMaybeUndef(TargetDecl, CallInfo.getNumRequiredArgs(), ArgNo);
+    bool ArgHasMaybeUndefAttr = CodeGenUtils::isArgumentMaybeUndef(
+        TargetDecl, CallInfo.getNumRequiredArgs(), ArgNo);
 
     switch (ArgInfo.getKind()) {
     case ABIArgInfo::InAlloca: {
@@ -6420,7 +6440,8 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   Attrs = AssumeAlignedAttrEmitter.TryEmitAsCallSiteAttribute(Attrs);
 
   AllocAlignAttrEmitter AllocAlignAttrEmitter(*this, TargetDecl, CallArgs);
-  Attrs = AllocAlignAttrEmitter.TryEmitAsCallSiteAttribute(Attrs);
+  Attrs =
+      AllocAlignAttrEmitter.TryEmitAsCallSiteAttribute(Attrs, IRFunctionArgs);
 
   if (Attrs.hasFnAttr(llvm::Attribute::Convergent)) {
     addConvergenceControlBundle(BundleList);
@@ -6876,7 +6897,6 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   // Emit the assume_aligned check on the return value.
   if (Ret.isScalar() && TargetDecl) {
     AssumeAlignedAttrEmitter.EmitAsAnAssumption(Loc, RetTy, Ret);
-    AllocAlignAttrEmitter.EmitAsAnAssumption(Loc, RetTy, Ret);
   }
 
   // Emit the end lifetime markers for any temporary allocas created for the

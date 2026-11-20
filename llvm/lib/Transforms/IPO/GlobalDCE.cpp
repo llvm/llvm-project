@@ -204,7 +204,7 @@ void GlobalDCEPass::ScanVTableLoad(Function *Caller, Metadata *TypeId,
 
     LLVM_DEBUG(dbgs() << "vfunc dep " << Caller->getName() << " -> "
                       << Callee->getName() << "\n");
-    GVDependencies[Caller].insert(Callee);
+    VFuncDependencies[Caller].insert({VTable, Callee});
   }
 }
 
@@ -281,13 +281,27 @@ void GlobalDCEPass::AddVirtualFunctionDependencies(Module &M) {
 PreservedAnalyses GlobalDCEPass::run(Module &M, ModuleAnalysisManager &MAM) {
   bool Changed = false;
 
+  // Only the analyses of the deleted functions need to be cleared.
+  FunctionAnalysisManager *FAM = nullptr;
+  if (MAM.isPassRegistered<FunctionAnalysisManagerModuleProxy>()) {
+    if (auto *FAMProxy =
+            MAM.getCachedResult<FunctionAnalysisManagerModuleProxy>(M))
+      FAM = &FAMProxy->getManager();
+  }
+
   // The algorithm first computes the set L of global variables that are
-  // trivially live.  Then it walks the initialization of these variables to
-  // compute the globals used to initialize them, which effectively builds a
-  // directed graph where nodes are global variables, and an edge from A to B
-  // means B is used to initialize A.  Finally, it propagates the liveness
-  // information through the graph starting from the nodes in L. Nodes note
-  // marked as alive are discarded.
+  // trivially live.
+  //
+  // Then it walks the initialization of these variables to compute the globals
+  // used to initialize them, which effectively builds a directed graph where
+  // nodes are global variables, and an edge from A to B means B is used to
+  // initialize A.
+  //
+  // Finally, it propagates the liveness information through the graph starting
+  // from the nodes in L. A virtual call only keeps a virtual function alive
+  // when its vtable is also live.
+  //
+  // Nodes not marked as alive are discarded.
 
   // Remove empty functions from the global ctors list.
   Changed |= optimizeGlobalCtorsList(
@@ -349,6 +363,29 @@ PreservedAnalyses GlobalDCEPass::run(Module &M, ModuleAnalysisManager &MAM) {
     GlobalValue *LGV = NewLiveGVs.pop_back_val();
     for (auto *GVD : GVDependencies[LGV])
       MarkLive(*GVD, &NewLiveGVs);
+
+    // A virtual call keeps a virtual function alive only if the vtable it is
+    // loaded from is alive too. If the vtable is not live, defer the function:
+    // the vtable may become live later.
+    if (auto *F = dyn_cast<Function>(LGV)) {
+      if (auto It = VFuncDependencies.find(F); It != VFuncDependencies.end()) {
+        for (auto [VTable, VFunc] : It->second) {
+          if (AliveGlobals.contains(VTable))
+            MarkLive(*VFunc, &NewLiveGVs);
+          else
+            PendingVFuncs[VTable].push_back(VFunc);
+        }
+      }
+    }
+
+    // If LGV is a vtable that became alive later, mark its deferred functions
+    // live.
+    if (auto *VT = dyn_cast<GlobalVariable>(LGV)) {
+      if (auto It = PendingVFuncs.find(VT); It != PendingVFuncs.end()) {
+        for (auto *VFunc : It->second)
+          MarkLive(*VFunc, &NewLiveGVs);
+      }
+    }
   }
 
   // Now that all globals which are needed are in the AliveGlobals set, we loop
@@ -373,6 +410,8 @@ PreservedAnalyses GlobalDCEPass::run(Module &M, ModuleAnalysisManager &MAM) {
   for (Function &F : M)
     if (!AliveGlobals.count(&F)) {
       DeadFunctions.push_back(&F);         // Keep track of dead globals
+      if (FAM)
+        FAM->clear(F, F.getName());
       if (!F.isDeclaration())
         F.deleteBody();
     }
@@ -440,13 +479,19 @@ PreservedAnalyses GlobalDCEPass::run(Module &M, ModuleAnalysisManager &MAM) {
   AliveGlobals.clear();
   ConstantDependenciesCache.clear();
   GVDependencies.clear();
+  VFuncDependencies.clear();
+  PendingVFuncs.clear();
   ComdatMembers.clear();
   TypeIdMap.clear();
   VFESafeVTables.clear();
 
-  if (Changed)
-    return PreservedAnalyses::none();
-  return PreservedAnalyses::all();
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA;
+  PA.preserve<FunctionAnalysisManagerModuleProxy>();
+  PA.preserveSet<AllAnalysesOn<Function>>();
+  return PA;
 }
 
 void GlobalDCEPass::printPipeline(

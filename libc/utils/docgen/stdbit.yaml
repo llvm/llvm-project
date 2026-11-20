@@ -1,3 +1,4 @@
+standard: c23
 c-reference-root: numeric/bit
 functions:
   stdc_bit_ceil_uc:

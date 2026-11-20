@@ -1,4 +1,18 @@
+standard: c23
+posix: posix-2024
 c-reference-root: string/wide
+types:
+  locale_t:
+    in-latest-posix: ''
+  wctrans_t:
+    c-definition: 7.32.1
+    in-latest-posix: ''
+  wctype_t:
+    c-definition: 7.32.1
+    in-latest-posix: ''
+  wint_t:
+    c-definition: 7.32.1
+    in-latest-posix: ''
 functions:
   iswalnum:
     c-definition: 7.32.2.1.1
@@ -89,4 +103,8 @@ functions:
     c-definition: 7.32.2.2.2
     in-latest-posix: ''
   wctype_l:
+    in-latest-posix: ''
+macros:
+  WEOF:
+    c-definition: 7.32.1
     in-latest-posix: ''

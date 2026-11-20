@@ -1,4 +1,13 @@
+standard: c23
+posix: posix-2024
 c-reference-root: numeric/fenv
+types:
+  fenv_t:
+    c-definition: '7.6'
+    in-latest-posix: ''
+  fexcept_t:
+    c-definition: '7.6'
+    in-latest-posix: ''
 functions:
   fe_dec_getround:
     c-definition: 7.6.5.3
@@ -62,6 +71,12 @@ functions:
     c-definition: 7.6.6.4
     c-reference: numeric/fenv/feenv
     in-latest-posix: ''
+  fedisableexcept:
+    extension: gnu
+  feenableexcept:
+    extension: gnu
+  fegetexcept:
+    extension: gnu
 macros:
   FE_ALL_EXCEPT:
     c-definition: 7.6.12

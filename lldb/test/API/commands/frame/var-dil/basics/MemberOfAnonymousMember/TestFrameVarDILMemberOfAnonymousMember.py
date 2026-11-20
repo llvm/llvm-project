@@ -22,8 +22,6 @@ class TestFrameVarDILMemberOfAnonymousMember(TestBase):
         lldbutil.run_to_source_breakpoint(self, "Set a breakpoint here",
                                           lldb.SBFileSpec("main.cpp"))
 
-        self.expect("settings set target.experimental.use-DIL true",
-                    substrs=[""])
         self.expect_var_path("a.x", value="1")
         self.expect_var_path("a.y", value="2")
 

@@ -53,6 +53,10 @@ class NamespaceBreakpointTestCase(TestBase):
         self.build()
 
         names = ["func()", "func(int)"]
+        if self.getPlatform() == "windows":
+            # On Windows MSVC, the return type is included in the mangled name,
+            # so it will show in the demangled one too.
+            names += ["int func(void)", "int func(int)"]
 
         # Create a target by the debugger.
         exe = self.getBuildArtifact("a.out")

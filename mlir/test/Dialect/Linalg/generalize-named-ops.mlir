@@ -889,3 +889,38 @@ func.func @generalize_scaled_contract_integer_data(
 //      CHECK:   %[[PROD:.+]] = arith.mulf %[[SLHS]], %[[SRHS]] : f32
 //      CHECK:   %[[ACC:.+]] = arith.addf %[[C_ARG]], %[[PROD]] : f32
 //      CHECK:   linalg.yield %[[ACC]] : f32
+
+// -----
+
+// Scales other than f8E8M0FNU are applied by value without a scaling extension.
+
+func.func @generalize_scaled_contract_non_e8m0_scale(
+    %A: tensor<8x16xf8E5M2>, %sA: tensor<8xf16>,
+    %B: tensor<4x16xf8E5M2>, %sB: tensor<4xf8E4M3FN>,
+    %C: tensor<8x4xf32>) -> tensor<8x4xf32> {
+  %D = linalg.scaled_contract
+      indexing_maps = [affine_map<(m, n, k) -> (m, k)>,
+                       affine_map<(m, n, k) -> (m)>,
+                       affine_map<(m, n, k) -> (n, k)>,
+                       affine_map<(m, n, k) -> (n)>,
+                       affine_map<(m, n, k) -> (m, n)>]
+      ins(%A, %sA, %B, %sB
+        : tensor<8x16xf8E5M2>, tensor<8xf16>,
+          tensor<4x16xf8E5M2>, tensor<4xf8E4M3FN>)
+      outs(%C : tensor<8x4xf32>) -> tensor<8x4xf32>
+  return %D : tensor<8x4xf32>
+}
+
+// CHECK-LABEL: func @generalize_scaled_contract_non_e8m0_scale
+//      CHECK:  linalg.generic
+//      CHECK: ^{{.*}}(%[[A_ARG:.+]]: f8E5M2, %[[SA_ARG:.+]]: f16, %[[B_ARG:.+]]: f8E5M2, %[[SB_ARG:.+]]: f8E4M3FN, %[[C_ARG:.+]]: f32)
+//  CHECK-NOT:   arith.scaling_extf
+//      CHECK:   %[[A_EXT:.+]] = arith.extf %[[A_ARG]] : f8E5M2 to f32
+//      CHECK:   %[[SA_EXT:.+]] = arith.extf %[[SA_ARG]] : f16 to f32
+//      CHECK:   %[[SLHS:.+]] = arith.mulf %[[A_EXT]], %[[SA_EXT]] : f32
+//      CHECK:   %[[B_EXT:.+]] = arith.extf %[[B_ARG]] : f8E5M2 to f32
+//      CHECK:   %[[SB_EXT:.+]] = arith.extf %[[SB_ARG]] : f8E4M3FN to f32
+//      CHECK:   %[[SRHS:.+]] = arith.mulf %[[B_EXT]], %[[SB_EXT]] : f32
+//      CHECK:   %[[PROD:.+]] = arith.mulf %[[SLHS]], %[[SRHS]] : f32
+//      CHECK:   %[[ACC:.+]] = arith.addf %[[C_ARG]], %[[PROD]] : f32
+//      CHECK:   linalg.yield %[[ACC]] : f32
