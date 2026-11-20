@@ -744,6 +744,32 @@ define void @diff_types(ptr %ptr, ptr %ptrX, ptr %ptrY) {
   ret void
 }
 
+define void @vectorize_ptrtoaddr(ptr %gep0, ptr %ptr0, ptr %ptr1) {
+; CHECK-LABEL: define void @vectorize_ptrtoaddr(
+; CHECK-SAME: ptr [[GEP0:%.*]], ptr [[PTR0:%.*]], ptr [[PTR1:%.*]]) {
+; CHECK-NEXT:    [[PACK:%.*]] = insertelement <2 x ptr> poison, ptr [[PTR0]], i32 0, !sandboxvec [[META21:![0-9]+]]
+; CHECK-NEXT:    [[PACK1:%.*]] = insertelement <2 x ptr> [[PACK]], ptr [[PTR1]], i32 1, !sandboxvec [[META21]]
+; CHECK-NEXT:    [[VCAST:%.*]] = ptrtoaddr <2 x ptr> [[PACK1]] to <2 x i64>, !sandboxvec [[META21]]
+; CHECK-NEXT:    store <2 x i64> [[VCAST]], ptr [[GEP0]], align 8, !sandboxvec [[META21]]
+; CHECK-NEXT:    ret void
+;
+; REVERT-LABEL: define void @vectorize_ptrtoaddr(
+; REVERT-SAME: ptr [[GEP0:%.*]], ptr [[PTR0:%.*]], ptr [[PTR1:%.*]]) {
+; REVERT-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[GEP0]], i64 8, !sandboxvec [[META21:![0-9]+]]
+; REVERT-NEXT:    [[V0:%.*]] = ptrtoaddr ptr [[PTR0]] to i64, !sandboxvec [[META21]]
+; REVERT-NEXT:    [[V1:%.*]] = ptrtoaddr ptr [[PTR1]] to i64, !sandboxvec [[META21]]
+; REVERT-NEXT:    store i64 [[V0]], ptr [[GEP0]], align 8, !sandboxvec [[META21]]
+; REVERT-NEXT:    store i64 [[V1]], ptr [[GEP1]], align 8, !sandboxvec [[META21]]
+; REVERT-NEXT:    ret void
+;
+  %gep1 = getelementptr i8, ptr %gep0, i64 8
+  %v0 = ptrtoaddr ptr %ptr0 to i64
+  %v1 = ptrtoaddr ptr %ptr1 to i64
+  store i64 %v0, ptr %gep0, align 8
+  store i64 %v1, ptr %gep1, align 8
+  ret void
+}
+
 ;.
 ; CHECK: [[META0]] = distinct !{!"sandboxregion"}
 ; CHECK: [[META1]] = distinct !{!"sandboxregion"}
@@ -766,6 +792,7 @@ define void @diff_types(ptr %ptr, ptr %ptrX, ptr %ptrY) {
 ; CHECK: [[META18]] = distinct !{!"sandboxregion"}
 ; CHECK: [[META19]] = distinct !{!"sandboxregion"}
 ; CHECK: [[META20]] = distinct !{!"sandboxregion"}
+; CHECK: [[META21]] = distinct !{!"sandboxregion"}
 ;.
 ; REVERT: [[META0]] = distinct !{!"sandboxregion"}
 ; REVERT: [[META1]] = distinct !{!"sandboxregion"}
@@ -788,4 +815,5 @@ define void @diff_types(ptr %ptr, ptr %ptrX, ptr %ptrY) {
 ; REVERT: [[META18]] = distinct !{!"sandboxregion"}
 ; REVERT: [[META19]] = distinct !{!"sandboxregion"}
 ; REVERT: [[META20]] = distinct !{!"sandboxregion"}
+; REVERT: [[META21]] = distinct !{!"sandboxregion"}
 ;.

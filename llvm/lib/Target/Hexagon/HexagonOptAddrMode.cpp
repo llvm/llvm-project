@@ -84,7 +84,6 @@ private:
   const HexagonRegisterInfo *HRI = nullptr;
   MachineDominatorTree *MDT = nullptr;
   DataFlowGraph *DFG = nullptr;
-  DataFlowGraph::DefStackMap DefM;
   Liveness *LV = nullptr;
   MISetType Deleted;
 

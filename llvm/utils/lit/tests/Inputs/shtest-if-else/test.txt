@@ -106,3 +106,12 @@
 # RUN: echo %{sub} %if feature%{test-%{sub}%}%else%{"fail"%}
 #      CHECK: # {{RUN}}: at line [[#@LINE-1]]
 # CHECK-NEXT: echo ok test-ok
+
+# '%if' is not matched if it's not followed by a space
+#
+# RUN: echo %if feature %{test-13%} %ifx
+# RUN: echo %if feature %{%ifx test-14%}
+#      CHECK: # {{RUN}}: at line [[#@LINE-2]]
+# CHECK-NEXT: echo test-13 %ifx
+#      CHECK: # {{RUN}}: at line [[#@LINE-3]]
+# CHECK-NEXT: echo %ifx test-14

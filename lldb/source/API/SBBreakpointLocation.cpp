@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBBreakpointLocation.h"
+#include "Utils.h"
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBDefines.h"
@@ -180,7 +181,7 @@ const char *SBBreakpointLocation::GetCondition() {
   StopCondition cond = loc_sp->GetCondition();
   if (!cond)
     return nullptr;
-  return ConstString(cond.GetText()).GetCString();
+  return GetDebuggerStringPool(loc_sp->GetTarget()).Intern(cond.GetText());
 }
 
 void SBBreakpointLocation::SetAutoContinue(bool auto_continue) {
@@ -375,7 +376,8 @@ const char *SBBreakpointLocation::GetThreadName() const {
 
   TargetAPIMutex api_lock = loc_sp->GetTarget().GetAPIMutex();
   std::lock_guard<TargetAPIMutex> guard(api_lock);
-  return ConstString(loc_sp->GetThreadName()).GetCString();
+  return GetDebuggerStringPool(loc_sp->GetTarget())
+      .Intern(loc_sp->GetThreadName());
 }
 
 void SBBreakpointLocation::SetQueueName(const char *queue_name) {
@@ -398,7 +400,8 @@ const char *SBBreakpointLocation::GetQueueName() const {
 
   TargetAPIMutex api_lock = loc_sp->GetTarget().GetAPIMutex();
   std::lock_guard<TargetAPIMutex> guard(api_lock);
-  return ConstString(loc_sp->GetQueueName()).GetCString();
+  return GetDebuggerStringPool(loc_sp->GetTarget())
+      .Intern(loc_sp->GetQueueName());
 }
 
 bool SBBreakpointLocation::IsResolved() {

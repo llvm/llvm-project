@@ -225,9 +225,11 @@ public:
   /// uses, and it doesn't remove dead defs.
   /// Dead PHIDef values are marked as unused. New dead machine instructions
   /// are added to the dead vector. Returns true if the interval may have been
-  /// separated into multiple connected components.
+  /// separated into multiple connected components. Only the subranges
+  /// overlapping \p SubRangeMask are shrunk.
   LLVM_ABI bool shrinkToUses(LiveInterval *li,
-                             SmallVectorImpl<MachineInstr *> *dead = nullptr);
+                             SmallVectorImpl<MachineInstr *> *dead = nullptr,
+                             LaneBitmask SubRangeMask = LaneBitmask::getAll());
 
   /// Specialized version of
   /// shrinkToUses(LiveInterval *li, SmallVectorImpl<MachineInstr*> *dead)
@@ -562,6 +564,12 @@ private:
   using ShrinkToUsesWorkList = SmallVector<std::pair<SlotIndex, VNInfo *>, 16>;
   void extendSegmentsToUses(LiveRange &Segments, ShrinkToUsesWorkList &WorkList,
                             Register Reg, LaneBitmask LaneMask);
+
+  using SubRangeUse = std::pair<SlotIndex, LaneBitmask>;
+  using SubRangeUseList = SmallVector<SubRangeUse, 16>;
+  void collectSubRangeUses(Register Reg, SubRangeUseList &Uses) const;
+  void shrinkSubRangeToUses(LiveInterval::SubRange &SR, Register Reg,
+                            ArrayRef<SubRangeUse> Uses);
 
   /// Helper function for repairIntervalsInRange(), walks backwards and
   /// creates/modifies live segments in \p LR to match the operands found.

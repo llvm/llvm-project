@@ -637,7 +637,7 @@ bool mlir::affine::getFusionComputeCost(AffineForOp srcForOp,
   if (storeLoadFwdGuaranteed) {
     // Subtract from operation count the loads/store we expect load/store
     // forwarding to remove.
-    unsigned storeCount = 0;
+    int64_t storeCount = 0;
     llvm::SmallDenseSet<Value, 4> storeMemrefs;
     srcForOp.walk([&](AffineWriteOpInterface storeOp) {
       storeMemrefs.insert(storeOp.getMemRef());

@@ -4,7 +4,8 @@
 //  -- member functions;
 //  -- static member functions.
 
-// Verify that all methods of struct A are associated to the same attribute set.
+// Verify that all methods of struct A are associated to the same attribute set,
+// apart from likely_module_local on the inline ones.
 // The attribute set shall contain attributes 'noinline' and 'optnone'.
 
 struct A {
@@ -13,14 +14,14 @@ struct A {
   static int static_optnone_method(int a) {
     return a + a;
   }
-  // CHECK: @_ZN1A21static_optnone_methodEi({{.*}}) [[OPTNONE:#[0-9]+]]
+  // CHECK: @_ZN1A21static_optnone_methodEi({{.*}}) [[OPTNONE_INLINE:#[0-9]+]]
 
   // Definition of an optnone normal method.
   __attribute__((optnone))
   int optnone_method(int a) {
     return a + a + a + a;
   }
-  // CHECK: @_ZN1A14optnone_methodEi({{.*}}) [[OPTNONE]]
+  // CHECK: @_ZN1A14optnone_methodEi({{.*}}) [[OPTNONE_INLINE]]
 
   // Declaration of an optnone method with out-of-line definition
   // that doesn't say optnone.
@@ -50,7 +51,7 @@ void foo() {
 int A::optnone_decl_method(int a) {
   return a;
 }
-// CHECK: @_ZN1A19optnone_decl_methodEi({{.*}}) [[OPTNONE]]
+// CHECK: @_ZN1A19optnone_decl_methodEi({{.*}}) [[OPTNONE:#[0-9]+]]
 
 // optnone implies noinline; therefore attribute noinline is added to
 // the set of function attributes.
@@ -61,7 +62,7 @@ __attribute__((optnone))
 int A::static_forceinline_method(int a) {
   return a + a + a + a;
 }
-// CHECK: @_ZN1A25static_forceinline_methodEi({{.*}}) [[OPTNONE]]
+// CHECK: @_ZN1A25static_forceinline_methodEi({{.*}}) [[OPTNONE_INLINE]]
 
 __attribute__((optnone))
 int A::alwaysinline_method(int a) {
@@ -148,17 +149,18 @@ int bar() {
   return result;
 }
 
-// CHECK: @_ZN1C12pure_virtualEi({{.*}}) {{.*}} [[OPTNONE]]
+// CHECK: @_ZN1C12pure_virtualEi({{.*}}) {{.*}} [[OPTNONE_INLINE]]
 // CHECK: @_ZN1C25pure_virtual_with_optnoneEi({{.*}}) {{.*}} [[NORMAL:#[0-9]+]]
-// CHECK: @_ZN1C4baseEi({{.*}}) {{.*}} [[OPTNONE]]
+// CHECK: @_ZN1C4baseEi({{.*}}) {{.*}} [[OPTNONE_INLINE]]
 // CHECK: @_ZN1C12optnone_baseEi({{.*}}) {{.*}} [[NORMAL]]
 // CHECK: @_ZN1C17only_base_virtualEi({{.*}}) {{.*}} [[NORMAL]]
 // CHECK: @_ZN1B4baseEi({{.*}}) {{.*}} [[NORMAL]]
-// CHECK: @_ZN1B12optnone_baseEi({{.*}}) {{.*}} [[OPTNONE]]
-// CHECK: @_ZN1B17only_base_virtualEi({{.*}}) {{.*}} [[OPTNONE]]
+// CHECK: @_ZN1B12optnone_baseEi({{.*}}) {{.*}} [[OPTNONE_INLINE]]
+// CHECK: @_ZN1B17only_base_virtualEi({{.*}}) {{.*}} [[OPTNONE_INLINE]]
 
 
-// CHECK: attributes [[NORMAL]] =
+// CHECK: attributes [[OPTNONE_INLINE]] = { likely_module_local {{.*}} noinline {{.*}} optnone
+// CHECK: attributes [[OPTNONE]] = { mustprogress noinline {{.*}} optnone
+// CHECK: attributes [[NORMAL]] = { likely_module_local
 // CHECK-NOT: noinline
 // CHECK-NOT: optnone
-// CHECK: attributes [[OPTNONE]] = {{.*}} noinline {{.*}} optnone

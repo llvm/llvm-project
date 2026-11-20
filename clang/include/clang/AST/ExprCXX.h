@@ -246,17 +246,17 @@ class CUDAKernelCallExpr final : public CallExpr {
 
   CUDAKernelCallExpr(Expr *Fn, CallExpr *Config, ArrayRef<Expr *> Args,
                      QualType Ty, ExprValueKind VK, SourceLocation RP,
-                     FPOptionsOverride FPFeatures, unsigned MinNumArgs);
+                     FPOptionsOverride FPFeatures, unsigned MinNumArgs,
+                     ADLCallKind UsesADL);
 
   CUDAKernelCallExpr(unsigned NumArgs, bool HasFPFeatures, EmptyShell Empty);
 
 public:
-  static CUDAKernelCallExpr *Create(const ASTContext &Ctx, Expr *Fn,
-                                    CallExpr *Config, ArrayRef<Expr *> Args,
-                                    QualType Ty, ExprValueKind VK,
-                                    SourceLocation RP,
-                                    FPOptionsOverride FPFeatures,
-                                    unsigned MinNumArgs = 0);
+  static CUDAKernelCallExpr *
+  Create(const ASTContext &Ctx, Expr *Fn, CallExpr *Config,
+         ArrayRef<Expr *> Args, QualType Ty, ExprValueKind VK,
+         SourceLocation RP, FPOptionsOverride FPFeatures,
+         unsigned MinNumArgs = 0, ADLCallKind UsesADL = NotADL);
 
   static CUDAKernelCallExpr *CreateEmpty(const ASTContext &Ctx,
                                          unsigned NumArgs, bool HasFPFeatures,

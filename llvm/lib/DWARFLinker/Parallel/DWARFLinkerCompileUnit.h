@@ -11,6 +11,7 @@
 
 #include "DWARFLinkerUnit.h"
 #include "llvm/DWARFLinker/DWARFFile.h"
+#include "llvm/DWARFLinker/RelocationFixups.h"
 #include <limits>
 #include <optional>
 
@@ -119,6 +120,10 @@ public:
   /// Returns DWARFFile containing this compile unit.
   const DWARFFile &getContainingFile() const { return File; }
 
+  std::string remapPath(StringRef Path) const override {
+    return File.remapPath(Path);
+  }
+
   /// Appends the names of the DW_TAG_module enclosing \p DieEntry, outermost
   /// first. Returns false when one of them has no name making the module
   /// unidentifiable across units.
@@ -162,6 +167,13 @@ public:
 
   /// Cleanup unneeded resources after compile unit is cloned.
   void cleanupDataAfterClonning();
+
+  RelocationFixups &getRelocFixups() { return RelocFixups; }
+
+  /// Saves the relocations, at offsets relative to the output of the unit,
+  /// which reportUnitOffsets() tells once the sections are placed.
+  void saveRelocations();
+  void reportUnitOffsets();
 
   /// After cloning stage the output DIEs offsets are deallocated.
   /// This method copies output offsets for referenced DIEs into DIEs patches.
@@ -508,12 +520,18 @@ public:
   // Clone and emit line table.
   Error cloneAndEmitLineTable(const Triple &TargetTriple);
 
-  /// Clone attribute location axpression.
-  void cloneDieAttrExpression(const DWARFExpression &InputExpression,
-                              SmallVectorImpl<uint8_t> &OutputExpression,
-                              SectionDescriptor &Section,
-                              std::optional<int64_t> VarAddressAdjustment,
-                              OffsetsPtrVector &PatchesOffsets);
+  /// Clone attribute location expression. \p Cloned, if set, receives where
+  /// its operations were cloned to in \p OutputExpression. With
+  /// \p KeepAddrIndices, DW_OP_addrx and DW_OP_constx index the output
+  /// .debug_addr, whose entries carry their relocations.
+  void
+  cloneDieAttrExpression(const DWARFExpression &InputExpression,
+                         SmallVectorImpl<uint8_t> &OutputExpression,
+                         SectionDescriptor &Section,
+                         std::optional<int64_t> VarAddressAdjustment,
+                         OffsetsPtrVector &PatchesOffsets,
+                         RelocationFixups::ClonedExpression *Cloned = nullptr,
+                         bool KeepAddrIndices = false);
 
   /// Returns index(inside .debug_addr) of an address.
   uint64_t getDebugAddrIndex(uint64_t Addr) {
@@ -821,6 +839,12 @@ private:
 
   /// Maps an address into the index inside .debug_addr section.
   IndexedValuesMap<uint64_t> DebugAddrIndexMap;
+
+  RelocationFixups RelocFixups;
+
+  /// The input offset of the unit, kept by saveRelocations() for
+  /// reportUnitOffsets(), as the input is unloaded in between.
+  std::optional<uint64_t> SavedRelocsUnitOffset;
 
   std::unique_ptr<DependencyTracker> Dependencies;
 

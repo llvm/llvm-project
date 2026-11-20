@@ -334,9 +334,6 @@ void FactsGenerator::VisitCastExpr(const CastExpr *CE) {
     // points to), not the outer origin (the pointer's storage location).
     flow(Dest, readValue(SubExpr), /*Kill=*/true);
     return;
-  case CK_Dynamic:
-    handleAccess(SubExpr);
-    return;
   case CK_NullToPointer:
     // TODO: Flow into them a null origin.
     return;
@@ -345,6 +342,10 @@ void FactsGenerator::VisitCastExpr(const CastExpr *CE) {
   case CK_UserDefinedConversion:
     flow(Dest, Src, /*Kill=*/true);
     return;
+  case CK_Dynamic:
+    // Reads the object's dynamic type.
+    handleAccess(SubExpr);
+    [[fallthrough]];
   case CK_UncheckedDerivedToBase:
   case CK_DerivedToBase:
   case CK_BaseToDerived:
@@ -932,6 +933,21 @@ void FactsGenerator::handleExitBlock() {
       ThisOrigins && !IsDestructor)
     EscapesInCurrentBlock.push_back(FactMgr.createFact<ThisEscapeFact>(
         (*ThisOrigins)->getOuterOriginID(), AC.getDecl()->getEndLoc()));
+
+  // Storage reachable through a reference parameter, i.e. every origin of the
+  // parameter but the outermost, is visible to the caller. A pointer parameter
+  // can be pointed at local storage, so stores through it are not necessarily
+  // visible to the caller.
+  if (const auto *Fn = dyn_cast_if_present<FunctionDecl>(AC.getDecl()))
+    for (const ParmVarDecl *PVD : Fn->parameters()) {
+      OriginList *List = getOriginsList(*PVD);
+      if (!List || !PVD->getType()->isReferenceType())
+        continue;
+      for (OriginList *Inner = List->peelOuterOrigin(); Inner;
+           Inner = Inner->peelOuterOrigin())
+        EscapesInCurrentBlock.push_back(FactMgr.createFact<ParamEscapeFact>(
+            Inner->getOuterOriginID(), PVD));
+    }
 }
 
 void FactsGenerator::handleGSLPointerConstruction(const CXXConstructExpr *CCE) {

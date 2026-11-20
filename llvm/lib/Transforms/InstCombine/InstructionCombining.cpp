@@ -5387,57 +5387,6 @@ Instruction *InstCombinerImpl::foldFreezeIntoRecurrence(FreezeInst &FI,
   return replaceInstUsesWith(FI, PN);
 }
 
-bool InstCombinerImpl::freezeOtherUses(FreezeInst &FI) {
-  Value *Op = FI.getOperand(0);
-
-  if (isa<Constant>(Op) || Op->hasOneUse())
-    return false;
-
-  // Move the freeze directly after the definition of its operand, so that
-  // it dominates the maximum number of uses. Note that it may not dominate
-  // *all* uses if the operand is an invoke/callbr and the use is in a phi on
-  // the normal/default destination. This is why the domination check in the
-  // replacement below is still necessary.
-  BasicBlock::iterator MoveBefore;
-  if (isa<Argument>(Op)) {
-    MoveBefore = FI.getFunction()->getEntryBlock().getFirstNonPHIOrAlloca();
-  } else {
-    auto MoveBeforeOpt = cast<Instruction>(Op)->getInsertionPointAfterDef();
-    if (!MoveBeforeOpt)
-      return false;
-    MoveBefore = *MoveBeforeOpt;
-  }
-
-  // Re-point iterator to come after any debug-info records.
-  MoveBefore.setHeadBit(false);
-
-  bool Changed = false;
-  if (&FI != &*MoveBefore) {
-    FI.moveBefore(*MoveBefore->getParent(), MoveBefore);
-    Changed = true;
-  }
-
-  SmallVector<User *> Users;
-  Changed |= Op->replaceUsesWithIf(&FI, [&](Use &U) -> bool {
-    if (!DT.dominates(&FI, U))
-      return false;
-
-    Users.push_back(U.getUser());
-    return true;
-  });
-
-  for (auto *U : Users) {
-    // Re-queue U and its users: freezing U's operand can expose a fold on a
-    // user of U (e.g. a freeze of U can now be pushed through it) that would
-    // otherwise only fire on a later iteration, tripping the fixpoint verifier.
-    auto *UI = cast<Instruction>(U);
-    Worklist.pushUsersToWorkList(*UI);
-    Worklist.push(UI);
-  }
-
-  return Changed;
-}
-
 // Check if any direct or bitcast user of this value is a shuffle instruction.
 static bool isUsedWithinShuffleVector(Value *V) {
   for (auto *U : V->users()) {
@@ -5559,8 +5508,23 @@ Instruction *InstCombinerImpl::visitFreeze(FreezeInst &I) {
   }
 
   // Replace uses of Op with freeze(Op).
-  if (freezeOtherUses(I))
-    return &I;
+  if (!isa<Constant>(Op0) && !Op0->hasOneUse()) {
+    SmallVector<User *> Users;
+    bool Changed = freezeUsesAfterDef(I, DT, &Users);
+
+    for (auto *U : Users) {
+      // Re-queue U and its users: freezing U's operand can expose a fold on a
+      // user of U (e.g. a freeze of U can now be pushed through it) that would
+      // otherwise only fire on a later iteration, tripping the fixpoint
+      // verifier.
+      auto *UI = cast<Instruction>(U);
+      Worklist.pushUsersToWorkList(*UI);
+      Worklist.push(UI);
+    }
+
+    if (Changed)
+      return &I;
+  }
 
   return nullptr;
 }

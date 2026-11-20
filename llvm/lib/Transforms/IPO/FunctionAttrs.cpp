@@ -16,6 +16,7 @@
 #include "IPOOptions.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/STLExtras.h"
@@ -1108,6 +1109,25 @@ static bool addAccessAttrs(Argument *A, ArgAccessProperties Props) {
   return true;
 }
 
+/// Return true if a block without successors is reachable from \p EntryBB
+/// without passing through a block that writes the argument. Nothing is
+/// initialized on such a path.
+static bool canExitWithoutWrites(const BasicBlock &EntryBB,
+                                 const ArgumentUsesSummary &ArgumentUses) {
+  const auto &UsesPerBlock = ArgumentUses.UsesPerBlock;
+  for (auto It = df_begin(&EntryBB), End = df_end(&EntryBB); It != End;) {
+    auto UPB = UsesPerBlock.find(*It);
+    if (UPB != UsesPerBlock.end() && UPB->second.HasWrites) {
+      It.skipChildren();
+      continue;
+    }
+    if (succ_empty(*It))
+      return true;
+    ++It;
+  }
+  return false;
+}
+
 static bool inferInitializes(Argument &A, Function &F) {
   auto ArgumentUses = collectArgumentUsesPerBlock(A, F);
   // No write anywhere in the function, bail.
@@ -1192,6 +1212,11 @@ static bool inferInitializes(Argument &A, Function &F) {
     if (EntryCRL.empty())
       return false;
   } else {
+    // Computing the initialized ranges of every block is expensive, and they
+    // are empty for the entry block if a path from it avoids all writes.
+    if (canExitWithoutWrites(EntryBB, ArgumentUses))
+      return false;
+
     // Now we have to go through CFG to get the initialized argument ranges
     // across blocks. With dominance and post-dominance, the initialized ranges
     // by a block include both accesses inside this block and accesses in its
