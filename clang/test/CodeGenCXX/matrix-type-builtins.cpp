@@ -96,7 +96,7 @@ void test_column_major_load_with_stride_template_double(double *Ptr) {
 }
 
 void test_column_major_load_with_stride_template_int(int *Ptr) {
-  // CHECK-LABEL: define{{.*}} void @_Z47test_column_major_load_with_stride_template_intPi(ptr noundef %Ptr) #5 {
+  // CHECK-LABEL: define{{.*}} void @_Z47test_column_major_load_with_stride_template_intPi(ptr noundef %Ptr) #7 {
   // CHECK:         [[PTR:%.*]] = load ptr, ptr %Ptr.addr, align 8
   // CHECK-NEXT:    call noundef <6 x i32> @_Z29column_major_load_with_strideIiLj3ELj2ELj12EEu11matrix_typeIXT0_EXT1_ET_EPS0_(ptr noundef [[PTR]])
 

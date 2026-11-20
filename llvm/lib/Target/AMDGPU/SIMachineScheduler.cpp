@@ -1811,9 +1811,9 @@ void SIScheduleDAGMI::schedule()
   postProcessDAG();
 
   LLVM_DEBUG(dump());
-  if (PrintDAGs)
+  if (shouldPrintMISchedDAGs(MF))
     dump();
-  if (ViewMISchedDAGs)
+  if (shouldViewMISchedDAGs(MF))
     viewGraph();
 
   topologicalSort();

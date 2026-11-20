@@ -35,8 +35,7 @@ define i32 @live_out_uf1(ptr %src, i64 %n) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
 ; CHECK-NEXT:    WIDEN ir<%add> = add ir<%l>, ir<1>
-; CHECK-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = extract-last-part ir<%add>
-; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = extract-last-lane vp<[[VP8]]>
+; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = extract-last-lane ir<%add>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -101,8 +100,7 @@ define void @first_order_recurrence_resume_uf1(ptr %src, ptr noalias %dst, i64 %
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = extract-last-part ir<%l>
-; CHECK-NEXT:    EMIT vp<%vector.recur.extract> = extract-last-lane vp<[[VP10]]>
+; CHECK-NEXT:    EMIT vp<%vector.recur.extract> = extract-last-lane ir<%l>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -156,8 +154,7 @@ define void @store_to_invariant_addr_uf1(ptr %src, ptr noalias %dst, i64 %n) {
 ; CHECK-NEXT:      CLONE ir<%gep.src> = getelementptr inbounds ir<%src>, vp<[[VP5]]>
 ; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.src>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%l> = load vp<[[VP6]]>, align 4
-; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = extract-last-part ir<%l>
-; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = extract-last-lane vp<[[VP7]]>
+; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = extract-last-lane ir<%l>
 ; CHECK-NEXT:      CLONE store vp<[[VP8]]>, ir<%dst>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP4]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>

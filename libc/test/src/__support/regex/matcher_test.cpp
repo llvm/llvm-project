@@ -16,20 +16,26 @@
 #include "src/__support/error_or.h"
 #include "src/__support/regex/regex_ast.h"
 #include "src/__support/regex/regex_expr_pool.h"
+#include "src/__support/regex/regex_internal.h"
 #include "src/__support/regex/regex_matcher.h"
 #include "src/__support/regex/regex_parser.h"
 #include "test/UnitTest/Test.h"
 
 using LIBC_NAMESPACE::ErrorOr;
 using LIBC_NAMESPACE::cpp::string_view;
+using LIBC_NAMESPACE::regex::ANCHOR_BOL;
+using LIBC_NAMESPACE::regex::ANCHOR_EOL;
 using LIBC_NAMESPACE::regex::derivative;
 using LIBC_NAMESPACE::regex::EMPTY_SET_ID;
 using LIBC_NAMESPACE::regex::EMPTY_STR_ID;
 using LIBC_NAMESPACE::regex::ExprId;
 using LIBC_NAMESPACE::regex::ExprPool;
+using LIBC_NAMESPACE::regex::INVALID_EXPR_ID;
 using LIBC_NAMESPACE::regex::match;
 using LIBC_NAMESPACE::regex::MatchResult;
+using LIBC_NAMESPACE::regex::nullable;
 using LIBC_NAMESPACE::regex::parse_ere;
+using LIBC_NAMESPACE::regex::RegexInternal;
 
 TEST(LlvmLibcRegexMatcherTest, DerivativeBaseCases) {
   ExprPool pool;
@@ -777,4 +783,40 @@ TEST(LlvmLibcRegexMatcherTest, RepeatStabilizationAndRfc2822Grammar) {
       "user@example..com"};
   for (string_view addr : BAD_ADDRS)
     EXPECT_EQ(match(rfc_pool, *addr_spec, addr), MatchResult::NoMatch);
+}
+
+TEST(LlvmLibcRegexMatcherTest, AnchorNullabilityMaskAndInvalidIds) {
+  // Default RegexInternal (root == INVALID_EXPR_ID) and uninitialised pool
+  // queries fail safely without dereferencing null blocks.
+  {
+    RegexInternal empty_internal;
+    EXPECT_EQ(match(empty_internal, "abc"), MatchResult::NoMatch);
+  }
+  {
+    ExprPool fresh;
+    EXPECT_EQ(match(fresh, EMPTY_STR_ID, "abc"), MatchResult::Match);
+    EXPECT_EQ(match(fresh, EMPTY_SET_ID, "abc"), MatchResult::NoMatch);
+    auto bad_d0 = derivative(INVALID_EXPR_ID, 'a', fresh);
+    auto bad_d1 = derivative(999, 'a', fresh);
+    ASSERT_FALSE(bad_d0.has_value());
+    ASSERT_FALSE(bad_d1.has_value());
+    EXPECT_EQ(bad_d0.error(), REG_BADPAT);
+    EXPECT_EQ(bad_d1.error(), REG_BADPAT);
+  }
+
+  // Deep 9,996-anchor chain evaluates nullable() in O(1) via the 4-bit mask
+  // with zero call-stack recursion.
+  ExprPool pool;
+  auto bol = pool.make_anchor(ANCHOR_BOL);
+  ASSERT_TRUE(bol.has_value());
+  ExprId chain = *bol;
+  for (size_t i = 0; i < 9995; ++i) {
+    auto next = pool.make_concat(*bol, chain);
+    ASSERT_TRUE(next.has_value()) << "iteration " << i;
+    chain = *next;
+  }
+  EXPECT_FALSE(nullable(chain, 0, pool));
+  EXPECT_TRUE(nullable(chain, ANCHOR_BOL, pool));
+  EXPECT_FALSE(nullable(chain, ANCHOR_EOL, pool));
+  EXPECT_TRUE(nullable(chain, ANCHOR_BOL | ANCHOR_EOL, pool));
 }
