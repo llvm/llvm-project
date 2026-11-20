@@ -69,6 +69,10 @@ class StackDepotBase {
   atomic_uint32_t tab[kTabSize];  // Hash table of Node's.
 
   atomic_uint32_t n_uniq_ids;
+  // Number of `Put` calls that hold a bucket lock or wait for one. It goes up
+  // before the lock is taken and down after it is released, so a forked child
+  // that reads zero has no locked bucket. In a child it can stay above zero.
+  atomic_uint32_t n_lockers;
 
   TwoLevelMap<Node, kNodesSize1, kNodesSize2> nodes;
 
@@ -93,9 +97,10 @@ u32 StackDepotBase<Node, kReservedBits, kTabSizeLog>::lock(atomic_uint32_t *p) {
   // Uses the pointer lsb as mutex.
   for (int i = 0;; i++) {
     u32 cmp = atomic_load(p, memory_order_relaxed);
+    // Release, so that the lock bit is not visible before `n_lockers` is.
     if ((cmp & kLockMask) == 0 &&
         atomic_compare_exchange_weak(p, &cmp, cmp | kLockMask,
-                                     memory_order_acquire))
+                                     memory_order_acq_rel))
       return cmp;
     if (i < 10)
       proc_yield(10);
@@ -128,11 +133,13 @@ u32 StackDepotBase<Node, kReservedBits, kTabSizeLog>::Put(args_type args,
     return node;
 
   // If failed, lock, retry and insert new.
+  atomic_fetch_add(&n_lockers, 1, memory_order_seq_cst);
   u32 s2 = lock(p);
   if (s2 != s) {
     node = find(s2, args, h);
     if (node) {
       unlock(p, s2);
+      atomic_fetch_sub(&n_lockers, 1, memory_order_seq_cst);
       return node;
     }
   }
@@ -143,6 +150,7 @@ u32 StackDepotBase<Node, kReservedBits, kTabSizeLog>::Put(args_type args,
   new_node.store(s, args, h);
   new_node.link = s2;
   unlock(p, s);
+  atomic_fetch_sub(&n_lockers, 1, memory_order_seq_cst);
   if (inserted) *inserted = true;
   return s;
 }
@@ -180,6 +188,12 @@ void StackDepotBase<Node, kReservedBits, kTabSizeLog>::UnlockAfterFork(
 
   // Only unlock in child process to avoid deadlock. See `LockBeforeFork`.
   if (!fork_child)
+    return;
+
+  // Walking the table is slow, and no bucket is locked unless a `Put` was
+  // inserting during the fork. Do not reset the count: if a signal handler that
+  // interrupted `Put` has forked, that call is still going to decrement it.
+  if (!atomic_load(&n_lockers, memory_order_relaxed))
     return;
 
   for (int i = 0; i < kTabSize; ++i) {
