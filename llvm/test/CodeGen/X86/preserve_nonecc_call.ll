@@ -192,3 +192,78 @@ define preserve_nonecc void @entry(ptr %r12, ptr %r13, ptr %r14, ptr %r15) {
   musttail call preserve_nonecc void @continuation(ptr %r12, ptr %r13, ptr %r14, ptr %r15)
   ret void
 }
+
+; Test i1/i8/i16 promotion to i32 in preserve_nonecc using all 12 GPRs starting at R12D.
+define preserve_nonecc i32 @preserve_none_i8_i16_args(
+; CHECK-LABEL: preserve_none_i8_i16_args:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andl $1, %r12d
+; CHECK-NEXT:    movzbl %r13b, %eax
+; CHECK-NEXT:    addl %r12d, %eax
+; CHECK-NEXT:    movzwl %r14w, %ebx
+; CHECK-NEXT:    movzbl %r15b, %r8d
+; CHECK-NEXT:    addl %ebx, %r8d
+; CHECK-NEXT:    addl %eax, %r8d
+; CHECK-NEXT:    movzwl %di, %eax
+; CHECK-NEXT:    movzbl %sil, %esi
+; CHECK-NEXT:    addl %eax, %esi
+; CHECK-NEXT:    movzwl %dx, %edx
+; CHECK-NEXT:    movzbl %cl, %eax
+; CHECK-NEXT:    addl %edx, %eax
+; CHECK-NEXT:    addl %esi, %eax
+; CHECK-NEXT:    addl %r8d, %eax
+; CHECK-NEXT:    retq
+    i1 %a0, i8 %a1, i16 %a2, i8 %a3,
+    i16 %a4, i8 %a5, i16 %a6, i8 %a7) nounwind {
+  %e0 = zext i1 %a0 to i32
+  %e1 = zext i8 %a1 to i32
+  %e2 = zext i16 %a2 to i32
+  %e3 = zext i8 %a3 to i32
+  %e4 = zext i16 %a4 to i32
+  %e5 = zext i8 %a5 to i32
+  %e6 = zext i16 %a6 to i32
+  %e7 = zext i8 %a7 to i32
+  %s0 = add i32 %e0, %e1
+  %s1 = add i32 %e2, %e3
+  %s2 = add i32 %e4, %e5
+  %s3 = add i32 %e6, %e7
+  %t0 = add i32 %s0, %s1
+  %t1 = add i32 %s2, %s3
+  %res = add i32 %t0, %t1
+  ret i32 %res
+}
+
+; Test nest parameter in R10.
+define preserve_nonecc ptr @preserve_none_nest(ptr nest %n, ptr %a) nounwind {
+; CHECK-LABEL: preserve_none_nest:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %r10, %rax
+; CHECK-NEXT:    retq
+  ret ptr %n
+}
+
+; Test i128 passed in consecutive registers (R12:R13) and on stack (not split across RAX and stack).
+define preserve_nonecc i64 @preserve_none_i128_regs(i128 %x) nounwind {
+; CHECK-LABEL: preserve_none_i128_regs:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    leaq (%r12,%r13), %rax
+; CHECK-NEXT:    retq
+  %hi = lshr i128 %x, 64
+  %sum = add i128 %x, %hi
+  %tr = trunc i128 %sum to i64
+  ret i64 %tr
+}
+
+define preserve_nonecc i64 @preserve_none_i128_no_split(
+; CHECK-LABEL: preserve_none_i128_no_split:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %r11, %rax
+; CHECK-NEXT:    addq {{[0-9]+}}(%rsp), %rax
+; CHECK-NEXT:    retq
+    i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5,
+    i64 %a6, i64 %a7, i64 %a8, i64 %a9, i64 %a10, i128 %x) nounwind {
+  %tr = trunc i128 %x to i64
+  %res = add i64 %a10, %tr
+  ret i64 %res
+}
+
