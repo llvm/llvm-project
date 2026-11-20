@@ -107,13 +107,19 @@ public:
   static const semantics::SourceName
   getRealName(const omp::clause::ProcedureDesignator &pd);
 
+  /// Returns the omp.declare_reduction name for an intrinsic reduction on
+  /// \p ty. \p unaligned marks a 64-bit by-value operand whose natural
+  /// alignment is not provable; it binds a declaration without the atomic
+  /// region.
   static std::string getReductionName(llvm::StringRef name,
                                       const fir::KindMapping &kindMap,
-                                      mlir::Type ty, bool isByRef);
+                                      mlir::Type ty, bool isByRef,
+                                      bool unaligned = false);
 
   static std::string getReductionName(ReductionIdentifier redId,
                                       const fir::KindMapping &kindMap,
-                                      mlir::Type ty, bool isByRef);
+                                      mlir::Type ty, bool isByRef,
+                                      bool unaligned = false);
 
   /// Returns the module-unique name of the omp.declare_reduction op for a
   /// user-defined reduction (named or operator). Derived from the reduction
@@ -167,13 +173,16 @@ public:
   /// Creates an OpenMP reduction declaration and inserts it into the provided
   /// symbol table. The declaration has a constant initializer with the neutral
   /// value `initValue`, and the reduction combiner carried over from `reduce`.
-  /// TODO: add atomic region.
+  /// For supported scalar intrinsic reductions an atomic region is added;
+  /// 64-bit types get one only when \p allowWideAtomic (the operand is known
+  /// to be naturally aligned).
   template <typename OpType>
   static OpType createDeclareReduction(AbstractConverter &builder,
                                        llvm::StringRef reductionOpName,
                                        const ReductionIdentifier redId,
                                        mlir::Type type, mlir::Location loc,
-                                       bool isByRef);
+                                       bool isByRef,
+                                       bool allowWideAtomic = false);
 
   /// Creates a reduction declaration and associates it with an OpenMP block
   /// directive.
@@ -215,8 +224,9 @@ private:
       llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
       const semantics::Symbol &reductionSymbol,
       semantics::SemanticsContext *semaCtx, fir::ReferenceType redType,
-      bool isByRef, const fir::KindMapping &kindMap, std::string &reductionName,
-      ReductionIdentifier &redId, bool *hasUserDefinedReduction);
+      bool isByRef, bool operandAligned, const fir::KindMapping &kindMap,
+      std::string &reductionName, ReductionIdentifier &redId,
+      bool *hasUserDefinedReduction);
 };
 
 template <typename FloatOp, typename IntegerOp>

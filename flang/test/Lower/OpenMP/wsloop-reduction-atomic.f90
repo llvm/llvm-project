@@ -18,9 +18,11 @@
 ! CHECK-LABEL: omp.declare_reduction @and_reduction_l32 : !fir.logical<4>
 ! CHECK-NOT:     llvm.atomicrmw
 
-! Types wider than 32 bits can be under-aligned through storage association or
-! dummy-argument aliasing, so they get no atomic region.
-! CHECK-LABEL: omp.declare_reduction @max_f64 : f64
+! 64-bit dummy arguments are not provably aligned, so they bind a separate
+! declaration without an atomic region (see wsloop-reduction-atomic-wide.f90).
+! CHECK-LABEL: omp.declare_reduction @max_f32 : f32
+! CHECK:         llvm.atomicrmw fmax %{{.*}}, %{{.*}} monotonic : !llvm.ptr, f32
+! CHECK-LABEL: omp.declare_reduction @max_unaligned_f64 : f64
 ! CHECK-NOT:     llvm.atomicrmw
 ! CHECK-LABEL: omp.declare_reduction @min_f32 : f32
 ! CHECK:         llvm.atomicrmw fmin %{{.*}}, %{{.*}} monotonic : !llvm.ptr, f32
@@ -30,9 +32,9 @@
 ! CHECK:         llvm.atomicrmw _or %{{.*}}, %{{.*}} monotonic : !llvm.ptr, i32
 ! CHECK-LABEL: omp.declare_reduction @min_i32 : i32
 ! CHECK:         llvm.atomicrmw min %{{.*}}, %{{.*}} monotonic : !llvm.ptr, i32
-! CHECK-LABEL: omp.declare_reduction @add_reduction_f64 : f64
+! CHECK-LABEL: omp.declare_reduction @add_reduction_unaligned_f64 : f64
 ! CHECK-NOT:     llvm.atomicrmw
-! CHECK-LABEL: omp.declare_reduction @add_reduction_i64 : i64
+! CHECK-LABEL: omp.declare_reduction @add_reduction_unaligned_i64 : i64
 ! CHECK-NOT:     llvm.atomicrmw
 ! CHECK-LABEL: omp.declare_reduction @add_reduction_i16 : i16
 ! CHECK:         llvm.atomicrmw add %{{.*}}, %{{.*}} monotonic : !llvm.ptr, i16
@@ -127,15 +129,16 @@ subroutine red_add_complex(a, n, res)
 end subroutine
 
 ! Cover the remaining bin-ops and supported widths without an entity matrix.
-subroutine red_ops_and_widths(s8, s16, s64, sreal, lo, bits, parity, rlo, rhi)
+subroutine red_ops_and_widths(s8, s16, s64, sreal, lo, bits, parity, rlo, rhi, rmax)
   integer(1) :: s8
   integer(2) :: s16
   integer(8) :: s64
   real(8) :: sreal, rhi
   integer :: lo, bits, parity, i
-  real :: rlo
+  real :: rlo, rmax
   !$omp parallel do reduction(+:s8,s16,s64,sreal) reduction(min:lo) &
-  !$omp& reduction(ior:bits) reduction(ieor:parity) reduction(min:rlo) reduction(max:rhi)
+  !$omp& reduction(ior:bits) reduction(ieor:parity) reduction(min:rlo) reduction(max:rhi) &
+  !$omp& reduction(max:rmax)
   do i = 1, 10
     s8 = s8 + 1_1
     s16 = s16 + 1_2
@@ -146,6 +149,7 @@ subroutine red_ops_and_widths(s8, s16, s64, sreal, lo, bits, parity, rlo, rhi)
     parity = ieor(parity, i)
     rlo = min(rlo, real(i))
     rhi = max(rhi, real(i, 8))
+    rmax = max(rmax, real(i))
   end do
 end subroutine
 

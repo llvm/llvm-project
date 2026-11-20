@@ -12,6 +12,7 @@
 
 #include "flang/Lower/Support/ReductionProcessor.h"
 
+#include "flang/Evaluate/tools.h"
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/ConvertType.h"
 #include "flang/Lower/OpenMP.h"
@@ -24,6 +25,7 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Semantics/openmp-utils.h"
+#include "flang/Semantics/tools.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/IRMapping.h"
@@ -72,13 +74,13 @@ template mlir::omp::DeclareReductionOp
 ReductionProcessor::createDeclareReduction<mlir::omp::DeclareReductionOp>(
     AbstractConverter &converter, llvm::StringRef reductionOpName,
     const ReductionIdentifier redId, mlir::Type type, mlir::Location loc,
-    bool isByRef);
+    bool isByRef, bool allowWideAtomic);
 
 template fir::DeclareReductionOp
 ReductionProcessor::createDeclareReduction<fir::DeclareReductionOp>(
     AbstractConverter &converter, llvm::StringRef reductionOpName,
     const ReductionIdentifier redId, mlir::Type type, mlir::Location loc,
-    bool isByRef);
+    bool isByRef, bool allowWideAtomic);
 
 template mlir::omp::DeclareReductionOp
 ReductionProcessor::createDeclareReductionHelper<mlir::omp::DeclareReductionOp>(
@@ -219,26 +221,63 @@ ReductionProcessor::findUserDefinedReductionForIntrinsic(
   return details && details->SupportsType(*type) ? &ultimate : nullptr;
 }
 
-// VOLATILE given to a use- or host-associated name sits on that association
-// link, not on the ultimate symbol.
+// VOLATILE given to a use- or host-associated name, or to an ASSOCIATE
+// selector, sits on that link rather than on the ultimate symbol. OpenMP
+// construct symbols link straight to the ultimate symbol, so also look the
+// name up in each enclosing scope.
 static bool isVolatileInAssociationChain(const semantics::Symbol &symbol) {
   const semantics::Symbol *sym = &symbol;
-  while (true) {
+  while (sym) {
     if (sym->attrs().test(semantics::Attr::VOLATILE))
       return true;
+    const semantics::Symbol &ultimate = sym->GetUltimate();
+    for (const semantics::Scope *scope = &sym->owner(); !scope->IsGlobal();
+         scope = &scope->parent()) {
+      auto it = scope->find(sym->name());
+      if (it != scope->end() && &it->second->GetUltimate() == &ultimate &&
+          it->second->attrs().test(semantics::Attr::VOLATILE))
+        return true;
+      if (scope == &ultimate.owner())
+        break;
+    }
+    if (const auto *use = sym->detailsIf<semantics::UseDetails>())
+      sym = &use->symbol();
+    else if (const auto *host = sym->detailsIf<semantics::HostAssocDetails>())
+      sym = &host->symbol();
+    else if (const auto *assoc =
+                 sym->detailsIf<semantics::AssocEntityDetails>())
+      sym = assoc->expr() ? evaluate::GetFirstSymbol(*assoc->expr()) : nullptr;
+    else
+      return false;
+  }
+  return false;
+}
+
+// Whether the reduction variable's storage is known to be naturally aligned:
+// a local or module variable that is not a dummy or storage associated
+// (COMMON, EQUIVALENCE), reached without an ASSOCIATE name (whose selector
+// may be a component at a non-natural offset).
+static bool isNaturallyAligned(const semantics::Symbol &symbol) {
+  const semantics::Symbol *sym = &symbol;
+  while (true) {
     if (const auto *use = sym->detailsIf<semantics::UseDetails>())
       sym = &use->symbol();
     else if (const auto *host = sym->detailsIf<semantics::HostAssocDetails>())
       sym = &host->symbol();
     else
-      return false;
+      break;
   }
+  if (!sym->has<semantics::ObjectEntityDetails>() || semantics::IsDummy(*sym))
+    return false;
+  if (semantics::FindCommonBlockContaining(*sym) ||
+      semantics::FindEquivalenceSet(*sym))
+    return false;
+  return true;
 }
 
-std::string
-ReductionProcessor::getReductionName(llvm::StringRef name,
-                                     const fir::KindMapping &kindMap,
-                                     mlir::Type ty, bool isByRef) {
+std::string ReductionProcessor::getReductionName(
+    llvm::StringRef name, const fir::KindMapping &kindMap, mlir::Type ty,
+    bool isByRef, bool unaligned) {
   // A volatile by-value operand cannot share the declaration whose atomic
   // region takes a non-volatile reference; by-ref reductions have no atomic
   // region and share one.
@@ -246,6 +285,12 @@ ReductionProcessor::getReductionName(llvm::StringRef name,
   llvm::StringRef volatileAddition{""};
   if (!isByRef && fir::isa_volatile_type(ty))
     volatileAddition = "_volatile";
+
+  // A 64-bit operand whose alignment is not provable keeps a declaration
+  // without the atomic region (see getAtomicReductionBinOp).
+  llvm::StringRef unalignedAddition{""};
+  if (unaligned)
+    unalignedAddition = "_unaligned";
 
   ty = fir::unwrapRefType(ty);
 
@@ -255,14 +300,14 @@ ReductionProcessor::getReductionName(llvm::StringRef name,
   if (isByRef)
     byrefAddition = "_byref";
 
-  return fir::getTypeAsString(ty, kindMap,
-                              (name + volatileAddition + byrefAddition).str());
+  return fir::getTypeAsString(
+      ty, kindMap,
+      (name + volatileAddition + unalignedAddition + byrefAddition).str());
 }
 
-std::string
-ReductionProcessor::getReductionName(ReductionIdentifier redId,
-                                     const fir::KindMapping &kindMap,
-                                     mlir::Type ty, bool isByRef) {
+std::string ReductionProcessor::getReductionName(
+    ReductionIdentifier redId, const fir::KindMapping &kindMap, mlir::Type ty,
+    bool isByRef, bool unaligned) {
   std::string reductionName;
 
   switch (redId) {
@@ -303,7 +348,7 @@ ReductionProcessor::getReductionName(ReductionIdentifier redId,
     llvm_unreachable("unsupported reduction identifier");
   }
 
-  return getReductionName(reductionName, kindMap, ty, isByRef);
+  return getReductionName(reductionName, kindMap, ty, isByRef, unaligned);
 }
 
 std::string ReductionProcessor::getScopedUserReductionName(
@@ -742,21 +787,24 @@ DeclareRedType ReductionProcessor::createDeclareReductionHelper(
 // region empty and the host runtime falls back to the critical/tree method.
 static std::optional<mlir::LLVM::AtomicBinOp>
 getAtomicReductionBinOp(ReductionProcessor::ReductionIdentifier redId,
-                        mlir::Type valTy) {
+                        mlir::Type valTy, bool allowWide) {
   using BinOp = mlir::LLVM::AtomicBinOp;
   const bool isInt = mlir::isa<mlir::IntegerType>(valTy);
   const bool isFloat = mlir::isa<mlir::FloatType>(valTy);
-  // Restrict to integer 8/16/32 and float 32, which atomicrmw lowers cleanly.
-  // Wider types are excluded: storage association or dummy-argument aliasing
-  // can leave them only 4-byte aligned, and a misaligned atomicrmw can span a
-  // cache line (a split lock on x86).
+  // Integer 8/16/32 and float 32 lower cleanly: conforming programs keep them
+  // naturally aligned (only the nonstandard EQUIVALENCE extensions, numeric
+  // with character or mixed kinds, can misalign them, and those are not
+  // handled). 64-bit types are allowed only when the operand is known to be
+  // aligned (\p allowWide): a conforming EQUIVALENCE, or an actual argument
+  // from one, can leave them 4-byte aligned, and a misaligned atomicrmw can
+  // span a cache line (a split lock on x86) or fault (ldarx on PowerPC).
   if (isInt) {
     unsigned w = valTy.getIntOrFloatBitWidth();
-    if (w != 8 && w != 16 && w != 32)
+    if (w != 8 && w != 16 && w != 32 && !(w == 64 && allowWide))
       return std::nullopt;
   } else if (isFloat) {
     unsigned w = valTy.getIntOrFloatBitWidth();
-    if (w != 32)
+    if (w != 32 && !(w == 64 && allowWide))
       return std::nullopt;
   }
   switch (redId) {
@@ -803,7 +851,8 @@ getAtomicReductionBinOp(ReductionProcessor::ReductionIdentifier redId,
 static void
 genAtomicReductionRegion(fir::FirOpBuilder &builder, mlir::Location loc,
                          ReductionProcessor::ReductionIdentifier redId,
-                         mlir::Type type, mlir::omp::DeclareReductionOp decl) {
+                         mlir::Type type, mlir::omp::DeclareReductionOp decl,
+                         bool allowWideAtomic) {
   mlir::Type valTy = fir::unwrapRefType(type);
   if (!fir::isa_trivial(valTy))
     return;
@@ -822,7 +871,7 @@ genAtomicReductionRegion(fir::FirOpBuilder &builder, mlir::Location loc,
     if (offloadMod.getIsTargetDevice())
       return;
   std::optional<mlir::LLVM::AtomicBinOp> binOp =
-      getAtomicReductionBinOp(redId, valTy);
+      getAtomicReductionBinOp(redId, valTy, allowWideAtomic);
   if (!binOp)
     return;
 
@@ -850,11 +899,25 @@ genAtomicReductionRegion(fir::FirOpBuilder &builder, mlir::Location loc,
   mlir::omp::YieldOp::create(builder, loc, mlir::ValueRange{});
 }
 
+// A 64-bit by-value operand whose natural alignment is not provable at the
+// clause binds a separate declaration without the atomic region.
+static bool usesUnalignedDecl(ReductionProcessor::ReductionIdentifier redId,
+                              mlir::Type refTy, bool isByRef,
+                              bool operandAligned) {
+  if (isByRef || operandAligned || fir::isa_volatile_type(refTy))
+    return false;
+  mlir::Type valTy = fir::unwrapRefType(refTy);
+  if (!mlir::isa<mlir::IntegerType, mlir::FloatType>(valTy) ||
+      valTy.getIntOrFloatBitWidth() != 64)
+    return false;
+  return getAtomicReductionBinOp(redId, valTy, /*allowWide=*/true).has_value();
+}
+
 template <typename OpType>
 OpType ReductionProcessor::createDeclareReduction(
     AbstractConverter &converter, llvm::StringRef reductionOpName,
     const ReductionIdentifier redId, mlir::Type type, mlir::Location loc,
-    bool isByRef) {
+    bool isByRef, bool allowWideAtomic) {
   auto genInitValueCB = [&](fir::FirOpBuilder &builder, mlir::Location loc,
                             mlir::Type type, mlir::Value /*moldArg*/,
                             mlir::Value /*privArg*/) {
@@ -880,7 +943,7 @@ OpType ReductionProcessor::createDeclareReduction(
   if constexpr (std::is_same_v<OpType, mlir::omp::DeclareReductionOp>)
     if (!isByRef && decl.getAtomicReductionRegion().empty())
       genAtomicReductionRegion(converter.getFirOpBuilder(), loc, redId, type,
-                               decl);
+                               decl, allowWideAtomic);
   return decl;
 }
 
@@ -1098,6 +1161,10 @@ struct OpenMPReductionBinder {
   const fir::KindMapping &kindMap;
   fir::ReferenceType redType;
   bool isByRef;
+  /// Whether the operand's storage is known to be naturally aligned, which
+  /// decides if a 64-bit operand may bind the declaration with the atomic
+  /// region.
+  bool operandAligned;
   /// Canonical reduction element type: redType with the allocatable/pointer
   /// storage wrappers stripped. Only naming and the type check use it;
   /// redType stays intact for op binding.
@@ -1285,8 +1352,9 @@ bool OpenMPReductionBinder<OpType>::processDefinedOperator(
   // Name it only here, since every path above either returns or is a TODO.
   // Reuse an existing op of the same global name if present; otherwise
   // fall through to createDeclareReduction below.
-  reductionName =
-      ReductionProcessor::getReductionName(redId, kindMap, redType, isByRef);
+  reductionName = ReductionProcessor::getReductionName(
+      redId, kindMap, redType, isByRef,
+      usesUnalignedDecl(redId, redType, isByRef, operandAligned));
   mlir::ModuleOp module = builder.getModule();
   if (auto existingDecl = module.lookupSymbol<OpType>(reductionName)) {
     reductionDeclSymbols.push_back(mlir::SymbolRefAttr::get(
@@ -1373,7 +1441,8 @@ bool OpenMPReductionBinder<OpType>::processProcedureDesignator(
   redId = ReductionProcessor::getReductionType(*reductionIntrinsic);
   reductionName = ReductionProcessor::getReductionName(
       ReductionProcessor::getRealName(*reductionIntrinsic).ToString(), kindMap,
-      redType, isByRef);
+      redType, isByRef,
+      usesUnalignedDecl(redId, redType, isByRef, operandAligned));
 
   return false;
 }
@@ -1394,8 +1463,9 @@ bool ReductionProcessor::processOpenMPReductionOperator(
     llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
     const semantics::Symbol &reductionSymbol,
     semantics::SemanticsContext *semaCtx, fir::ReferenceType redType,
-    bool isByRef, const fir::KindMapping &kindMap, std::string &reductionName,
-    ReductionIdentifier &redId, bool *hasUserDefinedReduction) {
+    bool isByRef, bool operandAligned, const fir::KindMapping &kindMap,
+    std::string &reductionName, ReductionIdentifier &redId,
+    bool *hasUserDefinedReduction) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
 
   const Fortran::lower::omp::clause::ReductionOperator &redOperator =
@@ -1448,6 +1518,7 @@ bool ReductionProcessor::processOpenMPReductionOperator(
                                        kindMap,
                                        redType,
                                        isByRef,
+                                       operandAligned,
                                        namingType,
                                        isBoxedTrivialReduction,
                                        isBoxedTrivialElemReduction,
@@ -1584,10 +1655,16 @@ bool ReductionProcessor::processReductionArguments(
     // EQUIVALENCE member), so also check the symbol.
     const bool symIsVolatile = fir::isa_volatile_type(symVal.getType()) ||
                                isVolatileInAssociationChain(*symbol);
-    mlir::Type refTy = fir::ReferenceType::get(elementType, symIsVolatile);
 
+    // Adding volatility must go through fir.volatile_cast, not fir.convert;
+    // convert to a fir.ref first since fir.ptr carries no volatile flag.
+    mlir::Value redVar = builder.createConvert(
+        currentLocation,
+        fir::ReferenceType::get(elementType,
+                                fir::isa_volatile_type(symVal.getType())),
+        symVal);
     reductionVars.push_back(
-        builder.createConvert(currentLocation, refTy, symVal));
+        builder.createVolatileCast(currentLocation, symIsVolatile, redVar));
     reduceVarByRef.push_back(doReductionByRef(reductionVars.back()));
 
     // Cache the final SSA value for this symbol so that subsequent calls
@@ -1609,13 +1686,14 @@ bool ReductionProcessor::processReductionArguments(
     const auto &kindMap = builder.getKindMap();
     std::string reductionName;
     ReductionIdentifier redId;
+    const bool operandAligned = isNaturallyAligned(*reductionSymbols[idx]);
 
     if constexpr (std::is_same_v<RedOperatorListTy,
                                  omp::clause::ReductionOperatorList>) {
       if (processOpenMPReductionOperator<OpType>(
               currentLocation, converter, redOperatorList, reductionDeclSymbols,
-              *reductionSymbols[idx], semaCtx, redType, isByRef, kindMap,
-              reductionName, redId, hasUserDefinedReduction)) {
+              *reductionSymbols[idx], semaCtx, redType, isByRef, operandAligned,
+              kindMap, reductionName, redId, hasUserDefinedReduction)) {
         ++idx;
         continue;
       }
@@ -1626,7 +1704,8 @@ bool ReductionProcessor::processReductionArguments(
     }
 
     OpType decl = createDeclareReduction<OpType>(
-        converter, reductionName, redId, redType, currentLocation, isByRef);
+        converter, reductionName, redId, redType, currentLocation, isByRef,
+        operandAligned);
     reductionDeclSymbols.push_back(
         mlir::SymbolRefAttr::get(builder.getContext(), decl.getSymName()));
     ++idx;
