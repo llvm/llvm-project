@@ -317,6 +317,7 @@ public:
 
   /// Evaluate the Data Inspection Language (DIL) expression \p var_expr in
   /// this frame.
+  /// \see https://lldb.llvm.org/resources/dil.html
   ///
   /// \param[in] var_expr
   ///     The DIL expression to evaluate.

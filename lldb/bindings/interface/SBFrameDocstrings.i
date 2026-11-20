@@ -153,11 +153,7 @@ See also SBThread."
         int_array[1]
         pt_ptr[22].x
 
-    Unlike `EvaluateExpression()` which returns :py:class:`SBValue` objects
-    with constant copies of the values at the time of evaluation,
-    the result of this function is a value that will continue to
-    track the current value of the value as execution progresses
-    in the current frame."
+    See https://lldb.llvm.org/resources/dil.html for more information."
 ) lldb::SBFrame::GetValueForVariablePath;
 
 %feature("docstring", "
