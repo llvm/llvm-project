@@ -251,8 +251,13 @@ bool InstrumentationRuntimeASan::NotifyBreakpointHit(
   if (!baton)
     return false;
 
+  // Hold a reference to the plugin while using it. The plugin might have been
+  // destroyed (e.g. because it was disabled) in which case don't stop.
+  InstrumentationRuntimeSP runtime_sp = GetRuntimeFromBaton(baton);
+  if (!runtime_sp)
+    return false;
   InstrumentationRuntimeASan *const instance =
-      static_cast<InstrumentationRuntimeASan *>(baton);
+      static_cast<InstrumentationRuntimeASan *>(runtime_sp.get());
 
   ProcessSP process_sp = instance->GetProcessSP();
 
@@ -317,8 +322,8 @@ void InstrumentationRuntimeASan::Activate() {
 
   const bool sync = false;
 
-  breakpoint->SetCallback(InstrumentationRuntimeASan::NotifyBreakpointHit, this,
-                          sync);
+  breakpoint->SetCallback(InstrumentationRuntimeASan::NotifyBreakpointHit,
+                          CreateBreakpointBaton(), sync);
   breakpoint->SetBreakpointKind("address-sanitizer-report");
   SetBreakpointID(breakpoint->GetID());
 

@@ -410,8 +410,13 @@ bool InstrumentationRuntimeBoundsSafety::NotifyBreakpointHit(
   if (!baton)
     return false; ///< false => resume execution.
 
+  // Hold a reference to the plugin while using it. The plugin might have been
+  // destroyed (e.g. because it was disabled) in which case don't stop.
+  InstrumentationRuntimeSP runtime_sp = GetRuntimeFromBaton(baton);
+  if (!runtime_sp)
+    return false;
   InstrumentationRuntimeBoundsSafety *const instance =
-      static_cast<InstrumentationRuntimeBoundsSafety *>(baton);
+      static_cast<InstrumentationRuntimeBoundsSafety *>(runtime_sp.get());
 
   ProcessSP process_sp = instance->GetProcessSP();
   if (!process_sp)
@@ -474,7 +479,8 @@ void InstrumentationRuntimeBoundsSafety::Activate() {
   // Note: When `sync=true` the suggested stackframe is completely ignored. So
   // we use `sync=false`. Is that a bug?
   breakpoint->SetCallback(
-      InstrumentationRuntimeBoundsSafety::NotifyBreakpointHit, this,
+      InstrumentationRuntimeBoundsSafety::NotifyBreakpointHit,
+      CreateBreakpointBaton(),
       /*sync=*/false);
   breakpoint->SetBreakpointKind("bounds-safety-soft-trap");
   SetBreakpointID(breakpoint->GetID());

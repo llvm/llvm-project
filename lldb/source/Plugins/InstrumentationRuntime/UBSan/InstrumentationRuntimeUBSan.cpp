@@ -202,8 +202,13 @@ bool InstrumentationRuntimeUBSan::NotifyBreakpointHit(
   if (!baton)
     return false; ///< false => resume execution.
 
+  // Hold a reference to the plugin while using it. The plugin might have been
+  // destroyed (e.g. because it was disabled) in which case don't stop.
+  InstrumentationRuntimeSP runtime_sp = GetRuntimeFromBaton(baton);
+  if (!runtime_sp)
+    return false;
   InstrumentationRuntimeUBSan *const instance =
-      static_cast<InstrumentationRuntimeUBSan *>(baton);
+      static_cast<InstrumentationRuntimeUBSan *>(runtime_sp.get());
 
   ProcessSP process_sp = instance->GetProcessSP();
   ThreadSP thread_sp = context->exe_ctx_ref.GetThreadSP();
@@ -275,7 +280,7 @@ void InstrumentationRuntimeUBSan::Activate() {
           .get();
   const bool sync = false;
   breakpoint->SetCallback(InstrumentationRuntimeUBSan::NotifyBreakpointHit,
-                          this, sync);
+                          CreateBreakpointBaton(), sync);
   breakpoint->SetBreakpointKind("undefined-behavior-sanitizer-report");
   SetBreakpointID(breakpoint->GetID());
 
