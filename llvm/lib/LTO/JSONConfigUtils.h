@@ -18,6 +18,7 @@
 
 #include <optional>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 namespace llvm {
@@ -121,6 +122,54 @@ struct JSONEntryApplier {
     return Error::success();
   }
 };
+
+template <typename T>
+void encodeField(JSONWriter &Writer, StringRef Key, const T &Field) {
+  if constexpr (std::is_same_v<T, bool>)
+    Writer.putBool(Key, Field);
+  else if constexpr (std::is_same_v<T, unsigned>)
+    Writer.putU32(Key, Field);
+  else if constexpr (std::is_same_v<T, int> || std::is_enum_v<T>)
+    Writer.putI32(Key, static_cast<int32_t>(Field));
+  else if constexpr (std::is_same_v<T, std::string>)
+    Writer.putString(Key, Field);
+  else {
+    static_assert(std::is_same_v<T, std::vector<std::string>>);
+    Writer.putStringList(Key, Field);
+  }
+}
+
+template <typename T>
+void encodeField(JSONWriter &Writer, StringRef Key,
+                 const std::optional<T> &Field) {
+  if (Field)
+    encodeField(Writer, Key, *Field);
+}
+
+template <typename T>
+Error decodeFieldWith(JSONEntryApplier Applier, function_ref<void(T)> Set) {
+  if constexpr (std::is_same_v<T, bool>)
+    return Applier.applyBool(Set);
+  else if constexpr (std::is_same_v<T, unsigned>)
+    return Applier.applyU32(Set);
+  else if constexpr (std::is_same_v<T, int> || std::is_enum_v<T>)
+    return Applier.applyI32([&](int32_t V) { Set(static_cast<T>(V)); });
+  else if constexpr (std::is_same_v<T, std::string>)
+    return Applier.applyString([&](StringRef V) { Set(V.str()); });
+  else {
+    static_assert(std::is_same_v<T, std::vector<std::string>>);
+    return Applier.applyStringList(Set);
+  }
+}
+
+template <typename T> Error decodeField(T &Field, JSONEntryApplier Applier) {
+  return decodeFieldWith<T>(Applier, [&](T V) { Field = std::move(V); });
+}
+
+template <typename T>
+Error decodeField(std::optional<T> &Field, JSONEntryApplier Applier) {
+  return decodeFieldWith<T>(Applier, [&](T V) { Field = std::move(V); });
+}
 
 template <typename T, typename ApplyEntryFn>
 Expected<T> decodeVersionedJSON(const json::Value &Value, unsigned Version,

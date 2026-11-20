@@ -1,0 +1,101 @@
+//===- MCTargetOptionsFields.def - MC option fields -------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// Define these macros before including this file.
+//   LLVM_MC_OPTION_FIELD(Type, Name, Initializer)
+//   LLVM_MC_OPTION_BITFIELD(Name)
+//   LLVM_MC_OPTION_BINUTILS_FIELD(Name)
+//
+//===----------------------------------------------------------------------===//
+
+LLVM_MC_OPTION_BITFIELD(MCRelaxAll)
+LLVM_MC_OPTION_BITFIELD(MCNoExecStack)
+LLVM_MC_OPTION_BITFIELD(MCFatalWarnings)
+LLVM_MC_OPTION_BITFIELD(MCNoWarn)
+LLVM_MC_OPTION_BITFIELD(MCNoDeprecatedWarn)
+LLVM_MC_OPTION_BITFIELD(MCNoTypeCheck)
+LLVM_MC_OPTION_BITFIELD(MCSaveTempLabels)
+LLVM_MC_OPTION_BITFIELD(MCIncrementalLinkerCompatible)
+LLVM_MC_OPTION_BITFIELD(FDPIC)
+LLVM_MC_OPTION_BITFIELD(ShowMCEncoding)
+LLVM_MC_OPTION_BITFIELD(ShowMCInst)
+LLVM_MC_OPTION_BITFIELD(AsmVerbose)
+
+/// Preserve Comments in Assembly.
+LLVM_MC_OPTION_BITFIELD(PreserveAsmComments)
+
+LLVM_MC_OPTION_BITFIELD(Dwarf64)
+
+// Use CREL relocation format for ELF.
+LLVM_MC_OPTION_FIELD(bool, Crel, = false)
+
+LLVM_MC_OPTION_FIELD(bool, ImplicitMapSyms, = false)
+
+/// Use relocations for DWARF cross-section offsets in Mach-O.
+LLVM_MC_OPTION_FIELD(bool, MachORelocatableDwarf, = false)
+
+// If true, prefer R_X86_64_[REX_]GOTPCRELX to R_X86_64_GOTPCREL on x86-64
+// ELF.
+LLVM_MC_OPTION_FIELD(bool, X86RelaxRelocations, = true)
+
+LLVM_MC_OPTION_FIELD(bool, X86Sse2Avx, = false)
+
+// Disable the integrated assembler.
+LLVM_MC_OPTION_FIELD(bool, DisableIntegratedAS, = false)
+
+// For ELF relocations, controls section symbol conversion.
+LLVM_MC_OPTION_FIELD(RelocSectionSymType, RelocSectionSym,
+                     = RelocSectionSymType::All)
+
+LLVM_MC_OPTION_FIELD(std::optional<unsigned>, OutputAsmVariant, )
+
+LLVM_MC_OPTION_FIELD(EmitDwarfUnwindType, EmitDwarfUnwind, )
+
+LLVM_MC_OPTION_FIELD(int, DwarfVersion, = 0)
+
+/// If greater than 0, overrides the default MCAsmInfo binutils version.
+LLVM_MC_OPTION_BINUTILS_FIELD(BinutilsVersion)
+
+LLVM_MC_OPTION_FIELD(DwarfDirectory, MCUseDwarfDirectory, )
+
+// Whether to compress DWARF debug sections.
+LLVM_MC_OPTION_FIELD(DebugCompressionType, CompressDebugSections,
+                     = DebugCompressionType::None)
+
+LLVM_MC_OPTION_FIELD(std::string, ABIName, )
+LLVM_MC_OPTION_FIELD(std::string, AssemblyLanguage, )
+LLVM_MC_OPTION_FIELD(std::string, SplitDwarfFile, )
+LLVM_MC_OPTION_FIELD(std::string, AsSecureLogFile, )
+
+// Used for codeview debug info. These will be set as compiler path and
+// commandline arguments in LF_BUILDINFO
+LLVM_MC_OPTION_FIELD(std::string, Argv0, )
+LLVM_MC_OPTION_FIELD(std::string, CommandlineArgs, )
+
+/// Additional paths to search for `.include` directives when using the
+/// integrated assembler.
+LLVM_MC_OPTION_FIELD(std::vector<std::string>, IASSearchPaths, )
+
+// InstPrinter options.
+LLVM_MC_OPTION_FIELD(std::vector<std::string>, InstPrinterOptions, )
+
+// Whether to emit compact-unwind for non-canonical personality
+// functions on Darwins.
+LLVM_MC_OPTION_BITFIELD(EmitCompactUnwindNonCanonical)
+
+// Whether to emit SFrame unwind sections.
+LLVM_MC_OPTION_BITFIELD(EmitSFrameUnwind)
+
+// Whether or not to use full register names on PowerPC.
+LLVM_MC_OPTION_BITFIELD(PPCUseFullRegisterNames)
+
+// Force 8-byte (sdata8) pointer encodings for ELF exception-handling.
+// On x86_64 this affects the .eh_frame FDE CFI plus the personality, LSDA,
+// and TType encodings; on AArch64/PPC64 only the FDE CFI encoding changes
+// (personality/LSDA/TType already default to sdata8).
+LLVM_MC_OPTION_FIELD(bool, LargeEHEncoding, = false)
