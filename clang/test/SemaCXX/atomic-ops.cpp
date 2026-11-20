@@ -22,3 +22,15 @@ void f() {
   __atomic_store(p, p, __ATOMIC_RELAXED);
   __atomic_compare_exchange(p, p, q, 0, __ATOMIC_RELAXED, __ATOMIC_RELAXED);
 }
+
+typedef volatile int VI;
+typedef const int CI;
+extern VI vi;
+extern CI ci;
+void sink(int &&);
+
+void unqualified_result() {
+  sink(__atomic_load_n(&vi, __ATOMIC_RELAXED));
+  sink(__atomic_load_n(&ci, __ATOMIC_RELAXED));
+  sink(__atomic_exchange_n(&vi, 0, __ATOMIC_RELAXED));
+}

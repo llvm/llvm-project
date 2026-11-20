@@ -375,6 +375,18 @@ bool AtomicInfo::emitMemSetZeroIfNecessary() const {
   return true;
 }
 
+static PointerAuthQualifier getResultPointerAuth(const AtomicExpr *E) {
+  switch (E->getOp()) {
+  case AtomicExpr::AO__atomic_load:
+  case AtomicExpr::AO__atomic_exchange:
+  case AtomicExpr::AO__scoped_atomic_load:
+  case AtomicExpr::AO__scoped_atomic_exchange:
+    return PointerAuthQualifier();
+  default:
+    return E->getPtr()->getType()->getPointeeType().getPointerAuth();
+  }
+}
+
 static void emitAtomicCmpXchg(CodeGenFunction &CGF, AtomicExpr *E, bool IsWeak,
                               Address Dest, Address Ptr, Address Val1,
                               Address Val2, Address ExpectedResult,
@@ -633,7 +645,12 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *E, Address Dest,
     Load->setVolatile(E->isVolatile());
     CGF.getTargetHooks().setTargetAtomicMetadata(CGF, *Load, E);
     CGF.maybeAttachRangeForLoad(Load, E->getValueType(), E->getExprLoc());
-    auto *I = CGF.Builder.CreateStore(Load, Dest);
+    llvm::Value *Result = Load;
+    if (PointerAuthQualifier PtrAuth = getResultPointerAuth(E))
+      Result = CGF.EmitPointerAuthUnqualify(
+          PtrAuth, Load, E->getValueType().getUnqualifiedType(), Ptr,
+          /*IsKnownNonNull=*/false);
+    auto *I = CGF.Builder.CreateStore(Result, Dest);
     CGF.addInstToCurrentSourceAtom(I, Load);
     return;
   }
@@ -838,6 +855,12 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *E, Address Dest,
   // For __atomic_*_fetch operations, perform the operation again to
   // determine the value which was written.
   llvm::Value *Result = RMWI;
+  if (PointerAuthQualifier PtrAuth = getResultPointerAuth(E)) {
+    assert(Op == llvm::AtomicRMWInst::Xchg && !PostOp && !PostOpMinMax);
+    Result = CGF.EmitPointerAuthUnqualify(
+        PtrAuth, RMWI, E->getValueType().getUnqualifiedType(), Ptr,
+        /*IsKnownNonNull=*/false);
+  }
   if (PostOpMinMax)
     Result = EmitPostAtomicMinMax(CGF.Builder, E->getOp(),
                                   E->getValueType()->isSignedIntegerType(),
@@ -854,11 +877,14 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *E, Address Dest,
 
 // This function emits any expression (scalar, complex, or aggregate)
 // into a temporary alloca.
-static Address
-EmitValToTemp(CodeGenFunction &CGF, Expr *E) {
+static Address EmitValToTemp(CodeGenFunction &CGF, Expr *E,
+                             PointerAuthQualifier PtrAuth, Address Ptr) {
   Address DeclPtr = CGF.CreateMemTempWithoutCast(E->getType(), ".atomictmp");
-  CGF.EmitAnyExprToMem(E, DeclPtr, E->getType().getQualifiers(),
-                       /*Init*/ true);
+  if (PtrAuth)
+    CGF.Builder.CreateStore(CGF.EmitPointerAuthQualify(PtrAuth, E, Ptr),
+                            DeclPtr);
+  else
+    CGF.EmitAnyExprToMem(E, DeclPtr, Qualifiers(), /*Init*/ true);
   return DeclPtr;
 }
 
@@ -1030,7 +1056,7 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
         E->getOp() == AtomicExpr::AO__scoped_atomic_compare_exchange)
       Val2 = EmitPointerWithAlignment(E->getVal2());
     else
-      Val2 = EmitValToTemp(*this, E->getVal2());
+      Val2 = EmitValToTemp(*this, E->getVal2(), AtomicTy.getPointerAuth(), Ptr);
     OrderFail = EmitScalarExpr(E->getOrderFail());
     if (E->getOp() == AtomicExpr::AO__atomic_compare_exchange_n ||
         E->getOp() == AtomicExpr::AO__atomic_compare_exchange ||
@@ -1133,7 +1159,7 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
   case AtomicExpr::AO__atomic_fetch_fmaximum:
   case AtomicExpr::AO__atomic_fetch_fminimum_num:
   case AtomicExpr::AO__atomic_fetch_fmaximum_num:
-    Val1 = EmitValToTemp(*this, E->getVal1());
+    Val1 = EmitValToTemp(*this, E->getVal1(), AtomicTy.getPointerAuth(), Ptr);
     break;
   }
 
@@ -2222,7 +2248,11 @@ void CodeGenFunction::EmitAtomicInit(Expr *init, LValue dest) {
 
   switch (atomics.getEvaluationKind()) {
   case TEK_Scalar: {
-    llvm::Value *value = EmitScalarExpr(init);
+    llvm::Value *value;
+    if (PointerAuthQualifier PtrAuth = dest.getQuals().getPointerAuth())
+      value = EmitPointerAuthQualify(PtrAuth, init, dest.getAddress());
+    else
+      value = EmitScalarExpr(init);
     atomics.emitCopyIntoMemory(RValue::get(value));
     return;
   }

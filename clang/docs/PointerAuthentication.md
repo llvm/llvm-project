@@ -431,6 +431,13 @@ a discriminator determined as follows:
   is `ptrauth_blend_discriminator(&x, discriminator)`; see
   [`ptrauth_blend_discriminator`](#ptrauth-blend-discriminator).
 
+Atomic initialization, load, store, exchange and compare-exchange on a
+`__ptrauth`-qualified object use its schema. An operand passed by address,
+such as the `expected` of a compare-exchange, must point to the object's
+`__ptrauth`-qualified type. Atomic arithmetic, `__sync_*`,
+`__atomic_test_and_set`, `__atomic_clear`, and implicit increment, decrement
+and compound assignment of an `_Atomic` object are rejected.
+
 ##### Non-triviality from address diversity
 
 Address diversity must impose additional restrictions in order to allow the

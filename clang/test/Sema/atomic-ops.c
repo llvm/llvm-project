@@ -976,3 +976,11 @@ void nullPointerWarning(void) {
   (void)__atomic_fetch_max(&vi, 0, memory_order_relaxed);
   (void)__atomic_fetch_max(&i, 0, memory_order_relaxed);
 }
+
+typedef const int ConstInt;
+extern ConstInt cint;
+
+void unqualified_result(void) {
+  __typeof__(__atomic_load_n(&cint, memory_order_relaxed)) r;
+  r = 1;
+}
