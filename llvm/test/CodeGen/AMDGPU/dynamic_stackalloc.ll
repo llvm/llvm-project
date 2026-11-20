@@ -50,8 +50,8 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_uniform(i32 %n) #0 {
 ; GFX11-SDAG-NEXT:    s_mov_b32 s33, 0
 ; GFX11-SDAG-NEXT:    s_mov_b32 s1, s32
 ; GFX11-SDAG-NEXT:    scratch_store_b32 off, v0, s1 dlc
-; GFX11-SDAG-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-SDAG-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-SDAG-NEXT:    s_lshl2_add_u32 s0, s0, 15
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    s_and_b32 s0, s0, -16
@@ -66,8 +66,8 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_uniform(i32 %n) #0 {
 ; GFX11-GISEL-NEXT:    s_mov_b32 s33, 0
 ; GFX11-GISEL-NEXT:    s_mov_b32 s0, s32
 ; GFX11-GISEL-NEXT:    scratch_store_b32 off, v0, s0 dlc
-; GFX11-GISEL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-GISEL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-GISEL-NEXT:    s_lshl2_add_u32 s1, s1, 15
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    s_and_b32 s1, s1, -16
@@ -128,8 +128,8 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_uniform_over_aligned(i
 ; GFX11-SDAG-NEXT:    s_mov_b32 s33, 0
 ; GFX11-SDAG-NEXT:    s_and_b32 s1, s1, 0xffffff80
 ; GFX11-SDAG-NEXT:    scratch_store_b32 off, v0, s1 dlc
-; GFX11-SDAG-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-SDAG-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-SDAG-NEXT:    s_lshl2_add_u32 s0, s0, 15
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    s_and_b32 s0, s0, -16
@@ -145,8 +145,8 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_uniform_over_aligned(i
 ; GFX11-GISEL-NEXT:    s_mov_b32 s33, 0
 ; GFX11-GISEL-NEXT:    s_and_b32 s1, s1, 0xffffff80
 ; GFX11-GISEL-NEXT:    scratch_store_b32 off, v0, s1 dlc
-; GFX11-GISEL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-GISEL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-GISEL-NEXT:    s_lshl2_add_u32 s0, s0, 15
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    s_and_b32 s0, s0, -16
@@ -203,8 +203,8 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_uniform_under_aligned(
 ; GFX11-SDAG-NEXT:    s_mov_b32 s33, 0
 ; GFX11-SDAG-NEXT:    s_mov_b32 s1, s32
 ; GFX11-SDAG-NEXT:    scratch_store_b32 off, v0, s1 dlc
-; GFX11-SDAG-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-SDAG-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-SDAG-NEXT:    s_lshl2_add_u32 s0, s0, 15
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    s_and_b32 s0, s0, -16
@@ -219,8 +219,8 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_uniform_under_aligned(
 ; GFX11-GISEL-NEXT:    s_mov_b32 s33, 0
 ; GFX11-GISEL-NEXT:    s_mov_b32 s0, s32
 ; GFX11-GISEL-NEXT:    scratch_store_b32 off, v0, s0 dlc
-; GFX11-GISEL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-GISEL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-GISEL-NEXT:    s_lshl2_add_u32 s1, s1, 15
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    s_and_b32 s1, s1, -16
@@ -2712,8 +2712,8 @@ define void @test_dynamic_stackalloc_device_control_flow(i32 %n, i32 %m) #0 {
 ; GFX9-SDAG-NEXT:    v_lshl_add_u32 v3, s8, 6, v1
 ; GFX9-SDAG-NEXT:    v_readfirstlane_b32 s32, v3
 ; GFX9-SDAG-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 offen
-; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-SDAG-NEXT:    ; implicit-def: $vgpr31
+; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-SDAG-NEXT:  .LBB15_2: ; %Flow
 ; GFX9-SDAG-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GFX9-SDAG-NEXT:    s_cbranch_execz .LBB15_4
@@ -2797,8 +2797,8 @@ define void @test_dynamic_stackalloc_device_control_flow(i32 %n, i32 %m) #0 {
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, s7
 ; GFX9-GISEL-NEXT:    s_add_u32 s32, s7, s6
 ; GFX9-GISEL-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 offen
-; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-GISEL-NEXT:    ; implicit-def: $vgpr31
+; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-GISEL-NEXT:  .LBB15_2: ; %Flow
 ; GFX9-GISEL-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GFX9-GISEL-NEXT:    s_cbranch_execz .LBB15_4

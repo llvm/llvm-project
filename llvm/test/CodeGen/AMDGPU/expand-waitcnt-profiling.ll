@@ -729,6 +729,8 @@ define amdgpu_kernel void @test_vscnt_global_stores(ptr addrspace(1) %buf) #0 {
 ; GFX9-EXPAND-NEXT:    global_store_dword v0, v1, s[0:1] offset:256
 ; GFX9-EXPAND-NEXT:    v_mov_b32_e32 v1, 3
 ; GFX9-EXPAND-NEXT:    global_store_dword v0, v1, s[0:1] offset:512
+; GFX9-EXPAND-NEXT:    s_waitcnt vmcnt(2)
+; GFX9-EXPAND-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-EXPAND-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-EXPAND-NEXT:    s_endpgm
 ;
@@ -757,6 +759,8 @@ define amdgpu_kernel void @test_vscnt_global_stores(ptr addrspace(1) %buf) #0 {
 ; GFX10-EXPAND-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX10-EXPAND-NEXT:    global_store_dword v0, v2, s[0:1] offset:256
 ; GFX10-EXPAND-NEXT:    global_store_dword v0, v3, s[0:1] offset:512
+; GFX10-EXPAND-NEXT:    s_waitcnt_vscnt null, 0x2
+; GFX10-EXPAND-NEXT:    s_waitcnt_vscnt null, 0x1
 ; GFX10-EXPAND-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-EXPAND-NEXT:    s_endpgm
 ;
@@ -786,6 +790,8 @@ define amdgpu_kernel void @test_vscnt_global_stores(ptr addrspace(1) %buf) #0 {
 ; GFX11-EXPAND-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-EXPAND-NEXT:    global_store_b32 v0, v2, s[0:1] offset:256
 ; GFX11-EXPAND-NEXT:    global_store_b32 v0, v3, s[0:1] offset:512
+; GFX11-EXPAND-NEXT:    s_waitcnt_vscnt null, 0x2
+; GFX11-EXPAND-NEXT:    s_waitcnt_vscnt null, 0x1
 ; GFX11-EXPAND-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-EXPAND-NEXT:    s_endpgm
 ;
