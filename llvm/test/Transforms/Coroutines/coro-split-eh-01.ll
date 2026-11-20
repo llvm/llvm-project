@@ -24,12 +24,12 @@ suspend:
 lpad:
   %tok = cleanuppad within none []
   call void @print(i32 2)
-  call void @llvm.coro.end(ptr null, i1 true, token none) [ "funclet"(token %tok) ]
+  call void @llvm.coro.end(ptr null, i1 true, token none)
   cleanupret from %tok unwind label %cleanup.cont
 
 cleanup.cont:
   %tok2 = cleanuppad within none []
-  call void @print(i32 3) ; should not be present in f.resume
+  call void @print(i32 3)
   cleanupret from %tok2 unwind to caller
 }
 
@@ -63,6 +63,7 @@ cleanup.cont:
 ; CHECK-NEXT:   call void @print(i32 2)
 ; Checks that the coroutine would be marked as done if it exits in unwinding path.
 ; CHECK-NEXT:   store ptr null, ptr %hdl, align 8
+; CHECK-NEXT:   call void @print(i32 3)
 ; CHECK-NEXT:   cleanupret from %tok unwind to caller
 
 declare ptr @llvm.coro.free(token, ptr)

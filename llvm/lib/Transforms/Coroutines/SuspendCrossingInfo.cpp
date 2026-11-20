@@ -167,7 +167,8 @@ SuspendCrossingInfo::SuspendCrossingInfo(Function &F, const coro::Shape &Shape)
     assert(CE->getParent()->getFirstInsertionPt() == CE->getIterator() &&
            CE->getParent()->size() <= 2 && "CoroEnd must be in its own BB");
 
-    getBlockData(CE->getParent()).setNeverKill();
+    if (CE->isFallthrough())
+      getBlockData(CE->getParent()).setNeverKill();
   }
 
   for (auto *InRamp : Shape.CoroIsInRampInsts)

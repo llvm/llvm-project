@@ -377,24 +377,6 @@ static void markCoroutineAsDone(IRBuilder<> &Builder, const coro::Shape &Shape,
   // Resume function pointer is always first
   auto *NullPtr = ConstantPointerNull::get(Shape.getSwitchResumePointerType());
   Builder.CreateStore(NullPtr, FramePtr);
-
-  // If the coroutine don't have unwind coro end, we could omit the store to
-  // the final suspend point since we could infer the coroutine is suspended
-  // at the final suspend point by the nullness of ResumeFnAddr.
-  // However, we can't skip it if the coroutine have unwind coro end. Since
-  // the coroutine reaches unwind coro end is considered suspended at the
-  // final suspend point (the ResumeFnAddr is null) but in fact the coroutine
-  // didn't complete yet. We need the IndexVal for the final suspend point
-  // to make the states clear.
-  if (Shape.SwitchLowering.HasUnwindCoroEnd &&
-      Shape.SwitchLowering.HasFinalSuspend) {
-    assert(cast<CoroSuspendInst>(Shape.CoroSuspends.back())->isFinal() &&
-           "The final suspend should only live in the last position of "
-           "CoroSuspends.");
-    ConstantInt *IndexVal = Shape.getIndex(Shape.CoroSuspends.size() - 1);
-    Value *FinalIndex = createSwitchIndexPtr(Shape, Builder, FramePtr);
-    Builder.CreateStore(IndexVal, FinalIndex);
-  }
 }
 
 /// Replace an unwind call to llvm.coro.end.
@@ -424,14 +406,6 @@ static void replaceUnwindCoroEnd(AnyCoroEndInst *End, const coro::Shape &Shape,
   case coro::ABI::RetconOnce:
     maybeFreeRetconStorage(Builder, Shape, FramePtr, CG);
     break;
-  }
-
-  // If coro.end has an associated bundle, add cleanupret instruction.
-  if (auto Bundle = End->getOperandBundle(LLVMContext::OB_funclet)) {
-    auto *FromPad = cast<CleanupPadInst>(Bundle->Inputs[0]);
-    auto *CleanupRet = Builder.CreateCleanupRet(FromPad, nullptr);
-    End->getParent()->splitBasicBlock(End);
-    CleanupRet->getParent()->getTerminator()->eraseFromParent();
   }
 }
 

@@ -50,7 +50,7 @@ catch.ret:
 
 ehcleanup:
   %cleanup = cleanuppad within none []
-  call void @llvm.coro.end(ptr null, i1 true, token none) [ "funclet"(token %cleanup) ]
+  call void @llvm.coro.end(ptr null, i1 true, token none)
   cleanupret from %cleanup unwind to caller
 
 coro.ret:

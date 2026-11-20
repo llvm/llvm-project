@@ -132,16 +132,17 @@ invoker g() {
 
   throw 0;
   // Test that GRO is destructed in EHCleanup
-  // CHECK: call void @llvm.coro.end(ptr null, i1 true, token none)
-  // CHECK-NEXT: call i1 @llvm.coro.is_in_ramp()
-  // CHECK-NEXT: br i1 {{.*}}, label %[[CLEANUP_CONT:.+]], label %eh.resume
-
-  // CHECK: [[CLEANUP_CONT]]
-  // CHECK-NEXT: %[[IS_ACTIVE:.+]] = load i1, ptr %[[RESULT_ACTIVE]]
+  // CHECK: %[[IS_ACTIVE:.+]] = load i1, ptr %[[RESULT_ACTIVE]]
   // CHECK-NEXT: br i1 %[[IS_ACTIVE]], label %[[CLEANUP_ACTION:.+]], label %{{.*}}
 
   // CHECK: [[CLEANUP_ACTION]]:
   // CHECK-NEXT: call void @_ZN7invokerD1Ev({{.*}} %[[AggRes]]
+  // CHECK-NEXT: br label %[[CLEANUP_DONE:.+]]
+
+  // CHECK: [[CLEANUP_DONE]]:
+  // CHECK-NEXT: call void @llvm.lifetime.end.p0(ptr %[[Promise]])
+  // CHECK-NEXT: call i1 @llvm.coro.is_in_ramp()
+  // CHECK-NEXT: br i1 {{.*}}, label %{{.+}}, label %eh.suspend
   co_return;
 }
 

@@ -52,11 +52,6 @@ coroutine ArrayInitCoro() {
     // CHECK-NEXT:  @_ZNSt14suspend_always11await_readyEv
     // CHECK-NEXT:  br i1 %{{.+}}, label %await.ready, label %{{CoroSave[0-9]+}}
   };
-  // CHECK:       await.cleanup:                                    ; preds = %AfterCoroSuspend{{.*}}
-  // CHECK-NEXT:    br label %cleanup{{.*}}.from.await.cleanup
-
-  // CHECK:       cleanup{{.*}}.from.await.cleanup:                      ; preds = %await.cleanup
-  // CHECK:         br label %cleanup{{.*}}
 
   // CHECK:       await.ready:
   // CHECK-NEXT:    %arrayinit.element.reload.addr = getelementptr inbounds i8, ptr %0, i64 48
@@ -65,7 +60,7 @@ coroutine ArrayInitCoro() {
   // CHECK-NEXT:    store i1 false, ptr %cleanup.isactive.reload.addr, align 1
   // CHECK-NEXT:    br label %cleanup{{.*}}.from.await.ready
 
-  // CHECK:       cleanup{{.*}}:                                         ; preds = %cleanup{{.*}}.from.await.ready, %cleanup{{.*}}.from.await.cleanup
+  // CHECK:       cleanup{{.*}}:                                         ; preds = %cleanup{{.*}}.from.await.ready
   // CHECK:         %cleanup.is_active = load i1, ptr %cleanup.isactive.reload.addr, align 1
   // CHECK-NEXT:    br i1 %cleanup.is_active, label %cleanup.action, label %cleanup.done
 
