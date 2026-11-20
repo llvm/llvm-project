@@ -1181,13 +1181,13 @@ unsigned llvm::computeUnrollCount(
     Count >>= 1;
 
   if (!UP.RuntimeUnrollMultiExit) {
-    std::optional<unsigned> MaxCount = getRuntimeUnrollMultiExitMaxCount(L);
-    if (MaxCount && Count > *MaxCount) {
+    if (auto MaxCount = getRuntimeUnrollMultiExitMaxCount(L);
+        MaxCount && Count > *MaxCount) {
+      unsigned NewCount = llvm::bit_floor(*MaxCount);
       LLVM_DEBUG(dbgs().indent(2)
                  << "Multi-exit loop: reducing unroll count from " << Count
-                 << " to at most " << *MaxCount << ".\n");
-      while (Count > *MaxCount)
-        Count >>= 1;
+                 << " to " << NewCount << ".\n");
+      Count = NewCount;
       // Profitability of the non-latch exit has been decided here, so the
       // remainder generation does not need to check it again.
       UP.RuntimeUnrollMultiExit = true;

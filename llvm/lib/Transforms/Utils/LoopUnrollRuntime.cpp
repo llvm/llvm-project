@@ -540,6 +540,8 @@ static Loop *CloneLoopBlocks(Loop *L, Value *NewIter,
   return NewLoop;
 }
 
+/// Largest runtime unroll count letting multi-exit \p L run MinBodies unrolled
+/// bodies before its side exit. std::nullopt if this limit does not apply.
 std::optional<unsigned> llvm::getRuntimeUnrollMultiExitMaxCount(Loop *L) {
   unsigned MinBodies = UnrollRuntimeMultiExitMinBodies;
   if (!MinBodies || UnrollRuntimeOtherExitPredictable ||
@@ -567,24 +569,8 @@ std::optional<unsigned> llvm::getRuntimeUnrollMultiExitMaxCount(Loop *L) {
   if (BranchProb.isZero())
     return std::numeric_limits<unsigned>::max();
 
-  // The largest Count with BranchProb <= 1 / (MinBodies * Count). Start from
-  // the exact quotient and correct for the rounding done by BranchProbability.
-  auto Fits = [&](uint64_t Count) {
-    return BranchProb <=
-           BranchProbability::getBranchProbability(1, MinBodies * Count);
-  };
-
-  uint64_t MaxCount =
-      BranchProbability::getDenominator() /
-      (static_cast<uint64_t>(BranchProb.getNumerator()) * MinBodies);
-  // Beyond any unroll count - no limit.
-  if (MaxCount >= std::numeric_limits<uint16_t>::max())
-    return std::numeric_limits<unsigned>::max();
-  while (MaxCount > 0 && !Fits(MaxCount))
-    --MaxCount;
-  while (Fits(MaxCount + 1))
-    ++MaxCount;
-  return MaxCount;
+  // The largest Count with MinBodies * Count <= 1 / BranchProb.
+  return BranchProb.scaleByInverse(1) / MinBodies;
 }
 
 /// Returns true if we can profitably unroll the multi-exit loop L by \p Count.
