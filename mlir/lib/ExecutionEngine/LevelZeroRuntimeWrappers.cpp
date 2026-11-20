@@ -20,8 +20,15 @@
 #include <limits>
 #include <memory>
 #include <stdexcept>
+#include <string>
 #include <unordered_set>
 #include <vector>
+
+#ifdef _WIN32
+#define MLIR_LEVELZERO_WRAPPERS_EXPORT __declspec(dllexport)
+#else
+#define MLIR_LEVELZERO_WRAPPERS_EXPORT __attribute__((visibility("default")))
+#endif // _WIN32
 
 namespace {
 template <typename F>
@@ -425,48 +432,54 @@ loadModule(const void *data, size_t dataSize,
 // L0 Wrappers definition
 //===----------------------------------------------------------------------===//
 
-extern "C" StreamWrapper *mgpuStreamCreate() {
+extern "C" MLIR_LEVELZERO_WRAPPERS_EXPORT StreamWrapper *mgpuStreamCreate() {
   return new StreamWrapper(getDynamicEventPool());
 }
 
-extern "C" void mgpuStreamSynchronize(StreamWrapper *stream) {
+extern "C" MLIR_LEVELZERO_WRAPPERS_EXPORT void
+mgpuStreamSynchronize(StreamWrapper *stream) {
   if (stream)
     stream->sync();
 }
 
-extern "C" void mgpuStreamDestroy(StreamWrapper *stream) { delete stream; }
+extern "C" MLIR_LEVELZERO_WRAPPERS_EXPORT void
+mgpuStreamDestroy(StreamWrapper *stream) {
+  delete stream;
+}
 
-extern "C" void mgpuStreamWaitEvent(StreamWrapper *stream,
-                                    ze_event_handle_t event) {
+extern "C" MLIR_LEVELZERO_WRAPPERS_EXPORT void
+mgpuStreamWaitEvent(StreamWrapper *stream, ze_event_handle_t event) {
   assert(stream && "Invalid stream");
   assert(event && "Invalid event");
   stream->sync(event);
 }
 
-extern "C" ze_event_handle_t mgpuEventCreate() {
+extern "C" MLIR_LEVELZERO_WRAPPERS_EXPORT ze_event_handle_t mgpuEventCreate() {
   return getDynamicEventPool().takeEvent();
 }
 
-extern "C" void mgpuEventDestroy(ze_event_handle_t event) {
+extern "C" MLIR_LEVELZERO_WRAPPERS_EXPORT void
+mgpuEventDestroy(ze_event_handle_t event) {
   return getDynamicEventPool().releaseEvent(event);
 }
 
-extern "C" void mgpuEventSynchronize(ze_event_handle_t event) {
+extern "C" MLIR_LEVELZERO_WRAPPERS_EXPORT void
+mgpuEventSynchronize(ze_event_handle_t event) {
   L0_SAFE_CALL(
       zeEventHostSynchronize(event, std::numeric_limits<uint64_t>::max()));
   L0_SAFE_CALL(zeEventHostReset(event));
 }
 
-extern "C" void mgpuEventRecord(ze_event_handle_t event,
-                                StreamWrapper *stream) {
+extern "C" MLIR_LEVELZERO_WRAPPERS_EXPORT void
+mgpuEventRecord(ze_event_handle_t event, StreamWrapper *stream) {
   L0_SAFE_CALL(zeCommandListAppendSignalEvent(
       getRtContext().immCmdListCopy.get(), event));
   L0_SAFE_CALL(zeCommandListAppendSignalEvent(
       getRtContext().immCmdListCompute.get(), event));
 }
 
-extern "C" void *mgpuMemAlloc(uint64_t size, StreamWrapper *stream,
-                              bool isShared) {
+extern "C" MLIR_LEVELZERO_WRAPPERS_EXPORT void *
+mgpuMemAlloc(uint64_t size, StreamWrapper *stream, bool isShared) {
   return catchAll([&]() {
     void *memPtr = nullptr;
     constexpr size_t alignment{64};
@@ -489,14 +502,15 @@ extern "C" void *mgpuMemAlloc(uint64_t size, StreamWrapper *stream,
   });
 }
 
-extern "C" void mgpuMemFree(void *ptr, StreamWrapper *stream) {
+extern "C" MLIR_LEVELZERO_WRAPPERS_EXPORT void
+mgpuMemFree(void *ptr, StreamWrapper *stream) {
   stream->sync();
   if (ptr)
     L0_SAFE_CALL(zeMemFree(getRtContext().context.get(), ptr));
 }
 
-extern "C" void mgpuMemcpy(void *dst, void *src, size_t sizeBytes,
-                           StreamWrapper *stream) {
+extern "C" MLIR_LEVELZERO_WRAPPERS_EXPORT void
+mgpuMemcpy(void *dst, void *src, size_t sizeBytes, StreamWrapper *stream) {
   stream->enqueueOp([&](ze_event_handle_t newEvent, uint32_t numWaitEvents,
                         ze_event_handle_t *waitEvents) {
     L0_SAFE_CALL(zeCommandListAppendMemoryCopy(
@@ -520,23 +534,25 @@ static void mgpuMemset(void *dst, PATTERN_TYPE value, size_t count,
         count * sizeof(PATTERN_TYPE), newEvent, numWaitEvents, waitEvents));
   });
 }
-extern "C" void mgpuMemset32(void *dst, unsigned int value, size_t count,
-                             StreamWrapper *stream) {
+extern "C" MLIR_LEVELZERO_WRAPPERS_EXPORT void
+mgpuMemset32(void *dst, unsigned int value, size_t count,
+             StreamWrapper *stream) {
   mgpuMemset<unsigned int>(dst, value, count, stream);
 }
 
-extern "C" void mgpuMemset16(void *dst, unsigned short value, size_t count,
-                             StreamWrapper *stream) {
+extern "C" MLIR_LEVELZERO_WRAPPERS_EXPORT void
+mgpuMemset16(void *dst, unsigned short value, size_t count,
+             StreamWrapper *stream) {
   mgpuMemset<unsigned short>(dst, value, count, stream);
 }
 
-extern "C" ze_module_handle_t mgpuModuleLoad(const void *data,
-                                             size_t gpuBlobSize) {
+extern "C" MLIR_LEVELZERO_WRAPPERS_EXPORT ze_module_handle_t
+mgpuModuleLoad(const void *data, size_t gpuBlobSize) {
   return catchAll([&]() { return loadModule(data, gpuBlobSize); });
 }
 
-extern "C" ze_module_handle_t mgpuModuleLoadJIT(void *data, int optLevel,
-                                                size_t assemblySize) {
+extern "C" MLIR_LEVELZERO_WRAPPERS_EXPORT ze_module_handle_t
+mgpuModuleLoadJIT(void *data, int optLevel, size_t assemblySize) {
   // Account for extra null terminator added in embedBinaryImpl.
   // A null terminator is added during embedding binary for assembly format to
   // support JIT paths that expect null-terminated strings. However, for SPIR-V
@@ -553,8 +569,8 @@ extern "C" ze_module_handle_t mgpuModuleLoadJIT(void *data, int optLevel,
   });
 }
 
-extern "C" ze_kernel_handle_t mgpuModuleGetFunction(ze_module_handle_t module,
-                                                    const char *name) {
+extern "C" MLIR_LEVELZERO_WRAPPERS_EXPORT ze_kernel_handle_t
+mgpuModuleGetFunction(ze_module_handle_t module, const char *name) {
   assert(module && name);
   ze_kernel_handle_t zeKernel;
   ze_kernel_desc_t desc = {};
@@ -563,12 +579,11 @@ extern "C" ze_kernel_handle_t mgpuModuleGetFunction(ze_module_handle_t module,
   return zeKernel;
 }
 
-extern "C" void mgpuLaunchKernel(ze_kernel_handle_t kernel, size_t gridX,
-                                 size_t gridY, size_t gridZ, size_t blockX,
-                                 size_t blockY, size_t blockZ,
-                                 int32_t sharedMemBytes, StreamWrapper *stream,
-                                 void **params, void ** /*extra*/,
-                                 size_t paramsCount) {
+extern "C" MLIR_LEVELZERO_WRAPPERS_EXPORT void
+mgpuLaunchKernel(ze_kernel_handle_t kernel, size_t gridX, size_t gridY,
+                 size_t gridZ, size_t blockX, size_t blockY, size_t blockZ,
+                 int32_t sharedMemBytes, StreamWrapper *stream, void **params,
+                 void ** /*extra*/, size_t paramsCount) {
 
   if (sharedMemBytes > 0) {
     paramsCount = paramsCount - 1; // Last param is shared memory size
@@ -591,11 +606,13 @@ extern "C" void mgpuLaunchKernel(ze_kernel_handle_t kernel, size_t gridX,
   });
 }
 
-extern "C" void mgpuModuleUnload(ze_module_handle_t module) {
+extern "C" MLIR_LEVELZERO_WRAPPERS_EXPORT void
+mgpuModuleUnload(ze_module_handle_t module) {
   L0_SAFE_CALL(zeModuleDestroy(module));
 }
 
-extern "C" void mgpuSetDefaultDevice(int32_t devIdx) {
+extern "C" MLIR_LEVELZERO_WRAPPERS_EXPORT void
+mgpuSetDefaultDevice(int32_t devIdx) {
   catchAll([&]() {
     // For now, a user must ensure that streams and events complete
     // and are destroyed before switching a device.
