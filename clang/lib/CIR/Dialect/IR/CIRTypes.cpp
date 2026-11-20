@@ -1734,6 +1734,16 @@ mlir::LogicalResult cir::VectorType::verify(
                          << " elements";
     return success();
   }
+  case cir::VectorAbiKind::SVECount: {
+    auto intTy = mlir::dyn_cast<cir::IntType>(elementType);
+    if (!size.isScalable() || size.getKnownMinValue() != 16 || !intTy ||
+        intTy.isSigned() || intTy.isBitInt() || intTy.getWidth() != 1)
+      return emitError() << "an SVE count vector must have [16] "
+                         << cir::IntType::get(elementType.getContext(), 1,
+                                              /*isSigned=*/false)
+                         << " elements";
+    return success();
+  }
   }
   llvm_unreachable("unknown vector kind");
 }
@@ -1794,7 +1804,8 @@ mlir::Type cir::VectorType::parse(::mlir::AsmParser &odsParser) {
     std::optional<cir::VectorAbiKind> parsedKind =
         cir::symbolizeVectorAbiKind(kindName);
     if (!parsedKind || *parsedKind == cir::VectorAbiKind::Generic) {
-      odsParser.emitError(kindLoc, "expected 'sve_data' or 'sve_predicate'");
+      odsParser.emitError(kindLoc, "expected 'sve_data', 'sve_predicate', or "
+                                   "'sve_count'");
       return {};
     }
     kind = *parsedKind;

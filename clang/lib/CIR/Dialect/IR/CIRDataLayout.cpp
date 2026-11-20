@@ -75,11 +75,12 @@ uint64_t CIRDataLayout::getTypeLanguageAlignment(mlir::Type ty) const {
         return maxMemberAlignment(recTy.getMembers());
       })
       .Case([&](cir::VectorType vecTy) -> uint64_t {
-        // An SVE data vector is 16-byte aligned and an SVE predicate is
-        // 2-byte aligned, regardless of its length.
+        // An SVE data vector is 16-byte aligned and an SVE predicate or
+        // count is 2-byte aligned, regardless of its length.
         if (vecTy.getKind() == cir::VectorAbiKind::SVEData)
           return 16;
-        if (vecTy.getKind() == cir::VectorAbiKind::SVEPredicate)
+        if (vecTy.getKind() == cir::VectorAbiKind::SVEPredicate ||
+            vecTy.getKind() == cir::VectorAbiKind::SVECount)
           return 2;
         uint64_t align = layout.getTypeABIAlignment(vecTy);
         if (vectorMaxAlignBits)

@@ -530,7 +530,8 @@ def CIR_ArrayType : CIR_Type<"Array", "array", [
 def CIR_VectorAbiKind : CIR_I32Enum<"VectorAbiKind", "vector ABI kind", [
     I32EnumCase<"Generic", 0, "generic">,
     I32EnumCase<"SVEData", 1, "sve_data">,
-    I32EnumCase<"SVEPredicate", 2, "sve_predicate">
+    I32EnumCase<"SVEPredicate", 2, "sve_predicate">,
+    I32EnumCase<"SVECount", 3, "sve_count">
 ]>;
 
 def CIR_VectorType : CIR_Type<"Vector", "vector", [
@@ -586,15 +587,19 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
     - A scalable `sve_predicate` vector has `!cir.int<u, 1>` elements. A
       fixed-length `sve_predicate` vector holds the predicate one bit per lane
       in `!cir.int<u, 8>` elements.
+    - An `sve_count` vector is `__SVCount_t`, an opaque predicate-as-counter.
+      It has the shape of `svbool_t`, `[16]` `!cir.int<u, 1>` elements, and
+      lowers to the LLVM type `target("aarch64.svcount")`.
 
     A scalable vector must have a kind other than generic. The language
     alignment of an `sve_data` vector is 16 bytes and that of an
-    `sve_predicate` vector is 2 bytes, whatever their size.
+    `sve_predicate` or `sve_count` vector is 2 bytes, whatever their size.
 
     Examples:
     ```
     !cir.vector<[4] x !cir.int<s, 32>, sve_data>
     !cir.vector<[16] x !cir.int<u, 1>, sve_predicate>
+    !cir.vector<[16] x !cir.int<u, 1>, sve_count>
     !cir.vector<16 x !cir.int<s, 32>, sve_data>
     !cir.vector<8 x !cir.int<u, 8>, sve_predicate>
     ```
@@ -623,10 +628,12 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
     /// Return whether this vector is scalable.
     bool isScalable() const { return getSize().isScalable(); }
 
-    /// Return whether this vector is an AArch64 SVE data or predicate vector.
+    /// Return whether this vector is an AArch64 SVE data, predicate, or count
+    /// vector.
     bool isSVE() const {
       return getKind() == VectorAbiKind::SVEData ||
-             getKind() == VectorAbiKind::SVEPredicate;
+             getKind() == VectorAbiKind::SVEPredicate ||
+             getKind() == VectorAbiKind::SVECount;
     }
 
     /// Return a fixed-width vector with the given element type, size, and

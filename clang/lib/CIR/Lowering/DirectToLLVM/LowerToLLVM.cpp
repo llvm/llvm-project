@@ -102,14 +102,18 @@ static mlir::InFlightDiagnostic emitTypeConversionError(mlir::Location loc,
 /// Alignment to use for a memory access whose op carries no explicit alignment.
 /// For _BitInt the storage integer iM's ABI alignment (e.g. i128's 16)
 /// over-aligns the value, so use the _BitInt language alignment (e.g. 8).
+/// An SVE count lowers to target("aarch64.svcount"), which the MLIR data
+/// layout cannot size, so it also uses its language alignment.
 static uint64_t getMemoryFallbackAlignment(mlir::Operation *op,
                                            mlir::Type cirType,
                                            mlir::Type llvmMemType,
                                            const mlir::DataLayout &dataLayout) {
-  if (auto intTy = mlir::dyn_cast<cir::IntType>(cirType);
-      intTy && intTy.isBitInt())
+  auto intTy = mlir::dyn_cast<cir::IntType>(cirType);
+  auto vecTy = mlir::dyn_cast<cir::VectorType>(cirType);
+  if ((intTy && intTy.isBitInt()) ||
+      (vecTy && vecTy.getKind() == cir::VectorAbiKind::SVECount))
     return cir::CIRDataLayout(op->getParentOfType<mlir::ModuleOp>())
-        .getTypeLanguageAlignment(intTy);
+        .getTypeLanguageAlignment(cirType);
   return dataLayout.getTypeABIAlignment(llvmMemType);
 }
 
@@ -2793,8 +2797,9 @@ mlir::LogicalResult CIRToLLVMLoadOpLowering::matchAndRewrite(
     return emitTypeConversionError(op, op.getType());
   mlir::LLVM::AtomicOrdering ordering = getLLVMMemOrder(op.getMemOrder());
   std::optional<size_t> opAlign = op.getAlignment();
-  unsigned alignment = (unsigned)opAlign.value_or(
-      getMemoryFallbackAlignment(op, op.getType(), llvmTy, dataLayout));
+  unsigned alignment = opAlign ? *opAlign
+                               : getMemoryFallbackAlignment(op, op.getType(),
+                                                            llvmTy, dataLayout);
 
   assert(!cir::MissingFeatures::lowerModeOptLevel());
 
@@ -2851,8 +2856,9 @@ mlir::LogicalResult CIRToLLVMStoreOpLowering::matchAndRewrite(
     return op.emitError()
            << "NYI: lowering store of a type with no memory representation";
   std::optional<size_t> opAlign = op.getAlignment();
-  unsigned alignment = (unsigned)opAlign.value_or(
-      getMemoryFallbackAlignment(op, valueType, llvmTy, dataLayout));
+  unsigned alignment =
+      opAlign ? *opAlign
+              : getMemoryFallbackAlignment(op, valueType, llvmTy, dataLayout);
 
   assert(!cir::MissingFeatures::lowerModeOptLevel());
 
@@ -4610,6 +4616,9 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
     return mlir::LLVM::LLVMArrayType::get(ty, type.getSize());
   });
   converter.addConversion([&](cir::VectorType type) -> mlir::Type {
+    if (type.getKind() == cir::VectorAbiKind::SVECount)
+      return mlir::LLVM::LLVMTargetExtType::get(type.getContext(),
+                                                "aarch64.svcount", {}, {});
     // Vector-of-_BitInt memory layout is not modeled here (the element would
     // stay at its literal width); report a conversion failure rather than emit
     // an unvalidated vector.
