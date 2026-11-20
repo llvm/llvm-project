@@ -61,6 +61,9 @@ The `parallel` column shows whether the algorithm runs in parallel when
 - ✅ - runs in parallel (given the iterator requirements described above).
 - ❌ - accepts an execution policy, but runs serially.
 
+`pr` mark in the table means that there's a Pull Request prepared for this algorithm / backend.  
+`planned` means something TODO.
+
 | Algorithm                              | default | serial | statpart | parallel? |
 | -------------------------------------- | ------- | :----: | :------: | :------: |
 | adjacent_difference | → transform |  |  | ✅ |
@@ -68,14 +71,14 @@ The `parallel` column shows whether the algorithm runs in parallel when
 | all_of | → any_of |  |  | ✅ |
 | any_of | → find_if |  | ● | ✅ |
 | copy | → transform |  |  | ✅ |
-| copy_if |  | ● |  | ❌ |
+| copy_if |  | ● | pr | pr |
 | copy_n | → copy |  |  | ✅ |
 | count | → count_if |  |  | ✅ |
 | count_if | → transform_reduce |  |  | ✅ |
 | destroy | → for_each |  |  | ✅ |
 | destroy_n | → for_each_n |  |  | ✅ |
 | equal | → transform_reduce |  |  | ✅ |
-| exclusive_scan |  |  |  |  |
+| exclusive_scan | pr |  |  | planned |
 | fill | → for_each |  | ● | ✅ |
 | fill_n | → for_each_n |  |  | ✅ |
 | find | → find_if |  |  | ✅ |
@@ -89,7 +92,7 @@ The `parallel` column shows whether the algorithm runs in parallel when
 | generate_n | → for_each_n |  |  | ✅ |
 | includes |  | ● |  | ❌ |
 | inclusive_scan | → transform_inclusive_scan |  |  | ✅ |
-| inplace_merge |  |  |  |  |
+| inplace_merge |  | planned |  |  |
 | is_heap | → is_heap_until |  |  | ✅ |
 | is_heap_until |  | ● | ● | ✅ |
 | is_partitioned | → find_if_not, none_of |  |  | ✅ |
@@ -103,23 +106,23 @@ The `parallel` column shows whether the algorithm runs in parallel when
 | mismatch | → mismatch | ● | ● | ✅ |
 | move | → transform |  |  | ✅ |
 | none_of | → any_of |  |  | ✅ |
-| nth_element |  |  |  |  |
-| partial_sort |  |  |  |  |
-| partial_sort_copy |  |  |  |  |
+| nth_element |  | planned  |  |  |
+| partial_sort |  | pr |  |  |
+| partial_sort_copy |  | pr  |  |  |
 | partition |  | ● |  | ❌ |
-| partition_copy |  | ● |  | ❌ |
+| partition_copy |  | ● | planned | planned |
 | reduce | → transform_reduce |  |  | ✅ |
-| remove |  |  |  |  |
-| remove_copy |  |  |  |  |
-| remove_copy_if |  |  |  |  |
-| remove_if |  |  |  |  |
+| remove | planned |  |  | planned |
+| remove_copy | pr |  |  |pr |
+| remove_copy_if | pr |  |  | pr |
+| remove_if |  | planned | planned | planned |
 | replace | → replace_if |  |  | ✅ |
 | replace_copy | → replace_copy_if |  |  | ✅ |
 | replace_copy_if | → transform |  |  | ✅ |
 | replace_if | → for_each |  |  | ✅ |
 | reverse |  | ● | ● | ✅ |
 | reverse_copy | → copy |  |  | ✅ |
-| rotate |  |  |  |  |
+| rotate |  | planned |  |  |
 | rotate_copy | → copy |  |  | ✅ |
 | search |  | ● | ● | ✅ |
 | search_n |  | ● | ● | ✅ |
@@ -132,7 +135,7 @@ The `parallel` column shows whether the algorithm runs in parallel when
 | stable_sort |  | ● | ● | ✅ |
 | swap_ranges |  | ● | ● | ✅ |
 | transform |  | ● | ● | ✅ |
-| transform_exclusive_scan |  |  |  |  |
+| transform_exclusive_scan | pr | pr | planned | planned |
 | transform_inclusive_scan | → transform_inclusive_scan | ● | ● | ✅ |
 | transform_reduce |  | ● | ● | ✅ |
 | uninitialized_copy |  | ● | ● | ✅ |
@@ -145,5 +148,5 @@ The `parallel` column shows whether the algorithm runs in parallel when
 | uninitialized_move_n | → uninitialized_move |  |  | ✅ |
 | uninitialized_value_construct | → for_each |  |  | ✅ |
 | uninitialized_value_construct_n | → for_each_n |  |  | ✅ |
-| unique |  |  |  |  |
-| unique_copy |  |  |  |  |
+| unique |  | planned | planned | planned |
+| unique_copy |  | planned | planned | planned |
