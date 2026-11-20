@@ -18,13 +18,28 @@ else()
   set(LIBOMP_HEADERS_INTDIR ${CMAKE_CURRENT_BINARY_DIR})
 endif()
 
-# Configure omp.h, kmp_config.h and omp-tools.h if necessary
-configure_file(${LIBOMP_INC_DIR}/omp.h.var ${LIBOMP_HEADERS_INTDIR}/omp.h @ONLY)
-configure_file(${LIBOMP_INC_DIR}/ompx.h.var ${LIBOMP_HEADERS_INTDIR}/ompx.h @ONLY)
+# Configure kmp_config.h
 configure_file(kmp_config.h.cmake kmp_config.h @ONLY)
+
+# Get omp.h, ompx.h and omp-tools.h if necessary
+set(LIBOMP_PUBLIC_HEADERS omp.h ompx.h)
 if(LIBOMP_OMPT_SUPPORT)
-  configure_file(${LIBOMP_INC_DIR}/omp-tools.h.var ${LIBOMP_HEADERS_INTDIR}/omp-tools.h @ONLY)
+  list(APPEND LIBOMP_PUBLIC_HEADERS omp-tools.h)
 endif()
+
+# Target directory where the headers are installed from
+set(LIBOMP_PUBLIC_HEADER_DIRS ${LIBOMP_HEADERS_INTDIR})
+# also generate them in the build directory
+if(NOT LIBOMP_HEADERS_INTDIR STREQUAL CMAKE_CURRENT_BINARY_DIR)
+  list(APPEND LIBOMP_PUBLIC_HEADER_DIRS ${CMAKE_CURRENT_BINARY_DIR})
+endif()
+
+# Configure each header into each directory
+foreach(dir IN LISTS LIBOMP_PUBLIC_HEADER_DIRS)
+  foreach(header IN LISTS LIBOMP_PUBLIC_HEADERS)
+    configure_file(${LIBOMP_INC_DIR}/${header}.var ${dir}/${header} @ONLY)
+  endforeach()
+endforeach()
 
 # Generate message catalog files: kmp_i18n_id.inc and kmp_i18n_default.inc
 set(LIBOMP_MESSAGE_CONVERTER_EXTRA_ARGS "")
