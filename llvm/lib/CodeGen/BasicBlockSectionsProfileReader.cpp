@@ -28,6 +28,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/UniqueBBID.h"
 #include <llvm/ADT/STLExtras.h>
+#include <optional>
 
 using namespace llvm;
 
@@ -113,6 +114,7 @@ BasicBlockSectionsProfileReader::getPrefetchHintsForFunction(
 // Reads the version 1 basic block sections profile. Profile for each function
 // is encoded as follows:
 //   m <module_name>
+//   u <function_guid>
 //   f <function_name_1> <function_name_2> ...
 //   c <bb_id_1> <bb_id_2> <bb_id_3>
 //   c <bb_id_4> <bb_id_5>
@@ -120,10 +122,18 @@ BasicBlockSectionsProfileReader::getPrefetchHintsForFunction(
 // Module name specifier (starting with 'm') is optional and allows
 // distinguishing profile for internal-linkage functions with the same name. If
 // not specified, it will apply to any function with the same name. Function
-// name specifier (starting with 'f') can specify multiple function name
-// aliases. Basic block clusters are specified by 'c' and specify the cluster of
-// basic blocks, and the internal order in which they must be placed in the same
-// section.
+// GUID specifier (starting with 'u') is optional and specifies the GUID (in
+// hex) of a function with local linkage, as emitted in the SHT_LLVM_BB_ADDR_MAP
+// section with `-basic-block-address-map-emit-func-guid`. Similar to the module
+// name, it allows distinguishing profiles for local-linkage functions with the
+// same name. If specified, the profile only applies to the local-linkage
+// function with the same name and GUID. Function GUIDs must be specified for
+// either all or none of the local-linkage functions in the profile. So if the
+// profile specifies any function GUIDs, function profiles without GUIDs only
+// apply to functions with non-local linkage. Function name specifier (starting
+// with 'f') can specify multiple function name aliases. Basic block clusters
+// are specified by 'c' and specify the cluster of basic blocks, and the
+// internal order in which they must be placed in the same section.
 // This profile can also specify cloning paths which instruct the compiler to
 // clone basic blocks along a path. The cloned blocks are then specified in the
 // cluster information.
@@ -231,6 +241,14 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
   // means no filename.
   StringRef DIFilename;
 
+  // GUID of the current function, if specified.
+  std::optional<uint64_t> FuncGUID;
+
+  // Whether the profile specifies any function GUIDs. Every line with a
+  // function GUID specifier comes after the version line, hence after a
+  // newline.
+  const bool HasFuncGUIDs = MBuf->getBuffer().contains("\nu");
+
   for (; !LineIt.is_at_eof(); ++LineIt) {
     StringRef S(*LineIt);
     char Specifier = S[0];
@@ -247,21 +265,46 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
       }
       DIFilename = sys::path::remove_leading_dotslash(Values[0]);
       continue;
+    case 'u': { // Function GUID specifier.
+      if (Values.size() != 1) {
+        return createProfileParseError(Twine("invalid function GUID value: '") +
+                                       S + "'");
+      }
+      unsigned long long GUID = 0;
+      if (getAsUnsignedInteger(Values[0], 16, GUID))
+        return createProfileParseError(
+            Twine("unsigned integer expected in hex format: '") + Values[0] +
+            "'");
+      FuncGUID = GUID;
+      continue;
+    }
     case 'f': { // Function names specifier.
       bool FunctionFound = any_of(Values, [&](StringRef Alias) {
         auto It = FunctionNameToDIFilename.find(Alias);
         // No match if this function name is not found in this module.
         if (It == FunctionNameToDIFilename.end())
           return false;
-        // Return a match if debug-info-filename is not specified. Otherwise,
-        // check for equality.
-        return DIFilename.empty() || It->second == DIFilename;
+        // No match if debug-info-filename is specified and is different.
+        if (!DIFilename.empty() && It->second != DIFilename)
+          return false;
+        auto GUIDIt = LocalFunctionNameToGUID.find(Alias);
+        bool HasLocalLinkage = GUIDIt != LocalFunctionNameToGUID.end();
+        // If the function GUID is specified, only match the local-linkage
+        // function with the same GUID.
+        if (FuncGUID)
+          return HasLocalLinkage && GUIDIt->second == *FuncGUID;
+        // No GUID means either it's not a local-linkage function, or the
+        // profile does not contain GUIDs at all.
+        return !HasLocalLinkage || !HasFuncGUIDs;
       });
+      // We won't need DIFilename and FuncGUID anymore. Clean them up to avoid
+      // their application on the next function.
+      DIFilename = "";
+      FuncGUID.reset();
       if (!FunctionFound) {
         // Skip the following profile by setting the profile iterator (FI) to
         // the past-the-end element.
         FI = ProgramOptimizationProfile.end();
-        DIFilename = "";
         continue;
       }
       for (size_t i = 1; i < Values.size(); ++i)
@@ -278,9 +321,6 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
       FI = R.first;
       CurrentCluster = 0;
       FuncBBIDs.clear();
-      // We won't need DIFilename anymore. Clean it up to avoid its application
-      // on the next function.
-      DIFilename = "";
       continue;
     }
     case 'c': // Basic block cluster specifier.
@@ -594,8 +634,10 @@ Error BasicBlockSectionsProfileReader::ReadProfile() {
 bool BasicBlockSectionsProfileReaderWrapperPass::doInitialization(Module &M) {
   if (!BBSPR.MBuf)
     return false;
-  // Get the function name to debug info filename mapping.
+  // Get the function name to debug info filename mapping, and the GUIDs of
+  // local-linkage functions.
   BBSPR.FunctionNameToDIFilename.clear();
+  BBSPR.LocalFunctionNameToGUID.clear();
   for (const Function &F : M) {
     SmallString<128> DIFilename;
     if (F.isDeclaration())
@@ -610,6 +652,11 @@ bool BasicBlockSectionsProfileReaderWrapperPass::doInitialization(Module &M) {
         BBSPR.FunctionNameToDIFilename.try_emplace(F.getName(), DIFilename)
             .second;
     assert(inserted);
+    // This must be consistent with the GUID emitted in the SHT_LLVM_BB_ADDR_MAP
+    // section (see AsmPrinter::emitBBAddrMapSection).
+    if (F.hasLocalLinkage())
+      BBSPR.LocalFunctionNameToGUID.try_emplace(F.getName(),
+                                                F.getGUIDOrFallback());
   }
   if (auto Err = BBSPR.ReadProfile())
     report_fatal_error(std::move(Err));
