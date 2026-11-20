@@ -403,7 +403,7 @@ bool LoongArchMergeBaseOffsetOpt::foldLargeOffset(
       if (ImmOp.getTargetFlags() != LoongArchII::MO_None || !Lo20)
         return false;
       Offset += SignExtend64<52>(ImmOp.getImm() << 32) & Mask;
-      Mask ^= 0x000FFFFF00000000ULL;
+      Mask &= ~0xFFFFFFFF00000000ULL;
       Reg = Curr->getOperand(1).getReg();
       Instrs.push_back(Curr);
       break;
@@ -413,7 +413,7 @@ bool LoongArchMergeBaseOffsetOpt::foldLargeOffset(
       if (ImmOp.getTargetFlags() != LoongArchII::MO_None || !Hi12)
         return false;
       Offset += ImmOp.getImm() << 52;
-      Mask ^= 0xFFF0000000000000ULL;
+      Mask &= ~0xFFF0000000000000ULL;
       Reg = Curr->getOperand(1).getReg();
       Instrs.push_back(Curr);
       break;
