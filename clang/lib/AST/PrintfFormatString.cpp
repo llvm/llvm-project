@@ -78,15 +78,13 @@ bool PrintfFormatStringParser::parseObjCFlags(PrintfSpecifier &FS,
                                               const char *E) const {
   StringRef Flag(FlagBeg, E - FlagBeg);
   // Currently there is only one flag.
-  if (Flag.size() == 2 &&
-      FormatStrConverter.convertBasicChar(FlagBeg[0]) == u8't' &&
-      FormatStrConverter.convertBasicChar(FlagBeg[1]) == u8't') {
+  if (Flag == "tt") {
     FS.setHasObjCTechnicalTerm(FlagBeg);
     return false;
   }
   // Handle either the case of no flag or an invalid flag.
   if (Warn) {
-    if (Flag.empty())
+    if (Flag == "")
       H.HandleEmptyObjCModifierFlag(FlagBeg, E - FlagBeg);
     else
       H.HandleInvalidObjCModifierFlag(FlagBeg, E - FlagBeg);
@@ -112,7 +110,7 @@ PrintfFormatStringParser::parseSpecifier(const char *&Beg, const char *E,
       H.HandleNullChar(I);
       return true;
     }
-    if (FormatStrConverter.convertBasicChar(c) == u8'%') {
+    if (Conv.convertBasicChar(c) == u8'%') {
       Start = I++; // Record the start of the format specifier.
       break;
     }
@@ -140,16 +138,13 @@ PrintfFormatStringParser::parseSpecifier(const char *&Beg, const char *E,
     return true;
   }
 
-  if (FormatStrConverter.convertBasicChar(*I) == u8'{') {
+  if (*I == '{') {
     ++I;
     unsigned char PrivacyFlags = 0;
     StringRef MatchedStr;
 
     do {
-      std::string S(I, E - I);
-      for (size_t i = 0; i < S.length(); ++i)
-        S[i] = FormatStrConverter.convertBasicChar(S[i]);
-      StringRef Str(S);
+      StringRef Str(I, E - I);
       std::string Match = "^[[:space:]]*"
                           "(private|public|sensitive|mask\\.[^[:space:],}]*)"
                           "[[:space:]]*(,|})";
@@ -157,30 +152,26 @@ PrintfFormatStringParser::parseSpecifier(const char *&Beg, const char *E,
       SmallVector<StringRef, 2> Matches;
 
       if (R.match(Str, &Matches)) {
-        StringRef MatchedStrUTF8 = Matches[1];
-        MatchedStr =
-            StringRef(I + (Matches[1].data() - Str.data()), Matches[1].size());
+        MatchedStr = Matches[1];
         I += Matches[0].size();
 
         // Set the privacy flag if the privacy annotation in the
         // comma-delimited segment is at least as strict as the privacy
         // annotations in previous comma-delimited segments.
-        if (MatchedStrUTF8.starts_with("mask")) {
+        if (MatchedStr.starts_with("mask")) {
           StringRef MaskType = MatchedStr.substr(sizeof("mask.") - 1);
           unsigned Size = MaskType.size();
-
           if (Warn && (Size == 0 || Size > 8))
             H.handleInvalidMaskType(MaskType);
           FS.setMaskType(MaskType);
-        } else if (MatchedStrUTF8 == "sensitive") {
+        } else if (MatchedStr == "sensitive")
           PrivacyFlags = clang::analyze_os_log::OSLogBufferItem::IsSensitive;
-        } else if (PrivacyFlags !=
-                       clang::analyze_os_log::OSLogBufferItem::IsSensitive &&
-                   MatchedStrUTF8 == "private") {
+        else if (PrivacyFlags !=
+                     clang::analyze_os_log::OSLogBufferItem::IsSensitive &&
+                 MatchedStr == "private")
           PrivacyFlags = clang::analyze_os_log::OSLogBufferItem::IsPrivate;
-        } else if (PrivacyFlags == 0 && MatchedStrUTF8 == "public") {
+        else if (PrivacyFlags == 0 && MatchedStr == "public")
           PrivacyFlags = clang::analyze_os_log::OSLogBufferItem::IsPublic;
-        }
       } else {
         size_t CommaOrBracePos =
             Str.find_if([](char c) { return c == ',' || c == '}'; });
@@ -195,7 +186,7 @@ PrintfFormatStringParser::parseSpecifier(const char *&Beg, const char *E,
         I += CommaOrBracePos + 1;
       }
       // Continue until the closing brace is found.
-    } while (FormatStrConverter.convertBasicChar(*(I - 1)) == u8',');
+    } while (*(I - 1) == ',');
 
     // Set the privacy flag.
     switch (PrivacyFlags) {
@@ -218,7 +209,7 @@ PrintfFormatStringParser::parseSpecifier(const char *&Beg, const char *E,
   // Look for flags (if any).
   bool hasMore = true;
   for (; I != E; ++I) {
-    switch (FormatStrConverter.convertBasicChar(*I)) {
+    switch (Conv.convertBasicChar(*I)) {
     default:
       hasMore = false;
       break;
@@ -266,7 +257,7 @@ PrintfFormatStringParser::parseSpecifier(const char *&Beg, const char *E,
   }
 
   // Look for the precision (if any).
-  if (FormatStrConverter.convertBasicChar(*I) == u8'.') {
+  if (Conv.convertBasicChar(*I) == u8'.') {
     ++I;
     if (I == E) {
       if (Warn)
@@ -304,7 +295,7 @@ PrintfFormatStringParser::parseSpecifier(const char *&Beg, const char *E,
   // enables better recovery, and we don't know if
   // these flags are applicable until later.
   const char *ObjCModifierFlagsStart = nullptr, *ObjCModifierFlagsEnd = nullptr;
-  if (FormatStrConverter.convertBasicChar(*I) == u8'[') {
+  if (Conv.convertBasicChar(*I) == u8'[') {
     ObjCModifierFlagsStart = I;
     ++I;
     auto flagStart = I;
@@ -316,7 +307,7 @@ PrintfFormatStringParser::parseSpecifier(const char *&Beg, const char *E,
         return true;
       }
       // Did we find the closing ']'?
-      if (FormatStrConverter.convertBasicChar(*I) == u8']') {
+      if (Conv.convertBasicChar(*I) == u8']') {
         if (parseObjCFlags(FS, flagStart, I))
           return true;
         ++I;
@@ -337,7 +328,7 @@ PrintfFormatStringParser::parseSpecifier(const char *&Beg, const char *E,
   // Finally, look for the conversion specifier.
   const char *conversionPosition = I++;
   ConversionSpecifier::Kind k = ConversionSpecifier::InvalidSpecifier;
-  switch (FormatStrConverter.convertBasicChar(*conversionPosition)) {
+  switch (Conv.convertBasicChar(*conversionPosition)) {
   default:
     break;
   // C99: 7.19.6.1 (section 8).
@@ -512,7 +503,7 @@ bool clang::analyze_format_string::ParsePrintfString(
   unsigned argIndex = 0;
 
   // Keep looking for a format specifier until we have exhausted the string.
-  llvm::TextEncodingConverter Conv = makeFormatStrConverter(Target);
+  llvm::TextEncodingConverter Conv = createFormatStrConverter(Target);
   PrintfFormatStringParser P(H, LO, Target, /*Warn=*/true, isFreeBSDKPrintf,
                              Conv);
   while (I != E) {
@@ -541,7 +532,7 @@ bool clang::analyze_format_string::ParseFormatStringHasSArg(
   unsigned argIndex = 0;
   // Keep looking for a %s format specifier until we have exhausted the string.
   FormatStringHandler H;
-  llvm::TextEncodingConverter Conv = makeFormatStrConverter(Target);
+  llvm::TextEncodingConverter Conv = createFormatStrConverter(Target);
   PrintfFormatStringParser P(H, LO, Target, /*Warn=*/false,
                              /*IsFreeBSDKPrintf=*/false, Conv);
   while (I != E) {
@@ -569,8 +560,10 @@ bool clang::analyze_format_string::parseFormatStringHasFormattingSpecifiers(
   unsigned ArgIndex = 0;
   // Keep looking for a formatting specifier until we have exhausted the string.
   FormatStringHandler H;
-  llvm::TextEncodingConverter Conv = makeFormatStrConverter(Target);
+  llvm::TextEncodingConverter Conv = createFormatStrConverter(Target);
+  PrintfFormatStringParser P(H, LO, Target, /*Warn=*/false,
                              /*IsFreeBSDKPrintf=*/false, Conv);
+  while (Begin != End) {
     const PrintfSpecifierResult &FSR = P.parseSpecifier(Begin, End, ArgIndex);
     if (FSR.shouldStop())
       break;

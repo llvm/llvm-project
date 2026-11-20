@@ -17,8 +17,10 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/FormatString.h"
 #include "clang/AST/Type.h"
-#include "clang/Basic/TargetInfo.h"
-#include "llvm/Support/TextEncoding.h"
+
+namespace llvm {
+class TextEncodingConverter;
+} // namespace llvm
 
 namespace clang {
 
@@ -29,16 +31,7 @@ class LangOptions;
 /// to UTF-8 before comparing against ASCII specifier characters.
 /// On all other targets a no-op converter is returned.
 /// Create this once per format string parse and pass it through.
-inline llvm::TextEncodingConverter
-makeFormatStrConverter(const TargetInfo &Target) {
-  auto MaybeConverter =
-      Target.getTriple().isOSzOS()
-          ? llvm::TextEncodingConverter::create(llvm::TextEncoding::IBM1047,
-                                                llvm::TextEncoding::UTF8)
-          : llvm::TextEncodingConverter::createNoopConverter();
-  assert(MaybeConverter && "Failed to create format string converter");
-  return std::move(*MaybeConverter);
-}
+llvm::TextEncodingConverter createFormatStrConverter(const TargetInfo &Target);
 
 template <typename T> class UpdateOnReturn {
   T &ValueToUpdate;
