@@ -12,6 +12,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cstdint>
 
 #define DEBUG_TYPE "orc"
 
@@ -28,17 +29,47 @@ namespace orc {
 extern "C" void __register_frame(const void *);
 extern "C" void __deregister_frame(const void *);
 
+#if defined(__ELF__) && LLVM_HAS_ATTRIBUTE_WEAK
+#define LLVM_ORC_DYNAMIC_ELF_EH_FRAME_REGISTRATION 1
+// LLVM's libunwind exports section-level registration entry points alongside
+// __unw_add_dynamic_fde, whereas its __register_frame only accepts a single FDE
+// rather than a null-terminated .eh_frame section. Detect them dynamically via
+// weak references (matching compiler-rt's elfnix_platform) and fall back to
+// __register_frame (e.g. libgcc) otherwise.
+extern "C" LLVM_ATTRIBUTE_WEAK void
+__unw_add_dynamic_eh_frame_section(uintptr_t);
+extern "C" LLVM_ATTRIBUTE_WEAK void
+__unw_remove_dynamic_eh_frame_section(uintptr_t);
+#else
+#define LLVM_ORC_DYNAMIC_ELF_EH_FRAME_REGISTRATION 0
+#endif
+
 Error registerFrameWrapper(const void *P) {
+#if LLVM_ORC_DYNAMIC_ELF_EH_FRAME_REGISTRATION
+  if (&__unw_add_dynamic_eh_frame_section &&
+      &__unw_remove_dynamic_eh_frame_section) {
+    __unw_add_dynamic_eh_frame_section(reinterpret_cast<uintptr_t>(P));
+    return Error::success();
+  }
+#endif
   __register_frame(P);
   return Error::success();
 }
 
 Error deregisterFrameWrapper(const void *P) {
+#if LLVM_ORC_DYNAMIC_ELF_EH_FRAME_REGISTRATION
+  if (&__unw_add_dynamic_eh_frame_section &&
+      &__unw_remove_dynamic_eh_frame_section) {
+    __unw_remove_dynamic_eh_frame_section(reinterpret_cast<uintptr_t>(P));
+    return Error::success();
+  }
+#endif
   __deregister_frame(P);
   return Error::success();
 }
 
 #else
+#define LLVM_ORC_DYNAMIC_ELF_EH_FRAME_REGISTRATION 0
 
 // The building compiler does not have __(de)register_frame but
 // it may be found at runtime in a dynamically-loaded library.
@@ -80,7 +111,8 @@ static Error deregisterFrameWrapper(const void *P) {
 }
 #endif
 
-#if defined(HAVE_UNW_ADD_DYNAMIC_FDE) || defined(__APPLE__)
+#if (defined(HAVE_UNW_ADD_DYNAMIC_FDE) || defined(__APPLE__)) &&               \
+    !LLVM_ORC_DYNAMIC_ELF_EH_FRAME_REGISTRATION
 
 template <typename HandleFDEFn>
 Error walkLibunwindEHFrameSection(const char *const SectionStart,
@@ -118,13 +150,17 @@ Error walkLibunwindEHFrameSection(const char *const SectionStart,
   return Error::success();
 }
 
-#endif // HAVE_UNW_ADD_DYNAMIC_FDE || __APPLE__
+#endif // (HAVE_UNW_ADD_DYNAMIC_FDE || __APPLE__) &&
+       // !LLVM_ORC_DYNAMIC_ELF_EH_FRAME_REGISTRATION
 
 Error registerEHFrameSection(const void *EHFrameSectionAddr,
                              size_t EHFrameSectionSize) {
-  /* libgcc and libunwind __register_frame behave differently. We use the
-   * presence of __unw_add_dynamic_fde to detect libunwind. */
-#if defined(HAVE_UNW_ADD_DYNAMIC_FDE) || defined(__APPLE__)
+  /* libgcc and libunwind __register_frame behave differently. On ELF targets
+   * with weak symbol support, registerFrameWrapper dynamically prefers
+   * libunwind's section-level entry points; elsewhere we use
+   * HAVE_UNW_ADD_DYNAMIC_FDE or __APPLE__ to detect per-FDE registration. */
+#if (defined(HAVE_UNW_ADD_DYNAMIC_FDE) || defined(__APPLE__)) &&               \
+    !LLVM_ORC_DYNAMIC_ELF_EH_FRAME_REGISTRATION
   // With libunwind, __register_frame has to be called for each FDE entry.
   return walkLibunwindEHFrameSection(
       static_cast<const char *>(EHFrameSectionAddr), EHFrameSectionSize,
@@ -135,20 +171,25 @@ Error registerEHFrameSection(const void *EHFrameSectionAddr,
 
   // How can it find the end? Because crtendS.o is linked
   // in and it has an .eh_frame section with four zero chars.
+  (void)EHFrameSectionSize;
   return registerFrameWrapper(EHFrameSectionAddr);
 #endif
 }
 
 Error deregisterEHFrameSection(const void *EHFrameSectionAddr,
                                size_t EHFrameSectionSize) {
-#if defined(HAVE_UNW_ADD_DYNAMIC_FDE) || defined(__APPLE__)
+#if (defined(HAVE_UNW_ADD_DYNAMIC_FDE) || defined(__APPLE__)) &&               \
+    !LLVM_ORC_DYNAMIC_ELF_EH_FRAME_REGISTRATION
   return walkLibunwindEHFrameSection(
       static_cast<const char *>(EHFrameSectionAddr), EHFrameSectionSize,
       deregisterFrameWrapper);
 #else
+  (void)EHFrameSectionSize;
   return deregisterFrameWrapper(EHFrameSectionAddr);
 #endif
 }
+
+#undef LLVM_ORC_DYNAMIC_ELF_EH_FRAME_REGISTRATION
 
 } // end namespace orc
 } // end namespace llvm
