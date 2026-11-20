@@ -32,6 +32,14 @@ class NVPTXTargetLowering : public TargetLowering {
 public:
   explicit NVPTXTargetLowering(const NVPTXTargetMachine &TM,
                                const NVPTXSubtarget &STI);
+  // PTX integer div/rem produces an unspecified machine value on division
+  // by zero. Restrict this to native PTX widths, excluding large division
+  // expansion and libcalls. See PTX ISA, Integer Arithmetic Instructions.
+  bool isIntDivRemTrapFree(EVT VT) const override {
+    // Small integers use native or promoted non-trapping division.
+    return VT == MVT::i8 || VT == MVT::i16 || VT == MVT::i32 || VT == MVT::i64;
+  }
+
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
 
   void getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
