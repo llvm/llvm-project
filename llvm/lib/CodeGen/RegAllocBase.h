@@ -107,17 +107,6 @@ protected:
   // rematerialization.
   virtual void postOptimization();
 
-  /// Perform cleanups on registers that failed to allocate. This hacks on the
-  /// liveness in order to avoid spurious verifier errors in later passes.
-  void cleanupFailedVReg(Register FailedVReg, MCRegister PhysReg,
-                         SmallVectorImpl<Register> &SplitRegs);
-
-  /// Add the defs of \p FailedReg on \p MI to the \p PhysReg regunit live
-  /// ranges, and make the defs of \p PhysReg on \p MI consistently dead or
-  /// live.
-  void cleanupFailedDefs(MachineInstr &MI, Register FailedReg,
-                         MCRegister PhysReg);
-
   // Get a temporary reference to a Spiller instance.
   virtual Spiller &spiller() = 0;
 
@@ -137,12 +126,6 @@ protected:
   virtual MCRegister selectOrSplit(const LiveInterval &VirtReg,
                                    SmallVectorImpl<Register> &splitLVRs) = 0;
 
-  /// Query a physical register to use as a filler in contexts where the
-  /// allocation has failed. This will raise an error, but not abort the
-  /// compilation.
-  MCPhysReg getErrorAssignment(const TargetRegisterClass &RC,
-                               const MachineInstr *CtxMI = nullptr);
-
   // Use this group name for NamedRegionTimer.
   static const char TimerGroupName[];
   static const char TimerGroupDescription[];
@@ -157,6 +140,12 @@ public:
 private:
   void seedLiveRegs();
 };
+
+/// Report that \p VirtReg failed to allocate, and rewrite it to a register of
+/// its class anyway, so that compilation can go on after the error. Return
+/// that register.
+MCRegister assignFailedVirtReg(Register VirtReg, const RegisterClassInfo &RCI,
+                               LiveIntervals &LIS, VirtRegMap &VRM);
 
 } // end namespace llvm
 

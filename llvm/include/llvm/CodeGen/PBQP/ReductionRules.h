@@ -191,12 +191,19 @@ namespace PBQP {
       RawVector v = G.getNodeCosts(NId);
 
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
-      // Although a conservatively allocatable node can be allocated to a register,
-      // spilling it may provide a lower cost solution. Assert here that spilling
-      // is done by choice, not because there were no register available.
+      // Although a conservatively allocatable node can be allocated to a
+      // register, spilling it may provide a lower cost solution. Assert here
+      // that spilling is done by choice, not because there were no registers
+      // available. The exception is a node with no option of finite cost, not
+      // even spilling. R1 and R2 fold costs exactly, so that only happens when
+      // the problem has no solution of finite cost, e.g. when two unspillable
+      // ranges need the one register left. The infinite costs then reach
+      // nodes that were conservatively allocatable when they were classified.
       if (G.getNodeMetadata(NId).wasConservativelyAllocatable())
-        assert(hasRegisterOptions(v) && "A conservatively allocatable node "
-                                        "must have available register options");
+        assert((hasRegisterOptions(v) ||
+                v[0] == std::numeric_limits<PBQP::PBQPNum>::infinity()) &&
+               "A conservatively allocatable node must have available "
+               "register options");
 #endif
 
       for (auto EId : G.adjEdgeIds(NId)) {
