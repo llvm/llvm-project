@@ -1,0 +1,68 @@
+# REQUIRES: x86
+#
+# A malformed replaceable COMDAT with a section-definition record but no leader
+# must not leak references from that invalid section. In particular, its
+# relocation must count as a relocation for provenance bookkeeping so the
+# undefined symbol is not misclassified as an "unrelocated" object-level
+# reference and used to extract an archive member.
+#
+# RUN: split-file %s %t.dir
+# RUN: llvm-mc -triple x86_64-pc-win32 -filetype=obj \
+# RUN:   %t.dir/provider.s -o %t.provider.obj
+# RUN: llvm-lib -machine:amd64 -out:%t.provider.lib %t.provider.obj
+# RUN: yaml2obj %t.dir/bad.yaml -o %t.bad.obj
+#
+# RUN: lld-link /dll /noentry /nodefaultlib /opt:noref \
+# RUN:   %t.provider.lib %t.bad.obj /out:%t.dll
+# RUN: llvm-objdump -s %t.dll | FileCheck %s
+#
+# CHECK-NOT: bebafeca
+#
+#--- provider.s
+        .section .rdata$provider, "dr"
+        .globl missing_from_bad_comdat
+missing_from_bad_comdat:
+        .long 0x01020304
+        .globl archive_marker
+archive_marker:
+        .long 0xcafebabe
+#
+#--- bad.yaml
+--- !COFF
+header:
+  Machine: IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [ ]
+sections:
+  - Name: '.text$bad'
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_LNK_COMDAT,
+                       IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment: 1
+    SectionData: '00000000'
+    Relocations:
+      - VirtualAddress: 0
+        SymbolTableIndex: 2
+        Type: IMAGE_REL_AMD64_ADDR32
+symbols:
+  - Name: '.text$bad'
+    Value: 0
+    SectionNumber: 1
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_NULL
+    StorageClass: IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length: 4
+      NumberOfRelocations: 1
+      NumberOfLinenumbers: 0
+      CheckSum: 0
+      Number: 1
+      Selection: IMAGE_COMDAT_SELECT_LARGEST
+  # There is deliberately no leader symbol for section 1. Raw symbol table
+  # index 1 is the section-definition auxiliary record, so the undefined below
+  # is raw index 2 and is the relocation target.
+  - Name: missing_from_bad_comdat
+    Value: 0
+    SectionNumber: 0
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_NULL
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL
+...
