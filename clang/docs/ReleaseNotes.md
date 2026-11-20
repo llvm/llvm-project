@@ -569,6 +569,10 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   `explicit_bzero` is called with a size argument larger than the destination
   buffer.
 
+- `-Wfortify-source` now diagnoses calls to `fread_unlocked`,
+  `fwrite_unlocked`, and `fgets_unlocked` when the requested size exceeds the
+  corresponding buffer (or is negative for `fgets_unlocked`).
+
 - The `cannot overload a member function` diagnostic now describes the previous
   declaration first, matching the order in which the declarations appear in the
   source. (#GH219803)
@@ -1097,6 +1101,11 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed a crash when a using-declaration naming an unresolvable member of a
   dependent base was shadowed by an invalid using-declaration. (#GH209427)
 
+- Fixed a stack overflow when parsing deeply nested template arguments such
+  as ``S<S<S<...>>>``. Parsing now goes through the existing stack guard, which
+  continues on a fresh stack instead of crashing when the parser's stack is
+  nearly exhausted. (#GH224114)
+
 - Fixed a CTAD bug when combining with concepts. (#GH124715)
 
 - Fixed a regression where an internal-linkage function (e.g. a `static` or
@@ -1615,6 +1624,11 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   calls with 2 arguments as a locking call. This fixes false negatives.
   (#GH237154)
 
+- Fixed an issue where predefined library builtins containing `_` (such as
+  `objc_read_weak`) could falsely match unrelated C library function names
+  (such as `read`) via fuzzy builtin matching, and added explicit
+  `CStringChecker` modeling for C23 `memset_explicit`.
+
 % comment:
 % This is for the Static Analyzer.
 % Use `####` headings for subsections:
@@ -1665,9 +1679,6 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   normalize `cfi-icall` and `kcfi` function type metadata, leaving C++ class
   vtable, member-pointer, and `-fexperimental-call-graph-section` metadata
   canonical so whole-program devirtualization works reliably. (#GH242466)
-- `-fsanitize=alloc-token` now also infers the allocated type from a placement
-  `new` into the result of an untyped allocation call, e.g. `new (malloc(n)) T`
-  or `void *p = malloc(n); new (p) T;`.
 
 ### Python Binding Changes
 

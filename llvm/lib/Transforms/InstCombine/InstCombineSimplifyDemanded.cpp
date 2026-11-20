@@ -3207,8 +3207,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
                                   Depth + 1))
         return I;
 
-      // exp(+/-0) = 1
-      if (KnownSrc.isKnownAlways(fcZero))
+      // exp(+/-0 | subnormal) = 1
+      if (KnownSrc.isKnownAlways(fcZero | fcSubnormal))
         return ConstantFP::get(VTy, 1.0);
 
       // Only perform nan propagation.
@@ -3216,12 +3216,14 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       if (KnownSrc.isKnownAlways(fcNan))
         return CI->getArgOperand(0);
 
-      // exp(0 | nan) => x == 0.0 ? 1.0 : x
-      if (KnownSrc.isKnownAlways(fcZero | fcNan)) {
+      // exp(0 | subnormal | +inf | nan) => x + 1.0
+      if (KnownSrc.isKnownAlways(fcZero | fcSubnormal | fcPosInf | fcNan)) {
         IRBuilderBase::InsertPointGuard Guard(Builder);
         Builder.SetInsertPoint(CI);
 
         // fadd +/-0, 1.0 => 1.0
+        // fadd subnormal, 1.0 => 1.0
+        // fadd +inf, 1.0 => +inf
         // fadd nan, 1.0 => nan
         return Builder.CreateFAddFMF(CI->getArgOperand(0),
                                      ConstantFP::get(VTy, 1.0), FMF);

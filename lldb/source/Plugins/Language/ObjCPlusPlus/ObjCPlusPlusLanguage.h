@@ -30,6 +30,9 @@ public:
 
   bool IsSourceFile(llvm::StringRef file_path) const override;
 
+  bool IsCategoryApplicable(lldb::LanguageType category_language,
+                            lldb::LanguageType valobj_language) const override;
+
   // Static Functions
   static void Initialize();
 

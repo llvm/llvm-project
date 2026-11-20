@@ -169,3 +169,14 @@ TEST(ObjCLanguage, FormatterLanguages) {
   EXPECT_TRUE(language.GetFormatterLanguages(lldb::eLanguageTypeObjC_plus_plus)
                   .empty());
 }
+
+TEST(ObjCLanguage, IsCategoryApplicable) {
+  ObjCLanguage language;
+  for (lldb::LanguageType c_or_objc :
+       {lldb::eLanguageTypeC89, lldb::eLanguageTypeC, lldb::eLanguageTypeC99,
+        lldb::eLanguageTypeObjC})
+    EXPECT_TRUE(
+        language.IsCategoryApplicable(lldb::eLanguageTypeObjC, c_or_objc));
+  EXPECT_FALSE(language.IsCategoryApplicable(lldb::eLanguageTypeObjC,
+                                             lldb::eLanguageTypeC_plus_plus));
+}
