@@ -258,3 +258,24 @@ body: |
     S_ENDPGM 0, implicit $vcc
 ...
 
+# S_CSELECT EXEC, 0 is itself masked by EXEC, so ANDing it with EXEC is a no-op.
+---
+name: cselect_exec_zero
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr0
+    ; CHECK-LABEL: name: cselect_exec_zero
+    ; CHECK: liveins: $sgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: S_CMP_LG_U32 $sgpr0, 0, implicit-def $scc
+    ; CHECK-NEXT: [[S_CSELECT_B64_:%[0-9]+]]:sreg_64_xexec = S_CSELECT_B64 $exec, 0, implicit $scc
+    ; CHECK-NEXT: $vcc = COPY [[S_CSELECT_B64_]]
+    ; CHECK-NEXT: S_ENDPGM 0, implicit $vcc
+    S_CMP_LG_U32 $sgpr0, 0, implicit-def $scc
+    %0:sreg_64_xexec = S_CSELECT_B64 $exec, 0, implicit $scc
+    %1:sreg_64_xexec = S_AND_B64 $exec, %0, implicit-def dead $scc
+    $vcc = COPY %1
+    S_ENDPGM 0, implicit $vcc
+...
+
