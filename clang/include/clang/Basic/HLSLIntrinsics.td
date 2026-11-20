@@ -1231,7 +1231,6 @@ can equivalently be written as x + s(y-x).
   let ParamNames = ["x", "y", "s"];
   let VaryingTypes = [HalfTy, FloatTy];
   let VaryingLongVector = 1;
-  let VaryingMatDims = [];
 }
 
 def hlsl_lit_float : HLSLBuiltin<"lit"> {
