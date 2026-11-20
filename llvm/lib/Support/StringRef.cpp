@@ -195,20 +195,10 @@ size_t StringRef::find_insensitive(StringRef Str, size_t From) const {
   return npos;
 }
 
-size_t StringRef::rfind_insensitive(char C, size_t From) const {
-  From = std::min(From, size());
-  size_t i = From;
-  while (i != 0) {
-    --i;
-    if (toLower(data()[i]) == toLower(C))
-      return i;
-  }
-  return npos;
-}
-
 // Returns the index of the last C in Data[0, End), or npos if it is not found.
 // Written to be vectorizable.
-static size_t rfindByte(const char *Data, size_t End, char C) {
+LLVM_ATTRIBUTE_ALWAYS_INLINE static size_t rfindByte(const char *Data,
+                                                     size_t End, char C) {
   constexpr size_t VectorWidth = 16;
   size_t I = End;
   for (; I >= VectorWidth; I -= VectorWidth) {
@@ -225,6 +215,21 @@ static size_t rfindByte(const char *Data, size_t End, char C) {
       return I;
   }
   return StringRef::npos;
+}
+
+size_t StringRef::rfind(char C, size_t From) const {
+  return rfindByte(data(), std::min(From, size()), C);
+}
+
+size_t StringRef::rfind_insensitive(char C, size_t From) const {
+  From = std::min(From, size());
+  size_t i = From;
+  while (i != 0) {
+    --i;
+    if (toLower(data()[i]) == toLower(C))
+      return i;
+  }
+  return npos;
 }
 
 /// rfind - Search for the last string \arg Str in the string.
