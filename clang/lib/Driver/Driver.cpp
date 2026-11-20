@@ -4163,7 +4163,7 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
       StringRef Target =
           ID.isIntelGPU() ? OffloadArchToVirtualArchString(ID) : Arch;
       Targets.insert(Target);
-      if (Target != Arch)
+      if (ID.isIntelGPU())
         C.addIGCADevice(&TC, Target, Arch);
     }
     Archs = std::move(Targets);
