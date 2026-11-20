@@ -2020,7 +2020,7 @@ TEST_F(MemorySSATest, ScopedIrreducibleBodyClobber) {
     Switch->setCondition(F->getArg(4));
     Switch->addCase(B.getTrue(), To);
   }
-  B.SetInsertPoint(Left, Left->begin());
+  B.SetInsertPoint(Left->begin());
   auto *Load = B.CreateLoad(B.getInt32Ty(), F->getArg(2));
   TestAnalyses A(*this);
   LoopInfo LI(A.DT);
