@@ -9,19 +9,18 @@ define <4 x i16> @fold_urem_vec_1(<4 x i16> %x) {
 ; SSE2-LABEL: fold_urem_vec_1:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [0,65535,65535,0,65535,65535,65535,65535]
-; SSE2-NEXT:    movq {{.*#+}} xmm2 = [0,16384,32768,0,0,0,0,0]
-; SSE2-NEXT:    pmulhuw %xmm0, %xmm2
-; SSE2-NEXT:    pand %xmm1, %xmm2
 ; SSE2-NEXT:    pandn %xmm0, %xmm1
-; SSE2-NEXT:    por %xmm2, %xmm1
-; SSE2-NEXT:    pmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [44151,16913,2675,1373,u,u,u,u]
-; SSE2-NEXT:    movdqa %xmm0, %xmm2
-; SSE2-NEXT:    psubw %xmm1, %xmm2
-; SSE2-NEXT:    pmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2 # [0,0,0,32768,u,u,u,u]
-; SSE2-NEXT:    paddw %xmm1, %xmm2
-; SSE2-NEXT:    pmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2 # [1024,8192,32768,128,u,u,u,u]
-; SSE2-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2 # [95,124,98,1003,u,u,u,u]
-; SSE2-NEXT:    psubw %xmm2, %xmm0
+; SSE2-NEXT:    movq {{.*#+}} xmm2 = [0,0,0,64,0,128,0,0,0,0,0,0,0,0,0,0]
+; SSE2-NEXT:    pmulhuw %xmm0, %xmm2
+; SSE2-NEXT:    por %xmm1, %xmm2
+; SSE2-NEXT:    pmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2 # [44151,16913,2675,1373,u,u,u,u]
+; SSE2-NEXT:    movdqa %xmm0, %xmm1
+; SSE2-NEXT:    psubw %xmm2, %xmm1
+; SSE2-NEXT:    pmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [0,0,0,32768,u,u,u,u]
+; SSE2-NEXT:    paddw %xmm2, %xmm1
+; SSE2-NEXT:    pmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [1024,8192,32768,128,u,u,u,u]
+; SSE2-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [95,124,98,1003,u,u,u,u]
+; SSE2-NEXT:    psubw %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE4-LABEL: fold_urem_vec_1:

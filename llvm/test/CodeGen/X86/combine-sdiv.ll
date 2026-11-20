@@ -578,8 +578,8 @@ define <16 x i16> @combine_vec_sdiv_by_pow2b_v16i16(<16 x i16> %x) {
 ; SSE2-LABEL: combine_vec_sdiv_by_pow2b_v16i16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa %xmm0, %xmm3
-; SSE2-NEXT:    movdqa {{.*#+}} xmm7 = [u,4,2,16,8,32,64,2]
 ; SSE2-NEXT:    psraw $15, %xmm0
+; SSE2-NEXT:    movdqa {{.*#+}} xmm7 = [u,4,2,16,8,32,64,2]
 ; SSE2-NEXT:    pmulhuw %xmm7, %xmm0
 ; SSE2-NEXT:    paddw %xmm3, %xmm0
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [65535,65535,65535,0,65535,0,0,65535]
@@ -739,8 +739,8 @@ define <32 x i16> @combine_vec_sdiv_by_pow2b_v32i16(<32 x i16> %x) {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa %xmm1, %xmm5
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
-; SSE2-NEXT:    movdqa {{.*#+}} xmm9 = [u,4,2,16,8,32,64,2]
 ; SSE2-NEXT:    psraw $15, %xmm0
+; SSE2-NEXT:    movdqa {{.*#+}} xmm9 = [u,4,2,16,8,32,64,2]
 ; SSE2-NEXT:    pmulhuw %xmm9, %xmm0
 ; SSE2-NEXT:    paddw %xmm1, %xmm0
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm6 = [65535,65535,65535,0,65535,0,0,65535]

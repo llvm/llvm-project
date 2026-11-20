@@ -11433,8 +11433,8 @@ static SDValue lowerShuffleAsBitBlend(const SDLoc &DL, MVT VT, SDValue V1,
   }
   SDValue V1Mask = getConstVector(MaskOps, VT, DAG, DL);
   // Freeze inputs to prevent AND(poison,0) -> poison folds.
-  V1 = DAG.getFreeze(V1, DemandedV1);
-  V2 = DAG.getFreeze(V2, DemandedV2);
+  V1 = DAG.getFreeze(V1, DemandedV1, UndefPoisonKind::PoisonOnly);
+  V2 = DAG.getFreeze(V2, DemandedV2, UndefPoisonKind::PoisonOnly);
   return getBitSelect(DL, VT, V1, V2, V1Mask, DAG);
 }
 
