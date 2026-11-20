@@ -15,6 +15,7 @@
 #include <cassert>
 #include <memory>
 #include <mutex>
+#include <utility>
 
 #include "checking_mutex.h"
 #include "test_macros.h"

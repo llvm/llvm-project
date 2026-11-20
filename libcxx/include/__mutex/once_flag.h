@@ -11,15 +11,10 @@
 
 #include <__config>
 #include <__memory/addressof.h>
-#include <__tuple/tuple_size.h>
+#include <__tuple/simple_tuple.h>
 #include <__type_traits/invoke.h>
 #include <__utility/forward.h>
-#include <__utility/integer_sequence.h>
 #include <__utility/move.h>
-#include <cstdint>
-#ifndef _LIBCPP_CXX03_LANG
-#  include <tuple>
-#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -87,9 +82,9 @@ public:
   _LIBCPP_HIDE_FROM_ABI explicit __call_once_param(_Fp& __f) : __f_(__f) {}
 
   _LIBCPP_HIDE_FROM_ABI void operator()() {
-    [&]<size_t... _Indices>(__index_sequence<_Indices...>) -> void {
-      std::__invoke(std::get<_Indices>(std::move(__f_))...);
-    }(__make_index_sequence<tuple_size<_Fp>::value>());
+    _Fp::__apply(std::move(__f_), []<class... _Args>(_Args&&... __args) -> void {
+      std::__invoke(std::forward<_Args>(__args)...);
+    });
   }
 };
 
@@ -131,7 +126,7 @@ inline _LIBCPP_HIDE_FROM_ABI _ValueType __libcpp_acquire_load(_ValueType const* 
 template <class _Callable, class... _Args>
 inline _LIBCPP_HIDE_FROM_ABI void call_once(once_flag& __flag, _Callable&& __func, _Args&&... __args) {
   if (__libcpp_acquire_load(&__flag.__state_) != once_flag::_Complete) {
-    typedef tuple<_Callable&&, _Args&&...> _Gp;
+    typedef __simple_tuple<_Callable&&, _Args&&...> _Gp;
     _Gp __f(std::forward<_Callable>(__func), std::forward<_Args>(__args)...);
     __call_once_param<_Gp> __p(__f);
     std::__call_once(__flag.__state_, std::addressof(__p), std::addressof(__call_once_proxy<_Gp>));
