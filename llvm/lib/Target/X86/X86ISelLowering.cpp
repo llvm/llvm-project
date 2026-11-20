@@ -48084,32 +48084,24 @@ static SDValue combineBasicSADPattern(SDNode *Extract, SelectionDAG &DAG,
   if (!isPowerOf2_32(RootVT.getVectorNumElements()))
     return SDValue();
 
-  // The operand is expected to be zero extended from i8.
-  // In order to convert to i64 and above, additional any/zero/sign
-  // extend is expected.
-  // The zero extend from 32 bit has no mathematical effect on the result.
-  // Also the sign extend is basically zero extend
-  // (extends the sign bit which is zero).
-  // So it is correct to skip the sign/zero extend instruction.
-  if (Root.getOpcode() == ISD::SIGN_EXTEND ||
-      Root.getOpcode() == ISD::ZERO_EXTEND ||
-      Root.getOpcode() == ISD::ANY_EXTEND)
-    Root = Root.getOperand(0);
-
   // Check whether we have an vXi8 abdu pattern.
+  // The operand is expected to be zero extended from i8, for
+  // abs(sub(zext,zext)) patterns the sign extend is basically zero extend
+  // (extends the sign bit which is zero).
   // TODO: Just match ISD::ABDU once the DAG is topological sorted.
   SDValue Src0, Src1;
   if (!sd_match(
           Root,
-          m_AnyOf(
+          m_ZExtOrSelf(m_AnyOf(
               m_SpecificVectorElementVT(
                   MVT::i8, m_c_BinOp(ISD::ABDU, m_Value(Src0), m_Value(Src1))),
               m_SpecificVectorElementVT(
                   MVT::i8, m_Sub(m_UMax(m_Value(Src0), m_Value(Src1)),
                                  m_UMin(m_Deferred(Src0), m_Deferred(Src1)))),
-              m_Abs(m_Sub(
+              m_SExtOrSelf(m_Abs(m_Sub(
                   m_Value(Src0, m_ZExt(m_SpecificVectorElementVT(MVT::i8))),
-                  m_Value(Src1, m_ZExt(m_SpecificVectorElementVT(MVT::i8))))))))
+                  m_Value(Src1,
+                          m_ZExt(m_SpecificVectorElementVT(MVT::i8))))))))))
     return SDValue();
 
   // Create the SAD instruction.
