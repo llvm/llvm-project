@@ -246,11 +246,14 @@ mlir::Type updateTypeWithVolatility(mlir::Type type, bool isVolatile) {
   if (fir::isa_volatile_type(type) == isVolatile)
     return type;
   return mlir::TypeSwitch<mlir::Type, mlir::Type>(type)
-      .Case<fir::BoxType, fir::ClassType, fir::ReferenceType>(
-          [&](auto ty) -> mlir::Type {
-            using TYPE = decltype(ty);
-            return TYPE::get(ty.getEleTy(), isVolatile);
-          })
+      .Case<fir::BoxType, fir::ClassType>([&](auto ty) -> mlir::Type {
+        using TYPE = decltype(ty);
+        return TYPE::get(ty.getEleTy(), isVolatile, ty.getCorank());
+      })
+      .Case<fir::ReferenceType>([&](auto ty) -> mlir::Type {
+        using TYPE = decltype(ty);
+        return TYPE::get(ty.getEleTy(), isVolatile);
+      })
       .Default([&](mlir::Type t) -> mlir::Type { return t; });
 }
 
@@ -772,6 +775,32 @@ bool fir::isa_volatile_type(mlir::Type t) {
       .Default([](mlir::Type) { return false; });
 }
 
+/// Parse the optional trailing attributes shared by !fir.box and !fir.class:
+///   (`,` (`volatile` | `corank` `:` integer))*
+/// Each attribute may appear at most once, in any order.
+static mlir::ParseResult parseBoxLikeAttrs(mlir::AsmParser &parser,
+                                           bool &isVolatile, int64_t &corank) {
+  bool hasCorank = false;
+  auto location = parser.getCurrentLocation();
+  while (mlir::succeeded(parser.parseOptionalComma())) {
+    if (mlir::succeeded(parser.parseOptionalKeyword(getVolatileKeyword()))) {
+      if (isVolatile)
+        return parser.emitError(location, "duplicate 'volatile' keyword");
+      isVolatile = true;
+    } else if (mlir::succeeded(
+                   parser.parseOptionalKeyword(getCorankKeyword()))) {
+      if (hasCorank)
+        return parser.emitError(location, "duplicate 'corank' keyword");
+      if (parser.parseColon() || parser.parseInteger(corank))
+        return mlir::failure();
+      hasCorank = true;
+    } else {
+      return parser.emitError(location, "expected 'volatile' or 'corank'");
+    }
+  }
+  return mlir::success();
+}
+
 //===----------------------------------------------------------------------===//
 // BoxProcType
 //===----------------------------------------------------------------------===//
@@ -809,7 +838,7 @@ static bool cannotBePointerOrHeapElementType(mlir::Type eleTy) {
 // BoxType
 //===----------------------------------------------------------------------===//
 
-// `box` `<` type (`, volatile` $volatile^)? (`, corank: corank` $corank^)? `>`
+// `box` `<` type (`,` (`volatile` | `corank` `:` integer))* `>`
 mlir::Type fir::BoxType::parse(mlir::AsmParser &parser) {
   mlir::Type eleTy;
   auto location = parser.getCurrentLocation();
@@ -818,17 +847,8 @@ mlir::Type fir::BoxType::parse(mlir::AsmParser &parser) {
   int64_t corank = 0;
   if (parser.parseLess() || parser.parseType(eleTy))
     return {};
-  if (mlir::succeeded(parser.parseOptionalComma())) {
-    // Fortran 2023 C871
-    // VOLATILE attribute shall not be specified for a coarray, so the
-    // "volatile" keyword cannot coexist with the "corank".
-    if (mlir::succeeded(parser.parseOptionalKeyword(getVolatileKeyword())))
-      isVolatile = true;
-    else if (mlir::succeeded(parser.parseKeyword(getCorankKeyword())))
-      if (mlir::succeeded(parser.parseOptionalColon()))
-        if (!mlir::succeeded(parser.parseInteger(corank)))
-          return {};
-  }
+  if (parseBoxLikeAttrs(parser, isVolatile, corank))
+    return {};
   if (parser.parseGreater())
     return {};
   return parser.getChecked<fir::BoxType>(location, context, eleTy, isVolatile,
@@ -912,8 +932,7 @@ void fir::CharacterType::print(mlir::AsmPrinter &printer) const {
 //===----------------------------------------------------------------------===//
 // ClassType
 //===----------------------------------------------------------------------===//
-
-// `class` `<` type (`, volatile` $volatile^)? (`, corank: corank` $corank^)?`>`
+// `class` `<` type (`,` (`volatile` | `corank` `:` integer))*`>`
 mlir::Type fir::ClassType::parse(mlir::AsmParser &parser) {
   mlir::Type eleTy;
   auto location = parser.getCurrentLocation();
@@ -922,17 +941,8 @@ mlir::Type fir::ClassType::parse(mlir::AsmParser &parser) {
   int64_t corank = 0;
   if (parser.parseLess() || parser.parseType(eleTy))
     return {};
-  if (mlir::succeeded(parser.parseOptionalComma())) {
-    // Fortran 2023 C871
-    // VOLATILE attribute shall not be specified for a coarray, so the
-    // "volatile" keyword cannot coexist with the "corank".
-    if (mlir::succeeded(parser.parseOptionalKeyword(getVolatileKeyword())))
-      isVolatile = true;
-    else if (mlir::succeeded(parser.parseKeyword(getCorankKeyword())))
-      if (mlir::succeeded(parser.parseOptionalColon()))
-        if (!mlir::succeeded(parser.parseInteger(corank)))
-          return {};
-  }
+  if (parseBoxLikeAttrs(parser, isVolatile, corank))
+    return {};
   if (parser.parseGreater())
     return {};
   return parser.getChecked<fir::ClassType>(location, context, eleTy, isVolatile,
