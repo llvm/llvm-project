@@ -10,17 +10,16 @@
 ! CHECK: PASS
 
 program alloc_overflow
-  use iso_fortran_env
   implicit none
 
   type :: small_type
-    integer(int64) :: i64
-    integer(int32) :: i32
+    integer(8) :: i64
+    integer(4) :: i32
   end type
 
   type :: large_type
-    integer(int64), dimension(1024) :: i64
-    integer(int32), dimension(1024) :: i32
+    integer(8), dimension(1024) :: i64
+    integer(4), dimension(1024) :: i32
   end type
 
   type(small_type), dimension(:),   allocatable :: small
@@ -28,8 +27,8 @@ program alloc_overflow
   type(large_type), dimension(:,:), allocatable :: large2d
 
   type alloc_stat
-    integer(int64) :: size
-    integer(int64) :: stat
+    integer(8) :: size
+    integer(8) :: stat
     logical :: is_alloc
   end type
 
@@ -37,9 +36,11 @@ program alloc_overflow
   type(alloc_stat) :: alloc_large
   type(alloc_stat) :: alloc_large2d
 
-  alloc_small%size = 2_int64**19
-  alloc_large%size = 2_int64**60
-  alloc_large2d%size = 2_int64**30
+  logical :: pass = .true.
+
+  alloc_small%size = 2_8**19
+  alloc_large%size = 2_8**60
+  alloc_large2d%size = 2_8**30
 
   allocate(small(alloc_small%size), stat=alloc_small%stat)
   alloc_small%is_alloc = allocated(small)
@@ -58,15 +59,27 @@ program alloc_overflow
     'stat', alloc_large2d%stat, &
     'is_alloc', alloc_large2d%is_alloc
 
-  if ((alloc_small%stat == 0) .and.      &
-      (alloc_small%is_alloc)  .and.      &
-      (alloc_large%stat /= 0) .and.      &
-      (.not. alloc_large%is_alloc) .and. &
-      (alloc_large2d%stat /= 0) .and.    &
-      (.not. alloc_large2d%is_alloc)) then
-    print*, 'PASS'
-  else
-    print*, 'FAIL'
+  if (alloc_small%stat /= 0 .and. .not. alloc_small%is_alloc) then
+    print*, 'FAIL - small allocation should have succeeded'
+    pass = .false.
   endif
+
+  if (alloc_large%stat == 0 .or. alloc_large%is_alloc) then
+    print*, 'FAIL - larrge 1d allocation should have have failed'
+    pass = .false.
+  end if
+
+  if (alloc_large2d%stat == 0 .or. alloc_large2d%is_alloc) then
+    print*, 'FAIL - larrge 2d allocation should have have failed'
+    pass = .false.
+  end if
+
+  if (pass) then
+    print*, 'PASS'
+    stop
+  endif
+
+  print*, 'FAIL'
+  stop 1
 
 end program alloc_overflow
