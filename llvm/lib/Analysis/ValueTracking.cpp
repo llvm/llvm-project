@@ -4792,7 +4792,7 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
     case Instruction::Add:
       // Add can have at most one carry bit.  Thus we know that the output
       // is, at worst, one more bit than the inputs.
-      Tmp = ComputeNumSignBits(U->getOperand(0), Q, Depth + 1);
+      Tmp = ComputeNumSignBits(U->getOperand(0), DemandedElts, Q, Depth + 1);
       if (Tmp == 1) break;
 
       // Special case decrementing a value (ADD X, -1):
@@ -4889,7 +4889,7 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
       // If the input contained enough sign bits that some remain after the
       // truncation, then we can make use of that. Otherwise we don't know
       // anything.
-      Tmp = ComputeNumSignBits(U->getOperand(0), Q, Depth + 1);
+      Tmp = ComputeNumSignBits(U->getOperand(0), DemandedElts, Q, Depth + 1);
       unsigned OperandTyBits = U->getOperand(0)->getType()->getScalarSizeInBits();
       if (Tmp > (OperandTyBits - TyBits))
         return Tmp - (OperandTyBits - TyBits);

@@ -996,3 +996,9 @@ let Predicates = [HasVendorXSfvfexpa64e] in {
   defm : VPatUnaryV_V<"int_riscv_sf_vfexpa", "PseudoSF_VFEXPA",
                       [VF64M1, VF64M2, VF64M4, VF64M8], isSEWAware=1>;
 }
+
+//===----------------------------------------------------------------------===//
+// XSfvfofp4min extension instruction.
+//===----------------------------------------------------------------------===//
+let Predicates = [HasVendorXSfvfofp4min], AltFmtType = IS_NOT_ALTFMT in
+  def VFEXT_VF2 : VEXT_MV_VS2<"sf.vfext.vf2", 0b010010, 0b10110>;

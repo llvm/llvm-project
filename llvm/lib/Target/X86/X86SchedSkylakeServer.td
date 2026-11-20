@@ -403,9 +403,10 @@ defm : SKXWriteResPair<WritePack,  [SKXPort5], 2, [2], 2, 5>; // Vector packs.
 defm : SKXWriteResPair<WritePackX, [SKXPort5], 1, [1], 1, 6>;
 defm : SKXWriteResPair<WritePackY, [SKXPort5], 1, [1], 1, 7>;
 defm : SKXWriteResPair<WritePackZ, [SKXPort5], 1, [1], 1, 7>;
-defm : SKXWriteResPair<WriteBlend, [SKXPort5], 1, [1], 1, 6>; // Vector blends.
-defm : SKXWriteResPair<WriteBlendY,[SKXPort5], 1, [1], 1, 7>;
-defm : SKXWriteResPair<WriteBlendZ,[SKXPort5], 1, [1], 1, 7>;
+defm : SKXWriteResPair<WritePBLENDDX,[SKXPort015], 1, [1], 1, 6>; // Vector blends.
+defm : SKXWriteResPair<WritePBLENDDY,[SKXPort015], 1, [1], 1, 7>;
+defm : SKXWriteResPair<WritePBLENDWX,[SKXPort5], 1, [1], 1, 6>; // Vector blends.
+defm : SKXWriteResPair<WritePBLENDWY,[SKXPort5], 1, [1], 1, 7>;
 defm : SKXWriteResPair<WriteVarBlend, [SKXPort015], 2, [2], 2, 6>; // Vector variable blends.
 defm : SKXWriteResPair<WriteVarBlendY,[SKXPort015], 2, [2], 2, 6>;
 defm : SKXWriteResPair<WriteMaskBlendX, [SKXPort015], 1, [1], 1, 6>; // Vector masked blends.
@@ -709,7 +710,6 @@ def SKXWriteResGroup9 : SchedWriteRes<[SKXPort015]> {
 }
 def: InstRW<[SKXWriteResGroup9], (instregex "VPADD(B|D|Q|W)(Y|Z|Z128|Z256)rr",
                                             "(V?)PADD(B|D|Q|W)rr",
-                                            "VPBLENDD(Y?)rri",
                                             "VPSUB(B|D|Q|W)(Y|Z|Z128|Z256)rrk",
                                             "VPTERNLOGD(Z|Z128|Z256)rri",
                                             "VPTERNLOGQ(Z|Z128|Z256)rri")>;
@@ -1321,7 +1321,6 @@ def SKXWriteResGroup95 : SchedWriteRes<[SKXPort23,SKXPort015]> {
   let NumMicroOps = 2;
   let ReleaseAtCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup95], (instrs VPBLENDDrmi)>;
 def: InstRW<[SKXWriteResGroup95, ReadAfterVecXLd],
                                   (instregex "VBROADCASTI32X2Z128rm(b?)",
                                              "VBROADCASTSSZ128rm(b?)",
@@ -1511,7 +1510,6 @@ def SKXWriteResGroup121 : SchedWriteRes<[SKXPort23,SKXPort015]> {
   let NumMicroOps = 2;
   let ReleaseAtCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup121], (instrs VPBLENDDYrmi)>;
 def: InstRW<[SKXWriteResGroup121, ReadAfterVecYLd],
                                    (instregex "VBROADCASTF32X2Z256rm(b?)",
                                               "VBROADCASTF32X2Zrm(b?)",

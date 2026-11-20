@@ -109,6 +109,10 @@ defm : BoolField<"profile-unknown-in-special-section", "false",
   "In profiling mode like sampleFDO, if a function doesn't have profile, we cannot tell the function is cold for sure because it may be a function newly added without ever being sampled. "
   "With the flag enabled, compiler can put such profile unknown functions into a special section, so runtime system can choose to handle it in a different way than .text section, to save RAM for example">;
 
+// DFAPacketizer.cpp
+defm : OptionalValueField<"dfa-instr-limit", "unsigned",
+  "If present, stops packetizing after N instructions">;
+
 // EarlyIfConversion.cpp
 defm : ValueField<"early-ifcvt-cold-edge-threshold", "unsigned", "1",
   "Cold edge probability threshold in percent for using no critical-path extension budget (0 disables the threshold)">;
@@ -258,6 +262,76 @@ defm : BoolField<"outliner-leaf-descendants", "true",
 // TODO: Remove the old spelling after 2027-05.
 def : AliasOf<"disable-global-outlining", "global-outlining=false">;
 
+// MachineScheduler.cpp
+defm : OptionalBoolField<"enable-misched",
+  "Enable the machine instruction scheduling pass">;
+defm : OptionalBoolField<"enable-post-misched",
+  "Enable the post-ra machine instruction scheduling pass">;
+defm : OptionalBoolField<"enable-ssa-misched",
+  "Enable the machine instruction scheduling pass in SSA">;
+defm : BoolField<"misched-cluster", "true",
+  "Enable memop clustering">;
+let Condition = AssertsOnly in
+defm : ValueField<"misched-cutoff", "unsigned", "~0U",
+  "Stop scheduling after N instructions">;
+defm : BoolField<"misched-cyclicpath", "true",
+  "Enable cyclic critical path analysis">;
+defm : BoolField<"misched-dcpl", "false",
+  "Print critical path length to stdout">;
+let Condition = AssertsOnly in {
+defm : BoolField<"misched-detail-resource-booking", "false",
+  "Show details of invoking getNextResoufceCycle">;
+defm : BoolField<"misched-dump-reserved-cycles", "false",
+  "Dump resource usage at schedule boundary">;
+defm : BoolField<"misched-dump-schedule-trace", "false",
+  "Dump resource usage at schedule boundary">;
+defm : ValueField<"misched-dump-schedule-trace-col-header-width", "unsigned", "19",
+  "Set width of the columns with the resources and schedule units">;
+defm : ValueField<"misched-dump-schedule-trace-col-width", "unsigned", "5",
+  "Set width of the columns showing resource booking">;
+}
+defm : ValueField<"misched-fast-cluster-threshold", "unsigned", "1000",
+  "The threshold for fast cluster">;
+defm : BoolField<"misched-force-fast-cluster", "false",
+  "Switch to fast cluster algorithm with the lost of some fusion opportunities">;
+// Avoid quadratic complexity in unusually large basic blocks by limiting the
+// size of the ready lists.
+defm : ValueField<"misched-limit", "unsigned", "256",
+  "Limit ready list to N instructions">;
+let Condition = AssertsOnly in {
+defm : OptionalValueField<"misched-only-block", "unsigned",
+  "Only schedule this MBB#">;
+defm : OptionalValueField<"misched-only-func", "StringRef",
+  "Only schedule this function">;
+}
+defm : EnumField<"misched-postra-direction", "MISched::Direction", "",
+  "topdown,bottomup,bidirectional",
+  ["MISched::TopDown", "MISched::BottomUp", "MISched::Bidirectional"],
+  "Post reg-alloc list scheduling direction">;
+defm : EnumField<"misched-prera-direction", "MISched::Direction", "",
+  "topdown,bottomup,bidirectional",
+  ["MISched::TopDown", "MISched::BottomUp", "MISched::Bidirectional"],
+  "Pre reg-alloc list scheduling direction">;
+let Condition = AssertsOnly in
+defm : BoolField<"misched-print-dags", "false",
+  "Print schedule DAGs">;
+defm : BoolField<"misched-regpressure", "true",
+  "Enable register pressure scheduling">;
+defm : ValueField<"misched-resource-cutoff", "unsigned", "10",
+  "Number of intervals to track">;
+let Condition = AssertsOnly in {
+defm : BoolField<"misched-sort-resources-in-trace", "true",
+  "Sort the resources printed in the dump trace">;
+// In some situations a few uninteresting nodes depend on nearly all other
+// nodes in the graph, provide a cutoff to hide them.
+defm : ValueField<"misched-view-cutoff", "unsigned", "0",
+  "Hide nodes with more predecessor/successor than cutoff">;
+defm : BoolField<"misched-view-dags", "false",
+  "Pop up a window to show MISched dags after they are processed">;
+}
+defm : BoolField<"verify-misched", "false",
+  "Verify machine instrs before and after machine scheduling">;
+
 // MachineSink.cpp
 defm : ValueField<"machine-sink-cycle-limit", "unsigned", "50",
   "The maximum number of instructions considered for cycle sinking">;
@@ -271,6 +345,10 @@ defm : ValueField<"machine-sink-split-probability-threshold", "unsigned", "40",
   "Percentage threshold for splitting single-instruction critical edge. If the branch threshold is higher than this threshold, we allow speculative execution of up to 1 instruction to avoid branching to splitted critical edge">;
 defm : BoolField<"sink-insts-to-avoid-spills", "false",
   "Sink instructions into cycles to avoid register spills">;
+
+// MacroFusion.cpp
+defm : BoolField<"misched-fusion", "true",
+  "Enable scheduling for macro fusion">;
 
 // PHIElimination.cpp
 defm : BoolField<"phi-elim-edge-splitting", "true",
@@ -357,6 +435,42 @@ def : AliasOf<"safestack-use-pointer-address", "safe-stack-use-pointer-address">
 // SafeStackLayout.cpp
 defm : BoolField<"safe-stack-layout", "true",
   "enable safe stack layout">;
+
+// ScheduleDAG.cpp
+let Condition = AssertsOnly in
+defm : BoolField<"stress-sched", "false",
+  "Stress test instruction scheduling">;
+
+// ScheduleDAGInstrs.cpp
+// Note: -dag-maps-huge-region and the -store-sequencing options might be used
+// in tuning compile time vs output quality. Setting -dag-maps-huge-region so
+// large that it will never be reached means best-effort, but may be slow.
+// FIXME(@cofibrant): Drop in favour of store-sequencing.
+// When the number of processed memops reaches this threshold, a reduction of
+// maps will be done.
+defm : ValueField<"dag-maps-huge-region", "unsigned", "500",
+  "The limit to use while constructing the DAG prior to scheduling, at which point a trade-off is made to avoid excessive compile time. Ignored when store-sequencing is enabled">;
+defm : OptionalBoolField<"sched-mi-aa",
+  "Enable use of AA during MI DAG construction">;
+defm : BoolField<"sched-mi-tbaa", "true",
+  "Enable use of TBAA during MI DAG construction">;
+let Condition = AssertsOnly in
+defm : BoolField<"sched-print-cycles", "false",
+  "Report top/bottom cycles when dumping SUnit instances">;
+defm : BoolField<"scheditins", "true",
+  "Use InstrItineraryData for latency lookup">;
+defm : BoolField<"schedmodel", "true",
+  "Use TargetSchedModel for latency lookup">;
+defm : BoolField<"store-sequencing", "false",
+  "Enable the store-sequencing DAG construction algorithm. This can eliminate a large number of redundant control dependencies and spurious alias analysis queries at the cost of some unnecessary dependencies">;
+defm : ValueField<"store-sequencing-max-frontier-size", "unsigned", "500",
+  "With store-sequencing DAG construction, after the number of memops in a frontier reaches this threshold, automatically promote the next store and clear the frontier">;
+defm : ValueField<"store-sequencing-max-memops-in-flight", "unsigned", "3000",
+  "With store-sequencing DAG construction, if the occupancy of all frontiers reaches this threshold, automatically promote the next memory operation to a global memory barrier and clear the frontiers">;
+// TODO: Remove the old spellings after 2027-05.
+def : AliasOf<"enable-aa-sched-mi", "sched-mi-aa">;
+def : AliasOf<"enable-store-sequencing", "store-sequencing">;
+def : AliasOf<"use-tbaa-in-sched-mi", "sched-mi-tbaa">;
 
 // SelectOptimize.cpp
 defm : ValueField<"cold-operand-max-cost-multiplier", "unsigned", "1",
@@ -574,6 +688,19 @@ defm : ValueField<"twoaddr-dataflow-edge-limit", "unsigned", "10",
 // Temporary flag to disable rescheduling.
 defm : BoolField<"twoaddr-reschedule", "true",
   "Coalesce copies by rescheduling">;
+
+// VLIWMachineScheduler.cpp
+// Check if the scheduler should penalize instructions that are available to
+// early due to a zero-latency dependence.
+defm : BoolField<"vliw-misched-check-early-avail", "true", "">;
+defm : BoolField<"vliw-misched-ignore-bb-reg-pressure", "false", "">;
+// This value is used to determine if a register class is a high pressure set.
+// We compute the maximum number of registers needed and divided by the total
+// available. Then, we compare the result to this value.
+defm : ValueField<"vliw-misched-reg-pressure", "float", "0.75f",
+  "High register pressure threhold">;
+defm : BoolField<"vliw-misched-use-newer-candidate", "true", "">;
+defm : ValueField<"vliw-misched-verbose-level", "unsigned", "1", "">;
 
 // WinEHPrepare.cpp
 defm : BoolField<"win-eh-prepare-cleanups", "true",

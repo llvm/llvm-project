@@ -163,6 +163,7 @@ public:
                            const CGPassBuilderOption &Opts,
                            PassInstrumentationCallbacks *PIC);
 
+protected:
   void addIRPasses(PassManagerWrapper &PMW) override;
   void addCodeGenPrepare(PassManagerWrapper &PMW) override;
   void addPreISel(PassManagerWrapper &PMW) override;

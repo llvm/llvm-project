@@ -402,9 +402,10 @@ defm : ICXWriteResPair<WritePack,  [ICXPort5], 4, [2], 2, 3>; // Vector packs.
 defm : ICXWriteResPair<WritePackX, [ICXPort5], 3, [1], 1, 7>;
 defm : ICXWriteResPair<WritePackY, [ICXPort5], 3, [1], 1, 8>;
 defm : ICXWriteResPair<WritePackZ, [ICXPort5], 3, [1], 1, 8>;
-defm : ICXWriteResPair<WriteBlend, [ICXPort15], 1, [1], 1, 6>; // Vector blends.
-defm : ICXWriteResPair<WriteBlendY,[ICXPort15], 1, [1], 1, 7>;
-defm : ICXWriteResPair<WriteBlendZ,[ICXPort15], 1, [1], 1, 7>;
+defm : ICXWriteResPair<WritePBLENDDX, [ICXPort015], 1, [1], 1, 6>; // Vector blends.
+defm : ICXWriteResPair<WritePBLENDDY, [ICXPort015], 1, [1], 1, 7>;
+defm : ICXWriteResPair<WritePBLENDWX, [ICXPort15], 1, [1], 1, 6>; // Vector blends.
+defm : ICXWriteResPair<WritePBLENDWY, [ICXPort15], 1, [1], 1, 7>;
 defm : ICXWriteResPair<WriteVarBlend, [ICXPort015], 2, [2], 2, 6>; // Vector variable blends.
 defm : ICXWriteResPair<WriteVarBlendY,[ICXPort015], 2, [2], 2, 6>;
 defm : ICXWriteResPair<WriteMaskBlendX, [ICXPort015], 1, [1], 1, 6>; // Vector masked blends.
@@ -715,7 +716,6 @@ def ICXWriteResGroup9 : SchedWriteRes<[ICXPort015]> {
 def: InstRW<[ICXWriteResGroup9], (instregex "VPADD(B|D|Q|W)(Y|Z|Z128|Z256)rr",
                                             "(V?)PADD(B|D|Q|W)rr",
                                             "(V?)MOV(SD|SS)(Z?)rr",
-                                            "VPBLENDD(Y?)rri",
                                             "VPSUB(B|D|Q|W)(Y|Z|Z128|Z256)rrk",
                                             "VPTERNLOGD(Z|Z128|Z256)rri",
                                             "VPTERNLOGQ(Z|Z128|Z256)rri")>;
@@ -1338,7 +1338,6 @@ def ICXWriteResGroup95 : SchedWriteRes<[ICXPort23,ICXPort015]> {
   let NumMicroOps = 2;
   let ReleaseAtCycles = [1,1];
 }
-def: InstRW<[ICXWriteResGroup95], (instrs VPBLENDDrmi)>;
 def: InstRW<[ICXWriteResGroup95, ReadAfterVecXLd],
                                   (instregex "VBROADCASTI32X2Z128rm(b?)",
                                              "VBROADCASTSSZ128rm(b?)",
@@ -1532,7 +1531,6 @@ def ICXWriteResGroup121 : SchedWriteRes<[ICXPort23,ICXPort015]> {
   let NumMicroOps = 2;
   let ReleaseAtCycles = [1,1];
 }
-def: InstRW<[ICXWriteResGroup121], (instrs VPBLENDDYrmi)>;
 def: InstRW<[ICXWriteResGroup121, ReadAfterVecYLd],
                                    (instregex "VBROADCASTF32X2Z256rm(b?)",
                                               "VBROADCASTF32X2Zrm(b?)",
