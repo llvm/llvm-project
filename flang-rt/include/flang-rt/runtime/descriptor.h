@@ -402,6 +402,32 @@ public:
     }
   }
 
+  // InlineAllocSizeWithOVF() computes the size of an allocation being
+  // the product: elements size in bytes * extent of all defined ranks
+  // guarding against std::size_t SIZE_MAX overflowing.
+  RT_API_ATTRS std::optional<std::size_t> InlineAllocSizeWithOVF(
+      std::size_t elementBytes) const {
+    int n{rank()};
+    if (n == 0) {
+      return elementBytes; // Allocation of one element
+    }
+    if (elementBytes == 0) {
+      return 0; // Short circuit, logic below will return 0
+    }
+
+    // Compute allocation size guarding against overflow.
+    std::size_t elements{elementBytes};
+    for (int j{0}; j < n; ++j) {
+      std::size_t t{elements};
+      SubscriptValue extent{GetDimension(j).Extent()};
+      elements *= extent;
+      if (elements / extent != t) {
+        return std::nullopt; // Multiplication overflowed
+      }
+    }
+    return elements;
+  }
+
   // Allocate() assumes Elements() and ElementBytes() work;
   // define the extents of the dimensions and the element length
   // before calling.  It (re)computes the byte strides after

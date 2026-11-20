@@ -168,19 +168,23 @@ RT_API_ATTRS std::size_t Descriptor::Elements() const {
 
 RT_API_ATTRS int Descriptor::Allocate(std::int64_t *asyncObject) {
   std::size_t elementBytes{ElementBytes()};
-  std::size_t elements{Elements()};
   if (static_cast<std::int64_t>(elementBytes) < 0) {
     // F'2023 7.4.4.2 p5: "If the character length parameter value evaluates
     // to a negative value, the length of character entities declared is zero."
     elementBytes = raw_.elem_len = 0;
   }
-  // Check for excessively large allocations, where the product of
-  //    elements * elementBytes
-  // will overflow and wrap around.
-  if (elementBytes != 0 && elements > SIZE_MAX / elementBytes) {
+
+  std::size_t byteSize;
+  // Guard against the possibility of the product of elementBytes and
+  // extents of all the ranks overflowing SIZE_MAX.
+  std::optional<std::size_t> byteSizewithOVF{
+      InlineAllocSizeWithOVF(elementBytes)};
+  if (byteSizewithOVF) {
+    byteSize = *byteSizewithOVF;
+  } else {
     return CFI_ERROR_MEM_ALLOCATION;
   }
-  std::size_t byteSize{elements * elementBytes};
+
   // For arrays, use the default array alignment
   std::size_t alignment{rank() > 0 ? kDefaultArrayAlignment : 0};
   // Zero size allocation is possible in Fortran and the resulting
