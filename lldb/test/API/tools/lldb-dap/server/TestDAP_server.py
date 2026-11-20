@@ -54,6 +54,7 @@ class TestDAP_server(DAPTestCaseBase):
             self.run_debug_session(session, name)
 
     @skipIfWindows
+    @skipIfWasm  # the killed process doesn't exit with SIGKILL
     def test_server_interrupt(self):
         """
         Test launching a binary with lldb-dap in server mode and shutting down

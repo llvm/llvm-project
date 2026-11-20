@@ -46,8 +46,11 @@
 // RUN: %clangxx_cfi -O3 -DBM -o %t16 %s
 // RUN: %expect_crash %run %t16 2>&1 | FileCheck --check-prefix=CFI %s
 
-// RUN: %clangxx_cfi_diag -o %t17 %s
+// RUN: %clangxx_cfi_diag -fno-whole-program-vtables -o %t17 %s
 // RUN: %run %t17 2>&1 | FileCheck --check-prefix=CFI-DIAG %s
+
+// RUN: %clangxx_cfi_diag -DB32 -o %t20 %s
+// RUN: %run %t20 2>&1 | FileCheck --check-prefix=CFI-DIAG %s
 
 // RUN: %clangxx -o %t18 %s
 // RUN: %run %t18 2>&1 | FileCheck --check-prefix=NCFI %s

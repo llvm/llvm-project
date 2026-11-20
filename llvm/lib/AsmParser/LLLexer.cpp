@@ -887,6 +887,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(indir);
   KEYWORD(singleImpl);
   KEYWORD(branchFunnel);
+  KEYWORD(speculative);
   KEYWORD(singleImplName);
   KEYWORD(resByArg);
   KEYWORD(byArg);
