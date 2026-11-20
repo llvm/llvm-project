@@ -208,6 +208,14 @@ spirv.func @load_nontemporal() "None" {
   spirv.Return
 }
 
+// CHECK-LABEL: @load_volatile_aligned_nontemporal
+spirv.func @load_volatile_aligned_nontemporal() "None" {
+  %0 = spirv.Variable : !spirv.ptr<f32, Function>
+  // CHECK: llvm.load volatile %{{.*}} <alignment = 4, nontemporal> : !llvm.ptr -> f32
+  %1 = spirv.Load "Function" %0 ["Volatile|Aligned|Nontemporal", 4] : f32
+  spirv.Return
+}
+
 //===----------------------------------------------------------------------===//
 // spirv.Store
 //===----------------------------------------------------------------------===//
@@ -249,6 +257,14 @@ spirv.func @store_nontemporal(%arg0 : f32) "None" {
   %0 = spirv.Variable : !spirv.ptr<f32, Function>
   // CHECK: llvm.store %{{.*}}, %{{.*}} <nontemporal> : f32, !llvm.ptr
   spirv.Store "Function" %0, %arg0 ["Nontemporal"] : f32
+  spirv.Return
+}
+
+// CHECK-LABEL: @store_volatile_aligned_nontemporal
+spirv.func @store_volatile_aligned_nontemporal(%arg0 : f32) "None" {
+  %0 = spirv.Variable : !spirv.ptr<f32, Function>
+  // CHECK: llvm.store volatile %{{.*}}, %{{.*}} <alignment = 4, nontemporal> : f32, !llvm.ptr
+  spirv.Store "Function" %0, %arg0 ["Volatile|Aligned|Nontemporal", 4] : f32
   spirv.Return
 }
 
