@@ -6,7 +6,6 @@
 
 ---
 name:            no_sink_into_landing_pad
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: no_sink_into_landing_pad
   ; CHECK: bb.0:

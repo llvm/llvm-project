@@ -38,17 +38,16 @@ static std::vector<uint32_t> CopyRegisterListToVector(const uint32_t *regs) {
 
 std::unique_ptr<RegisterContextELFCore_riscv32>
 RegisterContextELFCore_riscv32::Create(Thread &thread, const ArchSpec &arch,
-                                         const DataExtractor &gpregset,
-                                         llvm::ArrayRef<CoreNote> notes) {
+                                       const DataExtractor &gpregset,
+                                       llvm::ArrayRef<CoreNote> notes) {
   return std::unique_ptr<RegisterContextELFCore_riscv32>(
       new RegisterContextELFCore_riscv32(
-          thread, std::make_unique<RegisterInfoDynamic_riscv32>(arch),
-          gpregset, notes));
+          thread, std::make_unique<RegisterInfoDynamic_riscv32>(arch), gpregset,
+          notes));
 }
 
 RegisterContextELFCore_riscv32::RegisterContextELFCore_riscv32(
-    Thread &thread,
-    std::unique_ptr<RegisterInfoDynamic_riscv32> register_info,
+    Thread &thread, std::unique_ptr<RegisterInfoDynamic_riscv32> register_info,
     const DataExtractor &gpregset, llvm::ArrayRef<CoreNote> notes)
     : RegisterContext(thread, 0), m_reg_infos_up(std::move(register_info)) {
   // Compute the maximum register counts for GPR, FPR, and CSR.
@@ -71,7 +70,7 @@ RegisterContextELFCore_riscv32::RegisterContextELFCore_riscv32(
   uint32_t byte_offset = 0;
 
   // Build dynamic register information for GPR.
-  const lldb_private::ConstString gpr_set("GPR");
+  const llvm::StringRef gpr_set = "GPR";
   m_gpregset.SetData(std::make_shared<DataBufferHeap>(gpregset.GetDataStart(),
                                                       gpregset.GetByteSize()));
   if (m_gpregset.GetByteSize() >= g_register_infos_riscv32_gpr[0].byte_size) {
@@ -87,7 +86,7 @@ RegisterContextELFCore_riscv32::RegisterContextELFCore_riscv32(
   }
 
   // Build dynamic register information for FPR.
-  const lldb_private::ConstString fpr_set("FPR");
+  const llvm::StringRef fpr_set = "FPR";
   m_fpregset = getRegset(notes, triple, FPR_Desc);
   if (m_fpregset.GetByteSize() >= g_register_infos_riscv32_fpr[0].byte_size) {
     // FPR is available.
@@ -102,7 +101,7 @@ RegisterContextELFCore_riscv32::RegisterContextELFCore_riscv32(
   }
 
   // Build dynamic register information for CSR.
-  const lldb_private::ConstString csr_set("CSR");
+  const llvm::StringRef csr_set = "CSR";
   m_csregset = getRegset(notes, triple, RISCV32_CSREGMAP_Desc);
   if (m_csregset.GetByteSize() >=
       (sizeof(csr_kv_t::addr) + sizeof(csr_kv_t::val))) {
@@ -162,8 +161,8 @@ RegisterContextELFCore_riscv32::GetRegisterSet(size_t set) {
   return m_reg_infos_up->GetRegisterSet(static_cast<uint32_t>(set));
 }
 
-bool RegisterContextELFCore_riscv32::ReadRegister(
-    const RegisterInfo *reg_info, RegisterValue &value) {
+bool RegisterContextELFCore_riscv32::ReadRegister(const RegisterInfo *reg_info,
+                                                  RegisterValue &value) {
   const lldb_private::RegisterInfo *dyn_reg_info;
   const uint8_t *src = nullptr;
   if ((dyn_reg_info = m_reg_infos_up->GetRegisterInfo(reg_info->name))) {
@@ -295,8 +294,8 @@ bool RegisterContextELFCore_riscv32::ReadRegister(
   }
 }
 
-bool RegisterContextELFCore_riscv32::WriteRegister(
-    const RegisterInfo *reg_info, const RegisterValue &value) {
+bool RegisterContextELFCore_riscv32::WriteRegister(const RegisterInfo *reg_info,
+                                                   const RegisterValue &value) {
   return false;
 }
 
@@ -330,11 +329,11 @@ bool RegisterContextELFCore_riscv32::IsCSR(unsigned reg) {
 lldb_private::DynamicRegisterInfo::Register
 RegisterContextELFCore_riscv32::BuildDynamicRegister(
     const lldb_private::RegisterInfo &reg_info,
-    const lldb_private::ConstString &set_name, uint32_t byte_offset) {
+    llvm::StringRef set_name, uint32_t byte_offset) {
   return DynamicRegisterInfo::Register{
-      lldb_private::ConstString(reg_info.name),
-      lldb_private::ConstString(reg_info.alt_name),
-      set_name,
+      llvm::StringRef(reg_info.name).str(),
+      llvm::StringRef(reg_info.alt_name).str(),
+      set_name.str(),
       reg_info.byte_size,
       byte_offset,
       reg_info.encoding,

@@ -28,10 +28,6 @@ name:            test_zext_i1
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $edi
@@ -43,9 +39,9 @@ body:             |
     ; ALL: [[AND64ri32_:%[0-9]+]]:gr64 = AND64ri32 [[INSERT_SUBREG]], 1, implicit-def $eflags
     ; ALL: $rax = COPY [[AND64ri32_]]
     ; ALL: RET 0, implicit $rax
-    %0(s8) = COPY $dil
-    %1(s1) = G_TRUNC %0(s8)
-    %2(s64) = G_ZEXT %1(s1)
+    %0:gpr(s8) = COPY $dil
+    %1:gpr(s1) = G_TRUNC %0(s8)
+    %2:gpr(s64) = G_ZEXT %1(s1)
     $rax = COPY %2(s64)
     RET 0, implicit $rax
 
@@ -55,9 +51,6 @@ name:            test_sext_i8
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $edi
@@ -67,8 +60,8 @@ body:             |
     ; ALL: [[MOVSX64rr8_:%[0-9]+]]:gr64 = MOVSX64rr8 [[COPY]]
     ; ALL: $rax = COPY [[MOVSX64rr8_]]
     ; ALL: RET 0, implicit $rax
-    %0(s8) = COPY $dil
-    %1(s64) = G_SEXT %0(s8)
+    %0:gpr(s8) = COPY $dil
+    %1:gpr(s64) = G_SEXT %0(s8)
     $rax = COPY %1(s64)
     RET 0, implicit $rax
 
@@ -78,9 +71,6 @@ name:            test_sext_i16
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $edi
@@ -90,8 +80,8 @@ body:             |
     ; ALL: [[MOVSX64rr16_:%[0-9]+]]:gr64 = MOVSX64rr16 [[COPY]]
     ; ALL: $rax = COPY [[MOVSX64rr16_]]
     ; ALL: RET 0, implicit $rax
-    %0(s16) = COPY $di
-    %1(s64) = G_SEXT %0(s16)
+    %0:gpr(s16) = COPY $di
+    %1:gpr(s64) = G_SEXT %0(s16)
     $rax = COPY %1(s64)
     RET 0, implicit $rax
 
@@ -101,10 +91,6 @@ name:            anyext_s64_from_s1
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $edi
@@ -115,9 +101,9 @@ body:             |
     ; ALL: [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG [[COPY1]], %subreg.sub_8bit
     ; ALL: $rax = COPY [[SUBREG_TO_REG]]
     ; ALL: RET 0, implicit $rax
-    %0(s64) = COPY $rdi
-    %1(s1) = G_TRUNC %0(s64)
-    %2(s64) = G_ANYEXT %1(s1)
+    %0:gpr(s64) = COPY $rdi
+    %1:gpr(s1) = G_TRUNC %0(s64)
+    %2:gpr(s64) = G_ANYEXT %1(s1)
     $rax = COPY %2(s64)
     RET 0, implicit $rax
 ...
@@ -126,10 +112,6 @@ name:            anyext_s64_from_s8
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $edi
@@ -141,9 +123,9 @@ body:             |
     ; ALL: [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG [[MOVZX32rr8_]], %subreg.sub_32bit
     ; ALL: $rax = COPY [[SUBREG_TO_REG]]
     ; ALL: RET 0, implicit $rax
-    %0(s64) = COPY $rdi
-    %1(s8) = G_TRUNC %0(s64)
-    %2(s64) = G_ANYEXT %1(s8)
+    %0:gpr(s64) = COPY $rdi
+    %1:gpr(s8) = G_TRUNC %0(s64)
+    %2:gpr(s64) = G_ANYEXT %1(s8)
     $rax = COPY %2(s64)
     RET 0, implicit $rax
 ...
@@ -152,10 +134,6 @@ name:            anyext_s64_from_s16
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $edi
@@ -167,9 +145,9 @@ body:             |
     ; ALL: [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG [[MOVZX32rr16_]], %subreg.sub_32bit
     ; ALL: $rax = COPY [[SUBREG_TO_REG]]
     ; ALL: RET 0, implicit $rax
-    %0(s64) = COPY $rdi
-    %1(s16) = G_TRUNC %0(s64)
-    %2(s64) = G_ANYEXT %1(s16)
+    %0:gpr(s64) = COPY $rdi
+    %1:gpr(s16) = G_TRUNC %0(s64)
+    %2:gpr(s64) = G_ANYEXT %1(s16)
     $rax = COPY %2(s64)
     RET 0, implicit $rax
 ...
@@ -178,10 +156,6 @@ name:            anyext_s64_from_s32
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $edi
@@ -193,9 +167,9 @@ body:             |
     ; ALL: [[INSERT_SUBREG:%[0-9]+]]:gr64 = INSERT_SUBREG [[DEF]], [[COPY1]], %subreg.sub_32bit
     ; ALL: $rax = COPY [[INSERT_SUBREG]]
     ; ALL: RET 0, implicit $rax
-    %0(s64) = COPY $rdi
-    %1(s32) = G_TRUNC %0(s64)
-    %2(s64) = G_ANYEXT %1(s32)
+    %0:gpr(s64) = COPY $rdi
+    %1:gpr(s32) = G_TRUNC %0(s64)
+    %2:gpr(s64) = G_ANYEXT %1(s32)
     $rax = COPY %2(s64)
     RET 0, implicit $rax
 ...

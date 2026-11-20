@@ -12,9 +12,9 @@ body:             |
     ; RV64D: [[DEF:%[0-9]+]]:gpr = IMPLICIT_DEF
     ; RV64D-NEXT: [[ADD:%[0-9]+]]:gpr = ADD [[DEF]], [[DEF]]
     ; RV64D-NEXT: $x10 = COPY [[ADD]]
-    %0:gprb(s64) = G_IMPLICIT_DEF
-    %1:gprb(s64) = G_ADD %0, %0
-    $x10 = COPY %1(s64)
+    %0:gprb(i64) = G_IMPLICIT_DEF
+    %1:gprb(i64) = G_ADD %0, %0
+    $x10 = COPY %1(i64)
 ...
 ---
 name:            implicit_def_copy_gpr
@@ -25,9 +25,9 @@ body:             |
     ; RV64D-LABEL: name: implicit_def_copy_gpr
     ; RV64D: [[DEF:%[0-9]+]]:gpr = IMPLICIT_DEF
     ; RV64D-NEXT: $x10 = COPY [[DEF]]
-    %0:gprb(s64) = G_IMPLICIT_DEF
-    %1:gprb(s64) = COPY %0(s64)
-    $x10 = COPY %1(s64)
+    %0:gprb(i64) = G_IMPLICIT_DEF
+    %1:gprb(i64) = COPY %0(i64)
+    $x10 = COPY %1(i64)
 ...
 
 ---
@@ -40,9 +40,9 @@ body:             |
     ; RV64D: [[DEF:%[0-9]+]]:fpr64 = IMPLICIT_DEF
     ; RV64D-NEXT: [[FADD_D:%[0-9]+]]:fpr64 = nofpexcept FADD_D [[DEF]], [[DEF]], 7
     ; RV64D-NEXT: $f10_d = COPY [[FADD_D]]
-    %0:fprb(s64) = G_IMPLICIT_DEF
-    %1:fprb(s64) = G_FADD %0, %0
-    $f10_d = COPY %1(s64)
+    %0:fprb(f64) = G_IMPLICIT_DEF
+    %1:fprb(f64) = G_FADD %0, %0
+    $f10_d = COPY %1(f64)
 ...
 ---
 name:            implicit_def_copy_fpr
@@ -53,7 +53,7 @@ body:             |
     ; RV64D-LABEL: name: implicit_def_copy_fpr
     ; RV64D: [[DEF:%[0-9]+]]:fpr64 = IMPLICIT_DEF
     ; RV64D-NEXT: $f10_d = COPY [[DEF]]
-    %0:fprb(s64) = G_IMPLICIT_DEF
-    %1:fprb(s64) = COPY %0(s64)
-    $f10_d = COPY %1(s64)
+    %0:fprb(f64) = G_IMPLICIT_DEF
+    %1:fprb(f64) = COPY %0(f64)
+    $f10_d = COPY %1(f64)
 ...

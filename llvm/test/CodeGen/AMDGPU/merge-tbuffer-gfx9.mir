@@ -1554,4 +1554,3 @@ body:             |
     %8:vreg_64 = TBUFFER_LOAD_FORMAT_XY_IDXEN_exact %5, %6:sgpr_128, 0, 4, 123, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     %9:vreg_64 = TBUFFER_LOAD_FORMAT_XY_IDXEN_exact %5, %7:sgpr_128, 0, 12, 123, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
 ...
----

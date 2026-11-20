@@ -8,3 +8,11 @@ int test_builtin_flt_rounds() {
   return __builtin_flt_rounds();
 }
 
+void test_eh_return_data_regno(void) {
+  volatile int res;
+  // CHECK-LABEL: @test_eh_return_data_regno
+  // CHECK: store volatile i16 12
+  // CHECK: store volatile i16 13
+  res = __builtin_eh_return_data_regno(0);
+  res = __builtin_eh_return_data_regno(1);
+}
