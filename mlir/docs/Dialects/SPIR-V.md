@@ -251,6 +251,8 @@ Decorations on `OpFunctionParameter` are represented by argument attributes on
   32-bit `Alignment` literal. The parameter must have a SPIR-V pointer type.
   Values with the high bit set print using a negative spelling without changing
   the bit pattern.
+* `spirv.max_byte_offset`: same representation and constraints as
+  `spirv.alignment`, holding the `MaxByteOffset` literal.
 * `spirv.func_param_attr`: a non-empty array of
   `#spirv.function_parameter_attribute<...>` enum attributes. Each element
   represents one `FuncParamAttr` decoration. The supported core values are `Zext`,

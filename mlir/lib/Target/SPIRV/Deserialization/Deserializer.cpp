@@ -527,6 +527,12 @@ LogicalResult spirv::Deserializer::setFunctionArgAttrs(
                      decAttr.getValue());
       continue;
     }
+    if (decAttr.getName() == getSymbolDecoration(stringifyDecoration(
+                                 spirv::Decoration::MaxByteOffset))) {
+      attributes.set(spirv::getFuncParamMaxByteOffsetAttrName(),
+                     decAttr.getValue());
+      continue;
+    }
     if (!isa<UnitAttr>(decAttr.getValue()))
       return emitError(unknownLoc, "unhandled decoration '")
              << decAttr.getName().getValue()
