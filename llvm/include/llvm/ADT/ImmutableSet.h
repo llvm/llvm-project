@@ -239,6 +239,8 @@ private:
   // Field order places the traversal-hot fields (left, right, value) first so
   // that in a node that straddles a cache line they land in the earlier line;
   // the cold factory back-pointer (only touched on create/destroy) goes last.
+  // The reference count shares a word with the bit-fields so that it adds no
+  // padding before a pointer-aligned value.
   ImutAVLTree *left;
   ImutAVLTree *right;
 
@@ -249,9 +251,9 @@ private:
   unsigned IsDigestCached : 1;
   LLVM_PREFERRED_TYPE(bool)
   unsigned IsCanonicalized : 1;
+  uint32_t refCount = 0;
 
   value_type value;
-  uint32_t refCount = 0;
   LLVM_NO_UNIQUE_ADDRESS ImutAVLDetail::CanonicalDigest<Canonicalize> digest;
   Factory *factory;
 
