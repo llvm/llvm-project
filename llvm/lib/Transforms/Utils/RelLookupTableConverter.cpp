@@ -116,10 +116,14 @@ static bool shouldConvertToRelLookupTable(LookupTableInfo &Info, Module &M,
     if (!GlobalVarOp || !GlobalVarOp->isConstant())
       return false;
 
-    // FIXME: This excludes declarations because the MachO writer rejects them
-    // on x86. They should be fine on ELF at least.
-    if (!GlobalVarOp->isStrongDefinitionForLinker() ||
-        !GlobalVarOp->isImplicitDSOLocal())
+    // Weak declarations have to be excluded because they may be null.
+    // Weak definitions are excluded because the assembler currently incorrectly
+    // resolves them against the local symbol, instead of emitting a relocation
+    // (https://github.com/llvm/llvm-project/issues/244540).
+    // Non-implicit dso_local is excluded because we currently do not convey to
+    // the linker that the symbol is non-preemptible, which may result in a
+    // relocation error.
+    if (GlobalVarOp->isWeakForLinker() || !GlobalVarOp->isImplicitDSOLocal())
       return false;
 
     // On AArch64 small code model, the text-to-data span can be up to 4GB,

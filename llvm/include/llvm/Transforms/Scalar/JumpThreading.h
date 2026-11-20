@@ -29,6 +29,7 @@
 namespace llvm {
 
 class AAResults;
+class AssumptionCache;
 class BasicBlock;
 class BinaryOperator;
 class CondBrInst;
@@ -85,6 +86,7 @@ class JumpThreadingPass : public OptionalPassInfoMixin<JumpThreadingPass> {
   TargetTransformInfo *TTI = nullptr;
   LazyValueInfo *LVI = nullptr;
   AAResults *AA = nullptr;
+  AssumptionCache *AC = nullptr;
   std::unique_ptr<DomTreeUpdater> DTU;
   BlockFrequencyInfo *BFI = nullptr;
   BranchProbabilityInfo *BPI = nullptr;

@@ -499,6 +499,27 @@ static bool is_local_impl(struct STATVFS &Vfs) {
 #ifndef CIFS_MAGIC_NUMBER
 #define CIFS_MAGIC_NUMBER 0xFF534D42
 #endif
+#ifndef DVS_FTYPE_MAGIC
+#define DVS_FTYPE_MAGIC 0x3E3F
+#endif
+#ifndef LUSTRE_SUPER_MAGIC
+#define LUSTRE_SUPER_MAGIC 0x0BD00BD0
+#endif
+#ifndef GPFS_SUPER_MAGIC
+#define GPFS_SUPER_MAGIC 0x47504653
+#endif
+#ifndef CEPH_SUPER_MAGIC
+#define CEPH_SUPER_MAGIC 0x00C36400
+#endif
+#ifndef AFS_SUPER_MAGIC
+#define AFS_SUPER_MAGIC 0x5346414F
+#endif
+#ifndef AFS_FS_MAGIC
+#define AFS_FS_MAGIC 0x6B414653
+#endif
+#ifndef BEEGFS_MAGIC
+#define BEEGFS_MAGIC 0x19830326
+#endif
 #if defined(__GNU__) && ((__GLIBC__ < 2) || ((__GLIBC__ == 2) && (__GLIBC_MINOR__ < 39)))
   switch ((uint32_t)Vfs.__f_type) {
 #else
@@ -507,6 +528,13 @@ static bool is_local_impl(struct STATVFS &Vfs) {
   case NFS_SUPER_MAGIC:
   case SMB_SUPER_MAGIC:
   case CIFS_MAGIC_NUMBER:
+  case DVS_FTYPE_MAGIC:
+  case LUSTRE_SUPER_MAGIC:
+  case GPFS_SUPER_MAGIC:
+  case CEPH_SUPER_MAGIC:
+  case AFS_SUPER_MAGIC:
+  case AFS_FS_MAGIC:
+  case BEEGFS_MAGIC:
     return false;
   default:
     return true;

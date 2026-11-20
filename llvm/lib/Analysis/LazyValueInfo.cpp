@@ -494,7 +494,8 @@ public:
 
   ValueLatticeElement
   getValueAtUse(const Use &U,
-                SmallVectorImpl<DbgVariableRecord *> *DebugUsers = nullptr);
+                SmallVectorImpl<DbgVariableRecord *> *DebugUsers = nullptr,
+                bool AssumeFrozen = false);
 
   /// Complete flush all previously computed values
   void clear() {
@@ -1883,7 +1884,8 @@ getValueOnEdge(Value *V, BasicBlock *FromBB, BasicBlock *ToBB,
 }
 
 ValueLatticeElement LazyValueInfoImpl::getValueAtUse(
-    const Use &U, SmallVectorImpl<DbgVariableRecord *> *DebugUsers) {
+    const Use &U, SmallVectorImpl<DbgVariableRecord *> *DebugUsers,
+    bool AssumeFrozen) {
   Value *V = U.get();
   auto *CtxI = cast<Instruction>(U.getUser());
   ValueLatticeElement VL = getValueInBlock(V, CtxI->getParent(), CtxI);
@@ -1913,10 +1915,13 @@ ValueLatticeElement LazyValueInfoImpl::getValueAtUse(
     }
 
     if (auto *SI = dyn_cast<SelectInst>(CurrI)) {
-      // If the value is undef, a different value may be chosen in
-      // the select condition and at use.
-      if (!isGuaranteedNotToBeUndef(SI->getCondition(), AC))
+      // If the value is undef, a different value may be chosen in the select
+      // condition and at use, so bail.
+      //
+      // Allow if AssumeFrozen (the caller is going to freeze V).
+      if (!AssumeFrozen && !isGuaranteedNotToBeUndef(SI->getCondition(), AC))
         break;
+
       if (CurrU->getOperandNo() == 1)
         CondVal =
             *getValueFromCondition(V, SI->getCondition(), /*IsTrueDest*/ true,
@@ -2068,8 +2073,9 @@ ConstantRange LazyValueInfo::getConstantRange(Value *V, Instruction *CtxI,
 
 ConstantRange LazyValueInfo::getConstantRangeAtUse(
     const Use &U, bool UndefAllowed,
-    SmallVectorImpl<DbgVariableRecord *> *DebugUsers) {
-  ValueLatticeElement Result = getOrCreateImpl().getValueAtUse(U, DebugUsers);
+    SmallVectorImpl<DbgVariableRecord *> *DebugUsers, bool AssumeFrozen) {
+  ValueLatticeElement Result =
+      getOrCreateImpl().getValueAtUse(U, DebugUsers, AssumeFrozen);
   return Result.asConstantRange(U->getType(), UndefAllowed);
 }
 

@@ -11,8 +11,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_PWD_DYNAMIC_BUFFER_H
-#define LLVM_LIBC_SRC___SUPPORT_PWD_DYNAMIC_BUFFER_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_DYNAMIC_BUFFER_H
+#define LLVM_LIBC_SRC___SUPPORT_DYNAMIC_BUFFER_H
 
 #include "hdr/func/free.h"
 #include "hdr/func/realloc.h"
@@ -24,9 +24,8 @@
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
-namespace pwd {
 
-// A heap-backed, growable byte buffer for the flat-file database engine.
+// A heap-backed, growable byte buffer.
 //
 // This type is trivially destructible by design, so an instance can be a
 // constant-initialised process global. The owner releases the storage
@@ -98,7 +97,6 @@ public:
   LIBC_INLINE ~ScopedDynamicBuffer() { this->release(); }
 };
 
-} // namespace pwd
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC___SUPPORT_PWD_DYNAMIC_BUFFER_H
+#endif // LLVM_LIBC_SRC___SUPPORT_DYNAMIC_BUFFER_H
