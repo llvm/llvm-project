@@ -627,12 +627,13 @@ public:
   fpext(const KnownFPClass &KnownSrc, const fltSemantics &DstTy,
         const fltSemantics &SrcTy, DenormalMode DstMode, DenormalMode SrcMode);
 
-  /// Propagate known class for fptrunc and fptrunc_round. \p DstMode and
-  /// \p SrcMode are the denormal modes of the destination and source types.
+  /// Propagate known class for fptrunc and fptrunc_round. \p RM is the
+  /// rounding mode of the conversion. \p DstMode and \p SrcMode are the
+  /// denormal modes of the destination and source types.
   LLVM_ABI static KnownFPClass fptrunc(const KnownFPClass &KnownSrc,
                                        const fltSemantics &DstTy,
                                        const fltSemantics &SrcTy,
-                                       DenormalMode DstMode,
+                                       RoundingMode RM, DenormalMode DstMode,
                                        DenormalMode SrcMode);
 
   /// Propagate known class for rounding intrinsics (rint, nearbyint, round,

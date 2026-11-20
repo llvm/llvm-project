@@ -50,9 +50,9 @@ define float @ret_fptrunc_round_rtn_f64_f32__no_snan(double nofpclass(snan) %arg
 ;-------------------------------------------------------------------------------
 
 define float @ret_fptrunc_round_rtn_f64_f32__no_inf(double nofpclass(inf) %arg) {
-; CHECK-LABEL: define float @ret_fptrunc_round_rtn_f64_f32__no_inf(
+; CHECK-LABEL: define nofpclass(pinf) float @ret_fptrunc_round_rtn_f64_f32__no_inf(
 ; CHECK-SAME: double nofpclass(inf) [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.fptrunc.round.f32.f64(double nofpclass(inf) [[ARG]], metadata !"round.downward") #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(pinf) float @llvm.fptrunc.round.f32.f64(double nofpclass(inf) [[ARG]], metadata !"round.downward") #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.fptrunc.round.f32.f64(double %arg, metadata !"round.downward")
@@ -60,9 +60,9 @@ define float @ret_fptrunc_round_rtn_f64_f32__no_inf(double nofpclass(inf) %arg) 
 }
 
 define bfloat @ret_fptrunc_round_rtz_f32_bf16__no_pinf(float nofpclass(pinf) %arg) {
-; CHECK-LABEL: define bfloat @ret_fptrunc_round_rtz_f32_bf16__no_pinf(
+; CHECK-LABEL: define nofpclass(pinf) bfloat @ret_fptrunc_round_rtz_f32_bf16__no_pinf(
 ; CHECK-SAME: float nofpclass(pinf) [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call bfloat @llvm.fptrunc.round.bf16.f32(float nofpclass(pinf) [[ARG]], metadata !"round.towardzero") #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(pinf) bfloat @llvm.fptrunc.round.bf16.f32(float nofpclass(pinf) [[ARG]], metadata !"round.towardzero") #[[ATTR6]]
 ; CHECK-NEXT:    ret bfloat [[CALL]]
 ;
   %call = call bfloat @llvm.fptrunc.round.bf16.f32(float %arg, metadata !"round.towardzero")
@@ -70,9 +70,9 @@ define bfloat @ret_fptrunc_round_rtz_f32_bf16__no_pinf(float nofpclass(pinf) %ar
 }
 
 define bfloat @ret_fptrunc_round_rtz_f32_bf16__no_ninf(float nofpclass(ninf) %arg) {
-; CHECK-LABEL: define bfloat @ret_fptrunc_round_rtz_f32_bf16__no_ninf(
+; CHECK-LABEL: define nofpclass(ninf) bfloat @ret_fptrunc_round_rtz_f32_bf16__no_ninf(
 ; CHECK-SAME: float nofpclass(ninf) [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call bfloat @llvm.fptrunc.round.bf16.f32(float nofpclass(ninf) [[ARG]], metadata !"round.towardzero") #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf) bfloat @llvm.fptrunc.round.bf16.f32(float nofpclass(ninf) [[ARG]], metadata !"round.towardzero") #[[ATTR6]]
 ; CHECK-NEXT:    ret bfloat [[CALL]]
 ;
   %call = call bfloat @llvm.fptrunc.round.bf16.f32(float %arg, metadata !"round.towardzero")
@@ -80,9 +80,9 @@ define bfloat @ret_fptrunc_round_rtz_f32_bf16__no_ninf(float nofpclass(ninf) %ar
 }
 
 define half @ret_fptrunc_round_rtz_f128_f16__no_pinf(fp128 nofpclass(pinf) %arg) {
-; CHECK-LABEL: define half @ret_fptrunc_round_rtz_f128_f16__no_pinf(
+; CHECK-LABEL: define nofpclass(pinf) half @ret_fptrunc_round_rtz_f128_f16__no_pinf(
 ; CHECK-SAME: fp128 nofpclass(pinf) [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call half @llvm.fptrunc.round.f16.f128(fp128 nofpclass(pinf) [[ARG]], metadata !"round.towardzero") #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(pinf) half @llvm.fptrunc.round.f16.f128(fp128 nofpclass(pinf) [[ARG]], metadata !"round.towardzero") #[[ATTR6]]
 ; CHECK-NEXT:    ret half [[CALL]]
 ;
   %call = call half @llvm.fptrunc.round.f16.f128(fp128 %arg, metadata !"round.towardzero")
@@ -90,9 +90,9 @@ define half @ret_fptrunc_round_rtz_f128_f16__no_pinf(fp128 nofpclass(pinf) %arg)
 }
 
 define half @ret_fptrunc_round_rtz_f128_f16__no_ninf(fp128 nofpclass(ninf) %arg) {
-; CHECK-LABEL: define half @ret_fptrunc_round_rtz_f128_f16__no_ninf(
+; CHECK-LABEL: define nofpclass(ninf) half @ret_fptrunc_round_rtz_f128_f16__no_ninf(
 ; CHECK-SAME: fp128 nofpclass(ninf) [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call half @llvm.fptrunc.round.f16.f128(fp128 nofpclass(ninf) [[ARG]], metadata !"round.towardzero") #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf) half @llvm.fptrunc.round.f16.f128(fp128 nofpclass(ninf) [[ARG]], metadata !"round.towardzero") #[[ATTR6]]
 ; CHECK-NEXT:    ret half [[CALL]]
 ;
   %call = call half @llvm.fptrunc.round.f16.f128(fp128 %arg, metadata !"round.towardzero")
@@ -100,9 +100,9 @@ define half @ret_fptrunc_round_rtz_f128_f16__no_ninf(fp128 nofpclass(ninf) %arg)
 }
 
 define float @ret_fptrunc_round_rtp_f64_f32__no_ninf(double nofpclass(ninf) %arg) {
-; CHECK-LABEL: define float @ret_fptrunc_round_rtp_f64_f32__no_ninf(
+; CHECK-LABEL: define nofpclass(ninf) float @ret_fptrunc_round_rtp_f64_f32__no_ninf(
 ; CHECK-SAME: double nofpclass(ninf) [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.fptrunc.round.f32.f64(double nofpclass(ninf) [[ARG]], metadata !"round.upward") #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf) float @llvm.fptrunc.round.f32.f64(double nofpclass(ninf) [[ARG]], metadata !"round.upward") #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.fptrunc.round.f32.f64(double %arg, metadata !"round.upward")
@@ -110,9 +110,9 @@ define float @ret_fptrunc_round_rtp_f64_f32__no_ninf(double nofpclass(ninf) %arg
 }
 
 define float @ret_fptrunc_round_rtn_f64_f32__no_pinf(double nofpclass(pinf) %arg) {
-; CHECK-LABEL: define float @ret_fptrunc_round_rtn_f64_f32__no_pinf(
+; CHECK-LABEL: define nofpclass(pinf) float @ret_fptrunc_round_rtn_f64_f32__no_pinf(
 ; CHECK-SAME: double nofpclass(pinf) [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.fptrunc.round.f32.f64(double nofpclass(pinf) [[ARG]], metadata !"round.downward") #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(pinf) float @llvm.fptrunc.round.f32.f64(double nofpclass(pinf) [[ARG]], metadata !"round.downward") #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.fptrunc.round.f32.f64(double %arg, metadata !"round.downward")
@@ -120,9 +120,9 @@ define float @ret_fptrunc_round_rtn_f64_f32__no_pinf(double nofpclass(pinf) %arg
 }
 
 define bfloat @ret_fptrunc_round_rtp_f32_bf16__no_ninf(float nofpclass(ninf) %arg) {
-; CHECK-LABEL: define bfloat @ret_fptrunc_round_rtp_f32_bf16__no_ninf(
+; CHECK-LABEL: define nofpclass(ninf) bfloat @ret_fptrunc_round_rtp_f32_bf16__no_ninf(
 ; CHECK-SAME: float nofpclass(ninf) [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call bfloat @llvm.fptrunc.round.bf16.f32(float nofpclass(ninf) [[ARG]], metadata !"round.upward") #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf) bfloat @llvm.fptrunc.round.bf16.f32(float nofpclass(ninf) [[ARG]], metadata !"round.upward") #[[ATTR6]]
 ; CHECK-NEXT:    ret bfloat [[CALL]]
 ;
   %call = call bfloat @llvm.fptrunc.round.bf16.f32(float %arg, metadata !"round.upward")
@@ -130,9 +130,9 @@ define bfloat @ret_fptrunc_round_rtp_f32_bf16__no_ninf(float nofpclass(ninf) %ar
 }
 
 define bfloat @ret_fptrunc_round_rtn_f32_bf16__no_pinf(float nofpclass(pinf) %arg) {
-; CHECK-LABEL: define bfloat @ret_fptrunc_round_rtn_f32_bf16__no_pinf(
+; CHECK-LABEL: define nofpclass(pinf) bfloat @ret_fptrunc_round_rtn_f32_bf16__no_pinf(
 ; CHECK-SAME: float nofpclass(pinf) [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call bfloat @llvm.fptrunc.round.bf16.f32(float nofpclass(pinf) [[ARG]], metadata !"round.downward") #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(pinf) bfloat @llvm.fptrunc.round.bf16.f32(float nofpclass(pinf) [[ARG]], metadata !"round.downward") #[[ATTR6]]
 ; CHECK-NEXT:    ret bfloat [[CALL]]
 ;
   %call = call bfloat @llvm.fptrunc.round.bf16.f32(float %arg, metadata !"round.downward")
@@ -172,9 +172,9 @@ define float @ret_fptrunc_round_rtn_f64_f32__no_nzero(double nofpclass(nzero) %a
 }
 
 define float @ret_fptrunc_round_rtn_f64_f32__no_nan_inf(double nofpclass(nan inf) %arg) {
-; CHECK-LABEL: define nofpclass(nan) float @ret_fptrunc_round_rtn_f64_f32__no_nan_inf(
+; CHECK-LABEL: define nofpclass(nan pinf) float @ret_fptrunc_round_rtn_f64_f32__no_nan_inf(
 ; CHECK-SAME: double nofpclass(nan inf) [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan) float @llvm.fptrunc.round.f32.f64(double nofpclass(nan inf) [[ARG]], metadata !"round.downward") #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan pinf) float @llvm.fptrunc.round.f32.f64(double nofpclass(nan inf) [[ARG]], metadata !"round.downward") #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.fptrunc.round.f32.f64(double %arg, metadata !"round.downward")
