@@ -398,6 +398,8 @@ class LLVM_ABI_FOR_TEST VPUser {
   friend class VPPhiAccessors;
   /// Grant access to addOperand for VPWidenMemoryRecipe.
   friend class VPWidenMemoryRecipe;
+  /// Grant access to removeOperand for dropping a switch's unreachable default.
+  friend struct VPlanTransforms;
 
   SmallVector<VPValue *, 2> Operands;
 

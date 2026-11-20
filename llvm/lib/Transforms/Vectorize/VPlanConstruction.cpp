@@ -1329,6 +1329,20 @@ void VPlanTransforms::handleCountableEarlyExits(VPlan &Plan) {
     // Remove phi operands for the early exiting block.
     for (VPRecipeBase &R : EB->phis())
       cast<VPIRPhi>(&R)->removeIncomingValueFor(EarlyExitingVPBB);
+
+    auto *Terminator =
+        dyn_cast<VPInstruction>(EarlyExitingVPBB->getTerminator());
+    if (Terminator && Terminator->getOpcode() == Instruction::Switch &&
+        EarlyExitingVPBB->getSuccessors()[0] == EB) {
+      // The switch's default successor exits to a block that only contains
+      // unreachable, so its edge can be dropped. After removing the default
+      // successor, case 0's destination becomes the new default and its case
+      // value (operand 1) is removed to realign the pairs.
+      VPBlockUtils::disconnectBlocks(EarlyExitingVPBB, EB);
+      Terminator->removeOperand(1);
+      continue;
+    }
+
     EarlyExitingVPBB->getTerminator()->eraseFromParent();
     VPBlockUtils::disconnectBlocks(EarlyExitingVPBB, EB);
   }
