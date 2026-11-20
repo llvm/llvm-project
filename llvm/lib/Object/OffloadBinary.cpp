@@ -579,8 +579,6 @@ bool object::areTargetsCompatible(const OffloadFile::TargetID &Provided,
   if (Provided.Arch == "generic")
     return true;
 
-  // Otherwise, device images that list different real devices are linked
-  // separately.
   if (Provided.Code != Requested.Code)
     return false;
 
