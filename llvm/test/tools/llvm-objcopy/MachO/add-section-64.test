@@ -38,8 +38,8 @@
 # RUN:   | FileCheck %s --check-prefixes=OBJ,CASE5
 
 ## Case 6: Add a new section into an object file with more than one segment.
-## The section goes into the first segment, even if a later segment has the
-## requested name.
+## Such object files are malformed, but llvm-objcopy accepts them. The section
+## goes into the first segment, even if a later segment has the requested name.
 # RUN: yaml2obj --docnum=3 %s -o %t.multi.o
 # RUN: llvm-objcopy --add-section __FOO,__baz=%t.data %t.multi.o %t.out6
 # RUN: llvm-readobj --sections --macho-segment %t.out6 \
@@ -283,6 +283,7 @@ LoadCommands:
 # CASE6-NEXT:     Cmd: LC_SEGMENT_64
 # CASE6-NEXT:     Name: __TEXT{{$}}
 # CASE6:          nsects: 2
+
 # CASE6:        Segment {
 # CASE6-NEXT:     Cmd: LC_SEGMENT_64
 # CASE6-NEXT:     Name: __FOO{{$}}
