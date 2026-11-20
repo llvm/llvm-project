@@ -68,7 +68,10 @@ attributes #0 = { "zos-ppa1-name"="_ZNxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ; CHECK-NEXT: stdin#C CSECT
 
 ; CHECK: DC XL2'012F'
-; CHECK-NEXT: DC CE'_ZNxxxxxxxxxx
-; CHECK: DC CE'xxxxxxxxxx
+; CHECK-NEXT: DC CE'_ZNxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+; CHECK-NEXT: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+; CHECK-NEXT: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+; CHECK-NEXT: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+; CHECK-NEXT: xxxxxxxxxxxxxxxxxxxxxxxx'
+; CHECK-NEXT: DC CE'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
 ; CHECK-NEXT: DC 3XL1'00'
-
