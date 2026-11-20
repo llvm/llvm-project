@@ -212,6 +212,15 @@ public:
   virtual std::vector<lldb::LanguageType>
   GetFormatterLanguages(lldb::LanguageType language) const;
 
+  /// Returns whether the formatters in a category for \p category_language,
+  /// one of the languages of this plugin, apply to values of
+  /// \p valobj_language. By default, they only apply to values of
+  /// \p category_language.
+  virtual bool IsCategoryApplicable(lldb::LanguageType category_language,
+                                    lldb::LanguageType valobj_language) const {
+    return category_language == valobj_language;
+  }
+
   virtual std::unique_ptr<TypeScavenger> GetTypeScavenger();
 
   virtual const char *GetLanguageSpecificTypeLookupHelp();

@@ -1033,6 +1033,23 @@ static mlir::Value forwardableIndirectAddr(cir::LoadOp load,
   return slot && slot.getAlignment() >= minAlign ? addr : mlir::Value();
 }
 
+/// Whether a non-byval indirect argument of type \p ty is passed from the
+/// caller's storage rather than from a copy of it.  CIRGen gives each call its
+/// own temporary for a record that cannot be passed in registers, built by
+/// the record's copy or move constructor, so the call passes that temporary.
+/// Every other type is copied to a temporary at the call, since the callee
+/// may write the memory it is passed.  A record with no layout entry can be
+/// passed in registers.
+static bool passesCallerStorage(mlir::ModuleOp module, mlir::Type ty) {
+  auto recTy = mlir::dyn_cast<cir::RecordType>(ty);
+  if (!recTy)
+    return false;
+  cir::RecordLayoutAttr layout =
+      cir::tryGetRecordLayout(module, recTy.getName());
+  return layout &&
+         layout.getArgPassingKind() != cir::ArgPassingKind::CanPassInRegs;
+}
+
 /// True when \p aliasAnalysis shows that nothing between \p load and \p call
 /// can write the storage \p load read, so a byval argument may name that
 /// storage rather than a copy of it.  byval takes the callee's copy at the
@@ -2317,24 +2334,26 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
       // like byval.
       bool byRef = ac.kind == ArgKind::IndirectAliased;
       bool byCopy = byRef || ac.byVal;
+      bool fromCallerStorage =
+          !byCopy && passesCallerStorage(module, arg.getType());
       cir::PointerType ptrTy = getIndirectPtrTy(arg.getType(), ac);
 
       // A record operand that names storage is passed from that storage
       // rather than from the loaded value: a record value carries only the
       // fields of its type, so a store leaves the type's padding bytes
       // unwritten, and for a union those can be another member's live data.
-      // A byval _BitInt is passed from its value, since the load and the
-      // store below are its conversion between value and in-memory form.
+      // A _BitInt is passed from its value, since the load and the store
+      // below are its conversion between value and in-memory form.
       cir::LoadOp srcLoad;
-      if (!byCopy || mlir::isa<cir::RecordType>(arg.getType()))
+      if (mlir::isa<cir::RecordType>(arg.getType()))
         srcLoad = maybeGetSimpleLoad(arg);
 
-      // A non-byval argument must name the caller's storage, so that the
-      // object the callee operates on is the one the caller destroys.  That
-      // means passing the address the operand was loaded from rather than the
-      // loaded value, so a store to that storage after the load is visible to
-      // the callee.  byval fills a slot below, this cannot.
-      if (!byCopy) {
+      // A record passed from the caller's storage must name that storage, so
+      // that the object the callee operates on is the one the caller
+      // destroys.  That means passing the address the operand was loaded from
+      // rather than the loaded value, so a store to that storage after the
+      // load is visible to the callee.
+      if (fromCallerStorage) {
         mlir::Value fwdAddr = forwardableIndirectAddr(srcLoad, ptrTy, minAlign);
         if (!fwdAddr)
           return call->emitOpError()
@@ -2351,9 +2370,11 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
       // holds only while nothing writes that storage between the load and the
       // call, since the operand carries the value as of the load.  A volatile
       // load is not forwarded, since the copy byval takes at the call is not
-      // volatile.
+      // volatile.  Any other non-byval argument is copied to a temporary,
+      // since the callee may write the memory it is passed.
       if (mlir::Value fwdAddr =
-              forwardableIndirectAddr(srcLoad, ptrTy, minAlign);
+              byCopy ? forwardableIndirectAddr(srcLoad, ptrTy, minAlign)
+                     : mlir::Value();
           fwdAddr && storageUnwrittenBetween(srcLoad, call.getOperation(),
                                              aliasAnalysis)) {
         newArgs.push_back(fwdAddr);
@@ -2380,9 +2401,11 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
       if (srcLoad)
         builder.setInsertionPoint(srcLoad);
 
-      auto slot = cir::AllocaOp::create(
-          builder, call.getLoc(), ptrTy,
-          builder.getStringAttr(byRef ? "byref" : "byval"), slotAlign);
+      llvm::StringRef slotName =
+          byRef ? "byref" : (ac.byVal ? "byval" : "indirect.tmp");
+      auto slot =
+          cir::AllocaOp::create(builder, call.getLoc(), ptrTy,
+                                builder.getStringAttr(slotName), slotAlign);
       if (srcLoad) {
         auto copy = cir::CopyOp::create(builder, call.getLoc(), slot,
                                         srcLoad.getAddr(), slotAlign,

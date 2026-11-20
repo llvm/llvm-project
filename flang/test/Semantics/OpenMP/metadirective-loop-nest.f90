@@ -86,8 +86,8 @@ end subroutine
 
 subroutine collapse_too_deep_interface(n, a)
   integer :: n, a(n, n), i, j
-  !ERROR: This construct requires a nest of depth 3, but the associated nest is a nest of depth 2
-  !BECAUSE: COLLAPSE clause was specified with argument 3
+  !ERROR: A METADIRECTIVE in the specification part cannot have executable variants
+  !BECAUSE: The executable variant
   !$omp metadirective when(implementation={vendor(llvm)}: do collapse(3)) default(nothing)
   interface
     subroutine ext()
@@ -157,7 +157,8 @@ end subroutine
 ! specification part) also has no loop nest to associate with.
 module no_loop_in_module
   implicit none
-  !ERROR: This construct should contain a DO-loop or a loop-nest-generating construct
+  !ERROR: A METADIRECTIVE in the specification part cannot have executable variants
+  !BECAUSE: The executable variant
   !$omp metadirective when(implementation={vendor(llvm)}: do) default(nothing)
 end module
 
@@ -165,7 +166,8 @@ end module
 ! enclosing module specification part.
 module no_loop_in_module_with_contains
   implicit none
-  !ERROR: This construct should contain a DO-loop or a loop-nest-generating construct
+  !ERROR: A METADIRECTIVE in the specification part cannot have executable variants
+  !BECAUSE: The executable variant
   !$omp metadirective when(implementation={vendor(llvm)}: do) default(nothing)
 contains
   subroutine contained()
@@ -175,8 +177,11 @@ end module
 ! A later specification-part metadirective must not discard an earlier one.
 module no_loop_before_another_metadirective
   implicit none
-  !ERROR: This construct should contain a DO-loop or a loop-nest-generating construct
+  !ERROR: A METADIRECTIVE in the specification part cannot have executable variants
+  !BECAUSE: The executable variant
   !$omp metadirective when(implementation={vendor(llvm)}: do) default(nothing)
+  !ERROR: A METADIRECTIVE in the specification part cannot have executable variants
+  !BECAUSE: The executable variant
   !$omp metadirective when(implementation={vendor(llvm)}: parallel) default(nothing)
 end module
 
@@ -186,7 +191,8 @@ subroutine no_loop_in_interface_body(n, a)
   integer :: n, a(n), i
   interface
     subroutine iface()
-      !ERROR: This construct should contain a DO-loop or a loop-nest-generating construct
+      !ERROR: A METADIRECTIVE in the specification part cannot have executable variants
+      !BECAUSE: The executable variant
       !$omp metadirective when(implementation={vendor(llvm)}: do) default(nothing)
     end subroutine
   end interface
@@ -199,12 +205,13 @@ end subroutine
 ! subprogram for its execution part.
 subroutine no_loop_in_interface_body_preserves_outer(n, a)
   integer :: n, a(n), i
-  !ERROR: This construct requires a nest of depth 2, but the associated nest is a nest of depth 1
-  !BECAUSE: COLLAPSE clause was specified with argument 2
+  !ERROR: A METADIRECTIVE in the specification part cannot have executable variants
+  !BECAUSE: The executable variant
   !$omp metadirective when(implementation={vendor(llvm)}: do collapse(2)) default(nothing)
   interface
     subroutine iface()
-      !ERROR: This construct should contain a DO-loop or a loop-nest-generating construct
+      !ERROR: A METADIRECTIVE in the specification part cannot have executable variants
+      !BECAUSE: The executable variant
       !$omp metadirective when(implementation={vendor(llvm)}: do) default(nothing)
     end subroutine
   end interface

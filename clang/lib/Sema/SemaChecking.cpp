@@ -1607,19 +1607,22 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     Checker.checkSourceOverread(/*SrcArgIdx=*/0, /*SizeArgIdx=*/2);
     break;
   }
-  case Builtin::BIfread: {
+  case Builtin::BIfread:
+  case Builtin::BIfread_unlocked: {
     DiagID = diag::warn_fortify_source_overflow;
     AccessSize = Checker.ComputeExplicitObjectSizeArgumentProduct(1, 2);
     BufferSize = Checker.ComputeSizeArgument(0);
     break;
   }
-  case Builtin::BIfwrite: {
+  case Builtin::BIfwrite:
+  case Builtin::BIfwrite_unlocked: {
     DiagID = diag::warn_fortify_source_overread;
     AccessSize = Checker.ComputeExplicitObjectSizeArgumentProduct(1, 2);
     BufferSize = Checker.ComputeSizeArgument(0);
     break;
   }
-  case Builtin::BIfgets: {
+  case Builtin::BIfgets:
+  case Builtin::BIfgets_unlocked: {
     AccessSize = Checker.EvaluateIntegerArgument(1);
 
     if (AccessSize && AccessSize->isNegative()) {
@@ -1725,7 +1728,11 @@ void Sema::checkFortifiedLibcArgument(FunctionDecl *FD, CallExpr *TheCall) {
   if (TheCall->getNumArgs() != 1)
     return;
   Expr *Arg = TheCall->getArg(0);
-  if (!Arg->getType()->isIntegerType())
+  // POSIX mode_t is at least 16 bits; bail out if the argument has a narrower
+  // integer type (which is not POSIX umask and would otherwise assert
+  // constructing the 0777 bitmask for widths under 9 bits).
+  if (!Arg->getType()->isIntegerType() ||
+      getASTContext().getIntWidth(Arg->getType()) < 16)
     return;
   Expr::EvalResult R;
   if (!Arg->EvaluateAsInt(R, getASTContext()))
@@ -12196,6 +12203,13 @@ static std::optional<IntRange> TryGetExprRange(ASTContext &C, const Expr *E,
                                                bool InConstantContext,
                                                bool Approximate) {
   E = E->IgnoreParens();
+
+  // A BPF enumerator relocated at load time is not a constant. Use the range of
+  // its local value, as if it were not relocated, if an approximate range is
+  // allowed. Otherwise, use the range of its type, since its value is only
+  // known at load time.
+  if (Approximate && SemaBPF::isPreserveAIEnumeratorRef(E))
+    E = cast<PseudoObjectExpr>(E)->getSyntacticForm();
 
   // Try a full evaluation first.
   Expr::EvalResult result;

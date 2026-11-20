@@ -289,6 +289,11 @@ ErrorOr<std::unique_ptr<DWARFFile>> DwarfLinkerForBinary::loadObject(
         Obj.getObjectFilename(), std::move(Context),
         std::make_unique<AddressManager>(*this, *ErrorOrObj, Obj, DLBRM),
         [&](StringRef FileName) { BinHolder.eraseObjectEntry(FileName); });
+    Res->UnitOffsetsFunc = [DLBRM](uint64_t UnitOffset,
+                                   uint64_t DebugInfoOffset,
+                                   uint64_t DebugAddrOffset) {
+      DLBRM->setUnitOffsets(UnitOffset, DebugInfoOffset, DebugAddrOffset);
+    };
 
     if (Error E = PL.collect(*ErrorOrObj))
       reportWarning(toString(std::move(E)), Obj.getObjectFilename());
@@ -1403,8 +1408,16 @@ void DwarfLinkerForBinaryRelocationMap::addValidRelocs(RelocationMap &RM) {
   std::vector<ValidReloc> DebugInfoRelocs;
   std::vector<ValidReloc> DebugAddrRelocs;
   for (const auto &[UnitOffset, Relocs] : Units) {
-    llvm::append_range(DebugInfoRelocs, Relocs.DebugInfo);
-    llvm::append_range(DebugAddrRelocs, Relocs.DebugAddr);
+    auto [DebugInfoBase, DebugAddrBase] =
+        Relocs.Offsets.value_or(std::pair<uint64_t, uint64_t>(0, 0));
+    for (ValidReloc R : Relocs.DebugInfo) {
+      R.Offset = R.Offset + DebugInfoBase;
+      DebugInfoRelocs.push_back(R);
+    }
+    for (ValidReloc R : Relocs.DebugAddr) {
+      R.Offset = R.Offset + DebugAddrBase;
+      DebugAddrRelocs.push_back(R);
+    }
   }
 
   // The units are unordered.
@@ -1414,6 +1427,13 @@ void DwarfLinkerForBinaryRelocationMap::addValidRelocs(RelocationMap &RM) {
     RM.addDebugInfoRelocationMapEntry(R);
   for (const ValidReloc &R : DebugAddrRelocs)
     RM.addDebugAddrRelocationMapEntry(R);
+}
+
+void DwarfLinkerForBinaryRelocationMap::setUnitOffsets(
+    uint64_t UnitOffset, uint64_t DebugInfoOffset, uint64_t DebugAddrOffset) {
+  auto It = Units.find(UnitOffset);
+  assert(It != Units.end() && "unit placed before init()");
+  It->second.Offsets.emplace(DebugInfoOffset, DebugAddrOffset);
 }
 
 void DwarfLinkerForBinaryRelocationMap::updateAndSaveValidRelocs(

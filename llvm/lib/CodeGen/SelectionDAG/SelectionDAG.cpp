@@ -3952,10 +3952,7 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
   case ISD::CTLZ:
   case ISD::CTLZ_ZERO_POISON: {
     Known2 = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
-    // If we have a known 1, its position is our upper bound.
-    unsigned PossibleLZ = Known2.countMaxLeadingZeros();
-    unsigned LowBits = llvm::bit_width(PossibleLZ);
-    Known.Zero.setBitsFrom(LowBits);
+    Known = Known2.ctlz(/*ZeroIsPoison=*/false).zextOrTrunc(BitWidth);
     break;
   }
   case ISD::CTLS: {
