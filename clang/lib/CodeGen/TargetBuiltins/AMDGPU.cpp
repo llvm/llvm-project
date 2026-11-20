@@ -1001,6 +1001,9 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
 
     llvm::Value *ScopeMD = emitScopeMD(*this, ScopeExpr->getZExtValue(), AO);
     llvm::Function *F = CGM.getIntrinsic(IID, {LoadTy});
+    // Flat pointers are not in AS 0 on SPIR-V.
+    Addr = Builder.CreateAddrSpaceCast(Addr,
+                                       F->getFunctionType()->getParamType(0));
     return Builder.CreateCall(F, {Addr, AOExpr, ScopeMD});
   }
   case AMDGPU::BI__builtin_amdgcn_cluster_load_b32:
