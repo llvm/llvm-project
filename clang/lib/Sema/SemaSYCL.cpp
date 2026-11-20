@@ -437,8 +437,206 @@ void SemaSYCL::CheckSYCLEntryPointFunctionDecl(FunctionDecl *FD) {
   }
 }
 
-ExprResult SemaSYCL::BuildSYCLKernelLaunchIdExpr(FunctionDecl *FD,
-                                                 QualType KNT) {
+ClassTemplateDecl *SemaSYCL::GetSYCLKernelInfoClassTemplate() {
+  if (!SYCLKernelInfoClassTemplate) {
+    ASTContext &Ctx = getASTContext();
+    SourceLocation Loc;
+
+    // The class template is implicitly declared in the translation unit
+    // declaration context.
+    DeclContext *DC = Ctx.getTranslationUnitDecl();
+
+    // Build a reserved identifier for the name of the class template. The
+    // name is formally unspecified.
+    IdentifierInfo *KernelInfoID =
+        &Ctx.Idents.get("__sycl_kernel_info", tok::TokenKind::identifier);
+
+    // Build a template parameter list consisting of a single type template
+    // parameter corresponding to a SYCL kernel name type. A reserved
+    // identifier is used for the formally unspecified name of the template
+    // parameter.
+    IdentifierInfo *KernelNameID =
+        &Ctx.Idents.get("__sycl_kernel_name", tok::TokenKind::identifier);
+    TemplateTypeParmDecl *KernelNameParam = TemplateTypeParmDecl::Create(
+        Ctx, DC, /*KeyLoc*/ Loc, /*NameLoc*/ Loc, 0, 0, KernelNameID,
+        /*Typename*/ true, /*ParameterPack*/ false);
+    TemplateParameterList *ParamList = TemplateParameterList::Create(
+        Ctx, /*TemplateLoc*/ Loc, /*LAngleLoc*/ Loc, KernelNameParam,
+        /*RAngleLoc*/ Loc, /*RequiresClause*/ nullptr);
+
+    // Build the class template and add it to its declaration context.
+    CXXRecordDecl *KernelInfoDecl =
+        CXXRecordDecl::Create(Ctx, TagTypeKind::Class, DC, /*StartLoc*/ Loc,
+                              /*IdLoc*/ Loc, KernelInfoID);
+    SYCLKernelInfoClassTemplate = ClassTemplateDecl::Create(
+        Ctx, DC, /*L*/ Loc, DeclarationName(KernelInfoID), ParamList,
+        KernelInfoDecl);
+    KernelInfoDecl->setDescribedClassTemplate(SYCLKernelInfoClassTemplate);
+    DC->addDecl(SYCLKernelInfoClassTemplate);
+    SemaRef.addSynthesizedTopLevelDecl(SYCLKernelInfoClassTemplate);
+  }
+  return SYCLKernelInfoClassTemplate;
+}
+
+QualType SemaSYCL::GetSYCLKernelInfoClassSpecializationType(QualType KNT) {
+  ASTContext &Ctx = getASTContext();
+
+  // Retrieve the class template for which a specialization is requested.
+  ClassTemplateDecl *KernelInfoTemplateDecl = GetSYCLKernelInfoClassTemplate();
+
+  // Build the template argument for the requested specialization.
+  TemplateArgument KNTA = TemplateArgument(KNT);
+
+  // If KNT is a dependent type, then a canonical type without an underlying
+  // type is returned. Otherwise, an explicit specialization declaration for
+  // a canonical underlying type is found or created and a canonical type
+  // returned for it.
+  QualType UnderlyingKernelInfoType;
+  if (!KNT->isDependentType()) {
+    // KNT is not a dependent type, check for a previously synthesized explicit
+    // specialization declaration.
+    CanQualType CanonicalKNT = Ctx.getCanonicalType(KNT);
+    auto IT = SYCLKernelInfoClassTemplateSpecializations.find(CanonicalKNT);
+    if (IT == SYCLKernelInfoClassTemplateSpecializations.end()) {
+      // No previous explicit specialization declaration found; synthesize one.
+      // KNT and KNTA are reassigned to avoid inadvertent use of a non-canonical
+      // type.
+      KNT = CanonicalKNT;
+      KNTA = TemplateArgument(KNT);
+
+      // Find the insertion position for the new specialization and ensure no
+      // such specialization already exists.
+      llvm::FoldingSetInsertToken InsertToken;
+      ClassTemplateSpecializationDecl *KernelInfoDecl =
+          KernelInfoTemplateDecl->findSpecialization(KNTA, InsertToken);
+      assert(KernelInfoDecl == nullptr &&
+             "__sycl_kernel_info specialization unexpectedly already exists");
+
+      // Declare the explicit specialization, register it with the class
+      // template, and add it to the corresponding DeclContext.
+      DeclContext *DC = KernelInfoTemplateDecl->getDeclContext();
+      SourceLocation Loc;
+      KernelInfoDecl = ClassTemplateSpecializationDecl::Create(
+          Ctx, KernelInfoTemplateDecl->getTemplatedDecl()->getTagKind(), DC,
+          /*StartLoc*/ Loc, /*IdLoc*/ Loc, KernelInfoTemplateDecl, KNTA,
+          /*StrictPackMatch*/ false, /*PrevDecl*/ nullptr);
+      KernelInfoDecl->setSpecializationKind(TSK_ExplicitSpecialization);
+      KernelInfoTemplateDecl->AddSpecialization(KernelInfoDecl, InsertToken);
+      DC->addDecl(KernelInfoDecl);
+      SemaRef.addSynthesizedTopLevelDecl(KernelInfoDecl);
+
+      // Cache the new declaration for subsequent calls.
+      SYCLKernelInfoClassTemplateSpecializations.insert(
+          std::make_pair(CanonicalKNT, KernelInfoDecl));
+
+      // Retrieve the canonical underlying type to use for the returned
+      // specialization type.
+      UnderlyingKernelInfoType = Ctx.getCanonicalTagType(KernelInfoDecl);
+    } else {
+      UnderlyingKernelInfoType = Ctx.getCanonicalTagType(IT->second);
+    }
+  }
+
+  QualType KernelInfoType = Ctx.getTemplateSpecializationType(
+      ElaboratedTypeKeyword::None, TemplateName(KernelInfoTemplateDecl), KNTA,
+      /*CanonicalArgs*/ {}, UnderlyingKernelInfoType);
+
+  return KernelInfoType;
+}
+
+namespace {
+
+/// BuildSYCLKernelInfoClassSpecializationDefn builds an explicit
+/// specialization definition for the SYCL kernel info class template
+/// specialized for 'KNT'. 'KNT' cannot be a dependent type. The
+/// synthesized definition has the following structure where
+/// '<kernel-name>' represents the generated name of the offload
+/// kernel entry point function.
+///
+/// template<>
+/// struct  __sycl_kernel_info<KNT> {
+///   using kernel_name = KNT;
+///   static constexpr const char kernel_entry_point_name[] = "<kernel-name>";
+/// };
+void BuildSYCLKernelInfoClassSpecializationDefn(Sema &SemaRef, QualType KNT) {
+  assert(!KNT->isDependentType());
+
+  ASTContext &Ctx = SemaRef.getASTContext();
+
+  // Retrieve the class template to be specialized.
+  ClassTemplateDecl *KernelInfoTemplateDecl =
+      SemaRef.SYCL().GetSYCLKernelInfoClassTemplate();
+
+  // Retrieve the specialization declaration that should have already been
+  // generated and validate that it corresponds to an explicit specialization
+  // as opposed to a somehow instantiated implicit specialization.
+  TemplateArgument KNTA = TemplateArgument(KNT);
+  llvm::FoldingSetInsertToken InsertToken;
+  ClassTemplateSpecializationDecl *KernelInfoDecl =
+      KernelInfoTemplateDecl->findSpecialization(KNTA, InsertToken);
+  assert(KernelInfoDecl != nullptr &&
+         "__sycl_kernel_info specialization unexpectedly not found");
+  assert(KernelInfoDecl->getSpecializationKind() == TSK_ExplicitSpecialization);
+
+  // Start defining the specialization.
+  KernelInfoDecl->startDefinition();
+
+  // An injected class declaration would normally be declared for an explicit
+  // specialization, but isn't needed, so is skipped.
+
+  // Build the kernel_name type alias member.
+  SourceLocation Loc;
+  TypeSourceInfo *TSI = Ctx.getTrivialTypeSourceInfo(KNT, Loc);
+  IdentifierInfo &KernelNameTypeAliasID =
+      Ctx.Idents.get("kernel_name", tok::TokenKind::identifier);
+  TypeAliasDecl *KernelNameTypeAliasDecl = TypeAliasDecl::Create(
+      Ctx, KernelInfoDecl, Loc, Loc, &KernelNameTypeAliasID, TSI);
+  KernelNameTypeAliasDecl->setAccess(AS_public);
+  KernelInfoDecl->addDecl(KernelNameTypeAliasDecl);
+
+  // Build the kernel_entry_point_name static data member with its initializer.
+  const SYCLKernelInfo &SKI = Ctx.getSYCLKernelInfo(KNT);
+  const std::string &KernelName = SKI.GetKernelName();
+  QualType KernelNameCharTy = Ctx.CharTy;
+  QualType KernelNameArrayTy =
+      Ctx.getStringLiteralArrayType(KernelNameCharTy, KernelName.size());
+  IdentifierInfo &KernelEntryPointNameID =
+      Ctx.Idents.get("kernel_entry_point_name", tok::TokenKind::identifier);
+  VarDecl *KernelEntryPointNameDecl = VarDecl::Create(
+      Ctx, KernelInfoDecl, Loc, Loc, &KernelEntryPointNameID, KernelNameArrayTy,
+      Ctx.getTrivialTypeSourceInfo(KernelNameArrayTy, Loc), SC_Static);
+  Expr *KernelNameExpr =
+      StringLiteral::Create(Ctx, KernelName, StringLiteralKind::Ordinary,
+                            /*Pascal*/ false, KernelNameArrayTy, Loc);
+  KernelEntryPointNameDecl->setConstexpr(true);
+  KernelEntryPointNameDecl->setImplicitlyInline();
+  KernelEntryPointNameDecl->setAccess(AS_public);
+  KernelEntryPointNameDecl->setInitStyle(VarDecl::CInit);
+  SemaRef.AddInitializerToDecl(KernelEntryPointNameDecl, KernelNameExpr,
+                               /*DirectInit*/ false);
+  KernelInfoDecl->addDecl(KernelEntryPointNameDecl);
+
+  // Complete the definition of the specialization.
+  KernelInfoDecl->completeDefinition();
+}
+
+/// BuildSYCLKernelLaunchIdExpr performs lookup for a 'sycl_kernel_launch'
+/// template with 'KIT' used as an explicit type template argument. If
+/// lookup fails, a diagnostic is issued and an error expression returned.
+/// Otherwise, an UnresolvedLookupExpr, UnresolvedMemberExpr, DeclRefExpr,
+/// or MemberExpr will be returned. The resulting expression is intended
+/// to be passed as the 'IdExpr' argument to BuildSYCLKernelLaunchCallStmt()
+/// after the function body has been parsed.
+///
+/// 'FD' must be a function declared with a valid sycl_kernel_entry_point
+/// attribute and the current Sema context must match 'FD' so that scopes
+/// are properly in place such that lookup is performed as if from the first
+/// statement of the function body.
+///
+/// 'KIT' is the SYCL kernel info type to be used for lookup and it may
+/// be a dependent type.
+ExprResult BuildSYCLKernelLaunchIdExpr(Sema &SemaRef, FunctionDecl *FD,
+                                       QualType KIT) {
   // The current context must be the function definition context to ensure
   // that name lookup is performed within the correct scope.
   assert(SemaRef.CurContext == FD && "The current declaration context does not "
@@ -478,9 +676,9 @@ ExprResult SemaSYCL::BuildSYCLKernelLaunchIdExpr(FunctionDecl *FD,
     return ExprError();
 
   TemplateArgumentListInfo TALI{Loc, Loc};
-  TemplateArgument KNTA = TemplateArgument(KNT);
+  TemplateArgument KITA = TemplateArgument(KIT);
   TemplateArgumentLoc TAL =
-      SemaRef.getTrivialTemplateArgumentLoc(KNTA, QualType(), Loc);
+      SemaRef.getTrivialTemplateArgumentLoc(KITA, QualType(), Loc);
   TALI.addArgument(TAL);
 
   ExprResult IdExpr;
@@ -505,33 +703,99 @@ ExprResult SemaSYCL::BuildSYCLKernelLaunchIdExpr(FunctionDecl *FD,
   return IdExpr;
 }
 
-namespace {
+/// BuildSYCLReifyKernelParamsIdExpr performs lookup for a
+/// 'sycl_reify_kernel_parameters' template with 'KIT' used as an explicit
+/// type template argument. If lookup fails, no diagnostic is issued, but
+/// an error expression is returned. Otherwise, an UnresolvedLookupExpr,
+/// UnresolvedMemberExpr, DeclRefExpr, or MemberExpr will be returned.
+/// The resulting expression is intended to be passed as the 'IdExpr'
+/// argument to BuildSYCLReifyKernelParamsCallStmt() after the function
+/// body has been parsed.
+///
+/// 'FD' must be a function declared with a valid sycl_kernel_entry_point
+/// attribute and the current Sema context must match 'FD' so that scopes
+/// are properly in place such that lookup is performed as if from the first
+/// statement of the function body.
+///
+/// 'KIT' is the SYCL kernel info type to be used for lookup and it may
+/// be a dependent type.
+ExprResult BuildSYCLReifyKernelParamsIdExpr(Sema &SemaRef, FunctionDecl *FD,
+                                            QualType KIT) {
+  // The current context must be the function definition context to ensure
+  // that name lookup is performed within the correct scope.
+  assert(SemaRef.CurContext == FD && "The current declaration context does not "
+                                     "match the requested function context");
+
+  // An appropriate source location is required to emit diagnostics if
+  // lookup fails to produce an overload set. The desired location is the
+  // start of the function body, but that is not yet available since the
+  // body of the function has not yet been set when this function is called.
+  // The general location of the function is used instead.
+  SourceLocation Loc = FD->getLocation();
+
+  ASTContext &Ctx = SemaRef.getASTContext();
+  IdentifierInfo &SYCLReifyKernelParamsID = Ctx.Idents.get(
+      "sycl_reify_kernel_parameters", tok::TokenKind::identifier);
+
+  // Establish a code synthesis context for the implicit name lookup of
+  // a template named 'sycl_reify_kernel_parameters'. In the event of an error,
+  // this ensures an appropriate diagnostic note is issued to explain why the
+  // lookup was performed.
+  Sema::CodeSynthesisContext CSC;
+  CSC.Kind = Sema::CodeSynthesisContext::SYCLReifyKernelParamsLookup;
+  CSC.Entity = FD;
+  Sema::ScopedCodeSynthesisContext ScopedCSC(SemaRef, CSC);
+
+  // Perform ordinary name lookup for a function or variable template that
+  // accepts a single type template argument.
+  LookupResult Result(SemaRef, &SYCLReifyKernelParamsID, Loc,
+                      Sema::LookupOrdinaryName);
+  CXXScopeSpec EmptySS;
+  if (SemaRef.LookupTemplateName(Result, SemaRef.getCurScope(), EmptySS,
+                                 /*ObjectType*/ QualType(),
+                                 /*EnteringContext*/ false,
+                                 Sema::TemplateNameIsRequired))
+    return ExprError();
+  if (Result.isAmbiguous())
+    return ExprError();
+
+  TemplateArgumentListInfo TALI{Loc, Loc};
+  TemplateArgument KITA = TemplateArgument(KIT);
+  TemplateArgumentLoc TAL =
+      SemaRef.getTrivialTemplateArgumentLoc(KITA, QualType(), Loc);
+  TALI.addArgument(TAL);
+
+  ExprResult IdExpr;
+  if (SemaRef.isPotentialImplicitMemberAccess(EmptySS, Result,
+                                              /*IsAddressOfOperand*/ false)) {
+    // The lookup result allows for a possible implicit member access that
+    // would require an implicit or explicit 'this' argument.
+    IdExpr = SemaRef.BuildPossibleImplicitMemberExpr(
+        EmptySS, SourceLocation(), Result, &TALI, SemaRef.getCurScope());
+  } else {
+    IdExpr = SemaRef.BuildTemplateIdExpr(EmptySS, SourceLocation(), Result,
+                                         /*RequiresADL*/ true, &TALI);
+  }
+
+  // The resulting expression may be invalid if, for example, 'FD' is a
+  // non-static member function and name lookup selects a member function
+  // (which would require a 'this' argument which is not available).
+  if (IdExpr.isInvalid())
+    return ExprError();
+
+  return IdExpr;
+}
 
 // Constructs the arguments to be passed for the SYCL kernel launch call.
-// The first argument is a string literal that contains the SYCL kernel
-// name. The remaining arguments are the parameters of 'FD' passed as
-// move-elligible xvalues. Returns true on error and false otherwise.
-bool BuildSYCLKernelLaunchCallArgs(Sema &SemaRef, FunctionDecl *FD,
-                                   const SYCLKernelInfo *SKI,
-                                   SmallVectorImpl<Expr *> &Args,
-                                   SourceLocation Loc) {
+// Returns true on error and false otherwise.
+bool BuildSYCLKernelParamsForwardingArgs(Sema &SemaRef, FunctionDecl *FD,
+                                         SourceLocation Loc,
+                                         SmallVectorImpl<Expr *> &Args,
+                                         SmallVectorImpl<Expr *> &SRKPExprs) {
   // The current context must be the function definition context to ensure
   // that parameter references occur within the correct scope.
   assert(SemaRef.CurContext == FD && "The current declaration context does not "
                                      "match the requested function context");
-
-  // Prepare a string literal that contains the kernel name.
-  ASTContext &Ctx = SemaRef.getASTContext();
-  const std::string &KernelName = SKI->GetKernelName();
-  QualType KernelNameCharTy = Ctx.CharTy.withConst();
-  llvm::APInt KernelNameSize(Ctx.getTypeSize(Ctx.getSizeType()),
-                             KernelName.size() + 1);
-  QualType KernelNameArrayTy = Ctx.getConstantArrayType(
-      KernelNameCharTy, KernelNameSize, nullptr, ArraySizeModifier::Normal, 0);
-  Expr *KernelNameExpr =
-      StringLiteral::Create(Ctx, KernelName, StringLiteralKind::Ordinary,
-                            /*Pascal*/ false, KernelNameArrayTy, Loc);
-  Args.push_back(KernelNameExpr);
 
   // Forward all parameters of 'FD' to the SYCL kernel launch function as if
   // by std::move().
@@ -540,12 +804,19 @@ bool BuildSYCLKernelLaunchCallArgs(Sema &SemaRef, FunctionDecl *FD,
     ExprResult E = SemaRef.BuildDeclRefExpr(PVD, ParamType, VK_LValue, Loc);
     if (E.isInvalid())
       return true;
-    if (!PVD->getType()->isLValueReferenceType())
-      E = ImplicitCastExpr::Create(SemaRef.Context, E.get()->getType(), CK_NoOp,
-                                   E.get(), nullptr, VK_XValue,
-                                   FPOptionsOverride());
-    if (E.isInvalid())
-      return true;
+    if (SRKPExprs.empty()) {
+      // If no kernel parameters require reification, then by-value parameters
+      // can be forwarded as xvalues. Otherwise, lvalues are required so that
+      // they can be captured by reference by the callback lambda which will
+      // then be called with lvalues referencing subobjects that require
+      // reification.
+      if (!PVD->getType()->isLValueReferenceType())
+        E = ImplicitCastExpr::Create(SemaRef.Context, E.get()->getType(),
+                                     CK_NoOp, E.get(), nullptr, VK_XValue,
+                                     FPOptionsOverride());
+      if (E.isInvalid())
+        return true;
+    }
     Args.push_back(E.get());
   }
 
@@ -554,12 +825,12 @@ bool BuildSYCLKernelLaunchCallArgs(Sema &SemaRef, FunctionDecl *FD,
 
 // Constructs the SYCL kernel launch call.
 StmtResult BuildSYCLKernelLaunchCallStmt(Sema &SemaRef, FunctionDecl *FD,
-                                         const SYCLKernelInfo *SKI,
-                                         Expr *IdExpr, SourceLocation Loc) {
+                                         SourceLocation Loc, Expr *IdExpr,
+                                         SmallVectorImpl<Expr *> &SRKPExprs) {
   SmallVector<Stmt *> Stmts;
   // IdExpr may be null if name lookup failed.
   if (IdExpr) {
-    llvm::SmallVector<Expr *, 12> Args;
+    SmallVector<Expr *, 12> Args;
 
     // Establish a code synthesis context for construction of the arguments
     // for the implicit call to 'sycl_kernel_launch'.
@@ -569,12 +840,14 @@ StmtResult BuildSYCLKernelLaunchCallStmt(Sema &SemaRef, FunctionDecl *FD,
       CSC.Entity = FD;
       Sema::ScopedCodeSynthesisContext ScopedCSC(SemaRef, CSC);
 
-      if (BuildSYCLKernelLaunchCallArgs(SemaRef, FD, SKI, Args, Loc))
+      if (BuildSYCLKernelParamsForwardingArgs(SemaRef, FD, Loc, Args,
+                                              SRKPExprs))
         return StmtError();
     }
 
     // Establish a code synthesis context for the implicit call to
     // 'sycl_kernel_launch'.
+    ExprResult LaunchResult;
     {
       Sema::CodeSynthesisContext CSC;
       CSC.Kind = Sema::CodeSynthesisContext::SYCLKernelLaunchOverloadResolution;
@@ -583,13 +856,97 @@ StmtResult BuildSYCLKernelLaunchCallStmt(Sema &SemaRef, FunctionDecl *FD,
       CSC.NumCallArgs = Args.size();
       Sema::ScopedCodeSynthesisContext ScopedCSC(SemaRef, CSC);
 
-      ExprResult LaunchResult =
+      LaunchResult =
           SemaRef.BuildCallExpr(SemaRef.getCurScope(), IdExpr, Loc, Args, Loc);
       if (LaunchResult.isInvalid())
         return StmtError();
-
-      Stmts.push_back(SemaRef.MaybeCreateExprWithCleanups(LaunchResult).get());
     }
+
+    // If kernel parameter reification is required or if 'sycl_kernel_launch'
+    // doesn't return void, establish a code synthesis context for the implicit
+    // call to the returned callable.
+    if (!SRKPExprs.empty() || !LaunchResult.get()->getType()->isVoidType()) {
+      Sema::CodeSynthesisContext CSC;
+      CSC.Kind = Sema::CodeSynthesisContext::
+          SYCLKernelLaunchCallbackOverloadResolution;
+      CSC.Entity = FD;
+      CSC.CallArgs = SRKPExprs.data();
+      CSC.NumCallArgs = SRKPExprs.size();
+      Sema::ScopedCodeSynthesisContext ScopedCSC(SemaRef, CSC);
+
+      LaunchResult = SemaRef.BuildCallExpr(
+          SemaRef.getCurScope(), LaunchResult.get(), Loc, SRKPExprs, Loc);
+      if (LaunchResult.isInvalid())
+        return StmtError();
+    }
+
+    Stmts.push_back(SemaRef.MaybeCreateExprWithCleanups(LaunchResult).get());
+  }
+
+  return CompoundStmt::Create(SemaRef.getASTContext(), Stmts,
+                              FPOptionsOverride(), Loc, Loc);
+}
+
+// Constructs the SYCL reify kernel parameters call.
+StmtResult
+BuildSYCLReifyKernelParamsCallStmt(Sema &SemaRef, FunctionDecl *FD,
+                                   SourceLocation Loc, Expr *IdExpr,
+                                   SmallVectorImpl<Expr *> &SRKPExprs) {
+  SmallVector<Stmt *> Stmts;
+  // IdExpr may be null if name lookup failed.
+  if (IdExpr) {
+    SmallVector<Expr *, 12> Args;
+
+    // Establish a code synthesis context for construction of the arguments
+    // for the implicit call to 'sycl_reify_kernel_parameters'.
+    {
+      Sema::CodeSynthesisContext CSC;
+      CSC.Kind = Sema::CodeSynthesisContext::SYCLReifyKernelParamsLookup;
+      CSC.Entity = FD;
+      Sema::ScopedCodeSynthesisContext ScopedCSC(SemaRef, CSC);
+
+      if (BuildSYCLKernelParamsForwardingArgs(SemaRef, FD, Loc, Args,
+                                              SRKPExprs))
+        return StmtError();
+    }
+
+    // Establish a code synthesis context for the implicit call to
+    // 'sycl_reify_kernel_parameters'.
+    ExprResult LaunchResult;
+    {
+      Sema::CodeSynthesisContext CSC;
+      CSC.Kind =
+          Sema::CodeSynthesisContext::SYCLReifyKernelParamsOverloadResolution;
+      CSC.Entity = FD;
+      CSC.CallArgs = Args.data();
+      CSC.NumCallArgs = Args.size();
+      Sema::ScopedCodeSynthesisContext ScopedCSC(SemaRef, CSC);
+
+      LaunchResult =
+          SemaRef.BuildCallExpr(SemaRef.getCurScope(), IdExpr, Loc, Args, Loc);
+      if (LaunchResult.isInvalid())
+        return StmtError();
+    }
+
+    // If kernel parameter reification is required or if 'sycl_kernel_launch'
+    // doesn't return void, establish a code synthesis context for the implicit
+    // call to the returned callable.
+    if (!SRKPExprs.empty() || !LaunchResult.get()->getType()->isVoidType()) {
+      Sema::CodeSynthesisContext CSC;
+      CSC.Kind = Sema::CodeSynthesisContext::
+          SYCLReifyKernelParamsCallbackOverloadResolution;
+      CSC.Entity = FD;
+      CSC.CallArgs = SRKPExprs.data();
+      CSC.NumCallArgs = SRKPExprs.size();
+      Sema::ScopedCodeSynthesisContext ScopedCSC(SemaRef, CSC);
+
+      LaunchResult = SemaRef.BuildCallExpr(
+          SemaRef.getCurScope(), LaunchResult.get(), Loc, SRKPExprs, Loc);
+      if (LaunchResult.isInvalid())
+        return StmtError();
+    }
+
+    Stmts.push_back(SemaRef.MaybeCreateExprWithCleanups(LaunchResult).get());
   }
 
   return CompoundStmt::Create(SemaRef.getASTContext(), Stmts,
@@ -651,14 +1008,34 @@ private:
   FunctionDecl *FD;
 };
 
-OutlinedFunctionDecl *BuildSYCLKernelEntryPointOutline(Sema &SemaRef,
-                                                       FunctionDecl *FD,
-                                                       CompoundStmt *Body) {
-  using ParmDeclMap = OutlinedFunctionDeclBodyInstantiator::ParmDeclMap;
-  ParmDeclMap ParmMap;
+DeclResult BuildSYCLKernelEntryPointOutline(Sema &SemaRef, FunctionDecl *FD,
+                                            SourceLocation Loc,
+                                            Expr *ReifyKernelParamsIdExpr,
+                                            SmallVectorImpl<Expr *> &SRKPExprs,
+                                            CompoundStmt *Body) {
+  // If any of the kernel parameter types have a subobject type that requires
+  // reification, then a call to sycl_reify_kernel_parameters() is synthesized
+  // to provide the SYCL RT an opportunity to update them.
+  if (!SRKPExprs.empty()) {
+    StmtResult ReifyParamsResult = BuildSYCLReifyKernelParamsCallStmt(
+        SemaRef, FD, Loc, ReifyKernelParamsIdExpr, SRKPExprs);
+    if (ReifyParamsResult.isInvalid())
+      return DeclResult(true);
+
+    SmallVector<Stmt *> Stmts;
+    Stmts.push_back(ReifyParamsResult.get());
+    Stmts.push_back(Body);
+    Body = CompoundStmt::Create(SemaRef.getASTContext(), Stmts,
+                                FPOptionsOverride(), Loc, Loc);
+  }
 
   OutlinedFunctionDecl *OFD = OutlinedFunctionDecl::Create(
       SemaRef.getASTContext(), FD, FD->getNumParams());
+
+  // Create a map from the function parameters to the replacement set of
+  // implicit parameters that will substitute for them in the outlined function
+  // declaration.
+  OutlinedFunctionDeclBodyInstantiator::ParmDeclMap ParmMap;
   unsigned i = 0;
   for (ParmVarDecl *PVD : FD->parameters()) {
     ImplicitParamDecl *IPD = ImplicitParamDecl::Create(
@@ -678,13 +1055,21 @@ OutlinedFunctionDecl *BuildSYCLKernelEntryPointOutline(Sema &SemaRef,
   return OFD;
 }
 
+bool isReifiedKernelParameterType(QualType Ty) {
+  if (const auto *RT = Ty->getAsRecordDecl())
+    return RT->getMostRecentDecl()->hasAttr<SYCLReifiedKernelParameterAttr>();
+  return false;
+}
+
 class KernelParamsChecker : public ConstSubobjectVisitor<KernelParamsChecker> {
   SemaSYCL &SemaSYCLRef;
-  bool IsValid = true;
+  SourceLocation Loc;
   using ObjectAccess =
       llvm::PointerUnion<const ParmVarDecl *, const CXXBaseSpecifier *,
                          const FieldDecl *>;
   SmallVector<ObjectAccess, 4> ObjectAccessPath;
+  SmallVectorImpl<Expr *> &SRKPExprs;
+  bool IsValid = true;
 
   void emitObjectAccessPathNotes() {
     for (auto Parent : llvm::reverse(ObjectAccessPath)) {
@@ -711,10 +1096,60 @@ class KernelParamsChecker : public ConstSubobjectVisitor<KernelParamsChecker> {
     }
   }
 
+  Expr *BuildParmVarDeclAccessExpr(const ParmVarDecl *PVD) {
+    QualType Ty = PVD->getType().getNonReferenceType();
+    return SemaSYCLRef.SemaRef.BuildDeclRefExpr(const_cast<ParmVarDecl *>(PVD),
+                                                Ty, VK_LValue, Loc);
+  }
+
+  Expr *BuildDerivedToBaseCastExpr(Expr *E, const CXXBaseSpecifier *BS) {
+    QualType DerivedTy = E->getType();
+    QualType BaseTy = BS->getType();
+    CXXCastPath BasePath;
+    SemaSYCLRef.SemaRef.CheckDerivedToBaseConversion(DerivedTy, BaseTy, Loc,
+                                                     SourceRange(), &BasePath,
+                                                     /*IgnoreBaseAccess*/ true);
+    auto *ICE = ImplicitCastExpr::Create(
+        SemaSYCLRef.getASTContext(), BaseTy, CK_DerivedToBase, E,
+        /* CXXCastPath=*/&BasePath, VK_LValue, FPOptionsOverride());
+    return ICE;
+  }
+
+  Expr *BuildFieldDeclAccessExpr(Expr *E, const FieldDecl *FD) {
+    DeclAccessPair DAP =
+        DeclAccessPair::make(const_cast<FieldDecl *>(FD), AS_none);
+    MemberExpr *ME = SemaSYCLRef.SemaRef.BuildMemberExpr(
+        E, /*IsArrow */ false, Loc, NestedNameSpecifierLoc(), Loc,
+        const_cast<FieldDecl *>(FD), DAP, /*HadMultipleCandidates*/ false,
+        DeclarationNameInfo(FD->getDeclName(), Loc), FD->getType(), VK_LValue,
+        OK_Ordinary);
+    return ME;
+  }
+
+  void BuildSRKPObjectAccessExpr() {
+    Expr *E = nullptr;
+    for (auto OA : ObjectAccessPath) {
+      if (auto *PVD = OA.dyn_cast<const ParmVarDecl *>()) {
+        assert(!E && "No base expression should exist yet");
+        E = BuildParmVarDeclAccessExpr(PVD);
+      } else if (auto *BS = OA.dyn_cast<const CXXBaseSpecifier *>()) {
+        assert(E && "A base expression should already exist");
+        E = BuildDerivedToBaseCastExpr(E, BS);
+      } else if (auto *FD = OA.dyn_cast<const FieldDecl *>()) {
+        assert(E && "A base expression should already exist");
+        E = BuildFieldDeclAccessExpr(E, FD);
+      } else {
+        llvm_unreachable("Unhandled object access kind");
+      }
+    }
+    SRKPExprs.push_back(E);
+  }
+
 public:
-  KernelParamsChecker(SemaSYCL &SR, SourceLocation Loc)
+  KernelParamsChecker(SemaSYCL &SR, SourceLocation Loc,
+                      SmallVectorImpl<Expr *> &SRKPExprs)
       : ConstSubobjectVisitor<KernelParamsChecker>(SR.getASTContext()),
-        SemaSYCLRef(SR) {}
+        SemaSYCLRef(SR), Loc(Loc), SRKPExprs(SRKPExprs) {}
 
   void checkParameter(const ParmVarDecl *PVD) {
     ObjectAccessPath.push_back(PVD);
@@ -740,16 +1175,24 @@ public:
 
   // Returns true if subobjects should be visited and false otherwise.
   bool checkType(QualType Ty) {
-    if (Ty->isReferenceType()) {
+    if (isReifiedKernelParameterType(Ty)) {
+      BuildSRKPObjectAccessExpr();
+      // Don't visit subobjects of SRKP types; the SYCL RT takes full
+      // responsibility for them.
+      return false;
+    }
+
+    if (const auto *RT = Ty->getAs<const ReferenceType>()) {
       auto DirectParent = ObjectAccessPath.back();
-      // Reference cannot be a base, so just assume we came via a FieldDecl.
       if (isa<const ParmVarDecl *>(DirectParent)) {
-        // If reference is a kernel parameter, there is nothing to do. We allow
-        // references in direct kernel parameters for better performance of the
-        // host code and we eliminate them when building actual kernel.
-        return true;
+        // If the reference is for a kernel parameter, treat it like a value
+        // parameter type. Reference parameter types are replaced by value
+        // parameter types when the kernel entry point is generated.
+        visit(RT->getPointeeType());
+        return false;
       }
 
+      assert(isa<const FieldDecl *>(DirectParent));
       auto *DirectFieldParent = cast<const FieldDecl *>(DirectParent);
       SemaSYCLRef.Diag(DirectFieldParent->getLocation(),
                        diag::err_bad_kernel_param_type)
@@ -763,6 +1206,7 @@ public:
       IsValid = false;
       return false;
     }
+
     return true;
   }
 
@@ -774,26 +1218,26 @@ public:
   bool isInvalid() { return !IsValid; }
 };
 
-bool verifyKernelParams(FunctionDecl *FD, SemaSYCL &SemaSYCLRef) {
-  KernelParamsChecker KAC(SemaSYCLRef, FD->getLocation());
-  for (auto Param : FD->parameters())
-    KAC.checkParameter(Param);
-  return KAC.isInvalid();
-}
-
-} // unnamed namespace
-
-StmtResult SemaSYCL::BuildSYCLKernelCallStmt(FunctionDecl *FD,
-                                             CompoundStmt *Body,
-                                             Expr *LaunchIdExpr) {
+/// BuildResolvedSYCLKernelCallStmt builds a SYCLKernelCallStmt to serve as
+/// the body of 'FD'. If construction fails, a diagnostic is issued and an
+/// error statement is returned.
+///
+/// 'FD' must be a function declared with a valid sycl_kernel_entry_point
+/// attribute and must not have had its body assigned yet.
+///
+/// 'Body' is the parsed compound statement body of 'FD' to be wrapped by
+/// the new SYCLKernelCallStmt.
+///
+/// 'ASTFragments' contains the AST fragments previously returned by a call
+/// to BuildSYCLKernelCallStmtASTFragments() for 'FD'.
+StmtResult BuildResolvedSYCLKernelCallStmt(
+    Sema &SemaRef, FunctionDecl *FD, CompoundStmt *Body,
+    const SemaSYCL::SYCLKernelCallStmtASTFragments &ASTFragments) {
   assert(!FD->isInvalidDecl());
   assert(!FD->isTemplated());
   assert(FD->hasPrototype());
-  // The current context must be the function definition context to ensure
-  // that name lookup and parameter and local variable creation are performed
-  // within the correct scope.
-  assert(SemaRef.CurContext == FD && "The current declaration context does not "
-                                     "match the requested function context");
+
+  ASTContext &Ctx = SemaRef.getASTContext();
 
   const auto *SKEPAttr = FD->getAttr<SYCLKernelEntryPointAttr>();
   assert(SKEPAttr && "Missing sycl_kernel_entry_point attribute");
@@ -802,34 +1246,103 @@ StmtResult SemaSYCL::BuildSYCLKernelCallStmt(FunctionDecl *FD,
 
   // Ensure that the kernel name was previously registered and that the
   // stored declaration matches.
-  const SYCLKernelInfo &SKI =
-      getASTContext().getSYCLKernelInfo(SKEPAttr->getKernelName());
+  const SYCLKernelInfo &SKI = Ctx.getSYCLKernelInfo(SKEPAttr->getKernelName());
   assert(declaresSameEntity(SKI.getKernelEntryPointDecl(), FD) &&
          "SYCL kernel name conflict");
-  if (verifyKernelParams(FD, *this))
+
+  // Check the function parameters for invalid parameter types and types that
+  // require special handling.
+  SmallVector<Expr *, 12> SRKPObjectAccessExprs;
+  KernelParamsChecker KAC(SemaRef.SYCL(), FD->getLocation(),
+                          SRKPObjectAccessExprs);
+  for (auto P : FD->parameters())
+    KAC.checkParameter(P);
+  if (KAC.isInvalid())
     return StmtError();
 
-  // Build the outline of the synthesized device entry point function.
-  OutlinedFunctionDecl *OFD =
-      BuildSYCLKernelEntryPointOutline(SemaRef, FD, Body);
-  assert(OFD);
+  // Inject an explicit specialization definition for a specialization
+  // of __sycl_kernel_info parameterized by the kernel name type.
+  BuildSYCLKernelInfoClassSpecializationDefn(SemaRef, SKI.getKernelNameType());
 
   // Build the host kernel launch statement. An appropriate source location
   // is required to emit diagnostics.
   SourceLocation Loc = Body->getLBracLoc();
-  StmtResult LaunchResult =
-      BuildSYCLKernelLaunchCallStmt(SemaRef, FD, &SKI, LaunchIdExpr, Loc);
+  StmtResult LaunchResult = BuildSYCLKernelLaunchCallStmt(
+      SemaRef, FD, Loc, ASTFragments.KernelLaunchIdExpr, SRKPObjectAccessExprs);
   if (LaunchResult.isInvalid())
     return StmtError();
 
-  Stmt *NewBody =
-      new (getASTContext()) SYCLKernelCallStmt(Body, LaunchResult.get(), OFD);
+  // Build the outline of the synthesized device entry point function.
+  DeclResult OFD = BuildSYCLKernelEntryPointOutline(
+      SemaRef, FD, Loc, ASTFragments.ReifyKernelParamsIdExpr,
+      SRKPObjectAccessExprs, Body);
+  if (OFD.isInvalid())
+    return StmtError();
+
+  Stmt *NewBody = new (Ctx) SYCLKernelCallStmt(
+      Body, LaunchResult.get(), cast<OutlinedFunctionDecl>(OFD.get()));
 
   return NewBody;
 }
 
-StmtResult SemaSYCL::BuildUnresolvedSYCLKernelCallStmt(CompoundStmt *Body,
-                                                       Expr *LaunchIdExpr) {
-  return UnresolvedSYCLKernelCallStmt::Create(SemaRef.getASTContext(), Body,
-                                              LaunchIdExpr);
+/// BuildUnresolvedSYCLKernelCallStmt constructs a UnresolvedSYCLKernelCallStmt
+/// to serve as the body of a function in a dependent context.
+///
+/// 'Body' is the parsed compound statement body to be wrapped by the new
+/// UnresolvedSYCLKernelCallStmt.
+///
+/// 'ASTFragments' contains the AST fragments previously returned by a call
+/// to BuildSYCLKernelCallStmtASTFragments() for the function.
+StmtResult BuildUnresolvedSYCLKernelCallStmt(
+    Sema &SemaRef, CompoundStmt *Body,
+    const SemaSYCL::SYCLKernelCallStmtASTFragments &ASTFragments) {
+  return UnresolvedSYCLKernelCallStmt::Create(
+      SemaRef.getASTContext(), Body, ASTFragments.KernelLaunchIdExpr,
+      ASTFragments.ReifyKernelParamsIdExpr);
+}
+
+} // unnamed namespace
+
+std::optional<SemaSYCL::SYCLKernelCallStmtASTFragments>
+SemaSYCL::BuildSYCLKernelCallStmtASTFragments(FunctionDecl *FD) {
+  const auto *SKEPAttr = FD->getAttr<SYCLKernelEntryPointAttr>();
+  assert(SKEPAttr && "FD doesn't have a sycl_kernel_entry_point attribute");
+  assert(!SKEPAttr->isInvalidAttr() &&
+         "FD has an invalid sycl_kernel_entry_point attribute");
+  QualType KernelName = SKEPAttr->getKernelName();
+
+  // Retrieve or build the kernel info class template specialization type
+  // needed for lookup of SYCL runtime declared templates.
+  QualType KernelInfoType =
+      GetSYCLKernelInfoClassSpecializationType(KernelName);
+  assert(!KernelInfoType.isNull());
+
+  // Perform lookup for the sycl_kernel_launch template.
+  ExprResult KernelLaunchIdER =
+      BuildSYCLKernelLaunchIdExpr(SemaRef, FD, KernelInfoType);
+  if (KernelLaunchIdER.isInvalid())
+    return {};
+
+  // Perform lookup for the sycl_reify_kernel_parameters template. This
+  // lookup is not required to succeed.
+  ExprResult ReifyKernelParamsIdER =
+      BuildSYCLReifyKernelParamsIdExpr(SemaRef, FD, KernelInfoType);
+
+  return SemaSYCL::SYCLKernelCallStmtASTFragments{KernelLaunchIdER.get(),
+                                                  ReifyKernelParamsIdER.get()};
+}
+
+StmtResult SemaSYCL::BuildSYCLKernelCallStmt(
+    FunctionDecl *FD, CompoundStmt *Body,
+    const SemaSYCL::SYCLKernelCallStmtASTFragments &ASTFragments) {
+  // The current context must be the function definition context to ensure
+  // that name lookup and parameter and local variable creation are performed
+  // within the correct scope.
+  assert(SemaRef.CurContext == FD && "The current declaration context does not "
+                                     "match the requested function context");
+
+  if (FD->isTemplated())
+    return BuildUnresolvedSYCLKernelCallStmt(SemaRef, Body, ASTFragments);
+  else
+    return BuildResolvedSYCLKernelCallStmt(SemaRef, FD, Body, ASTFragments);
 }

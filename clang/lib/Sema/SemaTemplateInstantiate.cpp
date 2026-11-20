@@ -592,7 +592,11 @@ bool Sema::CodeSynthesisContext::isInstantiationRecord() const {
   case TypeAliasTemplateInstantiation:
   case PartialOrderingTTP:
   case SYCLKernelLaunchLookup:
+  case SYCLReifyKernelParamsLookup:
   case SYCLKernelLaunchOverloadResolution:
+  case SYCLReifyKernelParamsOverloadResolution:
+  case SYCLKernelLaunchCallbackOverloadResolution:
+  case SYCLReifyKernelParamsCallbackOverloadResolution:
     return false;
 
   // This function should never be called when Kind's value is Memoization.
@@ -1286,8 +1290,24 @@ void Sema::PrintInstantiationStack(InstantiationContextDiagFuncRef DiagFunc) {
              "sycl_kernel_entry_point attribute is invalid");
       DiagFunc(SKEPAttr->getLocation(), PDiag(diag::note_sycl_runtime_defect));
       DiagFunc(SKEPAttr->getLocation(),
-               PDiag(diag::note_sycl_kernel_launch_lookup_here)
-                   << SKEPAttr->getKernelName());
+               PDiag(diag::note_sycl_implicit_runtime_call_lookup_here)
+                   << "sycl_kernel_launch"
+                   << SYCL().GetSYCLKernelInfoClassSpecializationType(
+                          SKEPAttr->getKernelName()));
+      break;
+    }
+    case CodeSynthesisContext::SYCLReifyKernelParamsLookup: {
+      const auto *SKEPAttr =
+          Active->Entity->getAttr<SYCLKernelEntryPointAttr>();
+      assert(SKEPAttr && "Missing sycl_kernel_entry_point attribute");
+      assert(!SKEPAttr->isInvalidAttr() &&
+             "sycl_kernel_entry_point attribute is invalid");
+      DiagFunc(SKEPAttr->getLocation(), PDiag(diag::note_sycl_runtime_defect));
+      DiagFunc(SKEPAttr->getLocation(),
+               PDiag(diag::note_sycl_implicit_runtime_call_lookup_here)
+                   << "sycl_reify_kernel_parameters"
+                   << SYCL().GetSYCLKernelInfoClassSpecializationType(
+                          SKEPAttr->getKernelName()));
       break;
     }
     case CodeSynthesisContext::SYCLKernelLaunchOverloadResolution: {
@@ -1297,9 +1317,61 @@ void Sema::PrintInstantiationStack(InstantiationContextDiagFuncRef DiagFunc) {
       assert(!SKEPAttr->isInvalidAttr() &&
              "sycl_kernel_entry_point attribute is invalid");
       DiagFunc(SKEPAttr->getLocation(), PDiag(diag::note_sycl_runtime_defect));
+      DiagFunc(
+          SKEPAttr->getLocation(),
+          PDiag(diag::note_sycl_implicit_runtime_call_overload_resolution_here)
+              << "sycl_kernel_launch"
+              << SYCL().GetSYCLKernelInfoClassSpecializationType(
+                     SKEPAttr->getKernelName())
+              << convertCallArgsValueCategoryAndTypeToString(
+                     *this,
+                     llvm::ArrayRef(Active->CallArgs, Active->NumCallArgs)));
+      break;
+    }
+    case CodeSynthesisContext::SYCLReifyKernelParamsOverloadResolution: {
+      const auto *SKEPAttr =
+          Active->Entity->getAttr<SYCLKernelEntryPointAttr>();
+      assert(SKEPAttr && "Missing sycl_kernel_entry_point attribute");
+      assert(!SKEPAttr->isInvalidAttr() &&
+             "sycl_kernel_entry_point attribute is invalid");
+      DiagFunc(SKEPAttr->getLocation(), PDiag(diag::note_sycl_runtime_defect));
+      DiagFunc(
+          SKEPAttr->getLocation(),
+          PDiag(diag::note_sycl_implicit_runtime_call_overload_resolution_here)
+              << "sycl_reify_kernel_parameters"
+              << SYCL().GetSYCLKernelInfoClassSpecializationType(
+                     SKEPAttr->getKernelName())
+              << convertCallArgsValueCategoryAndTypeToString(
+                     *this,
+                     llvm::ArrayRef(Active->CallArgs, Active->NumCallArgs)));
+      break;
+    }
+    case CodeSynthesisContext::SYCLKernelLaunchCallbackOverloadResolution: {
+      const auto *SKEPAttr =
+          Active->Entity->getAttr<SYCLKernelEntryPointAttr>();
+      assert(SKEPAttr && "Missing sycl_kernel_entry_point attribute");
+      assert(!SKEPAttr->isInvalidAttr() &&
+             "sycl_kernel_entry_point attribute is invalid");
+      DiagFunc(SKEPAttr->getLocation(), PDiag(diag::note_sycl_runtime_defect));
       DiagFunc(SKEPAttr->getLocation(),
-               PDiag(diag::note_sycl_kernel_launch_overload_resolution_here)
-                   << SKEPAttr->getKernelName()
+               PDiag(diag::note_sycl_implicit_runtime_callback_call)
+                   << "sycl_kernel_launch"
+                   << convertCallArgsValueCategoryAndTypeToString(
+                          *this, llvm::ArrayRef(Active->CallArgs,
+                                                Active->NumCallArgs)));
+      break;
+    }
+    case CodeSynthesisContext::
+        SYCLReifyKernelParamsCallbackOverloadResolution: {
+      const auto *SKEPAttr =
+          Active->Entity->getAttr<SYCLKernelEntryPointAttr>();
+      assert(SKEPAttr && "Missing sycl_kernel_entry_point attribute");
+      assert(!SKEPAttr->isInvalidAttr() &&
+             "sycl_kernel_entry_point attribute is invalid");
+      DiagFunc(SKEPAttr->getLocation(), PDiag(diag::note_sycl_runtime_defect));
+      DiagFunc(SKEPAttr->getLocation(),
+               PDiag(diag::note_sycl_implicit_runtime_callback_call)
+                   << "sycl_reify_kernel_parameters"
                    << convertCallArgsValueCategoryAndTypeToString(
                           *this, llvm::ArrayRef(Active->CallArgs,
                                                 Active->NumCallArgs)));

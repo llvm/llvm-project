@@ -872,8 +872,10 @@ public:
   void
   VisitUnresolvedSYCLKernelCallStmt(const UnresolvedSYCLKernelCallStmt *Node) {
     Visit(Node->getOriginalStmt());
-    if (Traversal != TK_IgnoreUnlessSpelledInSource)
+    if (Traversal != TK_IgnoreUnlessSpelledInSource) {
       Visit(Node->getKernelLaunchIdExpr());
+      Visit(Node->getReifyKernelParamsIdExpr());
+    }
   }
 
   void VisitOMPExecutableDirective(const OMPExecutableDirective *Node) {

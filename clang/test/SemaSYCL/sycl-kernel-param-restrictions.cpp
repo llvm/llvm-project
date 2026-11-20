@@ -5,8 +5,8 @@
 template<int, int = 0> struct KN;
 
 // A generic kernel launch function.
-template<typename KNT, typename... Ts>
-void sycl_kernel_launch(const char *, Ts...) {}
+template<typename KIT, typename... Ts>
+void sycl_kernel_launch(Ts...) {}
 
 // Check that reference captures of kernel that defined as lambda are diagnosed.
 namespace badref1 {

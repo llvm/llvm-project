@@ -50,8 +50,8 @@
 // RUN:   -fembed-offload-object=%t.out -emit-llvm /dev/null -o - 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=NYI
 
-template <typename KN, typename... Ts>
-void sycl_kernel_launch(const char *, Ts...) {}
+template <typename KI, typename... Ts>
+void sycl_kernel_launch(Ts...) {}
 
 template <typename KN, typename KT>
 [[clang::sycl_kernel_entry_point(KN)]] void kernel_entry(KT k) { k(); }
