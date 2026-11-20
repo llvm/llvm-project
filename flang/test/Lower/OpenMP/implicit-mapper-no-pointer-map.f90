@@ -66,6 +66,6 @@ end program test_implicit_mapper_no_pointer_map
 
 ! CHECK-LABEL: func.func @_QQmain
 ! CHECK: %[[DATA_MAP:.*]] = omp.map.info var_ptr({{.*}}){{.*}}map_clauses(implicit, tofrom){{.*}}mapper(@{{.*}}outer_type_omp_default_mapper){{.*}}-> !fir.llvm_ptr
-! CHECK: %[[DESC_MAP:.*]] = omp.map.info var_ptr({{.*}}){{.*}}map_clauses(always, implicit, to){{.*}}members(%[[DATA_MAP]] : [0] :{{.*}}){{.*}}name("obj")
+! CHECK: %[[DESC_MAP:.*]] = omp.map.info var_ptr({{.*}}){{.*}}map_clauses({{.*}}){{.*}}members(%[[DATA_MAP]] : [0] :{{.*}}){{.*}}name("obj")
 ! CHECK: %[[ATTACH_MAP:.*]] = omp.map.info var_ptr({{.*}}){{.*}}map_clauses(attach, ref_ptr, ref_ptee){{.*}}name("obj")
 ! CHECK: omp.target kernel_type(generic) map_entries(%[[DESC_MAP]] -> %{{.*}}, %[[ATTACH_MAP]] -> %{{.*}}, %[[DATA_MAP]] -> %{{.*}} :

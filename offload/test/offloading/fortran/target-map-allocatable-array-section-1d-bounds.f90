@@ -14,7 +14,7 @@ program main
     end do
 
     !$omp target map(tofrom:sp_read(2:6)) map(tofrom:sp_write(2:6))
-        do i = 1, 10
+        do i = 2, 6
             sp_write(i) = sp_read(i)
         end do
     !$omp end target

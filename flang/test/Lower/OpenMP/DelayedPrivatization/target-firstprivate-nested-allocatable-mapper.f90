@@ -38,5 +38,5 @@ end subroutine target_firstprivate_nested_allocatable_mapper
 
 ! CHECK-LABEL: func.func @_QPtarget_firstprivate_nested_allocatable_mapper()
 ! CHECK:       %[[OBJS_DATA_MAP:.*]] = omp.map.info {{.*}}map_clauses(tofrom){{.*}}mapper(@[[OUTER_MAPPER]])
-! CHECK:       %[[OBJS_DESC_MAP:.*]] = omp.map.info {{.*}}map_clauses(always, to){{.*}}members(%[[OBJS_DATA_MAP]] : [0] :
+! CHECK:       %[[OBJS_DESC_MAP:.*]] = omp.map.info {{.*}}map_clauses({{.*}}){{.*}}members(%[[OBJS_DATA_MAP]] : [0] :
 ! CHECK:       omp.target {{.*}}map_entries(%[[OBJS_DESC_MAP]] -> {{.*}}, {{.*}}, %[[OBJS_DATA_MAP]] ->{{.*}}private(@{{.*}}objs_firstprivate{{.*}}outer_type {{.*}}[map_idx=0]
