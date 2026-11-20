@@ -72,7 +72,7 @@ static bool visitMBB(MachineBasicBlock &MBB, MachineRegisterInfo *MRI,
     Register SrcReg = MI->getOperand(1).getReg();
     Register DstReg = MI->getOperand(0).getReg();
 
-    if (DstReg.isVirtual() &&
+    if (DstReg.isVirtual() && SrcReg.isPhysical() &&
         (SrcReg == SystemZ::CC || SystemZ::AR32BitRegClass.contains(SrcReg))) {
       Register Tmp = MRI->createVirtualRegister(&SystemZ::GR32BitRegClass);
       if (SrcReg == SystemZ::CC)
@@ -81,9 +81,8 @@ static bool visitMBB(MachineBasicBlock &MBB, MachineRegisterInfo *MRI,
         BuildMI(MBB, MI, DL, TII->get(SystemZ::EAR), Tmp).addReg(SrcReg);
       MI->getOperand(1).setReg(Tmp);
       Modified = true;
-    }
-    else if (SrcReg.isVirtual() &&
-             SystemZ::AR32BitRegClass.contains(DstReg)) {
+    } else if (SrcReg.isVirtual() && DstReg.isPhysical() &&
+               SystemZ::AR32BitRegClass.contains(DstReg)) {
       Register Tmp = MRI->createVirtualRegister(&SystemZ::GR32BitRegClass);
       MI->getOperand(0).setReg(Tmp);
       MachineInstr *NMI =

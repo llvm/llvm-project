@@ -106,7 +106,7 @@
 # define ASM_SYMBOL(symbol) symbol
 # define ASM_SYMBOL_INTERCEPTOR(symbol) symbol
 #  if defined(__i386__) || defined(__powerpc__) || defined(__s390__) || \
-      defined(__sparc__) || defined(__alpha__)
+      defined(__sparc__) || defined(__alpha__) || defined(__hppa__)
 // For details, see interception.h
 #  define ASM_WRAPPER_NAME(symbol) __interceptor_##symbol
 #  define ASM_TRAMPOLINE_ALIAS(symbol, name)                                   \

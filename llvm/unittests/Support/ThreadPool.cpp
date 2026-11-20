@@ -47,7 +47,6 @@ using namespace llvm;
 // Fixture for the unittests, allowing to *temporarily* disable the unittests
 // on a particular platform
 template <typename ThreadPoolImpl> class ThreadPoolTest : public testing::Test {
-  Triple Host;
   SmallVector<Triple::ArchType, 4> UnsupportedArchs;
   SmallVector<Triple::OSType, 4> UnsupportedOSs;
   SmallVector<Triple::EnvironmentType, 1> UnsupportedEnvironments;

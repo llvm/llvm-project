@@ -956,35 +956,6 @@ SDValue R600TargetLowering::lowerADDRSPACECAST(SDValue Op,
   return Op;
 }
 
-void R600TargetLowering::getStackAddress(unsigned StackWidth,
-                                         unsigned ElemIdx,
-                                         unsigned &Channel,
-                                         unsigned &PtrIncr) const {
-  switch (StackWidth) {
-  default:
-  case 1:
-    Channel = 0;
-    if (ElemIdx > 0) {
-      PtrIncr = 1;
-    } else {
-      PtrIncr = 0;
-    }
-    break;
-  case 2:
-    Channel = ElemIdx % 2;
-    if (ElemIdx == 2) {
-      PtrIncr = 1;
-    } else {
-      PtrIncr = 0;
-    }
-    break;
-  case 4:
-    Channel = ElemIdx;
-    PtrIncr = 0;
-    break;
-  }
-}
-
 SDValue R600TargetLowering::lowerPrivateTruncStore(StoreSDNode *Store,
                                                    SelectionDAG &DAG) const {
   SDLoc DL(Store);

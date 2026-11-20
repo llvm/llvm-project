@@ -50,8 +50,8 @@ RegisterContextUnifiedCore::RegisterContextUnifiedCore(
   // the RegisterInfo.
   std::map<size_t, size_t> metadata_regset_to_combined_regset;
 
-  // Calculate the total size of the register store buffer we need
-  // for all registers.  The corefile register definitions may include
+  // Calculate the size of the register store buffer we need
+  // for the LC_THREAD registers.  The corefile register definitions may include
   // RegisterInfo descriptions of registers that aren't actually
   // available.  For simplicity, calculate the size of all registers
   // as if they are available, so we can maintain the same offsets into
@@ -64,22 +64,7 @@ RegisterContextUnifiedCore::RegisterContextUnifiedCore(
         std::max(reginfo->byte_offset + reginfo->byte_size, core_buffer_end);
   }
 
-  // Add metadata register sizes to the total buffer size.
-  uint32_t combined_buffer_end = core_buffer_end;
-  if (metadata_registers_dict) {
-    StructuredData::Array *registers = nullptr;
-    if (metadata_registers_dict->GetValueForKeyAsArray("registers", registers))
-      registers->ForEach(
-          [&combined_buffer_end](StructuredData::Object *ent) -> bool {
-            uint32_t bitsize;
-            if (!ent->GetAsDictionary()->GetValueForKeyAsInteger("bitsize",
-                                                                 bitsize))
-              return false;
-            combined_buffer_end += (bitsize / 8);
-            return true;
-          });
-  }
-  m_register_data.resize(combined_buffer_end, 0);
+  m_register_data.resize(core_buffer_end, 0);
 
   // Copy the core register values into our combined data buffer,
   // skip registers that are contained within another (e.g. w0 vs. x0)
@@ -105,19 +90,23 @@ RegisterContextUnifiedCore::RegisterContextUnifiedCore(
     if (metadata_registers_dict->GetValueForKeyAsArray("registers", registers))
       registers->ForEach([this, &offset,
                           byte_order](StructuredData::Object *ent) -> bool {
+        StructuredData::Dictionary *dict = ent->GetAsDictionary();
         uint64_t bitsize;
         uint64_t value;
-        if (!ent->GetAsDictionary()->GetValueForKeyAsInteger("bitsize",
-                                                             bitsize))
+        if (!dict || !dict->GetValueForKeyAsInteger("bitsize", bitsize))
           return false;
-        if (!ent->GetAsDictionary()->GetValueForKeyAsInteger("value", value)) {
+        if (!dict->GetValueForKeyAsInteger("value", value)) {
           // We had a bitsize but no value, so move the offset forward I guess.
           offset += (bitsize / 8);
           return false;
         }
-        ent->GetAsDictionary()->AddIntegerItem("offset", offset);
+        dict->AddIntegerItem("offset", offset);
         Status error;
         const int bytesize = bitsize / 8;
+        // The metadata is untrusted, so size the buffer from the values
+        // actually written.
+        if (bytesize == 2 || bytesize == 4 || bytesize == 8)
+          m_register_data.resize(offset + bytesize, 0);
         switch (bytesize) {
         case 2: {
           Scalar value_scalar((uint16_t)value);
@@ -244,7 +233,13 @@ RegisterContextUnifiedCore::RegisterContextUnifiedCore(
                 additional_reginfo_up->GetRegisterInfoAtIndex(reg_idx);
             m_regset_regnum_collection[combined_regset_idx].push_back(
                 m_register_infos.size());
-            m_register_infos.push_back(*reginfo);
+            // The strings in reginfo are owned by the additional_reginfo_up. To
+            // avoid dangling pointers, intern the strings with ConstString.
+            RegisterInfo new_reginfo = *reginfo;
+            new_reginfo.name = ConstString(reginfo->name).AsCString(nullptr);
+            new_reginfo.alt_name =
+                ConstString(reginfo->alt_name).AsCString(nullptr);
+            m_register_infos.push_back(new_reginfo);
             registers_this_regset++;
           }
         }

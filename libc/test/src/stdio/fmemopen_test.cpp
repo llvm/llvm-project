@@ -21,6 +21,7 @@
 #include "src/stdio/ferror.h"
 #include "src/stdio/fflush.h"
 #include "src/stdio/fgetc.h"
+#include "src/stdio/fileno.h"
 #include "src/stdio/fmemopen.h"
 #include "src/stdio/fread.h"
 #include "src/stdio/fseek.h"
@@ -244,6 +245,18 @@ TEST_F(LlvmLibcFMemOpenTest, InternalBuffer) {
     EXPECT_EQ(0L, LIBC_NAMESPACE::ftell(f));
     EXPECT_EQ(0, LIBC_NAMESPACE::fclose(f));
   }
+}
+
+TEST_F(LlvmLibcFMemOpenTest, FilenoFails) {
+  char storage[8];
+  ::FILE *f = LIBC_NAMESPACE::fmemopen(storage, sizeof(storage), "r+");
+  ASSERT_TRUE(f != nullptr);
+  scope_exit close([&] { EXPECT_EQ(0, LIBC_NAMESPACE::fclose(f)); });
+
+  // A memory stream has no underlying file descriptor: POSIX requires
+  // fileno() to fail with EBADF rather than return a bogus value derived
+  // from unrelated internal state.
+  ASSERT_THAT(LIBC_NAMESPACE::fileno(f), Fails(EBADF));
 }
 
 TEST_F(LlvmLibcFMemOpenTest, ZeroCapacity) {
