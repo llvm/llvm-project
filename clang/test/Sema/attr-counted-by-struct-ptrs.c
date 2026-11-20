@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -Wpointer-arith -verify=expected,immediate %s
-// RUN: %clang_cc1 -fsyntax-only -Wpointer-arith -fexperimental-late-parse-attributes %s -verify
+// RUN: %clang_cc1 -fsyntax-only -Wpointer-arith -fexperimental-late-parse-attributes %s -verify=expected,late
 
 #define __counted_by(f)  __attribute__((counted_by(f)))
 
@@ -225,6 +225,46 @@ struct on_pointer_non_int_count {
 struct on_nested_pointer_outer {
   int count;
   struct size_known **__counted_by(count) buf;
+};
+
+// The attribute on a pointer's chunk is checked against where the chunk is in
+// the declarator. An array chunk counts as a level of nesting, just like a
+// pointer chunk does.
+struct on_pointers_to_arrays {
+  int count;
+  // On the outermost pointer, to an array of known size.
+  int (*__counted_by(count) ok)[4];
+  // The same, with the attribute after the declarator, where it applies to the
+  // whole declared type, which is the pointer.
+  int (*ok_trailing)[4] __counted_by(count);
+  // On the outermost pointer, parenthesized.
+  int (*__counted_by(count) ok_paren);
+  // On the outermost pointer, to an array of unknown size.
+  // expected-error@+1{{'counted_by' cannot be applied to a pointer with pointee of unknown size because 'int[]' is an incomplete type}}
+  int (*__counted_by(count) incomplete)[];
+  // The same, with the attribute after the declarator, where it applies to the
+  // whole declared type, which is the pointer.
+  // expected-error@+1{{'counted_by' cannot be applied to a pointer with pointee of unknown size because 'int[]' is an incomplete type}}
+  int (*incomplete_trailing)[] __counted_by(count);
+  // On a pointer inside the array a pointer points to. With
+  // -fexperimental-late-parse-attributes it's still treated as a declaration
+  // attribute on the outermost pointer until late parsing handles type
+  // attributes.
+  // immediate-error@+1{{'counted_by' attribute on nested pointer type is not allowed}}
+  int *__counted_by(count) (*nested)[4];
+  // On the array a pointer points to, written inside the parentheses, which
+  // puts it on the parentheses chunk. Same as above in late-parse mode.
+  // immediate-error@+1{{'counted_by' attribute on nested pointer type is not allowed}}
+  int (__counted_by(count) *nested_array)[4];
+  // The same, on an incomplete array, the only array that can be counted. In
+  // late-parse mode it's applied to the pointer instead, whose pointee is
+  // incomplete.
+  // immediate-error@+2{{'counted_by' attribute on nested pointer type is not allowed}}
+  // late-error@+1{{'counted_by' cannot be applied to a pointer with pointee of unknown size because 'int[]' is an incomplete type}}
+  int (__counted_by(count) *nested_incomplete_array)[];
+  // On the return type of a function pointer, in an array a pointer points to.
+  // immediate-error@+1{{'counted_by' attribute on a function return type is not yet supported}}
+  int *__counted_by(count) (*(*(*fn_ptr_return)[4])(void))(void);
 };
 
 struct on_pointer_anon_buf_ty_pos {

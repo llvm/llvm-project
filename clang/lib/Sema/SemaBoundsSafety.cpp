@@ -106,12 +106,12 @@ bool Sema::ValidateBoundsAttrTypeShape(QualType Ty, SourceLocation AttrLoc,
   //
   // TODO: Converge with the -fbounds-safety attribute model checks in
   // checkBoundsAttrTypeConflictsAndMisc.
-  if (!getLangOpts().hasBoundsSafetyAttributes())
-    if (const auto *CATy = Ty->getAs<CountAttributedType>()) {
-      Diag(AttrLoc, diag::err_counted_by_on_bounds_attributed_type)
-          << Kind << CATy->getKind() << AttrRange;
-      return false;
-    }
+  if (const auto *CATy = Ty->getAs<CountAttributedType>();
+      CATy && !getLangOpts().hasBoundsSafetyAttributes()) {
+    Diag(AttrLoc, diag::err_counted_by_on_bounds_attributed_type)
+        << Kind << CATy->getKind() << AttrRange;
+    return false;
+  }
 
   // counted_by and sized_by require a pointer or array.
   if (!Ty->isPointerType() && !Ty->isArrayType()) {
@@ -351,8 +351,8 @@ bool Sema::CheckCountedByAttrInRecord(const DeclContext *DC, QualType Ty,
     // Whether CountRD is an anonymous struct is not determined at this
     // point. Thus, an additional diagnostic in case it's not anonymous struct
     // is done later in `Parser::ParseStructDeclaration`.
-    auto *TopRD = GetEnclosingNamedOrTopAnonRecord(RD);
-    auto *TopCountRD = GetEnclosingNamedOrTopAnonRecord(CountRD);
+    const RecordDecl *TopRD = GetEnclosingNamedOrTopAnonRecord(RD);
+    const RecordDecl *TopCountRD = GetEnclosingNamedOrTopAnonRecord(CountRD);
 
     if (TopRD != TopCountRD) {
       Diag(E->getBeginLoc(), diag::err_count_attr_param_not_in_same_struct)

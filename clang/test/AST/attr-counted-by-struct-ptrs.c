@@ -114,3 +114,14 @@ struct on_pointer_decl_spec_pos {
   __counted_by(count) struct size_known **pp;
   __counted_by(count) struct size_known *(par);
 };
+
+// The attribute applies to the pointer, not to the array it points to.
+// CHECK-LABEL: RecordDecl {{.+}} struct on_pointer_to_array definition
+// CHECK-NEXT: |-FieldDecl {{.+}} referenced count 'int'
+// CHECK-NEXT: |-FieldDecl {{.+}} trailing 'int (* __counted_by(count))[4]':'int (*)[4]'
+// CHECK-NEXT: `-FieldDecl {{.+}} in_parens 'int (* __counted_by(count))[4]':'int (*)[4]'
+struct on_pointer_to_array {
+  int count;
+  int (*trailing)[4] __counted_by(count);
+  int (*__counted_by(count) in_parens)[4];
+};

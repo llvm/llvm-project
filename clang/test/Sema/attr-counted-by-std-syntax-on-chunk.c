@@ -19,3 +19,45 @@ struct S {
   int *[[clang::counted_by_or_null(n)]] p;
   int *[[clang::counted_by(n)]] *pp; // expected-error{{'counted_by' attribute on nested pointer type is not allowed}}
 };
+
+// Declarators nest, so the position of an attribute is measured from the chunk
+// it's on. An attribute anywhere in the return type of a function a pointer
+// points to is on a return type, however deeply that function is nested.
+struct ReturnTypes {
+  int n;
+  // A function pointer returning a function pointer returning a pointer.
+  // expected-error@+1{{'counted_by' attribute on a function return type is not yet supported}}
+  int *[[clang::counted_by(n)]] (*(*fpfp)(void))(void);
+  // The same, returning a pointer to a counted array.
+  // expected-error@+1{{'counted_by' attribute on a function return type is not yet supported}}
+  int (*(*(*fpfp_arr)(void))(void))[] [[clang::counted_by(n)]];
+  // The same, with a fixed-size array. The position is checked before whether
+  // the array can be counted.
+  // expected-error@+1{{'counted_by' attribute on a function return type is not yet supported}}
+  int (*(*(*fpfp_arr4)(void))(void))[4] [[clang::counted_by(n)]];
+  // A pointer to an array of function pointers that return a pointer to a
+  // counted array.
+  // expected-error@+1{{'counted_by' attribute on a function return type is not yet supported}}
+  int (*(*(*pafp)[4])(void))[] [[clang::counted_by(n)]];
+};
+
+// An array behind a pointer is nested.
+struct PointerToArray {
+  int n;
+  // expected-error@+1{{'counted_by' attribute on nested pointer type is not allowed}}
+  int (*pa)[] [[clang::counted_by(n)]];
+};
+
+// A flexible array member is the one array that takes the attribute, with or
+// without parentheses around its name.
+struct FlexibleArrayMember {
+  int n;
+  // CHECK: FieldDecl {{.*}} fam 'int[] __counted_by(n)':'int[]'
+  int fam[] [[clang::counted_by(n)]];
+};
+
+struct ParenthesizedFlexibleArrayMember {
+  int n;
+  // CHECK: FieldDecl {{.*}} fam 'int[] __counted_by(n)':'int[]'
+  int (fam)[] [[clang::counted_by(n)]];
+};

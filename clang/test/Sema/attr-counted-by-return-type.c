@@ -53,3 +53,30 @@ struct fn_ptr_array_nested_return {
   // expected-error@+1{{'counted_by' attribute on a function return type is not yet supported}}
   int *__counted_by(n) *(*fpa[2])(void);
 };
+
+// A function pointer whose return type is another function pointer.
+struct fn_ptr_returning_fn_ptr {
+  int n;
+  // expected-error@+1{{'counted_by' attribute on a function return type is not yet supported}}
+  int *__counted_by(n) (*(*fpfp)(void))(void);
+};
+
+// The GNU spelling reaches the array that a function returns a pointer to when
+// it's written after the outermost '(' of the declarator. That puts it on the
+// parentheses chunk, whose type is the array.
+struct fn_ptr_returning_ptr_to_array {
+  int n;
+  // expected-error@+1{{'counted_by' attribute on a function return type is not yet supported}}
+  int (__counted_by(n) *(*(*fpfp_arr)(void))(void))[];
+  // The position is checked before whether the array can be counted.
+  // expected-error@+1{{'counted_by' attribute on a function return type is not yet supported}}
+  int (__counted_by(n) *(*(*fpfp_arr4)(void))(void))[4];
+  // A pointer to an array of function pointers that return a pointer to the
+  // array.
+  // expected-error@+1{{'counted_by' attribute on a function return type is not yet supported}}
+  int (__counted_by(n) *(*(*pafp)[4])(void))[];
+  // After an inner '(' it's on the function type that a pointer points to,
+  // which isn't a pointer.
+  // expected-error@+1{{'counted_by' only applies to pointers or C99 flexible array members}}
+  int (*(__counted_by(n) *(*fp_inner)(void))(void))[];
+};
