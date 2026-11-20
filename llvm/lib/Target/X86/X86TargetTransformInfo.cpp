@@ -1596,16 +1596,16 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
 
   // Targets with fast 256-bit vector division use lower costs than the
   // generic AVX2 table. This must be checked before the generic AVX2 lookup.
-  if (ST->hasAVX2() && ST->hasFastVectorFP256()) {
-    static const CostKindTblEntry AVX2FastVectorFP256CostTable[] = {
-        {ISD::FDIV, MVT::v8f32, {7, 13, 1, 1}},  // vdivps
-        {ISD::FDIV, MVT::v4f64, {14, 20, 1, 1}}, // vdivpd
-    };
+  static const CostKindTblEntry AVX2FastVectorFP256CostTable[] = {
+    { ISD::FDIV, MVT::v8f32,   {  7, 13, 1, 1 } }, // vdivps
+    { ISD::FDIV, MVT::v4f64,   { 14, 20, 1, 1 } }, // vdivpd
+  };
+
+  if (ST->hasAVX2() && ST->hasFastVectorFP256())
     if (const auto *Entry =
             CostTableLookup(AVX2FastVectorFP256CostTable, ISD, LT.second))
       if (auto KindCost = Entry->Cost[CostKind])
         return LT.first * *KindCost;
-  }
 
   // Look for AVX2 lowering tricks for custom cases.
   if (ST->hasAVX2())
@@ -4536,8 +4536,8 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { X86ISD::VROTLI,  MVT::v16i8,   {  1,  3,  1,  1 } },
   };
   static const CostKindTblEntry AVX2FastVectorFP256CostTable[] = {
-      {ISD::FSQRT, MVT::v8f32, {7, 15, 1, 1}},  // vsqrtps
-      {ISD::FSQRT, MVT::v4f64, {14, 21, 1, 1}}, // vsqrtpd
+    { ISD::FSQRT, MVT::v8f32,   {  7, 15, 1, 1 } }, // vsqrtps
+    { ISD::FSQRT, MVT::v4f64,   { 14, 21, 1, 1 } }, // vsqrtpd
   };
   static const CostKindTblEntry AVX2CostTbl[] = {
     { ISD::ABS,        MVT::v2i64,   {  2,  4,  3,  5 } }, // VBLENDVPD(X,VPSUBQ(0,X),X)
