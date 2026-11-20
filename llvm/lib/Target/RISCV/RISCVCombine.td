@@ -12,7 +12,8 @@
 include "llvm/Target/GlobalISel/Combine.td"
 
 def RISCVPreLegalizerCombiner: GICombiner<
-  "RISCVPreLegalizerCombinerImpl", [all_combines]> {
+  "RISCVPreLegalizerCombinerImpl",
+  [all_combines, sext_inreg_of_lshr_to_ashr]> {
 }
 
 def RISCVO0PreLegalizerCombiner: GICombiner<
@@ -34,5 +35,5 @@ def RISCVPostLegalizerCombiner
                  [sub_to_add, combines_for_extload, redundant_and,
                   identity_combines, shift_immed_chain,
                   commute_constant_to_rhs, simplify_neg_minmax,
-                  fold_fp_zero_store]> {
+                  fold_fp_zero_store, sext_inreg_of_lshr_to_ashr]> {
 }
