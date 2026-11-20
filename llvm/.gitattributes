@@ -20,6 +20,7 @@ test/YAMLParser/spec-09-02.test binary
 
 # These files must have CRLF line endings, therefore git should explicity treat
 # them as always having crlf line endings
+test/MC/AsmParser/block-comment-crlf.s text eol=crlf
 test/MC/AsmParser/preserve-comments-crlf.s text eol=crlf
 test/tools/llvm-mca/X86/directives-handle-crlf.s text eol=crlf
 
