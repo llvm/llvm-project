@@ -181,7 +181,6 @@ void MCContext::reset() {
   XCOFFUniquingMap.clear();
   DXCUniquingMap.clear();
 
-  RelSecNames.clear();
   MacroMap.clear();
   ELFEntrySizeMap.clear();
   ELFSeenGenericMergeableSections.clear();
@@ -592,12 +591,12 @@ MCSectionELF *
 MCContext::createELFRelSection(const Twine &Name, unsigned Type, unsigned Flags,
                                unsigned EntrySize, const MCSymbolELF *Group,
                                const MCSectionELF *RelInfoSection) {
-  StringMap<bool>::iterator I;
-  bool Inserted;
-  std::tie(I, Inserted) = RelSecNames.insert(std::make_pair(Name.str(), true));
-
+  // Create a symbol table entry, which will be reused by
+  // getOrCreateSectionSymbol in createELFSectionImpl.
+  SmallString<128> Buffer;
+  StringRef Key = getSymbolTableEntry(Name.toStringRef(Buffer)).getKey();
   return createELFSectionImpl(
-      I->getKey(), Type, Flags, EntrySize, Group, true, true,
+      Key, Type, Flags, EntrySize, Group, true, true,
       static_cast<const MCSymbolELF *>(RelInfoSection->getBeginSymbol()));
 }
 

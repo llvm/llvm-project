@@ -316,7 +316,6 @@ private:
   std::map<WasmSectionKey, MCSectionWasm *> WasmUniquingMap;
   std::map<XCOFFSectionKey, MCSectionXCOFF *> XCOFFUniquingMap;
   StringMap<MCSectionDXContainer *> DXCUniquingMap;
-  StringMap<bool> RelSecNames;
 
   /// Copies of MCSubtargetInfo created by getSubtargetCopy(). These must live
   /// as long as the context since fragments reference them.
