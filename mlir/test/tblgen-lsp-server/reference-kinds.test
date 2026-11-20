@@ -1,0 +1,108 @@
+// RUN: tblgen-lsp-server -input-style=delimited < %s | FileCheck %s
+// Check find-references for the kinds of references that the parser records
+// with TrackReferenceLocs. The input is:
+//
+//   0: class Foo<int a> {
+//   1:   int x = a;
+//   2: }
+//   3: def G : Foo<1>;
+//   4: def UseG {
+//   5:   Foo r = G;
+//   6:   int v = Foo<2>.x;
+//   7: }
+//   8: class User<Foo f> {
+//   9:   int y = f.x;
+//  10: }
+//  11: multiclass M<int b> {
+//  12:   def _a : Foo<b>;
+//  13:   def _b {
+//  14:     int z = G.x;
+//  15:   }
+//  16: }
+//  17: defm D : M<3>;
+//
+// The server ignores includeDeclaration, so the results always start with the
+// declaration.
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"tablegen","capabilities":{},"trace":"off"}}
+// -----
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{
+  "uri":"test:///foo.td",
+  "languageId":"tablegen",
+  "version":1,
+  "text":"class Foo<int a> {\n  int x = a;\n}\ndef G : Foo<1>;\ndef UseG {\n  Foo r = G;\n  int v = Foo<2>.x;\n}\nclass User<Foo f> {\n  int y = f.x;\n}\nmulticlass M<int b> {\n  def _a : Foo<b>;\n  def _b {\n    int z = G.x;\n  }\n}\ndefm D : M<3>;\n"
+}}}
+// -----
+// Class 'Foo': as a parent class, as a field type, instantiated as a value,
+// as a template argument type, and as a parent class in a multiclass.
+{"jsonrpc":"2.0","id":1,"method":"textDocument/references","params":{
+  "textDocument":{"uri":"test:///foo.td"},
+  "position":{"line":0,"character":6},
+  "context":{"includeDeclaration": false}
+}}
+// CHECK: {"id":1,"jsonrpc":"2.0","result":[
+// CHECK-SAME: {"range":{"end":{"character":9,"line":0},"start":{"character":6,"line":0}},"uri":"test:///foo.td"},
+// CHECK-SAME: {"range":{"end":{"character":11,"line":3},"start":{"character":8,"line":3}},"uri":"test:///foo.td"},
+// CHECK-SAME: {"range":{"end":{"character":5,"line":5},"start":{"character":2,"line":5}},"uri":"test:///foo.td"},
+// CHECK-SAME: {"range":{"end":{"character":13,"line":6},"start":{"character":10,"line":6}},"uri":"test:///foo.td"},
+// CHECK-SAME: {"range":{"end":{"character":14,"line":8},"start":{"character":11,"line":8}},"uri":"test:///foo.td"},
+// CHECK-SAME: {"range":{"end":{"character":14,"line":12},"start":{"character":11,"line":12}},"uri":"test:///foo.td"}]}
+// -----
+// Def 'G': used as a value, including inside a multiclass.
+{"jsonrpc":"2.0","id":2,"method":"textDocument/references","params":{
+  "textDocument":{"uri":"test:///foo.td"},
+  "position":{"line":3,"character":4},
+  "context":{"includeDeclaration": false}
+}}
+// CHECK: {"id":2,"jsonrpc":"2.0","result":[
+// CHECK-SAME: {"range":{"end":{"character":5,"line":3},"start":{"character":4,"line":3}},"uri":"test:///foo.td"},
+// CHECK-SAME: {"range":{"end":{"character":11,"line":5},"start":{"character":10,"line":5}},"uri":"test:///foo.td"},
+// CHECK-SAME: {"range":{"end":{"character":13,"line":14},"start":{"character":12,"line":14}},"uri":"test:///foo.td"}]}
+// -----
+// Field 'x' through a value whose type is class 'Foo' ('f.x'). Accesses
+// through a def, like 'G.x' and 'Foo<2>.x', are attributed to the def's
+// copy of the field instead, so they are not included here.
+{"jsonrpc":"2.0","id":3,"method":"textDocument/references","params":{
+  "textDocument":{"uri":"test:///foo.td"},
+  "position":{"line":9,"character":12},
+  "context":{"includeDeclaration": false}
+}}
+// CHECK: {"id":3,"jsonrpc":"2.0","result":[
+// CHECK-SAME: {"range":{"end":{"character":7,"line":1},"start":{"character":6,"line":1}},"uri":"test:///foo.td"},
+// CHECK-SAME: {"range":{"end":{"character":13,"line":9},"start":{"character":12,"line":9}},"uri":"test:///foo.td"}]}
+// -----
+// Field 'x' through an instantiated class value ('Foo<2>.x'): the anonymous
+// def's copy of the field.
+{"jsonrpc":"2.0","id":4,"method":"textDocument/references","params":{
+  "textDocument":{"uri":"test:///foo.td"},
+  "position":{"line":6,"character":17},
+  "context":{"includeDeclaration": false}
+}}
+// CHECK: {"id":4,"jsonrpc":"2.0","result":[
+// CHECK-SAME: {"range":{"end":{"character":7,"line":1},"start":{"character":6,"line":1}},"uri":"test:///foo.td"},
+// CHECK-SAME: {"range":{"end":{"character":18,"line":6},"start":{"character":17,"line":6}},"uri":"test:///foo.td"}]}
+// -----
+// Field 'x' through a def used inside a multiclass ('G.x'): G's copy of the
+// field.
+{"jsonrpc":"2.0","id":5,"method":"textDocument/references","params":{
+  "textDocument":{"uri":"test:///foo.td"},
+  "position":{"line":14,"character":14},
+  "context":{"includeDeclaration": false}
+}}
+// CHECK: {"id":5,"jsonrpc":"2.0","result":[
+// CHECK-SAME: {"range":{"end":{"character":7,"line":1},"start":{"character":6,"line":1}},"uri":"test:///foo.td"},
+// CHECK-SAME: {"range":{"end":{"character":15,"line":14},"start":{"character":14,"line":14}},"uri":"test:///foo.td"}]}
+// -----
+// Def 'D_a' from a defm: its declaration in the multiclass, and the reference
+// to the multiclass in the defm that instantiates it.
+{"jsonrpc":"2.0","id":6,"method":"textDocument/references","params":{
+  "textDocument":{"uri":"test:///foo.td"},
+  "position":{"line":12,"character":6},
+  "context":{"includeDeclaration": false}
+}}
+// CHECK: {"id":6,"jsonrpc":"2.0","result":[
+// CHECK-SAME: {"range":{"end":{"character":8,"line":12},"start":{"character":6,"line":12}},"uri":"test:///foo.td"},
+// CHECK-SAME: {"range":{"end":{"character":10,"line":17},"start":{"character":9,"line":17}},"uri":"test:///foo.td"}]}
+// -----
+{"jsonrpc":"2.0","id":7,"method":"shutdown"}
+// -----
+{"jsonrpc":"2.0","method":"exit"}
