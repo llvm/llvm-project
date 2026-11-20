@@ -59,7 +59,8 @@ def lto_emit_llvm : Flag<["--"], "lto-emit-llvm">, Flags<[WrapperOnlyOption]>,
 def lto_emit_asm : Flag<["--"], "lto-emit-asm">, Flags<[WrapperOnlyOption]>,
   HelpText<"Emit assembly code">;
 
-def u : JoinedOrSeparate<["-"], "u">, HelpText<"Force undefined symbol during linking">;
+def u : JoinedOrSeparate<["-"], "u">, Flags<[WrapperOnlyOption]>,
+  HelpText<"Force undefined symbol during linking">;
 def undefined : JoinedOrSeparate<["--"], "undefined">, Alias<u>;
 
 def O : Joined<["--", "-"], "plugin-opt=O">,
