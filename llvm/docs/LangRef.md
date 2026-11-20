@@ -24488,8 +24488,18 @@ The third argument is an `i1` mask for scalar operands, or a vector of `i1` with
 
 ##### Semantics:
 
-Follows the same semantics as {ref}`udiv <i_udiv>` with the exception that disabled lanes cannot produce undefined behaviour and always result in poison.
-For scalar operands, the mask describes a single lane, and a poison mask gives a {ref}`poison value <poisonvalues>` and has undefined behavior only where {ref}`udiv <i_udiv>` would.
+Performs {ref}`udiv <i_udiv>` on each enabled or poison lane.
+The result on disabled and poison lanes is a {ref}`poison value <poisonvalues>`.
+Disabled lanes do not produce undefined behavior.
+For scalar operands, the mask describes a single lane.
+An undef mask lane may be either enabled or disabled.
+
+Undefined behavior in an enabled or poison lane follows the rules of {ref}`udiv <i_udiv>`.
+In particular, a poison divisor in such a lane causes undefined behavior.
+
+:::{note}
+A transform may only introduce a poison divisor into a previously disabled lane if it keeps that lane's mask false.
+:::
 
 #### '`llvm.masked.sdiv.*`' Intrinsics
 
@@ -24513,8 +24523,18 @@ The third argument is an `i1` mask for scalar operands, or a vector of `i1` with
 
 ##### Semantics:
 
-Follows the same semantics as {ref}`sdiv <i_sdiv>` with the exception that disabled lanes cannot produce undefined behaviour and always result in poison.
-For scalar operands, the mask describes a single lane, and a poison mask gives a {ref}`poison value <poisonvalues>` and has undefined behavior only where {ref}`sdiv <i_sdiv>` would.
+Performs {ref}`sdiv <i_sdiv>` on each enabled or poison lane.
+The result on disabled and poison lanes is a {ref}`poison value <poisonvalues>`.
+Disabled lanes do not produce undefined behavior.
+For scalar operands, the mask describes a single lane.
+An undef mask lane may be either enabled or disabled.
+
+Undefined behavior in an enabled or poison lane follows the rules of {ref}`sdiv <i_sdiv>`.
+In particular, a poison divisor in such a lane causes undefined behavior.
+
+:::{note}
+A transform may only introduce a poison divisor into a previously disabled lane if it keeps that lane's mask false.
+:::
 
 #### '`llvm.masked.urem.*`' Intrinsics
 
@@ -24538,8 +24558,18 @@ The third argument is an `i1` mask for scalar operands, or a vector of `i1` with
 
 ##### Semantics:
 
-Follows the same semantics as {ref}`urem <i_urem>` with the exception that disabled lanes cannot produce undefined behaviour and always result in poison.
-For scalar operands, the mask describes a single lane, and a poison mask gives a {ref}`poison value <poisonvalues>` and has undefined behavior only where {ref}`urem <i_urem>` would.
+Performs {ref}`urem <i_urem>` on each enabled or poison lane.
+The result on disabled and poison lanes is a {ref}`poison value <poisonvalues>`.
+Disabled lanes do not produce undefined behavior.
+For scalar operands, the mask describes a single lane.
+An undef mask lane may be either enabled or disabled.
+
+Undefined behavior in an enabled or poison lane follows the rules of {ref}`urem <i_urem>`.
+In particular, a poison divisor in such a lane causes undefined behavior.
+
+:::{note}
+A transform may only introduce a poison divisor into a previously disabled lane if it keeps that lane's mask false.
+:::
 
 #### '`llvm.masked.srem.*`' Intrinsics
 
@@ -24563,8 +24593,18 @@ The third argument is an `i1` mask for scalar operands, or a vector of `i1` with
 
 ##### Semantics:
 
-Follows the same semantics as {ref}`srem <i_srem>` with the exception that disabled lanes cannot produce undefined behaviour and always result in poison.
-For scalar operands, the mask describes a single lane, and a poison mask gives a {ref}`poison value <poisonvalues>` and has undefined behavior only where {ref}`srem <i_srem>` would.
+Performs {ref}`srem <i_srem>` on each enabled or poison lane.
+The result on disabled and poison lanes is a {ref}`poison value <poisonvalues>`.
+Disabled lanes do not produce undefined behavior.
+For scalar operands, the mask describes a single lane.
+An undef mask lane may be either enabled or disabled.
+
+Undefined behavior in an enabled or poison lane follows the rules of {ref}`srem <i_srem>`.
+In particular, a poison divisor in such a lane causes undefined behavior.
+
+:::{note}
+A transform may only introduce a poison divisor into a previously disabled lane if it keeps that lane's mask false.
+:::
 
 ### Speculative Load Intrinsics
 

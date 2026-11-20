@@ -94,15 +94,27 @@ define i1 @srem_i1(i1 %a, i1 %b, i1 %m) {
   ret i1 %r
 }
 
-define <4 x i32> @udiv_v4i32(<4 x i32> %a, <4 x i32> %b, <4 x i1> %m) {
-; CHECK-LABEL: name: udiv_v4i32
-; CHECK:       [[A:%[0-9]+]]:_(<4 x i32>) = COPY $q0
-; CHECK-NEXT:  [[B:%[0-9]+]]:_(<4 x i32>) = COPY $q1
-; CHECK-NEXT:  [[M16:%[0-9]+]]:_(<4 x i16>) = COPY $d2
-; CHECK-NEXT:  [[M:%[0-9]+]]:_(<4 x i1>) = G_TRUNC [[M16]](<4 x i16>)
-; CHECK-NEXT:  [[RES:%[0-9]+]]:_(<4 x i32>) = G_INTRINSIC intrinsic(@llvm.masked.udiv), [[A]](<4 x i32>), [[B]](<4 x i32>), [[M]](<4 x i1>)
-; CHECK-NEXT:  $q0 = COPY [[RES]](<4 x i32>)
-; CHECK-NEXT:  RET_ReallyLR implicit $q0
-  %r = call <4 x i32> @llvm.masked.udiv.v4i32(<4 x i32> %a, <4 x i32> %b, <4 x i1> %m)
-  ret <4 x i32> %r
+define <2 x i1> @sdiv_v2i1(<2 x i1> %a, <2 x i1> %b, <2 x i1> %m) {
+; CHECK-LABEL: name: sdiv_v2i1
+; CHECK-NOT:   G_SDIV
+; CHECK:       [[ZERO:%[0-9]+]]:_(i1) = G_CONSTANT i1 false
+; CHECK-NEXT:  G_BUILD_VECTOR [[ZERO]](i1), [[ZERO]](i1)
+; CHECK:       RET_ReallyLR
+  %r = call <2 x i1> @llvm.masked.sdiv.v2i1(<2 x i1> %a, <2 x i1> %b, <2 x i1> %m)
+  ret <2 x i1> %r
+}
+
+define <2 x i128> @udiv_v2i128(<2 x i128> %a, <2 x i128> %b, <2 x i1> %m) {
+; CHECK-LABEL: name: udiv_v2i128
+; CHECK-COUNT-2: G_UDIV
+; CHECK:       RET_ReallyLR
+  %r = call <2 x i128> @llvm.masked.udiv.v2i128(<2 x i128> %a, <2 x i128> %b, <2 x i1> %m)
+  ret <2 x i128> %r
+}
+
+define void @udiv_nxv4i32() "target-features"="+sve" {
+; CHECK-LABEL: name: udiv_nxv4i32
+; CHECK:       failedISel: true
+  %r = call <vscale x 4 x i32> @llvm.masked.udiv.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> poison, <vscale x 4 x i1> poison)
+  ret void
 }

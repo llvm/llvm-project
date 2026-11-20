@@ -2870,7 +2870,10 @@ public:
 
       // Expansion generates a (select %mask, %rhs, 1) for the divisor.
       MVT LT = getTypeLegalizationCost(RetTy).second;
-      if (!getTLI()->isOperationLegalOrCustom(ISD, LT)) {
+      bool NeedsMask = RetTy->isIntegerTy()
+                           ? !getTLI()->isIntDivRemTrapFree(EVT::getEVT(RetTy))
+                           : !getTLI()->isOperationLegalOrCustom(ISD, LT);
+      if (NeedsMask) {
         Type *CondTy = RetTy->getWithNewBitWidth(1);
         Cost += thisT()->getCmpSelInstrCost(
             BinaryOperator::Select, RetTy, CondTy, CmpInst::BAD_ICMP_PREDICATE,

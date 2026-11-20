@@ -391,3 +391,33 @@ define <3 x i10> @sdiv_v3i10(<3 x i10> %x, <3 x i10> %y, <3 x i1> %m) {
   %res = call <3 x i10> @llvm.masked.sdiv(<3 x i10> %x, <3 x i10> %y, <3 x i1> %m)
   ret <3 x i10> %res
 }
+
+define <2 x i32> @sdiv_poison_mask(<2 x i32> %x) {
+; NEON-LABEL: sdiv_poison_mask:
+; NEON:       // %bb.0:
+; NEON-NEXT:    // kill: def $d0 killed $d0 def $q0
+; NEON-NEXT:    fmov w9, s0
+; NEON-NEXT:    mov w8, #21846 // =0x5556
+; NEON-NEXT:    mov w10, v0.s[1]
+; NEON-NEXT:    movk w8, #21845, lsl #16
+; NEON-NEXT:    smull x8, w9, w8
+; NEON-NEXT:    add w10, w10, w10, lsr #31
+; NEON-NEXT:    lsr x9, x8, #32
+; NEON-NEXT:    add x8, x9, x8, lsr #63
+; NEON-NEXT:    asr w9, w10, #1
+; NEON-NEXT:    fmov s0, w8
+; NEON-NEXT:    mov v0.s[1], w9
+; NEON-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; NEON-NEXT:    ret
+;
+; SVE-LABEL: sdiv_poison_mask:
+; SVE:       // %bb.0:
+; SVE-NEXT:    index z1.s, #3, #-1
+; SVE-NEXT:    ptrue p0.s, vl2
+; SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; SVE-NEXT:    sdiv z0.s, p0/m, z0.s, z1.s
+; SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; SVE-NEXT:    ret
+  %r = call <2 x i32> @llvm.masked.sdiv.v2i32(<2 x i32> %x, <2 x i32> <i32 3, i32 2>, <2 x i1> <i1 poison, i1 true>)
+  ret <2 x i32> %r
+}

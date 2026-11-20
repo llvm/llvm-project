@@ -605,6 +605,15 @@ public:
   /// for speed or for size.
   virtual bool isIntDivCheap(EVT VT, AttributeList Attr) const { return false; }
 
+  /// Return true if integer div/rem of VT never traps or has side effects,
+  /// even for a zero divisor or signed overflow. Exceptional operands produce
+  /// some value of VT. This must cover the complete lowering, including any
+  /// libcalls; support for native widths does not imply support for wider
+  /// types. VT may be a vector type, but callers must preserve valid lanes
+  /// when folding exceptional operands, for example by using target nodes
+  /// rather than ordinary vector DAG div/rem nodes.
+  virtual bool isIntDivRemTrapFree(EVT VT) const { return false; }
+
   /// Return true if the target can handle a standalone remainder operation.
   virtual bool hasStandaloneRem(EVT VT) const {
     return true;

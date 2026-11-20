@@ -19,6 +19,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/IR/ValueHandle.h"
 #include <cstdint>
 
@@ -28,30 +29,36 @@ class BasicBlock;
 class BranchProbabilityInfo;
 class DomTreeUpdater;
 class LoopInfo;
+class Type;
 class Value;
 
 struct DivRemMapKey {
   bool SignedOp;
   AssertingVH<Value> Dividend;
   AssertingVH<Value> Divisor;
+  AssertingVH<Value> Mask;
 
   DivRemMapKey() = default;
 
-  DivRemMapKey(bool InSignedOp, Value *InDividend, Value *InDivisor)
-      : SignedOp(InSignedOp), Dividend(InDividend), Divisor(InDivisor) {}
+  DivRemMapKey(bool InSignedOp, Value *InDividend, Value *InDivisor,
+               Value *InMask = nullptr)
+      : SignedOp(InSignedOp), Dividend(InDividend), Divisor(InDivisor),
+        Mask(InMask) {}
 };
 
 template <> struct DenseMapInfo<DivRemMapKey> {
   static bool isEqual(const DivRemMapKey &Val1, const DivRemMapKey &Val2) {
     return Val1.SignedOp == Val2.SignedOp && Val1.Dividend == Val2.Dividend &&
-           Val1.Divisor == Val2.Divisor;
+           Val1.Divisor == Val2.Divisor && Val1.Mask == Val2.Mask;
   }
 
   static unsigned getHashValue(const DivRemMapKey &Val) {
     return (unsigned)(reinterpret_cast<uintptr_t>(
                           static_cast<Value *>(Val.Dividend)) ^
                       reinterpret_cast<uintptr_t>(
-                          static_cast<Value *>(Val.Divisor))) ^
+                          static_cast<Value *>(Val.Divisor)) ^
+                      reinterpret_cast<uintptr_t>(
+                          static_cast<Value *>(Val.Mask))) ^
            (unsigned)Val.SignedOp;
   }
 };
@@ -59,13 +66,17 @@ template <> struct DenseMapInfo<DivRemMapKey> {
 /// This optimization identifies DIV instructions in a BB that can be
 /// profitably bypassed and carried out with a shorter, faster divide.
 ///
+/// Scalar masked div/rem is also handled when IsIntDivRemTrapFree accepts both
+/// the original and bypass types.
+///
 /// This optimization may add basic blocks immediately after BB; for obvious
 /// reasons, you shouldn't pass those blocks to bypassSlowDivision.
 LLVM_ABI bool
 bypassSlowDivision(BasicBlock *BB,
                    const DenseMap<unsigned int, unsigned int> &BypassWidth,
                    DomTreeUpdater *DTU = nullptr, LoopInfo *LI = nullptr,
-                   BranchProbabilityInfo *BPI = nullptr);
+                   BranchProbabilityInfo *BPI = nullptr,
+                   function_ref<bool(Type *)> IsIntDivRemTrapFree = {});
 
 } // end namespace llvm
 
