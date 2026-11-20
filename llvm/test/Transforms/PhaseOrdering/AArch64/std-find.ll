@@ -14,129 +14,113 @@ define i64 @std_find_i16_constant_offset_with_assumptions(ptr %first.coerce, i16
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <8 x i16>, ptr [[FIRST_COERCE]], align 2
 ; CHECK-NEXT:    [[WIDE_LOAD_FR1:%.*]] = freeze <8 x i16> [[WIDE_LOAD1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <8 x i16> [[WIDE_LOAD_FR1]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i1> [[TMP2]] to i8
-; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i8 [[TMP3]], 0
-; CHECK-NEXT:    br i1 [[DOTNOT]], label %[[VECTOR_BODY_INTERIM:.*]], label %[[VECTOR_EARLY_EXIT:.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call i1 @llvm.vector.reduce.or.v8i1(<8 x i1> [[TMP2]])
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[VECTOR_EARLY_EXIT:.*]], label %[[VECTOR_BODY_INTERIM:.*]]
 ; CHECK:       [[VECTOR_BODY_INTERIM]]:
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[FIRST_COERCE]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i16>, ptr [[NEXT_GEP]], align 2
 ; CHECK-NEXT:    [[WIDE_LOAD_FR:%.*]] = freeze <8 x i16> [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq <8 x i16> [[WIDE_LOAD_FR]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i1> [[TMP0]] to i8
-; CHECK-NEXT:    [[DOTNOT_1:%.*]] = icmp eq i8 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[DOTNOT_1]], label %[[VECTOR_BODY_INTERIM_1:.*]], label %[[VECTOR_EARLY_EXIT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call i1 @llvm.vector.reduce.or.v8i1(<8 x i1> [[TMP0]])
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[VECTOR_EARLY_EXIT]], label %[[VECTOR_BODY_INTERIM_1:.*]]
 ; CHECK:       [[VECTOR_BODY_INTERIM_1]]:
 ; CHECK-NEXT:    [[NEXT_GEP_2:%.*]] = getelementptr i8, ptr [[FIRST_COERCE]], i64 32
 ; CHECK-NEXT:    [[WIDE_LOAD_2:%.*]] = load <8 x i16>, ptr [[NEXT_GEP_2]], align 2
 ; CHECK-NEXT:    [[WIDE_LOAD_FR_2:%.*]] = freeze <8 x i16> [[WIDE_LOAD_2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <8 x i16> [[WIDE_LOAD_FR_2]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP32:%.*]] = bitcast <8 x i1> [[TMP4]] to i8
-; CHECK-NEXT:    [[DOTNOT_2:%.*]] = icmp eq i8 [[TMP32]], 0
-; CHECK-NEXT:    br i1 [[DOTNOT_2]], label %[[VECTOR_BODY_INTERIM_2:.*]], label %[[VECTOR_EARLY_EXIT]]
+; CHECK-NEXT:    [[TMP32:%.*]] = tail call i1 @llvm.vector.reduce.or.v8i1(<8 x i1> [[TMP4]])
+; CHECK-NEXT:    br i1 [[TMP32]], label %[[VECTOR_EARLY_EXIT]], label %[[VECTOR_BODY_INTERIM_2:.*]]
 ; CHECK:       [[VECTOR_BODY_INTERIM_2]]:
 ; CHECK-NEXT:    [[NEXT_GEP_3:%.*]] = getelementptr i8, ptr [[FIRST_COERCE]], i64 48
 ; CHECK-NEXT:    [[WIDE_LOAD_3:%.*]] = load <8 x i16>, ptr [[NEXT_GEP_3]], align 2
 ; CHECK-NEXT:    [[WIDE_LOAD_FR_3:%.*]] = freeze <8 x i16> [[WIDE_LOAD_3]]
 ; CHECK-NEXT:    [[TMP33:%.*]] = icmp eq <8 x i16> [[WIDE_LOAD_FR_3]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP34:%.*]] = bitcast <8 x i1> [[TMP33]] to i8
-; CHECK-NEXT:    [[DOTNOT_3:%.*]] = icmp eq i8 [[TMP34]], 0
-; CHECK-NEXT:    br i1 [[DOTNOT_3]], label %[[VECTOR_BODY_INTERIM_3:.*]], label %[[VECTOR_EARLY_EXIT]]
+; CHECK-NEXT:    [[TMP34:%.*]] = tail call i1 @llvm.vector.reduce.or.v8i1(<8 x i1> [[TMP33]])
+; CHECK-NEXT:    br i1 [[TMP34]], label %[[VECTOR_EARLY_EXIT]], label %[[VECTOR_BODY_INTERIM_3:.*]]
 ; CHECK:       [[VECTOR_BODY_INTERIM_3]]:
 ; CHECK-NEXT:    [[NEXT_GEP_4:%.*]] = getelementptr i8, ptr [[FIRST_COERCE]], i64 64
 ; CHECK-NEXT:    [[WIDE_LOAD_4:%.*]] = load <8 x i16>, ptr [[NEXT_GEP_4]], align 2
 ; CHECK-NEXT:    [[WIDE_LOAD_FR_4:%.*]] = freeze <8 x i16> [[WIDE_LOAD_4]]
 ; CHECK-NEXT:    [[TMP35:%.*]] = icmp eq <8 x i16> [[WIDE_LOAD_FR_4]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <8 x i1> [[TMP35]] to i8
-; CHECK-NEXT:    [[DOTNOT_4:%.*]] = icmp eq i8 [[TMP9]], 0
-; CHECK-NEXT:    br i1 [[DOTNOT_4]], label %[[VECTOR_BODY_INTERIM_4:.*]], label %[[VECTOR_EARLY_EXIT]]
+; CHECK-NEXT:    [[TMP9:%.*]] = tail call i1 @llvm.vector.reduce.or.v8i1(<8 x i1> [[TMP35]])
+; CHECK-NEXT:    br i1 [[TMP9]], label %[[VECTOR_EARLY_EXIT]], label %[[VECTOR_BODY_INTERIM_4:.*]]
 ; CHECK:       [[VECTOR_BODY_INTERIM_4]]:
 ; CHECK-NEXT:    [[NEXT_GEP_5:%.*]] = getelementptr i8, ptr [[FIRST_COERCE]], i64 80
 ; CHECK-NEXT:    [[WIDE_LOAD_5:%.*]] = load <8 x i16>, ptr [[NEXT_GEP_5]], align 2
 ; CHECK-NEXT:    [[WIDE_LOAD_FR_5:%.*]] = freeze <8 x i16> [[WIDE_LOAD_5]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq <8 x i16> [[WIDE_LOAD_FR_5]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <8 x i1> [[TMP10]] to i8
-; CHECK-NEXT:    [[DOTNOT_5:%.*]] = icmp eq i8 [[TMP11]], 0
-; CHECK-NEXT:    br i1 [[DOTNOT_5]], label %[[VECTOR_BODY_INTERIM_5:.*]], label %[[VECTOR_EARLY_EXIT]]
+; CHECK-NEXT:    [[TMP11:%.*]] = tail call i1 @llvm.vector.reduce.or.v8i1(<8 x i1> [[TMP10]])
+; CHECK-NEXT:    br i1 [[TMP11]], label %[[VECTOR_EARLY_EXIT]], label %[[VECTOR_BODY_INTERIM_5:.*]]
 ; CHECK:       [[VECTOR_BODY_INTERIM_5]]:
 ; CHECK-NEXT:    [[NEXT_GEP_6:%.*]] = getelementptr i8, ptr [[FIRST_COERCE]], i64 96
 ; CHECK-NEXT:    [[WIDE_LOAD_6:%.*]] = load <8 x i16>, ptr [[NEXT_GEP_6]], align 2
 ; CHECK-NEXT:    [[WIDE_LOAD_FR_6:%.*]] = freeze <8 x i16> [[WIDE_LOAD_6]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq <8 x i16> [[WIDE_LOAD_FR_6]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP13:%.*]] = bitcast <8 x i1> [[TMP12]] to i8
-; CHECK-NEXT:    [[DOTNOT_6:%.*]] = icmp eq i8 [[TMP13]], 0
-; CHECK-NEXT:    br i1 [[DOTNOT_6]], label %[[VECTOR_BODY_INTERIM_6:.*]], label %[[VECTOR_EARLY_EXIT]]
+; CHECK-NEXT:    [[TMP13:%.*]] = tail call i1 @llvm.vector.reduce.or.v8i1(<8 x i1> [[TMP12]])
+; CHECK-NEXT:    br i1 [[TMP13]], label %[[VECTOR_EARLY_EXIT]], label %[[VECTOR_BODY_INTERIM_6:.*]]
 ; CHECK:       [[VECTOR_BODY_INTERIM_6]]:
 ; CHECK-NEXT:    [[NEXT_GEP_7:%.*]] = getelementptr i8, ptr [[FIRST_COERCE]], i64 112
 ; CHECK-NEXT:    [[WIDE_LOAD_7:%.*]] = load <8 x i16>, ptr [[NEXT_GEP_7]], align 2
 ; CHECK-NEXT:    [[WIDE_LOAD_FR_7:%.*]] = freeze <8 x i16> [[WIDE_LOAD_7]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq <8 x i16> [[WIDE_LOAD_FR_7]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP15:%.*]] = bitcast <8 x i1> [[TMP14]] to i8
-; CHECK-NEXT:    [[DOTNOT_7:%.*]] = icmp eq i8 [[TMP15]], 0
-; CHECK-NEXT:    br i1 [[DOTNOT_7]], label %[[VECTOR_BODY_INTERIM_7:.*]], label %[[VECTOR_EARLY_EXIT]]
+; CHECK-NEXT:    [[TMP15:%.*]] = tail call i1 @llvm.vector.reduce.or.v8i1(<8 x i1> [[TMP14]])
+; CHECK-NEXT:    br i1 [[TMP15]], label %[[VECTOR_EARLY_EXIT]], label %[[VECTOR_BODY_INTERIM_7:.*]]
 ; CHECK:       [[VECTOR_BODY_INTERIM_7]]:
 ; CHECK-NEXT:    [[NEXT_GEP_8:%.*]] = getelementptr i8, ptr [[FIRST_COERCE]], i64 128
 ; CHECK-NEXT:    [[WIDE_LOAD_8:%.*]] = load <8 x i16>, ptr [[NEXT_GEP_8]], align 2
 ; CHECK-NEXT:    [[WIDE_LOAD_FR_8:%.*]] = freeze <8 x i16> [[WIDE_LOAD_8]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq <8 x i16> [[WIDE_LOAD_FR_8]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP17:%.*]] = bitcast <8 x i1> [[TMP16]] to i8
-; CHECK-NEXT:    [[DOTNOT_8:%.*]] = icmp eq i8 [[TMP17]], 0
-; CHECK-NEXT:    br i1 [[DOTNOT_8]], label %[[VECTOR_BODY_INTERIM_8:.*]], label %[[VECTOR_EARLY_EXIT]]
+; CHECK-NEXT:    [[TMP17:%.*]] = tail call i1 @llvm.vector.reduce.or.v8i1(<8 x i1> [[TMP16]])
+; CHECK-NEXT:    br i1 [[TMP17]], label %[[VECTOR_EARLY_EXIT]], label %[[VECTOR_BODY_INTERIM_8:.*]]
 ; CHECK:       [[VECTOR_BODY_INTERIM_8]]:
 ; CHECK-NEXT:    [[NEXT_GEP_9:%.*]] = getelementptr i8, ptr [[FIRST_COERCE]], i64 144
 ; CHECK-NEXT:    [[WIDE_LOAD_9:%.*]] = load <8 x i16>, ptr [[NEXT_GEP_9]], align 2
 ; CHECK-NEXT:    [[WIDE_LOAD_FR_9:%.*]] = freeze <8 x i16> [[WIDE_LOAD_9]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq <8 x i16> [[WIDE_LOAD_FR_9]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP19:%.*]] = bitcast <8 x i1> [[TMP18]] to i8
-; CHECK-NEXT:    [[DOTNOT_9:%.*]] = icmp eq i8 [[TMP19]], 0
-; CHECK-NEXT:    br i1 [[DOTNOT_9]], label %[[VECTOR_BODY_INTERIM_9:.*]], label %[[VECTOR_EARLY_EXIT]]
+; CHECK-NEXT:    [[TMP19:%.*]] = tail call i1 @llvm.vector.reduce.or.v8i1(<8 x i1> [[TMP18]])
+; CHECK-NEXT:    br i1 [[TMP19]], label %[[VECTOR_EARLY_EXIT]], label %[[VECTOR_BODY_INTERIM_9:.*]]
 ; CHECK:       [[VECTOR_BODY_INTERIM_9]]:
 ; CHECK-NEXT:    [[NEXT_GEP_10:%.*]] = getelementptr i8, ptr [[FIRST_COERCE]], i64 160
 ; CHECK-NEXT:    [[WIDE_LOAD_10:%.*]] = load <8 x i16>, ptr [[NEXT_GEP_10]], align 2
 ; CHECK-NEXT:    [[WIDE_LOAD_FR_10:%.*]] = freeze <8 x i16> [[WIDE_LOAD_10]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq <8 x i16> [[WIDE_LOAD_FR_10]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP21:%.*]] = bitcast <8 x i1> [[TMP20]] to i8
-; CHECK-NEXT:    [[DOTNOT_10:%.*]] = icmp eq i8 [[TMP21]], 0
-; CHECK-NEXT:    br i1 [[DOTNOT_10]], label %[[VECTOR_BODY_INTERIM_10:.*]], label %[[VECTOR_EARLY_EXIT]]
+; CHECK-NEXT:    [[TMP21:%.*]] = tail call i1 @llvm.vector.reduce.or.v8i1(<8 x i1> [[TMP20]])
+; CHECK-NEXT:    br i1 [[TMP21]], label %[[VECTOR_EARLY_EXIT]], label %[[VECTOR_BODY_INTERIM_10:.*]]
 ; CHECK:       [[VECTOR_BODY_INTERIM_10]]:
 ; CHECK-NEXT:    [[NEXT_GEP_11:%.*]] = getelementptr i8, ptr [[FIRST_COERCE]], i64 176
 ; CHECK-NEXT:    [[WIDE_LOAD_11:%.*]] = load <8 x i16>, ptr [[NEXT_GEP_11]], align 2
 ; CHECK-NEXT:    [[WIDE_LOAD_FR_11:%.*]] = freeze <8 x i16> [[WIDE_LOAD_11]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = icmp eq <8 x i16> [[WIDE_LOAD_FR_11]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP23:%.*]] = bitcast <8 x i1> [[TMP22]] to i8
-; CHECK-NEXT:    [[DOTNOT_11:%.*]] = icmp eq i8 [[TMP23]], 0
-; CHECK-NEXT:    br i1 [[DOTNOT_11]], label %[[VECTOR_BODY_INTERIM_11:.*]], label %[[VECTOR_EARLY_EXIT]]
+; CHECK-NEXT:    [[TMP23:%.*]] = tail call i1 @llvm.vector.reduce.or.v8i1(<8 x i1> [[TMP22]])
+; CHECK-NEXT:    br i1 [[TMP23]], label %[[VECTOR_EARLY_EXIT]], label %[[VECTOR_BODY_INTERIM_11:.*]]
 ; CHECK:       [[VECTOR_BODY_INTERIM_11]]:
 ; CHECK-NEXT:    [[NEXT_GEP_12:%.*]] = getelementptr i8, ptr [[FIRST_COERCE]], i64 192
 ; CHECK-NEXT:    [[WIDE_LOAD_12:%.*]] = load <8 x i16>, ptr [[NEXT_GEP_12]], align 2
 ; CHECK-NEXT:    [[WIDE_LOAD_FR_12:%.*]] = freeze <8 x i16> [[WIDE_LOAD_12]]
 ; CHECK-NEXT:    [[TMP24:%.*]] = icmp eq <8 x i16> [[WIDE_LOAD_FR_12]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP25:%.*]] = bitcast <8 x i1> [[TMP24]] to i8
-; CHECK-NEXT:    [[DOTNOT_12:%.*]] = icmp eq i8 [[TMP25]], 0
-; CHECK-NEXT:    br i1 [[DOTNOT_12]], label %[[VECTOR_BODY_INTERIM_12:.*]], label %[[VECTOR_EARLY_EXIT]]
+; CHECK-NEXT:    [[TMP25:%.*]] = tail call i1 @llvm.vector.reduce.or.v8i1(<8 x i1> [[TMP24]])
+; CHECK-NEXT:    br i1 [[TMP25]], label %[[VECTOR_EARLY_EXIT]], label %[[VECTOR_BODY_INTERIM_12:.*]]
 ; CHECK:       [[VECTOR_BODY_INTERIM_12]]:
 ; CHECK-NEXT:    [[NEXT_GEP_13:%.*]] = getelementptr i8, ptr [[FIRST_COERCE]], i64 208
 ; CHECK-NEXT:    [[WIDE_LOAD_13:%.*]] = load <8 x i16>, ptr [[NEXT_GEP_13]], align 2
 ; CHECK-NEXT:    [[WIDE_LOAD_FR_13:%.*]] = freeze <8 x i16> [[WIDE_LOAD_13]]
 ; CHECK-NEXT:    [[TMP26:%.*]] = icmp eq <8 x i16> [[WIDE_LOAD_FR_13]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP27:%.*]] = bitcast <8 x i1> [[TMP26]] to i8
-; CHECK-NEXT:    [[DOTNOT_13:%.*]] = icmp eq i8 [[TMP27]], 0
-; CHECK-NEXT:    br i1 [[DOTNOT_13]], label %[[VECTOR_BODY_INTERIM_13:.*]], label %[[VECTOR_EARLY_EXIT]]
+; CHECK-NEXT:    [[TMP27:%.*]] = tail call i1 @llvm.vector.reduce.or.v8i1(<8 x i1> [[TMP26]])
+; CHECK-NEXT:    br i1 [[TMP27]], label %[[VECTOR_EARLY_EXIT]], label %[[VECTOR_BODY_INTERIM_13:.*]]
 ; CHECK:       [[VECTOR_BODY_INTERIM_13]]:
 ; CHECK-NEXT:    [[NEXT_GEP_14:%.*]] = getelementptr i8, ptr [[FIRST_COERCE]], i64 224
 ; CHECK-NEXT:    [[WIDE_LOAD_14:%.*]] = load <8 x i16>, ptr [[NEXT_GEP_14]], align 2
 ; CHECK-NEXT:    [[WIDE_LOAD_FR_14:%.*]] = freeze <8 x i16> [[WIDE_LOAD_14]]
 ; CHECK-NEXT:    [[TMP28:%.*]] = icmp eq <8 x i16> [[WIDE_LOAD_FR_14]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP29:%.*]] = bitcast <8 x i1> [[TMP28]] to i8
-; CHECK-NEXT:    [[DOTNOT_14:%.*]] = icmp eq i8 [[TMP29]], 0
-; CHECK-NEXT:    br i1 [[DOTNOT_14]], label %[[VECTOR_BODY_INTERIM_14:.*]], label %[[VECTOR_EARLY_EXIT]]
+; CHECK-NEXT:    [[TMP29:%.*]] = tail call i1 @llvm.vector.reduce.or.v8i1(<8 x i1> [[TMP28]])
+; CHECK-NEXT:    br i1 [[TMP29]], label %[[VECTOR_EARLY_EXIT]], label %[[VECTOR_BODY_INTERIM_14:.*]]
 ; CHECK:       [[VECTOR_BODY_INTERIM_14]]:
 ; CHECK-NEXT:    [[NEXT_GEP_15:%.*]] = getelementptr i8, ptr [[FIRST_COERCE]], i64 240
 ; CHECK-NEXT:    [[WIDE_LOAD_15:%.*]] = load <8 x i16>, ptr [[NEXT_GEP_15]], align 2
 ; CHECK-NEXT:    [[WIDE_LOAD_FR_15:%.*]] = freeze <8 x i16> [[WIDE_LOAD_15]]
 ; CHECK-NEXT:    [[TMP30:%.*]] = icmp eq <8 x i16> [[WIDE_LOAD_FR_15]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP31:%.*]] = bitcast <8 x i1> [[TMP30]] to i8
-; CHECK-NEXT:    [[DOTNOT_15:%.*]] = icmp eq i8 [[TMP31]], 0
-; CHECK-NEXT:    br i1 [[DOTNOT_15]], label %[[RETURN:.*]], label %[[VECTOR_EARLY_EXIT]]
+; CHECK-NEXT:    [[TMP31:%.*]] = tail call i1 @llvm.vector.reduce.or.v8i1(<8 x i1> [[TMP30]])
+; CHECK-NEXT:    br i1 [[TMP31]], label %[[VECTOR_EARLY_EXIT]], label %[[RETURN:.*]]
 ; CHECK:       [[VECTOR_EARLY_EXIT]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ 8, %[[VECTOR_BODY_INTERIM]] ], [ 16, %[[VECTOR_BODY_INTERIM_1]] ], [ 24, %[[VECTOR_BODY_INTERIM_2]] ], [ 32, %[[VECTOR_BODY_INTERIM_3]] ], [ 40, %[[VECTOR_BODY_INTERIM_4]] ], [ 48, %[[VECTOR_BODY_INTERIM_5]] ], [ 56, %[[VECTOR_BODY_INTERIM_6]] ], [ 64, %[[VECTOR_BODY_INTERIM_7]] ], [ 72, %[[VECTOR_BODY_INTERIM_8]] ], [ 80, %[[VECTOR_BODY_INTERIM_9]] ], [ 88, %[[VECTOR_BODY_INTERIM_10]] ], [ 96, %[[VECTOR_BODY_INTERIM_11]] ], [ 104, %[[VECTOR_BODY_INTERIM_12]] ], [ 112, %[[VECTOR_BODY_INTERIM_13]] ], [ 120, %[[VECTOR_BODY_INTERIM_14]] ]
 ; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi <8 x i1> [ [[TMP2]], %[[ENTRY]] ], [ [[TMP0]], %[[VECTOR_BODY_INTERIM]] ], [ [[TMP4]], %[[VECTOR_BODY_INTERIM_1]] ], [ [[TMP33]], %[[VECTOR_BODY_INTERIM_2]] ], [ [[TMP35]], %[[VECTOR_BODY_INTERIM_3]] ], [ [[TMP10]], %[[VECTOR_BODY_INTERIM_4]] ], [ [[TMP12]], %[[VECTOR_BODY_INTERIM_5]] ], [ [[TMP14]], %[[VECTOR_BODY_INTERIM_6]] ], [ [[TMP16]], %[[VECTOR_BODY_INTERIM_7]] ], [ [[TMP18]], %[[VECTOR_BODY_INTERIM_8]] ], [ [[TMP20]], %[[VECTOR_BODY_INTERIM_9]] ], [ [[TMP22]], %[[VECTOR_BODY_INTERIM_10]] ], [ [[TMP24]], %[[VECTOR_BODY_INTERIM_11]] ], [ [[TMP26]], %[[VECTOR_BODY_INTERIM_12]] ], [ [[TMP28]], %[[VECTOR_BODY_INTERIM_13]] ], [ [[TMP30]], %[[VECTOR_BODY_INTERIM_14]] ]
@@ -270,9 +254,8 @@ define ptr @std_find_caller(ptr noundef %first, ptr noundef %last) {
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i16>, ptr [[NEXT_GEP1]], align 2
 ; CHECK-NEXT:    [[WIDE_LOAD_FR:%.*]] = freeze <8 x i16> [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <8 x i16> [[WIDE_LOAD_FR]], splat (i16 1)
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <8 x i1> [[TMP4]] to i8
-; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i8 [[TMP5]], 0
-; CHECK-NEXT:    br i1 [[DOTNOT]], label %[[VECTOR_BODY_INTERIM]], label %[[VECTOR_EARLY_EXIT:.*]]
+; CHECK-NEXT:    [[TMP5:%.*]] = tail call i1 @llvm.vector.reduce.or.v8i1(<8 x i1> [[TMP4]])
+; CHECK-NEXT:    br i1 [[TMP5]], label %[[VECTOR_EARLY_EXIT:.*]], label %[[VECTOR_BODY_INTERIM]]
 ; CHECK:       [[VECTOR_BODY_INTERIM]]:
 ; CHECK-NEXT:    [[PROL_ITER_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[PROL_ITER_CMP_NOT:%.*]] = icmp eq i64 [[PROL_ITER_NEXT]], [[XTRAITER]]

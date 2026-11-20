@@ -1931,6 +1931,53 @@ define i1 @freeze_other_uses_requeues_user(i32 %a, i32 %b) {
   ret i1 %r
 }
 
+define <4 x i32> @freeze_splat(i32 %x) {
+; CHECK-LABEL: define <4 x i32> @freeze_splat(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[X_FR:%.*]] = freeze i32 [[X]]
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[X_FR]], i64 0
+; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i32> [[DOTSPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    ret <4 x i32> [[DOTSPLAT]]
+;
+  %ins = insertelement <4 x i32> poison, i32 %x, i64 0
+  %splat = shufflevector <4 x i32> %ins, <4 x i32> poison, <4 x i32> zeroinitializer
+  %fr = freeze <4 x i32> %splat
+  ret <4 x i32> %fr
+}
+
+define <vscale x 4 x i32> @freeze_splat_scalable(i32 %x) {
+; CHECK-LABEL: define <vscale x 4 x i32> @freeze_splat_scalable(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[X_FR:%.*]] = freeze i32 [[X]]
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[X_FR]], i64 0
+; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[DOTSPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[DOTSPLAT]]
+;
+  %ins = insertelement <vscale x 4 x i32> poison, i32 %x, i64 0
+  %splat = shufflevector <vscale x 4 x i32> %ins, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+  %fr = freeze <vscale x 4 x i32> %splat
+  ret <vscale x 4 x i32> %fr
+}
+
+; Negative test - the inserted vector has another use.
+define <4 x i32> @freeze_splat_insert_multiuse(i32 %x) {
+; CHECK-LABEL: define <4 x i32> @freeze_splat_insert_multiuse(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[INS:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i64 0
+; CHECK-NEXT:    call void @use_splat_v4i32(<4 x i32> [[INS]])
+; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <4 x i32> [[INS]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[FR:%.*]] = freeze <4 x i32> [[SPLAT]]
+; CHECK-NEXT:    ret <4 x i32> [[FR]]
+;
+  %ins = insertelement <4 x i32> poison, i32 %x, i64 0
+  call void @use_splat_v4i32(<4 x i32> %ins)
+  %splat = shufflevector <4 x i32> %ins, <4 x i32> poison, <4 x i32> zeroinitializer
+  %fr = freeze <4 x i32> %splat
+  ret <4 x i32> %fr
+}
+
+declare void @use_splat_v4i32(<4 x i32>)
+
 !0 = !{}
 !1 = !{i64 4}
 !2 = !{i32 0, i32 100}
