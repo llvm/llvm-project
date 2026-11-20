@@ -515,6 +515,41 @@ class Hexagon_i64_i64i32i32_Intrinsic<string GCCIntSuffix,
        [llvm_i64_ty], [llvm_i64_ty,llvm_i32_ty,llvm_i32_ty],
        intr_properties>;
 
+// tag : M8_cvt_rs_hf
+class Hexagon__i32_Intrinsic<string GCCIntSuffix,
+      list<IntrinsicProperty> intr_properties = [IntrNoMem]>
+  : Hexagon_Intrinsic<GCCIntSuffix,
+       [], [llvm_i32_ty],
+       intr_properties>;
+
+// tag : M8_mxclracc_hf
+class Hexagon___Intrinsic<string GCCIntSuffix,
+      list<IntrinsicProperty> intr_properties = [IntrNoMem]>
+  : Hexagon_Intrinsic<GCCIntSuffix,
+       [], [],
+       intr_properties>;
+
+// tag : M8_mxmem
+class Hexagon__ptri32_Intrinsic<string GCCIntSuffix,
+      list<IntrinsicProperty> intr_properties = [IntrNoMem]>
+  : Hexagon_Intrinsic<GCCIntSuffix,
+       [], [llvm_ptr_ty,llvm_i32_ty],
+       intr_properties>;
+
+// tag : M8_mxmem2_bias
+class Hexagon__ptr_Intrinsic<string GCCIntSuffix,
+      list<IntrinsicProperty> intr_properties = [IntrNoMem]>
+  : Hexagon_Intrinsic<GCCIntSuffix,
+       [], [llvm_ptr_ty],
+       intr_properties>;
+
+// tag : M8_mxmem_blk_sm_act_hf
+class Hexagon__i32i32_Intrinsic<string GCCIntSuffix,
+      list<IntrinsicProperty> intr_properties = [IntrNoMem]>
+  : Hexagon_Intrinsic<GCCIntSuffix,
+       [], [llvm_i32_ty,llvm_i32_ty],
+       intr_properties>;
+
 // tag : S2_insert
 class Hexagon_i32_i32i32i32i32_Intrinsic<string GCCIntSuffix,
       list<IntrinsicProperty> intr_properties = [IntrNoMem]>
@@ -1271,20 +1306,6 @@ class Hexagon_v64i32_v64i32v32i32_Intrinsic<string GCCIntSuffix,
        [llvm_v64i32_ty], [llvm_v64i32_ty,llvm_v32i32_ty],
        intr_properties>;
 
-// tag : Y2_dccleana
-class Hexagon__ptr_Intrinsic<string GCCIntSuffix,
-      list<IntrinsicProperty> intr_properties = [IntrNoMem]>
-  : Hexagon_Intrinsic<GCCIntSuffix,
-       [], [llvm_ptr_ty],
-       intr_properties>;
-
-// tag : Y4_l2fetch
-class Hexagon__ptri32_Intrinsic<string GCCIntSuffix,
-      list<IntrinsicProperty> intr_properties = [IntrNoMem]>
-  : Hexagon_Intrinsic<GCCIntSuffix,
-       [], [llvm_ptr_ty,llvm_i32_ty],
-       intr_properties>;
-
 // tag : Y5_l2fetch
 class Hexagon__ptri64_Intrinsic<string GCCIntSuffix,
       list<IntrinsicProperty> intr_properties = [IntrNoMem]>
@@ -1304,18 +1325,6 @@ class Hexagon_i32__Intrinsic<string GCCIntSuffix,
       list<IntrinsicProperty> intr_properties = [IntrNoMem]>
   : Hexagon_Intrinsic<GCCIntSuffix,
        [llvm_i32_ty], [],
-       intr_properties>;
-
-class Hexagon___Intrinsic<string GCCIntSuffix,
-      list<IntrinsicProperty> intr_properties = [IntrNoMem]>
-  : Hexagon_Intrinsic<GCCIntSuffix,
-       [], [],
-       intr_properties>;
-
-class Hexagon__i32_Intrinsic<string GCCIntSuffix,
-      list<IntrinsicProperty> intr_properties = [IntrNoMem]>
-  : Hexagon_Intrinsic<GCCIntSuffix,
-       [], [llvm_i32_ty],
        intr_properties>;
 
 // V5 Scalar Instructions.
@@ -7482,6 +7491,40 @@ Hexagon_v32i32_v32i32v32i32_Intrinsic<"HEXAGON_V6_vsubuwwsat_dv">;
 
 def int_hexagon_V6_vsubuwwsat_dv_128B :
 Hexagon_v64i32_v64i32v64i32_Intrinsic<"HEXAGON_V6_vsubuwwsat_dv_128B">;
+
+// V68 HMX Instructions.
+
+def int_hexagon_M8_mxclracc_hf :
+Hexagon___Intrinsic<"HEXAGON_M8_mxclracc_hf", []>;
+
+def int_hexagon_M8_mxmem2_bias :
+Hexagon__ptr_Intrinsic<"HEXAGON_M8_mxmem2_bias", [IntrWriteMem, IntrHasSideEffects]>;
+
+def int_hexagon_M8_mxmem2_st_bias :
+Hexagon__ptr_Intrinsic<"HEXAGON_M8_mxmem2_st_bias", [IntrWriteMem, IntrHasSideEffects]>;
+
+def int_hexagon_M8_mxmem_blk_sm_act_hf :
+Hexagon__i32i32_Intrinsic<"HEXAGON_M8_mxmem_blk_sm_act_hf", [IntrConvergent, IntrNoDuplicate, IntrNoMerge, IntrHasSideEffects]>;
+
+def int_hexagon_M8_mxmem_sm_act_hf :
+Hexagon__i32i32_Intrinsic<"HEXAGON_M8_mxmem_sm_act_hf", [IntrConvergent, IntrNoDuplicate, IntrNoMerge, IntrHasSideEffects]>;
+
+def int_hexagon_M8_mxmem_wei_hf :
+Hexagon__i32i32_Intrinsic<"HEXAGON_M8_mxmem_wei_hf", [IntrConvergent, IntrNoDuplicate, IntrNoMerge, IntrHasSideEffects]>;
+
+def int_hexagon_M8_mxmemdp_wei_hf :
+Hexagon__i32i32_Intrinsic<"HEXAGON_M8_mxmemdp_wei_hf", [IntrConvergent, IntrNoDuplicate, IntrNoMerge, IntrHasSideEffects]>;
+
+def int_hexagon_M8_mxmems_blk_sm_act_hf :
+Hexagon__i32i32_Intrinsic<"HEXAGON_M8_mxmems_blk_sm_act_hf", [IntrConvergent, IntrNoDuplicate, IntrNoMerge, IntrHasSideEffects]>;
+
+// V73 HMX Instructions.
+
+def int_hexagon_M8_cvt_rs_hf :
+Hexagon__i32_Intrinsic<"HEXAGON_M8_cvt_rs_hf", [IntrHasSideEffects]>;
+
+def int_hexagon_M8_mxmem :
+Hexagon__ptri32_Intrinsic<"HEXAGON_M8_mxmem", [IntrWriteMem, IntrHasSideEffects]>;
 
 // V85 HLX Instructions.
 

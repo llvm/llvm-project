@@ -18,6 +18,7 @@
 //
 // #define ATOMIC_BOOL_LOCK_FREE see below
 // #define ATOMIC_CHAR_LOCK_FREE see below
+// #define ATOMIC_CHAR8_T_LOCK_FREE see below
 // #define ATOMIC_CHAR16_T_LOCK_FREE see below
 // #define ATOMIC_CHAR32_T_LOCK_FREE see below
 // #define ATOMIC_WCHAR_T_LOCK_FREE see below
@@ -124,6 +125,9 @@ static_assert(std::atomic<bool>::is_always_lock_free == (2 == ATOMIC_BOOL_LOCK_F
 static_assert(std::atomic<char>::is_always_lock_free == (2 == ATOMIC_CHAR_LOCK_FREE));
 static_assert(std::atomic<signed char>::is_always_lock_free == (2 == ATOMIC_CHAR_LOCK_FREE));
 static_assert(std::atomic<unsigned char>::is_always_lock_free == (2 == ATOMIC_CHAR_LOCK_FREE));
+#ifndef TEST_HAS_NO_CHAR8_T
+static_assert(std::atomic<char8_t>::is_always_lock_free == (2 == ATOMIC_CHAR8_T_LOCK_FREE));
+#endif
 static_assert(std::atomic<char16_t>::is_always_lock_free == (2 == ATOMIC_CHAR16_T_LOCK_FREE));
 static_assert(std::atomic<char32_t>::is_always_lock_free == (2 == ATOMIC_CHAR32_T_LOCK_FREE));
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS

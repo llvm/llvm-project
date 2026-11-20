@@ -3,6 +3,7 @@ Test inserting a breakpoint while inferior is executing.
 """
 
 import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import TestBase
 from lldbsuite.test import lldbutil
 
@@ -10,6 +11,7 @@ from lldbsuite.test import lldbutil
 class BreakpointWhileRunning(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
+    @skipIfWasm  # breakpoints set while running are never hit
     def test_breakpoint_while_running(self):
         self.build()
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(

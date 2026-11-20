@@ -462,3 +462,4 @@ body:             |
     %or:gpr(i64) = G_OR %add, %cmp_ext2
     $x0 = COPY %or(i64)
     RET_ReallyLR implicit $x0
+...

@@ -165,7 +165,7 @@ body:             |
     $sp = frame-destroy ADDXri $sp, 12, 0
     frame-destroy PAUTH_EPILOGUE implicit-def $lr, implicit $lr, implicit $sp
     RET undef $lr
-
+...
 # CHECK-LABEL:    name:            illegal0
 # CHECK:          body:             |
 # CHECK-NEXT:         bb.0 (%ir-block.0):

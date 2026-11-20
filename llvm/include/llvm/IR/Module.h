@@ -484,11 +484,19 @@ public:
   }
 
   /// Same as above, but without the attributes.
-  template <typename... ArgsTy>
+  template <typename... ArgsTy, typename = std::enable_if_t<std::conjunction_v<
+                                    std::is_convertible<ArgsTy, Type *>...>>>
   FunctionCallee getOrInsertFunction(StringRef Name, Type *RetTy,
                                      ArgsTy... Args) {
     return getOrInsertFunction(Name, AttributeList{}, RetTy, Args...);
   }
+
+  /// Look up the specified function in the module symbol table. If it does not
+  /// exist, insert a declaration of the function and invoke a callback to
+  /// initialize it. \p Name must not be empty or start with "llvm.".
+  FunctionCallee
+  getOrInsertFunction(StringRef Name, FunctionType *T,
+                      function_ref<void(Function &)> InitCallback);
 
   // Avoid an incorrect ordering that'd otherwise compile incorrectly.
   template <typename... ArgsTy>

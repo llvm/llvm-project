@@ -87,21 +87,14 @@ SymbolVendorELF::CreateInstance(const lldb::ModuleSP &module_sp,
           lldb::eSectionTypeDWARFDebugInfo, true))
     return nullptr;
 
-  // If the module specified a filespec, use that.
-  FileSpec fspec = module_sp->GetSymbolFileFileSpec();
-  // Otherwise, try gnu_debuglink, if one exists.
-  if (!fspec)
-    fspec = obj_file->GetDebugLink().value_or(FileSpec());
-
   LLDB_SCOPED_TIMERF("SymbolVendorELF::CreateInstance (module = %s)",
                      module_sp->GetFileSpec().GetPath().c_str());
 
-  ModuleSpec module_spec;
-
-  module_spec.GetFileSpec() = obj_file->GetFileSpec();
-  FileSystem::Instance().Resolve(module_spec.GetFileSpec());
-  module_spec.GetSymbolFileSpec() = fspec;
-  module_spec.GetUUID() = uuid;
+  ModuleSpec module_spec = module_sp->GetModuleSpec();
+  // Preserve the module's configured symbol file; otherwise try gnu_debuglink.
+  if (!module_spec.GetSymbolFileSpec())
+    module_spec.GetSymbolFileSpec() =
+        obj_file->GetDebugLink().value_or(FileSpec());
   FileSpecList search_paths = Target::GetDefaultDebugFileSearchPaths();
   FileSpec dsym_fspec = PluginManager::LocateExecutableSymbolFile(
       module_spec, search_paths, module_sp->GetSymbolLocatorStatistics());
