@@ -41,11 +41,14 @@ define amdgpu_kernel void @memset_size_4(ptr addrspace(1) %dst, i8 %val) {
 ; OPT4-NEXT:    ret void
 ;
 ; OPT0-LABEL: @memset_size_4(
-; OPT0-NEXT:    [[SETVALUE_SPLAT_SPLATINSERT:%.*]] = insertelement <4 x i8> poison, i8 [[VAL:%.*]], i64 0
-; OPT0-NEXT:    [[SETVALUE_SPLAT_SPLAT:%.*]] = shufflevector <4 x i8> [[SETVALUE_SPLAT_SPLATINSERT]], <4 x i8> poison, <4 x i32> zeroinitializer
-; OPT0-NEXT:    [[SETVALUE_SPLAT_CAST:%.*]] = bitcast <4 x i8> [[SETVALUE_SPLAT_SPLAT]] to i32
 ; OPT0-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST:%.*]], i64 0
-; OPT0-NEXT:    store i32 [[SETVALUE_SPLAT_CAST]], ptr addrspace(1) [[TMP1]], align 1
+; OPT0-NEXT:    store i8 [[VAL:%.*]], ptr addrspace(1) [[TMP1]], align 1
+; OPT0-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST]], i64 1
+; OPT0-NEXT:    store i8 [[VAL]], ptr addrspace(1) [[TMP2]], align 1
+; OPT0-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST]], i64 2
+; OPT0-NEXT:    store i8 [[VAL]], ptr addrspace(1) [[TMP3]], align 1
+; OPT0-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST]], i64 3
+; OPT0-NEXT:    store i8 [[VAL]], ptr addrspace(1) [[TMP4]], align 1
 ; OPT0-NEXT:    ret void
 ;
 ; OPT_NEG-LABEL: @memset_size_4(
@@ -62,19 +65,41 @@ define amdgpu_kernel void @memset_size_8(ptr addrspace(1) %dst, i8 %val) {
 ; OPT8-NEXT:    ret void
 ;
 ; OPT4-LABEL: @memset_size_8(
-; OPT4-NEXT:    [[SETVALUE_SPLAT_SPLATINSERT:%.*]] = insertelement <8 x i8> poison, i8 [[VAL:%.*]], i64 0
-; OPT4-NEXT:    [[SETVALUE_SPLAT_SPLAT:%.*]] = shufflevector <8 x i8> [[SETVALUE_SPLAT_SPLATINSERT]], <8 x i8> poison, <8 x i32> zeroinitializer
-; OPT4-NEXT:    [[SETVALUE_SPLAT_CAST:%.*]] = bitcast <8 x i8> [[SETVALUE_SPLAT_SPLAT]] to i64
 ; OPT4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST:%.*]], i64 0
-; OPT4-NEXT:    store i64 [[SETVALUE_SPLAT_CAST]], ptr addrspace(1) [[TMP1]], align 1
+; OPT4-NEXT:    store i8 [[VAL:%.*]], ptr addrspace(1) [[TMP1]], align 1
+; OPT4-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST]], i64 1
+; OPT4-NEXT:    store i8 [[VAL]], ptr addrspace(1) [[TMP2]], align 1
+; OPT4-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST]], i64 2
+; OPT4-NEXT:    store i8 [[VAL]], ptr addrspace(1) [[TMP3]], align 1
+; OPT4-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST]], i64 3
+; OPT4-NEXT:    store i8 [[VAL]], ptr addrspace(1) [[TMP4]], align 1
+; OPT4-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST]], i64 4
+; OPT4-NEXT:    store i8 [[VAL]], ptr addrspace(1) [[TMP5]], align 1
+; OPT4-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST]], i64 5
+; OPT4-NEXT:    store i8 [[VAL]], ptr addrspace(1) [[TMP6]], align 1
+; OPT4-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST]], i64 6
+; OPT4-NEXT:    store i8 [[VAL]], ptr addrspace(1) [[TMP7]], align 1
+; OPT4-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST]], i64 7
+; OPT4-NEXT:    store i8 [[VAL]], ptr addrspace(1) [[TMP8]], align 1
 ; OPT4-NEXT:    ret void
 ;
 ; OPT0-LABEL: @memset_size_8(
-; OPT0-NEXT:    [[SETVALUE_SPLAT_SPLATINSERT:%.*]] = insertelement <8 x i8> poison, i8 [[VAL:%.*]], i64 0
-; OPT0-NEXT:    [[SETVALUE_SPLAT_SPLAT:%.*]] = shufflevector <8 x i8> [[SETVALUE_SPLAT_SPLATINSERT]], <8 x i8> poison, <8 x i32> zeroinitializer
-; OPT0-NEXT:    [[SETVALUE_SPLAT_CAST:%.*]] = bitcast <8 x i8> [[SETVALUE_SPLAT_SPLAT]] to i64
 ; OPT0-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST:%.*]], i64 0
-; OPT0-NEXT:    store i64 [[SETVALUE_SPLAT_CAST]], ptr addrspace(1) [[TMP1]], align 1
+; OPT0-NEXT:    store i8 [[VAL:%.*]], ptr addrspace(1) [[TMP1]], align 1
+; OPT0-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST]], i64 1
+; OPT0-NEXT:    store i8 [[VAL]], ptr addrspace(1) [[TMP2]], align 1
+; OPT0-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST]], i64 2
+; OPT0-NEXT:    store i8 [[VAL]], ptr addrspace(1) [[TMP3]], align 1
+; OPT0-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST]], i64 3
+; OPT0-NEXT:    store i8 [[VAL]], ptr addrspace(1) [[TMP4]], align 1
+; OPT0-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST]], i64 4
+; OPT0-NEXT:    store i8 [[VAL]], ptr addrspace(1) [[TMP5]], align 1
+; OPT0-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST]], i64 5
+; OPT0-NEXT:    store i8 [[VAL]], ptr addrspace(1) [[TMP6]], align 1
+; OPT0-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST]], i64 6
+; OPT0-NEXT:    store i8 [[VAL]], ptr addrspace(1) [[TMP7]], align 1
+; OPT0-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST]], i64 7
+; OPT0-NEXT:    store i8 [[VAL]], ptr addrspace(1) [[TMP8]], align 1
 ; OPT0-NEXT:    ret void
 ;
 ; OPT_NEG-LABEL: @memset_size_8(
