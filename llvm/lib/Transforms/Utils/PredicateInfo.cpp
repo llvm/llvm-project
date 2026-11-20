@@ -370,15 +370,15 @@ void PredicateInfoBuilder::processAssume(
         auto [Ptr] = getAssumeNonNullInfo(OBU);
         if (shouldRename(Ptr))
           addInfoFor(OpsToRename, Ptr,
-                     new (Allocator)
-                         PredicateBundleAssume(Ptr, II, BundleAttr::NonNull));
+                     new (Allocator) PredicateBundleAssume(
+                         Ptr, II, BundleAttr::NonNull, OBU));
       } break;
       case BundleAttr::Range: {
         auto [Val, Range] = getAssumeRangeInfo(OBU);
         if (shouldRename(Val))
           addInfoFor(OpsToRename, Val,
-                     new (Allocator)
-                         PredicateRangeAssume(Val, II, std::move(Range)));
+                     new (Allocator) PredicateBundleAssume(
+                         Val, II, BundleAttr::Range, OBU));
       } break;
       default:
         break;
@@ -863,8 +863,8 @@ public:
         OS << "; assume predicate info {";
         if (auto *PBA = dyn_cast<PredicateBundleAssume>(PA)) {
           OS << " Attribute: " << getNameFromBundleAttr(PBA->AttrKind);
-          if (auto *PRA = dyn_cast<PredicateRangeAssume>(PBA)) {
-            OS << ", Range: " << PRA->Range;
+          if (PBA->AttrKind == BundleAttr::Range) {
+            OS << ", Range: " << getAssumeRangeInfo(PBA->OBU).Range;
           }
         } else {
           assert(isa<PredicateConditionAssume>(PA));

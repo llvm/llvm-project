@@ -134,29 +134,14 @@ protected:
 class PredicateBundleAssume : public PredicateAssume {
 public:
   BundleAttr AttrKind;
+  OperandBundleUse OBU;
   PredicateBundleAssume(Value *Op, IntrinsicInst *AssumeInst,
-                        BundleAttr AttrKind)
+                        BundleAttr AttrKind, OperandBundleUse OBU)
       : PredicateAssume(PT_BundleAssume, Op, AssumeInst, nullptr),
-        AttrKind(AttrKind) {}
+        AttrKind(AttrKind), OBU(OBU) {}
 
   static bool classof(const PredicateBase *PB) {
     return PB->Type == PT_BundleAssume;
-  }
-};
-
-class PredicateRangeAssume : public PredicateBundleAssume {
-public:
-  ConstantRange Range;
-
-  PredicateRangeAssume(Value *Op, IntrinsicInst *AssumeInst,
-                       ConstantRange Range)
-      : PredicateBundleAssume(Op, AssumeInst, BundleAttr::Range),
-        Range(std::move(Range)) {}
-
-  static bool classof(const PredicateBase *PB) {
-    return PB->Type == PT_BundleAssume &&
-           static_cast<const PredicateBundleAssume *>(PB)->AttrKind ==
-               BundleAttr::Range;
   }
 };
 
