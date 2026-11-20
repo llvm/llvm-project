@@ -276,5 +276,8 @@ PreservedAnalyses InternalizePass::run(Module &M, ModuleAnalysisManager &AM) {
   if (!internalizeModule(M))
     return PreservedAnalyses::all();
 
-  return PreservedAnalyses::none();
+  PreservedAnalyses PA;
+  PA.preserve<FunctionAnalysisManagerModuleProxy>();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }

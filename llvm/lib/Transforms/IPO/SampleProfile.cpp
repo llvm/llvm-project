@@ -146,6 +146,12 @@ cl::opt<int> SampleColdCallSiteThreshold(
     cl::desc("Threshold for inlining cold callsites"));
 } // namespace llvm
 
+static cl::opt<bool> PreserveDeferredInlines(
+    "sample-profile-preserve-deferred-inlines", cl::Hidden, cl::init(true),
+    cl::desc(
+        "In ThinLTO pre-link, add import hints for in-module targets of "
+        "deferred indirect calls so they can be imported with the caller."));
+
 namespace llvm {
 extern cl::opt<bool> EnableExtTspBlockPlacement;
 }
@@ -854,6 +860,12 @@ void SampleProfileLoader::emitOptimizationRemarksForInlineCandidates(
 void SampleProfileLoader::findExternalInlineCandidate(
     CallBase *CB, const FunctionSamples *Samples,
     DenseSet<GlobalValue::GUID> &InlinedGUIDs, uint64_t Threshold) {
+  // Normally only functions defined outside this module need import hints.
+  // The targets of a deferred indirect call are an exception: another module
+  // that imports the caller must import them too, and no direct call to them
+  // may survive to create a summary edge.
+  bool IncludeLocalTargets =
+      PreserveDeferredInlines && CB && CB->isIndirectCall();
 
   // If ExternalInlineAdvisor(ReplayInlineAdvisor) wants to inline an external
   // function make sure it's imported
@@ -883,7 +895,8 @@ void SampleProfileLoader::findExternalInlineCandidate(
     // Set threshold to zero to honor pre-inliner decision.
     if (UsePreInlinerDecision)
       Threshold = 0;
-    Samples->findInlinedFunctions(InlinedGUIDs, SymbolMap, Threshold);
+    Samples->findInlinedFunctions(InlinedGUIDs, SymbolMap, Threshold,
+                                  IncludeLocalTargets);
     return;
   }
 
@@ -907,20 +920,19 @@ void SampleProfileLoader::findExternalInlineCandidate(
     if (!PreInline && CalleeSample->getHeadSamplesEstimate() < Threshold)
       continue;
 
-    Function *Func = SymbolMap.lookup(CalleeSample->getFunction());
-    // Add to the import list only when it's defined out of module.
-    if (!Func || Func->isDeclaration())
-      InlinedGUIDs.insert(CalleeSample->getGUID());
+    // A pre-inlined context can have no samples. Unlike an external one, a
+    // local definition is then not worth importing into other modules.
+    FunctionSamples::addImportGUID(
+        InlinedGUIDs, SymbolMap, CalleeSample->getFunction(),
+        IncludeLocalTargets && CalleeSample->getTotalSamples());
 
     // Import hot CallTargets, which may not be available in IR because full
     // profile annotation cannot be done until backend compilation in ThinLTO.
     for (const auto &BS : CalleeSample->getBodySamples())
       for (const auto &TS : BS.second.getCallTargets())
-        if (TS.second > Threshold) {
-          const Function *Callee = SymbolMap.lookup(TS.first);
-          if (!Callee || Callee->isDeclaration())
-            InlinedGUIDs.insert(TS.first.getHashCode());
-        }
+        if (TS.second > Threshold)
+          FunctionSamples::addImportGUID(InlinedGUIDs, SymbolMap, TS.first,
+                                         IncludeLocalTargets);
 
     // Import hot child context profile associted with callees. Note that this
     // may have some overlap with the call target loop above, but doing this

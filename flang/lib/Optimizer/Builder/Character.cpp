@@ -15,7 +15,7 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMMemoryIntrinsicOps.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
 
@@ -280,16 +280,6 @@ fir::factory::CharacterExprHelper::createElementAddr(mlir::Value buffer,
   return fir::CoordinateOp::create(builder, loc, singleRefTy, coor, i);
 }
 
-/// Load a character out of `buff` from offset `index`.
-/// `buff` must be a reference to memory.
-mlir::Value
-fir::factory::CharacterExprHelper::createLoadCharAt(mlir::Value buff,
-                                                    mlir::Value index) {
-  LLVM_DEBUG(llvm::dbgs() << "load a char: " << buff << " type: "
-                          << buff.getType() << " at: " << index << '\n');
-  return fir::LoadOp::create(builder, loc, createElementAddr(buff, index));
-}
-
 /// Store the singleton character `c` to `str` at offset `index`.
 /// `str` must be a reference to memory.
 void fir::factory::CharacterExprHelper::createStoreCharAt(mlir::Value str,
@@ -484,31 +474,6 @@ void fir::factory::CharacterExprHelper::createAssign(
         mlir::arith::SubIOp::create(builder, loc, lhs.getLen(), one);
     createPadding(lhs, copyCount, maxPadding);
   }
-}
-
-fir::CharBoxValue fir::factory::CharacterExprHelper::createConcatenate(
-    const fir::CharBoxValue &lhs, const fir::CharBoxValue &rhs, bool useHeap) {
-  auto lhsLen = builder.createConvert(loc, builder.getCharacterLengthType(),
-                                      lhs.getLen());
-  auto rhsLen = builder.createConvert(loc, builder.getCharacterLengthType(),
-                                      rhs.getLen());
-  mlir::Value len = mlir::arith::AddIOp::create(builder, loc, lhsLen, rhsLen);
-  auto temp = createCharacterTemp(getCharacterType(rhs), len, useHeap);
-  createCopy(temp, lhs, lhsLen);
-  auto one = builder.createIntegerConstant(loc, len.getType(), 1);
-  auto upperBound = mlir::arith::SubIOp::create(builder, loc, len, one);
-  auto lhsLenIdx = builder.createConvert(loc, builder.getIndexType(), lhsLen);
-  auto fromBuff = getCharBoxBuffer(rhs);
-  auto toBuff = getCharBoxBuffer(temp);
-  fir::factory::DoLoopHelper{builder, loc}.createLoop(
-      lhsLenIdx, upperBound, one,
-      [&](fir::FirOpBuilder &bldr, mlir::Value index) {
-        auto rhsIndex =
-            mlir::arith::SubIOp::create(bldr, loc, index, lhsLenIdx);
-        auto charVal = createLoadCharAt(fromBuff, rhsIndex);
-        createStoreCharAt(toBuff, index, charVal);
-      });
-  return temp;
 }
 
 mlir::Value fir::factory::CharacterExprHelper::genSubstringBase(

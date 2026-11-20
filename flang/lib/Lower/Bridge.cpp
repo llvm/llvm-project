@@ -13,6 +13,7 @@
 #include "flang/Lower/Bridge.h"
 
 #include "flang/Evaluate/tools.h"
+#include "flang/Evaluate/traverse.h"
 #include "flang/Lower/Allocatable.h"
 #include "flang/Lower/CUDA.h"
 #include "flang/Lower/CallInterface.h"
@@ -84,7 +85,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/Triple.h"
 #include <optional>
 #include <set>
 
@@ -553,6 +554,25 @@ using IncrementLoopNestInfo = llvm::SmallVector<IncrementLoopInfo, 8>;
 //===----------------------------------------------------------------------===//
 
 namespace {
+
+/// Find the first component reference of an expression that designates the
+/// given component symbol.
+struct CUDAComponentFinder
+    : public Fortran::evaluate::AnyTraverse<CUDAComponentFinder> {
+  using Base = Fortran::evaluate::AnyTraverse<CUDAComponentFinder>;
+  explicit CUDAComponentFinder(const Fortran::semantics::Symbol &sym)
+      : Base{*this}, sym{sym} {}
+  using Base::operator();
+  bool operator()(const Fortran::evaluate::Component &component) const {
+    if (&component.GetLastSymbol().GetUltimate() == &sym) {
+      found = &component;
+      return true;
+    }
+    return (*this)(component.base());
+  }
+  const Fortran::semantics::Symbol &sym;
+  mutable const Fortran::evaluate::Component *found{nullptr};
+};
 
 /// Traverse the pre-FIR tree (PFT) to generate the FIR dialect of MLIR.
 class FirConverter : public Fortran::lower::AbstractConverter {
@@ -5784,8 +5804,13 @@ private:
     auto transferKindAttr = cuf::DataTransferKindAttr::get(
         builder.getContext(), cuf::DataTransferKind::DeviceHost);
     [[maybe_unused]] unsigned nbDeviceResidentObject = 0;
+    // The attribute of a component hides the one of its base.
+    Fortran::semantics::UnorderedSymbolSet effectiveSymbols{
+        Fortran::evaluate::CollectEffectiveCudaSymbols(assign.rhs)};
     for (const Fortran::semantics::Symbol &sym :
          Fortran::evaluate::CollectSymbols(assign.rhs)) {
+      if (!effectiveSymbols.count(sym.GetUltimate()))
+        continue;
       if (const auto *details =
               sym.GetUltimate()
                   .detailsIf<Fortran::semantics::ObjectEntityDetails>()) {
@@ -5794,10 +5819,28 @@ private:
           assert(
               nbDeviceResidentObject <= 1 &&
               "Only one reference to the device resident object is supported");
-          auto addr = getSymbolAddress(sym);
+          // A component has no address of its own: lower the component
+          // reference of the expression, and later override that reference
+          // with the temporary.
+          const Fortran::evaluate::Component *component = nullptr;
+          mlir::Value addr;
+          Fortran::lower::StatementContext stmtCtx;
+          if (sym.GetUltimate().owner().IsDerivedType()) {
+            CUDAComponentFinder finder{sym.GetUltimate()};
+            finder(assign.rhs);
+            component = finder.found;
+            if (!component)
+              continue;
+            addr = Fortran::lower::convertDataRefToHLFIRVariable(
+                       loc, *this, Fortran::evaluate::DataRef{*component},
+                       localSymbols, stmtCtx)
+                       .getBase();
+          } else {
+            addr = getSymbolAddress(sym);
+          }
           mlir::Value baseValue;
-          if (auto declareOp =
-                  llvm::dyn_cast<hlfir::DeclareOp>(addr.getDefiningOp()))
+          if (auto declareOp = mlir::dyn_cast_or_null<hlfir::DeclareOp>(
+                  addr.getDefiningOp()))
             baseValue = declareOp.getBase();
           else
             baseValue = addr;
@@ -5812,12 +5855,21 @@ private:
             else
               temps.push_back(temp);
           }
-          addSymbol(sym,
-                    hlfir::translateToExtendedValue(loc, builder, temp).first,
-                    /*forced=*/true);
+          if (component) {
+            auto tempVar =
+                mlir::dyn_cast_or_null<fir::FortranVariableOpInterface>(
+                    temp.getDefiningOp());
+            assert(tempVar && "implicit data transfer of a device component");
+            localSymbols.addComponentOverride(*component, tempVar);
+          } else {
+            addSymbol(sym,
+                      hlfir::translateToExtendedValue(loc, builder, temp).first,
+                      /*forced=*/true);
+          }
           cuf::DataTransferOp::create(builder, loc, addr, temp,
                                       /*shape=*/mlir::Value{},
                                       transferKindAttr);
+          stmtCtx.finalizeAndPop();
           ++nbDeviceResidentObject;
         }
       }
@@ -7459,7 +7511,7 @@ Fortran::lower::LoweringBridge::LoweringBridge(
     const Fortran::lower::LoweringOptions &loweringOptions,
     const std::vector<Fortran::lower::EnvironmentDefault> &envDefaults,
     const Fortran::common::LanguageFeatureControl &languageFeatures,
-    const llvm::TargetMachine &targetMachine,
+    llvm::StringRef targetFeatures,
     const Fortran::frontend::TargetOptions &targetOpts,
     const Fortran::frontend::CodeGenOptions &cgOpts)
     : semanticsContext{semanticsContext}, defaultKinds{defaultKinds},
@@ -7520,18 +7572,17 @@ Fortran::lower::LoweringBridge::LoweringBridge(
   assert(*module && "module was not created");
   fir::setTargetTriple(*module, triple);
   fir::setKindMapping(*module, kindMap);
-  fir::setTargetCPU(*module, targetMachine.getTargetCPU());
+  fir::setTargetCPU(*module, targetOpts.cpu);
   fir::setTuneCPU(*module, targetOpts.cpuToTuneFor);
   fir::setAtomicIgnoreDenormalMode(*module,
                                    targetOpts.atomicIgnoreDenormalMode);
   fir::setAtomicFineGrainedMemory(*module, targetOpts.atomicFineGrainedMemory);
   fir::setAtomicRemoteMemory(*module, targetOpts.atomicRemoteMemory);
-  fir::setTargetFeatures(*module, targetMachine.getTargetFeatureString());
+  fir::setTargetFeatures(*module, targetFeatures);
   fir::setTargetABI(*module, targetOpts.abi);
   fir::support::setMLIRDataLayout(
       *module,
-      llvm::DataLayout(
-          targetMachine.getTargetTriple().computeDataLayout(targetOpts.abi)));
+      llvm::DataLayout(llvm::Triple(triple).computeDataLayout(targetOpts.abi)));
   fir::setIdent(*module, Fortran::common::getFlangFullVersion());
   fir::setRelocationModel(*module, cgOpts.getRelocationModel());
   fir::setIsPIE(*module, cgOpts.IsPIE);

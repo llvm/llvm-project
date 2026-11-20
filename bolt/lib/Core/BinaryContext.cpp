@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Core/BinaryContext.h"
+#include "bolt/Core/BinaryBasicBlock.h"
 #include "bolt/Core/BinaryEmitter.h"
 #include "bolt/Core/BinaryFunction.h"
 #include "bolt/Utils/CommandLineOpts.h"
@@ -242,8 +243,13 @@ Expected<std::unique_ptr<BinaryContext>> BinaryContext::createBinaryContext(
         Twine("BOLT-ERROR: no register info for target ", TripleName));
 
   // Set up disassembler. The MCAsmInfo holds a reference to MCTargetOptions, so
-  // make it static to outlive the AsmInfo.
-  static const MCTargetOptions MCOptions;
+  // make it static to outlive the AsmInfo. Point it at the library options
+  // parsed from the command line (e.g. -x86-align-branch*).
+  static const MCTargetOptions MCOptions = [] {
+    MCTargetOptions Options;
+    Options.LibraryOptions = &opts::LibraryOptionsCtx;
+    return Options;
+  }();
   std::unique_ptr<MCAsmInfo> AsmInfo(
       TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
   if (!AsmInfo)
@@ -2306,6 +2312,10 @@ void BinaryContext::collectDebugScopeBoundaries() {
     if (std::optional<uint64_t> DWOId = CU->getDWOId())
       releaseDWOCU(*DWOId);
   }
+}
+
+bool BinaryContext::shouldEmitBlockAlignment(const BinaryBasicBlock &BB) const {
+  return (AlignBlocks || PreserveBlocksAlignment) && BB.getAlignment() > 1;
 }
 
 bool BinaryContext::shouldEmit(const BinaryFunction &Function) const {

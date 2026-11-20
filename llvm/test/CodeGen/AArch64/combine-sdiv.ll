@@ -1457,13 +1457,13 @@ define i5 @combine_i5_sdiv_const100(i5 %x) {
 define i8 @combine_i8_sdiv_const7(i8 %x) {
 ; CHECK-SD-LABEL: combine_i8_sdiv_const7:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    sxtb w8, w0
-; CHECK-SD-NEXT:    mov w9, #-109 // =0xffffff93
-; CHECK-SD-NEXT:    mul w8, w8, w9
+; CHECK-SD-NEXT:    sxtb w9, w0
+; CHECK-SD-NEXT:    mov w8, #-109 // =0xffffff93
+; CHECK-SD-NEXT:    mul w8, w9, w8
 ; CHECK-SD-NEXT:    add w8, w0, w8, lsr #8
-; CHECK-SD-NEXT:    sbfx w9, w8, #2, #6
-; CHECK-SD-NEXT:    and w8, w8, #0x80
-; CHECK-SD-NEXT:    add w0, w9, w8, lsr #7
+; CHECK-SD-NEXT:    sxtb w9, w8
+; CHECK-SD-NEXT:    ubfx w8, w8, #7, #1
+; CHECK-SD-NEXT:    add w0, w8, w9, asr #2
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: combine_i8_sdiv_const7:
@@ -1886,12 +1886,19 @@ define <2 x i64> @combine_vec_sdiv_nonuniform_v2i64(<2 x i64> %x) {
 ;
 ; CHECK-GI-LABEL: combine_vec_sdiv_nonuniform_v2i64:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    fmov x9, d0
-; CHECK-GI-NEXT:    mov w8, #7 // =0x7
-; CHECK-GI-NEXT:    mov w10, #6 // =0x6
-; CHECK-GI-NEXT:    sdiv x8, x9, x8
+; CHECK-GI-NEXT:    mov x8, #18725 // =0x4925
+; CHECK-GI-NEXT:    fmov x10, d0
 ; CHECK-GI-NEXT:    mov x9, v0.d[1]
-; CHECK-GI-NEXT:    sdiv x9, x9, x10
+; CHECK-GI-NEXT:    movk x8, #9362, lsl #16
+; CHECK-GI-NEXT:    movk x8, #37449, lsl #32
+; CHECK-GI-NEXT:    movk x8, #18724, lsl #48
+; CHECK-GI-NEXT:    smulh x8, x10, x8
+; CHECK-GI-NEXT:    mov x10, #-6148914691236517206 // =0xaaaaaaaaaaaaaaaa
+; CHECK-GI-NEXT:    eor x10, x10, #0x8000000000000001
+; CHECK-GI-NEXT:    smulh x9, x9, x10
+; CHECK-GI-NEXT:    asr x8, x8, #1
+; CHECK-GI-NEXT:    add x8, x8, x8, lsr #63
+; CHECK-GI-NEXT:    add x9, x9, x9, lsr #63
 ; CHECK-GI-NEXT:    fmov d0, x8
 ; CHECK-GI-NEXT:    mov v0.d[1], x9
 ; CHECK-GI-NEXT:    ret
