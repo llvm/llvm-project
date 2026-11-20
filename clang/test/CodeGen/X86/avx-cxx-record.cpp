@@ -16,9 +16,8 @@ struct XMM2 : XMM1<0>, XMM1<1> {
 // CHECK: define{{.*}} @_Z3foov({{.*}} [[ARG:%.*]]){{.*}}
 // CLANG-20: define{{.*}} <4 x double> @_Z3foov()
 // CHECK: entry:
+// The field stores can be combined; check the sret destination.
 // CHECK-NEXT: store {{.*}}, ptr [[ARG]]{{.*}}
-// CHECK-NEXT: [[TMP1:%.*]] = getelementptr {{.*}}, ptr [[ARG]]{{.*}}
-// CHECK-NEXT: store {{.*}}, ptr [[TMP1]]{{.*}}
 XMM2 foo() {
   XMM2 result;
   ((XMM1<0>*)&result)->x = UInt64x2{1, 2};
