@@ -1162,12 +1162,20 @@ def hlfir_YieldElementOp : hlfir_Op<"yield_element", [Terminator,
     When an elemental is inlined, this cleanup must follow the consumption of
     its scalar result. When inlined into another elemental, it can be appended
     to that elemental's yield cleanup.
+
+    The yielded entity must be a value, not an address or a descriptor
+    of a variable, so that any read of memory needed to produce the element
+    value is done by operations inside the hlfir.elemental region, where it
+    is visible to memory effect analysis. A variable can be turned into a
+    value with fir.load for trivial types, or hlfir.as_expr otherwise.
   }];
 
   let arguments = (ins AnyType:$element_value);
   let regions = (region MaxSizedRegion<1>:$cleanup);
 
   let assemblyFormat = "$element_value attr-dict `:` type($element_value) custom<YieldOpCleanup>($cleanup)";
+
+  let hasVerifier = 1;
 }
 
 def hlfir_ApplyOp : hlfir_Op<"apply", [NoMemoryEffect, AttrSizedOperandSegments]> {

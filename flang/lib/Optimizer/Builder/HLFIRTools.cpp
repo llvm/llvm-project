@@ -915,6 +915,20 @@ static hlfir::ExprType getArrayExprType(mlir::Type elementType,
                               isPolymorphic);
 }
 
+std::pair<hlfir::Entity, std::optional<hlfir::CleanupFunction>>
+hlfir::genElementalYieldValue(mlir::Location loc, fir::FirOpBuilder &builder,
+                              hlfir::Entity entity) {
+  if (!entity.isVariable())
+    return {entity, std::nullopt};
+  entity = hlfir::loadTrivialScalar(loc, builder, entity);
+  if (!entity.isVariable())
+    return {entity, std::nullopt};
+  mlir::Value copy = hlfir::AsExprOp::create(builder, loc, entity);
+  fir::FirOpBuilder *bldr = &builder;
+  return {hlfir::Entity{copy},
+          [=]() { hlfir::DestroyOp::create(*bldr, loc, copy); }};
+}
+
 hlfir::ElementalOp hlfir::genElementalOp(
     mlir::Location loc, fir::FirOpBuilder &builder, mlir::Type elementType,
     mlir::Value shape, mlir::ValueRange typeParams,
@@ -927,7 +941,9 @@ hlfir::ElementalOp hlfir::genElementalOp(
   auto insertPt = builder.saveInsertionPoint();
   builder.setInsertionPointToStart(elementalOp.getBody());
   auto [element, cleanup] = genKernel(loc, builder, elementalOp.getIndices());
-  mlir::Value elementResult = element;
+  auto [elementValue, copyCleanup] =
+      genElementalYieldValue(loc, builder, element);
+  mlir::Value elementResult = elementValue;
   // Numerical and logical scalars may be lowered to another type than the
   // Fortran expression type (e.g i1 instead of fir.logical). Array expression
   // values are typed according to their Fortran type. Insert a cast if needed
@@ -935,9 +951,13 @@ hlfir::ElementalOp hlfir::genElementalOp(
   if (fir::isa_trivial(elementResult.getType()))
     elementResult = builder.createConvert(loc, elementType, elementResult);
   auto yield = hlfir::YieldElementOp::create(builder, loc, elementResult);
-  if (cleanup) {
+  if (cleanup || copyCleanup) {
     builder.createBlock(&yield.getCleanup());
-    (*cleanup)();
+    // The copy was created last, so it is destroyed first.
+    if (copyCleanup)
+      (*copyCleanup)();
+    if (cleanup)
+      (*cleanup)();
     if (yield.getCleanup().front().empty())
       yield.getCleanup().front().erase();
     else
@@ -1393,6 +1413,10 @@ hlfir::convertToAddress(mlir::Location loc, fir::FirOpBuilder &builder,
 ///    %hlfir.yield_element %value : T
 ///  }
 /// ```
+///
+/// For non trivial types (derived types, characters, polymorphic entities),
+/// the element is copied into an hlfir.expr with an hlfir.as_expr by
+/// genElementalOp instead of being loaded.
 hlfir::ElementalOp
 hlfir::cloneToElementalOp(mlir::Location loc, fir::FirOpBuilder &builder,
                           hlfir::ElementalAddrOp elementalAddrOp) {
@@ -1413,8 +1437,7 @@ hlfir::cloneToElementalOp(mlir::Location loc, fir::FirOpBuilder &builder,
       b.clone(op, mapper);
     auto yield = mlir::cast<hlfir::YieldOp>(
         elementalAddrOp.getBody().back().getTerminator());
-    hlfir::Entity newAddr{mapper.lookupOrDefault(yield.getEntity())};
-    hlfir::Entity element = hlfir::loadTrivialScalar(l, b, newAddr);
+    hlfir::Entity element{mapper.lookupOrDefault(yield.getEntity())};
     if (yield.getCleanup().empty())
       return {element, std::nullopt};
     return {element, getElementCleanup(yield.getCleanup(), b, mapper)};

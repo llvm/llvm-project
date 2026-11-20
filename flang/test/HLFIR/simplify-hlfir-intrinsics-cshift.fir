@@ -240,7 +240,8 @@ func.func @cshift_vector_char(%arg0: !fir.box<!fir.array<?x!fir.char<2,?>>>, %ar
 // CHECK:             %[[VAL_32:.*]] = arith.subi %[[VAL_31]]#0, %[[VAL_2]] overflow<nsw> : index
 // CHECK:             %[[VAL_33:.*]] = arith.addi %[[VAL_28]], %[[VAL_32]] overflow<nsw> : index
 // CHECK:             %[[VAL_34:.*]] = hlfir.designate %[[VAL_0]] (%[[VAL_33]])  typeparams %[[VAL_30]] : (!fir.box<!fir.array<?x!fir.char<2,?>>>, index, index) -> !fir.boxchar<2>
-// CHECK:             hlfir.yield_element %[[VAL_34]] : !fir.boxchar<2>
+// CHECK:             %[[VAL_34_EXPR:.*]] = hlfir.as_expr %[[VAL_34]] : (!fir.boxchar<2>) -> !hlfir.expr<!fir.char<2,?>>
+// CHECK:             hlfir.yield_element %[[VAL_34_EXPR]] : !hlfir.expr<!fir.char<2,?>>
 // CHECK:           }
 // CHECK:           return %[[VAL_20]] : !hlfir.expr<?x!fir.char<2,?>>
 // CHECK:         }
@@ -282,7 +283,8 @@ func.func @cshift_vector_poly(%arg0: !fir.class<!fir.array<?x!fir.type<_QFFtestT
 // CHECK:             %[[VAL_26:.*]] = arith.subi %[[VAL_25]]#0, %[[VAL_2]] overflow<nsw> : index
 // CHECK:             %[[VAL_27:.*]] = arith.addi %[[VAL_24]], %[[VAL_26]] overflow<nsw> : index
 // CHECK:             %[[VAL_28:.*]] = hlfir.designate %[[VAL_0]] (%[[VAL_27]])  : (!fir.class<!fir.array<?x!fir.type<_QFFtestTt>>>, index) -> !fir.class<!fir.type<_QFFtestTt>>
-// CHECK:             hlfir.yield_element %[[VAL_28]] : !fir.class<!fir.type<_QFFtestTt>>
+// CHECK:             %[[VAL_28_EXPR:.*]] = hlfir.as_expr %[[VAL_28]] : (!fir.class<!fir.type<_QFFtestTt>>) -> !hlfir.expr<!fir.type<_QFFtestTt>?>
+// CHECK:             hlfir.yield_element %[[VAL_28_EXPR]] : !hlfir.expr<!fir.type<_QFFtestTt>?>
 // CHECK:           }
 // CHECK:           return %[[VAL_16]] : !hlfir.expr<?x!fir.type<_QFFtestTt>?>
 // CHECK:         }

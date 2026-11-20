@@ -119,7 +119,8 @@ func.func @reshape_derived_obj(%arg0: !fir.ref<!fir.array<10x!fir.type<whatever>
 // CHECK:           %[[VAL_6:.*]] = hlfir.elemental %[[VAL_5]] unordered : (!fir.shape<1>) -> !hlfir.expr<?x!fir.type<whatever>> {
 // CHECK:           ^bb0(%[[VAL_7:.*]]: index):
 // CHECK:             %[[VAL_8:.*]] = hlfir.designate %[[VAL_0]] (%[[VAL_7]])  : (!fir.ref<!fir.array<10x!fir.type<whatever>>>, index) -> !fir.ref<!fir.type<whatever>>
-// CHECK:             hlfir.yield_element %[[VAL_8]] : !fir.ref<!fir.type<whatever>>
+// CHECK:             %[[VAL_8_EXPR:.*]] = hlfir.as_expr %[[VAL_8]] : (!fir.ref<!fir.type<whatever>>) -> !hlfir.expr<!fir.type<whatever>>
+// CHECK:             hlfir.yield_element %[[VAL_8_EXPR]] : !hlfir.expr<!fir.type<whatever>>
 // CHECK:           }
 // CHECK:           return %[[VAL_6]] : !hlfir.expr<?x!fir.type<whatever>>
 // CHECK:         }
@@ -161,7 +162,8 @@ func.func @reshape_poly_obj(%arg0: !fir.class<!fir.array<?x!fir.type<whatever>>>
 // CHECK:             %[[VAL_10:.*]] = arith.subi %[[VAL_9]]#0, %[[VAL_2]] overflow<nsw> : index
 // CHECK:             %[[VAL_11:.*]] = arith.addi %[[VAL_8]], %[[VAL_10]] overflow<nsw> : index
 // CHECK:             %[[VAL_12:.*]] = hlfir.designate %[[VAL_0]] (%[[VAL_11]])  : (!fir.class<!fir.array<?x!fir.type<whatever>>>, index) -> !fir.class<!fir.type<whatever>>
-// CHECK:             hlfir.yield_element %[[VAL_12]] : !fir.class<!fir.type<whatever>>
+// CHECK:             %[[VAL_12_EXPR:.*]] = hlfir.as_expr %[[VAL_12]] : (!fir.class<!fir.type<whatever>>) -> !hlfir.expr<!fir.type<whatever>?>
+// CHECK:             hlfir.yield_element %[[VAL_12_EXPR]] : !hlfir.expr<!fir.type<whatever>?>
 // CHECK:           }
 // CHECK:           return %[[VAL_7]] : !hlfir.expr<?x!fir.type<whatever>?>
 // CHECK:         }
@@ -208,7 +210,8 @@ func.func @reshape_char(%arg0: !fir.box<!fir.array<?x!fir.char<2,?>>>, %arg1: !f
 // CHECK:             %[[VAL_15:.*]] = arith.subi %[[VAL_14]]#0, %[[VAL_2]] overflow<nsw> : index
 // CHECK:             %[[VAL_16:.*]] = arith.addi %[[VAL_11]], %[[VAL_15]] overflow<nsw> : index
 // CHECK:             %[[VAL_17:.*]] = hlfir.designate %[[VAL_0]] (%[[VAL_16]])  typeparams %[[VAL_13]] : (!fir.box<!fir.array<?x!fir.char<2,?>>>, index, index) -> !fir.boxchar<2>
-// CHECK:             hlfir.yield_element %[[VAL_17]] : !fir.boxchar<2>
+// CHECK:             %[[VAL_17_EXPR:.*]] = hlfir.as_expr %[[VAL_17]] : (!fir.boxchar<2>) -> !hlfir.expr<!fir.char<2,?>>
+// CHECK:             hlfir.yield_element %[[VAL_17_EXPR]] : !hlfir.expr<!fir.char<2,?>>
 // CHECK:           }
 // CHECK:           return %[[VAL_10]] : !hlfir.expr<?x!fir.char<2,?>>
 // CHECK:         }
