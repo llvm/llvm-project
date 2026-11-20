@@ -836,6 +836,7 @@ define <2 x bfloat> @from_f8e5m2_v2bf16(<2 x i8> %x) {
 ; CHECK-NEXT:    shll $23, %r10d
 ; CHECK-NEXT:    orl %r8d, %r10d
 ; CHECK-NEXT:    leal 939524096(%rcx,%r10), %r10d
+; CHECK-NEXT:    xorl %r11d, %r11d
 ; CHECK-NEXT:    bsrl %r9d, %r11d
 ; CHECK-NEXT:    movl %r9d, %ebx
 ; CHECK-NEXT:    btcl %r11d, %ebx

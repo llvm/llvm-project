@@ -209,6 +209,7 @@ define i64 @cmov_bsr64(i64 %x, i64 %y) nounwind {
 ; X86-NEXT:    testl %ecx, %ecx
 ; X86-NEXT:    jne .LBB6_3
 ; X86-NEXT:  # %bb.4: # %cond.false
+; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    bsrl %edx, %eax
 ; X86-NEXT:    xorl $31, %eax
 ; X86-NEXT:    orl $32, %eax
@@ -224,6 +225,7 @@ define i64 @cmov_bsr64(i64 %x, i64 %y) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB6_3:
+; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    bsrl %ecx, %eax
 ; X86-NEXT:    xorl $31, %eax
 ; X86-NEXT:    orl %ecx, %edx
@@ -309,12 +311,14 @@ define i128 @cmov_bsr128(i128 %x, i128 %y) nounwind {
 ; X86-NEXT:    jne .LBB8_3
 ; X86-NEXT:  # %bb.4: # %cond.false
 ; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    xorl %esi, %esi
 ; X86-NEXT:    bsrl %ebx, %esi
 ; X86-NEXT:    xorl $31, %esi
 ; X86-NEXT:    orl $32, %esi
 ; X86-NEXT:    testl %edi, %edi
 ; X86-NEXT:    je .LBB8_7
 ; X86-NEXT:  .LBB8_6:
+; X86-NEXT:    xorl %ecx, %ecx
 ; X86-NEXT:    bsrl %edi, %ecx
 ; X86-NEXT:    xorl $31, %ecx
 ; X86-NEXT:    orl %eax, %ebx
@@ -331,6 +335,7 @@ define i128 @cmov_bsr128(i128 %x, i128 %y) nounwind {
 ; X86-NEXT:    testl %edi, %edi
 ; X86-NEXT:    jne .LBB8_6
 ; X86-NEXT:  .LBB8_7: # %cond.false
+; X86-NEXT:    xorl %ecx, %ecx
 ; X86-NEXT:    bsrl %edx, %ecx
 ; X86-NEXT:    xorl $31, %ecx
 ; X86-NEXT:    orl $32, %ecx
@@ -410,11 +415,13 @@ define i128 @cmov_bsr128_undef(i128 %x, i128 %y) nounwind {
 ; X86-NEXT:    testl %eax, %eax
 ; X86-NEXT:    jne .LBB9_1
 ; X86-NEXT:  # %bb.2:
+; X86-NEXT:    xorl %esi, %esi
 ; X86-NEXT:    bsrl %edi, %esi
 ; X86-NEXT:    xorl $31, %esi
 ; X86-NEXT:    orl $32, %esi
 ; X86-NEXT:    jmp .LBB9_3
 ; X86-NEXT:  .LBB9_1:
+; X86-NEXT:    xorl %esi, %esi
 ; X86-NEXT:    bsrl %eax, %esi
 ; X86-NEXT:    xorl $31, %esi
 ; X86-NEXT:  .LBB9_3:

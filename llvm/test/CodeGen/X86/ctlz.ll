@@ -143,6 +143,7 @@ define i64 @ctlz_i64(i64 %x) {
 ; X86-NOCMOV-NEXT:    testl %eax, %eax
 ; X86-NOCMOV-NEXT:    jne .LBB3_1
 ; X86-NOCMOV-NEXT:  # %bb.2:
+; X86-NOCMOV-NEXT:    xorl %eax, %eax
 ; X86-NOCMOV-NEXT:    bsrl {{[0-9]+}}(%esp), %eax
 ; X86-NOCMOV-NEXT:    xorl $31, %eax
 ; X86-NOCMOV-NEXT:    orl $32, %eax
@@ -411,6 +412,7 @@ define i64 @ctlz_i64_zero_test(i64 %n) nounwind {
 ; X86-NOCMOV-NEXT:    testl %eax, %eax
 ; X86-NOCMOV-NEXT:    jne .LBB7_3
 ; X86-NOCMOV-NEXT:  # %bb.4: # %cond.false
+; X86-NOCMOV-NEXT:    xorl %eax, %eax
 ; X86-NOCMOV-NEXT:    bsrl %ecx, %eax
 ; X86-NOCMOV-NEXT:    xorl $31, %eax
 ; X86-NOCMOV-NEXT:    orl $32, %eax
@@ -434,6 +436,7 @@ define i64 @ctlz_i64_zero_test(i64 %n) nounwind {
 ; X86-CMOV-NEXT:    cmovnel %eax, %edx
 ; X86-CMOV-NEXT:    xorl $31, %edx
 ; X86-CMOV-NEXT:    addl $32, %edx
+; X86-CMOV-NEXT:    xorl %eax, %eax
 ; X86-CMOV-NEXT:    bsrl %ecx, %eax
 ; X86-CMOV-NEXT:    xorl $31, %eax
 ; X86-CMOV-NEXT:    testl %ecx, %ecx
@@ -1131,6 +1134,7 @@ define i64 @ctlz_xor63_i64_true(i64 %x) {
 ; X86-NOCMOV-NEXT:    testl %eax, %eax
 ; X86-NOCMOV-NEXT:    jne .LBB19_1
 ; X86-NOCMOV-NEXT:  # %bb.2:
+; X86-NOCMOV-NEXT:    xorl %eax, %eax
 ; X86-NOCMOV-NEXT:    bsrl {{[0-9]+}}(%esp), %eax
 ; X86-NOCMOV-NEXT:    xorl $31, %eax
 ; X86-NOCMOV-NEXT:    orl $32, %eax

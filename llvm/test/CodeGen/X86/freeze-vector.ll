@@ -958,6 +958,7 @@ define void @freeze_dynamic_insertelement_wide_vector(ptr %vp, i32 %x, ptr %dst)
 ; X86-NEXT:    vmovaps 32(%ecx), %ymm1
 ; X86-NEXT:    vmovaps 64(%ecx), %ymm2
 ; X86-NEXT:    vmovaps 96(%ecx), %ymm3
+; X86-NEXT:    xorl %ecx, %ecx
 ; X86-NEXT:    bsrl 12(%ebp), %ecx
 ; X86-NEXT:    notl %ecx
 ; X86-NEXT:    andl $31, %ecx
@@ -1052,6 +1053,7 @@ define void @freeze_dynamic_insertelement_chain_wide_vector(ptr %vp, i32 %x, i32
 ; X86-NEXT:    vmovaps 32(%ecx), %ymm1
 ; X86-NEXT:    vmovaps 64(%ecx), %ymm2
 ; X86-NEXT:    vmovaps 96(%ecx), %ymm3
+; X86-NEXT:    xorl %ecx, %ecx
 ; X86-NEXT:    bsrl 12(%ebp), %ecx
 ; X86-NEXT:    notl %ecx
 ; X86-NEXT:    andl $31, %ecx
