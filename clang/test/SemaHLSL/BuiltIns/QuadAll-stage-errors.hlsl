@@ -13,8 +13,8 @@
 
 bool shared(bool cond) {
   return QuadAll(cond); // #shared
-  // dxil-error@#shared {{'QuadAll' is not supported in 'vertex' shaders}}
-  // dxil-error@#shared {{'QuadAll' is not supported in 'geometry' shaders}}
+  // dxil-error@#shared {{intrinsic 'QuadAll' is not supported in 'vertex'}}
+  // dxil-error@#shared {{intrinsic 'QuadAll' is not supported in 'geometry'}}
 }
 
 bool indirect(bool cond) {
@@ -25,7 +25,7 @@ bool indirect(bool cond) {
 void vertex() {
   indirect(true);
   (void)__builtin_hlsl_quad_all(true);
-  // dxil-error@-1 {{'QuadAll' is not supported in 'vertex' shaders}}
+  // dxil-error@-1 {{intrinsic 'QuadAll' is not supported in 'vertex' shaders}}
 }
 
 [shader("vertex")]

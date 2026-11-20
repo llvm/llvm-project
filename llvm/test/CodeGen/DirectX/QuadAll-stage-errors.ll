@@ -22,13 +22,8 @@
 ; RUN:   -mtriple=dxil-pc-shadermodel6.6-vertex %t/unused.ll \
 ; RUN:   | FileCheck %s --check-prefix=UNUSED
 
-; VERTEX: error: 'QuadAll' is not supported in 'vertex' shaders for DirectX; supported stages: 'compute', 'amplification', 'mesh', 'pixel', 'node' (function 'vote')
-; LIBRARY: error: 'QuadAll' is not supported in 'vertex' shaders for DirectX; supported stages: 'compute', 'amplification', 'mesh', 'pixel', 'node' (function 'vertex')
-; EMULATED: call i32 @llvm.dx.quad.read.across.x.i32
-; NATIVE: call i1 @llvm.dx.quad.all
-; UNUSED: define void @vertex()
-
 ;--- direct.ll
+; VERTEX: error: intrinsic 'QuadAll' is not supported in 'vertex' shaders for DirectX; supported stages: 'compute', 'amplification', 'mesh', 'pixel', 'node' (function 'vote')
 define i1 @vote(i1 %cond) {
   %ret = call i1 @llvm.dx.quad.all(i1 %cond)
   ret i1 %ret
@@ -42,6 +37,7 @@ define i1 @unused(i1 %cond) {
   ret i1 %ret
 }
 
+; UNUSED: define void @vertex()
 define void @vertex() #0 {
   ret void
 }
@@ -61,6 +57,7 @@ define i1 @compute(i1 %cond) #0 {
   ret i1 %ret
 }
 
+; LIBRARY: error: intrinsic 'QuadAll' is not supported in 'vertex' shaders for DirectX; supported stages: 'compute', 'amplification', 'mesh', 'pixel', 'node' (function 'vertex')
 define i1 @vertex(i1 %cond) #1 {
   %ret = call i1 @shared(i1 %cond)
   ret i1 %ret
@@ -73,6 +70,10 @@ declare i1 @llvm.dx.quad.all(i1)
 
 ;--- allowed.ll
 define i1 @exported(i1 %cond) {
+  ; EMULATED: call i32 @llvm.dx.quad.read.across.x.i32
+  ; EMULATED: call i32 @llvm.dx.quad.read.across.y.i32
+  ; EMULATED: call i32 @llvm.dx.quad.read.across.diagonal.i32
+  ; NATIVE: call i1 @llvm.dx.quad.all
   %ret = call i1 @llvm.dx.quad.all(i1 %cond)
   ret i1 %ret
 }
