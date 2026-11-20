@@ -146,3 +146,11 @@ lldb::TypeCategoryImplSP RustLanguage::GetFormatters() {
   });
   return g_category;
 }
+
+std::vector<lldb::LanguageType>
+RustLanguage::GetFormatterLanguages(lldb::LanguageType language) const {
+  if (language == lldb::eLanguageTypeRust)
+    return {lldb::eLanguageTypeRust, lldb::eLanguageTypeC_plus_plus,
+            lldb::eLanguageTypeObjC};
+  return {};
+}

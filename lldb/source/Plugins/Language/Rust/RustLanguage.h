@@ -46,6 +46,9 @@ public:
 
   lldb::TypeCategoryImplSP GetFormatters() override;
 
+  std::vector<lldb::LanguageType>
+  GetFormatterLanguages(lldb::LanguageType language) const override;
+
   // Static Functions
   static void Initialize();
 
