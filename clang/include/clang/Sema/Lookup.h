@@ -25,6 +25,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Sema/Sema.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Casting.h"
@@ -611,6 +612,8 @@ public:
     Paths = nullptr;
     NamingClass = nullptr;
     Shadowed = false;
+    HiddenEntities.clear();
+    AcceptableRedecls.clear();
   }
 
   /// Clears out any current state and re-initializes for a
@@ -827,6 +830,15 @@ private:
 
   /// True if we're looking up a template-name.
   bool TemplateNameLookup = false;
+
+  /// The canonical declarations of the entities that getAcceptableDeclSlow
+  /// was called for, and whether it was called for more than one of their
+  /// declarations.
+  mutable llvm::DenseMap<const Decl *, bool> HiddenEntities;
+
+  /// The acceptable redeclaration of each redeclaration of the entities that
+  /// getAcceptableDeclSlow was called for more than once.
+  mutable llvm::DenseMap<const NamedDecl *, NamedDecl *> AcceptableRedecls;
 };
 
 /// Consumes visible declarations found when searching for
