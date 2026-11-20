@@ -1,0 +1,38 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+!u1i = !cir.int<u, 1>
+
+cir.func @u1_out_of_range(%arg0: !u1i) {
+  cir.switch.flat %arg0 : !u1i, ^bb1 [
+    // expected-error@+1 {{case value out of range for '!cir.int<u, 1>'}}
+    2: ^bb1
+  ]
+  ^bb1:
+    cir.return
+}
+
+// -----
+
+!s8i = !cir.int<s, 8>
+
+cir.func @s8_out_of_range(%arg0: !s8i) {
+  cir.switch.flat %arg0 : !s8i, ^bb1 [
+    // expected-error@+1 {{case value out of range for '!cir.int<s, 8>'}}
+    128: ^bb1
+  ]
+  ^bb1:
+    cir.return
+}
+
+// -----
+
+!u32i = !cir.int<u, 32>
+
+cir.func @unsigned_negative(%arg0: !u32i) {
+  cir.switch.flat %arg0 : !u32i, ^bb1 [
+    // expected-error@+1 {{case value out of range for '!cir.int<u, 32>'}}
+    -1: ^bb1
+  ]
+  ^bb1:
+    cir.return
+}
