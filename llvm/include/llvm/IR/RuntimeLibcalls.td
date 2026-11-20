@@ -258,7 +258,7 @@ foreach IntTy = [TypeSuffix<"I8", UInt8>, TypeSuffix<"I16", UInt16>,
   def UREM_#IntTy.Suffix : PureLibcall<IntTy.Type, [IntTy.Type, IntTy.Type]>;
 }
 
-defvar OutPtrAttrs = [NoAlias, WriteOnly, NonNull];
+defvar OutPtrAttrs = [NoAlias, WriteOnly, NonNull, CapturesNone];
 defvar ReadPtrAttrs = [ReadOnly, CapturesNone];
 
 foreach IntTy = [TypeSuffix<"I32", Int32>, TypeSuffix<"I64", Int64>,
@@ -727,6 +727,9 @@ foreach FPTy = [F32, F64, F128, PPCF128] in {
 }
 
 // Memory
+
+defvar ChkFnAttrs = [NoCallback, NoFree, NoSync, NoUnwind];
+
 class MemCmpLibcall : RuntimeLibcall<Int, [Ptr, Ptr, SizeT]> {
   let FnAttrs = CommonFnAttrs;
   let Memory = ArgMemReadOnly;
@@ -741,26 +744,41 @@ def MEMCPY : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]> {
                     [NoAlias, ReadOnly]];
 }
 
-def MEMCPY_CHK : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT, SizeT]>;
+def MEMCPY_CHK : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT, SizeT]> {
+  let FnAttrs = ChkFnAttrs;
+  let Memory = ArgMemOnly;
+  let ParamAttrs = [[NoAlias, WriteOnly], [NoAlias, ReadOnly, CapturesNone]];
+}
+
 def MEMMOVE : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]> {
   let FnAttrs = CommonFnAttrs;
   let Memory = ArgMemOnly;
   let ParamAttrs = [[Returned, WriteOnly], [ReadOnly]];
 }
 
-def MEMMOVE_CHK : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT, SizeT]>;
+def MEMMOVE_CHK : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT, SizeT]> {
+  let FnAttrs = ChkFnAttrs;
+  let Memory = ArgMemOnly;
+  let ParamAttrs = [[WriteOnly], ReadPtrAttrs];
+}
+
 def MEMSET : RuntimeLibcall<Ptr, [Ptr, Int, SizeT]> {
   let FnAttrs = CommonFnAttrs;
   let Memory = ArgMemWriteOnly;
   let ParamAttrs = [[Returned, WriteOnly]];
 }
 
-def MEMSET_CHK : RuntimeLibcall<Ptr, [Ptr, Int, SizeT, SizeT]>;
+def MEMSET_CHK : RuntimeLibcall<Ptr, [Ptr, Int, SizeT, SizeT]> {
+  let FnAttrs = ChkFnAttrs;
+  let Memory = ArgMemWriteOnly;
+  let ParamAttrs = [[WriteOnly]];
+}
+
 class MallocLibcall<string family> : RuntimeLibcall<Ptr, [SizeT]> {
   let FnAttrs = [NoFree, NoUnwind, WillReturn,
                  AllocKindAttr<"AllocFnKind::Alloc | AllocFnKind::Uninitialized">,
                  AllocSizeAttr<0>, AllocFamilyAttr<family>];
-  let Memory = InaccessibleOrErrnoMem;
+  let Memory = InaccessibleMemOrErrnoWrite;
   let RetAttrs = [NoAlias, NoUndef];
   let ParamAttrs = [[NoUndef]];
 }
@@ -769,7 +787,7 @@ class CallocLibcall<string family> : RuntimeLibcall<Ptr, [SizeT, SizeT]> {
   let FnAttrs = [NoFree, NoUnwind, WillReturn,
                  AllocKindAttr<"AllocFnKind::Alloc | AllocFnKind::Zeroed">,
                  AllocSizeAttr<0, "1">, AllocFamilyAttr<family>];
-  let Memory = InaccessibleOrErrnoMem;
+  let Memory = InaccessibleMemOrErrnoWrite;
   let RetAttrs = [NoAlias, NoUndef];
   let ParamAttrs = [[NoUndef], [NoUndef]];
 }
@@ -779,6 +797,17 @@ class FreeLibcall<string family> : RuntimeLibcall<Void, [Ptr]> {
                  AllocFamilyAttr<family>];
   let Memory = InaccessibleOrArgMem;
   let ParamAttrs = [[AllocatedPointer, NoUndef, CapturesNone]];
+}
+
+class ReallocLibcall<string family, list<FuncArgType> SizeTypes,
+                     AllocSizeAttr allocSize>
+    : RuntimeLibcall<Ptr, !listconcat([Ptr], SizeTypes)> {
+  let FnAttrs = [NoUnwind, WillReturn, AllocKindAttr<"AllocFnKind::Realloc">,
+                 allocSize, AllocFamilyAttr<family>];
+  let Memory = InaccessibleOrArgMemOrErrnoWrite;
+  let RetAttrs = [NoAlias, NoUndef];
+  let ParamAttrs = !listconcat([[AllocatedPointer, CapturesNone]],
+                               !listsplat([NoUndef], !size(SizeTypes)));
 }
 
 def MALLOC : MallocLibcall<"malloc">;
@@ -800,26 +829,50 @@ def STRLEN : RuntimeLibcall<SizeT, [Ptr]> {
 // Element-wise unordered-atomic memory of different sizes
 foreach MemSize = [1, 2, 4, 8, 16] in {
   def MEMCPY_ELEMENT_UNORDERED_ATOMIC_#MemSize
-      : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]>;
+      : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]> {
+    let FnAttrs = CommonFnAttrs;
+    let Memory = ArgMemOnly;
+    let ParamAttrs = [[NoAlias, WriteOnly], [NoAlias, ReadOnly]];
+  }
   def MEMMOVE_ELEMENT_UNORDERED_ATOMIC_#MemSize
-      : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]>;
+      : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]> {
+    let FnAttrs = CommonFnAttrs;
+    let Memory = ArgMemOnly;
+    let ParamAttrs = [[WriteOnly], [ReadOnly]];
+  }
   def MEMSET_ELEMENT_UNORDERED_ATOMIC_#MemSize
-      : RuntimeLibcall<Void, [Ptr, Int, SizeT]>;
+      : RuntimeLibcall<Void, [Ptr, Int, SizeT]> {
+    let FnAttrs = CommonFnAttrs;
+    let Memory = ArgMemWriteOnly;
+    let ParamAttrs = [[WriteOnly]];
+  }
 }
 
 // Exception handling
-def UNWIND_RESUME : RuntimeLibcall<Void, [Ptr]>;
+def UNWIND_RESUME : RuntimeLibcall<Void, [Ptr]> {
+  let FnAttrs = [NoReturn];
+}
+
 def UNWIND_RAISE_EXCEPTION : RuntimeLibcall<Int, [Ptr]>;
 def UNWIND_REGISTER : RuntimeLibcall<Void, [Ptr]>;
 def UNWIND_UNREGISTER : RuntimeLibcall<Void, [Ptr]>;
 def UNWIND_GET_WASM_LPAD_CONTEXT : RuntimeLibcall<Ptr, []> {
   let FnAttrs = [NoUnwind];
 }
-def CXA_END_CLEANUP : RuntimeLibcall<Void, []>;
+def CXA_END_CLEANUP : RuntimeLibcall<Void, []> {
+  let FnAttrs = [NoReturn];
+}
 
 // Note: there are two sets of atomics libcalls; see
 // <https://llvm.org/docs/Atomics.html> for more info on the
 // difference between them.
+
+class AtomicLibcall<FuncArgType RetType, list<FuncArgType> ArgTypes,
+                    list<list<Attr>> paramAttrs>
+    : RuntimeLibcall<RetType, ArgTypes> {
+  let FnAttrs = [NoCallback, NoFree, NoUnwind, WillReturn];
+  let ParamAttrs = paramAttrs;
+}
 
 // Atomic '__sync_*' libcalls.
 defset list<RuntimeLibcall> LibCalls__sync = {
@@ -827,80 +880,93 @@ defset list<RuntimeLibcall> LibCalls__sync = {
                   TypeSuffix<"4", UInt32>, TypeSuffix<"8", UInt64>,
                   TypeSuffix<"16", UInt128>] in {
     def SYNC_VAL_COMPARE_AND_SWAP_#IntTy.Suffix
-        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type, IntTy.Type]>;
+        : AtomicLibcall<IntTy.Type, [Ptr, IntTy.Type, IntTy.Type],
+                        [[CapturesNone]]>;
     def SYNC_LOCK_TEST_AND_SET_#IntTy.Suffix
-        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type]>;
+        : AtomicLibcall<IntTy.Type, [Ptr, IntTy.Type], [[CapturesNone]]>;
     def SYNC_FETCH_AND_ADD_#IntTy.Suffix
-        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type]>;
+        : AtomicLibcall<IntTy.Type, [Ptr, IntTy.Type], [[CapturesNone]]>;
     def SYNC_FETCH_AND_SUB_#IntTy.Suffix
-        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type]>;
+        : AtomicLibcall<IntTy.Type, [Ptr, IntTy.Type], [[CapturesNone]]>;
     def SYNC_FETCH_AND_AND_#IntTy.Suffix
-        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type]>;
+        : AtomicLibcall<IntTy.Type, [Ptr, IntTy.Type], [[CapturesNone]]>;
     def SYNC_FETCH_AND_OR_#IntTy.Suffix
-        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type]>;
+        : AtomicLibcall<IntTy.Type, [Ptr, IntTy.Type], [[CapturesNone]]>;
     def SYNC_FETCH_AND_XOR_#IntTy.Suffix
-        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type]>;
+        : AtomicLibcall<IntTy.Type, [Ptr, IntTy.Type], [[CapturesNone]]>;
     def SYNC_FETCH_AND_NAND_#IntTy.Suffix
-        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type]>;
+        : AtomicLibcall<IntTy.Type, [Ptr, IntTy.Type], [[CapturesNone]]>;
     def SYNC_FETCH_AND_MAX_#IntTy.Suffix
-        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type]>;
+        : AtomicLibcall<IntTy.Type, [Ptr, IntTy.Type], [[CapturesNone]]>;
     def SYNC_FETCH_AND_UMAX_#IntTy.Suffix
-        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type]>;
+        : AtomicLibcall<IntTy.Type, [Ptr, IntTy.Type], [[CapturesNone]]>;
     def SYNC_FETCH_AND_MIN_#IntTy.Suffix
-        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type]>;
+        : AtomicLibcall<IntTy.Type, [Ptr, IntTy.Type], [[CapturesNone]]>;
     def SYNC_FETCH_AND_UMIN_#IntTy.Suffix
-        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type]>;
+        : AtomicLibcall<IntTy.Type, [Ptr, IntTy.Type], [[CapturesNone]]>;
   }
 }
 
 defset list<RuntimeLibcall> LibCalls__atomic = {
   // Atomic `__atomic_*' libcalls.
-  def ATOMIC_EXCHANGE : RuntimeLibcall<Void, [SizeT, Ptr, Ptr, Ptr, Int]>;
+  def ATOMIC_EXCHANGE
+      : AtomicLibcall<Void, [SizeT, Ptr, Ptr, Ptr, Int],
+                      [[], [CapturesNone], ReadPtrAttrs,
+                       [WriteOnly, CapturesNone]]>;
   def ATOMIC_COMPARE_EXCHANGE
-      : RuntimeLibcall<Bool, [SizeT, Ptr, Ptr, Ptr, Int, Int]>;
+      : AtomicLibcall<Bool, [SizeT, Ptr, Ptr, Ptr, Int, Int],
+                      [[], [CapturesNone], [CapturesNone], ReadPtrAttrs]>;
   foreach IntTy = [TypeSuffix<"1", UInt8>, TypeSuffix<"2", UInt16>,
                   TypeSuffix<"4", UInt32>, TypeSuffix<"8", UInt64>,
                   TypeSuffix<"16", UInt128>] in {
     def ATOMIC_EXCHANGE_#IntTy.Suffix
-        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type, Int]>;
+        : AtomicLibcall<IntTy.Type, [Ptr, IntTy.Type, Int], [[CapturesNone]]>;
     def ATOMIC_COMPARE_EXCHANGE_#IntTy.Suffix
-        : RuntimeLibcall<Bool, [Ptr, Ptr, IntTy.Type, Int, Int]>;
+        : AtomicLibcall<Bool, [Ptr, Ptr, IntTy.Type, Int, Int],
+                        [[CapturesNone], [CapturesNone]]>;
   }
 
-  def ATOMIC_LOAD : RuntimeLibcall<Void, [SizeT, Ptr, Ptr, Int]>;
-  def ATOMIC_STORE : RuntimeLibcall<Void, [SizeT, Ptr, Ptr, Int]>;
+  def ATOMIC_LOAD
+      : AtomicLibcall<Void, [SizeT, Ptr, Ptr, Int],
+                      [[], [CapturesNone], [WriteOnly, CapturesNone]]>;
+  def ATOMIC_STORE
+      : AtomicLibcall<Void, [SizeT, Ptr, Ptr, Int],
+                      [[], [CapturesNone], ReadPtrAttrs]>;
   foreach IntTy = [TypeSuffix<"1", UInt8>, TypeSuffix<"2", UInt16>,
                   TypeSuffix<"4", UInt32>, TypeSuffix<"8", UInt64>,
                   TypeSuffix<"16", UInt128>] in {
-    def ATOMIC_LOAD_#IntTy.Suffix : RuntimeLibcall<IntTy.Type, [Ptr, Int]>;
+    def ATOMIC_LOAD_#IntTy.Suffix
+        : AtomicLibcall<IntTy.Type, [Ptr, Int], [[CapturesNone]]>;
     def ATOMIC_STORE_#IntTy.Suffix
-        : RuntimeLibcall<Void, [Ptr, IntTy.Type, Int]>;
+        : AtomicLibcall<Void, [Ptr, IntTy.Type, Int], [[CapturesNone]]>;
   }
 
   foreach IntTy = [TypeSuffix<"1", UInt8>, TypeSuffix<"2", UInt16>,
                   TypeSuffix<"4", UInt32>, TypeSuffix<"8", UInt64>,
                   TypeSuffix<"16", UInt128>] in {
     def ATOMIC_FETCH_ADD_#IntTy.Suffix
-        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type, Int]>;
+        : AtomicLibcall<IntTy.Type, [Ptr, IntTy.Type, Int], [[CapturesNone]]>;
     def ATOMIC_FETCH_SUB_#IntTy.Suffix
-        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type, Int]>;
+        : AtomicLibcall<IntTy.Type, [Ptr, IntTy.Type, Int], [[CapturesNone]]>;
     def ATOMIC_FETCH_AND_#IntTy.Suffix
-        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type, Int]>;
+        : AtomicLibcall<IntTy.Type, [Ptr, IntTy.Type, Int], [[CapturesNone]]>;
     def ATOMIC_FETCH_OR_#IntTy.Suffix
-        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type, Int]>;
+        : AtomicLibcall<IntTy.Type, [Ptr, IntTy.Type, Int], [[CapturesNone]]>;
     def ATOMIC_FETCH_XOR_#IntTy.Suffix
-        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type, Int]>;
+        : AtomicLibcall<IntTy.Type, [Ptr, IntTy.Type, Int], [[CapturesNone]]>;
     def ATOMIC_FETCH_NAND_#IntTy.Suffix
-        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type, Int]>;
+        : AtomicLibcall<IntTy.Type, [Ptr, IntTy.Type, Int], [[CapturesNone]]>;
   }
 }
 
 multiclass AtomicOrderSizeLibcall<FuncArgType RetType,
                                   list<FuncArgType> ArgTypes> {
-  def _RELAX : RuntimeLibcall<RetType, ArgTypes>;
-  def _ACQ : RuntimeLibcall<RetType, ArgTypes>;
-  def _REL : RuntimeLibcall<RetType, ArgTypes>;
-  def _ACQ_REL : RuntimeLibcall<RetType, ArgTypes>;
+  defvar PtrAttrs = !listconcat(
+      !listsplat([]<Attr>, !sub(!size(ArgTypes), 1)), [[CapturesNone]]);
+  def _RELAX : AtomicLibcall<RetType, ArgTypes, PtrAttrs>;
+  def _ACQ : AtomicLibcall<RetType, ArgTypes, PtrAttrs>;
+  def _REL : AtomicLibcall<RetType, ArgTypes, PtrAttrs>;
+  def _ACQ_REL : AtomicLibcall<RetType, ArgTypes, PtrAttrs>;
 }
 
 multiclass AtomicOrderSizeLibcallImpl<string ProvidesBase> {
@@ -1075,8 +1141,11 @@ def OBJC_RETAIN_AUTORELEASE : RuntimeLibcall<Ptr, [Ptr]>;
 def OBJC_SYNC_ENTER : RuntimeLibcall<Int, [Ptr]>;
 def OBJC_SYNC_EXIT : RuntimeLibcall<Int, [Ptr]>;
 
-def ABORT : RuntimeLibcall<Void, []>;
-def ABS : RuntimeLibcall<Int, [Int]>;
+def ABORT : RuntimeLibcall<Void, []> {
+  let FnAttrs = [Cold, NoFree, NoReturn, NoUnwind];
+}
+
+def ABS : PureLibcall<Int, [Int]>;
 def ACCESS : RuntimeLibcall<Int, [Ptr, Int]>;
 def ALIGNED_ALLOC : RuntimeLibcall<Ptr, [SizeT, SizeT]>;
 def ATEXIT : RuntimeLibcall<Int, [Ptr]>;
@@ -1100,7 +1169,10 @@ def CXA_ATEXIT : RuntimeLibcall<Int, [Ptr, Ptr, Ptr]>;
 def CXA_GUARD_ABORT : RuntimeLibcall<Void, [Ptr]>;
 def CXA_GUARD_ACQUIRE : RuntimeLibcall<Int, [Ptr]>;
 def CXA_GUARD_RELEASE : RuntimeLibcall<Void, [Ptr]>;
-def CXA_THROW : RuntimeLibcall<Void, [Ptr, Ptr, Ptr]>;
+def CXA_THROW : RuntimeLibcall<Void, [Ptr, Ptr, Ptr]> {
+  let FnAttrs = [Cold, NoReturn];
+}
+
 def DUNDER_ISOC99_SCANF : RuntimeLibcall<Int, [Ptr, Ellip]>;
 def DUNDER_ISOC99_SSCANF : RuntimeLibcall<Int, [Ptr, Ptr, Ellip]>;
 def DUNDER_STRDUP : RuntimeLibcall<Ptr, [Ptr]>;
@@ -1114,15 +1186,18 @@ def EXECVE : RuntimeLibcall<Int, [Ptr, Ptr, Ptr]>;
 def EXECVP : RuntimeLibcall<Int, [Ptr, Ptr]>;
 def EXECV_P : RuntimeLibcall<Int, [Ptr, Ptr, Ptr]>;
 def EXECVPE : RuntimeLibcall<Int, [Ptr, Ptr, Ptr]>;
-def EXIT : RuntimeLibcall<Void, [Int]>;
+def EXIT : RuntimeLibcall<Void, [Int]> {
+  let FnAttrs = [NoReturn];
+}
+
 def FCLOSE : RuntimeLibcall<Int, [Ptr]>;
 def FDOPEN : RuntimeLibcall<Ptr, [Int, Ptr]>;
 def FEOF : RuntimeLibcall<Int, [Ptr]>;
 def FERROR : RuntimeLibcall<Int, [Ptr]>;
 def FFLUSH : RuntimeLibcall<Int, [Ptr]>;
-def FFS : RuntimeLibcall<Int, [Int]>;
-def FFSL : RuntimeLibcall<Int, [Long]>;
-def FFSLL : RuntimeLibcall<Int, [LLong]>;
+def FFS : PureLibcall<Int, [Int]>;
+def FFSL : PureLibcall<Int, [Long]>;
+def FFSLL : PureLibcall<Int, [LLong]>;
 def FGETC : RuntimeLibcall<Int, [Ptr]>;
 def FGETC_UNLOCKED : RuntimeLibcall<Int, [Ptr]>;
 def FGETPOS : RuntimeLibcall<Int, [Ptr, Ptr]>;
@@ -1131,9 +1206,9 @@ def FGETS_UNLOCKED : RuntimeLibcall<Ptr, [Ptr, Int, Ptr]>;
 def FILENO : RuntimeLibcall<Int, [Ptr]>;
 def FIPRINTF : RuntimeLibcall<Int, [Ptr, Ptr, Ellip]>;
 def FLOCKFILE : RuntimeLibcall<Void, [Ptr]>;
-def FLS : RuntimeLibcall<Int, [Int]>;
-def FLSL : RuntimeLibcall<Int, [Long]>;
-def FLSLL : RuntimeLibcall<Int, [LLong]>;
+def FLS : PureLibcall<Int, [Int]>;
+def FLSL : PureLibcall<Int, [Long]>;
+def FLSLL : PureLibcall<Int, [LLong]>;
 def FOPEN : RuntimeLibcall<Ptr, [Ptr, Ptr]>;
 def FOPEN64 : RuntimeLibcall<Ptr, [Ptr, Ptr]>;
 def FORK : RuntimeLibcall<Int, []>;
@@ -1162,22 +1237,37 @@ def FWRITE : RuntimeLibcall<SizeT, [Ptr, SizeT, SizeT, Ptr]>;
 def FWRITE_UNLOCKED : RuntimeLibcall<SizeT, [Ptr, SizeT, SizeT, Ptr]>;
 def GETC : RuntimeLibcall<Int, [Ptr]>;
 def GETCHAR : RuntimeLibcall<Int, []>;
-def GETCHAR_UNLOCKED : RuntimeLibcall<Int, []>;
-def GETC_UNLOCKED : RuntimeLibcall<Int, [Ptr]>;
+def GETCHAR_UNLOCKED : RuntimeLibcall<Int, []> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+}
+
+def GETC_UNLOCKED : RuntimeLibcall<Int, [Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[NoUndef, CapturesNone]];
+}
+
 def GETENV : RuntimeLibcall<Ptr, [Ptr]>;
 def GETITIMER : RuntimeLibcall<Int, [Int, Ptr]>;
 def GETLOGIN_R : RuntimeLibcall<Int, [Ptr, SizeT]>;
 def GETPWNAM : RuntimeLibcall<Ptr, [Ptr]>;
 def GETS : RuntimeLibcall<Ptr, [Ptr]>;
 def GETTIMEOFDAY : RuntimeLibcall<Int, [Ptr, Ptr]>;
-def HTONL : RuntimeLibcall<UInt32, [UInt32]>;
-def HTONS : RuntimeLibcall<UInt16, [UInt16]>;
+def HTONL : PureLibcall<UInt32, [UInt32]>;
+def HTONS : PureLibcall<UInt16, [UInt16]>;
 def IPRINTF : RuntimeLibcall<Int, [Ptr, Ellip]>;
-def ISASCII : RuntimeLibcall<Int, [Int]>;
-def ISDIGIT : RuntimeLibcall<Int, [Int]>;
-def LABS : RuntimeLibcall<Long, [Same]>;
+def ISASCII : RuntimeLibcall<Int, [Int]> {
+  let FnAttrs = CommonFnAttrs;
+}
+
+def ISDIGIT : RuntimeLibcall<Int, [Int]> {
+  let FnAttrs = CommonFnAttrs;
+}
+
+def LABS : PureLibcall<Long, [Same]>;
 def LCHOWN : RuntimeLibcall<Int, [Ptr, IntX, IntX]>;
-def LLABS : RuntimeLibcall<LLong, [LLong]>;
+def LLABS : PureLibcall<LLong, [LLong]>;
 def LSTAT : RuntimeLibcall<Int, [Ptr, Ptr]>;
 def LSTAT64 : RuntimeLibcall<Int, [Ptr, Ptr]>;
 def MEMALIGN : RuntimeLibcall<Ptr, [SizeT, SizeT]>;
@@ -1216,8 +1306,8 @@ def MSVC_NEW_INT : RuntimeLibcall<Ptr, [UInt]>;
 def MSVC_NEW_INT_NOTHROW : RuntimeLibcall<Ptr, [UInt, Ptr]>;
 def MSVC_NEW_LONGLONG : RuntimeLibcall<Ptr, [ULLong]>;
 def MSVC_NEW_LONGLONG_NOTHROW : RuntimeLibcall<Ptr, [ULLong, Ptr]>;
-def NTOHL : RuntimeLibcall<UInt32, [UInt32]>;
-def NTOHS : RuntimeLibcall<UInt16, [UInt16]>;
+def NTOHL : PureLibcall<UInt32, [UInt32]>;
+def NTOHS : PureLibcall<UInt16, [UInt16]>;
 def OPEN : RuntimeLibcall<Int, [Ptr, Int, Ellip]>;
 def OPEN64 : RuntimeLibcall<Int, [Ptr, Int, Ellip]>;
 def OPENDIR : RuntimeLibcall<Ptr, [Ptr]>;
@@ -1229,17 +1319,28 @@ def PREAD : RuntimeLibcall<SSizeT, [Int, Ptr, SizeT, IntPlus]>;
 def PRINTF : RuntimeLibcall<Int, [Ptr, Ellip]>;
 def PUTC : RuntimeLibcall<Int, [Int, Ptr]>;
 def PUTCHAR : RuntimeLibcall<Int, [Int]>;
-def PUTCHAR_UNLOCKED : RuntimeLibcall<Int, [Int]>;
-def PUTC_UNLOCKED : RuntimeLibcall<Int, [Int, Ptr]>;
+def PUTCHAR_UNLOCKED : RuntimeLibcall<Int, [Int]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[NoUndef]];
+}
+
+def PUTC_UNLOCKED : RuntimeLibcall<Int, [Int, Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[NoUndef], [NoUndef, CapturesNone]];
+}
+
 def PUTS : RuntimeLibcall<Int, [Ptr]>;
 def PVALLOC : RuntimeLibcall<Ptr, [SizeT]>;
 def PWRITE : RuntimeLibcall<SSizeT, [Int, Ptr, SizeT, IntPlus]>;
 def QSORT : RuntimeLibcall<Void, [Ptr, SizeT, SizeT, Ptr]>;
 def READ : RuntimeLibcall<SSizeT, [Int, Ptr, SizeT]>;
 def READLINK : RuntimeLibcall<SSizeT, [Ptr, Ptr, SizeT]>;
-def REALLOC : RuntimeLibcall<Ptr, [Ptr, SizeT]>;
-def REALLOCARRAY : RuntimeLibcall<Ptr, [Ptr, SizeT, SizeT]>;
-def REALLOCF : RuntimeLibcall<Ptr, [Ptr, SizeT]>;
+def REALLOC : ReallocLibcall<"malloc", [SizeT], AllocSizeAttr<1>>;
+def REALLOCARRAY
+    : ReallocLibcall<"malloc", [SizeT, SizeT], AllocSizeAttr<1, "2">>;
+def REALLOCF : ReallocLibcall<"malloc", [SizeT], AllocSizeAttr<1>>;
 def REALPATH : RuntimeLibcall<Ptr, [Ptr, Ptr]>;
 def REMOVE : RuntimeLibcall<Int, [Ptr]>;
 def RENAME : RuntimeLibcall<Int, [Ptr, Ptr]>;
@@ -1310,11 +1411,14 @@ def STRTOUL : RuntimeLibcall<ULong, [Ptr, Ptr, Int]>;
 def STRTOULL : RuntimeLibcall<ULLong, [Ptr, Ptr, Int]>;
 def STRXFRM : RuntimeLibcall<SizeT, [Ptr, Ptr, SizeT]>;
 def SYSTEM : RuntimeLibcall<Int, [Ptr]>;
-def TERMINATE : RuntimeLibcall<Void, []>;
+def TERMINATE : RuntimeLibcall<Void, []> {
+  let FnAttrs = [Cold, NoFree, NoReturn];
+}
+
 def TIMES : RuntimeLibcall<IntPlus, [Ptr]>;
 def TMPFILE : RuntimeLibcall<Ptr, []>;
 def TMPFILE64 : RuntimeLibcall<Ptr, []>;
-def TOASCII : RuntimeLibcall<Int, [Int]>;
+def TOASCII : PureLibcall<Int, [Int]>;
 def UNAME : RuntimeLibcall<Int, [Ptr]>;
 def UNDER_IO_GETC : RuntimeLibcall<Int, [Ptr]>;
 def UNDER_IO_PUTC : RuntimeLibcall<Int, [Int, Ptr]>;
@@ -1327,7 +1431,7 @@ def VALLOC : RuntimeLibcall<Ptr, [SizeT]>;
 def VEC_CALLOC : CallocLibcall<"vec_malloc">;
 def VEC_FREE : FreeLibcall<"vec_malloc">;
 def VEC_MALLOC : MallocLibcall<"vec_malloc">;
-def VEC_REALLOC : RuntimeLibcall<Ptr, [Ptr, SizeT]>;
+def VEC_REALLOC : ReallocLibcall<"vec_malloc", [SizeT], AllocSizeAttr<1>>;
 def VFPRINTF : RuntimeLibcall<Int, [Ptr, Ptr, Ptr]>;
 def VFSCANF : RuntimeLibcall<Int, [Ptr, Ptr, Ptr]>;
 def VPRINTF : RuntimeLibcall<Int, [Ptr, Ptr]>;
