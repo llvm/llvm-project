@@ -14488,11 +14488,10 @@ AArch64TargetLowering::getRegForInlineAsmConstraint(
       if (Subtarget->hasLS64() && VT.getSizeInBits() == 512)
         return std::make_pair(0U, &AArch64::GPR64x8ClassRegClass);
 
-      // An integer wider than 64 bits, such as an i128, takes a 64-bit
-      // register for each 64 bits of it. 32-bit registers would hold only half
-      // of it.
-      if (VT.getFixedSizeInBits() == 64 ||
-          (VT.isScalarInteger() && VT.getFixedSizeInBits() > 64))
+      // A value wider than 64 bits, such as an i128 or an fp128, takes a
+      // 64-bit register for each 64 bits of it. 32-bit registers would hold
+      // only half of it.
+      if (VT.getFixedSizeInBits() >= 64)
         return std::make_pair(0U, &AArch64::GPR64commonRegClass);
 
       return std::make_pair(0U, &AArch64::GPR32commonRegClass);
