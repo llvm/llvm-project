@@ -67,6 +67,7 @@ public:
   UseAfterMoveFinder(ASTContext *TheContext,
                      llvm::ArrayRef<StringRef> InvalidationFunctions,
                      llvm::ArrayRef<StringRef> ReinitializationFunctions,
+                     llvm::ArrayRef<StringRef> ReportAccessOnlyUseForTypes,
                      const CXXRecordDecl *MovedAs);
 
   // Within the given code block, finds the first use of 'MovedVariable' that
@@ -92,6 +93,7 @@ private:
   ASTContext *Context;
   llvm::ArrayRef<StringRef> InvalidationFunctions;
   llvm::ArrayRef<StringRef> ReinitializationFunctions;
+  llvm::ArrayRef<StringRef> ReportAccessOnlyUseForTypes;
   const CXXRecordDecl *MovedAs;
   std::unique_ptr<ExprSequence> Sequence;
   std::unique_ptr<StmtToBlockMap> BlockMap;
@@ -100,10 +102,8 @@ private:
 
 } // namespace
 
-static auto getNameMatcher(llvm::ArrayRef<StringRef> InvalidationFunctions) {
-  return anyOf(hasAnyName("::std::move", "::std::forward"),
-               matchers::matchesAnyListedRegexName(InvalidationFunctions));
-}
+static SmallVector<std::pair<StringRef, std::optional<unsigned>>, 4>
+parseInvalidationFunctions(llvm::ArrayRef<StringRef> Entries);
 
 static StatementMatcher
 makeReinitMatcher(const ValueDecl *MovedVariable,
@@ -111,6 +111,10 @@ makeReinitMatcher(const ValueDecl *MovedVariable,
                   llvm::ArrayRef<StringRef> ReinitializationFunctions) {
   const auto DeclRefMatcher =
       declRefExpr(hasDeclaration(equalsNode(MovedVariable))).bind("declref");
+
+  SmallVector<StringRef, 4> InvalidationNames;
+  for (const auto &Func : parseInvalidationFunctions(InvalidationFunctions))
+    InvalidationNames.push_back(Func.first);
 
   const auto StandardContainerTypeMatcher = hasType(hasUnqualifiedDesugaredType(
       recordType(hasDeclaration(cxxRecordDecl(hasAnyName(
@@ -183,8 +187,9 @@ makeReinitMatcher(const ValueDecl *MovedVariable,
                               traverse(TK_AsIs, DeclRefMatcher),
                               unless(parmVarDecl(hasType(
                                   references(qualType(isConstQualified())))))),
-                          unless(callee(functionDecl(
-                              getNameMatcher(InvalidationFunctions)))))))
+                          unless(callee(
+                              functionDecl(matchers::matchesAnyListedRegexName(
+                                  InvalidationNames)))))))
       .bind("reinit");
 }
 
@@ -205,9 +210,12 @@ static StatementMatcher inDecltypeOrTemplateArg() {
 UseAfterMoveFinder::UseAfterMoveFinder(
     ASTContext *TheContext, llvm::ArrayRef<StringRef> InvalidationFunctions,
     llvm::ArrayRef<StringRef> ReinitializationFunctions,
+    llvm::ArrayRef<StringRef> ReportAccessOnlyUseForTypes,
     const CXXRecordDecl *MovedAs)
     : Context(TheContext), InvalidationFunctions(InvalidationFunctions),
-      ReinitializationFunctions(ReinitializationFunctions), MovedAs(MovedAs) {}
+      ReinitializationFunctions(ReinitializationFunctions),
+      ReportAccessOnlyUseForTypes(ReportAccessOnlyUseForTypes),
+      MovedAs(MovedAs) {}
 
 std::optional<UseAfterMove>
 UseAfterMoveFinder::find(Stmt *CodeBlock, const Expr *MovingCall,
@@ -404,32 +412,74 @@ static bool isSpecifiedAfterMove(const ValueDecl *VD) {
   return RecordDecl->getDeclContext()->isStdNamespace();
 }
 
+// Returns true if the check must report a use of `VD` only when the code
+// accesses the object. An access is a member access or a dereference. The
+// check does not report other references to the variable. The check does this
+// when the type of `VD` is one of these:
+// - a pointer to a type in the ReportAccessOnlyUseForTypes option;
+// - a class that is the same as or derived from such a type.
+static bool
+reportAccessOnlyUse(const ValueDecl *VD, ASTContext &Context,
+                    llvm::ArrayRef<StringRef> ReportAccessOnlyUseForTypes) {
+  if (ReportAccessOnlyUseForTypes.empty())
+    return false;
+
+  const auto RecordIsListed = cxxRecordDecl(isSameOrDerivedFrom(
+      matchers::matchesAnyListedRegexName(ReportAccessOnlyUseForTypes)));
+  const auto TypeMatcher =
+      qualType(anyOf(pointsTo(RecordIsListed), hasDeclaration(RecordIsListed)));
+
+  const QualType QT = VD->getType().getNonReferenceType().getCanonicalType();
+  return !match(TypeMatcher, QT, Context).empty();
+}
+
 void UseAfterMoveFinder::getDeclRefs(
     const CFGBlock *Block, const Decl *MovedVariable,
     llvm::SmallPtrSetImpl<const DeclRefExpr *> *DeclRefs) {
   DeclRefs->clear();
+
+  // For the types in the ReportAccessOnlyUseForTypes option, only an access
+  // counts as a use. An access is a member access or a dereference of the
+  // object. A different reference to the variable does not count as a use.
+  // Examples of a different reference are an argument, a comparison, or a copy.
+  const auto *MovedValueDecl = dyn_cast<ValueDecl>(MovedVariable);
+  const bool ReportAccessOnly =
+      MovedValueDecl && reportAccessOnlyUse(MovedValueDecl, *Context,
+                                            ReportAccessOnlyUseForTypes);
+
   for (const auto &Elem : *Block) {
     std::optional<CFGStmt> S = Elem.getAs<CFGStmt>();
     if (!S)
       continue;
 
-    const auto AddDeclRefs = [this, Block,
-                              DeclRefs](const ArrayRef<BoundNodes> Matches) {
+    const auto AddDeclRefs = [this, Block, DeclRefs, ReportAccessOnly](
+                                 const ArrayRef<BoundNodes> Matches) {
       for (const auto &Match : Matches) {
         const auto *DeclRef = Match.getNodeAs<DeclRefExpr>("declref");
         const auto *Member = Match.getNodeAs<MemberExpr>("member-expr");
         const auto *Operator = Match.getNodeAs<CXXOperatorCallExpr>("operator");
+        const auto *Access = Match.getNodeAs<Expr>("access");
         // Non-moved member as the move only implies a base class.
         if (Member && MovedAs && !isa<CXXMethodDecl>(Member->getMemberDecl()) &&
             !MovedAs->hasMemberName(Member->getMemberDecl()->getIdentifier())) {
           continue;
         }
-        if (DeclRef && BlockMap->blockContainingStmt(DeclRef) == Block &&
-            (Operator || !isSpecifiedAfterMove(DeclRef->getDecl())))
-          // Ignore uses of a standard smart pointer or classes annotated as
-          // "null_after_move" (smart-pointer-like behavior) that don't
-          // dereference the pointer.
-          DeclRefs->insert(DeclRef);
+        if (DeclRef && BlockMap->blockContainingStmt(DeclRef) == Block) {
+          if (ReportAccessOnly) {
+            // Report the use only if the code accesses the object. An access is
+            // one of these:
+            // - a member access (`op->m`, `op.m`);
+            // - an overloaded dereference operator;
+            // - a built-in dereference (`*op`) or subscript (`op[i]`).
+            if (Member || Operator || Access)
+              DeclRefs->insert(DeclRef);
+          } else if (Operator || !isSpecifiedAfterMove(DeclRef->getDecl())) {
+            // Ignore uses of a standard smart pointer, or of a class with the
+            // "null_after_move" annotation, that do not dereference the
+            // pointer.
+            DeclRefs->insert(DeclRef);
+          }
+        }
       }
     };
 
@@ -449,6 +499,24 @@ void UseAfterMoveFinder::getDeclRefs(
                                   hasArgument(0, DeclRefMatcher))
                                   .bind("operator")),
                       *S->getStmt(), *Context));
+    // A built-in dereference (`*op`) or a subscript (`op[i]`) of the variable
+    // is also an access. The types in the ReportAccessOnlyUseForTypes option
+    // need these matchers. For example, raw pointers need them because these
+    // operators are not overloaded calls. Thus, the "member-expr" and
+    // "operator" matchers do not match these operators.
+    AddDeclRefs(match(
+        traverse(TK_AsIs,
+                 findAll(unaryOperator(hasOperatorName("*"),
+                                       hasUnaryOperand(ignoringParenImpCasts(
+                                           DeclRefMatcher)))
+                             .bind("access"))),
+        *S->getStmt(), *Context));
+    AddDeclRefs(match(
+        traverse(TK_AsIs,
+                 findAll(arraySubscriptExpr(
+                             hasBase(ignoringParenImpCasts(DeclRefMatcher)))
+                             .bind("access"))),
+        *S->getStmt(), *Context));
   }
 }
 
@@ -539,15 +607,53 @@ static void emitDiagnostic(const Expr *MovingCall, const DeclRefExpr *MoveArg,
 UseAfterMoveCheck::UseAfterMoveCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       InvalidationFunctions(utils::options::parseStringList(
-          Options.get("InvalidationFunctions", ""))),
+          Options.get("InvalidationFunctions", "::std::move;::std::forward"))),
       ReinitializationFunctions(utils::options::parseStringList(
-          Options.get("ReinitializationFunctions", ""))) {}
+          Options.get("ReinitializationFunctions", ""))),
+      ReportAccessOnlyUseForTypes(utils::options::parseStringList(
+          Options.get("ReportAccessOnlyUseForTypes", ""))),
+      HandleAccessorFunctions(utils::options::parseStringList(
+          Options.get("HandleAccessorFunctions", ""))) {}
 
 void UseAfterMoveCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "InvalidationFunctions",
                 utils::options::serializeStringList(InvalidationFunctions));
   Options.store(Opts, "ReinitializationFunctions",
                 utils::options::serializeStringList(ReinitializationFunctions));
+  Options.store(
+      Opts, "ReportAccessOnlyUseForTypes",
+      utils::options::serializeStringList(ReportAccessOnlyUseForTypes));
+  Options.store(Opts, "HandleAccessorFunctions",
+                utils::options::serializeStringList(HandleAccessorFunctions));
+}
+
+// An explicit index selects a call argument; without one, a member call
+// invalidates its object and a free function invalidates its first argument.
+static SmallVector<std::pair<StringRef, std::optional<unsigned>>, 4>
+parseInvalidationFunctions(llvm::ArrayRef<StringRef> Entries) {
+  SmallVector<std::pair<StringRef, std::optional<unsigned>>, 4> Result;
+  for (StringRef Entry : Entries) {
+    Entry = Entry.trim();
+    if (Entry.empty())
+      continue;
+
+    StringRef Name = Entry;
+    std::optional<unsigned> ArgIndex;
+    if (Entry.ends_with(")")) {
+      const size_t Open = Entry.rfind('(');
+      if (Open != StringRef::npos) {
+        unsigned Parsed = 0;
+        if (!Entry.slice(Open + 1, Entry.size() - 1)
+                 .trim()
+                 .getAsInteger(10, Parsed)) {
+          Name = Entry.substr(0, Open).trim();
+          ArgIndex = Parsed;
+        }
+      }
+    }
+    Result.emplace_back(Name, ArgIndex);
+  }
+  return Result;
 }
 
 void UseAfterMoveCheck::registerMatchers(MatchFinder *Finder) {
@@ -562,22 +668,41 @@ void UseAfterMoveCheck::registerMatchers(MatchFinder *Finder) {
       callee(functionDecl(unless(isStaticStorageClass())));
   const auto DerivedToBaseCast =
       implicitCastExpr(hasCastKind(CK_DerivedToBase)).bind("optional-cast");
-  const auto CallMoveMatcher = callExpr(
-      callee(functionDecl(getNameMatcher(InvalidationFunctions))
-                 .bind("move-decl")),
-      anyOf(cxxMemberCallExpr(IsMemberCallee, on(Arg)),
-            callExpr(unless(cxxMemberCallExpr(IsMemberCallee)),
-                     hasArgument(0, Arg))),
-      unless(inDecltypeOrTemplateArg()), unless(hasParent(TryEmplaceMatcher)),
-      expr().bind("call-move"),
-      optionally(
-          anyOf(hasParent(DerivedToBaseCast),
+
+  // A handle accessor unwraps a handle object to the underlying resource that
+  // gets invalidated, e.g. `op.operator->()` or `op.getOperation()` where `op`
+  // is a wrapper variable (such as an mlir::OpState). When the invalidated
+  // object or argument is such an accessor call, the tracked variable is the
+  // handle `op` inside it, not the unwrapped resource. This lets the check flag
+  // uses of `op` after the resource it refers to has been invalidated. When the
+  // option is empty the accessor never matches, so this reduces to matching the
+  // tracked variable directly.
+  const auto HandleAccessorCallee = callee(cxxMethodDecl(
+      matchers::matchesAnyListedRegexName(HandleAccessorFunctions)));
+  const auto HandleAccessor = expr(anyOf(
+      cxxMemberCallExpr(HandleAccessorCallee, on(ignoringParenImpCasts(Arg))),
+      cxxOperatorCallExpr(HandleAccessorCallee,
+                          hasArgument(0, ignoringParenImpCasts(Arg)))));
+  // The invalidated object or argument is either the tracked variable directly
+  // or the variable behind a single handle accessor call.
+  const auto ArgOrHandle = expr(anyOf(Arg, HandleAccessor));
+
+  // Wraps an invalidation "core" matcher into the full moving-call matcher and
+  // registers it. The core matcher matches the invalidating call. It binds the
+  // callee as "move-decl" and the invalidated variable as "arg".
+  const auto AddMovingCallMatcher =
+      [&](const ast_matchers::internal::Matcher<CallExpr> &Core) {
+        const auto CallMoveMatcher = callExpr(
+            Core, unless(inDecltypeOrTemplateArg()),
+            unless(hasParent(TryEmplaceMatcher)), expr().bind("call-move"),
+            optionally(anyOf(
+                hasParent(DerivedToBaseCast),
                 hasArgument(
                     0, traverse(TK_AsIs, expr(hasParent(DerivedToBaseCast)))))),
-      anyOf(hasAncestor(compoundStmt(
-                hasParent(lambdaExpr().bind("containing-lambda")))),
-            hasAncestor(functionDecl(
-                anyOf(cxxConstructorDecl(
+            anyOf(hasAncestor(compoundStmt(
+                      hasParent(lambdaExpr().bind("containing-lambda")))),
+                  hasAncestor(functionDecl(anyOf(
+                      cxxConstructorDecl(
                           hasAnyConstructorInitializer(withInitializer(
                               expr(anyOf(equalsBoundNode("call-move"),
                                          hasDescendant(expr(
@@ -586,24 +711,43 @@ void UseAfterMoveCheck::registerMatchers(MatchFinder *Finder) {
                           .bind("containing-ctor"),
                       functionDecl().bind("containing-func"))))));
 
-  Finder->addMatcher(
-      traverse(
-          TK_AsIs,
-          // To find the Stmt that we assume performs the actual move, we look
-          // for the direct ancestor of the std::move() that isn't one of the
-          // node types ignored by ignoringParenImpCasts().
-          stmt(
-              forEach(expr(ignoringParenImpCasts(CallMoveMatcher))),
-              // Don't allow an InitListExpr to be the moving call. An
-              // InitListExpr has both a syntactic and a semantic form, and the
-              // parent-child relationships are different between the two. This
-              // could cause an InitListExpr to be analyzed as the moving call
-              // in addition to the Expr that we actually want, resulting in two
-              // diagnostics with different code locations for the same move.
-              unless(initListExpr()),
-              unless(expr(ignoringParenImpCasts(equalsBoundNode("call-move")))))
-              .bind("moving-call")),
-      this);
+        Finder->addMatcher(
+            traverse(
+                TK_AsIs,
+                // To find the Stmt that we assume performs the actual move, we
+                // look for the direct ancestor of the std::move() that isn't
+                // one of the node types ignored by ignoringParenImpCasts().
+                stmt(forEach(expr(ignoringParenImpCasts(CallMoveMatcher))),
+                     // Don't allow an InitListExpr to be the moving call. An
+                     // InitListExpr has both a syntactic and a semantic form,
+                     // and the parent-child relationships are different between
+                     // the two. This could cause an InitListExpr to be analyzed
+                     // as the moving call in addition to the Expr that we
+                     // actually want, resulting in two diagnostics with
+                     // different code locations for the same move.
+                     unless(initListExpr()),
+                     unless(expr(
+                         ignoringParenImpCasts(equalsBoundNode("call-move")))))
+                    .bind("moving-call")),
+            this);
+      };
+
+  for (const auto &[Name, ArgIndex] :
+       parseInvalidationFunctions(InvalidationFunctions)) {
+    const auto Callee =
+        callee(functionDecl(matchers::matchesAnyListedRegexName(Name))
+                   .bind("move-decl"));
+    if (ArgIndex) {
+      AddMovingCallMatcher(allOf(
+          Callee, hasArgument(*ArgIndex, ignoringParenImpCasts(ArgOrHandle))));
+    } else {
+      AddMovingCallMatcher(allOf(
+          Callee,
+          anyOf(cxxMemberCallExpr(IsMemberCallee, on(ArgOrHandle)),
+                callExpr(unless(cxxMemberCallExpr(IsMemberCallee)),
+                         hasArgument(0, ignoringParenImpCasts(ArgOrHandle))))));
+    }
+  }
 }
 
 void UseAfterMoveCheck::check(const MatchFinder::MatchResult &Result) {
@@ -656,7 +800,8 @@ void UseAfterMoveCheck::check(const MatchFinder::MatchResult &Result) {
 
   for (Stmt *CodeBlock : CodeBlocks) {
     UseAfterMoveFinder Finder(Result.Context, InvalidationFunctions,
-                              ReinitializationFunctions, MovedAs);
+                              ReinitializationFunctions,
+                              ReportAccessOnlyUseForTypes, MovedAs);
     if (auto Use = Finder.find(CodeBlock, MovingCall, Arg))
       emitDiagnostic(MovingCall, Arg, *Use, this, Result.Context,
                      determineMoveType(MoveDecl), MoveDecl);

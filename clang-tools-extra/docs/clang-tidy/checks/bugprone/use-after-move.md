@@ -257,9 +257,14 @@ use-after-move warning.
 
 ```{option} InvalidationFunctions
 A semicolon-separated list of regular expressions matching names of functions
-that cause their first arguments to be invalidated (e.g., closing a handle).
-For member functions, the first argument is considered to be the implicit
-object argument (`this`). Default value is an empty string.
+that invalidate an object (e.g., closing a handle). Without an index, a member
+function invalidates its implicit object argument (`this`), and a free function
+invalidates its first argument. To invalidate an explicit argument instead,
+append its zero-based index in parentheses, for example `Manager::close(0)`;
+for member functions index `0` is the first non-`this` argument. Defaults to
+`::std::move;::std::forward`. Setting this option replaces the default, so
+include those functions explicitly to continue checking them alongside
+additional invalidation functions.
 ```
 
 ```{option} ReinitializationFunctions
@@ -268,4 +273,26 @@ that reinitialize the object. For member functions, the implicit object
 argument (`*this`) is considered to be reinitialized. For non-member or
 static member functions, the first argument is considered to be
 reinitialized. Default value is an empty string.
+```
+
+```{option} ReportAccessOnlyUseForTypes
+A semicolon-separated list of regular expressions matching names of types for
+which only an access of the object counts as a use. For a variable whose type
+is a pointer to a listed type, or a class that is the same as or derived from a
+listed type, the check reports a use only when the code accesses the object,
+that is, a member access (`p->m`, `p.m`), an overloaded dereference, a built-in
+dereference (`*p`), or a subscript (`p[i]`). Other references to the variable
+(such as passing it as an argument, comparing it, or copying it) are not
+reported. Default value is an empty string.
+```
+
+```{option} HandleAccessorFunctions
+A semicolon-separated list of regular expressions matching names of accessor
+functions that unwrap a handle object to the underlying resource that gets
+invalidated (for example, `HandleBase::operator->` or
+`HandleBase::getResource`). When the invalidated object or argument is a
+call to one of these accessors, the check tracks the handle variable passed to
+the accessor instead of the unwrapped resource. This lets the check flag uses
+of a handle after the resource it refers to has been invalidated. Default value
+is an empty string.
 ```
