@@ -1416,7 +1416,7 @@ def FILENO : RuntimeLibcall<Int, [Ptr]> {
   let ParamAttrs = [[CapturesNone, NoUndef]];
 }
 
-def FIPRINTF : RuntimeLibcall<Int, [Ptr, Ptr, Ellip]>;
+def FIPRINTF : FPrintfLibcall;
 def FLOCKFILE : RuntimeLibcall<Void, [Ptr]> {
   let FnAttrs = [NoFree, NoUnwind];
   let ParamAttrs = [[CapturesNone, NoUndef]];
@@ -1641,7 +1641,7 @@ def GETTIMEOFDAY : RuntimeLibcall<Int, [Ptr, Ptr]> {
 
 def HTONL : PureLibcall<UInt32, [UInt32]>;
 def HTONS : PureLibcall<UInt16, [UInt16]>;
-def IPRINTF : RuntimeLibcall<Int, [Ptr, Ellip]>;
+def IPRINTF : PrintfLibcall;
 def ISASCII : RuntimeLibcall<Int, [Int]> {
   let FnAttrs = CommonFnAttrs;
 }
@@ -1924,16 +1924,16 @@ def SETVBUF : RuntimeLibcall<Int, [Ptr, Ptr, Int, SizeT]> {
   let ParamAttrs = [[CapturesNone, NoUndef], [NoUndef], [NoUndef], [NoUndef]];
 }
 
-def SIPRINTF : RuntimeLibcall<Int, [Ptr, Ptr, Ellip]>;
+def SIPRINTF : SPrintfLibcall;
 def SizedPtr : StructFuncArgType<[Ptr, SizeT]>;
 def SIZE_RETURNING_NEW : RuntimeLibcall<SizedPtr, [SizeT]>;
 def SIZE_RETURNING_NEW_ALIGNED : RuntimeLibcall<SizedPtr, [SizeT, AlignValT]>;
 def SIZE_RETURNING_NEW_ALIGNED_HOT_COLD
     : RuntimeLibcall<SizedPtr, [SizeT, AlignValT, UInt8]>;
 def SIZE_RETURNING_NEW_HOT_COLD : RuntimeLibcall<SizedPtr, [SizeT, UInt8]>;
-def SMALL_FPRINTF : RuntimeLibcall<Int, [Ptr, Ptr, Ellip]>;
-def SMALL_PRINTF : RuntimeLibcall<Int, [Ptr, Ellip]>;
-def SMALL_SPRINTF : RuntimeLibcall<Int, [Ptr, Ptr, Ellip]>;
+def SMALL_FPRINTF : FPrintfLibcall;
+def SMALL_PRINTF : PrintfLibcall;
+def SMALL_SPRINTF : SPrintfLibcall;
 def SNPRINTF : RuntimeLibcall<Int, [Ptr, SizeT, Ptr, Ellip]> {
   let FnAttrs = [NoFree, NoUnwind];
   let RetAttrs = [NoUndef];
