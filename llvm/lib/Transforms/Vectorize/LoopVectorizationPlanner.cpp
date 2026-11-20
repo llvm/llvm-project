@@ -890,7 +890,7 @@ bool LoopVectorizationPlanner::isCandidateForEpilogueVectorization(
     return false;
 
   // TODO: Not implemented yet.
-  if (EnableVPlanBasedStrideMV)
+  if (Opts.enable_vplan_based_stride_mv)
     return false;
 
   return true;

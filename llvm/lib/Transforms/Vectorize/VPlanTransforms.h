@@ -37,9 +37,6 @@ class TargetTransformInfo;
 class VPRecipeBuilder;
 struct VFRange;
 
-LLVM_ABI_FOR_TEST extern cl::opt<bool> VerifyEachVPlan;
-LLVM_ABI_FOR_TEST extern cl::opt<bool> EnableVPlanBasedStrideMV;
-
 struct VPlanTransforms {
   /// Abort if -vplan-verify-each is set and \p Plan is invalid.
   LLVM_ABI_FOR_TEST static void verifyIfRequested(VPlan &Plan);

@@ -43,6 +43,8 @@ defm : EnumField<"scalable-vectorization", "LoopVectorizeHints::ScalableForceKin
 // LoopVectorizationPlanner.cpp
 defm : BoolField<"force-target-supports-gather-scatter-ops", "false",
   "Assume the target supports gather/scatter operations (used for testing)">;
+defm : BoolField<"enable-vplan-based-stride-mv", "false",
+  "Perform stride multiversioning directly on VPlan instead of in LoopAccessAnalysis">;
 // Note: This currently only applies to `llvm.masked.load` and
 // `llvm.masked.store`. TODO: Extend this to cover other operations as needed.
 defm : BoolField<"force-target-supports-masked-memory-ops", "false",

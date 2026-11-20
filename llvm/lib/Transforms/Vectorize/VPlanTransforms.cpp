@@ -49,11 +49,6 @@ using namespace LoopVectorizationUtils;
 using namespace VPlanPatternMatch;
 using namespace SCEVPatternMatch;
 
-cl::opt<bool> llvm::EnableVPlanBasedStrideMV(
-    "enable-vplan-based-stride-mv", cl::init(false), cl::Hidden,
-    cl::desc("Perform stride multiversioning directly on VPlan instead of in "
-             "LoopAccessAnalysis."));
-
 void VPlanTransforms::verifyIfRequested(VPlan &Plan) {
   const VectorizeOptions &Opts = getVectorizeOptions(Plan.getContext());
   if (Opts.vplan_verify_each && !verifyVPlanIsValid(Plan))
@@ -5954,6 +5949,8 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
 void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
                                                  VPRecipeBuilder &RecipeBuilder,
                                                  VPCostContext &CostCtx) {
+  const VectorizeOptions &Opts = getVectorizeOptions(Plan.getContext());
+
   // Collect all loads/stores first. We will start with ones having simpler
   // decisions followed by more complex ones that are potentially
   // guided/dependent on the simpler ones.
@@ -6063,7 +6060,7 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
         });
   }
 
-  if (EnableVPlanBasedStrideMV && !CostCtx.Config.OptForSize)
+  if (Opts.enable_vplan_based_stride_mv && !CostCtx.Config.OptForSize)
     RUN_VPLAN_PASS(VPlanTransforms::multiversionForUnitStridedMemOps, Plan,
                    CostCtx, Range, MemOps);
 
