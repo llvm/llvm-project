@@ -1,0 +1,80 @@
+# RUN: llc -mtriple=x86_64-- -run-pass x86-fixup-bw-insts %s -o - | FileCheck %s
+
+# A debug instruction number allocated after parsing must not reuse one that
+# is already in use. The fixup pass rewrites each MOV16rm into a MOVZX32rm16
+# with a new number and records a substitution to it.
+
+# The highest number is only the source of a substitution. Reusing 2 would
+# form the cycle 2 -> 1 -> 2.
+# CHECK-LABEL: name: src_only
+# CHECK:       debugValueSubstitutions:
+# CHECK-DAG:   - { srcinst: 2, srcop: 0, dstinst: 1, dstop: 0, subreg: 0 }
+# CHECK-DAG:   - { srcinst: 1, srcop: 0, dstinst: 3, dstop: 0, subreg: {{[0-9]+}} }
+# CHECK:       $eax = MOVZX32rm16 {{.*}}, debug-instr-number 3
+
+# The highest number is only the destination of a substitution.
+# CHECK-LABEL: name: dst_only
+# CHECK:       debugValueSubstitutions:
+# CHECK-DAG:   - { srcinst: 2, srcop: 0, dstinst: 3, dstop: 0, subreg: 0 }
+# CHECK-DAG:   - { srcinst: 1, srcop: 0, dstinst: 4, dstop: 0, subreg: {{[0-9]+}} }
+# CHECK:       $eax = MOVZX32rm16 {{.*}}, debug-instr-number 4
+
+# The highest number is carried by a DBG_PHI operand.
+# CHECK-LABEL: name: dbg_phi
+# CHECK:       debugValueSubstitutions:
+# CHECK-NEXT:  - { srcinst: 1, srcop: 0, dstinst: 3, dstop: 0, subreg: {{[0-9]+}} }
+# CHECK:       DBG_PHI $rdi, 2
+# CHECK:       $eax = MOVZX32rm16 {{.*}}, debug-instr-number 3
+
+# The highest number is carried by an instruction inside a bundle.
+# CHECK-LABEL: name: in_bundle
+# CHECK:       debugValueSubstitutions:
+# CHECK-NEXT:  - { srcinst: 1, srcop: 0, dstinst: 3, dstop: 0, subreg: {{[0-9]+}} }
+# CHECK:       $rdx = MOV64ri 1, debug-instr-number 2
+# CHECK:       $eax = MOVZX32rm16 {{.*}}, debug-instr-number 3
+
+---
+name:            src_only
+debugInstrRef:   true
+debugValueSubstitutions:
+  - { srcinst: 2, srcop: 0, dstinst: 1, dstop: 0, subreg: 0 }
+body:             |
+  bb.0:
+    liveins: $rdi
+    $ax = MOV16rm killed $rdi, 1, $noreg, 0, $noreg, debug-instr-number 1
+    RET64 $ax
+...
+---
+name:            dst_only
+debugInstrRef:   true
+debugValueSubstitutions:
+  - { srcinst: 2, srcop: 0, dstinst: 3, dstop: 0, subreg: 0 }
+body:             |
+  bb.0:
+    liveins: $rdi
+    $ax = MOV16rm killed $rdi, 1, $noreg, 0, $noreg, debug-instr-number 1
+    RET64 $ax
+...
+---
+name:            dbg_phi
+debugInstrRef:   true
+body:             |
+  bb.0:
+    liveins: $rdi
+    DBG_PHI $rdi, 2
+    $ax = MOV16rm killed $rdi, 1, $noreg, 0, $noreg, debug-instr-number 1
+    RET64 $ax
+...
+---
+name:            in_bundle
+debugInstrRef:   true
+body:             |
+  bb.0:
+    liveins: $rdi
+    BUNDLE implicit-def $rcx, implicit-def $rdx {
+      $rcx = MOV64ri 0
+      $rdx = MOV64ri 1, debug-instr-number 2
+    }
+    $ax = MOV16rm killed $rdi, 1, $noreg, 0, $noreg, debug-instr-number 1
+    RET64 $ax, implicit $rcx, implicit $rdx
+...
