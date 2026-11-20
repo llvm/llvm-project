@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBTarget.h"
+#include "Utils.h"
 #include "lldb/API/SBBreakpoint.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBEnvironment.h"
@@ -66,6 +67,7 @@
 #include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/ScriptedMetadata.h"
+#include "lldb/Utility/StringPool.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
 #include "lldb/ValueObject/ValueObjectList.h"
 #include "lldb/ValueObject/ValueObjectVariable.h"
@@ -162,7 +164,8 @@ SBModule SBTarget::GetModuleAtIndexFromEvent(const uint32_t idx,
 const char *SBTarget::GetBroadcasterClassName() {
   LLDB_INSTRUMENT();
 
-  return ConstString(Target::GetStaticBroadcasterClass()).AsCString(nullptr);
+  return StringPool::GetSystemPool().InternNonEmpty(
+      Target::GetStaticBroadcasterClass());
 }
 
 bool SBTarget::IsValid() const {
@@ -932,7 +935,7 @@ lldb::SBBreakpoint SBTarget::BreakpointCreateByNames(
                      symbol_language, module_list, comp_unit_list);
 
   return BreakpointCreateByNames(symbol_names, num_names, name_type_mask,
-                                 eLanguageTypeUnknown, 0, module_list,
+                                 symbol_language, 0, module_list,
                                  comp_unit_list);
 }
 
@@ -1733,7 +1736,8 @@ const char *SBTarget::GetLabel() const {
   LLDB_INSTRUMENT_VA(this);
 
   if (TargetSP target_sp = GetSP())
-    return ConstString(target_sp->GetLabel()).AsCString(nullptr);
+    return GetDebuggerStringPool(*target_sp)
+        .InternNonEmpty(target_sp->GetLabel());
   return nullptr;
 }
 
@@ -1749,7 +1753,8 @@ const char *SBTarget::GetTargetSessionName() const {
   LLDB_INSTRUMENT_VA(this);
 
   if (TargetSP target_sp = GetSP())
-    return ConstString(target_sp->GetTargetSessionName()).AsCString(nullptr);
+    return GetDebuggerStringPool(*target_sp)
+        .InternNonEmpty(target_sp->GetTargetSessionName());
   return nullptr;
 }
 

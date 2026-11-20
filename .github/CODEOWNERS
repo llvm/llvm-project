@@ -157,7 +157,6 @@
 /mlir/include/mlir/Dialect/Vector/IR @kuhar
 /mlir/lib/Dialect/Vector @banach-space @dcaballe @nicolasvasilache @Groverkss
 /mlir/lib/Dialect/Vector/Transforms/* @banach-space @dcaballe @nicolasvasilache
-/mlir/lib/Dialect/Vector/Transforms/VectorEmulateNarrowType.cpp @banach-space @dcaballe @MaheshRavishankar @nicolasvasilache
 /mlir/**/*EmulateNarrowType* @dcaballe
 
 # Presburger library in MLIR
@@ -294,8 +293,8 @@
 /openmp @mjklemm @TerryLWilmarth
 
 # Offloading runtime
-/offload/plugins-nextgen/common @jhuber6
-/offload/plugins-nextgen/amdgpu @jhuber6
+/offload/liboffload/plugins/common @jhuber6
+/offload/liboffload/plugins/amdgpu @jhuber6
 /openmp/device/ @jhuber6
 
 # GPU headers and tools

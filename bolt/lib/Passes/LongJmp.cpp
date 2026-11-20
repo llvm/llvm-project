@@ -21,6 +21,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/MathExtras.h"
 #include <algorithm>
+#include <limits>
 
 #define DEBUG_TYPE "longjmp"
 
@@ -1081,13 +1082,15 @@ bool LongJmpPass::relaxLocalBranches(BinaryFunction &BF,
 namespace {
 class ClusteredRelaxation {
 public:
-  ClusteredRelaxation(BinaryContext &BC,
-                      BinaryFunctionListType &OutputFunctions)
-      : BC(BC), OutputFunctions(OutputFunctions) {}
+  explicit ClusteredRelaxation(BinaryContext &BC)
+      : BC(BC), OutputFunctions(BC.getOutputBinaryFunctions()) {}
 
-  bool run();
+  void run();
 
 private:
+  template <typename T>
+  static constexpr T MaxValue = std::numeric_limits<T>::max();
+
   static constexpr uint64_t ShortThunkSize = 4;
   static constexpr uint64_t LongThunkSize = 12;
 
@@ -1116,8 +1119,8 @@ private:
     /// The indices of the first and last functions contributing fragments to
     /// this cluster. Used as insertion points for adding thunks to the output
     /// function list.
-    size_t FirstFunctionIndex = -1;
-    size_t LastFunctionIndex = -1;
+    size_t FirstFunctionIndex = MaxValue<size_t>;
+    size_t LastFunctionIndex = MaxValue<size_t>;
 
     /// Thunks located after this cluster.
     BinaryFunctionListType ForwardThunkList;
@@ -1168,14 +1171,19 @@ private:
   void relaxCalls();
   void relaxUnconditionalBranches();
   void insertThunks();
+  void applyBTIFixups();
 
   BinaryContext &BC;
-  BinaryFunctionListType &OutputFunctions;
+  BinaryFunctionListType OutputFunctions;
 
   /// Estimated cluster layout and source/target position maps.
   SmallVector<FragmentCluster, 4> Clusters;
   DenseMap<const BinaryBasicBlock *, Position> BBLayout;
   DenseMap<const MCSymbol *, Position> SymLayout;
+  DenseMap<const MCSymbol *, BinaryBasicBlock *> SymbolToBB;
+
+  /// Long thunks whose out-of-layout targets need BTI fixups.
+  SmallVector<std::pair<BinaryFunction *, const MCSymbol *>> PendingBTIFixups;
 
   /// Out-of-range calls and branches grouped for relaxation.
   SmallVector<OutOfRangeRef> OutOfLayoutCalls;
@@ -1327,20 +1335,35 @@ void ClusteredRelaxation::buildLayout() {
     ++FC.NumFragments;
 
     // Map primary entry points.
-    if (FF.isMainFragment())
-      for (const MCSymbol *Symbol : BF.getSymbols())
+    if (FF.isMainFragment()) {
+      BinaryBasicBlock *BB = FF.empty() ? nullptr : FF.front();
+      for (const MCSymbol *Symbol : BF.getSymbols()) {
         SymLayout[Symbol] = {ClusterNum, FragmentOffset};
+        // Function symbols are emitted before the first block's alignment,
+        // so they may point to padding instead of the block's BTI landing.
+        // Not a concern for block labels or secondary entry symbols,
+        // since they are emitted after alignment.
+        if (BC.usesBTI() && BB && !BC.shouldEmitBlockAlignment(*BB))
+          SymbolToBB[Symbol] = BB;
+      }
+    }
 
     uint64_t BBOffset = FragmentOffset;
-    for (const BinaryBasicBlock *BB : FF) {
+    for (BinaryBasicBlock *BB : FF) {
       BBLayout[BB] = {ClusterNum, BBOffset};
       // Map the local BB label.
-      if (const MCSymbol *Label = BB->getLabel())
+      if (const MCSymbol *Label = BB->getLabel()) {
         SymLayout[Label] = {ClusterNum, BBOffset};
+        if (BC.usesBTI())
+          SymbolToBB[Label] = BB;
+      }
       // Map the secondary entry point, which can differ from the BB label.
       if (MCSymbol *Label = BF.getLabelAtOffset(BB->getOffset()))
-        if (MCSymbol *EntrySymbol = BF.getSecondaryEntryPointSymbol(Label))
+        if (MCSymbol *EntrySymbol = BF.getSecondaryEntryPointSymbol(Label)) {
           SymLayout[EntrySymbol] = {ClusterNum, BBOffset};
+          if (BC.usesBTI())
+            SymbolToBB[EntrySymbol] = BB;
+        }
 
       BBOffset += BB->estimateSize();
     }
@@ -1442,7 +1465,9 @@ void ClusteredRelaxation::collectOutOfRangeReferences() {
         auto TargetIt = SymLayout.find(TargetSymbol);
         const bool Found = TargetIt != SymLayout.end();
         // Unmapped targets use maximum offset and are treated as out of range.
-        const Position Target = Found ? TargetIt->second : Position{-1u, -1ULL};
+        const Position Target =
+            Found ? TargetIt->second
+                  : Position{MaxValue<unsigned>, MaxValue<uint64_t>};
 
         // References within the same cluster do not need relaxation.
         if (Source.Cluster == Target.Cluster)
@@ -1564,7 +1589,7 @@ ClusteredRelaxation::getOrCreateBranchThunkChain(const OutOfRangeRef &Ref,
     if (ThunkClusters.size() == MaxThunks)
       return nullptr;
 
-    unsigned BestHop = -1u;
+    unsigned BestHop = MaxValue<unsigned>;
     for (unsigned Hop = NextHop; Hop < NumHops; ++Hop) {
       const unsigned Cluster = getClusterAtHop(Hop);
       if (!isWithinClusterRange(CurrentOffset, getThunkOffset(Cluster)))
@@ -1572,7 +1597,7 @@ ClusteredRelaxation::getOrCreateBranchThunkChain(const OutOfRangeRef &Ref,
       BestHop = Hop;
     }
 
-    if (BestHop == -1u)
+    if (BestHop == MaxValue<unsigned>)
       return nullptr;
 
     const unsigned BestCluster = getClusterAtHop(BestHop);
@@ -1593,6 +1618,16 @@ ClusteredRelaxation::getOrCreateBranchThunkChain(const OutOfRangeRef &Ref,
 }
 
 void ClusteredRelaxation::relaxCalls() {
+  auto hasBTILanding = [&](const MCSymbol *Symbol) {
+    BinaryBasicBlock *BB = SymbolToBB.lookup(Symbol);
+    if (!BB)
+      return false;
+    MCInst *First = BB->getFirstNonPseudoInstr();
+    return First && (BC.MIB->isBTILandingPad(*First, BTIKind::C) ||
+                     BC.MIB->isBTILandingPad(*First, BTIKind::J) ||
+                     BC.MIB->isBTILandingPad(*First, BTIKind::JC));
+  };
+
   auto createLongThunk = [&](const MCSymbol *TargetSymbol, bool IsForward) {
     BinaryFunction *Thunk = nullptr;
     const size_t ThunkNumber = NumLongThunks++;
@@ -1647,6 +1682,9 @@ void ClusteredRelaxation::relaxCalls() {
     }
 
     BinaryFunction *Thunk = createLongThunk(TargetSymbol, IsForward);
+    // Defer out-of-layout fixups until the output function list is installed.
+    if (BC.usesBTI() && Call.TargetCluster == MaxValue<unsigned>)
+      PendingBTIFixups.emplace_back(Thunk, TargetSymbol);
 
     Thunk->setCodeSectionName(FC.getThunkSectionName(IsForward));
     BinaryFunctionListType &ThunkList =
@@ -1670,9 +1708,13 @@ void ClusteredRelaxation::relaxCalls() {
   // Process known targets from farthest to nearest for maximizing thunk reuse.
   for (auto &Calls : llvm::reverse(CallsByDistance)) {
     for (OutOfRangeRef &Call : Calls) {
+      const bool BTICompatible =
+          !BC.usesBTI() || hasBTILanding(Call.TargetSymbol);
+      const unsigned MaxThunks =
+          BTICompatible ? opts::MaxThunkChainLength : MaxValue<unsigned>;
       // Attempt a branch thunk chain if length is below threshold.
       if (const MCSymbol *Target =
-              getOrCreateBranchThunkChain(Call, opts::MaxThunkChainLength)) {
+              getOrCreateBranchThunkChain(Call, MaxThunks)) {
         // Skip already in-range calls that do not need relaxation.
         if (Target == Call.TargetSymbol)
           continue;
@@ -1680,6 +1722,7 @@ void ClusteredRelaxation::relaxCalls() {
         ++NumShortThunkCalls;
         continue;
       }
+      assert(BTICompatible && "long thunk target lacks a BTI landing pad");
       // Otherwise fall back to a long thunk.
       ++NumLongThunkCalls;
       relaxCallWithLongThunk(Call);
@@ -1690,7 +1733,7 @@ void ClusteredRelaxation::relaxCalls() {
 void ClusteredRelaxation::relaxUnconditionalBranches() {
   for (const OutOfRangeRef &Branch : Branches) {
     const MCSymbol *Target =
-        getOrCreateBranchThunkChain(Branch, /*MaxThunks=*/-1u);
+        getOrCreateBranchThunkChain(Branch, MaxValue<unsigned>);
     assert(Target && "expected branch thunk chain");
     // Skip already in-range branches that do not need relaxation.
     if (Target == Branch.TargetSymbol)
@@ -1734,10 +1777,16 @@ void ClusteredRelaxation::insertThunks() {
         Insertion.ThunkList->begin(), Insertion.ThunkList->end());
 }
 
-bool ClusteredRelaxation::run() {
+void ClusteredRelaxation::applyBTIFixups() {
+  for (const auto &[Thunk, TargetSymbol] : PendingBTIFixups)
+    BC.MIB->applyBTIFixupToSymbol(BC, TargetSymbol,
+                                  *Thunk->front().getLastNonPseudoInstr());
+}
+
+void ClusteredRelaxation::run() {
   buildLayout();
   if (Clusters.empty())
-    return false;
+    return;
 
   collectOutOfRangeReferences();
   relaxCalls();
@@ -1761,16 +1810,8 @@ bool ClusteredRelaxation::run() {
   LLVM_DEBUG(dbgs() << "\nFunction layout with thunks:\n";
              for (const auto *BF : OutputFunctions) { dbgs() << *BF << '\n'; });
 
-  return true;
-}
-
-void LongJmpPass::relaxWithClusters(BinaryContext &BC) {
-  BinaryFunctionListType OutputFunctions = BC.getOutputBinaryFunctions();
-  ClusteredRelaxation Relaxation(BC, OutputFunctions);
-  if (!Relaxation.run())
-    return;
-
   BC.updateOutputBinaryFunctions(std::move(OutputFunctions));
+  applyBTIFixups();
 }
 
 Error LongJmpPass::runOnFunctions(BinaryContext &BC) {
@@ -1832,7 +1873,7 @@ Error LongJmpPass::runOnFunctions(BinaryContext &BC) {
       return Error::success();
 
     BC.outs() << "BOLT-INFO: starting experimental relaxation pass\n";
-    relaxWithClusters(BC);
+    ClusteredRelaxation(BC).run();
     return Error::success();
   }
 

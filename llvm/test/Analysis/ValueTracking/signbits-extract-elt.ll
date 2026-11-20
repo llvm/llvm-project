@@ -26,3 +26,19 @@ define i32 @computeNumSignBits_look_through_extractelt(<2 x i1> %vecin) {
   %ashr = ashr i32 %elt0, 5
   ret i32 %ashr
 }
+
+define <2 x i32> @trunc_demanded(<2 x i1> %x, <2 x i64> %wide) {
+; CHECK-LABEL: @trunc_demanded(
+; CHECK-NEXT:    [[EXT:%.*]] = sext <2 x i1> [[X:%.*]] to <2 x i64>
+; CHECK-NEXT:    [[SRC:%.*]] = shufflevector <2 x i64> [[EXT]], <2 x i64> [[WIDE:%.*]], <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc <2 x i64> [[SRC]] to <2 x i32>
+; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <2 x i32> [[TRUNC]], <2 x i32> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    ret <2 x i32> [[SPLAT]]
+;
+  %ext = sext <2 x i1> %x to <2 x i64>
+  %src = shufflevector <2 x i64> %ext, <2 x i64> %wide, <2 x i32> <i32 0, i32 2>
+  %trunc = trunc <2 x i64> %src to <2 x i32>
+  %splat = shufflevector <2 x i32> %trunc, <2 x i32> poison, <2 x i32> zeroinitializer
+  %result = ashr <2 x i32> %splat, <i32 5, i32 5>
+  ret <2 x i32> %result
+}

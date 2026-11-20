@@ -560,14 +560,7 @@ def Zn3WritePDEP_PEXT : SchedWriteRes<[Zn3ALU1]> {
 def : InstRW<[Zn3WritePDEP_PEXT], (instrs PDEP32rr, PDEP64rr,
                                           PEXT32rr, PEXT64rr)>;
 
-defm : Zn3WriteResIntPair<WriteADC, [Zn3ALU0123], 1, [4], 1>; // Integer ALU + flags op.
-
-def Zn3WriteADC8mr_SBB8mr : SchedWriteRes<[Zn3AGU012, Zn3Load, Zn3ALU0123, Zn3Store]> {
-  let Latency = 1;
-  let ReleaseAtCycles = [1, 1, 7, 1];
-  let NumMicroOps = 1;
-}
-def : InstRW<[Zn3WriteADC8mr_SBB8mr], (instrs ADC8mr, SBB8mr)>;
+defm : Zn3WriteResIntPair<WriteADC, [Zn3ALU0123], 1, [1], 1>; // Integer ALU + flags op.
 
 // This is for simple LEAs with one or two input operands.
 defm : Zn3WriteResInt<WriteLEA, [Zn3AGU012], 1, [1], 1>;     // LEA instructions can't fold loads.
@@ -609,15 +602,15 @@ def Zn3SlowLEA16r : SchedWriteRes<[Zn3ALU0123]> {
 def : InstRW<[Zn3SlowLEA16r], (instrs LEA16r)>;
 
 // Integer multiplication
-defm : Zn3WriteResIntPair<WriteIMul8, [Zn3Multiplier], 3, [3], 1>; // Integer 8-bit multiplication.
-defm : Zn3WriteResIntPair<WriteIMul16, [Zn3Multiplier], 3, [3], 3, /*LoadUOps=*/1>; // Integer 16-bit multiplication.
+defm : Zn3WriteResIntPair<WriteIMul8, [Zn3Multiplier], 3, [1], 1>; // Integer 8-bit multiplication.
+defm : Zn3WriteResIntPair<WriteIMul16, [Zn3Multiplier], 3, [2], 3, /*LoadUOps=*/1>; // Integer 16-bit multiplication.
 defm : Zn3WriteResIntPair<WriteIMul16Imm, [Zn3Multiplier], 4, [4], 2>; // Integer 16-bit multiplication by immediate.
 defm : Zn3WriteResIntPair<WriteIMul16Reg, [Zn3Multiplier], 3, [1], 1>; // Integer 16-bit multiplication by register.
-defm : Zn3WriteResIntPair<WriteIMul32, [Zn3Multiplier], 3, [3], 2>;    // Integer 32-bit multiplication.
+defm : Zn3WriteResIntPair<WriteIMul32, [Zn3Multiplier], 3, [1], 2>;    // Integer 32-bit multiplication.
 defm : Zn3WriteResIntPair<WriteMULX32, [Zn3Multiplier], 3, [1], 2>;    // Integer 32-bit Unsigned Multiply Without Affecting Flags.
 defm : Zn3WriteResIntPair<WriteIMul32Imm, [Zn3Multiplier], 3, [1], 1>; // Integer 32-bit multiplication by immediate.
 defm : Zn3WriteResIntPair<WriteIMul32Reg, [Zn3Multiplier], 3, [1], 1>; // Integer 32-bit multiplication by register.
-defm : Zn3WriteResIntPair<WriteIMul64, [Zn3Multiplier], 3, [3], 2>;    // Integer 64-bit multiplication.
+defm : Zn3WriteResIntPair<WriteIMul64, [Zn3Multiplier], 3, [1], 2>;    // Integer 64-bit multiplication.
 defm : Zn3WriteResIntPair<WriteMULX64, [Zn3Multiplier], 3, [1], 2>;    // Integer 32-bit Unsigned Multiply Without Affecting Flags.
 defm : Zn3WriteResIntPair<WriteIMul64Imm, [Zn3Multiplier], 3, [1], 1>; // Integer 64-bit multiplication by immediate.
 defm : Zn3WriteResIntPair<WriteIMul64Reg, [Zn3Multiplier], 3, [1], 1>; // Integer 64-bit multiplication by register.

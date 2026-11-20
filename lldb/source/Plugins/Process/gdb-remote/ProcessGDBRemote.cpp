@@ -540,9 +540,9 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
 
         while (response.GetNameColonValue(name, value)) {
           if (name == "name") {
-            reg_info.name.SetString(value);
+            reg_info.name = value.str();
           } else if (name == "alt-name") {
-            reg_info.alt_name.SetString(value);
+            reg_info.alt_name = value.str();
           } else if (name == "bitsize") {
             if (!value.getAsInteger(BASE_10, reg_info.byte_size))
               reg_info.byte_size /= CHAR_BIT;
@@ -599,7 +599,7 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
                       .Case("float128", eFormatFloat128)
                       .Default(eFormatInvalid);
           } else if (name == "set") {
-            reg_info.set_name.SetString(value);
+            reg_info.set_name = value.str();
           } else if (name == "gcc" || name == "ehframe") {
             value.getAsInteger(BASE_AUTOSENSE, reg_info.regnum_ehframe);
           } else if (name == "dwarf") {
@@ -5122,7 +5122,7 @@ typedef std::vector<std::string> stringVec;
 
 typedef std::vector<struct GdbServerRegisterInfo> GDBServerRegisterVec;
 struct RegisterSetInfo {
-  ConstString name;
+  std::string name;
 };
 
 typedef std::map<uint32_t, RegisterSetInfo> RegisterSetMap;
@@ -5850,7 +5850,7 @@ bool ParseRegisters(
                                    log](const llvm::StringRef &name,
                                         const llvm::StringRef &value) -> bool {
           if (name == "name") {
-            reg_info.name.SetString(value);
+            reg_info.name = value.str();
           } else if (name == "bitsize") {
             if (llvm::to_integer(value, reg_info.byte_size))
               reg_info.byte_size =
@@ -5864,7 +5864,7 @@ bool ParseRegisters(
           } else if (name == "offset") {
             llvm::to_integer(value, reg_info.byte_offset);
           } else if (name == "altname") {
-            reg_info.alt_name.SetString(value);
+            reg_info.alt_name = value.str();
           } else if (name == "encoding") {
             encoding_set = true;
             reg_info.encoding = Args::StringToEncoding(value, eEncodingUint);
@@ -6030,13 +6030,13 @@ bool ParseRegisters(
         // Only update the register set name if we didn't get a "reg_set"
         // attribute. "set_name" will be empty if we didn't have a "reg_set"
         // attribute.
-        if (!reg_info.set_name) {
+        if (reg_info.set_name.empty()) {
           if (!gdb_group.empty()) {
-            reg_info.set_name.SetCString(gdb_group.c_str());
+            reg_info.set_name = gdb_group;
           } else {
             // If no register group name provided anywhere,
             // we'll create a 'general' register set
-            reg_info.set_name.SetCString("general");
+            reg_info.set_name = "general";
           }
         }
 
@@ -6103,7 +6103,7 @@ bool ProcessGDBRemote::GetGDBServerRegisterInfoXMLAndProcess(
                       if (name == "id")
                         llvm::to_integer(value, set_id);
                       if (name == "name")
-                        set_info.name = ConstString(value);
+                        set_info.name = value.str();
                       return true; // Keep iterating through all attributes
                     });
 

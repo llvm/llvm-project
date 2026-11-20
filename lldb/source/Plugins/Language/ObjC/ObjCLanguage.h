@@ -153,6 +153,9 @@ public:
   GetPossibleFormattersMatches(ValueObject &valobj,
                                lldb::DynamicValueType use_dynamic) override;
 
+  std::vector<lldb::LanguageType>
+  GetFormatterLanguages(lldb::LanguageType language) const override;
+
   std::unique_ptr<TypeScavenger> GetTypeScavenger() override;
 
   std::pair<llvm::StringRef, llvm::StringRef>

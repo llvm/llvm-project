@@ -67,6 +67,9 @@ public:
   std::unique_ptr<TypeScavenger> GetTypeScavenger() override;
   lldb::TypeCategoryImplSP GetFormatters() override;
 
+  std::vector<lldb::LanguageType>
+  GetFormatterLanguages(lldb::LanguageType language) const override;
+
   HardcodedFormatters::HardcodedSummaryFinder GetHardcodedSummaries() override;
 
   HardcodedFormatters::HardcodedSyntheticFinder

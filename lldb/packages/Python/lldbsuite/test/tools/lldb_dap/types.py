@@ -1044,9 +1044,8 @@ class RunInTerminalResponse(Response):
 
 @dataclass(frozen=True)
 class RunInTerminalArgs:
-    # TODO: Fix this cwd is not optional
-    cwd: Optional[str] = None
-    args: List[str] = field(default_factory=list)
+    cwd: str
+    args: List[str]
     kind: Optional[Literal["integrated", "external"]] = None
     title: Optional[str] = None
     env: Optional[Dict[str, Union[str, None]]] = None

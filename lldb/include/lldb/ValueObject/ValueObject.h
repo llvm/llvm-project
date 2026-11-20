@@ -1286,7 +1286,7 @@ public:
 
   ValueImpl(lldb::ValueObjectSP in_valobj_sp,
             lldb::DynamicValueType use_dynamic, bool use_synthetic,
-            const char *name = nullptr);
+            std::string name = {});
 
   ValueImpl(const ValueImpl &rhs) = default;
 
@@ -1335,7 +1335,7 @@ private:
   lldb::ValueObjectSP m_valobj_sp;
   lldb::DynamicValueType m_use_dynamic;
   bool m_use_synthetic;
-  ConstString m_name;
+  std::string m_name;
 };
 
 class ValueLocker {

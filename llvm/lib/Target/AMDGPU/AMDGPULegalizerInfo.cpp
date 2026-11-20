@@ -16,6 +16,7 @@
 #include "AMDGPU.h"
 #include "AMDGPUGlobalISelUtils.h"
 #include "AMDGPUInstrInfo.h"
+#include "AMDGPUMachineInstrs.h"
 #include "AMDGPUMemoryUtils.h"
 #include "AMDGPUTargetMachine.h"
 #include "SIInstrInfo.h"
@@ -448,6 +449,10 @@ static bool isLoadStoreSizeLegal(const GCNSubtarget &ST,
   if (AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT)
     return false;
 
+  // Never plain-legal; custom-lowered to G_AMDGPU_REG_LOAD/STORE.
+  if (AS == AMDGPUAS::VGPR)
+    return false;
+
   // Do not handle extending vector loads.
   if (Ty.isVector() && MemSize != RegSize)
     return false;
@@ -545,6 +550,12 @@ static bool isLoadStoreLegal(const GCNSubtarget &ST, const LegalityQuery &Query)
   const LLT Ty = Query.Types[0];
   return isRegisterType(ST, Ty) && isLoadStoreSizeLegal(ST, Query) &&
          !hasBufferRsrcWorkaround(Ty) && !loadStoreBitcastWorkaround(ST, Ty);
+}
+
+// Whole-dword accesses only, for now.
+static bool isVGPRLoadStoreSizeSupported(unsigned MemSize, unsigned ValSize) {
+  return MemSize == ValSize && MemSize <= MaxRegisterSize &&
+         AMDGPUMI::VLoadStoreIdxInst::isSupportedBitWidth(MemSize);
 }
 
 /// Return true if a load or store of the type should be lowered with a bitcast
@@ -698,6 +709,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   const LLT RegionPtr = LLT::pointer(AMDGPUAS::REGION_ADDRESS, 32);
   const LLT FlatPtr = LLT::pointer(AMDGPUAS::FLAT_ADDRESS, 64);
   const LLT PrivatePtr = LLT::pointer(AMDGPUAS::PRIVATE_ADDRESS, 32);
+  const LLT VGPRPtr = LLT::pointer(AMDGPUAS::VGPR, 32);
   const LLT BufferFatPtr = LLT::pointer(AMDGPUAS::BUFFER_FAT_POINTER, 160);
   const LLT RsrcPtr = LLT::pointer(AMDGPUAS::BUFFER_RESOURCE, 128);
   const LLT BufferStridedPtr =
@@ -940,7 +952,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .widenScalarToNextPow2(0, 32)
       .clampMaxNumElements(0, S32, 16);
 
-  getActionDefinitionsBuilder(G_FRAME_INDEX).legalFor({PrivatePtr});
+  // An alloca in the VGPR ("as memory") address space is diagnosed; see
+  // legalizeFrameIndexVGPR.
+  getActionDefinitionsBuilder(G_FRAME_INDEX)
+      .legalFor({PrivatePtr})
+      .customFor({VGPRPtr});
 
   // If the amount is divergent, we have to do a wave reduction to get the
   // maximum value, so this is expanded during RegBankSelect.
@@ -1700,9 +1716,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     // Constant 32-bit is handled by addrspacecasting the 32-bit pointer to
     // 64-bits.
     //
+    // VGPR accesses are always custom, to be lowered or diagnosed.
+    //
     // TODO: Should generalize bitcast action into coerce, which will also cover
     // inserting addrspacecasts.
-    Actions.customIf(typeIs(1, Constant32Ptr));
+    Actions.customIf(typeInSet(1, {Constant32Ptr, VGPRPtr}));
 
     // Turn any illegal element vectors into something easier to deal
     // with. These will ultimately produce 32-bit scalar shifts to extract the
@@ -1851,9 +1869,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   // Constant 32-bit is handled by addrspacecasting the 32-bit pointer to
   // 64-bits.
   //
+  // VGPR accesses are always custom, to be lowered or diagnosed.
+  //
   // TODO: Should generalize bitcast action into coerce, which will also cover
   // inserting addrspacecasts.
-  ExtLoads.customIf(typeIs(1, Constant32Ptr));
+  ExtLoads.customIf(typeInSet(1, {Constant32Ptr, VGPRPtr}));
 
   ExtLoads.narrowScalarIf(
       [](const LegalityQuery &Query) {
@@ -2363,6 +2383,8 @@ bool AMDGPULegalizerInfo::legalizeCustom(
   switch (MI.getOpcode()) {
   case TargetOpcode::G_ADDRSPACE_CAST:
     return legalizeAddrSpaceCast(MI, MRI, B);
+  case TargetOpcode::G_FRAME_INDEX:
+    return legalizeFrameIndexVGPR(MI, B);
   case TargetOpcode::G_INTRINSIC_ROUNDEVEN:
     return legalizeFroundeven(MI, MRI, B);
   case TargetOpcode::G_FCEIL:
@@ -2623,7 +2645,7 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
 
   if (SrcAS == AMDGPUAS::FLAT_ADDRESS &&
       (DestAS == AMDGPUAS::LOCAL_ADDRESS || DestAS == AMDGPUAS::BARRIER ||
-       DestAS == AMDGPUAS::PRIVATE_ADDRESS)) {
+       DestAS == AMDGPUAS::PRIVATE_ADDRESS || DestAS == AMDGPUAS::VGPR)) {
     auto castFlatToLocalOrPrivate = [&](const DstOp &Dst) -> Register {
       if (DestAS == AMDGPUAS::PRIVATE_ADDRESS &&
           ST.hasGloballyAddressableScratch()) {
@@ -2666,7 +2688,7 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
 
   if (DestAS == AMDGPUAS::FLAT_ADDRESS &&
       (SrcAS == AMDGPUAS::LOCAL_ADDRESS || SrcAS == AMDGPUAS::BARRIER ||
-       SrcAS == AMDGPUAS::PRIVATE_ADDRESS)) {
+       SrcAS == AMDGPUAS::PRIVATE_ADDRESS || SrcAS == AMDGPUAS::VGPR)) {
     auto castLocalOrPrivateToFlat = [&](const DstOp &Dst) -> Register {
       // Coerce the type of the low half of the result so we can use
       // merge_values.
@@ -3508,6 +3530,157 @@ static LLT widenToNextPowerOf2(LLT Ty) {
   return Ty.changeElementSize(PowerOf2Ceil(Ty.getSizeInBits()));
 }
 
+// An alloca in the VGPR ("as memory") address space has no registers to live
+// in. Parallels SITargetLowering::lowerFrameIndex.
+bool AMDGPULegalizerInfo::legalizeFrameIndexVGPR(MachineInstr &MI,
+                                                 MachineIRBuilder &B) const {
+  MachineFunction &MF = B.getMF();
+  int FI = MI.getOperand(1).getIndex();
+  const AllocaInst *Alloca = MF.getFrameInfo().getObjectAllocation(FI);
+  assert(Alloca && Alloca->getAddressSpace() == AMDGPUAS::VGPR);
+
+  MF.getFunction().getContext().diagnose(DiagnosticInfoUnsupported(
+      MF.getFunction(),
+      "unsupported alloca in VGPR 'as memory' address space (13)",
+      Alloca->getDebugLoc()));
+  B.buildUndef(MI.getOperand(0));
+  MI.eraseFromParent();
+  return true;
+}
+
+// The widest part of a VGPR access of type \p Ty that a VGPR tuple holds, in
+// whole elements if \p Ty is a vector; failing that, one element of whole
+// dwords. No type if there is neither.
+static LLT getVGPRLoadStorePartType(LLT Ty) {
+  const unsigned EltSize = Ty.isVector() ? Ty.getScalarSizeInBits() : 32;
+  for (unsigned Size = std::min<unsigned>(Ty.getSizeInBits(), MaxRegisterSize);
+       Size >= 32; Size -= 32) {
+    if (Size % EltSize != 0 ||
+        !AMDGPUMI::VLoadStoreIdxInst::isSupportedBitWidth(Size))
+      continue;
+    if (!Ty.isVector())
+      return Ty.changeElementSize(Size);
+    return LLT::scalarOrVector(ElementCount::getFixed(Size / EltSize),
+                               Ty.getElementType());
+  }
+  if (EltSize % 32 == 0)
+    return Ty.getElementType();
+  return LLT();
+}
+
+/// Lower a whole-dword load or store on AMDGPUAS::VGPR into
+/// G_AMDGPU_REG_LOAD / G_AMDGPU_REG_STORE. Parallels
+/// SITargetLowering::lowerLoadStoreVGPR.
+static bool lowerLoadStoreVGPR(LegalizerHelper &Helper, GLoadStore &LdSt) {
+  MachineIRBuilder &B = Helper.MIRBuilder;
+  MachineRegisterInfo &MRI = *B.getMRI();
+  MachineMemOperand &MMO = LdSt.getMMO();
+
+  const bool IsStore = isa<GStore>(LdSt);
+  Register ValReg = LdSt.getReg(0);
+  Register PtrReg = LdSt.getPointerReg();
+
+  const LLT ValTy = MRI.getType(ValReg);
+  const unsigned ValSize = ValTy.getSizeInBits();
+  const LLT I32 = LLT::integer(32);
+
+  // The combiner turns a masked or sign-extended whole-dword load into an
+  // extending load of its low bits. Load the dword back and extend it in
+  // registers; a load that really is sub-dword gets the checks below.
+  auto *ExtLoad = dyn_cast<GExtLoad>(&LdSt);
+  if (ExtLoad && MMO.getMemoryType().isScalar()) {
+    const unsigned MemSize = MMO.getMemoryType().getSizeInBits();
+    LLT LoadTy = LLT::integer(MemSize);
+    if (MemSize < 32 && LdSt.getAlign() >= Align(4))
+      LoadTy = I32;
+    Register Loaded = B.buildLoadFromOffset(LoadTy, PtrReg, MMO, 0).getReg(0);
+    const bool IsSigned = isa<GSExtLoad>(ExtLoad);
+    if (LoadTy.getSizeInBits() != MemSize) {
+      Loaded = IsSigned ? B.buildSExtInReg(LoadTy, Loaded, MemSize).getReg(0)
+                        : B.buildZExtInReg(LoadTy, Loaded, MemSize).getReg(0);
+    }
+    if (IsSigned)
+      B.buildSExtOrTrunc(ValReg, Loaded);
+    else
+      B.buildZExtOrTrunc(ValReg, Loaded);
+    LdSt.eraseFromParent();
+    return true;
+  }
+
+  // The index is the pointer >> 2, so an under-aligned access would silently
+  // reach the containing dword.
+  const unsigned MemSize = MMO.getMemoryType().getSizeInBits();
+  if (MemSize != ValSize || MemSize % 32 != 0 || LdSt.getAlign() < Align(4)) {
+    const Function &F = B.getMF().getFunction();
+    F.getContext().diagnose(DiagnosticInfoUnsupported(
+        F,
+        "unsupported access of VGPR 'as memory' address space (13); only "
+        "dword-aligned whole-dword loads and stores are implemented",
+        LdSt.getDebugLoc()));
+    if (!IsStore)
+      B.buildUndef(ValReg);
+    LdSt.eraseFromParent();
+    return true;
+  }
+
+  // A width no VGPR tuple has is split, the widest part first, and each part is
+  // legalized again. When there is no part, the access is first made one of
+  // <N x i32>.
+  if (!isVGPRLoadStoreSizeSupported(MemSize, ValSize)) {
+    LLT PartTy = getVGPRLoadStorePartType(ValTy);
+    LegalizerHelper::LegalizeResult Res =
+        PartTy.isValid()
+            ? Helper.reduceLoadStoreWidth(LdSt, 0, PartTy)
+            : Helper.bitcast(LdSt, 0, LLT::fixed_vector(ValSize / 32, I32));
+    return Res == LegalizerHelper::Legalized;
+  }
+
+  const MachineInstrBuilder PtrAsInt = B.buildPtrToInt(I32, PtrReg);
+  const MachineInstrBuilder Index =
+      B.buildLShr(I32, PtrAsInt, B.buildConstant(I32, 2));
+
+  // Pointers go through integers: a scalar pointer cannot be bitcast, and not
+  // every pointer type has a selection pattern.
+  LLT IntTy = ValTy;
+  if (ValTy.isPointerOrPointerVector())
+    IntTy = ValTy.changeElementType(LLT::integer(ValTy.getScalarSizeInBits()));
+
+  // Normalize to i32 / <N x i32> so a selection pattern exists (e.g. v4i8).
+  LLT RegTy = IntTy;
+  if (IntTy.getScalarSizeInBits() != 32) {
+    unsigned NumDwords = ValSize / 32;
+    RegTy = NumDwords == 1 ? I32 : LLT::fixed_vector(NumDwords, I32);
+  }
+
+  if (IsStore) {
+    Register Value = ValReg;
+    if (IntTy != ValTy)
+      Value = B.buildPtrToInt(IntTy, Value).getReg(0);
+    if (RegTy != IntTy)
+      Value = B.buildBitcast(RegTy, Value).getReg(0);
+    B.buildInstr(AMDGPU::G_AMDGPU_REG_STORE, {}, {Value, Index.getReg(0)})
+        .addMemOperand(&MMO);
+  } else if (RegTy == ValTy) {
+    B.buildInstr(AMDGPU::G_AMDGPU_REG_LOAD, {ValReg}, {Index.getReg(0)})
+        .addMemOperand(&MMO);
+  } else {
+    Register Result =
+        B.buildInstr(AMDGPU::G_AMDGPU_REG_LOAD, {RegTy}, {Index.getReg(0)})
+            .addMemOperand(&MMO)
+            .getReg(0);
+    if (IntTy == ValTy) {
+      B.buildBitcast(ValReg, Result);
+    } else {
+      if (RegTy != IntTy)
+        Result = B.buildBitcast(IntTy, Result).getReg(0);
+      B.buildIntToPtr(ValReg, Result);
+    }
+  }
+
+  LdSt.eraseFromParent();
+  return true;
+}
+
 bool AMDGPULegalizerInfo::legalizeLoad(LegalizerHelper &Helper,
                                        MachineInstr &MI) const {
   MachineIRBuilder &B = Helper.MIRBuilder;
@@ -3528,6 +3701,9 @@ bool AMDGPULegalizerInfo::legalizeLoad(LegalizerHelper &Helper,
     return true;
   }
 
+  if (AddrSpace == AMDGPUAS::VGPR && isa<GExtLoad>(MI))
+    return lowerLoadStoreVGPR(Helper, cast<GLoadStore>(MI));
+
   if (MI.getOpcode() != AMDGPU::G_LOAD)
     return false;
 
@@ -3540,6 +3716,9 @@ bool AMDGPULegalizerInfo::legalizeLoad(LegalizerHelper &Helper,
     Observer.changedInstr(MI);
     return true;
   }
+
+  if (AddrSpace == AMDGPUAS::VGPR)
+    return lowerLoadStoreVGPR(Helper, cast<GLoadStore>(MI));
 
   MachineMemOperand *MMO = *MI.memoperands_begin();
   const unsigned ValSize = ValTy.getSizeInBits();
@@ -3613,6 +3792,10 @@ bool AMDGPULegalizerInfo::legalizeStore(LegalizerHelper &Helper,
     Observer.changedInstr(MI);
     return true;
   }
+
+  if (MRI.getType(MI.getOperand(1).getReg()).getAddressSpace() ==
+      AMDGPUAS::VGPR)
+    return lowerLoadStoreVGPR(Helper, cast<GLoadStore>(MI));
   return false;
 }
 

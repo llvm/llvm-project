@@ -4889,7 +4889,7 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
       // If the input contained enough sign bits that some remain after the
       // truncation, then we can make use of that. Otherwise we don't know
       // anything.
-      Tmp = ComputeNumSignBits(U->getOperand(0), Q, Depth + 1);
+      Tmp = ComputeNumSignBits(U->getOperand(0), DemandedElts, Q, Depth + 1);
       unsigned OperandTyBits = U->getOperand(0)->getType()->getScalarSizeInBits();
       if (Tmp > (OperandTyBits - TyBits))
         return Tmp - (OperandTyBits - TyBits);
@@ -5400,8 +5400,9 @@ computeKnownFPClassForFAddSub(const Operator *Op, const APInt &DemandedElts,
       (InterestedClasses & KnownFPClass::OrderedLessThanZeroMask) != fcNone;
   bool WantNaN = (InterestedClasses & fcNan) != fcNone;
   bool WantNegZero = (InterestedClasses & fcNegZero) != fcNone;
+  bool WantSubnormal = (InterestedClasses & fcSubnormal) != fcNone;
 
-  if (!WantNaN && !WantNegative && !WantNegZero)
+  if (!WantNaN && !WantNegative && !WantNegZero && !WantSubnormal)
     return;
 
   FPClassTest InterestedSrcs = InterestedClasses;
@@ -5420,7 +5421,7 @@ computeKnownFPClassForFAddSub(const Operator *Op, const APInt &DemandedElts,
 
   if ((WantNaN && KnownRHS.isKnownNeverNaN()) ||
       (WantNegative && KnownRHS.cannotBeOrderedLessThanZero()) || WantNegZero ||
-      !IsAdd) {
+      WantSubnormal || !IsAdd) {
 
     // FIXME: Context function should always be passed in separately
     const Function *F = cast<Instruction>(Op)->getFunction();
@@ -5438,6 +5439,11 @@ computeKnownFPClassForFAddSub(const Operator *Op, const APInt &DemandedElts,
       if (!Self) {
         computeKnownFPClass(LHS, DemandedElts, InterestedSrcs, KnownLHS, Q,
                             Depth + 1);
+      }
+
+      if (const APFloat *CRHS; IsAdd && match(RHS, m_APFloat(CRHS))) {
+        Known = KnownFPClass::fadd(KnownLHS, *CRHS, RM, Mode);
+        return;
       }
 
       Known = IsAdd ? KnownFPClass::fadd(KnownLHS, KnownRHS, RM, Mode)

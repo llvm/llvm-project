@@ -3493,6 +3493,13 @@ def StrLen : LibBuiltin<"string.h"> {
   let AddBuiltinPrefixedAlias = 1;
 }
 
+// C23 string.h
+def MemsetExplicit : LibBuiltin<"string.h"> {
+  let Spellings = ["memset_explicit"];
+  let Attributes = [NoThrow];
+  let Prototype = "void*(void*, int, size_t)";
+}
+
 // C99 stdio.h
 // FIXME: This list is incomplete.
 def Printf : LibBuiltin<"stdio.h"> {
@@ -4005,6 +4012,12 @@ def StrlCat : GNULibBuiltin<"string.h"> {
   let Spellings = ["strlcat"];
   let Prototype = "size_t(char*, const char*, size_t)";
   let AddBuiltinPrefixedAlias = 1;
+}
+
+def ExplicitBZero : GNULibBuiltin<"string.h"> {
+  let Spellings = ["explicit_bzero"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(void*, size_t)";
 }
 
 def ObjcMsgSend : ObjCLibBuiltin<"objc_message.h"> {

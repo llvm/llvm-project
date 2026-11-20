@@ -1116,6 +1116,21 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  pthread_getcpuclockid
+  SRCS
+    pthread_getcpuclockid.cpp
+  HDRS
+    pthread_getcpuclockid.h
+  DEPENDS
+    libc.hdr.types.clockid_t
+    libc.hdr.types.pthread_t
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.src.__support.threads.thread
+)
+
+add_entrypoint_object(
   pthread_getattr_np
   SRCS
     pthread_getattr_np.cpp
