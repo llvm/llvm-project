@@ -234,6 +234,7 @@ private:
   SDValue splitBinaryBitConstantOp(DAGCombinerInfo &DCI, const SDLoc &SL,
                                    unsigned Opc, SDValue LHS,
                                    const ConstantSDNode *CRHS) const;
+  SDValue splitDivergentBitOp64(SDNode *N, DAGCombinerInfo &DCI) const;
 
   SDValue performAndCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performOrCombine(SDNode *N, DAGCombinerInfo &DCI) const;

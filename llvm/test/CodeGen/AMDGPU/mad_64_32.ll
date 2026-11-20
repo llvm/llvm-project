@@ -1343,16 +1343,13 @@ define i64 @mad_i64_i32_thrice(i32 %arg0, i32 %arg1, i64 %arg2, i64 %arg3, i64 %
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mad_nc_i64_i32 v[0:1], v0, v1, 0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_2)
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
 ; GFX1250-NEXT:    v_add_nc_u64_e32 v[2:3], v[0:1], v[2:3]
 ; GFX1250-NEXT:    v_add_nc_u64_e32 v[4:5], v[0:1], v[4:5]
 ; GFX1250-NEXT:    v_add_nc_u64_e32 v[0:1], v[0:1], v[6:7]
-; GFX1250-NEXT:    v_xor_b32_e32 v2, v2, v4
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1250-NEXT:    v_xor_b32_e32 v3, v3, v5
-; GFX1250-NEXT:    v_xor_b32_e32 v0, v2, v0
+; GFX1250-NEXT:    v_bitop3_b32 v0, v2, v0, v4 bitop3:0x96
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX1250-NEXT:    v_xor_b32_e32 v1, v3, v1
+; GFX1250-NEXT:    v_bitop3_b32 v1, v3, v1, v5 bitop3:0x96
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %sext0 = sext i32 %arg0 to i64
   %sext1 = sext i32 %arg1 to i64

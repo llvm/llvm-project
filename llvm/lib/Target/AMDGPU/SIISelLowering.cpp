@@ -14844,6 +14844,71 @@ SDValue SITargetLowering::splitBinaryBitConstantOp(
   return SDValue();
 }
 
+/// Return true if \p V is a divergent 64-bit or <2 x i32> AND, OR or XOR.
+static bool isDivergentBitOp64(SDValue V) {
+  unsigned Opc = V.getOpcode();
+  EVT VT = V.getValueType();
+  return (Opc == ISD::AND || Opc == ISD::OR || Opc == ISD::XOR) &&
+         (VT == MVT::i64 || VT == MVT::v2i32) && V->isDivergent();
+}
+
+static bool isBitOp32(const SDNode *N) {
+  unsigned Opc = N->getOpcode();
+  return (Opc == ISD::AND || Opc == ISD::OR || Opc == ISD::XOR) &&
+         N->getValueType(0) == MVT::i32;
+}
+
+/// Return true if an operand or a user of the 64-bit logic operation \p N is
+/// a 64-bit logic operation too, or one that was already split into halves.
+static bool isNextToBitOp64(SDNode *N) {
+  auto IsSplit = [](SDValue V) {
+    if (V.getOpcode() == ISD::BITCAST)
+      V = V.getOperand(0);
+    return V.getOpcode() == ISD::BUILD_VECTOR && V.getNumOperands() == 2 &&
+           isBitOp32(V.getOperand(0).getNode()) &&
+           isBitOp32(V.getOperand(1).getNode());
+  };
+  auto FeedsBitOp32 = [](const SDNode *U) {
+    return U->getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+           any_of(U->users(), isBitOp32);
+  };
+  if (any_of(N->op_values(),
+             [&](SDValue Op) { return isDivergentBitOp64(Op) || IsSplit(Op); }))
+    return true;
+  return any_of(N->users(), [&](SDNode *U) {
+    return isDivergentBitOp64(SDValue(U, 0)) || FeedsBitOp32(U) ||
+           (U->getOpcode() == ISD::BITCAST &&
+            U->getValueType(0) == MVT::v2i32 &&
+            any_of(U->users(), FeedsBitOp32));
+  });
+}
+
+/// Split a divergent 64-bit or <2 x i32> AND, OR or XOR that is next to other
+/// 64-bit logic into two 32-bit operations once the DAG is legal, as
+/// RegBankSelect does for GlobalISel. The VALU has only 32-bit forms, and the
+/// halves can then be selected with their neighbours, for example into
+/// V_BITOP3. A lone operation stays whole for the combines that match 64-bit
+/// operations.
+SDValue SITargetLowering::splitDivergentBitOp64(SDNode *N,
+                                                DAGCombinerInfo &DCI) const {
+  if (!DCI.isAfterLegalizeDAG() || !Subtarget->hasBitOp3Insts() ||
+      !isDivergentBitOp64(SDValue(N, 0)) || !isNextToBitOp64(N))
+    return SDValue();
+
+  SelectionDAG &DAG = DCI.DAG;
+  SDLoc SL(N);
+  unsigned Opc = N->getOpcode();
+  SDValue LHS = DAG.getBitcast(MVT::v2i32, N->getOperand(0));
+  SDValue RHS = DAG.getBitcast(MVT::v2i32, N->getOperand(1));
+  SDValue Halves[2];
+  for (unsigned I : {0, 1})
+    Halves[I] = DAG.getNode(
+        Opc, SL, MVT::i32, DAG.getExtractVectorElt(SL, MVT::i32, LHS, I),
+        DAG.getExtractVectorElt(SL, MVT::i32, RHS, I), N->getFlags());
+  return DAG.getBitcast(N->getValueType(0),
+                        DAG.getBuildVector(MVT::v2i32, SL, Halves));
+}
+
 bool llvm::isBoolSGPR(SDValue V) {
   if (V.getValueType() != MVT::i1)
     return false;
@@ -19392,6 +19457,9 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
 
   if (getTargetMachine().getOptLevel() == CodeGenOptLevel::None)
     return SDValue();
+
+  if (SDValue Split = splitDivergentBitOp64(N, DCI))
+    return Split;
 
   switch (N->getOpcode()) {
   case ISD::ADD:

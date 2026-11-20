@@ -14,6 +14,7 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUISELDAGTODAG_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUISELDAGTODAG_H
 
+#include "AMDGPUBitOp3.h"
 #include "AMDGPUSelectionDAGInfo.h"
 #include "GCNSubtarget.h"
 #include "SIMachineFunctionInfo.h"
@@ -55,6 +56,10 @@ class AMDGPUDAGToDAGISel : public SelectionDAGISel {
 
   // Default FP mode for the current function.
   SIModeRegisterDefaults Mode;
+
+  // The constants of the logic operations in each block of the current
+  // function, for the V_BITOP3 cost check.
+  mutable AMDGPU::LogicConstantBlocks LogicConstants;
 
   // Instructions that will be lowered with a final instruction that zeros the
   // high result bits.

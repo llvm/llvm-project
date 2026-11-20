@@ -264,7 +264,7 @@ define float @from_e5m3fnu_f32(i8 %x) {
 ; GFX950-NEXT:    v_ffbh_u32_e32 v2, v1
 ; GFX950-NEXT:    v_sub_u32_e32 v3, 31, v2
 ; GFX950-NEXT:    v_lshlrev_b32_e64 v3, v3, 1
-; GFX950-NEXT:    v_bitop3_b32 v3, v0, v3, 7 bitop3:0x6c
+; GFX950-NEXT:    v_xor_b32_e32 v3, v1, v3
 ; GFX950-NEXT:    v_add_u32_e32 v4, -8, v2
 ; GFX950-NEXT:    v_lshlrev_b32_e32 v3, v4, v3
 ; GFX950-NEXT:    v_sub_u32_e32 v2, 0x8d, v2
@@ -342,7 +342,7 @@ define <2 x float> @v2_from_e5m3fnu(<2 x i8> %x) {
 ; GFX950-NEXT:    v_ffbh_u32_e32 v3, v2
 ; GFX950-NEXT:    v_sub_u32_e32 v4, 31, v3
 ; GFX950-NEXT:    v_lshlrev_b32_e64 v4, v4, 1
-; GFX950-NEXT:    v_bitop3_b32 v4, v0, v4, 7 bitop3:0x6c
+; GFX950-NEXT:    v_xor_b32_e32 v4, v2, v4
 ; GFX950-NEXT:    v_add_u32_e32 v5, -8, v3
 ; GFX950-NEXT:    v_lshlrev_b32_e32 v4, v5, v4
 ; GFX950-NEXT:    v_sub_u32_e32 v3, 0x8d, v3
@@ -368,7 +368,7 @@ define <2 x float> @v2_from_e5m3fnu(<2 x i8> %x) {
 ; GFX950-NEXT:    v_ffbh_u32_e32 v4, v3
 ; GFX950-NEXT:    v_sub_u32_e32 v5, 31, v4
 ; GFX950-NEXT:    v_lshlrev_b32_e64 v5, v5, 1
-; GFX950-NEXT:    v_bitop3_b32 v5, v1, v5, 7 bitop3:0x6c
+; GFX950-NEXT:    v_xor_b32_e32 v5, v3, v5
 ; GFX950-NEXT:    v_add_u32_e32 v6, -8, v4
 ; GFX950-NEXT:    v_lshlrev_b32_e32 v5, v6, v5
 ; GFX950-NEXT:    v_sub_u32_e32 v4, 0x8d, v4
@@ -478,7 +478,7 @@ define <4 x float> @v4_from_e5m3fnu(<4 x i8> %x) {
 ; GFX950-NEXT:    v_ffbh_u32_e32 v5, v4
 ; GFX950-NEXT:    v_sub_u32_e32 v6, 31, v5
 ; GFX950-NEXT:    v_lshlrev_b32_e64 v6, v6, 1
-; GFX950-NEXT:    v_bitop3_b32 v6, v0, v6, 7 bitop3:0x6c
+; GFX950-NEXT:    v_xor_b32_e32 v6, v4, v6
 ; GFX950-NEXT:    v_add_u32_e32 v7, -8, v5
 ; GFX950-NEXT:    v_lshlrev_b32_e32 v6, v7, v6
 ; GFX950-NEXT:    v_sub_u32_e32 v5, 0x8d, v5
@@ -504,7 +504,7 @@ define <4 x float> @v4_from_e5m3fnu(<4 x i8> %x) {
 ; GFX950-NEXT:    v_ffbh_u32_e32 v6, v5
 ; GFX950-NEXT:    v_sub_u32_e32 v7, 31, v6
 ; GFX950-NEXT:    v_lshlrev_b32_e64 v7, v7, 1
-; GFX950-NEXT:    v_bitop3_b32 v7, v1, v7, 7 bitop3:0x6c
+; GFX950-NEXT:    v_xor_b32_e32 v7, v5, v7
 ; GFX950-NEXT:    v_add_u32_e32 v8, -8, v6
 ; GFX950-NEXT:    v_lshlrev_b32_e32 v7, v8, v7
 ; GFX950-NEXT:    v_sub_u32_e32 v6, 0x8d, v6
@@ -529,7 +529,7 @@ define <4 x float> @v4_from_e5m3fnu(<4 x i8> %x) {
 ; GFX950-NEXT:    v_ffbh_u32_e32 v6, v5
 ; GFX950-NEXT:    v_sub_u32_e32 v7, 31, v6
 ; GFX950-NEXT:    v_lshlrev_b32_e64 v7, v7, 1
-; GFX950-NEXT:    v_bitop3_b32 v7, v2, v7, 7 bitop3:0x6c
+; GFX950-NEXT:    v_xor_b32_e32 v7, v5, v7
 ; GFX950-NEXT:    v_add_u32_e32 v8, -8, v6
 ; GFX950-NEXT:    v_lshlrev_b32_e32 v7, v8, v7
 ; GFX950-NEXT:    v_sub_u32_e32 v6, 0x8d, v6
@@ -554,7 +554,7 @@ define <4 x float> @v4_from_e5m3fnu(<4 x i8> %x) {
 ; GFX950-NEXT:    v_ffbh_u32_e32 v6, v5
 ; GFX950-NEXT:    v_sub_u32_e32 v7, 31, v6
 ; GFX950-NEXT:    v_lshlrev_b32_e64 v7, v7, 1
-; GFX950-NEXT:    v_bitop3_b32 v7, v3, v7, 7 bitop3:0x6c
+; GFX950-NEXT:    v_xor_b32_e32 v7, v5, v7
 ; GFX950-NEXT:    v_add_u32_e32 v8, -8, v6
 ; GFX950-NEXT:    v_lshlrev_b32_e32 v7, v8, v7
 ; GFX950-NEXT:    v_sub_u32_e32 v6, 0x8d, v6
