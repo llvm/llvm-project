@@ -78,8 +78,7 @@ template <class, class... _Args>
 struct __invoke_result_impl {};
 
 template <class... _Args>
-using __direct_invoke_result_t _LIBCPP_NODEBUG =
-    decltype(__builtin_invoke(reinterpret_cast<_Args&&>(static_cast<int&&>(0))...));
+using __direct_invoke_result_t _LIBCPP_NODEBUG = decltype(__builtin_invoke(std::declval<_Args>()...));
 
 template <class... _Args>
 struct __invoke_result_impl<__void_t<__direct_invoke_result_t<_Args...> >, _Args...> {

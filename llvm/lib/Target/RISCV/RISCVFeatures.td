@@ -2102,6 +2102,13 @@ def FeatureTaggedGlobals : SubtargetFeature<"tagged-globals",
     "true", "Use an instruction sequence for taking the address of a global "
     "that allows a memory tag in the upper address bits">;
 
+def FeatureFixSiFiveMAL9174
+    : SubtargetFeature<"fix-sifive-mal-9174",
+                       "FixSiFiveMAL9174", "true",
+                       "Workaround SiFive erratum MAL-9174 by "
+                       "disallowing overlapping source and destination for "
+                       "vector indexed loads">;
+
 //===----------------------------------------------------------------------===//
 // Tuning features
 //===----------------------------------------------------------------------===//
