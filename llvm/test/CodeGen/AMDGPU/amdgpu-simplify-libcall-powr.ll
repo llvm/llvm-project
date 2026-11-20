@@ -795,7 +795,7 @@ define <2 x float> @test_powr_afn_v2f32_0.0(<2 x float> %x) {
 ; NOPRELINK-NEXT:    [[TMP4:%.*]] = call afn <2 x float> @llvm.log2.v2f32(<2 x float> [[TMP3]])
 ; NOPRELINK-NEXT:    [[TMP5:%.*]] = fmul afn <2 x float> [[TMP4]], zeroinitializer
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = call afn <2 x float> @llvm.exp2.v2f32(<2 x float> [[TMP5]])
-; NOPRELINK-NEXT:    [[TMP7:%.*]] = fcmp ueq <2 x float> [[TMP2]], zeroinitializer
+; NOPRELINK-NEXT:    [[TMP7:%.*]] = fcmp afn ueq <2 x float> [[TMP2]], zeroinitializer
 ; NOPRELINK-NEXT:    [[TMP8:%.*]] = select afn <2 x i1> [[TMP7]], <2 x float> splat (float +qnan), <2 x float> [[TMP6]]
 ; NOPRELINK-NEXT:    ret <2 x float> [[TMP8]]
 ;
