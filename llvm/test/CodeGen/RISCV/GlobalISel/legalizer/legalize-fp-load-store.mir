@@ -14,12 +14,12 @@ body:             |
     ; CHECK: liveins: $x10, $f10_f
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $f10_f
-    ; CHECK-NEXT: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store (s32))
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(f32) = COPY $f10_f
+    ; CHECK-NEXT: G_STORE [[COPY1]](f32), [[COPY]](p0) :: (store (f32))
     ; CHECK-NEXT: PseudoRET
     %0:_(p0) = COPY $x10
-    %1:_(s32) = COPY $f10_f
-    G_STORE %1(s32), %0(p0) :: (store (s32))
+    %1:_(f32) = COPY $f10_f
+    G_STORE %1(f32), %0(p0) :: (store (f32))
     PseudoRET
 
 ...
@@ -33,12 +33,12 @@ body:             |
     ; CHECK: liveins: $x10, $f10_d
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $f10_d
-    ; CHECK-NEXT: G_STORE [[COPY1]](s64), [[COPY]](p0) :: (store (s64))
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(f64) = COPY $f10_d
+    ; CHECK-NEXT: G_STORE [[COPY1]](f64), [[COPY]](p0) :: (store (f64))
     ; CHECK-NEXT: PseudoRET
     %0:_(p0) = COPY $x10
-    %1:_(s64) = COPY $f10_d
-    G_STORE %1(s64), %0(p0) :: (store (s64))
+    %1:_(f64) = COPY $f10_d
+    G_STORE %1(f64), %0(p0) :: (store (f64))
     PseudoRET
 
 ...
@@ -52,12 +52,12 @@ body:             |
     ; CHECK: liveins: $x10, $f10_f
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s32))
-    ; CHECK-NEXT: $f10_f = COPY [[LOAD]](s32)
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(f32) = G_LOAD [[COPY]](p0) :: (load (f32))
+    ; CHECK-NEXT: $f10_f = COPY [[LOAD]](f32)
     ; CHECK-NEXT: PseudoRET implicit $f10_f
     %0:_(p0) = COPY $x10
-    %2:_(s32) = G_LOAD %0(p0) :: (load (s32))
-    $f10_f = COPY %2(s32)
+    %2:_(f32) = G_LOAD %0(p0) :: (load (f32))
+    $f10_f = COPY %2(f32)
     PseudoRET implicit $f10_f
 
 ...
@@ -71,12 +71,12 @@ body:             |
     ; CHECK: liveins: $x10, $f10_d
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[COPY]](p0) :: (load (s64))
-    ; CHECK-NEXT: $f10_d = COPY [[LOAD]](s64)
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(f64) = G_LOAD [[COPY]](p0) :: (load (f64))
+    ; CHECK-NEXT: $f10_d = COPY [[LOAD]](f64)
     ; CHECK-NEXT: PseudoRET implicit $f10_d
     %0:_(p0) = COPY $x10
-    %2:_(s64) = G_LOAD %0(p0) :: (load (s64))
-    $f10_d = COPY %2(s64)
+    %2:_(f64) = G_LOAD %0(p0) :: (load (f64))
+    $f10_d = COPY %2(f64)
     PseudoRET implicit $f10_d
 
 ...
