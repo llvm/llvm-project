@@ -162,4 +162,4 @@ body:             |
   ; CHECK:   $r4 = MOVi 1, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   $r5 = MOVi 1, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   MOVPCLR 14 /* CC::al */, $noreg
-
+...

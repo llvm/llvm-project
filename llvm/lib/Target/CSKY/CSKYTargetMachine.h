@@ -16,6 +16,7 @@
 #include "CSKYSubtarget.h"
 #include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/Target/LastSubtargetCache.h"
 #include <optional>
 
 namespace llvm {
@@ -23,6 +24,20 @@ namespace llvm {
 class CSKYTargetMachine : public CodeGenTargetMachineImpl {
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   mutable StringMap<std::unique_ptr<CSKYSubtarget>> SubtargetMap;
+
+  /// The attributes that select a subtarget.
+  struct SubtargetAttrs {
+    Attribute CPU, TuneCPU, FS;
+    FloatABI::ABIType FloatABI = FloatABI::Default;
+
+    bool operator==(const SubtargetAttrs &RHS) const {
+      return CPU == RHS.CPU && TuneCPU == RHS.TuneCPU && FS == RHS.FS &&
+             FloatABI == RHS.FloatABI;
+    }
+
+    bool operator!=(const SubtargetAttrs &RHS) const { return !(*this == RHS); }
+  };
+  mutable LastSubtargetCache<CSKYSubtarget, SubtargetAttrs> LastSubtarget;
 
 public:
   CSKYTargetMachine(const Target &T, const Triple &TT, StringRef CPU,

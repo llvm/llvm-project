@@ -168,6 +168,10 @@ def warn_drv_unsupported_option_for_flang : Warning<
 def warn_drv_unsupported_diag_option_for_flang : Warning<
   "the warning option '-%0' is not supported">,
   InGroup<OptionIgnored>;
+def warn_drv_tsan_profile_update_single : Warning<
+  "'%0' with '-fsanitize=thread' may cause ThreadSanitizer to report data "
+  "races on profile counters">,
+  InGroup<DiagGroup<"tsan-profile-update">>;
 def warn_drv_unsupported_option_for_processor : Warning<
   "ignoring '%0' option as it is not currently supported for processor '%1'">,
   InGroup<OptionIgnored>;
@@ -624,6 +628,8 @@ def err_drv_needs_hvx : Error<
   "%0 requires HVX, use -mhvx/-mhvx= to enable it">;
 def err_drv_needs_hvx_version : Error<
   "%0 is not supported on HVX %1">;
+def err_drv_needs_hlx : Error<
+  "%0 requires HLX, use -mhlx to enable it">;
 
 def err_drv_module_header_wrong_kind : Error<
   "header file '%0' input type '%1' does not match type of prior input "

@@ -82,6 +82,16 @@ llvm.func @invalid_zeroext_attr_type(%0 : i32 {llvm.zeroext = !llvm.struct<(i32)
 
 // -----
 
+// expected-error@below {{"llvm.noext" attribute attached to non-integer LLVM type}}
+llvm.func @invalid_noext_arg_type(%0 : f32 {llvm.noext})
+
+// -----
+
+// expected-error@below {{"llvm.noext" should be a unit attribute}}
+llvm.func @invalid_noext_attr_type(%0 : i32 {llvm.noext = !llvm.struct<(i32)>})
+
+// -----
+
 // expected-error@below {{"llvm.noundef" should be a unit attribute}}
 llvm.func @invalid_noundef_attr_type(%0 : i32 {llvm.noundef = !llvm.ptr})
 

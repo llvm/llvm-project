@@ -41,3 +41,4 @@ body: |
   bb.1:
     liveins: $vgpr1
     $vgpr2 = WWM_COPY $vgpr1
+...
