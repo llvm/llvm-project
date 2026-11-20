@@ -2297,6 +2297,14 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val,
       // checked earlier in isLiteralImm()
 
       Val = FPLiteral.bitcastToAPInt().getZExtValue();
+
+      // On GFX11+, an f16 inline constant for a V2FP16_SPLAT operand should be
+      // replicated into both halves.
+      if (OpTy == AMDGPU::OPERAND_REG_IMM_V2FP16_SPLAT &&
+          Lit == LitModifier::None && AsmParser->isGFX11Plus() &&
+          AMDGPU::isInlinableLiteralFP16(static_cast<int16_t>(Val),
+                                         AsmParser->hasInv2PiInlineImm()))
+        Val = (Val << 16) | (Val & 0xffff);
       break;
     }
     default:
