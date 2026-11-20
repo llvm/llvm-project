@@ -1512,3 +1512,35 @@ define <4 x i32> @PR41419(<4 x i32> %v) {
   ret <4 x i32> %s
 }
 
+; Issue #234418: nsz must not be kept on the identity lanes when %v can be zero.
+define <2 x half> @fmul_nsz_identity_lane_issue234418(<2 x half> nofpclass(nan) %v) {
+; CHECK-LABEL: @fmul_nsz_identity_lane_issue234418(
+; CHECK-NEXT:    [[S:%.*]] = fmul nnan <2 x half> [[V:%.*]], <half 2.000000e+00, half 1.000000e+00>
+; CHECK-NEXT:    ret <2 x half> [[S]]
+;
+  %b = fmul nsz <2 x half> %v, <half 2.0, half 3.0>
+  %s = shufflevector <2 x half> %b, <2 x half> %v, <2 x i32> <i32 0, i32 3>
+  ret <2 x half> %s
+}
+
+; X is known never to be zero, so keeping nsz on the identity lanes is safe.
+define <2 x half> @fmul_nsz_known_nonzero(<2 x half> nofpclass(nan zero) %v) {
+; CHECK-LABEL: @fmul_nsz_known_nonzero(
+; CHECK-NEXT:    [[S:%.*]] = fmul nnan nsz <2 x half> [[V:%.*]], <half 2.000000e+00, half 1.000000e+00>
+; CHECK-NEXT:    ret <2 x half> [[S]]
+;
+  %b = fmul nsz <2 x half> %v, <half 2.0, half 3.0>
+  %s = shufflevector <2 x half> %b, <2 x half> %v, <2 x i32> <i32 0, i32 3>
+  ret <2 x half> %s
+}
+
+; Same problem for fadd: the identity lane computes X + -0.0, so nsz must be dropped.
+define <2 x float> @fadd_nsz_identity_lane(<2 x float> nofpclass(nan) %v) {
+; CHECK-LABEL: @fadd_nsz_identity_lane(
+; CHECK-NEXT:    [[S:%.*]] = fadd <2 x float> [[V:%.*]], <float 2.000000e+00, float -0.000000e+00>
+; CHECK-NEXT:    ret <2 x float> [[S]]
+;
+  %b = fadd nsz <2 x float> %v, <float 2.0, float 3.0>
+  %s = shufflevector <2 x float> %b, <2 x float> %v, <2 x i32> <i32 0, i32 3>
+  ret <2 x float> %s
+}
