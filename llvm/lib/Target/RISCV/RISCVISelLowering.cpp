@@ -21340,8 +21340,16 @@ static SDValue expandMulToAddOrSubOfShl(SDNode *N, SelectionDAG &DAG,
   }
   EVT VT = N->getValueType(0);
   SDLoc DL(N);
-  SDValue Shift1 = DAG.getNode(ISD::SHL, DL, VT, X,
-                               DAG.getConstant(Log2_64(ShiftAmt1), DL, VT));
+  SDValue Shift1;
+  // For negative power of two cases, Shift1 shifts left wider than the register
+  // width, inteding to zero out the register. However, the semantics of
+  // ISD::SHL stipulate that this is undef. Need to directly insert a `0`
+  // instead.
+  if (Log2_64(ShiftAmt1) >= N->getValueType(0).getScalarSizeInBits())
+    Shift1 = DAG.getConstant(0, DL, VT);
+  else
+    Shift1 = DAG.getNode(ISD::SHL, DL, VT, X,
+                         DAG.getConstant(Log2_64(ShiftAmt1), DL, VT));
   SDValue Shift2 = DAG.getNode(ISD::SHL, DL, VT, X,
                                DAG.getConstant(Log2_64(MulAmtLowBit), DL, VT));
   return DAG.getNode(Op, DL, VT, Shift1, Shift2);
