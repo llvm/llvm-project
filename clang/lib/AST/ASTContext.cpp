@@ -305,6 +305,8 @@ RawComment *ASTContext::getRawCommentNoCacheImpl(
   // Decompose the end of the comment.
   const unsigned CommentEndOffset =
       Comments.getCommentEndOffset(CommentBeforeDecl);
+  if (CommentEndOffset > LocDecomp.second)
+    return nullptr;
 
   // Get the corresponding buffer.
   bool Invalid = false;
@@ -541,8 +543,18 @@ void ASTContext::attachCommentsToJustParsedDecls(ArrayRef<Decl *> Decls,
       if (DeclLoc.isInvalid() || !DeclLoc.isFileID())
         continue;
 
+      const FileID DeclFile = SourceMgr.getDecomposedLoc(DeclLoc).first;
+      if (!DeclFile.isValid())
+        continue;
+
+      const auto *CommentsInDeclFile =
+          DeclFile == File ? CommentsInThisFile
+                           : Comments.getCommentsInFile(DeclFile);
+      if (!CommentsInDeclFile || CommentsInDeclFile->empty())
+        continue;
+
       if (RawComment *const DocComment =
-              getRawCommentNoCacheImpl(D, DeclLoc, *CommentsInThisFile)) {
+              getRawCommentNoCacheImpl(D, DeclLoc, *CommentsInDeclFile)) {
         cacheRawComment(D, *DocComment);
         comments::FullComment *FC = DocComment->parse(*this, PP, D);
         ParsedComments[D->getCanonicalDecl()] = FC;
@@ -9793,9 +9805,15 @@ void ASTContext::getObjCEncodingForTypeImpl(QualType T, std::string &S,
   case Type::DeducedTemplateSpecialization:
     return;
 
+  // An overflow behavior type has the representation of its underlying type.
+  case Type::OverflowBehavior:
+    getObjCEncodingForTypeImpl(
+        cast<OverflowBehaviorType>(CT)->getUnderlyingType(), S, Options, FD,
+        NotEncodedT);
+    return;
+
   case Type::HLSLAttributedResource:
   case Type::HLSLInlineSpirv:
-  case Type::OverflowBehavior:
     llvm_unreachable("unexpected type");
 
   case Type::ArrayParameter:
@@ -15389,6 +15407,46 @@ ASTContext::filterFunctionTargetAttrs(const TargetAttr *TD) const {
     return !Target->isValidFeatureName(StringRef{Feat}.substr(1));
   });
   return ParsedAttr;
+}
+
+const llvm::StringMap<bool> &
+ASTContext::getFunctionFeatureMap(const FunctionDecl *FD) const {
+  return getFunctionFeatureMap(GlobalDecl().getWithDecl(FD));
+}
+
+const llvm::StringMap<bool> &
+ASTContext::getFunctionFeatureMap(GlobalDecl GD) const {
+  const auto *FD = GD.getDecl() ? GD.getDecl()->getAsFunction() : nullptr;
+  if (!FD || !FD->hasAttrs())
+    return Target->getTargetOpts().FeatureMap;
+
+  const Attr *FeatureAttr;
+  StringRef FeatureText;
+  if (const auto *TargetAttribute = FD->getAttr<TargetAttr>()) {
+    FeatureAttr = TargetAttribute;
+    FeatureText = TargetAttribute->getFeaturesStr();
+  } else if (const auto *Specific = FD->getAttr<CPUSpecificAttr>()) {
+    FeatureAttr = Specific;
+    FeatureText = Specific->getCPUName(GD.getMultiVersionIndex())->getName();
+  } else if (const auto *Clones = FD->getAttr<TargetClonesAttr>()) {
+    FeatureAttr = Clones;
+    FeatureText = Clones->getFeatureStr(GD.getMultiVersionIndex());
+  } else if (const auto *Version = FD->getAttr<TargetVersionAttr>()) {
+    FeatureAttr = Version;
+    FeatureText = Version->getName();
+  } else {
+    return Target->getTargetOpts().FeatureMap;
+  }
+
+  auto Key = std::make_pair(FeatureText, unsigned(FeatureAttr->getKind()));
+  auto It = FunctionFeatureMaps.find(Key);
+  if (It != FunctionFeatureMaps.end())
+    return *It->second;
+
+  auto FeatureMap = std::make_unique<llvm::StringMap<bool>>();
+  getFunctionFeatureMap(*FeatureMap, GD);
+  return *FunctionFeatureMaps.try_emplace(Key, std::move(FeatureMap))
+              .first->second;
 }
 
 void ASTContext::getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,

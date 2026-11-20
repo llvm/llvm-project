@@ -2,7 +2,6 @@
 # RUN: llc -O0 -mtriple=aarch64 -run-pass=legalizer -global-isel-abort=1 %s -o - | FileCheck %s
 ---
 name:            add_v16s8
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x0
@@ -25,7 +24,6 @@ body:             |
 ...
 ---
 name:            add_v8s16
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x0
@@ -48,7 +46,6 @@ body:             |
 ...
 ---
 name:            add_v4s32
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x0
@@ -69,7 +66,6 @@ body:             |
 ...
 ---
 name:            add_v2s64
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x0
@@ -90,7 +86,6 @@ body:             |
 ...
 ---
 name:            add_v2s32
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x0
@@ -113,7 +108,6 @@ body:             |
 name:            test_v8i64
 # This is a power-of-2 legalization, so use a tree reduction.
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $q0, $q1, $q2, $q3
@@ -147,7 +141,6 @@ name:            test_v6i64
 # This is a non-power-of-2 legalization, generate multiple vector reductions
 # and combine them with scalar ops.
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $q0, $q1, $q2, $q3

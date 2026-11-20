@@ -474,13 +474,14 @@ bool RISCVAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
       if (!MO.isReg())
         OS << 'i';
       return false;
-    case 'N': // Print the register encoding as an integer (0-31)
+    case 'N': { // Print the register encoding as an integer (0-31)
       if (!MO.isReg())
         return true;
 
       const RISCVRegisterInfo *TRI = STI->getRegisterInfo();
       OS << TRI->getEncodingValue(MO.getReg());
       return false;
+    }
     }
   }
 
@@ -761,7 +762,7 @@ void RISCVAsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
   for (auto &Reg : ScratchRegs) {
     if (isRegAvailable(Reg))
       continue;
-    while (!isRegAvailable(NextReg))
+    while (NextReg <= RISCV::X31 && !isRegAvailable(NextReg))
       ++NextReg;
     Reg = NextReg++;
     if (Reg > RISCV::X31)

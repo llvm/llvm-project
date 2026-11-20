@@ -39,6 +39,7 @@ def XeGPU_LaneShuffleType
 class XeGPUTypeDef<string name, string typeMnemonic, list<Trait> traits = [],
                    string baseCppClass = "::mlir::Type">
     : TypeDef<XeGPU_Dialect, name, traits, baseCppClass> {
+  let cppIncludes = ["mlir/Dialect/XeGPU/IR/XeGPU.h"];
   let mnemonic = typeMnemonic;
 }
 
@@ -58,7 +59,8 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
     and DPAS (matrix multiplication instruction) on Intel GPUs. It encodes the following information:
 
     * shape:  the sizes/shape of the interested data block, e.g., 8x16 means 8 rows
-              and each row contains 16 contiguous data elements.
+              and each row contains 16 contiguous data elements. The shape
+              must be static.
 
     * element_type: the data type of the data element, e.g., f16, f32.
 

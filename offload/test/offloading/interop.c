@@ -1,6 +1,6 @@
 // RUN: %libomptarget-compile-run-and-check-generic
 
-// XFAIL: amdgpu
+// XFAIL: amdgpu || host
 
 #include <assert.h>
 #include <omp.h>

@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "RegisterInfoLinux_x86_64.h"
-#include "RegisterInfoLinux_i386.h"
 #include "Register/Arch/RegisterContext_x86.h"
 #include "Register/Arch/lldb-x86-register-enums.h"
+#include "RegisterInfoLinux_i386.h"
 #include "lldb/lldb-defines.h"
 #include <vector>
 
@@ -152,8 +152,7 @@ static uint32_t GetUserRegisterInfoCount(const ArchSpec &target_arch) {
   }
 }
 
-RegisterInfoLinux_x86_64::RegisterInfoLinux_x86_64(
-    const ArchSpec &target_arch)
+RegisterInfoLinux_x86_64::RegisterInfoLinux_x86_64(const ArchSpec &target_arch)
     : lldb_private::RegisterInfoLinux_x86(
           target_arch,
           {"orig_rax",

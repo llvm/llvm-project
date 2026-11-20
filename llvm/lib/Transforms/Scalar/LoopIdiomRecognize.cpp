@@ -1187,7 +1187,7 @@ bool LoopIdiomRecognize::processLoopStridedStore(
   // MemsetArg is the number of bytes for the memset libcall, and the number
   // of pattern repetitions if the memset.pattern intrinsic is being used.
   Value *MemsetArg;
-  std::optional<int64_t> BytesWritten;
+  std::optional<uint64_t> BytesWritten;
   uint64_t PatternRepsPerTrip = 0;
 
   if (PatternValue &&
@@ -1234,10 +1234,7 @@ bool LoopIdiomRecognize::processLoopStridedStore(
   AAMDNodes AATags = TheStore->getAAMetadata();
   for (Instruction *Store : Stores)
     AATags = AATags.merge(Store->getAAMetadata());
-  if (BytesWritten)
-    AATags = AATags.extendTo(BytesWritten.value());
-  else
-    AATags = AATags.extendTo(-1);
+  AATags = AATags.extendTo(BytesWritten);
 
   CallInst *NewCall;
   if (SplatValue) {
@@ -1548,10 +1545,7 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
   AAMDNodes AATags = TheLoad->getAAMetadata();
   AAMDNodes StoreAATags = TheStore->getAAMetadata();
   AATags = AATags.merge(StoreAATags);
-  if (auto CI = dyn_cast<ConstantInt>(NumBytes))
-    AATags = AATags.extendTo(CI->getZExtValue());
-  else
-    AATags = AATags.extendTo(-1);
+  AATags = AATags.extendTo(NumBytes);
 
   CallInst *NewCall = nullptr;
   // Check whether to generate an unordered atomic memcpy:
@@ -1962,6 +1956,7 @@ void LoopIdiomRecognize::optimizeCRCLoopUsingTableLookup(
     };
 
     IRBuilder<> Builder(CurLoop->getHeader()->getFirstNonPHIIt());
+    Builder.disableGEPCanonicalization();
 
     // Create the CRC PHI, and initialize its incoming value to the initial
     // value of CRC.
@@ -2083,9 +2078,8 @@ namespace {
 
 class StrlenVerifier {
 public:
-  explicit StrlenVerifier(const Loop *CurLoop, ScalarEvolution *SE,
-                          const TargetLibraryInfo *TLI)
-      : CurLoop(CurLoop), SE(SE), TLI(TLI) {}
+  explicit StrlenVerifier(const Loop *CurLoop, ScalarEvolution *SE)
+      : CurLoop(CurLoop), SE(SE) {}
 
   bool isValidStrlenIdiom() {
     // Give up if the loop has multiple blocks, multiple backedges, or
@@ -2139,7 +2133,7 @@ public:
 
     // Verify that StepSize is consistent with platform char width.
     OpWidth = OperandType->getIntegerBitWidth();
-    unsigned WcharSize = TLI->getWCharSize(*LoopLoad->getModule());
+    unsigned WcharSize = LoopLoad->getModule()->getWCharSize();
     if (OpWidth != 8 && OpWidth != 16 && OpWidth != 32)
       return false;
     if (StepSize != OpWidth / 8)
@@ -2199,7 +2193,6 @@ public:
 public:
   const Loop *CurLoop;
   ScalarEvolution *SE;
-  const TargetLibraryInfo *TLI;
 
   unsigned OpWidth;
   ConstantInt *StepSizeCI;
@@ -2272,7 +2265,7 @@ bool LoopIdiomRecognize::recognizeAndInsertStrLen() {
   if (DisableLIRP::All)
     return false;
 
-  StrlenVerifier Verifier(CurLoop, SE, TLI);
+  StrlenVerifier Verifier(CurLoop, SE);
 
   if (!Verifier.isValidStrlenIdiom())
     return false;

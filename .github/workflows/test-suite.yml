@@ -68,17 +68,33 @@ jobs:
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
-            const { data: pr } = await github.rest.pulls.get({
+            const getPR = async () => (await github.rest.pulls.get({
               owner: context.repo.owner,
               repo: context.repo.repo,
               pull_number: context.payload.issue.number
-            })
+            })).data
+            let pr = await getPR()
+            // Wait up to 5 minutes for the test merge commit.
+            for (let i = 0; i < 60 && pr.mergeable === null; i++) {
+              core.info('Waiting for GitHub to compute the test merge commit')
+              await new Promise((resolve) => setTimeout(resolve, 5000))
+              pr = await getPR()
+            }
             return pr
       - name: Check pull request is mergeable
+        id: check-mergeable
         if: ${{ !fromJSON(steps.get-pr.outputs.result).mergeable }}
+        env:
+          # "false" if there are merge conflicts, empty if still not computed
+          MERGEABLE: ${{ fromJSON(steps.get-pr.outputs.result).mergeable }}
         run: |
+          if [ "$MERGEABLE" = false ]; then
+            REASON="the PR has merge conflicts"
+          else
+            REASON="GitHub has not computed a merge commit for the PR yet, please try again later"
+          fi
           cat << EOF > comments
-          [{"body": "Unable to diff test-suite with PR, PR isn't mergeable"}]
+          [{"body": "Unable to diff test-suite with PR: $REASON"}]
           EOF
           exit 1
       - name: Checkout pull request
@@ -183,7 +199,7 @@ jobs:
           # write escaped markdown to format expected by issue-write.yml
           python3 -c 'import json; print(json.dumps([{"body": open("comment-body").read()}]))' > comments
       - name: Create comment on failure
-        if: failure()
+        if: failure() && steps.check-mergeable.outcome != 'failure'
         env:
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |

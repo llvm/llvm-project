@@ -12,17 +12,15 @@
 #include "flang/Common/float128.h"
 #include "flang/Evaluate/target.h"
 #include "flang/Frontend/TargetOptions.h"
-#include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/Triple.h"
 
 namespace Fortran::tools {
 
 [[maybe_unused]] inline static void setUpTargetCharacteristics(
     Fortran::evaluate::TargetCharacteristics &targetCharacteristics,
-    const llvm::TargetMachine &targetMachine,
+    const llvm::Triple &targetTriple,
     const Fortran::frontend::TargetOptions &targetOptions,
     const std::string &compilerVersion, const std::string &compilerOptions) {
-
-  const llvm::Triple &targetTriple{targetMachine.getTargetTriple()};
 
   targetCharacteristics.set_isBigEndian(!targetTriple.isLittleEndian());
 

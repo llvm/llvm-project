@@ -2643,7 +2643,11 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
           << 0 /* default */;
       else
         Diag(ConsumeToken(), diag::err_default_special_members)
-            << getLangOpts().CPlusPlus20;
+            << (getLangOpts().CPlusPlus29
+                    ? diag::DefaultableFunctionKinds::Cxx29
+                : getLangOpts().CPlusPlus20
+                    ? diag::DefaultableFunctionKinds::Cxx20
+                    : diag::DefaultableFunctionKinds::Default);
     } else {
       InitializerScopeRAII InitScope(*this, D, ThisDecl);
 
@@ -4990,12 +4994,12 @@ void LateParsedTypeAttribute::ParseInto(ParsedAttributes &OutAttrs) {
   Self->ParseLexedTypeAttribute(*this, OutAttrs);
 }
 
-void Parser::TakeTypeAttrsAppendingFrom(LateParsedAttrList &To,
-                                        LateParsedAttrList &From) {
+void Parser::TakeLateParsedTypeAttrInfos(LateParsedTypeAttrInfoList &To,
+                                         LateParsedAttrList &From) {
   LateParsedAttrList::iterator It =
       llvm::remove_if(From, [&](LateParsedAttribute *LA) {
-        if (isa<LateParsedTypeAttribute>(LA)) {
-          To.push_back(LA);
+        if (auto *LTA = dyn_cast<LateParsedTypeAttribute>(LA)) {
+          To.push_back(&LTA->Info);
           return true;
         }
         return false;

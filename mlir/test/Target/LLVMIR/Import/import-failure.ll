@@ -660,3 +660,38 @@ define ptr @wide_callsite_id() {
 declare ptr @alloc(i64)
 
 !0 = !{i128 1}
+; // -----
+
+; Only aggregate copies carry tbaa_struct; on any other instruction the node is
+; declined, and the import keeps going.
+; CHECK:      <unknown>
+; CHECK-SAME: warning: unhandled metadata: ![[ST:[0-9]+]] = !{i64 0, i64 4, ![[TAG:[0-9]+]]}
+define i32 @tbaa_struct_on_load(ptr %p) {
+  %v = load i32, ptr %p, !tbaa.struct !7
+  ret i32 %v
+}
+
+!5 = !{!"Simple C++ TBAA"}
+!0 = !{!"omnipotent char", !5, i64 0}
+!1 = !{!"int", !0, i64 0}
+!2 = !{!1, !1, i64 0}
+!7 = !{i64 0, i64 4, !2}
+
+; // -----
+
+; Offsets and sizes are int64 in the attribute; a wider constant cannot be
+; represented, so the node is declined instead of crashing.
+; CHECK:      <unknown>
+; CHECK-SAME: warning: unhandled metadata: ![[ST:[0-9]+]] = !{i128 18446744073709551616, i64 4, ![[TAG:[0-9]+]]}
+declare void @llvm.memcpy.p0.p0.i64(ptr, ptr, i64, i1)
+
+define void @tbaa_struct_wide_offset(ptr %d, ptr %s) {
+  call void @llvm.memcpy.p0.p0.i64(ptr %d, ptr %s, i64 12, i1 false), !tbaa.struct !8
+  ret void
+}
+
+!5 = !{!"Simple C++ TBAA"}
+!0 = !{!"omnipotent char", !5, i64 0}
+!1 = !{!"int", !0, i64 0}
+!2 = !{!1, !1, i64 0}
+!8 = !{i128 18446744073709551616, i64 4, !2}
