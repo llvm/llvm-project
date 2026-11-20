@@ -11,3 +11,11 @@
 
 // RUN: %clang_cc1 -E -dM -triple aarch64-unknown-linux -fsanitize=concurrency %s | FileCheck %s --check-prefix=CSAN
 // CSAN: #define __SANITIZE_CONCURRENCY__ 1
+
+// RUN: %clang_cc1 -E -dM -triple x86_64-unknown-linux -fsanitize=kcfi %s | FileCheck %s --check-prefix=KCFI
+// RUN: %clang_cc1 -E -dM -triple aarch64-unknown-linux -fsanitize=kcfi %s | FileCheck %s --check-prefix=KCFI
+// KCFI: #define __SANITIZE_KCFI__ 1
+
+// RUN: %clang_cc1 -E -dM -triple x86_64-unknown-linux %s | FileCheck %s --check-prefix=NOKCFI
+// RUN: %clang_cc1 -E -dM -triple x86_64-unknown-linux -fsanitize=cfi-icall %s | FileCheck %s --check-prefix=NOKCFI
+// NOKCFI-NOT: __SANITIZE_KCFI__
