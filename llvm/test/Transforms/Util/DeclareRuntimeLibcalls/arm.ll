@@ -8,9 +8,9 @@
 ; SJLJ: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
 ; SJLJ-NEXT: @__stack_chk_guard = external global ptr
 ; SJLJ-NEXT: declare arm_aapcscc i32 @_Unwind_SjLj_RaiseException(ptr)
-; SJLJ-NEXT: declare arm_aapcscc void @_Unwind_SjLj_Register(ptr)
+; SJLJ-NEXT: declare arm_aapcscc void @_Unwind_SjLj_Register(ptr) [[NOUNWIND_ATTRS:#[0-9]+]]
 ; SJLJ-NEXT: declare arm_aapcscc void @_Unwind_SjLj_Resume(ptr) [[NORETURN_ONLY_ATTRS:#[0-9]+]]
-; SJLJ-NEXT: declare arm_aapcscc void @_Unwind_SjLj_Unregister(ptr)
+; SJLJ-NEXT: declare arm_aapcscc void @_Unwind_SjLj_Unregister(ptr) [[NOUNWIND_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc double @__adddf3(double, double) [[NOMEM_ATTRS:#[0-9]+]]
 ; SJLJ-NEXT: declare arm_aapcscc float @__addsf3(float, float) [[NOMEM_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc fp128 @__addtf3(fp128, fp128) [[NOMEM_ATTRS]]
@@ -473,6 +473,7 @@
 ; SJLJ-NEXT: declare arm_aapcscc float @tgammaf(float) [[ERRNO_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc double @trunc(double) [[NOMEM_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc float @truncf(float) [[NOMEM_ATTRS]]
+; SJLJ-NEXT: attributes [[NOUNWIND_ATTRS]] = { nounwind }
 ; SJLJ-NEXT: attributes [[NORETURN_ONLY_ATTRS]] = { noreturn }
 ; SJLJ-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; SJLJ-NEXT: attributes [[ARGMEM_READ_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
