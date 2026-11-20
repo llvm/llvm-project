@@ -97,8 +97,8 @@ bool IndexingContext::handleReference(const NamedDecl *D, SourceLocation Loc,
        isa<TemplateTemplateParmDecl>(D))) {
     return true;
   }
-  return handleDeclOccurrence(D, Loc, /*IsRef=*/!D->isImplicit(), Parent, Roles, Relations,
-                              RefE, nullptr, DC);
+  return handleDeclOccurrence(D, Loc, /*IsRef=*/!D->isImplicit(), Parent, Roles,
+                              Relations, RefE, nullptr, DC);
 }
 
 static void reportModuleReferences(const Module *Mod,
