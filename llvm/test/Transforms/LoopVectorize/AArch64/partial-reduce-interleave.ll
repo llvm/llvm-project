@@ -13,11 +13,10 @@ define i32 @partial_reduce_with_non_constant_start_value(ptr %src, i32 %rdx.star
 ; IC2:       [[VECTOR_PH]]:
 ; IC2-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 31
 ; IC2-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
-; IC2-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[RDX_START]], i64 0
 ; IC2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; IC2:       [[VECTOR_BODY]]:
 ; IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; IC2-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ [[TMP0]], %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE:%.*]], %[[VECTOR_BODY]] ]
+; IC2-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE:%.*]], %[[VECTOR_BODY]] ]
 ; IC2-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE3:%.*]], %[[VECTOR_BODY]] ]
 ; IC2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[INDEX]]
 ; IC2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 16
@@ -35,11 +34,12 @@ define i32 @partial_reduce_with_non_constant_start_value(ptr %src, i32 %rdx.star
 ; IC2:       [[MIDDLE_BLOCK]]:
 ; IC2-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[PARTIAL_REDUCE3]], [[PARTIAL_REDUCE]]
 ; IC2-NEXT:    [[TMP9:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX]])
+; IC2-NEXT:    [[RDX_START4:%.*]] = add i32 [[TMP9]], [[RDX_START]]
 ; IC2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; IC2-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; IC2:       [[SCALAR_PH]]:
 ; IC2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; IC2-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP9]], %[[MIDDLE_BLOCK]] ], [ [[RDX_START]], %[[ENTRY]] ]
+; IC2-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[RDX_START4]], %[[MIDDLE_BLOCK]] ], [ [[RDX_START]], %[[ENTRY]] ]
 ; IC2-NEXT:    br label %[[LOOP:.*]]
 ; IC2:       [[LOOP]]:
 ; IC2-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -53,7 +53,7 @@ define i32 @partial_reduce_with_non_constant_start_value(ptr %src, i32 %rdx.star
 ; IC2-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
 ; IC2-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
 ; IC2:       [[EXIT]]:
-; IC2-NEXT:    [[RDX_NEXT_LCSSA:%.*]] = phi i32 [ [[RDX_NEXT]], %[[LOOP]] ], [ [[TMP9]], %[[MIDDLE_BLOCK]] ]
+; IC2-NEXT:    [[RDX_NEXT_LCSSA:%.*]] = phi i32 [ [[RDX_NEXT]], %[[LOOP]] ], [ [[RDX_START4]], %[[MIDDLE_BLOCK]] ]
 ; IC2-NEXT:    ret i32 [[RDX_NEXT_LCSSA]]
 ;
 ; IC4-LABEL: define i32 @partial_reduce_with_non_constant_start_value(
@@ -64,11 +64,10 @@ define i32 @partial_reduce_with_non_constant_start_value(ptr %src, i32 %rdx.star
 ; IC4:       [[VECTOR_PH]]:
 ; IC4-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 63
 ; IC4-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
-; IC4-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[RDX_START]], i64 0
 ; IC4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; IC4:       [[VECTOR_BODY]]:
 ; IC4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; IC4-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ [[TMP0]], %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE:%.*]], %[[VECTOR_BODY]] ]
+; IC4-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE:%.*]], %[[VECTOR_BODY]] ]
 ; IC4-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE7:%.*]], %[[VECTOR_BODY]] ]
 ; IC4-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE8:%.*]], %[[VECTOR_BODY]] ]
 ; IC4-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE9:%.*]], %[[VECTOR_BODY]] ]
@@ -100,11 +99,12 @@ define i32 @partial_reduce_with_non_constant_start_value(ptr %src, i32 %rdx.star
 ; IC4-NEXT:    [[BIN_RDX10:%.*]] = add <4 x i32> [[PARTIAL_REDUCE8]], [[BIN_RDX]]
 ; IC4-NEXT:    [[BIN_RDX11:%.*]] = add <4 x i32> [[PARTIAL_REDUCE9]], [[BIN_RDX10]]
 ; IC4-NEXT:    [[TMP15:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX11]])
+; IC4-NEXT:    [[RDX_START12:%.*]] = add i32 [[TMP15]], [[RDX_START]]
 ; IC4-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; IC4-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; IC4:       [[SCALAR_PH]]:
 ; IC4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; IC4-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP15]], %[[MIDDLE_BLOCK]] ], [ [[RDX_START]], %[[ENTRY]] ]
+; IC4-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[RDX_START12]], %[[MIDDLE_BLOCK]] ], [ [[RDX_START]], %[[ENTRY]] ]
 ; IC4-NEXT:    br label %[[LOOP:.*]]
 ; IC4:       [[LOOP]]:
 ; IC4-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -118,7 +118,7 @@ define i32 @partial_reduce_with_non_constant_start_value(ptr %src, i32 %rdx.star
 ; IC4-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
 ; IC4-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
 ; IC4:       [[EXIT]]:
-; IC4-NEXT:    [[RDX_NEXT_LCSSA:%.*]] = phi i32 [ [[RDX_NEXT]], %[[LOOP]] ], [ [[TMP15]], %[[MIDDLE_BLOCK]] ]
+; IC4-NEXT:    [[RDX_NEXT_LCSSA:%.*]] = phi i32 [ [[RDX_NEXT]], %[[LOOP]] ], [ [[RDX_START12]], %[[MIDDLE_BLOCK]] ]
 ; IC4-NEXT:    ret i32 [[RDX_NEXT_LCSSA]]
 ;
 entry:

@@ -489,11 +489,10 @@ define i32 @load_factor_4_with_gap(i64 %n, ptr noalias %a) vscale_range(1,16) {
 ; CHECK-NOTF-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP40]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NOTF-NEXT:    [[TMP41:%.*]] = and i64 [[N]], 3
 ; CHECK-NOTF-NEXT:    [[N_VEC13:%.*]] = sub i64 [[N]], [[TMP41]]
-; CHECK-NOTF-NEXT:    [[TMP42:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i64 0
 ; CHECK-NOTF-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK-NOTF:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; CHECK-NOTF-NEXT:    [[INDEX14:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT20:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NOTF-NEXT:    [[VEC_PHI15:%.*]] = phi <4 x i32> [ [[TMP42]], %[[VEC_EPILOG_PH]] ], [ [[TMP46:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NOTF-NEXT:    [[VEC_PHI15:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VEC_EPILOG_PH]] ], [ [[TMP46:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NOTF-NEXT:    [[TMP43:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i64 [[INDEX14]], i32 0
 ; CHECK-NOTF-NEXT:    [[WIDE_VEC16:%.*]] = load <16 x i32>, ptr [[TMP43]], align 4
 ; CHECK-NOTF-NEXT:    [[STRIDED_VEC17:%.*]] = shufflevector <16 x i32> [[WIDE_VEC16]], <16 x i32> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
@@ -507,11 +506,12 @@ define i32 @load_factor_4_with_gap(i64 %n, ptr noalias %a) vscale_range(1,16) {
 ; CHECK-NOTF-NEXT:    br i1 [[TMP47]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK-NOTF:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; CHECK-NOTF-NEXT:    [[TMP48:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP46]])
+; CHECK-NOTF-NEXT:    [[RDX_START:%.*]] = add i32 [[TMP48]], [[BC_MERGE_RDX]]
 ; CHECK-NOTF-NEXT:    [[CMP_N21:%.*]] = icmp eq i64 [[N]], [[N_VEC13]]
 ; CHECK-NOTF-NEXT:    br i1 [[CMP_N21]], label %[[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK-NOTF:       [[VEC_EPILOG_SCALAR_PH]]:
 ; CHECK-NOTF-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC13]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
-; CHECK-NOTF-NEXT:    [[BC_MERGE_RDX22:%.*]] = phi i32 [ [[TMP48]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP40]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
+; CHECK-NOTF-NEXT:    [[BC_MERGE_RDX22:%.*]] = phi i32 [ [[RDX_START]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP40]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
 ; CHECK-NOTF-NEXT:    br label %[[LOOP:.*]]
 ; CHECK-NOTF:       [[LOOP]]:
 ; CHECK-NOTF-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -529,7 +529,7 @@ define i32 @load_factor_4_with_gap(i64 %n, ptr noalias %a) vscale_range(1,16) {
 ; CHECK-NOTF-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
 ; CHECK-NOTF-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK-NOTF:       [[EXIT]]:
-; CHECK-NOTF-NEXT:    [[RDX_NEXT_LCSSA:%.*]] = phi i32 [ [[RDX_NEXT]], %[[LOOP]] ], [ [[TMP40]], %[[MIDDLE_BLOCK]] ], [ [[TMP48]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ]
+; CHECK-NOTF-NEXT:    [[RDX_NEXT_LCSSA:%.*]] = phi i32 [ [[RDX_NEXT]], %[[LOOP]] ], [ [[TMP40]], %[[MIDDLE_BLOCK]] ], [ [[RDX_START]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ]
 ; CHECK-NOTF-NEXT:    ret i32 [[RDX_NEXT_LCSSA]]
 ;
 ; CHECK-TF-LABEL: define i32 @load_factor_4_with_gap(
@@ -798,11 +798,10 @@ define i32 @load_factor_4_with_tail_gap(i64 %n, ptr noalias %a) vscale_range(1,1
 ; CHECK-NOTF-NEXT:    [[TMP44:%.*]] = icmp eq i64 [[TMP43]], 0
 ; CHECK-NOTF-NEXT:    [[TMP45:%.*]] = select i1 [[TMP44]], i64 4, i64 [[TMP43]]
 ; CHECK-NOTF-NEXT:    [[N_VEC13:%.*]] = sub i64 [[N]], [[TMP45]]
-; CHECK-NOTF-NEXT:    [[TMP46:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i64 0
 ; CHECK-NOTF-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK-NOTF:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; CHECK-NOTF-NEXT:    [[INDEX14:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT20:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NOTF-NEXT:    [[VEC_PHI15:%.*]] = phi <4 x i32> [ [[TMP46]], %[[VEC_EPILOG_PH]] ], [ [[TMP50:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NOTF-NEXT:    [[VEC_PHI15:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VEC_EPILOG_PH]] ], [ [[TMP50:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NOTF-NEXT:    [[TMP47:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i64 [[INDEX14]], i32 0
 ; CHECK-NOTF-NEXT:    [[WIDE_VEC16:%.*]] = load <16 x i32>, ptr [[TMP47]], align 4
 ; CHECK-NOTF-NEXT:    [[STRIDED_VEC17:%.*]] = shufflevector <16 x i32> [[WIDE_VEC16]], <16 x i32> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
@@ -816,10 +815,11 @@ define i32 @load_factor_4_with_tail_gap(i64 %n, ptr noalias %a) vscale_range(1,1
 ; CHECK-NOTF-NEXT:    br i1 [[TMP51]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; CHECK-NOTF:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; CHECK-NOTF-NEXT:    [[TMP52:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP50]])
+; CHECK-NOTF-NEXT:    [[RDX_START:%.*]] = add i32 [[TMP52]], [[BC_MERGE_RDX]]
 ; CHECK-NOTF-NEXT:    br label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK-NOTF:       [[VEC_EPILOG_SCALAR_PH]]:
 ; CHECK-NOTF-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC13]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
-; CHECK-NOTF-NEXT:    [[BC_MERGE_RDX21:%.*]] = phi i32 [ [[TMP52]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP42]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
+; CHECK-NOTF-NEXT:    [[BC_MERGE_RDX21:%.*]] = phi i32 [ [[RDX_START]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP42]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
 ; CHECK-NOTF-NEXT:    br label %[[LOOP:.*]]
 ; CHECK-NOTF:       [[LOOP]]:
 ; CHECK-NOTF-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -1112,11 +1112,10 @@ define i32 @load_factor_4_with_gap_reverse(i64 %n, ptr noalias %a) vscale_range(
 ; CHECK-NOTF-NEXT:    [[TMP45:%.*]] = and i64 [[TMP0]], 3
 ; CHECK-NOTF-NEXT:    [[N_VEC24:%.*]] = sub i64 [[TMP0]], [[TMP45]]
 ; CHECK-NOTF-NEXT:    [[TMP46:%.*]] = sub i64 [[N]], [[N_VEC24]]
-; CHECK-NOTF-NEXT:    [[TMP47:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i64 0
 ; CHECK-NOTF-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK-NOTF:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; CHECK-NOTF-NEXT:    [[INDEX25:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT34:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NOTF-NEXT:    [[VEC_PHI26:%.*]] = phi <4 x i32> [ [[TMP47]], %[[VEC_EPILOG_PH]] ], [ [[TMP53:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NOTF-NEXT:    [[VEC_PHI26:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VEC_EPILOG_PH]] ], [ [[TMP53:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NOTF-NEXT:    [[TMP48:%.*]] = sub i64 [[N]], [[INDEX25]]
 ; CHECK-NOTF-NEXT:    [[TMP49:%.*]] = getelementptr inbounds nuw [16 x i8], ptr [[A]], i64 [[TMP48]]
 ; CHECK-NOTF-NEXT:    [[TMP50:%.*]] = getelementptr inbounds i8, ptr [[TMP49]], i64 -48
@@ -1135,11 +1134,12 @@ define i32 @load_factor_4_with_gap_reverse(i64 %n, ptr noalias %a) vscale_range(
 ; CHECK-NOTF-NEXT:    br i1 [[TMP54]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP21:![0-9]+]]
 ; CHECK-NOTF:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; CHECK-NOTF-NEXT:    [[TMP55:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP53]])
+; CHECK-NOTF-NEXT:    [[RDX_START:%.*]] = add i32 [[TMP55]], [[BC_MERGE_RDX]]
 ; CHECK-NOTF-NEXT:    [[CMP_N35:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC24]]
 ; CHECK-NOTF-NEXT:    br i1 [[CMP_N35]], label %[[EXIT_LOOPEXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK-NOTF:       [[VEC_EPILOG_SCALAR_PH]]:
 ; CHECK-NOTF-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP46]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP4]], %[[VEC_EPILOG_ITER_CHECK]] ], [ [[N]], %[[ITER_CHECK]] ]
-; CHECK-NOTF-NEXT:    [[BC_MERGE_RDX36:%.*]] = phi i32 [ [[TMP55]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP44]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
+; CHECK-NOTF-NEXT:    [[BC_MERGE_RDX36:%.*]] = phi i32 [ [[RDX_START]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP44]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
 ; CHECK-NOTF-NEXT:    br label %[[LOOP:.*]]
 ; CHECK-NOTF:       [[LOOP]]:
 ; CHECK-NOTF-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_SCALAR_PH]] ]
@@ -1157,7 +1157,7 @@ define i32 @load_factor_4_with_gap_reverse(i64 %n, ptr noalias %a) vscale_range(
 ; CHECK-NOTF-NEXT:    [[CMP_NOT:%.*]] = icmp eq i64 [[IV]], 0
 ; CHECK-NOTF-NEXT:    br i1 [[CMP_NOT]], label %[[EXIT_LOOPEXIT]], label %[[LOOP]], !llvm.loop [[LOOP22:![0-9]+]]
 ; CHECK-NOTF:       [[EXIT_LOOPEXIT]]:
-; CHECK-NOTF-NEXT:    [[RDX_NEXT_LCSSA:%.*]] = phi i32 [ [[RDX_NEXT]], %[[LOOP]] ], [ [[TMP44]], %[[MIDDLE_BLOCK]] ], [ [[TMP55]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ]
+; CHECK-NOTF-NEXT:    [[RDX_NEXT_LCSSA:%.*]] = phi i32 [ [[RDX_NEXT]], %[[LOOP]] ], [ [[TMP44]], %[[MIDDLE_BLOCK]] ], [ [[RDX_START]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ]
 ; CHECK-NOTF-NEXT:    br label %[[EXIT]]
 ; CHECK-NOTF:       [[EXIT]]:
 ; CHECK-NOTF-NEXT:    [[RDX_FINAL:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[RDX_NEXT_LCSSA]], %[[EXIT_LOOPEXIT]] ]

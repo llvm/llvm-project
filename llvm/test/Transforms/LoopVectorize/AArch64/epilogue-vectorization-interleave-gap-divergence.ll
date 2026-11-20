@@ -55,11 +55,10 @@ define i32 @interleave_gap_divergent_epilogue_decision(ptr %p, i64 %n) {
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[TMP16]], 0
 ; CHECK-NEXT:    [[TMP18:%.*]] = select i1 [[TMP17]], i64 4, i64 [[TMP16]]
 ; CHECK-NEXT:    [[N_VEC7:%.*]] = sub i64 [[N]], [[TMP18]]
-; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i64 0
 ; CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX8:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT10:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI9:%.*]] = phi <4 x i32> [ [[TMP19]], %[[VEC_EPILOG_PH]] ], [ [[TMP50:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI9:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VEC_EPILOG_PH]] ], [ [[TMP50:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP20:%.*]] = add i64 [[INDEX8]], 1
 ; CHECK-NEXT:    [[TMP21:%.*]] = add i64 [[INDEX8]], 2
 ; CHECK-NEXT:    [[TMP22:%.*]] = add i64 [[INDEX8]], 3
@@ -96,10 +95,11 @@ define i32 @interleave_gap_divergent_epilogue_decision(ptr %p, i64 %n) {
 ; CHECK-NEXT:    br i1 [[TMP51]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP52:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP50]])
+; CHECK-NEXT:    [[RDX_START:%.*]] = add i32 [[TMP52]], [[BC_MERGE_RDX]]
 ; CHECK-NEXT:    br label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC7]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX11:%.*]] = phi i32 [ [[TMP52]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP15]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX11:%.*]] = phi i32 [ [[RDX_START]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP15]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]

@@ -204,15 +204,11 @@ define nofpclass(nan inf) double @monte_exp(i32 noundef %nblocks, i32 noundef %R
 ; CHECK-NEXT:    tail call void @resample(i32 noundef [[RAND_BLOCK_LENGTH]], ptr noundef [[SAMPLES]])
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[FOR_BODY3_US_PREHEADER:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x double> <double poison, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, double [[V1_019_US]], i64 0
-; CHECK-NEXT:    [[TMP27:%.*]] = insertelement <4 x double> <double poison, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, double [[V0_018_US]], i64 0
-; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
-; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x double> [ [[TMP2]], %[[VECTOR_PH]] ], [ [[TMP22:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI31:%.*]] = phi <4 x double> [ splat (double -0.000000e+00), %[[VECTOR_PH]] ], [ [[TMP23:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI32:%.*]] = phi <4 x double> [ [[TMP27]], %[[VECTOR_PH]] ], [ [[TMP18:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI33:%.*]] = phi <4 x double> [ splat (double -0.000000e+00), %[[VECTOR_PH]] ], [ [[TMP19:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], %[[VECTOR_PH]] ], [ 0, %[[FOR_BODY_US]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x double> [ [[TMP22:%.*]], %[[VECTOR_PH]] ], [ splat (double -0.000000e+00), %[[FOR_BODY_US]] ]
+; CHECK-NEXT:    [[VEC_PHI31:%.*]] = phi <4 x double> [ [[TMP23:%.*]], %[[VECTOR_PH]] ], [ splat (double -0.000000e+00), %[[FOR_BODY_US]] ]
+; CHECK-NEXT:    [[VEC_PHI32:%.*]] = phi <4 x double> [ [[TMP18:%.*]], %[[VECTOR_PH]] ], [ splat (double -0.000000e+00), %[[FOR_BODY_US]] ]
+; CHECK-NEXT:    [[VEC_PHI33:%.*]] = phi <4 x double> [ [[TMP19:%.*]], %[[VECTOR_PH]] ], [ splat (double -0.000000e+00), %[[FOR_BODY_US]] ]
 ; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[SAMPLES]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr [[ARRAYIDX_US]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[ARRAYIDX_US]], align 4
@@ -239,17 +235,19 @@ define nofpclass(nan inf) double @monte_exp(i32 noundef %nblocks, i32 noundef %R
 ; CHECK-NEXT:    [[TMP23]] = fadd reassoc arcp contract afn <4 x double> [[VEC_PHI31]], [[TMP21]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDVARS_IV]], 8
 ; CHECK-NEXT:    [[TMP24:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP24]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP24]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_PH]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd reassoc arcp contract afn <4 x double> [[TMP23]], [[TMP22]]
 ; CHECK-NEXT:    [[TMP25:%.*]] = tail call reassoc arcp contract afn double @llvm.vector.reduce.fadd.v4f64(double -0.000000e+00, <4 x double> [[BIN_RDX]])
+; CHECK-NEXT:    [[RDX_START:%.*]] = fadd reassoc arcp contract afn double [[TMP25]], [[V1_019_US]]
 ; CHECK-NEXT:    [[BIN_RDX35:%.*]] = fadd reassoc arcp contract afn <4 x double> [[TMP19]], [[TMP18]]
 ; CHECK-NEXT:    [[TMP26:%.*]] = tail call reassoc arcp contract afn double @llvm.vector.reduce.fadd.v4f64(double -0.000000e+00, <4 x double> [[BIN_RDX35]])
+; CHECK-NEXT:    [[RDX_START36:%.*]] = fadd reassoc arcp contract afn double [[TMP26]], [[V0_018_US]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[FOR_COND1_FOR_INC8_CRIT_EDGE_US]], label %[[FOR_BODY3_US_PREHEADER]]
 ; CHECK:       [[FOR_BODY3_US_PREHEADER]]:
 ; CHECK-NEXT:    [[INDVARS_IV_PH:%.*]] = phi i64 [ 0, %[[FOR_BODY_US]] ], [ [[N_VEC]], %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    [[V1_114_US_PH:%.*]] = phi double [ [[V1_019_US]], %[[FOR_BODY_US]] ], [ [[TMP25]], %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    [[V0_113_US_PH:%.*]] = phi double [ [[V0_018_US]], %[[FOR_BODY_US]] ], [ [[TMP26]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[V1_114_US_PH:%.*]] = phi double [ [[V1_019_US]], %[[FOR_BODY_US]] ], [ [[RDX_START]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[V0_113_US_PH:%.*]] = phi double [ [[V0_018_US]], %[[FOR_BODY_US]] ], [ [[RDX_START36]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY3_US:.*]]
 ; CHECK:       [[FOR_BODY3_US]]:
 ; CHECK-NEXT:    [[INDVARS_IV1:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY3_US]] ], [ [[INDVARS_IV_PH]], %[[FOR_BODY3_US_PREHEADER]] ]
@@ -271,8 +269,8 @@ define nofpclass(nan inf) double @monte_exp(i32 noundef %nblocks, i32 noundef %R
 ; CHECK-NEXT:    [[EXITCOND25_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
 ; CHECK-NEXT:    br i1 [[EXITCOND25_NOT]], label %[[FOR_COND1_FOR_INC8_CRIT_EDGE_US]], label %[[FOR_BODY3_US]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       [[FOR_COND1_FOR_INC8_CRIT_EDGE_US]]:
-; CHECK-NEXT:    [[V0_2_US_LCSSA]] = phi double [ [[TMP26]], %[[MIDDLE_BLOCK]] ], [ [[V0_2_US]], %[[FOR_BODY3_US]] ]
-; CHECK-NEXT:    [[V1_2_US_LCSSA]] = phi double [ [[TMP25]], %[[MIDDLE_BLOCK]] ], [ [[V1_2_US]], %[[FOR_BODY3_US]] ]
+; CHECK-NEXT:    [[V0_2_US_LCSSA]] = phi double [ [[RDX_START36]], %[[MIDDLE_BLOCK]] ], [ [[V0_2_US]], %[[FOR_BODY3_US]] ]
+; CHECK-NEXT:    [[V1_2_US_LCSSA]] = phi double [ [[RDX_START]], %[[MIDDLE_BLOCK]] ], [ [[V1_2_US]], %[[FOR_BODY3_US]] ]
 ; CHECK-NEXT:    [[INC9_US]] = add nuw nsw i32 [[BLOCK_017_US]], 1
 ; CHECK-NEXT:    [[EXITCOND26_NOT:%.*]] = icmp eq i32 [[INC9_US]], [[NBLOCKS]]
 ; CHECK-NEXT:    br i1 [[EXITCOND26_NOT]], label %[[FOR_END10_LOOPEXIT:.*]], label %[[FOR_BODY_US]]
