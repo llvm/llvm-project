@@ -279,6 +279,34 @@ public:
       }
     }
 
+    if (DstTy.isVector() && isa<GTrunc>(MRI.getVRegDef(SrcReg))) {
+      Register VectorSrc = SrcReg;
+      while (auto *Trunc = dyn_cast<GTrunc>(MRI.getVRegDef(VectorSrc)))
+        VectorSrc = lookThroughCopyInstrs(Trunc->getSrcReg());
+
+      if (auto *BuildVector =
+              dyn_cast<GBuildVector>(MRI.getVRegDef(VectorSrc))) {
+        LLT EltTy = DstTy.getElementType();
+        LLT SrcEltTy = MRI.getType(BuildVector->getSourceReg(0));
+        if (!isInstLegal(
+                {TargetOpcode::G_TRUNC, {DstTy, MRI.getType(VectorSrc)}}) &&
+            !isInstLegal({TargetOpcode::G_BUILD_VECTOR,
+                          {MRI.getType(VectorSrc), SrcEltTy}}) &&
+            isInstLegal({TargetOpcode::G_TRUNC, {EltTy, SrcEltTy}}) &&
+            isInstLegal({TargetOpcode::G_BUILD_VECTOR, {DstTy, EltTy}})) {
+          SmallVector<Register> Elts;
+          for (unsigned I = 0; I != BuildVector->getNumSources(); ++I)
+            Elts.push_back(
+                Builder.buildTrunc(EltTy, BuildVector->getSourceReg(I))
+                    .getReg(0));
+          Builder.buildBuildVector(DstReg, Elts);
+          UpdatedDefs.push_back(DstReg);
+          markInstAndDefDead(MI, *BuildVector, DeadInsts);
+          return true;
+        }
+      }
+    }
+
     // Try to fold trunc(merge) to directly use the source of the merge.
     // This gets rid of large, difficult to legalize, merges
     MachineInstr *SrcMI = MRI.getVRegDef(SrcReg);
@@ -353,9 +381,8 @@ public:
     // trunc(trunc) -> trunc
     Register TruncSrc;
     if (mi_match(SrcReg, MRI, m_GTrunc(m_Reg(TruncSrc)))) {
-      // Always combine trunc(trunc) since the eventual resulting trunc must be
-      // legal anyway as it must be legal for all outputs of the consumer type
-      // set.
+      if (!isInstLegal({TargetOpcode::G_TRUNC, {DstTy, MRI.getType(TruncSrc)}}))
+        return false;
       LLVM_DEBUG(dbgs() << ".. Combine G_TRUNC(G_TRUNC): " << MI);
 
       Builder.buildTrunc(DstReg, TruncSrc);
