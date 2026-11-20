@@ -490,8 +490,7 @@ PrintfFormatStringParser::parseSpecifier(const char *&Beg, const char *E,
       FS.setConversionSpecifier(CS);
     }
     // Assume the conversion takes one argument.
-    return !H.HandleInvalidPrintfConversionSpecifier(FS, Start, Len,
-                                                     FormatStrConverter);
+    return !H.HandleInvalidPrintfConversionSpecifier(FS, Start, Len, Conv);
   }
   return PrintfSpecifierResult(Start, FS);
 }
@@ -503,7 +502,8 @@ bool clang::analyze_format_string::ParsePrintfString(
   unsigned argIndex = 0;
 
   // Keep looking for a format specifier until we have exhausted the string.
-  llvm::TextEncodingConverter Conv = makeFormatStrConverter(Target);
+  llvm::TextEncodingConverter Conv =
+      llvm::TextEncodingConverter::createNoopConverter();
   PrintfFormatStringParser P(H, LO, Target, /*Warn=*/true, isFreeBSDKPrintf,
                              Conv);
   while (I != E) {
@@ -533,7 +533,8 @@ bool clang::analyze_format_string::ParseFormatStringHasSArg(
 
   // Keep looking for a %s format specifier until we have exhausted the string.
   FormatStringHandler H;
-  llvm::TextEncodingConverter Conv = makeFormatStrConverter(Target);
+  llvm::TextEncodingConverter Conv =
+      llvm::TextEncodingConverter::createNoopConverter();
   PrintfFormatStringParser P(H, LO, Target, /*Warn=*/false,
                              /*IsFreeBSDKPrintf=*/false, Conv);
   while (I != E) {
@@ -561,7 +562,8 @@ bool clang::analyze_format_string::parseFormatStringHasFormattingSpecifiers(
   unsigned ArgIndex = 0;
   // Keep looking for a formatting specifier until we have exhausted the string.
   FormatStringHandler H;
-  llvm::TextEncodingConverter Conv = makeFormatStrConverter(Target);
+  llvm::TextEncodingConverter Conv =
+      llvm::TextEncodingConverter::createNoopConverter();
   PrintfFormatStringParser P(H, LO, Target, /*Warn=*/false,
                              /*IsFreeBSDKPrintf=*/false, Conv);
   while (Begin != End) {

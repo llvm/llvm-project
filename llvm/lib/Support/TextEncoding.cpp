@@ -371,6 +371,6 @@ class TextEncodingConverterNoop final
 };
 } // namespace
 
-ErrorOr<TextEncodingConverter> TextEncodingConverter::createNoopConverter() {
+TextEncodingConverter TextEncodingConverter::createNoopConverter() {
   return TextEncodingConverter(std::make_unique<TextEncodingConverterNoop>());
 }

@@ -280,8 +280,7 @@ ScanfFormatStringParser::parseSpecifier(const char *&Beg, const char *E,
       FS.setConversionSpecifier(CS);
     }
     // Assume the conversion takes one argument.
-    return !H.HandleInvalidScanfConversionSpecifier(FS, Beg, Len,
-                                                    FormatStrConverter);
+    return !H.HandleInvalidScanfConversionSpecifier(FS, Beg, Len, Conv);
   }
   return ScanfSpecifierResult(Start, FS);
 }
@@ -637,7 +636,8 @@ bool clang::analyze_format_string::ParseScanfString(FormatStringHandler &H,
   unsigned argIndex = 0;
 
   // Keep looking for a format specifier until we have exhausted the string.
-  llvm::TextEncodingConverter Conv = makeFormatStrConverter(Target);
+  llvm::TextEncodingConverter Conv =
+      llvm::TextEncodingConverter::createNoopConverter();
   ScanfFormatStringParser P(H, LO, Target, Conv);
   while (I != E) {
     const ScanfSpecifierResult &FSR = P.parseSpecifier(I, E, argIndex);
