@@ -8,6 +8,7 @@
 
 #include "mlir-c/ExtensibleDialect.h"
 #include "mlir/CAPI/IR.h"
+#include "mlir/CAPI/Rewrite.h"
 #include "mlir/CAPI/Support.h"
 #include "mlir/IR/ExtensibleDialect.h"
 #include "mlir/IR/OperationSupport.h"
@@ -17,25 +18,14 @@ using namespace mlir;
 DEFINE_C_API_PTR_METHODS(MlirDynamicOpTrait, DynamicOpTrait)
 DEFINE_C_API_PTR_METHODS(MlirDynamicTypeDefinition, DynamicTypeDefinition)
 DEFINE_C_API_PTR_METHODS(MlirDynamicAttrDefinition, DynamicAttrDefinition)
+DEFINE_C_API_PTR_METHODS(MlirDynamicOpDefinition, DynamicOpDefinition)
 
 bool mlirDynamicOpTraitAttach(MlirDynamicOpTrait dynamicOpTrait,
                               MlirStringRef opName, MlirContext context) {
-  std::optional<RegisteredOperationName> opNameFound =
-      RegisteredOperationName::lookup(unwrap(opName), unwrap(context));
-  assert(opNameFound && "operation name must be registered in the context");
+  MlirDynamicOpDefinition dynamicOpDef =
+      mlirDynamicOpDefinitionLookup(opName, context);
 
-  // The original getImpl() is protected, so we create a small helper struct
-  // here.
-  struct RegisteredOperationNameWithImpl : RegisteredOperationName {
-    Impl *getImpl() { return RegisteredOperationName::getImpl(); }
-  };
-  OperationName::Impl *impl =
-      static_cast<RegisteredOperationNameWithImpl &>(*opNameFound).getImpl();
-
-  std::unique_ptr<DynamicOpTrait> trait(unwrap(dynamicOpTrait));
-  // TODO: we should enable llvm-style RTTI for `OperationName::Impl` and check
-  // whether the `impl` is a `DynamicOpDefinition` here.
-  return static_cast<DynamicOpDefinition *>(impl)->addTrait(std::move(trait));
+  return mlirDynamicOpDefinitionAddTrait(dynamicOpDef, dynamicOpTrait);
 }
 
 MlirDynamicOpTrait mlirDynamicOpTraitIsTerminatorCreate() {
@@ -134,10 +124,6 @@ bool mlirTypeIsADynamicType(MlirType type) {
   return llvm::isa<mlir::DynamicType>(unwrap(type));
 }
 
-MlirTypeID mlirDynamicTypeGetTypeID() {
-  return wrap(mlir::DynamicType::getTypeID());
-}
-
 MlirType mlirDynamicTypeGet(MlirDynamicTypeDefinition typeDef,
                             MlirAttribute *attrs, intptr_t numAttrs) {
   llvm::SmallVector<mlir::Attribute> attributes;
@@ -186,10 +172,6 @@ bool mlirAttributeIsADynamicAttr(MlirAttribute attr) {
   return llvm::isa<mlir::DynamicAttr>(unwrap(attr));
 }
 
-MlirTypeID mlirDynamicAttrGetTypeID(void) {
-  return wrap(mlir::DynamicAttr::getTypeID());
-}
-
 MlirAttribute mlirDynamicAttrGet(MlirDynamicAttrDefinition attrDef,
                                  MlirAttribute *attrs, intptr_t numAttrs) {
   llvm::SmallVector<mlir::Attribute> attributes;
@@ -225,4 +207,48 @@ mlirDynamicAttrDefinitionGetName(MlirDynamicAttrDefinition attrDef) {
 MlirDialect
 mlirDynamicAttrDefinitionGetDialect(MlirDynamicAttrDefinition attrDef) {
   return wrap(unwrap(attrDef)->getDialect());
+}
+
+MlirDynamicOpDefinition mlirDynamicOpDefinitionLookup(MlirStringRef opName,
+                                                      MlirContext context) {
+  std::optional<RegisteredOperationName> opNameFound =
+      RegisteredOperationName::lookup(unwrap(opName), unwrap(context));
+  assert(opNameFound && "operation name must be registered in the context");
+
+  // The original getImpl() is protected, so we create a small helper struct
+  // here.
+  struct RegisteredOperationNameWithImpl : RegisteredOperationName {
+    Impl *getImpl() { return RegisteredOperationName::getImpl(); }
+  };
+  OperationName::Impl *impl =
+      static_cast<RegisteredOperationNameWithImpl &>(*opNameFound).getImpl();
+
+  // TODO: we should enable llvm-style RTTI for `OperationName::Impl` and check
+  // whether the `impl` is a `DynamicOpDefinition` here.
+  return wrap(static_cast<DynamicOpDefinition *>(impl));
+}
+
+void mlirDynamicOpDefinitionSetGetCanonicalizationPatternsFn(
+    MlirDynamicOpDefinition opDef,
+    MlirDynamicOpDefinitionGetCanonicalizationPatternsFn fn,
+    MlirDynamicOpDefinitionDestructUserDataFn destructFn, void *userData) {
+  auto deleter = [destructFn](void *data) {
+    if (destructFn)
+      destructFn(data);
+  };
+
+  auto ownedUserData =
+      std::unique_ptr<void, decltype(deleter)>(userData, deleter);
+
+  unwrap(opDef)->setGetCanonicalizationPatternsFn(
+      [fn, ownedUserData = std::move(ownedUserData)](
+          RewritePatternSet &patterns, MLIRContext *context) {
+        fn(wrap(&patterns), wrap(context), ownedUserData.get());
+      });
+}
+
+bool mlirDynamicOpDefinitionAddTrait(MlirDynamicOpDefinition opDef,
+                                     MlirDynamicOpTrait dynamicOpTrait) {
+  std::unique_ptr<DynamicOpTrait> trait(unwrap(dynamicOpTrait));
+  return unwrap(opDef)->addTrait(std::move(trait));
 }

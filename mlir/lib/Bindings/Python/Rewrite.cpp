@@ -69,17 +69,6 @@ public:
 // PyRewritePatternSet
 //===----------------------------------------------------------------------===//
 
-PyRewritePatternSet::PyRewritePatternSet(MlirContext ctx)
-    : patterns(mlirRewritePatternSetCreate(ctx)), owned(true) {}
-
-PyRewritePatternSet::PyRewritePatternSet(MlirRewritePatternSet patterns)
-    : patterns(patterns), owned(false) {}
-
-PyRewritePatternSet::~PyRewritePatternSet() {
-  if (owned && patterns.ptr)
-    mlirRewritePatternSetDestroy(patterns);
-}
-
 MlirRewritePatternSet PyRewritePatternSet::get() const { return patterns; }
 
 bool PyRewritePatternSet::isOwned() const { return owned; }
