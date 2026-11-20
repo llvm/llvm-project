@@ -20,7 +20,7 @@ include "mlir/IR/OpBase.td"
 // DEF: ::test::SingleParameterType,
 // DEF: ::test::IntegerType
 
-// DEF-LABEL: ::mlir::OptionalParseResult generatedTypeParser(
+// DEF-LABEL: ::mlir::OptionalParseResult generatedTestDialectTypeParser(
 // DEF-SAME: ::mlir::AsmParser &parser,
 // DEF-SAME: ::llvm::StringRef *mnemonic,
 // DEF-SAME: ::mlir::Type &value) {
@@ -34,6 +34,9 @@ include "mlir/IR/OpBase.td"
 // DEF: .Default([&](llvm::StringRef keyword,
 // DEF-NEXT:   *mnemonic = keyword;
 // DEF-NEXT:   return std::nullopt;
+// DEF: /// Kept for compatibility, use `generatedTestDialectTypeParser` and `generatedTestDialectTypePrinter` instead.
+// DEF-NEXT: {{\[\[}}maybe_unused{{\]\]}} static ::mlir::OptionalParseResult generatedTypeParser(::mlir::AsmParser &parser, ::llvm::StringRef *mnemonic, ::mlir::Type &value) {
+// DEF-NEXT:   return ::test::generatedTestDialectTypeParser(parser, mnemonic, value);
 
 def Test_Dialect: Dialect {
 // DECL-NOT: TestDialect
