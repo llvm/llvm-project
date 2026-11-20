@@ -4817,9 +4817,12 @@ void CGDebugInfo::collectVarDeclProps(const VarDecl *VD, llvm::DIFile *&Unit,
   // Get context for static locals (that are technically globals) the same way
   // we do for "local" locals -- by using current lexical block.
   if (VD->isStaticLocal()) {
-    assert(!LexicalBlockStack.empty() && "Region stack mismatch, stack empty!");
-    VDContext = LexicalBlockStack.back();
-    return;
+    if (!LexicalBlockStack.empty()) {
+      VDContext = LexicalBlockStack.back();
+      return;
+    }
+    // CUDA/HIP emit host-used __device__ static locals at the end of the TU.
+    assert(CGM.getLangOpts().CUDA && "Region stack mismatch, stack empty!");
   }
 
   // Since we emit declarations (DW_AT_members) for static members, place the
