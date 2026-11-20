@@ -8,10 +8,10 @@
 spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses, Int8, Linkage], []> {
   spirv.func @lifetime() "None" {
     %0 = spirv.Variable : !spirv.ptr<f32, Function>
-    // CHECK: spirv.LifetimeStart %{{.*}}, 0 : !spirv.ptr<f32, Function>
-    spirv.LifetimeStart %0, 0 : !spirv.ptr<f32, Function>
-    // CHECK: spirv.LifetimeStop %{{.*}}, 0 : !spirv.ptr<f32, Function>
-    spirv.LifetimeStop %0, 0 : !spirv.ptr<f32, Function>
+    // CHECK: spirv.LifetimeStart %{{.*}}, 4 : !spirv.ptr<f32, Function>
+    spirv.LifetimeStart %0, 4 : !spirv.ptr<f32, Function>
+    // CHECK: spirv.LifetimeStop %{{.*}}, 4 : !spirv.ptr<f32, Function>
+    spirv.LifetimeStop %0, 4 : !spirv.ptr<f32, Function>
 
     %1 = spirv.Bitcast %0 : !spirv.ptr<f32, Function> to !spirv.ptr<i8, Function>
     // CHECK: spirv.LifetimeStart %{{.*}}, 0 : !spirv.ptr<i8, Function>
