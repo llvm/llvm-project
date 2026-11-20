@@ -698,20 +698,22 @@ public:
   Value *VisitStmtExpr(const StmtExpr *E);
 
   // Unary Operators.
+  // '++' and '--' read and write their operand, so it must be an object, not
+  // just an address.
   Value *VisitUnaryPostDec(const UnaryOperator *E) {
-    LValue LV = EmitLValue(E->getSubExpr());
+    LValue LV = CGF.EmitAccessedLValue(E->getSubExpr());
     return EmitScalarPrePostIncDec(E, LV, false, false);
   }
   Value *VisitUnaryPostInc(const UnaryOperator *E) {
-    LValue LV = EmitLValue(E->getSubExpr());
+    LValue LV = CGF.EmitAccessedLValue(E->getSubExpr());
     return EmitScalarPrePostIncDec(E, LV, true, false);
   }
   Value *VisitUnaryPreDec(const UnaryOperator *E) {
-    LValue LV = EmitLValue(E->getSubExpr());
+    LValue LV = CGF.EmitAccessedLValue(E->getSubExpr());
     return EmitScalarPrePostIncDec(E, LV, false, true);
   }
   Value *VisitUnaryPreInc(const UnaryOperator *E) {
-    LValue LV = EmitLValue(E->getSubExpr());
+    LValue LV = CGF.EmitAccessedLValue(E->getSubExpr());
     return EmitScalarPrePostIncDec(E, LV, true, true);
   }
 
