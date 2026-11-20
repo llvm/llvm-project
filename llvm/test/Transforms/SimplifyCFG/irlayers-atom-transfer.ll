@@ -1,10 +1,10 @@
 ; RUN: opt -S -passes=simplifycfg -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck %s
 
-;; foldBranchToCommonDest moves the folded branch's atom group to the
-;; predecessor's branch by copying its whole location, so it does so only when
-;; the layers match. @test_no_transfer: they differ, the branch keeps its own
-;; location. @test_transfer: they match, the atom moves, and both rebuilt
-;; locations, the branch's and the cloned bonus instruction's, keep the layers.
+;; Check that irlayers take precedence over Key Instructions atom groups when
+;; SimplifyCFG folds a branch into its predecessor. @test_no_transfer: the
+;; layers differ, so the predecessor's branch keeps its own location and does
+;; not take the folded branch's atom. @test_transfer: they match, the atom
+;; moves, and the rebuilt locations keep the layers.
 
 declare void @a()
 declare void @b()
@@ -26,8 +26,8 @@ other:
   ret void
 }
 
-;; The calls keep the branch from being folded away, so its location can be
-;; checked directly.
+;; The layers differ, so entry's branch keeps its own location: its own layers
+;; (line 100) and no atom group.
 ; CHECK-LABEL: define {{.*}}@test_no_transfer
 ; CHECK:       %or.cond = select {{.*}}, !dbg ![[PRED:[0-9]+]]
 ; CHECK-NEXT:  br i1 %or.cond, {{.*}}, !dbg ![[PRED]]
@@ -51,6 +51,7 @@ other:
 
 ;; %cmp is cloned into entry with a fresh atom group (2 becomes 3), and the
 ;; branch takes the folded branch's atom, remapped the same way.
+
 ; CHECK-LABEL: define {{.*}}@test_transfer
 ; CHECK:       {{%.*}} = icmp eq i32 %x, 0, !dbg ![[CMP:[0-9]+]]
 ; CHECK-NEXT:  %or.cond = select
@@ -75,13 +76,17 @@ other:
 !10 = !DILayerLocList(!9)
 !11 = !DILayerLoc(line: 200, column: 1, file: !8, kind: "IntermediateIR")
 !12 = !DILayerLocList(!11)
+
 ;; Same position on both branches, different layers; only bb's has an atom.
+
 !13 = !DILocation(line: 10, column: 5, scope: !4, irlayers: !10)
 !14 = !DILocation(line: 10, column: 5, scope: !4, irlayers: !12, atomGroup: 1, atomRank: 1)
 
 !20 = distinct !DISubprogram(name: "test_transfer", scope: !1, file: !1, line: 18, type: !2, scopeLine: 18, spFlags: DISPFlagDefinition, unit: !0, keyInstructions: true)
+
 ;; Same position and layers everywhere; %cmp and bb's branch carry atoms,
 ;; entry's branch does not.
+
 !21 = !DILocation(line: 20, column: 5, scope: !20, irlayers: !10)
 !22 = !DILocation(line: 20, column: 5, scope: !20, irlayers: !10, atomGroup: 2, atomRank: 2)
 !23 = !DILocation(line: 20, column: 5, scope: !20, irlayers: !10, atomGroup: 2, atomRank: 1)
