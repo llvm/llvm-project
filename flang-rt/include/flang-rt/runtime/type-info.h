@@ -258,6 +258,8 @@ public:
     return noFinalizationNeeded_;
   }
   RT_API_ATTRS bool noDefinedAssignment() const { return noDefinedAssignment_; }
+  RT_API_ATTRS bool isEnumeration() const { return isEnumeration_; }
+  RT_API_ATTRS std::int32_t enumeratorCount() const { return enumeratorCount_; }
 
   RT_API_ATTRS std::size_t LenParameters() const {
     return lenParameterKind().Elements();
@@ -341,6 +343,14 @@ private:
   bool noDestructionNeeded_{false};
   bool noFinalizationNeeded_{false};
   bool noDefinedAssignment_{false};
+  // F2023 enumeration type: the only data component is the INTEGER(4)
+  // ordinal.  These occupy what was formerly tail padding, which older
+  // compilers emit zero-filled, so their tables read as "not an enumeration
+  // type".  Each object file has its own linkonce_odr copy of a type's table,
+  // so in a program mixing objects from older and newer compilers the range
+  // check depends on which copy the linker keeps.
+  bool isEnumeration_{false};
+  std::int32_t enumeratorCount_{0};
 };
 
 } // namespace Fortran::runtime::typeInfo

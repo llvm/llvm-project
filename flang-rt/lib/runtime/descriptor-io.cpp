@@ -451,6 +451,85 @@ inline RT_API_ATTRS bool FormattedLogicalIO(
   return true;
 }
 
+// F2023 enumeration type formatted I/O.  The item is edited as its INTEGER(4)
+// ordinal.  Only the I, B, O, and Z edit descriptors are allowed (12.6.3),
+// and an input value must be positive and not greater than the number of
+// enumerators (13.7.2.2 p6).  On an input error the item is left unchanged.
+template <Direction DIR>
+static RT_API_ATTRS bool FormattedEnumerationIO(IoStatementState &io,
+    const Descriptor &descriptor, const typeInfo::DerivedType &derived) {
+  IoErrorHandler &handler{io.GetIoErrorHandler()};
+  const Descriptor &compDesc{derived.component()};
+  const typeInfo::Component *ordinal{compDesc.Elements() == 1
+          ? compDesc.OffsetElement<const typeInfo::Component>()
+          : nullptr};
+  RUNTIME_CHECK(handler,
+      ordinal != nullptr &&
+          ordinal->genre() == typeInfo::Component::Genre::Data &&
+          ordinal->category() == TypeCategory::Integer && ordinal->kind() == 4);
+  std::size_t ordinalOffset{static_cast<std::size_t>(ordinal->offset())};
+  std::size_t numElements{descriptor.Elements()};
+  SubscriptValue subscripts[maxRank];
+  descriptor.GetLowerBounds(subscripts);
+  for (std::size_t j{0}; j < numElements; ++j) {
+    auto edit{io.GetNextDataEdit()};
+    if (!edit) {
+      return false;
+    }
+    switch (edit->descriptor) {
+    case 'I':
+    case 'B':
+    case 'O':
+    case 'Z':
+      break;
+    case DataEdit::DefinedDerivedType:
+      handler.SignalError(IostatErrorInFormat,
+          "Data edit descriptor 'DT' may not be used with an enumeration type "
+          "data item");
+      return false;
+    default:
+      if (edit->IsListDirected() ||
+          edit->descriptor == DataEdit::ListDirectedNullValue) {
+        handler.SignalError("An enumeration type data item may not appear in "
+                            "list-directed or NAMELIST I/O");
+      } else {
+        handler.SignalError(IostatErrorInFormat,
+            "Data edit descriptor '%c' may not be used with an enumeration "
+            "type data item",
+            edit->descriptor);
+      }
+      return false;
+    }
+    char &element{ExtractElement<char>(io, descriptor, subscripts)};
+    auto &x{*reinterpret_cast<std::int32_t *>(&element + ordinalOffset)};
+    if constexpr (DIR == Direction::Output) {
+      if (!EditIntegerOutput<4>(io, *edit, x, /*isSigned=*/true)) {
+        return false;
+      }
+    } else {
+      std::int32_t value{0};
+      if (!EditIntegerInput(io, *edit, &value, 4, /*isSigned=*/true)) {
+        return false;
+      }
+      std::int32_t count{derived.enumeratorCount()};
+      if (value < 1 || value > count) {
+        const Descriptor &name{derived.name()};
+        handler.SignalError(IostatEnumerationInputOutOfRange,
+            "Input value %d is out of range for enumeration type '%.*s' "
+            "(must be from 1 to %d)",
+            static_cast<int>(value), static_cast<int>(name.ElementBytes()),
+            name.OffsetElement<const char>(), static_cast<int>(count));
+        return false;
+      }
+      x = value;
+    }
+    if (!descriptor.IncrementSubscripts(subscripts) && j + 1 < numElements) {
+      handler.Crash("FormattedEnumerationIO: subscripts out of bounds");
+    }
+  }
+  return true;
+}
+
 template <Direction DIR>
 RT_API_ATTRS int DerivedIoTicket<DIR>::Continue(WorkQueue &workQueue) {
   while (!IsComplete()) {
@@ -803,6 +882,10 @@ RT_API_ATTRS int DescriptorIoTicket<DIR>::Begin(WorkQueue &workQueue) {
             special_ = binding;
           }
         }
+      }
+      if (!special_ && derived_->isEnumeration()) {
+        any = FormattedEnumerationIO<DIR>(io_, instance_, *derived_);
+        break;
       }
       return StatContinue;
     }
