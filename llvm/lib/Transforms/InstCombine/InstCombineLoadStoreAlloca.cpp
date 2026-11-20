@@ -661,6 +661,7 @@ static StoreInst *combineStoreToNewValue(InstCombinerImpl &IC, StoreInst &SI,
     case LLVMContext::MD_align:
     case LLVMContext::MD_dereferenceable:
     case LLVMContext::MD_dereferenceable_or_null:
+    case LLVMContext::MD_nofreeobj:
       // These don't apply for stores.
       break;
     }

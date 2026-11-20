@@ -213,6 +213,42 @@ out:
   ret void
 }
 
+define void @hoist_nofreeobj(i1 %c, ptr %p) {
+; CHECK-LABEL: @hoist_nofreeobj(
+; CHECK-NEXT:  if:
+; CHECK-NEXT:    [[T:%.*]] = load ptr, ptr [[P:%.*]], align 8, !nofreeobj [[META2]]
+; CHECK-NEXT:    ret void
+;
+if:
+  br i1 %c, label %then, label %else
+then:
+  %t = load ptr, ptr %p, !nofreeobj !{}
+  br label %out
+else:
+  %e = load ptr, ptr %p, !nofreeobj !{}
+  br label %out
+out:
+  ret void
+}
+
+define void @hoist_nofreeobj_partial(i1 %c, ptr %p) {
+; CHECK-LABEL: @hoist_nofreeobj_partial(
+; CHECK-NEXT:  if:
+; CHECK-NEXT:    [[T:%.*]] = load ptr, ptr [[P:%.*]], align 8
+; CHECK-NEXT:    ret void
+;
+if:
+  br i1 %c, label %then, label %else
+then:
+  %t = load ptr, ptr %p, !nofreeobj !{}
+  br label %out
+else:
+  %e = load ptr, ptr %p
+  br label %out
+out:
+  ret void
+}
+
 ; !range violation only returns poison, and is thus safe to speculate.
 define i32 @speculate_range(i1 %c, ptr dereferenceable(8) align 8 %p) {
 ; CHECK-LABEL: @speculate_range(
