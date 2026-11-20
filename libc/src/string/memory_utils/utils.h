@@ -50,6 +50,26 @@ LIBC_INLINE uintptr_t distance_to_next_aligned(const void *ptr) {
   return alignment - distance_to_align_down<alignment>(ptr);
 }
 
+// Returns ptr rounded down to the alignment of Vector, for loads that read
+// outside the object ptr points into on purpose. The compiler may treat such a
+// read as undefined or drop the stores it does not see being read, which
+// happens once a call is inlined on a known array. Passing the pointer through
+// an asm that clobbers memory makes the object observable and hides the
+// aligned address.
+template <typename Vector>
+LIBC_INLINE const Vector *align_down_for_overread(const void *ptr) {
+#ifndef LIBC_COMPILER_IS_MSVC
+  asm("" : : "r"(ptr) : "memory");
+#endif
+  const Vector *aligned = reinterpret_cast<const Vector *>(
+      static_cast<const char *>(ptr) -
+      distance_to_align_down<alignof(Vector)>(ptr));
+#ifndef LIBC_COMPILER_IS_MSVC
+  asm("" : "+r"(aligned));
+#endif
+  return aligned;
+}
+
 // Returns the same pointer but notifies the compiler that it is aligned.
 template <size_t alignment, typename T> LIBC_INLINE T *assume_aligned(T *ptr) {
   return reinterpret_cast<T *>(__builtin_assume_aligned(ptr, alignment));

@@ -23,3 +23,15 @@ if(LIBC_TARGET_ARCHITECTURE_IS_AARCH64 OR
       libc.src.string.memory_utils.memory_utils
   )
 endif()
+
+add_libc_test(
+  inline_strlen_test
+  SUITE
+    libc-string-tests
+  SRCS
+    inline_strlen_test.cpp
+  COMPILE_OPTIONS
+    ${LIBC_COMPILE_OPTIONS_NATIVE}
+  DEPENDS
+    libc.src.string.memory_utils.memory_utils
+)
