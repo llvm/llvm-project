@@ -17909,7 +17909,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         break;
       }
       case TreeEntry::CompressVectorize: {
-        auto [CompressMask, LoadVecTy, InterleaveFactor, IsMasked] =
+        const auto &[CompressMask, LoadVecTy, InterleaveFactor, IsMasked] =
             getCompressEntryData(*E);
         Align CommonAlignment = LI0->getAlign();
         // For REVEC the emitted shuffle uses the compress mask expanded to the
@@ -29942,20 +29942,14 @@ bool BoUpSLP::storeConflictsWithLoad(StoreInst *BaseStore, unsigned VF,
                                      const TreeEntry &LoadTE, const Loop *L) {
   assert(BaseStore && "Expected a valid base store");
 
-  Type *StoreTy = getValueType(BaseStore, Opts.slp_revec);
-  // A scalable stored type has no fixed byte window. Bail out before
-  // getNumElements, which rejects scalable vectors.
-  if (isa<ScalableVectorType>(StoreTy))
+  Type *StoreTy = BaseStore->getValueOperand()->getType();
+  TypeSize StoreSize = DL->getTypeStoreSize(StoreTy);
+  if (StoreSize.isScalable() || StoreSize.isZero())
     return false;
-  Type *ValueTy = StoreTy->getScalarType();
-  TypeSize StoreSize = DL->getTypeStoreSize(ValueTy);
-  if (StoreSize.isScalable())
-    return false;
-  uint64_t ElementSize = StoreSize.getFixedValue();
-  if (ElementSize == 0)
-    return false;
-
-  uint64_t VectorStoreBytes = VF * getNumElements(StoreTy) * ElementSize;
+  uint64_t ElementSize =
+      DL->getTypeStoreSize(StoreTy->getScalarType()).getFixedValue();
+  uint64_t VectorStoreBytes =
+      SaturatingMultiply<uint64_t>(VF, StoreSize.getFixedValue());
   LLVM_DEBUG(dbgs() << "SLP: STLF check: VF=" << VF
                     << " ElementSize=" << ElementSize
                     << " VectorStoreBytes=" << VectorStoreBytes << "\n");
@@ -29990,47 +29984,61 @@ bool BoUpSLP::storeConflictsWithLoad(StoreInst *BaseStore, unsigned VF,
         DL->getTypeStoreSize(std::get<1>(getCompressEntryData(LoadTE)))
             .getFixedValue();
   } else {
-    LoadElementSize = DL->getTypeStoreSize(LoadI->getType()).getFixedValue() *
-                      LoadTE.Scalars.size();
+    LoadElementSize = SaturatingMultiply<uint64_t>(
+        DL->getTypeStoreSize(LoadI->getType()).getFixedValue(),
+        LoadTE.Scalars.size());
     // Leading non-load lanes move the emitted vector load below its first load.
-    Offset -= static_cast<int64_t>(getVectorLoadShift(LoadTE.Scalars));
+    uint64_t LoadShift = getVectorLoadShift(LoadTE.Scalars);
+    if (LoadShift > static_cast<uint64_t>(INT64_MAX) ||
+        SubOverflow(Offset, static_cast<int64_t>(LoadShift), Offset))
+      return false;
   }
+  // The forwarding window below is 8 * ElementSize iterations.
+  if (VectorStoreBytes > static_cast<uint64_t>(INT64_MAX) ||
+      LoadElementSize > static_cast<uint64_t>(INT64_MAX) ||
+      ElementSize > static_cast<uint64_t>(INT64_MAX) / 8)
+    return false;
   const auto StoreBytes = static_cast<int64_t>(VectorStoreBytes);
   const auto LoadBytes = static_cast<int64_t>(LoadElementSize);
   // A load overlapping the store of the same iteration, or of every iteration
   // for loop-invariant addresses, is forwarded only if the store covers it.
   if ((StoreStride == 0 || DT->dominates(BaseStore, LoadI)) &&
-      Offset < StoreBytes && Offset + LoadBytes > 0)
-    return Offset < 0 || Offset + LoadBytes > StoreBytes;
+      Offset < StoreBytes && Offset > -LoadBytes)
+    return Offset < 0 || Offset > StoreBytes - LoadBytes;
   // Without a constant step nothing shows that a later iteration re-reads the
   // stored bytes.
   if (StoreStride.value_or(0) == 0)
     return false;
   // A descending loop mirrors an ascending one: reflect the addresses so the
   // bytes written by earlier iterations always lie below the store.
-  if (*StoreStride < 0)
-    Offset = StoreBytes - Offset - LoadBytes;
-  if (Offset >= 0)
+  if (*StoreStride < 0 && SubOverflow(StoreBytes - LoadBytes, Offset, Offset))
     return false;
-  uint64_t Distance = -static_cast<uint64_t>(Offset);
-  LLVM_DEBUG(dbgs() << "SLP: STLF: load=" << *LoadI << " distance=" << Distance
-                    << " bytes from chain base\n");
-
+  if (Offset >= StoreBytes)
+    return false;
   // A later iteration re-reads the stored bytes only if some k >= 1 gives
-  //   Distance - LoadElementSize < k * |S| < Distance + VectorStoreBytes.
-  int64_t Stride = std::abs(*StoreStride);
-  int64_t Lo = static_cast<int64_t>(Distance) - LoadBytes;
-  int64_t Hi = static_cast<int64_t>(Distance) + StoreBytes;
-  int64_t K = Lo < Stride ? 1 : (Lo / Stride) + 1;
-  if (Stride * K >= Hi)
+  //   -(Offset + LoadBytes) < k * |S| < StoreBytes - Offset.
+  uint64_t Stride = static_cast<uint64_t>(std::abs(*StoreStride));
+  uint64_t Hi =
+      static_cast<uint64_t>(StoreBytes) - static_cast<uint64_t>(Offset);
+  uint64_t K = 1;
+  if (Offset < -LoadBytes) {
+    uint64_t Lo = -static_cast<uint64_t>(Offset) - LoadElementSize;
+    if (Lo >= Stride)
+      K = Lo / Stride + 1;
+  }
+  if (K > (Hi - 1) / Stride)
     return false;
+  uint64_t Shift = Stride * K;
   // Earlier stores repeat every Stride bytes, the tiled predicate below assumes
   // every VectorStoreBytes. Otherwise the youngest overlapping store, K
   // iterations back, must cover the load inside the forwarding window.
-  if (Stride != StoreBytes)
-    return K < 8 * static_cast<int64_t>(ElementSize) &&
-           (Stride * K < static_cast<int64_t>(Distance) ||
-            Stride * K + LoadBytes > Hi);
+  if (Stride != VectorStoreBytes)
+    return K < 8 * ElementSize &&
+           ((Offset < 0 && Shift < -static_cast<uint64_t>(Offset)) ||
+            LoadElementSize > Hi - Shift);
+  uint64_t Distance = -static_cast<uint64_t>(Offset);
+  LLVM_DEBUG(dbgs() << "SLP: STLF: load=" << *LoadI << " distance=" << Distance
+                    << " bytes from chain base\n");
   // Conflict if the load overlaps two wide stores within the recency window,
   // either because it is misaligned or because the load itself is wider than
   // the wide store and overruns its window.
@@ -30056,7 +30064,7 @@ bool BoUpSLP::findStoreLoadForwardingHazardForLoad(const TreeEntry &LoadTE) {
   auto [It, Inserted] = LoopSimpleStores.try_emplace(LoadL);
   if (Inserted) {
     for (BasicBlock *BB : LoadL->blocks()) {
-      if (LI->getLoopFor(BB) != LoadL)
+      if (LI->getLoopFor(BB) != LoadL || ScalarFallbackBlocks.contains(BB))
         continue;
       for (Instruction &I : *BB)
         if (auto *SI = dyn_cast<StoreInst>(&I); SI && SI->isSimple())

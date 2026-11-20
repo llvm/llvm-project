@@ -151,3 +151,147 @@ loop:
 exit:
   ret void
 }
+
+; Each iteration stores <8 x i1> (1 byte) and advances 8 bytes. The 4-byte load
+; of the previous iteration contains that 1-byte store, so it cannot forward.
+; The store width is the store size of <8 x i1>, not 8 elements of 1 byte.
+define void @subbyte_store(ptr noalias %A, ptr noalias %Out, <8 x i32> %x, i64 %n) {
+; CHECK-LABEL: define void @subbyte_store(
+; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[OUT:%.*]], <8 x i32> [[X:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 1, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[OFF:%.*]] = shl i64 [[I]], 3
+; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[OFF]]
+; CHECK-NEXT:    [[Q0:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 -8
+; CHECK-NEXT:    [[Q1:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 -7
+; CHECK-NEXT:    [[Q2:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 -6
+; CHECK-NEXT:    [[Q3:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 -5
+; CHECK-NEXT:    [[O4:%.*]] = shl i64 [[I]], 2
+; CHECK-NEXT:    [[O0:%.*]] = getelementptr inbounds i8, ptr [[OUT]], i64 [[O4]]
+; CHECK-NEXT:    [[L0:%.*]] = load i8, ptr [[Q0]], align 1
+; CHECK-NEXT:    [[L1:%.*]] = load i8, ptr [[Q1]], align 1
+; CHECK-NEXT:    [[L2:%.*]] = load i8, ptr [[Q2]], align 1
+; CHECK-NEXT:    [[L3:%.*]] = load i8, ptr [[Q3]], align 1
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i8> poison, i8 [[L0]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i8> [[TMP0]], i8 [[L1]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i8> [[TMP1]], i8 [[L2]], i64 2
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i8> [[TMP2]], i8 [[L3]], i64 3
+; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i8> [[TMP3]], <i8 1, i8 2, i8 3, i8 4>
+; CHECK-NEXT:    store <4 x i8> [[TMP4]], ptr [[O0]], align 1
+; CHECK-NEXT:    [[M:%.*]] = icmp eq <8 x i32> [[X]], zeroinitializer
+; CHECK-NEXT:    store <8 x i1> [[M]], ptr [[P]], align 1
+; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[I_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+loop:
+  %i = phi i64 [ 1, %entry ], [ %i.next, %loop ]
+  %off = shl i64 %i, 3
+  %p = getelementptr inbounds i8, ptr %A, i64 %off
+  %q0 = getelementptr inbounds i8, ptr %p, i64 -8
+  %q1 = getelementptr inbounds i8, ptr %p, i64 -7
+  %q2 = getelementptr inbounds i8, ptr %p, i64 -6
+  %q3 = getelementptr inbounds i8, ptr %p, i64 -5
+  %l0 = load i8, ptr %q0, align 1
+  %l1 = load i8, ptr %q1, align 1
+  %l2 = load i8, ptr %q2, align 1
+  %l3 = load i8, ptr %q3, align 1
+  %t0 = add i8 %l0, 1
+  %t1 = add i8 %l1, 2
+  %t2 = add i8 %l2, 3
+  %t3 = add i8 %l3, 4
+  %o4 = shl i64 %i, 2
+  %o0 = getelementptr inbounds i8, ptr %Out, i64 %o4
+  %o1 = getelementptr inbounds i8, ptr %o0, i64 1
+  %o2 = getelementptr inbounds i8, ptr %o0, i64 2
+  %o3 = getelementptr inbounds i8, ptr %o0, i64 3
+  store i8 %t0, ptr %o0, align 1
+  store i8 %t1, ptr %o1, align 1
+  store i8 %t2, ptr %o2, align 1
+  store i8 %t3, ptr %o3, align 1
+  %m = icmp eq <8 x i32> %x, zeroinitializer
+  store <8 x i1> %m, ptr %p, align 1
+  %i.next = add nuw nsw i64 %i, 1
+  %c = icmp slt i64 %i.next, %n
+  br i1 %c, label %loop, label %exit
+exit:
+  ret void
+}
+
+; Each iteration stores a 16-byte struct of two <2 x i32> and advances 16 bytes.
+; The load starting 4 bytes below straddles the previous store. The store width
+; is the store size of the struct, not its element count times its size.
+define void @struct_of_vectors_store(ptr noalias %A, ptr noalias %Out, <2 x i32> %v0, <2 x i32> %v1, i64 %n) {
+; CHECK-LABEL: define void @struct_of_vectors_store(
+; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[OUT:%.*]], <2 x i32> [[V0:%.*]], <2 x i32> [[V1:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[S0:%.*]] = insertvalue { <2 x i32>, <2 x i32> } poison, <2 x i32> [[V0]], 0
+; CHECK-NEXT:    [[S:%.*]] = insertvalue { <2 x i32>, <2 x i32> } [[S0]], <2 x i32> [[V1]], 1
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 1, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[OFF:%.*]] = shl i64 [[I]], 4
+; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[OFF]]
+; CHECK-NEXT:    [[Q0:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 -4
+; CHECK-NEXT:    [[Q1:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 0
+; CHECK-NEXT:    [[Q2:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 4
+; CHECK-NEXT:    [[O4:%.*]] = shl i64 [[I]], 4
+; CHECK-NEXT:    [[O0:%.*]] = getelementptr inbounds i8, ptr [[OUT]], i64 [[O4]]
+; CHECK-NEXT:    [[L0:%.*]] = load i32, ptr [[Q0]], align 4
+; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[Q1]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[Q2]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[L0]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[L1]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> [[TMP3]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i32> [[TMP4]], <i32 1, i32 2, i32 3, i32 4>
+; CHECK-NEXT:    store <4 x i32> [[TMP5]], ptr [[O0]], align 4
+; CHECK-NEXT:    store { <2 x i32>, <2 x i32> } [[S]], ptr [[P]], align 8
+; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[I_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %s0 = insertvalue { <2 x i32>, <2 x i32> } poison, <2 x i32> %v0, 0
+  %s = insertvalue { <2 x i32>, <2 x i32> } %s0, <2 x i32> %v1, 1
+  br label %loop
+loop:
+  %i = phi i64 [ 1, %entry ], [ %i.next, %loop ]
+  %off = shl i64 %i, 4
+  %p = getelementptr inbounds i8, ptr %A, i64 %off
+  %q0 = getelementptr inbounds i8, ptr %p, i64 -4
+  %q1 = getelementptr inbounds i8, ptr %p, i64 0
+  %q2 = getelementptr inbounds i8, ptr %p, i64 4
+  %q3 = getelementptr inbounds i8, ptr %p, i64 8
+  %l0 = load i32, ptr %q0, align 4
+  %l1 = load i32, ptr %q1, align 4
+  %l2 = load i32, ptr %q2, align 4
+  %l3 = load i32, ptr %q3, align 4
+  %t0 = add i32 %l0, 1
+  %t1 = add i32 %l1, 2
+  %t2 = add i32 %l2, 3
+  %t3 = add i32 %l3, 4
+  %o4 = shl i64 %i, 4
+  %o0 = getelementptr inbounds i8, ptr %Out, i64 %o4
+  %o1 = getelementptr inbounds i32, ptr %o0, i64 1
+  %o2 = getelementptr inbounds i32, ptr %o0, i64 2
+  %o3 = getelementptr inbounds i32, ptr %o0, i64 3
+  store i32 %t0, ptr %o0, align 4
+  store i32 %t1, ptr %o1, align 4
+  store i32 %t2, ptr %o2, align 4
+  store i32 %t3, ptr %o3, align 4
+  store { <2 x i32>, <2 x i32> } %s, ptr %p, align 8
+  %i.next = add nuw nsw i64 %i, 1
+  %c = icmp slt i64 %i.next, %n
+  br i1 %c, label %loop, label %exit
+exit:
+  ret void
+}

@@ -155,3 +155,112 @@ loop:
 exit:
   ret void
 }
+
+; The store A[i..i+3] advances by one element per iteration, so consecutive
+; stores overlap. The load A[i+1..i+4] runs before the store and straddles the
+; store of the previous iteration, A[i-1..i+2]. The penalty splits it into
+; two <2 x i32> loads that each forward cleanly.
+define void @above_store_base_overlapping_stride(ptr noalias %A, i64 %n) {
+; CHECK-LABEL: define void @above_store_base_overlapping_stride(
+; CHECK-SAME: ptr noalias [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[P0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I]]
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i32, ptr [[P0]], i64 1
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds i32, ptr [[P0]], i64 3
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[P1]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[P3]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> [[TMP3]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <4 x i32> [[TMP4]], <i32 1, i32 2, i32 3, i32 4>
+; CHECK-NEXT:    store <4 x i32> [[TMP5]], ptr [[P0]], align 4
+; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[I_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+loop:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %loop ]
+  %p0 = getelementptr inbounds i32, ptr %A, i64 %i
+  %p1 = getelementptr inbounds i32, ptr %p0, i64 1
+  %p2 = getelementptr inbounds i32, ptr %p0, i64 2
+  %p3 = getelementptr inbounds i32, ptr %p0, i64 3
+  %p4 = getelementptr inbounds i32, ptr %p0, i64 4
+  %l1 = load i32, ptr %p1, align 4
+  %l2 = load i32, ptr %p2, align 4
+  %l3 = load i32, ptr %p3, align 4
+  %l4 = load i32, ptr %p4, align 4
+  %t0 = add nsw i32 %l1, 1
+  %t1 = add nsw i32 %l2, 2
+  %t2 = add nsw i32 %l3, 3
+  %t3 = add nsw i32 %l4, 4
+  store i32 %t0, ptr %p0, align 4
+  store i32 %t1, ptr %p1, align 4
+  store i32 %t2, ptr %p2, align 4
+  store i32 %t3, ptr %p3, align 4
+  %i.next = add nuw nsw i64 %i, 1
+  %c = icmp slt i64 %i.next, %n
+  br i1 %c, label %loop, label %exit
+exit:
+  ret void
+}
+
+; Descending mirror: the store A[i..i+3] moves down one element per iteration
+; and the load A[i-1..i+2] straddles the store of the previous iteration,
+; A[i+1..i+4]. The penalty splits it into two <2 x i32> loads.
+define void @below_store_base_overlapping_stride_desc(ptr noalias %A, i64 %n) {
+; CHECK-LABEL: define void @below_store_base_overlapping_stride_desc(
+; CHECK-SAME: ptr noalias [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[N]], %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[P0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I]]
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i32, ptr [[P0]], i64 1
+; CHECK-NEXT:    [[PM1:%.*]] = getelementptr inbounds i32, ptr [[P0]], i64 -1
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[PM1]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[P1]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> [[TMP3]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <4 x i32> [[TMP4]], <i32 1, i32 2, i32 3, i32 4>
+; CHECK-NEXT:    store <4 x i32> [[TMP5]], ptr [[P0]], align 4
+; CHECK-NEXT:    [[I_NEXT]] = add nsw i64 [[I]], -1
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i64 [[I_NEXT]], 0
+; CHECK-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+loop:
+  %i = phi i64 [ %n, %entry ], [ %i.next, %loop ]
+  %p0 = getelementptr inbounds i32, ptr %A, i64 %i
+  %p1 = getelementptr inbounds i32, ptr %p0, i64 1
+  %p2 = getelementptr inbounds i32, ptr %p0, i64 2
+  %p3 = getelementptr inbounds i32, ptr %p0, i64 3
+  %pm1 = getelementptr inbounds i32, ptr %p0, i64 -1
+  %l0 = load i32, ptr %pm1, align 4
+  %l1 = load i32, ptr %p0, align 4
+  %l2 = load i32, ptr %p1, align 4
+  %l3 = load i32, ptr %p2, align 4
+  %t0 = add nsw i32 %l0, 1
+  %t1 = add nsw i32 %l1, 2
+  %t2 = add nsw i32 %l2, 3
+  %t3 = add nsw i32 %l3, 4
+  store i32 %t0, ptr %p0, align 4
+  store i32 %t1, ptr %p1, align 4
+  store i32 %t2, ptr %p2, align 4
+  store i32 %t3, ptr %p3, align 4
+  %i.next = add nsw i64 %i, -1
+  %c = icmp sgt i64 %i.next, 0
+  br i1 %c, label %loop, label %exit
+exit:
+  ret void
+}
