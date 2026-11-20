@@ -49,6 +49,9 @@ class RewritePatternSet;
 ///
 /// When applying the pattern a second time, the existing alloca() operation
 /// is reused and only a second vector.type_cast is added.
+///
+/// For progressive lowering, allocate transfer buffers outside enclosing serial
+/// loops when possible, while preserving other allocation scopes.
 struct VectorTransferToSCFOptions {
   /// Minimal rank to which vector transfer are lowered.
   unsigned targetRank = 1;
