@@ -33,6 +33,7 @@ bool lowerLoongArchMachineOperandToMCOperand(const MachineOperand &MO,
                                              MCOperand &MCOp,
                                              const AsmPrinter &AP);
 
+FunctionPass *createLoongArchAvoidStoreForwardingBlocksPass();
 FunctionPass *createLoongArchDeadRegisterDefinitionsPass();
 FunctionPass *createLoongArchExpandAtomicPseudoPass();
 FunctionPass *createLoongArchISelDag(LoongArchTargetMachine &TM,
@@ -44,6 +45,7 @@ FunctionPass *createLoongArchPreRAExpandPseudoPass();
 FunctionPass *createLoongArchExpandPseudoPass();
 FunctionPass *createLoongArchLateBranchOptPass();
 void initializeLoongArchAsmPrinterPass(PassRegistry &);
+void initializeLoongArchAvoidSFBPass(PassRegistry &);
 void initializeLoongArchDAGToDAGISelLegacyPass(PassRegistry &);
 void initializeLoongArchDeadRegisterDefinitionsPass(PassRegistry &);
 void initializeLoongArchExpandAtomicPseudoPass(PassRegistry &);
