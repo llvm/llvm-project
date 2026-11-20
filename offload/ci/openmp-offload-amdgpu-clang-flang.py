@@ -34,6 +34,10 @@ with worker.run(
                 "-DFLANG_RUNTIME_F128_MATH_LIB=libquadmath",
                 "-DCMAKE_CXX_STANDARD=17",
                 "-DLIBOMPTARGET_PLUGINS_TO_BUILD=amdgpu;host",
+                # ompTest: run its unit tests as part of check-openmp, and
+                # exercise its install rules during the install step.
+                "-DLIBOMPTEST_BUILD_UNITTESTS=ON",
+                "-DLIBOMPTEST_INSTALL_COMPONENTS=ON",
             ]
         )
 
