@@ -8772,15 +8772,21 @@ struct FoldSelectIntoMaskedLoad final : OpRewritePattern<arith::SelectOp> {
     if (load->getParentRegion() != select->getParentRegion())
       return failure();
 
+    // In an enclosing graph, the old passthrough may be the only dependency
+    // ordering a write before the load. Check up to the nearest isolated op.
+    for (Region *region = load->getParentRegion(); region;
+         region = region->getParentRegion()) {
+      if (mayBeGraphRegion(*region))
+        return failure();
+      if (region->getParentOp()->hasTrait<OpTrait::IsIsolatedFromAbove>())
+        break;
+    }
+
     // Keep the load in place so it cannot cross a write to the same memory.
     // Check availability at the load or at its enclosing operation in the
     // passthrough's block, without building a dominator tree.
     Value passthrough = select.getFalseValue();
     Block *passthroughBlock = passthrough.getParentBlock();
-    // Graph regions do not guarantee SSA dominance.
-    if (mayBeGraphRegion(*load->getParentRegion()) ||
-        mayBeGraphRegion(*passthroughBlock->getParent()))
-      return failure();
     Operation *loadInPassthroughBlock =
         passthroughBlock->findAncestorOpInBlock(*load.getOperation());
     if (!loadInPassthroughBlock)

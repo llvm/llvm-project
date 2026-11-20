@@ -94,7 +94,7 @@ func.func @negative_fold_select_late_passthrough(%base: memref<?xf32>, %idx: ind
 
 // -----
 
-// The passthrough's block contains neither the load nor an ancestor of it.
+// The passthrough is only defined on the ^take path, after the load.
 // CHECK-LABEL: func.func @negative_fold_select_passthrough_in_successor(
 // CHECK-SAME: %[[MASK:[^:]+]]: vector<4xi1>, %[[OLD_PASSTHROUGH:[^:]+]]: vector<4xf32>,
 // CHECK: %[[LOAD:.*]] = vector.maskedload {{.*}}, %[[MASK]], %[[OLD_PASSTHROUGH]]
@@ -120,14 +120,14 @@ func.func @negative_fold_select_passthrough_in_successor(
 // -----
 
 // CHECK-LABEL: func.func @negative_fold_select_load_on_false_arm(
-// CHECK: %[[PASSTHROUGH:.*]] = vector.maskedload
-// CHECK: arith.select {{.*}}, %[[PASSTHROUGH]] :
+// CHECK: %[[LOAD:.*]] = vector.maskedload
+// CHECK: arith.select {{.*}}, %[[LOAD]] :
 func.func @negative_fold_select_load_on_false_arm(%base: memref<?xf32>, %idx: index,
     %mask: vector<4xi1>, %old_passthrough: vector<4xf32>,
     %on_true: vector<4xf32>) -> vector<4xf32> {
-  %passthrough = vector.maskedload %base[%idx], %mask, %old_passthrough
+  %load = vector.maskedload %base[%idx], %mask, %old_passthrough
       : memref<?xf32>, vector<4xi1>, vector<4xf32> into vector<4xf32>
-  %result = arith.select %mask, %on_true, %passthrough
+  %result = arith.select %mask, %on_true, %load
       : vector<4xi1>, vector<4xf32>
   return %result : vector<4xf32>
 }
@@ -151,14 +151,15 @@ func.func @fold_select_broadcast_mask(%base: memref<?xf32>, %idx: index,
 
 // -----
 
-// A rewrite scoped to the if region cannot update the enclosing load.
-// CHECK-LABEL: func.func @negative_fold_select_in_nested_region(
+// The passthrough is available at the load. A rewrite scoped to the if
+// cannot modify the outer load.
+// CHECK-LABEL: func.func @negative_fold_select_load_outside_rewrite_scope(
 // CHECK-SAME: %[[MASK:[^:]+]]: vector<4xi1>, %[[OLD_PASSTHROUGH:[^:]+]]: vector<4xf32>, %[[PASSTHROUGH:[^:]+]]: vector<4xf32>
 // CHECK: %[[LOAD:.*]] = vector.maskedload {{.*}}, %[[MASK]], %[[OLD_PASSTHROUGH]]
 // CHECK: scf.if
 // CHECK: %[[SELECT:.*]] = arith.select %[[MASK]], %[[LOAD]], %[[PASSTHROUGH]]
 // CHECK: vector.store %[[SELECT]],
-func.func @negative_fold_select_in_nested_region(%base: memref<?xf32>, %idx: index,
+func.func @negative_fold_select_load_outside_rewrite_scope(%base: memref<?xf32>, %idx: index,
     %cond: i1, %mask: vector<4xi1>, %old_passthrough: vector<4xf32>,
     %passthrough: vector<4xf32>) {
   %load = vector.maskedload %base[%idx], %mask, %old_passthrough
@@ -172,37 +173,32 @@ func.func @negative_fold_select_in_nested_region(%base: memref<?xf32>, %idx: ind
 
 // -----
 
-// The fold relies on SSA ordering both at the load and in the block that
-// defines the replacement passthrough.
-// CHECK-LABEL: func.func @negative_fold_select_in_graph_region(
-// CHECK: test.graph_region
-// CHECK: %[[LOAD:.*]] = vector.maskedload
-// CHECK: %[[RESULT:.*]] = arith.select {{.*}}, %[[LOAD]],
-// CHECK: vector.store %[[RESULT]],
-// CHECK: %[[PASSTHROUGH:.*]] = arith.addf
-// CHECK: scf.if
-// CHECK: %[[NESTED_LOAD:.*]] = vector.maskedload
-// CHECK: %[[NESTED_RESULT:.*]] = arith.select {{.*}}, %[[NESTED_LOAD]], %[[PASSTHROUGH]]
-// CHECK: vector.store %[[NESTED_RESULT]],
-func.func @negative_fold_select_in_graph_region(%base: memref<?xf32>, %idx: index,
-    %cond: i1, %mask: vector<4xi1>, %old_passthrough: vector<4xf32>,
-    %passthrough: vector<4xf32>) {
-  test.graph_region {
-    %load = vector.maskedload %base[%idx], %mask, %old_passthrough
-        : memref<?xf32>, vector<4xi1>, vector<4xf32> into vector<4xf32>
-    %result = arith.select %mask, %load, %passthrough
-        : vector<4xi1>, vector<4xf32>
-    vector.store %result, %base[%idx] : memref<?xf32>, vector<4xf32>
+func.func @write_then_return(%base: memref<1xi32>, %idx: index,
+                             %value: vector<1xi32>) -> vector<1xi32> {
+  vector.store %value, %base[%idx] : memref<1xi32>, vector<1xi32>
+  return %value : vector<1xi32>
+}
 
-    %graph_passthrough = arith.addf %passthrough, %passthrough : vector<4xf32>
-    scf.if %cond {
-      %nested_load = vector.maskedload %base[%idx], %mask, %old_passthrough
-          : memref<?xf32>, vector<4xi1>, vector<4xf32> into vector<4xf32>
-      %nested_result = arith.select %mask, %nested_load, %graph_passthrough
-          : vector<4xi1>, vector<4xf32>
-      vector.store %nested_result, %base[%idx] : memref<?xf32>, vector<4xf32>
-    }
-    "test.finish"() : () -> ()
+// The old passthrough orders the write before the load in the enclosing graph.
+// Folding would let the scf.if run before the call that writes to %base.
+// CHECK-LABEL: ml_program.subgraph @negative_fold_select_graph_write_dependency(
+// CHECK: scf.if
+// CHECK: %[[LOAD:.*]] = vector.maskedload {{.*}}, %[[OLD:[^ ]+]] :
+// CHECK: arith.select {{.*}}, %[[LOAD]],
+// CHECK: %[[OLD]] = func.call @write_then_return
+ml_program.subgraph @negative_fold_select_graph_write_dependency(
+    %base: memref<1xi32>, %idx: index, %cond: i1, %mask: vector<1xi1>,
+    %value: vector<1xi32>, %arg: vector<1xi32>) -> vector<1xi32> {
+  %out = scf.if %cond -> vector<1xi32> {
+    %passthrough = arith.addi %arg, %value : vector<1xi32>
+    %load = vector.maskedload %base[%idx], %mask, %old_passthrough
+        : memref<1xi32>, vector<1xi1>, vector<1xi32> into vector<1xi32>
+    %result = arith.select %mask, %load, %passthrough : vector<1xi1>, vector<1xi32>
+    scf.yield %result : vector<1xi32>
+  } else {
+    scf.yield %arg : vector<1xi32>
   }
-  return
+  %old_passthrough = func.call @write_then_return(%base, %idx, %value)
+      : (memref<1xi32>, index, vector<1xi32>) -> vector<1xi32>
+  ml_program.output %out : vector<1xi32>
 }
