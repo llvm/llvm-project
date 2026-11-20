@@ -1,0 +1,112 @@
+! RUN: split-file %s %t
+! RUN: bbc -fcuda -emit-hlfir %t/accepted.cuf -o - | FileCheck %s --check-prefixes=CHECK,HOST
+! RUN: bbc -fcuda -gpu=managed -emit-hlfir %t/accepted.cuf -o - | FileCheck %s --check-prefixes=CHECK,HOST
+! RUN: bbc -fcuda -gpu=unified -emit-hlfir %t/accepted.cuf -o - | FileCheck %s --check-prefixes=CHECK,UNIFIED
+! RUN: not bbc -fcuda -emit-hlfir %t/strict.cuf -o - 2>&1 | FileCheck %s --check-prefix=STRICT
+
+!--- accepted.cuf
+subroutine host_caller(a)
+  integer :: a
+  interface choose
+    attributes(host,device) subroutine both_reference(x)
+      integer :: x
+    end subroutine
+  end interface
+  ! CHECK-LABEL: func.func @_QPhost_caller
+  ! CHECK-COUNT-2: fir.call @_QPboth_reference
+  call choose(a)
+  call both_reference(a)
+end subroutine
+
+attributes(device) subroutine device_caller(a)
+  integer, device :: a
+  interface choose
+    attributes(host,device) subroutine both_reference(x)
+      integer :: x
+    end subroutine
+  end interface
+  ! CHECK-LABEL: func.func @_QPdevice_caller
+  ! CHECK-COUNT-2: fir.call @_QPboth_reference
+  call choose(a)
+  call both_reference(a)
+end subroutine
+
+! A HOST,DEVICE procedure also accepts host storage for a DEVICE dummy.
+subroutine host_storage(a)
+  integer :: a
+  interface choose
+    attributes(host,device) subroutine both_device(x)
+      integer, device :: x
+    end subroutine
+  end interface
+  ! CHECK-LABEL: func.func @_QPhost_storage
+  ! CHECK-COUNT-2: fir.call @_QPboth_device
+  call choose(a)
+  call both_device(a)
+end subroutine
+
+! That association keeps its infinite distance, so a specific whose distance
+! is finite is preferred. Under -gpu=unified the DEVICE dummy's distance is
+! finite and better than the host dummy's.
+subroutine host_storage_ranking(a)
+  integer :: a
+  interface choose
+    attributes(host,device) subroutine both_device(x)
+      integer, device :: x
+    end subroutine
+    subroutine host_reference(x)
+      integer :: x
+    end subroutine
+  end interface
+  ! CHECK-LABEL: func.func @_QPhost_storage_ranking
+  ! HOST: fir.call @_QPhost_reference
+  ! UNIFIED: fir.call @_QPboth_device
+  call choose(a)
+end subroutine
+
+! Existing finite preferences are unchanged. nvfortran reports the first
+! reference as ambiguous.
+subroutine preferences(a, m, u)
+  integer :: a
+  integer, managed :: m
+  integer, unified :: u
+  interface choose
+    attributes(host,device) subroutine both_reference(x)
+      integer :: x
+    end subroutine
+    subroutine host_reference(x)
+      integer :: x
+    end subroutine
+  end interface
+  interface choose_memory
+    procedure :: both_reference
+    subroutine managed_reference(x)
+      integer, managed :: x
+    end subroutine
+    subroutine unified_reference(x)
+      integer, unified :: x
+    end subroutine
+  end interface
+  ! CHECK-LABEL: func.func @_QPpreferences
+  ! HOST: fir.call @_QPhost_reference
+  ! UNIFIED: fir.call @_QPboth_reference
+  ! CHECK: fir.call @_QPmanaged_reference
+  ! CHECK: fir.call @_QPunified_reference
+  call choose(a)
+  call choose_memory(m)
+  call choose_memory(u)
+end subroutine
+
+!--- strict.cuf
+! A pure host procedure's DEVICE dummy still requires device-accessible storage.
+! Argument checking already rejects it, and so does generic resolution.
+subroutine strict_host(a)
+  integer :: a
+  interface choose
+    subroutine device_reference(x)
+      integer, device :: x
+    end subroutine
+  end interface
+  ! STRICT: No specific subroutine of generic 'choose' matches the actual arguments
+  call choose(a)
+end subroutine

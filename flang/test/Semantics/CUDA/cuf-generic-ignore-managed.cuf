@@ -1,0 +1,128 @@
+! RUN: split-file %s %t
+! RUN: bbc -fcuda -emit-hlfir %t/associations.cuf -o - | FileCheck %s --check-prefix=ASSOC
+! RUN: bbc -fcuda -gpu=unified -emit-hlfir %t/associations.cuf -o - | FileCheck %s --check-prefix=ASSOC
+! RUN: bbc -fcuda -gpu=managed -emit-hlfir %t/associations.cuf -o - | FileCheck %s --check-prefix=ASSOC
+! RUN: bbc -fcuda -emit-hlfir %t/ranking.cuf -o - | FileCheck %s --check-prefix=RANK
+! RUN: not bbc -fcuda -emit-hlfir %t/rejected.cuf -o - 2>&1 | FileCheck %s --check-prefix=REJECT
+! RUN: not bbc -fcuda -gpu=unified -emit-hlfir %t/rejected.cuf -o - 2>&1 | FileCheck %s --check-prefix=REJECT
+! RUN: not bbc -fcuda -gpu=managed -emit-hlfir %t/rejected.cuf -o - 2>&1 | FileCheck %s --check-prefix=REJECT
+
+!--- associations.cuf
+! IGNORE_TKR(M) admits the same host/managed/unified associations through a
+! generic as through a direct call, regardless of the implicit memory mode.
+subroutine associations(h, m, u)
+  integer :: h
+  integer, managed :: m
+  integer, unified :: u
+  interface host
+    subroutine host_specific(x)
+      integer :: x
+      !dir$ ignore_tkr(m) x
+    end subroutine
+  end interface
+  interface managed
+    subroutine managed_specific(x)
+      integer, managed :: x
+      !dir$ ignore_tkr(m) x
+    end subroutine
+  end interface
+  interface unified
+    subroutine unified_specific(x)
+      integer, unified :: x
+      !dir$ ignore_tkr(m) x
+    end subroutine
+  end interface
+  ! ASSOC-LABEL: func.func @_QPassociations
+  ! ASSOC: fir.call @_QPhost_specific
+  ! ASSOC: fir.call @_QPhost_specific
+  ! ASSOC: fir.call @_QPhost_specific
+  call host(h)
+  call host(m)
+  call host(u)
+  ! ASSOC: fir.call @_QPmanaged_specific
+  ! ASSOC: fir.call @_QPmanaged_specific
+  ! ASSOC: fir.call @_QPmanaged_specific
+  ! ASSOC: fir.call @_QPmanaged_specific
+  call managed(h)
+  call managed(m)
+  call managed(u)
+  call managed_specific(h)
+  ! ASSOC: fir.call @_QPunified_specific
+  ! ASSOC: fir.call @_QPunified_specific
+  ! ASSOC: fir.call @_QPunified_specific
+  ! ASSOC: fir.call @_QPunified_specific
+  call unified(h)
+  call unified(m)
+  call unified(u)
+  call unified_specific(h)
+end subroutine
+
+!--- ranking.cuf
+module ignored_ranking
+  interface choose
+    module procedure md, um
+  end interface
+  interface reversed
+    module procedure um, md
+  end interface
+  interface plain
+    module procedure md_plain, um_plain
+  end interface
+contains
+  subroutine md(x, y)
+    integer, managed :: x
+    integer, device :: y
+    !dir$ ignore_tkr(m) x
+  end subroutine
+  subroutine um(x, y)
+    integer, unified :: x
+    integer, managed :: y
+    !dir$ ignore_tkr(m) x
+  end subroutine
+  subroutine md_plain(x, y)
+    integer, managed :: x
+    integer, device :: y
+  end subroutine
+  subroutine um_plain(x, y)
+    integer, unified :: x
+    integer, managed :: y
+  end subroutine
+  subroutine caller(x, y, z)
+    integer, managed :: x, y
+    integer, unified :: z
+    ! IGNORE_TKR(M) does not change finite table distances, so these rank
+    ! as they would without it.
+    ! RANK-LABEL: func.func @_QMignored_rankingPcaller
+    ! RANK: fir.call @_QMignored_rankingPmd
+    ! RANK: fir.call @_QMignored_rankingPmd
+    ! RANK: fir.call @_QMignored_rankingPmd
+    ! RANK: fir.call @_QMignored_rankingPmd_plain
+    call choose(x, y)
+    call reversed(x, y)
+    call choose(x, z)
+    call plain(x, y)
+  end subroutine
+end module
+
+!--- rejected.cuf
+subroutine rejected(h, d)
+  integer :: h
+  integer, device :: d
+  interface managed
+    subroutine managed_specific(x)
+      integer, managed :: x
+      !dir$ ignore_tkr(m) x
+    end subroutine
+  end interface
+  interface device
+    subroutine device_specific(x)
+      integer, device :: x
+      !dir$ ignore_tkr(m) x
+    end subroutine
+  end interface
+  ! (M) does not ignore DEVICE status or enable implicit host-to-device matching.
+  ! REJECT: No specific subroutine of generic 'managed' matches the actual arguments
+  call managed(d)
+  ! REJECT: No specific subroutine of generic 'device' matches the actual arguments
+  call device(h)
+end subroutine

@@ -1,0 +1,109 @@
+! RUN: split-file %s %t
+! RUN: not bbc -fcuda -emit-hlfir %t/single.cuf -o - 2>&1 | FileCheck %s --check-prefix=SINGLE
+! RUN: not bbc -fcuda -emit-hlfir %t/multiple.cuf -o - 2>&1 | FileCheck %s --check-prefix=MULTIPLE
+! RUN: not bbc -fcuda -emit-hlfir %t/later-argument.cuf -o - 2>&1 | FileCheck %s --check-prefix=LATER
+! RUN: bbc -fcuda -emit-hlfir %t/finite.cuf -o - | FileCheck %s --check-prefix=FINITE
+! RUN: not bbc -fcuda -emit-hlfir %t/managed-generic.cuf -o - 2>&1 | FileCheck %s --check-prefix=MANAGED-GENERIC
+! RUN: bbc -fcuda -emit-hlfir %t/managed-direct.cuf -o - | FileCheck %s --check-prefix=MANAGED-DIRECT
+
+! A CUDA-incompatible specific must be rejected before selection or comparison.
+! VALUE bypasses the earlier CUDA argument check, exposing infinite distances.
+
+!--- single.cuf
+subroutine single(x)
+  integer, device :: x
+  interface choose_single
+    subroutine host_value(y)
+      integer, value :: y
+    end subroutine
+  end interface
+  ! SINGLE: No specific subroutine of generic 'choose_single' matches the actual arguments
+  call choose_single(x)
+end subroutine
+
+!--- multiple.cuf
+subroutine multiple(x, y)
+  integer, device :: x, y
+  interface choose_multiple
+    subroutine host_first(a, b)
+      integer, value :: a
+      integer, device :: b
+    end subroutine
+    subroutine host_second(a, b)
+      integer, device :: a
+      integer, value :: b
+    end subroutine
+  end interface
+  ! An all-infinite set has no match, rather than an ambiguous match.
+  ! MULTIPLE: No specific subroutine of generic 'choose_multiple' matches the actual arguments
+  call choose_multiple(x, y)
+end subroutine
+
+!--- later-argument.cuf
+subroutine later_argument(x, d)
+  integer :: x
+  integer, device :: d
+  interface choose_later
+    subroutine host_pair(y, z)
+      integer, value :: y, z
+    end subroutine
+  end interface
+  ! A finite distance for the first argument does not make the specific valid.
+  ! LATER: No specific subroutine of generic 'choose_later' matches the actual arguments
+  call choose_later(x, d)
+end subroutine
+
+!--- finite.cuf
+subroutine finite(x, y)
+  integer, device :: x, y
+  interface choose_finite
+    subroutine host_first(a, b)
+      integer, value :: a
+      integer, device :: b
+    end subroutine
+    subroutine host_second(a, b)
+      integer, device :: a
+      integer, value :: b
+    end subroutine
+    subroutine device_pair(a, b)
+      integer, device :: a, b
+    end subroutine
+  end interface
+  interface choose_reversed
+    procedure :: device_pair, host_second, host_first
+  end interface
+  ! Rejecting infinite candidates must allow a later finite candidate to win.
+  ! FINITE-LABEL: func.func @_QPfinite
+  ! FINITE: fir.call @_QPdevice_pair
+  ! FINITE: fir.call @_QPdevice_pair
+  ! FINITE-NOT: fir.call
+  call choose_finite(x, y)
+  call choose_reversed(x, y)
+end subroutine
+
+!--- managed-generic.cuf
+! A DEVICE actual has an infinite distance to a MANAGED dummy, so the generic
+! reference has no match even though the equivalent direct call is accepted.
+attributes(device) subroutine managed_generic(x)
+  integer, device :: x
+  interface choose_managed
+    attributes(device) subroutine managed_specific(y)
+      integer, managed :: y
+    end subroutine
+  end interface
+  ! MANAGED-GENERIC: No specific subroutine of generic 'choose_managed' matches the actual arguments
+  call choose_managed(x)
+end subroutine
+
+!--- managed-direct.cuf
+attributes(device) subroutine managed_direct(x)
+  integer, device :: x
+  interface
+    attributes(device) subroutine managed_specific(y)
+      integer, managed :: y
+    end subroutine
+  end interface
+  ! MANAGED-DIRECT-LABEL: func.func @_QPmanaged_direct
+  ! MANAGED-DIRECT: fir.call @_QPmanaged_specific
+  call managed_specific(x)
+end subroutine

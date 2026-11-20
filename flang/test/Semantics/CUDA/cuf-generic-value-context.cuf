@@ -1,0 +1,147 @@
+! RUN: split-file %s %t
+! RUN: bbc -fcuda -emit-hlfir %t/body.cuf -o - | FileCheck %s --check-prefix=BODY
+! RUN: %flang_fc1 -x cuda -fsyntax-only %t/mask.cuf
+! RUN: bbc -fcuda -module %t -emit-hlfir %t/controls-module.cuf -o /dev/null
+! RUN: bbc -fcuda -I %t -emit-hlfir %t/host-controls.cuf -o - | FileCheck %s --check-prefix=HOST-CONTROLS
+! RUN: not bbc -fcuda -I %t -emit-hlfir %t/launch.cuf -o - 2>&1 | FileCheck %s --check-prefix=REJECT
+! RUN: not bbc -fcuda -I %t -emit-hlfir %t/outside.cuf -o - 2>&1 | FileCheck %s --check-prefix=REJECT
+
+!--- body.cuf
+! Device calls in CUF kernels use a function in the same module, as required
+! by the CUDA Fortran programming guide's CUF restrictions.
+module cuf_value_bodies
+  interface choose
+    module procedure val
+  end interface
+  interface operator(.foo.)
+    module procedure val
+  end interface
+contains
+  attributes(device) pure integer function val(x)
+    integer, value :: x
+    val = x
+  end function
+  subroutine body(n, a, b)
+    integer :: n, i
+    integer, device :: a(n), b(n)
+    ! BODY-LABEL: func.func @_QMcuf_value_bodiesPbody
+    ! BODY: fir.load
+    ! BODY: fir.call @_QMcuf_value_bodiesPval
+    ! BODY: fir.call @_QMcuf_value_bodiesPval
+    !$cuf kernel do <<<*,*>>>
+    do i = 1, n
+      b(i) = .foo.a(i) + choose(a(i))
+    end do
+  end subroutine
+  subroutine inner_bounds(n, a, b)
+    integer :: n, i, j
+    integer, device :: a(n), b(n)
+    ! An unassociated inner loop's bounds execute in the kernel body.
+    ! BODY-LABEL: func.func @_QMcuf_value_bodiesPinner_bounds
+    ! BODY: fir.call @_QMcuf_value_bodiesPval
+    !$cuf kernel do(1) <<<*,*>>>
+    do i = 1, n
+      do j = 1, choose(a(i))
+        b(i) = j
+      end do
+    end do
+  end subroutine
+  subroutine associated(n, a, b)
+    integer :: n, i, j
+    integer, device :: a(n,n), b(n,n)
+    ! BODY-LABEL: func.func @_QMcuf_value_bodiesPassociated
+    ! BODY: fir.call @_QMcuf_value_bodiesPval
+    !$cuf kernel do(2) <<<*,*>>>
+    do i = 1, n
+      do j = 1, n
+        b(i,j) = choose(a(i,j))
+      end do
+    end do
+  end subroutine
+  subroutine labeled(n, a, b)
+    integer :: n, i
+    integer, device :: a(n), b(n)
+    ! BODY-LABEL: func.func @_QMcuf_value_bodiesPlabeled
+    ! BODY: fir.call @_QMcuf_value_bodiesPval
+    !$cuf kernel do <<<*,*>>>
+    do 10 i = 1, n
+      b(i) = choose(a(i))
+10  continue
+  end subroutine
+end module
+
+!--- mask.cuf
+! The per-iteration DO CONCURRENT mask executes in the kernel, so it resolves in
+! device context. Check semantics only: lowering does not yet apply the mask in
+! a CUF kernel.
+module cuf_value_mask
+  interface choose
+    module procedure val
+  end interface
+contains
+  attributes(device) pure integer function val(x)
+    integer, value :: x
+    val = x
+  end function
+  subroutine concurrent_mask(n, a, b)
+    integer :: n, i
+    integer, device :: a(n), b(n)
+    !$cuf kernel do <<<*,*>>>
+    do concurrent (i = 1:n, choose(a(i)) > 0)
+      b(i) = 1
+    end do
+  end subroutine
+end module
+
+!--- controls-module.cuf
+module cuf_value_controls
+  interface choose
+    module procedure val
+  end interface
+contains
+  pure integer function val(x)
+    integer, value :: x
+    val = x
+  end function
+end module
+
+!--- host-controls.cuf
+subroutine host_controls(n, h, a)
+  use cuf_value_controls
+  integer :: n, h, i
+  integer, device :: a(n)
+  ! Ordinary host VALUE calls remain valid in the directive and loop controls.
+  ! HOST-CONTROLS-LABEL: func.func @_QPhost_controls
+  ! HOST-CONTROLS-COUNT-4: fir.call @_QMcuf_value_controlsPval
+  !$cuf kernel do <<<choose(h),1>>>
+  do i = choose(h), choose(h), choose(h)
+    a(i) = i
+  end do
+end subroutine
+
+! The launch configuration and code after the kernel are host code, which
+! cannot load device storage to pass it by value.
+! REJECT: No specific function of generic 'choose' matches the actual arguments
+
+!--- launch.cuf
+subroutine launch(n, a)
+  use cuf_value_controls
+  integer :: n, i
+  integer, device :: a(n)
+  !$cuf kernel do <<<choose(a(1)),1>>>
+  do i = 1, n
+    a(i) = i
+  end do
+end subroutine
+
+!--- outside.cuf
+subroutine outside(n, a)
+  use cuf_value_controls
+  integer :: n, i
+  integer, device :: a(n)
+  !$cuf kernel do <<<*,*>>>
+  do i = 1, n
+    a(i) = i
+  end do
+  n = choose(a(1))
+end subroutine
