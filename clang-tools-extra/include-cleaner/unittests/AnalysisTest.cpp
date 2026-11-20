@@ -123,18 +123,19 @@ TEST_F(WalkUsedTest, Basic) {
   auto MainFile = Header(*SM.getFileEntryRefForID(SM.getMainFileID()));
   auto VectorSTL = Header(*tooling::stdlib::Header::named("<vector>"));
   auto UtilitySTL = Header(*tooling::stdlib::Header::named("<utility>"));
-  EXPECT_THAT(
-      offsetToProviders(AST),
-      UnorderedElementsAre(
-          Pair(Code.point("bar"), UnorderedElementsAre(MainFile)),
-          Pair(Code.point("private"),
-               UnorderedElementsAre(PublicFile, PrivateFile)),
-          Pair(Code.point("foo"), UnorderedElementsAre(HeaderFile)),
-          Pair(Code.point("vector"), UnorderedElementsAre(VectorSTL)),
-          Pair(Code.point("vconstructor"), UnorderedElementsAre(VectorSTL)),
-          Pair(Code.point("v"), UnorderedElementsAre(MainFile)),
-          Pair(Code.point("builtin"), testing::IsEmpty()),
-          Pair(Code.point("move"), UnorderedElementsAre(UtilitySTL))));
+  EXPECT_THAT(offsetToProviders(AST),
+              UnorderedElementsAre(
+                  Pair(Code.point("bar"), UnorderedElementsAre(MainFile)),
+                  Pair(Code.point("private"),
+                       UnorderedElementsAre(PublicFile, PrivateFile)),
+                  Pair(Code.point("foo"), UnorderedElementsAre(HeaderFile)),
+                  Pair(Code.point("vector"),
+                       UnorderedElementsAre(VectorSTL, HeaderFile)),
+                  Pair(Code.point("vconstructor"),
+                       UnorderedElementsAre(VectorSTL, HeaderFile)),
+                  Pair(Code.point("v"), UnorderedElementsAre(MainFile)),
+                  Pair(Code.point("builtin"), testing::IsEmpty()),
+                  Pair(Code.point("move"), UnorderedElementsAre(UtilitySTL))));
 }
 
 TEST_F(WalkUsedTest, MultipleProviders) {
@@ -317,6 +318,46 @@ TEST_F(AnalyzeTest, ResourceDirIsIgnored) {
   auto Results = analyze({}, {}, PP.Includes, &PI, AST.preprocessor());
   EXPECT_THAT(Results.Unused, testing::IsEmpty());
   EXPECT_THAT(Results.Missing, testing::IsEmpty());
+}
+
+TEST_F(AnalyzeTest, StandardNamesDeclaredByProject) {
+  Inputs.ExtraArgs.push_back("-xc");
+  Inputs.Code = R"cpp(
+#include "sys/stddef.h"
+#include "sys/string.h"
+
+struct s { int a; };
+int x = offsetof(struct s, a);
+int foo(const char *a, const char *b) { return strcmp(a, b); }
+)cpp";
+  Inputs.ExtraFiles["sys/stddef.h"] =
+      guard("#define offsetof(t, m) __builtin_offsetof(t, m)");
+  Inputs.ExtraFiles["sys/string.h"] =
+      guard("int strcmp(const char *, const char *);");
+  TestAST AST(Inputs);
+  auto Decls = AST.context().getTranslationUnitDecl()->decls();
+  auto Results =
+      analyze(std::vector<Decl *>{Decls.begin(), Decls.end()},
+              PP.MacroReferences, PP.Includes, &PI, AST.preprocessor());
+  EXPECT_THAT(Results.Unused, testing::IsEmpty());
+  EXPECT_THAT(Results.Missing, testing::IsEmpty());
+}
+
+TEST_F(AnalyzeTest, UndeclaredLibraryFunctionIsMissing) {
+  Inputs.ExtraArgs.push_back("-xc");
+  Inputs.ErrorOK = true;
+  Inputs.Code = R"cpp(
+int foo(void) { return strlen("x"); }
+)cpp";
+  TestAST AST(Inputs);
+  auto Decls = AST.context().getTranslationUnitDecl()->decls();
+  auto Results =
+      analyze(std::vector<Decl *>{Decls.begin(), Decls.end()},
+              PP.MacroReferences, PP.Includes, &PI, AST.preprocessor());
+  EXPECT_THAT(Results.Missing,
+              ElementsAre(Pair(testing::_,
+                               Header(*tooling::stdlib::Header::named(
+                                   "<string.h>", tooling::stdlib::Lang::C)))));
 }
 
 TEST_F(AnalyzeTest, DifferentHeaderSameSpelling) {

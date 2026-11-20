@@ -251,8 +251,17 @@ llvm::SmallVector<Header> headersForSymbol(const Symbol &S,
   if (auto SpecialHeaders = headersForSpecialSymbol(S, SM, PI)) {
     Headers = std::move(*SpecialHeaders);
   } else {
-    for (auto &Loc : locateSymbol(S, PP.getLangOpts()))
+    auto Locations = locateSymbol(S, PP.getLangOpts());
+    bool IsStdlibSymbol = llvm::any_of(Locations, [](const auto &Loc) {
+      return Loc.kind() == SymbolLocation::Standard;
+    });
+    for (auto &Loc : Locations) {
+      // The stdlib providers already cover declarations in system headers.
+      if (IsStdlibSymbol && Loc.kind() == SymbolLocation::Physical &&
+          (Loc.physical().isInvalid() || SM.isInSystemHeader(Loc.physical())))
+        continue;
       Headers.append(applyHints(findHeaders(Loc, SM, PI), Loc.Hint));
+    }
   }
   // If two Headers probably refer to the same file (e.g. Verbatim(foo.h) and
   // Physical(/path/to/foo.h), we won't deduplicate them or merge their hints
