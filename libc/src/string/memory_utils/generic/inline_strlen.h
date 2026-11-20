@@ -186,8 +186,11 @@ find_first_character(const unsigned char *s, unsigned char c, size_t n) {
   } else {
     // Fallback for page-crossing small inputs or wide vectors (LOOP_BLOCK_SIZE
     // > 64): step aligned vectors until done or LOOP_BLOCK_SIZE-aligned.
-    const cpp::simd<char> *aligned = reinterpret_cast<const cpp::simd<char> *>(
-        __builtin_align_down(s, alignof(cpp::simd<char>)));
+    const cpp::simd<char> *aligned =
+        reinterpret_cast<const cpp::simd<char> *>(s);
+    if constexpr (alignof(cpp::simd<char>) > 1)
+      aligned = reinterpret_cast<const cpp::simd<char> *>(
+          __builtin_align_down(s, alignof(cpp::simd<char>)));
     size_t offset = static_cast<size_t>(
         s - reinterpret_cast<const unsigned char *>(aligned));
     cpp::simd_mask<char> cmp_v = shift_mask<unsigned char>(
