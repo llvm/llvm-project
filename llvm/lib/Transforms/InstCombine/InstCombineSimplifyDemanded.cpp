@@ -619,6 +619,11 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
     if (DemandedFromOps.isSubsetOf(LHSKnown.Zero))
       return I->getOperand(1);
 
+    // (add X, -1) --> X if bit 0 isn't demanded and X is known odd
+    if (!DemandedMask[0] && match(I->getOperand(1), m_AllOnes()) &&
+        LHSKnown.One[0])
+      return I->getOperand(0);
+
     // (add X, C) --> (xor X, C) IFF C is equal to the top bit of the DemandMask
     {
       const APInt *C;
