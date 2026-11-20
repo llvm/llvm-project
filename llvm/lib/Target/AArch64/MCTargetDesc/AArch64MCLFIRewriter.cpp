@@ -913,8 +913,15 @@ void AArch64MCLFIRewriter::doRewriteInst(const MCInst &Inst, MCStreamer &Out,
     return rewriteVASysOp(Inst, Out, STI);
 
   // LFI routes all indirect branches through x28, including tail calls that
-  // would otherwise use x16/x17. A BR through x28 cannot land on BTI C, so
-  // promote call landing pads to BTI JC.
+  // would otherwise use x16/x17. AAPCS64 only allows for `bti c` landing
+  // pads for indirect calls though x16/x17.
+  // A BR through any other register (e.g., x28) cannot land on BTI C, so
+  // we promote call landing pads to BTI JC.
+  //
+  // br {x16,x17}
+  // ->
+  // add x28, x27, {w16,w17}, uxtw
+  // br x28
   if (isBTIC(Inst))
     return emitInst(MCInstBuilder(AArch64::HINT)
                         .addImm(getBTIHintNum(/*CallTarget=*/true,

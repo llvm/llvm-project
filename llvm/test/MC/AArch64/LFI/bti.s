@@ -6,9 +6,6 @@
 bti c
 // CHECK: bti jc
 
-hint #34
-// CHECK: bti jc
-
 // Other BTI variants are left unchanged.
 bti
 // CHECK: bti{{$}}
