@@ -72,6 +72,7 @@
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
+#include "lldb/ValueObject/DILEval.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -3092,6 +3093,16 @@ ExpressionResults Target::EvaluateExpression(
   else
     m_stats.GetExpressionStats().NotifyFailure();
   return execution_results;
+}
+
+ValueObjectSP Target::GetValueForVariableExpressionPath(
+    llvm::StringRef var_expr, DynamicValueType use_dynamic, uint32_t options,
+    VariableSP &var_sp, Status &error, lldb::DILMode mode) {
+  error.Clear();
+  ExecutionContext exe_ctx;
+  CalculateExecutionContext(exe_ctx);
+  return dil::EvaluateDILExpression(exe_ctx, var_expr, use_dynamic, options,
+                                    var_sp, error, mode);
 }
 
 lldb::ExpressionVariableSP Target::GetPersistentVariable(ConstString name) {

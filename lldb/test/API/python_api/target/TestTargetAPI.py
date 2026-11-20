@@ -537,3 +537,29 @@ class TargetAPITestCase(TestBase):
             # The API call below doesn't actually matter, it's just there to
             # confirm we don't block on the API lock.
             target.BreakpointCreateByName("foo", "bar")
+
+    def test_find_get_value_for_variable_path(self):
+        """Exercise SBTarget.GetValueForVariablePath() API."""
+        d = {"EXE": "b.out"}
+        self.build(dictionary=d)
+        self.setTearDownCleanup(dictionary=d)
+        target = self.create_simple_target("b.out")
+
+        val = target.GetValueForVariablePath("(short) my_global_var_of_char_type")
+        self.assertSuccess(val.GetError())
+        self.assertEqual(val.GetTypeName(), "short")
+        self.assertEqual(val.GetValue(), "88")
+
+        val = target.GetValueForVariablePath("no_variable")
+        error = val.GetError()
+        self.assertFailure(error)
+        self.assertIn("use of undeclared identifier 'no_variable'", error.GetCString())
+
+        val = target.GetValueForVariablePathWithMode(
+            "my_global_var_of_char_type+1", lldb.eDILModeSimple
+        )
+        error = val.GetError()
+        self.assertFailure(error)
+        self.assertIn(
+            "<'+' (plus)> is not allowed in DIL simple mode", error.GetCString()
+        )

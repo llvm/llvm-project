@@ -987,6 +987,23 @@ public:
   lldb::SBValue EvaluateExpression(const char *expr,
                                    const SBExpressionOptions &options);
 
+  /// Create a ValueObject from a simple expression, evaluated by
+  /// Data Inspection Language. Only the target is used as context.
+  /// \see https://lldb.llvm.org/resources/dil.html
+  lldb::SBValue GetValueForVariablePath(const char *var_path,
+                                        DynamicValueType use_dynamic);
+
+  /// The version that doesn't supply a 'use_dynamic' value will use the
+  /// target's default.
+  lldb::SBValue GetValueForVariablePath(const char *var_path);
+
+  lldb::SBValue GetValueForVariablePathWithMode(const char *var_path,
+                                                lldb::DILMode mode,
+                                                DynamicValueType use_dynamic);
+
+  lldb::SBValue GetValueForVariablePathWithMode(const char *var_path,
+                                                lldb::DILMode mode);
+
   lldb::addr_t GetStackRedZoneSize();
 
   bool IsLoaded(const lldb::SBModule &module) const;

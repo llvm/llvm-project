@@ -19,6 +19,7 @@
 #include "lldb/ValueObject/DILAST.h"
 #include "lldb/ValueObject/DILParser.h"
 #include "lldb/ValueObject/ValueObject.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
 #include "lldb/ValueObject/ValueObjectRegister.h"
 #include "lldb/ValueObject/ValueObjectVariable.h"
 #include "llvm/Support/ErrorExtras.h"
@@ -27,6 +28,40 @@
 #include <optional>
 
 namespace lldb_private::dil {
+
+lldb::ValueObjectSP EvaluateDILExpression(ExecutionContext exe_ctx,
+                                          llvm::StringRef var_expr,
+                                          lldb::DynamicValueType use_dynamic,
+                                          uint32_t options,
+                                          lldb::VariableSP &var_sp,
+                                          Status &error, lldb::DILMode mode) {
+  // Lex the expression.
+  auto lex_or_err = DILLexer::Create(var_expr, mode);
+  if (!lex_or_err) {
+    error = Status::FromError(lex_or_err.takeError());
+    return ValueObjectConstResult::Create(nullptr, error.Clone());
+  }
+
+  // Parse the expression.
+  auto tree_or_error = DILParser::Parse(
+      exe_ctx, var_expr, std::move(*lex_or_err), use_dynamic, mode);
+  if (!tree_or_error) {
+    error = Status::FromError(tree_or_error.takeError());
+    return ValueObjectConstResult::Create(nullptr, error.Clone());
+  }
+
+  // Evaluate the parsed expression.
+  Interpreter interpreter(exe_ctx, var_expr, use_dynamic, options);
+
+  auto valobj_or_error = interpreter.EvaluateTree(*tree_or_error);
+  if (!valobj_or_error) {
+    error = Status::FromError(valobj_or_error.takeError());
+    return ValueObjectConstResult::Create(nullptr, error.Clone());
+  }
+
+  var_sp = (*valobj_or_error)->GetVariable();
+  return *valobj_or_error;
+}
 
 static CompilerType GetBasicType(lldb::TypeSystemSP type_system,
                                  lldb::BasicType basic_type) {
@@ -363,27 +398,29 @@ static lldb::VariableSP DILFindVariable(ConstString name,
 lldb::ValueObjectSP LookupGlobalIdentifier(llvm::StringRef name_ref,
                                            ExecutionContext &exe_ctx,
                                            lldb::DynamicValueType use_dynamic) {
-  // Get a global variables list without the locals from the current frame
-  auto frame_sp = exe_ctx.GetFrameSP();
-  if (!frame_sp)
-    return nullptr;
-  SymbolContext symbol_context =
-      frame_sp->GetSymbolContext(lldb::eSymbolContextCompUnit);
-  lldb::VariableListSP variable_list;
-  if (symbol_context.comp_unit)
-    variable_list = symbol_context.comp_unit->GetVariableList(true);
-
   name_ref.consume_front("::");
-  lldb::ValueObjectSP value_sp;
-  if (variable_list) {
-    lldb::VariableSP var_sp =
-        DILFindVariable(ConstString(name_ref), *variable_list);
-    if (var_sp)
-      value_sp = frame_sp->GetValueObjectForFrameVariable(var_sp, use_dynamic);
-  }
 
-  if (value_sp)
-    return value_sp;
+  // Get a global variables list without the locals from the current frame
+  lldb::ValueObjectSP value_sp;
+  auto frame_sp = exe_ctx.GetFrameSP();
+  if (frame_sp) {
+    SymbolContext symbol_context =
+        frame_sp->GetSymbolContext(lldb::eSymbolContextCompUnit);
+    lldb::VariableListSP variable_list;
+    if (symbol_context.comp_unit)
+      variable_list = symbol_context.comp_unit->GetVariableList(true);
+
+    if (variable_list) {
+      lldb::VariableSP var_sp =
+          DILFindVariable(ConstString(name_ref), *variable_list);
+      if (var_sp)
+        value_sp =
+            frame_sp->GetValueObjectForFrameVariable(var_sp, use_dynamic);
+    }
+
+    if (value_sp)
+      return value_sp;
+  }
 
   // Check for match in modules global variables.
   auto target_sp = exe_ctx.GetTargetSP();

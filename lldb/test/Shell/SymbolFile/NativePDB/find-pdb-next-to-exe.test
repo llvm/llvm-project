@@ -56,7 +56,7 @@
 # Remove the last PDB in dir3. Now, there's no matching PDB anymore.
 # RUN: rm %t/dir3/a.pdb
 # RUN: %lldb -S %t/init.input -s %t/check.input -f %t/dir1/a.exe 2>&1 | FileCheck --check-prefix=NOPDB %s
-# NOPDB: error: can't find global variable 'a'
+# NOPDB: use of undeclared identifier 'a'
 
 #--- main.cpp
 

@@ -33,9 +33,6 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/ValueObject/DILEval.h"
-#include "lldb/ValueObject/DILLexer.h"
-#include "lldb/ValueObject/DILParser.h"
-#include "lldb/ValueObject/ValueObjectConstResult.h"
 #include "lldb/ValueObject/ValueObjectMemory.h"
 #include "lldb/ValueObject/ValueObjectRegister.h"
 #include "lldb/ValueObject/ValueObjectVariable.h"
@@ -594,35 +591,10 @@ ValueObjectSP StackFrame::DILGetValueForVariableExpressionPath(
     llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
     uint32_t options, lldb::VariableSP &var_sp, Status &error,
     lldb::DILMode mode) {
-
-  // Lex the expression.
-  auto lex_or_err = dil::DILLexer::Create(var_expr, mode);
-  if (!lex_or_err) {
-    error = Status::FromError(lex_or_err.takeError());
-    return ValueObjectConstResult::Create(nullptr, error.Clone());
-  }
-
-  // Parse the expression.
   ExecutionContext exe_ctx;
   CalculateExecutionContext(exe_ctx);
-  auto tree_or_error = dil::DILParser::Parse(
-      exe_ctx, var_expr, std::move(*lex_or_err), use_dynamic, mode);
-  if (!tree_or_error) {
-    error = Status::FromError(tree_or_error.takeError());
-    return ValueObjectConstResult::Create(nullptr, error.Clone());
-  }
-
-  // Evaluate the parsed expression.
-  dil::Interpreter interpreter(exe_ctx, var_expr, use_dynamic, options);
-
-  auto valobj_or_error = interpreter.EvaluateTree(*tree_or_error);
-  if (!valobj_or_error) {
-    error = Status::FromError(valobj_or_error.takeError());
-    return ValueObjectConstResult::Create(nullptr, error.Clone());
-  }
-
-  var_sp = (*valobj_or_error)->GetVariable();
-  return *valobj_or_error;
+  return dil::EvaluateDILExpression(exe_ctx, var_expr, use_dynamic, options,
+                                    var_sp, error, mode);
 }
 
 ValueObjectSP StackFrame::LegacyGetValueForVariableExpressionPath(
