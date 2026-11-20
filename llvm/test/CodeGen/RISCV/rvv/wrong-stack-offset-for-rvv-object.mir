@@ -68,7 +68,6 @@ failedISel:      false
 hasWinCFI:       false
 failsVerification: false
 tracksDebugUserValues: true
-registers:       []
 liveins:
   - { reg: '$x11', virtual-reg: '' }
   - { reg: '$x14', virtual-reg: '' }

@@ -351,7 +351,14 @@ public:
   /// If this is a vector type, return the getPrimitiveSizeInBits value for the
   /// element type. Otherwise return the getPrimitiveSizeInBits value for this
   /// type.
-  LLVM_ABI unsigned getScalarSizeInBits() const LLVM_READONLY;
+  unsigned getScalarSizeInBits() const LLVM_READONLY {
+    // Avoid the out of line call for integers, which are the common case.
+    const Type *ScalarTy = getScalarType();
+    if (ScalarTy->getTypeID() == IntegerTyID)
+      return ScalarTy->getSubclassData();
+    // It is safe to assume that the scalar types have a fixed size.
+    return ScalarTy->getPrimitiveSizeInBits().getFixedValue();
+  }
 
   /// Return the width of the mantissa of this type. This is only valid on
   /// floating-point types. If the FP type does not have a stable mantissa (e.g.

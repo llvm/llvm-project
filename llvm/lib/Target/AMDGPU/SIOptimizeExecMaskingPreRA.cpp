@@ -38,6 +38,7 @@ private:
   MCRegister CondReg;
   MCRegister ExecReg;
 
+  void removePhysRegDefs(const MachineInstr &MI, SlotIndex Idx);
   bool optimizeVcndVcmpPair(MachineBasicBlock &MBB);
   bool optimizeElseBranch(MachineBasicBlock &MBB);
 
@@ -106,22 +107,14 @@ static bool isDefBetween(const SIRegisterInfo &TRI,
   return false;
 }
 
-// Return true if Use is not after Def in the same block or EXEC is modified
-// between them.
-static bool execModifiedBeforeUse(const SIRegisterInfo &TRI, MCRegister ExecReg,
-                                  const MachineInstr &Def,
-                                  const MachineInstr &Use) {
-  if (Use.getParent() != Def.getParent())
-    return true;
-
-  auto I = std::next(Def.getIterator());
-  auto E = Def.getParent()->end();
-  for (; I != E && &*I != &Use; ++I) {
-    if (I->modifiesRegister(ExecReg, &TRI))
-      return true;
+void SIOptimizeExecMaskingPreRA::removePhysRegDefs(const MachineInstr &MI,
+                                                   SlotIndex Idx) {
+  for (const MachineOperand &Op : MI.all_defs()) {
+    if (Op.getReg().isPhysical()) {
+      LIS->removePhysRegDefAt(Op.getReg().asMCReg(),
+                              Idx.getRegSlot(Op.isEarlyClobber()));
+    }
   }
-
-  return I == E;
 }
 
 // Optimize sequence
@@ -259,6 +252,7 @@ bool SIOptimizeExecMaskingPreRA::optimizeVcndVcmpPair(MachineBasicBlock &MBB) {
     LLVM_DEBUG(dbgs() << "Erasing: " << *Cmp << '\n');
     if (CmpLI)
       LIS->removeVRegDefAt(*CmpLI, CmpIdx.getRegSlot());
+    removePhysRegDefs(*Cmp, CmpIdx);
     LIS->RemoveMachineInstrFromMaps(*Cmp);
     Cmp->eraseFromParent();
 
@@ -352,6 +346,7 @@ bool SIOptimizeExecMaskingPreRA::optimizeElseBranch(MachineBasicBlock &MBB) {
 
   SaveExecMI.getOperand(0).setReg(DstReg);
 
+  removePhysRegDefs(*AndExecMI, EndIdx);
   LIS->RemoveMachineInstrFromMaps(*AndExecMI);
   AndExecMI->eraseFromParent();
 
@@ -381,22 +376,12 @@ bool SIOptimizeExecMaskingPreRA::run(MachineFunction &MF) {
   CondReg = MCRegister::from(LMC.VccReg);
   ExecReg = MCRegister::from(LMC.ExecReg);
 
-  DenseSet<Register> RecalcRegs({AMDGPU::EXEC_LO, AMDGPU::EXEC_HI});
+  DenseSet<Register> RecalcRegs;
   bool Changed = false;
 
   for (MachineBasicBlock &MBB : MF) {
-
-    if (optimizeElseBranch(MBB)) {
-      RecalcRegs.insert(AMDGPU::SCC);
-      Changed = true;
-    }
-
-    if (optimizeVcndVcmpPair(MBB)) {
-      RecalcRegs.insert(AMDGPU::VCC_LO);
-      RecalcRegs.insert(AMDGPU::VCC_HI);
-      RecalcRegs.insert(AMDGPU::SCC);
-      Changed = true;
-    }
+    Changed |= optimizeElseBranch(MBB);
+    Changed |= optimizeVcndVcmpPair(MBB);
 
     // Try to remove unneeded instructions before s_endpgm.
     if (MBB.succ_empty()) {
@@ -485,16 +470,18 @@ bool SIOptimizeExecMaskingPreRA::run(MachineFunction &MF) {
         int Idx = SingleExecUser->findRegisterUseOperandIdx(SavedExec,
                                                             /*TRI=*/nullptr);
         assert(Idx != -1);
-        if (!execModifiedBeforeUse(*TRI, ExecReg, *I, *SingleExecUser) &&
+        if (SingleExecUser->getParent() == I->getParent() &&
             !SingleExecUser->getOperand(Idx).isImplicit() &&
             static_cast<unsigned>(Idx) <
                 SingleExecUser->getDesc().getNumOperands() &&
             TII->isOperandLegal(*SingleExecUser, Idx, &I->getOperand(1))) {
           LLVM_DEBUG(dbgs() << "Redundant EXEC COPY: " << *I << '\n');
+          removePhysRegDefs(*I, LIS->getInstructionIndex(*I));
           LIS->RemoveMachineInstrFromMaps(*I);
           I->eraseFromParent();
           MRI->replaceRegWith(SavedExec, ExecReg);
           LIS->removeInterval(SavedExec);
+          RecalcRegs.erase(SavedExec);
           Changed = true;
         }
       }

@@ -184,7 +184,9 @@ const unsigned UnlimitedArgs = unsigned(-1);
 // arguments are accepted.
 unsigned getNumArgsForKind(const Record *OptionKind, const Record *Option) {
   return StringSwitch<unsigned>(OptionKind->getName())
-      .Cases({"KIND_JOINED", "KIND_JOINED_OR_SEPARATE", "KIND_SEPARATE"}, 1)
+      .Cases({"KIND_JOINED", "KIND_JOINED_OR_SEPARATE", "KIND_SEPARATE",
+              "KIND_SEPARATE_OR_EQ"},
+             1)
       .Cases({"KIND_REMAINING_ARGS", "KIND_REMAINING_ARGS_JOINED",
               "KIND_COMMAJOINED"},
              UnlimitedArgs)
@@ -288,6 +290,8 @@ void emitOptionName(StringRef Prefix, const Record *Option, raw_ostream &OS) {
 
   emitOptionWithArgs(Prefix, Option,
                      std::vector<StringRef>(Args.begin(), Args.end()), OS);
+  if (Option->getValueAsDef("Kind")->getName() == "KIND_SEPARATE_OR_EQ")
+    OS << ", " << Prefix << Option->getValueAsString("Name") << '=' << Args[0];
 
   auto AliasArgs = Option->getValueAsListOfStrings("AliasArgs");
   if (!AliasArgs.empty()) {
