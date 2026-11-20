@@ -4341,8 +4341,8 @@ mlir::LogicalResult CIRToLLVMFCmpOpLowering::matchAndRewrite(
   }
   mlir::LLVM::FCmpPredicate kind =
       convertCmpKindToFCmpPredicate(FCmpOp.getKind());
-  rewriter.replaceOpWithNewOp<mlir::LLVM::FCmpOp>(FCmpOp, kind, adaptor.getLhs(),
-                                                  adaptor.getRhs());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::FCmpOp>(
+      FCmpOp, kind, adaptor.getLhs(), adaptor.getRhs());
   return mlir::success();
 }
 
