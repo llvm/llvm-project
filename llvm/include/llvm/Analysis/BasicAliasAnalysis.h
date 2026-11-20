@@ -130,8 +130,15 @@ private:
   /// establishing a minimum absolute value of the variable offset.
   std::optional<APInt> computeMinAbsVarOffset(const DecomposedGEP &GEP,
                                               ArrayRef<KnownBits> VIKnownBits,
+                                              bool OffsetIsExact,
                                               DominatorTree *DT,
                                               const AAQueryInfo &AAQI);
+
+  /// Whether the distance between two pointers equals the decomposed offset
+  /// evaluated without wrapping, if accesses of the given sizes overlap.
+  static bool offsetIsExactIfOverlapping(const DecomposedGEP &GEP,
+                                         ArrayRef<ConstantRange> VIRanges,
+                                         uint64_t V1Size, uint64_t V2Size);
 
   /// A Heuristic for aliasGEP that searches for a constant offset
   /// between the variables.
@@ -143,7 +150,8 @@ private:
   /// the addition overflows.
   bool computeConstantOffsetHeuristic(const DecomposedGEP &GEP,
                                       LocationSize V1Size, LocationSize V2Size,
-                                      AssumptionCache *AC, DominatorTree *DT,
+                                      bool OffsetIsExact, AssumptionCache *AC,
+                                      DominatorTree *DT,
                                       const AAQueryInfo &AAQI);
 
   bool isValueEqualInPotentialCycles(const Value *V1, const Value *V2,
