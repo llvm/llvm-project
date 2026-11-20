@@ -1325,7 +1325,7 @@ static void checkAggExprForMemSetUse(AggValueSlot &slot, const Expr *e,
     return;
 
   // C++ objects with a user-declared constructor don't need zero'ing.
-  if (cgf.getLangOpts().CPlusPlus)
+  if (cgf.getLangOpts().CPlusPlus) {
     if (const RecordType *rt = cgf.getContext()
                                    .getBaseElementType(e->getType())
                                    ->getAsCanonical<RecordType>()) {
@@ -1333,6 +1333,7 @@ static void checkAggExprForMemSetUse(AggValueSlot &slot, const Expr *e,
       if (rd->hasUserDeclaredConstructor())
         return;
     }
+  }
 
   // If the type is 16-bytes or smaller, prefer individual stores over memset.
   CharUnits size = slot.getPreferredSize(cgf.getContext(), e->getType());
