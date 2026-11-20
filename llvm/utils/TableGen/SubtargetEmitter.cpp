@@ -1447,6 +1447,44 @@ void SubtargetEmitter::genSchedClassTables(const CodeGenProcModel &ProcModel,
       PrintWarning(RWDef->getLoc(), "InstRW on " + ProcModel.ModelName +
                                         " matches the base SchedRW of all "
                                         "its instructions");
+
+  if (!ProcModel.ModelDef->getValueAsBit("WarnRedundantWriteRes"))
+    return;
+  for (const Record *WRDef : ProcModel.WriteResDefs) {
+    if (!WRDef->isSubClassOf("WriteRes"))
+      continue;
+    const Record *WriteDef = WRDef->getValueAsDef("WriteType");
+    if (!WriteDef->isSubClassOf("SchedWriteFallback"))
+      continue;
+    unsigned WriteIdx = SchedModels.getSchedRWIdx(WriteDef, /*IsRead=*/false);
+    if (!WriteIdx)
+      continue;
+    unsigned FallbackIdx = SchedModels.getSchedRWIdx(
+        WriteDef->getValueAsDef("Fallback"), /*IsRead=*/false);
+    MCSchedClassDesc Desc{}, FallbackDesc{};
+    SchedClassEntries Entries, FallbackEntries;
+    if (genSchedClassEntries(WriteIdx, {}, ProcModel, Desc, Entries) ||
+        genSchedClassEntries(FallbackIdx, {}, ProcModel, FallbackDesc,
+                             FallbackEntries))
+      continue;
+    bool Unsupported = Desc.NumMicroOps == MCSchedClassDesc::InvalidNumMicroOps;
+    bool FallbackUnsupported =
+        FallbackDesc.NumMicroOps == MCSchedClassDesc::InvalidNumMicroOps;
+    bool Redundant =
+        Unsupported || FallbackUnsupported
+            ? Unsupported && FallbackUnsupported
+            : FallbackDesc.NumMicroOps == Desc.NumMicroOps &&
+                  FallbackDesc.BeginGroup == Desc.BeginGroup &&
+                  FallbackDesc.EndGroup == Desc.EndGroup &&
+                  FallbackDesc.RetireOOO == Desc.RetireOOO &&
+                  FallbackEntries.WriteProcResources ==
+                      Entries.WriteProcResources &&
+                  FallbackEntries.WriteLatencies == Entries.WriteLatencies;
+    if (Redundant)
+      PrintWarning(WRDef->getLoc(), "WriteRes for " + WriteDef->getName() +
+                                        " on " + ProcModel.ModelName +
+                                        " matches its fallback");
+  }
 }
 
 // Emit SchedClass tables for all processors and associated global tables.

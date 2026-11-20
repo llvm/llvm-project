@@ -105,6 +105,8 @@ class SchedMachineModel {
   // Warn about InstRWs that resolve to the same entries as the base SchedRW.
   bit WarnRedundantInstRW = true;
 
+  // Warn about WriteRes that resolve to the same entries as their fallback.
+  bit WarnRedundantWriteRes = true;
 
   // A processor may only implement part of published ISA, due to either new ISA
   // extensions, (e.g. Pentium 4 doesn't have AVX) or implementation

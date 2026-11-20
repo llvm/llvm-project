@@ -1,6 +1,7 @@
 // RUN: llvm-tblgen -gen-subtarget -I %p/../../include %s | FileCheck %s
 // RUN: not llvm-tblgen -gen-subtarget -I %p/../../include -DCYCLE %s 2>&1 | FileCheck %s --check-prefix=CYCLE
 // RUN: not llvm-tblgen -gen-subtarget -I %p/../../include -DWRITERES %s 2>&1 | FileCheck %s --check-prefix=WRITERES
+// RUN: llvm-tblgen -gen-subtarget -I %p/../../include -DWARN %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=WARN --implicit-check-not=warning:
 
 include "llvm/Target/Target.td"
 
@@ -97,6 +98,47 @@ def WriteLoop : SchedWriteFallback<NoWrite> {
 let OutOperandList = (outs), InOperandList = (ins) in
 def Inst_Loop : Instruction { let SchedRW = [WriteLoop]; }
 // CYCLE: [[@LINE-5]]:5: error: Fallback cycle through WriteLoop
+#endif
+
+#ifdef WARN
+def WriteKF : SchedWriteFallback<WriteBase>;
+def ReadF : SchedRead;
+let OutOperandList = (outs), InOperandList = (ins) in
+def Inst_KF : Instruction { let SchedRW = [WriteKF, ReadF]; }
+foreach M = [ModelA, ModelB, ModelC] in
+let SchedModel = M in def : ReadAdvance<ReadF, 0>;
+
+def ModelD : SchedMachineModel { let CompleteModel = 0; }
+def ModelE : SchedMachineModel {
+  let CompleteModel = 0;
+  let WarnRedundantWriteRes = 0;
+}
+
+def UnitD : ProcResource<1> { let SchedModel = ModelD; }
+def UnitE : ProcResource<1> { let SchedModel = ModelE; }
+
+let SchedModel = ModelD in {
+  def : WriteRes<WriteBase, [UnitD]> { let Latency = 2; }
+  def : WriteRes<WriteK, [UnitD]> { let Latency = 2; }
+// WARN: [[@LINE-1]]:3: warning: WriteRes for WriteK on ModelD matches its fallback
+  def : WriteRes<WriteKZ, [UnitD]> { let Latency = 3; }
+  def : WriteRes<WriteKF, [UnitD]> { let Latency = 2; }
+  def : ReadAdvance<ReadF, 1, [WriteKF]>;
+  def : WriteRes<WriteVarK, [UnitD]> { let Latency = 2; }
+  let Unsupported = true in
+  def : WriteRes<WriteZ, []>;
+// WARN: [[@LINE-1]]:3: warning: WriteRes for WriteZ on ModelD matches its fallback
+}
+
+let SchedModel = ModelE in {
+  def : WriteRes<WriteBase, [UnitE]> { let Latency = 2; }
+  def : WriteRes<WriteK, [UnitE]> { let Latency = 2; }
+  def : WriteRes<WriteVarBase, [UnitE]> { let Latency = 2; }
+  def : ReadAdvance<ReadF, 0>;
+}
+
+def ProcD : ProcessorModel<"proc-d", ModelD, []>;
+def ProcE : ProcessorModel<"proc-e", ModelE, []>;
 #endif
 
 #ifdef WRITERES
