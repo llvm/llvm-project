@@ -116,7 +116,7 @@ TEST_F(OpenACCOpsInterfacesTest, GlobalVariableOpInterfaceLocalLinkage) {
   };
 
   // memref.global "private" @private_global : memref<10xf32>
-  // hasLocalLinkage() is true for private visibility.
+  // Lowers to llvm.mlir.global private. LLVM hasLocalLinkage is true.
   OwningOpRef<memref::GlobalOp> privateGlobal =
       makeGlobal("private_global", builder.getStringAttr("private"));
   auto privateIface =
@@ -125,7 +125,8 @@ TEST_F(OpenACCOpsInterfacesTest, GlobalVariableOpInterfaceLocalLinkage) {
   EXPECT_TRUE(privateIface.hasLocalLinkage());
 
   // memref.global "nested" @nested_global : memref<10xf32>
-  // hasLocalLinkage() is true for nested visibility.
+  // Nested is not public, so this lowers to llvm.mlir.global private.
+  // LLVM hasLocalLinkage is true.
   OwningOpRef<memref::GlobalOp> nestedGlobal =
       makeGlobal("nested_global", builder.getStringAttr("nested"));
   auto nestedIface =
@@ -134,7 +135,7 @@ TEST_F(OpenACCOpsInterfacesTest, GlobalVariableOpInterfaceLocalLinkage) {
   EXPECT_TRUE(nestedIface.hasLocalLinkage());
 
   // memref.global "public" @public_global : memref<10xf32>
-  // hasLocalLinkage() is false for public visibility.
+  // Lowers to llvm.mlir.global external. LLVM hasLocalLinkage is false.
   OwningOpRef<memref::GlobalOp> publicGlobal =
       makeGlobal("public_global", builder.getStringAttr("public"));
   auto publicIface =
@@ -143,7 +144,8 @@ TEST_F(OpenACCOpsInterfacesTest, GlobalVariableOpInterfaceLocalLinkage) {
   EXPECT_FALSE(publicIface.hasLocalLinkage());
 
   // memref.global @default_global : memref<10xf32>
-  // Omitted visibility is public, so hasLocalLinkage() is false.
+  // Omitted visibility is public, so this lowers to llvm.mlir.global external.
+  // LLVM hasLocalLinkage is false.
   OwningOpRef<memref::GlobalOp> defaultGlobal =
       makeGlobal("default_global", StringAttr());
   auto defaultIface =

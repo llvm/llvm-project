@@ -313,8 +313,9 @@ struct MemrefGlobalVariableModel
 
   bool isCompilerGenerated(Operation *op) const { return false; }
 
-  // memref.global has no linkage. Non-public symbol visibility is its local
-  // linkage.
+  // memref.global has no linkage attribute. MemRefToLLVM lowers a non-public
+  // symbol to LLVM private linkage and a public symbol to external linkage.
+  // LLVM hasLocalLinkage is true for private linkage.
   bool hasLocalLinkage(Operation *op) const {
     return cast<memref::GlobalOp>(op).getVisibility() !=
            SymbolTable::Visibility::Public;
