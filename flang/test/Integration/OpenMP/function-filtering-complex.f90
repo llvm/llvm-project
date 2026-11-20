@@ -6,15 +6,19 @@
 ! added to this directory and sub-directories.
 !===----------------------------------------------------------------------===!
 
-! REQUIRES: flang-supports-f128-math
+! REQUIRES: flang-supports-f128-math, amdgpu-registered-target
 
-! RUN: %if x86-registered-target %{ %flang_fc1 -triple x86_64-unknown-linux-gnu -fopenmp -emit-llvm %s -o - | FileCheck %s --check-prefix=HOST %}
-! RUN: %if amdgpu-registered-target %{ %flang_fc1 -triple amdgcn-amd-amdhsa -fopenmp -fopenmp-is-target-device -emit-llvm %s -o - | FileCheck %s --check-prefix=DEVICE --implicit-check-not=@_FortranACAbsF128 %}
+! RUN: %flang_fc1 -triple amdgcn-amd-amdhsa -fopenmp -fopenmp-is-target-device -emit-llvm %s -o - | FileCheck %s --implicit-check-not=@_FortranACAbsF128
+
+! LLVM IR is needed because this regression depends on the driver's OpenMP
+! device pipeline: early declare-target marking and selective TargetRewrite
+! run before FIR-to-LLVM lowering, and host-only functions are removed only by
+! the later function filtering. No earlier -emit-* stage runs this sequence.
+! Pass-level behavior is covered by flang/test/Fir/target-rewrite-openmp.fir.
 
 ! Host-only quad-complex operations must survive lowering until late function
 ! filtering without triggering unsupported AMDGPU ABI rewriting. The same
 ! applies to host code in a function containing a target region.
-! HOST: call {{.*}}@_FortranACAbsF128(
 subroutine host_only(x)
   complex(16) :: x
   print *, abs(x)
@@ -46,6 +50,6 @@ contains
   end function
 end subroutine
 
-! DEVICE-DAG: define {{.*}}{ double, double } @_QFmixedPdevice_fn(double {{.*}}, double {{.*}})
-! DEVICE-DAG: define {{.*}}@__omp_offloading_{{.*}}mixed_{{.*}}
-! DEVICE-DAG: call {{.*}}{ double, double } @_QFmixedPdevice_fn(double {{.*}}, double {{.*}})
+! CHECK-DAG: define {{.*}}{ double, double } @_QFmixedPdevice_fn(double {{.*}}, double {{.*}})
+! CHECK-DAG: define {{.*}}@__omp_offloading_{{.*}}mixed_{{.*}}
+! CHECK-DAG: call {{.*}}{ double, double } @_QFmixedPdevice_fn(double {{.*}}, double {{.*}})

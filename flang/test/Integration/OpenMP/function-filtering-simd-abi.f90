@@ -6,7 +6,13 @@
 ! added to this directory and sub-directories.
 !===----------------------------------------------------------------------===!
 
-! RUN: %if amdgpu-registered-target %{ %flang_fc1 -triple amdgcn-amd-amdhsa -fopenmp-simd -fopenmp-is-target-device -emit-llvm %s -o - | FileCheck %s %}
+! REQUIRES: amdgpu-registered-target
+
+! RUN: %flang_fc1 -triple amdgcn-amd-amdhsa -fopenmp-simd -fopenmp-is-target-device -emit-llvm %s -o - | FileCheck %s
+
+! LLVM IR is needed because the driver decides whether TargetRewrite may skip
+! host functions, and only actions that run the codegen pipeline expose that
+! choice. Pass-pipeline tests show pass order but not pass options.
 
 ! SIMD-only device compilation does not filter host functions, so complex
 ! arguments must still use the AMDGPU target ABI.
