@@ -649,20 +649,11 @@ matchBlocks(BinaryContext &BC, const yaml::bolt::BinaryFunctionProfile &YamlBF,
         MatchedBlocks[YamlBB.Index] = {MatchedBlock, &YamlBB};
       };
 
-  // YAML can omit block exec counts even when branch counts are present.
-  // Weights are for statistics only, including unmatched profile blocks.
-  DenseMap<uint32_t, std::pair<uint64_t, uint64_t>> ProfileEdgeCounts;
-  for (const yaml::bolt::BinaryBasicBlockProfile &BB : YamlBF.Blocks) {
-    for (const yaml::bolt::SuccessorInfo &SI : BB.Successors) {
-      ProfileEdgeCounts[BB.Index].second += SI.Count;
-      ProfileEdgeCounts[SI.Index].first += SI.Count;
-    }
-  }
-  auto getProfileExecCount =
-      [&](const yaml::bolt::BinaryBasicBlockProfile &BB) {
-        const auto [Incoming, Outgoing] = ProfileEdgeCounts.lookup(BB.Index);
-        return std::max({BB.ExecCount, Incoming, Outgoing});
-      };
+  // Computed totals affect diagnostics only. Keep legacy statistics for profiles
+  // without the optional field; never change the optimization input ExecCount.
+  auto getProfileExecCount = [](const yaml::bolt::BinaryBasicBlockProfile &BB) {
+    return BB.ExecTotal.value_or(BB.ExecCount);
+  };
 
   // Match blocks from the profile to the blocks in CFG by strict hash.
   for (const yaml::bolt::BinaryBasicBlockProfile &YamlBB : YamlBF.Blocks) {

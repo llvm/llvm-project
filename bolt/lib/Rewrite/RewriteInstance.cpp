@@ -917,6 +917,8 @@ Error RewriteInstance::run() {
 
   postProcessFunctions();
 
+  finishProfileData();
+
   processMetadataPostCFG();
 
   if (opts::DiffOnly)
@@ -4058,18 +4060,31 @@ void RewriteInstance::processProfileData() {
   }
 
   if (!opts::SaveProfile.empty() && !BAT->enabledFor(InputFile)) {
-    YAMLProfileWriter PW(opts::SaveProfile);
-    PW.writeProfile(*this);
+    auto PW = std::make_unique<YAMLProfileWriter>(opts::SaveProfile);
+    PW->captureProfile(*this);
+    ProfileWriters.emplace_back(std::move(PW));
   }
   if (opts::AggregateOnly &&
       opts::ProfileFormat == opts::ProfileFormatKind::PF_YAML &&
       !BAT->enabledFor(InputFile)) {
-    YAMLProfileWriter PW(opts::OutputFilename);
-    PW.writeProfile(*this);
+    auto PW = std::make_unique<YAMLProfileWriter>(opts::OutputFilename);
+    PW->captureProfile(*this);
+    ProfileWriters.emplace_back(std::move(PW));
   }
 
   // Release memory used by profile reader.
   ProfileReader.reset();
+
+  // YAML aggregation must reach CFG processing to capture computed counts.
+  // Other aggregation formats retain their existing early-exit path.
+  if (opts::AggregateOnly && ProfileWriters.empty())
+    finishProfileData();
+}
+
+void RewriteInstance::finishProfileData() {
+  for (const auto &PW : ProfileWriters)
+    PW->writeProfile();
+  ProfileWriters.clear();
 
   if (opts::AggregateOnly) {
     PrintProgramStats PPS(&*BAT);

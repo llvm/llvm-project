@@ -38,6 +38,7 @@ class BoltAddressTranslation;
 class CFIReaderWriter;
 class DWARFRewriter;
 class ProfileReaderBase;
+class YAMLProfileWriter;
 
 /// This class encapsulates all data necessary to carry on binary reading,
 /// disassembly, CFG building, BB reordering (among other binary-level
@@ -171,6 +172,9 @@ private:
 
   /// Associate profile data with functions and data objects.
   void processProfileData();
+
+  /// Write captured YAML profiles after computed block counts are available.
+  void finishProfileData();
 
   /// Disassemble each function in the binary and associate it with a
   /// BinaryFunction object, preparing all information necessary for binary
@@ -489,6 +493,7 @@ private:
   StringRef ToolPath;
 
   std::unique_ptr<ProfileReaderBase> ProfileReader;
+  std::vector<std::unique_ptr<YAMLProfileWriter>> ProfileWriters;
 
   std::unique_ptr<BinaryContext> BC;
   std::unique_ptr<CFIReaderWriter> CFIRdWrt;

@@ -34,7 +34,7 @@ RUN: FileCheck --input-file %t.hm-section-hotness.csv --check-prefix CHECK-HM %s
 ## Check that YAML converted from fdata matches YAML created directly with BAT.
 RUN: llvm-bolt %t.exe -data %t.fdata -w %t.yaml-fdata -o /dev/null \
 RUN:   2>&1 | FileCheck --check-prefix READ-BAT-FDATA-CHECK %s
-RUN: FileCheck --input-file %t.yaml-fdata --check-prefix YAML-BAT-CHECK %s
+RUN: sed '/exec-total:/d' %t.yaml-fdata | FileCheck --check-prefix YAML-BAT-CHECK %s
 
 ## Test resulting YAML profile with the original binary (no-stale mode)
 RUN: llvm-bolt %t.exe -data %t.yaml -o %t.null -dyno-stats 2>&1 \

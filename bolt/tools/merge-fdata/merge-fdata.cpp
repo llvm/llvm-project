@@ -166,6 +166,12 @@ void mergeBasicBlockProfile(BinaryBasicBlockProfile &MergedBB,
   // Update the execution count.
   MergedBB.ExecCount += BB.ExecCount;
 
+  // A computed total is available only if both contributions provide it.
+  if (MergedBB.ExecTotal && BB.ExecTotal)
+    *MergedBB.ExecTotal += *BB.ExecTotal;
+  else
+    MergedBB.ExecTotal.reset();
+
   // Update the event count.
   MergedBB.EventCount += BB.EventCount;
 
