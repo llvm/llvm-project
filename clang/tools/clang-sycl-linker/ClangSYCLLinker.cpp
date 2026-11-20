@@ -715,7 +715,7 @@ static Error runAOTCompileIntelGPU(StringRef InputFile, StringRef OutputFile,
   CmdArgs.push_back("-spirv_input");
 
   // Compile for the --code list, e.g. "xe-mtl-u,xe-mtl-h" for an IGCA target,
-  // or else for the Intel GPU in --arch.
+  // or otherwise for the Intel GPU in --arch.
   std::string Devices = llvm::join(Args.getAllArgValues(OPT_code_EQ), ",");
   if (Devices.empty())
     Devices = Args.getLastArgValue(OPT_arch_EQ);

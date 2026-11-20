@@ -312,8 +312,8 @@ LLVM_ABI bool areTargetsCompatible(const OffloadFile::TargetID &Provided,
                                    const OffloadFile::TargetID &Requested);
 
 /// Returns true if device images built for \p LHS and \p RHS are linked
-/// together: they have the same processor and features, and list the same
-/// real devices in "code".
+/// together: they have the same processor and features, and identical "code"
+/// lists.
 LLVM_ABI bool areTargetsEquivalent(const OffloadFile::TargetID &LHS,
                                    const OffloadFile::TargetID &RHS);
 

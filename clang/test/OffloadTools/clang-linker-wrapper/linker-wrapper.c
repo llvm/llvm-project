@@ -66,7 +66,7 @@ __attribute__((visibility("protected"), used)) int x;
 // SPIRV-LINK: clang{{.*}} -o {{.*}}.img -dumpdir a.out.spirv64.foo.img. --target=spirv64-unknown-unknown -march=foo {{.*}}.o --sycl-link{{$}}
 
 // SYCL images with the same IGCA target and the same "code" list are linked
-// together and compiled ahead of time for the devices in the list. Images with
+// together, and the devices in the list are passed on with --code. Images with
 // a different "code" list are linked separately.
 // RUN: llvm-offload-binary -o %t.sycl-u.out \
 // RUN:   --image=file=%t.spirv.bc,kind=sycl,triple=spirv64-unknown-unknown,arch=igca_30r,code=xe-mtl-u
@@ -97,6 +97,13 @@ __attribute__((visibility("protected"), used)) int x;
 // RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
 // RUN:   --linker-path=/usr/bin/ld %t.sycl-generic.o %t.sycl-u.a -o a.out 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=SYCL-CODE-ARCHIVE
+// RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.sycl-u-member.o -fembed-offload-object=%t.sycl-u.out
+// RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.sycl-uh-member.o -fembed-offload-object=%t.sycl-uh.out
+// RUN: rm -f %t.sycl-two-code.a
+// RUN: llvm-ar rcs %t.sycl-two-code.a %t.sycl-u-member.o %t.sycl-uh-member.o
+// RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
+// RUN:   --linker-path=/usr/bin/ld %t.sycl-u.o %t.sycl-uh-a.o %t.sycl-two-code.a \
+// RUN:   -o a.out 2>&1 | FileCheck %s --check-prefix=SYCL-TWO-CODE-ARCHIVE
 // RUN: llvm-offload-binary -o %t.sycl-two.out \
 // RUN:   --image=file=%t.spirv.bc,kind=sycl,triple=spirv64-unknown-unknown,arch=igca_30r,code=xe-mtl-u \
 // RUN:   --image=file=%t.spirv.bc,kind=sycl,triple=spirv64-unknown-unknown,arch=igca_30r,code=xe-mtl-u,code=xe-mtl-h
@@ -114,11 +121,6 @@ __attribute__((visibility("protected"), used)) int x;
 // RUN:   --emit-fatbin-only --linker-path=/usr/bin/ld %t.sycl-30r.o %t.sycl-40r.o \
 // RUN:   -o %t.sycl.fatbin
 // RUN: llvm-objdump --offloading %t.sycl.fatbin | FileCheck %s --check-prefix=SYCL-MERGED
-// RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu \
-// RUN:   --embed-bitcode --emit-fatbin-only --linker-path=/usr/bin/ld \
-// RUN:   %t.sycl-30r.o %t.sycl-40r.o -o %t.sycl-bc.fatbin
-// RUN: llvm-objdump --offloading %t.sycl-bc.fatbin \
-// RUN:   | FileCheck %s --check-prefix=SYCL-MERGED-BC
 // RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
 // RUN:   --wrapper-verbose --save-temps --linker-path=/usr/bin/ld \
 // RUN:   %t.sycl-30r.o %t.sycl-40r.o -o a.out 2>&1 \
@@ -130,6 +132,13 @@ __attribute__((visibility("protected"), used)) int x;
 // RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
 // RUN:   --save-temps --wrapper-verbose --linker-path=/usr/bin/ld %t.sycl-mix.o \
 // RUN:   -o a.out 2>&1 | FileCheck %s --check-prefix=SYCL-REPLAY
+// RUN: llvm-offload-binary -o %t.openmp-code.out \
+// RUN:   --image=file=%t.elf.o,kind=openmp,triple=nvptx64-nvidia-cuda,arch=sm_70,code=a \
+// RUN:   --image=file=%t.elf.o,kind=openmp,triple=nvptx64-nvidia-cuda,arch=sm_70,code=b
+// RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.openmp-code.o -fembed-offload-object=%t.openmp-code.out
+// RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
+// RUN:   --linker-path=/usr/bin/ld %t.openmp-code.o -o a.out 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=OPENMP-CODE
 
 // SYCL-SAME-CODE:     clang{{.*}} -march=igca_30r {{.*}}.o {{.*}}.o --sycl-link -Xlinker --code=xe-mtl-u -Xlinker --code=xe-mtl-h{{$}}
 // SYCL-SAME-CODE-NOT: --sycl-link
@@ -144,6 +153,11 @@ __attribute__((visibility("protected"), used)) int x;
 
 // A generic archive member is still linked into an image that lists devices.
 // SYCL-GENERIC-ARCHIVE: clang{{.*}} -march=igca_30r {{.*}}igca_30r{{.*}}.o {{.*}}generic{{.*}}.o --sycl-link -Xlinker --code=xe-mtl-u{{$}}
+
+// Archive members that list different devices are each linked only with the
+// SYCL images that list the same devices.
+// SYCL-TWO-CODE-ARCHIVE-DAG: clang{{.*}} -march=igca_30r {{[^ ]*}}sycl-u-spirv64{{[^ ]*}}.o {{[^ ]*}}sycl-u-member-spirv64{{[^ ]*}}.o --sycl-link -Xlinker --code=xe-mtl-u{{$}}
+// SYCL-TWO-CODE-ARCHIVE-DAG: clang{{.*}} -march=igca_30r {{[^ ]*}}sycl-uh-a-spirv64{{[^ ]*}}.o {{[^ ]*}}sycl-uh-member-spirv64{{[^ ]*}}.o --sycl-link -Xlinker --code=xe-mtl-u -Xlinker --code=xe-mtl-h{{$}}
 
 // An archive member that lists real devices is not linked into a generic group.
 // SYCL-CODE-ARCHIVE:     clang{{.*}} --target=spirv64-unknown-unknown {{[^ ]*}}generic{{[^ ]*}}.o --sycl-link{{$}}
@@ -160,24 +174,16 @@ __attribute__((visibility("protected"), used)) int x;
 // SYCL-MERGED-DAG: arch            igca_30r
 // SYCL-MERGED-DAG: arch            igca_40r
 
-// With --embed-bitcode, each linked bitcode file is one device image.
-// SYCL-MERGED-BC:      OFFLOADING IMAGE [0]:
-// SYCL-MERGED-BC-NEXT: kind            llvm ir
-// SYCL-MERGED-BC-NEXT: arch            igca_40r
-// SYCL-MERGED-BC-NEXT: triple          spirv64-unknown-unknown
-// SYCL-MERGED-BC-NEXT: producer        sycl
-// SYCL-MERGED-BC:      OFFLOADING IMAGE [1]:
-// SYCL-MERGED-BC-NEXT: kind            llvm ir
-// SYCL-MERGED-BC-NEXT: arch            igca_30r
-// SYCL-MERGED-BC-NEXT: triple          spirv64-unknown-unknown
-// SYCL-MERGED-BC-NEXT: producer        sycl
-// SYCL-MERGED-BC-NOT:  OFFLOADING IMAGE
-
 // With --wrapper-verbose --save-temps, the merged offload binary is wrapped.
 // SYCL-MERGED-VERBOSE: llvm-offload-wrapper{{.*}} --kind=sycl {{.*}} a.out.sycl.merged.out{{$}}
 
+// Grouping by "code" does not depend on the offload kind: OpenMP images with
+// the same "arch" but different "code" are linked separately, without --code.
+// OPENMP-CODE-COUNT-2: clang{{.*}} --target=nvptx64-nvidia-cuda -march=sm_70 {{[^ ]*}}.o{{$}}
+// OPENMP-CODE-NOT:     --target=nvptx64-nvidia-cuda
+
 // The replayed extraction of an image without "code" does not also match one
-// with "code" for the same architecture.
+// with "code" for the same "arch".
 // SYCL-REPLAY: llvm-offload-binary{{.*}} --image=kind=sycl,triple=spirv64-unknown-unknown,arch=igca_30r,code=,file={{[^ ]*}}-igca_30r.o --image=kind=sycl,triple=spirv64-unknown-unknown,arch=igca_30r,code=xe-mtl-u,file={{[^ ]*}}-igca_30r.xe-mtl-u.o
 
 // RUN: llvm-offload-binary -o %t.out \

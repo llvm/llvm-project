@@ -4157,10 +4157,10 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
   if (Kind == Action::OFK_SYCL) {
     llvm::DenseSet<StringRef> Targets;
     for (StringRef Arch : Archs) {
-      StringRef Target = toolchains::getSYCLVirtualArch(Arch);
+      StringRef Target = getArchToCompileFor(Arch);
       Targets.insert(Target);
       if (Target != Arch)
-        C.addSYCLIGCADevice(&TC, Target, Arch);
+        C.addIGCADevice(&TC, Target, Arch);
     }
     Archs = std::move(Targets);
   }

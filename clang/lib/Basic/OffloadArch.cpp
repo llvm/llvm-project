@@ -111,6 +111,11 @@ OffloadArch StringToOffloadArch(llvm::StringRef S) {
   return OffloadArch::getUnknown();
 }
 
+llvm::StringRef getArchToCompileFor(llvm::StringRef Arch) {
+  OffloadArch ID = StringToOffloadArch(Arch);
+  return ID.isIntelGPU() ? OffloadArchToString(ID.intelGPUIGCATarget()) : Arch;
+}
+
 OffloadArch getSubArchOffloadArch(llvm::Triple::SubArchType SubArch) {
   llvm::AMDGPU::GPUKind AK = llvm::AMDGPU::getGPUKindFromSubArch(SubArch);
   if (AK == llvm::AMDGPU::GK_NONE)

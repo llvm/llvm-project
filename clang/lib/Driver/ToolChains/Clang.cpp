@@ -18,7 +18,6 @@
 #include "Hexagon.h"
 #include "PS4CPU.h"
 #include "ToolChains/Cuda.h"
-#include "ToolChains/SYCL.h"
 #include "clang/Basic/CLWarnings.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/HeaderInclude.h"
@@ -9774,7 +9773,7 @@ void OffloadPackager::ConstructJob(Compilation &C, const JobAction &JA,
     // llvm-offload-binary joins them, so the image gets
     // "code=xe-mtl-h,xe-mtl-u".
     if (OffloadAction->getOffloadingDeviceKind() == Action::OFK_SYCL)
-      for (StringRef Device : C.getSYCLIGCADevices(TC, Arch.ArchName))
+      for (StringRef Device : C.getIGCADevices(TC, Arch.ArchName))
         Parts.emplace_back("code=" + Device.str());
 
     if (TC->isUsingLTO(TCArgs, OffloadAction->getOffloadingDeviceKind()))
@@ -9976,7 +9975,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
         // A SYCL device image for an Intel GPU is labeled with the GPU's IGCA
         // target.
         if (Kind == Action::OFK_SYCL)
-          Name = toolchains::getSYCLVirtualArch(Name);
+          Name = getArchToCompileFor(Name);
         // Intel GPUs that share an IGCA target ask for it once.
         if (ShouldExtract.insert(Name).second)
           CmdArgs.emplace_back(Args.MakeArgString("--should-extract=" + Name));

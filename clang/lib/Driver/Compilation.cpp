@@ -121,18 +121,18 @@ Compilation::getArgsForToolChain(const ToolChain *TC, BoundArch BA,
   return *Entry;
 }
 
-void Compilation::addSYCLIGCADevice(const ToolChain *TC, StringRef Target,
-                                    StringRef Device) {
-  SmallVector<StringRef, 2> &Devices = SYCLIGCADevices[{TC, Target}];
+void Compilation::addIGCADevice(const ToolChain *TC, StringRef Target,
+                                StringRef Device) {
+  SmallVector<StringRef, 2> &Devices = IGCADevices[{TC, Target}];
   auto It = llvm::lower_bound(Devices, Device);
   if (It == Devices.end() || *It != Device)
     Devices.insert(It, Device);
 }
 
-ArrayRef<StringRef> Compilation::getSYCLIGCADevices(const ToolChain *TC,
-                                                    StringRef Target) const {
-  auto It = SYCLIGCADevices.find({TC, Target});
-  if (It == SYCLIGCADevices.end())
+ArrayRef<StringRef> Compilation::getIGCADevices(const ToolChain *TC,
+                                                StringRef Target) const {
+  auto It = IGCADevices.find({TC, Target});
+  if (It == IGCADevices.end())
     return {};
   return It->second;
 }

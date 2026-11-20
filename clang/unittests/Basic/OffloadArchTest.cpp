@@ -95,6 +95,18 @@ TEST(OffloadArchTest, IntelGPUIGCATarget) {
   EXPECT_TRUE(parse("xe-pvc").intelGPUIGCATarget().isIntelIGCA());
 }
 
+TEST(OffloadArchTest, ArchToCompileFor) {
+  // A device job for an Intel GPU is named after its IGCA target, and for
+  // anything else after the value itself.
+  EXPECT_EQ(getArchToCompileFor("xe-mtl-u"), "igca_30r");
+  EXPECT_EQ(getArchToCompileFor("xe-mtl-h"), "igca_30r");
+  EXPECT_EQ(getArchToCompileFor("igca_30r"), "igca_30r");
+  EXPECT_EQ(getArchToCompileFor("graniterapids"), "graniterapids");
+  EXPECT_EQ(getArchToCompileFor("sm_70"), "sm_70");
+  EXPECT_EQ(getArchToCompileFor("gfx90a:xnack+"), "gfx90a:xnack+");
+  EXPECT_EQ(getArchToCompileFor("generic"), "generic");
+}
+
 TEST(OffloadArchTest, Defaults) {
   EXPECT_STREQ(OffloadArchToString(OffloadArch::CudaDefault()), "sm_52");
   EXPECT_STREQ(OffloadArchToString(OffloadArch::HIPDefault()), "gfx906");

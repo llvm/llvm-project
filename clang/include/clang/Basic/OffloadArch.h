@@ -131,6 +131,11 @@ const char *OffloadArchToVirtualArchString(OffloadArch A);
 // string is not recognized.
 OffloadArch StringToOffloadArch(llvm::StringRef S);
 
+/// \return the architecture that the device job for the --offload-arch value
+/// \p Arch is named after: the IGCA target if \p Arch is an Intel GPU, e.g.
+/// "igca_30r" for "xe-mtl-u", and \p Arch itself otherwise.
+llvm::StringRef getArchToCompileFor(llvm::StringRef Arch);
+
 OffloadArch getSubArchOffloadArch(llvm::Triple::SubArchType SubArch);
 llvm::Triple::SubArchType getOffloadArchSubArch(OffloadArch ID);
 

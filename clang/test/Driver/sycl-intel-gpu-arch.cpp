@@ -1,6 +1,7 @@
 /// Tests for Intel GPU names in --offload-arch.
 
-/// An Intel GPU is compiled for its IGCA target, e.g. igca_40r for xe-bmg-g21.
+/// A device job is named after the IGCA target of an Intel GPU, e.g. igca_40r
+/// for xe-bmg-g21.
 // RUN: %clang -ccc-print-phases --target=x86_64-unknown-linux-gnu -fsycl \
 // RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=xe-bmg-g21 \
 // RUN:   --offload-arch=xe-dg2 -c %s 2>&1 \
@@ -8,9 +9,8 @@
 // CHK-SYCL-DAG: offload, "device-sycl (spirv64-unknown-unknown:igca_40r)"
 // CHK-SYCL-DAG: offload, "device-sycl (spirv64-unknown-unknown:igca_15ra)"
 
-/// A device name, an alias and a numeric name of one device give one device
-/// image for its IGCA target, which lists each name as given, to compile ahead
-/// of time for.
+/// A device name, an alias and a numeric name of the same device result in one
+/// device image for its IGCA target, with all names kept as given.
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
 // RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=xe-mtl-u \
 // RUN:   --offload-arch=xe-arl-u --offload-arch=xe_12.70.0 -c %s 2>&1 \
@@ -18,7 +18,7 @@
 // CHK-AS-GIVEN: llvm-offload-binary" "-o" "{{[^"]*}}" "--image=file={{[^"]*}},triple=spirv64-unknown-unknown,arch=igca_30r,kind=sycl,code=xe-arl-u,code=xe-mtl-u,code=xe_12.70.0"{{$}}
 
 /// The devices are sorted, so that objects compiled for the same devices in any
-/// order have the same list and are linked together.
+/// order have the same list.
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
 // RUN:   --offload-arch=xe-mtl-h,xe-mtl-u -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=CHK-SORTED %s
@@ -39,8 +39,7 @@
 // RUN:   | FileCheck -check-prefixes=CHK-MIXED %s
 // CHK-MIXED: "--image=file={{[^"]*}},triple=spirv64-unknown-unknown,arch=igca_30r,kind=sycl,code=xe-mtl-u"{{$}}
 
-/// An IGCA target given directly lists no devices, so it is compiled just in
-/// time.
+/// An IGCA target given directly lists no devices.
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
 // RUN:   --offload-arch=igca_30r -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=CHK-IGCA-ONLY %s
