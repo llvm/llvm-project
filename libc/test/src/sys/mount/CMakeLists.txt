@@ -1,0 +1,55 @@
+add_libc_testsuite(libc-sys-mount-tests)
+
+add_libc_test(
+  mount_test
+  SUITE
+    libc-sys-mount-tests
+  SRCS
+    mount_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.sys_stat_macros
+    libc.src.__support.CPP.scope
+    libc.src.sys.mount.mount
+    libc.src.sys.mount.umount
+    libc.src.sys.stat.mkdir
+    libc.src.unistd.rmdir
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
+  umount_test
+  SUITE
+    libc-sys-mount-tests
+  SRCS
+    umount_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.sys_stat_macros
+    libc.src.__support.CPP.scope
+    libc.src.sys.mount.mount
+    libc.src.sys.mount.umount
+    libc.src.sys.stat.mkdir
+    libc.src.unistd.rmdir
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
+  umount2_test
+  SUITE
+    libc-sys-mount-tests
+  SRCS
+    umount2_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.sys_stat_macros
+    libc.src.__support.CPP.scope
+    libc.src.sys.mount.mount
+    libc.src.sys.mount.umount2
+    libc.src.sys.stat.mkdir
+    libc.src.unistd.rmdir
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)

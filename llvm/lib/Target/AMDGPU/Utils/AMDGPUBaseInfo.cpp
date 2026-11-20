@@ -484,8 +484,15 @@ struct VOP3PHasNoOpSelHiInfo {
 #define GET_getMFMA_F8F6F4_WithSize_IMPL
 #define GET_isMFMA_F8F6F4Table_IMPL
 #define GET_isCvtScaleF32_F32F16ToF8F4Table_IMPL
+#define GET_VLdStIdxOpcodeInfoTable_IMPL
 
 #include "AMDGPUGenSearchableTables.inc"
+
+const VLdStIdxOpcodeInfo *
+getVLdStIdxOpcodeInfoByKey(unsigned BitWidth, bool IsStore, bool IsGPRIdx) {
+  assert(isUInt<16>(BitWidth) && "the table's key is 16 bits");
+  return getVLdStIdxOpcodeInfoByKeyImpl(BitWidth, IsStore, IsGPRIdx);
+}
 
 int getMTBUFBaseOpcode(unsigned Opc) {
   const MTBUFInfo *Info = getMTBUFInfoFromOpcode(Opc);
@@ -2578,8 +2585,8 @@ unsigned hasKernargPreload(const MCSubtargetInfo &STI) {
   return STI.hasFeature(AMDGPU::FeatureKernargPreload);
 }
 
-int32_t getTotalNumVGPRs(bool has90AInsts, int32_t ArgNumAGPR,
-                         int32_t ArgNumVGPR) {
+uint32_t getTotalNumVGPRs(bool has90AInsts, uint32_t ArgNumAGPR,
+                          uint32_t ArgNumVGPR) {
   if (has90AInsts && ArgNumAGPR)
     return alignTo(ArgNumVGPR, 4) + ArgNumAGPR;
   return std::max(ArgNumVGPR, ArgNumAGPR);

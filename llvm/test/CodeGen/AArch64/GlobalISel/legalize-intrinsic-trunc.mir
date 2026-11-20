@@ -184,3 +184,4 @@ body:             |
     %1:_(<2 x f64>) = G_INTRINSIC_TRUNC %0
     $q0 = COPY %1(<2 x f64>)
     RET_ReallyLR implicit $q0
+...

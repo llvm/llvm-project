@@ -108,7 +108,7 @@ TEST_F(LlvmLibcExp2bf16Test, SpecialNumbers) { test_special_numbers(); }
 TEST_F(LlvmLibcExp2bf16Test, OverflowStatusAllRoundingModes) {
   using Bits = LIBC_NAMESPACE::fputil::FPBits<bfloat16>;
   const bfloat16 x = Bits(uint16_t(0x4380)).get_val();
-  const bfloat16 largest = Bits(uint16_t(0x7f7f)).get_val();
+  [[maybe_unused]] const bfloat16 largest = Bits(uint16_t(0x7f7f)).get_val();
   const bfloat16 infinity = Bits::inf().get_val();
   EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_NEAREST(
       infinity, LIBC_NAMESPACE::exp2bf16(x), FE_OVERFLOW | FE_INEXACT);
