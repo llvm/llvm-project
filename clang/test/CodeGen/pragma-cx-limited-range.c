@@ -16,6 +16,10 @@
 // RUN: %clang_cc1 %s -O0 -emit-llvm -triple x86_64-unknown-unknown \
 // RUN: -complex-range=full -o - | FileCheck --check-prefix=FULL %s
 
+// RUN: %clang_cc1 %s -O0 -emit-llvm -triple x86_64-unknown-unknown \
+// RUN: -ffast-math -ffp-contract=fast -complex-range=basic -o - \
+// RUN: | FileCheck --check-prefix=FAST %s
+
 _Complex float pragma_on_mul(_Complex float a, _Complex float b) {
 #pragma STDC CX_LIMITED_RANGE ON
   // LABEL: define {{.*}} @pragma_on_mul(
@@ -239,3 +243,165 @@ _Complex float pragma_default_div(_Complex float a, _Complex float b) {
 
   return a / b;
 }
+
+// GH66555: float_control(precise) overrides the command-line complex range.
+_Complex float pragma_precise_off_div(_Complex float a, _Complex float b) {
+#pragma float_control(precise, off)
+  // FULL-LABEL: @pragma_precise_off_div(
+  // FULL: fdiv fast float
+  // FULL-NEXT: fdiv fast float
+
+  // BASIC-LABEL: @pragma_precise_off_div(
+  // BASIC: fdiv fast float
+  // BASIC-NEXT: fdiv fast float
+
+  // IMPRVD-LABEL: @pragma_precise_off_div(
+  // IMPRVD: fdiv fast float
+  // IMPRVD-NEXT: fdiv fast float
+
+  // PRMTD-LABEL: @pragma_precise_off_div(
+  // PRMTD: fdiv fast float
+  // PRMTD-NEXT: fdiv fast float
+
+  // FAST-LABEL: @pragma_precise_off_div(
+  // FAST: fdiv fast float
+  // FAST-NEXT: fdiv fast float
+
+  return a / b;
+}
+
+_Complex float pragma_precise_off_mul(_Complex float a, _Complex float b) {
+#pragma float_control(precise, off)
+  // FULL-LABEL: @pragma_precise_off_mul(
+  // FULL: fmul fast float
+  // FULL-NEXT: fmul fast float
+  // FULL-NEXT: fmul fast float
+  // FULL-NEXT: fmul fast float
+  // FULL-NEXT: fsub fast float
+  // FULL-NEXT: fadd fast float
+  // FULL-NOT: @__mulsc3
+
+  // BASIC-LABEL: @pragma_precise_off_mul(
+  // BASIC: fmul fast float
+  // BASIC-NEXT: fmul fast float
+  // BASIC-NEXT: fmul fast float
+  // BASIC-NEXT: fmul fast float
+  // BASIC-NEXT: fsub fast float
+  // BASIC-NEXT: fadd fast float
+  // BASIC-NOT: @__mulsc3
+
+  // IMPRVD-LABEL: @pragma_precise_off_mul(
+  // IMPRVD: fmul fast float
+  // IMPRVD-NEXT: fmul fast float
+  // IMPRVD-NEXT: fmul fast float
+  // IMPRVD-NEXT: fmul fast float
+  // IMPRVD-NEXT: fsub fast float
+  // IMPRVD-NEXT: fadd fast float
+  // IMPRVD-NOT: @__mulsc3
+
+  // PRMTD-LABEL: @pragma_precise_off_mul(
+  // PRMTD: fmul fast float
+  // PRMTD-NEXT: fmul fast float
+  // PRMTD-NEXT: fmul fast float
+  // PRMTD-NEXT: fmul fast float
+  // PRMTD-NEXT: fsub fast float
+  // PRMTD-NEXT: fadd fast float
+  // PRMTD-NOT: @__mulsc3
+
+  // FAST-LABEL: @pragma_precise_off_mul(
+  // FAST: fmul fast float
+  // FAST-NEXT: fmul fast float
+  // FAST-NEXT: fmul fast float
+  // FAST-NEXT: fmul fast float
+  // FAST-NEXT: fsub fast float
+  // FAST-NEXT: fadd fast float
+  // FAST-NOT: @__mulsc3
+
+  return a * b;
+}
+
+#pragma float_control(push)
+#pragma float_control(precise, on)
+_Complex float pragma_precise_on_div(_Complex float a, _Complex float b) {
+  // FULL-LABEL: @pragma_precise_on_div(
+  // FULL-NOT: fdiv
+  // FULL: call {{.*}} @__divsc3
+  // FULL-NOT: fdiv
+
+  // BASIC-LABEL: @pragma_precise_on_div(
+  // BASIC-NOT: fdiv
+  // BASIC: call {{.*}} @__divsc3
+  // BASIC-NOT: fdiv
+
+  // IMPRVD-LABEL: @pragma_precise_on_div(
+  // IMPRVD-NOT: fdiv
+  // IMPRVD: call {{.*}} @__divsc3
+  // IMPRVD-NOT: fdiv
+
+  // PRMTD-LABEL: @pragma_precise_on_div(
+  // PRMTD-NOT: fdiv
+  // PRMTD: call {{.*}} @__divsc3
+  // PRMTD-NOT: fdiv
+
+  // FAST-LABEL: @pragma_precise_on_div(
+  // FAST-NOT: fdiv
+  // FAST: call {{.*}} @__divsc3
+  // FAST-NOT: fdiv
+
+  return a / b;
+}
+
+_Complex float pragma_precise_on_mul(_Complex float a, _Complex float b) {
+  // FULL-LABEL: @pragma_precise_on_mul(
+  // FULL: call {{.*}} @__mulsc3
+
+  // BASIC-LABEL: @pragma_precise_on_mul(
+  // BASIC: call {{.*}} @__mulsc3
+
+  // IMPRVD-LABEL: @pragma_precise_on_mul(
+  // IMPRVD: call {{.*}} @__mulsc3
+
+  // PRMTD-LABEL: @pragma_precise_on_mul(
+  // PRMTD: call {{.*}} @__mulsc3
+
+  // FAST-LABEL: @pragma_precise_on_mul(
+  // FAST: fmul float
+  // FAST-NEXT: fmul float
+  // FAST-NEXT: fmul float
+  // FAST-NEXT: fmul float
+  // FAST-NEXT: fsub float
+  // FAST-NEXT: fadd float
+  // FAST: call {{.*}} @__mulsc3
+
+  return a * b;
+}
+
+void pragma_precise_on_div_assign(_Complex float *a, _Complex float b) {
+  // FULL-LABEL: @pragma_precise_on_div_assign(
+  // FULL-NOT: fdiv
+  // FULL: call {{.*}} @__divsc3
+  // FULL-NOT: fdiv
+
+  // BASIC-LABEL: @pragma_precise_on_div_assign(
+  // BASIC-NOT: fdiv
+  // BASIC: call {{.*}} @__divsc3
+  // BASIC-NOT: fdiv
+
+  // IMPRVD-LABEL: @pragma_precise_on_div_assign(
+  // IMPRVD-NOT: fdiv
+  // IMPRVD: call {{.*}} @__divsc3
+  // IMPRVD-NOT: fdiv
+
+  // PRMTD-LABEL: @pragma_precise_on_div_assign(
+  // PRMTD-NOT: fdiv
+  // PRMTD: call {{.*}} @__divsc3
+  // PRMTD-NOT: fdiv
+
+  // FAST-LABEL: @pragma_precise_on_div_assign(
+  // FAST-NOT: fdiv
+  // FAST: call {{.*}} @__divsc3
+  // FAST-NOT: fdiv
+
+  *a /= b;
+}
+#pragma float_control(pop)
