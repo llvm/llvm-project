@@ -101,6 +101,7 @@
 //  g -> const when FP exceptions are ignored
 //  j -> returns_twice (like setjmp)
 //  u -> arguments are not evaluated for their side-effects
+//  k -> pointer parameters are not rewritten to the argument's address space
 //  V:{num}: -> requires vectors of at least {num} bits to be legal
 //  C<{num},M_0,...,M_k> -> callback behavior: argument {num} is called with
 //                          argument M_0, ..., M_k as payload

@@ -15,7 +15,7 @@
 include "clang/Basic/BuiltinsARMBase.td"
 
 // In libgcc
-let Attributes = [RuntimeLibraryFunction] in {
+let Attributes = [RuntimeLibraryFunction, NoAddressSpaceRewrite] in {
 	def __clear_cache : ARMNoPrefixBuiltin<"void (void *, void *)">;
 }
 
