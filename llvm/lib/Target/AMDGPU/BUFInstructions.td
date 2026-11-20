@@ -115,6 +115,8 @@ class MTBUF_Pseudo <string opName, dag outs, dag ins,
 
   Instruction BaseOpcode = !cast<Instruction>(MTBUFGetBaseOpcode<NAME>.ret);
   let MTBUF = 1;
+
+  dag AliasInOperandList;
 }
 
 class MTBUF_Real <MTBUF_Pseudo ps, string real_name = ps.Mnemonic> :
@@ -159,6 +161,15 @@ class MTBUF_Real <MTBUF_Pseudo ps, string real_name = ps.Mnemonic> :
   bits<1> acc = !if(ps.has_vdata, vdata{9}, 0);
 }
 
+// The legacy syntax, where the format is a regular operand before soffset.
+class MTBUF_LegacyFormatAlias<MTBUF_Pseudo ps, Instruction real> :
+  InstAlias<!subst("$soffset$format", "$format, $soffset", real.AsmString),
+            !con(!setdagop(real.OutOperandList, real),
+                 !setdagop(ps.AliasInOperandList, real)),
+            0, real.AsmVariantName>, PredicateControl {
+  let Predicates = real.Predicates;
+}
+
 class getMTBUFInsDA<list<RegisterOperand> vdataList,
                     list<RegisterOperand> vaddrList=[], bit hasRestrictedSOffset,
                     DAGOperand RsrcRC = SReg_128_XNULL> {
@@ -168,38 +179,42 @@ class getMTBUFInsDA<list<RegisterOperand> vdataList,
   dag SOffset = !if(hasRestrictedSOffset, (ins SReg_32:$soffset),
                                  (ins SCSrc_b32:$soffset));
 
-  dag NonVaddrInputs = !con((ins RsrcRC:$srsrc), SOffset,
-                            (ins Offset:$offset, FORMAT:$format, CPol_0:$cpol, i1imm_0:$swz));
+  dag Prefix = !con(!if(!empty(vdataList), (ins), (ins vdata_op:$vdata)),
+                    !if(!empty(vaddrList), (ins), (ins vaddr_op:$vaddr)),
+                    (ins RsrcRC:$srsrc), SOffset);
 
-  dag Inputs = !if(!empty(vaddrList),
-                   NonVaddrInputs,
-                   !con((ins vaddr_op:$vaddr), NonVaddrInputs));
-  dag ret = !if(!empty(vdataList),
-                Inputs,
-                !con((ins vdata_op:$vdata), Inputs));
+  dag ret = !con(Prefix, (ins Offset:$offset, format:$format, CPol_0:$cpol,
+                              i1imm_0:$swz));
+
+  // The operands of the legacy-syntax alias, where the format is a regular
+  // operand before soffset.
+  dag alias_ret = !con(Prefix, (ins Offset:$offset, format_op:$format,
+                                    CPol_0:$cpol, 0));
 }
 
 class getMTBUFIns<int addrKind, list<RegisterOperand> vdataList=[], bit hasRestrictedSOffset, DAGOperand RsrcRC = SReg_128_XNULL> {
-  dag ret =
-    !if(!eq(addrKind, BUFAddrKind.Offset), getMTBUFInsDA<vdataList, [], hasRestrictedSOffset, RsrcRC>.ret,
-    !if(!eq(addrKind, BUFAddrKind.OffEn),  getMTBUFInsDA<vdataList, [VGPROp_32], hasRestrictedSOffset, RsrcRC>.ret,
-    !if(!eq(addrKind, BUFAddrKind.IdxEn),  getMTBUFInsDA<vdataList, [VGPROp_32], hasRestrictedSOffset, RsrcRC>.ret,
-    !if(!eq(addrKind, BUFAddrKind.BothEn), getMTBUFInsDA<vdataList, [VGPROp_64], hasRestrictedSOffset, RsrcRC>.ret,
-    !if(!eq(addrKind, BUFAddrKind.Addr64), getMTBUFInsDA<vdataList, [VGPROp_64], hasRestrictedSOffset, RsrcRC>.ret,
-    (ins))))));
+  defvar vaddrList =
+    !cond(!eq(addrKind, BUFAddrKind.Offset) : []<RegisterOperand>,
+          !eq(addrKind, BUFAddrKind.OffEn)  : [VGPROp_32],
+          !eq(addrKind, BUFAddrKind.IdxEn)  : [VGPROp_32],
+          !eq(addrKind, BUFAddrKind.BothEn) : [VGPROp_64],
+          !eq(addrKind, BUFAddrKind.Addr64) : [VGPROp_64]);
+  defvar ins = getMTBUFInsDA<vdataList, vaddrList, hasRestrictedSOffset, RsrcRC>;
+  dag ret = ins.ret;
+  dag alias_ret = ins.alias_ret;
 }
 
 class getMTBUFAsmOps<int addrKind> {
   string Pfx =
-    !if(!eq(addrKind, BUFAddrKind.Offset), "off, $srsrc,$format $soffset",
+    !if(!eq(addrKind, BUFAddrKind.Offset), "off, $srsrc, $soffset$format",
     !if(!eq(addrKind, BUFAddrKind.OffEn),
-            "$vaddr, $srsrc,$format $soffset offen",
+            "$vaddr, $srsrc, $soffset$format offen",
     !if(!eq(addrKind, BUFAddrKind.IdxEn),
-            "$vaddr, $srsrc,$format $soffset idxen",
+            "$vaddr, $srsrc, $soffset$format idxen",
     !if(!eq(addrKind, BUFAddrKind.BothEn),
-            "$vaddr, $srsrc,$format $soffset idxen offen",
+            "$vaddr, $srsrc, $soffset$format idxen offen",
     !if(!eq(addrKind, BUFAddrKind.Addr64),
-            "$vaddr, $srsrc,$format $soffset addr64",
+            "$vaddr, $srsrc, $soffset$format addr64",
     "")))));
   string ret = " $vdata, " # Pfx # "$offset$cpol";
 }
@@ -229,6 +244,8 @@ class MTBUF_Load_Pseudo <string opName,
                  getMTBUFAsmOps<addrKind>.ret,
                  pattern>,
     MTBUF_SetupAddr<addrKind> {
+  let AliasInOperandList =
+    getMTBUFIns<addrKind, [], hasRestrictedSOffset, RsrcRC>.alias_ret;
   let isIndexed = !ne(RsrcRC, SReg_128_XNULL);
   defvar suffix = !if(isIndexed, "_indexed", "");
   let PseudoInstr = opName # suffix # "_" # getAddrName<addrKind>.ret;
@@ -278,6 +295,8 @@ class MTBUF_Store_Pseudo <string opName,
                  getMTBUFAsmOps<addrKind>.ret,
                  pattern>,
     MTBUF_SetupAddr<addrKind> {
+  let AliasInOperandList =
+    getMTBUFIns<addrKind, [vdataClass], hasRestrictedSOffset, RsrcRC>.alias_ret;
   let isIndexed = !ne(RsrcRC, SReg_128_XNULL);
   defvar suffix = !if(isIndexed, "_indexed", "");
   let PseudoInstr = opName # suffix # "_" # getAddrName<addrKind>.ret;
@@ -2717,6 +2736,7 @@ multiclass VBUFFER_MTBUF_Real_gfx12<bits<4> op, string real_name> {
     bits<7> format;
     let Inst{61-55} = format;
   }
+  def : MTBUF_LegacyFormatAlias<ps, !cast<Instruction>(NAME # "_gfx12")>;
 }
 
 class VBUFFER_Real_gfx13<bits<8> op, BUF_Pseudo ps, string real_name, bit isIndexed = 0> :
@@ -2743,6 +2763,7 @@ multiclass VBUFFER_MTBUF_Real_gfx13<bits<8> op, string real_name, bit isIndexed 
     bits<7> format;
     let Inst{61-55} = format;
   }
+  def : MTBUF_LegacyFormatAlias<ps, !cast<Instruction>(NAME # "_gfx13")>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -3240,6 +3261,7 @@ multiclass MTBUF_Real_gfx11<bits<4> op, string real_name> {
     let AssemblerPredicate = isGFX11Only;
     let DecoderNamespace = "GFX11";
   }
+  def : MTBUF_LegacyFormatAlias<ps, !cast<Instruction>(NAME # "_gfx11")>;
 }
 
 class Base_MTBUF_Real_gfx6_gfx7_gfx10<bits<3> op, MTBUF_Pseudo ps, int ef> :
@@ -3344,6 +3366,7 @@ multiclass MTBUF_Real_gfx10<bits<4> op> {
     let AssemblerPredicate = isGFX10Only;
     let DecoderNamespace = "GFX10";
   }
+  def : MTBUF_LegacyFormatAlias<ps, !cast<Instruction>(NAME # "_gfx10")>;
 }
 
 multiclass MTBUF_Real_AllAddr_gfx10<bits<4> op> {
@@ -3375,6 +3398,7 @@ multiclass MTBUF_Real_gfx6_gfx7<bits<4> op> {
     let AssemblerPredicate = isGFX6GFX7;
     let DecoderNamespace = "GFX6GFX7";
   }
+  def : MTBUF_LegacyFormatAlias<ps, !cast<Instruction>(NAME # "_gfx6_gfx7")>;
 }
 
 multiclass MTBUF_Real_AllAddr_gfx6_gfx7<bits<4> op> {
@@ -3710,7 +3734,9 @@ class MTBUF_Real_gfx90a <bits<4> op, MTBUF_Pseudo ps> :
 multiclass MTBUF_Real_vi_gfx90a<bits<4> op> {
   defvar ps = !cast<MTBUF_Pseudo>(NAME);
   def _vi :     MTBUF_Real_vi<op, ps>;
+  def : MTBUF_LegacyFormatAlias<ps, !cast<Instruction>(NAME # "_vi")>;
   def _gfx90a : MTBUF_Real_gfx90a<op, ps>;
+  def : MTBUF_LegacyFormatAlias<ps, !cast<Instruction>(NAME # "_gfx90a")>;
 }
 
 multiclass MTBUF_Real_AllAddr_vi<bits<4> op> {
@@ -3743,6 +3769,7 @@ multiclass MTBUF_Real_gfx80 <bits<4> op> {
     let Inst{55}    = ps.tfe;
     let Inst{63-56} = !if(ps.has_soffset, soffset, ?);
   }
+  def : MTBUF_LegacyFormatAlias<ps, !cast<Instruction>(NAME # "_gfx80")>;
 }
 
 multiclass MTBUF_Real_AllAddr_gfx80<bits<4> op> {

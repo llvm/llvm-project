@@ -10,3 +10,8 @@ struct S {
     ^{ (void)x; (void)y; };
   }
 };
+
+struct T {
+  int x;
+  int n() { return ^{ return x; }(); }
+};

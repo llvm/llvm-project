@@ -342,6 +342,8 @@ module AtomicRMWBinOp : sig
   | USub_Sat
   | FMaximum
   | FMinimum
+  | FMaximumNum
+  | FMinimumNum
 end
 
 (** The kind of an [llvalue], the result of [classify_value v].

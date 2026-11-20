@@ -11,7 +11,6 @@ define void @f(i64 %n) #0 {
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    addi sp, sp, -16
 ; RV64-NEXT:    .cfi_def_cfa_offset 16
-; RV64-NEXT:    sd zero, 0(sp)
 ; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    .cfi_offset ra, -8

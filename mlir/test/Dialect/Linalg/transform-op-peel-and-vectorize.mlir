@@ -47,7 +47,7 @@ func.func @matmul(%A: tensor<1024x512xf32>,
 // CHECK:           %[[MUL:.*]] = arith.mulf %{{.*}}, %[[RHS]] : vector<8x[16]x1xf32>
 // CHECK:           %[[MASK_3:.*]] = vector.create_mask {{.*}} : vector<8x[16]xi1>
 // CHECK:           vector.shape_cast %[[MUL]] : vector<8x[16]x1xf32> to vector<8x[16]xf32>
-// CHECK:           arith.addf %[[LHS]], %{{.*}} : vector<8x[16]xf32>
+// CHECK:           arith.addf %{{.*}}, %[[LHS]] : vector<8x[16]xf32>
 // CHECK:           arith.select %[[MASK_3]], {{.*}} : vector<8x[16]xi1>, vector<8x[16]xf32>
 // CHECK:           vector.mask %[[MASK_2]] { vector.transfer_write {{.*}} } : vector<8x[16]xi1> -> tensor<8x?xf32>
 // CHECK:           scf.yield %inserted_slice : tensor<1024x2000xf32>
