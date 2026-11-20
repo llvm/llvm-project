@@ -91,13 +91,26 @@ multiclass ACE_TILEMOVE<bits<8> OpcImm, bits<8> OpcReg, string Opstr,
   }
 
   let isPseudo = true, hasNoSchedulingInfo = 1, usesCustomInserter = 1,
-      Constraints = "$src0 = $dst" in
-  def "P"#NAME#"treV"
-      : PseudoI<(outs TILE:$dst),
-                (ins GR16:$row, GR16:$col, TILE:$src0, VR512:$src, GR32:$idx),
-                [(set TILE:$dst,
-                  (!cast<Intrinsic>("int_x86_acev1_"#IntName#"_internal")
-                   GR16:$row, GR16:$col, TILE:$src0, VR512:$src, GR32:$idx))]>;
+      Constraints = "$src0 = $dst" in {
+    // One intrinsic covers both index forms, as for the row reads.
+    def "P"#NAME#"triV"
+        : PseudoI<(outs TILE:$dst),
+                  (ins GR16:$row, GR16:$col, TILE:$src0, VR512:$src,
+                       i32u8imm:$idx),
+                  [(set TILE:$dst,
+                    (!cast<Intrinsic>("int_x86_acev1_"#IntName#"_internal")
+                     GR16:$row, GR16:$col, TILE:$src0, VR512:$src,
+                     imm:$idx))]>;
+
+    def "P"#NAME#"treV"
+        : PseudoI<(outs TILE:$dst),
+                  (ins GR16:$row, GR16:$col, TILE:$src0, VR512:$src,
+                       GR32:$idx),
+                  [(set TILE:$dst,
+                    (!cast<Intrinsic>("int_x86_acev1_"#IntName#"_internal")
+                     GR16:$row, GR16:$col, TILE:$src0, VR512:$src,
+                     GR32:$idx))]>;
+  }
 }
 
 // Outer products accumulate into the destination tile, so $src1 is tied to it.
@@ -286,8 +299,14 @@ let isPseudo = true, hasNoSchedulingInfo = 1 in {
   let mayStore = 1 in
   def ACE_TILESPILL : PseudoI<(outs), (ins opaquemem:$dst, TILE:$src), []>;
 
-  let mayLoad = 1 in
-  def ACE_TILERELOAD : PseudoI<(outs TILE:$dst), (ins opaquemem:$src), []>;
+  let mayLoad = 1 in {
+    def ACE_TILERELOAD : PseudoI<(outs TILE:$dst), (ins opaquemem:$src), []>;
+
+    // Reload a PHI tile; the dead shape keeps this a tile def for the config.
+    def ACE_TILERELOADV : PseudoI<(outs TILE:$dst),
+                                  (ins GR16:$src1, GR16:$src2,
+                                       opaquemem:$src3), []>;
+  }
 }
 
 } // end HasACEV1, In64BitMode

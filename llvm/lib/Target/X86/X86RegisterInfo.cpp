@@ -1164,6 +1164,8 @@ static ShapeT getTileShape(Register VirtReg, VirtRegMap *VRM,
   case X86::PTOP4MXHBF8PStrriV:
   case X86::PTOP4MXBF8PStrriV:
   case X86::PTOP4MXBSSPStrriV:
+  case X86::PTILEMOVCOLtriV:
+  case X86::PTILEMOVROWtriV:
   case X86::PTILEMOVCOLtreV:
   case X86::PTILEMOVROWtreV: {
     MachineOperand &MO1 = MI->getOperand(1);

@@ -465,7 +465,8 @@ void X86FastPreTileConfigImpl::convertPHI(MachineBasicBlock *MBB,
         // The PHI node is coverted to tileload instruction. Get the stack
         // address from tileload operands.
         MachineInstr *TileLoad = MRI->getVRegDef(InTileReg);
-        assert(TileLoad && TileLoad->getOpcode() == X86::PTILELOADDV);
+        assert(TileLoad && (TileLoad->getOpcode() == X86::PTILELOADDV ||
+                            TileLoad->getOpcode() == X86::ACE_TILERELOADV));
         Register InRowReg = TileLoad->getOperand(1).getReg();
         Register InColReg = TileLoad->getOperand(2).getReg();
         Register InStackAddrReg = TileLoad->getOperand(3).getReg();
@@ -497,17 +498,27 @@ void X86FastPreTileConfigImpl::convertPHI(MachineBasicBlock *MBB,
   }
 
   MachineBasicBlock::iterator InsertPos = MBB->getFirstNonPHI();
-  Register StrideReg = MRI->createVirtualRegister(&X86::GR64_NOSPRegClass);
-  BuildMI(*MBB, InsertPos, DebugLoc(), TII->get(X86::MOV64ri), StrideReg)
-      .addImm(64);
   Register TileReg = PHI.getOperand(0).getReg();
-  MachineInstr *NewMI = addDirectMem(
-      BuildMI(*MBB, InsertPos, DebugLoc(), TII->get(X86::PTILELOADDV), TileReg)
-          .addReg(RowReg)
-          .addReg(ColReg),
-      StackAddrReg);
-  MachineOperand &MO = NewMI->getOperand(5);
-  MO.setReg(StrideReg);
+  if (X86FI->getACEProgModel() == ACEProgModelEnum::ACE_ManagedRA) {
+    // Palette 2 has no TILELOADD, so leave the row moves to X86LowerTileCopy.
+    addDirectMem(BuildMI(*MBB, InsertPos, DebugLoc(),
+                         TII->get(X86::ACE_TILERELOADV), TileReg)
+                     .addReg(RowReg)
+                     .addReg(ColReg),
+                 StackAddrReg);
+  } else {
+    Register StrideReg = MRI->createVirtualRegister(&X86::GR64_NOSPRegClass);
+    BuildMI(*MBB, InsertPos, DebugLoc(), TII->get(X86::MOV64ri), StrideReg)
+        .addImm(64);
+    MachineInstr *NewMI =
+        addDirectMem(BuildMI(*MBB, InsertPos, DebugLoc(),
+                             TII->get(X86::PTILELOADDV), TileReg)
+                         .addReg(RowReg)
+                         .addReg(ColReg),
+                     StackAddrReg);
+    MachineOperand &MO = NewMI->getOperand(5);
+    MO.setReg(StrideReg);
+  }
   PHI.eraseFromParent();
   VisitedPHIs.erase(&PHI);
 }
@@ -598,6 +609,9 @@ bool X86FastPreTileConfigImpl::configBasicBlock(MachineBasicBlock &MBB) {
   MachineInstr *LastShapeMI = nullptr;
   MachineInstr *LastTileCfg = nullptr;
   bool HasUnconfigTile = false;
+  // ldtilecfg resets the BSR, so palette 2 configures at the head of the block.
+  bool IsACEManaged =
+      X86FI->getACEProgModel() == ACEProgModelEnum::ACE_ManagedRA;
 
   auto Config = [&](MachineInstr &Before) {
     if (CfgSS == -1)
@@ -703,17 +717,19 @@ bool X86FastPreTileConfigImpl::configBasicBlock(MachineBasicBlock &MBB) {
     MachineInstr *ColMI = MRI->getVRegDef(ColMO->getReg());
     // If the shape is defined in current MBB, check the domination.
     // FIXME how about loop?
-    if (RowMI->getParent() == &MBB) {
-      if (!LastShapeMI)
-        LastShapeMI = RowMI;
-      else if (dominates(MBB, LastShapeMI, RowMI))
-        LastShapeMI = RowMI;
-    }
-    if (ColMI->getParent() == &MBB) {
-      if (!LastShapeMI)
-        LastShapeMI = ColMI;
-      else if (dominates(MBB, LastShapeMI, ColMI))
-        LastShapeMI = ColMI;
+    if (!IsACEManaged) {
+      if (RowMI->getParent() == &MBB) {
+        if (!LastShapeMI)
+          LastShapeMI = RowMI;
+        else if (dominates(MBB, LastShapeMI, RowMI))
+          LastShapeMI = RowMI;
+      }
+      if (ColMI->getParent() == &MBB) {
+        if (!LastShapeMI)
+          LastShapeMI = ColMI;
+        else if (dominates(MBB, LastShapeMI, ColMI))
+          LastShapeMI = ColMI;
+      }
     }
 
     // If there is user live out of the tilecfg, spill it and reload in

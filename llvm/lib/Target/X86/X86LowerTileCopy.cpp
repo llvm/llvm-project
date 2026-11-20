@@ -21,6 +21,7 @@
 #include "X86InstrInfo.h"
 #include "X86MachineFunctionInfo.h"
 #include "X86Subtarget.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -62,17 +63,32 @@ static void emitACETileSpill(MachineBasicBlock &MBB,
   }
 }
 
-/// Emit the ACE tile reload sequence, loading \p DstReg from \p TileSS.
-static void emitACETileReload(MachineBasicBlock &MBB,
-                              MachineBasicBlock::iterator MI,
-                              const X86InstrInfo *TII, Register DstReg,
-                              int TileSS, Register ScratchZMM) {
+/// Add tile row \p Row's address to \p MIB from \p MI's operands at \p MemIdx.
+static void addACETileRowAddr(MachineInstrBuilder &MIB, MachineInstr &MI,
+                              unsigned MemIdx, unsigned Row) {
+  for (unsigned I = 0; I != X86::AddrNumOperands; ++I) {
+    // Every row reads the address, so none of them may kill it.
+    MachineOperand MO = MI.getOperand(MemIdx + I);
+    if (MO.isReg())
+      MO.setIsKill(false);
+    if (I == X86::AddrDisp)
+      MIB.addImm(MO.getImm() + Row * ACETileRowSize);
+    else
+      MIB.add(MO);
+  }
+}
+
+/// Reload \p DstReg through \p ScratchZMM, a row at a time from \p AddRowAddr.
+static void emitACETileReload(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
+    const X86InstrInfo *TII, Register DstReg, Register ScratchZMM,
+    function_ref<void(MachineInstrBuilder &, unsigned)> AddRowAddr) {
   const DebugLoc &DL = MI->getDebugLoc();
   for (unsigned Row = 0; Row < ACENumTileRows; ++Row) {
-    // vmovups row*64(%sp), %zmm
+    // vmovups row*64(%addr), %zmm
     MachineInstrBuilder MIB =
         BuildMI(MBB, MI, DL, TII->get(X86::VMOVUPSZrm), ScratchZMM);
-    addFrameReference(MIB, TileSS, Row * ACETileRowSize);
+    AddRowAddr(MIB, Row);
 
     // tilemovrow $row, %zmm, %tmm
     // Each write merges into the tile; row 0 has nothing to merge with.
@@ -156,15 +172,19 @@ static bool lowerTileCopy(MachineFunction &MF) {
       // allocator. getLoadStoreRegOpcode is the only place these are created,
       // and it only does so for palette 2 tiles.
       unsigned Opcode = MI.getOpcode();
-      if (Opcode == X86::ACE_TILESPILL || Opcode == X86::ACE_TILERELOAD) {
+      if (Opcode == X86::ACE_TILESPILL || Opcode == X86::ACE_TILERELOAD ||
+          Opcode == X86::ACE_TILERELOADV) {
         assert(FuncInfo->getACEProgModel() == ACEProgModelEnum::ACE_ManagedRA &&
                "ACE tile spill pseudo outside an ACE function");
         bool IsSpill = Opcode == X86::ACE_TILESPILL;
-        // ACE_TILESPILL is (mem, tile), ACE_TILERELOAD is (tile, mem).
+        // Spill is (mem, tile); reloads (tile, [row, col,] mem).
         MachineOperand &TileMO =
             MI.getOperand(IsSpill ? X86::AddrNumOperands : 0);
-        int TileSS =
-            MI.getOperand((IsSpill ? 0 : 1) + X86::AddrBaseReg).getIndex();
+        unsigned MemIdx = 0;
+        if (Opcode == X86::ACE_TILERELOAD)
+          MemIdx = 1;
+        else if (Opcode == X86::ACE_TILERELOADV)
+          MemIdx = 3;
         const DebugLoc &DL = MI.getDebugLoc();
 
         Register ScratchZMM = findScratchZMM(MF, TRI, UsedRegs);
@@ -180,9 +200,13 @@ static bool lowerTileCopy(MachineFunction &MF) {
 
         if (IsSpill)
           emitACETileSpill(MBB, MI, TII, TileMO.getReg(), TileMO.isKill(),
-                           TileSS, ScratchZMM);
+                           MI.getOperand(MemIdx + X86::AddrBaseReg).getIndex(),
+                           ScratchZMM);
         else
-          emitACETileReload(MBB, MI, TII, TileMO.getReg(), TileSS, ScratchZMM);
+          emitACETileReload(MBB, MI, TII, TileMO.getReg(), ScratchZMM,
+                            [&](MachineInstrBuilder &MIB, unsigned Row) {
+                              addACETileRowAddr(MIB, MI, MemIdx, Row);
+                            });
 
         if (ZmmSS != -1)
           addFrameReference(
@@ -226,7 +250,11 @@ static bool lowerTileCopy(MachineFunction &MF) {
 
         emitACETileSpill(MBB, MI, TII, SrcReg, SrcMO.isKill(), TileSS,
                          ScratchZMM);
-        emitACETileReload(MBB, MI, TII, DstReg, TileSS, ScratchZMM);
+        emitACETileReload(MBB, MI, TII, DstReg, ScratchZMM,
+                          [&](MachineInstrBuilder &MIB, unsigned Row) {
+                            addFrameReference(MIB, TileSS,
+                                              Row * ACETileRowSize);
+                          });
 
         if (ZmmSS != -1)
           addFrameReference(

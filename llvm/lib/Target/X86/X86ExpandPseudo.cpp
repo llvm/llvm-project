@@ -805,13 +805,30 @@ bool X86ExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
     MI.tieOperands(0, 1);
     return true;
   }
+  case X86::PTILEMOVCOLtriV:
+  case X86::PTILEMOVROWtriV:
   case X86::PTILEMOVCOLtreV:
   case X86::PTILEMOVROWtreV: {
     MI.untieRegOperand(3);
     for (unsigned i = 2; i > 0; --i)
       MI.removeOperand(i);
-    unsigned Opc = (Opcode == X86::PTILEMOVCOLtreV) ? X86::TILEMOVCOLtre
-                                                    : X86::TILEMOVROWtre;
+    unsigned Opc;
+    switch (Opcode) {
+    default:
+      llvm_unreachable("Unexpected ACE tile move opcode");
+    case X86::PTILEMOVCOLtriV:
+      Opc = X86::TILEMOVCOLtri;
+      break;
+    case X86::PTILEMOVROWtriV:
+      Opc = X86::TILEMOVROWtri;
+      break;
+    case X86::PTILEMOVCOLtreV:
+      Opc = X86::TILEMOVCOLtre;
+      break;
+    case X86::PTILEMOVROWtreV:
+      Opc = X86::TILEMOVROWtre;
+      break;
+    }
     MI.setDesc(TII->get(Opc));
     MI.tieOperands(0, 1);
     return true;
