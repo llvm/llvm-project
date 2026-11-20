@@ -375,8 +375,7 @@ define <2 x i8> @lshr_xor_vec_splat(<2 x i8> %x) {
 define <2 x i8> @lshr_xor_vec_splat_poison(<2 x i8> %x) {
 ; CHECK-LABEL: @lshr_xor_vec_splat_poison(
 ; CHECK-NEXT:    [[M:%.*]] = and <2 x i8> [[X:%.*]], <i8 2, i8 3>
-; CHECK-NEXT:    [[S:%.*]] = xor <2 x i8> [[M]], splat (i8 3)
-; CHECK-NEXT:    [[R:%.*]] = lshr exact <2 x i8> <i8 poison, i8 16>, [[S]]
+; CHECK-NEXT:    [[R:%.*]] = shl nuw nsw <2 x i8> splat (i8 2), [[M]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %m = and <2 x i8> <i8 2, i8 3>, %x
