@@ -221,6 +221,68 @@ TEST(BitstreamReaderTest, readAbbrevWithManyOperands) {
   }
 }
 
+TEST(BitstreamReaderTest, deeplyNestedBlocks) {
+  // Nest more blocks than the cursor's block scope stores inline and check
+  // that leaving each block restores the parent's abbreviation width and
+  // abbreviations, also in a copy of the cursor.
+  const unsigned Depth = 6;
+  SmallVector<char, 1> Buffer;
+  {
+    BitstreamWriter Stream(Buffer);
+    SmallVector<unsigned, Depth> AbbrevIDs;
+    for (unsigned I = 0; I != Depth; ++I) {
+      Stream.EnterSubblock(bitc::FIRST_APPLICATION_BLOCKID + I, 3 + I);
+      auto Abbrev = std::make_shared<BitCodeAbbrev>();
+      Abbrev->Add(BitCodeAbbrevOp(I + 1));
+      Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 8));
+      AbbrevIDs.push_back(Stream.EmitAbbrev(std::move(Abbrev)));
+      unsigned Record[] = {I + 1, I};
+      Stream.EmitRecordWithAbbrev(AbbrevIDs.back(), Record);
+    }
+    for (unsigned I = Depth; I-- != 0;) {
+      unsigned Record[] = {I + 1, 100 + I};
+      Stream.EmitRecordWithAbbrev(AbbrevIDs[I], Record);
+      Stream.ExitBlock();
+    }
+  }
+
+  BitstreamCursor Cursor(
+      ArrayRef<uint8_t>((const uint8_t *)Buffer.begin(), Buffer.size()));
+  auto ExpectRecord = [](BitstreamCursor &Cursor, unsigned Code,
+                         uint64_t Value) {
+    Expected<BitstreamEntry> MaybeEntry = Cursor.advance();
+    ASSERT_TRUE((bool)MaybeEntry);
+    ASSERT_EQ(BitstreamEntry::Record, MaybeEntry->Kind);
+    SmallVector<uint64_t, 1> Record;
+    Expected<unsigned> MaybeCode = Cursor.readRecord(MaybeEntry->ID, Record);
+    ASSERT_TRUE((bool)MaybeCode);
+    EXPECT_EQ(Code, *MaybeCode);
+    EXPECT_EQ(ArrayRef<uint64_t>(Value), ArrayRef(Record));
+  };
+  for (unsigned I = 0; I != Depth; ++I) {
+    Expected<BitstreamEntry> MaybeEntry = Cursor.advance();
+    ASSERT_TRUE((bool)MaybeEntry);
+    ASSERT_EQ(BitstreamEntry::SubBlock, MaybeEntry->Kind);
+    ASSERT_EQ(bitc::FIRST_APPLICATION_BLOCKID + I, MaybeEntry->ID);
+    ASSERT_FALSE(Cursor.EnterSubBlock(MaybeEntry->ID));
+    EXPECT_EQ(3 + I, Cursor.getAbbrevIDWidth());
+    ExpectRecord(Cursor, I + 1, I);
+  }
+
+  BitstreamCursor Copy = Cursor;
+  for (BitstreamCursor *C : {&Cursor, &Copy}) {
+    for (unsigned I = Depth; I-- != 0;) {
+      EXPECT_EQ(3 + I, C->getAbbrevIDWidth());
+      ExpectRecord(*C, I + 1, 100 + I);
+      Expected<BitstreamEntry> MaybeEntry = C->advance();
+      ASSERT_TRUE((bool)MaybeEntry);
+      ASSERT_EQ(BitstreamEntry::EndBlock, MaybeEntry->Kind);
+    }
+    EXPECT_EQ(2u, C->getAbbrevIDWidth());
+    EXPECT_TRUE(C->AtEndOfStream());
+  }
+}
+
 TEST(BitstreamReaderTest, shortRead) {
   uint8_t Bytes[] = {8, 7, 6, 5, 4, 3, 2, 1};
   for (unsigned I = 1; I != 8; ++I) {
