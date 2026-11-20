@@ -1,0 +1,12 @@
+{
+  "sources": [
+    {
+      "type": "tar",
+      "archive_url": "https://crates.io/api/v1/crates/syn/2.0.23/download"
+    }
+  ],
+  "folder_name": "syn",
+  "build_system": "cargo",
+  "license": "MIT",
+  "license_source": "manual"
+}

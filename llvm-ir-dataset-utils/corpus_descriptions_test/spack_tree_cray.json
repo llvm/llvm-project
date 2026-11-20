@@ -1,0 +1,10 @@
+{
+  "sources": [],
+  "folder_name": "tree",
+  "build_system": "spack",
+  "package_name": "tree",
+  "package_spec": "tree@2.1.0%clang@18.0.0 cflags=\"-Xclang -fembed-bitcode=all\" cxxflags=\"-Xclang -fembed-bitcode=all\" build_system=generic arch=cray-ubuntu22.04-x86_64",
+  "package_hash": "27m7lbcwl23ud62oadfzbfu4enpqergm",
+  "license": "GPL-2.0-or-later",
+  "license_source": "manual"
+}

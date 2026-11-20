@@ -1,0 +1,14 @@
+{
+  "sources": [
+    {
+      "type": "git",
+      "repo_url": "https://github.com/dirtyhenry/swift-blocks",
+      "commit_sha": null
+    }
+  ],
+  "folder_name": "swift-blocks",
+  "build_system": "swift",
+  "package_name": "swift-blocks",
+  "license": "MIT",
+  "license_source": "manual"
+}
