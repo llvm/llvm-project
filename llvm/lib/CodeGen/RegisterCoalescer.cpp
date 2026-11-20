@@ -948,15 +948,6 @@ RegisterCoalescer::removeCopyByCommutingDef(const CoalescerPair &CP,
     MBB->erase(DefMI);
   }
 
-  // If ALR and BLR overlaps and end of BLR extends beyond end of ALR, e.g.
-  // A = or A, B
-  // ...
-  // B = A
-  // ...
-  // C = killed A
-  // ...
-  //   = B
-
   // Update uses of IntA of the specific Val# with IntB.
   for (MachineOperand &UseMO :
        llvm::make_early_inc_range(MRI->use_operands(IntA.reg()))) {
