@@ -579,7 +579,7 @@ TEST(CallDescription, MatchBuiltins) {
   }
   {
     SCOPED_TRACE("predefined lib builtins do not fuzzy match other lib names");
-    EXPECT_TRUE(tooling::runToolOnCode(
+    EXPECT_TRUE(tooling::runToolOnCodeWithArgs(
         std::unique_ptr<FrontendAction>(new CallDescriptionAction<>(
             {{{CDM::CLibrary, {"bzero"}, 2}, false},
              {{CDM::CLibrary, {"explicit_bzero"}, 2}, true}})),
@@ -587,7 +587,8 @@ TEST(CallDescription, MatchBuiltins) {
           extern "C" void explicit_bzero(void *, size_t);
           void test(void *p) {
             explicit_bzero(p, 4);
-          })"));
+          })",
+        {"-std=gnu++17"}));
     EXPECT_TRUE(tooling::runToolOnCode(
         std::unique_ptr<FrontendAction>(new CallDescriptionAction<>(
             {{{CDM::CLibrary, {"memset"}, 3}, false},
@@ -597,6 +598,15 @@ TEST(CallDescription, MatchBuiltins) {
           void test(void *p) {
             memset_explicit(p, 0, 4);
           })"));
+    EXPECT_TRUE(tooling::runToolOnCodeWithArgs(
+        std::unique_ptr<FrontendAction>(new CallDescriptionAction<>(
+            {{{CDM::CLibrary, {"read"}, 1}, false},
+             {{CDM::CLibrary, {"objc_read_weak"}, 1}, true}})),
+        R"(extern "C" id objc_read_weak(id *);
+          void test(id *p) {
+            objc_read_weak(p);
+          })",
+        {"-x", "objective-c++"}));
   }
   {
     SCOPED_TRACE("compiler-prefixed inline builtin still fuzzy matches");

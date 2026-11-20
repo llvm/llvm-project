@@ -1615,6 +1615,11 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   calls with 2 arguments as a locking call. This fixes false negatives.
   (#GH237154)
 
+- Fixed an issue where predefined library builtins containing `_` (such as
+  `objc_read_weak`) could falsely match unrelated C library function names
+  (such as `read`) via fuzzy builtin matching, and added explicit
+  `CStringChecker` modeling for C23 `memset_explicit`.
+
 % comment:
 % This is for the Static Analyzer.
 % Use `####` headings for subsections:

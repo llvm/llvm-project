@@ -62,8 +62,7 @@ bool CheckerContext::isCLibraryFunction(const FunctionDecl *FD,
       return true;
     // Only perform fuzzy name matching for non-library builtins (e.g.
     // __builtin_memcpy, __builtin_memcpy_inline), not for distinct predefined
-    // library functions (e.g. explicit_bzero vs bzero, memset_explicit vs
-    // memset).
+    // library functions (e.g. objc_read_weak vs read, getlogin_r vs getlogin).
     if (!BuiltinInfo.isPredefinedLibFunction(BId)) {
       size_t start = BName.find(Name);
       if (start != StringRef::npos) {
