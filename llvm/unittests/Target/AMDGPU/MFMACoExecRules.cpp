@@ -40,7 +40,7 @@ TEST_F(AMDGPUMFMACoExecRules, GFX950) {
   const MCInstrInfo *MCII = TM->getMCInstrInfo();
 
   for (unsigned Op = 0; Op < MCII->getNumOpcodes(); ++Op) {
-    if (!ST->getInstrInfo()->isMFMAorWMMA(Op))
+    if (!ST->getInstrInfo()->isMFMAorWMMA(Op) || !MCII->get(Op).isPseudo())
       continue;
 
     // Filter out pre-gfx950 MFMA instructions
@@ -54,5 +54,25 @@ TEST_F(AMDGPUMFMACoExecRules, GFX950) {
     // every slot, so here we check that we did not encounter the fallback
     // definition of co-exec rules.
     EXPECT_EQ(Info.Slots[0].Mask, CoExecMask::None) << MCII->getName(Op);
+  }
+}
+
+TEST_F(AMDGPUMFMACoExecRules, AllMFMAsHaveVariant) {
+  for (StringRef CPU : {"gfx942", "gfx950"}) {
+    std::unique_ptr<GCNTargetMachine> TM =
+        createAMDGPUTargetMachine(Triple("amdgpu-amd-amdhsa"), CPU, "");
+    auto ST = std::make_unique<GCNSubtarget>(TM->getTargetTriple(),
+                                             TM->getTargetCPU(),
+                                             TM->getTargetFeatureString(), *TM);
+    const MCInstrInfo *MCII = TM->getMCInstrInfo();
+
+    for (unsigned Op = 0; Op < MCII->getNumOpcodes(); ++Op) {
+      if (!ST->getInstrInfo()->isMFMA(Op) || !MCII->get(Op).isPseudo() ||
+          !AMDGPU_MC::isOpcodeAvailable(Op, ST->getFeatureBits()))
+        continue;
+      const MAIInstInfo *Info = getMAIInstInfoHelper(Op);
+      EXPECT_TRUE(Info && Info->Variant != MFMAVariant::Unknown)
+          << CPU.str() << ": " << MCII->getName(Op).str();
+    }
   }
 }

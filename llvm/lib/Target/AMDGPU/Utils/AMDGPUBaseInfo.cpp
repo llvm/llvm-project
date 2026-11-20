@@ -590,12 +590,38 @@ bool isVOPCAsmOnly(unsigned Opc) { return isVOPCAsmOnlyOpcodeHelper(Opc); }
 
 bool getMAIIsDGEMM(unsigned Opc) {
   const MAIInstInfo *Info = getMAIInstInfoHelper(Opc);
-  return Info && Info->is_dgemm;
+  return Info && (Info->Variant == MFMAVariant::DGEMM_4Pass ||
+                  Info->Variant == MFMAVariant::DGEMM_16x16x4);
 }
 
 bool getMAIIsGFX940XDL(unsigned Opc) {
   const MAIInstInfo *Info = getMAIInstInfoHelper(Opc);
-  return Info && Info->is_gfx940_xdl;
+  if (!Info)
+    return false;
+
+  switch (Info->Variant) {
+  case MFMAVariant::Unknown:
+  case MFMAVariant::SGEMM_2Pass:
+  case MFMAVariant::SGEMM_8Pass:
+  case MFMAVariant::SGEMM_16Pass:
+  case MFMAVariant::DGEMM_4Pass:
+  case MFMAVariant::DGEMM_16x16x4:
+    return false;
+  case MFMAVariant::XDL_2Pass:
+  case MFMAVariant::XDL_4Pass:
+  case MFMAVariant::XDL_8Pass:
+  case MFMAVariant::XDL_16Pass:
+  case MFMAVariant::XDL2x_4Pass:
+  case MFMAVariant::XDL2x_8Pass:
+  case MFMAVariant::XDL2x_F8_8Pass:
+  case MFMAVariant::XDL2x_F8_16Pass:
+  case MFMAVariant::SMFMAC_4Pass:
+  case MFMAVariant::SMFMAC_8Pass:
+  case MFMAVariant::SMFMAC2x_4Pass:
+  case MFMAVariant::SMFMAC2x_8Pass:
+    return true;
+  }
+  llvm_unreachable("unknown MFMA variant");
 }
 
 bool getWMMAIsXDL(unsigned Opc) {

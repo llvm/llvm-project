@@ -106,10 +106,31 @@ struct GcnBufferFormatInfo {
   unsigned DataFormat;
 };
 
+/// Normalized MFMA or SMFMAC family, selects co-execution rules.
+enum class MFMAVariant {
+  Unknown = 0,
+  DGEMM_4Pass,
+  DGEMM_16x16x4, // 8 passes on gfx942, 16 on gfx950.
+  SGEMM_2Pass,
+  SGEMM_8Pass,
+  SGEMM_16Pass,
+  SMFMAC2x_4Pass,
+  SMFMAC2x_8Pass,
+  SMFMAC_4Pass,
+  SMFMAC_8Pass,
+  XDL2x_4Pass,
+  XDL2x_8Pass,
+  XDL2x_F8_8Pass,
+  XDL2x_F8_16Pass,
+  XDL_2Pass,
+  XDL_4Pass,
+  XDL_8Pass,
+  XDL_16Pass,
+};
+
 struct MAIInstInfo {
   uint32_t Opcode;
-  bool is_dgemm;
-  bool is_gfx940_xdl;
+  MFMAVariant Variant;
 };
 
 struct MFMA_F8F6F4_Info {
