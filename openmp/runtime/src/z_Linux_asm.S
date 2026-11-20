@@ -1216,47 +1216,22 @@ KMP_LABEL(kmp_invoke_pass_parms):	// put 1st - 6th parms to pkfn in registers.
 
 	movq	%r8, %r11	// p_argv -> %r11
 
-#if KMP_MIC
-	cmpq	$4, %rax	// argc >= 4?
-	jns	KMP_LABEL(kmp_4)	// jump to movq
-	jmp	KMP_LABEL(kmp_4_exit)	// jump ahead
-KMP_LABEL(kmp_4):
-	movq	24(%r11), %r9	// p_argv[3] -> %r9 (store 6th parm to pkfn)
-KMP_LABEL(kmp_4_exit):
-
-	cmpq	$3, %rax	// argc >= 3?
-	jns	KMP_LABEL(kmp_3)	// jump to movq
-	jmp	KMP_LABEL(kmp_3_exit)	// jump ahead
-KMP_LABEL(kmp_3):
-	movq	16(%r11), %r8	// p_argv[2] -> %r8 (store 5th parm to pkfn)
-KMP_LABEL(kmp_3_exit):
-
-	cmpq	$2, %rax	// argc >= 2?
-	jns	KMP_LABEL(kmp_2)	// jump to movq
-	jmp	KMP_LABEL(kmp_2_exit)	// jump ahead
-KMP_LABEL(kmp_2):
-	movq	8(%r11), %rcx	// p_argv[1] -> %rcx (store 4th parm to pkfn)
-KMP_LABEL(kmp_2_exit):
-
-	cmpq	$1, %rax	// argc >= 1?
-	jns	KMP_LABEL(kmp_1)	// jump to movq
-	jmp	KMP_LABEL(kmp_1_exit)	// jump ahead
-KMP_LABEL(kmp_1):
+	// Only load the p_argv entries that exist. A cmov with a memory
+	// operand always does the load, which could read past the end of
+	// p_argv.
 	movq	(%r11), %rdx	// p_argv[0] -> %rdx (store 3rd parm to pkfn)
-KMP_LABEL(kmp_1_exit):
-#else
-	cmpq	$4, %rax	// argc >= 4?
-	cmovnsq	24(%r11), %r9	// p_argv[3] -> %r9 (store 6th parm to pkfn)
-
-	cmpq	$3, %rax	// argc >= 3?
-	cmovnsq	16(%r11), %r8	// p_argv[2] -> %r8 (store 5th parm to pkfn)
 
 	cmpq	$2, %rax	// argc >= 2?
-	cmovnsq	8(%r11), %rcx	// p_argv[1] -> %rcx (store 4th parm to pkfn)
+	jl	KMP_LABEL(kmp_no_args)
+	movq	8(%r11), %rcx	// p_argv[1] -> %rcx (store 4th parm to pkfn)
 
-	cmpq	$1, %rax	// argc >= 1?
-	cmovnsq	(%r11), %rdx	// p_argv[0] -> %rdx (store 3rd parm to pkfn)
-#endif // KMP_MIC
+	cmpq	$3, %rax	// argc >= 3?
+	jl	KMP_LABEL(kmp_no_args)
+	movq	16(%r11), %r8	// p_argv[2] -> %r8 (store 5th parm to pkfn)
+
+	cmpq	$4, %rax	// argc >= 4?
+	jl	KMP_LABEL(kmp_no_args)
+	movq	24(%r11), %r9	// p_argv[3] -> %r9 (store 6th parm to pkfn)
 
 KMP_LABEL(kmp_no_args):
 	call	*%rbx		// call (*pkfn)();
