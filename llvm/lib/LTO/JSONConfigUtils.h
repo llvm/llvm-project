@@ -9,16 +9,26 @@
 #ifndef LLVM_LIB_LTO_JSONCONFIGUTILS_H
 #define LLVM_LIB_LTO_JSONCONFIGUTILS_H
 
-#include "BitcodeMetadataUtils.h"
+#include "llvm/ADT/FunctionExtras.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/Base64.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/MathExtras.h"
+
+#include <optional>
+#include <string>
+#include <vector>
 
 namespace llvm {
 class TargetOptions;
 }
 
 namespace llvm::lto::bitcodemeta {
+
+inline Error configError(const Twine &Msg) {
+  return make_error<StringError>(Msg.str(), inconvertibleErrorCode());
+}
 
 // Paths and profile buffers may contain bytes that are invalid UTF-8.
 inline json::Value encodeString(StringRef S) {
@@ -37,7 +47,7 @@ inline Expected<std::string> decodeString(const json::Value &V) {
         return std::move(E);
       return std::string(Bytes.begin(), Bytes.end());
     }
-  return metadataError("expected a string or base64-encoded bytes");
+  return configError("expected a string or base64-encoded bytes");
 }
 
 class JSONWriter {
@@ -66,7 +76,7 @@ struct JSONEntryApplier {
   Error applyI32(function_ref<void(int32_t)> Setter) {
     auto V = Entry.getAsInteger();
     if (!V || !isInt<32>(*V))
-      return metadataError(Key + ": expected a signed 32-bit integer");
+      return configError(Key + ": expected a signed 32-bit integer");
     Setter(*V);
     return Error::success();
   }
@@ -74,7 +84,7 @@ struct JSONEntryApplier {
   Error applyU32(function_ref<void(uint32_t)> Setter) {
     auto V = Entry.getAsUINT64();
     if (!V || !isUInt<32>(*V))
-      return metadataError(Key + ": expected an unsigned 32-bit integer");
+      return configError(Key + ": expected an unsigned 32-bit integer");
     Setter(*V);
     return Error::success();
   }
@@ -82,7 +92,7 @@ struct JSONEntryApplier {
   Error applyBool(function_ref<void(bool)> Setter) {
     auto V = Entry.getAsBoolean();
     if (!V)
-      return metadataError(Key + ": expected a boolean");
+      return configError(Key + ": expected a boolean");
     Setter(*V);
     return Error::success();
   }
@@ -98,7 +108,7 @@ struct JSONEntryApplier {
   Error applyStringList(function_ref<void(std::vector<std::string>)> Setter) {
     auto *Array = Entry.getAsArray();
     if (!Array)
-      return metadataError(Key + ": expected a string array");
+      return configError(Key + ": expected a string array");
     std::vector<std::string> Values;
     Values.reserve(Array->size());
     for (const auto &Element : *Array) {
@@ -117,9 +127,9 @@ Expected<T> decodeVersionedJSON(const json::Value &Value, unsigned Version,
                                 StringRef Kind, ApplyEntryFn ApplyEntry) {
   auto *Object = Value.getAsObject();
   if (!Object)
-    return metadataError(Kind + ": expected a JSON object");
+    return configError(Kind + ": expected a JSON object");
   if (Object->getInteger("Version") != Version)
-    return metadataError("unsupported " + Kind + " JSON version");
+    return configError("unsupported " + Kind + " JSON version");
   T Result{};
   for (const auto &[Key, Entry] : *Object)
     if (Key != "Version")

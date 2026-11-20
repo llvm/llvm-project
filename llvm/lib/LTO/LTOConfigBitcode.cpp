@@ -4,8 +4,7 @@
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-// Encodes serializable lto::Config fields as JSON text. Summary indexes store
-// the JSON as a blob. Readers also accept the previous module metadata format.
+// Encodes and decodes the lto::Config JSON blob in ThinLTO summary indexes.
 //
 //===----------------------------------------------------------------------===//
 
@@ -13,15 +12,8 @@
 
 #include "JSONConfigUtils.h"
 
-#include "llvm/Bitcode/BitcodeReader.h"
-#include "llvm/Bitcode/BitcodeWriter.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/Metadata.h"
-#include "llvm/LTO/TargetOptionsBitcode.h"
+#include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -31,36 +23,6 @@ using namespace llvm::lto::bitcodemeta;
 namespace {
 
 constexpr unsigned kVersion = 1;
-constexpr StringRef kEntryKind = "lto config entry";
-
-Error writeConfigBitcode(raw_ostream &Out, const Config &Config) {
-  LLVMContext Ctx;
-  Module M("llvm.lto.config", Ctx);
-  if (Error Err = encodeLTOConfigToModule(M, Config))
-    return Err;
-  WriteBitcodeToFile(M, Out);
-  return Error::success();
-}
-
-Expected<std::optional<Config>>
-readConfigBitcodeIfPresent(MemoryBufferRef Buffer) {
-  LLVMContext Ctx;
-  Expected<std::unique_ptr<Module>> M = parseBitcodeFile(Buffer, Ctx);
-  if (!M)
-    return M.takeError();
-  if (!hasEncodedLTOConfig(**M))
-    return std::nullopt;
-  return decodeLTOConfigFromModule(**M);
-}
-
-Expected<Config> readConfigBitcode(MemoryBufferRef Buffer) {
-  Expected<std::optional<Config>> Config = readConfigBitcodeIfPresent(Buffer);
-  if (!Config)
-    return Config.takeError();
-  if (!*Config)
-    return metadataError("missing lto config metadata");
-  return std::move(**Config);
-}
 
 void encodePipelineTuningOptions(JSONWriter &Writer,
                                  const PipelineTuningOptions &PTO) {
@@ -191,11 +153,6 @@ void encodeConfigFields(JSONWriter &Writer, const Config &C) {
   encodePipelineTuningOptions(Writer, C.PTO);
 }
 
-Error decodeRelocModel(Config &C, EntryApplier Applier) {
-  return Applier.applyI32(
-      [&](int32_t V) { C.RelocModel = static_cast<Reloc::Model>(V); });
-}
-
 Error decodeRelocModel(Config &C, JSONEntryApplier Applier) {
   if (Applier.Entry.getAsNull()) {
     C.RelocModel.reset();
@@ -205,42 +162,8 @@ Error decodeRelocModel(Config &C, JSONEntryApplier Applier) {
       [&](int32_t V) { C.RelocModel = static_cast<Reloc::Model>(V); });
 }
 
-Expected<TargetOptions> decodeOptions(const MDNode &Entry) {
-  auto Node = getNodeField(Entry, kEntryKind);
-  if (!Node)
-    return Node.takeError();
-  return decodeTargetOptionsFromNode(*Node);
-}
-
 Expected<TargetOptions> decodeOptions(const json::Value &Entry) {
   return decodeTargetOptionsJSON(Entry);
-}
-
-Error decodeRemarksHotnessThreshold(Config &C, const MDNode &Entry) {
-  auto Node = getNodeField(Entry, kEntryKind);
-  if (!Node)
-    return Node.takeError();
-  if ((*Node)->getNumOperands() != 2)
-    return metadataError("RemarksHotnessThreshold must have mode and value");
-  auto *Mode = mdconst::dyn_extract<ConstantInt>((*Node)->getOperand(0));
-  auto *Value = mdconst::dyn_extract<ConstantInt>((*Node)->getOperand(1));
-  if (!Mode || !Mode->getType()->isIntegerTy(32) || !Value ||
-      !Value->getType()->isIntegerTy(64))
-    return metadataError("malformed RemarksHotnessThreshold metadata");
-  switch (Mode->getZExtValue()) {
-  case 0:
-    C.RemarksHotnessThreshold = 0;
-    break;
-  case 1:
-    C.RemarksHotnessThreshold = Value->getZExtValue();
-    break;
-  case 2:
-    C.RemarksHotnessThreshold = std::nullopt;
-    break;
-  default:
-    return metadataError("invalid RemarksHotnessThreshold mode");
-  }
-  return Error::success();
 }
 
 Error decodeRemarksHotnessThreshold(Config &C, const json::Value &Entry) {
@@ -250,14 +173,13 @@ Error decodeRemarksHotnessThreshold(Config &C, const json::Value &Entry) {
   }
   auto Value = Entry.getAsUINT64();
   if (!Value)
-    return metadataError(
+    return configError(
         "RemarksHotnessThreshold: expected an unsigned integer or null");
   C.RemarksHotnessThreshold = *Value;
   return Error::success();
 }
 
-template <typename ApplierT>
-Error applyEntry(Config &C, StringRef Key, ApplierT Applier) {
+Error applyEntry(Config &C, StringRef Key, JSONEntryApplier Applier) {
   if (Key == "CPU")
     return Applier.applyString([&](StringRef V) { C.CPU = V.str(); });
   if (Key == "Options") {
@@ -411,21 +333,7 @@ Error applyEntry(Config &C, StringRef Key, ApplierT Applier) {
     return Applier.applyBool(
         [&](bool V) { PTO.DevirtualizeSpeculatively = V; });
 
-  return metadataError("unknown lto config key: " + Key);
-}
-
-Expected<Config> decodeConfigFromRoot(const MDNode *Root) {
-  return decodeVersionedMetadata<Config>(
-      Root, kVersion, "lto config",
-      [](Config &C, StringRef Key, const MDNode &Entry) {
-        EntryApplier Applier{Entry, kEntryKind};
-        if (Key == "RelocModel.HasValue")
-          return Applier.applyBool([&](bool V) {
-            if (!V)
-              C.RelocModel.reset();
-          });
-        return applyEntry(C, Key, Applier);
-      });
+  return configError("unknown lto config key: " + Key);
 }
 
 Expected<Config> decodeConfigJSON(StringRef Text) {
@@ -441,10 +349,6 @@ Expected<Config> decodeConfigJSON(StringRef Text) {
 
 } // namespace
 
-bool lto::hasEncodedLTOConfig(const Module &M) {
-  return M.getNamedMetadata(LTOConfigMetadataName) != nullptr;
-}
-
 std::string lto::serializeLTOConfig(const Config &Config) {
   json::Object Object{{"Version", kVersion}};
   JSONWriter Writer(Object);
@@ -456,75 +360,9 @@ std::string lto::serializeLTOConfig(const Config &Config) {
   return Text;
 }
 
-Error lto::encodeLTOConfigToModule(Module &M, const Config &Config) {
-  LLVMContext &Ctx = M.getContext();
-  MDNode *Root =
-      MDNode::get(Ctx, MDString::get(Ctx, serializeLTOConfig(Config)));
-  NamedMDNode *NMD = M.getOrInsertNamedMetadata(LTOConfigMetadataName);
-  NMD->clearOperands();
-  NMD->addOperand(Root);
-  return Error::success();
-}
-
-Expected<Config> lto::decodeLTOConfigFromModule(const Module &M) {
-  NamedMDNode *NMD = M.getNamedMetadata(LTOConfigMetadataName);
-  if (!NMD || NMD->getNumOperands() == 0)
-    return metadataError("missing lto config metadata");
-  if (NMD->getNumOperands() != 1)
-    return metadataError("expected a single lto config metadata node");
-  const MDNode *Root = NMD->getOperand(0);
-  if (Root->getNumOperands() == 1)
-    if (auto *Text = dyn_cast_or_null<MDString>(Root->getOperand(0)))
-      return decodeConfigJSON(Text->getString());
-  return decodeConfigFromRoot(Root);
-}
-
-Error lto::writeLTOConfigToFile(StringRef Path, const Config &Config) {
-  std::error_code EC;
-  raw_fd_ostream OS(Path, EC, sys::fs::OF_None);
-  if (EC)
-    return createStringError(EC, "cannot open LTO config file '%s'",
-                             Path.str().c_str());
-  if (Error Err = writeConfigBitcode(OS, Config))
-    return Err;
-  OS.close();
-  if (OS.has_error())
-    return createStringError(OS.error(), "cannot write LTO config file '%s'",
-                             Path.str().c_str());
-  return Error::success();
-}
-
-Expected<Config> lto::readLTOConfigFromFile(StringRef Path) {
-  ErrorOr<std::unique_ptr<MemoryBuffer>> Buffer = MemoryBuffer::getFile(Path);
-  if (!Buffer)
-    return createStringError(Buffer.getError(),
-                             "cannot read LTO config file '%s'",
-                             Path.str().c_str());
-
-  return readConfigBitcode((*Buffer)->getMemBufferRef());
-}
-
-Expected<Config> lto::readLTOConfigFromSummaryIndex(MemoryBufferRef Buffer) {
-  auto C = readLTOConfigFromSummaryIndexIfPresent(Buffer);
-  if (!C)
-    return C.takeError();
-  if (!*C)
-    return metadataError("missing lto config in summary index");
-  return std::move(**C);
-}
-
 Expected<std::optional<Config>>
-lto::readLTOConfigFromSummaryIndexIfPresent(MemoryBufferRef Buffer) {
-  auto Index = getModuleSummaryIndex(Buffer);
-  if (!Index)
-    return Index.takeError();
-  return readLTOConfigFromSummaryIndexIfPresent(**Index, Buffer);
-}
-
-Expected<std::optional<Config>>
-lto::readLTOConfigFromSummaryIndexIfPresent(const ModuleSummaryIndex &Index,
-                                            MemoryBufferRef Buffer) {
+lto::readLTOConfigFromSummaryIndexIfPresent(const ModuleSummaryIndex &Index) {
   if (StringRef JSON = Index.getLTOConfigJSON(); !JSON.empty())
     return decodeConfigJSON(JSON);
-  return readConfigBitcodeIfPresent(Buffer);
+  return std::nullopt;
 }

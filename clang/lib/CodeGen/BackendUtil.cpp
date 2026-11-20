@@ -1343,13 +1343,11 @@ void EmitAssemblyHelper::emitAssembly(BackendAction Action,
     DwoOS->keep();
 }
 
-static void runThinLTOBackend(CompilerInstance &CI,
-                              ModuleSummaryIndex *CombinedIndex,
-                              MemoryBufferRef IndexBuffer, llvm::Module *M,
-                              std::unique_ptr<raw_pwrite_stream> OS,
-                              std::string SampleProfile,
-                              std::string ProfileRemapping,
-                              BackendAction Action) {
+static void
+runThinLTOBackend(CompilerInstance &CI, ModuleSummaryIndex *CombinedIndex,
+                  llvm::Module *M, std::unique_ptr<raw_pwrite_stream> OS,
+                  std::string SampleProfile, std::string ProfileRemapping,
+                  BackendAction Action) {
   DiagnosticsEngine &Diags = CI.getDiagnostics();
   const auto &CGOpts = CI.getCodeGenOpts();
   const auto &TOpts = CI.getTargetOpts();
@@ -1373,7 +1371,7 @@ static void runThinLTOBackend(CompilerInstance &CI,
   };
 
   Expected<std::optional<lto::Config>> SerializedConf =
-      lto::readLTOConfigFromSummaryIndexIfPresent(*CombinedIndex, IndexBuffer);
+      lto::readLTOConfigFromSummaryIndexIfPresent(*CombinedIndex);
   if (!SerializedConf) {
     Diags.Report(diag::err_fe_error_backend)
         << ("Error loading LTO config from index file '" +
@@ -1595,14 +1593,14 @@ void clang::emitBackendOutput(CompilerInstance &CI, CodeGenOptions &CGOpts,
 
     // Empty index files skip ThinLTO processing.
     if ((*IndexBuffer)->getBufferSize()) {
-      MemoryBufferRef Buffer = (*IndexBuffer)->getMemBufferRef();
-      auto CombinedIndex = llvm::getModuleSummaryIndex(Buffer);
+      auto CombinedIndex =
+          llvm::getModuleSummaryIndex((*IndexBuffer)->getMemBufferRef());
       if (!CombinedIndex) {
         ReportIndexError(CombinedIndex.takeError());
         return;
       }
       if (!(*CombinedIndex)->skipModuleByDistributedBackend()) {
-        runThinLTOBackend(CI, CombinedIndex->get(), Buffer, M, std::move(OS),
+        runThinLTOBackend(CI, CombinedIndex->get(), M, std::move(OS),
                           CGOpts.SampleProfileFile, CGOpts.ProfileRemappingFile,
                           Action);
         return;

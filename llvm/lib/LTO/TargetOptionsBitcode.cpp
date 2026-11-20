@@ -4,32 +4,15 @@
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-// Encodes llvm::TargetOptions as module metadata that is stored in bitcode.
-//
-// Layout:
-//   !llvm.lto.target_options = !{ !0 }
-//   !0 = !{ i32 <version>, !1, !2, ... }
-//   !1 = !{ !"<key>", <value> }
-//
-// Value kinds:
-//   - i32 ConstantInt for bools, enums, and small integers
-//   - MDString for std::string fields
-//   - nested MDNode for structured fields such as MemoryBuffer
-//
-// Fields that cannot be represented in IR (such as callbacks) are
-// intentionally omitted.
+// Encodes and decodes TargetOptions for the LTO configuration JSON.
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/LTO/TargetOptionsBitcode.h"
-
 #include "JSONConfigUtils.h"
 
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/Metadata.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Target/TargetOptions.h"
 
 using namespace llvm;
 using namespace llvm::lto;
@@ -38,37 +21,6 @@ using namespace llvm::lto::bitcodemeta;
 namespace {
 
 constexpr unsigned kVersion = 1;
-constexpr StringRef kEntryKind = "target options entry";
-
-void encodeMemoryBuffer(MetadataWriter &Writer, StringRef Key,
-                        const std::shared_ptr<MemoryBuffer> &Buffer) {
-  if (!Buffer)
-    return;
-
-  Metadata *Fields[] = {
-      getStringValue(Writer.getContext(), Buffer->getBufferIdentifier()),
-      getStringValue(Writer.getContext(), Buffer->getBuffer())};
-  Writer.putNode(Key, MDNode::get(Writer.getContext(), Fields));
-}
-
-Error decodeMemoryBuffer(std::shared_ptr<MemoryBuffer> &Buffer,
-                         const MDNode &Entry) {
-  Expected<MDNode *> Fields = getNodeField(Entry, kEntryKind);
-  if (!Fields)
-    return Fields.takeError();
-  if ((*Fields)->getNumOperands() != 2)
-    return metadataError(kEntryKind +
-                         " memory buffer must contain an identifier and data");
-
-  auto *Identifier = dyn_cast<MDString>((*Fields)->getOperand(0));
-  auto *Data = dyn_cast<MDString>((*Fields)->getOperand(1));
-  if (!Identifier || !Data)
-    return metadataError(kEntryKind + " memory buffer fields must be strings");
-
-  Buffer = MemoryBuffer::getMemBufferCopy(Data->getString(),
-                                          Identifier->getString());
-  return Error::success();
-}
 
 void encodeMemoryBuffer(JSONWriter &Writer, StringRef Key,
                         const std::shared_ptr<MemoryBuffer> &Buffer) {
@@ -85,7 +37,7 @@ Error decodeMemoryBuffer(std::shared_ptr<MemoryBuffer> &Buffer,
   const auto *Identifier = Object ? Object->get("Identifier") : nullptr;
   const auto *Data = Object ? Object->get("Data") : nullptr;
   if (!Identifier || !Data)
-    return metadataError("expected memory buffer identifier and data");
+    return configError("expected memory buffer identifier and data");
   auto Name = decodeString(*Identifier);
   if (!Name)
     return Name.takeError();
@@ -96,8 +48,7 @@ Error decodeMemoryBuffer(std::shared_ptr<MemoryBuffer> &Buffer,
   return Error::success();
 }
 
-template <typename WriterT>
-void encodeMCTargetOptions(WriterT &Writer, const MCTargetOptions &MC) {
+void encodeMCTargetOptions(JSONWriter &Writer, const MCTargetOptions &MC) {
   // Keep this decomposition in sync with MCTargetOptions so that adding or
   // removing a field produces a compile error here.
   [[maybe_unused]] const auto &[MCRelaxAll, MCNoExecStack, MCFatalWarnings,
@@ -165,8 +116,7 @@ void encodeMCTargetOptions(WriterT &Writer, const MCTargetOptions &MC) {
   Writer.putBool("mc.LargeEHEncoding", MC.LargeEHEncoding);
 }
 
-template <typename WriterT>
-void encodeTargetOptionsFields(WriterT &Writer, const TargetOptions &Opt) {
+void encodeTargetOptionsFields(JSONWriter &Writer, const TargetOptions &Opt) {
   // Keep this decomposition in sync with TargetOptions. It intentionally
   // includes non-serializable fields so that adding or removing any field
   // produces a compile error here. New fields must either be serialized or
@@ -246,19 +196,7 @@ void encodeTargetOptionsFields(WriterT &Writer, const TargetOptions &Opt) {
   encodeMCTargetOptions(Writer, Opt.MCOptions);
 }
 
-template <typename ApplierT>
-Error applyEntry(TargetOptions &Opt, StringRef Key, ApplierT Applier) {
-  // Read the previous locations of MC options, which have since moved.
-  if (Key == "BinutilsVersionMajor")
-    return Applier.applyI32(
-        [&](int32_t V) { Opt.MCOptions.BinutilsVersion.first = V; });
-  if (Key == "BinutilsVersionMinor")
-    return Applier.applyI32(
-        [&](int32_t V) { Opt.MCOptions.BinutilsVersion.second = V; });
-  if (Key == "DisableIntegratedAS")
-    return Applier.applyBool(
-        [&](bool V) { Opt.MCOptions.DisableIntegratedAS = V; });
-
+Error applyEntry(TargetOptions &Opt, StringRef Key, JSONEntryApplier Applier) {
   if (Key == "NoZerosInBSS")
     return Applier.applyBool([&](bool V) { Opt.NoZerosInBSS = V; });
   if (Key == "GuaranteedTailCallOpt")
@@ -465,65 +403,10 @@ Error applyEntry(TargetOptions &Opt, StringRef Key, ApplierT Applier) {
   if (Key == "mc.LargeEHEncoding")
     return Applier.applyBool([&](bool V) { MC.LargeEHEncoding = V; });
 
-  return metadataError("unknown target options key: " + Key);
+  return configError("unknown target options key: " + Key);
 }
 
 } // namespace
-
-bool lto::hasEncodedTargetOptions(const Module &M) {
-  return M.getNamedMetadata(TargetOptionsMetadataName) != nullptr;
-}
-
-Error lto::encodeTargetOptionsToModule(Module &M,
-                                       const TargetOptions &Options) {
-  MDNode *Root = encodeTargetOptionsAsNode(M.getContext(), Options);
-  NamedMDNode *NMD = M.getOrInsertNamedMetadata(TargetOptionsMetadataName);
-  NMD->clearOperands();
-  NMD->addOperand(Root);
-  return Error::success();
-}
-
-MDNode *lto::encodeTargetOptionsAsNode(LLVMContext &Ctx,
-                                       const TargetOptions &Options) {
-  SmallVector<Metadata *, 32> Entries;
-  Entries.push_back(getI32Value(Ctx, kVersion));
-  MetadataWriter Writer(Entries, Ctx);
-  encodeTargetOptionsFields(Writer, Options);
-  return MDNode::get(Ctx, Entries);
-}
-
-Expected<TargetOptions> lto::decodeTargetOptionsFromNode(const MDNode *Root) {
-  return decodeVersionedMetadata<TargetOptions>(
-      Root, kVersion, "target options",
-      [](TargetOptions &Opt, StringRef Key, const MDNode &Entry) -> Error {
-        // These options have moved out of TargetOptions.
-        constexpr StringLiteral RemovedOptions[] = {
-            "NoTrappingFPMath",
-            "EnableAIXExtendedAltivecABI",
-            "HonorSignDependentRoundingFPMathOption",
-            "EnableMachineFunctionSplitter",
-            "SupportsDefaultOutlining",
-            "SupportsDebugEntryValues",
-            "Hotpatch",
-            "PPCGenScalarMASSEntries",
-            "AllowFPOpFusion",
-            "ThreadModel",
-            "EABIVersion",
-            "DebuggerTuning",
-            "ExceptionModel"};
-        if (llvm::is_contained(RemovedOptions, Key))
-          return Error::success();
-        return applyEntry(Opt, Key, EntryApplier{Entry, kEntryKind});
-      });
-}
-
-Expected<TargetOptions> lto::decodeTargetOptionsFromModule(const Module &M) {
-  NamedMDNode *NMD = M.getNamedMetadata(TargetOptionsMetadataName);
-  if (!NMD || NMD->getNumOperands() == 0)
-    return metadataError("missing target options metadata");
-
-  return decodeTargetOptionsFromNode(dyn_cast<MDNode>(NMD->getOperand(0)));
-}
 
 json::Object
 llvm::lto::bitcodemeta::encodeTargetOptionsJSON(const TargetOptions &Options) {

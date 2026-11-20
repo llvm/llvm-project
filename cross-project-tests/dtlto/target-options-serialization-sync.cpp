@@ -12,7 +12,7 @@
 #define ObjectFilenameForDebug                                                \
   ObjectFilenameForDebug;                                                     \
   bool SerializationTestExtraField
-#include "llvm/LTO/TargetOptionsBitcode.h"
+#include "llvm/Target/TargetOptions.h"
 #undef ObjectFilenameForDebug
 
 #include "TargetOptionsBitcode.cpp"
