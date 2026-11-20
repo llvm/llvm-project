@@ -29,7 +29,7 @@ import os
 
 import lldb
 import lldbsuite.test.lldbutil as lldbutil
-from lldbsuite.test.decorators import expectedFailureAll
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import TestBase
 
 
@@ -182,6 +182,7 @@ class TestScriptedExtensionsDiagnostics(TestBase):
     # discarded by its only caller, RefreshStateAfterStop).
     # ------------------------------------------------------------------
 
+    @skipIfWasm  # the diagnostic never arrives
     def test_scripted_frame_missing_methods(self):
         """A scripted frame object returned from a thread's
         `get_stackframes()` that is missing a required abstract method

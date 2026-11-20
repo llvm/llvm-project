@@ -1483,6 +1483,15 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     break;
   }
 
+  case Builtin::BImemccpy: {
+    // Whether memccpy overflows depends on whether the stop character appears
+    // in the source buffer before reaching n, not just the buffer size.
+    DiagID = diag::warn_fortify_source_size_mismatch;
+    AccessSize = Checker.ComputeExplicitObjectSizeArgument(3);
+    BufferSize = Checker.ComputeSizeArgument(0);
+    break;
+  }
+
   case Builtin::BIstrncat:
   case Builtin::BI__builtin_strncat:
   case Builtin::BIstrncpy:
@@ -1499,8 +1508,7 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     // size larger than the destination buffer though; this is a runtime abort
     // in _FORTIFY_SOURCE mode, and is quite suspicious otherwise.
     DiagID = diag::warn_fortify_source_size_mismatch;
-    AccessSize =
-        Checker.ComputeExplicitObjectSizeArgument(TheCall->getNumArgs() - 1);
+    AccessSize = Checker.ComputeExplicitObjectSizeArgument(2);
     BufferSize = Checker.ComputeSizeArgument(0);
     break;
   }
@@ -1562,24 +1570,30 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
 
   case Builtin::BIbzero:
   case Builtin::BI__builtin_bzero:
+  case Builtin::BIexplicit_bzero: {
+    DiagID = diag::warn_fortify_source_overflow;
+    AccessSize = Checker.ComputeExplicitObjectSizeArgument(1);
+    BufferSize = Checker.ComputeSizeArgument(0);
+    break;
+  }
+
   case Builtin::BImemcpy:
   case Builtin::BI__builtin_memcpy:
   case Builtin::BImemmove:
   case Builtin::BI__builtin_memmove:
   case Builtin::BImemset:
   case Builtin::BI__builtin_memset:
+  case Builtin::BImemset_explicit:
   case Builtin::BImempcpy:
   case Builtin::BI__builtin_mempcpy: {
     DiagID = diag::warn_fortify_source_overflow;
-    AccessSize =
-        Checker.ComputeExplicitObjectSizeArgument(TheCall->getNumArgs() - 1);
+    AccessSize = Checker.ComputeExplicitObjectSizeArgument(2);
     BufferSize = Checker.ComputeSizeArgument(0);
 
-    // Buffer overread doesn't make sense for memset/bzero.
+    // Buffer overread doesn't make sense for memset.
     if (BuiltinID != Builtin::BImemset &&
         BuiltinID != Builtin::BI__builtin_memset &&
-        BuiltinID != Builtin::BIbzero &&
-        BuiltinID != Builtin::BI__builtin_bzero) {
+        BuiltinID != Builtin::BImemset_explicit) {
       Checker.checkSourceOverread(/*SrcArgIdx=*/1, /*SizeArgIdx=*/2);
     }
     break;
@@ -4901,6 +4915,17 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
       !isUnevaluatedContext())
     SYCL().DiagIfDeviceCode(Loc, diag::err_variadic_device_fn)
         << diag::OffloadLang::SYCL;
+
+  // A calling convention that is supported only by the host is accepted on the
+  // declaration, but cannot be used for a call from device code.
+  if (Proto && getLangOpts().SYCLIsDevice && !isUnevaluatedContext()) {
+    CallingConv CC = Proto->getCallConv();
+    if (Context.getTargetInfo().checkCallingConvention(CC) !=
+        TargetInfo::CCCR_OK)
+      SYCL().DiagIfDeviceCode(Loc, diag::warn_cconv_unsupported)
+          << &Context.Idents.get(FunctionType::getNameForCallConv(CC))
+          << (int)CallingConventionIgnoredReason::ForThisTarget;
+  }
 
   if (FD)
     diagnoseArgDependentDiagnoseIfAttrs(FD, ThisArg, Args, Loc);
@@ -12171,6 +12196,13 @@ static std::optional<IntRange> TryGetExprRange(ASTContext &C, const Expr *E,
                                                bool InConstantContext,
                                                bool Approximate) {
   E = E->IgnoreParens();
+
+  // A BPF enumerator relocated at load time is not a constant. Use the range of
+  // its local value, as if it were not relocated, if an approximate range is
+  // allowed. Otherwise, use the range of its type, since its value is only
+  // known at load time.
+  if (Approximate && SemaBPF::isPreserveAIEnumeratorRef(E))
+    E = cast<PseudoObjectExpr>(E)->getSyntacticForm();
 
   // Try a full evaluation first.
   Expr::EvalResult result;
