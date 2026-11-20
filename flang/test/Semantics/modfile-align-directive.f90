@@ -12,10 +12,15 @@ module m
   !dir$ align(64) :: d
   real :: d
   common /blk/ d
+  ! Neither does a member of EQUIVALENCE storage.
+  !dir$ align(64) :: e1
+  real :: e1, e2
+  equivalence (e1, e2)
   ! Neither does an ALLOCATABLE or POINTER variable, which is not supported
   ! yet.
-  !dir$ align(64) :: e
-  real, allocatable :: e(:)
+  !dir$ align(64) :: f, g
+  real, allocatable :: f(:)
+  real, pointer :: g(:)
 end
 
 !Expect: m.mod
@@ -26,6 +31,10 @@ end
 !!dir$ align(128) :: b
 !real(4)::c
 !real(4)::d
-!real(4),allocatable::e(:)
+!real(4)::e1
+!real(4)::e2
+!real(4),allocatable::f(:)
+!real(4),pointer::g(:)
 !common/blk/d
+!equivalence(e1,e2)
 !end

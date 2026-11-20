@@ -2,8 +2,8 @@
 ! RUN: %flang_fc1 -fdebug-dump-parse-tree-no-sema %s | FileCheck --check-prefix=TREE %s
 
 ! The alignment directive is parsed among the components of a derived type.
-! Semantics rejects it there for now (see Semantics/align-directive01.f90), so
-! this test stops after parsing.
+! Semantics does not support it on any component yet (see
+! Semantics/align-directive01.f90), so this test stops after parsing.
 
 module m
   type t

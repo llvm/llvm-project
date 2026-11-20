@@ -3227,14 +3227,6 @@ common::IgnoreTKRSet GetIgnoreTKR(const Symbol &symbol) {
   return result;
 }
 
-std::optional<std::uint64_t> GetAlignment(const Symbol &symbol) {
-  if (const auto *object{
-          symbol.GetUltimate().detailsIf<ObjectEntityDetails>()}) {
-    return object->alignment();
-  }
-  return std::nullopt;
-}
-
 std::optional<int> GetDummyArgumentNumber(const Symbol *symbol) {
   if (symbol) {
     if (IsDummy(*symbol)) {
