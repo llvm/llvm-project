@@ -217,6 +217,10 @@ public:
   explicit Constant(int kind, Scalar<Result> &&);
   Constant(int kind, ConstantSubscript length, std::vector<Element> &&,
       ConstantSubscripts &&);
+  // Takes the elements already concatenated into one string, so that no
+  // separate string has to be built for each element.
+  static Constant FromContiguous(int kind, ConstantSubscript length,
+      Scalar<Result> &&values, ConstantSubscripts &&shape);
   ~Constant();
 
   bool operator==(const Constant &that) const {
