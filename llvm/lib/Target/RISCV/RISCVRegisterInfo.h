@@ -78,6 +78,8 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
     return 5;
   }
 
+  bool enableCSRFirstTimeMinCost(const MachineFunction &MF) const override;
+
   const MCPhysReg *getCalleeSavedRegs(const MachineFunction *MF) const override;
 
   const TargetRegisterClass *
