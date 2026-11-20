@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cmath>
 #include <iterator>
 #include <limits>
 #include <random>
@@ -219,8 +220,20 @@ bool test_floating_special_values() {
   std::mt19937 randomness;
   std::shuffle(v.begin(), v.end(), randomness);
 
+  // -0.0 and +0.0 are equivalent, so the sort must preserve their relative order.
+  std::vector<bool> zero_signs;
+  for (T x : v)
+    if (x == T(0))
+      zero_signs.push_back(std::signbit(x));
+
   std::stable_sort(v.begin(), v.end());
   assert(std::is_sorted(v.begin(), v.end()));
+
+  std::vector<bool> sorted_zero_signs;
+  for (T x : v)
+    if (x == T(0))
+      sorted_zero_signs.push_back(std::signbit(x));
+  assert(sorted_zero_signs == zero_signs);
 
   return true;
 }
