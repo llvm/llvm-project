@@ -660,3 +660,20 @@ TEST(CPlusPlusLanguage, FormatterLanguages) {
   EXPECT_TRUE(language.GetFormatterLanguages(lldb::eLanguageTypeObjC_plus_plus)
                   .empty());
 }
+
+TEST(CPlusPlusLanguage, IsCategoryApplicable) {
+  CPlusPlusLanguage language;
+  for (lldb::LanguageType c_or_cplusplus :
+       {lldb::eLanguageTypeC89, lldb::eLanguageTypeC, lldb::eLanguageTypeC99,
+        lldb::eLanguageTypeC_plus_plus})
+    EXPECT_TRUE(language.IsCategoryApplicable(lldb::eLanguageTypeC_plus_plus,
+                                              c_or_cplusplus));
+  EXPECT_FALSE(language.IsCategoryApplicable(lldb::eLanguageTypeC_plus_plus,
+                                             lldb::eLanguageTypeObjC));
+
+  // A category for a specific version of C++ only applies to its own values.
+  EXPECT_TRUE(language.IsCategoryApplicable(lldb::eLanguageTypeC_plus_plus_11,
+                                            lldb::eLanguageTypeC_plus_plus_11));
+  EXPECT_FALSE(language.IsCategoryApplicable(lldb::eLanguageTypeC_plus_plus_11,
+                                             lldb::eLanguageTypeC_plus_plus));
+}

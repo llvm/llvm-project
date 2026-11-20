@@ -79,11 +79,17 @@
   args   = [ ]
 }
 
+// Big cannot be passed in registers, as for a C++ class with a non-trivial
+// copy constructor, so a non-byval call site passes the caller's storage.
 module attributes {
   dlti.dl_spec = #dlti.dl_spec<
     #dlti.dl_entry<i8, dense<8>: vector<2xi64>>,
     #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
-    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>,
+  cir.record_layouts = {
+    Big = #cir.record_layout<arg_passing_kind = cannot_pass_in_regs,
+                             has_trivial_dtor = true, record_align = 8>
+  }
 } {
 
   // A byval parameter the body never reads gets nothing at entry.

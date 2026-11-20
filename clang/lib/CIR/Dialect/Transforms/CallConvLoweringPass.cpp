@@ -207,6 +207,18 @@ void CallConvLoweringPass::runOnOperation() {
   bool enableNoundefAttrs =
       !loweringOpts || loweringOpts.getEnableNoundefAttrs();
 
+  // FIXME: MLIR translation currently crashes on CC-lowered CIR module
+  // for some spirv* triples due to some MLIR/OpenMP dialect gaps,
+  // thus temporarily report error for OpenMP device code with
+  // spirv target until the fix lands in MLIR.
+  if (target == cir::CallConvTarget::SPIRV && loweringOpts &&
+      loweringOpts.getOpenmpIsTargetDevice()) {
+    moduleOp.emitOpError() << "OpenMP device code with SPIR-V target "
+                              "is not yet supported";
+    signalPassFailure();
+    return;
+  }
+
   DataLayout dl(moduleOp);
   CIRABIRewriteContext rewriteCtx(moduleOp, dl, enableNoundefAttrs);
   // A non-byval indirect parameter's slot outlives the rewrite that retypes
