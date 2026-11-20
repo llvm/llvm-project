@@ -681,7 +681,7 @@ TEST(HeuristicResolver, MemberExpr_CallOfUsingDeclFromDependentBase) {
       cxxMethodDecl(hasName("foo")).bind("output"));
 }
 
-TEST(HeuristicResolver, MemberExpr_ExplicitArgumentIgnored) {
+TEST(HeuristicResolver, MemberExpr_ExplicitArgument) {
   std::string Code = R"cpp(
     struct Default {
       void foo();
@@ -699,18 +699,15 @@ TEST(HeuristicResolver, MemberExpr_ExplicitArgumentIgnored) {
       s.bar().foo();
     }
   )cpp";
-  // FIXME: "foo" in "s.bar().foo()" should resolve to Custom::foo. Looking a
-  // name up in the primary template discards the arguments the type was
-  // written with, so the default argument is substituted for "A" even though
-  // "Custom" was given explicitly.
+  // Test resolution of "foo" in "s.bar().foo()", where the explicit argument
+  // for "A" must take precedence over its default argument.
   expectResolution(
       Code, &HeuristicResolver::resolveMemberExpr,
       cxxDependentScopeMemberExpr(hasMemberName("foo")).bind("input"),
-      cxxMethodDecl(hasName("foo"), ofClass(hasName("Default")))
-          .bind("output"));
+      cxxMethodDecl(hasName("foo"), ofClass(hasName("Custom"))).bind("output"));
 }
 
-TEST(HeuristicResolver, MemberExpr_ExplicitArgumentIgnored_Typedef) {
+TEST(HeuristicResolver, MemberExpr_ExplicitArgument_Typedef) {
   std::string Code = R"cpp(
     struct Default {
       void foo();
@@ -728,17 +725,45 @@ TEST(HeuristicResolver, MemberExpr_ExplicitArgumentIgnored_Typedef) {
       t.foo();
     }
   )cpp";
-  // FIXME: as above, "foo" should resolve to Custom::foo. Reaching the
-  // parameter through a member typedef rather than a return type makes no
-  // difference: the explicit argument is still discarded.
+  // As above, but reaching the parameter through a member typedef rather than
+  // a return type.
   expectResolution(
       Code, &HeuristicResolver::resolveMemberExpr,
       cxxDependentScopeMemberExpr(hasMemberName("foo")).bind("input"),
-      cxxMethodDecl(hasName("foo"), ofClass(hasName("Default")))
-          .bind("output"));
+      cxxMethodDecl(hasName("foo"), ofClass(hasName("Custom"))).bind("output"));
 }
 
-TEST(HeuristicResolver, MemberExpr_DefaultTemplateArgumentNotSeenByBase) {
+TEST(HeuristicResolver, MemberExpr_ExplicitArgument_Base) {
+  std::string Code = R"cpp(
+    struct Default {
+      void foo();
+    };
+    struct Custom {
+      void foo();
+    };
+    template <class A>
+    struct Base {
+      A get();
+    };
+    template <class T, class A = Default>
+    struct Mid : Base<A> {};
+    template <class T, class A = Default>
+    struct Derived : Mid<T, A> {};
+    template <class T>
+    void bar(Derived<T, Custom> d) {
+      d.get().foo();
+    }
+  )cpp";
+  // Test resolution of "foo" in "d.get().foo()", where "get" is declared two
+  // levels up the inheritance chain, and the argument for its return type has
+  // to be followed through both base-specifiers to the explicit argument.
+  expectResolution(
+      Code, &HeuristicResolver::resolveMemberExpr,
+      cxxDependentScopeMemberExpr(hasMemberName("foo")).bind("input"),
+      cxxMethodDecl(hasName("foo"), ofClass(hasName("Custom"))).bind("output"));
+}
+
+TEST(HeuristicResolver, MemberExpr_DefaultTemplateArgumentThroughBase) {
   std::string Code = R"cpp(
     struct Result {
       void foo();
@@ -758,20 +783,15 @@ TEST(HeuristicResolver, MemberExpr_DefaultTemplateArgumentNotSeenByBase) {
       d.get().foo();
     }
   )cpp";
-  // FIXME: "foo" in "d.get().foo()" would ideally resolve to Result::foo, but
-  // currently does not resolve at all. Looking "get" up in Base's primary
-  // template discards the arguments Derived passes to Base, so the return type
-  // is Base's own "A", which -- unlike Derived's -- has no default argument to
-  // fall back on. Resolving this would require propagating template arguments
-  // to base classes, which this file's "look the name up in the primary
-  // template" approach does not do.
-  //
+  // Test resolution of "foo" in "d.get().foo()". "get" is declared in Base,
+  // whose "A" has no default argument, but it is passed Derived's "A", which
+  // does.
   // This mirrors libstdc++, where vector's allocator parameter is defaulted but
-  // _Vector_base's is not, and is why completion after `v.get_allocator().`
-  // does not work even though `vector<T>::allocator_type` itself resolves.
+  // _Vector_base's is not, as is relevant for `v.get_allocator().`.
   expectResolution(
       Code, &HeuristicResolver::resolveMemberExpr,
-      cxxDependentScopeMemberExpr(hasMemberName("foo")).bind("input"));
+      cxxDependentScopeMemberExpr(hasMemberName("foo")).bind("input"),
+      cxxMethodDecl(hasName("foo"), ofClass(hasName("Result"))).bind("output"));
 }
 
 TEST(HeuristicResolver, MemberExpr_DefaultTemplateTemplateArgument) {
