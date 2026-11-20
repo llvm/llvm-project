@@ -356,26 +356,6 @@ static inline SDValue getBuildVectorizedValue(unsigned N, const SDLoc &dl,
   return DAG.getBuildVector(VT, dl, Values);
 }
 
-// Build the value for one store and advance past its register values.
-template <typename GetValueT>
-static SDValue buildParamStoreValue(EVT VT, unsigned NumElts,
-                                    unsigned &RegIndex,
-                                    ArrayRef<SDValue> Values, const SDLoc &dl,
-                                    SelectionDAG &DAG, GetValueT GetValue) {
-  if (VT.isFixedLengthVectorOf(MVT::i1)) {
-    const EVT StoreVT = getVectorizedVT(VT, NumElts, *DAG.getContext());
-    const unsigned NumLanes = StoreVT.getVectorNumElements();
-    SDValue V =
-        DAG.getBuildVector(StoreVT, dl, Values.slice(RegIndex, NumLanes));
-    RegIndex += NumLanes;
-    return V;
-  }
-  SDValue V = getBuildVectorizedValue(
-      NumElts, dl, DAG, [&](unsigned K) { return GetValue(RegIndex + K, VT); });
-  RegIndex += NumElts;
-  return V;
-}
-
 /// PromoteScalarIntegerPTX
 /// Used to make sure the arguments/returns are suitable for passing
 /// and promote them to a larger size if they're not.
@@ -1282,6 +1262,34 @@ static SDValue correctParamType(SDValue V, EVT ExpectedVT,
   return V;
 }
 
+// Build the value for one store and advance past its register values.
+static SDValue
+buildParamStoreValue(EVT VT, unsigned NumElts, unsigned &RegIndex,
+                     ArrayRef<SDValue> Values, ArrayRef<ISD::OutputArg> Outs,
+                     bool ExtendInteger, const SDLoc &dl, SelectionDAG &DAG) {
+  if (VT.isFixedLengthVectorOf(MVT::i1)) {
+    const EVT StoreVT = getVectorizedVT(VT, NumElts, *DAG.getContext());
+    const unsigned NumLanes = StoreVT.getVectorNumElements();
+    SDValue V =
+        DAG.getBuildVector(StoreVT, dl, Values.slice(RegIndex, NumLanes));
+    RegIndex += NumLanes;
+    return V;
+  }
+
+  const EVT VTI = promoteScalarIntegerPTX(VT);
+  const EVT StoreVT =
+      ExtendInteger ? MVT::i32 : (VTI == MVT::i1 ? MVT::i8 : VTI);
+  SDValue V = getBuildVectorizedValue(NumElts, dl, DAG, [&](unsigned K) {
+    const unsigned I = RegIndex + K;
+    SDValue Val = Values[I];
+    assert(promoteScalarIntegerPTX(Val.getValueType()) == Val.getValueType() &&
+           "OutVal type should always be legal");
+    return correctParamType(Val, StoreVT, Outs[I].Flags, DAG, dl);
+  });
+  RegIndex += NumElts;
+  return V;
+}
+
 static SDValue getSymbolNode(SelectionDAG &DAG, MCSymbol *Sym, EVT T) {
   return DAG.getNode(NVPTXISD::Symbol, SDLoc(), T, DAG.getMCSymbol(Sym, T));
 }
@@ -1498,19 +1506,6 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       const bool ExtendIntegerParam =
           Arg.Ty->isIntegerTy() && DL.getTypeAllocSizeInBits(Arg.Ty) < 32;
 
-      const auto GetStoredValue = [&](unsigned I, EVT VT) {
-        SDValue StVal = ArgOutVals[I];
-        assert(promoteScalarIntegerPTX(StVal.getValueType()) ==
-                   StVal.getValueType() &&
-               "OutVal type should always be legal");
-
-        const EVT VTI = promoteScalarIntegerPTX(VT);
-        const EVT StoreVT =
-            ExtendIntegerParam ? MVT::i32 : (VTI == MVT::i1 ? MVT::i8 : VTI);
-
-        return correctParamType(StVal, StoreVT, ArgOuts[I].Flags, DAG, dl);
-      };
-
       unsigned J = 0, RegIndex = 0;
       const auto VI = VectorizePTXValueVTs(VTs, Offsets, ArgAlign, IsVAArg);
       for (const unsigned NumElts : VI) {
@@ -1541,8 +1536,9 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                                             ? MaybeAlign(std::nullopt)
                                             : commonAlignment(ArgAlign, Offset);
 
-        SDValue Val = buildParamStoreValue(VTs[J], NumElts, RegIndex,
-                                           ArgOutVals, dl, DAG, GetStoredValue);
+        SDValue Val =
+            buildParamStoreValue(VTs[J], NumElts, RegIndex, ArgOutVals, ArgOuts,
+                                 ExtendIntegerParam, dl, DAG);
 
         SDValue StoreParam = DAG.getStore(
             ArgDeclare, dl, Val, Ptr,
@@ -4497,18 +4493,6 @@ NVPTXTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   SmallVector<uint64_t, 16> Offsets;
   ComputePTXValueVTs(*this, DL, Ctx, CallConv, RetTy, VTs, Offsets);
 
-  const auto GetRetVal = [&](unsigned I, EVT VT) -> SDValue {
-    SDValue RetVal = OutVals[I];
-    assert(promoteScalarIntegerPTX(RetVal.getValueType()) ==
-               RetVal.getValueType() &&
-           "OutVal type should always be legal");
-
-    const EVT VTI = promoteScalarIntegerPTX(VT);
-    const EVT StoreVT =
-        ExtendIntegerRetVal ? MVT::i32 : (VTI == MVT::i1 ? MVT::i8 : VTI);
-    return correctParamType(RetVal, StoreVT, Outs[I].Flags, DAG, dl);
-  };
-
   unsigned I = 0, RegIndex = 0;
   const auto VI = VectorizePTXValueVTs(VTs, Offsets, RetAlign);
   for (const unsigned NumElts : VI) {
@@ -4516,8 +4500,8 @@ NVPTXTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
                                         ? MaybeAlign(std::nullopt)
                                         : commonAlignment(RetAlign, Offsets[I]);
 
-    SDValue Val = buildParamStoreValue(VTs[I], NumElts, RegIndex, OutVals, dl,
-                                       DAG, GetRetVal);
+    SDValue Val = buildParamStoreValue(VTs[I], NumElts, RegIndex, OutVals, Outs,
+                                       ExtendIntegerRetVal, dl, DAG);
 
     SDValue Ptr =
         DAG.getObjectPtrOffset(dl, RetSymbol, TypeSize::getFixed(Offsets[I]));
