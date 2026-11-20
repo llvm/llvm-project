@@ -450,6 +450,111 @@ exit:
   ret void
 }
 
+; When folding the loop-invariant %li (88 * %outer_clamped) into the recurrence
+; %iv.dec ({-1,+,1}<nsw><%loop>) for %sum = add nuw nsw i64 %add2, %add1, the
+; non-loop-invariant operands %nli1 and %nli2 remain outside the recurrence and
+; restrict %sum's nuw flag to the %guarded block (where %iv >= 1). Therefore,
+; the folded recurrence start (-1 + %li) must not receive <nuw> (since -1 + 88
+; unsigned-wraps when %outer_clamped == 1), while still inferring <nsw>.
+define void @addrec_fold_li_with_guarded_non_li(i64 %outer, ptr %q1, ptr %q2, ptr %p) {
+; CHECK-LABEL: 'addrec_fold_li_with_guarded_non_li'
+; CHECK-NEXT:  Classifying expressions for: @addrec_fold_li_with_guarded_non_li
+; CHECK-NEXT:    %outer_clamped = and i64 %outer, 1
+; CHECK-NEXT:    --> (zext i1 (trunc i64 %outer to i1) to i64) U: [0,2) S: [0,2)
+; CHECK-NEXT:    %li = mul nuw nsw i64 %outer_clamped, 88
+; CHECK-NEXT:    --> (88 * (zext i1 (trunc i64 %outer to i1) to i64))<nuw><nsw> U: [0,89) S: [0,89)
+; CHECK-NEXT:    %iv = phi i64 [ 0, %entry ], [ %iv.next, %latch ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,88) S: [0,88) Exits: 87 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.dec = add nsw i64 %iv, -1
+; CHECK-NEXT:    --> {-1,+,1}<nsw><%loop> U: [-1,87) S: [-1,87) Exits: 86 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %nli1 = load i64, ptr %q1, align 8
+; CHECK-NEXT:    --> %nli1 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    %add1 = add nuw nsw i64 %iv.dec, %nli1
+; CHECK-NEXT:    --> ({-1,+,1}<nsw><%loop> + %nli1)<nuw><nsw> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    %nli2 = load i64, ptr %q2, align 8
+; CHECK-NEXT:    --> %nli2 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    %add2 = add nuw nsw i64 %nli2, %li
+; CHECK-NEXT:    --> ((88 * (zext i1 (trunc i64 %outer to i1) to i64))<nuw><nsw> + %nli2)<nuw><nsw> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    %sum = add nuw nsw i64 %add2, %add1
+; CHECK-NEXT:    --> ({(-1 + (88 * (zext i1 (trunc i64 %outer to i1) to i64))<nuw><nsw>)<nsw>,+,1}<nw><%loop> + %nli1 + %nli2) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    %gep = getelementptr inbounds nuw i64, ptr %p, i64 %sum
+; CHECK-NEXT:    --> ((8 * ({(-1 + (88 * (zext i1 (trunc i64 %outer to i1) to i64))<nuw><nsw>)<nsw>,+,1}<nsw><%loop> + %nli1 + %nli2))<nuw><nsw> + %p)<nuw> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    %v = load i64, ptr %gep, align 8
+; CHECK-NEXT:    --> %v U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    %iv.next = add nuw nsw i64 %iv, 1
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,89) S: [1,89) Exits: 88 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @addrec_fold_li_with_guarded_non_li
+; CHECK-NEXT:  Loop %loop: backedge-taken count is i64 87
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 87
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i64 87
+; CHECK-NEXT:  Loop %loop: Trip multiple is 88
+;
+entry:
+  %outer_clamped = and i64 %outer, 1
+  %li = mul nuw nsw i64 %outer_clamped, 88
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %latch ]
+  %cond = icmp eq i64 %iv, 0
+  br i1 %cond, label %latch, label %guarded
+
+guarded:
+  %iv.dec = add nsw i64 %iv, -1
+  %nli1 = load i64, ptr %q1, align 8
+  %add1 = add nuw nsw i64 %iv.dec, %nli1
+  %nli2 = load i64, ptr %q2, align 8
+  %add2 = add nuw nsw i64 %nli2, %li
+  %sum = add nuw nsw i64 %add2, %add1
+  %gep = getelementptr inbounds nuw i64, ptr %p, i64 %sum
+  %v = load i64, ptr %gep, align 8
+  br label %latch
+
+latch:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 88
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; Conversely, when there are no remaining non-loop-invariant operands
+; (Ops.size() == 1) and the add executes unconditionally in the loop header,
+; ExprFlags (<nuw>) is propagated to the folded recurrence start (1 + %li)<nuw>.
+define void @addrec_fold_li_without_non_li(i64 %li, ptr %p) {
+; CHECK-LABEL: 'addrec_fold_li_without_non_li'
+; CHECK-NEXT:  Classifying expressions for: @addrec_fold_li_without_non_li
+; CHECK-NEXT:    %iv = phi i64 [ 1, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,88) S: [1,88) Exits: 87 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %sum = add nuw i64 %iv, %li
+; CHECK-NEXT:    --> {(1 + %li)<nuw>,+,1}<nuw><%loop> U: [1,0) S: [1,0) Exits: (87 + %li) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %gep = getelementptr i64, ptr %p, i64 %sum
+; CHECK-NEXT:    --> {(8 + (8 * %li) + %p),+,8}<%loop> U: full-set S: full-set Exits: (696 + (8 * %li) + %p) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add nuw nsw i64 %iv, 1
+; CHECK-NEXT:    --> {2,+,1}<nuw><nsw><%loop> U: [2,89) S: [2,89) Exits: 88 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @addrec_fold_li_without_non_li
+; CHECK-NEXT:  Loop %loop: backedge-taken count is i64 86
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 86
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i64 86
+; CHECK-NEXT:  Loop %loop: Trip multiple is 87
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 1, %entry ], [ %iv.next, %loop ]
+  %sum = add nuw i64 %iv, %li
+  %gep = getelementptr i64, ptr %p, i64 %sum
+  store i64 0, ptr %gep, align 8
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 88
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 declare void @print(i32)
 
 declare void @foo(i32)
