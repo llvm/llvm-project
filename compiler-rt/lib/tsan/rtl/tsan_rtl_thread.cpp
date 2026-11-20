@@ -155,17 +155,6 @@ struct OnStartedArgs {
 void ThreadStart(ThreadState *thr, Tid tid, ThreadID os_id,
                  ThreadType thread_type) {
   ctx->thread_registry.StartThread(tid, os_id, thread_type, thr);
-  if (!thr->ignore_sync) {
-    SlotAttachAndLock(thr);
-    if (thr->tctx->sync_epoch == ctx->global_epoch)
-      thr->clock.Acquire(thr->tctx->sync);
-    SlotUnlock(thr);
-  }
-  Free(thr->tctx->sync);
-
-#if !SANITIZER_GO
-  thr->is_inited = true;
-#endif
 
   uptr stk_addr = 0;
   uptr stk_end = 0;
@@ -183,7 +172,16 @@ void ThreadStart(ThreadState *thr, Tid tid, ThreadID os_id,
   thr->tls_addr = tls_addr;
   thr->tls_size = tls_size;
 
+  if (!thr->ignore_sync) {
+    SlotAttachAndLock(thr);
+    if (thr->tctx->sync_epoch == ctx->global_epoch)
+      thr->clock.Acquire(thr->tctx->sync);
+    SlotUnlock(thr);
+  }
+  Free(thr->tctx->sync);
+
 #if !SANITIZER_GO
+  thr->is_inited = true;
   if (ctx->after_multithreaded_fork) {
     thr->ignore_interceptors++;
     ThreadIgnoreBegin(thr, 0);
