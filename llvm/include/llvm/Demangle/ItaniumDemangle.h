@@ -2818,15 +2818,19 @@ template <typename Derived, typename Alloc> struct AbstractManglingParser {
     AbstractManglingParser *Parser;
     decltype(TemplateParams) OldParams;
     decltype(OuterTemplateParams) OldOuterParams;
+    bool Restore;
 
   public:
-    SaveTemplateParams(AbstractManglingParser *TheParser) : Parser(TheParser) {
+    SaveTemplateParams(AbstractManglingParser *TheParser, bool Restore = true)
+        : Parser(TheParser), Restore(Restore) {
       OldParams = std::move(Parser->TemplateParams);
       OldOuterParams = std::move(Parser->OuterTemplateParams);
       Parser->TemplateParams.clear();
       Parser->OuterTemplateParams.clear();
     }
     ~SaveTemplateParams() {
+      if (!Restore)
+        return;
       Parser->TemplateParams = std::move(OldParams);
       Parser->OuterTemplateParams = std::move(OldOuterParams);
     }
@@ -3136,8 +3140,12 @@ Node *AbstractManglingParser<Derived, Alloc>::parseLocalName(NameState *State) {
   }
 
   // The template parameters of the inner name are unrelated to those of the
-  // enclosing context.
-  SaveTemplateParams SaveTemplateParamsScope(this);
+  // enclosing context. If the inner name is the name of an <encoding>, its
+  // template arguments are needed to parse the rest of the encoding, so don't
+  // restore the enclosing template parameters here. The enclosing
+  // parseEncoding restores them once the encoding has been parsed.
+  SaveTemplateParams SaveTemplateParamsScope(this,
+                                             /*Restore=*/State == nullptr);
 
   if (consumeIf('d')) {
     parseNumber(true);

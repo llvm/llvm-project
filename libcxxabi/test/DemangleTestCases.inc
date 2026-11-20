@@ -30067,6 +30067,11 @@
 
 {"_Z3TPLIiET_S0_", "int TPL<int>(int)"},
 
+// A function template in a local name whose signature refers to its own
+// template parameters.
+{"_ZZ1fvE1gIiEvT_", "void f()::g<int>(int)"},
+{"_ZZ1fiENK3$_0clIiEEDaT_", "auto f(int)::$_0::operator()<int>(int) const"},
+
 {"_ZN1XawEv", "X::operator co_await()"},
 
 // C++20 modules
