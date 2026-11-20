@@ -2722,6 +2722,13 @@ void LoweringPreparePass::lowerStoreOfConstAggregate(cir::StoreOp op) {
 
   mlir::TypedAttr constant = constOp.getValue();
 
+  // A poison or undef aggregate has no bytes to copy, so there is nothing to
+  // materialize in a global. CallConvLowering emits such stores for ignored
+  // and empty-record arguments after this pass has run; leaving them alone
+  // keeps a rerun of the pipeline from rewriting them into a copy.
+  if (mlir::isa<cir::PoisonAttr, cir::UndefAttr>(constant))
+    return;
+
   // OG implements several optimization tiers for constant aggregate
   // initialization. For now we always create a global constant + memcpy
   // (shouldCreateMemCpyFromGlobal). Future work can add the intermediate
@@ -2759,7 +2766,7 @@ void LoweringPreparePass::lowerStoreOfConstAggregate(cir::StoreOp op) {
   cir::CopyOp copyOp = builder.createCopy(op.getAddr(), globalPtr);
 
   cir::CIRDataLayout dataLayout(mlirModule);
-  uint64_t naturalAlign = dataLayout.getABITypeAlign(ty).value();
+  uint64_t naturalAlign = dataLayout.getTypeLanguageAlignment(ty);
   if (alloca.getAlignment() != naturalAlign)
     copyOp.setDstAlignment(alloca.getAlignment());
   uint64_t srcAlign = gv.getAlignment().value_or(naturalAlign);

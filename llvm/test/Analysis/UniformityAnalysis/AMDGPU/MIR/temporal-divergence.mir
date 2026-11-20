@@ -47,7 +47,6 @@ alignment:       1
 legalized:       true
 tracksRegLiveness: true
 registers:
-  - { id: 3, class: _ }
   - { id: 4, class: vgpr_32 }
   - { id: 5, class: sgpr_32 }
   - { id: 6, class: sgpr_32 }
@@ -105,7 +104,6 @@ alignment:       1
 legalized:       true
 tracksRegLiveness: true
 registers:
-  - { id: 3, class: _ }
   - { id: 4, class: vgpr_32 }
   - { id: 5, class: sgpr_32 }
   - { id: 6, class: sgpr_32 }
@@ -163,7 +161,6 @@ alignment:       1
 legalized:       true
 tracksRegLiveness: true
 registers:
-  - { id: 3, class: _ }
   - { id: 4, class: vgpr_32 }
   - { id: 5, class: sgpr_32 }
   - { id: 6, class: sgpr_32 }
@@ -217,7 +214,6 @@ alignment:       1
 legalized:       true
 tracksRegLiveness: true
 registers:
-  - { id: 3, class: _ }
   - { id: 4, class: vgpr_32 }
   - { id: 5, class: sgpr_32 }
   - { id: 6, class: sgpr_32 }
@@ -271,7 +267,6 @@ alignment:       1
 legalized:       true
 tracksRegLiveness: true
 registers:
-  - { id: 3, class: _ }
   - { id: 4, class: vgpr_32 }
   - { id: 5, class: sgpr_32 }
   - { id: 6, class: sgpr_32 }
@@ -326,7 +321,6 @@ alignment:       1
 legalized:       true
 tracksRegLiveness: true
 registers:
-  - { id: 3, class: _ }
   - { id: 4, class: vgpr_32 }
   - { id: 5, class: sgpr_32 }
   - { id: 6, class: sgpr_32 }

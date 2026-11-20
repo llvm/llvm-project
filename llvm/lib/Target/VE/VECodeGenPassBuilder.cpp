@@ -28,6 +28,7 @@ public:
                                 PassInstrumentationCallbacks *PIC)
       : CodeGenPassBuilder(TM, Opts, PIC) {}
 
+protected:
   void addIRPasses(PassManagerWrapper &PMW) override;
   Error addInstSelector(PassManagerWrapper &PMW) override;
   void addPreEmitPass(PassManagerWrapper &PMW) override;

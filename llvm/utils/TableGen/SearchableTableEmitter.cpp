@@ -154,12 +154,6 @@ private:
                              "'; expected: bit, bits, string, or code");
   }
 
-  bool isIntrinsic(const Init *I) {
-    if (const auto *DI = dyn_cast<DefInit>(I))
-      return DI->getDef()->isSubClassOf("Intrinsic");
-    return false;
-  }
-
   const CodeGenIntrinsic &getIntrinsic(const Init *I) {
     const Record *Def = cast<DefInit>(I)->getDef();
     return Target->getIntrinsic(Def);

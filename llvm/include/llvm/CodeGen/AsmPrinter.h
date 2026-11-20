@@ -238,7 +238,7 @@ private:
   std::unique_ptr<raw_fd_ostream> StackUsageStream;
 
   /// List of symbols to be inserted into PC sections.
-  DenseMap<const MDNode *, SmallVector<const MCSymbol *>> PCSectionsSymbols;
+  MapVector<const MDNode *, SmallVector<const MCSymbol *>> PCSectionsSymbols;
 
   static char ID;
 

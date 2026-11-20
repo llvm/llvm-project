@@ -33,6 +33,7 @@ public:
                                    PassInstrumentationCallbacks *PIC)
       : CodeGenPassBuilder(TM, Opts, PIC) {}
 
+protected:
   void addIRPasses(PassManagerWrapper &PMW) override;
   Error addInstSelector(PassManagerWrapper &PMW) override;
   void addPreEmitPass(PassManagerWrapper &PMW) override;
@@ -57,9 +58,6 @@ void SparcCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
     addMachineFunctionPass(BranchRelaxationPass(), PMW);
 
   addMachineFunctionPass(SparcDelaySlotFillerPass(), PMW);
-  addMachineFunctionPass(SparcInsertNOPLoadPass(), PMW);
-  addMachineFunctionPass(SparcDetectRoundChangePass(), PMW);
-  addMachineFunctionPass(SparcFixAllFDIVSQRTPass(), PMW);
   addMachineFunctionPass(SparcErrataWorkaroundPass(), PMW);
 }
 

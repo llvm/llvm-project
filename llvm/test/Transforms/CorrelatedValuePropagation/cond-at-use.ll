@@ -493,15 +493,74 @@ define i16 @abs_not_int_min(i16 %x) {
 
 define i16 @umin_elide(i16 %x) {
 ; CHECK-LABEL: @umin_elide(
-; CHECK-NEXT:    [[MIN:%.*]] = call i16 @llvm.umin.i16(i16 [[X:%.*]], i16 10)
+; CHECK-NEXT:    [[X:%.*]] = freeze i16 [[X1:%.*]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i16 [[X]], 10
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i16 [[MIN]], i16 42
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i16 [[X]], i16 42
 ; CHECK-NEXT:    ret i16 [[SEL]]
 ;
   %min = call i16 @llvm.umin.i16(i16 %x, i16 10)
-  %cmp = icmp ule i16 %x, 10
+  %cmp = icmp ule i16 %x, 10 ; %x may be undef -> freeze it
   %sel = select i1 %cmp, i16 %min, i16 42
   ret i16 %sel
+}
+
+define i32 @smin_elide_freeze(i32 %m) {
+; CHECK-LABEL: @smin_elide_freeze(
+; CHECK-NEXT:    [[M_FR:%.*]] = freeze i32 [[M:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[M_FR]], 0
+; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[M_FR]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[NEG]], i32 0
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %cmp = icmp slt i32 %m, 0 ; m may be undef -> freeze it
+  %min = call i32 @llvm.smin.i32(i32 %m, i32 0)
+  %neg = sub i32 0, %min
+  %sel = select i1 %cmp, i32 %neg, i32 0
+  ret i32 %sel
+}
+
+; Not folded: both operands would need to be frozen.
+define i16 @umin_freeze_both(i16 %x, i16 %y) {
+; CHECK-LABEL: @umin_freeze_both(
+; CHECK-NEXT:    [[CX:%.*]] = icmp ule i16 [[X:%.*]], 10
+; CHECK-NEXT:    [[CY:%.*]] = icmp uge i16 [[Y:%.*]], 20
+; CHECK-NEXT:    [[C:%.*]] = and i1 [[CX]], [[CY]]
+; CHECK-NEXT:    [[MIN:%.*]] = call i16 @llvm.umin.i16(i16 [[X]], i16 [[Y]])
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C]], i16 [[MIN]], i16 42
+; CHECK-NEXT:    ret i16 [[SEL]]
+;
+  %cx = icmp ule i16 %x, 10
+  %cy = icmp uge i16 %y, 20
+  %c = and i1 %cx, %cy
+  %min = call i16 @llvm.umin.i16(i16 %x, i16 %y)
+  %sel = select i1 %c, i16 %min, i16 42
+  ret i16 %sel
+}
+
+; Not folded: the select is beyond the number of uses LVI inspects.
+define i64 @refill(i64 %bits, i32 %w, ptr %availp) {
+; CHECK-LABEL: @refill(
+; CHECK-NEXT:    [[AVAIL:%.*]] = load i32, ptr [[AVAILP:%.*]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[AVAIL]], 0
+; CHECK-NEXT:    [[MIN:%.*]] = call i32 @llvm.smin.i32(i32 [[AVAIL]], i32 0)
+; CHECK-NEXT:    [[NEED:%.*]] = sub nsw i32 0, [[MIN]]
+; CHECK-NEXT:    [[W64:%.*]] = zext i32 [[W:%.*]] to i64
+; CHECK-NEXT:    [[NEED64:%.*]] = zext nneg i32 [[NEED]] to i64
+; CHECK-NEXT:    [[SHL:%.*]] = shl i64 [[W64]], [[NEED64]]
+; CHECK-NEXT:    [[ADD:%.*]] = select i1 [[CMP]], i64 [[SHL]], i64 0
+; CHECK-NEXT:    [[OR:%.*]] = or i64 [[ADD]], [[BITS:%.*]]
+; CHECK-NEXT:    ret i64 [[OR]]
+;
+  %avail = load i32, ptr %availp, align 4
+  %cmp = icmp slt i32 %avail, 0 ; avail may be undef -> freeze it
+  %min = call i32 @llvm.smin.i32(i32 %avail, i32 0)
+  %need = sub nsw i32 0, %min
+  %w64 = zext i32 %w to i64
+  %need64 = zext nneg i32 %need to i64
+  %shl = shl i64 %w64, %need64
+  %add = select i1 %cmp, i64 %shl, i64 0
+  %or = or i64 %add, %bits
+  ret i64 %or
 }
 
 define i16 @ashr_convert(i16 noundef %x, i16 %y) {

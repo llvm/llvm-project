@@ -131,9 +131,8 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
     // CHECK: [[RES1:%.*]] = spirv.SpecConstantOperation wraps "spirv.ISub"([[USE1]], [[USE2]]) : (i32, i32) -> i32
 
     // CHECK: [[USE3:%.*]] = spirv.mlir.referenceof @sc_i32_1 : i32
-    // CHECK: [[USE4:%.*]] = spirv.Constant 0 : i32
 
-    // CHECK: [[RES2:%.*]] = spirv.SpecConstantOperation wraps "spirv.ISub"([[USE3]], [[USE4]]) : (i32, i32) -> i32
+    // CHECK: [[RES2:%.*]] = spirv.SpecConstantOperation wraps "spirv.ISub"([[USE3]], [[USE2]]) : (i32, i32) -> i32
 
     %0 = spirv.mlir.referenceof @sc_i32_1 : i32
     %1 = spirv.Constant 0 : i32

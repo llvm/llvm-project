@@ -129,6 +129,15 @@ HexagonRegisterInfo::getCallerSavedRegs(const MachineFunction *MF,
   return Empty;
 }
 
+// Returns true if MF takes HLX arguments or returns an HLX type.
+static bool hasHLXSignature(const MachineFunction &MF) {
+  const auto &HST = MF.getSubtarget<HexagonSubtarget>();
+  const Function &F = MF.getFunction();
+  return HST.isTypeForHLX(F.getReturnType()) ||
+         any_of(F.args(), [&HST](const Argument &A) {
+           return HST.isTypeForHLX(A.getType());
+         });
+}
 
 const MCPhysReg *
 HexagonRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
@@ -149,13 +158,18 @@ HexagonRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
 
   bool HasEHReturn = MF->getInfo<HexagonMachineFunctionInfo>()->hasEHReturn();
 
+  if (hasHLXSignature(*MF))
+    return HasEHReturn ? HexagonCSR_HLX_EH_SaveList : HexagonCSR_HLX_SaveList;
   return HasEHReturn ? CalleeSavedRegsV3EHReturn : CalleeSavedRegsV3;
 }
-
 
 const uint32_t *HexagonRegisterInfo::getCallPreservedMask(
       const MachineFunction &MF, CallingConv::ID) const {
   return HexagonCSR_RegMask;
+}
+
+const uint32_t *HexagonRegisterInfo::getHLXCallPreservedMask() const {
+  return HexagonCSR_HLX_RegMask;
 }
 
 BitVector
@@ -274,10 +288,33 @@ bool HexagonRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   // Select the base pointer (BP) and calculate the actual offset from BP
   // to the beginning of the object at index FI.
   int Offset = HFI.getFrameIndexReference(MF, FI, BP).getFixed();
-  // Add the offset from the instruction.
-  int RealOffset = Offset + MI.getOperand(FIOp+1).getImm();
-
   unsigned Opc = MI.getOpcode();
+  bool IsBaseOnlyHLX =
+      Opc == Hexagon::LX_L16b_pseudo || Opc == Hexagon::LX_S16b_pseudo;
+  // Add the offset from the instruction.
+  int RealOffset =
+      Offset + (IsBaseOnlyHLX ? 0 : MI.getOperand(FIOp + 1).getImm());
+
+  if (BP == Hexagon::VSP) {
+    auto &MRI = MF.getRegInfo();
+    Register VSPCopy = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
+    BuildMI(MB, II, MI.getDebugLoc(), HII.get(Hexagon::A2_tfrcrr), VSPCopy)
+        .addReg(BP);
+    BP = VSPCopy;
+
+    // HLX memory operations take a complete scalar address and do not have an
+    // immediate offset operand. Materialize the VTCM address before replacing
+    // their frame index.
+    if (IsBaseOnlyHLX) {
+      Register Addr = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
+      BuildMI(MB, II, MI.getDebugLoc(), HII.get(Hexagon::A2_addi), Addr)
+          .addReg(BP)
+          .addImm(RealOffset);
+      MI.getOperand(FIOp).ChangeToRegister(Addr, false, false, true);
+      return false;
+    }
+  }
+
   switch (Opc) {
     case Hexagon::PS_fia:
       MI.setDesc(HII.get(Hexagon::A2_addi));
@@ -466,6 +503,9 @@ Register HexagonRegisterInfo::getStackRegister() const {
   return Hexagon::R29;
 }
 
+Register HexagonRegisterInfo::getVTCMStackRegister() const {
+  return Hexagon::VSP;
+}
 
 unsigned HexagonRegisterInfo::getHexagonSubRegIndex(
       const TargetRegisterClass &RC, unsigned GenIdx) const {
@@ -481,6 +521,7 @@ unsigned HexagonRegisterInfo::getHexagonSubRegIndex(
     case Hexagon::CircRegsRegClassID:
       return ISub[GenIdx];
     case Hexagon::HvxWRRegClassID:
+    case Hexagon::HlxLLRRegClassID:
       return VSub[GenIdx];
     case Hexagon::HvxVQRRegClassID:
       return WSub[GenIdx];

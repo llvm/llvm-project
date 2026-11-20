@@ -24,6 +24,7 @@
 #include "ConstantEmitter.h"
 #include "PatternInit.h"
 #include "TargetInfo.h"
+#include "clang/AST/InferAlloc.h"
 #include "clang/AST/OSLog.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/DiagnosticFrontend.h"
@@ -737,10 +738,7 @@ static llvm::Value *emitModfBuiltin(CodeGenFunction &CGF, const CallExpr *E,
 
 /// EmitFAbs - Emit a call to @llvm.fabs().
 static Value *EmitFAbs(CodeGenFunction &CGF, Value *V) {
-  llvm::Value *Call = CGF.Builder.CreateFAbs(V);
-  if (auto *CallI = dyn_cast<llvm::CallInst>(Call))
-    CallI->setDoesNotAccessMemory();
-  return Call;
+  return CGF.Builder.CreateFAbs(V);
 }
 
 /// Emit the computation of the sign bit for a floating point value. Returns
@@ -1946,6 +1944,10 @@ Value *CodeGenFunction::EmitMSVCBuiltinExpr(MSVCIntrin BuiltinID,
     return EmitAtomicDecrementValue(*this, E);
   case MSVCIntrin::_InterlockedIncrement:
     return EmitAtomicIncrementValue(*this, E);
+
+  case MSVCIntrin::_ReadWriteBarrier:
+    return Builder.CreateFence(llvm::AtomicOrdering::SequentiallyConsistent,
+                               llvm::SyncScope::SingleThread);
 
   case MSVCIntrin::__fastfail: {
     // Request immediate process termination from the kernel. The instruction
@@ -4891,7 +4893,10 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   }
 
   case Builtin::BI__builtin_infer_alloc_token: {
-    llvm::MDNode *MDN = buildAllocToken(E);
+    // The builtin has no enclosing allocation whose placement-new uses could
+    // be inspected, so only the call-based inference applies.
+    llvm::MDNode *MDN = buildAllocToken(
+        infer_alloc::inferPossibleType(E, getContext(), CurCast));
     llvm::Value *MDV = MetadataAsValue::get(getLLVMContext(), MDN);
     llvm::Function *F =
         CGM.getIntrinsic(llvm::Intrinsic::alloc_token_id, {IntPtrTy});

@@ -399,6 +399,28 @@ add_integration_test(
 )
 
 add_integration_test(
+  pthread_getcpuclockid_test
+  SUITE
+    libc-pthread-integration-tests
+  SRCS
+    pthread_getcpuclockid_test.cpp
+  DEPENDS
+    libc.hdr.time_macros
+    libc.hdr.types.clockid_t
+    libc.hdr.types.pthread_t
+    libc.hdr.types.struct_timespec
+    libc.hdr.types.time_t
+    libc.src.__support.CPP.atomic
+    libc.src.__support.threads.futex_utils
+    libc.src.__support.threads.thread
+    libc.src.pthread.pthread_create
+    libc.src.pthread.pthread_getcpuclockid
+    libc.src.pthread.pthread_join
+    libc.src.pthread.pthread_self
+    libc.src.time.clock_gettime
+)
+
+add_integration_test(
   pthread_kill_test
   SUITE
     libc-pthread-integration-tests

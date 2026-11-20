@@ -49,6 +49,9 @@ LIBC_INLINE_VAR constexpr size_t native_vector_size = 16 / sizeof(T);
 template <typename T> LIBC_INLINE constexpr size_t native_vector_size = 1;
 #endif
 
+template <typename T>
+using get_as_integer_type_t = unsigned _BitInt(sizeof(T) * CHAR_BIT);
+
 } // namespace internal
 
 // Type aliases.
@@ -58,6 +61,8 @@ template <typename T, size_t N = internal::native_vector_size<T>>
 using simd = T [[clang::ext_vector_type(N)]];
 template <typename T>
 using simd_mask = simd<bool, internal::native_vector_size<T>>;
+template <typename T, size_t N = internal::native_vector_size<T>>
+using simd_bitmask = internal::get_as_integer_type_t<simd<bool, N>>;
 
 // Type trait helpers.
 template <typename T>
@@ -83,9 +88,6 @@ template <typename T, size_t N> struct simd_element_type<simd<T, N>> {
 template <typename T>
 using simd_element_type_t = typename simd_element_type<T>::type;
 namespace internal {
-
-template <typename T>
-using get_as_integer_type_t = unsigned _BitInt(sizeof(T) * CHAR_BIT);
 
 template <typename T> LIBC_INLINE constexpr T poison() {
   return __builtin_nondeterministic_value(T());

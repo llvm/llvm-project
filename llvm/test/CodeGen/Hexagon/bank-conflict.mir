@@ -90,7 +90,6 @@
 ---
 name:            f0
 alignment:       16
-registers:
 liveins:
   - { reg: '$r0', virtual-reg: '' }
 fixedStack:

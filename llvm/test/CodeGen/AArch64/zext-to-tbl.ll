@@ -1721,59 +1721,59 @@ define void @zext_v8i8_to_v8i64_with_add_in_sequence_in_loop(ptr %src, ptr %dst)
 ; CHECK-BE-NEXT:    add x10, x0, #8
 ; CHECK-BE-NEXT:  .LBB17_1: // %loop
 ; CHECK-BE-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-BE-NEXT:    ld1 { v2.8b }, [x10]
 ; CHECK-BE-NEXT:    sub x11, x10, #8
-; CHECK-BE-NEXT:    add x15, x9, #32
-; CHECK-BE-NEXT:    ld1 { v3.8b }, [x11]
-; CHECK-BE-NEXT:    ld1 { v16.2d }, [x15]
-; CHECK-BE-NEXT:    sub x11, x9, #64
+; CHECK-BE-NEXT:    ld1 { v3.8b }, [x10]
 ; CHECK-BE-NEXT:    sub x12, x9, #32
-; CHECK-BE-NEXT:    ld1 { v6.2d }, [x9]
-; CHECK-BE-NEXT:    ld1 { v22.2d }, [x11]
-; CHECK-BE-NEXT:    tbl v4.16b, { v2.16b }, v1.16b
-; CHECK-BE-NEXT:    tbl v2.16b, { v2.16b }, v0.16b
-; CHECK-BE-NEXT:    ld1 { v19.2d }, [x12]
+; CHECK-BE-NEXT:    ld1 { v2.8b }, [x11]
+; CHECK-BE-NEXT:    ld1 { v17.2d }, [x12]
+; CHECK-BE-NEXT:    sub x13, x9, #16
+; CHECK-BE-NEXT:    sub x11, x9, #64
+; CHECK-BE-NEXT:    sub x14, x9, #48
+; CHECK-BE-NEXT:    ld1 { v19.2d }, [x13]
 ; CHECK-BE-NEXT:    tbl v5.16b, { v3.16b }, v1.16b
 ; CHECK-BE-NEXT:    tbl v3.16b, { v3.16b }, v0.16b
-; CHECK-BE-NEXT:    sub x13, x9, #16
-; CHECK-BE-NEXT:    sub x14, x9, #48
+; CHECK-BE-NEXT:    ld1 { v20.2d }, [x11]
+; CHECK-BE-NEXT:    tbl v4.16b, { v2.16b }, v1.16b
+; CHECK-BE-NEXT:    tbl v2.16b, { v2.16b }, v0.16b
+; CHECK-BE-NEXT:    ld1 { v21.2d }, [x14]
+; CHECK-BE-NEXT:    add x15, x9, #32
 ; CHECK-BE-NEXT:    add x16, x9, #48
+; CHECK-BE-NEXT:    ld1 { v16.2d }, [x9]
 ; CHECK-BE-NEXT:    add x17, x9, #16
-; CHECK-BE-NEXT:    ld1 { v21.2d }, [x13]
+; CHECK-BE-NEXT:    ld1 { v23.2d }, [x15]
 ; CHECK-BE-NEXT:    subs x8, x8, #16
-; CHECK-BE-NEXT:    add x10, x10, #16
-; CHECK-BE-NEXT:    rev32 v7.8b, v4.8b
-; CHECK-BE-NEXT:    mov d4, v4.d[1]
-; CHECK-BE-NEXT:    rev32 v17.8b, v2.8b
 ; CHECK-BE-NEXT:    mov d18, v5.d[1]
-; CHECK-BE-NEXT:    mov d20, v3.d[1]
-; CHECK-BE-NEXT:    mov d2, v2.d[1]
-; CHECK-BE-NEXT:    rev32 v5.8b, v5.8b
+; CHECK-BE-NEXT:    mov d22, v3.d[1]
 ; CHECK-BE-NEXT:    rev32 v3.8b, v3.8b
-; CHECK-BE-NEXT:    uaddw v7.2d, v16.2d, v7.2s
+; CHECK-BE-NEXT:    mov d6, v4.d[1]
+; CHECK-BE-NEXT:    mov d7, v2.d[1]
 ; CHECK-BE-NEXT:    rev32 v4.8b, v4.8b
-; CHECK-BE-NEXT:    uaddw v6.2d, v6.2d, v17.2s
-; CHECK-BE-NEXT:    rev32 v17.8b, v18.8b
-; CHECK-BE-NEXT:    rev32 v20.8b, v20.8b
 ; CHECK-BE-NEXT:    rev32 v2.8b, v2.8b
-; CHECK-BE-NEXT:    ld1 { v16.2d }, [x16]
-; CHECK-BE-NEXT:    ld1 { v18.2d }, [x14]
-; CHECK-BE-NEXT:    uaddw v5.2d, v19.2d, v5.2s
-; CHECK-BE-NEXT:    uaddw v3.2d, v22.2d, v3.2s
-; CHECK-BE-NEXT:    st1 { v7.2d }, [x15]
-; CHECK-BE-NEXT:    ld1 { v7.2d }, [x17]
-; CHECK-BE-NEXT:    st1 { v6.2d }, [x9]
+; CHECK-BE-NEXT:    rev32 v5.8b, v5.8b
+; CHECK-BE-NEXT:    add x10, x10, #16
+; CHECK-BE-NEXT:    rev32 v18.8b, v18.8b
+; CHECK-BE-NEXT:    uaddw v3.2d, v16.2d, v3.2s
+; CHECK-BE-NEXT:    rev32 v6.8b, v6.8b
+; CHECK-BE-NEXT:    rev32 v7.8b, v7.8b
+; CHECK-BE-NEXT:    uaddw v4.2d, v17.2d, v4.2s
+; CHECK-BE-NEXT:    ld1 { v17.2d }, [x16]
+; CHECK-BE-NEXT:    uaddw v2.2d, v20.2d, v2.2s
+; CHECK-BE-NEXT:    ld1 { v20.2d }, [x17]
+; CHECK-BE-NEXT:    uaddw v5.2d, v23.2d, v5.2s
+; CHECK-BE-NEXT:    st1 { v4.2d }, [x12]
+; CHECK-BE-NEXT:    uaddw v6.2d, v19.2d, v6.2s
+; CHECK-BE-NEXT:    rev32 v19.8b, v22.8b
+; CHECK-BE-NEXT:    uaddw v4.2d, v21.2d, v7.2s
+; CHECK-BE-NEXT:    st1 { v2.2d }, [x11]
+; CHECK-BE-NEXT:    uaddw v2.2d, v17.2d, v18.2s
+; CHECK-BE-NEXT:    st1 { v4.2d }, [x14]
+; CHECK-BE-NEXT:    uaddw v4.2d, v20.2d, v19.2s
+; CHECK-BE-NEXT:    st1 { v6.2d }, [x13]
+; CHECK-BE-NEXT:    st1 { v3.2d }, [x9]
 ; CHECK-BE-NEXT:    add x9, x9, #128
-; CHECK-BE-NEXT:    uaddw v4.2d, v16.2d, v4.2s
-; CHECK-BE-NEXT:    st1 { v5.2d }, [x12]
-; CHECK-BE-NEXT:    uaddw v5.2d, v21.2d, v17.2s
-; CHECK-BE-NEXT:    st1 { v3.2d }, [x11]
-; CHECK-BE-NEXT:    uaddw v3.2d, v18.2d, v20.2s
-; CHECK-BE-NEXT:    uaddw v2.2d, v7.2d, v2.2s
-; CHECK-BE-NEXT:    st1 { v4.2d }, [x16]
-; CHECK-BE-NEXT:    st1 { v5.2d }, [x13]
-; CHECK-BE-NEXT:    st1 { v3.2d }, [x14]
-; CHECK-BE-NEXT:    st1 { v2.2d }, [x17]
+; CHECK-BE-NEXT:    st1 { v5.2d }, [x15]
+; CHECK-BE-NEXT:    st1 { v2.2d }, [x16]
+; CHECK-BE-NEXT:    st1 { v4.2d }, [x17]
 ; CHECK-BE-NEXT:    b.ne .LBB17_1
 ; CHECK-BE-NEXT:  // %bb.2: // %exit
 ; CHECK-BE-NEXT:    ret

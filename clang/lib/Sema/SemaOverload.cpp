@@ -6210,12 +6210,9 @@ static ImplicitConversionSequence TryObjectArgumentInitialization(
       ExplicitParameterType = Method->getFunctionObjectParameterReferenceType();
     OpaqueValueExpr TmpExpr(Loc, FromType.getNonReferenceType(),
                             ValueKindFromClassification(FromClassification));
-    ImplicitConversionSequence ICS = TryCopyInitialization(
-        S, &TmpExpr, ExplicitParameterType, SuppressUserConversion,
-        /*InOverloadResolution=*/true, false);
-    if (ICS.isBad())
-      ICS.Bad.FromExpr = nullptr;
-    return ICS;
+    return TryCopyInitialization(S, &TmpExpr, ExplicitParameterType,
+                                 SuppressUserConversion,
+                                 /*InOverloadResolution=*/true, false);
   }
 
   assert(FromType->isRecordType());

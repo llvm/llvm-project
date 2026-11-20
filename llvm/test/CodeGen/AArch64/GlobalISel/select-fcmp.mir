@@ -9,7 +9,6 @@ name:            zero
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $s0, $s1
@@ -35,7 +34,6 @@ name:            notzero
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.1:
@@ -63,7 +61,6 @@ name:            notzero_s64
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.1:
@@ -92,7 +89,6 @@ name:            zero_s64
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $d0, $d1, $s0
@@ -118,7 +114,6 @@ name:            zero_lhs
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $s0, $s1
@@ -144,7 +139,6 @@ name:            zero_lhs_not_commutative_pred
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $s0, $s1

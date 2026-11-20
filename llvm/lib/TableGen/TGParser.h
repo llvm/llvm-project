@@ -207,9 +207,6 @@ public:
     return true;
   }
   bool TokError(const Twine &Msg) const { return Error(Lex.getLoc(), Msg); }
-  const TGLexer::DependenciesSetTy &getDependencies() const {
-    return Lex.getDependencies();
-  }
 
   TGVarScope *PushScope() {
     CurScope = std::make_unique<TGVarScope>(std::move(CurScope));

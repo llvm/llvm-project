@@ -1720,6 +1720,23 @@ bool SIFoldOperandsImpl::tryConstantFoldOp(MachineInstr *MI) const {
 
   unsigned Opc = MI->getOpcode();
 
+  // (src0 << src1) + 0 -> src0 << src1
+  if (Opc == AMDGPU::V_LSHL_ADD_U32_e64) {
+    int DataIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0);
+    int AddIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2);
+    std::optional<int64_t> Addend =
+        TII->getImmOrMaterializedImm(*MRI, MI->getOperand(AddIdx));
+
+    if (Addend && static_cast<uint32_t>(*Addend) == 0) {
+      MachineOperand Data = MI->getOperand(DataIdx);
+      MI->removeOperand(AddIdx);
+      MI->removeOperand(DataIdx);
+      MI->addOperand(*MF, Data);
+      TII->mutateAndCleanupImplicit(*MI, TII->get(AMDGPU::V_LSHLREV_B32_e64));
+      return true;
+    }
+  }
+
   int Src0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0);
   if (Src0Idx == -1)
     return false;
@@ -1815,13 +1832,14 @@ bool SIFoldOperandsImpl::tryConstantFoldOp(MachineInstr *MI) const {
   }
 
   if (Opc == AMDGPU::V_AND_B32_e64 || Opc == AMDGPU::V_AND_B32_e32 ||
-      Opc == AMDGPU::S_AND_B32) {
-    if (Src1Val == 0) {
-      // y = and x, 0 => y = v_mov_b32 0
+      Opc == AMDGPU::S_AND_B32 || Opc == AMDGPU::S_AND_B64) {
+    int64_t C = Opc == AMDGPU::S_AND_B64 ? *Src1Imm : Src1Val;
+    if (C == 0) {
+      // y = and x, 0 => y = mov 0
       MI->removeOperand(Src0Idx);
       TII->mutateAndCleanupImplicit(
-          *MI, TII->get(getMovOpc(Opc == AMDGPU::S_AND_B32)));
-    } else if (Src1Val == -1) {
+          *MI, TII->get(TII->getMovOpcode(TII->getOpRegClass(*MI, 0))));
+    } else if (C == -1) {
       // y = and x, -1 => y = copy x
       MI->removeOperand(Src1Idx);
       TII->mutateAndCleanupImplicit(*MI, TII->get(AMDGPU::COPY));
@@ -2456,10 +2474,18 @@ bool SIFoldOperandsImpl::tryFoldClamp(MachineInstr &MI) {
   if (!ClampSrc->getReg().isVirtual())
     return false;
 
-  // Look through COPY. COPY only observed with True16.
-  Register DefSrcReg = TRI->lookThruCopyLike(ClampSrc->getReg(), MRI);
-  MachineInstr *Def =
-      MRI->getVRegDef(DefSrcReg.isVirtual() ? DefSrcReg : ClampSrc->getReg());
+  // Look through COPY. COPY only observed with True16. Setting the clamp bit on
+  // Def changes the value of every register in the chain, so each of them must
+  // have no other users.
+  MachineInstr *Def = MRI->getVRegDef(ClampSrc->getReg());
+  while (Def && Def->isCopy()) {
+    Register CopySrcReg = Def->getOperand(1).getReg();
+    if (!CopySrcReg.isVirtual() || !MRI->hasOneNonDBGUser(CopySrcReg))
+      return false;
+    Def = MRI->getVRegDef(CopySrcReg);
+  }
+  if (!Def)
+    return false;
 
   // The type of clamp must be compatible.
   if (!SIInstrInfo::hasSameClamp(*Def, MI))

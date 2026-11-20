@@ -64,6 +64,11 @@ getImplicitObjectParamLifetimeBoundAttr(const FunctionDecl *FD);
 /// method or because it's a normal assignment operator.
 bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD);
 
+/// Returns true if \p PVD should be considered lifetimebound, either due to an
+/// explicit lifetimebound attribute or because it is a constructor parameter
+/// marked `lifetime_capture_by(this)`, which has the same meaning.
+bool paramIsLifetimeBound(const ParmVarDecl &PVD);
+
 /// Check if a function has a lifetime_capture_by attribute on its declaration
 /// or its function type (which represents the implicit 'this' parameter for
 /// methods). Returns the attribute if found, nullptr otherwise.

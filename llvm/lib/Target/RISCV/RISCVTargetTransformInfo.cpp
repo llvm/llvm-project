@@ -2620,12 +2620,11 @@ InstructionCost RISCVTTIImpl::getExtendedReductionCost(
 
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(ValTy);
 
-  if (IsUnsigned && Opcode == Instruction::Add &&
-      LT.second.isFixedLengthVectorOf(MVT::i1)) {
-    // Represent vector_reduce_add(ZExt(<n x i1>)) as
-    // ZExtOrTrunc(ctpop(bitcast <n x i1> to in)).
-    return LT.first *
-           getRISCVInstructionCost(RISCV::VCPOP_M, LT.second, CostKind);
+  if (IsUnsigned && Opcode == Instruction::Add && LT.first == 1 &&
+      LT.second.isVectorOf(MVT::i1)) {
+    // Represent vector_reduce_add(ZExt(<i1 vector>)) as
+    // ZExtOrTrunc(ctpop(bitcast <i1 vector> to in)).
+    return getRISCVInstructionCost(RISCV::VCPOP_M, LT.second, CostKind);
   }
 
   if (ResTy->getScalarSizeInBits() != 2 * LT.second.getScalarSizeInBits())
@@ -4046,18 +4045,6 @@ bool RISCVTTIImpl::shouldCopyAttributeWhenOutliningFrom(
     return false;
 
   return BaseT::shouldCopyAttributeWhenOutliningFrom(Caller, Attr);
-}
-
-bool RISCVTTIImpl::areInlineCompatible(const Function *Caller,
-                                       const Function *Callee) const {
-  // riscv_new is the only function that can be called in an non-attributed
-  // function, we need to prevent inlining this kind of function in case any
-  // compiler generated non-attributed call in attributed function is inlined so
-  // it passes the check silently.
-  if (Callee->hasFnAttribute("riscv_new"))
-    return false;
-
-  return BaseT::areInlineCompatible(Caller, Callee);
 }
 
 std::optional<Instruction *>

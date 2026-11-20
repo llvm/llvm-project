@@ -333,7 +333,7 @@ basic_istream<_CharT, _Traits>::sentry::sentry(basic_istream<_CharT, _Traits>& _
       __is.tie()->flush();
     if (!__noskipws && (__is.flags() & ios_base::skipws)) {
       typedef istreambuf_iterator<_CharT, _Traits> _Ip;
-      const ctype<_CharT>& __ct = std::use_facet<ctype<_CharT> >(__is.getloc());
+      const ctype<_CharT>& __ct = std::use_facet<ctype<_CharT> >(__is.__getloc());
       _Ip __i(__is);
       _Ip __eof;
       for (; __i != __eof; ++__i)
@@ -373,7 +373,7 @@ __input_arithmetic(basic_istream<_CharT, _Traits>& __is, _Tp& __n) {
 #    endif // _LIBCPP_HAS_EXCEPTIONS
       typedef istreambuf_iterator<_CharT, _Traits> _Ip;
       typedef num_get<_CharT, _Ip> _Fp;
-      std::use_facet<_Fp>(__is.getloc()).get(_Ip(__is), _Ip(), __is, __state, __n);
+      std::use_facet<_Fp>(__is.__getloc()).get(_Ip(__is), _Ip(), __is, __state, __n);
 #    if _LIBCPP_HAS_EXCEPTIONS
     } catch (...) {
       __state |= ios_base::badbit;
@@ -455,7 +455,7 @@ __input_arithmetic_with_numeric_limits(basic_istream<_CharT, _Traits>& __is, _Tp
       typedef istreambuf_iterator<_CharT, _Traits> _Ip;
       typedef num_get<_CharT, _Ip> _Fp;
       long __temp;
-      std::use_facet<_Fp>(__is.getloc()).get(_Ip(__is), _Ip(), __is, __state, __temp);
+      std::use_facet<_Fp>(__is.__getloc()).get(_Ip(__is), _Ip(), __is, __state, __temp);
       if (__temp < numeric_limits<_Tp>::min()) {
         __state |= ios_base::failbit;
         __n = numeric_limits<_Tp>::min();
@@ -499,7 +499,7 @@ __input_c_string(basic_istream<_CharT, _Traits>& __is, _CharT* __p, size_t __n) 
     try {
 #    endif
       _CharT* __s               = __p;
-      const ctype<_CharT>& __ct = std::use_facet<ctype<_CharT> >(__is.getloc());
+      const ctype<_CharT>& __ct = std::use_facet<ctype<_CharT> >(__is.__getloc());
       while (__s != __p + (__n - 1)) {
         typename _Traits::int_type __i = __is.rdbuf()->sgetc();
         if (_Traits::eq_int_type(__i, _Traits::eof())) {
@@ -1135,7 +1135,7 @@ _LIBCPP_HIDE_FROM_ABI basic_istream<_CharT, _Traits>& ws(basic_istream<_CharT, _
 #    if _LIBCPP_HAS_EXCEPTIONS
     try {
 #    endif // _LIBCPP_HAS_EXCEPTIONS
-      const ctype<_CharT>& __ct = std::use_facet<ctype<_CharT> >(__is.getloc());
+      const ctype<_CharT>& __ct = std::use_facet<ctype<_CharT> >(__is.__getloc());
       while (true) {
         typename _Traits::int_type __i = __is.rdbuf()->sgetc();
         if (_Traits::eq_int_type(__i, _Traits::eof())) {
@@ -1235,7 +1235,7 @@ operator>>(basic_istream<_CharT, _Traits>& __is, basic_string<_CharT, _Traits, _
       }
 
       _Size __c                 = 0;
-      const ctype<_CharT>& __ct = std::use_facet<ctype<_CharT> >(__is.getloc());
+      const ctype<_CharT>& __ct = std::use_facet<ctype<_CharT> >(__is.__getloc());
       while (__c < __n) {
         typename _Traits::int_type __i = __is.rdbuf()->sgetc();
         if (_Traits::eq_int_type(__i, _Traits::eof())) {
@@ -1366,7 +1366,7 @@ operator>>(basic_istream<_CharT, _Traits>& __is, bitset<_Size>& __x) {
     try {
 #    endif
       basic_string<_CharT, _Traits> __str;
-      const ctype<_CharT>& __ct = std::use_facet<ctype<_CharT> >(__is.getloc());
+      const ctype<_CharT>& __ct = std::use_facet<ctype<_CharT> >(__is.__getloc());
       size_t __c                = 0;
       _CharT __zero             = __ct.widen('0');
       _CharT __one              = __ct.widen('1');

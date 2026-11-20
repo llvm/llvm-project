@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBWatchpoint.h"
+#include "Utils.h"
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBDefines.h"
@@ -210,7 +211,8 @@ const char *SBWatchpoint::GetCondition() {
 
   TargetAPIMutex api_lock = watchpoint_sp->GetTarget().GetAPIMutex();
   std::lock_guard<TargetAPIMutex> guard(api_lock);
-  return ConstString(watchpoint_sp->GetConditionText()).GetCString();
+  return GetDebuggerStringPool(watchpoint_sp->GetTarget())
+      .Intern(watchpoint_sp->GetConditionText());
 }
 
 void SBWatchpoint::SetCondition(const char *condition) {

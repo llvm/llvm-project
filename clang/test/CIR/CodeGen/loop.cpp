@@ -411,8 +411,7 @@ void test_do_while_false() {
 // CIR-NEXT:     cir.do {
 // CIR-NEXT:       cir.yield
 // CIR-NEXT:     } while {
-// CIR-NEXT:       %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
-// CIR-NEXT:       %[[FALSE:.*]] = cir.cast int_to_bool %[[ZERO]] : !s32i -> !cir.bool
+// CIR-NEXT:       %[[FALSE:.*]] = cir.const #false
 // CIR-NEXT:       cir.condition(%[[FALSE]])
 
 // LLVM: define{{.*}} void @_Z19test_do_while_falsev(){{.*}}
