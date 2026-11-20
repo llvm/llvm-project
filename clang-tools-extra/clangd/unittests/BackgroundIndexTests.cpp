@@ -766,6 +766,36 @@ TEST_F(BackgroundIndexTest, CmdLineHash) {
   EXPECT_EQ(CmdStored.Directory, Cmd.Directory);
 }
 
+TEST_F(BackgroundIndexTest, MainFileWithOtherSlashes) {
+  MockFS FS;
+  llvm::StringMap<std::string> Storage;
+  size_t CacheHits = 0;
+  MemoryShardStorage MSS(Storage, CacheHits);
+  OverlayCDB CDB(/*Base=*/nullptr);
+  BackgroundIndex Idx(FS, CDB, [&](llvm::StringRef) { return &MSS; },
+                      /*Opts=*/{});
+
+  FS.Files[testPath("A.cc")] = "void f(); void g() { f(); }";
+  // On Windows, this is not the canonical path of the file.
+  std::string File = testPath("A.cc");
+  std::replace(File.begin(), File.end(), '\\', '/');
+  tooling::CompileCommand Cmd;
+  Cmd.Filename = File;
+  Cmd.Directory = testRoot();
+  Cmd.CommandLine = {"clang++", File};
+  CDB.setCompileCommand(File, Cmd);
+  ASSERT_TRUE(Idx.blockUntilIdleForTest());
+
+  // It is still the main file: its shard has the command, and its refs count.
+  EXPECT_THAT(Storage.keys(), UnorderedElementsAre(testPath("A.cc")));
+  auto Shard = MSS.loadShard(testPath("A.cc"));
+  ASSERT_NE(Shard, nullptr);
+  EXPECT_TRUE(Shard->Cmd);
+  EXPECT_THAT(runFuzzyFind(Idx, ""),
+              UnorderedElementsAre(AllOf(named("f"), numReferences(2U)),
+                                   AllOf(named("g"), numReferences(1U))));
+}
+
 TEST_F(BackgroundIndexTest, Reindex) {
   MockFS FS;
   llvm::StringMap<std::string> Storage;
