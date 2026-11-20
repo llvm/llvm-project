@@ -122,6 +122,15 @@ static constexpr llvm::StringRef getReadOnlyAttrName() {
   return "fir.read_only";
 }
 
+/// Unit attribute to mark a fir.call (or fir.dispatch) argument of a PURE
+/// function whose dummy argument is INTENT(OUT) or INTENT(INOUT) (an
+/// extension), i.e., the function may modify the actual argument. The ordered
+/// assignment scheduling otherwise assumes that calls inside FORALL do not
+/// write to non local variables.
+static constexpr llvm::StringRef getMayBeModifiedAttrName() {
+  return "fir.may_be_modified";
+}
+
 /// Dummy intent, attached to the corresponding `func.func` argument.
 /// A function pass reads intent from this signature attribute and does not
 /// inspect another function's body. The `fir.` prefix is required: function
