@@ -13,6 +13,7 @@
 
 #include "FormatStringParsing.h"
 #include "clang/AST/FormatString.h"
+#include "clang/Basic/TargetInfo.h"
 
 using clang::UpdateOnReturn;
 using clang::analyze_format_string::ArgType;
@@ -60,7 +61,7 @@ bool ScanfFormatStringParser::parseScanList(ScanfConversionSpecifier &CS,
   }
 
   // Special case: ']' is the first character.
-  if (FormatStrConverter.convertBasicChar(*I) == u8']') {
+  if (Conv.convertBasicChar(*I) == u8']') {
     if (++I == E) {
       H.HandleIncompleteScanList(start, I - 1);
       return true;
@@ -68,8 +69,8 @@ bool ScanfFormatStringParser::parseScanList(ScanfConversionSpecifier &CS,
   }
 
   // Special case: "^]" are the first characters.
-  if (I + 1 != E && FormatStrConverter.convertBasicChar(I[0]) == u8'^' &&
-      FormatStrConverter.convertBasicChar(I[1]) == u8']') {
+  if (I + 1 != E && Conv.convertBasicChar(I[0]) == u8'^' &&
+      Conv.convertBasicChar(I[1]) == u8']') {
     I += 2;
     if (I == E) {
       H.HandleIncompleteScanList(start, I - 1);
@@ -78,7 +79,7 @@ bool ScanfFormatStringParser::parseScanList(ScanfConversionSpecifier &CS,
   }
 
   // Look for a ']' character which denotes the end of the scan list.
-  while (FormatStrConverter.convertBasicChar(*I) != u8']') {
+  while (Conv.convertBasicChar(*I) != u8']') {
     if (++I == E) {
       H.HandleIncompleteScanList(start, I - 1);
       return true;
@@ -107,7 +108,7 @@ ScanfFormatStringParser::parseSpecifier(const char *&Beg, const char *E,
       H.HandleNullChar(I);
       return true;
     }
-    if (FormatStrConverter.convertBasicChar(c) == u8'%') {
+    if (Conv.convertBasicChar(c) == u8'%') {
       Start = I++; // Record the start of the format specifier.
       break;
     }
@@ -134,7 +135,7 @@ ScanfFormatStringParser::parseSpecifier(const char *&Beg, const char *E,
   }
 
   // Look for '*' flag if it is present.
-  if (FormatStrConverter.convertBasicChar(*I) == u8'*') {
+  if (Conv.convertBasicChar(*I) == u8'*') {
     FS.setSuppressAssignment(I);
     if (++I == E) {
       H.HandleIncompleteSpecifier(Start, E - Start);
@@ -172,7 +173,7 @@ ScanfFormatStringParser::parseSpecifier(const char *&Beg, const char *E,
   // Finally, look for the conversion specifier.
   const char *conversionPosition = I++;
   ScanfConversionSpecifier::Kind k = ScanfConversionSpecifier::InvalidSpecifier;
-  switch (FormatStrConverter.convertBasicChar(*conversionPosition)) {
+  switch (Conv.convertBasicChar(*conversionPosition)) {
   default:
     break;
   case u8'%':
@@ -634,8 +635,7 @@ bool clang::analyze_format_string::ParseScanfString(FormatStringHandler &H,
   unsigned argIndex = 0;
 
   // Keep looking for a format specifier until we have exhausted the string.
-  llvm::TextEncodingConverter Conv =
-      llvm::TextEncodingConverter::createNoopConverter();
+  llvm::TextEncodingConverter Conv = createFormatStrConverter(Target);
   ScanfFormatStringParser P(H, LO, Target, Conv);
   while (I != E) {
     const ScanfSpecifierResult &FSR = P.parseSpecifier(I, E, argIndex);
