@@ -731,6 +731,99 @@ TEST(Bytecode, VerifiedAttrOverDeepMutableType) {
   EXPECT_EQ(curType, parsedRec14Box);
 }
 
+TEST(Bytecode, MutableTypeReachedThroughImmutableWrapper) {
+  MLIRContext srcCtx;
+  srcCtx.getOrLoadDialect<TestMutableBytecodeDialect>();
+
+  // Mutable type first reached through the immutable TupleType that also
+  // appears in its body (the pointer-to-self-referential-record pattern).
+  auto wrapped = MutableBoxType::get(&srcCtx, "wrapped");
+  Type wrappedTuple = TupleType::get(&srcCtx, TypeRange{wrapped});
+  ASSERT_TRUE(succeeded(wrapped.setBody(wrappedTuple)));
+
+  // Same pattern wrapped past maxAttrTypeDepth.
+  auto deepWrapped = MutableBoxType::get(&srcCtx, "deep_wrapped");
+  Type deepWrappedTuple = wrapInTuples(&srcCtx, deepWrapped, 7);
+  ASSERT_TRUE(succeeded(deepWrapped.setBody(deepWrappedTuple)));
+
+  // Two mutable types sharing one immutable wrapper, exercising multiple
+  // guarded re-entries of the same wrapper across distinct live partials.
+  auto sharedA = MutableBoxType::get(&srcCtx, "shared_a");
+  auto sharedB = MutableBoxType::get(&srcCtx, "shared_b");
+  Type sharedTuple = TupleType::get(&srcCtx, TypeRange{sharedA, sharedB});
+  ASSERT_TRUE(succeeded(sharedA.setBody(sharedTuple)));
+  ASSERT_TRUE(succeeded(sharedB.setBody(sharedTuple)));
+
+  OwningOpRef<ModuleOp> module = ModuleOp::create(UnknownLoc::get(&srcCtx));
+  (*module)->setDiscardableAttr("test_mutable_bc.wrapped",
+                                TypeAttr::get(wrappedTuple));
+  (*module)->setDiscardableAttr("test_mutable_bc.deep_wrapped",
+                                TypeAttr::get(deepWrappedTuple));
+  (*module)->setDiscardableAttr("test_mutable_bc.shared_wrapped",
+                                TypeAttr::get(sharedTuple));
+
+  std::string bytecode;
+  serializeModule(module.get(), bytecode);
+
+  MLIRContext dstCtx;
+  dstCtx.getOrLoadDialect<TestMutableBytecodeDialect>();
+  ParserConfig config(&dstCtx);
+  // Attach a fallthrough callback on builtin types to confirm guarded re-entry
+  // does not re-enter callbacks on an active Entry<T>.
+  config.getBytecodeReaderConfig().attachTypeCallback(
+      [](DialectBytecodeReader &, StringRef, Type &entry) -> LogicalResult {
+        entry = Type();
+        return success();
+      });
+  Block block;
+  ASSERT_TRUE(succeeded(readBytecodeFile(
+      llvm::MemoryBufferRef(bytecode, "wrapped-buffer"), &block, config)));
+  ASSERT_FALSE(block.empty());
+
+  Operation *roundTripped = &block.front();
+
+  auto wrappedAttr = dyn_cast_or_null<TypeAttr>(
+      roundTripped->getDiscardableAttr("test_mutable_bc.wrapped"));
+  ASSERT_TRUE(wrappedAttr);
+  auto parsedWrappedTuple = dyn_cast<TupleType>(wrappedAttr.getValue());
+  ASSERT_TRUE(parsedWrappedTuple);
+  ASSERT_EQ(parsedWrappedTuple.size(), 1u);
+  auto parsedWrapped = dyn_cast<MutableBoxType>(parsedWrappedTuple.getType(0));
+  ASSERT_TRUE(parsedWrapped);
+  EXPECT_EQ(parsedWrapped.getName(), "wrapped");
+  EXPECT_EQ(parsedWrapped.getBody(), parsedWrappedTuple);
+
+  auto deepAttr = dyn_cast_or_null<TypeAttr>(
+      roundTripped->getDiscardableAttr("test_mutable_bc.deep_wrapped"));
+  ASSERT_TRUE(deepAttr);
+  Type curType = deepAttr.getValue();
+  for (unsigned i = 0; i < 7; ++i) {
+    auto tup = dyn_cast_or_null<TupleType>(curType);
+    ASSERT_TRUE(tup);
+    ASSERT_EQ(tup.size(), 1u);
+    curType = tup.getType(0);
+  }
+  auto parsedDeep = dyn_cast_or_null<MutableBoxType>(curType);
+  ASSERT_TRUE(parsedDeep);
+  EXPECT_EQ(parsedDeep.getName(), "deep_wrapped");
+  EXPECT_EQ(parsedDeep.getBody(), deepAttr.getValue());
+
+  auto sharedAttr = dyn_cast_or_null<TypeAttr>(
+      roundTripped->getDiscardableAttr("test_mutable_bc.shared_wrapped"));
+  ASSERT_TRUE(sharedAttr);
+  auto parsedSharedTuple = dyn_cast<TupleType>(sharedAttr.getValue());
+  ASSERT_TRUE(parsedSharedTuple);
+  ASSERT_EQ(parsedSharedTuple.size(), 2u);
+  auto parsedA = dyn_cast<MutableBoxType>(parsedSharedTuple.getType(0));
+  auto parsedB = dyn_cast<MutableBoxType>(parsedSharedTuple.getType(1));
+  ASSERT_TRUE(parsedA);
+  ASSERT_TRUE(parsedB);
+  EXPECT_EQ(parsedA.getName(), "shared_a");
+  EXPECT_EQ(parsedB.getName(), "shared_b");
+  EXPECT_EQ(parsedA.getBody(), parsedSharedTuple);
+  EXPECT_EQ(parsedB.getBody(), parsedSharedTuple);
+}
+
 TEST(Bytecode, MutableTypeCallbackFallthroughAndMismatch) {
   MLIRContext srcCtx;
   srcCtx.getOrLoadDialect<TestMutableBytecodeDialect>();
@@ -896,6 +989,27 @@ TEST(Bytecode, UnguardedCyclicTypeFailsCleanly) {
 
     OwningOpRef<ModuleOp> module = ModuleOp::create(UnknownLoc::get(&srcCtx));
     (*module)->setDiscardableAttr("test_mutable_bc.bad", TypeAttr::get(self));
+
+    std::string bytecode;
+    serializeModule(module.get(), bytecode);
+    expectReadDiagnostic(bytecode, "cyclic dependency detected in type");
+  }
+
+  // An unguarded self-cycle that also references a guarded mutable peer whose
+  // body points back to it must still fail cleanly rather than spinning on the
+  // peer's live partial.
+  {
+    MLIRContext srcCtx;
+    srcCtx.getOrLoadDialect<TestMutableBytecodeDialect>();
+    auto unguarded = MutableBoxType::get(&srcCtx, "unguarded_pair");
+    auto guardedPeer = MutableBoxType::get(&srcCtx, "guarded_peer");
+    ASSERT_TRUE(succeeded(guardedPeer.setBody(unguarded)));
+    ASSERT_TRUE(succeeded(unguarded.setBody(
+        TupleType::get(&srcCtx, TypeRange{guardedPeer, unguarded}))));
+
+    OwningOpRef<ModuleOp> module = ModuleOp::create(UnknownLoc::get(&srcCtx));
+    (*module)->setDiscardableAttr("test_mutable_bc.bad_pair",
+                                  TypeAttr::get(unguarded));
 
     std::string bytecode;
     serializeModule(module.get(), bytecode);

@@ -993,89 +993,45 @@ private:
   };
 
   /// Post-order DFS worklist that deduplicates queued entries and supports O(1)
-  /// splicing of dependencies ahead of their dependents in contiguous storage.
+  /// splicing of dependencies ahead of their dependents.
   class AttrTypeWorklist {
-    struct Node {
-      WorklistEntry entry;
-      uint32_t prev = 0;
-      uint32_t next = 0;
-    };
-
   public:
-    AttrTypeWorklist() {
-      // Index 0 is the circular sentinel node (prev = tail, next = head).
-      nodes.push_back({{0, EntryKind::Attribute}, 0, 0});
-    }
-
-    bool empty() const { return nodes[0].next == 0; }
+    bool empty() const { return entries.empty(); }
 
     void pushFront(WorklistEntry entry) {
       auto [it, inserted] = positions.try_emplace(entry);
-      if (inserted) {
-        uint32_t idx = allocateNode(entry);
-        it->second = idx;
-        linkAfter(0, idx);
-      } else {
-        uint32_t idx = it->second;
-        if (nodes[0].next != idx) {
-          unlink(idx);
-          linkAfter(0, idx);
-        }
-      }
+      if (inserted)
+        it->second = entries.insert(entries.begin(), entry);
+      else
+        entries.splice(entries.begin(), entries, it->second);
     }
 
     void pushBack(WorklistEntry entry) {
       auto [it, inserted] = positions.try_emplace(entry);
-      if (inserted) {
-        uint32_t idx = allocateNode(entry);
-        it->second = idx;
-        linkAfter(nodes[0].prev, idx);
-      }
+      if (inserted)
+        it->second = entries.insert(entries.end(), entry);
     }
 
     WorklistEntry popFront() {
       assert(!empty() && "cannot pop from an empty worklist");
-      uint32_t head = nodes[0].next;
-      WorklistEntry entry = nodes[head].entry;
-      unlink(head);
-      positions.erase(entry);
-      nodes[head].next = freeHead;
-      freeHead = head;
-      return entry;
+      WorklistEntry front = entries.front();
+      positions.erase(front);
+      entries.pop_front();
+      return front;
     }
 
   private:
-    uint32_t allocateNode(WorklistEntry entry) {
-      if (freeHead != 0) {
-        uint32_t idx = freeHead;
-        freeHead = nodes[idx].next;
-        nodes[idx] = {entry, 0, 0};
-        return idx;
-      }
-      uint32_t idx = static_cast<uint32_t>(nodes.size());
-      nodes.push_back({entry, 0, 0});
-      return idx;
-    }
-
-    void linkAfter(uint32_t pos, uint32_t idx) {
-      uint32_t next = nodes[pos].next;
-      nodes[idx].prev = pos;
-      nodes[idx].next = next;
-      nodes[pos].next = idx;
-      nodes[next].prev = idx;
-    }
-
-    void unlink(uint32_t idx) {
-      uint32_t prev = nodes[idx].prev;
-      uint32_t next = nodes[idx].next;
-      nodes[prev].next = next;
-      nodes[next].prev = prev;
-    }
-
-    SmallVector<Node, 16> nodes;
-    DenseMap<WorklistEntry, uint32_t> positions;
-    uint32_t freeHead = 0;
+    std::list<WorklistEntry> entries;
+    DenseMap<WorklistEntry, std::list<WorklistEntry>::iterator> positions;
   };
+
+  /// Return whether any partial type published at or after
+  /// `partialHistory[start]` is still live.
+  bool hasLivePartialSince(size_t start) const {
+    return llvm::any_of(
+        ArrayRef(partialHistory).drop_front(start),
+        [&](uint64_t idx) { return partialTypes.contains(idx); });
+  }
 
   void eraseUncommittedPartialType(uint64_t index) {
     if (partialTypes.erase(index))
@@ -1139,13 +1095,18 @@ private:
   DenseMap<uint64_t, Type> partialTypes;
   SmallVector<uint64_t, 4> partialHistory;
 
-  /// Entries currently on the active C++ `readEntry` call stack, used to detect
-  /// unguarded cycles without waiting for the depth limit.
-  llvm::SmallDenseSet<WorklistEntry, 8> activeEntries;
+  /// Entries currently on the active C++ `readEntry` call stack, mapped to
+  /// `partialHistory.size()` when their read began, used to distinguish guarded
+  /// cycles (which defer) from unguarded cycles (which fail).
+  llvm::SmallDenseMap<WorklistEntry, size_t, 8> activeEntries;
 
-  /// Monotonic counters tracking committed entries and active partial types to
-  /// detect non-progressing cycles and escaped speculative partials.
+  /// Potential counter incremented on each committed entry and each newly
+  /// published partial type, and decremented if an uncommitted partial is
+  /// rolled back or discarded; used to detect non-progressing worklist cycles.
   uint64_t progressGeneration = 0;
+
+  /// Monotonic count of committed attribute/type entries, used to detect
+  /// speculative partials that escaped into a cached entry before fallthrough.
   uint64_t resolvedCount = 0;
 
   /// A location used for error emission.
@@ -1679,7 +1640,17 @@ LogicalResult AttrTypeReader::readEntry(SmallVectorImpl<Entry<T>> &entries,
   constexpr EntryKind kind =
       std::is_same_v<T, Type> ? EntryKind::Type : EntryKind::Attribute;
   WorklistEntry activeKey(index, kind);
-  if (!activeEntries.insert(activeKey).second) {
+  auto [activeIt, firstActivation] =
+      activeEntries.try_emplace(activeKey, partialHistory.size());
+  if (!firstActivation) {
+    // Re-entering an active entry is guarded if a partial type published since
+    // the outer read began is still live: defer so the worklist parses this
+    // entry once using the published partial before completing the mutable
+    // type.
+    if (hasLivePartialSince(activeIt->second)) {
+      addDeferredParsing(index, kind);
+      return failure();
+    }
     deferredWorklist.clear();
     StringRef kindStr = std::is_same_v<T, Type> ? "type" : "attribute";
     return emitError(fileLoc)
