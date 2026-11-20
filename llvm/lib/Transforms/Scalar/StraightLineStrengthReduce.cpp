@@ -1369,6 +1369,20 @@ void StraightLineStrengthReduce::partialStrengthReduce() {
           continue;
 
         Instruction *InsertPoint = DomBB->getTerminator();
+        // An earlier round may have hoisted a candidate into DomBB, ahead of
+        // InsertPoint. PSRBasis can only serve such a candidate if it already
+        // dominates it; hoisting PSRBasis to InsertPoint would not.
+        llvm::erase_if(PSRCands, [&](const DeltaInfo &DI) {
+          if (DI.Cand->Ins->getParent() != DomBB ||
+              DT->dominates(PSRBasis->Ins, DI.Cand->Ins))
+            return false;
+          LLVM_DEBUG(dbgs() << "Drop PSR candidate not dominated by basis: "
+                            << *DI.Cand << "\n");
+          return true;
+        });
+        if (PSRCands.empty())
+          continue;
+
         // PSRBasis->Ins may be already hoisted
         if (!DT->dominates(PSRBasis->Ins, InsertPoint)) {
           SmallVector<Instruction *, 8> HoistList;
@@ -1393,6 +1407,8 @@ void StraightLineStrengthReduce::partialStrengthReduce() {
 
         for (auto &DI : PSRCands) {
           Candidate *Cand = DI.Cand;
+          assert(DT->dominates(PSRBasis->Ins, Cand->Ins) &&
+                 "PSR basis must dominate its candidate");
           Cand->Basis = PSRBasis;
           Cand->DeltaKind = DI.DeltaKind;
           Cand->Delta = DI.Delta;
