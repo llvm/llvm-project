@@ -8,9 +8,9 @@
 ; Move %p1 to a temporary register (%eax).
 ; CHECK: movl  {{%edi|%ecx}}, [[R1:%e..|%r.*d]]
 ; Fold the load of %in1 into the add.
-; CHECK: addl  [[A1:32|144]](%rsp), [[R1]]
+; CHECK: addl  [[A1:32|128]](%rsp), [[R1]]
 ; Move param %in2 to temp register (%r10d).
-; CHECK: movl  [[A2:40|152]](%rsp), [[R2:%[a-z0-9]+]]
+; CHECK: movl  [[A2:40|136]](%rsp), [[R2:%[a-z0-9]+]]
 ; Move param %in2 to stack.
 ; CHECK-DAG: movl  [[R2]], [[A1]](%rsp)
 ; Move result of addition to stack.
