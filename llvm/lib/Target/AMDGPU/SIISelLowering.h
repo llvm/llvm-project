@@ -42,6 +42,14 @@ private:
   std::bitset<MVT::VALUETYPE_SIZE> SBufferLoadDiagnosticVTs;
 
 public:
+  // GCN expands i32/i64 div/rem to ALU sequences without libcalls. The
+  // reciprocal instruction can raise the FP divide-by-zero exception flag;
+  // kernel exception enables are zero (AMDGPUAsmPrinter::getSIProgramInfo).
+  bool isIntDivRemTrapFree(EVT VT) const override {
+    // Small integers use native or promoted non-trapping division.
+    return VT == MVT::i8 || VT == MVT::i16 || VT == MVT::i32 || VT == MVT::i64;
+  }
+
   MVT getRegisterTypeForCallingConv(LLVMContext &Context,
                                     CallingConv::ID CC,
                                     EVT VT) const override;
