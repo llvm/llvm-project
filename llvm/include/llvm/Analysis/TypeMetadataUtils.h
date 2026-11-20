@@ -26,8 +26,10 @@ class CallInst;
 class Constant;
 class Function;
 class DominatorTree;
+class GlobalObject;
 class GlobalVariable;
 class Instruction;
+class Metadata;
 class Module;
 
 /// A call site that could be devirtualized.
@@ -79,6 +81,10 @@ LLVM_ABI Constant *getPointerAtOffset(Constant *I, uint64_t Offset, Module &M,
 /// otherwise.
 LLVM_ABI std::pair<Function *, Constant *>
 getFunctionAtVTableOffset(GlobalVariable *GV, uint64_t Offset, Module &M);
+
+/// Returns true if GO has a !type entry with the given Offset and TypeId.
+LLVM_ABI bool isTypeIdMemberAtOffset(const GlobalObject &GO, uint64_t Offset,
+                                     const Metadata *TypeId);
 
 /// Finds the same "relative pointer" pattern as described above, where the
 /// target is `C`, and replaces the entire pattern with a constant zero.
