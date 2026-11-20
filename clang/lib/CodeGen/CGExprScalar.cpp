@@ -3148,9 +3148,11 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
   case CK_IntegralComplexToBoolean: {
     CodeGenFunction::ComplexPairTy V = CGF.EmitComplexExpr(E);
 
+    // The destination may be an enumeration whose underlying type is bool
+    // (C23 6.7.3.3p16), so convert to bool rather than to DestTy.
     // TODO: kill this function off, inline appropriate case here
-    return EmitComplexToScalarConversion(V, E->getType(), DestTy,
-                                         CE->getExprLoc());
+    return EmitComplexToScalarConversion(
+        V, E->getType(), CGF.getContext().BoolTy, CE->getExprLoc());
   }
 
   case CK_ZeroToOCLOpaqueType: {

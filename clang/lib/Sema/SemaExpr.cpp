@@ -7983,6 +7983,15 @@ CastKind Sema::PrepareScalarCast(ExprResult &Src, QualType DestTy) {
   if (Context.hasSameUnqualifiedType(SrcTy, DestTy))
     return CK_NoOp;
 
+  // C23 6.7.3.3p16: conversion to an enumerated type with a fixed underlying
+  // type has the same semantics as conversion to the underlying type, so an
+  // enumeration with an underlying type of bool converts like bool.
+  Type::ScalarTypeKind DestKind = DestTy->getScalarTypeKind();
+  if (DestKind == Type::STK_Integral)
+    if (const EnumDecl *ED = DestTy->getAsEnumDecl();
+        ED && ED->isFixed() && ED->getIntegerType()->isBooleanType())
+      DestKind = Type::STK_Bool;
+
   switch (Type::ScalarTypeKind SrcKind = SrcTy->getScalarTypeKind()) {
   case Type::STK_MemberPointer:
     llvm_unreachable("member pointer type in C");
@@ -7990,7 +7999,7 @@ CastKind Sema::PrepareScalarCast(ExprResult &Src, QualType DestTy) {
   case Type::STK_CPointer:
   case Type::STK_BlockPointer:
   case Type::STK_ObjCObjectPointer:
-    switch (DestTy->getScalarTypeKind()) {
+    switch (DestKind) {
     case Type::STK_CPointer: {
       LangAS SrcAS = SrcTy->getPointeeType().getAddressSpace();
       LangAS DestAS = DestTy->getPointeeType().getAddressSpace();
@@ -8024,7 +8033,7 @@ CastKind Sema::PrepareScalarCast(ExprResult &Src, QualType DestTy) {
     llvm_unreachable("Should have returned before this");
 
   case Type::STK_FixedPoint:
-    switch (DestTy->getScalarTypeKind()) {
+    switch (DestKind) {
     case Type::STK_FixedPoint:
       return CK_FixedPointCast;
     case Type::STK_Bool:
@@ -8049,7 +8058,7 @@ CastKind Sema::PrepareScalarCast(ExprResult &Src, QualType DestTy) {
 
   case Type::STK_Bool: // casting from bool is like casting from an integer
   case Type::STK_Integral:
-    switch (DestTy->getScalarTypeKind()) {
+    switch (DestKind) {
     case Type::STK_CPointer:
     case Type::STK_ObjCObjectPointer:
     case Type::STK_BlockPointer:
@@ -8081,7 +8090,7 @@ CastKind Sema::PrepareScalarCast(ExprResult &Src, QualType DestTy) {
     llvm_unreachable("Should have returned before this");
 
   case Type::STK_Floating:
-    switch (DestTy->getScalarTypeKind()) {
+    switch (DestKind) {
     case Type::STK_Floating:
       return CK_FloatingCast;
     case Type::STK_Bool:
@@ -8110,7 +8119,7 @@ CastKind Sema::PrepareScalarCast(ExprResult &Src, QualType DestTy) {
     llvm_unreachable("Should have returned before this");
 
   case Type::STK_FloatingComplex:
-    switch (DestTy->getScalarTypeKind()) {
+    switch (DestKind) {
     case Type::STK_FloatingComplex:
       return CK_FloatingComplexCast;
     case Type::STK_IntegralComplex:
@@ -8144,7 +8153,7 @@ CastKind Sema::PrepareScalarCast(ExprResult &Src, QualType DestTy) {
     llvm_unreachable("Should have returned before this");
 
   case Type::STK_IntegralComplex:
-    switch (DestTy->getScalarTypeKind()) {
+    switch (DestKind) {
     case Type::STK_FloatingComplex:
       return CK_IntegralComplexToFloatingComplex;
     case Type::STK_IntegralComplex:
