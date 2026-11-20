@@ -130,8 +130,6 @@ exit:
   ret i32 0
 }
 
-; TODO: Should be able to prove min.iters.check is false, same as
-; @loop_never_executes_precondition_order_1_predicates_flipped.
 define void @loop_never_executes_precondition_order_1(i64 %start, ptr %dst) {
 ; CHECK-LABEL: define void @loop_never_executes_precondition_order_1(
 ; CHECK-SAME: i64 [[START:%.*]], ptr [[DST:%.*]]) {
@@ -141,42 +139,16 @@ define void @loop_never_executes_precondition_order_1(i64 %start, ptr %dst) {
 ; CHECK:       [[PH]]:
 ; CHECK-NEXT:    [[MUL:%.*]] = shl i64 [[START]], 1
 ; CHECK-NEXT:    [[PRE_1:%.*]] = icmp slt i64 [[MUL]], [[START]]
-; CHECK-NEXT:    br i1 [[PRE_1]], label %[[LOOP_PREHEADER:.*]], label %[[EXIT]]
-; CHECK:       [[LOOP_PREHEADER]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 1, [[START]]
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 2
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
-; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 1
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[START]], [[N_VEC]]
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[START]], i64 0
-; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x i64> [[DOTSPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add <2 x i64> [[DOTSPLAT]], <i64 0, i64 1>
-; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
-; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ [[INDUCTION]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 [[START]], [[INDEX]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    store <2 x i64> [[VEC_IND]], ptr [[TMP2]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], splat (i64 2)
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
-; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT_LOOPEXIT:.*]], label %[[SCALAR_PH]]
+; CHECK-NEXT:    br i1 [[PRE_1]], label %[[SCALAR_PH:.*]], label %[[EXIT]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP1]], %[[MIDDLE_BLOCK]] ], [ [[START]], %[[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ [[START]], %[[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[IV]]
 ; CHECK-NEXT:    store i64 [[IV]], ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], 0
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT_LOOPEXIT]], label %[[LOOP]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT_LOOPEXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT_LOOPEXIT]]:
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
@@ -203,8 +175,6 @@ exit:
   ret void
 }
 
-; TODO: Should be able to prove min.iters.check is false, same as
-; @loop_never_executes_precondition_order_1_predicates_flipped.
 define void @loop_never_executes_precondition_order_1_predicates_flipped(i64 %start, ptr %dst) {
 ; CHECK-LABEL: define void @loop_never_executes_precondition_order_1_predicates_flipped(
 ; CHECK-SAME: i64 [[START:%.*]], ptr [[DST:%.*]]) {
@@ -214,42 +184,16 @@ define void @loop_never_executes_precondition_order_1_predicates_flipped(i64 %st
 ; CHECK:       [[PH]]:
 ; CHECK-NEXT:    [[MUL:%.*]] = shl i64 [[START]], 1
 ; CHECK-NEXT:    [[PRE_1:%.*]] = icmp slt i64 [[MUL]], [[START]]
-; CHECK-NEXT:    br i1 [[PRE_1]], label %[[LOOP_PREHEADER:.*]], label %[[EXIT]]
-; CHECK:       [[LOOP_PREHEADER]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 1, [[START]]
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 2
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
-; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 1
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[START]], [[N_VEC]]
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[START]], i64 0
-; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x i64> [[DOTSPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add <2 x i64> [[DOTSPLAT]], <i64 0, i64 1>
-; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
-; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ [[INDUCTION]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 [[START]], [[INDEX]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    store <2 x i64> [[VEC_IND]], ptr [[TMP2]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], splat (i64 2)
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
-; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT_LOOPEXIT:.*]], label %[[SCALAR_PH]]
+; CHECK-NEXT:    br i1 [[PRE_1]], label %[[SCALAR_PH:.*]], label %[[EXIT]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP1]], %[[MIDDLE_BLOCK]] ], [ [[START]], %[[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ [[START]], %[[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[IV]]
 ; CHECK-NEXT:    store i64 [[IV]], ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], 0
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT_LOOPEXIT]], label %[[LOOP]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT_LOOPEXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT_LOOPEXIT]]:
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
