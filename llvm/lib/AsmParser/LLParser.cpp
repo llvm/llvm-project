@@ -432,6 +432,11 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
                  "use of undefined metadata '!" +
                      Twine(ForwardRefMDNodes.begin()->first) + "'");
 
+  if (FirstSeenDILocations.isValid() && FirstSeenFLDebugLocs.isValid()) {
+    return error(FirstSeenDILocations,
+                 "seen !dbg and !!dbgLoc in the same module");
+  }
+
   // Set debug locations.
   for (auto [Loc, DR, MD] : PendingDbgRecords) {
     if (auto *DI = dyn_cast<DILocation>(MD))
@@ -458,6 +463,72 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
       FLContext->InlinedCalls[InlinedCallIdx].InlineeContext =
           dyn_cast<MDFunctionLocalContext>(TempFLContext);
   FLForwardRefFLMDs.clear();
+
+  bool ShouldResolveDbgLocs = needsDLConversion();
+  if (ShouldResolveDbgLocs) {
+    // Perform some quick checks to make sure we don't try to handle any invalid
+    // FunctionLocalContexts, since we need to semantically handle them here
+    // before we reach the verifier.
+    for (auto [Loc, FLCtx] : SeenFunctionLocalContexts) {
+      for (FLSrcLoc SrcLoc : FLCtx->getSrcLocs())
+        if (!SrcLoc.ScopeIdx ||
+            SrcLoc.ScopeIdx.get() >= FLCtx->getScopes().size())
+          return error(Loc,
+                       "invalid function-local metadata: invalid scope index");
+      if (!FLCtx->getScopes().empty() &&
+          !isa_and_present<DISubprogram>(FLCtx->getScope(0).get()))
+        return error(Loc,
+                     "invalid function-local metadata: missing DISubprogram");
+      for (FLScope Scope : FLCtx->getScopes()) {
+        if (!Scope.get())
+          return error(Loc, "invalid function-local metadata: missing scope");
+        if (Scope.get()->getSubprogram() !=
+            cast<DISubprogram>(FLCtx->getScope(0).get()))
+          return error(Loc, "invalid function-local metadata: scope points at "
+                            "wrong subprogram");
+      }
+      for (size_t ICIdx = 0; ICIdx < FLCtx->getInlinedCalls().size(); ++ICIdx) {
+        FLInlinedCall IC = FLCtx->getInlinedCall(ICIdx);
+        if (IC.InlinedAtIdx && IC.InlinedAtIdx.get() >= ICIdx)
+          return error(
+              Loc, "invalid function-local metadata: invalid inlinedAt index");
+        if (!IC.SrcLocIdx) {
+          if (IC.InlinedAtIdx)
+            return error(Loc, "invalid function-local metadata: nodebug "
+                              "inlined call cannot be inlined");
+        } else if (!FLCtx->isValidSrcLoc(IC.SrcLocIdx, IC.InlinedAtIdx)) {
+          return error(Loc, "invalid function-local metadata: invalid srcLoc "
+                            "index in inlined call");
+        }
+      }
+    }
+    for (auto [Loc, Fn, DL] : SeenFLDebugLocAttachments) {
+      auto *FLCtx = Fn->getFLContext();
+      if (!FLCtx)
+        return error(Loc, "!!dbgLoc in function without valid !flmd");
+      if (!DL.isInstrLoc())
+        return error(Loc, "!!dbgLoc attachment is missing SrcLoc");
+      if (!DL.isValidInContext(FLCtx))
+        return error(Loc, "!!dbgLoc has invalid indexes for !flmd");
+    }
+    for (auto [Loc, DL] : SeenDIDbgLocNodes) {
+      auto *FLCtx =
+          dyn_cast_or_null<MDFunctionLocalContext>(DL->getRawFLContext());
+      if (!FLCtx)
+        return error(Loc, "!DIDbgLoc without valid context");
+      if (!DL->getFLDebugLoc().isInstrLoc())
+        return error(Loc, "!DIDbgLoc has !!dbgLoc with missing SrcLoc");
+      if (!DL->getFLDebugLoc().isValidInContext(FLCtx))
+        return error(Loc, "!!dbgLoc has invalid indexes for !flmd");
+    }
+  }
+
+  // Finally, we can convert !!dbgLocs.
+  if (needsDLConversion()) {
+    for (auto [I, N] : SeenInstLoops)
+      getDLConversionMap().addLoopInstr(I, N);
+    getDLConversionMap().resolveReferences();
+  }
 
   for (const auto &[Name, Info] : make_early_inc_range(ForwardRefVals)) {
     if (StringRef(Name).starts_with("llvm.")) {
@@ -2562,21 +2633,41 @@ bool LLParser::parseMetadataAttachment(unsigned &Kind, MDNode *&MD) {
 ///   ::= !dbg !42 (',' !dbg !57)*
 bool LLParser::parseInstructionMetadata(Instruction &Inst) {
   do {
-    if (Lex.getKind() != lltok::MetadataVar)
+    if (Lex.getKind() != lltok::MetadataVar && Lex.getKind() != lltok::FLMDType)
       return tokError("expected metadata after comma");
 
-    unsigned MDK;
-    MDNode *N;
     auto Loc = Lex.getLoc();
-    if (parseMetadataAttachment(MDK, N))
-      return true;
+    if (Lex.getKind() == lltok::FLMDType) {
+      if (!FirstSeenFLDebugLocs.isValid())
+        FirstSeenFLDebugLocs = Loc;
+      FLMDAttachment Attachment = std::nullopt;
+      if (parseFLMDAttachment(Attachment))
+        return true;
+      assert(Attachment.index() != 0 &&
+             "Attachment should have been set by a non-erroring parse");
+      if (auto *FLDL = std::get_if<FLDebugLoc>(&Attachment)) {
+        getDLConversionMap().addAttachment(Inst.getFunction(), &Inst, *FLDL);
+        SeenFLDebugLocAttachments.emplace_back(Lex.getLoc(), Inst.getFunction(),
+                                               *FLDL);
+      } else {
+        llvm_unreachable("unhandled FLMD attachment variant");
+      }
+    } else {
+      unsigned MDK;
+      MDNode *N;
+      if (parseMetadataAttachment(MDK, N))
+        return true;
 
-    if (MDK == LLVMContext::MD_DIAssignID)
-      TempDIAssignIDAttachments[N].push_back(&Inst);
-    else if (MDK == LLVMContext::MD_dbg)
-      PendingDbgInsts.emplace_back(Loc, &Inst, N);
-    else
-      Inst.setMetadata(MDK, N);
+      if (MDK == LLVMContext::MD_DIAssignID) {
+        TempDIAssignIDAttachments[N].push_back(&Inst);
+      } else if (MDK == LLVMContext::MD_dbg) {
+        addSeenDbgMDAttachment(Loc, &Inst, N);
+      } else {
+        if (MDK == LLVMContext::MD_loop)
+          SeenInstLoops.emplace_back(&Inst, N);
+        Inst.setMetadata(MDK, N);
+      }
+    }
 
     // If this is the end of the list, we're done.
   } while (EatIfPresent(lltok::comma));
@@ -3066,7 +3157,8 @@ bool LLParser::parseOptionalCommaAlign(MaybeAlign &Alignment,
   AteExtraComma = false;
   while (EatIfPresent(lltok::comma)) {
     // Metadata at the end is an early exit.
-    if (Lex.getKind() == lltok::MetadataVar) {
+    if (Lex.getKind() == lltok::MetadataVar ||
+        Lex.getKind() == lltok::FLMDType) {
       AteExtraComma = true;
       return false;
     }
@@ -3092,7 +3184,8 @@ bool LLParser::parseOptionalCommaAddrSpace(unsigned &AddrSpace, LocTy &Loc,
   AteExtraComma = false;
   while (EatIfPresent(lltok::comma)) {
     // Metadata at the end is an early exit.
-    if (Lex.getKind() == lltok::MetadataVar) {
+    if (Lex.getKind() == lltok::MetadataVar ||
+        Lex.getKind() == lltok::FLMDType) {
       AteExtraComma = true;
       return false;
     }
@@ -3260,7 +3353,8 @@ bool LLParser::parseIndexList(SmallVectorImpl<unsigned> &Indices,
     return tokError("expected ',' as start of index list");
 
   while (EatIfPresent(lltok::comma)) {
-    if (Lex.getKind() == lltok::MetadataVar) {
+    if (Lex.getKind() == lltok::MetadataVar ||
+        Lex.getKind() == lltok::FLMDType) {
       if (Indices.empty())
         return tokError("expected index");
       AteExtraComma = true;
@@ -5308,6 +5402,11 @@ struct MDUnsignedOrMDField : MDEitherFieldImpl<MDUnsignedField, MDField> {
   }
 };
 
+struct MDUnsignedArrayField : public MDFieldImpl<SmallVector<uint64_t>> {
+
+  MDUnsignedArrayField() : ImplTy({}) {}
+};
+
 } // end anonymous namespace
 
 namespace llvm {
@@ -5829,6 +5928,29 @@ bool LLParser::parseMDField(LocTy Loc, StringRef Name,
   return false;
 }
 
+template <>
+bool LLParser::parseMDField(LocTy Loc, StringRef Name,
+                            MDUnsignedArrayField &Result) {
+  if (parseToken(lltok::lsquare, "expected '['"))
+    return true;
+
+  Result.Seen = true;
+  bool ParsedOne = false;
+  while (Lex.getKind() != lltok::rsquare) {
+    if (ParsedOne && parseToken(lltok::comma, "expected ',' between integers"))
+      return true;
+
+    ParsedOne = true;
+    if (Lex.getKind() != lltok::APSInt || Lex.getAPSIntVal().isSigned())
+      return tokError("expected unsigned integer");
+    auto &U = Lex.getAPSIntVal();
+    Result.Val.push_back(U.getZExtValue());
+    Lex.Lex();
+  };
+  Lex.Lex();
+  return false;
+}
+
 } // end namespace llvm
 
 template <class ParserTy>
@@ -6008,6 +6130,7 @@ bool LLParser::parseMDFunctionLocalContext(MDNode *&Result, bool IsDistinct) {
   // but the storage field parsing logic is much simpler if we can pass a valid
   // context to the parser, so we use a deferred approach.
   MDFunctionLocalContext *FLMD = MDFunctionLocalContext::getDistinct(Context);
+  SeenFunctionLocalContexts.emplace_back(Lex.getLoc(), FLMD);
   MDBoolField NonDebug(false);
   bool SeenScopes = false;
   SmallVector<FLScope> ScopesStorage;
@@ -6052,10 +6175,59 @@ bool LLParser::parseMDFunctionLocalContext(MDNode *&Result, bool IsDistinct) {
   return false;
 }
 
+/// parseFLMDAttachment
+///   ::= !!dbgLoc()
+/// Currently the only kind of FL attachment is !!dbgLoc; if this changes, the
+/// new type must be added to the FLMDAttachment variant.
+bool LLParser::parseFLMDAttachment(FLMDAttachment &FLMD) {
+  assert(Lex.getKind() == lltok::FLMDType && "Expected FLMD");
+
+  std::string Name = Lex.getStrVal();
+  // !!dbgLoc is the only attachment we currently accept.
+  if (Name != "dbgLoc")
+    return tokError("invalid function-local metadata attachment");
+
+  /// There are two possible forms for an FLDebugLoc: normal, and
+  /// forward-referenced.
+  /// In contrast to a DILocation, the "forward-ref" form is one that contains
+  /// the Line/Column/Scope of the location, which must later be resolved to a
+  /// specific SrcLocIdx. If we encounter one of these, then it must be held in
+  /// reserve until we can resolve it, since it cannot be directly attached.
+
+#define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
+  OPTIONAL(srcLoc, MDUnsignedField, );                                         \
+  OPTIONAL(inlinedAt, MDUnsignedField, );                                      \
+  OPTIONAL(atom, MDUnsignedArrayField, );
+  PARSE_MD_FIELDS();
+#undef VISIT_MD_FIELDS
+  if (!srcLoc.Seen) {
+    return tokError("missing required field 'srcLoc'");
+  }
+  FLIndex<FLInlinedCall> InlinedAt;
+  if (inlinedAt.Seen)
+    InlinedAt = inlinedAt.Val;
+  uint16_t AtomGroup = 0;
+  uint8_t AtomRank = 0;
+  if (atom.Seen) {
+    if (atom.Val.size() != 2)
+      return tokError("expected 2 values for atom: [<group>, <rank>]");
+    if (atom.Val[0] >= 1 << 13)
+      return tokError("expected atom group < 2^13");
+    if (atom.Val[1] >= 8)
+      return tokError("expected atom rank < 8");
+    AtomGroup = atom.Val[0];
+    AtomRank = atom.Val[1];
+  }
+  FLMD = FLDebugLoc(srcLoc.Val, InlinedAt, AtomGroup, AtomRank);
+
+  return false;
+}
+
 /// parseDILocationFields:
 ///   ::= !DILocation(line: 43, column: 8, scope: !5, inlinedAt: !6,
 ///   isImplicitCode: true, atomGroup: 1, atomRank: 1)
 bool LLParser::parseDILocation(MDNode *&Result, bool IsDistinct) {
+  addSeenDILocation(Lex.getLoc());
 #define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
   OPTIONAL(line, LineField, );                                                 \
   OPTIONAL(column, ColumnField, );                                             \
@@ -6109,8 +6281,64 @@ bool LLParser::parseDILayerLocList(MDNode *&Result, bool IsDistinct) {
   return false;
 }
 
+/// parseDIDbgLoc:
+///   ::= !DIDbgLoc(context: !5, srcLoc: 2, inlinedAt: 4, atom: [4, 2])
 bool LLParser::parseDIDbgLoc(MDNode *&Result, bool IsDistinct) {
-  llvm_unreachable("not implemented");
+  if (!FirstSeenFLDebugLocs.isValid())
+    FirstSeenFLDebugLocs = Lex.getLoc();
+  assert((Lex.getKind() == lltok::MetadataVar) &&
+         "Expected metadata type name");
+  LocTy StartLoc = Lex.getLoc();
+  Lex.Lex();
+
+  if (parseToken(lltok::lparen, "expected '(' here"))
+    return true;
+
+  MDNode *FLContext;
+  bool SeenFLContext = false;
+  FLMDAttachment DbgLoc = std::nullopt;
+  bool SeenDbgLoc = false;
+  if (Lex.getKind() != lltok::rparen) {
+    do {
+      if (Lex.getKind() != lltok::LabelStr)
+        return tokError("expected field label here");
+
+      if (Lex.getStrVal() == "context") {
+        if (SeenFLContext)
+          return tokError("field 'context' cannot be specified more than once");
+        SeenFLContext = true;
+
+        Lex.Lex();
+        if (parseMDNode(FLContext))
+          return true;
+      } else if (Lex.getStrVal() == "dbgLoc") {
+        if (SeenDbgLoc)
+          return tokError("field 'dbgLoc' cannot be specified more than once");
+        SeenDbgLoc = true;
+
+        Lex.Lex();
+        if (parseFLMDAttachment(DbgLoc))
+          return true;
+        if (!std::holds_alternative<FLDebugLoc>(DbgLoc))
+          return tokError("expected normal !!dbgLoc");
+      } else {
+        return tokError(Twine("invalid field '") + Lex.getStrVal() + "'");
+      }
+    } while (EatIfPresent(lltok::comma));
+  }
+  if (!SeenFLContext)
+    return tokError("missing required field 'context'");
+  if (!SeenDbgLoc)
+    return tokError("missing required field 'dbgLoc'");
+
+  if (parseToken(lltok::rparen, "expected ')' here"))
+    return true;
+
+  Result = GET_OR_DISTINCT(DIDbgLoc,
+                           (Context, FLContext, std::get<FLDebugLoc>(DbgLoc)));
+
+  SeenDIDbgLocNodes.emplace_back(StartLoc, cast<DIDbgLoc>(Result));
+  return false;
 }
 
 /// parseDIAssignID:
@@ -7866,13 +8094,34 @@ bool LLParser::parseDebugRecord(DbgRecord *&DR, PerFunctionState &PFS) {
       return true;
     if (parseToken(lltok::comma, "Expected ',' here"))
       return true;
-    MDNode *DbgLoc;
-    if (parseMDNode(DbgLoc))
-      return true;
+
+    DR = DbgLabelRecord::createUnresolvedDbgLabelRecord(Label);
+    MDNode *DbgLoc = nullptr;
+    if (Lex.getKind() == lltok::FLMDType) {
+      if (Lex.getKind() != lltok::FLMDType)
+        return tokError("wut");
+      if (!FirstSeenFLDebugLocs.isValid())
+        FirstSeenFLDebugLocs = Lex.getLoc();
+      LocTy StartLoc = Lex.getLoc();
+      FLMDAttachment Attachment = std::nullopt;
+      if (parseFLMDAttachment(Attachment))
+        return true;
+      assert(Attachment.index() != 0 &&
+             "Attachment should have been set by a non-erroring parse");
+      if (auto *FLDL = std::get_if<FLDebugLoc>(&Attachment)) {
+        getDLConversionMap().addAttachment(&PFS.getFunction(), DR, *FLDL);
+        SeenFLDebugLocAttachments.emplace_back(StartLoc, &PFS.getFunction(),
+                                               *FLDL);
+      } else {
+        return tokError("expected !!dbgLoc");
+      }
+    } else {
+      if (parseMDNode(DbgLoc))
+        return true;
+      addSeenDbgMDAttachment(DVRLoc, DR, DbgLoc);
+    }
     if (parseToken(lltok::rparen, "Expected ')' here"))
       return true;
-    DR = DbgLabelRecord::createUnresolvedDbgLabelRecord(Label);
-    PendingDbgRecords.emplace_back(DVRLoc, DR, DbgLoc);
     return false;
   }
 
@@ -7931,17 +8180,37 @@ bool LLParser::parseDebugRecord(DbgRecord *&DR, PerFunctionState &PFS) {
       return true;
   }
 
-  /// Parse DILocation.
-  MDNode *DebugLoc;
-  if (parseMDNode(DebugLoc))
-    return true;
-
-  if (parseToken(lltok::rparen, "Expected ')' here"))
-    return true;
   DR = DbgVariableRecord::createUnresolvedDbgVariableRecord(
       ValueType, ValLocMD, Variable, Expression, AssignID, AddressLocation,
       AddressExpression);
-  PendingDbgRecords.emplace_back(DVRLoc, DR, DebugLoc);
+
+  /// Parse DILocation.
+  MDNode *DebugLoc = nullptr;
+  if (Lex.getKind() == lltok::FLMDType) {
+    if (!FirstSeenFLDebugLocs.isValid())
+      FirstSeenFLDebugLocs = Lex.getLoc();
+    LocTy StartLoc = Lex.getLoc();
+    FLMDAttachment Attachment = std::nullopt;
+    if (parseFLMDAttachment(Attachment))
+      return true;
+    assert(Attachment.index() != 0 &&
+           "Attachment should have been set by a non-erroring parse");
+    if (auto *FLDL = std::get_if<FLDebugLoc>(&Attachment)) {
+      getDLConversionMap().addAttachment(&PFS.getFunction(), DR, *FLDL);
+      SeenFLDebugLocAttachments.emplace_back(StartLoc, &PFS.getFunction(),
+                                             *FLDL);
+    } else {
+      return tokError("expected !!dbgLoc");
+    }
+  } else {
+    if (parseMDNode(DebugLoc))
+      return true;
+    addSeenDbgMDAttachment(DVRLoc, DR, DebugLoc);
+  }
+
+  if (parseToken(lltok::rparen, "Expected ')' here"))
+    return true;
+
   return false;
 }
 //===----------------------------------------------------------------------===//
@@ -9080,7 +9349,8 @@ int LLParser::parsePHI(Instruction *&Inst, PerFunctionState &PFS) {
     } else if (!EatIfPresent(lltok::comma))
       break;
 
-    if (Lex.getKind() == lltok::MetadataVar) {
+    if (Lex.getKind() == lltok::MetadataVar ||
+        Lex.getKind() == lltok::FLMDType) {
       AteExtraComma = true;
       break;
     }
@@ -9311,7 +9581,8 @@ int LLParser::parseAlloc(Instruction *&Inst, PerFunctionState &PFS) {
       ASLoc = Lex.getLoc();
       if (parseOptionalAddrSpace(AddrSpace))
         return true;
-    } else if (Lex.getKind() == lltok::MetadataVar) {
+    } else if (Lex.getKind() == lltok::MetadataVar ||
+               Lex.getKind() == lltok::FLMDType) {
       AteExtraComma = true;
     } else {
       if (parseTypeAndValue(Size, SizeLoc, PFS))
@@ -9326,7 +9597,8 @@ int LLParser::parseAlloc(Instruction *&Inst, PerFunctionState &PFS) {
           ASLoc = Lex.getLoc();
           if (parseOptionalAddrSpace(AddrSpace))
             return true;
-        } else if (Lex.getKind() == lltok::MetadataVar) {
+        } else if (Lex.getKind() == lltok::MetadataVar ||
+                   Lex.getKind() == lltok::FLMDType) {
           AteExtraComma = true;
         }
       }
@@ -9742,7 +10014,8 @@ int LLParser::parseGetElementPtr(Instruction *&Inst, PerFunctionState &PFS) {
                               : ElementCount::getFixed(0);
 
   while (EatIfPresent(lltok::comma)) {
-    if (Lex.getKind() == lltok::MetadataVar) {
+    if (Lex.getKind() == lltok::MetadataVar ||
+        Lex.getKind() == lltok::FLMDType) {
       AteExtraComma = true;
       break;
     }
