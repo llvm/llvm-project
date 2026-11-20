@@ -561,3 +561,218 @@ divbb:
   %div = sdiv i32 7, %t0
   ret i32 %div
 }
+
+; The remainder is folded into an equality comparison with the dividend. If the
+; target has a unified div/rem instruction, recompose it and compare against 0.
+
+declare void @use(i32)
+
+define i1 @fold_rem_into_icmp_eq_udiv(i32 %a, i32 %b) {
+; CHECK-LABEL: @fold_rem_into_icmp_eq_udiv(
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[DIV]], [[B]]
+; CHECK-NEXT:    [[CMP_REM:%.*]] = urem i32 [[A]], [[B]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CMP_REM]], 0
+; CHECK-NEXT:    call void @use(i32 [[DIV]])
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %div = udiv i32 %a, %b
+  %mul = mul i32 %div, %b
+  %cmp = icmp eq i32 %a, %mul
+  call void @use(i32 %div)
+  ret i1 %cmp
+}
+
+define i1 @fold_rem_into_icmp_ne_udiv(i32 %a, i32 %b) {
+; CHECK-LABEL: @fold_rem_into_icmp_ne_udiv(
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[DIV]], [[B]]
+; CHECK-NEXT:    [[CMP_REM:%.*]] = urem i32 [[A]], [[B]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[CMP_REM]], 0
+; CHECK-NEXT:    call void @use(i32 [[DIV]])
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %div = udiv i32 %a, %b
+  %mul = mul i32 %div, %b
+  %cmp = icmp ne i32 %a, %mul
+  call void @use(i32 %div)
+  ret i1 %cmp
+}
+
+define i1 @fold_rem_into_icmp_eq_sdiv(i32 %a, i32 %b) {
+; CHECK-LABEL: @fold_rem_into_icmp_eq_sdiv(
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[DIV]], [[B]]
+; CHECK-NEXT:    [[CMP_REM:%.*]] = srem i32 [[A]], [[B]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CMP_REM]], 0
+; CHECK-NEXT:    call void @use(i32 [[DIV]])
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %div = sdiv i32 %a, %b
+  %mul = mul i32 %div, %b
+  %cmp = icmp eq i32 %a, %mul
+  call void @use(i32 %div)
+  ret i1 %cmp
+}
+
+define i1 @fold_rem_into_icmp_commuted_mul(i32 %a, i32 %b) {
+; CHECK-LABEL: @fold_rem_into_icmp_commuted_mul(
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[B]], [[DIV]]
+; CHECK-NEXT:    [[CMP_REM:%.*]] = urem i32 [[A]], [[B]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CMP_REM]], 0
+; CHECK-NEXT:    call void @use(i32 [[DIV]])
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %div = udiv i32 %a, %b
+  %mul = mul i32 %b, %div
+  %cmp = icmp eq i32 %a, %mul
+  call void @use(i32 %div)
+  ret i1 %cmp
+}
+
+define i1 @fold_rem_into_icmp_swapped_operands(i32 %a, i32 %b) {
+; CHECK-LABEL: @fold_rem_into_icmp_swapped_operands(
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[DIV]], [[B]]
+; CHECK-NEXT:    [[CMP_REM:%.*]] = urem i32 [[A]], [[B]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CMP_REM]], 0
+; CHECK-NEXT:    call void @use(i32 [[DIV]])
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %div = udiv i32 %a, %b
+  %mul = mul i32 %div, %b
+  %cmp = icmp eq i32 %mul, %a
+  call void @use(i32 %div)
+  ret i1 %cmp
+}
+
+; samesign doesn't hold for the compare of a remainder against zero.
+
+define i1 @fold_rem_into_icmp_drops_samesign(i32 %a, i32 %b) {
+; CHECK-LABEL: @fold_rem_into_icmp_drops_samesign(
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[DIV]], [[B]]
+; CHECK-NEXT:    [[CMP_REM:%.*]] = srem i32 [[A]], [[B]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CMP_REM]], 0
+; CHECK-NEXT:    call void @use(i32 [[DIV]])
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %div = sdiv i32 %a, %b
+  %mul = mul i32 %div, %b
+  %cmp = icmp samesign eq i32 %a, %mul
+  call void @use(i32 %div)
+  ret i1 %cmp
+}
+
+; Division and the folded compare are in different blocks: the new remainder is
+; hoisted next to the division.
+
+define i32 @fold_rem_into_icmp_hoist(i32 %a, i32 %b) {
+; CHECK-LABEL: @fold_rem_into_icmp_hoist(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[CMP_REM:%.*]] = urem i32 [[A]], [[B]]
+; CHECK-NEXT:    [[CMP_DIV:%.*]] = icmp ugt i32 [[DIV]], 42
+; CHECK-NEXT:    br i1 [[CMP_DIV]], label [[IF:%.*]], label [[END:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[DIV]], [[B]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CMP_REM]], 0
+; CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[CMP]] to i32
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[RET:%.*]] = phi i32 [ [[EXT]], [[IF]] ], [ 3, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i32 [[RET]]
+;
+entry:
+  %div = udiv i32 %a, %b
+  %cmp.div = icmp ugt i32 %div, 42
+  br i1 %cmp.div, label %if, label %end
+
+if:
+  %mul = mul i32 %div, %b
+  %cmp = icmp eq i32 %a, %mul
+  %ext = zext i1 %cmp to i32
+  br label %end
+
+end:
+  %ret = phi i32 [ %ext, %if ], [ 3, %entry ]
+  ret i32 %ret
+}
+
+; The multiplication has another use, so it stays alive. We still recompose
+; the remainder, same as for the expanded form with a sub.
+
+define i1 @fold_rem_into_icmp_mul_has_other_use(i32 %a, i32 %b) {
+; CHECK-LABEL: @fold_rem_into_icmp_mul_has_other_use(
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[DIV]], [[B]]
+; CHECK-NEXT:    [[CMP_REM:%.*]] = urem i32 [[A]], [[B]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CMP_REM]], 0
+; CHECK-NEXT:    call void @use(i32 [[DIV]])
+; CHECK-NEXT:    call void @use(i32 [[MUL]])
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %div = udiv i32 %a, %b
+  %mul = mul i32 %div, %b
+  %cmp = icmp eq i32 %a, %mul
+  call void @use(i32 %div)
+  call void @use(i32 %mul)
+  ret i1 %cmp
+}
+
+; Negative tests.
+
+; Only equality comparisons are equivalent to a comparison of the remainder.
+
+define i1 @dont_fold_rem_into_icmp_ult(i32 %a, i32 %b) {
+; CHECK-LABEL: @dont_fold_rem_into_icmp_ult(
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[DIV]], [[B]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[A]], [[MUL]]
+; CHECK-NEXT:    call void @use(i32 [[DIV]])
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %div = udiv i32 %a, %b
+  %mul = mul i32 %div, %b
+  %cmp = icmp ult i32 %a, %mul
+  call void @use(i32 %div)
+  ret i1 %cmp
+}
+
+; The compare is not with the dividend of the division.
+
+define i1 @dont_fold_rem_into_icmp_different_dividend(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: @dont_fold_rem_into_icmp_different_dividend(
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[DIV]], [[B]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[C:%.*]], [[MUL]]
+; CHECK-NEXT:    call void @use(i32 [[DIV]])
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %div = udiv i32 %a, %b
+  %mul = mul i32 %div, %b
+  %cmp = icmp eq i32 %c, %mul
+  call void @use(i32 %div)
+  ret i1 %cmp
+}
+
+; The target doesn't have a unified div/rem instruction for this type, so the
+; folded form is what we want.
+
+define i1 @dont_fold_rem_into_icmp_i128(i128 %a, i128 %b) {
+; CHECK-LABEL: @dont_fold_rem_into_icmp_i128(
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i128 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul i128 [[DIV]], [[B]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i128 [[A]], [[MUL]]
+; CHECK-NEXT:    call void @use128(i128 [[DIV]])
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %div = udiv i128 %a, %b
+  %mul = mul i128 %div, %b
+  %cmp = icmp eq i128 %a, %mul
+  call void @use128(i128 %div)
+  ret i1 %cmp
+}
+
+declare void @use128(i128)
