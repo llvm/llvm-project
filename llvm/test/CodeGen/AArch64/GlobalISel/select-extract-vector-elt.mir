@@ -6,11 +6,6 @@ name:            v2s32_fpr
 alignment:       4
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: gpr }
-  - { id: 3, class: fpr }
 body:             |
   bb.0:
     liveins: $d0
@@ -37,10 +32,6 @@ name:            v2s32_gpr
 alignment:       4
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
 body:             |
   bb.0:
     liveins: $d0
@@ -89,11 +80,6 @@ name:            v2s64_fpr
 alignment:       4
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: gpr }
-  - { id: 3, class: fpr }
 body:             |
   bb.0:
     liveins: $q0
@@ -118,11 +104,6 @@ name:            v4s16_fpr
 alignment:       4
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: gpr }
-  - { id: 3, class: fpr }
 body:             |
   bb.0:
     liveins: $d0
