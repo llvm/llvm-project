@@ -46,6 +46,7 @@ namespace ARMCP {
   enum ARMCPModifier {
     no_modifier, /// None
     TLSGD,       /// Thread Local Storage (General Dynamic Mode)
+    GOT,         /// Global Offset Table
     GOT_PREL,    /// Global Offset Table, PC Relative
     GOTTPOFF,    /// Global Offset Table, Thread Pointer Offset
     TPOFF,       /// Thread Pointer Offset

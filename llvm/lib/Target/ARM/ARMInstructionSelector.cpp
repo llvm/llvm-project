@@ -627,20 +627,19 @@ bool ARMInstructionSelector::selectGlobal(MachineInstrBuilder &MIB,
   LLT PtrTy = MRI.getType(MIB->getOperand(0).getReg());
   const Align Alignment(4);
 
-  auto addOpsForConstantPoolLoad = [&MF, Alignment, PtrTy](
-                                       MachineInstrBuilder &MIB,
-                                       const GlobalValue *GV, bool IsSBREL) {
+  auto addOpsForConstantPoolLoad = [&MF, Alignment,
+                                    PtrTy](MachineInstrBuilder &MIB,
+                                           const GlobalValue *GV,
+                                           ARMCP::ARMCPModifier Modifier) {
     assert((MIB->getOpcode() == ARM::LDRi12 ||
             MIB->getOpcode() == ARM::t2LDRpci) &&
            "Unsupported instruction");
     auto ConstPool = MF.getConstantPool();
     auto CPIndex =
-        // For SB relative entries we need a target-specific constant pool.
-        // Otherwise, just use a regular constant pool entry.
-        IsSBREL
-            ? ConstPool->getConstantPoolIndex(
-                  ARMConstantPoolConstant::Create(GV, ARMCP::SBREL), Alignment)
-            : ConstPool->getConstantPoolIndex(GV, Alignment);
+        Modifier == ARMCP::no_modifier
+            ? ConstPool->getConstantPoolIndex(GV, Alignment)
+            : ConstPool->getConstantPoolIndex(
+                  ARMConstantPoolConstant::Create(GV, Modifier), Alignment);
     MIB.addConstantPoolIndex(CPIndex, /*Offset*/ 0, /*TargetFlags*/ 0)
         .addMemOperand(MF.getMachineMemOperand(
             MachinePointerInfo::getConstantPool(MF), MachineMemOperand::MOLoad,
@@ -658,7 +657,34 @@ bool ARMInstructionSelector::selectGlobal(MachineInstrBuilder &MIB,
   };
 
   if (TM.isPositionIndependent()) {
-    bool Indirect = STI.isGVIndirectSymbol(GV);
+    if (STI.useStaticBaseForPicData(GV)) {
+      auto Offset = MRI.createVirtualRegister(&ARM::GPRRegClass);
+      MachineInstrBuilder OffsetMIB =
+          BuildMI(MBB, *MIB, MIB->getDebugLoc(), TII.get(Opcodes.ConstPoolLoad),
+                  Offset);
+      addOpsForConstantPoolLoad(OffsetMIB, GV, ARMCP::GOT);
+      constrainSelectedInstRegOperands(*OffsetMIB, TII, TRI, RBI);
+
+      MRI.addLiveIn(ARM::R9);
+      MBB.addLiveIn(ARM::R9);
+      auto GOTEntry = MRI.createVirtualRegister(&ARM::GPRRegClass);
+      auto AddMIB = BuildMI(MBB, *MIB, MIB->getDebugLoc(),
+                            TII.get(Opcodes.ADDrr), GOTEntry)
+                        .addReg(ARM::R9)
+                        .addReg(Offset)
+                        .add(predOps(ARMCC::AL))
+                        .add(condCodeOp());
+      constrainSelectedInstRegOperands(*AddMIB, TII, TRI, RBI);
+
+      MIB->setDesc(TII.get(Opcodes.LOAD32));
+      MIB->removeOperand(1);
+      MIB.addReg(GOTEntry).addImm(0).add(predOps(ARMCC::AL));
+      addGOTMemOperand(MIB);
+      constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
+      return true;
+    }
+
+    bool Indirect = STI.isGVIndirectSymbol(GV) || STI.isGVInGOT(GV);
 
     // For ARM mode, we have different pseudoinstructions for direct accesses
     // and indirect accesses, and the ones for indirect accesses include the
@@ -728,7 +754,7 @@ bool ARMInstructionSelector::selectGlobal(MachineInstrBuilder &MIB,
       // Load the offset from the constant pool.
       OffsetMIB = BuildMI(MBB, *MIB, MIB->getDebugLoc(),
                           TII.get(Opcodes.ConstPoolLoad), Offset);
-      addOpsForConstantPoolLoad(OffsetMIB, GV, /*IsSBREL*/ true);
+      addOpsForConstantPoolLoad(OffsetMIB, GV, ARMCP::SBREL);
     }
     constrainSelectedInstRegOperands(*OffsetMIB, TII, TRI, RBI);
 
@@ -751,7 +777,7 @@ bool ARMInstructionSelector::selectGlobal(MachineInstrBuilder &MIB,
       // Load the global's address from the constant pool.
       MIB->setDesc(TII.get(Opcodes.ConstPoolLoad));
       MIB->removeOperand(1);
-      addOpsForConstantPoolLoad(MIB, GV, /*IsSBREL*/ false);
+      addOpsForConstantPoolLoad(MIB, GV, ARMCP::no_modifier);
     }
   } else if (STI.isTargetMachO()) {
     if (UseMovt)

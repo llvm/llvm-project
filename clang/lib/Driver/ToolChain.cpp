@@ -530,6 +530,15 @@ ToolChain::getMultilibFlags(const llvm::opt::ArgList &Args) const {
   else
     Result.push_back("-fno-pic");
 
+  if (RelocationModel == llvm::Reloc::PIC_ &&
+      (Triple.isARM() || Triple.isThumb())) {
+    bool PicDataIsTextRelative =
+        Args.hasFlag(options::OPT_mpic_data_is_text_relative,
+                     options::OPT_mno_pic_data_is_text_relative, true);
+    Result.push_back(PicDataIsTextRelative ? "-mpic-data-is-text-relative"
+                                           : "-mno-pic-data-is-text-relative");
+  }
+
   // Sort and remove duplicates.
   std::sort(Result.begin(), Result.end());
   Result.erase(llvm::unique(Result), Result.end());
