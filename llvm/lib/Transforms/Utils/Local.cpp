@@ -4089,7 +4089,7 @@ bool llvm::freezeUsesAfterDef(FreezeInst &FI, DominatorTree &DT,
 
   // Move the freeze directly after the definition of its operand, so that
   // it dominates the maximum number of uses. Note that it may not dominate
-  // *all* uses if the operand is an invoke/callbr and the use is in a phi on
+  // *all* uses if the operand is an invoke and the use is in a phi on
   // the normal/default destination. This is why the domination check in the
   // replacement below is still necessary.
   BasicBlock::iterator MoveBefore;
