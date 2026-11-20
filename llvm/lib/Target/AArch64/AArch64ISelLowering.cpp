@@ -20959,9 +20959,61 @@ static SDValue performVecReduceAddCntpCombine(SDNode *N, SelectionDAG &DAG,
   return DAG.getZExtOrTrunc(Cntp, DL, N->getValueType(0));
 }
 
+// A legal NEON long reduction sums these complete fixed vectors without
+// overflow. Reducing the original elements therefore has the same i64 result
+// as extending each lane first. Keep fixed-vector SVE preference and all
+// non-NEON modes unchanged.
+static SDValue performWidenedReductionCombine(SDNode *N, SelectionDAG &DAG,
+                                              const AArch64Subtarget *ST) {
+  if (N->getValueType(0) != MVT::i64 || !ST->isNeonAvailable())
+    return SDValue();
+
+  // Skip the fold when the scalar reduction is immediately rebuilt into a
+  // vector.
+  for (auto *U : N->users())
+    if (U->getOpcode() == ISD::BUILD_VECTOR)
+      return SDValue();
+
+  SDValue Ext = N->getOperand(0);
+  unsigned ExtOpcode = Ext.getOpcode();
+  if (ExtOpcode != ISD::ZERO_EXTEND && ExtOpcode != ISD::SIGN_EXTEND)
+    return SDValue();
+
+  SDValue Input = Ext.getOperand(0);
+  EVT InputVT = Input.getValueType();
+  if (InputVT != MVT::v8i8 && InputVT != MVT::v16i8 && InputVT != MVT::v4i16 &&
+      InputVT != MVT::v8i16 && InputVT != MVT::v4i32)
+    return SDValue();
+
+  // Use the same legal node/result types as the existing UADDLV/SADDLV
+  // intrinsic lowering.
+  SDLoc DL(N);
+  unsigned AddlvOpcode =
+      (ExtOpcode == ISD::ZERO_EXTEND) ? AArch64ISD::UADDLV : AArch64ISD::SADDLV;
+  EVT VectorElementType = InputVT.getVectorElementType();
+  MVT ExtractVT = (VectorElementType == MVT::i32) ? MVT::i64 : MVT::i32;
+  MVT VectorVT = (VectorElementType == MVT::i32) ? MVT::v2i64 : MVT::v4i32;
+  SDValue Sum = DAG.getNode(AddlvOpcode, DL, VectorVT, Input);
+  SDValue Scalar;
+  if (VectorElementType == MVT::i8) {
+    SDValue PackedHalfwords = DAG.getBitcast(MVT::v8i16, Sum);
+    Scalar = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i16, PackedHalfwords,
+                         DAG.getConstant(0, DL, MVT::i64));
+  } else {
+    Scalar = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ExtractVT, Sum,
+                         DAG.getConstant(0, DL, MVT::i64));
+  }
+  return ExtOpcode == ISD::ZERO_EXTEND
+             ? DAG.getZExtOrTrunc(Scalar, DL, MVT::i64)
+             : DAG.getSExtOrTrunc(Scalar, DL, MVT::i64);
+}
+
 static SDValue performVecReduceAddCombine(SDNode *N, SelectionDAG &DAG,
                                           const AArch64Subtarget *ST) {
   if (SDValue Result = performVecReduceAddCntpCombine(N, DAG, ST))
+    return Result;
+
+  if (SDValue Result = performWidenedReductionCombine(N, DAG, ST))
     return Result;
 
   if (!ST->isNeonAvailable())
