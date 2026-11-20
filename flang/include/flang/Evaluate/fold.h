@@ -114,8 +114,6 @@ inline std::optional<std::int64_t> ToInt64(
   }
 }
 
-std::optional<std::int64_t> ToInt64(const Expr<SomeInteger> &);
-std::optional<std::int64_t> ToInt64(const Expr<SomeUnsigned> &);
 std::optional<std::int64_t> ToInt64(const Expr<SomeType> &);
 std::optional<std::int64_t> ToInt64(const ActualArgument &);
 

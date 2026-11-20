@@ -104,6 +104,21 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  unshare
+  SRCS
+    unshare.cpp
+  HDRS
+    ../unshare.h
+  DEPENDS
+    libc.src.__support.OSUtil.linux.syscall_wrappers.unshare
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   sched_setparam
   SRCS
     sched_setparam.cpp
@@ -250,9 +265,9 @@ add_entrypoint_object(
     libc.hdr.sched_macros
     libc.hdr.stdint_proxy
     libc.hdr.types.cpu_set_t
-    libc.src.__support.alloc_checker
+    libc.hdr.types.size_t
+    libc.src.__support.checked_ptr
     libc.src.__support.common
-    libc.src.__support.CPP.new
     libc.src.__support.macros.config
     libc.src.errno.errno
 )

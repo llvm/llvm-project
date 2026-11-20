@@ -151,11 +151,9 @@ define void @call_custom_varg_without_ret(i32 %a, i32 %b) {
   ; CHECK: [[AS:%.*]] = load i8, ptr @__dfsan_arg_tls, align 2
   ; CHECK: [[VS0:%.*]] = getelementptr inbounds nuw [1 x i8], ptr %labelva, i32 0, i32 0
   ; CHECK: store i8 [[AS]], ptr [[VS0]], align 1
-  ; CHECK: [[VS0:%.*]] = getelementptr inbounds nuw [1 x i8], ptr %labelva, i32 0, i32 0
   ; CHECK: [[VO0:%.*]] = getelementptr inbounds nuw [1 x i32], ptr %originva, i32 0, i32 0
   ; CHECK: store i32 [[AO]], ptr [[VO0]], align 4
-  ; CHECK: [[VO0:%.*]] = getelementptr inbounds nuw [1 x i32], ptr %originva, i32 0, i32 0
-  ; CHECK: call void (i32, i32, i8, i8, ptr, i32, i32, ptr, ...) @__dfso_custom_varg_without_ret(i32 %a, i32 %b, i8 zeroext [[AS]], i8 zeroext [[BS]], ptr [[VS0]], i32 [[AO]], i32 [[BO]], ptr [[VO0]], i32 %a)
+  ; CHECK: call void (i32, i32, i8, i8, ptr, i32, i32, ptr, ...) @__dfso_custom_varg_without_ret(i32 %a, i32 %b, i8 zeroext [[AS]], i8 zeroext [[BS]], ptr %labelva, i32 [[AO]], i32 [[BO]], ptr %originva, i32 %a)
   ; CHECK-NEXT: ret void
 
   call void (i32, i32, ...) @custom_varg_without_ret(i32 %a, i32 %b, i32 %a)
@@ -174,11 +172,9 @@ define i32 @call_custom_varg_with_ret(i32 %a, i32 %b) {
   ; CHECK: [[AS:%.*]] = load i8, ptr @__dfsan_arg_tls, align 2
   ; CHECK: [[VS0:%.*]] = getelementptr inbounds nuw [1 x i8], ptr %labelva, i32 0, i32 0
   ; CHECK: store i8 [[BS]], ptr [[VS0]], align 1
-  ; CHECK: [[VS0:%.*]] = getelementptr inbounds nuw [1 x i8], ptr %labelva, i32 0, i32 0
   ; CHECK: [[VO0:%.*]] = getelementptr inbounds nuw [1 x i32], ptr %originva, i32 0, i32 0
   ; CHECK: store i32 [[BO]], ptr [[VO0]], align 4
-  ; CHECK: [[VO0:%.*]] = getelementptr inbounds nuw [1 x i32], ptr %originva, i32 0, i32 0
-  ; CHECK: {{.*}} = call i32 (i32, i32, i8, i8, ptr, ptr, i32, i32, ptr, ptr, ...) @__dfso_custom_varg_with_ret(i32 %a, i32 %b, i8 zeroext [[AS]], i8 zeroext [[BS]], ptr [[VS0]], ptr %labelreturn, i32 [[AO]], i32 [[BO]], ptr [[VO0]], ptr %originreturn, i32 %b)
+  ; CHECK: {{.*}} = call i32 (i32, i32, i8, i8, ptr, ptr, i32, i32, ptr, ptr, ...) @__dfso_custom_varg_with_ret(i32 %a, i32 %b, i8 zeroext [[AS]], i8 zeroext [[BS]], ptr %labelva, ptr %labelreturn, i32 [[AO]], i32 [[BO]], ptr %originva, ptr %originreturn, i32 %b)
   ; CHECK: [[RS:%.*]] = load i8, ptr %labelreturn, align 1
   ; CHECK: [[RO:%.*]] = load i32, ptr %originreturn, align 4
   ; CHECK: store i8 [[RS]], ptr @__dfsan_retval_tls, align 2
