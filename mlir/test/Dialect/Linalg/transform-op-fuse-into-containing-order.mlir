@@ -236,7 +236,6 @@ module attributes {transform.with_named_sequence} {
 // A top-level payload operation has no parent region. Diagnose it instead of
 // trying to find a common ancestor region with another selected producer.
 module attributes {transform.with_named_sequence} {
-  // NO-CHECK-LABEL-ON-EXPECTED-ERROR
   func.func @top_level_producer(%output: tensor<4xf32>) -> tensor<4xf32> {
     %zero = arith.constant 0.0 : f32
     %fill = linalg.fill ins(%zero : f32) outs(%output : tensor<4xf32>)
