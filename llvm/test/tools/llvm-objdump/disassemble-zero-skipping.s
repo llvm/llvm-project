@@ -1,3 +1,7 @@
+## This regression test could only be applied to VE target at the moment
+## due to it's 8 byte instruction size, alignment and instructions that have
+## 4 bytes of leading zeroes in their encoding (nop in this case).
+
 # REQUIRES: ve-registered-target
 # RUN: llvm-mc -triple=ve -filetype=obj %s -o %t
 # RUN: llvm-objdump --no-print-imm-hex -d %t | FileCheck %s --check-prefixes=CHECK,SKIP --implicit-check-not='<unknown>'
