@@ -21319,7 +21319,8 @@ static SDValue expandMulToAddOrSubOfShl(SDNode *N, SelectionDAG &DAG,
   SDValue X = N->getOperand(0);
   ISD::NodeType Op;
   uint64_t ShiftAmt1;
-  bool CanSub = isPowerOf2_64(MulAmt + MulAmtLowBit);
+  bool SubShiftOverFlow = (MulAmt + MulAmtLowBit) == 0 && MulAmt != 0;
+  bool CanSub = isPowerOf2_64(MulAmt + MulAmtLowBit) || SubShiftOverFlow;
   auto PreferSub = [X, MulAmtLowBit]() {
     // For MulAmt == 3 << M both (X << M + 2) - (X << M)
     // and (X << M + 1) + (X << M) are valid expansions.
@@ -21345,7 +21346,8 @@ static SDValue expandMulToAddOrSubOfShl(SDNode *N, SelectionDAG &DAG,
   // width, inteding to zero out the register. However, the semantics of
   // ISD::SHL stipulate that this is undef. Need to directly insert a `0`
   // instead.
-  if (Log2_64(ShiftAmt1) >= N->getValueType(0).getScalarSizeInBits())
+  if ((Op == ISD::SUB && SubShiftOverFlow) ||
+      Log2_64(ShiftAmt1) >= VT.getScalarSizeInBits())
     Shift1 = DAG.getConstant(0, DL, VT);
   else
     Shift1 = DAG.getNode(ISD::SHL, DL, VT, X,
