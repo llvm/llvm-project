@@ -306,23 +306,20 @@ define float @test_readonly_exp2f_f32_of_uitofp_flags(i32 %x) {
 
 define float @uitofp_i32_scalar_intrinsic_with_ninf(i32 %x) {
 ; LDEXP32-LABEL: @uitofp_i32_scalar_intrinsic_with_ninf(
-; LDEXP32-NEXT:    [[U:%.*]] = uitofp i32 [[X:%.*]] to float
-; LDEXP32-NEXT:    [[R:%.*]] = tail call ninf float @llvm.exp2.f32(float [[U]])
+; LDEXP32-NEXT:    [[R:%.*]] = tail call ninf float @llvm.ldexp.f32.i32(float 1.000000e+00, i32 [[X:%.*]])
 ; LDEXP32-NEXT:    ret float [[R]]
 ;
 ; LDEXP16-LABEL: @uitofp_i32_scalar_intrinsic_with_ninf(
-; LDEXP16-NEXT:    [[U:%.*]] = uitofp i32 [[X:%.*]] to float
-; LDEXP16-NEXT:    [[R:%.*]] = tail call ninf float @llvm.exp2.f32(float [[U]])
+; LDEXP16-NEXT:    [[TMP1:%.*]] = trunc i32 [[X:%.*]] to i16
+; LDEXP16-NEXT:    [[R:%.*]] = tail call ninf float @llvm.ldexp.f32.i16(float 1.000000e+00, i16 [[TMP1]])
 ; LDEXP16-NEXT:    ret float [[R]]
 ;
 ; NOLDEXPF-LABEL: @uitofp_i32_scalar_intrinsic_with_ninf(
-; NOLDEXPF-NEXT:    [[U:%.*]] = uitofp i32 [[X:%.*]] to float
-; NOLDEXPF-NEXT:    [[R:%.*]] = tail call ninf float @llvm.exp2.f32(float [[U]])
+; NOLDEXPF-NEXT:    [[R:%.*]] = tail call ninf float @llvm.ldexp.f32.i32(float 1.000000e+00, i32 [[X:%.*]])
 ; NOLDEXPF-NEXT:    ret float [[R]]
 ;
 ; NOLDEXP-LABEL: @uitofp_i32_scalar_intrinsic_with_ninf(
-; NOLDEXP-NEXT:    [[U:%.*]] = uitofp i32 [[X:%.*]] to float
-; NOLDEXP-NEXT:    [[R:%.*]] = tail call ninf float @llvm.exp2.f32(float [[U]])
+; NOLDEXP-NEXT:    [[R:%.*]] = tail call ninf float @llvm.ldexp.f32.i32(float 1.000000e+00, i32 [[X:%.*]])
 ; NOLDEXP-NEXT:    ret float [[R]]
 ;
   %u = uitofp i32 %x to float
@@ -332,23 +329,24 @@ define float @uitofp_i32_scalar_intrinsic_with_ninf(i32 %x) {
 
 define float @uitofp_i32_scalar_intrinsic(i32 %x) {
 ; LDEXP32-LABEL: @uitofp_i32_scalar_intrinsic(
-; LDEXP32-NEXT:    [[U:%.*]] = uitofp i32 [[X:%.*]] to float
-; LDEXP32-NEXT:    [[R:%.*]] = tail call float @llvm.exp2.f32(float [[U]])
+; LDEXP32-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umin.i32(i32 [[X:%.*]], i32 128)
+; LDEXP32-NEXT:    [[R:%.*]] = tail call float @llvm.ldexp.f32.i32(float 1.000000e+00, i32 [[TMP1]])
 ; LDEXP32-NEXT:    ret float [[R]]
 ;
 ; LDEXP16-LABEL: @uitofp_i32_scalar_intrinsic(
-; LDEXP16-NEXT:    [[U:%.*]] = uitofp i32 [[X:%.*]] to float
-; LDEXP16-NEXT:    [[R:%.*]] = tail call float @llvm.exp2.f32(float [[U]])
+; LDEXP16-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umin.i32(i32 [[X:%.*]], i32 128)
+; LDEXP16-NEXT:    [[TMP2:%.*]] = trunc nuw nsw i32 [[TMP1]] to i16
+; LDEXP16-NEXT:    [[R:%.*]] = tail call float @llvm.ldexp.f32.i16(float 1.000000e+00, i16 [[TMP2]])
 ; LDEXP16-NEXT:    ret float [[R]]
 ;
 ; NOLDEXPF-LABEL: @uitofp_i32_scalar_intrinsic(
-; NOLDEXPF-NEXT:    [[U:%.*]] = uitofp i32 [[X:%.*]] to float
-; NOLDEXPF-NEXT:    [[R:%.*]] = tail call float @llvm.exp2.f32(float [[U]])
+; NOLDEXPF-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umin.i32(i32 [[X:%.*]], i32 128)
+; NOLDEXPF-NEXT:    [[R:%.*]] = tail call float @llvm.ldexp.f32.i32(float 1.000000e+00, i32 [[TMP1]])
 ; NOLDEXPF-NEXT:    ret float [[R]]
 ;
 ; NOLDEXP-LABEL: @uitofp_i32_scalar_intrinsic(
-; NOLDEXP-NEXT:    [[U:%.*]] = uitofp i32 [[X:%.*]] to float
-; NOLDEXP-NEXT:    [[R:%.*]] = tail call float @llvm.exp2.f32(float [[U]])
+; NOLDEXP-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umin.i32(i32 [[X:%.*]], i32 128)
+; NOLDEXP-NEXT:    [[R:%.*]] = tail call float @llvm.ldexp.f32.i32(float 1.000000e+00, i32 [[TMP1]])
 ; NOLDEXP-NEXT:    ret float [[R]]
 ;
   %u = uitofp i32 %x to float
@@ -363,8 +361,7 @@ define float @uitofp_i16_scalar_intrinsic_with_ninf(i16 %x) {
 ; LDEXP32-NEXT:    ret float [[R]]
 ;
 ; LDEXP16-LABEL: @uitofp_i16_scalar_intrinsic_with_ninf(
-; LDEXP16-NEXT:    [[U:%.*]] = uitofp i16 [[X:%.*]] to float
-; LDEXP16-NEXT:    [[R:%.*]] = tail call ninf float @llvm.exp2.f32(float [[U]])
+; LDEXP16-NEXT:    [[R:%.*]] = tail call ninf float @llvm.ldexp.f32.i16(float 1.000000e+00, i16 [[X:%.*]])
 ; LDEXP16-NEXT:    ret float [[R]]
 ;
 ; NOLDEXPF-LABEL: @uitofp_i16_scalar_intrinsic_with_ninf(
@@ -389,8 +386,8 @@ define float @uitofp_i16_scalar_intrinsic(i16 %x) {
 ; LDEXP32-NEXT:    ret float [[R]]
 ;
 ; LDEXP16-LABEL: @uitofp_i16_scalar_intrinsic(
-; LDEXP16-NEXT:    [[U:%.*]] = uitofp i16 [[X:%.*]] to float
-; LDEXP16-NEXT:    [[R:%.*]] = tail call float @llvm.exp2.f32(float [[U]])
+; LDEXP16-NEXT:    [[TMP1:%.*]] = call i16 @llvm.umin.i16(i16 [[X:%.*]], i16 128)
+; LDEXP16-NEXT:    [[R:%.*]] = tail call float @llvm.ldexp.f32.i16(float 1.000000e+00, i16 [[TMP1]])
 ; LDEXP16-NEXT:    ret float [[R]]
 ;
 ; NOLDEXPF-LABEL: @uitofp_i16_scalar_intrinsic(
@@ -415,8 +412,8 @@ define fp128 @uitofp_i16_scalar_intrinsic_fp128(i16 %x) {
 ; LDEXP32-NEXT:    ret fp128 [[R]]
 ;
 ; LDEXP16-LABEL: @uitofp_i16_scalar_intrinsic_fp128(
-; LDEXP16-NEXT:    [[U:%.*]] = uitofp i16 [[X:%.*]] to fp128
-; LDEXP16-NEXT:    [[R:%.*]] = tail call fp128 @llvm.exp2.f128(fp128 [[U]])
+; LDEXP16-NEXT:    [[TMP1:%.*]] = call i16 @llvm.umin.i16(i16 [[X:%.*]], i16 16384)
+; LDEXP16-NEXT:    [[R:%.*]] = tail call fp128 @llvm.ldexp.f128.i16(fp128 1.000000e+00, i16 [[TMP1]])
 ; LDEXP16-NEXT:    ret fp128 [[R]]
 ;
 ; NOLDEXPF-LABEL: @uitofp_i16_scalar_intrinsic_fp128(
