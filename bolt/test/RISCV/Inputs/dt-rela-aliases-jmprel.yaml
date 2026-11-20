@@ -1,0 +1,382 @@
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_RISCV
+  Flags:           [ EF_RISCV_RVC, EF_RISCV_FLOAT_ABI_DOUBLE ]
+  Entry:           0x1051C
+ProgramHeaders:
+  - Type:            PT_PHDR
+    Flags:           [ PF_R ]
+    VAddr:           0x10040
+    Align:           0x8
+    Offset:          0x40
+  - Type:            PT_INTERP
+    Flags:           [ PF_R ]
+    FirstSec:        .interp
+    LastSec:         .interp
+    VAddr:           0x10270
+    Offset:          0x270
+  - Type:            0x70000003
+    Flags:           [ PF_R ]
+    FirstSec:        .riscv.attributes
+    LastSec:         .riscv.attributes
+    Offset:          0x10AD
+  - Type:            PT_LOAD
+    Flags:           [ PF_X, PF_R ]
+    FirstSec:        .interp
+    LastSec:         .eh_frame
+    VAddr:           0x10000
+    Align:           0x1000
+    Offset:          0x0
+  - Type:            PT_LOAD
+    Flags:           [ PF_W, PF_R ]
+    FirstSec:        .preinit_array
+    LastSec:         .bss
+    VAddr:           0x11DF0
+    Align:           0x1000
+    Offset:          0xDF0
+  - Type:            PT_DYNAMIC
+    Flags:           [ PF_W, PF_R ]
+    FirstSec:        .dynamic
+    LastSec:         .dynamic
+    VAddr:           0x11E08
+    Align:           0x8
+    Offset:          0xE08
+  - Type:            PT_NOTE
+    Flags:           [ PF_R ]
+    FirstSec:        .note.ABI-tag
+    LastSec:         .note.ABI-tag
+    VAddr:           0x10294
+    Align:           0x4
+    Offset:          0x294
+  - Type:            PT_GNU_EH_FRAME
+    Flags:           [ PF_R ]
+    FirstSec:        .eh_frame_hdr
+    LastSec:         .eh_frame_hdr
+    VAddr:           0x1063C
+    Align:           0x4
+    Offset:          0x63C
+  - Type:            PT_GNU_STACK
+    Flags:           [ PF_W, PF_R ]
+    Align:           0x10
+    Offset:          0x0
+  - Type:            PT_GNU_RELRO
+    Flags:           [ PF_R ]
+    FirstSec:        .preinit_array
+    LastSec:         .got
+    VAddr:           0x11DF0
+    Offset:          0xDF0
+Sections:
+  - Name:            .interp
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x10270
+    AddressAlign:    0x1
+    Content:         2F6C69622F6C642D6C696E75782D726973637636342D6C703634642E736F2E3100
+  - Name:            .note.ABI-tag
+    Type:            SHT_NOTE
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x10294
+    AddressAlign:    0x4
+    Notes:
+      - Name:            GNU
+        Desc:            00000000040000000F00000000000000
+        Type:            NT_VERSION
+  - Name:            .hash
+    Type:            SHT_HASH
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x102B8
+    Link:            .dynsym
+    AddressAlign:    0x8
+    Bucket:          [ 4, 1, 2 ]
+    Chain:           [ 0, 5, 0, 0, 3, 0 ]
+  - Name:            .gnu.hash
+    Type:            SHT_GNU_HASH
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x102E8
+    Link:            .dynsym
+    AddressAlign:    0x8
+    Header:
+      SymNdx:          0x1
+      Shift2:          0x6
+    BloomFilter:     [ 0x1D00700001020000 ]
+    HashBuckets:     [ 0x1, 0x2, 0x5 ]
+    HashValues:      [ 0x7C9C7B11, 0x1C93DEEC, 0xCA90EEBC, 0x870A7E19, 
+                       0xF63D4E2F ]
+  - Name:            .dynsym
+    Type:            SHT_DYNSYM
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x10320
+    Link:            .dynstr
+    AddressAlign:    0x8
+  - Name:            .dynstr
+    Type:            SHT_STRTAB
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x103B0
+    AddressAlign:    0x1
+  - Name:            .gnu.version
+    Type:            SHT_GNU_versym
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x103FE
+    Link:            .dynsym
+    AddressAlign:    0x2
+    Entries:         [ 0, 2, 2, 2, 1, 2 ]
+  - Name:            .gnu.version_r
+    Type:            SHT_GNU_verneed
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x10410
+    Link:            .dynstr
+    AddressAlign:    0x8
+    Dependencies:
+      - Version:         1
+        File:            libc.so.6
+        Entries:
+          - Name:            GLIBC_2.27
+            Hash:            110530951
+            Flags:           0
+            Other:           2
+  - Name:            .rela.plt
+    Type:            SHT_RELA
+    Flags:           [ SHF_ALLOC, SHF_INFO_LINK ]
+    Address:         0x10430
+    Link:            .dynsym
+    AddressAlign:    0x8
+    Info:            .got.plt
+    Relocations:
+      - Offset:          0x12000
+        Symbol:          strtol
+        Type:            R_RISCV_JUMP_SLOT
+      - Offset:          0x12008
+        Symbol:          __libc_start_main
+        Type:            R_RISCV_JUMP_SLOT
+      - Offset:          0x12010
+        Symbol:          putchar
+        Type:            R_RISCV_JUMP_SLOT
+      - Offset:          0x12018
+        Symbol:          puts
+        Type:            R_RISCV_JUMP_SLOT
+  - Name:            .plt
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x10490
+    AddressAlign:    0x10
+    EntSize:         0x10
+    Content:         972300003303C34103BE03B6130343FD938203B61353130083B2820067000E00172E0000033E0EB567030E0013000000172E0000033E8EB467030E0013000000172E0000033E0EB467030E0013000000172E0000033E8EB367030E0013000000
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x104F0
+    AddressAlign:    0x4
+    Content:         416541111305056306E4EFF07FFE13052006EFF0FFFCC1621385826329468145EFF01FFAA260012541018280EF00E002AA87170500001305E5FC82653000137101FF970600009386A609170700001307C70E0A88EFF0DFF70290972100009381612D82800000172500001305A5AC97270000938727AC6387A700130300006303030002838280172500001305A5AA97250000938525AAB382A54093D7324013D3F203B303F30093D5134089C51306000011C2028682809727000083C727A889EF411106E4EFF03FFAA260854217270000230657A641018280828075B7397122F84AF0972700009387E782172400001304E48106FC33898740638A870226F44EEC52E856E413593940B28A2E8AAA898144033304005686D2854E85850402932104E3E824FFA274E269426AA26AE27042740279216182808280
+  - Name:            .rodata
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x10628
+    AddressAlign:    0x8
+    Content:         '010002000000000061000000000000003300'
+  - Name:            .eh_frame_hdr
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x1063C
+    AddressAlign:    0x4
+    Content:         011B033B2800000004000000B4FEFFFF54000000E0FEFFFF4000000090FFFFFF74000000EAFFFFFFAC000000
+  - Name:            .eh_frame
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x10668
+    AddressAlign:    0x8
+    Content:         1000000000000000037A5200017C01011B0C0200100000001800000098FEFFFF2E000000000701001C0000002C00000058FEFFFF2C00000000440E104681025CC1440E0000000000340000004C00000014FFFFFF5A00000000420E404C880492084E81024C8906930A940C950E62C942D342D442D542C142C842D2420E000000100000008400000036FFFFFF020000000000000000000000
+  - Name:            .preinit_array
+    Type:            SHT_PREINIT_ARRAY
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x11DF0
+    AddressAlign:    0x1
+    EntSize:         0x8
+    Offset:          0xDF0
+    Content:         4A05010000000000
+  - Name:            .init_array
+    Type:            SHT_INIT_ARRAY
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x11DF8
+    AddressAlign:    0x8
+    EntSize:         0x8
+    Content:         CA05010000000000
+  - Name:            .fini_array
+    Type:            SHT_FINI_ARRAY
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x11E00
+    AddressAlign:    0x8
+    EntSize:         0x8
+    Content:         A605010000000000
+  - Name:            .dynamic
+    Type:            SHT_DYNAMIC
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x11E08
+    Link:            .dynstr
+    AddressAlign:    0x8
+    Entries:
+      - Tag:             DT_NEEDED
+        Value:           0x27
+      - Tag:             DT_PREINIT_ARRAY
+        Value:           0x11DF0
+      - Tag:             DT_PREINIT_ARRAYSZ
+        Value:           0x8
+      - Tag:             DT_INIT_ARRAY
+        Value:           0x11DF8
+      - Tag:             DT_INIT_ARRAYSZ
+        Value:           0x8
+      - Tag:             DT_FINI_ARRAY
+        Value:           0x11E00
+      - Tag:             DT_FINI_ARRAYSZ
+        Value:           0x8
+      - Tag:             DT_HASH
+        Value:           0x102B8
+      - Tag:             DT_GNU_HASH
+        Value:           0x102E8
+      - Tag:             DT_STRTAB
+        Value:           0x103B0
+      - Tag:             DT_SYMTAB
+        Value:           0x10320
+      - Tag:             DT_STRSZ
+        Value:           0x4E
+      - Tag:             DT_SYMENT
+        Value:           0x18
+      - Tag:             DT_DEBUG
+        Value:           0x0
+      - Tag:             DT_PLTGOT
+        Value:           0x11FF0
+      - Tag:             DT_PLTRELSZ
+        Value:           0x60
+      - Tag:             DT_PLTREL
+        Value:           0x7
+      - Tag:             DT_JMPREL
+        Value:           0x10430
+      - Tag:             DT_RELA
+        Value:           0x10430
+      - Tag:             DT_RELASZ
+        Value:           0x60
+      - Tag:             DT_RELAENT
+        Value:           0x18
+      - Tag:             DT_VERNEED
+        Value:           0x10410
+      - Tag:             DT_VERNEEDNUM
+        Value:           0x1
+      - Tag:             DT_VERSYM
+        Value:           0x103FE
+      - Tag:             DT_NULL
+        Value:           0x0
+      - Tag:             DT_NULL
+        Value:           0x0
+      - Tag:             DT_NULL
+        Value:           0x0
+      - Tag:             DT_NULL
+        Value:           0x0
+      - Tag:             DT_NULL
+        Value:           0x0
+      - Tag:             DT_NULL
+        Value:           0x0
+  - Name:            .got
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x11FE8
+    AddressAlign:    0x8
+    EntSize:         0x8
+    Content:         '081E010000000000'
+  - Name:            .got.plt
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x11FF0
+    AddressAlign:    0x8
+    EntSize:         0x8
+    Content:         FFFFFFFFFFFFFFFF00000000000000009004010000000000900401000000000090040100000000009004010000000000
+  - Name:            .data
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x12020
+    AddressAlign:    0x1
+  - Name:            .tm_clone_table
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x12020
+    AddressAlign:    0x8
+  - Name:            .sdata
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x12020
+    AddressAlign:    0x8
+    Content:         '0000000000000000'
+  - Name:            .bss
+    Type:            SHT_NOBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x12028
+    AddressAlign:    0x1
+    Size:            0x8
+  - Name:            .comment
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_MERGE, SHF_STRINGS ]
+    AddressAlign:    0x1
+    EntSize:         0x1
+    Content:         4743433A2028474E55292031342E332E31203230323530373234004743433A20285875616E7469652D393030206C696E75782D362E362E333620676C6962632067636320546F6F6C636861696E204465762D43492D6763632D31342D727579692D3130363330333620422D3230323630363330292031342E332E3120323032353037323400
+  - Name:            .riscv.attributes
+    Type:            SHT_RISCV_ATTRIBUTES
+    AddressAlign:    0x1
+    Content:         41A5000000726973637600019B00000004100572763634693270315F6D3270305F613270315F663270325F643270325F633270305F623170305F7A69636F6E643170305F7A696373723270305F7A6966656E6365693270305F7A6D6D756C3170305F7A61616D6F3170305F7A616C7273633170305F7A66613170305F7A63613170305F7A63623170305F7A63643170305F7A62613170305F7A62623170305F7A627331703000
+  - Name:            .rela.text
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .text
+    Relocations:
+      - Offset:          0x104F0
+        Symbol:          .LC0
+        Type:            R_RISCV_PCREL_HI20
+      - Offset:          0x104F2
+        Type:            R_RISCV_NONE
+        Addend:          2
+      - Offset:          0x104F4
+        Symbol:          main
+        Type:            R_RISCV_PCREL_LO12_I
+      - Offset:          0x104F4
+        Type:            R_RISCV_RELAX
+      - Offset:          0x104FA
+        Symbol:          'puts@GLIBC_2.27'
+        Type:            R_RISCV_JAL
+Symbols:
+  - Name:            .LC0
+    Section:         .rodata
+    Value:           0x10630
+  - Name:            'puts@GLIBC_2.27'
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+    Value:           0x104E0
+  - Name:            main
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x104F0
+    Size:            0x2C
+DynamicSymbols:
+  - Name:            puts
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+    Value:           0x104E0
+  - Name:            strtol
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+    Value:           0x104B0
+  - Name:            putchar
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+    Value:           0x104D0
+  - Name:            '__global_pointer$'
+    Index:           SHN_ABS
+    Binding:         STB_GLOBAL
+    Value:           0x12820
+  - Name:            __libc_start_main
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+    Value:           0x104C0
+...
