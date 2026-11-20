@@ -18,7 +18,7 @@
 namespace llvm {
 namespace hlsl {
 
-void parseThreadCounts(StringRef Str, unsigned &Count1, unsigned &Count2,
+LLVM_ABI void parseThreadCounts(StringRef Str, unsigned &Count1, unsigned &Count2,
                        unsigned &Count3);
 
 } // namespace hlsl
