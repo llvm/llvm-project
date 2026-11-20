@@ -1635,6 +1635,19 @@ bool LoopInterchangeLegality::canInterchangeLoops(unsigned InnerLoopId,
       if (isa<LoadInst, StoreInst, PseudoProbeInst>(&I))
         continue;
 
+      // Re-nesting or cloning a convergent operation can change the set of
+      // threads that execute it together. Conservatively reject a convergent
+      // operation anywhere in the two loops.
+      if (auto *CB = dyn_cast<CallBase>(&I); CB && CB->isConvergent()) {
+        LLVM_DEBUG(dbgs() << "Loops contain a convergent operation\n");
+        ORE->emit([&]() {
+          return OptimizationRemarkMissed(DEBUG_TYPE, "UnsafeInst",
+                                          I.getDebugLoc(), I.getParent())
+                 << "Cannot interchange loops due to a convergent operation.";
+        });
+        return false;
+      }
+
       // We cannot ignore potential memory reads, e.g., loads inside the called
       // function.
       if (!I.mayHaveSideEffects() && !I.mayReadFromMemory())
