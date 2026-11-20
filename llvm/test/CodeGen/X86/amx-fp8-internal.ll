@@ -77,13 +77,14 @@ define dso_local void @__tile_dpbf8ps(ptr %dst, ptr %src1, ptr %src2) #0 {
 ; CHECK-NEXT:    movw %cx, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movw %cx, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movswq 2(%rsi), %r8
-; CHECK-NEXT:    movw %r8w, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movzwl %r8w, %r9d
-; CHECK-NEXT:    movb %r9b, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    shrl $2, %r9d
-; CHECK-NEXT:    movb %r9b, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movw %r9w, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movl %r9d, %r10d
+; CHECK-NEXT:    movb %r10b, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    shrl $2, %r10d
+; CHECK-NEXT:    movb %r10b, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    addq $64, %rdi
+; CHECK-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    tileloadd (%rdi,%rcx), %tmm0
 ; CHECK-NEXT:    addq $64, %rsi
 ; CHECK-NEXT:    tileloadd (%rsi,%r8), %tmm1

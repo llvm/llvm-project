@@ -1192,10 +1192,9 @@ define amdgpu_kernel void @v_insertelement_v4bf16_dynamic_sgpr(ptr addrspace(1) 
 ; SI-NEXT:    s_or_b32 s7, s5, s4
 ; SI-NEXT:    s_lshl_b64 s[4:5], 0xffff, s6
 ; SI-NEXT:    v_mov_b32_e32 v4, s7
-; SI-NEXT:    v_mov_b32_e32 v5, s7
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_bfi_b32 v3, s5, v4, v3
-; SI-NEXT:    v_bfi_b32 v2, s4, v5, v2
+; SI-NEXT:    v_bfi_b32 v2, s4, v4, v2
 ; SI-NEXT:    buffer_store_dwordx2 v[2:3], v[0:1], s[0:3], 0 addr64
 ; SI-NEXT:    s_endpgm
 ;
@@ -1220,11 +1219,10 @@ define amdgpu_kernel void @v_insertelement_v4bf16_dynamic_sgpr(ptr addrspace(1) 
 ; VI-NEXT:    v_add_u32_e32 v2, vcc, s0, v2
 ; VI-NEXT:    s_lshl_b64 s[0:1], 0xffff, s3
 ; VI-NEXT:    v_mov_b32_e32 v4, s2
-; VI-NEXT:    v_mov_b32_e32 v5, s2
 ; VI-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_bfi_b32 v1, s1, v4, v1
-; VI-NEXT:    v_bfi_b32 v0, s0, v5, v0
+; VI-NEXT:    v_bfi_b32 v0, s0, v4, v0
 ; VI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; VI-NEXT:    s_endpgm
 ;
@@ -1239,10 +1237,9 @@ define amdgpu_kernel void @v_insertelement_v4bf16_dynamic_sgpr(ptr addrspace(1) 
 ; GFX900-NEXT:    s_pack_ll_b32_b16 s4, s4, s4
 ; GFX900-NEXT:    s_lshl_b64 s[2:3], 0xffff, s2
 ; GFX900-NEXT:    v_mov_b32_e32 v3, s4
-; GFX900-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    v_bfi_b32 v1, s3, v3, v1
-; GFX900-NEXT:    v_bfi_b32 v0, s2, v4, v0
+; GFX900-NEXT:    v_bfi_b32 v0, s2, v3, v0
 ; GFX900-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
 ; GFX900-NEXT:    s_endpgm
 ;
@@ -1258,10 +1255,9 @@ define amdgpu_kernel void @v_insertelement_v4bf16_dynamic_sgpr(ptr addrspace(1) 
 ; GFX942-NEXT:    s_pack_ll_b32_b16 s4, s6, s6
 ; GFX942-NEXT:    s_lshl_b64 s[2:3], 0xffff, s2
 ; GFX942-NEXT:    v_mov_b32_e32 v3, s4
-; GFX942-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_bfi_b32 v1, s3, v3, v1
-; GFX942-NEXT:    v_bfi_b32 v0, s2, v4, v0
+; GFX942-NEXT:    v_bfi_b32 v0, s2, v3, v0
 ; GFX942-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
 ; GFX942-NEXT:    s_endpgm
 ;
@@ -1500,15 +1496,14 @@ define amdgpu_kernel void @v_insertelement_v8bf16_dynamic(ptr addrspace(1) %out,
 ; VI-NEXT:    s_or_b32 s4, s4, s6
 ; VI-NEXT:    s_cmp_eq_u32 s2, 0
 ; VI-NEXT:    v_mov_b32_e32 v6, s4
-; VI-NEXT:    v_mov_b32_e32 v7, s4
 ; VI-NEXT:    s_cselect_b32 s1, s1, 0
 ; VI-NEXT:    s_cselect_b32 s0, s0, 0
 ; VI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v5, vcc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_bfi_b32 v3, s3, v6, v3
-; VI-NEXT:    v_bfi_b32 v2, s5, v7, v2
+; VI-NEXT:    v_bfi_b32 v2, s5, v6, v2
 ; VI-NEXT:    v_bfi_b32 v1, s1, v6, v1
-; VI-NEXT:    v_bfi_b32 v0, s0, v7, v0
+; VI-NEXT:    v_bfi_b32 v0, s0, v6, v0
 ; VI-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
 ; VI-NEXT:    s_endpgm
 ;
@@ -1524,7 +1519,6 @@ define amdgpu_kernel void @v_insertelement_v8bf16_dynamic(ptr addrspace(1) %out,
 ; GFX900-NEXT:    s_lshl_b32 s2, s2, 4
 ; GFX900-NEXT:    s_lshr_b32 s5, s5, 2
 ; GFX900-NEXT:    v_mov_b32_e32 v5, s3
-; GFX900-NEXT:    v_mov_b32_e32 v6, s3
 ; GFX900-NEXT:    s_lshl_b64 s[2:3], 0xffff, s2
 ; GFX900-NEXT:    s_cmp_eq_u32 s5, 1
 ; GFX900-NEXT:    s_cselect_b32 s4, s3, 0
@@ -1534,9 +1528,9 @@ define amdgpu_kernel void @v_insertelement_v8bf16_dynamic(ptr addrspace(1) %out,
 ; GFX900-NEXT:    s_cselect_b32 s2, s2, 0
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    v_bfi_b32 v3, s4, v5, v3
-; GFX900-NEXT:    v_bfi_b32 v2, s6, v6, v2
+; GFX900-NEXT:    v_bfi_b32 v2, s6, v5, v2
 ; GFX900-NEXT:    v_bfi_b32 v1, s3, v5, v1
-; GFX900-NEXT:    v_bfi_b32 v0, s2, v6, v0
+; GFX900-NEXT:    v_bfi_b32 v0, s2, v5, v0
 ; GFX900-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX900-NEXT:    s_endpgm
 ;
@@ -1553,7 +1547,6 @@ define amdgpu_kernel void @v_insertelement_v8bf16_dynamic(ptr addrspace(1) %out,
 ; GFX942-NEXT:    s_lshl_b32 s2, s2, 4
 ; GFX942-NEXT:    s_lshr_b32 s4, s7, 2
 ; GFX942-NEXT:    v_mov_b32_e32 v5, s3
-; GFX942-NEXT:    v_mov_b32_e32 v6, s3
 ; GFX942-NEXT:    s_lshl_b64 s[2:3], 0xffff, s2
 ; GFX942-NEXT:    s_cmp_eq_u32 s4, 1
 ; GFX942-NEXT:    s_cselect_b32 s5, s3, 0
@@ -1563,9 +1556,9 @@ define amdgpu_kernel void @v_insertelement_v8bf16_dynamic(ptr addrspace(1) %out,
 ; GFX942-NEXT:    s_cselect_b32 s2, s2, 0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_bfi_b32 v3, s5, v5, v3
-; GFX942-NEXT:    v_bfi_b32 v2, s6, v6, v2
+; GFX942-NEXT:    v_bfi_b32 v2, s6, v5, v2
 ; GFX942-NEXT:    v_bfi_b32 v1, s3, v5, v1
-; GFX942-NEXT:    v_bfi_b32 v0, s2, v6, v0
+; GFX942-NEXT:    v_bfi_b32 v0, s2, v5, v0
 ; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_endpgm
 ;
@@ -1888,7 +1881,6 @@ define amdgpu_kernel void @v_insertelement_v16bf16_dynamic(ptr addrspace(1) %out
 ; VI-NEXT:    s_or_b32 s4, s4, s6
 ; VI-NEXT:    s_cmp_eq_u32 s2, 0
 ; VI-NEXT:    v_mov_b32_e32 v12, s4
-; VI-NEXT:    v_mov_b32_e32 v13, s4
 ; VI-NEXT:    s_cselect_b32 s4, s1, 0
 ; VI-NEXT:    s_cselect_b32 s6, s0, 0
 ; VI-NEXT:    s_cmp_eq_u32 s2, 3
@@ -1902,14 +1894,14 @@ define amdgpu_kernel void @v_insertelement_v16bf16_dynamic(ptr addrspace(1) %out
 ; VI-NEXT:    v_addc_u32_e32 v11, vcc, 0, v9, vcc
 ; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_bfi_b32 v3, s3, v12, v3
-; VI-NEXT:    v_bfi_b32 v2, s5, v13, v2
+; VI-NEXT:    v_bfi_b32 v2, s5, v12, v2
 ; VI-NEXT:    v_bfi_b32 v1, s4, v12, v1
-; VI-NEXT:    v_bfi_b32 v0, s6, v13, v0
+; VI-NEXT:    v_bfi_b32 v0, s6, v12, v0
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_bfi_b32 v7, s7, v12, v7
-; VI-NEXT:    v_bfi_b32 v6, s8, v13, v6
+; VI-NEXT:    v_bfi_b32 v6, s8, v12, v6
 ; VI-NEXT:    v_bfi_b32 v5, s1, v12, v5
-; VI-NEXT:    v_bfi_b32 v4, s0, v13, v4
+; VI-NEXT:    v_bfi_b32 v4, s0, v12, v4
 ; VI-NEXT:    flat_store_dwordx4 v[10:11], v[4:7]
 ; VI-NEXT:    flat_store_dwordx4 v[8:9], v[0:3]
 ; VI-NEXT:    s_endpgm
@@ -1927,7 +1919,6 @@ define amdgpu_kernel void @v_insertelement_v16bf16_dynamic(ptr addrspace(1) %out
 ; GFX900-NEXT:    s_lshl_b32 s2, s2, 4
 ; GFX900-NEXT:    s_lshr_b32 s5, s5, 2
 ; GFX900-NEXT:    v_mov_b32_e32 v9, s3
-; GFX900-NEXT:    v_mov_b32_e32 v10, s3
 ; GFX900-NEXT:    s_lshl_b64 s[2:3], 0xffff, s2
 ; GFX900-NEXT:    s_cmp_eq_u32 s5, 1
 ; GFX900-NEXT:    s_cselect_b32 s4, s3, 0
@@ -1945,12 +1936,12 @@ define amdgpu_kernel void @v_insertelement_v16bf16_dynamic(ptr addrspace(1) %out
 ; GFX900-NEXT:    v_bfi_b32 v3, s4, v9, v3
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    v_bfi_b32 v7, s9, v9, v7
-; GFX900-NEXT:    v_bfi_b32 v6, s10, v10, v6
+; GFX900-NEXT:    v_bfi_b32 v6, s10, v9, v6
 ; GFX900-NEXT:    v_bfi_b32 v5, s3, v9, v5
-; GFX900-NEXT:    v_bfi_b32 v4, s2, v10, v4
-; GFX900-NEXT:    v_bfi_b32 v2, s6, v10, v2
+; GFX900-NEXT:    v_bfi_b32 v4, s2, v9, v4
+; GFX900-NEXT:    v_bfi_b32 v2, s6, v9, v2
 ; GFX900-NEXT:    v_bfi_b32 v1, s7, v9, v1
-; GFX900-NEXT:    v_bfi_b32 v0, s8, v10, v0
+; GFX900-NEXT:    v_bfi_b32 v0, s8, v9, v0
 ; GFX900-NEXT:    global_store_dwordx4 v8, v[4:7], s[0:1] offset:16
 ; GFX900-NEXT:    global_store_dwordx4 v8, v[0:3], s[0:1]
 ; GFX900-NEXT:    s_endpgm
@@ -1969,7 +1960,6 @@ define amdgpu_kernel void @v_insertelement_v16bf16_dynamic(ptr addrspace(1) %out
 ; GFX942-NEXT:    s_lshl_b32 s2, s2, 4
 ; GFX942-NEXT:    s_lshr_b32 s4, s7, 2
 ; GFX942-NEXT:    v_mov_b32_e32 v9, s3
-; GFX942-NEXT:    v_mov_b32_e32 v10, s3
 ; GFX942-NEXT:    s_lshl_b64 s[2:3], 0xffff, s2
 ; GFX942-NEXT:    s_cmp_eq_u32 s4, 1
 ; GFX942-NEXT:    s_cselect_b32 s5, s3, 0
@@ -1987,12 +1977,12 @@ define amdgpu_kernel void @v_insertelement_v16bf16_dynamic(ptr addrspace(1) %out
 ; GFX942-NEXT:    v_bfi_b32 v3, s5, v9, v3
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_bfi_b32 v7, s9, v9, v7
-; GFX942-NEXT:    v_bfi_b32 v6, s10, v10, v6
+; GFX942-NEXT:    v_bfi_b32 v6, s10, v9, v6
 ; GFX942-NEXT:    v_bfi_b32 v5, s3, v9, v5
-; GFX942-NEXT:    v_bfi_b32 v4, s2, v10, v4
-; GFX942-NEXT:    v_bfi_b32 v2, s6, v10, v2
+; GFX942-NEXT:    v_bfi_b32 v4, s2, v9, v4
+; GFX942-NEXT:    v_bfi_b32 v2, s6, v9, v2
 ; GFX942-NEXT:    v_bfi_b32 v1, s7, v9, v1
-; GFX942-NEXT:    v_bfi_b32 v0, s8, v10, v0
+; GFX942-NEXT:    v_bfi_b32 v0, s8, v9, v0
 ; GFX942-NEXT:    global_store_dwordx4 v8, v[4:7], s[0:1] offset:16
 ; GFX942-NEXT:    global_store_dwordx4 v8, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_endpgm
