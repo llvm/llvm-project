@@ -2284,3 +2284,126 @@ define <2 x i32> @mul_x_xplus_nonsplat_even_lane_sdiv2(<2 x i32> noundef %x) {
   %d = sdiv <2 x i32> %m, <i32 2, i32 2>
   ret <2 x i32> %d
 }
+
+define i32 @mul_x_xxor5_sdiv2(i32 noundef %x) {
+; CHECK-LABEL: @mul_x_xxor5_sdiv2(
+; CHECK-NEXT:    [[A:%.*]] = xor i32 [[X:%.*]], 5
+; CHECK-NEXT:    [[M:%.*]] = mul i32 [[A]], [[X]]
+; CHECK-NEXT:    [[D:%.*]] = sdiv i32 [[M]], 2
+; CHECK-NEXT:    ret i32 [[D]]
+;
+  %a = xor i32 %x, 5
+  %m = mul i32 %a, %x
+  %d = sdiv i32 %m, 2
+  ret i32 %d
+}
+
+define i32 @mul_x_notx_sdiv2(i32 noundef %x) {
+; CHECK-LABEL: @mul_x_notx_sdiv2(
+; CHECK-NEXT:    [[A:%.*]] = xor i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[M:%.*]] = mul i32 [[X]], [[A]]
+; CHECK-NEXT:    [[D:%.*]] = sdiv i32 [[M]], 2
+; CHECK-NEXT:    ret i32 [[D]]
+;
+  %a = xor i32 %x, -1
+  %m = mul i32 %x, %a
+  %d = sdiv i32 %m, 2
+  ret i32 %d
+}
+
+define i32 @mul_x_7minusx_sdiv2(i32 noundef %x) {
+; CHECK-LABEL: @mul_x_7minusx_sdiv2(
+; CHECK-NEXT:    [[A:%.*]] = sub i32 7, [[X:%.*]]
+; CHECK-NEXT:    [[M:%.*]] = mul i32 [[A]], [[X]]
+; CHECK-NEXT:    [[D:%.*]] = sdiv i32 [[M]], 2
+; CHECK-NEXT:    ret i32 [[D]]
+;
+  %a = sub i32 7, %x
+  %m = mul i32 %a, %x
+  %d = sdiv i32 %m, 2
+  ret i32 %d
+}
+
+define i32 @mul_x_1minusx_sdiv2(i32 noundef %x) {
+; CHECK-LABEL: @mul_x_1minusx_sdiv2(
+; CHECK-NEXT:    [[A:%.*]] = sub i32 1, [[X:%.*]]
+; CHECK-NEXT:    [[M:%.*]] = mul i32 [[X]], [[A]]
+; CHECK-NEXT:    [[D:%.*]] = sdiv i32 [[M]], 2
+; CHECK-NEXT:    ret i32 [[D]]
+;
+  %a = sub i32 1, %x
+  %m = mul i32 %x, %a
+  %d = sdiv i32 %m, 2
+  ret i32 %d
+}
+
+define i32 @mul_x_xordisjoint1_sdiv2(i32 noundef %x) {
+; CHECK-LABEL: @mul_x_xordisjoint1_sdiv2(
+; CHECK-NEXT:    [[A:%.*]] = or disjoint i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[M:%.*]] = mul i32 [[A]], [[X]]
+; CHECK-NEXT:    [[D:%.*]] = sdiv i32 [[M]], 2
+; CHECK-NEXT:    ret i32 [[D]]
+;
+  %a = or disjoint i32 %x, 1
+  %m = mul i32 %a, %x
+  %d = sdiv i32 %m, 2
+  ret i32 %d
+}
+
+define <2 x i32> @mul_x_xplus_poison_lane_sdiv2(<2 x i32> noundef %x) {
+; CHECK-LABEL: @mul_x_xplus_poison_lane_sdiv2(
+; CHECK-NEXT:    [[A:%.*]] = add <2 x i32> [[X:%.*]], <i32 5, i32 poison>
+; CHECK-NEXT:    [[M:%.*]] = mul <2 x i32> [[A]], [[X]]
+; CHECK-NEXT:    [[D:%.*]] = ashr exact <2 x i32> [[M]], splat (i32 1)
+; CHECK-NEXT:    ret <2 x i32> [[D]]
+;
+  %a = add <2 x i32> %x, <i32 5, i32 poison>
+  %m = mul <2 x i32> %a, %x
+  %d = sdiv <2 x i32> %m, <i32 2, i32 2>
+  ret <2 x i32> %d
+}
+
+; Negative test: xor with an even constant keeps the parity.
+define i32 @mul_x_xxor2_sdiv2(i32 noundef %x) {
+; CHECK-LABEL: @mul_x_xxor2_sdiv2(
+; CHECK-NEXT:    [[A:%.*]] = xor i32 [[X:%.*]], 2
+; CHECK-NEXT:    [[M:%.*]] = mul i32 [[A]], [[X]]
+; CHECK-NEXT:    [[D:%.*]] = sdiv i32 [[M]], 2
+; CHECK-NEXT:    ret i32 [[D]]
+;
+  %a = xor i32 %x, 2
+  %m = mul i32 %a, %x
+  %d = sdiv i32 %m, 2
+  ret i32 %d
+}
+
+; Negative test: or without disjoint is not an add (x | 1 == x for odd x).
+define i32 @mul_x_or_nondisjoint1_sdiv2(i32 noundef %x) {
+; CHECK-LABEL: @mul_x_or_nondisjoint1_sdiv2(
+; CHECK-NEXT:    [[A:%.*]] = or i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[M:%.*]] = mul i32 [[A]], [[X]]
+; CHECK-NEXT:    [[D:%.*]] = sdiv i32 [[M]], 2
+; CHECK-NEXT:    ret i32 [[D]]
+;
+  %a = or i32 %x, 1
+  %m = mul i32 %a, %x
+  %d = sdiv i32 %m, 2
+  ret i32 %d
+}
+
+; (X + 4) * (X + 3) is always even, but neither factor is X itself, so this is
+; not handled yet.
+define i32 @mul_xplus4_xplus3_sdiv2(i32 noundef %x) {
+; CHECK-LABEL: @mul_xplus4_xplus3_sdiv2(
+; CHECK-NEXT:    [[A:%.*]] = add i32 [[X:%.*]], 4
+; CHECK-NEXT:    [[B:%.*]] = add i32 [[X]], 3
+; CHECK-NEXT:    [[M:%.*]] = mul i32 [[A]], [[B]]
+; CHECK-NEXT:    [[D:%.*]] = sdiv i32 [[M]], 2
+; CHECK-NEXT:    ret i32 [[D]]
+;
+  %a = add i32 %x, 4
+  %b = add i32 %x, 3
+  %m = mul i32 %a, %b
+  %d = sdiv i32 %m, 2
+  ret i32 %d
+}
