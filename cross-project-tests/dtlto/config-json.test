@@ -1,19 +1,72 @@
-# The DTLTO shard records the linker's function-sections setting. The backend
-# should use that setting even when Clang's command line requests otherwise.
+# Check that Clang reads target options and a custom optimization pipeline
+# from a DTLTO index. Compile the same IR with both indexes and identical
+# Clang options so the ordinary ThinLTO index serves as a control.
 
 RUN: rm -rf %t && split-file %s %t && cd %t
-RUN: %clang --target=x86_64-unknown-linux-gnu -flto=thin -c foo.c -o foo.bc
+RUN: opt -thinlto-bc input.ll -o input.bc
+
+DEFINE: %{link} = llvm-lto2 run input.bc -r=input.bc,foo,px \
+DEFINE:   -r=input.bc,counter,px -thinlto-emit-indexes -O0
+DEFINE: %{backend} = %clang --target=x86_64-unknown-linux-gnu -O0 \
+DEFINE:   -fno-function-sections -fdata-sections -x ir input.bc
+
+RUN: %{link} -o ordinary.o
 RUN: touch placeholder.o
-RUN: llvm-lto2 run foo.bc -r=foo.bc,foo,px -o linked.o \
+RUN: %{link} -o distributed.o \
 RUN:   -dtlto-distributor=%python \
 RUN:   -dtlto-distributor-arg=%llvm_src_root/utils/dtlto/mock.py,placeholder.o \
-RUN:   -thinlto-emit-indexes -function-sections
-RUN: cp foo.1.*.native.o.thinlto.bc foo.thinlto.bc
-RUN: %clang -target x86_64-unknown-linux-gnu -fno-function-sections \
-RUN:   -x ir -c foo.bc -o backend.o -fthinlto-index=foo.thinlto.bc
-RUN: llvm-readobj --sections backend.o | FileCheck %s
+RUN:   -function-sections -data-sections=false -opt-pipeline='function(instcombine)'
+RUN: cp input.1.*.native.o.thinlto.bc distributed.thinlto.bc
 
-CHECK: Name: .text.foo
+RUN: %{backend} -c -fthinlto-index=distributed.thinlto.bc -o dtlto.o
+RUN: %{backend} -c -fthinlto-index=input.bc.thinlto.bc -o thinlto.o
+RUN: llvm-readobj --sections dtlto.o | FileCheck %s --check-prefix=DTLTO \
+RUN:   --implicit-check-not=.data.counter
+RUN: llvm-readobj --sections thinlto.o | FileCheck %s --check-prefix=THINLTO \
+RUN:   --implicit-check-not=.text.foo
 
-#--- foo.c
-void foo(void) {}
+DTLTO-DAG: Name: .text.foo (
+DTLTO-DAG: Name: .data (
+THINLTO-DAG: Name: .text (
+THINLTO-DAG: Name: .data.counter (
+
+# InstCombine comes from the serialized OptPipeline field.
+RUN: %{backend} -S -emit-llvm -fthinlto-index=distributed.thinlto.bc -o - | \
+RUN:   FileCheck %s --check-prefix=INSTCOMBINE
+RUN: %{backend} -S -emit-llvm -fthinlto-index=input.bc.thinlto.bc -o - | \
+RUN:   FileCheck %s --check-prefix=DEFAULT
+
+INSTCOMBINE-LABEL: define {{.*}}i32 @foo(i32 %input)
+INSTCOMBINE-NEXT: entry:
+INSTCOMBINE-NEXT: ret i32 %input
+DEFAULT-LABEL: define {{.*}}i32 @foo(i32 %input)
+DEFAULT: %plus_zero = add i32 %input, 0
+DEFAULT-NEXT: ret i32 %plus_zero
+
+# A malformed blob must fail the backend. Replacing an equal-length token
+# preserves the bitstream framing.
+RUN: %python corrupt-config.py
+RUN: not %{backend} -c -fthinlto-index=corrupt.thinlto.bc -o corrupt.o 2>&1 | \
+RUN:   FileCheck %s --check-prefix=ERROR
+
+ERROR: error: error in backend: Error loading LTO config from index file 'corrupt.thinlto.bc'
+ERROR-SAME: Invalid JSON value
+
+#--- input.ll
+target triple = "x86_64-unknown-linux-gnu"
+
+@counter = global i32 1
+
+define i32 @foo(i32 %input) {
+entry:
+  %plus_zero = add i32 %input, 0
+  ret i32 %plus_zero
+}
+
+#--- corrupt-config.py
+from pathlib import Path
+
+index = Path("distributed.thinlto.bc").read_bytes()
+original = b'"Dtlto":true'
+assert index.count(original) == 1
+Path("corrupt.thinlto.bc").write_bytes(index.replace(original, b'"Dtlto":oops'))
