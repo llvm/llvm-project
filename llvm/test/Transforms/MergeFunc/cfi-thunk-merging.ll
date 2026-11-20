@@ -8,7 +8,7 @@ target triple = "x86_64-unknown-linux"
 
 @0 = private unnamed_addr constant { i16, i16, [12 x i8] } { i16 -1, i16 0, [12 x i8] c"'int (int)'\00" }
 
-; Function Attrs: noinline nounwind optnone
+; Function Attrs: noinline nounwind
 define dso_local i32 @f(i32 noundef %arg) #0 !type !3 !type !4 {
 entry:
   %arg.addr = alloca i32, align 4
@@ -31,7 +31,7 @@ if.end:                                           ; preds = %if.then, %entry
   ret i32 %add
 }
 
-; Function Attrs: noinline nounwind optnone
+; Function Attrs: noinline nounwind
 define dso_local i32 @f_thunk(i32 noundef %arg) #0 !type !3 !type !4 {
 entry:
   %arg.addr = alloca i32, align 4
@@ -54,7 +54,7 @@ if.end:                                           ; preds = %if.then, %entry
   ret i32 %add
 }
 
-; Function Attrs: noinline nounwind optnone
+; Function Attrs: noinline nounwind
 define dso_local i32 @g(i32 noundef %b) #0 !type !3 !type !4 {
 entry:
   %b.addr = alloca i32, align 4
@@ -85,7 +85,7 @@ declare i1 @llvm.type.test(ptr, metadata) #1
 ; Function Attrs: cold noreturn nounwind
 declare void @llvm.ubsantrap(i8 immarg) #2
 
-attributes #0 = { noinline nounwind optnone "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
+attributes #0 = { noinline nounwind "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
 attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 attributes #2 = { cold noreturn nounwind }
 attributes #3 = { noreturn nounwind }

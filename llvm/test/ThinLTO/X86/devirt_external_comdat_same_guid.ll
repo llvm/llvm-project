@@ -55,7 +55,7 @@ entry:
   ret i32 0
 }
 
-; CHECK-IR1: define noundef i32 @test(
+; CHECK-IR1: define i32 @test(
 define i32 @test(ptr %obj, i32 %a) {
 entry:
   %vtable = load ptr, ptr %obj

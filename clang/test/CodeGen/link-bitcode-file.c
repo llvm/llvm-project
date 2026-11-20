@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple i386-pc-linux-gnu -DBITCODE -emit-llvm-bc -o %t.bc %s
+// RUN: %clang_cc1 -triple i386-pc-linux-gnu -DBITCODE -disable-O0-optnone -emit-llvm-bc -o %t.bc %s
 // RUN: %clang_cc1 -triple i386-pc-linux-gnu -DBITCODE2 -emit-llvm-bc -o %t-2.bc %s
 // RUN: %clang_cc1 -triple i386-pc-linux-gnu -mlink-bitcode-file %t.bc \
 // RUN:     -O3 -emit-llvm -o - %s | FileCheck -check-prefix=CHECK-NO-BC %s
