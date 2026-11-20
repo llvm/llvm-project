@@ -899,6 +899,16 @@ public:
     return 30;
   }
 
+  /// Return true if the RegAlloc can spill instead of using an unused CSR,
+  /// when the spill costs less than the CSR cost. Return false if a spill
+  /// on this target is not comparable with the CSR cost, for example when
+  /// a spill does not go to the stack.
+  virtual bool
+  shouldSpillInsteadOfFirstCSRUse(const MachineFunction &MF,
+                                  const LiveInterval &VirtReg) const {
+    return true;
+  }
+
   /// Returns true if the target requires (and can make use of) the register
   /// scavenger.
   virtual bool requiresRegisterScavenging(const MachineFunction &MF) const {

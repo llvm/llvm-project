@@ -7,26 +7,14 @@
 define double @main(i224 %0) #0 {
 ; CHECK-LABEL: main:
 ; CHECK:       # %bb.0: # %entryitofp-entry
-; CHECK-NEXT:    pushq %rbp
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    pushq %r15
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    pushq %r14
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    pushq %r13
-; CHECK-NEXT:    .cfi_def_cfa_offset 40
-; CHECK-NEXT:    pushq %r12
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    .cfi_def_cfa_offset 56
-; CHECK-NEXT:    subq $88, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 24
+; CHECK-NEXT:    subq $120, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 144
-; CHECK-NEXT:    .cfi_offset %rbx, -56
-; CHECK-NEXT:    .cfi_offset %r12, -48
-; CHECK-NEXT:    .cfi_offset %r13, -40
-; CHECK-NEXT:    .cfi_offset %r14, -32
-; CHECK-NEXT:    .cfi_offset %r15, -24
-; CHECK-NEXT:    .cfi_offset %rbp, -16
+; CHECK-NEXT:    .cfi_offset %rbx, -24
+; CHECK-NEXT:    .cfi_offset %r14, -16
 ; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    movq %rdi, %r8
 ; CHECK-NEXT:    orq %rdx, %r8
@@ -104,39 +92,45 @@ define double @main(i224 %0) #0 {
 ; CHECK-NEXT:  .LBB0_5: # %itofp-sw-default
 ; CHECK-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq %rsi, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq %rdx, (%rsp)
 ; CHECK-NEXT:    movl %ecx, %r8d
-; CHECK-NEXT:    movq %r8, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq %r8, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb $-87, %r8b
 ; CHECK-NEXT:    subb %al, %r8b
 ; CHECK-NEXT:    movb %r8b, %bl
 ; CHECK-NEXT:    shrb $6, %bl
-; CHECK-NEXT:    movzbl %bl, %r12d
+; CHECK-NEXT:    movzbl %bl, %r14d
 ; CHECK-NEXT:    movq $0, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq $0, (%rsp)
-; CHECK-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq -24(%rsp,%r12,8), %rbx
-; CHECK-NEXT:    movq -32(%rsp,%r12,8), %r13
-; CHECK-NEXT:    movq %rcx, %rbp
+; CHECK-NEXT:    movq $0, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq $0, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq $0, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq 8(%rsp,%r14,8), %rbx
+; CHECK-NEXT:    movq %rbx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-NEXT:    movq (%rsp,%r14,8), %rbx
+; CHECK-NEXT:    movq %rbx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    movb %r8b, %cl
-; CHECK-NEXT:    movq %r13, %r14
-; CHECK-NEXT:    shrdq %cl, %rbx, %r14
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rbx # 8-byte Reload
+; CHECK-NEXT:    movq %rbx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rbx # 8-byte Reload
+; CHECK-NEXT:    shrdq %cl, %rbx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Folded Spill
+; CHECK-NEXT:    movq -16(%rsp,%r14,8), %rcx
+; CHECK-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-NEXT:    movq -8(%rsp,%r14,8), %r14
+; CHECK-NEXT:    movb %r8b, %cl
 ; CHECK-NEXT:    movq %r14, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-NEXT:    movq -48(%rsp,%r12,8), %r15
-; CHECK-NEXT:    movq -40(%rsp,%r12,8), %r12
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rbx # 8-byte Reload
+; CHECK-NEXT:    shrdq %cl, %rbx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Folded Spill
 ; CHECK-NEXT:    movb %r8b, %cl
-; CHECK-NEXT:    movq %r12, %r14
-; CHECK-NEXT:    shrdq %cl, %r13, %r14
+; CHECK-NEXT:    shrq %cl, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Folded Spill
 ; CHECK-NEXT:    movb %r8b, %cl
-; CHECK-NEXT:    shrq %cl, %rbx
-; CHECK-NEXT:    movb %r8b, %cl
-; CHECK-NEXT:    shrdq %cl, %r12, %r15
+; CHECK-NEXT:    shrdq %cl, %r14, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Folded Spill
 ; CHECK-NEXT:    addb $55, %al
 ; CHECK-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq %rsi, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq %rbp, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
+; CHECK-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
@@ -146,17 +140,17 @@ define double @main(i224 %0) #0 {
 ; CHECK-NEXT:    andb $24, %cl
 ; CHECK-NEXT:    negb %cl
 ; CHECK-NEXT:    movsbq %cl, %rdx
-; CHECK-NEXT:    movq -80(%rsp,%rdx), %rsi
-; CHECK-NEXT:    movq -72(%rsp,%rdx), %rdi
-; CHECK-NEXT:    movq -64(%rsp,%rdx), %r8
+; CHECK-NEXT:    movq -48(%rsp,%rdx), %rsi
+; CHECK-NEXT:    movq -40(%rsp,%rdx), %rdi
+; CHECK-NEXT:    movq -32(%rsp,%rdx), %r8
 ; CHECK-NEXT:    movb %al, %cl
-; CHECK-NEXT:    movq %r8, %r12
-; CHECK-NEXT:    shldq %cl, %rdi, %r12
+; CHECK-NEXT:    movq %r8, %rbx
+; CHECK-NEXT:    shldq %cl, %rdi, %rbx
 ; CHECK-NEXT:    movb %al, %cl
-; CHECK-NEXT:    movq %rsi, %r13
-; CHECK-NEXT:    shlq %cl, %r13
-; CHECK-NEXT:    orq %r12, %r13
-; CHECK-NEXT:    movq -56(%rsp,%rdx), %rdx
+; CHECK-NEXT:    movq %rsi, %r14
+; CHECK-NEXT:    shlq %cl, %r14
+; CHECK-NEXT:    orq %rbx, %r14
+; CHECK-NEXT:    movq -24(%rsp,%rdx), %rdx
 ; CHECK-NEXT:    movb %al, %cl
 ; CHECK-NEXT:    shldq %cl, %r8, %rdx
 ; CHECK-NEXT:    movl %edx, %edx
@@ -164,13 +158,13 @@ define double @main(i224 %0) #0 {
 ; CHECK-NEXT:    shldq %cl, %rsi, %rdi
 ; CHECK-NEXT:    orq %rdx, %rdi
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    orq %rdi, %r13
+; CHECK-NEXT:    orq %rdi, %r14
 ; CHECK-NEXT:    setne %al
-; CHECK-NEXT:    orq %rax, %r15
-; CHECK-NEXT:    movq %r15, %rdi
-; CHECK-NEXT:    movq %r14, %rsi
+; CHECK-NEXT:    orq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Folded Spill
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi # 8-byte Reload
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
 ; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
-; CHECK-NEXT:    movq %rbx, %rcx
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
 ; CHECK-NEXT:    jmp .LBB0_6
 ; CHECK-NEXT:  .LBB0_6: # %itofp-sw-epilog
 ; CHECK-NEXT:    movl %edi, %eax
@@ -210,7 +204,7 @@ define double @main(i224 %0) #0 {
 ; CHECK-NEXT:    andb $24, %cl
 ; CHECK-NEXT:    negb %cl
 ; CHECK-NEXT:    movsbq %cl, %rcx
-; CHECK-NEXT:    movq 48(%rsp,%rcx), %rdx
+; CHECK-NEXT:    movq 80(%rsp,%rcx), %rdx
 ; CHECK-NEXT:    movb %al, %cl
 ; CHECK-NEXT:    shlq %cl, %rdx
 ; CHECK-NEXT:    movq %rdx, %rax
@@ -229,19 +223,11 @@ define double @main(i224 %0) #0 {
 ; CHECK-NEXT:    orq %rdx, %rax
 ; CHECK-NEXT:    movq %rax, %xmm0
 ; CHECK-NEXT:  .LBB0_10: # %itofp-return
-; CHECK-NEXT:    addq $88, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 56
-; CHECK-NEXT:    popq %rbx
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-NEXT:    popq %r12
-; CHECK-NEXT:    .cfi_def_cfa_offset 40
-; CHECK-NEXT:    popq %r13
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    popq %r14
+; CHECK-NEXT:    addq $120, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    popq %r15
+; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    popq %rbp
+; CHECK-NEXT:    popq %r14
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 entry:

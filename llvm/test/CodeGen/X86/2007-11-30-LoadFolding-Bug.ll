@@ -12,15 +12,16 @@ define fastcc void @mp_sqrt(i32 %n, i32 %radix, ptr %in, ptr %out, ptr %tmp1, pt
 ; CHECK-NEXT:    pushl %ebx
 ; CHECK-NEXT:    pushl %edi
 ; CHECK-NEXT:    pushl %esi
-; CHECK-NEXT:    pushl %eax
-; CHECK-NEXT:    movb $1, %cl
-; CHECK-NEXT:    movl $1, %esi
+; CHECK-NEXT:    subl $8, %esp
+; CHECK-NEXT:    movb $1, %bl
+; CHECK-NEXT:    movl $1, %ecx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %bb.i5
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movl %ecx, %eax
-; CHECK-NEXT:    addl %esi, %esi
-; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    movl %ebx, %eax
+; CHECK-NEXT:    addl %ecx, %ecx
+; CHECK-NEXT:    xorl %ebx, %ebx
 ; CHECK-NEXT:    testb $1, %al
 ; CHECK-NEXT:    jne .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %mp_unexp_mp2d.exit.i
@@ -29,35 +30,34 @@ define fastcc void @mp_sqrt(i32 %n, i32 %radix, ptr %in, ptr %out, ptr %tmp1, pt
 ; CHECK-NEXT:    jne .LBB0_3
 ; CHECK-NEXT:  # %bb.6: # %cond_next36.i
 ; CHECK-NEXT:    movl $0, 0
-; CHECK-NEXT:    movzbl %al, %ebp
-; CHECK-NEXT:    andl $1, %ebp
+; CHECK-NEXT:    movzbl %al, %ebx
+; CHECK-NEXT:    andl $1, %ebx
 ; CHECK-NEXT:    xorpd %xmm0, %xmm0
+; CHECK-NEXT:    xorl %ebp, %ebp
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    xorl %edi, %edi
 ; CHECK-NEXT:    xorpd %xmm1, %xmm1
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_7: # %bb.i28.i
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    cvttsd2si %xmm1, %ecx
-; CHECK-NEXT:    cmpl %edx, %ecx
-; CHECK-NEXT:    cmovgel %eax, %ecx
-; CHECK-NEXT:    addl $2, %edi
+; CHECK-NEXT:    cvttsd2si %xmm1, %esi
+; CHECK-NEXT:    cmpl %edx, %esi
+; CHECK-NEXT:    cmovgel %ebp, %esi
+; CHECK-NEXT:    addl $2, %eax
 ; CHECK-NEXT:    xorps %xmm2, %xmm2
-; CHECK-NEXT:    cvtsi2sd %ecx, %xmm2
+; CHECK-NEXT:    cvtsi2sd %esi, %xmm2
 ; CHECK-NEXT:    xorpd %xmm1, %xmm1
 ; CHECK-NEXT:    subsd %xmm2, %xmm1
 ; CHECK-NEXT:    mulsd %xmm0, %xmm1
-; CHECK-NEXT:    addl $-2, %ebp
+; CHECK-NEXT:    addl $-2, %ebx
 ; CHECK-NEXT:    jne .LBB0_7
 ; CHECK-NEXT:  # %bb.8: # %mp_unexp_d2mp.exit29.i
 ; CHECK-NEXT:    movl $0, 0
 ; CHECK-NEXT:    je .LBB0_9
 ; CHECK-NEXT:  # %bb.10: # %mp_sqrt_init.exit
-; CHECK-NEXT:    movl %esi, (%esp) # 4-byte Spill
+; CHECK-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    movl %edx, %edi
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; CHECK-NEXT:    movl %ebx, %edx
+; CHECK-NEXT:    movl %edx, (%esp) # 4-byte Spill
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; CHECK-NEXT:    calll mp_mul_csqu@PLT
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    movl $-1, %edx
@@ -67,18 +67,17 @@ define fastcc void @mp_sqrt(i32 %n, i32 %radix, ptr %in, ptr %out, ptr %tmp1, pt
 ; CHECK-NEXT:    calll rdft@PLT
 ; CHECK-NEXT:    addl $12, %esp
 ; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    movl (%esp), %edx # 4-byte Reload
 ; CHECK-NEXT:    movl %edi, %esi
-; CHECK-NEXT:    movl %edi, %edx
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; CHECK-NEXT:    pushl %edi
-; CHECK-NEXT:    pushl %ebx
+; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    pushl $0
 ; CHECK-NEXT:    calll mp_mul_d2i@PLT
 ; CHECK-NEXT:    addl $12, %esp
-; CHECK-NEXT:    testl %ebp, %ebp
+; CHECK-NEXT:    testl %ebx, %ebx
 ; CHECK-NEXT:    je .LBB0_11
 ; CHECK-NEXT:  .LBB0_3: # %cond_true.i
-; CHECK-NEXT:    addl $4, %esp
+; CHECK-NEXT:    addl $8, %esp
 ; CHECK-NEXT:  .LBB0_4: # %cond_true.i
 ; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    popl %edi
@@ -91,39 +90,39 @@ define fastcc void @mp_sqrt(i32 %n, i32 %radix, ptr %in, ptr %out, ptr %tmp1, pt
 ; CHECK-NEXT:    jmp .LBB0_9
 ; CHECK-NEXT:  .LBB0_11: # %cond_false.i
 ; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    movl %esi, %edx
+; CHECK-NEXT:    movl (%esp), %edx # 4-byte Reload
 ; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    pushl $0
 ; CHECK-NEXT:    calll mp_round@PLT
 ; CHECK-NEXT:    addl $8, %esp
 ; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    movl %esi, %edx
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; CHECK-NEXT:    pushl %ebx
+; CHECK-NEXT:    movl (%esp), %edx # 4-byte Reload
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; CHECK-NEXT:    pushl %edi
-; CHECK-NEXT:    pushl %ebx
+; CHECK-NEXT:    pushl %esi
+; CHECK-NEXT:    pushl %edi
 ; CHECK-NEXT:    calll mp_add@PLT
 ; CHECK-NEXT:    addl $12, %esp
 ; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    movl %esi, %edx
-; CHECK-NEXT:    pushl %edi
-; CHECK-NEXT:    pushl %edi
+; CHECK-NEXT:    movl (%esp), %edx # 4-byte Reload
+; CHECK-NEXT:    pushl %esi
+; CHECK-NEXT:    pushl %esi
 ; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    calll mp_sub@PLT
 ; CHECK-NEXT:    addl $12, %esp
 ; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    movl %esi, %edx
-; CHECK-NEXT:    pushl %ebx
+; CHECK-NEXT:    movl (%esp), %edx # 4-byte Reload
+; CHECK-NEXT:    pushl %edi
 ; CHECK-NEXT:    pushl $0
 ; CHECK-NEXT:    calll mp_round@PLT
 ; CHECK-NEXT:    addl $8, %esp
 ; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    movl %esi, %edx
-; CHECK-NEXT:    pushl %edi
+; CHECK-NEXT:    movl (%esp), %edx # 4-byte Reload
+; CHECK-NEXT:    pushl %esi
 ; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    pushl {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
 ; CHECK-NEXT:    calll mp_mul_d2i@PLT
-; CHECK-NEXT:    addl $16, %esp
+; CHECK-NEXT:    addl $20, %esp
 ; CHECK-NEXT:    jmp .LBB0_4
 entry:
 	br label %bb.i5

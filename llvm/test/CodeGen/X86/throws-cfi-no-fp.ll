@@ -13,7 +13,7 @@ $__clang_call_terminate = comdat any
 define void @_Z6throwsv() personality ptr @__gxx_personality_v0 {
 
 ; CHECK-LABEL:   _Z6throwsv:
-; CHECK:         popq	%rbx
+; CHECK:         popq	%rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:    .LBB0_1:

@@ -43,8 +43,8 @@ define i32 @eflagsLiveInPrologue() #0 {
 ; ENABLE-NEXT:    cmovnel %edx, %ecx
 ; ENABLE-NEXT:    movl L_e$non_lazy_ptr, %edx
 ; ENABLE-NEXT:    movb %cl, (%edx)
-; ENABLE-NEXT:    leal 1(%ecx), %esi
 ; ENABLE-NEXT:    cltd
+; ENABLE-NEXT:    leal 1(%ecx), %esi
 ; ENABLE-NEXT:    idivl %esi
 ; ENABLE-NEXT:    movl L_c$non_lazy_ptr, %eax
 ; ENABLE-NEXT:    movl %edx, (%eax)
@@ -81,8 +81,8 @@ define i32 @eflagsLiveInPrologue() #0 {
 ; DISABLE-NEXT:    cmovnel %edx, %ecx
 ; DISABLE-NEXT:    movl L_e$non_lazy_ptr, %edx
 ; DISABLE-NEXT:    movb %cl, (%edx)
-; DISABLE-NEXT:    leal 1(%ecx), %esi
 ; DISABLE-NEXT:    cltd
+; DISABLE-NEXT:    leal 1(%ecx), %esi
 ; DISABLE-NEXT:    idivl %esi
 ; DISABLE-NEXT:    movl L_c$non_lazy_ptr, %eax
 ; DISABLE-NEXT:    movl %edx, (%eax)

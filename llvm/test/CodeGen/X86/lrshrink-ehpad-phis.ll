@@ -26,8 +26,8 @@ define void @test() personality ptr @__gxx_personality_v0  {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 56
-; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    subq $24, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 80
 ; CHECK-NEXT:    .cfi_offset %rbx, -56
 ; CHECK-NEXT:    .cfi_offset %r12, -48
 ; CHECK-NEXT:    .cfi_offset %r13, -40
@@ -43,12 +43,12 @@ define void @test() personality ptr @__gxx_personality_v0  {
 ; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    movq externalC@GOTPCREL(%rip), %rax
 ; CHECK-NEXT:    movl (%rax), %eax
-; CHECK-NEXT:    movl %eax, (%rsp) # 4-byte Spill
+; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:  .Ltmp2:
+; CHECK-NEXT:  .Ltmp2: # EH_LABEL
 ; CHECK-NEXT:    callq maythrow@PLT
-; CHECK-NEXT:  .Ltmp3:
+; CHECK-NEXT:  .Ltmp3: # EH_LABEL
 ; CHECK-NEXT:    jmp .LBB0_4
 ; CHECK-NEXT:  .LBB0_3: # %branchB
 ; CHECK-NEXT:    movq externalB@GOTPCREL(%rip), %rax
@@ -56,14 +56,14 @@ define void @test() personality ptr @__gxx_personality_v0  {
 ; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    movq externalD@GOTPCREL(%rip), %rax
 ; CHECK-NEXT:    movl (%rax), %eax
-; CHECK-NEXT:    movl %eax, (%rsp) # 4-byte Spill
+; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:  .Ltmp0:
+; CHECK-NEXT:  .Ltmp0: # EH_LABEL
 ; CHECK-NEXT:    callq maythrow@PLT
-; CHECK-NEXT:  .Ltmp1:
+; CHECK-NEXT:  .Ltmp1: # EH_LABEL
 ; CHECK-NEXT:  .LBB0_4: # %end
-; CHECK-NEXT:    addq $8, %rsp
+; CHECK-NEXT:    addq $24, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 56
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
@@ -79,13 +79,13 @@ define void @test() personality ptr @__gxx_personality_v0  {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB0_2: # %lpad
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:  .Ltmp4:
-; CHECK-NEXT:    movq %rax, %rbx
+; CHECK-NEXT:    .cfi_def_cfa_offset 80
+; CHECK-NEXT:  .Ltmp4: # EH_LABEL
+; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
-; CHECK-NEXT:    addl (%rsp), %edi # 4-byte Folded Reload
+; CHECK-NEXT:    addl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Folded Reload
 ; CHECK-NEXT:    callq cleanup@PLT
-; CHECK-NEXT:    movq %rbx, %rdi
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi # 8-byte Reload
 ; CHECK-NEXT:    callq _Unwind_Resume@PLT
   %1 = load i1, ptr @external_bool
   br i1 %1, label %branchA, label %branchB

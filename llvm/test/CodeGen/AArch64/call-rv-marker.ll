@@ -89,9 +89,10 @@ define dso_local void @rv_marker_3() personality ptr @__gxx_personality_v0 {
 ; CHECK-SD-NEXT:    .cfi_personality 155, ___gxx_personality_v0
 ; CHECK-SD-NEXT:    .cfi_lsda 16, Lexception0
 ; CHECK-SD-NEXT:  ; %bb.0: ; %entry
-; CHECK-SD-NEXT:    stp x20, x19, [sp, #-32]! ; 16-byte Folded Spill
-; CHECK-SD-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-SD-NEXT:    sub sp, sp, #48
+; CHECK-SD-NEXT:    stp x20, x19, [sp, #16] ; 16-byte Folded Spill
+; CHECK-SD-NEXT:    stp x29, x30, [sp, #32] ; 16-byte Folded Spill
+; CHECK-SD-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-SD-NEXT:    .cfi_offset w30, -8
 ; CHECK-SD-NEXT:    .cfi_offset w29, -16
 ; CHECK-SD-NEXT:    .cfi_offset w19, -24
@@ -104,16 +105,17 @@ define dso_local void @rv_marker_3() personality ptr @__gxx_personality_v0 {
 ; CHECK-SD-NEXT:    bl _objc_object
 ; CHECK-SD-NEXT:  Ltmp1: ; EH_LABEL
 ; CHECK-SD-NEXT:  ; %bb.1: ; %invoke.cont
-; CHECK-SD-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
 ; CHECK-SD-NEXT:    mov x0, x19
-; CHECK-SD-NEXT:    ldp x20, x19, [sp], #32 ; 16-byte Folded Reload
+; CHECK-SD-NEXT:    ldp x29, x30, [sp, #32] ; 16-byte Folded Reload
+; CHECK-SD-NEXT:    ldp x20, x19, [sp, #16] ; 16-byte Folded Reload
+; CHECK-SD-NEXT:    add sp, sp, #48
 ; CHECK-SD-NEXT:    b _objc_release
 ; CHECK-SD-NEXT:  LBB3_2: ; %lpad
 ; CHECK-SD-NEXT:  Ltmp2: ; EH_LABEL
-; CHECK-SD-NEXT:    mov x20, x0
+; CHECK-SD-NEXT:    str x0, [sp, #8] ; 8-byte Spill
 ; CHECK-SD-NEXT:    mov x0, x19
 ; CHECK-SD-NEXT:    bl _objc_release
-; CHECK-SD-NEXT:    mov x0, x20
+; CHECK-SD-NEXT:    ldr x0, [sp, #8] ; 8-byte Reload
 ; CHECK-SD-NEXT:    bl __Unwind_Resume
 ; CHECK-SD-NEXT:  Lfunc_end0:
 ; CHECK-SD-NEXT:    .cfi_endproc
@@ -147,9 +149,10 @@ define dso_local void @rv_marker_3() personality ptr @__gxx_personality_v0 {
 ; CHECK-GI-NEXT:    .cfi_personality 155, ___gxx_personality_v0
 ; CHECK-GI-NEXT:    .cfi_lsda 16, Lexception0
 ; CHECK-GI-NEXT:  ; %bb.0: ; %entry
-; CHECK-GI-NEXT:    stp x20, x19, [sp, #-32]! ; 16-byte Folded Spill
-; CHECK-GI-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
-; CHECK-GI-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-GI-NEXT:    sub sp, sp, #48
+; CHECK-GI-NEXT:    stp x20, x19, [sp, #16] ; 16-byte Folded Spill
+; CHECK-GI-NEXT:    stp x29, x30, [sp, #32] ; 16-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-GI-NEXT:    .cfi_offset w30, -8
 ; CHECK-GI-NEXT:    .cfi_offset w29, -16
 ; CHECK-GI-NEXT:    .cfi_offset w19, -24
@@ -167,19 +170,20 @@ define dso_local void @rv_marker_3() personality ptr @__gxx_personality_v0 {
 ; CHECK-GI-NEXT:    mov x0, x19
 ; CHECK-GI-NEXT:  Lloh1:
 ; CHECK-GI-NEXT:    ldr x1, [x1, _objc_release@GOTPAGEOFF]
-; CHECK-GI-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
-; CHECK-GI-NEXT:    ldp x20, x19, [sp], #32 ; 16-byte Folded Reload
+; CHECK-GI-NEXT:    ldp x29, x30, [sp, #32] ; 16-byte Folded Reload
+; CHECK-GI-NEXT:    ldp x20, x19, [sp, #16] ; 16-byte Folded Reload
+; CHECK-GI-NEXT:    add sp, sp, #48
 ; CHECK-GI-NEXT:    br x1
 ; CHECK-GI-NEXT:  LBB3_2: ; %lpad
 ; CHECK-GI-NEXT:  Ltmp2: ; EH_LABEL
 ; CHECK-GI-NEXT:  Lloh2:
 ; CHECK-GI-NEXT:    adrp x8, _objc_release@GOTPAGE
-; CHECK-GI-NEXT:    mov x20, x0
-; CHECK-GI-NEXT:    mov x0, x19
 ; CHECK-GI-NEXT:  Lloh3:
 ; CHECK-GI-NEXT:    ldr x8, [x8, _objc_release@GOTPAGEOFF]
+; CHECK-GI-NEXT:    str x0, [sp, #8] ; 8-byte Spill
+; CHECK-GI-NEXT:    mov x0, x19
 ; CHECK-GI-NEXT:    blr x8
-; CHECK-GI-NEXT:    mov x0, x20
+; CHECK-GI-NEXT:    ldr x0, [sp, #8] ; 8-byte Reload
 ; CHECK-GI-NEXT:    bl __Unwind_Resume
 ; CHECK-GI-NEXT:    .loh AdrpLdrGot Lloh0, Lloh1
 ; CHECK-GI-NEXT:    .loh AdrpLdrGot Lloh2, Lloh3
@@ -260,18 +264,17 @@ define dso_local void @rv_marker_4() personality ptr @__gxx_personality_v0 {
 ; CHECK-SD-NEXT:    ret
 ; CHECK-SD-NEXT:  LBB4_3: ; %lpad1
 ; CHECK-SD-NEXT:  Ltmp8: ; EH_LABEL
-; CHECK-SD-NEXT:    mov x1, x19
-; CHECK-SD-NEXT:    mov x19, x0
-; CHECK-SD-NEXT:    mov x0, x1
+; CHECK-SD-NEXT:    str x0, [sp] ; 8-byte Spill
+; CHECK-SD-NEXT:    mov x0, x19
 ; CHECK-SD-NEXT:    bl _objc_release
 ; CHECK-SD-NEXT:    b LBB4_5
 ; CHECK-SD-NEXT:  LBB4_4: ; %lpad
 ; CHECK-SD-NEXT:  Ltmp5: ; EH_LABEL
-; CHECK-SD-NEXT:    mov x19, x0
+; CHECK-SD-NEXT:    str x0, [sp] ; 8-byte Spill
 ; CHECK-SD-NEXT:  LBB4_5: ; %ehcleanup
 ; CHECK-SD-NEXT:    add x0, sp, #15
 ; CHECK-SD-NEXT:    bl __ZN1SD1Ev
-; CHECK-SD-NEXT:    mov x0, x19
+; CHECK-SD-NEXT:    ldr x0, [sp] ; 8-byte Reload
 ; CHECK-SD-NEXT:    bl __Unwind_Resume
 ; CHECK-SD-NEXT:  Lfunc_end1:
 ; CHECK-SD-NEXT:    .cfi_endproc
@@ -340,19 +343,19 @@ define dso_local void @rv_marker_4() personality ptr @__gxx_personality_v0 {
 ; CHECK-GI-NEXT:  Ltmp8: ; EH_LABEL
 ; CHECK-GI-NEXT:  Lloh6:
 ; CHECK-GI-NEXT:    adrp x8, _objc_release@GOTPAGE
-; CHECK-GI-NEXT:    mov x20, x0
-; CHECK-GI-NEXT:    mov x0, x19
 ; CHECK-GI-NEXT:  Lloh7:
 ; CHECK-GI-NEXT:    ldr x8, [x8, _objc_release@GOTPAGEOFF]
+; CHECK-GI-NEXT:    str x0, [sp] ; 8-byte Spill
+; CHECK-GI-NEXT:    mov x0, x19
 ; CHECK-GI-NEXT:    blr x8
 ; CHECK-GI-NEXT:    b LBB4_5
 ; CHECK-GI-NEXT:  LBB4_4: ; %lpad
 ; CHECK-GI-NEXT:  Ltmp5: ; EH_LABEL
-; CHECK-GI-NEXT:    mov x20, x0
+; CHECK-GI-NEXT:    str x0, [sp] ; 8-byte Spill
 ; CHECK-GI-NEXT:  LBB4_5: ; %ehcleanup
 ; CHECK-GI-NEXT:    add x0, sp, #15
 ; CHECK-GI-NEXT:    bl __ZN1SD1Ev
-; CHECK-GI-NEXT:    mov x0, x20
+; CHECK-GI-NEXT:    ldr x0, [sp] ; 8-byte Reload
 ; CHECK-GI-NEXT:    bl __Unwind_Resume
 ; CHECK-GI-NEXT:    .loh AdrpLdrGot Lloh4, Lloh5
 ; CHECK-GI-NEXT:    .loh AdrpLdrGot Lloh6, Lloh7

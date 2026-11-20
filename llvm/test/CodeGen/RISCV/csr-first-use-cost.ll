@@ -48,7 +48,6 @@ define fastcc void @Perl_sv_setnv(i8 %c, ptr %.str.54.3682) nounwind {
 ; DEFAULT-COST:       # %bb.0: # %entry
 ; DEFAULT-COST-NEXT:    addi sp, sp, -32
 ; DEFAULT-COST-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; DEFAULT-COST-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
 ; DEFAULT-COST-NEXT:    li a2, 2
 ; DEFAULT-COST-NEXT:    zext.b a0, a0
 ; DEFAULT-COST-NEXT:    blt a2, a0, .LBB0_3
@@ -64,7 +63,6 @@ define fastcc void @Perl_sv_setnv(i8 %c, ptr %.str.54.3682) nounwind {
 ; DEFAULT-COST-NEXT:    bne a0, a2, .LBB0_5
 ; DEFAULT-COST-NEXT:  .LBB0_4: # %sw.bb3
 ; DEFAULT-COST-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; DEFAULT-COST-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; DEFAULT-COST-NEXT:    addi sp, sp, 32
 ; DEFAULT-COST-NEXT:    ret
 ; DEFAULT-COST-NEXT:  .LBB0_5: # %entry
@@ -74,14 +72,16 @@ define fastcc void @Perl_sv_setnv(i8 %c, ptr %.str.54.3682) nounwind {
 ; DEFAULT-COST-NEXT:  .LBB0_6: # %sw.bb34.i
 ; DEFAULT-COST-NEXT:    sd zero, 8(sp) # 8-byte Folded Spill
 ; DEFAULT-COST-NEXT:  .LBB0_7: # %Perl_sv_reftype.exit
-; DEFAULT-COST-NEXT:    li s0, 0
-; DEFAULT-COST-NEXT:    li a0, 0
-; DEFAULT-COST-NEXT:    li a1, 0
-; DEFAULT-COST-NEXT:    jalr s0
-; DEFAULT-COST-NEXT:    li a0, 0
+; DEFAULT-COST-NEXT:    sd zero, 16(sp) # 8-byte Folded Spill
+; DEFAULT-COST-NEXT:    ld a0, 16(sp) # 8-byte Folded Reload
+; DEFAULT-COST-NEXT:    ld a1, 16(sp) # 8-byte Folded Reload
+; DEFAULT-COST-NEXT:    ld a2, 16(sp) # 8-byte Folded Reload
+; DEFAULT-COST-NEXT:    jalr a2
+; DEFAULT-COST-NEXT:    ld a0, 16(sp) # 8-byte Folded Reload
 ; DEFAULT-COST-NEXT:    ld a1, 8(sp) # 8-byte Folded Reload
-; DEFAULT-COST-NEXT:    li a2, 0
-; DEFAULT-COST-NEXT:    jalr s0
+; DEFAULT-COST-NEXT:    ld a2, 16(sp) # 8-byte Folded Reload
+; DEFAULT-COST-NEXT:    ld a3, 16(sp) # 8-byte Folded Reload
+; DEFAULT-COST-NEXT:    jalr a3
 entry:
   switch i8 %c, label %Perl_sv_reftype.exit [
     i8 1, label %sw.bb4
