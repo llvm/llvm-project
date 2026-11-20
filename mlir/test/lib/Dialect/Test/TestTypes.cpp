@@ -418,7 +418,6 @@ struct PtrElementModel
 
 void TestDialect::registerTypes() {
   addTypes<TestRecursiveType>();
-  registerTestDialectTypes(this);
   SimpleAType::attachInterface<PtrElementModel>(*getContext());
 
   registerDynamicType(getSingletonDynamicType(this));
