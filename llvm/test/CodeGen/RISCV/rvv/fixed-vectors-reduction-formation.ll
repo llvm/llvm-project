@@ -3,13 +3,21 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+v,+m -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,RV64
 
 define i32 @reduce_sum_2xi32(<2 x i32> %v) {
-; CHECK-LABEL: reduce_sum_2xi32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vmv.s.x v9, zero
-; CHECK-NEXT:    vredsum.vs v8, v8, v9
-; CHECK-NEXT:    vmv.x.s a0, v8
-; CHECK-NEXT:    ret
+; RV32-LABEL: reduce_sum_2xi32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; RV32-NEXT:    vmv.s.x v9, zero
+; RV32-NEXT:    vredsum.vs v8, v8, v9
+; RV32-NEXT:    vmv.x.s a0, v8
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: reduce_sum_2xi32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; RV64-NEXT:    vmv.x.s a0, v8
+; RV64-NEXT:    srli a1, a0, 32
+; RV64-NEXT:    addw a0, a0, a1
+; RV64-NEXT:    ret
   %e0 = extractelement <2 x i32> %v, i32 0
   %e1 = extractelement <2 x i32> %v, i32 1
   %add0 = add i32 %e0, %e1
