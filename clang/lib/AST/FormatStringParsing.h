@@ -17,20 +17,10 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/FormatString.h"
 #include "clang/AST/Type.h"
-#include "llvm/Support/TextEncoding.h"
 
 namespace clang {
 
 class LangOptions;
-
-/// Creates the TextEncodingConverter used for format string character
-/// comparisons. Currently this is always a no-op converter.
-inline llvm::TextEncodingConverter
-makeFormatStrConverter(const TargetInfo &Target) {
-  auto Converter = llvm::TextEncodingConverter::createNoopConverter();
-  assert(Converter && "Failed to create format string converter");
-  return std::move(*Converter);
-}
 
 template <typename T> class UpdateOnReturn {
   T &ValueToUpdate;
@@ -50,8 +40,7 @@ protected:
   FormatStringParser(FormatStringHandler &H, const LangOptions &LO,
                      const TargetInfo &Target, bool IsScanf,
                      const llvm::TextEncodingConverter &Conv)
-      : H(H), LO(LO), Target(Target), IsScanf(IsScanf),
-        FormatStrConverter(Conv) {}
+      : H(H), LO(LO), Target(Target), IsScanf(IsScanf), Conv(Conv) {}
 
   OptionalAmount parseAmount(const char *&Beg, const char *E) const;
 
@@ -85,7 +74,7 @@ protected:
   const LangOptions &LO;
   const TargetInfo &Target;
   bool IsScanf;
-  const llvm::TextEncodingConverter &FormatStrConverter;
+  const llvm::TextEncodingConverter &Conv;
 
 private:
   bool parseWidthModifier(const char *&I, const char *E, unsigned &BitWidth,
