@@ -505,9 +505,7 @@ defm : ValueField<"msan-switch-precision", "int", "99",
 // or heap) the uninitialized bits came from originally.
 defm : OptionalValueField<"msan-track-origins", "int",
   "Track origins (allocation sites) of poisoned memory">;
-// This is off by default because of a bug in gold:
-// https://sourceware.org/bugzilla/show_bug.cgi?id=19002
-defm : BoolField<"msan-with-comdat", "false",
+defm : BoolField<"msan-with-comdat", "true",
   "Place MSan constructors in comdat sections">;
 defm : ValueField<"msan-xor-mask", "uint64_t", "0",
   "Define custom MSan XorMask">;
