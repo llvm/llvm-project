@@ -938,6 +938,20 @@ void HexagonToolChain::addClangTargetOptions(const ArgList &DriverArgs,
     CC1Args.push_back("-mllvm");
     CC1Args.push_back("-hexagon-autohvx");
   }
+
+  if (Arg *A = DriverArgs.getLastArg(options::OPT_fhlx_vector_stack_limit_EQ)) {
+    unsigned Limit;
+    if (!DriverArgs.hasFlag(options::OPT_mhexagon_hlx,
+                            options::OPT_mno_hexagon_hlx, false)) {
+      getDriver().Diag(diag::err_drv_needs_hlx) << A->getSpelling();
+    } else if (StringRef(A->getValue()).getAsInteger(10, Limit)) {
+      getDriver().Diag(diag::err_drv_invalid_value)
+          << A->getAsString(DriverArgs) << A->getValue();
+    } else {
+      CC1Args.push_back(
+          DriverArgs.MakeArgString("-fhlx-vector-stack-limit=" + Twine(Limit)));
+    }
+  }
 }
 
 void HexagonToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,

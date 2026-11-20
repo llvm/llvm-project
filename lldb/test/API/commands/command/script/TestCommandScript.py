@@ -115,6 +115,15 @@ class CmdPythonTestCase(TestBase):
         )
 
         self.expect(
+            "targetname fail-sberror",
+            error=True,
+            substrs=["a test for SBError in command"],
+        )
+
+        # A successful SBError leaves the command successful.
+        self.expect("targetname success-sberror", substrs=["Current target"])
+
+        self.expect(
             "command script list", substrs=["targetname", "For more information run"]
         )
 

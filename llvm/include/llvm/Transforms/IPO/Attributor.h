@@ -1409,12 +1409,12 @@ private:
   friend struct Attributor;
 };
 
-/// A set of kinds of abstract attributes, given by their IDs. The kinds
-/// declared here are tested with a bit mask, others with a list of IDs.
+/// A set of kinds of abstract attributes. The kinds declared here are tested
+/// with a bit mask, others with a list of IDs.
 class AAKindSet {
 public:
-  /// Return the set of the kinds with the IDs \p KindIDs.
-  template <const char *...KindIDs> static constexpr AAKindSet get();
+  /// Return the set of the kinds of abstract attributes of types \p AATypes.
+  template <typename... AATypes> static constexpr AAKindSet get();
 
   /// Return true if abstract attributes of type \p AAType are in the set.
   template <typename AAType> bool contains() const;
@@ -1841,6 +1841,17 @@ struct Attributor {
   bool isFunctionIPOAmendable(const Function &F) {
     return InfoCache.isExactOrInlineable(F) ||
            (Configuration.IPOAmendableCB && Configuration.IPOAmendableCB(F));
+  }
+
+  /// Return true if the body of the associated function can be used to derive
+  /// information for \p IRP.
+  ///
+  /// That is not the case for the interface (function, argument and return
+  /// positions) of a function that might be replaced by another definition,
+  /// e.g. a linkonce_odr function.
+  bool canUseBodyFor(const IRPosition &IRP) {
+    return !IRP.isFnInterfaceKind() ||
+           isFunctionIPOAmendable(*IRP.getAssociatedFunction());
   }
 
   /// Return whether attributes can participate in fixed-point deduction.
@@ -4970,10 +4981,6 @@ template <typename MemberTy> struct PotentialValuesState : AbstractState {
   }
 
   /// Return empty set as the best state of potential values.
-  static PotentialValuesState getBestState() {
-    return PotentialValuesState(true);
-  }
-
   static PotentialValuesState getBestState(const PotentialValuesState &PVS) {
     return PotentialValuesState(true, PVS.MaxPotentialValues);
   }
@@ -6462,65 +6469,61 @@ bool hasAssumedIRAttr(Attributor &A, const AbstractAttribute *QueryingAA,
 } // namespace AA
 
 namespace detail {
-template <const char *...IDs> struct AAKindIDList {};
+template <typename... AATypes> struct AAKindList {};
 
-/// The IDs of the abstract attributes declared here, by their bit in
-/// AAKindSet.
-using AAKindIDs = AAKindIDList<
-    &AANoUnwind::ID, &AANoSync::ID, &AAMustProgress::ID, &AANonNull::ID,
-    &AANoRecurse::ID, &AAWillReturn::ID, &AAUndefinedBehavior::ID,
-    &AAIntraFnReachability::ID, &AANoAlias::ID, &AANoFree::ID, &AANoReturn::ID,
-    &AAIsDead::ID, &AADereferenceable::ID, &AAAlign::ID, &AAInstanceInfo::ID,
-    &AANoCapture::ID, &AAValueSimplify::ID, &AAHeapToStack::ID,
-    &AAPrivatizablePtr::ID, &AAMemoryBehavior::ID, &AAMemoryLocation::ID,
-    &AAValueConstantRange::ID, &AAPotentialConstantValues::ID,
-    &AAPotentialValues::ID, &AANoUndef::ID, &AANoFPClass::ID, &AACallEdges::ID,
-    &AAExecutionDomain::ID, &AAInterFnReachability::ID, &AANonConvergent::ID,
-    &AAPointerInfo::ID, &AAAssumptionInfo::ID, &AAUnderlyingObjects::ID,
-    &AAInvariantLoadPointer::ID, &AAAddressSpace::ID, &AANoAliasAddrSpace::ID,
-    &AAAllocationInfo::ID, &AAGlobalValueInfo::ID, &AAIndirectCallInfo::ID,
-    &AADenormalFPMath::ID>;
+/// The abstract attributes declared here, by their bit in AAKindSet.
+using AAKinds = AAKindList<
+    AANoUnwind, AANoSync, AAMustProgress, AANonNull, AANoRecurse, AAWillReturn,
+    AAUndefinedBehavior, AAIntraFnReachability, AANoAlias, AANoFree, AANoReturn,
+    AAIsDead, AADereferenceable, AAAlign, AAInstanceInfo, AANoCapture,
+    AAValueSimplify, AAHeapToStack, AAPrivatizablePtr, AAMemoryBehavior,
+    AAMemoryLocation, AAValueConstantRange, AAPotentialConstantValues,
+    AAPotentialValues, AANoUndef, AANoFPClass, AACallEdges, AAExecutionDomain,
+    AAInterFnReachability, AANonConvergent, AAPointerInfo, AAAssumptionInfo,
+    AAUnderlyingObjects, AAInvariantLoadPointer, AAAddressSpace,
+    AANoAliasAddrSpace, AAAllocationInfo, AAGlobalValueInfo, AAIndirectCallInfo,
+    AADenormalFPMath>;
 
-template <const char *...IDs>
-constexpr size_t getNumAAKinds(AAKindIDList<IDs...>) {
-  return sizeof...(IDs);
+template <typename... AATypes>
+constexpr size_t getNumAAKinds(AAKindList<AATypes...>) {
+  return sizeof...(AATypes);
 }
 
-constexpr size_t NumAAKinds = getNumAAKinds(AAKindIDs());
+constexpr size_t NumAAKinds = getNumAAKinds(AAKinds());
 static_assert(NumAAKinds <= 64, "Too many kinds for the mask");
 
-/// Return the bit of \p ID in AAKindSet, or the number of kinds if it has
-/// none. The IDs are compared as template arguments since older compilers
-/// cannot compare their addresses in constant expressions.
-template <const char *ID, const char *...IDs>
-constexpr size_t getAAKindBit(AAKindIDList<IDs...>) {
-  constexpr bool Matches[] = {
-      std::is_same_v<AAKindIDList<ID>, AAKindIDList<IDs>>...};
-  for (size_t I = 0; I != sizeof...(IDs); ++I) {
+/// Return the bit of \p AAType in AAKindSet, or the number of kinds if it has
+/// none. The kinds are compared by type since older compilers cannot compare
+/// the addresses of IDs in constant expressions, and MSVC rejects the
+/// addresses of internal IDs as template arguments.
+template <typename AAType, typename... AATypes>
+constexpr size_t getAAKindBit(AAKindList<AATypes...>) {
+  constexpr bool Matches[] = {std::is_same_v<AAType, AATypes>...};
+  for (size_t I = 0; I != sizeof...(AATypes); ++I) {
     if (Matches[I])
       return I;
   }
-  return sizeof...(IDs);
+  return sizeof...(AATypes);
 }
 
-/// Return the bit of \p ID in the mask of AAKindSet, or 0 if it has none.
-template <const char *ID> constexpr uint64_t getAAKindMask() {
-  constexpr size_t Bit = getAAKindBit<ID>(AAKindIDs());
+/// Return the bit of \p AAType in the mask of AAKindSet, or 0 if it has none.
+template <typename AAType> constexpr uint64_t getAAKindMask() {
+  constexpr size_t Bit = getAAKindBit<AAType>(AAKinds());
   return Bit < NumAAKinds ? uint64_t(1) << Bit : 0;
 }
 
 /// The storage of the IDs of an AAKindSet.
-template <const char *...IDs>
-inline constexpr const char *AAKindSetIDs[] = {IDs...};
+template <typename... AATypes>
+inline constexpr const char *AAKindSetIDs[] = {&AATypes::ID...};
 } // namespace detail
 
-template <const char *...KindIDs> constexpr AAKindSet AAKindSet::get() {
-  return AAKindSet((detail::getAAKindMask<KindIDs>() | ...),
-                   detail::AAKindSetIDs<KindIDs...>);
+template <typename... AATypes> constexpr AAKindSet AAKindSet::get() {
+  return AAKindSet((detail::getAAKindMask<AATypes>() | ...),
+                   detail::AAKindSetIDs<AATypes...>);
 }
 
 template <typename AAType> bool AAKindSet::contains() const {
-  constexpr uint64_t KindMask = detail::getAAKindMask<&AAType::ID>();
+  constexpr uint64_t KindMask = detail::getAAKindMask<AAType>();
   if constexpr (KindMask != 0)
     return Mask & KindMask;
   else

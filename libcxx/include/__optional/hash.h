@@ -34,7 +34,7 @@ struct hash< __enable_hash_helper<optional<_Tp>, remove_const_t<_Tp>> > {
   _LIBCPP_DEPRECATED_IN_CXX17 typedef size_t result_type;
 #  endif
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI size_t operator()(const optional<_Tp>& __opt) const {
+  [[nodiscard]] size_t operator()(const optional<_Tp>& __opt) const {
     return static_cast<bool>(__opt) ? hash<remove_const_t<_Tp>>()(*__opt) : 0;
   }
 };

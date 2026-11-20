@@ -772,7 +772,7 @@ MDNode *AAMDNodes::shiftTBAAStruct(MDNode *MD, size_t Offset) {
   return MDNode::get(MD->getContext(), Sub);
 }
 
-MDNode *AAMDNodes::extendToTBAA(MDNode *MD, ssize_t Len) {
+MDNode *AAMDNodes::extendToTBAA(MDNode *MD, std::optional<uint64_t> Len) {
   // Fast path if 0-length
   if (Len == 0)
     return nullptr;
@@ -784,7 +784,7 @@ MDNode *AAMDNodes::extendToTBAA(MDNode *MD, ssize_t Len) {
     return MD;
 
   // If unknown size, drop the TBAA.
-  if (Len == -1)
+  if (!Len)
     return nullptr;
 
   // Otherwise, create TBAA with the new Len
@@ -793,12 +793,18 @@ MDNode *AAMDNodes::extendToTBAA(MDNode *MD, ssize_t Len) {
   ConstantInt *PreviousSize = mdconst::extract<ConstantInt>(NextNodes[3]);
 
   // Don't create a new MDNode if it is the same length.
-  if (PreviousSize->equalsInt(Len))
+  if (PreviousSize->equalsInt(*Len))
     return MD;
 
   NextNodes[3] =
-      ConstantAsMetadata::get(ConstantInt::get(PreviousSize->getType(), Len));
+      ConstantAsMetadata::get(ConstantInt::get(PreviousSize->getType(), *Len));
   return MDNode::get(MD->getContext(), NextNodes);
+}
+
+AAMDNodes AAMDNodes::extendTo(Value *Size) const {
+  if (auto *CI = dyn_cast<ConstantInt>(Size))
+    return extendTo(CI->getValue().tryZExtValue());
+  return extendTo(std::nullopt);
 }
 
 AAMDNodes AAMDNodes::adjustForAccess(unsigned AccessSize) {

@@ -15,10 +15,11 @@ define void @replicating_load_used_as_store_addr(ptr noalias %A) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = add i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[INDEX]], 3
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP0]], 1
-; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[TMP11]], 1
-; CHECK-NEXT:    [[TMP16:%.*]] = add i64 [[TMP12]], 1
+; CHECK-NEXT:    [[TMP15:%.*]] = add i64 1, [[INDEX]]
+; CHECK-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP15]] to i32
+; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[TMP7]], 1
+; CHECK-NEXT:    [[TMP17:%.*]] = add i32 [[TMP7]], 2
+; CHECK-NEXT:    [[TMP18:%.*]] = add i32 [[TMP7]], 3
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr ptr, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr ptr, ptr [[A]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr ptr, ptr [[A]], i64 [[TMP11]]
@@ -27,10 +28,6 @@ define void @replicating_load_used_as_store_addr(ptr noalias %A) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[TMP4]], align 8
 ; CHECK-NEXT:    [[TMP13:%.*]] = load ptr, ptr [[TMP19]], align 8
 ; CHECK-NEXT:    [[TMP14:%.*]] = load ptr, ptr [[TMP10]], align 8
-; CHECK-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP1]] to i32
-; CHECK-NEXT:    [[TMP8:%.*]] = trunc i64 [[TMP2]] to i32
-; CHECK-NEXT:    [[TMP17:%.*]] = trunc i64 [[TMP15]] to i32
-; CHECK-NEXT:    [[TMP18:%.*]] = trunc i64 [[TMP16]] to i32
 ; CHECK-NEXT:    store i32 [[TMP7]], ptr [[TMP5]], align 4
 ; CHECK-NEXT:    store i32 [[TMP8]], ptr [[TMP6]], align 4
 ; CHECK-NEXT:    store i32 [[TMP17]], ptr [[TMP13]], align 4

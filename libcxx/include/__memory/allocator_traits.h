@@ -314,28 +314,26 @@ struct allocator_traits : __allocator_traits_base<_Alloc> {
   template <class _Tp>
   using rebind_traits = typename __base::template rebind_traits<_Tp>;
 
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 static pointer
-  allocate(allocator_type& __a, size_type __n) {
+  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 static pointer allocate(allocator_type& __a, size_type __n) {
     return __a.allocate(__n);
   }
 
   template <class _Ap = _Alloc, __enable_if_t<__has_allocate_hint_v<_Ap, size_type, const_void_pointer>, int> = 0>
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 static pointer
+  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 static pointer
   allocate(allocator_type& __a, size_type __n, const_void_pointer __hint) {
     _LIBCPP_SUPPRESS_DEPRECATED_PUSH
     return __a.allocate(__n, __hint);
     _LIBCPP_SUPPRESS_DEPRECATED_POP
   }
   template <class _Ap = _Alloc, __enable_if_t<!__has_allocate_hint_v<_Ap, size_type, const_void_pointer>, int> = 0>
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 static pointer
+  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 static pointer
   allocate(allocator_type& __a, size_type __n, const_void_pointer) {
     return __a.allocate(__n);
   }
 
 #if _LIBCPP_STD_VER >= 23
   template <class _Ap = _Alloc>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr allocation_result<pointer, size_type>
-  allocate_at_least(_Ap& __alloc, size_type __n) {
+  [[nodiscard]] static constexpr allocation_result<pointer, size_type> allocate_at_least(_Ap& __alloc, size_type __n) {
     if constexpr (requires { __alloc.allocate_at_least(__n); }) {
       return __alloc.allocate_at_least(__n);
     } else {
@@ -344,55 +342,50 @@ struct allocator_traits : __allocator_traits_base<_Alloc> {
   }
 #endif
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 static void
-  deallocate(allocator_type& __a, pointer __p, size_type __n) _NOEXCEPT {
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 static void deallocate(allocator_type& __a, pointer __p, size_type __n) _NOEXCEPT {
     __a.deallocate(__p, __n);
   }
 
   template <class _Tp, class... _Args, __enable_if_t<__has_construct_v<allocator_type, _Tp*, _Args...>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 static void
-  construct(allocator_type& __a, _Tp* __p, _Args&&... __args) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 static void construct(allocator_type& __a, _Tp* __p, _Args&&... __args) {
     _LIBCPP_SUPPRESS_DEPRECATED_PUSH
     __a.construct(__p, std::forward<_Args>(__args)...);
     _LIBCPP_SUPPRESS_DEPRECATED_POP
   }
   template <class _Tp, class... _Args, __enable_if_t<!__has_construct_v<allocator_type, _Tp*, _Args...>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 static void
-  construct(allocator_type&, _Tp* __p, _Args&&... __args) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 static void construct(allocator_type&, _Tp* __p, _Args&&... __args) {
     std::__construct_at(__p, std::forward<_Args>(__args)...);
   }
 
   template <class _Tp, __enable_if_t<__has_destroy_v<allocator_type, _Tp*>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 static void destroy(allocator_type& __a, _Tp* __p) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 static void destroy(allocator_type& __a, _Tp* __p) {
     _LIBCPP_SUPPRESS_DEPRECATED_PUSH
     __a.destroy(__p);
     _LIBCPP_SUPPRESS_DEPRECATED_POP
   }
   template <class _Tp, __enable_if_t<!__has_destroy_v<allocator_type, _Tp*>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 static void destroy(allocator_type&, _Tp* __p) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 static void destroy(allocator_type&, _Tp* __p) {
     std::__destroy_at(__p);
   }
 
   template <class _Ap = _Alloc, __enable_if_t<__has_max_size_v<const _Ap>, int> = 0>
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 static size_type
-  max_size(const allocator_type& __a) _NOEXCEPT {
+  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 static size_type max_size(const allocator_type& __a) _NOEXCEPT {
     _LIBCPP_SUPPRESS_DEPRECATED_PUSH
     return __a.max_size();
     _LIBCPP_SUPPRESS_DEPRECATED_POP
   }
   template <class _Ap = _Alloc, __enable_if_t<!__has_max_size_v<const _Ap>, int> = 0>
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 static size_type
-  max_size(const allocator_type&) _NOEXCEPT {
+  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 static size_type max_size(const allocator_type&) _NOEXCEPT {
     return numeric_limits<size_type>::max() / sizeof(value_type);
   }
 
   template <class _Ap = _Alloc, __enable_if_t<__has_select_on_container_copy_construction_v<const _Ap>, int> = 0>
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 static allocator_type
+  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 static allocator_type
   select_on_container_copy_construction(const allocator_type& __a) {
     return __a.select_on_container_copy_construction();
   }
   template <class _Ap = _Alloc, __enable_if_t<!__has_select_on_container_copy_construction_v<const _Ap>, int> = 0>
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 static allocator_type
+  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 static allocator_type
   select_on_container_copy_construction(const allocator_type& __a) {
     return __a;
   }
