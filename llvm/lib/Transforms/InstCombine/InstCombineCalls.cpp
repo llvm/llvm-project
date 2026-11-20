@@ -5498,6 +5498,8 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
 /// In Fortran when implicit interfaces are used:
 ///  * Trailing extra arguments at the call-site, e.g. when passing a Fortran
 ///    CHARACTER to a function taking an INTEGER(1) argument.
+///  * Missing arguments at the call-site, when emulating variadic functions
+///    in F77, prior to OPTIONAL support.
 ///  * A call-site with void return calling a function with a non-void return.
 bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
   auto *Callee =
