@@ -2190,9 +2190,11 @@ bool ScalarEvolution::willNotOverflow(Instruction::BinaryOps BinOp, bool Signed,
       return false;
     const APInt &ShiftAmt = RHSC->getAPInt();
     unsigned BitWidth = ShiftAmt.getBitWidth();
+    assert(ShiftAmt.ult(BitWidth) &&
+           "ShiftAmt >= BitWidth should have been handled above");
     // Cannot rewrite signed shl by BitWidth - 1 as mul, since
     // 1 << (BitWidth - 1) is negative.
-    if (ShiftAmt.uge(BitWidth) || (Signed && ShiftAmt.uge(BitWidth - 1)))
+    if (Signed && ShiftAmt == BitWidth - 1)
       return false;
     BinOp = Instruction::Mul;
     RHS = getConstant(APInt::getOneBitSet(BitWidth, ShiftAmt.getZExtValue()));
