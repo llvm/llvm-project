@@ -20,12 +20,13 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_DEX_DEX_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_DEX_DEX_H
 
-#include "index/dex/Iterator.h"
 #include "index/Index.h"
 #include "index/Relation.h"
+#include "index/dex/Iterator.h"
 #include "index/dex/PostingList.h"
 #include "index/dex/Token.h"
 #include "llvm/ADT/StringSet.h"
+#include <mutex>
 
 namespace clang {
 namespace clangd {
@@ -127,6 +128,7 @@ private:
   };
 
   void buildIndex(bool EnableOutgoingCalls);
+  const std::vector<RevRef> &revRefs() const;
   llvm::iterator_range<std::vector<RevRef>::const_iterator>
   lookupRevRefs(const SymbolID &Container) const;
   std::unique_ptr<Iterator> iterator(const Token &Tok) const;
@@ -149,7 +151,13 @@ private:
   llvm::DenseMap<Token, PostingList> InvertedIndex;
   dex::Corpus Corpus;
   llvm::DenseMap<SymbolID, llvm::ArrayRef<Ref>> Refs;
-  std::vector<RevRef> RevRefs; // sorted by container ID
+  // The refs by container, for containedRefs(). They are built on its first
+  // request: they take memory for every ref, and many sessions never ask.
+  // Use revRefs() to read them.
+  bool SupportContainedRefs = false;
+  mutable std::mutex LazyRevRefsMutex;
+  mutable bool LazyRevRefsBuilt = false;
+  mutable std::vector<RevRef> LazyRevRefs; // sorted by container ID
   static_assert(sizeof(RelationKind) == sizeof(uint8_t),
                 "RelationKind should be of same size as a uint8_t");
   llvm::DenseMap<std::pair<SymbolID, uint8_t>, std::vector<SymbolID>> Relations;
