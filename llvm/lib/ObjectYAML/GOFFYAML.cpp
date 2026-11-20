@@ -227,7 +227,7 @@ void MappingTraits<GOFFYAML::ESDRecord>::mapping(IO &IO,
   IO.mapOptional("FillByteValue", Record.FillByteValue);
   IO.mapOptional("ADAESDID", Record.ADAESDID);
   IO.mapOptional("SortPriority", Record.SortPriority);
-  IO.mapOptional("Name", Record.Name, std::string(""));
+  IO.mapOptional("Name", Record.Name);
 }
 
 void MappingTraits<GOFFYAML::Object>::mapping(IO &IO, GOFFYAML::Object &Obj) {
