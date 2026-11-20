@@ -1577,30 +1577,26 @@ void clang::emitBackendOutput(CompilerInstance &CI, CodeGenOptions &CGOpts,
   if (!CGOpts.ThinLTOIndexFile.empty()) {
     // FIXME(sandboxing): Figure out how to support distributed indexing.
     auto BypassSandbox = sys::sandbox::scopedDisable();
-    ErrorOr<std::unique_ptr<MemoryBuffer>> IndexBuffer =
-        CGOpts.ThinLTOIndexFile == "-"
-            ? MemoryBuffer::getSTDIN()
-            : VFS->getBufferForFile(CGOpts.ThinLTOIndexFile);
-    auto ReportIndexError = [&](Error E) {
+    // If we are performing a ThinLTO importing compile, load the function index
+    // into memory and pass it into runThinLTOBackend, which will run the
+    // function importer and invoke LTO passes.
+    std::unique_ptr<ModuleSummaryIndex> CombinedIndex;
+    if (Error E = llvm::getModuleSummaryIndexForFile(
+                      CGOpts.ThinLTOIndexFile,
+                      /*IgnoreEmptyThinLTOIndexFile*/ true)
+                      .moveInto(CombinedIndex)) {
       logAllUnhandledErrors(std::move(E), errs(),
                             "Error loading index file '" +
                                 CGOpts.ThinLTOIndexFile + "': ");
-    };
-    if (!IndexBuffer) {
-      ReportIndexError(errorCodeToError(IndexBuffer.getError()));
       return;
     }
 
-    // Empty index files skip ThinLTO processing.
-    if ((*IndexBuffer)->getBufferSize()) {
-      auto CombinedIndex =
-          llvm::getModuleSummaryIndex((*IndexBuffer)->getMemBufferRef());
-      if (!CombinedIndex) {
-        ReportIndexError(CombinedIndex.takeError());
-        return;
-      }
-      if (!(*CombinedIndex)->skipModuleByDistributedBackend()) {
-        runThinLTOBackend(CI, CombinedIndex->get(), M, std::move(OS),
+    // A null CombinedIndex means we should skip ThinLTO compilation
+    // (LLVM will optionally ignore empty index files, returning null instead
+    // of an error).
+    if (CombinedIndex) {
+      if (!CombinedIndex->skipModuleByDistributedBackend()) {
+        runThinLTOBackend(CI, CombinedIndex.get(), M, std::move(OS),
                           CGOpts.SampleProfileFile, CGOpts.ProfileRemappingFile,
                           Action);
         return;
