@@ -1,5 +1,6 @@
 // RUN: mlir-opt %s --split-input-file -math-expand-ops | FileCheck %s
 // RUN: mlir-opt %s --split-input-file -math-expand-ops=ops=tanh,tan | FileCheck %s --check-prefix=CHECK-FILTER
+// RUN: mlir-opt %s --split-input-file -math-expand-ops=expand-round-f64=true | FileCheck %s --check-prefix=F64
 
 // CHECK-LABEL: func @tanh
 func.func @tanh(%arg: f32) -> f32 {
@@ -254,6 +255,52 @@ func.func @roundf_func(%a: f32) -> f32 {
 
 // -----
 
+// CHECK-LABEL: func @round_f64_dynamic_tensor
+// CHECK: math.round
+// CHECK: return
+// F64-LABEL: func @round_f64_dynamic_tensor
+// F64: tensor.dim
+// F64: tensor.splat
+// F64: arith.bitcast %{{.*}} : tensor<?xf64> to tensor<?xi64>
+// F64: arith.andi
+// F64: arith.shli
+// F64-NOT: math.round
+// F64-NOT: scf.if
+// F64: return
+func.func @round_f64_dynamic_tensor(%arg: tensor<?xf64>) -> tensor<?xf64> {
+  %result = math.round %arg : tensor<?xf64>
+  return %result : tensor<?xf64>
+}
+
+// -----
+
+// CHECK-LABEL: func @round_f64_tensor
+// CHECK: math.round
+// CHECK: return
+// F64-LABEL: func @round_f64_tensor
+// F64: arith.bitcast %{{.*}} : tensor<2xf64> to tensor<2xi64>
+// F64: arith.shli
+// F64-NOT: math.round
+// F64-NOT: scf.if
+// F64: return
+func.func @round_f64_tensor(%arg: tensor<2xf64>) -> tensor<2xf64> {
+  %result = math.round %arg : tensor<2xf64>
+  return %result : tensor<2xf64>
+}
+
+// -----
+
+// CHECK-LABEL: func @round_f64_unranked
+// CHECK: math.round
+// F64-LABEL: func @round_f64_unranked
+// F64: math.round
+func.func @round_f64_unranked(%arg: tensor<*xf64>) -> tensor<*xf64> {
+  %result = math.round %arg : tensor<*xf64>
+  return %result : tensor<*xf64>
+}
+
+// -----
+
 // CHECK-LABEL:   func @powf_func
 // CHECK-SAME:    (%[[ARG0:.+]]: f64, %[[ARG1:.+]]: f64) -> f64
 func.func @powf_func(%a: f64, %b: f64) -> f64 {
@@ -353,6 +400,10 @@ func.func @powf_func_three(%a: f64) -> f64{
 // -----
 
 // CHECK-LABEL:   func.func @roundeven64
+// F64-LABEL: func.func @roundeven64
+// F64: arith.bitcast %{{.*}} : i64 to f64
+// F64-NOT: math.round
+// F64: return
 func.func @roundeven64(%arg: f64) -> f64 {
   %res = math.roundeven %arg : f64
   return %res : f64

@@ -28,8 +28,8 @@ namespace lldb {
 #ifndef SWIG
 class LLDB_API SBInputReader {
 public:
-  SBInputReader() = default;
-  ~SBInputReader() = default;
+  SBInputReader();
+  ~SBInputReader();
 
   SBError Initialize(lldb::SBDebugger &sb_debugger,
                      unsigned long (*callback)(void *, lldb::SBInputReader *,
@@ -134,6 +134,10 @@ public:
   ///
   /// Similar to Initialize(), but returns an error if initialization fails.
   static lldb::SBError InitializeWithErrorHandling();
+
+  /// InitializeWithErrorHandling() with options. LLDB is left uninitialized if
+  /// one cannot be honored.
+  static lldb::SBError Initialize(const lldb::SBInitializationOptions &options);
 
   /// Configure LLDB to print a stack trace when it crashes.
   static void PrintStackTraceOnError();
@@ -437,7 +441,8 @@ public:
   /// Get information about a script interpreter as structured data.
   SBStructuredData GetScriptInterpreterInfo(ScriptLanguage language);
 
-  /// Get the LLDB version string.
+  /// Get the LLDB version string. Plugins can augment this string. To
+  /// get the full string, call this after SBDebugger::Initialize().
   static const char *GetVersionString();
 
   /// Convert a state type to a string.

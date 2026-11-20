@@ -58,7 +58,7 @@ Base* test_covariant_return(FinalCovariant *f) {
 }
 
 // CIR-LABEL: @_Z21test_covariant_returnP14FinalCovariant
-// CIR:   cir.vtable.get_virtual_fn_addr
+// CIR:   cir.vtable.get_virtual_fn
 // CIR:   cir.call %{{.*}}({{.*}})
 
 // LLVM-LABEL: @_Z21test_covariant_returnP14FinalCovariant
@@ -94,7 +94,7 @@ struct CrossMulti final : CrossB, CrossC {};
 void test_cross_class(CrossMulti *m) { static_cast<CrossC *>(m)->f(); }
 
 // CIR-LABEL: @_Z16test_cross_classP10CrossMulti
-// CIR:   cir.vtable.get_virtual_fn_addr
+// CIR:   cir.vtable.get_virtual_fn
 // CIR:   cir.call %{{.*}}({{.*}})
 
 // LLVM-LABEL: @_Z16test_cross_classP10CrossMulti

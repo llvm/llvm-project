@@ -36,7 +36,6 @@
 #include <cstddef>
 #include <functional>
 #include <memory>
-#include <set>
 #include <tuple>
 #include <utility>
 
@@ -212,12 +211,6 @@ namespace llvm {
     Segments segments;   // the liveness segments
     VNInfoList valnos;   // value#'s
 
-    // The segment set is used temporarily to accelerate initial computation
-    // of live ranges of physical registers in computeRegUnitRange.
-    // After that the set is flushed to the segment vector and deleted.
-    using SegmentSet = std::set<Segment>;
-    std::unique_ptr<SegmentSet> segmentSet;
-
     using iterator = Segments::iterator;
     using const_iterator = Segments::const_iterator;
 
@@ -245,15 +238,11 @@ namespace llvm {
     }
 
     /// Constructs a new LiveRange object.
-    LiveRange(bool UseSegmentSet = false)
-        : segmentSet(UseSegmentSet ? std::make_unique<SegmentSet>()
-                                   : nullptr) {}
+    LiveRange() = default;
 
     /// Constructs a new LiveRange object by copying segments and valnos from
     /// another LiveRange.
     LiveRange(const LiveRange &Other, BumpPtrAllocator &Allocator) {
-      assert(Other.segmentSet == nullptr &&
-             "Copying of LiveRanges with active SegmentSets is not supported");
       assign(Other, Allocator);
     }
 
@@ -262,8 +251,6 @@ namespace llvm {
       if (this == &Other)
         return;
 
-      assert(Other.segmentSet == nullptr &&
-             "Copying of LiveRanges with active SegmentSets is not supported");
       // Duplicate valnos.
       for (const VNInfo *VNI : Other.valnos)
         createValueCopy(VNI, Allocator);
@@ -490,6 +477,10 @@ namespace llvm {
     /// may have grown since it was inserted).
     LLVM_ABI iterator addSegment(Segment S);
 
+    /// Add \p NewSegs, sorted by start, in one pass. Gives the same result as
+    /// calling addSegment() for each.
+    LLVM_ABI void addSegments(ArrayRef<Segment> NewSegs);
+
     /// Merge the segment pointed to by @p I with its immediate neighbors when
     /// they use the same value number and touch it. @p I must be a valid
     /// iterator into this live range. Returns an iterator to the merged
@@ -630,12 +621,6 @@ namespace llvm {
       });
     }
 
-    /// Flush segment set into the regular segment vector.
-    /// The method is to be called after the live range
-    /// has been created, if use of the segment set was
-    /// activated in the constructor of the live range.
-    LLVM_ABI void flushSegmentSet();
-
     /// Stores indexes from the input index sequence R at which this LiveRange
     /// is live to the output O iterator.
     /// R is a range of _ascending sorted_ _random_ access iterators
@@ -691,7 +676,6 @@ namespace llvm {
 
   private:
     friend class LiveRangeUpdater;
-    void addSegmentToSet(Segment S);
     void markValNoForDeletion(VNInfo *V);
   };
 

@@ -1869,102 +1869,153 @@ entry:
 declare float @llvm.fma.f32(float, float, float) #0
 
 define void @ffma(float %b, float %c) {
-; MIPS32-LABEL: ffma:
-; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    lui $2, %hi(_gp_disp)
-; MIPS32-NEXT:    addiu $2, $2, %lo(_gp_disp)
-; MIPS32-NEXT:    addiu $sp, $sp, -24
-; MIPS32-NEXT:    .cfi_def_cfa_offset 24
-; MIPS32-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; MIPS32-NEXT:    sw $16, 16($sp) # 4-byte Folded Spill
-; MIPS32-NEXT:    .cfi_offset 31, -4
-; MIPS32-NEXT:    .cfi_offset 16, -8
-; MIPS32-NEXT:    addu $gp, $2, $25
-; MIPS32-NEXT:    mov.s $f0, $f12
-; MIPS32-NEXT:    mfc1 $6, $f14
-; MIPS32-NEXT:    lw $16, %got(g)($gp)
-; MIPS32-NEXT:    lhu $1, 0($16)
-; MIPS32-NEXT:    fill.h $w1, $1
-; MIPS32-NEXT:    fexupr.w $w12, $w1
-; MIPS32-NEXT:    lw $25, %call16(fmaf)($gp)
-; MIPS32-NEXT:    # kill: def $f12 killed $f12 killed $w12
-; MIPS32-NEXT:    jalr $25
-; MIPS32-NEXT:    mov.s $f14, $f0
-; MIPS32-NEXT:    # kill: def $f0 killed $f0 def $w0
-; MIPS32-NEXT:    splati.w $w0, $w0[0]
-; MIPS32-NEXT:    fexdo.h $w0, $w0, $w0
-; MIPS32-NEXT:    copy_s.h $1, $w0[0]
-; MIPS32-NEXT:    sh $1, 0($16)
-; MIPS32-NEXT:    lw $16, 16($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    jr $ra
-; MIPS32-NEXT:    addiu $sp, $sp, 24
+; MIPS32-O32-LABEL: ffma:
+; MIPS32-O32:       # %bb.0: # %entry
+; MIPS32-O32-NEXT:    lui $2, %hi(_gp_disp)
+; MIPS32-O32-NEXT:    addiu $2, $2, %lo(_gp_disp)
+; MIPS32-O32-NEXT:    addiu $sp, $sp, -24
+; MIPS32-O32-NEXT:    .cfi_def_cfa_offset 24
+; MIPS32-O32-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
+; MIPS32-O32-NEXT:    sw $16, 16($sp) # 4-byte Folded Spill
+; MIPS32-O32-NEXT:    .cfi_offset 31, -4
+; MIPS32-O32-NEXT:    .cfi_offset 16, -8
+; MIPS32-O32-NEXT:    addu $gp, $2, $25
+; MIPS32-O32-NEXT:    mov.s $f0, $f12
+; MIPS32-O32-NEXT:    mfc1 $6, $f14
+; MIPS32-O32-NEXT:    lw $16, %got(g)($gp)
+; MIPS32-O32-NEXT:    lhu $1, 0($16)
+; MIPS32-O32-NEXT:    fill.h $w1, $1
+; MIPS32-O32-NEXT:    fexupr.w $w12, $w1
+; MIPS32-O32-NEXT:    lw $25, %call16(fmaf)($gp)
+; MIPS32-O32-NEXT:    # kill: def $f12 killed $f12 killed $w12
+; MIPS32-O32-NEXT:    jalr $25
+; MIPS32-O32-NEXT:    mov.s $f14, $f0
+; MIPS32-O32-NEXT:    # kill: def $f0 killed $f0 def $w0
+; MIPS32-O32-NEXT:    splati.w $w0, $w0[0]
+; MIPS32-O32-NEXT:    fexdo.h $w0, $w0, $w0
+; MIPS32-O32-NEXT:    copy_s.h $1, $w0[0]
+; MIPS32-O32-NEXT:    sh $1, 0($16)
+; MIPS32-O32-NEXT:    lw $16, 16($sp) # 4-byte Folded Reload
+; MIPS32-O32-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
+; MIPS32-O32-NEXT:    jr $ra
+; MIPS32-O32-NEXT:    addiu $sp, $sp, 24
 ;
-; MIPS64-N32-LABEL: ffma:
-; MIPS64-N32:       # %bb.0: # %entry
-; MIPS64-N32-NEXT:    addiu $sp, $sp, -32
-; MIPS64-N32-NEXT:    .cfi_def_cfa_offset 32
-; MIPS64-N32-NEXT:    sd $ra, 24($sp) # 8-byte Folded Spill
-; MIPS64-N32-NEXT:    sd $gp, 16($sp) # 8-byte Folded Spill
-; MIPS64-N32-NEXT:    sd $16, 8($sp) # 8-byte Folded Spill
-; MIPS64-N32-NEXT:    .cfi_offset 31, -8
-; MIPS64-N32-NEXT:    .cfi_offset 28, -16
-; MIPS64-N32-NEXT:    .cfi_offset 16, -24
-; MIPS64-N32-NEXT:    lui $1, %hi(%neg(%gp_rel(ffma)))
-; MIPS64-N32-NEXT:    addu $1, $1, $25
-; MIPS64-N32-NEXT:    addiu $gp, $1, %lo(%neg(%gp_rel(ffma)))
-; MIPS64-N32-NEXT:    mov.s $f14, $f13
-; MIPS64-N32-NEXT:    mov.s $f13, $f12
-; MIPS64-N32-NEXT:    lw $16, %got_disp(g)($gp)
-; MIPS64-N32-NEXT:    lhu $1, 0($16)
-; MIPS64-N32-NEXT:    fill.h $w0, $1
-; MIPS64-N32-NEXT:    lw $25, %call16(fmaf)($gp)
-; MIPS64-N32-NEXT:    # kill: def $f12 killed $f12 killed $w12
-; MIPS64-N32-NEXT:    jalr $25
-; MIPS64-N32-NEXT:    fexupr.w $w12, $w0
-; MIPS64-N32-NEXT:    # kill: def $f0 killed $f0 def $w0
-; MIPS64-N32-NEXT:    splati.w $w0, $w0[0]
-; MIPS64-N32-NEXT:    fexdo.h $w0, $w0, $w0
-; MIPS64-N32-NEXT:    copy_s.h $1, $w0[0]
-; MIPS64-N32-NEXT:    sh $1, 0($16)
-; MIPS64-N32-NEXT:    ld $16, 8($sp) # 8-byte Folded Reload
-; MIPS64-N32-NEXT:    ld $gp, 16($sp) # 8-byte Folded Reload
-; MIPS64-N32-NEXT:    ld $ra, 24($sp) # 8-byte Folded Reload
-; MIPS64-N32-NEXT:    jr $ra
-; MIPS64-N32-NEXT:    addiu $sp, $sp, 32
+; MIPS64R5-N32-LABEL: ffma:
+; MIPS64R5-N32:       # %bb.0: # %entry
+; MIPS64R5-N32-NEXT:    addiu $sp, $sp, -32
+; MIPS64R5-N32-NEXT:    .cfi_def_cfa_offset 32
+; MIPS64R5-N32-NEXT:    sd $ra, 24($sp) # 8-byte Folded Spill
+; MIPS64R5-N32-NEXT:    sd $gp, 16($sp) # 8-byte Folded Spill
+; MIPS64R5-N32-NEXT:    sd $16, 8($sp) # 8-byte Folded Spill
+; MIPS64R5-N32-NEXT:    .cfi_offset 31, -8
+; MIPS64R5-N32-NEXT:    .cfi_offset 28, -16
+; MIPS64R5-N32-NEXT:    .cfi_offset 16, -24
+; MIPS64R5-N32-NEXT:    lui $1, %hi(%neg(%gp_rel(ffma)))
+; MIPS64R5-N32-NEXT:    addu $1, $1, $25
+; MIPS64R5-N32-NEXT:    addiu $gp, $1, %lo(%neg(%gp_rel(ffma)))
+; MIPS64R5-N32-NEXT:    mov.s $f14, $f13
+; MIPS64R5-N32-NEXT:    mov.s $f13, $f12
+; MIPS64R5-N32-NEXT:    lw $16, %got_disp(g)($gp)
+; MIPS64R5-N32-NEXT:    lhu $1, 0($16)
+; MIPS64R5-N32-NEXT:    fill.h $w0, $1
+; MIPS64R5-N32-NEXT:    lw $25, %call16(fmaf)($gp)
+; MIPS64R5-N32-NEXT:    # kill: def $f12 killed $f12 killed $w12
+; MIPS64R5-N32-NEXT:    jalr $25
+; MIPS64R5-N32-NEXT:    fexupr.w $w12, $w0
+; MIPS64R5-N32-NEXT:    # kill: def $f0 killed $f0 def $w0
+; MIPS64R5-N32-NEXT:    splati.w $w0, $w0[0]
+; MIPS64R5-N32-NEXT:    fexdo.h $w0, $w0, $w0
+; MIPS64R5-N32-NEXT:    copy_s.h $1, $w0[0]
+; MIPS64R5-N32-NEXT:    sh $1, 0($16)
+; MIPS64R5-N32-NEXT:    ld $16, 8($sp) # 8-byte Folded Reload
+; MIPS64R5-N32-NEXT:    ld $gp, 16($sp) # 8-byte Folded Reload
+; MIPS64R5-N32-NEXT:    ld $ra, 24($sp) # 8-byte Folded Reload
+; MIPS64R5-N32-NEXT:    jr $ra
+; MIPS64R5-N32-NEXT:    addiu $sp, $sp, 32
 ;
-; MIPS64-N64-LABEL: ffma:
-; MIPS64-N64:       # %bb.0: # %entry
-; MIPS64-N64-NEXT:    daddiu $sp, $sp, -32
-; MIPS64-N64-NEXT:    .cfi_def_cfa_offset 32
-; MIPS64-N64-NEXT:    sd $ra, 24($sp) # 8-byte Folded Spill
-; MIPS64-N64-NEXT:    sd $gp, 16($sp) # 8-byte Folded Spill
-; MIPS64-N64-NEXT:    sd $16, 8($sp) # 8-byte Folded Spill
-; MIPS64-N64-NEXT:    .cfi_offset 31, -8
-; MIPS64-N64-NEXT:    .cfi_offset 28, -16
-; MIPS64-N64-NEXT:    .cfi_offset 16, -24
-; MIPS64-N64-NEXT:    lui $1, %hi(%neg(%gp_rel(ffma)))
-; MIPS64-N64-NEXT:    daddu $1, $1, $25
-; MIPS64-N64-NEXT:    daddiu $gp, $1, %lo(%neg(%gp_rel(ffma)))
-; MIPS64-N64-NEXT:    mov.s $f14, $f13
-; MIPS64-N64-NEXT:    mov.s $f13, $f12
-; MIPS64-N64-NEXT:    ld $16, %got_disp(g)($gp)
-; MIPS64-N64-NEXT:    lhu $1, 0($16)
-; MIPS64-N64-NEXT:    fill.h $w0, $1
-; MIPS64-N64-NEXT:    ld $25, %call16(fmaf)($gp)
-; MIPS64-N64-NEXT:    # kill: def $f12 killed $f12 killed $w12
-; MIPS64-N64-NEXT:    jalr $25
-; MIPS64-N64-NEXT:    fexupr.w $w12, $w0
-; MIPS64-N64-NEXT:    # kill: def $f0 killed $f0 def $w0
-; MIPS64-N64-NEXT:    splati.w $w0, $w0[0]
-; MIPS64-N64-NEXT:    fexdo.h $w0, $w0, $w0
-; MIPS64-N64-NEXT:    copy_s.h $1, $w0[0]
-; MIPS64-N64-NEXT:    sh $1, 0($16)
-; MIPS64-N64-NEXT:    ld $16, 8($sp) # 8-byte Folded Reload
-; MIPS64-N64-NEXT:    ld $gp, 16($sp) # 8-byte Folded Reload
-; MIPS64-N64-NEXT:    ld $ra, 24($sp) # 8-byte Folded Reload
-; MIPS64-N64-NEXT:    jr $ra
-; MIPS64-N64-NEXT:    daddiu $sp, $sp, 32
+; MIPS64R5-N64-LABEL: ffma:
+; MIPS64R5-N64:       # %bb.0: # %entry
+; MIPS64R5-N64-NEXT:    daddiu $sp, $sp, -32
+; MIPS64R5-N64-NEXT:    .cfi_def_cfa_offset 32
+; MIPS64R5-N64-NEXT:    sd $ra, 24($sp) # 8-byte Folded Spill
+; MIPS64R5-N64-NEXT:    sd $gp, 16($sp) # 8-byte Folded Spill
+; MIPS64R5-N64-NEXT:    sd $16, 8($sp) # 8-byte Folded Spill
+; MIPS64R5-N64-NEXT:    .cfi_offset 31, -8
+; MIPS64R5-N64-NEXT:    .cfi_offset 28, -16
+; MIPS64R5-N64-NEXT:    .cfi_offset 16, -24
+; MIPS64R5-N64-NEXT:    lui $1, %hi(%neg(%gp_rel(ffma)))
+; MIPS64R5-N64-NEXT:    daddu $1, $1, $25
+; MIPS64R5-N64-NEXT:    daddiu $gp, $1, %lo(%neg(%gp_rel(ffma)))
+; MIPS64R5-N64-NEXT:    mov.s $f14, $f13
+; MIPS64R5-N64-NEXT:    mov.s $f13, $f12
+; MIPS64R5-N64-NEXT:    ld $16, %got_disp(g)($gp)
+; MIPS64R5-N64-NEXT:    lhu $1, 0($16)
+; MIPS64R5-N64-NEXT:    fill.h $w0, $1
+; MIPS64R5-N64-NEXT:    ld $25, %call16(fmaf)($gp)
+; MIPS64R5-N64-NEXT:    # kill: def $f12 killed $f12 killed $w12
+; MIPS64R5-N64-NEXT:    jalr $25
+; MIPS64R5-N64-NEXT:    fexupr.w $w12, $w0
+; MIPS64R5-N64-NEXT:    # kill: def $f0 killed $f0 def $w0
+; MIPS64R5-N64-NEXT:    splati.w $w0, $w0[0]
+; MIPS64R5-N64-NEXT:    fexdo.h $w0, $w0, $w0
+; MIPS64R5-N64-NEXT:    copy_s.h $1, $w0[0]
+; MIPS64R5-N64-NEXT:    sh $1, 0($16)
+; MIPS64R5-N64-NEXT:    ld $16, 8($sp) # 8-byte Folded Reload
+; MIPS64R5-N64-NEXT:    ld $gp, 16($sp) # 8-byte Folded Reload
+; MIPS64R5-N64-NEXT:    ld $ra, 24($sp) # 8-byte Folded Reload
+; MIPS64R5-N64-NEXT:    jr $ra
+; MIPS64R5-N64-NEXT:    daddiu $sp, $sp, 32
+;
+; MIPSR6-O32-LABEL: ffma:
+; MIPSR6-O32:       # %bb.0: # %entry
+; MIPSR6-O32-NEXT:    lui $2, %hi(_gp_disp)
+; MIPSR6-O32-NEXT:    addiu $2, $2, %lo(_gp_disp)
+; MIPSR6-O32-NEXT:    addu $1, $2, $25
+; MIPSR6-O32-NEXT:    # kill: def $f14 killed $f14 def $w14
+; MIPSR6-O32-NEXT:    lw $1, %got(g)($1)
+; MIPSR6-O32-NEXT:    lhu $2, 0($1)
+; MIPSR6-O32-NEXT:    fill.h $w0, $2
+; MIPSR6-O32-NEXT:    fexupr.w $w0, $w0
+; MIPSR6-O32-NEXT:    maddf.s $f14, $f0, $f12
+; MIPSR6-O32-NEXT:    splati.w $w0, $w14[0]
+; MIPSR6-O32-NEXT:    fexdo.h $w0, $w0, $w0
+; MIPSR6-O32-NEXT:    copy_s.h $2, $w0[0]
+; MIPSR6-O32-NEXT:    jr $ra
+; MIPSR6-O32-NEXT:    sh $2, 0($1)
+;
+; MIPSR6-N32-LABEL: ffma:
+; MIPSR6-N32:       # %bb.0: # %entry
+; MIPSR6-N32-NEXT:    lui $1, %hi(%neg(%gp_rel(ffma)))
+; MIPSR6-N32-NEXT:    addu $1, $1, $25
+; MIPSR6-N32-NEXT:    addiu $1, $1, %lo(%neg(%gp_rel(ffma)))
+; MIPSR6-N32-NEXT:    # kill: def $f13 killed $f13 def $w13
+; MIPSR6-N32-NEXT:    lw $1, %got_disp(g)($1)
+; MIPSR6-N32-NEXT:    lhu $2, 0($1)
+; MIPSR6-N32-NEXT:    fill.h $w0, $2
+; MIPSR6-N32-NEXT:    fexupr.w $w0, $w0
+; MIPSR6-N32-NEXT:    maddf.s $f13, $f0, $f12
+; MIPSR6-N32-NEXT:    splati.w $w0, $w13[0]
+; MIPSR6-N32-NEXT:    fexdo.h $w0, $w0, $w0
+; MIPSR6-N32-NEXT:    copy_s.h $2, $w0[0]
+; MIPSR6-N32-NEXT:    jr $ra
+; MIPSR6-N32-NEXT:    sh $2, 0($1)
+;
+; MIPSR6-N64-LABEL: ffma:
+; MIPSR6-N64:       # %bb.0: # %entry
+; MIPSR6-N64-NEXT:    lui $1, %hi(%neg(%gp_rel(ffma)))
+; MIPSR6-N64-NEXT:    daddu $1, $1, $25
+; MIPSR6-N64-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(ffma)))
+; MIPSR6-N64-NEXT:    # kill: def $f13 killed $f13 def $w13
+; MIPSR6-N64-NEXT:    ld $1, %got_disp(g)($1)
+; MIPSR6-N64-NEXT:    lhu $2, 0($1)
+; MIPSR6-N64-NEXT:    fill.h $w0, $2
+; MIPSR6-N64-NEXT:    fexupr.w $w0, $w0
+; MIPSR6-N64-NEXT:    maddf.s $f13, $f0, $f12
+; MIPSR6-N64-NEXT:    splati.w $w0, $w13[0]
+; MIPSR6-N64-NEXT:    fexdo.h $w0, $w0, $w0
+; MIPSR6-N64-NEXT:    copy_s.h $2, $w0[0]
+; MIPSR6-N64-NEXT:    jr $ra
+; MIPSR6-N64-NEXT:    sh $2, 0($1)
 entry:
   %0 = load i16, ptr @g, align 2
   %1 = bitcast i16 %0 to half
@@ -3830,22 +3881,13 @@ entry:
 define i64 @fptosi_f16_i64(ptr %p) {
 ; MIPS32-LABEL: fptosi_f16_i64:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    lui $2, %hi(_gp_disp)
-; MIPS32-NEXT:    addiu $2, $2, %lo(_gp_disp)
-; MIPS32-NEXT:    addiu $sp, $sp, -24
-; MIPS32-NEXT:    .cfi_def_cfa_offset 24
-; MIPS32-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; MIPS32-NEXT:    .cfi_offset 31, -4
-; MIPS32-NEXT:    addu $gp, $2, $25
 ; MIPS32-NEXT:    lhu $1, 0($4)
 ; MIPS32-NEXT:    fill.h $w0, $1
-; MIPS32-NEXT:    lw $25, %call16(__fixsfdi)($gp)
-; MIPS32-NEXT:    # kill: def $f12 killed $f12 killed $w12
-; MIPS32-NEXT:    jalr $25
-; MIPS32-NEXT:    fexupr.w $w12, $w0
-; MIPS32-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    fexupr.w $w0, $w0
+; MIPS32-NEXT:    trunc.w.s $f0, $f0
+; MIPS32-NEXT:    mfc1 $2, $f0
 ; MIPS32-NEXT:    jr $ra
-; MIPS32-NEXT:    addiu $sp, $sp, 24
+; MIPS32-NEXT:    sra $3, $2, 31
 ;
 ; MIPS64-N32-LABEL: fptosi_f16_i64:
 ; MIPS64-N32:       # %bb.0: # %entry
@@ -3874,22 +3916,13 @@ entry:
 define i64 @fptoui_f16_i64(ptr %p) {
 ; MIPS32-LABEL: fptoui_f16_i64:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    lui $2, %hi(_gp_disp)
-; MIPS32-NEXT:    addiu $2, $2, %lo(_gp_disp)
-; MIPS32-NEXT:    addiu $sp, $sp, -24
-; MIPS32-NEXT:    .cfi_def_cfa_offset 24
-; MIPS32-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; MIPS32-NEXT:    .cfi_offset 31, -4
-; MIPS32-NEXT:    addu $gp, $2, $25
 ; MIPS32-NEXT:    lhu $1, 0($4)
 ; MIPS32-NEXT:    fill.h $w0, $1
-; MIPS32-NEXT:    lw $25, %call16(__fixunssfdi)($gp)
-; MIPS32-NEXT:    # kill: def $f12 killed $f12 killed $w12
-; MIPS32-NEXT:    jalr $25
-; MIPS32-NEXT:    fexupr.w $w12, $w0
-; MIPS32-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    fexupr.w $w0, $w0
+; MIPS32-NEXT:    trunc.w.s $f0, $f0
+; MIPS32-NEXT:    mfc1 $2, $f0
 ; MIPS32-NEXT:    jr $ra
-; MIPS32-NEXT:    addiu $sp, $sp, 24
+; MIPS32-NEXT:    addiu $3, $zero, 0
 ;
 ; MIPS64-N32-LABEL: fptoui_f16_i64:
 ; MIPS64-N32:       # %bb.0: # %entry
@@ -3918,67 +3951,36 @@ entry:
 define i128 @fptosi_f16_i128(ptr %p) {
 ; MIPS32-LABEL: fptosi_f16_i128:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    lui $2, %hi(_gp_disp)
-; MIPS32-NEXT:    addiu $2, $2, %lo(_gp_disp)
-; MIPS32-NEXT:    addiu $sp, $sp, -24
-; MIPS32-NEXT:    .cfi_def_cfa_offset 24
-; MIPS32-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; MIPS32-NEXT:    .cfi_offset 31, -4
-; MIPS32-NEXT:    addu $gp, $2, $25
 ; MIPS32-NEXT:    lhu $1, 0($4)
 ; MIPS32-NEXT:    fill.h $w0, $1
-; MIPS32-NEXT:    lw $25, %call16(__fixsfti)($gp)
-; MIPS32-NEXT:    # kill: def $f12 killed $f12 killed $w12
-; MIPS32-NEXT:    jalr $25
-; MIPS32-NEXT:    fexupr.w $w12, $w0
-; MIPS32-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    fexupr.w $w0, $w0
+; MIPS32-NEXT:    trunc.w.s $f0, $f0
+; MIPS32-NEXT:    mfc1 $2, $f0
+; MIPS32-NEXT:    sra $3, $2, 31
+; MIPS32-NEXT:    move $4, $3
 ; MIPS32-NEXT:    jr $ra
-; MIPS32-NEXT:    addiu $sp, $sp, 24
+; MIPS32-NEXT:    move $5, $3
 ;
 ; MIPS64-N32-LABEL: fptosi_f16_i128:
 ; MIPS64-N32:       # %bb.0: # %entry
-; MIPS64-N32-NEXT:    addiu $sp, $sp, -16
-; MIPS64-N32-NEXT:    .cfi_def_cfa_offset 16
-; MIPS64-N32-NEXT:    sd $ra, 8($sp) # 8-byte Folded Spill
-; MIPS64-N32-NEXT:    sd $gp, 0($sp) # 8-byte Folded Spill
-; MIPS64-N32-NEXT:    .cfi_offset 31, -8
-; MIPS64-N32-NEXT:    .cfi_offset 28, -16
-; MIPS64-N32-NEXT:    lui $1, %hi(%neg(%gp_rel(fptosi_f16_i128)))
-; MIPS64-N32-NEXT:    addu $1, $1, $25
-; MIPS64-N32-NEXT:    addiu $gp, $1, %lo(%neg(%gp_rel(fptosi_f16_i128)))
 ; MIPS64-N32-NEXT:    sll $1, $4, 0
 ; MIPS64-N32-NEXT:    lhu $1, 0($1)
 ; MIPS64-N32-NEXT:    fill.h $w0, $1
-; MIPS64-N32-NEXT:    lw $25, %call16(__fixsfti)($gp)
-; MIPS64-N32-NEXT:    # kill: def $f12 killed $f12 killed $w12
-; MIPS64-N32-NEXT:    jalr $25
-; MIPS64-N32-NEXT:    fexupr.w $w12, $w0
-; MIPS64-N32-NEXT:    ld $gp, 0($sp) # 8-byte Folded Reload
-; MIPS64-N32-NEXT:    ld $ra, 8($sp) # 8-byte Folded Reload
+; MIPS64-N32-NEXT:    fexupr.w $w0, $w0
+; MIPS64-N32-NEXT:    trunc.l.s $f0, $f0
+; MIPS64-N32-NEXT:    dmfc1 $2, $f0
 ; MIPS64-N32-NEXT:    jr $ra
-; MIPS64-N32-NEXT:    addiu $sp, $sp, 16
+; MIPS64-N32-NEXT:    dsra $3, $2, 63
 ;
 ; MIPS64-N64-LABEL: fptosi_f16_i128:
 ; MIPS64-N64:       # %bb.0: # %entry
-; MIPS64-N64-NEXT:    daddiu $sp, $sp, -16
-; MIPS64-N64-NEXT:    .cfi_def_cfa_offset 16
-; MIPS64-N64-NEXT:    sd $ra, 8($sp) # 8-byte Folded Spill
-; MIPS64-N64-NEXT:    sd $gp, 0($sp) # 8-byte Folded Spill
-; MIPS64-N64-NEXT:    .cfi_offset 31, -8
-; MIPS64-N64-NEXT:    .cfi_offset 28, -16
-; MIPS64-N64-NEXT:    lui $1, %hi(%neg(%gp_rel(fptosi_f16_i128)))
-; MIPS64-N64-NEXT:    daddu $1, $1, $25
-; MIPS64-N64-NEXT:    daddiu $gp, $1, %lo(%neg(%gp_rel(fptosi_f16_i128)))
 ; MIPS64-N64-NEXT:    lhu $1, 0($4)
 ; MIPS64-N64-NEXT:    fill.h $w0, $1
-; MIPS64-N64-NEXT:    ld $25, %call16(__fixsfti)($gp)
-; MIPS64-N64-NEXT:    # kill: def $f12 killed $f12 killed $w12
-; MIPS64-N64-NEXT:    jalr $25
-; MIPS64-N64-NEXT:    fexupr.w $w12, $w0
-; MIPS64-N64-NEXT:    ld $gp, 0($sp) # 8-byte Folded Reload
-; MIPS64-N64-NEXT:    ld $ra, 8($sp) # 8-byte Folded Reload
+; MIPS64-N64-NEXT:    fexupr.w $w0, $w0
+; MIPS64-N64-NEXT:    trunc.l.s $f0, $f0
+; MIPS64-N64-NEXT:    dmfc1 $2, $f0
 ; MIPS64-N64-NEXT:    jr $ra
-; MIPS64-N64-NEXT:    daddiu $sp, $sp, 16
+; MIPS64-N64-NEXT:    dsra $3, $2, 63
 entry:
   %x = load half, ptr %p, align 2
   %r = fptosi half %x to i128
@@ -3988,67 +3990,36 @@ entry:
 define i128 @fptoui_f16_i128(ptr %p) {
 ; MIPS32-LABEL: fptoui_f16_i128:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    lui $2, %hi(_gp_disp)
-; MIPS32-NEXT:    addiu $2, $2, %lo(_gp_disp)
-; MIPS32-NEXT:    addiu $sp, $sp, -24
-; MIPS32-NEXT:    .cfi_def_cfa_offset 24
-; MIPS32-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; MIPS32-NEXT:    .cfi_offset 31, -4
-; MIPS32-NEXT:    addu $gp, $2, $25
 ; MIPS32-NEXT:    lhu $1, 0($4)
 ; MIPS32-NEXT:    fill.h $w0, $1
-; MIPS32-NEXT:    lw $25, %call16(__fixunssfti)($gp)
-; MIPS32-NEXT:    # kill: def $f12 killed $f12 killed $w12
-; MIPS32-NEXT:    jalr $25
-; MIPS32-NEXT:    fexupr.w $w12, $w0
-; MIPS32-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    fexupr.w $w0, $w0
+; MIPS32-NEXT:    trunc.w.s $f0, $f0
+; MIPS32-NEXT:    mfc1 $2, $f0
+; MIPS32-NEXT:    addiu $3, $zero, 0
+; MIPS32-NEXT:    addiu $4, $zero, 0
 ; MIPS32-NEXT:    jr $ra
-; MIPS32-NEXT:    addiu $sp, $sp, 24
+; MIPS32-NEXT:    addiu $5, $zero, 0
 ;
 ; MIPS64-N32-LABEL: fptoui_f16_i128:
 ; MIPS64-N32:       # %bb.0: # %entry
-; MIPS64-N32-NEXT:    addiu $sp, $sp, -16
-; MIPS64-N32-NEXT:    .cfi_def_cfa_offset 16
-; MIPS64-N32-NEXT:    sd $ra, 8($sp) # 8-byte Folded Spill
-; MIPS64-N32-NEXT:    sd $gp, 0($sp) # 8-byte Folded Spill
-; MIPS64-N32-NEXT:    .cfi_offset 31, -8
-; MIPS64-N32-NEXT:    .cfi_offset 28, -16
-; MIPS64-N32-NEXT:    lui $1, %hi(%neg(%gp_rel(fptoui_f16_i128)))
-; MIPS64-N32-NEXT:    addu $1, $1, $25
-; MIPS64-N32-NEXT:    addiu $gp, $1, %lo(%neg(%gp_rel(fptoui_f16_i128)))
 ; MIPS64-N32-NEXT:    sll $1, $4, 0
 ; MIPS64-N32-NEXT:    lhu $1, 0($1)
 ; MIPS64-N32-NEXT:    fill.h $w0, $1
-; MIPS64-N32-NEXT:    lw $25, %call16(__fixunssfti)($gp)
-; MIPS64-N32-NEXT:    # kill: def $f12 killed $f12 killed $w12
-; MIPS64-N32-NEXT:    jalr $25
-; MIPS64-N32-NEXT:    fexupr.w $w12, $w0
-; MIPS64-N32-NEXT:    ld $gp, 0($sp) # 8-byte Folded Reload
-; MIPS64-N32-NEXT:    ld $ra, 8($sp) # 8-byte Folded Reload
+; MIPS64-N32-NEXT:    fexupr.w $w0, $w0
+; MIPS64-N32-NEXT:    trunc.l.s $f0, $f0
+; MIPS64-N32-NEXT:    dmfc1 $2, $f0
 ; MIPS64-N32-NEXT:    jr $ra
-; MIPS64-N32-NEXT:    addiu $sp, $sp, 16
+; MIPS64-N32-NEXT:    daddiu $3, $zero, 0
 ;
 ; MIPS64-N64-LABEL: fptoui_f16_i128:
 ; MIPS64-N64:       # %bb.0: # %entry
-; MIPS64-N64-NEXT:    daddiu $sp, $sp, -16
-; MIPS64-N64-NEXT:    .cfi_def_cfa_offset 16
-; MIPS64-N64-NEXT:    sd $ra, 8($sp) # 8-byte Folded Spill
-; MIPS64-N64-NEXT:    sd $gp, 0($sp) # 8-byte Folded Spill
-; MIPS64-N64-NEXT:    .cfi_offset 31, -8
-; MIPS64-N64-NEXT:    .cfi_offset 28, -16
-; MIPS64-N64-NEXT:    lui $1, %hi(%neg(%gp_rel(fptoui_f16_i128)))
-; MIPS64-N64-NEXT:    daddu $1, $1, $25
-; MIPS64-N64-NEXT:    daddiu $gp, $1, %lo(%neg(%gp_rel(fptoui_f16_i128)))
 ; MIPS64-N64-NEXT:    lhu $1, 0($4)
 ; MIPS64-N64-NEXT:    fill.h $w0, $1
-; MIPS64-N64-NEXT:    ld $25, %call16(__fixunssfti)($gp)
-; MIPS64-N64-NEXT:    # kill: def $f12 killed $f12 killed $w12
-; MIPS64-N64-NEXT:    jalr $25
-; MIPS64-N64-NEXT:    fexupr.w $w12, $w0
-; MIPS64-N64-NEXT:    ld $gp, 0($sp) # 8-byte Folded Reload
-; MIPS64-N64-NEXT:    ld $ra, 8($sp) # 8-byte Folded Reload
+; MIPS64-N64-NEXT:    fexupr.w $w0, $w0
+; MIPS64-N64-NEXT:    trunc.l.s $f0, $f0
+; MIPS64-N64-NEXT:    dmfc1 $2, $f0
 ; MIPS64-N64-NEXT:    jr $ra
-; MIPS64-N64-NEXT:    daddiu $sp, $sp, 16
+; MIPS64-N64-NEXT:    daddiu $3, $zero, 0
 entry:
   %x = load half, ptr %p, align 2
   %r = fptoui half %x to i128

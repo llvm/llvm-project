@@ -1,0 +1,22 @@
+# RUN: llc -mtriple=hexagon -mcpu=hexagonv85 -mattr=+hlx \
+# RUN:   -run-pass=hexagon-packetizer %s -o - | FileCheck %s
+
+# Check that an HLX load pseudo is not packetized with an instruction that reads
+# the register it defines. The load pseudo expands to a temporary load and a
+# copy, so the reader would see the newly loaded value.
+
+# CHECK-LABEL: name: hlx_load_anti
+# CHECK: $l0 = LX_max_uh
+# CHECK-NEXT: BUNDLE
+# CHECK-NEXT: $l1 = LX_L16b_pseudo
+---
+name: hlx_load_anti
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $l0, $l1, $r2
+
+    renamable $l0 = LX_max_uh killed renamable $l0, killed renamable $l1
+    renamable $l1 = LX_L16b_pseudo killed renamable $r2
+    PS_jmpret $r31, implicit-def dead $pc, implicit $l0, implicit $l1
+...

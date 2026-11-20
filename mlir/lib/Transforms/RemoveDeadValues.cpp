@@ -196,18 +196,6 @@ static void collectNonLiveValues(DenseSet<Value> &nonLiveSet, ValueRange range,
   }
 }
 
-/// Drop the uses of the i-th result of `op` and then erase it iff toErase[i]
-/// is 1.
-static void dropUsesAndEraseResults(RewriterBase &rewriter, Operation *op,
-                                    BitVector toErase) {
-  assert(op->getNumResults() == toErase.size() &&
-         "expected the number of results in `op` and the size of `toErase` to "
-         "be the same");
-  for (auto idx : toErase.set_bits())
-    op->getResult(idx).dropAllUses();
-  rewriter.eraseOpResults(op, toErase);
-}
-
 /// Process a simple operation `op` using the liveness analysis `la`.
 /// If the operation has no memory effects, none of its results are live, and it
 /// is not a symbol with known users:
@@ -750,7 +738,18 @@ static void cleanUpDeadVals(MLIRContext *ctx, RDVFinalCleanupList &list) {
          << OpWithFlags(r.op,
                         OpPrintingFlags().skipRegions().printGenericOpForm());
     });
-    dropUsesAndEraseResults(rewriter, r.op, r.nonLive);
+    // Replace remaining uses with poison before erasing the results. Dropping
+    // the uses would leave null operands in surviving ops, such as an scf.if
+    // whose condition is a dead call result in an unreachable function.
+    rewriter.setInsertionPoint(r.op);
+    for (auto deadIdx : r.nonLive.set_bits()) {
+      Value result = r.op->getResult(deadIdx);
+      if (result.use_empty())
+        continue;
+      rewriter.replaceAllUsesWith(result,
+                                  createPoisonedValue(rewriter, result));
+    }
+    rewriter.eraseOpResults(r.op, r.nonLive);
   }
 
   // 7. Operations
