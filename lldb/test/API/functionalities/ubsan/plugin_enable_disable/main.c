@@ -30,11 +30,23 @@ __attribute__((noinline, optnone)) void test_breakpoint(void) {}
 __attribute__((noinline, optnone)) void test_breakpoint_2(void) {}
 __attribute__((noinline, optnone)) void test_breakpoint_dlopen(void) {}
 __attribute__((noinline, optnone)) void test_breakpoint_after_dlopen(void) {}
+__attribute__((noinline, optnone)) void test_breakpoint_before_wait(void) {}
 
 __attribute__((noinline, optnone)) int shift(void) { return 33; }
 
+// Set by the debugger to stop the process waiting.
+volatile int g_release = 0;
+
 int main() {
   uint32_t x = 0;
+
+  if (getenv("WAIT_FOR_RELEASE")) {
+    // Keep running until the debugger sets `g_release` so that the debugger
+    // can act on the process while it is running.
+    test_breakpoint_before_wait();
+    while (!g_release)
+      ;
+  }
 
   x = x << shift(); // first ubsan issue
   x = x << shift(); // second ubsan issue

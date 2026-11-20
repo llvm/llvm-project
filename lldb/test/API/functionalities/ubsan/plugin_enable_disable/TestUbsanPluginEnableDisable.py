@@ -665,3 +665,61 @@ class UbsanPluginEnableDisableTestCase(TestBase):
         process.Continue()
         self.assertEqual(process.GetState(), lldb.eStateExited)
         self.assertEqual(process.GetExitStatus(), 0)
+
+    @skipUnlessUndefinedBehaviorSanitizer
+    @no_debug_info_test
+    def test_disable_plugin_while_running(self):
+        """Test that disabling the UBSan plugin while the process is running
+        halts the process, disables the plugin and then resumes the process."""
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        target = self.dbg.CreateTarget(exe)
+        self.assertTrue(target, VALID_TARGET)
+        self.registerSanitizerLibrariesWithTarget(target)
+        bp = target.BreakpointCreateByName("test_breakpoint_before_wait")
+        self.assertTrue(bp.GetNumLocations() > 0)
+
+        # Launch with WAIT_FOR_RELEASE set so that the process keeps running
+        # after test_breakpoint_before_wait until g_release is set.
+        launch_info = target.GetLaunchInfo()
+        launch_info.SetWorkingDirectory(self.get_process_working_directory())
+        launch_info.SetEnvironmentEntries(["WAIT_FOR_RELEASE=1"], True)
+        error = lldb.SBError()
+        process = target.Launch(launch_info, error)
+        self.assertSuccess(error)
+        self.assertTrue(process, PROCESS_IS_VALID)
+        self.check_stopped_at_breakpoint("test_breakpoint_before_wait", process)
+        self.assertTrue(self.ubsan_plugin_is_enabled(domain="target"))
+
+        # Continue asynchronously so that the process is running when the
+        # plugin is disabled.
+        self.dbg.SetAsync(True)
+        listener = self.dbg.GetListener()
+        process.Continue()
+        lldbutil.expect_state_changes(self, listener, process, [lldb.eStateRunning])
+
+        self.runCmd(
+            "plugin disable --domain target instrumentation-runtime.UndefinedBehaviorSanitizer"
+        )
+
+        # Disabling the plugin halts the process and then resumes it. The halt
+        # isn't hidden so the process is seen to stop and then run again.
+        lldbutil.expect_state_changes(
+            self, listener, process, [lldb.eStateStopped, lldb.eStateRunning]
+        )
+        self.assertFalse(self.ubsan_plugin_is_enabled(domain="target"))
+        # Globally the plugin is still marked as enabled.
+        self.assertTrue(self.ubsan_plugin_is_enabled(domain="global"))
+
+        # Stop the process and release it from waiting.
+        process.Stop()
+        lldbutil.expect_state_changes(self, listener, process, [lldb.eStateStopped])
+        self.runCmd("expression g_release = 1")
+
+        # Continue. The UBSan issues should not cause instrumentation stops and
+        # the process should exit cleanly.
+        process.Continue()
+        lldbutil.expect_state_changes(
+            self, listener, process, [lldb.eStateRunning, lldb.eStateExited]
+        )
+        self.assertEqual(process.GetExitStatus(), 0)

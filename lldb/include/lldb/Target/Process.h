@@ -2735,9 +2735,11 @@ void PruneThreadPlans();
   /// process.
   ///
   /// Disabling destroys this process's instance of the plugin, which
-  /// deactivates it. Enabling creates a new instance of the plugin (if one
-  /// doesn't already exist) and gives it a chance to activate using the
-  /// modules that are currently loaded.
+  /// deactivates it. The process must be stopped to disable a plugin so that
+  /// the plugin's breakpoints can't be hit while it is being destroyed.
+  /// Enabling creates a new instance of the plugin (if one doesn't already
+  /// exist) and gives it a chance to activate using the modules that are
+  /// currently loaded.
   llvm::Error
   SetInstrumentationRuntimeEnabled(lldb::InstrumentationRuntimeType irt,
                                    bool enabled);

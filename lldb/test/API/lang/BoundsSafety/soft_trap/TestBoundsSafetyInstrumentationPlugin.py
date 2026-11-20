@@ -5,6 +5,7 @@ Test the BoundsSafety instrumentation plugin
 import lldb
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
+import lldbsuite.test.lldbutil as lldbutil
 
 
 STOP_REASON_MAX_LEN = 100
@@ -820,4 +821,63 @@ class BoundsSafetyTestSoftTrapPlugin(TestBase):
         )
         process.Continue()
         self.assertEqual(process.GetState(), lldb.eStateExited)
+        self.assertEqual(process.GetExitStatus(), 0)
+
+    @skipIfWindows
+    @skipUnlessBoundsSafety
+    @no_debug_info_test
+    def test_call_minimal_disable_plugin_while_running(self):
+        """
+        Test that disabling the plugin while the process is running halts the
+        process, disables the plugin and then resumes the process on code built
+        with -fbounds-safety-soft-traps=call-minimal
+        """
+        self.build(make_targets=["soft-trap-test-minimal"])
+        self.test_target = self.createTestTarget()
+        bp = self.test_target.BreakpointCreateByName("test_breakpoint_before_wait")
+        self.assertTrue(bp.GetNumLocations() > 0)
+
+        # Launch with WAIT_FOR_RELEASE set so that the process keeps running
+        # after test_breakpoint_before_wait until g_release is set.
+        launch_info = self.test_target.GetLaunchInfo()
+        launch_info.SetWorkingDirectory(self.get_process_working_directory())
+        launch_info.SetEnvironmentEntries(["WAIT_FOR_RELEASE=1"], True)
+        error = lldb.SBError()
+        process = self.test_target.Launch(launch_info, error)
+        self.assertSuccess(error)
+        self.assertTrue(process, PROCESS_IS_VALID)
+        self.check_stopped_at_breakpoint("test_breakpoint_before_wait", process)
+        self.assertTrue(self.bs_plugin_is_enabled(domain="target"))
+
+        # Continue asynchronously so that the process is running when the
+        # plugin is disabled.
+        self.dbg.SetAsync(True)
+        listener = self.dbg.GetListener()
+        process.Continue()
+        lldbutil.expect_state_changes(self, listener, process, [lldb.eStateRunning])
+
+        self.runCmd(
+            "plugin disable --domain target instrumentation-runtime.BoundsSafety"
+        )
+
+        # Disabling the plugin halts the process and then resumes it. The halt
+        # isn't hidden so the process is seen to stop and then run again.
+        lldbutil.expect_state_changes(
+            self, listener, process, [lldb.eStateStopped, lldb.eStateRunning]
+        )
+        self.assertFalse(self.bs_plugin_is_enabled(domain="target"))
+        # Globally the plugin is still marked as enabled.
+        self.assertTrue(self.bs_plugin_is_enabled(domain="global"))
+
+        # Stop the process and release it from waiting.
+        process.Stop()
+        lldbutil.expect_state_changes(self, listener, process, [lldb.eStateStopped])
+        self.runCmd("expression g_release = 1")
+
+        # Continue. The soft traps should not cause instrumentation stops and
+        # the process should exit cleanly.
+        process.Continue()
+        lldbutil.expect_state_changes(
+            self, listener, process, [lldb.eStateRunning, lldb.eStateExited]
+        )
         self.assertEqual(process.GetExitStatus(), 0)

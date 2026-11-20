@@ -30,11 +30,24 @@ __attribute__((noinline, optnone)) void test_breakpoint(void) {}
 __attribute__((noinline, optnone)) void test_breakpoint_2(void) {}
 __attribute__((noinline, optnone)) void test_breakpoint_dlopen(void) {}
 __attribute__((noinline, optnone)) void test_breakpoint_after_dlopen(void) {}
+__attribute__((noinline, optnone)) void test_breakpoint_before_wait(void) {}
+
+// Set by the debugger to stop the process waiting.
+volatile int g_release = 0;
 
 int main(void) {
   int pad;
   int buffer[] = {0, 1};
   int pad2;
+
+  if (getenv("WAIT_FOR_RELEASE")) {
+    // Keep running until the debugger sets `g_release` so that the debugger
+    // can act on the process while it is running.
+    test_breakpoint_before_wait();
+    while (!g_release)
+      ;
+  }
+
   int tmp = buffer[2]; // first soft trap: access past upper bound
   test_breakpoint();
   tmp = buffer[-1]; // second soft trap: access below lower bound

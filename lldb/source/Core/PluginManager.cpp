@@ -18,6 +18,7 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/State.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StringList.h"
 #include "llvm/ADT/DenseMap.h"
@@ -2680,6 +2681,41 @@ llvm::StringRef PluginManager::PluginDomainKindToStr(PluginDomainKind kind) {
   llvm_unreachable("unhandled PluginDomainKind");
 }
 
+/// Enable/disable the instrumentation runtime \p irt in \p process.
+///
+/// This might halt the \p process temporarily and then resume it.
+static llvm::Error SetInstrumentationRuntimeEnabledInProcess(
+    Process &process, lldb::InstrumentationRuntimeType irt, bool enable) {
+  // Fast path: Process doesn't need to halted
+  if (enable || !StateIsRunningState(process.GetState()))
+    return process.SetInstrumentationRuntimeEnabled(irt, enable);
+
+  // Slow path: The process needs to be halted.
+  // We halt the process to avoid any possibility of race caused by
+  // an InstrumentationPlugin's breakpoint running (which uses the plugin
+  // instance) while we are the middle of disabling the plugin which deletes the
+  // plugin instance.
+
+  if (Status halt_error = process.Halt(); halt_error.Fail())
+    return llvm::createStringErrorV("failed to halt process {0}: {1}",
+                                    process.GetID(), halt_error.AsCString());
+
+  llvm::Error error = process.SetInstrumentationRuntimeEnabled(irt, enable);
+
+  // FIXME: It's possible (but very unlikely) that we could hide a breakpoint
+  // firing by always resuming here. The `process.Halt()` call above could race
+  // with a breakpoint firing and so we end up halting not because we requested
+  // it but because a breakpoint fired and it was processed first. This can
+  // happen because `process.Halt()` returns as soon as the process stops
+  // without checking why it stopped.
+  if (Status resume_error = process.Resume(); resume_error.Fail())
+    error = llvm::joinErrors(
+        std::move(error),
+        llvm::createStringErrorV("failed to resume process {0}: {1}",
+                                 process.GetID(), resume_error.AsCString()));
+  return error;
+}
+
 /// Enable/disable the instrumentation runtime \p irt in every alive process in
 /// \p debugger. If \p report_missing_processes is true then an error is
 /// returned if \p debugger has no targets or no alive processes.
@@ -2697,7 +2733,7 @@ static llvm::Error SetInstrumentationRuntimeEnabledInDebugger(
     found_alive_process = true;
     errors = llvm::joinErrors(
         std::move(errors),
-        process_sp->SetInstrumentationRuntimeEnabled(irt, enable));
+        SetInstrumentationRuntimeEnabledInProcess(*process_sp, irt, enable));
   }
 
   if (!report_missing_processes)
@@ -2796,8 +2832,8 @@ llvm::Error PluginManager::SetInstrumentationRuntimePluginEnabled(
       return llvm::createStringErrorV(
           "target has no alive process; the plugin was not {0} in any process",
           action);
-    return process_sp->SetInstrumentationRuntimeEnabled(
-        *instrumentation_runtime_ty, enable);
+    return SetInstrumentationRuntimeEnabledInProcess(
+        *process_sp, *instrumentation_runtime_ty, enable);
   }
   }
   llvm_unreachable("Unhandled domain");
