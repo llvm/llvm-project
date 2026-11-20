@@ -875,7 +875,8 @@ int64_t CIRGenFunction::getAccessedFieldNo(unsigned int idx,
 // appropriate shufflevector.
 RValue CIRGenFunction::emitLoadOfExtVectorElementLValue(LValue lv) {
   mlir::Location loc = lv.getExtVectorPointer().getLoc();
-  mlir::Value vec = builder.createLoad(loc, lv.getExtVectorAddress());
+  mlir::Value vec =
+      builder.createLoad(loc, lv.getExtVectorAddress(), lv.isVolatile());
 
   // HLSL allows treating scalars as one-element vectors. Converting the scalar
   // IR value to a vector here allows the rest of codegen to behave as normal.
@@ -2995,10 +2996,10 @@ RValue CIRGenFunction::emitCXXMemberCallExpr(const CXXMemberCallExpr *ce,
   const auto *me = cast<MemberExpr>(callee);
   const auto *md = cast<CXXMethodDecl>(me->getMemberDecl());
 
-  if (md->isStatic()) {
-    cgm.errorNYI(ce->getSourceRange(), "emitCXXMemberCallExpr: static method");
-    return RValue::get(nullptr);
-  }
+  // Sema represents calls to static member functions as ordinary CallExpr
+  // nodes rather than CXXMemberCallExpr.
+  assert(!md->isStatic() &&
+         "static member call is unexpected in emitCXXMemberCallExpr");
 
   bool hasQualifier = me->hasQualifier();
   NestedNameSpecifier qualifier = me->getQualifier();

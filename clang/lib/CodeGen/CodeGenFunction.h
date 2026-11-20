@@ -375,6 +375,12 @@ public:
   /// expression.
   const CastExpr *CurCast = nullptr;
 
+  /// Allocation calls of the current function body whose result is used as
+  /// placement-new storage, mapped to the constructed type; collected lazily
+  /// for -fsanitize=alloc-token type inference.
+  std::optional<llvm::DenseMap<const CallExpr *, QualType>>
+      AllocTokenPlacementTypes;
+
   /// Save Parameter Decl for coroutine.
   llvm::SmallVector<const ParmVarDecl *, 4> FnArgs;
 
@@ -3707,9 +3713,12 @@ public:
                                     SourceLocation Loc,
                                     SourceLocation AssumptionLoc,
                                     llvm::Value *Alignment,
-                                    llvm::Value *OffsetValue,
-                                    llvm::Value *TheCheck,
-                                    llvm::Instruction *Assumption);
+                                    llvm::Value *OffsetValue = nullptr);
+
+  void emitReturnAlignmentAssumptionCheck(llvm::Value *Ptr, QualType Ty,
+                                          SourceLocation AssumptionLoc,
+                                          llvm::Value *Alignment,
+                                          llvm::Value *OffsetValue = nullptr);
 
   void emitAlignmentAssumption(llvm::Value *PtrValue, QualType Ty,
                                SourceLocation Loc, SourceLocation AssumptionLoc,
@@ -3771,6 +3780,8 @@ public:
   void EmitDefaultStmt(const DefaultStmt &S, ArrayRef<const Attr *> Attrs);
   void EmitCaseStmt(const CaseStmt &S, ArrayRef<const Attr *> Attrs);
   void EmitCaseStmtRange(const CaseStmt &S, ArrayRef<const Attr *> Attrs);
+  void EmitBPFRelocatedCaseStmt(const CaseStmt &S,
+                                ArrayRef<const Attr *> Attrs);
   void EmitDeferStmt(const DeferStmt &S);
   void EmitAsmStmt(const AsmStmt &S);
 

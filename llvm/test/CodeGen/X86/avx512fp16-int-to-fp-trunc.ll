@@ -206,62 +206,14 @@ define <8 x half> @uitofp_trunc_v8i64_v8f16(<8 x i64> %a0) {
 define <8 x float> @sitofp_trunc_nsw_v8i64_v8f32(<8 x i64> %a0) {
 ; NOVL-LABEL: sitofp_trunc_nsw_v8i64_v8f32:
 ; NOVL:       # %bb.0:
-; NOVL-NEXT:    vextracti32x4 $2, %zmm0, %xmm1
-; NOVL-NEXT:    vpextrq $1, %xmm1, %rax
-; NOVL-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm2
-; NOVL-NEXT:    vmovq %xmm1, %rax
-; NOVL-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm1
-; NOVL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[2,3]
-; NOVL-NEXT:    vextracti32x4 $3, %zmm0, %xmm2
-; NOVL-NEXT:    vmovq %xmm2, %rax
-; NOVL-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm3
-; NOVL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm3[0],xmm1[3]
-; NOVL-NEXT:    vpextrq $1, %xmm2, %rax
-; NOVL-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm2
-; NOVL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],xmm2[0]
-; NOVL-NEXT:    vpextrq $1, %xmm0, %rax
-; NOVL-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm2
-; NOVL-NEXT:    vmovq %xmm0, %rax
-; NOVL-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm3
-; NOVL-NEXT:    vinsertps {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[2,3]
-; NOVL-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; NOVL-NEXT:    vmovq %xmm0, %rax
-; NOVL-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm3
-; NOVL-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1],xmm3[0],xmm2[3]
-; NOVL-NEXT:    vpextrq $1, %xmm0, %rax
-; NOVL-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm0
-; NOVL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm2[0,1,2],xmm0[0]
-; NOVL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; NOVL-NEXT:    vpmovqd %zmm0, %ymm0
+; NOVL-NEXT:    vcvtdq2ps %ymm0, %ymm0
 ; NOVL-NEXT:    retq
 ;
 ; VLNODQ-LABEL: sitofp_trunc_nsw_v8i64_v8f32:
 ; VLNODQ:       # %bb.0:
-; VLNODQ-NEXT:    vextracti32x4 $2, %zmm0, %xmm1
-; VLNODQ-NEXT:    vpextrq $1, %xmm1, %rax
-; VLNODQ-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm2
-; VLNODQ-NEXT:    vmovq %xmm1, %rax
-; VLNODQ-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm1
-; VLNODQ-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[2,3]
-; VLNODQ-NEXT:    vextracti32x4 $3, %zmm0, %xmm2
-; VLNODQ-NEXT:    vmovq %xmm2, %rax
-; VLNODQ-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm3
-; VLNODQ-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm3[0],xmm1[3]
-; VLNODQ-NEXT:    vpextrq $1, %xmm2, %rax
-; VLNODQ-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm2
-; VLNODQ-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],xmm2[0]
-; VLNODQ-NEXT:    vpextrq $1, %xmm0, %rax
-; VLNODQ-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm2
-; VLNODQ-NEXT:    vmovq %xmm0, %rax
-; VLNODQ-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm3
-; VLNODQ-NEXT:    vinsertps {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[2,3]
-; VLNODQ-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; VLNODQ-NEXT:    vmovq %xmm0, %rax
-; VLNODQ-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm3
-; VLNODQ-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1],xmm3[0],xmm2[3]
-; VLNODQ-NEXT:    vpextrq $1, %xmm0, %rax
-; VLNODQ-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm0
-; VLNODQ-NEXT:    vinsertps {{.*#+}} xmm0 = xmm2[0,1,2],xmm0[0]
-; VLNODQ-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; VLNODQ-NEXT:    vpmovqd %zmm0, %ymm0
+; VLNODQ-NEXT:    vcvtdq2ps %ymm0, %ymm0
 ; VLNODQ-NEXT:    retq
 ;
 ; VLDQ-LABEL: sitofp_trunc_nsw_v8i64_v8f32:
@@ -276,41 +228,23 @@ define <8 x float> @sitofp_trunc_nsw_v8i64_v8f32(<8 x i64> %a0) {
 define <4 x float> @uitofp_trunc_nuw_v4i64_v4f32(<4 x i64> %a0) {
 ; NOVL-LABEL: uitofp_trunc_nuw_v4i64_v4f32:
 ; NOVL:       # %bb.0:
-; NOVL-NEXT:    vpextrq $1, %xmm0, %rax
-; NOVL-NEXT:    vcvtusi2ss %rax, %xmm15, %xmm1
-; NOVL-NEXT:    vmovq %xmm0, %rax
-; NOVL-NEXT:    vcvtusi2ss %rax, %xmm15, %xmm2
-; NOVL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0],xmm1[0],xmm2[2,3]
-; NOVL-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; NOVL-NEXT:    vmovq %xmm0, %rax
-; NOVL-NEXT:    vcvtusi2ss %rax, %xmm15, %xmm2
-; NOVL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm2[0],xmm1[3]
-; NOVL-NEXT:    vpextrq $1, %xmm0, %rax
-; NOVL-NEXT:    vcvtusi2ss %rax, %xmm15, %xmm0
-; NOVL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
+; NOVL-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; NOVL-NEXT:    vpmovqd %zmm0, %ymm0
+; NOVL-NEXT:    vcvtudq2ps %zmm0, %zmm0
+; NOVL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; NOVL-NEXT:    vzeroupper
 ; NOVL-NEXT:    retq
 ;
 ; VLNODQ-LABEL: uitofp_trunc_nuw_v4i64_v4f32:
 ; VLNODQ:       # %bb.0:
-; VLNODQ-NEXT:    vpextrq $1, %xmm0, %rax
-; VLNODQ-NEXT:    vcvtusi2ss %rax, %xmm15, %xmm1
-; VLNODQ-NEXT:    vmovq %xmm0, %rax
-; VLNODQ-NEXT:    vcvtusi2ss %rax, %xmm15, %xmm2
-; VLNODQ-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0],xmm1[0],xmm2[2,3]
-; VLNODQ-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; VLNODQ-NEXT:    vmovq %xmm0, %rax
-; VLNODQ-NEXT:    vcvtusi2ss %rax, %xmm15, %xmm2
-; VLNODQ-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm2[0],xmm1[3]
-; VLNODQ-NEXT:    vpextrq $1, %xmm0, %rax
-; VLNODQ-NEXT:    vcvtusi2ss %rax, %xmm15, %xmm0
-; VLNODQ-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
+; VLNODQ-NEXT:    vpmovqd %ymm0, %xmm0
+; VLNODQ-NEXT:    vcvtudq2ps %xmm0, %xmm0
 ; VLNODQ-NEXT:    vzeroupper
 ; VLNODQ-NEXT:    retq
 ;
 ; VLDQ-LABEL: uitofp_trunc_nuw_v4i64_v4f32:
 ; VLDQ:       # %bb.0:
-; VLDQ-NEXT:    vcvtuqq2ps %ymm0, %xmm0
+; VLDQ-NEXT:    vcvtqq2ps %ymm0, %xmm0
 ; VLDQ-NEXT:    vzeroupper
 ; VLDQ-NEXT:    retq
   %t = trunc nuw <4 x i64> %a0 to <4 x i32>

@@ -31,6 +31,28 @@ add_libc_test(
     libc.src.__support.File.file
 )
 
+if(TARGET libc.src.__support.File.platform_file)
+  add_libc_test(
+    line_reader_test
+    SUITE
+      libc-support-tests
+    SRCS
+      line_reader_test.cpp
+    DEPENDS
+      libc.hdr.errno_macros
+      libc.hdr.types.size_t
+      libc.src.__support.CPP.scope
+      libc.src.__support.CPP.span
+      libc.src.__support.CPP.string_view
+      libc.src.__support.File.file
+      libc.src.__support.File.line_reader
+      libc.src.__support.File.platform_file
+      libc.src.__support.dynamic_buffer
+      libc.src.stdio.remove
+      libc.test.UnitTest.MemoryMatcher
+  )
+endif()
+
 add_libc_test(
   platform_file_test
   SUITE

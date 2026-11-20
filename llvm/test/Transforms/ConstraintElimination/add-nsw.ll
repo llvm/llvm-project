@@ -1213,8 +1213,8 @@ define i64 @add_neg_via_known_bits(i64 %x) {
   ret i64 %sum
 }
 
-define i1 @nested_sign_query_is_not_recursive(i32 %x, i32 %y, i32 %z) {
-; CHECK-LABEL: @nested_sign_query_is_not_recursive(
+define i1 @nested_sign_query(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @nested_sign_query(
 ; CHECK-NEXT:    [[A1:%.*]] = add i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[A2:%.*]] = add i32 [[A1]], [[Z:%.*]]
 ; CHECK-NEXT:    [[X_GT_5:%.*]] = icmp sgt i32 [[X]], 5
@@ -1227,8 +1227,7 @@ define i1 @nested_sign_query_is_not_recursive(i32 %x, i32 %y, i32 %z) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[Z_GT_M3]])
 ; CHECK-NEXT:    [[Z_NEG:%.*]] = icmp slt i32 [[Z]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[Z_NEG]])
-; CHECK-NEXT:    [[C:%.*]] = icmp sgt i32 [[A2]], 0
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
   %a1 = add i32 %x, %y
   %a2 = add i32 %a1, %z
