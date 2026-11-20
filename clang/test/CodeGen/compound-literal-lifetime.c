@@ -194,9 +194,9 @@ void use_vla(int, char *);
 // Verify that a compound literal inside a VLA bound is visited during bypass
 // detection when crossed by a backward jump.
 // CHECK-LABEL: define dso_local i32 @test_vla_bound_backward_goto()
-// CHECK-NOT: call void @llvm.lifetime.start
-// CHECK-NOT: call void @llvm.lifetime.end
-// CHECK: ret i32
+// CHECK-NOT: call void @llvm.lifetime
+// CHECK: call ptr @id_ptr(
+// CHECK-NOT: call void @llvm.lifetime
 int test_vla_bound_backward_goto(void) {
   int *p = 0;
 label:
@@ -204,6 +204,173 @@ label:
     return *p;
   char vla[*(p = id_ptr(&(int){5}))];
   use_vla(sizeof(vla), vla);
+  goto label;
+}
+
+// Verify that a compound literal inside a VLA typedef crossed by a backward
+// jump suppresses its lifetime markers.
+// CHECK-LABEL: define dso_local i32 @test_vla_typedef_backward_goto()
+// CHECK-NOT: call void @llvm.lifetime
+// CHECK: call ptr @id_ptr(
+// CHECK-NOT: call void @llvm.lifetime
+int test_vla_typedef_backward_goto(void) {
+  int *p = 0;
+label:
+  if (p)
+    return *p;
+  typedef char vla_t[*(p = id_ptr(&(int){5}))];
+  vla_t a;
+  use_vla(sizeof(a), a);
+  goto label;
+}
+
+// Verify pointer-to-VLA variably modified type.
+// CHECK-LABEL: define dso_local i32 @test_vla_ptr_backward_goto()
+// CHECK-NOT: call void @llvm.lifetime
+// CHECK: call ptr @id_ptr(
+// CHECK-NOT: call void @llvm.lifetime
+int test_vla_ptr_backward_goto(void) {
+  int *p = 0;
+label:
+  if (p)
+    return *p;
+  int (*vp)[*(p = id_ptr(&(int){5}))] = 0;
+  (void)vp;
+  goto label;
+}
+
+// Verify _Atomic variably modified type (AtomicType).
+// CHECK-LABEL: define dso_local i32 @test_atomic_vla_ptr_backward_goto()
+// CHECK-NOT: call void @llvm.lifetime
+// CHECK: call ptr @id_ptr(
+// CHECK-NOT: call void @llvm.lifetime
+int test_atomic_vla_ptr_backward_goto(void) {
+  int *p = 0;
+label:
+  if (p)
+    return *p;
+  _Atomic(int (*)[*(p = id_ptr(&(int){5}))]) vp = 0;
+  (void)vp;
+  goto label;
+}
+
+// Verify __typeof__(expr) with variably modified type (TypeOfExprType).
+// CHECK-LABEL: define dso_local i32 @test_typeof_expr_vla_backward_goto()
+// CHECK-NOT: call void @llvm.lifetime
+// CHECK: call ptr @id_ptr(
+// CHECK-NOT: call void @llvm.lifetime
+int test_typeof_expr_vla_backward_goto(void) {
+  int n = 5;
+  int *p = 0;
+label:
+  if (p)
+    return *p;
+  char a[n];
+  __typeof__(p = id_ptr(&(int){5}), &a) bp = 0;
+  (void)bp;
+  goto label;
+}
+
+// Verify __typeof__(type) with variably modified type (TypeOfType).
+// CHECK-LABEL: define dso_local i32 @test_typeof_type_vla_backward_goto()
+// CHECK-NOT: call void @llvm.lifetime
+// CHECK: call ptr @id_ptr(
+// CHECK-NOT: call void @llvm.lifetime
+int test_typeof_type_vla_backward_goto(void) {
+  int *p = 0;
+label:
+  if (p)
+    return *p;
+  __typeof__(char[*(p = id_ptr(&(int){5}))]) a;
+  use_vla(sizeof(a), a);
+  goto label;
+}
+
+// Verify sizeof(type) with a VLA type argument.
+// CHECK-LABEL: define dso_local i32 @test_sizeof_vla_type_backward_goto()
+// CHECK-NOT: call void @llvm.lifetime
+// CHECK: call ptr @id_ptr(
+// CHECK-NOT: call void @llvm.lifetime
+int test_sizeof_vla_type_backward_goto(void) {
+  int *p = 0;
+label:
+  if (p)
+    return *p;
+  (void)sizeof(char[*(p = id_ptr(&(int){5}))]);
+  goto label;
+}
+
+// Verify sizeof(expr) whose argument has a VLA type.
+// CHECK-LABEL: define dso_local i32 @test_sizeof_vla_expr_backward_goto()
+// CHECK-NOT: call void @llvm.lifetime
+// CHECK: call ptr @id_ptr(
+// CHECK-NOT: call void @llvm.lifetime
+int test_sizeof_vla_expr_backward_goto(void) {
+  int n = 5;
+  int *p = 0;
+label:
+  if (p)
+    return *p;
+  char vla[n];
+  (void)sizeof(*(p = id_ptr(&(int){5}), &vla));
+  goto label;
+}
+
+// Verify explicit cast to a pointer-to-VLA type.
+// CHECK-LABEL: define dso_local i32 @test_cast_vla_ptr_backward_goto()
+// CHECK-NOT: call void @llvm.lifetime
+// CHECK: call ptr @id_ptr(
+// CHECK-NOT: call void @llvm.lifetime
+int test_cast_vla_ptr_backward_goto(void) {
+  int *p = 0;
+label:
+  if (p)
+    return *p;
+  (void)(int (*)[*(p = id_ptr(&(int){5}))])0;
+  goto label;
+}
+
+// Verify multi-dimensional ConstantArray of VariableArray.
+// CHECK-LABEL: define dso_local i32 @test_multidim_vla_backward_goto()
+// CHECK-NOT: call void @llvm.lifetime
+// CHECK: call ptr @id_ptr(
+// CHECK-NOT: call void @llvm.lifetime
+int test_multidim_vla_backward_goto(void) {
+  int *p = 0;
+label:
+  if (p)
+    return *p;
+  char vla[2][*(p = id_ptr(&(int){5}))];
+  use_vla(sizeof(vla), vla[0]);
+  goto label;
+}
+
+// Verify function pointer returning pointer to VLA (FunctionProtoType + Paren).
+// CHECK-LABEL: define dso_local i32 @test_fnptr_ret_vla_backward_goto()
+// CHECK-NOT: call void @llvm.lifetime
+// CHECK: call ptr @id_ptr(
+// CHECK-NOT: call void @llvm.lifetime
+int test_fnptr_ret_vla_backward_goto(void) {
+  int *p = 0;
+label:
+  if (p)
+    return *p;
+  int (*(*fp)(void))[*(p = id_ptr(&(int){5}))] = 0;
+  (void)fp;
+  goto label;
+}
+
+// Verify compound literal whose own type is variably modified.
+// CHECK-LABEL: define dso_local i32 @test_cl_vm_type_backward_goto()
+// CHECK-NOT: call void @llvm.lifetime
+// CHECK: call ptr @id_ptr(
+// CHECK-NOT: call void @llvm.lifetime
+int test_cl_vm_type_backward_goto(void) {
+  int *p = 0;
+label:
+  if (p)
+    return *p;
+  (void)&(int (*)[*(p = id_ptr(&(int){5}))]){0};
   goto label;
 }
 
