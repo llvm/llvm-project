@@ -113,6 +113,15 @@ bool VFSelectionContext::isLegalGatherOrScatter(bool IsLoad, Type *ScalarTy,
                  : TTI.isLegalMaskedScatter(VectorTy, Alignment));
 }
 
+bool VFSelectionContext::canMaskAccess(bool IsLoad, Type *ScalarTy,
+                                       Align Alignment, unsigned AddressSpace,
+                                       bool IsConsecutive,
+                                       ElementCount VF) const {
+  return (IsConsecutive && isLegalMaskedLoadOrStore(IsLoad, ScalarTy, Alignment,
+                                                    AddressSpace)) ||
+         isLegalGatherOrScatter(IsLoad, ScalarTy, Alignment, VF);
+}
+
 bool VFSelectionContext::supportsScalableVectors() const {
   return TTI.supportsScalableVectors() ||
          Opts.force_target_supports_scalable_vectors ||

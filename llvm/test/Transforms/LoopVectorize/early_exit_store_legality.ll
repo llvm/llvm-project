@@ -749,7 +749,9 @@ exit:
 define i16 @uncountable_exit_with_live_out(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred) {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'uncountable_exit_with_live_out'
 ; CHECK-DEBUG:       LV: Loop passed LoopVectorizationLegality checks!
+; CHECK-DEBUG:       LV: Cannot skip memory operations after the early exit with users outside the skipped code; masking instead %data = load i16, ptr %st.addr, align 2
 ; CHECK-DEBUG:       LV: VPlan created successfully. Loop can be vectorized.
+; CHECK-REMARK:      remark: <unknown>:0:0: Cannot skip memory operations after the early exit with users outside the skipped code; masking instead
 entry:
   br label %for.body
 

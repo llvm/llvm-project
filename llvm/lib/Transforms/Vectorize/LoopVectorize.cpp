@@ -1960,9 +1960,10 @@ bool LoopVectorizationCostModel::isScalarWithPredication(Instruction *I,
     Value *Ptr = getLoadStorePointerOperand(I);
     if (Legal->isCompressedLoadOrStore(I))
       return false; // We can't scalarize compressed loads/stores.
-    bool IsConsecutive = Legal->isConsecutivePtr(ScalarTy, Ptr);
-    return !(IsConsecutive && isLegalMaskedLoadOrStore(I, VF)) &&
-           !isLegalGatherOrScatter(I, VF);
+    return !Config.canMaskAccess(isa<LoadInst>(I), ScalarTy,
+                                 getLoadStoreAlignment(I),
+                                 getLoadStoreAddressSpace(I),
+                                 Legal->isConsecutivePtr(ScalarTy, Ptr), VF);
   }
   case Instruction::UDiv:
   case Instruction::SDiv:
@@ -6274,7 +6275,7 @@ LoopVectorizationPlanner::tryToBuildVPlan1(LoopVectorizationCostModel &PlanCM) {
     UncountableExitStyle EEStyle = UncountableExitStyle::ReadOnly;
     if (!RUN_VPLAN_PASS(VPlanTransforms::handleUncountableEarlyExits, *VPlan0,
                         ORE, OrigLoop, PSE, *DT, Legal->getAssumptionCache(),
-                        EEStyle)) {
+                        EEStyle, Config)) {
       return nullptr;
     }
   } else {
