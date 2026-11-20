@@ -6185,6 +6185,7 @@ TreeTransform<Derived>::TransformDependentSizedArrayType(TypeLocBuilder &TLB,
   ExprResult sizeResult
     = getDerived().TransformExpr(origSize);
   sizeResult = SemaRef.ActOnConstantExpression(sizeResult);
+  sizeResult = SemaRef.ActOnArrayBound(sizeResult);
   if (sizeResult.isInvalid())
     return QualType();
 

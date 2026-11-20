@@ -166,8 +166,8 @@ ExprResult Parser::ParseArrayBoundExpression() {
       break;
     Iter->InConditionallyConstantEvaluateContext = true;
   }
-  return ParseConstantExpressionInExprEvalContext(
-      TypoCorrectionTypeBehavior::AllowNonTypes);
+  return Actions.ActOnArrayBound(ParseConstantExpressionInExprEvalContext(
+      TypoCorrectionTypeBehavior::AllowNonTypes));
 }
 
 ExprResult Parser::ParseCaseExpression(SourceLocation CaseLoc) {

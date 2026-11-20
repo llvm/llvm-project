@@ -104,9 +104,7 @@ int test_musttail(int cond) {
   [[clang::musttail]] return callee(s.x);
 }
 
-// GH237441: a compound literal in a VLA bound used to leave its lifetime cleanup
-// queued and FinishFunction asserted. It lives until the end of the enclosing
-// block, which for a parameter is the whole function.
+// GH237441: a literal in a VLA bound lives to the end of the enclosing block.
 int size(int *);
 void use(char *);
 void other(void);

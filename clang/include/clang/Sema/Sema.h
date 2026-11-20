@@ -7225,6 +7225,10 @@ public:
 
   ExprResult ActOnConstantExpression(ExprResult Res);
 
+  /// Finish an array bound: apply the lvalue conversion and wrap any cleanups
+  /// it queued in an ExprWithCleanups while its evaluation context is open.
+  ExprResult ActOnArrayBound(ExprResult Bound);
+
   // Functions for marking a declaration referenced.  These functions also
   // contain the relevant logic for marking if a reference to a function or
   // variable is an odr-use (in the C++11 sense).  There are separate variants

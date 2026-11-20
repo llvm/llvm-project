@@ -1543,3 +1543,11 @@ namespace GH197403 {
   }
   static_assert(test() == 0);
 }
+
+namespace GH237441 {
+  struct S { int a = 4; constexpr ~S() {} };
+  int a[S().a];
+  static_assert(sizeof(a) == 4 * sizeof(int));
+  template <typename T> constexpr int f() { int b[T().a]; return sizeof(b); }
+  static_assert(f<S>() == 4 * sizeof(int));
+}
