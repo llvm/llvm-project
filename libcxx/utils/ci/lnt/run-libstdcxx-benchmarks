@@ -64,6 +64,8 @@ def main(argv):
         help='The name of the machine for reporting LNT results.')
     parser.add_argument('--output', type=pathlib.Path, required=True,
         help='Path where the resulting LNT JSON report is written.')
+    parser.add_argument('--tbb-path', type=pathlib.Path, required=False,
+        help='Path to the TBB library.')
     parser.add_argument('lit_options', nargs=argparse.REMAINDER,
         help='Optional arguments passed to Lit when running the benchmarks (e.g. --filter). Should be provided '
              'last and separated from other arguments with a `--`.')
@@ -93,6 +95,7 @@ def main(argv):
                         '-j1', '--test-output=failed',
                         '--param', f'compiler={args.compiler}',
                         '--param', f'libstdcxx_compiler={args.gcc}',
+                        *(['--param', f'tbb_path={args.tbb_path}'] if args.tbb_path else []),
                         '--param', 'enable_werror=False', # don't fail on warnings when running with libstdc++
                         *lit_options,
                         build_dir / 'libcxx/test/benchmarks'])
