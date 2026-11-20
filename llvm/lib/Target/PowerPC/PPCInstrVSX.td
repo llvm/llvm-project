@@ -4803,9 +4803,10 @@ foreach Idx = [[0,15],[1,14],[2,13],[3,12],[4,11],[5,10],[6,9],[7,8],[8,7],
 }
 
 // Unsiged int in vsx register -> QP
+// The word is in word element 1 of the VSR in either endianness.
 def : Pat<(f128 (uint_to_fp (i32 (PPCmfvsr f64:$src)))),
           (f128 (XSCVUDQP
-                  (XXEXTRACTUW (SUBREG_TO_REG $src, sub_64), 8)))>;
+                  (XXEXTRACTUW (SUBREG_TO_REG $src, sub_64), 4)))>;
 } // HasVSX, HasP9Vector, IsLittleEndian
 
 // Any Power9 VSX subtarget that supports Power9 Altivec.
