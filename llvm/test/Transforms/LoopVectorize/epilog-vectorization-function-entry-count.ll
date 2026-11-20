@@ -181,7 +181,8 @@ define i32 @any_of_reduction(ptr %src, i64 %n) !prof !0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD]], zeroinitializer
-; CHECK-NEXT:    [[TMP3]] = or <4 x i1> [[VEC_PHI]], [[TMP2]]
+; CHECK-NEXT:    [[TMP15:%.*]] = freeze <4 x i1> [[TMP2]]
+; CHECK-NEXT:    [[TMP3]] = or <4 x i1> [[VEC_PHI]], [[TMP15]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
@@ -209,7 +210,8 @@ define i32 @any_of_reduction(ptr %src, i64 %n) !prof !0 {
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[INDEX3]]
 ; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <2 x i32>, ptr [[TMP9]], align 4
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq <2 x i32> [[WIDE_LOAD5]], zeroinitializer
-; CHECK-NEXT:    [[TMP11]] = or <2 x i1> [[VEC_PHI4]], [[TMP10]]
+; CHECK-NEXT:    [[TMP16:%.*]] = freeze <2 x i1> [[TMP10]]
+; CHECK-NEXT:    [[TMP11]] = or <2 x i1> [[VEC_PHI4]], [[TMP16]]
 ; CHECK-NEXT:    [[INDEX_NEXT6]] = add nuw i64 [[INDEX3]], 2
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT6]], [[N_VEC2]]
 ; CHECK-NEXT:    br i1 [[TMP12]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]

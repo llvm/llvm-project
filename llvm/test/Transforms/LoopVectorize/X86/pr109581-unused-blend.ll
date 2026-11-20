@@ -15,13 +15,14 @@ define i32 @unused_blend_after_unrolling(ptr %p, i32 %a, i1 %c.1, i16 %x, i16 %y
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT16:%.*]] = insertelement <4 x i1> poison, i1 [[C]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT17:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT16]], <4 x i1> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP22:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT17]], splat (i1 true)
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze <4 x i1> [[TMP22]]
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE17:.*]]
 ; CHECK:       [[PRED_SDIV_CONTINUE17]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_SDIV_CONTINUE17]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP24:%.*]], %[[PRED_SDIV_CONTINUE17]] ]
-; CHECK-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP25:%.*]], %[[PRED_SDIV_CONTINUE17]] ]
-; CHECK-NEXT:    [[TMP24]] = or <4 x i1> [[VEC_PHI]], [[TMP22]]
-; CHECK-NEXT:    [[TMP25]] = or <4 x i1> [[VEC_PHI3]], [[TMP22]]
+; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP25:%.*]], %[[PRED_SDIV_CONTINUE17]] ]
+; CHECK-NEXT:    [[TMP24]] = or <4 x i1> [[VEC_PHI]], [[TMP1]]
+; CHECK-NEXT:    [[TMP25]] = or <4 x i1> [[VEC_PHI1]], [[TMP1]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP26:%.*]] = icmp eq i32 [[INDEX_NEXT]], 96
 ; CHECK-NEXT:    br i1 [[TMP26]], label %[[MIDDLE_BLOCK:.*]], label %[[PRED_SDIV_CONTINUE17]], !llvm.loop [[LOOP0:![0-9]+]]
