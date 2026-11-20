@@ -468,6 +468,75 @@ func.func @test_reshape_samerank_unsigned(%arg0: tensor<3x2xui8>) -> tensor<2x3x
 
 // -----
 
+// A shape that is computed at runtime is rebuilt with index arithmetic and
+// passed to tensor.reshape.
+
+// CHECK-LABEL: @test_reshape_dynamic_shape_mul
+// CHECK-SAME: (%[[ARG0:.*]]: tensor<?x4xf32>)
+func.func @test_reshape_dynamic_shape_mul(%arg0: tensor<?x4xf32>) -> tensor<?xf32> {
+  // CHECK: %[[C0:.*]] = arith.constant 0 : index
+  // CHECK: %[[DIM:.*]] = tensor.dim %[[ARG0]], %[[C0]] : tensor<?x4xf32>
+  // CHECK: %[[C4:.*]] = arith.constant 4 : index
+  // CHECK: %[[MUL:.*]] = arith.muli %[[DIM]], %[[C4]] : index
+  // CHECK: %[[SHAPE:.*]] = tensor.from_elements %[[MUL]] : tensor<1xindex>
+  // CHECK: %[[RESHAPE:.*]] = tensor.reshape %[[ARG0]](%[[SHAPE]]) : (tensor<?x4xf32>, tensor<1xindex>) -> tensor<?xf32>
+  // CHECK: return %[[RESHAPE]] : tensor<?xf32>
+  %dim = tosa.dim %arg0 axis(0) : (tensor<?x4xf32>) -> !tosa.shape<1>
+  %four = tosa.const_shape values(dense<4> : tensor<1xindex>) : () -> !tosa.shape<1>
+  %shape = tosa.mul_shape %dim, %four : (!tosa.shape<1>, !tosa.shape<1>) -> !tosa.shape<1>
+  %0 = tosa.reshape %arg0, %shape : (tensor<?x4xf32>, !tosa.shape<1>) -> tensor<?xf32>
+  return %0 : tensor<?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @test_reshape_dynamic_shape_concat
+// CHECK-SAME: (%[[ARG0:.*]]: tensor<?x?x3xf32>)
+func.func @test_reshape_dynamic_shape_concat(%arg0: tensor<?x?x3xf32>) -> tensor<?x3xf32> {
+  // CHECK: %[[C0:.*]] = arith.constant 0 : index
+  // CHECK: %[[DIM0:.*]] = tensor.dim %[[ARG0]], %[[C0]] : tensor<?x?x3xf32>
+  // CHECK: %[[C1:.*]] = arith.constant 1 : index
+  // CHECK: %[[DIM1:.*]] = tensor.dim %[[ARG0]], %[[C1]] : tensor<?x?x3xf32>
+  // CHECK: %[[MUL:.*]] = arith.muli %[[DIM0]], %[[DIM1]] : index
+  // CHECK: %[[C3:.*]] = arith.constant 3 : index
+  // CHECK: %[[SHAPE:.*]] = tensor.from_elements %[[MUL]], %[[C3]] : tensor<2xindex>
+  // CHECK: %[[RESHAPE:.*]] = tensor.reshape %[[ARG0]](%[[SHAPE]]) : (tensor<?x?x3xf32>, tensor<2xindex>) -> tensor<?x3xf32>
+  // CHECK: return %[[RESHAPE]] : tensor<?x3xf32>
+  %dim0 = tosa.dim %arg0 axis(0) : (tensor<?x?x3xf32>) -> !tosa.shape<1>
+  %dim1 = tosa.dim %arg0 axis(1) : (tensor<?x?x3xf32>) -> !tosa.shape<1>
+  %dim2 = tosa.dim %arg0 axis(2) : (tensor<?x?x3xf32>) -> !tosa.shape<1>
+  %batch = tosa.mul_shape %dim0, %dim1 : (!tosa.shape<1>, !tosa.shape<1>) -> !tosa.shape<1>
+  %shape = tosa.concat_shape %batch, %dim2 : (!tosa.shape<1>, !tosa.shape<1>) -> !tosa.shape<2>
+  %0 = tosa.reshape %arg0, %shape : (tensor<?x?x3xf32>, !tosa.shape<2>) -> tensor<?x3xf32>
+  return %0 : tensor<?x3xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @test_reshape_dynamic_shape_add_sub
+// CHECK-SAME: (%[[ARG0:.*]]: tensor<?xf32>, %[[ARG1:.*]]: tensor<?xf32>)
+func.func @test_reshape_dynamic_shape_add_sub(%arg0: tensor<?xf32>, %arg1: tensor<?xf32>) -> tensor<?x1xf32> {
+  // CHECK: %[[DIM0:.*]] = tensor.dim %[[ARG0]], %{{.*}} : tensor<?xf32>
+  // CHECK: %[[DIM1:.*]] = tensor.dim %[[ARG1]], %{{.*}} : tensor<?xf32>
+  // CHECK: %[[ADD:.*]] = arith.addi %[[DIM0]], %[[DIM1]] : index
+  // CHECK: %[[DIM1_AGAIN:.*]] = tensor.dim %[[ARG1]], %{{.*}} : tensor<?xf32>
+  // CHECK: %[[SUB:.*]] = arith.subi %[[ADD]], %[[DIM1_AGAIN]] : index
+  // CHECK: %[[C1:.*]] = arith.constant 1 : index
+  // CHECK: %[[SHAPE:.*]] = tensor.from_elements %[[SUB]], %[[C1]] : tensor<2xindex>
+  // CHECK: %[[RESHAPE:.*]] = tensor.reshape %[[ARG0]](%[[SHAPE]]) : (tensor<?xf32>, tensor<2xindex>) -> tensor<?x1xf32>
+  // CHECK: return %[[RESHAPE]] : tensor<?x1xf32>
+  %dim0 = tosa.dim %arg0 axis(0) : (tensor<?xf32>) -> !tosa.shape<1>
+  %dim1 = tosa.dim %arg1 axis(0) : (tensor<?xf32>) -> !tosa.shape<1>
+  %sum = tosa.add_shape %dim0, %dim1 : (!tosa.shape<1>, !tosa.shape<1>) -> !tosa.shape<1>
+  %diff = tosa.sub_shape %sum, %dim1 : (!tosa.shape<1>, !tosa.shape<1>) -> !tosa.shape<1>
+  %one = tosa.const_shape values(dense<1> : tensor<1xindex>) : () -> !tosa.shape<1>
+  %shape = tosa.concat_shape %diff, %one : (!tosa.shape<1>, !tosa.shape<1>) -> !tosa.shape<2>
+  %0 = tosa.reshape %arg0, %shape : (tensor<?xf32>, !tosa.shape<2>) -> tensor<?x1xf32>
+  return %0 : tensor<?x1xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @slice
 func.func @slice(%arg0: tensor<6xf32>) ->() {
   // CHECK: [[SLICE:%.+]] = tensor.extract_slice %arg0[2] [1] [1]

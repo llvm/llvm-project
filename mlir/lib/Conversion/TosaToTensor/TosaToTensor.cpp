@@ -222,6 +222,80 @@ Value createExpand(OpBuilder &builder, Location loc, TensorType resultType,
                                                      reassociationMap);
 }
 
+// Returns true if 'reifyShape' can materialize the given TOSA shape value.
+// This only inspects the IR, so that a pattern can bail out before it has
+// created any operation.
+bool canReifyShape(Value shape) {
+  Operation *def = shape.getDefiningOp();
+  // A shape that is a block argument has no computation to rebuild.
+  if (!def)
+    return false;
+
+  if (isa<tosa::ConstShapeOp, tosa::DimOp>(def))
+    return true;
+
+  if (isa<tosa::ConcatShapeOp, tosa::AddShapeOp, tosa::SubShapeOp,
+          tosa::MulShapeOp>(def))
+    return llvm::all_of(def->getOperands(), canReifyShape);
+
+  return false;
+}
+
+// Materializes the dimensions of a TOSA shape value as index values.
+//
+// A value of type '!tosa.shape' has no counterpart in the tensor dialect, so
+// shape operations are not lowered on their own. Instead, an operation that
+// consumes a shape rebuilds the shape computation with 'arith' and 'tensor'
+// operations. The shape operations are left without uses and can be removed
+// as dead code.
+//
+// Callers must check 'canReifyShape' first.
+SmallVector<Value> reifyShape(OpBuilder &builder, Location loc, Value shape) {
+  Operation *def = shape.getDefiningOp();
+  assert(def && "expected shape to be defined by an operation");
+  SmallVector<Value> dims;
+
+  if (auto constShape = dyn_cast<tosa::ConstShapeOp>(def)) {
+    for (const APInt &dim : constShape.getValues().getValues<APInt>())
+      dims.push_back(
+          arith::ConstantIndexOp::create(builder, loc, dim.getSExtValue()));
+    return dims;
+  }
+
+  if (auto dimOp = dyn_cast<tosa::DimOp>(def)) {
+    Value input = dimOp.getInput1();
+    int64_t axis = dimOp.getAxis();
+    auto inputType = dyn_cast<RankedTensorType>(input.getType());
+    if (inputType && !inputType.isDynamicDim(axis))
+      dims.push_back(arith::ConstantIndexOp::create(
+          builder, loc, inputType.getDimSize(axis)));
+    else
+      dims.push_back(tensor::DimOp::create(builder, loc, input, axis));
+    return dims;
+  }
+
+  if (isa<tosa::ConcatShapeOp>(def)) {
+    for (Value operand : def->getOperands())
+      llvm::append_range(dims, reifyShape(builder, loc, operand));
+    return dims;
+  }
+
+  // Element-wise binary operations.
+  SmallVector<Value> lhs = reifyShape(builder, loc, def->getOperand(0));
+  SmallVector<Value> rhs = reifyShape(builder, loc, def->getOperand(1));
+  for (auto [l, r] : llvm::zip_equal(lhs, rhs)) {
+    if (isa<tosa::AddShapeOp>(def))
+      dims.push_back(builder.createOrFold<arith::AddIOp>(loc, l, r));
+    else if (isa<tosa::SubShapeOp>(def))
+      dims.push_back(builder.createOrFold<arith::SubIOp>(loc, l, r));
+    else if (isa<tosa::MulShapeOp>(def))
+      dims.push_back(builder.createOrFold<arith::MulIOp>(loc, l, r));
+    else
+      llvm_unreachable("unexpected shape operation");
+  }
+  return dims;
+}
+
 class ReshapeConverter : public OpConversionPattern<tosa::ReshapeOp> {
 public:
   using OpConversionPattern<tosa::ReshapeOp>::OpConversionPattern;
@@ -245,7 +319,28 @@ public:
     llvm::SmallVector<int64_t> newShape;
     if (!tosa::getConstShapeValues(reshape.getShape().getDefiningOp(),
                                    newShape)) {
-      return failure();
+      // The new shape is computed at runtime. Rebuild its dimensions as index
+      // values and reshape with 'tensor.reshape', which takes the new shape as
+      // an operand. The inferable dimension size (-1) is only supported for a
+      // constant shape.
+      Value shape = reshape.getShape();
+      if (!canReifyShape(shape))
+        return rewriter.notifyMatchFailure(
+            reshape, "unsupported computation of the shape operand");
+
+      int64_t shapeRank = cast<tosa::shapeType>(shape.getType()).getRank();
+      if (resultType.hasRank() && resultType.getRank() != shapeRank)
+        return rewriter.notifyMatchFailure(
+            reshape, "rank of the shape operand differs from the result rank");
+
+      SmallVector<Value> dims = reifyShape(rewriter, loc, shape);
+      auto shapeTensorType =
+          RankedTensorType::get({shapeRank}, rewriter.getIndexType());
+      Value shapeTensor =
+          tensor::FromElementsOp::create(rewriter, loc, shapeTensorType, dims);
+      rewriter.replaceOpWithNewOp<tensor::ReshapeOp>(reshape, resultType, input,
+                                                     shapeTensor);
+      return success();
     }
 
     // Infer all intermediate types
