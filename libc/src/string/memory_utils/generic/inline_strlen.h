@@ -58,7 +58,9 @@ LIBC_INLINE static const void *calculate_find_first_character_return(
 }
 
 LIBC_INLINE_VAR constexpr size_t VEC_SIZE = sizeof(cpp::simd<char>);
-LIBC_INLINE_VAR constexpr size_t LOOP_BLOCK_SIZE = 4 * VEC_SIZE;
+LIBC_INLINE_VAR constexpr size_t LOOP_UNROLL_FACTOR = 4;
+LIBC_INLINE_VAR constexpr size_t LOOP_BLOCK_SIZE =
+    LOOP_UNROLL_FACTOR * VEC_SIZE;
 
 // A find_first_character implementation for inputs less than the loop block
 // size. It loads VecN vectors with the end of the last vector aligning
@@ -67,7 +69,7 @@ template <size_t VecN>
 LIBC_NO_SANITIZE_OOB_ACCESS LIBC_ALWAYS_INLINE static const void *
 find_first_character_small(const unsigned char *s, cpp::simd<char> c,
                            size_t n) {
-  static_assert(VecN >= 2 && VecN <= 4);
+  static_assert(VecN >= 2 && VecN <= LOOP_UNROLL_FACTOR);
 
   const unsigned char *ptrs[VecN];
   cpp::simd_mask<char> masks[VecN];
@@ -125,7 +127,7 @@ find_first_aligned_loop(const cpp::simd<char> *s, cpp::simd<char> c, size_t n) {
     }
     if (n <= LOOP_BLOCK_SIZE)
       return nullptr;
-    s += 4;
+    s += LOOP_UNROLL_FACTOR;
     n -= LOOP_BLOCK_SIZE;
   }
 }
@@ -171,7 +173,7 @@ find_first_character(const unsigned char *s, unsigned char c, size_t n) {
     size_t offset =
         static_cast<size_t>(s - reinterpret_cast<const unsigned char *>(block));
     uint64_t combined = 0;
-    for (size_t i = 0; i < 4; ++i) {
+    for (size_t i = 0; i < LOOP_UNROLL_FACTOR; ++i) {
       cpp::simd_mask<char> m =
           cpp::load<cpp::simd<char>>(block + i, /*aligned=*/true) == c_byte;
       combined |= static_cast<uint64_t>(cpp::to_bitmask(m)) << (i * VEC_SIZE);
@@ -180,7 +182,7 @@ find_first_character(const unsigned char *s, unsigned char c, size_t n) {
     if (LIBC_UNLIKELY(combined != 0))
       return s + cpp::countr_zero(combined);
     n -= LOOP_BLOCK_SIZE - offset;
-    loop_aligned = block + 4;
+    loop_aligned = block + LOOP_UNROLL_FACTOR;
   } else {
     // Fallback for page-crossing small inputs or wide vectors (LOOP_BLOCK_SIZE
     // > 64): step aligned vectors until done or LOOP_BLOCK_SIZE-aligned.
