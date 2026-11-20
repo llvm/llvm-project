@@ -113,7 +113,7 @@ private:
   std::pair<Value *, Value *> getLocalSizeYZ(IRBuilder<> &Builder);
   Value *getWorkitemID(IRBuilder<> &Builder, unsigned N);
 
-  bool collectAllocaUses(AllocaAnalysis &AA) const;
+  bool collectAllocaUses(AllocaAnalysis &AA, bool BeforeSROA) const;
 
   /// Val is a derived pointer from Alloca. OpIdx0/OpIdx1 are the operand
   /// indices to an instruction with 2 pointer inputs (e.g. select, icmp).
@@ -246,13 +246,15 @@ FunctionPass *llvm::createAMDGPUPromoteAlloca() {
   return new AMDGPUPromoteAlloca();
 }
 
-bool AMDGPUPromoteAllocaImpl::collectAllocaUses(AllocaAnalysis &AA) const {
+bool AMDGPUPromoteAllocaImpl::collectAllocaUses(AllocaAnalysis &AA,
+                                                bool BeforeSROA) const {
   const auto RejectUser = [&](Instruction *Inst, Twine Msg) {
     LLVM_DEBUG(dbgs() << "  Cannot promote alloca: " << Msg << "\n"
                       << "    " << *Inst << "\n");
     return false;
   };
 
+  bool HasDynamicIndex = false;
   SmallVector<Instruction *, 4> WorkList({AA.Alloca});
   while (!WorkList.empty()) {
     auto *Cur = WorkList.pop_back_val();
@@ -268,7 +270,8 @@ bool AMDGPUPromoteAllocaImpl::collectAllocaUses(AllocaAnalysis &AA) const {
       }
       AA.Uses.push_back(&U);
 
-      if (isa<GetElementPtrInst>(U.getUser())) {
+      if (auto *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
+        HasDynamicIndex |= !GEP->hasAllConstantIndices();
         WorkList.push_back(Inst);
       } else if (auto *SI = dyn_cast<SelectInst>(Inst)) {
         // Only promote a select if we know that the other select operand is
@@ -297,6 +300,13 @@ bool AMDGPUPromoteAllocaImpl::collectAllocaUses(AllocaAnalysis &AA) const {
         AA.HaveSelectOrPHI = true;
       }
     }
+  }
+
+  // SROA, which runs next, promotes allocas that are only accessed at constant
+  // offsets. This pass is for the dynamic indices that SROA cannot handle.
+  if (BeforeSROA && !HasDynamicIndex) {
+    LLVM_DEBUG(dbgs() << "  Leaving alloca with constant indices to SROA\n");
+    return false;
   }
   return true;
 }
@@ -358,7 +368,7 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
       LLVM_DEBUG(dbgs() << "Analyzing: " << *AI << '\n');
 
       AllocaAnalysis AA{AI};
-      if (collectAllocaUses(AA)) {
+      if (collectAllocaUses(AA, /*BeforeSROA=*/!PromoteToLDS)) {
         analyzePromoteToVector(AA);
         if (PromoteToLDS)
           analyzePromoteToLDS(AA);
