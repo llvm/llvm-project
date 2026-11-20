@@ -21,20 +21,19 @@ define void @sink_fold_i64(i64 %k, i64 %n, ptr %a) nounwind {
 ; LA32-NEXT:    st.w $s4, $sp, 20 # 4-byte Folded Spill
 ; LA32-NEXT:    st.w $s5, $sp, 16 # 4-byte Folded Spill
 ; LA32-NEXT:    st.w $s6, $sp, 12 # 4-byte Folded Spill
-; LA32-NEXT:    move $s0, $a3
 ; LA32-NEXT:    move $s1, $a2
 ; LA32-NEXT:    slli.w $a1, $a0, 4
 ; LA32-NEXT:    alsl.w $a0, $a0, $a1, 3
-; LA32-NEXT:    sltui $a1, $a3, 1
-; LA32-NEXT:    slti $a2, $a3, 0
-; LA32-NEXT:    masknez $a2, $a2, $a1
-; LA32-NEXT:    sltui $a3, $s1, 1
-; LA32-NEXT:    maskeqz $a1, $a3, $a1
-; LA32-NEXT:    or $a1, $a1, $a2
+; LA32-NEXT:    slti $a1, $a3, 0
+; LA32-NEXT:    maskeqz $a1, $a1, $a3
+; LA32-NEXT:    sltui $a2, $a2, 1
+; LA32-NEXT:    masknez $a2, $a2, $a3
+; LA32-NEXT:    or $a1, $a2, $a1
 ; LA32-NEXT:    add.w $s2, $a4, $a0
 ; LA32-NEXT:    bnez $a1, .LBB0_3
 ; LA32-NEXT:  # %bb.1: # %for.body.preheader
 ; LA32-NEXT:    move $fp, $a4
+; LA32-NEXT:    move $s0, $a3
 ; LA32-NEXT:    move $s4, $zero
 ; LA32-NEXT:    move $s5, $zero
 ; LA32-NEXT:    move $s3, $zero
@@ -147,20 +146,19 @@ define void @sink_fold_f32(i64 %k, i64 %n, ptr %a) nounwind {
 ; LA32-NEXT:    st.w $s3, $sp, 24 # 4-byte Folded Spill
 ; LA32-NEXT:    st.w $s4, $sp, 20 # 4-byte Folded Spill
 ; LA32-NEXT:    fst.d $fs0, $sp, 8 # 8-byte Folded Spill
-; LA32-NEXT:    move $s0, $a3
 ; LA32-NEXT:    move $s1, $a2
 ; LA32-NEXT:    slli.w $a1, $a0, 4
 ; LA32-NEXT:    alsl.w $a0, $a0, $a1, 3
-; LA32-NEXT:    sltui $a1, $a3, 1
-; LA32-NEXT:    slti $a2, $a3, 0
-; LA32-NEXT:    masknez $a2, $a2, $a1
-; LA32-NEXT:    sltui $a3, $s1, 1
-; LA32-NEXT:    maskeqz $a1, $a3, $a1
-; LA32-NEXT:    or $a1, $a1, $a2
+; LA32-NEXT:    slti $a1, $a3, 0
+; LA32-NEXT:    maskeqz $a1, $a1, $a3
+; LA32-NEXT:    sltui $a2, $a2, 1
+; LA32-NEXT:    masknez $a2, $a2, $a3
+; LA32-NEXT:    or $a1, $a2, $a1
 ; LA32-NEXT:    add.w $s2, $a4, $a0
 ; LA32-NEXT:    bnez $a1, .LBB1_3
 ; LA32-NEXT:  # %bb.1: # %for.body.preheader
 ; LA32-NEXT:    move $fp, $a4
+; LA32-NEXT:    move $s0, $a3
 ; LA32-NEXT:    move $s3, $zero
 ; LA32-NEXT:    move $s4, $zero
 ; LA32-NEXT:    movgr2fr.w $fs0, $zero
@@ -264,19 +262,18 @@ define void @sink_fold_v4i32(i64 %k, i64 %n, ptr %a) nounwind {
 ; LA32-NEXT:    st.w $s2, $sp, 28 # 4-byte Folded Spill
 ; LA32-NEXT:    st.w $s3, $sp, 24 # 4-byte Folded Spill
 ; LA32-NEXT:    st.w $s4, $sp, 20 # 4-byte Folded Spill
-; LA32-NEXT:    move $s0, $a3
 ; LA32-NEXT:    move $s1, $a2
 ; LA32-NEXT:    slli.w $a0, $a0, 6
-; LA32-NEXT:    sltui $a1, $a3, 1
-; LA32-NEXT:    slti $a2, $a3, 0
-; LA32-NEXT:    masknez $a2, $a2, $a1
-; LA32-NEXT:    sltui $a3, $s1, 1
-; LA32-NEXT:    maskeqz $a1, $a3, $a1
-; LA32-NEXT:    or $a1, $a1, $a2
+; LA32-NEXT:    slti $a1, $a3, 0
+; LA32-NEXT:    maskeqz $a1, $a1, $a3
+; LA32-NEXT:    sltui $a2, $a2, 1
+; LA32-NEXT:    masknez $a2, $a2, $a3
+; LA32-NEXT:    or $a1, $a2, $a1
 ; LA32-NEXT:    add.w $s2, $a4, $a0
 ; LA32-NEXT:    bnez $a1, .LBB2_3
 ; LA32-NEXT:  # %bb.1: # %for.body.preheader
 ; LA32-NEXT:    move $fp, $a4
+; LA32-NEXT:    move $s0, $a3
 ; LA32-NEXT:    move $s3, $zero
 ; LA32-NEXT:    move $s4, $zero
 ; LA32-NEXT:    vrepli.b $vr0, 0
@@ -384,19 +381,18 @@ define void @sink_fold_v16i16(i64 %k, i64 %n, ptr %a) nounwind {
 ; LA32-NEXT:    st.w $s2, $sp, 60 # 4-byte Folded Spill
 ; LA32-NEXT:    st.w $s3, $sp, 56 # 4-byte Folded Spill
 ; LA32-NEXT:    st.w $s4, $sp, 52 # 4-byte Folded Spill
-; LA32-NEXT:    move $s0, $a3
 ; LA32-NEXT:    move $s1, $a2
 ; LA32-NEXT:    slli.w $a0, $a0, 6
-; LA32-NEXT:    sltui $a1, $a3, 1
-; LA32-NEXT:    slti $a2, $a3, 0
-; LA32-NEXT:    masknez $a2, $a2, $a1
-; LA32-NEXT:    sltui $a3, $s1, 1
-; LA32-NEXT:    maskeqz $a1, $a3, $a1
-; LA32-NEXT:    or $a1, $a1, $a2
+; LA32-NEXT:    slti $a1, $a3, 0
+; LA32-NEXT:    maskeqz $a1, $a1, $a3
+; LA32-NEXT:    sltui $a2, $a2, 1
+; LA32-NEXT:    masknez $a2, $a2, $a3
+; LA32-NEXT:    or $a1, $a2, $a1
 ; LA32-NEXT:    add.w $s2, $a4, $a0
 ; LA32-NEXT:    bnez $a1, .LBB3_3
 ; LA32-NEXT:  # %bb.1: # %for.body.preheader
 ; LA32-NEXT:    move $fp, $a4
+; LA32-NEXT:    move $s0, $a3
 ; LA32-NEXT:    move $s3, $zero
 ; LA32-NEXT:    move $s4, $zero
 ; LA32-NEXT:    xvrepli.b $xr0, 0
@@ -504,20 +500,19 @@ define void @sink_fold_extracti8(i64 %k, i64 %n, ptr %a) nounwind {
 ; LA32-NEXT:    st.w $s2, $sp, 28 # 4-byte Folded Spill
 ; LA32-NEXT:    st.w $s3, $sp, 24 # 4-byte Folded Spill
 ; LA32-NEXT:    st.w $s4, $sp, 20 # 4-byte Folded Spill
-; LA32-NEXT:    move $s0, $a3
 ; LA32-NEXT:    move $s1, $a2
 ; LA32-NEXT:    slli.w $a1, $a0, 4
 ; LA32-NEXT:    alsl.w $a0, $a0, $a1, 3
-; LA32-NEXT:    sltui $a1, $a3, 1
-; LA32-NEXT:    slti $a2, $a3, 0
-; LA32-NEXT:    masknez $a2, $a2, $a1
-; LA32-NEXT:    sltui $a3, $s1, 1
-; LA32-NEXT:    maskeqz $a1, $a3, $a1
-; LA32-NEXT:    or $a1, $a1, $a2
+; LA32-NEXT:    slti $a1, $a3, 0
+; LA32-NEXT:    maskeqz $a1, $a1, $a3
+; LA32-NEXT:    sltui $a2, $a2, 1
+; LA32-NEXT:    masknez $a2, $a2, $a3
+; LA32-NEXT:    or $a1, $a2, $a1
 ; LA32-NEXT:    add.w $s2, $a4, $a0
 ; LA32-NEXT:    bnez $a1, .LBB4_3
 ; LA32-NEXT:  # %bb.1: # %for.body.preheader
 ; LA32-NEXT:    move $fp, $a4
+; LA32-NEXT:    move $s0, $a3
 ; LA32-NEXT:    move $s3, $zero
 ; LA32-NEXT:    move $s4, $zero
 ; LA32-NEXT:    vrepli.b $vr0, 0
@@ -629,20 +624,19 @@ define void @sink_fold_extractf64(i64 %k, i64 %n, ptr %a) nounwind {
 ; LA32-NEXT:    st.w $s2, $sp, 60 # 4-byte Folded Spill
 ; LA32-NEXT:    st.w $s3, $sp, 56 # 4-byte Folded Spill
 ; LA32-NEXT:    st.w $s4, $sp, 52 # 4-byte Folded Spill
-; LA32-NEXT:    move $s0, $a3
 ; LA32-NEXT:    move $s1, $a2
 ; LA32-NEXT:    slli.w $a1, $a0, 4
 ; LA32-NEXT:    alsl.w $a0, $a0, $a1, 3
-; LA32-NEXT:    sltui $a1, $a3, 1
-; LA32-NEXT:    slti $a2, $a3, 0
-; LA32-NEXT:    masknez $a2, $a2, $a1
-; LA32-NEXT:    sltui $a3, $s1, 1
-; LA32-NEXT:    maskeqz $a1, $a3, $a1
-; LA32-NEXT:    or $a1, $a1, $a2
+; LA32-NEXT:    slti $a1, $a3, 0
+; LA32-NEXT:    maskeqz $a1, $a1, $a3
+; LA32-NEXT:    sltui $a2, $a2, 1
+; LA32-NEXT:    masknez $a2, $a2, $a3
+; LA32-NEXT:    or $a1, $a2, $a1
 ; LA32-NEXT:    add.w $s2, $a4, $a0
 ; LA32-NEXT:    bnez $a1, .LBB5_3
 ; LA32-NEXT:  # %bb.1: # %for.body.preheader
 ; LA32-NEXT:    move $fp, $a4
+; LA32-NEXT:    move $s0, $a3
 ; LA32-NEXT:    move $s3, $zero
 ; LA32-NEXT:    move $s4, $zero
 ; LA32-NEXT:    xvrepli.b $xr0, 0

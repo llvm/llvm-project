@@ -1,10 +1,10 @@
 ## The file testing Nop insertion with R_LARCH_ALIGN for relaxation.
 
 # RUN: llvm-mc --filetype=obj --triple=loongarch64 --mattr=-relax %s -o %t
-# RUN: llvm-objdump -d %t | FileCheck %s --check-prefix=INSTR
+# RUN: llvm-objdump --no-print-imm-hex -d %t | FileCheck %s --check-prefix=INSTR
 # RUN: llvm-readobj -r %t | FileCheck %s --check-prefix=RELOC
 # RUN: llvm-mc --filetype=obj --triple=loongarch64 --mattr=+relax %s -o %t.r
-# RUN: llvm-objdump -d %t.r | FileCheck %s --check-prefixes=INSTR,RELAX-INSTR
+# RUN: llvm-objdump --no-print-imm-hex -d %t.r | FileCheck %s --check-prefixes=INSTR,RELAX-INSTR
 # RUN: llvm-readobj -r %t.r | FileCheck %s --check-prefixes=RELOC,RELAX-RELOC
 
 .text

@@ -64,7 +64,10 @@ void TypeList::ForEach(
 }
 
 void TypeList::Dump(Stream *s, bool show_context) {
-  for (auto &type : m_types)
-    if (type)
+  // Dumping a type can complete it. Completing a type can parse more types and
+  // append them to m_types, which can reallocate it. Index into m_types instead
+  // of using iterators, which a reallocation would invalidate.
+  for (size_t i = 0; i < m_types.size(); ++i)
+    if (Type *type = m_types[i].get())
       type->Dump(s, show_context);
 }

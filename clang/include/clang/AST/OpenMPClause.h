@@ -10220,6 +10220,7 @@ class OMPChildren final
   friend TrailingObjects;
   friend class OMPClauseReader;
   friend class OMPExecutableDirective;
+  friend class OMPMetaDirective;
   template <typename T> friend class OMPDeclarativeDirective;
 
   /// Numbers of clauses.
@@ -10260,8 +10261,6 @@ public:
   void setAssociatedStmt(Stmt *S) {
     getTrailingObjects<Stmt *>()[NumChildren] = S;
   }
-
-  void setChildren(ArrayRef<Stmt *> Children);
 
   /// Sets the list of variables for this clause.
   ///

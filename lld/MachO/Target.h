@@ -73,6 +73,12 @@ public:
                                     uint64_t stubsAddr, uint64_t &stubOffset,
                                     uint64_t selrefVA,
                                     Symbol *objcMsgSend) const = 0;
+  virtual void writeObjCMsgSendClassStub(uint8_t *, Symbol *, uint64_t,
+                                         uint64_t &, uint64_t, Symbol *,
+                                         Symbol *) const {
+    llvm_unreachable("target does not support objc class stubs");
+  }
+  virtual bool supportsObjCClassStubs() const { return false; }
 
   // Init 'thunk' so that it be a direct jump to 'branchTarget'.
   virtual void initICFSafeThunkBody(InputSection *thunk,
@@ -136,6 +142,8 @@ public:
   size_t stubHelperEntrySize;
   size_t objcStubsFastSize;
   size_t objcStubsSmallSize;
+  size_t objcClassStubsFastSize = 0;
+  size_t objcClassStubsSmallSize = 0;
   size_t objcStubsFastAlignment;
   size_t objcStubsSmallAlignment;
   uint8_t p2WordSize;

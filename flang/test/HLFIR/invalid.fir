@@ -306,6 +306,13 @@ func.func @bad_concat_4(%arg0: !fir.ref<!fir.char<1,30>>) {
 }
 
 // -----
+func.func @bad_char_trim(%arg0: !fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>) {
+  // expected-error@+1 {{'hlfir.char_trim' op operand #0 must be any character scalar type, but got '!fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>'}}
+  %0 = hlfir.char_trim %arg0 : (!fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>) -> !hlfir.expr<!fir.char<1,?>>
+  return
+}
+
+// -----
 func.func @bad_cmpchar_1(%arg0: !fir.ref<!fir.char<1,10>>, %arg1: !fir.ref<!fir.char<2,10>>) {
   // expected-error@+1 {{'hlfir.cmpchar' op character arguments must have the same KIND}}
   %0 = hlfir.cmpchar ne %arg0  %arg1 : (!fir.ref<!fir.char<1,10>>, !fir.ref<!fir.char<2,10>>) -> i1

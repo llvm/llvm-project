@@ -67,6 +67,7 @@
 ; CHECK-NEXT:   experimental-zvvmtls             - 'Zvvmtls' (Matrix Tile Load/Store).
 ; CHECK-NEXT:   experimental-zvvmttls            - 'Zvvmttls' (Transposing Matrix Tile Load/Store).
 ; CHECK-NEXT:   experimental-zvzip               - 'Zvzip' (Vector Reordering Structured Data).
+; CHECK-NEXT:   experimental-zyhybrid            - 'Zyhybrid' (Hybrid Extension for RVI Compatibility).
 ; CHECK-NEXT:   f                                - 'F' (Single-Precision Floating-Point).
 ; CHECK-NEXT:   forced-atomics                   - Assume that lock-free native-width atomics are available.
 ; CHECK-NEXT:   fusion-add-load                  - Enable ADD(.UW) + load macrofusion.
@@ -283,6 +284,7 @@
 ; CHECK-NEXT:   xsfvfexpa                        - 'XSfvfexpa' (SiFive Vector Floating-Point Exponential Approximation Instruction).
 ; CHECK-NEXT:   xsfvfexpa64e                     - 'XSfvfexpa64e' (SiFive Vector Floating-Point Exponential Approximation Instruction with Double-Precision).
 ; CHECK-NEXT:   xsfvfnrclipxfqf                  - 'XSfvfnrclipxfqf' (SiFive FP32-to-int8 Ranged Clip Instructions).
+; CHECK-NEXT:   xsfvfofp4min                     - 'XSfvfofp4min' (SiFive Vector OFP4 Conversion Instruction).
 ; CHECK-NEXT:   xsfvfwmaccqqq                    - 'XSfvfwmaccqqq' (SiFive Matrix Multiply Accumulate Instruction (4-by-4)).
 ; CHECK-NEXT:   xsfvqmaccdod                     - 'XSfvqmaccdod' (SiFive Int8 Matrix Multiplication Instructions (2-by-8 and 8-by-2)).
 ; CHECK-NEXT:   xsfvqmaccqoq                     - 'XSfvqmaccqoq' (SiFive Int8 Matrix Multiplication Instructions (4-by-8 and 8-by-4)).

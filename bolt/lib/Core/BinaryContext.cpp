@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Core/BinaryContext.h"
+#include "bolt/Core/BinaryBasicBlock.h"
 #include "bolt/Core/BinaryEmitter.h"
 #include "bolt/Core/BinaryFunction.h"
 #include "bolt/Utils/CommandLineOpts.h"
@@ -1319,6 +1320,9 @@ MCSymbol *BinaryContext::registerNameAtAddress(StringRef Name, uint64_t Address,
     }
   }
 
+  if (BD->isVTable())
+    VTableMap.try_emplace(Address, BD);
+
   return Symbol;
 }
 
@@ -1340,6 +1344,17 @@ BinaryContext::getBinaryDataContainingAddressImpl(uint64_t Address) const {
     }
   }
   return nullptr;
+}
+
+const BinaryData *
+BinaryContext::getVTableContainingAddress(uint64_t Address) const {
+  // Vtables do not overlap, so only the last one starting at or before
+  // Address can contain it.
+  auto VI = VTableMap.upper_bound(Address);
+  if (VI == VTableMap.begin())
+    return nullptr;
+  const BinaryData *VTable = std::prev(VI)->second;
+  return VTable->containsAddress(Address) ? VTable : nullptr;
 }
 
 BinaryData *BinaryContext::getGOTSymbol() {
@@ -2292,6 +2307,10 @@ void BinaryContext::collectDebugScopeBoundaries() {
     if (std::optional<uint64_t> DWOId = CU->getDWOId())
       releaseDWOCU(*DWOId);
   }
+}
+
+bool BinaryContext::shouldEmitBlockAlignment(const BinaryBasicBlock &BB) const {
+  return (AlignBlocks || PreserveBlocksAlignment) && BB.getAlignment() > 1;
 }
 
 bool BinaryContext::shouldEmit(const BinaryFunction &Function) const {

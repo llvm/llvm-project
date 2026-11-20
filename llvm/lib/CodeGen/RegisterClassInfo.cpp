@@ -119,6 +119,10 @@ void RegisterClassInfo::runOnMachineFunction(const MachineFunction &mf,
   }
 }
 
+bool RegisterClassInfo::hasCurrentReservedRegs() const {
+  return Reserved == MF->getRegInfo().getReservedRegs();
+}
+
 void RegisterClassInfo::updateReservedRegs(const BitVector &ReservedInput) {
   assert(MF && TRI && RegClass &&
          "RegisterClassInfo must be initialized before updating reserved regs");
@@ -275,10 +279,12 @@ unsigned RegisterClassInfo::computePSetLimit(unsigned Idx) const {
   unsigned ReservedRegWeight = TRI->getRegClassWeight(RC).RegWeight * NReserved;
   // A target-provided limit may already account for restricted register
   // availability, such as an AMDGPU occupancy requirement. If the additional
-  // reserved-register adjustment would not leave a positive limit, preserve the
-  // target's nonzero limit; zero is the PSetLimits cache sentinel.
-  if (ReservedRegWeight >= RegPressureSetLimit)
-    return RegPressureSetLimit;
+  // reserved-register adjustment would not leave a positive limit, bound the
+  // target limit by the remaining allocatable register weight.
+  if (ReservedRegWeight >= RegPressureSetLimit) {
+    return std::min(RegPressureSetLimit,
+                    NAllocatableRegs * TRI->getRegClassWeight(RC).RegWeight);
+  }
   return RegPressureSetLimit - ReservedRegWeight;
 }
 

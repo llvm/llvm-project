@@ -38,6 +38,9 @@ set(LLVM_TABLEGEN_PROJECT LLVM_HEADERS)
 set(LLVM_TARGET_DEFINITIONS CodeGenOptions.td)
 llvm_tablegen(CodeGenOptions.inc -gen-opt-parser-defs)
 add_public_tablegen_target(CodeGenOptionsTableGen)
+set(LLVM_TARGET_DEFINITIONS CodeGenToolOptions.td)
+llvm_tablegen(CodeGenToolOptions.inc -gen-opt-parser-defs)
+add_public_tablegen_target(CodeGenToolOptionsTableGen)
 
 add_llvm_component_library(LLVMCodeGen
   AggressiveAntiDepBreaker.cpp
@@ -290,6 +293,7 @@ add_llvm_component_library(LLVMCodeGen
 
   DEPENDS
   CodeGenOptionsTableGen
+  CodeGenToolOptionsTableGen
   intrinsics_gen
   vt_gen
   ${MLDeps}

@@ -7,7 +7,7 @@
 ; RUN: mkdir -p %t.dir
 
 ; RUN: llvm-mc -filetype=obj -triple=arm64-apple-macos -o %t.dir/erase-objc-name.o %s
-; RUN: %lld -no_objc_relative_method_lists -arch arm64 -dylib -o %t.dir/erase-objc-name.dylib %t.dir/erase-objc-name.o -objc_category_merging
+; RUN: %lld -arch arm64 -dylib -o %t.dir/erase-objc-name.dylib %t.dir/erase-objc-name.o -objc_category_merging
 ; RUN: llvm-objdump --objc-meta-data --macho %t.dir/erase-objc-name.dylib | FileCheck %s --check-prefixes=MERGE_CATS
 
 ; === Check merge categories enabled ===
@@ -30,14 +30,14 @@
 ; MERGE_CATS-NEXT:                ivarLayout {{.*}}
 ; MERGE_CATS-NEXT:                      name {{.*}} MyBaseClass
 ; MERGE_CATS-NEXT:               baseMethods {{.*}} (struct method_list_t *)
-; MERGE_CATS-NEXT:             entsize 24
+; MERGE_CATS-NEXT:             entsize 12 (relative)
 ; MERGE_CATS-NEXT:               count 2
 ; MERGE_CATS-NEXT:                name {{.*}} getValue
 ; MERGE_CATS-NEXT:               types {{.*}} i16@0:8
-; MERGE_CATS-NEXT:                 imp -[MyBaseClass(MyTestProtocol) getValue]
+; MERGE_CATS-NEXT:                 imp {{.*}} -[MyBaseClass(MyTestProtocol) getValue]
 ; MERGE_CATS-NEXT:                name {{.*}} baseInstanceMethod
 ; MERGE_CATS-NEXT:               types {{.*}} v16@0:8
-; MERGE_CATS-NEXT:                 imp -[MyBaseClass baseInstanceMethod]
+; MERGE_CATS-NEXT:                 imp {{.*}} -[MyBaseClass baseInstanceMethod]
 ; MERGE_CATS-NEXT:             baseProtocols {{.*}}
 ; MERGE_CATS-NEXT:                       count 1
 ; MERGE_CATS-NEXT:                list[0] {{.*}} (struct protocol_t *)

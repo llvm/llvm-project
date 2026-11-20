@@ -219,3 +219,67 @@ define i64 @imm110000014000000a() {
 ; CHECK-NEXT:    ret
   ret i64 1224979104013484042
 }
+
+define i64 @imm0008000000000000() {
+; CHECK-LABEL: imm0008000000000000:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lu12i.w $a0, 1
+; CHECK-NEXT:    slli.d $a0, $a0, 39
+; CHECK-NEXT:    ret
+  ret i64 u0x0008000000000000
+}
+
+define i64 @imm000f800000000000() {
+; CHECK-LABEL: imm000f800000000000:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lu12i.w $a0, 31
+; CHECK-NEXT:    slli.d $a0, $a0, 35
+; CHECK-NEXT:    ret
+  ret i64 u0x000f800000000000
+}
+
+define i64 @imm0000000100000000() {
+; CHECK-LABEL: imm0000000100000000:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lu12i.w $a0, 1
+; CHECK-NEXT:    slli.d $a0, $a0, 20
+; CHECK-NEXT:    ret
+  ret i64 u0x0000000100000000
+}
+
+define i64 @imm7ff8000000000000() {
+; CHECK-LABEL: imm7ff8000000000000:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lu12i.w $a0, 4095
+; CHECK-NEXT:    slli.d $a0, $a0, 39
+; CHECK-NEXT:    ret
+  ret i64 u0x7ff8000000000000
+}
+
+define i64 @imm8000100000000000() {
+; CHECK-LABEL: imm8000100000000000:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lu12i.w $a0, -524287
+; CHECK-NEXT:    slli.d $a0, $a0, 32
+; CHECK-NEXT:    ret
+  ret i64 u0x8000100000000000
+}
+
+define i64 @immC000080000000000() {
+; CHECK-LABEL: immC000080000000000:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lu12i.w $a0, -524287
+; CHECK-NEXT:    slli.d $a0, $a0, 31
+; CHECK-NEXT:    ret
+  ret i64 u0xC000080000000000
+}
+
+define i64 @imm000fffff00000000() {
+; CHECK-LABEL: imm000fffff00000000:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ori $a0, $zero, 0
+; CHECK-NEXT:    lu32i.d $a0, -1
+; CHECK-NEXT:    lu52i.d $a0, $a0, 0
+; CHECK-NEXT:    ret
+  ret i64 u0x000fffff00000000
+}

@@ -1,13 +1,13 @@
-; RUN: llc -enable-machine-outliner -verify-machineinstrs -mtriple=arm-- \
+; RUN: llc -enable-machine-outliner -mtriple=arm-- \
 ; RUN: --stop-after=machine-outliner < %s | FileCheck %s --check-prefix=ARM
-; RUN: llc -enable-machine-outliner -verify-machineinstrs -mtriple=thumbv7-- \
+; RUN: llc -enable-machine-outliner -mtriple=thumbv7-- \
 ; RUN: --stop-after=machine-outliner < %s | FileCheck %s --check-prefix=THUMB
-; RUN: llc -enable-machine-outliner -verify-machineinstrs \
+; RUN: llc -enable-machine-outliner \
 ; RUN: -mtriple=thumbv7-apple-darwin --stop-after=machine-outliner < %s \
 ; RUN: | FileCheck %s --check-prefix=MACHO
-; RUN: llc -enable-machine-outliner -verify-machineinstrs -mtriple=thumbv5-- \
+; RUN: llc -enable-machine-outliner -mtriple=thumbv5-- \
 ; RUN: --stop-after=machine-outliner < %s | FileCheck %s --check-prefix=THUMB1
-; RUN: llc -verify-machineinstrs -mtriple=thumbv8m.main \
+; RUN: llc -mtriple=thumbv8m.main \
 ; RUN: --stop-after=machine-outliner < %s | FileCheck %s --check-prefix=THUMB
 
 ; ARM-LABEL: name:            OUTLINED_FUNCTION_0

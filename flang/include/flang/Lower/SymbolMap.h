@@ -188,6 +188,23 @@ public:
   SymMap() { pushScope(); }
   SymMap(const SymMap &) = delete;
 
+  /// Return the symbol under which `symRef` is bound in the map. A LOCAL or
+  /// LOCAL_INIT construct entity of a DO CONCURRENT has its own storage, so it
+  /// is its own key. Any other symbol is keyed by the nearest such entity on
+  /// its host-association chain (e.g. a REDUCE or SHARED entity of a nested
+  /// DO CONCURRENT naming an outer LOCAL variable), else by its ultimate
+  /// symbol.
+  static const semantics::Symbol &getKey(semantics::SymbolRef symRef) {
+    const semantics::Symbol *sym = &*symRef;
+    while (!sym->HasLocalLocality()) {
+      const auto *hostAssoc = sym->detailsIf<semantics::HostAssocDetails>();
+      if (!hostAssoc)
+        return sym->GetUltimate();
+      sym = &hostAssoc->symbol();
+    }
+    return *sym;
+  }
+
   void pushScope() {
     symbolMapStack.emplace_back();
     deviceSymbolMapStack.emplace_back();
@@ -432,7 +449,7 @@ private:
   /// Bind `box` to `symRef` in the symbol map.
   void makeSym(semantics::SymbolRef symRef, const SymbolBox &box,
                bool force = false) {
-    auto *sym = symRef->HasLocalLocality() ? &*symRef : &symRef->GetUltimate();
+    auto *sym = &getKey(symRef);
     if (force)
       symbolMapStack.back().erase(sym);
     assert(box && "cannot add an undefined symbol box");
@@ -441,7 +458,7 @@ private:
 
   void makeDeviceSym(semantics::SymbolRef symRef, const SymbolBox &box,
                      bool force = false) {
-    auto *sym = symRef->HasLocalLocality() ? &*symRef : &symRef->GetUltimate();
+    auto *sym = &getKey(symRef);
     if (force)
       deviceSymbolMapStack.back().erase(sym);
     assert(box && "cannot add an undefined device symbol box");
