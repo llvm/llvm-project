@@ -10,6 +10,7 @@
 #include "DependencyTracker.h"
 #include "llvm/DWARFLinker/Utils.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
+#include "llvm/Support/EndianStream.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/ThreadPool.h"
@@ -1291,13 +1292,14 @@ void DWARFLinkerImpl::emitCommonSectionsAndWriteCompileUnitsToTheOutput() {
   // Emit .debug_str and .debug_line_str sections.
   TG.spawn([&]() { emitStringSections(); });
 
-  if (llvm::is_contained(GlobalData.Options.AccelTables,
-                         AccelTableKind::Apple)) {
-    // Emit apple accelerator sections.
-    TG.spawn([&]() {
-      emitAppleAcceleratorSections((*GlobalData.getTargetTriple()).get());
-    });
-  }
+  // Spawn writing the compile units to the output file early, so it overlaps
+  // with building the Apple tables (collected on this thread).
+  TG.spawn([&]() { writeCompileUnitsToTheOutput(); });
+
+  // Emit apple accelerator sections. This collects the records in this
+  // thread, before the .debug_names task below may enumerate them too.
+  if (llvm::is_contained(GlobalData.Options.AccelTables, AccelTableKind::Apple))
+    emitAppleAcceleratorSections(TG);
 
   if (llvm::is_contained(GlobalData.Options.AccelTables,
                          AccelTableKind::DebugNames)) {
@@ -1306,9 +1308,6 @@ void DWARFLinkerImpl::emitCommonSectionsAndWriteCompileUnitsToTheOutput() {
       emitDWARFv5DebugNamesSection((*GlobalData.getTargetTriple()).get());
     });
   }
-
-  // Write compile units to the output file.
-  TG.spawn([&]() { writeCompileUnitsToTheOutput(); });
 }
 
 void DWARFLinkerImpl::emitStringSections() {
@@ -1360,134 +1359,354 @@ void DWARFLinkerImpl::emitStringSections() {
       });
 }
 
-void DWARFLinkerImpl::emitAppleAcceleratorSections(const Triple &TargetTriple) {
-  AccelTable<AppleAccelTableStaticOffsetData> AppleNamespaces;
-  AccelTable<AppleAccelTableStaticOffsetData> AppleNames;
-  AccelTable<AppleAccelTableStaticOffsetData> AppleObjC;
-  AccelTable<AppleAccelTableStaticTypeData> AppleTypes;
+namespace {
+/// Appends values in the section endianness to the contents of a section.
+/// The section stream is unbuffered, so its buffer is always up to date and
+/// values are appended to it directly.
+class SectionWriter {
+public:
+  SectionWriter(SectionDescriptor &Section)
+      : Buffer(Section.OS.buffer()), Start(Buffer.size()),
+        Endianness(Section.getEndianess()) {}
+
+  template <typename T> void write(T Value) {
+    support::endian::write(Buffer, Value, Endianness);
+  }
+  /// \returns the number of bytes written so far.
+  uint64_t size() const { return Buffer.size() - Start; }
+
+private:
+  SmallVectorImpl<char> &Buffer;
+  uint64_t Start;
+  llvm::endianness Endianness;
+};
+
+/// \returns the number of distinct hash values of \p Entries.
+template <typename EntryT>
+uint32_t countUniqueHashes(const std::vector<EntryT> &Entries) {
+  std::vector<uint32_t> Hashes;
+  Hashes.reserve(Entries.size());
+  for (const EntryT &E : Entries)
+    Hashes.push_back(E.HashValue);
+  std::sort(Hashes.begin(), Hashes.end());
+  return std::unique(Hashes.begin(), Hashes.end()) - Hashes.begin();
+}
+
+/// \returns the indexes of \p Entries ordered by bucket, then by hash value,
+/// then by name: the order of the sorted buckets of
+/// AccelTableBase::finalize().
+template <typename EntryT>
+std::vector<uint32_t> orderByBucket(const std::vector<EntryT> &Entries,
+                                    uint32_t BucketCount) {
+  std::vector<uint32_t> BucketStart(BucketCount + 1, 0);
+  for (const EntryT &E : Entries)
+    ++BucketStart[E.HashValue % BucketCount + 1];
+  for (uint32_t Bucket = 0; Bucket < BucketCount; ++Bucket)
+    BucketStart[Bucket + 1] += BucketStart[Bucket];
+
+  std::vector<uint32_t> Order(Entries.size());
+  {
+    std::vector<uint32_t> Next(BucketStart.begin(), BucketStart.end() - 1);
+    for (uint32_t Idx = 0, End = Entries.size(); Idx != End; ++Idx)
+      Order[Next[Entries[Idx].HashValue % BucketCount]++] = Idx;
+  }
+
+  // Buckets are small: insertion sort by hash value, then by name.
+  auto Less = [&](uint32_t LHS, uint32_t RHS) {
+    const EntryT &L = Entries[LHS];
+    const EntryT &R = Entries[RHS];
+    if (L.HashValue != R.HashValue)
+      return L.HashValue < R.HashValue;
+    return L.Name->String < R.Name->String;
+  };
+  for (uint32_t Bucket = 0; Bucket < BucketCount; ++Bucket) {
+    for (uint32_t I = BucketStart[Bucket] + 1; I < BucketStart[Bucket + 1];
+         ++I) {
+      uint32_t Idx = Order[I];
+      uint32_t J = I;
+      for (; J > BucketStart[Bucket] && Less(Idx, Order[J - 1]); --J)
+        Order[J] = Order[J - 1];
+      Order[J] = Idx;
+    }
+  }
+  return Order;
+}
+} // anonymous namespace
+
+namespace {
+/// Builds one Apple accelerator table and writes its section contents
+/// directly. The output is byte-identical to filling an AccelTable and
+/// emitting it through AppleAccelTableWriter, without the MC layer.
+class AppleAccelTableBuilder {
+public:
+  struct Value {
+    uint32_t Offset;
+    uint32_t QualifiedNameHash;
+    uint16_t Tag;
+    bool ObjCClassIsImplementation;
+  };
+
+  AppleAccelTableBuilder(bool IsTypeTable) : IsTypeTable(IsTypeTable) {}
+
+  void reserve(size_t NumRecords) { Records.reserve(NumRecords); }
+
+  void addName(const StringEntry *Key,
+               const DwarfStringPoolEntryWithExtString &Name, Value V) {
+    auto [It, Inserted] = Index.try_emplace(Key, Entries.size());
+    if (Inserted)
+      Entries.push_back({&Name, djbHash(Name.String), 0, 0});
+    ++Entries[It->second].NumValues;
+    Records.push_back({It->second, V});
+  }
+
+  void emit(SectionDescriptor &OutSection);
+
+private:
+  struct Entry {
+    const DwarfStringPoolEntryWithExtString *Name;
+    uint32_t HashValue;
+    /// The values of the entry are Values[FirstValue, FirstValue+NumValues).
+    uint32_t FirstValue;
+    uint32_t NumValues;
+  };
+
+  struct Record {
+    uint32_t EntryIdx;
+    Value V;
+  };
+
+  ArrayRef<Value> getValues(const Entry &E) const {
+    return ArrayRef(Values).slice(E.FirstValue, E.NumValues);
+  }
+
+  bool IsTypeTable;
+  DenseMap<const StringEntry *, uint32_t> Index;
+  std::vector<Entry> Entries;
+  std::vector<Record> Records;
+  std::vector<Value> Values;
+};
+
+void AppleAccelTableBuilder::emit(SectionDescriptor &OutSection) {
+  // Group the values by entry, in insertion order, then order them as in
+  // AccelTableBase::finalize().
+  uint32_t FirstValue = 0;
+  for (Entry &E : Entries) {
+    E.FirstValue = FirstValue;
+    FirstValue += E.NumValues;
+  }
+  Values.resize(Records.size());
+  {
+    std::vector<uint32_t> NextValue(Entries.size());
+    for (size_t I = 0; I < Entries.size(); ++I)
+      NextValue[I] = Entries[I].FirstValue;
+    for (const Record &R : Records)
+      Values[NextValue[R.EntryIdx]++] = R.V;
+    std::vector<Record>().swap(Records);
+  }
+  for (Entry &E : Entries)
+    std::stable_sort(Values.begin() + E.FirstValue,
+                     Values.begin() + E.FirstValue + E.NumValues,
+                     [](const Value &LHS, const Value &RHS) {
+                       return LHS.Offset < RHS.Offset;
+                     });
+
+  uint32_t UniqueHashCount = countUniqueHashes(Entries);
+  uint32_t BucketCount = dwarf::getDebugNamesBucketCount(UniqueHashCount);
+
+  // Entries ordered by bucket, then by hash value, then by name: the order of
+  // the sorted buckets in AccelTableBase::finalize().
+  std::vector<uint32_t> Order = orderByBucket(Entries, BucketCount);
+
+  ArrayRef<AppleAccelTableData::Atom> Atoms =
+      IsTypeTable ? ArrayRef<AppleAccelTableData::Atom>(
+                        AppleAccelTableStaticTypeData::Atoms)
+                  : ArrayRef<AppleAccelTableData::Atom>(
+                        AppleAccelTableStaticOffsetData::Atoms);
+  const uint32_t ValueSize = IsTypeTable ? 4 + 2 + 1 + 4 : 4;
+
+  SectionWriter W(OutSection);
+
+  // Header.
+  W.write<uint32_t>(0x48415348); // 'HASH'
+  W.write<uint16_t>(1);
+  W.write<uint16_t>(dwarf::DW_hash_function_djb);
+  W.write<uint32_t>(BucketCount);
+  W.write<uint32_t>(UniqueHashCount);
+  W.write<uint32_t>(8 + Atoms.size() * 4);
+
+  // Header data.
+  W.write<uint32_t>(0);
+  W.write<uint32_t>(Atoms.size());
+  for (const AppleAccelTableData::Atom &A : Atoms) {
+    W.write<uint16_t>(A.Type);
+    W.write<uint16_t>(A.Form);
+  }
+
+  // Buckets: index of the first hash of each bucket.
+  constexpr uint64_t NoHash = std::numeric_limits<uint64_t>::max();
+  {
+    size_t Pos = 0;
+    uint32_t HashIndex = 0;
+    for (uint32_t Bucket = 0; Bucket < BucketCount; ++Bucket) {
+      if (Pos < Order.size() &&
+          Entries[Order[Pos]].HashValue % BucketCount == Bucket)
+        W.write<uint32_t>(HashIndex);
+      else
+        W.write<uint32_t>(std::numeric_limits<uint32_t>::max());
+      uint64_t PrevHash = NoHash;
+      for (; Pos < Order.size() &&
+             Entries[Order[Pos]].HashValue % BucketCount == Bucket;
+           ++Pos) {
+        uint32_t HashValue = Entries[Order[Pos]].HashValue;
+        if (PrevHash != HashValue)
+          ++HashIndex;
+        PrevHash = HashValue;
+      }
+    }
+  }
+
+  // Hashes, skipping identical consecutive values.
+  {
+    uint64_t PrevHash = NoHash;
+    for (uint32_t Idx : Order) {
+      uint32_t HashValue = Entries[Idx].HashValue;
+      if (PrevHash == HashValue)
+        continue;
+      W.write<uint32_t>(HashValue);
+      PrevHash = HashValue;
+    }
+  }
+
+  // Offsets of the data of each unique hash, relative to the section start.
+  uint64_t DataStart = W.size() + UniqueHashCount * 4;
+  {
+    uint64_t PrevHash = NoHash;
+    uint64_t DataOffset = DataStart;
+    uint32_t PrevBucket = 0;
+    bool First = true;
+    for (uint32_t Idx : Order) {
+      const Entry &E = Entries[Idx];
+      uint32_t Bucket = E.HashValue % BucketCount;
+      if (!First && Bucket != PrevBucket) {
+        // End marker of the previous bucket.
+        DataOffset += 4;
+        PrevHash = NoHash;
+      } else if (PrevHash != NoHash && PrevHash != E.HashValue) {
+        // Terminator of the previous hash.
+        DataOffset += 4;
+      }
+      if (First || PrevHash != E.HashValue)
+        W.write<uint32_t>(DataOffset);
+      DataOffset += 4 + 4 + E.NumValues * ValueSize;
+      PrevHash = E.HashValue;
+      PrevBucket = Bucket;
+      First = false;
+    }
+  }
+
+  // Data.
+  assert(W.size() == DataStart);
+  {
+    uint64_t PrevHash = NoHash;
+    uint32_t PrevBucket = 0;
+    bool First = true;
+    for (uint32_t Idx : Order) {
+      const Entry &E = Entries[Idx];
+      uint32_t Bucket = E.HashValue % BucketCount;
+      if (!First && Bucket != PrevBucket) {
+        W.write<uint32_t>(0);
+        PrevHash = NoHash;
+      } else if (PrevHash != NoHash && PrevHash != E.HashValue) {
+        W.write<uint32_t>(0);
+      }
+      W.write<uint32_t>(E.Name->Offset);
+      W.write<uint32_t>(E.NumValues);
+      for (const Value &V : getValues(E)) {
+        W.write<uint32_t>(V.Offset);
+        if (IsTypeTable) {
+          W.write<uint16_t>(V.Tag);
+          W.write<uint8_t>(V.ObjCClassIsImplementation
+                               ? dwarf::DW_FLAG_type_implementation
+                               : 0);
+          W.write<uint32_t>(V.QualifiedNameHash);
+        }
+      }
+      PrevHash = E.HashValue;
+      PrevBucket = Bucket;
+      First = false;
+    }
+    if (!First)
+      W.write<uint32_t>(0);
+  }
+}
+} // anonymous namespace
+
+void DWARFLinkerImpl::emitAppleAcceleratorSections(
+    llvm::parallel::TaskGroup &TG) {
+
+  // Collect the records first: forEachAcceleratorRecord() of the type unit
+  // updates the records, so it must not run concurrently.
+  struct Record {
+    const StringEntry *String;
+    AppleAccelTableBuilder::Value V;
+  };
+  enum AppleTableIndex : unsigned { Namespaces, Names, ObjC, Types };
+  std::array<std::vector<Record>, Types + 1> Records;
+  auto TableIndexOf = [](DwarfUnit::AccelType Type) {
+    switch (Type) {
+    case DwarfUnit::AccelType::Namespace:
+      return Namespaces;
+    case DwarfUnit::AccelType::Name:
+      return Names;
+    case DwarfUnit::AccelType::ObjC:
+      return ObjC;
+    case DwarfUnit::AccelType::Type:
+      return Types;
+    case DwarfUnit::AccelType::None:
+      break;
+    }
+    llvm_unreachable("Unknown accelerator record");
+  };
+  auto SectionKindOf = [](AppleTableIndex Table) {
+    switch (Table) {
+    case Namespaces:
+      return DebugSectionKind::AppleNamespaces;
+    case Names:
+      return DebugSectionKind::AppleNames;
+    case ObjC:
+      return DebugSectionKind::AppleObjC;
+    case Types:
+      return DebugSectionKind::AppleTypes;
+    }
+    llvm_unreachable("Unknown Apple accelerator table");
+  };
 
   forEachCompileAndTypeUnit([&](DwarfUnit *CU) {
+    uint64_t StartOffset =
+        CU->getSectionDescriptor(DebugSectionKind::DebugInfo).StartOffset;
     CU->forEachAcceleratorRecord([&](const DwarfUnit::AccelInfo &Info) {
-      uint64_t OutOffset = Info.OutOffset;
-      switch (Info.Type) {
-      case DwarfUnit::AccelType::None: {
-        llvm_unreachable("Unknown accelerator record");
-      } break;
-      case DwarfUnit::AccelType::Namespace: {
-        AppleNamespaces.addName(
-            *DebugStrStrings.getExistingEntry(Info.String),
-            CU->getSectionDescriptor(DebugSectionKind::DebugInfo).StartOffset +
-                OutOffset);
-      } break;
-      case DwarfUnit::AccelType::Name: {
-        AppleNames.addName(
-            *DebugStrStrings.getExistingEntry(Info.String),
-            CU->getSectionDescriptor(DebugSectionKind::DebugInfo).StartOffset +
-                OutOffset);
-      } break;
-      case DwarfUnit::AccelType::ObjC: {
-        AppleObjC.addName(
-            *DebugStrStrings.getExistingEntry(Info.String),
-            CU->getSectionDescriptor(DebugSectionKind::DebugInfo).StartOffset +
-                OutOffset);
-      } break;
-      case DwarfUnit::AccelType::Type: {
-        AppleTypes.addName(
-            *DebugStrStrings.getExistingEntry(Info.String),
-            CU->getSectionDescriptor(DebugSectionKind::DebugInfo).StartOffset +
-                OutOffset,
-            Info.Tag,
-            Info.ObjcClassImplementation ? dwarf::DW_FLAG_type_implementation
-                                         : 0,
-            Info.QualifiedNameHash);
-      } break;
+      AppleTableIndex Table = TableIndexOf(Info.Type);
+      AppleAccelTableBuilder::Value V{
+          static_cast<uint32_t>(StartOffset + Info.OutOffset), 0, 0, false};
+      if (Table == Types) {
+        V.QualifiedNameHash = Info.QualifiedNameHash;
+        V.Tag = Info.Tag;
+        V.ObjCClassIsImplementation = Info.ObjcClassImplementation;
       }
+      Records[Table].push_back({Info.String, V});
     });
   });
 
-  {
-    // FIXME: we use AsmPrinter to emit accelerator sections.
-    // It might be beneficial to directly emit accelerator data
-    // to the raw_svector_ostream.
-    SectionDescriptor &OutSection =
-        CommonSections.getSectionDescriptor(DebugSectionKind::AppleNamespaces);
-    DwarfEmitterImpl Emitter(DWARFLinker::OutputFileType::Object,
-                             OutSection.OS);
-    if (Error Err = Emitter.init(TargetTriple, "__DWARF")) {
-      consumeError(std::move(Err));
-      return;
-    }
-
-    // Emit table.
-    Emitter.emitAppleNamespaces(AppleNamespaces);
-    Emitter.finish();
-
-    // Set start offset and size for output section.
-    OutSection.setSizesForSectionCreatedByAsmPrinter();
-  }
-
-  {
-    // FIXME: we use AsmPrinter to emit accelerator sections.
-    // It might be beneficial to directly emit accelerator data
-    // to the raw_svector_ostream.
-    SectionDescriptor &OutSection =
-        CommonSections.getSectionDescriptor(DebugSectionKind::AppleNames);
-    DwarfEmitterImpl Emitter(DWARFLinker::OutputFileType::Object,
-                             OutSection.OS);
-    if (Error Err = Emitter.init(TargetTriple, "__DWARF")) {
-      consumeError(std::move(Err));
-      return;
-    }
-
-    // Emit table.
-    Emitter.emitAppleNames(AppleNames);
-    Emitter.finish();
-
-    // Set start offset ans size for output section.
-    OutSection.setSizesForSectionCreatedByAsmPrinter();
-  }
-
-  {
-    // FIXME: we use AsmPrinter to emit accelerator sections.
-    // It might be beneficial to directly emit accelerator data
-    // to the raw_svector_ostream.
-    SectionDescriptor &OutSection =
-        CommonSections.getSectionDescriptor(DebugSectionKind::AppleObjC);
-    DwarfEmitterImpl Emitter(DWARFLinker::OutputFileType::Object,
-                             OutSection.OS);
-    if (Error Err = Emitter.init(TargetTriple, "__DWARF")) {
-      consumeError(std::move(Err));
-      return;
-    }
-
-    // Emit table.
-    Emitter.emitAppleObjc(AppleObjC);
-    Emitter.finish();
-
-    // Set start offset ans size for output section.
-    OutSection.setSizesForSectionCreatedByAsmPrinter();
-  }
-
-  {
-    // FIXME: we use AsmPrinter to emit accelerator sections.
-    // It might be beneficial to directly emit accelerator data
-    // to the raw_svector_ostream.
-    SectionDescriptor &OutSection =
-        CommonSections.getSectionDescriptor(DebugSectionKind::AppleTypes);
-    DwarfEmitterImpl Emitter(DWARFLinker::OutputFileType::Object,
-                             OutSection.OS);
-    if (Error Err = Emitter.init(TargetTriple, "__DWARF")) {
-      consumeError(std::move(Err));
-      return;
-    }
-
-    // Emit table.
-    Emitter.emitAppleTypes(AppleTypes);
-    Emitter.finish();
-
-    // Set start offset ans size for output section.
-    OutSection.setSizesForSectionCreatedByAsmPrinter();
-  }
+  for (AppleTableIndex Table : {Namespaces, Names, ObjC, Types})
+    TG.spawn([this, Table, SectionKind = SectionKindOf(Table),
+              TableRecords = std::move(Records[Table])]() {
+      AppleAccelTableBuilder Builder(/*IsTypeTable=*/Table == Types);
+      Builder.reserve(TableRecords.size());
+      for (const Record &R : TableRecords)
+        Builder.addName(R.String, *DebugStrStrings.getExistingEntry(R.String),
+                        R.V);
+      Builder.emit(CommonSections.getSectionDescriptor(SectionKind));
+    });
 }
 
 void DWARFLinkerImpl::emitDWARFv5DebugNamesSection(const Triple &TargetTriple) {
