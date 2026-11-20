@@ -5,11 +5,7 @@
 define <16 x i8> @splat_extract_v16i8(<16 x i8> %a, i32 %b) nounwind {
 ; CHECK-LABEL: splat_extract_v16i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andi $a0, $a0, 15
 ; CHECK-NEXT:    vreplve.b $vr0, $vr0, $a0
-; CHECK-NEXT:    movfr2gr.s $a0, $fa0
-; CHECK-NEXT:    srai.w $a0, $a0, 24
-; CHECK-NEXT:    vreplgr2vr.b $vr0, $a0
 ; CHECK-NEXT:    ret
 entry:
   %idx = and i32 %b, 15
@@ -22,11 +18,7 @@ entry:
 define <8 x i16> @splat_extract_v8i16(<8 x i16> %a, i32 %b) nounwind {
 ; CHECK-LABEL: splat_extract_v8i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andi $a0, $a0, 7
 ; CHECK-NEXT:    vreplve.h $vr0, $vr0, $a0
-; CHECK-NEXT:    movfr2gr.s $a0, $fa0
-; CHECK-NEXT:    srai.w $a0, $a0, 16
-; CHECK-NEXT:    vreplgr2vr.h $vr0, $a0
 ; CHECK-NEXT:    ret
 entry:
   %idx = and i32 %b, 7
@@ -39,10 +31,7 @@ entry:
 define <4 x i32> @splat_extract_v4i32(<4 x i32> %a, i32 %b) nounwind {
 ; CHECK-LABEL: splat_extract_v4i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andi $a0, $a0, 3
 ; CHECK-NEXT:    vreplve.w $vr0, $vr0, $a0
-; CHECK-NEXT:    movfr2gr.s $a0, $fa0
-; CHECK-NEXT:    vreplgr2vr.w $vr0, $a0
 ; CHECK-NEXT:    ret
 entry:
   %idx = and i32 %b, 3
@@ -70,10 +59,7 @@ define <2 x i64> @splat_extract_v2i64(<2 x i64> %a, i32 %b) nounwind {
 ;
 ; LA64-LABEL: splat_extract_v2i64:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    andi $a0, $a0, 1
 ; LA64-NEXT:    vreplve.d $vr0, $vr0, $a0
-; LA64-NEXT:    movfr2gr.d $a0, $fa0
-; LA64-NEXT:    vreplgr2vr.d $vr0, $a0
 ; LA64-NEXT:    ret
 entry:
   %idx = and i32 %b, 1
@@ -86,9 +72,7 @@ entry:
 define <4 x float> @splat_extract_v4f32(<4 x float> %a, i32 %b) nounwind {
 ; CHECK-LABEL: splat_extract_v4f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andi $a0, $a0, 3
 ; CHECK-NEXT:    vreplve.w $vr0, $vr0, $a0
-; CHECK-NEXT:    vreplvei.w $vr0, $vr0, 0
 ; CHECK-NEXT:    ret
 entry:
   %idx = and i32 %b, 3
@@ -101,9 +85,7 @@ entry:
 define <2 x double> @splat_extract_v2f64(<2 x double> %a, i32 %b) nounwind {
 ; CHECK-LABEL: splat_extract_v2f64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andi $a0, $a0, 1
 ; CHECK-NEXT:    vreplve.d $vr0, $vr0, $a0
-; CHECK-NEXT:    vreplvei.d $vr0, $vr0, 0
 ; CHECK-NEXT:    ret
 entry:
   %idx = and i32 %b, 1
@@ -115,20 +97,10 @@ entry:
 
 ;; Unmasked index: out-of-range extract yields poison, so VREPLVE is still fine.
 define <4 x i32> @splat_extract_v4i32_nomask(<4 x i32> %a, i32 %b) nounwind {
-; LA32-LABEL: splat_extract_v4i32_nomask:
-; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    vreplve.w $vr0, $vr0, $a0
-; LA32-NEXT:    movfr2gr.s $a0, $fa0
-; LA32-NEXT:    vreplgr2vr.w $vr0, $a0
-; LA32-NEXT:    ret
-;
-; LA64-LABEL: splat_extract_v4i32_nomask:
-; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    bstrpick.d $a0, $a0, 31, 0
-; LA64-NEXT:    vreplve.w $vr0, $vr0, $a0
-; LA64-NEXT:    movfr2gr.s $a0, $fa0
-; LA64-NEXT:    vreplgr2vr.w $vr0, $a0
-; LA64-NEXT:    ret
+; CHECK-LABEL: splat_extract_v4i32_nomask:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vreplve.w $vr0, $vr0, $a0
+; CHECK-NEXT:    ret
 entry:
   %e = extractelement <4 x i32> %a, i32 %b
   %ins = insertelement <4 x i32> poison, i32 %e, i64 0
@@ -140,11 +112,7 @@ entry:
 define <16 x i8> @splat_extract_v16i8_mask255(<16 x i8> %a, i32 %b) nounwind {
 ; CHECK-LABEL: splat_extract_v16i8_mask255:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andi $a0, $a0, 255
 ; CHECK-NEXT:    vreplve.b $vr0, $vr0, $a0
-; CHECK-NEXT:    movfr2gr.s $a0, $fa0
-; CHECK-NEXT:    srai.w $a0, $a0, 24
-; CHECK-NEXT:    vreplgr2vr.b $vr0, $a0
 ; CHECK-NEXT:    ret
 entry:
   %idx = and i32 %b, 255
@@ -160,9 +128,6 @@ define <16 x i8> @splat_extract_v16i8_mask7(<16 x i8> %a, i32 %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    andi $a0, $a0, 7
 ; CHECK-NEXT:    vreplve.b $vr0, $vr0, $a0
-; CHECK-NEXT:    movfr2gr.s $a0, $fa0
-; CHECK-NEXT:    srai.w $a0, $a0, 24
-; CHECK-NEXT:    vreplgr2vr.b $vr0, $a0
 ; CHECK-NEXT:    ret
 entry:
   %idx = and i32 %b, 7
@@ -178,8 +143,6 @@ define <4 x i32> @splat_extract_v4i32_idx_multiuse(<4 x i32> %a, i32 %b, ptr %p)
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    andi $a0, $a0, 3
 ; CHECK-NEXT:    vreplve.w $vr0, $vr0, $a0
-; CHECK-NEXT:    movfr2gr.s $a2, $fa0
-; CHECK-NEXT:    vreplgr2vr.w $vr0, $a2
 ; CHECK-NEXT:    st.w $a0, $a1, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -198,7 +161,6 @@ define <4 x i32> @splat_extract_v4i32_elt_multiuse(<4 x i32> %a, i32 %b, ptr %p)
 ; CHECK-NEXT:    andi $a0, $a0, 3
 ; CHECK-NEXT:    vreplve.w $vr0, $vr0, $a0
 ; CHECK-NEXT:    movfr2gr.s $a0, $fa0
-; CHECK-NEXT:    vreplgr2vr.w $vr0, $a0
 ; CHECK-NEXT:    st.w $a0, $a1, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -249,7 +211,6 @@ declare <16 x i8> @llvm.loongarch.lsx.vreplve.b(<16 x i8>, i32)
 define <16 x i8> @intrinsic_vreplve_b_mask(<16 x i8> %a, i32 %b) nounwind {
 ; CHECK-LABEL: intrinsic_vreplve_b_mask:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andi $a0, $a0, 15
 ; CHECK-NEXT:    vreplve.b $vr0, $vr0, $a0
 ; CHECK-NEXT:    ret
 entry:

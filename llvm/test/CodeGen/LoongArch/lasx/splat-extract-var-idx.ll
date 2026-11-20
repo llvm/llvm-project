@@ -25,7 +25,6 @@ declare <32 x i8> @llvm.loongarch.lasx.xvreplve.b(<32 x i8>, i32)
 define <32 x i8> @intrinsic_xvreplve_b_mask(<32 x i8> %a, i32 %b) nounwind {
 ; CHECK-LABEL: intrinsic_xvreplve_b_mask:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andi $a0, $a0, 15
 ; CHECK-NEXT:    xvreplve.b $xr0, $xr0, $a0
 ; CHECK-NEXT:    ret
 entry:
@@ -38,7 +37,6 @@ entry:
 define <32 x i8> @intrinsic_xvreplve_b_mask31(<32 x i8> %a, i32 %b) nounwind {
 ; CHECK-LABEL: intrinsic_xvreplve_b_mask31:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andi $a0, $a0, 31
 ; CHECK-NEXT:    xvreplve.b $xr0, $xr0, $a0
 ; CHECK-NEXT:    ret
 entry:
@@ -61,39 +59,10 @@ entry:
 }
 ;; Splat of a[idx] in the low lane and a[idx + 16] in the high lane is XVREPLVE.
 define <32 x i8> @lane_splat_extract_v32i8(<32 x i8> %a, i32 %b) nounwind {
-; LA32-LABEL: lane_splat_extract_v32i8:
-; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    andi $a1, $a0, 15
-; LA32-NEXT:    movgr2fr.w $fa1, $a1
-; LA32-NEXT:    xvpermi.q $xr2, $xr0, 1
-; LA32-NEXT:    xvshuf.b $xr1, $xr2, $xr0, $xr1
-; LA32-NEXT:    vpickve2gr.b $a1, $vr1, 0
-; LA32-NEXT:    xvreplgr2vr.b $xr1, $a1
-; LA32-NEXT:    ori $a1, $zero, 1
-; LA32-NEXT:    bstrins.w $a0, $a1, 31, 4
-; LA32-NEXT:    movgr2fr.w $fa3, $a0
-; LA32-NEXT:    xvshuf.b $xr0, $xr2, $xr0, $xr3
-; LA32-NEXT:    vpickve2gr.b $a0, $vr0, 0
-; LA32-NEXT:    xvreplgr2vr.b $xr0, $a0
-; LA32-NEXT:    xvpermi.q $xr0, $xr1, 48
-; LA32-NEXT:    ret
-;
-; LA64-LABEL: lane_splat_extract_v32i8:
-; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    andi $a1, $a0, 15
-; LA64-NEXT:    movgr2fr.w $fa1, $a1
-; LA64-NEXT:    xvpermi.q $xr2, $xr0, 1
-; LA64-NEXT:    xvshuf.b $xr1, $xr2, $xr0, $xr1
-; LA64-NEXT:    vpickve2gr.b $a1, $vr1, 0
-; LA64-NEXT:    xvreplgr2vr.b $xr1, $a1
-; LA64-NEXT:    ori $a1, $zero, 1
-; LA64-NEXT:    bstrins.d $a0, $a1, 63, 4
-; LA64-NEXT:    movgr2fr.w $fa3, $a0
-; LA64-NEXT:    xvshuf.b $xr0, $xr2, $xr0, $xr3
-; LA64-NEXT:    vpickve2gr.b $a0, $vr0, 0
-; LA64-NEXT:    xvreplgr2vr.b $xr0, $a0
-; LA64-NEXT:    xvpermi.q $xr0, $xr1, 48
-; LA64-NEXT:    ret
+; CHECK-LABEL: lane_splat_extract_v32i8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvreplve.b $xr0, $xr0, $a0
+; CHECK-NEXT:    ret
 entry:
   %idx = and i32 %b, 15
   %e0 = extractelement <32 x i8> %a, i32 %idx
@@ -108,39 +77,10 @@ entry:
 }
 
 define <16 x i16> @lane_splat_extract_v16i16(<16 x i16> %a, i32 %b) nounwind {
-; LA32-LABEL: lane_splat_extract_v16i16:
-; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    andi $a1, $a0, 7
-; LA32-NEXT:    movgr2fr.w $fa1, $a1
-; LA32-NEXT:    xvpermi.q $xr2, $xr0, 1
-; LA32-NEXT:    xvshuf.h $xr1, $xr2, $xr0
-; LA32-NEXT:    vpickve2gr.h $a1, $vr1, 0
-; LA32-NEXT:    xvreplgr2vr.h $xr1, $a1
-; LA32-NEXT:    ori $a1, $zero, 1
-; LA32-NEXT:    bstrins.w $a0, $a1, 31, 3
-; LA32-NEXT:    movgr2fr.w $fa3, $a0
-; LA32-NEXT:    xvshuf.h $xr3, $xr2, $xr0
-; LA32-NEXT:    vpickve2gr.h $a0, $vr3, 0
-; LA32-NEXT:    xvreplgr2vr.h $xr0, $a0
-; LA32-NEXT:    xvpermi.q $xr0, $xr1, 48
-; LA32-NEXT:    ret
-;
-; LA64-LABEL: lane_splat_extract_v16i16:
-; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    andi $a1, $a0, 7
-; LA64-NEXT:    movgr2fr.w $fa1, $a1
-; LA64-NEXT:    xvpermi.q $xr2, $xr0, 1
-; LA64-NEXT:    xvshuf.h $xr1, $xr2, $xr0
-; LA64-NEXT:    vpickve2gr.h $a1, $vr1, 0
-; LA64-NEXT:    xvreplgr2vr.h $xr1, $a1
-; LA64-NEXT:    ori $a1, $zero, 1
-; LA64-NEXT:    bstrins.d $a0, $a1, 63, 3
-; LA64-NEXT:    movgr2fr.w $fa3, $a0
-; LA64-NEXT:    xvshuf.h $xr3, $xr2, $xr0
-; LA64-NEXT:    vpickve2gr.h $a0, $vr3, 0
-; LA64-NEXT:    xvreplgr2vr.h $xr0, $a0
-; LA64-NEXT:    xvpermi.q $xr0, $xr1, 48
-; LA64-NEXT:    ret
+; CHECK-LABEL: lane_splat_extract_v16i16:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvreplve.h $xr0, $xr0, $a0
+; CHECK-NEXT:    ret
 entry:
   %idx = and i32 %b, 7
   %e0 = extractelement <16 x i16> %a, i32 %idx
@@ -155,37 +95,10 @@ entry:
 }
 
 define <8 x i32> @lane_splat_extract_v8i32(<8 x i32> %a, i32 %b) nounwind {
-; LA32-LABEL: lane_splat_extract_v8i32:
-; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    andi $a1, $a0, 3
-; LA32-NEXT:    xvreplgr2vr.w $xr1, $a1
-; LA32-NEXT:    xvperm.w $xr1, $xr0, $xr1
-; LA32-NEXT:    xvpickve2gr.w $a1, $xr1, 0
-; LA32-NEXT:    xvreplgr2vr.w $xr1, $a1
-; LA32-NEXT:    ori $a1, $zero, 1
-; LA32-NEXT:    bstrins.w $a0, $a1, 31, 2
-; LA32-NEXT:    xvreplgr2vr.w $xr2, $a0
-; LA32-NEXT:    xvperm.w $xr0, $xr0, $xr2
-; LA32-NEXT:    xvpickve2gr.w $a0, $xr0, 0
-; LA32-NEXT:    xvreplgr2vr.w $xr0, $a0
-; LA32-NEXT:    xvpermi.q $xr0, $xr1, 48
-; LA32-NEXT:    ret
-;
-; LA64-LABEL: lane_splat_extract_v8i32:
-; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    andi $a1, $a0, 3
-; LA64-NEXT:    xvreplgr2vr.w $xr1, $a1
-; LA64-NEXT:    xvperm.w $xr1, $xr0, $xr1
-; LA64-NEXT:    xvpickve2gr.w $a1, $xr1, 0
-; LA64-NEXT:    xvreplgr2vr.w $xr1, $a1
-; LA64-NEXT:    ori $a1, $zero, 1
-; LA64-NEXT:    bstrins.d $a0, $a1, 63, 2
-; LA64-NEXT:    xvreplgr2vr.w $xr2, $a0
-; LA64-NEXT:    xvperm.w $xr0, $xr0, $xr2
-; LA64-NEXT:    xvpickve2gr.w $a0, $xr0, 0
-; LA64-NEXT:    xvreplgr2vr.w $xr0, $a0
-; LA64-NEXT:    xvpermi.q $xr0, $xr1, 48
-; LA64-NEXT:    ret
+; CHECK-LABEL: lane_splat_extract_v8i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvreplve.w $xr0, $xr0, $a0
+; CHECK-NEXT:    ret
 entry:
   %idx = and i32 %b, 3
   %e0 = extractelement <8 x i32> %a, i32 %idx
@@ -236,19 +149,7 @@ define <4 x i64> @lane_splat_extract_v4i64(<4 x i64> %a, i32 %b) nounwind {
 ;
 ; LA64-LABEL: lane_splat_extract_v4i64:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    andi $a1, $a0, 1
-; LA64-NEXT:    movgr2fr.w $fa1, $a1
-; LA64-NEXT:    xvpermi.q $xr2, $xr0, 1
-; LA64-NEXT:    xvshuf.d $xr1, $xr2, $xr0
-; LA64-NEXT:    xvpickve2gr.d $a1, $xr1, 0
-; LA64-NEXT:    xvreplgr2vr.d $xr1, $a1
-; LA64-NEXT:    ori $a1, $zero, 1
-; LA64-NEXT:    bstrins.d $a0, $a1, 63, 1
-; LA64-NEXT:    movgr2fr.w $fa3, $a0
-; LA64-NEXT:    xvshuf.d $xr3, $xr2, $xr0
-; LA64-NEXT:    xvpickve2gr.d $a0, $xr3, 0
-; LA64-NEXT:    xvreplgr2vr.d $xr0, $a0
-; LA64-NEXT:    xvpermi.q $xr0, $xr1, 48
+; LA64-NEXT:    xvreplve.d $xr0, $xr0, $a0
 ; LA64-NEXT:    ret
 entry:
   %idx = and i32 %b, 1
@@ -264,33 +165,10 @@ entry:
 }
 
 define <8 x float> @lane_splat_extract_v8f32(<8 x float> %a, i32 %b) nounwind {
-; LA32-LABEL: lane_splat_extract_v8f32:
-; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    andi $a1, $a0, 3
-; LA32-NEXT:    xvreplgr2vr.w $xr1, $a1
-; LA32-NEXT:    xvperm.w $xr1, $xr0, $xr1
-; LA32-NEXT:    xvreplve0.w $xr1, $xr1
-; LA32-NEXT:    ori $a1, $zero, 1
-; LA32-NEXT:    bstrins.w $a0, $a1, 31, 2
-; LA32-NEXT:    xvreplgr2vr.w $xr2, $a0
-; LA32-NEXT:    xvperm.w $xr0, $xr0, $xr2
-; LA32-NEXT:    xvreplve0.w $xr0, $xr0
-; LA32-NEXT:    xvpermi.q $xr0, $xr1, 48
-; LA32-NEXT:    ret
-;
-; LA64-LABEL: lane_splat_extract_v8f32:
-; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    andi $a1, $a0, 3
-; LA64-NEXT:    xvreplgr2vr.w $xr1, $a1
-; LA64-NEXT:    xvperm.w $xr1, $xr0, $xr1
-; LA64-NEXT:    xvreplve0.w $xr1, $xr1
-; LA64-NEXT:    ori $a1, $zero, 1
-; LA64-NEXT:    bstrins.d $a0, $a1, 63, 2
-; LA64-NEXT:    xvreplgr2vr.w $xr2, $a0
-; LA64-NEXT:    xvperm.w $xr0, $xr0, $xr2
-; LA64-NEXT:    xvreplve0.w $xr0, $xr0
-; LA64-NEXT:    xvpermi.q $xr0, $xr1, 48
-; LA64-NEXT:    ret
+; CHECK-LABEL: lane_splat_extract_v8f32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvreplve.w $xr0, $xr0, $a0
+; CHECK-NEXT:    ret
 entry:
   %idx = and i32 %b, 3
   %e0 = extractelement <8 x float> %a, i32 %idx
@@ -305,35 +183,10 @@ entry:
 }
 
 define <4 x double> @lane_splat_extract_v4f64(<4 x double> %a, i32 %b) nounwind {
-; LA32-LABEL: lane_splat_extract_v4f64:
-; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    andi $a1, $a0, 1
-; LA32-NEXT:    movgr2fr.w $fa1, $a1
-; LA32-NEXT:    xvpermi.q $xr2, $xr0, 1
-; LA32-NEXT:    xvshuf.d $xr1, $xr2, $xr0
-; LA32-NEXT:    xvreplve0.d $xr1, $xr1
-; LA32-NEXT:    ori $a1, $zero, 1
-; LA32-NEXT:    bstrins.w $a0, $a1, 31, 1
-; LA32-NEXT:    movgr2fr.w $fa3, $a0
-; LA32-NEXT:    xvshuf.d $xr3, $xr2, $xr0
-; LA32-NEXT:    xvreplve0.d $xr0, $xr3
-; LA32-NEXT:    xvpermi.q $xr0, $xr1, 48
-; LA32-NEXT:    ret
-;
-; LA64-LABEL: lane_splat_extract_v4f64:
-; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    andi $a1, $a0, 1
-; LA64-NEXT:    movgr2fr.w $fa1, $a1
-; LA64-NEXT:    xvpermi.q $xr2, $xr0, 1
-; LA64-NEXT:    xvshuf.d $xr1, $xr2, $xr0
-; LA64-NEXT:    xvreplve0.d $xr1, $xr1
-; LA64-NEXT:    ori $a1, $zero, 1
-; LA64-NEXT:    bstrins.d $a0, $a1, 63, 1
-; LA64-NEXT:    movgr2fr.w $fa3, $a0
-; LA64-NEXT:    xvshuf.d $xr3, $xr2, $xr0
-; LA64-NEXT:    xvreplve0.d $xr0, $xr3
-; LA64-NEXT:    xvpermi.q $xr0, $xr1, 48
-; LA64-NEXT:    ret
+; CHECK-LABEL: lane_splat_extract_v4f64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvreplve.d $xr0, $xr0, $a0
+; CHECK-NEXT:    ret
 entry:
   %idx = and i32 %b, 1
   %e0 = extractelement <4 x double> %a, i32 %idx
@@ -349,37 +202,10 @@ entry:
 
 ;; The high lane index may also be formed by an add.
 define <8 x i32> @lane_splat_extract_v8i32_add(<8 x i32> %a, i32 %b) nounwind {
-; LA32-LABEL: lane_splat_extract_v8i32_add:
-; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    andi $a1, $a0, 3
-; LA32-NEXT:    xvreplgr2vr.w $xr1, $a1
-; LA32-NEXT:    xvperm.w $xr1, $xr0, $xr1
-; LA32-NEXT:    xvpickve2gr.w $a1, $xr1, 0
-; LA32-NEXT:    xvreplgr2vr.w $xr1, $a1
-; LA32-NEXT:    ori $a1, $zero, 1
-; LA32-NEXT:    bstrins.w $a0, $a1, 31, 2
-; LA32-NEXT:    xvreplgr2vr.w $xr2, $a0
-; LA32-NEXT:    xvperm.w $xr0, $xr0, $xr2
-; LA32-NEXT:    xvpickve2gr.w $a0, $xr0, 0
-; LA32-NEXT:    xvreplgr2vr.w $xr0, $a0
-; LA32-NEXT:    xvpermi.q $xr0, $xr1, 48
-; LA32-NEXT:    ret
-;
-; LA64-LABEL: lane_splat_extract_v8i32_add:
-; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    andi $a1, $a0, 3
-; LA64-NEXT:    xvreplgr2vr.w $xr1, $a1
-; LA64-NEXT:    xvperm.w $xr1, $xr0, $xr1
-; LA64-NEXT:    xvpickve2gr.w $a1, $xr1, 0
-; LA64-NEXT:    xvreplgr2vr.w $xr1, $a1
-; LA64-NEXT:    ori $a1, $zero, 1
-; LA64-NEXT:    bstrins.d $a0, $a1, 63, 2
-; LA64-NEXT:    xvreplgr2vr.w $xr2, $a0
-; LA64-NEXT:    xvperm.w $xr0, $xr0, $xr2
-; LA64-NEXT:    xvpickve2gr.w $a0, $xr0, 0
-; LA64-NEXT:    xvreplgr2vr.w $xr0, $a0
-; LA64-NEXT:    xvpermi.q $xr0, $xr1, 48
-; LA64-NEXT:    ret
+; CHECK-LABEL: lane_splat_extract_v8i32_add:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvreplve.w $xr0, $xr0, $a0
+; CHECK-NEXT:    ret
 entry:
   %idx = and i32 %b, 3
   %e0 = extractelement <8 x i32> %a, i32 %idx
