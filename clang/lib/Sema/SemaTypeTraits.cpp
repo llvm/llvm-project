@@ -2751,6 +2751,20 @@ static void DiagnoseNonAbstractReason(Sema &SemaRef, SourceLocation Loc,
     DiagnoseNonAbstractReason(SemaRef, Loc, D);
 }
 
+static void DiagnoseNonConstReason(Sema &SemaRef, SourceLocation Loc,
+                                   QualType T) {
+  SemaRef.Diag(Loc, diag::note_unsatisfied_trait)
+      << T << diag::TraitName::Const;
+
+  if (T->isReferenceType()) {
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::RefTypeNotConstQualified;
+  } else if (T->isFunctionType()) {
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::FunctionTypeNotConstQualified;
+  }
+}
+
 void Sema::DiagnoseTypeTraitDetails(const Expr *E) {
   if (E->containsErrors())
     return;
@@ -2793,6 +2807,9 @@ void Sema::DiagnoseTypeTraitDetails(const Expr *E) {
   }
   case UTT_IsAbstract:
     DiagnoseNonAbstractReason(*this, E->getBeginLoc(), Args[0]);
+    break;
+  case UTT_IsConst:
+    DiagnoseNonConstReason(*this, E->getBeginLoc(), Args[0]);
     break;
   default:
     break;
