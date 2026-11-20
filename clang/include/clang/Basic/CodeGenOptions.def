@@ -171,8 +171,6 @@ CODEGENOPT(MNopMCount , 1, 0, Benign) ///< Set when -mnop-mcount is enabled.
 CODEGENOPT(RecordMCount , 1, 0, Benign) ///< Set when -mrecord-mcount is enabled.
 CODEGENOPT(StackProtectorGuardRecord, 1, 0, Benign) ///< Set when -mstack-protector-guard-record is enabled.
 CODEGENOPT(PackedStack , 1, 0, Benign) ///< Set when -mpacked-stack is enabled.
-CODEGENOPT(LessPreciseFPMAD  , 1, 0, Benign) ///< Enable less precise MAD instructions to
-                                             ///< be generated.
 CODEGENOPT(PrepareForLTO     , 1, 0, Benign) ///< Set when -flto is enabled on the
                                              ///< compile step.
 CODEGENOPT(PrepareForThinLTO , 1, 0, Benign) ///< Set when -flto=thin is enabled on the
