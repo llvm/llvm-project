@@ -117,8 +117,7 @@ define i64 @pdep_i64(i64 %a, i64 %mask) {
 ; CHECK-Z17-LABEL: pdep_i64:
 ; CHECK-Z17:       # %bb.0:
 ; CHECK-Z17-NEXT:    popcnt %r0, %r3, 8
-; CHECK-Z17-NEXT:    lghi %r1, 64
-; CHECK-Z17-NEXT:    sgr %r1, %r0
+; CHECK-Z17-NEXT:    lcgr %r1, %r0
 ; CHECK-Z17-NEXT:    sllg %r0, %r2, 0(%r1)
 ; CHECK-Z17-NEXT:    bdepg %r2, %r0, %r3
 ; CHECK-Z17-NEXT:    br %r14
@@ -260,8 +259,7 @@ define i32 @pdep_i32(i32 %a, i32 %mask) {
 ; CHECK-Z17:       # %bb.0:
 ; CHECK-Z17-NEXT:    # kill: def $r3l killed $r3l def $r3d
 ; CHECK-Z17-NEXT:    popcnt %r0, %r3, 8
-; CHECK-Z17-NEXT:    lghi %r1, 64
-; CHECK-Z17-NEXT:    sgr %r1, %r0
+; CHECK-Z17-NEXT:    lcgr %r1, %r0
 ; CHECK-Z17-NEXT:    # kill: def $r2l killed $r2l def $r2d
 ; CHECK-Z17-NEXT:    sllg %r0, %r2, 0(%r1)
 ; CHECK-Z17-NEXT:    bdepg %r2, %r0, %r3
@@ -368,8 +366,7 @@ define i16 @pdep_i16(i16 %a, i16 %mask) {
 ; CHECK-Z17:       # %bb.0:
 ; CHECK-Z17-NEXT:    # kill: def $r3l killed $r3l def $r3d
 ; CHECK-Z17-NEXT:    popcnt %r0, %r3, 8
-; CHECK-Z17-NEXT:    lghi %r1, 64
-; CHECK-Z17-NEXT:    sgr %r1, %r0
+; CHECK-Z17-NEXT:    lcgr %r1, %r0
 ; CHECK-Z17-NEXT:    # kill: def $r2l killed $r2l def $r2d
 ; CHECK-Z17-NEXT:    sllg %r0, %r2, 0(%r1)
 ; CHECK-Z17-NEXT:    bdepg %r2, %r0, %r3
@@ -455,8 +452,7 @@ define i8 @pdep_i8(i8 %a, i8 %mask) {
 ; CHECK-Z17:       # %bb.0:
 ; CHECK-Z17-NEXT:    # kill: def $r3l killed $r3l def $r3d
 ; CHECK-Z17-NEXT:    popcnt %r0, %r3, 8
-; CHECK-Z17-NEXT:    lghi %r1, 64
-; CHECK-Z17-NEXT:    sgr %r1, %r0
+; CHECK-Z17-NEXT:    lcgr %r1, %r0
 ; CHECK-Z17-NEXT:    # kill: def $r2l killed $r2l def $r2d
 ; CHECK-Z17-NEXT:    sllg %r0, %r2, 0(%r1)
 ; CHECK-Z17-NEXT:    bdepg %r2, %r0, %r3
@@ -582,9 +578,8 @@ define i64 @pext_i64(i64 %a, i64 %mask) {
 ; CHECK-Z17:       # %bb.0:
 ; CHECK-Z17-NEXT:    bextg %r0, %r2, %r3
 ; CHECK-Z17-NEXT:    popcnt %r1, %r3, 8
-; CHECK-Z17-NEXT:    lghi %r2, 64
-; CHECK-Z17-NEXT:    sgr %r2, %r1
-; CHECK-Z17-NEXT:    srlg %r2, %r0, 0(%r2)
+; CHECK-Z17-NEXT:    lcgr %r1, %r1
+; CHECK-Z17-NEXT:    srlg %r2, %r0, 0(%r1)
 ; CHECK-Z17-NEXT:    br %r14
   %res = call i64 @llvm.pext.i64(i64 %a, i64 %mask)
   ret i64 %res
@@ -713,8 +708,7 @@ define i32 @pext_i32(i32 %a, i32 %mask) {
 ; CHECK-Z17-NEXT:    # kill: def $r2l killed $r2l def $r2d
 ; CHECK-Z17-NEXT:    bextg %r1, %r2, %r0
 ; CHECK-Z17-NEXT:    popcnt %r0, %r0, 8
-; CHECK-Z17-NEXT:    lghi %r2, 64
-; CHECK-Z17-NEXT:    sgr %r2, %r0
+; CHECK-Z17-NEXT:    lcgr %r2, %r0
 ; CHECK-Z17-NEXT:    srlg %r2, %r1, 0(%r2)
 ; CHECK-Z17-NEXT:    # kill: def $r2l killed $r2l killed $r2d
 ; CHECK-Z17-NEXT:    br %r14
@@ -821,8 +815,7 @@ define i16 @pext_i16(i16 %a, i16 %mask) {
 ; CHECK-Z17-NEXT:    # kill: def $r2l killed $r2l def $r2d
 ; CHECK-Z17-NEXT:    bextg %r1, %r2, %r0
 ; CHECK-Z17-NEXT:    popcnt %r0, %r0, 8
-; CHECK-Z17-NEXT:    lghi %r2, 64
-; CHECK-Z17-NEXT:    sgr %r2, %r0
+; CHECK-Z17-NEXT:    lcgr %r2, %r0
 ; CHECK-Z17-NEXT:    srlg %r2, %r1, 0(%r2)
 ; CHECK-Z17-NEXT:    # kill: def $r2l killed $r2l killed $r2d
 ; CHECK-Z17-NEXT:    br %r14
@@ -910,8 +903,7 @@ define i8 @pext_i8(i8 %a, i8 %mask) {
 ; CHECK-Z17-NEXT:    # kill: def $r2l killed $r2l def $r2d
 ; CHECK-Z17-NEXT:    bextg %r1, %r2, %r0
 ; CHECK-Z17-NEXT:    popcnt %r0, %r0, 8
-; CHECK-Z17-NEXT:    lghi %r2, 64
-; CHECK-Z17-NEXT:    sgr %r2, %r0
+; CHECK-Z17-NEXT:    lcgr %r2, %r0
 ; CHECK-Z17-NEXT:    srlg %r2, %r1, 0(%r2)
 ; CHECK-Z17-NEXT:    # kill: def $r2l killed $r2l killed $r2d
 ; CHECK-Z17-NEXT:    br %r14
