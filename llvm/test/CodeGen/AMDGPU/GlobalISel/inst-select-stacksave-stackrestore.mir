@@ -10,10 +10,14 @@ tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX10-WAVE32-LABEL: name: stackrestore_waveaddress_sgpr
-    ; GFX10-WAVE32: $sgpr32 = COPY $sgpr32
+    ; GFX10-WAVE32: [[S_LSHR_B32_:%[0-9]+]]:sreg_32 = S_LSHR_B32 $sgpr32, 5, implicit-def dead $scc
+    ; GFX10-WAVE32-NEXT: [[S_LSHL_B32_:%[0-9]+]]:sreg_32 = S_LSHL_B32 [[S_LSHR_B32_]], 5, implicit-def dead $scc
+    ; GFX10-WAVE32-NEXT: $sgpr32 = COPY [[S_LSHL_B32_]]
     ;
     ; GFX10-WAVE64-LABEL: name: stackrestore_waveaddress_sgpr
-    ; GFX10-WAVE64: $sgpr32 = COPY $sgpr32
+    ; GFX10-WAVE64: [[S_LSHR_B32_:%[0-9]+]]:sreg_32 = S_LSHR_B32 $sgpr32, 6, implicit-def dead $scc
+    ; GFX10-WAVE64-NEXT: [[S_LSHL_B32_:%[0-9]+]]:sreg_32 = S_LSHL_B32 [[S_LSHR_B32_]], 6, implicit-def dead $scc
+    ; GFX10-WAVE64-NEXT: $sgpr32 = COPY [[S_LSHL_B32_]]
     %0:sgpr(p5) = G_AMDGPU_WAVE_ADDRESS $sgpr32
     G_STACKRESTORE %0
 

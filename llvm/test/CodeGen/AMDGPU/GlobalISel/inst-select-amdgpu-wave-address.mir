@@ -41,3 +41,49 @@ body: |
     %0:vgpr(p5) = G_AMDGPU_WAVE_ADDRESS $sgpr32
     S_ENDPGM 0, implicit %0
 ...
+
+---
+name: wave_address_s_virtual_src
+legalized: true
+regBankSelected: true
+tracksRegLiveness: true
+machineFunctionInfo:
+  stackPtrOffsetReg: $sgpr32
+body: |
+  bb.0:
+    ; WAVE32-LABEL: name: wave_address_s_virtual_src
+    ; WAVE32: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr32
+    ; WAVE32-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[COPY]], 5, implicit-def dead $scc
+    ; WAVE32-NEXT: S_ENDPGM 0, implicit [[S_LSHR_B32_]]
+    ;
+    ; WAVE64-LABEL: name: wave_address_s_virtual_src
+    ; WAVE64: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr32
+    ; WAVE64-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[COPY]], 6, implicit-def dead $scc
+    ; WAVE64-NEXT: S_ENDPGM 0, implicit [[S_LSHR_B32_]]
+    %0:sgpr(p5) = COPY $sgpr32
+    %1:sgpr(p5) = G_AMDGPU_WAVE_ADDRESS %0
+    S_ENDPGM 0, implicit %1
+...
+
+---
+name: wave_address_v_virtual_src
+legalized: true
+regBankSelected: true
+tracksRegLiveness: true
+machineFunctionInfo:
+  stackPtrOffsetReg: $sgpr32
+body: |
+  bb.0:
+    ; WAVE32-LABEL: name: wave_address_v_virtual_src
+    ; WAVE32: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr32
+    ; WAVE32-NEXT: [[V_LSHRREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e64 5, [[COPY]], implicit $exec
+    ; WAVE32-NEXT: S_ENDPGM 0, implicit [[V_LSHRREV_B32_e64_]]
+    ;
+    ; WAVE64-LABEL: name: wave_address_v_virtual_src
+    ; WAVE64: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr32
+    ; WAVE64-NEXT: [[V_LSHRREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e64 6, [[COPY]], implicit $exec
+    ; WAVE64-NEXT: S_ENDPGM 0, implicit [[V_LSHRREV_B32_e64_]]
+    %0:sgpr(p5) = COPY $sgpr32
+    %1:vgpr(p5) = G_AMDGPU_WAVE_ADDRESS %0
+    S_ENDPGM 0, implicit %1
+...
