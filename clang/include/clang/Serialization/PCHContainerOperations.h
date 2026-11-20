@@ -12,12 +12,12 @@
 #include "clang/Basic/Module.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/Support/MemoryBufferRef.h"
 #include <memory>
 
 namespace llvm {
+class MemoryBuffer;
 class raw_pwrite_stream;
-}
+} // namespace llvm
 
 namespace clang {
 
@@ -58,8 +58,9 @@ public:
   /// Equivalent to the format passed to -fmodule-format=
   virtual llvm::ArrayRef<llvm::StringRef> getFormats() const = 0;
 
-  /// Returns the serialized AST inside the PCH container Buffer.
-  virtual llvm::StringRef ExtractPCH(llvm::MemoryBufferRef Buffer) const = 0;
+  /// Returns a buffer with the serialized AST inside the PCH container Buffer.
+  virtual std::unique_ptr<llvm::MemoryBuffer>
+  ExtractPCH(std::unique_ptr<llvm::MemoryBuffer> Buffer) const = 0;
 };
 
 /// Implements write operations for a raw pass-through PCH container.
@@ -79,8 +80,9 @@ class RawPCHContainerWriter : public PCHContainerWriter {
 /// Implements read operations for a raw pass-through PCH container.
 class RawPCHContainerReader : public PCHContainerReader {
   llvm::ArrayRef<llvm::StringRef> getFormats() const override;
-  /// Simply returns the buffer contained in Buffer.
-  llvm::StringRef ExtractPCH(llvm::MemoryBufferRef Buffer) const override;
+  /// Simply returns Buffer, since the container is the serialized AST itself.
+  std::unique_ptr<llvm::MemoryBuffer>
+  ExtractPCH(std::unique_ptr<llvm::MemoryBuffer> Buffer) const override;
 };
 
 /// A registry of PCHContainerWriter and -Reader objects for different formats.

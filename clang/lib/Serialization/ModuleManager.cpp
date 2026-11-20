@@ -229,7 +229,8 @@ AddModuleResult ModuleManager::addModule(
       return Result;
     }
 
-    NewFileBuffer = std::move(*Buf);
+    // Extract the AST file now, so that the readers don't have to.
+    NewFileBuffer = PCHContainerRdr.ExtractPCH(std::move(*Buf));
     ModuleBuffer = NewFileBuffer.get();
   }
 
@@ -243,7 +244,7 @@ AddModuleResult ModuleManager::addModule(
   NewModule->ModTime = ModTime;
   NewModule->Buffer = ModuleBuffer;
   // Initialize the stream.
-  NewModule->Data = PCHContainerRdr.ExtractPCH(*NewModule->Buffer);
+  NewModule->Data = NewModule->Buffer->getBuffer();
 
   // Check file properties.
   if (isModuleFileOutOfDate(Size, ModTime, ExpectedSize, ExpectedModTime,
