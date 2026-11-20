@@ -514,14 +514,15 @@ void CIRGenFunction::emitStoreOfScalar(mlir::Value value, Address addr,
                                        LValueBaseInfo baseInfo, bool isInit,
                                        bool isNontemporal) {
 
-  // if (const auto *clangVecTy = ty->getAs<clang::VectorType>()) {
-  //   // Handle vectors of size 3 like size 4 for better performance.
-  //   // TODO(CIR): Use `ABIInfo::getOptimalVectorMemoryType` once it upstreamed
-  //   assert(!cir::MissingFeatures::cirgenABIInfo());
-  //   if (clangVecTy->getNumElements() == 3 && !getLangOpts().PreserveVec3Type)
-  //     cgm.errorNYI(addr.getPointer().getLoc(),
-  //                  "emitStoreOfScalar Vec3 & PreserveVec3Type disabled");
-  // }
+  if (const auto *clangVecTy = ty->getAs<clang::VectorType>()) {
+    // Handle vectors of size 3 like size 4 for better performance.
+    // TODO(CIR): Use `ABIInfo::getOptimalVectorMemoryType` once it upstreamed
+    assert(!cir::MissingFeatures::cirgenABIInfo());
+    if (clangVecTy->getNumElements() == 3 && !getLangOpts().PreserveVec3Type &&
+        !getTarget().getTriple().isAMDGCN())
+      cgm.errorNYI(addr.getPointer().getLoc(),
+                   "emitStoreOfScalar Vec3 & PreserveVec3Type disabled");
+  }
 
   value = emitToMemory(value, ty);
 
@@ -776,13 +777,14 @@ mlir::Value CIRGenFunction::emitLoadOfScalar(Address addr, bool isVolatile,
   // Traditional LLVM codegen handles thread local separately, CIR handles
   // as part of getAddrOfGlobalVar (GetGlobalOp).
   mlir::Type eltTy = addr.getElementType();
-  // if (const auto *clangVecTy = ty->getAs<clang::VectorType>()) {
-  //   // Handle vectors of size 3 like size 4 for better performance.
-  //   assert(!cir::MissingFeatures::cirgenABIInfo());
-  //   if (clangVecTy->getNumElements() == 3 && !getLangOpts().PreserveVec3Type)
-  //     cgm.errorNYI(addr.getPointer().getLoc(),
-  //                  "emitLoadOfScalar Vec3 & PreserveVec3Type disabled");
-  // }
+  if (const auto *clangVecTy = ty->getAs<clang::VectorType>()) {
+    // Handle vectors of size 3 like size 4 for better performance.
+    assert(!cir::MissingFeatures::cirgenABIInfo());
+    if (clangVecTy->getNumElements() == 3 && !getLangOpts().PreserveVec3Type &&
+        !getTarget().getTriple().isAMDGCN())
+      cgm.errorNYI(addr.getPointer().getLoc(),
+                   "emitLoadOfScalar Vec3 & PreserveVec3Type disabled");
+  }
 
   assert(!cir::MissingFeatures::opLoadStoreTbaa());
   LValue atomicLValue = LValue::makeAddr(addr, ty, baseInfo);
