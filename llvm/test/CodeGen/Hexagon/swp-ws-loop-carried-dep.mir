@@ -1,0 +1,325 @@
+# REQUIRES: asserts
+# RUN: llc --mtriple=hexagon -mcpu=hexagonv68 %s -run-pass=pipeliner \
+# RUN: -debug-only=pipeliner -window-sched=force -filetype=null \
+# RUN: -verify-machineinstrs 2>&1 | FileCheck %s
+
+# This is the SHA-512 message-schedule loop from llvm.org/PR209946. Each
+# iteration advances the base pointer %1 by 32 bytes and stores to offsets
+# +48/+56/+64/+72. The store to +72 of iteration N writes the same address
+# that a load from +40 of iteration N+1 reads (72 == 32 + 40), a loop-carried
+# store->load dependence. If the WindowScheduler does not honor it, the
+# aliasing load is scheduled ahead of the store and the loop computes wrong
+# results. With the dependence modeled, window scheduling finds no profitable
+# reordering here, so it declines (checked below).
+
+# CHECK: Window scheduling is not needed!
+
+--- |
+  target triple = "hexagon"
+
+  ; Function Attrs: nofree noinline norecurse nosync nounwind memory(argmem: readwrite)
+  define dso_local void @schedule(ptr noundef captures(none) %W) local_unnamed_addr #0 {
+  entry:
+    %cgep = getelementptr i8, ptr %W, i32 80
+    br label %for.body
+
+  for.cond.cleanup:                                 ; preds = %for.body
+    ret void
+
+  for.body:                                         ; preds = %for.body, %entry
+    %lsr.iv1 = phi ptr [ %cgep21, %for.body ], [ %cgep, %entry ]
+    %lsr.iv = phi i32 [ %lsr.iv.next, %for.body ], [ 64, %entry ]
+    %cgep20 = getelementptr i8, ptr %lsr.iv1, i32 -72
+    %0 = load i64, ptr %cgep20, align 8, !tbaa !9
+    %or = tail call i64 @llvm.fshl.i64(i64 %0, i64 %0, i64 63)
+    %or9 = tail call i64 @llvm.fshl.i64(i64 %0, i64 %0, i64 56)
+    %xor = xor i64 %or, %or9
+    %shr12 = lshr i64 %0, 7
+    %xor13 = xor i64 %xor, %shr12
+    %cgep21 = getelementptr i8, ptr %lsr.iv1, i32 32
+    %1 = load i64, ptr %cgep21, align 8, !tbaa !9
+    %or20 = tail call i64 @llvm.fshl.i64(i64 %1, i64 %1, i64 45)
+    %or27 = tail call i64 @llvm.fshl.i64(i64 %1, i64 %1, i64 3)
+    %xor28 = xor i64 %or20, %or27
+    %shr31 = lshr i64 %1, 6
+    %xor32 = xor i64 %xor28, %shr31
+    %cgep22 = getelementptr i8, ptr %lsr.iv1, i32 -80
+    %2 = load i64, ptr %cgep22, align 8, !tbaa !9
+    %add = add i64 %xor13, %2
+    %cgep23 = getelementptr i8, ptr %lsr.iv1, i32 -8
+    %3 = load i64, ptr %cgep23, align 8, !tbaa !9
+    %add37 = add i64 %add, %3
+    %add38 = add i64 %add37, %xor32
+    %cgep19 = getelementptr i8, ptr %lsr.iv1, i32 48
+    store i64 %add38, ptr %cgep19, align 8, !tbaa !9
+    %cgep25 = getelementptr i8, ptr %lsr.iv1, i32 -64
+    %4 = load i64, ptr %cgep25, align 8, !tbaa !9
+    %or.1 = tail call i64 @llvm.fshl.i64(i64 %4, i64 %4, i64 63)
+    %or9.1 = tail call i64 @llvm.fshl.i64(i64 %4, i64 %4, i64 56)
+    %xor.1 = xor i64 %or.1, %or9.1
+    %shr12.1 = lshr i64 %4, 7
+    %xor13.1 = xor i64 %xor.1, %shr12.1
+    %cgep26 = getelementptr i8, ptr %lsr.iv1, i32 40
+    %5 = load i64, ptr %cgep26, align 8, !tbaa !9
+    %or20.1 = tail call i64 @llvm.fshl.i64(i64 %5, i64 %5, i64 45)
+    %or27.1 = tail call i64 @llvm.fshl.i64(i64 %5, i64 %5, i64 3)
+    %xor28.1 = xor i64 %or20.1, %or27.1
+    %shr31.1 = lshr i64 %5, 6
+    %xor32.1 = xor i64 %xor28.1, %shr31.1
+    %add.1 = add i64 %xor13.1, %0
+    %6 = load i64, ptr %lsr.iv1, align 8, !tbaa !9
+    %add37.1 = add i64 %add.1, %6
+    %add38.1 = add i64 %add37.1, %xor32.1
+    %cgep24 = getelementptr i8, ptr %lsr.iv1, i32 56
+    store i64 %add38.1, ptr %cgep24, align 8, !tbaa !9
+    %cgep28 = getelementptr i8, ptr %lsr.iv1, i32 -56
+    %7 = load i64, ptr %cgep28, align 8, !tbaa !9
+    %or.2 = tail call i64 @llvm.fshl.i64(i64 %7, i64 %7, i64 63)
+    %or9.2 = tail call i64 @llvm.fshl.i64(i64 %7, i64 %7, i64 56)
+    %xor.2 = xor i64 %or.2, %or9.2
+    %shr12.2 = lshr i64 %7, 7
+    %xor13.2 = xor i64 %xor.2, %shr12.2
+    %8 = load i64, ptr %cgep19, align 8, !tbaa !9
+    %or20.2 = tail call i64 @llvm.fshl.i64(i64 %8, i64 %8, i64 45)
+    %or27.2 = tail call i64 @llvm.fshl.i64(i64 %8, i64 %8, i64 3)
+    %xor28.2 = xor i64 %or20.2, %or27.2
+    %shr31.2 = lshr i64 %8, 6
+    %xor32.2 = xor i64 %xor28.2, %shr31.2
+    %add.2 = add i64 %xor13.2, %4
+    %cgep29 = getelementptr i8, ptr %lsr.iv1, i32 8
+    %9 = load i64, ptr %cgep29, align 8, !tbaa !9
+    %add37.2 = add i64 %add.2, %9
+    %add38.2 = add i64 %add37.2, %xor32.2
+    %cgep27 = getelementptr i8, ptr %lsr.iv1, i32 64
+    store i64 %add38.2, ptr %cgep27, align 8, !tbaa !9
+    %cgep31 = getelementptr i8, ptr %lsr.iv1, i32 -48
+    %10 = load i64, ptr %cgep31, align 8, !tbaa !9
+    %or.3 = tail call i64 @llvm.fshl.i64(i64 %10, i64 %10, i64 63)
+    %or9.3 = tail call i64 @llvm.fshl.i64(i64 %10, i64 %10, i64 56)
+    %xor.3 = xor i64 %or.3, %or9.3
+    %shr12.3 = lshr i64 %10, 7
+    %xor13.3 = xor i64 %xor.3, %shr12.3
+    %11 = load i64, ptr %cgep24, align 8, !tbaa !9
+    %or20.3 = tail call i64 @llvm.fshl.i64(i64 %11, i64 %11, i64 45)
+    %or27.3 = tail call i64 @llvm.fshl.i64(i64 %11, i64 %11, i64 3)
+    %xor28.3 = xor i64 %or20.3, %or27.3
+    %shr31.3 = lshr i64 %11, 6
+    %xor32.3 = xor i64 %xor28.3, %shr31.3
+    %add.3 = add i64 %xor13.3, %7
+    %cgep32 = getelementptr i8, ptr %lsr.iv1, i32 16
+    %12 = load i64, ptr %cgep32, align 8, !tbaa !9
+    %add37.3 = add i64 %add.3, %12
+    %add38.3 = add i64 %add37.3, %xor32.3
+    %cgep30 = getelementptr i8, ptr %lsr.iv1, i32 72
+    store i64 %add38.3, ptr %cgep30, align 8, !tbaa !9
+    %lsr.iv.next = add nsw i32 %lsr.iv, -4
+    %exitcond.not.3 = icmp eq i32 %lsr.iv.next, 0
+    br i1 %exitcond.not.3, label %for.cond.cleanup, label %for.body, !llvm.loop !11
+  }
+
+  ; Function Attrs: nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none)
+  declare i64 @llvm.fshl.i64(i64, i64, i64) #1
+
+  attributes #0 = { nofree noinline norecurse nosync nounwind memory(argmem: readwrite) "frame-pointer"="all" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="hexagonv68" "target-features"="+v68,-long-calls" }
+  attributes #1 = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) "target-cpu"="hexagonv68" }
+
+  !llvm.module.flags = !{!0, !1, !2, !3}
+  !llvm.ident = !{!4}
+  !llvm.errno.tbaa = !{!5}
+
+  !0 = !{i32 1, !"wchar_size", i32 4}
+  !1 = !{i32 8, !"PIC Level", i32 2}
+  !2 = !{i32 7, !"PIE Level", i32 2}
+  !3 = !{i32 7, !"frame-pointer", i32 2}
+  !4 = !{!"clang version 22.1.8"}
+  !5 = !{!6, !6, i64 0}
+  !6 = !{!"int", !7, i64 0}
+  !7 = !{!"omnipotent char", !8, i64 0}
+  !8 = !{!"Simple C/C++ TBAA"}
+  !9 = !{!10, !10, i64 0}
+  !10 = !{!"long long", !7, i64 0}
+  !11 = distinct !{!11, !12}
+  !12 = !{!"llvm.loop.mustprogress"}
+...
+---
+name:            schedule
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+noPhis:          false
+isSSA:           true
+noVRegs:         false
+hasFakeUses:     false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHContTarget: false
+hasEHScopes:     false
+hasEHFunclets:   false
+isOutlined:      false
+debugInstrRef:   false
+failsVerification: false
+tracksDebugUserValues: false
+registers:
+  - { id: 0, class: intregs, preferred-register: '', flags: [  ] }
+  - { id: 1, class: intregs, preferred-register: '', flags: [  ] }
+  - { id: 2, class: intregs, preferred-register: '', flags: [  ] }
+  - { id: 3, class: intregs, preferred-register: '', flags: [  ] }
+  - { id: 4, class: intregs, preferred-register: '', flags: [  ] }
+  - { id: 5, class: intregs, preferred-register: '', flags: [  ] }
+  - { id: 6, class: intregs, preferred-register: '', flags: [  ] }
+  - { id: 7, class: doubleregs, preferred-register: '', flags: [  ] }
+  - { id: 8, class: doubleregs, preferred-register: '', flags: [  ] }
+  - { id: 9, class: doubleregs, preferred-register: '', flags: [  ] }
+  - { id: 10, class: doubleregs, preferred-register: '', flags: [  ] }
+  - { id: 11, class: doubleregs, preferred-register: '', flags: [  ] }
+  - { id: 12, class: doubleregs, preferred-register: '', flags: [  ] }
+  - { id: 13, class: doubleregs, preferred-register: '', flags: [  ] }
+  - { id: 14, class: doubleregs, preferred-register: '', flags: [  ] }
+  - { id: 15, class: doubleregs, preferred-register: '', flags: [  ] }
+  - { id: 16, class: doubleregs, preferred-register: '', flags: [  ] }
+  - { id: 17, class: doubleregs, preferred-register: '', flags: [  ] }
+  - { id: 18, class: doubleregs, preferred-register: '', flags: [  ] }
+  - { id: 19, class: doubleregs, preferred-register: '', flags: [  ] }
+  - { id: 20, class: doubleregs, preferred-register: '', flags: [  ] }
+  - { id: 21, class: doubleregs, preferred-register: '', flags: [  ] }
+  - { id: 22, class: doubleregs, preferred-register: '', flags: [  ] }
+  - { id: 23, class: doubleregs, preferred-register: '', flags: [  ] }
+  - { id: 24, class: doubleregs, preferred-register: '', flags: [  ] }
+  - { id: 25, class: doubleregs, preferred-register: '', flags: [  ] }
+  - { id: 26, class: doubleregs, preferred-register: '', flags: [  ] }
+  - { id: 27, class: doubleregs, preferred-register: '', flags: [  ] }
+  - { id: 28, class: doubleregs, preferred-register: '', flags: [  ] }
+  - { id: 29, class: doubleregs, preferred-register: '', flags: [  ] }
+  - { id: 30, class: doubleregs, preferred-register: '', flags: [  ] }
+  - { id: 31, class: doubleregs, preferred-register: '', flags: [  ] }
+  - { id: 32, class: doubleregs, preferred-register: '', flags: [  ] }
+  - { id: 33, class: doubleregs, preferred-register: '', flags: [  ] }
+  - { id: 34, class: doubleregs, preferred-register: '', flags: [  ] }
+  - { id: 35, class: doubleregs, preferred-register: '', flags: [  ] }
+  - { id: 36, class: doubleregs, preferred-register: '', flags: [  ] }
+  - { id: 37, class: doubleregs, preferred-register: '', flags: [  ] }
+  - { id: 38, class: doubleregs, preferred-register: '', flags: [  ] }
+  - { id: 39, class: doubleregs, preferred-register: '', flags: [  ] }
+  - { id: 40, class: doubleregs, preferred-register: '', flags: [  ] }
+  - { id: 41, class: doubleregs, preferred-register: '', flags: [  ] }
+  - { id: 42, class: doubleregs, preferred-register: '', flags: [  ] }
+  - { id: 43, class: doubleregs, preferred-register: '', flags: [  ] }
+  - { id: 44, class: doubleregs, preferred-register: '', flags: [  ] }
+  - { id: 45, class: doubleregs, preferred-register: '', flags: [  ] }
+  - { id: 46, class: doubleregs, preferred-register: '', flags: [  ] }
+  - { id: 47, class: doubleregs, preferred-register: '', flags: [  ] }
+  - { id: 48, class: doubleregs, preferred-register: '', flags: [  ] }
+  - { id: 49, class: doubleregs, preferred-register: '', flags: [  ] }
+  - { id: 50, class: doubleregs, preferred-register: '', flags: [  ] }
+  - { id: 51, class: doubleregs, preferred-register: '', flags: [  ] }
+  - { id: 52, class: doubleregs, preferred-register: '', flags: [  ] }
+  - { id: 53, class: doubleregs, preferred-register: '', flags: [  ] }
+  - { id: 54, class: predregs, preferred-register: '', flags: [  ] }
+liveins:
+  - { reg: '$r0', virtual-reg: '%5' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        false
+  framePointerPolicy: all
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  isCalleeSavedInfoValid: false
+  localFrameSize:  0
+fixedStack:      []
+stack:           []
+entry_values:    []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo:
+  stackAlignBaseReg: ''
+body:             |
+  bb.0.entry:
+    successors: %bb.2(0x80000000)
+    liveins: $r0
+
+    %5:intregs = COPY $r0
+    %0:intregs = A2_addi %5, 80
+    J2_loop0i %bb.2, 16, implicit-def $lc0, implicit-def $sa0, implicit-def $usr
+    J2_jump %bb.2, implicit-def dead $pc
+
+  bb.1.for.cond.cleanup:
+    PS_jmpret $r31, implicit-def dead $pc
+
+  bb.2.for.body (machine-block-address-taken):
+    successors: %bb.1(0x04000000), %bb.2(0x7c000000)
+
+    %1:intregs = PHI %0, %bb.0, %3, %bb.2
+    %7:doubleregs = L2_loadrd_io %1, -72 :: (load (s64) from %ir.cgep20, !tbaa !9)
+    %8:doubleregs = S6_rol_i_p %7, 63
+    %9:doubleregs = S6_rol_i_p_xacc %8, %7, 56
+    %10:doubleregs = S2_lsr_i_p_xacc %9, %7, 7
+    %3:intregs = A2_addi %1, 32
+    %11:doubleregs = L2_loadrd_io %1, 32 :: (load (s64) from %ir.cgep21, !tbaa !9)
+    %12:doubleregs = S6_rol_i_p %11, 45
+    %13:doubleregs = S6_rol_i_p_xacc %12, %11, 3
+    %14:doubleregs = S2_lsr_i_p_xacc %13, %11, 6
+    %15:doubleregs = L2_loadrd_io %1, -80 :: (load (s64) from %ir.cgep22, !tbaa !9)
+    %16:doubleregs = A2_addp killed %10, killed %15
+    %17:doubleregs = L2_loadrd_io %1, -8 :: (load (s64) from %ir.cgep23, !tbaa !9)
+    %18:doubleregs = A2_addp killed %16, killed %17
+    %19:doubleregs = A2_addp killed %18, killed %14
+    S2_storerd_io %1, 48, %19 :: (store (s64) into %ir.cgep19, !tbaa !9)
+    %20:doubleregs = L2_loadrd_io %1, -64 :: (load (s64) from %ir.cgep25, !tbaa !9)
+    %21:doubleregs = S6_rol_i_p %20, 63
+    %22:doubleregs = S6_rol_i_p_xacc %21, %20, 56
+    %23:doubleregs = S2_lsr_i_p_xacc %22, %20, 7
+    %24:doubleregs = L2_loadrd_io %1, 40 :: (load (s64) from %ir.cgep26, !tbaa !9)
+    %25:doubleregs = S6_rol_i_p %24, 45
+    %26:doubleregs = S6_rol_i_p_xacc %25, %24, 3
+    %27:doubleregs = S2_lsr_i_p_xacc %26, %24, 6
+    %28:doubleregs = A2_addp killed %23, %7
+    %29:doubleregs = L2_loadrd_io %1, 0 :: (load (s64) from %ir.lsr.iv1, !tbaa !9)
+    %30:doubleregs = A2_addp killed %28, killed %29
+    %31:doubleregs = A2_addp killed %30, killed %27
+    S2_storerd_io %1, 56, %31 :: (store (s64) into %ir.cgep24, !tbaa !9)
+    %32:doubleregs = L2_loadrd_io %1, -56 :: (load (s64) from %ir.cgep28, !tbaa !9)
+    %33:doubleregs = S6_rol_i_p %32, 63
+    %34:doubleregs = S6_rol_i_p_xacc %33, %32, 56
+    %35:doubleregs = S2_lsr_i_p_xacc %34, %32, 7
+    %36:doubleregs = S6_rol_i_p %19, 45
+    %37:doubleregs = S6_rol_i_p_xacc %36, %19, 3
+    %38:doubleregs = S2_lsr_i_p_xacc %37, %19, 6
+    %39:doubleregs = A2_addp killed %35, %20
+    %40:doubleregs = L2_loadrd_io %1, 8 :: (load (s64) from %ir.cgep29, !tbaa !9)
+    %41:doubleregs = A2_addp killed %39, killed %40
+    %42:doubleregs = A2_addp killed %41, killed %38
+    S2_storerd_io %1, 64, killed %42 :: (store (s64) into %ir.cgep27, !tbaa !9)
+    %43:doubleregs = L2_loadrd_io %1, -48 :: (load (s64) from %ir.cgep31, !tbaa !9)
+    %44:doubleregs = S6_rol_i_p %43, 63
+    %45:doubleregs = S6_rol_i_p_xacc %44, %43, 56
+    %46:doubleregs = S2_lsr_i_p_xacc %45, %43, 7
+    %47:doubleregs = S6_rol_i_p %31, 45
+    %48:doubleregs = S6_rol_i_p_xacc %47, %31, 3
+    %49:doubleregs = S2_lsr_i_p_xacc %48, %31, 6
+    %50:doubleregs = A2_addp killed %46, %32
+    %51:doubleregs = L2_loadrd_io %1, 16 :: (load (s64) from %ir.cgep32, !tbaa !9)
+    %52:doubleregs = A2_addp killed %50, killed %51
+    %53:doubleregs = A2_addp killed %52, killed %49
+    S2_storerd_io %1, 72, killed %53 :: (store (s64) into %ir.cgep30, !tbaa !9)
+    ENDLOOP0 %bb.2, implicit-def $pc, implicit-def $lc0, implicit $sa0, implicit $lc0
+    J2_jump %bb.1, implicit-def $pc
+...

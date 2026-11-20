@@ -63,6 +63,23 @@ class SMSchedule;
 extern LLVM_ABI cl::opt<bool> SwpEnableCopyToPhi;
 extern LLVM_ABI cl::opt<int> SwpForceIssueWidth;
 
+/// Return true if BaseMI and OtherMI may access overlapping memory in a later
+/// iteration of the loop LoopBB. Returns true conservatively whenever overlap
+/// cannot be ruled out.
+LLVM_ABI bool mayOverlapInLaterIter(const MachineInstr *BaseMI,
+                                    const MachineInstr *OtherMI,
+                                    const MachineBasicBlock *LoopBB,
+                                    const MachineRegisterInfo &MRI,
+                                    const TargetInstrInfo &TII);
+
+/// Software pipelining policy for a loop, which a target can customize by
+/// implementing TargetSubtargetInfo::overridePipelinerPolicy.
+struct MachinePipelinerPolicy {
+  /// Limit the register pressure of the scheduled loop, retrying at a higher
+  /// II when a schedule needs too many registers.
+  bool ShouldLimitRegPressure = false;
+};
+
 /// The main class in the implementation of the target independent
 /// software pipeliner pass.
 class LLVM_ABI MachinePipeliner : public MachineFunctionPass {
