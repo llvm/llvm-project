@@ -190,10 +190,25 @@ namespace llvm {
     SmallVector<std::tuple<LocTy, Instruction *, TrackingMDNodeRef>>
         PendingDbgInsts;
 
+    /// The parsed "expanded" form of an FLDebugLoc, which has the FLSrcLoc
+    /// contents stored in-line rather than indexed.
+    struct ExpandedFLDebugLoc {
+      uint32_t Line;
+      uint16_t Column;
+      TrackingMDRef Scope;
+      FLIndex<FLInlinedCall> InlinedAtIdx;
+      uint16_t AtomGroup;
+      uint8_t AtomRank;
+    };
     /// An FLMD attachment to an instruction/record (currently just !!dbgLoc, in
     /// its normal or expanded forms).
-    using FLMDAttachment = std::variant<std::nullopt_t, FLDebugLoc>;
+    using FLMDAttachment =
+        std::variant<std::nullopt_t, FLDebugLoc, ExpandedFLDebugLoc>;
 
+    SmallVector<std::tuple<LocTy, DbgRecord *, ExpandedFLDebugLoc>>
+        PendingDbgRecordExpandedLocs;
+    SmallVector<std::tuple<LocTy, Instruction *, ExpandedFLDebugLoc>>
+        PendingDbgInstExpandedLocs;
     SmallVector<std::tuple<Instruction *, TrackingMDNodeRef>> SeenInstLoops;
 
     DenseMap<MDFunctionLocalContext *,
