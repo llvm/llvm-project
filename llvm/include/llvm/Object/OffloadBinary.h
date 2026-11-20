@@ -220,10 +220,7 @@ private:
 /// A handle to a single OffloadBinary.
 class OffloadFile {
 public:
-  /// The target a device image is built for. Device images with the same
-  /// target are linked together.
   struct TargetID {
-    /// The target triple, e.g. "spirv64-unknown-unknown".
     StringRef Triple;
     /// The architecture, e.g. "sm_70" or "igca_30r".
     StringRef Arch;
