@@ -325,6 +325,13 @@ bool CompilerType::HasPointerAuthQualifier() const {
   return false;
 }
 
+std::optional<uint32_t> CompilerType::GetTargetAddressSpace() const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetTargetAddressSpace(m_type);
+  return std::nullopt;
+}
+
 bool CompilerType::IsPointerToScalarType() const {
   if (!IsValid())
     return false;
@@ -695,6 +702,14 @@ CompilerType CompilerType::AddPtrAuthModifier(uint32_t payload) const {
   return CompilerType();
 }
 
+CompilerType
+CompilerType::AddAddressSpaceModifier(uint32_t address_space) const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->AddAddressSpaceModifier(m_type, address_space);
+  return CompilerType();
+}
+
 CompilerType CompilerType::GetLValueReferenceType() const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
@@ -778,6 +793,13 @@ CompilerType::GetByteSize(ExecutionContextScope *exe_scope) const {
   if (!bit_size_or_err)
     return bit_size_or_err.takeError();
   return (*bit_size_or_err + 7) / 8;
+}
+
+std::optional<uint64_t> CompilerType::GetByteStride() const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetByteStride(m_type);
+  return {};
 }
 
 std::optional<size_t>

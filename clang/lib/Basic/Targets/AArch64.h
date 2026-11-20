@@ -68,6 +68,7 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   bool HasMatmulFP64 = false;
   bool HasMatmulFP32 = false;
   bool HasLSE = false;
+  bool HasLSCP = false;
   bool HasFlagM = false;
   bool HasAlternativeNZCV = false;
   bool HasMOPS = false;
@@ -194,9 +195,9 @@ public:
 
   llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
 
-  std::optional<std::pair<unsigned, unsigned>>
-  getVScaleRange(const LangOptions &LangOpts, ArmStreamingKind Mode,
-                 llvm::StringMap<bool> *FeatureMap = nullptr) const override;
+  std::optional<std::pair<unsigned, unsigned>> getVScaleRange(
+      const LangOptions &LangOpts, ArmStreamingKind Mode,
+      const llvm::StringMap<bool> *FeatureMap = nullptr) const override;
   bool doesFeatureAffectCodeGen(StringRef Name) const override;
   bool validateCpuSupports(StringRef FeatureStr) const override;
   bool hasFeature(StringRef Feature) const override;
@@ -318,6 +319,20 @@ class LLVM_LIBRARY_VISIBILITY MinGWARM64TargetInfo
     : public WindowsARM64TargetInfo {
 public:
   MinGWARM64TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts);
+};
+
+// ARM64 UEFI target
+class LLVM_LIBRARY_VISIBILITY UEFIAArch64TargetInfo
+    : public UEFITargetInfo<AArch64leTargetInfo> {
+public:
+  UEFIAArch64TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts);
+
+  BuiltinVaListKind getBuiltinVaListKind() const override;
+
+  CallingConvCheckResult checkCallingConvention(CallingConv CC) const override;
+
+  TargetInfo::CallingConvKind
+  getCallingConvKind(bool ClangABICompat4) const override;
 };
 
 class LLVM_LIBRARY_VISIBILITY AArch64beTargetInfo : public AArch64TargetInfo {

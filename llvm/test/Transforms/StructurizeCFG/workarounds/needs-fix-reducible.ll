@@ -21,7 +21,8 @@ define void @irreducible(i1 %PredEntry, i1 %PredB1, i1 %PredB2, i1 %PredB3, i1 %
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi i1 [ true, [[FLOW5]] ], [ [[TMP9:%.*]], [[FLOW:%.*]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi i1 [ true, [[FLOW5]] ], [ [[TMP12:%.*]], [[FLOW]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = phi i1 [ [[TMP7:%.*]], [[FLOW5]] ], [ true, [[FLOW]] ]
-; CHECK-NEXT:    br i1 true, label [[FLOW6:%.*]], label [[FLOW]]
+; CHECK-NEXT:    [[TMP6:%.*]] = phi i1 [ [[TMP10:%.*]], [[FLOW5]] ], [ true, [[FLOW]] ]
+; CHECK-NEXT:    br i1 [[TMP6]], label [[FLOW6:%.*]], label [[FLOW]]
 ; CHECK:       B2:
 ; CHECK-NEXT:    br i1 [[PREDB2_INV]], label [[B3]], label [[FLOW4:%.*]]
 ; CHECK:       Flow3:
@@ -33,6 +34,7 @@ define void @irreducible(i1 %PredEntry, i1 %PredB1, i1 %PredB2, i1 %PredB3, i1 %
 ; CHECK:       B4:
 ; CHECK-NEXT:    br label [[FLOW]]
 ; CHECK:       Flow5:
+; CHECK-NEXT:    [[TMP10]] = phi i1 [ [[PREDB1:%.*]], [[B1]] ], [ true, [[FLOW3]] ]
 ; CHECK-NEXT:    br label [[FLOW2:%.*]]
 ; CHECK:       Flow6:
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[EXIT:%.*]], label [[IRR_GUARD]]
@@ -44,7 +46,7 @@ define void @irreducible(i1 %PredEntry, i1 %PredB1, i1 %PredB2, i1 %PredB3, i1 %
 ; CHECK:       Flow:
 ; CHECK-NEXT:    [[TMP9]] = phi i1 [ [[TMP3]], [[FLOW2]] ], [ poison, [[B4]] ], [ poison, [[IRR_GUARD]] ]
 ; CHECK-NEXT:    [[TMP12]] = phi i1 [ [[TMP4]], [[FLOW2]] ], [ true, [[B4]] ], [ false, [[IRR_GUARD]] ]
-; CHECK-NEXT:    [[TMP13:%.*]] = phi i1 [ false, [[FLOW2]] ], [ [[PREDB4:%.*]], [[B4]] ], [ true, [[IRR_GUARD]] ]
+; CHECK-NEXT:    [[TMP13:%.*]] = phi i1 [ true, [[FLOW2]] ], [ [[PREDB4:%.*]], [[B4]] ], [ true, [[IRR_GUARD]] ]
 ; CHECK-NEXT:    br i1 [[TMP13]], label [[IRR_GUARD1]], label [[FLOW2]]
 ; CHECK:       irr.guard1:
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[B2]], label [[FLOW3]]

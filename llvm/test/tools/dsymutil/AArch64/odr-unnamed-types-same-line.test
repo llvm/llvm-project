@@ -122,16 +122,6 @@
 # PARALLEL-NOT: DW_TAG
 # PARALLEL:       NULL
 
-# PARALLEL:     0x[[INNER:[0-9a-f]+]]: DW_TAG_structure_type
-# PARALLEL-NOT: DW_TAG
-# PARALLEL:       DW_TAG_member
-# PARALLEL-NEXT:    DW_AT_name{{.*}}"a"
-# PARALLEL-NOT: DW_TAG
-# PARALLEL:       DW_TAG_member
-# PARALLEL-NEXT:    DW_AT_name{{.*}}"b"
-# PARALLEL-NOT: DW_TAG
-# PARALLEL:       NULL
-
 # PARALLEL:     0x[[OUTER:[0-9a-f]+]]: DW_TAG_structure_type
 # PARALLEL-NOT: DW_TAG
 # PARALLEL:       DW_TAG_member
@@ -142,10 +132,13 @@
 # PARALLEL-NOT: DW_TAG
 # PARALLEL:       NULL
 
-# PARALLEL:     0x[[FLOATBOX:[0-9a-f]+]]: DW_TAG_structure_type
+# PARALLEL:     0x[[INNER:[0-9a-f]+]]: DW_TAG_structure_type
 # PARALLEL-NOT: DW_TAG
 # PARALLEL:       DW_TAG_member
-# PARALLEL-NEXT:    DW_AT_name{{.*}}"f"
+# PARALLEL-NEXT:    DW_AT_name{{.*}}"a"
+# PARALLEL-NOT: DW_TAG
+# PARALLEL:       DW_TAG_member
+# PARALLEL-NEXT:    DW_AT_name{{.*}}"b"
 # PARALLEL-NOT: DW_TAG
 # PARALLEL:       NULL
 
@@ -153,6 +146,13 @@
 # PARALLEL-NOT: DW_TAG
 # PARALLEL:       DW_TAG_member
 # PARALLEL-NEXT:    DW_AT_name{{.*}}"i"
+# PARALLEL-NOT: DW_TAG
+# PARALLEL:       NULL
+
+# PARALLEL:     0x[[FLOATBOX:[0-9a-f]+]]: DW_TAG_structure_type
+# PARALLEL-NOT: DW_TAG
+# PARALLEL:       DW_TAG_member
+# PARALLEL-NEXT:    DW_AT_name{{.*}}"f"
 # PARALLEL-NOT: DW_TAG
 # PARALLEL:       NULL
 

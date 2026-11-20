@@ -3882,47 +3882,46 @@ multiclass sse4_pack<bits<8> opc, string OpcodeStr, ValueType OutVT,
 
 let Predicates = [HasAVX, NoVLX_Or_NoBWI] in {
   defm VPACKSSWB : sse2_pack<0x63, "vpacksswb", v16i8, v8i16, X86Packss, VR128,
-                             i128mem, SchedWriteShuffle.XMM, load, 0>,
+                             i128mem, SchedWritePack.XMM, load, 0>,
                              VEX, VVVV, WIG;
   defm VPACKSSDW : sse2_pack<0x6B, "vpackssdw", v8i16, v4i32, X86Packss, VR128,
-                             i128mem, SchedWriteShuffle.XMM, load, 0>,
+                             i128mem, SchedWritePack.XMM, load, 0>,
                              VEX, VVVV, WIG;
 
   defm VPACKUSWB : sse2_pack<0x67, "vpackuswb", v16i8, v8i16, X86Packus, VR128,
-                             i128mem, SchedWriteShuffle.XMM, load, 0>,
+                             i128mem, SchedWritePack.XMM, load, 0>,
                              VEX, VVVV, WIG;
   defm VPACKUSDW : sse4_pack<0x2B, "vpackusdw", v8i16, v4i32, X86Packus, VR128,
-                             i128mem, SchedWriteShuffle.XMM, load, 0>,
+                             i128mem, SchedWritePack.XMM, load, 0>,
                              VEX, VVVV, WIG;
 }
 
 let Predicates = [HasAVX2, NoVLX_Or_NoBWI] in {
   defm VPACKSSWBY : sse2_pack<0x63, "vpacksswb", v32i8, v16i16, X86Packss, VR256,
-                              i256mem, SchedWriteShuffle.YMM, load, 0>,
+                              i256mem, SchedWritePack.YMM, load, 0>,
                               VEX, VVVV, VEX_L, WIG;
   defm VPACKSSDWY : sse2_pack<0x6B, "vpackssdw", v16i16, v8i32, X86Packss, VR256,
-                              i256mem, SchedWriteShuffle.YMM, load, 0>,
+                              i256mem, SchedWritePack.YMM, load, 0>,
                               VEX, VVVV, VEX_L, WIG;
 
   defm VPACKUSWBY : sse2_pack<0x67, "vpackuswb", v32i8, v16i16, X86Packus, VR256,
-                              i256mem, SchedWriteShuffle.YMM, load, 0>,
+                              i256mem, SchedWritePack.YMM, load, 0>,
                               VEX, VVVV, VEX_L, WIG;
   defm VPACKUSDWY : sse4_pack<0x2B, "vpackusdw", v16i16, v8i32, X86Packus, VR256,
-                              i256mem, SchedWriteShuffle.YMM, load, 0>,
+                              i256mem, SchedWritePack.YMM, load, 0>,
                               VEX, VVVV, VEX_L, WIG;
 }
 
 let Constraints = "$src1 = $dst" in {
   defm PACKSSWB : sse2_pack<0x63, "packsswb", v16i8, v8i16, X86Packss, VR128,
-                            i128mem, SchedWriteShuffle.XMM, memop>;
+                            i128mem, SchedWritePack.XMM, memop>;
   defm PACKSSDW : sse2_pack<0x6B, "packssdw", v8i16, v4i32, X86Packss, VR128,
-                            i128mem, SchedWriteShuffle.XMM, memop>;
+                            i128mem, SchedWritePack.XMM, memop>;
 
   defm PACKUSWB : sse2_pack<0x67, "packuswb", v16i8, v8i16, X86Packus, VR128,
-                            i128mem, SchedWriteShuffle.XMM, memop>;
-
+                            i128mem, SchedWritePack.XMM, memop>;
   defm PACKUSDW : sse4_pack<0x2B, "packusdw", v8i16, v4i32, X86Packus, VR128,
-                            i128mem, SchedWriteShuffle.XMM, memop>;
+                            i128mem, SchedWritePack.XMM, memop>;
 }
 } // ExeDomain = SSEPackedInt
 
@@ -4082,20 +4081,6 @@ let Predicates = [UseSSE2], Constraints = "$src1 = $dst" in
 defm PINSRW : sse2_pinsrw, TB, PD;
 
 } // ExeDomain = SSEPackedInt
-
-// Always select FP16 instructions if available.
-let Predicates = [UseSSE2], AddedComplexity = -10 in {
-  def : Pat<(f16 (load addr:$src)), (COPY_TO_REGCLASS (PINSRWrmi (v8i16 (IMPLICIT_DEF)), addr:$src, 0), FR16)>;
-  def : Pat<(store f16:$src, addr:$dst), (MOV16mr addr:$dst, (EXTRACT_SUBREG (PEXTRWrri (v8i16 (COPY_TO_REGCLASS FR16:$src, VR128)), 0), sub_16bit))>;
-  def : Pat<(i16 (bitconvert f16:$src)), (EXTRACT_SUBREG (PEXTRWrri (v8i16 (COPY_TO_REGCLASS FR16:$src, VR128)), 0), sub_16bit)>;
-  def : Pat<(f16 (bitconvert i16:$src)), (COPY_TO_REGCLASS (PINSRWrri (v8i16 (IMPLICIT_DEF)), (INSERT_SUBREG (IMPLICIT_DEF), GR16:$src, sub_16bit), 0), FR16)>;
-}
-
-let Predicates = [HasAVX, NoBWI] in {
-  def : Pat<(f16 (load addr:$src)), (COPY_TO_REGCLASS (VPINSRWrmi (v8i16 (IMPLICIT_DEF)), addr:$src, 0), FR16)>;
-  def : Pat<(i16 (bitconvert f16:$src)), (EXTRACT_SUBREG (VPEXTRWrri (v8i16 (COPY_TO_REGCLASS FR16:$src, VR128)), 0), sub_16bit)>;
-  def : Pat<(f16 (bitconvert i16:$src)), (COPY_TO_REGCLASS (VPINSRWrri (v8i16 (IMPLICIT_DEF)), (INSERT_SUBREG (IMPLICIT_DEF), GR16:$src, sub_16bit), 0), FR16)>;
-}
 
 //===---------------------------------------------------------------------===//
 // SSE2 - Packed Mask Creation
@@ -4368,6 +4353,20 @@ def : InstAlias<"vmovd\t{$src, $dst|$dst, $src}",
                 (VMOV64toPQIrr VR128:$dst, GR64:$src), 0>;
 def : InstAlias<"vmovd\t{$src, $dst|$dst, $src}",
                 (VMOVPQIto64rr GR64:$dst, VR128:$src), 0>;
+
+// Always select FP16 instructions if available.
+let Predicates = [UseSSE2], AddedComplexity = -10 in {
+  def : Pat<(f16 (load addr:$src)), (COPY_TO_REGCLASS (PINSRWrmi (v8i16 (IMPLICIT_DEF)), addr:$src, 0), FR16)>;
+  def : Pat<(store f16:$src, addr:$dst), (MOV16mr addr:$dst, (EXTRACT_SUBREG (PEXTRWrri (v8i16 (COPY_TO_REGCLASS FR16:$src, VR128)), 0), sub_16bit))>;
+  def : Pat<(i16 (bitconvert f16:$src)), (EXTRACT_SUBREG (PEXTRWrri (v8i16 (COPY_TO_REGCLASS FR16:$src, VR128)), 0), sub_16bit)>;
+  def : Pat<(f16 (bitconvert i16:$src)), (COPY_TO_REGCLASS (MOVDI2PDIrr (INSERT_SUBREG (IMPLICIT_DEF), GR16:$src, sub_16bit)), FR16)>;
+}
+
+let Predicates = [HasAVX, NoBWI] in {
+  def : Pat<(f16 (load addr:$src)), (COPY_TO_REGCLASS (VPINSRWrmi (v8i16 (IMPLICIT_DEF)), addr:$src, 0), FR16)>;
+  def : Pat<(i16 (bitconvert f16:$src)), (EXTRACT_SUBREG (VPEXTRWrri (v8i16 (COPY_TO_REGCLASS FR16:$src, VR128)), 0), sub_16bit)>;
+  def : Pat<(f16 (bitconvert i16:$src)), (COPY_TO_REGCLASS (VMOVDI2PDIrr (INSERT_SUBREG (IMPLICIT_DEF), GR16:$src, sub_16bit)), FR16)>;
+}
 
 //===---------------------------------------------------------------------===//
 // SSE2 - Move Quadword
@@ -7276,13 +7275,11 @@ def : Pat<(v16i16 (X86SubVBroadcastld128 addr:$src)),
           (VBROADCASTF128rm addr:$src)>;
 def : Pat<(v16f16 (X86SubVBroadcastld128 addr:$src)),
           (VBROADCASTF128rm addr:$src)>;
+def : Pat<(v16bf16 (X86SubVBroadcastld128 addr:$src)),
+          (VBROADCASTF128rm addr:$src)>;
 def : Pat<(v32i8 (X86SubVBroadcastld128 addr:$src)),
           (VBROADCASTF128rm addr:$src)>;
 }
-
-let Predicates = [HasAVXNECONVERT, NoVLX] in
-  def : Pat<(v16bf16 (X86SubVBroadcastld128 addr:$src)),
-            (VBROADCASTF128rm addr:$src)>;
 
 //===----------------------------------------------------------------------===//
 // VPERM2F128 - Permute Floating-Point Values in 128-bit chunks
@@ -8030,11 +8027,9 @@ let Predicates = [HasAVX2, NoVLX] in {
   defm : vinsert_lowering<"VINSERTI128", "VPERM2I128", v4i32, v8i32,  loadv4i32,  loadv8i32>;
   defm : vinsert_lowering<"VINSERTI128", "VPERM2I128", v8i16, v16i16, loadv8i16,  loadv16i16>;
   defm : vinsert_lowering<"VINSERTI128", "VPERM2I128", v8f16, v16f16, loadv8f16,  loadv16f16>;
+  defm : vinsert_lowering<"VINSERTI128", "VPERM2I128", v8bf16, v16bf16, loadv8bf16, loadv16bf16>;
   defm : vinsert_lowering<"VINSERTI128", "VPERM2I128", v16i8, v32i8,  loadv16i8,  loadv32i8>;
 }
-
-let Predicates = [HasAVXNECONVERT, NoVLX] in
-  defm : vinsert_lowering<"VINSERTI128", "VPERM2I128", v8bf16, v16bf16, loadv8bf16, loadv16bf16>;
 
 //===----------------------------------------------------------------------===//
 // VEXTRACTI128 - Extract packed integer values
@@ -8054,12 +8049,10 @@ let Predicates = [HasAVX2, NoVLX] in {
   defm : vextract_lowering<"VEXTRACTI128", v8i32,  v4i32>;
   defm : vextract_lowering<"VEXTRACTI128", v16i16, v8i16>;
   defm : vextract_lowering<"VEXTRACTI128", v16f16, v8f16>;
+  defm : vextract_lowering<"VEXTRACTI128", v16bf16, v8bf16>;
   defm : vextract_lowering<"VEXTRACTI128", v32i8,  v16i8>;
   defm : vextract_lowering<"VEXTRACTI128", v32i8,  v16i8>;
 }
-
-let Predicates = [HasAVXNECONVERT, NoVLX] in
-  defm : vextract_lowering<"VEXTRACTI128", v16bf16, v8bf16>;
 
 //===----------------------------------------------------------------------===//
 // VPMASKMOV - Conditional SIMD Integer Packed Loads and Stores

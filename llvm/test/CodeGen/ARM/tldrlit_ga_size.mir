@@ -18,7 +18,6 @@
 ---
 name:            f_pcrel
 alignment:       2
-tracksRegLiveness: true
 noPhis:          true
 isSSA:           false
 noVRegs:         true
@@ -49,7 +48,6 @@ body:             |
 ---
 name:            f_abs
 alignment:       2
-tracksRegLiveness: true
 noPhis:          true
 isSSA:           false
 noVRegs:         true

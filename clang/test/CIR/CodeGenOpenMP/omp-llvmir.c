@@ -58,7 +58,7 @@
 // LLVM: %[[LOAD:.*]] = load i32, ptr %[[RETVAL]], align 4
 // LLVM: ret i32 %[[LOAD]]
 
-// LLVM-LABEL: define internal void @main..omp_par(ptr noalias %{{.*}}, ptr noalias %{{.*}}, ptr %{{.*}})
+// LLVM-LABEL: define internal void @main..omp_par(ptr noalias %{{.*}}, ptr noalias %{{.*}}, ptr noalias nofreeobj %{{.*}})
 // LLVM: [[PAR_ENTRY:.*]]:
 // LLVM: %[[GEP_J:.*]] = getelementptr { ptr }, ptr %{{.*}}, i32 0, i32 0
 // LLVM: %[[LOAD_J:.*]] = load ptr, ptr %[[GEP_J]], align 8
@@ -88,9 +88,6 @@
 // LLVM: br i1 %[[CMP]], label %[[PAR_REGION4:.*]], label %[[PAR_REGION6:.*]]
 
 // LLVM: [[PAR_REGION6]]:
-// LLVM: br label %[[PAR_REGION7:.*]]
-
-// LLVM: [[PAR_REGION7]]:
 // LLVM: br label %[[REGION_CONT:.*]]
 
 // LLVM: [[REGION_CONT]]:
@@ -123,7 +120,7 @@
 // OGCG: call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @1, i32 1, ptr @main.omp_outlined, ptr %[[J]])
 // OGCG: ret i32 0
 
-// OGCG-LABEL: define internal void @main.omp_outlined(ptr noalias noundef %{{.*}}, ptr noalias noundef %{{.*}}, ptr noundef nonnull align 4 dereferenceable(4) %{{.*}})
+// OGCG-LABEL: define internal void @main.omp_outlined(ptr noalias noundef %{{.*}}, ptr noalias noundef %{{.*}}, ptr nofreeobj noundef nonnull align 4 dereferenceable(4) %{{.*}})
 // OGCG: [[OUTLINED_ENTRY:.*]]:
 // OGCG: %[[GLOBAL_TID_ADDR:.*]] = alloca ptr, align 8
 // OGCG: %[[BOUND_TID_ADDR:.*]] = alloca ptr, align 8

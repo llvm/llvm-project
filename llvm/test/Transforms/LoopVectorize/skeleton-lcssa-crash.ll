@@ -134,8 +134,7 @@ define void @test2(ptr %dst) {
 ; CHECK-NEXT:    [[INDVAR_LCSSA:%.*]] = phi i32 [ [[INDVAR]], [[LOOP_2]] ]
 ; CHECK-NEXT:    [[IV_1_LCSSA:%.*]] = phi i64 [ [[IV_1]], [[LOOP_2]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = and i64 [[IV_1_LCSSA]], 4294967295
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[INDVAR_LCSSA]], -1
-; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], 1000
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 1000, [[INDVAR_LCSSA]]
 ; CHECK-NEXT:    [[SMIN:%.*]] = call i32 @llvm.smin.i32(i32 [[TMP2]], i32 1)
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub i32 [[TMP2]], [[SMIN]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[TMP3]] to i64
@@ -153,7 +152,7 @@ define void @test2(ptr %dst) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = add nsw i64 [[OFFSET_IDX]], -1
 ; CHECK-NEXT:    [[TMP8:%.*]] = and i64 [[TMP7]], 4294967295
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[DST:%.*]], i64 [[TMP8]]
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[TMP9]], i64 -1
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr [[TMP9]], i64 -4
 ; CHECK-NEXT:    store <2 x i32> zeroinitializer, ptr [[TMP11]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]

@@ -5,8 +5,8 @@
 // REQUIRES: target={{x86_64.*}}
 // UNSUPPORTED: i386-target-arch, internal_symbolizer
 
-// Does not link.
-// UNSUPPORTED: darwin,target={{.*solaris.*}}
+// Does not link (Android and Darwin default to -shared-libsan; Solaris lacks libc.a).
+// UNSUPPORTED: android, darwin, target={{.*solaris.*}}
 
 #include <signal.h>
 #include <stdio.h>

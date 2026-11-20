@@ -1,4 +1,4 @@
-; RUN: not llvm-as < %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llvm-as < %s -disable-output 2>&1 | FileCheck %s
 
 declare i32 @llvm.experimental.get.vector.length.i32(i32, i32, i1)
 

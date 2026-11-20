@@ -11,6 +11,7 @@ set(CLANG_LIBS_TO_LINK
 else()
 set(LLVM_COMPONENTS_TO_LINK
   ${LLVM_TARGETS_TO_BUILD}
+  BitWriter
   Core
   MC
   OrcJIT
