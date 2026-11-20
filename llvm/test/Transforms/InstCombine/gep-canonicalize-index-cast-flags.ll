@@ -19,7 +19,7 @@ define void @dependent_iv_inbounds(ptr %start, i64 %n) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV2:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV2_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[IV2]] to i32
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc nsw i64 [[IV2]] to i32
 ; CHECK-NEXT:    [[IV:%.*]] = getelementptr inbounds i8, ptr [[START]], i32 [[TMP0]]
 ; CHECK-NEXT:    call void @use(ptr [[IV]])
 ; CHECK-NEXT:    [[IV2_NEXT]] = add i64 [[IV2]], 4
@@ -49,7 +49,7 @@ define void @dependent_iv_inbounds_nuw(ptr %start, i64 %n) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV2:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV2_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[IV2]] to i32
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc nuw nsw i64 [[IV2]] to i32
 ; CHECK-NEXT:    [[IV:%.*]] = getelementptr inbounds nuw i8, ptr [[START]], i32 [[TMP0]]
 ; CHECK-NEXT:    call void @use(ptr [[IV]])
 ; CHECK-NEXT:    [[IV2_NEXT]] = add i64 [[IV2]], 4
@@ -109,7 +109,7 @@ define void @ext_inbounds_nuw(ptr %start, i16 %n) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV2:%.*]] = phi i16 [ 0, %[[ENTRY]] ], [ [[IV2_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = sext i16 [[IV2]] to i32
+; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i16 [[IV2]] to i32
 ; CHECK-NEXT:    [[IV:%.*]] = getelementptr inbounds nuw i8, ptr [[START]], i32 [[TMP0]]
 ; CHECK-NEXT:    call void @use(ptr [[IV]])
 ; CHECK-NEXT:    [[IV2_NEXT]] = add i16 [[IV2]], 4
