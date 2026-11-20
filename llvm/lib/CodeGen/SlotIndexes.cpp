@@ -279,7 +279,7 @@ void SlotIndexes::repairIndexesInRange(MachineBasicBlock *MBB,
     MachineInstr *SlotMI = ListI->getInstr();
     MachineInstr *MI = (MBBI != MBB->end() && !pastStart) ? &*MBBI : nullptr;
     bool MBBIAtBegin = MBBI == Begin && (!includeStart || pastStart);
-    bool MIIndexNotFound = MI && !getMIEntry(*MI);
+    bool MIIndexNotFound = MI && !hasIndex(*MI);
     bool SlotMIRemoved = false;
 
     if (SlotMI == MI && !MBBIAtBegin) {
