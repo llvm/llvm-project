@@ -2778,13 +2778,6 @@ void advanceRegisterCursors(CIRBaseBuilderTy &b, mlir::Location loc,
   }
 }
 
-/// Whether \p ac reads the value in place from a buffer of slots, each
-/// ac.directAlign in size and alignment.
-bool isSlotFetch(const ArgClassification &ac) {
-  return ac.kind == ArgKind::Direct && !ac.coercedType && ac.directAlign &&
-         !ac.neededIntRegs && !ac.neededSseRegs;
-}
-
 /// Advances the pointer cursor at \p valist past the argument's slots and
 /// returns the argument's address, which is the old cursor.
 mlir::Value buildSlotAddrAndAdvance(CIRBaseBuilderTy &b, mlir::Location loc,
@@ -2830,9 +2823,6 @@ CIRABIRewriteContext::rewriteVAArg(mlir::Operation *vaArgOp,
                                    mlir::OpBuilder &opBuilder) {
   auto op = mlir::cast<cir::VAArgOp>(vaArgOp);
   CIRBaseBuilderTy builder(opBuilder);
-  mlir::Location loc = op.getLoc();
-  mlir::Type resultTy = op.getType();
-  mlir::Value valist = op.getArgList();
 
   // An ignored type travels in no register and no stack slot, so the fetch
   // reads nothing and must leave the cursor unchanged.  The value holds no
@@ -2840,23 +2830,41 @@ CIRABIRewriteContext::rewriteVAArg(mlir::Operation *vaArgOp,
   if (ac.kind == ArgKind::Ignore) {
     builder.setInsertionPoint(op);
     op.getResult().replaceAllUsesWith(
-        createIgnoredValue(builder, loc, resultTy));
+        createIgnoredValue(builder, op.getLoc(), op.getType()));
     op->erase();
     return mlir::success();
   }
 
-  // A va_list that is a single pointer walks one buffer of fixed-size slots.
-  auto vaListTy = mlir::cast<cir::PointerType>(valist.getType()).getPointee();
-  if (mlir::isa<cir::PointerType>(vaListTy) && isSlotFetch(ac)) {
-    // A value smaller than its slot would sit right-adjusted on big-endian.
-    if (cirDataLayout.isBigEndian())
-      return reportVAArgNYI(op, "a slot on a big-endian target");
-    builder.setInsertionPoint(op);
-    uint64_t slotSize = ac.directAlign->value();
-    mlir::Value addr =
-        buildSlotAddrAndAdvance(builder, loc, valist, resultTy, slotSize, dl);
-    return replaceVAArgResult(builder, op, addr, slotSize, dl);
+  switch (target) {
+  case cir::CallConvTarget::X86_64:
+    return rewriteVAArgX86_64(op, ac, builder);
+  case cir::CallConvTarget::AMDGPU:
+    return rewriteVAArgAMDGPU(op, ac, builder);
+  case cir::CallConvTarget::None:
+  case cir::CallConvTarget::Test:
+  case cir::CallConvTarget::SPIRV:
+  case cir::CallConvTarget::AArch64:
+    break;
   }
+  return reportVAArgNYI(op, "a type on this target");
+}
+
+mlir::LogicalResult CIRABIRewriteContext::rewriteVAArgAMDGPU(
+    cir::VAArgOp op, const ArgClassification &ac, CIRBaseBuilderTy &builder) {
+  assert(ac.kind == ArgKind::Direct && !ac.coercedType && ac.directAlign &&
+         "AMDGPU reads every variadic argument in place from its slots");
+  builder.setInsertionPoint(op);
+  uint64_t slotSize = ac.directAlign->value();
+  mlir::Value addr = buildSlotAddrAndAdvance(
+      builder, op.getLoc(), op.getArgList(), op.getType(), slotSize, dl);
+  return replaceVAArgResult(builder, op, addr, slotSize, dl);
+}
+
+mlir::LogicalResult CIRABIRewriteContext::rewriteVAArgX86_64(
+    cir::VAArgOp op, const ArgClassification &ac, CIRBaseBuilderTy &builder) {
+  mlir::Location loc = op.getLoc();
+  mlir::Type resultTy = op.getType();
+  mlir::Value valist = op.getArgList();
 
   if (ac.kind == ArgKind::Indirect && !ac.byVal)
     return reportVAArgNYI(op, "a non-trivially-copyable type");

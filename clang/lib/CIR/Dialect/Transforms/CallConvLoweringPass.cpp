@@ -208,7 +208,7 @@ void CallConvLoweringPass::runOnOperation() {
       !loweringOpts || loweringOpts.getEnableNoundefAttrs();
 
   DataLayout dl(moduleOp);
-  CIRABIRewriteContext rewriteCtx(moduleOp, dl, enableNoundefAttrs);
+  CIRABIRewriteContext rewriteCtx(moduleOp, dl, target, enableNoundefAttrs);
   // A non-byval indirect parameter's slot outlives the rewrite that retypes
   // the parameter, so that a call forwarding the parameter can still recognize
   // it.  Draining on scope exit collapses those slots whichever way this
