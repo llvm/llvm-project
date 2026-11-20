@@ -382,6 +382,22 @@ def AMDGPUPreLegalizerCombiner: GICombiner<
   let CombineAllMethodName = "tryCombineAllImpl";
 }
 
+// Convert unsigned BFE(x, 0, N) to AND(x, 1<<N - 1)
+def ubfe_to_and : GICombineRule<
+  (defs root:$bfe, unsigned_matchinfo:$width_val),
+  (match (int_amdgcn_ubfe $dst, $src, $offset, $width):$bfe,
+         [{
+           auto OffsetCst = getIConstantVRegValWithLookThrough(${offset}.getReg(), MRI);
+           if (!OffsetCst || OffsetCst->Value != 0)
+             return false;
+           auto WidthCst = getIConstantVRegValWithLookThrough(${width}.getReg(), MRI);
+           if (!WidthCst)
+             return false;
+           ${width_val} = WidthCst->Value.getZExtValue();
+           return true;
+         }]),
+  (apply [{ applyUBFEToAnd(*${bfe}, ${width_val}); }])>;
+
 def AMDGPUPostLegalizerCombiner: GICombiner<
   "AMDGPUPostLegalizerCombinerImpl",
   [all_combines, gfx6gfx7_combines, gfx8_combines, combine_fmul_with_select_to_fldexp,
@@ -389,7 +405,7 @@ def AMDGPUPostLegalizerCombiner: GICombiner<
    fold_fabs_fptrunc, rcp_sqrt_to_rsq, fdiv_by_sqrt_to_rsq_f16,
    sign_extension_in_reg, smulu64, trunc_lshr16_to_unmerge,
    binop_s64_with_s32_mask_combines, combine_or_s64_s32,
-   fold_carry_into_addsub_combines, simplify_demanded_bits]> {
+   fold_carry_into_addsub_combines, ubfe_to_and, simplify_demanded_bits]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }
 
