@@ -12,6 +12,7 @@
 
 #include "RISCVRegisterInfo.h"
 #include "RISCV.h"
+#include "RISCVMachineFunctionInfo.h"
 #include "RISCVSubtarget.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -75,24 +76,44 @@ RISCVRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     return Subtarget.hasStdExtE() ? CSR_RT_MostRegs_RVE_SaveList
                                   : CSR_RT_MostRegs_SaveList;
   if (MF->getFunction().hasFnAttribute("interrupt")) {
+    const bool IsPushPop =
+        MF->getInfo<RISCVMachineFunctionInfo>()->isACLICPushPopInterrupt(*MF);
     if (Subtarget.hasVInstructions()) {
       if (Subtarget.hasStdExtD())
-        return Subtarget.hasStdExtE() ? CSR_XLEN_F64_V_Interrupt_RVE_SaveList
-                                      : CSR_XLEN_F64_V_Interrupt_SaveList;
+        return Subtarget.hasStdExtE()
+                   ? (IsPushPop ? CSR_XLEN_F64_V_Interrupt_PushPop_RVE_SaveList
+                                : CSR_XLEN_F64_V_Interrupt_RVE_SaveList)
+                   : (IsPushPop ? CSR_XLEN_F64_V_Interrupt_PushPop_SaveList
+                                : CSR_XLEN_F64_V_Interrupt_SaveList);
       if (Subtarget.hasStdExtF())
-        return Subtarget.hasStdExtE() ? CSR_XLEN_F32_V_Interrupt_RVE_SaveList
-                                      : CSR_XLEN_F32_V_Interrupt_SaveList;
-      return Subtarget.hasStdExtE() ? CSR_XLEN_V_Interrupt_RVE_SaveList
-                                    : CSR_XLEN_V_Interrupt_SaveList;
+        return Subtarget.hasStdExtE()
+                   ? (IsPushPop ? CSR_XLEN_F32_V_Interrupt_PushPop_RVE_SaveList
+                                : CSR_XLEN_F32_V_Interrupt_RVE_SaveList)
+                   : (IsPushPop ? CSR_XLEN_F32_V_Interrupt_PushPop_SaveList
+                                : CSR_XLEN_F32_V_Interrupt_SaveList);
+      return Subtarget.hasStdExtE()
+                 ? (IsPushPop ? CSR_XLEN_V_Interrupt_PushPop_RVE_SaveList
+                              : CSR_XLEN_V_Interrupt_RVE_SaveList)
+                 : (IsPushPop ? CSR_XLEN_V_Interrupt_PushPop_SaveList
+                              : CSR_XLEN_V_Interrupt_SaveList);
     }
     if (Subtarget.hasStdExtD())
-      return Subtarget.hasStdExtE() ? CSR_XLEN_F64_Interrupt_RVE_SaveList
-                                    : CSR_XLEN_F64_Interrupt_SaveList;
+      return Subtarget.hasStdExtE()
+                 ? (IsPushPop ? CSR_XLEN_F64_Interrupt_PushPop_RVE_SaveList
+                              : CSR_XLEN_F64_Interrupt_RVE_SaveList)
+                 : (IsPushPop ? CSR_XLEN_F64_Interrupt_PushPop_SaveList
+                              : CSR_XLEN_F64_Interrupt_SaveList);
     if (Subtarget.hasStdExtF())
-      return Subtarget.hasStdExtE() ? CSR_XLEN_F32_Interrupt_RVE_SaveList
-                                    : CSR_XLEN_F32_Interrupt_SaveList;
-    return Subtarget.hasStdExtE() ? CSR_Interrupt_RVE_SaveList
-                                  : CSR_Interrupt_SaveList;
+      return Subtarget.hasStdExtE()
+                 ? (IsPushPop ? CSR_XLEN_F32_Interrupt_PushPop_RVE_SaveList
+                              : CSR_XLEN_F32_Interrupt_RVE_SaveList)
+                 : (IsPushPop ? CSR_XLEN_F32_Interrupt_PushPop_SaveList
+                              : CSR_XLEN_F32_Interrupt_SaveList);
+    return Subtarget.hasStdExtE()
+               ? (IsPushPop ? CSR_Interrupt_PushPop_RVE_SaveList
+                            : CSR_Interrupt_RVE_SaveList)
+               : (IsPushPop ? CSR_Interrupt_PushPop_SaveList
+                            : CSR_Interrupt_SaveList);
   }
 
   bool HasVectorCSR =
