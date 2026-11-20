@@ -342,8 +342,10 @@ without pre-commit review if you have commit access.
 - Use auto-generated check lines (produced by the scripts mentioned above)
   whenever feasible.
 - Don't convert an existing test to auto-generated check lines as part of a
-  functional change. Update hand-written checks by hand, and do the
-  conversion in a separate NFC commit so the functional diff stays readable.
+  functional change. Either update the hand-written checks by hand, or land
+  the conversion first as a separate NFC change and then regenerate the checks
+  in the functional change, so its diff stays readable. Not every hand-written
+  test needs to be converted; well-written manual checks can stay.
 - Include comments about what is tested/expected in a particular test. If there
   are relevant issues in the bug tracker, add references to those bug reports
   (for example, "See PR999 for more details").
@@ -449,7 +451,8 @@ guidelines:
   (e.g., `--check-prefixes=CHECK,SDAG` and `--check-prefixes=CHECK,GISEL`) so
   identical output is only checked once.
 - In new MIR tests, prefer the new pass manager's `-passes=` over the legacy
-  `-run-pass=` when the pass has been ported.
+  `-run-pass=` when the pass has been ported. Tests for a newly added pass
+  should cover both.
 - Use `-verify-machineinstrs` sparingly. It runs the machine verifier after
   every pass, which is slow. Builds with `LLVM_ENABLE_EXPENSIVE_CHECKS`
   already enable it by default for most targets. Only add it when a verifier
