@@ -175,6 +175,13 @@ mlir::Operation *genOpenACCLoopFromDoConstruct(
     Fortran::lower::SymMap &localSymbols,
     const Fortran::parser::DoConstruct &doConstruct, pft::Evaluation &eval);
 
+/// Assigns to the DO variable of \p doConstruct, lowered to the acc.loop
+/// \p loopOp, the value it has after the loop. Nothing is generated if that
+/// value cannot be used.
+void genOpenACCDoVariableFinalValue(
+    AbstractConverter &converter, mlir::Operation *loopOp,
+    const Fortran::parser::DoConstruct &doConstruct, pft::Evaluation &eval);
+
 } // namespace lower
 } // namespace Fortran
 
