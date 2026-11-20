@@ -5480,49 +5480,7 @@ void SelectionDAGBuilder::visitAtomicCmpXchg(const AtomicCmpXchgInst &I) {
 
 void SelectionDAGBuilder::visitAtomicRMW(const AtomicRMWInst &I) {
   SDLoc dl = getCurSDLoc();
-  ISD::NodeType NT;
-  switch (I.getOperation()) {
-  default: llvm_unreachable("Unknown atomicrmw operation");
-  case AtomicRMWInst::Xchg: NT = ISD::ATOMIC_SWAP; break;
-  case AtomicRMWInst::Add:  NT = ISD::ATOMIC_LOAD_ADD; break;
-  case AtomicRMWInst::Sub:  NT = ISD::ATOMIC_LOAD_SUB; break;
-  case AtomicRMWInst::And:  NT = ISD::ATOMIC_LOAD_AND; break;
-  case AtomicRMWInst::Nand: NT = ISD::ATOMIC_LOAD_NAND; break;
-  case AtomicRMWInst::Or:   NT = ISD::ATOMIC_LOAD_OR; break;
-  case AtomicRMWInst::Xor:  NT = ISD::ATOMIC_LOAD_XOR; break;
-  case AtomicRMWInst::Max:  NT = ISD::ATOMIC_LOAD_MAX; break;
-  case AtomicRMWInst::Min:  NT = ISD::ATOMIC_LOAD_MIN; break;
-  case AtomicRMWInst::UMax: NT = ISD::ATOMIC_LOAD_UMAX; break;
-  case AtomicRMWInst::UMin: NT = ISD::ATOMIC_LOAD_UMIN; break;
-  case AtomicRMWInst::FAdd: NT = ISD::ATOMIC_LOAD_FADD; break;
-  case AtomicRMWInst::FSub: NT = ISD::ATOMIC_LOAD_FSUB; break;
-  case AtomicRMWInst::FMax: NT = ISD::ATOMIC_LOAD_FMAX; break;
-  case AtomicRMWInst::FMin: NT = ISD::ATOMIC_LOAD_FMIN; break;
-  case AtomicRMWInst::FMaximum:
-    NT = ISD::ATOMIC_LOAD_FMAXIMUM;
-    break;
-  case AtomicRMWInst::FMinimum:
-    NT = ISD::ATOMIC_LOAD_FMINIMUM;
-    break;
-  case AtomicRMWInst::FMaximumNum:
-    NT = ISD::ATOMIC_LOAD_FMAXIMUMNUM;
-    break;
-  case AtomicRMWInst::FMinimumNum:
-    NT = ISD::ATOMIC_LOAD_FMINIMUMNUM;
-    break;
-  case AtomicRMWInst::UIncWrap:
-    NT = ISD::ATOMIC_LOAD_UINC_WRAP;
-    break;
-  case AtomicRMWInst::UDecWrap:
-    NT = ISD::ATOMIC_LOAD_UDEC_WRAP;
-    break;
-  case AtomicRMWInst::USubCond:
-    NT = ISD::ATOMIC_LOAD_USUB_COND;
-    break;
-  case AtomicRMWInst::USubSat:
-    NT = ISD::ATOMIC_LOAD_USUB_SAT;
-    break;
-  }
+  ISD::NodeType NT = getAtomicRMWOpcode(I.getOperation());
   AtomicOrdering Ordering = I.getOrdering();
   SyncScope::ID SSID = I.getSyncScopeID();
 

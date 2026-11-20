@@ -1,0 +1,70 @@
+# Test that paths to Swift interfaces in prefix-mapped debug info are remapped
+# using the compilation-prefix-map.json closest to the object file before they
+# are filtered and copied.
+
+# RUN: rm -rf %t.dir
+# RUN: mkdir -p %t.dir/build/Objects
+# RUN: llvm-mc -triple x86_64-apple-macos -filetype=obj \
+# RUN:    -o %t.dir/build/Objects/1.o %p/../Inputs/swift-interface-prefix-map.s
+# RUN: echo '{"/^src": "/src", "/^sdk": "/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk", "/^xcode": "/Xcode.app/Contents/Developer", "/^toolchain": "/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain"}' \
+# RUN:    > %t.dir/build/compilation-prefix-map.json
+
+## Interfaces from the SDK, Xcode, and the toolchain are skipped. The remaining
+## ones are looked up at their remapped location.
+# RUN: dsymutil --linker classic -oso-prepend-path %t.dir -y %s \
+# RUN:    -o %t.dir/classic.dSYM 2>&1 \
+# RUN:    | FileCheck %s --check-prefix=MISSING --implicit-check-not=interface
+# RUN: dsymutil --linker parallel -oso-prepend-path %t.dir -y %s \
+# RUN:    -o %t.dir/parallel.dSYM 2>&1 \
+# RUN:    | FileCheck %s --check-prefix=MISSING --implicit-check-not=interface
+
+# MISSING: cannot copy parseable Swift interface {{.*}}.dir{{[/\\]}}src{{[/\\]}}Bar{{[/\\]}}x86_64.swiftinterface
+# MISSING: cannot copy parseable Swift interface {{.*}}.dir{{[/\\]}}src{{[/\\]}}Foo{{[/\\]}}x86_64.swiftinterface
+
+# RUN: mkdir -p %t.dir/src/Foo %t.dir/src/Bar
+# RUN: echo "// module Foo" > %t.dir/src/Foo/x86_64.swiftinterface
+# RUN: echo "// module Bar" > %t.dir/src/Bar/x86_64.swiftinterface
+# RUN: rm -rf %t.dir/classic.dSYM %t.dir/parallel.dSYM
+# RUN: dsymutil --linker classic -oso-prepend-path %t.dir -y %s \
+# RUN:    -o %t.dir/classic.dSYM 2>&1 | count 0
+# RUN: ls %t.dir/classic.dSYM/Contents/Resources/Swift/x86_64 \
+# RUN:    | FileCheck %s --check-prefix=COPIED --implicit-check-not=interface
+# RUN: dsymutil --linker parallel -oso-prepend-path %t.dir -y %s \
+# RUN:    -o %t.dir/parallel.dSYM 2>&1 | count 0
+# RUN: ls %t.dir/parallel.dSYM/Contents/Resources/Swift/x86_64 \
+# RUN:    | FileCheck %s --check-prefix=COPIED --implicit-check-not=interface
+
+# COPIED: Bar.swiftinterface
+# COPIED: Foo.swiftinterface
+
+## The original paths are restored in the linked debug info.
+# RUN: llvm-dwarfdump -a %t.dir/classic.dSYM \
+# RUN:    | FileCheck %s --check-prefix=DWARF --implicit-check-not=/^
+# RUN: llvm-dwarfdump -a %t.dir/parallel.dSYM \
+# RUN:    | FileCheck %s --check-prefix=DWARF --implicit-check-not=/^
+
+# DWARF: DW_TAG_compile_unit
+# DWARF: DW_AT_LLVM_sysroot ("/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk")
+# DWARF: DW_AT_comp_dir ("/src")
+# DWARF: DW_AT_name ("Foo")
+# DWARF-NEXT: DW_AT_LLVM_include_path ("/src{{[/\\]}}Foo{{[/\\]}}x86_64.swiftinterface")
+# DWARF: DW_AT_name ("Testing")
+# DWARF-NEXT: DW_AT_LLVM_include_path ("/Xcode.app/Contents/Developer{{[/\\]}}Platforms/MacOSX.platform/Developer/Library/Frameworks/Testing.framework/Modules/Testing.swiftmodule/x86_64-apple-macos.swiftinterface")
+# DWARF: include_directories[  1] = "/src"
+
+## A malformed prefix map is diagnosed and ignored.
+# RUN: echo 'not json' > %t.dir/build/compilation-prefix-map.json
+# RUN: dsymutil --linker classic -oso-prepend-path %t.dir -y %s \
+# RUN:    -o %t.dir/malformed.dSYM 2>&1 | FileCheck %s --check-prefix=MALFORMED
+
+# MALFORMED: warning: cannot parse compilation prefix map: {{.*}}Invalid JSON value
+# MALFORMED-NEXT: note: while processing {{.*}}.dir{{[/\\]}}build{{[/\\]}}compilation-prefix-map.json
+# MALFORMED: cannot copy parseable Swift interface {{.*}}.dir{{[/\\]}}^src{{[/\\]}}Bar{{[/\\]}}x86_64.swiftinterface
+
+---
+triple:          'x86_64-apple-darwin'
+objects:
+  - filename: build/Objects/1.o
+    symbols:
+      - { sym: _main, objAddr: 0x0, binAddr: 0x10000, size: 0x10 }
+...

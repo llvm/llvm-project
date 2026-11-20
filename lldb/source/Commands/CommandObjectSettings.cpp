@@ -21,6 +21,15 @@
 using namespace lldb;
 using namespace lldb_private;
 
+/// Warn when \a var_name is a deprecated setting, so that users can stop
+/// relying on it before it's removed.
+static void WarnIfDeprecated(Debugger &debugger, llvm::StringRef var_name,
+                             CommandReturnObject &result) {
+  if (std::optional<std::string> warning =
+          debugger.GetDeprecationWarning(var_name))
+    result.AppendWarning(*warning);
+}
+
 // CommandObjectSettingsSet
 #define LLDB_OPTIONS_settings_set
 #include "CommandOptions.inc"
@@ -232,6 +241,8 @@ protected:
       return;
     }
 
+    if (error.Success())
+      WarnIfDeprecated(GetDebugger(), var_name, result);
     result.SetStatus(eReturnStatusSuccessFinishResult);
   }
 
@@ -270,6 +281,9 @@ public:
       case 'c':
         m_only_changed = true;
         break;
+      case 'D':
+        m_include_deprecated = true;
+        break;
       default:
         llvm_unreachable("Unimplemented option");
       }
@@ -279,6 +293,7 @@ public:
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_include_defaults = false;
       m_only_changed = false;
+      m_include_deprecated = false;
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
@@ -287,6 +302,7 @@ public:
 
     bool m_include_defaults = false;
     bool m_only_changed = false;
+    bool m_include_deprecated = false;
   };
 
 protected:
@@ -300,6 +316,8 @@ protected:
       dump_mask |= OptionValue::eDumpOptionOnlyChanged;
       dump_mask |= OptionValue::eDumpOptionDefaultValue;
     }
+    if (m_options.m_include_deprecated)
+      dump_mask |= OptionValue::eDumpOptionIncludeDeprecated;
 
     if (!args.empty()) {
       for (const auto &arg : args) {
@@ -499,6 +517,8 @@ private:
 };
 
 // CommandObjectSettingsList -- List settable variables
+#define LLDB_OPTIONS_settings_list
+#include "CommandOptions.inc"
 
 class CommandObjectSettingsList : public CommandObjectParsed {
 public:
@@ -528,6 +548,36 @@ public:
 
   ~CommandObjectSettingsList() override = default;
 
+  Options *GetOptions() override { return &m_options; }
+
+  class CommandOptions : public Options {
+  public:
+    ~CommandOptions() override = default;
+
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      const int short_option = m_getopt_table[option_idx].val;
+      switch (short_option) {
+      case 'D':
+        m_include_deprecated = true;
+        break;
+      default:
+        llvm_unreachable("Unimplemented option");
+      }
+      return {};
+    }
+
+    void OptionParsingStarting(ExecutionContext *execution_context) override {
+      m_include_deprecated = false;
+    }
+
+    llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
+      return g_settings_list_options;
+    }
+
+    bool m_include_deprecated = false;
+  };
+
   void
   HandleArgumentCompletion(CompletionRequest &request,
                            OptionElementVector &opt_element_vector) override {
@@ -540,6 +590,7 @@ protected:
   void DoExecute(Args &args, CommandReturnObject &result) override {
     result.SetStatus(eReturnStatusSuccessFinishResult);
 
+    const bool include_deprecated = m_options.m_include_deprecated;
     const size_t argc = args.GetArgumentCount();
     if (argc > 0) {
       const bool dump_qualified_name = true;
@@ -553,17 +604,20 @@ protected:
 
         if (property) {
           property->DumpDescription(m_interpreter, result.GetOutputStream(), 0,
-                                    dump_qualified_name);
+                                    dump_qualified_name, include_deprecated);
         } else {
           result.AppendErrorWithFormat("invalid property path '%s'",
                                        property_path);
         }
       }
     } else {
-      GetDebugger().DumpAllDescriptions(m_interpreter,
-                                        result.GetOutputStream());
+      GetDebugger().DumpAllDescriptions(m_interpreter, result.GetOutputStream(),
+                                        include_deprecated);
     }
   }
+
+private:
+  CommandOptions m_options;
 };
 
 // CommandObjectSettingsRemove
@@ -745,6 +799,7 @@ protected:
     if (error.Fail()) {
       result.AppendError(error.AsCString());
     } else {
+      WarnIfDeprecated(GetDebugger(), var_name, result);
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
     }
   }
@@ -840,6 +895,8 @@ protected:
         &m_exe_ctx, eVarSetOperationInsertBefore, var_name, var_value));
     if (error.Fail()) {
       result.AppendError(error.AsCString());
+    } else {
+      WarnIfDeprecated(GetDebugger(), var_name, result);
     }
   }
 };
@@ -933,6 +990,8 @@ protected:
         &m_exe_ctx, eVarSetOperationInsertAfter, var_name, var_value));
     if (error.Fail()) {
       result.AppendError(error.AsCString());
+    } else {
+      WarnIfDeprecated(GetDebugger(), var_name, result);
     }
   }
 };
@@ -1017,6 +1076,8 @@ protected:
         &m_exe_ctx, eVarSetOperationAppend, var_name, var_value));
     if (error.Fail()) {
       result.AppendError(error.AsCString());
+    } else {
+      WarnIfDeprecated(GetDebugger(), var_name, result);
     }
   }
 };
