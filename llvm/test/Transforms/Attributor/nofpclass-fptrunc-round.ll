@@ -2,9 +2,9 @@
 ; RUN: opt -S -aa-pipeline=basic-aa -passes=attributor -attributor-manifest-internal < %s | FileCheck %s
 
 define float @ret_fptrunc_round(double %arg0) {
-; CHECK-LABEL: define float @ret_fptrunc_round
-; CHECK-SAME: (double [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[EXT:%.*]] = call float @llvm.fptrunc.round.f32.f64(double [[ARG0]], metadata !"round.downward") #[[ATTR4:[0-9]+]]
+; CHECK-LABEL: define float @ret_fptrunc_round(
+; CHECK-SAME: double [[ARG0:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:    [[EXT:%.*]] = call float @llvm.fptrunc.round.f32.f64(double [[ARG0]], metadata !"round.downward") #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    ret float [[EXT]]
 ;
   %ext = call float @llvm.fptrunc.round.f32.f64(double %arg0, metadata !"round.downward")
@@ -12,9 +12,9 @@ define float @ret_fptrunc_round(double %arg0) {
 }
 
 define float @ret_fptrunc_round_nonan(double nofpclass(nan) %arg0) {
-; CHECK-LABEL: define nofpclass(nan) float @ret_fptrunc_round_nonan
-; CHECK-SAME: (double nofpclass(nan) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[EXT:%.*]] = call nofpclass(nan) float @llvm.fptrunc.round.f32.f64(double nofpclass(nan) [[ARG0]], metadata !"round.downward") #[[ATTR4]]
+; CHECK-LABEL: define nofpclass(nan) float @ret_fptrunc_round_nonan(
+; CHECK-SAME: double nofpclass(nan) [[ARG0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[EXT:%.*]] = call nofpclass(nan) float @llvm.fptrunc.round.f32.f64(double nofpclass(nan) [[ARG0]], metadata !"round.downward") #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[EXT]]
 ;
   %ext = call float @llvm.fptrunc.round.f32.f64(double %arg0, metadata !"round.downward")
@@ -22,9 +22,9 @@ define float @ret_fptrunc_round_nonan(double nofpclass(nan) %arg0) {
 }
 
 define float @ret_fptrunc_round_noqnan(double nofpclass(qnan) %arg0) {
-; CHECK-LABEL: define float @ret_fptrunc_round_noqnan
-; CHECK-SAME: (double nofpclass(qnan) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[EXT:%.*]] = call float @llvm.fptrunc.round.f32.f64(double nofpclass(qnan) [[ARG0]], metadata !"round.downward") #[[ATTR4]]
+; CHECK-LABEL: define float @ret_fptrunc_round_noqnan(
+; CHECK-SAME: double nofpclass(qnan) [[ARG0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[EXT:%.*]] = call float @llvm.fptrunc.round.f32.f64(double nofpclass(qnan) [[ARG0]], metadata !"round.downward") #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[EXT]]
 ;
   %ext = call float @llvm.fptrunc.round.f32.f64(double %arg0, metadata !"round.downward")
@@ -32,9 +32,9 @@ define float @ret_fptrunc_round_noqnan(double nofpclass(qnan) %arg0) {
 }
 
 define float @ret_fptrunc_round_nosnan(double nofpclass(snan) %arg0) {
-; CHECK-LABEL: define nofpclass(snan) float @ret_fptrunc_round_nosnan
-; CHECK-SAME: (double nofpclass(snan) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[EXT:%.*]] = call nofpclass(snan) float @llvm.fptrunc.round.f32.f64(double nofpclass(snan) [[ARG0]], metadata !"round.downward") #[[ATTR4]]
+; CHECK-LABEL: define nofpclass(snan) float @ret_fptrunc_round_nosnan(
+; CHECK-SAME: double nofpclass(snan) [[ARG0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[EXT:%.*]] = call nofpclass(snan) float @llvm.fptrunc.round.f32.f64(double nofpclass(snan) [[ARG0]], metadata !"round.downward") #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[EXT]]
 ;
   %ext = call float @llvm.fptrunc.round.f32.f64(double %arg0, metadata !"round.downward")
@@ -42,9 +42,9 @@ define float @ret_fptrunc_round_nosnan(double nofpclass(snan) %arg0) {
 }
 
 define float @ret_fptrunc_round_noinf(double nofpclass(inf) %arg0) {
-; CHECK-LABEL: define float @ret_fptrunc_round_noinf
-; CHECK-SAME: (double nofpclass(inf) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[EXT:%.*]] = call float @llvm.fptrunc.round.f32.f64(double nofpclass(inf) [[ARG0]], metadata !"round.downward") #[[ATTR4]]
+; CHECK-LABEL: define float @ret_fptrunc_round_noinf(
+; CHECK-SAME: double nofpclass(inf) [[ARG0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[EXT:%.*]] = call float @llvm.fptrunc.round.f32.f64(double nofpclass(inf) [[ARG0]], metadata !"round.downward") #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[EXT]]
 ;
   %ext = call float @llvm.fptrunc.round.f32.f64(double %arg0, metadata !"round.downward")
@@ -52,9 +52,9 @@ define float @ret_fptrunc_round_noinf(double nofpclass(inf) %arg0) {
 }
 
 define float @ret_fptrunc_round_nopinf(double nofpclass(pinf) %arg0) {
-; CHECK-LABEL: define float @ret_fptrunc_round_nopinf
-; CHECK-SAME: (double nofpclass(pinf) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[EXT:%.*]] = call float @llvm.fptrunc.round.f32.f64(double nofpclass(pinf) [[ARG0]], metadata !"round.downward") #[[ATTR4]]
+; CHECK-LABEL: define float @ret_fptrunc_round_nopinf(
+; CHECK-SAME: double nofpclass(pinf) [[ARG0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[EXT:%.*]] = call float @llvm.fptrunc.round.f32.f64(double nofpclass(pinf) [[ARG0]], metadata !"round.downward") #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[EXT]]
 ;
   %ext = call float @llvm.fptrunc.round.f32.f64(double %arg0, metadata !"round.downward")
@@ -62,9 +62,9 @@ define float @ret_fptrunc_round_nopinf(double nofpclass(pinf) %arg0) {
 }
 
 define float @ret_fptrunc_round_noninf(double nofpclass(ninf) %arg0) {
-; CHECK-LABEL: define float @ret_fptrunc_round_noninf
-; CHECK-SAME: (double nofpclass(ninf) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[EXT:%.*]] = call float @llvm.fptrunc.round.f32.f64(double nofpclass(ninf) [[ARG0]], metadata !"round.downward") #[[ATTR4]]
+; CHECK-LABEL: define float @ret_fptrunc_round_noninf(
+; CHECK-SAME: double nofpclass(ninf) [[ARG0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[EXT:%.*]] = call float @llvm.fptrunc.round.f32.f64(double nofpclass(ninf) [[ARG0]], metadata !"round.downward") #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[EXT]]
 ;
   %ext = call float @llvm.fptrunc.round.f32.f64(double %arg0, metadata !"round.downward")
@@ -72,9 +72,9 @@ define float @ret_fptrunc_round_noninf(double nofpclass(ninf) %arg0) {
 }
 
 define float @ret_fptrunc_round_nozero(double nofpclass(zero) %arg0) {
-; CHECK-LABEL: define float @ret_fptrunc_round_nozero
-; CHECK-SAME: (double nofpclass(zero) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[EXT:%.*]] = call float @llvm.fptrunc.round.f32.f64(double nofpclass(zero) [[ARG0]], metadata !"round.downward") #[[ATTR4]]
+; CHECK-LABEL: define float @ret_fptrunc_round_nozero(
+; CHECK-SAME: double nofpclass(zero) [[ARG0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[EXT:%.*]] = call float @llvm.fptrunc.round.f32.f64(double nofpclass(zero) [[ARG0]], metadata !"round.downward") #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[EXT]]
 ;
   %ext = call float @llvm.fptrunc.round.f32.f64(double %arg0, metadata !"round.downward")
@@ -82,9 +82,9 @@ define float @ret_fptrunc_round_nozero(double nofpclass(zero) %arg0) {
 }
 
 define float @ret_fptrunc_round_nopzero(double nofpclass(pzero) %arg0) {
-; CHECK-LABEL: define float @ret_fptrunc_round_nopzero
-; CHECK-SAME: (double nofpclass(pzero) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[EXT:%.*]] = call float @llvm.fptrunc.round.f32.f64(double nofpclass(pzero) [[ARG0]], metadata !"round.downward") #[[ATTR4]]
+; CHECK-LABEL: define float @ret_fptrunc_round_nopzero(
+; CHECK-SAME: double nofpclass(pzero) [[ARG0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[EXT:%.*]] = call float @llvm.fptrunc.round.f32.f64(double nofpclass(pzero) [[ARG0]], metadata !"round.downward") #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[EXT]]
 ;
   %ext = call float @llvm.fptrunc.round.f32.f64(double %arg0, metadata !"round.downward")
@@ -92,9 +92,9 @@ define float @ret_fptrunc_round_nopzero(double nofpclass(pzero) %arg0) {
 }
 
 define float @ret_fptrunc_round_nonzero(double nofpclass(nzero) %arg0) {
-; CHECK-LABEL: define float @ret_fptrunc_round_nonzero
-; CHECK-SAME: (double nofpclass(nzero) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[EXT:%.*]] = call float @llvm.fptrunc.round.f32.f64(double nofpclass(nzero) [[ARG0]], metadata !"round.downward") #[[ATTR4]]
+; CHECK-LABEL: define float @ret_fptrunc_round_nonzero(
+; CHECK-SAME: double nofpclass(nzero) [[ARG0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[EXT:%.*]] = call float @llvm.fptrunc.round.f32.f64(double nofpclass(nzero) [[ARG0]], metadata !"round.downward") #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[EXT]]
 ;
   %ext = call float @llvm.fptrunc.round.f32.f64(double %arg0, metadata !"round.downward")
@@ -102,9 +102,9 @@ define float @ret_fptrunc_round_nonzero(double nofpclass(nzero) %arg0) {
 }
 
 define float @ret_fptrunc_round_nonan_noinf(double nofpclass(nan inf) %arg0) {
-; CHECK-LABEL: define nofpclass(nan) float @ret_fptrunc_round_nonan_noinf
-; CHECK-SAME: (double nofpclass(nan inf) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[EXT:%.*]] = call nofpclass(nan) float @llvm.fptrunc.round.f32.f64(double nofpclass(nan inf) [[ARG0]], metadata !"round.downward") #[[ATTR4]]
+; CHECK-LABEL: define nofpclass(nan) float @ret_fptrunc_round_nonan_noinf(
+; CHECK-SAME: double nofpclass(nan inf) [[ARG0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[EXT:%.*]] = call nofpclass(nan) float @llvm.fptrunc.round.f32.f64(double nofpclass(nan inf) [[ARG0]], metadata !"round.downward") #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[EXT]]
 ;
   %ext = call float @llvm.fptrunc.round.f32.f64(double %arg0, metadata !"round.downward")
@@ -112,9 +112,9 @@ define float @ret_fptrunc_round_nonan_noinf(double nofpclass(nan inf) %arg0) {
 }
 
 define float @ret_fptrunc_round_nosub(double nofpclass(sub) %arg0) {
-; CHECK-LABEL: define float @ret_fptrunc_round_nosub
-; CHECK-SAME: (double nofpclass(sub) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[EXT:%.*]] = call float @llvm.fptrunc.round.f32.f64(double nofpclass(sub) [[ARG0]], metadata !"round.downward") #[[ATTR4]]
+; CHECK-LABEL: define float @ret_fptrunc_round_nosub(
+; CHECK-SAME: double nofpclass(sub) [[ARG0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[EXT:%.*]] = call float @llvm.fptrunc.round.f32.f64(double nofpclass(sub) [[ARG0]], metadata !"round.downward") #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[EXT]]
 ;
   %ext = call float @llvm.fptrunc.round.f32.f64(double %arg0, metadata !"round.downward")
@@ -122,9 +122,9 @@ define float @ret_fptrunc_round_nosub(double nofpclass(sub) %arg0) {
 }
 
 define float @ret_fptrunc_round_nonorm(double nofpclass(norm) %arg0) {
-; CHECK-LABEL: define nofpclass(norm) float @ret_fptrunc_round_nonorm
-; CHECK-SAME: (double nofpclass(norm) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[EXT:%.*]] = call nofpclass(norm) float @llvm.fptrunc.round.f32.f64(double nofpclass(norm) [[ARG0]], metadata !"round.downward") #[[ATTR4]]
+; CHECK-LABEL: define nofpclass(norm) float @ret_fptrunc_round_nonorm(
+; CHECK-SAME: double nofpclass(norm) [[ARG0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[EXT:%.*]] = call nofpclass(norm) float @llvm.fptrunc.round.f32.f64(double nofpclass(norm) [[ARG0]], metadata !"round.downward") #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[EXT]]
 ;
   %ext = call float @llvm.fptrunc.round.f32.f64(double %arg0, metadata !"round.downward")
@@ -132,9 +132,9 @@ define float @ret_fptrunc_round_nonorm(double nofpclass(norm) %arg0) {
 }
 
 define float @ret_fptrunc_round_f64_f32__negnormal(double nofpclass(nan inf zero sub pnorm) %arg0) {
-; CHECK-LABEL: define nofpclass(nan pinf pzero psub pnorm) float @ret_fptrunc_round_f64_f32__negnormal
-; CHECK-SAME: (double nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[EXT:%.*]] = call nofpclass(nan pinf pzero psub pnorm) float @llvm.fptrunc.round.f32.f64(double nofpclass(nan inf zero sub pnorm) [[ARG0]], metadata !"round.downward") #[[ATTR4]]
+; CHECK-LABEL: define nofpclass(nan pinf pzero psub pnorm) float @ret_fptrunc_round_f64_f32__negnormal(
+; CHECK-SAME: double nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[EXT:%.*]] = call nofpclass(nan pinf pzero psub pnorm) float @llvm.fptrunc.round.f32.f64(double nofpclass(nan inf zero sub pnorm) [[ARG0]], metadata !"round.downward") #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[EXT]]
 ;
   %ext = call float @llvm.fptrunc.round.f32.f64(double %arg0, metadata !"round.downward")
