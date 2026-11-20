@@ -26,6 +26,8 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/MemCacheHint.h"
 #include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Value.h"
@@ -57,6 +59,8 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   case Intrinsic::ssub_sat:
   case Intrinsic::uadd_sat:
   case Intrinsic::usub_sat:
+  case Intrinsic::sshl_sat:
+  case Intrinsic::ushl_sat:
   case Intrinsic::smul_fix:
   case Intrinsic::smul_fix_sat:
   case Intrinsic::umul_fix:
@@ -1140,6 +1144,11 @@ void llvm::getMetadataToPropagate(
 Instruction *llvm::propagateMetadata(Instruction *Inst, ArrayRef<Value *> VL) {
   if (VL.empty())
     return Inst;
+
+  // Keep cache hints out of getMetadataToPropagate(): VPlan changes operand
+  // layouts without remapping cache-hint indices.
+  propagateMemCacheHint(*Inst, VL);
+
   SmallVector<std::pair<unsigned, MDNode *>> Metadata;
   getMetadataToPropagate(cast<Instruction>(VL[0]), Metadata);
 
@@ -1398,6 +1407,11 @@ void InterleavedAccessInfo::collectConstStrideAccesses(
       int64_t Stride = getPtrStride(PSE, ElementTy, Ptr, TheLoop, *DT, Strides,
                                     /*ShouldCheckWrap=*/false, Predicates)
                            .value_or(0);
+      // The interleave analysis takes strides as int (isStrided,
+      // createInterleaveGroup, InterleaveGroup); treat strides that do not
+      // fit as unknown.
+      if (!isInt<32>(Stride))
+        Stride = 0;
 
       const SCEV *Scev = replaceSymbolicStrideSCEV(PSE, TheLoop, Strides, Ptr);
       AccessStrideInfo[&I] = StrideDescriptor(Stride, Scev, Size,
@@ -1629,11 +1643,13 @@ void InterleavedAccessInfo::analyzeInterleaving(
 
       // The index of A is the index of B plus A's distance to B in multiples
       // of the size.
-      int IndexA =
+      int64_t IndexA =
           GroupB->getIndex(B) + DistanceToB / static_cast<int64_t>(DesB.Size);
 
-      // Try to insert A into B's group.
-      if (GroupB->insertMember(A, IndexA, DesA.Alignment)) {
+      // Try to insert A into B's group. insertMember takes an int32_t index, so
+      // reject A if IndexA does not fit.
+      if (isInt<32>(IndexA) &&
+          GroupB->insertMember(A, IndexA, DesA.Alignment)) {
         LLVM_DEBUG(dbgs() << "LV: Inserted:" << *A << '\n'
                           << "    into the interleave group with" << *B
                           << '\n');

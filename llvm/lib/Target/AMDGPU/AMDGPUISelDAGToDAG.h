@@ -71,6 +71,9 @@ public:
   void PreprocessISelDAG() override;
   void Select(SDNode *N) override;
   void PostprocessISelDAG() override;
+  bool SelectInlineAsmMemoryOperand(const SDValue &Op,
+                                    InlineAsm::ConstraintCode ConstraintID,
+                                    std::vector<SDValue> &OutOps) override;
 
 protected:
   void SelectBuildVector(SDNode *N, unsigned RegClassID);
@@ -92,6 +95,7 @@ private:
 
   bool isVGPRImm(const SDNode *N) const;
   bool isUniformBr(const SDNode *N) const;
+  bool isVRegIdxFoldableAdd(const SDNode *N, unsigned NumDwords) const;
 
   MachineSDNode *buildRegSequence16(SmallVectorImpl<SDValue> &Elts,
                                     const SDLoc &DL) const;

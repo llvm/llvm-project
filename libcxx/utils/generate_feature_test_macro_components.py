@@ -3,7 +3,6 @@
 import os
 from builtins import range
 from dataclasses import dataclass
-from functools import reduce
 from typing import (
     Any,
     Dict,
@@ -135,7 +134,10 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_apply",
-            "values": {"c++17": 201603},
+            "values": {
+                "c++17": 201603,
+                # "c++26": 202506,  # P1317R2: Remove return type deduction in std::apply
+            },
             "headers": ["tuple"],
         },
         {
@@ -189,8 +191,17 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_atomic_min_max",
-            "values": {"c++26": 202403}, # P0493R5: Atomic minimum/maximum
+            "values": {
+                "c++26": 202403,  # P0493R5 Atomic minimum/maximum
+                # "c++26": 202506,  # P3008R6 Atomic floating-point min/max
+            },
             "headers": ["atomic"],
+        },
+        {
+            "name": "__cpp_lib_atomic_reductions",
+            "values": {"c++26": 202506},
+            "headers": ["atomic"],
+            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_atomic_ref",
@@ -449,7 +460,11 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_constexpr_memory",
-            "values": {"c++20": 201811, "c++23": 202202},
+            "values": {
+                "c++20": 201811,
+                "c++23": 202202,
+                # "c++26": 202506,  # P3037R6 constexpr std::shared_ptr and friends
+            },
             "headers": ["memory"],
         },
         {
@@ -565,6 +580,14 @@ feature_test_macros = [
             "headers": ["coroutine"],
         },
         {
+            "name": "__cpp_lib_counting_scope",
+            "values": {
+                "c++26": 202506  # P3149R11 async_scope - Creating scopes for non-sequential concurrency
+            },
+            "headers": ["execution"],
+            "unimplemented": True,
+        },
+        {
             "name": "__cpp_lib_debugging",
             "values": {
                 "c++26": 202403,  # P2810R4: is_debugger_present is_replaceable
@@ -610,6 +633,12 @@ feature_test_macros = [
                 "unordered_set",
                 "vector",
             ],
+        },
+        {
+            "name": "__cpp_lib_exception_ptr_cast",
+            "values": {"c++26": 202506},
+            "headers": ["exception"],
+            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_exchange_function",
@@ -669,7 +698,10 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_format_path",
-            "values": {"c++26": 202403},  # P2845R8: Formatting of std::filesystem::path
+            "values": {
+                "c++26": 202403,  # P2845R8 Formatting of std::filesystem::path
+                # "c++26": 202506,  # P2319R5 Prevent path presentation problems
+            },
             "headers": ["filesystem"],
             "unimplemented": True,
         },
@@ -1239,6 +1271,12 @@ feature_test_macros = [
             "headers": ["iterator"],
         },
         {
+            "name": "__cpp_lib_observable_checkpoint",
+            "values": {"c++26": 202506},
+            "headers": ["utility"],
+            "unimplemented": True,
+        },
+        {
             "name": "__cpp_lib_optional",
             "values": {
                 "c++17": 201606,
@@ -1265,8 +1303,17 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_parallel_algorithm",
-            "values": {"c++17": 201603},
+            "values": {
+                "c++17": 201603
+                # "c++26": 202506,  # P3179R9 Parallel Range Algorithms
+            },
             "headers": ["algorithm", "numeric"],
+            "unimplemented": True,
+        },
+        {
+            "name": "__cpp_lib_parallel_scheduler",
+            "values": {"c++26": 202506},  # P2079R10 Parallel scheduler
+            "headers": ["execution"],
             "unimplemented": True,
         },
         {
@@ -1510,7 +1557,10 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_senders",
-            "values": {"c++26": 202406},  # P2300R10 std::execution
+            "values": {
+                "c++26": 202406,  # P2300R10 std::execution
+                # "c++26": 202506,  # P3570R2 optional variants in sender/receiver
+            },
             "headers": ["execution"],
             "unimplemented": True,
         },
@@ -1546,8 +1596,11 @@ feature_test_macros = [
         {
             "name": "__cpp_lib_simd",
             "values": {
-                "c++26": 202606
-            },  # P3319R6 Add an iota object for simd (and more)
+                "c++26": 202411,  # P1928R15: std::simd — merge data-parallel types from the Parallelism TS 2
+                # "c++26": 202506,  # P2876R3: Proposal to extend std::simd with more constructors and accessors
+                #                   # P3480R6: std::simd is a range
+                # "c++29": 202606,  # P3319R6 Add an iota object for simd (and more)
+            },
             "headers": ["simd"],
             "unimplemented": True,
         },
@@ -1569,8 +1622,9 @@ feature_test_macros = [
         {
             "name": "__cpp_lib_simd_permutations",
             "values": {
-                "c++26": 202606
-            },  # P3319R6 Add an iota object for simd (and more)
+                "c++26": 202506,  # P3480R6 std::simd is a range
+                # "c++29": 202606,  # P3319R6 Add an iota object for simd (and more)
+            },
             "headers": ["simd"],
             "unimplemented": True,
         },
@@ -1683,6 +1737,12 @@ feature_test_macros = [
             "headers": ["syncstream"],
             "test_suite_guard": "!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM",
             "libcxx_guard": "_LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM",
+        },
+        {
+            "name": "__cpp_lib_task",
+            "values": {"c++26": 202506},
+            "headers": ["execution"],
+            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_text_encoding",
@@ -2241,51 +2301,20 @@ def produce_tests():
 """
 
 
-def make_widths(grid):
-    widths = []
-    for i in range(0, len(grid[0])):
-        cell_width = 2 + max(
-            reduce(lambda x, y: x + y, [[len(row[i])] for row in grid], [])
-        )
-        widths += [cell_width]
-    return widths
+def create_table(grid):
+    widths = [max(len(row[column]) for row in grid) for column in range(len(grid[0]))]
 
-
-def create_table(grid, indent):
-    indent_str = " " * indent
-    col_widths = make_widths(grid)
-    result = [indent_str + add_divider(col_widths, 2)]
-    header_flag = 2
-    for row_i in range(0, len(grid)):
-        row = grid[row_i]
-        line = indent_str + " ".join(
-            [pad_cell(row[i], col_widths[i]) for i in range(0, len(row))]
+    def format_row(row):
+        return (
+            "| "
+            + " | ".join(cell.ljust(widths[i]) for i, cell in enumerate(row))
+            + " |"
         )
-        result.append(line.rstrip())
-        if row_i == len(grid) - 1:
-            header_flag = 2
-        if row[0].startswith("**"):
-            header_flag += 1
-        separator = indent_str + add_divider(col_widths, header_flag)
-        result.append(separator.rstrip())
-        header_flag = 0
+
+    result = [format_row(grid[0])]
+    result.append("| " + " | ".join("-" * width for width in widths) + " |")
+    result.extend(format_row(row) for row in grid[1:])
     return "\n".join(result)
-
-
-def add_divider(widths, header_flag):
-    if header_flag == 3:
-        return "=".join(["=" * w for w in widths])
-    if header_flag == 2:
-        return " ".join(["=" * w for w in widths])
-    if header_flag == 1:
-        return "-".join(["-" * w for w in widths])
-    else:
-        return " ".join(["-" * w for w in widths])
-
-
-def pad_cell(s, length, left_align=True):
-    padding = (length - len(s)) * " "
-    return s + padding
 
 
 def get_status_table():
@@ -2295,44 +2324,42 @@ def get_status_table():
         for tc in feature_test_macros:
             if std not in tc["values"].keys():
                 continue
-            value = "``%sL``" % tc["values"][std]
+            value = "`%sL`" % tc["values"][std]
             if "unimplemented" in tc.keys():
                 value = "*unimplemented*"
-            table += [["``%s``" % tc["name"], value]]
+            table += [["`%s`" % tc["name"], value]]
     return table
 
 
 def produce_docs():
-    doc_str = """.. _FeatureTestMacroTable:
+    doc_str = """(featuretestmacrotable)=
 
-==========================
-Feature Test Macro Support
-==========================
+# Feature Test Macro Support
 
-.. contents::
-   :local:
+:::{{contents}}
+:local: true
+:::
 
-Overview
-========
+## Overview
 
 This file documents the feature test macros currently supported by libc++.
 
-.. _feature-status:
+(feature-status)=
 
-Status
-======
+## Status
 
-.. table:: Current Status
-    :name: feature-status-table
-    :widths: auto
+:::{{table}} Current Status
+:name: feature-status-table
+:widths: auto
 
 {status_tables}
+:::
 
 """.format(
-        status_tables=create_table(get_status_table(), 4)
+        status_tables=create_table(get_status_table())
     )
 
-    table_doc_path = os.path.join(docs_path, "FeatureTestMacroTable.rst")
+    table_doc_path = os.path.join(docs_path, "FeatureTestMacroTable.md")
     with open(table_doc_path, "w", newline="\n") as f:
         f.write(doc_str)
 

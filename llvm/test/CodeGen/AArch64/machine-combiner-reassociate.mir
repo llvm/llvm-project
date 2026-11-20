@@ -9,14 +9,6 @@
 ---
 name:            fadd_no_reassoc
 alignment:       4
-registers:
-  - { id: 0, class: fpr32 }
-  - { id: 1, class: fpr32 }
-  - { id: 2, class: fpr32 }
-  - { id: 3, class: fpr32 }
-  - { id: 4, class: fpr32 }
-  - { id: 5, class: fpr32 }
-  - { id: 6, class: fpr32 }
 liveins:
   - { reg: '$s0', virtual-reg: '%0' }
   - { reg: '$s1', virtual-reg: '%1' }
@@ -50,14 +42,6 @@ body:             |
 ---
 name:            fadd_reassoc
 alignment:       4
-registers:
-  - { id: 0, class: fpr32 }
-  - { id: 1, class: fpr32 }
-  - { id: 2, class: fpr32 }
-  - { id: 3, class: fpr32 }
-  - { id: 4, class: fpr32 }
-  - { id: 5, class: fpr32 }
-  - { id: 6, class: fpr32 }
 liveins:
   - { reg: '$s0', virtual-reg: '%0' }
   - { reg: '$s1', virtual-reg: '%1' }
@@ -89,14 +73,6 @@ body:             |
 ---
 name:            fadd_flags
 alignment:       4
-registers:
-  - { id: 0, class: fpr32 }
-  - { id: 1, class: fpr32 }
-  - { id: 2, class: fpr32 }
-  - { id: 3, class: fpr32 }
-  - { id: 4, class: fpr32 }
-  - { id: 5, class: fpr32 }
-  - { id: 6, class: fpr32 }
 liveins:
   - { reg: '$s0', virtual-reg: '%0' }
   - { reg: '$s1', virtual-reg: '%1' }

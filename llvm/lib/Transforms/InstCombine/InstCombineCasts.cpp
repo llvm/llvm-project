@@ -1383,12 +1383,10 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
 
   if (DestTy->isIntegerTy(1))
     if (auto *LI = dyn_cast<LoadInst>(Src))
-      if (auto *GEP = dyn_cast<GetElementPtrInst>(LI->getOperand(0))) {
-        if (Instruction *Res = foldCmpLoadFromIndexedGlobal(
-                LI, GEP, ICmpInst::ICMP_NE, ConstantInt::getNullValue(SrcTy),
-                Trunc, ConstantInt::get(cast<IntegerType>(SrcTy), 1)))
-          return Res;
-      }
+      if (Instruction *Res = foldCmpLoadFromIndexedGlobal(
+              LI, ICmpInst::ICMP_NE, ConstantInt::getNullValue(SrcTy), Trunc,
+              ConstantInt::get(cast<IntegerType>(SrcTy), 1)))
+        return Res;
 
   return Changed ? &Trunc : nullptr;
 }

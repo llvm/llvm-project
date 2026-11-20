@@ -584,7 +584,9 @@ struct DevirtModule {
         OREGetter([&](Function &F) -> OptimizationRemarkEmitter & {
           return FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
         }),
-        DevirtSpeculatively(DevirtSpeculatively) {
+        DevirtSpeculatively(
+            DevirtSpeculatively ||
+            (ImportSummary && ImportSummary->withSpeculativeDevirt())) {
     assert(!(ExportSummary && ImportSummary));
     FunctionsToSkip.init(SkipFunctionNames);
   }
@@ -600,18 +602,18 @@ struct DevirtModule {
       std::vector<VTableBits> &Bits,
       DenseMap<Metadata *, std::set<TypeMemberInfo>> &TypeIdMap);
 
-  bool
-  tryFindVirtualCallTargets(std::vector<VirtualCallTarget> &TargetsForSlot,
-                            const std::set<TypeMemberInfo> &TypeMemberInfos,
-                            uint64_t ByteOffset,
-                            ModuleSummaryIndex *ExportSummary);
+  bool tryFindVirtualCallTargets(
+      std::vector<VirtualCallTarget> &TargetsForSlot,
+      const std::set<TypeMemberInfo> &TypeMemberInfos, uint64_t ByteOffset,
+      ModuleSummaryIndex *ExportSummary, bool &HasPublicTarget);
 
   void applySingleImplDevirt(VTableSlotInfo &SlotInfo, Constant *TheFn,
-                             bool &IsExported);
+                             bool HasPublicTarget, bool &IsExported);
   bool trySingleImplDevirt(ModuleSummaryIndex *ExportSummary,
                            MutableArrayRef<VirtualCallTarget> TargetsForSlot,
                            VTableSlotInfo &SlotInfo,
-                           WholeProgramDevirtResolution *Res);
+                           WholeProgramDevirtResolution *Res,
+                           bool HasPublicTarget);
 
   void applyICallBranchFunnel(VTableSlotInfo &SlotInfo, Function &JT,
                               bool &IsExported);
@@ -698,7 +700,8 @@ struct DevirtModule {
 
   // Lower the module using the action and summary passed as command line
   // arguments. For testing purposes only.
-  static bool runForTesting(Module &M, ModuleAnalysisManager &MAM);
+  static bool runForTesting(Module &M, ModuleAnalysisManager &MAM,
+                            bool DevirtSpeculatively);
 };
 
 struct DevirtIndex {
@@ -720,6 +723,10 @@ struct DevirtIndex {
 
   PatternList FunctionsToSkip;
 
+  // Whether speculative devirtualization is enabled, as recorded in the
+  // combined index by runWholeProgramDevirtOnIndex.
+  const bool DevirtSpeculatively;
+
   DevirtIndex(
       ModuleSummaryIndex &ExportSummary,
       std::set<GlobalValue::GUID> &ExportedGUIDs,
@@ -727,19 +734,21 @@ struct DevirtIndex {
       DenseSet<StringRef> *ExternallyVisibleSymbolNamesPtr)
       : ExportSummary(ExportSummary), ExportedGUIDs(ExportedGUIDs),
         LocalWPDTargetsMap(LocalWPDTargetsMap),
-        ExternallyVisibleSymbolNamesPtr(ExternallyVisibleSymbolNamesPtr) {
+        ExternallyVisibleSymbolNamesPtr(ExternallyVisibleSymbolNamesPtr),
+        DevirtSpeculatively(ExportSummary.withSpeculativeDevirt()) {
     FunctionsToSkip.init(SkipFunctionNames);
   }
 
   bool tryFindVirtualCallTargets(std::vector<ValueInfo> &TargetsForSlot,
                                  const TypeIdCompatibleVtableInfo TIdInfo,
-                                 uint64_t ByteOffset);
+                                 uint64_t ByteOffset, bool &HasPublicTarget);
 
   bool trySingleImplDevirt(MutableArrayRef<ValueInfo> TargetsForSlot,
                            VTableSlotSummary &SlotSummary,
                            VTableSlotInfo &SlotInfo,
                            WholeProgramDevirtResolution *Res,
-                           std::set<ValueInfo> &DevirtTargets);
+                           std::set<ValueInfo> &DevirtTargets,
+                           bool HasPublicTarget);
 
   void run();
 };
@@ -747,22 +756,27 @@ struct DevirtIndex {
 
 PreservedAnalyses WholeProgramDevirtPass::run(Module &M,
                                               ModuleAnalysisManager &MAM) {
+  const bool DevirtualizeSpeculatively =
+      DevirtSpeculatively || getIPOOptions(M).devirtualize_speculatively;
+
   if (UseCommandLine) {
-    if (!DevirtModule::runForTesting(M, MAM))
+    if (!DevirtModule::runForTesting(M, MAM, DevirtualizeSpeculatively))
       return PreservedAnalyses::all();
     return PreservedAnalyses::none();
   }
 
+  // FIXME: The state of a run should not be kept in the pass. A more resilient
+  // design would create an object in run() that holds the values the run
+  // needs, such as the module, the analyses and the summaries.
   std::optional<ModuleSummaryIndex> Index;
-  if (!ExportSummary && !ImportSummary && DevirtSpeculatively) {
+  ModuleSummaryIndex *Export = ExportSummary;
+  if (!ExportSummary && !ImportSummary && DevirtualizeSpeculatively) {
     // Build the ExportSummary from the module.
-    assert(!ExportSummary &&
-           "ExportSummary is expected to be empty in non-LTO mode");
     ProfileSummaryInfo PSI(M);
     Index.emplace(buildModuleSummaryIndex(M, nullptr, &PSI));
-    ExportSummary = Index.has_value() ? &Index.value() : nullptr;
+    Export = &*Index;
   }
-  if (!DevirtModule(M, MAM, ExportSummary, ImportSummary, DevirtSpeculatively)
+  if (!DevirtModule(M, MAM, Export, ImportSummary, DevirtualizeSpeculatively)
            .run())
     return PreservedAnalyses::all();
   return PreservedAnalyses::none();
@@ -844,7 +858,8 @@ void llvm::updateVCallVisibilityInModule(
 }
 
 void llvm::updatePublicTypeTestCalls(Module &M,
-                                     bool WholeProgramVisibilityEnabledInLTO) {
+                                     bool WholeProgramVisibilityEnabledInLTO,
+                                     bool DevirtSpeculativelyInIndex) {
   llvm::TimeTraceScope timeScope("Update public type test calls");
   Function *PublicTypeTestFunc =
       Intrinsic::getDeclarationIfExists(&M, Intrinsic::public_type_test);
@@ -861,9 +876,12 @@ void llvm::updatePublicTypeTestCalls(Module &M,
       CI->replaceAllUsesWith(NewCI);
       CI->eraseFromParent();
     }
-  } else {
-    // TODO: Don't replace public type tests when speculative devirtualization
-    // gets enabled in LTO mode.
+  } else if (!DevirtSpeculativelyInIndex &&
+             !getIPOOptions(M).devirtualize_speculatively) {
+    // Keep the public type tests when speculative devirtualization is enabled,
+    // either via the option or as recorded in the combined index by the thin
+    // link (needed by distributed ThinLTO backends, which don't see the
+    // option), since WPD uses them to find the call sites to devirtualize.
     auto *True = ConstantInt::getTrue(M.getContext());
     for (Use &U : make_early_inc_range(PublicTypeTestFunc->uses())) {
       auto *CI = cast<CallInst>(U.getUser());
@@ -919,7 +937,14 @@ void llvm::updateVCallVisibilityInIndex(
 void llvm::runWholeProgramDevirtOnIndex(
     ModuleSummaryIndex &Summary, std::set<GlobalValue::GUID> &ExportedGUIDs,
     std::map<ValueInfo, std::vector<VTableSlotSummary>> &LocalWPDTargetsMap,
-    DenseSet<StringRef> *ExternallyVisibleSymbolNamesPtr) {
+    DenseSet<StringRef> *ExternallyVisibleSymbolNamesPtr,
+    const LLVMContext *Ctx) {
+  // Record in the combined index whether speculative devirtualization is
+  // enabled. This is consulted by the index-based WPD below, and by the
+  // backends (in particular distributed ThinLTO backends, which do not see the
+  // option) so that they apply the speculative resolutions.
+  if (Ctx && getIPOOptions(*Ctx).devirtualize_speculatively)
+    Summary.setWithSpeculativeDevirt();
   DevirtIndex(Summary, ExportedGUIDs, LocalWPDTargetsMap,
               ExternallyVisibleSymbolNamesPtr)
       .run();
@@ -969,7 +994,8 @@ static Error checkCombinedSummaryForTesting(const IPOOptions &Opts,
   return ErrorSuccess();
 }
 
-bool DevirtModule::runForTesting(Module &M, ModuleAnalysisManager &MAM) {
+bool DevirtModule::runForTesting(Module &M, ModuleAnalysisManager &MAM,
+                                 bool DevirtSpeculatively) {
   const IPOOptions &Opts = getIPOOptions(M);
   StringRef ReadSummary = Opts.wholeprogramdevirt_read_summary;
   StringRef WriteSummary = Opts.wholeprogramdevirt_write_summary;
@@ -1002,7 +1028,7 @@ bool DevirtModule::runForTesting(Module &M, ModuleAnalysisManager &MAM) {
           M, MAM,
           SummaryAction == PassSummaryAction::Export ? Summary.get() : nullptr,
           SummaryAction == PassSummaryAction::Import ? Summary.get() : nullptr,
-          Opts.devirtualize_speculatively)
+          DevirtSpeculatively)
           .run();
 
   if (!WriteSummary.empty()) {
@@ -1061,16 +1087,19 @@ void DevirtModule::buildTypeIdentifierMap(
 bool DevirtModule::tryFindVirtualCallTargets(
     std::vector<VirtualCallTarget> &TargetsForSlot,
     const std::set<TypeMemberInfo> &TypeMemberInfos, uint64_t ByteOffset,
-    ModuleSummaryIndex *ExportSummary) {
+    ModuleSummaryIndex *ExportSummary, bool &HasPublicTarget) {
+  HasPublicTarget = false;
+
   for (const TypeMemberInfo &TM : TypeMemberInfos) {
     if (!TM.Bits->GV->isConstant())
       return false;
 
-    // Without DevirtSpeculatively, we cannot perform whole program
-    // devirtualization analysis on a vtable with public LTO visibility.
-    if (!DevirtSpeculatively && TM.Bits->GV->getVCallVisibility() ==
-                                    GlobalObject::VCallVisibilityPublic)
-      return false;
+    if (TM.Bits->GV->getVCallVisibility() ==
+        GlobalObject::VCallVisibilityPublic) {
+      HasPublicTarget = true;
+      if (!DevirtSpeculatively)
+        return false;
+    }
 
     // A local vtable without live uses cannot be loaded from, so it does not
     // provide a call target.
@@ -1093,12 +1122,6 @@ bool DevirtModule::tryFindVirtualCallTargets(
     if (Fn->getName() == "__cxa_pure_virtual")
       continue;
 
-    // In most cases empty functions will be overridden by the
-    // implementation of the derived class, so we can skip them.
-    if (DevirtSpeculatively && Fn->getReturnType()->isVoidTy() &&
-        Fn->getInstructionCount() <= 1)
-      continue;
-
     // We can disregard unreachable functions as possible call targets, as
     // unreachable functions shouldn't be called.
     if (mustBeUnreachableFunction(Fn, ExportSummary))
@@ -1114,13 +1137,32 @@ bool DevirtModule::tryFindVirtualCallTargets(
     TargetsForSlot.push_back({GV, &TM});
   }
 
+  // In most cases empty functions will be overridden by the
+  // implementation of the derived class, so we can skip them
+  // for speculative devirtualization.
+  if (HasPublicTarget) {
+    erase_if(TargetsForSlot, [](const VirtualCallTarget &Target) {
+      const auto *Fn = dyn_cast<Function>(Target.Fn);
+      if (!Fn)
+        Fn = cast<Function>(cast<GlobalAlias>(Target.Fn)->getAliasee());
+      // TODO: This heuristic is currently not applied during hybrid LTO because
+      // we skip all declarations. If there is a function summary, we should get
+      // the instruction from there instead.
+      return !Fn->isDeclaration() && Fn->getReturnType()->isVoidTy() &&
+             Fn->getInstructionCount() <= 1;
+    });
+  }
+
   // Give up if we couldn't find any targets.
   return !TargetsForSlot.empty();
 }
 
 bool DevirtIndex::tryFindVirtualCallTargets(
     std::vector<ValueInfo> &TargetsForSlot,
-    const TypeIdCompatibleVtableInfo TIdInfo, uint64_t ByteOffset) {
+    const TypeIdCompatibleVtableInfo TIdInfo, uint64_t ByteOffset,
+    bool &HasPublicTarget) {
+  HasPublicTarget = false;
+
   for (const TypeIdOffsetVtableInfo &P : TIdInfo) {
     // Find a representative copy of the vtable initializer.
     // We can have multiple available_externally, linkonce_odr and weak_odr
@@ -1149,8 +1191,11 @@ bool DevirtIndex::tryFindVirtualCallTargets(
         VS = CurVS;
         // We cannot perform whole program devirtualization analysis on a vtable
         // with public LTO visibility.
-        if (VS->getVCallVisibility() == GlobalObject::VCallVisibilityPublic)
-          return false;
+        if (VS->getVCallVisibility() == GlobalObject::VCallVisibilityPublic) {
+          HasPublicTarget = true;
+          if (!DevirtSpeculatively)
+            return false;
+        }
         break;
       }
     }
@@ -1176,7 +1221,8 @@ bool DevirtIndex::tryFindVirtualCallTargets(
 }
 
 void DevirtModule::applySingleImplDevirt(VTableSlotInfo &SlotInfo,
-                                         Constant *TheFn, bool &IsExported) {
+                                         Constant *TheFn, bool HasPublicTarget,
+                                         bool &IsExported) {
   // Don't devirtualize function if we're told to skip it
   // in -wholeprogramdevirt-skip.
   if (FunctionsToSkip.match(TheFn->stripPointerCasts()->getName()))
@@ -1221,7 +1267,7 @@ void DevirtModule::applySingleImplDevirt(VTableSlotInfo &SlotInfo,
       // call. The guard's weights come from the indirect call's value
       // profile when one is available.
       if (Opts.wholeprogramdevirt_check == WPDCheckMode::Fallback ||
-          DevirtSpeculatively) {
+          HasPublicTarget) {
         MDBuilder MDB(M.getContext());
         uint64_t TotalCount = 0;
         SmallVector<InstrProfValueData> ValueData = getValueProfDataFromInst(
@@ -1265,6 +1311,7 @@ void DevirtModule::applySingleImplDevirt(VTableSlotInfo &SlotInfo,
       // In either trapping or non-checking mode, devirtualize original call.
       else {
         // Devirtualize unconditionally.
+        assert(!HasPublicTarget);
         CB.setCalledOperand(Callee);
         // Since the call site is now direct, we must clear metadata that
         // is only appropriate for indirect calls. This includes !prof and
@@ -1279,15 +1326,17 @@ void DevirtModule::applySingleImplDevirt(VTableSlotInfo &SlotInfo,
           // Schedule for deletion at the end of pass run.
           CallsWithPtrAuthBundleRemoved.push_back(&CB);
         }
-      }
 
-      // This use is no longer unsafe.
-      if (VCallSite.NumUnsafeUses)
-        --*VCallSite.NumUnsafeUses;
+        // This use is no longer unsafe.
+        if (VCallSite.NumUnsafeUses)
+          --*VCallSite.NumUnsafeUses;
+      }
     }
     if (CSInfo.isExported())
       IsExported = true;
-    CSInfo.markDevirt();
+    if (!HasPublicTarget &&
+        Opts.wholeprogramdevirt_check != WPDCheckMode::Fallback)
+      CSInfo.markDevirt();
   };
   Apply(SlotInfo.CSInfo);
   for (auto &P : SlotInfo.ConstCSInfo)
@@ -1325,7 +1374,7 @@ static bool addCalls(VTableSlotInfo &SlotInfo, const ValueInfo &Callee) {
 bool DevirtModule::trySingleImplDevirt(
     ModuleSummaryIndex *ExportSummary,
     MutableArrayRef<VirtualCallTarget> TargetsForSlot, VTableSlotInfo &SlotInfo,
-    WholeProgramDevirtResolution *Res) {
+    WholeProgramDevirtResolution *Res, bool HasPublicTarget) {
   // See if the program contains a single implementation of this virtual
   // function.
   auto *TheFn = TargetsForSlot[0].Fn;
@@ -1338,7 +1387,7 @@ bool DevirtModule::trySingleImplDevirt(
     TargetsForSlot[0].WasDevirt = true;
 
   bool IsExported = false;
-  applySingleImplDevirt(SlotInfo, TheFn, IsExported);
+  applySingleImplDevirt(SlotInfo, TheFn, HasPublicTarget, IsExported);
   if (!IsExported)
     return false;
 
@@ -1370,7 +1419,11 @@ bool DevirtModule::trySingleImplDevirt(
     // LTO unit split, so we can ignore return value of AddCalls.
     addCalls(SlotInfo, TheFnVI);
 
-  Res->TheKind = WholeProgramDevirtResolution::SingleImpl;
+  if (HasPublicTarget)
+    Res->TheKind = WholeProgramDevirtResolution::Speculative;
+  else
+    Res->TheKind = WholeProgramDevirtResolution::SingleImpl;
+
   Res->SingleImplName = std::string(TheFn->getName());
 
   return true;
@@ -1380,7 +1433,8 @@ bool DevirtIndex::trySingleImplDevirt(MutableArrayRef<ValueInfo> TargetsForSlot,
                                       VTableSlotSummary &SlotSummary,
                                       VTableSlotInfo &SlotInfo,
                                       WholeProgramDevirtResolution *Res,
-                                      std::set<ValueInfo> &DevirtTargets) {
+                                      std::set<ValueInfo> &DevirtTargets,
+                                      bool HasPublicTarget) {
   // See if the program contains a single implementation of this virtual
   // function.
   auto TheFn = TargetsForSlot[0];
@@ -1414,7 +1468,11 @@ bool DevirtIndex::trySingleImplDevirt(MutableArrayRef<ValueInfo> TargetsForSlot,
 
   // Record in summary for use in devirtualization during the ThinLTO import
   // step.
-  Res->TheKind = WholeProgramDevirtResolution::SingleImpl;
+  if (HasPublicTarget)
+    Res->TheKind = WholeProgramDevirtResolution::Speculative;
+  else
+    Res->TheKind = WholeProgramDevirtResolution::SingleImpl;
+
   if (GlobalValue::isLocalLinkage(S->linkage())) {
     if (IsExported) {
       // If target is a local function and we are exporting it by
@@ -2305,7 +2363,8 @@ void DevirtModule::importResolution(VTableSlot Slot, VTableSlotInfo &SlotInfo) {
     return;
   const WholeProgramDevirtResolution &Res = ResI->second;
 
-  if (Res.TheKind == WholeProgramDevirtResolution::SingleImpl) {
+  if (Res.TheKind == WholeProgramDevirtResolution::SingleImpl ||
+      Res.TheKind == WholeProgramDevirtResolution::Speculative) {
     assert(!Res.SingleImplName.empty());
     // The type of the function in the declaration is irrelevant because every
     // call site will cast it to the correct type.
@@ -2320,7 +2379,9 @@ void DevirtModule::importResolution(VTableSlot Slot, VTableSlotInfo &SlotInfo) {
 
     // This is the import phase so we should not be exporting anything.
     bool IsExported = false;
-    applySingleImplDevirt(SlotInfo, SingleImpl, IsExported);
+    bool IsSpeculative =
+        Res.TheKind == WholeProgramDevirtResolution::Speculative;
+    applySingleImplDevirt(SlotInfo, SingleImpl, IsSpeculative, IsExported);
     assert(!IsExported);
   }
 
@@ -2561,14 +2622,14 @@ bool DevirtModule::run() {
                  ->getOrInsertTypeIdSummary(
                      cast<MDString>(S.first.TypeID)->getString())
                  .WPDRes[S.first.ByteOffset];
+
+    bool HasPublicTarget = true;
     if (tryFindVirtualCallTargets(TargetsForSlot, TypeMemberInfos,
-                                  S.first.ByteOffset, ExportSummary)) {
-      bool SingleImplDevirt =
-          trySingleImplDevirt(ExportSummary, TargetsForSlot, S.second, Res);
-      // Out of speculative devirtualization mode, Try to apply virtual constant
-      // propagation or branch funneling.
-      // TODO: This should eventually be enabled for non-public type tests.
-      if (!SingleImplDevirt && !DevirtSpeculatively) {
+                                  S.first.ByteOffset, ExportSummary,
+                                  HasPublicTarget)) {
+      bool SingleImplDevirt = trySingleImplDevirt(
+          ExportSummary, TargetsForSlot, S.second, Res, HasPublicTarget);
+      if (!SingleImplDevirt && !HasPublicTarget) {
         DidVirtualConstProp |=
             tryVirtualConstProp(TargetsForSlot, S.second, Res, S.first);
 
@@ -2712,11 +2773,13 @@ void DevirtIndex::run() {
     WholeProgramDevirtResolution *Res =
         &ExportSummary.getTypeIdSummary(S.first.TypeID)
              ->WPDRes[S.first.ByteOffset];
+
+    bool HasPublicTarget = true;
     if (tryFindVirtualCallTargets(TargetsForSlot, *TidSummary,
-                                  S.first.ByteOffset)) {
+                                  S.first.ByteOffset, HasPublicTarget)) {
 
       if (!trySingleImplDevirt(TargetsForSlot, S.first, S.second, Res,
-                               DevirtTargets))
+                               DevirtTargets, HasPublicTarget))
         continue;
     }
   }
