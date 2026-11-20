@@ -174,7 +174,7 @@ public:
         // the def block. Every lane that is active at the def block at the end
         // of that trip was active at the end of MBB, since MBB's terminator
         // cannot enable more lanes.
-        if (Pred == &DefBlock && MBB != &DefBlock) {
+        if (Pred == &DefBlock) {
           assert(llvm::none_of(MBB->terminators(),
                                [](const MachineInstr &MI) {
                                  return MI.getOpcode() == AMDGPU::SI_ELSE;
