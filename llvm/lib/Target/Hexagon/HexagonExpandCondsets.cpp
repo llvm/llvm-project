@@ -90,6 +90,7 @@
 #include "HexagonRegisterInfo.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/LiveInterval.h"
@@ -167,6 +168,7 @@ namespace {
     unsigned TfrLimit;
     unsigned CoaCounter = 0;
     unsigned TfrCounter = 0;
+    SmallPtrSet<const MachineOperand *, 16> KilledUses;
 
     // FIXME: Consolidate duplicate definitions of RegisterRef
     struct RegisterRef {
@@ -198,7 +200,7 @@ namespace {
     bool isRefInMap(RegisterRef, ReferenceMap &Map, unsigned Exec);
 
     void updateDeadsInRange(Register Reg, LaneBitmask LM, LiveRange &Range);
-    void updateKillFlags(Register Reg);
+    void computeKills(Register Reg);
     void updateDeadFlags(Register Reg);
     void recalculateLiveInterval(Register Reg);
     void removeInstr(MachineInstr &MI);
@@ -299,9 +301,9 @@ bool HexagonExpandCondsets::isRefInMap(RegisterRef RR, ReferenceMap &Map,
   return false;
 }
 
-void HexagonExpandCondsets::updateKillFlags(Register Reg) {
-  auto KillAt = [this,Reg] (SlotIndex K, LaneBitmask LM) -> void {
-    // Set the <kill> flag on a use of Reg whose lane mask is contained in LM.
+void HexagonExpandCondsets::computeKills(Register Reg) {
+  auto KillAt = [this, Reg](SlotIndex K, LaneBitmask LM) -> void {
+    // Record a kill on a use of Reg whose lane mask is contained in LM.
     MachineInstr *MI = LIS->getInstructionFromIndex(K);
     for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
       MachineOperand &Op = MI->getOperand(i);
@@ -310,13 +312,15 @@ void HexagonExpandCondsets::updateKillFlags(Register Reg) {
         continue;
       LaneBitmask SLM = getLaneMask(Reg, Op.getSubReg());
       if ((SLM & LM) == SLM) {
-        // Only set the kill flag on the first encountered use of Reg in this
-        // instruction.
-        Op.setIsKill(true);
+        // Only mark the first encountered use of Reg in this instruction.
+        KilledUses.insert(&Op);
         break;
       }
     }
   };
+
+  for (const MachineOperand &Op : MRI->use_operands(Reg))
+    KilledUses.erase(&Op);
 
   LiveInterval &LI = LIS->getInterval(Reg);
   for (auto I = LI.begin(), E = LI.end(); I != E; ++I) {
@@ -529,6 +533,8 @@ void HexagonExpandCondsets::recalculateLiveInterval(Register Reg) {
 }
 
 void HexagonExpandCondsets::removeInstr(MachineInstr &MI) {
+  for (const MachineOperand &Op : MI.operands())
+    KilledUses.erase(&Op);
   LIS->RemoveMachineInstrFromMaps(MI);
   MI.eraseFromParent();
 }
@@ -536,7 +542,6 @@ void HexagonExpandCondsets::removeInstr(MachineInstr &MI) {
 void HexagonExpandCondsets::updateLiveness(const std::set<Register> &RegSet,
                                            bool Recalc, bool UpdateKills,
                                            bool UpdateDeads) {
-  UpdateKills |= UpdateDeads;
   for (Register R : RegSet) {
     if (!R.isVirtual()) {
       assert(R.isPhysical());
@@ -547,14 +552,12 @@ void HexagonExpandCondsets::updateLiveness(const std::set<Register> &RegSet,
     }
     if (Recalc)
       recalculateLiveInterval(R);
-    if (UpdateKills)
-      MRI->clearKillFlags(R);
+
     if (UpdateDeads)
       updateDeadFlags(R);
-    // Fixing <dead> flags may extend live ranges, so reset <kill> flags
-    // after that.
+    // Fixing <dead> flags may extend live ranges, so compute kills after that.
     if (UpdateKills)
-      updateKillFlags(R);
+      computeKills(R);
     assert(LIS->getInterval(R).verify());
   }
 }
@@ -644,13 +647,13 @@ MachineInstr *HexagonExpandCondsets::genCondTfrFor(MachineOperand &SrcOp,
   MachineInstrBuilder MIB;
 
   if (SrcOp.isReg()) {
-    RegState SrcState = getRegState(SrcOp);
-    if (RegisterRef(SrcOp) == RegisterRef(DstR, DstSR))
-      SrcState &= ~RegState::Kill;
     MIB = BuildMI(B, At, DL, HII->get(Opc))
-            .addReg(DstR, DstState, DstSR)
-            .addReg(PredOp.getReg(), PredState, PredOp.getSubReg())
-            .addReg(SrcOp.getReg(), SrcState, SrcOp.getSubReg());
+              .addReg(DstR, DstState, DstSR)
+              .addReg(PredOp.getReg(), PredState, PredOp.getSubReg())
+              .addReg(SrcOp.getReg(), getRegState(SrcOp), SrcOp.getSubReg());
+    if (KilledUses.contains(&SrcOp) &&
+        RegisterRef(SrcOp) != RegisterRef(DstR, DstSR))
+      KilledUses.insert(&MIB->getOperand(2));
   } else {
     MIB = BuildMI(B, At, DL, HII->get(Opc))
             .addReg(DstR, DstState, DstSR)
@@ -699,6 +702,8 @@ bool HexagonExpandCondsets::split(MachineInstr &MI,
       updateRegs(MI);
       MI.setDesc(HII->get(TargetOpcode::COPY));
       RegState S = getRegState(ST);
+      for (const MachineOperand &Op : MI.operands())
+        KilledUses.erase(&Op);
       while (MI.getNumOperands() > 1)
         MI.removeOperand(MI.getNumOperands()-1);
       MachineFunction &MF = *MI.getParent()->getParent();
@@ -951,10 +956,10 @@ bool HexagonExpandCondsets::predicate(MachineInstr &TfrI, bool Cond,
   MachineOperand &MD = TfrI.getOperand(0);
   MachineOperand &MP = TfrI.getOperand(1);
   MachineOperand &MS = TfrI.getOperand(2);
-  // The source operand should be a <kill>. This is not strictly necessary,
+  // The source operand should be a kill. This is not strictly necessary,
   // but it makes things a lot simpler. Otherwise, we would need to rename
   // some registers, which would complicate the transformation considerably.
-  if (!MS.isKill())
+  if (!KilledUses.contains(&MS))
     return false;
   // Avoid predicating instructions that define a subregister if subregister
   // liveness tracking is not enabled.
@@ -1187,7 +1192,7 @@ bool HexagonExpandCondsets::coalesceRegisters(RegisterRef R1, RegisterRef R2) {
     L2.removeSegment(*L2.begin());
   LIS->removeInterval(R2.Reg);
 
-  updateKillFlags(R1.Reg);
+  computeKills(R1.Reg);
   LLVM_DEBUG(dbgs() << "coalesced: " << L1 << "\n");
   assert(L1.verify());
 
@@ -1286,11 +1291,9 @@ bool HexagonExpandCondsets::runOnMachineFunction(MachineFunction &MF) {
   // This could eliminate a register copy in some circumstances.
   Changed |= coalesceSegments(Condsets, CoalUpd);
 
-  // Update kill flags on all source operands. This is done here because
-  // at this moment (when expand-condsets runs), there are no kill flags
-  // in the IR (they have been removed by live range analysis).
-  // Updating them right before we split is the easiest, because splitting
-  // adds definitions which would interfere with updating kills afterwards.
+  // Compute kills on all source operands. Doing this right before we split is
+  // the easiest, because splitting adds definitions which would interfere with
+  // computing kills afterwards.
   std::set<Register> KillUpd;
   for (MachineInstr *MI : Condsets) {
     for (MachineOperand &Op : MI->operands()) {
@@ -1305,18 +1308,16 @@ bool HexagonExpandCondsets::runOnMachineFunction(MachineFunction &MF) {
 
   // First, simply split all muxes into a pair of conditional transfers
   // and update the live intervals to reflect the new arrangement. The
-  // goal is to update the kill flags, since predication will rely on
+  // goal is to preserve the computed kills, since predication will rely on
   // them.
   for (MachineInstr *MI : Condsets)
     Changed |= split(*MI, PredUpd);
   Condsets.clear(); // The contents of Condsets are invalid here anyway.
 
-  // Do not update live ranges after splitting. Recalculation of live
-  // intervals removes kill flags, which were preserved by splitting on
-  // the source operands of condsets. These kill flags are needed by
-  // predication, and after splitting they are difficult to recalculate
-  // (because of predicated defs), so make sure they are left untouched.
-  // Predication does not use live intervals.
+  // Do not update live ranges after splitting. The kills recorded on the
+  // source operands of condsets were carried over by splitting, and are needed
+  // by predication. After splitting they are difficult to recalculate (because
+  // of predicated defs). Predication does not use live intervals.
   LLVM_DEBUG(LIS->print(dbgs() << "After splitting\n"));
 
   // Traverse all blocks and collapse predicable instructions feeding
@@ -1329,12 +1330,7 @@ bool HexagonExpandCondsets::runOnMachineFunction(MachineFunction &MF) {
 
   PredUpd.insert(CoalUpd.begin(), CoalUpd.end());
   updateLiveness(PredUpd, true, false, true);
-
-  KillUpd.insert(PredUpd.begin(), PredUpd.end());
-  for (Register R : KillUpd) {
-    if (R.isVirtual())
-      MRI->clearKillFlags(R);
-  }
+  KilledUses.clear();
 
   if (Changed)
     distributeLiveIntervals(PredUpd);
