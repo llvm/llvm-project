@@ -42,3 +42,21 @@ define <2 x i32> @trunc_demanded(<2 x i1> %x, <2 x i64> %wide) {
   %result = ashr <2 x i32> %splat, <i32 5, i32 5>
   ret <2 x i32> %result
 }
+
+define <2 x i32> @add_demanded(<2 x i1> %x, <2 x i32> %wide) {
+; CHECK-LABEL: @add_demanded(
+; CHECK-NEXT:    [[EXT:%.*]] = sext <2 x i1> [[X:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[SRC:%.*]] = shufflevector <2 x i32> [[EXT]], <2 x i32> [[WIDE:%.*]], <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i32> [[SRC]], splat (i32 -1)
+; CHECK-NEXT:    [[SHIFT:%.*]] = ashr <2 x i32> [[ADD]], splat (i32 1)
+; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <2 x i32> [[SHIFT]], <2 x i32> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    ret <2 x i32> [[SPLAT]]
+;
+  %ext = sext <2 x i1> %x to <2 x i32>
+  %src = shufflevector <2 x i32> %ext, <2 x i32> %wide, <2 x i32> <i32 0, i32 2>
+  %add = add <2 x i32> %src, <i32 -1, i32 -1>
+  %shift = ashr <2 x i32> %add, <i32 1, i32 1>
+  %splat = shufflevector <2 x i32> %shift, <2 x i32> poison, <2 x i32> zeroinitializer
+  %result = ashr <2 x i32> %splat, <i32 5, i32 5>
+  ret <2 x i32> %result
+}
