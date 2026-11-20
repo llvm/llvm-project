@@ -2289,7 +2289,7 @@ define i32 @mul_x_xxor5_sdiv2(i32 noundef %x) {
 ; CHECK-LABEL: @mul_x_xxor5_sdiv2(
 ; CHECK-NEXT:    [[A:%.*]] = xor i32 [[X:%.*]], 5
 ; CHECK-NEXT:    [[M:%.*]] = mul i32 [[A]], [[X]]
-; CHECK-NEXT:    [[D:%.*]] = sdiv i32 [[M]], 2
+; CHECK-NEXT:    [[D:%.*]] = ashr exact i32 [[M]], 1
 ; CHECK-NEXT:    ret i32 [[D]]
 ;
   %a = xor i32 %x, 5
@@ -2302,7 +2302,7 @@ define i32 @mul_x_notx_sdiv2(i32 noundef %x) {
 ; CHECK-LABEL: @mul_x_notx_sdiv2(
 ; CHECK-NEXT:    [[A:%.*]] = xor i32 [[X:%.*]], -1
 ; CHECK-NEXT:    [[M:%.*]] = mul i32 [[X]], [[A]]
-; CHECK-NEXT:    [[D:%.*]] = sdiv i32 [[M]], 2
+; CHECK-NEXT:    [[D:%.*]] = ashr exact i32 [[M]], 1
 ; CHECK-NEXT:    ret i32 [[D]]
 ;
   %a = xor i32 %x, -1
@@ -2315,7 +2315,7 @@ define i32 @mul_x_7minusx_sdiv2(i32 noundef %x) {
 ; CHECK-LABEL: @mul_x_7minusx_sdiv2(
 ; CHECK-NEXT:    [[A:%.*]] = sub i32 7, [[X:%.*]]
 ; CHECK-NEXT:    [[M:%.*]] = mul i32 [[A]], [[X]]
-; CHECK-NEXT:    [[D:%.*]] = sdiv i32 [[M]], 2
+; CHECK-NEXT:    [[D:%.*]] = ashr exact i32 [[M]], 1
 ; CHECK-NEXT:    ret i32 [[D]]
 ;
   %a = sub i32 7, %x
@@ -2328,7 +2328,7 @@ define i32 @mul_x_1minusx_sdiv2(i32 noundef %x) {
 ; CHECK-LABEL: @mul_x_1minusx_sdiv2(
 ; CHECK-NEXT:    [[A:%.*]] = sub i32 1, [[X:%.*]]
 ; CHECK-NEXT:    [[M:%.*]] = mul i32 [[X]], [[A]]
-; CHECK-NEXT:    [[D:%.*]] = sdiv i32 [[M]], 2
+; CHECK-NEXT:    [[D:%.*]] = ashr exact i32 [[M]], 1
 ; CHECK-NEXT:    ret i32 [[D]]
 ;
   %a = sub i32 1, %x
@@ -2341,7 +2341,7 @@ define i32 @mul_x_xordisjoint1_sdiv2(i32 noundef %x) {
 ; CHECK-LABEL: @mul_x_xordisjoint1_sdiv2(
 ; CHECK-NEXT:    [[A:%.*]] = or disjoint i32 [[X:%.*]], 1
 ; CHECK-NEXT:    [[M:%.*]] = mul i32 [[A]], [[X]]
-; CHECK-NEXT:    [[D:%.*]] = sdiv i32 [[M]], 2
+; CHECK-NEXT:    [[D:%.*]] = ashr exact i32 [[M]], 1
 ; CHECK-NEXT:    ret i32 [[D]]
 ;
   %a = or disjoint i32 %x, 1
