@@ -3602,3 +3602,84 @@ entry:
   %result = select i1 %eq, i1 %v1_lt_v3, i1 %less_than
   ret i1 %result
 }
+
+; Test where the new icmp after the rewrite (%n - 1) == 0 --> %n == 1 allows
+; folding the icmp.
+define i1 @multiuse_add_eq_implied_false(i64 %n, ptr %p) {
+; CHECK-LABEL: @multiuse_add_eq_implied_false(
+; CHECK-NEXT:    [[C:%.*]] = icmp ugt i64 [[N:%.*]], 10
+; CHECK-NEXT:    br i1 [[C]], label [[IF:%.*]], label [[EXIT:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[N]], -1
+; CHECK-NEXT:    store i64 [[ADD]], ptr [[P:%.*]], align 8
+; CHECK-NEXT:    ret i1 false
+; CHECK:       exit:
+; CHECK-NEXT:    ret i1 false
+;
+  %c = icmp ugt i64 %n, 10
+  br i1 %c, label %if, label %exit
+
+if:
+  %add = add i64 %n, -1
+  store i64 %add, ptr %p, align 8
+  %cmp = icmp eq i64 %add, 0
+  ret i1 %cmp
+
+exit:
+  ret i1 false
+}
+
+define i1 @multiuse_add_eq_implied_true(i64 %n, ptr %p) {
+; CHECK-LABEL: @multiuse_add_eq_implied_true(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i64 [[N:%.*]], 7
+; CHECK-NEXT:    br i1 [[C]], label [[IF:%.*]], label [[EXIT:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[N]], -1
+; CHECK-NEXT:    store i64 [[ADD]], ptr [[P:%.*]], align 8
+; CHECK-NEXT:    ret i1 true
+; CHECK:       exit:
+; CHECK-NEXT:    ret i1 false
+;
+  %c = icmp eq i64 %n, 7
+  br i1 %c, label %if, label %exit
+
+if:
+  %add = add i64 %n, -1
+  store i64 %add, ptr %p, align 8
+  %cmp = icmp eq i64 %add, 6
+  ret i1 %cmp
+
+exit:
+  ret i1 false
+}
+
+define i1 @multiuse_add_ne_implied_by_assume(i64 %n, ptr %p) {
+; CHECK-LABEL: @multiuse_add_ne_implied_by_assume(
+; CHECK-NEXT:    [[C:%.*]] = icmp ugt i64 [[N:%.*]], 10
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
+; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[N]], -1
+; CHECK-NEXT:    store i64 [[ADD]], ptr [[P:%.*]], align 8
+; CHECK-NEXT:    ret i1 true
+;
+  %c = icmp ugt i64 %n, 10
+  call void @llvm.assume(i1 %c)
+  %add = add i64 %n, -1
+  store i64 %add, ptr %p, align 8
+  %cmp = icmp ne i64 %add, 0
+  ret i1 %cmp
+}
+
+; Test with add with multiple uses and the new compare does not
+; simplify.
+define i1 @multiuse_add_eq_not_implied(i64 %n, ptr %p) {
+; CHECK-LABEL: @multiuse_add_eq_not_implied(
+; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[N:%.*]], -1
+; CHECK-NEXT:    store i64 [[ADD]], ptr [[P:%.*]], align 8
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[ADD]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add = add i64 %n, -1
+  store i64 %add, ptr %p, align 8
+  %cmp = icmp eq i64 %add, 0
+  ret i1 %cmp
+}
