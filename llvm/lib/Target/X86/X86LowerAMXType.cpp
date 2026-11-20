@@ -344,6 +344,53 @@ static Intrinsic::ID getTilezeroIntrinsic(IntrinsicInst *Consumer) {
              : Intrinsic::x86_tilezero_internal;
 }
 
+// A palette 2 tile is 16 rows of 64 bytes, which is 16 lanes of i32 per row.
+static constexpr unsigned ACENumTileRows = 16;
+static constexpr unsigned ACERowNumElts = 16;
+
+// Palette 2 has no TILELOADD, so build the tile a row at a time.
+static Value *createACETileFromVector(IRBuilder<> &Builder, Value *Vec,
+                                      Value *Row, Value *Col) {
+  Type *RowsTy = FixedVectorType::get(Builder.getInt32Ty(),
+                                      ACENumTileRows * ACERowNumElts);
+  Value *Rows = Builder.CreateBitCast(Vec, RowsTy);
+  // The first write's source is dead, but a constant cannot be an argument.
+  Value *Tile = Builder.CreateIntrinsic(Intrinsic::x86_acev1_tilezero_internal,
+                                        {}, {Row, Col});
+  for (unsigned R = 0; R != ACENumTileRows; ++R) {
+    SmallVector<int, ACERowNumElts> Mask;
+    for (unsigned E = 0; E != ACERowNumElts; ++E)
+      Mask.push_back(R * ACERowNumElts + E);
+    Tile = Builder.CreateIntrinsic(
+        Intrinsic::x86_acev1_tilemovrowinsert_internal, {},
+        {Row, Col, Tile, Builder.CreateShuffleVector(Rows, Mask),
+         Builder.getInt32(R)});
+  }
+  return Tile;
+}
+
+// Palette 2 has no TILESTORED, so read the tile back a row at a time.
+static Value *createVectorFromACETile(IRBuilder<> &Builder, Value *Tile,
+                                      Value *Row, Value *Col, Type *VecTy) {
+  SmallVector<Value *, ACENumTileRows> Rows;
+  for (unsigned R = 0; R != ACENumTileRows; ++R)
+    Rows.push_back(
+        Builder.CreateIntrinsic(Intrinsic::x86_acev1_tilemovrowextract_internal,
+                                {}, {Row, Col, Tile, Builder.getInt32(R)}));
+
+  // Join the rows in pairs, so the shuffles form a tree and not a chain.
+  for (unsigned Width = ACENumTileRows; Width != 1; Width /= 2) {
+    unsigned NumElts =
+        cast<FixedVectorType>(Rows[0]->getType())->getNumElements();
+    SmallVector<int, 2 * ACERowNumElts> Mask;
+    for (unsigned E = 0; E != 2 * NumElts; ++E)
+      Mask.push_back(E);
+    for (unsigned I = 0; I != Width / 2; ++I)
+      Rows[I] = Builder.CreateShuffleVector(Rows[2 * I], Rows[2 * I + 1], Mask);
+  }
+  return Builder.CreateBitCast(Rows[0], VecTy);
+}
+
 namespace {
 class X86LowerAMXType {
   Function &Func;
@@ -1341,14 +1388,10 @@ bool X86LowerAMXCast::transformAMXCast(IntrinsicInst *AMXCast) {
     auto *II = dyn_cast<IntrinsicInst>(U.getUser());
     if (!II)
       return false; // May be bitcast from x86amx to <256 x i32>.
-    // ACE v1 doesn't have TILELOADD, so an ACE tile cannot be loaded here.
-    // Use tilezero, since ACE tiles are typically zero-initialized in the
-    // struct API.
     if (isACEOnlyIntrinsic(II)) {
       Value *Row = nullptr, *Col = nullptr;
       std::tie(Row, Col) = getShape(II, OpNo);
-      Value *NewInst =
-          Builder.CreateIntrinsic(getTilezeroIntrinsic(II), {}, {Row, Col});
+      Value *NewInst = createACETileFromVector(Builder, Src, Row, Col);
       AMXCast->replaceAllUsesWith(NewInst);
       AMXCast->eraseFromParent();
       return true;
@@ -1375,11 +1418,11 @@ bool X86LowerAMXCast::transformAMXCast(IntrinsicInst *AMXCast) {
     auto *II = dyn_cast<IntrinsicInst>(Src);
     if (!II)
       return false; // May be bitcast from <256 x i32> to x86amx.
-    // ACE v1 doesn't have TILESTORED, so an ACE tile cannot be stored here.
-    // Use poison, since the tile result is typically not read back.
     if (isACEOnlyIntrinsic(II)) {
-      Value *Poison = PoisonValue::get(AMXCast->getType());
-      AMXCast->replaceAllUsesWith(Poison);
+      Value *NewInst =
+          createVectorFromACETile(Builder, Src, II->getOperand(0),
+                                  II->getOperand(1), AMXCast->getType());
+      AMXCast->replaceAllUsesWith(NewInst);
       AMXCast->eraseFromParent();
       return true;
     }

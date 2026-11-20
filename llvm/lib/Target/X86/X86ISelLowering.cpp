@@ -39710,6 +39710,8 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MFI->setAMXProgModel(AMXProgModelEnum::ManagedRA);
     return BB;
   }
+  case X86::PTILEMOVCOLtriV:
+  case X86::PTILEMOVROWtriV:
   case X86::PTILEMOVCOLtreV:
   case X86::PTILEMOVROWtreV:
   case X86::PTOP2BF16PStrrV:

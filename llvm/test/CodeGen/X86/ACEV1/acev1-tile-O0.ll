@@ -62,6 +62,24 @@ entry:
   ret void
 }
 
+; ldtilecfg resets the BSR, so the config has to precede a BSR write.
+define void @config_precedes_a_bsr_write(ptr %out, <64 x i8> %hi, <64 x i8> %lo) nounwind {
+; CHECK-LABEL: config_precedes_a_bsr_write:
+; CHECK:         ldtilecfg
+; CHECK:         bsrmovf
+; CHECK:         tilezero %tmm{{[0-7]}}
+; CHECK:         top4mxbf8ps
+entry:
+  call void @llvm.x86.acev1.bsr0movf(<64 x i8> %hi, <64 x i8> %lo)
+  %t = call x86_amx @llvm.x86.acev1.tilezero.internal(i16 16, i16 64)
+  %d = call x86_amx @llvm.x86.acev1.top4mxbf8ps.internal(i16 16, i16 64, i8 0, x86_amx %t, <64 x i8> %hi, <64 x i8> %lo)
+  %r = call <16 x i32> @llvm.x86.acev1.tilemovrowextract.internal(i16 16, i16 64, x86_amx %d, i32 0)
+  store volatile <16 x i32> %r, ptr %out, align 64
+  ret void
+}
+
+declare void @llvm.x86.acev1.bsr0movf(<64 x i8>, <64 x i8>)
+declare x86_amx @llvm.x86.acev1.top4mxbf8ps.internal(i16, i16, i8, x86_amx, <64 x i8>, <64 x i8>)
 declare x86_amx @llvm.x86.acev1.tilezero.internal(i16, i16)
 declare <16 x i32> @llvm.x86.acev1.tilemovrowextract.internal(i16, i16, x86_amx, i32)
 declare <16 x float> @llvm.x86.acev1.tcvtrowd2ps.internal(i16, i16, x86_amx, i32)
