@@ -28,6 +28,10 @@ class DWARFFile {
 public:
   using UnloadCallbackTy = std::function<void(StringRef FileName)>;
 
+  using UnitOffsetsCallbackTy =
+      std::function<void(uint64_t OriginalUnitOffset, uint64_t DebugInfoOffset,
+                         uint64_t DebugAddrOffset)>;
+
   DWARFFile(StringRef Name, std::unique_ptr<DWARFContext> Dwarf,
             std::unique_ptr<AddressesMap> Addresses,
             UnloadCallbackTy UnloadFunc = nullptr)
@@ -57,6 +61,11 @@ public:
   std::string remapPath(StringRef Path) const {
     return PrefixMap ? PrefixMap->mapToString(Path) : Path.str();
   }
+
+  /// Reports where a unit landed in the output .debug_info and .debug_addr, for
+  /// the relocations saved relative to it. Unlike Addresses, it outlives
+  /// unload(), as a linker may only place the units after unloading them.
+  UnitOffsetsCallbackTy UnitOffsetsFunc;
 
   /// Unloads object file and corresponding AddressesMap and Dwarf Context.
   void unload() {
