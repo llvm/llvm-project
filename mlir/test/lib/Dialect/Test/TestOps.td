@@ -2972,6 +2972,10 @@ def AnyCondOp : TEST_Op<"any_cond",
   let regions = (region AnyRegion:$region);
 }
 
+def EarlyExitOp : TEST_Op<"early_exit", [Pure, Terminator]> {
+  let assemblyFormat = "attr-dict";
+}
+
 def LoopBlockOp : TEST_Op<"loop_block",
     [DeclareOpInterfaceMethods<RegionBranchOpInterface,
         ["getEntrySuccessorOperands", "getSuccessorInputs"]>,

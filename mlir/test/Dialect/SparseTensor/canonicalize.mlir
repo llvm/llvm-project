@@ -39,3 +39,19 @@ func.func @sparse_iterate_canonicalize(%sp : tensor<?x?xf64, #CSR>) {
   }
   return
 }
+
+// -----
+
+#CSR = #sparse_tensor.encoding<{
+  map = (i, j) -> (i : dense, j : compressed)
+}>
+
+// CHECK-LABEL: @sparse_iterate_dead
+// CHECK-NEXT:    return
+func.func @sparse_iterate_dead(%sp : tensor<?x?xf64, #CSR>) {
+  %l1 = sparse_tensor.extract_iteration_space %sp lvls = 0 to 2
+      : tensor<?x?xf64, #CSR> -> !sparse_tensor.iter_space<#CSR, lvls = 0 to 2>
+  sparse_tensor.iterate %it1 in %l1 : !sparse_tensor.iter_space<#CSR, lvls = 0 to 2> {
+  }
+  return
+}
