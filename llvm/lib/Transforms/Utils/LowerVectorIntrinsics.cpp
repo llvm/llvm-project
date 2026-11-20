@@ -15,7 +15,7 @@
 
 using namespace llvm;
 
-bool llvm::lowerUnaryVectorIntrinsicAsLoop(Module &M, CallInst *CI) {
+bool llvm::lowerVectorIntrinsicAsLoop(Module &M, CallInst *CI) {
   Type *RetTy = CI->getType();
   auto *StructRetTy = dyn_cast<StructType>(RetTy);
   unsigned NumResults = StructRetTy ? StructRetTy->getNumElements() : 1;
@@ -49,12 +49,25 @@ bool llvm::lowerUnaryVectorIntrinsicAsLoop(Module &M, CallInst *CI) {
     ResultPhis[I]->addIncoming(PoisonValue::get(VecTy), PreLoopBB);
   }
 
-  Value *Elem =
-      LoopBuilder.CreateExtractElement(CI->getArgOperand(0), LoopIndex);
+  SmallVector<Value *, 4> Args;
+  SmallVector<Type *, 4> ArgTys;
+  for (Value *Arg : CI->args()) {
+    if (Arg->getType()->isVectorTy())
+      Arg = LoopBuilder.CreateExtractElement(Arg, LoopIndex);
+    Args.push_back(Arg);
+    ArgTys.push_back(Arg->getType());
+  }
+  Type *ScalarRetTy = VecTy->getElementType();
+  if (StructRetTy) {
+    SmallVector<Type *, 2> ScalarRetTys;
+    for (Type *EltTy : StructRetTy->elements())
+      ScalarRetTys.push_back(cast<VectorType>(EltTy)->getElementType());
+    ScalarRetTy = StructType::get(Ctx, ScalarRetTys);
+  }
   Function *Fn = Intrinsic::getOrInsertDeclaration(&M, CI->getIntrinsicID(),
-                                                   VecTy->getElementType());
+                                                   ScalarRetTy, ArgTys);
 
-  CallInst *ScalarCall = LoopBuilder.CreateCall(Fn, Elem);
+  CallInst *ScalarCall = LoopBuilder.CreateCall(Fn, Args);
   if (isa<FPMathOperator>(CI))
     ScalarCall->copyFastMathFlags(CI);
 
