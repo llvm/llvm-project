@@ -339,6 +339,78 @@ void loop_with_break_gsl(bool cond) {
   v.use();      // expected-note {{later used here}}
 }
 
+void infinite_for_loop() {
+  MyObj safe;
+  MyObj* p = &safe;
+  {
+    MyObj s;
+    p = &s;     // expected-warning {{local variable 's' does not live long enough}}
+  }             // expected-note {{local variable 's' is destroyed here}}
+  for (;;)
+    use(*p);    // expected-note {{later used here}}
+}
+
+// GH222273
+void infinite_while_loop(bool cond) {
+  while (true) {
+    MyObj* p;
+    if (cond) {
+      MyObj s;
+      p = &s;   // expected-warning {{local variable 's' does not live long enough}}
+    }           // expected-note {{local variable 's' is destroyed here}}
+    use(*p);    // expected-note {{later used here}}
+  }
+}
+
+void infinite_goto_loop() {
+  View v;
+  {
+    MyObj s;
+    v = s;      // expected-warning {{local variable 's' does not live long enough}}
+  }             // expected-note {{local variable 's' is destroyed here}}
+again:
+  v.use();      // expected-note {{later used here}}
+  goto again;
+}
+
+void infinite_loop_on_one_branch(bool cond) {
+  MyObj safe;
+  MyObj* p = &safe;
+  {
+    MyObj s;
+    p = &s;     // expected-warning {{local variable 's' does not live long enough}}
+  }             // expected-note {{local variable 's' is destroyed here}}
+  if (cond)
+    for (;;)
+      use(*p);  // expected-note {{later used here}}
+}
+
+void infinite_loops_on_both_branches(bool cond) {
+  MyObj safe;
+  MyObj* p = &safe;
+  MyObj* q = &safe;
+  {
+    MyObj s, t;
+    p = &s;     // expected-warning {{local variable 's' does not live long enough}}
+    q = &t;     // expected-warning {{local variable 't' does not live long enough}}
+  }             // expected-note {{local variable 's' is destroyed here}} \
+                // expected-note {{local variable 't' is destroyed here}}
+  if (cond) {
+    for (;;)
+      use(*p);  // expected-note {{later used here}}
+  } else {
+    for (;;)
+      use(*q);  // expected-note {{later used here}}
+  }
+}
+
+void safe_infinite_loop() {
+  MyObj safe;
+  MyObj* p = &safe;
+  for (;;)
+    use(*p);
+}
+
 void multiple_expiry_of_same_loan(bool cond) {
   // Choose the last expiry location for the loan (e.g., through scope-ends and break statements).
   MyObj safe;

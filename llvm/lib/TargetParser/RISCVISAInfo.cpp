@@ -280,7 +280,7 @@ bool RISCVISAInfo::hasExtension(StringRef Ext) const {
   if (!isSupportedExtension(Ext))
     return false;
 
-  return Exts.count(Ext.str()) != 0;
+  return Exts.count(Ext) != 0;
 }
 
 std::vector<std::string> RISCVISAInfo::toFeatures(bool AddAllExtensions,
@@ -805,12 +805,12 @@ Error RISCVISAInfo::checkDependency() {
 
   if (Exts.count("zcd"))
     for (auto Ext : ZcdOverlaps)
-      if (Exts.count(Ext.str()))
+      if (Exts.count(Ext))
         return getIncompatibleError(Ext, "zcd");
 
   if (XLen != 32)
     for (auto Ext : RV32Only)
-      if (Exts.count(Ext.str()))
+      if (Exts.count(Ext))
         return getError(Twine("'") + Ext + "' is only supported for 'rv32'");
 
   if (Exts.count("xwchc") != 0) {
@@ -836,7 +836,7 @@ Error RISCVISAInfo::checkDependency() {
       if (Exts.count("zcd") != 0)
         return getBaseIncompatibleError("zcd", "rv64y");
       for (auto Ext : ZcdOverlaps)
-        if (Exts.count(Ext.str()))
+        if (Exts.count(Ext))
           return getBaseIncompatibleError(Ext, "rv64y");
     }
   }
@@ -992,7 +992,7 @@ void RISCVISAInfo::updateCombination() {
   do {
     MadeChange = false;
     for (StringRef CombineExt : CombineIntoExts) {
-      if (Exts.count(CombineExt.str()))
+      if (Exts.count(CombineExt))
         continue;
 
       // Look up the extension in the ImpliesExt table to find everything it

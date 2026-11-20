@@ -754,4 +754,81 @@ TEST_F(OpenMPContextTest, ConstructOrderInStrictSubset) {
   }
 }
 
+TEST_F(OpenMPContextTest, StrictSubsetOfLaterTiedVariant) {
+  OMPContext HostLinux(false, Triple("x86_64-unknown-linux"), Triple(), -1);
+  APInt Three(64, 3), Four(64, 4);
+  VariantMatchInfo Subset, Other, Superset;
+  Subset.addTrait(TraitProperty::user_condition_true, "");
+  Subset.addTrait(TraitProperty::implementation_vendor_llvm, "", &Four);
+  Other.addTrait(TraitProperty::device_kind_cpu, "");
+  Other.addTrait(TraitProperty::implementation_vendor_llvm, "", &Three);
+  Superset.addTrait(TraitProperty::user_condition_true, "");
+  Superset.addTrait(TraitProperty::device_kind_host, "");
+  Superset.addTrait(TraitProperty::implementation_vendor_llvm, "", &Three);
+
+  auto Best = [&](std::initializer_list<VariantMatchInfo> VMIs) {
+    return getBestVariantMatchForContext(SmallVector<VariantMatchInfo, 3>(VMIs),
+                                         HostLinux);
+  };
+
+  // All three score 5. Subset is a strict subset of Superset, and the first of
+  // the other two wins.
+  EXPECT_EQ(Best({Subset, Other, Superset}), 1);
+  EXPECT_EQ(Best({Subset, Superset, Other}), 1);
+}
+
+TEST_F(OpenMPContextTest, StrictSubsetsOfAlternatingTiedSupersets) {
+  OMPContext HostLinux(false, Triple("x86_64-unknown-linux"), Triple(), -1);
+  APInt Three(64, 3);
+  VariantMatchInfo Host, CPU, HostSuperset, CPUSuperset;
+  Host.addTrait(TraitProperty::device_kind_host, "");
+  Host.addTrait(TraitProperty::implementation_vendor_llvm, "", &Three);
+  CPU.addTrait(TraitProperty::device_kind_cpu, "");
+  CPU.addTrait(TraitProperty::implementation_vendor_llvm, "", &Three);
+  HostSuperset = Host;
+  HostSuperset.addTrait(TraitProperty::user_condition_true, "");
+  CPUSuperset = CPU;
+  CPUSuperset.addTrait(TraitProperty::user_condition_true, "");
+
+  auto Best = [&](std::initializer_list<VariantMatchInfo> VMIs) {
+    return getBestVariantMatchForContext(SmallVector<VariantMatchInfo, 6>(VMIs),
+                                         HostLinux);
+  };
+
+  // All score 5. Host and CPU are strict subsets of different supersets, so
+  // the supersets they lose to alternate. The first variant that isn't a strict
+  // subset of another one wins.
+  EXPECT_EQ(Best({Host, CPU, Host, CPU, HostSuperset, CPUSuperset}), 4);
+  EXPECT_EQ(Best({Host, CPU, Host, CPU, CPUSuperset, HostSuperset}), 4);
+  EXPECT_EQ(Best({Host, CPU, Host, HostSuperset}), 1);
+}
+
+TEST_F(OpenMPContextTest, ISANamesInStrictSubset) {
+  struct ISAContext : OMPContext {
+    using OMPContext::OMPContext;
+    bool matchesISATrait(StringRef) const override { return true; }
+  } Context(false, Triple("x86_64-unknown-linux"), Triple(), -1);
+  APInt Three(64, 3), Four(64, 4);
+  VariantMatchInfo SSE, AVX;
+  SSE.addTrait(TraitProperty::device_isa___ANY, "sse");
+  SSE.addTrait(TraitProperty::implementation_vendor_llvm, "", &Four);
+  AVX.addTrait(TraitProperty::device_isa___ANY, "avx");
+  AVX.addTrait(TraitProperty::implementation_vendor_llvm, "", &Three);
+  AVX.addTrait(TraitProperty::device_kind_host, "");
+  auto Best = [&](const VariantMatchInfo &First,
+                  const VariantMatchInfo &Second) {
+    return getBestVariantMatchForContext(
+        SmallVector<VariantMatchInfo, 2>{First, Second}, Context);
+  };
+
+  // Both score 9. AVX requires more traits, but not the `sse` ISA name.
+  EXPECT_EQ(Best(SSE, AVX), 0);
+  EXPECT_EQ(Best(AVX, SSE), 0);
+
+  // With all of SSE's ISA names, AVX is a strict superset.
+  AVX.addTrait(TraitProperty::device_isa___ANY, "sse");
+  EXPECT_EQ(Best(SSE, AVX), 1);
+  EXPECT_EQ(Best(AVX, SSE), 0);
+}
+
 } // namespace

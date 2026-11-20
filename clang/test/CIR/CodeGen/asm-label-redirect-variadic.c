@@ -16,16 +16,14 @@ int real_log(const char *path, long x) { return (int)x; }
 // CIR-LABEL: cir.func {{.*}} @test_plain(
 // CIR:         %[[G1:.+]] = cir.get_global @real_log : !cir.ptr<!cir.func<(!cir.ptr<!s8i>, !s64i) -> !s32i>>
 // CIR-NEXT:    %[[P1:.+]] = cir.cast bitcast %[[G1]] : !cir.ptr<!cir.func<(!cir.ptr<!s8i>, !s64i) -> !s32i>> -> !cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>
-// CIR-NEXT:    %{{.+}} = cir.call %[[P1]](%{{.+}}, %{{.+}}, %{{.+}}) : (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, !cir.ptr<!s8i>, !s32i, !s32i) -> !s32i
+// CIR-NEXT:    %{{.+}} = cir.call %[[P1]](%{{.+}}, %{{.+}}, %{{.+}}) : (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, !cir.ptr<!s8i> {llvm.noundef}, !s32i {llvm.noundef}, !s32i {llvm.noundef}) -> !s32i
 // CIR:         %[[G2:.+]] = cir.get_global @real_log : !cir.ptr<!cir.func<(!cir.ptr<!s8i>, !s64i) -> !s32i>>
 // CIR-NEXT:    %[[P2:.+]] = cir.cast bitcast %[[G2]] : !cir.ptr<!cir.func<(!cir.ptr<!s8i>, !s64i) -> !s32i>> -> !cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>
-// CIR-NEXT:    %{{.+}} = cir.call %[[P2]](%{{.+}}) : (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, !cir.ptr<!s8i>) -> !s32i
+// CIR-NEXT:    %{{.+}} = cir.call %[[P2]](%{{.+}}) : (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, !cir.ptr<!s8i> {llvm.noundef}) -> !s32i
 
 // LLVM-LABEL:  define dso_local i32 @test_plain(
-// LLVMCIR:       call i32 (ptr, ...) @real_log(ptr %{{[^,)]+}}, i32 1, i32 2)
-// LLVMCIR:       call i32 (ptr, ...) @real_log(ptr %{{[^,)]+}})
-// OGCG:          call i32 (ptr, ...) @real_log(ptr noundef %{{[^,)]+}}, i32 noundef 1, i32 noundef 2)
-// OGCG:          call i32 (ptr, ...) @real_log(ptr noundef %{{[^,)]+}})
+// LLVM:          call i32 (ptr, ...) @real_log(ptr noundef %{{[^,)]+}}, i32 noundef 1, i32 noundef 2)
+// LLVM:          call i32 (ptr, ...) @real_log(ptr noundef %{{[^,)]+}})
 
 // The same holds when the definition is a gnu_inline body emitted later.
 extern int xreal_vimpl(const char *path, long x);
@@ -45,16 +43,14 @@ int test_inline(const char *p) {
 // CIR-LABEL: cir.func {{.*}} @test_inline(
 // CIR:         %[[G3:.+]] = cir.get_global @real_vimpl : !cir.ptr<!cir.func<(!cir.ptr<!s8i>, !s64i) -> !s32i>>
 // CIR-NEXT:    %[[P3:.+]] = cir.cast bitcast %[[G3]] : !cir.ptr<!cir.func<(!cir.ptr<!s8i>, !s64i) -> !s32i>> -> !cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>
-// CIR-NEXT:    %{{.+}} = cir.call %[[P3]](%{{.+}}, %{{.+}}, %{{.+}}) : (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, !cir.ptr<!s8i>, !s32i, !s32i) -> !s32i
+// CIR-NEXT:    %{{.+}} = cir.call %[[P3]](%{{.+}}, %{{.+}}, %{{.+}}) : (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, !cir.ptr<!s8i> {llvm.noundef}, !s32i {llvm.noundef}, !s32i {llvm.noundef}) -> !s32i
 // CIR:         %[[G4:.+]] = cir.get_global @real_vimpl : !cir.ptr<!cir.func<(!cir.ptr<!s8i>, !s64i) -> !s32i>>
 // CIR-NEXT:    %[[P4:.+]] = cir.cast bitcast %[[G4]] : !cir.ptr<!cir.func<(!cir.ptr<!s8i>, !s64i) -> !s32i>> -> !cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>
-// CIR-NEXT:    %{{.+}} = cir.call %[[P4]](%{{.+}}) : (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, !cir.ptr<!s8i>) -> !s32i
+// CIR-NEXT:    %{{.+}} = cir.call %[[P4]](%{{.+}}) : (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, !cir.ptr<!s8i> {llvm.noundef}) -> !s32i
 
 // LLVM-LABEL:  define dso_local i32 @test_inline(
-// LLVMCIR:       call i32 (ptr, ...) @real_vimpl(ptr %{{[^,)]+}}, i32 1, i32 2)
-// LLVMCIR:       call i32 (ptr, ...) @real_vimpl(ptr %{{[^,)]+}})
-// OGCG:          call i32 (ptr, ...) @real_vimpl(ptr noundef %{{[^,)]+}}, i32 noundef 1, i32 noundef 2)
-// OGCG:          call i32 (ptr, ...) @real_vimpl(ptr noundef %{{[^,)]+}})
+// LLVM:          call i32 (ptr, ...) @real_vimpl(ptr noundef %{{[^,)]+}}, i32 noundef 1, i32 noundef 2)
+// LLVM:          call i32 (ptr, ...) @real_vimpl(ptr noundef %{{[^,)]+}})
 
 // A variadic declaration later defined as an alias is redirected the same way,
 // and its calls keep the ellipsis.
@@ -67,14 +63,12 @@ int vlog(const char *fmt, ...) __attribute__((alias("vlog_impl")));
 
 // CIR-LABEL: cir.func {{.*}} @test_alias(
 // CIR:         %[[G5:.+]] = cir.get_global @vlog : !cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>
-// CIR-NEXT:    %{{.+}} = cir.call %[[G5]](%{{.+}}, %{{.+}}, %{{.+}}) : (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, !cir.ptr<!s8i>, !s32i, !s32i) -> !s32i
-// CIR:         %{{.+}} = cir.call @vlog(%{{.+}}) : (!cir.ptr<!s8i>) -> !s32i
+// CIR-NEXT:    %{{.+}} = cir.call %[[G5]](%{{.+}}, %{{.+}}, %{{.+}}) : (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, !cir.ptr<!s8i> {llvm.noundef}, !s32i {llvm.noundef}, !s32i {llvm.noundef}) -> !s32i
+// CIR:         %{{.+}} = cir.call @vlog(%{{.+}}) : (!cir.ptr<!s8i> {llvm.noundef}) -> !s32i
 
 // LLVM-LABEL:  define dso_local i32 @test_alias(
-// LLVMCIR:       call i32 (ptr, ...) @vlog(ptr %{{[^,)]+}}, i32 1, i32 2)
-// LLVMCIR:       call i32 (ptr, ...) @vlog(ptr %{{[^,)]+}})
-// OGCG:          call i32 (ptr, ...) @vlog(ptr noundef %{{[^,)]+}}, i32 noundef 1, i32 noundef 2)
-// OGCG:          call i32 (ptr, ...) @vlog(ptr noundef %{{[^,)]+}})
+// LLVM:          call i32 (ptr, ...) @vlog(ptr noundef %{{[^,)]+}}, i32 noundef 1, i32 noundef 2)
+// LLVM:          call i32 (ptr, ...) @vlog(ptr noundef %{{[^,)]+}})
 
 // A library call CIRGen emits by name can bind to an unprototyped declaration.
 // When a definition replaces that declaration, the call keeps its own operand

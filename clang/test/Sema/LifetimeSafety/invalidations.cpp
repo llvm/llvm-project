@@ -146,6 +146,16 @@ void IteratorInvalidationInAWhileLoop(std::vector<int> v) {
   }
 }
 
+void PointerInvalidationBeforeInfiniteLoop() {
+  std::vector<int> v = {1, 2, 3};
+  int* p = &v[0]; // expected-warning {{local variable 'v' is later invalidated}} \
+                  // expected-note {{result of call to 'operator[]' aliases the storage of local variable 'v'}}
+  v.push_back(4); // expected-note {{local variable 'v' is invalidated here}}
+  *p = 10;        // expected-note {{later used here}}
+  for (;;) {
+  }
+}
+
 void NoIteratorInvalidationInAWhileLoopErase(std::unordered_map<int, int> mp) {
   auto it = mp.begin();
   while (it != std::end(mp)) {
