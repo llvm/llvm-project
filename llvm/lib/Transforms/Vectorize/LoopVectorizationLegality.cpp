@@ -1042,12 +1042,15 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
 
     // FP instructions can allow unsafe algebra, thus vectorizable by
     // non-IEEE-754 compliant SIMD units.
-    // This applies to floating-point math operations and calls, not memory
-    // operations, shuffles, or casts, as they don't change precision or
-    // semantics.
-  } else if (I.getType()->isFloatingPointTy() && (CI || I.isBinaryOp()) &&
+    // This applies to floating-point math operations, calls and compares
+    // other than NaN checks, not memory operations, shuffles, or casts, as they
+    // don't change precision or semantics.
+  } else if (((I.getType()->isFloatingPointTy() && (CI || I.isBinaryOp())) ||
+              (isa<FCmpInst>(I) &&
+               !is_contained({FCmpInst::FCMP_ORD, FCmpInst::FCMP_UNO},
+                             cast<FCmpInst>(I).getPredicate()))) &&
              !I.isFast()) {
-    LLVM_DEBUG(dbgs() << "LV: Found FP op with unsafe algebra.\n");
+    LLVM_DEBUG(dbgs() << "LV: Found potentially unsafe FP op.\n");
     Hints->setPotentiallyUnsafe();
   }
 

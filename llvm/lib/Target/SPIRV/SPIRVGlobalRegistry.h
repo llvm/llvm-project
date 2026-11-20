@@ -733,7 +733,7 @@ public:
   SPIRVTypeInst getOrCreateUnknownType(const Type *Ty,
                                        MachineIRBuilder &MIRBuilder,
                                        unsigned Opcode,
-                                       const ArrayRef<MCOperand> Operands);
+                                       const ArrayRef<MachineOperand> Operands);
 
   const TargetRegisterClass *getRegClass(SPIRVTypeInst SpvType) const;
   LLT getRegType(SPIRVTypeInst SpvType) const;

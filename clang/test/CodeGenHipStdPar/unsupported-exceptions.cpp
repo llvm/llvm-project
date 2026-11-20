@@ -1,51 +1,51 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: not %clang_cc1 -triple amdgcn-amd-amdhsa \
+// RUN: not %clang_cc1 -triple amdgpu9-amd-amdhsa \
 // RUN:   -aux-triple x86_64-unknown-linux-gnu --hipstdpar -x hip \
 // RUN:   -fcuda-is-device -fcxx-exceptions -fexceptions \
 // RUN:   -mllvm -amdgpu-enable-hipstdpar -emit-llvm -o - -DREACHABLE %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=REACHABLE
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa \
+// RUN: %clang_cc1 -triple amdgpu9-amd-amdhsa \
 // RUN:   -aux-triple x86_64-unknown-linux-gnu --hipstdpar -x hip \
 // RUN:   -fcuda-is-device -fcxx-exceptions -fexceptions \
 // RUN:   -emit-llvm -o - -DTRY_CATCH %s \
 // RUN:   | FileCheck %s --check-prefix=TRY-IR
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu \
-// RUN:   -aux-triple amdgcn-amd-amdhsa --hipstdpar -x hip \
+// RUN:   -aux-triple amdgpu9-amd-amdhsa --hipstdpar -x hip \
 // RUN:   -fcxx-exceptions -fexceptions -emit-llvm -o - -DTRY_CATCH %s \
 // RUN:   | FileCheck %s --check-prefix=HOST-IR
-// RUN: not %clang_cc1 -triple amdgcn-amd-amdhsa \
+// RUN: not %clang_cc1 -triple amdgpu9-amd-amdhsa \
 // RUN:   -aux-triple x86_64-unknown-linux-gnu --hipstdpar -x hip \
 // RUN:   -fcuda-is-device -fcxx-exceptions -fexceptions \
 // RUN:   -mllvm -amdgpu-enable-hipstdpar -emit-llvm -o - -DTRY_CATCH %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=TRY-CATCH
-// RUN: not %clang_cc1 -triple amdgcn-amd-amdhsa \
+// RUN: not %clang_cc1 -triple amdgpu9-amd-amdhsa \
 // RUN:   -aux-triple x86_64-unknown-linux-gnu --hipstdpar -x hip \
 // RUN:   -fcuda-is-device -fcxx-exceptions -fexceptions \
 // RUN:   -mllvm -amdgpu-enable-hipstdpar -emit-llvm -o - -DFUNCTION_TRY %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=FUNCTION-TRY
-// RUN: not %clang_cc1 -triple amdgcn-amd-amdhsa \
+// RUN: not %clang_cc1 -triple amdgpu9-amd-amdhsa \
 // RUN:   -aux-triple x86_64-unknown-linux-gnu --hipstdpar -x hip \
 // RUN:   -fcuda-is-device -fcxx-exceptions -fexceptions \
 // RUN:   -mllvm -amdgpu-enable-hipstdpar -emit-llvm -o - \
 // RUN:   -DCONSTRUCTOR_FUNCTION_TRY %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CONSTRUCTOR-FUNCTION-TRY
-// RUN: not %clang_cc1 -triple amdgcn-amd-amdhsa \
+// RUN: not %clang_cc1 -triple amdgpu9-amd-amdhsa \
 // RUN:   -aux-triple x86_64-unknown-linux-gnu --hipstdpar -x hip \
 // RUN:   -fcuda-is-device -fcxx-exceptions -fexceptions \
 // RUN:   -mllvm -amdgpu-enable-hipstdpar -emit-llvm -o - \
 // RUN:   -DDESTRUCTOR_FUNCTION_TRY %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=DESTRUCTOR-FUNCTION-TRY
-// RUN: not %clang_cc1 -triple amdgcn-amd-amdhsa \
+// RUN: not %clang_cc1 -triple amdgpu9-amd-amdhsa \
 // RUN:   -aux-triple x86_64-unknown-linux-gnu --hipstdpar -x hip \
 // RUN:   -fcuda-is-device -fcxx-exceptions -fexceptions \
 // RUN:   -mllvm -amdgpu-enable-hipstdpar -emit-llvm -o - -DBAD_CAST %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=BAD-CAST
-// RUN: not %clang_cc1 -triple amdgcn-amd-amdhsa \
+// RUN: not %clang_cc1 -triple amdgpu9-amd-amdhsa \
 // RUN:   -aux-triple x86_64-unknown-linux-gnu --hipstdpar -x hip \
 // RUN:   -fcuda-is-device -fcxx-exceptions -fexceptions \
 // RUN:   -mllvm -amdgpu-enable-hipstdpar -emit-llvm -o - -DBAD_TYPEID %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=BAD-TYPEID
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa \
+// RUN: %clang_cc1 -triple amdgpu9-amd-amdhsa \
 // RUN:   -aux-triple x86_64-unknown-linux-gnu --hipstdpar -x hip \
 // RUN:   -fcuda-is-device -fcxx-exceptions -fexceptions \
 // RUN:   -mllvm -amdgpu-enable-hipstdpar -emit-llvm -o - %s \

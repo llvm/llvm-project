@@ -21,23 +21,19 @@
 
 namespace llvm::orc::sps {
 
-/// A ProxySpec per operation, pairing one of the bindings' proxies with its
-/// controller-interface descriptor in Shared/SPSCI/SharedMemoryMapperSPSCI.h,
-/// which supplies the wrapper name and wire signature. The specs are public so
-/// that clients can resolve the operations under non-default names, using
+/// A ProxySpec per operation, built from the operation's controller-interface
+/// descriptor in Shared/SPSCI/SharedMemoryMapperSPSCI.h, which supplies the
+/// wrapper name and wire signature. The specs are public so that clients can
+/// resolve the operations under non-default names, using
 /// recordProxy<Spec>(&P, Name) with lookupAndApply.
 using SharedMemoryMapReserveProxySpec =
-    ProxySpec<SharedMemoryMapBindings::ReserveProxy,
-              rt::sps_ci::SharedMemoryMapperReserve>;
+    ProxySpec<rt::sps_ci::SharedMemoryMapperReserve>;
 using SharedMemoryMapInitializeProxySpec =
-    ProxySpec<SharedMemoryMapBindings::InitializeProxy,
-              rt::sps_ci::SharedMemoryMapperInitialize>;
+    ProxySpec<rt::sps_ci::SharedMemoryMapperInitialize>;
 using SharedMemoryMapDeinitializeProxySpec =
-    ProxySpec<SharedMemoryMapBindings::DeinitializeProxy,
-              rt::sps_ci::SharedMemoryMapperDeinitialize>;
+    ProxySpec<rt::sps_ci::SharedMemoryMapperDeinitialize>;
 using SharedMemoryMapReleaseProxySpec =
-    ProxySpec<SharedMemoryMapBindings::ReleaseProxy,
-              rt::sps_ci::SharedMemoryMapperRelease>;
+    ProxySpec<rt::sps_ci::SharedMemoryMapperRelease>;
 
 /// Build bindings over the SPS controller interface, resolving the operations
 /// in the given JITDylib under the specs' default names.

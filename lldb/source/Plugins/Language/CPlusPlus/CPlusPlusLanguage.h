@@ -67,6 +67,9 @@ public:
   std::unique_ptr<TypeScavenger> GetTypeScavenger() override;
   lldb::TypeCategoryImplSP GetFormatters() override;
 
+  std::vector<lldb::LanguageType>
+  GetFormatterLanguages(lldb::LanguageType language) const override;
+
   HardcodedFormatters::HardcodedSummaryFinder GetHardcodedSummaries() override;
 
   HardcodedFormatters::HardcodedSyntheticFinder
@@ -239,6 +242,8 @@ public:
   llvm::StringRef GetInstanceName() override { return "this"; }
 
   FormatEntity::Entry GetFunctionNameFormat() const override;
+
+  std::string GetVersionInfo() const override;
 
   // PluginInterface protocol
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
