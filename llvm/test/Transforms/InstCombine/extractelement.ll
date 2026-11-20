@@ -144,6 +144,35 @@ define i8 @bitcasted_inselt_wide_source_wrong_insert(<2 x i32> %v, i32 %x) {
   ret i8 %r
 }
 
+; Negative tests: the destination lane count is not a multiple of the source
+; lane count, so a destination lane may straddle two source lanes.
+
+define i16 @bitcasted_inselt_wide_source_not_multiple_straddle(<2 x i24> %v, i24 %x) {
+; ANY-LABEL: @bitcasted_inselt_wide_source_not_multiple_straddle(
+; ANY-NEXT:    [[I:%.*]] = insertelement <2 x i24> [[V:%.*]], i24 [[X:%.*]], i64 1
+; ANY-NEXT:    [[B:%.*]] = bitcast <2 x i24> [[I]] to <3 x i16>
+; ANY-NEXT:    [[R:%.*]] = extractelement <3 x i16> [[B]], i64 1
+; ANY-NEXT:    ret i16 [[R]]
+;
+  %i = insertelement <2 x i24> %v, i24 %x, i32 1
+  %b = bitcast <2 x i24> %i to <3 x i16>
+  %r = extractelement <3 x i16> %b, i32 1
+  ret i16 %r
+}
+
+define i16 @bitcasted_inselt_wide_source_not_multiple_wrong_insert(<2 x i24> %v, i24 %x) {
+; ANY-LABEL: @bitcasted_inselt_wide_source_not_multiple_wrong_insert(
+; ANY-NEXT:    [[I:%.*]] = insertelement <2 x i24> [[V:%.*]], i24 [[X:%.*]], i64 1
+; ANY-NEXT:    [[B:%.*]] = bitcast <2 x i24> [[I]] to <3 x i16>
+; ANY-NEXT:    [[R:%.*]] = extractelement <3 x i16> [[B]], i64 2
+; ANY-NEXT:    ret i16 [[R]]
+;
+  %i = insertelement <2 x i24> %v, i24 %x, i32 1
+  %b = bitcast <2 x i24> %i to <3 x i16>
+  %r = extractelement <3 x i16> %b, i32 2
+  ret i16 %r
+}
+
 ; Partial negative test for the above fold, extra uses are not allowed if shift is needed.
 
 declare void @use(<8 x i8>)
