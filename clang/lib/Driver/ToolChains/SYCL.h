@@ -70,6 +70,11 @@ private:
   SYCLInstallationDetector SYCLInstallation;
 };
 
+/// \return the architecture to compile SYCL device code for, given \p Arch
+/// from --offload-arch: the IGCA target if \p Arch is an Intel GPU, e.g.
+/// "igca_30r" for "xe-mtl-u", and \p Arch itself otherwise.
+StringRef getSYCLVirtualArch(StringRef Arch);
+
 } // end namespace toolchains
 
 } // end namespace driver

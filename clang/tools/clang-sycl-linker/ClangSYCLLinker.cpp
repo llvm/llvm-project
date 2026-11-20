@@ -714,10 +714,11 @@ static Error runAOTCompileIntelGPU(StringRef InputFile, StringRef OutputFile,
   CmdArgs.push_back("-output_no_suffix");
   CmdArgs.push_back("-spirv_input");
 
-  StringRef Arch(Args.getLastArgValue(OPT_arch_EQ));
-  assert(!Arch.empty() && "Arch must be specified for AOT compilation");
+  // Compile for the --code list, e.g. "xe-mtl-u,xe-mtl-h" for an IGCA target.
+  std::string Devices = llvm::join(Args.getAllArgValues(OPT_code_EQ), ",");
+  assert(!Devices.empty() && "--code must be specified for AOT compilation");
   CmdArgs.push_back("-device");
-  CmdArgs.push_back(Arch);
+  CmdArgs.push_back(Devices);
 
   // getAllArgValues returns a temporary vector; retain it so the StringRefs
   // remain valid through the executeCommands call below.
@@ -742,15 +743,11 @@ static Error runAOTCompileIntelGPU(StringRef InputFile, StringRef OutputFile,
 /// into the AOT compilation step.
 static Error runAOTCompile(StringRef InputFile, StringRef OutputFile,
                            const ArgList &Args) {
-  StringRef Arch = Args.getLastArgValue(OPT_arch_EQ);
-  OffloadArch OA = StringToOffloadArch(Arch);
-  if (OA.isIntelGPU())
+  OffloadArch OA = StringToOffloadArch(Args.getLastArgValue(OPT_arch_EQ));
+  if (OA.isIntelIGCA())
     return runAOTCompileIntelGPU(InputFile, OutputFile, Args);
   if (OA.isIntelCPU())
     return runAOTCompileIntelCPU(InputFile, OutputFile, Args);
-  if (OA.isIntelIGCA())
-    return createStringError("AOT compilation for IGCA target '" + Arch +
-                             "' is not yet implemented");
 
   llvm_unreachable("runAOTCompile dispatched on unsupported arch");
 }
@@ -1002,8 +999,11 @@ static Error runSYCLLink(ArrayRef<std::unique_ptr<MemoryBuffer>> Inputs,
     SplitModules = std::move(*SplitModulesOrErr);
   }
 
+  // SYCL device code for an IGCA target is compiled ahead of time only for the
+  // Intel GPUs in --code, and SYCL device code for an Intel CPU always.
+  OffloadArch OA = StringToOffloadArch(Args.getLastArgValue(OPT_arch_EQ));
   bool IsAOTCompileNeeded =
-      StringToOffloadArch(Args.getLastArgValue(OPT_arch_EQ)).isIntel();
+      OA.isIntelIGCA() ? Args.hasArg(OPT_code_EQ) : OA.isIntelCPU();
 
   StringRef OutputFileNameExt = ".spv";
 
@@ -1118,6 +1118,25 @@ int main(int argc, char **argv) {
   if (!Args.hasArg(OPT_o))
     reportError(createStringError("output file must be specified"));
   OutputFile = Args.getLastArgValue(OPT_o);
+
+  // SYCL device code for Intel GPUs is compiled ahead of time for the IGCA
+  // target in --arch and the Intel GPUs in --code.
+  StringRef Arch = Args.getLastArgValue(OPT_arch_EQ);
+  OffloadArch OA = StringToOffloadArch(Arch);
+  if (OA.isIntelGPU())
+    reportError(createStringError(
+        "'--arch=" + Arch +
+        "' names an Intel GPU; pass its IGCA target in --arch and the Intel "
+        "GPU in --code, e.g. '--arch=" +
+        OffloadArchToString(OA.intelGPUIGCATarget()) + " --code=" + Arch +
+        "'"));
+  if (Args.hasArg(OPT_code_EQ) && !OA.isIntelIGCA())
+    reportError(createStringError("--code requires an IGCA target in --arch"));
+  // Each --code value is an Intel GPU name, or a comma-separated list of them.
+  for (StringRef Code : Args.getAllArgValues(OPT_code_EQ))
+    if (llvm::is_contained(llvm::split(Code, ','), StringRef()))
+      reportError(createStringError("'--code=" + Code +
+                                    "' has an empty Intel GPU name"));
 
   // Get the input buffers to pass to the linking stage.
   auto ResolvedInputsOrErr = getInput(Args);

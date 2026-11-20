@@ -16,6 +16,7 @@
 #include "clang/Driver/Util.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Option/Option.h"
 #include <cassert>
@@ -96,6 +97,13 @@ class Compilation {
     }
   };
   std::map<TCArgsKey, llvm::opt::DerivedArgList *> TCArgs;
+
+  /// For SYCL, maps a device toolchain and an IGCA target, e.g. igca_30r, to
+  /// the Intel GPUs from --offload-arch that share that target, e.g. xe-mtl-h
+  /// and xe-mtl-u. Each list is sorted and has no duplicates.
+  llvm::DenseMap<std::pair<const ToolChain *, StringRef>,
+                 llvm::SmallVector<StringRef, 2>>
+      SYCLIGCADevices;
 
   /// Temporary files which should be removed on exit.
   llvm::opt::ArgStringList TempFiles;
@@ -255,6 +263,15 @@ public:
   const llvm::opt::DerivedArgList &
   getArgsForToolChain(const ToolChain *TC, BoundArch BA,
                       Action::OffloadKind DeviceOffloadKind);
+
+  /// Add the Intel GPU \p Device to the GPUs of the IGCA target \p Target.
+  void addSYCLIGCADevice(const ToolChain *TC, StringRef Target,
+                         StringRef Device);
+
+  /// \return the Intel GPUs of the IGCA target \p Target, sorted, or an empty
+  /// list if there are none.
+  ArrayRef<StringRef> getSYCLIGCADevices(const ToolChain *TC,
+                                         StringRef Target) const;
 
   /// addTempFile - Add a file to remove on exit, and returns its
   /// argument.
