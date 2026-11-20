@@ -2132,6 +2132,25 @@ TEST(FindImplementations, InheritanceTemplate) {
               UnorderedPointwise(declRange(), Main.ranges("Third")));
 }
 
+TEST(FindImplementations, InheritanceTemplateDebug) {
+  Annotations Main(R"cpp(
+    class Th$Third^ird {};
+
+    template <typename... T>
+    struct $Third[[Inherit]] : T... {};
+
+    class $Third[[Maria]] : Inherit<Third> {};
+  )cpp");
+
+  TestTU TU;
+  TU.Code = std::string(Main.code());
+  auto AST = TU.build();
+  auto Index = TU.index();
+
+  EXPECT_THAT(findImplementations(AST, Main.point("Third"), Index.get()),
+              UnorderedPointwise(declRange(), Main.ranges("Third")));
+}
+
 TEST(FindImplementations, CaptureDefinition) {
   llvm::StringRef Test = R"cpp(
     struct Base {
