@@ -1,5 +1,4 @@
-//===- unittests/Passes/DoublerPlugin.cpp
-//--------------------------------===//
+//===- unittests/Passes/DoublerPlugin.cpp ---------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -58,6 +57,7 @@ static Error parseArguments(cl::LibraryOptionsContext &LibraryOptions,
                             ArrayRef<const char *> Args) {
   static constexpr opt::LibraryOptionsParser Parser{
       std::in_place_type<DoublerOptions>};
+  // Unit tests don't pass positional arguments
   for (unsigned I = 0, Consumed = 0; I < Args.size(); I += Consumed)
     if (Error E = LibraryOptions.parse(Parser, Args.drop_front(I), Consumed))
       return E;

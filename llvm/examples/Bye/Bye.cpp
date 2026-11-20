@@ -103,9 +103,14 @@ static Error parseArguments(cl::LibraryOptionsContext &LibraryOptions,
   // can't interfere.
   static constexpr opt::LibraryOptionsParser Parser{
       std::in_place_type<ByeOptions>};
-  for (unsigned I = 0, Consumed = 0; I < Args.size(); I += Consumed)
+  for (unsigned I = 0, Consumed = 0; I < Args.size(); I += Consumed) {
+    // LibraryOptionsContext::parse() only accepts options
+    StringRef Arg = Args[I];
+    if (!Arg.starts_with("-") || Arg == "-")
+      return createStringError("unexpected positional argument '" + Arg + "'");
     if (Error E = LibraryOptions.parse(Parser, Args.drop_front(I), Consumed))
       return E;
+  }
   return Error::success();
 }
 
