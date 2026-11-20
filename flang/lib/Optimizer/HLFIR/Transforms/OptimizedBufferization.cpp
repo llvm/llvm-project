@@ -737,6 +737,185 @@ llvm::LogicalResult EvaluateIntoMemoryAssignBufferization::matchAndRewrite(
   return mlir::success();
 }
 
+/// Build a temporary's value directly in the assignment destination
+///   %tmp = fir.allocmem !fir.array<>
+///   ... initialise elements of %tmp ...
+///   %expr = hlfir.as_expr %tmp move %mustFree
+///   hlfir.assign %expr to %dest
+///   hlfir.destroy %expr
+/// Replacing %tmp with %dest creates earlier direct writes to %dest. This is
+/// safe only if the temporary does not escape and the destination is available
+/// and remains untouched and live from allocation through assignment. The
+/// checks below also restrict the types so the final assignment needs no
+/// conversion, reallocation, or finalisation.
+class TemporaryAssignBufferisation
+    : public mlir::OpRewritePattern<hlfir::AssignOp> {
+public:
+  TemporaryAssignBufferisation(mlir::MLIRContext *ctx,
+                               mlir::AliasAnalysis &aliasAnalysis)
+      : OpRewritePattern{ctx}, aliasAnalysis{aliasAnalysis} {}
+
+  llvm::LogicalResult
+  matchAndRewrite(hlfir::AssignOp assign,
+                  mlir::PatternRewriter &rewriter) const override {
+    auto asExpr = assign.getRhs().getDefiningOp<hlfir::AsExprOp>();
+    if (!asExpr || !asExpr.isMove() || assign.isAllocatableAssignment())
+      return rewriter.notifyMatchFailure(assign,
+                                         "Assign op does not have a preceding "
+                                         "non-allocatable as_expr move op");
+
+    // Find the alloc creating %dest.
+    mlir::Value storage = asExpr.getVar();
+    if (auto declare = storage.getDefiningOp<hlfir::DeclareOp>())
+      storage = declare.getMemref();
+    auto alloc = storage.getDefiningOp<fir::AllocMemOp>();
+    if (!alloc)
+      return rewriter.notifyMatchFailure(
+          assign, "Unable to locate an AllocMem op allocating the operand of "
+                  "as_expr op.");
+
+    // Equal static array types guarantee matching extents and element types.
+    auto arrayType = mlir::dyn_cast<fir::SequenceType>(
+        fir::unwrapRefType(storage.getType()));
+    if (!arrayType || fir::sequenceWithNonConstantShape(arrayType) ||
+        !fir::isa_trivial(arrayType.getEleTy()) ||
+        assign.getLhs().getType() != fir::ReferenceType::get(arrayType))
+      return mlir::failure();
+
+    // Only the assign given as argument and one destroy may consume the result
+    // of as_expr.
+    hlfir::DestroyOp destroy;
+    for (mlir::Operation *user : asExpr->getUsers()) {
+      if (auto candidate = mlir::dyn_cast<hlfir::DestroyOp>(user)) {
+        if (destroy)
+          return mlir::failure();
+        destroy = candidate;
+      } else if (user != assign.getOperation()) {
+        return mlir::failure();
+      }
+    }
+    if (!destroy)
+      return mlir::failure();
+
+    // Ensure the lifetime endpoints are in the same block so helper functions
+    // can easily check bounds. Construction of the temporary itself may occur
+    // in nested regions, such as loops.
+    if (alloc->getBlock() != assign->getBlock() ||
+        asExpr->getBlock() != assign->getBlock() ||
+        destroy->getBlock() != assign->getBlock())
+      return rewriter.notifyMatchFailure(
+          assign, "temporary lifetime endpoints are not in the same block");
+
+    if (!alloc->isBeforeInBlock(asExpr) || !asExpr->isBeforeInBlock(assign) ||
+        !assign->isBeforeInBlock(destroy))
+      return rewriter.notifyMatchFailure(
+          assign, "expected temporary lifetime order: alloc, as_expr, assign, "
+                  "destroy");
+
+    // The destination address must be available when the temporary is
+    // allocated.
+    mlir::DominanceInfo dominance;
+    if (!dominance.properlyDominates(assign.getLhs(), alloc.getOperation()))
+      return rewriter.notifyMatchFailure(
+          assign, "expected destination to properly dominate the temporary");
+
+    if (!hasOnlySupportedTemporaryUses(alloc, asExpr, arrayType.getEleTy()))
+      return rewriter.notifyMatchFailure(
+          assign, "temporary has unsupported uses or uses outside its "
+                  "construction interval");
+    if (!isDestinationUntouchedAndLive(alloc, assign))
+      return rewriter.notifyMatchFailure(
+          assign, "cannot prove destination remains untouched and live between "
+                  "temporary allocation and assignment");
+
+    rewriter.setInsertionPoint(alloc);
+    fir::FirOpBuilder builder(rewriter, assign.getOperation());
+    mlir::Value rawDest = hlfir::genVariableRawAddress(
+        assign.getLoc(), builder, hlfir::Entity{assign.getLhs()});
+    mlir::Value replacement =
+        builder.createConvert(alloc.getLoc(), storage.getType(), rawDest);
+    rewriter.eraseOp(assign);
+    rewriter.eraseOp(destroy);
+    rewriter.eraseOp(asExpr);
+    rewriter.replaceOp(alloc, replacement);
+    return mlir::success();
+  }
+
+private:
+  /// Follow declarations and designators beginning from alloc. Permit
+  /// only stores and assignments to this storage. Every use of the storage
+  /// must lie strictly between alloc and asExpr. The caller must establish
+  /// that alloc precedes asExpr in the same block.
+  static bool hasOnlySupportedTemporaryUses(fir::AllocMemOp alloc,
+                                            hlfir::AsExprOp asExpr,
+                                            mlir::Type elementType) {
+    llvm::SmallVector<mlir::Value> worklist{alloc.getResult()};
+    llvm::SmallPtrSet<mlir::Operation *, 4> visited;
+    while (!worklist.empty()) {
+      mlir::Value value = worklist.pop_back_val();
+      for (mlir::Operation *user : value.getUsers()) {
+        if (user == asExpr.getOperation())
+          continue;
+        // For a nested use, compare the enclosing operation in alloc's block
+        // (e.g. the loop containing an element store) with the endpoints.
+        auto *ancestor = alloc->getBlock()->findAncestorOpInBlock(*user);
+        if (!ancestor || !alloc->isBeforeInBlock(ancestor) ||
+            !ancestor->isBeforeInBlock(asExpr))
+          return false;
+        if (auto declare = mlir::dyn_cast<hlfir::DeclareOp>(user)) {
+          if (declare.getMemref() != value)
+            return false;
+        } else if (auto designate = mlir::dyn_cast<hlfir::DesignateOp>(user)) {
+          if (designate.getMemref() != value ||
+              designate.getType() != fir::ReferenceType::get(elementType))
+            return false;
+        } else if (auto write = mlir::dyn_cast<hlfir::AssignOp>(user)) {
+          if (write.getLhs() != value ||
+              write.getRhs().getType() != elementType ||
+              write.isAllocatableAssignment())
+            return false;
+          continue;
+        } else if (auto store = mlir::dyn_cast<fir::StoreOp>(user)) {
+          if (store.getMemref() != value ||
+              store.getValue().getType() != elementType)
+            return false;
+          continue;
+        } else {
+          return false;
+        }
+        if (visited.insert(user).second)
+          // Check every alias, including both results of a hlfir.declare.
+          llvm::append_range(worklist, user->getResults());
+      }
+    }
+    return true;
+  }
+
+  /// Check that the destination of assign is neither accessed nor freed
+  /// strictly between alloc and assign. Unknown effects are rejected as well.
+  bool isDestinationUntouchedAndLive(fir::AllocMemOp alloc,
+                                     hlfir::AssignOp assign) const {
+    for (mlir::Operation *op = alloc->getNextNode(); op != assign;
+         op = op->getNextNode()) {
+      if (aliasAnalysis.getModRef(op, assign.getLhs()).isModOrRef())
+        return false;
+      // ModRef ignores free effects. Reject unknown effects and
+      // deallocation so the destination remains live throughout.
+      auto effects = mlir::getEffectsRecursively(op);
+      if (!effects)
+        return false;
+      for (const auto &effect : *effects)
+        if (mlir::isa<mlir::MemoryEffects::Free>(effect.getEffect()) &&
+            (!effect.getValue() ||
+             !aliasAnalysis.alias(effect.getValue(), assign.getLhs()).isNo()))
+          return false;
+    }
+    return true;
+  }
+
+  mlir::AliasAnalysis &aliasAnalysis;
+};
+
 class OptimizedBufferizationPass
     : public hlfir::impl::OptimizedBufferizationBase<
           OptimizedBufferizationPass> {
@@ -763,6 +942,7 @@ public:
     patterns.insert<BroadcastAssignBufferization>(context);
     patterns.insert<EvaluateIntoMemoryAssignBufferization>(context,
                                                            aliasAnalysis);
+    patterns.insert<TemporaryAssignBufferisation>(context, aliasAnalysis);
 
     if (mlir::failed(mlir::applyPatternsGreedily(
             getOperation(), std::move(patterns), config))) {
