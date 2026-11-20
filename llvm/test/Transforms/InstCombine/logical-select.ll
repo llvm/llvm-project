@@ -381,6 +381,22 @@ define i1 @bools_logical(i1 %a, i1 %b, i1 %c) {
   ret i1 %or
 }
 
+; The condition and its inverse may be compares with inverse predicates.
+
+define i1 @bools_inverted_icmp(i8 %x, i1 %a, i1 %b) {
+; CHECK-LABEL: @bools_inverted_icmp(
+; CHECK-NEXT:    [[C_NOT:%.*]] = icmp eq i8 [[X:%.*]], 2
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[C_NOT]], i1 [[B:%.*]], i1 [[A:%.*]]
+; CHECK-NEXT:    ret i1 [[OR]]
+;
+  %c = icmp ne i8 %x, 2
+  %nc = icmp eq i8 %x, 2
+  %and1 = and i1 %a, %c
+  %and2 = and i1 %nc, %b
+  %or = or i1 %and1, %and2
+  ret i1 %or
+}
+
 ; Form a select if we know we can replace 2 simple logic ops.
 
 define i1 @bools_multi_uses1(i1 %a, i1 %b, i1 %c) {
