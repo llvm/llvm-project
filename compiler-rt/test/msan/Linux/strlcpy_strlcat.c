@@ -2,6 +2,7 @@
 // RUN: %clang_msan %s -o %t
 // RUN: %run %t
 // RUN: not %run %t uninit 2>&1 | FileCheck %s
+// RUN: not %run %t uninit_cat 2>&1 | FileCheck %s --check-prefix=CHECK-CAT
 
 #include <assert.h>
 #include <sanitizer/msan_interface.h>
@@ -13,10 +14,13 @@ static size_t (*volatile call_strlcat)(char *, const char *, size_t) = strlcat;
 int main(int argc, char **argv) {
   if (argc > 1) {
     char src[8] = "hello";
-    char dst[16];
+    char dst[16] = "ab";
 
     __msan_poison(src + 2, 1);
-    call_strlcpy(dst, src, sizeof(dst));
+    if (strcmp(argv[1], "uninit_cat") == 0)
+      call_strlcat(dst, src, sizeof(dst));
+    else
+      call_strlcpy(dst, src, sizeof(dst));
     return 0;
   }
 
@@ -58,3 +62,4 @@ int main(int argc, char **argv) {
 }
 
 // CHECK: Uninitialized bytes in strlcpy at offset 2 inside
+// CHECK-CAT: Uninitialized bytes in strlcat at offset 2 inside
