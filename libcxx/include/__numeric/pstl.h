@@ -49,14 +49,16 @@ _LIBCPP_HIDE_FROM_ABI _ForwardIterator2 exclusive_scan(
     _Tp __init) {
   _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator1, "exclusive_scan requires ForwardIterators");
   _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator2, "exclusive_scan requires ForwardIterators");
-  using _Implementation = __pstl::__dispatch<__pstl::__exclusive_scan, __pstl::__current_configuration, _RawPolicy>;
+  using _Implementation =
+      __pstl::__dispatch<__pstl::__transform_exclusive_scan, __pstl::__current_configuration, _RawPolicy>;
   return __pstl::__handle_exception<_Implementation>(
       std::forward<_ExecutionPolicy>(__policy),
       std::move(__first),
       std::move(__last),
       std::move(__result),
       std::move(__init),
-      plus{});
+      plus{},
+      __identity{});
 }
 
 template <class _ExecutionPolicy,
@@ -75,14 +77,16 @@ _LIBCPP_HIDE_FROM_ABI _ForwardIterator2 exclusive_scan(
     _BinaryOperation __reduce) {
   _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator1, "exclusive_scan requires ForwardIterators");
   _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator2, "exclusive_scan requires ForwardIterators");
-  using _Implementation = __pstl::__dispatch<__pstl::__exclusive_scan, __pstl::__current_configuration, _RawPolicy>;
+  using _Implementation =
+      __pstl::__dispatch<__pstl::__transform_exclusive_scan, __pstl::__current_configuration, _RawPolicy>;
   return __pstl::__handle_exception<_Implementation>(
       std::forward<_ExecutionPolicy>(__policy),
       std::move(__first),
       std::move(__last),
       std::move(__result),
       std::move(__init),
-      std::move(__reduce));
+      std::move(__reduce),
+      __identity{});
 }
 
 template <class _ExecutionPolicy,
