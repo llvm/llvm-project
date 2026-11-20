@@ -4672,10 +4672,9 @@ void SelectionDAGBuilder::visitAlloca(const AllocaInst &I) {
     return;   // getValue will auto-populate this.
 
   SDLoc dl = getCurSDLoc();
-  Type *Ty = I.getAllocatedType();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   auto &DL = DAG.getDataLayout();
-  TypeSize TySize = DL.getTypeAllocSize(Ty);
+  TypeSize TySize = I.getAllocationBaseSize(DL);
   MaybeAlign Alignment = I.getAlign();
 
   SDValue AllocSize = getValue(I.getArraySize());

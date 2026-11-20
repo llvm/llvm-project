@@ -942,7 +942,7 @@ bool ObjectSizeOffsetVisitor::checkedZextOrTrunc(APInt &I) {
 }
 
 OffsetSpan ObjectSizeOffsetVisitor::visitAllocaInst(AllocaInst &I) {
-  TypeSize ElemSize = DL.getTypeAllocSize(I.getAllocatedType());
+  TypeSize ElemSize = I.getAllocationBaseSize(DL);
   if (ElemSize.isScalable() && Options.EvalMode != ObjectSizeOpts::Mode::Min)
     return ObjectSizeOffsetVisitor::unknown();
   if (!isUIntN(IntTyBits, ElemSize.getKnownMinValue()))
@@ -1327,11 +1327,8 @@ SizeOffsetValue ObjectSizeOffsetEvaluator::compute_(Value *V) {
 }
 
 SizeOffsetValue ObjectSizeOffsetEvaluator::visitAllocaInst(AllocaInst &I) {
-  if (!I.getAllocatedType()->isSized())
-    return ObjectSizeOffsetEvaluator::unknown();
-
   // must be a VLA or vscale.
-  assert(I.isArrayAllocation() || I.getAllocatedType()->isScalableTy());
+  assert(I.isArrayAllocation() || I.isScalable());
 
   // If needed, adjust the alloca's operand size to match the pointer indexing
   // size. Subsequent math operations expect the types to match.
