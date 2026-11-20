@@ -9,6 +9,7 @@
 #include "clang/Serialization/ObjectFilePCHContainerReader.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/MemoryBuffer.h"
 
 using namespace clang;
@@ -86,5 +87,10 @@ std::unique_ptr<llvm::MemoryBuffer> ObjectFilePCHContainerReader::ExtractPCH(
   if (Extracted.begin() == Buffer->getBufferStart() &&
       Extracted.end() == Buffer->getBufferEnd())
     return Buffer;
+  // The on-disk hash tables need to be aligned. This matches the alignment the
+  // object file container writer requests for the serialized AST.
+  if (!llvm::isAddrAligned(llvm::Align(8), Extracted.data()))
+    return llvm::MemoryBuffer::getMemBufferCopy(Extracted,
+                                                Buffer->getBufferIdentifier());
   return std::make_unique<SubMemoryBuffer>(std::move(Buffer), Extracted);
 }
