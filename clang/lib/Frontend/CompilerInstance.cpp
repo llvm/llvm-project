@@ -162,6 +162,15 @@ bool CompilerInstance::createTarget() {
       !getTarget().validateOpenCLTarget(getLangOpts(), getDiagnostics()))
     return false;
 
+  // Fixed-point types are not supported in C++ for the Microsoft C++ ABI
+  // because there is no Microsoft C++ ABI mangling scheme for fixed-point
+  // types.
+  if (getLangOpts().CPlusPlus && getLangOpts().FixedPoint &&
+      getTarget().getCXXABI().isMicrosoft()) {
+    getDiagnostics().Report(diag::err_fixed_point_unsupported_cxx_abi);
+    return false;
+  }
+
   // Inform the target of the language options.
   // FIXME: We shouldn't need to do this, the target should be immutable once
   // created. This complexity should be lifted elsewhere.
