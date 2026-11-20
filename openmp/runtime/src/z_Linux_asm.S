@@ -563,19 +563,14 @@ __kmp_unnamed_critical_addr:
         subl    $4, %esp
         pushl   %esi
 
-        movl    4(%ebp), %esi
-        flds    (%esi)
-                        // load <addr>
-        fsts    -4(%ebp)
-                        // store old value
-
-        movl    8(%ebp), %eax
+        movl    8(%ebp), %esi   // "addr"
+        movl    12(%ebp), %eax  // "data"
 
         lock
         xchgl   %eax, (%esi)
 
-        flds    -4(%ebp)
-                        // return old value
+        movl    %eax, -4(%ebp)  // store old value
+        flds    -4(%ebp)        // return old value
 
         popl    %esi
         movl    %ebp, %esp
