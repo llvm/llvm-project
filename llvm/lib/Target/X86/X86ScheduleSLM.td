@@ -390,7 +390,6 @@ defm : SLMWriteResPair<WritePack,   [SLM_FPC_RSV0],  1>;
 defm : SLMWriteResPair<WritePackX,  [SLM_FPC_RSV0],  1>;
 defm : X86WriteResPairUnsupported<WritePackY>;
 defm : X86WriteResPairUnsupported<WritePackZ>;
-defm : SLMWriteResPair<WriteBlend,  [SLM_FPC_RSV0],  1>;
 defm : SLMWriteResPair<WritePBLENDWX, [SLM_FPC_RSV0],  1>;
 defm : X86WriteResPairUnsupported<WritePBLENDWY>;
 defm : X86WriteResPairUnsupported<WritePBLENDDX>;

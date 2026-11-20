@@ -438,8 +438,6 @@ defm : Zn2WriteResFpuPair<WritePack,       [Zn2FPU12],   1>;
 defm : Zn2WriteResFpuPair<WritePackX,      [Zn2FPU12],   1>;
 defm : Zn2WriteResFpuPair<WritePackY,      [Zn2FPU12],   1>;
 defm : X86WriteResPairUnsupported<WritePackZ>;
-defm : Zn2WriteResFpuPair<WriteBlend,      [Zn2FPU013], 1>;
-defm : Zn2WriteResFpuPair<WriteBlendY,     [Zn2FPU013], 1>;
 defm : X86WriteRes<WritePBLENDDX,          [Zn2FPU01], 1, [1], 1>;
 defm : X86WriteRes<WritePBLENDDY,          [Zn2FPU01], 1, [1], 2>;
 defm : X86WriteRes<WritePBLENDDXLd,        [Zn2AGU,Zn2FPU01], 8, [1,2], 2>;

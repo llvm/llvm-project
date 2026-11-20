@@ -1397,7 +1397,6 @@ defm : C4GM7WriteResFPPair<WritePack, [C4GM7FPU13], 1>;
 defm : C4GM7WriteResFPPair<WritePackX, [C4GM7FPU13], 1>;
 defm : C4GM7WriteResFPPair<WritePackY, [C4GM7FPU13], 1>;
 defm : C4GM7WriteResFPPair<WritePackZ, [C4GM7FPU13], 1, [2], 1>;
-defm : C4GM7WriteResFPPair<WriteBlend, [C4GM7FPU], 1>;
 defm : C4GM7WriteResFPPair<WritePBLENDDX, [C4GM7FPU], 1>;
 defm : C4GM7WriteResFPPair<WritePBLENDDY, [C4GM7FPU], 1>;
 defm : C4GM7WriteResFPPair<WritePBLENDWX, [C4GM7FPU], 1>;
