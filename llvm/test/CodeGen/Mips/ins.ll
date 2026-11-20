@@ -211,43 +211,25 @@ define i32 @masked_insert32(i32 %a, i32 %b) {
 define i32 @masked_insert32_commuted(i32 %a, i32 %b) {
 ; MIPS32R2-LABEL: masked_insert32_commuted:
 ; MIPS32R2:       # %bb.0:
-; MIPS32R2-NEXT:    lui $1, 32768
-; MIPS32R2-NEXT:    lui $2, 32767
-; MIPS32R2-NEXT:    sll $3, $5, 15
-; MIPS32R2-NEXT:    ori $1, $1, 32767
-; MIPS32R2-NEXT:    ori $2, $2, 32768
-; MIPS32R2-NEXT:    and $1, $4, $1
-; MIPS32R2-NEXT:    and $2, $3, $2
+; MIPS32R2-NEXT:    move $2, $4
+; MIPS32R2-NEXT:    ins $2, $5, 15, 16
 ; MIPS32R2-NEXT:    jr $ra
-; MIPS32R2-NEXT:    or $2, $2, $1
+; MIPS32R2-NEXT:    nop
 ;
 ; MIPS64R2-LABEL: masked_insert32_commuted:
 ; MIPS64R2:       # %bb.0:
-; MIPS64R2-NEXT:    lui $1, 32768
 ; MIPS64R2-NEXT:    sll $2, $4, 0
-; MIPS64R2-NEXT:    sll $3, $5, 0
-; MIPS64R2-NEXT:    ori $1, $1, 32767
-; MIPS64R2-NEXT:    sll $3, $3, 15
-; MIPS64R2-NEXT:    and $1, $2, $1
-; MIPS64R2-NEXT:    lui $2, 32767
-; MIPS64R2-NEXT:    ori $2, $2, 32768
-; MIPS64R2-NEXT:    and $2, $3, $2
+; MIPS64R2-NEXT:    sll $1, $5, 0
+; MIPS64R2-NEXT:    ins $2, $1, 15, 16
 ; MIPS64R2-NEXT:    jr $ra
-; MIPS64R2-NEXT:    or $2, $2, $1
+; MIPS64R2-NEXT:    nop
 ;
 ; MIPS64R6-LABEL: masked_insert32_commuted:
 ; MIPS64R6:       # %bb.0:
-; MIPS64R6-NEXT:    lui $1, 32768
 ; MIPS64R6-NEXT:    sll $2, $4, 0
-; MIPS64R6-NEXT:    sll $3, $5, 0
-; MIPS64R6-NEXT:    ori $1, $1, 32767
-; MIPS64R6-NEXT:    sll $3, $3, 15
-; MIPS64R6-NEXT:    and $1, $2, $1
-; MIPS64R6-NEXT:    lui $2, 32767
-; MIPS64R6-NEXT:    ori $2, $2, 32768
-; MIPS64R6-NEXT:    and $2, $3, $2
-; MIPS64R6-NEXT:    jr $ra
-; MIPS64R6-NEXT:    or $2, $2, $1
+; MIPS64R6-NEXT:    sll $1, $5, 0
+; MIPS64R6-NEXT:    ins $2, $1, 15, 16
+; MIPS64R6-NEXT:    jrc $ra
 ;
 ; MIPS3-LABEL: masked_insert32_commuted:
 ; MIPS3:       # %bb.0:
@@ -312,40 +294,24 @@ define i64 @masked_insert64(i64 %a, i64 %b) {
 define i64 @masked_insert64_commuted(i64 %a, i64 %b) {
 ; MIPS32R2-LABEL: masked_insert64_commuted:
 ; MIPS32R2:       # %bb.0:
-; MIPS32R2-NEXT:    lui $1, 32768
-; MIPS32R2-NEXT:    lui $2, 32767
+; MIPS32R2-NEXT:    move $2, $4
 ; MIPS32R2-NEXT:    move $3, $5
-; MIPS32R2-NEXT:    ori $1, $1, 32767
-; MIPS32R2-NEXT:    ori $2, $2, 32768
-; MIPS32R2-NEXT:    and $1, $4, $1
-; MIPS32R2-NEXT:    sll $4, $6, 15
-; MIPS32R2-NEXT:    and $2, $4, $2
+; MIPS32R2-NEXT:    ins $2, $6, 15, 16
 ; MIPS32R2-NEXT:    jr $ra
-; MIPS32R2-NEXT:    or $2, $2, $1
+; MIPS32R2-NEXT:    nop
 ;
 ; MIPS64R2-LABEL: masked_insert64_commuted:
 ; MIPS64R2:       # %bb.0:
-; MIPS64R2-NEXT:    lui $1, 32768
-; MIPS64R2-NEXT:    lui $2, 32767
-; MIPS64R2-NEXT:    dsll $3, $5, 15
-; MIPS64R2-NEXT:    ori $1, $1, 32767
-; MIPS64R2-NEXT:    ori $2, $2, 32768
-; MIPS64R2-NEXT:    and $1, $4, $1
-; MIPS64R2-NEXT:    and $2, $3, $2
+; MIPS64R2-NEXT:    move $2, $4
+; MIPS64R2-NEXT:    dins $2, $5, 15, 16
 ; MIPS64R2-NEXT:    jr $ra
-; MIPS64R2-NEXT:    or $2, $2, $1
+; MIPS64R2-NEXT:    nop
 ;
 ; MIPS64R6-LABEL: masked_insert64_commuted:
 ; MIPS64R6:       # %bb.0:
-; MIPS64R6-NEXT:    lui $1, 32768
-; MIPS64R6-NEXT:    lui $2, 32767
-; MIPS64R6-NEXT:    dsll $3, $5, 15
-; MIPS64R6-NEXT:    ori $1, $1, 32767
-; MIPS64R6-NEXT:    ori $2, $2, 32768
-; MIPS64R6-NEXT:    and $1, $4, $1
-; MIPS64R6-NEXT:    and $2, $3, $2
-; MIPS64R6-NEXT:    jr $ra
-; MIPS64R6-NEXT:    or $2, $2, $1
+; MIPS64R6-NEXT:    move $2, $4
+; MIPS64R6-NEXT:    dins $2, $5, 15, 16
+; MIPS64R6-NEXT:    jrc $ra
 ;
 ; MIPS3-LABEL: masked_insert64_commuted:
 ; MIPS3:       # %bb.0:
@@ -379,33 +345,16 @@ define i64 @masked_insert_middle_commuted(i64 %a, i64 %b) {
 ;
 ; MIPS64R2-LABEL: masked_insert_middle_commuted:
 ; MIPS64R2:       # %bb.0:
-; MIPS64R2-NEXT:    daddiu $2, $zero, 1
-; MIPS64R2-NEXT:    dsll $1, $5, 31
-; MIPS64R2-NEXT:    dsll $2, $2, 32
-; MIPS64R2-NEXT:    daddiu $3, $2, -1
-; MIPS64R2-NEXT:    daddiu $2, $2, 1
-; MIPS64R2-NEXT:    dsll $2, $2, 31
-; MIPS64R2-NEXT:    dsll $3, $3, 31
-; MIPS64R2-NEXT:    daddiu $2, $2, -1
-; MIPS64R2-NEXT:    and $1, $1, $3
-; MIPS64R2-NEXT:    and $2, $4, $2
+; MIPS64R2-NEXT:    move $2, $4
+; MIPS64R2-NEXT:    dinsm $2, $5, 31, 32
 ; MIPS64R2-NEXT:    jr $ra
-; MIPS64R2-NEXT:    or $2, $1, $2
+; MIPS64R2-NEXT:    nop
 ;
 ; MIPS64R6-LABEL: masked_insert_middle_commuted:
 ; MIPS64R6:       # %bb.0:
-; MIPS64R6-NEXT:    daddiu $2, $zero, 1
-; MIPS64R6-NEXT:    dsll $1, $5, 31
-; MIPS64R6-NEXT:    dsll $2, $2, 32
-; MIPS64R6-NEXT:    daddiu $3, $2, -1
-; MIPS64R6-NEXT:    daddiu $2, $2, 1
-; MIPS64R6-NEXT:    dsll $2, $2, 31
-; MIPS64R6-NEXT:    dsll $3, $3, 31
-; MIPS64R6-NEXT:    daddiu $2, $2, -1
-; MIPS64R6-NEXT:    and $1, $1, $3
-; MIPS64R6-NEXT:    and $2, $4, $2
-; MIPS64R6-NEXT:    jr $ra
-; MIPS64R6-NEXT:    or $2, $1, $2
+; MIPS64R6-NEXT:    move $2, $4
+; MIPS64R6-NEXT:    dinsm $2, $5, 31, 32
+; MIPS64R6-NEXT:    jrc $ra
 ;
 ; MIPS3-LABEL: masked_insert_middle_commuted:
 ; MIPS3:       # %bb.0:
@@ -485,31 +434,16 @@ define i64 @masked_insert_upper_commuted(i64 %a, i64 %b) {
 ;
 ; MIPS64R2-LABEL: masked_insert_upper_commuted:
 ; MIPS64R2:       # %bb.0:
-; MIPS64R2-NEXT:    ori $1, $zero, 65535
-; MIPS64R2-NEXT:    dsll $2, $5, 32
-; MIPS64R2-NEXT:    dsll $1, $1, 32
-; MIPS64R2-NEXT:    and $1, $2, $1
-; MIPS64R2-NEXT:    lui $2, 65535
-; MIPS64R2-NEXT:    daddiu $2, $2, 1
-; MIPS64R2-NEXT:    dsll $2, $2, 32
-; MIPS64R2-NEXT:    daddiu $2, $2, -1
-; MIPS64R2-NEXT:    and $2, $4, $2
+; MIPS64R2-NEXT:    move $2, $4
+; MIPS64R2-NEXT:    dinsu $2, $5, 32, 16
 ; MIPS64R2-NEXT:    jr $ra
-; MIPS64R2-NEXT:    or $2, $1, $2
+; MIPS64R2-NEXT:    nop
 ;
 ; MIPS64R6-LABEL: masked_insert_upper_commuted:
 ; MIPS64R6:       # %bb.0:
-; MIPS64R6-NEXT:    ori $1, $zero, 65535
-; MIPS64R6-NEXT:    dsll $2, $5, 32
-; MIPS64R6-NEXT:    dsll $1, $1, 32
-; MIPS64R6-NEXT:    and $1, $2, $1
-; MIPS64R6-NEXT:    lui $2, 65535
-; MIPS64R6-NEXT:    daddiu $2, $2, 1
-; MIPS64R6-NEXT:    dsll $2, $2, 32
-; MIPS64R6-NEXT:    daddiu $2, $2, -1
-; MIPS64R6-NEXT:    and $2, $4, $2
-; MIPS64R6-NEXT:    jr $ra
-; MIPS64R6-NEXT:    or $2, $1, $2
+; MIPS64R6-NEXT:    move $2, $4
+; MIPS64R6-NEXT:    dinsu $2, $5, 32, 16
+; MIPS64R6-NEXT:    jrc $ra
 ;
 ; MIPS3-LABEL: masked_insert_upper_commuted:
 ; MIPS3:       # %bb.0:
@@ -660,29 +594,24 @@ define i64 @masked_insert_positioned_commuted(i64 %a, i64 %b) {
 ;
 ; MIPS64R2-LABEL: masked_insert_positioned_commuted:
 ; MIPS64R2:       # %bb.0:
-; MIPS64R2-NEXT:    lui $2, 65535
 ; MIPS64R2-NEXT:    ori $1, $zero, 65535
-; MIPS64R2-NEXT:    daddiu $2, $2, 1
+; MIPS64R2-NEXT:    move $2, $4
 ; MIPS64R2-NEXT:    dsll $1, $1, 32
-; MIPS64R2-NEXT:    dsll $2, $2, 32
 ; MIPS64R2-NEXT:    and $1, $5, $1
-; MIPS64R2-NEXT:    daddiu $2, $2, -1
-; MIPS64R2-NEXT:    and $2, $4, $2
+; MIPS64R2-NEXT:    dsrl $1, $1, 32
+; MIPS64R2-NEXT:    dinsu $2, $1, 32, 16
 ; MIPS64R2-NEXT:    jr $ra
-; MIPS64R2-NEXT:    or $2, $1, $2
+; MIPS64R2-NEXT:    nop
 ;
 ; MIPS64R6-LABEL: masked_insert_positioned_commuted:
 ; MIPS64R6:       # %bb.0:
-; MIPS64R6-NEXT:    lui $2, 65535
 ; MIPS64R6-NEXT:    ori $1, $zero, 65535
-; MIPS64R6-NEXT:    daddiu $2, $2, 1
+; MIPS64R6-NEXT:    move $2, $4
 ; MIPS64R6-NEXT:    dsll $1, $1, 32
-; MIPS64R6-NEXT:    dsll $2, $2, 32
 ; MIPS64R6-NEXT:    and $1, $5, $1
-; MIPS64R6-NEXT:    daddiu $2, $2, -1
-; MIPS64R6-NEXT:    and $2, $4, $2
-; MIPS64R6-NEXT:    jr $ra
-; MIPS64R6-NEXT:    or $2, $1, $2
+; MIPS64R6-NEXT:    dsrl $1, $1, 32
+; MIPS64R6-NEXT:    dinsu $2, $1, 32, 16
+; MIPS64R6-NEXT:    jrc $ra
 ;
 ; MIPS3-LABEL: masked_insert_positioned_commuted:
 ; MIPS3:       # %bb.0:
@@ -810,34 +739,16 @@ define i64 @masked_insert_live_inputs(i64 %a, i64 %b) {
 ;
 ; MIPS64R2-LABEL: masked_insert_live_inputs:
 ; MIPS64R2:       # %bb.0:
-; MIPS64R2-NEXT:    daddiu $2, $zero, 1
-; MIPS64R2-NEXT:    dsll $1, $5, 31
-; MIPS64R2-NEXT:    dsll $2, $2, 32
-; MIPS64R2-NEXT:    daddiu $3, $2, -1
-; MIPS64R2-NEXT:    daddiu $2, $2, 1
-; MIPS64R2-NEXT:    dsll $2, $2, 31
-; MIPS64R2-NEXT:    dsll $3, $3, 31
-; MIPS64R2-NEXT:    daddiu $2, $2, -1
-; MIPS64R2-NEXT:    and $1, $1, $3
-; MIPS64R2-NEXT:    and $2, $4, $2
-; MIPS64R2-NEXT:    or $1, $1, $2
+; MIPS64R2-NEXT:    move $1, $4
+; MIPS64R2-NEXT:    dinsm $1, $5, 31, 32
 ; MIPS64R2-NEXT:    xor $1, $1, $4
 ; MIPS64R2-NEXT:    jr $ra
 ; MIPS64R2-NEXT:    xor $2, $1, $5
 ;
 ; MIPS64R6-LABEL: masked_insert_live_inputs:
 ; MIPS64R6:       # %bb.0:
-; MIPS64R6-NEXT:    daddiu $2, $zero, 1
-; MIPS64R6-NEXT:    dsll $1, $5, 31
-; MIPS64R6-NEXT:    dsll $2, $2, 32
-; MIPS64R6-NEXT:    daddiu $3, $2, -1
-; MIPS64R6-NEXT:    daddiu $2, $2, 1
-; MIPS64R6-NEXT:    dsll $2, $2, 31
-; MIPS64R6-NEXT:    dsll $3, $3, 31
-; MIPS64R6-NEXT:    daddiu $2, $2, -1
-; MIPS64R6-NEXT:    and $1, $1, $3
-; MIPS64R6-NEXT:    and $2, $4, $2
-; MIPS64R6-NEXT:    or $1, $1, $2
+; MIPS64R6-NEXT:    move $1, $4
+; MIPS64R6-NEXT:    dinsm $1, $5, 31, 32
 ; MIPS64R6-NEXT:    xor $1, $1, $4
 ; MIPS64R6-NEXT:    jr $ra
 ; MIPS64R6-NEXT:    xor $2, $1, $5
