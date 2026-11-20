@@ -1001,12 +1001,14 @@ TEST_F(X86TargetInfoTest, IntArgExtension) {
   std::unique_ptr<FunctionInfo> FI;
   std::unique_ptr<TargetInfo> TI;
 
-  // Clang: extend in the caller and assume the extension in the callee.
-  expectExtendInteger(ClassifyArg(I8, SmallIntABICompatKind::Clang, FI, TI), I8,
+  // Clang23: extend in the caller and assume the extension in the callee.
+  expectExtendInteger(ClassifyArg(I8, SmallIntABICompatKind::Clang23, FI, TI),
+                      I8,
                       /*IsSigned=*/true);
-  expectExtendInteger(ClassifyArg(U8, SmallIntABICompatKind::Clang, FI, TI), U8,
+  expectExtendInteger(ClassifyArg(U8, SmallIntABICompatKind::Clang23, FI, TI),
+                      U8,
                       /*IsSigned=*/false);
-  expectExtendInteger(ClassifyArg(Bool, SmallIntABICompatKind::Clang, FI, TI),
+  expectExtendInteger(ClassifyArg(Bool, SmallIntABICompatKind::Clang23, FI, TI),
                       Bool, /*IsSigned=*/false);
 
   // Both: extend in the caller, but do not assume it in the callee.
@@ -1032,8 +1034,9 @@ TEST_F(X86TargetInfoTest, IntArgExtension) {
       /*IsSigned=*/false);
 
   // int is never extended.
-  for (auto Kind : {SmallIntABICompatKind::Platform,
-                    SmallIntABICompatKind::Clang, SmallIntABICompatKind::Both})
+  for (auto Kind :
+       {SmallIntABICompatKind::Platform, SmallIntABICompatKind::Clang23,
+        SmallIntABICompatKind::Both})
     expectDirectInteger(ClassifyArg(I32, Kind, FI, TI), 32);
 }
 

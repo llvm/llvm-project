@@ -15,6 +15,8 @@
 
 namespace lldb_private {
 
+struct InitializationOptions {};
+
 class SystemInitializer {
 public:
   SystemInitializer();

@@ -129,6 +129,7 @@ HexagonPacketizerList::HexagonPacketizerList(MachineFunction &MF,
 
   addMutation(std::make_unique<HexagonSubtarget::UsrOverflowMutation>());
   addMutation(std::make_unique<HexagonSubtarget::HVXMemLatencyMutation>());
+  addMutation(std::make_unique<HexagonSubtarget::HMXActivateWeightMutation>());
   addMutation(std::make_unique<HexagonSubtarget::BankConflictMutation>());
   addMutation(std::make_unique<HexagonSubtarget::HLXPseudoMutation>());
 }
@@ -851,9 +852,9 @@ bool HexagonPacketizerList::canPromoteToDotNew(const MachineInstr &MI,
   if (PI.isInlineAsm())
     return false;
 
-  // IMPLICIT_DEFs won't materialize as real instructions, so .new makes no
-  // sense.
-  if (PI.isImplicitDef())
+  // IMPLICIT_DEFs and FREEZEs won't materialize as real instructions, so .new
+  // makes no sense.
+  if (PI.isImplicitDef() || PI.getOpcode() == TargetOpcode::FREEZE)
     return false;
 
   // If dependency is through an implicitly defined register, we should not
@@ -1041,7 +1042,7 @@ bool HexagonPacketizerList::ignorePseudoInstruction(const MachineInstr &MI,
   if (MI.isInlineAsm())
     return false;
 
-  if (MI.isImplicitDef())
+  if (MI.isImplicitDef() || MI.getOpcode() == TargetOpcode::FREEZE)
     return false;
 
   // We check if MI has any functional units mapped to it. If it doesn't,
@@ -1745,13 +1746,40 @@ HexagonPacketizerList::addToPacket(MachineInstr &MI) {
   PacketStalls |= producesStall(MI);
   PacketStallCycles = std::max(PacketStallCycles, calcStall(MI));
 
-  if (MI.isImplicitDef()) {
+  if (MI.isImplicitDef() || MI.getOpcode() == TargetOpcode::FREEZE) {
     // Add to the packet to allow subsequent instructions to be checked
     // properly.
     CurrentPacketMIs.push_back(&MI);
     return MII;
   }
   assert(ResourceTracker->canReserveResources(MI));
+
+  MachineBasicBlock::iterator nextMII = MII;
+  if (std::next(MII) != MI.getParent()->end()) {
+    MachineInstr &nextMI = *++nextMII;
+    if (HII->isActivateWeightPair(MI, nextMI)) {
+      for (auto J : CurrentPacketMIs) {
+        MachineInstr &JMI = *J;
+        if (HII->isDependent(JMI, MI) || HII->isDependent(JMI, nextMI)) {
+          endPacket(MBB, MI);
+          break;
+        }
+      }
+      ResourceTracker->reserveResources(MI);
+      if (ResourceTracker->canReserveResources(nextMI))
+        ResourceTracker->reserveResources(nextMI);
+      else {
+        endPacket(MBB, MI);
+        assert(ResourceTracker->canReserveResources(MI));
+        ResourceTracker->reserveResources(MI);
+        assert(ResourceTracker->canReserveResources(nextMI));
+        ResourceTracker->reserveResources(nextMI);
+      }
+      CurrentPacketMIs.push_back(&MI);
+      CurrentPacketMIs.push_back(&nextMI);
+      return nextMII;
+    }
+  }
 
   bool ExtMI = HII->isExtended(MI) || HII->isConstExtended(MI);
   bool Good = true;

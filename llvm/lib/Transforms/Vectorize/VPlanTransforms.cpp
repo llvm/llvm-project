@@ -1389,9 +1389,6 @@ static VPValue *simplifyRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
     if (!Steps->getStartIndex() && vputils::onlyFirstLaneUsed(Steps))
       return Steps->getOperand(0);
 
-  if (Plan.getConcreteUF() == 1 && match(Def, m_ExtractLastPart(m_VPValue(A))))
-    return A;
-
   return nullptr;
 }
 

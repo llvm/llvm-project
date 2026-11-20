@@ -108,12 +108,16 @@ set(TARGET_LIBM_ENTRYPOINTS
   # complex.h entrypoints
   libc.src.complex.cabs
   libc.src.complex.cabsf
+  libc.src.complex.carg
+  libc.src.complex.cargf
   libc.src.complex.creal
   libc.src.complex.crealf
   libc.src.complex.cimag
   libc.src.complex.cimagf
   libc.src.complex.conj
   libc.src.complex.conjf
+  libc.src.complex.cproj
+  libc.src.complex.cprojf
 )
 
 if(LIBC_TYPES_HAS_FLOAT16)

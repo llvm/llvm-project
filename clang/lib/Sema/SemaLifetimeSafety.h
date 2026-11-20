@@ -58,6 +58,11 @@ inline bool ShouldCheckLifetimeboundViolations(Sema &S, const Decl *D) {
       diag::warn_lifetime_safety_lifetimebound_violation, D->getBeginLoc());
 }
 
+inline bool ShouldCheckCaptureByViolations(Sema &S, const Decl *D) {
+  return !S.getDiagnostics().isIgnored(
+      diag::warn_lifetime_safety_capture_by_violation, D->getBeginLoc());
+}
+
 inline bool ShouldCheckMisplacedLifetimebound(Sema &S, const Decl *D) {
   DiagnosticsEngine &Diags = S.getDiagnostics();
   constexpr unsigned DiagIDs[] = {
@@ -130,6 +135,7 @@ inline bool IsLifetimeSafetyEnabled(Sema &S, const Decl *D) {
 
   return ShouldCheckSafety(S, D) || ShouldCheckNoescapeViolations(S, D) ||
          ShouldCheckLifetimeboundViolations(S, D) ||
+         ShouldCheckCaptureByViolations(S, D) ||
          ShouldCheckMisplacedLifetimebound(S, D) ||
          ShouldCheckInapplicableLifetimebound(S, D) ||
          ShouldCheckFieldOriginEscape(S, D) ||
@@ -149,6 +155,7 @@ inline LifetimeSafetyOpts GetLifetimeSafetyOpts(Sema &S, const Decl *D) {
       ShouldCheckInapplicableLifetimebound(S, D);
   LSOpts.CheckFieldOriginEscape = ShouldCheckFieldOriginEscape(S, D);
   LSOpts.CheckDestructorUses = ShouldCheckDestructorUses(S, D);
+  LSOpts.CheckCaptureByViolations = ShouldCheckCaptureByViolations(S, D);
   return LSOpts;
 }
 
@@ -391,6 +398,65 @@ public:
     S.Diag(Attr->getLocation(),
            diag::warn_lifetime_safety_lifetimebound_violation)
         << 2 << "" << Attr->getRange();
+  }
+
+  /// Returns the name of \p CapturingParam on the declaration where \p Attr of
+  /// \p PVD is written, as the attribute's parameter names refer to that
+  /// declaration.
+  static StringRef getCapturerName(const ParmVarDecl *PVD,
+                                   const LifetimeCaptureByAttr *Attr,
+                                   const ParmVarDecl *CapturingParam) {
+    if (!CapturingParam)
+      return "";
+    const auto *Fn = cast<FunctionDecl>(PVD->getDeclContext());
+    for (const FunctionDecl *Redecl : Fn->redecls()) {
+      const ParmVarDecl *P = Redecl->getParamDecl(PVD->getFunctionScopeIndex());
+      if (llvm::any_of(P->specific_attrs<LifetimeCaptureByAttr>(),
+                       [&](const LifetimeCaptureByAttr *A) {
+                         return !A->isInherited() &&
+                                A->getLocation() == Attr->getLocation();
+                       })) {
+        StringRef Name =
+            Redecl->getParamDecl(CapturingParam->getFunctionScopeIndex())
+                ->getName();
+        if (!Name.empty())
+          return Name;
+        break;
+      }
+    }
+    return CapturingParam->getName();
+  }
+
+  void reportCaptureByViolation(const ParmVarDecl *PVD,
+                                const LifetimeCaptureByAttr *Attr,
+                                int CapturerIdx,
+                                const ValueDecl *CapturedBy) override {
+    assert(!Attr->isImplicit() && "only written attributes are verified");
+    const auto *CapturingParam = dyn_cast_if_present<ParmVarDecl>(CapturedBy);
+    assert((CapturingParam || CapturerIdx == LifetimeCaptureByAttr::This ||
+            CapturerIdx == LifetimeCaptureByAttr::Global) &&
+           "only this, global and parameter capturers are verified");
+    // The capturer kinds of warn_lifetime_safety_capture_by_violation.
+    enum CapturerKind { CapturedByThis, CapturedByGlobal, CapturedByParam };
+    CapturerKind Kind = CapturedByThis;
+    if (CapturingParam)
+      Kind = CapturedByParam;
+    else if (CapturerIdx == LifetimeCaptureByAttr::Global)
+      Kind = CapturedByGlobal;
+    S.Diag(Attr->getLocation(), diag::warn_lifetime_safety_capture_by_violation)
+        << PVD << Kind << getCapturerName(PVD, Attr, CapturingParam)
+        << Attr->getRange();
+    if (!CapturedBy)
+      return;
+    unsigned NoteID = diag::note_lifetime_safety_escapes_to_global_here;
+    if (CapturingParam)
+      NoteID = diag::note_lifetime_safety_escapes_to_param_here;
+    else if (isa<FieldDecl>(CapturedBy))
+      NoteID = diag::note_lifetime_safety_escapes_to_field_here;
+    else if (const auto *VD = cast<VarDecl>(CapturedBy);
+             VD->isStaticLocal() || VD->isStaticDataMember())
+      NoteID = diag::note_lifetime_safety_escapes_to_static_storage_here;
+    S.Diag(CapturedBy->getLocation(), NoteID) << CapturedBy->getEndLoc();
   }
 
   void reportMisplacedLifetimebound(WarningScope Scope,

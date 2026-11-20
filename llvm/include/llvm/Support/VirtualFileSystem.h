@@ -109,6 +109,11 @@ public:
   LLVM_ABI bool isStatusKnown() const;
   LLVM_ABI bool exists() const;
   /// @}
+
+  /// Returns true if any of the owner, group, or others execute permissions is
+  /// set. Unlike llvm::sys::fs::can_execute, this does not check whether the
+  /// current process is allowed to execute the file.
+  LLVM_ABI bool isExecutable() const;
 };
 
 /// Represents an open file.

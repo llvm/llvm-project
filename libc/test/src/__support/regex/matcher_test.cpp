@@ -480,6 +480,19 @@ TEST(LlvmLibcRegexMatcherTest, BracketMatchingAndRanges) {
   ASSERT_TRUE(multi_class.has_value());
   EXPECT_EQ(match(pool, *multi_class, "Hello World"), MatchResult::Match);
   EXPECT_EQ(match(pool, *multi_class, "Hello1World"), MatchResult::NoMatch);
+
+  // Equivalent bracket permutations deduplicate to the same ByteSet ExprId.
+  {
+    ExprPool dedup_pool;
+    ErrorOr<ExprId> cls_ab =
+        parse_ere("[[:alpha:][:blank:]]", REG_EXTENDED, dedup_pool);
+    ErrorOr<ExprId> cls_ba =
+        parse_ere("[[:blank:][:alpha:]]", REG_EXTENDED, dedup_pool);
+    ASSERT_TRUE(cls_ab.has_value());
+    ASSERT_TRUE(cls_ba.has_value());
+    EXPECT_EQ(*cls_ab, *cls_ba);
+    EXPECT_EQ(dedup_pool.num_byte_sets(), size_t(1));
+  }
 }
 
 TEST(LlvmLibcRegexMatcherTest, PoolExhaustionPropagation) {

@@ -116,6 +116,24 @@ static void writeStdOptionalAttribute(DialectBytecodeWriter &writer,
   writer.writeOptionalAttribute(storage.value_or(AttrTy()));
 }
 
+static LogicalResult readOptionalType(DialectBytecodeReader &reader,
+                                      Type &result) {
+  bool present = false;
+  if (failed(reader.readBool(present)))
+    return failure();
+  if (!present) {
+    result = Type();
+    return success();
+  }
+  return reader.readType(result);
+}
+
+static void writeOptionalType(DialectBytecodeWriter &writer, Type type) {
+  writer.writeOwnedBool(static_cast<bool>(type));
+  if (type)
+    writer.writeType(type);
+}
+
 // A scoped enum validated through its symbolizer; out-of-range values fail
 // instead of casting undefined values into the enum.
 template <typename EnumTy>

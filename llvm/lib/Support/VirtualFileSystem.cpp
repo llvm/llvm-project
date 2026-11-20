@@ -110,6 +110,10 @@ bool Status::exists() const {
   return isStatusKnown() && Type != file_type::file_not_found;
 }
 
+bool Status::isExecutable() const {
+  return (Perms & sys::fs::all_exe) != sys::fs::no_perms;
+}
+
 File::~File() = default;
 
 FileSystem::~FileSystem() = default;
