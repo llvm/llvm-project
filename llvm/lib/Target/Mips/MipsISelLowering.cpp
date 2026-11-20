@@ -3204,7 +3204,10 @@ static bool CC_MipsO32(unsigned ValNo, MVT ValVT, MVT LocVT,
     // the allocated register must be either A0 or A2.
     if (isI64 && (Reg == IntRegs[1] || Reg == IntRegs[3]))
       Reg = State.AllocateReg(IntRegs);
-    LocVT = MVT::i32;
+    // An f32 is only passed as an i32 when it is in an integer register. On
+    // the stack it keeps its own type, as f64 does.
+    if (Reg)
+      LocVT = MVT::i32;
   } else if (ValVT == MVT::f64 && AllocateFloatsInIntReg) {
     // Allocate int register and shadow next int register. If first
     // available register is $a1 or $a3, shadow it too.
