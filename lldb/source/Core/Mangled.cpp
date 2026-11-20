@@ -21,12 +21,9 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Compiler.h"
 
 #include <mutex>
 #include <optional>
-#include <string>
-#include <utility>
 #include <vector>
 
 using namespace lldb_private;
@@ -437,12 +434,13 @@ bool Mangled::Decode(const DataExtractor &data, lldb::offset_t *offset_ptr,
 /// The strings are stored as null-terminated UTF8 strings and str1 and str2
 /// are only saved if we need them based on the encoding.
 ///
-/// Some mangled names have a mangled name that can be demangled by the built
-/// in demanglers. These kinds of mangled objects know when the mangled and
-/// demangled names are the counterparts for each other. This is done because
-/// demangling is very expensive and avoiding demangling the same name twice
-/// saves us a lot of compute time. For these kinds of names we only need to
-/// save the mangled name and have the encoding set to "MangledOnly".
+/// Some mangled names have a mangled name that can be demangled by a
+/// plugin. These kinds of mangled objects know when the mangled and
+/// demangled names are the counterparts for each other. This is done
+/// because demangling is very expensive and avoiding demangling the
+/// same name twice saves us a lot of compute time. For these kinds of
+/// names we only need to save the mangled name and have the encoding
+/// set to "MangledOnly".
 ///
 /// If a mangled object has only a demangled name, then we save only that string
 /// and have the encoding set to "DemangledOnly".

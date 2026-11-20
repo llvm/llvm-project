@@ -902,10 +902,7 @@
 ! CHECK:             fir.do_loop %[[VAL_3:.*]] = %[[CONSTANT_4]] to %[[CONSTANT_0]] step %[[CONSTANT_4]] unordered {
 ! CHECK:               %[[DESIGNATE_0:.*]] = hlfir.designate %[[VAL_1]] (%[[VAL_3]], %[[VAL_2]])  : (!fir.ref<!fir.array<100x10xi32>>, index, index) -> !fir.ref<i32>
 ! CHECK:               %[[DESIGNATE_1:.*]] = hlfir.designate %[[VAL_0]] (%[[VAL_3]], %[[VAL_2]])  : (!fir.ref<!fir.array<100x10xi32>>, index, index) -> !fir.ref<i32>
-! CHECK:               %[[LOAD_0:.*]] = fir.load %[[DESIGNATE_0]] : !fir.ref<i32>
-! CHECK:               %[[LOAD_1:.*]] = fir.load %[[DESIGNATE_1]] : !fir.ref<i32>
-! CHECK:               %[[SELECT_0:.*]] = arith.maxsi %[[LOAD_1]], %[[LOAD_0]] : i32
-! CHECK:               hlfir.assign %[[SELECT_0]] to %[[DESIGNATE_1]] : i32, !fir.ref<i32>
+! CHECK:               acc.reduction_combine %[[DESIGNATE_0]] into %[[DESIGNATE_1]] <max> : !fir.ref<i32>
 ! CHECK:             }
 ! CHECK:           }
 ! CHECK:           acc.yield %[[VAL_0]] : !fir.ref<!fir.array<100x10xi32>>
@@ -920,10 +917,7 @@
 
 ! CHECK-LABEL:   } combiner {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<i32>, %[[VAL_1:.*]]: !fir.ref<i32>):
-! CHECK:           %[[LOAD_0:.*]] = fir.load %[[VAL_1]] : !fir.ref<i32>
-! CHECK:           %[[LOAD_1:.*]] = fir.load %[[VAL_0]] : !fir.ref<i32>
-! CHECK:           %[[SELECT_0:.*]] = arith.maxsi %[[LOAD_1]], %[[LOAD_0]] : i32
-! CHECK:           hlfir.assign %[[SELECT_0]] to %[[VAL_0]] : i32, !fir.ref<i32>
+! CHECK:           acc.reduction_combine %[[VAL_1]] into %[[VAL_0]] <max> : !fir.ref<i32>
 ! CHECK:           acc.yield %[[VAL_0]] : !fir.ref<i32>
 ! CHECK:         }
 
@@ -1013,10 +1007,7 @@
 ! CHECK:           fir.do_loop %[[VAL_2:.*]] = %[[CONSTANT_2]] to %[[CONSTANT_0]] step %[[CONSTANT_2]] unordered {
 ! CHECK:             %[[DESIGNATE_0:.*]] = hlfir.designate %[[VAL_1]] (%[[VAL_2]])  : (!fir.ref<!fir.array<100xi32>>, index) -> !fir.ref<i32>
 ! CHECK:             %[[DESIGNATE_1:.*]] = hlfir.designate %[[VAL_0]] (%[[VAL_2]])  : (!fir.ref<!fir.array<100xi32>>, index) -> !fir.ref<i32>
-! CHECK:             %[[LOAD_0:.*]] = fir.load %[[DESIGNATE_0]] : !fir.ref<i32>
-! CHECK:             %[[LOAD_1:.*]] = fir.load %[[DESIGNATE_1]] : !fir.ref<i32>
-! CHECK:             %[[SELECT_0:.*]] = arith.minsi %[[LOAD_1]], %[[LOAD_0]] : i32
-! CHECK:             hlfir.assign %[[SELECT_0]] to %[[DESIGNATE_1]] : i32, !fir.ref<i32>
+! CHECK:             acc.reduction_combine %[[DESIGNATE_0]] into %[[DESIGNATE_1]] <min> : !fir.ref<i32>
 ! CHECK:           }
 ! CHECK:           acc.yield %[[VAL_0]] : !fir.ref<!fir.array<100xi32>>
 ! CHECK:         }
@@ -1030,10 +1021,7 @@
 
 ! CHECK-LABEL:   } combiner {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<i32>, %[[VAL_1:.*]]: !fir.ref<i32>):
-! CHECK:           %[[LOAD_0:.*]] = fir.load %[[VAL_1]] : !fir.ref<i32>
-! CHECK:           %[[LOAD_1:.*]] = fir.load %[[VAL_0]] : !fir.ref<i32>
-! CHECK:           %[[SELECT_0:.*]] = arith.minsi %[[LOAD_1]], %[[LOAD_0]] : i32
-! CHECK:           hlfir.assign %[[SELECT_0]] to %[[VAL_0]] : i32, !fir.ref<i32>
+! CHECK:           acc.reduction_combine %[[VAL_1]] into %[[VAL_0]] <min> : !fir.ref<i32>
 ! CHECK:           acc.yield %[[VAL_0]] : !fir.ref<i32>
 ! CHECK:         }
 

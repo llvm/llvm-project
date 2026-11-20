@@ -62,7 +62,6 @@ add_libc_test(
     libc.test.UnitTest.ErrnoCheckingTest
 )
 
-
 add_libc_test(
   mbsrtowcs_test
   SUITE
@@ -745,7 +744,7 @@ if(LIBC_CONF_PRINTF_DISABLE_FLOAT)
   libc_add_definition(swprintf_test_copts "LIBC_COPT_PRINTF_DISABLE_FLOAT")
 endif()
 if(LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_DYADIC_FLOAT OR
-  LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_FLOAT320)
+    LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_FLOAT320)
   libc_add_definition(swprintf_test_copts "LIBC_COPT_FLOAT_TO_STR_REDUCED_PRECISION")
 endif()
 if(LIBC_CONF_PRINTF_DISABLE_INDEX_MODE)
@@ -781,4 +780,20 @@ add_fp_unittest(
     libc.test.UnitTest.ErrnoSetterMatcher
   COMPILE_OPTIONS
     ${swprintf_test_copts}
+)
+
+add_libc_test(
+  vswprintf_test
+  SUITE
+    libc-wchar-tests
+  SRCS
+    vswprintf_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.types.size_t
+    libc.hdr.types.wchar_t
+    libc.hdr.wchar_macros
+    libc.src.__support.CPP.limits
+    libc.src.wchar.vswprintf
+    libc.test.UnitTest.ErrnoCheckingTest
 )

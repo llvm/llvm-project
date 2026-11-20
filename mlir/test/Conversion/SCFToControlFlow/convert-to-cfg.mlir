@@ -852,3 +852,25 @@ func.func @parallel_loop_annotation_2d(%arg0 : index, %arg1 : index, %arg2 : ind
   } {llvm.loop_annotation = #no_unroll}
   return
 }
+
+// -----
+
+// Preserve the loop annotation and its nested hint.
+// Drop standalone loop hints, unrelated LLVM attributes and builtin values.
+// CHECK: #[[UNROLL:.*]] = #llvm.loop_unroll<disable = true>
+// CHECK: #[[ANNOTATION:.*]] = #llvm.loop_annotation<unroll = #[[UNROLL]]>
+// CHECK: func.func @loop_annotation_value_dialect
+// CHECK-NOT: test.extra
+// CHECK-NOT: test.linkage
+// CHECK-NOT: llvm.unrelated
+// CHECK: cf.br {{.*}} {test.annotation = #[[ANNOTATION]]}
+// CHECK-NOT: test.extra
+// CHECK-NOT: test.linkage
+// CHECK-NOT: llvm.unrelated
+// CHECK: return
+#annotation = #llvm.loop_annotation<unroll = <disable = true>>
+func.func @loop_annotation_value_dialect(%lb : index, %ub : index, %step : index) {
+  scf.for %i = %lb to %ub step %step {
+  } {test.annotation = #annotation, test.extra = #llvm.loop_unroll<disable = true>, test.linkage = #llvm.linkage<internal>, llvm.unrelated = 42 : i32}
+  return
+}

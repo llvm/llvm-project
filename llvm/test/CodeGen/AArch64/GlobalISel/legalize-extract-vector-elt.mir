@@ -533,3 +533,4 @@ body: |
     %eve:_(p0) = G_EXTRACT_VECTOR_ELT %vec:_(<4 x p1>), %idx:_(i64)
     $x0 = COPY %eve(p0)
     RET_ReallyLR
+...

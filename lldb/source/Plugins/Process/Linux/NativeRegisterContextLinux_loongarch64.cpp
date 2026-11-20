@@ -12,8 +12,8 @@
 
 #include "Plugins/Process/Linux/NativeProcessLinux.h"
 #include "Plugins/Process/Linux/Procfs.h"
-#include "Register/Common/RegisterInfo_loongarch64.h"
 #include "Register/Arch/lldb-loongarch-register-enums.h"
+#include "Register/Common/RegisterInfo_loongarch64.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Log.h"
@@ -84,8 +84,8 @@ NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
   switch (target_arch.GetMachine()) {
   case llvm::Triple::loongarch64: {
     Flags opt_regsets;
-    auto register_info_up = std::make_unique<RegisterInfo_loongarch64>(
-        target_arch, opt_regsets);
+    auto register_info_up =
+        std::make_unique<RegisterInfo_loongarch64>(target_arch, opt_regsets);
     return std::make_unique<NativeRegisterContextLinux_loongarch64>(
         target_arch, native_thread, std::move(register_info_up));
   }

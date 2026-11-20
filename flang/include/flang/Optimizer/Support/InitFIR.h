@@ -29,6 +29,7 @@
 #include "mlir/Dialect/Func/Extensions/InlinerExtension.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Index/IR/IndexDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/Dialect/LLVMIR/Transforms/InlinerInterfaceImpl.h"
 #include "mlir/Dialect/Math/IR/Math.h"
@@ -77,6 +78,7 @@ inline void addFIRExtensions(mlir::DialectRegistry &registry,
   if (addFIRInlinerInterface)
     addFIRInlinerExtension(registry);
   addFIRToLLVMIRExtension(registry);
+  registerMemRefFortranObjectViewExternalModels(registry);
   cuf::registerCUFDialectTranslation(registry);
   fir::acc::registerOpenACCExtensions(registry);
   fir::omp::registerOpenMPExtensions(registry);
