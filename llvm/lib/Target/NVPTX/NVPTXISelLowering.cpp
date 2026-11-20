@@ -1449,12 +1449,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       unsigned J = 0;
       const auto VI = VectorizePTXValueVTs(MemVTs, Offsets, ArgAlign, IsVAArg);
       for (const unsigned NumElts : VI) {
-        // A scalar field occupies whole bytes even when its value has fewer
-        // bits.
-        EVT CopyVT = MemVTs[J];
-        if (NumElts > 1 && !CopyVT.isByteSized())
-          CopyVT = EVT::getIntegerVT(Ctx, CopyVT.getStoreSizeInBits());
-        EVT LoadVT = getVectorizedVT(CopyVT, NumElts, Ctx);
+        EVT LoadVT = getVectorizedVT(MemVTs[J], NumElts, Ctx);
         Align SrcAlign = commonAlignment(BaseSrcAlign, Offsets[J]);
         SDValue SrcAddr = DAG.getObjectPtrOffset(dl, SrcPtr, Offsets[J]);
         SDValue SrcLoad =
