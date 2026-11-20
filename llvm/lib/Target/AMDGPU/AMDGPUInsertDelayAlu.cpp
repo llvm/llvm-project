@@ -252,6 +252,12 @@ public:
       });
     }
 
+    void advanceByTRANSNum(unsigned TRANSNum) {
+      remove_if([&](auto &P) {
+        return P.second.TRANSNum >= TRANSNum && P.second.TRANSCycles > 0;
+      });
+    }
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
     void dump(const TargetRegisterInfo *TRI) const {
       if (empty()) {
@@ -452,6 +458,7 @@ public:
         if (It != State.end()) {
           DelayInfo Info = It->getSecond();
           State.advanceByVALUNum(Info.VALUNum);
+          State.advanceByTRANSNum(Info.TRANSNum);
           // FIXME: 0 is a valid register unit.
           LastSGPRFromVALU = static_cast<MCRegUnit>(0);
         }
@@ -505,7 +512,7 @@ public:
           }
         }
 
-        if (ProducerType == VALU) {
+        if (ProducerType == VALU || ProducerType == TRANS) {
           for (const auto &Op : MI.defs()) {
             Register Reg = Op.getReg();
             if (AMDGPU::isSGPR(Reg, TRI)) {

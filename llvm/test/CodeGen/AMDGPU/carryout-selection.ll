@@ -3723,17 +3723,16 @@ define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_2) | instskip(NEXT) | instid1(SALU_CYCLE_3)
 ; GFX1250-NEXT:    s_fmac_f32 s4, s8, 0x4f800000
 ; GFX1250-NEXT:    v_s_rcp_f32 s4, s4
-; GFX1250-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_3)
 ; GFX1250-NEXT:    s_mul_f32 s4, s4, 0x5f7ffffc
-; GFX1250-NEXT:    s_mul_f32 s8, s4, 0x2f800000
 ; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(NEXT) | instid1(SALU_CYCLE_3)
+; GFX1250-NEXT:    s_mul_f32 s8, s4, 0x2f800000
 ; GFX1250-NEXT:    s_trunc_f32 s9, s8
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(SKIP_1) | instid1(SALU_CYCLE_2)
 ; GFX1250-NEXT:    s_fmac_f32 s4, s9, 0xcf800000
 ; GFX1250-NEXT:    s_cvt_u32_f32 s9, s8
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_2) | instskip(NEXT) | instid1(SALU_CYCLE_3)
 ; GFX1250-NEXT:    s_cvt_u32_f32 s8, s4
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1250-NEXT:    s_mul_u64 s[12:13], s[10:11], s[8:9]
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-NEXT:    s_mul_hi_u32 s15, s8, s13
 ; GFX1250-NEXT:    s_mul_i32 s14, s8, s13
 ; GFX1250-NEXT:    s_mul_hi_u32 s4, s8, s12
@@ -3869,17 +3868,16 @@ define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_2) | instskip(NEXT) | instid1(SALU_CYCLE_3)
 ; GFX13-NEXT:    s_fmac_f32 s6, s8, 0x4f800000
 ; GFX13-NEXT:    v_s_rcp_f32 s6, s6
-; GFX13-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_3)
 ; GFX13-NEXT:    s_mul_f32 s6, s6, 0x5f7ffffc
-; GFX13-NEXT:    s_mul_f32 s8, s6, 0x2f800000
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(NEXT) | instid1(SALU_CYCLE_3)
+; GFX13-NEXT:    s_mul_f32 s8, s6, 0x2f800000
 ; GFX13-NEXT:    s_trunc_f32 s9, s8
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(SKIP_1) | instid1(SALU_CYCLE_2)
 ; GFX13-NEXT:    s_fmac_f32 s6, s9, 0xcf800000
 ; GFX13-NEXT:    s_cvt_u32_f32 s9, s8
-; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_2) | instskip(NEXT) | instid1(SALU_CYCLE_3)
 ; GFX13-NEXT:    s_cvt_u32_f32 s8, s6
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX13-NEXT:    s_mul_u64 s[12:13], s[10:11], s[8:9]
-; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX13-NEXT:    s_mul_hi_u32 s15, s8, s13
 ; GFX13-NEXT:    s_mul_i32 s14, s8, s13
 ; GFX13-NEXT:    s_mul_hi_u32 s6, s8, s12
