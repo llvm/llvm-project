@@ -111,6 +111,9 @@ public:
   /// \return
   ///   The value GetStopReturnValue or GetStopErrorValue would return,
   ///   whichever is valid.
+#ifdef SWIG
+  %apply bool &OUTPUT { bool &is_error_value };
+#endif
   SBValue GetStopReturnOrErrorValue(bool &is_error_value);
 
   lldb::tid_t GetThreadID() const;
