@@ -920,9 +920,11 @@ func.func @scalable_transpose_store_constant_mask(%vec: vector<4x[4]xf32>, %dest
 // FULL-UNROLL:           %[[C3:.*]] = arith.constant 3 : index
 // FULL-UNROLL:           %[[C4:.*]] = arith.constant 4 : index
 // FULL-UNROLL:           %[[VSCALE:.*]] = vector.vscale
+// FULL-UNROLL:           %[[MASK_SIZE:.*]] = arith.muli %[[VSCALE]], %[[C4]] : index
 // FULL-UNROLL:           %[[C4_VSCALE:.*]] = arith.muli %[[VSCALE]], %[[C4]] : index
+// FULL-UNROLL:           %[[UB:.*]] = arith.minsi %[[MASK_SIZE]], %[[C4_VSCALE]] : index
 // FULL-UNROLL:           %[[SLICE_MASK:.*]] = vector.create_mask %[[C3]] : vector<4xi1>
-// FULL-UNROLL:           scf.for %{{.*}} to %[[C4_VSCALE]]
+// FULL-UNROLL:           scf.for %{{.*}} to %[[UB]]
 // FULL-UNROLL:             vector.transfer_write {{.*}}, %[[SLICE_MASK]]
 
 // -----
