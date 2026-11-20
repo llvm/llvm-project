@@ -11,7 +11,6 @@
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/BinaryFormat/COFF.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
@@ -217,19 +216,3 @@ size_t StringTableBuilder::getOffset(CachedHashStringRef S) const {
   return I->second;
 }
 
-size_t StringTableBuilder::add(CachedHashStringRef S, uint8_t Priority) {
-  if (K == WinCOFF)
-    assert(S.size() > COFF::NameSize && "Short string in COFF string table!");
-
-  assert(!isFinalized());
-  if (Priority)
-    StringPriorityMap[S] = std::max(Priority, StringPriorityMap[S]);
-
-  auto P = StringIndexMap.try_emplace(S);
-  if (P.second) {
-    size_t Start = alignTo(Size, Alignment);
-    P.first->second = Start;
-    Size = Start + S.size() + (K != RAW);
-  }
-  return P.first->second;
-}

@@ -77,7 +77,7 @@ struct ToyInlinerInterface : public DialectInlinerInterface {
     return true;
   }
 
-  /// This hook cheks if the given 'src' region can be inlined into the 'dest'
+  /// This hook checks if the given 'src' region can be inlined into the 'dest'
   /// region. The regions here are the bodies of the callable functions. For
   /// Toy, any function can be inlined, so we simply return true.
   bool isLegalToInline(Region *dest, Region *src, bool wouldBeCloned,

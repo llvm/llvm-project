@@ -70,6 +70,9 @@ extern "C" {
 #endif
 
 extern int sscanf(const char *input, const char *format, ...);
+extern void *memccpy(void *dst, const void *src, int c, size_t n);
+extern void *memset_explicit(void *dst, int c, size_t n);
+extern void explicit_bzero(void *dst, size_t n);
 
 #ifdef __cplusplus
 }
@@ -90,6 +93,23 @@ void warn_my_vsprintf(void) {
   __builtin_va_list list;
   my_vsprintf("hello", buf, list);
   my_vsprintf("hello!", buf, list); // expected-warning{{'vsprintf' will always overflow; destination buffer has size 6, but format string expands to at least 7}}
+}
+
+void *my_memccpy(int extra, void *dst, const void *src, int c, size_t n)
+    __attribute__((diagnose_as_builtin(memccpy, 2, 3, 4, 5)));
+void *my_memset_explicit(int extra, void *dst, int c, size_t n)
+    __attribute__((diagnose_as_builtin(memset_explicit, 2, 3, 4)));
+void my_explicit_bzero(int extra, void *dst, size_t n)
+    __attribute__((diagnose_as_builtin(explicit_bzero, 2, 3)));
+
+void warn_my_mem_zero_and_memccpy(void) {
+  char src[20], dst[10];
+  my_memccpy(0, dst, src, '\0', 10);
+  my_memccpy(0, dst, src, '\0', 11); // expected-warning{{'memccpy' size argument is too large; destination buffer has size 10, but size argument is 11}}
+  my_memset_explicit(0, dst, 0, 10);
+  my_memset_explicit(0, dst, 0, 11); // expected-warning{{'memset_explicit' will always overflow; destination buffer has size 10, but size argument is 11}}
+  my_explicit_bzero(0, dst, 10);
+  my_explicit_bzero(0, dst, 11); // expected-warning{{'explicit_bzero' will always overflow; destination buffer has size 10, but size argument is 11}}
 }
 
 #ifdef __cplusplus

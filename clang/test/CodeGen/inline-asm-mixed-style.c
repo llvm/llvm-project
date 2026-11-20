@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -ffreestanding -triple i386-unknown-unknown -fasm-blocks -O0 -S %s -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -ffreestanding -triple i386-unknown-unknown -fasm-blocks -O0 -S %s -o - | FileCheck %s %}
 // RUN: %clang_cc1 -ffreestanding -triple x86_64-unknown-unknown -fasm-blocks -O0 -S %s -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -ffreestanding -triple x86_64-unknown-unknown -fasm-blocks -O0 -S %s -o - | FileCheck %s %}
 // REQUIRES: x86-registered-target
 
 #include <immintrin.h>

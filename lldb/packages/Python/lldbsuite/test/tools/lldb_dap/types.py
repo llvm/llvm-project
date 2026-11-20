@@ -799,9 +799,14 @@ class StackFrame:
     canRestart: Optional[bool] = None
     instructionPointerReference: Optional[str] = None
     moduleId: Optional[Union[int, str]] = None
-    compileUnitId: Optional[int] = None
+    compileUnitId: Optional[int] = field(
+        metadata={"alias": "$__lldb_compileUnitId"}, default=None
+    )
     languageSpecificData: Optional[Dict[str, Any]] = field(
         metadata={"alias": "$__lldb_languageSpecificData"}, default=None
+    )
+    isOptimized: Optional[bool] = field(
+        metadata={"alias": "$__lldb_isOptimized"}, default=None
     )
     presentationHint: Optional[StackFramePresentationHint] = None
 
@@ -1039,9 +1044,8 @@ class RunInTerminalResponse(Response):
 
 @dataclass(frozen=True)
 class RunInTerminalArgs:
-    # TODO: Fix this cwd is not optional
-    cwd: Optional[str] = None
-    args: List[str] = field(default_factory=list)
+    cwd: str
+    args: List[str]
     kind: Optional[Literal["integrated", "external"]] = None
     title: Optional[str] = None
     env: Optional[Dict[str, Union[str, None]]] = None
@@ -1120,7 +1124,7 @@ class LaunchArgs:
     args: Optional[List[str]] = None
     env: Optional[Union[Dict[str, str], List[str]]] = None
     detachOnError: Optional[bool] = None
-    disableASLR: bool = False
+    disableASLR: Optional[bool] = False
     disableSTDIO: Optional[bool] = None
     shellExpandArguments: bool = False
     console: Optional[Console] = None

@@ -693,6 +693,16 @@ void privatizeSymbol(
 
   const semantics::Symbol *sym =
       isDoConcurrent ? &symToPrivatize->GetUltimate() : symToPrivatize;
+  // The original value of a DO CONCURRENT locality-spec entity is that of the
+  // variable it names in the enclosing scope, which may itself be a LOCAL or
+  // LOCAL_INIT entity of an enclosing DO CONCURRENT (F2023 11.1.7.5). Look it
+  // up from the host symbol so that SymMap::getKey finds that entity; the
+  // ultimate symbol `sym` still names the privatizer.
+  const semantics::Symbol *hostSym = sym;
+  if (isDoConcurrent)
+    if (const auto *hostAssoc =
+            symToPrivatize->detailsIf<semantics::HostAssocDetails>())
+      hostSym = &hostAssoc->symbol();
   // Module variables accessed via USE inside nested BLOCKs may not be
   // instantiated yet. Ensure they are bound before looking up the host box.
   const auto &ultimate = sym->GetUltimate();
@@ -703,7 +713,7 @@ void privatizeSymbol(
         converter, Fortran::lower::pft::Variable{ultimate, /*global=*/true},
         symTable, storeMap);
   }
-  lower::SymbolBox hsb = symTable.lookupSymbol(*sym);
+  lower::SymbolBox hsb = symTable.lookupSymbol(*hostSym);
   assert(hsb && "Host symbol box not found");
 
   mlir::Location symLoc = hsb.getAddr().getLoc();
@@ -831,8 +841,7 @@ void privatizeSymbol(
         mlir::isa<fir::BaseBoxType>(allocType) ||
         mlir::isa<fir::BoxCharType>(allocType);
     if (needsInitialization) {
-      lower::SymbolBox hsb = symTable.lookupSymbol(
-          isDoConcurrent ? symToPrivatize->GetUltimate() : *symToPrivatize);
+      lower::SymbolBox hsb = symTable.lookupSymbol(*hostSym);
 
       assert(hsb && "Host symbol box not found");
       hlfir::Entity entity{hsb.getAddr()};
@@ -954,5 +963,23 @@ privatizeSymbol<fir::LocalitySpecifierOp, fir::LocalitySpecifierOperands>(
     fir::LocalitySpecifierOperands *clauseOps,
     std::optional<llvm::omp::Directive> dir,
     bool forceHeapAllocationForPrivateDynamicArrays, bool isLinear);
+
+llvm::SmallVector<const semantics::Symbol *>
+getCommonBlockStorageMembers(const semantics::Symbol &commonBlock) {
+  llvm::SmallVector<const semantics::Symbol *> members;
+  const semantics::Scope &scope = commonBlock.owner();
+  if (scope.equivalenceSets().empty()) {
+    for (const auto &object :
+         commonBlock.get<semantics::CommonBlockDetails>().objects())
+      members.push_back(&*object);
+    return members;
+  }
+  // An object EQUIVALENCEd with a member is in the block's storage without
+  // being in a COMMON statement, so look at every symbol of the scope.
+  for (const auto &[name, symbol] : scope)
+    if (semantics::FindCommonBlockContaining(*symbol) == &commonBlock)
+      members.push_back(&*symbol);
+  return members;
+}
 
 } // end namespace Fortran::lower

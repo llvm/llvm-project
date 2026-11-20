@@ -52,8 +52,8 @@ struct T thread_local t1;
 // CIR-GD-DAG: cir.global external tls_model = tls_dyn @x = #cir.int<0> : !s32i align(4)
 // CIR-GD-DAG: cir.global "private" internal tls_model = tls_dyn dso_local @_ZZ1fvE1y = #cir.int<0> : !s32i align(4)
 // CIR-GD-DAG: cir.global external tls_model = tls_init_exec @z = #cir.int<0> : !s32i align(4)
-// CIR-GD-DAG: cir.global external tls_model = tls_dyn tls_refs = <"_ZTW2s1", "_ZTH2s1"> @s1 = #cir.zero : !rec_S align(1) ast(#cir.var.decl.ast)
-// CIR-GD-DAG: cir.global external tls_model = tls_dyn tls_refs = <"_ZTW2t1", "_ZTH2t1"> @t1 = #cir.zero : !rec_T align(1) ast(#cir.var.decl.ast)
+// CIR-GD-DAG: cir.global external tls_model = tls_dyn @s1 = #cir.zero : !rec_S align(1) ast(#cir.var.decl.ast)
+// CIR-GD-DAG: cir.global external tls_model = tls_dyn @t1 = #cir.zero : !rec_T align(1) ast(#cir.var.decl.ast)
 // CIR-GD-DAG: cir.global internal tls_model = tls_dyn @__tls_guard = #cir.int<0> : !s8i align(1)
 
 // LLVM-GD-DAG: @z1 ={{.*}} global i32 0
@@ -76,8 +76,8 @@ struct T thread_local t1;
 // CIR-LD-DAG: cir.global external tls_model = tls_local_dyn @x = #cir.int<0> : !s32i align(4)
 // CIR-LD-DAG: cir.global "private" internal tls_model = tls_local_dyn dso_local @_ZZ1fvE1y = #cir.int<0> : !s32i align(4)
 // CIR-LD-DAG: cir.global external tls_model = tls_init_exec @z = #cir.int<0> : !s32i align(4)
-// CIR-LD-DAG: cir.global external tls_model = tls_local_dyn tls_refs = <"_ZTW2s1", "_ZTH2s1"> @s1 = #cir.zero : !rec_S align(1) ast(#cir.var.decl.ast)
-// CIR-LD-DAG: cir.global external tls_model = tls_local_dyn tls_refs = <"_ZTW2t1", "_ZTH2t1"> @t1 = #cir.zero : !rec_T align(1) ast(#cir.var.decl.ast)
+// CIR-LD-DAG: cir.global external tls_model = tls_local_dyn @s1 = #cir.zero : !rec_S align(1) ast(#cir.var.decl.ast)
+// CIR-LD-DAG: cir.global external tls_model = tls_local_dyn @t1 = #cir.zero : !rec_T align(1) ast(#cir.var.decl.ast)
 // CIR-LD-DAG: cir.global internal tls_model = tls_local_dyn @__tls_guard = #cir.int<0> : !s8i align(1)
 
 // LLVM-LD-DAG: @z1 ={{.*}} global i32 0
@@ -100,8 +100,8 @@ struct T thread_local t1;
 // CIR-IE-DAG: cir.global external tls_model = tls_init_exec @x = #cir.int<0> : !s32i align(4)
 // CIR-IE-DAG: cir.global "private" internal tls_model = tls_init_exec dso_local @_ZZ1fvE1y = #cir.int<0> : !s32i align(4)
 // CIR-IE-DAG: cir.global external tls_model = tls_init_exec @z = #cir.int<0> : !s32i align(4)
-// CIR-IE-DAG: cir.global external tls_model = tls_init_exec tls_refs = <"_ZTW2s1", "_ZTH2s1"> @s1 = #cir.zero : !rec_S align(1) ast(#cir.var.decl.ast)
-// CIR-IE-DAG: cir.global external tls_model = tls_init_exec tls_refs = <"_ZTW2t1", "_ZTH2t1"> @t1 = #cir.zero : !rec_T align(1) ast(#cir.var.decl.ast)
+// CIR-IE-DAG: cir.global external tls_model = tls_init_exec @s1 = #cir.zero : !rec_S align(1) ast(#cir.var.decl.ast)
+// CIR-IE-DAG: cir.global external tls_model = tls_init_exec @t1 = #cir.zero : !rec_T align(1) ast(#cir.var.decl.ast)
 // CIR-IE-DAG: cir.global internal tls_model = tls_init_exec @__tls_guard = #cir.int<0> : !s8i align(1)
 
 // LLVM-IE-DAG: @z1 ={{.*}} global i32 0
@@ -124,8 +124,8 @@ struct T thread_local t1;
 // CIR-LE-DAG: cir.global external tls_model = tls_local_exec @x = #cir.int<0> : !s32i align(4)
 // CIR-LE-DAG: cir.global "private" internal tls_model = tls_local_exec dso_local @_ZZ1fvE1y = #cir.int<0> : !s32i align(4)
 // CIR-LE-DAG: cir.global external tls_model = tls_init_exec @z = #cir.int<0> : !s32i align(4)
-// CIR-LE-DAG: cir.global external tls_model = tls_local_exec tls_refs = <"_ZTW2s1", "_ZTH2s1"> @s1 = #cir.zero : !rec_S align(1) ast(#cir.var.decl.ast)
-// CIR-LE-DAG: cir.global external tls_model = tls_local_exec tls_refs = <"_ZTW2t1", "_ZTH2t1"> @t1 = #cir.zero : !rec_T align(1) ast(#cir.var.decl.ast)
+// CIR-LE-DAG: cir.global external tls_model = tls_local_exec @s1 = #cir.zero : !rec_S align(1) ast(#cir.var.decl.ast)
+// CIR-LE-DAG: cir.global external tls_model = tls_local_exec @t1 = #cir.zero : !rec_T align(1) ast(#cir.var.decl.ast)
 // CIR-LE-DAG: cir.global internal tls_model = tls_local_exec @__tls_guard = #cir.int<0> : !s8i align(1)
 
 // LLVM-LE-DAG: @z1 ={{.*}} global i32 0

@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MachineCSE.h"
+#include "CodeGenOptions.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -60,18 +61,10 @@ STATISTIC(NumCrossBBCSEs,
           "Number of cross-MBB physreg referencing CS eliminated");
 STATISTIC(NumCommutes,  "Number of copies coalesced after commuting");
 
-// Threshold to avoid excessive cost to compute isProfitableToCSE.
-static cl::opt<int>
-    CSUsesThreshold("csuses-threshold", cl::Hidden, cl::init(1024),
-                    cl::desc("Threshold for the size of CSUses"));
-
-static cl::opt<bool> AggressiveMachineCSE(
-    "aggressive-machine-cse", cl::Hidden, cl::init(false),
-    cl::desc("Override the profitability heuristics for Machine CSE"));
-
 namespace {
 
 class MachineCSEImpl {
+  const CodeGenOptions &Opts;
   const TargetInstrInfo *TII = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
   MachineDominatorTree *DT = nullptr;
@@ -79,8 +72,9 @@ class MachineCSEImpl {
   MachineBlockFrequencyInfo *MBFI = nullptr;
 
 public:
-  MachineCSEImpl(MachineDominatorTree *DT, MachineBlockFrequencyInfo *MBFI)
-      : DT(DT), MBFI(MBFI) {}
+  MachineCSEImpl(const CodeGenOptions &Opts, MachineDominatorTree *DT,
+                 MachineBlockFrequencyInfo *MBFI)
+      : Opts(Opts), DT(DT), MBFI(MBFI) {}
   bool run(MachineFunction &MF);
 
 private:
@@ -202,7 +196,6 @@ bool MachineCSEImpl::PerformTrivialCopyPropagation(MachineInstr *MI,
 
     // Propagate SrcReg of copies to MI.
     MO.setReg(SrcReg);
-    MRI->clearKillFlags(SrcReg);
     // Coalesce single use copies.
     if (OnlyOneUse) {
       // If (and only if) we've eliminated all uses of the copy, also
@@ -435,7 +428,7 @@ bool MachineCSEImpl::isCSECandidate(MachineInstr *MI) {
 bool MachineCSEImpl::isProfitableToCSE(Register CSReg, Register Reg,
                                        MachineBasicBlock *CSBB,
                                        MachineInstr *MI) {
-  if (AggressiveMachineCSE)
+  if (Opts.machine_cse_aggressive)
     return true;
 
   // FIXME: Heuristics that works around the lack the live range splitting.
@@ -451,7 +444,7 @@ bool MachineCSEImpl::isProfitableToCSE(Register CSReg, Register Reg,
       CSUses.insert(&MI);
       // Too costly to compute if NumOfUses is very large. Conservatively assume
       // MayIncreasePressure to avoid spending too much time here.
-      if (++NumOfUses > CSUsesThreshold) {
+      if (++NumOfUses > Opts.machine_cse_csuses_threshold) {
         MayIncreasePressure = true;
         break;
       }
@@ -675,9 +668,7 @@ bool MachineCSEImpl::ProcessBlockCSE(MachineBasicBlock *MBB) {
         MachineInstr *Def = MRI->getUniqueVRegDef(NewReg);
         assert(Def != nullptr && "CSEd register has no unique definition?");
         Def->clearRegisterDeads(NewReg);
-        // Replace with NewReg and clear kill flags which may be wrong now.
         MRI->replaceRegWith(OldReg, NewReg);
-        MRI->clearKillFlags(NewReg);
       }
 
       // Go through implicit defs of CSMI and MI, if a def is not dead at MI,
@@ -698,17 +689,19 @@ bool MachineCSEImpl::ProcessBlockCSE(MachineBasicBlock *MBB) {
       // Since we eliminated MI, and reused a register imp-def'd by CSMI
       // (here %nzcv), that register, if it was killed before MI, should have
       // that kill flag removed, because it's lifetime was extended.
-      if (CSMI->getParent() == MI.getParent()) {
-        for (MachineBasicBlock::iterator II = CSMI, IE = &MI; II != IE; ++II)
+      auto ClearKills = [&](MachineBasicBlock::iterator II,
+                            MachineBasicBlock::iterator IE) {
+        for (; II != IE; ++II)
           for (auto ImplicitDef : ImplicitDefs)
             if (MachineOperand *MO = II->findRegisterUseOperand(
                     ImplicitDef, TRI, /*isKill=*/true))
               MO->setIsKill(false);
+      };
+      if (CSMI->getParent() == MBB) {
+        ClearKills(CSMI, MI);
       } else {
-        // If the instructions aren't in the same BB, bail out and clear the
-        // kill flag on all uses of the imp-def'd register.
-        for (auto ImplicitDef : ImplicitDefs)
-          MRI->clearKillFlags(ImplicitDef);
+        ClearKills(CSMI, CSMI->getParent()->end());
+        ClearKills(MBB->begin(), MI);
       }
 
       if (CrossMBBPhysDef) {
@@ -953,7 +946,7 @@ PreservedAnalyses MachineCSEPass::run(MachineFunction &MF,
   MachineDominatorTree &MDT = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
   MachineBlockFrequencyInfo &MBFI =
       MFAM.getResult<MachineBlockFrequencyAnalysis>(MF);
-  MachineCSEImpl Impl(&MDT, &MBFI);
+  MachineCSEImpl Impl(getCodeGenOptions(MF), &MDT, &MBFI);
   bool Changed = Impl.run(MF);
   if (!Changed)
     return PreservedAnalyses::all();
@@ -971,6 +964,6 @@ bool MachineCSELegacy::runOnMachineFunction(MachineFunction &MF) {
       getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   MachineBlockFrequencyInfo &MBFI =
       getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
-  MachineCSEImpl Impl(&MDT, &MBFI);
+  MachineCSEImpl Impl(getCodeGenOptions(MF), &MDT, &MBFI);
   return Impl.run(MF);
 }

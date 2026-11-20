@@ -24,9 +24,9 @@ body:             |
     ; CHECK-NEXT: FLAT_STORE_DWORDX2 $vgpr0_vgpr1, %2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s64))
     ; CHECK-NEXT: S_ENDPGM 0
     INLINEASM &"", attdialect, regdef:VGPR_32, def %0:vgpr_32, regdef-ec:VGPR_32, def early-clobber %1:vgpr_32
-    undef %2.sub0:vreg_64 = COPY killed %0
-    %2.sub1:vreg_64 = COPY killed %1
-    FLAT_STORE_DWORDX2 killed $vgpr0_vgpr1, killed %2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s64))
+    undef %2.sub0:vreg_64 = COPY %0
+    %2.sub1:vreg_64 = COPY %1
+    FLAT_STORE_DWORDX2 killed $vgpr0_vgpr1, %2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s64))
     S_ENDPGM 0
 
 ...
@@ -45,9 +45,9 @@ body:             |
     ; CHECK-NEXT: FLAT_STORE_DWORDX2 $vgpr0_vgpr1, %2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s64))
     ; CHECK-NEXT: S_ENDPGM 0
     INLINEASM &"", attdialect, regdef-ec:VGPR_32, def early-clobber %1:vgpr_32, regdef:VGPR_32, def %0:vgpr_32
-    undef %2.sub0:vreg_64 = COPY killed %0
-    %2.sub1:vreg_64 = COPY killed %1
-    FLAT_STORE_DWORDX2 killed $vgpr0_vgpr1, killed %2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s64))
+    undef %2.sub0:vreg_64 = COPY %0
+    %2.sub1:vreg_64 = COPY %1
+    FLAT_STORE_DWORDX2 killed $vgpr0_vgpr1, %2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s64))
     S_ENDPGM 0
 
 ...
@@ -66,9 +66,9 @@ body:             |
     ; CHECK-NEXT: FLAT_STORE_DWORDX2 $vgpr0_vgpr1, %2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s64))
     ; CHECK-NEXT: S_ENDPGM 0
     INLINEASM &"", attdialect, regdef:VGPR_32, def %1:vgpr_32, regdef-ec:VGPR_32, def early-clobber %0:vgpr_32
-    undef %2.sub0:vreg_64 = COPY killed %1
-    %2.sub1:vreg_64 = COPY killed %0
-    FLAT_STORE_DWORDX2 killed $vgpr0_vgpr1, killed %2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s64))
+    undef %2.sub0:vreg_64 = COPY %1
+    %2.sub1:vreg_64 = COPY %0
+    FLAT_STORE_DWORDX2 killed $vgpr0_vgpr1, %2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s64))
     S_ENDPGM 0
 
 ...
@@ -87,9 +87,9 @@ body:             |
     ; CHECK-NEXT: FLAT_STORE_DWORDX2 $vgpr0_vgpr1, %2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s64))
     ; CHECK-NEXT: S_ENDPGM 0
     INLINEASM &"", attdialect, regdef-ec:VGPR_32, def early-clobber %0:vgpr_32, regdef:VGPR_32, def %1:vgpr_32
-    undef %2.sub0:vreg_64 = COPY killed %1
-    %2.sub1:vreg_64 = COPY killed %0
-    FLAT_STORE_DWORDX2 killed $vgpr0_vgpr1, killed %2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s64))
+    undef %2.sub0:vreg_64 = COPY %1
+    %2.sub1:vreg_64 = COPY %0
+    FLAT_STORE_DWORDX2 killed $vgpr0_vgpr1, %2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s64))
     S_ENDPGM 0
 
 ...

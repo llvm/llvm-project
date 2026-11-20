@@ -7,19 +7,21 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/errno_macros.h"
+#include "src/__support/FPUtil/cast.h"
 #include "src/math/acospif16.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
 using LlvmLibcAcospif16Test = LIBC_NAMESPACE::testing::FPTest<float16>;
 TEST_F(LlvmLibcAcospif16Test, SpecialNumbers) {
+  using LIBC_NAMESPACE::fputil::cast;
   EXPECT_FP_IS_NAN(LIBC_NAMESPACE::acospif16(aNaN));
   EXPECT_MATH_ERRNO(0);
 
   EXPECT_FP_IS_NAN_WITH_EXCEPTION(LIBC_NAMESPACE::acospif16(sNaN), FE_INVALID);
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(zero, LIBC_NAMESPACE::acospif16(1.0f));
+  EXPECT_FP_EQ(zero, LIBC_NAMESPACE::acospif16(cast<float16>(1.0f)));
   EXPECT_MATH_ERRNO(0);
 
   EXPECT_FP_IS_NAN(LIBC_NAMESPACE::acospif16(inf));
@@ -28,9 +30,9 @@ TEST_F(LlvmLibcAcospif16Test, SpecialNumbers) {
   EXPECT_FP_IS_NAN(LIBC_NAMESPACE::acospif16(neg_inf));
   EXPECT_MATH_ERRNO(EDOM);
 
-  EXPECT_FP_IS_NAN(LIBC_NAMESPACE::acospif16(2.0f));
+  EXPECT_FP_IS_NAN(LIBC_NAMESPACE::acospif16(cast<float16>(2.0f)));
   EXPECT_MATH_ERRNO(EDOM);
 
-  EXPECT_FP_IS_NAN(LIBC_NAMESPACE::acospif16(-2.0f));
+  EXPECT_FP_IS_NAN(LIBC_NAMESPACE::acospif16(cast<float16>(-2.0f)));
   EXPECT_MATH_ERRNO(EDOM);
 }

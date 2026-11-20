@@ -4,12 +4,13 @@
 define amdgpu_ps void @uniform_fshr_i32(i32 inreg %lhs, i32 inreg %rhs, i32 inreg %amt, ptr %resptr) {
 ; CHECK-LABEL: uniform_fshr_i32:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    v_mov_b32_e32 v2, s2
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; CHECK-NEXT:    v_alignbit_b32 v2, s0, s1, v2.l
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v2
+; CHECK-NEXT:    s_mov_b32 s5, s0
+; CHECK-NEXT:    s_mov_b32 s4, s1
+; CHECK-NEXT:    s_and_b32 s0, s2, 31
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; CHECK-NEXT:    s_lshr_b64 s[0:1], s[4:5], s0
 ; CHECK-NEXT:    s_add_co_i32 s0, s0, s0
-; CHECK-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    v_mov_b32_e32 v2, s0
 ; CHECK-NEXT:    flat_store_b32 v[0:1], v2
 ; CHECK-NEXT:    s_endpgm

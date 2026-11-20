@@ -72,7 +72,8 @@ def CIR_CUDAVarRegistrationInfoAttr : CIR_Attr<"CUDAVarRegistrationInfo", "cu.va
     "bool":$isExtern,
     "bool":$isConstant,
     "bool":$isManaged,
-    "int32_t":$surfTexType
+    "int32_t":$surfTexType,
+    "bool":$normalized
   );
 
   let hasCustomAssemblyFormat = 1;
