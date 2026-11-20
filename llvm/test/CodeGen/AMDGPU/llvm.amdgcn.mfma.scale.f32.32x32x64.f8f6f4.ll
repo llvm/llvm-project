@@ -6500,8 +6500,7 @@ define amdgpu_kernel void @test_mfma_scale_f32_32x32x64_f8f6f4__vgprcd(<8 x i32>
 ; SDAG-NEXT:    v_mov_b64_e32 v[24:25], s[14:15]
 ; SDAG-NEXT:    v_mov_b64_e32 v[26:27], s[16:17]
 ; SDAG-NEXT:    v_mov_b64_e32 v[28:29], s[18:19]
-; SDAG-NEXT:    v_mov_b32_e32 v30, s20
-; SDAG-NEXT:    v_mov_b32_e32 v31, s21
+; SDAG-NEXT:    v_mov_b64_e32 v[30:31], s[20:21]
 ; SDAG-NEXT:    v_mov_b64_e32 v[32:33], s[22:23]
 ; SDAG-NEXT:    v_mov_b64_e32 v[2:3], s[38:39]
 ; SDAG-NEXT:    v_mov_b64_e32 v[4:5], s[40:41]
@@ -6569,8 +6568,7 @@ define amdgpu_kernel void @test_mfma_scale_f32_32x32x64_f8f6f4__vgprcd(<8 x i32>
 ; AGPR-SDAG-NEXT:    v_mov_b64_e32 v[24:25], s[14:15]
 ; AGPR-SDAG-NEXT:    v_mov_b64_e32 v[26:27], s[16:17]
 ; AGPR-SDAG-NEXT:    v_mov_b64_e32 v[28:29], s[18:19]
-; AGPR-SDAG-NEXT:    v_mov_b32_e32 v30, s20
-; AGPR-SDAG-NEXT:    v_mov_b32_e32 v31, s21
+; AGPR-SDAG-NEXT:    v_mov_b64_e32 v[30:31], s[20:21]
 ; AGPR-SDAG-NEXT:    v_mov_b64_e32 v[32:33], s[22:23]
 ; AGPR-SDAG-NEXT:    v_mov_b64_e32 v[2:3], s[38:39]
 ; AGPR-SDAG-NEXT:    v_mov_b64_e32 v[4:5], s[40:41]
@@ -6787,8 +6785,7 @@ define amdgpu_kernel void @test_mfma_scale_f32_32x32x64_f8f6f4_0_0__nonmac(<8 x 
 ; SDAG-NEXT:    v_mov_b64_e32 v[28:29], s[22:23]
 ; SDAG-NEXT:    s_load_dwordx16 s[8:23], s[4:5], 0x40
 ; SDAG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x80
-; SDAG-NEXT:    v_mov_b32_e32 v30, s24
-; SDAG-NEXT:    v_mov_b32_e32 v31, s25
+; SDAG-NEXT:    v_mov_b64_e32 v[30:31], s[24:25]
 ; SDAG-NEXT:    v_mov_b64_e32 v[32:33], s[26:27]
 ; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-NEXT:    v_mov_b64_e32 v[0:1], s[8:9]
@@ -6901,8 +6898,7 @@ define amdgpu_kernel void @test_mfma_scale_f32_32x32x64_f8f6f4_0_0__nonmac(<8 x 
 ; AGPR-SDAG-NEXT:    v_mov_b64_e32 v[12:13], s[22:23]
 ; AGPR-SDAG-NEXT:    s_load_dwordx16 s[8:23], s[4:5], 0x40
 ; AGPR-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x80
-; AGPR-SDAG-NEXT:    v_mov_b32_e32 v14, s24
-; AGPR-SDAG-NEXT:    v_mov_b32_e32 v15, s25
+; AGPR-SDAG-NEXT:    v_mov_b64_e32 v[14:15], s[24:25]
 ; AGPR-SDAG-NEXT:    v_mov_b64_e32 v[16:17], s[26:27]
 ; AGPR-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; AGPR-SDAG-NEXT:    v_accvgpr_write_b32 a0, s8

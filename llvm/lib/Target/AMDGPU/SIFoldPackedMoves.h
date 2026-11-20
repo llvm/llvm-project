@@ -1,5 +1,4 @@
-//===- SIFoldPackedMoves.h ---------------------------------------*- C++
-//-*-===//
+//===- SIFoldPackedMoves.h --------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,6 +17,10 @@ class SIFoldPackedMovesPass
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
+
+  MachineFunctionProperties getRequiredProperties() const {
+    return MachineFunctionProperties().setNoVRegs();
+  }
 };
 } // namespace llvm
 
