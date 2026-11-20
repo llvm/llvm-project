@@ -15,7 +15,6 @@
 
 #include "clang/Basic/OffloadArch.h"
 #include "clang/Basic/TargetInfo.h"
-#include "clang/Basic/TargetOptions.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -26,12 +25,15 @@ namespace targets {
 /// class obtain an offload architecture from the `-target-cpu` option, which
 /// is then accessible via getOffloadArch().
 class LLVM_LIBRARY_VISIBILITY OffloadTargetInfo : public TargetInfo {
-protected:
-  OffloadArch DeviceArch = OffloadArch::getUnused();
+  OffloadArch SelectedOffloadArch = OffloadArch::getUnused();
 
+protected:
   /// \return true if \p Arch is an offload device architecture this target
   /// should accept.
   virtual bool isSupportedOffloadArch(OffloadArch Arch) const { return false; }
+
+  /// Sets offload arch directly. Does not check isSupportedOffloadArch().
+  void setOffloadArch(OffloadArch Arch) { SelectedOffloadArch = Arch; }
 
 public:
   OffloadTargetInfo(const llvm::Triple &Triple) : TargetInfo(Triple) {}
@@ -44,11 +46,11 @@ public:
     OffloadArch Arch = StringToOffloadArch(Name);
     if (!isSupportedOffloadArch(Arch))
       return false;
-    DeviceArch = Arch;
+    setOffloadArch(Arch);
     return true;
   }
 
-  OffloadArch getOffloadArch() const override { return DeviceArch; }
+  OffloadArch getOffloadArch() const override { return SelectedOffloadArch; }
 };
 
 } // namespace targets
