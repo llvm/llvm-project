@@ -11225,6 +11225,8 @@ void ResolveNamesVisitor::ApplyAlignDirective(
         "'%s' must be a variable to be aligned with !DIR$ ALIGN"_err_en_US);
     return;
   }
+  // Detect duplicate (via iter->second) and the first use. Note that multiple
+  // align directives with the same alignment value are allowed.
   auto [iter, isFirstRequest]{
       specPartState_.requestedAlignments.emplace(&symbol, value)};
   if (iter->second != value) {
