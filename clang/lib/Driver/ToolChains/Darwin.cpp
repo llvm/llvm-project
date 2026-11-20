@@ -1141,6 +1141,11 @@ void AppleMachO::AddHIPIncludeArgs(const ArgList &DriverArgs,
   RocmInstallation->AddHIPIncludeArgs(DriverArgs, CC1Args);
 }
 
+void AppleMachO::AddHIPIncludeArgsLate(const ArgList &DriverArgs,
+                                       ArgStringList &CC1Args) const {
+  RocmInstallation->AddHIPIncludeArgsLate(DriverArgs, CC1Args);
+}
+
 void AppleMachO::addSYCLIncludeArgs(const ArgList &DriverArgs,
                                     ArgStringList &CC1Args) const {
   SYCLInstallation->addSYCLIncludeArgs(DriverArgs, CC1Args);

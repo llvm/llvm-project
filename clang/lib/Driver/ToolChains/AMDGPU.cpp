@@ -614,18 +614,34 @@ void RocmInstallationDetector::AddHIPIncludeArgs(const ArgList &DriverArgs,
     return;
   }
 
-  CC1Args.push_back("-idirafter");
-  CC1Args.push_back(DriverArgs.MakeArgString(getIncludePath()));
-  SmallString<128> LibHipCxxPath(getIncludePath());
-  llvm::sys::path::append(LibHipCxxPath, "libhipcxx");
-  if (D.getVFS().exists(LibHipCxxPath)) {
-    CC1Args.push_back("-idirafter");
-    CC1Args.push_back(DriverArgs.MakeArgString(LibHipCxxPath));
-  }
+  // The ROCm toolkit include path (e.g. /opt/rocm/include) is added later
+  // by AddHIPIncludeArgsLate, which is called after C++ stdlib headers but
+  // before C system headers. This positional ordering ensures ROCm headers
+  // beat distro-installed HIP headers in /usr/include without breaking
+  // C++ #include_next chains.
   if (UsesRuntimeWrapper)
     CC1Args.append({"-include", "__clang_hip_runtime_wrapper.h"});
   if (HasHipStdPar)
     HandleHipStdPar();
+}
+
+void RocmInstallationDetector::AddHIPIncludeArgsLate(
+    const ArgList &DriverArgs, ArgStringList &CC1Args) const {
+  if (!DriverArgs.hasFlag(options::OPT_offload_inc, options::OPT_no_offload_inc,
+                          true))
+    return;
+  if (!hasHIPRuntime())
+    return;
+
+  StringRef IncPath = getIncludePath();
+  CC1Args.push_back("-internal-isystem");
+  CC1Args.push_back(DriverArgs.MakeArgString(IncPath));
+  SmallString<128> LibHipCxxPath(IncPath);
+  llvm::sys::path::append(LibHipCxxPath, "libhipcxx");
+  if (D.getVFS().exists(LibHipCxxPath)) {
+    CC1Args.push_back("-internal-isystem");
+    CC1Args.push_back(DriverArgs.MakeArgString(LibHipCxxPath));
+  }
 }
 
 void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
@@ -1337,6 +1353,13 @@ void AMDGPUToolChain::AddHIPIncludeArgs(const ArgList &DriverArgs,
   }
 
   RocmInstallation->AddHIPIncludeArgs(DriverArgs, CC1Args);
+}
+
+void AMDGPUToolChain::AddHIPIncludeArgsLate(const ArgList &DriverArgs,
+                                            ArgStringList &CC1Args) const {
+  if (getTriple().getEnvironment() == llvm::Triple::LLVM)
+    return;
+  RocmInstallation->AddHIPIncludeArgsLate(DriverArgs, CC1Args);
 }
 
 VersionTuple AMDGPUToolChain::computeMSVCVersion(const Driver *D,

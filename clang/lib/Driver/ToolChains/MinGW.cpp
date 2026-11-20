@@ -670,6 +670,11 @@ void toolchains::MinGW::AddHIPIncludeArgs(const ArgList &DriverArgs,
   RocmInstallation->AddHIPIncludeArgs(DriverArgs, CC1Args);
 }
 
+void toolchains::MinGW::AddHIPIncludeArgsLate(const ArgList &DriverArgs,
+                                              ArgStringList &CC1Args) const {
+  RocmInstallation->AddHIPIncludeArgsLate(DriverArgs, CC1Args);
+}
+
 void toolchains::MinGW::printVerboseInfo(raw_ostream &OS) const {
   CudaInstallation->print(OS);
   RocmInstallation->print(OS);
