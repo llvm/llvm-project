@@ -13,14 +13,9 @@ define void @chrome(ptr noalias sret(%struct.aaa) %arg) local_unnamed_addr #0 al
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr [[ARG:%.*]], align 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i8 [[TMP4]], 0
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[BB7:%.*]], label [[BB14:%.*]]
-; CHECK:       bb7:
-; CHECK-NEXT:    store i8 0, ptr [[ARG]], align 1
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp ne i8 0, 0
-; CHECK-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], i1 true, i1 false
-; CHECK-NEXT:    br i1 [[TMP10]], label [[BB12:%.*]], label [[BB12]]
 ; CHECK:       bb12:
-; CHECK-NEXT:    [[TMP94:%.*]] = phi i1 [ [[TMP9]], [[BB7]] ], [ [[TMP9]], [[BB7]] ]
-; CHECK-NEXT:    br i1 [[TMP94]], label [[BB14]], label [[BB13]]
+; CHECK-NEXT:    store i8 0, ptr [[ARG]], align 1
+; CHECK-NEXT:    br label [[BB13]]
 ; CHECK:       bb13:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb14:
