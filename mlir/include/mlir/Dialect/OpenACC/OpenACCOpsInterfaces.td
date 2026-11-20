@@ -98,10 +98,6 @@ def GlobalVariableOpInterface : OpInterface<"GlobalVariableOpInterface"> {
       "isCompilerGenerated", (ins), [{
         return false;
       }]>,
-    InterfaceMethod<"Check if the global variable has internal linkage", "bool",
-      "isInternalLinkage", (ins), [{
-        return false;
-      }]>,
   ];
 }
 
