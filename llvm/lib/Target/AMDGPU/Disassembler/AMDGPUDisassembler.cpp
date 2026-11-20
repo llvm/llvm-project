@@ -586,8 +586,15 @@ DecodeStatus AMDGPUDisassembler::tryDecodeInst(const uint8_t *Table, MCInst &MI,
 
   DecodeStatus Res =
       decodeInstruction(Table, TmpInst, Inst, Address, this, STI);
-  if (Res != MCDisassembler::Fail && !decodeImmOperands(TmpInst, *MCII))
-    Res = MCDisassembler::Fail;
+
+  if (Res != MCDisassembler::Fail) {
+    // In case its a dual issue MADK instruction, add the immX operand position
+    // before decoding it
+    if (AMDGPU::hasNamedOperand(TmpInst.getOpcode(), AMDGPU::OpName::immX))
+      convertFMAanyK(TmpInst);
+    if (!decodeImmOperands(TmpInst, *MCII))
+      Res = MCDisassembler::Fail;
+  }
 
   CommentStream = nullptr;
 
@@ -646,6 +653,10 @@ bool AMDGPUDisassembler::decodeImmOperands(MCInst &MI,
   for (auto [OpNo, OpDesc] : enumerate(Desc.operands())) {
     if (OpNo >= MI.getNumOperands())
       continue;
+
+    // Skip decoding a KImm operand
+    if (AMDGPU::isKImmOperand(Desc, OpNo))
+        continue;
 
     // TODO: Fix V_DUAL_FMAMK_F32_X_FMAAK_F32_gfx12 vsrc operands,
     // defined to take VGPR_32, but in reality allowing inline constants.
@@ -1084,10 +1095,6 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
         AMDGPU::OpName::vdst_in);
     }
   }
-
-  bool IsSOPK = SIInstrFlags::isSOPK(*MCII, MI);
-  if (AMDGPU::hasNamedOperand(MI.getOpcode(), AMDGPU::OpName::imm) && !IsSOPK)
-    convertFMAanyK(MI);
 
   // Some VOPC instructions, e.g., v_cmpx_f_f64, use VOP3 encoding and
   // have EXEC as implicit destination. Issue a warning if encoding for
