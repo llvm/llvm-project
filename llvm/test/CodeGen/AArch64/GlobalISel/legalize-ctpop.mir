@@ -488,3 +488,4 @@ body:             |
     %1:_(<2 x i32>) = G_CTPOP %0(<2 x i32>)
     $d0 = COPY %1(<2 x i32>)
     RET_ReallyLR implicit $d0
+...

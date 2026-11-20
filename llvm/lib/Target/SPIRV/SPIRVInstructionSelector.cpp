@@ -329,6 +329,9 @@ private:
   bool selectQuadSwap(Register ResVReg, SPIRVTypeInst ResType, MachineInstr &I,
                       unsigned Direction) const;
 
+  bool selectQuadAll(Register ResVReg, SPIRVTypeInst ResType,
+                     MachineInstr &I) const;
+
   bool selectConst(Register ResVReg, SPIRVTypeInst ResType,
                    MachineInstr &I) const;
 
@@ -600,12 +603,14 @@ void SPIRVInstructionSelector::resetVRegsType(MachineFunction &MF) {
   for (unsigned I = 0, E = MRI.getNumVirtRegs(); I != E; ++I) {
     Register Reg = Register::index2VirtReg(I);
     LLT RegType = MRI.getType(Reg);
+    LLT ScalarTy =
+        RegType.isFloatOrFloatVector() ? LLT::float64() : LLT::integer(64);
     if (RegType.isScalar())
-      MRI.setType(Reg, LLT::scalar(64));
+      MRI.setType(Reg, ScalarTy);
     else if (RegType.isPointer())
       MRI.setType(Reg, LLT::pointer(0, 64));
     else if (RegType.isVector())
-      MRI.setType(Reg, LLT::fixed_vector(2, LLT::scalar(64)));
+      MRI.setType(Reg, LLT::fixed_vector(2, ScalarTy));
   }
   for (const auto &MBB : MF) {
     for (const auto &MI : MBB) {
@@ -1659,11 +1664,7 @@ bool SPIRVInstructionSelector::selectFrexp(Register ResVReg,
       continue;
 
     MachineIRBuilder MIRBuilder(I);
-    // An unused exponent def has no SPIR-V type.
-    SPIRVTypeInst PointeeTy = GR.getOrCreateSPIRVIntegerType(32, I, TII);
-    unsigned N = GR.getScalarOrVectorComponentCount(ResType);
-    if (N > 1)
-      PointeeTy = GR.getOrCreateSPIRVVectorType(PointeeTy, N, I, TII);
+    SPIRVTypeInst PointeeTy = GR.getSPIRVTypeForVReg(I.getOperand(1).getReg());
     const SPIRVTypeInst PointerType = GR.getOrCreateSPIRVPointerType(
         PointeeTy, MIRBuilder, SPIRV::StorageClass::Function);
     Register PointerVReg =
@@ -1711,17 +1712,6 @@ bool SPIRVInstructionSelector::selectLdexp(Register ResVReg,
                                            MachineInstr &I) const {
   Register XReg = I.getOperand(1).getReg();
   Register ExpReg = I.getOperand(2).getReg();
-
-  // Both OpenCL.std ldexp and GLSL.std.450 Ldexp require the exponent to have
-  // the same number of components as the result, but G_FLDEXP's exponent is
-  // scalar even for vector operands. Splat it when the result is a vector.
-  SPIRVTypeInst ExpType = GR.getSPIRVTypeForVReg(ExpReg);
-  if (ResType->getOpcode() == SPIRV::OpTypeVector &&
-      ExpType->getOpcode() != SPIRV::OpTypeVector) {
-    unsigned NumElts = ResType->getOperand(2).getImm();
-    ExpReg = buildVectorSplat(ExpReg, NumElts, I);
-  }
-
   return selectExtInst(ResVReg, ResType, I, CL::ldexp, GL::Ldexp,
                        /*setMIFlags=*/true, /*useMISrc=*/false, {XReg, ExpReg});
 }
@@ -2776,13 +2766,14 @@ bool SPIRVInstructionSelector::selectUnmergeValues(MachineInstr &I) const {
 
 bool SPIRVInstructionSelector::selectFence(MachineInstr &I) const {
   AtomicOrdering AO = AtomicOrdering(I.getOperand(0).getImm());
+  // In the kernel environment image ordering is requested explicitly via
+  // CLK_IMAGE_MEM_FENCE, so a fence covers only pointer-addressable memory.
   uint32_t ScSem = STI.isShader()
                        ? SPIRV::MemorySemantics::UniformMemory |
                              SPIRV::MemorySemantics::WorkgroupMemory |
                              SPIRV::MemorySemantics::ImageMemory
                        : SPIRV::MemorySemantics::WorkgroupMemory |
-                             SPIRV::MemorySemantics::CrossWorkgroupMemory |
-                             SPIRV::MemorySemantics::ImageMemory;
+                             SPIRV::MemorySemantics::CrossWorkgroupMemory;
   uint32_t MemSem = getMemSemanticsWithStorageClass(
       STI.getTargetTriple(), static_cast<uint32_t>(getMemSemantics(AO)), ScSem);
   Register MemSemReg = buildI32ConstantInEntryBlock(MemSem, I);
@@ -4142,6 +4133,28 @@ bool SPIRVInstructionSelector::selectQuadSwap(Register ResVReg,
   return true;
 }
 
+bool SPIRVInstructionSelector::selectQuadAll(Register ResVReg,
+                                             SPIRVTypeInst ResType,
+                                             MachineInstr &I) const {
+  if (STI.canUseExtension(SPIRV::Extension::SPV_KHR_quad_control))
+    return selectOpWithSrcs(ResVReg, ResType, I, {I.getOperand(2).getReg()},
+                            SPIRV::OpGroupNonUniformQuadAllKHR);
+
+  Register Result = I.getOperand(2).getReg();
+  for (unsigned Direction = 0; Direction != 3; ++Direction) {
+    Register QuadValue = createVirtualRegister(ResType, &GR, MRI, MRI->getMF());
+    Register Next =
+        Direction == 2 ? ResVReg
+                       : createVirtualRegister(ResType, &GR, MRI, MRI->getMF());
+    if (!selectQuadSwap(QuadValue, ResType, I, Direction) ||
+        !selectOpWithSrcs(Next, ResType, I, {Result, QuadValue},
+                          SPIRV::OpLogicalAnd))
+      return false;
+    Result = Next;
+  }
+  return true;
+}
+
 bool SPIRVInstructionSelector::selectBitreverseViaI32(Register ResVReg,
                                                       SPIRVTypeInst ResType,
                                                       MachineInstr &I,
@@ -4891,8 +4904,7 @@ bool SPIRVInstructionSelector::selectSelect(Register ResVReg,
 
   bool IsFloatTy =
       GR.isScalarOrVectorOfType(SelectFirstArg, SPIRV::OpTypeFloat);
-  bool IsPtrTy =
-      GR.isScalarOrVectorOfType(SelectFirstArg, SPIRV::OpTypePointer);
+  bool IsPtrTy = GR.getScalarOrVectorComponentType(ResType).isPointer();
 
   Register CondReg = I.getOperand(1).getReg();
   bool IsScalarBool = GR.isScalarOfType(CondReg, SPIRV::OpTypeBool);
@@ -5927,12 +5939,7 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_wave_prefix_product:
     return selectWaveExclusiveScanProduct(ResVReg, ResType, I);
   case Intrinsic::spv_quad_all:
-    BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpGroupNonUniformQuadAllKHR))
-        .addDef(ResVReg)
-        .addUse(GR.getSPIRVTypeID(ResType))
-        .addUse(I.getOperand(2).getReg())
-        .constrainAllUses(TII, TRI, RBI);
-    return true;
+    return selectQuadAll(ResVReg, ResType, I);
   case Intrinsic::spv_quad_read_across_x: {
     return selectQuadSwap(ResVReg, ResType, I, /*Direction*/ 0);
   }
@@ -6821,7 +6828,6 @@ bool SPIRVInstructionSelector::selectResourceGetPointer(Register &ResVReg,
   }
 
   assert(ResType->getOpcode() == SPIRV::OpTypePointer);
-  MachineIRBuilder MIRBuilder(I);
 
   Register ZeroReg =
       buildZerosVal(GR.getOrCreateSPIRVIntegerType(32, I, TII), I);

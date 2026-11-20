@@ -4275,6 +4275,18 @@ func.func @omp_iterator_negative_step(%s2 : !llvm.struct<(ptr, i64)>) -> () {
   return
 }
 
+// CHECK-LABEL: func.func @omp_iterator_inclusive_wide
+func.func @omp_iterator_inclusive_wide(%hi : i128, %st : i128) -> () {
+  // CHECK: omp.iterator(%[[IV:.*]]: i128) = (%{{.*}} to %{{.*}} step %{{.*}}) {
+  // CHECK:   omp.yield(%[[IV]] : i128)
+  // CHECK: } inclusive -> !omp.iterated<i128>
+  %lb = arith.constant 0 : i128
+  %0 = omp.iterator(%iv: i128) = (%lb to %hi step %st) {
+    omp.yield(%iv : i128)
+  } inclusive -> !omp.iterated<i128>
+  return
+}
+
 // CHECK-LABEL: func.func @omp_iterator_multi_block
 func.func @omp_iterator_multi_block(%a : !llvm.ptr, %b : !llvm.ptr) -> () {
   // CHECK: omp.iterator(%[[IV:.*]]: index) = (%{{.*}} to %{{.*}} step %{{.*}}) {

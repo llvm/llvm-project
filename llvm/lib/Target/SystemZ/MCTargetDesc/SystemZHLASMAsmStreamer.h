@@ -32,8 +32,11 @@ namespace llvm {
 class MCSymbolGOFF;
 
 class SystemZHLASMAsmStreamer final : public MCAsmBaseStreamer {
+  // The full length of a line.
   constexpr static size_t InstLimit = 80;
+  // The column which contains the indicator that the line is continued.
   constexpr static size_t ContIndicatorColumn = 72;
+  // The start column of a contined line.
   constexpr static size_t ContStartColumn = 15;
   constexpr static size_t ContLen = ContIndicatorColumn - ContStartColumn;
   constexpr static size_t MaxXLLen = 256;

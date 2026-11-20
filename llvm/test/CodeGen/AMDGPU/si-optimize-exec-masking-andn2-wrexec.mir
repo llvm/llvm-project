@@ -26,7 +26,7 @@
   !8 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
   !9 = !DILocation(line: 1, column: 1, scope: !4)
   !10 = !{!7}
-
+...
 ---
 name:            fold_adjacent
 tracksRegLiveness: true

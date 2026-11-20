@@ -550,6 +550,25 @@ public:
     llvm_unreachable("unknown register class");
   }
 
+  InstructionCost
+  getRegisterClassSpillCost(unsigned ClassID,
+                            TTI::TargetCostKind CostKind) const override {
+    // Unlike scalar spills, spilling a vector register requires materializing
+    // the address of the spill slot in addition to the store itself, as there
+    // is no vector store with a frame index addressing mode.
+    if (ClassID == RISCVRegisterClass::VRRC)
+      return 2 * TTI::TCC_Basic;
+    return TTI::TCC_Basic;
+  }
+
+  InstructionCost
+  getRegisterClassReloadCost(unsigned ClassID,
+                             TTI::TargetCostKind CostKind) const override {
+    if (ClassID == RISCVRegisterClass::VRRC)
+      return 2 * TTI::TCC_Basic;
+    return TTI::TCC_Basic;
+  }
+
   bool isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
                      const TargetTransformInfo::LSRCost &C2) const override;
 

@@ -843,11 +843,9 @@ static bool IsInRange(const Expr<T> &expr, int lb, int ub) {
 template <int lb, int ub>
 static bool VerifyInRangeIfReal(
     const std::vector<Expr<SomeType>> &args, FoldingContext &context) {
-  if (const auto *someReal{
-          std::get_if<Expr<SomeReal>>(&GetArg(firstArg, args).u)}) {
-    bool isInRange{
-        std::visit([&](const auto &x) -> bool { return IsInRange(x, lb, ub); },
-            someReal->u)};
+  if (const auto *someReal{std::get_if<Expr<Type<TypeCategory::Real>>>(
+          &GetArg(firstArg, args).u)}) {
+    bool isInRange{IsInRange(*someReal, lb, ub)};
     if (!isInRange) {
       context.messages().Say(
           "argument is out of range [%d., %d.]"_warn_en_US, lb, ub);
@@ -860,17 +858,13 @@ static bool VerifyInRangeIfReal(
 template <int argPosition, const char *argName>
 static bool VerifyStrictlyPositiveIfReal(
     const std::vector<Expr<SomeType>> &args, FoldingContext &context) {
-  if (const auto *someReal =
-          std::get_if<Expr<SomeReal>>(&GetArg(argPosition, args).u)) {
-    const bool isStrictlyPositive{std::visit(
-        [&](const auto &x) -> bool {
-          using T = typename std::decay_t<decltype(x)>::Result;
-          const int kind{x.kind()};
-          auto scalar{GetScalarConstantValue<T>(kind, x)};
-          return Satisfies(
-              RelationalOperator::LT, Scalar<T>::Zero(kind).Compare(*scalar));
-        },
-        someReal->u)};
+  if (const auto *someReal = std::get_if<Expr<Type<TypeCategory::Real>>>(
+          &GetArg(argPosition, args).u)) {
+    using T = Type<TypeCategory::Real>;
+    const int kind{someReal->kind()};
+    auto scalar{GetScalarConstantValue<T>(kind, *someReal)};
+    const bool isStrictlyPositive{Satisfies(
+        RelationalOperator::LT, Scalar<T>::Zero(kind).Compare(*scalar))};
     if (!isStrictlyPositive) {
       context.messages().Say(
           "argument '%s' must be strictly positive"_warn_en_US, argName);
@@ -884,15 +878,10 @@ static bool VerifyStrictlyPositiveIfReal(
 template <int argPosition, const char *argName>
 static bool VerifyNotZeroIfReal(
     const std::vector<Expr<SomeType>> &args, FoldingContext &context) {
-  if (const auto *someReal =
-          std::get_if<Expr<SomeReal>>(&GetArg(argPosition, args).u)) {
-    const bool isNotZero{std::visit(
-        [&](const auto &x) -> bool {
-          using T = typename std::decay_t<decltype(x)>::Result;
-          auto scalar{GetScalarConstantValue<T>(x)};
-          return !scalar || !scalar->IsZero();
-        },
-        someReal->u)};
+  if (const auto *someReal = std::get_if<Expr<Type<TypeCategory::Real>>>(
+          &GetArg(argPosition, args).u)) {
+    auto scalar{GetScalarConstantValue<Type<TypeCategory::Real>>(*someReal)};
+    const bool isNotZero{!scalar || !scalar->IsZero()};
     if (!isNotZero) {
       context.messages().Say(
           "argument '%s' must be different from zero"_warn_en_US, argName);
@@ -905,15 +894,11 @@ static bool VerifyNotZeroIfReal(
 /// Verify that the argument in an intrinsic call is not zero if is complex.
 static bool VerifyNotZeroIfComplex(
     const std::vector<Expr<SomeType>> &args, FoldingContext &context) {
-  if (const auto *someComplex =
-          std::get_if<Expr<SomeComplex>>(&GetArg(firstArg, args).u)) {
-    const bool isNotZero{std::visit(
-        [&](const auto &z) -> bool {
-          using T = typename std::decay_t<decltype(z)>::Result;
-          auto scalar{GetScalarConstantValue<T>(z)};
-          return !scalar || !scalar->IsZero();
-        },
-        someComplex->u)};
+  if (const auto *someComplex = std::get_if<Expr<Type<TypeCategory::Complex>>>(
+          &GetArg(firstArg, args).u)) {
+    auto scalar{
+        GetScalarConstantValue<Type<TypeCategory::Complex>>(*someComplex)};
+    const bool isNotZero{!scalar || !scalar->IsZero()};
     if (!isNotZero) {
       context.messages().Say(
           "complex argument must be different from zero"_warn_en_US);
@@ -927,20 +912,13 @@ static bool VerifyNotZeroIfComplex(
 // integer.
 static bool VerifyGammaLikeArgument(
     const std::vector<Expr<SomeType>> &args, FoldingContext &context) {
-  if (const auto *someReal =
-          std::get_if<Expr<SomeReal>>(&GetArg(firstArg, args).u)) {
-    const bool isValid{std::visit(
-        [&](const auto &x) -> bool {
-          using T = typename std::decay_t<decltype(x)>::Result;
-          auto scalar{GetScalarConstantValue<T>(x)};
-          if (scalar) {
-            return !scalar->IsZero() &&
-                !(scalar->IsNegative() &&
-                    scalar->ToWholeNumber().value == scalar);
-          }
-          return true;
-        },
-        someReal->u)};
+  if (const auto *someReal = std::get_if<Expr<Type<TypeCategory::Real>>>(
+          &GetArg(firstArg, args).u)) {
+    auto scalar{GetScalarConstantValue<Type<TypeCategory::Real>>(*someReal)};
+    const bool isValid{!scalar ||
+        (!scalar->IsZero() &&
+            !(scalar->IsNegative() &&
+                scalar->ToWholeNumber().value == scalar))};
     if (!isValid) {
       context.messages().Say(
           "argument must not be a negative integer or zero"_warn_en_US);
@@ -953,20 +931,12 @@ static bool VerifyGammaLikeArgument(
 // Verify that two real arguments are not both zero.
 static bool VerifyAtan2LikeArguments(
     const std::vector<Expr<SomeType>> &args, FoldingContext &context) {
-  if (const auto *someReal =
-          std::get_if<Expr<SomeReal>>(&GetArg(firstArg, args).u)) {
-    const bool isValid{std::visit(
-        [&](const auto &typedExpr) -> bool {
-          using T = typename std::decay_t<decltype(typedExpr)>::Result;
-          auto x{GetScalarConstantValue<T>(typedExpr)};
-          auto y{GetScalarConstantValue<T>(
-              typedExpr.kind(), GetArg(lastArg, args))};
-          if (x && y) {
-            return !(x->IsZero() && y->IsZero());
-          }
-          return true;
-        },
-        someReal->u)};
+  if (const auto *someReal = std::get_if<Expr<Type<TypeCategory::Real>>>(
+          &GetArg(firstArg, args).u)) {
+    auto x{GetScalarConstantValue<Type<TypeCategory::Real>>(*someReal)};
+    auto y{GetScalarConstantValue<Type<TypeCategory::Real>>(
+        someReal->kind(), GetArg(lastArg, args))};
+    const bool isValid{!(x && y) || !(x->IsZero() && y->IsZero())};
     if (!isValid) {
       context.messages().Say(
           "'x' and 'y' arguments must not be both zero"_warn_en_US);

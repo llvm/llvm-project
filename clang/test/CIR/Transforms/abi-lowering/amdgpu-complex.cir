@@ -1,0 +1,135 @@
+// RUN: cir-opt %s -cir-call-conv-lowering=target=amdgpu | FileCheck %s
+
+// Checks that CallConvLowering under target=amdgpu passes a _Complex wider
+// than 64 bits as its two parts.
+
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+
+// Anonymous record aliases are numbered in the order they are printed, so
+// capture each pair rather than naming it.
+// CHECK-DAG: ![[F64PAIR:rec_anon_struct[0-9]*]] = !cir.struct<{data !cir.double, data !cir.double}>
+// CHECK-DAG: ![[I64PAIR:rec_anon_struct[0-9]*]] = !cir.struct<{data !s64i, data !s64i}>
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>,
+    #dlti.dl_entry<f32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<f64, dense<64>: vector<2xi64>>>
+} {
+
+  // A _Complex double fits the register budget, so it is split into its real
+  // and imaginary parts. The callee rebuilds the value from the two halves.
+  cir.func @take_cdouble(%arg0: !cir.complex<!cir.double>) requires_call_conv_lowering {
+    %0 = cir.alloca "c" align(8) : !cir.ptr<!cir.complex<!cir.double>>
+    cir.store %arg0, %0 : !cir.complex<!cir.double>, !cir.ptr<!cir.complex<!cir.double>>
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_cdouble(%[[RE:[^:]*]]: !cir.double, %[[IM:[^:]*]]: !cir.double) {
+  // CHECK-NEXT: %[[SLOT:.*]] = cir.alloca "coerce" align(8) : !cir.ptr<![[F64PAIR]]>
+  // CHECK-NEXT: %[[RE_PTR:.*]] = cir.get_member %[[SLOT]][0] {name = ""} : !cir.ptr<![[F64PAIR]]> -> !cir.ptr<!cir.double>
+  // CHECK-NEXT: cir.store %[[RE]], %[[RE_PTR]] : !cir.double, !cir.ptr<!cir.double>
+  // CHECK-NEXT: %[[IM_PTR:.*]] = cir.get_member %[[SLOT]][1] {name = ""} : !cir.ptr<![[F64PAIR]]> -> !cir.ptr<!cir.double>
+  // CHECK-NEXT: cir.store %[[IM]], %[[IM_PTR]] : !cir.double, !cir.ptr<!cir.double>
+  // CHECK-NEXT: %[[C_PTR:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<![[F64PAIR]]> -> !cir.ptr<!cir.complex<!cir.double>>
+  // CHECK-NEXT: %[[C:.*]] = cir.load %[[C_PTR]] : !cir.ptr<!cir.complex<!cir.double>>, !cir.complex<!cir.double>
+  // CHECK-NEXT: %[[C_LOCAL:.*]] = cir.alloca "c" align(8) : !cir.ptr<!cir.complex<!cir.double>>
+  // CHECK-NEXT: cir.store %[[C]], %[[C_LOCAL]] : !cir.complex<!cir.double>, !cir.ptr<!cir.complex<!cir.double>>
+  // CHECK-NEXT: cir.return
+
+  // An integer _Complex wider than 64 bits is split the same way.
+  cir.func @take_clong(%arg0: !cir.complex<!s64i>) requires_call_conv_lowering {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_clong(%[[RE:[^:]*]]: !s64i, %[[IM:[^:]*]]: !s64i) {
+  // CHECK-NEXT: %[[SLOT:.*]] = cir.alloca "coerce" align(8) : !cir.ptr<![[I64PAIR]]>
+  // CHECK-NEXT: %[[RE_PTR:.*]] = cir.get_member %[[SLOT]][0] {name = ""} : !cir.ptr<![[I64PAIR]]> -> !cir.ptr<!s64i>
+  // CHECK-NEXT: cir.store %[[RE]], %[[RE_PTR]] : !s64i, !cir.ptr<!s64i>
+  // CHECK-NEXT: %[[IM_PTR:.*]] = cir.get_member %[[SLOT]][1] {name = ""} : !cir.ptr<![[I64PAIR]]> -> !cir.ptr<!s64i>
+  // CHECK-NEXT: cir.store %[[IM]], %[[IM_PTR]] : !s64i, !cir.ptr<!s64i>
+  // CHECK-NEXT: %[[C_PTR:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<![[I64PAIR]]> -> !cir.ptr<!cir.complex<!s64i>>
+  // CHECK-NEXT: %{{.*}} = cir.load %[[C_PTR]] : !cir.ptr<!cir.complex<!s64i>>, !cir.complex<!s64i>
+  // CHECK-NEXT: cir.return
+
+  // A _Complex of 64 bits or less is still packed into a pair of i32.
+  cir.func @take_cfloat(%arg0: !cir.complex<!cir.float>) requires_call_conv_lowering {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_cfloat(%[[ARR:[^:]*]]: !cir.array<!u32i x 2>) {
+  // CHECK-NEXT: %[[SLOT:.*]] = cir.alloca "coerce" align(4) : !cir.ptr<!cir.array<!u32i x 2>>
+  // CHECK-NEXT: cir.store %[[ARR]], %[[SLOT]] : !cir.array<!u32i x 2>, !cir.ptr<!cir.array<!u32i x 2>>
+  // CHECK-NEXT: %[[C_PTR:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!cir.array<!u32i x 2>> -> !cir.ptr<!cir.complex<!cir.float>>
+  // CHECK-NEXT: %{{.*}} = cir.load %[[C_PTR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
+  // CHECK-NEXT: cir.return
+
+  // A return is not split. It comes back whole as the same pair.
+  cir.func @ret_cdouble(%arg0: !cir.ptr<!cir.complex<!cir.double>>) -> !cir.complex<!cir.double> requires_call_conv_lowering {
+    %0 = cir.load %arg0 : !cir.ptr<!cir.complex<!cir.double>>, !cir.complex<!cir.double>
+    cir.return %0 : !cir.complex<!cir.double>
+  }
+
+  // CHECK: cir.func{{.*}} @ret_cdouble(%[[SRC:[^:]*]]: !cir.ptr<!cir.complex<!cir.double>>) -> ![[F64PAIR]] {
+  // CHECK-NEXT: %[[SLOT:.*]] = cir.alloca "coerce" align(8) : !cir.ptr<!cir.complex<!cir.double>>
+  // CHECK-NEXT: %[[C:.*]] = cir.load %[[SRC]] : !cir.ptr<!cir.complex<!cir.double>>, !cir.complex<!cir.double>
+  // CHECK-NEXT: cir.store %[[C]], %[[SLOT]] : !cir.complex<!cir.double>, !cir.ptr<!cir.complex<!cir.double>>
+  // CHECK-NEXT: %[[PAIR_PTR:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!cir.complex<!cir.double>> -> !cir.ptr<![[F64PAIR]]>
+  // CHECK-NEXT: %[[PAIR:.*]] = cir.load %[[PAIR_PTR]] : !cir.ptr<![[F64PAIR]]>, ![[F64PAIR]]
+  // CHECK-NEXT: cir.return %[[PAIR]] : ![[F64PAIR]]
+
+  // The call site passes the two halves of the operand.
+  cir.func @call_cdouble() requires_call_conv_lowering {
+    %0 = cir.alloca "c" align(8) : !cir.ptr<!cir.complex<!cir.double>>
+    %1 = cir.load %0 : !cir.ptr<!cir.complex<!cir.double>>, !cir.complex<!cir.double>
+    cir.call @take_cdouble(%1) : (!cir.complex<!cir.double>) -> ()
+    %2 = cir.call @ret_cdouble(%0) : (!cir.ptr<!cir.complex<!cir.double>>) -> !cir.complex<!cir.double>
+    cir.store %2, %0 : !cir.complex<!cir.double>, !cir.ptr<!cir.complex<!cir.double>>
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @call_cdouble() {
+  // CHECK-NEXT: %[[RES_SLOT:.*]] = cir.alloca "coerce" align(8) : !cir.ptr<![[F64PAIR]]>
+  // CHECK-NEXT: %[[ARG_SLOT:.*]] = cir.alloca "coerce" align(8) : !cir.ptr<!cir.complex<!cir.double>>
+  // CHECK-NEXT: %[[C_PTR:.*]] = cir.alloca "c" align(8) : !cir.ptr<!cir.complex<!cir.double>>
+  // CHECK-NEXT: %[[C:.*]] = cir.load %[[C_PTR]] : !cir.ptr<!cir.complex<!cir.double>>, !cir.complex<!cir.double>
+  // CHECK-NEXT: cir.store %[[C]], %[[ARG_SLOT]] : !cir.complex<!cir.double>, !cir.ptr<!cir.complex<!cir.double>>
+  // CHECK-NEXT: %[[ARG_PAIR:.*]] = cir.cast bitcast %[[ARG_SLOT]] : !cir.ptr<!cir.complex<!cir.double>> -> !cir.ptr<![[F64PAIR]]>
+  // CHECK-NEXT: %[[RE_PTR:.*]] = cir.get_member %[[ARG_PAIR]][0] {name = ""} : !cir.ptr<![[F64PAIR]]> -> !cir.ptr<!cir.double>
+  // CHECK-NEXT: %[[RE:.*]] = cir.load %[[RE_PTR]] : !cir.ptr<!cir.double>, !cir.double
+  // CHECK-NEXT: %[[IM_PTR:.*]] = cir.get_member %[[ARG_PAIR]][1] {name = ""} : !cir.ptr<![[F64PAIR]]> -> !cir.ptr<!cir.double>
+  // CHECK-NEXT: %[[IM:.*]] = cir.load %[[IM_PTR]] : !cir.ptr<!cir.double>, !cir.double
+  // CHECK-NEXT: cir.call @take_cdouble(%[[RE]], %[[IM]]) : (!cir.double, !cir.double) -> ()
+  // CHECK-NEXT: %[[RES:.*]] = cir.call @ret_cdouble(%[[C_PTR]]) : (!cir.ptr<!cir.complex<!cir.double>>) -> ![[F64PAIR]]
+  // CHECK-NEXT: cir.store %[[RES]], %[[RES_SLOT]] : ![[F64PAIR]], !cir.ptr<![[F64PAIR]]>
+  // CHECK-NEXT: %[[RES_C_PTR:.*]] = cir.cast bitcast %[[RES_SLOT]] : !cir.ptr<![[F64PAIR]]> -> !cir.ptr<!cir.complex<!cir.double>>
+  // CHECK-NEXT: %[[RES_C:.*]] = cir.load %[[RES_C_PTR]] : !cir.ptr<!cir.complex<!cir.double>>, !cir.complex<!cir.double>
+  // CHECK-NEXT: cir.store %[[RES_C]], %[[C_PTR]] : !cir.complex<!cir.double>, !cir.ptr<!cir.complex<!cir.double>>
+  // CHECK-NEXT: cir.return
+
+  cir.func private @take_var(!s32i, ...) requires_call_conv_lowering
+
+  // CHECK: cir.func private @take_var(!s32i, ...)
+
+  // An ellipsis argument is not split, so the _Complex passes whole. The
+  // function's own fixed _Complex parameter is still split.
+  cir.func @call_var_cdouble(%arg0: !cir.complex<!cir.double>) requires_call_conv_lowering {
+    %0 = cir.const #cir.int<1> : !s32i
+    cir.call @take_var(%0, %arg0) : (!s32i, !cir.complex<!cir.double>) -> ()
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @call_var_cdouble(%[[RE:[^:]*]]: !cir.double, %[[IM:[^:]*]]: !cir.double) {
+  // CHECK-NEXT: %[[SLOT:.*]] = cir.alloca "coerce" align(8) : !cir.ptr<![[F64PAIR]]>
+  // CHECK-NEXT: %[[RE_PTR:.*]] = cir.get_member %[[SLOT]][0] {name = ""} : !cir.ptr<![[F64PAIR]]> -> !cir.ptr<!cir.double>
+  // CHECK-NEXT: cir.store %[[RE]], %[[RE_PTR]] : !cir.double, !cir.ptr<!cir.double>
+  // CHECK-NEXT: %[[IM_PTR:.*]] = cir.get_member %[[SLOT]][1] {name = ""} : !cir.ptr<![[F64PAIR]]> -> !cir.ptr<!cir.double>
+  // CHECK-NEXT: cir.store %[[IM]], %[[IM_PTR]] : !cir.double, !cir.ptr<!cir.double>
+  // CHECK-NEXT: %[[C_PTR:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<![[F64PAIR]]> -> !cir.ptr<!cir.complex<!cir.double>>
+  // CHECK-NEXT: %[[C:.*]] = cir.load %[[C_PTR]] : !cir.ptr<!cir.complex<!cir.double>>, !cir.complex<!cir.double>
+  // CHECK-NEXT: %[[N:.*]] = cir.const #cir.int<1> : !s32i
+  // CHECK-NEXT: cir.call @take_var(%[[N]], %[[C]]) : (!s32i, !cir.complex<!cir.double>) -> ()
+  // CHECK-NEXT: cir.return
+}
