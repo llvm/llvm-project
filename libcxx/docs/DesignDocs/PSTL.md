@@ -122,7 +122,7 @@ The `parallel` column shows whether the algorithm runs in parallel when
 | replace_if | → for_each |  |  | ✅ |
 | reverse |  | ● | ● | ✅ |
 | reverse_copy | → copy |  |  | ✅ |
-| rotate |  | planned |  |  |
+| rotate |  | pr |  |  |
 | rotate_copy | → copy |  |  | ✅ |
 | search |  | ● | ● | ✅ |
 | search_n |  | ● | ● | ✅ |
@@ -135,7 +135,7 @@ The `parallel` column shows whether the algorithm runs in parallel when
 | stable_sort |  | ● | ● | ✅ |
 | swap_ranges |  | ● | ● | ✅ |
 | transform |  | ● | ● | ✅ |
-| transform_exclusive_scan | pr | pr | planned | planned |
+| transform_exclusive_scan |  | pr | planned | planned |
 | transform_inclusive_scan | → transform_inclusive_scan | ● | ● | ✅ |
 | transform_reduce |  | ● | ● | ✅ |
 | uninitialized_copy |  | ● | ● | ✅ |
