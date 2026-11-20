@@ -1836,6 +1836,87 @@ define i64 @test_shlr_u64_negimm(i64 %a) {
   ret i64 %res
 }
 
+define i64 @test_sha_i64_negimm_too_large(i64 %a) {
+; CHECK-LABEL: test_sha_i64_negimm_too_large:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    srai a0, a0, 63
+; CHECK-NEXT:    ret
+  %res = call i64 @llvm.riscv.sha.i64(i64 %a, i32 -64)
+  ret i64 %res
+}
+
+define i64 @test_sha_i64_low_8_bits(i64 %a) {
+; CHECK-LABEL: test_sha_i64_low_8_bits:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    srai a0, a0, 63
+; CHECK-NEXT:    ret
+  %res = call i64 @llvm.riscv.sha.i64(i64 %a, i32 192)
+  ret i64 %res
+}
+
+define i64 @test_shar_i64_negimm_too_large(i64 %a) {
+; CHECK-LABEL: test_shar_i64_negimm_too_large:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    ret
+  %res = call i64 @llvm.riscv.shar.i64(i64 %a, i32 -64)
+  ret i64 %res
+}
+
+define i64 @test_shl_u64_negimm_too_large(i64 %a) {
+; CHECK-LABEL: test_shl_u64_negimm_too_large:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    ret
+  %res = call i64 @llvm.riscv.shl.u64(i64 %a, i32 -64)
+  ret i64 %res
+}
+
+define i64 @test_shlr_u64_negimm_too_large(i64 %a) {
+; CHECK-LABEL: test_shlr_u64_negimm_too_large:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    srli a0, a0, 63
+; CHECK-NEXT:    ret
+  %res = call i64 @llvm.riscv.shlr.u64(i64 %a, i32 -64)
+  ret i64 %res
+}
+
+define i64 @test_sha_i64_imm_too_large(i64 %a) {
+; CHECK-LABEL: test_sha_i64_imm_too_large:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    ret
+  %res = call i64 @llvm.riscv.sha.i64(i64 %a, i32 64)
+  ret i64 %res
+}
+
+define i64 @test_shar_i64_imm_too_large(i64 %a) {
+; CHECK-LABEL: test_shar_i64_imm_too_large:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    ret
+  %res = call i64 @llvm.riscv.shar.i64(i64 %a, i32 64)
+  ret i64 %res
+}
+
+define i64 @test_shl_u64_imm_too_large(i64 %a) {
+; CHECK-LABEL: test_shl_u64_imm_too_large:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    ret
+  %res = call i64 @llvm.riscv.shl.u64(i64 %a, i32 64)
+  ret i64 %res
+}
+
+define i64 @test_shlr_u64_imm_too_large(i64 %a) {
+; CHECK-LABEL: test_shlr_u64_imm_too_large:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    ret
+  %res = call i64 @llvm.riscv.shlr.u64(i64 %a, i32 64)
+  ret i64 %res
+}
+
 define signext i32 @ssha_intrinsic_i32_signext(i32 signext %a, i32 signext %shamt) nounwind {
 ; CHECK-LABEL: ssha_intrinsic_i32_signext:
 ; CHECK:       # %bb.0:
@@ -1878,4 +1959,13 @@ define signext i32 @msltu_i32_sext(i32 signext %a, i32 signext %b) nounwind {
 ; CHECK-NEXT:    ret
   %r = call i32 @llvm.riscv.msltu.u32(i32 %a, i32 %b)
   ret i32 %r
+}
+
+define i64 @test_shlr_u64_negimm_beyond_width(i64 %a) {
+; CHECK-LABEL: test_shlr_u64_negimm_beyond_width:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    ret
+  %res = call i64 @llvm.riscv.shlr.u64(i64 %a, i32 -65)
+  ret i64 %res
 }

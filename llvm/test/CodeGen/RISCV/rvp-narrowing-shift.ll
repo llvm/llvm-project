@@ -210,9 +210,7 @@ define <4 x i8> @pnsrar_v4i8_16(<4 x i16> %x) {
 ;
 ; RV64-LABEL: pnsrar_v4i8_16:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    li a1, -16
-; RV64-NEXT:    psshar.hs a0, a0, a1
-; RV64-NEXT:    pncvt.wb a0, a0
+; RV64-NEXT:    pncvt.wb a0, zero
 ; RV64-NEXT:    ret
   %res = call <4 x i8> @llvm.riscv.pnsrar.v4i8.v4i16(<4 x i16> %x, i32 16)
   ret <4 x i8> %res

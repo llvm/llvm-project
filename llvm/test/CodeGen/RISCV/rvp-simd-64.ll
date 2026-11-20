@@ -2971,14 +2971,12 @@ define <2 x i32> @test_pssha_s_i32x2_neg_imm_max(<2 x i32> %a) {
 define <2 x i32> @test_pssha_s_i32x2_neg_imm_too_large(<2 x i32> %a) {
 ; RV32-LABEL: test_pssha_s_i32x2_neg_imm_too_large:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    li a2, -32
-; RV32-NEXT:    pssha.dws a0, a0, a2
+; RV32-NEXT:    psrai.dw a0, a0, 31
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_pssha_s_i32x2_neg_imm_too_large:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    li a1, -32
-; RV64-NEXT:    pssha.ws a0, a0, a1
+; RV64-NEXT:    psrai.w a0, a0, 31
 ; RV64-NEXT:    ret
   %res = call <2 x i32> @llvm.riscv.pssha.v2i32.i32(<2 x i32> %a, i32 -32)
   ret <2 x i32> %res

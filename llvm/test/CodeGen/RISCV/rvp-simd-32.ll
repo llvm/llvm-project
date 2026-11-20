@@ -1490,10 +1490,36 @@ define <2 x i16> @test_pssha_s_i16x2_neg_imm_max(<2 x i16> %a) {
 define <2 x i16> @test_pssha_s_i16x2_neg_imm_too_large(<2 x i16> %a) {
 ; CHECK-LABEL: test_pssha_s_i16x2_neg_imm_too_large:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, -16
-; CHECK-NEXT:    pssha.hs a0, a0, a1
+; CHECK-NEXT:    psrai.h a0, a0, 15
 ; CHECK-NEXT:    ret
   %res = call <2 x i16> @llvm.riscv.pssha.v2i16.i32(<2 x i16> %a, i32 -16)
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_psshar_s_i16x2_neg_imm_too_large(<2 x i16> %a) {
+; CHECK-LABEL: test_psshar_s_i16x2_neg_imm_too_large:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.psshar.v2i16.i32(<2 x i16> %a, i32 -16)
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_psshl_s_u16x2_neg_imm_too_large(<2 x i16> %a) {
+; CHECK-LABEL: test_psshl_s_u16x2_neg_imm_too_large:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.psshl.v2i16.i32(<2 x i16> %a, i32 -16)
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_psshlr_s_u16x2_neg_imm_too_large(<2 x i16> %a) {
+; CHECK-LABEL: test_psshlr_s_u16x2_neg_imm_too_large:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    psrli.h a0, a0, 15
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.psshlr.v2i16.i32(<2 x i16> %a, i32 -16)
   ret <2 x i16> %res
 }
 
@@ -2695,10 +2721,10 @@ define <2 x i16> @test_select_v2i16(i1 %cond, <2 x i16> %a, <2 x i16> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a0, 1
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    bnez a3, .LBB193_2
+; CHECK-NEXT:    bnez a3, .LBB196_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:  .LBB193_2:
+; CHECK-NEXT:  .LBB196_2:
 ; CHECK-NEXT:    ret
   %res = select i1 %cond, <2 x i16> %a, <2 x i16> %b
   ret <2 x i16> %res
@@ -2709,10 +2735,10 @@ define <4 x i8> @test_select_v4i8(i1 %cond, <4 x i8> %a, <4 x i8> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a0, 1
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    bnez a3, .LBB194_2
+; CHECK-NEXT:    bnez a3, .LBB197_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:  .LBB194_2:
+; CHECK-NEXT:  .LBB197_2:
 ; CHECK-NEXT:    ret
   %res = select i1 %cond, <4 x i8> %a, <4 x i8> %b
   ret <4 x i8> %res
@@ -4495,4 +4521,49 @@ define <2 x i16> @merge_v2i16(<2 x i16> %m, <2 x i16> %a, <2 x i16> %b) {
   %y = and <2 x i16> %n, %a
   %r = or <2 x i16> %x, %y
   ret <2 x i16> %r
+}
+
+define <2 x i16> @test_psshlr_s_u16x2_neg_imm_beyond_width(<2 x i16> %a) {
+; CHECK-LABEL: test_psshlr_s_u16x2_neg_imm_beyond_width:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.psshlr.v2i16.i32(<2 x i16> %a, i32 -17)
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_pssha_s_i16x2_imm_too_large(<2 x i16> %a) {
+; CHECK-LABEL: test_pssha_s_i16x2_imm_too_large:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    psslai.h a0, a0, 15
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.pssha.v2i16.i32(<2 x i16> %a, i32 16)
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_psshar_s_i16x2_imm_too_large(<2 x i16> %a) {
+; CHECK-LABEL: test_psshar_s_i16x2_imm_too_large:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    psslai.h a0, a0, 15
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.psshar.v2i16.i32(<2 x i16> %a, i32 16)
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_psshl_s_u16x2_imm_too_large(<2 x i16> %a) {
+; CHECK-LABEL: test_psshl_s_u16x2_imm_too_large:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pmsnez.h a0, a0
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.psshl.v2i16.i32(<2 x i16> %a, i32 16)
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_psshlr_s_u16x2_imm_too_large(<2 x i16> %a) {
+; CHECK-LABEL: test_psshlr_s_u16x2_imm_too_large:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pmsnez.h a0, a0
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.psshlr.v2i16.i32(<2 x i16> %a, i32 16)
+  ret <2 x i16> %res
 }
