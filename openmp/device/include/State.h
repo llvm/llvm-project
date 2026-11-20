@@ -18,6 +18,7 @@
 #include "DeviceTypes.h"
 #include "DeviceUtils.h"
 #include "Mapping.h"
+#include "Synchronization.h"
 
 // Forward declaration.
 struct KernelEnvironmentTy;
@@ -234,8 +235,9 @@ lookupPtr(ValueKind Kind, bool IsReadonly, bool ForceTeamState) {
 /// update ICV values we can declare in global scope.
 template <typename Ty, ValueKind Kind> struct Value {
   [[gnu::flatten, gnu::always_inline]] operator Ty() {
-    return lookup(/*IsReadonly=*/true, /*IdentTy=*/nullptr,
-                  /*ForceTeamState=*/false);
+    return atomic::load(&lookup(/*IsReadonly=*/true, /*IdentTy=*/nullptr,
+                                /*ForceTeamState=*/false),
+                        atomic::relaxed);
   }
 
   [[gnu::flatten, gnu::always_inline]] Value &operator=(const Ty &Other) {
@@ -256,7 +258,9 @@ template <typename Ty, ValueKind Kind> struct Value {
   [[gnu::flatten, gnu::always_inline]] void
   assert_eq(const Ty &V, IdentTy *Ident = nullptr,
             bool ForceTeamState = false) {
-    ASSERT(lookup(/*IsReadonly=*/true, Ident, ForceTeamState) == V, nullptr);
+    ASSERT(atomic::load(&lookup(/*IsReadonly=*/true, Ident, ForceTeamState),
+                        atomic::relaxed) == V,
+           nullptr);
   }
 
 private:
@@ -266,14 +270,15 @@ private:
     return t;
   }
 
-  [[gnu::flatten, gnu::always_inline]] Ty &inc(int UpdateVal, IdentTy *Ident) {
-    return (lookup(/*IsReadonly=*/false, Ident, /*ForceTeamState=*/false) +=
-            UpdateVal);
+  [[gnu::flatten, gnu::always_inline]] void inc(int UpdateVal, IdentTy *Ident) {
+    atomic::add(&lookup(/*IsReadonly=*/false, Ident, /*ForceTeamState=*/false),
+                UpdateVal, atomic::relaxed);
   }
 
-  [[gnu::flatten, gnu::always_inline]] Ty &set(Ty UpdateVal, IdentTy *Ident) {
-    return (lookup(/*IsReadonly=*/false, Ident, /*ForceTeamState=*/false) =
-                UpdateVal);
+  [[gnu::flatten, gnu::always_inline]] void set(Ty UpdateVal, IdentTy *Ident) {
+    atomic::store(
+        &lookup(/*IsReadonly=*/false, Ident, /*ForceTeamState=*/false),
+        UpdateVal, atomic::relaxed);
   }
 
   template <typename VTy, typename Ty2> friend struct ValueRAII;
@@ -314,12 +319,13 @@ template <typename VTy, typename Ty> struct ValueRAII {
         Val(OldValue), Active(Active) {
     if (!Active)
       return;
-    ASSERT(*Ptr == OldValue, "ValueRAII initialization with wrong old value!");
-    *Ptr = NewValue;
+    ASSERT(atomic::load(Ptr, atomic::relaxed) == OldValue,
+           "ValueRAII initialization with wrong old value!");
+    atomic::store(Ptr, NewValue, atomic::relaxed);
   }
   ~ValueRAII() {
     if (Active)
-      *Ptr = Val;
+      atomic::store(Ptr, Val, atomic::relaxed);
   }
 
 private:
