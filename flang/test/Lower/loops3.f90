@@ -54,9 +54,9 @@ subroutine loop_bitwise_test
   x = 0
 
   ! CHECK: fir.do_concurrent.loop
-  ! CHECK-SAME: @iand_reduction_i32 #fir.reduce_attr<iand>
-  ! CHECK-SAME: @ior_reduction_i32 #fir.reduce_attr<ior>
-  ! CHECK-SAME: @ieor_reduction_i32 #fir.reduce_attr<ieor>
+  ! CHECK-SAME: @and_reduction_i32 #fir.reduce_attr<iand>
+  ! CHECK-SAME: @or_reduction_i32 #fir.reduce_attr<ior>
+  ! CHECK-SAME: @neqv_reduction_i32 #fir.reduce_attr<ieor>
   do concurrent (i=1:10) reduce(iand:a) reduce(ior:o) reduce(ieor:x)
     a = iand(a, i)
     o = ior(o, i)
