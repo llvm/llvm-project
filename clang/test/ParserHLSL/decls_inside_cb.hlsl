@@ -20,6 +20,7 @@ cbuffer A {
 #else
 tbuffer A {
 #endif
+
     // variable declaration
     float f;
 
@@ -84,4 +85,9 @@ tbuffer A {
 
     // static assert declarations
     static_assert(sizeof(float) == 4, "something's wrong");
+
+    // namespace alias
+    namespace NsAlias = Ns1::Ns2;
+
+    NsAlias::Bar barStruct;
 }

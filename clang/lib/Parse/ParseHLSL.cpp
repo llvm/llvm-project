@@ -33,7 +33,8 @@ static bool validateDeclsInsideHLSLBuffer(Parser::DeclGroupPtrTy DG,
     Decl *D = *I;
     if (isa<CXXRecordDecl, RecordDecl, FunctionDecl, VarDecl, EmptyDecl,
             EnumDecl, UsingDecl, UsingDirectiveDecl, TypeAliasDecl,
-            TemplateDecl, TypedefDecl, ExportDecl, StaticAssertDecl>(D))
+            TemplateDecl, TypedefDecl, ExportDecl, StaticAssertDecl,
+            NamespaceAliasDecl>(D))
       continue;
 
     IsValid = false;
