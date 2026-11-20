@@ -1767,8 +1767,18 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
     assert(MaxBECount->getType() == ExactExitCount->getType());
 
     // Can we prove that some other exit must be taken strictly before this
-    // one?
-    if (SE->isLoopEntryGuardedByCond(L, CmpInst::ICMP_ULT, MaxBECount,
+    // one? If MaxBECount is a umin that includes this exit's count, compare
+    // the other operands: umin(X, E) u< E iff X u< E, and
+    // umin(X, Y, E) u< E iff umin(X, Y) u< E.
+    const SCEV *OtherMaxBECount = MaxBECount;
+    if (auto *UMin = dyn_cast<SCEVUMinExpr>(MaxBECount)) {
+      SmallVector<SCEVUse, 4> Others(UMin->operands());
+      erase(Others, ExactExitCount);
+      // The operands are unique, so at most one was removed.
+      if (Others.size() != UMin->getNumOperands())
+        OtherMaxBECount = SE->getUMinExpr(Others);
+    }
+    if (SE->isLoopEntryGuardedByCond(L, CmpInst::ICMP_ULT, OtherMaxBECount,
                                      ExactExitCount)) {
       foldExit(L, ExitingBB, false, DeadInsts);
       Changed = true;
