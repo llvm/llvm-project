@@ -559,6 +559,10 @@ defm FP6BF6ToF16BF16F32ConversionScaleInsts : AMDGPUSubtargetFeature<"fp6bf6-to-
   "Has fp6bf6 to f16bf16f32 conversion scale instructions"
 >;
 
+defm F32F16BF16ToFP6BF6ConversionPK16ScaleF32Insts : AMDGPUSubtargetFeature<"f32f16bf16-to-fp6bf6-cvt-pk16-scalef32-insts",
+  "Has f32/f16/bf16 to fp6/bf6 conversion pk16 and sr pk16 scale f32 instructions"
+>;
+
 defm Block16ConversionScaleInsts : AMDGPUSubtargetFeature<"block16-cvt-scale-insts",
   "Has block16 conversion scale instructions"
 >;
@@ -2566,6 +2570,7 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureBF16InlineConstFromUpperFP32,
    FeatureCvtPkF16F32Inst,
    FeatureCvtSrPkBF16F32Inst,
+   FeatureF32F16BF16ToFP6BF6ConversionPK16ScaleF32Insts,
    FeatureFmaMixBF16Insts,
    FeatureMin3Max3PKF16,
    FeatureMinimum3Maximum3PKF16,
@@ -2865,6 +2870,7 @@ def AMDGPUFrontendVisibleFeatures {
   FeatureFP6BF6ConversionScaleInsts, FeatureFP8ConversionInsts, FeatureFP8ConversionScaleInsts,
   FeatureBlock16ConversionScaleInsts, FeatureFP8E5M3Insts, FeatureFP8Insts,
   FeatureFP6BF6ToF16BF16F32ConversionScaleInsts,
+  FeatureF32F16BF16ToFP6BF6ConversionPK16ScaleF32Insts,
   FeatureFlatBufferGlobalAtomicFaddF64Inst, FeatureFlatGlobalInsts,
   FeatureGFX10Insts, FeatureGFX10_3Insts, FeatureGFX11Insts,
   FeatureGFX1250Insts, FeatureGFX1251GEMMInsts, FeatureGFX12Insts,

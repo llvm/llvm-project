@@ -896,6 +896,37 @@ Loads data from a buffer using an SGPR buffer descriptor.
 // Conversion Builtins
 //===----------------------------------------------------------------------===//
 
+def DocCvtScaleF32Pk16 : Documentation {
+  let Category = DocCatAMDGPUConversion;
+  let Content = [{
+Scales a packed 16-component floating-point input ``src`` using the scale
+factor ``scale``, then converts the values to a packed 16-component FP6 or BF6
+value, returned as a 3-element vector of 32-bit unsigned integers.
+
+The builtin name gives the destination format followed by the element type of
+``src``: ``__builtin_amdgcn_cvt_scalef32_pk16_<dst>_<src>``.
+
+This operation is available only for wavefront size 32.
+}];
+}
+
+def DocCvtScaleF32SrPk16 : Documentation {
+  let Category = DocCatAMDGPUConversion;
+  let Content = [{
+Scales a packed 16-component floating-point input ``src`` using the scale
+factor ``scale``, then converts the values to a packed 16-component FP6 or BF6
+value with stochastic rounding, returned as a 3-element vector of 32-bit
+unsigned integers.
+
+``seed`` is the random seed used for stochastic rounding.
+
+The builtin name gives the destination format followed by the element type of
+``src``: ``__builtin_amdgcn_cvt_scalef32_sr_pk16_<dst>_<src>``.
+
+This operation is available only for wavefront size 32.
+}];
+}
+
 def DocCvtScaleF32Pk32BF6F32 : Documentation {
   let Category = DocCatAMDGPUConversion;
   let Content = [{

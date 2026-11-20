@@ -6,6 +6,10 @@
 
 typedef short __attribute__((ext_vector_type(2))) short2;
 typedef unsigned short __attribute__((ext_vector_type(2))) ushort2;
+typedef unsigned int __attribute__((ext_vector_type(3))) uint3;
+typedef __bf16 __attribute__((ext_vector_type(16))) bfloat16;
+typedef half __attribute__((ext_vector_type(16))) half16;
+typedef float __attribute__((ext_vector_type(16))) float16;
 
 // CHECK-LABEL: @test_setprio_inc_wg(
 // CHECK-NEXT:  entry:
@@ -209,4 +213,122 @@ void test_pk_add_min_max(global short2 *out, global ushort2 *uout, short2 a, sho
   *uout = __builtin_amdgcn_pk_add_max_u16(ua, ub, uc, true);
   *out = __builtin_amdgcn_pk_add_min_i16(a, b, c, false);
   *uout = __builtin_amdgcn_pk_add_min_u16(ua, ub, uc, true);
+}
+
+// CHECK-LABEL: @test_cvt_scalef32_pk16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT3_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[SRCBF16_ADDR:%.*]] = alloca <16 x bfloat>, align 32, addrspace(5)
+// CHECK-NEXT:    [[SRCH16_ADDR:%.*]] = alloca <16 x half>, align 32, addrspace(5)
+// CHECK-NEXT:    [[SRCF16_ADDR:%.*]] = alloca <16 x float>, align 64, addrspace(5)
+// CHECK-NEXT:    [[SCALE_ADDR:%.*]] = alloca float, align 4, addrspace(5)
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT3:%.*]], ptr addrspace(5) [[OUT3_ADDR]], align 8
+// CHECK-NEXT:    store <16 x bfloat> [[SRCBF16:%.*]], ptr addrspace(5) [[SRCBF16_ADDR]], align 32
+// CHECK-NEXT:    store <16 x half> [[SRCH16:%.*]], ptr addrspace(5) [[SRCH16_ADDR]], align 32
+// CHECK-NEXT:    store <16 x float> [[SRCF16:%.*]], ptr addrspace(5) [[SRCF16_ADDR]], align 64
+// CHECK-NEXT:    store float [[SCALE:%.*]], ptr addrspace(5) [[SCALE_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load <16 x bfloat>, ptr addrspace(5) [[SRCBF16_ADDR]], align 32
+// CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(5) [[SCALE_ADDR]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = call <3 x i32> @llvm.amdgcn.cvt.scalef32.pk16.bf6.bf16(<16 x bfloat> [[TMP0]], float [[TMP1]])
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT3_ADDR]], align 8
+// CHECK-NEXT:    store <3 x i32> [[TMP2]], ptr addrspace(1) [[TMP3]], align 16
+// CHECK-NEXT:    [[TMP4:%.*]] = load <16 x half>, ptr addrspace(5) [[SRCH16_ADDR]], align 32
+// CHECK-NEXT:    [[TMP5:%.*]] = load float, ptr addrspace(5) [[SCALE_ADDR]], align 4
+// CHECK-NEXT:    [[TMP6:%.*]] = call <3 x i32> @llvm.amdgcn.cvt.scalef32.pk16.bf6.f16(<16 x half> [[TMP4]], float [[TMP5]])
+// CHECK-NEXT:    [[TMP7:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT3_ADDR]], align 8
+// CHECK-NEXT:    store <3 x i32> [[TMP6]], ptr addrspace(1) [[TMP7]], align 16
+// CHECK-NEXT:    [[TMP8:%.*]] = load <16 x bfloat>, ptr addrspace(5) [[SRCBF16_ADDR]], align 32
+// CHECK-NEXT:    [[TMP9:%.*]] = load float, ptr addrspace(5) [[SCALE_ADDR]], align 4
+// CHECK-NEXT:    [[TMP10:%.*]] = call <3 x i32> @llvm.amdgcn.cvt.scalef32.pk16.fp6.bf16(<16 x bfloat> [[TMP8]], float [[TMP9]])
+// CHECK-NEXT:    [[TMP11:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT3_ADDR]], align 8
+// CHECK-NEXT:    store <3 x i32> [[TMP10]], ptr addrspace(1) [[TMP11]], align 16
+// CHECK-NEXT:    [[TMP12:%.*]] = load <16 x half>, ptr addrspace(5) [[SRCH16_ADDR]], align 32
+// CHECK-NEXT:    [[TMP13:%.*]] = load float, ptr addrspace(5) [[SCALE_ADDR]], align 4
+// CHECK-NEXT:    [[TMP14:%.*]] = call <3 x i32> @llvm.amdgcn.cvt.scalef32.pk16.fp6.f16(<16 x half> [[TMP12]], float [[TMP13]])
+// CHECK-NEXT:    [[TMP15:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT3_ADDR]], align 8
+// CHECK-NEXT:    store <3 x i32> [[TMP14]], ptr addrspace(1) [[TMP15]], align 16
+// CHECK-NEXT:    [[TMP16:%.*]] = load <16 x float>, ptr addrspace(5) [[SRCF16_ADDR]], align 64
+// CHECK-NEXT:    [[TMP17:%.*]] = load float, ptr addrspace(5) [[SCALE_ADDR]], align 4
+// CHECK-NEXT:    [[TMP18:%.*]] = call <3 x i32> @llvm.amdgcn.cvt.scalef32.pk16.bf6.f32(<16 x float> [[TMP16]], float [[TMP17]])
+// CHECK-NEXT:    [[TMP19:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT3_ADDR]], align 8
+// CHECK-NEXT:    store <3 x i32> [[TMP18]], ptr addrspace(1) [[TMP19]], align 16
+// CHECK-NEXT:    [[TMP20:%.*]] = load <16 x float>, ptr addrspace(5) [[SRCF16_ADDR]], align 64
+// CHECK-NEXT:    [[TMP21:%.*]] = load float, ptr addrspace(5) [[SCALE_ADDR]], align 4
+// CHECK-NEXT:    [[TMP22:%.*]] = call <3 x i32> @llvm.amdgcn.cvt.scalef32.pk16.fp6.f32(<16 x float> [[TMP20]], float [[TMP21]])
+// CHECK-NEXT:    [[TMP23:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT3_ADDR]], align 8
+// CHECK-NEXT:    store <3 x i32> [[TMP22]], ptr addrspace(1) [[TMP23]], align 16
+// CHECK-NEXT:    ret void
+//
+void test_cvt_scalef32_pk16(global uint3 *out3, bfloat16 srcbf16, half16 srch16, float16 srcf16,
+                            float scale)
+{
+  *out3 = __builtin_amdgcn_cvt_scalef32_pk16_bf6_bf16(srcbf16, scale);
+  *out3 = __builtin_amdgcn_cvt_scalef32_pk16_bf6_f16(srch16, scale);
+  *out3 = __builtin_amdgcn_cvt_scalef32_pk16_fp6_bf16(srcbf16, scale);
+  *out3 = __builtin_amdgcn_cvt_scalef32_pk16_fp6_f16(srch16, scale);
+  *out3 = __builtin_amdgcn_cvt_scalef32_pk16_bf6_f32(srcf16, scale);
+  *out3 = __builtin_amdgcn_cvt_scalef32_pk16_fp6_f32(srcf16, scale);
+}
+
+// CHECK-LABEL: @test_cvt_scalef32_sr_pk16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT3_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[SRCBF16_ADDR:%.*]] = alloca <16 x bfloat>, align 32, addrspace(5)
+// CHECK-NEXT:    [[SRCH16_ADDR:%.*]] = alloca <16 x half>, align 32, addrspace(5)
+// CHECK-NEXT:    [[SRCF16_ADDR:%.*]] = alloca <16 x float>, align 64, addrspace(5)
+// CHECK-NEXT:    [[SR_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[SCALE_ADDR:%.*]] = alloca float, align 4, addrspace(5)
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT3:%.*]], ptr addrspace(5) [[OUT3_ADDR]], align 8
+// CHECK-NEXT:    store <16 x bfloat> [[SRCBF16:%.*]], ptr addrspace(5) [[SRCBF16_ADDR]], align 32
+// CHECK-NEXT:    store <16 x half> [[SRCH16:%.*]], ptr addrspace(5) [[SRCH16_ADDR]], align 32
+// CHECK-NEXT:    store <16 x float> [[SRCF16:%.*]], ptr addrspace(5) [[SRCF16_ADDR]], align 64
+// CHECK-NEXT:    store i32 [[SR:%.*]], ptr addrspace(5) [[SR_ADDR]], align 4
+// CHECK-NEXT:    store float [[SCALE:%.*]], ptr addrspace(5) [[SCALE_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load <16 x bfloat>, ptr addrspace(5) [[SRCBF16_ADDR]], align 32
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[SR_ADDR]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr addrspace(5) [[SCALE_ADDR]], align 4
+// CHECK-NEXT:    [[TMP3:%.*]] = call <3 x i32> @llvm.amdgcn.cvt.scalef32.sr.pk16.bf6.bf16(<16 x bfloat> [[TMP0]], i32 [[TMP1]], float [[TMP2]])
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT3_ADDR]], align 8
+// CHECK-NEXT:    store <3 x i32> [[TMP3]], ptr addrspace(1) [[TMP4]], align 16
+// CHECK-NEXT:    [[TMP5:%.*]] = load <16 x half>, ptr addrspace(5) [[SRCH16_ADDR]], align 32
+// CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr addrspace(5) [[SR_ADDR]], align 4
+// CHECK-NEXT:    [[TMP7:%.*]] = load float, ptr addrspace(5) [[SCALE_ADDR]], align 4
+// CHECK-NEXT:    [[TMP8:%.*]] = call <3 x i32> @llvm.amdgcn.cvt.scalef32.sr.pk16.bf6.f16(<16 x half> [[TMP5]], i32 [[TMP6]], float [[TMP7]])
+// CHECK-NEXT:    [[TMP9:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT3_ADDR]], align 8
+// CHECK-NEXT:    store <3 x i32> [[TMP8]], ptr addrspace(1) [[TMP9]], align 16
+// CHECK-NEXT:    [[TMP10:%.*]] = load <16 x bfloat>, ptr addrspace(5) [[SRCBF16_ADDR]], align 32
+// CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr addrspace(5) [[SR_ADDR]], align 4
+// CHECK-NEXT:    [[TMP12:%.*]] = load float, ptr addrspace(5) [[SCALE_ADDR]], align 4
+// CHECK-NEXT:    [[TMP13:%.*]] = call <3 x i32> @llvm.amdgcn.cvt.scalef32.sr.pk16.fp6.bf16(<16 x bfloat> [[TMP10]], i32 [[TMP11]], float [[TMP12]])
+// CHECK-NEXT:    [[TMP14:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT3_ADDR]], align 8
+// CHECK-NEXT:    store <3 x i32> [[TMP13]], ptr addrspace(1) [[TMP14]], align 16
+// CHECK-NEXT:    [[TMP15:%.*]] = load <16 x half>, ptr addrspace(5) [[SRCH16_ADDR]], align 32
+// CHECK-NEXT:    [[TMP16:%.*]] = load i32, ptr addrspace(5) [[SR_ADDR]], align 4
+// CHECK-NEXT:    [[TMP17:%.*]] = load float, ptr addrspace(5) [[SCALE_ADDR]], align 4
+// CHECK-NEXT:    [[TMP18:%.*]] = call <3 x i32> @llvm.amdgcn.cvt.scalef32.sr.pk16.fp6.f16(<16 x half> [[TMP15]], i32 [[TMP16]], float [[TMP17]])
+// CHECK-NEXT:    [[TMP19:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT3_ADDR]], align 8
+// CHECK-NEXT:    store <3 x i32> [[TMP18]], ptr addrspace(1) [[TMP19]], align 16
+// CHECK-NEXT:    [[TMP20:%.*]] = load <16 x float>, ptr addrspace(5) [[SRCF16_ADDR]], align 64
+// CHECK-NEXT:    [[TMP21:%.*]] = load i32, ptr addrspace(5) [[SR_ADDR]], align 4
+// CHECK-NEXT:    [[TMP22:%.*]] = load float, ptr addrspace(5) [[SCALE_ADDR]], align 4
+// CHECK-NEXT:    [[TMP23:%.*]] = call <3 x i32> @llvm.amdgcn.cvt.scalef32.sr.pk16.bf6.f32(<16 x float> [[TMP20]], i32 [[TMP21]], float [[TMP22]])
+// CHECK-NEXT:    [[TMP24:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT3_ADDR]], align 8
+// CHECK-NEXT:    store <3 x i32> [[TMP23]], ptr addrspace(1) [[TMP24]], align 16
+// CHECK-NEXT:    [[TMP25:%.*]] = load <16 x float>, ptr addrspace(5) [[SRCF16_ADDR]], align 64
+// CHECK-NEXT:    [[TMP26:%.*]] = load i32, ptr addrspace(5) [[SR_ADDR]], align 4
+// CHECK-NEXT:    [[TMP27:%.*]] = load float, ptr addrspace(5) [[SCALE_ADDR]], align 4
+// CHECK-NEXT:    [[TMP28:%.*]] = call <3 x i32> @llvm.amdgcn.cvt.scalef32.sr.pk16.fp6.f32(<16 x float> [[TMP25]], i32 [[TMP26]], float [[TMP27]])
+// CHECK-NEXT:    [[TMP29:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT3_ADDR]], align 8
+// CHECK-NEXT:    store <3 x i32> [[TMP28]], ptr addrspace(1) [[TMP29]], align 16
+// CHECK-NEXT:    ret void
+//
+void test_cvt_scalef32_sr_pk16(global uint3 *out3, bfloat16 srcbf16, half16 srch16, float16 srcf16,
+                               unsigned int sr, float scale)
+{
+  *out3 = __builtin_amdgcn_cvt_scalef32_sr_pk16_bf6_bf16(srcbf16, sr, scale);
+  *out3 = __builtin_amdgcn_cvt_scalef32_sr_pk16_bf6_f16(srch16, sr, scale);
+  *out3 = __builtin_amdgcn_cvt_scalef32_sr_pk16_fp6_bf16(srcbf16, sr, scale);
+  *out3 = __builtin_amdgcn_cvt_scalef32_sr_pk16_fp6_f16(srch16, sr, scale);
+  *out3 = __builtin_amdgcn_cvt_scalef32_sr_pk16_bf6_f32(srcf16, sr, scale);
+  *out3 = __builtin_amdgcn_cvt_scalef32_sr_pk16_fp6_f32(srcf16, sr, scale);
 }

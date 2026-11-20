@@ -1962,7 +1962,9 @@ let SubtargetPredicate = isGFX1250Plus in {
       defm V_CVT_SCALEF32_PK8_FP4_F16    : VOP3Inst<"v_cvt_scalef32_pk8_fp4_f16",   VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_I32_V8F16_F32>,     int_amdgcn_cvt_scalef32_pk8_fp4_f16>;
       defm V_CVT_SCALEF32_PK8_FP4_BF16   : VOP3Inst<"v_cvt_scalef32_pk8_fp4_bf16",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_I32_V8BF16_F32>,    int_amdgcn_cvt_scalef32_pk8_fp4_bf16>;
     } // End WaveSizePredicate = isWave32, GFX1250BlockingCycles = 4, HasGFX1250BlockingCycles = true
-    let GFX1250BlockingCycles = 8, HasGFX1250BlockingCycles = true in {
+    let SubtargetPredicate = HasF32F16BF16ToFP6BF6ConversionPK16ScaleF32Insts,
+        WaveSizePredicate = isWave32,
+        GFX1250BlockingCycles = 8, HasGFX1250BlockingCycles = true in {
     defm V_CVT_SCALEF32_PK16_FP6_F32   : VOP3Inst<"v_cvt_scalef32_pk16_fp6_f32",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V3I32_V16F32_F32>,  int_amdgcn_cvt_scalef32_pk16_fp6_f32>;
     defm V_CVT_SCALEF32_PK16_BF6_F32   : VOP3Inst<"v_cvt_scalef32_pk16_bf6_f32",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V3I32_V16F32_F32>,  int_amdgcn_cvt_scalef32_pk16_bf6_f32>;
     defm V_CVT_SCALEF32_PK16_FP6_F16   : VOP3Inst<"v_cvt_scalef32_pk16_fp6_f16",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V3I32_V16F16_F32>,  int_amdgcn_cvt_scalef32_pk16_fp6_f16>;
@@ -1982,7 +1984,9 @@ let SubtargetPredicate = isGFX1250Plus in {
       defm V_CVT_SCALEF32_SR_PK8_FP4_F16   : VOP3Inst<"v_cvt_scalef32_sr_pk8_fp4_f16",   VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_I32_V8F16_I32_F32>,     int_amdgcn_cvt_scalef32_sr_pk8_fp4_f16>;
       defm V_CVT_SCALEF32_SR_PK8_FP4_BF16  : VOP3Inst<"v_cvt_scalef32_sr_pk8_fp4_bf16",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_I32_V8BF16_I32_F32>,    int_amdgcn_cvt_scalef32_sr_pk8_fp4_bf16>;
     } // End WaveSizePredicate = isWave32, GFX1250BlockingCycles = 4, HasGFX1250BlockingCycles = true
-    let GFX1250BlockingCycles = 8, HasGFX1250BlockingCycles = true in {
+    let SubtargetPredicate = HasF32F16BF16ToFP6BF6ConversionPK16ScaleF32Insts,
+        WaveSizePredicate = isWave32,
+        GFX1250BlockingCycles = 8, HasGFX1250BlockingCycles = true in {
     defm V_CVT_SCALEF32_SR_PK16_BF6_BF16 : VOP3Inst<"v_cvt_scalef32_sr_pk16_bf6_bf16", VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V3I32_V16BF16_I32_F32>, int_amdgcn_cvt_scalef32_sr_pk16_bf6_bf16>;
     defm V_CVT_SCALEF32_SR_PK16_BF6_F16  : VOP3Inst<"v_cvt_scalef32_sr_pk16_bf6_f16",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V3I32_V16F16_I32_F32>,  int_amdgcn_cvt_scalef32_sr_pk16_bf6_f16>;
     defm V_CVT_SCALEF32_SR_PK16_BF6_F32  : VOP3Inst<"v_cvt_scalef32_sr_pk16_bf6_f32",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V3I32_V16F32_I32_F32>,  int_amdgcn_cvt_scalef32_sr_pk16_bf6_f32>;

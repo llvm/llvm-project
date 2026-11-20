@@ -1191,12 +1191,14 @@ def __builtin_amdgcn_cvt_scalef32_pk8_bf8_f32 : AMDGPUBuiltin<"_ExtVector<2, uns
 def __builtin_amdgcn_cvt_scalef32_pk8_fp4_f32 : AMDGPUBuiltin<"unsigned int(_ExtVector<8, float>, float)", [Const], "gfx1250-insts">;
 def __builtin_amdgcn_cvt_scalef32_pk8_fp4_f16 : AMDGPUBuiltin<"unsigned int(_ExtVector<8, _Float16>, float)", [Const], "gfx1250-insts">;
 def __builtin_amdgcn_cvt_scalef32_pk8_fp4_bf16 : AMDGPUBuiltin<"unsigned int(_ExtVector<8, __bf16>, float)", [Const], "gfx1250-insts">;
-def __builtin_amdgcn_cvt_scalef32_pk16_fp6_f32 : AMDGPUBuiltin<"_ExtVector<3, unsigned int>(_ExtVector<16, float>, float)", [Const], "gfx1250-insts">;
-def __builtin_amdgcn_cvt_scalef32_pk16_bf6_f32 : AMDGPUBuiltin<"_ExtVector<3, unsigned int>(_ExtVector<16, float>, float)", [Const], "gfx1250-insts">;
-def __builtin_amdgcn_cvt_scalef32_pk16_fp6_f16 : AMDGPUBuiltin<"_ExtVector<3, unsigned int>(_ExtVector<16, _Float16>, float)", [Const], "gfx1250-insts">;
-def __builtin_amdgcn_cvt_scalef32_pk16_bf6_f16 : AMDGPUBuiltin<"_ExtVector<3, unsigned int>(_ExtVector<16, _Float16>, float)", [Const], "gfx1250-insts">;
-def __builtin_amdgcn_cvt_scalef32_pk16_fp6_bf16 : AMDGPUBuiltin<"_ExtVector<3, unsigned int>(_ExtVector<16, __bf16>, float)", [Const], "gfx1250-insts">;
-def __builtin_amdgcn_cvt_scalef32_pk16_bf6_bf16 : AMDGPUBuiltin<"_ExtVector<3, unsigned int>(_ExtVector<16, __bf16>, float)", [Const], "gfx1250-insts">;
+let Documentation = [DocCvtScaleF32Pk16], ArgNames = ["src", "scale"] in {
+def __builtin_amdgcn_cvt_scalef32_pk16_fp6_f32 : AMDGPUBuiltin<"_ExtVector<3, unsigned int>(_ExtVector<16, float>, float)", [Const], "f32f16bf16-to-fp6bf6-cvt-pk16-scalef32-insts,wavefrontsize32">;
+def __builtin_amdgcn_cvt_scalef32_pk16_bf6_f32 : AMDGPUBuiltin<"_ExtVector<3, unsigned int>(_ExtVector<16, float>, float)", [Const], "f32f16bf16-to-fp6bf6-cvt-pk16-scalef32-insts,wavefrontsize32">;
+def __builtin_amdgcn_cvt_scalef32_pk16_fp6_f16 : AMDGPUBuiltin<"_ExtVector<3, unsigned int>(_ExtVector<16, _Float16>, float)", [Const], "f32f16bf16-to-fp6bf6-cvt-pk16-scalef32-insts,wavefrontsize32">;
+def __builtin_amdgcn_cvt_scalef32_pk16_bf6_f16 : AMDGPUBuiltin<"_ExtVector<3, unsigned int>(_ExtVector<16, _Float16>, float)", [Const], "f32f16bf16-to-fp6bf6-cvt-pk16-scalef32-insts,wavefrontsize32">;
+def __builtin_amdgcn_cvt_scalef32_pk16_fp6_bf16 : AMDGPUBuiltin<"_ExtVector<3, unsigned int>(_ExtVector<16, __bf16>, float)", [Const], "f32f16bf16-to-fp6bf6-cvt-pk16-scalef32-insts,wavefrontsize32">;
+def __builtin_amdgcn_cvt_scalef32_pk16_bf6_bf16 : AMDGPUBuiltin<"_ExtVector<3, unsigned int>(_ExtVector<16, __bf16>, float)", [Const], "f32f16bf16-to-fp6bf6-cvt-pk16-scalef32-insts,wavefrontsize32">;
+}
 def __builtin_amdgcn_cvt_scalef32_sr_pk8_fp8_bf16 : AMDGPUBuiltin<"_ExtVector<2, unsigned int>(_ExtVector<8, __bf16>, unsigned int, float)", [Const], "gfx1250-insts">;
 def __builtin_amdgcn_cvt_scalef32_sr_pk8_bf8_bf16 : AMDGPUBuiltin<"_ExtVector<2, unsigned int>(_ExtVector<8, __bf16>, unsigned int, float)", [Const], "gfx1250-insts">;
 def __builtin_amdgcn_cvt_scalef32_sr_pk8_fp8_f16 : AMDGPUBuiltin<"_ExtVector<2, unsigned int>(_ExtVector<8, _Float16>, unsigned int, float)", [Const], "gfx1250-insts">;
@@ -1206,12 +1208,14 @@ def __builtin_amdgcn_cvt_scalef32_sr_pk8_bf8_f32 : AMDGPUBuiltin<"_ExtVector<2, 
 def __builtin_amdgcn_cvt_scalef32_sr_pk8_fp4_f32 : AMDGPUBuiltin<"unsigned int(_ExtVector<8, float>, unsigned int, float)", [Const], "gfx1250-insts">;
 def __builtin_amdgcn_cvt_scalef32_sr_pk8_fp4_f16 : AMDGPUBuiltin<"unsigned int(_ExtVector<8, _Float16>, unsigned int, float)", [Const], "gfx1250-insts">;
 def __builtin_amdgcn_cvt_scalef32_sr_pk8_fp4_bf16 : AMDGPUBuiltin<"unsigned int(_ExtVector<8, __bf16>, unsigned int, float)", [Const], "gfx1250-insts">;
-def __builtin_amdgcn_cvt_scalef32_sr_pk16_bf6_bf16 : AMDGPUBuiltin<"_ExtVector<3, unsigned int>(_ExtVector<16, __bf16>, unsigned int, float)", [Const], "gfx1250-insts">;
-def __builtin_amdgcn_cvt_scalef32_sr_pk16_bf6_f16 : AMDGPUBuiltin<"_ExtVector<3, unsigned int>(_ExtVector<16, _Float16>, unsigned int, float)", [Const], "gfx1250-insts">;
-def __builtin_amdgcn_cvt_scalef32_sr_pk16_bf6_f32 : AMDGPUBuiltin<"_ExtVector<3, unsigned int>(_ExtVector<16, float>, unsigned int, float)", [Const], "gfx1250-insts">;
-def __builtin_amdgcn_cvt_scalef32_sr_pk16_fp6_bf16 : AMDGPUBuiltin<"_ExtVector<3, unsigned int>(_ExtVector<16, __bf16>, unsigned int, float)", [Const], "gfx1250-insts">;
-def __builtin_amdgcn_cvt_scalef32_sr_pk16_fp6_f16 : AMDGPUBuiltin<"_ExtVector<3, unsigned int>(_ExtVector<16, _Float16>, unsigned int, float)", [Const], "gfx1250-insts">;
-def __builtin_amdgcn_cvt_scalef32_sr_pk16_fp6_f32 : AMDGPUBuiltin<"_ExtVector<3, unsigned int>(_ExtVector<16, float>, unsigned int, float)", [Const], "gfx1250-insts">;
+let Documentation = [DocCvtScaleF32SrPk16], ArgNames = ["src", "seed", "scale"] in {
+def __builtin_amdgcn_cvt_scalef32_sr_pk16_bf6_bf16 : AMDGPUBuiltin<"_ExtVector<3, unsigned int>(_ExtVector<16, __bf16>, unsigned int, float)", [Const], "f32f16bf16-to-fp6bf6-cvt-pk16-scalef32-insts,wavefrontsize32">;
+def __builtin_amdgcn_cvt_scalef32_sr_pk16_bf6_f16 : AMDGPUBuiltin<"_ExtVector<3, unsigned int>(_ExtVector<16, _Float16>, unsigned int, float)", [Const], "f32f16bf16-to-fp6bf6-cvt-pk16-scalef32-insts,wavefrontsize32">;
+def __builtin_amdgcn_cvt_scalef32_sr_pk16_bf6_f32 : AMDGPUBuiltin<"_ExtVector<3, unsigned int>(_ExtVector<16, float>, unsigned int, float)", [Const], "f32f16bf16-to-fp6bf6-cvt-pk16-scalef32-insts,wavefrontsize32">;
+def __builtin_amdgcn_cvt_scalef32_sr_pk16_fp6_bf16 : AMDGPUBuiltin<"_ExtVector<3, unsigned int>(_ExtVector<16, __bf16>, unsigned int, float)", [Const], "f32f16bf16-to-fp6bf6-cvt-pk16-scalef32-insts,wavefrontsize32">;
+def __builtin_amdgcn_cvt_scalef32_sr_pk16_fp6_f16 : AMDGPUBuiltin<"_ExtVector<3, unsigned int>(_ExtVector<16, _Float16>, unsigned int, float)", [Const], "f32f16bf16-to-fp6bf6-cvt-pk16-scalef32-insts,wavefrontsize32">;
+def __builtin_amdgcn_cvt_scalef32_sr_pk16_fp6_f32 : AMDGPUBuiltin<"_ExtVector<3, unsigned int>(_ExtVector<16, float>, unsigned int, float)", [Const], "f32f16bf16-to-fp6bf6-cvt-pk16-scalef32-insts,wavefrontsize32">;
+}
 def __builtin_amdgcn_cvt_pk_fp8_f32_e5m3 : AMDGPUBuiltin<"int(float, float, int, _Constant bool)", [Const], "fp8e5m3-insts">;
 def __builtin_amdgcn_cvt_sr_fp8_f32_e5m3 : AMDGPUBuiltin<"int(float, int, int, _Constant int)", [Const], "fp8e5m3-insts">;
 def __builtin_amdgcn_sat_pk4_i4_i8 : AMDGPUBuiltin<"unsigned short(unsigned int)", [Const], "gfx1250-insts">;
