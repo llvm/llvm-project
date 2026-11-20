@@ -258,3 +258,23 @@ define i32 @PR42571(i32 %x, i32 %y) {
   %cond = select i1 %tobool, i32 %y, i32 %and
   ret i32 %cond
 }
+
+; Some simple multi-BB situations can still be handled.
+
+declare dso_local fastcc void @use(i32)
+define void @Issue156015(i32 %a) {
+; CHECK-LABEL: Issue156015:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    subl $10, %edi
+; CHECK-NEXT:    jae use # TAILCALL
+; CHECK-NEXT:  # %bb.1: # %then
+; CHECK-NEXT:    retq
+  %c = icmp ult i32 %a, 10
+  br i1 %c, label %then, label %else
+then:
+  ret void
+else:
+  %l = sub i32 %a, 10
+  tail call fastcc void @use(i32 %l)
+  ret void
+}
