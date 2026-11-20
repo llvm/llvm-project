@@ -451,3 +451,25 @@ __device__ void test_wave_shuffle(int* out, int a, int b)
 {
   *out = __builtin_amdgcn_wave_shuffle(a, b);
 }
+
+// CIR-LABEL: @_Z14test_ds_appendPiS_(
+// CIR: [[APPEND_FALSE:%.+]] = cir.const #false
+// CIR: cir.call_llvm_intrinsic "amdgcn.ds.append" %{{[^, ]+}}, [[APPEND_FALSE]]
+// CIR-SAME: : (!cir.ptr<!s32i, target_address_space(3)>, !cir.bool) -> !s32i
+// LLVM-LABEL: define{{.*}} void @_Z14test_ds_appendPiS_(
+// LLVM: call{{.*}} i32 @llvm.amdgcn.ds.append.p3(ptr addrspace(3) %{{[^, ]+}}, i1 false)
+__device__ void test_ds_append(int *out, int *ptr) 
+{
+  *out = __builtin_amdgcn_ds_append(ptr);
+}
+
+// CIR-LABEL: @_Z15test_ds_consumePiS_(
+// CIR: [[CONSUME_FALSE:%.+]] = cir.const #false
+// CIR: cir.call_llvm_intrinsic "amdgcn.ds.consume" %{{[^, ]+}}, [[CONSUME_FALSE]]
+// CIR-SAME: : (!cir.ptr<!s32i, target_address_space(3)>, !cir.bool) -> !s32i
+// LLVM-LABEL: define{{.*}} void @_Z15test_ds_consumePiS_(
+// LLVM: call{{.*}} i32 @llvm.amdgcn.ds.consume.p3(ptr addrspace(3) %{{[^, ]+}}, i1 false)
+__device__ void test_ds_consume(int *out, int *ptr) 
+{
+  *out = __builtin_amdgcn_ds_consume(ptr);
+}
