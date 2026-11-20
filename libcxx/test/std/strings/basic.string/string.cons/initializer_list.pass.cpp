@@ -51,6 +51,7 @@ TEST_CONSTEXPR_CXX20 void test_string() {
 TEST_CONSTEXPR_CXX20 bool test() {
   test_string<std::allocator>();
   test_string<min_allocator>();
+  test_string<fancy_pointer_allocator>();
   test_string<safe_allocator>();
 
   return true;

@@ -24,6 +24,7 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 #include "asan_testing.h"
+#include "test_allocator.h"
 
 template <class S, class SV>
 TEST_CONSTEXPR_CXX20 void
@@ -6282,6 +6283,10 @@ int main(int, char**) {
 #if TEST_STD_VER >= 11
   test<char, min_allocator>();
   test<char, safe_allocator>();
+#  ifndef __ARM_ARCH_7M__
+  // Avoid overflowing the flash region on armv7m-picolibc.
+  test<char, fancy_pointer_allocator>();
+#  endif
 #endif
 
   return 0;

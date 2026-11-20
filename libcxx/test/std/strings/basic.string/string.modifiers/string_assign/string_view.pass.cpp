@@ -57,18 +57,19 @@ TEST_CONSTEXPR_CXX20 void test_string() {
   test(S("12345678901234567890"), SV("1234567890"), S("1234567890"));
   test(S("12345678901234567890"), SV("12345678901234567890"), S("12345678901234567890"));
 
-  using A = typename S::allocator_type;
+  typename S::allocator_type a;
 
-  testAlloc(S(), SV(), A());
-  testAlloc(S(), SV("12345"), A());
-  testAlloc(S(), SV("1234567890"), A());
-  testAlloc(S(), SV("12345678901234567890"), A());
+  testAlloc(S(a), SV(), a);
+  testAlloc(S(a), SV("12345"), a);
+  testAlloc(S(a), SV("1234567890"), a);
+  testAlloc(S(a), SV("12345678901234567890"), a);
 }
 
 TEST_CONSTEXPR_CXX20 bool test() {
   test_string<std::string>();
 #if TEST_STD_VER >= 11
   test_string<std::basic_string<char, std::char_traits<char>, min_allocator<char>>>();
+  test_string<std::basic_string<char, std::char_traits<char>, fancy_pointer_allocator<char>>>();
 #endif
 
   return true;

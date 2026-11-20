@@ -32,6 +32,13 @@ TEST_CONSTEXPR_CXX20 void test(S s1, S s2) {
   LIBCPP_ASSERT(is_string_asan_correct(s0));
   LIBCPP_ASSERT(is_string_asan_correct(s1));
   LIBCPP_ASSERT(is_string_asan_correct(s2));
+
+  S& self = s1;
+  s1      = std::move(self);
+  LIBCPP_ASSERT(s1.__invariants());
+  LIBCPP_ASSERT(is_string_asan_correct(s1));
+  s1 = "123";
+  assert(s1 == "123");
 }
 
 template <class S>
@@ -57,6 +64,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
 #if TEST_STD_VER >= 11
   test_string<std::basic_string<char, std::char_traits<char>, min_allocator<char>>>();
   test_string<std::basic_string<char, std::char_traits<char>, safe_allocator<char>>>();
+  test_string<std::basic_string<char, std::char_traits<char>, fancy_pointer_allocator<char>>>();
 #endif
 
   return true;

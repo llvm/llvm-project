@@ -16,6 +16,7 @@
 
 #include "test_macros.h"
 #include "min_allocator.h"
+#include "test_allocator.h"
 
 TEST_CONSTEXPR_CXX20 int sign(int x) {
   if (x == 0)
@@ -369,6 +370,7 @@ int main(int, char**) {
   test<std::string>();
 #if TEST_STD_VER >= 11
   test<std::basic_string<char, std::char_traits<char>, min_allocator<char> > >();
+  test<std::basic_string<char, std::char_traits<char>, fancy_pointer_allocator<char> > >();
   { // LWG 2946
     std::string s = " !";
     assert(s.compare(0, 1, {"abc", 1}) < 0);
