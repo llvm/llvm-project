@@ -29,7 +29,7 @@
 
 ############ Test merging swift category into the base class ############
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-macos -o MyBaseClassSwiftExtension.o MyBaseClassSwiftExtension.s
-# RUN: %lld -no_objc_relative_method_lists -arch arm64 -dylib -o merge_base_class_swift_minimal_yes_merge.dylib -objc_category_merging MyBaseClassSwiftExtension.o merge_base_class_minimal.o
+# RUN: %lld -arch arm64 -dylib -o merge_base_class_swift_minimal_yes_merge.dylib -objc_category_merging MyBaseClassSwiftExtension.o merge_base_class_minimal.o
 # RUN: llvm-objdump --objc-meta-data --macho merge_base_class_swift_minimal_yes_merge.dylib | FileCheck %s --check-prefixes=YES_MERGE_INTO_BASE_SWIFT
 
 ############ Test merging skipped due to invalid category name ############
@@ -130,14 +130,14 @@ YES_MERGE_INTO_BASE-NEXT: imp {{.*}} -[MyBaseClass baseInstanceMethod]
 YES_MERGE_INTO_BASE_SWIFT: _OBJC_CLASS_$_MyBaseClass
 YES_MERGE_INTO_BASE_SWIFT-NEXT: _OBJC_METACLASS_$_MyBaseClass
 YES_MERGE_INTO_BASE_SWIFT: baseMethods
-YES_MERGE_INTO_BASE_SWIFT-NEXT: entsize 24
+YES_MERGE_INTO_BASE_SWIFT-NEXT: entsize 12 (relative)
 YES_MERGE_INTO_BASE_SWIFT-NEXT: count 2
 YES_MERGE_INTO_BASE_SWIFT-NEXT: name {{.*}} swiftMethod
 YES_MERGE_INTO_BASE_SWIFT-NEXT: types {{.*}} v16@0:8
-YES_MERGE_INTO_BASE_SWIFT-NEXT: imp _$sSo11MyBaseClassC0abC14SwiftExtensionE11swiftMethodyyFTo
+YES_MERGE_INTO_BASE_SWIFT-NEXT: imp {{.*}} _$sSo11MyBaseClassC0abC14SwiftExtensionE11swiftMethodyyFTo
 YES_MERGE_INTO_BASE_SWIFT-NEXT: name {{.*}} baseInstanceMethod
 YES_MERGE_INTO_BASE_SWIFT-NEXT: types {{.*}} v16@0:8
-YES_MERGE_INTO_BASE_SWIFT-NEXT: imp -[MyBaseClass baseInstanceMethod]
+YES_MERGE_INTO_BASE_SWIFT-NEXT: imp {{.*}} -[MyBaseClass baseInstanceMethod]
 
 
 #--- a64_fakedylib.s

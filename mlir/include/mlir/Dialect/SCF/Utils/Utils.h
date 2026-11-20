@@ -162,7 +162,9 @@ void denormalizeInductionVariable(RewriterBase &rewriter, Location loc,
 
 /// Tile a nest of standard for loops rooted at `rootForOp` by finding such
 /// parametric tile sizes that the outer loops have a fixed number of iterations
-/// as defined in `sizes`.
+/// as defined in `sizes`. Tiling changes the order of the iterations; the
+/// caller must make sure that does not change the result, including the
+/// values carried by iter_args.
 using Loops = SmallVector<scf::ForOp, 8>;
 using TileLoops = std::pair<Loops, Loops>;
 TileLoops extractFixedOuterLoops(scf::ForOp rootFOrOp, ArrayRef<int64_t> sizes);

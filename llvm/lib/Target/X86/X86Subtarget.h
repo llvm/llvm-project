@@ -217,6 +217,7 @@ public:
   bool hasAVX512() const { return X86SSELevel >= AVX512; }
   bool hasInt256() const { return hasAVX2(); }
   bool hasAnyFMA() const { return hasFMA() || hasFMA4(); }
+  bool useAPXFastCC() const { return hasEGPR() && hasAVX10_1(); }
   bool hasPrefetchW() const {
     // The PREFETCHW instruction was added with 3DNow but later CPUs gave it
     // its own CPUID bit as part of deprecating 3DNow.

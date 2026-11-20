@@ -652,7 +652,7 @@ define i32 @signbits_cmpss_int(<4 x float> %0, <4 x float> %1) {
 ; CHECK-LABEL: signbits_cmpss_int:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcmpeqss %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vextractps $0, %xmm0, %eax
+; CHECK-NEXT:    vmovd %xmm0, %eax
 ; CHECK-NEXT:    ret{{[l|q]}}
   %3 = tail call <4 x float> @llvm.x86.sse.cmp.ss(<4 x float> %0, <4 x float> %1, i8 0)
   %4 = bitcast <4 x float> %3 to <4 x i32>

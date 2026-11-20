@@ -36,11 +36,6 @@ public:
   // The arguments assigned so far.
   ArrayRef<const char *> args() const { return SavedArgs; }
 
-  // The library that parsed each argument in args().
-  ArrayRef<const LibraryOptions *> argLibraries() const {
-    return SavedLibraries;
-  }
-
   // T's values, or T::Default if none of its options is parsed.
   template <typename T> const T &get() const {
     auto It = Values.find(&T::Default);
@@ -48,9 +43,9 @@ public:
                               : *static_cast<const T *>(It->second);
   }
 
-  // C's values of T, or T::Global if C is null.
+  // C's values of T, or T::Default if C is null.
   template <typename T> static const T &get(const LibraryOptionsContext *C) {
-    return C ? C->get<T>() : T::Global;
+    return C ? C->get<T>() : T::Default;
   }
 
 private:

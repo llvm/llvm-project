@@ -37,12 +37,12 @@ struct RISCVOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
                            ISD::ArgFlagsTy Flags) override {
     MachineFunction &MF = MIRBuilder.getMF();
     LLT p0 = LLT::pointer(0, Subtarget.getXLen());
-    LLT sXLen = LLT::scalar(Subtarget.getXLen());
+    LLT iXLen = LLT::integer(Subtarget.getXLen());
 
     if (!SPReg)
       SPReg = MIRBuilder.buildCopy(p0, Register(RISCV::X2)).getReg(0);
 
-    auto OffsetReg = MIRBuilder.buildConstant(sXLen, Offset);
+    auto OffsetReg = MIRBuilder.buildConstant(iXLen, Offset);
 
     auto AddrReg = MIRBuilder.buildPtrAdd(p0, SPReg, OffsetReg);
 
@@ -88,8 +88,13 @@ struct RISCVOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
       std::function<void()> AssignFunc;
       if (NarrowValWideLoc) {
         AssignFunc = [=]() {
-          auto Trunc = MIRBuilder.buildAnyExt(LLT(VA.getLocVT()), Arg.Regs[0]);
-          MIRBuilder.buildCopy(PhysReg, Trunc);
+          Register Src = Arg.Regs[0];
+          LLT SrcTy = MRI.getType(Src);
+          if (SrcTy.isFloat())
+            Src =
+                MIRBuilder.buildBitcast(SrcTy.changeToInteger(), Src).getReg(0);
+          auto Ext = MIRBuilder.buildAnyExt(LLT(VA.getLocVT()), Src);
+          MIRBuilder.buildCopy(PhysReg, Ext);
           MIB.addUse(PhysReg, RegState::Implicit);
         };
       } else if (FixedLenVecInScalableVec) {
@@ -125,8 +130,8 @@ struct RISCVOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
            VA.getValVT() == MVT::f64 && VAHi.getValVT() == MVT::f64 &&
            "unexpected custom value");
 
-    Register NewRegs[] = {MRI.createGenericVirtualRegister(LLT::scalar(32)),
-                          MRI.createGenericVirtualRegister(LLT::scalar(32))};
+    Register NewRegs[] = {MRI.createGenericVirtualRegister(LLT::integer(32)),
+                          MRI.createGenericVirtualRegister(LLT::integer(32))};
     MIRBuilder.buildUnmerge(NewRegs, Arg.Regs[0]);
 
     if (VAHi.isMemLoc()) {
@@ -213,9 +218,16 @@ struct RISCVIncomingValueHandler : public CallLowering::IncomingValueHandler {
       LLT LocTy(VA.getLocVT());
       auto Copy = MIRBuilder.buildCopy(LocTy, PhysReg);
 
-      if (NarrowValWideLoc)
-        MIRBuilder.buildTrunc(Arg.Regs[0], Copy.getReg(0));
-      else if (FixedLenVecInScalableVec)
+      if (NarrowValWideLoc) {
+        LLT ValTy = MRI.getType(Arg.Regs[0]);
+        if (ValTy.isFloat()) {
+          auto Trunc =
+              MIRBuilder.buildTrunc(ValTy.changeToInteger(), Copy.getReg(0));
+          MIRBuilder.buildBitcast(Arg.Regs[0], Trunc);
+        } else {
+          MIRBuilder.buildTrunc(Arg.Regs[0], Copy.getReg(0));
+        }
+      } else if (FixedLenVecInScalableVec)
         MIRBuilder.buildExtractSubvector(Arg.Regs[0], Copy.getReg(0), 0);
       else
         llvm_unreachable(
@@ -235,8 +247,8 @@ struct RISCVIncomingValueHandler : public CallLowering::IncomingValueHandler {
            VA.getValVT() == MVT::f64 && VAHi.getValVT() == MVT::f64 &&
            "unexpected custom value");
 
-    Register NewRegs[] = {MRI.createGenericVirtualRegister(LLT::scalar(32)),
-                          MRI.createGenericVirtualRegister(LLT::scalar(32))};
+    Register NewRegs[] = {MRI.createGenericVirtualRegister(LLT::integer(32)),
+                          MRI.createGenericVirtualRegister(LLT::integer(32))};
 
     if (VAHi.isMemLoc()) {
       LLT MemTy(VAHi.getLocVT());
@@ -463,17 +475,17 @@ void RISCVCallLowering::saveVarArgRegisters(
 
     const LLT p0 = LLT::pointer(MF.getDataLayout().getAllocaAddrSpace(),
                                 Subtarget.getXLen());
-    const LLT sXLen = LLT::scalar(Subtarget.getXLen());
+    const LLT iXLen = LLT::integer(Subtarget.getXLen());
 
     auto FIN = MIRBuilder.buildFrameIndex(p0, FI);
     auto Offset = MIRBuilder.buildConstant(
-        MRI.createGenericVirtualRegister(sXLen), XLenInBytes);
+        MRI.createGenericVirtualRegister(iXLen), XLenInBytes);
 
     // Copy the integer registers that may have been used for passing varargs
     // to the vararg save area.
     const MVT XLenVT = Subtarget.getXLenVT();
     for (unsigned I = Idx; I < ArgRegs.size(); ++I) {
-      const Register VReg = MRI.createGenericVirtualRegister(sXLen);
+      const Register VReg = MRI.createGenericVirtualRegister(iXLen);
       Handler.assignValueToReg(
           VReg, ArgRegs[I],
           CCValAssign::getReg(I + MF.getFunction().getNumOperands(), XLenVT,

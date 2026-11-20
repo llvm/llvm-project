@@ -31,6 +31,8 @@ void test() {
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::none_of(std::execution::par, std::begin(a), std::end(a), pred);
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::copy_if(std::execution::par, std::begin(a), std::end(a), std::begin(b), pred);
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::count_if(std::execution::par, std::begin(a), std::end(a), pred);
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::count(std::execution::par, std::begin(a), std::end(a), 1);

@@ -367,6 +367,8 @@ vector         | `spirv.CompositeInsert`  | `llvm.insertelement`
 non-vector     | `spirv.CompositeExtract` | `llvm.extractvalue`
 non-vector     | `spirv.CompositeInsert`  | `llvm.insertvalue`
 
+`spirv.CopyObject` is replaced with its converted operand.
+
 ### `spirv.EntryPoint` and `spirv.ExecutionMode`
 
 First of all, it is important to note that there is no direct representation of
@@ -592,9 +594,7 @@ in a pointer to it, which can be used with `spirv.Load` and `spirv.Store`. It is
 also a function-level variable.
 
 `spirv.Variable` is modelled as `llvm.alloca` op. If initialized, an additional
-store instruction is used. Note that there is no initialization for arrays and
-structs since constants of these types are not supported in LLVM dialect (TODO).
-Also, at the moment initialization is only possible via `spirv.Constant`.
+store instruction is used. Initialization from a spec constant is not supported.
 
 ```mlir
 // Conversion of VariableOp without initialization
@@ -651,8 +651,10 @@ bitwidth. This leads to the following conversions:
 
 ### `spirv.Constant`
 
-At the moment `spirv.Constant` conversion supports scalar and vector constants
-**only**.
+`spirv.Constant` conversion supports scalar, vector, array and struct constants.
+`#spirv.null` is only supported as a constituent. Arrays of scalars map to a
+single `llvm.mlir.constant`, other arrays and structs are built with
+`llvm.insertvalue`.
 
 #### Mapping
 
@@ -717,6 +719,9 @@ As well as:
 corresponding `branch_weights` attribute of `llvm.cond_br`. When translated to
 proper LLVM, `branch_weights` are converted into LLVM metadata associated with
 the conditional branch.
+
+`spirv.Switch` is mapped to `llvm.switch`. Case literals are rebuilt with the
+signless selector type.
 
 ### `spirv.FunctionCall`
 

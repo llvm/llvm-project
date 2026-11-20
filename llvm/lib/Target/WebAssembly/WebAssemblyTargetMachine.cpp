@@ -190,13 +190,26 @@ WebAssemblyTargetMachine::getSubtargetImpl(StringRef CPU, StringRef FS,
 
 const WebAssemblySubtarget *
 WebAssemblyTargetMachine::getSubtargetImpl(const Function &F) const {
-  Attribute CPUAttr = F.getFnAttribute("target-cpu");
-  Attribute FSAttr = F.getFnAttribute("target-features");
+  AttributeSet FnAttrs = F.getAttributes().getFnAttrs();
+  const Module *M = F.getParent();
+  if (const WebAssemblySubtarget *ST = LastSubtarget.lookup(FnAttrs, M))
+    return ST;
 
-  StringRef CPU = CPUAttr.isValid() ? CPUAttr.getValueAsString() : TargetCPU;
-  StringRef FS = FSAttr.isValid() ? FSAttr.getValueAsString() : TargetFS;
+  SubtargetAttrs Attrs;
+  Attrs.CPU = FnAttrs.getAttribute("target-cpu");
+  Attrs.FS = FnAttrs.getAttribute("target-features");
+  Attrs.ABIName = getTargetABIName(*M);
 
-  return getSubtargetImpl(CPU, FS, getTargetABIName(*F.getParent()));
+  if (const WebAssemblySubtarget *ST = LastSubtarget.lookup(FnAttrs, M, Attrs))
+    return ST;
+
+  StringRef CPU =
+      Attrs.CPU.isValid() ? Attrs.CPU.getValueAsString() : TargetCPU;
+  StringRef FS = Attrs.FS.isValid() ? Attrs.FS.getValueAsString() : TargetFS;
+
+  const WebAssemblySubtarget *ST = getSubtargetImpl(CPU, FS, Attrs.ABIName);
+  LastSubtarget.set(FnAttrs, M, Attrs, ST);
+  return ST;
 }
 
 namespace {

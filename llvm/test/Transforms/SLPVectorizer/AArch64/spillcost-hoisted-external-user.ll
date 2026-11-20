@@ -77,4 +77,328 @@ exit:
   ret void
 }
 
+; The multiplies are scheduled above all the users of %m0 before the call,
+; which are not recorded one by one, so their vector is live across the call.
+
+define double @many_users(double %x, ptr %sink) {
+; CHECK-LABEL: define double @many_users(
+; CHECK-SAME: double [[X:%.*]], ptr [[SINK:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x double> <double 0.000000e+00, double poison, double 0.000000e+00, double 1.000000e+00>, double [[X]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul <4 x double> [[TMP0]], <double 0.000000e+00, double 0.000000e+00, double 0.000000e+00, double 1.000000e+00>
+; CHECK-NEXT:    [[M0:%.*]] = extractelement <4 x double> [[TMP1]], i64 0
+; CHECK-NEXT:    store volatile double [[M0]], ptr [[SINK]], align 8
+; CHECK-NEXT:    store volatile double [[M0]], ptr [[SINK]], align 8
+; CHECK-NEXT:    store volatile double [[M0]], ptr [[SINK]], align 8
+; CHECK-NEXT:    store volatile double [[M0]], ptr [[SINK]], align 8
+; CHECK-NEXT:    store volatile double [[M0]], ptr [[SINK]], align 8
+; CHECK-NEXT:    store volatile double [[M0]], ptr [[SINK]], align 8
+; CHECK-NEXT:    store volatile double [[M0]], ptr [[SINK]], align 8
+; CHECK-NEXT:    call void @bar()
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul <4 x double> zeroinitializer, [[TMP1]]
+; CHECK-NEXT:    [[A2:%.*]] = call reassoc double @llvm.vector.reduce.fadd.v4f64(double -0.000000e+00, <4 x double> [[TMP3]])
+; CHECK-NEXT:    ret double [[A2]]
+;
+entry:
+  %m0 = fmul double 0.000000e+00, 0.000000e+00
+  store volatile double %m0, ptr %sink, align 8
+  store volatile double %m0, ptr %sink, align 8
+  store volatile double %m0, ptr %sink, align 8
+  store volatile double %m0, ptr %sink, align 8
+  store volatile double %m0, ptr %sink, align 8
+  store volatile double %m0, ptr %sink, align 8
+  store volatile double %m0, ptr %sink, align 8
+  call void @bar()
+  %m1 = fmul double %x, 0.000000e+00
+  %r0 = fmul contract double %m0, 0.000000e+00
+  %r1 = fmul double %m1, 0.000000e+00
+  %a0 = fadd reassoc contract double %r0, %r1
+  %m2 = fmul double 0.000000e+00, 0.000000e+00
+  %r2 = fmul double %m2, 0.000000e+00
+  %a1 = fadd reassoc double %a0, %r2
+  %a2 = fadd reassoc double %a1, 0.000000e+00
+  ret double %a2
+}
+
+; The adds are scheduled above their call user, so their vector is live across
+; the call and the loaded vector is not.
+
+define void @call_user(ptr noalias %in, ptr noalias %out) {
+; CHECK-LABEL: define void @call_user(
+; CHECK-SAME: ptr noalias [[IN:%.*]], ptr noalias [[OUT:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[IN2:%.*]] = getelementptr double, ptr [[IN]], i64 2
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[IN]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd <2 x double> [[TMP0]], <double 1.000000e+00, double 2.000000e+00>
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[TMP1]], i64 0
+; CHECK-NEXT:    call void @use(double [[TMP2]])
+; CHECK-NEXT:    store <2 x double> [[TMP1]], ptr [[OUT]], align 8
+; CHECK-NEXT:    [[O2:%.*]] = getelementptr double, ptr [[OUT]], i64 2
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr [[IN2]], align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[TMP3]], <double 3.000000e+00, double 4.000000e+00>
+; CHECK-NEXT:    store <2 x double> [[TMP4]], ptr [[O2]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  %x0 = load double, ptr %in, align 8
+  %in1 = getelementptr double, ptr %in, i64 1
+  %x1 = load double, ptr %in1, align 8
+  %in2 = getelementptr double, ptr %in, i64 2
+  %x2 = load double, ptr %in2, align 8
+  %in3 = getelementptr double, ptr %in, i64 3
+  %x3 = load double, ptr %in3, align 8
+  %e0 = fadd double %x0, 1.0
+  call void @use(double %e0)
+  %e1 = fadd double %x1, 2.0
+  %e2 = fadd double %x2, 3.0
+  %e3 = fadd double %x3, 4.0
+  store double %e0, ptr %out, align 8
+  %o1 = getelementptr double, ptr %out, i64 1
+  store double %e1, ptr %o1, align 8
+  %o2 = getelementptr double, ptr %out, i64 2
+  store double %e2, ptr %o2, align 8
+  %o3 = getelementptr double, ptr %out, i64 3
+  store double %e3, ptr %o3, align 8
+  ret void
+}
+
+; The multiplies are scheduled above the call together with the adds that use
+; them, so both vectors are live across the call.
+
+define void @moved_operand(ptr noalias %in, ptr noalias %out) {
+; CHECK-LABEL: define void @moved_operand(
+; CHECK-SAME: ptr noalias [[IN:%.*]], ptr noalias [[OUT:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[X0:%.*]] = load double, ptr [[IN]], align 8
+; CHECK-NEXT:    [[IN2:%.*]] = getelementptr double, ptr [[IN]], i64 2
+; CHECK-NEXT:    [[X1:%.*]] = load double, ptr [[IN2]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[X0]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[X1]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul <2 x double> [[TMP1]], <double 3.000000e+00, double 5.000000e+00>
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP2]], <double 1.000000e+00, double 2.000000e+00>
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP3]], i64 0
+; CHECK-NEXT:    call void @use(double [[TMP4]]) #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul <2 x double> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    store <2 x double> [[TMP5]], ptr [[OUT]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  %x0 = load double, ptr %in, align 8
+  %a0 = fmul double %x0, 3.0
+  %b0 = fadd double %a0, 1.0
+  call void @use(double %b0) nounwind willreturn memory(read)
+  %in2 = getelementptr double, ptr %in, i64 2
+  %x1 = load double, ptr %in2, align 8
+  %a1 = fmul double %x1, 5.0
+  %b1 = fadd double %a1, 2.0
+  %c0 = fmul double %a0, %b0
+  %c1 = fmul double %a1, %b1
+  store double %c0, ptr %out, align 8
+  %out1 = getelementptr double, ptr %out, i64 1
+  store double %c1, ptr %out1, align 8
+  ret void
+}
+
+; The multiplies feeding the phis in another block are scheduled above their
+; external user, so their vector is live across the call.
+
+define void @cross_block_phi(ptr noalias %in, ptr noalias %out, i1 %cond) {
+; CHECK-LABEL: define void @cross_block_phi(
+; CHECK-SAME: ptr noalias [[IN:%.*]], ptr noalias [[OUT:%.*]], i1 [[COND:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[X0:%.*]] = load double, ptr [[IN]], align 8
+; CHECK-NEXT:    [[IN2:%.*]] = getelementptr double, ptr [[IN]], i64 2
+; CHECK-NEXT:    [[X1:%.*]] = load double, ptr [[IN2]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[X0]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[X1]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul <2 x double> [[TMP1]], <double 3.000000e+00, double 5.000000e+00>
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[TMP2]], i64 0
+; CHECK-NEXT:    [[R0_USE:%.*]] = fmul double [[TMP3]], 7.000000e+00
+; CHECK-NEXT:    call void @use(double [[R0_USE]]) #[[ATTR2]]
+; CHECK-NEXT:    br i1 [[COND]], label %[[MERGE:.*]], label %[[OTHER:.*]]
+; CHECK:       [[OTHER]]:
+; CHECK-NEXT:    br label %[[MERGE]]
+; CHECK:       [[MERGE]]:
+; CHECK-NEXT:    [[TMP4:%.*]] = phi <2 x double> [ [[TMP2]], %[[ENTRY]] ], [ zeroinitializer, %[[OTHER]] ]
+; CHECK-NEXT:    store <2 x double> [[TMP4]], ptr [[OUT]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  %x0 = load double, ptr %in, align 8
+  %r0 = fmul double %x0, 3.0
+  %r0.use = fmul double %r0, 7.0
+  call void @use(double %r0.use) nounwind willreturn memory(read)
+  %in2 = getelementptr double, ptr %in, i64 2
+  %x1 = load double, ptr %in2, align 8
+  %r1 = fmul double %x1, 5.0
+  br i1 %cond, label %merge, label %other
+
+other:
+  br label %merge
+
+merge:
+  %p0 = phi double [ %r0, %entry ], [ 0.0, %other ]
+  %p1 = phi double [ %r1, %entry ], [ 0.0, %other ]
+  store double %p0, ptr %out, align 8
+  %out1 = getelementptr double, ptr %out, i64 1
+  store double %p1, ptr %out1, align 8
+  ret void
+}
+
+; The <16 x i1> compare result is promoted to <16 x i8> and kept live across
+; the call in a single Q register.
+
+define i1 @v16i1(ptr %p, i1 %x) {
+; CHECK-LABEL: define i1 @v16i1(
+; CHECK-SAME: ptr [[P:%.*]], i1 [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[P]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <16 x i8> [[TMP0]], zeroinitializer
+; CHECK-NEXT:    call void @bar()
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <16 x i1> poison, i1 [[X]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <16 x i1> [[TMP2]], <16 x i1> poison, <16 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = and <16 x i1> [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> [[TMP4]])
+; CHECK-NEXT:    ret i1 [[TMP5]]
+;
+entry:
+  %a0 = load i8, ptr %p, align 1
+  %c0 = icmp eq i8 %a0, 0
+  %p1 = getelementptr i8, ptr %p, i64 1
+  %a1 = load i8, ptr %p1, align 1
+  %c1 = icmp eq i8 %a1, 0
+  %p2 = getelementptr i8, ptr %p, i64 2
+  %a2 = load i8, ptr %p2, align 1
+  %c2 = icmp eq i8 %a2, 0
+  %p3 = getelementptr i8, ptr %p, i64 3
+  %a3 = load i8, ptr %p3, align 1
+  %c3 = icmp eq i8 %a3, 0
+  %p4 = getelementptr i8, ptr %p, i64 4
+  %a4 = load i8, ptr %p4, align 1
+  %c4 = icmp eq i8 %a4, 0
+  %p5 = getelementptr i8, ptr %p, i64 5
+  %a5 = load i8, ptr %p5, align 1
+  %c5 = icmp eq i8 %a5, 0
+  %p6 = getelementptr i8, ptr %p, i64 6
+  %a6 = load i8, ptr %p6, align 1
+  %c6 = icmp eq i8 %a6, 0
+  %p7 = getelementptr i8, ptr %p, i64 7
+  %a7 = load i8, ptr %p7, align 1
+  %c7 = icmp eq i8 %a7, 0
+  %p8 = getelementptr i8, ptr %p, i64 8
+  %a8 = load i8, ptr %p8, align 1
+  %c8 = icmp eq i8 %a8, 0
+  %p9 = getelementptr i8, ptr %p, i64 9
+  %a9 = load i8, ptr %p9, align 1
+  %c9 = icmp eq i8 %a9, 0
+  %p10 = getelementptr i8, ptr %p, i64 10
+  %a10 = load i8, ptr %p10, align 1
+  %c10 = icmp eq i8 %a10, 0
+  %p11 = getelementptr i8, ptr %p, i64 11
+  %a11 = load i8, ptr %p11, align 1
+  %c11 = icmp eq i8 %a11, 0
+  %p12 = getelementptr i8, ptr %p, i64 12
+  %a12 = load i8, ptr %p12, align 1
+  %c12 = icmp eq i8 %a12, 0
+  %p13 = getelementptr i8, ptr %p, i64 13
+  %a13 = load i8, ptr %p13, align 1
+  %c13 = icmp eq i8 %a13, 0
+  %p14 = getelementptr i8, ptr %p, i64 14
+  %a14 = load i8, ptr %p14, align 1
+  %c14 = icmp eq i8 %a14, 0
+  %p15 = getelementptr i8, ptr %p, i64 15
+  %a15 = load i8, ptr %p15, align 1
+  %c15 = icmp eq i8 %a15, 0
+  call void @bar()
+  %and0 = and i1 %c0, %x
+  %and1 = and i1 %c1, %x
+  %and2 = and i1 %c2, %x
+  %and3 = and i1 %c3, %x
+  %and4 = and i1 %c4, %x
+  %and5 = and i1 %c5, %x
+  %and6 = and i1 %c6, %x
+  %and7 = and i1 %c7, %x
+  %and8 = and i1 %c8, %x
+  %and9 = and i1 %c9, %x
+  %and10 = and i1 %c10, %x
+  %and11 = and i1 %c11, %x
+  %and12 = and i1 %c12, %x
+  %and13 = and i1 %c13, %x
+  %and14 = and i1 %c14, %x
+  %and15 = and i1 %c15, %x
+  %r0 = or i1 %and0, %and1
+  %r1 = or i1 %r0, %and2
+  %r2 = or i1 %r1, %and3
+  %r3 = or i1 %r2, %and4
+  %r4 = or i1 %r3, %and5
+  %r5 = or i1 %r4, %and6
+  %r6 = or i1 %r5, %and7
+  %r7 = or i1 %r6, %and8
+  %r8 = or i1 %r7, %and9
+  %r9 = or i1 %r8, %and10
+  %r10 = or i1 %r9, %and11
+  %r11 = or i1 %r10, %and12
+  %r12 = or i1 %r11, %and13
+  %r13 = or i1 %r12, %and14
+  %r14 = or i1 %r13, %and15
+  ret i1 %r14
+}
+
+; The copyable phi lane of the adds uses the phi itself, not its backedge value
+; after the call, so the multiplies stay below the call and the vector of the
+; adds is live across it.
+
+define double @copyable_phi_backedge(double %init, double %b) {
+; CHECK-LABEL: define double @copyable_phi_backedge(
+; CHECK-SAME: double [[INIT:%.*]], double [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x double> poison, double [[B]], i64 1
+; CHECK-NEXT:    [[E1:%.*]] = fadd fast double [[B]], 1.000000e+00
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[PHI0:%.*]] = phi double [ [[INIT]], %[[ENTRY]] ], [ [[TMP6:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> [[TMP0]], double [[PHI0]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[TMP1]], <4 x double> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd <4 x double> [[TMP2]], <double -0.000000e+00, double 1.000000e+00, double 2.000000e+00, double 4.000000e+00>
+; CHECK-NEXT:    [[E1_USE:%.*]] = fmul double [[E1]], 7.000000e+00
+; CHECK-NEXT:    call void @use(double [[E1_USE]])
+; CHECK-NEXT:    [[TMP4:%.*]] = fmul fast <4 x double> [[TMP3]], <double 1.100000e+01, double 1.300000e+01, double 1.700000e+01, double 1.900000e+01>
+; CHECK-NEXT:    [[R2:%.*]] = call fast double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[TMP4]])
+; CHECK-NEXT:    call void @use(double [[R2]])
+; CHECK-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[I_NEXT]], 100
+; CHECK-NEXT:    [[TMP6]] = extractelement <4 x double> [[TMP4]], i64 0
+; CHECK-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret double [[R2]]
+;
+entry:
+  br label %loop
+
+loop:
+  %phi0 = phi double [ %init, %entry ], [ %back0, %loop ]
+  %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
+  %e1 = fadd fast double %b, 1.0
+  %e1.use = fmul double %e1, 7.0
+  %e2 = fadd fast double %b, 2.0
+  %e3 = fadd fast double %b, 4.0
+  call void @use(double %e1.use)
+  %back0 = fmul fast double %phi0, 11.0
+  %back1 = fmul fast double %e1, 13.0
+  %back2 = fmul fast double %e2, 17.0
+  %back3 = fmul fast double %e3, 19.0
+  %r0 = fadd fast double %back0, %back1
+  %r1 = fadd fast double %r0, %back2
+  %r2 = fadd fast double %r1, %back3
+  call void @use(double %r2)
+  %i.next = add i32 %i, 1
+  %c = icmp ult i32 %i.next, 100
+  br i1 %c, label %loop, label %exit
+
+exit:
+  ret double %r2
+}
+
 declare void @use(double)
+declare void @bar()

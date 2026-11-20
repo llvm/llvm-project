@@ -15,6 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/SafeStack.h"
+#include "CodeGenOptions.h"
 #include "SafeStackLayout.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -86,16 +87,6 @@ STATISTIC(NumUnsafeDynamicAllocas, "Number of unsafe dynamic allocas");
 STATISTIC(NumUnsafeByValArguments, "Number of unsafe byval arguments");
 STATISTIC(NumUnsafeStackRestorePoints, "Number of setjmps and landingpads");
 
-/// Use __safestack_pointer_address even if the platform has a faster way of
-/// access safe stack pointer.
-static cl::opt<bool>
-    SafeStackUsePointerAddress("safestack-use-pointer-address",
-                                  cl::init(false), cl::Hidden);
-
-static cl::opt<bool> ClColoring("safe-stack-coloring",
-                                cl::desc("enable safe stack coloring"),
-                                cl::Hidden, cl::init(true));
-
 namespace {
 
 /// The SafeStack pass splits the stack of each function into the safe
@@ -104,6 +95,7 @@ namespace {
 /// local variables that are accessed in ways that we can't prove to
 /// be safe.
 class SafeStack {
+  const CodeGenOptions &Opts;
   Function &F;
   const TargetLoweringBase &TL;
   const LibcallLoweringInfo &Libcalls;
@@ -189,8 +181,8 @@ public:
   SafeStack(Function &F, const TargetLoweringBase &TL,
             const LibcallLoweringInfo &Libcalls, const DataLayout &DL,
             DomTreeUpdater *DTU, ScalarEvolution &SE)
-      : F(F), TL(TL), Libcalls(Libcalls), DL(DL), DTU(DTU), SE(SE),
-        StackPtrTy(DL.getAllocaPtrType(F.getContext())),
+      : Opts(getCodeGenOptions(F)), F(F), TL(TL), Libcalls(Libcalls), DL(DL),
+        DTU(DTU), SE(SE), StackPtrTy(DL.getAllocaPtrType(F.getContext())),
         AddrTy(DL.getAddressType(StackPtrTy)),
         Int32Ty(Type::getInt32Ty(F.getContext())) {}
 
@@ -507,7 +499,7 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
 
   StackLifetime SSC(F, StaticAllocas, StackLifetime::LivenessType::May);
   static const StackLifetime::LiveRange NoColoringRange(1, true);
-  if (ClColoring)
+  if (Opts.safe_stack_coloring)
     SSC.run();
 
   for (const auto *I : SSC.getMarkers()) {
@@ -519,7 +511,7 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
   }
 
   // Unsafe stack always grows down.
-  StackLayout SSL(StackAlignment);
+  StackLayout SSL(Opts, StackAlignment);
   if (StackGuardSlot) {
     SSL.addObject(StackGuardSlot, getStaticAllocaAllocationSize(StackGuardSlot),
                   StackGuardSlot->getAlign(), SSC.getFullLiveRange());
@@ -544,7 +536,8 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
       Size = 1; // Don't create zero-sized stack objects.
 
     SSL.addObject(AI, Size, AI->getAlign(),
-                  ClColoring ? SSC.getLiveRange(AI) : NoColoringRange);
+                  Opts.safe_stack_coloring ? SSC.getLiveRange(AI)
+                                           : NoColoringRange);
   }
 
   SSL.computeLayout();
@@ -790,7 +783,7 @@ bool SafeStack::run() {
   if (DISubprogram *SP = F.getSubprogram())
     IRB.SetCurrentDebugLocation(
         DILocation::get(SP->getContext(), SP->getScopeLine(), 0, SP));
-  if (SafeStackUsePointerAddress)
+  if (Opts.safe_stack_use_pointer_address)
     UnsafeStackPtr = TL.getSafeStackPointerAddressCall(IRB, Libcalls);
   else
     UnsafeStackPtr = TL.getSafeStackPointerLocation(IRB, Libcalls);

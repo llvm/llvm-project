@@ -18,11 +18,11 @@
 ; CHECK: OpLabel
 ; CHECK-NEXT: OpPhi %[[#float]]
 ; CHECK-NEXT: %[[#i64:]] = OpPhi %[[#ulong]]
-; CHECK-NEXT: OpInBoundsAccessChain %[[#ptr]] %[[#w]] %[[#i64]]{{$}}
+; CHECK: OpInBoundsAccessChain %[[#ptr]] %[[#w]] %[[#i64]]{{$}}
 ; CHECK: OpFunctionEnd
 ; CHECK: %[[#main32]] = OpFunction
 ; CHECK: %[[#i32:]] = OpPhi %[[#uint]]
-; CHECK-NEXT: OpInBoundsAccessChain %[[#ptr]] %[[#w]] %[[#i32]]{{$}}
+; CHECK: OpInBoundsAccessChain %[[#ptr]] %[[#w]] %[[#i32]]{{$}}
 ; CHECK: OpFunctionEnd
 
 @w = internal addrspace(10) constant [8 x float] [float 1.0, float 2.0, float 3.0, float 4.0, float 5.0, float 6.0, float 7.0, float 8.0]

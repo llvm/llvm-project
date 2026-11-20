@@ -83,6 +83,7 @@ public:
                 MachineBlockPlacementPass>();
   }
 
+protected:
   void addIRPasses(PassManagerWrapper &PMW) override;
   Error addInstSelector(PassManagerWrapper &PMW) override;
   void addPreRegAlloc(PassManagerWrapper &PMW) override;

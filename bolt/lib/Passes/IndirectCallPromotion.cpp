@@ -284,7 +284,7 @@ IndirectCallPromotion::getCallTargets(BinaryBasicBlock &BB,
     // Targets may contain multiple entries to the same target, but using
     // different indices. Their profile will report the same number of branches
     // for different indices if the target is the same. That's because we don't
-    // profile the index value, but only the target via LBR.
+    // profile the index value, but only the target via brstack.
     auto First = Targets.begin();
     auto Last = Targets.end();
     auto Result = First;
@@ -564,7 +564,7 @@ IndirectCallPromotion::findCallTargetSymbols(std::vector<Callsite> &Targets,
     // Recompute hottest targets, now discriminating which index is hot
     // NOTE: This is a tradeoff. On one hand, we get index information. On the
     // other hand, info coming from the memory profile is much less accurate
-    // than LBRs. So we may actually end up working with more coarse
+    // than brstack data. So we may actually end up working with more coarse
     // profile granularity in exchange for information about indices.
     std::vector<Callsite> NewTargets;
     std::map<const MCSymbol *, uint32_t> IndicesPerTarget;

@@ -39,6 +39,7 @@
 #include "src/__support/threads/linux/futex_utils.h" // For FutexWordType
 #include "src/__support/threads/linux/futex_word.h"
 #include "src/__support/threads/thread_attributes.h"
+#include "src/__support/time/linux/cpu_clock.h"
 
 #include "hdr/errno_macros.h"
 #include "hdr/fcntl_macros.h"
@@ -492,6 +493,15 @@ ErrorOr<SchedParameters> Thread::getschedparam() const {
     return Error(param_result.error());
 
   return SchedParameters{pol_result.value(), param};
+}
+
+clockid_t Thread::getcpuclockid() const {
+  // NB: Once the thread exits, the kernel can reuse its TID, so the clock ID
+  // may stop working, or even refer to a different thread. We don't check for
+  // that since POSIX.1-2024 considers the pthread_t of an exited thread valid
+  // until it is joined or detached, and a clock ID obtained before the thread
+  // exited is affected the same way.
+  return internal::make_thread_cpu_clock(attrib->tid);
 }
 
 ErrorOr<void> Thread::kill(int sig) {

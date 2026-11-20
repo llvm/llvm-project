@@ -576,6 +576,16 @@ public:
   /// reenter the policy or retain references. The default visits nothing.
   virtual void forEachPendingRemark(
       llvm::function_ref<void(const Remark &)> callback) const {}
+
+  /// Visit pending remarks at the complete location. The default filters the
+  /// existing visitor; policies may override this to use a location index.
+  virtual void forEachPendingRemarkAt(
+      Location loc, llvm::function_ref<void(const Remark &)> callback) const {
+    forEachPendingRemark([&](const Remark &remark) {
+      if (remark.getLocation() == loc)
+        callback(remark);
+    });
+  }
 };
 
 //===----------------------------------------------------------------------===//
@@ -703,8 +713,9 @@ public:
   void clearHistory();
 
   /// Find matching emitted remarks and pending candidates in ID order, each
-  /// once. Returns empty without history; otherwise scans all pending and
-  /// emitted remarks. Candidates may be replaced before emission. Queries may
+  /// once. Returns empty without history. Queries with a location use indexes
+  /// for emitted and Final's pending remarks; other queries scan all remarks.
+  /// Candidates may be replaced before emission. Queries may
   /// overlap reports, but not Final::finalize(). Cross-function matches depend
   /// on thread timing; scope queries with function().
   SmallVector<RemarkId> findRemarks(const RemarkQuery &query) const;
@@ -791,6 +802,9 @@ public:
   /// Visit pending candidates. Must not overlap finalize().
   void forEachPendingRemark(
       llvm::function_ref<void(const detail::Remark &)> callback) const override;
+  void forEachPendingRemarkAt(
+      Location loc,
+      llvm::function_ref<void(const detail::Remark &)> callback) const override;
 
   /// Emit each survivor once, grouping related remarks after their parents.
   /// Visit roots with IDs in ID order, then ID-less roots in unspecified order.
@@ -801,8 +815,27 @@ public:
   void finalize() override;
 
 private:
+  struct RemarkPtrInfo {
+    static unsigned
+    getHashValue(const std::unique_ptr<detail::Remark> &remark) {
+      return getHashValue(*remark);
+    }
+    static unsigned getHashValue(const detail::Remark &remark);
+    static bool isEqual(const std::unique_ptr<detail::Remark> &lhs,
+                        const std::unique_ptr<detail::Remark> &rhs) {
+      return isEqual(*lhs, rhs);
+    }
+    static bool isEqual(const detail::Remark &lhs,
+                        const std::unique_ptr<detail::Remark> &rhs);
+  };
+
   mutable std::mutex mutex;
-  llvm::DenseSet<detail::Remark> pendingRemarks;
+  // Stable addresses keep the location index valid when the set grows.
+  llvm::DenseSet<std::unique_ptr<detail::Remark>, RemarkPtrInfo> pendingRemarks;
+  using LocationIndex =
+      llvm::DenseMap<Location, SmallVector<const detail::Remark *, 1>>;
+  /// Built on the first location query and released when the batch drains.
+  mutable std::unique_ptr<LocationIndex> pendingByLocation;
   /// IDs replaced in the current batch.
   llvm::DenseSet<uint64_t> discardedIds;
 };
