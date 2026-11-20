@@ -1532,7 +1532,7 @@ mlir::Value CIRGenFunction::emitSVEPredicateCast(mlir::Value pred,
   // TODO: Handle "aarch64.svcount" once we get round to supporting SME.
 
   auto retTy = cir::VectorType::getScalable(builder.getUIntNTy(1), minNumElts,
-                                            cir::VectorKind::SVEPredicate);
+                                            cir::VectorAbiKind::SVEPredicate);
   if (pred.getType() == retTy)
     return pred;
 
@@ -1606,45 +1606,45 @@ cir::VectorType CIRGenFunction::getSVEType(const SVETypeFlags &typeFlags) {
 
   case SVETypeFlags::EltTyInt8:
     return cir::VectorType::getScalable(builder.getUInt8Ty(), 16,
-                                        cir::VectorKind::SVEData);
+                                        cir::VectorAbiKind::SVEData);
   case SVETypeFlags::EltTyInt16:
     return cir::VectorType::getScalable(builder.getUInt16Ty(), 8,
-                                        cir::VectorKind::SVEData);
+                                        cir::VectorAbiKind::SVEData);
   case SVETypeFlags::EltTyInt32:
     return cir::VectorType::getScalable(builder.getUInt32Ty(), 4,
-                                        cir::VectorKind::SVEData);
+                                        cir::VectorAbiKind::SVEData);
   case SVETypeFlags::EltTyInt64:
     return cir::VectorType::getScalable(builder.getUInt64Ty(), 2,
-                                        cir::VectorKind::SVEData);
+                                        cir::VectorAbiKind::SVEData);
 
   case SVETypeFlags::EltTyMFloat8:
     return cir::VectorType::getScalable(builder.getUInt8Ty(), 16,
-                                        cir::VectorKind::SVEData);
+                                        cir::VectorAbiKind::SVEData);
   case SVETypeFlags::EltTyFloat16:
     return cir::VectorType::getScalable(builder.getFp16Ty(), 8,
-                                        cir::VectorKind::SVEData);
+                                        cir::VectorAbiKind::SVEData);
   case SVETypeFlags::EltTyBFloat16:
     return cir::VectorType::getScalable(builder.getBfloat16Ty(), 8,
-                                        cir::VectorKind::SVEData);
+                                        cir::VectorAbiKind::SVEData);
   case SVETypeFlags::EltTyFloat32:
     return cir::VectorType::getScalable(builder.getSingleTy(), 4,
-                                        cir::VectorKind::SVEData);
+                                        cir::VectorAbiKind::SVEData);
   case SVETypeFlags::EltTyFloat64:
     return cir::VectorType::getScalable(builder.getDoubleTy(), 2,
-                                        cir::VectorKind::SVEData);
+                                        cir::VectorAbiKind::SVEData);
 
   case SVETypeFlags::EltTyBool8:
     return cir::VectorType::getScalable(builder.getUIntNTy(1), 16,
-                                        cir::VectorKind::SVEPredicate);
+                                        cir::VectorAbiKind::SVEPredicate);
   case SVETypeFlags::EltTyBool16:
     return cir::VectorType::getScalable(builder.getUIntNTy(1), 8,
-                                        cir::VectorKind::SVEPredicate);
+                                        cir::VectorAbiKind::SVEPredicate);
   case SVETypeFlags::EltTyBool32:
     return cir::VectorType::getScalable(builder.getUIntNTy(1), 4,
-                                        cir::VectorKind::SVEPredicate);
+                                        cir::VectorAbiKind::SVEPredicate);
   case SVETypeFlags::EltTyBool64:
     return cir::VectorType::getScalable(builder.getUIntNTy(1), 2,
-                                        cir::VectorKind::SVEPredicate);
+                                        cir::VectorAbiKind::SVEPredicate);
   }
 }
 
@@ -1655,7 +1655,8 @@ static cir::VectorType getSVEVectorForElementType(CIRGenModule &cgm,
                                                   mlir::Type eltTy) {
   unsigned numElts =
       sveBitsPerBlock / cgm.getDataLayout().getTypeSizeInBits(eltTy);
-  return cir::VectorType::getScalable(eltTy, numElts, cir::VectorKind::SVEData);
+  return cir::VectorType::getScalable(eltTy, numElts,
+                                      cir::VectorAbiKind::SVEData);
 }
 
 //===----------------------------------------------------------------------===//

@@ -62,7 +62,7 @@ class EnumParam<string name> :
 
 def CtorKindParam : EnumParam<"CtorKind">;
 def AssignKindParam : EnumParam<"AssignKind">;
-def VectorKindParam : EnumParam<"VectorKind">;
+def VectorAbiKindParam : EnumParam<"VectorAbiKind">;
 
 def CheckedInt :
   WithParser<"succeeded(readCheckedInt($_reader, $_var))",
@@ -340,7 +340,7 @@ def VectorType : DialectType<(type
   WithGetter<"$_attrType.getSize().getKnownMinValue()",
              CheckedUnsigned>:$size,
   WithGetter<"$_attrType.isScalable()", Bool>:$scalable,
-  VectorKindParam:$kind
+  VectorAbiKindParam:$kind
 )> {
   let cType = "::cir::VectorType";
   let cBuilder = "$_resultType::getChecked(" #

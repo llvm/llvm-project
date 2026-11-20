@@ -1670,16 +1670,16 @@ cir::VectorType::verifyEntries(mlir::DataLayoutEntryListRef entries,
 
 mlir::LogicalResult cir::VectorType::verify(
     llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
-    mlir::Type elementType, llvm::ElementCount size, cir::VectorKind kind) {
+    mlir::Type elementType, llvm::ElementCount size, cir::VectorAbiKind kind) {
   if (size.isZero())
     return emitError() << "the number of vector elements must be non-zero";
 
   switch (kind) {
-  case cir::VectorKind::Generic:
+  case cir::VectorAbiKind::Generic:
     if (size.isScalable())
       return emitError() << "a scalable vector must have a vector kind";
     return success();
-  case cir::VectorKind::SVEData: {
+  case cir::VectorAbiKind::SVEData: {
     if (auto intTy = mlir::dyn_cast<cir::IntType>(elementType)) {
       unsigned width = intTy.getWidth();
       if (!intTy.isBitInt() &&
@@ -1693,7 +1693,7 @@ mlir::LogicalResult cir::VectorType::verify(
                           "64-bit integer elements or f16, bf16, float, or "
                           "double elements";
   }
-  case cir::VectorKind::SVEPredicate: {
+  case cir::VectorAbiKind::SVEPredicate: {
     unsigned width = size.isScalable() ? 1 : 8;
     auto intTy = mlir::dyn_cast<cir::IntType>(elementType);
     if (!intTy || intTy.isSigned() || intTy.isBitInt() ||
@@ -1755,15 +1755,15 @@ mlir::Type cir::VectorType::parse(::mlir::AsmParser &odsParser) {
   }
 
   // Parse the optional vector kind. A generic vector has no kind keyword.
-  cir::VectorKind kind = cir::VectorKind::Generic;
+  cir::VectorAbiKind kind = cir::VectorAbiKind::Generic;
   if (odsParser.parseOptionalComma().succeeded()) {
     llvm::SMLoc kindLoc = odsParser.getCurrentLocation();
     llvm::StringRef kindName;
     if (odsParser.parseKeyword(&kindName))
       return {};
-    std::optional<cir::VectorKind> parsedKind =
-        cir::symbolizeVectorKind(kindName);
-    if (!parsedKind || *parsedKind == cir::VectorKind::Generic) {
+    std::optional<cir::VectorAbiKind> parsedKind =
+        cir::symbolizeVectorAbiKind(kindName);
+    if (!parsedKind || *parsedKind == cir::VectorAbiKind::Generic) {
       odsParser.emitError(kindLoc, "expected 'sve_data' or 'sve_predicate'");
       return {};
     }
@@ -1790,8 +1790,8 @@ void cir::VectorType::print(mlir::AsmPrinter &odsPrinter) const {
   odsPrinter << ' ' << "x";
   odsPrinter << ' ';
   odsPrinter.printStrippedAttrOrType(getElementType());
-  if (getKind() != cir::VectorKind::Generic)
-    odsPrinter << ", " << cir::stringifyVectorKind(getKind());
+  if (getKind() != cir::VectorAbiKind::Generic)
+    odsPrinter << ", " << cir::stringifyVectorAbiKind(getKind());
   odsPrinter << ">";
 }
 

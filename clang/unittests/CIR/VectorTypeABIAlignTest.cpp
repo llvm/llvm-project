@@ -175,24 +175,24 @@ TEST_F(VectorTypeABIAlignTest, SVEVectorLanguageAlignment) {
   mlir::Type u1 = cir::IntType::get(&context, 1, /*isSigned=*/false);
 
   auto svfloat32 =
-      cir::VectorType::getScalable(f32(), 4, cir::VectorKind::SVEData);
+      cir::VectorType::getScalable(f32(), 4, cir::VectorAbiKind::SVEData);
   EXPECT_EQ(dl.layout.getTypeABIAlignment(svfloat32), 16u);
   EXPECT_EQ(dl.getTypeLanguageAlignment(svfloat32), 16u);
 
   auto svbool =
-      cir::VectorType::getScalable(u1, 16, cir::VectorKind::SVEPredicate);
+      cir::VectorType::getScalable(u1, 16, cir::VectorAbiKind::SVEPredicate);
   EXPECT_EQ(dl.layout.getTypeABIAlignment(svbool), 2u);
   EXPECT_EQ(dl.getTypeLanguageAlignment(svbool), 2u);
 
   // A 512-bit fixed_float32_t.
   auto fixedFloat32 =
-      cir::VectorType::getFixed(f32(), 16, cir::VectorKind::SVEData);
+      cir::VectorType::getFixed(f32(), 16, cir::VectorAbiKind::SVEData);
   EXPECT_EQ(dl.layout.getTypeABIAlignment(fixedFloat32), 64u);
   EXPECT_EQ(dl.getTypeLanguageAlignment(fixedFloat32), 16u);
 
   // A 512-bit fixed_bool_t.
   auto fixedBool =
-      cir::VectorType::getFixed(u8(), 8, cir::VectorKind::SVEPredicate);
+      cir::VectorType::getFixed(u8(), 8, cir::VectorAbiKind::SVEPredicate);
   EXPECT_EQ(dl.layout.getTypeABIAlignment(fixedBool), 8u);
   EXPECT_EQ(dl.getTypeLanguageAlignment(fixedBool), 2u);
 

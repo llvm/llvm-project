@@ -499,11 +499,8 @@ def CIR_ArrayType : CIR_Type<"Array", "array", [
 // VectorType
 //===----------------------------------------------------------------------===//
 
-// FIXME: This corresponds to the clang::VectorKind enum. We will eventually
-//        need to match more (though possibly not all) of the entries there. It
-//        would be nice to have a way to generate both from a common source or
-//        at least tablegen the conversion handling.
-def CIR_VectorKind : CIR_I32Enum<"VectorKind", "vector kind", [
+// This corresponds to the llvm::abi::VectorKind enum.
+def CIR_VectorAbiKind : CIR_I32Enum<"VectorAbiKind", "vector ABI kind", [
     I32EnumCase<"Generic", 0, "generic">,
     I32EnumCase<"SVEData", 1, "sve_data">,
     I32EnumCase<"SVEPredicate", 2, "sve_predicate">
@@ -578,13 +575,14 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
   let parameters = (ins
     CIR_VectorElementType:$element_type,
     "llvm::ElementCount":$size,
-    DefaultValuedParameter<"cir::VectorKind", "cir::VectorKind::Generic">:$kind
+    DefaultValuedParameter<"cir::VectorAbiKind",
+                           "cir::VectorAbiKind::Generic">:$kind
   );
 
   let builders = [
     TypeBuilderWithInferredContext<(ins
       "mlir::Type":$element_type, "llvm::ElementCount":$size,
-      CArg<"cir::VectorKind", "cir::VectorKind::Generic">:$kind
+      CArg<"cir::VectorAbiKind", "cir::VectorAbiKind::Generic">:$kind
     ), [{
         return $_get(element_type.getContext(), element_type, size, kind);
     }]>,
@@ -599,21 +597,21 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
 
     /// Return whether this vector is an AArch64 SVE data or predicate vector.
     bool isSVE() const {
-      return getKind() == VectorKind::SVEData ||
-             getKind() == VectorKind::SVEPredicate;
+      return getKind() == VectorAbiKind::SVEData ||
+             getKind() == VectorAbiKind::SVEPredicate;
     }
 
     /// Return a fixed-width vector with the given element type, size, and
     /// kind.
     static VectorType getFixed(mlir::Type elementType, uint64_t size,
-                               VectorKind kind = VectorKind::Generic) {
+                               VectorAbiKind kind = VectorAbiKind::Generic) {
       return get(elementType, llvm::ElementCount::getFixed(size), kind);
     }
 
     /// Return a scalable vector with the given element type, minimum size,
     /// and kind.
     static VectorType getScalable(mlir::Type elementType, uint64_t size,
-                                  VectorKind kind) {
+                                  VectorAbiKind kind) {
       return get(elementType, llvm::ElementCount::getScalable(size), kind);
     }
 

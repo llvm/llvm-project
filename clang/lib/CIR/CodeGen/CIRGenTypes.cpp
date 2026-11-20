@@ -303,17 +303,17 @@ mlir::Type CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *rd) {
   return entry;
 }
 
-static cir::VectorKind getCIRVectorKind(clang::VectorKind kind) {
+static cir::VectorAbiKind getCIRVectorAbiKind(clang::VectorKind kind) {
   switch (kind) {
   case VectorKind::SveFixedLengthData:
-    return cir::VectorKind::SVEData;
+    return cir::VectorAbiKind::SVEData;
   case VectorKind::SveFixedLengthPredicate:
-    return cir::VectorKind::SVEPredicate;
+    return cir::VectorAbiKind::SVEPredicate;
   default:
     // Most vector kinds aren't needed during code generation. RISC-V vector
     // kinds will be needed for ABI lowering.
     assert(!cir::MissingFeatures::riscvVectorKinds());
-    return cir::VectorKind::Generic;
+    return cir::VectorAbiKind::Generic;
   }
 }
 
@@ -417,8 +417,8 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
           eltTy = convertType(info.ElementType);
         resultType =
             cir::VectorType::get(eltTy, info.EC,
-                                 isPredicate ? cir::VectorKind::SVEPredicate
-                                             : cir::VectorKind::SVEData);
+                                 isPredicate ? cir::VectorAbiKind::SVEPredicate
+                                             : cir::VectorAbiKind::SVEData);
         break;
       }
 
@@ -601,8 +601,9 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
   case Type::Vector: {
     const VectorType *vec = cast<VectorType>(ty);
     const mlir::Type elemTy = convertType(vec->getElementType());
-    resultType = cir::VectorType::getFixed(
-        elemTy, vec->getNumElements(), getCIRVectorKind(vec->getVectorKind()));
+    resultType =
+        cir::VectorType::getFixed(elemTy, vec->getNumElements(),
+                                  getCIRVectorAbiKind(vec->getVectorKind()));
     break;
   }
 
