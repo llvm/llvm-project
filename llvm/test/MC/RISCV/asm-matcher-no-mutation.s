@@ -10,36 +10,36 @@
 ## parsed register operands across match table rows.
 
 # VMADOT:      Trying to match opcode SMT_VMADOT1
-# VMADOT-NEXT:   Matching formal operand class MCK_VRM2 against actual operand at index 1 (<reg: v0 (35)>): match success using generic matcher
-# VMADOT-NEXT:   Matching formal operand class MCK_VRM2 against actual operand at index 2 (<reg: v3 (38)>): operand match failed, recording near-miss with diag code 58
+# VMADOT-NEXT:   Matching formal operand class MCK_VRM2 against actual operand at index 1 (<reg: v0 ([[V0:[0-9]+]])>): match success using generic matcher
+# VMADOT-NEXT:   Matching formal operand class MCK_VRM2 against actual operand at index 2 (<reg: v3 ([[V3:[0-9]+]])>): operand match failed, recording near-miss with diag code {{[0-9]+}}
 # VMADOT:      Trying to match opcode SMT_VMADOT1vtype
-# VMADOT-NEXT:   Matching formal operand class MCK_VRM2 against actual operand at index 1 (<reg: v0 (35)>): match success using generic matcher
-# VMADOT-NEXT:   Matching formal operand class MCK_VRM2 against actual operand at index 2 (<reg: v3 (38)>): operand match failed, recording near-miss with diag code 58
+# VMADOT-NEXT:   Matching formal operand class MCK_VRM2 against actual operand at index 1 (<reg: v0 ([[V0]])>): match success using generic matcher
+# VMADOT-NEXT:   Matching formal operand class MCK_VRM2 against actual operand at index 2 (<reg: v3 ([[V3]])>): operand match failed, recording near-miss with diag code {{[0-9]+}}
 smt.vmadot1 v0, v3, v4
 
 # YADD:      Trying to match opcode YADD
-# YADD-NEXT:   Matching formal operand class MCK_YGPR against actual operand at index 1 (<reg: a0 (77)>): match success using generic matcher
-# YADD-NEXT:   Matching formal operand class MCK_YGPR against actual operand at index 2 (<reg: a1 (78)>): match success using generic matcher
-# YADD-NEXT:   Matching formal operand class MCK_GPRNoX0 against actual operand at index 3 (<reg: zero (67)>): operand match failed, recording near-miss
+# YADD-NEXT:   Matching formal operand class MCK_YGPR against actual operand at index 1 (<reg: a0 ([[A0:[0-9]+]])>): match success using generic matcher
+# YADD-NEXT:   Matching formal operand class MCK_YGPR against actual operand at index 2 (<reg: a1 ([[A1:[0-9]+]])>): match success using generic matcher
+# YADD-NEXT:   Matching formal operand class MCK_GPRNoX0 against actual operand at index 3 (<reg: zero ({{[0-9]+}})>): operand match failed, recording near-miss
 # YADD:      Trying to match opcode YADDI
-# YADD-NEXT:   Matching formal operand class MCK_YGPR against actual operand at index 1 (<reg: a0 (77)>): match success using generic matcher
-# YADD-NEXT:   Matching formal operand class MCK_YGPR against actual operand at index 2 (<reg: a1 (78)>): match success using generic matcher
+# YADD-NEXT:   Matching formal operand class MCK_YGPR against actual operand at index 1 (<reg: a0 ([[A0]])>): match success using generic matcher
+# YADD-NEXT:   Matching formal operand class MCK_YGPR against actual operand at index 2 (<reg: a1 ([[A1]])>): match success using generic matcher
 yadd a0, a1, x0
 
 ## Verify that GPR operands are not mutated into GPRPair before instruction
 ## matching.
 # RV32:      Trying to match opcode LD
-# RV32-NEXT:   Matching formal operand class MCK_GPR against actual operand at index 1 (<reg: a0 (77)>): match success using generic matcher
+# RV32-NEXT:   Matching formal operand class MCK_GPR against actual operand at index 1 (<reg: a0 ([[A0:[0-9]+]])>): match success using generic matcher
 # RV32:      Trying to match opcode LD_RV32
-# RV32-NEXT:   Matching formal operand class MCK_GPRPair against actual operand at index 1 (<reg: a0 (77)>): match success using generic matcher
+# RV32-NEXT:   Matching formal operand class MCK_GPRPair against actual operand at index 1 (<reg: a0 ([[A0]])>): match success using generic matcher
 ld a0, 0(a3)
 
 # RV32:      Trying to match opcode FADD_D
-# RV32-NEXT:   Matching formal operand class MCK_FPR64 against actual operand at index 1 (<reg: a0 (77)>): operand match failed, recording near-miss
+# RV32-NEXT:   Matching formal operand class MCK_FPR64 against actual operand at index 1 (<reg: a0 ([[A0]])>): operand match failed, recording near-miss
 # RV32:      Trying to match opcode FADD_D_INX
-# RV32-NEXT:   Matching formal operand class MCK_GPRF64AsFPR against actual operand at index 1 (<reg: a0 (77)>): operand match failed, recording near-miss
+# RV32-NEXT:   Matching formal operand class MCK_GPRF64AsFPR against actual operand at index 1 (<reg: a0 ([[A0]])>): operand match failed, recording near-miss
 # RV32:      Trying to match opcode FADD_D_IN32X
-# RV32-NEXT:   Matching formal operand class MCK_GPRPairAsFPR against actual operand at index 1 (<reg: a0 (77)>): match success using generic matcher
-# RV32-NEXT:   Matching formal operand class MCK_GPRPairAsFPR against actual operand at index 2 (<reg: a2 (79)>): match success using generic matcher
-# RV32-NEXT:   Matching formal operand class MCK_GPRPairAsFPR against actual operand at index 3 (<reg: a4 (81)>): match success using generic matcher
+# RV32-NEXT:   Matching formal operand class MCK_GPRPairAsFPR against actual operand at index 1 (<reg: a0 ([[A0]])>): match success using generic matcher
+# RV32-NEXT:   Matching formal operand class MCK_GPRPairAsFPR against actual operand at index 2 (<reg: a2 ({{[0-9]+}})>): match success using generic matcher
+# RV32-NEXT:   Matching formal operand class MCK_GPRPairAsFPR against actual operand at index 3 (<reg: a4 ({{[0-9]+}})>): match success using generic matcher
 fadd.d a0, a2, a4
