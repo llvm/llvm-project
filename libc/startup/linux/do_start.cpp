@@ -20,6 +20,7 @@
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/threads/linux/futex_utils.h"
+#include "src/__support/threads/stack_size.h"
 #include "src/__support/threads/tcb.h"
 #include "src/__support/threads/thread.h"
 #include "src/errno/program_invocation_name.h"
@@ -206,6 +207,10 @@ static TLSDescriptor tls;
     linux_syscalls::exit_group(1);
 
   get_tcb(tls.tp)->attrib = &main_thread_attrib;
+
+  // This needs to happen before the init array callbacks, as global
+  // constructors can already create threads.
+  init_default_stacksize();
 
   // We want the fini array callbacks to be run after other atexit
   // callbacks are run. So, we register them before running the init

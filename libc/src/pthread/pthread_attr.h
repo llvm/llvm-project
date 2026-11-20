@@ -19,19 +19,22 @@
 #include "hdr/types/pthread_attr_t.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/threads/stack_size.h"
 #include "src/__support/threads/thread.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-LIBC_INLINE_VAR constexpr pthread_attr_t DEFAULT_PTHREAD_ATTR = {
-    PTHREAD_CREATE_JOINABLE,   // Not detached
-    PTHREAD_INHERIT_SCHED,     // Default inherit scheduler
-    SCHED_OTHER,               // Default scheduling policy
-    {},                        // Default scheduling parameters
-    nullptr,                   // Let the thread manage its stack
-    Thread::DEFAULT_STACKSIZE, // stack size.
-    Thread::DEFAULT_GUARDSIZE, // Default page size for the guard size.
-};
+LIBC_INLINE pthread_attr_t default_pthread_attr() {
+  return pthread_attr_t{
+      PTHREAD_CREATE_JOINABLE,   // Not detached
+      PTHREAD_INHERIT_SCHED,     // Default inherit scheduler
+      SCHED_OTHER,               // Default scheduling policy
+      {},                        // Default scheduling parameters
+      nullptr,                   // Let the thread manage its stack
+      default_stacksize(),       // Default stack size
+      Thread::DEFAULT_GUARDSIZE, // Default page size for the guard size
+  };
+}
 
 } // namespace LIBC_NAMESPACE_DECL
 

@@ -58,6 +58,17 @@ if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.tcb)
   )
 endif()
 
+if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.stack_size)
+  add_header_library(
+    stack_size
+    HDRS
+      stack_size.h
+    DEPENDS
+      .${LIBC_TARGET_OS}.stack_size
+      libc.src.__support.macros.properties.os
+  )
+endif()
+
 if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.futex_utils)
   add_header_library(
     futex_utils
