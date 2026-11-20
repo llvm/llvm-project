@@ -49,6 +49,7 @@
 #include "clang/Sema/SemaBPF.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaHLSL.h"
+#include "clang/Sema/SemaHexagon.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaM68k.h"
 #include "clang/Sema/SemaMIPS.h"
@@ -7793,6 +7794,9 @@ ProcessDeclAttribute(Sema &S, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_BTFDeclTag:
     handleBTFDeclTagAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_HexagonHLXVectorStackLimit:
+    S.Hexagon().handleHLXVectorStackLimitAttr(D, AL);
     break;
   case ParsedAttr::AT_WebAssemblyExportName:
     S.Wasm().handleWebAssemblyExportNameAttr(D, AL);

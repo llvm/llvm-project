@@ -68,7 +68,7 @@ private:
   struct CaptureByViolation {
     /// The first written [[clang::lifetime_capture_by]] attribute.
     const LifetimeCaptureByAttr *Attr;
-    /// The field or global it is captured by, if known.
+    /// The field, global or parameter it is captured by, if known.
     const ValueDecl *CapturedBy;
   };
   /// Parameters captured by an entity their written
@@ -230,7 +230,7 @@ public:
   struct Capturer {
     /// The index that a [[clang::lifetime_capture_by]] attribute uses for it.
     int Index;
-    /// The field or global, if known.
+    /// The field, global or parameter, if known.
     const ValueDecl *CapturedBy;
   };
 
@@ -239,7 +239,8 @@ public:
   /// attributes are not verified.
   void checkCaptureBy(const ParmVarDecl &PVD, const OriginEscapesFact &OEF) {
     std::optional<Capturer> C = getCapturer(OEF);
-    if (!C)
+    // A parameter cannot name itself as its capturer.
+    if (!C || C->CapturedBy == &PVD)
       return;
     // A lifetimebound constructor parameter is captured by the constructed
     // object.
@@ -268,11 +269,12 @@ public:
   /// Returns the entity that a parameter escaping through \p OEF is captured
   /// by, if a [[clang::lifetime_capture_by]] attribute can name it.
   std::optional<Capturer> getCapturer(const OriginEscapesFact &OEF) const {
+    // Index 0 names `this` only with an implicit object parameter; otherwise
+    // it names the first parameter.
+    const auto *MD = dyn_cast<CXXMethodDecl>(FD);
+    bool HasThis = MD && MD->isImplicitObjectMemberFunction();
     if (isa<FieldEscapeFact, ThisEscapeFact>(OEF)) {
-      // Index 0 names `this` only with an implicit object parameter;
-      // otherwise it names the first parameter.
-      const auto *MD = dyn_cast<CXXMethodDecl>(FD);
-      if (!MD || !MD->isImplicitObjectMemberFunction())
+      if (!HasThis)
         return std::nullopt;
       const auto *FieldEsc = dyn_cast<FieldEscapeFact>(&OEF);
       return Capturer{LifetimeCaptureByAttr::This,
@@ -280,6 +282,12 @@ public:
     }
     if (const auto *GlobalEsc = dyn_cast<GlobalEscapeFact>(&OEF))
       return Capturer{LifetimeCaptureByAttr::Global, GlobalEsc->getGlobal()};
+    if (const auto *ParamEsc = dyn_cast<ParamEscapeFact>(&OEF)) {
+      const ParmVarDecl *Param = ParamEsc->getParam();
+      return Capturer{static_cast<int>(Param->getFunctionScopeIndex()) +
+                          (HasThis ? 1 : 0),
+                      Param};
+    }
     return std::nullopt;
   }
 
@@ -426,14 +434,13 @@ public:
               SemaHelper->reportInvalidatedGlobal(
                   InvalidatedPVD, GlobalEscape->getGlobal(),
                   Warning.InvalidatedByExpr, ExprChain);
-          } else if (isa<ReturnEscapeFact>(OEF)) {
-            // FIXME: Diagnose invalidated return escapes separately.
-          } else if (const auto *ThisEscape = dyn_cast<ThisEscapeFact>(OEF)) {
-            // A loan still held by the object at the method's exit was
-            // invalidated.
-            llvm::SmallVector<const Expr *> ExprChain = getExprChain(
-                LoanPropagation.buildOriginFlowChain(OEF, LID, Cfg));
-            UseSite Use = UseSite::at(ThisEscape->getLoc());
+          } else if (isa<ReturnEscapeFact, ThisEscapeFact>(OEF)) {
+            // An invalidated loan is returned, or is still held by the object
+            // at the method's exit.
+            const auto *RetEscape = dyn_cast<ReturnEscapeFact>(OEF);
+            UseSite Use =
+                RetEscape ? UseSite::fromExpr(*RetEscape->getReturnExpr())
+                          : UseSite::at(cast<ThisEscapeFact>(OEF)->getLoc());
             if (IssueExpr)
               SemaHelper->reportUseAfterInvalidation(
                   IssueExpr, Use, Warning.InvalidatedByExpr, ExprChain);

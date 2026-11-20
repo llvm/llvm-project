@@ -2100,22 +2100,34 @@ TEST(ScudoCombinedDeathTest, SizeNotExactUsableMismatch) {
   using AllocatorT = scudo::Allocator<TestMatchNotExactUsableSizeConfig>;
   auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
 
-  void *Ptr = Allocator->allocate(10, scudo::Chunk::Origin::Malloc);
+  // Free with exact size passed to allocate.
+  void *Ptr = Allocator->allocate(9, scudo::Chunk::Origin::Malloc);
   EXPECT_TRUE(Ptr != nullptr);
   SCUDO_EXPECT_DEATH(
       Allocator->deallocateSized(Ptr, scudo::Chunk::Origin::Malloc, 1000000),
-      "invalid sized delete when deallocating.*\\(1000000 vs 10 or .*\\)");
-  Allocator->deallocateSized(Ptr, scudo::Chunk::Origin::Malloc, 10);
+      "invalid sized delete when deallocating.*\\(1000000 vs \\[9,.*\\)");
+  Allocator->deallocateSized(Ptr, scudo::Chunk::Origin::Malloc, 9);
 
-  Ptr = Allocator->allocate(10, scudo::Chunk::Origin::Memalign, 32);
+  // Free with usable size which should not be the same as the exact size.
+  Ptr = Allocator->allocate(9, scudo::Chunk::Origin::Memalign, 32);
   EXPECT_TRUE(Ptr != nullptr);
   SCUDO_EXPECT_DEATH(
       Allocator->deallocateSizedAligned(Ptr, scudo::Chunk::Origin::Malloc,
                                         1000000, 32),
-      "invalid sized delete when deallocating.*\\(1000000 vs 10 or .*\\)");
-  EXPECT_NE(10U, Allocator->getUsableSize(Ptr));
+      "invalid sized delete when deallocating.*\\(1000000 vs \\[9,.*\\)");
+  auto UsableSize = Allocator->getUsableSize(Ptr);
+  EXPECT_NE(9U, UsableSize);
   Allocator->deallocateSizedAligned(Ptr, scudo::Chunk::Origin::Malloc,
-                                    Allocator->getUsableSize(Ptr), 32);
+                                    UsableSize, 32);
+
+  // Free with a size between the exact size and the usable size.
+  Ptr = Allocator->allocate(9, scudo::Chunk::Origin::Memalign, 32);
+  EXPECT_TRUE(Ptr != nullptr);
+  UsableSize = Allocator->getUsableSize(Ptr);
+  EXPECT_NE(9U, UsableSize);
+  // Verify the usable size and exact size is not usable size + 1.
+  EXPECT_NE(10U, UsableSize);
+  Allocator->deallocateSizedAligned(Ptr, scudo::Chunk::Origin::Malloc, 10U, 32);
 }
 
 template <class AllocatorT>

@@ -24,6 +24,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstVisitor.h"
@@ -339,6 +340,7 @@ class SPIRVEmitIntrinsicsImpl
   bool convertMaskedMemIntrinsics(Module &M);
   bool preprocessModule(Module &M);
   void preprocessBoolVectorBitcasts(Function &F);
+  void scalarizeVectorPtrCasts(Function &F);
 
   void emitUnstructuredLoopControls(Function &F, IRBuilder<> &B);
 
@@ -777,12 +779,14 @@ static Type *getPointeeTypeByCallInst(StringRef DemangledName,
                                       Function *CalledF, unsigned OpIdx) {
   // OpenCL.std printf takes its format string as a pointer to i8. Match the
   // bare builtin name, as lowering does, to also cover unmangled `printf`.
+  std::string Name = SPIRV::lookupBuiltinNameHelper(DemangledName);
   // OpenCL get_fence only has void* overloads.
-  if (OpIdx == 0) {
-    std::string Name = SPIRV::lookupBuiltinNameHelper(DemangledName);
-    if (Name == "printf" || Name == "get_fence")
-      return IntegerType::getInt8Ty(CalledF->getContext());
-  }
+  if (OpIdx == 0 && (Name == "printf" || Name == "get_fence"))
+    return IntegerType::getInt8Ty(CalledF->getContext());
+  // OpCaptureEventProfilingInfo requires Value to point to an 8-bit integer.
+  if (OpIdx == 2 && (Name == "capture_event_profiling_info" ||
+                     Name == "__spirv_CaptureEventProfilingInfo"))
+    return IntegerType::getInt8Ty(CalledF->getContext());
   return nullptr;
 }
 
@@ -2573,6 +2577,85 @@ SPIRVEmitIntrinsicsImpl::visitExtractElementInst(ExtractElementInst &I) {
   return NewI;
 }
 
+// Scalarize ptrtoint and inttoptr instructions operating on vectors of
+// pointers, since SPIR-V does not support vectors of pointers without
+// extensions. Run before preprocessCompositeConstants so that
+// findScalarElement still sees constant vectors.
+void SPIRVEmitIntrinsicsImpl::scalarizeVectorPtrCasts(Function &F) {
+  // If the extension for vector-of-pointers is available, no scalarization
+  // is needed - the backend can handle them natively.
+  const SPIRVSubtarget &ST = TM.getSubtarget<SPIRVSubtarget>(F);
+  if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_masked_gather_scatter))
+    return;
+
+  SmallVector<Instruction *, 8> ToErase;
+
+  for (Instruction &I : make_early_inc_range(instructions(F))) {
+    if (auto *PTI = dyn_cast<PtrToIntInst>(&I)) {
+      auto *VecTy = dyn_cast<FixedVectorType>(PTI->getOperand(0)->getType());
+      if (!VecTy || !VecTy->getElementType()->isPointerTy())
+        continue;
+
+      IRBuilder<> B(PTI);
+      unsigned NumElems = VecTy->getNumElements();
+      Type *ElemIntTy = cast<VectorType>(PTI->getType())->getElementType();
+      Value *Result = PoisonValue::get(PTI->getType());
+
+      for (unsigned Idx = 0; Idx < NumElems; ++Idx) {
+        Value *ElemPtr = findScalarElement(PTI->getOperand(0), Idx);
+        if (!ElemPtr)
+          ElemPtr = B.CreateExtractElement(PTI->getOperand(0), B.getInt32(Idx));
+        Value *Conv = B.CreatePtrToInt(ElemPtr, ElemIntTy);
+        Result = B.CreateInsertElement(Result, Conv, B.getInt32(Idx));
+      }
+
+      PTI->replaceAllUsesWith(Result);
+      ToErase.push_back(PTI);
+    } else if (auto *ITP = dyn_cast<IntToPtrInst>(&I)) {
+      auto *VecTy = dyn_cast<FixedVectorType>(ITP->getType());
+      if (!VecTy || !VecTy->getElementType()->isPointerTy())
+        continue;
+
+      // Only scalarize if all users are extractelement with constant index.
+      // Other uses (e.g. masked.gather) need the vector-of-pointers and
+      // should be handled by extension-specific lowering.
+      bool AllUsersExtract = llvm::all_of(ITP->users(), [&](User *U) {
+        auto *EE = dyn_cast<ExtractElementInst>(U);
+        return EE && isa<ConstantInt>(EE->getIndexOperand());
+      });
+      if (!AllUsersExtract)
+        continue;
+
+      IRBuilder<> B(ITP);
+      Type *ElemPtrTy = VecTy->getElementType();
+
+      // Replace extractelement users with scalar inttoptr.
+      for (User *U : make_early_inc_range(ITP->users())) {
+        auto *EE = cast<ExtractElementInst>(U);
+        unsigned Idx = cast<ConstantInt>(EE->getIndexOperand())->getZExtValue();
+        B.SetInsertPoint(EE);
+        Value *Elem =
+            B.CreateExtractElement(ITP->getOperand(0), B.getInt32(Idx));
+        Value *Conv = B.CreateIntToPtr(Elem, ElemPtrTy);
+        EE->replaceAllUsesWith(Conv);
+        ToErase.push_back(EE);
+      }
+
+      ToErase.push_back(ITP);
+    }
+  }
+
+  if (ToErase.empty())
+    return;
+  SmallVector<WeakTrackingVH, 8> MaybeDead;
+  for (Instruction *I : ToErase) {
+    for (Value *Op : I->operand_values())
+      MaybeDead.push_back(Op);
+    I->eraseFromParent();
+  }
+  RecursivelyDeleteTriviallyDeadInstructionsPermissive(MaybeDead);
+}
+
 Instruction *SPIRVEmitIntrinsicsImpl::visitInsertValueInst(InsertValueInst &I) {
   IRBuilder<> B(I.getParent());
   B.SetInsertPoint(&I);
@@ -3899,6 +3982,7 @@ bool SPIRVEmitIntrinsicsImpl::runOnFunction(Function &Func) {
   AggrConstTypes.clear();
   AggrStores.clear();
 
+  scalarizeVectorPtrCasts(Func);
   processParamTypesByFunHeader(CurrF, B);
 
   // Fix GEP result types ahead of inference, and simplify if possible.

@@ -76,10 +76,26 @@ cc_library(
         "//flang/lib/Decimal:binary-to-decimal.cpp",
         "//flang/lib/Decimal:decimal-to-binary.cpp",
     ],
-    copts = [
-        "-fno-exceptions",
-        "-fno-rtti",
-    ],
+    # Match AddFlangRT.cmake: configure the C++ standard library before any
+    # runtime source or standard header can include it.
+    cxxopts = select({
+        "//llvm:is_windows_clang_cl": [
+            "/EHs-c-",
+            "/GR-",
+            "/FI$(location :stl-overrides.h)",
+        ],
+        "//llvm:is_windows_msvc": [
+            "/EHs-c-",
+            "/GR-",
+            "/FI$(location :stl-overrides.h)",
+        ],
+        "//conditions:default": [
+            "-fno-exceptions",
+            "-fno-rtti",
+            "-include",
+            "$(location :stl-overrides.h)",
+        ],
+    }),
     deps = [
         ":runtime_config",
         "//flang:CommonHeaders",

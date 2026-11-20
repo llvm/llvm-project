@@ -10,6 +10,8 @@ add_header_library(
   DEPENDS
     libc.hdr.termios_macros
     libc.hdr.types.speed_t
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
 )
 
 add_entrypoint_object(

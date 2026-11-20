@@ -32,8 +32,11 @@ namespace llvm {
 class MCSymbolGOFF;
 
 class SystemZHLASMAsmStreamer final : public MCAsmBaseStreamer {
+  // The full length of a line.
   constexpr static size_t InstLimit = 80;
+  // The column which contains the indicator that the line is continued.
   constexpr static size_t ContIndicatorColumn = 72;
+  // The start column of a contined line.
   constexpr static size_t ContStartColumn = 15;
   constexpr static size_t ContLen = ContIndicatorColumn - ContStartColumn;
   constexpr static size_t MaxXLLen = 256;
@@ -73,6 +76,8 @@ public:
   void AddComment(const Twine &T, bool EOL = true) override;
 
   void emitBytes(StringRef Data) override;
+  void emitBinaryData(StringRef Data) override;
+  void emitIntValue(uint64_t Value, unsigned Size) override;
   void emitFill(const MCExpr &NumBytes, uint64_t FillValue,
                 SMLoc Loc = SMLoc()) override;
 
@@ -117,6 +122,9 @@ public:
   /// @}
 
   void finishImpl() override;
+
+protected:
+  void emitBytes(StringRef Data, bool MayBeString);
 };
 } // namespace llvm
 
