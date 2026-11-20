@@ -69,4 +69,3 @@ functions:
         exec-total: 100
         succ: [ { bid: 99, cnt: 100 } ]
 ...
-

@@ -2639,6 +2639,12 @@ public:
     return BC.DwCtx->getLineTableForUnit(Unit);
   }
 
+  /// Compute block counts from the input branch profile without changing it.
+  /// This also supports non-simple functions whose CFG/profile is available.
+  /// Return an empty map if the CFG or valid branch profile is unavailable.
+  DenseMap<const BinaryBasicBlock *, uint64_t>
+  getProfileBlockExecutionCounts() const;
+
   /// Finalize profile for the function.
   void postProcessProfile();
 

@@ -440,13 +440,23 @@ std::error_code YAMLProfileWriter::writeProfile() {
   for (auto [YamlBF, Source] : llvm::zip_equal(Profile.Functions, OriginalBlocks)) {
     const auto &[BF, Blocks] = Source;
     // Do not label unprocessed or invalid counts as computed totals.
-    if (!BF->isSimple() || !BF->hasValidProfile() ||
+    if (!BF->hasValidProfile() ||
         !(BF->getProfileFlags() & BinaryFunction::PF_BRANCH))
       continue;
+    // Non-simple functions bypass postProcessProfile(). Calculate their
+    // diagnostic totals in scratch storage, leaving optimization inputs intact.
+    const auto Counts = !BF->isSimple()
+                            ? BF->getProfileBlockExecutionCounts()
+                            : DenseMap<const BinaryBasicBlock *, uint64_t>();
     for (yaml::bolt::BinaryBasicBlockProfile &YamlBB : YamlBF.Blocks) {
       const BinaryBasicBlock *BB = Blocks.at(YamlBB.Index);
-      if (BB->hasProfile())
+      if (!BF->isSimple()) {
+        auto It = Counts.find(BB);
+        if (It != Counts.end())
+          YamlBB.ExecTotal = It->second;
+      } else if (BB->hasProfile()) {
         YamlBB.ExecTotal = BB->getKnownExecutionCount();
+      }
     }
   }
 

@@ -64,6 +64,226 @@ static cl::opt<bool>
 namespace llvm {
 namespace bolt {
 
+namespace {
+
+// Keep the calculation separate from updates to the optimizer's profile.
+// In particular, diagnostics must not change counts in non-simple functions.
+struct WorkingProfile {
+  struct BlockProfile {
+    uint64_t Count;
+    SmallVector<BinaryBasicBlock::BinaryBranchInfo, 2> Branches;
+  };
+  DenseMap<const BinaryBasicBlock *, BlockProfile> Blocks;
+
+  explicit WorkingProfile(const BinaryFunction &BF) {
+    for (const BinaryBasicBlock &BB : BF)
+      Blocks.try_emplace(
+          &BB, BlockProfile{BB.getExecutionCount(),
+                            {BB.branch_info_begin(), BB.branch_info_end()}});
+  }
+
+  BlockProfile &operator[](const BinaryBasicBlock *BB) {
+    auto It = Blocks.find(BB);
+    assert(It != Blocks.end() && "block outside function profile");
+    return It->second;
+  }
+
+  uint64_t knownCount(const BinaryBasicBlock *BB) {
+    uint64_t Count = (*this)[BB].Count;
+    return Count == BinaryBasicBlock::COUNT_NO_PROFILE ? 0 : Count;
+  }
+
+  void apply(BinaryFunction &BF) {
+    for (BinaryBasicBlock &BB : BF) {
+      const BlockProfile &Profile = (*this)[&BB];
+      BB.setExecutionCount(Profile.Count);
+      llvm::copy(Profile.Branches, BB.branch_info_begin());
+    }
+  }
+};
+
+void inferFallThroughCounts(const BinaryFunction &BF, WorkingProfile &Profile) {
+  const BinaryContext &BC = BF.getBinaryContext();
+
+  // Work on a basic block at a time, propagating frequency information
+  // forwards.
+  // It is important to walk in the layout order.
+  for (const BinaryBasicBlock &Block : BF) {
+    const BinaryBasicBlock *BB = &Block;
+    const uint64_t BBExecCount = Profile[BB].Count;
+
+    // Propagate this information to successors, filling in fall-through edges
+    // with frequency information
+    if (BB->succ_size() == 0)
+      continue;
+
+    // Calculate frequency of outgoing branches from this node according to
+    // brstack data.
+    uint64_t ReportedBranches = 0;
+    for (const BinaryBasicBlock::BinaryBranchInfo &SuccBI :
+         Profile[BB].Branches)
+      if (SuccBI.Count != BinaryBasicBlock::COUNT_NO_PROFILE)
+        ReportedBranches += SuccBI.Count;
+
+    // Get taken count of conditional tail call if the block ends with one.
+    uint64_t CTCTakenCount = 0;
+    const MCInst *CTCInstr = BB->getLastNonPseudoInstr();
+    if (CTCInstr && BC.MIB->getConditionalTailCall(*CTCInstr)) {
+      CTCTakenCount = BC.MIB->getAnnotationWithDefault<uint64_t>(
+          *CTCInstr, "CTCTakenCount");
+    }
+
+    // Calculate frequency of throws from this node according to brstack data
+    // for branching into associated landing pads. Since it is possible
+    // for a landing pad to be associated with more than one basic blocks,
+    // we may overestimate the frequency of throws for such blocks.
+    uint64_t ReportedThrows = 0;
+    for (const BinaryBasicBlock *LP : BB->landing_pads())
+      ReportedThrows += Profile[LP].Count;
+
+    const uint64_t TotalReportedJumps =
+        ReportedBranches + CTCTakenCount + ReportedThrows;
+
+    // Infer the frequency of the fall-through edge, representing not taking the
+    // branch.
+    uint64_t Inferred = 0;
+    if (BBExecCount > TotalReportedJumps)
+      Inferred = BBExecCount - TotalReportedJumps;
+
+    LLVM_DEBUG(
+        if (BBExecCount < TotalReportedJumps) dbgs()
+            << "Fall-through inference is slightly inconsistent. "
+               "exec frequency is less than the outgoing edges frequency ("
+            << BBExecCount << " < " << ReportedBranches
+            << ") for  BB at offset 0x"
+            << Twine::utohexstr(BF.getAddress() + BB->getOffset()) << '\n';);
+
+    if (BB->succ_size() <= 2) {
+      // Skip if the last instruction is an unconditional jump.
+      const MCInst *LastInstr = BB->getLastNonPseudoInstr();
+      if (LastInstr && (BC.MIB->isUnconditionalBranch(*LastInstr) ||
+                        BC.MIB->isIndirectBranch(*LastInstr)))
+        continue;
+      // If there is an FT it will be the last successor.
+      auto &SuccBI = *Profile[BB].Branches.rbegin();
+      auto &Succ = *BB->succ_rbegin();
+      if (SuccBI.Count == 0) {
+        SuccBI.Count = Inferred;
+        SuccBI.MispredictedCount = BinaryBasicBlock::COUNT_INFERRED;
+        Profile[Succ].Count = std::max(Profile.knownCount(Succ), Inferred);
+      }
+    }
+  }
+}
+
+WorkingProfile computeBlockProfile(const BinaryFunction &BF,
+                                   bool IncludeConditionalTailCalls) {
+  const BinaryContext &BC = BF.getBinaryContext();
+  WorkingProfile Profile(BF);
+  // Compute preliminary execution count for each basic block.
+  for (const BinaryBasicBlock &Block : BF) {
+    const BinaryBasicBlock *BB = &Block;
+    if ((!BB->isEntryPoint() && !BB->isLandingPad()) ||
+        Profile[BB].Count == BinaryBasicBlock::COUNT_NO_PROFILE)
+      Profile[BB].Count = 0;
+  }
+  for (const BinaryBasicBlock &Block : BF) {
+    const BinaryBasicBlock *BB = &Block;
+    auto SuccBIIter = Profile[BB].Branches.begin();
+    for (BinaryBasicBlock *Succ : BB->successors()) {
+      // All incoming edges to the primary entry have been accounted for, thus
+      // we skip the update here.
+      if (SuccBIIter->Count != BinaryBasicBlock::COUNT_NO_PROFILE &&
+          Succ != &BF.front())
+        Profile[Succ].Count += SuccBIIter->Count;
+      ++SuccBIIter;
+    }
+  }
+
+  // Fix for old profiles.
+  for (const BinaryBasicBlock &Block : BF) {
+    const BinaryBasicBlock *BB = &Block;
+    if (BB->size() != 1 || BB->succ_size() != 1)
+      continue;
+
+    if (Profile.knownCount(BB) == 0)
+      continue;
+
+    const MCInst *Instr = BB->getLastNonPseudoInstr();
+    assert(Instr && "expected non-pseudo instr");
+    if (!BC.MIB->hasAnnotation(*Instr, "NOP"))
+      continue;
+
+    BinaryBasicBlock *FTSuccessor = BB->getSuccessor();
+    BinaryBasicBlock::BinaryBranchInfo &BI = Profile[BB].Branches.front();
+    if (!BI.Count) {
+      BI.Count = Profile.knownCount(BB);
+      Profile[FTSuccessor].Count = Profile.knownCount(FTSuccessor) + BI.Count;
+    }
+  }
+
+  if (opts::FixBlockCounts) {
+    for (const BinaryBasicBlock &Block : BF) {
+      const BinaryBasicBlock *BB = &Block;
+      // Make sure that execution count of a block is at least the branch count
+      // of an incoming/outgoing jump.
+      auto SuccBIIter = Profile[BB].Branches.begin();
+      for (BinaryBasicBlock *Succ : BB->successors()) {
+        uint64_t Count = SuccBIIter->Count;
+        if (Count != BinaryBasicBlock::COUNT_NO_PROFILE && Count > 0) {
+          Profile[Succ].Count = std::max(Profile[Succ].Count, Count);
+          Profile[BB].Count = std::max(Profile[BB].Count, Count);
+        }
+        ++SuccBIIter;
+      }
+
+      // Set the execution count of the basic block to be the maximum execution
+      // count across the indirect branches, indirect calls and call
+      // instructions. All other instructions can be ignored.
+      uint64_t MaxCount = Profile[BB].Count;
+      for (const MCInst &Inst : *BB) {
+        uint64_t ExecCount = 0;
+        if (BC.MIB->isIndirectBranch(Inst) || BC.MIB->isIndirectCall(Inst)) {
+          if (auto ICSP = BC.MIB->tryGetAnnotationAs<IndirectCallSiteProfile>(
+                  Inst, "CallProfile")) {
+            for (const IndirectCallProfile &Entry : *ICSP)
+              ExecCount += Entry.Count;
+          }
+        } else if (IncludeConditionalTailCalls &&
+                   BC.MIB->getConditionalTailCall(Inst)) {
+          // The optimizer represents this count as an edge to a synthetic
+          // tail-call block. Diagnostics must not insert that block.
+          ExecCount = BC.MIB->getAnnotationWithDefault<uint64_t>(
+              Inst, "CTCTakenCount", 0);
+        } else if (BC.MIB->isCall(Inst)) {
+          if (auto Count = BC.MIB->tryGetAnnotationAs<uint64_t>(Inst, "Count"))
+            ExecCount = *Count;
+        }
+        MaxCount = std::max(MaxCount, ExecCount);
+      }
+      Profile[BB].Count = MaxCount;
+    }
+  }
+
+  if (opts::InferFallThroughs)
+    inferFallThroughCounts(BF, Profile);
+
+  return Profile;
+}
+
+} // namespace
+
+DenseMap<const BinaryBasicBlock *, uint64_t>
+BinaryFunction::getProfileBlockExecutionCounts() const {
+  DenseMap<const BinaryBasicBlock *, uint64_t> Counts;
+  if (!hasCFG() || !hasValidProfile() || !(getProfileFlags() & PF_BRANCH))
+    return Counts;
+  WorkingProfile Profile = computeBlockProfile(*this, true);
+  for (const BinaryBasicBlock &BB : *this)
+    Counts[&BB] = Profile.knownCount(&BB);
+  return Counts;
+}
+
 void BinaryFunction::postProcessProfile() {
   if (!hasValidProfile()) {
     clearProfile();
@@ -78,84 +298,7 @@ void BinaryFunction::postProcessProfile() {
   if (opts::FixFuncCounts && ExecutionCount == 0)
     ExecutionCount = 1;
 
-  // Compute preliminary execution count for each basic block.
-  for (BinaryBasicBlock *BB : BasicBlocks) {
-    if ((!BB->isEntryPoint() && !BB->isLandingPad()) ||
-        BB->ExecutionCount == BinaryBasicBlock::COUNT_NO_PROFILE)
-      BB->ExecutionCount = 0;
-  }
-  for (BinaryBasicBlock *BB : BasicBlocks) {
-    auto SuccBIIter = BB->branch_info_begin();
-    for (BinaryBasicBlock *Succ : BB->successors()) {
-      // All incoming edges to the primary entry have been accounted for, thus
-      // we skip the update here.
-      if (SuccBIIter->Count != BinaryBasicBlock::COUNT_NO_PROFILE &&
-          Succ != BasicBlocks.front())
-        Succ->setExecutionCount(Succ->getExecutionCount() + SuccBIIter->Count);
-      ++SuccBIIter;
-    }
-  }
-
-  // Fix for old profiles.
-  for (BinaryBasicBlock *BB : BasicBlocks) {
-    if (BB->size() != 1 || BB->succ_size() != 1)
-      continue;
-
-    if (BB->getKnownExecutionCount() == 0)
-      continue;
-
-    MCInst *Instr = BB->getFirstNonPseudoInstr();
-    assert(Instr && "expected non-pseudo instr");
-    if (!BC.MIB->hasAnnotation(*Instr, "NOP"))
-      continue;
-
-    BinaryBasicBlock *FTSuccessor = BB->getSuccessor();
-    BinaryBasicBlock::BinaryBranchInfo &BI = BB->getBranchInfo(*FTSuccessor);
-    if (!BI.Count) {
-      BI.Count = BB->getKnownExecutionCount();
-      FTSuccessor->setExecutionCount(FTSuccessor->getKnownExecutionCount() +
-                                     BI.Count);
-    }
-  }
-
-  if (opts::FixBlockCounts) {
-    for (BinaryBasicBlock *BB : BasicBlocks) {
-      // Make sure that execution count of a block is at least the branch count
-      // of an incoming/outgoing jump.
-      auto SuccBIIter = BB->branch_info_begin();
-      for (BinaryBasicBlock *Succ : BB->successors()) {
-        uint64_t Count = SuccBIIter->Count;
-        if (Count != BinaryBasicBlock::COUNT_NO_PROFILE && Count > 0) {
-          Succ->setExecutionCount(std::max(Succ->getExecutionCount(), Count));
-          BB->setExecutionCount(std::max(BB->getExecutionCount(), Count));
-        }
-        ++SuccBIIter;
-      }
-
-      // Set the execution count of the basic block to be the maximum execution
-      // count across the indirect branches, indirect calls and call
-      // instructions. All other instructions can be ignored.
-      uint64_t MaxCount = BB->getExecutionCount();
-      for (MCInst &Inst : *BB) {
-        uint64_t ExecCount = 0;
-        if (BC.MIB->isIndirectBranch(Inst) || BC.MIB->isIndirectCall(Inst)) {
-          if (auto ICSP = BC.MIB->tryGetAnnotationAs<IndirectCallSiteProfile>(
-                  Inst, "CallProfile")) {
-            for (IndirectCallProfile &Entry : *ICSP)
-              ExecCount += Entry.Count;
-          }
-        } else if (BC.MIB->isCall(Inst)) {
-          if (auto Count = BC.MIB->tryGetAnnotationAs<uint64_t>(Inst, "Count"))
-            ExecCount = *Count;
-        }
-        MaxCount = std::max(MaxCount, ExecCount);
-      }
-      BB->setExecutionCount(MaxCount);
-    }
-  }
-
-  if (opts::InferFallThroughs)
-    inferFallThroughCounts();
+  computeBlockProfile(*this, false).apply(*this);
 
   // Update profile information for jump tables based on CFG branch data.
   for (BinaryBasicBlock *BB : BasicBlocks) {
@@ -282,74 +425,9 @@ void BinaryFunction::mergeProfileDataInto(BinaryFunction &BF) const {
 }
 
 void BinaryFunction::inferFallThroughCounts() {
-  // Work on a basic block at a time, propagating frequency information
-  // forwards.
-  // It is important to walk in the layout order.
-  for (BinaryBasicBlock *BB : BasicBlocks) {
-    const uint64_t BBExecCount = BB->getExecutionCount();
-
-    // Propagate this information to successors, filling in fall-through edges
-    // with frequency information
-    if (BB->succ_size() == 0)
-      continue;
-
-    // Calculate frequency of outgoing branches from this node according to
-    // brstack data.
-    uint64_t ReportedBranches = 0;
-    for (const BinaryBasicBlock::BinaryBranchInfo &SuccBI : BB->branch_info())
-      if (SuccBI.Count != BinaryBasicBlock::COUNT_NO_PROFILE)
-        ReportedBranches += SuccBI.Count;
-
-    // Get taken count of conditional tail call if the block ends with one.
-    uint64_t CTCTakenCount = 0;
-    const MCInst *CTCInstr = BB->getLastNonPseudoInstr();
-    if (CTCInstr && BC.MIB->getConditionalTailCall(*CTCInstr)) {
-      CTCTakenCount = BC.MIB->getAnnotationWithDefault<uint64_t>(
-          *CTCInstr, "CTCTakenCount");
-    }
-
-    // Calculate frequency of throws from this node according to brstack data
-    // for branching into associated landing pads. Since it is possible
-    // for a landing pad to be associated with more than one basic blocks,
-    // we may overestimate the frequency of throws for such blocks.
-    uint64_t ReportedThrows = 0;
-    for (const BinaryBasicBlock *LP : BB->landing_pads())
-      ReportedThrows += LP->getExecutionCount();
-
-    const uint64_t TotalReportedJumps =
-        ReportedBranches + CTCTakenCount + ReportedThrows;
-
-    // Infer the frequency of the fall-through edge, representing not taking the
-    // branch.
-    uint64_t Inferred = 0;
-    if (BBExecCount > TotalReportedJumps)
-      Inferred = BBExecCount - TotalReportedJumps;
-
-    LLVM_DEBUG(
-        if (BBExecCount < TotalReportedJumps) dbgs()
-            << "Fall-through inference is slightly inconsistent. "
-               "exec frequency is less than the outgoing edges frequency ("
-            << BBExecCount << " < " << ReportedBranches
-            << ") for  BB at offset 0x"
-            << Twine::utohexstr(getAddress() + BB->getOffset()) << '\n';);
-
-    if (BB->succ_size() <= 2) {
-      // Skip if the last instruction is an unconditional jump.
-      const MCInst *LastInstr = BB->getLastNonPseudoInstr();
-      if (LastInstr && (BC.MIB->isUnconditionalBranch(*LastInstr) ||
-                        BC.MIB->isIndirectBranch(*LastInstr)))
-        continue;
-      // If there is an FT it will be the last successor.
-      auto &SuccBI = *BB->branch_info_rbegin();
-      auto &Succ = *BB->succ_rbegin();
-      if (SuccBI.Count == 0) {
-        SuccBI.Count = Inferred;
-        SuccBI.MispredictedCount = BinaryBasicBlock::COUNT_INFERRED;
-        Succ->ExecutionCount =
-            std::max(Succ->getKnownExecutionCount(), Inferred);
-      }
-    }
-  }
+  WorkingProfile Profile(*this);
+  ::llvm::bolt::inferFallThroughCounts(*this, Profile);
+  Profile.apply(*this);
 }
 
 void BinaryFunction::clearProfile() {
