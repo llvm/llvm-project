@@ -1604,15 +1604,8 @@ Error ThinBackendProc::emitFiles(
     OS = std::move(FileOS);
   }
 
-  if (Conf.Dtlto) {
-    if (Error Err = writeIndexWithLTOConfigToFile(CombinedIndex, Conf, *OS,
-                                                  &ModuleToSummariesForIndex,
-                                                  &DeclarationSummaries))
-      return Err;
-  } else {
-    writeIndexToFile(CombinedIndex, *OS, &ModuleToSummariesForIndex,
-                     &DeclarationSummaries);
-  }
+  writeIndexToFile(CombinedIndex, *OS, &ModuleToSummariesForIndex,
+                   &DeclarationSummaries);
 
   // Emit imports files if requested, using callback if provided.
   if (Conf.GetImportsListOutputArray) {
@@ -2299,6 +2292,9 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
 
   auto &ModuleMap =
       ThinLTO.ModulesToCompile ? *ThinLTO.ModulesToCompile : ThinLTO.ModuleMap;
+
+  if (Conf.Dtlto)
+    ThinLTO.CombinedIndex.setLTOConfigJSON(serializeLTOConfig(Conf));
 
   auto RunBackends = [&](ThinBackendProc *BackendProcess) -> Error {
     auto ProcessOneModule = [&](int I) -> Error {

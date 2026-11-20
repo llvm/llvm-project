@@ -1373,7 +1373,7 @@ static void runThinLTOBackend(CompilerInstance &CI,
   };
 
   Expected<std::optional<lto::Config>> SerializedConf =
-      lto::readLTOConfigFromSummaryIndexIfPresent(IndexBuffer);
+      lto::readLTOConfigFromSummaryIndexIfPresent(*CombinedIndex, IndexBuffer);
   if (!SerializedConf) {
     Diags.Report(diag::err_fe_error_backend)
         << ("Error loading LTO config from index file '" +

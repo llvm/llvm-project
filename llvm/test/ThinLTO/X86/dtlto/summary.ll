@@ -1,5 +1,5 @@
 ; Check that DTLTO creates equivalent summary index shards to an ordinary
-; ThinLTO link and embeds the serialized LTO configuration as metadata.
+; ThinLTO link and embeds the serialized LTO configuration as a blob.
 
 RUN: rm -rf %t && split-file %s %t && cd %t
 
@@ -34,14 +34,15 @@ RUN: llvm-dis t2.2.*.native.o.thinlto.bc -o - | grep '^\^' > t2.dtlto.ll
 RUN: llvm-dis t2.bc.thinlto.bc -o - | grep '^\^' > t2.thinlto.ll
 RUN: cmp t2.dtlto.ll t2.thinlto.ll
 
-; Check that each DTLTO index contains the configuration metadata.
+; Check that each DTLTO index contains a configuration blob.
 RUN: llvm-bcanalyzer -dump t1.1.*.native.o.thinlto.bc | FileCheck %s --check-prefix=CONFIG
 RUN: llvm-bcanalyzer -dump t2.2.*.native.o.thinlto.bc | FileCheck %s --check-prefix=CONFIG
 
-; CONFIG: <METADATA_BLOCK
-; CONFIG: \"Dtlto\":true
-; CONFIG: record string = 'llvm.lto.config'
-; CONFIG: </METADATA_BLOCK>
+; CONFIG-NOT: <METADATA_BLOCK
+; CONFIG: <GLOBALVAL_SUMMARY_BLOCK
+; CONFIG: <LTO_CONFIG {{.*}} blob data = '{{.*}}"Dtlto":true
+; CONFIG: </GLOBALVAL_SUMMARY_BLOCK>
+; CONFIG-NOT: <METADATA_BLOCK
 
 ;--- t1.ll
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

@@ -139,29 +139,19 @@ TEST(LTOConfigBitcodeTest, RoundTripThroughThinLTOSummaryIndex) {
   StringRef Profile("profile\xFF\0", 9);
   InputConfig.Options.BBSectionsFuncListBuf =
       MemoryBuffer::getMemBufferCopy(Profile, "profile");
+  InputIndex.setLTOConfigJSON(serializeLTOConfig(InputConfig));
 
   SmallString<0> Storage;
   raw_svector_ostream OS(Storage);
-  ASSERT_THAT_ERROR(writeIndexWithLTOConfigToFile(InputIndex, InputConfig, OS),
-                    Succeeded());
+  writeIndexToFile(InputIndex, OS);
 
   MemoryBufferRef Buffer(StringRef(Storage.data(), Storage.size()),
                          "summary.thinlto.bc");
 
   ModuleSummaryIndex OutputIndex(/*HaveGVs=*/false);
   ASSERT_THAT_ERROR(readModuleSummaryIndex(Buffer, OutputIndex), Succeeded());
-
-  LLVMContext Ctx;
-  auto Parsed = parseBitcodeFile(Buffer, Ctx);
-  ASSERT_THAT_EXPECTED(Parsed, Succeeded());
-  auto *Metadata = (*Parsed)->getNamedMetadata(LTOConfigMetadataName);
-  ASSERT_TRUE(Metadata);
-  ASSERT_EQ(Metadata->getNumOperands(), 1u);
-  auto *Root = Metadata->getOperand(0);
-  ASSERT_EQ(Root->getNumOperands(), 1u);
-  auto *Text = dyn_cast<MDString>(Root->getOperand(0));
-  ASSERT_TRUE(Text);
-  auto JSON = json::parse(Text->getString());
+  EXPECT_EQ(OutputIndex.getLTOConfigJSON(), InputIndex.getLTOConfigJSON());
+  auto JSON = json::parse(OutputIndex.getLTOConfigJSON());
   ASSERT_THAT_EXPECTED(JSON, Succeeded());
   ASSERT_TRUE(JSON->getAsObject());
   EXPECT_EQ(JSON->getAsObject()->getString("CPU"), "summary-cpu");
@@ -192,7 +182,8 @@ TEST(LTOConfigBitcodeTest, ReadsLegacySummaryIndex) {
   ModuleSummaryIndex Index(/*HaveGVs=*/false);
   SmallString<0> Storage;
   raw_svector_ostream OS(Storage);
-  writeIndexToFile(Index, OS, nullptr, nullptr, &LegacyConfig);
+  WriteBitcodeToFile(LegacyConfig, OS, /*ShouldPreserveUseListOrder=*/false,
+                     &Index);
 
   auto Output = readLTOConfigFromSummaryIndex(
       MemoryBufferRef(Storage, "legacy.thinlto.bc"));
@@ -201,15 +192,11 @@ TEST(LTOConfigBitcodeTest, ReadsLegacySummaryIndex) {
 }
 
 TEST(LTOConfigBitcodeTest, InvalidJSONInSummaryIndex) {
-  LLVMContext Ctx;
-  Module InvalidConfig("invalid", Ctx);
-  InvalidConfig.getOrInsertNamedMetadata(LTOConfigMetadataName)
-      ->addOperand(MDNode::get(Ctx, MDString::get(Ctx, "{")));
-
   ModuleSummaryIndex Index(/*HaveGVs=*/false);
+  Index.setLTOConfigJSON("{");
   SmallString<0> Storage;
   raw_svector_ostream OS(Storage);
-  writeIndexToFile(Index, OS, nullptr, nullptr, &InvalidConfig);
+  writeIndexToFile(Index, OS);
 
   EXPECT_THAT_EXPECTED(readLTOConfigFromSummaryIndexIfPresent(
                            MemoryBufferRef(Storage, "invalid.thinlto.bc")),

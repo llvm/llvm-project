@@ -348,6 +348,8 @@ enum GlobalValueSummarySymtabCodes {
   //  nummib x alloc type,
   //  numver x version]
   FS_COMBINED_ALLOC_INFO_NO_CONTEXT = 33,
+  // FS_LTO_CONFIG: [blob]
+  FS_LTO_CONFIG = 34,
 };
 
 enum MetadataCodes {

@@ -4,8 +4,8 @@
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-// Encodes serializable lto::Config fields as JSON text in module metadata.
-// Readers also accept the previous structured metadata format.
+// Encodes serializable lto::Config fields as JSON text. Summary indexes store
+// the JSON as a blob. Readers also accept the previous module metadata format.
 //
 //===----------------------------------------------------------------------===//
 
@@ -439,7 +439,13 @@ Expected<Config> decodeConfigJSON(StringRef Text) {
       });
 }
 
-std::string serializeLTOConfig(const Config &Config) {
+} // namespace
+
+bool lto::hasEncodedLTOConfig(const Module &M) {
+  return M.getNamedMetadata(LTOConfigMetadataName) != nullptr;
+}
+
+std::string lto::serializeLTOConfig(const Config &Config) {
   json::Object Object{{"Version", kVersion}};
   JSONWriter Writer(Object);
   encodeConfigFields(Writer, Config);
@@ -448,12 +454,6 @@ std::string serializeLTOConfig(const Config &Config) {
   raw_string_ostream OS(Text);
   OS << json::Value(std::move(Object));
   return Text;
-}
-
-} // namespace
-
-bool lto::hasEncodedLTOConfig(const Module &M) {
-  return M.getNamedMetadata(LTOConfigMetadataName) != nullptr;
 }
 
 Error lto::encodeLTOConfigToModule(Module &M, const Config &Config) {
@@ -504,24 +504,27 @@ Expected<Config> lto::readLTOConfigFromFile(StringRef Path) {
   return readConfigBitcode((*Buffer)->getMemBufferRef());
 }
 
-Error lto::writeIndexWithLTOConfigToFile(
-    const ModuleSummaryIndex &Index, const Config &Config, raw_ostream &Out,
-    const ModuleToSummariesForIndexTy *ModuleToSummariesForIndex,
-    const GVSummaryPtrSet *DecSummaries) {
-  LLVMContext Ctx;
-  Module MetadataModule("llvm.lto.config", Ctx);
-  if (Error Err = encodeLTOConfigToModule(MetadataModule, Config))
-    return Err;
-  writeIndexToFile(Index, Out, ModuleToSummariesForIndex, DecSummaries,
-                   &MetadataModule);
-  return Error::success();
-}
-
 Expected<Config> lto::readLTOConfigFromSummaryIndex(MemoryBufferRef Buffer) {
-  return readConfigBitcode(Buffer);
+  auto C = readLTOConfigFromSummaryIndexIfPresent(Buffer);
+  if (!C)
+    return C.takeError();
+  if (!*C)
+    return metadataError("missing lto config in summary index");
+  return std::move(**C);
 }
 
 Expected<std::optional<Config>>
 lto::readLTOConfigFromSummaryIndexIfPresent(MemoryBufferRef Buffer) {
+  auto Index = getModuleSummaryIndex(Buffer);
+  if (!Index)
+    return Index.takeError();
+  return readLTOConfigFromSummaryIndexIfPresent(**Index, Buffer);
+}
+
+Expected<std::optional<Config>>
+lto::readLTOConfigFromSummaryIndexIfPresent(const ModuleSummaryIndex &Index,
+                                            MemoryBufferRef Buffer) {
+  if (StringRef JSON = Index.getLTOConfigJSON(); !JSON.empty())
+    return decodeConfigJSON(JSON);
   return readConfigBitcodeIfPresent(Buffer);
 }

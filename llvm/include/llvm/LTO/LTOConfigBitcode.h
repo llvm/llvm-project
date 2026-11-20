@@ -4,8 +4,8 @@
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-// Utility for embedding serializable fields of lto::Config in LLVM IR bitcode
-// as JSON text in module metadata for LTO / DTLTO configuration transport.
+// Utility for embedding the serializable fields of lto::Config as JSON in
+// ThinLTO summary indexes and standalone bitcode files.
 //
 // Non-serializable fields (callbacks, loaded plugin pointers, stream handles)
 // are omitted. Readers also accept the previous structured metadata format.
@@ -28,6 +28,8 @@ namespace lto {
 
 inline constexpr StringLiteral LTOConfigMetadataName = "llvm.lto.config";
 
+LLVM_ABI std::string serializeLTOConfig(const Config &Config);
+
 /// Serialize all serializable fields of \p Config into \p M.
 LLVM_ABI Error encodeLTOConfigToModule(Module &M, const Config &Config);
 
@@ -40,19 +42,17 @@ LLVM_ABI Error writeLTOConfigToFile(StringRef Path, const Config &Config);
 /// Read a Config from a file written by writeLTOConfigToFile().
 LLVM_ABI Expected<Config> readLTOConfigFromFile(StringRef Path);
 
-/// Write a ThinLTO summary index containing Config as JSON metadata.
-LLVM_ABI Error writeIndexWithLTOConfigToFile(
-    const ModuleSummaryIndex &Index, const Config &Config, raw_ostream &Out,
-    const ModuleToSummariesForIndexTy *ModuleToSummariesForIndex = nullptr,
-    const GVSummaryPtrSet *DecSummaries = nullptr);
-
-/// Read Config metadata from a ThinLTO summary index.
+/// Read the Config from a ThinLTO summary index.
 LLVM_ABI Expected<Config> readLTOConfigFromSummaryIndex(MemoryBufferRef Buffer);
 
-/// Read Config metadata from a ThinLTO summary index, or return std::nullopt if
-/// the index has no Config metadata.
+/// Read the Config from a ThinLTO summary index, if present.
 LLVM_ABI Expected<std::optional<Config>>
 readLTOConfigFromSummaryIndexIfPresent(MemoryBufferRef Buffer);
+
+/// Use the parsed index and consult its original bitcode for legacy metadata.
+LLVM_ABI Expected<std::optional<Config>>
+readLTOConfigFromSummaryIndexIfPresent(const ModuleSummaryIndex &Index,
+                                       MemoryBufferRef Buffer);
 
 /// Returns true if \p M contains serialized lto::Config metadata.
 LLVM_ABI bool hasEncodedLTOConfig(const Module &M);

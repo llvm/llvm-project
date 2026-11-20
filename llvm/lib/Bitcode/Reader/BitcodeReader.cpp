@@ -8056,7 +8056,9 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
     // in the combined index VST entries). The records also contain
     // information used for ThinLTO renaming and importing.
     Record.clear();
-    Expected<unsigned> MaybeBitCode = Stream.readRecord(Entry.ID, Record);
+    StringRef Blob;
+    Expected<unsigned> MaybeBitCode =
+        Stream.readRecord(Entry.ID, Record, &Blob);
     if (!MaybeBitCode)
       return MaybeBitCode.takeError();
     unsigned BitCode = MaybeBitCode.get();
@@ -8068,6 +8070,13 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       TheIndex.setFlags(Record[0]);
       break;
     }
+    case bitc::FS_LTO_CONFIG:
+      if (Blob.empty() || !Record.empty())
+        return error("Invalid LTO configuration blob");
+      if (!TheIndex.getLTOConfigJSON().empty())
+        return error("Duplicate LTO configuration blob");
+      TheIndex.setLTOConfigJSON(Blob.str());
+      break;
     case bitc::FS_VALUE_GUID: { // [valueid, refguid_upper32, refguid_lower32]
       uint64_t ValueID = Record[0];
       GlobalValue::GUID RefGUID;
