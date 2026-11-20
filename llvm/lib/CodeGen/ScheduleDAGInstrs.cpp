@@ -52,8 +52,12 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
+#include <cstdint>
 #include <iterator>
+#include <limits>
 #include <list>
+#include <map>
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -624,6 +628,147 @@ namespace {
 /// with a memory pool (SmallVector was tried but slow and SparseSet is not
 /// applicable).
 using SUList = std::list<SUnit *>;
+
+struct AccessByteRange {
+  int64_t Start;
+  int64_t End;
+};
+
+struct NoAABaseKey {
+  uint8_t Kind = 0; // 1 = Register, 2 = FrameIndex
+  unsigned RegOrFI = 0;
+  unsigned SubReg = 0;
+
+  bool operator==(const NoAABaseKey &Other) const {
+    return Kind == Other.Kind && RegOrFI == Other.RegOrFI &&
+           SubReg == Other.SubReg;
+  }
+};
+
+static std::optional<AccessByteRange>
+getKnownAccessRange(const MachineInstr &MI, ValueType V, const DataLayout &DL,
+                    bool AllowConstantOffsetStrip, int64_t MaxAccessSize) {
+  if (MI.isCall() || MI.getNumMemOperands() != 1)
+    return std::nullopt;
+
+  const MachineMemOperand *MMO = *MI.memoperands_begin();
+  if (MMO->isVolatile() || MMO->isAtomic())
+    return std::nullopt;
+
+  LocationSize LocSize = MMO->getSize();
+  if (!LocSize.isPrecise() || LocSize.isScalable())
+    return std::nullopt;
+
+  uint64_t RawSize = LocSize.getValue().getFixedValue();
+  if (RawSize == 0 || RawSize > static_cast<uint64_t>(MaxAccessSize))
+    return std::nullopt;
+  int64_t Size = static_cast<int64_t>(RawSize);
+
+  int64_t MMOOffset = MMO->getOffset();
+  int64_t MinSafeStart = std::numeric_limits<int64_t>::min() + MaxAccessSize;
+  int64_t MaxSafeStart = std::numeric_limits<int64_t>::max() - MaxAccessSize;
+
+  if (const PseudoSourceValue *PSV = MMO->getPseudoValue()) {
+    if (dyn_cast<const PseudoSourceValue *>(V) != PSV)
+      return std::nullopt;
+    if (MMOOffset < MinSafeStart || MMOOffset > MaxSafeStart)
+      return std::nullopt;
+    return AccessByteRange{MMOOffset, MMOOffset + Size};
+  }
+
+  const Value *Val = MMO->getValue();
+  const Value *Obj = dyn_cast<const Value *>(V);
+  if (!Val || !Obj)
+    return std::nullopt;
+
+  if (Val == Obj) {
+    if (MMOOffset < MinSafeStart || MMOOffset > MaxSafeStart)
+      return std::nullopt;
+    return AccessByteRange{MMOOffset, MMOOffset + Size};
+  }
+
+  if (!AllowConstantOffsetStrip || MMOOffset < 0)
+    return std::nullopt;
+  if (!Val->getType()->isPointerTy() || !Obj->getType()->isPointerTy())
+    return std::nullopt;
+
+  unsigned IndexBits = DL.getIndexTypeSizeInBits(Val->getType());
+  if (IndexBits == 0 || IndexBits > 64 ||
+      IndexBits != DL.getIndexTypeSizeInBits(Obj->getType()))
+    return std::nullopt;
+
+  int64_t BaseOff = 0;
+  if (GetPointerBaseWithConstantOffset(Val, BaseOff, DL) != Obj || BaseOff < 0)
+    return std::nullopt;
+
+  int64_t MaxSignedIndex = IndexBits == 64
+                               ? std::numeric_limits<int64_t>::max()
+                               : ((int64_t(1) << (IndexBits - 1)) - 1);
+  if (BaseOff > MaxSignedIndex - MMOOffset)
+    return std::nullopt;
+  int64_t Start = BaseOff + MMOOffset;
+  if (Start > MaxSignedIndex - Size || Start > MaxSafeStart)
+    return std::nullopt;
+
+  return AccessByteRange{Start, Start + Size};
+}
+
+static std::optional<std::pair<NoAABaseKey, AccessByteRange>>
+getNoAAStoreBaseAndRange(const MachineInstr &MI, ValueType V,
+                         const DataLayout &DL, const TargetInstrInfo *TII) {
+  if (MI.isCall() || MI.hasUnmodeledSideEffects() || MI.hasOrderedMemoryRef() ||
+      MI.isBundle() || MI.getNumMemOperands() != 1 ||
+      TII->getMemOperandAACheckLimit() < 1)
+    return std::nullopt;
+
+  const MachineMemOperand *MMO = *MI.memoperands_begin();
+  if (!MMO->isStore() || !MMO->getValue() || MMO->getPseudoValue())
+    return std::nullopt;
+
+  SmallVector<const MachineOperand *, 2> BaseOps;
+  int64_t Offset = 0;
+  bool OffsetIsScalable = false;
+  LocationSize Width = LocationSize::precise(0);
+  if (TII->getMemOperandsWithOffsetWidth(MI, BaseOps, Offset, OffsetIsScalable,
+                                         Width)) {
+    if (OffsetIsScalable || !Width.isPrecise() || Width.isScalable() ||
+        BaseOps.size() != 1 || !BaseOps[0]->isReg() ||
+        BaseOps[0]->getTargetFlags() != 0)
+      return std::nullopt;
+    uint64_t RawWidth = Width.getValue().getFixedValue();
+    if (RawWidth == 0 ||
+        RawWidth >
+            static_cast<uint64_t>(std::numeric_limits<int64_t>::max() / 2))
+      return std::nullopt;
+    int64_t SignedWidth = static_cast<int64_t>(RawWidth);
+    if (Offset > std::numeric_limits<int64_t>::max() - SignedWidth)
+      return std::nullopt;
+    NoAABaseKey Key{1, BaseOps[0]->getReg().id(), BaseOps[0]->getSubReg()};
+    return std::make_pair(Key, AccessByteRange{Offset, Offset + SignedWidth});
+  }
+
+  if (MI.getNumDefs() != 0)
+    return std::nullopt;
+  int FrameIdx = 0;
+  unsigned NumFI = 0;
+  for (const MachineOperand &MO : MI.operands()) {
+    if (MO.isFI()) {
+      if (MO.getTargetFlags() != 0 || ++NumFI > 1)
+        return std::nullopt;
+      FrameIdx = MO.getIndex();
+    }
+  }
+  if (NumFI != 1)
+    return std::nullopt;
+
+  auto Range = getKnownAccessRange(MI, V, DL, /*AllowConstantOffsetStrip=*/true,
+                                   std::numeric_limits<int64_t>::max() / 2);
+  if (!Range)
+    return std::nullopt;
+
+  NoAABaseKey Key{2, static_cast<unsigned>(FrameIdx), 0};
+  return std::make_pair(Key, *Range);
+}
 } // end anonymous namespace
 
 namespace llvm {
@@ -662,10 +807,53 @@ private:
   /// if we were to update the sequencing store every time we see a store
   /// instruction, the effect would be to linearize the stores.
   struct MemopFrontier {
+    static constexpr int64_t MaxIndexedAccessSize = 64;
+
+    struct OffsetEntry {
+      int64_t End;
+      SUnit *SU;
+    };
+    using OffsetMap = std::map<int64_t, SmallVector<OffsetEntry, 1>>;
+
+    struct NoAAChainEntry {
+      SUnit *SU = nullptr;
+      SUList::iterator ListIt;
+      const Value *Val = nullptr;
+      int64_t Start = 0;
+      int64_t End = 0;
+    };
+    struct NoAAStoreChainBucket {
+      NoAABaseKey Key;
+      NoAAChainEntry Latest;
+      NoAAChainEntry Second;
+    };
+
     // The current sequencing store.
     SUnit *SequencingStore = nullptr;
-    /// The memory operations in the frontier.
+    /// The memory operations in the frontier without a bounded constant byte
+    /// range relative to this frontier's single underlying object.
     SUList Stores, Loads;
+    /// Memory operations with a known constant byte range [Start, End) (with
+    /// 0 < End - Start <= MaxIndexedAccessSize) relative to this frontier's
+    /// underlying object, keyed by Start.
+    OffsetMap StoresByOffset, LoadsByOffset;
+    unsigned NumOffsetStores = 0;
+    unsigned NumOffsetLoads = 0;
+    /// When AA is disabled, tracks the two most recent chained disjoint stores
+    /// per machine base register / frame index so transitively redundant older
+    /// stores can be pruned from #Stores without changing aliasing edges.
+    SmallVector<NoAAStoreChainBucket, 2> NoAAStoreChains;
+
+    void recordIndexedAccess(SUnit *SU, bool IsStore, int64_t Start,
+                             int64_t End) {
+      if (IsStore) {
+        StoresByOffset[Start].push_back({End, SU});
+        ++NumOffsetStores;
+      } else {
+        LoadsByOffset[Start].push_back({End, SU});
+        ++NumOffsetLoads;
+      }
+    }
 
     /// Returns true if the next store should be promoted to a sequencing store
     /// and false otherwise.
@@ -759,9 +947,15 @@ private:
 
   /// Adds dependencies as needed from all SUs in list to SU.
   void addChainDependencies(SUnit *SU, SUList &SUs, unsigned Latency);
+  void addChainDependencies(SUnit *SU, SUList &FallbackList,
+                            const MemopFrontier::OffsetMap &IndexedMap,
+                            unsigned Latency);
   void addChainDependencies(SUnit *SU, MemopFrontier &F, bool IsStore);
+  void addChainDependencies(SUnit *SU, MemopFrontier &F, bool IsStore,
+                            int64_t Start, int64_t End);
 
   void addBarrierChain(SUList &SUs);
+  void addBarrierChain(MemopFrontier::OffsetMap &Map);
   void addBarrierChain(MemopFrontier &F);
 
   /// Add dependencies from the barrier chain to all in flight memory operations
@@ -785,13 +979,18 @@ public:
 } // end namespace llvm
 
 unsigned ScheduleDAGDependencyBuilder::MemopFrontier::size() const {
-  return Loads.size() + Stores.size();
+  return Loads.size() + Stores.size() + NumOffsetLoads + NumOffsetStores;
 }
 
 void ScheduleDAGDependencyBuilder::MemopFrontier::clear() {
   SequencingStore = nullptr;
   Stores.clear();
   Loads.clear();
+  StoresByOffset.clear();
+  LoadsByOffset.clear();
+  NumOffsetStores = 0;
+  NumOffsetLoads = 0;
+  NoAAStoreChains.clear();
 }
 
 bool ScheduleDAGDependencyBuilder::MemopFrontier::shouldUpdate() const {
@@ -841,15 +1040,74 @@ void ScheduleDAGDependencyBuilder::addChainDependencies(SUnit *SU, SUList &SUs,
     addChainDependency(SU, Entry, Latency);
 }
 
+void ScheduleDAGDependencyBuilder::addChainDependencies(
+    SUnit *SU, SUList &FallbackList, const MemopFrontier::OffsetMap &IndexedMap,
+    unsigned Latency) {
+  if (IndexedMap.empty()) {
+    addChainDependencies(SU, FallbackList, Latency);
+    return;
+  }
+
+  SmallVector<SUnit *, 16> Candidates(FallbackList.begin(), FallbackList.end());
+  for (const auto &[_, Entries] : IndexedMap)
+    for (const MemopFrontier::OffsetEntry &Entry : Entries)
+      Candidates.push_back(Entry.SU);
+
+  if (Candidates.size() > 1)
+    llvm::sort(Candidates, [](const SUnit *A, const SUnit *B) {
+      return A->NodeNum > B->NodeNum;
+    });
+
+  for (SUnit *Entry : Candidates)
+    addChainDependency(SU, Entry, Latency);
+}
+
 void ScheduleDAGDependencyBuilder::addChainDependencies(SUnit *SU,
                                                         MemopFrontier &F,
                                                         bool IsStore) {
   if (F.SequencingStore)
     F.SequencingStore->addPredBarrier(SU);
 
-  addChainDependencies(SU, F.Stores, /*Latency=*/0);
+  addChainDependencies(SU, F.Stores, F.StoresByOffset, /*Latency=*/0);
   if (IsStore)
-    addChainDependencies(SU, F.Loads, /*Latency=*/1);
+    addChainDependencies(SU, F.Loads, F.LoadsByOffset, /*Latency=*/1);
+}
+
+void ScheduleDAGDependencyBuilder::addChainDependencies(
+    SUnit *SU, MemopFrontier &F, bool IsStore, int64_t Start, int64_t End) {
+  if (F.SequencingStore)
+    F.SequencingStore->addPredBarrier(SU);
+
+  auto AddOverlappingDeps = [&](SUList &FallbackList,
+                                const MemopFrontier::OffsetMap &IndexedMap,
+                                unsigned Latency) {
+    SmallVector<SUnit *, 8> Candidates;
+    if (!IndexedMap.empty()) {
+      int64_t MinStart = Start - MemopFrontier::MaxIndexedAccessSize + 1;
+      for (auto It = IndexedMap.lower_bound(MinStart), E = IndexedMap.end();
+           It != E && It->first < End; ++It) {
+        for (const MemopFrontier::OffsetEntry &Entry : It->second) {
+          if (Entry.End > Start)
+            Candidates.push_back(Entry.SU);
+        }
+      }
+    }
+    if (Candidates.empty()) {
+      addChainDependencies(SU, FallbackList, Latency);
+      return;
+    }
+    Candidates.append(FallbackList.begin(), FallbackList.end());
+    if (Candidates.size() > 1)
+      llvm::sort(Candidates, [](const SUnit *A, const SUnit *B) {
+        return A->NodeNum > B->NodeNum;
+      });
+    for (SUnit *Entry : Candidates)
+      addChainDependency(SU, Entry, Latency);
+  };
+
+  AddOverlappingDeps(F.Stores, F.StoresByOffset, /*Latency=*/0);
+  if (IsStore)
+    AddOverlappingDeps(F.Loads, F.LoadsByOffset, /*Latency=*/1);
 }
 
 void ScheduleDAGDependencyBuilder::addBarrierChain(SUList &SUs) {
@@ -861,11 +1119,32 @@ void ScheduleDAGDependencyBuilder::addBarrierChain(SUList &SUs) {
   SUs.clear();
 }
 
+void ScheduleDAGDependencyBuilder::addBarrierChain(
+    MemopFrontier::OffsetMap &Map) {
+  assert(BarrierChain != nullptr);
+  if (Map.empty())
+    return;
+
+  SmallVector<SUnit *, 16> Ordered;
+  for (auto &[_, Entries] : Map)
+    for (const MemopFrontier::OffsetEntry &Entry : Entries)
+      Ordered.push_back(Entry.SU);
+  llvm::sort(Ordered, [](const SUnit *A, const SUnit *B) {
+    return A->NodeNum > B->NodeNum;
+  });
+  for (SUnit *EntrySU : Ordered)
+    EntrySU->addPredBarrier(BarrierChain);
+
+  Map.clear();
+}
+
 void ScheduleDAGDependencyBuilder::addBarrierChain(MemopFrontier &F) {
   assert(BarrierChain != nullptr);
 
   addBarrierChain(F.Stores);
   addBarrierChain(F.Loads);
+  addBarrierChain(F.StoresByOffset);
+  addBarrierChain(F.LoadsByOffset);
 
   if (F.SequencingStore)
     F.SequencingStore->addPredBarrier(BarrierChain);
@@ -903,10 +1182,24 @@ void ScheduleDAGDependencyBuilder::updateSequencingStore(
   }
 
   // Sequence all stores against the sequencing store and clear the map.
-  for (SUnit *S : F.Stores)
-    S->addPredBarrier(SU);
-
+  if (F.StoresByOffset.empty()) {
+    for (SUnit *S : F.Stores)
+      S->addPredBarrier(SU);
+  } else {
+    SmallVector<SUnit *, 16> OrderedStores(F.Stores.begin(), F.Stores.end());
+    for (auto &[_, Entries] : F.StoresByOffset)
+      for (const MemopFrontier::OffsetEntry &Entry : Entries)
+        OrderedStores.push_back(Entry.SU);
+    llvm::sort(OrderedStores, [](const SUnit *A, const SUnit *B) {
+      return A->NodeNum > B->NodeNum;
+    });
+    for (SUnit *S : OrderedStores)
+      S->addPredBarrier(SU);
+    F.StoresByOffset.clear();
+    F.NumOffsetStores = 0;
+  }
   F.Stores.clear();
+  F.NoAAStoreChains.clear();
 
   if (PreserveNoAliasLoads) {
     // If asked, for loads, we can do slightly better. Rather than naively
@@ -921,14 +1214,58 @@ void ScheduleDAGDependencyBuilder::updateSequencingStore(
         ++It;
       }
     }
+    if (!F.LoadsByOffset.empty()) {
+      SmallDenseSet<SUnit *, 16> SequencedLoads;
+      SmallVector<SUnit *, 16> OrderedLoads;
+      for (auto &[_, Entries] : F.LoadsByOffset)
+        for (const MemopFrontier::OffsetEntry &Entry : Entries)
+          OrderedLoads.push_back(Entry.SU);
+      llvm::sort(OrderedLoads, [](const SUnit *A, const SUnit *B) {
+        return A->NodeNum > B->NodeNum;
+      });
+      for (SUnit *LoadSU : OrderedLoads) {
+        if (addChainDependency(SU, LoadSU, /*TrueMemOrderLatency=*/1))
+          SequencedLoads.insert(LoadSU);
+      }
+      if (!SequencedLoads.empty()) {
+        for (auto MapIt = F.LoadsByOffset.begin();
+             MapIt != F.LoadsByOffset.end();) {
+          auto &Entries = MapIt->second;
+          llvm::erase_if(Entries, [&](const MemopFrontier::OffsetEntry &Entry) {
+            if (SequencedLoads.contains(Entry.SU)) {
+              --F.NumOffsetLoads;
+              return true;
+            }
+            return false;
+          });
+          if (Entries.empty())
+            MapIt = F.LoadsByOffset.erase(MapIt);
+          else
+            ++MapIt;
+        }
+      }
+    }
 
     // Re-account for the potentially remaining loads.
-    MemopsInFlight += F.Loads.size();
+    MemopsInFlight += F.Loads.size() + F.NumOffsetLoads;
   } else {
     // Sequence all loads against the sequencing store and clear the map.
-    for (SUnit *S : F.Loads)
-      S->addPredBarrier(SU);
-
+    if (F.LoadsByOffset.empty()) {
+      for (SUnit *S : F.Loads)
+        S->addPredBarrier(SU);
+    } else {
+      SmallVector<SUnit *, 16> OrderedLoads(F.Loads.begin(), F.Loads.end());
+      for (auto &[_, Entries] : F.LoadsByOffset)
+        for (const MemopFrontier::OffsetEntry &Entry : Entries)
+          OrderedLoads.push_back(Entry.SU);
+      llvm::sort(OrderedLoads, [](const SUnit *A, const SUnit *B) {
+        return A->NodeNum > B->NodeNum;
+      });
+      for (SUnit *S : OrderedLoads)
+        S->addPredBarrier(SU);
+      F.LoadsByOffset.clear();
+      F.NumOffsetLoads = 0;
+    }
     F.Loads.clear();
   }
 
@@ -1151,20 +1488,77 @@ void ScheduleDAGDependencyBuilder::buildDeps() {
     } else {
       // Add precise dependencies against all previously seen memory
       // accesses mapped to the same Value(s).
-      SmallSet<ValueType, 2> SeenValues;
-      for (const ValueType V : Objs) {
-        // Deduplicate values to avoid adding self loops.
-        if (!SeenValues.insert(V).second)
-          continue;
+      std::optional<AccessByteRange> SingleObjRange;
+      bool AllowOffsetStrip = (AA != nullptr);
+      if (Objs.size() == 1 && TII->getMemOperandAACheckLimit() >= 1)
+        SingleObjRange = getKnownAccessRange(
+            MI, Objs[0], DAG.MF.getDataLayout(), AllowOffsetStrip,
+            MemopFrontier::MaxIndexedAccessSize);
 
-        MemopFrontier &Frontier = AnalyzableFrontiers[V];
-
+      if (SingleObjRange) {
+        MemopFrontier &Frontier = AnalyzableFrontiers[Objs[0]];
         if (IsStore && Frontier.shouldUpdate()) {
           updateSequencingStore(Frontier, SU);
         } else {
-          addChainDependencies(SU, Frontier, IsStore);
-          (IsStore ? Frontier.Stores : Frontier.Loads).push_back(SU);
+          addChainDependencies(SU, Frontier, IsStore, SingleObjRange->Start,
+                               SingleObjRange->End);
+          Frontier.recordIndexedAccess(SU, IsStore, SingleObjRange->Start,
+                                       SingleObjRange->End);
           ++MemopsInFlight;
+        }
+      } else {
+        std::optional<std::pair<NoAABaseKey, AccessByteRange>> NoAAStoreInfo;
+        if (!AA && IsStore && Objs.size() == 1)
+          NoAAStoreInfo = getNoAAStoreBaseAndRange(MI, Objs[0],
+                                                   DAG.MF.getDataLayout(), TII);
+
+        SmallSet<ValueType, 2> SeenValues;
+        for (const ValueType V : Objs) {
+          // Deduplicate values to avoid adding self loops.
+          if (!SeenValues.insert(V).second)
+            continue;
+
+          MemopFrontier &Frontier = AnalyzableFrontiers[V];
+
+          if (IsStore && Frontier.shouldUpdate()) {
+            updateSequencingStore(Frontier, SU);
+          } else {
+            addChainDependencies(SU, Frontier, IsStore);
+            SUList &List = IsStore ? Frontier.Stores : Frontier.Loads;
+            auto NewIt = List.insert(List.end(), SU);
+            ++MemopsInFlight;
+
+            if (NoAAStoreInfo) {
+              const auto &[BaseKey, Range] = *NoAAStoreInfo;
+              const Value *Val = (*MI.memoperands_begin())->getValue();
+              MemopFrontier::NoAAStoreChainBucket *Bucket = nullptr;
+              for (auto &Entry : Frontier.NoAAStoreChains) {
+                if (Entry.Key == BaseKey) {
+                  Bucket = &Entry;
+                  break;
+                }
+              }
+              if (!Bucket) {
+                Frontier.NoAAStoreChains.push_back({BaseKey, {}, {}});
+                Bucket = &Frontier.NoAAStoreChains.back();
+              }
+
+              if (!Bucket->Latest.SU) {
+                Bucket->Latest = {SU, NewIt, Val, Range.Start, Range.End};
+              } else if (Val != Bucket->Latest.Val &&
+                         (Range.End <= Bucket->Latest.Start ||
+                          Bucket->Latest.End <= Range.Start) &&
+                         MI.mayAlias(AA, *Bucket->Latest.SU->getInstr(),
+                                     UseTBAA)) {
+                if (Bucket->Second.SU) {
+                  Frontier.Stores.erase(Bucket->Second.ListIt);
+                  --MemopsInFlight;
+                }
+                Bucket->Second = Bucket->Latest;
+                Bucket->Latest = {SU, NewIt, Val, Range.Start, Range.End};
+              }
+            }
+          }
         }
       }
 
