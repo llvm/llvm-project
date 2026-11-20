@@ -1,12 +1,12 @@
-! RUN: %flang_fc1 -ffast-real-mod -emit-mlir -o - %s | FileCheck %s --check-prefixes=CHECK-FRM%if target=x86_64{{.*}} %{,CHECK-FRM-KIND10%}%if flang-supports-f128-math %{,CHECK-FRM-KIND16%}
-! RUN: %flang_fc1 -ffast-real-mod -fno-fast-real-mod -emit-mlir -o - %s | FileCheck %s --check-prefixes=CHECK-NFRM%if target=x86_64{{.*}} %{,CHECK-NFRM-KIND10%}%if flang-supports-f128-math %{,CHECK-NFRM-KIND16%}
-! RUN: %flang_fc1 -fno-fast-real-mod -ffast-real-mod -emit-mlir -o - %s | FileCheck %s --check-prefixes=CHECK-FRM%if target=x86_64{{.*}} %{,CHECK-FRM-KIND10%}%if flang-supports-f128-math %{,CHECK-FRM-KIND16%}
-! RUN: %flang_fc1 -ffast-math -emit-mlir -o - %s | FileCheck %s --check-prefixes=CHECK-FM%if target=x86_64{{.*}} %{,CHECK-FM-KIND10%}%if flang-supports-f128-math %{,CHECK-FM-KIND16%}
-! RUN: %flang_fc1 -ffast-math -fno-fast-real-mod -emit-mlir -o - %s | FileCheck %s --check-prefixes=CHECK-NFRM%if target=x86_64{{.*}} %{,CHECK-NFRM-KIND10%}%if flang-supports-f128-math %{,CHECK-NFRM-KIND16%}
-! RUN: %flang_fc1 -ffast-real-mod -mllvm -fast-real-mod-trunc=math-trunc -emit-mlir -o - %s | FileCheck %s --check-prefixes=CHECK-FRM%if target=x86_64{{.*}} %{,CHECK-FRM-KIND10%}%if flang-supports-f128-math %{,CHECK-FRM-KIND16%}
-! RUN: %flang_fc1 -ffast-real-mod -mllvm -fast-real-mod-trunc=emulate-trunc -emit-mlir -o - %s | FileCheck %s --check-prefixes=CHECK-EMU%if target=x86_64{{.*}} %{,CHECK-FRM-KIND10%}%if flang-supports-f128-math %{,CHECK-FRM-KIND16%}
-! RUN: %flang_fc1 -ffast-math -mllvm -fast-real-mod-trunc=emulate-trunc -emit-mlir -o - %s | FileCheck %s --check-prefixes=CHECK-EMU%if target=x86_64{{.*}} %{,CHECK-FM-KIND10%}%if flang-supports-f128-math %{,CHECK-FM-KIND16%}
-! RUN: %flang_fc1 -ffast-math -fno-fast-real-mod -mllvm -fast-real-mod-trunc=emulate-trunc -emit-mlir -o - %s | FileCheck %s --check-prefixes=CHECK-NFRM%if target=x86_64{{.*}} %{,CHECK-NFRM-KIND10%}%if flang-supports-f128-math %{,CHECK-NFRM-KIND16%}
+! RUN: %flang_fc1 -ffast-real-mod -emit-mlir -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-FRM%if target=x86_64{{.*}} %{,CHECK-FRM-KIND10%}%if flang-supports-f128-math %{,CHECK-FRM-KIND16%}
+! RUN: %flang_fc1 -ffast-real-mod -fno-fast-real-mod -emit-mlir -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-NFRM%if target=x86_64{{.*}} %{,CHECK-NFRM-KIND10%}%if flang-supports-f128-math %{,CHECK-NFRM-KIND16%}
+! RUN: %flang_fc1 -fno-fast-real-mod -ffast-real-mod -emit-mlir -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-FRM%if target=x86_64{{.*}} %{,CHECK-FRM-KIND10%}%if flang-supports-f128-math %{,CHECK-FRM-KIND16%}
+! RUN: %flang_fc1 -ffast-math -emit-mlir -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-FM%if target=x86_64{{.*}} %{,CHECK-FM-KIND10%}%if flang-supports-f128-math %{,CHECK-FM-KIND16%}
+! RUN: %flang_fc1 -ffast-math -fno-fast-real-mod -emit-mlir -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-NFRM%if target=x86_64{{.*}} %{,CHECK-NFRM-KIND10%}%if flang-supports-f128-math %{,CHECK-NFRM-KIND16%}
+! RUN: %flang_fc1 -ffast-real-mod -mllvm -fast-real-mod-trunc=math-trunc -emit-mlir -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-FRM%if target=x86_64{{.*}} %{,CHECK-FRM-KIND10%}%if flang-supports-f128-math %{,CHECK-FRM-KIND16%}
+! RUN: %flang_fc1 -ffast-real-mod -mllvm -fast-real-mod-trunc=emulate-trunc -emit-mlir -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-EMU%if target=x86_64{{.*}} %{,CHECK-FRM-KIND10%}%if flang-supports-f128-math %{,CHECK-FRM-KIND16%}
+! RUN: %flang_fc1 -ffast-math -mllvm -fast-real-mod-trunc=emulate-trunc -emit-mlir -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-EMU%if target=x86_64{{.*}} %{,CHECK-FM-KIND10%}%if flang-supports-f128-math %{,CHECK-FM-KIND16%}
+! RUN: %flang_fc1 -ffast-math -fno-fast-real-mod -mllvm -fast-real-mod-trunc=emulate-trunc -emit-mlir -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-NFRM%if target=x86_64{{.*}} %{,CHECK-NFRM-KIND10%}%if flang-supports-f128-math %{,CHECK-NFRM-KIND16%}
 
 ! CHECK-FM: module attributes {{{.*}}fir.fast_real_mod = true{{.*}}}
 ! CHECK-FRM: module attributes {{{.*}}fir.fast_real_mod = true{{.*}}}
