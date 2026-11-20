@@ -23,7 +23,7 @@ define void @test(double %fneg, i1 %tobool.not, i1 %tobool31.not) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <8 x double> <double poison, double 0.000000e+00, double 0.000000e+00, double 0.000000e+00, double -0.000000e+00, double 0.000000e+00, double -0.000000e+00, double -0.000000e+00>, double [[ADD7]], i64 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = fadd <8 x double> [[TMP9]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <8 x double> [[TMP11]], <8 x double> poison, <2 x i32> <i32 poison, i32 5>
-; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <2 x double> [[TMP12]], <2 x double> <double 0.000000e+00, double poison>, <2 x i32> <i32 2, i32 1>
+; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <2 x double> <double 0.000000e+00, double poison>, <2 x double> [[TMP12]], <2 x i32> <i32 0, i32 3>
 ; CHECK-NEXT:    [[TMP14:%.*]] = fsub <2 x double> [[TMP13]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <8 x double> [[TMP11]], <8 x double> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <4 x double> [[TMP15]], <4 x double> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison>

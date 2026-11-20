@@ -1343,6 +1343,9 @@ void HexagonDAGToDAGISel::ppHoistZextI1(std::vector<SDNode*> &&Nodes) {
       // Do not generate select for all i1 vector type.
       if (UVT.isVectorOf(MVT::i1))
         continue;
+      // SELECT on HLX vectors needs custom lowering, which has already run.
+      if (HST->isHLXVectorType(UVT))
+        continue;
       if (isMemOPCandidate(N, U))
         continue;
 

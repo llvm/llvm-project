@@ -1,0 +1,53 @@
+! RUN: %python %S/test_errors.py %s %flang_fc1
+! Managed objects in host subprograms may not be SAVEd unless allocatable.
+subroutine s1()
+  !ERROR: Saved object 'a' in host code may not have ATTRIBUTES(MANAGED) unless allocatable
+  real, managed, save :: a(10)
+  a = 1.0
+end subroutine
+
+subroutine s2()
+  real, managed, save, allocatable :: b(:)
+  real, managed :: c(10)
+  allocate(b(10))
+  c = 1.0
+end subroutine
+
+subroutine s3()
+  real, managed :: a(10)
+  save ! blanket SAVE is accepted
+  a = 1.0
+end subroutine
+
+subroutine s4()
+  !ERROR: Saved object 'a' in host code may not have ATTRIBUTES(MANAGED) unless allocatable
+  real, managed :: a(10)
+  save :: a
+  a = 1.0
+end subroutine
+
+subroutine s5()
+  !ERROR: Saved object 'a' in host code may not have ATTRIBUTES(DEVICE) unless allocatable
+  real, device, save :: a(10)
+  a = 1.0
+end subroutine
+
+subroutine s6()
+  real, device, save, allocatable :: b(:)
+  real, device :: c(10)
+  allocate(b(10))
+  c = 1.0
+end subroutine
+
+subroutine s7()
+  real, device :: a(10)
+  save ! blanket SAVE is accepted
+  a = 1.0
+end subroutine
+
+subroutine s8()
+  !ERROR: Saved object 'a' in host code may not have ATTRIBUTES(DEVICE) unless allocatable
+  real, device :: a(10)
+  save :: a
+  a = 1.0
+end subroutine

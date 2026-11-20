@@ -15,8 +15,6 @@
 
 ---
 name:            compressb_rrz_128
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $xmm0, $xmm1
@@ -37,8 +35,6 @@ body:             |
 ...
 ---
 name:            compressb_rrz_256
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $ymm0, $ymm1
@@ -59,8 +55,6 @@ body:             |
 ...
 ---
 name:            compressb_rrz_512
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $zmm0, $zmm1
@@ -81,8 +75,6 @@ body:             |
 ...
 ---
 name:            compressw_rrz_128
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $xmm0, $xmm1
@@ -103,8 +95,6 @@ body:             |
 ...
 ---
 name:            compressw_rrz_256
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $ymm0, $ymm1
@@ -125,8 +115,6 @@ body:             |
 ...
 ---
 name:            compressw_rrz_512
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $zmm0, $zmm1
@@ -147,8 +135,6 @@ body:             |
 ...
 ---
 name:            compressd_rrz_128
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $xmm0, $xmm1
@@ -169,8 +155,6 @@ body:             |
 ...
 ---
 name:            compressd_rrz_256
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $ymm0, $ymm1
@@ -191,8 +175,6 @@ body:             |
 ...
 ---
 name:            compressd_rrz_512
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $zmm0, $zmm1
@@ -213,8 +195,6 @@ body:             |
 ...
 ---
 name:            compressq_rrz_128
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $xmm0, $xmm1
@@ -235,8 +215,6 @@ body:             |
 ...
 ---
 name:            compressq_rrz_256
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $ymm0, $ymm1
@@ -257,8 +235,6 @@ body:             |
 ...
 ---
 name:            compressq_rrz_512
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $zmm0, $zmm1
@@ -279,8 +255,6 @@ body:             |
 ...
 ---
 name:            compressps_rrz_128
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $xmm0, $xmm1
@@ -301,8 +275,6 @@ body:             |
 ...
 ---
 name:            compressps_rrz_256
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $ymm0, $ymm1
@@ -323,8 +295,6 @@ body:             |
 ...
 ---
 name:            compressps_rrz_512
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $zmm0, $zmm1
@@ -345,8 +315,6 @@ body:             |
 ...
 ---
 name:            compresspd_rrz_128
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $xmm0, $xmm1
@@ -367,8 +335,6 @@ body:             |
 ...
 ---
 name:            compresspd_rrz_256
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $ymm0, $ymm1
@@ -389,8 +355,6 @@ body:             |
 ...
 ---
 name:            compresspd_rrz_512
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $zmm0, $zmm1
@@ -411,8 +375,6 @@ body:             |
 ...
 ---
 name:            no_break_compressb_rrz_128
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $xmm1
@@ -428,8 +390,6 @@ body:             |
 ...
 ---
 name:            no_break_compressb_rrz_256
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $ymm1
@@ -445,8 +405,6 @@ body:             |
 ...
 ---
 name:            no_break_compressb_rrz_512
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $zmm1
@@ -462,8 +420,6 @@ body:             |
 ...
 ---
 name:            no_break_compressw_rrz_128
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $xmm1
@@ -479,8 +435,6 @@ body:             |
 ...
 ---
 name:            no_break_compressw_rrz_256
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $ymm1
@@ -496,8 +450,6 @@ body:             |
 ...
 ---
 name:            no_break_compressw_rrz_512
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $zmm1
@@ -513,8 +465,6 @@ body:             |
 ...
 ---
 name:            no_break_compressd_rrz_128
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $xmm1
@@ -530,8 +480,6 @@ body:             |
 ...
 ---
 name:            no_break_compressd_rrz_256
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $ymm1
@@ -547,8 +495,6 @@ body:             |
 ...
 ---
 name:            no_break_compressd_rrz_512
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $zmm1
@@ -564,8 +510,6 @@ body:             |
 ...
 ---
 name:            no_break_compressq_rrz_128
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $xmm1
@@ -581,8 +525,6 @@ body:             |
 ...
 ---
 name:            no_break_compressq_rrz_256
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $ymm1
@@ -598,8 +540,6 @@ body:             |
 ...
 ---
 name:            no_break_compressq_rrz_512
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $zmm1
@@ -615,8 +555,6 @@ body:             |
 ...
 ---
 name:            no_break_compressps_rrz_128
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $xmm1
@@ -632,8 +570,6 @@ body:             |
 ...
 ---
 name:            no_break_compressps_rrz_256
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $ymm1
@@ -649,8 +585,6 @@ body:             |
 ...
 ---
 name:            no_break_compressps_rrz_512
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $zmm1
@@ -666,8 +600,6 @@ body:             |
 ...
 ---
 name:            no_break_compresspd_rrz_128
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $xmm1
@@ -683,8 +615,6 @@ body:             |
 ...
 ---
 name:            no_break_compresspd_rrz_256
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $ymm1
@@ -700,8 +630,6 @@ body:             |
 ...
 ---
 name:            no_break_compresspd_rrz_512
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $zmm1

@@ -147,6 +147,8 @@ bool SBTypeSynthetic::IsEqualTo(lldb::SBTypeSynthetic &rhs) {
 
   if (!IsValid())
     return !rhs.IsValid();
+  if (!rhs.IsValid())
+    return false;
 
   if (m_opaque_sp->IsScripted() != rhs.m_opaque_sp->IsScripted())
     return false;
@@ -164,7 +166,7 @@ bool SBTypeSynthetic::operator!=(lldb::SBTypeSynthetic &rhs) {
   LLDB_INSTRUMENT_VA(this, rhs);
 
   if (!IsValid())
-    return !rhs.IsValid();
+    return rhs.IsValid();
   return m_opaque_sp != rhs.m_opaque_sp;
 }
 
