@@ -7366,6 +7366,15 @@ static Value *simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
     break;
   case Intrinsic::ldexp:
     return simplifyLdexp(Op0, Op1, Q, false);
+  case Intrinsic::fptrunc_round: {
+    // fptrunc_round ( fpext X, rm ) --> X
+    // Truncation back from an fpext under any rounding mode is exact.
+    // "fptrunc (fpext X) --> X" fold already exists for plain casts.
+    Value *X;
+    if (match(Op0, m_FPExt(m_Value(X))) && X->getType() == ReturnType)
+      return X;
+    break;
+  }
   case Intrinsic::copysign:
     // copysign X, X --> X
     if (Op0 == Op1)
