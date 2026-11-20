@@ -245,10 +245,6 @@ def FeaturePPCPostRASched:
   SubtargetFeature<"ppc-postra-sched", "UsePPCPostRASchedStrategy", "true",
                    "Use PowerPC post-RA scheduling strategy",
                    [], InlineIgnore>;
-def FeatureFloat128 :
-  SubtargetFeature<"float128", "HasFloat128", "true",
-                   "Enable the __float128 data type for IEEE-754R Binary128.",
-                   [FeatureVSX]>;
 def FeaturePOPCNTD   : SubtargetFeature<"popcntd","HasPOPCNTD",
                                         "POPCNTD_Fast",
                                         "Enable the popcnt[dw] instructions">;
