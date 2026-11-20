@@ -17,7 +17,6 @@
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/VirtualFileSystemFwd.h"
 #include <string>
@@ -26,13 +25,20 @@ namespace llvm {
 
 class LLVMContext;
 class Module;
+namespace cl {
+class LibraryOptionsContext;
+}
 
-LLVM_ABI extern cl::opt<int> SampleHotCallSiteThreshold;
-LLVM_ABI extern cl::opt<int> SampleColdCallSiteThreshold;
-LLVM_ABI extern cl::opt<int> ProfileInlineGrowthLimit;
-LLVM_ABI extern cl::opt<int> ProfileInlineLimitMin;
-LLVM_ABI extern cl::opt<int> ProfileInlineLimitMax;
-LLVM_ABI extern cl::opt<bool> SortProfiledSCC;
+/// The thresholds of the priority-based sample profile loader inliner, which
+/// llvm-profgen's preinliner shares.
+struct SampleProfileInlineOptions {
+  int HotCallSiteThreshold = 3000;
+  int ColdCallSiteThreshold = 45;
+  unsigned GrowthLimit = 12;
+  unsigned LimitMin = 100;
+  unsigned LimitMax = 10000;
+  bool SortProfiledSCC = true;
+};
 
 /// The sample profiler data loader pass.
 class SampleProfileLoaderPass
@@ -49,6 +55,11 @@ public:
 
   /// Return -sample-profile-file.
   LLVM_ABI static StringRef getSampleProfileFile(const LLVMContext &C);
+
+  /// Return \p R overridden by the inliner options given in \p C.
+  LLVM_ABI static SampleProfileInlineOptions
+  getInlineOptions(const cl::LibraryOptionsContext &C,
+                   SampleProfileInlineOptions R);
 
 private:
   std::string ProfileFileName;
