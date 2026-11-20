@@ -1095,7 +1095,8 @@ public:
   /// Return true if this type is legal.
   LLVM_ABI bool isTypeLegal(Type *Ty) const;
 
-  /// Returns the estimated number of registers required to represent \p Ty.
+  /// Returns the estimated number of registers required to represent \p Ty,
+  /// or zero if \p Ty cannot be legalized.
   LLVM_ABI unsigned getRegUsageForType(Type *Ty) const;
 
   /// Return true if switches should be turned into lookup tables for the

@@ -1691,6 +1691,11 @@ void Clang::RenderTargetOptions(const llvm::Triple &EffectiveTriple,
   case llvm::Triple::ve:
     AddVETargetArgs(Args, CmdArgs);
     break;
+
+  case llvm::Triple::bpfel:
+  case llvm::Triple::bpfeb:
+    Args.AddAllArgs(CmdArgs, options::OPT_fbpf_no_enum_reloc_EQ);
+    break;
   }
 }
 

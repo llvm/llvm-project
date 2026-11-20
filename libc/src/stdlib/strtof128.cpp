@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdlib/strtof128.h"
+#include "src/__support/CPP/bit.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"

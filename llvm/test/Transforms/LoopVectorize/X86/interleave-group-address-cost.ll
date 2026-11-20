@@ -6,23 +6,20 @@
 define void @interleave_store_factor_2(ptr noalias %src, ptr noalias %dst) {
 ; CHECK-LABEL: 'interleave_store_factor_2'
 ; CHECK:  Cost of 0 for VF 2: forced scalar %gep.src = getelementptr inbounds i32, ptr %src, i64 %iv
-; CHECK:  Cost of 0 for VF 2: forced scalar %gep.dst.1 = getelementptr inbounds i32, ptr %dst, i64 %idx.1
-; CHECK:  Cost of 1 for VF 2: forced scalar %idx.1 = or disjoint i64 %idx.0, 1
+; CHECK:  Cost of 0 for VF 2: forced scalar %gep.dst.0 = getelementptr inbounds i32, ptr %dst, i64 %idx.0
 ; CHECK:  Cost of 1 for VF 2: forced scalar %idx.0 = shl nuw nsw i64 %iv, 1
 ; CHECK:  Cost of 0 for VF 2: CLONE ir<%idx.0> = shl nuw nsw vp<[[VP4:%[0-9]+]]>, ir<1>
-; CHECK:  Cost for VF 2: 8 (Estimated cost per lane: 4)
+; CHECK:  Cost for VF 2: 7 (Estimated cost per lane: 3.5)
 ; CHECK:  Cost of 0 for VF 4: forced scalar %gep.src = getelementptr inbounds i32, ptr %src, i64 %iv
-; CHECK:  Cost of 0 for VF 4: forced scalar %gep.dst.1 = getelementptr inbounds i32, ptr %dst, i64 %idx.1
-; CHECK:  Cost of 1 for VF 4: forced scalar %idx.1 = or disjoint i64 %idx.0, 1
+; CHECK:  Cost of 0 for VF 4: forced scalar %gep.dst.0 = getelementptr inbounds i32, ptr %dst, i64 %idx.0
 ; CHECK:  Cost of 1 for VF 4: forced scalar %idx.0 = shl nuw nsw i64 %iv, 1
 ; CHECK:  Cost of 0 for VF 4: CLONE ir<%idx.0> = shl nuw nsw vp<[[VP4]]>, ir<1>
-; CHECK:  Cost for VF 4: 24 (Estimated cost per lane: 6)
+; CHECK:  Cost for VF 4: 23 (Estimated cost per lane: 5.75)
 ; CHECK:  Cost of 0 for VF 8: forced scalar %gep.src = getelementptr inbounds i32, ptr %src, i64 %iv
-; CHECK:  Cost of 0 for VF 8: forced scalar %gep.dst.1 = getelementptr inbounds i32, ptr %dst, i64 %idx.1
-; CHECK:  Cost of 1 for VF 8: forced scalar %idx.1 = or disjoint i64 %idx.0, 1
+; CHECK:  Cost of 0 for VF 8: forced scalar %gep.dst.0 = getelementptr inbounds i32, ptr %dst, i64 %idx.0
 ; CHECK:  Cost of 1 for VF 8: forced scalar %idx.0 = shl nuw nsw i64 %iv, 1
 ; CHECK:  Cost of 0 for VF 8: CLONE ir<%idx.0> = shl nuw nsw vp<[[VP4]]>, ir<1>
-; CHECK:  Cost for VF 8: 47 (Estimated cost per lane: 5.88)
+; CHECK:  Cost for VF 8: 46 (Estimated cost per lane: 5.75)
 ;
 entry:
   br label %loop
@@ -50,23 +47,20 @@ exit:
 define void @interleave_store_factor_2_reverse(ptr noalias %src, ptr noalias %dst) {
 ; CHECK-LABEL: 'interleave_store_factor_2_reverse'
 ; CHECK:  Cost of 0 for VF 2: forced scalar %gep.src = getelementptr inbounds i32, ptr %src, i64 %iv
-; CHECK:  Cost of 0 for VF 2: forced scalar %gep.dst.1 = getelementptr inbounds i32, ptr %dst, i64 %idx.1
-; CHECK:  Cost of 1 for VF 2: forced scalar %idx.1 = or disjoint i64 %idx.0, 1
+; CHECK:  Cost of 0 for VF 2: forced scalar %gep.dst.0 = getelementptr inbounds i32, ptr %dst, i64 %idx.0
 ; CHECK:  Cost of 1 for VF 2: forced scalar %idx.0 = shl nuw nsw i64 %iv, 1
 ; CHECK:  Cost of 0 for VF 2: CLONE ir<%idx.0> = shl nuw nsw vp<[[VP6:%[0-9]+]]>, ir<1>
-; CHECK:  Cost for VF 2: 12 (Estimated cost per lane: 6)
+; CHECK:  Cost for VF 2: 11 (Estimated cost per lane: 5.5)
 ; CHECK:  Cost of 0 for VF 4: forced scalar %gep.src = getelementptr inbounds i32, ptr %src, i64 %iv
-; CHECK:  Cost of 0 for VF 4: forced scalar %gep.dst.1 = getelementptr inbounds i32, ptr %dst, i64 %idx.1
-; CHECK:  Cost of 1 for VF 4: forced scalar %idx.1 = or disjoint i64 %idx.0, 1
+; CHECK:  Cost of 0 for VF 4: forced scalar %gep.dst.0 = getelementptr inbounds i32, ptr %dst, i64 %idx.0
 ; CHECK:  Cost of 1 for VF 4: forced scalar %idx.0 = shl nuw nsw i64 %iv, 1
 ; CHECK:  Cost of 0 for VF 4: CLONE ir<%idx.0> = shl nuw nsw vp<[[VP6]]>, ir<1>
-; CHECK:  Cost for VF 4: 28 (Estimated cost per lane: 7)
+; CHECK:  Cost for VF 4: 27 (Estimated cost per lane: 6.75)
 ; CHECK:  Cost of 0 for VF 8: forced scalar %gep.src = getelementptr inbounds i32, ptr %src, i64 %iv
-; CHECK:  Cost of 0 for VF 8: forced scalar %gep.dst.1 = getelementptr inbounds i32, ptr %dst, i64 %idx.1
-; CHECK:  Cost of 1 for VF 8: forced scalar %idx.1 = or disjoint i64 %idx.0, 1
+; CHECK:  Cost of 0 for VF 8: forced scalar %gep.dst.0 = getelementptr inbounds i32, ptr %dst, i64 %idx.0
 ; CHECK:  Cost of 1 for VF 8: forced scalar %idx.0 = shl nuw nsw i64 %iv, 1
 ; CHECK:  Cost of 0 for VF 8: CLONE ir<%idx.0> = shl nuw nsw vp<[[VP6]]>, ir<1>
-; CHECK:  Cost for VF 8: 54 (Estimated cost per lane: 6.75)
+; CHECK:  Cost for VF 8: 53 (Estimated cost per lane: 6.63)
 ;
 entry:
   br label %loop

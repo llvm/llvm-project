@@ -316,8 +316,7 @@ add_header_library(
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.limits
     libc.src.__support.CPP.optional
-    libc.src.__support.CPP.string_view
-    libc.src.__support.FPUtil.float128
+    libc.src.__support.CPP.type_traits
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.rounding_mode
     libc.src.__support.macros.attributes
@@ -393,6 +392,21 @@ add_header_library(
     libc.hdr.func.malloc
     libc.hdr.func.realloc
     libc.src.__support.common
+)
+
+add_header_library(
+  dynamic_buffer
+  HDRS
+    dynamic_buffer.h
+  DEPENDS
+    libc.hdr.func.free
+    libc.hdr.func.realloc
+    libc.hdr.types.size_t
+    libc.src.__support.CPP.limits
+    libc.src.__support.CPP.span
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
 )
 
 add_header_library(

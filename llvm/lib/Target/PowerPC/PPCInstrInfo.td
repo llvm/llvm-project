@@ -5585,12 +5585,21 @@ def : Pat<(int_ppc_stwcx ForceXForm:$dst, gprc:$A),
           (RLWINM (STWCX gprc:$A, ForceXForm:$dst), 31, 31, 31)>;
 def : Pat<(PPCStoreCond ForceXForm:$dst, gprc:$A, 4),
           (RLWINM (STWCX gprc:$A, ForceXForm:$dst), 31, 31, 31)>;
+
+let Predicates = [HasPartwordAtomics] in {
 def : Pat<(int_ppc_lbarx ForceXForm:$ptr),
           (LBARX ForceXForm:$ptr)>;
 def : Pat<(int_ppc_stbcx ForceXForm:$dst, gprc:$A),
           (RLWINM (STBCX gprc:$A, ForceXForm:$dst), 31, 31, 31)>;
 def : Pat<(PPCStoreCond ForceXForm:$dst, gprc:$A, 1),
           (RLWINM (STBCX gprc:$A, ForceXForm:$dst), 31, 31, 31)>;
+def : Pat<(int_ppc_lharx ForceXForm:$ptr),
+          (LHARX ForceXForm:$ptr)>;
+def : Pat<(int_ppc_sthcx ForceXForm:$dst, gprc:$A),
+          (RLWINM (STHCX gprc:$A, ForceXForm:$dst), 31, 31, 31)>;
+def : Pat<(PPCStoreCond ForceXForm:$dst, gprc:$A, 2),
+          (RLWINM (STHCX gprc:$A, ForceXForm:$dst), 31, 31, 31)>;
+}
 
 def : Pat<(int_ppc_fcfid f64:$A),
         (XSCVSXDDP $A)>;
@@ -5617,16 +5626,6 @@ def : Pat<(int_ppc_mtspr timm:$SPR, gprc:$RT),
           (MTSPR $SPR, $RT)>;
 def : Pat<(int_ppc_mtmsr gprc:$RS),
           (MTMSR $RS, 0)>;
-
-let Predicates = [IsISA2_07] in {
-  def : Pat<(int_ppc_lharx ForceXForm:$ptr),
-          (LHARX ForceXForm:$ptr)>;
-
-  def : Pat<(int_ppc_sthcx ForceXForm:$dst, gprc:$A),
-            (RLWINM (STHCX gprc:$A, ForceXForm:$dst), 31, 31, 31)>;
-  def : Pat<(PPCStoreCond ForceXForm:$dst, gprc:$A, 2),
-            (RLWINM (STHCX gprc:$A, ForceXForm:$dst), 31, 31, 31)>;
-}
 def : Pat<(int_ppc_dcbtstt ForceXForm:$dst),
           (DCBTST 16, ForceXForm:$dst)>;
 def : Pat<(int_ppc_dcbtt ForceXForm:$dst),

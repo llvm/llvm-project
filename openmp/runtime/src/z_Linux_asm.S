@@ -2388,7 +2388,7 @@ __kmp_invoke_microtask:
 __kmp_invoke_microtask:
 	.cfi_startproc
 
-	stmg	%r6,%r14,48(%r15)
+	stmg	%r6,%r15,48(%r15)
         .cfi_offset %r6, -112
         .cfi_offset %r7, -104
         .cfi_offset %r8, -96
@@ -2472,8 +2472,7 @@ __kmp_invoke_microtask:
 
 	// Restore stack and return
 
-	lgr	%r15,%r11
-	lmg	%r6,%r14,48(%r15)
+	lmg	%r6,%r15,48(%r11)
 	lghi	%r2,1
 	br	%r14
 .Lfunc_end0:

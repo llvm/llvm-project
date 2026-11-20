@@ -199,10 +199,12 @@ add_entrypoint_object(
   HDRS
     strtof128.h
   DEPENDS
-    libc.include.llvm-libc-types.float128
+    libc.src.__support.CPP.bit
+    libc.src.__support.FPUtil.float128
     libc.src.__support.common
     libc.src.__support.libc_errno
     libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
     libc.src.__support.str_to_float
     libc.src.errno.errno
 )

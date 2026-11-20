@@ -11,7 +11,10 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "hdr/errno_macros.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/float128.h"
+#include "src/__support/macros/properties/types.h"
 #include "src/__support/uint128.h"
 #include "src/stdlib/strtof128.h"
 
@@ -19,6 +22,10 @@
 #include "test/UnitTest/Test.h"
 
 #include <stddef.h>
+
+#ifndef LIBC_TYPES_HAS_NATIVE_FLOAT128
+using float128 = LIBC_NAMESPACE::fputil::Float128;
+#endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
 
 class LlvmLibcStrToF128Test
     : public LIBC_NAMESPACE::testing::ErrnoCheckingTest {
