@@ -1006,9 +1006,12 @@ private:
   /// [C++20] module-import-declaration
   /// \endverbatim
   ///
-  DeclGroupPtrTy ParseExternalDeclaration(ParsedAttributes &DeclAttrs,
-                                          ParsedAttributes &DeclSpecAttrs,
-                                          ParsingDeclSpec *DS = nullptr);
+  DeclGroupPtrTy ParseExternalDeclarationWithAttrs();
+  DeclGroupPtrTy
+  ParseExternalDeclaration(ParsedAttributes &DeclAttrs,
+                           ParsedAttributes &DeclSpecAttrs,
+                           ParsingDeclSpec *DS = nullptr,
+                           ParsingDeclRAIIObject *LeadingAttrDiags = nullptr);
 
   /// Determine whether the current token, if it occurs after a
   /// declarator, continues a declaration or declaration list.
@@ -1020,7 +1023,8 @@ private:
 
   DeclGroupPtrTy ParseDeclarationOrFunctionDefinition(
       ParsedAttributes &DeclAttrs, ParsedAttributes &DeclSpecAttrs,
-      ParsingDeclSpec *DS = nullptr, AccessSpecifier AS = AS_none);
+      ParsingDeclSpec *DS = nullptr, AccessSpecifier AS = AS_none,
+      ParsingDeclRAIIObject *LeadingAttrDiags = nullptr);
 
   /// Parse either a function-definition or a declaration.  We can't tell which
   /// we have until we read up to the compound-statement in function-definition.
