@@ -123,4 +123,102 @@ void f_double(double d) {
   d = d == 0.0 ? 1.0 : d;
 }
 
+// A volatile x keeps its accesses volatile on every path.
+// CHECK-LABEL: define {{.*}}void @x_volatile(
+// CHECK:         [[X:%.*]] = load ptr, ptr %p.addr, align 8
+// CHECK:         load atomic volatile i128, ptr [[X]] monotonic, align 16
+// CHECK:         cmpxchg volatile ptr [[X]], i128 {{%.*}}, i128 {{%.*}} monotonic monotonic, align 16
+void x_volatile(volatile long double *p, long double e, long double d) {
+#pragma omp atomic compare
+  *p = *p == e ? d : *p;
+}
+
+// CHECK-LABEL: define {{.*}}void @x_volatile_double(
+// CHECK:         [[X:%.*]] = load ptr, ptr %p.addr, align 8
+// CHECK:         cmpxchg volatile ptr [[X]], i64 {{%.*}}, i64 {{%.*}} monotonic monotonic, align 8
+void x_volatile_double(volatile double *p, double e, double d) {
+#pragma omp atomic compare
+  *p = *p == e ? d : *p;
+}
+
+// CHECK-LABEL: define {{.*}}void @x_volatile_min(
+// CHECK:         [[X:%.*]] = load ptr, ptr %p.addr, align 8
+// CHECK:         atomicrmw volatile max ptr [[X]], i32 {{%.*}} monotonic, align 4
+void x_volatile_min(volatile int *p, int e) {
+#pragma omp atomic compare
+  *p = *p < e ? e : *p;
+}
+
+// A volatile fail-only v keeps a volatile store.
+// CHECK-LABEL: define {{.*}}void @v_volatile(
+// CHECK:         [[V:%.*]] = load ptr, ptr %v.addr, align 8
+// CHECK:         store volatile x86_fp80 {{%.*}}, ptr [[V]], align 16
+void v_volatile(long double *x, volatile long double *v, long double e,
+                long double d) {
+#pragma omp atomic compare capture
+  {
+    if (*x == e) {
+      *x = d;
+    } else {
+      *v = *x;
+    }
+  }
+}
+
+// CHECK-LABEL: define {{.*}}void @v_volatile_double(
+// CHECK:         [[V:%.*]] = load ptr, ptr %v.addr, align 8
+// CHECK:         store volatile double {{%.*}}, ptr [[V]], align 8
+void v_volatile_double(double *x, volatile double *v, double e, double d) {
+#pragma omp atomic compare capture
+  {
+    if (*x == e) {
+      *x = d;
+    } else {
+      *v = *x;
+    }
+  }
+}
+
+// Under-aligned operands of other types keep their own alignment too.
+struct __attribute__((packed)) Q {
+  char c;
+  double d;
+  int i;
+  long double v;
+  int r;
+};
+
+// CHECK-LABEL: define {{.*}}void @q_double(
+// CHECK:         [[X:%.*]] = getelementptr inbounds {{.*}}%struct.Q, ptr {{%.*}}, i32 0, i32 1
+// CHECK:         cmpxchg ptr [[X]], i64 {{%.*}}, i64 {{%.*}} monotonic monotonic, align 1
+void q_double(struct Q *q, double e, double d) {
+#pragma omp atomic compare
+  q->d = q->d == e ? d : q->d;
+}
+
+// CHECK-LABEL: define {{.*}}void @q_int_min(
+// CHECK:         [[X:%.*]] = getelementptr inbounds {{.*}}%struct.Q, ptr {{%.*}}, i32 0, i32 2
+// CHECK:         atomicrmw max ptr [[X]], i32 {{%.*}} monotonic, align 1
+void q_int_min(struct Q *q, int e) {
+#pragma omp atomic compare
+  q->i = q->i < e ? e : q->i;
+}
+
+// CHECK-LABEL: define {{.*}}void @q_vr(
+// CHECK:         [[V:%.*]] = getelementptr inbounds {{.*}}%struct.Q, ptr {{%.*}}, i32 0, i32 3
+// CHECK:         [[R:%.*]] = getelementptr inbounds {{.*}}%struct.Q, ptr {{%.*}}, i32 0, i32 4
+// CHECK:         store x86_fp80 {{%.*}}, ptr [[V]], align 1
+// CHECK:         store i32 {{%.*}}, ptr [[R]], align 1
+void q_vr(struct Q *q, long double *x, long double e, long double d) {
+#pragma omp atomic compare capture
+  {
+    q->r = *x == e;
+    if (q->r) {
+      *x = d;
+    } else {
+      q->v = *x;
+    }
+  }
+}
+
 // SIMD-ONLY0-NOT: {{__kmpc|__tgt}}

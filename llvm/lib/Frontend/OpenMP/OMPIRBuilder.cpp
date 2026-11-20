@@ -11875,8 +11875,9 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
       Value *DInt =
           Builder.CreateZExt(Builder.CreateBitCast(D, ValueIntTy), IntCastTy);
 
-      LoadInst *XLoad = Builder.CreateAlignedLoad(
-          IntCastTy, X.Var, X.Alignment, X.Var->getName() + ".atomic.load");
+      LoadInst *XLoad =
+          Builder.CreateAlignedLoad(IntCastTy, X.Var, X.Alignment, X.IsVolatile,
+                                    X.Var->getName() + ".atomic.load");
       XLoad->setAtomic(Failure);
 
       BasicBlock *CurBB = Builder.GetInsertBlock();
@@ -11914,6 +11915,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
       AtomicCmpXchgInst *Result = Builder.CreateAtomicCmpXchg(
           X.Var, XCurr, DInt, X.Alignment, AO, Failure);
       Result->setWeak(IsWeak);
+      Result->setVolatile(X.IsVolatile);
       Value *CasOld = Builder.CreateExtractValue(Result, /*Idxs=*/0);
       Value *CasOk = Builder.CreateExtractValue(Result, /*Idxs=*/1);
       Builder.CreateCondBr(CasOk, ExitBB, ContBB);
@@ -11975,8 +11977,9 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
       Value *DBCast = Builder.CreateBitCast(D, IntCastTy);
 
       // Load X atomically.
-      LoadInst *XCurr = Builder.CreateAlignedLoad(
-          IntCastTy, X.Var, X.Alignment, X.Var->getName() + ".atomic.load");
+      LoadInst *XCurr =
+          Builder.CreateAlignedLoad(IntCastTy, X.Var, X.Alignment, X.IsVolatile,
+                                    X.Var->getName() + ".atomic.load");
       XCurr->setAtomic(AtomicOrdering::Monotonic);
       Value *XFP = Builder.CreateBitCast(XCurr, X.ElemTy);
 
@@ -12025,6 +12028,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
       AtomicCmpXchgInst *ResZero = Builder.CreateAtomicCmpXchg(
           X.Var, XCurr, DBCast, X.Alignment, AO, Failure);
       ResZero->setWeak(IsWeak);
+      ResZero->setVolatile(X.IsVolatile);
       Value *OldZero = Builder.CreateExtractValue(ResZero, /*Idxs=*/0);
       Value *OkZero = Builder.CreateExtractValue(ResZero, /*Idxs=*/1);
       Builder.CreateBr(ExitBB);
@@ -12034,6 +12038,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
       AtomicCmpXchgInst *ResNormal = Builder.CreateAtomicCmpXchg(
           X.Var, EBCast, DBCast, X.Alignment, AO, Failure);
       ResNormal->setWeak(IsWeak);
+      ResNormal->setVolatile(X.IsVolatile);
       Value *OldNormal = Builder.CreateExtractValue(ResNormal, /*Idxs=*/0);
       Value *OkNormal = Builder.CreateExtractValue(ResNormal, /*Idxs=*/1);
       Builder.CreateBr(ExitBB);
@@ -12075,6 +12080,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
             Builder.CreateAtomicCmpXchg(X.Var, E, D, X.Alignment, AO, Failure);
       }
       Result->setWeak(IsWeak);
+      Result->setVolatile(X.IsVolatile);
 
       if (V.Var) {
         OldValue = Builder.CreateExtractValue(Result, /*Idxs=*/0);
@@ -12231,6 +12237,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
 
     AtomicRMWInst *OldValue =
         Builder.CreateAtomicRMW(NewOp, X.Var, E, X.Alignment, AO);
+    OldValue->setVolatile(X.IsVolatile);
     if (V.Var) {
       Value *CapturedValue = nullptr;
       if (IsPostfixUpdate) {

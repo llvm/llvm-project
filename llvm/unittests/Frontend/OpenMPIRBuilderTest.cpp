@@ -4310,7 +4310,7 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicCompareCapture) {
 
   AtomicOrdering AO = AtomicOrdering::Monotonic;
   ConstantInt *Expr = ConstantInt::get(Type::getInt32Ty(Ctx), 1U);
-  ConstantInt *D = ConstantInt::get(Type::getInt32Ty(Ctx), 1U);
+  ConstantInt *D = ConstantInt::get(Type::getInt32Ty(Ctx), 2U);
   OMPAtomicCompareOp OpMax = OMPAtomicCompareOp::MAX;
   OMPAtomicCompareOp OpEQ = OMPAtomicCompareOp::EQ;
 
@@ -4548,9 +4548,11 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicComparePaddedFPUnderAligned) {
   XVal->setAlignment(Align(1));
   AllocaInst *VVal = Builder.CreateAlloca(FP80Ty);
   VVal->setName("v");
+  VVal->setAlignment(Align(1));
 
-  OpenMPIRBuilder::AtomicOpValue X = {XVal, FP80Ty, false, false, Align(1)};
-  OpenMPIRBuilder::AtomicOpValue V = {VVal, FP80Ty, false, false};
+  OpenMPIRBuilder::AtomicOpValue X = {XVal, FP80Ty, false, /*IsVolatile=*/true,
+                                      Align(1)};
+  OpenMPIRBuilder::AtomicOpValue V = {VVal, FP80Ty, false, false, Align(1)};
   OpenMPIRBuilder::AtomicOpValue NoR = {nullptr, nullptr, false, false};
   Constant *E = ConstantFP::get(FP80Ty, 1.0);
   Constant *D = ConstantFP::get(FP80Ty, 2.0);
@@ -4578,11 +4580,13 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicComparePaddedFPUnderAligned) {
         EXPECT_EQ(LI->getPointerOperand(), XVal);
         EXPECT_EQ(LI->getType(), Int128);
         EXPECT_EQ(LI->getAlign().value(), 1u);
+        EXPECT_TRUE(LI->isVolatile());
       } else if (auto *CXI = dyn_cast<AtomicCmpXchgInst>(&I)) {
         ++NumCmpXchgs;
         EXPECT_EQ(CXI->getPointerOperand(), XVal);
         EXPECT_EQ(CXI->getNewValOperand()->getType(), Int128);
         EXPECT_EQ(CXI->getAlign().value(), 1u);
+        EXPECT_TRUE(CXI->isVolatile());
       } else if (auto *FCI = dyn_cast<FCmpInst>(&I)) {
         ++NumFCmps;
         EXPECT_EQ(FCI->getPredicate(), CmpInst::FCMP_OEQ);
@@ -4597,6 +4601,7 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicComparePaddedFPUnderAligned) {
   EXPECT_EQ(NumFCmps, 1u);
   ASSERT_NE(VStore, nullptr);
   EXPECT_EQ(VStore->getValueOperand()->getType(), FP80Ty);
+  EXPECT_EQ(VStore->getAlign().value(), 1u);
 }
 
 TEST_F(OpenMPIRBuilderTest, OMPAtomicRWStructType) {

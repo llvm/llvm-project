@@ -202,15 +202,21 @@ llvm.func @compare_capture_float_failonly(%x : !llvm.ptr, %e : !llvm.ptr, %d : !
 // f80 postfix compare+capture: the value is padded to 16 bytes, so the old
 // value comes out of the i128 PHI through trunc and bitcast.
 // CHECK-LABEL: define void @compare_capture_f80_postfix(
-// CHECK:         load atomic i128, ptr %{{.*}} monotonic
-// CHECK:         fcmp oeq x86_fp80
-// CHECK:         cmpxchg ptr %{{.*}}, i128 %{{.*}}, i128 %{{.*}} monotonic monotonic
+// CHECK-SAME:    ptr %[[X:.*]], ptr %[[E:.*]], ptr %[[D:.*]], ptr %[[V:.*]])
+// CHECK:         %[[EVAL:.*]] = load x86_fp80, ptr %[[E]]
+// CHECK:         %[[DVAL:.*]] = load x86_fp80, ptr %[[D]]
+// CHECK:         %[[DBITS:.*]] = bitcast x86_fp80 %[[DVAL]] to i80
+// CHECK:         %[[DINT:.*]] = zext i80 %[[DBITS]] to i128
+// CHECK:         load atomic i128, ptr %[[X]] monotonic
+// CHECK:         fcmp oeq x86_fp80 %{{.*}}, %[[EVAL]]
+// CHECK:         cmpxchg ptr %[[X]], i128 %{{.*}}, i128 %[[DINT]] monotonic monotonic
 // CHECK:       {{.*}}.atomic.exit:
+// CHECK:         %[[OLD_INT:.*]] = phi i128
 // CHECK:         %[[OK:.*]] = phi i1 [ false,
-// CHECK:         %[[OLD_BITS:.*]] = trunc i128 %{{.*}} to i80
+// CHECK:         %[[OLD_BITS:.*]] = trunc i128 %[[OLD_INT]] to i80
 // CHECK:         %[[OLD_FP:.*]] = bitcast i80 %[[OLD_BITS]] to x86_fp80
-// CHECK:         %[[NEW:.*]] = select i1 %[[OK]], x86_fp80 %{{.*}}, x86_fp80 %[[OLD_FP]]
-// CHECK:         store x86_fp80 %[[NEW]], ptr %{{.*}}
+// CHECK:         %[[NEW:.*]] = select i1 %[[OK]], x86_fp80 %[[DVAL]], x86_fp80 %[[OLD_FP]]
+// CHECK:         store x86_fp80 %[[NEW]], ptr %[[V]]
 llvm.func @compare_capture_f80_postfix(%x : !llvm.ptr, %e : !llvm.ptr, %d : !llvm.ptr, %v : !llvm.ptr) {
   %eval = llvm.load %e : !llvm.ptr -> f80
   %dval = llvm.load %d : !llvm.ptr -> f80
