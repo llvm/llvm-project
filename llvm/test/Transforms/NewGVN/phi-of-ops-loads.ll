@@ -77,18 +77,17 @@ bb237:
   ret void
 }
 
-; TODO: we should support this case
 define void @no-alias-store-in-loop(ptr noalias %p, ptr noalias %q) {
 ; CHECK-LABEL: @no-alias-store-in-loop(
 ; CHECK-NEXT:  bb56:
 ; CHECK-NEXT:    br label [[BB57:%.*]]
 ; CHECK:       bb57:
-; CHECK-NEXT:    [[N59:%.*]] = phi i1 [ false, [[BB229:%.*]] ], [ true, [[BB56:%.*]] ]
+; CHECK-NEXT:    [[PHIOFOPS:%.*]] = phi i1 [ true, [[BB56:%.*]] ], [ [[N62:%.*]], [[BB229:%.*]] ]
+; CHECK-NEXT:    [[N59:%.*]] = phi i1 [ false, [[BB229]] ], [ true, [[BB56]] ]
 ; CHECK-NEXT:    [[IDX:%.*]] = phi i8 [ 0, [[BB56]] ], [ [[INC:%.*]], [[BB229]] ]
 ; CHECK-NEXT:    [[N60:%.*]] = load i8, ptr [[P:%.*]], align 1
-; CHECK-NEXT:    [[N62:%.*]] = icmp ne i8 [[N60]], 2
-; CHECK-NEXT:    [[N63:%.*]] = or i1 [[N59]], [[N62]]
-; CHECK-NEXT:    br i1 [[N63]], label [[BB229]], label [[BB237:%.*]]
+; CHECK-NEXT:    [[N62]] = icmp ne i8 [[N60]], 2
+; CHECK-NEXT:    br i1 [[PHIOFOPS]], label [[BB229]], label [[BB237:%.*]]
 ; CHECK:       bb229:
 ; CHECK-NEXT:    [[INC]] = add i8 [[IDX]], 1
 ; CHECK-NEXT:    store i8 [[INC]], ptr [[Q:%.*]], align 1
@@ -150,17 +149,16 @@ bb237:
   ret void
 }
 
-; TODO: we should support this case
 define void @nowrite-function-in-loop(ptr %p) {
 ; CHECK-LABEL: @nowrite-function-in-loop(
 ; CHECK-NEXT:  bb56:
 ; CHECK-NEXT:    br label [[BB57:%.*]]
 ; CHECK:       bb57:
-; CHECK-NEXT:    [[N59:%.*]] = phi i1 [ false, [[BB229:%.*]] ], [ true, [[BB56:%.*]] ]
+; CHECK-NEXT:    [[PHIOFOPS:%.*]] = phi i1 [ true, [[BB56:%.*]] ], [ [[N62:%.*]], [[BB229:%.*]] ]
+; CHECK-NEXT:    [[N59:%.*]] = phi i1 [ false, [[BB229]] ], [ true, [[BB56]] ]
 ; CHECK-NEXT:    [[N60:%.*]] = load i8, ptr [[P:%.*]], align 1
-; CHECK-NEXT:    [[N62:%.*]] = icmp ne i8 [[N60]], 2
-; CHECK-NEXT:    [[N63:%.*]] = or i1 [[N59]], [[N62]]
-; CHECK-NEXT:    br i1 [[N63]], label [[BB229]], label [[BB237:%.*]]
+; CHECK-NEXT:    [[N62]] = icmp ne i8 [[N60]], 2
+; CHECK-NEXT:    br i1 [[PHIOFOPS]], label [[BB229]], label [[BB237:%.*]]
 ; CHECK:       bb229:
 ; CHECK-NEXT:    call void @f() #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    br label [[BB57]]
@@ -199,9 +197,7 @@ define void @issfeoperand(ptr nocapture readonly %array, i1 %cond1, i1 %cond2, p
 ; CHECK-NEXT:    [[PHI1:%.*]] = phi i8 [ [[LD1]], [[COND_TRUE]] ], [ 0, [[FOR_BODY:%.*]] ]
 ; CHECK-NEXT:    [[ARRAYIDX42:%.*]] = getelementptr inbounds [3 x [2 x [1 x i8]]], ptr [[ARRAY]], i64 109, i64 0, i64 0, i64 undef
 ; CHECK-NEXT:    [[LD2:%.*]] = load i8, ptr [[ARRAYIDX42]], align 1
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i8 [[LD2]], [[PHI1]]
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[CMP1]] to i32
-; CHECK-NEXT:    store i32 [[ZEXT]], ptr [[P2:%.*]], align 4
+; CHECK-NEXT:    store i32 0, ptr [[P2:%.*]], align 4
 ; CHECK-NEXT:    br i1 [[COND2:%.*]], label [[COND_END:%.*]], label [[EXIT:%.*]]
 ; CHECK:       cond.end:
 ; CHECK-NEXT:    [[LD3:%.*]] = load i16, ptr [[P1:%.*]], align 2
