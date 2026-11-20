@@ -6090,7 +6090,7 @@ def HLSLDdyFine : LangBuiltin<"HLSL_LANG"> {
 
 def HLSLIsDebuggingEnabled : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_isdebuggingenabled"];
-  let Attributes = [NoThrow, Const];
+  let Attributes = [NoThrow];
   let Prototype = "bool()";
 }
 

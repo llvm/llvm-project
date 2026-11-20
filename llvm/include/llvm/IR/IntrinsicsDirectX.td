@@ -669,5 +669,5 @@ let TargetPrefix = "dx" in {
       : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem]>;
 
 def int_dx_isdebuggingenabled
-      : DefaultAttrsIntrinsic<[llvm_i1_ty], [], [IntrNoMem]>;
+      : DefaultAttrsIntrinsic<[llvm_i1_ty], [], []>;
 }
