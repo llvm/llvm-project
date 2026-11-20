@@ -647,11 +647,14 @@ static bool haveComparableSyms(const BankAddr &A0, const BankAddr &A1,
   if (A0.Sym == A1.Sym)
     return true;
   // Different symbols: the linker places each one independently, so their
-  // low address bits are known only from their alignment. If both are
-  // aligned to the bank period (32 bytes), they do not affect the bank bits.
+  // low address bits are known only from their alignment. A symbol aligned to
+  // the bank period (32 bytes) does not affect the bank bits, the same as a
+  // plain immediate offset (null Sym).
   const Align BankPeriod(32);
-  return A0.Sym && A1.Sym && A0.Sym->getPointerAlignment(DL) >= BankPeriod &&
-         A1.Sym->getPointerAlignment(DL) >= BankPeriod;
+  auto HasKnownBankBits = [&](const GlobalValue *Sym) {
+    return !Sym || Sym->getPointerAlignment(DL) >= BankPeriod;
+  };
+  return HasKnownBankBits(A0.Sym) && HasKnownBankBits(A1.Sym);
 }
 
 // Return true if loads MI0 and MI1 likely map to the same cache bank and
