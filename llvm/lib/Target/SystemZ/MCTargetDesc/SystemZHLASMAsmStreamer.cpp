@@ -381,13 +381,13 @@ void SystemZHLASMAsmStreamer::emitBytes(StringRef Data, bool MayBeString) {
     SmallString<MaxXLLen> EBCDICText;
     ConverterEBCDIC::convertToUTF8(Data, EBCDICText);
     if (isPrintableText(EBCDICText)) {
-      OS << " DC CE'";
+      OS.indent(Indent) << "DC CE'";
       emitQuotedText(OS, EBCDICText);
       OS << '\'';
       return true;
     }
     if (isPrintableText(Data)) {
-      OS << " DC CA'";
+      OS.indent(Indent) << "DC CA'";
       emitQuotedText(OS, Data);
       OS << '\'';
       return true;
@@ -398,7 +398,8 @@ void SystemZHLASMAsmStreamer::emitBytes(StringRef Data, bool MayBeString) {
   for (size_t I = 0, E = Data.size(); I < E; I += MaxXLLen) {
     StringRef Chunk = Data.substr(I, MaxXLLen);
     if (!(MayBeString && Chunk.size() > 1 && EmitAsString(Chunk)))
-      OS.indent(Indent) << "DC XL" << Chunk.size() << '\'' << toHex(Chunk) << '\'';
+      OS.indent(Indent) << "DC XL" << Chunk.size() << '\'' << toHex(Chunk)
+                        << '\'';
     EmitEOL();
   }
 }
@@ -415,8 +416,9 @@ void SystemZHLASMAsmStreamer::emitIntValue(uint64_t Value, unsigned Size) {
   assert(1 <= Size && Size <= 8 && "Invalid size");
   assert((isUIntN(8 * Size, Value) || isIntN(8 * Size, Value)) &&
          "Invalid size");
-  OS << " DC XL" << Size << '\''
-     << format_hex_no_prefix(Value, Size * 2, /*Upper=*/true) << '\'';
+  OS.indent(Indent) << "DC XL" << Size << '\''
+                    << format_hex_no_prefix(Value, Size * 2, /*Upper=*/true)
+                    << '\'';
   EmitEOL();
 }
 
