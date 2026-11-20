@@ -387,10 +387,9 @@ bool LoadStoreVec::runOnRegion(Region &Rgn, const Analyses &RegionAnalyses) {
     llvm_unreachable("Expected Load or Store");
   }
 
-  LegalityAnalysis L(A->getAA(), A->getScalarEvolution(),
-                     F.getParent()->getDataLayout(), A->getTTI(),
-                     F.getContext(), IMaps, Dir);
-  Legality = &L;
+  Legality = std::make_unique<LegalityAnalysis>(
+      A->getAA(), A->getScalarEvolution(), F.getParent()->getDataLayout(),
+      A->getTTI(), F.getContext(), IMaps, Dir);
 
   bool Changed = false;
   switch (Opc) {
