@@ -72,6 +72,9 @@ bool VarBypassDetector::BuildScopeInformation(CodeGenModule &CGM, QualType Ty,
                                               unsigned &ParentScope) {
   while (!Ty.isNull() && Ty->isVariablyModifiedType()) {
     const Type *T = Ty.getTypePtr();
+    // Stop walking: CodeGenFunction::EmitVariablyModifiedType does not evaluate
+    // anything for these (e.g., typedefs are evaluated at their declaration and
+    // decltype operands are unevaluated).
     if (isa<TypedefType, DecltypeType, AutoType,
             DeducedTemplateSpecializationType, PackIndexingType>(T))
       return true;
