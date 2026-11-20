@@ -90,8 +90,8 @@ attributes #0 = { noinline nounwind optnone "correctly-rounded-divide-sqrt-fp-ma
 ; CHECK:       PtrEnd: 0x0
 ; CHECK:       PtrNext: 0x0
 ; CHECK:       CodeSize: 0x14
-; CHECK:       DbgStart: 0x0
-; CHECK:       DbgEnd: 0x0
+; CHECK:       DbgStart: 0x8
+; CHECK:       DbgEnd: 0xC
 ; CHECK:       FunctionType: main (0x1002)
 ; CHECK:       CodeOffset: main+0x0
 ; CHECK:       Segment: 0x0
