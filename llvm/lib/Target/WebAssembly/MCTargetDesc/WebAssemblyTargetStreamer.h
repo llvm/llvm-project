@@ -38,6 +38,8 @@ public:
   virtual void emitIndIdx(const MCExpr *Value) = 0;
   /// .globaltype
   virtual void emitGlobalType(const MCSymbolWasm *Sym) = 0;
+  /// .globalinit
+  virtual void emitGlobalInit(const MCSymbolWasm *Sym) = 0;
   /// .tabletype
   virtual void emitTableType(const MCSymbolWasm *Sym) = 0;
   /// .tagtype
@@ -67,6 +69,7 @@ public:
   void emitFunctionType(const MCSymbolWasm *Sym) override;
   void emitIndIdx(const MCExpr *Value) override;
   void emitGlobalType(const MCSymbolWasm *Sym) override;
+  void emitGlobalInit(const MCSymbolWasm *Sym) override;
   void emitTableType(const MCSymbolWasm *Sym) override;
   void emitTagType(const MCSymbolWasm *Sym) override;
   void emitImportModule(const MCSymbolWasm *Sym, StringRef ImportModule) override;
@@ -83,6 +86,7 @@ public:
   void emitFunctionType(const MCSymbolWasm *Sym) override {}
   void emitIndIdx(const MCExpr *Value) override;
   void emitGlobalType(const MCSymbolWasm *Sym) override {}
+  void emitGlobalInit(const MCSymbolWasm *Sym) override {}
   void emitTableType(const MCSymbolWasm *Sym) override {}
   void emitTagType(const MCSymbolWasm *Sym) override {}
   void emitImportModule(const MCSymbolWasm *Sym,
@@ -103,6 +107,7 @@ public:
   void emitFunctionType(const MCSymbolWasm *) override {}
   void emitIndIdx(const MCExpr *) override {}
   void emitGlobalType(const MCSymbolWasm *) override {}
+  void emitGlobalInit(const MCSymbolWasm *) override {}
   void emitTableType(const MCSymbolWasm *) override {}
   void emitTagType(const MCSymbolWasm *) override {}
   void emitImportModule(const MCSymbolWasm *, StringRef) override {}

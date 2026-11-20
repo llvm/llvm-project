@@ -28,6 +28,8 @@ class MCSymbolWasm : public MCSymbol {
   wasm::WasmSignature *Signature = nullptr;
   std::optional<wasm::WasmGlobalType> GlobalType;
   std::optional<wasm::WasmTableType> TableType;
+  /// A global's initial value, or its type's default when unset.
+  std::optional<wasm::WasmInitExpr> GlobalInitExpr;
 
   /// An expression describing how to calculate the size of a symbol. If a
   /// symbol has no size this field will be NULL.
@@ -132,11 +134,19 @@ public:
   const wasm::WasmSignature *getSignature() const { return Signature; }
   void setSignature(wasm::WasmSignature *Sig) { Signature = Sig; }
 
+  bool hasGlobalType() const { return GlobalType.has_value(); }
   const wasm::WasmGlobalType &getGlobalType() const {
     assert(GlobalType);
     return *GlobalType;
   }
   void setGlobalType(wasm::WasmGlobalType GT) { GlobalType = GT; }
+
+  bool hasGlobalInitExpr() const { return GlobalInitExpr.has_value(); }
+  const wasm::WasmInitExpr &getGlobalInitExpr() const {
+    assert(GlobalInitExpr);
+    return *GlobalInitExpr;
+  }
+  void setGlobalInitExpr(wasm::WasmInitExpr IE) { GlobalInitExpr = IE; }
 
   bool hasTableType() const { return TableType.has_value(); }
   const wasm::WasmTableType &getTableType() const {

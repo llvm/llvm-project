@@ -302,30 +302,6 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, uint64_t Address,
   }
 }
 
-static std::string toString(const APFloat &FP) {
-  // Print NaNs with custom payloads specially.
-  if (FP.isNaN() && !FP.bitwiseIsEqual(APFloat::getQNaN(FP.getSemantics())) &&
-      !FP.bitwiseIsEqual(
-          APFloat::getQNaN(FP.getSemantics(), /*Negative=*/true))) {
-    APInt AI = FP.bitcastToAPInt();
-    return std::string(AI.isNegative() ? "-" : "") + "nan:0x" +
-           utohexstr(AI.getZExtValue() &
-                         (AI.getBitWidth() == 32 ? INT64_C(0x007fffff)
-                                                 : INT64_C(0x000fffffffffffff)),
-                     /*LowerCase=*/true);
-  }
-
-  // Use C99's hexadecimal floating-point representation.
-  static const size_t BufBytes = 128;
-  char Buf[BufBytes];
-  auto Written = FP.convertToHexString(
-      Buf, /*HexDigits=*/0, /*UpperCase=*/false, APFloat::rmNearestTiesToEven);
-  (void)Written;
-  assert(Written != 0);
-  assert(Written < BufBytes);
-  return Buf;
-}
-
 void WebAssemblyInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
                                           const MCSubtargetInfo &STI,
                                           raw_ostream &O, bool IsVariadicDef) {
@@ -347,9 +323,11 @@ void WebAssemblyInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   } else if (Op.isImm()) {
     O << Op.getImm();
   } else if (Op.isSFPImm()) {
-    O << ::toString(APFloat(APFloat::IEEEsingle(), APInt(32, Op.getSFPImm())));
+    O << WebAssembly::floatToString(
+        APFloat(APFloat::IEEEsingle(), APInt(32, Op.getSFPImm())));
   } else if (Op.isDFPImm()) {
-    O << ::toString(APFloat(APFloat::IEEEdouble(), APInt(64, Op.getDFPImm())));
+    O << WebAssembly::floatToString(
+        APFloat(APFloat::IEEEdouble(), APInt(64, Op.getDFPImm())));
   } else {
     assert(Op.isExpr() && "unknown operand kind in printOperand");
     // call_indirect instructions have a TYPEINDEX operand that we print

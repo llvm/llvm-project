@@ -15,6 +15,8 @@
 #include "MCTargetDesc/WebAssemblyTargetStreamer.h"
 #include "MCTargetDesc/WebAssemblyMCAsmInfo.h"
 #include "MCTargetDesc/WebAssemblyMCTypeUtilities.h"
+#include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSectionWasm.h"
 #include "llvm/MC/MCSymbolWasm.h"
@@ -70,6 +72,35 @@ void WebAssemblyTargetAsmStreamer::emitGlobalType(const MCSymbolWasm *Sym) {
             static_cast<wasm::ValType>(Sym->getGlobalType().Type));
   if (!Sym->getGlobalType().Mutable)
     OS << ", immutable";
+  OS << '\n';
+}
+
+void WebAssemblyTargetAsmStreamer::emitGlobalInit(const MCSymbolWasm *Sym) {
+  assert(Sym->isGlobal());
+  if (!Sym->hasGlobalInitExpr())
+    return;
+  const wasm::WasmInitExprMVP &Inst = Sym->getGlobalInitExpr().Inst;
+  OS << "\t.globalinit\t" << Sym->getName() << ", ";
+  switch (Inst.Opcode) {
+  case wasm::WASM_OPCODE_I32_CONST:
+    OS << "i32.const " << Inst.Value.Int32;
+    break;
+  case wasm::WASM_OPCODE_I64_CONST:
+    OS << "i64.const " << Inst.Value.Int64;
+    break;
+  case wasm::WASM_OPCODE_F32_CONST:
+    OS << "f32.const "
+       << WebAssembly::floatToString(
+              APFloat(APFloat::IEEEsingle(), APInt(32, Inst.Value.Float32)));
+    break;
+  case wasm::WASM_OPCODE_F64_CONST:
+    OS << "f64.const "
+       << WebAssembly::floatToString(
+              APFloat(APFloat::IEEEdouble(), APInt(64, Inst.Value.Float64)));
+    break;
+  default:
+    llvm_unreachable("only number types carry an init expression");
+  }
   OS << '\n';
 }
 
