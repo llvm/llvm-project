@@ -23,9 +23,11 @@
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/OpenMP/OpenMPInterfaces.h"
 #include "mlir/IR/Value.h"
+#include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
@@ -1147,6 +1149,79 @@ static bool isSavedLocal(const fir::AliasAnalysis::Source &src) {
   return false;
 }
 
+static bool isMainProgram(mlir::func::FuncOp func) {
+  return func.getSymName() == fir::NameUniquer::doProgramEntry();
+}
+
+/// Whether \p func is the function of the main program or of the procedure
+/// that owns the saved local variable whose global is named \p varName. The
+/// procedure is identified by the name of the function, or by its
+/// fir.internal_name if the function was renamed. The BLOCK construct of the
+/// variable, if any, does not matter.
+static bool isOwnerOf(mlir::func::FuncOp func, llvm::StringRef varName) {
+  auto [varKind, varParts] = fir::NameUniquer::deconstruct(varName);
+  if (varKind != fir::NameUniquer::NameKind::VARIABLE)
+    return false;
+  // The variables of the main program are named as if the main program was a
+  // procedure with an empty name.
+  if (isMainProgram(func))
+    return varParts.modules.empty() && varParts.procs.size() == 1 &&
+           varParts.procs.front().empty();
+  llvm::StringRef funcName = func.getSymName();
+  if (auto internalName = func->getAttrOfType<mlir::StringAttr>(
+          fir::getInternalFuncNameAttrName()))
+    funcName = internalName.getValue();
+  auto [funcKind, funcParts] = fir::NameUniquer::deconstruct(funcName);
+  if (funcKind != fir::NameUniquer::NameKind::PROCEDURE ||
+      varParts.modules != funcParts.modules ||
+      varParts.procs.size() != funcParts.procs.size() + 1)
+    return false;
+  return llvm::equal(funcParts.procs,
+                     llvm::ArrayRef(varParts.procs).drop_back()) &&
+         varParts.procs.back() == funcParts.name;
+}
+
+/// Whether \p call cannot access the saved local variable \p src, other than
+/// through its arguments. All the instances of the procedure that owns the
+/// variable share it, so this requires that the call cannot invoke that
+/// procedure. Returns false if this cannot be proven.
+static bool callCannotReachSavedLocal(fir::CallOp call,
+                                      const fir::AliasAnalysis::Source &src) {
+  // A pure procedure only references pure procedures, and a pure procedure
+  // has no saved local variables (F2023 C1598, C15105).
+  if (fir::hasProcedureAttr<fir::FortranProcedureFlagsEnum::pure>(
+          call.getOperation()))
+    return true;
+  // A NON_RECURSIVE procedure cannot invoke itself, directly or indirectly
+  // (F2023 15.6.2.1), so a call in the func.func lowered from the procedure
+  // cannot invoke it. A call in another func.func that the procedure was
+  // inlined into may invoke it. For example, after work is inlined into
+  // caller, the call to g may invoke work and modify x, because no instance
+  // of work is active when g is called:
+  //
+  //   non_recursive subroutine work()
+  //     integer, save :: x = 0
+  //     x = x + 1
+  //   end subroutine
+  //   subroutine caller()
+  //     call work()  ! inlined: x = x + 1
+  //     call g()     ! may call work()
+  //     call work()  ! inlined: x = x + 1
+  //   end subroutine
+  //
+  // The main program cannot be referenced (F2023 14.1), so a call in its
+  // func.func cannot invoke it either.
+  auto func = mlir::dyn_cast_or_null<mlir::func::FuncOp>(
+      call->getParentOfType<mlir::FunctionOpInterface>().getOperation());
+  if (!func ||
+      (!isMainProgram(func) &&
+       !fir::hasProcedureAttr<fir::FortranProcedureFlagsEnum::non_recursive>(
+           func.getOperation())))
+    return false;
+  auto symRef = llvm::dyn_cast<mlir::SymbolRefAttr>(src.origin.u);
+  return symRef && isOwnerOf(func, symRef.getLeafReference().getValue());
+}
+
 bool AliasAnalysis::isCallToFortranUserProcedure(Operation *op) {
   fir::CallOp call = dyn_cast<fir::CallOp>(op);
   if (!call)
@@ -1222,13 +1297,14 @@ ModRefResult AliasAnalysis::getCallModRef(Operation *op, Value var) {
   if (varSrc.kind == fir::AliasAnalysis::SourceKind::HostAssoc ||
       varSrc.isCapturedInInternalProcedure)
     return ModRefResult::getModAndRef();
-  // At that stage, it has been ruled out that local (including the saved ones)
-  // and dummy cannot be indirectly accessed in the call.
+  // At that stage, it has been ruled out that locals and dummies can be
+  // accessed indirectly in the call, except that a saved local may be
+  // accessed by another instance of its procedure.
   if (varSrc.kind != fir::AliasAnalysis::SourceKind::Allocate &&
       varSrc.kind != fir::AliasAnalysis::SourceKind::Argument &&
       !varSrc.isDummyArgument()) {
     if (varSrc.kind != fir::AliasAnalysis::SourceKind::Global ||
-        !isSavedLocal(varSrc))
+        !isSavedLocal(varSrc) || !callCannotReachSavedLocal(call, varSrc))
       return ModRefResult::getModAndRef();
   }
   // 2. Check if the variable is passed via the arguments. A dummy with a
@@ -1291,6 +1367,8 @@ AliasAnalysis::AliasAnalysis(AliasAnalysis &&other) noexcept
       sortedScopeCache(std::move(other.sortedScopeCache)),
       multiScopeCache(std::move(other.multiScopeCache)),
       getSourceCache(std::move(other.getSourceCache)),
+      publicationCache(std::move(other.publicationCache)),
+      allocationsInProgress(std::move(other.allocationsInProgress)),
       sourceCacheEnabled(other.sourceCacheEnabled),
       sourceCacheHits(other.sourceCacheHits),
       sourceCacheMisses(other.sourceCacheMisses), cache(other.cache) {
@@ -1617,6 +1695,167 @@ static mlir::Value walkBlockArgPassThroughs(mlir::Value v) {
   return v;
 }
 
+/// Whether \p op produces a result by reading the memory at \p address.
+static bool isLoadFrom(mlir::Operation *op, mlir::Value address) {
+  auto load = mlir::dyn_cast<fir::FortranObjectLoadOpInterface>(op);
+  return load && llvm::any_of(op->getResults(), [&](mlir::OpResult result) {
+           return load.getLoadSource(result) == address;
+         });
+}
+
+/// Whether \p op reads, writes or frees the memory at \p address.
+static bool accessesMemoryThrough(mlir::Operation *op, mlir::Value address) {
+  auto memEffects = mlir::dyn_cast<mlir::MemoryEffectOpInterface>(op);
+  if (!memEffects)
+    return false;
+  llvm::SmallVector<mlir::MemoryEffects::EffectInstance> effects;
+  memEffects.getEffectsOnValue(address, effects);
+  return !effects.empty();
+}
+
+AliasAnalysis::AllocationPublication
+AliasAnalysis::getAllocationPublication(mlir::OpResult allocation) {
+  if (sourceCacheEnabled) {
+    auto it = publicationCache.find(allocation);
+    if (it != publicationCache.end())
+      return it->second;
+  }
+
+  using Kind = AllocationPublication::Kind;
+  AllocationPublication publication;
+  // The values that may hold the address of the allocation.
+  llvm::SmallVector<mlir::Value> worklist{allocation};
+  llvm::SmallPtrSet<mlir::Value, 8> visited{allocation};
+  llvm::SmallSetVector<mlir::Value, 2> descriptors;
+  // Whether the address may be stored into memory that is not a descriptor,
+  // or passed on in a way that the walk does not follow.
+  bool escapes = false;
+  auto carry = [&](mlir::Value value) {
+    if (visited.insert(value).second)
+      worklist.push_back(value);
+  };
+  // A declaration without a dummy_scope makes the allocation a variable,
+  // whose accesses follow the rules for its attributes. So does the
+  // declaration of a VALUE dummy argument, whose own copy of the actual
+  // argument is the allocation. The declaration of another dummy argument,
+  // e.g. of an inlined procedure, only associates it with the allocation.
+  auto declaresAllocation = [](mlir::Operation *op, mlir::Value value) {
+    auto declares = [&](auto declare) {
+      if (declare.getMemref() != value)
+        return false;
+      if (!declare.getDummyScope())
+        return true;
+      std::optional<fir::FortranVariableFlagsEnum> attrs =
+          declare.getFortranAttrs();
+      return attrs &&
+             bitEnumContainsAny(*attrs, fir::FortranVariableFlagsEnum::value);
+    };
+    if (auto declare = mlir::dyn_cast<fir::DeclareOp>(op))
+      return declares(declare);
+    if (auto declare = mlir::dyn_cast<hlfir::DeclareOp>(op))
+      return declares(declare);
+    return false;
+  };
+  auto forwardSuccessorOperand = [&](mlir::RegionBranchOpInterface op,
+                                     mlir::RegionBranchPoint point,
+                                     mlir::OpOperand &use) {
+    mlir::RegionBranchSuccessorMapping mapping;
+    op.getSuccessorOperandInputMapping(mapping, point);
+    auto it = mapping.find(&use);
+    if (it != mapping.end())
+      llvm::for_each(it->second, carry);
+  };
+  bool declared = false;
+  while (!worklist.empty() && !declared) {
+    mlir::Value value = worklist.pop_back_val();
+    for (mlir::OpOperand &use : value.getUses()) {
+      mlir::Operation *user = use.getOwner();
+      if (declaresAllocation(user, value)) {
+        declared = true;
+        break;
+      }
+      if (auto view = mlir::dyn_cast<fir::FortranObjectViewOpInterface>(user)) {
+        // The other operands of a view, e.g. its shape, do not take part in
+        // its address.
+        for (mlir::OpResult result : user->getResults())
+          if (view.getViewSource(result) == value)
+            carry(result);
+      } else if (isLoadFrom(user, value)) {
+        // The results are read from the allocation.
+      } else if (auto store = mlir::dyn_cast<fir::StoreOp>(user)) {
+        if (store.getValue() == value) {
+          if (mlir::isa<fir::BaseBoxType>(value.getType()))
+            descriptors.insert(store.getMemref());
+          else
+            escapes = true;
+        }
+      } else if (auto select =
+                     mlir::dyn_cast<mlir::SelectLikeOpInterface>(user)) {
+        if (select.getTrueValue() == value || select.getFalseValue() == value)
+          for (mlir::Value result : user->getResults())
+            carry(result);
+      } else if (auto branch = mlir::dyn_cast<mlir::BranchOpInterface>(user)) {
+        if (std::optional<mlir::BlockArgument> arg =
+                branch.getSuccessorBlockArgument(use.getOperandNumber()))
+          carry(*arg);
+      } else if (auto terminator =
+                     mlir::dyn_cast<mlir::RegionBranchTerminatorOpInterface>(
+                         user)) {
+        if (auto parent = mlir::dyn_cast<mlir::RegionBranchOpInterface>(
+                user->getParentOp())) {
+          forwardSuccessorOperand(parent, mlir::RegionBranchPoint(terminator),
+                                  use);
+        } else {
+          // E.g. func.return passes the address to the caller.
+          escapes = true;
+        }
+      } else if (auto regionBranch =
+                     mlir::dyn_cast<mlir::RegionBranchOpInterface>(user)) {
+        forwardSuccessorOperand(regionBranch, mlir::RegionBranchPoint::parent(),
+                                use);
+      } else if (mlir::BlockArgument arg =
+                     mlir::acc::getACCBlockArgForOperand(use)) {
+        carry(arg);
+      } else if (mlir::isa<hlfir::ExprType>(value.getType())) {
+        // An expression has no address. An operation that uses it may give
+        // its storage an address only in a variable that it returns, e.g.
+        // hlfir.associate, or pass the storage on in another expression.
+        for (mlir::Value result : user->getResults())
+          if (mlir::isa<hlfir::ExprType>(result.getType()) ||
+              hlfir::isFortranVariableType(result.getType()))
+            carry(result);
+      } else if (mlir::isa<mlir::CallOpInterface>(user)) {
+        // After a call, no pointer remains associated with an actual
+        // argument that is not a TARGET. An allocation can be a TARGET only
+        // as the data of a TARGET or POINTER variable, and then its source
+        // has the attribute of that variable.
+      } else if (user->getNumRegions() == 0 &&
+                 !user->hasTrait<mlir::OpTrait::IsTerminator>() &&
+                 (accessesMemoryThrough(user, value) ||
+                  !mlir::mightHaveEffect<mlir::MemoryEffects::Write>(user))) {
+        // The operation does not store the address: it does not write
+        // memory, or it uses the address to access memory. It may still pass
+        // the address on through its results.
+        llvm::for_each(user->getResults(), carry);
+      } else {
+        escapes = true;
+      }
+    }
+  }
+
+  if (!declared) {
+    if (escapes || descriptors.size() > 1) {
+      publication.kind = Kind::Unknown;
+    } else if (descriptors.size() == 1) {
+      publication.kind = Kind::Descriptor;
+      publication.descriptor = descriptors.front();
+    }
+  }
+  if (sourceCacheEnabled)
+    publicationCache.try_emplace(allocation, publication);
+  return publication;
+}
+
 void AliasAnalysis::enableSourceCache() { sourceCacheEnabled = true; }
 
 void AliasAnalysis::disableSourceCache() {
@@ -1627,7 +1866,11 @@ void AliasAnalysis::disableSourceCache() {
 AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
                                                bool getLastInstantiationPoint,
                                                bool collectScopedOrigins) {
-  if (!sourceCacheEnabled)
+  // While the source of an allocation is in progress, the walk does not
+  // follow that allocation into the descriptor it is stored into, so the
+  // sources that depend on it differ from the ones of a query that is not
+  // nested. Neither use nor record cached sources then.
+  if (!sourceCacheEnabled || !allocationsInProgress.empty())
     return getSourceImpl(v, getLastInstantiationPoint, collectScopedOrigins);
 
   // Key on the queried value and the two boolean flags. Recursive sub-queries
@@ -1698,6 +1941,119 @@ AliasAnalysis::getSourceImpl(mlir::Value v, bool getLastInstantiationPoint,
       if (!scopedOrigin.accessPath.storageDecl)
         scopedOrigin.accessPath.storageDecl = decl;
   };
+  // Classify the data of the descriptor of type boxTy stored at
+  // descriptorRef, i.e. the memory addressed through
+  // fir.box_addr(fir.load descriptorRef), and stop the walk.
+  // The access path records a PointerDeref or AllocDeref step so that
+  // alias() can distinguish pointer-dereferenced addresses from statically
+  // known ones.
+  auto classifyDescriptorData = [&](mlir::Value descriptorRef,
+                                    fir::BaseBoxType boxTy) {
+    bool isPointerBox = mlir::isa<fir::PointerType>(boxTy.getEleTy());
+    if (isPointerBox)
+      attributes.set(Attribute::Pointer);
+
+    // Keep the inner walk's getLastInstantiationPoint=false so it
+    // continues past dummy-scope declares to the underlying
+    // BlockArgument. The outer classification below relies on
+    // boxSrc.origin.u being the BlockArg (so isDummyArgument()
+    // succeeds and the outer SourceKind becomes Argument).
+    // Passing true here would stop the inner walk at the declare
+    // and force SourceKind::Indirect, which spuriously coarsens
+    // getCallModRef (e.g. for box_addr of allocatable dummies).
+    auto boxSrc =
+        getSource(descriptorRef,
+                  /*getLastInstantiationPoint=*/false, collectScopedOrigins);
+    attributes |= boxSrc.attributes;
+    approximateSource |= boxSrc.approximateSource;
+    isCapturedInInternalProcedure |= boxSrc.isCapturedInInternalProcedure;
+
+    if (getLastInstantiationPoint) {
+      if (!instantiationPoint)
+        instantiationPoint = boxSrc.origin.instantiationPoint;
+    } else {
+      instantiationPoint = boxSrc.origin.instantiationPoint;
+    }
+
+    // Compose the access path: inner path (root to this load point)
+    // + deref step + outer path (this load to the queried value).
+    accessPath.steps = boxSrc.accessPath.steps;
+    Source::PathStep derefStep;
+    derefStep.kind = isPointerBox ? Source::PathStep::Kind::PointerDeref
+                                  : Source::PathStep::Kind::AllocDeref;
+    derefStep.component = {};
+    accessPath.steps.push_back(derefStep);
+    for (int i = pathSteps.size() - 1; i >= 0; --i)
+      accessPath.steps.push_back(pathSteps[i]);
+    accessPath.isApproximate =
+        boxSrc.accessPath.isApproximate || approximateSource;
+    setStorageDecl(boxSrc.accessPath.storageDecl);
+    accessPath.storageDecl = storageDecl;
+    accessPathFinalized = true;
+
+    // Rebase each forwarded ScopedOrigin from the inner walk's
+    // coordinate system (rooted at the inner declare, leaf=memref)
+    // to the outer (leaf=original query) by splicing the deref
+    // step and the outer pathSteps onto the snapshot's path.
+    if (collectScopedOrigins) {
+      for (auto scopedOrigin : boxSrc.scopedOrigins) {
+        scopedOrigin.accessPath.steps.push_back(derefStep);
+        for (int i = pathSteps.size() - 1; i >= 0; --i)
+          scopedOrigin.accessPath.steps.push_back(pathSteps[i]);
+        scopedOrigin.accessPath.isApproximate |= approximateSource;
+        if (isPointerBox)
+          scopedOrigin.attributes.set(Attribute::Pointer);
+        scopedOrigin.approximateSource |= approximateSource;
+        // The inner walk computed isData against the box memref
+        // (typically false, since the walk started at
+        // !fir.ref<!fir.box<...>>). After splicing the deref step, the
+        // snapshot's path now describes reaching the outer query's leaf
+        // via the box's pointer, so it follows data iff the outer walk
+        // does.
+        scopedOrigin.isData = followingData;
+        scopedOrigins.push_back(std::move(scopedOrigin));
+      }
+    }
+
+    global = llvm::dyn_cast<mlir::SymbolRefAttr>(boxSrc.origin.u);
+    if (global) {
+      type = SourceKind::Global;
+    } else {
+      auto def = llvm::cast<mlir::Value>(boxSrc.origin.u);
+      auto defAsOpResult = mlir::dyn_cast<OpResult>(def);
+      // An allocation whose address is stored into several descriptors or
+      // into other memory is Indirect, and stays Indirect.
+      if (defAsOpResult && boxSrc.kind != SourceKind::Indirect &&
+          classifyAllocateFromEffects(defAsOpResult) == SourceKind::Allocate) {
+        v = def;
+        defOp = defAsOpResult.getOwner();
+        type = SourceKind::Allocate;
+      } else if (boxSrc.kind == SourceKind::Allocate ||
+                 boxSrc.kind == SourceKind::Null) {
+        type = boxSrc.kind;
+        v = def;
+        defOp = nullptr;
+      } else if (boxSrc.kind == SourceKind::HostAssoc) {
+        // Box loaded from a host-associated descriptor: classify
+        // the dereferenced target as HostAssoc (not Indirect) so
+        // alias() can apply the host-assoc/pointer rules instead
+        // of coarsening to MayAlias. The access path (PointerDeref/
+        // AllocDeref step) and Pointer attribute were already set
+        // above, so the resulting Source matches the one that
+        // buildSourceAtDeclare() rebuilds during scope-aware
+        // refinement.
+        type = SourceKind::HostAssoc;
+        v = def;
+        defOp = nullptr;
+      } else if (isDummyArgument(def)) {
+        defOp = nullptr;
+        v = def;
+      } else {
+        type = SourceKind::Indirect;
+      }
+    }
+    breakFromLoop = true;
+  };
   while (defOp && !breakFromLoop) {
     // Operations may have multiple results, so we need to analyze
     // the result for which the source is queried.
@@ -1706,6 +2062,40 @@ AliasAnalysis::getSourceImpl(mlir::Value v, bool getLastInstantiationPoint,
     // Value-scoped allocation detection via effects.
     if (classifyAllocateFromEffects(opResult) == SourceKind::Allocate) {
       type = SourceKind::Allocate;
+      // An allocation that is not declared as a variable may become the
+      // data of a descriptor, which is then accessed through that
+      // descriptor. A descriptor is never the data of another descriptor.
+      if (!mlir::isa<fir::BaseBoxType>(
+              fir::unwrapRefType(opResult.getType()))) {
+        auto inProgress = allocationsInProgress.find(opResult);
+        if (inProgress != allocationsInProgress.end()) {
+          inProgress->second = true;
+        } else {
+          AllocationPublication publication =
+              getAllocationPublication(opResult);
+          if (publication.kind == AllocationPublication::Kind::Unknown) {
+            type = SourceKind::Indirect;
+          } else if (publication.kind ==
+                     AllocationPublication::Kind::Descriptor) {
+            // The descriptor may also hold other data before or after it
+            // holds the allocation.
+            auto boxTy = mlir::cast<fir::BaseBoxType>(
+                fir::unwrapRefType(publication.descriptor.getType()));
+            ty = boxTy;
+            approximateSource = true;
+            type = SourceKind::Unknown;
+            allocationsInProgress.try_emplace(opResult, false);
+            classifyDescriptorData(publication.descriptor, boxTy);
+            // If the descriptor is reached through the allocation, e.g. it is
+            // a component of the allocation, the access path depends on
+            // where the walk stopped going around, and cannot be compared
+            // with the access paths of other values.
+            if (allocationsInProgress.lookup(opResult))
+              type = SourceKind::Indirect;
+            allocationsInProgress.erase(opResult);
+          }
+        }
+      }
       break;
     }
     ty = opResult.getType();
@@ -1787,120 +2177,8 @@ AliasAnalysis::getSourceImpl(mlir::Value v, bool getLastInstantiationPoint,
           // component's descriptor). Trace the memref so derived-type
           // component accesses reach their [hl]fir.declare instead of
           // SourceKind::Indirect (which forces MayAlias broadly in alias()).
-          // The access path records a PointerDeref or AllocDeref step here
-          // so that alias() can distinguish pointer-dereferenced addresses
-          // from statically known ones.
           if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(ty); boxTy) {
-
-            bool isPointerBox = mlir::isa<fir::PointerType>(boxTy.getEleTy());
-            if (isPointerBox)
-              attributes.set(Attribute::Pointer);
-
-            // Keep the inner walk's getLastInstantiationPoint=false so it
-            // continues past dummy-scope declares to the underlying
-            // BlockArgument. The outer classification below relies on
-            // boxSrc.origin.u being the BlockArg (so isDummyArgument()
-            // succeeds and the outer SourceKind becomes Argument).
-            // Passing true here would stop the inner walk at the declare
-            // and force SourceKind::Indirect, which spuriously coarsens
-            // getCallModRef (e.g. for box_addr of allocatable dummies).
-            auto boxSrc = getSource(loadSource,
-                                    /*getLastInstantiationPoint=*/false,
-                                    collectScopedOrigins);
-            attributes |= boxSrc.attributes;
-            approximateSource |= boxSrc.approximateSource;
-            isCapturedInInternalProcedure |=
-                boxSrc.isCapturedInInternalProcedure;
-
-            if (getLastInstantiationPoint) {
-              if (!instantiationPoint)
-                instantiationPoint = boxSrc.origin.instantiationPoint;
-            } else {
-              instantiationPoint = boxSrc.origin.instantiationPoint;
-            }
-
-            // Compose the access path: inner path (root to this load point)
-            // + deref step + outer path (this load to the queried value).
-            accessPath.steps = boxSrc.accessPath.steps;
-            Source::PathStep derefStep;
-            derefStep.kind = isPointerBox ? Source::PathStep::Kind::PointerDeref
-                                          : Source::PathStep::Kind::AllocDeref;
-            derefStep.component = {};
-            accessPath.steps.push_back(derefStep);
-            for (int i = pathSteps.size() - 1; i >= 0; --i)
-              accessPath.steps.push_back(pathSteps[i]);
-            accessPath.isApproximate =
-                boxSrc.accessPath.isApproximate || approximateSource;
-            setStorageDecl(boxSrc.accessPath.storageDecl);
-            accessPath.storageDecl = storageDecl;
-            accessPathFinalized = true;
-
-            // Rebase each forwarded ScopedOrigin from the inner walk's
-            // coordinate system (rooted at the inner declare, leaf=memref)
-            // to the outer (leaf=original query) by splicing the deref
-            // step and the outer pathSteps onto the snapshot's path.
-            if (collectScopedOrigins) {
-              for (auto scopedOrigin : boxSrc.scopedOrigins) {
-                scopedOrigin.accessPath.steps.push_back(derefStep);
-                for (int i = pathSteps.size() - 1; i >= 0; --i)
-                  scopedOrigin.accessPath.steps.push_back(pathSteps[i]);
-                scopedOrigin.accessPath.isApproximate |= approximateSource;
-                if (isPointerBox)
-                  scopedOrigin.attributes.set(Attribute::Pointer);
-                scopedOrigin.approximateSource |= approximateSource;
-                // The inner walk computed isData against the box memref
-                // (typically false, since the walk started at
-                // !fir.ref<!fir.box<...>>). After splicing the deref step, the
-                // snapshot's path now describes reaching the outer query's leaf
-                // via the box's pointer, so it follows data iff the outer walk
-                // does.
-                scopedOrigin.isData = followingData;
-                scopedOrigins.push_back(std::move(scopedOrigin));
-              }
-            }
-
-            global = llvm::dyn_cast<mlir::SymbolRefAttr>(boxSrc.origin.u);
-            if (global) {
-              type = SourceKind::Global;
-            } else {
-              auto def = llvm::cast<mlir::Value>(boxSrc.origin.u);
-              bool classified = false;
-              if (auto defAsOpResult = mlir::dyn_cast<OpResult>(def)) {
-                if (classifyAllocateFromEffects(defAsOpResult) ==
-                    SourceKind::Allocate) {
-                  v = def;
-                  defOp = defAsOpResult.getOwner();
-                  type = SourceKind::Allocate;
-                  classified = true;
-                }
-              }
-              if (!classified) {
-                if (boxSrc.kind == SourceKind::Allocate ||
-                    boxSrc.kind == SourceKind::Null) {
-                  type = boxSrc.kind;
-                  v = def;
-                  defOp = nullptr;
-                } else if (boxSrc.kind == SourceKind::HostAssoc) {
-                  // Box loaded from a host-associated descriptor: classify
-                  // the dereferenced target as HostAssoc (not Indirect) so
-                  // alias() can apply the host-assoc/pointer rules instead
-                  // of coarsening to MayAlias. The access path (PointerDeref/
-                  // AllocDeref step) and Pointer attribute were already set
-                  // above, so the resulting Source matches the one that
-                  // buildSourceAtDeclare() rebuilds during scope-aware
-                  // refinement.
-                  type = SourceKind::HostAssoc;
-                  v = def;
-                  defOp = nullptr;
-                } else if (isDummyArgument(def)) {
-                  defOp = nullptr;
-                  v = def;
-                } else {
-                  type = SourceKind::Indirect;
-                }
-              }
-            }
-            breakFromLoop = true;
+            classifyDescriptorData(loadSource, boxTy);
             return;
           }
           // No further tracking for addresses loaded from memory for now.

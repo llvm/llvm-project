@@ -193,7 +193,10 @@ public:
       : domInfo(domInfo), localAllocsThreshold(localAllocsThreshold),
         symTab(module.getOperation()),
         llvmTypeConverter(module, /*applyTBAA=*/false,
-                          /*forceUnifiedTBAATree=*/false, dl) {}
+                          /*forceUnifiedTBAATree=*/false, dl) {
+    // The pass only attaches attributes, which do not change the sources.
+    analysis.enableSourceCache();
+  }
   /// memoised call to fir::AliasAnalysis::getSource
   inline const fir::AliasAnalysis::Source &getSource(mlir::Value value) {
     if (!analysisCache.contains(value))

@@ -26,15 +26,26 @@ struct TestFIRAliasAnalysisPass
       PassWrapper<TestFIRAliasAnalysisPass, OperationPass<>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestFIRAliasAnalysisPass)
 
+  TestFIRAliasAnalysisPass() = default;
+  TestFIRAliasAnalysisPass(const TestFIRAliasAnalysisPass &pass)
+      : PassWrapper(pass) {}
+
   StringRef getArgument() const final { return "test-fir-alias-analysis"; }
   StringRef getDescription() const final {
     return "Test alias analysis results.";
   }
   void runOnOperation() override {
     mlir::AliasAnalysis aliasAnalysis(getOperation());
-    aliasAnalysis.addAnalysisImplementation(fir::AliasAnalysis());
+    fir::AliasAnalysis firAliasAnalysis;
+    if (sourceCache)
+      firAliasAnalysis.enableSourceCache();
+    aliasAnalysis.addAnalysisImplementation(std::move(firAliasAnalysis));
     runAliasAnalysisOnOperation(getOperation(), aliasAnalysis);
   }
+
+  Option<bool> sourceCache{*this, "source-cache",
+      llvm::cl::desc("Memoize the sources of the queried values"),
+      llvm::cl::init(false)};
 };
 
 //===----------------------------------------------------------------------===//
