@@ -102,9 +102,10 @@ define i32 @test5(i32 %A) nounwind {
 ; X64-LABEL: test5:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    imulq $365384439, %rax, %rax # imm = 0x15C752F7
-; X64-NEXT:    shrq $59, %rax
-; X64-NEXT:    # kill: def $eax killed $eax killed $rax
+; X64-NEXT:    movl $365384439, %ecx # imm = 0x15C752F7
+; X64-NEXT:    mull %ecx
+; X64-NEXT:    movl %edx, %eax
+; X64-NEXT:    shrl $27, %eax
 ; X64-NEXT:    retq
   %tmp1 = udiv i32 %A, 1577682821         ; <i32> [#uses=1]
   ret i32 %tmp1
@@ -390,10 +391,12 @@ define i64 @PR23590(i64 %x) nounwind {
 ; X64-SLOW-NEXT:    movq %rdi, %rax
 ; X64-SLOW-NEXT:    mulq %rcx
 ; X64-SLOW-NEXT:    shrq $12, %rdx
-; X64-SLOW-NEXT:    imulq $12345, %rdx, %rax # imm = 0x3039
-; X64-SLOW-NEXT:    subq %rax, %rdi
-; X64-SLOW-NEXT:    imulq $613566757, %rdi, %rax # imm = 0x24924925
-; X64-SLOW-NEXT:    shrq $32, %rax
+; X64-SLOW-NEXT:    imull $12345, %edx, %eax # imm = 0x3039
+; X64-SLOW-NEXT:    subl %eax, %edi
+; X64-SLOW-NEXT:    movl $613566757, %ecx # imm = 0x24924925
+; X64-SLOW-NEXT:    movl %edi, %eax
+; X64-SLOW-NEXT:    mull %ecx
+; X64-SLOW-NEXT:    movl %edx, %eax
 ; X64-SLOW-NEXT:    retq
 entry:
   %rem = urem i64 %x, 12345

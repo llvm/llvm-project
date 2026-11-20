@@ -17,22 +17,25 @@ define i32 @f(i1 %foo, ptr %tm_year2, ptr %bar, i16 %zed, i32 %zed2) {
 ; CHECK-NEXT:    testb $1, %dil
 ; CHECK-NEXT:    jne .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %if.end
-; CHECK-NEXT:    movslq %r8d, %rax
-; CHECK-NEXT:    imulq $1374389535, %rax, %rcx # imm = 0x51EB851F
-; CHECK-NEXT:    movq %rcx, %rdi
-; CHECK-NEXT:    shrq $63, %rdi
-; CHECK-NEXT:    sarq $37, %rcx
-; CHECK-NEXT:    addl %edi, %ecx
-; CHECK-NEXT:    imull $100, %ecx, %ecx
-; CHECK-NEXT:    subl %ecx, %eax
-; CHECK-NEXT:    movw %ax, (%rsi)
-; CHECK-NEXT:    movswq %ax, %rax
-; CHECK-NEXT:    imulq $1717986919, %rax, %rax # imm = 0x66666667
-; CHECK-NEXT:    movq %rax, %rcx
-; CHECK-NEXT:    shrq $63, %rcx
-; CHECK-NEXT:    shrq $34, %rax
-; CHECK-NEXT:    addl %ecx, %eax
-; CHECK-NEXT:    movb %al, (%rdx)
+; CHECK-NEXT:    movq %rdx, %rcx
+; CHECK-NEXT:    movl $1374389535, %edx # imm = 0x51EB851F
+; CHECK-NEXT:    movl %r8d, %eax
+; CHECK-NEXT:    imull %edx
+; CHECK-NEXT:    movl %edx, %eax
+; CHECK-NEXT:    shrl $31, %eax
+; CHECK-NEXT:    sarl $5, %edx
+; CHECK-NEXT:    addl %eax, %edx
+; CHECK-NEXT:    imull $100, %edx, %eax
+; CHECK-NEXT:    subl %eax, %r8d
+; CHECK-NEXT:    movswl %r8w, %eax
+; CHECK-NEXT:    movl $1717986919, %edx # imm = 0x66666667
+; CHECK-NEXT:    imull %edx
+; CHECK-NEXT:    movw %r8w, (%rsi)
+; CHECK-NEXT:    movl %edx, %eax
+; CHECK-NEXT:    shrl $31, %eax
+; CHECK-NEXT:    shrl $2, %edx
+; CHECK-NEXT:    addl %eax, %edx
+; CHECK-NEXT:    movb %dl, (%rcx)
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:  .LBB0_2: # %return
 ; CHECK-NEXT:    retq

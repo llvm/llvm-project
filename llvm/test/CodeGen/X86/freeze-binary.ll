@@ -1011,13 +1011,13 @@ define void @pr59676_frozen(ptr %dst, i32 %x.orig) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    imull %esi, %esi
 ; X64-NEXT:    imull $84, %esi, %eax
-; X64-NEXT:    cltq
-; X64-NEXT:    imulq $818089009, %rax, %rax # imm = 0x30C30C31
-; X64-NEXT:    movq %rax, %rcx
-; X64-NEXT:    shrq $63, %rcx
-; X64-NEXT:    sarq $35, %rax
-; X64-NEXT:    addl %ecx, %eax
-; X64-NEXT:    movl %eax, (%rdi)
+; X64-NEXT:    movl $818089009, %ecx # imm = 0x30C30C31
+; X64-NEXT:    imull %ecx
+; X64-NEXT:    movl %edx, %eax
+; X64-NEXT:    shrl $31, %eax
+; X64-NEXT:    sarl $3, %edx
+; X64-NEXT:    addl %eax, %edx
+; X64-NEXT:    movl %edx, (%rdi)
 ; X64-NEXT:    retq
   %x = freeze i32 %x.orig
   %mul = mul i32 %x, 42
@@ -1049,13 +1049,13 @@ define void @pr59676_nsw_frozen(ptr %dst, i32 %x.orig) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    imull %esi, %esi
 ; X64-NEXT:    imull $84, %esi, %eax
-; X64-NEXT:    cltq
-; X64-NEXT:    imulq $818089009, %rax, %rax # imm = 0x30C30C31
-; X64-NEXT:    movq %rax, %rcx
-; X64-NEXT:    shrq $63, %rcx
-; X64-NEXT:    sarq $35, %rax
-; X64-NEXT:    addl %ecx, %eax
-; X64-NEXT:    movl %eax, (%rdi)
+; X64-NEXT:    movl $818089009, %ecx # imm = 0x30C30C31
+; X64-NEXT:    imull %ecx
+; X64-NEXT:    movl %edx, %eax
+; X64-NEXT:    shrl $31, %eax
+; X64-NEXT:    sarl $3, %edx
+; X64-NEXT:    addl %eax, %edx
+; X64-NEXT:    movl %edx, (%rdi)
 ; X64-NEXT:    retq
   %x = freeze i32 %x.orig
   %mul = mul nsw i32 %x, 42
@@ -1087,13 +1087,13 @@ define void @pr59676_nsw(ptr %dst, i32 %x) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    imull %esi, %esi
 ; X64-NEXT:    imull $84, %esi, %eax
-; X64-NEXT:    cltq
-; X64-NEXT:    imulq $818089009, %rax, %rax # imm = 0x30C30C31
-; X64-NEXT:    movq %rax, %rcx
-; X64-NEXT:    shrq $63, %rcx
-; X64-NEXT:    sarq $35, %rax
-; X64-NEXT:    addl %ecx, %eax
-; X64-NEXT:    movl %eax, (%rdi)
+; X64-NEXT:    movl $818089009, %ecx # imm = 0x30C30C31
+; X64-NEXT:    imull %ecx
+; X64-NEXT:    movl %edx, %eax
+; X64-NEXT:    shrl $31, %eax
+; X64-NEXT:    sarl $3, %edx
+; X64-NEXT:    addl %eax, %edx
+; X64-NEXT:    movl %edx, (%rdi)
 ; X64-NEXT:    retq
   %mul = mul nsw i32 %x, 42
   %shl = shl i32 %x, 1

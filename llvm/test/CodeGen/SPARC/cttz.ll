@@ -68,7 +68,7 @@ define i32 @i32_nopoison(i32 %x) nounwind {
 ; SPARC64-NEXT:    and %o0, %o1, %o0
 ; SPARC64-NEXT:    sethi 122669, %o1
 ; SPARC64-NEXT:    or %o1, 305, %o1
-; SPARC64-NEXT:    mulx %o0, %o1, %o0
+; SPARC64-NEXT:    smul %o0, %o1, %o0
 ; SPARC64-NEXT:    srl %o0, 27, %o0
 ; SPARC64-NEXT:    srl %o0, 0, %o0
 ; SPARC64-NEXT:    sethi %h44(.LCPI0_0), %o1
@@ -149,7 +149,7 @@ define i32 @i32_poison(i32 %x) nounwind {
 ; SPARC64-NEXT:    and %o0, %o1, %o0
 ; SPARC64-NEXT:    sethi 122669, %o1
 ; SPARC64-NEXT:    or %o1, 305, %o1
-; SPARC64-NEXT:    mulx %o0, %o1, %o0
+; SPARC64-NEXT:    smul %o0, %o1, %o0
 ; SPARC64-NEXT:    srl %o0, 27, %o0
 ; SPARC64-NEXT:    srl %o0, 0, %o0
 ; SPARC64-NEXT:    sethi %h44(.LCPI1_0), %o1

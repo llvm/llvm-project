@@ -104,13 +104,13 @@ define i64 @lopped64_64to32(i64 %x) {
 define i32 @shrinkAndKnownBits(i32 %x) {
 ; CHECK-LABEL: shrinkAndKnownBits:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %ecx # encoding: [0x89,0xf9]
-; CHECK-NEXT:    movl $4042322161, %eax # encoding: [0xb8,0xf1,0xf0,0xf0,0xf0]
+; CHECK-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
+; CHECK-NEXT:    movl $-252645135, %ecx # encoding: [0xb9,0xf1,0xf0,0xf0,0xf0]
 ; CHECK-NEXT:    # imm = 0xF0F0F0F1
-; CHECK-NEXT:    imulq %rcx, %rax # encoding: [0x48,0x0f,0xaf,0xc1]
-; CHECK-NEXT:    shrq $36, %rax # encoding: [0x48,0xc1,0xe8,0x24]
+; CHECK-NEXT:    mull %ecx # encoding: [0xf7,0xe1]
+; CHECK-NEXT:    movl %edx, %eax # encoding: [0x89,0xd0]
+; CHECK-NEXT:    shrl $4, %eax # encoding: [0xc1,0xe8,0x04]
 ; CHECK-NEXT:    andl $-128, %eax # encoding: [0x83,0xe0,0x80]
-; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %div = udiv i32 %x, 17
   %and = and i32 %div, 268435328

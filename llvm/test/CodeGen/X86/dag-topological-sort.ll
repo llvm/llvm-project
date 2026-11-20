@@ -8,31 +8,32 @@
 define i32 @Test_use_divrem_reg_imm(i32 %a) nounwind {
 ; DEFAULT-LABEL: Test_use_divrem_reg_imm:
 ; DEFAULT:       # %bb.0:
-; DEFAULT-NEXT:    movslq %edi, %rax
-; DEFAULT-NEXT:    imulq $1041204193, %rax, %rcx # imm = 0x3E0F83E1
-; DEFAULT-NEXT:    movq %rcx, %rdx
-; DEFAULT-NEXT:    shrq $63, %rdx
-; DEFAULT-NEXT:    sarq $35, %rcx
-; DEFAULT-NEXT:    addl %edx, %ecx
-; DEFAULT-NEXT:    movl %ecx, %edx
-; DEFAULT-NEXT:    shll $5, %edx
-; DEFAULT-NEXT:    addl %ecx, %edx
-; DEFAULT-NEXT:    subl %edx, %eax
-; DEFAULT-NEXT:    addl %ecx, %eax
-; DEFAULT-NEXT:    # kill: def $eax killed $eax killed $rax
+; DEFAULT-NEXT:    movl $1041204193, %ecx # imm = 0x3E0F83E1
+; DEFAULT-NEXT:    movl %edi, %eax
+; DEFAULT-NEXT:    imull %ecx
+; DEFAULT-NEXT:    movl %edx, %eax
+; DEFAULT-NEXT:    shrl $31, %eax
+; DEFAULT-NEXT:    sarl $3, %edx
+; DEFAULT-NEXT:    addl %edx, %eax
+; DEFAULT-NEXT:    movl %eax, %ecx
+; DEFAULT-NEXT:    shll $5, %ecx
+; DEFAULT-NEXT:    addl %eax, %ecx
+; DEFAULT-NEXT:    subl %ecx, %edi
+; DEFAULT-NEXT:    addl %edi, %eax
 ; DEFAULT-NEXT:    retq
 ;
 ; TOPOLOGICAL-LABEL: Test_use_divrem_reg_imm:
 ; TOPOLOGICAL:       # %bb.0:
-; TOPOLOGICAL-NEXT:    movslq %edi, %rax
-; TOPOLOGICAL-NEXT:    imulq $1041204193, %rax, %rcx # imm = 0x3E0F83E1
-; TOPOLOGICAL-NEXT:    movq %rcx, %rdx
-; TOPOLOGICAL-NEXT:    shrq $63, %rdx
-; TOPOLOGICAL-NEXT:    shrq $35, %rcx
-; TOPOLOGICAL-NEXT:    addl %edx, %ecx
-; TOPOLOGICAL-NEXT:    shll $5, %ecx
-; TOPOLOGICAL-NEXT:    subl %ecx, %eax
-; TOPOLOGICAL-NEXT:    # kill: def $eax killed $eax killed $rax
+; TOPOLOGICAL-NEXT:    movl $1041204193, %ecx # imm = 0x3E0F83E1
+; TOPOLOGICAL-NEXT:    movl %edi, %eax
+; TOPOLOGICAL-NEXT:    imull %ecx
+; TOPOLOGICAL-NEXT:    movl %edx, %eax
+; TOPOLOGICAL-NEXT:    shrl $31, %eax
+; TOPOLOGICAL-NEXT:    shrl $3, %edx
+; TOPOLOGICAL-NEXT:    addl %eax, %edx
+; TOPOLOGICAL-NEXT:    shll $5, %edx
+; TOPOLOGICAL-NEXT:    subl %edx, %edi
+; TOPOLOGICAL-NEXT:    movl %edi, %eax
 ; TOPOLOGICAL-NEXT:    retq
   %resultdiv = sdiv i32 %a, 33
   %resultrem = srem i32 %a, 33

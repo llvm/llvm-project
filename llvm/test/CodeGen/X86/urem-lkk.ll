@@ -19,13 +19,13 @@ define i32 @fold_urem_positive_odd(i32 %x) {
 define i32 @fold_urem_positive_even(i32 %x) {
 ; CHECK-LABEL: fold_urem_positive_even:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl $-145866813, %ecx # imm = 0xF74E3FC3
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    movl %edi, %ecx
-; CHECK-NEXT:    movl $4149100483, %edx # imm = 0xF74E3FC3
-; CHECK-NEXT:    imulq %rcx, %rdx
-; CHECK-NEXT:    shrq $42, %rdx
-; CHECK-NEXT:    imull $1060, %edx, %ecx # imm = 0x424
-; CHECK-NEXT:    subl %ecx, %eax
+; CHECK-NEXT:    mull %ecx
+; CHECK-NEXT:    shrl $10, %edx
+; CHECK-NEXT:    imull $1060, %edx, %eax # imm = 0x424
+; CHECK-NEXT:    subl %eax, %edi
+; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
   %1 = urem i32 %x, 1060
   ret i32 %1

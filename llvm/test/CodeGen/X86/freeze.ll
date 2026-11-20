@@ -145,15 +145,15 @@ define i64 @freeze_array() {
 define i32 @freeze_zext(i64 %a) nounwind {
 ; X86ASM-LABEL: freeze_zext:
 ; X86ASM:       # %bb.0: # %entry
-; X86ASM-NEXT:    movq %rdi, %rax
-; X86ASM-NEXT:    movl %eax, %ecx
-; X86ASM-NEXT:    movl $3435973837, %edx # imm = 0xCCCCCCCD
-; X86ASM-NEXT:    imulq %rcx, %rdx
-; X86ASM-NEXT:    shrq $35, %rdx
-; X86ASM-NEXT:    addl %edx, %edx
-; X86ASM-NEXT:    leal (%rdx,%rdx,4), %ecx
-; X86ASM-NEXT:    subl %ecx, %eax
-; X86ASM-NEXT:    # kill: def $eax killed $eax killed $rax
+; X86ASM-NEXT:    movl $-858993459, %ecx # imm = 0xCCCCCCCD
+; X86ASM-NEXT:    movl %edi, %eax
+; X86ASM-NEXT:    mull %ecx
+; X86ASM-NEXT:    # kill: def $edx killed $edx def $rdx
+; X86ASM-NEXT:    shrl $2, %edx
+; X86ASM-NEXT:    andl $-2, %edx
+; X86ASM-NEXT:    leal (%rdx,%rdx,4), %eax
+; X86ASM-NEXT:    subl %eax, %edi
+; X86ASM-NEXT:    movl %edi, %eax
 ; X86ASM-NEXT:    retq
 entry:
   %x = trunc i64 %a to i32
