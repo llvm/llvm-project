@@ -7,7 +7,7 @@ import os
 import tempfile
 
 from typing import Tuple
-from xml.sax.saxutils import quoteattr as quo
+from xml.sax.saxutils import escape, quoteattr as quo
 
 import lit.Test
 
@@ -175,7 +175,13 @@ class XunitReport(Report):
             file.write("]]></failure>\n</testcase>\n")
         elif test.result.code in self.skipped_codes:
             reason = self._get_skip_reason(test)
-            file.write(f">\n  <skipped message={quo(reason)}/>\n</testcase>\n")
+            file.write(f">\n  <skipped message={quo(reason)}/>\n")
+            # A test format may explain why it skipped a test in its output.
+            # Preserve that detail without changing the skip classification.
+            if test.result.code != lit.Test.EXCLUDED and test.result.output:
+                output = escape(remove_invalid_xml_chars(test.result.output))
+                file.write(f"  <system-out>{output}</system-out>\n")
+            file.write("</testcase>\n")
         else:
             file.write("/>\n")
 
