@@ -12,6 +12,8 @@ declare nofpclass(nan zero sub norm) half @returns_inf()
 declare nofpclass(nan ninf zero sub norm) half @returns_pinf()
 declare nofpclass(nan pinf zero sub norm) half @returns_ninf()
 declare nofpclass(zero sub norm) half @returns_inf_or_nan()
+declare nofpclass(ninf zero sub norm) half @returns_pinf_or_nan()
+declare nofpclass(pinf zero sub norm) half @returns_ninf_or_nan()
 
 declare nofpclass(ninf nzero nsub nnorm) half @returns_positive_or_nan()
 declare nofpclass(pinf pzero psub pnorm) half @returns_negative_or_nan()
@@ -1229,6 +1231,100 @@ define nofpclass(snan) half @qnan_result_demands_snan_rhs(i1 %cond, half %unknow
 ;
   %snan = call half @returns_snan()
   %select = select i1 %cond, half %snan, half %unknown0
+  %result = fsub half %unknown1, %select
+  ret half %result
+}
+
+define nofpclass(nan pinf) half @ret__no_nan_pinf__fsub__lhs_no_demand_pinf(i1 %cond, half %unknown0, half %unknown1) {
+; CHECK-LABEL: define nofpclass(nan pinf) half @ret__no_nan_pinf__fsub__lhs_no_demand_pinf(
+; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN0:%.*]], half [[UNKNOWN1:%.*]]) {
+; CHECK-NEXT:    [[NAN_PINF:%.*]] = call half @returns_pinf_or_nan()
+; CHECK-NEXT:    [[RESULT:%.*]] = fsub nnan half [[UNKNOWN0]], [[UNKNOWN1]]
+; CHECK-NEXT:    ret half [[RESULT]]
+;
+  %nan.pinf = call half @returns_pinf_or_nan()
+  %select = select i1 %cond, half %nan.pinf, half %unknown0
+  %result = fsub half %select, %unknown1
+  ret half %result
+}
+
+define nofpclass(nan ninf) half @ret__no_nan_ninf__fsub__lhs_no_demand_ninf(i1 %cond, half %unknown0, half %unknown1) {
+; CHECK-LABEL: define nofpclass(nan ninf) half @ret__no_nan_ninf__fsub__lhs_no_demand_ninf(
+; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN0:%.*]], half [[UNKNOWN1:%.*]]) {
+; CHECK-NEXT:    [[NAN_NINF:%.*]] = call half @returns_ninf_or_nan()
+; CHECK-NEXT:    [[RESULT:%.*]] = fsub nnan half [[UNKNOWN0]], [[UNKNOWN1]]
+; CHECK-NEXT:    ret half [[RESULT]]
+;
+  %nan.ninf = call half @returns_ninf_or_nan()
+  %select = select i1 %cond, half %nan.ninf, half %unknown0
+  %result = fsub half %select, %unknown1
+  ret half %result
+}
+
+define nofpclass(nan pinf) half @ret__no_nan_pinf__fsub__rhs_no_demand_ninf(i1 %cond, half %unknown0, half %unknown1) {
+; CHECK-LABEL: define nofpclass(nan pinf) half @ret__no_nan_pinf__fsub__rhs_no_demand_ninf(
+; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN0:%.*]], half [[UNKNOWN1:%.*]]) {
+; CHECK-NEXT:    [[NAN_NINF:%.*]] = call half @returns_ninf_or_nan()
+; CHECK-NEXT:    [[RESULT:%.*]] = fsub nnan half [[UNKNOWN1]], [[UNKNOWN0]]
+; CHECK-NEXT:    ret half [[RESULT]]
+;
+  %nan.ninf = call half @returns_ninf_or_nan()
+  %select = select i1 %cond, half %nan.ninf, half %unknown0
+  %result = fsub half %unknown1, %select
+  ret half %result
+}
+
+define nofpclass(nan ninf) half @ret__no_nan_ninf__fsub__rhs_no_demand_pinf(i1 %cond, half %unknown0, half %unknown1) {
+; CHECK-LABEL: define nofpclass(nan ninf) half @ret__no_nan_ninf__fsub__rhs_no_demand_pinf(
+; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN0:%.*]], half [[UNKNOWN1:%.*]]) {
+; CHECK-NEXT:    [[NAN_PINF:%.*]] = call half @returns_pinf_or_nan()
+; CHECK-NEXT:    [[RESULT:%.*]] = fsub nnan half [[UNKNOWN1]], [[UNKNOWN0]]
+; CHECK-NEXT:    ret half [[RESULT]]
+;
+  %nan.pinf = call half @returns_pinf_or_nan()
+  %select = select i1 %cond, half %nan.pinf, half %unknown0
+  %result = fsub half %unknown1, %select
+  ret half %result
+}
+
+define nofpclass(nan ninf) half @ret__no_nan_ninf__fsub__rhs_demand_ninf(i1 %cond, half %unknown0, half %unknown1) {
+; CHECK-LABEL: define nofpclass(nan ninf) half @ret__no_nan_ninf__fsub__rhs_demand_ninf(
+; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN0:%.*]], half [[UNKNOWN1:%.*]]) {
+; CHECK-NEXT:    [[NINF:%.*]] = call half @returns_ninf()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half -inf, half [[UNKNOWN0]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fsub nnan half [[UNKNOWN1]], [[SELECT]]
+; CHECK-NEXT:    ret half [[RESULT]]
+;
+  %ninf = call half @returns_ninf()
+  %select = select i1 %cond, half %ninf, half %unknown0
+  %result = fsub half %unknown1, %select
+  ret half %result
+}
+
+define nofpclass(qnan inf) half @ret__no_qnan_inf__fsub__lhs_demand_inf(i1 %cond, half %unknown0, half %unknown1) {
+; CHECK-LABEL: define nofpclass(qnan inf) half @ret__no_qnan_inf__fsub__lhs_demand_inf(
+; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN0:%.*]], half [[UNKNOWN1:%.*]]) {
+; CHECK-NEXT:    [[INF:%.*]] = call half @returns_inf()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[INF]], half [[UNKNOWN0]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fsub half [[SELECT]], [[UNKNOWN1]]
+; CHECK-NEXT:    ret half [[RESULT]]
+;
+  %inf = call half @returns_inf()
+  %select = select i1 %cond, half %inf, half %unknown0
+  %result = fsub half %select, %unknown1
+  ret half %result
+}
+
+define nofpclass(snan inf) half @ret__no_snan_inf__fsub__rhs_demand_inf(i1 %cond, half %unknown0, half %unknown1) {
+; CHECK-LABEL: define nofpclass(snan inf) half @ret__no_snan_inf__fsub__rhs_demand_inf(
+; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN0:%.*]], half [[UNKNOWN1:%.*]]) {
+; CHECK-NEXT:    [[INF:%.*]] = call half @returns_inf()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[INF]], half [[UNKNOWN0]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fsub half [[UNKNOWN1]], [[SELECT]]
+; CHECK-NEXT:    ret half [[RESULT]]
+;
+  %inf = call half @returns_inf()
+  %select = select i1 %cond, half %inf, half %unknown0
   %result = fsub half %unknown1, %select
   ret half %result
 }
