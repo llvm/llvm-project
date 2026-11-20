@@ -39,6 +39,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/Version.h"
 #include "clang/Driver/CreateASTUnitFromArgs.h"
+#include "clang/Driver/Driver.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Index/CommentToXML.h"
@@ -4402,8 +4403,12 @@ clang_parseTranslationUnit_Impl(CXIndex CIdx, const char *source_filename,
   Args->insert(Args->end(), command_line_args,
                command_line_args + num_command_line_args);
 
+  // Use the driver pass-through spelling for options not accepted by clang-cl.
+  bool IsCLMode = driver::IsClangCL(
+      driver::getDriverMode((*Args)[0], llvm::ArrayRef(*Args).slice(1)));
   if (!FoundSpellCheckingArgument)
-    Args->insert(Args->begin() + 1, "-fno-spell-checking");
+    Args->insert(Args->begin() + 1, IsCLMode ? "/clang:-fno-spell-checking"
+                                             : "-fno-spell-checking");
 
   // The 'source_filename' argument is optional.  If the caller does not
   // specify it then it is assumed that the source file is specified
@@ -4420,7 +4425,8 @@ clang_parseTranslationUnit_Impl(CXIndex CIdx, const char *source_filename,
   }
 
   // Suppress any editor placeholder diagnostics.
-  Args->push_back("-fallow-editor-placeholders");
+  Args->push_back(IsCLMode ? "/clang:-fallow-editor-placeholders"
+                           : "-fallow-editor-placeholders");
 
   unsigned NumErrors = Diags->getClient()->getNumErrors();
   std::unique_ptr<ASTUnit> ErrUnit;
