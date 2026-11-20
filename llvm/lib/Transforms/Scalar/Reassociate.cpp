@@ -357,7 +357,7 @@ static BinaryOperator *LowerNegateToMultiply(Instruction *Neg) {
 static BinaryOperator *ReuseFDiv(Value *Denom, Value *Divisor,
                                  FastMathFlags FMF, Instruction *BeforeInst) {
   auto Expr = Divisor->hasUseList() ? Divisor : Denom;
-  if (Expr->hasUseList())
+  if (Expr->hasUseList()) {
     for (User *U : Expr->users()) {
       if (!match(U, m_FDiv(m_Specific(Denom), m_Specific(Divisor))))
         continue;
@@ -366,7 +366,7 @@ static BinaryOperator *ReuseFDiv(Value *Denom, Value *Divisor,
           BO->comesBefore(BeforeInst) && BO->getFastMathFlags() == FMF)
         return BO;
     }
-  else
+  } else {
     for (Instruction *Prev = BeforeInst->getPrevNode(); Prev;
          Prev = Prev->getPrevNode()) {
       if (!match(Prev, m_FDiv(m_Specific(Denom), m_Specific(Divisor))))
@@ -375,6 +375,7 @@ static BinaryOperator *ReuseFDiv(Value *Denom, Value *Divisor,
       if (BO->getFastMathFlags() == FMF)
         return BO;
     }
+  }
   return nullptr;
 }
 
@@ -496,9 +497,9 @@ static bool LinearizeExprTree(Instruction *I,
     assert(hasFPAssociativeFlags(I) &&
            "Expected a reassociable FDIV operation!");
     if (auto Numerator = dyn_cast<Instruction>(I->getOperand(0));
-        Numerator && isReassociableOp(Numerator, Instruction::FMul))
+        Numerator && isReassociableOp(Numerator, Instruction::FMul)) {
       I = Numerator;
-    else {
+    } else {
       Ops.push_back(RepeatedValue(I->getOperand(0), 1));
       return false;
     }
@@ -748,22 +749,20 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
     // The last operation (which comes earliest in the IR) is special as both
     // operands will come from Ops, rather than just one with the other being
     // a subexpression.
-    if (i+2 == Ops.size()) {
-      Value *NewLHS = Ops[i].Op;
-      Value *NewRHS = Ops[i+1].Op;
-      Value *OldLHS = Op->getOperand(0);
-      Value *OldRHS = Op->getOperand(1);
-
+    if (i + 2 == Ops.size()) {
       // Workaround: current order of operands is (Ops[N-2].Op op Ops[N-1].Op)
       // op Ops[N-3].Op ... op Ops[0].Op To enable FDIV reassociation, we have
       // to set Ops[N-2] left.
-      if ((!isFDiv && NewLHS == OldLHS && NewRHS == OldRHS) ||
-          (isFDiv && NewLHS == OldRHS && NewRHS == OldLHS))
+      Value *NewLHS = isFDiv ? Ops[i + 1].Op : Ops[i].Op;
+      Value *NewRHS = isFDiv ? Ops[i].Op : Ops[i + 1].Op;
+      Value *OldLHS = Op->getOperand(0);
+      Value *OldRHS = Op->getOperand(1);
+
+      if (NewLHS == OldLHS && NewRHS == OldRHS)
         // Nothing changed, leave it alone.
         break;
 
-      if ((!isFDiv && NewLHS == OldRHS && NewRHS == OldLHS) ||
-          (isFDiv && NewLHS == OldLHS && NewRHS == OldRHS)) {
+      if (NewLHS == OldRHS && NewRHS == OldLHS) {
         // The order of the operands was reversed.  Swap them.
         LLVM_DEBUG(dbgs() << "RA: " << *Op << '\n');
         Op->swapOperands();
@@ -2095,7 +2094,9 @@ Value *ReassociatePass::OptimizeMul(BinaryOperator *I,
   // three, such that a balanced tree might require fewer total multiplies.
   if (Ops.size() < 4)
     return nullptr;
-  if (I->getOpcode() == Instruction::FDiv) {
+  BinaryOperator *OrigI = I;
+  bool isFDiv = I->getOpcode() == Instruction::FDiv;
+  if (isFDiv) {
     if (BinaryOperator *BO = dyn_cast<BinaryOperator>(I->getOperand(0)))
       I = BO;
     else
@@ -2117,9 +2118,16 @@ Value *ReassociatePass::OptimizeMul(BinaryOperator *I,
     Builder.setFastMathFlags(FPI->getFastMathFlags());
 
   Value *V = buildMinimalMultiplyDAG(Builder, Factors);
-  if (Ops.empty())
+  if (Ops.empty()) {
+    if (isFDiv) {
+      auto *NewV = BinaryOperator::CreateFDiv(V, OrigI->getOperand(1), "div",
+                                              OrigI->getIterator());
+      NewV->setFastMathFlags(OrigI->getFastMathFlags());
+      NewV->setDebugLoc(OrigI->getDebugLoc());
+      return NewV;
+    }
     return V;
-
+  }
   ValueEntry NewEntry = ValueEntry(getRank(V), V);
   Ops.insert(llvm::lower_bound(Ops, NewEntry), NewEntry);
   return nullptr;
@@ -2527,7 +2535,8 @@ void ReassociatePass::OptimizeInst(Instruction *I) {
   unsigned BackOpcode = BO->user_back()->getOpcode();
   if (BO->hasOneUse() &&
       ((BackOpcode != Instruction::FDiv && BackOpcode == Opcode) ||
-       (BackOpcode == Instruction::FDiv && Opcode == Instruction::FMul &&
+       (BackOpcode == Instruction::FDiv &&
+        hasFPAssociativeFlags(BO->user_back()) && Opcode == Instruction::FMul &&
         BO->user_back()->getOperand(0) == BO))) {
     // During the initial run we will get to the root of the tree.
     // But if we get here while we are redoing instructions, there is no
