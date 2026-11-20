@@ -60,6 +60,18 @@ public:
            DstTy->getPrimitiveSizeInBits() == 32;
   }
 
+  bool isTypeDesirableForOp(unsigned Opc, EVT VT) const override {
+    switch (Opc) {
+    case ISD::TRUNCATE_SSAT_S:
+    case ISD::TRUNCATE_SSAT_U:
+    case ISD::TRUNCATE_USAT_U:
+      // i8 is promoted and i1 has no corresponding cvt.sat instruction.
+      return VT == MVT::i16 || VT == MVT::i32;
+    default:
+      return TargetLowering::isTypeDesirableForOp(Opc, VT);
+    }
+  }
+
   EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Ctx,
                          EVT VT) const override {
     if (VT.isVector())

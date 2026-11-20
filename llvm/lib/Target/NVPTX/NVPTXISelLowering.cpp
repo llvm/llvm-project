@@ -659,6 +659,12 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction(ISD::SDIVREM, {MVT::i32, MVT::i64}, Expand);
   setOperationAction(ISD::UDIVREM, {MVT::i32, MVT::i64}, Expand);
 
+  // Saturating integer truncations are selected as cvt.sat. These actions
+  // are indexed by the source type.
+  setOperationAction(
+      {ISD::TRUNCATE_SSAT_S, ISD::TRUNCATE_SSAT_U, ISD::TRUNCATE_USAT_U},
+      {MVT::i32, MVT::i64}, Legal);
+
   // We don't want ops like FMINIMUM or UMAX to be lowered to SETCC+VSELECT.
   setOperationAction(ISD::VSELECT, {MVT::v2f32, MVT::v2i32}, Expand);
 
