@@ -1461,7 +1461,7 @@ define internal i32 @recBad(i1 %c, i32 %arg) {
 ; TUNIT-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; TUNIT:       t:
 ; TUNIT-NEXT:    [[R:%.*]] = call i32 @recBad(i1 noundef false, i32 [[ADD]]) #[[ATTR8]]
-; TUNIT-NEXT:    ret i32 [[ADD]]
+; TUNIT-NEXT:    ret i32 [[R]]
 ; TUNIT:       f:
 ; TUNIT-NEXT:    ret i32 [[ARG]]
 ;
@@ -1472,7 +1472,7 @@ define internal i32 @recBad(i1 %c, i32 %arg) {
 ; CGSCC-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; CGSCC:       t:
 ; CGSCC-NEXT:    [[R:%.*]] = call i32 @recBad(i1 noundef false, i32 [[ADD]]) #[[ATTR7]]
-; CGSCC-NEXT:    ret i32 [[ADD]]
+; CGSCC-NEXT:    ret i32 [[R]]
 ; CGSCC:       f:
 ; CGSCC-NEXT:    ret i32 [[ARG]]
 ;
