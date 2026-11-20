@@ -7,7 +7,9 @@ void f1(int [*]);
 void f2(int [const *]);
 void f3(int [volatile const*]);
 int f4(*XX)(void); /* expected-error {{cannot return}} expected-error {{type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int}} */
-int f5(int [static]); /* expected-error {{'static' may not be used without an array size}} */
+int f5(int [static]); /* expected-warning {{ISO C requires a length expression with 'static'}} */
+int f5(int a[static]) {} /* expected-warning {{ISO C requires a length expression with 'static'}} */
+void f6(int [static *]); /* expected-warning {{ISO C requires a length expression with 'static'}} */
 
 char ((((*X))));
 
