@@ -100,8 +100,6 @@ struct CIROpAsmDialectInterface : public OpAsmDialectInterface {
 } // namespace
 
 void cir::CIRDialect::initialize() {
-  registerTypes();
-  registerAttributes();
   registerCIRDialectOperations(this);
   addInterfaces<CIROpAsmDialectInterface>();
   detail::addBytecodeInterface(this);

@@ -560,11 +560,6 @@ struct VectorInlinerInterface : public DialectInlinerInterface {
 } // namespace
 
 void VectorDialect::initialize() {
-  addAttributes<
-#define GET_ATTRDEF_LIST
-#include "mlir/Dialect/Vector/IR/VectorAttributes.cpp.inc"
-      >();
-
   addOperations<
 #define GET_OP_LIST
 #include "mlir/Dialect/Vector/IR/VectorOps.cpp.inc"

@@ -53,11 +53,6 @@ struct ROCDLInlinerInterface final : DialectInlinerInterface {
 void ROCDLDialect::initialize() {
   registerROCDLDialectOperations(this);
 
-  addAttributes<
-#define GET_ATTRDEF_LIST
-#include "mlir/Dialect/LLVMIR/ROCDLOpsAttributes.cpp.inc"
-      >();
-
   // Support unknown operations because not all ROCDL operations are registered.
   allowUnknownOperations();
   addInterfaces<ROCDLInlinerInterface>();

@@ -1220,14 +1220,3 @@ RecordLayoutAttr cir::getRecordLayout(mlir::ModuleOp mod,
   assert(attr && "record layout entry missing for named record");
   return attr;
 }
-
-//===----------------------------------------------------------------------===//
-// CIR Dialect
-//===----------------------------------------------------------------------===//
-
-void CIRDialect::registerAttributes() {
-  addAttributes<
-#define GET_ATTRDEF_LIST
-#include "clang/CIR/Dialect/IR/CIROpsAttributes.cpp.inc"
-      >();
-}
