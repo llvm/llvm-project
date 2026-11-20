@@ -628,8 +628,19 @@ static OptimizationLevel mapToLevel(const CodeGenOptions &Opts) {
   }
 }
 
-static void addKCFIPass(const Triple &TargetTriple, const LangOptions &LangOpts,
-                        PassBuilder &PB) {
+// In FatLTO, the pre-link pipeline runs before EmbedBitcodePass, followed by
+// the non-LTO optimization pipeline on the same module. Pre-link passes
+// registered on OptimizerEarlyEP/OptimizerLastEP should only run during the
+// pre-link phase so both the embedded bitcode and native object code are
+// instrumented once.
+static bool isFatLTONonPreLinkPhase(bool FatLTO, ThinOrFullLTOPhase Phase) {
+  return FatLTO && Phase != ThinOrFullLTOPhase::ThinLTOPreLink &&
+         Phase != ThinOrFullLTOPhase::FullLTOPreLink;
+}
+
+static void addKCFIPass(const Triple &TargetTriple,
+                        const CodeGenOptions &CodeGenOpts,
+                        const LangOptions &LangOpts, PassBuilder &PB) {
   // If the back-end supports KCFI operand bundle lowering, skip KCFIPass.
   if (TargetTriple.getArch() == llvm::Triple::x86_64 ||
       TargetTriple.isAArch64(64) || TargetTriple.isRISCV() ||
@@ -638,12 +649,15 @@ static void addKCFIPass(const Triple &TargetTriple, const LangOptions &LangOpts,
     return;
 
   // Ensure we lower KCFI operand bundles with -O0.
-  PB.registerOptimizerLastEPCallback(
-      [&](ModulePassManager &MPM, OptimizationLevel Level, ThinOrFullLTOPhase) {
-        if (Level == OptimizationLevel::O0 &&
-            LangOpts.Sanitize.has(SanitizerKind::KCFI))
-          MPM.addPass(createModuleToFunctionPassAdaptor(KCFIPass()));
-      });
+  PB.registerOptimizerLastEPCallback([&](ModulePassManager &MPM,
+                                         OptimizationLevel Level,
+                                         ThinOrFullLTOPhase Phase) {
+    if (isFatLTONonPreLinkPhase(CodeGenOpts.FatLTO, Phase))
+      return;
+    if (Level == OptimizationLevel::O0 &&
+        LangOpts.Sanitize.has(SanitizerKind::KCFI))
+      MPM.addPass(createModuleToFunctionPassAdaptor(KCFIPass()));
+  });
 
   // When optimizations are requested, run KCIFPass after InstCombine to
   // avoid unnecessary checks.
@@ -659,7 +673,9 @@ static void addSanitizers(const Triple &TargetTriple,
                           const CodeGenOptions &CodeGenOpts,
                           const LangOptions &LangOpts, PassBuilder &PB) {
   auto SanitizersCallback = [&](ModulePassManager &MPM, OptimizationLevel Level,
-                                ThinOrFullLTOPhase) {
+                                ThinOrFullLTOPhase Phase) {
+    if (isFatLTONonPreLinkPhase(CodeGenOpts.FatLTO, Phase))
+      return;
     if (CodeGenOpts.hasSanitizeCoverage()) {
       auto SancovOpts = getSancovOptsFromCGOpts(CodeGenOpts);
       MPM.addPass(
@@ -797,9 +813,12 @@ void addLowerAllowCheckPass(const cl::LibraryOptionsContext &LibraryOptions,
       LowerAllowSanitize) {
     // We want to call it after inline, which is about OptimizerEarlyEPCallback.
     PB.registerOptimizerEarlyEPCallback(
-        [ScaledCutoffs, AllowRuntimeCheckSkipHotCutoff](
-            ModulePassManager &MPM, OptimizationLevel Level,
-            ThinOrFullLTOPhase Phase) {
+        [ScaledCutoffs, AllowRuntimeCheckSkipHotCutoff,
+         FatLTO = CodeGenOpts.FatLTO](ModulePassManager &MPM,
+                                      OptimizationLevel Level,
+                                      ThinOrFullLTOPhase Phase) {
+          if (isFatLTONonPreLinkPhase(FatLTO, Phase))
+            return;
           LowerAllowCheckPass::Options Opts;
           // TODO: after removing isRequested(), make this unconditional
           if (ScaledCutoffs.has_value())
@@ -1091,7 +1110,7 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
     if (!IsThinLTOPostLink) {
       // Most sanitizers only run during PreLink stage.
       addSanitizers(TargetTriple, CodeGenOpts, LangOpts, PB);
-      addKCFIPass(TargetTriple, LangOpts, PB);
+      addKCFIPass(TargetTriple, CodeGenOpts, LangOpts, PB);
       addLowerAllowCheckPass(LibraryOptions, CodeGenOpts, LangOpts, PB);
 
       PB.registerPipelineStartEPCallback(
@@ -1117,9 +1136,11 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
             });
         // Late pass: to reduce runtime overhead, instrument stores only after
         // optimizations have been run so only useful stores are instrumented.
-        PB.registerOptimizerLastEPCallback([](ModulePassManager &MPM,
-                                              OptimizationLevel,
-                                              ThinOrFullLTOPhase) {
+        PB.registerOptimizerLastEPCallback([&](ModulePassManager &MPM,
+                                               OptimizationLevel,
+                                               ThinOrFullLTOPhase Phase) {
+          if (isFatLTONonPreLinkPhase(CodeGenOpts.FatLTO, Phase))
+            return;
           MPM.addPass(createModuleToFunctionPassAdaptor(CopyProfStoresPass()));
         });
       }
@@ -1142,9 +1163,11 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
     // TODO: Consider passing the MemoryProfileOutput to the pass builder via
     // the PGOOptions, and set this up there.
     if (!CodeGenOpts.MemoryProfileOutput.empty()) {
-      PB.registerOptimizerLastEPCallback([](ModulePassManager &MPM,
-                                            OptimizationLevel Level,
-                                            ThinOrFullLTOPhase) {
+      PB.registerOptimizerLastEPCallback([&](ModulePassManager &MPM,
+                                             OptimizationLevel Level,
+                                             ThinOrFullLTOPhase Phase) {
+        if (isFatLTONonPreLinkPhase(CodeGenOpts.FatLTO, Phase))
+          return;
         MPM.addPass(createModuleToFunctionPassAdaptor(MemProfilerPass()));
         MPM.addPass(ModuleMemProfilerPass());
       });
