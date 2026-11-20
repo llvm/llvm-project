@@ -25,6 +25,7 @@
 #include <__pstl/backends/statpart/basis.h>
 #include <__pstl/backends/statpart/decoupled_lookback.h>
 #include <__utility/empty.h>
+#include <__utility/forward.h>
 #include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -56,6 +57,33 @@ _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator2> __transform_scan(
     _BinaryOperation __reduce,
     _UnaryOperation __transform,
     _Tp __init) noexcept {
+  // Perform either an inclusive or an exclusive scanning, depending on the flavour of __transform_scan.
+  // The order of arguments follows transform_inclusive_scan and implicitly changes when the exclusive branch is called.
+  auto __leaf_scan =
+      [](auto&& __leaf_first,
+         auto&& __leaf_last,
+         auto&& __leaf_result,
+         auto&& __leaf_reduce,
+         auto&& __leaf_transform,
+         auto&& __leaf_init) {
+        if constexpr (_IsInclusive)
+          return std::transform_inclusive_scan(
+              std::forward<decltype(__leaf_first)>(__leaf_first),
+              std::forward<decltype(__leaf_last)>(__leaf_last),
+              std::forward<decltype(__leaf_result)>(__leaf_result),
+              std::forward<decltype(__leaf_reduce)>(__leaf_reduce),
+              std::forward<decltype(__leaf_transform)>(__leaf_transform),
+              std::forward<decltype(__leaf_init)>(__leaf_init));
+        else
+          return std::transform_exclusive_scan(
+              std::forward<decltype(__leaf_first)>(__leaf_first),
+              std::forward<decltype(__leaf_last)>(__leaf_last),
+              std::forward<decltype(__leaf_result)>(__leaf_result),
+              std::forward<decltype(__leaf_init)>(__leaf_init),
+              std::forward<decltype(__leaf_reduce)>(__leaf_reduce),
+              std::forward<decltype(__leaf_transform)>(__leaf_transform));
+      };
+
   if constexpr (__is_parallel_execution_policy_v<_Policy> &&
                 __has_random_access_iterator_category_or_concept<_ForwardIterator1>::value &&
                 __has_random_access_iterator_category_or_concept<_ForwardIterator2>::value) {
@@ -77,143 +105,91 @@ _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator2> __transform_scan(
           // Derive the destination iterator for this chunk.
           _ForwardIterator2 __chunk_result = __result + (__chunk_first - __first);
           // Perform the scanning into the destination.
-          if constexpr (_IsInclusive)
-            std::transform_inclusive_scan(
-                __chunk_first, __chunk_last, __chunk_result, __reduce, __transform, std::move(__init));
-          else
-            std::transform_exclusive_scan(
-                __chunk_first, __chunk_last, __chunk_result, std::move(__init), __reduce, __transform);
+          __leaf_scan(__chunk_first, __chunk_last, __chunk_result, __reduce, __transform, std::move(__init));
         };
 
-    auto __scan_middle =
-        [&](__empty /*__ctx*/,
-            size_t /*__worker_idx*/,
-            _ForwardIterator1 __chunk_first,
-            _ForwardIterator1 __chunk_last,
-            __decoupled_lookback_partition<_Tp>* __lookback_partition) {
-          // General case: a chunk in the middle.
-          _LIBCPP_ASSERT_INTERNAL(__lookback_partition != nullptr, "middle chunks must have their lookback partitions");
+    auto __scan_middle = [&](__empty /*__ctx*/,
+                             size_t /*__worker_idx*/,
+                             _ForwardIterator1 __chunk_first,
+                             _ForwardIterator1 __chunk_last,
+                             __decoupled_lookback_partition<_Tp>* __lookback_partition) {
+      // General case: a chunk in the middle.
+      _LIBCPP_ASSERT_INTERNAL(__lookback_partition != nullptr, "middle chunks must have their lookback partitions");
 
-          // Compute and publish the local aggregate.
-          _Tp __aggregate = std::transform_reduce(
-              __chunk_first + 1, __chunk_last, static_cast<_Tp>(__transform(*__chunk_first)), __reduce, __transform);
-          __lookback_partition->__construct_aggregate(__aggregate);
+      // Compute and publish the local aggregate.
+      _Tp __aggregate = std::transform_reduce(
+          __chunk_first + 1, __chunk_last, static_cast<_Tp>(__transform(*__chunk_first)), __reduce, __transform);
+      __lookback_partition->__construct_aggregate(__aggregate);
 
-          // Derive the destination iterator for this chunk.
-          _ForwardIterator2 __chunk_result = __result + (__chunk_first - __first);
+      // Derive the destination iterator for this chunk.
+      _ForwardIterator2 __chunk_result = __result + (__chunk_first - __first);
 
-          // Depending on the state of the previous chunk, either immediately compute and publish the inclusive prefix,
-          // or first compute the inclusive prefix of the previous partition by ourselves and then compute and publish
-          // our inclusive prefix.
-          __decoupled_lookback_partition<_Tp>* __prev_partition = __lookback_partition - 1;
-          if (__prev_partition->__acquire_available_status() & __decoupled_lookback_status_prefix_available) {
-            // Use the existing inclusive prefix directly (avoid copies)
-            const _Tp& __exclusive_prefix = __prev_partition->__inclusive_prefix();
-            // Calculate and publish the inclusive prefix for the current chunk.
-            __lookback_partition->__construct_inclusive_prefix(__reduce(__exclusive_prefix, std::move(__aggregate)));
-            // Perform the scanning into the destination.
-            if constexpr (_IsInclusive)
-              std::transform_inclusive_scan(
-                  __chunk_first, __chunk_last, __chunk_result, __reduce, __transform, __exclusive_prefix);
-            else
-              std::transform_exclusive_scan(
-                  __chunk_first, __chunk_last, __chunk_result, __exclusive_prefix, __reduce, __transform);
-          } else {
-            // Calculate the exclusive prefix starting with the aggregate of the previous chunk.
-            _Tp __exclusive_prefix = __statpart::__calculate_inclusive_prefix_of_partition(__prev_partition, __reduce);
-            // Calculate and publish the inclusive prefix for the current chunk.
-            __lookback_partition->__construct_inclusive_prefix(__reduce(__exclusive_prefix, std::move(__aggregate)));
-            // Perform the scanning into the destination.
-            if constexpr (_IsInclusive)
-              std::transform_inclusive_scan(
-                  __chunk_first, __chunk_last, __chunk_result, __reduce, __transform, std::move(__exclusive_prefix));
-            else
-              std::transform_exclusive_scan(
-                  __chunk_first, __chunk_last, __chunk_result, std::move(__exclusive_prefix), __reduce, __transform);
-          }
-        };
+      // Depending on the state of the previous chunk, either immediately compute and publish the inclusive prefix,
+      // or first compute the inclusive prefix of the previous partition by ourselves and then compute and publish
+      // our inclusive prefix.
+      __decoupled_lookback_partition<_Tp>* __prev_partition = __lookback_partition - 1;
+      if (__prev_partition->__acquire_available_status() & __decoupled_lookback_status_prefix_available) {
+        // Use the existing inclusive prefix directly (avoid copies)
+        const _Tp& __exclusive_prefix = __prev_partition->__inclusive_prefix();
+        // Calculate and publish the inclusive prefix for the current chunk.
+        __lookback_partition->__construct_inclusive_prefix(__reduce(__exclusive_prefix, std::move(__aggregate)));
+        // Perform the scanning into the destination.
+        __leaf_scan(__chunk_first, __chunk_last, __chunk_result, __reduce, __transform, __exclusive_prefix);
+      } else {
+        // Calculate the exclusive prefix starting with the aggregate of the previous chunk.
+        _Tp __exclusive_prefix = __statpart::__calculate_inclusive_prefix_of_partition(__prev_partition, __reduce);
+        // Calculate and publish the inclusive prefix for the current chunk.
+        __lookback_partition->__construct_inclusive_prefix(__reduce(__exclusive_prefix, std::move(__aggregate)));
+        // Perform the scanning into the destination.
+        __leaf_scan(__chunk_first, __chunk_last, __chunk_result, __reduce, __transform, std::move(__exclusive_prefix));
+      }
+    };
 
-    auto __scan_tail =
-        [&](__empty /*__ctx*/,
-            size_t /*__worker_idx*/,
-            _ForwardIterator1 __chunk_first,
-            _ForwardIterator1 __chunk_last,
-            __decoupled_lookback_partition<_Tp>* __nonexistent_lookback_partition) {
-          // Handling of the last chunk (which is also not the first one).
-          // It doesn't have its lookback partition, so get the exclusive prefix from the previous chunk and perform
-          // scanning without publishing the inclusive prefix.
+    auto __scan_tail = [&](__empty /*__ctx*/,
+                           size_t /*__worker_idx*/,
+                           _ForwardIterator1 __chunk_first,
+                           _ForwardIterator1 __chunk_last,
+                           __decoupled_lookback_partition<_Tp>* __nonexistent_lookback_partition) {
+      // Handling of the last chunk (which is also not the first one).
+      // It doesn't have its lookback partition, so get the exclusive prefix from the previous chunk and perform
+      // scanning without publishing the inclusive prefix.
 
-          // Derive the destination iterator for this chunk.
-          _ForwardIterator2 __chunk_result = __result + (__chunk_first - __first);
+      // Derive the destination iterator for this chunk.
+      _ForwardIterator2 __chunk_result = __result + (__chunk_first - __first);
 
-          __decoupled_lookback_partition<_Tp>* __prev_partition = __nonexistent_lookback_partition - 1;
-          if (__prev_partition->__acquire_available_status() & __decoupled_lookback_status_prefix_available) {
-            // Perform the scanning using the existing inclusive prefix of the previous chunk.
-            if constexpr (_IsInclusive)
-              std::transform_inclusive_scan(
-                  __chunk_first,
-                  __chunk_last,
-                  __chunk_result,
-                  __reduce,
-                  __transform,
-                  __prev_partition->__inclusive_prefix());
-            else
-              std::transform_exclusive_scan(
-                  __chunk_first,
-                  __chunk_last,
-                  __chunk_result,
-                  __prev_partition->__inclusive_prefix(),
-                  __reduce,
-                  __transform);
-          } else {
-            // Calculate the exclusive prefix for the previous chunk and perform the scanning.
-            if constexpr (_IsInclusive)
-              std::transform_inclusive_scan(
-                  __chunk_first,
-                  __chunk_last,
-                  __chunk_result,
-                  __reduce,
-                  __transform,
-                  __statpart::__calculate_inclusive_prefix_of_partition(__prev_partition, __reduce));
-            else
-              std::transform_exclusive_scan(
-                  __chunk_first,
-                  __chunk_last,
-                  __chunk_result,
-                  __statpart::__calculate_inclusive_prefix_of_partition(__prev_partition, __reduce),
-                  __reduce,
-                  __transform);
-          }
-        };
+      __decoupled_lookback_partition<_Tp>* __prev_partition = __nonexistent_lookback_partition - 1;
+      if (__prev_partition->__acquire_available_status() & __decoupled_lookback_status_prefix_available) {
+        // Perform the scanning using the existing inclusive prefix of the previous chunk.
+        __leaf_scan(
+            __chunk_first, __chunk_last, __chunk_result, __reduce, __transform, __prev_partition->__inclusive_prefix());
+      } else {
+        // Calculate the inclusive prefix for the previous chunk and perform the scanning.
+        __leaf_scan(__chunk_first,
+                    __chunk_last,
+                    __chunk_result,
+                    __reduce,
+                    __transform,
+                    __statpart::__calculate_inclusive_prefix_of_partition(__prev_partition, __reduce));
+      }
+    };
 
-    auto __ret = __statpart::__lookback_scan<_Tp>(
-        __first,
-        __last,
-        [](size_t /*__max_workers_count*/, size_t /*__max_partition_size*/) { return optional<__empty>(__empty{}); },
-        __scan_head,
-        __scan_middle,
-        __scan_tail);
+    auto __setup = [](size_t /*__max_workers_count*/, size_t /*__max_partition_size*/) {
+      return optional<__empty>(__empty{}); // This algorithm doesn't require a custom context.
+    };
+
+    auto __ret = __statpart::__lookback_scan<_Tp>(__first, __last, __setup, __scan_head, __scan_middle, __scan_tail);
     if (!__ret)
       return nullopt;
     return __result + (__last - __first);
   } else {
     // Non-random access iterators cannot be processed in parallel, fall back to the sequential implementation.
-    if constexpr (_IsInclusive)
-      return std::transform_inclusive_scan(
-          std::move(__first),
-          std::move(__last),
-          std::move(__result),
-          std::move(__reduce),
-          std::move(__transform),
-          std::move(__init));
-    else
-      return std::transform_exclusive_scan(
-          std::move(__first),
-          std::move(__last),
-          std::move(__result),
-          std::move(__init),
-          std::move(__reduce),
-          std::move(__transform));
+    return __leaf_scan(
+        std::move(__first),
+        std::move(__last),
+        std::move(__result),
+        std::move(__reduce),
+        std::move(__transform),
+        std::move(__init));
   }
 }
 
@@ -235,7 +211,7 @@ struct __transform_inclusive_scan_init<__statpart_backend_tag, _ExecutionPolicy>
       _BinaryOperation __reduce,
       _UnaryOperation __transform,
       _Tp __init) const noexcept {
-    return __statpart::__transform_scan<true>(
+    return __statpart::__transform_scan</*inclusive=*/true>(
         __policy,
         std::move(__first),
         std::move(__last),
@@ -262,7 +238,7 @@ struct __transform_exclusive_scan<__statpart_backend_tag, _ExecutionPolicy> {
       _Tp __init,
       _BinaryOperation __reduce,
       _UnaryOperation __transform) const noexcept {
-    return __statpart::__transform_scan<false>(
+    return __statpart::__transform_scan</*exclusive=*/false>(
         __policy,
         std::move(__first),
         std::move(__last),
