@@ -532,7 +532,9 @@ public:
           m_is_valid = mc_disasm_ptr->GetMCInst(opcode_data, opcode_data_len,
                                                 pc, inst, inst_size);
           m_opcode.Clear();
-          inst_size = std::min<uint64_t>(inst_size, Opcode::kMaxByteSize);
+          const uint64_t clamp_limit =
+              std::max<size_t>(max_op_byte_size, Opcode::kMaxByteSize);
+          inst_size = std::min<uint64_t>(inst_size, clamp_limit);
           if (inst_size != 0) {
             if (arch.GetTriple().isRISCV())
               m_opcode.SetOpcode16_32TupleBytes(opcode_data, inst_size,
