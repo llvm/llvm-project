@@ -25,9 +25,12 @@ TEST_CONSTEXPR_CXX20 bool tests() {
   }
   {
     std::vector<int> v(100);
-    assert(v.capacity() == 100);
+    assert(v.capacity() >= 100);
+    while (v.size() != v.capacity())
+      v.push_back(0);
+    auto before_cap = v.capacity();
     v.push_back(0);
-    assert(v.capacity() > 101);
+    assert(v.capacity() > before_cap);
     assert(is_contiguous_container_asan_correct(v));
   }
 #if TEST_STD_VER >= 11

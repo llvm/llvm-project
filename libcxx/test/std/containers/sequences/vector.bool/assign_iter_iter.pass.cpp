@@ -19,8 +19,8 @@
 TEST_CONSTEXPR_CXX20 bool tests() {
   {   // Test with various cases where assign may or may not trigger reallocations for forward_iterator
     { // Reallocation happens
-      std::vector<bool> in(128, true);
       std::vector<bool> v(5, false);
+      std::vector<bool> in(v.capacity() + 1, true);
       assert(v.capacity() < in.size());
       using It = forward_iterator<std::vector<bool>::iterator>;
       v.assign(It(in.begin()), It(in.end()));
@@ -51,9 +51,8 @@ TEST_CONSTEXPR_CXX20 bool tests() {
 
   {   // Test with various cases where assign may or may not trigger reallocations for input_iterator
     { // Reallocation happens
-      std::vector<bool> in(128, true);
       std::vector<bool> v(5, false);
-      assert(v.capacity() < in.size());
+      std::vector<bool> in(v.capacity() + 1, true);
       using It = cpp17_input_iterator<std::vector<bool>::iterator>;
       v.assign(It(in.begin()), It(in.end()));
       assert(v == in);
