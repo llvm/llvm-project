@@ -255,3 +255,189 @@ loop.exit:
   store i64 %red.3.next, ptr %base.3
   ret void
 }
+
+; Added for #243706, check that vscale x 2 spills.
+; Note that the estimated spill count still lower than the generated assembly.
+define i32 @accumulate_fit(ptr %flr, ptr %mdct, i32 %x0, i32 %x1, ptr %a, float %atten, i32 %fitweight) {
+; CHECK-LABEL: 'accumulate_fit'
+; CHECK:  LV(REG): Calculating max register usage:
+; CHECK:  LV(REG): VF = 1
+; CHECK:  LV(REG): Found max usage: 2 item
+; CHECK:  LV(REG): RegisterClass: RISCV::GPRRC, 28 registers
+; CHECK:  LV(REG): RegisterClass: RISCV::FPRRC, 2 registers
+; CHECK:  LV(REG): Found invariant usage: 1 item
+; CHECK:  LV(REG): RegisterClass: RISCV::GPRRC, 2 registers
+; CHECK:  LV(REG): Calculating max register usage:
+; CHECK:  LV(REG): VF = vscale x 1
+; CHECK:  LV(REG): Found max usage: 2 item
+; CHECK:  LV(REG): RegisterClass: RISCV::GPRRC, 6 registers
+; CHECK:  LV(REG): RegisterClass: RISCV::VRRC, 20 registers
+; CHECK:  LV(REG): Found invariant usage: 1 item
+; CHECK:  LV(REG): RegisterClass: RISCV::GPRRC, 2 registers
+; CHECK:  LV(REG): VF = vscale x 2
+; CHECK:  LV(REG): Found max usage: 2 item
+; CHECK:  LV(REG): RegisterClass: RISCV::GPRRC, 6 registers
+; CHECK:  LV(REG): RegisterClass: RISCV::VRRC, 37 registers
+; CHECK:  LV(REG): Found invariant usage: 1 item
+; CHECK:  LV(REG): RegisterClass: RISCV::GPRRC, 2 registers
+; CHECK:  LV(REG): VF = vscale x 4
+; CHECK:  LV(REG): Found max usage: 2 item
+; CHECK:  LV(REG): RegisterClass: RISCV::GPRRC, 6 registers
+; CHECK:  LV(REG): RegisterClass: RISCV::VRRC, 71 registers
+; CHECK:  LV(REG): Found invariant usage: 1 item
+; CHECK:  LV(REG): RegisterClass: RISCV::GPRRC, 2 registers
+; CHECK:  LV(REG): VF = vscale x 8
+; CHECK:  LV(REG): Found max usage: 2 item
+; CHECK:  LV(REG): RegisterClass: RISCV::GPRRC, 6 registers
+; CHECK:  LV(REG): RegisterClass: RISCV::VRRC, 139 registers
+; CHECK:  LV(REG): Found invariant usage: 1 item
+; CHECK:  LV(REG): RegisterClass: RISCV::GPRRC, 2 registers
+; CHECK:  LV(REG): Cost of 20 from 5 spills of RISCV::VRRC
+; CHECK:  LV(REG): Cost of 156 from 39 spills of RISCV::VRRC
+; CHECK:  LV(REG): Cost of 428 from 107 spills of RISCV::VRRC
+;
+entry:
+  %cmp.not123 = icmp sgt i32 %x0, %x1
+  br i1 %cmp.not123, label %for.cond.cleanup, label %for.body.preheader
+
+for.body.preheader:
+  %conv1 = sext i32 %x1 to i64
+  %conv = sext i32 %x0 to i64
+  br label %for.body
+
+for.cond.cleanup.loopexit:
+  %ya.1.lcssa = phi i64 [ %ya.1, %if.end29 ]
+  %x2a.1.lcssa = phi i64 [ %x2a.1, %if.end29 ]
+  %y2a.1.lcssa = phi i64 [ %y2a.1, %if.end29 ]
+  %xya.1.lcssa = phi i64 [ %xya.1, %if.end29 ]
+  %na.1.lcssa = phi i64 [ %na.1, %if.end29 ]
+  %xb.1.lcssa = phi i64 [ %xb.1, %if.end29 ]
+  %yb.1.lcssa = phi i64 [ %yb.1, %if.end29 ]
+  %x2b.1.lcssa = phi i64 [ %x2b.1, %if.end29 ]
+  %y2b.1.lcssa = phi i64 [ %y2b.1, %if.end29 ]
+  %xyb.1.lcssa = phi i64 [ %xyb.1, %if.end29 ]
+  %nb.1.lcssa = phi i64 [ %nb.1, %if.end29 ]
+  %xa.1.lcssa = phi i64 [ %xa.1, %if.end29 ]
+  br label %for.cond.cleanup
+
+for.cond.cleanup:
+  %ya.0.lcssa = phi i64 [ 0, %entry ], [ %ya.1.lcssa, %for.cond.cleanup.loopexit ]
+  %x2a.0.lcssa = phi i64 [ 0, %entry ], [ %x2a.1.lcssa, %for.cond.cleanup.loopexit ]
+  %y2a.0.lcssa = phi i64 [ 0, %entry ], [ %y2a.1.lcssa, %for.cond.cleanup.loopexit ]
+  %xya.0.lcssa = phi i64 [ 0, %entry ], [ %xya.1.lcssa, %for.cond.cleanup.loopexit ]
+  %na.0.lcssa = phi i64 [ 0, %entry ], [ %na.1.lcssa, %for.cond.cleanup.loopexit ]
+  %xb.0.lcssa = phi i64 [ 0, %entry ], [ %xb.1.lcssa, %for.cond.cleanup.loopexit ]
+  %yb.0.lcssa = phi i64 [ 0, %entry ], [ %yb.1.lcssa, %for.cond.cleanup.loopexit ]
+  %x2b.0.lcssa = phi i64 [ 0, %entry ], [ %x2b.1.lcssa, %for.cond.cleanup.loopexit ]
+  %y2b.0.lcssa = phi i64 [ 0, %entry ], [ %y2b.1.lcssa, %for.cond.cleanup.loopexit ]
+  %xyb.0.lcssa = phi i64 [ 0, %entry ], [ %xyb.1.lcssa, %for.cond.cleanup.loopexit ]
+  %nb.0.lcssa = phi i64 [ 0, %entry ], [ %nb.1.lcssa, %for.cond.cleanup.loopexit ]
+  %xa.0.lcssa = phi i64 [ 0, %entry ], [ %xa.1.lcssa, %for.cond.cleanup.loopexit ]
+  %add31 = add nsw i64 %xa.0.lcssa, %xb.0.lcssa
+  %add32 = add nsw i64 %yb.0.lcssa, %ya.0.lcssa
+  %add33 = add nsw i64 %x2b.0.lcssa, %x2a.0.lcssa
+  %add34 = add nsw i64 %y2b.0.lcssa, %y2a.0.lcssa
+  %add35 = add nsw i64 %xyb.0.lcssa, %xya.0.lcssa
+  %add36 = add nsw i64 %nb.0.lcssa, %na.0.lcssa
+  %conv37 = sext i32 %fitweight to i64
+  %mul38 = mul nsw i64 %add36, %conv37
+  %add39 = add nsw i64 %na.0.lcssa, 1
+  %div = sdiv i64 %mul38, %add39
+  %0 = shl i64 %div, 32
+  %conv41 = ashr exact i64 %0, 32
+  %mul42 = mul nsw i64 %conv41, %xa.0.lcssa
+  %add43 = add nsw i64 %add31, %mul42
+  %xa44 = getelementptr inbounds nuw i8, ptr %a, i64 16
+  store i64 %add43, ptr %xa44, align 8
+  %mul46 = mul nsw i64 %conv41, %ya.0.lcssa
+  %add47 = add nsw i64 %add32, %mul46
+  %ya48 = getelementptr inbounds nuw i8, ptr %a, i64 24
+  store i64 %add47, ptr %ya48, align 8
+  %mul50 = mul nsw i64 %conv41, %x2a.0.lcssa
+  %add51 = add nsw i64 %add33, %mul50
+  %x2a52 = getelementptr inbounds nuw i8, ptr %a, i64 32
+  store i64 %add51, ptr %x2a52, align 8
+  %mul54 = mul nsw i64 %conv41, %y2a.0.lcssa
+  %add55 = add nsw i64 %add34, %mul54
+  %y2a56 = getelementptr inbounds nuw i8, ptr %a, i64 40
+  store i64 %add55, ptr %y2a56, align 8
+  %mul58 = mul nsw i64 %conv41, %xya.0.lcssa
+  %add59 = add nsw i64 %add35, %mul58
+  %xya60 = getelementptr inbounds nuw i8, ptr %a, i64 48
+  store i64 %add59, ptr %xya60, align 8
+  %mul62 = mul nsw i64 %conv41, %na.0.lcssa
+  %add63 = add nsw i64 %mul62, %add36
+  %an = getelementptr inbounds nuw i8, ptr %a, i64 56
+  store i64 %add63, ptr %an, align 8
+  %conv64 = trunc i64 %na.0.lcssa to i32
+  ret i32 %conv64
+
+for.body:
+  %xa.0136 = phi i64 [ %xa.1, %if.end29 ], [ 0, %for.body.preheader ]
+  %i.0135 = phi i64 [ %inc30, %if.end29 ], [ %conv, %for.body.preheader ]
+  %nb.0134 = phi i64 [ %nb.1, %if.end29 ], [ 0, %for.body.preheader ]
+  %xyb.0133 = phi i64 [ %xyb.1, %if.end29 ], [ 0, %for.body.preheader ]
+  %y2b.0132 = phi i64 [ %y2b.1, %if.end29 ], [ 0, %for.body.preheader ]
+  %x2b.0131 = phi i64 [ %x2b.1, %if.end29 ], [ 0, %for.body.preheader ]
+  %yb.0130 = phi i64 [ %yb.1, %if.end29 ], [ 0, %for.body.preheader ]
+  %xb.0129 = phi i64 [ %xb.1, %if.end29 ], [ 0, %for.body.preheader ]
+  %na.0128 = phi i64 [ %na.1, %if.end29 ], [ 0, %for.body.preheader ]
+  %xya.0127 = phi i64 [ %xya.1, %if.end29 ], [ 0, %for.body.preheader ]
+  %y2a.0126 = phi i64 [ %y2a.1, %if.end29 ], [ 0, %for.body.preheader ]
+  %x2a.0125 = phi i64 [ %x2a.1, %if.end29 ], [ 0, %for.body.preheader ]
+  %ya.0124 = phi i64 [ %ya.1, %if.end29 ], [ 0, %for.body.preheader ]
+  %add.ptr = getelementptr inbounds [4 x i8], ptr %flr, i64 %i.0135
+  %add.ptr.val = load float, ptr %add.ptr, align 4
+  %1 = call float @llvm.fmuladd.f32(float %add.ptr.val, float f0x40EA0EA1, float 1.023500e+03)
+  %conv.i = fptosi float %1 to i32
+  %tobool.not = icmp slt i32 %conv.i, 1
+  br i1 %tobool.not, label %if.end29, label %if.then
+
+if.then:
+  %2 = call i32 @llvm.umin.i32(i32 %conv.i, i32 1023)
+  %arrayidx = getelementptr inbounds [4 x i8], ptr %mdct, i64 %i.0135
+  %3 = load float, ptr %arrayidx, align 4
+  %add = fadd float %atten, %3
+  %cmp4 = fcmp ult float %add, %add.ptr.val
+  %conv18 = zext nneg i32 %2 to i64
+  %mul20 = mul nsw i64 %i.0135, %i.0135
+  %mul22 = mul nuw nsw i32 %2, %2
+  %conv23 = zext nneg i32 %mul22 to i64
+  %mul26 = mul nsw i64 %i.0135, %conv18
+  br i1 %cmp4, label %if.else, label %if.then6
+
+if.then6:
+  %add7 = add nsw i64 %xa.0136, %i.0135
+  %add9 = add nsw i64 %ya.0124, %conv18
+  %add10 = add nsw i64 %mul20, %x2a.0125
+  %add13 = add nsw i64 %y2a.0126, %conv23
+  %add16 = add nsw i64 %mul26, %xya.0127
+  %inc = add nsw i64 %na.0128, 1
+  br label %if.end29
+
+if.else:
+  %add17 = add nsw i64 %i.0135, %xb.0129
+  %add19 = add nsw i64 %yb.0130, %conv18
+  %add21 = add nsw i64 %mul20, %x2b.0131
+  %add24 = add nsw i64 %y2b.0132, %conv23
+  %add27 = add nsw i64 %mul26, %xyb.0133
+  %inc28 = add nsw i64 %nb.0134, 1
+  br label %if.end29
+
+if.end29:
+  %ya.1 = phi i64 [ %add9, %if.then6 ], [ %ya.0124, %if.else ], [ %ya.0124, %for.body ]
+  %x2a.1 = phi i64 [ %add10, %if.then6 ], [ %x2a.0125, %if.else ], [ %x2a.0125, %for.body ]
+  %y2a.1 = phi i64 [ %add13, %if.then6 ], [ %y2a.0126, %if.else ], [ %y2a.0126, %for.body ]
+  %xya.1 = phi i64 [ %add16, %if.then6 ], [ %xya.0127, %if.else ], [ %xya.0127, %for.body ]
+  %na.1 = phi i64 [ %inc, %if.then6 ], [ %na.0128, %if.else ], [ %na.0128, %for.body ]
+  %xb.1 = phi i64 [ %xb.0129, %if.then6 ], [ %add17, %if.else ], [ %xb.0129, %for.body ]
+  %yb.1 = phi i64 [ %yb.0130, %if.then6 ], [ %add19, %if.else ], [ %yb.0130, %for.body ]
+  %x2b.1 = phi i64 [ %x2b.0131, %if.then6 ], [ %add21, %if.else ], [ %x2b.0131, %for.body ]
+  %y2b.1 = phi i64 [ %y2b.0132, %if.then6 ], [ %add24, %if.else ], [ %y2b.0132, %for.body ]
+  %xyb.1 = phi i64 [ %xyb.0133, %if.then6 ], [ %add27, %if.else ], [ %xyb.0133, %for.body ]
+  %nb.1 = phi i64 [ %nb.0134, %if.then6 ], [ %inc28, %if.else ], [ %nb.0134, %for.body ]
+  %xa.1 = phi i64 [ %add7, %if.then6 ], [ %xa.0136, %if.else ], [ %xa.0136, %for.body ]
+  %inc30 = add nsw i64 %i.0135, 1
+  %exitcond.not = icmp eq i64 %i.0135, %conv1
+  br i1 %exitcond.not, label %for.cond.cleanup.loopexit, label %for.body
+}

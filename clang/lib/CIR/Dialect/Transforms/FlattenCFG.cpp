@@ -1243,7 +1243,9 @@ public:
               funcOp->getParentOfType<mlir::ModuleOp>());
           uint64_t alignment =
               dataLayout.getAlignment(operand.getType(), true).value();
-          cir::PointerType ptrType = cir::PointerType::get(operand.getType());
+          cir::PointerType ptrType = cir::PointerType::get(
+              operand.getType(),
+              dataLayout.getAllocaAddrSpace(rewriter.getContext()));
           alloca =
               cir::AllocaOp::create(rewriter, loc, ptrType, "__ret_operand_tmp",
                                     rewriter.getI64IntegerAttr(alignment));

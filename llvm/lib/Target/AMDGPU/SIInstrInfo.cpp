@@ -5006,6 +5006,7 @@ AMDGPU::AsyncStages SIInstrInfo::getAsyncStage(const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   // Keep in sync with FLATInstructions.td.
   case AMDGPU::GLOBAL_LOAD_ASYNC_TO_LDS_B8:
+  case AMDGPU::GLOBAL_LOAD_ASYNC_TO_LDS_B8_replay:
   case AMDGPU::GLOBAL_LOAD_ASYNC_TO_LDS_B8_SADDR:
   case AMDGPU::GLOBAL_LOAD_ASYNC_TO_LDS_B32:
   case AMDGPU::GLOBAL_LOAD_ASYNC_TO_LDS_B32_SADDR:
@@ -10605,6 +10606,8 @@ unsigned SIInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   unsigned Opc = MI.getOpcode();
   const MCInstrDesc &Desc = getMCOpcodeFromPseudo(Opc);
   unsigned DescSize = Desc.getSize();
+  if (Opc == AMDGPU::GLOBAL_LOAD_ASYNC_TO_LDS_B8_replay)
+    return DescSize + 12; // Three scalar moves around the load.
 
   // If we have a definitive size, we can use it. Otherwise we need to inspect
   // the operands to know the size.
@@ -11037,7 +11040,7 @@ bool SIInstrInfo::isLegalFLATOffset(int64_t Offset, unsigned AddrSpace,
   using AMDGPU::FlatAddrSpace;
   if (ST.hasFlatSegmentOffsetBug() && FlatVariant == FlatAddrSpace::FLAT &&
       (AddrSpace == AMDGPUAS::FLAT_ADDRESS ||
-       AddrSpace == AMDGPUAS::GLOBAL_ADDRESS))
+       AMDGPU::isExtendedGlobalAddrSpace(AddrSpace)))
     return false;
 
   if (ST.hasNegativeUnalignedScratchOffsetBug() &&

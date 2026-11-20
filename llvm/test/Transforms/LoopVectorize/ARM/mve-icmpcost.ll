@@ -403,7 +403,7 @@ define void @floatcmp(ptr nocapture readonly %pSrc, ptr nocapture %pDst, i32 %bl
 ; CHECK:  LV: Found an estimated cost of 0 for VF 1 For instruction: %blockSize.addr.09 = phi i32 [ %dec, %while.body ], [ %blockSize, %while.body.preheader ]
 ; CHECK:  LV: Found an estimated cost of 0 for VF 1 For instruction: %pDst.addr.08 = phi ptr [ %incdec.ptr, %while.body ], [ %pDst, %while.body.preheader ]
 ; CHECK:  LV: Found an estimated cost of 1 for VF 1 For instruction: %0 = load float, ptr %pSrc.addr.010, align 4
-; CHECK:  LV: Found an estimated cost of 1 for VF 1 For instruction: %cmp1 = fcmp nnan ninf nsz olt float %0, 0.000000e+00
+; CHECK:  LV: Found an estimated cost of 1 for VF 1 For instruction: %cmp1 = fcmp fast olt float %0, 0.000000e+00
 ; CHECK:  LV: Found an estimated cost of 1 for VF 1 For instruction: %cond = select nnan ninf nsz i1 %cmp1, float 1.000000e+01, float %0
 ; CHECK:  LV: Found an estimated cost of 1 for VF 1 For instruction: %conv = fptosi float %cond to i32
 ; CHECK:  LV: Found an estimated cost of 0 for VF 1 For instruction: %incdec.ptr = getelementptr inbounds i32, ptr %pDst.addr.08, i32 1
@@ -418,7 +418,7 @@ define void @floatcmp(ptr nocapture readonly %pSrc, ptr nocapture %pDst, i32 %bl
 ; CHECK:  Cost of 0 for VF 2: EMIT vp<%next.gep>.1 = ptradd ir<%pDst>, vp<[[VP8]]>
 ; CHECK:  Cost of 0 for VF 2: vp<[[VP9:%[0-9]+]]> = vector-pointer float, vp<%next.gep>, ir<1>
 ; CHECK:  Cost of 6 for VF 2: WIDEN ir<%0> = load vp<[[VP9]]>, align 4
-; CHECK:  Cost of 12 for VF 2: WIDEN ir<%cmp1> = fcmp olt nnan ninf nsz ir<%0>, ir<0.000000e+00>
+; CHECK:  Cost of 12 for VF 2: WIDEN ir<%cmp1> = fcmp olt fast ir<%0>, ir<0.000000e+00>
 ; CHECK:  Cost of 8 for VF 2: WIDEN ir<%cond> = select nnan ninf nsz ir<%cmp1>, ir<1.000000e+01>, ir<%0>
 ; CHECK:  Cost of 36 for VF 2: WIDEN-CAST ir<%conv> = fptosi ir<%cond> to i32
 ; CHECK:  Cost of 0 for VF 2: vp<[[VP10:%[0-9]+]]> = vector-pointer i32, vp<%next.gep>.1, ir<1>
@@ -434,7 +434,7 @@ define void @floatcmp(ptr nocapture readonly %pSrc, ptr nocapture %pDst, i32 %bl
 ; CHECK:  Cost of 0 for VF 2: IR %blockSize.addr.09 = phi i32 [ %dec, %while.body ], [ %blockSize, %while.body.preheader ] (extra operand: vp<%bc.resume.val>.1 from scalar.ph)
 ; CHECK:  Cost of 0 for VF 2: IR %pDst.addr.08 = phi ptr [ %incdec.ptr, %while.body ], [ %pDst, %while.body.preheader ] (extra operand: vp<%bc.resume.val>.2 from scalar.ph)
 ; CHECK:  Cost of 0 for VF 2: IR %0 = load float, ptr %pSrc.addr.010, align 4
-; CHECK:  Cost of 0 for VF 2: IR %cmp1 = fcmp nnan ninf nsz olt float %0, 0.000000e+00
+; CHECK:  Cost of 0 for VF 2: IR %cmp1 = fcmp fast olt float %0, 0.000000e+00
 ; CHECK:  Cost of 0 for VF 2: IR %cond = select nnan ninf nsz i1 %cmp1, float 1.000000e+01, float %0
 ; CHECK:  Cost of 0 for VF 2: IR %conv = fptosi float %cond to i32
 ; CHECK:  Cost of 0 for VF 2: IR %incdec.ptr = getelementptr inbounds i32, ptr %pDst.addr.08, i32 1
@@ -454,7 +454,7 @@ define void @floatcmp(ptr nocapture readonly %pSrc, ptr nocapture %pDst, i32 %bl
 ; CHECK:  Cost of 0 for VF 4: EMIT vp<%next.gep>.1 = ptradd ir<%pDst>, vp<[[VP8]]>
 ; CHECK:  Cost of 0 for VF 4: vp<[[VP9]]> = vector-pointer float, vp<%next.gep>, ir<1>
 ; CHECK:  Cost of 2 for VF 4: WIDEN ir<%0> = load vp<[[VP9]]>, align 4
-; CHECK:  Cost of 24 for VF 4: WIDEN ir<%cmp1> = fcmp olt nnan ninf nsz ir<%0>, ir<0.000000e+00>
+; CHECK:  Cost of 24 for VF 4: WIDEN ir<%cmp1> = fcmp olt fast ir<%0>, ir<0.000000e+00>
 ; CHECK:  Cost of 16 for VF 4: WIDEN ir<%cond> = select nnan ninf nsz ir<%cmp1>, ir<1.000000e+01>, ir<%0>
 ; CHECK:  Cost of 72 for VF 4: WIDEN-CAST ir<%conv> = fptosi ir<%cond> to i32
 ; CHECK:  Cost of 0 for VF 4: vp<[[VP10]]> = vector-pointer i32, vp<%next.gep>.1, ir<1>
@@ -470,7 +470,7 @@ define void @floatcmp(ptr nocapture readonly %pSrc, ptr nocapture %pDst, i32 %bl
 ; CHECK:  Cost of 0 for VF 4: IR %blockSize.addr.09 = phi i32 [ %dec, %while.body ], [ %blockSize, %while.body.preheader ] (extra operand: vp<%bc.resume.val>.1 from scalar.ph)
 ; CHECK:  Cost of 0 for VF 4: IR %pDst.addr.08 = phi ptr [ %incdec.ptr, %while.body ], [ %pDst, %while.body.preheader ] (extra operand: vp<%bc.resume.val>.2 from scalar.ph)
 ; CHECK:  Cost of 0 for VF 4: IR %0 = load float, ptr %pSrc.addr.010, align 4
-; CHECK:  Cost of 0 for VF 4: IR %cmp1 = fcmp nnan ninf nsz olt float %0, 0.000000e+00
+; CHECK:  Cost of 0 for VF 4: IR %cmp1 = fcmp fast olt float %0, 0.000000e+00
 ; CHECK:  Cost of 0 for VF 4: IR %cond = select nnan ninf nsz i1 %cmp1, float 1.000000e+01, float %0
 ; CHECK:  Cost of 0 for VF 4: IR %conv = fptosi float %cond to i32
 ; CHECK:  Cost of 0 for VF 4: IR %incdec.ptr = getelementptr inbounds i32, ptr %pDst.addr.08, i32 1
@@ -495,7 +495,7 @@ while.body:
   %blockSize.addr.09 = phi i32 [ %dec, %while.body ], [ %blockSize, %entry ]
   %pDst.addr.08 = phi ptr [ %incdec.ptr, %while.body ], [ %pDst, %entry ]
   %0 = load float, ptr %pSrc.addr.010, align 4
-  %cmp1 = fcmp nnan ninf nsz olt float %0, 0.000000e+00
+  %cmp1 = fcmp fast olt float %0, 0.000000e+00
   %cond = select nnan ninf nsz i1 %cmp1, float 1.000000e+01, float %0
   %conv = fptosi float %cond to i32
   %incdec.ptr = getelementptr inbounds i32, ptr %pDst.addr.08, i32 1
