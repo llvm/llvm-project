@@ -201,8 +201,6 @@ LIBC_INLINE constexpr static auto to_bitmask(const simd<bool, N> &m) {
   using bitmask_t = internal::get_as_integer_type_t<simd<bool, N>>;
   if constexpr (N % CHAR_BIT == 0) {
     return cpp::bit_cast<bitmask_t>(m);
-  } else if constexpr (N == 1) {
-    return static_cast<bitmask_t>(__builtin_reduce_or(m));
   } else {
     bitmask_t res = 0;
     for (size_t i = 0; i < N; ++i)
