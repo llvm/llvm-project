@@ -18,6 +18,16 @@ define i64 @test_sext_zext(i16 %A) {
   ret i64 %c2
 }
 
+define i64 @zext_of_chained_trunc_nuw(i64 %x) {
+; CHECK-LABEL: @zext_of_chained_trunc_nuw(
+; CHECK-NEXT:    ret i64 [[X:%.*]]
+;
+  %t48 = trunc nuw i64 %x to i48
+  %t = trunc nuw i48 %t48 to i32
+  %z = zext i32 %t to i64
+  ret i64 %z
+}
+
 define <2 x i64> @test2(<2 x i1> %A) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i1> [[A:%.*]], splat (i1 true)
