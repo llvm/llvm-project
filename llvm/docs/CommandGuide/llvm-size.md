@@ -33,9 +33,9 @@ Equivalent to {option}`--format` with a value of `berkeley`.
 :::
 
 :::{option} --common
-Include ELF common symbol sizes in bss size for `berkeley` output format, or
-as a separate section entry for `sysv` output. If not specified, these
-symbols are ignored.
+Include ELF common symbol sizes in bss size for `berkeley` and `gnu` output
+formats, or as a separate section entry for `sysv` output. If not specified,
+these symbols are ignored.
 :::
 
 :::{option} --exclude-pagezero
@@ -56,7 +56,7 @@ Mach-O files in `darwin` format.
 
 :::{option} --format=<format>
 Set the output format to the `<format>` specified. Available `<format>`
-options are `berkeley` (the default), `sysv` and `darwin`.
+options are `berkeley` (the default), `gnu`, `sysv` and `darwin`.
 
 Berkeley output summarises text, data and bss sizes in each file, as shown
 below for a typical pair of ELF files:
@@ -75,6 +75,18 @@ $ llvm-size --format=berkeley macho.obj macho2.obj
 __TEXT  __DATA  __OBJC  others  dec     hex
 4       8       0       0       12      c       macho.obj
 16      32      0       0       48      30      macho2.obj
+```
+
+GNU output also summarises text, data and bss sizes in each file, classifying
+executable sections into text, `SHT_NOBITS` sections into bss, and remaining
+allocatable sections (including read-only data) into data, with a single `total`
+column formatted in the selected `--radix`:
+
+```console
+$ llvm-size --format=gnu test.elf test2.o
+      text       data        bss      total filename
+        90        108          5        203 test.elf
+        26         64          1         91 test2.o
 ```
 
 Sysv output displays size and address information for most sections, with each
@@ -125,6 +137,10 @@ $ llvm-size --format=darwin macho.obj macho2.obj
 ```
 :::
 
+:::{option} -G
+Equivalent to {option}`--format` with a value of `gnu`.
+:::
+
 :::{option} --help, -h
 Display a summary of command line options.
 :::
@@ -160,8 +176,8 @@ $ llvm-size --radix=16 test.o
 :::
 
 :::{option} --totals, -t
-Applies only to `berkeley` output format. Display the totals for all listed
-fields, in addition to the individual file listings.
+Applies only to `berkeley` and `gnu` output formats. Display the totals for all
+listed fields, in addition to the individual file listings.
 
 Example:
 

@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/MachO.h"
@@ -50,7 +51,7 @@ public:
   SizeOptTable() : OptTable(optionTables()) { setGroupedShortOptions(true); }
 };
 
-enum OutputFormatTy { berkeley, sysv, darwin };
+enum OutputFormatTy { berkeley, gnu, sysv, darwin };
 enum RadixTy { octal = 8, decimal = 10, hexadecimal = 16 };
 } // namespace
 
@@ -71,6 +72,7 @@ static std::string ToolName;
 // States
 static bool HadError = false;
 static bool BerkeleyHeaderPrinted = false;
+static bool GnuHeaderPrinted = false;
 static bool MoreThanOneFile = false;
 static uint64_t TotalObjectText = 0;
 static uint64_t TotalObjectData = 0;
@@ -345,6 +347,58 @@ static void printDarwinSegmentSizes(MachOObjectFile *MachO) {
          << "\t";
 }
 
+static void printGnuNumber(uint64_t Value) {
+  SmallString<32> Buf;
+  raw_svector_ostream OS(Buf);
+  if (Radix == hexadecimal)
+    OS << format_hex(Value, 0);
+  else if (Radix == octal)
+    OS << '0' << format("%" PRIo64, Value);
+  else
+    OS << Value;
+  outs() << right_justify(Buf, 10) << ' ';
+}
+
+static void printGnuRow(uint64_t Text, uint64_t Data, uint64_t Bss,
+                        uint64_t Total) {
+  printGnuNumber(Text);
+  printGnuNumber(Data);
+  printGnuNumber(Bss);
+  printGnuNumber(Total);
+}
+
+/// Accumulate GNU format section sizes for @p Obj (matching GNU binutils
+/// size -G: SHF_ALLOC sections with SHF_EXECINSTR -> text, SHT_NOBITS -> bss,
+/// remaining SHF_ALLOC -> data).
+static void getGnuSectionSizes(ObjectFile *Obj, uint64_t &TotalText,
+                               uint64_t &TotalData, uint64_t &TotalBss) {
+  TotalText = 0;
+  TotalData = 0;
+  TotalBss = 0;
+  for (const SectionRef &Section : Obj->sections()) {
+    uint64_t Size = Section.getSize();
+    if (Obj->isELF()) {
+      ELFSectionRef ElfSec(Section);
+      uint64_t Flags = ElfSec.getFlags();
+      if (!(Flags & ELF::SHF_ALLOC))
+        continue;
+      if (Flags & ELF::SHF_EXECINSTR)
+        TotalText += Size;
+      else if (ElfSec.getType() == ELF::SHT_NOBITS)
+        TotalBss += Size;
+      else
+        TotalData += Size;
+    } else {
+      if (Section.isText())
+        TotalText += Size;
+      else if (Section.isData())
+        TotalData += Size;
+      else if (Section.isBSS())
+        TotalBss += Size;
+    }
+  }
+}
+
 /// Print the size of each section in @p Obj.
 ///
 /// The format used is determined by @c OutputFormat and @c Radix.
@@ -443,24 +497,28 @@ static void printObjectSectionSizes(ObjectFile *Obj) {
     outs() << format(fmtbuf.c_str(), static_cast<const char *>("Total"), total)
            << "\n\n";
   } else {
-    // The Berkeley format does not display individual section sizes. It
-    // displays the cumulative size for each section type.
+    // The Berkeley and GNU formats do not display individual section sizes.
+    // They display the cumulative size for each section type.
     uint64_t total_text = 0;
     uint64_t total_data = 0;
     uint64_t total_bss = 0;
 
-    // Make one pass over the section table to calculate sizes.
-    for (const SectionRef &Section : Obj->sections()) {
-      uint64_t size = Section.getSize();
-      bool isText = Section.isBerkeleyText();
-      bool isData = Section.isBerkeleyData();
-      bool isBSS = Section.isBSS();
-      if (isText)
-        total_text += size;
-      else if (isData)
-        total_data += size;
-      else if (isBSS)
-        total_bss += size;
+    if (OutputFormat == gnu) {
+      getGnuSectionSizes(Obj, total_text, total_data, total_bss);
+    } else {
+      // Make one pass over the section table to calculate sizes.
+      for (const SectionRef &Section : Obj->sections()) {
+        uint64_t size = Section.getSize();
+        bool isText = Section.isBerkeleyText();
+        bool isData = Section.isBerkeleyData();
+        bool isBSS = Section.isBSS();
+        if (isText)
+          total_text += size;
+        else if (isData)
+          total_data += size;
+        else if (isBSS)
+          total_bss += size;
+      }
     }
 
     if (ELFCommons) {
@@ -481,27 +539,35 @@ static void printObjectSectionSizes(ObjectFile *Obj) {
       TotalObjectTotal += total;
     }
 
-    if (!BerkeleyHeaderPrinted) {
-      outs() << "   text\t"
-                "   data\t"
-                "    bss\t"
-                "    "
-             << (Radix == octal ? "oct" : "dec")
-             << "\t"
-                "    hex\t"
-                "filename\n";
-      BerkeleyHeaderPrinted = true;
-    }
+    if (OutputFormat == gnu) {
+      if (!GnuHeaderPrinted) {
+        outs() << "      text       data        bss      total filename\n";
+        GnuHeaderPrinted = true;
+      }
+      printGnuRow(total_text, total_data, total_bss, total);
+    } else {
+      if (!BerkeleyHeaderPrinted) {
+        outs() << "   text\t"
+                  "   data\t"
+                  "    bss\t"
+                  "    "
+               << (Radix == octal ? "oct" : "dec")
+               << "\t"
+                  "    hex\t"
+                  "filename\n";
+        BerkeleyHeaderPrinted = true;
+      }
 
-    // Print result.
-    fmt << "%#7" << radix_fmt << "\t"
-        << "%#7" << radix_fmt << "\t"
-        << "%#7" << radix_fmt << "\t";
-    outs() << format(fmtbuf.c_str(), total_text, total_data, total_bss);
-    fmtbuf.clear();
-    fmt << "%7" << (Radix == octal ? PRIo64 : PRIu64) << "\t"
-        << "%7" PRIx64 "\t";
-    outs() << format(fmtbuf.c_str(), total, total);
+      // Print result.
+      fmt << "%#7" << radix_fmt << "\t"
+          << "%#7" << radix_fmt << "\t"
+          << "%#7" << radix_fmt << "\t";
+      outs() << format(fmtbuf.c_str(), total_text, total_data, total_bss);
+      fmtbuf.clear();
+      fmt << "%7" << (Radix == octal ? PRIo64 : PRIu64) << "\t"
+          << "%7" PRIx64 "\t";
+      outs() << format(fmtbuf.c_str(), total, total);
+    }
   }
 }
 
@@ -566,7 +632,7 @@ static void printFileSectionSizes(StringRef file) {
         printObjectSectionSizes(o);
         if (!MachO && OutputFormat == darwin)
           outs() << o->getFileName() << " (ex " << a->getFileName() << ")\n";
-        if (OutputFormat == berkeley) {
+        if (OutputFormat == berkeley || OutputFormat == gnu) {
           if (MachO)
             outs() << a->getFileName() << "(" << o->getFileName() << ")\n";
           else
@@ -601,8 +667,9 @@ static void printFileSectionSizes(StringRef file) {
                          << I->getArchFlagName() << "): \n";
               }
               printObjectSectionSizes(o);
-              if (OutputFormat == berkeley) {
-                if (!MachO || MoreThanOneFile || ArchFlags.size() > 1)
+              if (OutputFormat == berkeley || OutputFormat == gnu) {
+                if (OutputFormat == gnu || !MachO || MoreThanOneFile ||
+                    ArchFlags.size() > 1)
                   outs() << o->getFileName() << " (for architecture "
                          << I->getArchFlagName() << ")";
                 outs() << "\n";
@@ -639,7 +706,7 @@ static void printFileSectionSizes(StringRef file) {
                            << " (for architecture " << I->getArchFlagName()
                            << "):\n";
                   printObjectSectionSizes(o);
-                  if (OutputFormat == berkeley) {
+                  if (OutputFormat == berkeley || OutputFormat == gnu) {
                     if (MachO) {
                       outs() << UA->getFileName() << "(" << o->getFileName()
                              << ")";
@@ -691,8 +758,8 @@ static void printFileSectionSizes(StringRef file) {
                        << I->getArchFlagName() << "):\n";
             }
             printObjectSectionSizes(o);
-            if (OutputFormat == berkeley) {
-              if (!MachO || MoreThanOneFile)
+            if (OutputFormat == berkeley || OutputFormat == gnu) {
+              if (OutputFormat == gnu || !MachO || MoreThanOneFile)
                 outs() << o->getFileName() << " (for architecture "
                        << I->getArchFlagName() << ")";
               outs() << "\n";
@@ -724,7 +791,7 @@ static void printFileSectionSizes(StringRef file) {
                          << " (for architecture " << I->getArchFlagName()
                          << "):\n";
                 printObjectSectionSizes(o);
-                if (OutputFormat == berkeley) {
+                if (OutputFormat == berkeley || OutputFormat == gnu) {
                   if (MachO)
                     outs() << UA->getFileName() << "(" << o->getFileName()
                            << ")\n";
@@ -766,8 +833,9 @@ static void printFileSectionSizes(StringRef file) {
           outs() << "\n";
         }
         printObjectSectionSizes(o);
-        if (OutputFormat == berkeley) {
-          if (!MachO || MoreThanOneFile || MoreThanOneArch)
+        if (OutputFormat == berkeley || OutputFormat == gnu) {
+          if (OutputFormat == gnu || !MachO || MoreThanOneFile ||
+              MoreThanOneArch)
             outs() << o->getFileName() << " (for architecture "
                    << I->getArchFlagName() << ")";
           outs() << "\n";
@@ -799,7 +867,7 @@ static void printFileSectionSizes(StringRef file) {
               outs() << UA->getFileName() << "(" << o->getFileName() << ")"
                      << " (for architecture " << I->getArchFlagName() << "):\n";
             printObjectSectionSizes(o);
-            if (OutputFormat == berkeley) {
+            if (OutputFormat == berkeley || OutputFormat == gnu) {
               if (MachO)
                 outs() << UA->getFileName() << "(" << o->getFileName() << ")"
                        << " (for architecture " << I->getArchFlagName()
@@ -831,8 +899,8 @@ static void printFileSectionSizes(StringRef file) {
     printObjectSectionSizes(o);
     if (!MachO && OutputFormat == darwin)
       outs() << o->getFileName() << "\n";
-    if (OutputFormat == berkeley) {
-      if (!MachO || MoreThanOneFile)
+    if (OutputFormat == berkeley || OutputFormat == gnu) {
+      if (OutputFormat == gnu || !MachO || MoreThanOneFile)
         outs() << o->getFileName();
       outs() << "\n";
     }
@@ -841,12 +909,16 @@ static void printFileSectionSizes(StringRef file) {
   }
 }
 
-static void printBerkeleyTotals() {
+static void printTotals() {
   std::string fmtbuf;
   raw_string_ostream fmt(fmtbuf);
   const char *radix_fmt = getRadixFmt();
 
-  if (HasMachOFiles) {
+  if (OutputFormat == gnu) {
+    printGnuRow(TotalObjectText, TotalObjectData, TotalObjectBss,
+                TotalObjectTotal);
+    outs() << "(TOTALS)\n";
+  } else if (HasMachOFiles) {
     // Darwin format totals: __TEXT __DATA __OBJC others dec hex
     outs() << TotalObjectText << "\t" << TotalObjectData << "\t"
            << TotalObjectObjc << "\t" << TotalObjectOthers << "\t"
@@ -900,10 +972,13 @@ int llvm_size_main(int argc, char **argv, const llvm::ToolContext &) {
     OutputFormat = berkeley;
   else if (V == "darwin")
     OutputFormat = darwin;
+  else if (V == "gnu")
+    OutputFormat = gnu;
   else if (V == "sysv")
     OutputFormat = sysv;
   else
-    error("--format value should be one of: 'berkeley', 'darwin', 'sysv'");
+    error(
+        "--format value should be one of: 'berkeley', 'darwin', 'gnu', 'sysv'");
   V = Args.getLastArgValue(OPT_radix_EQ, "10");
   if (V == "8")
     Radix = RadixTy::octal;
@@ -936,8 +1011,8 @@ int llvm_size_main(int argc, char **argv, const llvm::ToolContext &) {
 
   MoreThanOneFile = InputFilenames.size() > 1;
   llvm::for_each(InputFilenames, printFileSectionSizes);
-  if (OutputFormat == berkeley && TotalSizes)
-    printBerkeleyTotals();
+  if ((OutputFormat == berkeley || OutputFormat == gnu) && TotalSizes)
+    printTotals();
 
   if (HadError)
     return 1;
