@@ -2,8 +2,9 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu < %s | FileCheck %s --check-prefixes=CHECK,LE
 ; RUN: llc -mtriple=aarch64_be-linux-gnu < %s | FileCheck %s --check-prefixes=CHECK,BE
 
-; An integer wider than 64 bits in an "r" operand goes in 64-bit registers,
-; one for each 64 bits of it. 32-bit registers would hold only half of it.
+; A value wider than 64 bits in an "r" operand, such as an i128 or an fp128,
+; goes in 64-bit registers, one for each 64 bits of it. 32-bit registers would
+; hold only half of it.
 ; Big-endian puts the halves of an i128 in the other order (see
 ; @test_i128_high_half).
 
@@ -91,4 +92,62 @@ entry:
   %hi = lshr i128 %r, 64
   %t = trunc i128 %hi to i64
   ret i64 %t
+}
+
+; A floating-point value or a vector goes in X registers the same way, so
+; "stp $1, ${1:H}" stores the same bytes that a plain store of it would.
+define void @test_fp128_store(ptr %p, fp128 %x) {
+; CHECK-LABEL: test_fp128_store:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    str q0, [sp, #-16]!
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    ldp x8, x9, [sp]
+; CHECK-NEXT:    //APP
+; CHECK-NEXT:    stp x8, x9, [x0]
+; CHECK-NEXT:    //NO_APP
+; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    ret
+entry:
+  call void asm sideeffect "stp $1, ${1:H}, [$0]", "r,r,~{memory}"(ptr %p, fp128 %x)
+  ret void
+}
+
+define fp128 @test_fp128_load(ptr %p) {
+; CHECK-LABEL: test_fp128_load:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    //APP
+; CHECK-NEXT:    ldp x8, x9, [x0]
+; CHECK-NEXT:    //NO_APP
+; CHECK-NEXT:    stp x8, x9, [sp, #-16]!
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    ldr q0, [sp], #16
+; CHECK-NEXT:    ret
+entry:
+  %r = call fp128 asm sideeffect "ldp $0, ${0:H}, [$1]", "=&r,r,~{memory}"(ptr %p)
+  ret fp128 %r
+}
+
+define void @test_v2f64_store(ptr %p, <2 x double> %x) {
+; LE-LABEL: test_v2f64_store:
+; LE:       // %bb.0: // %entry
+; LE-NEXT:    mov x8, v0.d[1]
+; LE-NEXT:    fmov x9, d0
+; LE-NEXT:    //APP
+; LE-NEXT:    stp x9, x8, [x0]
+; LE-NEXT:    //NO_APP
+; LE-NEXT:    ret
+;
+; BE-LABEL: test_v2f64_store:
+; BE:       // %bb.0: // %entry
+; BE-NEXT:    str q0, [sp, #-16]!
+; BE-NEXT:    .cfi_def_cfa_offset 16
+; BE-NEXT:    ldp x8, x9, [sp]
+; BE-NEXT:    //APP
+; BE-NEXT:    stp x8, x9, [x0]
+; BE-NEXT:    //NO_APP
+; BE-NEXT:    add sp, sp, #16
+; BE-NEXT:    ret
+entry:
+  call void asm sideeffect "stp $1, ${1:H}, [$0]", "r,r,~{memory}"(ptr %p, <2 x double> %x)
+  ret void
 }
