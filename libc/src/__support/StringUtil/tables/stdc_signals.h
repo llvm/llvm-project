@@ -24,6 +24,12 @@ LIBC_INLINE_VAR constexpr const MsgTable<6> STDC_SIGNALS = {
     MsgMapping(SIGTERM, "Terminated"),
 };
 
+LIBC_INLINE_VAR constexpr const MsgTable<6> STDC_SIGNAL_NAMES = {
+    MsgMapping(SIGINT, "INT"),   MsgMapping(SIGILL, "ILL"),
+    MsgMapping(SIGABRT, "ABRT"), MsgMapping(SIGFPE, "FPE"),
+    MsgMapping(SIGSEGV, "SEGV"), MsgMapping(SIGTERM, "TERM"),
+};
+
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_STRINGUTIL_TABLES_STDC_SIGNALS_H

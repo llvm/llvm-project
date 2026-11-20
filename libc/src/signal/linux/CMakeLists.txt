@@ -286,3 +286,31 @@ add_entrypoint_object(
     libc.src.__support.OSUtil.linux.sigmask
     libc.src.errno.errno
 )
+
+add_entrypoint_object(
+  sig2str
+  SRCS
+    ../sig2str.cpp
+  HDRS
+    ../sig2str.h
+  DEPENDS
+    libc.hdr.signal_macros
+    libc.src.__support.CPP.span
+    libc.src.__support.CPP.string_view
+    libc.src.__support.StringUtil.signal_to_string
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)
+
+add_entrypoint_object(
+  str2sig
+  SRCS
+    ../str2sig.cpp
+  HDRS
+    ../str2sig.h
+  DEPENDS
+    libc.src.__support.CPP.string_view
+    libc.src.__support.StringUtil.signal_to_string
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)

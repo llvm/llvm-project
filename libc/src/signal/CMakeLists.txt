@@ -134,3 +134,17 @@ add_entrypoint_object(
   DEPENDS
     .${LIBC_TARGET_OS}.sigismember
 )
+
+add_entrypoint_object(
+  sig2str
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.sig2str
+)
+
+add_entrypoint_object(
+  str2sig
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.str2sig
+)

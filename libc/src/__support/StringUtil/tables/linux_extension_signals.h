@@ -28,6 +28,16 @@ LIBC_INLINE_VAR constexpr const MsgTable<3> LINUX_SIGNALS = {
 #endif
 };
 
+LIBC_INLINE_VAR constexpr const MsgTable<3> LINUX_SIGNAL_NAMES = {
+#ifdef SIGSTKFLT
+    MsgMapping(SIGSTKFLT, "STKFLT"),
+#endif
+    MsgMapping(SIGWINCH, "WINCH"),
+#ifdef SIGPWR
+    MsgMapping(SIGPWR, "PWR"),
+#endif
+};
+
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_STRINGUTIL_TABLES_LINUX_EXTENSION_SIGNALS_H

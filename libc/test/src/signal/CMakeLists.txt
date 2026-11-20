@@ -276,3 +276,15 @@ add_libc_test(
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
+
+add_libc_test(
+  sig2str_test
+  SUITE
+    libc-signal-tests
+  SRCS
+    sig2str_test.cpp
+  DEPENDS
+    libc.hdr.signal_macros
+    libc.src.signal.sig2str
+    libc.src.signal.str2sig
+)
