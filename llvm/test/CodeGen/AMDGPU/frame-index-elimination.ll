@@ -66,7 +66,7 @@ define void @func_mov_fi_i32_offset() #0 {
 ; GFX9-MUBUF-NEXT:  v_add_u32_e32 v0, 4, [[SCALED]]
 
 ; FIXME: Should commute and shrink
-; GFX9-FLATSCR: v_add_u32_e64 v0, s32, 4
+; GFX9-FLATSCR: v_add_u32_e64 v0, 4, s32
 
 ; GCN-NOT: v_mov
 ; GCN: ds_write_b32 v0, v0
@@ -127,7 +127,7 @@ define void @func_load_private_arg_i32_ptr(ptr addrspace(5) %ptr) #0 {
 ; GFX9-MUBUF:      v_lshrrev_b32_e64 [[SHIFT:v[0-9]+]], 6, s32
 ; GFX9-MUBUF-NEXT: v_or_b32_e32 v0, 4, [[SHIFT]]
 
-; GFX9-FLATSCR: v_or_b32_e64 v0, s32, 4
+; GFX9-FLATSCR: v_or_b32_e64 v0, 4, s32
 
 ; GCN-NOT: v_mov
 ; GCN: ds_write_b32 v0, v0
@@ -278,7 +278,7 @@ bb5:
 ; GFX9-MUBUF: v_lshrrev_b32_e64 [[SHIFT:v[0-9]+]], 6, s32
 ; GFX9-MUBUF-NEXT: v_or_b32_e32 [[PTR:v[0-9]+]], 4, [[SHIFT]]
 
-; GFX9-FLATSCR: v_or_b32_e64 [[PTR:v[0-9]+]], s32, 4
+; GFX9-FLATSCR: v_or_b32_e64 [[PTR:v[0-9]+]], 4, s32
 
 ; GCN: ds_write_b32 v{{[0-9]+}}, [[PTR]]
 define void @alloca_ptr_nonentry_block(i32 %arg0) #0 {
