@@ -137,8 +137,8 @@ void log_message(int priority, const char *__restrict format,
           buffer, sizeof(buffer),
           &printf_core::overflow_write_flush_to_sink<char, stderr_write_hook>);
       if (internal::write_log_message(writer, log_state, priority, format, args,
-                                    local_time, pid,
-                                    program_invocation_short_name))
+                                      local_time, pid,
+                                      program_invocation_short_name))
         writer.get_write_buffer().flush_to_sink<stderr_write_hook>();
     }
   }
