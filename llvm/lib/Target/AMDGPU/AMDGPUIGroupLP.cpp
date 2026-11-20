@@ -28,36 +28,6 @@ using namespace llvm::AMDGPU;
 
 namespace {
 
-static cl::opt<bool> EnableExactSolver(
-    "amdgpu-igrouplp-exact-solver", cl::Hidden,
-    cl::desc("Whether to use the exponential time solver to fit "
-             "the instructions to the pipeline as closely as "
-             "possible."),
-    cl::init(false));
-
-static cl::opt<unsigned> CutoffForExact(
-    "amdgpu-igrouplp-exact-solver-cutoff", cl::init(0), cl::Hidden,
-    cl::desc("The maximum number of scheduling group conflicts "
-             "which we attempt to solve with the exponential time "
-             "exact solver. Problem sizes greater than this will"
-             "be solved by the less accurate greedy algorithm. Selecting "
-             "solver by size is superseded by manually selecting "
-             "the solver (e.g. by amdgpu-igrouplp-exact-solver"));
-
-static cl::opt<uint64_t> MaxBranchesExplored(
-    "amdgpu-igrouplp-exact-solver-max-branches", cl::init(0), cl::Hidden,
-    cl::desc("The amount of branches that we are willing to explore with"
-             "the exact algorithm before giving up."));
-
-static cl::opt<bool> UseCostHeur(
-    "amdgpu-igrouplp-exact-solver-cost-heur", cl::init(true), cl::Hidden,
-    cl::desc("Whether to use the cost heuristic to make choices as we "
-             "traverse the search space using the exact solver. Defaulted "
-             "to on, and if turned off, we will use the node order -- "
-             "attempting to put the later nodes in the later sched groups. "
-             "Experimentally, results are mixed, so this should be set on a "
-             "case-by-case basis."));
-
 class SchedGroup;
 
 // InstructionRule class is used to enact a filter which determines whether or
@@ -226,6 +196,7 @@ using SUsToCandSGsVec = SmallVector<SUToCandSGsPair, 4>;
 // only be used for small sized problems or medium sized problems where an exact
 // solution is highly desired.
 class PipelineSolver {
+  const AMDGPUOptions &CLOpts;
   [[maybe_unused]] ScheduleDAGMI *DAG;
 
   // Instructions that can be assigned to multiple SchedGroups
@@ -360,8 +331,9 @@ public:
   PipelineSolver(DenseMap<int, SmallVector<SchedGroup, 4>> &SyncedSchedGroups,
                  DenseMap<int, SUnitsToCandidateSGsMap> &SyncedInstrs,
                  ScheduleDAGMI *DAG, bool IsBottomUp = true)
-      : DAG(DAG), SyncedInstrs(SyncedInstrs),
-        SyncedSchedGroups(SyncedSchedGroups), IsBottomUp(IsBottomUp) {
+      : CLOpts(DAG->MF.getSubtarget<GCNSubtarget>().getCLOpts()), DAG(DAG),
+        SyncedInstrs(SyncedInstrs), SyncedSchedGroups(SyncedSchedGroups),
+        IsBottomUp(IsBottomUp) {
 
     for (auto &PipelineInstrs : SyncedInstrs) {
       if (!PipelineInstrs.second.empty()) {
@@ -671,7 +643,8 @@ bool PipelineSolver::checkOptimal() {
   }
 
   bool DoneExploring = false;
-  if (MaxBranchesExplored > 0 && BranchesExplored >= MaxBranchesExplored)
+  if (CLOpts.igrouplp_exact_solver_max_branches > 0 &&
+      BranchesExplored >= CLOpts.igrouplp_exact_solver_max_branches)
     DoneExploring = true;
 
   return (DoneExploring || BestCost == 0);
@@ -692,7 +665,7 @@ void PipelineSolver::populateReadyList(
     });
     assert(Match);
 
-    if (UseCostHeur) {
+    if (CLOpts.igrouplp_exact_solver_cost_heur) {
       if (Match->isFull()) {
         ReadyList.push_back(std::pair(*I, MissPenalty));
         continue;
@@ -705,7 +678,7 @@ void PipelineSolver::populateReadyList(
       ReadyList.push_back(std::pair(*I, -1));
   }
 
-  if (UseCostHeur)
+  if (CLOpts.igrouplp_exact_solver_cost_heur)
     std::sort(ReadyList.begin(), ReadyList.end(), llvm::less_second());
 
   assert(ReadyList.size() == CurrSU.second.size());
@@ -914,11 +887,12 @@ void PipelineSolver::solve() {
   unsigned ProblemSize = computeProblemSize();
   assert(ProblemSize > 0);
 
-  bool BelowCutoff = (CutoffForExact > 0) && ProblemSize <= CutoffForExact;
+  bool BelowCutoff = (CLOpts.igrouplp_exact_solver_cutoff > 0) &&
+                     ProblemSize <= CLOpts.igrouplp_exact_solver_cutoff;
   MissPenalty = (ProblemSize / 2) + 1;
 
   LLVM_DEBUG(DAG->dump());
-  if (EnableExactSolver || BelowCutoff) {
+  if (CLOpts.igrouplp_exact_solver || BelowCutoff) {
     LLVM_DEBUG(dbgs() << "Starting Greedy pipeline solver\n");
     solveGreedy();
     reset();
@@ -946,6 +920,47 @@ protected:
 
   const SIInstrInfo *TII;
 
+  // The IGLP_OPT instruction that selected this strategy. Operand 0 is the
+  // strategy ID. Strategies that need results of the pre-RA DAG analysis in
+  // later scheduling phases store them as additional immediate operands (see
+  // setIGLPOptData), so they stay attached to this IGLP_OPT and are serialized
+  // with the MIR.
+  MachineInstr *IGLPOptMI;
+
+  /// Returns true if IGLPOptMI holds \p NumValues analysis data values.
+  bool hasIGLPOptData(unsigned NumValues) const {
+    return IGLPOptMI->getNumOperands() == NumValues + 1 &&
+           all_of(drop_begin(IGLPOptMI->operands()),
+                  [](const MachineOperand &MO) { return MO.isImm(); });
+  }
+
+  /// Replace the analysis data stored on IGLPOptMI with \p Data.
+  void setIGLPOptData(ArrayRef<int64_t> Data) {
+    // Overwrite the values in place if an earlier scheduling stage already
+    // stored the same number of values.
+    if (hasIGLPOptData(Data.size())) {
+      for (auto [MO, V] : zip_equal(drop_begin(IGLPOptMI->operands()), Data))
+        MO.setImm(V);
+      return;
+    }
+    while (IGLPOptMI->getNumOperands() > 1)
+      IGLPOptMI->removeOperand(IGLPOptMI->getNumOperands() - 1);
+    for (int64_t V : Data)
+      IGLPOptMI->addOperand(MachineOperand::CreateImm(V));
+  }
+
+  /// Returns the \p NumValues analysis data values stored on IGLPOptMI, or
+  /// std::nullopt if there are none.
+  template <unsigned NumValues>
+  std::optional<std::array<int64_t, NumValues>> getIGLPOptData() const {
+    if (!hasIGLPOptData(NumValues))
+      return std::nullopt;
+    std::array<int64_t, NumValues> Data;
+    for (auto [V, MO] : zip_equal(Data, drop_begin(IGLPOptMI->operands())))
+      V = MO.getImm();
+    return Data;
+  }
+
 public:
   /// Add SchedGroups to \p SyncedSchedGroups to implement this Strategy.
   virtual bool applyIGLPStrategy(
@@ -959,8 +974,9 @@ public:
 
   bool IsBottomUp = true;
 
-  IGLPStrategy(ScheduleDAGInstrs *DAG, const SIInstrInfo *TII)
-      : DAG(DAG), TII(TII) {}
+  IGLPStrategy(ScheduleDAGInstrs *DAG, const SIInstrInfo *TII,
+               MachineInstr *IGLPOptMI)
+      : DAG(DAG), TII(TII), IGLPOptMI(IGLPOptMI) {}
 
   virtual ~IGLPStrategy() = default;
 };
@@ -978,8 +994,9 @@ public:
     return true;
   }
 
-  MFMASmallGemmOpt(ScheduleDAGInstrs *DAG, const SIInstrInfo *TII)
-      : IGLPStrategy(DAG, TII) {
+  MFMASmallGemmOpt(ScheduleDAGInstrs *DAG, const SIInstrInfo *TII,
+                   MachineInstr *IGLPOptMI)
+      : IGLPStrategy(DAG, TII, IGLPOptMI) {
     IsBottomUp = true;
   }
 };
@@ -1012,29 +1029,58 @@ bool MFMASmallGemmOpt::applyIGLPStrategy(
 class MFMAExpInterleaveOpt final : public IGLPStrategy {
 private:
   // The count of TRANS SUs involved in the interleaved pipeline
-  static unsigned TransPipeCount;
+  unsigned TransPipeCount = 0;
   // The count of MFMA SUs involved in the interleaved pipeline
-  static unsigned MFMAPipeCount;
+  unsigned MFMAPipeCount = 0;
   // The count of Add SUs involved in the interleaved pipeline
-  static unsigned AddPipeCount;
+  unsigned AddPipeCount = 0;
   // The number of transitive MFMA successors for each TRANS SU
-  static unsigned MFMAEnablement;
+  unsigned MFMAEnablement = 0;
   // The number of transitive TRANS predecessors for each MFMA SU
-  static unsigned ExpRequirement;
+  unsigned ExpRequirement = 0;
   // The count of independent "chains" of MFMA instructions in the pipeline
-  static unsigned MFMAChains;
+  unsigned MFMAChains = 0;
   // Whether or not the pipeline has V_CVT instructions
-  static bool HasCvt;
+  bool HasCvt = false;
   // Whether or not there are instructions between the TRANS instruction and
   // V_CVT
-  static bool HasChainBetweenCvt;
+  bool HasChainBetweenCvt = false;
   // The first occuring DS_READ which feeds an MFMA chain
-  static std::optional<unsigned> FirstPipeDSR;
+  std::optional<unsigned> FirstPipeDSR;
   // The MFMAPipe SUs with no MFMA predecessors
   SmallVector<SUnit *, 4> MFMAChainSeeds;
-  // Compute the heuristics for the pipeline, returning whether or not the DAG
-  // is well formatted for the mutation
+  // Compute the analysis data for the pipeline, returning whether or not the
+  // DAG is well formatted for the mutation
   bool analyzeDAG(const SIInstrInfo *TII);
+
+  // The number of analysis data values stored on the IGLP_OPT by
+  // storeAnalysisData.
+  static constexpr unsigned NumAnalysisValues = 8;
+  // Store the analysis data on the IGLP_OPT for PostRA scheduling, where the
+  // DAG dependencies differ and the analysis cannot be repeated.
+  void storeAnalysisData() {
+    setIGLPOptData({TransPipeCount, MFMAPipeCount, AddPipeCount, MFMAEnablement,
+                    ExpRequirement, MFMAChains, HasCvt, HasChainBetweenCvt});
+  }
+  // Load the analysis data stored by storeAnalysisData. Returns false if there
+  // is none, i.e. the pre-RA analysis did not run or failed.
+  bool loadAnalysisData() {
+    std::optional<std::array<int64_t, NumAnalysisValues>> Data =
+        getIGLPOptData<NumAnalysisValues>();
+    if (!Data)
+      return false;
+    TransPipeCount = (*Data)[0];
+    MFMAPipeCount = (*Data)[1];
+    AddPipeCount = (*Data)[2];
+    MFMAEnablement = (*Data)[3];
+    ExpRequirement = (*Data)[4];
+    MFMAChains = (*Data)[5];
+    HasCvt = (*Data)[6];
+    HasChainBetweenCvt = (*Data)[7];
+    assert(TransPipeCount > 0 && MFMAPipeCount > 0 && MFMAChains > 0 &&
+           "guaranteed by a successful analyzeDAG");
+    return true;
+  }
 
   /// Whether or not the instruction is a transitive predecessor of an MFMA
   /// instruction
@@ -1439,21 +1485,12 @@ public:
   bool shouldApplyStrategy(ScheduleDAGInstrs *DAG,
                            AMDGPU::SchedulingPhase Phase) override;
 
-  MFMAExpInterleaveOpt(ScheduleDAGInstrs *DAG, const SIInstrInfo *TII)
-      : IGLPStrategy(DAG, TII) {
+  MFMAExpInterleaveOpt(ScheduleDAGInstrs *DAG, const SIInstrInfo *TII,
+                       MachineInstr *IGLPOptMI)
+      : IGLPStrategy(DAG, TII, IGLPOptMI) {
     IsBottomUp = false;
   }
 };
-
-unsigned MFMAExpInterleaveOpt::TransPipeCount = 0;
-unsigned MFMAExpInterleaveOpt::MFMAPipeCount = 0;
-unsigned MFMAExpInterleaveOpt::AddPipeCount = 0;
-unsigned MFMAExpInterleaveOpt::MFMAEnablement = 0;
-unsigned MFMAExpInterleaveOpt::ExpRequirement = 0;
-unsigned MFMAExpInterleaveOpt::MFMAChains = 0;
-bool MFMAExpInterleaveOpt::HasCvt = false;
-bool MFMAExpInterleaveOpt::HasChainBetweenCvt = false;
-std::optional<unsigned> MFMAExpInterleaveOpt::FirstPipeDSR = std::nullopt;
 
 bool MFMAExpInterleaveOpt::analyzeDAG(const SIInstrInfo *TII) {
   SmallVector<SUnit *, 10> ExpPipeCands;
@@ -1472,7 +1509,6 @@ bool MFMAExpInterleaveOpt::analyzeDAG(const SIInstrInfo *TII) {
 
   auto isAdd = [](unsigned Opc) { return Opc == AMDGPU::V_ADD_F32_e32; };
 
-  AddPipeCount = 0;
   for (SUnit &SU : DAG->SUnits) {
     auto Opc = SU.getInstr()->getOpcode();
     if (TII->isTRANS(Opc)) {
@@ -1501,8 +1537,6 @@ bool MFMAExpInterleaveOpt::analyzeDAG(const SIInstrInfo *TII) {
 
   if (!(PackSUs.size() && MFMAPipeCands.size() && ExpPipeCands.size()))
     return false;
-
-  TransPipeCount = 0;
 
   std::optional<SUnit *> TempMFMA;
   std::optional<SUnit *> TempExp;
@@ -1557,7 +1591,6 @@ bool MFMAExpInterleaveOpt::analyzeDAG(const SIInstrInfo *TII) {
     }
   }
 
-  HasCvt = false;
   if (TempCvt.has_value()) {
     for (auto &SuccSU : MFMAPipeSUs) {
       if (DAG->IsReachable(SuccSU, *TempCvt)) {
@@ -1567,7 +1600,6 @@ bool MFMAExpInterleaveOpt::analyzeDAG(const SIInstrInfo *TII) {
     }
   }
 
-  MFMAChains = 0;
   for (auto &MFMAPipeSU : MFMAPipeSUs) {
     if (is_contained(MFMAChainSeeds, MFMAPipeSU))
       continue;
@@ -1609,8 +1641,6 @@ bool MFMAExpInterleaveOpt::analyzeDAG(const SIInstrInfo *TII) {
   if (PackPred == (*TempMFMA)->Preds.end())
     return false;
 
-  MFMAEnablement = 0;
-  ExpRequirement = 0;
   // How many MFMAs depend on a single bit pack operation
   MFMAEnablement = static_cast<unsigned>(
       llvm::count_if(PackPred->getSUnit()->Succs, [&TII](SDep &Succ) {
@@ -1635,11 +1665,16 @@ bool MFMAExpInterleaveOpt::shouldApplyStrategy(ScheduleDAGInstrs *DAG,
   const GCNSubtarget &ST = DAG->MF.getSubtarget<GCNSubtarget>();
   const SIInstrInfo *TII = ST.getInstrInfo();
 
-  if (Phase != AMDGPU::SchedulingPhase::PostRA)
-    MFMAChainSeeds.clear();
-  if (Phase != AMDGPU::SchedulingPhase::PostRA && !analyzeDAG(TII))
-    return false;
+  if (Phase == AMDGPU::SchedulingPhase::PostRA)
+    return loadAnalysisData();
 
+  if (!analyzeDAG(TII)) {
+    // Drop analysis data stored by an earlier pre-RA stage.
+    setIGLPOptData({});
+    return false;
+  }
+
+  storeAnalysisData();
   return true;
 }
 
@@ -1667,18 +1702,18 @@ bool MFMAExpInterleaveOpt::applyIGLPStrategy(
   unsigned CurrMFMAForTransPosition = 0;
 
   auto incrementTransPosition = [&MFMAChain, &PositionInChain,
-                                 &CurrMFMAForTransPosition]() {
+                                 &CurrMFMAForTransPosition, this]() {
     CurrMFMAForTransPosition += MFMAEnablement;
     PositionInChain = (CurrMFMAForTransPosition / MFMAChains);
     MFMAChain = CurrMFMAForTransPosition % MFMAChains;
   };
 
-  auto getNextTransPositionInChain = [&CurrMFMAForTransPosition]() {
+  auto getNextTransPositionInChain = [&CurrMFMAForTransPosition, this]() {
     auto TempMFMAForTrans = CurrMFMAForTransPosition + MFMAEnablement;
     return (TempMFMAForTrans / MFMAChains);
   };
 
-  auto getNextTransMFMAChain = [&CurrMFMAForTransPosition]() {
+  auto getNextTransMFMAChain = [&CurrMFMAForTransPosition, this]() {
     auto TempMFMAForTrans = CurrMFMAForTransPosition + MFMAEnablement;
     return TempMFMAForTrans % MFMAChains;
   };
@@ -1688,7 +1723,7 @@ bool MFMAExpInterleaveOpt::applyIGLPStrategy(
   unsigned PositionInChainForMFMA = 0;
 
   auto incrementMFMAPosition = [&CurrMFMAPosition, &MFMAChainForMFMA,
-                                &PositionInChainForMFMA]() {
+                                &PositionInChainForMFMA, this]() {
     ++CurrMFMAPosition;
     MFMAChainForMFMA = CurrMFMAPosition % MFMAChains;
     PositionInChainForMFMA = CurrMFMAPosition / MFMAChains;
@@ -1946,8 +1981,9 @@ public:
     return true;
   }
 
-  MFMAExpSimpleInterleaveOpt(ScheduleDAGInstrs *DAG, const SIInstrInfo *TII)
-      : IGLPStrategy(DAG, TII) {
+  MFMAExpSimpleInterleaveOpt(ScheduleDAGInstrs *DAG, const SIInstrInfo *TII,
+                             MachineInstr *IGLPOptMI)
+      : IGLPStrategy(DAG, TII, IGLPOptMI) {
     IsBottomUp = true;
   }
 };
@@ -2168,20 +2204,22 @@ public:
       DenseMap<int, SmallVector<SchedGroup, 4>> &SyncedSchedGroups,
       AMDGPU::SchedulingPhase Phase) override;
 
+  // The number of DS_WRITE counts stored on the IGLP_OPT in the Initial phase.
+  static constexpr unsigned NumDSWCounts = 3;
+
   bool shouldApplyStrategy(ScheduleDAGInstrs *DAG,
                            AMDGPU::SchedulingPhase Phase) override {
-    return true;
+    // The later phases need the DS_WRITE counts of the Initial phase.
+    return Phase == AMDGPU::SchedulingPhase::Initial ||
+           hasIGLPOptData(NumDSWCounts);
   }
 
-  MFMASmallGemmSingleWaveOpt(ScheduleDAGInstrs *DAG, const SIInstrInfo *TII)
-      : IGLPStrategy(DAG, TII) {
+  MFMASmallGemmSingleWaveOpt(ScheduleDAGInstrs *DAG, const SIInstrInfo *TII,
+                             MachineInstr *IGLPOptMI)
+      : IGLPStrategy(DAG, TII, IGLPOptMI) {
     IsBottomUp = false;
   }
 };
-
-static unsigned DSWCount = 0;
-static unsigned DSWWithPermCount = 0;
-static unsigned DSWWithSharedVMEMCount = 0;
 
 bool MFMASmallGemmSingleWaveOpt::applyIGLPStrategy(
     DenseMap<int, SUnitsToCandidateSGsMap> &SyncedInstrs,
@@ -2189,12 +2227,23 @@ bool MFMASmallGemmSingleWaveOpt::applyIGLPStrategy(
     AMDGPU::SchedulingPhase Phase) {
   unsigned MFMACount = 0;
   unsigned DSRCount = 0;
+  // The DS_WRITE counts are computed in the Initial phase and stored on the
+  // IGLP_OPT for the later phases.
+  unsigned DSWCount = 0;
+  unsigned DSWWithPermCount = 0;
+  unsigned DSWWithSharedVMEMCount = 0;
 
   bool IsInitial = Phase == AMDGPU::SchedulingPhase::Initial;
 
-  assert((!IsInitial || (DSWCount == 0 && DSWWithPermCount == 0 &&
-                         DSWWithSharedVMEMCount == 0)) &&
-         "DSWCounters should be zero in pre-RA scheduling!");
+  if (!IsInitial) {
+    std::optional<std::array<int64_t, NumDSWCounts>> Data =
+        getIGLPOptData<NumDSWCounts>();
+    assert(Data && "checked by shouldApplyStrategy");
+    DSWCount = (*Data)[0];
+    DSWWithPermCount = (*Data)[1];
+    DSWWithSharedVMEMCount = (*Data)[2];
+  }
+
   SmallVector<SUnit *, 6> DSWithPerms;
   for (auto &SU : DAG->SUnits) {
     auto *I = SU.getInstr();
@@ -2269,6 +2318,8 @@ bool MFMASmallGemmSingleWaveOpt::applyIGLPStrategy(
         Counted.push_back(*I);
       }
     }
+
+    setIGLPOptData({DSWCount, DSWWithPermCount, DSWWithSharedVMEMCount});
   }
 
   assert(DSWWithSharedVMEMCount <= DSWWithPermCount);
@@ -2430,16 +2481,16 @@ bool MFMASmallGemmSingleWaveOpt::applyIGLPStrategy(
 
 static std::unique_ptr<IGLPStrategy>
 createIGLPStrategy(IGLPStrategyID ID, ScheduleDAGInstrs *DAG,
-                   const SIInstrInfo *TII) {
+                   const SIInstrInfo *TII, MachineInstr *IGLPOptMI) {
   switch (ID) {
   case MFMASmallGemmOptID:
-    return std::make_unique<MFMASmallGemmOpt>(DAG, TII);
+    return std::make_unique<MFMASmallGemmOpt>(DAG, TII, IGLPOptMI);
   case MFMASmallGemmSingleWaveOptID:
-    return std::make_unique<MFMASmallGemmSingleWaveOpt>(DAG, TII);
+    return std::make_unique<MFMASmallGemmSingleWaveOpt>(DAG, TII, IGLPOptMI);
   case MFMAExpInterleaveID:
-    return std::make_unique<MFMAExpInterleaveOpt>(DAG, TII);
+    return std::make_unique<MFMAExpInterleaveOpt>(DAG, TII, IGLPOptMI);
   case MFMAExpSimpleInterleaveID:
-    return std::make_unique<MFMAExpSimpleInterleaveOpt>(DAG, TII);
+    return std::make_unique<MFMAExpSimpleInterleaveOpt>(DAG, TII, IGLPOptMI);
   }
 
   llvm_unreachable("Unknown IGLPStrategyID");
@@ -2814,7 +2865,7 @@ void IGroupLPDAGMutation::initSchedGroupBarrierPipelineStage(
 bool IGroupLPDAGMutation::initIGLPOpt(SUnit &SU) {
   IGLPStrategyID StrategyID =
       (IGLPStrategyID)SU.getInstr()->getOperand(0).getImm();
-  auto S = createIGLPStrategy(StrategyID, DAG, TII);
+  auto S = createIGLPStrategy(StrategyID, DAG, TII, SU.getInstr());
   if (!S->shouldApplyStrategy(DAG, Phase))
     return false;
 

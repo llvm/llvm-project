@@ -1,0 +1,85 @@
+// RUN: cir-opt %s -verify-roundtrip | FileCheck %s
+// RUN: cir-opt %s --emit-bytecode | llvm-strings \
+// RUN:   | FileCheck %s --check-prefix=NATIVE
+// RUN: cir-opt %s --emit-bytecode | cir-opt | FileCheck %s
+
+// Round-trip the non-recursive CIR types.
+//
+// Check no type is string-encoded in the blob. Struct and union types still
+// use the fallback, so the only one is the class of the member pointers.
+// NATIVE-NOT: !cir.
+// NATIVE: !cir.struct<"S" incomplete>
+// NATIVE-NOT: !cir.
+
+!s8i = !cir.int<s, 8>
+!u8i = !cir.int<u, 8>
+!s32i = !cir.int<s, 32>
+!u32i = !cir.int<u, 32>
+!s64i = !cir.int<s, 64>
+!rec_S = !cir.struct<"S" incomplete>
+
+module {
+  // Width, signedness and _BitInt are independent parameters.
+  cir.func private @ints(!u8i, !s32i, !s64i, !cir.int<s, 13, bitint>,
+                         !cir.int<u, 128, bitint>)
+
+  cir.func private @floats(!cir.float, !cir.double, !cir.f16, !cir.bf16,
+                           !cir.f80, !cir.f128, !cir.long_double<!cir.double>,
+                           !cir.long_double<!cir.f80>,
+                           !cir.long_double<!cir.f128>)
+
+  cir.func private @scalars(!cir.bool, !cir.vptr) -> !cir.bool
+
+  cir.func private @ptrs(!cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!u8i>>,
+                         !cir.ptr<!s32i, target_address_space(1)>,
+                         !cir.ptr<!s32i, lang_address_space(offload_global)>)
+
+  cir.func private @arrays(!cir.array<!s32i x 4>,
+                           !cir.array<!cir.array<!u8i x 3> x 5>,
+                           !cir.array<!cir.ptr<!s32i> x 2>)
+
+  cir.func private @complexes(!cir.complex<!cir.double>, !cir.complex<!s32i>)
+
+  // A void return has no return type, a variadic one has a flag.
+  cir.func private @funcs(
+      !cir.ptr<!cir.func<()>>,
+      !cir.ptr<!cir.func<(!s32i, ...) -> !s32i>>,
+      !cir.ptr<!cir.func<(!cir.ptr<!cir.func<(!s8i)>>) -> !cir.ptr<!s32i>>>)
+
+  // The size of a scalable vector is a minimum, so [4] and 4 must differ.
+  cir.func private @vectors(!cir.vector<4 x !s32i>, !cir.vector<[4] x !s32i>,
+                            !cir.vector<17 x !cir.bool>,
+                            !cir.vector<2 x !cir.double>)
+
+  cir.func private @matrices(!cir.matrix<2 x 3 x !cir.float>,
+                             !cir.matrix<3 x 2 x !s32i>)
+
+  // A zero-width bit-field has no storage type.
+  cir.func private @bitfields(
+      !cir.bitfield<!u32i, [#cir.bitfield_decl<!s32i, 4>,
+                            #cir.bitfield_decl<!s64i, 20>,
+                            #cir.bitfield_decl<!u32i, 3, unnamed>]>,
+      !cir.bitfield<[#cir.bitfield_decl<!s32i, 0, unnamed>]>,
+      !cir.bitfield<!cir.array<!u8i x 3>, [#cir.bitfield_decl<!cir.bool, 1>]>)
+
+  cir.func private @member_ptrs(
+      !cir.data_member<!s32i in !rec_S>,
+      !cir.method<!cir.func<(!s32i) -> !s32i> in !rec_S>,
+      !cir.method<!cir.func<()> in !rec_S>)
+
+  cir.func private @opaque(!cir.cuda_surface, !cir.cuda_texture, !cir.eh_token,
+                           !cir.cleanup_token, !cir.catch_token)
+}
+
+// CHECK: cir.func private @ints(!u8i, !s32i, !s64i, !cir.int<s, 13, bitint>, !u128i_bitint)
+// CHECK: cir.func private @floats(!cir.float, !cir.double, !cir.f16, !cir.bf16, !cir.f80, !cir.f128, !cir.long_double<!cir.double>, !cir.long_double<!cir.f80>, !cir.long_double<!cir.f128>)
+// CHECK: cir.func private @scalars(!cir.bool, !cir.vptr) -> !cir.bool
+// CHECK: cir.func private @ptrs(!cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!u8i>>, !cir.ptr<!s32i, target_address_space(1)>, !cir.ptr<!s32i, lang_address_space(offload_global)>)
+// CHECK: cir.func private @arrays(!cir.array<!s32i x 4>, !cir.array<!cir.array<!u8i x 3> x 5>, !cir.array<!cir.ptr<!s32i> x 2>)
+// CHECK: cir.func private @complexes(!cir.complex<!cir.double>, !cir.complex<!s32i>)
+// CHECK: cir.func private @funcs(!cir.ptr<!cir.func<()>>, !cir.ptr<!cir.func<(!s32i, ...) -> !s32i>>, !cir.ptr<!cir.func<(!cir.ptr<!cir.func<(!s8i)>>) -> !cir.ptr<!s32i>>>)
+// CHECK: cir.func private @vectors(!cir.vector<4 x !s32i>, !cir.vector<[4] x !s32i>, !cir.vector<17 x !cir.bool>, !cir.vector<2 x !cir.double>)
+// CHECK: cir.func private @matrices(!cir.matrix<2 x 3 x !cir.float>, !cir.matrix<3 x 2 x !s32i>)
+// CHECK: cir.func private @bitfields(!cir.bitfield<!u32i, [#cir.bitfield_decl<!s32i, 4>, #cir.bitfield_decl<!s64i, 20>, #cir.bitfield_decl<!u32i, 3, unnamed>]>, !cir.bitfield<[#cir.bitfield_decl<!s32i, 0, unnamed>]>, !cir.bitfield<!cir.array<!u8i x 3>, [#cir.bitfield_decl<!cir.bool, 1>]>)
+// CHECK: cir.func private @member_ptrs(!cir.data_member<!s32i in !rec_S>, !cir.method<!cir.func<(!s32i) -> !s32i> in !rec_S>, !cir.method<!cir.func<()> in !rec_S>)
+// CHECK: cir.func private @opaque(!cir.cuda_surface, !cir.cuda_texture, !cir.eh_token, !cir.cleanup_token, !cir.catch_token)

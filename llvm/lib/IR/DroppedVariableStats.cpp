@@ -27,36 +27,26 @@ DroppedVariableStats::DroppedVariableStats(bool DroppedVarStatsEnabled)
 
 void DroppedVariableStats::setup() {
   DebugVariablesStack.push_back({DenseMap<const Function *, DebugVariables>()});
-  InlinedAts.push_back({DenseMap<StringRef, DenseMap<VarID, DILocation *>>()});
 }
 
 void DroppedVariableStats::cleanup() {
   assert(!DebugVariablesStack.empty() &&
          "DebugVariablesStack shouldn't be empty!");
-  assert(!InlinedAts.empty() && "InlinedAts shouldn't be empty!");
   DebugVariablesStack.pop_back();
-  InlinedAts.pop_back();
 }
 
 void DroppedVariableStats::calculateDroppedStatsAndPrint(
-    DebugVariables &DbgVariables, StringRef FuncName, StringRef PassID,
-    StringRef FuncOrModName, StringRef PassLevel, const Function *Func) {
+    DebugVariables &DbgVariables, StringRef PassID, StringRef FuncOrModName,
+    StringRef PassLevel, const Function *Func) {
   unsigned DroppedCount = 0;
   DenseSet<VarID> &DebugVariablesBeforeSet = DbgVariables.DebugVariablesBefore;
   DenseSet<VarID> &DebugVariablesAfterSet = DbgVariables.DebugVariablesAfter;
-  auto It = InlinedAts.back().find(FuncName);
-  if (It == InlinedAts.back().end())
-    return;
-  DenseMap<VarID, DILocation *> &InlinedAtsMap = It->second;
-  // Find an Instruction that shares the same scope as the dropped #dbg_value
-  // or has a scope that is the child of the scope of the #dbg_value, and has
-  // an inlinedAt equal to the inlinedAt of the #dbg_value or it's inlinedAt
-  // chain contains the inlinedAt of the #dbg_value, if such an Instruction is
-  // found, debug information is dropped.
+  // A variable is considered dropped if an instruction remains at which a
+  // debugger could observe it.
   for (VarID Var : DebugVariablesBeforeSet) {
     if (DebugVariablesAfterSet.contains(Var))
       continue;
-    visitEveryInstruction(DroppedCount, InlinedAtsMap, Var);
+    visitEveryInstruction(DroppedCount, Var);
     removeVarFromAllSets(Var, Func);
   }
   if (DroppedCount > 0) {
@@ -67,44 +57,29 @@ void DroppedVariableStats::calculateDroppedStatsAndPrint(
     PassDroppedVariables = false;
 }
 
-bool DroppedVariableStats::updateDroppedCount(
-    DILocation *DbgLoc, const DIScope *Scope, const DIScope *DbgValScope,
-    DenseMap<VarID, DILocation *> &InlinedAtsMap, VarID Var,
-    unsigned &DroppedCount) {
-  // If the Scope is a child of, or equal to the DbgValScope and is inlined at
-  // the Var's InlinedAt location, return true to signify that the Var has
-  // been dropped.
-  if (isScopeChildOfOrEqualTo(Scope, DbgValScope))
-    if (isInlinedAtChildOfOrEqualTo(DbgLoc->getInlinedAt(),
-                                    InlinedAtsMap[Var])) {
-      // Found another instruction in the variable's scope, so there exists a
-      // break point at which the variable could be observed. Count it as
-      // dropped.
-      DroppedCount++;
-      return true;
-    }
-  return false;
+bool DroppedVariableStats::updateDroppedCount(const DILocation *DbgLoc,
+                                              VarID Var,
+                                              unsigned &DroppedCount) {
+  if (!isVarInScopeAt(DbgLoc, Var))
+    return false;
+  // Found another instruction in the variable's scope, so there exists a break
+  // point at which the variable could be observed. Count it as dropped.
+  DroppedCount++;
+  return true;
 }
 
-void DroppedVariableStats::run(DebugVariables &DbgVariables, StringRef FuncName,
-                               bool Before) {
+void DroppedVariableStats::run(DebugVariables &DbgVariables, bool Before) {
   auto &VarIDSet = (Before ? DbgVariables.DebugVariablesBefore
                            : DbgVariables.DebugVariablesAfter);
-  auto &InlinedAtsMap = InlinedAts.back();
-  if (Before)
-    InlinedAtsMap.try_emplace(FuncName, DenseMap<VarID, DILocation *>());
   VarIDSet = DenseSet<VarID>();
-  visitEveryDebugRecord(VarIDSet, InlinedAtsMap, FuncName, Before);
+  visitEveryDebugRecord(VarIDSet);
 }
 
-void DroppedVariableStats::populateVarIDSetAndInlinedMap(
-    const DILocalVariable *DbgVar, DebugLoc DbgLoc, DenseSet<VarID> &VarIDSet,
-    DenseMap<StringRef, DenseMap<VarID, DILocation *>> &InlinedAtsMap,
-    StringRef FuncName, bool Before) {
-  VarID Key{DbgVar->getScope(), DbgLoc->getInlinedAtScope(), DbgVar};
-  VarIDSet.insert(Key);
-  if (Before)
-    InlinedAtsMap[FuncName].try_emplace(Key, DbgLoc.getInlinedAt());
+void DroppedVariableStats::populateVarIDSet(const DILocalVariable *DbgVar,
+                                            DebugLoc DbgLoc,
+                                            DenseSet<VarID> &VarIDSet) {
+  VarIDSet.insert(DebugVariableAggregate(
+      DebugVariable(DbgVar, std::nullopt, DbgLoc.getInlinedAt())));
 }
 
 void DroppedVariableStats::removeVarFromAllSets(VarID Var, const Function *F) {
@@ -115,33 +90,22 @@ void DroppedVariableStats::removeVarFromAllSets(VarID Var, const Function *F) {
 }
 
 bool DroppedVariableStats::isScopeChildOfOrEqualTo(const DIScope *Scope,
-                                                   const DIScope *DbgValScope) {
+                                                   const DIScope *VarScope) {
   while (Scope != nullptr) {
-    if (VisitedScope.insert(Scope).second) {
-      if (Scope == DbgValScope) {
-        VisitedScope.clear();
-        return true;
-      }
-      Scope = Scope->getScope();
-    } else {
-      VisitedScope.clear();
-      return false;
-    }
+    if (Scope == VarScope)
+      return true;
+    Scope = Scope->getScope();
   }
   return false;
 }
 
-bool DroppedVariableStats::isInlinedAtChildOfOrEqualTo(
-    const DILocation *InlinedAt, const DILocation *DbgValInlinedAt) {
-  if (DbgValInlinedAt == InlinedAt)
-    return true;
-  if (!DbgValInlinedAt)
-    return false;
-  auto *IA = InlinedAt;
-  while (IA) {
-    if (IA == DbgValInlinedAt)
-      return true;
-    IA = IA->getInlinedAt();
-  }
+bool DroppedVariableStats::isVarInScopeAt(const DILocation *Loc, VarID Var) {
+  // Loc and the call sites in its inlinedAt chain are the frames a debugger
+  // stopped at Loc can see. Var can only be in the frame of its own
+  // inlined instance.
+  for (const DILocation *Frame = Loc; Frame; Frame = Frame->getInlinedAt())
+    if (Frame->getInlinedAt() == Var.getInlinedAt())
+      return isScopeChildOfOrEqualTo(Frame->getScope(),
+                                     Var.getVariable()->getScope());
   return false;
 }

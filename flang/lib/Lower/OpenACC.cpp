@@ -141,6 +141,10 @@ createDataEntryOp(fir::FirOpBuilder &builder, mlir::Location loc,
                   bool unwrapBoxAddr = false, mlir::Value isPresent = {},
                   mlir::acc::DataClauseModifier modifiers =
                       mlir::acc::DataClauseModifier::none) {
+  if (mlir::isa<fir::BoxCharType>(baseAddr.getType()))
+    TODO(loc, "OpenACC mapping of scalar CHARACTER variable with "
+              "runtime-determined length or host association");
+
   mlir::Value varPtrPtr;
   llvm::SmallVector<mlir::Value, 8> operands;
   llvm::SmallVector<int32_t, 8> operandSegments;
@@ -887,17 +891,16 @@ static void genDataOperandOperations(
             /*loadAllocatableAndPointerComponent=*/false);
     LLVM_DEBUG(llvm::dbgs() << __func__ << "\n"; info.dump(llvm::dbgs()));
 
-    // If the input value is optional and is not a descriptor, we use the
-    // rawInput directly.
+    // An OPTIONAL whose base is not an acc pointer-like or mappable type
+    // (e.g. a fir.boxchar for CHARACTER(*)) is mapped through its raw address.
     // For privatization, absent OPTIONAL are illegal as per OpenACC 3.3
     // section 2.17.1 and the descriptor must be used to drive the creation of
     // the temporary and the copy.
-    mlir::Value baseAddr = (!isPrivate &&
-                            (fir::unwrapRefType(info.addr.getType()) !=
-                             fir::unwrapRefType(info.rawInput.getType())) &&
-                            info.isPresent)
-                               ? info.rawInput
-                               : info.addr;
+    mlir::Value baseAddr = info.addr;
+    if (!isPrivate && info.isPresent &&
+        !mlir::isa<mlir::acc::PointerLikeType, mlir::acc::MappableType>(
+            baseAddr.getType()))
+      baseAddr = info.rawInput;
 
     Op op = createDataEntryOp<Op>(
         builder, operandLocation, baseAddr, asFortran, bounds, structured,
@@ -1558,25 +1561,25 @@ mlir::Type getTypeFromIvTypeSize(fir::FirOpBuilder &builder,
   return builder.getIntegerType(ivTypeSize * 8);
 }
 
-// Lower one DO control (lower, upper, or step).
-//
-// An implicit acc.loop is a DO inside a compute construct with no `!$acc loop`.
-// A non-integer control is a Fortran extension; convert it to the induction
-// variable's integer type, matching non-OpenACC lowering. An integer control,
-// of any kind, is already a legal acc.loop operand and is left unchanged.
-// An explicit `!$acc loop` keeps every control expression's own type.
-// OpenACC requires those bounds to be integer.
+// Lower one DO control (lower, upper, or step). The loop parameters have the
+// induction variable's kind (F2023 11.1.7.4.1), so convert a control whose
+// type differs. A non-integer control is a Fortran extension used by an
+// implicit acc.loop. An explicit !$acc loop with a non-integer bound is
+// rejected in semantics and must not reach here.
 static mlir::Value genACCLoopControlValue(
     Fortran::lower::AbstractConverter &converter, fir::FirOpBuilder &builder,
     mlir::Location loc, Fortran::lower::StatementContext &stmtCtx,
     const Fortran::lower::SomeExpr &expr,
     const Fortran::semantics::Symbol &ivSym, bool hasDirective) {
+  mlir::Type ivTy = getTypeFromIvTypeSize(builder, ivSym);
   mlir::Value value = fir::getBase(converter.genExprValue(expr, stmtCtx));
-  if (hasDirective || mlir::isa<mlir::IntegerType>(value.getType()) ||
-      value.getType().isIndex())
+  if (value.getType() == ivTy)
     return value;
-  return builder.createConvert(loc, getTypeFromIvTypeSize(builder, ivSym),
-                               value);
+  if (!mlir::isa<mlir::IntegerType>(value.getType()) &&
+      !value.getType().isIndex())
+    assert(!hasDirective &&
+           "non-integer OpenACC loop bound should have been rejected");
+  return builder.createConvert(loc, ivTy, value);
 }
 
 static void privatizeIv(
@@ -1810,7 +1813,8 @@ static void visitLoopControl(
     Fortran::lower::AbstractConverter &converter,
     const Fortran::parser::DoConstruct &outerDoConstruct,
     uint64_t loopsToProcess, Fortran::lower::pft::Evaluation &eval,
-    std::function<void(const Fortran::parser::LoopControl::Bounds &,
+    std::function<void(const Fortran::parser::DoConstruct &,
+                       const Fortran::parser::LoopControl::Bounds &,
                        mlir::Location)>
         callback,
     bool markInnerCollapsed = true) {
@@ -1821,7 +1825,8 @@ static void visitLoopControl(
       loopControl = &*outerDoConstruct.GetLoopControl();
       mlir::Location loc = converter.genLocation(
           Fortran::parser::FindSourceLocation(outerDoConstruct));
-      callback(std::get<Fortran::parser::LoopControl::Bounds>(loopControl->u),
+      callback(outerDoConstruct,
+               std::get<Fortran::parser::LoopControl::Bounds>(loopControl->u),
                loc);
     } else {
       // Safely locate the next inner DoConstruct within this eval, skipping
@@ -1847,7 +1852,8 @@ static void visitLoopControl(
       if (innerDo->IsDoConcurrent())
         TODO(loc, "OpenACC LOOP with nested DO CONCURRENT");
       loopControl = &*innerDo->GetLoopControl();
-      callback(std::get<Fortran::parser::LoopControl::Bounds>(loopControl->u),
+      callback(*innerDo,
+               std::get<Fortran::parser::LoopControl::Bounds>(loopControl->u),
                loc);
     }
   }
@@ -2036,9 +2042,9 @@ static void processDoLoopBounds(
         steps.push_back(genACCLoopControlValue(
             converter, builder, currentLocation, stmtCtx,
             *Fortran::semantics::GetExpr(*expr), ivSym, hasDirective));
-      else // If `step` is not present, assume it is `1`.
+      else // Absent step is 1 of the induction variable's kind.
         steps.push_back(builder.createIntegerConstant(
-            currentLocation, upperbounds.back().getType(), 1));
+            currentLocation, getTypeFromIvTypeSize(builder, ivSym), 1));
 
       privatizeIv(converter, ivSym, currentLocation, ivTypes, ivLocs,
                   privateOperands, ivPrivate, isDoConcurrent);
@@ -2067,7 +2073,8 @@ static void processDoLoopBounds(
   } else {
     visitLoopControl(
         converter, outerDoConstruct, loopsToProcess, eval,
-        [&](const Fortran::parser::LoopControl::Bounds &bounds,
+        [&](const Fortran::parser::DoConstruct &,
+            const Fortran::parser::LoopControl::Bounds &bounds,
             mlir::Location loc) {
           locs.push_back(loc);
           Fortran::semantics::Symbol &ivSym =
@@ -2084,9 +2091,9 @@ static void processDoLoopBounds(
             steps.push_back(genACCLoopControlValue(
                 converter, builder, loc, stmtCtx,
                 *Fortran::semantics::GetExpr(step), ivSym, hasDirective));
-          else // If `step` is not present, assume it is `1`.
+          else // Absent step is 1 of the induction variable's kind.
             steps.push_back(builder.createIntegerConstant(
-                currentLocation, upperbounds.back().getType(), 1));
+                currentLocation, getTypeFromIvTypeSize(builder, ivSym), 1));
           privatizeIv(converter, ivSym, currentLocation, ivTypes, ivLocs,
                       privateOperands, ivPrivate);
 
@@ -2154,29 +2161,17 @@ void AccDataMap::remapDataOperandSymbols(
     // Note: this will instantiate all common block members even if they are not
     // used inside the region. If hlfir.declare DCE is not made possible, this
     // could be improved to reduce IR noise.
-    if (const auto *commonBlock = symbol->template detailsIf<
-                                  Fortran::semantics::CommonBlockDetails>()) {
+    if (symbol->template has<Fortran::semantics::CommonBlockDetails>()) {
       // Common block members keep their host binding; only whole objects get
       // an alternate device binding.
       if (deviceBindingsOnly)
         continue;
-      const Fortran::semantics::Scope &commonScope = symbol->owner();
-      if (commonScope.equivalenceSets().empty()) {
-        for (auto member : commonBlock->objects())
-          remapCommonBlockMember(converter, loc, *member, value, *symbol,
-                                 seenSymbols);
-      } else {
-        // Objects equivalenced with common block members still belong to the
-        // common block storage even if they are not part of the common block
-        // declaration. The easiest and most robust way to find all symbols
-        // belonging to the common block is to loop through the scope symbols
-        // and check if they belong to the common.
-        for (const auto &scopeSymbol : commonScope)
-          if (Fortran::semantics::FindCommonBlockContaining(
-                  *scopeSymbol.second) == &symbol.get())
-            remapCommonBlockMember(converter, loc, *scopeSymbol.second, value,
-                                   *symbol, seenSymbols);
-      }
+      // Objects EQUIVALENCEd with common block members belong to the block's
+      // storage too, even though no COMMON statement names them.
+      for (const Fortran::semantics::Symbol *member :
+           Fortran::lower::getCommonBlockStorageMembers(*symbol))
+        remapCommonBlockMember(converter, loc, *member, value, *symbol,
+                               seenSymbols);
       continue;
     }
     std::optional<fir::FortranVariableOpInterface> hostDef =
@@ -2204,15 +2199,47 @@ void AccDataMap::remapDataOperandSymbols(
     mlir::Value hostInput = hostDeclare.getMemref();
     mlir::Type hostType = hostInput.getType();
     mlir::Type computeType = value.getType();
+    auto hostBoxType = llvm::dyn_cast<fir::BaseBoxType>(hostType);
+    auto computeBoxType = llvm::dyn_cast<fir::BaseBoxType>(computeType);
     if (hostType == computeType) {
       mapper.map(hostInput, value);
-    } else if (llvm::isa<fir::BaseBoxType>(computeType)) {
+    } else if (hostBoxType && computeBoxType &&
+               hostBoxType.getBoxTypeWithNewAttr(
+                   fir::BaseBoxType::Attribute::None) ==
+                   computeBoxType.getBoxTypeWithNewAttr(
+                       fir::BaseBoxType::Attribute::None)) {
+      // The host declare input may describe an allocatable or pointer while
+      // the declared variable does not (e.g. a SELECT TYPE associate name with
+      // an allocatable or pointer selector). hlfir.declare drops that from its
+      // results, so the data operation result can be declared directly.
+      mapper.map(hostInput, value);
+    } else if (computeBoxType) {
       assert(!llvm::isa<fir::BaseBoxType>(hostType) &&
              "box type mismatch between compute region variable and "
              "hlfir.declare input unexpected");
-      if (Fortran::semantics::IsOptional(symbol))
-        TODO(loc, "remapping OPTIONAL symbol in OpenACC compute region");
-      auto rawValue = fir::BoxAddrOp::create(builder, loc, hostType, value);
+      mlir::Value rawValue;
+      if (Fortran::semantics::IsOptional(symbol)) {
+        // An absent OPTIONAL is a null descriptor: fir.box_addr must not
+        // read it.
+        mlir::Value box = value;
+        mlir::Value isPresent =
+            fir::IsPresentOp::create(builder, loc, builder.getI1Type(), box);
+        rawValue =
+            builder.genIfOp(loc, {hostType}, isPresent, /*withElseRegion=*/true)
+                .genThen([&]() {
+                  mlir::Value addr =
+                      fir::BoxAddrOp::create(builder, loc, hostType, box);
+                  fir::ResultOp::create(builder, loc, addr);
+                })
+                .genElse([&]() {
+                  mlir::Value absent =
+                      fir::AbsentOp::create(builder, loc, hostType);
+                  fir::ResultOp::create(builder, loc, absent);
+                })
+                .getResults()[0];
+      } else {
+        rawValue = fir::BoxAddrOp::create(builder, loc, hostType, value);
+      }
       mapper.map(hostInput, rawValue);
     } else {
       assert(!llvm::isa<fir::BaseBoxType>(hostType) &&
@@ -2278,6 +2305,24 @@ void AccDataMap::remapDataOperandSymbols(
   }
 }
 
+/// The DOs whose induction variables an unstructured acc.loop privatizes.
+/// privatizeInductionVariables records them; genOpenACCLoopFromDoConstruct then
+/// lowers them as plain control flow inside a seq acc.loop instead of reporting
+/// them as unstructured DOs whose induction variables nothing privatizes.
+static llvm::SmallPtrSet<const Fortran::parser::DoConstruct *, 8>
+    ivPrivatizedDoConstructs;
+
+void Fortran::lower::clearIvPrivatizedDoConstructs(
+    const Fortran::lower::pft::Evaluation &eval) {
+  if (!eval.evaluationList)
+    return;
+  for (const Fortran::lower::pft::Evaluation &nested : *eval.evaluationList) {
+    if (const auto *doConstruct = nested.getIf<Fortran::parser::DoConstruct>())
+      ivPrivatizedDoConstructs.erase(doConstruct);
+    clearIvPrivatizedDoConstructs(nested);
+  }
+}
+
 static void privatizeInductionVariables(
     Fortran::lower::AbstractConverter &converter,
     mlir::Location currentLocation,
@@ -2302,13 +2347,15 @@ static void privatizeInductionVariables(
   // assertion.
   visitLoopControl(
       converter, outerDoConstruct, loopsToProcess, eval,
-      [&](const Fortran::parser::LoopControl::Bounds &bounds,
+      [&](const Fortran::parser::DoConstruct &doConstruct,
+          const Fortran::parser::LoopControl::Bounds &bounds,
           mlir::Location loc) {
         locs.push_back(loc);
         Fortran::semantics::Symbol &ivSym =
             bounds.Name().thing.symbol->GetUltimate();
         privatizeIv(converter, ivSym, currentLocation, ivTypes, ivLocs,
                     privateOperands, ivPrivate);
+        ivPrivatizedDoConstructs.insert(&doConstruct);
       },
       /*markInnerCollapsed=*/false);
 }
@@ -2347,7 +2394,11 @@ buildACCLoopOp(Fortran::lower::AbstractConverter &converter,
   // Look at the do/do concurrent loops to extract bounds information unless
   // this loop is lowered in an unstructured fashion, in which case bounds are
   // not represented on acc.loop and explicit control flow is used inside body.
-  if (!eval.lowerAsUnstructured()) {
+  // A DO WHILE has no bounds either, even when it is lowered structurally (to
+  // scf.while): the whole loop is generated inside the body.
+  const bool boundsFree =
+      eval.lowerAsUnstructured() || outerDoConstruct.IsDoWhile();
+  if (!boundsFree) {
     processDoLoopBounds(converter, semanticsContext, currentLocation, stmtCtx,
                         builder, outerDoConstruct, eval, lowerbounds,
                         upperbounds, steps, privateOperands, ivPrivate, ivTypes,
@@ -2357,10 +2408,13 @@ buildACCLoopOp(Fortran::lower::AbstractConverter &converter,
   } else {
     // When the loop contains early exits, privatize induction variables, but do
     // not create acc.loop bounds. The control flow of the loop will be
-    // generated explicitly in the acc.loop body that is just a container.
-    privatizeInductionVariables(converter, currentLocation, outerDoConstruct,
-                                eval, privateOperands, ivPrivate, locs,
-                                loopsToProcess);
+    // generated explicitly in the acc.loop body that is just a container. Only
+    // a counted DO has a loop variable here: a DO WHILE has none, and a DO
+    // CONCURRENT cannot contain early exits.
+    if (outerDoConstruct.IsDoNormal())
+      privatizeInductionVariables(converter, currentLocation, outerDoConstruct,
+                                  eval, privateOperands, ivPrivate, locs,
+                                  loopsToProcess);
   }
   llvm::SmallVector<mlir::Value> operands;
   llvm::SmallVector<int32_t> operandSegments;
@@ -2411,7 +2465,7 @@ buildACCLoopOp(Fortran::lower::AbstractConverter &converter,
   for (auto &[hostAssocSym, ultimateSym] : localSymPairs)
     converter.copySymbolBinding(ultimateSym, hostAssocSym);
 
-  if (!eval.lowerAsUnstructured()) {
+  if (!boundsFree) {
     for (auto [arg, iv] :
          llvm::zip(loopOp.getLoopRegions().front()->front().getArguments(),
                    ivPrivate)) {
@@ -5711,6 +5765,16 @@ mlir::Operation *Fortran::lower::genOpenACCLoopFromDoConstruct(
   // to any OpenACC directives (e.g. `kernels` ops), it is just nested inside
   // the kernels region.
   if (eval.lowerAsUnstructured()) {
+    // A DO owned by an unstructured seq acc.loop is lowered as plain control
+    // flow inside that acc.loop, which privatizes its induction variable.
+    if (ivPrivatizedDoConstructs.contains(&doConstruct)) {
+      auto loopOp = converter.getFirOpBuilder()
+                        .getBlock()
+                        ->getParent()
+                        ->getParentOfType<mlir::acc::LoopOp>();
+      if (loopOp && loopOp.hasSeq())
+        return nullptr;
+    }
     if (mlir::isa_and_present<mlir::acc::KernelsOp>(
             mlir::acc::getEnclosingComputeOp(
                 converter.getFirOpBuilder().getRegion())) &&

@@ -94,7 +94,7 @@ exit:
   ret void
 }
 
-; CHECK: loop not vectorized: We can vectorize this loop with a compressstore or expandload, but vectorization support is not implemented yet.
+; CHECK: vectorization is not possible
 
 ; Negative test: In this case the %idx is incremented when %cond.val != 0,
 ; but the store occurs when %cond.val > 100. The store mask does not match the
@@ -139,7 +139,7 @@ exit:
   ret void
 }
 
-; CHECK: loop not vectorized: We can vectorize this loop with a compressstore or expandload, but vectorization support is not implemented yet.
+; CHECK: vectorization is not possible
 
 ; Negative test: Simple early exit loop with a compressstore. This fails in VPlan handling for early exits.
 ; Note: The conditional induction is legal (this loop is rejected in early exit VPlan transforms).
@@ -272,10 +272,9 @@ exit:
   ret void
 }
 
-; CHECK: loop not vectorized: We can vectorize this loop with a compressstore or expandload, but vectorization support is not implemented yet.
+; CHECK: vectorization is not possible
 
 ; Negative test: Lowering unpredicated loads/stores to compresstore/expandload is not supported yet.
-; Note: This passes basic legality checks, but is rejected in early VPlan transforms.
 define void @unpredicated_load_of_conditional_induction(ptr noalias %tab, ptr noalias %cond, ptr noalias %out, ptr noalias %flag, i64 %n) {
 entry:
   br label %for.body

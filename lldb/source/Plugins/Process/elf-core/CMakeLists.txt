@@ -2,15 +2,15 @@ add_lldb_library(lldbPluginProcessElfCore PLUGIN
   ProcessElfCore.cpp
   ThreadElfCore.cpp
   RegisterContextLinuxCore_x86.cpp
-  RegisterContextPOSIXCore_arm.cpp
-  RegisterContextPOSIXCore_arm64.cpp
-  RegisterContextPOSIXCore_powerpc.cpp
-  RegisterContextPOSIXCore_ppc64le.cpp
-  RegisterContextPOSIXCore_s390x.cpp
-  RegisterContextPOSIXCore_x86.cpp
-  RegisterContextPOSIXCore_riscv32.cpp
-  RegisterContextPOSIXCore_riscv64.cpp
-  RegisterContextPOSIXCore_loongarch64.cpp
+  RegisterContextELFCore_arm.cpp
+  RegisterContextELFCore_arm64.cpp
+  RegisterContextELFCore_powerpc.cpp
+  RegisterContextELFCore_ppc64le.cpp
+  RegisterContextELFCore_s390x.cpp
+  RegisterContextELFCore_x86.cpp
+  RegisterContextELFCore_riscv32.cpp
+  RegisterContextELFCore_riscv64.cpp
+  RegisterContextELFCore_loongarch64.cpp
   RegisterUtilities.cpp
 
   LINK_COMPONENTS

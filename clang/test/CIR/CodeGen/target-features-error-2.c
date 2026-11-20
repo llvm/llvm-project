@@ -17,8 +17,6 @@ int baz(__m256i a) {
 
 #if NEED_AVX_2
 __m128 need_avx(__m128 a, __m128 b) {
-  // expected-error@+2{{unimplemented X86 builtin call:}}
-  // expected-error@+1{{unimplemented builtin call:}}
   return _mm_cmp_ps(a, b, 8); // expected-error {{'__builtin_ia32_cmpps' needs target feature avx}}
 }
 #endif

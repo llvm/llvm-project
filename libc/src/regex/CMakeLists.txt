@@ -7,12 +7,11 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.regex_macros
     libc.hdr.types.regex_t
-    libc.src.__support.alloc_checker
-    libc.src.__support.CPP.new
-    libc.src.__support.CPP.scope
+    libc.src.__support.checked_ptr
     libc.src.__support.CPP.string_view
     libc.src.__support.error_or
     libc.src.__support.macros.null_check
+    libc.src.__support.regex.regex_expr_pool
     libc.src.__support.regex.regex_internal
     libc.src.__support.regex.regex_parser
 )
@@ -30,6 +29,7 @@ add_entrypoint_object(
     libc.hdr.types.size_t
     libc.src.__support.CPP.mutex
     libc.src.__support.CPP.string_view
+    libc.src.__support.libc_assert
     libc.src.__support.macros.null_check
     libc.src.__support.regex.regex_internal
     libc.src.__support.regex.regex_matcher
@@ -42,11 +42,11 @@ add_entrypoint_object(
   HDRS
     regerror.h
   DEPENDS
+    libc.hdr.regex_macros
     libc.hdr.types.regex_t
     libc.hdr.types.size_t
-    libc.hdr.regex_macros
-    libc.src.__support.common
     libc.src.__support.CPP.string_view
+    libc.src.__support.macros.null_check
     libc.src.string.memory_utils.inline_memcpy
 )
 

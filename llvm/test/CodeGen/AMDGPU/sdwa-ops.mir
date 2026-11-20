@@ -14,8 +14,6 @@
 ---
 name:            test1_add_co_sdwa
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: vgpr_32, preferred-register: '' }
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%0' }
   - { reg: '$sgpr0_sgpr1', virtual-reg: '%1' }
@@ -56,8 +54,6 @@ body:             |
 ---
 name:            test2_add_co_sdwa
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: vgpr_32, preferred-register: '' }
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%0' }
   - { reg: '$sgpr0_sgpr1', virtual-reg: '%1' }
@@ -98,8 +94,6 @@ body:             |
 ---
 name:            test3_add_co_sdwa
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: vgpr_32, preferred-register: '' }
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%0' }
   - { reg: '$sgpr0_sgpr1', virtual-reg: '%1' }
@@ -114,7 +108,8 @@ body:             |
     %4:vreg_64 = COPY $sgpr0_sgpr1
     %5:vgpr_32, %6:sreg_64_xexec = V_ADD_CO_U32_e64 %4.sub0, %3, 0, implicit $exec
     %7:vgpr_32, %8:sreg_64_xexec = V_ADDC_U32_e64 %4.sub1, %0, %6, 0, implicit $exec
-    %9:vreg_64 = REG_SEQUENCE %5, %subreg.sub0, %8, %subreg.sub1
+    %9:vreg_64 = REG_SEQUENCE %5, %subreg.sub0, %7, %subreg.sub1
+    S_NOP 0, implicit %8
     GLOBAL_STORE_DWORDX2_SADDR %4.sub0, %9, %1, 0, 0, implicit $exec, implicit $exec :: (store (s64))
 
 ...
@@ -128,8 +123,6 @@ body:             |
 ---
 name:            test4_add_co_sdwa
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: vgpr_32, preferred-register: '' }
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%0' }
   - { reg: '$sgpr0_sgpr1', virtual-reg: '%1' }
@@ -144,7 +137,8 @@ body:             |
     %4:vreg_64 = COPY $sgpr0_sgpr1
     %5:vgpr_32, %6:sreg_64_xexec = V_ADD_CO_U32_e64 %4.sub0, %3, 0, implicit $exec
     %7:vgpr_32, %8:sreg_64_xexec = V_ADDC_U32_e64 %4.sub1, %0, %6, 0, implicit $exec
-    %9:vreg_64 = REG_SEQUENCE %5, %subreg.sub0, %6, %subreg.sub1
+    %9:vreg_64 = REG_SEQUENCE %5, %subreg.sub0, %7, %subreg.sub1
+    S_NOP 0, implicit %6
     GLOBAL_STORE_DWORDX2_SADDR %4.sub0, %9, %1, 0, 0, implicit $exec, implicit $exec :: (store (s64))
 
 
@@ -157,8 +151,6 @@ body:             |
 ---
 name:            test5_add_co_sdwa
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: vgpr_32, preferred-register: '' }
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%0' }
   - { reg: '$sgpr0_sgpr1', virtual-reg: '%1' }
@@ -187,8 +179,6 @@ body:             |
 ---
 name:            test6_add_co_sdwa
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: vgpr_32, preferred-register: '' }
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%0' }
   - { reg: '$sgpr0_sgpr1', virtual-reg: '%1' }
@@ -216,8 +206,6 @@ body:             |
 ---
 name:            test7_add_co_sdwa
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: vgpr_32, preferred-register: '' }
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%0' }
   - { reg: '$sgpr0_sgpr1', virtual-reg: '%1' }
@@ -246,8 +234,6 @@ body:             |
 ---
 name:            test8_add_co_sdwa
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: vgpr_32, preferred-register: '' }
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%0' }
   - { reg: '$sgpr0_sgpr1', virtual-reg: '%1' }
@@ -277,8 +263,6 @@ body:             |
 ---
 name:            test9_add_co_sdwa
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: vgpr_32, preferred-register: '' }
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%0' }
   - { reg: '$sgpr0_sgpr1', virtual-reg: '%1' }
@@ -308,8 +292,6 @@ body:             |
 ---
 name:            test10_add_co_sdwa
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: vgpr_32, preferred-register: '' }
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%0' }
   - { reg: '$sgpr0_sgpr1', virtual-reg: '%1' }
@@ -339,8 +321,6 @@ body:             |
 ---
 name:            test11_add_co_sdwa
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: vgpr_32, preferred-register: '' }
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%0' }
   - { reg: '$sgpr0_sgpr1', virtual-reg: '%1' }
@@ -370,8 +350,6 @@ body:             |
 ---
 name:            test12_add_co_sdwa
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: vgpr_32, preferred-register: '' }
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%0' }
   - { reg: '$sgpr0_sgpr1', virtual-reg: '%1' }

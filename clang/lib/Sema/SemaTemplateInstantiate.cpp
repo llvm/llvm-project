@@ -1168,6 +1168,13 @@ void Sema::PrintInstantiationStack(InstantiationContextDiagFuncRef DiagFunc) {
         DiagFunc(Active->PointOfInstantiation,
                  PDiag(diag::note_comparison_synthesized_at)
                      << (int)DFK.asComparison() << RecordType);
+      } else if (DFK.isPostfixOperator()) {
+        // The declared return type of a defaulted postfix operator is the
+        // type for which it is defaulted.
+        DiagFunc(Active->PointOfInstantiation,
+                 PDiag(diag::note_postfix_operator_synthesized_at)
+                     << (int)DFK.asPostfixOperator()
+                     << FD->getReturnType().getUnqualifiedType());
       }
       break;
     }
@@ -3332,9 +3339,13 @@ ParmVarDecl *Sema::SubstParmVarDecl(
     CurrentInstantiationScope->InstantiatedLocal(OldParm, NewParm);
   }
 
-  // FIXME: OldParm may come from a FunctionProtoType, in which case CurContext
-  // can be anything, is this right ?
-  NewParm->setDeclContext(CurContext);
+  // A parameter that is not a function's own, such as one of a function
+  // pointer's pointee, belongs to no function (see ActOnParamDeclarator); keep
+  // it in the translation unit, where CheckParameter created it.
+  // FIXME: For other parameters from a FunctionProtoType, CurContext can be
+  // anything; is this right?
+  if (!OldParm->getDeclContext()->isTranslationUnit())
+    NewParm->setDeclContext(CurContext);
 
   NewParm->setScopeInfo(OldParm->getFunctionScopeDepth(),
                         OldParm->getFunctionScopeIndex() + indexAdjustment);

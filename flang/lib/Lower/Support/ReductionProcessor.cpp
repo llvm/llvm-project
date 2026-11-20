@@ -52,7 +52,8 @@ template bool ReductionProcessor::processReductionArguments<
     llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
     const llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSymbols,
     semantics::SemanticsContext *semaCtx,
-    llvm::DenseMap<const semantics::Symbol *, mlir::Value> *reductionVarCache);
+    llvm::DenseMap<const semantics::Symbol *, mlir::Value> *reductionVarCache,
+    bool *hasUserDefinedReduction);
 
 template bool ReductionProcessor::processReductionArguments<
     fir::DeclareReductionOp, llvm::SmallVector<fir::ReduceOperationEnum>>(
@@ -63,7 +64,8 @@ template bool ReductionProcessor::processReductionArguments<
     llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
     const llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSymbols,
     semantics::SemanticsContext *semaCtx,
-    llvm::DenseMap<const semantics::Symbol *, mlir::Value> *reductionVarCache);
+    llvm::DenseMap<const semantics::Symbol *, mlir::Value> *reductionVarCache,
+    bool *hasUserDefinedReduction);
 
 template mlir::omp::DeclareReductionOp
 ReductionProcessor::createDeclareReduction<mlir::omp::DeclareReductionOp>(
@@ -99,21 +101,21 @@ ReductionProcessor::ReductionIdentifier ReductionProcessor::getReductionType(
 }
 
 ReductionProcessor::ReductionIdentifier ReductionProcessor::getReductionType(
-    omp::clause::DefinedOperator::IntrinsicOperator intrinsicOp) {
-  switch (intrinsicOp) {
-  case omp::clause::DefinedOperator::IntrinsicOperator::Add:
+    omp::clause::IntrinsicOperator intrinsicOp) {
+  switch (intrinsicOp.v) {
+  case omp::clause::IntrinsicOperator::Operator::Add:
     return ReductionIdentifier::ADD;
-  case omp::clause::DefinedOperator::IntrinsicOperator::Subtract:
+  case omp::clause::IntrinsicOperator::Operator::Subtract:
     return ReductionIdentifier::SUBTRACT;
-  case omp::clause::DefinedOperator::IntrinsicOperator::Multiply:
+  case omp::clause::IntrinsicOperator::Operator::Multiply:
     return ReductionIdentifier::MULTIPLY;
-  case omp::clause::DefinedOperator::IntrinsicOperator::AND:
+  case omp::clause::IntrinsicOperator::Operator::AND:
     return ReductionIdentifier::AND;
-  case omp::clause::DefinedOperator::IntrinsicOperator::EQV:
+  case omp::clause::IntrinsicOperator::Operator::EQV:
     return ReductionIdentifier::EQV;
-  case omp::clause::DefinedOperator::IntrinsicOperator::OR:
+  case omp::clause::IntrinsicOperator::Operator::OR:
     return ReductionIdentifier::OR;
-  case omp::clause::DefinedOperator::IntrinsicOperator::NEQV:
+  case omp::clause::IntrinsicOperator::Operator::NEQV:
     return ReductionIdentifier::NEQV;
   default:
     llvm_unreachable("unexpected intrinsic operator in reduction");
@@ -127,10 +129,10 @@ ReductionProcessor::ReductionIdentifier ReductionProcessor::getReductionType(
 // (the intrinsic-operator clause path filters the rest with a TODO first).
 parser::DefinedOperator::IntrinsicOperator
 ReductionProcessor::toParserIntrinsicOperator(
-    omp::clause::DefinedOperator::IntrinsicOperator op) {
-  using C = omp::clause::DefinedOperator::IntrinsicOperator;
+    omp::clause::IntrinsicOperator op) {
+  using C = omp::clause::IntrinsicOperator::Operator;
   using P = parser::DefinedOperator::IntrinsicOperator;
-  switch (op) {
+  switch (op.v) {
   case C::Add:
     return P::Add;
   case C::Multiply:
@@ -953,6 +955,7 @@ struct OpenMPReductionBinder {
   bool isBoxedTrivialElemReduction;
   std::string &reductionName;
   ReductionIdentifier &redId;
+  bool *hasUserDefinedReduction;
 };
 } // namespace
 
@@ -992,6 +995,8 @@ bool OpenMPReductionBinder<OpType>::bindUserReductionDecl(
             converter, semaCtx, ultimate, redType, currentLocation)) {
       reductionDeclSymbols.push_back(mlir::SymbolRefAttr::get(
           builder.getContext(), boxedDecl.getSymName()));
+      if (hasUserDefinedReduction)
+        *hasUserDefinedReduction = true;
       return true;
     }
   }
@@ -1017,6 +1022,8 @@ bool OpenMPReductionBinder<OpType>::bindUserReductionDecl(
   }
   reductionDeclSymbols.push_back(mlir::SymbolRefAttr::get(
       builder.getContext(), existingDecl.getSymName()));
+  if (hasUserDefinedReduction)
+    *hasUserDefinedReduction = true;
   return true;
 }
 
@@ -1074,9 +1081,8 @@ bool OpenMPReductionBinder<OpType>::processDefinedOperator(
               &redDefinedOp->u)) {
     return processDefinedOpName(definedOpName);
   }
-  const auto &intrinsicOp{
-      std::get<omp::clause::DefinedOperator::IntrinsicOperator>(
-          redDefinedOp->u)};
+  const auto &intrinsicOp =
+      std::get<omp::clause::IntrinsicOperator>(redDefinedOp->u);
   redId = ReductionProcessor::getReductionType(intrinsicOp);
   switch (redId) {
   case ReductionIdentifier::ADD:
@@ -1238,7 +1244,7 @@ bool ReductionProcessor::processOpenMPReductionOperator(
     const semantics::Symbol &reductionSymbol,
     semantics::SemanticsContext *semaCtx, fir::ReferenceType redType,
     bool isByRef, const fir::KindMapping &kindMap, std::string &reductionName,
-    ReductionIdentifier &redId) {
+    ReductionIdentifier &redId, bool *hasUserDefinedReduction) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
 
   const Fortran::lower::omp::clause::ReductionOperator &redOperator =
@@ -1295,7 +1301,8 @@ bool ReductionProcessor::processOpenMPReductionOperator(
                                        isBoxedTrivialReduction,
                                        isBoxedTrivialElemReduction,
                                        reductionName,
-                                       redId};
+                                       redId,
+                                       hasUserDefinedReduction};
 
   if (const auto *redDefinedOp =
           std::get_if<omp::clause::DefinedOperator>(&redOperator.u)) {
@@ -1320,7 +1327,8 @@ bool ReductionProcessor::processReductionArguments(
     llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
     const llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSymbols,
     semantics::SemanticsContext *semaCtx,
-    llvm::DenseMap<const semantics::Symbol *, mlir::Value> *reductionVarCache) {
+    llvm::DenseMap<const semantics::Symbol *, mlir::Value> *reductionVarCache,
+    bool *hasUserDefinedReduction) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
 
   if constexpr (std::is_same_v<RedOperatorListTy,
@@ -1446,7 +1454,7 @@ bool ReductionProcessor::processReductionArguments(
       if (processOpenMPReductionOperator<OpType>(
               currentLocation, converter, redOperatorList, reductionDeclSymbols,
               *reductionSymbols[idx], semaCtx, redType, isByRef, kindMap,
-              reductionName, redId)) {
+              reductionName, redId, hasUserDefinedReduction)) {
         ++idx;
         continue;
       }
