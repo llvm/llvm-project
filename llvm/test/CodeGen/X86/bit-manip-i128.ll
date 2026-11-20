@@ -136,51 +136,51 @@ define i128 @bext_i128_vector(<2 x i64> %v0, i128 %idx, i128 %len) nounwind {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movq %rdx, %rcx
 ; SSE2-NEXT:    movq %xmm0, %rax
-; SSE2-NEXT:    movl $1, %r8d
-; SSE2-NEXT:    xorl %esi, %esi
-; SSE2-NEXT:    shldq %cl, %r8, %rsi
+; SSE2-NEXT:    movl $1, %esi
+; SSE2-NEXT:    xorl %r8d, %r8d
+; SSE2-NEXT:    shldq %cl, %rsi, %r8
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; SSE2-NEXT:    movq %xmm0, %rdx
 ; SSE2-NEXT:    xorl %r9d, %r9d
-; SSE2-NEXT:    shlq %cl, %r8
+; SSE2-NEXT:    shlq %cl, %rsi
 ; SSE2-NEXT:    testb $64, %cl
-; SSE2-NEXT:    cmovneq %r8, %rsi
-; SSE2-NEXT:    cmovneq %r9, %r8
-; SSE2-NEXT:    addq $-1, %r8
-; SSE2-NEXT:    adcq $-1, %rsi
+; SSE2-NEXT:    cmovneq %rsi, %r8
+; SSE2-NEXT:    cmovneq %r9, %rsi
+; SSE2-NEXT:    addq $-1, %rsi
+; SSE2-NEXT:    adcq $-1, %r8
 ; SSE2-NEXT:    movl %edi, %ecx
 ; SSE2-NEXT:    shrdq %cl, %rdx, %rax
 ; SSE2-NEXT:    shrq %cl, %rdx
 ; SSE2-NEXT:    testb $64, %dil
 ; SSE2-NEXT:    cmovneq %rdx, %rax
 ; SSE2-NEXT:    cmovneq %r9, %rdx
-; SSE2-NEXT:    andq %r8, %rax
-; SSE2-NEXT:    andq %rsi, %rdx
+; SSE2-NEXT:    andq %rsi, %rax
+; SSE2-NEXT:    andq %r8, %rdx
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: bext_i128_vector:
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    pextrq $1, %xmm0, %rsi
 ; SSE42-NEXT:    movq %rdx, %rcx
-; SSE42-NEXT:    movl $1, %r8d
-; SSE42-NEXT:    xorl %edx, %edx
-; SSE42-NEXT:    shldq %cl, %r8, %rdx
+; SSE42-NEXT:    movl $1, %edx
+; SSE42-NEXT:    xorl %r8d, %r8d
+; SSE42-NEXT:    shldq %cl, %rdx, %r8
 ; SSE42-NEXT:    movq %xmm0, %rax
 ; SSE42-NEXT:    xorl %r9d, %r9d
-; SSE42-NEXT:    shlq %cl, %r8
+; SSE42-NEXT:    shlq %cl, %rdx
 ; SSE42-NEXT:    testb $64, %cl
-; SSE42-NEXT:    cmovneq %r8, %rdx
-; SSE42-NEXT:    cmovneq %r9, %r8
-; SSE42-NEXT:    addq $-1, %r8
-; SSE42-NEXT:    adcq $-1, %rdx
+; SSE42-NEXT:    cmovneq %rdx, %r8
+; SSE42-NEXT:    cmovneq %r9, %rdx
+; SSE42-NEXT:    addq $-1, %rdx
+; SSE42-NEXT:    adcq $-1, %r8
 ; SSE42-NEXT:    movl %edi, %ecx
 ; SSE42-NEXT:    shrdq %cl, %rsi, %rax
 ; SSE42-NEXT:    shrq %cl, %rsi
 ; SSE42-NEXT:    testb $64, %dil
 ; SSE42-NEXT:    cmovneq %rsi, %rax
 ; SSE42-NEXT:    cmovneq %r9, %rsi
-; SSE42-NEXT:    andq %r8, %rax
-; SSE42-NEXT:    andq %rdx, %rsi
+; SSE42-NEXT:    andq %rdx, %rax
+; SSE42-NEXT:    andq %r8, %rsi
 ; SSE42-NEXT:    movq %rsi, %rdx
 ; SSE42-NEXT:    retq
 ;
@@ -1158,16 +1158,16 @@ define i128 @bitreverse_i128(i128 %a0) nounwind {
 ; SSE2-NEXT:    bswapq %rsi
 ; SSE2-NEXT:    movq %rsi, %rax
 ; SSE2-NEXT:    shrq $4, %rax
-; SSE2-NEXT:    movabsq $1085102592571150095, %rdx # imm = 0xF0F0F0F0F0F0F0F
-; SSE2-NEXT:    andq %rdx, %rax
-; SSE2-NEXT:    andq %rdx, %rsi
+; SSE2-NEXT:    movabsq $1085102592571150095, %rcx # imm = 0xF0F0F0F0F0F0F0F
+; SSE2-NEXT:    andq %rcx, %rax
+; SSE2-NEXT:    andq %rcx, %rsi
 ; SSE2-NEXT:    shlq $4, %rsi
 ; SSE2-NEXT:    orq %rax, %rsi
-; SSE2-NEXT:    movabsq $3689348814741910323, %rcx # imm = 0x3333333333333333
+; SSE2-NEXT:    movabsq $3689348814741910323, %rdx # imm = 0x3333333333333333
 ; SSE2-NEXT:    movq %rsi, %rax
-; SSE2-NEXT:    andq %rcx, %rax
+; SSE2-NEXT:    andq %rdx, %rax
 ; SSE2-NEXT:    shrq $2, %rsi
-; SSE2-NEXT:    andq %rcx, %rsi
+; SSE2-NEXT:    andq %rdx, %rsi
 ; SSE2-NEXT:    leaq (%rsi,%rax,4), %rax
 ; SSE2-NEXT:    movabsq $6148914691236517205, %rsi # imm = 0x5555555555555555
 ; SSE2-NEXT:    movq %rax, %r8
@@ -1178,15 +1178,15 @@ define i128 @bitreverse_i128(i128 %a0) nounwind {
 ; SSE2-NEXT:    bswapq %rdi
 ; SSE2-NEXT:    movq %rdi, %r8
 ; SSE2-NEXT:    shrq $4, %r8
-; SSE2-NEXT:    andq %rdx, %r8
-; SSE2-NEXT:    andq %rdx, %rdi
+; SSE2-NEXT:    andq %rcx, %r8
+; SSE2-NEXT:    andq %rcx, %rdi
 ; SSE2-NEXT:    shlq $4, %rdi
 ; SSE2-NEXT:    orq %r8, %rdi
-; SSE2-NEXT:    movq %rdi, %rdx
-; SSE2-NEXT:    andq %rcx, %rdx
+; SSE2-NEXT:    movq %rdi, %rcx
+; SSE2-NEXT:    andq %rdx, %rcx
 ; SSE2-NEXT:    shrq $2, %rdi
-; SSE2-NEXT:    andq %rcx, %rdi
-; SSE2-NEXT:    leaq (%rdi,%rdx,4), %rcx
+; SSE2-NEXT:    andq %rdx, %rdi
+; SSE2-NEXT:    leaq (%rdi,%rcx,4), %rcx
 ; SSE2-NEXT:    movq %rcx, %rdx
 ; SSE2-NEXT:    andq %rsi, %rdx
 ; SSE2-NEXT:    shrq %rcx
@@ -1297,44 +1297,44 @@ define i128 @bitreverse_i128_vector(<2 x i64> %v0) nounwind {
 ; SSE2-LABEL: bitreverse_i128_vector:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; SSE2-NEXT:    movq %xmm0, %rdx
-; SSE2-NEXT:    bswapq %rdx
+; SSE2-NEXT:    movq %xmm0, %rcx
+; SSE2-NEXT:    bswapq %rcx
 ; SSE2-NEXT:    movq %xmm1, %rax
-; SSE2-NEXT:    movq %rdx, %rcx
-; SSE2-NEXT:    shrq $4, %rcx
+; SSE2-NEXT:    movq %rcx, %rdx
+; SSE2-NEXT:    shrq $4, %rdx
 ; SSE2-NEXT:    movabsq $1085102592571150095, %rsi # imm = 0xF0F0F0F0F0F0F0F
-; SSE2-NEXT:    andq %rsi, %rcx
 ; SSE2-NEXT:    andq %rsi, %rdx
-; SSE2-NEXT:    shlq $4, %rdx
-; SSE2-NEXT:    orq %rcx, %rdx
-; SSE2-NEXT:    movabsq $3689348814741910323, %rcx # imm = 0x3333333333333333
-; SSE2-NEXT:    movq %rdx, %rdi
-; SSE2-NEXT:    andq %rcx, %rdi
-; SSE2-NEXT:    shrq $2, %rdx
-; SSE2-NEXT:    andq %rcx, %rdx
-; SSE2-NEXT:    leaq (%rdx,%rdi,4), %rdx
-; SSE2-NEXT:    movabsq $6148914691236517205, %rdi # imm = 0x5555555555555555
-; SSE2-NEXT:    movq %rdx, %r8
-; SSE2-NEXT:    andq %rdi, %r8
-; SSE2-NEXT:    shrq %rdx
+; SSE2-NEXT:    andq %rsi, %rcx
+; SSE2-NEXT:    shlq $4, %rcx
+; SSE2-NEXT:    orq %rdx, %rcx
+; SSE2-NEXT:    movabsq $3689348814741910323, %rdi # imm = 0x3333333333333333
+; SSE2-NEXT:    movq %rcx, %rdx
 ; SSE2-NEXT:    andq %rdi, %rdx
-; SSE2-NEXT:    leaq (%rdx,%r8,2), %rdx
+; SSE2-NEXT:    shrq $2, %rcx
+; SSE2-NEXT:    andq %rdi, %rcx
+; SSE2-NEXT:    leaq (%rcx,%rdx,4), %rcx
+; SSE2-NEXT:    movabsq $6148914691236517205, %r8 # imm = 0x5555555555555555
+; SSE2-NEXT:    movq %rcx, %rdx
+; SSE2-NEXT:    andq %r8, %rdx
+; SSE2-NEXT:    shrq %rcx
+; SSE2-NEXT:    andq %r8, %rcx
+; SSE2-NEXT:    leaq (%rcx,%rdx,2), %rdx
 ; SSE2-NEXT:    bswapq %rax
-; SSE2-NEXT:    movq %rax, %r8
-; SSE2-NEXT:    shrq $4, %r8
-; SSE2-NEXT:    andq %rsi, %r8
+; SSE2-NEXT:    movq %rax, %rcx
+; SSE2-NEXT:    shrq $4, %rcx
+; SSE2-NEXT:    andq %rsi, %rcx
 ; SSE2-NEXT:    andq %rsi, %rax
 ; SSE2-NEXT:    shlq $4, %rax
-; SSE2-NEXT:    orq %r8, %rax
-; SSE2-NEXT:    movq %rax, %rsi
-; SSE2-NEXT:    andq %rcx, %rsi
-; SSE2-NEXT:    shrq $2, %rax
-; SSE2-NEXT:    andq %rcx, %rax
-; SSE2-NEXT:    leaq (%rax,%rsi,4), %rax
+; SSE2-NEXT:    orq %rcx, %rax
 ; SSE2-NEXT:    movq %rax, %rcx
 ; SSE2-NEXT:    andq %rdi, %rcx
-; SSE2-NEXT:    shrq %rax
+; SSE2-NEXT:    shrq $2, %rax
 ; SSE2-NEXT:    andq %rdi, %rax
+; SSE2-NEXT:    leaq (%rax,%rcx,4), %rax
+; SSE2-NEXT:    movq %rax, %rcx
+; SSE2-NEXT:    andq %r8, %rcx
+; SSE2-NEXT:    shrq %rax
+; SSE2-NEXT:    andq %r8, %rax
 ; SSE2-NEXT:    leaq (%rax,%rcx,2), %rax
 ; SSE2-NEXT:    retq
 ;

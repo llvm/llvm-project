@@ -658,33 +658,33 @@ define <64 x i8> @ext_i64_64i8(i64 %a0) {
 define <8 x i32> @PR157382(ptr %p0, ptr %p1, ptr %p2) {
 ; SSE2-SSSE3-LABEL: PR157382:
 ; SSE2-SSSE3:       # %bb.0:
-; SSE2-SSSE3-NEXT:    movdqu (%rdi), %xmm3
-; SSE2-SSSE3-NEXT:    movdqu 16(%rdi), %xmm2
-; SSE2-SSSE3-NEXT:    movdqu (%rsi), %xmm5
-; SSE2-SSSE3-NEXT:    movdqu 16(%rsi), %xmm4
+; SSE2-SSSE3-NEXT:    movdqu (%rdi), %xmm2
+; SSE2-SSSE3-NEXT:    movdqu 16(%rdi), %xmm3
+; SSE2-SSSE3-NEXT:    movdqu (%rsi), %xmm4
+; SSE2-SSSE3-NEXT:    movdqu 16(%rsi), %xmm5
 ; SSE2-SSSE3-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
 ; SSE2-SSSE3-NEXT:    pxor %xmm0, %xmm0
 ; SSE2-SSSE3-NEXT:    pxor %xmm6, %xmm6
-; SSE2-SSSE3-NEXT:    pcmpgtd %xmm2, %xmm6
+; SSE2-SSSE3-NEXT:    pcmpgtd %xmm3, %xmm6
 ; SSE2-SSSE3-NEXT:    pcmpeqd %xmm7, %xmm7
 ; SSE2-SSSE3-NEXT:    pxor %xmm7, %xmm6
 ; SSE2-SSSE3-NEXT:    pxor %xmm8, %xmm8
-; SSE2-SSSE3-NEXT:    pcmpgtd %xmm3, %xmm8
+; SSE2-SSSE3-NEXT:    pcmpgtd %xmm2, %xmm8
 ; SSE2-SSSE3-NEXT:    pxor %xmm7, %xmm8
-; SSE2-SSSE3-NEXT:    pcmpgtd %xmm0, %xmm4
-; SSE2-SSSE3-NEXT:    por %xmm6, %xmm4
 ; SSE2-SSSE3-NEXT:    pcmpgtd %xmm0, %xmm5
-; SSE2-SSSE3-NEXT:    por %xmm8, %xmm5
+; SSE2-SSSE3-NEXT:    por %xmm6, %xmm5
+; SSE2-SSSE3-NEXT:    pcmpgtd %xmm0, %xmm4
+; SSE2-SSSE3-NEXT:    por %xmm8, %xmm4
 ; SSE2-SSSE3-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; SSE2-SSSE3-NEXT:    pcmpeqb %xmm0, %xmm1
 ; SSE2-SSSE3-NEXT:    pxor %xmm7, %xmm1
 ; SSE2-SSSE3-NEXT:    movdqa %xmm1, %xmm0
 ; SSE2-SSSE3-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
-; SSE2-SSSE3-NEXT:    por %xmm5, %xmm0
+; SSE2-SSSE3-NEXT:    por %xmm4, %xmm0
 ; SSE2-SSSE3-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4,4,5,5,6,6,7,7]
-; SSE2-SSSE3-NEXT:    por %xmm4, %xmm1
-; SSE2-SSSE3-NEXT:    pand %xmm3, %xmm0
-; SSE2-SSSE3-NEXT:    pand %xmm2, %xmm1
+; SSE2-SSSE3-NEXT:    por %xmm5, %xmm1
+; SSE2-SSSE3-NEXT:    pand %xmm2, %xmm0
+; SSE2-SSSE3-NEXT:    pand %xmm3, %xmm1
 ; SSE2-SSSE3-NEXT:    retq
 ;
 ; AVX1-LABEL: PR157382:

@@ -467,19 +467,19 @@ define i32 @load_i32_by_i8_bswap_store_in_between(ptr %arg, ptr %arg1) nounwind 
 ; X86-LABEL: load_i32_by_i8_bswap_store_in_between:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl 12(%esp), %ecx
-; X86-NEXT:    movl 8(%esp), %eax
-; X86-NEXT:    movzbl (%eax), %edx
+; X86-NEXT:    movl 12(%esp), %eax
+; X86-NEXT:    movl 8(%esp), %ecx
+; X86-NEXT:    movzbl (%ecx), %edx
 ; X86-NEXT:    shll $24, %edx
-; X86-NEXT:    movzbl 1(%eax), %esi
-; X86-NEXT:    movl $0, (%ecx)
+; X86-NEXT:    movzbl 1(%ecx), %esi
+; X86-NEXT:    movl $0, (%eax)
 ; X86-NEXT:    shll $16, %esi
 ; X86-NEXT:    orl %edx, %esi
-; X86-NEXT:    movzbl 2(%eax), %ecx
-; X86-NEXT:    shll $8, %ecx
-; X86-NEXT:    orl %esi, %ecx
-; X86-NEXT:    movzbl 3(%eax), %eax
-; X86-NEXT:    orl %ecx, %eax
+; X86-NEXT:    movzbl 2(%ecx), %edx
+; X86-NEXT:    shll $8, %edx
+; X86-NEXT:    orl %esi, %edx
+; X86-NEXT:    movzbl 3(%ecx), %eax
+; X86-NEXT:    orl %edx, %eax
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;

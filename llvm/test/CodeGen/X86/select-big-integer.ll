@@ -202,18 +202,18 @@ define void @test_not_i256(ptr %p0, ptr %p1, i1 zeroext %a2, ptr %p3) nounwind {
 ;
 ; X86-SSE4-LABEL: test_not_i256:
 ; X86-SSE4:       # %bb.0:
-; X86-SSE4-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE4-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE4-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE4-NEXT:    pcmpeqd %xmm1, %xmm1
-; X86-SSE4-NEXT:    movdqa 16(%ecx), %xmm2
+; X86-SSE4-NEXT:    movdqa 16(%eax), %xmm2
 ; X86-SSE4-NEXT:    pxor %xmm1, %xmm2
-; X86-SSE4-NEXT:    pxor (%ecx), %xmm1
-; X86-SSE4-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-SSE4-NEXT:    negl %ecx
-; X86-SSE4-NEXT:    movd %ecx, %xmm0
+; X86-SSE4-NEXT:    pxor (%eax), %xmm1
+; X86-SSE4-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-SSE4-NEXT:    negl %eax
+; X86-SSE4-NEXT:    movd %eax, %xmm0
 ; X86-SSE4-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
-; X86-SSE4-NEXT:    blendvps %xmm0, (%eax), %xmm1
-; X86-SSE4-NEXT:    blendvps %xmm0, 16(%eax), %xmm2
+; X86-SSE4-NEXT:    blendvps %xmm0, (%ecx), %xmm1
+; X86-SSE4-NEXT:    blendvps %xmm0, 16(%ecx), %xmm2
 ; X86-SSE4-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE4-NEXT:    movaps %xmm2, 16(%eax)
 ; X86-SSE4-NEXT:    movaps %xmm1, (%eax)
@@ -237,20 +237,20 @@ define void @test_not_i256(ptr %p0, ptr %p1, i1 zeroext %a2, ptr %p3) nounwind {
 ; X86-AVX1-LABEL: test_not_i256:
 ; X86-AVX1:       # %bb.0:
 ; X86-AVX1-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX1-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-AVX1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-AVX1-NEXT:    vmovaps (%edx), %xmm0
-; X86-AVX1-NEXT:    vinsertf128 $1, 16(%edx), %ymm0, %ymm0
-; X86-AVX1-NEXT:    vmovaps (%ecx), %xmm1
+; X86-AVX1-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-AVX1-NEXT:    vmovaps (%ecx), %xmm0
+; X86-AVX1-NEXT:    vinsertf128 $1, 16(%ecx), %ymm0, %ymm0
+; X86-AVX1-NEXT:    vmovaps (%edx), %xmm1
 ; X86-AVX1-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; X86-AVX1-NEXT:    vcmptrueps %ymm2, %ymm2, %ymm2
 ; X86-AVX1-NEXT:    vxorps %ymm2, %ymm0, %ymm0
-; X86-AVX1-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
-; X86-AVX1-NEXT:    negl %edx
-; X86-AVX1-NEXT:    vmovd %edx, %xmm2
+; X86-AVX1-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-AVX1-NEXT:    negl %ecx
+; X86-AVX1-NEXT:    vmovd %ecx, %xmm2
 ; X86-AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[0,0,0,0]
 ; X86-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; X86-AVX1-NEXT:    vblendvps %xmm2, 16(%ecx), %xmm3, %xmm3
+; X86-AVX1-NEXT:    vblendvps %xmm2, 16(%edx), %xmm3, %xmm3
 ; X86-AVX1-NEXT:    vmovaps %xmm3, 16(%eax)
 ; X86-AVX1-NEXT:    vblendvps %xmm2, %xmm1, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vmovaps %xmm0, (%eax)
@@ -347,22 +347,22 @@ define void @test_not_i512(ptr %p0, ptr %p1, i1 zeroext %a2, ptr %p3) nounwind {
 ; X86-SSE2-NEXT:    negl %edx
 ; X86-SSE2-NEXT:    movd %edx, %xmm4
 ; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[0,0,0,0]
-; X86-SSE2-NEXT:    movdqa (%ecx), %xmm6
-; X86-SSE2-NEXT:    pand %xmm4, %xmm6
-; X86-SSE2-NEXT:    pcmpeqd %xmm5, %xmm5
-; X86-SSE2-NEXT:    pxor %xmm4, %xmm5
-; X86-SSE2-NEXT:    pandn %xmm5, %xmm0
-; X86-SSE2-NEXT:    por %xmm6, %xmm0
-; X86-SSE2-NEXT:    movdqa 16(%ecx), %xmm6
-; X86-SSE2-NEXT:    pand %xmm4, %xmm6
-; X86-SSE2-NEXT:    pandn %xmm5, %xmm3
-; X86-SSE2-NEXT:    por %xmm6, %xmm3
-; X86-SSE2-NEXT:    movdqa 32(%ecx), %xmm6
-; X86-SSE2-NEXT:    pand %xmm4, %xmm6
-; X86-SSE2-NEXT:    pandn %xmm5, %xmm1
-; X86-SSE2-NEXT:    por %xmm6, %xmm1
+; X86-SSE2-NEXT:    movdqa (%ecx), %xmm5
+; X86-SSE2-NEXT:    pand %xmm4, %xmm5
+; X86-SSE2-NEXT:    pcmpeqd %xmm6, %xmm6
+; X86-SSE2-NEXT:    pxor %xmm4, %xmm6
+; X86-SSE2-NEXT:    pandn %xmm6, %xmm0
+; X86-SSE2-NEXT:    por %xmm5, %xmm0
+; X86-SSE2-NEXT:    movdqa 16(%ecx), %xmm5
+; X86-SSE2-NEXT:    pand %xmm4, %xmm5
+; X86-SSE2-NEXT:    pandn %xmm6, %xmm3
+; X86-SSE2-NEXT:    por %xmm5, %xmm3
+; X86-SSE2-NEXT:    movdqa 32(%ecx), %xmm5
+; X86-SSE2-NEXT:    pand %xmm4, %xmm5
+; X86-SSE2-NEXT:    pandn %xmm6, %xmm1
+; X86-SSE2-NEXT:    por %xmm5, %xmm1
 ; X86-SSE2-NEXT:    pand 48(%ecx), %xmm4
-; X86-SSE2-NEXT:    pandn %xmm5, %xmm2
+; X86-SSE2-NEXT:    pandn %xmm6, %xmm2
 ; X86-SSE2-NEXT:    por %xmm4, %xmm2
 ; X86-SSE2-NEXT:    movdqa %xmm2, 48(%eax)
 ; X86-SSE2-NEXT:    movdqa %xmm1, 32(%eax)
@@ -372,10 +372,10 @@ define void @test_not_i512(ptr %p0, ptr %p1, i1 zeroext %a2, ptr %p3) nounwind {
 ;
 ; X64-SSE2-LABEL: test_not_i512:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    movdqa (%rsi), %xmm3
-; X64-SSE2-NEXT:    movdqa 16(%rsi), %xmm2
-; X64-SSE2-NEXT:    movdqa 32(%rsi), %xmm1
-; X64-SSE2-NEXT:    movdqa 48(%rsi), %xmm0
+; X64-SSE2-NEXT:    movdqa (%rsi), %xmm0
+; X64-SSE2-NEXT:    movdqa 16(%rsi), %xmm1
+; X64-SSE2-NEXT:    movdqa 32(%rsi), %xmm2
+; X64-SSE2-NEXT:    movdqa 48(%rsi), %xmm3
 ; X64-SSE2-NEXT:    negl %edx
 ; X64-SSE2-NEXT:    movd %edx, %xmm4
 ; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[0,0,0,0]
@@ -383,23 +383,23 @@ define void @test_not_i512(ptr %p0, ptr %p1, i1 zeroext %a2, ptr %p3) nounwind {
 ; X64-SSE2-NEXT:    pand %xmm4, %xmm5
 ; X64-SSE2-NEXT:    pcmpeqd %xmm6, %xmm6
 ; X64-SSE2-NEXT:    pxor %xmm4, %xmm6
-; X64-SSE2-NEXT:    pandn %xmm6, %xmm0
-; X64-SSE2-NEXT:    por %xmm5, %xmm0
+; X64-SSE2-NEXT:    pandn %xmm6, %xmm3
+; X64-SSE2-NEXT:    por %xmm5, %xmm3
 ; X64-SSE2-NEXT:    movdqa 32(%rdi), %xmm5
-; X64-SSE2-NEXT:    pand %xmm4, %xmm5
-; X64-SSE2-NEXT:    pandn %xmm6, %xmm1
-; X64-SSE2-NEXT:    por %xmm5, %xmm1
-; X64-SSE2-NEXT:    movdqa 16(%rdi), %xmm5
 ; X64-SSE2-NEXT:    pand %xmm4, %xmm5
 ; X64-SSE2-NEXT:    pandn %xmm6, %xmm2
 ; X64-SSE2-NEXT:    por %xmm5, %xmm2
+; X64-SSE2-NEXT:    movdqa 16(%rdi), %xmm5
+; X64-SSE2-NEXT:    pand %xmm4, %xmm5
+; X64-SSE2-NEXT:    pandn %xmm6, %xmm1
+; X64-SSE2-NEXT:    por %xmm5, %xmm1
 ; X64-SSE2-NEXT:    pand (%rdi), %xmm4
-; X64-SSE2-NEXT:    pandn %xmm6, %xmm3
-; X64-SSE2-NEXT:    por %xmm4, %xmm3
-; X64-SSE2-NEXT:    movdqa %xmm3, (%rcx)
-; X64-SSE2-NEXT:    movdqa %xmm2, 16(%rcx)
-; X64-SSE2-NEXT:    movdqa %xmm1, 32(%rcx)
-; X64-SSE2-NEXT:    movdqa %xmm0, 48(%rcx)
+; X64-SSE2-NEXT:    pandn %xmm6, %xmm0
+; X64-SSE2-NEXT:    por %xmm4, %xmm0
+; X64-SSE2-NEXT:    movdqa %xmm0, (%rcx)
+; X64-SSE2-NEXT:    movdqa %xmm1, 16(%rcx)
+; X64-SSE2-NEXT:    movdqa %xmm2, 32(%rcx)
+; X64-SSE2-NEXT:    movdqa %xmm3, 48(%rcx)
 ; X64-SSE2-NEXT:    retq
 ;
 ; X86-SSE4-LABEL: test_not_i512:
@@ -587,9 +587,9 @@ define void @test_neg_i512(ptr %p0, ptr %p1, i1 zeroext %a2, ptr %p3) nounwind {
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $44, %esp
+; X86-NEXT:    subl $40, %esp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    xorl %edi, %edi
+; X86-NEXT:    xorl %ecx, %ecx
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    subl (%edx), %eax
 ; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
@@ -626,49 +626,46 @@ define void @test_neg_i512(ptr %p0, ptr %p1, i1 zeroext %a2, ptr %p3) nounwind {
 ; X86-NEXT:    sbbl 44(%edx), %ebp
 ; X86-NEXT:    movl $0, %eax
 ; X86-NEXT:    sbbl 48(%edx), %eax
-; X86-NEXT:    movl $0, %ecx
-; X86-NEXT:    sbbl 52(%edx), %ecx
 ; X86-NEXT:    movl $0, %esi
-; X86-NEXT:    sbbl 56(%edx), %esi
-; X86-NEXT:    sbbl 60(%edx), %edi
-; X86-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    sbbl 52(%edx), %esi
+; X86-NEXT:    movl $0, %edi
+; X86-NEXT:    sbbl 56(%edx), %edi
+; X86-NEXT:    sbbl 60(%edx), %ecx
 ; X86-NEXT:    cmpb $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    je .LBB3_2
 ; X86-NEXT:  # %bb.1:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl (%edi), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl (%ecx), %eax
 ; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    movl 4(%edi), %eax
+; X86-NEXT:    movl 4(%ecx), %eax
 ; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    movl 8(%edi), %eax
+; X86-NEXT:    movl 8(%ecx), %eax
 ; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    movl 12(%edi), %eax
+; X86-NEXT:    movl 12(%ecx), %eax
 ; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    movl 16(%edi), %eax
+; X86-NEXT:    movl 16(%ecx), %eax
 ; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    movl 20(%edi), %eax
+; X86-NEXT:    movl 20(%ecx), %eax
 ; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    movl 24(%edi), %eax
+; X86-NEXT:    movl 24(%ecx), %eax
 ; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    movl 28(%edi), %eax
+; X86-NEXT:    movl 28(%ecx), %eax
 ; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    movl 32(%edi), %eax
+; X86-NEXT:    movl 32(%ecx), %eax
 ; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    movl 36(%edi), %eax
+; X86-NEXT:    movl 36(%ecx), %eax
 ; X86-NEXT:    movl %eax, (%esp) # 4-byte Spill
-; X86-NEXT:    movl 40(%edi), %ebx
-; X86-NEXT:    movl 44(%edi), %ebp
-; X86-NEXT:    movl 48(%edi), %eax
-; X86-NEXT:    movl 52(%edi), %ecx
-; X86-NEXT:    movl 56(%edi), %esi
-; X86-NEXT:    movl 60(%edi), %edi
-; X86-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    movl 40(%ecx), %ebx
+; X86-NEXT:    movl 44(%ecx), %ebp
+; X86-NEXT:    movl 48(%ecx), %eax
+; X86-NEXT:    movl 52(%ecx), %esi
+; X86-NEXT:    movl 56(%ecx), %edi
+; X86-NEXT:    movl 60(%ecx), %ecx
 ; X86-NEXT:  .LBB3_2:
-; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Reload
-; X86-NEXT:    movl %edi, 60(%edx)
-; X86-NEXT:    movl %esi, 56(%edx)
-; X86-NEXT:    movl %ecx, 52(%edx)
+; X86-NEXT:    movl %ecx, 60(%edx)
+; X86-NEXT:    movl %edi, 56(%edx)
+; X86-NEXT:    movl %esi, 52(%edx)
 ; X86-NEXT:    movl %eax, 48(%edx)
 ; X86-NEXT:    movl %ebp, 44(%edx)
 ; X86-NEXT:    movl %ebx, 40(%edx)
@@ -692,7 +689,7 @@ define void @test_neg_i512(ptr %p0, ptr %p1, i1 zeroext %a2, ptr %p3) nounwind {
 ; X86-NEXT:    movl %eax, 4(%edx)
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; X86-NEXT:    movl %eax, (%edx)
-; X86-NEXT:    addl $44, %esp
+; X86-NEXT:    addl $40, %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx

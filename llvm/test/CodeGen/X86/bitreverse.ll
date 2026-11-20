@@ -862,16 +862,16 @@ define i128 @test_bitreverse_i128(i128 %a) nounwind {
 ; X64-NEXT:    bswapq %rsi
 ; X64-NEXT:    movq %rsi, %rax
 ; X64-NEXT:    shrq $4, %rax
-; X64-NEXT:    movabsq $1085102592571150095, %rdx # imm = 0xF0F0F0F0F0F0F0F
-; X64-NEXT:    andq %rdx, %rax
-; X64-NEXT:    andq %rdx, %rsi
+; X64-NEXT:    movabsq $1085102592571150095, %rcx # imm = 0xF0F0F0F0F0F0F0F
+; X64-NEXT:    andq %rcx, %rax
+; X64-NEXT:    andq %rcx, %rsi
 ; X64-NEXT:    shlq $4, %rsi
 ; X64-NEXT:    orq %rax, %rsi
-; X64-NEXT:    movabsq $3689348814741910323, %rcx # imm = 0x3333333333333333
+; X64-NEXT:    movabsq $3689348814741910323, %rdx # imm = 0x3333333333333333
 ; X64-NEXT:    movq %rsi, %rax
-; X64-NEXT:    andq %rcx, %rax
+; X64-NEXT:    andq %rdx, %rax
 ; X64-NEXT:    shrq $2, %rsi
-; X64-NEXT:    andq %rcx, %rsi
+; X64-NEXT:    andq %rdx, %rsi
 ; X64-NEXT:    leaq (%rsi,%rax,4), %rax
 ; X64-NEXT:    movabsq $6148914691236517205, %rsi # imm = 0x5555555555555555
 ; X64-NEXT:    movq %rax, %r8
@@ -882,15 +882,15 @@ define i128 @test_bitreverse_i128(i128 %a) nounwind {
 ; X64-NEXT:    bswapq %rdi
 ; X64-NEXT:    movq %rdi, %r8
 ; X64-NEXT:    shrq $4, %r8
-; X64-NEXT:    andq %rdx, %r8
-; X64-NEXT:    andq %rdx, %rdi
+; X64-NEXT:    andq %rcx, %r8
+; X64-NEXT:    andq %rcx, %rdi
 ; X64-NEXT:    shlq $4, %rdi
 ; X64-NEXT:    orq %r8, %rdi
-; X64-NEXT:    movq %rdi, %rdx
-; X64-NEXT:    andq %rcx, %rdx
+; X64-NEXT:    movq %rdi, %rcx
+; X64-NEXT:    andq %rdx, %rcx
 ; X64-NEXT:    shrq $2, %rdi
-; X64-NEXT:    andq %rcx, %rdi
-; X64-NEXT:    leaq (%rdi,%rdx,4), %rcx
+; X64-NEXT:    andq %rdx, %rdi
+; X64-NEXT:    leaq (%rdi,%rcx,4), %rcx
 ; X64-NEXT:    movq %rcx, %rdx
 ; X64-NEXT:    andq %rsi, %rdx
 ; X64-NEXT:    shrq %rcx
@@ -1855,7 +1855,7 @@ define i528 @large_promotion(i528 %A) nounwind {
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $60, %esp
+; X86-NEXT:    subl $52, %esp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -1878,7 +1878,8 @@ define i528 @large_promotion(i528 %A) nounwind {
 ; X86-NEXT:    andl $1431633920, %ebp # imm = 0x55550000
 ; X86-NEXT:    shrl %ebx
 ; X86-NEXT:    andl $1431633920, %ebx # imm = 0x55550000
-; X86-NEXT:    leal (%ebx,%ebp,2), %ebp
+; X86-NEXT:    leal (%ebx,%ebp,2), %ebx
+; X86-NEXT:    movl %ebx, (%esp) # 4-byte Spill
 ; X86-NEXT:    bswapl %edi
 ; X86-NEXT:    movl %edi, %ebx
 ; X86-NEXT:    andl $252645135, %ebx # imm = 0xF0F0F0F
@@ -1913,7 +1914,8 @@ define i528 @large_promotion(i528 %A) nounwind {
 ; X86-NEXT:    andl $1431655765, %edi # imm = 0x55555555
 ; X86-NEXT:    shrl %esi
 ; X86-NEXT:    andl $1431655765, %esi # imm = 0x55555555
-; X86-NEXT:    leal (%esi,%edi,2), %ebx
+; X86-NEXT:    leal (%esi,%edi,2), %esi
+; X86-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NEXT:    bswapl %edx
 ; X86-NEXT:    movl %edx, %esi
 ; X86-NEXT:    andl $252645135, %esi # imm = 0xF0F0F0F
@@ -2042,24 +2044,6 @@ define i528 @large_promotion(i528 %A) nounwind {
 ; X86-NEXT:    andl $1431655765, %ecx # imm = 0x55555555
 ; X86-NEXT:    shrl %eax
 ; X86-NEXT:    andl $1431655765, %eax # imm = 0x55555555
-; X86-NEXT:    leal (%eax,%ecx,2), %edi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    bswapl %eax
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    andl $252645135, %ecx # imm = 0xF0F0F0F
-; X86-NEXT:    shll $4, %ecx
-; X86-NEXT:    shrl $4, %eax
-; X86-NEXT:    andl $252645135, %eax # imm = 0xF0F0F0F
-; X86-NEXT:    orl %ecx, %eax
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    andl $858993459, %ecx # imm = 0x33333333
-; X86-NEXT:    shrl $2, %eax
-; X86-NEXT:    andl $858993459, %eax # imm = 0x33333333
-; X86-NEXT:    leal (%eax,%ecx,4), %eax
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    andl $1431655765, %ecx # imm = 0x55555555
-; X86-NEXT:    shrl %eax
-; X86-NEXT:    andl $1431655765, %eax # imm = 0x55555555
 ; X86-NEXT:    leal (%eax,%ecx,2), %eax
 ; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -2079,27 +2063,7 @@ define i528 @large_promotion(i528 %A) nounwind {
 ; X86-NEXT:    andl $1431655765, %ecx # imm = 0x55555555
 ; X86-NEXT:    shrl %eax
 ; X86-NEXT:    andl $1431655765, %eax # imm = 0x55555555
-; X86-NEXT:    leal (%eax,%ecx,2), %eax
-; X86-NEXT:    movl %eax, (%esp) # 4-byte Spill
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    bswapl %eax
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    andl $252645135, %ecx # imm = 0xF0F0F0F
-; X86-NEXT:    shll $4, %ecx
-; X86-NEXT:    shrl $4, %eax
-; X86-NEXT:    andl $252645135, %eax # imm = 0xF0F0F0F
-; X86-NEXT:    orl %ecx, %eax
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    andl $858993459, %ecx # imm = 0x33333333
-; X86-NEXT:    shrl $2, %eax
-; X86-NEXT:    andl $858993459, %eax # imm = 0x33333333
-; X86-NEXT:    leal (%eax,%ecx,4), %eax
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    andl $1431655765, %ecx # imm = 0x55555555
-; X86-NEXT:    shrl %eax
-; X86-NEXT:    andl $1431655765, %eax # imm = 0x55555555
-; X86-NEXT:    leal (%eax,%ecx,2), %eax
-; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    leal (%eax,%ecx,2), %ebp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    bswapl %eax
 ; X86-NEXT:    movl %eax, %ecx
@@ -2157,6 +2121,42 @@ define i528 @large_promotion(i528 %A) nounwind {
 ; X86-NEXT:    andl $1431655765, %eax # imm = 0x55555555
 ; X86-NEXT:    leal (%eax,%ecx,2), %eax
 ; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    bswapl %eax
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    andl $252645135, %ecx # imm = 0xF0F0F0F
+; X86-NEXT:    shll $4, %ecx
+; X86-NEXT:    shrl $4, %eax
+; X86-NEXT:    andl $252645135, %eax # imm = 0xF0F0F0F
+; X86-NEXT:    orl %ecx, %eax
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    andl $858993459, %ecx # imm = 0x33333333
+; X86-NEXT:    shrl $2, %eax
+; X86-NEXT:    andl $858993459, %eax # imm = 0x33333333
+; X86-NEXT:    leal (%eax,%ecx,4), %eax
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    andl $1431655765, %ecx # imm = 0x55555555
+; X86-NEXT:    shrl %eax
+; X86-NEXT:    andl $1431655765, %eax # imm = 0x55555555
+; X86-NEXT:    leal (%eax,%ecx,2), %ebx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    bswapl %eax
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    andl $252645135, %ecx # imm = 0xF0F0F0F
+; X86-NEXT:    shll $4, %ecx
+; X86-NEXT:    shrl $4, %eax
+; X86-NEXT:    andl $252645135, %eax # imm = 0xF0F0F0F
+; X86-NEXT:    orl %ecx, %eax
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    andl $858993459, %ecx # imm = 0x33333333
+; X86-NEXT:    shrl $2, %eax
+; X86-NEXT:    andl $858993459, %eax # imm = 0x33333333
+; X86-NEXT:    leal (%eax,%ecx,4), %eax
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    andl $1431655765, %ecx # imm = 0x55555555
+; X86-NEXT:    shrl %eax
+; X86-NEXT:    andl $1431655765, %eax # imm = 0x55555555
+; X86-NEXT:    leal (%eax,%ecx,2), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    bswapl %eax
 ; X86-NEXT:    movl %eax, %ecx
@@ -2175,56 +2175,55 @@ define i528 @large_promotion(i528 %A) nounwind {
 ; X86-NEXT:    shrl %eax
 ; X86-NEXT:    andl $1431655765, %eax # imm = 0x55555555
 ; X86-NEXT:    leal (%eax,%ecx,2), %edx
-; X86-NEXT:    movl %ebp, %esi
-; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X86-NEXT:    shrdl $16, %ecx, %esi
-; X86-NEXT:    movl %ebx, %eax
-; X86-NEXT:    shrdl $16, %ebx, %ecx
-; X86-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X86-NEXT:    shrdl $16, %ecx, %eax
-; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; X86-NEXT:    shrdl $16, %eax, %ecx
-; X86-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X86-NEXT:    shrdl $16, %ecx, %eax
-; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; X86-NEXT:    shrdl $16, %eax, %ecx
-; X86-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X86-NEXT:    shrdl $16, %ecx, %eax
-; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; X86-NEXT:    shrdl $16, %eax, %ecx
-; X86-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    shrdl $16, %edi, %eax
-; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    movl (%esp), %edi # 4-byte Reload
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; X86-NEXT:    shrdl $16, %eax, %edi
-; X86-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    movl (%esp), %ecx # 4-byte Reload
+; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
 ; X86-NEXT:    shrdl $16, %ecx, %eax
 ; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-NEXT:    shrdl $16, %eax, %ecx
+; X86-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; X86-NEXT:    shrdl $16, %ecx, %eax
+; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-NEXT:    shrdl $16, %eax, %ecx
+; X86-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; X86-NEXT:    shrdl $16, %ecx, %eax
+; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-NEXT:    shrdl $16, %eax, %ecx
+; X86-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; X86-NEXT:    shrdl $16, %ecx, %eax
+; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-NEXT:    shrdl $16, %eax, %ecx
+; X86-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    shrdl $16, %ebp, %eax
+; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-NEXT:    shrdl $16, %eax, %ebp
+; X86-NEXT:    movl %ebp, (%esp) # 4-byte Spill
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebp # 4-byte Reload
-; X86-NEXT:    shrdl $16, %ebp, %ecx
-; X86-NEXT:    movl %ecx, (%esp) # 4-byte Spill
-; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
-; X86-NEXT:    shrdl $16, %ebx, %ebp
-; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Reload
-; X86-NEXT:    shrdl $16, %edi, %ebx
-; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X86-NEXT:    shrdl $16, %ecx, %edi
-; X86-NEXT:    shrdl $16, %edx, %ecx
+; X86-NEXT:    shrdl $16, %ebp, %eax
+; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-NEXT:    shrdl $16, %eax, %ebp
+; X86-NEXT:    shrdl $16, %ebx, %eax
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    shrdl $16, %esi, %ebx
+; X86-NEXT:    shrdl $16, %edx, %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %ecx, 60(%eax)
-; X86-NEXT:    movl %edi, 56(%eax)
-; X86-NEXT:    movl %ebx, 52(%eax)
+; X86-NEXT:    movl %esi, 60(%eax)
+; X86-NEXT:    movl %ebx, 56(%eax)
+; X86-NEXT:    movl %ecx, 52(%eax)
 ; X86-NEXT:    movl %ebp, 48(%eax)
-; X86-NEXT:    movl (%esp), %ecx # 4-byte Reload
-; X86-NEXT:    movl %ecx, 44(%eax)
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; X86-NEXT:    movl %ecx, 44(%eax)
+; X86-NEXT:    movl (%esp), %ecx # 4-byte Reload
 ; X86-NEXT:    movl %ecx, 40(%eax)
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
 ; X86-NEXT:    movl %ecx, 36(%eax)
@@ -2244,10 +2243,10 @@ define i528 @large_promotion(i528 %A) nounwind {
 ; X86-NEXT:    movl %ecx, 8(%eax)
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
 ; X86-NEXT:    movl %ecx, 4(%eax)
-; X86-NEXT:    movl %esi, (%eax)
+; X86-NEXT:    movl %edi, (%eax)
 ; X86-NEXT:    shrl $16, %edx
 ; X86-NEXT:    movw %dx, 64(%eax)
-; X86-NEXT:    addl $60, %esp
+; X86-NEXT:    addl $52, %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx
@@ -2497,11 +2496,11 @@ define i528 @large_promotion(i528 %A) nounwind {
 ; X86XOP-NEXT:    vpextrd $1, %xmm2, %eax
 ; X86XOP-NEXT:    shrdl $16, %eax, %ecx
 ; X86XOP-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86XOP-NEXT:    vpextrd $2, %xmm2, %ebp
-; X86XOP-NEXT:    shrdl $16, %ebp, %eax
+; X86XOP-NEXT:    vpextrd $2, %xmm2, %ebx
+; X86XOP-NEXT:    shrdl $16, %ebx, %eax
 ; X86XOP-NEXT:    movl %eax, (%esp) # 4-byte Spill
 ; X86XOP-NEXT:    vpextrd $3, %xmm2, %edi
-; X86XOP-NEXT:    shrdl $16, %edi, %ebp
+; X86XOP-NEXT:    shrdl $16, %edi, %ebx
 ; X86XOP-NEXT:    vextractf128 $1, %ymm1, %xmm1
 ; X86XOP-NEXT:    vpperm %xmm0, %xmm1, %xmm0, %xmm0
 ; X86XOP-NEXT:    vmovd %xmm0, %esi
@@ -2510,14 +2509,14 @@ define i528 @large_promotion(i528 %A) nounwind {
 ; X86XOP-NEXT:    shrdl $16, %edx, %esi
 ; X86XOP-NEXT:    vpextrd $2, %xmm0, %ecx
 ; X86XOP-NEXT:    shrdl $16, %ecx, %edx
-; X86XOP-NEXT:    vpextrd $3, %xmm0, %ebx
-; X86XOP-NEXT:    shrdl $16, %ebx, %ecx
+; X86XOP-NEXT:    vpextrd $3, %xmm0, %ebp
+; X86XOP-NEXT:    shrdl $16, %ebp, %ecx
 ; X86XOP-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86XOP-NEXT:    movl %ecx, 60(%eax)
 ; X86XOP-NEXT:    movl %edx, 56(%eax)
 ; X86XOP-NEXT:    movl %esi, 52(%eax)
 ; X86XOP-NEXT:    movl %edi, 48(%eax)
-; X86XOP-NEXT:    movl %ebp, 44(%eax)
+; X86XOP-NEXT:    movl %ebx, 44(%eax)
 ; X86XOP-NEXT:    movl (%esp), %ecx # 4-byte Reload
 ; X86XOP-NEXT:    movl %ecx, 40(%eax)
 ; X86XOP-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
@@ -2540,8 +2539,8 @@ define i528 @large_promotion(i528 %A) nounwind {
 ; X86XOP-NEXT:    movl %ecx, 4(%eax)
 ; X86XOP-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
 ; X86XOP-NEXT:    movl %ecx, (%eax)
-; X86XOP-NEXT:    shrl $16, %ebx
-; X86XOP-NEXT:    movw %bx, 64(%eax)
+; X86XOP-NEXT:    shrl $16, %ebp
+; X86XOP-NEXT:    movw %bp, 64(%eax)
 ; X86XOP-NEXT:    addl $44, %esp
 ; X86XOP-NEXT:    popl %esi
 ; X86XOP-NEXT:    popl %edi

@@ -963,120 +963,120 @@ define <16 x iXLen> @lrint_v16f16(<16 x half> %x) nounwind {
 ;
 ; X86-AVX-I32-LABEL: lrint_v16f16:
 ; X86-AVX-I32:       # %bb.0:
-; X86-AVX-I32-NEXT:    vpsrldq {{.*#+}} xmm1 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; X86-AVX-I32-NEXT:    vcvtph2ps %xmm1, %xmm1
-; X86-AVX-I32-NEXT:    vroundss $4, %xmm1, %xmm1, %xmm1
-; X86-AVX-I32-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
-; X86-AVX-I32-NEXT:    vcvtph2ps %xmm1, %xmm1
-; X86-AVX-I32-NEXT:    vcvttss2si %xmm1, %eax
-; X86-AVX-I32-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
-; X86-AVX-I32-NEXT:    vcvtph2ps %xmm1, %xmm1
-; X86-AVX-I32-NEXT:    vroundss $4, %xmm1, %xmm1, %xmm1
-; X86-AVX-I32-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
-; X86-AVX-I32-NEXT:    vcvtph2ps %xmm1, %xmm1
-; X86-AVX-I32-NEXT:    vcvttss2si %xmm1, %ecx
-; X86-AVX-I32-NEXT:    vmovd %ecx, %xmm1
-; X86-AVX-I32-NEXT:    vpinsrd $1, %eax, %xmm1, %xmm1
-; X86-AVX-I32-NEXT:    vshufps {{.*#+}} xmm2 = xmm0[3,3,3,3]
+; X86-AVX-I32-NEXT:    vmovdqa %ymm0, %ymm1
+; X86-AVX-I32-NEXT:    vpsrldq {{.*#+}} xmm0 = xmm1[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; X86-AVX-I32-NEXT:    vcvtph2ps %xmm0, %xmm0
+; X86-AVX-I32-NEXT:    vroundss $4, %xmm0, %xmm0, %xmm0
+; X86-AVX-I32-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; X86-AVX-I32-NEXT:    vcvtph2ps %xmm0, %xmm0
+; X86-AVX-I32-NEXT:    vcvttss2si %xmm0, %eax
+; X86-AVX-I32-NEXT:    vshufpd {{.*#+}} xmm0 = xmm1[1,0]
+; X86-AVX-I32-NEXT:    vcvtph2ps %xmm0, %xmm0
+; X86-AVX-I32-NEXT:    vroundss $4, %xmm0, %xmm0, %xmm0
+; X86-AVX-I32-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; X86-AVX-I32-NEXT:    vcvtph2ps %xmm0, %xmm0
+; X86-AVX-I32-NEXT:    vcvttss2si %xmm0, %ecx
+; X86-AVX-I32-NEXT:    vmovd %ecx, %xmm0
+; X86-AVX-I32-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
+; X86-AVX-I32-NEXT:    vshufps {{.*#+}} xmm2 = xmm1[3,3,3,3]
 ; X86-AVX-I32-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; X86-AVX-I32-NEXT:    vroundss $4, %xmm2, %xmm2, %xmm2
 ; X86-AVX-I32-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
 ; X86-AVX-I32-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; X86-AVX-I32-NEXT:    vcvttss2si %xmm2, %eax
-; X86-AVX-I32-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
-; X86-AVX-I32-NEXT:    vpsrldq {{.*#+}} xmm2 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; X86-AVX-I32-NEXT:    vpinsrd $2, %eax, %xmm0, %xmm0
+; X86-AVX-I32-NEXT:    vpsrldq {{.*#+}} xmm2 = xmm1[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; X86-AVX-I32-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; X86-AVX-I32-NEXT:    vroundss $4, %xmm2, %xmm2, %xmm2
 ; X86-AVX-I32-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
 ; X86-AVX-I32-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; X86-AVX-I32-NEXT:    vcvttss2si %xmm2, %eax
-; X86-AVX-I32-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm1
-; X86-AVX-I32-NEXT:    vpsrld $16, %xmm0, %xmm2
+; X86-AVX-I32-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0
+; X86-AVX-I32-NEXT:    vpsrld $16, %xmm1, %xmm2
 ; X86-AVX-I32-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; X86-AVX-I32-NEXT:    vroundss $4, %xmm2, %xmm2, %xmm2
 ; X86-AVX-I32-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
 ; X86-AVX-I32-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; X86-AVX-I32-NEXT:    vcvttss2si %xmm2, %eax
-; X86-AVX-I32-NEXT:    vcvtph2ps %xmm0, %xmm2
+; X86-AVX-I32-NEXT:    vcvtph2ps %xmm1, %xmm2
 ; X86-AVX-I32-NEXT:    vroundss $4, %xmm2, %xmm2, %xmm2
 ; X86-AVX-I32-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
 ; X86-AVX-I32-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; X86-AVX-I32-NEXT:    vcvttss2si %xmm2, %ecx
 ; X86-AVX-I32-NEXT:    vmovd %ecx, %xmm2
 ; X86-AVX-I32-NEXT:    vpinsrd $1, %eax, %xmm2, %xmm2
-; X86-AVX-I32-NEXT:    vmovshdup {{.*#+}} xmm3 = xmm0[1,1,3,3]
+; X86-AVX-I32-NEXT:    vmovshdup {{.*#+}} xmm3 = xmm1[1,1,3,3]
 ; X86-AVX-I32-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; X86-AVX-I32-NEXT:    vroundss $4, %xmm3, %xmm3, %xmm3
 ; X86-AVX-I32-NEXT:    vcvtps2ph $4, %xmm3, %xmm3
 ; X86-AVX-I32-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; X86-AVX-I32-NEXT:    vcvttss2si %xmm3, %eax
 ; X86-AVX-I32-NEXT:    vpinsrd $2, %eax, %xmm2, %xmm2
-; X86-AVX-I32-NEXT:    vpsrlq $48, %xmm0, %xmm3
+; X86-AVX-I32-NEXT:    vpsrlq $48, %xmm1, %xmm3
 ; X86-AVX-I32-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; X86-AVX-I32-NEXT:    vroundss $4, %xmm3, %xmm3, %xmm3
 ; X86-AVX-I32-NEXT:    vcvtps2ph $4, %xmm3, %xmm3
 ; X86-AVX-I32-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; X86-AVX-I32-NEXT:    vcvttss2si %xmm3, %eax
 ; X86-AVX-I32-NEXT:    vpinsrd $3, %eax, %xmm2, %xmm2
-; X86-AVX-I32-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm2
-; X86-AVX-I32-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; X86-AVX-I32-NEXT:    vpsrldq {{.*#+}} xmm1 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; X86-AVX-I32-NEXT:    vcvtph2ps %xmm1, %xmm1
-; X86-AVX-I32-NEXT:    vroundss $4, %xmm1, %xmm1, %xmm1
-; X86-AVX-I32-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
-; X86-AVX-I32-NEXT:    vcvtph2ps %xmm1, %xmm1
-; X86-AVX-I32-NEXT:    vcvttss2si %xmm1, %eax
-; X86-AVX-I32-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
-; X86-AVX-I32-NEXT:    vcvtph2ps %xmm1, %xmm1
-; X86-AVX-I32-NEXT:    vroundss $4, %xmm1, %xmm1, %xmm1
-; X86-AVX-I32-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
-; X86-AVX-I32-NEXT:    vcvtph2ps %xmm1, %xmm1
-; X86-AVX-I32-NEXT:    vcvttss2si %xmm1, %ecx
-; X86-AVX-I32-NEXT:    vmovd %ecx, %xmm1
-; X86-AVX-I32-NEXT:    vpinsrd $1, %eax, %xmm1, %xmm1
-; X86-AVX-I32-NEXT:    vshufps {{.*#+}} xmm3 = xmm0[3,3,3,3]
+; X86-AVX-I32-NEXT:    vinserti128 $1, %xmm0, %ymm2, %ymm0
+; X86-AVX-I32-NEXT:    vextracti128 $1, %ymm1, %xmm1
+; X86-AVX-I32-NEXT:    vpsrldq {{.*#+}} xmm2 = xmm1[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; X86-AVX-I32-NEXT:    vcvtph2ps %xmm2, %xmm2
+; X86-AVX-I32-NEXT:    vroundss $4, %xmm2, %xmm2, %xmm2
+; X86-AVX-I32-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
+; X86-AVX-I32-NEXT:    vcvtph2ps %xmm2, %xmm2
+; X86-AVX-I32-NEXT:    vcvttss2si %xmm2, %eax
+; X86-AVX-I32-NEXT:    vshufpd {{.*#+}} xmm2 = xmm1[1,0]
+; X86-AVX-I32-NEXT:    vcvtph2ps %xmm2, %xmm2
+; X86-AVX-I32-NEXT:    vroundss $4, %xmm2, %xmm2, %xmm2
+; X86-AVX-I32-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
+; X86-AVX-I32-NEXT:    vcvtph2ps %xmm2, %xmm2
+; X86-AVX-I32-NEXT:    vcvttss2si %xmm2, %ecx
+; X86-AVX-I32-NEXT:    vmovd %ecx, %xmm2
+; X86-AVX-I32-NEXT:    vpinsrd $1, %eax, %xmm2, %xmm2
+; X86-AVX-I32-NEXT:    vshufps {{.*#+}} xmm3 = xmm1[3,3,3,3]
 ; X86-AVX-I32-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; X86-AVX-I32-NEXT:    vroundss $4, %xmm3, %xmm3, %xmm3
 ; X86-AVX-I32-NEXT:    vcvtps2ph $4, %xmm3, %xmm3
 ; X86-AVX-I32-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; X86-AVX-I32-NEXT:    vcvttss2si %xmm3, %eax
-; X86-AVX-I32-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
-; X86-AVX-I32-NEXT:    vpsrldq {{.*#+}} xmm3 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; X86-AVX-I32-NEXT:    vpinsrd $2, %eax, %xmm2, %xmm2
+; X86-AVX-I32-NEXT:    vpsrldq {{.*#+}} xmm3 = xmm1[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; X86-AVX-I32-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; X86-AVX-I32-NEXT:    vroundss $4, %xmm3, %xmm3, %xmm3
 ; X86-AVX-I32-NEXT:    vcvtps2ph $4, %xmm3, %xmm3
 ; X86-AVX-I32-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; X86-AVX-I32-NEXT:    vcvttss2si %xmm3, %eax
-; X86-AVX-I32-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm1
-; X86-AVX-I32-NEXT:    vpsrld $16, %xmm0, %xmm3
+; X86-AVX-I32-NEXT:    vpinsrd $3, %eax, %xmm2, %xmm2
+; X86-AVX-I32-NEXT:    vpsrld $16, %xmm1, %xmm3
 ; X86-AVX-I32-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; X86-AVX-I32-NEXT:    vroundss $4, %xmm3, %xmm3, %xmm3
 ; X86-AVX-I32-NEXT:    vcvtps2ph $4, %xmm3, %xmm3
 ; X86-AVX-I32-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; X86-AVX-I32-NEXT:    vcvttss2si %xmm3, %eax
-; X86-AVX-I32-NEXT:    vcvtph2ps %xmm0, %xmm3
+; X86-AVX-I32-NEXT:    vcvtph2ps %xmm1, %xmm3
 ; X86-AVX-I32-NEXT:    vroundss $4, %xmm3, %xmm3, %xmm3
 ; X86-AVX-I32-NEXT:    vcvtps2ph $4, %xmm3, %xmm3
 ; X86-AVX-I32-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; X86-AVX-I32-NEXT:    vcvttss2si %xmm3, %ecx
 ; X86-AVX-I32-NEXT:    vmovd %ecx, %xmm3
 ; X86-AVX-I32-NEXT:    vpinsrd $1, %eax, %xmm3, %xmm3
-; X86-AVX-I32-NEXT:    vmovshdup {{.*#+}} xmm4 = xmm0[1,1,3,3]
+; X86-AVX-I32-NEXT:    vmovshdup {{.*#+}} xmm4 = xmm1[1,1,3,3]
 ; X86-AVX-I32-NEXT:    vcvtph2ps %xmm4, %xmm4
 ; X86-AVX-I32-NEXT:    vroundss $4, %xmm4, %xmm4, %xmm4
 ; X86-AVX-I32-NEXT:    vcvtps2ph $4, %xmm4, %xmm4
 ; X86-AVX-I32-NEXT:    vcvtph2ps %xmm4, %xmm4
 ; X86-AVX-I32-NEXT:    vcvttss2si %xmm4, %eax
 ; X86-AVX-I32-NEXT:    vpinsrd $2, %eax, %xmm3, %xmm3
-; X86-AVX-I32-NEXT:    vpsrlq $48, %xmm0, %xmm0
-; X86-AVX-I32-NEXT:    vcvtph2ps %xmm0, %xmm0
-; X86-AVX-I32-NEXT:    vroundss $4, %xmm0, %xmm0, %xmm0
-; X86-AVX-I32-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; X86-AVX-I32-NEXT:    vcvtph2ps %xmm0, %xmm0
-; X86-AVX-I32-NEXT:    vcvttss2si %xmm0, %eax
-; X86-AVX-I32-NEXT:    vpinsrd $3, %eax, %xmm3, %xmm0
-; X86-AVX-I32-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm1
-; X86-AVX-I32-NEXT:    vmovdqa %ymm2, %ymm0
+; X86-AVX-I32-NEXT:    vpsrlq $48, %xmm1, %xmm1
+; X86-AVX-I32-NEXT:    vcvtph2ps %xmm1, %xmm1
+; X86-AVX-I32-NEXT:    vroundss $4, %xmm1, %xmm1, %xmm1
+; X86-AVX-I32-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
+; X86-AVX-I32-NEXT:    vcvtph2ps %xmm1, %xmm1
+; X86-AVX-I32-NEXT:    vcvttss2si %xmm1, %eax
+; X86-AVX-I32-NEXT:    vpinsrd $3, %eax, %xmm3, %xmm1
+; X86-AVX-I32-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
 ; X86-AVX-I32-NEXT:    retl
 ;
 ; X86-FP16-I32-LABEL: lrint_v16f16:
@@ -1086,120 +1086,120 @@ define <16 x iXLen> @lrint_v16f16(<16 x half> %x) nounwind {
 ;
 ; X64-AVX-I32-LABEL: lrint_v16f16:
 ; X64-AVX-I32:       # %bb.0:
-; X64-AVX-I32-NEXT:    vpsrldq {{.*#+}} xmm1 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; X64-AVX-I32-NEXT:    vcvtph2ps %xmm1, %xmm1
-; X64-AVX-I32-NEXT:    vroundss $4, %xmm1, %xmm1, %xmm1
-; X64-AVX-I32-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
-; X64-AVX-I32-NEXT:    vcvtph2ps %xmm1, %xmm1
-; X64-AVX-I32-NEXT:    vcvttss2si %xmm1, %eax
-; X64-AVX-I32-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
-; X64-AVX-I32-NEXT:    vcvtph2ps %xmm1, %xmm1
-; X64-AVX-I32-NEXT:    vroundss $4, %xmm1, %xmm1, %xmm1
-; X64-AVX-I32-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
-; X64-AVX-I32-NEXT:    vcvtph2ps %xmm1, %xmm1
-; X64-AVX-I32-NEXT:    vcvttss2si %xmm1, %ecx
-; X64-AVX-I32-NEXT:    vmovd %ecx, %xmm1
-; X64-AVX-I32-NEXT:    vpinsrd $1, %eax, %xmm1, %xmm1
-; X64-AVX-I32-NEXT:    vshufps {{.*#+}} xmm2 = xmm0[3,3,3,3]
+; X64-AVX-I32-NEXT:    vmovdqa %ymm0, %ymm1
+; X64-AVX-I32-NEXT:    vpsrldq {{.*#+}} xmm0 = xmm1[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; X64-AVX-I32-NEXT:    vcvtph2ps %xmm0, %xmm0
+; X64-AVX-I32-NEXT:    vroundss $4, %xmm0, %xmm0, %xmm0
+; X64-AVX-I32-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; X64-AVX-I32-NEXT:    vcvtph2ps %xmm0, %xmm0
+; X64-AVX-I32-NEXT:    vcvttss2si %xmm0, %eax
+; X64-AVX-I32-NEXT:    vshufpd {{.*#+}} xmm0 = xmm1[1,0]
+; X64-AVX-I32-NEXT:    vcvtph2ps %xmm0, %xmm0
+; X64-AVX-I32-NEXT:    vroundss $4, %xmm0, %xmm0, %xmm0
+; X64-AVX-I32-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; X64-AVX-I32-NEXT:    vcvtph2ps %xmm0, %xmm0
+; X64-AVX-I32-NEXT:    vcvttss2si %xmm0, %ecx
+; X64-AVX-I32-NEXT:    vmovd %ecx, %xmm0
+; X64-AVX-I32-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
+; X64-AVX-I32-NEXT:    vshufps {{.*#+}} xmm2 = xmm1[3,3,3,3]
 ; X64-AVX-I32-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; X64-AVX-I32-NEXT:    vroundss $4, %xmm2, %xmm2, %xmm2
 ; X64-AVX-I32-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
 ; X64-AVX-I32-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; X64-AVX-I32-NEXT:    vcvttss2si %xmm2, %eax
-; X64-AVX-I32-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
-; X64-AVX-I32-NEXT:    vpsrldq {{.*#+}} xmm2 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; X64-AVX-I32-NEXT:    vpinsrd $2, %eax, %xmm0, %xmm0
+; X64-AVX-I32-NEXT:    vpsrldq {{.*#+}} xmm2 = xmm1[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; X64-AVX-I32-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; X64-AVX-I32-NEXT:    vroundss $4, %xmm2, %xmm2, %xmm2
 ; X64-AVX-I32-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
 ; X64-AVX-I32-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; X64-AVX-I32-NEXT:    vcvttss2si %xmm2, %eax
-; X64-AVX-I32-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm1
-; X64-AVX-I32-NEXT:    vpsrld $16, %xmm0, %xmm2
+; X64-AVX-I32-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0
+; X64-AVX-I32-NEXT:    vpsrld $16, %xmm1, %xmm2
 ; X64-AVX-I32-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; X64-AVX-I32-NEXT:    vroundss $4, %xmm2, %xmm2, %xmm2
 ; X64-AVX-I32-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
 ; X64-AVX-I32-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; X64-AVX-I32-NEXT:    vcvttss2si %xmm2, %eax
-; X64-AVX-I32-NEXT:    vcvtph2ps %xmm0, %xmm2
+; X64-AVX-I32-NEXT:    vcvtph2ps %xmm1, %xmm2
 ; X64-AVX-I32-NEXT:    vroundss $4, %xmm2, %xmm2, %xmm2
 ; X64-AVX-I32-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
 ; X64-AVX-I32-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; X64-AVX-I32-NEXT:    vcvttss2si %xmm2, %ecx
 ; X64-AVX-I32-NEXT:    vmovd %ecx, %xmm2
 ; X64-AVX-I32-NEXT:    vpinsrd $1, %eax, %xmm2, %xmm2
-; X64-AVX-I32-NEXT:    vmovshdup {{.*#+}} xmm3 = xmm0[1,1,3,3]
+; X64-AVX-I32-NEXT:    vmovshdup {{.*#+}} xmm3 = xmm1[1,1,3,3]
 ; X64-AVX-I32-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; X64-AVX-I32-NEXT:    vroundss $4, %xmm3, %xmm3, %xmm3
 ; X64-AVX-I32-NEXT:    vcvtps2ph $4, %xmm3, %xmm3
 ; X64-AVX-I32-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; X64-AVX-I32-NEXT:    vcvttss2si %xmm3, %eax
 ; X64-AVX-I32-NEXT:    vpinsrd $2, %eax, %xmm2, %xmm2
-; X64-AVX-I32-NEXT:    vpsrlq $48, %xmm0, %xmm3
+; X64-AVX-I32-NEXT:    vpsrlq $48, %xmm1, %xmm3
 ; X64-AVX-I32-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; X64-AVX-I32-NEXT:    vroundss $4, %xmm3, %xmm3, %xmm3
 ; X64-AVX-I32-NEXT:    vcvtps2ph $4, %xmm3, %xmm3
 ; X64-AVX-I32-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; X64-AVX-I32-NEXT:    vcvttss2si %xmm3, %eax
 ; X64-AVX-I32-NEXT:    vpinsrd $3, %eax, %xmm2, %xmm2
-; X64-AVX-I32-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm2
-; X64-AVX-I32-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; X64-AVX-I32-NEXT:    vpsrldq {{.*#+}} xmm1 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; X64-AVX-I32-NEXT:    vcvtph2ps %xmm1, %xmm1
-; X64-AVX-I32-NEXT:    vroundss $4, %xmm1, %xmm1, %xmm1
-; X64-AVX-I32-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
-; X64-AVX-I32-NEXT:    vcvtph2ps %xmm1, %xmm1
-; X64-AVX-I32-NEXT:    vcvttss2si %xmm1, %eax
-; X64-AVX-I32-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
-; X64-AVX-I32-NEXT:    vcvtph2ps %xmm1, %xmm1
-; X64-AVX-I32-NEXT:    vroundss $4, %xmm1, %xmm1, %xmm1
-; X64-AVX-I32-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
-; X64-AVX-I32-NEXT:    vcvtph2ps %xmm1, %xmm1
-; X64-AVX-I32-NEXT:    vcvttss2si %xmm1, %ecx
-; X64-AVX-I32-NEXT:    vmovd %ecx, %xmm1
-; X64-AVX-I32-NEXT:    vpinsrd $1, %eax, %xmm1, %xmm1
-; X64-AVX-I32-NEXT:    vshufps {{.*#+}} xmm3 = xmm0[3,3,3,3]
+; X64-AVX-I32-NEXT:    vinserti128 $1, %xmm0, %ymm2, %ymm0
+; X64-AVX-I32-NEXT:    vextracti128 $1, %ymm1, %xmm1
+; X64-AVX-I32-NEXT:    vpsrldq {{.*#+}} xmm2 = xmm1[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; X64-AVX-I32-NEXT:    vcvtph2ps %xmm2, %xmm2
+; X64-AVX-I32-NEXT:    vroundss $4, %xmm2, %xmm2, %xmm2
+; X64-AVX-I32-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
+; X64-AVX-I32-NEXT:    vcvtph2ps %xmm2, %xmm2
+; X64-AVX-I32-NEXT:    vcvttss2si %xmm2, %eax
+; X64-AVX-I32-NEXT:    vshufpd {{.*#+}} xmm2 = xmm1[1,0]
+; X64-AVX-I32-NEXT:    vcvtph2ps %xmm2, %xmm2
+; X64-AVX-I32-NEXT:    vroundss $4, %xmm2, %xmm2, %xmm2
+; X64-AVX-I32-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
+; X64-AVX-I32-NEXT:    vcvtph2ps %xmm2, %xmm2
+; X64-AVX-I32-NEXT:    vcvttss2si %xmm2, %ecx
+; X64-AVX-I32-NEXT:    vmovd %ecx, %xmm2
+; X64-AVX-I32-NEXT:    vpinsrd $1, %eax, %xmm2, %xmm2
+; X64-AVX-I32-NEXT:    vshufps {{.*#+}} xmm3 = xmm1[3,3,3,3]
 ; X64-AVX-I32-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; X64-AVX-I32-NEXT:    vroundss $4, %xmm3, %xmm3, %xmm3
 ; X64-AVX-I32-NEXT:    vcvtps2ph $4, %xmm3, %xmm3
 ; X64-AVX-I32-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; X64-AVX-I32-NEXT:    vcvttss2si %xmm3, %eax
-; X64-AVX-I32-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
-; X64-AVX-I32-NEXT:    vpsrldq {{.*#+}} xmm3 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; X64-AVX-I32-NEXT:    vpinsrd $2, %eax, %xmm2, %xmm2
+; X64-AVX-I32-NEXT:    vpsrldq {{.*#+}} xmm3 = xmm1[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; X64-AVX-I32-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; X64-AVX-I32-NEXT:    vroundss $4, %xmm3, %xmm3, %xmm3
 ; X64-AVX-I32-NEXT:    vcvtps2ph $4, %xmm3, %xmm3
 ; X64-AVX-I32-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; X64-AVX-I32-NEXT:    vcvttss2si %xmm3, %eax
-; X64-AVX-I32-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm1
-; X64-AVX-I32-NEXT:    vpsrld $16, %xmm0, %xmm3
+; X64-AVX-I32-NEXT:    vpinsrd $3, %eax, %xmm2, %xmm2
+; X64-AVX-I32-NEXT:    vpsrld $16, %xmm1, %xmm3
 ; X64-AVX-I32-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; X64-AVX-I32-NEXT:    vroundss $4, %xmm3, %xmm3, %xmm3
 ; X64-AVX-I32-NEXT:    vcvtps2ph $4, %xmm3, %xmm3
 ; X64-AVX-I32-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; X64-AVX-I32-NEXT:    vcvttss2si %xmm3, %eax
-; X64-AVX-I32-NEXT:    vcvtph2ps %xmm0, %xmm3
+; X64-AVX-I32-NEXT:    vcvtph2ps %xmm1, %xmm3
 ; X64-AVX-I32-NEXT:    vroundss $4, %xmm3, %xmm3, %xmm3
 ; X64-AVX-I32-NEXT:    vcvtps2ph $4, %xmm3, %xmm3
 ; X64-AVX-I32-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; X64-AVX-I32-NEXT:    vcvttss2si %xmm3, %ecx
 ; X64-AVX-I32-NEXT:    vmovd %ecx, %xmm3
 ; X64-AVX-I32-NEXT:    vpinsrd $1, %eax, %xmm3, %xmm3
-; X64-AVX-I32-NEXT:    vmovshdup {{.*#+}} xmm4 = xmm0[1,1,3,3]
+; X64-AVX-I32-NEXT:    vmovshdup {{.*#+}} xmm4 = xmm1[1,1,3,3]
 ; X64-AVX-I32-NEXT:    vcvtph2ps %xmm4, %xmm4
 ; X64-AVX-I32-NEXT:    vroundss $4, %xmm4, %xmm4, %xmm4
 ; X64-AVX-I32-NEXT:    vcvtps2ph $4, %xmm4, %xmm4
 ; X64-AVX-I32-NEXT:    vcvtph2ps %xmm4, %xmm4
 ; X64-AVX-I32-NEXT:    vcvttss2si %xmm4, %eax
 ; X64-AVX-I32-NEXT:    vpinsrd $2, %eax, %xmm3, %xmm3
-; X64-AVX-I32-NEXT:    vpsrlq $48, %xmm0, %xmm0
-; X64-AVX-I32-NEXT:    vcvtph2ps %xmm0, %xmm0
-; X64-AVX-I32-NEXT:    vroundss $4, %xmm0, %xmm0, %xmm0
-; X64-AVX-I32-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; X64-AVX-I32-NEXT:    vcvtph2ps %xmm0, %xmm0
-; X64-AVX-I32-NEXT:    vcvttss2si %xmm0, %eax
-; X64-AVX-I32-NEXT:    vpinsrd $3, %eax, %xmm3, %xmm0
-; X64-AVX-I32-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm1
-; X64-AVX-I32-NEXT:    vmovdqa %ymm2, %ymm0
+; X64-AVX-I32-NEXT:    vpsrlq $48, %xmm1, %xmm1
+; X64-AVX-I32-NEXT:    vcvtph2ps %xmm1, %xmm1
+; X64-AVX-I32-NEXT:    vroundss $4, %xmm1, %xmm1, %xmm1
+; X64-AVX-I32-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
+; X64-AVX-I32-NEXT:    vcvtph2ps %xmm1, %xmm1
+; X64-AVX-I32-NEXT:    vcvttss2si %xmm1, %eax
+; X64-AVX-I32-NEXT:    vpinsrd $3, %eax, %xmm3, %xmm1
+; X64-AVX-I32-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
 ; X64-AVX-I32-NEXT:    retq
 ;
 ; X64-FP16-I32-LABEL: lrint_v16f16:

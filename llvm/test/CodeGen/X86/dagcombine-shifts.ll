@@ -369,22 +369,22 @@ define <4 x i32> @shift_zext_shl_vec(<4 x i8> %x) nounwind {
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    andl $64, %ecx
-; X86-NEXT:    shll $9, %ecx
-; X86-NEXT:    andl $63, %edx
-; X86-NEXT:    shll $8, %edx
-; X86-NEXT:    andl $31, %esi
-; X86-NEXT:    shll $7, %esi
-; X86-NEXT:    andl $23, %edi
-; X86-NEXT:    shll $6, %edi
-; X86-NEXT:    movl %edi, 12(%eax)
-; X86-NEXT:    movl %esi, 8(%eax)
-; X86-NEXT:    movl %edx, 4(%eax)
-; X86-NEXT:    movl %ecx, (%eax)
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    andl $64, %edi
+; X86-NEXT:    shll $9, %edi
+; X86-NEXT:    andl $63, %esi
+; X86-NEXT:    shll $8, %esi
+; X86-NEXT:    andl $31, %edx
+; X86-NEXT:    shll $7, %edx
+; X86-NEXT:    andl $23, %ecx
+; X86-NEXT:    shll $6, %ecx
+; X86-NEXT:    movl %ecx, 12(%eax)
+; X86-NEXT:    movl %edx, 8(%eax)
+; X86-NEXT:    movl %esi, 4(%eax)
+; X86-NEXT:    movl %edi, (%eax)
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    retl $4

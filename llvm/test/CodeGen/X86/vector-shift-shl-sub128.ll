@@ -195,22 +195,22 @@ define <4 x i16> @var_shift_v4i16(<4 x i16> %a, <4 x i16> %b) nounwind {
 ;
 ; X86-SSE-LABEL: var_shift_v4i16:
 ; X86-SSE:       # %bb.0:
-; X86-SSE-NEXT:    pxor %xmm3, %xmm3
-; X86-SSE-NEXT:    movdqa %xmm1, %xmm2
-; X86-SSE-NEXT:    punpckhwd {{.*#+}} xmm2 = xmm2[4],xmm3[4],xmm2[5],xmm3[5],xmm2[6],xmm3[6],xmm2[7],xmm3[7]
-; X86-SSE-NEXT:    pslld $23, %xmm2
+; X86-SSE-NEXT:    pxor %xmm2, %xmm2
+; X86-SSE-NEXT:    movdqa %xmm1, %xmm3
+; X86-SSE-NEXT:    punpckhwd {{.*#+}} xmm3 = xmm3[4],xmm2[4],xmm3[5],xmm2[5],xmm3[6],xmm2[6],xmm3[7],xmm2[7]
+; X86-SSE-NEXT:    pslld $23, %xmm3
 ; X86-SSE-NEXT:    movdqa {{.*#+}} xmm4 = [1065353216,1065353216,1065353216,1065353216]
-; X86-SSE-NEXT:    paddd %xmm4, %xmm2
-; X86-SSE-NEXT:    cvttps2dq %xmm2, %xmm2
-; X86-SSE-NEXT:    pslld $16, %xmm2
-; X86-SSE-NEXT:    psrad $16, %xmm2
-; X86-SSE-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1],xmm1[2],xmm3[2],xmm1[3],xmm3[3]
+; X86-SSE-NEXT:    paddd %xmm4, %xmm3
+; X86-SSE-NEXT:    cvttps2dq %xmm3, %xmm3
+; X86-SSE-NEXT:    pslld $16, %xmm3
+; X86-SSE-NEXT:    psrad $16, %xmm3
+; X86-SSE-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1],xmm1[2],xmm2[2],xmm1[3],xmm2[3]
 ; X86-SSE-NEXT:    pslld $23, %xmm1
 ; X86-SSE-NEXT:    paddd %xmm4, %xmm1
 ; X86-SSE-NEXT:    cvttps2dq %xmm1, %xmm1
 ; X86-SSE-NEXT:    pslld $16, %xmm1
 ; X86-SSE-NEXT:    psrad $16, %xmm1
-; X86-SSE-NEXT:    packssdw %xmm2, %xmm1
+; X86-SSE-NEXT:    packssdw %xmm3, %xmm1
 ; X86-SSE-NEXT:    pmullw %xmm1, %xmm0
 ; X86-SSE-NEXT:    retl
   %shift = shl <4 x i16> %a, %b
@@ -322,22 +322,22 @@ define <2 x i16> @var_shift_v2i16(<2 x i16> %a, <2 x i16> %b) nounwind {
 ;
 ; X86-SSE-LABEL: var_shift_v2i16:
 ; X86-SSE:       # %bb.0:
-; X86-SSE-NEXT:    pxor %xmm3, %xmm3
-; X86-SSE-NEXT:    movdqa %xmm1, %xmm2
-; X86-SSE-NEXT:    punpckhwd {{.*#+}} xmm2 = xmm2[4],xmm3[4],xmm2[5],xmm3[5],xmm2[6],xmm3[6],xmm2[7],xmm3[7]
-; X86-SSE-NEXT:    pslld $23, %xmm2
+; X86-SSE-NEXT:    pxor %xmm2, %xmm2
+; X86-SSE-NEXT:    movdqa %xmm1, %xmm3
+; X86-SSE-NEXT:    punpckhwd {{.*#+}} xmm3 = xmm3[4],xmm2[4],xmm3[5],xmm2[5],xmm3[6],xmm2[6],xmm3[7],xmm2[7]
+; X86-SSE-NEXT:    pslld $23, %xmm3
 ; X86-SSE-NEXT:    movdqa {{.*#+}} xmm4 = [1065353216,1065353216,1065353216,1065353216]
-; X86-SSE-NEXT:    paddd %xmm4, %xmm2
-; X86-SSE-NEXT:    cvttps2dq %xmm2, %xmm2
-; X86-SSE-NEXT:    pslld $16, %xmm2
-; X86-SSE-NEXT:    psrad $16, %xmm2
-; X86-SSE-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1],xmm1[2],xmm3[2],xmm1[3],xmm3[3]
+; X86-SSE-NEXT:    paddd %xmm4, %xmm3
+; X86-SSE-NEXT:    cvttps2dq %xmm3, %xmm3
+; X86-SSE-NEXT:    pslld $16, %xmm3
+; X86-SSE-NEXT:    psrad $16, %xmm3
+; X86-SSE-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1],xmm1[2],xmm2[2],xmm1[3],xmm2[3]
 ; X86-SSE-NEXT:    pslld $23, %xmm1
 ; X86-SSE-NEXT:    paddd %xmm4, %xmm1
 ; X86-SSE-NEXT:    cvttps2dq %xmm1, %xmm1
 ; X86-SSE-NEXT:    pslld $16, %xmm1
 ; X86-SSE-NEXT:    psrad $16, %xmm1
-; X86-SSE-NEXT:    packssdw %xmm2, %xmm1
+; X86-SSE-NEXT:    packssdw %xmm3, %xmm1
 ; X86-SSE-NEXT:    pmullw %xmm1, %xmm0
 ; X86-SSE-NEXT:    retl
   %shift = shl <2 x i16> %a, %b
