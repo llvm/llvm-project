@@ -188,6 +188,7 @@ public:
 
   // Make a placeholder symbol for a Name that otherwise wouldn't have one.
   // It is not in any scope and always has MiscDetails.
+  Symbol *MakePlaceholder(parser::CharBlock name, MiscDetails::Kind kind);
   void MakePlaceholder(const parser::Name &, MiscDetails::Kind);
 
   template <typename T> common::IfNoLvalue<T, T> FoldExpr(T &&expr) {
@@ -2194,6 +2195,22 @@ void OmpVisitor::ProcessMapperSpecifier(const parser::OmpMapperSpecifier &spec,
 void OmpVisitor::ProcessReductionSpecifier(
     const parser::OmpReductionSpecifier &spec,
     const parser::OmpClauseList &clauses) {
+  // Even if this directive is invalid or ignored for any reason, there is
+  // still some processing that needs to happen in order for all Name's
+  // embedded in the reduction specifier and the clauses to have symbols.
+  bool ignore{false};
+
+  // Ignore declarative METADIRECTIVEs for now. Those are not handled yet.
+  // Also, the top of the declaratives_ stack can be a nullptr if this
+  // directive is (incorrectly) placed in the execution part.
+  const parser::OpenMPDeclarativeConstruct *ompDecl{declaratives_.back()};
+  auto dirId = ompDecl
+      ? parser::omp::GetOmpDirectiveSpecification(*ompDecl).DirId()
+      : llvm::omp::Directive::OMPD_nothing;
+  if (dirId != llvm::omp::OMPD_declare_reduction) {
+    ignore = true;
+  }
+
   const parser::Name *name{nullptr};
   parser::CharBlock mangledName;
   UserReductionDetails reductionDetailsTemp;
@@ -2224,7 +2241,7 @@ void OmpVisitor::ProcessReductionSpecifier(
   UserReductionDetails *reductionDetails{&reductionDetailsTemp};
   // Use scope-local lookup to avoid false matches from parent scopes.
   Symbol *symbol{FindInScope(currScope(), mangledName)};
-  if (symbol) {
+  if (!ignore && symbol) {
     if (symbol->detailsIf<UseDetails>()) {
       // USE-associated reduction: shadow it with a new local declaration.
       EraseSymbol(*symbol);
@@ -2243,22 +2260,29 @@ void OmpVisitor::ProcessReductionSpecifier(
     }
   }
 
-  reductionDetails->AddDecl(declaratives_.back());
-
   // Do not walk OmpTypeNameList. The types on the list will be visited
-  // during procesing of OmpCombinerExpression.
+  // during procesing of OmpCombinerExpression. The traversal of
+  // OmpCombinerExpression will also create symbols for omp_* variables,
+  // so it has to run regardless of whether this directive is valid
+  // or not.
   Walk(std::get<std::optional<parser::OmpCombinerExpression>>(spec.t));
   Walk(clauses);
 
-  for (auto &type : std::get<parser::OmpTypeNameList>(spec.t).v) {
-    // The declTypeSpec can be null if there is some semantic error.
-    if (type.declTypeSpec) {
-      reductionDetails->AddType(*type.declTypeSpec);
+  if (!ignore) {
+    reductionDetails->AddDecl(declaratives_.back());
+
+    for (auto &type : std::get<parser::OmpTypeNameList>(spec.t).v) {
+      // The declTypeSpec can be null if there is some semantic error.
+      if (type.declTypeSpec) {
+        reductionDetails->AddType(*type.declTypeSpec);
+      }
     }
   }
 
-  if (!symbol) {
-    symbol = &MakeSymbol(mangledName, Attrs{}, std::move(*reductionDetails));
+  if (ignore || !symbol) {
+    symbol = ignore
+        ? MakePlaceholder(mangledName, MiscDetails::Kind::None)
+        : &MakeSymbol(mangledName, Attrs{}, std::move(*reductionDetails));
   }
   if (name) {
     name->symbol = symbol;
@@ -2570,11 +2594,15 @@ template <typename T> void BaseVisitor::Walk(const T &x) {
   parser::Walk(x, *this_);
 }
 
+Symbol *BaseVisitor::MakePlaceholder(
+    parser::CharBlock name, MiscDetails::Kind kind) {
+  return &context_->globalScope().MakeSymbol(name, Attrs{}, MiscDetails{kind});
+}
+
 void BaseVisitor::MakePlaceholder(
     const parser::Name &name, MiscDetails::Kind kind) {
   if (!name.symbol) {
-    name.symbol = &context_->globalScope().MakeSymbol(
-        name.source, Attrs{}, MiscDetails{kind});
+    name.symbol = MakePlaceholder(name.source, kind);
   }
 }
 
