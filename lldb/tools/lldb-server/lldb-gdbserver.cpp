@@ -50,6 +50,8 @@
 #include "Plugins/Process/FreeBSD/NativeProcessFreeBSD.h"
 #elif defined(__NetBSD__)
 #include "Plugins/Process/NetBSD/NativeProcessNetBSD.h"
+#elif defined(__OpenBSD__)
+#include "Plugins/Process/OpenBSD/NativeProcessOpenBSD.h"
 #elif defined(_WIN32)
 #include "Plugins/Process/Windows/Common/NativeProcessWindows.h"
 #elif defined(_AIX)
@@ -77,6 +79,8 @@ typedef process_linux::NativeProcessLinux::Manager NativeProcessManager;
 typedef process_freebsd::NativeProcessFreeBSD::Manager NativeProcessManager;
 #elif defined(__NetBSD__)
 typedef process_netbsd::NativeProcessNetBSD::Manager NativeProcessManager;
+#elif defined(__OpenBSD__)
+typedef process_openbsd::NativeProcessOpenBSD::Manager NativeProcessManager;
 #elif defined(_WIN32)
 typedef NativeProcessWindows::Manager NativeProcessManager;
 #elif defined(_AIX)
