@@ -33,8 +33,9 @@ namespace {
 class ScanfFormatStringParser : analyze_format_string::FormatStringParser {
 public:
   ScanfFormatStringParser(FormatStringHandler &H, const LangOptions &LO,
-                          const TargetInfo &Target)
-      : FormatStringParser(H, LO, Target, /*IsScanf=*/true) {}
+                          const TargetInfo &Target,
+                          const llvm::TextEncodingConverter &Conv)
+      : FormatStringParser(H, LO, Target, /*IsScanf=*/true, Conv) {}
 
   ScanfSpecifierResult parseSpecifier(const char *&Beg, const char *E,
                                       unsigned &argIndex) const;
@@ -279,7 +280,8 @@ ScanfFormatStringParser::parseSpecifier(const char *&Beg, const char *E,
       FS.setConversionSpecifier(CS);
     }
     // Assume the conversion takes one argument.
-    return !H.HandleInvalidScanfConversionSpecifier(FS, Beg, Len);
+    return !H.HandleInvalidScanfConversionSpecifier(FS, Beg, Len,
+                                                    FormatStrConverter);
   }
   return ScanfSpecifierResult(Start, FS);
 }
@@ -635,7 +637,8 @@ bool clang::analyze_format_string::ParseScanfString(FormatStringHandler &H,
   unsigned argIndex = 0;
 
   // Keep looking for a format specifier until we have exhausted the string.
-  ScanfFormatStringParser P(H, LO, Target);
+  llvm::TextEncodingConverter Conv = makeFormatStrConverter(Target);
+  ScanfFormatStringParser P(H, LO, Target, Conv);
   while (I != E) {
     const ScanfSpecifierResult &FSR = P.parseSpecifier(I, E, argIndex);
     // Did a fail-stop error of any kind occur when parsing the specifier?
