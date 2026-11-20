@@ -8,8 +8,7 @@
 // The SuspendCrossingInfo maintains data that allows to answer a question
 // whether given two BasicBlocks A and B there is a path from A to B that
 // passes through a suspend point. Note, SuspendCrossingInfo is invalidated
-// by changes to the CFG including adding/removing BBs due to its use of BB
-// ptrs in the BlockToIndexMapping.
+// by changes to the block numbering.
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_TRANSFORMS_COROUTINES_SUSPENDCROSSINGINFO_H
@@ -29,28 +28,6 @@ namespace llvm {
 
 class ModuleSlotTracker;
 
-// Provides two way mapping between the blocks and numbers.
-class BlockToIndexMapping {
-  SmallVector<BasicBlock *, 32> V;
-
-public:
-  size_t size() const { return V.size(); }
-
-  BlockToIndexMapping(Function &F) {
-    for (BasicBlock &BB : F)
-      V.push_back(&BB);
-    llvm::sort(V);
-  }
-
-  size_t blockToIndex(BasicBlock const *BB) const {
-    auto *I = llvm::lower_bound(V, BB);
-    assert(I != V.end() && *I == BB && "BasicBlockNumberng: Unknown block");
-    return I - V.begin();
-  }
-
-  BasicBlock *indexToBlock(unsigned Index) const { return V[Index]; }
-};
-
 // The SuspendCrossingInfo maintains data that allows to answer a question
 // whether given two BasicBlocks A and B there is a path from A to B that
 // passes through a suspend point.
@@ -67,8 +44,6 @@ public:
 //             crosses a suspend point.
 //
 class SuspendCrossingInfo {
-  BlockToIndexMapping Mapping;
-
   struct BlockData {
     BitVector Consumes;
     BitVector Kills;
@@ -91,16 +66,8 @@ class SuspendCrossingInfo {
       NeverKill = true;
     }
   };
+  Function *F;
   SmallVector<BlockData, 32> Block;
-
-  iterator_range<pred_iterator> predecessors(BlockData const &BD) const {
-    BasicBlock *BB = Mapping.indexToBlock(&BD - &Block[0]);
-    return llvm::predecessors(BB);
-  }
-
-  BlockData &getBlockData(BasicBlock *BB) {
-    return Block[Mapping.blockToIndex(BB)];
-  }
 
   /// Compute the BlockData for the current function in one iteration.
   /// Initialize - Whether this is the first iteration, we can optimize
