@@ -7035,6 +7035,8 @@ def note_protected_by_variable_non_pod : Note<
   "jump bypasses initialization of non-POD variable">;
 def note_protected_by_cleanup : Note<
   "jump bypasses initialization of variable with __attribute__((cleanup))">;
+def note_protected_by_omp_allocate : Note<
+  "jump bypasses allocation of variable with '#pragma omp allocate'">;
 def note_protected_by_vla_typedef : Note<
   "jump bypasses initialization of VLA typedef">;
 def note_protected_by_vla_type_alias : Note<
@@ -7095,6 +7097,8 @@ def note_enters_defer_stmt : Note<"jump enters a defer statement">;
 
 def note_exits_cleanup : Note<
   "jump exits scope of variable with __attribute__((cleanup))">;
+def note_exits_omp_allocate : Note<
+  "jump exits scope of variable with '#pragma omp allocate'">;
 def note_exits_dtor : Note<
   "jump exits scope of variable with non-trivial destructor">;
 def note_exits_temporary_dtor : Note<
@@ -13663,6 +13667,13 @@ def warn_preserve_access_index_enumerator_not_relocated : Warning<
   "enumerator %0 is not relocated where a constant is required, although %1 "
   "has the 'preserve_access_index' attribute">,
   InGroup<BPFEnumNotRelocated>, DefaultError;
+def note_preserve_enum_value_not_const : Note<
+  "an explicit '__builtin_preserve_enum_value' call is relocated at load time, "
+  "so it is not a constant">;
+def note_preserve_enum_value_case_attr : Note<
+  "a case label with an enumerator of an enum with the "
+  "'preserve_access_index' attribute is relocated, and compared like an 'if' "
+  "condition before the switch">;
 
 def err_bit_cast_non_trivially_copyable : Error<
   "'__builtin_bit_cast' %select{source|destination}0 type must be trivially copyable">;

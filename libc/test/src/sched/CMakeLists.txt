@@ -33,6 +33,19 @@ add_libc_test(
 )
 
 add_libc_test(
+  unshare_test
+  SUITE
+    libc-sched-tests
+  SRCS
+    unshare_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.sched.unshare
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
   get_priority_test
   SUITE
     libc-sched-tests
