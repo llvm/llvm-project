@@ -831,6 +831,10 @@ public:
   LowerTypeTestsModule(Module &M, ModuleAnalysisManager &AM,
                        ModuleSummaryIndex *ExportSummary,
                        const ModuleSummaryIndex *ImportSummary);
+  ~LowerTypeTestsModule() {
+    if (JumpTableDIB)
+      JumpTableDIB->finalize();
+  }
 
   bool lower();
 
@@ -2990,9 +2994,6 @@ bool LowerTypeTestsModule::lower() {
       buildBitSetsFromDisjointSet(TypeIds, Globals, ICallBranchFunnels);
     }
   }
-
-  if (JumpTableDIB)
-    JumpTableDIB->finalize();
 
   allocateByteArrays();
 
