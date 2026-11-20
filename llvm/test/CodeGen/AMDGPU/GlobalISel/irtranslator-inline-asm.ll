@@ -260,7 +260,8 @@ define i32 @test_sgpr_matching_constraint() nounwind {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY %8
   ; CHECK-NEXT:   INLINEASM &"s_mov_b32 $0, 8", attdialect, regdef:SReg_32, def %10
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY %10
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[COPY]](i32)
+  ; CHECK-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:_(i32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY]](i32)
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[INTRINSIC_CONVERGENT]](i32)
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY [[COPY1]](i32)
   ; CHECK-NEXT:   INLINEASM &"s_add_u32 $0, $1, $2", attdialect, regdef:SReg_32, def %12, reguse:SReg_32, [[COPY2]], reguse tiedto:$0, [[COPY3]](tied-def 3)
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY %12
