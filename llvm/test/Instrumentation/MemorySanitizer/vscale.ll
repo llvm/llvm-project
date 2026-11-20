@@ -589,6 +589,189 @@ entry:
   ret void
 }
 
+; Multiplication by a scalable splat constant.
+define <vscale x 4 x i32> @mul_by_splat(ptr %ap) sanitize_memory {
+; CHECK-LABEL: define <vscale x 4 x i32> @mul_by_splat(
+; CHECK-SAME: ptr [[AP:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    call void @llvm.donothing()
+; CHECK-NEXT:    [[A:%.*]] = load <vscale x 4 x i32>, ptr [[AP]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[AP]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i64 [[TMP1]], 87960930222080
+; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[TMP2]] to ptr
+; CHECK-NEXT:    [[_MSLD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP3]], align 16
+; CHECK-NEXT:    [[MSPROP_MUL_CST:%.*]] = mul <vscale x 4 x i32> [[_MSLD]], splat (i32 4)
+; CHECK-NEXT:    [[M:%.*]] = mul <vscale x 4 x i32> [[A]], splat (i32 12)
+; CHECK-NEXT:    store <vscale x 4 x i32> [[MSPROP_MUL_CST]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[M]]
+;
+; ORIGIN-LABEL: define <vscale x 4 x i32> @mul_by_splat(
+; ORIGIN-SAME: ptr [[AP:%.*]]) #[[ATTR0]] {
+; ORIGIN-NEXT:    call void @llvm.donothing()
+; ORIGIN-NEXT:    [[A:%.*]] = load <vscale x 4 x i32>, ptr [[AP]], align 16
+; ORIGIN-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[AP]] to i64
+; ORIGIN-NEXT:    [[TMP2:%.*]] = xor i64 [[TMP1]], 87960930222080
+; ORIGIN-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[TMP2]] to ptr
+; ORIGIN-NEXT:    [[TMP4:%.*]] = add i64 [[TMP2]], 17592186044416
+; ORIGIN-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr
+; ORIGIN-NEXT:    [[_MSLD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP3]], align 16
+; ORIGIN-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP5]], align 16
+; ORIGIN-NEXT:    [[MSPROP_MUL_CST:%.*]] = mul <vscale x 4 x i32> [[_MSLD]], splat (i32 4)
+; ORIGIN-NEXT:    [[M:%.*]] = mul <vscale x 4 x i32> [[A]], splat (i32 12)
+; ORIGIN-NEXT:    store <vscale x 4 x i32> [[MSPROP_MUL_CST]], ptr @__msan_retval_tls, align 8
+; ORIGIN-NEXT:    store i32 [[TMP6]], ptr @__msan_retval_origin_tls, align 4
+; ORIGIN-NEXT:    ret <vscale x 4 x i32> [[M]]
+;
+  %a = load <vscale x 4 x i32>, ptr %ap
+  %m = mul <vscale x 4 x i32> %a, splat (i32 12)
+  ret <vscale x 4 x i32> %m
+}
+
+define <vscale x 4 x i32> @mul_by_splat_commuted(ptr %ap) sanitize_memory {
+; CHECK-LABEL: define <vscale x 4 x i32> @mul_by_splat_commuted(
+; CHECK-SAME: ptr [[AP:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    call void @llvm.donothing()
+; CHECK-NEXT:    [[A:%.*]] = load <vscale x 4 x i32>, ptr [[AP]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[AP]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i64 [[TMP1]], 87960930222080
+; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[TMP2]] to ptr
+; CHECK-NEXT:    [[_MSLD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP3]], align 16
+; CHECK-NEXT:    [[MSPROP_MUL_CST:%.*]] = mul <vscale x 4 x i32> [[_MSLD]], splat (i32 4)
+; CHECK-NEXT:    [[M:%.*]] = mul <vscale x 4 x i32> splat (i32 12), [[A]]
+; CHECK-NEXT:    store <vscale x 4 x i32> [[MSPROP_MUL_CST]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[M]]
+;
+; ORIGIN-LABEL: define <vscale x 4 x i32> @mul_by_splat_commuted(
+; ORIGIN-SAME: ptr [[AP:%.*]]) #[[ATTR0]] {
+; ORIGIN-NEXT:    call void @llvm.donothing()
+; ORIGIN-NEXT:    [[A:%.*]] = load <vscale x 4 x i32>, ptr [[AP]], align 16
+; ORIGIN-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[AP]] to i64
+; ORIGIN-NEXT:    [[TMP2:%.*]] = xor i64 [[TMP1]], 87960930222080
+; ORIGIN-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[TMP2]] to ptr
+; ORIGIN-NEXT:    [[TMP4:%.*]] = add i64 [[TMP2]], 17592186044416
+; ORIGIN-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr
+; ORIGIN-NEXT:    [[_MSLD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP3]], align 16
+; ORIGIN-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP5]], align 16
+; ORIGIN-NEXT:    [[MSPROP_MUL_CST:%.*]] = mul <vscale x 4 x i32> [[_MSLD]], splat (i32 4)
+; ORIGIN-NEXT:    [[M:%.*]] = mul <vscale x 4 x i32> splat (i32 12), [[A]]
+; ORIGIN-NEXT:    store <vscale x 4 x i32> [[MSPROP_MUL_CST]], ptr @__msan_retval_tls, align 8
+; ORIGIN-NEXT:    store i32 [[TMP6]], ptr @__msan_retval_origin_tls, align 4
+; ORIGIN-NEXT:    ret <vscale x 4 x i32> [[M]]
+;
+  %a = load <vscale x 4 x i32>, ptr %ap
+  %m = mul <vscale x 4 x i32> splat (i32 12), %a
+  ret <vscale x 4 x i32> %m
+}
+
+; Multiplication by zero: the result is fully initialized.
+define <vscale x 4 x i32> @mul_by_zero(ptr %ap) sanitize_memory {
+; CHECK-LABEL: define <vscale x 4 x i32> @mul_by_zero(
+; CHECK-SAME: ptr [[AP:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    call void @llvm.donothing()
+; CHECK-NEXT:    [[A:%.*]] = load <vscale x 4 x i32>, ptr [[AP]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[AP]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i64 [[TMP1]], 87960930222080
+; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[TMP2]] to ptr
+; CHECK-NEXT:    [[_MSLD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP3]], align 16
+; CHECK-NEXT:    [[MSPROP_MUL_CST:%.*]] = mul <vscale x 4 x i32> [[_MSLD]], zeroinitializer
+; CHECK-NEXT:    [[M:%.*]] = mul <vscale x 4 x i32> [[A]], zeroinitializer
+; CHECK-NEXT:    store <vscale x 4 x i32> [[MSPROP_MUL_CST]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[M]]
+;
+; ORIGIN-LABEL: define <vscale x 4 x i32> @mul_by_zero(
+; ORIGIN-SAME: ptr [[AP:%.*]]) #[[ATTR0]] {
+; ORIGIN-NEXT:    call void @llvm.donothing()
+; ORIGIN-NEXT:    [[A:%.*]] = load <vscale x 4 x i32>, ptr [[AP]], align 16
+; ORIGIN-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[AP]] to i64
+; ORIGIN-NEXT:    [[TMP2:%.*]] = xor i64 [[TMP1]], 87960930222080
+; ORIGIN-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[TMP2]] to ptr
+; ORIGIN-NEXT:    [[TMP4:%.*]] = add i64 [[TMP2]], 17592186044416
+; ORIGIN-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr
+; ORIGIN-NEXT:    [[_MSLD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP3]], align 16
+; ORIGIN-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP5]], align 16
+; ORIGIN-NEXT:    [[MSPROP_MUL_CST:%.*]] = mul <vscale x 4 x i32> [[_MSLD]], zeroinitializer
+; ORIGIN-NEXT:    [[M:%.*]] = mul <vscale x 4 x i32> [[A]], zeroinitializer
+; ORIGIN-NEXT:    store <vscale x 4 x i32> [[MSPROP_MUL_CST]], ptr @__msan_retval_tls, align 8
+; ORIGIN-NEXT:    store i32 [[TMP6]], ptr @__msan_retval_origin_tls, align 4
+; ORIGIN-NEXT:    ret <vscale x 4 x i32> [[M]]
+;
+  %a = load <vscale x 4 x i32>, ptr %ap
+  %m = mul <vscale x 4 x i32> %a, zeroinitializer
+  ret <vscale x 4 x i32> %m
+}
+
+; Multiplication by scalable constants that are not ConstantInt splats.
+define <vscale x 4 x i32> @mul_by_poison(ptr %ap) sanitize_memory {
+; CHECK-LABEL: define <vscale x 4 x i32> @mul_by_poison(
+; CHECK-SAME: ptr [[AP:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    call void @llvm.donothing()
+; CHECK-NEXT:    [[A:%.*]] = load <vscale x 4 x i32>, ptr [[AP]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[AP]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i64 [[TMP1]], 87960930222080
+; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[TMP2]] to ptr
+; CHECK-NEXT:    [[_MSLD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP3]], align 16
+; CHECK-NEXT:    [[MSPROP_MUL_CST:%.*]] = mul <vscale x 4 x i32> [[_MSLD]], splat (i32 1)
+; CHECK-NEXT:    [[M:%.*]] = mul <vscale x 4 x i32> [[A]], poison
+; CHECK-NEXT:    store <vscale x 4 x i32> [[MSPROP_MUL_CST]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[M]]
+;
+; ORIGIN-LABEL: define <vscale x 4 x i32> @mul_by_poison(
+; ORIGIN-SAME: ptr [[AP:%.*]]) #[[ATTR0]] {
+; ORIGIN-NEXT:    call void @llvm.donothing()
+; ORIGIN-NEXT:    [[A:%.*]] = load <vscale x 4 x i32>, ptr [[AP]], align 16
+; ORIGIN-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[AP]] to i64
+; ORIGIN-NEXT:    [[TMP2:%.*]] = xor i64 [[TMP1]], 87960930222080
+; ORIGIN-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[TMP2]] to ptr
+; ORIGIN-NEXT:    [[TMP4:%.*]] = add i64 [[TMP2]], 17592186044416
+; ORIGIN-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr
+; ORIGIN-NEXT:    [[_MSLD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP3]], align 16
+; ORIGIN-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP5]], align 16
+; ORIGIN-NEXT:    [[MSPROP_MUL_CST:%.*]] = mul <vscale x 4 x i32> [[_MSLD]], splat (i32 1)
+; ORIGIN-NEXT:    [[M:%.*]] = mul <vscale x 4 x i32> [[A]], poison
+; ORIGIN-NEXT:    store <vscale x 4 x i32> [[MSPROP_MUL_CST]], ptr @__msan_retval_tls, align 8
+; ORIGIN-NEXT:    store i32 [[TMP6]], ptr @__msan_retval_origin_tls, align 4
+; ORIGIN-NEXT:    ret <vscale x 4 x i32> [[M]]
+;
+  %a = load <vscale x 4 x i32>, ptr %ap
+  %m = mul <vscale x 4 x i32> %a, poison
+  ret <vscale x 4 x i32> %m
+}
+
+define <vscale x 4 x i32> @mul_by_constexpr(ptr %ap) sanitize_memory {
+; CHECK-LABEL: define <vscale x 4 x i32> @mul_by_constexpr(
+; CHECK-SAME: ptr [[AP:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    call void @llvm.donothing()
+; CHECK-NEXT:    [[A:%.*]] = load <vscale x 4 x i32>, ptr [[AP]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[AP]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i64 [[TMP1]], 87960930222080
+; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[TMP2]] to ptr
+; CHECK-NEXT:    [[_MSLD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP3]], align 16
+; CHECK-NEXT:    [[MSPROP_MUL_CST:%.*]] = mul <vscale x 4 x i32> [[_MSLD]], splat (i32 1)
+; CHECK-NEXT:    [[M:%.*]] = mul <vscale x 4 x i32> [[A]], bitcast (<vscale x 2 x i64> splat (i64 1) to <vscale x 4 x i32>)
+; CHECK-NEXT:    store <vscale x 4 x i32> [[MSPROP_MUL_CST]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[M]]
+;
+; ORIGIN-LABEL: define <vscale x 4 x i32> @mul_by_constexpr(
+; ORIGIN-SAME: ptr [[AP:%.*]]) #[[ATTR0]] {
+; ORIGIN-NEXT:    call void @llvm.donothing()
+; ORIGIN-NEXT:    [[A:%.*]] = load <vscale x 4 x i32>, ptr [[AP]], align 16
+; ORIGIN-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[AP]] to i64
+; ORIGIN-NEXT:    [[TMP2:%.*]] = xor i64 [[TMP1]], 87960930222080
+; ORIGIN-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[TMP2]] to ptr
+; ORIGIN-NEXT:    [[TMP4:%.*]] = add i64 [[TMP2]], 17592186044416
+; ORIGIN-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr
+; ORIGIN-NEXT:    [[_MSLD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP3]], align 16
+; ORIGIN-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP5]], align 16
+; ORIGIN-NEXT:    [[MSPROP_MUL_CST:%.*]] = mul <vscale x 4 x i32> [[_MSLD]], splat (i32 1)
+; ORIGIN-NEXT:    [[M:%.*]] = mul <vscale x 4 x i32> [[A]], bitcast (<vscale x 2 x i64> splat (i64 1) to <vscale x 4 x i32>)
+; ORIGIN-NEXT:    store <vscale x 4 x i32> [[MSPROP_MUL_CST]], ptr @__msan_retval_tls, align 8
+; ORIGIN-NEXT:    store i32 [[TMP6]], ptr @__msan_retval_origin_tls, align 4
+; ORIGIN-NEXT:    ret <vscale x 4 x i32> [[M]]
+;
+  %a = load <vscale x 4 x i32>, ptr %ap
+  %m = mul <vscale x 4 x i32> %a, bitcast (<vscale x 2 x i64> splat (i64 1) to <vscale x 4 x i32>)
+  ret <vscale x 4 x i32> %m
+}
+
 ;.
 ; CHECK: [[PROF1]] = !{!"branch_weights", i32 1, i32 1048575}
 ;.
