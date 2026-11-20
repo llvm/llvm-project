@@ -27,6 +27,8 @@
 #include "polly/Support/PollyDebug.h"
 #define DEBUG_TYPE "polly-delicm"
 
+extern llvm::cl::opt<bool> PollyVectorizeMetadata;
+
 using namespace polly;
 using namespace llvm;
 
@@ -48,10 +50,20 @@ cl::opt<bool> DelicmOverapproximateWrites(
         "Do more PHI writes than necessary in order to avoid partial accesses"),
     cl::init(false), cl::Hidden, cl::cat(PollyCategory));
 
-cl::opt<bool> DelicmPartialWrites("polly-delicm-partial-writes",
-                                  cl::desc("Allow partial writes"),
-                                  cl::init(true), cl::Hidden,
-                                  cl::cat(PollyCategory));
+cl::opt<bool> DelicmPartialWrites(
+    "polly-delicm-partial-writes",
+    cl::desc("Allow partial writes (Disable for PHIs with "
+             "-polly-annotate-metadata-vectorize unless passed explicitly)"),
+    cl::init(true), cl::Hidden, cl::cat(PollyCategory));
+
+/// Partial PHI writes become conditional stores reloaded in the next iteration,
+/// which the LoopVectorizer cannot vectorize. Disable them in vectorize mode
+/// unless -polly-delicm-partial-writes is passed explicitly.
+static bool allowPartialPHIWrites() {
+  if (DelicmPartialWrites.getNumOccurrences() > 0)
+    return DelicmPartialWrites;
+  return !PollyVectorizeMetadata;
+}
 
 cl::opt<bool>
     DelicmComputeKnown("polly-delicm-compute-known",
@@ -902,7 +914,7 @@ private:
       WritesTarget = expandMapping(WritesTarget, UniverseWritesDom);
 
     auto ExpandedWritesDom = WritesTarget.domain();
-    if (!DelicmPartialWrites &&
+    if (!allowPartialPHIWrites() &&
         !UniverseWritesDom.is_subset(ExpandedWritesDom)) {
       POLLY_DEBUG(
           dbgs() << "    Reject because did not find PHI write mapping for "
