@@ -2,6 +2,7 @@
 ; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
 declare void @use(i8)
+declare void @use.i64(i64)
 
 define i1 @set_low_bit_mask_eq(i8 %x) {
 ; CHECK-LABEL: @set_low_bit_mask_eq(
@@ -426,21 +427,12 @@ define i1 @icmp_or_xor_2_ne_fail(i64 %x1, i64 %y1, i64 %x2, i64 %y2) {
   ret i1 %cmp
 }
 
-; negative test - xor multiuse
+; xor multiuse - simplifies to the implied icmp
 
-; NB: This requires more than 1 iteration to simplify. After we
-; simplify `%cmp_1 = icmp eq i64 %xor, 0`, `%xor = xor i64 %x1, %y1`
-; has one use which allows for complete simplification (rooted on
-; `%or1 = or i1 %cmp, %cmp_1` so we don't end up adding it back).
-define i1 @icmp_or_xor_2_3_fail(i64 %x1, i64 %y1, i64 %x2, i64 %y2) "instcombine-no-verify-fixpoint" {
-; CHECK-LABEL: @icmp_or_xor_2_3_fail(
-; CHECK-NEXT:    [[XOR:%.*]] = xor i64 [[X1:%.*]], [[Y1:%.*]]
-; CHECK-NEXT:    [[XOR1:%.*]] = xor i64 [[X2:%.*]], [[Y2:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = or i64 [[XOR]], [[XOR1]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[OR]], 0
-; CHECK-NEXT:    [[CMP_1:%.*]] = icmp eq i64 [[X1]], [[Y1]]
-; CHECK-NEXT:    [[OR1:%.*]] = or i1 [[CMP]], [[CMP_1]]
-; CHECK-NEXT:    ret i1 [[OR1]]
+define i1 @icmp_or_xor_2_3(i64 %x1, i64 %y1, i64 %x2, i64 %y2) {
+; CHECK-LABEL: @icmp_or_xor_2_3(
+; CHECK-NEXT:    [[CMP_1:%.*]] = icmp eq i64 [[X1:%.*]], [[Y1:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP_1]]
 ;
   %xor = xor i64 %x1, %y1
   %xor1 = xor i64 %x2, %y2
@@ -451,17 +443,12 @@ define i1 @icmp_or_xor_2_3_fail(i64 %x1, i64 %y1, i64 %x2, i64 %y2) "instcombine
   ret i1 %or1
 }
 
-; negative test - xor multiuse
+; xor multiuse - simplifies to the implied icmp
 
-define i1 @icmp_or_xor_2_4_fail(i64 %x1, i64 %y1, i64 %x2, i64 %y2) "instcombine-no-verify-fixpoint" {
-; CHECK-LABEL: @icmp_or_xor_2_4_fail(
-; CHECK-NEXT:    [[XOR:%.*]] = xor i64 [[X1:%.*]], [[Y1:%.*]]
-; CHECK-NEXT:    [[XOR1:%.*]] = xor i64 [[X2:%.*]], [[Y2:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = or i64 [[XOR]], [[XOR1]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[OR]], 0
-; CHECK-NEXT:    [[CMP_1:%.*]] = icmp eq i64 [[X2]], [[Y2]]
-; CHECK-NEXT:    [[OR1:%.*]] = or i1 [[CMP]], [[CMP_1]]
-; CHECK-NEXT:    ret i1 [[OR1]]
+define i1 @icmp_or_xor_2_4(i64 %x1, i64 %y1, i64 %x2, i64 %y2) {
+; CHECK-LABEL: @icmp_or_xor_2_4(
+; CHECK-NEXT:    [[CMP_1:%.*]] = icmp eq i64 [[X2:%.*]], [[Y2:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP_1]]
 ;
   %xor = xor i64 %x1, %y1
   %xor1 = xor i64 %x2, %y2
@@ -470,6 +457,44 @@ define i1 @icmp_or_xor_2_4_fail(i64 %x1, i64 %y1, i64 %x2, i64 %y2) "instcombine
   %cmp_1 = icmp eq i64 %xor1, 0
   %or1 = or i1 %cmp, %cmp_1
   ret i1 %or1
+}
+
+; negative test - xor multiuse
+
+define i1 @icmp_or_xor_2_multiuse_fail(i64 %x1, i64 %y1, i64 %x2, i64 %y2) {
+; CHECK-LABEL: @icmp_or_xor_2_multiuse_fail(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i64 [[X1:%.*]], [[Y1:%.*]]
+; CHECK-NEXT:    call void @use.i64(i64 [[XOR]])
+; CHECK-NEXT:    [[XOR1:%.*]] = xor i64 [[X2:%.*]], [[Y2:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or i64 [[XOR]], [[XOR1]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[OR]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %xor = xor i64 %x1, %y1
+  call void @use.i64(i64 %xor)
+  %xor1 = xor i64 %x2, %y2
+  %or = or i64 %xor, %xor1
+  %cmp = icmp eq i64 %or, 0
+  ret i1 %cmp
+}
+
+; negative test - xor multiuse
+
+define i1 @icmp_or_xor_2_multiuse1_fail(i64 %x1, i64 %y1, i64 %x2, i64 %y2) {
+; CHECK-LABEL: @icmp_or_xor_2_multiuse1_fail(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i64 [[X1:%.*]], [[Y1:%.*]]
+; CHECK-NEXT:    [[XOR1:%.*]] = xor i64 [[X2:%.*]], [[Y2:%.*]]
+; CHECK-NEXT:    call void @use.i64(i64 [[XOR1]])
+; CHECK-NEXT:    [[OR:%.*]] = or i64 [[XOR]], [[XOR1]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[OR]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %xor = xor i64 %x1, %y1
+  %xor1 = xor i64 %x2, %y2
+  call void @use.i64(i64 %xor1)
+  %or = or i64 %xor, %xor1
+  %cmp = icmp eq i64 %or, 0
+  ret i1 %cmp
 }
 
 define i1 @icmp_or_xor_3_1(i64 %x1, i64 %y1, i64 %x2, i64 %y2, i64 %x3, i64 %y3) {
