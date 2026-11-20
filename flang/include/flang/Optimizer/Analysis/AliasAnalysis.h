@@ -477,9 +477,12 @@ private:
                                  mlir::Value rhs);
 
   /// Return true if a call may access \p var through its actual argument
-  /// \p arg: \p var may alias \p arg or, if \p arg is the address of a
-  /// descriptor, the data that the descriptor describes.
-  bool mayAccessThroughArgument(mlir::Value arg, mlir::Value var);
+  /// \p arg: \p var is a TARGET or POINTER, which a pointer reachable from
+  /// \p arg may give access to, \p var may alias \p arg or, if \p arg is the
+  /// address of a descriptor, the data that the descriptor describes. Only
+  /// the attributes of \p varSrc, the source of \p var, are used.
+  bool mayAccessThroughArgument(mlir::Value arg, mlir::Value var,
+                                const Source &varSrc);
 
   /// Return the dummy_scope SSA value governing \p declareOp.
   /// Prefers the declare's explicit getDummyScope() operand; otherwise

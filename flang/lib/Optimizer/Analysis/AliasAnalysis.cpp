@@ -1182,7 +1182,12 @@ bool AliasAnalysis::isCallToFortranUserProcedure(Operation *op) {
   return false;
 }
 
-bool AliasAnalysis::mayAccessThroughArgument(mlir::Value arg, mlir::Value var) {
+bool AliasAnalysis::mayAccessThroughArgument(mlir::Value arg, mlir::Value var,
+                                             const Source &varSrc) {
+  // getSource() does not see that a pointer reachable from arg, e.g. a
+  // pointer component, may be associated with var.
+  if (varSrc.isTargetOrPointer())
+    return true;
   if (!alias(arg, var).isNo())
     return true;
   if (!fir::isBoxAddress(arg.getType()))
@@ -1204,14 +1209,16 @@ bool AliasAnalysis::mayAccessThroughArgument(mlir::Value arg, mlir::Value var) {
                                 : Source::PathStep::Kind::AllocDeref;
   dataSrc.accessPath.steps.push_back(derefStep);
   dataSrc.origin.isData = true;
-  Source varSrc = getSource(var, /*getLastInstantiationPoint=*/false,
-                            /*collectScopedOrigins=*/false);
+  // Compare with a source of var built like dataSrc.
+  Source fullVarSrc = getSource(var, /*getLastInstantiationPoint=*/false,
+                                /*collectScopedOrigins=*/false);
   LLVM_DEBUG(llvm::dbgs() << "\nAliasAnalysis::mayAccessThroughArgument\n";
              llvm::dbgs() << "  arg: " << arg << "\n";
              llvm::dbgs() << "  described data: " << dataSrc << "\n";
              llvm::dbgs() << "  var: " << var << "\n";
-             llvm::dbgs() << "  varSrc: " << varSrc << "\n";);
-  return !aliasSources(std::move(dataSrc), std::move(varSrc), arg, var).isNo();
+             llvm::dbgs() << "  varSrc: " << fullVarSrc << "\n";);
+  return !aliasSources(std::move(dataSrc), std::move(fullVarSrc), arg, var)
+              .isNo();
 }
 
 ModRefResult AliasAnalysis::getCallModRef(Operation *op, Value var) {
@@ -1289,7 +1296,7 @@ ModRefResult AliasAnalysis::getCallModRef(Operation *op, Value var) {
   ModRefResult modRef = ModRefResult::getNoModRef();
   for (auto [idx, arg] : llvm::enumerate(args)) {
     if (!fir::conformsWithPassByRef(arg.getType()) ||
-        !mayAccessThroughArgument(arg, var))
+        !mayAccessThroughArgument(arg, var, varSrc))
       continue;
     if (!intentsAvailable)
       return ModRefResult::getModAndRef();
