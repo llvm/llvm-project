@@ -18,6 +18,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Eytzinger.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SortedVectorMap.h"
 #include "llvm/ADT/StringExtras.h"
@@ -1304,6 +1305,10 @@ public:
 
   uint64_t getFunctionHash() const { return FunctionHash; }
 
+  bool hasIRToProfileLocationMap() const {
+    return IRToProfileLocationMap && !IRToProfileLocationMap->empty();
+  }
+
   void setIRToProfileLocationMap(const LocToLocMap *LTLM) {
     assert(IRToProfileLocationMap == nullptr && "this should be set only once");
     IRToProfileLocationMap = LTLM;
@@ -1426,12 +1431,17 @@ public:
   /// \returns the FunctionSamples pointer to the inlined instance.
   /// If \p Remapper or \p FuncNameToProfNameMap is not nullptr, it will be used
   /// to find matching FunctionSamples with not exactly the same but equivalent
-  /// name.
+  /// name. If \p Fallback is not null, it is called for an inlined frame that
+  /// has no profile under its caller, with the caller's profile, the call site,
+  /// and the frame's name; a non-null result is used instead.
   LLVM_ABI const FunctionSamples *findFunctionSamples(
       const DILocation *DIL,
       SampleProfileReaderItaniumRemapper *Remapper = nullptr,
       const HashKeyMap<DenseMap, FunctionId, FunctionId>
-          *FuncNameToProfNameMap = nullptr) const LLVM_LIFETIME_BOUND;
+          *FuncNameToProfNameMap = nullptr,
+      function_ref<const FunctionSamples *(const FunctionSamples &,
+                                           const LineLocation &, StringRef)>
+          Fallback = nullptr) const LLVM_LIFETIME_BOUND;
 
   SampleContext &getContext() const LLVM_LIFETIME_BOUND { return Context; }
 

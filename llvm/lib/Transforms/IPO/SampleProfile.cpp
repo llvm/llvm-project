@@ -48,6 +48,7 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -106,6 +107,8 @@ STATISTIC(NumMismatchedProfile,
 STATISTIC(NumMatchedProfile, "Number of functions with CFG matched profile");
 STATISTIC(NumDuplicatedInlinesite,
           "Number of inlined callsites with a partial distribution factor");
+STATISTIC(NumOrphanedRootsLoaded,
+          "Number of orphaned root profiles loaded on demand");
 
 STATISTIC(NumCSInlinedHitMinLimit,
           "Number of functions with FDO inline stopped due to min size limit");
@@ -154,8 +157,9 @@ static cl::opt<bool> PreserveDeferredInlines(
 
 static cl::opt<bool> PreserveOrphanedInlines(
     "sample-profile-preserve-orphaned-inlines", cl::Hidden, cl::init(true),
-    cl::desc("In ThinLTO pre-link, preserve import GUIDs "
-             "of functions that pre-link inlines and deletes."));
+    cl::desc(
+        "In ThinLTO, preserve the import GUIDs and profile inline decisions "
+        "of functions that pre-link inlines and deletes."));
 
 namespace llvm {
 extern cl::opt<bool> EnableExtTspBlockPlacement;
@@ -337,6 +341,9 @@ protected:
   findFunctionSamples(const Instruction &I) const override;
   std::vector<const FunctionSamples *>
   findIndirectCallFunctionSamples(const Instruction &I, uint64_t &Sum) const;
+  const FunctionSamples *findOrphanedRoot(const FunctionSamples &CallerFS,
+                                          const LineLocation &Loc,
+                                          StringRef Name) const;
   void findExternalInlineCandidate(CallBase *CB, const FunctionSamples *Samples,
                                    DenseSet<GlobalValue::GUID> &InlinedGUIDs,
                                    uint64_t Threshold);
@@ -618,13 +625,59 @@ SampleProfileLoader::findFunctionSamples(const Instruction &Inst) const {
 
   auto it = DILocation2SampleMap.try_emplace(DIL,nullptr);
   if (it.second) {
-    if (FunctionSamples::ProfileIsCS)
+    if (FunctionSamples::ProfileIsCS) {
       it.first->second = ContextTracker->getContextSamplesFor(DIL);
-    else
+    } else {
       it.first->second = Samples->findFunctionSamples(
-          DIL, Reader->getRemapper(), &FuncNameToProfNameMap);
+          DIL, Reader->getRemapper(), &FuncNameToProfNameMap,
+          [this](const FunctionSamples &CallerFS, const LineLocation &Loc,
+                 StringRef Name) {
+            return findOrphanedRoot(CallerFS, Loc, Name);
+          });
+    }
   }
   return it.first->second;
+}
+
+/// Recover the top-level profile of \p Name for a missing inline context at
+/// \p Loc of \p CallerFS. Pre-link may have inlined and deleted a function
+/// whose profile the pre-inliner kept top-level. Require no definition in this
+/// module and check the call-site count before reusing the root. Retrieving
+/// a root for matching does not by itself justify reusing its sample counts.
+const FunctionSamples *
+SampleProfileLoader::findOrphanedRoot(const FunctionSamples &CallerFS,
+                                      const LineLocation &Loc,
+                                      StringRef Name) const {
+  if (!PreserveOrphanedInlines ||
+      LTOPhase != ThinOrFullLTOPhase::ThinLTOPostLink)
+    return nullptr;
+  StringRef Canonical = FunctionSamples::getCanonicalFnName(Name);
+  const Function *Def = SymbolMap.lookup(FunctionId(Canonical));
+  if (Def && !Def->isDeclarationForLinker())
+    return nullptr;
+  const FunctionSamples *Root = Reader->getSamplesFor(Canonical);
+  // Require this call site to account for all entries of the function, so
+  // that inlined copies at other call sites do not reuse the same samples.
+  auto Targets = CallerFS.findCallTargetMapAt(Loc);
+  if (!Targets)
+    return nullptr;
+  auto Target =
+      Targets->find(Root ? Root->getFunction() : getRepInFormat(Canonical));
+  if (Target == Targets->end())
+    return nullptr;
+  // A zero head count cannot establish that this inline site owns the root.
+  if (!Root || !Root->getHeadSamples() ||
+      Target->second < Root->getHeadSamples())
+    return nullptr;
+  // Import does not copy llvm.pseudo_probe_desc, so an imported inline frame
+  // may have no descriptor in this module. Check its hash when one is present.
+  if (FunctionSamples::ProfileIsProbeBased) {
+    const PseudoProbeDescriptor *Desc = ProbeManager->getDesc(Root->getGUID());
+    if (Desc && ProbeManager->profileIsHashMismatched(*Desc, *Root) &&
+        !Root->hasIRToProfileLocationMap())
+      return nullptr;
+  }
+  return Root;
 }
 
 /// Check whether the indirect call promotion history of \p Inst allows
@@ -1988,8 +2041,6 @@ void SampleProfileLoader::removePseudoProbeInstsDiscriminator(Module &M) {
 
 bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager &AM,
                                       ProfileSummaryInfo *_PSI) {
-  GUIDToFuncNameMapper Mapper(M, *Reader, GUIDToFuncNameMap);
-
   PSI = _PSI;
   if (M.getProfileSummary(/* IsCS */ false) == nullptr) {
     M.setProfileSummary(Reader->getSummary().getMD(M.getContext()),
@@ -2028,6 +2079,25 @@ bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager &AM,
       }
     }
   }
+
+  // Inline frames can outlive their standalone Function. Load their missing
+  // roots before either consumer runs; matching and annotation have different
+  // rules for using a root, but share the same selective retrieval.
+  if ((PreserveOrphanedInlines &&
+       LTOPhase == ThinOrFullLTOPhase::ThinLTOPostLink) ||
+      SalvageStaleProfile) {
+    size_t Before = Reader->getProfiles().size();
+    if (std::error_code EC =
+            Reader->readInlineFunctionProfiles(M, SalvageStaleProfile)) {
+      M.getContext().diagnose(DiagnosticInfoSampleProfile(
+          Filename, "profile reading failed: " + EC.message()));
+      return false;
+    }
+    NumOrphanedRootsLoaded += Reader->getProfiles().size() - Before;
+  }
+
+  // Created after all profiles are loaded, so that it covers them all.
+  GUIDToFuncNameMapper Mapper(M, *Reader, GUIDToFuncNameMap);
 
   // Stale profile matching.
   if (Opts.report_profile_staleness || Opts.persist_profile_staleness ||

@@ -24,12 +24,16 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ProfileSummary.h"
+#include "llvm/IR/PseudoProbe.h"
 #include "llvm/ProfileData/ProfileCommon.h"
 #include "llvm/ProfileData/SampleProf.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compression.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/LEB128.h"
@@ -1118,6 +1122,99 @@ SampleProfileReaderExtBinaryBase::read(const DenseSet<StringRef> &FuncsToUse,
 
   if (std::error_code EC = readFuncMetadata(ProfilesToReadMetadata))
     return EC;
+  return sampleprof_error::success;
+}
+
+std::error_code
+SampleProfileReader::readInlineFunctionProfiles(const Module &M,
+                                                bool ForMatching) {
+  if (getFormat() != SPF_Ext_Binary || profileIsCS())
+    return sampleprof_error::success;
+
+  struct Frame {
+    const FunctionSamples *Samples;
+    const DILocation *Location;
+    unsigned Parent, Depth;
+  };
+  SmallVector<Frame> Frames;
+  SmallVector<SmallVector<unsigned>> Levels(1);
+  using FrameKey = std::pair<const DILocation *, const DISubprogram *>;
+  for (const Function &F : M) {
+    if (F.isDeclaration() || !F.hasFnAttribute("use-sample-profile"))
+      continue;
+    unsigned Root = Frames.size();
+    Frames.push_back({getSamplesFor(F), nullptr, Root, 0});
+    DenseMap<FrameKey, unsigned> Seen;
+    for (const Instruction &I : instructions(F)) {
+      const DILocation *DIL = I.getDebugLoc();
+      if (!DIL || (profileIsProbeBased() && !extractProbe(I)))
+        continue;
+      SmallVector<const DILocation *, 4> Path;
+      unsigned Parent = Root;
+      for (; DIL->getInlinedAt(); DIL = DIL->getInlinedAt()) {
+        FrameKey Key = {DIL->getInlinedAt(), DIL->getScope()->getSubprogram()};
+        auto It = Seen.find(Key);
+        if (It != Seen.end()) {
+          Parent = It->second;
+          break;
+        }
+        Path.push_back(DIL);
+      }
+      for (const DILocation *DIL : reverse(Path)) {
+        unsigned ID = Frames.size();
+        unsigned Depth = Frames[Parent].Depth + 1;
+        Frames.push_back({nullptr, DIL, Parent, Depth});
+        Seen.try_emplace(
+            FrameKey{DIL->getInlinedAt(), DIL->getScope()->getSubprogram()},
+            ID);
+        if (Levels.size() <= Depth)
+          Levels.resize(Depth + 1);
+        Levels[Depth].push_back(ID);
+        Parent = ID;
+      }
+    }
+  }
+
+  DenseSet<StringRef> Requested;
+  for (const auto &Level : Levels) {
+    DenseSet<StringRef> Names;
+    SmallVector<std::pair<StringRef, Frame *>> Missing;
+    for (unsigned ID : Level) {
+      Frame &F = Frames[ID];
+      StringRef Name = FunctionSamples::getCanonicalFnName(
+          F.Location->getSubprogramLinkageName());
+      const FunctionSamples *Parent = Frames[F.Parent].Samples;
+      LineLocation Loc = FunctionSamples::getCallSiteIdentifier(
+          F.Location->getInlinedAt(), FunctionSamples::ProfileIsFS);
+      if (Parent)
+        F.Samples = Parent->findFunctionSamplesAt(Loc, Name, getRemapper(),
+                                                  FuncNameToProfNameMap);
+      if (F.Samples)
+        continue;
+      // A known caller without this target cannot use its root for annotation.
+      // An unknown caller must not hide deeper frames: it may itself be inlined
+      // later, acquiring a nested profile in its new caller.
+      if (Parent && !ForMatching) {
+        auto Targets = Parent->findCallTargetMapAt(Loc);
+        if (!Targets || Targets->find(getRepInFormat(Name)) == Targets->end())
+          continue;
+      }
+      F.Samples = getSamplesFor(Name);
+      if (!F.Samples) {
+        Missing.emplace_back(Name, &F);
+        if (Requested.insert(Name).second)
+          Names.insert(Name);
+      }
+    }
+    if (std::error_code EC = read(Names))
+      return EC;
+    for (const auto &[Name, F] : Missing)
+      F->Samples = getSamplesFor(Name);
+    LLVM_DEBUG(for (StringRef Name : Names) {
+      if (getSamplesFor(Name))
+        dbgs() << "Loaded inline frame root: " << Name << "\n";
+    });
+  }
   return sampleprof_error::success;
 }
 
