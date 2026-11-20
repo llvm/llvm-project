@@ -1949,6 +1949,12 @@ public:
   /// fewer operand than it started with.
   LLVM_ABI void removeOperand(unsigned OpNo);
 
+  /// Swap the contents of operands \p OpIdx1 and \p OpIdx2, updating use-def
+  /// lists if the instruction is in a function. Each operand position keeps
+  /// its tied-operand status, so a tied register operand can only be swapped
+  /// with another register operand.
+  LLVM_ABI void swapOperands(unsigned OpIdx1, unsigned OpIdx2);
+
   /// Clear this MachineInstr's memory reference descriptor list.  This resets
   /// the memrefs to their most conservative state.  This should be used only
   /// as a last resort since it greatly pessimizes our knowledge of the memory

@@ -313,6 +313,29 @@ void MachineInstr::removeOperand(unsigned OpNo) {
   --NumOperands;
 }
 
+void MachineInstr::swapOperands(unsigned OpIdx1, unsigned OpIdx2) {
+  assert(OpIdx1 < getNumOperands() && OpIdx2 < getNumOperands() &&
+         "Invalid operand number");
+  MachineOperand &A = Operands[OpIdx1];
+  MachineOperand &B = Operands[OpIdx2];
+  if (MachineRegisterInfo *MRI = getRegInfo())
+    return MRI->swapOperands(&A, &B);
+
+  // There are no use-def lists to update, but tied-operand status must stay
+  // with the operand position.
+  assert(OpIdx1 != OpIdx2 && "Noop swapOperands");
+  assert((!A.isReg() || !A.isTied() || B.isReg()) &&
+         (!B.isReg() || !B.isTied() || A.isReg()) &&
+         "Cannot swap a tied operand with a non-register operand");
+  unsigned TiedA = A.isReg() ? A.TiedTo : 0;
+  unsigned TiedB = B.isReg() ? B.TiedTo : 0;
+  std::swap(A, B);
+  if (A.isReg())
+    A.TiedTo = TiedA;
+  if (B.isReg())
+    B.TiedTo = TiedB;
+}
+
 void MachineInstr::setExtraInfo(MachineFunction &MF,
                                 ArrayRef<MachineMemOperand *> MMOs,
                                 MCSymbol *PreInstrSymbol,
