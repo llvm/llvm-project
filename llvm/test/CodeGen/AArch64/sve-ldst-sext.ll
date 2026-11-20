@@ -272,10 +272,8 @@ define <vscale x 2 x i64> @load_frozen_before_sext_multiuse(ptr %src) {
 ; CHECK-LABEL: load_frozen_before_sext_multiuse:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    ld1b { z1.d }, p0/z, [x0]
-; CHECK-NEXT:    movprfx z0, z1
-; CHECK-NEXT:    sxtb z0.d, p0/m, z1.d
-; CHECK-NEXT:    // fake_use: $z1
+; CHECK-NEXT:    ld1sb { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    // fake_use: $z0
 ; CHECK-NEXT:    ret
   %load = load <vscale x 2 x i8>, ptr %src, align 1
   %load.frozen = freeze <vscale x 2 x i8> %load
@@ -289,10 +287,9 @@ define <vscale x 2 x i64> @load_frozen_before_sext_multiuse2(ptr %src) {
 ; CHECK-LABEL: load_frozen_before_sext_multiuse2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    ld1b { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ld1sb { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    movprfx z1, z0
 ; CHECK-NEXT:    mul z1.d, z1.d, #13
-; CHECK-NEXT:    sxtb z0.d, p0/m, z0.d
 ; CHECK-NEXT:    and z1.d, z1.d, #0xff
 ; CHECK-NEXT:    add z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
@@ -310,10 +307,9 @@ define <vscale x 2 x i64> @load_frozen_before_sext_multiuse3(ptr %src, ptr %dst1
 ; CHECK-LABEL: load_frozen_before_sext_multiuse3:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    ld1b { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ld1sb { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    movprfx z1, z0
 ; CHECK-NEXT:    and z1.d, z1.d, #0xff
-; CHECK-NEXT:    sxtb z0.d, p0/m, z0.d
 ; CHECK-NEXT:    movprfx z2, z1
 ; CHECK-NEXT:    mul z2.d, z2.d, #49
 ; CHECK-NEXT:    mul z1.d, z1.d, #33
@@ -343,11 +339,10 @@ define <vscale x 2 x i64> @load_frozen_before_sext_multiuse4(ptr %src1, ptr %src
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov w8, #1234 // =0x4d2
 ; CHECK-NEXT:    mov z3.d, #27 // =0x1b
-; CHECK-NEXT:    ld1b { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ld1sb { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ld1b { z2.d }, p0/z, [x1]
 ; CHECK-NEXT:    movprfx z1, z0
 ; CHECK-NEXT:    and z1.d, z1.d, #0xff
-; CHECK-NEXT:    sxtb z0.d, p0/m, z0.d
 ; CHECK-NEXT:    cmpeq p1.d, p0/z, z1.d, #3
 ; CHECK-NEXT:    mov z1.d, x8
 ; CHECK-NEXT:    add z0.d, z0.d, z1.d
