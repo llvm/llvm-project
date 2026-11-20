@@ -67,15 +67,8 @@ is a 32-bit type and stays valid. A typed resource is any SRV or UAV resource
 whose handle has a contained type and is not a raw buffer, so structured and
 byte-address buffers are not affected.
 
-The rule concerns the image's Sampled Type, not the precision of the
-texel format: an `R16f` image uses a 32-bit floating-point Sampled
-Type, as specified by Vulkan's [image format and type matching
-rules][vulkan-image-format-type-matching].
-
 [constantbuffer]: https://learn.microsoft.com/en-us/windows/win32/direct3d12/resource-binding-in-hlsl#constant-buffers
 [rasterizerorderedtexture2d]: https://learn.microsoft.com/en-us/windows/win32/direct3d11/rasterizer-order-views
 [rwbyteaddressbuffer]: https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/sm5-object-rwbyteaddressbuffer
 [texture3d]: https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/sm5-object-texture3d
 [vulkan-image-sampled-type]: https://docs.vulkan.org/spec/latest/appendices/spirvenv.html#VUID-StandaloneSpirv-OpTypeImage-04656
-[vulkan-image-format-type-matching]: https://docs.vulkan.org/spec/latest/appendices/spirvenv.html#spirvenv-format-type-matching
-
