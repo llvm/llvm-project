@@ -8,25 +8,43 @@
 ; operand: CodeGenPrepare sinks the splat back into the loop.
 
 define amdgpu_ps void @fma_v2f32_scalar_splat_loop(ptr addrspace(1) inreg %p, float inreg %s, i32 inreg %n) {
-; GFX90A-LABEL: fma_v2f32_scalar_splat_loop:
-; GFX90A:       ; %bb.0: ; %entry
-; GFX90A-NEXT:    s_mov_b32 s4, s3
-; GFX90A-NEXT:    s_mov_b32 s3, s2
-; GFX90A-NEXT:    s_mov_b32 s5, 0
-; GFX90A-NEXT:    v_mov_b32_e32 v0, 0
-; GFX90A-NEXT:  .LBB0_1: ; %loop
-; GFX90A-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX90A-NEXT:    global_load_dwordx2 v[2:3], v0, s[0:1]
-; GFX90A-NEXT:    s_add_i32 s5, s5, 1
-; GFX90A-NEXT:    s_waitcnt vmcnt(0)
-; GFX90A-NEXT:    v_pk_fma_f32 v[2:3], s[2:3], v[2:3], v[2:3] neg_lo:[0,0,1] neg_hi:[0,0,1]
-; GFX90A-NEXT:    global_store_dwordx2 v0, v[2:3], s[0:1]
-; GFX90A-NEXT:    s_add_u32 s0, s0, 8
-; GFX90A-NEXT:    s_addc_u32 s1, s1, 0
-; GFX90A-NEXT:    s_cmp_lt_i32 s5, s4
-; GFX90A-NEXT:    s_cbranch_scc1 .LBB0_1
-; GFX90A-NEXT:  ; %bb.2: ; %exit
-; GFX90A-NEXT:    s_endpgm
+; GFX90A-SDAG-LABEL: fma_v2f32_scalar_splat_loop:
+; GFX90A-SDAG:       ; %bb.0: ; %entry
+; GFX90A-SDAG-NEXT:    s_mov_b32 s4, 0
+; GFX90A-SDAG-NEXT:    v_mov_b32_e32 v0, 0
+; GFX90A-SDAG-NEXT:  .LBB0_1: ; %loop
+; GFX90A-SDAG-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX90A-SDAG-NEXT:    global_load_dwordx2 v[2:3], v0, s[0:1]
+; GFX90A-SDAG-NEXT:    s_add_i32 s4, s4, 1
+; GFX90A-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-SDAG-NEXT:    v_pk_fma_f32 v[2:3], s[2:3], v[2:3], v[2:3] op_sel_hi:[0,1,1] neg_lo:[0,0,1] neg_hi:[0,0,1]
+; GFX90A-SDAG-NEXT:    global_store_dwordx2 v0, v[2:3], s[0:1]
+; GFX90A-SDAG-NEXT:    s_add_u32 s0, s0, 8
+; GFX90A-SDAG-NEXT:    s_addc_u32 s1, s1, 0
+; GFX90A-SDAG-NEXT:    s_cmp_lt_i32 s4, s3
+; GFX90A-SDAG-NEXT:    s_cbranch_scc1 .LBB0_1
+; GFX90A-SDAG-NEXT:  ; %bb.2: ; %exit
+; GFX90A-SDAG-NEXT:    s_endpgm
+;
+; GFX90A-GISEL-LABEL: fma_v2f32_scalar_splat_loop:
+; GFX90A-GISEL:       ; %bb.0: ; %entry
+; GFX90A-GISEL-NEXT:    s_mov_b32 s4, s3
+; GFX90A-GISEL-NEXT:    s_mov_b32 s5, 0
+; GFX90A-GISEL-NEXT:    v_mov_b32_e32 v0, 0
+; GFX90A-GISEL-NEXT:    s_mov_b32 s3, s2
+; GFX90A-GISEL-NEXT:  .LBB0_1: ; %loop
+; GFX90A-GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX90A-GISEL-NEXT:    global_load_dwordx2 v[2:3], v0, s[0:1]
+; GFX90A-GISEL-NEXT:    s_add_i32 s5, s5, 1
+; GFX90A-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-GISEL-NEXT:    v_pk_fma_f32 v[2:3], s[2:3], v[2:3], v[2:3] neg_lo:[0,0,1] neg_hi:[0,0,1]
+; GFX90A-GISEL-NEXT:    global_store_dwordx2 v0, v[2:3], s[0:1]
+; GFX90A-GISEL-NEXT:    s_add_u32 s0, s0, 8
+; GFX90A-GISEL-NEXT:    s_addc_u32 s1, s1, 0
+; GFX90A-GISEL-NEXT:    s_cmp_lt_i32 s5, s4
+; GFX90A-GISEL-NEXT:    s_cbranch_scc1 .LBB0_1
+; GFX90A-GISEL-NEXT:  ; %bb.2: ; %exit
+; GFX90A-GISEL-NEXT:    s_endpgm
 ;
 ; GFX11-SDAG-LABEL: fma_v2f32_scalar_splat_loop:
 ; GFX11-SDAG:       ; %bb.0: ; %entry
@@ -86,79 +104,41 @@ exit:
 }
 
 define amdgpu_ps void @fmul_v2f16_scalar_splat_loop(ptr addrspace(1) inreg %p, half inreg %s, i32 inreg %n) {
-; GFX90A-SDAG-LABEL: fmul_v2f16_scalar_splat_loop:
-; GFX90A-SDAG:       ; %bb.0: ; %entry
-; GFX90A-SDAG-NEXT:    s_pack_ll_b32_b16 s2, s2, s2
-; GFX90A-SDAG-NEXT:    s_mov_b32 s4, 0
-; GFX90A-SDAG-NEXT:    v_mov_b32_e32 v0, 0
-; GFX90A-SDAG-NEXT:  .LBB1_1: ; %loop
-; GFX90A-SDAG-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX90A-SDAG-NEXT:    global_load_dword v1, v0, s[0:1]
-; GFX90A-SDAG-NEXT:    s_add_i32 s4, s4, 1
-; GFX90A-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX90A-SDAG-NEXT:    v_pk_mul_f16 v1, s2, v1
-; GFX90A-SDAG-NEXT:    global_store_dword v0, v1, s[0:1]
-; GFX90A-SDAG-NEXT:    s_add_u32 s0, s0, 4
-; GFX90A-SDAG-NEXT:    s_addc_u32 s1, s1, 0
-; GFX90A-SDAG-NEXT:    s_cmp_lt_i32 s4, s3
-; GFX90A-SDAG-NEXT:    s_cbranch_scc1 .LBB1_1
-; GFX90A-SDAG-NEXT:  ; %bb.2: ; %exit
-; GFX90A-SDAG-NEXT:    s_endpgm
+; GFX90A-LABEL: fmul_v2f16_scalar_splat_loop:
+; GFX90A:       ; %bb.0: ; %entry
+; GFX90A-NEXT:    s_mov_b32 s4, 0
+; GFX90A-NEXT:    v_mov_b32_e32 v0, 0
+; GFX90A-NEXT:  .LBB1_1: ; %loop
+; GFX90A-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX90A-NEXT:    global_load_dword v1, v0, s[0:1]
+; GFX90A-NEXT:    s_add_i32 s4, s4, 1
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-NEXT:    v_pk_mul_f16 v1, s2, v1 op_sel_hi:[0,1]
+; GFX90A-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX90A-NEXT:    s_add_u32 s0, s0, 4
+; GFX90A-NEXT:    s_addc_u32 s1, s1, 0
+; GFX90A-NEXT:    s_cmp_lt_i32 s4, s3
+; GFX90A-NEXT:    s_cbranch_scc1 .LBB1_1
+; GFX90A-NEXT:  ; %bb.2: ; %exit
+; GFX90A-NEXT:    s_endpgm
 ;
-; GFX90A-GISEL-LABEL: fmul_v2f16_scalar_splat_loop:
-; GFX90A-GISEL:       ; %bb.0: ; %entry
-; GFX90A-GISEL-NEXT:    s_mov_b32 s4, 0
-; GFX90A-GISEL-NEXT:    v_mov_b32_e32 v0, 0
-; GFX90A-GISEL-NEXT:  .LBB1_1: ; %loop
-; GFX90A-GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX90A-GISEL-NEXT:    global_load_dword v1, v0, s[0:1]
-; GFX90A-GISEL-NEXT:    s_add_i32 s4, s4, 1
-; GFX90A-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX90A-GISEL-NEXT:    v_pk_mul_f16 v1, s2, v1 op_sel_hi:[0,1]
-; GFX90A-GISEL-NEXT:    global_store_dword v0, v1, s[0:1]
-; GFX90A-GISEL-NEXT:    s_add_u32 s0, s0, 4
-; GFX90A-GISEL-NEXT:    s_addc_u32 s1, s1, 0
-; GFX90A-GISEL-NEXT:    s_cmp_lt_i32 s4, s3
-; GFX90A-GISEL-NEXT:    s_cbranch_scc1 .LBB1_1
-; GFX90A-GISEL-NEXT:  ; %bb.2: ; %exit
-; GFX90A-GISEL-NEXT:    s_endpgm
-;
-; GFX11-SDAG-LABEL: fmul_v2f16_scalar_splat_loop:
-; GFX11-SDAG:       ; %bb.0: ; %entry
-; GFX11-SDAG-NEXT:    v_mov_b32_e32 v0, 0
-; GFX11-SDAG-NEXT:    s_pack_ll_b32_b16 s2, s2, s2
-; GFX11-SDAG-NEXT:    s_mov_b32 s4, 0
-; GFX11-SDAG-NEXT:  .LBB1_1: ; %loop
-; GFX11-SDAG-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX11-SDAG-NEXT:    global_load_b32 v1, v0, s[0:1]
-; GFX11-SDAG-NEXT:    s_add_i32 s4, s4, 1
-; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-SDAG-NEXT:    v_pk_mul_f16 v1, s2, v1
-; GFX11-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX11-SDAG-NEXT:    s_add_u32 s0, s0, 4
-; GFX11-SDAG-NEXT:    s_addc_u32 s1, s1, 0
-; GFX11-SDAG-NEXT:    s_cmp_lt_i32 s4, s3
-; GFX11-SDAG-NEXT:    s_cbranch_scc1 .LBB1_1
-; GFX11-SDAG-NEXT:  ; %bb.2: ; %exit
-; GFX11-SDAG-NEXT:    s_endpgm
-;
-; GFX11-GISEL-LABEL: fmul_v2f16_scalar_splat_loop:
-; GFX11-GISEL:       ; %bb.0: ; %entry
-; GFX11-GISEL-NEXT:    v_mov_b32_e32 v0, 0
-; GFX11-GISEL-NEXT:    s_mov_b32 s4, 0
-; GFX11-GISEL-NEXT:  .LBB1_1: ; %loop
-; GFX11-GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX11-GISEL-NEXT:    global_load_b32 v1, v0, s[0:1]
-; GFX11-GISEL-NEXT:    s_add_i32 s4, s4, 1
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-GISEL-NEXT:    v_pk_mul_f16 v1, s2, v1 op_sel_hi:[0,1]
-; GFX11-GISEL-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX11-GISEL-NEXT:    s_add_u32 s0, s0, 4
-; GFX11-GISEL-NEXT:    s_addc_u32 s1, s1, 0
-; GFX11-GISEL-NEXT:    s_cmp_lt_i32 s4, s3
-; GFX11-GISEL-NEXT:    s_cbranch_scc1 .LBB1_1
-; GFX11-GISEL-NEXT:  ; %bb.2: ; %exit
-; GFX11-GISEL-NEXT:    s_endpgm
+; GFX11-LABEL: fmul_v2f16_scalar_splat_loop:
+; GFX11:       ; %bb.0: ; %entry
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-NEXT:    s_mov_b32 s4, 0
+; GFX11-NEXT:  .LBB1_1: ; %loop
+; GFX11-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX11-NEXT:    global_load_b32 v1, v0, s[0:1]
+; GFX11-NEXT:    s_add_i32 s4, s4, 1
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_pk_mul_f16 v1, s2, v1 op_sel_hi:[0,1]
+; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_add_u32 s0, s0, 4
+; GFX11-NEXT:    s_addc_u32 s1, s1, 0
+; GFX11-NEXT:    s_cmp_lt_i32 s4, s3
+; GFX11-NEXT:    s_cbranch_scc1 .LBB1_1
+; GFX11-NEXT:  ; %bb.2: ; %exit
+; GFX11-NEXT:    s_endpgm
 entry:
   %ins = insertelement <2 x half> poison, half %s, i64 0
   %splat = shufflevector <2 x half> %ins, <2 x half> poison, <2 x i32> zeroinitializer
@@ -181,7 +161,6 @@ exit:
 define amdgpu_ps void @add_v2i16_scalar_splat_loop(ptr addrspace(1) inreg %p, i16 inreg %s, i32 inreg %n) {
 ; GFX90A-SDAG-LABEL: add_v2i16_scalar_splat_loop:
 ; GFX90A-SDAG:       ; %bb.0: ; %entry
-; GFX90A-SDAG-NEXT:    s_pack_ll_b32_b16 s2, s2, s2
 ; GFX90A-SDAG-NEXT:    s_mov_b32 s4, 0
 ; GFX90A-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX90A-SDAG-NEXT:  .LBB2_1: ; %loop
@@ -189,7 +168,7 @@ define amdgpu_ps void @add_v2i16_scalar_splat_loop(ptr addrspace(1) inreg %p, i1
 ; GFX90A-SDAG-NEXT:    global_load_dword v1, v0, s[0:1]
 ; GFX90A-SDAG-NEXT:    s_add_i32 s4, s4, 1
 ; GFX90A-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX90A-SDAG-NEXT:    v_pk_add_u16 v1, s2, v1
+; GFX90A-SDAG-NEXT:    v_pk_add_u16 v1, s2, v1 op_sel_hi:[0,1]
 ; GFX90A-SDAG-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX90A-SDAG-NEXT:    s_add_u32 s0, s0, 4
 ; GFX90A-SDAG-NEXT:    s_addc_u32 s1, s1, 0
@@ -226,14 +205,13 @@ define amdgpu_ps void @add_v2i16_scalar_splat_loop(ptr addrspace(1) inreg %p, i1
 ; GFX11-SDAG-LABEL: add_v2i16_scalar_splat_loop:
 ; GFX11-SDAG:       ; %bb.0: ; %entry
 ; GFX11-SDAG-NEXT:    v_mov_b32_e32 v0, 0
-; GFX11-SDAG-NEXT:    s_pack_ll_b32_b16 s2, s2, s2
 ; GFX11-SDAG-NEXT:    s_mov_b32 s4, 0
 ; GFX11-SDAG-NEXT:  .LBB2_1: ; %loop
 ; GFX11-SDAG-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX11-SDAG-NEXT:    global_load_b32 v1, v0, s[0:1]
 ; GFX11-SDAG-NEXT:    s_add_i32 s4, s4, 1
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-SDAG-NEXT:    v_pk_add_u16 v1, s2, v1
+; GFX11-SDAG-NEXT:    v_pk_add_u16 v1, s2, v1 op_sel_hi:[0,1]
 ; GFX11-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-SDAG-NEXT:    s_add_u32 s0, s0, 4
 ; GFX11-SDAG-NEXT:    s_addc_u32 s1, s1, 0
@@ -285,5 +263,3 @@ loop:
 exit:
   ret void
 }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; GFX11: {{.*}}

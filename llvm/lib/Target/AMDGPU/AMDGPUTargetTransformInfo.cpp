@@ -1835,21 +1835,18 @@ bool GCNTTIImpl::isProfitableToSinkOperands(Instruction *I,
       continue;
     }
 
-    // Check for zero-cost multiple use InsertElement instructions.
-    // ExtractElement never matches here because its result is a scalar.
-    if (Instruction *OpInst = dyn_cast<Instruction>(Op.get())) {
-      if (OpInst->getType()->isVectorTy() && OpInst->getNumOperands() > 1) {
-        Instruction *VecOpInst = dyn_cast<Instruction>(OpInst->getOperand(0));
-        if (VecOpInst && VecOpInst->hasOneUse())
-          continue;
+    // Check for zero-cost multiple use InsertElement instructions. Shuffles are
+    // handled below.
+    if (auto *OpInst = dyn_cast<InsertElementInst>(Op.get())) {
+      Instruction *VecOpInst = dyn_cast<Instruction>(OpInst->getOperand(0));
+      if (VecOpInst && VecOpInst->hasOneUse())
+        continue;
 
-        if (getVectorInstrCost(OpInst->getOpcode(), OpInst->getType(),
-                               TTI::TCK_RecipThroughput, 0,
-                               OpInst->getOperand(0),
-                               OpInst->getOperand(1)) == 0) {
-          Ops.push_back(&Op);
-          continue;
-        }
+      if (getVectorInstrCost(OpInst->getOpcode(), OpInst->getType(),
+                             TTI::TCK_RecipThroughput, 0, OpInst->getOperand(0),
+                             OpInst->getOperand(1)) == 0) {
+        Ops.push_back(&Op);
+        continue;
       }
     }
 
@@ -1880,6 +1877,12 @@ bool GCNTTIImpl::isProfitableToSinkOperands(Instruction *I,
 
       if (Shuffle->isReverse() || Shuffle->isZeroEltSplat() ||
           Shuffle->isSingleSource()) {
+        // Sink the insertelement of a scalar splat along with the shuffle, so
+        // that isel sees the scalar and can fold it as a splat operand.
+        if (Shuffle->isZeroEltSplat() &&
+            match(Shuffle->getOperand(0),
+                  m_InsertElt(m_Value(), m_Value(), m_ZeroInt())))
+          Ops.push_back(&Shuffle->getOperandUse(0));
         Ops.push_back(&Op);
         continue;
       }
