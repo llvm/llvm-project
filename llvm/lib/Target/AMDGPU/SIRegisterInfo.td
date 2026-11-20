@@ -1660,6 +1660,17 @@ def VISrc_1024_f32    : SrcRegOrImm9 <VReg_1024_AlignTarget, "OPERAND_REG_INLINE
 //  AVSrc_*, AVDst_*, AVLdSt_* Operands with an AGPR or VGPR
 //===----------------------------------------------------------------------===//
 
+class getCPPOperandTypeName<ValueType VT> {
+  string vec = !if (VT.isVector, "V" # VT.nElem, "");
+  string ty =
+    !cond(VT.isInteger:                                 "INT",
+          !eq(VT, bf16):                                "BF",
+          !and(VT.isVector, !eq(VT.ElementType, bf16)): "BF",
+          VT.isFP:                                      "FP",
+          1:                                            "UNTYPED");
+  string ret = vec # ty # VT.Size;
+}
+
 class AVSrcOperand<RegisterClassLike regClass>
   : AVOperand<regClass, "decodeSrcAV10">;
 
@@ -1674,16 +1685,11 @@ def AVSrc_128_Align2 : AVSrcOperand<AV_128_Align2>;
 def AVSrc_192_Align2 : AVSrcOperand<AV_192_Align2>;
 def AVSrc_256_Align2 : AVSrcOperand<AV_256_Align2>;
 
-class AVDstOperand<RegisterClassLike regClass>
-  : AVOperand<regClass, "decodeAV10">;
-
-def AVDst_128 : AVDstOperand<AV_128>;
-def AVDst_256 : AVDstOperand<AV_256>;
-def AVDst_512 : AVDstOperand<AV_512>;
-
-def AVDst_128_Align2 : AVDstOperand<AV_128_Align2>;
-def AVDst_256_Align2 : AVDstOperand<AV_256_Align2>;
-def AVDst_512_Align2 : AVDstOperand<AV_512_Align2>;
+class AVDstOperand<RegisterClassLike regClass, ValueType VT>
+  : AVOperand<regClass, "decodeAV10"> {
+  let OperandNamespace = "AMDGPU";
+  let OperandType = "OPERAND_REG_" # getCPPOperandTypeName<VT>.ret;
+}
 
 class AVLdStOperand<RegisterClassLike regClass>
   : AVOperand<regClass, "decodeAVLdSt">;

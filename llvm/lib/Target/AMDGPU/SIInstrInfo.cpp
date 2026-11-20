@@ -5260,6 +5260,10 @@ bool SIInstrInfo::isInlineConstant(int64_t Imm, uint8_t OperandType) const {
     // Just ignore anything else.
     return false;
   default:
+    // Ignore all register only operands.
+    if (OperandType >= AMDGPU::OPERAND_REG_FIRST &&
+        OperandType <= AMDGPU::OPERAND_REG_LAST)
+      return false;
     llvm_unreachable("invalid operand type");
   }
 }
@@ -5754,12 +5758,6 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     const MCOperandInfo &OpInfo = Desc.operands()[i];
 
     switch (OpInfo.OperandType) {
-    case MCOI::OPERAND_REGISTER:
-      if (MI.getOperand(i).isImm() || MI.getOperand(i).isGlobal()) {
-        ErrInfo = "Illegal immediate value for operand.";
-        return false;
-      }
-      break;
     case AMDGPU::OPERAND_REG_IMM_INT32:
     case AMDGPU::OPERAND_REG_IMM_INT16:
     case AMDGPU::OPERAND_REG_IMM_FP32:
@@ -5833,6 +5831,16 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     case MCOI::OPERAND_PCREL:
       break;
     default:
+      if (OpInfo.OperandType == MCOI::OPERAND_REGISTER ||
+          (OpInfo.OperandType >= AMDGPU::OPERAND_REG_FIRST &&
+           OpInfo.OperandType <= AMDGPU::OPERAND_REG_LAST)) {
+        if (MI.getOperand(i).isImm() || MI.getOperand(i).isGlobal()) {
+          ErrInfo = "Illegal immediate value for operand.";
+          return false;
+        }
+        break;
+      }
+
       if (OpInfo.isGenericType())
         continue;
       break;

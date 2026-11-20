@@ -320,20 +320,25 @@ def CPolBit {
   int SCAL = 9;
 }
 
-class VOPDstOperand<RegisterClassLike rc> : RegisterOperand<rc, "printVOPDst">;
+class VOPDstOperand<RegisterClassLike rc, ValueType VT>
+  : RegisterOperand<rc, "printVOPDst"> {
+  let OperandNamespace = "AMDGPU";
+  let OperandType = "OPERAND_REG_" # getCPPOperandTypeName<VT>.ret;
+}
 
-def VOPDstOperand_t16 : VOPDstOperand <VGPR_16> {
+class VOPDstOperand_t16<ValueType VT> : VOPDstOperand <VGPR_16, VT> {
   let EncoderMethod = "getMachineOpValueT16";
   let DecoderMethod = "DecodeVGPR_16RegisterClass";
 }
 
-def VOPDstOperand_t16Lo128 : VOPDstOperand <VGPR_16_Lo128> {
+class VOPDstOperand_t16Lo128<ValueType VT> : VOPDstOperand <VGPR_16_Lo128, VT> {
   let EncoderMethod = "getMachineOpValueT16Lo128";
   let DecoderMethod = "DecodeVGPR_16_Lo128RegisterClass";
 }
 
 // Source-encoded destination operand for instructions like v_swap_b16.
-def VOPSrcEncodedDstOperand_t16Lo128 : VOPDstOperand <VGPR_16_Lo128> {
+class VOPSrcEncodedDstOperand_t16Lo128<ValueType VT>
+  : VOPDstOperand <VGPR_16_Lo128, VT> {
   let EncoderMethod = VSrcT_b16_Lo128.EncoderMethod;
   let DecoderMethod = VSrcT_b16_Lo128.DecoderMethod;
 }
