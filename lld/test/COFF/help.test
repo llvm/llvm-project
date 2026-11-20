@@ -1,3 +1,4 @@
 # RUN: lld-link /help | FileCheck %s
 
 CHECK: OVERVIEW: LLVM Linker
+CHECK: /delay:<value>{{ *}}Delay-load settings (UNLOAD, NOBIND)

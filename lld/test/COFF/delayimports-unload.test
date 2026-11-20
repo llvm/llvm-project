@@ -1,0 +1,79 @@
+# REQUIRES: x86
+## /delay:unload emits an UnloadDelayImportTable: a read-only copy of the
+## initial delay IAT (with base relocs), as __FUnloadDelayLoadedDLL2 expects.
+
+# RUN: lld-link /out:%t.exe /entry:main /subsystem:console \
+# RUN:   %p/Inputs/hello64.obj %p/Inputs/std64.lib /delayload:STD64.DLL \
+# RUN:   /alternatename:__delayLoadHelper2=main /delay:UNLOAD /delay:nobind
+# RUN: llvm-readobj --coff-imports %t.exe > %t.dump
+# RUN: llvm-readobj --sections --section-data %t.exe >> %t.dump
+# RUN: llvm-readobj --coff-basereloc %t.exe >> %t.dump
+# RUN: FileCheck --check-prefix=X64 %s < %t.dump
+
+X64: ImportAddressTable: 0x[[#%X,IAT:]]
+X64: UnloadDelayImportTable: 0x[[#%X,UIAT:]]
+X64: Name: .rdata (
+X64: VirtualAddress: 0x[[#%X,ROBASE:]]
+X64: Characteristics [ (0x40000040)
+X64: SectionData (
+X64: [[#%X,UIAT-ROBASE]]: [[V0_0:[0-9A-F]{8} [0-9A-F]{8}]] [[V0_1:[0-9A-F]{8} [0-9A-F]{8}]]
+X64-NEXT: [[#%X,UIAT-ROBASE+16]]: [[V0_2:[0-9A-F]{8} [0-9A-F]{8}]] 00000000 00000000
+X64: Name: .data (
+X64: VirtualAddress: 0x[[#%X,RWBASE:]]
+X64: SectionData (
+X64: [[#%X,IAT-RWBASE]]: [[V0_0]] [[V0_1]]
+X64-NEXT: [[#%X,IAT-RWBASE+16]]: [[V0_2]] 00000000 00000000
+X64: BaseReloc [
+X64: Type: DIR64{{[[:space:]]+}}Address: 0x[[#%X,UIAT]]
+X64: Type: DIR64{{[[:space:]]+}}Address: 0x[[#%X,UIAT+8]]
+X64: Type: DIR64{{[[:space:]]+}}Address: 0x[[#%X,UIAT+16]]
+X64: Type: DIR64{{[[:space:]]+}}Address: 0x[[#%X,IAT]]
+X64: Type: DIR64{{[[:space:]]+}}Address: 0x[[#%X,IAT+8]]
+X64: Type: DIR64{{[[:space:]]+}}Address: 0x[[#%X,IAT+16]]
+
+## Without /delay:unload the field stays 0.
+# RUN: lld-link /out:%t.nounload.exe /entry:main /subsystem:console \
+# RUN:   %p/Inputs/hello64.obj %p/Inputs/std64.lib /delayload:STD64.DLL \
+# RUN:   /alternatename:__delayLoadHelper2=main /delay:nobind 2>&1 \
+# RUN:   | FileCheck -allow-empty -check-prefix=NOWARN %s
+# RUN: llvm-readobj --coff-imports %t.nounload.exe \
+# RUN:   | FileCheck -check-prefix=NOUNLOAD %s
+
+NOWARN-NOT: warning
+NOUNLOAD:   UnloadDelayImportTable: 0x0
+
+## i386: entries are 4 bytes with HIGHLOW relocs.
+# RUN: yaml2obj %p/Inputs/hello32.yaml -o %t32.obj
+# RUN: lld-link -safeseh:no %t32.obj %p/Inputs/std32.lib /subsystem:console \
+# RUN:   /entry:main@0 /alternatename:___delayLoadHelper2@8=_main@0 \
+# RUN:   /delayload:std32.dll /delay:unload /out:%t32.exe
+# RUN: llvm-readobj --coff-imports %t32.exe > %t32.dump
+# RUN: llvm-readobj --sections --section-data %t32.exe >> %t32.dump
+# RUN: llvm-readobj --coff-basereloc %t32.exe >> %t32.dump
+# RUN: FileCheck --check-prefix=X86 %s < %t32.dump
+
+X86: ImportAddressTable: 0x[[#%X,IAT:]]
+X86: UnloadDelayImportTable: 0x[[#%X,UIAT:]]
+X86: Name: .rdata (
+X86: VirtualAddress: 0x[[#%X,ROBASE:]]
+X86: Characteristics [ (0x40000040)
+X86: SectionData (
+X86: [[#%X,UIAT-ROBASE-8]]: {{([0-9A-F]{8})}} {{([0-9A-F]{8})}} [[V0_0:[0-9A-F]{8}]] [[V0_1:[0-9A-F]{8}]]
+X86-NEXT: [[#%X,UIAT-ROBASE+8]]: 00000000
+X86: Name: .data (
+X86: VirtualAddress: 0x[[#%X,RWBASE:]]
+X86: SectionData (
+X86: [[#%X,IAT-RWBASE]]: [[V0_0]] [[V0_1]] 00000000
+X86: BaseReloc [
+X86: Type: HIGHLOW{{[[:space:]]+}}Address: 0x[[#%X,UIAT]]
+X86: Type: HIGHLOW{{[[:space:]]+}}Address: 0x[[#%X,UIAT+4]]
+X86: Type: HIGHLOW{{[[:space:]]+}}Address: 0x[[#%X,IAT]]
+X86: Type: HIGHLOW{{[[:space:]]+}}Address: 0x[[#%X,IAT+4]]
+
+## Unknown values warn and are ignored.
+# RUN: lld-link /out:%t.bogus.exe /entry:main /subsystem:console \
+# RUN:   %p/Inputs/hello64.obj %p/Inputs/std64.lib /delayload:STD64.DLL \
+# RUN:   /alternatename:__delayLoadHelper2=main /delay:bogus 2>&1 \
+# RUN:   | FileCheck -check-prefix=BOGUS %s
+
+BOGUS: warning: ignoring unknown argument for /delay: bogus
