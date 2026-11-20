@@ -62,7 +62,7 @@ bb:
 ; GCN-LABEL: {{^}}test_load_store:
 ; GCN-COUNT-8: global_load_dwordx4 v[{{[0-9:]+}}], v{{[0-9:]+}}, s[{{[0-9:]+}}]
 ; GCN-NOT:     v_accvgpr
-; GCN-COUNT-8: global_store_dwordx4 v[{{[0-9:]+}}], v[{{[0-9:]+}}]
+; GCN-COUNT-8: global_store_dwordx4 v{{[0-9:]+}}, v[{{[0-9:]+}}], s[{{[0-9:]+}}]
 define amdgpu_kernel void @test_load_store(ptr addrspace(1) %arg) #0 {
 bb:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -170,7 +170,7 @@ bb:
 ; GCN-NOT:     v_accvgpr_write
 ; GCN:         v_mfma_f32_32x32x1f32
 ; GCN-NOT:     v_accvgpr_read
-; GCN-COUNT-8: global_store_dwordx4 v[{{[0-9:]+}}], a[{{[0-9:]+}}]
+; GCN-COUNT-8: global_store_dwordx4 v{{[0-9:]+}}, a[{{[0-9:]+}}], s[{{[0-9:]+}}]
 define amdgpu_kernel void @test_multiuse_load_mfma_mfma_store(ptr addrspace(1) %arg) #0 {
 bb:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
