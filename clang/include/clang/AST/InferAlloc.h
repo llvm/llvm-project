@@ -15,15 +15,30 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Expr.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Support/AllocToken.h"
 #include <optional>
 
 namespace clang {
 namespace infer_alloc {
 
-/// Infer the possible allocated type from an allocation call expression.
-QualType inferPossibleType(const CallExpr *E, const ASTContext &Ctx,
-                           const CastExpr *CastE);
+/// Infer the possible allocated type from an allocation call expression, in
+/// this order: a sizeof in a size argument, a placement new into the result
+/// (\p PlacementNewType, if given, maps the call to the type constructed into
+/// its result, see collectPlacementNewTypes()), and finally a cast of the
+/// result (\p CastE is the cast the call result is immediately used in, if
+/// any).
+QualType inferPossibleType(
+    const CallExpr *E, const ASTContext &Ctx, const CastExpr *CastE,
+    llvm::function_ref<QualType(const CallExpr *)> PlacementNewType = nullptr);
+
+/// Maps the allocation calls in \p Body whose result is used as placement-new
+/// storage to the constructed type (null if different types are constructed
+/// into it), e.g. `void *mem = alloc(n); new (mem) T();`. A local variable is
+/// only used if it is initialized by the call and otherwise only read.
+llvm::DenseMap<const CallExpr *, QualType>
+collectPlacementNewTypes(const Stmt *Body);
 
 /// Get the information required for construction of an allocation token ID.
 std::optional<llvm::AllocTokenMetadata>

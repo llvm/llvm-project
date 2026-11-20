@@ -13,11 +13,6 @@
 
 namespace hlsl {
 
-#define _HLSL_AVAILABILITY(platform, version)                                  \
-  __attribute__((availability(platform, introduced = version)))
-#define _HLSL_BUILTIN_ALIAS(builtin)                                           \
-  __attribute__((clang_builtin_alias(builtin)))
-
 static const uint UAV_MEMORY = 0x1;
 static const uint GROUP_SHARED_MEMORY = 0x2;
 static const uint NODE_INPUT_MEMORY = 0x4;

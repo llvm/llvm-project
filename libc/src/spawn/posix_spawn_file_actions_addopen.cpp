@@ -9,11 +9,10 @@
 #include "posix_spawn_file_actions_addopen.h"
 
 #include "file_actions.h"
-#include "src/__support/CPP/new.h"
-#include "src/__support/alloc-checker.h"
+#include "hdr/errno_macros.h"
 #include "src/__support/common.h"
-#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/null_check.h"
 
 #include <spawn.h>
 
@@ -26,12 +25,12 @@ LLVM_LIBC_FUNCTION(int, posix_spawn_file_actions_addopen,
     return EINVAL;
   if (fd < 0)
     return EBADF;
+  LIBC_CRASH_ON_NULLPTR(path);
 
-  AllocChecker ac;
-  auto *act = new (ac) SpawnFileOpenAction(path, fd, oflag, mode);
-  if (act == nullptr)
+  auto act = SpawnFileOpenAction::create(path, fd, oflag, mode);
+  if (!act)
     return ENOMEM;
-  BaseSpawnFileAction::add_action(actions, act);
+  BaseSpawnFileAction::add_action(actions, act.take_unique());
 
   return 0;
 }

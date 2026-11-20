@@ -303,6 +303,27 @@ InstructionCost RISCVTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
   return TTI::TCC_Free;
 }
 
+bool RISCVTTIImpl::preferLoopExitWithEqualityComparison(
+    const ICmpInst &Cond, const APInt &PostIncExitValue) const {
+  if (!ST->hasStdExtZibi())
+    return false;
+
+  // Relational comparisons against zero and some adjacent constants can
+  // already lower to a single branch against x0.
+  const auto Pred = Cond.getPredicate();
+  const auto *C = dyn_cast<ConstantInt>(Cond.getOperand(1));
+  if (C && (C->isZero() ||
+            (C->isMinusOne() &&
+             (Pred == ICmpInst::ICMP_SGT || Pred == ICmpInst::ICMP_SLE)) ||
+            (C->isOne() &&
+             (Pred == ICmpInst::ICMP_SLT || Pred == ICmpInst::ICMP_SGE ||
+              Pred == ICmpInst::ICMP_ULT || Pred == ICmpInst::ICMP_UGE))))
+    return false;
+
+  int64_t Imm = PostIncExitValue.getSExtValue();
+  return Imm == -1 || (Imm >= 1 && Imm <= 31);
+}
+
 InstructionCost
 RISCVTTIImpl::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
                                   const APInt &Imm, Type *Ty,
@@ -2599,12 +2620,11 @@ InstructionCost RISCVTTIImpl::getExtendedReductionCost(
 
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(ValTy);
 
-  if (IsUnsigned && Opcode == Instruction::Add &&
-      LT.second.isFixedLengthVectorOf(MVT::i1)) {
-    // Represent vector_reduce_add(ZExt(<n x i1>)) as
-    // ZExtOrTrunc(ctpop(bitcast <n x i1> to in)).
-    return LT.first *
-           getRISCVInstructionCost(RISCV::VCPOP_M, LT.second, CostKind);
+  if (IsUnsigned && Opcode == Instruction::Add && LT.first == 1 &&
+      LT.second.isVectorOf(MVT::i1)) {
+    // Represent vector_reduce_add(ZExt(<i1 vector>)) as
+    // ZExtOrTrunc(ctpop(bitcast <i1 vector> to in)).
+    return getRISCVInstructionCost(RISCV::VCPOP_M, LT.second, CostKind);
   }
 
   if (ResTy->getScalarSizeInBits() != 2 * LT.second.getScalarSizeInBits())

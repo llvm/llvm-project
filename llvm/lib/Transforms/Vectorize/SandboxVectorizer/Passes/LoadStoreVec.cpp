@@ -8,7 +8,6 @@
 
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/LoadStoreVec.h"
 #include "../../VectorizeOptions.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/SandboxIR/Constant.h"
 #include "llvm/SandboxIR/Instruction.h"
@@ -18,7 +17,6 @@
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Debug.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Legality.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/RegionWithScore.h"
-#include "llvm/Transforms/Vectorize/SandboxVectorizer/Scheduler.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/VecUtils.h"
 
 namespace llvm {
@@ -27,19 +25,22 @@ namespace sandboxir {
 
 #define DEBUG_PREFIX_LOCAL DEBUG_PREFIX "LoadStoreVec: "
 
+/// \returns true if \p Ty is a pointer, or a vector of pointers, in a
+/// non-integral address space, which has no stable integer representation.
+static bool isNonIntegralPtr(Type *Ty, const DataLayout &DL) {
+  Type *ScalarTy = Ty->getScalarType();
+  return ScalarTy->isPointerTy() &&
+         DL.isNonIntegralAddressSpace(ScalarTy->getPointerAddressSpace());
+}
+
 std::optional<Type *> LoadStoreVec::canVectorize(BndlRef<Instruction *> Bndl) {
-  // Check if in the same BB.
-  if (LegalityAnalysis::differentBlock(Bndl))
-    return std::nullopt;
+  LLVM_DEBUG(dbgs() << DEBUG_PREFIX << "canVectorize() Bundle:\n";
+             VecUtils::dump(Bndl));
+  const auto &LegalityRes = Legality->canVectorizeLSV(Bndl);
+  LLVM_DEBUG(dbgs() << DEBUG_PREFIX << "Legality: " << LegalityRes << "\n");
 
-  // Check if instructions repeat.
-  if (!LegalityAnalysis::areUnique(Bndl))
+  if (LegalityRes.getSubclassID() != LegalityResultID::Widen)
     return std::nullopt;
-
-  // Check scheduling.
-  if (!Sched->trySchedule(Bndl))
-    return std::nullopt;
-
   return VecUtils::getCombinedVectorTypeFor(Bndl, *DL);
 }
 
@@ -69,39 +70,79 @@ bool LoadStoreVec::acceptOrRevert() {
 }
 
 LoadInst *LoadStoreVec::createVectorLoad(BndlRef<Instruction *> Loads) {
-  if (!VecUtils::areConsecutive<LoadInst, Instruction>(
-          Loads, A->getScalarEvolution(), *DL))
-    return nullptr;
-  if (!canVectorize(Loads))
-    return nullptr;
-
   Type *Ty = VecUtils::getCombinedVectorTypeFor(Loads, *DL);
   Value *LdPtr = cast<LoadInst>(Loads[0])->getPointerOperand();
   Align LdAlign = VecUtils::getVecAlignment(Loads);
   auto LdWhereIt = std::next(VecUtils::getLowest(Loads)->getIterator());
-  return LoadInst::create(Ty, LdPtr, LdAlign, LdWhereIt, *Ctx, "VecIinitL");
+  auto *VecL =
+      LoadInst::create(Ty, LdPtr, LdAlign, LdWhereIt, *Ctx, "VecIinitL");
+  Utils::propagateMetadata(VecL, Loads);
+  return VecL;
 }
 
-Constant *LoadStoreVec::getEquivalentConstantWithType(Constant *C,
-                                                      Type *DestTy) {
-  // A non-integral pointer has no fixed ptrtoint/inttoptr width.
-  if (DestTy->isPointerTy())
-    assert(!DL->isNonIntegralAddressSpace(DestTy->getPointerAddressSpace()) &&
-           "DestTy has no fixed size");
-  Type *SrcTy = C->getType();
-  if (SrcTy == DestTy)
-    return C;
+bool SameSizeReinterpret::canReinterpret(Type *SrcTy, Type *DestTy,
+                                         const DataLayout &DL) {
+  return !isNonIntegralPtr(SrcTy, DL) && !isNonIntegralPtr(DestTy, DL);
+}
 
-  Constant *AsInt = C;
-  if (!SrcTy->isIntegerTy()) {
-    Type *IntTy = IntegerType::get(*Ctx, Utils::getNumBits(SrcTy, *DL));
-    AsInt = SrcTy->isPointerTy() ? ConstantExpr::getPtrToInt(C, IntTy)
-                                 : ConstantExpr::getBitCast(C, IntTy);
+Type *SameSizeReinterpret::getIntTypeFor(Type *Ty, const DataLayout &DL) {
+  Context &Ctx = Ty->getContext();
+  if (auto *VecTy = dyn_cast<FixedVectorType>(Ty)) {
+    auto *ElmIntTy =
+        IntegerType::get(Ctx, Utils::getNumBits(VecTy->getElementType(), DL));
+    return FixedVectorType::get(ElmIntTy, VecTy->getNumElements());
   }
-  if (DestTy->isIntegerTy())
-    return AsInt;
-  return DestTy->isPointerTy() ? ConstantExpr::getIntToPtr(AsInt, DestTy)
-                               : ConstantExpr::getBitCast(AsInt, DestTy);
+  return IntegerType::get(Ctx, Utils::getNumBits(Ty, DL));
+}
+
+SmallVector<SameSizeReinterpret::CastStep, 3>
+SameSizeReinterpret::getCastChain(Type *SrcTy, Type *DestTy,
+                                  const DataLayout &DL) {
+  assert(canReinterpret(SrcTy, DestTy, DL) &&
+         "Cannot reinterpret a non-integral pointer!");
+  assert(Utils::getNumBits(SrcTy, DL) == Utils::getNumBits(DestTy, DL) &&
+         "Expected types of the same size!");
+  SmallVector<CastStep, 3> Chain;
+  if (SrcTy == DestTy)
+    return Chain;
+  Type *Ty = SrcTy;
+  if (Ty->getScalarType()->isPointerTy()) {
+    Ty = getIntTypeFor(Ty, DL);
+    Chain.emplace_back(Instruction::Opcode::PtrToInt, Ty);
+  }
+  bool DestIsPtr = DestTy->getScalarType()->isPointerTy();
+  Type *BitCastTy = DestIsPtr ? getIntTypeFor(DestTy, DL) : DestTy;
+  if (Ty != BitCastTy)
+    Chain.emplace_back(Instruction::Opcode::BitCast, BitCastTy);
+  if (DestIsPtr)
+    Chain.emplace_back(Instruction::Opcode::IntToPtr, DestTy);
+  // ptrtoint, bitcast, and inttoptr, with any step omitted. A vector of
+  // pointers and a scalar pointer of the same width need all three.
+  assert(Chain.size() <= 3 && "Unexpected reinterpret cast chain!");
+  return Chain;
+}
+
+Constant *SameSizeReinterpret::reinterpretConstant(Constant *C, Type *DestTy,
+                                                   const DataLayout &DL) {
+  if (!canReinterpret(C->getType(), DestTy, DL))
+    return nullptr;
+  Constant *NewC = C;
+  for (auto [Opc, Ty] : getCastChain(C->getType(), DestTy, DL)) {
+    switch (Opc) {
+    case Instruction::Opcode::PtrToInt:
+      NewC = ConstantExpr::getPtrToInt(NewC, Ty);
+      break;
+    case Instruction::Opcode::BitCast:
+      NewC = ConstantExpr::getBitCast(NewC, Ty);
+      break;
+    case Instruction::Opcode::IntToPtr:
+      NewC = ConstantExpr::getIntToPtr(NewC, Ty);
+      break;
+    default:
+      llvm_unreachable("Unexpected cast in reinterpret chain!");
+    }
+  }
+  return NewC;
 }
 
 Constant *LoadStoreVec::createConstantVector(BndlRef<Constant *> Constants) {
@@ -174,7 +215,7 @@ Constant *LoadStoreVec::createConstantVector(BndlRef<Constant *> Constants) {
   for (Constant *C : ConstantElements) {
     unsigned Bits = Utils::getNumBits(C, *DL);
     if (Bits == LaneBits) {
-      Constant *Lane = getEquivalentConstantWithType(C, LaneTy);
+      Constant *Lane = SameSizeReinterpret::reinterpretConstant(C, LaneTy, *DL);
       if (Lane == nullptr)
         return nullptr;
       LaneTyConstants.push_back(Lane);
@@ -200,7 +241,8 @@ Constant *LoadStoreVec::createConstantVector(BndlRef<Constant *> Constants) {
         // without changing its bits, so a float lane stays a float.
         Constant *SliceCInt = ConstantInt::get(
             *Ctx, Val.extractBits(LaneBits, EndianAwareSlice * LaneBits));
-        Constant *SliceC = getEquivalentConstantWithType(SliceCInt, LaneTy);
+        Constant *SliceC =
+            SameSizeReinterpret::reinterpretConstant(SliceCInt, LaneTy, *DL);
         if (SliceC == nullptr)
           return nullptr;
         LaneTyConstants.push_back(SliceC);
@@ -213,9 +255,6 @@ Constant *LoadStoreVec::createConstantVector(BndlRef<Constant *> Constants) {
 }
 
 bool LoadStoreVec::vectorizeStores(BndlRef<Instruction *> Stores, Region &Rgn) {
-  if (!VecUtils::areConsecutive<StoreInst, Instruction>(
-          Stores, A->getScalarEvolution(), *DL))
-    return false;
   if (!canVectorize(Stores))
     return false;
   SmallVector<Value *, 4> Operands;
@@ -253,11 +292,12 @@ bool LoadStoreVec::vectorizeStores(BndlRef<Instruction *> Stores, Region &Rgn) {
     Loads.reserve(Operands.size());
     for (Value *Op : Operands)
       Loads.push_back(cast<Instruction>(Op));
-    VecOp = createVectorLoad(Loads);
-    if (VecOp == nullptr) {
+    if (!canVectorize(Loads)) {
       Ctx->accept();
       return false;
     }
+    VecOp = createVectorLoad(Loads);
+    assert(VecOp != nullptr && "Expected vector value!");
   } else if (AllConstants) {
     SmallVector<Constant *, 8> Constants;
     Constants.reserve(Operands.size());
@@ -274,7 +314,8 @@ bool LoadStoreVec::vectorizeStores(BndlRef<Instruction *> Stores, Region &Rgn) {
   Value *StPtr = cast<StoreInst>(Stores[0])->getPointerOperand();
   Align StAlign = VecUtils::getVecAlignment(Stores);
   auto StWhereIt = std::next(VecUtils::getLowest(Stores)->getIterator());
-  StoreInst::create(VecOp, StPtr, StAlign, StWhereIt, *Ctx);
+  auto *VecS = StoreInst::create(VecOp, StPtr, StAlign, StWhereIt, *Ctx);
+  Utils::propagateMetadata(VecS, Stores);
 
   DeadInstrMorgue.collectPotentiallyDeadInstrs(Stores);
   if (AllLoads)
@@ -286,9 +327,6 @@ bool LoadStoreVec::vectorizeStores(BndlRef<Instruction *> Stores, Region &Rgn) {
 
 LoadInst *LoadStoreVec::vectorizeLoads(BndlRef<Instruction *> Loads,
                                        Region &Rgn) {
-  if (!VecUtils::areConsecutive<LoadInst, Instruction>(
-          Loads, A->getScalarEvolution(), *DL))
-    return nullptr;
   auto VecTy = canVectorize(Loads);
   if (!VecTy)
     return nullptr;
@@ -303,10 +341,7 @@ LoadInst *LoadStoreVec::vectorizeLoads(BndlRef<Instruction *> Loads,
   saveIR(Rgn);
 
   auto *VecLoad = createVectorLoad(Loads);
-  if (VecLoad == nullptr) {
-    Ctx->accept();
-    return nullptr;
-  }
+  assert(VecLoad != nullptr && "Expected vector load");
 
   BasicBlock::iterator WhereIt = std::next(VecLoad->getIterator());
   for (auto [Lane, OrigV] : VecUtils::enumerateLanes(Loads)) {
@@ -334,13 +369,27 @@ bool LoadStoreVec::runOnRegion(Region &Rgn, const Analyses &RegionAnalyses) {
   DL = &F.getParent()->getDataLayout();
   Ctx = &F.getContext();
   A = &RegionAnalyses;
-  Sched =
-      std::make_unique<Scheduler>(A->getAA(), *Ctx, SchedDirection::BottomUp);
-
+  InstrMaps IMaps;
   auto Opc = Bndl[0]->getOpcode();
   assert(
       all_of(Bndl, [Opc](Instruction *I) { return I->getOpcode() == Opc; }) &&
       "Expected a homogeneous seed slice!");
+
+  SchedDirection Dir;
+  switch (Opc) {
+  case Instruction::Opcode::Load:
+    Dir = SchedDirection::TopDown;
+    break;
+  case Instruction::Opcode::Store:
+    Dir = SchedDirection::BottomUp;
+    break;
+  default:
+    llvm_unreachable("Expected Load or Store");
+  }
+
+  Legality = std::make_unique<LegalityAnalysis>(
+      A->getAA(), A->getScalarEvolution(), F.getParent()->getDataLayout(),
+      A->getTTI(), F.getContext(), IMaps, Dir);
 
   bool Changed = false;
   switch (Opc) {
@@ -353,7 +402,6 @@ bool LoadStoreVec::runOnRegion(Region &Rgn, const Analyses &RegionAnalyses) {
   default:
     llvm_unreachable("Expected Load or Store");
   }
-  Sched.reset();
   return Changed;
 }
 

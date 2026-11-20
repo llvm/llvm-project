@@ -279,12 +279,6 @@ def RestoreZAPseudo :
          (ins GPR64:$tpidr2_el0, GPR64sp:$tpidr2obj, i64imm:$restore_routine, variable_ops), []>,
          Sched<[]>;
 
-// Read and write TPIDR2_EL0
-def : Pat<(int_aarch64_sme_set_tpidr2 i64:$val),
-          (MSR 0xde85, GPR64:$val)>;
-def : Pat<(i64 (int_aarch64_sme_get_tpidr2)),
-          (MRS 0xde85)>;
-
 } // End let Predicates = [HasSMEandIsNonStreamingSafe]
 
 multiclass CoalescerBarrierPseudo<RegisterClass rc, list<ValueType> vts> {

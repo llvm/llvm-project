@@ -1,5 +1,5 @@
 ; RUN: opt < %s -passes=loop-vectorize,transform-warning -S -pass-remarks-missed='loop-vectorize' -pass-remarks-analysis='loop-vectorize' -vectorize-memory-check-threshold=1 -mtriple=x86_64-apple-macosx 2>&1 | FileCheck %s
-; RUN: opt < %s -passes=loop-vectorize,transform-warning -o /dev/null -pass-remarks-output=%t.yaml -vectorize-memory-check-threshold=1 -mtriple=x86_64-apple-macosx
+; RUN: opt < %s -passes=loop-vectorize,transform-warning -disable-output -pass-remarks-output=%t.yaml -vectorize-memory-check-threshold=1 -mtriple=x86_64-apple-macosx
 ; RUN: cat %t.yaml | FileCheck -check-prefix=YAML %s
 
 ; C/C++ code for tests
@@ -146,12 +146,12 @@
 ; YAML-NEXT: ...
 ; YAML-NEXT: --- !Analysis
 ; YAML-NEXT: Pass:            loop-vectorize
-; YAML-NEXT: Name:            RecurrencesInEarlyExitLoop
+; YAML-NEXT: Name:            UnknownLatchExitCountEarlyExitLoop
 ; YAML-NEXT: DebugLoc:        { File: source.cpp, Line: 27, Column: 3 }
 ; YAML-NEXT: Function:        test_multiple_failures
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - String:          'loop not vectorized: '
-; YAML-NEXT:   - String:          Cannot vectorize early exit loop with reductions or recurrences
+; YAML-NEXT:   - String:          Cannot vectorize early exit loop
 ; YAML-NEXT: ...
 ; YAML-NEXT: --- !Analysis
 ; YAML-NEXT: Pass:            loop-vectorize

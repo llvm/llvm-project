@@ -11,7 +11,6 @@
 
 #include "lldb/Symbol/ObjectContainer.h"
 #include "lldb/Utility/ArchSpec.h"
-#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/FileSpec.h"
 
@@ -73,7 +72,7 @@ protected:
     lldb::offset_t Extract(const lldb_private::DataExtractor &data,
                            lldb::offset_t offset);
     /// Object name in the archive.
-    lldb_private::ConstString ar_name;
+    std::string ar_name;
 
     /// Object modification time in the archive.
     uint32_t modification_time = 0;
