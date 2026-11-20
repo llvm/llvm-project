@@ -504,9 +504,9 @@ void AMDGPU::PhiLoweringHelper::mergeIncomingLaneMasks(
 
     for (auto &Incoming : Incomings) {
       MachineBasicBlock &IMBB = *Incoming.Block;
-      buildMergeLaneMasks(
-          IMBB, getSaluInsertionAtEnd(IMBB), {}, Incoming.UpdatedReg,
-          SSAUpdater.getValueInMiddleOfBlock(&IMBB), Incoming.Reg);
+      buildMergeLaneMasksAtEnd(IMBB, Incoming.UpdatedReg,
+                               SSAUpdater.getValueInMiddleOfBlock(&IMBB),
+                               Incoming.Reg);
     }
   } else {
     // The value is not observed from outside a loop. Use a more accurate
@@ -536,9 +536,9 @@ void AMDGPU::PhiLoweringHelper::mergeIncomingLaneMasks(
         continue;
 
       MachineBasicBlock &IMBB = *Incoming.Block;
-      buildMergeLaneMasks(
-          IMBB, getSaluInsertionAtEnd(IMBB), {}, Incoming.UpdatedReg,
-          SSAUpdater.getValueInMiddleOfBlock(&IMBB), Incoming.Reg);
+      buildMergeLaneMasksAtEnd(IMBB, Incoming.UpdatedReg,
+                               SSAUpdater.getValueInMiddleOfBlock(&IMBB),
+                               Incoming.Reg);
     }
   }
 }
@@ -737,6 +737,60 @@ AMDGPU::PhiLoweringHelper::getSaluInsertionAtEnd(MachineBasicBlock &MBB) const {
 
   // We should have at least seen an IMPLICIT_DEF or COPY
   llvm_unreachable("SCC used by terminator but no def in block");
+}
+
+/// Build a lane mask merge at the end of \p MBB. Normally this is inserted at
+/// getSaluInsertionAtEnd, but if the terminators use SCC then one of the input
+/// lane masks might only be defined after the last SCC def. If so,
+/// rematerialize it if it is a constant, otherwise insert the merge just
+/// before the terminators and save and restore SCC around it.
+void AMDGPU::PhiLoweringHelper::buildMergeLaneMasksAtEnd(MachineBasicBlock &MBB,
+                                                         Register DstReg,
+                                                         Register PrevReg,
+                                                         Register CurReg) {
+  MachineBasicBlock::iterator I = getSaluInsertionAtEnd(MBB);
+  MachineBasicBlock::iterator FirstTerm = MBB.getFirstTerminator();
+  SmallVector<MachineInstr *, 2> RematDefs;
+  bool NeedSaveSCC = false;
+  auto MakeAvailable = [&](Register &Reg) {
+    MachineInstr *Def = MRI->getUniqueVRegDef(Reg);
+    if (!Def || Def->getParent() != &MBB ||
+        llvm::none_of(make_range(I, FirstTerm),
+                      [&](const MachineInstr &MI) { return &MI == Def; }))
+      return;
+    bool Val;
+    if (!isConstantLaneMask(Reg, Val)) {
+      NeedSaveSCC = true;
+      return;
+    }
+    Register NewReg = createLaneMaskReg(MRI, LaneMaskRegAttrs);
+    if (Def->isImplicitDef())
+      BuildMI(MBB, I, {}, TII->get(AMDGPU::IMPLICIT_DEF), NewReg);
+    else
+      BuildMI(MBB, I, {}, TII->get(LMC->MovOpc), NewReg).addImm(Val ? -1 : 0);
+    RematDefs.push_back(MRI->getVRegDef(NewReg));
+    Reg = NewReg;
+  };
+  MakeAvailable(PrevReg);
+  MakeAvailable(CurReg);
+
+  if (NeedSaveSCC) {
+    Register SavedSCC = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
+    BuildMI(MBB, FirstTerm, {}, TII->get(AMDGPU::S_CSELECT_B32), SavedSCC)
+        .addImm(-1)
+        .addImm(0);
+    buildMergeLaneMasks(MBB, FirstTerm, {}, DstReg, PrevReg, CurReg);
+    BuildMI(MBB, FirstTerm, {}, TII->get(AMDGPU::S_CMP_LG_U32))
+        .addReg(SavedSCC)
+        .addImm(0);
+  } else {
+    buildMergeLaneMasks(MBB, I, {}, DstReg, PrevReg, CurReg);
+  }
+
+  // The merge may not have needed the rematerialized constants.
+  for (MachineInstr *MI : RematDefs)
+    if (MRI->use_nodbg_empty(MI->getOperand(0).getReg()))
+      MI->eraseFromParent();
 }
 
 // VReg_1 -> SReg_32 or SReg_64
