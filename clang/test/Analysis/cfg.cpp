@@ -83,16 +83,18 @@ void testBuiltinSize() {
 }
 
 // CHECK-LABEL: void testBuiltinConstantP()
-// CHECK: ENTRY
-// CHECK-NEXT: Succs (1): B1
-// CHECK: [B1]
+// CHECK-NEXT: [B2 (ENTRY)]
+// CHECK-NEXT:   Succs (1): B1
+// CHECK-EMPTY:
+// CHECK-NEXT: [B1]
 // CHECK-NEXT:   1: __builtin_constant_p
 // CHECK-NEXT:   2: [B1.1] (ImplicitCastExpr, BuiltinFnToFnPtr, int (*)(...) noexcept)
 // CHECK-NEXT:   3: [B1.2](dummy())
 // CHECK-NEXT:   4: (void)[B1.3] (CStyleCastExpr, ToVoid, void)
 // CHECK-NEXT:   Preds (1): B2
 // CHECK-NEXT:   Succs (1): B0
-// CHECK: [B0 (EXIT)]
+// CHECK-EMPTY:
+// CHECK-NEXT: [B0 (EXIT)]
 // CHECK-NEXT:   Preds (1): B1
 void testBuiltinConstantP() {
   extern int *dummy();
