@@ -56,3 +56,23 @@ TEST_F(AMDGPUMFMACoExecRules, GFX950) {
     EXPECT_EQ(Info.Slots[0].Mask, CoExecMask::None) << MCII->getName(Op);
   }
 }
+
+TEST_F(AMDGPUMFMACoExecRules, AllMFMAsHaveVariant) {
+  for (StringRef TT : {"amdgpu9.42-amd-amdhsa", "amdgpu9.50-amd-amdhsa"}) {
+    std::unique_ptr<GCNTargetMachine> TM =
+        createAMDGPUTargetMachine(Triple(TT), "", "");
+    std::unique_ptr<GCNSubtarget> ST = std::make_unique<GCNSubtarget>(
+        TM->getTargetTriple(), TM->getTargetCPU(), TM->getTargetFeatureString(),
+        *TM);
+    const MCInstrInfo *MCII = TM->getMCInstrInfo();
+
+    for (unsigned Op = 0; Op < MCII->getNumOpcodes(); ++Op) {
+      if (!ST->getInstrInfo()->isMFMA(Op) ||
+          !AMDGPU_MC::isOpcodeAvailable(Op, ST->getFeatureBits()))
+        continue;
+      const MAIInstInfo *Info = getMAIInstInfoHelper(Op);
+      EXPECT_TRUE(Info && Info->Variant != MFMAVariant::Unknown)
+          << TT.str() << ": " << MCII->getName(Op).str();
+    }
+  }
+}

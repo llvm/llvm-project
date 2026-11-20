@@ -1272,11 +1272,8 @@ let isAsCheapAsAMove = 1, isReMaterializable = 1 in {
 } // End isAsCheapAsAMove = 1, isReMaterializable = 1
 
 class MAIInst<string OpName, VOPProfile P, SDPatternOperator node, bit Scaled = false>
-  : VOP3InstBase<OpName, P, node, /*IsVOP2=*/0, Scaled> {
+  : VOP3InstBase<OpName, P, node, /*IsVOP2=*/0, Scaled>, MAIInstInfo {
   let SubtargetPredicate = HasMAIInsts;
-  Instruction Opcode = !cast<Instruction>(NAME);
-  bit is_dgemm = 0;
-  bit is_gfx940_xdl = 0;
   let isConvergent = 1;
   let PseudoInstr = NAME; // FIXME: Why is this not the default
 }
@@ -1288,6 +1285,7 @@ class MAIInst<string OpName, VOPProfile P, SDPatternOperator node, bit Scaled = 
 // FIXME: Usual syntax for op_sel is quite hostile here.
 class ScaledMAIInst<string OpName, MAIInst BaseInst, SDPatternOperator node> :
   MAIInst<OpName, BaseInst.Pfl, node, /*Scaled=*/true> {
+  let MFMAVariant = BaseInst.MFMAVariant;
   // Append operands from V_MFMA_LD_SCALE_B32, but we need to rename them.
   // Restrict to VGPR only (VRegSrc_32) for the scale operands to workaround a
   // hardware design defect: For all Inline/SGPR constants, SP HW use bits
@@ -1379,17 +1377,22 @@ multiclass ScaledMAIInst_mc<string OpName, string UnscaledOpName_, SDPatternOper
 
 // Each of SrcA and SrcB can be encoded using 3 different sizes, so
 // define 9 permutations of register classes.
-multiclass MAIInst_SrcFormats_mc<string OpName, string ProfileSuffix, SDPatternOperator node> {
+multiclass MAIInst_SrcFormats_mc<string OpName, string ProfileSuffix, SDPatternOperator node,
+                                 code F8Variant, code F6F4Variant> {
   defvar HasAbid = false;
+  let MFMAVariant = F8Variant in {
   defm _f8_f8 : MAIInst<OpName, "F32_V8I32_V8I32"#ProfileSuffix, node, HasAbid>;
   defm _f8_f6 : MAIInst<OpName, "F32_V8I32_V6I32"#ProfileSuffix, node, HasAbid>;
   defm _f6_f8 : MAIInst<OpName, "F32_V6I32_V8I32"#ProfileSuffix, node, HasAbid>;
-  defm _f6_f6 : MAIInst<OpName, "F32_V6I32_V6I32"#ProfileSuffix, node, HasAbid>;
   defm _f8_f4 : MAIInst<OpName, "F32_V8I32_V4I32"#ProfileSuffix, node, HasAbid>;
   defm _f4_f8 : MAIInst<OpName, "F32_V4I32_V8I32"#ProfileSuffix, node, HasAbid>;
+  }
+  let MFMAVariant = F6F4Variant in {
+  defm _f6_f6 : MAIInst<OpName, "F32_V6I32_V6I32"#ProfileSuffix, node, HasAbid>;
   defm _f6_f4 : MAIInst<OpName, "F32_V6I32_V4I32"#ProfileSuffix, node, HasAbid>;
   defm _f4_f6 : MAIInst<OpName, "F32_V4I32_V6I32"#ProfileSuffix, node, HasAbid>;
   defm _f4_f4 : MAIInst<OpName, "F32_V4I32_V4I32"#ProfileSuffix, node, HasAbid>;
+  }
 }
 
 multiclass MAIInst_SrcFormats_Scaled_mc<string OpName, string UnscaledOpName, SDPatternOperator node> {
@@ -1404,20 +1407,30 @@ multiclass MAIInst_SrcFormats_Scaled_mc<string OpName, string UnscaledOpName, SD
   defm _f4_f4 : ScaledMAIInst_mc<OpName, UnscaledOpName, node>;
 }
 
+let MFMAVariant = [{ MFMAVariant::SGEMM_2Pass }] in
 defm V_MFMA_F32_4X4X1F32    : MAIInst<"v_mfma_f32_4x4x1f32",    "F32_F32_X4",    int_amdgcn_mfma_f32_4x4x1f32>;
+let MFMAVariant = [{ MFMAVariant::SGEMM_8Pass }] in {
 defm V_MFMA_F32_16X16X1F32  : MAIInst<"v_mfma_f32_16x16x1f32",  "F32_F32_X16",   int_amdgcn_mfma_f32_16x16x1f32>;
 defm V_MFMA_F32_16X16X4F32  : MAIInst<"v_mfma_f32_16x16x4f32",  "F32_F32_X4",    int_amdgcn_mfma_f32_16x16x4f32>;
+}
+let MFMAVariant = [{ MFMAVariant::SGEMM_16Pass }] in {
 defm V_MFMA_F32_32X32X1F32  : MAIInst<"v_mfma_f32_32x32x1f32",  "F32_F32_X32",   int_amdgcn_mfma_f32_32x32x1f32>;
 defm V_MFMA_F32_32X32X2F32  : MAIInst<"v_mfma_f32_32x32x2f32",  "F32_F32_X16",   int_amdgcn_mfma_f32_32x32x2f32>;
+}
 
-let is_gfx940_xdl = 1 in {
+let MFMAVariant = [{ MFMAVariant::XDL_2Pass }] in {
 defm V_MFMA_F32_4X4X4F16    : MAIInst<"v_mfma_f32_4x4x4f16",    "F32_V4F16_X4",  int_amdgcn_mfma_f32_4x4x4f16>;
 defm V_MFMA_I32_4X4X4I8     : MAIInst<"v_mfma_i32_4x4x4i8",     "I32_I32_X4",    int_amdgcn_mfma_i32_4x4x4i8>;
-defm V_MFMA_F32_16X16X4F16  : MAIInst<"v_mfma_f32_16x16x4f16",  "F32_V4F16_X16", int_amdgcn_mfma_f32_16x16x4f16>;
+}
+let MFMAVariant = [{ MFMAVariant::XDL_4Pass }] in
 defm V_MFMA_F32_16X16X16F16 : MAIInst<"v_mfma_f32_16x16x16f16", "F32_V4F16_X4",  int_amdgcn_mfma_f32_16x16x16f16>;
+let MFMAVariant = [{ MFMAVariant::XDL_8Pass }] in {
+defm V_MFMA_F32_16X16X4F16  : MAIInst<"v_mfma_f32_16x16x4f16",  "F32_V4F16_X16", int_amdgcn_mfma_f32_16x16x4f16>;
 defm V_MFMA_I32_16X16X4I8   : MAIInst<"v_mfma_i32_16x16x4i8",   "I32_I32_X16",   int_amdgcn_mfma_i32_16x16x4i8>;
-defm V_MFMA_F32_32X32X4F16  : MAIInst<"v_mfma_f32_32x32x4f16",  "F32_V4F16_X32", int_amdgcn_mfma_f32_32x32x4f16>;
 defm V_MFMA_F32_32X32X8F16  : MAIInst<"v_mfma_f32_32x32x8f16",  "F32_V4F16_X16", int_amdgcn_mfma_f32_32x32x8f16>;
+}
+let MFMAVariant = [{ MFMAVariant::XDL_16Pass }] in {
+defm V_MFMA_F32_32X32X4F16  : MAIInst<"v_mfma_f32_32x32x4f16",  "F32_V4F16_X32", int_amdgcn_mfma_f32_32x32x4f16>;
 defm V_MFMA_I32_32X32X4I8   : MAIInst<"v_mfma_i32_32x32x4i8",   "I32_I32_X32",   int_amdgcn_mfma_i32_32x32x4i8>;
 }
 
@@ -1431,18 +1444,24 @@ defm V_MFMA_F32_32X32X2BF16 : MAIInst<"v_mfma_f32_32x32x2bf16", "F32_V2I16_X32",
 defm V_MFMA_F32_32X32X4BF16 : MAIInst<"v_mfma_f32_32x32x4bf16", "F32_V2I16_X16", int_amdgcn_mfma_f32_32x32x4bf16>;
 }
 
-let SubtargetPredicate = HasGFX950Insts, is_gfx940_xdl = 1 in {
+let SubtargetPredicate = HasGFX950Insts in {
+let MFMAVariant = [{ MFMAVariant::XDL2x_4Pass }] in {
 defm V_MFMA_F32_16X16X32_F16   : MAIInst<"v_mfma_f32_16x16x32f16",    "F32_V8F16_X32", int_amdgcn_mfma_f32_16x16x32_f16>;
-defm V_MFMA_F32_32X32X16_F16   : MAIInst<"v_mfma_f32_32x32x16f16",    "F32_V8F16_X16", int_amdgcn_mfma_f32_32x32x16_f16>;
 defm V_MFMA_F32_16X16X32_BF16  : MAIInst<"v_mfma_f32_16x16x32bf16",   "F32_V8BF16_X4", int_amdgcn_mfma_f32_16x16x32_bf16>;
 defm V_MFMA_I32_16X16X64_I8    : MAIInst<"v_mfma_i32_16x16x64i8",     "I32_V4I32_X128", int_amdgcn_mfma_i32_16x16x64_i8>;
+}
+let MFMAVariant = [{ MFMAVariant::XDL2x_8Pass }] in {
+defm V_MFMA_F32_32X32X16_F16   : MAIInst<"v_mfma_f32_32x32x16f16",    "F32_V8F16_X16", int_amdgcn_mfma_f32_32x32x16_f16>;
 defm V_MFMA_F32_32X32X16_BF16  : MAIInst<"v_mfma_f32_32x32x16bf16",   "F32_V8BF16_X16", int_amdgcn_mfma_f32_32x32x16_bf16>;
 defm V_MFMA_I32_32X32X32_I8    : MAIInst<"v_mfma_i32_32x32x32i8",     "I32_V4I32_X16", int_amdgcn_mfma_i32_32x32x32_i8>;
+}
 
 defm V_MFMA_F32_16X16X128_F8F6F4 : MAIInst_SrcFormats_mc<"v_mfma_f32_16x16x128f8f6f4",
-  "_X128", mfma_f32_16x16x128_f8f6f4>;
+  "_X128", mfma_f32_16x16x128_f8f6f4,
+  [{ MFMAVariant::XDL2x_F8_8Pass }], [{ MFMAVariant::XDL2x_4Pass }]>;
 defm V_MFMA_F32_32X32X64_F8F6F4 : MAIInst_SrcFormats_mc<"v_mfma_f32_32x32x64f8f6f4",
-  "_X512", mfma_f32_32x32x64_f8f6f4>;
+  "_X512", mfma_f32_32x32x64_f8f6f4,
+  [{ MFMAVariant::XDL2x_F8_16Pass }], [{ MFMAVariant::XDL2x_8Pass }]>;
 
 defm V_MFMA_SCALE_F32_16X16X128_F8F6F4 : MAIInst_SrcFormats_Scaled_mc<
   "v_mfma_scale_f32_16x16x128_f8f6f4", "V_MFMA_F32_16X16X128_F8F6F4",
@@ -1459,90 +1478,114 @@ defm V_MFMA_LD_SCALE_B32 : VOP3PInst<"v_mfma_ld_scale_b32", VOP_MFMA_LD_SCALE>;
 }
 
 let SubtargetPredicate = isGFX90APlus in {
-  let is_gfx940_xdl = 1 in {
+  let MFMAVariant = [{ MFMAVariant::XDL_16Pass }] in
   defm V_MFMA_F32_32X32X4BF16_1K  : MAIInst<"v_mfma_f32_32x32x4bf16_1k",  "F32_V4I16_X32",  int_amdgcn_mfma_f32_32x32x4bf16_1k>;
+  let MFMAVariant = [{ MFMAVariant::XDL_8Pass }] in
   defm V_MFMA_F32_16X16X4BF16_1K  : MAIInst<"v_mfma_f32_16x16x4bf16_1k",  "F32_V4I16_X16",  int_amdgcn_mfma_f32_16x16x4bf16_1k>;
+  let MFMAVariant = [{ MFMAVariant::XDL_2Pass }] in
   defm V_MFMA_F32_4X4X4BF16_1K    : MAIInst<"v_mfma_f32_4x4x4bf16_1k",    "F32_V4I16_X4",   int_amdgcn_mfma_f32_4x4x4bf16_1k>;
+  let MFMAVariant = [{ MFMAVariant::XDL_8Pass }] in
   defm V_MFMA_F32_32X32X8BF16_1K  : MAIInst<"v_mfma_f32_32x32x8bf16_1k",  "F32_V4I16_X16",  int_amdgcn_mfma_f32_32x32x8bf16_1k>;
+  let MFMAVariant = [{ MFMAVariant::XDL_4Pass }] in
   defm V_MFMA_F32_16X16X16BF16_1K : MAIInst<"v_mfma_f32_16x16x16bf16_1k", "F32_V4I16_X4",   int_amdgcn_mfma_f32_16x16x16bf16_1k>;
-  }
 
-  let is_dgemm = 1 in {
+  let MFMAVariant = [{ MFMAVariant::DGEMM_16x16x4 }] in
   defm V_MFMA_F64_16X16X4F64      : MAIInst<"v_mfma_f64_16x16x4f64",      "F64_16X16X4F64", int_amdgcn_mfma_f64_16x16x4f64>;
+  let MFMAVariant = [{ MFMAVariant::DGEMM_4Pass }] in
   defm V_MFMA_F64_4X4X4F64        : MAIInst<"v_mfma_f64_4x4x4f64",        "F64_4X4X4F64",   int_amdgcn_mfma_f64_4x4x4f64>;
-  }
 } // End SubtargetPredicate = isGFX90APlus
 
-let SubtargetPredicate = isGFX940Plus, is_gfx940_xdl = 1 in {
+let SubtargetPredicate = isGFX940Plus in {
+  let MFMAVariant = [{ MFMAVariant::XDL_8Pass }] in
   defm V_MFMA_I32_32X32X16I8       : MAIInst<"v_mfma_i32_32x32x16i8",       "I32_I64_X32",    int_amdgcn_mfma_i32_32x32x16_i8>;
+  let MFMAVariant = [{ MFMAVariant::XDL_4Pass }] in
   defm V_MFMA_I32_16X16X32I8       : MAIInst<"v_mfma_i32_16x16x32i8",       "I32_I64_X16",    int_amdgcn_mfma_i32_16x16x32_i8>;
-} // End SubtargetPredicate = isGFX940Plus, is_gfx940_xdl = 1
+} // End SubtargetPredicate = isGFX940Plus
 
-let SubtargetPredicate = HasXF32Insts, is_gfx940_xdl = 1 in {
+let SubtargetPredicate = HasXF32Insts in {
+  let MFMAVariant = [{ MFMAVariant::XDL_4Pass }] in
   defm V_MFMA_F32_16X16X8XF32      : MAIInst<"v_mfma_f32_16x16x8xf32",      "F32_V2F32_X16",  int_amdgcn_mfma_f32_16x16x8_xf32>;
+  let MFMAVariant = [{ MFMAVariant::XDL_8Pass }] in
   defm V_MFMA_F32_32X32X4XF32      : MAIInst<"v_mfma_f32_32x32x4xf32",      "F32_V2F32_X32",  int_amdgcn_mfma_f32_32x32x4_xf32>;
-} // End SubtargetPredicate = HasXF32Insts, is_gfx940_xdl = 1
+} // End SubtargetPredicate = HasXF32Insts
 
-let SubtargetPredicate = HasFP8Insts, is_gfx940_xdl = 1 in {
+let SubtargetPredicate = HasFP8Insts in {
+  let MFMAVariant = [{ MFMAVariant::XDL_4Pass }] in {
   defm V_MFMA_F32_16X16X32_BF8_BF8 : MAIInst<"v_mfma_f32_16x16x32_bf8_bf8", "F32_I64_X32",    int_amdgcn_mfma_f32_16x16x32_bf8_bf8>;
   defm V_MFMA_F32_16X16X32_BF8_FP8 : MAIInst<"v_mfma_f32_16x16x32_bf8_fp8", "F32_I64_X32",    int_amdgcn_mfma_f32_16x16x32_bf8_fp8>;
   defm V_MFMA_F32_16X16X32_FP8_BF8 : MAIInst<"v_mfma_f32_16x16x32_fp8_bf8", "F32_I64_X32",    int_amdgcn_mfma_f32_16x16x32_fp8_bf8>;
   defm V_MFMA_F32_16X16X32_FP8_FP8 : MAIInst<"v_mfma_f32_16x16x32_fp8_fp8", "F32_I64_X32",    int_amdgcn_mfma_f32_16x16x32_fp8_fp8>;
+  }
+  let MFMAVariant = [{ MFMAVariant::XDL_8Pass }] in {
   defm V_MFMA_F32_32X32X16_BF8_BF8 : MAIInst<"v_mfma_f32_32x32x16_bf8_bf8", "F32_I64_X16",    int_amdgcn_mfma_f32_32x32x16_bf8_bf8>;
   defm V_MFMA_F32_32X32X16_BF8_FP8 : MAIInst<"v_mfma_f32_32x32x16_bf8_fp8", "F32_I64_X16",    int_amdgcn_mfma_f32_32x32x16_bf8_fp8>;
   defm V_MFMA_F32_32X32X16_FP8_BF8 : MAIInst<"v_mfma_f32_32x32x16_fp8_bf8", "F32_I64_X16",    int_amdgcn_mfma_f32_32x32x16_fp8_bf8>;
   defm V_MFMA_F32_32X32X16_FP8_FP8 : MAIInst<"v_mfma_f32_32x32x16_fp8_fp8", "F32_I64_X16",    int_amdgcn_mfma_f32_32x32x16_fp8_fp8>;
-} // End SubtargetPredicate = HasFP8Insts, is_gfx940_xdl = 1
+  }
+} // End SubtargetPredicate = HasFP8Insts
 
 multiclass SMFMACInst<string OpName, string P, SDPatternOperator node> {
   let Constraints = "$vdst = $src2",
-      isConvergent = 1, mayRaiseFPException = 0, ReadsModeReg = 1, is_gfx940_xdl = 1 in {
+      isConvergent = 1, mayRaiseFPException = 0, ReadsModeReg = 1 in {
     def _e64 : MAIInst<OpName, !cast<VOPProfileSMFMAC>("VOPProfileSMFMAC_" # P), node>;
   }
 }
 
 let SubtargetPredicate = isGFX940Plus in {
+let MFMAVariant = [{ MFMAVariant::SMFMAC_4Pass }] in {
 defm V_SMFMAC_F32_16X16X32_F16     : SMFMACInst<"v_smfmac_f32_16x16x32_f16",     "F32_16X16X32_F16", int_amdgcn_smfmac_f32_16x16x32_f16>;
-defm V_SMFMAC_F32_32X32X16_F16     : SMFMACInst<"v_smfmac_f32_32x32x16_f16",     "F32_32X32X16_F16", int_amdgcn_smfmac_f32_32x32x16_f16>;
 defm V_SMFMAC_F32_16X16X32_BF16    : SMFMACInst<"v_smfmac_f32_16x16x32_bf16",    "F32_16X16X32_I16", int_amdgcn_smfmac_f32_16x16x32_bf16>;
-defm V_SMFMAC_F32_32X32X16_BF16    : SMFMACInst<"v_smfmac_f32_32x32x16_bf16",    "F32_32X32X16_I16", int_amdgcn_smfmac_f32_32x32x16_bf16>;
 defm V_SMFMAC_I32_16X16X64_I8      : SMFMACInst<"v_smfmac_i32_16x16x64_i8",      "I32_16X16X64_I8",  int_amdgcn_smfmac_i32_16x16x64_i8>;
+}
+let MFMAVariant = [{ MFMAVariant::SMFMAC_8Pass }] in {
+defm V_SMFMAC_F32_32X32X16_F16     : SMFMACInst<"v_smfmac_f32_32x32x16_f16",     "F32_32X32X16_F16", int_amdgcn_smfmac_f32_32x32x16_f16>;
+defm V_SMFMAC_F32_32X32X16_BF16    : SMFMACInst<"v_smfmac_f32_32x32x16_bf16",    "F32_32X32X16_I16", int_amdgcn_smfmac_f32_32x32x16_bf16>;
 defm V_SMFMAC_I32_32X32X32_I8      : SMFMACInst<"v_smfmac_i32_32x32x32_i8",      "I32_32X32X32_I8",  int_amdgcn_smfmac_i32_32x32x32_i8>;
 }
+}
 
-let SubtargetPredicate = HasFP8Insts, is_gfx940_xdl = 1 in {
+let SubtargetPredicate = HasFP8Insts in {
+let MFMAVariant = [{ MFMAVariant::SMFMAC_4Pass }] in {
 defm V_SMFMAC_F32_16X16X64_BF8_BF8 : SMFMACInst<"v_smfmac_f32_16x16x64_bf8_bf8", "F32_16X16X64_F8",  int_amdgcn_smfmac_f32_16x16x64_bf8_bf8>;
 defm V_SMFMAC_F32_16X16X64_BF8_FP8 : SMFMACInst<"v_smfmac_f32_16x16x64_bf8_fp8", "F32_16X16X64_F8",  int_amdgcn_smfmac_f32_16x16x64_bf8_fp8>;
 defm V_SMFMAC_F32_16X16X64_FP8_BF8 : SMFMACInst<"v_smfmac_f32_16x16x64_fp8_bf8", "F32_16X16X64_F8",  int_amdgcn_smfmac_f32_16x16x64_fp8_bf8>;
 defm V_SMFMAC_F32_16X16X64_FP8_FP8 : SMFMACInst<"v_smfmac_f32_16x16x64_fp8_fp8", "F32_16X16X64_F8",  int_amdgcn_smfmac_f32_16x16x64_fp8_fp8>;
+}
+let MFMAVariant = [{ MFMAVariant::SMFMAC_8Pass }] in {
 defm V_SMFMAC_F32_32X32X32_BF8_BF8 : SMFMACInst<"v_smfmac_f32_32x32x32_bf8_bf8", "F32_32X32X32_F8",  int_amdgcn_smfmac_f32_32x32x32_bf8_bf8>;
 defm V_SMFMAC_F32_32X32X32_BF8_FP8 : SMFMACInst<"v_smfmac_f32_32x32x32_bf8_fp8", "F32_32X32X32_F8",  int_amdgcn_smfmac_f32_32x32x32_bf8_fp8>;
 defm V_SMFMAC_F32_32X32X32_FP8_BF8 : SMFMACInst<"v_smfmac_f32_32x32x32_fp8_bf8", "F32_32X32X32_F8",  int_amdgcn_smfmac_f32_32x32x32_fp8_bf8>;
 defm V_SMFMAC_F32_32X32X32_FP8_FP8 : SMFMACInst<"v_smfmac_f32_32x32x32_fp8_fp8", "F32_32X32X32_F8",  int_amdgcn_smfmac_f32_32x32x32_fp8_fp8>;
-} // End SubtargetPredicate = HasFP8Insts, is_gfx940_xdl = 1
+}
+} // End SubtargetPredicate = HasFP8Insts
 
 let SubtargetPredicate = HasGFX950Insts in {
+let MFMAVariant = [{ MFMAVariant::SMFMAC2x_4Pass }] in {
 defm V_SMFMAC_F32_16X16X64_F16     : SMFMACInst<"v_smfmac_f32_16x16x64_f16",     "F32_16X16X64_F16", int_amdgcn_smfmac_f32_16x16x64_f16>;
-defm V_SMFMAC_F32_32X32X32_F16     : SMFMACInst<"v_smfmac_f32_32x32x32_f16",     "F32_32X32X32_F16", int_amdgcn_smfmac_f32_32x32x32_f16>;
 defm V_SMFMAC_F32_16X16X64_BF16    : SMFMACInst<"v_smfmac_f32_16x16x64_bf16",    "F32_16X16X64_BF16", int_amdgcn_smfmac_f32_16x16x64_bf16>;
-defm V_SMFMAC_F32_32X32X32_BF16    : SMFMACInst<"v_smfmac_f32_32x32x32_bf16",    "F32_32X32X32_BF16", int_amdgcn_smfmac_f32_32x32x32_bf16>;
 defm V_SMFMAC_I32_16X16X128_I8     : SMFMACInst<"v_smfmac_i32_16x16x128_i8",     "I32_16X16X128_I8", int_amdgcn_smfmac_i32_16x16x128_i8>;
-defm V_SMFMAC_I32_32X32X64_I8      : SMFMACInst<"v_smfmac_i32_32x32x64_i8",      "I32_32X32X64_I8", int_amdgcn_smfmac_i32_32x32x64_i8>;
 defm V_SMFMAC_F32_16X16X128_BF8_BF8 : SMFMACInst<"v_smfmac_f32_16x16x128_bf8_bf8", "F32_16X16X128_F8", int_amdgcn_smfmac_f32_16x16x128_bf8_bf8>;
 defm V_SMFMAC_F32_16X16X128_BF8_FP8 : SMFMACInst<"v_smfmac_f32_16x16x128_bf8_fp8", "F32_16X16X128_F8", int_amdgcn_smfmac_f32_16x16x128_bf8_fp8>;
 defm V_SMFMAC_F32_16X16X128_FP8_BF8 : SMFMACInst<"v_smfmac_f32_16x16x128_fp8_bf8", "F32_16X16X128_F8", int_amdgcn_smfmac_f32_16x16x128_fp8_bf8>;
 defm V_SMFMAC_F32_16X16X128_FP8_FP8 : SMFMACInst<"v_smfmac_f32_16x16x128_fp8_fp8", "F32_16X16X128_F8", int_amdgcn_smfmac_f32_16x16x128_fp8_fp8>;
+}
+let MFMAVariant = [{ MFMAVariant::SMFMAC2x_8Pass }] in {
+defm V_SMFMAC_F32_32X32X32_F16     : SMFMACInst<"v_smfmac_f32_32x32x32_f16",     "F32_32X32X32_F16", int_amdgcn_smfmac_f32_32x32x32_f16>;
+defm V_SMFMAC_F32_32X32X32_BF16    : SMFMACInst<"v_smfmac_f32_32x32x32_bf16",    "F32_32X32X32_BF16", int_amdgcn_smfmac_f32_32x32x32_bf16>;
+defm V_SMFMAC_I32_32X32X64_I8      : SMFMACInst<"v_smfmac_i32_32x32x64_i8",      "I32_32X32X64_I8", int_amdgcn_smfmac_i32_32x32x64_i8>;
 defm V_SMFMAC_F32_32X32X64_BF8_BF8 : SMFMACInst<"v_smfmac_f32_32x32x64_bf8_bf8", "F32_32X32X64_F8", int_amdgcn_smfmac_f32_32x32x64_bf8_bf8>;
 defm V_SMFMAC_F32_32X32X64_BF8_FP8 : SMFMACInst<"v_smfmac_f32_32x32x64_bf8_fp8", "F32_32X32X64_F8", int_amdgcn_smfmac_f32_32x32x64_bf8_fp8>;
 defm V_SMFMAC_F32_32X32X64_FP8_BF8 : SMFMACInst<"v_smfmac_f32_32x32x64_fp8_bf8", "F32_32X32X64_F8", int_amdgcn_smfmac_f32_32x32x64_fp8_bf8>;
 defm V_SMFMAC_F32_32X32X64_FP8_FP8 : SMFMACInst<"v_smfmac_f32_32x32x64_fp8_fp8", "F32_32X32X64_F8", int_amdgcn_smfmac_f32_32x32x64_fp8_fp8>;
 }
+}
 
 def MAIInstInfoTable : GenericTable {
-  let FilterClass = "MAIInst";
+  let FilterClass = "MAIInstInfo";
+  let FilterClassField = "HasMAIInstInfo";
   let CppTypeName = "MAIInstInfo";
   let Fields = [
-    "Opcode", "is_dgemm", "is_gfx940_xdl"
+    "Opcode", "MFMAVariant"
   ];
 
   let PrimaryKey = ["Opcode"];
