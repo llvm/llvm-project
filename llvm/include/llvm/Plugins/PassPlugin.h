@@ -88,12 +88,9 @@ struct PassPluginLibraryInfo {
                              IntrusiveRefCntPtr<vfs::FileSystem> VFS) = nullptr;
 
   /// Callback receiving the arguments given to the plugin, e.g. by
-  /// -plugin-arg=<PluginName>,<arg>, in order. \p LibraryOptions are the
-  /// library options of the host's compilation. The host copies them into each
-  /// LLVMContext that it compiles in, so a plugin that parses its options into
-  /// them reads the values back from the context of the IR it works on. For
-  /// options declared in TableGen, a few lines with a
-  /// \c opt::LibraryOptionsParser do the parsing (see llvm/examples/Bye).
+  /// -plugin-arg=<PluginName>,<arg>, in order. Options that the plugin parses
+  /// into \p LibraryOptions are available in the LLVMContext of the IR it works
+  /// on (see llvm/examples/Bye).
   Error (*ParseArguments)(cl::LibraryOptionsContext &LibraryOptions,
                           ArrayRef<const char *> Args) = nullptr;
 };

@@ -560,9 +560,8 @@ Makes programs 10x faster by doing Special New Thing.
 * `opt` and `llc` load `-load-pass-plugin` plugins after parsing the command line, so a loaded plugin's options are no longer accepted as ordinary options.
   Pass them with `-plugin-arg=<plugin>,<arg>` (see below).
 
-* `opt` and `llc` accept `-plugin-arg=<plugin>,<arg>`, which passes `<arg>` to the new `PassPluginLibraryInfo::ParseArguments` callback of the pass plugin named `<plugin>`.
-  A plugin that defines `cl::opt` has to call `cl::ParseCommandLineOptions` itself inside `ParseArguments`.
-  The callback also receives the `cl::LibraryOptionsContext` of the host, which a plugin that declares its options in TableGen parses them into.
+* `opt`, `llc` and `llvm-lto2` accept `-plugin-arg=<plugin>,<arg>`, which passes `<arg>` to the new `PassPluginLibraryInfo::ParseArguments` callback of the pass plugin named `<plugin>`.
+  Options that the plugin parses into the `cl::LibraryOptionsContext` it receives are available in the `LLVMContext` of the IR it works on.
   `LLVM_PLUGIN_API_VERSION` is now 3.
 
 * `PassPluginLibraryInfo::PreCodeGenCallback` now matches the parameters of the
