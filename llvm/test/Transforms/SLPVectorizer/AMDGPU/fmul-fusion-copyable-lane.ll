@@ -8,15 +8,24 @@
 define double @copyable_lane(ptr %a, ptr %b) {
 ; CHECK-LABEL: define double @copyable_lane(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) {
+; CHECK-NEXT:    [[A0:%.*]] = load double, ptr [[A]], align 8
+; CHECK-NEXT:    [[B0:%.*]] = load double, ptr [[B]], align 8
+; CHECK-NEXT:    [[AP1:%.*]] = getelementptr inbounds double, ptr [[A]], i64 1
+; CHECK-NEXT:    [[BP1:%.*]] = getelementptr inbounds double, ptr [[B]], i64 1
+; CHECK-NEXT:    [[A1:%.*]] = load double, ptr [[AP1]], align 8
+; CHECK-NEXT:    [[B1:%.*]] = load double, ptr [[BP1]], align 8
+; CHECK-NEXT:    [[AP2:%.*]] = getelementptr inbounds double, ptr [[A]], i64 2
 ; CHECK-NEXT:    [[BP2:%.*]] = getelementptr inbounds double, ptr [[B]], i64 2
+; CHECK-NEXT:    [[A2:%.*]] = load double, ptr [[AP2]], align 8
 ; CHECK-NEXT:    [[B2:%.*]] = load double, ptr [[BP2]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[B]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x double>, ptr [[A]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x double> <double poison, double poison, double poison, double 1.000000e+00>, double [[B2]], i64 2
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x double> [[TMP3]], <4 x double> [[TMP4]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP6:%.*]] = fmul reassoc contract <4 x double> [[TMP2]], [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = call contract double @llvm.vector.reduce.fadd.v4f64(double -0.000000e+00, <4 x double> [[TMP6]])
+; CHECK-NEXT:    [[AP3:%.*]] = getelementptr inbounds double, ptr [[A]], i64 3
+; CHECK-NEXT:    [[A3:%.*]] = load double, ptr [[AP3]], align 8
+; CHECK-NEXT:    [[M0:%.*]] = fmul reassoc contract double [[A0]], [[B0]]
+; CHECK-NEXT:    [[M1:%.*]] = fmul reassoc contract double [[A1]], [[B1]]
+; CHECK-NEXT:    [[M2:%.*]] = fmul reassoc contract double [[A2]], [[B2]]
+; CHECK-NEXT:    [[S1:%.*]] = fadd reassoc contract double [[M0]], [[M1]]
+; CHECK-NEXT:    [[S2:%.*]] = fadd reassoc contract double [[S1]], [[M2]]
+; CHECK-NEXT:    [[TMP7:%.*]] = fadd reassoc contract double [[S2]], [[A3]]
 ; CHECK-NEXT:    ret double [[TMP7]]
 ;
   %a0 = load double, ptr %a
