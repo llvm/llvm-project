@@ -586,9 +586,12 @@ def ACCMaterializeRoutineBindTargets
     the current symbol table. This parent-level pass must run before
     `acc-bind-routine`, which can then rewrite calls in parallel without
     mutating a parent operation.
+
+    Every string bind target of a called routine is declared, whichever
+    device type it applies to. `acc-bind-routine` picks the target for its
+    own device type, so the two passes do not need to agree on one.
   }];
   let dependentDialects = ["mlir::func::FuncDialect"];
-  let options = [ AccDeviceTypeOption ];
 }
 
 def ACCBindRoutine

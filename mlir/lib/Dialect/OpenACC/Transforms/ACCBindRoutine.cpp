@@ -141,21 +141,26 @@ public:
       if (!routine)
         return WalkResult::advance();
 
-      auto bindNameOpt = routine.getEffectiveBindName(this->deviceType);
-      if (!bindNameOpt || !std::holds_alternative<StringAttr>(*bindNameOpt))
-        return WalkResult::advance();
-
-      StringRef bindName = std::get<StringAttr>(*bindNameOpt).getValue();
-      if (insertSymTab.lookup(bindName))
+      // Declare every string bind target of the routine, whatever device type
+      // it applies to. Which one a call uses is decided later by
+      // acc-bind-routine for its own device type, so this pass does not need
+      // to know the device type and the two passes cannot disagree.
+      std::optional<ArrayAttr> bindStrNames = routine.getBindStrName();
+      if (!bindStrNames)
         return WalkResult::advance();
 
       OpBuilder builder(mod.getContext());
       builder.setInsertionPointToEnd(insertBlock);
       auto funcType = cast<FunctionType>(callee.getFunctionType());
-      func::FuncOp bindFunc =
-          func::FuncOp::create(builder, callee.getLoc(), bindName, funcType);
-      bindFunc.setPrivate();
-      insertSymTab.insert(bindFunc);
+      for (Attribute attr : *bindStrNames) {
+        StringRef bindName = cast<StringAttr>(attr).getValue();
+        if (insertSymTab.lookup(bindName))
+          continue;
+        func::FuncOp bindFunc =
+            func::FuncOp::create(builder, callee.getLoc(), bindName, funcType);
+        bindFunc.setPrivate();
+        insertSymTab.insert(bindFunc);
+      }
       return WalkResult::advance();
     });
   }
@@ -232,8 +237,11 @@ public:
             gpuMod ? gpuMod.getOperation() : module.getOperation();
         SymbolTable symbolTable(symbolTableOp);
         if (!symbolTable.lookup(bindName)) {
-          callOp.emitError(
-              "string-bound ACC routine target was not materialized");
+          callOp.emitError() << "string-bound ACC routine target '" << bindName
+                             << "' selected for device type '"
+                             << stringifyDeviceType(this->deviceType)
+                             << "' was not materialized, run "
+                                "acc-materialize-routine-bind-targets first";
           failed = true;
           return;
         }

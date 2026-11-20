@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --pass-pipeline='builtin.module(acc-materialize-routine-bind-targets{device-type=nvidia}, any(acc-bind-routine{device-type=nvidia}))' -split-input-file | FileCheck %s
+// RUN: mlir-opt %s --pass-pipeline='builtin.module(acc-materialize-routine-bind-targets, any(acc-bind-routine{device-type=nvidia}))' -split-input-file | FileCheck %s
 
 // The device_type(*) bind applies as target device type NVIDIA isn't named in the directive
 module {
