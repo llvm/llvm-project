@@ -7122,8 +7122,33 @@ static void handleCountedByAttrField(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (!CountExpr)
     return;
 
-  auto *FD = cast<FieldDecl>(D);
   Sema::BoundsAttrFlags Flags = Sema::BoundsAttrFlags::get(AL.getKind());
+
+  // A parameter's count written after its declarator is parsed at the end of
+  // the parameter list, before the function's type is built from the
+  // parameters' types.
+  if (auto *PVD = dyn_cast<ParmVarDecl>(D)) {
+    // An array or function parameter has decayed to a pointer by now; check
+    // it as written.
+    QualType Ty = PVD->getType();
+    if (!PVD->getOriginalType()->isPointerType())
+      Ty = PVD->getOriginalType();
+    if (!S.ValidateBoundsAttrTypeShape(Ty, AL.getLoc(), AL.getRange(), Flags,
+                                       /*AttrSpelling=*/{},
+                                       /*AllowRedecl=*/false,
+                                       /*AttrArg=*/nullptr,
+                                       /*UpdateFlags=*/false) ||
+        S.CheckCountedByAttrOnParam(Ty, CountExpr, Flags.CountInBytes,
+                                    Flags.OrNull))
+      return;
+    QualType CAT = S.BuildCountAttributedArrayOrPointerType(
+        PVD->getType(), CountExpr, Flags.CountInBytes, Flags.OrNull);
+    if (!CAT.isNull())
+      PVD->setType(CAT);
+    return;
+  }
+
+  auto *FD = cast<FieldDecl>(D);
   if (!S.ValidateBoundsAttrTypeShape(FD->getType(), AL.getLoc(), AL.getRange(),
                                      Flags, /*AttrSpelling=*/{},
                                      /*AllowRedecl=*/false, /*AttrArg=*/nullptr,

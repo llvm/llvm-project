@@ -7210,6 +7210,8 @@ def err_counted_by_attr_refer_to_itself : Error<
   "'counted_by' cannot refer to the flexible array member %0">;
 def err_count_attr_must_be_in_structure : Error<
   "field %0 in '%select{counted_by|sized_by|counted_by_or_null|sized_by_or_null}1' not inside structure">;
+def err_count_attr_refer_to_non_param : Error<
+  "count expression in function declaration may only reference function parameters">;
 def err_count_attr_argument_not_integer : Error<
   "'%select{counted_by|sized_by|counted_by_or_null|sized_by_or_null}0' requires a non-boolean integer type argument">;
 def err_count_attr_only_support_simple_decl_reference : Error<
