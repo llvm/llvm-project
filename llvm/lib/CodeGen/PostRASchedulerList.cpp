@@ -18,6 +18,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/PostRASchedulerList.h"
+#include "CodeGenOptions.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/AntiDepBreaker.h"
@@ -36,7 +37,6 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -48,29 +48,6 @@ using namespace llvm;
 STATISTIC(NumNoops, "Number of noops inserted");
 STATISTIC(NumStalls, "Number of pipeline stalls");
 STATISTIC(NumFixedAnti, "Number of fixed anti-dependencies");
-
-// Post-RA scheduling is enabled with
-// TargetSubtargetInfo.enablePostRAScheduler(). This flag can be used to
-// override the target.
-static cl::opt<bool>
-EnablePostRAScheduler("post-RA-scheduler",
-                       cl::desc("Enable scheduling after register allocation"),
-                       cl::init(false), cl::Hidden);
-static cl::opt<std::string>
-EnableAntiDepBreaking("break-anti-dependencies",
-                      cl::desc("Break post-RA scheduling anti-dependencies: "
-                               "\"critical\", \"all\", or \"none\""),
-                      cl::init("none"), cl::Hidden);
-
-// If DebugDiv > 0 then only schedule MBB with (ID % DebugDiv) == DebugMod
-static cl::opt<int>
-DebugDiv("postra-sched-debugdiv",
-                      cl::desc("Debug control MBBs that are scheduled"),
-                      cl::init(0), cl::Hidden);
-static cl::opt<int>
-DebugMod("postra-sched-debugmod",
-                      cl::desc("Debug control MBBs that are scheduled"),
-                      cl::init(0), cl::Hidden);
 
 AntiDepBreaker::~AntiDepBreaker() = default;
 
@@ -267,30 +244,30 @@ LLVM_DUMP_METHOD void SchedulePostRATDList::dumpSchedule() const {
 }
 #endif
 
-static bool enablePostRAScheduler(const TargetSubtargetInfo &ST,
+static bool enablePostRAScheduler(const CodeGenOptions &Opts,
+                                  const TargetSubtargetInfo &ST,
                                   CodeGenOptLevel OptLevel) {
   // Check for explicit enable/disable of post-ra scheduling.
-  if (EnablePostRAScheduler.getPosition() > 0)
-    return EnablePostRAScheduler;
-
-  return ST.enablePostRAScheduler() &&
-         OptLevel >= ST.getOptLevelToEnablePostRAScheduler();
+  return valueOr(Opts.post_RA_scheduler,
+                 ST.enablePostRAScheduler() &&
+                     OptLevel >= ST.getOptLevelToEnablePostRAScheduler());
 }
 
 bool PostRAScheduler::run(MachineFunction &MF) {
+  const CodeGenOptions &Opts = getCodeGenOptions(MF);
   const auto &Subtarget = MF.getSubtarget();
   // Check that post-RA scheduling is enabled for this target.
-  if (!enablePostRAScheduler(Subtarget, TM->getOptLevel()))
+  if (!enablePostRAScheduler(Opts, Subtarget, TM->getOptLevel()))
     return false;
 
   TargetSubtargetInfo::AntiDepBreakMode AntiDepMode =
       Subtarget.getAntiDepBreakMode();
-  if (EnableAntiDepBreaking.getPosition() > 0) {
-    AntiDepMode = (EnableAntiDepBreaking == "all")
-      ? TargetSubtargetInfo::ANTIDEP_ALL
-      : ((EnableAntiDepBreaking == "critical")
-         ? TargetSubtargetInfo::ANTIDEP_CRITICAL
-         : TargetSubtargetInfo::ANTIDEP_NONE);
+  if (auto Mode = Opts.break_anti_dependencies) {
+    AntiDepMode =
+        (*Mode == "all")
+            ? TargetSubtargetInfo::ANTIDEP_ALL
+            : ((*Mode == "critical") ? TargetSubtargetInfo::ANTIDEP_CRITICAL
+                                     : TargetSubtargetInfo::ANTIDEP_NONE);
   }
   SmallVector<const TargetRegisterClass *, 4> CriticalPathRCs;
   Subtarget.getCriticalPathRCs(CriticalPathRCs);
@@ -303,10 +280,11 @@ bool PostRAScheduler::run(MachineFunction &MF) {
   // Loop over all of the basic blocks
   for (auto &MBB : MF) {
 #ifndef NDEBUG
-    // If DebugDiv > 0 then only schedule MBB with (ID % DebugDiv) == DebugMod
-    if (DebugDiv > 0) {
+    // If -postra-sched-debugdiv=D is positive, only schedule MBBs with
+    // ID % D == -postra-sched-debugmod.
+    if (Opts.postra_sched_debugdiv > 0) {
       static int bbcnt = 0;
-      if (bbcnt++ % DebugDiv != DebugMod)
+      if (bbcnt++ % Opts.postra_sched_debugdiv != Opts.postra_sched_debugmod)
         continue;
       dbgs() << "*** DEBUG scheduling " << MF.getName() << ":"
              << printMBBReference(MBB) << " ***\n";

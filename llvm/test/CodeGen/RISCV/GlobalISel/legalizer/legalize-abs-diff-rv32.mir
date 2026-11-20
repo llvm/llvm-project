@@ -6,7 +6,6 @@
 
 ---
 name:            abds_i8
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -49,7 +48,6 @@ body:             |
 ...
 ---
 name:            abds_i16
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -92,7 +90,6 @@ body:             |
 ...
 ---
 name:            abds_i32
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -126,20 +123,22 @@ body:             |
 ...
 ---
 name:            abds_i64
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11
     ; CHECK-LABEL: name: abds_i64
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; CHECK: liveins: $x10, $x11
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $x10
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $x11
     ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[COPY]], [[COPY2]]
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ult), [[COPY]](s32), [[COPY2]]
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i32) = G_ICMP intpred(ult), [[COPY]](s32), [[COPY2]]
     ; CHECK-NEXT: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[COPY1]], [[COPY3]]
     ; CHECK-NEXT: [[SUB2:%[0-9]+]]:_(s32) = G_SUB [[SUB1]], [[ICMP]]
     ; CHECK-NEXT: [[SUB3:%[0-9]+]]:_(s32) = G_SUB [[COPY2]], [[COPY]]
-    ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(s32) = G_ICMP intpred(ult), [[COPY2]](s32), [[COPY]]
+    ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(i32) = G_ICMP intpred(ult), [[COPY2]](s32), [[COPY]]
     ; CHECK-NEXT: [[SUB4:%[0-9]+]]:_(s32) = G_SUB [[COPY3]], [[COPY1]]
     ; CHECK-NEXT: [[SUB5:%[0-9]+]]:_(s32) = G_SUB [[SUB4]], [[ICMP1]]
     ; CHECK-NEXT: [[ICMP2:%[0-9]+]]:_(s32) = G_ICMP intpred(ugt), [[COPY]](s32), [[COPY2]]
@@ -165,7 +164,6 @@ body:             |
 ...
 ---
 name:            abdu_i8
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -208,7 +206,6 @@ body:             |
 ...
 ---
 name:            abdu_i16
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -251,7 +248,6 @@ body:             |
 ...
 ---
 name:            abdu_i32
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -285,20 +281,22 @@ body:             |
 ...
 ---
 name:            abdu_i64
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11
     ; CHECK-LABEL: name: abdu_i64
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; CHECK: liveins: $x10, $x11
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $x10
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $x11
     ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[COPY]], [[COPY2]]
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ult), [[COPY]](s32), [[COPY2]]
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i32) = G_ICMP intpred(ult), [[COPY]](s32), [[COPY2]]
     ; CHECK-NEXT: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[COPY1]], [[COPY3]]
     ; CHECK-NEXT: [[SUB2:%[0-9]+]]:_(s32) = G_SUB [[SUB1]], [[ICMP]]
     ; CHECK-NEXT: [[SUB3:%[0-9]+]]:_(s32) = G_SUB [[COPY2]], [[COPY]]
-    ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(s32) = G_ICMP intpred(ult), [[COPY2]](s32), [[COPY]]
+    ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(i32) = G_ICMP intpred(ult), [[COPY2]](s32), [[COPY]]
     ; CHECK-NEXT: [[SUB4:%[0-9]+]]:_(s32) = G_SUB [[COPY3]], [[COPY1]]
     ; CHECK-NEXT: [[SUB5:%[0-9]+]]:_(s32) = G_SUB [[SUB4]], [[ICMP1]]
     ; CHECK-NEXT: [[ICMP2:%[0-9]+]]:_(s32) = G_ICMP intpred(ugt), [[COPY]](s32), [[COPY2]]

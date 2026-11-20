@@ -9,20 +9,18 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FIXED_POINT_FX_BITS_H
 #define LLVM_LIBC_SRC___SUPPORT_FIXED_POINT_FX_BITS_H
 
+#include "hdr/stdint_proxy.h"
 #include "include/llvm-libc-macros/stdfix-macros.h"
-#include "src/__support/CPP/algorithm.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/limits.h" // numeric_limits
 #include "src/__support/CPP/type_traits.h"
-#include "src/__support/libc_assert.h"
+#include "src/__support/fixed_point/fx_rep.h"
 #include "src/__support/macros/attributes.h"   // LIBC_INLINE
 #include "src/__support/macros/config.h"       // LIBC_NAMESPACE_DECL
 #include "src/__support/macros/null_check.h"   // LIBC_CRASH_ON_VALUE
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/__support/math_extras.h"
 #include "src/__support/uint128.h"
-
-#include "fx_rep.h"
 
 #ifdef LIBC_COMPILER_HAS_FIXED_POINT
 
@@ -217,6 +215,14 @@ idiv(T x, T y) {
   // behavior is undefined. Ref: ISO/IEC TR 18037:2008(E) p.g. 16
   LIBC_CRASH_ON_VALUE(y, FXRep::ZERO());
 
+  // MIN / -EPS == 2^VALUE_LEN does not fit in CompType (the division would
+  // truncate, or trap with SIGFPE), but it fits in XType if XType is wider
+  // than CompType. This is the only input pair that overflows CompType.
+  if constexpr (FXRep::SIGN_LEN > 0 && sizeof(XType) > sizeof(CompType)) {
+    if (LIBC_UNLIKELY(x == FXRep::MIN() && y == -FXRep::EPS()))
+      return static_cast<XType>(1) << FXRep::VALUE_LEN;
+  }
+
   CompType x_comp = static_cast<CompType>(FXBits(x).get_bits());
   CompType y_comp = static_cast<CompType>(FXBits(y).get_bits());
 
@@ -275,14 +281,11 @@ fxdivi(IntType n, IntType d) {
     d_mag = d;
   }
 
-  if constexpr (OutRep::INTEGRAL_LEN > 0) {
-    constexpr UInt128 MAX_UNITS = static_cast<UInt128>(1)
-                                  << OutRep::INTEGRAL_LEN;
+  constexpr UInt128 MAX_UNITS = static_cast<UInt128>(1) << OutRep::INTEGRAL_LEN;
 
-    if (LIBC_UNLIKELY(static_cast<UInt128>(n_mag) >=
-                      MAX_UNITS * static_cast<UInt128>(d_mag)))
-      return result_is_negative ? OutRep::MIN() : OutRep::MAX();
-  }
+  if (LIBC_UNLIKELY(static_cast<UInt128>(n_mag) >=
+                    MAX_UNITS * static_cast<UInt128>(d_mag)))
+    return result_is_negative ? OutRep::MIN() : OutRep::MAX();
 
   WideFXType res;
 

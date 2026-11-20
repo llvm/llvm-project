@@ -172,3 +172,4 @@ body:             |
     ;CHECK-NEXT: $r2 = LDRSH $sp, $noreg, 8, 14 /* CC::al */, $noreg
     ;CHECK-NEXT: $r5 = LDRSH $sp, $noreg, 247, 14 /* CC::al */, $noreg
     ;CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg
+...

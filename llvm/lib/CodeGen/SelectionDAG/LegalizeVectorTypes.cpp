@@ -3277,9 +3277,8 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_SHUFFLE(ShuffleVectorSDNode *N,
 
   auto &&IsConstant = [](const SDValue &N) {
     APInt SplatValue;
-    return N.getResNo() == 0 &&
-           (ISD::isConstantSplatVector(N.getNode(), SplatValue) ||
-            ISD::isBuildVectorOfConstantSDNodes(N.getNode()));
+    return N.getResNo() == 0 && (ISD::isConstantSplatVector(N, SplatValue) ||
+                                 ISD::isBuildVectorOfConstantSDNodes(N));
   };
   auto &&BuildVector = [NewElts, &DAG = DAG, NewVT, &DL](SDValue &Input1,
                                                          SDValue &Input2,
@@ -3735,6 +3734,10 @@ void DAGTypeLegalizer::SplitVecRes_VP_REVERSE(SDNode *N, SDValue &Lo,
       PtrInfo, MachineMemOperand::MOLoad, LocationSize::beforeOrAfterPointer(),
       Alignment);
 
+  EVL = DAG.getNode(
+      ISD::UMIN, DL, EVL.getValueType(), DAG.getFreeze(EVL),
+      DAG.getElementCount(DL, EVL.getValueType(), VT.getVectorElementCount()));
+
   unsigned EltWidth = VT.getScalarSizeInBits() / 8;
   SDValue NumElemMinus1 =
       DAG.getNode(ISD::SUB, DL, PtrVT, DAG.getZExtOrTrunc(EVL, DL, PtrVT),
@@ -3805,7 +3808,7 @@ void DAGTypeLegalizer::SplitVecRes_VP_SPLICE(SDNode *N, SDValue &Lo,
 
   SDValue EltByteSize =
       DAG.getTypeSize(DL, PtrVT, VT.getVectorElementType().getStoreSize());
-  SDValue EVL1Ptr = DAG.getZExtOrTrunc(EVL1, DL, PtrVT);
+  SDValue EVL1Ptr = DAG.getZExtOrTrunc(DAG.getFreeze(EVL1), DL, PtrVT);
   SDValue EVL1Bytes = DAG.getNode(ISD::MUL, DL, PtrVT, EVL1Ptr, EltByteSize);
   // Clip EVL1Bytes to make sure we stay within the stack object.
   SDValue VTBytes = DAG.getTypeSize(DL, PtrVT, VT.getStoreSize());
@@ -5441,11 +5444,18 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
     // elements. If the wide vector op is eventually going to be expanded to
     // scalar libcalls, then unroll into scalar ops now to avoid unnecessary
     // libcalls on the undef elements.
+
+    // The lane count comes from the result being widened, but operation
+    // legality is queried using the corresponding result 0 type.
     EVT ResVT = N->getValueType(ResNo);
-    EVT WideVecVT = TLI.getTypeToTransformTo(*DAG.getContext(), ResVT);
-    if (WideVecVT.isScalableVector())
+    EVT WideResVT = TLI.getTypeToTransformTo(*DAG.getContext(), ResVT);
+    if (WideResVT.isScalableVector())
       return false;
+
     EVT VT0 = N->getValueType(0);
+    EVT WideVecVT = VT0.changeVectorElementCount(
+        *DAG.getContext(), WideResVT.getVectorElementCount());
+
     if (!TLI.isOperationLegalOrCustomOrPromote(N->getOpcode(), WideVecVT) &&
         TLI.isOperationExpandOrLibCall(N->getOpcode(), VT0.getScalarType())) {
       SDValue Unrolled =
@@ -6466,9 +6476,9 @@ SDValue DAGTypeLegalizer::WidenVecRes_EXTEND_VECTOR_INREG(SDNode *N) {
 
 SDValue DAGTypeLegalizer::WidenVecRes_FCOPYSIGN(SDNode *N) {
   // If this is an FCOPYSIGN with same input types, we can treat it as a
-  // normal (can trap) binary op.
+  // normal binary op.
   if (N->getOperand(0).getValueType() == N->getOperand(1).getValueType())
-    return WidenVecRes_BinaryCanTrap(N);
+    return WidenVecRes_Binary(N);
 
   // If the types are different, fall back to unrolling.
   EVT WidenVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
@@ -6497,7 +6507,10 @@ SDValue DAGTypeLegalizer::WidenVecRes_ExpOp(SDNode *N) {
   if (ExpVT.isVector()) {
     EVT WideExpVT = WidenVT.changeVectorElementType(
         *DAG.getContext(), ExpVT.getVectorElementType());
-    ExpOp = ModifyToType(RHS, WideExpVT);
+    if (WideExpVT == TLI.getTypeToTransformTo(*DAG.getContext(), ExpVT))
+      ExpOp = GetWidenedVector(RHS);
+    else
+      ExpOp = ModifyToType(RHS, WideExpVT);
   }
 
   return DAG.getNode(N->getOpcode(), SDLoc(N), WidenVT, InOp, ExpOp);
@@ -7375,8 +7388,7 @@ static inline bool isSETCCorConvertedSETCC(SDValue N) {
     return isSETCCorConvertedSETCC(N.getOperand(0)) &&
            isSETCCorConvertedSETCC(N.getOperand(1));
 
-  return (isSETCCOp(N.getOpcode()) ||
-          ISD::isBuildVectorOfConstantSDNodes(N.getNode()));
+  return (isSETCCOp(N.getOpcode()) || ISD::isBuildVectorOfConstantSDNodes(N));
 }
 #endif
 
@@ -7547,9 +7559,9 @@ DAGTypeLegalizer::convertMaskTreeImpl(SDValue V, EVT ToVT, unsigned Depth) {
 
   // Base case: all-zeros or all-ones BUILD_VECTOR. Type-lenient since these are
   // invariant under sign-extend/truncate.
-  if (ISD::isBuildVectorAllZeros(V.getNode()))
+  if (ISD::isBuildVectorAllZeros(V))
     return {DAG.getConstant(0, DL, ToVT), /*IsTypeLenient=*/true};
-  if (ISD::isBuildVectorAllOnes(V.getNode()))
+  if (ISD::isBuildVectorAllOnes(V))
     return {DAG.getAllOnesConstant(DL, ToVT), /*IsTypeLenient=*/true};
 
   // Logical operations (AND/OR/XOR): try picking the best fitting width out
@@ -8179,6 +8191,12 @@ bool DAGTypeLegalizer::WidenVectorOperand(SDNode *N, unsigned OpNo) {
     break;
   case ISD::VECTOR_MATCH:
     Res = WidenVecOp_VECTOR_MATCH(N, OpNo);
+    break;
+  case ISD::PARTIAL_REDUCE_UMLA:
+  case ISD::PARTIAL_REDUCE_SMLA:
+  case ISD::PARTIAL_REDUCE_SUMLA:
+  case ISD::PARTIAL_REDUCE_FMLA:
+    Res = WidenVecOp_PARTIAL_REDUCE_MLA(N);
     break;
   }
 
@@ -9302,6 +9320,12 @@ SDValue DAGTypeLegalizer::WidenVecOp_VECTOR_MATCH(SDNode *N, unsigned OpNo) {
   return DAG.getNode(ISD::VECTOR_MATCH, DL, N->getValueType(0),
                      N->getOperand(0), WideNeedle, N->getOperand(2),
                      N->getFlags());
+}
+
+SDValue DAGTypeLegalizer::WidenVecOp_PARTIAL_REDUCE_MLA(SDNode *N) {
+  // The accumulator is legal and only the inputs need widening. Expand, as
+  // when widening the result; the extended inputs are widened from there.
+  return TLI.expandPartialReduceMLA(N, DAG);
 }
 
 //===----------------------------------------------------------------------===//

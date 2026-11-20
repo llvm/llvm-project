@@ -16,8 +16,8 @@
 
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/multiply_add.h"
+#include "src/__support/FPUtil/polyeval.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
@@ -105,10 +105,10 @@ LIBC_INLINE float log2f(float x) {
   float u = xbits.get_val();
 #ifdef LIBC_TARGET_CPU_HAS_FMA_FLOAT
   double v =
-      static_cast<double>(fputil::multiply_add(u, R[index], -1.0f)); // Exact.
+      static_cast<double>(fputil::multiply_sub(u, R[index], 1.0f)); // Exact.
 #else
   double v =
-      fputil::multiply_add(static_cast<double>(u), RD[index], -1.0); // Exact
+      fputil::multiply_sub(static_cast<double>(u), RD[index], 1.0); // Exact
 #endif // LIBC_TARGET_CPU_HAS_FMA_FLOAT
 
   double extra_factor = static_cast<double>(m) + LOG2_R[index];
