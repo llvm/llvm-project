@@ -760,6 +760,11 @@ class LowerTypeTestsModule {
   // address taken functions in case they are address taken in other modules.
   bool CrossDsoCfi = M.getModuleFlag("Cross-DSO CFI") != nullptr;
 
+  std::optional<DIBuilder> JumpTableDIB;
+  DICompileUnit *JumpTableCU = nullptr;
+  DIFile *JumpTableFile = nullptr;
+  DISubroutineType *JumpTableFnTy = nullptr;
+
   bool shouldExportConstantsAsAbsoluteSymbols();
   uint8_t *exportTypeId(StringRef TypeId, const TypeIdLowering &TIL);
   TypeIdLowering importTypeId(StringRef TypeId);
@@ -800,9 +805,6 @@ class LowerTypeTestsModule {
   void moveInitializerToModuleConstructor(GlobalVariable *GV);
   void findGlobalVariableUsersOf(Constant *C,
                                  SmallSetVector<GlobalVariable *, 8> &Out);
-
-  std::optional<DIBuilder> JumpTableDIB;
-  DICompileUnit *JumpTableCU = nullptr;
 
   SmallVector<DILocation *>
   createJumpTableDebugInfo(Function *F, ArrayRef<GlobalTypeMember *> Functions);
@@ -1832,22 +1834,20 @@ SmallVector<DILocation *> LowerTypeTestsModule::createJumpTableDebugInfo(
     if (!CUs.empty())
       JumpTableCU = *CUs.begin();
     JumpTableDIB.emplace(M, /*AllowUnresolved=*/true, JumpTableCU);
+    JumpTableFile = JumpTableDIB->createFile("ubsan_interface.h", "sanitizer");
+    if (!JumpTableCU) {
+      // Synthetic module (like ld-temp.o), it frequently lacks a DICompileUnit
+      // even if the rest of the program has debug info.
+      JumpTableCU = JumpTableDIB->createCompileUnit(
+          DISourceLanguageName(dwarf::DW_LANG_C), JumpTableFile, "llvm", true,
+          "", 0, "", DICompileUnit::DebugEmissionKind::LineTablesOnly);
+    }
+    JumpTableFnTy = JumpTableDIB->createSubroutineType(nullptr);
   }
-
-  DIFile *File = JumpTableDIB->createFile("ubsan_interface.h", "sanitizer");
-  if (!JumpTableCU) {
-    // Synthetic module (like ld-temp.o), it frequently lacks a DICompileUnit
-    // even if the rest of the program has debug info.
-    JumpTableCU = JumpTableDIB->createCompileUnit(
-        DISourceLanguageName(dwarf::DW_LANG_C), File, "llvm", true, "", 0, "",
-        DICompileUnit::DebugEmissionKind::LineTablesOnly);
-  }
-
-  DISubroutineType *DIFnTy = JumpTableDIB->createSubroutineType(nullptr);
 
   DISubprogram *UbsanSP = JumpTableDIB->createFunction(
-      JumpTableCU, "__ubsan_check_cfi_icall_jt", {}, File, 0, DIFnTy, 0,
-      DINode::FlagArtificial, DISubprogram::SPFlagDefinition);
+      JumpTableCU, "__ubsan_check_cfi_icall_jt", {}, JumpTableFile, 0,
+      JumpTableFnTy, 0, DINode::FlagArtificial, DISubprogram::SPFlagDefinition);
 
   F->setSubprogram(UbsanSP);
 
@@ -1860,8 +1860,9 @@ SmallVector<DILocation *> LowerTypeTestsModule::createJumpTableDebugInfo(
     StringRef FuncName = Func->getGlobal()->getName();
     FuncName.consume_back(".cfi");
     DISubprogram *JumpSP = JumpTableDIB->createFunction(
-        JumpTableCU, (FuncName + ".cfi_jt").str(), {}, File, 0, DIFnTy, 0,
-        DINode::FlagArtificial, DISubprogram::SPFlagDefinition);
+        JumpTableCU, (FuncName + ".cfi_jt").str(), {}, JumpTableFile, 0,
+        JumpTableFnTy, 0, DINode::FlagArtificial,
+        DISubprogram::SPFlagDefinition);
 
     DILocation *EntryLoc =
         DILocation::get(M.getContext(), 0, 0, JumpSP, UbsanLoc);
