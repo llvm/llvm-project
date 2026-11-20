@@ -5118,6 +5118,9 @@ bool AArch64InstructionSelector::tryOptSelectConjunction(GSelect &SelI,
 
 bool AArch64InstructionSelector::tryOptSelect(GSelect &I) {
   MachineRegisterInfo &MRI = *MIB.getMRI();
+  if (MRI.getType(I.getReg(0)).isVector())
+    return false;
+
   // We want to recognize this pattern:
   //
   // $z = G_FCMP pred, $x, $y

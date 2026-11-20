@@ -20,21 +20,24 @@ define <2 x i8> @uadd_v2i8(<2 x i8> %a, <2 x i8> %b) {
 ;
 ; CHECK-GI-LABEL: uadd_v2i8:
 ; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-GI-NEXT:    add v2.2s, v0.2s, v1.2s
 ; CHECK-GI-NEXT:    mov w9, v1.s[1]
+; CHECK-GI-NEXT:    mov w10, v0.s[1]
 ; CHECK-GI-NEXT:    mov w8, v2.s[1]
 ; CHECK-GI-NEXT:    mov v3.16b, v2.16b
 ; CHECK-GI-NEXT:    mov v1.b[1], w9
+; CHECK-GI-NEXT:    mov v0.b[1], w10
 ; CHECK-GI-NEXT:    mov v3.b[1], w8
+; CHECK-GI-NEXT:    mov v2.b[1], w8
 ; CHECK-GI-NEXT:    cmhi v1.8b, v1.8b, v3.8b
-; CHECK-GI-NEXT:    umov w8, v1.b[0]
-; CHECK-GI-NEXT:    umov w9, v1.b[1]
-; CHECK-GI-NEXT:    fmov s1, w8
-; CHECK-GI-NEXT:    mov v1.s[1], w9
-; CHECK-GI-NEXT:    shl v1.2s, v1.2s, #31
-; CHECK-GI-NEXT:    cmlt v1.2s, v1.2s, #0
 ; CHECK-GI-NEXT:    bit v0.8b, v2.8b, v1.8b
+; CHECK-GI-NEXT:    umov w8, v0.b[0]
+; CHECK-GI-NEXT:    umov w9, v0.b[1]
+; CHECK-GI-NEXT:    fmov s0, w8
+; CHECK-GI-NEXT:    mov v0.s[1], w9
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
   %o = call {<2 x i8>, <2 x i1>} @llvm.uadd.with.overflow(<2 x i8> %a, <2 x i8> %b)
   %e0 = extractvalue {<2 x i8>, <2 x i1>} %o, 0
@@ -60,30 +63,37 @@ define <2 x i8> @sadd_v2i8(<2 x i8> %a, <2 x i8> %b) {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-GI-NEXT:    add v3.2s, v0.2s, v1.2s
+; CHECK-GI-NEXT:    add v2.2s, v0.2s, v1.2s
 ; CHECK-GI-NEXT:    mov w9, v0.s[1]
 ; CHECK-GI-NEXT:    mov w10, v1.s[1]
-; CHECK-GI-NEXT:    mov v5.16b, v0.16b
-; CHECK-GI-NEXT:    movi v2.2d, #0000000000000000
-; CHECK-GI-NEXT:    mov w8, v3.s[1]
-; CHECK-GI-NEXT:    mov v4.16b, v3.16b
-; CHECK-GI-NEXT:    mov v5.b[1], w9
+; CHECK-GI-NEXT:    movi v3.2d, #0000000000000000
+; CHECK-GI-NEXT:    mov w8, v2.s[1]
+; CHECK-GI-NEXT:    mov v4.16b, v2.16b
+; CHECK-GI-NEXT:    mov v0.b[1], w9
 ; CHECK-GI-NEXT:    mov v1.b[1], w10
 ; CHECK-GI-NEXT:    mov v4.b[1], w8
-; CHECK-GI-NEXT:    cmgt v1.8b, v2.8b, v1.8b
-; CHECK-GI-NEXT:    cmgt v4.8b, v5.8b, v4.8b
-; CHECK-GI-NEXT:    umov w8, v1.b[0]
-; CHECK-GI-NEXT:    umov w10, v1.b[1]
-; CHECK-GI-NEXT:    umov w9, v4.b[0]
-; CHECK-GI-NEXT:    umov w11, v4.b[1]
-; CHECK-GI-NEXT:    fmov s1, w8
-; CHECK-GI-NEXT:    fmov s2, w9
-; CHECK-GI-NEXT:    mov v1.s[1], w10
-; CHECK-GI-NEXT:    mov v2.s[1], w11
-; CHECK-GI-NEXT:    eor v1.8b, v1.8b, v2.8b
-; CHECK-GI-NEXT:    shl v1.2s, v1.2s, #31
-; CHECK-GI-NEXT:    cmlt v1.2s, v1.2s, #0
-; CHECK-GI-NEXT:    bit v0.8b, v3.8b, v1.8b
+; CHECK-GI-NEXT:    mov v2.b[1], w8
+; CHECK-GI-NEXT:    cmgt v1.8b, v3.8b, v1.8b
+; CHECK-GI-NEXT:    cmgt v4.8b, v0.8b, v4.8b
+; CHECK-GI-NEXT:    umov w9, v1.b[0]
+; CHECK-GI-NEXT:    umov w11, v1.b[1]
+; CHECK-GI-NEXT:    umov w10, v4.b[0]
+; CHECK-GI-NEXT:    umov w12, v4.b[1]
+; CHECK-GI-NEXT:    fmov s1, w9
+; CHECK-GI-NEXT:    fmov s3, w10
+; CHECK-GI-NEXT:    mov v1.s[1], w11
+; CHECK-GI-NEXT:    mov v3.s[1], w12
+; CHECK-GI-NEXT:    eor v1.8b, v1.8b, v3.8b
+; CHECK-GI-NEXT:    uzp1 v1.4h, v1.4h, v0.4h
+; CHECK-GI-NEXT:    uzp1 v1.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    shl v1.8b, v1.8b, #7
+; CHECK-GI-NEXT:    cmlt v1.8b, v1.8b, #0
+; CHECK-GI-NEXT:    bit v0.8b, v2.8b, v1.8b
+; CHECK-GI-NEXT:    umov w8, v0.b[0]
+; CHECK-GI-NEXT:    umov w9, v0.b[1]
+; CHECK-GI-NEXT:    fmov s0, w8
+; CHECK-GI-NEXT:    mov v0.s[1], w9
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
   %o = call {<2 x i8>, <2 x i1>} @llvm.sadd.with.overflow(<2 x i8> %a, <2 x i8> %b)
   %e0 = extractvalue {<2 x i8>, <2 x i1>} %o, 0
@@ -108,20 +118,20 @@ define <2 x i8> @usub_v2i8(<2 x i8> %a, <2 x i8> %b) {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-GI-NEXT:    sub v2.2s, v0.2s, v1.2s
 ; CHECK-GI-NEXT:    mov w8, v0.s[1]
 ; CHECK-GI-NEXT:    mov w9, v1.s[1]
-; CHECK-GI-NEXT:    mov v2.16b, v0.16b
-; CHECK-GI-NEXT:    sub v3.2s, v0.2s, v1.2s
-; CHECK-GI-NEXT:    mov v2.b[1], w8
+; CHECK-GI-NEXT:    mov w10, v2.s[1]
+; CHECK-GI-NEXT:    mov v0.b[1], w8
 ; CHECK-GI-NEXT:    mov v1.b[1], w9
-; CHECK-GI-NEXT:    cmhi v1.8b, v1.8b, v2.8b
-; CHECK-GI-NEXT:    umov w8, v1.b[0]
-; CHECK-GI-NEXT:    umov w9, v1.b[1]
-; CHECK-GI-NEXT:    fmov s1, w8
-; CHECK-GI-NEXT:    mov v1.s[1], w9
-; CHECK-GI-NEXT:    shl v1.2s, v1.2s, #31
-; CHECK-GI-NEXT:    cmlt v1.2s, v1.2s, #0
-; CHECK-GI-NEXT:    bit v0.8b, v3.8b, v1.8b
+; CHECK-GI-NEXT:    mov v2.b[1], w10
+; CHECK-GI-NEXT:    cmhi v1.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    bit v0.8b, v2.8b, v1.8b
+; CHECK-GI-NEXT:    umov w8, v0.b[0]
+; CHECK-GI-NEXT:    umov w9, v0.b[1]
+; CHECK-GI-NEXT:    fmov s0, w8
+; CHECK-GI-NEXT:    mov v0.s[1], w9
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
   %o = call {<2 x i8>, <2 x i1>} @llvm.usub.with.overflow(<2 x i8> %a, <2 x i8> %b)
   %e0 = extractvalue {<2 x i8>, <2 x i1>} %o, 0
@@ -148,30 +158,37 @@ define <2 x i8> @ssub_v2i8(<2 x i8> %a, <2 x i8> %b) {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-GI-NEXT:    sub v3.2s, v0.2s, v1.2s
+; CHECK-GI-NEXT:    sub v2.2s, v0.2s, v1.2s
 ; CHECK-GI-NEXT:    mov w8, v0.s[1]
 ; CHECK-GI-NEXT:    mov w9, v1.s[1]
-; CHECK-GI-NEXT:    mov v4.16b, v0.16b
-; CHECK-GI-NEXT:    movi v2.2d, #0000000000000000
-; CHECK-GI-NEXT:    mov w10, v3.s[1]
-; CHECK-GI-NEXT:    mov v5.16b, v3.16b
-; CHECK-GI-NEXT:    mov v4.b[1], w8
+; CHECK-GI-NEXT:    movi v3.2d, #0000000000000000
+; CHECK-GI-NEXT:    mov w10, v2.s[1]
+; CHECK-GI-NEXT:    mov v4.16b, v2.16b
+; CHECK-GI-NEXT:    mov v0.b[1], w8
 ; CHECK-GI-NEXT:    mov v1.b[1], w9
-; CHECK-GI-NEXT:    mov v5.b[1], w10
-; CHECK-GI-NEXT:    cmgt v1.8b, v1.8b, v4.8b
-; CHECK-GI-NEXT:    cmgt v2.8b, v2.8b, v5.8b
+; CHECK-GI-NEXT:    mov v4.b[1], w10
+; CHECK-GI-NEXT:    mov v2.b[1], w10
+; CHECK-GI-NEXT:    cmgt v1.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    cmgt v3.8b, v3.8b, v4.8b
 ; CHECK-GI-NEXT:    umov w8, v1.b[0]
-; CHECK-GI-NEXT:    umov w10, v1.b[1]
-; CHECK-GI-NEXT:    umov w9, v2.b[0]
-; CHECK-GI-NEXT:    umov w11, v2.b[1]
+; CHECK-GI-NEXT:    umov w11, v1.b[1]
+; CHECK-GI-NEXT:    umov w9, v3.b[0]
+; CHECK-GI-NEXT:    umov w12, v3.b[1]
 ; CHECK-GI-NEXT:    fmov s1, w8
-; CHECK-GI-NEXT:    fmov s2, w9
-; CHECK-GI-NEXT:    mov v1.s[1], w10
-; CHECK-GI-NEXT:    mov v2.s[1], w11
-; CHECK-GI-NEXT:    eor v1.8b, v1.8b, v2.8b
-; CHECK-GI-NEXT:    shl v1.2s, v1.2s, #31
-; CHECK-GI-NEXT:    cmlt v1.2s, v1.2s, #0
-; CHECK-GI-NEXT:    bit v0.8b, v3.8b, v1.8b
+; CHECK-GI-NEXT:    fmov s3, w9
+; CHECK-GI-NEXT:    mov v1.s[1], w11
+; CHECK-GI-NEXT:    mov v3.s[1], w12
+; CHECK-GI-NEXT:    eor v1.8b, v1.8b, v3.8b
+; CHECK-GI-NEXT:    uzp1 v1.4h, v1.4h, v0.4h
+; CHECK-GI-NEXT:    uzp1 v1.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    shl v1.8b, v1.8b, #7
+; CHECK-GI-NEXT:    cmlt v1.8b, v1.8b, #0
+; CHECK-GI-NEXT:    bit v0.8b, v2.8b, v1.8b
+; CHECK-GI-NEXT:    umov w8, v0.b[0]
+; CHECK-GI-NEXT:    umov w9, v0.b[1]
+; CHECK-GI-NEXT:    fmov s0, w8
+; CHECK-GI-NEXT:    mov v0.s[1], w9
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
   %o = call {<2 x i8>, <2 x i1>} @llvm.ssub.with.overflow(<2 x i8> %a, <2 x i8> %b)
   %e0 = extractvalue {<2 x i8>, <2 x i1>} %o, 0
@@ -195,23 +212,26 @@ define <2 x i8> @umul_v2i8(<2 x i8> %a, <2 x i8> %b) {
 ; CHECK-GI-LABEL: umul_v2i8:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    movi d2, #0x0000ff000000ff
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    mov w9, v0.s[1]
 ; CHECK-GI-NEXT:    and v3.8b, v0.8b, v2.8b
 ; CHECK-GI-NEXT:    and v2.8b, v1.8b, v2.8b
 ; CHECK-GI-NEXT:    mul v1.2s, v0.2s, v1.2s
 ; CHECK-GI-NEXT:    mul v2.2s, v3.2s, v2.2s
 ; CHECK-GI-NEXT:    movi v3.2d, #0000000000000000
+; CHECK-GI-NEXT:    mov w8, v1.s[1]
 ; CHECK-GI-NEXT:    uzp1 v2.4h, v2.4h, v0.4h
+; CHECK-GI-NEXT:    mov v1.b[1], w8
 ; CHECK-GI-NEXT:    ushr v2.4h, v2.4h, #8
 ; CHECK-GI-NEXT:    uzp1 v2.8b, v2.8b, v0.8b
+; CHECK-GI-NEXT:    mov v0.b[1], w9
 ; CHECK-GI-NEXT:    cmeq v2.8b, v2.8b, v3.8b
-; CHECK-GI-NEXT:    mvn v2.8b, v2.8b
-; CHECK-GI-NEXT:    umov w8, v2.b[0]
-; CHECK-GI-NEXT:    umov w9, v2.b[1]
-; CHECK-GI-NEXT:    fmov s2, w8
-; CHECK-GI-NEXT:    mov v2.s[1], w9
-; CHECK-GI-NEXT:    shl v2.2s, v2.2s, #31
-; CHECK-GI-NEXT:    cmlt v2.2s, v2.2s, #0
-; CHECK-GI-NEXT:    bit v0.8b, v1.8b, v2.8b
+; CHECK-GI-NEXT:    bif v0.8b, v1.8b, v2.8b
+; CHECK-GI-NEXT:    umov w8, v0.b[0]
+; CHECK-GI-NEXT:    umov w9, v0.b[1]
+; CHECK-GI-NEXT:    fmov s0, w8
+; CHECK-GI-NEXT:    mov v0.s[1], w9
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
   %o = call {<2 x i8>, <2 x i1>} @llvm.umul.with.overflow(<2 x i8> %a, <2 x i8> %b)
   %e0 = extractvalue {<2 x i8>, <2 x i1>} %o, 0
@@ -236,6 +256,7 @@ define <2 x i8> @smul_v2i8(<2 x i8> %a, <2 x i8> %b) {
 ;
 ; CHECK-GI-LABEL: smul_v2i8:
 ; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    shl v3.2s, v0.2s, #24
 ; CHECK-GI-NEXT:    shl v4.2s, v1.2s, #24
 ; CHECK-GI-NEXT:    mul v1.2s, v0.2s, v1.2s
@@ -245,21 +266,20 @@ define <2 x i8> @smul_v2i8(<2 x i8> %a, <2 x i8> %b) {
 ; CHECK-GI-NEXT:    mov w8, v1.s[1]
 ; CHECK-GI-NEXT:    neg v2.8b, v2.8b
 ; CHECK-GI-NEXT:    mul v3.2s, v3.2s, v4.2s
-; CHECK-GI-NEXT:    mov v4.16b, v1.16b
-; CHECK-GI-NEXT:    mov v4.b[1], w8
+; CHECK-GI-NEXT:    mov v1.b[1], w8
+; CHECK-GI-NEXT:    mov w8, v0.s[1]
 ; CHECK-GI-NEXT:    uzp1 v3.4h, v3.4h, v0.4h
-; CHECK-GI-NEXT:    sshl v2.8b, v4.8b, v2.8b
+; CHECK-GI-NEXT:    sshl v2.8b, v1.8b, v2.8b
 ; CHECK-GI-NEXT:    sshr v3.4h, v3.4h, #8
 ; CHECK-GI-NEXT:    uzp1 v3.8b, v3.8b, v0.8b
+; CHECK-GI-NEXT:    mov v0.b[1], w8
 ; CHECK-GI-NEXT:    cmeq v2.8b, v3.8b, v2.8b
-; CHECK-GI-NEXT:    mvn v2.8b, v2.8b
-; CHECK-GI-NEXT:    umov w8, v2.b[0]
-; CHECK-GI-NEXT:    umov w9, v2.b[1]
-; CHECK-GI-NEXT:    fmov s2, w8
-; CHECK-GI-NEXT:    mov v2.s[1], w9
-; CHECK-GI-NEXT:    shl v2.2s, v2.2s, #31
-; CHECK-GI-NEXT:    cmlt v2.2s, v2.2s, #0
-; CHECK-GI-NEXT:    bit v0.8b, v1.8b, v2.8b
+; CHECK-GI-NEXT:    bif v0.8b, v1.8b, v2.8b
+; CHECK-GI-NEXT:    umov w8, v0.b[0]
+; CHECK-GI-NEXT:    umov w9, v0.b[1]
+; CHECK-GI-NEXT:    fmov s0, w8
+; CHECK-GI-NEXT:    mov v0.s[1], w9
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
   %o = call {<2 x i8>, <2 x i1>} @llvm.smul.with.overflow(<2 x i8> %a, <2 x i8> %b)
   %e0 = extractvalue {<2 x i8>, <2 x i1>} %o, 0
@@ -292,29 +312,29 @@ define <3 x i8> @uadd_v3i8(<3 x i8> %a, <3 x i8> %b) {
 ;
 ; CHECK-GI-LABEL: uadd_v3i8:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    fmov s0, w3
-; CHECK-GI-NEXT:    fmov s1, w0
+; CHECK-GI-NEXT:    fmov s0, w0
+; CHECK-GI-NEXT:    fmov s1, w3
 ; CHECK-GI-NEXT:    mov v2.16b, v0.16b
-; CHECK-GI-NEXT:    mov v1.h[1], w1
-; CHECK-GI-NEXT:    mov v0.b[1], w4
-; CHECK-GI-NEXT:    mov v2.h[1], w4
-; CHECK-GI-NEXT:    mov v1.h[2], w2
-; CHECK-GI-NEXT:    mov v2.h[2], w5
-; CHECK-GI-NEXT:    add v2.4h, v1.4h, v2.4h
-; CHECK-GI-NEXT:    uzp1 v3.8b, v2.8b, v0.8b
-; CHECK-GI-NEXT:    mov v0.b[2], w5
-; CHECK-GI-NEXT:    cmhi v0.8b, v0.8b, v3.8b
-; CHECK-GI-NEXT:    movi d3, #0xffffffffffffffff
-; CHECK-GI-NEXT:    zip1 v0.8b, v0.8b, v0.8b
-; CHECK-GI-NEXT:    shl v0.4h, v0.4h, #15
-; CHECK-GI-NEXT:    cmlt v0.4h, v0.4h, #0
-; CHECK-GI-NEXT:    eor v3.8b, v0.8b, v3.8b
-; CHECK-GI-NEXT:    and v0.8b, v2.8b, v0.8b
-; CHECK-GI-NEXT:    and v1.8b, v1.8b, v3.8b
-; CHECK-GI-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    umov w0, v0.h[0]
-; CHECK-GI-NEXT:    umov w1, v0.h[1]
-; CHECK-GI-NEXT:    umov w2, v0.h[2]
+; CHECK-GI-NEXT:    mov v3.16b, v1.16b
+; CHECK-GI-NEXT:    mov v1.b[1], w4
+; CHECK-GI-NEXT:    mov v2.h[1], w1
+; CHECK-GI-NEXT:    mov v3.h[1], w4
+; CHECK-GI-NEXT:    mov v1.b[2], w5
+; CHECK-GI-NEXT:    mov v2.h[2], w2
+; CHECK-GI-NEXT:    mov v3.h[2], w5
+; CHECK-GI-NEXT:    add v2.4h, v2.4h, v3.4h
+; CHECK-GI-NEXT:    uzp1 v2.8b, v2.8b, v0.8b
+; CHECK-GI-NEXT:    mov v0.b[1], w1
+; CHECK-GI-NEXT:    cmhi v1.8b, v1.8b, v2.8b
+; CHECK-GI-NEXT:    mov v0.b[2], w2
+; CHECK-GI-NEXT:    mov v3.b[0], v1.b[0]
+; CHECK-GI-NEXT:    mov v3.b[1], v1.b[1]
+; CHECK-GI-NEXT:    mov v3.b[2], v1.b[2]
+; CHECK-GI-NEXT:    mov v3.b[3], wzr
+; CHECK-GI-NEXT:    bit v0.8b, v2.8b, v3.8b
+; CHECK-GI-NEXT:    umov w0, v0.b[0]
+; CHECK-GI-NEXT:    umov w1, v0.b[1]
+; CHECK-GI-NEXT:    umov w2, v0.b[2]
 ; CHECK-GI-NEXT:    ret
   %o = call {<3 x i8>, <3 x i1>} @llvm.uadd.with.overflow(<3 x i8> %a, <3 x i8> %b)
   %e0 = extractvalue {<3 x i8>, <3 x i1>} %o, 0
@@ -347,46 +367,53 @@ define <3 x i8> @sadd_v3i8(<3 x i8> %a, <3 x i8> %b) {
 ;
 ; CHECK-GI-LABEL: sadd_v3i8:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    fmov s1, w0
+; CHECK-GI-NEXT:    fmov s0, w0
 ; CHECK-GI-NEXT:    fmov s2, w3
-; CHECK-GI-NEXT:    movi v5.2d, #0000000000000000
-; CHECK-GI-NEXT:    mov v0.16b, v1.16b
+; CHECK-GI-NEXT:    mov v1.16b, v0.16b
 ; CHECK-GI-NEXT:    mov v3.16b, v2.16b
-; CHECK-GI-NEXT:    mov v1.b[1], w1
+; CHECK-GI-NEXT:    mov v0.b[1], w1
 ; CHECK-GI-NEXT:    mov v2.b[1], w4
-; CHECK-GI-NEXT:    mov v0.h[1], w1
+; CHECK-GI-NEXT:    mov v1.h[1], w1
 ; CHECK-GI-NEXT:    mov v3.h[1], w4
-; CHECK-GI-NEXT:    mov v1.b[2], w2
 ; CHECK-GI-NEXT:    mov v2.b[2], w5
-; CHECK-GI-NEXT:    mov v0.h[2], w2
+; CHECK-GI-NEXT:    mov v1.h[2], w2
 ; CHECK-GI-NEXT:    mov v3.h[2], w5
-; CHECK-GI-NEXT:    cmgt v2.8b, v5.8b, v2.8b
-; CHECK-GI-NEXT:    add v3.4h, v0.4h, v3.4h
+; CHECK-GI-NEXT:    add v1.4h, v1.4h, v3.4h
+; CHECK-GI-NEXT:    movi v3.2d, #0000000000000000
+; CHECK-GI-NEXT:    uzp1 v1.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    mov v0.b[2], w2
+; CHECK-GI-NEXT:    cmgt v2.8b, v3.8b, v2.8b
+; CHECK-GI-NEXT:    cmgt v4.8b, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    mov b5, v2.b[1]
 ; CHECK-GI-NEXT:    mov b7, v2.b[2]
-; CHECK-GI-NEXT:    uzp1 v4.8b, v3.8b, v0.8b
+; CHECK-GI-NEXT:    mov b3, v4.b[1]
+; CHECK-GI-NEXT:    mov b6, v4.b[2]
 ; CHECK-GI-NEXT:    fmov w8, s5
-; CHECK-GI-NEXT:    cmgt v1.8b, v1.8b, v4.8b
+; CHECK-GI-NEXT:    fmov w9, s3
 ; CHECK-GI-NEXT:    mov v2.h[1], w8
 ; CHECK-GI-NEXT:    fmov w8, s7
-; CHECK-GI-NEXT:    mov b4, v1.b[1]
-; CHECK-GI-NEXT:    mov b6, v1.b[2]
-; CHECK-GI-NEXT:    mov v2.h[2], w8
-; CHECK-GI-NEXT:    fmov w9, s4
-; CHECK-GI-NEXT:    mov v1.h[1], w9
+; CHECK-GI-NEXT:    mov v4.h[1], w9
 ; CHECK-GI-NEXT:    fmov w9, s6
-; CHECK-GI-NEXT:    mov v1.h[2], w9
-; CHECK-GI-NEXT:    eor v1.8b, v2.8b, v1.8b
-; CHECK-GI-NEXT:    movi d2, #0xffffffffffffffff
-; CHECK-GI-NEXT:    shl v1.4h, v1.4h, #15
-; CHECK-GI-NEXT:    cmlt v1.4h, v1.4h, #0
-; CHECK-GI-NEXT:    eor v2.8b, v1.8b, v2.8b
-; CHECK-GI-NEXT:    and v1.8b, v3.8b, v1.8b
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v2.8b
-; CHECK-GI-NEXT:    orr v0.8b, v1.8b, v0.8b
-; CHECK-GI-NEXT:    umov w0, v0.h[0]
-; CHECK-GI-NEXT:    umov w1, v0.h[1]
-; CHECK-GI-NEXT:    umov w2, v0.h[2]
+; CHECK-GI-NEXT:    mov v2.h[2], w8
+; CHECK-GI-NEXT:    mov v4.h[2], w9
+; CHECK-GI-NEXT:    eor v2.8b, v2.8b, v4.8b
+; CHECK-GI-NEXT:    umov w8, v2.h[0]
+; CHECK-GI-NEXT:    umov w9, v2.h[1]
+; CHECK-GI-NEXT:    umov w10, v2.h[2]
+; CHECK-GI-NEXT:    lsl w8, w8, #7
+; CHECK-GI-NEXT:    lsl w9, w9, #7
+; CHECK-GI-NEXT:    sbfx w8, w8, #7, #1
+; CHECK-GI-NEXT:    sbfx w9, w9, #7, #1
+; CHECK-GI-NEXT:    fmov s2, w8
+; CHECK-GI-NEXT:    lsl w8, w10, #7
+; CHECK-GI-NEXT:    sbfx w8, w8, #7, #1
+; CHECK-GI-NEXT:    mov v2.b[1], w9
+; CHECK-GI-NEXT:    mov v2.b[2], w8
+; CHECK-GI-NEXT:    mov v2.b[3], wzr
+; CHECK-GI-NEXT:    bit v0.8b, v1.8b, v2.8b
+; CHECK-GI-NEXT:    umov w0, v0.b[0]
+; CHECK-GI-NEXT:    umov w1, v0.b[1]
+; CHECK-GI-NEXT:    umov w2, v0.b[2]
 ; CHECK-GI-NEXT:    ret
   %o = call {<3 x i8>, <3 x i1>} @llvm.sadd.with.overflow(<3 x i8> %a, <3 x i8> %b)
   %e0 = extractvalue {<3 x i8>, <3 x i1>} %o, 0
@@ -431,19 +458,17 @@ define <3 x i8> @usub_v3i8(<3 x i8> %a, <3 x i8> %b) {
 ; CHECK-GI-NEXT:    mov v1.b[2], w5
 ; CHECK-GI-NEXT:    mov v2.h[2], w2
 ; CHECK-GI-NEXT:    mov v3.h[2], w5
-; CHECK-GI-NEXT:    cmhi v0.8b, v1.8b, v0.8b
-; CHECK-GI-NEXT:    movi d1, #0xffffffffffffffff
-; CHECK-GI-NEXT:    sub v3.4h, v2.4h, v3.4h
-; CHECK-GI-NEXT:    zip1 v0.8b, v0.8b, v0.8b
-; CHECK-GI-NEXT:    shl v0.4h, v0.4h, #15
-; CHECK-GI-NEXT:    cmlt v0.4h, v0.4h, #0
-; CHECK-GI-NEXT:    eor v1.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    and v0.8b, v3.8b, v0.8b
-; CHECK-GI-NEXT:    and v1.8b, v2.8b, v1.8b
-; CHECK-GI-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    umov w0, v0.h[0]
-; CHECK-GI-NEXT:    umov w1, v0.h[1]
-; CHECK-GI-NEXT:    umov w2, v0.h[2]
+; CHECK-GI-NEXT:    cmhi v1.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    mov v4.b[0], v1.b[0]
+; CHECK-GI-NEXT:    mov v4.b[1], v1.b[1]
+; CHECK-GI-NEXT:    mov v4.b[2], v1.b[2]
+; CHECK-GI-NEXT:    sub v1.4h, v2.4h, v3.4h
+; CHECK-GI-NEXT:    uzp1 v1.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    mov v4.b[3], wzr
+; CHECK-GI-NEXT:    bit v0.8b, v1.8b, v4.8b
+; CHECK-GI-NEXT:    umov w0, v0.b[0]
+; CHECK-GI-NEXT:    umov w1, v0.b[1]
+; CHECK-GI-NEXT:    umov w2, v0.b[2]
 ; CHECK-GI-NEXT:    ret
   %o = call {<3 x i8>, <3 x i1>} @llvm.usub.with.overflow(<3 x i8> %a, <3 x i8> %b)
   %e0 = extractvalue {<3 x i8>, <3 x i1>} %o, 0
@@ -477,46 +502,53 @@ define <3 x i8> @ssub_v3i8(<3 x i8> %a, <3 x i8> %b) {
 ;
 ; CHECK-GI-LABEL: ssub_v3i8:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    fmov s1, w0
+; CHECK-GI-NEXT:    fmov s0, w0
 ; CHECK-GI-NEXT:    fmov s2, w3
-; CHECK-GI-NEXT:    movi v5.2d, #0000000000000000
-; CHECK-GI-NEXT:    mov v0.16b, v1.16b
+; CHECK-GI-NEXT:    mov v1.16b, v0.16b
 ; CHECK-GI-NEXT:    mov v3.16b, v2.16b
-; CHECK-GI-NEXT:    mov v1.b[1], w1
+; CHECK-GI-NEXT:    mov v0.b[1], w1
 ; CHECK-GI-NEXT:    mov v2.b[1], w4
-; CHECK-GI-NEXT:    mov v0.h[1], w1
+; CHECK-GI-NEXT:    mov v1.h[1], w1
 ; CHECK-GI-NEXT:    mov v3.h[1], w4
-; CHECK-GI-NEXT:    mov v1.b[2], w2
+; CHECK-GI-NEXT:    mov v0.b[2], w2
 ; CHECK-GI-NEXT:    mov v2.b[2], w5
-; CHECK-GI-NEXT:    mov v0.h[2], w2
+; CHECK-GI-NEXT:    mov v1.h[2], w2
 ; CHECK-GI-NEXT:    mov v3.h[2], w5
-; CHECK-GI-NEXT:    cmgt v1.8b, v2.8b, v1.8b
-; CHECK-GI-NEXT:    sub v3.4h, v0.4h, v3.4h
-; CHECK-GI-NEXT:    mov b6, v1.b[2]
-; CHECK-GI-NEXT:    uzp1 v4.8b, v3.8b, v0.8b
-; CHECK-GI-NEXT:    cmgt v2.8b, v5.8b, v4.8b
-; CHECK-GI-NEXT:    mov b4, v1.b[1]
-; CHECK-GI-NEXT:    mov b5, v2.b[1]
-; CHECK-GI-NEXT:    mov b7, v2.b[2]
+; CHECK-GI-NEXT:    cmgt v2.8b, v2.8b, v0.8b
+; CHECK-GI-NEXT:    sub v1.4h, v1.4h, v3.4h
+; CHECK-GI-NEXT:    movi v3.2d, #0000000000000000
+; CHECK-GI-NEXT:    mov b4, v2.b[1]
+; CHECK-GI-NEXT:    mov b6, v2.b[2]
+; CHECK-GI-NEXT:    uzp1 v1.8b, v1.8b, v0.8b
 ; CHECK-GI-NEXT:    fmov w8, s4
-; CHECK-GI-NEXT:    fmov w9, s5
-; CHECK-GI-NEXT:    mov v1.h[1], w8
+; CHECK-GI-NEXT:    cmgt v3.8b, v3.8b, v1.8b
+; CHECK-GI-NEXT:    mov v2.h[1], w8
 ; CHECK-GI-NEXT:    fmov w8, s6
-; CHECK-GI-NEXT:    mov v2.h[1], w9
+; CHECK-GI-NEXT:    mov b5, v3.b[1]
+; CHECK-GI-NEXT:    mov b7, v3.b[2]
+; CHECK-GI-NEXT:    mov v2.h[2], w8
+; CHECK-GI-NEXT:    fmov w9, s5
+; CHECK-GI-NEXT:    mov v3.h[1], w9
 ; CHECK-GI-NEXT:    fmov w9, s7
-; CHECK-GI-NEXT:    mov v1.h[2], w8
-; CHECK-GI-NEXT:    mov v2.h[2], w9
-; CHECK-GI-NEXT:    eor v1.8b, v1.8b, v2.8b
-; CHECK-GI-NEXT:    movi d2, #0xffffffffffffffff
-; CHECK-GI-NEXT:    shl v1.4h, v1.4h, #15
-; CHECK-GI-NEXT:    cmlt v1.4h, v1.4h, #0
-; CHECK-GI-NEXT:    eor v2.8b, v1.8b, v2.8b
-; CHECK-GI-NEXT:    and v1.8b, v3.8b, v1.8b
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v2.8b
-; CHECK-GI-NEXT:    orr v0.8b, v1.8b, v0.8b
-; CHECK-GI-NEXT:    umov w0, v0.h[0]
-; CHECK-GI-NEXT:    umov w1, v0.h[1]
-; CHECK-GI-NEXT:    umov w2, v0.h[2]
+; CHECK-GI-NEXT:    mov v3.h[2], w9
+; CHECK-GI-NEXT:    eor v2.8b, v2.8b, v3.8b
+; CHECK-GI-NEXT:    umov w8, v2.h[0]
+; CHECK-GI-NEXT:    umov w9, v2.h[1]
+; CHECK-GI-NEXT:    umov w10, v2.h[2]
+; CHECK-GI-NEXT:    lsl w8, w8, #7
+; CHECK-GI-NEXT:    lsl w9, w9, #7
+; CHECK-GI-NEXT:    sbfx w8, w8, #7, #1
+; CHECK-GI-NEXT:    sbfx w9, w9, #7, #1
+; CHECK-GI-NEXT:    fmov s2, w8
+; CHECK-GI-NEXT:    lsl w8, w10, #7
+; CHECK-GI-NEXT:    sbfx w8, w8, #7, #1
+; CHECK-GI-NEXT:    mov v2.b[1], w9
+; CHECK-GI-NEXT:    mov v2.b[2], w8
+; CHECK-GI-NEXT:    mov v2.b[3], wzr
+; CHECK-GI-NEXT:    bit v0.8b, v1.8b, v2.8b
+; CHECK-GI-NEXT:    umov w0, v0.b[0]
+; CHECK-GI-NEXT:    umov w1, v0.b[1]
+; CHECK-GI-NEXT:    umov w2, v0.b[2]
 ; CHECK-GI-NEXT:    ret
   %o = call {<3 x i8>, <3 x i1>} @llvm.ssub.with.overflow(<3 x i8> %a, <3 x i8> %b)
   %e0 = extractvalue {<3 x i8>, <3 x i1>} %o, 0
@@ -554,16 +586,15 @@ define <3 x i8> @umul_v3i8(<3 x i8> %a, <3 x i8> %b) {
 ; CHECK-GI-NEXT:    fmov s0, w8
 ; CHECK-GI-NEXT:    fmov s1, w10
 ; CHECK-GI-NEXT:    and w8, w4, #0xff
-; CHECK-GI-NEXT:    fmov s2, w3
-; CHECK-GI-NEXT:    movi d3, #0xffffffffffffffff
+; CHECK-GI-NEXT:    fmov s3, w3
 ; CHECK-GI-NEXT:    mov v0.h[1], w9
 ; CHECK-GI-NEXT:    mov v1.h[1], w8
 ; CHECK-GI-NEXT:    and w8, w2, #0xff
 ; CHECK-GI-NEXT:    and w9, w5, #0xff
-; CHECK-GI-NEXT:    mov v2.h[1], w4
+; CHECK-GI-NEXT:    mov v3.h[1], w4
 ; CHECK-GI-NEXT:    mov v0.h[2], w8
 ; CHECK-GI-NEXT:    mov v1.h[2], w9
-; CHECK-GI-NEXT:    mov v2.h[2], w5
+; CHECK-GI-NEXT:    mov v3.h[2], w5
 ; CHECK-GI-NEXT:    mul v0.4h, v0.4h, v1.4h
 ; CHECK-GI-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-GI-NEXT:    ushr v0.4h, v0.4h, #8
@@ -571,19 +602,21 @@ define <3 x i8> @umul_v3i8(<3 x i8> %a, <3 x i8> %b) {
 ; CHECK-GI-NEXT:    cmeq v0.8b, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    fmov s1, w0
 ; CHECK-GI-NEXT:    mvn v0.8b, v0.8b
-; CHECK-GI-NEXT:    mov v1.h[1], w1
-; CHECK-GI-NEXT:    zip1 v0.8b, v0.8b, v0.8b
-; CHECK-GI-NEXT:    mov v1.h[2], w2
-; CHECK-GI-NEXT:    shl v0.4h, v0.4h, #15
-; CHECK-GI-NEXT:    mul v2.4h, v1.4h, v2.4h
-; CHECK-GI-NEXT:    cmlt v0.4h, v0.4h, #0
-; CHECK-GI-NEXT:    eor v3.8b, v0.8b, v3.8b
-; CHECK-GI-NEXT:    and v0.8b, v2.8b, v0.8b
-; CHECK-GI-NEXT:    and v1.8b, v1.8b, v3.8b
-; CHECK-GI-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    umov w0, v0.h[0]
-; CHECK-GI-NEXT:    umov w1, v0.h[1]
-; CHECK-GI-NEXT:    umov w2, v0.h[2]
+; CHECK-GI-NEXT:    mov v2.16b, v1.16b
+; CHECK-GI-NEXT:    mov v1.b[1], w1
+; CHECK-GI-NEXT:    mov v2.h[1], w1
+; CHECK-GI-NEXT:    mov v4.b[0], v0.b[0]
+; CHECK-GI-NEXT:    mov v1.b[2], w2
+; CHECK-GI-NEXT:    mov v2.h[2], w2
+; CHECK-GI-NEXT:    mov v4.b[1], v0.b[1]
+; CHECK-GI-NEXT:    mul v2.4h, v2.4h, v3.4h
+; CHECK-GI-NEXT:    mov v4.b[2], v0.b[2]
+; CHECK-GI-NEXT:    mov v4.b[3], wzr
+; CHECK-GI-NEXT:    uzp1 v0.8b, v2.8b, v0.8b
+; CHECK-GI-NEXT:    bif v0.8b, v1.8b, v4.8b
+; CHECK-GI-NEXT:    umov w0, v0.b[0]
+; CHECK-GI-NEXT:    umov w1, v0.b[1]
+; CHECK-GI-NEXT:    umov w2, v0.b[2]
 ; CHECK-GI-NEXT:    ret
   %o = call {<3 x i8>, <3 x i1>} @llvm.umul.with.overflow(<3 x i8> %a, <3 x i8> %b)
   %e0 = extractvalue {<3 x i8>, <3 x i1>} %o, 0
@@ -618,50 +651,50 @@ define <3 x i8> @smul_v3i8(<3 x i8> %a, <3 x i8> %b) {
 ; CHECK-GI-LABEL: smul_v3i8:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    lsl w8, w0, #8
-; CHECK-GI-NEXT:    lsl w10, w3, #8
-; CHECK-GI-NEXT:    lsl w9, w1, #8
-; CHECK-GI-NEXT:    lsl w11, w4, #8
+; CHECK-GI-NEXT:    lsl w9, w3, #8
 ; CHECK-GI-NEXT:    fmov s0, w0
-; CHECK-GI-NEXT:    fmov s1, w3
+; CHECK-GI-NEXT:    lsl w10, w1, #8
+; CHECK-GI-NEXT:    lsl w11, w4, #8
+; CHECK-GI-NEXT:    fmov s4, w3
 ; CHECK-GI-NEXT:    sbfx w8, w8, #8, #8
-; CHECK-GI-NEXT:    sbfx w10, w10, #8, #8
 ; CHECK-GI-NEXT:    sbfx w9, w9, #8, #8
+; CHECK-GI-NEXT:    mov v3.16b, v0.16b
+; CHECK-GI-NEXT:    sbfx w10, w10, #8, #8
 ; CHECK-GI-NEXT:    sbfx w11, w11, #8, #8
-; CHECK-GI-NEXT:    lsl w12, w2, #8
-; CHECK-GI-NEXT:    fmov s2, w8
-; CHECK-GI-NEXT:    fmov s3, w10
-; CHECK-GI-NEXT:    lsl w8, w5, #8
-; CHECK-GI-NEXT:    mov v0.h[1], w1
-; CHECK-GI-NEXT:    mov v1.h[1], w4
+; CHECK-GI-NEXT:    fmov s1, w8
+; CHECK-GI-NEXT:    fmov s2, w9
+; CHECK-GI-NEXT:    lsl w8, w2, #8
+; CHECK-GI-NEXT:    lsl w9, w5, #8
+; CHECK-GI-NEXT:    mov v4.h[1], w4
+; CHECK-GI-NEXT:    mov v3.h[1], w1
 ; CHECK-GI-NEXT:    sbfx w8, w8, #8, #8
-; CHECK-GI-NEXT:    mov v2.h[1], w9
-; CHECK-GI-NEXT:    mov v3.h[1], w11
-; CHECK-GI-NEXT:    sbfx w9, w12, #8, #8
-; CHECK-GI-NEXT:    mov v0.h[2], w2
-; CHECK-GI-NEXT:    mov v1.h[2], w5
+; CHECK-GI-NEXT:    mov v1.h[1], w10
+; CHECK-GI-NEXT:    mov v2.h[1], w11
+; CHECK-GI-NEXT:    sbfx w9, w9, #8, #8
+; CHECK-GI-NEXT:    mov v4.h[2], w5
+; CHECK-GI-NEXT:    mov v3.h[2], w2
+; CHECK-GI-NEXT:    mov v1.h[2], w8
 ; CHECK-GI-NEXT:    mov v2.h[2], w9
-; CHECK-GI-NEXT:    mov v3.h[2], w8
-; CHECK-GI-NEXT:    mul v1.4h, v0.4h, v1.4h
-; CHECK-GI-NEXT:    mul v2.4h, v2.4h, v3.4h
+; CHECK-GI-NEXT:    mul v1.4h, v1.4h, v2.4h
+; CHECK-GI-NEXT:    mul v2.4h, v3.4h, v4.4h
 ; CHECK-GI-NEXT:    movi v3.8b, #23
-; CHECK-GI-NEXT:    uzp1 v4.8b, v1.8b, v0.8b
-; CHECK-GI-NEXT:    sshr v2.4h, v2.4h, #8
-; CHECK-GI-NEXT:    neg v3.8b, v3.8b
+; CHECK-GI-NEXT:    sshr v1.4h, v1.4h, #8
 ; CHECK-GI-NEXT:    uzp1 v2.8b, v2.8b, v0.8b
-; CHECK-GI-NEXT:    sshl v3.8b, v4.8b, v3.8b
-; CHECK-GI-NEXT:    cmeq v2.8b, v2.8b, v3.8b
-; CHECK-GI-NEXT:    movi d3, #0xffffffffffffffff
-; CHECK-GI-NEXT:    mvn v2.8b, v2.8b
-; CHECK-GI-NEXT:    zip1 v2.8b, v2.8b, v2.8b
-; CHECK-GI-NEXT:    shl v2.4h, v2.4h, #15
-; CHECK-GI-NEXT:    cmlt v2.4h, v2.4h, #0
-; CHECK-GI-NEXT:    eor v3.8b, v2.8b, v3.8b
-; CHECK-GI-NEXT:    and v1.8b, v1.8b, v2.8b
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v3.8b
-; CHECK-GI-NEXT:    orr v0.8b, v1.8b, v0.8b
-; CHECK-GI-NEXT:    umov w0, v0.h[0]
-; CHECK-GI-NEXT:    umov w1, v0.h[1]
-; CHECK-GI-NEXT:    umov w2, v0.h[2]
+; CHECK-GI-NEXT:    neg v3.8b, v3.8b
+; CHECK-GI-NEXT:    uzp1 v1.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    mov v0.b[1], w1
+; CHECK-GI-NEXT:    sshl v3.8b, v2.8b, v3.8b
+; CHECK-GI-NEXT:    cmeq v1.8b, v1.8b, v3.8b
+; CHECK-GI-NEXT:    mov v0.b[2], w2
+; CHECK-GI-NEXT:    mvn v1.8b, v1.8b
+; CHECK-GI-NEXT:    mov v3.b[0], v1.b[0]
+; CHECK-GI-NEXT:    mov v3.b[1], v1.b[1]
+; CHECK-GI-NEXT:    mov v3.b[2], v1.b[2]
+; CHECK-GI-NEXT:    mov v3.b[3], wzr
+; CHECK-GI-NEXT:    bit v0.8b, v2.8b, v3.8b
+; CHECK-GI-NEXT:    umov w0, v0.b[0]
+; CHECK-GI-NEXT:    umov w1, v0.b[1]
+; CHECK-GI-NEXT:    umov w2, v0.b[2]
 ; CHECK-GI-NEXT:    ret
   %o = call {<3 x i8>, <3 x i1>} @llvm.smul.with.overflow(<3 x i8> %a, <3 x i8> %b)
   %e0 = extractvalue {<3 x i8>, <3 x i1>} %o, 0
@@ -685,18 +718,13 @@ define <4 x i8> @uadd_v4i8(<4 x i8> %a, <4 x i8> %b) {
 ;
 ; CHECK-GI-LABEL: uadd_v4i8:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    add v3.4h, v0.4h, v1.4h
+; CHECK-GI-NEXT:    add v2.4h, v0.4h, v1.4h
 ; CHECK-GI-NEXT:    uzp1 v1.8b, v1.8b, v0.8b
-; CHECK-GI-NEXT:    movi d2, #0xff00ff00ff00ff
-; CHECK-GI-NEXT:    uzp1 v4.8b, v3.8b, v0.8b
-; CHECK-GI-NEXT:    cmhi v1.8b, v1.8b, v4.8b
-; CHECK-GI-NEXT:    zip1 v1.8b, v1.8b, v1.8b
-; CHECK-GI-NEXT:    shl v1.4h, v1.4h, #15
-; CHECK-GI-NEXT:    cmlt v1.4h, v1.4h, #0
-; CHECK-GI-NEXT:    eor v2.8b, v1.8b, v2.8b
-; CHECK-GI-NEXT:    and v1.8b, v3.8b, v1.8b
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v2.8b
-; CHECK-GI-NEXT:    orr v0.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    uzp1 v2.8b, v2.8b, v0.8b
+; CHECK-GI-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
+; CHECK-GI-NEXT:    cmhi v1.8b, v1.8b, v2.8b
+; CHECK-GI-NEXT:    bit v0.8b, v2.8b, v1.8b
+; CHECK-GI-NEXT:    zip1 v0.8b, v0.8b, v0.8b
 ; CHECK-GI-NEXT:    ret
   %o = call {<4 x i8>, <4 x i1>} @llvm.uadd.with.overflow(<4 x i8> %a, <4 x i8> %b)
   %e0 = extractvalue {<4 x i8>, <4 x i1>} %o, 0
@@ -722,21 +750,19 @@ define <4 x i8> @sadd_v4i8(<4 x i8> %a, <4 x i8> %b) {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    add v3.4h, v0.4h, v1.4h
 ; CHECK-GI-NEXT:    movi v2.2d, #0000000000000000
-; CHECK-GI-NEXT:    uzp1 v5.8b, v0.8b, v0.8b
+; CHECK-GI-NEXT:    uzp1 v3.8b, v3.8b, v0.8b
+; CHECK-GI-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
 ; CHECK-GI-NEXT:    uzp1 v1.8b, v1.8b, v0.8b
-; CHECK-GI-NEXT:    uzp1 v4.8b, v3.8b, v0.8b
+; CHECK-GI-NEXT:    cmgt v4.8b, v0.8b, v3.8b
 ; CHECK-GI-NEXT:    cmgt v1.8b, v2.8b, v1.8b
-; CHECK-GI-NEXT:    cmgt v4.8b, v5.8b, v4.8b
-; CHECK-GI-NEXT:    zip1 v1.8b, v1.8b, v1.8b
 ; CHECK-GI-NEXT:    zip1 v2.8b, v4.8b, v4.8b
+; CHECK-GI-NEXT:    zip1 v1.8b, v1.8b, v1.8b
 ; CHECK-GI-NEXT:    eor v1.8b, v1.8b, v2.8b
-; CHECK-GI-NEXT:    movi d2, #0xff00ff00ff00ff
-; CHECK-GI-NEXT:    shl v1.4h, v1.4h, #15
-; CHECK-GI-NEXT:    cmlt v1.4h, v1.4h, #0
-; CHECK-GI-NEXT:    eor v2.8b, v1.8b, v2.8b
-; CHECK-GI-NEXT:    and v1.8b, v3.8b, v1.8b
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v2.8b
-; CHECK-GI-NEXT:    orr v0.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    uzp1 v1.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    shl v1.8b, v1.8b, #7
+; CHECK-GI-NEXT:    cmlt v1.8b, v1.8b, #0
+; CHECK-GI-NEXT:    bit v0.8b, v3.8b, v1.8b
+; CHECK-GI-NEXT:    zip1 v0.8b, v0.8b, v0.8b
 ; CHECK-GI-NEXT:    ret
   %o = call {<4 x i8>, <4 x i1>} @llvm.sadd.with.overflow(<4 x i8> %a, <4 x i8> %b)
   %e0 = extractvalue {<4 x i8>, <4 x i1>} %o, 0
@@ -760,18 +786,13 @@ define <4 x i8> @usub_v4i8(<4 x i8> %a, <4 x i8> %b) {
 ;
 ; CHECK-GI-LABEL: usub_v4i8:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    uzp1 v3.8b, v0.8b, v0.8b
-; CHECK-GI-NEXT:    uzp1 v4.8b, v1.8b, v0.8b
-; CHECK-GI-NEXT:    movi d2, #0xff00ff00ff00ff
-; CHECK-GI-NEXT:    sub v1.4h, v0.4h, v1.4h
-; CHECK-GI-NEXT:    cmhi v3.8b, v4.8b, v3.8b
-; CHECK-GI-NEXT:    zip1 v3.8b, v3.8b, v3.8b
-; CHECK-GI-NEXT:    shl v3.4h, v3.4h, #15
-; CHECK-GI-NEXT:    cmlt v3.4h, v3.4h, #0
-; CHECK-GI-NEXT:    eor v2.8b, v3.8b, v2.8b
-; CHECK-GI-NEXT:    and v1.8b, v1.8b, v3.8b
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v2.8b
-; CHECK-GI-NEXT:    orr v0.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    sub v2.4h, v0.4h, v1.4h
+; CHECK-GI-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
+; CHECK-GI-NEXT:    uzp1 v1.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    uzp1 v2.8b, v2.8b, v0.8b
+; CHECK-GI-NEXT:    cmhi v1.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    bit v0.8b, v2.8b, v1.8b
+; CHECK-GI-NEXT:    zip1 v0.8b, v0.8b, v0.8b
 ; CHECK-GI-NEXT:    ret
   %o = call {<4 x i8>, <4 x i1>} @llvm.usub.with.overflow(<4 x i8> %a, <4 x i8> %b)
   %e0 = extractvalue {<4 x i8>, <4 x i1>} %o, 0
@@ -797,22 +818,20 @@ define <4 x i8> @ssub_v4i8(<4 x i8> %a, <4 x i8> %b) {
 ; CHECK-GI-LABEL: ssub_v4i8:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    sub v3.4h, v0.4h, v1.4h
+; CHECK-GI-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
 ; CHECK-GI-NEXT:    movi v2.2d, #0000000000000000
-; CHECK-GI-NEXT:    uzp1 v4.8b, v0.8b, v0.8b
 ; CHECK-GI-NEXT:    uzp1 v1.8b, v1.8b, v0.8b
-; CHECK-GI-NEXT:    uzp1 v5.8b, v3.8b, v0.8b
-; CHECK-GI-NEXT:    cmgt v1.8b, v1.8b, v4.8b
-; CHECK-GI-NEXT:    cmgt v2.8b, v2.8b, v5.8b
+; CHECK-GI-NEXT:    uzp1 v3.8b, v3.8b, v0.8b
+; CHECK-GI-NEXT:    cmgt v1.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    cmgt v2.8b, v2.8b, v3.8b
 ; CHECK-GI-NEXT:    zip1 v1.8b, v1.8b, v1.8b
 ; CHECK-GI-NEXT:    zip1 v2.8b, v2.8b, v2.8b
 ; CHECK-GI-NEXT:    eor v1.8b, v1.8b, v2.8b
-; CHECK-GI-NEXT:    movi d2, #0xff00ff00ff00ff
-; CHECK-GI-NEXT:    shl v1.4h, v1.4h, #15
-; CHECK-GI-NEXT:    cmlt v1.4h, v1.4h, #0
-; CHECK-GI-NEXT:    eor v2.8b, v1.8b, v2.8b
-; CHECK-GI-NEXT:    and v1.8b, v3.8b, v1.8b
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v2.8b
-; CHECK-GI-NEXT:    orr v0.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    uzp1 v1.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    shl v1.8b, v1.8b, #7
+; CHECK-GI-NEXT:    cmlt v1.8b, v1.8b, #0
+; CHECK-GI-NEXT:    bit v0.8b, v3.8b, v1.8b
+; CHECK-GI-NEXT:    zip1 v0.8b, v0.8b, v0.8b
 ; CHECK-GI-NEXT:    ret
   %o = call {<4 x i8>, <4 x i1>} @llvm.ssub.with.overflow(<4 x i8> %a, <4 x i8> %b)
   %e0 = extractvalue {<4 x i8>, <4 x i1>} %o, 0
@@ -837,21 +856,17 @@ define <4 x i8> @umul_v4i8(<4 x i8> %a, <4 x i8> %b) {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    movi d2, #0xff00ff00ff00ff
 ; CHECK-GI-NEXT:    and v3.8b, v0.8b, v2.8b
-; CHECK-GI-NEXT:    and v4.8b, v1.8b, v2.8b
+; CHECK-GI-NEXT:    and v2.8b, v1.8b, v2.8b
 ; CHECK-GI-NEXT:    mul v1.4h, v0.4h, v1.4h
-; CHECK-GI-NEXT:    mul v3.4h, v3.4h, v4.4h
-; CHECK-GI-NEXT:    movi v4.2d, #0000000000000000
-; CHECK-GI-NEXT:    ushr v3.4h, v3.4h, #8
-; CHECK-GI-NEXT:    uzp1 v3.8b, v3.8b, v0.8b
-; CHECK-GI-NEXT:    cmeq v3.8b, v3.8b, v4.8b
-; CHECK-GI-NEXT:    mvn v3.8b, v3.8b
-; CHECK-GI-NEXT:    zip1 v3.8b, v3.8b, v3.8b
-; CHECK-GI-NEXT:    shl v3.4h, v3.4h, #15
-; CHECK-GI-NEXT:    cmlt v3.4h, v3.4h, #0
-; CHECK-GI-NEXT:    eor v2.8b, v3.8b, v2.8b
-; CHECK-GI-NEXT:    and v1.8b, v1.8b, v3.8b
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v2.8b
-; CHECK-GI-NEXT:    orr v0.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    mul v2.4h, v3.4h, v2.4h
+; CHECK-GI-NEXT:    movi v3.2d, #0000000000000000
+; CHECK-GI-NEXT:    uzp1 v1.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    ushr v2.4h, v2.4h, #8
+; CHECK-GI-NEXT:    uzp1 v2.8b, v2.8b, v0.8b
+; CHECK-GI-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
+; CHECK-GI-NEXT:    cmeq v2.8b, v2.8b, v3.8b
+; CHECK-GI-NEXT:    bif v0.8b, v1.8b, v2.8b
+; CHECK-GI-NEXT:    zip1 v0.8b, v0.8b, v0.8b
 ; CHECK-GI-NEXT:    ret
   %o = call {<4 x i8>, <4 x i1>} @llvm.umul.with.overflow(<4 x i8> %a, <4 x i8> %b)
   %e0 = extractvalue {<4 x i8>, <4 x i1>} %o, 0
@@ -882,22 +897,16 @@ define <4 x i8> @smul_v4i8(<4 x i8> %a, <4 x i8> %b) {
 ; CHECK-GI-NEXT:    movi v2.8b, #31
 ; CHECK-GI-NEXT:    sshr v3.4h, v3.4h, #8
 ; CHECK-GI-NEXT:    sshr v4.4h, v4.4h, #8
+; CHECK-GI-NEXT:    uzp1 v1.8b, v1.8b, v0.8b
 ; CHECK-GI-NEXT:    neg v2.8b, v2.8b
 ; CHECK-GI-NEXT:    mul v3.4h, v3.4h, v4.4h
-; CHECK-GI-NEXT:    uzp1 v4.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    sshl v2.8b, v1.8b, v2.8b
 ; CHECK-GI-NEXT:    sshr v3.4h, v3.4h, #8
-; CHECK-GI-NEXT:    sshl v2.8b, v4.8b, v2.8b
 ; CHECK-GI-NEXT:    uzp1 v3.8b, v3.8b, v0.8b
+; CHECK-GI-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
 ; CHECK-GI-NEXT:    cmeq v2.8b, v3.8b, v2.8b
-; CHECK-GI-NEXT:    movi d3, #0xff00ff00ff00ff
-; CHECK-GI-NEXT:    mvn v2.8b, v2.8b
-; CHECK-GI-NEXT:    zip1 v2.8b, v2.8b, v2.8b
-; CHECK-GI-NEXT:    shl v2.4h, v2.4h, #15
-; CHECK-GI-NEXT:    cmlt v2.4h, v2.4h, #0
-; CHECK-GI-NEXT:    eor v3.8b, v2.8b, v3.8b
-; CHECK-GI-NEXT:    and v1.8b, v1.8b, v2.8b
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v3.8b
-; CHECK-GI-NEXT:    orr v0.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    bif v0.8b, v1.8b, v2.8b
+; CHECK-GI-NEXT:    zip1 v0.8b, v0.8b, v0.8b
 ; CHECK-GI-NEXT:    ret
   %o = call {<4 x i8>, <4 x i1>} @llvm.smul.with.overflow(<4 x i8> %a, <4 x i8> %b)
   %e0 = extractvalue {<4 x i8>, <4 x i1>} %o, 0
@@ -1011,8 +1020,8 @@ define <8 x i8> @umul_v8i8(<8 x i8> %a, <8 x i8> %b) {
 ; CHECK-GI-NEXT:    umull v2.8h, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    mul v1.8b, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    shrn v2.8b, v2.8h, #8
-; CHECK-GI-NEXT:    cmtst v2.8b, v2.8b, v2.8b
-; CHECK-GI-NEXT:    bit v0.8b, v1.8b, v2.8b
+; CHECK-GI-NEXT:    cmeq v2.8b, v2.8b, #0
+; CHECK-GI-NEXT:    bif v0.8b, v1.8b, v2.8b
 ; CHECK-GI-NEXT:    ret
   %o = call {<8 x i8>, <8 x i1>} @llvm.umul.with.overflow(<8 x i8> %a, <8 x i8> %b)
   %e0 = extractvalue {<8 x i8>, <8 x i1>} %o, 0
@@ -1040,8 +1049,7 @@ define <8 x i8> @smul_v8i8(<8 x i8> %a, <8 x i8> %b) {
 ; CHECK-GI-NEXT:    shrn v3.8b, v3.8h, #8
 ; CHECK-GI-NEXT:    sshl v2.8b, v1.8b, v2.8b
 ; CHECK-GI-NEXT:    cmeq v2.8b, v3.8b, v2.8b
-; CHECK-GI-NEXT:    mvn v2.8b, v2.8b
-; CHECK-GI-NEXT:    bit v0.8b, v1.8b, v2.8b
+; CHECK-GI-NEXT:    bif v0.8b, v1.8b, v2.8b
 ; CHECK-GI-NEXT:    ret
   %o = call {<8 x i8>, <8 x i1>} @llvm.smul.with.overflow(<8 x i8> %a, <8 x i8> %b)
   %e0 = extractvalue {<8 x i8>, <8 x i1>} %o, 0
@@ -1141,25 +1149,15 @@ define <16 x i8> @ssub_v16i8(<16 x i8> %a, <16 x i8> %b) {
 }
 
 define <16 x i8> @umul_v16i8(<16 x i8> %a, <16 x i8> %b) {
-; CHECK-SD-LABEL: umul_v16i8:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    umull2 v2.8h, v0.16b, v1.16b
-; CHECK-SD-NEXT:    umull v3.8h, v0.8b, v1.8b
-; CHECK-SD-NEXT:    mul v1.16b, v0.16b, v1.16b
-; CHECK-SD-NEXT:    uzp2 v2.16b, v3.16b, v2.16b
-; CHECK-SD-NEXT:    cmeq v2.16b, v2.16b, #0
-; CHECK-SD-NEXT:    bif v0.16b, v1.16b, v2.16b
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: umul_v16i8:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    umull2 v2.8h, v0.16b, v1.16b
-; CHECK-GI-NEXT:    umull v3.8h, v0.8b, v1.8b
-; CHECK-GI-NEXT:    mul v1.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    uzp2 v2.16b, v3.16b, v2.16b
-; CHECK-GI-NEXT:    cmtst v2.16b, v2.16b, v2.16b
-; CHECK-GI-NEXT:    bit v0.16b, v1.16b, v2.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: umul_v16i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umull2 v2.8h, v0.16b, v1.16b
+; CHECK-NEXT:    umull v3.8h, v0.8b, v1.8b
+; CHECK-NEXT:    mul v1.16b, v0.16b, v1.16b
+; CHECK-NEXT:    uzp2 v2.16b, v3.16b, v2.16b
+; CHECK-NEXT:    cmeq v2.16b, v2.16b, #0
+; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-NEXT:    ret
   %o = call {<16 x i8>, <16 x i1>} @llvm.umul.with.overflow(<16 x i8> %a, <16 x i8> %b)
   %e0 = extractvalue {<16 x i8>, <16 x i1>} %o, 0
   %e1 = extractvalue {<16 x i8>, <16 x i1>} %o, 1
@@ -1188,8 +1186,7 @@ define <16 x i8> @smul_v16i8(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-GI-NEXT:    uzp2 v3.16b, v4.16b, v3.16b
 ; CHECK-GI-NEXT:    sshl v2.16b, v1.16b, v2.16b
 ; CHECK-GI-NEXT:    cmeq v2.16b, v3.16b, v2.16b
-; CHECK-GI-NEXT:    mvn v2.16b, v2.16b
-; CHECK-GI-NEXT:    bit v0.16b, v1.16b, v2.16b
+; CHECK-GI-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-GI-NEXT:    ret
   %o = call {<16 x i8>, <16 x i1>} @llvm.smul.with.overflow(<16 x i8> %a, <16 x i8> %b)
   %e0 = extractvalue {<16 x i8>, <16 x i1>} %o, 0
@@ -1317,10 +1314,10 @@ define <32 x i8> @umul_v32i8(<32 x i8> %a, <32 x i8> %b) {
 ; CHECK-GI-NEXT:    mul v3.16b, v1.16b, v3.16b
 ; CHECK-GI-NEXT:    uzp2 v4.16b, v5.16b, v4.16b
 ; CHECK-GI-NEXT:    uzp2 v5.16b, v7.16b, v6.16b
-; CHECK-GI-NEXT:    cmtst v4.16b, v4.16b, v4.16b
-; CHECK-GI-NEXT:    cmtst v5.16b, v5.16b, v5.16b
-; CHECK-GI-NEXT:    bit v0.16b, v2.16b, v4.16b
-; CHECK-GI-NEXT:    bit v1.16b, v3.16b, v5.16b
+; CHECK-GI-NEXT:    cmeq v4.16b, v4.16b, #0
+; CHECK-GI-NEXT:    cmeq v5.16b, v5.16b, #0
+; CHECK-GI-NEXT:    bif v0.16b, v2.16b, v4.16b
+; CHECK-GI-NEXT:    bif v1.16b, v3.16b, v5.16b
 ; CHECK-GI-NEXT:    ret
   %o = call {<32 x i8>, <32 x i1>} @llvm.umul.with.overflow(<32 x i8> %a, <32 x i8> %b)
   %e0 = extractvalue {<32 x i8>, <32 x i1>} %o, 0
@@ -1363,10 +1360,8 @@ define <32 x i8> @smul_v32i8(<32 x i8> %a, <32 x i8> %b) {
 ; CHECK-GI-NEXT:    sshl v7.16b, v3.16b, v16.16b
 ; CHECK-GI-NEXT:    cmeq v4.16b, v4.16b, v6.16b
 ; CHECK-GI-NEXT:    cmeq v5.16b, v5.16b, v7.16b
-; CHECK-GI-NEXT:    mvn v4.16b, v4.16b
-; CHECK-GI-NEXT:    mvn v5.16b, v5.16b
-; CHECK-GI-NEXT:    bit v0.16b, v2.16b, v4.16b
-; CHECK-GI-NEXT:    bit v1.16b, v3.16b, v5.16b
+; CHECK-GI-NEXT:    bif v0.16b, v2.16b, v4.16b
+; CHECK-GI-NEXT:    bif v1.16b, v3.16b, v5.16b
 ; CHECK-GI-NEXT:    ret
   %o = call {<32 x i8>, <32 x i1>} @llvm.smul.with.overflow(<32 x i8> %a, <32 x i8> %b)
   %e0 = extractvalue {<32 x i8>, <32 x i1>} %o, 0
@@ -1394,11 +1389,12 @@ define <2 x i16> @uadd_v2i16(<2 x i16> %a, <2 x i16> %b) {
 ; CHECK-GI-NEXT:    add v3.2s, v0.2s, v1.2s
 ; CHECK-GI-NEXT:    and v4.8b, v3.8b, v2.8b
 ; CHECK-GI-NEXT:    and v1.8b, v1.8b, v2.8b
+; CHECK-GI-NEXT:    uzp1 v2.4h, v3.4h, v0.4h
 ; CHECK-GI-NEXT:    cmhi v1.2s, v1.2s, v4.2s
-; CHECK-GI-NEXT:    eor v2.8b, v1.8b, v2.8b
-; CHECK-GI-NEXT:    and v1.8b, v3.8b, v1.8b
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v2.8b
-; CHECK-GI-NEXT:    orr v0.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    uzp1 v1.4h, v1.4h, v0.4h
+; CHECK-GI-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
+; CHECK-GI-NEXT:    bit v0.8b, v2.8b, v1.8b
+; CHECK-GI-NEXT:    zip1 v0.4h, v0.4h, v0.4h
 ; CHECK-GI-NEXT:    ret
   %o = call {<2 x i16>, <2 x i1>} @llvm.uadd.with.overflow(<2 x i16> %a, <2 x i16> %b)
   %e0 = extractvalue {<2 x i16>, <2 x i1>} %o, 0
@@ -1432,13 +1428,13 @@ define <2 x i16> @sadd_v2i16(<2 x i16> %a, <2 x i16> %b) {
 ; CHECK-GI-NEXT:    sshll v2.4s, v2.4h, #0
 ; CHECK-GI-NEXT:    sshr v4.2s, v4.2s, #16
 ; CHECK-GI-NEXT:    cmgt v1.2s, v2.2s, v1.2s
-; CHECK-GI-NEXT:    movi d2, #0x00ffff0000ffff
+; CHECK-GI-NEXT:    uzp1 v2.4h, v3.4h, v0.4h
 ; CHECK-GI-NEXT:    cmgt v4.2s, v5.2s, v4.2s
 ; CHECK-GI-NEXT:    eor v1.8b, v1.8b, v4.8b
-; CHECK-GI-NEXT:    eor v2.8b, v1.8b, v2.8b
-; CHECK-GI-NEXT:    and v1.8b, v3.8b, v1.8b
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v2.8b
-; CHECK-GI-NEXT:    orr v0.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    uzp1 v1.4h, v1.4h, v0.4h
+; CHECK-GI-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
+; CHECK-GI-NEXT:    bit v0.8b, v2.8b, v1.8b
+; CHECK-GI-NEXT:    zip1 v0.4h, v0.4h, v0.4h
 ; CHECK-GI-NEXT:    ret
   %o = call {<2 x i16>, <2 x i1>} @llvm.sadd.with.overflow(<2 x i16> %a, <2 x i16> %b)
   %e0 = extractvalue {<2 x i16>, <2 x i1>} %o, 0
@@ -1465,11 +1461,12 @@ define <2 x i16> @usub_v2i16(<2 x i16> %a, <2 x i16> %b) {
 ; CHECK-GI-NEXT:    sub v3.2s, v0.2s, v1.2s
 ; CHECK-GI-NEXT:    and v4.8b, v0.8b, v2.8b
 ; CHECK-GI-NEXT:    and v1.8b, v1.8b, v2.8b
+; CHECK-GI-NEXT:    uzp1 v2.4h, v3.4h, v0.4h
 ; CHECK-GI-NEXT:    cmhi v1.2s, v1.2s, v4.2s
-; CHECK-GI-NEXT:    eor v2.8b, v1.8b, v2.8b
-; CHECK-GI-NEXT:    and v1.8b, v3.8b, v1.8b
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v2.8b
-; CHECK-GI-NEXT:    orr v0.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    uzp1 v1.4h, v1.4h, v0.4h
+; CHECK-GI-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
+; CHECK-GI-NEXT:    bit v0.8b, v2.8b, v1.8b
+; CHECK-GI-NEXT:    zip1 v0.4h, v0.4h, v0.4h
 ; CHECK-GI-NEXT:    ret
   %o = call {<2 x i16>, <2 x i1>} @llvm.usub.with.overflow(<2 x i16> %a, <2 x i16> %b)
   %e0 = extractvalue {<2 x i16>, <2 x i1>} %o, 0
@@ -1504,13 +1501,13 @@ define <2 x i16> @ssub_v2i16(<2 x i16> %a, <2 x i16> %b) {
 ; CHECK-GI-NEXT:    sshll v2.4s, v2.4h, #0
 ; CHECK-GI-NEXT:    sshr v5.2s, v5.2s, #16
 ; CHECK-GI-NEXT:    cmgt v1.2s, v1.2s, v4.2s
-; CHECK-GI-NEXT:    movi d4, #0x00ffff0000ffff
 ; CHECK-GI-NEXT:    cmgt v2.2s, v2.2s, v5.2s
 ; CHECK-GI-NEXT:    eor v1.8b, v1.8b, v2.8b
-; CHECK-GI-NEXT:    eor v2.8b, v1.8b, v4.8b
-; CHECK-GI-NEXT:    and v1.8b, v3.8b, v1.8b
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v2.8b
-; CHECK-GI-NEXT:    orr v0.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    uzp1 v2.4h, v3.4h, v0.4h
+; CHECK-GI-NEXT:    uzp1 v1.4h, v1.4h, v0.4h
+; CHECK-GI-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
+; CHECK-GI-NEXT:    bit v0.8b, v2.8b, v1.8b
+; CHECK-GI-NEXT:    zip1 v0.4h, v0.4h, v0.4h
 ; CHECK-GI-NEXT:    ret
   %o = call {<2 x i16>, <2 x i1>} @llvm.ssub.with.overflow(<2 x i16> %a, <2 x i16> %b)
   %e0 = extractvalue {<2 x i16>, <2 x i1>} %o, 0
@@ -1535,18 +1532,19 @@ define <2 x i16> @umul_v2i16(<2 x i16> %a, <2 x i16> %b) {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    movi d2, #0x00ffff0000ffff
 ; CHECK-GI-NEXT:    and v3.8b, v0.8b, v2.8b
-; CHECK-GI-NEXT:    and v4.8b, v1.8b, v2.8b
+; CHECK-GI-NEXT:    and v2.8b, v1.8b, v2.8b
 ; CHECK-GI-NEXT:    mul v1.2s, v0.2s, v1.2s
-; CHECK-GI-NEXT:    mul v3.2s, v3.2s, v4.2s
-; CHECK-GI-NEXT:    movi v4.2d, #0000000000000000
-; CHECK-GI-NEXT:    ushr v3.2s, v3.2s, #16
-; CHECK-GI-NEXT:    ushll v4.4s, v4.4h, #0
-; CHECK-GI-NEXT:    cmeq v3.2s, v3.2s, v4.2s
-; CHECK-GI-NEXT:    mvn v4.8b, v3.8b
-; CHECK-GI-NEXT:    bic v1.8b, v1.8b, v3.8b
-; CHECK-GI-NEXT:    eor v2.8b, v4.8b, v2.8b
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v2.8b
-; CHECK-GI-NEXT:    orr v0.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    mul v2.2s, v3.2s, v2.2s
+; CHECK-GI-NEXT:    movi v3.2d, #0000000000000000
+; CHECK-GI-NEXT:    uzp1 v1.4h, v1.4h, v0.4h
+; CHECK-GI-NEXT:    ushr v2.2s, v2.2s, #16
+; CHECK-GI-NEXT:    ushll v3.4s, v3.4h, #0
+; CHECK-GI-NEXT:    cmeq v2.2s, v2.2s, v3.2s
+; CHECK-GI-NEXT:    mvn v2.8b, v2.8b
+; CHECK-GI-NEXT:    uzp1 v2.4h, v2.4h, v0.4h
+; CHECK-GI-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
+; CHECK-GI-NEXT:    bit v0.8b, v1.8b, v2.8b
+; CHECK-GI-NEXT:    zip1 v0.4h, v0.4h, v0.4h
 ; CHECK-GI-NEXT:    ret
   %o = call {<2 x i16>, <2 x i1>} @llvm.umul.with.overflow(<2 x i16> %a, <2 x i16> %b)
   %e0 = extractvalue {<2 x i16>, <2 x i1>} %o, 0
@@ -1575,22 +1573,22 @@ define <2 x i16> @smul_v2i16(<2 x i16> %a, <2 x i16> %b) {
 ; CHECK-GI-NEXT:    shl v4.2s, v1.2s, #16
 ; CHECK-GI-NEXT:    mul v1.2s, v0.2s, v1.2s
 ; CHECK-GI-NEXT:    movi v2.4h, #31
-; CHECK-GI-NEXT:    movi d5, #0x00ffff0000ffff
 ; CHECK-GI-NEXT:    sshr v3.2s, v3.2s, #16
 ; CHECK-GI-NEXT:    sshr v4.2s, v4.2s, #16
+; CHECK-GI-NEXT:    uzp1 v1.4h, v1.4h, v0.4h
 ; CHECK-GI-NEXT:    neg v2.4h, v2.4h
 ; CHECK-GI-NEXT:    mul v3.2s, v3.2s, v4.2s
-; CHECK-GI-NEXT:    uzp1 v4.4h, v1.4h, v0.4h
-; CHECK-GI-NEXT:    sshl v2.4h, v4.4h, v2.4h
+; CHECK-GI-NEXT:    movi d4, #0x00ffff0000ffff
+; CHECK-GI-NEXT:    sshl v2.4h, v1.4h, v2.4h
 ; CHECK-GI-NEXT:    sshr v3.2s, v3.2s, #16
-; CHECK-GI-NEXT:    and v3.8b, v3.8b, v5.8b
 ; CHECK-GI-NEXT:    ushll v2.4s, v2.4h, #0
+; CHECK-GI-NEXT:    and v3.8b, v3.8b, v4.8b
 ; CHECK-GI-NEXT:    cmeq v2.2s, v3.2s, v2.2s
-; CHECK-GI-NEXT:    mvn v3.8b, v2.8b
-; CHECK-GI-NEXT:    bic v1.8b, v1.8b, v2.8b
-; CHECK-GI-NEXT:    eor v3.8b, v3.8b, v5.8b
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v3.8b
-; CHECK-GI-NEXT:    orr v0.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    mvn v2.8b, v2.8b
+; CHECK-GI-NEXT:    uzp1 v2.4h, v2.4h, v0.4h
+; CHECK-GI-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
+; CHECK-GI-NEXT:    bit v0.8b, v1.8b, v2.8b
+; CHECK-GI-NEXT:    zip1 v0.4h, v0.4h, v0.4h
 ; CHECK-GI-NEXT:    ret
   %o = call {<2 x i16>, <2 x i1>} @llvm.smul.with.overflow(<2 x i16> %a, <2 x i16> %b)
   %e0 = extractvalue {<2 x i16>, <2 x i1>} %o, 0
@@ -1609,13 +1607,9 @@ define <3 x i16> @uadd_v3i16(<3 x i16> %a, <3 x i16> %b) {
 ;
 ; CHECK-GI-LABEL: uadd_v3i16:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    add v3.4h, v0.4h, v1.4h
-; CHECK-GI-NEXT:    movi d2, #0xffffffffffffffff
-; CHECK-GI-NEXT:    cmhi v1.4h, v1.4h, v3.4h
-; CHECK-GI-NEXT:    eor v2.8b, v1.8b, v2.8b
-; CHECK-GI-NEXT:    and v1.8b, v3.8b, v1.8b
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v2.8b
-; CHECK-GI-NEXT:    orr v0.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    add v2.4h, v0.4h, v1.4h
+; CHECK-GI-NEXT:    cmhi v1.4h, v1.4h, v2.4h
+; CHECK-GI-NEXT:    bit v0.8b, v2.8b, v1.8b
 ; CHECK-GI-NEXT:    ret
   %o = call {<3 x i16>, <3 x i1>} @llvm.uadd.with.overflow(<3 x i16> %a, <3 x i16> %b)
   %e0 = extractvalue {<3 x i16>, <3 x i1>} %o, 0
@@ -1639,12 +1633,8 @@ define <3 x i16> @sadd_v3i16(<3 x i16> %a, <3 x i16> %b) {
 ; CHECK-GI-NEXT:    add v3.4h, v0.4h, v1.4h
 ; CHECK-GI-NEXT:    cmgt v4.4h, v0.4h, v3.4h
 ; CHECK-GI-NEXT:    cmgt v1.4h, v2.4h, v1.4h
-; CHECK-GI-NEXT:    movi d2, #0xffffffffffffffff
 ; CHECK-GI-NEXT:    eor v1.8b, v1.8b, v4.8b
-; CHECK-GI-NEXT:    eor v2.8b, v1.8b, v2.8b
-; CHECK-GI-NEXT:    and v1.8b, v3.8b, v1.8b
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v2.8b
-; CHECK-GI-NEXT:    orr v0.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    bit v0.8b, v3.8b, v1.8b
 ; CHECK-GI-NEXT:    ret
   %o = call {<3 x i16>, <3 x i1>} @llvm.sadd.with.overflow(<3 x i16> %a, <3 x i16> %b)
   %e0 = extractvalue {<3 x i16>, <3 x i1>} %o, 0
@@ -1663,13 +1653,9 @@ define <3 x i16> @usub_v3i16(<3 x i16> %a, <3 x i16> %b) {
 ;
 ; CHECK-GI-LABEL: usub_v3i16:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi d2, #0xffffffffffffffff
-; CHECK-GI-NEXT:    cmhi v3.4h, v1.4h, v0.4h
-; CHECK-GI-NEXT:    sub v1.4h, v0.4h, v1.4h
-; CHECK-GI-NEXT:    and v1.8b, v1.8b, v3.8b
-; CHECK-GI-NEXT:    eor v2.8b, v3.8b, v2.8b
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v2.8b
-; CHECK-GI-NEXT:    orr v0.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    sub v2.4h, v0.4h, v1.4h
+; CHECK-GI-NEXT:    cmhi v1.4h, v1.4h, v0.4h
+; CHECK-GI-NEXT:    bit v0.8b, v2.8b, v1.8b
 ; CHECK-GI-NEXT:    ret
   %o = call {<3 x i16>, <3 x i1>} @llvm.usub.with.overflow(<3 x i16> %a, <3 x i16> %b)
   %e0 = extractvalue {<3 x i16>, <3 x i1>} %o, 0
@@ -1692,13 +1678,9 @@ define <3 x i16> @ssub_v3i16(<3 x i16> %a, <3 x i16> %b) {
 ; CHECK-GI-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-GI-NEXT:    sub v3.4h, v0.4h, v1.4h
 ; CHECK-GI-NEXT:    cmgt v1.4h, v1.4h, v0.4h
-; CHECK-GI-NEXT:    movi d4, #0xffffffffffffffff
 ; CHECK-GI-NEXT:    cmgt v2.4h, v2.4h, v3.4h
 ; CHECK-GI-NEXT:    eor v1.8b, v1.8b, v2.8b
-; CHECK-GI-NEXT:    eor v2.8b, v1.8b, v4.8b
-; CHECK-GI-NEXT:    and v1.8b, v3.8b, v1.8b
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v2.8b
-; CHECK-GI-NEXT:    orr v0.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    bit v0.8b, v3.8b, v1.8b
 ; CHECK-GI-NEXT:    ret
   %o = call {<3 x i16>, <3 x i1>} @llvm.ssub.with.overflow(<3 x i16> %a, <3 x i16> %b)
   %e0 = extractvalue {<3 x i16>, <3 x i1>} %o, 0
@@ -1738,12 +1720,7 @@ define <3 x i16> @umul_v3i16(<3 x i16> %a, <3 x i16> %b) {
 ; CHECK-GI-NEXT:    movi v3.2d, #0000000000000000
 ; CHECK-GI-NEXT:    shrn v2.4h, v2.4s, #16
 ; CHECK-GI-NEXT:    cmeq v2.4h, v2.4h, v3.4h
-; CHECK-GI-NEXT:    movi d3, #0xffffffffffffffff
-; CHECK-GI-NEXT:    mvn v4.8b, v2.8b
-; CHECK-GI-NEXT:    bic v1.8b, v1.8b, v2.8b
-; CHECK-GI-NEXT:    eor v3.8b, v4.8b, v3.8b
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v3.8b
-; CHECK-GI-NEXT:    orr v0.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    bif v0.8b, v1.8b, v2.8b
 ; CHECK-GI-NEXT:    ret
   %o = call {<3 x i16>, <3 x i1>} @llvm.umul.with.overflow(<3 x i16> %a, <3 x i16> %b)
   %e0 = extractvalue {<3 x i16>, <3 x i1>} %o, 0
@@ -1786,12 +1763,7 @@ define <3 x i16> @smul_v3i16(<3 x i16> %a, <3 x i16> %b) {
 ; CHECK-GI-NEXT:    mul v3.4s, v3.4s, v4.4s
 ; CHECK-GI-NEXT:    shrn v3.4h, v3.4s, #16
 ; CHECK-GI-NEXT:    cmeq v2.4h, v3.4h, v2.4h
-; CHECK-GI-NEXT:    movi d3, #0xffffffffffffffff
-; CHECK-GI-NEXT:    mvn v4.8b, v2.8b
-; CHECK-GI-NEXT:    bic v1.8b, v1.8b, v2.8b
-; CHECK-GI-NEXT:    eor v3.8b, v4.8b, v3.8b
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v3.8b
-; CHECK-GI-NEXT:    orr v0.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    bif v0.8b, v1.8b, v2.8b
 ; CHECK-GI-NEXT:    ret
   %o = call {<3 x i16>, <3 x i1>} @llvm.smul.with.overflow(<3 x i16> %a, <3 x i16> %b)
   %e0 = extractvalue {<3 x i16>, <3 x i1>} %o, 0
@@ -1905,8 +1877,8 @@ define <4 x i16> @umul_v4i16(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-GI-NEXT:    umull v2.4s, v0.4h, v1.4h
 ; CHECK-GI-NEXT:    mul v1.4h, v0.4h, v1.4h
 ; CHECK-GI-NEXT:    shrn v2.4h, v2.4s, #16
-; CHECK-GI-NEXT:    cmtst v2.4h, v2.4h, v2.4h
-; CHECK-GI-NEXT:    bit v0.8b, v1.8b, v2.8b
+; CHECK-GI-NEXT:    cmeq v2.4h, v2.4h, #0
+; CHECK-GI-NEXT:    bif v0.8b, v1.8b, v2.8b
 ; CHECK-GI-NEXT:    ret
   %o = call {<4 x i16>, <4 x i1>} @llvm.umul.with.overflow(<4 x i16> %a, <4 x i16> %b)
   %e0 = extractvalue {<4 x i16>, <4 x i1>} %o, 0
@@ -1934,8 +1906,7 @@ define <4 x i16> @smul_v4i16(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-GI-NEXT:    shrn v3.4h, v3.4s, #16
 ; CHECK-GI-NEXT:    sshl v2.4h, v1.4h, v2.4h
 ; CHECK-GI-NEXT:    cmeq v2.4h, v3.4h, v2.4h
-; CHECK-GI-NEXT:    mvn v2.8b, v2.8b
-; CHECK-GI-NEXT:    bit v0.8b, v1.8b, v2.8b
+; CHECK-GI-NEXT:    bif v0.8b, v1.8b, v2.8b
 ; CHECK-GI-NEXT:    ret
   %o = call {<4 x i16>, <4 x i1>} @llvm.smul.with.overflow(<4 x i16> %a, <4 x i16> %b)
   %e0 = extractvalue {<4 x i16>, <4 x i1>} %o, 0
@@ -2035,25 +2006,15 @@ define <8 x i16> @ssub_v8i16(<8 x i16> %a, <8 x i16> %b) {
 }
 
 define <8 x i16> @umul_v8i16(<8 x i16> %a, <8 x i16> %b) {
-; CHECK-SD-LABEL: umul_v8i16:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    umull2 v2.4s, v0.8h, v1.8h
-; CHECK-SD-NEXT:    umull v3.4s, v0.4h, v1.4h
-; CHECK-SD-NEXT:    mul v1.8h, v0.8h, v1.8h
-; CHECK-SD-NEXT:    uzp2 v2.8h, v3.8h, v2.8h
-; CHECK-SD-NEXT:    cmeq v2.8h, v2.8h, #0
-; CHECK-SD-NEXT:    bif v0.16b, v1.16b, v2.16b
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: umul_v8i16:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    umull2 v2.4s, v0.8h, v1.8h
-; CHECK-GI-NEXT:    umull v3.4s, v0.4h, v1.4h
-; CHECK-GI-NEXT:    mul v1.8h, v0.8h, v1.8h
-; CHECK-GI-NEXT:    uzp2 v2.8h, v3.8h, v2.8h
-; CHECK-GI-NEXT:    cmtst v2.8h, v2.8h, v2.8h
-; CHECK-GI-NEXT:    bit v0.16b, v1.16b, v2.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: umul_v8i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umull2 v2.4s, v0.8h, v1.8h
+; CHECK-NEXT:    umull v3.4s, v0.4h, v1.4h
+; CHECK-NEXT:    mul v1.8h, v0.8h, v1.8h
+; CHECK-NEXT:    uzp2 v2.8h, v3.8h, v2.8h
+; CHECK-NEXT:    cmeq v2.8h, v2.8h, #0
+; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-NEXT:    ret
   %o = call {<8 x i16>, <8 x i1>} @llvm.umul.with.overflow(<8 x i16> %a, <8 x i16> %b)
   %e0 = extractvalue {<8 x i16>, <8 x i1>} %o, 0
   %e1 = extractvalue {<8 x i16>, <8 x i1>} %o, 1
@@ -2082,8 +2043,7 @@ define <8 x i16> @smul_v8i16(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-GI-NEXT:    uzp2 v2.8h, v3.8h, v2.8h
 ; CHECK-GI-NEXT:    sshl v3.8h, v1.8h, v4.8h
 ; CHECK-GI-NEXT:    cmeq v2.8h, v2.8h, v3.8h
-; CHECK-GI-NEXT:    mvn v2.16b, v2.16b
-; CHECK-GI-NEXT:    bit v0.16b, v1.16b, v2.16b
+; CHECK-GI-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-GI-NEXT:    ret
   %o = call {<8 x i16>, <8 x i1>} @llvm.smul.with.overflow(<8 x i16> %a, <8 x i16> %b)
   %e0 = extractvalue {<8 x i16>, <8 x i1>} %o, 0
@@ -2245,10 +2205,10 @@ define <16 x i16> @umul_v16i16(<16 x i16> %a, <16 x i16> %b) {
 ; CHECK-GI-NEXT:    mul v3.8h, v1.8h, v3.8h
 ; CHECK-GI-NEXT:    uzp2 v4.8h, v5.8h, v4.8h
 ; CHECK-GI-NEXT:    uzp2 v5.8h, v7.8h, v6.8h
-; CHECK-GI-NEXT:    cmtst v4.8h, v4.8h, v4.8h
-; CHECK-GI-NEXT:    cmtst v5.8h, v5.8h, v5.8h
-; CHECK-GI-NEXT:    bit v0.16b, v2.16b, v4.16b
-; CHECK-GI-NEXT:    bit v1.16b, v3.16b, v5.16b
+; CHECK-GI-NEXT:    cmeq v4.8h, v4.8h, #0
+; CHECK-GI-NEXT:    cmeq v5.8h, v5.8h, #0
+; CHECK-GI-NEXT:    bif v0.16b, v2.16b, v4.16b
+; CHECK-GI-NEXT:    bif v1.16b, v3.16b, v5.16b
 ; CHECK-GI-NEXT:    ret
   %o = call {<16 x i16>, <16 x i1>} @llvm.umul.with.overflow(<16 x i16> %a, <16 x i16> %b)
   %e0 = extractvalue {<16 x i16>, <16 x i1>} %o, 0
@@ -2291,10 +2251,8 @@ define <16 x i16> @smul_v16i16(<16 x i16> %a, <16 x i16> %b) {
 ; CHECK-GI-NEXT:    sshl v7.8h, v3.8h, v16.8h
 ; CHECK-GI-NEXT:    cmeq v4.8h, v4.8h, v6.8h
 ; CHECK-GI-NEXT:    cmeq v5.8h, v5.8h, v7.8h
-; CHECK-GI-NEXT:    mvn v4.16b, v4.16b
-; CHECK-GI-NEXT:    mvn v5.16b, v5.16b
-; CHECK-GI-NEXT:    bit v0.16b, v2.16b, v4.16b
-; CHECK-GI-NEXT:    bit v1.16b, v3.16b, v5.16b
+; CHECK-GI-NEXT:    bif v0.16b, v2.16b, v4.16b
+; CHECK-GI-NEXT:    bif v1.16b, v3.16b, v5.16b
 ; CHECK-GI-NEXT:    ret
   %o = call {<16 x i16>, <16 x i1>} @llvm.smul.with.overflow(<16 x i16> %a, <16 x i16> %b)
   %e0 = extractvalue {<16 x i16>, <16 x i1>} %o, 0
@@ -2408,8 +2366,8 @@ define <2 x i32> @umul_v2i32(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-GI-NEXT:    umull v2.2d, v0.2s, v1.2s
 ; CHECK-GI-NEXT:    mul v1.2s, v0.2s, v1.2s
 ; CHECK-GI-NEXT:    shrn v2.2s, v2.2d, #32
-; CHECK-GI-NEXT:    cmtst v2.2s, v2.2s, v2.2s
-; CHECK-GI-NEXT:    bit v0.8b, v1.8b, v2.8b
+; CHECK-GI-NEXT:    cmeq v2.2s, v2.2s, #0
+; CHECK-GI-NEXT:    bif v0.8b, v1.8b, v2.8b
 ; CHECK-GI-NEXT:    ret
   %o = call {<2 x i32>, <2 x i1>} @llvm.umul.with.overflow(<2 x i32> %a, <2 x i32> %b)
   %e0 = extractvalue {<2 x i32>, <2 x i1>} %o, 0
@@ -2437,8 +2395,7 @@ define <2 x i32> @smul_v2i32(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-GI-NEXT:    shrn v3.2s, v3.2d, #32
 ; CHECK-GI-NEXT:    sshl v2.2s, v1.2s, v2.2s
 ; CHECK-GI-NEXT:    cmeq v2.2s, v3.2s, v2.2s
-; CHECK-GI-NEXT:    mvn v2.8b, v2.8b
-; CHECK-GI-NEXT:    bit v0.8b, v1.8b, v2.8b
+; CHECK-GI-NEXT:    bif v0.8b, v1.8b, v2.8b
 ; CHECK-GI-NEXT:    ret
   %o = call {<2 x i32>, <2 x i1>} @llvm.smul.with.overflow(<2 x i32> %a, <2 x i32> %b)
   %e0 = extractvalue {<2 x i32>, <2 x i1>} %o, 0
@@ -2457,13 +2414,13 @@ define <3 x i32> @uadd_v3i32(<3 x i32> %a, <3 x i32> %b) {
 ;
 ; CHECK-GI-LABEL: uadd_v3i32:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    add v3.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    movi v2.2d, #0xffffffffffffffff
-; CHECK-GI-NEXT:    cmhi v1.4s, v1.4s, v3.4s
-; CHECK-GI-NEXT:    eor v2.16b, v1.16b, v2.16b
-; CHECK-GI-NEXT:    and v1.16b, v3.16b, v1.16b
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
-; CHECK-GI-NEXT:    orr v0.16b, v1.16b, v0.16b
+; CHECK-GI-NEXT:    add v2.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    cmhi v1.4s, v1.4s, v2.4s
+; CHECK-GI-NEXT:    mov v3.s[0], v1.s[2]
+; CHECK-GI-NEXT:    mov v1.d[1], v3.d[0]
+; CHECK-GI-NEXT:    shl v1.4s, v1.4s, #31
+; CHECK-GI-NEXT:    cmlt v1.4s, v1.4s, #0
+; CHECK-GI-NEXT:    bit v0.16b, v2.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
   %o = call {<3 x i32>, <3 x i1>} @llvm.uadd.with.overflow(<3 x i32> %a, <3 x i32> %b)
   %e0 = extractvalue {<3 x i32>, <3 x i1>} %o, 0
@@ -2487,14 +2444,14 @@ define <3 x i32> @sadd_v3i32(<3 x i32> %a, <3 x i32> %b) {
 ; CHECK-GI-NEXT:    add v3.4s, v0.4s, v1.4s
 ; CHECK-GI-NEXT:    cmgt v4.4s, v0.4s, v3.4s
 ; CHECK-GI-NEXT:    cmgt v1.4s, v2.4s, v1.4s
-; CHECK-GI-NEXT:    movi v2.2d, #0xffffffffffffffff
 ; CHECK-GI-NEXT:    eor v1.16b, v1.16b, v4.16b
+; CHECK-GI-NEXT:    xtn v2.4h, v1.4s
+; CHECK-GI-NEXT:    umov w8, v2.h[2]
+; CHECK-GI-NEXT:    fmov s2, w8
+; CHECK-GI-NEXT:    mov v1.d[1], v2.d[0]
 ; CHECK-GI-NEXT:    shl v1.4s, v1.4s, #31
 ; CHECK-GI-NEXT:    cmlt v1.4s, v1.4s, #0
-; CHECK-GI-NEXT:    eor v2.16b, v1.16b, v2.16b
-; CHECK-GI-NEXT:    and v1.16b, v3.16b, v1.16b
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
-; CHECK-GI-NEXT:    orr v0.16b, v1.16b, v0.16b
+; CHECK-GI-NEXT:    bit v0.16b, v3.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
   %o = call {<3 x i32>, <3 x i1>} @llvm.sadd.with.overflow(<3 x i32> %a, <3 x i32> %b)
   %e0 = extractvalue {<3 x i32>, <3 x i1>} %o, 0
@@ -2513,13 +2470,13 @@ define <3 x i32> @usub_v3i32(<3 x i32> %a, <3 x i32> %b) {
 ;
 ; CHECK-GI-LABEL: usub_v3i32:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v2.2d, #0xffffffffffffffff
-; CHECK-GI-NEXT:    cmhi v3.4s, v1.4s, v0.4s
+; CHECK-GI-NEXT:    cmhi v2.4s, v1.4s, v0.4s
 ; CHECK-GI-NEXT:    sub v1.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    and v1.16b, v1.16b, v3.16b
-; CHECK-GI-NEXT:    eor v2.16b, v3.16b, v2.16b
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
-; CHECK-GI-NEXT:    orr v0.16b, v1.16b, v0.16b
+; CHECK-GI-NEXT:    mov v3.s[0], v2.s[2]
+; CHECK-GI-NEXT:    mov v2.d[1], v3.d[0]
+; CHECK-GI-NEXT:    shl v2.4s, v2.4s, #31
+; CHECK-GI-NEXT:    cmlt v2.4s, v2.4s, #0
+; CHECK-GI-NEXT:    bit v0.16b, v1.16b, v2.16b
 ; CHECK-GI-NEXT:    ret
   %o = call {<3 x i32>, <3 x i1>} @llvm.usub.with.overflow(<3 x i32> %a, <3 x i32> %b)
   %e0 = extractvalue {<3 x i32>, <3 x i1>} %o, 0
@@ -2544,13 +2501,13 @@ define <3 x i32> @ssub_v3i32(<3 x i32> %a, <3 x i32> %b) {
 ; CHECK-GI-NEXT:    cmgt v1.4s, v1.4s, v0.4s
 ; CHECK-GI-NEXT:    cmgt v2.4s, v2.4s, v3.4s
 ; CHECK-GI-NEXT:    eor v1.16b, v1.16b, v2.16b
-; CHECK-GI-NEXT:    movi v2.2d, #0xffffffffffffffff
+; CHECK-GI-NEXT:    xtn v2.4h, v1.4s
+; CHECK-GI-NEXT:    umov w8, v2.h[2]
+; CHECK-GI-NEXT:    fmov s2, w8
+; CHECK-GI-NEXT:    mov v1.d[1], v2.d[0]
 ; CHECK-GI-NEXT:    shl v1.4s, v1.4s, #31
 ; CHECK-GI-NEXT:    cmlt v1.4s, v1.4s, #0
-; CHECK-GI-NEXT:    eor v2.16b, v1.16b, v2.16b
-; CHECK-GI-NEXT:    and v1.16b, v3.16b, v1.16b
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
-; CHECK-GI-NEXT:    orr v0.16b, v1.16b, v0.16b
+; CHECK-GI-NEXT:    bit v0.16b, v3.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
   %o = call {<3 x i32>, <3 x i1>} @llvm.ssub.with.overflow(<3 x i32> %a, <3 x i32> %b)
   %e0 = extractvalue {<3 x i32>, <3 x i1>} %o, 0
@@ -2591,12 +2548,12 @@ define <3 x i32> @umul_v3i32(<3 x i32> %a, <3 x i32> %b) {
 ; CHECK-GI-NEXT:    mov v3.s[1], w9
 ; CHECK-GI-NEXT:    mov v3.s[2], w8
 ; CHECK-GI-NEXT:    cmeq v2.4s, v3.4s, v2.4s
-; CHECK-GI-NEXT:    movi v3.2d, #0xffffffffffffffff
-; CHECK-GI-NEXT:    mvn v4.16b, v2.16b
-; CHECK-GI-NEXT:    bic v1.16b, v1.16b, v2.16b
-; CHECK-GI-NEXT:    eor v3.16b, v4.16b, v3.16b
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v3.16b
-; CHECK-GI-NEXT:    orr v0.16b, v1.16b, v0.16b
+; CHECK-GI-NEXT:    mvn v2.16b, v2.16b
+; CHECK-GI-NEXT:    mov v3.s[0], v2.s[2]
+; CHECK-GI-NEXT:    mov v2.d[1], v3.d[0]
+; CHECK-GI-NEXT:    shl v2.4s, v2.4s, #31
+; CHECK-GI-NEXT:    cmlt v2.4s, v2.4s, #0
+; CHECK-GI-NEXT:    bit v0.16b, v1.16b, v2.16b
 ; CHECK-GI-NEXT:    ret
   %o = call {<3 x i32>, <3 x i1>} @llvm.umul.with.overflow(<3 x i32> %a, <3 x i32> %b)
   %e0 = extractvalue {<3 x i32>, <3 x i1>} %o, 0
@@ -2640,12 +2597,12 @@ define <3 x i32> @smul_v3i32(<3 x i32> %a, <3 x i32> %b) {
 ; CHECK-GI-NEXT:    mov v3.s[1], w9
 ; CHECK-GI-NEXT:    mov v3.s[2], w8
 ; CHECK-GI-NEXT:    cmeq v2.4s, v3.4s, v2.4s
-; CHECK-GI-NEXT:    movi v3.2d, #0xffffffffffffffff
-; CHECK-GI-NEXT:    mvn v4.16b, v2.16b
-; CHECK-GI-NEXT:    bic v1.16b, v1.16b, v2.16b
-; CHECK-GI-NEXT:    eor v3.16b, v4.16b, v3.16b
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v3.16b
-; CHECK-GI-NEXT:    orr v0.16b, v1.16b, v0.16b
+; CHECK-GI-NEXT:    mvn v2.16b, v2.16b
+; CHECK-GI-NEXT:    mov v3.s[0], v2.s[2]
+; CHECK-GI-NEXT:    mov v2.d[1], v3.d[0]
+; CHECK-GI-NEXT:    shl v2.4s, v2.4s, #31
+; CHECK-GI-NEXT:    cmlt v2.4s, v2.4s, #0
+; CHECK-GI-NEXT:    bit v0.16b, v1.16b, v2.16b
 ; CHECK-GI-NEXT:    ret
   %o = call {<3 x i32>, <3 x i1>} @llvm.smul.with.overflow(<3 x i32> %a, <3 x i32> %b)
   %e0 = extractvalue {<3 x i32>, <3 x i1>} %o, 0
@@ -2745,25 +2702,15 @@ define <4 x i32> @ssub_v4i32(<4 x i32> %a, <4 x i32> %b) {
 }
 
 define <4 x i32> @umul_v4i32(<4 x i32> %a, <4 x i32> %b) {
-; CHECK-SD-LABEL: umul_v4i32:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    umull2 v2.2d, v0.4s, v1.4s
-; CHECK-SD-NEXT:    umull v3.2d, v0.2s, v1.2s
-; CHECK-SD-NEXT:    mul v1.4s, v0.4s, v1.4s
-; CHECK-SD-NEXT:    uzp2 v2.4s, v3.4s, v2.4s
-; CHECK-SD-NEXT:    cmeq v2.4s, v2.4s, #0
-; CHECK-SD-NEXT:    bif v0.16b, v1.16b, v2.16b
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: umul_v4i32:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    umull2 v2.2d, v0.4s, v1.4s
-; CHECK-GI-NEXT:    umull v3.2d, v0.2s, v1.2s
-; CHECK-GI-NEXT:    mul v1.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    uzp2 v2.4s, v3.4s, v2.4s
-; CHECK-GI-NEXT:    cmtst v2.4s, v2.4s, v2.4s
-; CHECK-GI-NEXT:    bit v0.16b, v1.16b, v2.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: umul_v4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umull2 v2.2d, v0.4s, v1.4s
+; CHECK-NEXT:    umull v3.2d, v0.2s, v1.2s
+; CHECK-NEXT:    mul v1.4s, v0.4s, v1.4s
+; CHECK-NEXT:    uzp2 v2.4s, v3.4s, v2.4s
+; CHECK-NEXT:    cmeq v2.4s, v2.4s, #0
+; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-NEXT:    ret
   %o = call {<4 x i32>, <4 x i1>} @llvm.umul.with.overflow(<4 x i32> %a, <4 x i32> %b)
   %e0 = extractvalue {<4 x i32>, <4 x i1>} %o, 0
   %e1 = extractvalue {<4 x i32>, <4 x i1>} %o, 1
@@ -2792,8 +2739,7 @@ define <4 x i32> @smul_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-GI-NEXT:    uzp2 v2.4s, v3.4s, v2.4s
 ; CHECK-GI-NEXT:    sshl v3.4s, v1.4s, v4.4s
 ; CHECK-GI-NEXT:    cmeq v2.4s, v2.4s, v3.4s
-; CHECK-GI-NEXT:    mvn v2.16b, v2.16b
-; CHECK-GI-NEXT:    bit v0.16b, v1.16b, v2.16b
+; CHECK-GI-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-GI-NEXT:    ret
   %o = call {<4 x i32>, <4 x i1>} @llvm.smul.with.overflow(<4 x i32> %a, <4 x i32> %b)
   %e0 = extractvalue {<4 x i32>, <4 x i1>} %o, 0
@@ -2955,10 +2901,10 @@ define <8 x i32> @umul_v8i32(<8 x i32> %a, <8 x i32> %b) {
 ; CHECK-GI-NEXT:    mul v3.4s, v1.4s, v3.4s
 ; CHECK-GI-NEXT:    uzp2 v4.4s, v5.4s, v4.4s
 ; CHECK-GI-NEXT:    uzp2 v5.4s, v7.4s, v6.4s
-; CHECK-GI-NEXT:    cmtst v4.4s, v4.4s, v4.4s
-; CHECK-GI-NEXT:    cmtst v5.4s, v5.4s, v5.4s
-; CHECK-GI-NEXT:    bit v0.16b, v2.16b, v4.16b
-; CHECK-GI-NEXT:    bit v1.16b, v3.16b, v5.16b
+; CHECK-GI-NEXT:    cmeq v4.4s, v4.4s, #0
+; CHECK-GI-NEXT:    cmeq v5.4s, v5.4s, #0
+; CHECK-GI-NEXT:    bif v0.16b, v2.16b, v4.16b
+; CHECK-GI-NEXT:    bif v1.16b, v3.16b, v5.16b
 ; CHECK-GI-NEXT:    ret
   %o = call {<8 x i32>, <8 x i1>} @llvm.umul.with.overflow(<8 x i32> %a, <8 x i32> %b)
   %e0 = extractvalue {<8 x i32>, <8 x i1>} %o, 0
@@ -3001,10 +2947,8 @@ define <8 x i32> @smul_v8i32(<8 x i32> %a, <8 x i32> %b) {
 ; CHECK-GI-NEXT:    sshl v7.4s, v3.4s, v16.4s
 ; CHECK-GI-NEXT:    cmeq v4.4s, v4.4s, v6.4s
 ; CHECK-GI-NEXT:    cmeq v5.4s, v5.4s, v7.4s
-; CHECK-GI-NEXT:    mvn v4.16b, v4.16b
-; CHECK-GI-NEXT:    mvn v5.16b, v5.16b
-; CHECK-GI-NEXT:    bit v0.16b, v2.16b, v4.16b
-; CHECK-GI-NEXT:    bit v1.16b, v3.16b, v5.16b
+; CHECK-GI-NEXT:    bif v0.16b, v2.16b, v4.16b
+; CHECK-GI-NEXT:    bif v1.16b, v3.16b, v5.16b
 ; CHECK-GI-NEXT:    ret
   %o = call {<8 x i32>, <8 x i1>} @llvm.smul.with.overflow(<8 x i32> %a, <8 x i32> %b)
   %e0 = extractvalue {<8 x i32>, <8 x i1>} %o, 0
@@ -3139,8 +3083,8 @@ define <2 x i64> @umul_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-GI-NEXT:    mov v1.d[1], x13
 ; CHECK-GI-NEXT:    fmov d2, x10
 ; CHECK-GI-NEXT:    mov v2.d[1], x8
-; CHECK-GI-NEXT:    cmtst v1.2d, v1.2d, v1.2d
-; CHECK-GI-NEXT:    bit v0.16b, v2.16b, v1.16b
+; CHECK-GI-NEXT:    cmeq v1.2d, v1.2d, #0
+; CHECK-GI-NEXT:    bif v0.16b, v2.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
   %o = call {<2 x i64>, <2 x i1>} @llvm.umul.with.overflow(<2 x i64> %a, <2 x i64> %b)
   %e0 = extractvalue {<2 x i64>, <2 x i1>} %o, 0
@@ -3201,8 +3145,7 @@ define <2 x i64> @smul_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-GI-NEXT:    mov v2.d[1], x11
 ; CHECK-GI-NEXT:    sshl v3.2d, v1.2d, v3.2d
 ; CHECK-GI-NEXT:    cmeq v2.2d, v2.2d, v3.2d
-; CHECK-GI-NEXT:    mvn v2.16b, v2.16b
-; CHECK-GI-NEXT:    bit v0.16b, v1.16b, v2.16b
+; CHECK-GI-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-GI-NEXT:    ret
   %o = call {<2 x i64>, <2 x i1>} @llvm.smul.with.overflow(<2 x i64> %a, <2 x i64> %b)
   %e0 = extractvalue {<2 x i64>, <2 x i1>} %o, 0
@@ -3240,26 +3183,24 @@ define <3 x i64> @uadd_v3i64(<3 x i64> %a, <3 x i64> %b) {
 ; CHECK-GI-NEXT:    mov v7.16b, v3.16b
 ; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-GI-NEXT:    // kill: def $d4 killed $d4 def $q4
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-GI-NEXT:    // kill: def $d5 killed $d5 def $q5
 ; CHECK-GI-NEXT:    fmov x8, d2
 ; CHECK-GI-NEXT:    mov v3.d[1], v4.d[0]
-; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    fmov x9, d5
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    mov v6.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    mov v7.d[1], v4.d[0]
-; CHECK-GI-NEXT:    add x9, x8, x9
+; CHECK-GI-NEXT:    add x8, x8, x9
 ; CHECK-GI-NEXT:    add v4.2d, v6.2d, v7.2d
 ; CHECK-GI-NEXT:    cmhi v1.2d, v3.2d, v4.2d
+; CHECK-GI-NEXT:    fmov d3, x8
 ; CHECK-GI-NEXT:    bit v0.16b, v4.16b, v1.16b
-; CHECK-GI-NEXT:    fmov d1, x9
-; CHECK-GI-NEXT:    cmhi v2.2d, v5.2d, v1.2d
+; CHECK-GI-NEXT:    cmhi v1.2d, v5.2d, v3.2d
+; CHECK-GI-NEXT:    bit v2.16b, v3.16b, v1.16b
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-GI-NEXT:    fmov x10, d2
-; CHECK-GI-NEXT:    and x9, x9, x10
-; CHECK-GI-NEXT:    bic x8, x8, x10
-; CHECK-GI-NEXT:    orr x8, x9, x8
-; CHECK-GI-NEXT:    fmov d2, x8
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-GI-NEXT:    ret
   %o = call {<3 x i64>, <3 x i1>} @llvm.uadd.with.overflow(<3 x i64> %a, <3 x i64> %b)
   %e0 = extractvalue {<3 x i64>, <3 x i1>} %o, 0
@@ -3302,45 +3243,47 @@ define <3 x i64> @sadd_v3i64(<3 x i64> %a, <3 x i64> %b) {
 ; CHECK-GI-NEXT:    // kill: def $d4 killed $d4 def $q4
 ; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-GI-NEXT:    // kill: def $d5 killed $d5 def $q5
-; CHECK-GI-NEXT:    mov v17.16b, v0.16b
-; CHECK-GI-NEXT:    mov v3.d[1], v4.d[0]
 ; CHECK-GI-NEXT:    fmov x10, d2
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-GI-NEXT:    mov v3.d[1], v4.d[0]
 ; CHECK-GI-NEXT:    fmov x11, d5
 ; CHECK-GI-NEXT:    movi d6, #0000000000000000
-; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    mov v7.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    mov v16.d[1], v4.d[0]
-; CHECK-GI-NEXT:    mov v17.d[1], v1.d[0]
-; CHECK-GI-NEXT:    add x11, x10, x11
+; CHECK-GI-NEXT:    add x10, x10, x11
 ; CHECK-GI-NEXT:    cmlt v3.2d, v3.2d, #0
 ; CHECK-GI-NEXT:    cmgt v5.2d, v6.2d, v5.2d
-; CHECK-GI-NEXT:    add v4.2d, v7.2d, v16.2d
-; CHECK-GI-NEXT:    fmov d16, x11
+; CHECK-GI-NEXT:    add v1.2d, v7.2d, v16.2d
+; CHECK-GI-NEXT:    fmov d7, x10
 ; CHECK-GI-NEXT:    fmov x12, d3
 ; CHECK-GI-NEXT:    mov x8, v3.d[1]
-; CHECK-GI-NEXT:    cmgt v7.2d, v17.2d, v4.2d
-; CHECK-GI-NEXT:    cmgt v2.2d, v2.2d, v16.2d
+; CHECK-GI-NEXT:    cmgt v4.2d, v0.2d, v1.2d
+; CHECK-GI-NEXT:    cmgt v6.2d, v2.2d, v7.2d
 ; CHECK-GI-NEXT:    fmov s3, w12
-; CHECK-GI-NEXT:    fmov x13, d7
-; CHECK-GI-NEXT:    mov x9, v7.d[1]
+; CHECK-GI-NEXT:    fmov x13, d4
+; CHECK-GI-NEXT:    mov x9, v4.d[1]
 ; CHECK-GI-NEXT:    mov v3.h[1], w8
-; CHECK-GI-NEXT:    fmov s7, w13
+; CHECK-GI-NEXT:    fmov s4, w13
 ; CHECK-GI-NEXT:    mov v3.h[2], v5.h[0]
-; CHECK-GI-NEXT:    mov v7.h[1], w9
-; CHECK-GI-NEXT:    mov v7.h[2], v2.h[0]
-; CHECK-GI-NEXT:    eor v2.8b, v3.8b, v7.8b
-; CHECK-GI-NEXT:    zip1 v3.4h, v2.4h, v2.4h
-; CHECK-GI-NEXT:    smov x8, v2.h[2]
-; CHECK-GI-NEXT:    ushll v3.2d, v3.2s, #0
-; CHECK-GI-NEXT:    and x9, x11, x8
-; CHECK-GI-NEXT:    bic x8, x10, x8
-; CHECK-GI-NEXT:    orr x8, x9, x8
-; CHECK-GI-NEXT:    fmov d2, x8
-; CHECK-GI-NEXT:    shl v3.2d, v3.2d, #63
-; CHECK-GI-NEXT:    cmlt v1.2d, v3.2d, #0
-; CHECK-GI-NEXT:    bit v0.16b, v4.16b, v1.16b
+; CHECK-GI-NEXT:    mov v4.h[1], w9
+; CHECK-GI-NEXT:    mov v4.h[2], v6.h[0]
+; CHECK-GI-NEXT:    eor v3.8b, v3.8b, v4.8b
+; CHECK-GI-NEXT:    umov w8, v3.h[0]
+; CHECK-GI-NEXT:    umov w9, v3.h[1]
+; CHECK-GI-NEXT:    fmov d4, x8
+; CHECK-GI-NEXT:    umov w8, v3.h[2]
+; CHECK-GI-NEXT:    mov v4.d[1], x9
+; CHECK-GI-NEXT:    shl v3.2d, v4.2d, #63
+; CHECK-GI-NEXT:    fmov d4, x8
+; CHECK-GI-NEXT:    cmlt v3.2d, v3.2d, #0
+; CHECK-GI-NEXT:    shl v4.2d, v4.2d, #63
+; CHECK-GI-NEXT:    bit v0.16b, v1.16b, v3.16b
+; CHECK-GI-NEXT:    cmlt v1.2d, v4.2d, #0
+; CHECK-GI-NEXT:    fmov d3, x10
+; CHECK-GI-NEXT:    bit v2.16b, v3.16b, v1.16b
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-GI-NEXT:    ret
   %o = call {<3 x i64>, <3 x i1>} @llvm.sadd.with.overflow(<3 x i64> %a, <3 x i64> %b)
   %e0 = extractvalue {<3 x i64>, <3 x i1>} %o, 0
@@ -3374,32 +3317,28 @@ define <3 x i64> @usub_v3i64(<3 x i64> %a, <3 x i64> %b) {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    // kill: def $d3 killed $d3 def $q3
-; CHECK-GI-NEXT:    mov v6.16b, v3.16b
-; CHECK-GI-NEXT:    mov v7.16b, v0.16b
+; CHECK-GI-NEXT:    mov v6.16b, v0.16b
+; CHECK-GI-NEXT:    mov v7.16b, v3.16b
 ; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-GI-NEXT:    // kill: def $d4 killed $d4 def $q4
 ; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-GI-NEXT:    // kill: def $d5 killed $d5 def $q5
-; CHECK-GI-NEXT:    mov v16.16b, v0.16b
-; CHECK-GI-NEXT:    mov v3.d[1], v4.d[0]
-; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    fmov x8, d2
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-GI-NEXT:    mov v3.d[1], v4.d[0]
 ; CHECK-GI-NEXT:    fmov x9, d5
-; CHECK-GI-NEXT:    mov v6.d[1], v4.d[0]
-; CHECK-GI-NEXT:    mov v7.d[1], v1.d[0]
-; CHECK-GI-NEXT:    mov v16.d[1], v1.d[0]
-; CHECK-GI-NEXT:    sub x9, x8, x9
-; CHECK-GI-NEXT:    sub v1.2d, v7.2d, v6.2d
-; CHECK-GI-NEXT:    cmhi v3.2d, v3.2d, v16.2d
+; CHECK-GI-NEXT:    mov v6.d[1], v1.d[0]
+; CHECK-GI-NEXT:    mov v7.d[1], v4.d[0]
+; CHECK-GI-NEXT:    sub x8, x8, x9
+; CHECK-GI-NEXT:    cmhi v3.2d, v3.2d, v0.2d
+; CHECK-GI-NEXT:    sub v1.2d, v6.2d, v7.2d
 ; CHECK-GI-NEXT:    bit v0.16b, v1.16b, v3.16b
-; CHECK-GI-NEXT:    cmhi v3.2d, v5.2d, v2.2d
-; CHECK-GI-NEXT:    fmov x10, d3
+; CHECK-GI-NEXT:    cmhi v1.2d, v5.2d, v2.2d
+; CHECK-GI-NEXT:    fmov d3, x8
+; CHECK-GI-NEXT:    bit v2.16b, v3.16b, v1.16b
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-GI-NEXT:    and x9, x9, x10
-; CHECK-GI-NEXT:    bic x8, x8, x10
-; CHECK-GI-NEXT:    orr x8, x9, x8
-; CHECK-GI-NEXT:    fmov d2, x8
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-GI-NEXT:    ret
   %o = call {<3 x i64>, <3 x i1>} @llvm.usub.with.overflow(<3 x i64> %a, <3 x i64> %b)
   %e0 = extractvalue {<3 x i64>, <3 x i1>} %o, 0
@@ -3442,45 +3381,47 @@ define <3 x i64> @ssub_v3i64(<3 x i64> %a, <3 x i64> %b) {
 ; CHECK-GI-NEXT:    // kill: def $d4 killed $d4 def $q4
 ; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-GI-NEXT:    // kill: def $d5 killed $d5 def $q5
-; CHECK-GI-NEXT:    mov v17.16b, v0.16b
-; CHECK-GI-NEXT:    mov v3.d[1], v4.d[0]
 ; CHECK-GI-NEXT:    fmov x10, d2
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-GI-NEXT:    mov v3.d[1], v4.d[0]
 ; CHECK-GI-NEXT:    fmov x11, d5
 ; CHECK-GI-NEXT:    movi d6, #0000000000000000
-; CHECK-GI-NEXT:    cmgt v2.2d, v5.2d, v2.2d
-; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-GI-NEXT:    cmgt v5.2d, v5.2d, v2.2d
 ; CHECK-GI-NEXT:    mov v7.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    mov v16.d[1], v4.d[0]
-; CHECK-GI-NEXT:    mov v17.d[1], v1.d[0]
-; CHECK-GI-NEXT:    sub x11, x10, x11
-; CHECK-GI-NEXT:    sub v4.2d, v7.2d, v16.2d
-; CHECK-GI-NEXT:    cmgt v3.2d, v3.2d, v17.2d
-; CHECK-GI-NEXT:    fmov d16, x11
-; CHECK-GI-NEXT:    cmlt v7.2d, v4.2d, #0
+; CHECK-GI-NEXT:    sub x10, x10, x11
+; CHECK-GI-NEXT:    cmgt v3.2d, v3.2d, v0.2d
+; CHECK-GI-NEXT:    sub v1.2d, v7.2d, v16.2d
+; CHECK-GI-NEXT:    fmov d7, x10
 ; CHECK-GI-NEXT:    fmov x12, d3
 ; CHECK-GI-NEXT:    mov x8, v3.d[1]
-; CHECK-GI-NEXT:    cmgt v5.2d, v6.2d, v16.2d
-; CHECK-GI-NEXT:    fmov x13, d7
-; CHECK-GI-NEXT:    mov x9, v7.d[1]
+; CHECK-GI-NEXT:    cmlt v4.2d, v1.2d, #0
+; CHECK-GI-NEXT:    cmgt v6.2d, v6.2d, v7.2d
 ; CHECK-GI-NEXT:    fmov s3, w12
-; CHECK-GI-NEXT:    fmov s7, w13
+; CHECK-GI-NEXT:    fmov x13, d4
+; CHECK-GI-NEXT:    mov x9, v4.d[1]
 ; CHECK-GI-NEXT:    mov v3.h[1], w8
-; CHECK-GI-NEXT:    mov v7.h[1], w9
-; CHECK-GI-NEXT:    mov v3.h[2], v2.h[0]
-; CHECK-GI-NEXT:    mov v7.h[2], v5.h[0]
-; CHECK-GI-NEXT:    eor v2.8b, v3.8b, v7.8b
-; CHECK-GI-NEXT:    zip1 v3.4h, v2.4h, v2.4h
-; CHECK-GI-NEXT:    smov x8, v2.h[2]
-; CHECK-GI-NEXT:    ushll v3.2d, v3.2s, #0
-; CHECK-GI-NEXT:    and x9, x11, x8
-; CHECK-GI-NEXT:    bic x8, x10, x8
-; CHECK-GI-NEXT:    orr x8, x9, x8
-; CHECK-GI-NEXT:    fmov d2, x8
-; CHECK-GI-NEXT:    shl v3.2d, v3.2d, #63
-; CHECK-GI-NEXT:    cmlt v1.2d, v3.2d, #0
-; CHECK-GI-NEXT:    bit v0.16b, v4.16b, v1.16b
+; CHECK-GI-NEXT:    fmov s4, w13
+; CHECK-GI-NEXT:    mov v3.h[2], v5.h[0]
+; CHECK-GI-NEXT:    mov v4.h[1], w9
+; CHECK-GI-NEXT:    mov v4.h[2], v6.h[0]
+; CHECK-GI-NEXT:    eor v3.8b, v3.8b, v4.8b
+; CHECK-GI-NEXT:    umov w8, v3.h[0]
+; CHECK-GI-NEXT:    umov w9, v3.h[1]
+; CHECK-GI-NEXT:    fmov d4, x8
+; CHECK-GI-NEXT:    umov w8, v3.h[2]
+; CHECK-GI-NEXT:    mov v4.d[1], x9
+; CHECK-GI-NEXT:    shl v3.2d, v4.2d, #63
+; CHECK-GI-NEXT:    fmov d4, x8
+; CHECK-GI-NEXT:    cmlt v3.2d, v3.2d, #0
+; CHECK-GI-NEXT:    shl v4.2d, v4.2d, #63
+; CHECK-GI-NEXT:    bit v0.16b, v1.16b, v3.16b
+; CHECK-GI-NEXT:    cmlt v1.2d, v4.2d, #0
+; CHECK-GI-NEXT:    fmov d3, x10
+; CHECK-GI-NEXT:    bit v2.16b, v3.16b, v1.16b
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-GI-NEXT:    ret
   %o = call {<3 x i64>, <3 x i1>} @llvm.ssub.with.overflow(<3 x i64> %a, <3 x i64> %b)
   %e0 = extractvalue {<3 x i64>, <3 x i1>} %o, 0
@@ -3538,6 +3479,7 @@ define <3 x i64> @umul_v3i64(<3 x i64> %a, <3 x i64> %b) {
 ; CHECK-GI-NEXT:    fmov x8, d0
 ; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-GI-NEXT:    // kill: def $d4 killed $d4 def $q4
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-GI-NEXT:    fmov x9, d3
 ; CHECK-GI-NEXT:    mov v7.16b, v0.16b
 ; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
@@ -3550,30 +3492,27 @@ define <3 x i64> @umul_v3i64(<3 x i64> %a, <3 x i64> %b) {
 ; CHECK-GI-NEXT:    fmov x12, d0
 ; CHECK-GI-NEXT:    umulh x9, x9, x10
 ; CHECK-GI-NEXT:    mov x10, v0.d[1]
-; CHECK-GI-NEXT:    mov x11, v16.d[1]
 ; CHECK-GI-NEXT:    fmov x13, d16
+; CHECK-GI-NEXT:    mov x11, v16.d[1]
 ; CHECK-GI-NEXT:    fmov d0, x8
 ; CHECK-GI-NEXT:    fmov x8, d2
 ; CHECK-GI-NEXT:    mul x12, x12, x13
 ; CHECK-GI-NEXT:    mov v0.d[1], x9
+; CHECK-GI-NEXT:    fmov x9, d5
 ; CHECK-GI-NEXT:    mul x10, x10, x11
-; CHECK-GI-NEXT:    fmov x11, d5
-; CHECK-GI-NEXT:    umulh x9, x8, x11
-; CHECK-GI-NEXT:    fmov d2, x12
-; CHECK-GI-NEXT:    cmtst v0.2d, v0.2d, v0.2d
-; CHECK-GI-NEXT:    mov v2.d[1], x10
-; CHECK-GI-NEXT:    fmov d1, x9
-; CHECK-GI-NEXT:    mul x9, x8, x11
-; CHECK-GI-NEXT:    bsl v0.16b, v2.16b, v7.16b
+; CHECK-GI-NEXT:    umulh x11, x8, x9
+; CHECK-GI-NEXT:    fmov d3, x12
+; CHECK-GI-NEXT:    cmeq v0.2d, v0.2d, #0
+; CHECK-GI-NEXT:    mul x8, x8, x9
+; CHECK-GI-NEXT:    mov v3.d[1], x10
+; CHECK-GI-NEXT:    fmov d1, x11
+; CHECK-GI-NEXT:    bsl v0.16b, v7.16b, v3.16b
 ; CHECK-GI-NEXT:    cmeq v1.2d, v1.2d, v6.2d
-; CHECK-GI-NEXT:    mvn v2.16b, v1.16b
+; CHECK-GI-NEXT:    fmov d3, x8
+; CHECK-GI-NEXT:    bif v2.16b, v3.16b, v1.16b
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-GI-NEXT:    fmov x10, d2
-; CHECK-GI-NEXT:    and x9, x9, x10
-; CHECK-GI-NEXT:    bic x8, x8, x10
-; CHECK-GI-NEXT:    orr x8, x9, x8
-; CHECK-GI-NEXT:    fmov d2, x8
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-GI-NEXT:    ret
   %o = call {<3 x i64>, <3 x i1>} @llvm.umul.with.overflow(<3 x i64> %a, <3 x i64> %b)
   %e0 = extractvalue {<3 x i64>, <3 x i1>} %o, 0
@@ -3631,6 +3570,7 @@ define <3 x i64> @smul_v3i64(<3 x i64> %a, <3 x i64> %b) {
 ; CHECK-GI-NEXT:    fmov x9, d3
 ; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-GI-NEXT:    // kill: def $d4 killed $d4 def $q4
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-GI-NEXT:    fmov x12, d4
 ; CHECK-GI-NEXT:    mov v6.16b, v0.16b
 ; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
@@ -3651,39 +3591,35 @@ define <3 x i64> @smul_v3i64(<3 x i64> %a, <3 x i64> %b) {
 ; CHECK-GI-NEXT:    mov x13, v3.d[1]
 ; CHECK-GI-NEXT:    asr x11, x11, #63
 ; CHECK-GI-NEXT:    mul x14, x14, x15
-; CHECK-GI-NEXT:    fmov d3, x8
-; CHECK-GI-NEXT:    mul x10, x10, x13
+; CHECK-GI-NEXT:    fmov d4, x8
 ; CHECK-GI-NEXT:    madd x9, x11, x12, x9
 ; CHECK-GI-NEXT:    fmov x11, d2
 ; CHECK-GI-NEXT:    fmov x12, d5
+; CHECK-GI-NEXT:    mul x10, x10, x13
 ; CHECK-GI-NEXT:    fmov d0, x14
+; CHECK-GI-NEXT:    asr x15, x12, #63
+; CHECK-GI-NEXT:    asr x8, x11, #63
 ; CHECK-GI-NEXT:    umulh x13, x11, x12
-; CHECK-GI-NEXT:    asr x14, x12, #63
+; CHECK-GI-NEXT:    mov v4.d[1], x9
+; CHECK-GI-NEXT:    mul x9, x11, x12
 ; CHECK-GI-NEXT:    mov v0.d[1], x10
 ; CHECK-GI-NEXT:    adrp x10, .LCPI101_0
-; CHECK-GI-NEXT:    ldr q2, [x10, :lo12:.LCPI101_0]
-; CHECK-GI-NEXT:    mov v3.d[1], x9
-; CHECK-GI-NEXT:    asr x9, x11, #63
-; CHECK-GI-NEXT:    madd x8, x11, x14, x13
-; CHECK-GI-NEXT:    mul x10, x11, x12
-; CHECK-GI-NEXT:    sshl v2.2d, v0.2d, v2.2d
-; CHECK-GI-NEXT:    madd x8, x9, x12, x8
-; CHECK-GI-NEXT:    mov w9, #191 // =0xbf
-; CHECK-GI-NEXT:    cmeq v2.2d, v3.2d, v2.2d
-; CHECK-GI-NEXT:    asr x9, x10, x9
-; CHECK-GI-NEXT:    mvn v1.16b, v2.16b
-; CHECK-GI-NEXT:    fmov d2, x8
+; CHECK-GI-NEXT:    madd x13, x11, x15, x13
+; CHECK-GI-NEXT:    ldr q3, [x10, :lo12:.LCPI101_0]
+; CHECK-GI-NEXT:    mov w10, #191 // =0xbf
+; CHECK-GI-NEXT:    madd x8, x8, x12, x13
+; CHECK-GI-NEXT:    sshl v3.2d, v0.2d, v3.2d
+; CHECK-GI-NEXT:    asr x10, x9, x10
+; CHECK-GI-NEXT:    cmeq v1.2d, v4.2d, v3.2d
+; CHECK-GI-NEXT:    fmov d4, x10
+; CHECK-GI-NEXT:    fmov d3, x8
+; CHECK-GI-NEXT:    bit v0.16b, v6.16b, v1.16b
+; CHECK-GI-NEXT:    cmeq v1.2d, v3.2d, v4.2d
 ; CHECK-GI-NEXT:    fmov d3, x9
-; CHECK-GI-NEXT:    bif v0.16b, v6.16b, v1.16b
-; CHECK-GI-NEXT:    cmeq v2.2d, v2.2d, v3.2d
-; CHECK-GI-NEXT:    mvn v2.16b, v2.16b
+; CHECK-GI-NEXT:    bif v2.16b, v3.16b, v1.16b
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-GI-NEXT:    fmov x8, d2
-; CHECK-GI-NEXT:    and x9, x10, x8
-; CHECK-GI-NEXT:    bic x8, x11, x8
-; CHECK-GI-NEXT:    orr x8, x9, x8
-; CHECK-GI-NEXT:    fmov d2, x8
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-GI-NEXT:    ret
   %o = call {<3 x i64>, <3 x i1>} @llvm.smul.with.overflow(<3 x i64> %a, <3 x i64> %b)
   %e0 = extractvalue {<3 x i64>, <3 x i1>} %o, 0
@@ -3879,14 +3815,14 @@ define <4 x i64> @umul_v4i64(<4 x i64> %a, <4 x i64> %b) {
 ; CHECK-GI-NEXT:    mov v3.d[1], x0
 ; CHECK-GI-NEXT:    mul x10, x13, x14
 ; CHECK-GI-NEXT:    fmov d4, x8
-; CHECK-GI-NEXT:    cmtst v2.2d, v2.2d, v2.2d
+; CHECK-GI-NEXT:    cmeq v2.2d, v2.2d, #0
 ; CHECK-GI-NEXT:    mul x11, x17, x15
-; CHECK-GI-NEXT:    cmtst v3.2d, v3.2d, v3.2d
+; CHECK-GI-NEXT:    cmeq v3.2d, v3.2d, #0
 ; CHECK-GI-NEXT:    mov v4.d[1], x9
 ; CHECK-GI-NEXT:    fmov d5, x10
 ; CHECK-GI-NEXT:    mov v5.d[1], x11
-; CHECK-GI-NEXT:    bit v0.16b, v4.16b, v2.16b
-; CHECK-GI-NEXT:    bit v1.16b, v5.16b, v3.16b
+; CHECK-GI-NEXT:    bif v0.16b, v4.16b, v2.16b
+; CHECK-GI-NEXT:    bif v1.16b, v5.16b, v3.16b
 ; CHECK-GI-NEXT:    ret
   %o = call {<4 x i64>, <4 x i1>} @llvm.umul.with.overflow(<4 x i64> %a, <4 x i64> %b)
   %e0 = extractvalue {<4 x i64>, <4 x i1>} %o, 0
@@ -3989,11 +3925,9 @@ define <4 x i64> @smul_v4i64(<4 x i64> %a, <4 x i64> %b) {
 ; CHECK-GI-NEXT:    cmeq v4.2d, v4.2d, v7.2d
 ; CHECK-GI-NEXT:    mov v5.d[1], x13
 ; CHECK-GI-NEXT:    sshl v6.2d, v3.2d, v6.2d
-; CHECK-GI-NEXT:    mvn v4.16b, v4.16b
+; CHECK-GI-NEXT:    bif v0.16b, v2.16b, v4.16b
 ; CHECK-GI-NEXT:    cmeq v5.2d, v5.2d, v6.2d
-; CHECK-GI-NEXT:    bit v0.16b, v2.16b, v4.16b
-; CHECK-GI-NEXT:    mvn v5.16b, v5.16b
-; CHECK-GI-NEXT:    bit v1.16b, v3.16b, v5.16b
+; CHECK-GI-NEXT:    bif v1.16b, v3.16b, v5.16b
 ; CHECK-GI-NEXT:    ret
   %o = call {<4 x i64>, <4 x i1>} @llvm.smul.with.overflow(<4 x i64> %a, <4 x i64> %b)
   %e0 = extractvalue {<4 x i64>, <4 x i1>} %o, 0
