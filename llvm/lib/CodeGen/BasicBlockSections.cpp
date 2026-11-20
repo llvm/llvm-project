@@ -171,8 +171,6 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 
 private:
-  bool handleBBSections(MachineFunction &MF);
-  bool handleBBAddrMap(MachineFunction &MF);
   bool shouldSplitWithPGO(MachineFunction &MF);
   void assignColdSectionWithPGO(MachineFunction &MF);
 
@@ -547,7 +545,7 @@ void BasicBlockSections::assignColdSectionWithPGO(MachineFunction &MF) {
 // Identify, arrange, and modify basic blocks which need separate sections
 // according to the specification provided by the -fbasic-block-sections flag,
 // or according to the PGO/AutoFDO profile with -function-splitting=all.
-bool BasicBlockSections::handleBBSections(MachineFunction &MF) {
+bool BasicBlockSections::runOnMachineFunction(MachineFunction &MF) {
   auto BBSectionsType = MF.getTarget().getBBSectionsType();
 
   DenseMap<UniqueBBID, BBClusterInfo> FuncClusterInfo;
@@ -650,25 +648,6 @@ bool BasicBlockSections::handleBBSections(MachineFunction &MF) {
   sortBasicBlocksAndUpdateBranches(MF, Comparator);
   avoidZeroOffsetLandingPad(MF);
   return true;
-}
-
-// When the BB address map needs to be generated, this renumbers basic blocks to
-// make them appear in increasing order of their IDs in the function. This
-// avoids the need to store basic block IDs in the BB address map section, since
-// they can be determined implicitly.
-bool BasicBlockSections::handleBBAddrMap(MachineFunction &MF) {
-  if (!MF.getTarget().Options.BBAddrMap)
-    return false;
-  MF.RenumberBlocks();
-  return true;
-}
-
-bool BasicBlockSections::runOnMachineFunction(MachineFunction &MF) {
-  // First handle the basic block sections.
-  auto R1 = handleBBSections(MF);
-  // Handle basic block address map after basic block sections are finalized.
-  auto R2 = handleBBAddrMap(MF);
-  return R1 || R2;
 }
 
 void BasicBlockSections::getAnalysisUsage(AnalysisUsage &AU) const {
