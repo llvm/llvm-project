@@ -41,6 +41,9 @@ public:
   bool isLegalAddressingMode(const DataLayout &DL, const AddrMode &AM, Type *Ty,
                              unsigned AS,
                              Instruction *I = nullptr) const override;
+  bool isLegalXqcislsScaledAddressingMode(const DataLayout &DL,
+                                          const AddrMode &AM, Type *Ty,
+                                          Instruction *I) const;
   bool isLegalICmpImmediate(int64_t Imm) const override;
   bool isLegalAddImmediate(int64_t Imm) const override;
   bool isTruncateFree(Type *SrcTy, Type *DstTy) const override;
