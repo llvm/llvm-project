@@ -384,7 +384,7 @@ void testStructArray(void) {
 
   __builtin_memset(&tainted, 0, sizeof(tainted));
   // If we taint element 1, we should not raise an alert on taint for element 0 or element 2
-  read(sock, &tainted[1], sizeof(tainted));
+  read(sock, &tainted[1], sizeof(tainted[1]));
   clang_analyzer_isTainted_int(tainted[0].length); // expected-warning {{NO}}
   clang_analyzer_isTainted_int(tainted[2].length); // expected-warning {{NO}}
 }
