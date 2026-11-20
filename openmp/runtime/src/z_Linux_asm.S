@@ -304,7 +304,7 @@ __kmp_unnamed_critical_addr:
 #endif /* KMP_GOMP_COMPAT */
 
 
-#if KMP_ARCH_X86 && !KMP_ARCH_PPC64
+#if KMP_ARCH_X86
 
 // -----------------------------------------------------------------------
 // microtasking routines specifically written for IA-32 architecture
