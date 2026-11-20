@@ -32,7 +32,10 @@ macros:
     macro_header: arpa-nameser-macros.h
   - macro_name: NS_DEFAULTPORT
     macro_header: arpa-nameser-macros.h
-types: []
+types:
+  - type_name: ns_class
+  - type_name: ns_sect
+  - type_name: ns_type
 enums: []
 objects: []
 functions: []

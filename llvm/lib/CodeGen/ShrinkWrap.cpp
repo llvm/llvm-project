@@ -1036,8 +1036,9 @@ bool ShrinkWrapImpl::isShrinkWrapEnabled(const MachineFunction &MF) {
   switch (getCodeGenOptions(MF).shrink_wrap) {
   case BoolOrDefault::Default:
     return TFI->enableShrinkWrapping(MF) &&
-           (!MF.usesWindowsUnwindInfo() ||
-            TFI->enableWindowsCFIShrinkWrapping(MF)) &&
+           // Windows with CFI has some limitations that make it impossible
+           // to use shrink-wrapping.
+           !MF.usesWindowsUnwindInfo() &&
            // Sanitizers look at the value of the stack at the location
            // of the crash. Since a crash can happen anywhere, the
            // frame must be lowered before anything else happen for the

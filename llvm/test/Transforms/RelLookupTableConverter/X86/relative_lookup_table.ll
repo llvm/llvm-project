@@ -26,9 +26,30 @@ target triple = "x86_64-unknown-linux-gnu"
 @c2 = internal constant i32 0, align 4
 @d2 = internal constant i32 0, align 4
 
+@a.hidden.def = hidden constant i32 0, align 4
+@b.hidden.def = hidden constant i32 0, align 4
+@c.hidden.def = hidden constant i32 0, align 4
+@d.hidden.def = hidden constant i32 0, align 4
+
+@a.hidden.decl = external hidden constant i32, align 4
+@b.hidden.decl = external hidden constant i32, align 4
+@c.hidden.decl = external hidden constant i32, align 4
+@d.hidden.decl = external hidden constant i32, align 4
+
+@a.hidden.weak = weak hidden constant i32 0, align 4
+@b.hidden.weak = weak hidden constant i32 0, align 4
+@c.hidden.weak = weak hidden constant i32 0, align 4
+@d.hidden.weak = weak hidden constant i32 0, align 4
+
 @switch.table.external_linkage = private unnamed_addr constant [3 x ptr] [ptr @a1, ptr @b1, ptr @c1], align 8
 
 @switch.table.internal_linkage = private unnamed_addr constant [3 x ptr] [ptr @a2, ptr @b2, ptr @c2], align 8
+
+@switch.table.hidden.def = private unnamed_addr constant [3 x ptr] [ptr @a.hidden.def, ptr @b.hidden.def, ptr @c.hidden.def], align 8
+
+@switch.table.hidden.decl = private unnamed_addr constant [3 x ptr] [ptr @a.hidden.decl, ptr @b.hidden.decl, ptr @c.hidden.decl], align 8
+
+@switch.table.hidden.weak = private unnamed_addr constant [3 x ptr] [ptr @a.hidden.weak, ptr @b.hidden.weak, ptr @c.hidden.weak], align 8
 
 @switch.table.string_table = private unnamed_addr constant [3 x ptr]
   [
@@ -137,8 +158,23 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: @b2 = internal constant i32 0, align 4
 ; CHECK: @c2 = internal constant i32 0, align 4
 ; CHECK: @d2 = internal constant i32 0, align 4
+; CHECK: @a.hidden.def = hidden constant i32 0, align 4
+; CHECK: @b.hidden.def = hidden constant i32 0, align 4
+; CHECK: @c.hidden.def = hidden constant i32 0, align 4
+; CHECK: @d.hidden.def = hidden constant i32 0, align 4
+; CHECK: @a.hidden.decl = external hidden constant i32, align 4
+; CHECK: @b.hidden.decl = external hidden constant i32, align 4
+; CHECK: @c.hidden.decl = external hidden constant i32, align 4
+; CHECK: @d.hidden.decl = external hidden constant i32, align 4
+; CHECK: @a.hidden.weak = weak hidden constant i32 0, align 4
+; CHECK: @b.hidden.weak = weak hidden constant i32 0, align 4
+; CHECK: @c.hidden.weak = weak hidden constant i32 0, align 4
+; CHECK: @d.hidden.weak = weak hidden constant i32 0, align 4
 ; CHECK: @switch.table.external_linkage = private unnamed_addr constant [3 x ptr] [ptr @a1, ptr @b1, ptr @c1], align 8
 ; CHECK: @switch.table.internal_linkage.rel = private unnamed_addr constant [3 x i32] [i32 trunc (i64 sub (i64 ptrtoint (ptr @a2 to i64), i64 ptrtoint (ptr @switch.table.internal_linkage.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @b2 to i64), i64 ptrtoint (ptr @switch.table.internal_linkage.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @c2 to i64), i64 ptrtoint (ptr @switch.table.internal_linkage.rel to i64)) to i32)], align 4
+; CHECK: @switch.table.hidden.def.rel = private unnamed_addr constant [3 x i32] [i32 trunc (i64 sub (i64 ptrtoint (ptr @a.hidden.def to i64), i64 ptrtoint (ptr @switch.table.hidden.def.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @b.hidden.def to i64), i64 ptrtoint (ptr @switch.table.hidden.def.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @c.hidden.def to i64), i64 ptrtoint (ptr @switch.table.hidden.def.rel to i64)) to i32)], align 4
+; CHECK: @switch.table.hidden.decl.rel = private unnamed_addr constant [3 x i32] [i32 trunc (i64 sub (i64 ptrtoint (ptr @a.hidden.decl to i64), i64 ptrtoint (ptr @switch.table.hidden.decl.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @b.hidden.decl to i64), i64 ptrtoint (ptr @switch.table.hidden.decl.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @c.hidden.decl to i64), i64 ptrtoint (ptr @switch.table.hidden.decl.rel to i64)) to i32)], align 4
+; CHECK: @switch.table.hidden.weak = private unnamed_addr constant [3 x ptr] [ptr @a.hidden.weak, ptr @b.hidden.weak, ptr @c.hidden.weak], align 8
 ; CHECK: @switch.table.string_table.rel = private unnamed_addr constant [3 x i32] [i32 trunc (i64 sub (i64 ptrtoint (ptr @.str to i64), i64 ptrtoint (ptr @switch.table.string_table.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.1 to i64), i64 ptrtoint (ptr @switch.table.string_table.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.2 to i64), i64 ptrtoint (ptr @switch.table.string_table.rel to i64)) to i32)], align 4
 ; CHECK: @switch.table.string_table_holes.rel = private unnamed_addr constant [4 x i32] [i32 trunc (i64 sub (i64 ptrtoint (ptr @.str to i64), i64 ptrtoint (ptr @switch.table.string_table_holes.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.3 to i64), i64 ptrtoint (ptr @switch.table.string_table_holes.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.2 to i64), i64 ptrtoint (ptr @switch.table.string_table_holes.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.4 to i64), i64 ptrtoint (ptr @switch.table.string_table_holes.rel to i64)) to i32)], align 4
 ; CHECK: @switch.table.single_value.rel = private unnamed_addr constant [3 x i32] [i32 trunc (i64 sub (i64 ptrtoint (ptr @.str to i64), i64 ptrtoint (ptr @switch.table.single_value.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.1 to i64), i64 ptrtoint (ptr @switch.table.single_value.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.2 to i64), i64 ptrtoint (ptr @switch.table.single_value.rel to i64)) to i32)], align 4
@@ -206,6 +242,42 @@ switch.lookup:                                    ; preds = %entry
 
 return:                                           ; preds = %entry
   ret ptr @d2
+}
+
+define ptr @hidden_def(i32 %cond) {
+; CHECK-LABEL: define ptr @hidden_def(
+; CHECK-SAME: i32 [[COND:%.*]]) {
+; CHECK-NEXT:    [[RELTABLE_SHIFT:%.*]] = shl i32 [[COND]], 2
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = call ptr @llvm.load.relative.i32(ptr @switch.table.hidden.def.rel, i32 [[RELTABLE_SHIFT]])
+; CHECK-NEXT:    ret ptr [[SWITCH_LOAD]]
+;
+  %switch.gep = getelementptr inbounds [3 x ptr], ptr @switch.table.hidden.def, i32 0, i32 %cond
+  %switch.load = load ptr, ptr %switch.gep, align 8
+  ret ptr %switch.load
+}
+
+define ptr @hidden_decl(i32 %cond) {
+; CHECK-LABEL: define ptr @hidden_decl(
+; CHECK-SAME: i32 [[COND:%.*]]) {
+; CHECK-NEXT:    [[RELTABLE_SHIFT:%.*]] = shl i32 [[COND]], 2
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = call ptr @llvm.load.relative.i32(ptr @switch.table.hidden.decl.rel, i32 [[RELTABLE_SHIFT]])
+; CHECK-NEXT:    ret ptr [[SWITCH_LOAD]]
+;
+  %switch.gep = getelementptr inbounds [3 x ptr], ptr @switch.table.hidden.decl, i32 0, i32 %cond
+  %switch.load = load ptr, ptr %switch.gep, align 8
+  ret ptr %switch.load
+}
+
+define ptr @hidden_weak(i32 %cond) {
+; CHECK-LABEL: define ptr @hidden_weak(
+; CHECK-SAME: i32 [[COND:%.*]]) {
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [3 x ptr], ptr @switch.table.hidden.weak, i32 0, i32 [[COND]]
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load ptr, ptr [[SWITCH_GEP]], align 8
+; CHECK-NEXT:    ret ptr [[SWITCH_LOAD]]
+;
+  %switch.gep = getelementptr inbounds [3 x ptr], ptr @switch.table.hidden.weak, i32 0, i32 %cond
+  %switch.load = load ptr, ptr %switch.gep, align 8
+  ret ptr %switch.load
 }
 
 ; ; Relative switch lookup table for strings
