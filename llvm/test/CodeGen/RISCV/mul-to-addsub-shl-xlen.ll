@@ -39,10 +39,9 @@ define i32 @mul_constant_32(i32 %x) {
 define i64 @mul_opaque_64(i64 %x) {
 ; RV32-LABEL: mul_opaque_64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    lui a2, 524288
-; RV32-NEXT:    mulhu a2, a0, a2
+; RV32-NEXT:    srli a2, a0, 1
+; RV32-NEXT:    add a2, a2, a0
 ; RV32-NEXT:    slli a1, a1, 31
-; RV32-NEXT:    add a1, a0, a1
 ; RV32-NEXT:    add a1, a2, a1
 ; RV32-NEXT:    slli a0, a0, 31
 ; RV32-NEXT:    ret

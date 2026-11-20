@@ -19,8 +19,7 @@ define i32 @umulh_opaque_32_no_bitcast(i32 %x) {
 define i32 @umulh_opaque_32(i32 %x) {
 ; RV32-LABEL: umulh_opaque_32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    lui a1, 524288
-; RV32-NEXT:    mulhu a0, a0, a1
+; RV32-NEXT:    srli a0, a0, 1
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: umulh_opaque_32:
@@ -55,20 +54,15 @@ define i64 @umulh_opaque_64_no_bitcast(i64 %x) {
 define i64 @umulh_opaque_64(i64 %x) {
 ; RV32-LABEL: umulh_opaque_64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    lui a2, 524288
-; RV32-NEXT:    mulhu a0, a0, a2
-; RV32-NEXT:    mulhu a2, a1, a2
-; RV32-NEXT:    slli a1, a1, 31
-; RV32-NEXT:    or a0, a1, a0
-; RV32-NEXT:    sltu a1, a0, a1
-; RV32-NEXT:    add a1, a2, a1
+; RV32-NEXT:    slli a2, a1, 31
+; RV32-NEXT:    srli a0, a0, 1
+; RV32-NEXT:    or a0, a0, a2
+; RV32-NEXT:    srli a1, a1, 1
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: umulh_opaque_64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    li a1, -1
-; RV64-NEXT:    slli a1, a1, 63
-; RV64-NEXT:    mulhu a0, a0, a1
+; RV64-NEXT:    srli a0, a0, 1
 ; RV64-NEXT:    ret
   %k = bitcast i64 u0x8000000000000000 to i64
   %r = call i64 @llvm.umulh.i64(i64 %x, i64 %k)
@@ -78,8 +72,7 @@ define i64 @umulh_opaque_64(i64 %x) {
 define i32 @smulh_opaque_32_no_bitcast(i32 %x) {
 ; RV32-LABEL: smulh_opaque_32_no_bitcast:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    lui a1, 262144
-; RV32-NEXT:    mulh a0, a0, a1
+; RV32-NEXT:    srai a0, a0, 2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: smulh_opaque_32_no_bitcast:
@@ -95,8 +88,7 @@ define i32 @smulh_opaque_32_no_bitcast(i32 %x) {
 define i32 @smulh_opaque_32(i32 %x) {
 ; RV32-LABEL: smulh_opaque_32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    lui a1, 262144
-; RV32-NEXT:    mulh a0, a0, a1
+; RV32-NEXT:    srai a0, a0, 2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: smulh_opaque_32:
@@ -115,20 +107,15 @@ define i32 @smulh_opaque_32(i32 %x) {
 define i64 @smulh_opaque_64_no_bitcast(i64 %x) {
 ; RV32-LABEL: smulh_opaque_64_no_bitcast:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    lui a2, 262144
-; RV32-NEXT:    mulh a2, a1, a2
+; RV32-NEXT:    slli a2, a1, 30
 ; RV32-NEXT:    srli a0, a0, 2
-; RV32-NEXT:    slli a1, a1, 30
-; RV32-NEXT:    or a0, a1, a0
-; RV32-NEXT:    sltu a1, a0, a1
-; RV32-NEXT:    add a1, a2, a1
+; RV32-NEXT:    or a0, a0, a2
+; RV32-NEXT:    srai a1, a1, 2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: smulh_opaque_64_no_bitcast:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    li a1, 1
-; RV64-NEXT:    slli a1, a1, 62
-; RV64-NEXT:    mulh a0, a0, a1
+; RV64-NEXT:    srai a0, a0, 2
 ; RV64-NEXT:    ret
   %r = call i64 @llvm.smulh.i64(i64 %x, i64 u0x4000000000000000)
   ret i64 %r
@@ -137,22 +124,15 @@ define i64 @smulh_opaque_64_no_bitcast(i64 %x) {
 define i64 @smulh_opaque_64(i64 %x) {
 ; RV32-LABEL: smulh_opaque_64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    lui a2, 262144
-; RV32-NEXT:    mulhu a0, a0, a2
-; RV32-NEXT:    mulh a2, a1, a2
-; RV32-NEXT:    slli a3, a1, 30
-; RV32-NEXT:    slli a1, a1, 31
-; RV32-NEXT:    sub a1, a1, a3
-; RV32-NEXT:    or a0, a1, a0
-; RV32-NEXT:    sltu a1, a0, a1
-; RV32-NEXT:    add a1, a2, a1
+; RV32-NEXT:    slli a2, a1, 30
+; RV32-NEXT:    srli a0, a0, 2
+; RV32-NEXT:    or a0, a0, a2
+; RV32-NEXT:    srai a1, a1, 2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: smulh_opaque_64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    li a1, 1
-; RV64-NEXT:    slli a1, a1, 62
-; RV64-NEXT:    mulh a0, a0, a1
+; RV64-NEXT:    srai a0, a0, 2
 ; RV64-NEXT:    ret
   %k = bitcast i64 u0x4000000000000000 to i64
   %r = call i64 @llvm.smulh.i64(i64 %x, i64 %k)
