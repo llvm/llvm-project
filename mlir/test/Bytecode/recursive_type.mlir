@@ -22,6 +22,8 @@
 // CHECK-DAG: ![[$D:[^ ]+]] = !test.test_rec_alias<d, tuple<tuple<tuple<tuple<tuple<tuple<!test.test_rec_alias<d>>>>>>>>
 // CHECK-DAG: ![[$DATTR:[^ ]+]] = !test.test_rec_alias<dattr, tuple<tuple<tuple<tuple<tuple<tuple<!test.test_rec_alias<dattr>>>>>>>>
 // CHECK-DAG: ![[$DFUNC:[^ ]+]] = !test.test_rec_alias<dfunc, tuple<tuple<tuple<tuple<tuple<tuple<!test.test_rec_alias<dfunc>>>>>>>>
+// CHECK-DAG: ![[$WRAPPED:[^ ]+]] = !test.test_rec_alias<wrapped, tuple<!test.test_rec_alias<wrapped>>>
+// CHECK-DAG: ![[$DEEP_WRAPPED:[^ ]+]] = !test.test_rec_alias<deep_wrapped, tuple<tuple<tuple<tuple<tuple<tuple<tuple<!test.test_rec_alias<deep_wrapped>>>>>>>>>
 // Each alias in c9..c0 is emitted before its user, while the chain as a whole
 // may interleave with unrelated top-level aliases above.
 // CHECK-DAG: ![[$C9:[^ ]+]] = !test.test_rec_alias<c9, !test.test_rec_alias<c0, !test.test_rec_alias<c1, !test.test_rec_alias<c2, !test.test_rec_alias<c3, !test.test_rec_alias<c4, !test.test_rec_alias<c5, !test.test_rec_alias<c6, !test.test_rec_alias<c7, !test.test_rec_alias<c8, !test.test_rec_alias<c9>>>>>>>>>>>
@@ -80,6 +82,17 @@ func.func @roundtrip() {
   // later mutable types in the cycle are first discovered via deferral.
   // CHECK: ![[$C0]]
   "test.dummy_op_for_roundtrip"() : () -> !test.test_rec_alias<c0, !test.test_rec_alias<c1, !test.test_rec_alias<c2, !test.test_rec_alias<c3, !test.test_rec_alias<c4, !test.test_rec_alias<c5, !test.test_rec_alias<c6, !test.test_rec_alias<c7, !test.test_rec_alias<c8, !test.test_rec_alias<c9, !test.test_rec_alias<c0>>>>>>>>>>>
+
+  // A mutable type first reached through the immutable type wrapping it in its
+  // own body: reading its body re-enters the active tuple<...> entry, which is
+  // guarded by the published partial.
+  // CHECK: tuple<![[$WRAPPED]]>
+  "test.dummy_op_for_roundtrip"() : () -> tuple<!test.test_rec_alias<wrapped, tuple<!test.test_rec_alias<wrapped>>>>
+
+  // Same pattern wrapped past maxAttrTypeDepth so deferral and guarded
+  // re-entry compose cleanly.
+  // CHECK: tuple<tuple<tuple<tuple<tuple<tuple<tuple<![[$DEEP_WRAPPED]]>>>>>>>
+  "test.dummy_op_for_roundtrip"() : () -> tuple<tuple<tuple<tuple<tuple<tuple<tuple<!test.test_rec_alias<deep_wrapped, tuple<tuple<tuple<tuple<tuple<tuple<tuple<!test.test_rec_alias<deep_wrapped>>>>>>>>>>>>>>>>
 
   return
 }
