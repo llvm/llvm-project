@@ -31,6 +31,7 @@
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopIterator.h"
+#include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
@@ -363,6 +364,233 @@ getNonAffineMonotonicBounds(const Loop *Lp, const SCEV *PtrExpr,
           SE->getAddExpr(Base, OffEnd, EltSizeSCEV)};
 }
 
+/// Split \p Offset, the offset of a non-wrapping pointer add from its base,
+/// into the sum of its non-constant loop-invariant terms and the sum of the
+/// remaining terms. A constant multiplier of an add is distributed first if
+/// neither wraps, so C * (A + B) splits like C * A + C * B. Every term is then
+/// at most \p Offset as an unsigned value. Returns {nullptr, Offset} if there
+/// is nothing to split off.
+static std::pair<const SCEV *, const SCEV *>
+splitLoopInvariantOffset(const SCEV *Offset, const Loop *Lp,
+                         ScalarEvolution &SE) {
+  const SCEV *Sum = Offset;
+  if (const auto *Mul = dyn_cast<SCEVMulExpr>(Offset);
+      Mul && Mul->getNumOperands() == 2 && Mul->hasNoUnsignedWrap() &&
+      isa<SCEVConstant>(Mul->getOperand(0)))
+    if (const auto *Add = dyn_cast<SCEVAddExpr>(Mul->getOperand(1));
+        Add && Add->hasNoUnsignedWrap()) {
+      SmallVector<SCEVUse> Terms;
+      for (const SCEV *Op : Add->operands())
+        Terms.push_back(SE.getMulExpr(Mul->getOperand(0), Op));
+      Sum = SE.getAddExpr(Terms);
+    }
+
+  const auto *Add = dyn_cast<SCEVAddExpr>(Sum);
+  if (!Add)
+    return {nullptr, Offset};
+  SmallVector<SCEVUse> Invariant, Variant;
+  for (const SCEV *Op : Add->operands())
+    (!isa<SCEVConstant>(Op) && SE.isLoopInvariant(Op, Lp) ? Invariant : Variant)
+        .push_back(Op);
+  if (Invariant.empty() || Variant.empty())
+    return {nullptr, Offset};
+  return {SE.getAddExpr(Invariant), SE.getAddExpr(Variant)};
+}
+
+/// Return the half-open interval [Lo, Hi) of byte offsets covered by an access
+/// of \p EltSize bytes at any value of \p Offset, from the unsigned range of
+/// \p Offset, in which case Lo and Hi are non-negative as signed values. If
+/// \p AllowSigned is set and the unsigned range does not fit, use the signed
+/// range instead. The range of loop-invariant terms is narrowed by the loop
+/// guards \p Guards, if given.
+static std::optional<std::pair<APInt, APInt>>
+getOffsetRangeInterval(const SCEV *Offset, const APInt &EltSize,
+                       ScalarEvolution &SE, ScalarEvolution::LoopGuards *Guards,
+                       bool AllowSigned = false) {
+  if (Guards)
+    Offset = SE.applyLoopGuards(Offset, *Guards);
+  bool Overflow;
+  ConstantRange UR = SE.getUnsignedRange(Offset);
+  if (!UR.isEmptySet() && !UR.isFullSet() && !UR.isWrappedSet() &&
+      UR.getUnsignedMax().isNonNegative()) {
+    APInt Hi = UR.getUnsignedMax().sadd_ov(EltSize, Overflow);
+    if (!Overflow)
+      return std::make_pair(UR.getUnsignedMin(), Hi);
+  }
+  if (!AllowSigned)
+    return std::nullopt;
+  ConstantRange SR = SE.getSignedRange(Offset);
+  if (SR.isEmptySet() || SR.isFullSet() || SR.isSignWrappedSet())
+    return std::nullopt;
+  APInt Hi = SR.getSignedMax().sadd_ov(EltSize, Overflow);
+  if (Overflow)
+    return std::nullopt;
+  return std::make_pair(SR.getSignedMin(), Hi);
+}
+
+/// Return true if \p Obj is an object whose size, as computed by
+/// ObjectSizeOffsetVisitor, is the whole extent of the memory it designates: an
+/// alloca, a global variable, a noalias allocation call or a byval argument.
+/// Other pointers can point into a larger allocation. For example, a call with
+/// allocsize only returns at least that many bytes, byref and sret arguments
+/// can point into a larger caller allocation, and noalias on an argument does
+/// not bound its extent.
+static bool isSizedIdentifiedObject(const Value *Obj) {
+  if (const auto *A = dyn_cast<Argument>(Obj))
+    return A->hasByValAttr();
+  return isIdentifiedObject(Obj);
+}
+
+/// Try to bound a loop-variant pointer that is not an affine AddRec by the
+/// allocation its loop-invariant base points into: a global variable, an
+/// alloca, a noalias allocation call whose size is known or a byval argument.
+///
+/// Every executed access is based on that allocation, so it accesses bytes
+/// inside it. An allocation does not cross the end of the address space and
+/// its size fits in the signed index type (see LangRef, Allocated Objects), so
+/// the interval does not wrap, and an offset in the signed range of the index
+/// type is the exact distance from the base. The interval is intersected with
+/// the value range of the offset.
+///
+/// This only holds if the size is the whole extent of the object. Every
+/// underlying object of the base must therefore satisfy
+/// isSizedIdentifiedObject, as BasicAA requires in isObjectSmallerThan.
+static std::pair<const SCEV *, const SCEV *>
+getNonAffineObjectBounds(const Loop *Lp, const SCEV *PtrExpr,
+                         const SCEV *EltSizeSCEV, ScalarEvolution *SE,
+                         ScalarEvolution::LoopGuards *Guards) {
+  const auto *Base = dyn_cast<SCEVUnknown>(SE->getPointerBase(PtrExpr));
+  const auto *EltSizeC = dyn_cast<SCEVConstant>(EltSizeSCEV);
+  if (!Base || !SE->isLoopInvariant(Base, Lp) || !EltSizeC)
+    return {nullptr, nullptr};
+  const SCEV *Offset = SE->removePointerBase(PtrExpr);
+  if (isa<SCEVCouldNotCompute>(Offset) ||
+      Offset->getType() != EltSizeSCEV->getType())
+    return {nullptr, nullptr};
+
+  SmallVector<const Value *, 4> Objects;
+  getUnderlyingObjects(Base->getValue(), Objects);
+  if (!all_of(Objects, isSizedIdentifiedObject))
+    return {nullptr, nullptr};
+
+  const DataLayout &DL = Lp->getHeader()->getDataLayout();
+  ObjectSizeOpts Opts;
+  Opts.EvalMode = ObjectSizeOpts::Mode::ExactUnderlyingSizeAndOffset;
+  ObjectSizeOffsetVisitor Visitor(DL, /*TLI=*/nullptr,
+                                  Base->getType()->getContext(), Opts);
+  SizeOffsetAPInt SizeOffset = Visitor.compute(Base->getValue());
+  unsigned BitWidth = EltSizeC->getAPInt().getBitWidth();
+  if (!SizeOffset.bothKnown() || SizeOffset.Size.getBitWidth() != BitWidth ||
+      SizeOffset.Offset.isNegative() || SizeOffset.Offset.ugt(SizeOffset.Size))
+    return {nullptr, nullptr};
+
+  // [Allocation start, allocation end) relative to Base.
+  APInt Lo = -SizeOffset.Offset;
+  APInt Hi = SizeOffset.Size - SizeOffset.Offset;
+  if (auto Range = getOffsetRangeInterval(Offset, EltSizeC->getAPInt(), *SE,
+                                          Guards, /*AllowSigned=*/true)) {
+    Lo = APIntOps::smax(Lo, Range->first);
+    Hi = APIntOps::smin(Hi, Range->second);
+  }
+  if (Lo.sge(Hi))
+    return {nullptr, nullptr};
+  return {SE->getAddExpr(Base, SE->getConstant(Lo)),
+          SE->getAddExpr(Base, SE->getConstant(Hi))};
+}
+
+/// Return \p Base + \p Off, saturating at the ends of the address space instead
+/// of wrapping: Base + umin(Off, ~Base) for a non-negative \p Off, and
+/// Base - umin(-Off, Base) for a negative one.
+static const SCEV *getSaturatingPtrAdd(const SCEV *Base, const APInt &Off,
+                                       ScalarEvolution &SE) {
+  if (Off.isZero())
+    return Base;
+  const SCEV *BaseInt = SE.getPtrToAddrExpr(Base);
+  if (isa<SCEVCouldNotCompute>(BaseInt) ||
+      SE.getTypeSizeInBits(BaseInt->getType()) != Off.getBitWidth())
+    return nullptr;
+  if (Off.isNonNegative())
+    return SE.getAddExpr(
+        Base, SE.getUMinExpr(SE.getConstant(Off), SE.getNotSCEV(BaseInt)));
+  return SE.getAddExpr(
+      Base, SE.getNegativeSCEV(SE.getUMinExpr(SE.getConstant(-Off), BaseInt)));
+}
+
+/// Return the interval [Base + Lo, Base + Hi) of an access, saturating the ends
+/// that may wrap. A non-negative \p Lo cannot wrap, because Base + Lo is at
+/// most the address of an executed access.
+static std::pair<const SCEV *, const SCEV *>
+getSaturatingInterval(const SCEV *Base, const APInt &Lo, const APInt &Hi,
+                      ScalarEvolution &SE) {
+  const SCEV *Start;
+  if (Lo.isNonNegative())
+    Start = SE.getAddExpr(Base, SE.getConstant(Lo));
+  else
+    Start = getSaturatingPtrAdd(Base, Lo, SE);
+  const SCEV *End = getSaturatingPtrAdd(Base, Hi, SE);
+  if (!Start || !End)
+    return {nullptr, nullptr};
+  return {Start, End};
+}
+
+/// Try to bound a loop-variant pointer that is not an affine AddRec by the
+/// unsigned value range of its offset from a loop-invariant base. Non-constant
+/// loop-invariant terms of the offset are moved into the base first, so only
+/// the loop-variant part needs a small range.
+///
+/// The pointer must be a non-wrapping add, so the address of every executed
+/// access is at least the start of the interval. The interval also covers
+/// offsets that no access uses, so its end saturates instead of wrapping, and
+/// its size is limited by -laa-max-range-bound-bytes.
+static std::pair<const SCEV *, const SCEV *>
+getNonAffineRangeBounds(const Loop *Lp, const SCEV *PtrExpr,
+                        const SCEV *EltSizeSCEV, ScalarEvolution *SE,
+                        ScalarEvolution::LoopGuards *Guards) {
+  const uint64_t MaxRangeBoundBytes =
+      getAnalysisOptions(*Lp).laa_max_range_bound_bytes;
+  const auto *PtrAdd = dyn_cast<SCEVAddExpr>(PtrExpr);
+  const auto *EltSizeC = dyn_cast<SCEVConstant>(EltSizeSCEV);
+  if (!PtrAdd || !PtrAdd->hasNoUnsignedWrap() || !EltSizeC)
+    return {nullptr, nullptr};
+  // The base is the pointer operand of the add, not the base of a nested
+  // pointer: the no-wrap flag of the add only covers its own operands.
+  const auto *PtrOp = find_if(PtrAdd->operands(), [](const SCEV *Op) {
+    return Op->getType()->isPointerTy();
+  });
+  if (PtrOp == PtrAdd->operands().end() || !SE->isLoopInvariant(*PtrOp, Lp))
+    return {nullptr, nullptr};
+  const SCEV *Base = *PtrOp;
+  const SCEV *Offset = SE->getMinusSCEV(PtrExpr, Base);
+  if (isa<SCEVCouldNotCompute>(Offset) ||
+      Offset->getType() != EltSizeSCEV->getType())
+    return {nullptr, nullptr};
+
+  auto [Invariant, Variant] = splitLoopInvariantOffset(Offset, Lp, *SE);
+  if (Invariant)
+    Base = SE->getAddExpr(Base, Invariant);
+
+  auto Interval =
+      getOffsetRangeInterval(Variant, EltSizeC->getAPInt(), *SE, Guards);
+  if (!Interval || (Interval->second - Interval->first).ugt(MaxRangeBoundBytes))
+    return {nullptr, nullptr};
+  return getSaturatingInterval(Base, Interval->first, Interval->second, *SE);
+}
+
+/// Try to bound a loop-variant pointer that is not an affine AddRec, as a
+/// monotonic expression, by the allocation its base points into, or by the
+/// value range of its offset. The result only depends on \p PtrExpr, so it can
+/// be cached by it.
+static std::pair<const SCEV *, const SCEV *>
+getNonAffineBounds(const Loop *Lp, const SCEV *PtrExpr, const SCEV *EltSizeSCEV,
+                   ScalarEvolution *SE, ScalarEvolution::LoopGuards *Guards) {
+  auto Bounds = getNonAffineMonotonicBounds(Lp, PtrExpr, EltSizeSCEV, SE);
+  if (!Bounds.first)
+    Bounds = getNonAffineObjectBounds(Lp, PtrExpr, EltSizeSCEV, SE, Guards);
+  if (!Bounds.first)
+    Bounds = getNonAffineRangeBounds(Lp, PtrExpr, EltSizeSCEV, SE, Guards);
+  return Bounds;
+}
+
 std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
     const Loop *Lp, const SCEV *PtrExpr, Type *AccessTy, const SCEV *BTC,
     const SCEV *MaxBTC, ScalarEvolution *SE,
@@ -405,7 +633,8 @@ std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
   if (SE->isLoopInvariant(PtrExpr, Lp)) {
     ScStart = PtrExpr;
     ScEnd = SE->getAddExpr(PtrExpr, EltSizeSCEV);
-  } else if (auto *AR = dyn_cast<SCEVAddRecExpr>(PtrExpr)) {
+  } else if (auto *AR = dyn_cast<SCEVAddRecExpr>(PtrExpr);
+             AR && AR->isAffine()) {
     assert(AR->getLoop() == Lp && "LoopGuards must be the guards of Lp");
     const SCEV *Step = AR->getStepRecurrence(*SE);
     // The address of the last accessed element, if it can be computed
@@ -452,10 +681,10 @@ std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
       ScEnd = SE->getAddExpr(SE->getUMaxExpr(Start, LastAddr), EltSizeSCEV);
     }
   } else {
-    // The pointer is loop-variant but not an affine AddRec. Try to form a
-    // tight bound for a monotonic offset (see getNonAffineMonotonicBounds).
+    // The pointer is loop-variant but not an affine AddRec (see
+    // getNonAffineBounds). The placeholder in the cache records a failure.
     std::tie(ScStart, ScEnd) =
-        getNonAffineMonotonicBounds(Lp, PtrExpr, EltSizeSCEV, SE);
+        getNonAffineBounds(Lp, PtrExpr, EltSizeSCEV, SE, &LoopGuards);
     if (!ScStart)
       return {SE->getCouldNotCompute(), SE->getCouldNotCompute()};
   }
@@ -2143,12 +2372,12 @@ bool AccessAnalysis::createCheckForAccess(RuntimePointerChecking &RtCheck,
     if (!AR && Assume)
       AR = PSE.getAsAddRec(Ptr, &Predicates);
     if (!AR || !AR->isAffine()) {
-      // Check if bounds for non-affine monotonic expressions can be formed.
+      // Check if bounds for non-affine expressions can be formed.
       const SCEV *EltSizeSCEV = SE->getStoreSizeOfExpr(
           DL.getIndexType(P.getPointer()->getType()), AccessTy);
-      if (!Assume ||
-          !getNonAffineMonotonicBounds(TheLoop, P.getPointer(), EltSizeSCEV, SE)
-               .first)
+      if (!Assume || !getNonAffineBounds(TheLoop, P.getPointer(), EltSizeSCEV,
+                                         SE, &RtCheck.getLoopGuards())
+                          .first)
         return false;
       continue;
     }

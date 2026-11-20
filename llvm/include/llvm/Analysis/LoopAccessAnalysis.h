@@ -618,6 +618,9 @@ public:
   /// of pointers to reduce the number of memchecks necessary.
   LLVM_ABI void generateChecks(MemoryDepChecker::DepCandidates &DepCands);
 
+  /// The loop guards of the loop being checked, collected on first use.
+  ScalarEvolution::LoopGuards &getLoopGuards() const { return LoopGuards; }
+
   /// Returns the checks that generateChecks created. They can be used to ensure
   /// no read/write accesses overlap across all loop iterations.
   const SmallVectorImpl<RuntimePointerCheck> &getChecks() const {

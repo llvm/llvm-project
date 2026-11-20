@@ -335,6 +335,11 @@ defm : ValueField<"max-dependences", "unsigned", "100",
   "Maximum number of dependences collected by loop-access analysis">;
 defm : ValueField<"max-forked-scev-depth", "unsigned", "5",
   "Maximum recursion depth when finding forked SCEVs">;
+// The default covers a table indexed by a 16-bit value with elements of up to
+// 16 bytes. Wider intervals, e.g. from a full 32-bit index, are expected to
+// overlap other objects and make the runtime check fail.
+defm : ValueField<"laa-max-range-bound-bytes", "uint64_t", "1048576",
+  "Maximum size in bytes of a runtime-check interval derived only from the value range of a non-affine pointer offset">;
 // The maximum iterations used to merge memory checks.
 defm : ValueField<"memory-check-merge-threshold", "unsigned", "100",
   "Maximum number of comparisons done when trying to merge runtime memory checks">;
