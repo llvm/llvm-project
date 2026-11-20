@@ -129,6 +129,10 @@ public:
   /// Get the allocation order without reordered hints.
   ArrayRef<MCPhysReg> getOrder() const { return Order; }
 
+  /// True when iteration visits the preferred registers and not the rest of
+  /// the order, i.e. the target asked for hard hints.
+  bool hintsOnly() const { return IterationLimit == 0; }
+
   /// Return true if a custom order replaced the RegisterClassInfo order.
   bool hasCustomOrder() const {
     return static_cast<int>(HintsAndCustomOrder.size()) > NumHints;

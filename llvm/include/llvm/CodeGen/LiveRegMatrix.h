@@ -40,12 +40,29 @@ class VirtRegMap;
 class LiveRegMatrix {
   friend class LiveRegMatrixWrapperLegacy;
   friend class LiveRegMatrixAnalysis;
+
+public:
+  /// FreedReg records the unassigned physical register and the freed
+  /// slot range [Begin, End).
+  struct FreedReg {
+    MCRegister PhysReg;
+    SlotIndex Begin;
+    SlotIndex End;
+  };
+
+private:
   const TargetRegisterInfo *TRI = nullptr;
   LiveIntervals *LIS = nullptr;
   VirtRegMap *VRM = nullptr;
 
   // UserTag changes whenever virtual registers have been modified.
   unsigned UserTag = 0;
+
+  /// Retained unassigns, oldest first.
+  SmallVector<FreedReg, 16> FreedRegs;
+
+  /// Start index of the oldest retained unassign.
+  unsigned FreedBase = 0;
 
   // The matrix is represented as a LiveIntervalUnion per register unit.
   std::unique_ptr<LiveIntervalUnion::Allocator> LIUAlloc;
@@ -92,6 +109,19 @@ public:
   /// live ranges. Interference checks may return stale information unless
   /// caches are invalidated.
   void invalidateVirtRegs() { ++UserTag; }
+
+  /// Retained unassigns, oldest first. The entry at index \p i has absolute
+  /// position getFreedBase() + \p i. Unassigns before getFreedBase() were
+  /// discarded and are not represented here.
+  ArrayRef<FreedReg> getFreedRegs() const { return FreedRegs; }
+
+  /// Position of the first entry of getFreedRegs(). Unassigns before this are
+  /// no longer described, so an observer holding a smaller position has
+  /// missed one.
+  unsigned getFreedBase() const { return FreedBase; }
+
+  /// Position just past the last entry of getFreedRegs().
+  unsigned getFreedEnd() const { return FreedBase + FreedRegs.size(); }
 
   enum InterferenceKind {
     /// No interference, go ahead and assign.
