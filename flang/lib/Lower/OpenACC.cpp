@@ -1813,7 +1813,8 @@ static void visitLoopControl(
     Fortran::lower::AbstractConverter &converter,
     const Fortran::parser::DoConstruct &outerDoConstruct,
     uint64_t loopsToProcess, Fortran::lower::pft::Evaluation &eval,
-    std::function<void(const Fortran::parser::LoopControl::Bounds &,
+    std::function<void(const Fortran::parser::DoConstruct &,
+                       const Fortran::parser::LoopControl::Bounds &,
                        mlir::Location)>
         callback,
     bool markInnerCollapsed = true) {
@@ -1824,7 +1825,8 @@ static void visitLoopControl(
       loopControl = &*outerDoConstruct.GetLoopControl();
       mlir::Location loc = converter.genLocation(
           Fortran::parser::FindSourceLocation(outerDoConstruct));
-      callback(std::get<Fortran::parser::LoopControl::Bounds>(loopControl->u),
+      callback(outerDoConstruct,
+               std::get<Fortran::parser::LoopControl::Bounds>(loopControl->u),
                loc);
     } else {
       // Safely locate the next inner DoConstruct within this eval, skipping
@@ -1850,7 +1852,8 @@ static void visitLoopControl(
       if (innerDo->IsDoConcurrent())
         TODO(loc, "OpenACC LOOP with nested DO CONCURRENT");
       loopControl = &*innerDo->GetLoopControl();
-      callback(std::get<Fortran::parser::LoopControl::Bounds>(loopControl->u),
+      callback(*innerDo,
+               std::get<Fortran::parser::LoopControl::Bounds>(loopControl->u),
                loc);
     }
   }
@@ -2070,7 +2073,8 @@ static void processDoLoopBounds(
   } else {
     visitLoopControl(
         converter, outerDoConstruct, loopsToProcess, eval,
-        [&](const Fortran::parser::LoopControl::Bounds &bounds,
+        [&](const Fortran::parser::DoConstruct &,
+            const Fortran::parser::LoopControl::Bounds &bounds,
             mlir::Location loc) {
           locs.push_back(loc);
           Fortran::semantics::Symbol &ivSym =
@@ -2301,6 +2305,24 @@ void AccDataMap::remapDataOperandSymbols(
   }
 }
 
+/// The DOs whose induction variables an unstructured acc.loop privatizes.
+/// privatizeInductionVariables records them; genOpenACCLoopFromDoConstruct then
+/// lowers them as plain control flow inside a seq acc.loop instead of reporting
+/// them as unstructured DOs whose induction variables nothing privatizes.
+static llvm::SmallPtrSet<const Fortran::parser::DoConstruct *, 8>
+    ivPrivatizedDoConstructs;
+
+void Fortran::lower::clearIvPrivatizedDoConstructs(
+    const Fortran::lower::pft::Evaluation &eval) {
+  if (!eval.evaluationList)
+    return;
+  for (const Fortran::lower::pft::Evaluation &nested : *eval.evaluationList) {
+    if (const auto *doConstruct = nested.getIf<Fortran::parser::DoConstruct>())
+      ivPrivatizedDoConstructs.erase(doConstruct);
+    clearIvPrivatizedDoConstructs(nested);
+  }
+}
+
 static void privatizeInductionVariables(
     Fortran::lower::AbstractConverter &converter,
     mlir::Location currentLocation,
@@ -2325,13 +2347,15 @@ static void privatizeInductionVariables(
   // assertion.
   visitLoopControl(
       converter, outerDoConstruct, loopsToProcess, eval,
-      [&](const Fortran::parser::LoopControl::Bounds &bounds,
+      [&](const Fortran::parser::DoConstruct &doConstruct,
+          const Fortran::parser::LoopControl::Bounds &bounds,
           mlir::Location loc) {
         locs.push_back(loc);
         Fortran::semantics::Symbol &ivSym =
             bounds.Name().thing.symbol->GetUltimate();
         privatizeIv(converter, ivSym, currentLocation, ivTypes, ivLocs,
                     privateOperands, ivPrivate);
+        ivPrivatizedDoConstructs.insert(&doConstruct);
       },
       /*markInnerCollapsed=*/false);
 }
@@ -5734,6 +5758,16 @@ mlir::Operation *Fortran::lower::genOpenACCLoopFromDoConstruct(
   // to any OpenACC directives (e.g. `kernels` ops), it is just nested inside
   // the kernels region.
   if (eval.lowerAsUnstructured()) {
+    // A DO owned by an unstructured seq acc.loop is lowered as plain control
+    // flow inside that acc.loop, which privatizes its induction variable.
+    if (ivPrivatizedDoConstructs.contains(&doConstruct)) {
+      auto loopOp = converter.getFirOpBuilder()
+                        .getBlock()
+                        ->getParent()
+                        ->getParentOfType<mlir::acc::LoopOp>();
+      if (loopOp && loopOp.hasSeq())
+        return nullptr;
+    }
     if (mlir::isa_and_present<mlir::acc::KernelsOp>(
             mlir::acc::getEnclosingComputeOp(
                 converter.getFirOpBuilder().getRegion())) &&
