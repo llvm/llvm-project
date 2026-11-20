@@ -537,10 +537,21 @@ bool Sema::checkLiteralOperatorId(const CXXScopeSpec &SS,
   llvm_unreachable("unknown nested name specifier kind");
 }
 
+/// RTTI is not available in CUDA/HIP device code, so typeid can't be used
+/// there. A dependent operand is checked once the template is instantiated.
+static void diagnoseCUDADeviceTypeid(Sema &S, SourceLocation TypeidLoc,
+                                     bool IsDependent) {
+  if (S.getLangOpts().CUDA && !IsDependent)
+    S.CUDA().checkRTTIUse(TypeidLoc, "typeid");
+}
+
 ExprResult Sema::BuildCXXTypeId(QualType TypeInfoType,
                                 SourceLocation TypeidLoc,
                                 TypeSourceInfo *Operand,
                                 SourceLocation RParenLoc) {
+  diagnoseCUDADeviceTypeid(*this, TypeidLoc,
+                           Operand->getType()->isDependentType());
+
   // C++ [expr.typeid]p4:
   //   The top-level cv-qualifiers of the lvalue expression or the type-id
   //   that is the operand of typeid are always ignored.
@@ -568,6 +579,8 @@ ExprResult Sema::BuildCXXTypeId(QualType TypeInfoType,
                                 SourceLocation TypeidLoc,
                                 Expr *E,
                                 SourceLocation RParenLoc) {
+  diagnoseCUDADeviceTypeid(*this, TypeidLoc, E && E->isTypeDependent());
+
   bool WasEvaluated = false;
   if (E && !E->isTypeDependent()) {
     if (E->hasPlaceholderType()) {
@@ -858,23 +871,7 @@ Sema::ActOnCXXThrow(Scope *S, SourceLocation OpLoc, Expr *Ex) {
 
 ExprResult Sema::BuildCXXThrow(SourceLocation OpLoc, Expr *Ex,
                                bool IsThrownVarInScope) {
-  const llvm::Triple &T = Context.getTargetInfo().getTriple();
-  const bool IsOpenMPGPUTarget =
-      getLangOpts().OpenMPIsTargetDevice && T.isGPU();
-
   DiagnoseExceptionUse(OpLoc, /* IsTry= */ false);
-
-  // In OpenMP target regions, we replace 'throw' with a trap on GPU targets.
-  if (IsOpenMPGPUTarget)
-    targetDiag(OpLoc, diag::warn_throw_not_valid_on_target) << T.str();
-
-  // Exceptions aren't allowed in CUDA device code.
-  if (getLangOpts().CUDA)
-    CUDA().DiagIfDeviceCode(OpLoc, diag::err_cuda_device_exceptions)
-        << "throw" << CUDA().CurrentTarget();
-
-  if (getCurScope() && getCurScope()->isOpenMPSimdDirectiveScope())
-    Diag(OpLoc, diag::err_omp_simd_region_cannot_use_stmt) << "throw";
 
   // Exceptions that escape a compute construct are ill-formed.
   if (getLangOpts().OpenACC && getCurScope() &&
@@ -1398,13 +1395,15 @@ bool Sema::CheckCXXThisCapture(SourceLocation Loc, const bool Explicit,
   for (int idx = MaxFunctionScopesIndex; NumCapturingClosures;
        --idx, --NumCapturingClosures) {
     CapturingScopeInfo *CSI = cast<CapturingScopeInfo>(FunctionScopes[idx]);
+    // An enclosing block or captured region can only capture the pointer.
+    bool CaptureByCopy = ByCopy && isa<LambdaScopeInfo>(CSI);
 
     // The type of the corresponding data member (not a 'this' pointer if 'by
     // copy').
-    QualType CaptureType = ByCopy ? ThisTy->getPointeeType() : ThisTy;
+    QualType CaptureType = CaptureByCopy ? ThisTy->getPointeeType() : ThisTy;
 
     bool isNested = NumCapturingClosures > 1;
-    CSI->addThisCapture(isNested, Loc, CaptureType, ByCopy);
+    CSI->addThisCapture(isNested, Loc, CaptureType, CaptureByCopy);
   }
   return false;
 }
@@ -6930,6 +6929,14 @@ ExprResult Sema::ActOnDecltypeExpression(Expr *E) {
              ExpressionEvaluationContextRecord::EK_Decltype &&
          "not in a decltype expression");
 
+  // RecoveryExpr is always instantiation-dependent regardless of its
+  // type. If the type is essentially non-dependent, we continue to build
+  // a dependent decltype expression to avoid confusing diagnostics with wrong
+  // type. If the type is dependent, we will recover with int.
+  // FIXME: Maybe RecoveryExpr shouldn't be always instantiation-dependent.
+  if (isa<RecoveryExpr>(E) && E->isTypeDependent())
+    return ExprError();
+
   ExprResult Result = CheckPlaceholderExpr(E);
   if (Result.isInvalid())
     return ExprError();
@@ -7548,11 +7555,10 @@ ExprResult Sema::ActOnPseudoDestructorExpr(Scope *S, Expr *Base,
     break;
   }
   case DeclSpec::TST_typename_pack_indexing: {
-    T = ActOnPackIndexingType(DS.getRepAsType().get(), DS.getPackIndexingExpr(),
-                              DS.getBeginLoc(), DS.getEllipsisLoc());
-    TLB.pushTrivial(getASTContext(),
-                    cast<PackIndexingType>(T.getTypePtr())->getPattern(),
-                    DS.getBeginLoc());
+    TypeSourceInfo *TSI = nullptr;
+    T = GetTypeFromParser(DS.getRepAsType(), &TSI);
+    T = ActOnPackIndexingType(T, DS.getPackIndexingExpr(), DS.getBeginLoc());
+    TLB.pushFullCopy(TSI->getTypeLoc());
     PackIndexingTypeLoc PITL = TLB.push<PackIndexingTypeLoc>(T);
     PITL.setEllipsisLoc(DS.getEllipsisLoc());
     break;
@@ -8121,12 +8127,12 @@ Sema::BuildExprRequirement(
     assert(IDC && "ImmediatelyDeclaredConstraint can't be null here.");
 
     SFINAETrap Trap(*this);
-    ExprResult Constraint = SubstExpr(IDC, MLTAL);
+    ExprResult Constraint = SubstConstraintExpr(IDC, MLTAL);
     bool HasError = Constraint.isInvalid();
     if (!HasError) {
       SubstitutedConstraintExpr =
           cast<ConceptSpecializationExpr>(Constraint.get());
-      if (SubstitutedConstraintExpr->getSatisfaction().ContainsErrors)
+      if (SubstitutedConstraintExpr->getSatisfaction().containsErrors())
         HasError = true;
     }
     if (HasError) {
@@ -8194,14 +8200,6 @@ Sema::BuildNestedRequirement(Expr *Constraint) {
 
   return new (Context) concepts::NestedRequirement(Context, Constraint,
                                                    Satisfaction);
-}
-
-concepts::NestedRequirement *
-Sema::BuildNestedRequirement(StringRef InvalidConstraintEntity,
-                       const ASTConstraintSatisfaction &Satisfaction) {
-  return new (Context) concepts::NestedRequirement(
-      InvalidConstraintEntity,
-      ASTConstraintSatisfaction::Rebuild(Context, Satisfaction));
 }
 
 RequiresExprBodyDecl *

@@ -137,7 +137,7 @@ define i32 @oneusecmp(i32 %a, i32 %b, i32 %d) {
 ; CHECK-NEXT:    v_cmp_gt_i32_e32 vcc_lo, 0, v0
 ; CHECK-NEXT:    v_ashrrev_i32_e32 v3, 31, v0
 ; CHECK-NEXT:    v_cndmask_b32_e32 v0, v1, v2, vcc_lo
-; CHECK-NEXT:    v_xad_u32 v0, 0x7f, v3, v0
+; CHECK-NEXT:    v_xad_u32 v0, v3, 0x7f, v0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %c = icmp sle i32 %a, -1
   %s = select i1 %c, i32 -128, i32 127

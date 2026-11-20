@@ -36,7 +36,7 @@ define dso_local void @foo(i32 %N) {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[N_ADDR:%.*]] = alloca i32, align 4
 ; TUNIT-NEXT:    [[P:%.*]] = alloca float, align 4
-; TUNIT-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 3, ptr noundef nonnull @.omp_outlined., ptr noalias nofree nonnull readnone align 4 captures(none) dereferenceable(4) undef, ptr noalias nofree nonnull readnone align 4 captures(none) dereferenceable(4) undef, i64 undef)
+; TUNIT-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 3, ptr noundef nonnull @.omp_outlined., ptr noalias nofree nonnull readnone align 4 captures(none) undef, ptr noalias nofree nonnull readnone align 4 captures(none) undef, i64 undef)
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@foo

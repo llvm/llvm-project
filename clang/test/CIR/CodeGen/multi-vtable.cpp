@@ -39,7 +39,7 @@ void Child::MotherKey() {}
 
 // Child vtable
 
-// CIR:      cir.global "private" constant external @_ZTV5Child = #cir.vtable<{
+// CIR:      cir.global constant external unnamed_addr @_ZTV5Child = #cir.vtable<{
 // CIR-SAME:     #cir.const_array<[
 // CIR-SAME:         #cir.ptr<null> : !cir.ptr<!u8i>,
 // CIR-SAME:         #cir.ptr<null> : !cir.ptr<!u8i>,
@@ -51,9 +51,9 @@ void Child::MotherKey() {}
 // CIR-SAME:         #cir.ptr<null> : !cir.ptr<!u8i>,
 // CIR-SAME:         #cir.global_view<@_ZN6Father9FatherKeyEv> : !cir.ptr<!u8i>
 // CIR-SAME:     ]> : !cir.array<!cir.ptr<!u8i> x 3>
-// CIR-SAME: }> : [[CHILD_VTABLE_TYPE]]
+// CIR-SAME: }, address_points = [#cir.address_point<index = 0, offset = 2>, #cir.address_point<index = 1, offset = 2>]> : [[CHILD_VTABLE_TYPE]]
 
-// LLVM:      @_ZTV5Child = constant { [4 x ptr], [3 x ptr] } {
+// LLVM:      @_ZTV5Child = unnamed_addr constant { [4 x ptr], [3 x ptr] } {
 // LLVM-SAME:     [4 x ptr] [
 // LLVM-SAME:         ptr null,
 // LLVM-SAME:         ptr null,
@@ -83,16 +83,16 @@ void Child::MotherKey() {}
 
 // Mother vtable
 
-// CIR:      cir.global "private" constant external @_ZTV6Mother = #cir.vtable<{
+// CIR:      cir.global constant external unnamed_addr @_ZTV6Mother = #cir.vtable<{
 // CIR-SAME:      #cir.const_array<[
 // CIR-SAME:          #cir.ptr<null> : !cir.ptr<!u8i>,
 // CIR-SAME:          #cir.ptr<null> : !cir.ptr<!u8i>,
 // CIR-SAME:          #cir.global_view<@_ZN6Mother9MotherKeyEv> : !cir.ptr<!u8i>,
 // CIR-SAME:          #cir.global_view<@_ZN6Mother12MotherNonKeyEv> : !cir.ptr<!u8i>
 // CIR-SAME:      ]> : !cir.array<!cir.ptr<!u8i> x 4>
-// CIR-SAME: }> : [[MOTHER_VTABLE_TYPE]]
+// CIR-SAME: }, address_points = [#cir.address_point<index = 0, offset = 2>]> : [[MOTHER_VTABLE_TYPE]]
 
-// LLVM:      @_ZTV6Mother = constant { [4 x ptr] } {
+// LLVM:      @_ZTV6Mother = unnamed_addr constant { [4 x ptr] } {
 // LLVM-SAME:     [4 x ptr] [
 // LLVM-SAME:         ptr null,
 // LLVM-SAME:         ptr null,
@@ -112,15 +112,15 @@ void Child::MotherKey() {}
 
 // Father vtable
 
-// CIR:      cir.global "private" constant external @_ZTV6Father = #cir.vtable<{
+// CIR:      cir.global constant external unnamed_addr @_ZTV6Father = #cir.vtable<{
 // CIR-SAME:     #cir.const_array<[
 // CIR-SAME:         #cir.ptr<null> : !cir.ptr<!u8i>,
 // CIR-SAME:         #cir.ptr<null> : !cir.ptr<!u8i>,
 // CIR-SAME:         #cir.global_view<@_ZN6Father9FatherKeyEv> : !cir.ptr<!u8i>
 // CIR-SAME:     ]> : !cir.array<!cir.ptr<!u8i> x 3>
-// CIR-SAME: }> : [[FATHER_VTABLE_TYPE]]
+// CIR-SAME: }, address_points = [#cir.address_point<index = 0, offset = 2>]> : [[FATHER_VTABLE_TYPE]]
 
-// LLVM:      @_ZTV6Father = constant { [3 x ptr] } {
+// LLVM:      @_ZTV6Father = unnamed_addr constant { [3 x ptr] } {
 // LLVM-SAME:     [3 x ptr] [
 // LLVM-SAME:         ptr null,
 // LLVM-SAME:         ptr null,

@@ -110,6 +110,12 @@ fir::ExtendedValue convertToValue(mlir::Location loc,
                                   hlfir::Entity entity,
                                   Fortran::lower::StatementContext &);
 
+/// Lower a DataRef to the HLFIR variable that designates it.
+fir::FortranVariableOpInterface convertDataRefToHLFIRVariable(
+    mlir::Location loc, Fortran::lower::AbstractConverter &,
+    const Fortran::evaluate::DataRef &, Fortran::lower::SymMap &,
+    Fortran::lower::StatementContext &);
+
 fir::ExtendedValue convertDataRefToValue(mlir::Location loc,
                                          Fortran::lower::AbstractConverter &,
                                          const Fortran::evaluate::DataRef &,
@@ -144,6 +150,19 @@ hlfir::Entity genVectorSubscriptedDesignatorFirstElementAddress(
     mlir::Location loc, Fortran::lower::AbstractConverter &converter,
     const Fortran::lower::SomeExpr &expr, Fortran::lower::SymMap &symMap,
     Fortran::lower::StatementContext &stmtCtx);
+
+/// Address the ordinal component of a scalar or array variable of an F2023
+/// enumeration type.
+hlfir::Entity genEnumerationOrdinalDesignator(mlir::Location loc,
+                                              fir::FirOpBuilder &builder,
+                                              hlfir::Entity enumVar);
+
+/// Create a scalar temporary of enumeration type recTy holding ordinal.
+hlfir::EntityWithAttributes genEnumerationTemp(mlir::Location loc,
+                                               fir::FirOpBuilder &builder,
+                                               fir::RecordType recTy,
+                                               mlir::Value ordinal,
+                                               llvm::StringRef name);
 
 } // namespace Fortran::lower
 

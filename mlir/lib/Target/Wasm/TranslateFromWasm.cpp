@@ -240,9 +240,14 @@ private:
 
 using local_val_t = TypedValue<wasmssa::LocalRefType>;
 
+// MSVC 19.29 cannot parse a pack expansion of a braced conversion
+// (std::byte{IS}...) as a non-type template argument.
+template <size_t I>
+constexpr std::byte byteAt = static_cast<std::byte>(I);
+
 template <size_t... IS>
-constexpr ByteSequence<std::byte{IS}...>
-    castIndexSequenceToBytes(std::index_sequence<IS...>) {
+constexpr ByteSequence<byteAt<IS>...>
+castIndexSequenceToBytes(std::index_sequence<IS...>) {
   return {};
 }
 

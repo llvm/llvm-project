@@ -28,7 +28,9 @@ module Mod { header "Mod.h" }
 
 // RUN: sed -e "s|DIR|%/t|g" %t/cdb.json.template > %t/cdb.json
 // RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-full > %t/result.json
-// RUN: cat %t/result.json | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t
+// RUN: %scan-deps-filter %t/result.json --fields=modules.clang-module-deps,modules.clang-modulemap-file,modules.command-line,modules.name \
+// RUN:   > %t/filtered.json
+// RUN: sed 's:\\\\\?:/:g' %t/filtered.json | FileCheck %s -DPREFIX=%/t
 
 // CHECK:      {
 // CHECK-NEXT:   "modules": [
@@ -39,10 +41,6 @@ module Mod { header "Mod.h" }
 // CHECK:              "-fmodule-map-file=[[PREFIX]]/frameworks/X.framework/Modules/module.modulemap"
 // CHECK-NOT:          "-fmodule-file={{.*}}"
 // CHECK:            ],
-// CHECK-NEXT:       "context-hash": "{{.*}}",
-// CHECK-NEXT:       "file-deps": [
-// CHECK:            ],
-// CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "Mod"
 // CHECK-NEXT:     }
 // CHECK-NEXT:   ]

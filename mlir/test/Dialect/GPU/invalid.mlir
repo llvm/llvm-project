@@ -935,6 +935,14 @@ func.func @wmmaMmaOp_invalid_operand_shapes(%A : !gpu.mma_matrix<16x32xf16, "AOp
 
 // -----
 
+func.func @wmmaElementwiseOp_mismatched_operand_types(%A : !gpu.mma_matrix<16x16xf16, "COp">, %B : !gpu.mma_matrix<16x16xf32, "COp">) -> () {
+    // expected-error @+1 {{failed to verify that all elements of 'args' have same type}}
+    %C = gpu.subgroup_mma_elementwise addf %A, %B : (!gpu.mma_matrix<16x16xf16, "COp">, !gpu.mma_matrix<16x16xf32, "COp">) -> !gpu.mma_matrix<16x16xf16, "COp">
+    return
+}
+
+// -----
+
 // Number of symbol operand count less than memref symbol count.
 func.func @alloc() {
    // expected-error@+1 {{symbol operand count does not equal memref symbol count}}

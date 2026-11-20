@@ -120,8 +120,6 @@ public:
   void run(raw_ostream &OS);
 
 private:
-  using SearchTableEntry = std::pair<const Init *, int>;
-
   enum TypeContext {
     TypeInStaticStruct,
     TypeInTempStruct,
@@ -154,12 +152,6 @@ private:
     }
     PrintFatalError(Loc, Twine("invalid field type for field '") + Field.Name +
                              "'; expected: bit, bits, string, or code");
-  }
-
-  bool isIntrinsic(const Init *I) {
-    if (const auto *DI = dyn_cast<DefInit>(I))
-      return DI->getDef()->isSubClassOf("Intrinsic");
-    return false;
   }
 
   const CodeGenIntrinsic &getIntrinsic(const Init *I) {
@@ -516,9 +508,10 @@ void SearchableTableEmitter::emitLookupFunction(const GenericTable &Table,
            << ");\n";
         OS << "      if (" << CmpVar << " < 0) return true;\n";
         OS << "      if (" << CmpVar << " > 0) return false;\n";
-      } else if (Field.Enum) {
+      } else if (Field.Enum || isa<BitRecTy>(Field.RecType)) {
         // Explicitly cast to unsigned, because the signedness of enums is
-        // compiler-dependent.
+        // compiler-dependent. Bit fields are emitted as bool; cast them too to
+        // avoid MSVC warning C4804 ("unsafe use of type 'bool' in operation").
         OS << "      if ((unsigned)LHS." << Field.Name << " < (unsigned)RHS."
            << Field.Name << ")\n";
         OS << "        return true;\n";
@@ -1008,8 +1001,7 @@ void SearchableTableEmitter::run(raw_ostream &OS) {
 
   // Translate legacy tables.
   const Record *SearchableTable = Records.getClass("SearchableTable");
-  for (auto &NameRec : Records.getClasses()) {
-    const Record *Class = NameRec.second.get();
+  for (const Record *Class : Records.getClasses()) {
     if (Class->getDirectSuperClasses().size() != 1 ||
         !Class->isSubClassOf(SearchableTable))
       continue;

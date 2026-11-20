@@ -15,7 +15,7 @@
 #include <__cstddef/size_t.h>
 #include <__memory/addressof.h>
 #include <__memory/allocator_traits.h>
-#include <__new/allocate.h>
+#include <__new/align_val_t.h>
 #include <__new/exceptions.h>
 #include <__type_traits/is_const.h>
 #include <__type_traits/is_constant_evaluated.h>
@@ -55,8 +55,21 @@ struct __non_trivially_default_constructible_if {};
 
 template <class _Unique>
 struct __non_trivially_default_constructible_if<true, _Unique> {
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __non_trivially_default_constructible_if() {}
+  _LIBCPP_CONSTEXPR __non_trivially_default_constructible_if() {}
 };
+
+// TODO(LLVM 26): Remove these wrappers and call them unconditionally in `allocator::allocate` and
+// `allocator::deallocate`. These are here to the `__builtin_operator`s are never in a constant
+// context due to a Clang bug.
+template <class _Tp, class... _Args>
+_Tp* __operator_new_wrapper(size_t __count, _Args&&... __args) {
+  return static_cast<_Tp*>(__builtin_operator_new(__count * sizeof(_Tp), std::forward<_Args>(__args)...));
+}
+
+template <class... _Args>
+void __operator_delete_wrapper(_Args&&... __args) {
+  return __builtin_operator_delete(std::forward<_Args>(__args)...);
+}
 
 template <class _Tp>
 class allocator
@@ -77,36 +90,49 @@ public:
   _LIBCPP_DEPRECATED_IN_CXX23 typedef true_type is_always_equal;
 #endif
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 allocator() _NOEXCEPT = default;
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 allocator() _NOEXCEPT = default;
 
   template <class _Up>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 allocator(const allocator<_Up>&) _NOEXCEPT {}
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 allocator(const allocator<_Up>&) _NOEXCEPT {}
 
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp* allocate(size_t __n) {
+  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp* allocate(size_t __n) {
     static_assert(sizeof(_Tp) >= 0, "cannot allocate memory for an incomplete type");
     if (__n > allocator_traits<allocator>::max_size(*this))
       std::__throw_bad_array_new_length();
-    if (__libcpp_is_constant_evaluated()) {
-      return static_cast<_Tp*>(::operator new(__n * sizeof(_Tp)));
-    } else {
-      return std::__libcpp_allocate<_Tp>(__element_count(__n));
-    }
+    if (__libcpp_is_constant_evaluated())
+      return static_cast<_Tp*>(::operator new(sizeof(_Tp) * __n));
+#if _LIBCPP_HAS_ALIGNED_ALLOCATION
+    if _LIBCPP_CONSTEXPR (_LIBCPP_ALIGNOF(value_type) > _LIBCPP_DEFAULT_NEW_ALIGNMENT)
+      return std::__operator_new_wrapper<value_type>(__n, static_cast<align_val_t>(_LIBCPP_ALIGNOF(value_type)));
+#endif
+    return std::__operator_new_wrapper<value_type>(__n);
   }
 
 #if _LIBCPP_STD_VER >= 23
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr allocation_result<_Tp*> allocate_at_least(size_t __n) {
+  [[nodiscard]] constexpr allocation_result<_Tp*> allocate_at_least(size_t __n) {
     static_assert(sizeof(_Tp) >= 0, "cannot allocate memory for an incomplete type");
     return {allocate(__n), __n};
   }
 #endif
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void deallocate(_Tp* __p, size_t __n) _NOEXCEPT {
-    if (__libcpp_is_constant_evaluated()) {
-      ::operator delete(__p);
-    } else {
-      std::__libcpp_deallocate<_Tp>(__p, __element_count(__n));
-    }
+#if defined(__cpp_sized_deallocation) && __cpp_sized_deallocation >= 201309L
+#  define _LIBCPP_ONLY_IF_SIZED_DEALLOCATION(...) __VA_ARGS__
+#else
+#  define _LIBCPP_ONLY_IF_SIZED_DEALLOCATION(...) /* nothing */
+#endif
+
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 void deallocate(_Tp* __p, [[__maybe_unused__]] size_t __n) _NOEXCEPT {
+    if (__libcpp_is_constant_evaluated())
+      return ::operator delete(__p);
+#if _LIBCPP_HAS_ALIGNED_ALLOCATION
+    if (_LIBCPP_ALIGNOF(value_type) > _LIBCPP_DEFAULT_NEW_ALIGNMENT)
+      return std::__operator_delete_wrapper(__p _LIBCPP_ONLY_IF_SIZED_DEALLOCATION(, __n * sizeof(value_type)),
+                                            static_cast<align_val_t>(_LIBCPP_ALIGNOF(value_type)));
+#endif
+    return std::__operator_delete_wrapper(__p _LIBCPP_ONLY_IF_SIZED_DEALLOCATION(, __n * sizeof(value_type)));
   }
+
+#undef _LIBCPP_ONLY_IF_SIZED_DEALLOCATION
 
   // C++20 Removed members
 #if _LIBCPP_STD_VER <= 17
@@ -120,41 +146,37 @@ public:
     typedef allocator<_Up> other;
   };
 
-  [[__nodiscard__]] _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_HIDE_FROM_ABI pointer address(reference __x) const _NOEXCEPT {
+  [[__nodiscard__]] _LIBCPP_DEPRECATED_IN_CXX17 pointer address(reference __x) const _NOEXCEPT {
     return std::addressof(__x);
   }
-  [[__nodiscard__]] _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_HIDE_FROM_ABI const_pointer
-  address(const_reference __x) const _NOEXCEPT {
+  [[__nodiscard__]] _LIBCPP_DEPRECATED_IN_CXX17 const_pointer address(const_reference __x) const _NOEXCEPT {
     return std::addressof(__x);
   }
 
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_DEPRECATED_IN_CXX17 _Tp* allocate(size_t __n, const void*) {
-    return allocate(__n);
-  }
+  [[__nodiscard__]] _LIBCPP_DEPRECATED_IN_CXX17 _Tp* allocate(size_t __n, const void*) { return allocate(__n); }
 
-  [[__nodiscard__]] _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_HIDE_FROM_ABI size_type max_size() const _NOEXCEPT {
+  [[__nodiscard__]] _LIBCPP_DEPRECATED_IN_CXX17 size_type max_size() const _NOEXCEPT {
     return size_type(~0) / sizeof(_Tp);
   }
 
   template <class _Up, class... _Args>
-  _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_HIDE_FROM_ABI void construct(_Up* __p, _Args&&... __args) {
+  _LIBCPP_DEPRECATED_IN_CXX17 void construct(_Up* __p, _Args&&... __args) {
     ::new ((void*)__p) _Up(std::forward<_Args>(__args)...);
   }
 
-  _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_HIDE_FROM_ABI void destroy(pointer __p) { __p->~_Tp(); }
+  _LIBCPP_DEPRECATED_IN_CXX17 void destroy(pointer __p) { __p->~_Tp(); }
 #endif
 };
 
 template <class _Tp, class _Up>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
-operator==(const allocator<_Tp>&, const allocator<_Up>&) _NOEXCEPT {
+inline _LIBCPP_CONSTEXPR_SINCE_CXX20 bool operator==(const allocator<_Tp>&, const allocator<_Up>&) _NOEXCEPT {
   return true;
 }
 
 #if _LIBCPP_STD_VER <= 17
 
 template <class _Tp, class _Up>
-inline _LIBCPP_HIDE_FROM_ABI bool operator!=(const allocator<_Tp>&, const allocator<_Up>&) _NOEXCEPT {
+inline bool operator!=(const allocator<_Tp>&, const allocator<_Up>&) _NOEXCEPT {
   return false;
 }
 

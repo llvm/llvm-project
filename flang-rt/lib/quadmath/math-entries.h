@@ -220,9 +220,9 @@ DEFINE_SIMPLE_ALIAS(Yn, ynl)
 
 // Use numeric_limits to produce infinity of the right type.
 #define F128_RT_INFINITY \
-  (std::numeric_limits<CppTypeFor<TypeCategory::Real, 16>>::infinity())
+  (common::numeric_limits<CppTypeFor<TypeCategory::Real, 16>>::infinity())
 #define F128_RT_QNAN \
-  (std::numeric_limits<CppTypeFor<TypeCategory::Real, 16>>::quiet_NaN())
+  (common::numeric_limits<CppTypeFor<TypeCategory::Real, 16>>::quiet_NaN())
 #elif HAS_LIBMF128
 // We can use __float128 versions of libm functions.
 // __STDC_WANT_IEC_60559_TYPES_EXT__ needs to be defined

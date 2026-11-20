@@ -113,8 +113,7 @@ define i32 @sudot4_zero_acc_add_const(i32 %a, i32 %b) {
 define i32 @sudot4_zero_acc_add_value(i32 %a, i32 %b, i32 %acc) {
 ; CHECK-LABEL: define i32 @sudot4_zero_acc_add_value(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i32 [[ACC:%.*]]) {
-; CHECK-NEXT:    [[DOT:%.*]] = call i32 @llvm.amdgcn.sudot4(i1 true, i32 [[A]], i1 false, i32 [[B]], i32 0, i1 false)
-; CHECK-NEXT:    [[R:%.*]] = add i32 [[DOT]], [[ACC]]
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.amdgcn.sudot4(i1 true, i32 [[A]], i1 false, i32 [[B]], i32 [[ACC]], i1 false)
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %dot = call i32 @llvm.amdgcn.sudot4(i1 true, i32 %a, i1 false, i32 %b, i32 0, i1 false)
@@ -242,8 +241,7 @@ define i32 @sudot8_zero_acc_add_const(i32 %a, i32 %b) {
 define i32 @sudot8_zero_acc_add_value(i32 %a, i32 %b, i32 %acc) {
 ; CHECK-LABEL: define i32 @sudot8_zero_acc_add_value(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i32 [[ACC:%.*]]) {
-; CHECK-NEXT:    [[DOT:%.*]] = call i32 @llvm.amdgcn.sudot8(i1 false, i32 [[A]], i1 true, i32 [[B]], i32 0, i1 false)
-; CHECK-NEXT:    [[R:%.*]] = add i32 [[DOT]], [[ACC]]
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.amdgcn.sudot8(i1 false, i32 [[A]], i1 true, i32 [[B]], i32 [[ACC]], i1 false)
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %dot = call i32 @llvm.amdgcn.sudot8(i1 false, i32 %a, i1 true, i32 %b, i32 0, i1 false)

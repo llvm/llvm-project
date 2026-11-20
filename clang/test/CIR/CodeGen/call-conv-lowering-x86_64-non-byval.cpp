@@ -43,10 +43,8 @@ void callNonByval() {
 // LLVM-LABEL: define dso_local void @_Z12callNonByvalv()
 // LLVM:         call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[TMP:[^,]+]], ptr align 4 %[[T:[^,]+]], i64 4, i1 false)
 // LLVM:         call void @_Z12takeNonByval8WithDtor(ptr nofreeobj noundef align 4 dereferenceable(4) %[[TMP]])
-// LLVM-CIR:     call void @_ZN8WithDtorD1Ev(ptr noundef nonnull align 4 dereferenceable(4) %[[TMP]])
-// LLVM-CIR:     call void @_ZN8WithDtorD1Ev(ptr noundef nonnull align 4 dereferenceable(4) %[[T]])
-// OGCG:         call void @_ZN8WithDtorD1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) %[[TMP]])
-// OGCG:         call void @_ZN8WithDtorD1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) %[[T]])
+// LLVM:         call void @_ZN8WithDtorD1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) %[[TMP]])
+// LLVM:         call void @_ZN8WithDtorD1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) %[[T]])
 
 // Each non-byval argument forwards its own temporary.
 void callTwoNonByval() {
@@ -66,10 +64,8 @@ void callTwoNonByval() {
 // LLVM:         call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[TMP_A:[^,]+]], ptr align 4 %{{[^,]+}}, i64 4, i1 false)
 // LLVM:         call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[TMP_B:[^,]+]], ptr align 4 %{{[^,]+}}, i64 4, i1 false)
 // LLVM:         call void @_Z15takeTwoNonByval8WithDtorS_(ptr nofreeobj noundef align 4 dereferenceable(4) %[[TMP_A]], ptr nofreeobj noundef align 4 dereferenceable(4) %[[TMP_B]])
-// LLVM-CIR:     call void @_ZN8WithDtorD1Ev(ptr noundef nonnull align 4 dereferenceable(4) %[[TMP_B]])
-// LLVM-CIR:     call void @_ZN8WithDtorD1Ev(ptr noundef nonnull align 4 dereferenceable(4) %[[TMP_A]])
-// OGCG:         call void @_ZN8WithDtorD1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) %[[TMP_B]])
-// OGCG:         call void @_ZN8WithDtorD1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) %[[TMP_A]])
+// LLVM:         call void @_ZN8WithDtorD1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) %[[TMP_B]])
+// LLVM:         call void @_ZN8WithDtorD1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) %[[TMP_A]])
 
 // A non-trivial copy constructor also classifies non-byval: the constructor
 // call populates the forwarded temporary directly, with no load in between.
@@ -84,13 +80,12 @@ void callCopyCtorNonByval() {
 // CIR:         cir.call @_ZN12WithCopyCtorC1Ev(%[[C]])
 // CIR:         cir.call @_ZN12WithCopyCtorC1ERKS_(%[[TMP]], %[[C]])
 // CIR-NOT:     cir.load
-// CIR:         cir.call @_Z20takeCopyCtorNonByval12WithCopyCtor(%[[TMP]]) : (!cir.ptr<!rec_WithCopyCtor> {llvm.align = 4 : i64, llvm.dereferenceable = 4 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
+// CIR:         cir.call @_Z20takeCopyCtorNonByval12WithCopyCtor(%[[TMP]]) : (!cir.ptr<!rec_WithCopyCtor> {llvm.align = 4 : i64, llvm.dead_on_return = -1 : i64, llvm.dereferenceable = 4 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
 
 // LLVM-LABEL: define dso_local void @_Z20callCopyCtorNonByvalv()
 // LLVM:         call void @_ZN12WithCopyCtorC1Ev(ptr noundef nonnull align 4 dereferenceable(4) %[[C:[^)]+]])
 // LLVM:         call void @_ZN12WithCopyCtorC1ERKS_(ptr noundef nonnull align 4 dereferenceable(4) %[[TMP:[^,]+]], ptr noundef nonnull align 4 dereferenceable(4) %[[C]])
-// LLVM-CIR:     call void @_Z20takeCopyCtorNonByval12WithCopyCtor(ptr nofreeobj noundef align 4 dereferenceable(4) %[[TMP]])
-// OGCG:         call void @_Z20takeCopyCtorNonByval12WithCopyCtor(ptr nofreeobj noundef align 4 dead_on_return dereferenceable(4) %[[TMP]])
+// LLVM:         call void @_Z20takeCopyCtorNonByval12WithCopyCtor(ptr nofreeobj noundef align 4 dead_on_return dereferenceable(4) %[[TMP]])
 
 // The materialized temporary is the operand's storage, so it is handed on as
 // the byval pointer with no slot of its own.
@@ -152,8 +147,7 @@ void callInheritedCtor(WithDtor t) { Derived d(t); }
 // LLVM:          %[[INHTMP:.+]] = alloca %struct.WithDtor, align 4
 // LLVM:          call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[INHTMP]], ptr align 4 %[[INHARG]], i64 4, i1 false)
 // LLVM:          call void @_ZN7DerivedCI14BaseE8WithDtor(ptr noundef nonnull align 1 dereferenceable(1) %{{.+}}, ptr nofreeobj noundef align 4 dereferenceable(4) %[[INHTMP]])
-// LLVM-CIR:      call void @_ZN8WithDtorD1Ev(ptr noundef nonnull align 4 dereferenceable(4) %[[INHTMP]])
-// OGCG:          call void @_ZN8WithDtorD1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) %[[INHTMP]])
+// LLVM:          call void @_ZN8WithDtorD1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) %[[INHTMP]])
 
 // Both inheriting constructor variants hand their own parameter on unchanged.
 // CIR-LABEL: cir.func {{.*}}@_ZN7DerivedCI14BaseE8WithDtor

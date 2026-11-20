@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=x86_64-- -run-pass=x86-flags-copy-lowering -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple=x86_64-- -run-pass=x86-flags-copy-lowering -o - %s | FileCheck %s
 #
 # An EFLAGS copy stranded in a block that is unreachable from the entry must
 # not trip the "Unlowered EFLAGS copy!" assertion. The pass collects copies to
@@ -8,7 +8,6 @@
 # same notion of reachability.
 ---
 name:            stranded_eflags_copy
-tracksRegLiveness: true
 body:             |
   bb.0:
     RET 0

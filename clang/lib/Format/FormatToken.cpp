@@ -79,6 +79,17 @@ bool FormatToken::isBlockIndentedInitRBrace(const FormatStyle &Style) const {
   return false;
 }
 
+bool FormatToken::mustBreakAfterAttributes(const FormatStyle &Style) const {
+  switch (Style.BreakAfterAttributes) {
+  case FormatStyle::ABS_Always:
+    return true;
+  case FormatStyle::ABS_Never:
+    return false;
+  default: // ABS_Leave and ABS_LeaveAll
+    return NewlinesBefore > 0;
+  }
+}
+
 bool FormatToken::opensBlockOrBlockTypeList(const FormatStyle &Style) const {
   // C# Does not indent object initialisers as continuations.
   if (is(tok::l_brace) && getBlockKind() == BK_BracedInit && Style.isCSharp())
@@ -346,6 +357,10 @@ bool startsNextParameter(const FormatToken &Current, const FormatStyle &Style) {
     return true;
   if (Current.is(TT_QtProperty))
     return true;
+  if (Current.is(TT_TrailingCommaVaOptRParen))
+    return false;
+  if (Previous.is(TT_TrailingCommaVaOptRParen))
+    return !Current.closesScope() && !Current.isTrailingComment();
   return Previous.is(tok::comma) && !Current.isTrailingComment() &&
          ((Previous.isNot(TT_CtorInitializerComma) ||
            Style.BreakConstructorInitializers !=

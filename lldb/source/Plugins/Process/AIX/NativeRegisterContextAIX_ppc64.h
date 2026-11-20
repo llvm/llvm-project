@@ -12,10 +12,10 @@
 #define LLDB_SOURCE_PLUGINS_PROCESS_AIX_NATIVEREGISTERCONTEXTAIX_PPC64_H
 
 #include "Plugins/Process/AIX/NativeRegisterContextAIX.h"
-#include "Plugins/Process/Utility/lldb-ppc64-register-enums.h"
+#include "Register/Arch/lldb-ppc64-register-enums.h"
 
 #define DECLARE_REGISTER_INFOS_PPC64_STRUCT
-#include "Plugins/Process/Utility/RegisterInfos_ppc64.h"
+#include "Register/Arch/RegisterInfos_ppc64.h"
 #undef DECLARE_REGISTER_INFOS_PPC64_STRUCT
 
 namespace lldb_private {

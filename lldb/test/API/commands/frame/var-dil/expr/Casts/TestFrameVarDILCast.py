@@ -13,13 +13,12 @@ import time
 
 
 class TestFrameVarDILCast(TestBase):
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test_type_cast(self):
         self.build()
         (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
             self, "Set a breakpoint here", lldb.SBFileSpec("main.cpp")
         )
-
-        self.runCmd("settings set target.experimental.use-DIL true")
 
         Is32Bit = False
         if self.target().GetAddressByteSize() == 4:

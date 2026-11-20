@@ -236,3 +236,7 @@ bti c
 .arch_extension cflt
 cfltz #1, w0
 // CHECK: cflteq #1, w0, #0
+
+.arch_extension fpv2
+fcmtl s31, s0
+// CHECK: fcmtl s31, s0
