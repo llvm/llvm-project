@@ -1873,6 +1873,11 @@ bool CompilerInvocation::createFromArgs(
       invoc.getDiagnosticOpts().Remarks.push_back(a->getValue());
   }
 
+  // -fcheck-already-allocated is the default.
+  invoc.loweringOpts.setCheckAlreadyAllocated(args.hasFlag(
+      clang::options::OPT_fcheck_already_allocated,
+      clang::options::OPT_fno_check_already_allocated, /*default=*/true));
+
   // -frealloc-lhs is the default.
   if (!args.hasFlag(clang::options::OPT_frealloc_lhs,
                     clang::options::OPT_fno_realloc_lhs, true)) {
