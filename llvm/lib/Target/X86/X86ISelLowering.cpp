@@ -13076,7 +13076,7 @@ static SDValue lowerShuffleAsZeroOrAnyExtend(
   if (VT == MVT::v4i32 &&
       (V1.getOpcode() == ISD::SCALAR_TO_VECTOR || isa<MemSDNode>(V1)) &&
       Mask[0] == 0 && (NumElements - 1) == (int)Zeroable.countLeadingOnes())
-    return DAG.getNode(X86ISD::VZEXT_MOVL, DL, VT, V1);
+    return DAG.getNode(X86ISD::VZEXT_MOVL, DL, VT, DAG.getBitcast(VT, V1));
 
   // The widest scale possible for extending is to a 64-bit integer.
   assert(Bits % 64 == 0 &&
