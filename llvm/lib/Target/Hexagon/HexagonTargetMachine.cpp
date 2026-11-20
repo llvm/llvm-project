@@ -187,6 +187,8 @@ static ScheduleDAGInstrs *createVLIWMachineSched(MachineSchedContext *C) {
       C, std::make_unique<HexagonConvergingVLIWScheduler>());
   DAG->addMutation(std::make_unique<HexagonSubtarget::UsrOverflowMutation>());
   DAG->addMutation(std::make_unique<HexagonSubtarget::HVXMemLatencyMutation>());
+  DAG->addMutation(
+      std::make_unique<HexagonSubtarget::HMXActivateWeightMutation>());
   DAG->addMutation(std::make_unique<HexagonSubtarget::CallMutation>());
   DAG->addMutation(createCopyConstrainDAGMutation(DAG->TII));
   DAG->addMutation(std::make_unique<HexagonSubtarget::HLXPseudoMutation>());
@@ -223,6 +225,8 @@ LLVMInitializeHexagonTarget() {
   initializeHexagonHVXSaveRemarkPass(PR);
   initializeHexagonLoopIdiomRecognizeLegacyPassPass(PR);
   initializeHexagonLowerHLXPairAllocasPass(PR);
+  initializeHexagonMergeActivateWeightPass(PR);
+  initializeHexagonMergeActivateWeight2Pass(PR);
   initializeHexagonNewValueJumpPass(PR);
   initializeHexagonOptAddrModePass(PR);
   initializeHexagonPacketizerPass(PR);
@@ -275,18 +279,27 @@ HexagonTargetMachine::HexagonTargetMachine(const Target &T, const Triple &TT,
 
 const HexagonSubtarget *
 HexagonTargetMachine::getSubtargetImpl(const Function &F) const {
-  AttributeList FnAttrs = F.getAttributes();
-  Attribute CPUAttr = FnAttrs.getFnAttr("target-cpu");
-  Attribute FSAttr = FnAttrs.getFnAttr("target-features");
+  AttributeSet FnAttrs = F.getAttributes().getFnAttrs();
+  const Module *M = F.getParent();
+  if (const HexagonSubtarget *ST = LastSubtarget.lookup(FnAttrs, M))
+    return ST;
+
+  SubtargetAttrs Attrs;
+  Attrs.CPU = FnAttrs.getAttribute("target-cpu");
+  Attrs.FS = FnAttrs.getAttribute("target-features");
+
+  if (const HexagonSubtarget *ST = LastSubtarget.lookup(FnAttrs, M, Attrs))
+    return ST;
 
   std::string CPU =
-      CPUAttr.isValid() ? CPUAttr.getValueAsString().str() : TargetCPU;
+      Attrs.CPU.isValid() ? Attrs.CPU.getValueAsString().str() : TargetCPU;
   std::string FS =
-      FSAttr.isValid() ? FSAttr.getValueAsString().str() : TargetFS;
+      Attrs.FS.isValid() ? Attrs.FS.getValueAsString().str() : TargetFS;
 
   auto &I = SubtargetMap[CPU + FS];
   if (!I)
     I = std::make_unique<HexagonSubtarget>(TargetTriple, CPU, FS, *this);
+  LastSubtarget.set(FnAttrs, M, Attrs, I.get());
   return I.get();
 }
 
@@ -506,6 +519,14 @@ void HexagonPassConfig::addMachineSSAOptimization() {
 }
 
 void HexagonPassConfig::addPreRegAlloc() {
+  // HMX activation/weight pairs must be adjacent before register allocation.
+  // With optimized register allocation, run after the machine scheduler,
+  // which may separate the pairs.
+  if (getOptimizeRegAlloc())
+    insertPass(&MachineSchedulerID, &HexagonMergeActivateWeightID);
+  else
+    insertPass(&PHIEliminationID, &HexagonMergeActivateWeightID);
+
   if (getOptLevel() != CodeGenOptLevel::None) {
     if (EnableExpandCondsets)
       insertPass(&RegisterCoalescerID, &HexagonExpandCondsetsID);
@@ -565,6 +586,8 @@ void HexagonPassConfig::addPreEmitPass() {
     if (!DisableHexagonLiveVars)
       addPass(&HexagonLiveVariablesID);
   }
+
+  addPass(createHexagonMergeActivateWeight2());
 
   // Emit KCFI checks for indirect calls. Must run before packetization so
   // the check and call can be bundled together into a VLIW packet.

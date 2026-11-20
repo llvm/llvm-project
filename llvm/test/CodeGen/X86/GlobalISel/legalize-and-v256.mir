@@ -29,10 +29,6 @@ name:            test_and_v32i8
 alignment:       16
 legalized:       false
 regBankSelected: false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $ymm0, $ymm1
@@ -57,9 +53,9 @@ body:             |
     ; AVX-NEXT: [[AND:%[0-9]+]]:_(<32 x s8>) = G_AND [[DEF]], [[DEF1]]
     ; AVX-NEXT: $ymm0 = COPY [[AND]](<32 x s8>)
     ; AVX-NEXT: RET 0
-    %0(<32 x s8>) = IMPLICIT_DEF
-    %1(<32 x s8>) = IMPLICIT_DEF
-    %2(<32 x s8>) = G_AND %0, %1
+    %0:_(<32 x s8>) = IMPLICIT_DEF
+    %1:_(<32 x s8>) = IMPLICIT_DEF
+    %2:_(<32 x s8>) = G_AND %0, %1
     $ymm0 = COPY %2
     RET 0
 ...
@@ -68,10 +64,6 @@ name:            test_and_v16i16
 alignment:       16
 legalized:       false
 regBankSelected: false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $ymm0, $ymm1
@@ -96,9 +88,9 @@ body:             |
     ; AVX-NEXT: [[AND:%[0-9]+]]:_(<16 x s16>) = G_AND [[DEF]], [[DEF1]]
     ; AVX-NEXT: $ymm0 = COPY [[AND]](<16 x s16>)
     ; AVX-NEXT: RET 0
-    %0(<16 x s16>) = IMPLICIT_DEF
-    %1(<16 x s16>) = IMPLICIT_DEF
-    %2(<16 x s16>) = G_AND %0, %1
+    %0:_(<16 x s16>) = IMPLICIT_DEF
+    %1:_(<16 x s16>) = IMPLICIT_DEF
+    %2:_(<16 x s16>) = G_AND %0, %1
     $ymm0 = COPY %2
     RET 0
 ...
@@ -107,10 +99,6 @@ name:            test_and_v8i32
 alignment:       16
 legalized:       false
 regBankSelected: false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $ymm0, $ymm1
@@ -135,9 +123,9 @@ body:             |
     ; AVX-NEXT: [[AND:%[0-9]+]]:_(<8 x s32>) = G_AND [[DEF]], [[DEF1]]
     ; AVX-NEXT: $ymm0 = COPY [[AND]](<8 x s32>)
     ; AVX-NEXT: RET 0
-    %0(<8 x s32>) = IMPLICIT_DEF
-    %1(<8 x s32>) = IMPLICIT_DEF
-    %2(<8 x s32>) = G_AND %0, %1
+    %0:_(<8 x s32>) = IMPLICIT_DEF
+    %1:_(<8 x s32>) = IMPLICIT_DEF
+    %2:_(<8 x s32>) = G_AND %0, %1
     $ymm0 = COPY %2
     RET 0
 ...
@@ -146,10 +134,6 @@ name:            test_and_v4i64
 alignment:       16
 legalized:       false
 regBankSelected: false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $ymm0, $ymm1
@@ -174,9 +158,9 @@ body:             |
     ; AVX-NEXT: [[AND:%[0-9]+]]:_(<4 x s64>) = G_AND [[DEF]], [[DEF1]]
     ; AVX-NEXT: $ymm0 = COPY [[AND]](<4 x s64>)
     ; AVX-NEXT: RET 0
-    %0(<4 x s64>) = IMPLICIT_DEF
-    %1(<4 x s64>) = IMPLICIT_DEF
-    %2(<4 x s64>) = G_AND %0, %1
+    %0:_(<4 x s64>) = IMPLICIT_DEF
+    %1:_(<4 x s64>) = IMPLICIT_DEF
+    %2:_(<4 x s64>) = G_AND %0, %1
     $ymm0 = COPY %2
     RET 0
 ...

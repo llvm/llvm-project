@@ -1852,6 +1852,11 @@ convertFloatValue(APFloat sourceValue,
   if (sourceValue.isNaN() &&
       targetSemantics.nonFiniteBehavior == fltNonfiniteBehavior::FiniteOnly)
     return failure();
+  // A format without a sign (e.g. f8E8M0FNU) has no negative values, and
+  // APFloat::convert reaches llvm_unreachable on a negative NaN or overflow.
+  if (sourceValue.isNegative() &&
+      !APFloat::semanticsHasSignedRepr(targetSemantics))
+    return failure();
 
   bool losesInfo = false;
   auto status = sourceValue.convert(targetSemantics, roundingMode, &losesInfo);
@@ -3198,6 +3203,13 @@ struct SelectCommonElementwiseOp : public OpRewritePattern<arith::SelectOp> {
     Operation *lhs = op.getTrueValue().getDefiningOp();
     Operation *rhs = op.getFalseValue().getDefiningOp();
     if (!lhs || !rhs || lhs == rhs)
+      return failure();
+
+    // Do not hoist a select through selects: rewriting
+    // select(c, select(d, a, b), select(d, x, y)) into
+    // select(d, select(c, a, x), select(c, b, y)) matches again with c and d
+    // swapped, so the greedy rewriter never converges.
+    if (isa<arith::SelectOp>(lhs))
       return failure();
 
     for (Operation *producer : {lhs, rhs}) {

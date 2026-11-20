@@ -31,6 +31,20 @@ entry:
   ret <1024 x i32> %result
 }
 
+; Only the exact pair-typed store is lowered; the HLX_Vector-typed load from
+; the same alloca stays a plain load.
+; CHECK-LABEL: define <1024 x i16> @half
+; CHECK: call void @llvm.hexagon.LX.SS16b.new(ptr %pair, <1024 x i32> %value)
+; CHECK: %half = load <1024 x i16>, ptr %pair, align 2048
+; CHECK: ret <1024 x i16> %half
+define <1024 x i16> @half(<1024 x i32> %value) {
+entry:
+  %pair = alloca <1024 x i32>, align 2048
+  store <1024 x i32> %value, ptr %pair, align 2048
+  %half = load <1024 x i16>, ptr %pair, align 2048
+  ret <1024 x i16> %half
+}
+
 !7 = distinct !{!7, !"domain"}
 !8 = !{!9}
 !9 = distinct !{!9, !7, !"alias"}
