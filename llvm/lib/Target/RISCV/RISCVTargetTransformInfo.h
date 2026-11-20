@@ -187,7 +187,9 @@ public:
                           MemIntrinsicInfo &Info) const override;
 
   unsigned getMinVectorRegisterBitWidth() const override {
-    return ST->useRVVForFixedLengthVectors() ? 16 : 0;
+    if (ST->useRVVForFixedLengthVectors())
+      return 16;
+    return ST->hasStdExtP() ? 32 : 0;
   }
 
   InstructionCost
@@ -524,7 +526,9 @@ public:
   unsigned getRegisterClassForType(bool Vector,
                                    Type *Ty = nullptr) const override {
     if (Vector)
-      return RISCVRegisterClass::VRRC;
+      return (!ST->hasVInstructions() && ST->hasStdExtP())
+                 ? RISCVRegisterClass::GPRRC
+                 : RISCVRegisterClass::VRRC;
     if (!Ty)
       return RISCVRegisterClass::GPRRC;
 

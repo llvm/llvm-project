@@ -459,8 +459,9 @@ RISCVTTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
   case TargetTransformInfo::RGK_Scalar:
     return TypeSize::getFixed(ST->getXLen());
   case TargetTransformInfo::RGK_FixedWidthVector:
-    return TypeSize::getFixed(
-        ST->useRVVForFixedLengthVectors() ? LMUL * ST->getRealMinVLen() : 0);
+    if (ST->useRVVForFixedLengthVectors())
+      return TypeSize::getFixed(LMUL * ST->getRealMinVLen());
+    return TypeSize::getFixed(ST->hasStdExtP() ? ST->getXLen() : 0);
   case TargetTransformInfo::RGK_ScalableVector:
     return TypeSize::getScalable(
         (ST->hasVInstructions() &&
