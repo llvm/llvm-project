@@ -2188,6 +2188,13 @@ defm borland_extensions : BoolFOption<"borland-extensions",
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
           "Accept non-standard constructs supported by the Borland compiler">,
   NegFlag<SetFalse>>;
+def fbpf_no_enum_reloc_EQ : CommaJoined<["-"], "fbpf-no-enum-reloc=">,
+  Group<f_Group>, Flags<[TargetSpecific]>,
+  Visibility<[ClangOption, CC1Option]>, MetaVarName<"<enum>">,
+  HelpText<"Do not relocate the enumerators of the comma-separated enums, "
+           "although the enums have the preserve_access_index attribute "
+           "(BPF only)">,
+  MarshallingInfoStringVector<LangOpts<"BPFNoEnumRelocs">>;
 def fbuiltin : Flag<["-"], "fbuiltin">, Group<f_Group>,
   Visibility<[ClangOption, CLOption, DXCOption, FlangOption, FC1Option]>;
 def fbuiltin_module_map : Flag <["-"], "fbuiltin-module-map">, Group<f_Group>,

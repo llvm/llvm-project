@@ -334,9 +334,6 @@ void FactsGenerator::VisitCastExpr(const CastExpr *CE) {
     // points to), not the outer origin (the pointer's storage location).
     flow(Dest, readValue(SubExpr), /*Kill=*/true);
     return;
-  case CK_Dynamic:
-    handleAccess(SubExpr);
-    return;
   case CK_NullToPointer:
     // TODO: Flow into them a null origin.
     return;
@@ -345,6 +342,10 @@ void FactsGenerator::VisitCastExpr(const CastExpr *CE) {
   case CK_UserDefinedConversion:
     flow(Dest, Src, /*Kill=*/true);
     return;
+  case CK_Dynamic:
+    // Reads the object's dynamic type.
+    handleAccess(SubExpr);
+    [[fallthrough]];
   case CK_UncheckedDerivedToBase:
   case CK_DerivedToBase:
   case CK_BaseToDerived:
