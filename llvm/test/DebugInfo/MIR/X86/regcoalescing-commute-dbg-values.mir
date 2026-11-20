@@ -75,13 +75,13 @@ body: |
 
   bb.1:
     DBG_VALUE %1, $noreg, !6, !DIExpression(), debug-location !11
-    %1:gr32 = ADD32rr %1, killed %0, implicit-def dead $eflags
+    %1:gr32 = ADD32rr %1, %0, implicit-def dead $eflags
     DBG_VALUE %1, $noreg, !8, !DIExpression(), debug-location !11
     %0:gr32 = COPY %1
     DBG_VALUE %1, $noreg, !9, !DIExpression(), debug-location !11
     %1:gr32 = MOV32rm $rip, 1, $noreg, 0, $noreg
     DBG_VALUE %1, $noreg, !10, !DIExpression(), debug-location !11
-    %4:gr32 = ADD32rr %4, killed %3, implicit-def dead $eflags
+    %4:gr32 = ADD32rr %4, %3, implicit-def dead $eflags
     %3:gr32 = COPY %4
     %4:gr32 = IMUL32rri %4, 3, implicit-def dead $eflags
     DBG_VALUE %4, $noreg, !12, !DIExpression(), debug-location !11
