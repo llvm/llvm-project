@@ -38,9 +38,9 @@
 namespace llvm {
 
 class GlobalVariable;
-struct SPIRVOptions;
 class MachineDominatorTree;
 class SPIRVSubtarget;
+class SPIRVTargetMachine;
 
 /// AsmPrinter handler that emits NonSemantic.Shader.DebugInfo.100 (NSDI)
 /// instructions for the SPIR-V backend. Registered with SPIRVAsmPrinter when
@@ -61,7 +61,9 @@ class SPIRVSubtarget;
 ///   being printed, and the DebugDeclare and DebugValue anchored on it.
 /// - endFunctionImpl() resets per-function state.
 class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
-  const SPIRVOptions &CLOpts;
+  bool UseLexicalBlockDiscriminatorScope = false;
+  bool UseDebugScopeForwardRefs = false;
+  bool AllowDebugDeclareUntypedVariable = false;
 
   static constexpr unsigned NSSet = static_cast<unsigned>(
       SPIRV::InstructionSet::NonSemantic_Shader_DebugInfo_100);
@@ -151,8 +153,8 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
   // Types and scopes whose instruction is currently being built.
   SmallDenseMap<const DIScope *, InProgressScope, 8> ScopesInProgress;
 
-  // True when -spirv-debug-scope-forward-refs is set and prepareModuleOutput
-  // saw SPV_KHR_relaxed_extended_instruction.
+  // True when UseDebugScopeForwardRefs is set and prepareModuleOutput saw
+  // SPV_KHR_relaxed_extended_instruction.
   bool HasRelaxedExtInst = false;
 
   // Types and scopes that are not supported.
@@ -287,6 +289,10 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
   // Records to emit before their anchor is printed, built once per function by
   // analyzeDebugRecords() and only read afterwards.
   DenseMap<const MachineInstr *, SmallVector<DebugRecord>> Records;
+
+  /// Enable each NSDI option when its command-line flag is set or the target
+  /// vendor enables it by default.
+  void initOptions(const SPIRVTargetMachine &TM);
 
 public:
   explicit SPIRVNonSemanticDebugHandler(AsmPrinter &AP);
@@ -747,7 +753,7 @@ private:
   ///
   /// A \c DIType, \c DILexicalBlock, \c DINamespace, or \c DISubprogram scope
   /// is created through \c getOrCreateDebugScope. When
-  /// \c -spirv-debug-lexical-block-discriminator-scope is enabled, a
+  /// \c UseLexicalBlockDiscriminatorScope is set, a
   /// \c DILexicalBlockFile is also created this way, becoming a
   /// \c DebugLexicalBlockDiscriminator; otherwise it is unwrapped to its
   /// enclosing scope first. When \p Scope is null, a \c DIFile, or another
