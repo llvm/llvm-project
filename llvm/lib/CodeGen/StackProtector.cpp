@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/StackProtector.h"
+#include "CodeGenOptions.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
@@ -44,7 +45,6 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -57,11 +57,6 @@ using namespace llvm;
 STATISTIC(NumFunProtected, "Number of functions protected");
 STATISTIC(NumAddrTaken, "Number of local variables that have their address"
                         " taken.");
-
-static cl::opt<bool> EnableSelectionDAGSP("enable-selectiondag-sp",
-                                          cl::init(true), cl::Hidden);
-static cl::opt<bool> DisableCheckNoReturn("disable-check-noreturn-call",
-                                          cl::init(false), cl::Hidden);
 
 /// InsertStackProtectors - Insert code into the prologue and epilogue of the
 /// function.
@@ -604,6 +599,7 @@ bool InsertStackProtectors(const TargetLowering &TLI,
                            const LibcallLoweringInfo &Libcalls, Function *F,
                            DomTreeUpdater *DTU, bool &HasPrologue,
                            bool &HasIRCheck) {
+  const CodeGenOptions &Opts = getCodeGenOptions(*F);
   auto *M = F->getParent();
 
   // If the target wants to XOR the frame pointer into the guard value, it's
@@ -611,7 +607,8 @@ bool InsertStackProtectors(const TargetLowering &TLI,
   // protection in SDAG.
   bool SupportsSelectionDAGSP =
       TLI.useStackGuardMixFP() ||
-      (EnableSelectionDAGSP && !TLI.getTargetMachine().Options.EnableFastISel);
+      (Opts.stack_protector_selectiondag &&
+       !TLI.getTargetMachine().Options.EnableFastISel);
   AllocaInst *AI = nullptr; // Place on stack that stores the stack guard.
   BasicBlock *FailBB = nullptr;
 
@@ -620,7 +617,7 @@ bool InsertStackProtectors(const TargetLowering &TLI,
     if (&BB == FailBB)
       continue;
     Instruction *CheckLoc = dyn_cast<ReturnInst>(BB.getTerminator());
-    if (!CheckLoc && !DisableCheckNoReturn)
+    if (!CheckLoc && Opts.stack_protector_check_noreturn_call)
       for (auto &Inst : BB) {
         if (IntrinsicInst *IB = dyn_cast<IntrinsicInst>(&Inst);
             IB && (IB->getIntrinsicID() == Intrinsic::eh_sjlj_callsite)) {

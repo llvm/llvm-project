@@ -163,6 +163,7 @@ public:
                            const CGPassBuilderOption &Opts,
                            PassInstrumentationCallbacks *PIC);
 
+protected:
   void addIRPasses(PassManagerWrapper &PMW) override;
   void addCodeGenPrepare(PassManagerWrapper &PMW) override;
   void addPreISel(PassManagerWrapper &PMW) override;
@@ -744,18 +745,6 @@ bool AMDGPUTargetMachine::EnableObjectLinking = false;
 bool AMDGPUTargetMachine::EnableLowerModuleLDS = true;
 
 AMDGPUTargetMachine::~AMDGPUTargetMachine() = default;
-
-StringRef AMDGPUTargetMachine::getGPUName(const Function &F) const {
-  Attribute GPUAttr = F.getFnAttribute("target-cpu");
-  return GPUAttr.isValid() ? GPUAttr.getValueAsString() : getTargetCPU();
-}
-
-StringRef AMDGPUTargetMachine::getFeatureString(const Function &F) const {
-  Attribute FSAttr = F.getFnAttribute("target-features");
-
-  return FSAttr.isValid() ? FSAttr.getValueAsString()
-                          : getTargetFeatureString();
-}
 
 llvm::ScheduleDAGInstrs *
 AMDGPUTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
