@@ -1164,6 +1164,13 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::Musl, T.getEnvironment());
   EXPECT_EQ(Triple::MipsSubArch_r6, T.getSubArch());
 
+  T = Triple("nanomips-unknown-elf");
+  EXPECT_EQ(Triple::nanomips, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::UnknownOS, T.getOS());
+  EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+  EXPECT_EQ(Triple::ELF, T.getObjectFormat());
+
   T = Triple("arm-oe-linux-gnueabi");
   EXPECT_EQ(Triple::arm, T.getArch());
   EXPECT_EQ(Triple::OpenEmbedded, T.getVendor());
@@ -1788,10 +1795,10 @@ TEST(TripleTest, DefaultLongDoubleFormat) {
   EXPECT_EQ(
       LongDoubleFormat::IEEEquad,
       Triple("aarch64_32-unknown-linux-gnu").getDefaultLongDoubleFormat());
-  // ... except on Windows and Darwin, which use IEEE double.
+  // ... except on Windows, UEFI and Darwin, which use IEEE double.
   EXPECT_EQ(LongDoubleFormat::IEEEdouble,
             Triple("aarch64-pc-windows-msvc").getDefaultLongDoubleFormat());
-  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
             Triple("aarch64-unknown-uefi").getDefaultLongDoubleFormat());
   EXPECT_EQ(LongDoubleFormat::IEEEdouble,
             Triple("arm64-apple-macosx").getDefaultLongDoubleFormat());
@@ -1852,14 +1859,20 @@ TEST(TripleTest, DefaultLongDoubleFormat) {
   EXPECT_EQ(LongDoubleFormat::IEEEquad,
             Triple("wasm64-unknown-unknown").getDefaultLongDoubleFormat());
 
-  // 64-bit MIPS uses IEEE quad; 32-bit MIPS uses IEEE double. Both are
-  // independent of the environment.
+  // 64-bit MIPS uses IEEE quad, except on FreeBSD; 32-bit MIPS uses IEEE
+  // double. Both are independent of the environment.
   EXPECT_EQ(LongDoubleFormat::IEEEquad,
             Triple("mips64-unknown-linux-gnu").getDefaultLongDoubleFormat());
   EXPECT_EQ(LongDoubleFormat::IEEEquad,
             Triple("mips64-unknown-linux").getDefaultLongDoubleFormat());
   EXPECT_EQ(LongDoubleFormat::IEEEquad,
             Triple("mips64el-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("mips64-unknown-freebsd").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("mips64el-unknown-freebsd").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("mipsisa64r6-unknown-freebsd").getDefaultLongDoubleFormat());
   EXPECT_EQ(LongDoubleFormat::IEEEdouble,
             Triple("mips-unknown-linux-gnu").getDefaultLongDoubleFormat());
   EXPECT_EQ(LongDoubleFormat::IEEEdouble,
@@ -2432,6 +2445,11 @@ TEST(TripleTest, BitWidthChecks) {
   EXPECT_FALSE(T.isArch16Bit());
   EXPECT_TRUE(T.isArch32Bit());
   EXPECT_FALSE(T.isArch64Bit());
+
+  T.setArch(Triple::nanomips);
+  EXPECT_FALSE(T.isArch16Bit());
+  EXPECT_TRUE(T.isArch32Bit());
+  EXPECT_FALSE(T.isArch64Bit());
 }
 
 TEST(TripleTest, BitWidthArchVariants) {
@@ -2634,6 +2652,10 @@ TEST(TripleTest, BitWidthArchVariants) {
   T.setArch(Triple::xtensa);
   EXPECT_EQ(Triple::xtensa, T.get32BitArchVariant().getArch());
   EXPECT_EQ(Triple::UnknownArch, T.get64BitArchVariant().getArch());
+
+  T.setArch(Triple::nanomips);
+  EXPECT_EQ(Triple::nanomips, T.get32BitArchVariant().getArch());
+  EXPECT_EQ(Triple::UnknownArch, T.get64BitArchVariant().getArch());
 }
 
 TEST(TripleTest, EndianArchVariants) {
@@ -2728,6 +2750,10 @@ TEST(TripleTest, EndianArchVariants) {
   EXPECT_EQ(Triple::mipsel, T.getLittleEndianArchVariant().getArch());
   EXPECT_EQ(Triple::MipsSubArch_r6,
             T.getLittleEndianArchVariant().getSubArch());
+
+  T.setArch(Triple::nanomips);
+  EXPECT_EQ(Triple::UnknownArch, T.getBigEndianArchVariant().getArch());
+  EXPECT_EQ(Triple::nanomips, T.getLittleEndianArchVariant().getArch());
 
   T.setArch(Triple::ppc);
   EXPECT_EQ(Triple::ppc, T.getBigEndianArchVariant().getArch());
@@ -4107,6 +4133,17 @@ TEST(DataLayoutTest, NVPTX) {
   EXPECT_THAT(PointerLayoutSpecs(TT64.computeDataLayout("shortptr")),
               testing::ElementsAre("p3:32:32", "p4:32:32", "p5:32:32",
                                    "p6:32:32", "p7:32:32", "p101:32:32"));
+}
+
+TEST(DataLayoutTest, PowerPC64FreeBSD) {
+  // FreeBSD uses the ELFv2 ABI on both big- and little-endian powerpc64 and
+  // shares the 16-byte stack alignment and the vector alignment of Linux.
+  EXPECT_EQ(Triple("powerpc64le-unknown-freebsd").computeDataLayout(),
+            Triple("powerpc64le-unknown-linux-gnu").computeDataLayout());
+  EXPECT_EQ(Triple("powerpc64le-unknown-freebsd").computeDataLayout(),
+            "e-m:e-Fn32-i64:64-i128:128-n32:64-S128-v256:256:256-v512:512:512");
+  EXPECT_EQ(Triple("powerpc64-unknown-freebsd").computeDataLayout(),
+            "E-m:e-Fn32-i64:64-i128:128-n32:64-S128-v256:256:256-v512:512:512");
 }
 
 TEST(DataLayoutTest, CheriRISCV32) {

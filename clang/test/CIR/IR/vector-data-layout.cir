@@ -1,0 +1,36 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+// A well-formed #cir.vector_spec entry round-trips without diagnostics.
+module attributes {dlti.dl_spec = #dlti.dl_spec<
+    !cir.vector<1 x !cir.int<u, 8>> = #cir.vector_spec<max_align = 128>>} {
+}
+
+// -----
+
+// The entry value must be a #cir.vector_spec attribute.
+// expected-error @below {{expected layout attribute for '!cir.vector<1 x !cir.int<u, 8>>' to be a #cir.vector_spec attribute}}
+module attributes {dlti.dl_spec = #dlti.dl_spec<
+    !cir.vector<1 x !cir.int<u, 8>> = 128 : i64>} {
+}
+
+// -----
+
+// The entry is keyed on the vector class, not on one vector shape.
+// expected-error @below {{expected vector data layout entry to be keyed on '!cir.vector<1 x !cir.int<u, 8>>', got '!cir.vector<4 x !cir.float>'}}
+module attributes {dlti.dl_spec = #dlti.dl_spec<
+    !cir.vector<4 x !cir.float> = #cir.vector_spec<max_align = 128>>} {
+}
+
+// -----
+
+// expected-error @+2 {{max_align must be a power of two of at least 8}}
+module attributes {dlti.dl_spec = #dlti.dl_spec<
+    !cir.vector<1 x !cir.int<u, 8>> = #cir.vector_spec<max_align = 4>>} {
+}
+
+// -----
+
+// expected-error @+2 {{max_align must be a power of two of at least 8}}
+module attributes {dlti.dl_spec = #dlti.dl_spec<
+    !cir.vector<1 x !cir.int<u, 8>> = #cir.vector_spec<max_align = 24>>} {
+}

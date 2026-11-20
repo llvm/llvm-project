@@ -215,6 +215,10 @@ public:
 
 /// This base class for TargetLowering contains the SelectionDAG-independent
 /// parts that can be used from the rest of CodeGen.
+///
+/// Virtual methods here should express a fundamental property of the
+/// target. These should be reusable in different contexts, and not be used to
+/// control a specific transformation.
 class LLVM_ABI TargetLoweringBase {
 public:
   /// This enum indicates whether operations are valid for a target, and if not,
@@ -3752,12 +3756,6 @@ public:
   virtual bool shouldConvertFpToSat(unsigned Op, EVT FPVT, EVT VT) const {
     return isOperationLegalOrCustom(Op, VT);
   }
-
-  /// Return true if an ISD::SINT_TO_FP or ISD::UINT_TO_FP of an i1 or i1 vector
-  /// to \p VT should be replaced by a select of the two exact results before
-  /// operation legalization. The DAGCombiner folds for scalar SETCC results do
-  /// not query this hook.
-  virtual bool shouldConvertBoolToFPWithSelect(EVT VT) const { return false; }
 
   /// Should we prefer selects to doing arithmetic on boolean types
   virtual bool preferSelectsOverBooleanArithmetic(EVT VT) const {

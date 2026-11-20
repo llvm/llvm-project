@@ -3079,6 +3079,22 @@ attribute for the BPF target. This attribute may be attached to a
 struct or union declaration, where if -g is specified, it enables
 preserving struct or union member access debuginfo indices of this
 struct or union, similar to clang `__builtin_preserve_access_index()`.
+
+The attribute may also be attached to a named enum, or an anonymous enum with
+a typedef name. A use of its enumerator is then treated like
+`__builtin_preserve_enum_value(*(enum_type *)enumerator, BPF_ENUMVAL_VALUE)`,
+so it is not a constant expression, and if -g is specified, its value is
+relocated. An enum defined in a struct or union with the attribute does not
+get the attribute.
+
+Where a constant is required, e.g., in an array bound, a case label, an array
+designator, the initializer of a global, static local or constexpr variable or
+an `"i"` operand of inline asm, the enumerator is not relocated and its value in
+the local enum is used. This is diagnosed by `-Wbpf-enum-not-relocated`, an
+error by default; `-Wno-error=` or `#pragma clang diagnostic` allows such a use.
+
+The macro `__BPF_FEATURE_ENUM_PRESERVE_ACCESS_INDEX` is defined if the
+attribute is supported on enum declarations.
   }];
 }
 
@@ -6961,6 +6977,22 @@ declared with this attribute will utilize the standard fixed-length vector
 calling convention variant instead of the default calling convention defined by
 the ABI. This variant aims to pass fixed-length vectors via vector registers,
 if possible, rather than through general-purpose registers.}];
+}
+
+def HexagonHLXVectorStackLimitDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``hlx_vector_stack_limit`` attribute (Hexagon only) sets a limit, in bytes,
+on the HLX vector stack frame of a function. HLX vectors that are stored on the
+stack are placed on a separate stack in VTCM. If the function needs a larger
+vector stack frame, the compiler reports an error.
+
+The attribute overrides the limit set with ``-fhlx-vector-stack-limit=<bytes>``.
+
+.. code-block:: c
+
+  void foo(void) __attribute__((hlx_vector_stack_limit(8192)));
+  }];
 }
 
 def PreferredNameDocs : Documentation {

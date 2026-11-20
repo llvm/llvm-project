@@ -54,6 +54,7 @@
 #include "clang/Basic/StackExhaustionHandler.h"
 #include "clang/Basic/TemplateKinds.h"
 #include "clang/Basic/TokenKinds.h"
+#include "clang/Lex/TextEncoding.h"
 #include "clang/Sema/AnalysisBasedWarnings.h"
 #include "clang/Sema/Attr.h"
 #include "clang/Sema/CleanupInfo.h"
@@ -7317,6 +7318,12 @@ public:
   /// variable will have in the given scope.
   QualType getCapturedDeclRefType(ValueDecl *Var, SourceLocation Loc);
 
+  /// Handle a use of the variably modified type \p T in the current context.
+  /// Array bounds evaluated in an enclosing context are captured by the
+  /// lambdas in between; if a local class or a block is in between instead,
+  /// the use is diagnosed. Returns false if the use is invalid.
+  bool CheckVariablyModifiedTypeUse(QualType T, SourceLocation Loc);
+
   /// Mark all of the declarations referenced within a particular AST node as
   /// referenced. Used when template instantiation instantiates a non-dependent
   /// type -- entities referenced by the type are now referenced.
@@ -7365,7 +7372,7 @@ public:
 
   ExprResult ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
                                SourceLocation TemplateKWLoc, UnqualifiedId &Id,
-                               bool HasTrailingLParen, bool IsAddressOfOperand,
+                               bool IsCall, bool IsAddressOfOperand,
                                CorrectionCandidateCallback *CCC = nullptr,
                                bool IsInlineAsmIdentifier = false);
 
@@ -7428,7 +7435,7 @@ public:
                    const TemplateArgumentListInfo *TemplateArgs = nullptr);
 
   bool UseArgumentDependentLookup(const CXXScopeSpec &SS, const LookupResult &R,
-                                  bool HasTrailingLParen);
+                                  bool IsCall);
 
   /// BuildQualifiedDeclarationNameExpr - Build a C++ qualified
   /// declaration name, generally during template instantiation.
@@ -7478,7 +7485,8 @@ public:
   /// from multiple tokens.  However, the common case is that StringToks points
   /// to one string.
   ExprResult ActOnStringLiteral(ArrayRef<Token> StringToks,
-                                Scope *UDLScope = nullptr);
+                                Scope *UDLScope = nullptr,
+                                ConversionAction Action = CA_ToLiteralEncoding);
 
   ExprResult ActOnUnevaluatedStringLiteral(ArrayRef<Token> StringToks);
 
@@ -7654,8 +7662,10 @@ public:
                            bool AllowRecovery = false);
 
   /// BuildBuiltinCallExpr - Create a call to a builtin function specified by Id
-  //  with the specified CallArgs
-  Expr *BuildBuiltinCallExpr(SourceLocation Loc, Builtin::ID Id,
+  /// with the specified CallArgs. Id is unsigned rather than Builtin::ID, so
+  /// that it can also be a target-specific builtin ID, which is not in
+  /// Builtin::ID, e.g., BPF::BI__builtin_preserve_enum_value.
+  Expr *BuildBuiltinCallExpr(SourceLocation Loc, unsigned Id,
                              MultiExprArg CallArgs);
 
   using ADLCallKind = CallExpr::ADLCallKind;
@@ -8529,6 +8539,10 @@ public:
 
 private:
   static BinaryOperatorKind ConvertTokenKindToBinaryOpcode(tok::TokenKind Kind);
+
+  /// Maps the size expression of each VLA type created inside a function,
+  /// block or lambda to the context in which that size is evaluated.
+  llvm::DenseMap<const Expr *, const DeclContext *> VLASizeExprOwners;
 
   /// Methods for marking which expressions involve dereferencing a pointer
   /// marked with the 'noderef' attribute. Expressions are checked bottom up as
@@ -11523,7 +11537,8 @@ private:
   ///@{
 
 public:
-  ExprResult ActOnGCCAsmStmtString(Expr *Stm, bool ForAsmLabel);
+  ExprResult ActOnGCCAsmStmtString(Expr *Stm, bool ForAsmLabel,
+                                   bool IsConstexpr = false);
   StmtResult ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
                              bool IsVolatile, unsigned NumOutputs,
                              unsigned NumInputs, IdentifierInfo **Names,

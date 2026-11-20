@@ -26,7 +26,7 @@ class FeaturePTX<int version, list<SubtargetFeature> implies>:
 
 defvar PTXVersions = [32, 40, 41, 42, 43, 50, 60, 61, 62, 63, 64, 65, 70, 71,
                       72, 73, 74, 75, 76, 77, 78, 80, 81, 82, 83, 84, 85, 86,
-                      87, 88, 90, 91, 92, 93, 94];
+                      87, 88, 90, 91, 92, 93, 94, 95];
 
 foreach version = PTXVersions in
   def PTX # version : FeaturePTX<version,

@@ -8,13 +8,13 @@
 
 #include "src/arpa/inet/ntohl.h"
 #include "src/__support/common.h"
-#include "src/__support/endian_internal.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/net/byte_order.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(uint32_t, ntohl, (uint32_t netlong)) {
-  return Endian::from_big_endian(netlong);
+  return net::ntoh(netlong);
 }
 
 } // namespace LIBC_NAMESPACE_DECL
