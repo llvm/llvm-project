@@ -1201,6 +1201,25 @@ SDValue DAGCombiner::reassociateOpsCommutative(unsigned Opc, const SDLoc &DL,
   SDValue N00 = N0.getOperand(0);
   SDValue N01 = N0.getOperand(1);
 
+  // Check for repeated operand logic simplifications. Do this before
+  // reassociating constants, which would hide the repeated operand.
+  if (Opc == ISD::AND || Opc == ISD::OR) {
+    // (N00 & N01) & N00 --> N00 & N01
+    // (N00 & N01) & N01 --> N00 & N01
+    // (N00 | N01) | N00 --> N00 | N01
+    // (N00 | N01) | N01 --> N00 | N01
+    if (N1 == N00 || N1 == N01)
+      return N0;
+  }
+  if (Opc == ISD::XOR) {
+    // (N00 ^ N01) ^ N00 --> N01
+    if (N1 == N00)
+      return N01;
+    // (N00 ^ N01) ^ N01 --> N00
+    if (N1 == N01)
+      return N00;
+  }
+
   if (DAG.isConstantIntBuildVectorOrConstantInt(N01)) {
     SDNodeFlags NewFlags;
     if (N0.getOpcode() == ISD::ADD && N0->getFlags().hasNoUnsignedWrap() &&
@@ -1222,24 +1241,6 @@ SDValue DAGCombiner::reassociateOpsCommutative(unsigned Opc, const SDLoc &DL,
       SDValue OpNode = DAG.getNode(Opc, SDLoc(N0), VT, N00, N1, NewFlags);
       return DAG.getNode(Opc, DL, VT, OpNode, N01, NewFlags);
     }
-  }
-
-  // Check for repeated operand logic simplifications.
-  if (Opc == ISD::AND || Opc == ISD::OR) {
-    // (N00 & N01) & N00 --> N00 & N01
-    // (N00 & N01) & N01 --> N00 & N01
-    // (N00 | N01) | N00 --> N00 | N01
-    // (N00 | N01) | N01 --> N00 | N01
-    if (N1 == N00 || N1 == N01)
-      return N0;
-  }
-  if (Opc == ISD::XOR) {
-    // (N00 ^ N01) ^ N00 --> N01
-    if (N1 == N00)
-      return N01;
-    // (N00 ^ N01) ^ N01 --> N00
-    if (N1 == N01)
-      return N00;
   }
 
   if (TLI.isReassocProfitable(DAG, N0, N1)) {
