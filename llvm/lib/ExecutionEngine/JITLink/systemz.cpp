@@ -46,6 +46,14 @@ const char *getEdgeKindName(Edge::Kind R) {
     return "Pointer12";
   case Pointer8:
     return "Pointer8";
+  case Pointer64Add:
+    return "Pointer64Add";
+  case Pointer32Add:
+    return "Pointer32Add";
+  case Pointer64Sub:
+    return "Pointer64Sub";
+  case Pointer32Sub:
+    return "Pointer32Sub";
   case Delta64:
     return "Delta64";
   case Delta32:
