@@ -5,7 +5,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fcxx-exceptions -fexceptions -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefixes=LLVM,OGCG
 
-// Runtime library functions do not get "no-trapping-math" and
+// Runtime library functions and declarations do not get "no-trapping-math" and
 // "stack-protector-buffer-size", while user functions and compiler-generated
 // init functions do, matching classic codegen.
 
@@ -43,8 +43,5 @@ void h() { throw 1; }
 // LLVM-DAG: define internal void @_GLOBAL__sub_I_{{.*}}() #[[INIT]]
 
 // LLVM-DAG: attributes #[[USER]] = { {{.*}}"no-trapping-math"="true" "stack-protector-buffer-size"="8"
-// LLVM-DAG: attributes #[[DECL]] = { {{.*}}"no-trapping-math"="true" "stack-protector-buffer-size"="8"
-// CIR gives the init functions the same attributes as the declaration of `f`,
-// so they share one attribute group, which the check above for DECL covers;
-// a DAG check cannot match that line twice.
-// OGCG-DAG: attributes #[[INIT]] = { {{.*}}"no-trapping-math"="true" "stack-protector-buffer-size"="8"
+// LLVM-DAG: attributes #[[DECL]] = { "target-features"="{{[^"]*}}" }
+// LLVM-DAG: attributes #[[INIT]] = { {{.*}}"no-trapping-math"="true" "stack-protector-buffer-size"="8"

@@ -482,6 +482,7 @@ template <class Derived> struct GenFuncBase {
     F->setVisibility(llvm::GlobalValue::HiddenVisibility);
     CGM.SetLLVMFunctionAttributes(GlobalDecl(), FI, F, /*IsThunk=*/false);
     CGM.SetLLVMFunctionAttributesForDefinition(nullptr, F);
+    CGM.addDefinitionFunctionAttributes(GlobalDecl(), *F);
     CodeGenFunction NewCGF(CGM);
     setCGF(&NewCGF);
     CGF->StartFunction(GlobalDecl(), Ctx.VoidTy, F, FI, Args);

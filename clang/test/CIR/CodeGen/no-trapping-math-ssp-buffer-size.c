@@ -12,10 +12,10 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -ffp-exception-behavior=strict -stack-protector-buffer-size 16 -emit-llvm %s -o %t-strict.ll
 // RUN: FileCheck --input-file=%t-strict.ll %s -check-prefix=LLVM-STRICT
 
-// Both the definition and the declaration get "no-trapping-math" (unless FP
-// exceptions are not ignored) and "stack-protector-buffer-size". Their values
-// are TU-wide and live in #cir.lowering_options, and LowerToLLVM adds them
-// to every function that is not marked runtime_func.
+// The definition gets "no-trapping-math" (unless FP exceptions are not
+// ignored) and "stack-protector-buffer-size", but the declaration does not.
+// Their values are TU-wide and live in #cir.lowering_options, and LowerToLLVM
+// adds them to every function definition that is not marked runtime_func.
 
 int decl(int);
 
@@ -29,11 +29,11 @@ int def(int x) { return decl(x); }
 // LLVM: define{{.*}} i32 @def(i32 {{.*}}) #[[DEF_ATTR:[0-9]+]]
 // LLVM: declare{{.*}} i32 @decl(i32 {{.*}}) #[[DECL_ATTR:[0-9]+]]
 // LLVM: attributes #[[DEF_ATTR]] = {{{.*}}"no-trapping-math"="true" "stack-protector-buffer-size"="8"
-// LLVM: attributes #[[DECL_ATTR]] = {{{.*}}"no-trapping-math"="true" "stack-protector-buffer-size"="8"
+// LLVM: attributes #[[DECL_ATTR]] = { "target-features"="{{[^"]*}}" }
 
 // LLVM-STRICT: define{{.*}} i32 @def(i32 {{.*}}) #[[DEF_ATTR:[0-9]+]]
 // LLVM-STRICT: declare{{.*}} i32 @decl(i32 {{.*}}) #[[DECL_ATTR:[0-9]+]]
 // String attributes are sorted, so "no-trapping-math" would precede
 // "stack-protector-buffer-size".
 // LLVM-STRICT: attributes #[[DEF_ATTR]] = { {{[^"]*}}{{("min-legal-vector-width"="0" )?}}"stack-protector-buffer-size"="16"
-// LLVM-STRICT: attributes #[[DECL_ATTR]] = { "stack-protector-buffer-size"="16"
+// LLVM-STRICT: attributes #[[DECL_ATTR]] = { "target-features"="{{[^"]*}}" }

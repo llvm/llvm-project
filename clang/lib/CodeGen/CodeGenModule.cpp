@@ -3696,6 +3696,7 @@ void CodeGenModule::SetInternalFunctionAttributes(GlobalDecl GD,
   const Decl *D = GD.getDecl();
   SetLLVMFunctionAttributes(GD, FI, F, /*IsThunk=*/false);
   SetLLVMFunctionAttributesForDefinition(D, F);
+  addDefinitionFunctionAttributes(GD, *F);
 
   F->setLinkage(llvm::Function::InternalLinkage);
 
@@ -7141,6 +7142,8 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
 
   maybeSetTrivialComdat(*D, *Fn);
 
+  addDefinitionFunctionAttributes(GD, *Fn);
+
   if (!tryEmitCUDADeviceInvalidFunctionBody(GD, Fn))
     CodeGenFunction(*this).GenerateCode(GD, Fn, FI);
 
@@ -9193,6 +9196,7 @@ CodeGenModule::getOrCreateMSVCGlobalDeleteWrapper(const FunctionDecl *GlobOD) {
         getTypes().arrangeGlobalDeclaration(GlobalDecl(GlobOD)), EmptyFn,
         /*IsThunk=*/false);
     SetLLVMFunctionAttributesForDefinition(GlobOD, EmptyFn);
+    addDefinitionFunctionAttributes(GlobalDecl(GlobOD), *EmptyFn);
     getTargetCodeGenInfo().setTargetAttributes(GlobOD, EmptyFn, *this);
     auto *BB = llvm::BasicBlock::Create(LLVMCtx, "", EmptyFn);
     llvm::Function *TrapFn =
@@ -9269,6 +9273,7 @@ void CodeGenModule::emitGlobalDeleteForwardingBodies() {
         getTypes().arrangeGlobalDeclaration(GlobalDecl(OperatorDeleteFD)),
         GlobDelFn, /*IsThunk=*/false);
     SetLLVMFunctionAttributesForDefinition(OperatorDeleteFD, GlobDelFn);
+    addDefinitionFunctionAttributes(GlobalDecl(OperatorDeleteFD), *GlobDelFn);
     getTargetCodeGenInfo().setTargetAttributes(OperatorDeleteFD, GlobDelFn,
                                                *this);
   }

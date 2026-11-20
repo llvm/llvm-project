@@ -127,7 +127,7 @@ void test_not_unroll() {
 // CHECK: declare spir_func void @nodupfun(){{[^#]*}} #[[attr3:[0-9]+]]
 
 // CHECK-LABEL: @assume_convergent_asm
-// CHECK: tail call void asm sideeffect "s_barrier", ""() #8
+// CHECK: tail call void asm sideeffect "s_barrier", ""() #6
 kernel void assume_convergent_asm()
 {
   __asm__ volatile("s_barrier");
@@ -138,7 +138,5 @@ kernel void assume_convergent_asm()
 // CHECK: attributes #2 = { convergent nounwind{{[^}]*}} }
 // CHECK: attributes #3 = { convergent noduplicate nounwind{{[^}]*}} }
 // CHECK: attributes #4 = { alwaysinline convergent norecurse nounwind{{[^}]*}} }
-// CHECK: attributes #5 = { convergent nounwind "uniform-work-group-size" }
-// CHECK: attributes #6 = { nounwind "uniform-work-group-size" }
-// CHECK: attributes #7 = { convergent noduplicate nounwind "uniform-work-group-size" }
-// CHECK: attributes #8 = { convergent nounwind }
+// CHECK: attributes #5 = { nounwind "uniform-work-group-size" }
+// CHECK: attributes #6 = { convergent nounwind }

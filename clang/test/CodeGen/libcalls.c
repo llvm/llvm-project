@@ -123,5 +123,5 @@ void test_builtins(double d, float f, long double ld) {
 // CHECK-YES: declare float @logf(float noundef) [[NUW]]
 }
 
-// CHECK-YES: attributes [[NUW]] = { nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+x87" }
+// CHECK-YES: attributes [[NUW]] = { nounwind "target-features"="+cx8,+x87" }
 // CHECK-NO-DAG: attributes [[NUW_RNI]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }

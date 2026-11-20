@@ -35,4 +35,4 @@ int Foo::test_method() {
 // CHECK: [[FIELD:%.*]] = load i32, ptr [[FIELDPTR]], align 4
 // CHECK: ret i32 [[FIELD]]
 // CHECK: [[LPAD]]:
-// CHECK: call void @_ZN9TestClassdlEPv(ptr noundef [[ALLOCATION]]) #3
+// CHECK: call void @_ZN9TestClassdlEPv(ptr noundef [[ALLOCATION]]) #1

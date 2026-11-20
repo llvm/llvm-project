@@ -16,14 +16,12 @@
 // CHECK: declare noundef float @_Z3sinf(float noundef) [[attr1:#[0-9]*]]
 // CHECK: declare void @__kmpc_target_deinit(
 // CHECK: define weak_odr protected ptx_kernel void @__omp_offloading_{{.*}}__Z17complex_reductionIdEvv_{{.*}}({{.*}}) [[attr0]]
-// CHECK: %call = call noundef double @_Z3sind(double noundef 0.000000e+00) [[attr2:#[0-9]]]
+// CHECK: %call = call noundef double @_Z3sind(double noundef 0.000000e+00) [[attr1]]
 // CHECK: declare noundef double @_Z3sind(double noundef) [[attr1]]
 
 // CHECK:       attributes [[attr0]]
 // CHECK-NOT:  "llvm.assume"
 // CHECK:       attributes [[attr1]]
-// CHECK-SAME:  "llvm.assume"="ompx_check_that_this_is_attached_to_included_functions_and_template_instantiations"
-// CHECK:       attributes [[attr2]]
 // CHECK-SAME:  "llvm.assume"="ompx_check_that_this_is_attached_to_included_functions_and_template_instantiations"
 
 

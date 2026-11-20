@@ -394,7 +394,7 @@ void set_anon_i() {
 // CHECK: [[UM_ADDR:%.+]] = call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @_ZN1U1mE)
 // CHECK: ret ptr [[UM_ADDR]]
 
-// LINUX_AIX: declare extern_weak void @_ZTH1b() [[ATTR:#[0-9]+]]
+// LINUX_AIX: declare extern_weak void @_ZTH1b(){{( #[0-9]+)?$}}
 
 // AIX: define linkonce_odr void @_ZTHN1WIiE1mE(){{.*}} {
 // AIX-NEXT: ret void
@@ -404,4 +404,3 @@ void set_anon_i() {
 // AIX-NEXT: ret void
 // AIX-NEXT: }
 
-// LINUX_AIX: attributes [[ATTR]] = { {{.+}} }

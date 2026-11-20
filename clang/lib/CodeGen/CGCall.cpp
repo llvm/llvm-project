@@ -2352,6 +2352,92 @@ addMergableDefaultFunctionAttributes(const CodeGenOptions &CodeGenOpts,
                        FuncAttrs);
 }
 
+static void getDefinitionFunctionAttributes(const CodeGenOptions &CodeGenOpts,
+                                            const LangOptions &LangOpts,
+                                            llvm::AttrBuilder &FuncAttrs) {
+  switch (CodeGenOpts.getFramePointer()) {
+  case CodeGenOptions::FramePointerKind::None:
+    // This is the default behavior.
+    break;
+  case CodeGenOptions::FramePointerKind::Reserved:
+  case CodeGenOptions::FramePointerKind::NonLeafNoReserve:
+  case CodeGenOptions::FramePointerKind::NonLeaf:
+  case CodeGenOptions::FramePointerKind::All:
+    FuncAttrs.addAttribute(
+        "frame-pointer",
+        CodeGenOptions::getFramePointerKindName(CodeGenOpts.getFramePointer()));
+  }
+
+  if (LangOpts.getDefaultExceptionMode() == LangOptions::FPE_Ignore)
+    FuncAttrs.addAttribute("no-trapping-math", "true");
+
+  // TODO: Are these all needed?
+  // unsafe/inf/nan/nsz are handled by instruction-level FastMathFlags.
+  if (CodeGenOpts.SoftFloat)
+    FuncAttrs.addAttribute("use-soft-float", "true");
+  FuncAttrs.addAttribute("stack-protector-buffer-size",
+                         llvm::utostr(CodeGenOpts.SSPBufferSize));
+  if (LangOpts.NoSignedZero)
+    FuncAttrs.addAttribute("no-signed-zeros-fp-math", "true");
+
+  // TODO: Reciprocal estimate codegen options should apply to instructions?
+  const std::vector<std::string> &Recips = CodeGenOpts.Reciprocals;
+  if (!Recips.empty())
+    FuncAttrs.addAttribute("reciprocal-estimates", llvm::join(Recips, ","));
+
+  if (!CodeGenOpts.PreferVectorWidth.empty() &&
+      CodeGenOpts.PreferVectorWidth != "none")
+    FuncAttrs.addAttribute("prefer-vector-width",
+                           CodeGenOpts.PreferVectorWidth);
+
+  if (CodeGenOpts.StackRealignment)
+    FuncAttrs.addAttribute("stackrealign");
+  if (CodeGenOpts.Backchain)
+    FuncAttrs.addAttribute("backchain");
+  if (CodeGenOpts.EnableSegmentedStacks)
+    FuncAttrs.addAttribute("split-stack");
+
+  if (CodeGenOpts.SpeculativeLoadHardening)
+    FuncAttrs.addAttribute(llvm::Attribute::SpeculativeLoadHardening);
+
+  // Add zero-call-used-regs attribute.
+  switch (CodeGenOpts.getZeroCallUsedRegs()) {
+  case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::Skip:
+    FuncAttrs.removeAttribute("zero-call-used-regs");
+    break;
+  case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::UsedGPRArg:
+    FuncAttrs.addAttribute("zero-call-used-regs", "used-gpr-arg");
+    break;
+  case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::UsedGPR:
+    FuncAttrs.addAttribute("zero-call-used-regs", "used-gpr");
+    break;
+  case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::UsedArg:
+    FuncAttrs.addAttribute("zero-call-used-regs", "used-arg");
+    break;
+  case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::Used:
+    FuncAttrs.addAttribute("zero-call-used-regs", "used");
+    break;
+  case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::AllGPRArg:
+    FuncAttrs.addAttribute("zero-call-used-regs", "all-gpr-arg");
+    break;
+  case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::AllGPR:
+    FuncAttrs.addAttribute("zero-call-used-regs", "all-gpr");
+    break;
+  case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::AllArg:
+    FuncAttrs.addAttribute("zero-call-used-regs", "all-arg");
+    break;
+  case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::All:
+    FuncAttrs.addAttribute("zero-call-used-regs", "all");
+    break;
+  }
+
+  if (CodeGenOpts.SaveRegParams)
+    FuncAttrs.addAttribute("save-reg-params");
+
+  TargetInfo::BranchProtectionInfo BPI(LangOpts);
+  TargetCodeGenInfo::initBranchProtectionFnAttributes(BPI, FuncAttrs);
+}
+
 static void getTrivialDefaultFunctionAttributes(
     StringRef Name, bool HasOptnone, const CodeGenOptions &CodeGenOpts,
     const LangOptions &LangOpts, bool AttrOnCallSite,
@@ -2380,84 +2466,8 @@ static void getTrivialDefaultFunctionAttributes(
     if (!CodeGenOpts.TrapFuncName.empty())
       FuncAttrs.addAttribute("trap-func-name", CodeGenOpts.TrapFuncName);
   } else {
-    switch (CodeGenOpts.getFramePointer()) {
-    case CodeGenOptions::FramePointerKind::None:
-      // This is the default behavior.
-      break;
-    case CodeGenOptions::FramePointerKind::Reserved:
-    case CodeGenOptions::FramePointerKind::NonLeafNoReserve:
-    case CodeGenOptions::FramePointerKind::NonLeaf:
-    case CodeGenOptions::FramePointerKind::All:
-      FuncAttrs.addAttribute("frame-pointer",
-                             CodeGenOptions::getFramePointerKindName(
-                                 CodeGenOpts.getFramePointer()));
-    }
-
     if (CodeGenOpts.NullPointerIsValid)
       FuncAttrs.addAttribute(llvm::Attribute::NullPointerIsValid);
-
-    if (LangOpts.getDefaultExceptionMode() == LangOptions::FPE_Ignore)
-      FuncAttrs.addAttribute("no-trapping-math", "true");
-
-    // TODO: Are these all needed?
-    // unsafe/inf/nan/nsz are handled by instruction-level FastMathFlags.
-    if (CodeGenOpts.SoftFloat)
-      FuncAttrs.addAttribute("use-soft-float", "true");
-    FuncAttrs.addAttribute("stack-protector-buffer-size",
-                           llvm::utostr(CodeGenOpts.SSPBufferSize));
-    if (LangOpts.NoSignedZero)
-      FuncAttrs.addAttribute("no-signed-zeros-fp-math", "true");
-
-    // TODO: Reciprocal estimate codegen options should apply to instructions?
-    const std::vector<std::string> &Recips = CodeGenOpts.Reciprocals;
-    if (!Recips.empty())
-      FuncAttrs.addAttribute("reciprocal-estimates", llvm::join(Recips, ","));
-
-    if (!CodeGenOpts.PreferVectorWidth.empty() &&
-        CodeGenOpts.PreferVectorWidth != "none")
-      FuncAttrs.addAttribute("prefer-vector-width",
-                             CodeGenOpts.PreferVectorWidth);
-
-    if (CodeGenOpts.StackRealignment)
-      FuncAttrs.addAttribute("stackrealign");
-    if (CodeGenOpts.Backchain)
-      FuncAttrs.addAttribute("backchain");
-    if (CodeGenOpts.EnableSegmentedStacks)
-      FuncAttrs.addAttribute("split-stack");
-
-    if (CodeGenOpts.SpeculativeLoadHardening)
-      FuncAttrs.addAttribute(llvm::Attribute::SpeculativeLoadHardening);
-
-    // Add zero-call-used-regs attribute.
-    switch (CodeGenOpts.getZeroCallUsedRegs()) {
-    case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::Skip:
-      FuncAttrs.removeAttribute("zero-call-used-regs");
-      break;
-    case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::UsedGPRArg:
-      FuncAttrs.addAttribute("zero-call-used-regs", "used-gpr-arg");
-      break;
-    case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::UsedGPR:
-      FuncAttrs.addAttribute("zero-call-used-regs", "used-gpr");
-      break;
-    case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::UsedArg:
-      FuncAttrs.addAttribute("zero-call-used-regs", "used-arg");
-      break;
-    case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::Used:
-      FuncAttrs.addAttribute("zero-call-used-regs", "used");
-      break;
-    case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::AllGPRArg:
-      FuncAttrs.addAttribute("zero-call-used-regs", "all-gpr-arg");
-      break;
-    case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::AllGPR:
-      FuncAttrs.addAttribute("zero-call-used-regs", "all-gpr");
-      break;
-    case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::AllArg:
-      FuncAttrs.addAttribute("zero-call-used-regs", "all-arg");
-      break;
-    case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::All:
-      FuncAttrs.addAttribute("zero-call-used-regs", "all");
-      break;
-    }
   }
 
   if (LangOpts.assumeFunctionsAreConvergent()) {
@@ -2476,18 +2486,10 @@ static void getTrivialDefaultFunctionAttributes(
     FuncAttrs.addAttribute(llvm::Attribute::NoUnwind);
   }
 
-  if (CodeGenOpts.SaveRegParams && !AttrOnCallSite)
-    FuncAttrs.addAttribute("save-reg-params");
-
   for (StringRef Attr : CodeGenOpts.DefaultFunctionAttrs) {
     StringRef Var, Value;
     std::tie(Var, Value) = Attr.split('=');
     FuncAttrs.addAttribute(Var, Value);
-  }
-
-  if (!AttrOnCallSite) {
-    TargetInfo::BranchProtectionInfo BPI(LangOpts);
-    TargetCodeGenInfo::initBranchProtectionFnAttributes(BPI, FuncAttrs);
   }
 }
 
@@ -2544,6 +2546,7 @@ void CodeGen::mergeDefaultFunctionDefinitionAttributes(
   ::getTrivialDefaultFunctionAttributes(F.getName(), F.hasOptNone(),
                                         CodeGenOpts, LangOpts,
                                         /*AttrOnCallSite=*/false, FuncAttrs);
+  ::getDefinitionFunctionAttributes(CodeGenOpts, LangOpts, FuncAttrs);
 
   if (!WillInternalize && F.isInterposable()) {
     // Do not promote "dynamic" denormal-fp-math to this translation unit's
@@ -2590,10 +2593,6 @@ void CodeGenModule::getDefaultFunctionAttributes(StringRef Name,
   getTrivialDefaultFunctionAttributes(Name, HasOptnone, AttrOnCallSite,
                                       FuncAttrs);
 
-  if (!AttrOnCallSite)
-    TargetCodeGenInfo::initPointerAuthFnAttributes(CodeGenOpts.PointerAuth,
-                                                   FuncAttrs);
-
   // If we're just getting the default, get the default values for mergeable
   // attributes.
   if (!AttrOnCallSite)
@@ -2604,7 +2603,36 @@ void CodeGenModule::addDefaultFunctionDefinitionAttributes(
     llvm::AttrBuilder &attrs) {
   getDefaultFunctionAttributes(/*function name*/ "", /*optnone*/ false,
                                /*for call*/ false, attrs);
+  ::getDefinitionFunctionAttributes(CodeGenOpts, LangOpts, attrs);
+  TargetCodeGenInfo::initPointerAuthFnAttributes(CodeGenOpts.PointerAuth,
+                                                 attrs);
   GetCPUAndFeaturesAttributes(GlobalDecl(), attrs);
+}
+
+void CodeGenModule::addDefinitionFunctionAttributes(GlobalDecl GD,
+                                                    llvm::Function &F) {
+  llvm::AttrBuilder FuncAttrs(F.getContext());
+  ::getDefinitionFunctionAttributes(CodeGenOpts, LangOpts, FuncAttrs);
+  TargetCodeGenInfo::initPointerAuthFnAttributes(CodeGenOpts.PointerAuth,
+                                                 FuncAttrs);
+
+  if (const Decl *D = GD.getDecl()) {
+    if (D->hasAttr<NoSpeculativeLoadHardeningAttr>())
+      FuncAttrs.removeAttribute(llvm::Attribute::SpeculativeLoadHardening);
+    if (D->hasAttr<SpeculativeLoadHardeningAttr>())
+      FuncAttrs.addAttribute(llvm::Attribute::SpeculativeLoadHardening);
+    if (D->hasAttr<NoSplitStackAttr>())
+      FuncAttrs.removeAttribute("split-stack");
+    if (const auto *ZCURA = D->getAttr<ZeroCallUsedRegsAttr>()) {
+      // A function "__attribute__((...))" overrides the command-line flag.
+      FuncAttrs.addAttribute(
+          "zero-call-used-regs",
+          ZeroCallUsedRegsAttr::ConvertZeroCallUsedRegsKindToStr(
+              ZCURA->getZeroCallUsedRegs()));
+    }
+  }
+
+  F.addFnAttrs(FuncAttrs);
 }
 
 static void addNoBuiltinAttributes(llvm::AttrBuilder &FuncAttrs,
@@ -2912,22 +2940,6 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
   // Override some default IR attributes based on declaration-specific
   // information.
   if (TargetDecl) {
-    if (TargetDecl->hasAttr<NoSpeculativeLoadHardeningAttr>())
-      FuncAttrs.removeAttribute(llvm::Attribute::SpeculativeLoadHardening);
-    if (TargetDecl->hasAttr<SpeculativeLoadHardeningAttr>())
-      FuncAttrs.addAttribute(llvm::Attribute::SpeculativeLoadHardening);
-    if (TargetDecl->hasAttr<NoSplitStackAttr>())
-      FuncAttrs.removeAttribute("split-stack");
-    if (TargetDecl->hasAttr<ZeroCallUsedRegsAttr>()) {
-      // A function "__attribute__((...))" overrides the command-line flag.
-      auto Kind =
-          TargetDecl->getAttr<ZeroCallUsedRegsAttr>()->getZeroCallUsedRegs();
-      FuncAttrs.removeAttribute("zero-call-used-regs");
-      FuncAttrs.addAttribute(
-          "zero-call-used-regs",
-          ZeroCallUsedRegsAttr::ConvertZeroCallUsedRegsKindToStr(Kind));
-    }
-
     // Add NonLazyBind attribute to function declarations when -fno-plt
     // is used.
     // FIXME: what if we just haven't processed the function definition

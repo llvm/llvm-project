@@ -3259,6 +3259,7 @@ void ItaniumCXXABI::EmitThreadLocalInitFuncs(
     }
 
     CGM.SetLLVMFunctionAttributesForDefinition(nullptr, Wrapper);
+    CGM.addDefinitionFunctionAttributes(GlobalDecl(), *Wrapper);
 
     // Mangle the name for the thread_local initialization function.
     SmallString<256> InitFnName;
@@ -3449,6 +3450,7 @@ ItaniumCXXABI::getOrCreateVirtualFunctionPointerThunk(const CXXMethodDecl *MD) {
 
   CGM.SetLLVMFunctionAttributes(MD, FnInfo, ThunkFn, /*IsThunk=*/true);
   CGM.SetLLVMFunctionAttributesForDefinition(MD, ThunkFn);
+  CGM.addDefinitionFunctionAttributes(MD, *ThunkFn);
 
   // Stack protection sometimes gets inserted after the musttail call.
   ThunkFn->removeFnAttr(llvm::Attribute::StackProtect);
@@ -4848,6 +4850,7 @@ static llvm::FunctionCallee getClangCallTerminateFn(CodeGenModule &CGM) {
   if (fn->empty()) {
     CGM.SetLLVMFunctionAttributes(GlobalDecl(), FI, fn, /*IsThunk=*/false);
     CGM.SetLLVMFunctionAttributesForDefinition(nullptr, fn);
+    CGM.addDefinitionFunctionAttributes(GlobalDecl(), *fn);
     fn->setDoesNotThrow();
     fn->setDoesNotReturn();
 

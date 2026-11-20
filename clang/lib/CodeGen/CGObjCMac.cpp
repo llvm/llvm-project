@@ -4779,6 +4779,7 @@ CGObjCCommonMac::GenerateObjCDirectThunk(const ObjCMethodDecl *OMD,
   // because Implementation may not have its attributes set yet at this point.
   CGM.SetLLVMFunctionAttributes(GlobalDecl(OMD), FI, Thunk, /*IsThunk=*/false);
   CGM.SetLLVMFunctionAttributesForDefinition(OMD, Thunk);
+  CGM.addDefinitionFunctionAttributes(GlobalDecl(OMD), *Thunk);
 
   // - [self self] for class methods (class realization)
   // - if (self == nil) branch to nil block with zero return

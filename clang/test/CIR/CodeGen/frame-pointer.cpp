@@ -70,24 +70,24 @@ void definition() { declaration(); }
 // LLVM-NON-LEAF: define {{.*}}void @_Z10definitionv() #[[DEF_ATTR:[0-9]+]]
 // LLVM-NON-LEAF: declare void @_Z11declarationv() #[[DECL_ATTR:[0-9]+]]
 // LLVM-NON-LEAF: attributes #[[DEF_ATTR]] = {{.*}}"frame-pointer"="non-leaf"
-// LLVM-NON-LEAF: attributes #[[DECL_ATTR]] = {{.*}}"frame-pointer"="non-leaf"
+// LLVM-NON-LEAF: attributes #[[DECL_ATTR]] = { "target-features"="{{[^"]*}}" }
 // LLVM-NON-LEAF: !{i32 7, !"frame-pointer", i32 1}
 
 // LLVM-ALL: define {{.*}}void @_Z10definitionv() #[[DEF_ATTR:[0-9]+]]
 // LLVM-ALL: call void @_Z11declarationv(){{$}}
 // LLVM-ALL: declare void @_Z11declarationv() #[[DECL_ATTR:[0-9]+]]
 // LLVM-ALL: attributes #[[DEF_ATTR]] = {{.*}}"frame-pointer"="all"
-// LLVM-ALL: attributes #[[DECL_ATTR]] = {{.*}}"frame-pointer"="all"
+// LLVM-ALL: attributes #[[DECL_ATTR]] = { "target-features"="{{[^"]*}}" }
 // LLVM-ALL: !{i32 7, !"frame-pointer", i32 2}
 
 // LLVM-RESERVED: define {{.*}}void @_Z10definitionv() #[[DEF_ATTR:[0-9]+]]
 // LLVM-RESERVED: declare void @_Z11declarationv() #[[DECL_ATTR:[0-9]+]]
 // LLVM-RESERVED: attributes #[[DEF_ATTR]] = {{.*}}"frame-pointer"="reserved"
-// LLVM-RESERVED: attributes #[[DECL_ATTR]] = {{.*}}"frame-pointer"="reserved"
+// LLVM-RESERVED: attributes #[[DECL_ATTR]] = { "target-features"="{{[^"]*}}" }
 // LLVM-RESERVED: !{i32 7, !"frame-pointer", i32 3}
 
 // LLVM-NLNR: define {{.*}}void @_Z10definitionv() #[[DEF_ATTR:[0-9]+]]
 // LLVM-NLNR: declare void @_Z11declarationv() #[[DECL_ATTR:[0-9]+]]
 // LLVM-NLNR: attributes #[[DEF_ATTR]] = {{.*}}"frame-pointer"="non-leaf-no-reserve"
-// LLVM-NLNR: attributes #[[DECL_ATTR]] = {{.*}}"frame-pointer"="non-leaf-no-reserve"
+// LLVM-NLNR: attributes #[[DECL_ATTR]] = { "target-features"="{{[^"]*}}" }
 // LLVM-NLNR: !{i32 7, !"frame-pointer", i32 4}

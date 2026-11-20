@@ -65,11 +65,11 @@ B fail;
 // WITH-NONZERO-DEFAULT-AS-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr [[A_ADDR]] to ptr addrspace(4)
 // WITH-NONZERO-DEFAULT-AS-NEXT:    store ptr addrspace(4) [[A]], ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
 // WITH-NONZERO-DEFAULT-AS-NEXT:    [[TMP0:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
-// WITH-NONZERO-DEFAULT-AS-NEXT:    [[TMP1:%.*]] = call spir_func addrspace(4) ptr addrspace(4) @__dynamic_cast(ptr addrspace(4) [[TMP0]], ptr addrspace(1) @_ZTI1A, ptr addrspace(1) @_ZTI1B, i64 0) #[[ATTR3:[0-9]+]]
+// WITH-NONZERO-DEFAULT-AS-NEXT:    [[TMP1:%.*]] = call spir_func addrspace(4) ptr addrspace(4) @__dynamic_cast(ptr addrspace(4) [[TMP0]], ptr addrspace(1) @_ZTI1A, ptr addrspace(1) @_ZTI1B, i64 0) #[[ATTR2:[0-9]+]]
 // WITH-NONZERO-DEFAULT-AS-NEXT:    [[TMP2:%.*]] = icmp eq ptr addrspace(4) [[TMP1]], null
 // WITH-NONZERO-DEFAULT-AS-NEXT:    br i1 [[TMP2]], label [[DYNAMIC_CAST_BAD_CAST:%.*]], label [[DYNAMIC_CAST_END:%.*]]
 // WITH-NONZERO-DEFAULT-AS:       dynamic_cast.bad_cast:
-// WITH-NONZERO-DEFAULT-AS-NEXT:    invoke spir_func addrspace(4) void @__cxa_bad_cast() #[[ATTR4:[0-9]+]]
+// WITH-NONZERO-DEFAULT-AS-NEXT:    invoke spir_func addrspace(4) void @__cxa_bad_cast() #[[ATTR3:[0-9]+]]
 // WITH-NONZERO-DEFAULT-AS-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
 // WITH-NONZERO-DEFAULT-AS:       invoke.cont:
 // WITH-NONZERO-DEFAULT-AS-NEXT:    unreachable
@@ -85,7 +85,7 @@ B fail;
 // WITH-NONZERO-DEFAULT-AS-NEXT:    br label [[CATCH:%.*]]
 // WITH-NONZERO-DEFAULT-AS:       catch:
 // WITH-NONZERO-DEFAULT-AS-NEXT:    [[EXN:%.*]] = load ptr addrspace(4), ptr [[EXN_SLOT]], align 8
-// WITH-NONZERO-DEFAULT-AS-NEXT:    [[TMP6:%.*]] = call spir_func addrspace(4) ptr addrspace(4) @__cxa_begin_catch(ptr addrspace(4) [[EXN]]) #[[ATTR3]]
+// WITH-NONZERO-DEFAULT-AS-NEXT:    [[TMP6:%.*]] = call spir_func addrspace(4) ptr addrspace(4) @__cxa_begin_catch(ptr addrspace(4) [[EXN]]) #[[ATTR2]]
 // WITH-NONZERO-DEFAULT-AS-NEXT:    call spir_func addrspace(4) void @__cxa_end_catch()
 // WITH-NONZERO-DEFAULT-AS-NEXT:    br label [[TRY_CONT]]
 // WITH-NONZERO-DEFAULT-AS:       try.cont:
@@ -103,15 +103,14 @@ const B& f(A *a) {
 //.
 // CHECK: attributes #[[ATTR0]] = { convergent mustprogress noinline optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // CHECK: attributes #[[ATTR1:[0-9]+]] = { nounwind willreturn memory(read) }
-// CHECK: attributes #[[ATTR2:[0-9]+]] = { convergent "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// CHECK: attributes #[[ATTR2:[0-9]+]] = { convergent }
 // CHECK: attributes #[[ATTR3]] = { nounwind }
 // CHECK: attributes #[[ATTR4]] = { noreturn }
 //.
 // WITH-NONZERO-DEFAULT-AS: attributes #[[ATTR0]] = { mustprogress noinline optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // WITH-NONZERO-DEFAULT-AS: attributes #[[ATTR1:[0-9]+]] = { nounwind willreturn memory(read) }
-// WITH-NONZERO-DEFAULT-AS: attributes #[[ATTR2:[0-9]+]] = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-// WITH-NONZERO-DEFAULT-AS: attributes #[[ATTR3]] = { nounwind }
-// WITH-NONZERO-DEFAULT-AS: attributes #[[ATTR4]] = { noreturn }
+// WITH-NONZERO-DEFAULT-AS: attributes #[[ATTR2]] = { nounwind }
+// WITH-NONZERO-DEFAULT-AS: attributes #[[ATTR3]] = { noreturn }
 //.
 // CHECK: [[META0:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 600}
 // CHECK: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}

@@ -108,7 +108,7 @@ extern int foo(int *, int *);
 // NON-ZERO-GLOBAL-AS-NEXT:    [[TMP1:%.*]] = call align 4 ptr addrspace(1) @llvm.threadlocal.address.p1(ptr addrspace(1) align 4 @_ZZ1hvE1k)
 // NON-ZERO-GLOBAL-AS-NEXT:    [[TMP2:%.*]] = addrspacecast ptr addrspace(1) [[TMP0]] to ptr
 // NON-ZERO-GLOBAL-AS-NEXT:    [[TMP3:%.*]] = addrspacecast ptr addrspace(1) [[TMP1]] to ptr
-// NON-ZERO-GLOBAL-AS-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z3fooPiS_(ptr noundef [[TMP2]], ptr noundef [[TMP3]]) #[[ATTR4:[0-9]+]]
+// NON-ZERO-GLOBAL-AS-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z3fooPiS_(ptr noundef [[TMP2]], ptr noundef [[TMP3]]) #[[ATTR2:[0-9]+]]
 // NON-ZERO-GLOBAL-AS-NEXT:    ret i32 [[CALL]]
 //
 // CHECK-O1-LABEL: define dso_local noundef i32 @_Z1hv(
@@ -116,7 +116,7 @@ extern int foo(int *, int *);
 // CHECK-O1-NEXT:  [[ENTRY:.*:]]
 // CHECK-O1-NEXT:    [[TMP0:%.*]] = tail call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @i)
 // CHECK-O1-NEXT:    [[TMP1:%.*]] = tail call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @_ZZ1hvE1k)
-// CHECK-O1-NEXT:    [[CALL:%.*]] = tail call noundef i32 @_Z3fooPiS_(ptr noundef nonnull [[TMP0]], ptr noundef nonnull [[TMP1]]) #[[ATTR5:[0-9]+]]
+// CHECK-O1-NEXT:    [[CALL:%.*]] = tail call noundef i32 @_Z3fooPiS_(ptr noundef nonnull [[TMP0]], ptr noundef nonnull [[TMP1]]) #[[ATTR4:[0-9]+]]
 // CHECK-O1-NEXT:    ret i32 [[CALL]]
 //
 int h() {
@@ -126,21 +126,19 @@ int h() {
 //.
 // CHECK: attributes #[[ATTR0]] = { mustprogress noinline nounwind optnone "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
 // CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-// CHECK: attributes #[[ATTR2:[0-9]+]] = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
+// CHECK: attributes #[[ATTR2:[0-9]+]] = { "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
 // CHECK: attributes #[[ATTR3:[0-9]+]] = { noinline nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
 //.
 // NON-ZERO-GLOBAL-AS: attributes #[[ATTR0]] = { convergent mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // NON-ZERO-GLOBAL-AS: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-// NON-ZERO-GLOBAL-AS: attributes #[[ATTR2:[0-9]+]] = { convergent "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// NON-ZERO-GLOBAL-AS: attributes #[[ATTR2]] = { convergent }
 // NON-ZERO-GLOBAL-AS: attributes #[[ATTR3:[0-9]+]] = { convergent noinline nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-// NON-ZERO-GLOBAL-AS: attributes #[[ATTR4]] = { convergent }
 //.
 // CHECK-O1: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(readwrite, argmem: none, inaccessiblemem: none, target_mem: none) "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // CHECK-O1: attributes #[[ATTR1:[0-9]+]] = { mustprogress nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 // CHECK-O1: attributes #[[ATTR2]] = { mustprogress nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-// CHECK-O1: attributes #[[ATTR3:[0-9]+]] = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-// CHECK-O1: attributes #[[ATTR4:[0-9]+]] = { nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-// CHECK-O1: attributes #[[ATTR5]] = { nounwind }
+// CHECK-O1: attributes #[[ATTR3:[0-9]+]] = { nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// CHECK-O1: attributes #[[ATTR4]] = { nounwind }
 //.
 // CHECK: [[META0:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 //.

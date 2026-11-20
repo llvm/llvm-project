@@ -87,7 +87,7 @@ int hoo(void) {
 //MACHO: define{{.*}} i32 @goo(){{.*}} section "__TEXT,__mytext2" {
 
 // ensure zoo/hoo don't have a section
-//CHECK: declare i32 @zoo(ptr noundef, ptr noundef) #6{{$}}
+//CHECK: declare i32 @zoo(ptr noundef, ptr noundef){{( #[0-9]+)?$}}
 //CHECK: define{{.*}} i32 @hoo() #5 {
 
 //ELF: attributes #0 = { "bss-section"="my_bss.1" "data-section"="my_data.1" "rodata-section"="my_rodata.1" }

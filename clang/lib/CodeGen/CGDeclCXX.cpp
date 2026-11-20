@@ -452,6 +452,7 @@ llvm::Function *CodeGenModule::CreateGlobalInitOrCleanUpFunction(
   else {
     SetLLVMFunctionAttributes(GlobalDecl(), FI, Fn, false);
     SetLLVMFunctionAttributesForDefinition(nullptr, Fn);
+    addDefinitionFunctionAttributes(GlobalDecl(), *Fn);
     getTargetCodeGenInfo().setTargetAttributes(nullptr, Fn, *this);
   }
 

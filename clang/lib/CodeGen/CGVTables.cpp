@@ -627,6 +627,7 @@ llvm::Constant *CodeGenVTables::maybeEmitThunk(GlobalDecl GD,
     ThunkFn->addFnAttr("thunk");
 
   CGM.SetLLVMFunctionAttributesForDefinition(GD.getDecl(), ThunkFn);
+  CGM.addDefinitionFunctionAttributes(GD, *ThunkFn);
 
   // Thunks for variadic methods are special because in general variadic
   // arguments cannot be perfectly forwarded. In the general case, clang

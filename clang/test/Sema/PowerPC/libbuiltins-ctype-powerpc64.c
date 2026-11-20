@@ -46,20 +46,19 @@ void test(int x) {
   (void)toupper(x);
 }
 
-// CHECK: declare signext i32 @isalnum(i32 noundef signext) [[NUW_RO:#[0-9]+]]
-// CHECK: declare signext i32 @isalpha(i32 noundef signext) [[NUW_RO:#[0-9]+]]
-// CHECK: declare signext i32 @isblank(i32 noundef signext) [[NUW_RO:#[0-9]+]]
-// CHECK: declare signext i32 @iscntrl(i32 noundef signext) [[NUW_RO:#[0-9]+]]
-// CHECK: declare signext i32 @isdigit(i32 noundef signext) [[NUW_RO:#[0-9]+]]
-// CHECK: declare signext i32 @isgraph(i32 noundef signext) [[NUW_RO:#[0-9]+]]
-// CHECK: declare signext i32 @islower(i32 noundef signext) [[NUW_RO:#[0-9]+]]
-// CHECK: declare signext i32 @isprint(i32 noundef signext) [[NUW_RO:#[0-9]+]]
-// CHECK: declare signext i32 @ispunct(i32 noundef signext) [[NUW_RO:#[0-9]+]]
-// CHECK: declare signext i32 @isspace(i32 noundef signext) [[NUW_RO:#[0-9]+]]
-// CHECK: declare signext i32 @isupper(i32 noundef signext) [[NUW_RO:#[0-9]+]]
-// CHECK: declare signext i32 @isxdigit(i32 noundef signext) [[NUW_RO:#[0-9]+]]
-// CHECK: declare signext i32 @tolower(i32 noundef signext) [[NUW_RO:#[0-9]+]]
-// CHECK: declare signext i32 @toupper(i32 noundef signext) [[NUW_RO:#[0-9]+]]
+// CHECK: declare signext i32 @isalnum(i32 noundef signext) [[NUW_RO_CALL]]
+// CHECK: declare signext i32 @isalpha(i32 noundef signext) [[NUW_RO_CALL]]
+// CHECK: declare signext i32 @isblank(i32 noundef signext) [[NUW_RO_CALL]]
+// CHECK: declare signext i32 @iscntrl(i32 noundef signext) [[NUW_RO_CALL]]
+// CHECK: declare signext i32 @isdigit(i32 noundef signext) [[NUW_RO_CALL]]
+// CHECK: declare signext i32 @isgraph(i32 noundef signext) [[NUW_RO_CALL]]
+// CHECK: declare signext i32 @islower(i32 noundef signext) [[NUW_RO_CALL]]
+// CHECK: declare signext i32 @isprint(i32 noundef signext) [[NUW_RO_CALL]]
+// CHECK: declare signext i32 @ispunct(i32 noundef signext) [[NUW_RO_CALL]]
+// CHECK: declare signext i32 @isspace(i32 noundef signext) [[NUW_RO_CALL]]
+// CHECK: declare signext i32 @isupper(i32 noundef signext) [[NUW_RO_CALL]]
+// CHECK: declare signext i32 @isxdigit(i32 noundef signext) [[NUW_RO_CALL]]
+// CHECK: declare signext i32 @tolower(i32 noundef signext) [[NUW_RO_CALL]]
+// CHECK: declare signext i32 @toupper(i32 noundef signext) [[NUW_RO_CALL]]
 
-// CHECK: attributes [[NUW_RO]] = { nounwind willreturn memory(read){{.*}} }
 // CHECK: attributes [[NUW_RO_CALL]] = { nounwind willreturn memory(read) }
