@@ -3,9 +3,9 @@
 // RUN: %clang_cc1 -emit-llvm -x c %s -triple x86_64-unknown-linux-gnu -o - -femit-all-decls -fblocks              | FileCheck %s --check-prefix=C,C-NONE
 
 
-// RUN: %clang_cc1 -emit-llvm -x c++ %s -triple x86_64-unknown-linux-gnu -o - -femit-all-decls -fblocks -std=c++23 -DTEST_ATTR  | FileCheck %s --check-prefixes=CXX,CXX-ATTR
-// RUN: %clang_cc1 -emit-llvm -x c++ %s -triple x86_64-unknown-linux-gnu -o - -femit-all-decls -fblocks -std=c++23 -mno-outline | FileCheck %s --check-prefixes=CXX,CXX-ARG
-// RUN: %clang_cc1 -emit-llvm -x c++ %s -triple x86_64-unknown-linux-gnu -o - -femit-all-decls -fblocks -std=c++23              | FileCheck %s --check-prefixes=CXX,CXX-NONE
+// RUN: %clang_cc1 -fno-module-local-hints -emit-llvm -x c++ %s -triple x86_64-unknown-linux-gnu -o - -femit-all-decls -fblocks -std=c++23 -DTEST_ATTR  | FileCheck %s --check-prefixes=CXX,CXX-ATTR
+// RUN: %clang_cc1 -fno-module-local-hints -emit-llvm -x c++ %s -triple x86_64-unknown-linux-gnu -o - -femit-all-decls -fblocks -std=c++23 -mno-outline | FileCheck %s --check-prefixes=CXX,CXX-ARG
+// RUN: %clang_cc1 -fno-module-local-hints -emit-llvm -x c++ %s -triple x86_64-unknown-linux-gnu -o - -femit-all-decls -fblocks -std=c++23              | FileCheck %s --check-prefixes=CXX,CXX-NONE
 
 // This test checks that:
 // - [[clang::no_outline]] adds the nooutline IR attribute to specific definitions

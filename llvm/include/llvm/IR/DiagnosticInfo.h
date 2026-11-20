@@ -337,6 +337,7 @@ public:
   LLVM_ABI DiagnosticLocation(const DISubprogram *SP);
 
   bool isValid() const { return File; }
+  const DIFile *getFile() const { return File; }
   /// Return the full path to the file.
   LLVM_ABI std::string getAbsolutePath() const;
   /// Return the file name relative to the compilation directory.
@@ -1224,6 +1225,7 @@ struct DebugInlineInfo {
   StringRef Filename;
   unsigned Line;
   unsigned Column;
+  const DIFile *File = nullptr;
 };
 
 class LLVM_ABI DiagnosticInfoDontCall : public DiagnosticInfo {

@@ -280,6 +280,24 @@ private:
   AlignedBuffer rhs_buffer;
 };
 
+/// Provides source buffer for the Search operation (memchr) as well as the
+/// associated size distributions.
+struct SearchSetup : public ParameterBatch {
+  SearchSetup();
+
+  inline static const ArrayRef<MemorySizeDistribution> get_distributions() {
+    return getMemcmpSizeDistributions();
+  }
+
+  inline void *call(ParameterType parameter, MemchrFunction memchr_func) {
+    return memchr_func(src_buffer + parameter.offset_bytes, 0,
+                       parameter.size_bytes);
+  }
+
+private:
+  AlignedBuffer src_buffer;
+};
+
 } // namespace libc_benchmarks
 } // namespace llvm
 

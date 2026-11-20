@@ -75,8 +75,22 @@ R600TargetMachine::R600TargetMachine(const Target &T, const Triple &TT,
 
 const TargetSubtargetInfo *
 R600TargetMachine::getSubtargetImpl(const Function &F) const {
-  StringRef GPU = getGPUName(F);
-  StringRef FS = getFeatureString(F);
+  AttributeSet FnAttrs = F.getAttributes().getFnAttrs();
+  const Module *M = F.getParent();
+  if (const R600Subtarget *ST = LastSubtarget.lookup(FnAttrs, M))
+    return ST;
+
+  SubtargetAttrs Attrs;
+  Attrs.GPU = FnAttrs.getAttribute("target-cpu");
+  Attrs.FS = FnAttrs.getAttribute("target-features");
+
+  if (const R600Subtarget *ST = LastSubtarget.lookup(FnAttrs, M, Attrs))
+    return ST;
+
+  StringRef GPU =
+      Attrs.GPU.isValid() ? Attrs.GPU.getValueAsString() : getTargetCPU();
+  StringRef FS = Attrs.FS.isValid() ? Attrs.FS.getValueAsString()
+                                    : getTargetFeatureString();
 
   SmallString<128> SubtargetKey(GPU);
   SubtargetKey.append(FS);
@@ -85,6 +99,7 @@ R600TargetMachine::getSubtargetImpl(const Function &F) const {
   if (!I)
     I = std::make_unique<R600Subtarget>(TargetTriple, GPU, FS, *this);
 
+  LastSubtarget.set(FnAttrs, M, Attrs, I.get());
   return I.get();
 }
 

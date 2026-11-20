@@ -13,7 +13,7 @@
 #include "CIRGenFunction.h"
 
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
 #include "mlir/IR/Value.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
@@ -657,12 +657,10 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
   }
   case AMDGPU::BI__builtin_amdgcn_frexp_exp:
   case AMDGPU::BI__builtin_amdgcn_frexp_expf:
-  case AMDGPU::BI__builtin_amdgcn_frexp_exph: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
-  }
+  case AMDGPU::BI__builtin_amdgcn_frexp_exph:
+    return emitBuiltinWithOneOverloadedType<1>(expr, "amdgcn.frexp.exp",
+                                               convertType(expr->getType()))
+        .getValue();
   case AMDGPU::BI__builtin_amdgcn_fract:
   case AMDGPU::BI__builtin_amdgcn_fractf:
   case AMDGPU::BI__builtin_amdgcn_fracth:

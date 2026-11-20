@@ -100,8 +100,12 @@ compiler_support
 :maxdepth: 1
 
 contributing
+design_philosophy
+abi_policy
+roadmap
 build_and_test
 dev/index
+math/index
 porting
 Maintainers
 ```

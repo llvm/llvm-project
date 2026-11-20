@@ -39,8 +39,8 @@ namespace double_eval {
 LIBC_INLINE_VAR constexpr double LOG2_10_HI = 0x1.a934f0979a371p+1;
 
 // log(10) = 0x1.26bb1bbb55516p+1 - 0x1.f48ad494ea3e9p-53
-LIBC_INLINE_VAR constexpr DoubleDouble LOG_10 = {-0x1.f48ad494ea3e9p-53,
-                                                 0x1.26bb1bbb55516p+1};
+LIBC_INLINE_VAR constexpr DoubleDouble LOG_10_DD = {-0x1.f48ad494ea3e9p-53,
+                                                    0x1.26bb1bbb55516p+1};
 
 #if defined(LIBC_MATH_HAS_SKIP_ACCURATE_PASS) &&                               \
     defined(LIBC_MATH_HAS_SMALL_TABLES)
@@ -68,7 +68,7 @@ LIBC_INLINE_VAR constexpr double MLOG10_2_EXP2_MID = 0x1.0c0219dc1da99p-46;
 // > lo = round(log(10) - hi, D, RN);
 LIBC_INLINE_VAR constexpr double LOG_10_HI_12 = 0x1.26cp+1;
 LIBC_INLINE_VAR constexpr double LOG_10_LO_12 =
-    (LOG_10.hi - LOG_10_HI_12) + LOG_10.lo;
+    (LOG_10_DD.hi - LOG_10_HI_12) + LOG_10_DD.lo;
 
 // Fast-path Ziv error bound for exp10:
 LIBC_INLINE_VAR constexpr double EXP10_ERR_D = 0x1.8p-64;
@@ -172,7 +172,7 @@ LIBC_ALWAYS_INLINE double exp10(double x) {
 #ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   double t1 = fputil::multiply_add(kd, MLOG10_2_EXP2_HI, x); // exact
   double dx = fputil::multiply_add(kd, MLOG10_2_EXP2_MID, t1);
-  double u = dx * LOG_10.hi;
+  double u = dx * LOG_10_DD.hi;
   return exp2_eval(x, u, hi, idx);
 #else // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 #ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
@@ -197,8 +197,8 @@ LIBC_ALWAYS_INLINE double exp10(double x) {
 
   double t1 = fputil::multiply_add(kd, MLOG10_2_HI_53, x); // exact
   double corr = kd * MLOG10_2_MID_53_LOG10;
-  DoubleDouble u = fputil::exact_mult(t1, LOG_10.hi);
-  double lo1 = fputil::multiply_add(t1, LOG_10.lo, corr);
+  DoubleDouble u = fputil::exact_mult(t1, LOG_10_DD.hi);
+  double lo1 = fputil::multiply_add(t1, LOG_10_DD.lo, corr);
   double lo2 = fputil::multiply_add(u.hi, corr, lo1);
   u.lo += lo2;
   return exp2_eval(x, u, hi, idx, EXP10_ERR_D, &LOG2_10_192);
