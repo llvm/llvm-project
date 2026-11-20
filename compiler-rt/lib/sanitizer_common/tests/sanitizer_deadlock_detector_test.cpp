@@ -133,6 +133,121 @@ TEST(DeadlockDetector, BasicTest) {
   RunBasicTest<BV4>();
 }
 
+TEST(DeadlockDetector, GuardedCycle) {
+  ScopedDD<BV2> sdd;
+  auto& detector = *sdd.dp;
+  auto& tls = sdd.dtls;
+  uptr first = detector.newNode(1);
+  uptr second = detector.newNode(2);
+  const DeadlockDetector<BV2>::Edge* edges[4];
+
+  detector.onLockAfter(&tls, first);
+  detector.addEdges(&tls, second, 0, 1);
+  detector.onLockAfter(&tls, second);
+  detector.onUnlock(&tls, second);
+  detector.onUnlock(&tls, first);
+
+  detector.onLockAfter(&tls, second);
+  detector.addEdges(&tls, first, 0, 1);
+  EXPECT_EQ(
+      0U, detector.findGuardedCycle(&tls, first, 1, edges, ARRAY_SIZE(edges)));
+
+  detector.addEdges(&tls, first, 0, 2);
+  EXPECT_EQ(0U, detector.findGuardedCycle(&tls, first, 2, edges, 1));
+  EXPECT_EQ(
+      2U, detector.findGuardedCycle(&tls, first, 2, edges, ARRAY_SIZE(edges)));
+
+  detector.addEdges(&tls, first, 0, -1);
+  EXPECT_EQ(
+      2U, detector.findGuardedCycle(&tls, first, -1, edges, ARRAY_SIZE(edges)));
+  const int last_tid = BV2::kSize * 32 + 1;
+  for (int tid = 3; tid <= last_tid; ++tid)
+    detector.addEdges(&tls, first, 0, tid);
+  ASSERT_EQ(2U, detector.findGuardedCycle(&tls, first, last_tid, edges,
+                                          ARRAY_SIZE(edges)));
+  EXPECT_EQ(last_tid, edges[1]->unique_tid);
+  ASSERT_EQ(
+      2U, detector.findGuardedCycle(&tls, first, 2, edges, ARRAY_SIZE(edges)));
+  EXPECT_EQ(2, edges[1]->unique_tid);
+  detector.onUnlock(&tls, second);
+}
+
+TEST(DeadlockDetector, GuardedLocks) {
+  for (bool write_guard : {true, false}) {
+    ScopedDD<BV2> sdd;
+    auto& detector = *sdd.dp;
+    auto& tls = sdd.dtls;
+    uptr guard = detector.newNode(0);
+    uptr first = detector.newNode(1);
+    uptr second = detector.newNode(2);
+    const DeadlockDetector<BV2>::Edge* edges[4];
+
+    detector.onLockAfter(&tls, guard, 0, write_guard);
+    detector.onLockAfter(&tls, first);
+    detector.addEdges(&tls, second, 0, 1);
+    detector.onLockAfter(&tls, second);
+    detector.onUnlock(&tls, second);
+    detector.onUnlock(&tls, first);
+    detector.onUnlock(&tls, guard);
+
+    detector.onLockAfter(&tls, guard, 0, write_guard);
+    detector.onLockAfter(&tls, second);
+    detector.addEdges(&tls, first, 0, 2);
+    EXPECT_EQ(
+        write_guard ? 0U : 2U,
+        detector.findGuardedCycle(&tls, first, 2, edges, ARRAY_SIZE(edges)));
+    detector.onUnlock(&tls, second);
+    detector.onUnlock(&tls, guard);
+
+    for (uptr allocated = 3; allocated < detector.size(); ++allocated)
+      detector.newNode(0);
+    detector.removeNode(guard);
+    detector.newNode(0);
+    detector.onLockAfter(&tls, second);
+    detector.addEdges(&tls, first, 0, 2);
+    EXPECT_EQ(2U, detector.findGuardedCycle(&tls, first, 2, edges,
+                                            ARRAY_SIZE(edges)));
+    detector.onUnlock(&tls, second);
+  }
+}
+
+TEST(DeadlockDetector, GuardedAlternativePath) {
+  ScopedDD<BV2> sdd;
+  auto& detector = *sdd.dp;
+  auto& tls = sdd.dtls;
+  uptr first = detector.newNode(1);
+  uptr second = detector.newNode(2);
+  uptr middle = detector.newNode(3);
+  const DeadlockDetector<BV2>::Edge* edges[4];
+  auto record = [&](uptr from, uptr to, int tid) {
+    detector.onLockAfter(&tls, from);
+    detector.addEdges(&tls, to, to, tid);
+    detector.onLockAfter(&tls, to);
+    detector.onUnlock(&tls, to);
+    detector.onUnlock(&tls, from);
+  };
+
+  record(first, middle, 1);
+  record(middle, second, 2);
+  record(first, second, 3);
+  detector.onLockAfter(&tls, second);
+  detector.addEdges(&tls, first, 0, 3);
+  EXPECT_EQ(
+      3U, detector.findGuardedCycle(&tls, first, 3, edges, ARRAY_SIZE(edges)));
+  EXPECT_EQ(1, edges[0]->unique_tid);
+  EXPECT_EQ(2, edges[1]->unique_tid);
+  EXPECT_EQ(3, edges[2]->unique_tid);
+  detector.addEdges(&tls, first, 0, 4);
+  EXPECT_EQ(
+      2U, detector.findGuardedCycle(&tls, first, 4, edges, ARRAY_SIZE(edges)));
+  EXPECT_EQ(3, edges[0]->unique_tid);
+  EXPECT_EQ(4, edges[1]->unique_tid);
+  detector.removeNode(middle);
+  EXPECT_EQ(
+      0U, detector.findGuardedCycle(&tls, first, 3, edges, ARRAY_SIZE(edges)));
+  detector.onUnlock(&tls, second);
+}
+
 template <class BV>
 void RunRemoveNodeTest() {
   ScopedDD<BV> sdd;
