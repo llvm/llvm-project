@@ -222,9 +222,8 @@ bool lldb_private::formatters::NSStringSummaryProvider(
     uint64_t length_ivar_offset = 1 * ptr_size;
     CompilerType length_type = valobj.GetCompilerType().GetBasicTypeFromAST(
         lldb::eBasicTypeUnsignedInt);
-    ValueObjectSP length_valobj_sp =
-        valobj.GetSyntheticChildAtOffset(length_ivar_offset, length_type, true,
-                                         ConstString("_lengthAndRefCount"));
+    ValueObjectSP length_valobj_sp = valobj.GetSyntheticChildAtOffset(
+        length_ivar_offset, length_type, true, "_lengthAndRefCount");
     if (!length_valobj_sp)
       return false;
     // Get the length out of _lengthAndRefCount.

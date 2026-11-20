@@ -159,12 +159,12 @@ ValueObjectConstResultImpl::CreateSyntheticArrayMember(size_t idx) {
 
 lldb::ValueObjectSP ValueObjectConstResultImpl::GetSyntheticChildAtOffset(
     uint32_t offset, const CompilerType &type, bool can_create,
-    ConstString name_const_str) {
+    llvm::StringRef name) {
   if (m_impl_backend == nullptr)
     return lldb::ValueObjectSP();
 
   return m_impl_backend->ValueObject::GetSyntheticChildAtOffset(
-      offset, type, can_create, name_const_str);
+      offset, type, can_create, name);
 }
 
 lldb::ValueObjectSP ValueObjectConstResultImpl::AddressOf(Status &error) {

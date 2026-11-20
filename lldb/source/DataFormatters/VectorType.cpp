@@ -246,7 +246,7 @@ public:
     StreamString idx_name;
     idx_name.Printf("[%" PRIu64 "]", (uint64_t)idx);
     ValueObjectSP child_sp(m_backend.GetSyntheticChildAtOffset(
-        offset, m_child_type, true, ConstString(idx_name.GetString())));
+        offset, m_child_type, true, idx_name.GetString()));
     if (!child_sp)
       return child_sp;
 

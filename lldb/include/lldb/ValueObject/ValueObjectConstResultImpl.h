@@ -41,10 +41,10 @@ public:
   ValueObject *CreateChildAtIndex(size_t idx);
   ValueObject *CreateSyntheticArrayMember(size_t idx);
 
-  lldb::ValueObjectSP
-  GetSyntheticChildAtOffset(uint32_t offset, const CompilerType &type,
-                            bool can_create,
-                            ConstString name_const_str = ConstString());
+  lldb::ValueObjectSP GetSyntheticChildAtOffset(uint32_t offset,
+                                                const CompilerType &type,
+                                                bool can_create,
+                                                llvm::StringRef name = {});
 
   lldb::ValueObjectSP AddressOf(Status &error);
 

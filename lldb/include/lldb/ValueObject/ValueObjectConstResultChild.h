@@ -42,9 +42,10 @@ public:
     return ValueObjectChild::GetCompilerType();
   }
 
-  lldb::ValueObjectSP GetSyntheticChildAtOffset(
-      uint32_t offset, const CompilerType &type, bool can_create,
-      ConstString name_const_str = ConstString()) override;
+  lldb::ValueObjectSP
+  GetSyntheticChildAtOffset(uint32_t offset, const CompilerType &type,
+                            bool can_create,
+                            llvm::StringRef name = {}) override;
 
   lldb::ValueObjectSP AddressOf(Status &error) override;
 

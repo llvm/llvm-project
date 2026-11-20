@@ -1834,14 +1834,13 @@ bool ValueObject::GetDeclaration(Declaration &decl) {
   return false;
 }
 
-void ValueObject::AddSyntheticChild(ConstString key, ValueObject *valobj) {
+void ValueObject::AddSyntheticChild(llvm::StringRef key, ValueObject *valobj) {
   m_synthetic_children[key] = valobj;
 }
 
-ValueObjectSP ValueObject::GetSyntheticChild(ConstString key) const {
+ValueObjectSP ValueObject::GetSyntheticChild(llvm::StringRef key) const {
   ValueObjectSP synthetic_child_sp;
-  std::map<ConstString, ValueObject *>::const_iterator pos =
-      m_synthetic_children.find(key);
+  const auto pos = m_synthetic_children.find(key);
   if (pos != m_synthetic_children.end())
     synthetic_child_sp = pos->second->GetSP();
   return synthetic_child_sp;
@@ -1909,10 +1908,9 @@ ValueObjectSP ValueObject::GetSyntheticArrayMember(size_t index,
   ValueObjectSP synthetic_child_sp;
   if (IsPointerType() || IsArrayType()) {
     std::string index_str = llvm::formatv("[{0}]", index);
-    ConstString index_const_str(index_str);
     // Check if we have already created a synthetic array member in this valid
     // object. If we have we will re-use it.
-    synthetic_child_sp = GetSyntheticChild(index_const_str);
+    synthetic_child_sp = GetSyntheticChild(index_str);
     if (!synthetic_child_sp) {
       ValueObject *synthetic_child;
       // We haven't made a synthetic array member for INDEX yet, so lets make
@@ -1921,7 +1919,7 @@ ValueObjectSP ValueObject::GetSyntheticArrayMember(size_t index,
 
       // Cache the value if we got one back...
       if (synthetic_child) {
-        AddSyntheticChild(index_const_str, synthetic_child);
+        AddSyntheticChild(index_str, synthetic_child);
         synthetic_child_sp = synthetic_child->GetSP();
         synthetic_child_sp->SetName(index_str);
         synthetic_child_sp->m_flags.m_is_array_item_for_pointer = true;
@@ -1946,10 +1944,9 @@ ValueObjectSP ValueObject::GetSyntheticBitFieldChild(uint32_t from, uint32_t to,
   ValueObjectSP synthetic_child_sp;
   if (IsScalarType()) {
     std::string index_str = llvm::formatv("[{0}-{1}]", from, to);
-    ConstString index_const_str(index_str);
     // Check if we have already created a synthetic array member in this valid
     // object. If we have we will re-use it.
-    synthetic_child_sp = GetSyntheticChild(index_const_str);
+    synthetic_child_sp = GetSyntheticChild(index_str);
     if (!synthetic_child_sp) {
       uint32_t bit_field_size = to - from + 1;
       uint32_t bit_field_offset = from;
@@ -1960,14 +1957,14 @@ ValueObjectSP ValueObject::GetSyntheticBitFieldChild(uint32_t from, uint32_t to,
       // We haven't made a synthetic array member for INDEX yet, so lets make
       // one and cache it for any future reference.
       ValueObjectChild *synthetic_child = new ValueObjectChild(
-          *this, GetCompilerType(), index_const_str,
+          *this, GetCompilerType(), ConstString(index_str),
           llvm::expectedToOptional(GetByteSize()).value_or(0), 0,
           bit_field_size, bit_field_offset, false, false, eAddressTypeInvalid,
           0);
 
       // Cache the value if we got one back...
       if (synthetic_child) {
-        AddSyntheticChild(index_const_str, synthetic_child);
+        AddSyntheticChild(index_str, synthetic_child);
         synthetic_child_sp = synthetic_child->GetSP();
         synthetic_child_sp->SetName(index_str);
         synthetic_child_sp->m_flags.m_is_bitfield_for_scalar = true;
@@ -1977,19 +1974,23 @@ ValueObjectSP ValueObject::GetSyntheticBitFieldChild(uint32_t from, uint32_t to,
   return synthetic_child_sp;
 }
 
-ValueObjectSP ValueObject::GetSyntheticChildAtOffset(
-    uint32_t offset, const CompilerType &type, bool can_create,
-    ConstString name_const_str) {
+ValueObjectSP ValueObject::GetSyntheticChildAtOffset(uint32_t offset,
+                                                     const CompilerType &type,
+                                                     bool can_create,
+                                                     llvm::StringRef name) {
 
   ValueObjectSP synthetic_child_sp;
 
-  if (name_const_str.IsEmpty()) {
-    name_const_str.SetString("@" + std::to_string(offset));
+  std::string backup_name;
+
+  if (name.empty()) {
+    backup_name = "@" + std::to_string(offset);
+    name = backup_name;
   }
 
   // Check if we have already created a synthetic array member in this valid
   // object. If we have we will re-use it.
-  synthetic_child_sp = GetSyntheticChild(name_const_str);
+  synthetic_child_sp = GetSyntheticChild(name);
 
   if (synthetic_child_sp.get())
     return synthetic_child_sp;
@@ -2003,12 +2004,12 @@ ValueObjectSP ValueObject::GetSyntheticChildAtOffset(
   if (!size)
     return {};
   ValueObjectChild *synthetic_child =
-      new ValueObjectChild(*this, type, name_const_str, *size, offset, 0, 0,
+      new ValueObjectChild(*this, type, ConstString(name), *size, offset, 0, 0,
                            false, false, eAddressTypeInvalid, 0);
   if (synthetic_child) {
-    AddSyntheticChild(name_const_str, synthetic_child);
+    AddSyntheticChild(name, synthetic_child);
     synthetic_child_sp = synthetic_child->GetSP();
-    synthetic_child_sp->SetName(name_const_str);
+    synthetic_child_sp->SetName(name);
     synthetic_child_sp->m_flags.m_is_child_at_offset = true;
     synthetic_child_sp->SetSyntheticChildrenGenerated(true);
   }
@@ -2018,19 +2019,20 @@ ValueObjectSP ValueObject::GetSyntheticChildAtOffset(
 ValueObjectSP ValueObject::GetSyntheticBase(uint32_t offset,
                                             const CompilerType &type,
                                             bool can_create,
-                                            ConstString name_const_str) {
+                                            llvm::StringRef name) {
   ValueObjectSP synthetic_child_sp;
 
-  if (name_const_str.IsEmpty()) {
-    char name_str[128];
-    snprintf(name_str, sizeof(name_str), "base%s@%i",
-             type.GetTypeName().AsCString("<unknown>"), offset);
-    name_const_str.SetCString(name_str);
+  std::string backup_name;
+  if (name.empty()) {
+    backup_name = std::string("base") +
+                  type.GetTypeName().AsCString("<unknown>") + "@" +
+                  std::to_string(offset);
+    name = backup_name;
   }
 
   // Check if we have already created a synthetic array member in this valid
   // object. If we have we will re-use it.
-  synthetic_child_sp = GetSyntheticChild(name_const_str);
+  synthetic_child_sp = GetSyntheticChild(name);
 
   if (synthetic_child_sp.get())
     return synthetic_child_sp;
@@ -2046,12 +2048,12 @@ ValueObjectSP ValueObject::GetSyntheticBase(uint32_t offset,
   if (!size)
     return {};
   ValueObjectChild *synthetic_child =
-      new ValueObjectChild(*this, type, name_const_str, *size, offset, 0, 0,
+      new ValueObjectChild(*this, type, ConstString(name), *size, offset, 0, 0,
                            is_base_class, false, eAddressTypeInvalid, 0);
   if (synthetic_child) {
-    AddSyntheticChild(name_const_str, synthetic_child);
+    AddSyntheticChild(name, synthetic_child);
     synthetic_child_sp = synthetic_child->GetSP();
-    synthetic_child_sp->SetName(name_const_str);
+    synthetic_child_sp->SetName(name);
   }
   return synthetic_child_sp;
 }
@@ -2073,10 +2075,9 @@ ValueObjectSP
 ValueObject::GetSyntheticExpressionPathChild(llvm::StringRef expression,
                                              bool can_create) {
   ValueObjectSP synthetic_child_sp;
-  ConstString name_const_string(expression);
   // Check if we have already created a synthetic array member in this valid
   // object. If we have we will re-use it.
-  synthetic_child_sp = GetSyntheticChild(name_const_string);
+  synthetic_child_sp = GetSyntheticChild(expression);
   if (!synthetic_child_sp) {
     // We haven't made a synthetic array member for expression yet, so lets
     // make one and cache it for any future reference.
@@ -2090,7 +2091,7 @@ ValueObject::GetSyntheticExpressionPathChild(llvm::StringRef expression,
     if (synthetic_child_sp.get()) {
       // FIXME: this causes a "real" child to end up with its name changed to
       // the contents of expression
-      AddSyntheticChild(name_const_string, synthetic_child_sp.get());
+      AddSyntheticChild(expression, synthetic_child_sp.get());
       synthetic_child_sp->SetName(
           ConstString(SkipLeadingExpressionPathSeparators(expression)));
     }
