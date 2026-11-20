@@ -2622,6 +2622,7 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
     SmallVector<VariantMatchInfo, 4> VMIs;
     SmallVector<OMPTraitInfo *, 4> TraitInfos;
     bool AnyVariantTakesStmt = false;
+    bool AnyVariantSharesStmt = false;
 
     // First iteration of parsing all clauses of metadirective.
     // This iteration only parses and collects all context selectors ignoring
@@ -2710,6 +2711,7 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
         ConsumeAnyToken();
       }
       AnyVariantTakesStmt |= TakesStmt;
+      AnyVariantSharesStmt |= !TakesStmt;
       // Parse ')'
       if (Tok.is(tok::r_paren))
         T.consumeClose();
@@ -2759,15 +2761,21 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
       unsigned NumVariants = NumClauses + (HasOtherwise ? 0 : 1);
 
       // Reuse the normal metadirective variant parse per clause so every
-      // variant is a complete directive node with its own body and its own
-      // data-sharing context. Diagnostics in the associated statement are
-      // reported once per variant.
+      // variant is a complete directive node with its own data-sharing
+      // context. Diagnostics in a variant's own statement are reported once
+      // per variant.
       SmallVector<Stmt *, 4> Variants;
-      SmallVector<bool, 4> DirectiveThenStmt;
       bool HasError = false;
+      // Variants without an associated statement run one shared copy of it,
+      // parsed once after them in the enclosing scope.
+      bool HasSharedStmt =
+          AnyVariantTakesStmt && (AnyVariantSharesStmt || !HasOtherwise);
       for (unsigned I : llvm::seq<unsigned>(NumVariants)) {
+        if (HasSharedStmt && I == NumClauses) {
+          Variants.push_back(Actions.ActOnNullStmt(Loc).get());
+          continue;
+        }
         bool HasDirective = false;
-        bool IsDirectiveThenStmt = false;
         if (I < NumClauses) {
           OpenMPClauseKind CKind = getOpenMPClauseKind(PP.getSpelling(Tok));
           ConsumeToken();
@@ -2781,9 +2789,9 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
           HasDirective = Tok.isNot(tok::r_paren) &&
                          Tok.isNot(tok::annot_pragma_openmp_end);
         }
-        // Re-parse the directive and body for every variant but the last.
+        // Re-parse every variant but the last; with a shared statement, all.
         std::optional<TentativeParsingAction> VariantTPA;
-        if (I + 1 < NumVariants)
+        if (I + 1 < NumVariants || HasSharedStmt)
           VariantTPA.emplace(*this, /*Unannotated=*/true);
 
         StmtResult Variant;
@@ -2796,24 +2804,6 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
             ConsumeAnyToken();
           ConsumeAnnotationToken();
         }
-        // If any variant uses the statement, the others run a copy of it.
-        auto *D = dyn_cast_or_null<OMPExecutableDirective>(Variant.get());
-        if (!Variant.isInvalid() && !(D && D->hasAssociatedStmt()) &&
-            AnyVariantTakesStmt) {
-          ParsingOpenMPDirectiveRAII NormalScope(*this, /*Value=*/false);
-          StmtResult Body = ParseStatement();
-          if (Body.isInvalid()) {
-            Variant = StmtError();
-          } else if (Variant.isUsable()) {
-            Variant = CompoundStmt::Create(
-                Actions.getASTContext(), {Variant.get(), Body.get()},
-                FPOptionsOverride(), Variant.get()->getBeginLoc(),
-                Body.get()->getEndLoc());
-            IsDirectiveThenStmt = true;
-          } else {
-            Variant = Body;
-          }
-        }
         // Nothing to run for this variant.
         if (!Variant.isInvalid() && !Variant.isUsable())
           Variant = Actions.ActOnNullStmt(Loc);
@@ -2823,17 +2813,22 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
           SkipUntil(tok::r_paren, StopBeforeMatch);
           T.consumeClose();
         }
-        if (Variant.isInvalid()) {
+        if (Variant.isInvalid())
           HasError = true;
-        } else {
+        else
           Variants.push_back(Variant.get());
-          DirectiveThenStmt.push_back(IsDirectiveThenStmt);
-        }
+      }
+      StmtResult SharedStmt;
+      if (HasSharedStmt) {
+        ConsumeAnnotationToken();
+        ParsingOpenMPDirectiveRAII NormalScope(*this, /*Value=*/false);
+        SharedStmt = ParseStatement();
+        HasError |= SharedStmt.isInvalid();
       }
       if (HasError)
         return StmtError();
       return Actions.OpenMP().ActOnOpenMPMetaDirective(
-          Loc, EndLoc, TraitInfos, Variants, DirectiveThenStmt);
+          Loc, EndLoc, TraitInfos, Variants, SharedStmt.get());
     }
 
     int Idx = 0;

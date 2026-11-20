@@ -382,21 +382,22 @@ void OMPLoopDirective::setHelperExprs(const HelperExprs &Exprs) {
   setCombinedParForInDistCond(Exprs.DistCombinedFields.ParForInDistCond);
 }
 
-OMPMetaDirective *OMPMetaDirective::allocate(const ASTContext &C,
-                                             unsigned NumVariants,
-                                             unsigned NumConstructTraits,
-                                             SourceLocation StartLoc,
-                                             SourceLocation EndLoc) {
-  void *Mem = C.Allocate(
-      sizeof(OMPMetaDirective) + getConstructTraitsOffset(NumVariants) +
-          NumConstructTraits * sizeof(llvm::omp::TraitProperty),
-      alignof(OMPMetaDirective));
+OMPMetaDirective *
+OMPMetaDirective::allocate(const ASTContext &C, unsigned NumVariants,
+                           unsigned NumConstructTraits, bool HasSharedStmt,
+                           SourceLocation StartLoc, SourceLocation EndLoc) {
+  void *Mem =
+      C.Allocate(sizeof(OMPMetaDirective) +
+                     getConstructTraitsOffset(NumVariants, HasSharedStmt) +
+                     NumConstructTraits * sizeof(llvm::omp::TraitProperty),
+                 alignof(OMPMetaDirective));
   auto *Data = OMPChildren::CreateEmpty(
       reinterpret_cast<OMPMetaDirective *>(Mem) + 1, /*NumClauses=*/0,
-      /*HasAssociatedStmt=*/false, 2 * NumVariants);
+      /*HasAssociatedStmt=*/false, 2 * NumVariants + HasSharedStmt);
   auto *Dir = new (Mem) OMPMetaDirective(StartLoc, EndLoc);
   Dir->Data = Data;
   Dir->NumConstructTraits = NumConstructTraits;
+  Dir->HasSharedStmt = HasSharedStmt;
   return Dir;
 }
 
@@ -404,18 +405,17 @@ OMPMetaDirective *OMPMetaDirective::Create(
     const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
     ArrayRef<Stmt *> Variants, ArrayRef<Expr *> Conditions,
     ArrayRef<OMPTraitInfo *> TraitInfos, bool HasImplicitOtherwise,
-    ArrayRef<llvm::omp::TraitProperty> ConstructTraits,
-    ArrayRef<bool> DirectiveThenStmt) {
+    ArrayRef<llvm::omp::TraitProperty> ConstructTraits, Stmt *SharedStmt) {
   assert(Variants.size() == Conditions.size() &&
          Variants.size() == TraitInfos.size() &&
-         Variants.size() == DirectiveThenStmt.size() &&
-         "Expected one condition, trait info and flag per variant");
-  OMPMetaDirective *Dir =
-      allocate(C, Variants.size(), ConstructTraits.size(), StartLoc, EndLoc);
+         "Expected one condition and trait info per variant");
+  OMPMetaDirective *Dir = allocate(C, Variants.size(), ConstructTraits.size(),
+                                   SharedStmt != nullptr, StartLoc, EndLoc);
   llvm::copy(Variants, Dir->getTrailingVariants().begin());
   llvm::copy(Conditions, Dir->getTrailingConditions().begin());
+  if (SharedStmt)
+    Dir->Data->getChildren().back() = SharedStmt;
   llvm::copy(TraitInfos, Dir->getTrailingTraitInfos().begin());
-  llvm::copy(DirectiveThenStmt, Dir->getTrailingDirectiveThenStmt().begin());
   llvm::copy(ConstructTraits, Dir->getTrailingConstructTraits().begin());
   Dir->setHasImplicitOtherwise(HasImplicitOtherwise);
   return Dir;
@@ -424,9 +424,10 @@ OMPMetaDirective *OMPMetaDirective::Create(
 OMPMetaDirective *OMPMetaDirective::CreateEmpty(const ASTContext &C,
                                                 unsigned NumVariants,
                                                 unsigned NumConstructTraits,
+                                                bool HasSharedStmt,
                                                 EmptyShell) {
-  return allocate(C, NumVariants, NumConstructTraits, SourceLocation(),
-                  SourceLocation());
+  return allocate(C, NumVariants, NumConstructTraits, HasSharedStmt,
+                  SourceLocation(), SourceLocation());
 }
 
 OMPParallelDirective *OMPParallelDirective::Create(

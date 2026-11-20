@@ -2485,12 +2485,20 @@ void CodeGenFunction::EmitOMPMetaDirective(const OMPMetaDirective &S) {
   }
   EmitBranch(Fallback ? VariantBBs[*Fallback] : EndBB);
 
+  const Stmt *Shared = S.getSharedStmt();
+  llvm::BasicBlock *SharedBB =
+      Shared ? createBasicBlock("omp.metadirective.stmt") : EndBB;
   // Emit every variant in source order, as the device compilation does, so
   // their target regions get the same names on both sides.
   for (auto [V, BB] : llvm::zip_equal(Variants, VariantBBs)) {
     EmitBlock(BB);
     EmitStmt(V);
-    EmitBranch(EndBB);
+    const auto *D = dyn_cast<OMPExecutableDirective>(V);
+    EmitBranch(D && D->hasAssociatedStmt() ? EndBB : SharedBB);
+  }
+  if (Shared) {
+    EmitBlock(SharedBB);
+    EmitStmt(Shared);
   }
   EmitBlock(EndBB, /*IsFinished=*/true);
 }

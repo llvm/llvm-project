@@ -55,3 +55,16 @@ void separate_lines(int flag) {
     when(user={condition(flag)}: target thread_limit(9) map(tofrom: x))
   x = 1;
 }
+
+// A target region in the statement shared by the standalone variant gets a
+// device kernel, next to the one in the 'parallel' variant.
+// DEV-DAG: define {{.*}}void @__omp_offloading_{{.*}}_Z13shared_targeti_l{{[0-9]+}}(
+// DEV-DAG: define {{.*}}void @__omp_offloading_{{.*}}_Z13shared_targeti_l{{[0-9]+}}_1(
+void shared_target(int flag) {
+  int x = 0;
+#pragma omp metadirective when(user={condition(flag)}: barrier) otherwise(parallel)
+  {
+#pragma omp target map(tofrom: x)
+    x++;
+  }
+}

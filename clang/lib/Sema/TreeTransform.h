@@ -1712,9 +1712,9 @@ public:
                                      SourceLocation EndLoc,
                                      ArrayRef<OMPTraitInfo *> TraitInfos,
                                      ArrayRef<Stmt *> Variants,
-                                     ArrayRef<bool> DirectiveThenStmt) {
+                                     Stmt *SharedStmt) {
     return getSema().OpenMP().ActOnOpenMPMetaDirective(
-        StartLoc, EndLoc, TraitInfos, Variants, DirectiveThenStmt);
+        StartLoc, EndLoc, TraitInfos, Variants, SharedStmt);
   }
 
   /// Build a new OpenMP informational directive.
@@ -10103,6 +10103,12 @@ TreeTransform<Derived>::TransformOMPMetaDirective(OMPMetaDirective *D) {
       return StmtError();
     Variants.push_back(NewV.get());
   }
+  StmtResult SharedStmt;
+  if (Stmt *S = D->getSharedStmt()) {
+    SharedStmt = getDerived().TransformStmt(S);
+    if (SharedStmt.isInvalid())
+      return StmtError();
+  }
 
   // Copy the trait infos and transform their score and condition expressions.
   // The implicit 'otherwise' trait info is added back by Sema.
@@ -10131,9 +10137,8 @@ TreeTransform<Derived>::TransformOMPMetaDirective(OMPMetaDirective *D) {
     TraitInfos.push_back(&TI);
   }
 
-  return getDerived().RebuildOMPMetaDirective(D->getBeginLoc(), D->getEndLoc(),
-                                              TraitInfos, Variants,
-                                              D->directiveThenStmt());
+  return getDerived().RebuildOMPMetaDirective(
+      D->getBeginLoc(), D->getEndLoc(), TraitInfos, Variants, SharedStmt.get());
 }
 
 template <typename Derived>

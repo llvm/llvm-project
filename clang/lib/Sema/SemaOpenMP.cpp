@@ -3871,7 +3871,7 @@ StmtResult SemaOpenMP::ActOnOpenMPAssumeDirective(ArrayRef<OMPClause *> Clauses,
 StmtResult SemaOpenMP::ActOnOpenMPMetaDirective(
     SourceLocation StartLoc, SourceLocation EndLoc,
     ArrayRef<OMPTraitInfo *> TraitInfos, ArrayRef<Stmt *> Variants,
-    ArrayRef<bool> DirectiveThenStmt) {
+    Stmt *SharedStmt) {
   // Without an 'otherwise' clause, the last variant is the implicit one.
   bool HasImplicitOtherwise = Variants.size() == TraitInfos.size() + 1;
   assert((HasImplicitOtherwise || Variants.size() == TraitInfos.size()) &&
@@ -3898,7 +3898,7 @@ StmtResult SemaOpenMP::ActOnOpenMPMetaDirective(
   }
   return OMPMetaDirective::Create(
       getASTContext(), StartLoc, EndLoc, Variants, Conditions, AllTraitInfos,
-      HasImplicitOtherwise, getConstructTraits(), DirectiveThenStmt);
+      HasImplicitOtherwise, getConstructTraits(), SharedStmt);
 }
 
 OMPRequiresDecl *

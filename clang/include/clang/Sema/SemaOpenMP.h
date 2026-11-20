@@ -214,13 +214,13 @@ public:
   /// Called for metadirectives with user conditions that require runtime
   /// selection. \p Variants holds one complete directive (or the plain
   /// associated statement) per entry of \p TraitInfos.
-  /// \p DirectiveThenStmt marks the variants that are a standalone directive
-  /// followed by the statement.
+  /// \p SharedStmt, if any, is run by the variants without an associated
+  /// statement.
   StmtResult ActOnOpenMPMetaDirective(SourceLocation StartLoc,
                                       SourceLocation EndLoc,
                                       ArrayRef<OMPTraitInfo *> TraitInfos,
                                       ArrayRef<Stmt *> Variants,
-                                      ArrayRef<bool> DirectiveThenStmt);
+                                      Stmt *SharedStmt);
 
   // OpenMP directives and clauses.
   /// Called on correct id-expression from the '#pragma omp

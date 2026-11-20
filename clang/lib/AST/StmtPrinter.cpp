@@ -813,11 +813,7 @@ void StmtPrinter::VisitOMPMetaDirective(OMPMetaDirective *Node) {
       TraitInfos[I]->print(OS, Policy);
       OS << ": ";
     }
-    Stmt *V = Variants[I];
-    // A standalone directive is stored together with the statement.
-    if (Node->directiveThenStmt()[I])
-      V = cast<CompoundStmt>(V)->body_front();
-    if (auto *D = dyn_cast<OMPExecutableDirective>(V)) {
+    if (auto *D = dyn_cast<OMPExecutableDirective>(Variants[I])) {
       OS << getOpenMPDirectiveName(D->getDirectiveKind(), OpenMPVersion);
       for (OMPClause *C : D->clauses()) {
         if (C && !C->isImplicit()) {

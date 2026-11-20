@@ -42,6 +42,8 @@ void when_otherwise(int flag) {
 // CHECK:       [[V1]]:
 // CHECK-NEXT:  call i32 @__kmpc_single(
 // CHECK:       [[V2]]:
+// CHECK-NEXT:  br label %[[STMT:omp.metadirective.stmt[0-9]*]]
+// CHECK:       [[STMT]]:
 // CHECK-NEXT:  call void @_Z3barv()
 // CHECK-NEXT:  br label %[[END:omp.metadirective.end[0-9]*]]
 // CHECK:       [[END]]:
@@ -60,6 +62,8 @@ void two_whens(int a, int b) {
 // CHECK:       [[WHEN]]:
 // CHECK-NEXT:  call {{.*}}@__kmpc_fork_call(
 // CHECK:       [[OTHER]]:
+// CHECK-NEXT:  br label %[[STMT:omp.metadirective.stmt[0-9]*]]
+// CHECK:       [[STMT]]:
 // CHECK-NEXT:  call void @_Z3barv()
 // CHECK-NEXT:  br label %[[END:omp.metadirective.end[0-9]*]]
 // CHECK:       [[END]]:
@@ -78,6 +82,8 @@ void no_otherwise(int flag) {
 // CHECK:       omp.metadirective.variant{{[0-9]+}}:{{.*}}No predecessors!
 // CHECK-NEXT:  call i32 @__kmpc_single(
 // CHECK:       omp.metadirective.variant{{[0-9]+}}:{{.*}}No predecessors!
+// CHECK-NEXT:  br label %[[STMT:omp.metadirective.stmt[0-9]*]]
+// CHECK:       [[STMT]]:
 // CHECK-NEXT:  call void @_Z3barv()
 void static_match_first(int flag) {
 #pragma omp metadirective when(implementation={vendor(llvm)}: parallel) \
@@ -95,6 +101,8 @@ void static_match_first(int flag) {
 // CHECK:       [[WHEN]]:
 // CHECK-NEXT:  call i32 @__kmpc_single(
 // CHECK:       [[OTHER]]:
+// CHECK-NEXT:  br label %[[STMT:omp.metadirective.stmt[0-9]*]]
+// CHECK:       [[STMT]]:
 // CHECK-NEXT:  call void @_Z3barv()
 void static_nomatch(int flag) {
 #pragma omp metadirective when(implementation={vendor(amd)}: parallel) \
@@ -112,6 +120,8 @@ void static_nomatch(int flag) {
 // CHECK:       [[OTHER]]:
 // CHECK-NEXT:  call {{.*}}@__kmpc_fork_call(
 // CHECK:       omp.metadirective.variant{{[0-9]+}}:{{.*}}No predecessors!
+// CHECK-NEXT:  br label %[[STMT:omp.metadirective.stmt[0-9]*]]
+// CHECK:       [[STMT]]:
 // CHECK-NEXT:  call void @_Z3barv()
 void static_match_last(int flag) {
 #pragma omp metadirective when(user={condition(flag)}: single) \
@@ -181,6 +191,8 @@ void loop_variants(int flag, int n) {
 // CHECK:       [[WHEN]]:
 // CHECK-NEXT:  call {{.*}}@__kmpc_fork_call({{.*}}@_Z6nestedii.omp_outlined, ptr %b.addr)
 // CHECK:       [[OTHER]]:
+// CHECK-NEXT:  br label %[[STMT:omp.metadirective.stmt[0-9]*]]
+// CHECK:       [[STMT]]:
 // CHECK-NEXT:  {{%.*}} = load i32, ptr %b.addr
 // CHECK-NEXT:  {{%.*}} = icmp ne i32
 // CHECK-NEXT:  br i1 {{.*}}, label %[[IWHEN:omp.metadirective.variant[0-9]*]], label %[[IELSE:omp.metadirective.else[0-9]*]]
@@ -224,17 +236,19 @@ void runtime_path(int flag) {
   }
 }
 
-// A standalone variant runs its directive and then the statement.
+// A standalone variant runs its directive and then the shared statement.
 // CHECK-LABEL: define internal void @_Z5mixedi.omp_outlined(
 // CHECK:       br i1 {{.*}}, label %[[WHEN:omp.metadirective.variant[0-9]*]], label %[[ELSE:omp.metadirective.else[0-9]*]]
 // CHECK:       [[ELSE]]:
 // CHECK-NEXT:  br label %[[OTHER:omp.metadirective.variant[0-9]*]]
 // CHECK:       [[WHEN]]:
 // CHECK:       call void @__kmpc_barrier(
-// CHECK-NEXT:  call void @_Z3barv()
-// CHECK-NEXT:  br label %[[END:omp.metadirective.end[0-9]*]]
+// CHECK-NEXT:  br label %[[STMT:omp.metadirective.stmt[0-9]*]]
 // CHECK:       [[OTHER]]:
 // CHECK:       call i32 @__kmpc_single(
+// CHECK:       [[STMT]]:
+// CHECK-NEXT:  call void @_Z3barv()
+// CHECK-NEXT:  br label %[[END:omp.metadirective.end[0-9]*]]
 // CHECK:       [[END]]:
 // CHECK-NEXT:  ret void
 void mixed(int flag) {
@@ -289,6 +303,21 @@ void same_cond(int x) {
 #pragma omp metadirective when(user={condition(x)}: parallel) \
     when(user={condition(x)}, implementation={vendor(llvm)}: single)
   bar();
+}
+
+// Variants without an associated statement share one copy of it.
+// CHECK-LABEL: define {{.*}}void @_Z12shared_labelii(
+// CHECK:       call void @__kmpc_barrier(
+// CHECK-NEXT:  br label %[[STMT:omp.metadirective.stmt[0-9]*]]
+// CHECK:       [[STMT]]:
+// CHECK:       call void @_Z3barv()
+void shared_label(int a, int b) {
+#pragma omp metadirective when(user={condition(a)}: barrier) \
+                          when(user={condition(b)}: parallel)
+  {
+  L:
+    bar();
+  }
 }
 
 // Instantiated template. Kept last: the instantiation may be emitted at the
