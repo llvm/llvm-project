@@ -119,6 +119,15 @@ static bool CC_X86_VectorCallAssignRegister(unsigned &ValNo, MVT &ValVT,
   return false;
 }
 
+/// Vector types as defined by the vectorcall spec: "A vector type is either a
+/// floating-point type, for example, a float or double, or an SIMD vector type,
+/// for example, __m128 or __m256". f80 is excluded because it cannot live in an
+/// XMM register.
+static bool isVectorCallVectorType(MVT ValVT) {
+  return (ValVT.isFloatingPoint() && ValVT != MVT::f80) ||
+         (ValVT.isVector() && ValVT.getSizeInBits() >= 128);
+}
+
 /// Vectorcall calling convention has special handling for vector types or
 /// HVA for 64 bit arch.
 /// For HVAs shadow registers might be allocated on the first pass
@@ -136,11 +145,7 @@ static bool CC_X86_64_VectorCall(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
     return true;
   }
 
-  // Process only vector types as defined by vectorcall spec:
-  // "A vector type is either a floating-point type, for example,
-  //  a float or double, or an SIMD vector type, for example, __m128 or __m256".
-  if (!(ValVT.isFloatingPoint() ||
-        (ValVT.isVector() && ValVT.getSizeInBits() >= 128))) {
+  if (!isVectorCallVectorType(ValVT)) {
     // If R9 was already assigned it means that we are after the fourth element
     // and because this is not an HVA / Vector type, we need to allocate
     // shadow XMM register.
@@ -196,13 +201,8 @@ static bool CC_X86_32_VectorCall(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
     return true;
   }
 
-  // Process only vector types as defined by vectorcall spec:
-  // "A vector type is either a floating point type, for example,
-  //  a float or double, or an SIMD vector type, for example, __m128 or __m256".
-  if (!(ValVT.isFloatingPoint() ||
-        (ValVT.isVector() && ValVT.getSizeInBits() >= 128))) {
+  if (!isVectorCallVectorType(ValVT))
     return false;
-  }
 
   if (ArgFlags.isHva())
     return true; // If this is an HVA - Stop the search.
