@@ -42,7 +42,7 @@ define void @foo() personality ptr @__gxx_personality_v0 {
 ; GISEL-X86-NEXT:  .LBB0_2: # %lpad
 ; GISEL-X86-NEXT:    .cfi_def_cfa_offset 16
 ; GISEL-X86-NEXT:  .Ltmp2: # EH_LABEL
-; GISEL-X86-NEXT:    movl $0, %eax
+; GISEL-X86-NEXT:    xorl %eax, %eax
 ; GISEL-X86-NEXT:    movl %eax, (%esp)
 ; GISEL-X86-NEXT:    calll _Unwind_Resume
 ;
@@ -77,7 +77,7 @@ define void @foo() personality ptr @__gxx_personality_v0 {
 ; GISEL-X64-NEXT:  .LBB0_2: # %lpad
 ; GISEL-X64-NEXT:    .cfi_def_cfa_offset 16
 ; GISEL-X64-NEXT:  .Ltmp2: # EH_LABEL
-; GISEL-X64-NEXT:    movl $0, %edi
+; GISEL-X64-NEXT:    xorl %edi, %edi
 ; GISEL-X64-NEXT:    callq _Unwind_Resume
 entry:
   invoke void @bar() to label %invoke.cont unwind label %lpad
