@@ -42,6 +42,17 @@ bool4 test_or_bool4(bool4 x, bool4 y)
     return or(x, y);
 }
 
+// CHECK-LABEL: define hidden noundef <7 x i1> @_Z13test_or_bool7Dv7_bS_(
+// CHECK-SAME: <7 x i1> noundef [[X:%.*]], <7 x i1> noundef [[Y:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  entry:
+// CHECK:         [[HLSL_OR:%.*]] = or <7 x i1> [[A:%.*]], [[B:%.*]]
+// CHECK:         ret <7 x i1> [[HLSL_OR]]
+vector<bool, 7> test_or_bool7(vector<bool, 7> x, vector<bool, 7> y)
+{
+    return or(x, y);
+}
+
+
 // CHECK-LABEL: define hidden noundef i1 @_Z11test_or_intii(
 // CHECK-SAME: i32 noundef [[X:%.*]], i32 noundef [[Y:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
