@@ -2374,8 +2374,15 @@ const DefInit *VarDefInit::instantiate() {
       Records.getNewAnonymousName(), Loc, Records, Record::RK_AnonymousDef);
   Record *NewRec = NewRecOwner.get();
 
-  // Copy fields from class to instance.
+  // Copy fields from class to instance. A compacted instance can inherit a
+  // field with a concrete value without copying it, because substituting the
+  // template arguments cannot change it.
+  bool Compact = Records.getCompactDefs();
+  if (Compact)
+    NewRec->startCompact();
   for (const RecordVal &Val : Class->getValues()) {
+    if (Compact && Val.getValue()->isConcrete())
+      continue;
     NewRec->addValue(Val);
     NewRec->appendValueReferenceLocs(*Class, Val.getNameInit());
   }
@@ -2853,6 +2860,9 @@ void Record::setName(const Init *NewName) {
 }
 
 void Record::resolveReferences(Resolver &R, const RecordVal *SkipVal) {
+  // For a compacted record, only resolve its own fields. The fields it
+  // inherits without copying have concrete values, which resolving cannot
+  // change.
   const Init *OldName = getNameInit();
   const Init *NewName = Name->resolveReferences(R);
   if (NewName != OldName) {
@@ -2906,6 +2916,50 @@ void Record::resolveReferences(const Init *NewName) {
 LLVM_DUMP_METHOD void Record::dump() const { errs() << *this; }
 #endif
 
+void Record::getAllValues(SmallVectorImpl<const RecordVal *> &Vals) const {
+  if (!Compacted) {
+    for (const RecordVal &Val : Values)
+      Vals.push_back(&Val);
+    return;
+  }
+  // First come the fields this record inherits from its direct superclasses,
+  // in the same order that TGParser::AddSubClass adds them: the fields of each
+  // direct superclass in turn, with later superclasses overriding earlier ones
+  // in place.
+  SmallDenseMap<const Init *, unsigned, 64> Index;
+  for (const Record *SC : make_first_range(DirectSuperClasses)) {
+    for (const RecordVal &Val : SC->getValues()) {
+      auto [It, Inserted] = Index.try_emplace(Val.Name, Vals.size());
+      if (Inserted)
+        Vals.push_back(&Val);
+      else
+        Vals[It->second] = &Val;
+    }
+  }
+  // Replace inherited fields with this record's own version if it has one.
+  // Then come the fields that no superclass provides.
+  for (const RecordVal &Val : Values) {
+    auto It = Index.find(Val.Name);
+    if (It != Index.end())
+      Vals[It->second] = &Val;
+    else
+      Vals.push_back(&Val);
+  }
+}
+
+RecordVal *Record::getMutableValue(const Init *Name) {
+  for (RecordVal &Val : Values)
+    if (Val.Name == Name)
+      return &Val;
+  if (!Compacted)
+    return nullptr;
+  const RecordVal *InheritedVal = getInheritedValue(Name);
+  if (!InheritedVal)
+    return nullptr;
+  Values.push_back(*InheritedVal);
+  return &Values.back();
+}
+
 raw_ostream &llvm::operator<<(raw_ostream &OS, const Record &R) {
   OS << R.getNameInitAsString();
 
@@ -2929,12 +2983,14 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const Record &R) {
   }
   OS << "\n";
 
-  for (const RecordVal &Val : R.getValues())
-    if (Val.isNonconcreteOK())
-      OS << Val;
-  for (const RecordVal &Val : R.getValues())
-    if (!Val.isNonconcreteOK())
-      OS << Val;
+  SmallVector<const RecordVal *, 0> Vals;
+  R.getAllValues(Vals);
+  for (const RecordVal *Val : Vals)
+    if (Val->isNonconcreteOK())
+      OS << *Val;
+  for (const RecordVal *Val : Vals)
+    if (!Val->isNonconcreteOK())
+      OS << *Val;
 
   return OS << "}\n";
 }

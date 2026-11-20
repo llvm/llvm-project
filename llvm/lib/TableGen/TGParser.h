@@ -196,7 +196,12 @@ public:
            const bool TrackReferenceLocs = false)
       : Lex(SM, Macros), CurMultiClass(nullptr), Records(records),
         NoWarnOnUnusedTemplateArgs(NoWarnOnUnusedTemplateArgs),
-        TrackReferenceLocs(TrackReferenceLocs) {}
+        TrackReferenceLocs(TrackReferenceLocs) {
+    // Clients that track reference locations, like the TableGen language
+    // server, expect every def to store all of its fields.
+    if (TrackReferenceLocs)
+      Records.setCompactDefs(false);
+  }
 
   /// ParseFile - Main entrypoint for parsing a tblgen file. These parser
   /// routines return true on error, or false on success.

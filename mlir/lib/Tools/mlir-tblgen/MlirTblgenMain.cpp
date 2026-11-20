@@ -53,9 +53,9 @@ static bool findUse(const Init *field, const Init *deprecatedInit,
       // This is also a trivial case we return false for in constant time.
       return false;
 
-    return memoize(
-        llvm::any_of(defInit->getDef()->getValues(), [&](const RecordVal &val) {
-          return findUse(val.getValue(), deprecatedInit, known);
+    return memoize(llvm::any_of(
+        defInit->getDef()->getAllValues(), [&](const RecordVal *val) {
+          return findUse(val->getValue(), deprecatedInit, known);
         }));
   }
 
@@ -84,8 +84,8 @@ static bool findUse(const Init *field, const Init *deprecatedInit,
 // Returns if there is a use of `deprecatedInit` in `record`.
 static bool findUse(const Record &record, const Init *deprecatedInit,
                     llvm::DenseMap<const Init *, bool> &known) {
-  return llvm::any_of(record.getValues(), [&](const RecordVal &val) {
-    return findUse(val.getValue(), deprecatedInit, known);
+  return llvm::any_of(record.getAllValues(), [&](const RecordVal *val) {
+    return findUse(val->getValue(), deprecatedInit, known);
   });
 }
 

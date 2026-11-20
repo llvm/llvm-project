@@ -696,7 +696,8 @@ struct TupleExpander : SetTheory::Expander {
         NewReg->addDirectSuperClass(Super, Loc);
 
       // Copy Proto fields.
-      for (RecordVal RV : Proto->getValues()) {
+      for (const RecordVal *ProtoRV : Proto->getAllValues()) {
+        RecordVal RV(*ProtoRV);
         // Skip existing fields, like NAME.
         if (NewReg->getValue(RV.getNameInit()))
           continue;
