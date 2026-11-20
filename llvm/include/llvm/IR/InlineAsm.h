@@ -328,7 +328,7 @@ public:
     explicit Flag(uint32_t F) : Storage(F) {}
     Flag(enum Kind K, unsigned NumOps) : Storage(0) {
       Bitfield::set<KindField>(Storage, K);
-      Bitfield::set<NumOperands>(Storage, NumOps);
+      setNumOperandRegisters(NumOps);
     }
     operator uint32_t() { return Storage; }
     Kind getKind() const { return Bitfield::get<KindField>(Storage); }
