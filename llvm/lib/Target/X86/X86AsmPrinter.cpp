@@ -32,6 +32,7 @@
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Mangler.h"
@@ -230,7 +231,14 @@ void X86AsmPrinter::emitKCFITypeId(const MachineFunction &MF) {
           ++Arity;
         }
       }
+      if (Arity >= 7) {
+        F.getContext().diagnose(DiagnosticInfoUnsupported(
+            F, "-fsanitize-kcfi-arity requires System V ABI compliance",
+            F.getSubprogram()));
+        Arity = 0;
+      }
     }
+
     DestReg = ArityToRegMap[Arity];
   }
 
