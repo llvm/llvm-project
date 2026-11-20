@@ -1,0 +1,106 @@
+# RUN: llc -mtriple=amdgpu10.30-amd-amdhsa -verify-machineinstrs -passes=si-i1-copies -o - %s | FileCheck %s
+
+--- |
+  declare void @report() noreturn
+
+  define amdgpu_kernel void @remove_rejoin() {
+  entry:
+    br i1 false, label %fail, label %join
+  fail:
+    call void @report()
+    br label %join
+  join:
+    ret void
+  }
+
+  define amdgpu_kernel void @split_block() {
+  entry:
+    br i1 false, label %fail, label %join
+  fail:
+    call void @report()
+    br label %join
+  join:
+    ret void
+  }
+...
+---
+name: remove_rejoin
+tracksRegLiveness: false
+body: |
+  ; CHECK-LABEL: name: remove_rejoin
+  ; CHECK: bb.0.entry:
+  ; CHECK: successors: %bb.1
+  ; CHECK: S_CBRANCH_SCC1 %bb.1
+  ; CHECK: S_BRANCH %bb.2
+  ; CHECK: bb.1.fail:
+  ; CHECK-NEXT: successors:{{$}}
+  ; CHECK-NOT: S_BRANCH
+  ; CHECK: bb.2.join:
+  ; CHECK-NEXT: S_ENDPGM
+  bb.0.entry:
+    successors: %bb.1, %bb.2
+
+    S_CBRANCH_SCC1 %bb.1, implicit undef $scc
+    S_BRANCH %bb.2
+
+  bb.1.fail:
+    successors: %bb.2
+
+    S_BRANCH %bb.2
+
+  bb.2.join:
+    S_ENDPGM 0
+
+...
+---
+name: split_block
+tracksRegLiveness: false
+body: |
+  ; CHECK-LABEL: name: split_block
+  ; The block that still maps to the IR block keeps its edge into the split.
+  ; CHECK: bb.1.fail:
+  ; CHECK: successors: %bb.2
+  ; CHECK: S_BRANCH %bb.2
+  ; The split body, and the edge back to its header, stay.
+  ; CHECK: bb.3:
+  ; CHECK: successors: %bb.2{{.*}}, %bb.4
+  ; CHECK: S_NOP 0
+  ; CHECK: S_CBRANCH_SCC1 %bb.2
+  ; CHECK: S_BRANCH %bb.4
+  ; The rejoin out of the split is gone.
+  ; CHECK: bb.4:
+  ; CHECK-NEXT: successors:{{$}}
+  ; CHECK-NOT: S_BRANCH
+  ; CHECK: bb.5.join:
+  ; CHECK-NEXT: S_ENDPGM
+  bb.0.entry:
+    successors: %bb.1, %bb.5
+
+    S_CBRANCH_SCC1 %bb.1, implicit undef $scc
+    S_BRANCH %bb.5
+
+  bb.1.fail:
+    successors: %bb.2
+
+    S_BRANCH %bb.2
+
+  bb.2:
+    successors: %bb.3
+
+    S_BRANCH %bb.3
+
+  bb.3:
+    successors: %bb.2, %bb.4
+
+    S_NOP 0
+    S_CBRANCH_SCC1 %bb.2, implicit undef $scc
+    S_BRANCH %bb.4
+
+  bb.4:
+    successors: %bb.5
+
+    S_BRANCH %bb.5
+
+  bb.5.join:
+    S_ENDPGM 0
+...
