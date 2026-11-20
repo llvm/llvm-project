@@ -1366,8 +1366,31 @@ define i32 @PR239204(<16 x i8> %a, <16 x i8> %b) {
   ret i32 %r
 }
 
-declare <8 x i8> @llvm.umax.v8i8(<8 x i8>, <8 x i8>)
-declare <8 x i8> @llvm.umin.v8i8(<8 x i8>, <8 x i8>)
-declare i8 @llvm.vector.reduce.add.v8i8(<8 x i8>)
+; FIXME: Don't sign-extend adbu pattern, as its not guaranteed to be non-negative.
+define i32 @PR244529(<16 x i8> %v) {
+; SSE2-LABEL: PR244529:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pxor %xmm1, %xmm1
+; SSE2-NEXT:    psadbw %xmm0, %xmm1
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
+; SSE2-NEXT:    paddq %xmm1, %xmm0
+; SSE2-NEXT:    movd %xmm0, %eax
+; SSE2-NEXT:    retq
+;
+; AVX-LABEL: PR244529:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; AVX-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vmovd %xmm0, %eax
+; AVX-NEXT:    retq
+  %max = tail call <16 x i8> @llvm.umax.v16i8(<16 x i8> %v, <16 x i8> zeroinitializer)
+  %min = tail call <16 x i8> @llvm.umin.v16i8(<16 x i8> %v, <16 x i8> zeroinitializer)
+  %diff = sub <16 x i8> %max, %min
+  %sext = sext <16 x i8> %diff to <16 x i32>
+  %res = tail call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %sext)
+  ret i32 %res
+}
 
 attributes #0 = { nofree nosync nounwind readnone speculatable willreturn }
