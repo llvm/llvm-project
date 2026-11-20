@@ -428,11 +428,9 @@ static bool isLTOPreLink(ThinOrFullLTOPhase Phase) {
 } // anonymous namespace
 
 // Enable the hot block rematerialization pass.
-static cl::opt<bool> EnableHotBlockRemat(
+static cl::opt<bool, true> EnableHotBlockRemat(
     "amdgpu-enable-hot-block-remat",
-    cl::desc("Enable hot block rematerialize optimization"),
-    cl::init(true),
-    cl::Hidden);
+    cl::desc("Enable hot block rematerialize optimization"), cl::init(false),
     cl::Hidden);
 
 static cl::opt<bool, true> EnableObjectLinking(
@@ -571,11 +569,8 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUWaitSGPRHazardsLegacyPass(*PR);
   initializeAMDGPUPreloadKernelArgumentsLegacyPass(*PR);
   initializeAMDGPUUniformIntrinsicCombineLegacyPass(*PR);
-<<<<<<< HEAD
   initializeSIPostRA16BitMovFoldingLegacyPass(*PR);
-=======
   initializeAMDGPUHotBlockRematerializePass(*PR);
->>>>>>> f87912c91661 (Initial pass)
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -753,6 +748,7 @@ AMDGPUTargetMachine::AMDGPUTargetMachine(const Target &T, const Triple &TT,
 bool AMDGPUTargetMachine::EnableFunctionCalls = false;
 bool AMDGPUTargetMachine::EnableObjectLinking = false;
 bool AMDGPUTargetMachine::EnableLowerModuleLDS = true;
+bool AMDGPUTargetMachine::EnableHotBlockRemat = false;
 
 AMDGPUTargetMachine::~AMDGPUTargetMachine() = default;
 
@@ -1702,7 +1698,7 @@ void GCNPassConfig::addOptimizedRegAlloc() {
 
   // Rematerialize must run before PHI elimination so it can move virtual
   // register defs freely on SSA MachineIR.
-  if (isPassEnabled(EnableHotBlockRemat))
+  if (AMDGPUTargetMachine::EnableHotBlockRemat)
     addPass(&AMDGPUHotBlockRematerializeID);
 
   TargetPassConfig::addOptimizedRegAlloc();
