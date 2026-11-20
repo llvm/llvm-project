@@ -44,7 +44,7 @@ constexpr size_t BUFFER_SIZE = 1024;
 
 Mutex log_mutex(/*is_priority_inherit=*/false, /*is_recursive=*/false,
                 /*is_robust=*/false, /*is_pshared=*/false);
-LIBC_CONSTINIT internal::LogState log_state;
+LIBC_CONSTINIT detail::LogState log_state;
 
 LIBC_INLINE int stderr_write_hook(cpp::string_view str, void *) {
   write_to_stderr(str);
@@ -53,7 +53,7 @@ LIBC_INLINE int stderr_write_hook(cpp::string_view str, void *) {
 
 } // namespace
 
-namespace internal {
+namespace detail {
 
 bool write_log_message(
     printf_core::Writer<printf_core::OverflowMode::CALLBACK> &writer,
@@ -102,7 +102,7 @@ bool write_log_message(
   return true;
 }
 
-} // namespace internal
+} // namespace detail
 
 void open_log(const char *ident, int options, int facility) {
   log_mutex.lock();
@@ -136,9 +136,9 @@ void log_message(int priority, const char *__restrict format,
       printf_core::Writer writer = printf_core::make_writer(
           buffer, sizeof(buffer),
           &printf_core::overflow_write_flush_to_sink<char, stderr_write_hook>);
-      if (internal::write_log_message(writer, log_state, priority, format, args,
-                                      local_time, pid,
-                                      program_invocation_short_name))
+      if (detail::write_log_message(writer, log_state, priority, format, args,
+                                    local_time, pid,
+                                    program_invocation_short_name))
         writer.get_write_buffer().flush_to_sink<stderr_write_hook>();
     }
   }

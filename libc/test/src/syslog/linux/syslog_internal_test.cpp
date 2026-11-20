@@ -30,7 +30,7 @@
 
 using LIBC_NAMESPACE::cpp::string_view;
 using LIBC_NAMESPACE::printf_core::overflow_write_flush_to_sink;
-using LIBC_NAMESPACE::syslog_internal::internal::LogState;
+using LIBC_NAMESPACE::syslog_internal::detail::LogState;
 
 struct CaptureBuffer {
   char data[2048] = {};
@@ -65,7 +65,7 @@ static bool format_to_capture(const LogState &state, int priority,
   va_start(vlist, format);
   LIBC_NAMESPACE::internal::ArgList args(vlist);
   va_end(vlist);
-  bool wrote = LIBC_NAMESPACE::syslog_internal::internal::write_log_message(
+  bool wrote = LIBC_NAMESPACE::syslog_internal::detail::write_log_message(
       writer, state, priority, format, args, timestamp, pid, default_ident);
   if (wrote)
     writer.get_write_buffer().flush_to_sink<CaptureBuffer::write_hook>(

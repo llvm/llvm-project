@@ -26,7 +26,7 @@ namespace syslog_internal {
 
 // Unlocked state and formatting helpers (exposed here for unit testing).
 // Callers operating on shared state must synchronize externally.
-namespace internal {
+namespace detail {
 
 inline constexpr int LEVEL_MASK = 0x07;
 inline constexpr int FACILITY_MASK = 0x3f8;
@@ -72,7 +72,7 @@ bool write_log_message(
     internal::ArgList &args, const tm &timestamp, pid_t pid,
     const char *default_ident);
 
-} // namespace internal
+} // namespace detail
 
 void open_log(const char *ident, int options, int facility);
 
