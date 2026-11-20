@@ -21,5 +21,13 @@ void RTDEF(CUFInit)() {
     CUDA_REPORT_IF_ERROR(cudaDeviceSetLimit(cudaLimitStackSize,
         Fortran::runtime::executionEnvironment.cudaStackLimit));
   }
+  // Mirror the host execution environment (already configured: lowering
+  // generates the CUFInit call after ProgramStart) into the device image's
+  // copy, so that the environment variables documented in
+  // flang/docs/RuntimeEnvironment.md have the same effect in runtime code
+  // compiled for the device as they have on the host. Without this, the
+  // device copy stays at its default-initialized values. A no-op unless
+  // Flang-RT was built with device offload support (see environment.cpp).
+  RTNAME(CUFSyncExecutionEnvironment)();
 }
 }
