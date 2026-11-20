@@ -2302,11 +2302,14 @@ bool CallAnalyzer::visitInsertValue(InsertValueInst &I) {
 /// it has simplified the callsite to some other entity (a constant), making it
 /// free.
 bool CallAnalyzer::simplifyCallSite(Function *F, CallBase &Call) {
+  const TargetLibraryInfo *TLI =
+      GetTLI ? &GetTLI(*CandidateCall.getFunction()) : nullptr;
+
   // FIXME: Using the instsimplify logic directly for this is inefficient
   // because we have to continually rebuild the argument list even when no
   // simplifications can be performed. Until that is fixed with remapping
   // inside of instsimplify, directly constant fold calls here.
-  if (!canConstantFoldCallTo(&Call, F))
+  if (!canConstantFoldCallTo(&Call, F, TLI))
     return false;
 
   // Try to re-map the arguments to constants.
@@ -2319,7 +2322,7 @@ bool CallAnalyzer::simplifyCallSite(Function *F, CallBase &Call) {
 
     ConstantArgs.push_back(C);
   }
-  if (Constant *C = ConstantFoldCall(&Call, F, ConstantArgs)) {
+  if (Constant *C = ConstantFoldCall(&Call, F, ConstantArgs, TLI)) {
     SimplifiedValues[&Call] = C;
     return true;
   }
@@ -3353,6 +3356,10 @@ InlineCostAnnotationPrinterPass::run(Function &F,
     return FAM.getResult<AssumptionAnalysis>(F);
   };
 
+  auto GetTLI = [&](Function &F) -> const TargetLibraryInfo & {
+    return FAM.getResult<TargetLibraryAnalysis>(F);
+  };
+
   auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
   ProfileSummaryInfo *PSI =
       MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
@@ -3372,7 +3379,7 @@ InlineCostAnnotationPrinterPass::run(Function &F,
           continue;
         OptimizationRemarkEmitter ORE(CalledFunction);
         InlineCostCallAnalyzer ICCA(*CalledFunction, *CB, Params, TTI,
-                                    GetAssumptionCache, nullptr, nullptr, PSI,
+                                    GetAssumptionCache, nullptr, GetTLI, PSI,
                                     &ORE, /*BoostIndirect=*/true,
                                     /*IgnoreThreshold=*/false,
                                     /*GetEphValuesCache=*/nullptr,
