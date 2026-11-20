@@ -1034,10 +1034,11 @@ Parser::ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand,
       Validator.WantRemainingKeywords = Tok.isNot(tok::r_paren);
     }
     Name.setIdentifier(&II, ILoc);
-    Res = Actions.ActOnIdExpression(getCurScope(), ScopeSpec, TemplateKWLoc,
-                                    Name, Tok.is(tok::l_paren),
-                                    isAddressOfOperand, &Validator,
-                                    /*IsInlineAsmIdentifier=*/false);
+    Res =
+        Actions.ActOnIdExpression(getCurScope(), ScopeSpec, TemplateKWLoc, Name,
+                                  Tok.isOneOf(tok::l_paren, tok::lesslessless),
+                                  isAddressOfOperand, &Validator,
+                                  /*IsInlineAsmIdentifier=*/false);
     Res = tryParseCXXPackIndexingExpression(Res);
     if (!Res.isInvalid() && Tok.is(tok::less))
       checkPotentialAngleBracket(Res);

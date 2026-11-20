@@ -1619,8 +1619,8 @@ mlir::LogicalResult CIRToLLVMAtomicXchgOpLowering::matchAndRewrite(
   // replace below erases immediately.
   auto xchg = mlir::LLVM::AtomicRMWOp::create(
       rewriter, op.getLoc(), mlir::LLVM::AtomicBinOp::xchg, adaptor.getPtr(),
-      adaptor.getVal(), llvmOrder, llvmSyncScope, /*alignment=*/0,
-      op.getIsVolatile());
+      adaptor.getVal(), llvmOrder, llvmSyncScope,
+      adaptor.getAlignment().value_or(0), op.getIsVolatile());
   forwardAMDGPUAtomicOptionMarkers(op, xchg);
   forwardAMDGPUNoPrivateAddrSpace(op, xchg, adaptor.getPtr());
   rewriter.replaceOp(op, xchg);
@@ -1825,7 +1825,8 @@ mlir::LogicalResult CIRToLLVMAtomicFetchOpLowering::matchAndRewrite(
       getLLVMAtomicBinOp(op.getBinop(), isInt, isSignedInt);
   auto rmwVal = mlir::LLVM::AtomicRMWOp::create(
       rewriter, op.getLoc(), llvmBinOp, adaptor.getPtr(), adaptor.getVal(),
-      llvmOrder, llvmSyncScope, /*alignment=*/0, op.getIsVolatile());
+      llvmOrder, llvmSyncScope, adaptor.getAlignment().value_or(0),
+      op.getIsVolatile());
 
   forwardAMDGPUAtomicOptionMarkers(op, rmwVal);
   forwardAMDGPUNoPrivateAddrSpace(op, rmwVal, adaptor.getPtr());
@@ -5287,16 +5288,14 @@ void ConvertCIRToLLVMPass::runOnOperation() {
     return;
   }
 
-  // Drop CIR-native data-layout entries. They drove pointer-width and
-  // _BitInt alignment queries up to this point, but the LLVM IR exporter
-  // rejects CIR types.
+  // Drop CIR-native data-layout entries.
   if (auto dlSpec = mlir::dyn_cast_or_null<mlir::DataLayoutSpecAttr>(
           module->getAttr(mlir::DLTIDialect::kDataLayoutAttrName))) {
     llvm::SmallVector<mlir::DataLayoutEntryInterface> kept;
     for (mlir::DataLayoutEntryInterface entry : dlSpec.getEntries()) {
       if (entry.isTypeEntry()) {
         mlir::Type key = mlir::cast<mlir::Type>(entry.getKey());
-        if (mlir::isa<cir::PointerType, cir::IntType>(key))
+        if (mlir::isa<cir::PointerType, cir::IntType, cir::VectorType>(key))
           continue;
       }
       kept.push_back(entry);

@@ -32,6 +32,9 @@ static CallConvTarget getCallConvTarget(const llvm::Triple &triple) {
   // AMDGCN-flavored SPIR-V follows the AMDGPU ABI.
   if (triple.isSPIRV() && triple.getVendor() == llvm::Triple::AMD)
     return CallConvTarget::AMDGPU;
+  if (triple.isAArch64() && !triple.isOSWindows() &&
+      triple.getArch() != llvm::Triple::aarch64_32)
+    return CallConvTarget::AArch64;
   return CallConvTarget::None;
 }
 
@@ -76,7 +79,7 @@ getX86ABICompatInfo(const llvm::Triple &triple,
   // Match the classic CodeGen default of -msmall-int-abi-compat.
   assert(!cir::MissingFeatures::smallIntABICompatOption());
   abiCompat.SmallIntABICompat = triple.isOSDarwin() || triple.isPS()
-                                    ? llvm::abi::SmallIntABICompatKind::Clang
+                                    ? llvm::abi::SmallIntABICompatKind::Clang23
                                     : llvm::abi::SmallIntABICompatKind::Both;
   return abiCompat;
 }

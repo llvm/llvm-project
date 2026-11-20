@@ -11,7 +11,6 @@
 
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/TargetParser/Triple.h"
 
 namespace llvm {
 class AsmPrinter;
@@ -27,7 +26,6 @@ class MachineOperand;
 class LLVM_LIBRARY_VISIBILITY AArch64MCInstLower {
   MCContext &Ctx;
   AsmPrinter &Printer;
-  Triple TargetTriple;
 
 public:
   AArch64MCInstLower(MCContext &ctx, AsmPrinter &printer);

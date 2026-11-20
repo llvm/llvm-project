@@ -357,6 +357,8 @@ contains `Y`.
 [Informational note --- The "{ref}`contains<amdgpu-subscopes>`" relation is
 reflexive over scope instances.]
 
+(amdgpu-location-order)=
+
 ### Location Order
 
 A write `W` is *location-ordered* before an access `Y` to the same address

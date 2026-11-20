@@ -5360,25 +5360,13 @@ public:
 
   unsigned getMaxBlockNumber() const { return CreatedBlocks.size(); }
 
-  /// Returns true if the VPlan is based on a loop with an early exit.
+  /// Returns true if the VPlan is based on a loop with an early exit. Must be
+  /// called before regions are dissolved.
   bool hasEarlyExit() const {
-    unsigned NumExitPredecessors =
-        sum_of(map_range(ExitBlocks, [](VPIRBasicBlock *EB) {
-          return EB->getNumPredecessors();
-        }));
-
-    // If the scalar preheader executes unconditionally, there's no branch from
-    // middle block to any exit. If there is any edge to an exit block
-    // remaining, it must be an early exit.
-    VPBasicBlock *ScalarPH = getScalarPreheader();
-    VPBlockBase *ScalarPHPred =
-        ScalarPH ? ScalarPH->getSinglePredecessor() : nullptr;
-    if (ScalarPHPred && ScalarPHPred->getNumSuccessors() == 1)
-      return NumExitPredecessors >= 1;
-
-    // Otherwise there must be at least 2 edges to exit blocks (from the middle
-    // block and the early exiting edge).
-    return NumExitPredecessors > 1;
+    // An early exit plan uses BranchOnTwoConds in the vector loop region latch.
+    const VPRegionBlock *LoopRegion = getVectorLoopRegion();
+    assert(LoopRegion && "vector loop region already dissolved");
+    return LoopRegion->getNumSuccessors() > 1;
   }
 
   /// Returns true if the scalar tail may execute after the vector loop, i.e.

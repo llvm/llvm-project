@@ -501,11 +501,9 @@ define amdgpu_kernel void @fence_acquire_clobbers_ptr_nest_3(ptr addrspace(1) no
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds ptr, ptr addrspace(1) [[ARG:%.*]], i32 [[I]]
 ; CHECK-NEXT:    [[ACQ:%.*]] = load atomic i32, ptr addrspace(1) [[FLAG:%.*]] monotonic, align 4
 ; CHECK-NEXT:    fence acquire
-; CHECK-NEXT:    [[P2:%.*]] = load ptr, ptr addrspace(1) [[P1]], align 8, !amdgpu.noclobber [[META0]]
-; CHECK-NEXT:    [[P2_GLOBAL:%.*]] = addrspacecast ptr [[P2]] to ptr addrspace(1)
-; CHECK-NEXT:    [[P3:%.*]] = load ptr, ptr addrspace(1) [[P2_GLOBAL]], align 8, !amdgpu.noclobber [[META0]]
-; CHECK-NEXT:    [[P3_GLOBAL:%.*]] = addrspacecast ptr [[P3]] to ptr addrspace(1)
-; CHECK-NEXT:    store float 0.000000e+00, ptr addrspace(1) [[P3_GLOBAL]], align 4
+; CHECK-NEXT:    [[P2:%.*]] = load ptr, ptr addrspace(1) [[P1]], align 8
+; CHECK-NEXT:    [[P3:%.*]] = load ptr, ptr [[P2]], align 8
+; CHECK-NEXT:    store float 0.000000e+00, ptr [[P3]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

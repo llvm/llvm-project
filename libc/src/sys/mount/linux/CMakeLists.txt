@@ -1,0 +1,44 @@
+add_entrypoint_object(
+  mount
+  SRCS
+    mount.cpp
+  HDRS
+    ../mount.h
+  DEPENDS
+    libc.src.__support.OSUtil.linux.syscall_wrappers.mount
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  umount
+  SRCS
+    umount.cpp
+  HDRS
+    ../umount.h
+  DEPENDS
+    libc.src.__support.OSUtil.linux.syscall_wrappers.umount2
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  umount2
+  SRCS
+    umount2.cpp
+  HDRS
+    ../umount2.h
+  DEPENDS
+    libc.src.__support.OSUtil.linux.syscall_wrappers.umount2
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)
