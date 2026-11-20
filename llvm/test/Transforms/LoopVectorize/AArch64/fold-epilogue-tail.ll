@@ -244,6 +244,7 @@ define i32 @live_out(ptr %src, i64 %n) {
 ; CHECK-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]]
 ; CHECK:       [[VEC_EPILOG_PH]]:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; CHECK-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[N]], 1
 ; CHECK-NEXT:    [[TRIP_COUNT_MINUS_VF:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[N]], i64 8)
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i64(i64 [[VEC_EPILOG_RESUME_VAL]], i64 [[N]])
 ; CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
@@ -259,10 +260,8 @@ define i32 @live_out(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[INDEX_NEXT2]] = add i64 [[INDEX2]], 8
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP8:%.*]] = xor <8 x i1> [[ACTIVE_LANE_MASK]], splat (i1 true)
-; CHECK-NEXT:    [[FIRST_INACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v8i1(<8 x i1> [[TMP8]], i1 false)
-; CHECK-NEXT:    [[LAST_ACTIVE_LANE:%.*]] = sub i64 [[FIRST_INACTIVE_LANE]], 1
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <8 x i32> [[WIDE_MASKED_LOAD]], i64 [[LAST_ACTIVE_LANE]]
+; CHECK-NEXT:    [[TMP10:%.*]] = sub i64 [[TRIP_COUNT_MINUS_1]], [[INDEX1]]
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <8 x i32> [[WIDE_MASKED_LOAD]], i64 [[TMP10]]
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
@@ -312,6 +311,7 @@ define i32 @live_out(ptr %src, i64 %n) {
 ; CHECK-VS-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-VS-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-VS-NEXT:    [[TMP11:%.*]] = shl nuw i64 [[TMP10]], 3
+; CHECK-VS-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[N]], 1
 ; CHECK-VS-NEXT:    [[TRIP_COUNT_MINUS_VF:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[N]], i64 [[TMP11]])
 ; CHECK-VS-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 [[VEC_EPILOG_RESUME_VAL]], i64 [[N]])
 ; CHECK-VS-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
@@ -327,10 +327,8 @@ define i32 @live_out(ptr %src, i64 %n) {
 ; CHECK-VS-NEXT:    [[INDEX_NEXT2]] = add i64 [[INDEX2]], [[TMP11]]
 ; CHECK-VS-NEXT:    br i1 [[TMP14]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK-VS:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
-; CHECK-VS-NEXT:    [[TMP15:%.*]] = xor <vscale x 8 x i1> [[ACTIVE_LANE_MASK]], splat (i1 true)
-; CHECK-VS-NEXT:    [[FIRST_INACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.nxv8i1(<vscale x 8 x i1> [[TMP15]], i1 false)
-; CHECK-VS-NEXT:    [[LAST_ACTIVE_LANE:%.*]] = sub i64 [[FIRST_INACTIVE_LANE]], 1
-; CHECK-VS-NEXT:    [[TMP16:%.*]] = extractelement <vscale x 8 x i32> [[WIDE_MASKED_LOAD]], i64 [[LAST_ACTIVE_LANE]]
+; CHECK-VS-NEXT:    [[TMP18:%.*]] = sub i64 [[TRIP_COUNT_MINUS_1]], [[INDEX1]]
+; CHECK-VS-NEXT:    [[TMP16:%.*]] = extractelement <vscale x 8 x i32> [[WIDE_MASKED_LOAD]], i64 [[TMP18]]
 ; CHECK-VS-NEXT:    br label %[[EXIT]]
 ; CHECK-VS:       [[VEC_EPILOG_SCALAR_PH]]:
 ; CHECK-VS-NEXT:    br label %[[LOOP:.*]]
@@ -374,6 +372,7 @@ define i32 @live_out(ptr %src, i64 %n) {
 ; CHECK-FX-VS-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-FX-VS-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-FX-VS-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 1
+; CHECK-FX-VS-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[N]], 1
 ; CHECK-FX-VS-NEXT:    [[TRIP_COUNT_MINUS_VF:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[N]], i64 [[TMP6]])
 ; CHECK-FX-VS-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[VEC_EPILOG_RESUME_VAL]], i64 [[N]])
 ; CHECK-FX-VS-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
@@ -389,10 +388,8 @@ define i32 @live_out(ptr %src, i64 %n) {
 ; CHECK-FX-VS-NEXT:    [[INDEX_NEXT2]] = add i64 [[INDEX1]], [[TMP6]]
 ; CHECK-FX-VS-NEXT:    br i1 [[TMP10]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK-FX-VS:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
-; CHECK-FX-VS-NEXT:    [[TMP11:%.*]] = xor <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], splat (i1 true)
-; CHECK-FX-VS-NEXT:    [[FIRST_INACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.nxv2i1(<vscale x 2 x i1> [[TMP11]], i1 false)
-; CHECK-FX-VS-NEXT:    [[LAST_ACTIVE_LANE:%.*]] = sub i64 [[FIRST_INACTIVE_LANE]], 1
-; CHECK-FX-VS-NEXT:    [[TMP12:%.*]] = extractelement <vscale x 2 x i32> [[WIDE_MASKED_LOAD]], i64 [[LAST_ACTIVE_LANE]]
+; CHECK-FX-VS-NEXT:    [[TMP11:%.*]] = sub i64 [[TRIP_COUNT_MINUS_1]], [[TMP7]]
+; CHECK-FX-VS-NEXT:    [[TMP12:%.*]] = extractelement <vscale x 2 x i32> [[WIDE_MASKED_LOAD]], i64 [[TMP11]]
 ; CHECK-FX-VS-NEXT:    br label %[[EXIT]]
 ; CHECK-FX-VS:       [[VEC_EPILOG_SCALAR_PH]]:
 ; CHECK-FX-VS-NEXT:    br label %[[LOOP:.*]]

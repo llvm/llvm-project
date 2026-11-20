@@ -216,11 +216,44 @@ addVPLaneMaskPhiAndUpdateExitBranch(VPlan &Plan) {
   return LaneMaskPhi;
 }
 
-void VPlanTransforms::materializeHeaderMask(
+/// Create the backedge-taken count, TC - 1, in the vector preheader.
+static VPValue *createScalarBTC(VPlan &Plan) {
+  VPValue *TC = Plan.getTripCount();
+  return VPBuilder(Plan.getVectorPreheader()->getFirstNonPhi())
+      .createSub(TC, Plan.getConstantInt(TC->getScalarType(), 1),
+                 DebugLoc::getCompilerGenerated(), "trip.count.minus.1");
+}
+
+void VPlanTransforms::materializeHeaderMaskAndLastActiveLane(
     VPlan &Plan, bool UseActiveLaneMask, bool UseActiveLaneMaskForControlFlow) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   VPValue *HeaderMask = LoopRegion->getUsedHeaderMask();
   if (!HeaderMask)
+    return;
+
+  // Lane i of the header mask is active iff CanonicalIV + i <= BTC. After the
+  // last vector iteration, the last active lane is BTC - CanonicalIV.
+  // TODO: Use umin(BTC - CanonicalIV, VFxUF - 1) for users in the loop.
+  VPValue *BTC = nullptr;
+  for (VPUser *U : to_vector(HeaderMask->users())) {
+    if (!match(U, m_LastActiveLane(m_Specific(HeaderMask))))
+      continue;
+    auto *LastActiveLane = cast<VPInstruction>(U);
+    assert(LastActiveLane->getParent() == Plan.getMiddleBlock() &&
+           match(LoopRegion->getExitingBasicBlock()->getTerminator(),
+                 m_BranchOnCount()) &&
+           "expected LastActiveLane only after the last vector iteration");
+    if (!BTC)
+      BTC = createScalarBTC(Plan);
+    DebugLoc DL = LastActiveLane->getDebugLoc();
+    VPBuilder Builder(LastActiveLane);
+    VPValue *Lane = Builder.createSub(BTC, LoopRegion->getCanonicalIV(), DL,
+                                      "last.active.lane");
+    LastActiveLane->replaceAllUsesWith(Builder.createScalarZExtOrTrunc(
+        Lane, LastActiveLane->getScalarType(), DL));
+    LastActiveLane->eraseFromParent();
+  }
+  if (HeaderMask->user_empty())
     return;
 
   if (UseActiveLaneMaskForControlFlow) {
@@ -239,16 +272,11 @@ void VPlanTransforms::materializeHeaderMask(
                                 {WideCanonicalIV, Plan.getTripCount()}, nullptr,
                                 "active.lane.mask");
   } else {
-    // Compare against the backedge-taken count, TC - 1, computed in the vector
-    // preheader.
-    VPBasicBlock *VectorPH = Plan.getVectorPreheader();
-    VPValue *TC = Plan.getTripCount();
-    VPValue *BTC =
-        VPBuilder(VectorPH->getFirstNonPhi())
-            .createSub(TC, Plan.getConstantInt(TC->getScalarType(), 1),
-                       DebugLoc::getCompilerGenerated(), "trip.count.minus.1");
+    if (!BTC)
+      BTC = createScalarBTC(Plan);
     if (!Plan.hasScalarVFOnly())
-      BTC = VPBuilder(VectorPH).createNaryOp(VPInstruction::Broadcast, BTC);
+      BTC = VPBuilder(Plan.getVectorPreheader())
+                .createNaryOp(VPInstruction::Broadcast, BTC);
     Mask = Builder.createICmp(CmpInst::ICMP_ULE, WideCanonicalIV, BTC);
   }
   HeaderMask->replaceAllUsesWith(Mask);
