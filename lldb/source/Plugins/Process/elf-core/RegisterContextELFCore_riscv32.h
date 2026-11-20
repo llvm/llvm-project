@@ -9,8 +9,8 @@
 #ifndef LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTELFCORE_RISCV32_H
 #define LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTELFCORE_RISCV32_H
 
-#include "Register/Common/RegisterInfoDynamic_riscv32.h"
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
+#include "Register/Common/RegisterInfoDynamic_riscv32.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/RegisterValue.h"
@@ -63,7 +63,7 @@ protected:
 
   lldb_private::DynamicRegisterInfo::Register
   BuildDynamicRegister(const lldb_private::RegisterInfo &reg_info,
-                       const lldb_private::ConstString &set_name,
+                       llvm::StringRef set_name,
                        uint32_t byte_offset);
 
   /// Retrieves enabled RISC-V ISA extension feature names from the module's

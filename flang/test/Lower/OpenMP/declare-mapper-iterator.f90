@@ -23,8 +23,9 @@
 ! RUN:   -fopenmp-is-target-device %t/no-offload.f90 -o - | \
 ! RUN:   FileCheck %t/no-offload.f90
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 \
-! RUN:   -fopenmp-targets=amdgcn-amd-amdhsa %t/self.f90 -o - | \
-! RUN:   FileCheck %t/self.f90
+! RUN:   %t/self.f90 -o - | FileCheck %t/self.f90
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 \
+! RUN:   %t/reconcile.f90 -o - 2>&1 | FileCheck %t/reconcile.f90
 
 !--- maps.f90
 subroutine declare_mapper_mapper_references()
@@ -472,3 +473,50 @@ end subroutine
 
 ! CHECK-LABEL: omp.declare_mapper @_QQFself_component_mappert_omp_default_mapper
 ! CHECK:         omp.map.info {{.*}} map_clauses(tofrom) capture(ByRef) bounds(%{{.*}}) name("") -> !llvm.ptr
+
+!--- reconcile.f90
+! The mapper variable's own map and its iterator-produced members follow the
+! rules applied to ordinary members: an explicit mapper on the variable is
+! dropped (it would remap the iterated elements), and close on the iterated
+! members is ignored unless the variable itself is mapped close.
+subroutine explicit_mapper_with_iterated_members()
+  type :: t
+    integer :: a(4)
+  end type
+  !$omp declare mapper(other: t :: u) map(u%a)
+  !$omp declare mapper(m: t :: v) map(mapper(other): v) map(iterator(i = 1:4): v%a(i))
+end subroutine
+
+subroutine close_on_iterated_members()
+  type :: t
+    integer :: a(4)
+  end type
+  !$omp declare mapper(m: t :: v) map(v) map(close, iterator(i = 1:4): v%a(i))
+end subroutine
+
+subroutine close_on_variable_and_iterated_members()
+  type :: t
+    integer :: a(4)
+  end type
+  !$omp declare mapper(m: t :: v) map(close: v) map(close, iterator(i = 1:4): v%a(i))
+end subroutine
+
+! Mappers are emitted in reverse order of declaration.
+
+! CHECK-LABEL: omp.declare_mapper @_QQFclose_on_variable_and_iterated_membersm
+! CHECK:         omp.map.info var_ptr(%{{.*}} : !fir.ref<!fir.type<_QFclose_on_variable_and_iterated_membersTt{a:!fir.array<4xi32>}>>, !fir.type<_QFclose_on_variable_and_iterated_membersTt{a:!fir.array<4xi32>}>) map_clauses(close, tofrom) capture(ByRef) name("v")
+! CHECK:         omp.iterator
+! CHECK:         omp.map.info var_ptr(%{{.*}} : !fir.ref<!fir.array<4xi32>>, !fir.array<4xi32>) map_clauses(close, tofrom) capture(ByRef) bounds(%{{.*}}) name("")
+
+! CHECK-LABEL: omp.declare_mapper @_QQFclose_on_iterated_membersm
+! CHECK:         omp.map.info var_ptr(%{{.*}} : !fir.ref<!fir.type<_QFclose_on_iterated_membersTt{a:!fir.array<4xi32>}>>, !fir.type<_QFclose_on_iterated_membersTt{a:!fir.array<4xi32>}>) map_clauses(tofrom) capture(ByRef) name("v")
+! CHECK:         omp.iterator
+! CHECK:         omp.map.info var_ptr(%{{.*}} : !fir.ref<!fir.array<4xi32>>, !fir.array<4xi32>) map_clauses(tofrom) capture(ByRef) bounds(%{{.*}}) name("")
+
+! CHECK-LABEL: omp.declare_mapper @_QQFexplicit_mapper_with_iterated_membersm
+! CHECK:         %[[V:.*]] = omp.map.info var_ptr(%{{.*}} : !fir.ref<!fir.type<_QFexplicit_mapper_with_iterated_membersTt{a:!fir.array<4xi32>}>>, !fir.type<_QFexplicit_mapper_with_iterated_membersTt{a:!fir.array<4xi32>}>) map_clauses(tofrom) capture(ByRef) name("v")
+! CHECK-NOT:     mapper(
+! CHECK:         omp.iterator
+! CHECK:         omp.map.info var_ptr(%{{.*}} : !fir.ref<!fir.array<4xi32>>, !fir.array<4xi32>) map_clauses(tofrom) capture(ByRef) bounds(%{{.*}}) name("")
+! CHECK:         omp.declare_mapper.info map_entries(%[[V]] : {{.*}}) map_iterated(
+! CHECK-LABEL: omp.declare_mapper @_QQFexplicit_mapper_with_iterated_membersother

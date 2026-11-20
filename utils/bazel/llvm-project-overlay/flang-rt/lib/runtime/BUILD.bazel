@@ -14,17 +14,30 @@ package(
 
 licenses(["notice"])
 
-# Generate config.h from flang-rt/cmake/config.h.cmake.in. Values match what
-# CMake autodetects on a typical Linux glibc host.
+# Generate config.h from flang-rt/cmake/config.h.cmake.in for the target.
 expand_template(
     name = "config_h_gen",
     out = "config.h",
-    substitutions = {
-        "#cmakedefine HAVE_BACKTRACE ${HAVE_BACKTRACE}": "#define HAVE_BACKTRACE 1",
-        "#cmakedefine01 HAVE_DECL_STRERROR_S": "#define HAVE_DECL_STRERROR_S 0",
-        "#cmakedefine01 HAVE_STRERROR_R": "#define HAVE_STRERROR_R 1",
-        "#define BACKTRACE_HEADER <${BACKTRACE_HEADER}>": "#define BACKTRACE_HEADER <execinfo.h>",
-    },
+    substitutions = select({
+        "@platforms//os:windows": {
+            "#cmakedefine HAVE_BACKTRACE ${HAVE_BACKTRACE}": "/* #undef HAVE_BACKTRACE */",
+            "#cmakedefine01 HAVE_DECL_STRERROR_S": "#define HAVE_DECL_STRERROR_S 1",
+            "#cmakedefine01 HAVE_STRERROR_R": "#define HAVE_STRERROR_R 0",
+            "#define BACKTRACE_HEADER <${BACKTRACE_HEADER}>": "/* no backtrace header on Windows */",
+        },
+        "@rules_cc//cc/libc:musl": {
+            "#cmakedefine HAVE_BACKTRACE ${HAVE_BACKTRACE}": "/* #undef HAVE_BACKTRACE */",
+            "#cmakedefine01 HAVE_DECL_STRERROR_S": "#define HAVE_DECL_STRERROR_S 0",
+            "#cmakedefine01 HAVE_STRERROR_R": "#define HAVE_STRERROR_R 1",
+            "#define BACKTRACE_HEADER <${BACKTRACE_HEADER}>": "/* no backtrace header on musl */",
+        },
+        "//conditions:default": {
+            "#cmakedefine HAVE_BACKTRACE ${HAVE_BACKTRACE}": "#define HAVE_BACKTRACE 1",
+            "#cmakedefine01 HAVE_DECL_STRERROR_S": "#define HAVE_DECL_STRERROR_S 0",
+            "#cmakedefine01 HAVE_STRERROR_R": "#define HAVE_STRERROR_R 1",
+            "#define BACKTRACE_HEADER <${BACKTRACE_HEADER}>": "#define BACKTRACE_HEADER <execinfo.h>",
+        },
+    }),
     template = "//flang-rt:cmake/config.h.cmake.in",
 )
 
@@ -63,10 +76,26 @@ cc_library(
         "//flang/lib/Decimal:binary-to-decimal.cpp",
         "//flang/lib/Decimal:decimal-to-binary.cpp",
     ],
-    copts = [
-        "-fno-exceptions",
-        "-fno-rtti",
-    ],
+    # Match AddFlangRT.cmake: configure the C++ standard library before any
+    # runtime source or standard header can include it.
+    cxxopts = select({
+        "//llvm:is_windows_clang_cl": [
+            "/EHs-c-",
+            "/GR-",
+            "/FI$(location :stl-overrides.h)",
+        ],
+        "//llvm:is_windows_msvc": [
+            "/EHs-c-",
+            "/GR-",
+            "/FI$(location :stl-overrides.h)",
+        ],
+        "//conditions:default": [
+            "-fno-exceptions",
+            "-fno-rtti",
+            "-include",
+            "$(location :stl-overrides.h)",
+        ],
+    }),
     deps = [
         ":runtime_config",
         "//flang:CommonHeaders",

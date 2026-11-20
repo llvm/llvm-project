@@ -16,6 +16,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MachineSink.h"
+#include "CodeGenOptions.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/MapVector.h"
@@ -67,48 +68,10 @@ using namespace llvm;
 
 #define DEBUG_TYPE "machine-sink"
 
-static cl::opt<bool>
-    SplitEdges("machine-sink-split",
-               cl::desc("Split critical edges during machine sinking"),
-               cl::init(true), cl::Hidden);
-
 static cl::opt<bool> UseBlockFreqInfo(
     "machine-sink-bfi",
     cl::desc("Use block frequency info to find successors to sink"),
     cl::init(true), cl::Hidden);
-
-static cl::opt<unsigned> SplitEdgeProbabilityThreshold(
-    "machine-sink-split-probability-threshold",
-    cl::desc(
-        "Percentage threshold for splitting single-instruction critical edge. "
-        "If the branch threshold is higher than this threshold, we allow "
-        "speculative execution of up to 1 instruction to avoid branching to "
-        "splitted critical edge"),
-    cl::init(40), cl::Hidden);
-
-static cl::opt<unsigned> SinkLoadInstsPerBlockThreshold(
-    "machine-sink-load-instrs-threshold",
-    cl::desc("Do not try to find alias store for a load if there is a in-path "
-             "block whose instruction number is higher than this threshold."),
-    cl::init(2000), cl::Hidden);
-
-static cl::opt<unsigned> SinkLoadBlocksThreshold(
-    "machine-sink-load-blocks-threshold",
-    cl::desc("Do not try to find alias store for a load if the block number in "
-             "the straight line is higher than this threshold."),
-    cl::init(20), cl::Hidden);
-
-static cl::opt<bool>
-    SinkInstsIntoCycle("sink-insts-to-avoid-spills",
-                       cl::desc("Sink instructions into cycles to avoid "
-                                "register spills"),
-                       cl::init(false), cl::Hidden);
-
-static cl::opt<unsigned> SinkIntoCycleLimit(
-    "machine-sink-cycle-limit",
-    cl::desc(
-        "The maximum number of instructions considered for cycle sinking."),
-    cl::init(50), cl::Hidden);
 
 STATISTIC(NumSunk, "Number of machine instructions sunk");
 STATISTIC(NumCycleSunk, "Number of machine instructions sunk into a cycle");
@@ -121,6 +84,7 @@ using RegSubRegPair = TargetInstrInfo::RegSubRegPair;
 namespace {
 
 class MachineSinking {
+  const CodeGenOptions &Opts;
   const TargetSubtargetInfo *STI = nullptr;
   const TargetInstrInfo *TII = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
@@ -192,14 +156,14 @@ class MachineSinking {
   bool EnableSinkAndFold;
 
 public:
-  MachineSinking(bool EnableSinkAndFold, MachineDominatorTree *DT,
-                 MachinePostDominatorTree *PDT, MachineLoopInfo *MLI,
-                 MachineCycleInfo *CI, ProfileSummaryInfo *PSI,
-                 MachineBlockFrequencyInfo *MBFI,
+  MachineSinking(const CodeGenOptions &Opts, bool EnableSinkAndFold,
+                 MachineDominatorTree *DT, MachinePostDominatorTree *PDT,
+                 MachineLoopInfo *MLI, MachineCycleInfo *CI,
+                 ProfileSummaryInfo *PSI, MachineBlockFrequencyInfo *MBFI,
                  const MachineBranchProbabilityInfo *MBPI, AliasAnalysis *AA,
                  RegisterClassInfo *RegClassInfo)
-      : DT(DT), PDT(PDT), CI(CI), PSI(PSI), MBFI(MBFI), MBPI(MBPI), AA(AA),
-        RegClassInfo(RegClassInfo), MLI(MLI),
+      : Opts(Opts), DT(DT), PDT(PDT), CI(CI), PSI(PSI), MBFI(MBFI), MBPI(MBPI),
+        AA(AA), RegClassInfo(RegClassInfo), MLI(MLI),
         EnableSinkAndFold(EnableSinkAndFold) {}
 
   bool run(MachineFunction &MF);
@@ -756,8 +720,8 @@ MachineSinkingPass::run(MachineFunction &MF,
                   .getResult<AAManager>(MF.getFunction());
   auto *MLI = MFAM.getCachedResult<MachineLoopAnalysis>(MF);
   auto *RegClassInfo = &MFAM.getResult<MachineRegisterClassAnalysis>(MF);
-  MachineSinking Impl(EnableSinkAndFold, DT, PDT, MLI, CI, PSI, MBFI, MBPI, AA,
-                      RegClassInfo);
+  MachineSinking Impl(getCodeGenOptions(MF), EnableSinkAndFold, DT, PDT, MLI,
+                      CI, PSI, MBFI, MBPI, AA, RegClassInfo);
   bool Changed = Impl.run(MF);
   if (!Changed)
     return PreservedAnalyses::all();
@@ -801,8 +765,8 @@ bool MachineSinkingLegacy::runOnMachineFunction(MachineFunction &MF) {
   auto *RegClassInfo =
       &getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI();
 
-  MachineSinking Impl(EnableSinkAndFold, DT, PDT, MLI, CI, PSI, MBFI, MBPI, AA,
-                      RegClassInfo);
+  MachineSinking Impl(getCodeGenOptions(MF), EnableSinkAndFold, DT, PDT, MLI,
+                      CI, PSI, MBFI, MBPI, AA, RegClassInfo);
   return Impl.run(MF);
 }
 
@@ -852,7 +816,7 @@ bool MachineSinking::run(MachineFunction &MF) {
     EverMadeChange = true;
   }
 
-  if (SinkInstsIntoCycle) {
+  if (Opts.sink_insts_to_avoid_spills) {
     SmallVector<CycleRef, 8> Cycles(CI->toplevel_cycles());
     SchedModel.init(STI);
     bool HasHighPressure;
@@ -881,7 +845,7 @@ bool MachineSinking::run(MachineFunction &MF) {
         for (MachineInstr *I : llvm::reverse(Candidates)) {
           // CycleSinkStage::COPY: Sink a limited number of copies
           if (Stage == CycleSinkStage::COPY) {
-            if (i++ == SinkIntoCycleLimit) {
+            if (i++ == Opts.machine_sink_cycle_limit) {
               LLVM_DEBUG(dbgs()
                          << "CycleSink:   Limit reached of instructions to "
                             "be analyzed.");
@@ -1038,7 +1002,7 @@ bool MachineSinking::isWorthBreakingCriticalEdge(
 
   if (From->isSuccessor(To) &&
       MBPI->getEdgeProbability(From, To) <=
-          BranchProbability(SplitEdgeProbabilityThreshold, 100))
+          BranchProbability(Opts.machine_sink_split_probability_threshold, 100))
     return true;
 
   // MI is cheap, we probably don't want to break the critical edge for it.
@@ -1077,7 +1041,7 @@ bool MachineSinking::isLegalToBreakCriticalEdge(MachineInstr &MI,
                                                 MachineBasicBlock *ToBB,
                                                 bool BreakPHIEdge) {
   // Avoid breaking back edge. From == To means backedge for single BB cycle.
-  if (!SplitEdges || FromBB == ToBB || !FromBB->isSuccessor(ToBB))
+  if (!Opts.machine_sink_split || FromBB == ToBB || !FromBB->isSuccessor(ToBB))
     return false;
 
   CycleRef FromCycle = CI->getCycle(FromBB);
@@ -1664,8 +1628,9 @@ bool MachineSinking::hasStoreBetween(MachineBasicBlock *From,
 
       // If this BB is too big or the block number in straight line between From
       // and To is too big, stop searching to save compiling time.
-      if (BB->sizeWithoutDebugLargerThan(SinkLoadInstsPerBlockThreshold) ||
-          HandledDomBlocks.size() > SinkLoadBlocksThreshold) {
+      if (BB->sizeWithoutDebugLargerThan(
+              Opts.machine_sink_load_instrs_threshold) ||
+          HandledDomBlocks.size() > Opts.machine_sink_load_blocks_threshold) {
         for (auto *DomBB : HandledDomBlocks) {
           if (DomBB != BB && DT->dominates(DomBB, BB))
             HasStoreCache[std::make_pair(DomBB, To)] = true;

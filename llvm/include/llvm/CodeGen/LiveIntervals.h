@@ -74,13 +74,23 @@ class LiveIntervals {
   /// Live interval pointers for all the virtual registers.
   IndexedMap<LiveInterval *, VirtReg2IndexFunctor> VirtRegIntervals;
 
-  /// Indexed by block number. A block has been queued as live-out by the
-  /// current extendSegmentsToUses call iff its entry equals LiveOutTag.
-  SmallVector<unsigned, 0> LiveOutTags;
+  /// Per-block state for the current extendSegmentsToUses call. A tag is
+  /// current iff it equals ShrinkTag.
+  struct ShrinkBlockState {
+    /// Current if the block has been queued as live-out.
+    unsigned LiveOutTag = 0;
+    /// Current if LiveIn is valid.
+    unsigned LiveInTag = 0;
+    /// Index of the block's pending live-in segment.
+    unsigned LiveIn = 0;
+  };
+
+  /// Indexed by block number.
+  SmallVector<ShrinkBlockState, 0> ShrinkBlocks;
 
   /// Tag for the current extendSegmentsToUses call, incremented on each call
-  /// so stale LiveOutTags entries never need clearing.
-  unsigned LiveOutTag = 0;
+  /// so stale ShrinkBlocks entries never need clearing.
+  unsigned ShrinkTag = 0;
 
   /// Sorted list of instructions with register mask operands. Always use the
   /// 'r' slot, RegMasks are normal clobbers, not early clobbers.
@@ -215,9 +225,11 @@ public:
   /// uses, and it doesn't remove dead defs.
   /// Dead PHIDef values are marked as unused. New dead machine instructions
   /// are added to the dead vector. Returns true if the interval may have been
-  /// separated into multiple connected components.
+  /// separated into multiple connected components. Only the subranges
+  /// overlapping \p SubRangeMask are shrunk.
   LLVM_ABI bool shrinkToUses(LiveInterval *li,
-                             SmallVectorImpl<MachineInstr *> *dead = nullptr);
+                             SmallVectorImpl<MachineInstr *> *dead = nullptr,
+                             LaneBitmask SubRangeMask = LaneBitmask::getAll());
 
   /// Specialized version of
   /// shrinkToUses(LiveInterval *li, SmallVectorImpl<MachineInstr*> *dead)
@@ -552,6 +564,12 @@ private:
   using ShrinkToUsesWorkList = SmallVector<std::pair<SlotIndex, VNInfo *>, 16>;
   void extendSegmentsToUses(LiveRange &Segments, ShrinkToUsesWorkList &WorkList,
                             Register Reg, LaneBitmask LaneMask);
+
+  using SubRangeUse = std::pair<SlotIndex, LaneBitmask>;
+  using SubRangeUseList = SmallVector<SubRangeUse, 16>;
+  void collectSubRangeUses(Register Reg, SubRangeUseList &Uses) const;
+  void shrinkSubRangeToUses(LiveInterval::SubRange &SR, Register Reg,
+                            ArrayRef<SubRangeUse> Uses);
 
   /// Helper function for repairIntervalsInRange(), walks backwards and
   /// creates/modifies live segments in \p LR to match the operands found.

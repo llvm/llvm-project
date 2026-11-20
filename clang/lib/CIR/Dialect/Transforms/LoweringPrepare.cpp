@@ -2766,7 +2766,7 @@ void LoweringPreparePass::lowerStoreOfConstAggregate(cir::StoreOp op) {
   cir::CopyOp copyOp = builder.createCopy(op.getAddr(), globalPtr);
 
   cir::CIRDataLayout dataLayout(mlirModule);
-  uint64_t naturalAlign = dataLayout.getABITypeAlign(ty).value();
+  uint64_t naturalAlign = dataLayout.getTypeLanguageAlignment(ty);
   if (alloca.getAlignment() != naturalAlign)
     copyOp.setDstAlignment(alloca.getAlignment());
   uint64_t srcAlign = gv.getAlignment().value_or(naturalAlign);
