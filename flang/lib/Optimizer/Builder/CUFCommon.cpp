@@ -294,6 +294,50 @@ cuf::DeviceCodeSet cuf::collectDeviceCode(mlir::ModuleOp mod,
   return code;
 }
 
+llvm::SetVector<mlir::func::FuncOp>
+cuf::collectFunctionsExecutingOnDevice(mlir::ModuleOp mod) {
+  llvm::SetVector<mlir::func::FuncOp> funcs;
+  mlir::SymbolTable symTab(mod);
+  // A host_device procedure that already has a device copy is host code.
+  llvm::StringSet<> hasDeviceCopy;
+  for (auto func : mod.getOps<mlir::func::FuncOp>())
+    if (std::optional<llvm::StringRef> original = cuf::getDeviceCopyOf(func))
+      hasDeviceCopy.insert(*original);
+
+  // Add the functions referenced in \p func, by its offload regions only
+  // unless \p wholeBody is set.
+  auto scan = [&](mlir::func::FuncOp func, bool wholeBody) {
+    func.walk([&](mlir::Operation *op) {
+      // The attributes of a function are not references made by its body.
+      if (op == func)
+        return;
+      llvm::SmallVector<mlir::StringAttr, 2> symbols;
+      op->getAttrDictionary().walk<mlir::WalkOrder::PreOrder>(
+          [&](mlir::SymbolRefAttr symbol) {
+            symbols.push_back(symbol.getLeafReference());
+            return mlir::WalkResult::skip();
+          });
+      if (symbols.empty() || !(wholeBody || fir::isInOffloadRegion(op)))
+        return;
+      for (mlir::StringAttr symbol : symbols)
+        if (auto callee = symTab.lookup<mlir::func::FuncOp>(symbol))
+          funcs.insert(callee);
+    });
+  };
+  for (auto func : mod.getOps<mlir::func::FuncOp>()) {
+    if (mlir::acc::isAccRoutine(func) ||
+        (cuf::isDeviceProcedure(func) &&
+         !hasDeviceCopy.contains(func.getSymName())))
+      funcs.insert(func);
+    else
+      scan(func, /*wholeBody=*/false);
+  }
+  // The set grows while it is walked, which makes the collection transitive.
+  for (size_t i = 0; i < funcs.size(); ++i)
+    scan(funcs[i], /*wholeBody=*/true);
+  return funcs;
+}
+
 // Shared by both passes: the duplicator points device code at the copies and
 // the outliner points it back, and the two must rewrite the same ops.
 void cuf::remapProcedureSymbols(

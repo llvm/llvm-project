@@ -485,6 +485,12 @@ def AlgebraicSimplification
   }];
   let dependentDialects = [ "mlir::math::MathDialect" ];
   let constructor = "::fir::createAlgebraicSimplificationPass()";
+  let options = [
+    Option<"keepDeviceComplexPowi", "keep-device-complex-powi", "bool",
+           /*default=*/"true",
+           "Do not simplify a complex power with a negative constant exponent "
+           "in OpenACC and CUDA Fortran device code.">
+  ];
 }
 
 def PolymorphicOpConversion : Pass<"fir-polymorphic-op", "mlir::ModuleOp"> {

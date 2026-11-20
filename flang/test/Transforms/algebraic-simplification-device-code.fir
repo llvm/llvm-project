@@ -1,9 +1,13 @@
 // RUN: fir-opt --flang-algebraic-simplification %s | FileCheck %s
+// RUN: fir-opt --flang-algebraic-simplification="keep-device-complex-powi=false" %s | FileCheck %s --check-prefix=ALL
 
 // A complex power with a negative constant exponent stays a power in OpenACC
 // and CUDA Fortran device code, and in the functions that device code
 // references. The simplification applies everywhere else, and to the other
 // powers in device code.
+
+// With the option off, every power of this file is simplified.
+// ALL-NOT: complex.powi
 
 acc.routine @acc_routine_0 func(@acc_routine) seq
 
