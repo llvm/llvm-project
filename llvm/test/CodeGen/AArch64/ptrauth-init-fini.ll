@@ -108,6 +108,49 @@ define void @bar() {
 !0 = !{i32 1, !"ptrauth-init-fini", i32 1}
 !1 = !{i32 1, !"ptrauth-init-fini-address-discrimination", i32 1}
 
+;--- blended-bb.ll
+
+; RUN: llc -mtriple aarch64-elf -mattr=+pauth -filetype=asm -o - blended-bb.ll | \
+; RUN:   FileCheck %s --check-prefix=ASM-BLENDED-BB
+; RUN: llc -mtriple aarch64-elf -mattr=+pauth -filetype=obj -o - blended-bb.ll | \
+; RUN:   llvm-readelf -r -x .init_array -x .fini_array - | FileCheck %s --check-prefix=OBJ-BLENDED-BB
+
+; ASM-BLENDED-BB:      .section .init_array,"aw",@init_array
+; ASM-BLENDED-BB-NEXT: .p2align 3, 0x0
+; ASM-BLENDED-BB-NEXT: .xword   foo@AUTH(ib,55764,addr)
+; ASM-BLENDED-BB-NEXT: .section .fini_array,"aw",@fini_array
+; ASM-BLENDED-BB-NEXT: .p2align 3, 0x0
+; ASM-BLENDED-BB-NEXT: .xword   bar@AUTH(ib,55764,addr)
+
+; OBJ-BLENDED-BB:      Relocation section '.rela.init_array' at offset 0x[[#]] contains 1 entries:
+; OBJ-BLENDED-BB-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
+; OBJ-BLENDED-BB-NEXT: 0000000000000000  0000000700000244 R_AARCH64_AUTH_ABS64   0000000000000000 foo + 0
+; OBJ-BLENDED-BB:      Relocation section '.rela.fini_array' at offset 0x[[#]] contains 1 entries:
+; OBJ-BLENDED-BB-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
+; OBJ-BLENDED-BB-NEXT: 0000000000000000  0000000800000244 R_AARCH64_AUTH_ABS64   0000000000000004 bar + 0
+; OBJ-BLENDED-BB:      Hex dump of section '.init_array':
+; OBJ-BLENDED-BB-NEXT: 0x00000000 00000000 d4d90090
+; OBJ-BLENDED-BB:      Hex dump of section '.fini_array':
+; OBJ-BLENDED-BB-NEXT: 0x00000000 00000000 d4d90090
+;;                                      ^^^^ 0xD9D4: constant discriminator = 55764
+;;                                            ^^ 0x90: bits 61..60 key = IB; bit 63 addr disc = true
+
+@llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @foo, ptr null }]
+@llvm.global_dtors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @bar, ptr null }]
+
+define void @foo() {
+  ret void
+}
+
+define void @bar() {
+  ret void
+}
+
+!llvm.module.flags = !{!0, !1, !2}
+!0 = !{i32 1, !"ptrauth-init-fini", i32 1}
+!1 = !{i32 1, !"ptrauth-init-fini-address-discrimination", i32 1}
+!2 = !{i32 1, !"ptrauth-keys", !"ibdbibdb"}
+
 ;--- err1.ll
 
 ; RUN: not opt -S < err1.ll 2>&1 | FileCheck %s --check-prefix=ERR1

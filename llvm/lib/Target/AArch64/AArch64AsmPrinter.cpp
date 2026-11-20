@@ -17,6 +17,7 @@
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64RegisterInfo.h"
 #include "AArch64Subtarget.h"
+#include "AArch64TargetMachine.h"
 #include "AArch64TargetObjectFile.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "MCTargetDesc/AArch64InstPrinter.h"
@@ -1089,11 +1090,12 @@ void AArch64AsmPrinter::emitEndOfAsmFile(Module &M) {
     }
 
     // With signed ELF GOT enabled, the linker looks at the symbol type to
-    // choose between keys IA (for STT_FUNC) and DA (for other types). Symbols
-    // for functions not defined in the module have STT_NOTYPE type by default.
-    // This makes linker to emit signing schema with DA key (instead of IA) for
-    // corresponding R_AARCH64_AUTH_GLOB_DAT dynamic reloc. To avoid that, force
-    // all function symbols used in the module to have STT_FUNC type. See
+    // choose between global code keys (for STT_FUNC) and global data keys (for
+    // other types). Symbols for functions not defined in the module have
+    // STT_NOTYPE type by default.  This makes the linker emit signing schema
+    // with global data key (instead of global code key) for corresponding
+    // R_AARCH64_AUTH_GLOB_DAT dynamic reloc. To avoid that, force all function
+    // symbols used in the module to have STT_FUNC type. See
     // https://github.com/ARM-software/abi-aa/blob/main/pauthabielf64/pauthabielf64.rst#default-signing-schema
     const auto *PtrAuthELFGOTFlag = mdconst::extract_or_null<ConstantInt>(
         M.getModuleFlag("ptrauth-elf-got"));
@@ -1532,7 +1534,9 @@ void AArch64AsmPrinter::emitXXStructor(const DataLayout &DL,
     IntegerType *Int64Ty = IntegerType::get(C, 64);
     PointerType *PtrTy = PointerType::get(C, 0);
 
-    ConstantInt *Key = ConstantInt::get(Int32Ty, AArch64PAuth::InitFiniKey);
+    const auto &ATM = static_cast<AArch64TargetMachine &>(TM);
+    AArch64PACKey::ID InitFiniKey = ATM.getGlobalCodeKey(*MMI->getModule());
+    ConstantInt *Key = ConstantInt::get(Int32Ty, InitFiniKey);
     ConstantInt *IntDisc = ConstantInt::get(
         Int64Ty, AArch64PAuth::InitFiniPointerConstantDiscriminator);
     Constant *Null = ConstantPointerNull::get(PtrTy);
@@ -3046,7 +3050,10 @@ void AArch64AsmPrinter::LowerMOVaddrPAC(const MachineInstr &MI) {
       assert(GAOp.getGlobal()->getValueType() != nullptr);
 
       bool IsFunctionTy = GAOp.getGlobal()->getValueType()->isFunctionTy();
-      auto AuthKey = IsFunctionTy ? AArch64PACKey::IA : AArch64PACKey::DA;
+      const auto &ATM = static_cast<AArch64TargetMachine &>(TM);
+      const Module &M = *MMI->getModule();
+      auto AuthKey =
+          IsFunctionTy ? ATM.getGlobalCodeKey(M) : ATM.getGlobalDataKey(M);
       emitAUT(AuthKey, AArch64::X16, AArch64::X17);
 
       if (!STI->hasFPAC())
@@ -3125,7 +3132,10 @@ void AArch64AsmPrinter::LowerLOADgotAUTH(const MachineInstr &MI) {
   assert(GAMO.getGlobal()->getValueType() != nullptr);
 
   bool IsFunctionTy = GAMO.getGlobal()->getValueType()->isFunctionTy();
-  auto AuthKey = IsFunctionTy ? AArch64PACKey::IA : AArch64PACKey::DA;
+  const auto &ATM = static_cast<AArch64TargetMachine &>(TM);
+  const Module &M = *MMI->getModule();
+  auto AuthKey =
+      IsFunctionTy ? ATM.getGlobalCodeKey(M) : ATM.getGlobalDataKey(M);
   emitAUT(AuthKey, AuthResultReg, AArch64::X17);
 
   if (GAMO.getGlobal()->hasExternalWeakLinkage())
@@ -3144,9 +3154,11 @@ AArch64AsmPrinter::lowerBlockAddressConstant(const BlockAddress &BA) {
   const MCExpr *BAE = AsmPrinter::lowerBlockAddressConstant(BA);
   const Function &Fn = *BA.getFunction();
 
+  const auto &ATM = static_cast<AArch64TargetMachine &>(TM);
+  AArch64PACKey::ID Key = ATM.getGlobalCodeKey(*MMI->getModule());
   if (std::optional<uint16_t> BADisc =
           STI->getPtrAuthBlockAddressDiscriminatorIfEnabled(Fn))
-    return AArch64AuthMCExpr::create(BAE, *BADisc, AArch64PACKey::IA,
+    return AArch64AuthMCExpr::create(BAE, *BADisc, Key,
                                      /*HasAddressDiversity=*/false, OutContext);
 
   return BAE;
@@ -3846,11 +3858,15 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     --InstsEmitted; // no code emitted
 #endif
 
-    MCInst Blraa;
-    Blraa.setOpcode(AArch64::BLRAA);
-    Blraa.addOperand(MCOperand::createReg(AArch64::X16));
-    Blraa.addOperand(MCOperand::createReg(AArch64::X0));
-    EmitToStreamer(*OutStreamer, Blraa);
+    const auto &ATM = static_cast<AArch64TargetMachine &>(TM);
+    AArch64PACKey::ID Key = ATM.getGlobalCodeKey(*MMI->getModule());
+    unsigned Opcode =
+        getBranchOpcodeForKey(/* IsCall */ true, Key, /* IsZeroDisc */ false);
+    MCInst Blra;
+    Blra.setOpcode(Opcode);
+    Blra.addOperand(MCOperand::createReg(AArch64::X16));
+    Blra.addOperand(MCOperand::createReg(AArch64::X0));
+    EmitToStreamer(*OutStreamer, Blra);
 
     return;
   }
