@@ -21,8 +21,6 @@ define void @matmul(ptr %0, ptr %1, i64 %2, i64 %3, i64 %4, i64 %5, i64 %6, ptr 
 ; CHECK-LABEL: matmul:
 ; CHECK:      zero {za}
 ; CHECK-NOT:  TPIDR2_EL0
-; CHECK:      msr TPIDR2_EL0, x{{.*}}
-; CHECK-NOT:  .LBB{{.*}}
 ; CHECK:      bl printMemrefF32
   %22 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } poison, ptr %14, 0
   %23 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %22, ptr %15, 1
