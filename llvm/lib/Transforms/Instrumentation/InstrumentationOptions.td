@@ -50,6 +50,8 @@ defm : BoolField<"asan-initialization-order", "true",
   "Handle C++ initializer order">;
 defm : ListField<"asan-instrument-address-spaces", "unsigned",
   "Only instrument variables in the specified address spaces">;
+defm : BoolField<"asan-instrument-assume-dereferenceable", "false",
+  "Instrument llvm.assume(dereferenceable)">;
 defm : BoolField<"asan-instrument-atomics", "true",
   "Instrument atomic instructions (rmw, cmpxchg)">;
 defm : BoolField<"asan-instrument-byval", "true",
@@ -367,7 +369,7 @@ defm : BoolField<"icp-samplepgo", "false",
   "Run indirect-call promotion in SamplePGO mode">;
 // Indirect call promotion pass will fall back to function-based comparison if
 // vtable-count / function-count is smaller than this threshold.
-defm : ValueField<"icp-vtable-percentage-threshold", "float", "0.995",
+defm : ValueField<"icp-vtable-percentage-threshold", "float", "0.995f",
   "The percentage threshold of vtable-count / function-count for cost-benefit analysis">;
 
 // InstrProfiling.cpp
@@ -386,8 +388,8 @@ defm : OptionalBoolField<"do-counter-promotion",
   "Do counter register promotion">;
 defm : BoolField<"hash-based-counter-split", "true",
   "Rename counter variable of a comdat function based on cfg hash">;
-defm : BoolField<"instrprof-atomic-counter-update-all", "false",
-  "Make all profile counter updates atomic (for testing only)">;
+defm : OptionalBoolField<"instrprof-atomic-counter-update-all",
+  "Override whether all profile counter updates are atomic">;
 defm : BoolField<"iterative-counter-promotion", "true",
   "Allow counter promotion across the whole loop nest">;
 // A debug option.
@@ -397,9 +399,9 @@ defm : ValueField<"max-counter-promotions-per-loop", "unsigned", "20",
   "Max number counter promotions per loop to avoid increasing register pressure too much">;
 defm : ValueField<"offload-pgo-sampling", "unsigned", "3",
   "Log2 of the sampling period for offload PGO instrumentation. Only 1 in every 2^N blocks is instrumented. 0 = all blocks, 1 = 50%, 2 = 25%, 3 = 12.5%. Higher values reduce overhead at the cost of sparser profiles">;
-defm : EnumField<"profile-correlate", "InstrProfCorrelator::ProfCorrelatorKind", "InstrProfCorrelator::NONE",
+defm : OptionalEnumField<"profile-correlate", "ProfCorrelatorKind",
   "debug-info,binary",
-  ["InstrProfCorrelator::DEBUG_INFO", "InstrProfCorrelator::BINARY"],
+  ["ProfCorrelatorKind::DebugInfo", "ProfCorrelatorKind::Binary"],
   "Use debug info or binary file to correlate profiles">;
 defm : OptionalBoolField<"runtime-counter-relocation",
   "Enable relocating counters at runtime">;
@@ -679,9 +681,9 @@ defm : BoolField<"pgo-verify-hot-bfi", "false",
 defm : BoolField<"pgo-view-block-coverage-graph", "false",
   "Create a dot file of CFGs with block coverage inference information">;
 // Command line option to turn on CFG dot or text dump of raw profile counts.
-defm : EnumField<"pgo-view-raw-counts", "PGOViewCountsType", "PGOVCT_None",
+defm : EnumField<"pgo-view-raw-counts", "PGOViewCountsType", "PGOViewCountsType::None",
   "none,graph,text",
-  ["PGOVCT_None", "PGOVCT_Graph", "PGOVCT_Text"],
+  ["PGOViewCountsType::None", "PGOViewCountsType::Graph", "PGOViewCountsType::Text"],
   "A boolean option to show CFG dag or text with raw profile counts from profile data. See also option -pgo-view-counts. To limit graph display to only one function, use filtering option -view-bfi-func-name">;
 // Command line option to enable/disable the warning about missing profile
 // information.

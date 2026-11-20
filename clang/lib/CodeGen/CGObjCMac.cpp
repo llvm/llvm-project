@@ -2611,9 +2611,14 @@ ConstantAddress CGObjCCommonMac::GenerateConstantNSDictionary(
                           CGM.getCodeGenOpts().PointerAuth.ObjCIsaPointers,
                           GlobalDecl(), QualType());
 
-  // Use the hashing helper to manage the keys and sorting.
+  // Use the hashing helper to manage the keys and sorting. Sort by UTF-16
+  // code unit exactly when the keys are emitted as constant CFStrings (which
+  // store and compare keys as UTF-16); with -fno-constant-cfstrings the keys
+  // are OBJC_CLASS_$_NSConstantString compared as raw bytes, so sort by
+  // UTF-8 byte order instead.
   auto HashOpts(NSDictionaryBuilder::Options::Sorted);
-  NSDictionaryBuilder DictBuilder(E, KeysAndObjects, HashOpts);
+  NSDictionaryBuilder DictBuilder(E, KeysAndObjects, HashOpts,
+                                  !CGM.getLangOpts().NoConstantCFStrings);
 
   // Ask `HashBuilder` for the fully sorted keys / values and the count.
   uint64_t const NumElements = DictBuilder.getNumElements();

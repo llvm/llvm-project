@@ -868,32 +868,10 @@ entry:
 define i64 @utest_f16i64(half %x) {
 ; CHECK-LABEL: utest_f16i64:
 ; CHECK:         .functype utest_f16i64 (i32) -> (i64)
-; CHECK-NEXT:    .local i32, i64, i64
 ; CHECK-NEXT:  # %bb.0: # %entry
-; CHECK-NEXT:    global.get __stack_pointer
-; CHECK-NEXT:    i32.const 16
-; CHECK-NEXT:    i32.sub
-; CHECK-NEXT:    local.tee 1
-; CHECK-NEXT:    global.set __stack_pointer
-; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    call __extendhfsf2
-; CHECK-NEXT:    call __fixunssfti
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 8
-; CHECK-NEXT:    local.set 2
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 0
-; CHECK-NEXT:    local.set 3
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 16
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    global.set __stack_pointer
-; CHECK-NEXT:    local.get 3
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 2
-; CHECK-NEXT:    i64.eqz
-; CHECK-NEXT:    i64.select
+; CHECK-NEXT:    i64.trunc_sat_f32_u
 ; CHECK-NEXT:    # fallthrough-return
 entry:
   %conv = fptoui half %x to i128
@@ -906,25 +884,10 @@ entry:
 define i64 @utest_f16i64_cse(half %x) {
 ; CHECK-LABEL: utest_f16i64_cse:
 ; CHECK:         .functype utest_f16i64_cse (i32) -> (i64)
-; CHECK-NEXT:    .local i32, i64
 ; CHECK-NEXT:  # %bb.0: # %entry
-; CHECK-NEXT:    global.get __stack_pointer
-; CHECK-NEXT:    i32.const 16
-; CHECK-NEXT:    i32.sub
-; CHECK-NEXT:    local.tee 1
-; CHECK-NEXT:    global.set __stack_pointer
-; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    call __extendhfsf2
-; CHECK-NEXT:    call __fixunssfti
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 0
-; CHECK-NEXT:    local.set 2
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 16
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    global.set __stack_pointer
-; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i64.trunc_sat_f32_u
 ; CHECK-NEXT:    # fallthrough-return
 entry:
   %conv = fptoui half %x to i128
@@ -935,47 +898,34 @@ entry:
 define i64 @ustest_f16i64(half %x) {
 ; CHECK-LABEL: ustest_f16i64:
 ; CHECK:         .functype ustest_f16i64 (i32) -> (i64)
-; CHECK-NEXT:    .local i32, i64, i64
+; CHECK-NEXT:    .local i64, i64
 ; CHECK-NEXT:  # %bb.0: # %entry
-; CHECK-NEXT:    global.get __stack_pointer
-; CHECK-NEXT:    i32.const 16
-; CHECK-NEXT:    i32.sub
-; CHECK-NEXT:    local.tee 1
-; CHECK-NEXT:    global.set __stack_pointer
-; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    call __extendhfsf2
-; CHECK-NEXT:    call __fixsfti
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 8
-; CHECK-NEXT:    local.set 2
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 0
-; CHECK-NEXT:    local.set 3
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 16
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    global.set __stack_pointer
-; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    i64.trunc_sat_f32_s
+; CHECK-NEXT:    local.tee 1
 ; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i64.const 63
+; CHECK-NEXT:    i64.shr_s
+; CHECK-NEXT:    local.tee 1
 ; CHECK-NEXT:    i64.const 1
 ; CHECK-NEXT:    i64.lt_s
-; CHECK-NEXT:    local.tee 1
-; CHECK-NEXT:    i64.select
-; CHECK-NEXT:    local.tee 3
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 3
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    i64.ne
-; CHECK-NEXT:    local.get 2
-; CHECK-NEXT:    i64.const 1
-; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.tee 0
 ; CHECK-NEXT:    i64.select
 ; CHECK-NEXT:    local.tee 2
 ; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    i64.gt_s
 ; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i64.const 0
+; CHECK-NEXT:    i64.ne
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i64.const 1
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i64.select
+; CHECK-NEXT:    local.tee 1
+; CHECK-NEXT:    i64.const 0
+; CHECK-NEXT:    i64.gt_s
+; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i64.eqz
 ; CHECK-NEXT:    i32.select
 ; CHECK-NEXT:    i64.select
@@ -1066,6 +1016,19 @@ entry:
   %spec.store.select = call i64 @llvm.umin.i64(i64 %conv, i64 4294967295)
   %conv6 = trunc i64 %spec.store.select to i32
   ret i32 %conv6
+}
+
+; A zero clamp is not saturation bound, so umin(fptoui(x), 0) should fold to 0.
+define i32 @utest_f32i32_zero(float %x) {
+; CHECK-LABEL: utest_f32i32_zero:
+; CHECK:         .functype utest_f32i32_zero (f32) -> (i32)
+; CHECK-NEXT:  # %bb.0: # %entry
+; CHECK-NEXT:    i32.const 0
+; CHECK-NEXT:    # fallthrough-return
+entry:
+  %conv = fptoui float %x to i32
+  %spec.store.select = call i32 @llvm.umin.i32(i32 %conv, i32 0)
+  ret i32 %spec.store.select
 }
 
 define i32 @ustest_f32i32_mm(float %x) {
@@ -1610,32 +1573,10 @@ entry:
 define i64 @utest_f16i64_mm(half %x) {
 ; CHECK-LABEL: utest_f16i64_mm:
 ; CHECK:         .functype utest_f16i64_mm (i32) -> (i64)
-; CHECK-NEXT:    .local i32, i64, i64
 ; CHECK-NEXT:  # %bb.0: # %entry
-; CHECK-NEXT:    global.get __stack_pointer
-; CHECK-NEXT:    i32.const 16
-; CHECK-NEXT:    i32.sub
-; CHECK-NEXT:    local.tee 1
-; CHECK-NEXT:    global.set __stack_pointer
-; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    call __extendhfsf2
-; CHECK-NEXT:    call __fixunssfti
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 8
-; CHECK-NEXT:    local.set 2
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 0
-; CHECK-NEXT:    local.set 3
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 16
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    global.set __stack_pointer
-; CHECK-NEXT:    local.get 3
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 2
-; CHECK-NEXT:    i64.eqz
-; CHECK-NEXT:    i64.select
+; CHECK-NEXT:    i64.trunc_sat_f32_u
 ; CHECK-NEXT:    # fallthrough-return
 entry:
   %conv = fptoui half %x to i128
@@ -1647,38 +1588,25 @@ entry:
 define i64 @ustest_f16i64_mm(half %x) {
 ; CHECK-LABEL: ustest_f16i64_mm:
 ; CHECK:         .functype ustest_f16i64_mm (i32) -> (i64)
-; CHECK-NEXT:    .local i32, i64, i64
+; CHECK-NEXT:    .local i64
 ; CHECK-NEXT:  # %bb.0: # %entry
-; CHECK-NEXT:    global.get __stack_pointer
-; CHECK-NEXT:    i32.const 16
-; CHECK-NEXT:    i32.sub
-; CHECK-NEXT:    local.tee 1
-; CHECK-NEXT:    global.set __stack_pointer
-; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i64.const 0
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    call __extendhfsf2
-; CHECK-NEXT:    call __fixsfti
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 8
-; CHECK-NEXT:    local.set 2
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 0
-; CHECK-NEXT:    local.set 3
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 16
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    global.set __stack_pointer
+; CHECK-NEXT:    i64.trunc_sat_f32_s
+; CHECK-NEXT:    local.tee 1
 ; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 3
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i64.const 63
+; CHECK-NEXT:    i64.shr_s
+; CHECK-NEXT:    local.tee 1
 ; CHECK-NEXT:    i64.const 1
 ; CHECK-NEXT:    i64.lt_s
-; CHECK-NEXT:    local.tee 1
+; CHECK-NEXT:    local.tee 0
 ; CHECK-NEXT:    i64.select
-; CHECK-NEXT:    local.get 2
-; CHECK-NEXT:    i64.const 1
 ; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i64.const 1
+; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i64.select
 ; CHECK-NEXT:    i64.const 0
 ; CHECK-NEXT:    i64.lt_s
@@ -1695,25 +1623,10 @@ entry:
 define i64 @utest_f16i64_mm_cse(half %x) {
 ; CHECK-LABEL: utest_f16i64_mm_cse:
 ; CHECK:         .functype utest_f16i64_mm_cse (i32) -> (i64)
-; CHECK-NEXT:    .local i32, i64
 ; CHECK-NEXT:  # %bb.0: # %entry
-; CHECK-NEXT:    global.get __stack_pointer
-; CHECK-NEXT:    i32.const 16
-; CHECK-NEXT:    i32.sub
-; CHECK-NEXT:    local.tee 1
-; CHECK-NEXT:    global.set __stack_pointer
-; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    call __extendhfsf2
-; CHECK-NEXT:    call __fixunssfti
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.load 0
-; CHECK-NEXT:    local.set 2
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 16
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    global.set __stack_pointer
-; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i64.trunc_sat_f32_u
 ; CHECK-NEXT:    # fallthrough-return
 entry:
   %conv = fptoui half %x to i128

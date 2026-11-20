@@ -1188,7 +1188,7 @@ SDValue DAGTypeLegalizer::SoftenFloatOp_FP_ROUND(SDNode *N) {
 
 SDValue DAGTypeLegalizer::SoftenFloatOp_BR_CC(SDNode *N) {
   SDValue NewLHS = N->getOperand(2), NewRHS = N->getOperand(3);
-  ISD::CondCode CCCode = cast<CondCodeSDNode>(N->getOperand(1))->get();
+  ISD::CondCode CCCode = N->getOperandCondCode(1);
 
   EVT VT = NewLHS.getValueType();
   NewLHS = GetSoftenedFloat(NewLHS);
@@ -1284,7 +1284,7 @@ SDValue DAGTypeLegalizer::SoftenFloatOp_FP_TO_XINT_SAT(SDNode *N) {
 
 SDValue DAGTypeLegalizer::SoftenFloatOp_SELECT_CC(SDNode *N) {
   SDValue NewLHS = N->getOperand(0), NewRHS = N->getOperand(1);
-  ISD::CondCode CCCode = cast<CondCodeSDNode>(N->getOperand(4))->get();
+  ISD::CondCode CCCode = N->getOperandCondCode(4);
 
   EVT VT = NewLHS.getValueType();
   NewLHS = GetSoftenedFloat(NewLHS);
@@ -1311,8 +1311,7 @@ SDValue DAGTypeLegalizer::SoftenFloatOp_SETCC(SDNode *N) {
   SDValue Op0 = N->getOperand(IsStrict ? 1 : 0);
   SDValue Op1 = N->getOperand(IsStrict ? 2 : 1);
   SDValue Chain = IsStrict ? N->getOperand(0) : SDValue();
-  ISD::CondCode CCCode =
-      cast<CondCodeSDNode>(N->getOperand(IsStrict ? 3 : 2))->get();
+  ISD::CondCode CCCode = N->getOperandCondCode(IsStrict ? 3 : 2);
 
   EVT VT = Op0.getValueType();
   SDValue NewLHS = GetSoftenedFloat(Op0);
@@ -2262,7 +2261,7 @@ void DAGTypeLegalizer::FloatExpandSetCCOperands(SDValue &NewLHS,
 
 SDValue DAGTypeLegalizer::ExpandFloatOp_BR_CC(SDNode *N) {
   SDValue NewLHS = N->getOperand(2), NewRHS = N->getOperand(3);
-  ISD::CondCode CCCode = cast<CondCodeSDNode>(N->getOperand(1))->get();
+  ISD::CondCode CCCode = N->getOperandCondCode(1);
   SDValue Chain;
   FloatExpandSetCCOperands(NewLHS, NewRHS, CCCode, SDLoc(N), Chain);
 
@@ -2357,7 +2356,7 @@ SDValue DAGTypeLegalizer::ExpandFloatOp_FP_TO_XINT(SDNode *N) {
 
 SDValue DAGTypeLegalizer::ExpandFloatOp_SELECT_CC(SDNode *N) {
   SDValue NewLHS = N->getOperand(0), NewRHS = N->getOperand(1);
-  ISD::CondCode CCCode = cast<CondCodeSDNode>(N->getOperand(4))->get();
+  ISD::CondCode CCCode = N->getOperandCondCode(4);
   SDValue Chain;
   FloatExpandSetCCOperands(NewLHS, NewRHS, CCCode, SDLoc(N), Chain);
 
@@ -2379,8 +2378,7 @@ SDValue DAGTypeLegalizer::ExpandFloatOp_SETCC(SDNode *N) {
   SDValue NewLHS = N->getOperand(IsStrict ? 1 : 0);
   SDValue NewRHS = N->getOperand(IsStrict ? 2 : 1);
   SDValue Chain = IsStrict ? N->getOperand(0) : SDValue();
-  ISD::CondCode CCCode =
-      cast<CondCodeSDNode>(N->getOperand(IsStrict ? 3 : 2))->get();
+  ISD::CondCode CCCode = N->getOperandCondCode(IsStrict ? 3 : 2);
   FloatExpandSetCCOperands(NewLHS, NewRHS, CCCode, SDLoc(N), Chain,
                            N->getOpcode() == ISD::STRICT_FSETCCS);
 
@@ -2827,6 +2825,19 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfRes_FP_ROUND(SDNode *N) {
   SDValue Op = N->getOperand(IsStrict ? 1 : 0);
   EVT SVT = Op.getValueType();
 
+  // When an f32 value is known to already be an exact bf16 (Trunc == 1), simply
+  // keep its upper 16 bits.
+  if (RVT == MVT::bf16 && SVT == MVT::f32 &&
+      N->getConstantOperandVal(IsStrict ? 2 : 1) == 1) {
+    SDLoc DL(N);
+    if (IsStrict)
+      ReplaceValueWith(SDValue(N, 1), N->getOperand(0));
+    SDValue IntVal = DAG.getNode(ISD::BITCAST, DL, MVT::i32, Op);
+    SDValue Shifted = DAG.getNode(ISD::SRL, DL, MVT::i32, IntVal,
+                                  DAG.getShiftAmountConstant(16, MVT::i32, DL));
+    return DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, Shifted);
+  }
+
   // If the input type needs to be softened, do that now so that call lowering
   // will see the f16 type.
   if (getTypeAction(SVT) == TargetLowering::TypeSoftenFloat) {
@@ -3272,7 +3283,7 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfOp_SELECT_CC(SDNode *N,
 SDValue DAGTypeLegalizer::SoftPromoteHalfOp_SETCC(SDNode *N) {
   SDValue Op0 = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
-  ISD::CondCode CCCode = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  ISD::CondCode CCCode = N->getOperandCondCode(2);
   SDLoc dl(N);
 
   EVT SVT = Op0.getValueType();

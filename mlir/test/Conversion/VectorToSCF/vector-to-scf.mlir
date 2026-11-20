@@ -879,18 +879,14 @@ func.func @scalable_transpose_store_unmasked(%vec: vector<4x[4]xf32>, %dest: mem
 // FULL-UNROLL-DAG:       %[[C0:.*]] = arith.constant 0 : index
 // FULL-UNROLL-DAG:       %[[C1:.*]] = arith.constant 1 : index
 // FULL-UNROLL-DAG:       %[[C4:.*]] = arith.constant 4 : index
-// FULL-UNROLL:           %[[SLICE_0:.*]] = vector.extract %[[VEC]][0] : vector<[4]xf32> from vector<4x[4]xf32>
-// FULL-UNROLL:           %[[SLICE_1:.*]] = vector.extract %[[VEC]][1] : vector<[4]xf32> from vector<4x[4]xf32>
-// FULL-UNROLL:           %[[SLICE_2:.*]] = vector.extract %[[VEC]][2] : vector<[4]xf32> from vector<4x[4]xf32>
-// FULL-UNROLL:           %[[SLICE_3:.*]] = vector.extract %[[VEC]][3] : vector<[4]xf32> from vector<4x[4]xf32>
 // FULL-UNROLL:           %[[VSCALE:.*]] = vector.vscale
 // FULL-UNROLL:           %[[C4_VSCALE:.*]] = arith.muli %[[VSCALE]], %[[C4]] : index
 // FULL-UNROLL:           scf.for %[[VAL_13:.*]] = %[[C0]] to %[[C4_VSCALE]] step %[[C1]] {
 // FULL-UNROLL:             %[[SLICE_I:.*]] = affine.apply #[[$SLICE_MAP]](%[[VAL_13]]){{\[}}%[[I]]]
-// FULL-UNROLL:             %[[ELEM_0:.*]] = vector.extract %[[SLICE_0]]{{\[}}%[[VAL_13]]] : f32 from vector<[4]xf32>
-// FULL-UNROLL:             %[[ELEM_1:.*]] = vector.extract %[[SLICE_1]]{{\[}}%[[VAL_13]]] : f32 from vector<[4]xf32>
-// FULL-UNROLL:             %[[ELEM_2:.*]] = vector.extract %[[SLICE_2]]{{\[}}%[[VAL_13]]] : f32 from vector<[4]xf32>
-// FULL-UNROLL:             %[[ELEM_3:.*]] = vector.extract %[[SLICE_3]]{{\[}}%[[VAL_13]]] : f32 from vector<[4]xf32>
+// FULL-UNROLL:             %[[ELEM_0:.*]] = vector.extract %[[VEC]][0, %[[VAL_13]]] : f32 from vector<4x[4]xf32>
+// FULL-UNROLL:             %[[ELEM_1:.*]] = vector.extract %[[VEC]][1, %[[VAL_13]]] : f32 from vector<4x[4]xf32>
+// FULL-UNROLL:             %[[ELEM_2:.*]] = vector.extract %[[VEC]][2, %[[VAL_13]]] : f32 from vector<4x[4]xf32>
+// FULL-UNROLL:             %[[ELEM_3:.*]] = vector.extract %[[VEC]][3, %[[VAL_13]]] : f32 from vector<4x[4]xf32>
 // FULL-UNROLL:             %[[TRANSPOSE_SLICE:.*]] = vector.from_elements %[[ELEM_0]], %[[ELEM_1]], %[[ELEM_2]], %[[ELEM_3]] : vector<4xf32>
 // FULL-UNROLL:             vector.transfer_write %[[TRANSPOSE_SLICE]], %[[DEST]]{{\[}}%[[SLICE_I]], %[[J]]] {in_bounds = [true]} : vector<4xf32>, memref<?x?xf32>
 
@@ -983,3 +979,86 @@ func.func private @transfer_write_no_alloc_scope()
 %cst = arith.constant dense<0.0> : vector<2x3xf32>
 %m = memref.alloc() : memref<2x3xf32>
 vector.transfer_write %cst, %m[%c0, %c0] : vector<2x3xf32>, memref<2x3xf32>
+
+// -----
+
+//-----------------------------------------------------------------------------
+// Negative tests: a transfer op inside `vector.mask` is left alone, since the
+// mask region can only hold that one op. The mask has to be lowered first.
+//-----------------------------------------------------------------------------
+
+// [Pattern: PrepareTransferReadConversion, UnrollTransferReadConversion]
+
+// CHECK-LABEL: @negative_masked_transfer_read
+// CHECK:       vector.mask %{{.*}} { vector.transfer_read
+// CHECK-NOT:   scf.for
+// FULL-UNROLL-LABEL: @negative_masked_transfer_read
+// FULL-UNROLL:       vector.mask %{{.*}} { vector.transfer_read
+// FULL-UNROLL-NOT:   vector.extract
+// TARGET-RANK-ZERO-LABEL: @negative_masked_transfer_read
+// TARGET-RANK-ZERO:       vector.mask %{{.*}} { vector.transfer_read
+// TARGET-RANK-ZERO-NOT:   vector.extract
+func.func @negative_masked_transfer_read(%mem: memref<?x?xf32>, %mask: vector<4x8xi1>) -> vector<4x8xf32> {
+  %c0 = arith.constant 0 : index
+  %pad = arith.constant 0.0 : f32
+  %0 = vector.mask %mask { vector.transfer_read %mem[%c0, %c0], %pad : memref<?x?xf32>, vector<4x8xf32> } : vector<4x8xi1> -> vector<4x8xf32>
+  return %0 : vector<4x8xf32>
+}
+
+// -----
+
+// [Pattern: PrepareTransferWriteConversion, UnrollTransferWriteConversion]
+
+// CHECK-LABEL: @negative_masked_transfer_write
+// CHECK:       vector.mask %{{.*}} { vector.transfer_write
+// CHECK-NOT:   scf.for
+// FULL-UNROLL-LABEL: @negative_masked_transfer_write
+// FULL-UNROLL:       vector.mask %{{.*}} { vector.transfer_write
+// FULL-UNROLL-NOT:   vector.extract
+// TARGET-RANK-ZERO-LABEL: @negative_masked_transfer_write
+// TARGET-RANK-ZERO:       vector.mask %{{.*}} { vector.transfer_write
+// TARGET-RANK-ZERO-NOT:   vector.extract
+func.func @negative_masked_transfer_write(%vec: vector<4x8xf32>, %mem: memref<?x?xf32>, %mask: vector<4x8xi1>) {
+  %c0 = arith.constant 0 : index
+  vector.mask %mask { vector.transfer_write %vec, %mem[%c0, %c0] : vector<4x8xf32>, memref<?x?xf32> } : vector<4x8xi1>
+  return
+}
+
+// -----
+
+// [Pattern: TransferOp1dConversion]
+// The permutation map makes this a strided 1-D read, which goes through
+// TransferOp1dConversion rather than the patterns above (TARGET-RANK-ZERO
+// unrolls it first).
+
+// CHECK-LABEL: @negative_masked_transfer_read_1d_strided
+// CHECK:       vector.mask %{{.*}} { vector.transfer_read
+// CHECK-NOT:   scf.for
+// FULL-UNROLL-LABEL: @negative_masked_transfer_read_1d_strided
+// FULL-UNROLL:       vector.mask %{{.*}} { vector.transfer_read
+// FULL-UNROLL-NOT:   scf.for
+// TARGET-RANK-ZERO-LABEL: @negative_masked_transfer_read_1d_strided
+// TARGET-RANK-ZERO:       vector.mask %{{.*}} { vector.transfer_read
+// TARGET-RANK-ZERO-NOT:   scf.for
+func.func @negative_masked_transfer_read_1d_strided(%mem: memref<?x?xf32>, %mask: vector<8xi1>) -> vector<8xf32> {
+  %c0 = arith.constant 0 : index
+  %pad = arith.constant 0.0 : f32
+  %0 = vector.mask %mask { vector.transfer_read %mem[%c0, %c0], %pad {permutation_map = affine_map<(d0, d1) -> (d0)>} : memref<?x?xf32>, vector<8xf32> } : vector<8xi1> -> vector<8xf32>
+  return %0 : vector<8xf32>
+}
+
+// -----
+
+// [Pattern: ScalableTransposeTransferWriteConversion]
+// @scalable_transpose_store_unmasked inside a `vector.mask`. Only the
+// FULL-UNROLL RUN line sets lower-scalable, so only it reaches this pattern.
+
+// FULL-UNROLL-LABEL: @negative_masked_scalable_transpose_store
+// FULL-UNROLL:       vector.mask %{{.*}} { vector.transfer_write
+// FULL-UNROLL-NOT:   scf.for
+func.func @negative_masked_scalable_transpose_store(%vec: vector<4x[4]xf32>, %dest: memref<?x?xf32>, %i: index, %j: index, %a: index, %b: index) {
+  %transpose = vector.transpose %vec, [1, 0] : vector<4x[4]xf32> to vector<[4]x4xf32>
+  %mask = vector.create_mask %a, %b : vector<[4]x4xi1>
+  vector.mask %mask { vector.transfer_write %transpose, %dest[%i, %j] {in_bounds = [true, true]} : vector<[4]x4xf32>, memref<?x?xf32> } : vector<[4]x4xi1>
+  return
+}

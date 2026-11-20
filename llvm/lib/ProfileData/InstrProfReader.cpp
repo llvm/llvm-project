@@ -157,7 +157,7 @@ Expected<std::unique_ptr<InstrProfReader>> InstrProfReader::create(
     const Twine &Path, vfs::FileSystem &FS,
     const InstrProfCorrelator *Correlator,
     const object::BuildIDFetcher *BIDFetcher,
-    const InstrProfCorrelator::ProfCorrelatorKind BIDFetcherCorrelatorKind,
+    std::optional<ProfCorrelatorKind> BIDFetcherCorrelatorKind,
     std::function<void(Error)> Warn) {
   // Set up the buffer to read.
   auto BufferOrError = setupMemoryBuffer(Path, FS);
@@ -170,7 +170,7 @@ Expected<std::unique_ptr<InstrProfReader>> InstrProfReader::create(
 Expected<std::unique_ptr<InstrProfReader>> InstrProfReader::create(
     std::unique_ptr<MemoryBuffer> Buffer, const InstrProfCorrelator *Correlator,
     const object::BuildIDFetcher *BIDFetcher,
-    const InstrProfCorrelator::ProfCorrelatorKind BIDFetcherCorrelatorKind,
+    std::optional<ProfCorrelatorKind> BIDFetcherCorrelatorKind,
     std::function<void(Error)> Warn) {
   if (Buffer->getBufferSize() == 0)
     return make_error<InstrProfError>(instrprof_error::empty_raw_profile);
@@ -690,7 +690,7 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
     std::vector<object::BuildID> BinaryIDs;
     if (Error E = readBinaryIds(BinaryIDs))
       return E;
-    if (auto E = InstrProfCorrelator::get("", BIDFetcherCorrelatorKind,
+    if (auto E = InstrProfCorrelator::get("", *BIDFetcherCorrelatorKind,
                                           BIDFetcher, BinaryIDs)
                      .moveInto(BIDFetcherCorrelator)) {
       return E;

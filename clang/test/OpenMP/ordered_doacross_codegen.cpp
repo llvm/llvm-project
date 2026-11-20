@@ -20,7 +20,7 @@ extern int n;
 int a[10], b[10], c[10], d[10];
 void foo();
 
-// CHECK-LABEL:bar
+// CHECK-LABEL: define {{.*}}void @_Z3barv()
 void bar() {
   int i,j;
 // CHECK: call void @__kmpc_doacross_init(

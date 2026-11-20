@@ -312,4 +312,41 @@ define i8 @no_fold_usub_b_extra_use(i8 %a, i8 %b) {
   ret i8 %res
 }
 
+; The select has a different type than the usub.sat.
+define i32 @no_fold_select_type_mismatch(i64 %a, i64 %b) {
+; CHECK-LABEL: define i32 @no_fold_select_type_mismatch(
+; CHECK-SAME: i64 [[A:%.*]], i64 [[B:%.*]]) {
+; CHECK-NEXT:    [[A_SUB:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[A]], i64 -9223372036854775807)
+; CHECK-NEXT:    [[B_SUB:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[B]], i64 -9223372036854775806)
+; CHECK-NEXT:    [[OR:%.*]] = or i64 [[A_SUB]], [[B_SUB]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[OR]], 0
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP]], i32 0, i32 -2147483648
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %a_sub = call i64 @llvm.usub.sat.i64(i64 %a, i64 -9223372036854775807)
+  %b_sub = call i64 @llvm.usub.sat.i64(i64 %b, i64 -9223372036854775806)
+  %or = or i64 %a_sub, %b_sub
+  %cmp = icmp eq i64 %or, 0
+  %res = select i1 %cmp, i32 0, i32 -2147483648
+  ret i32 %res
+}
+
+define <2 x i64> @no_fold_select_type_mismatch2(i64 %a, i64 %b) {
+; CHECK-LABEL: define <2 x i64> @no_fold_select_type_mismatch2(
+; CHECK-SAME: i64 [[A:%.*]], i64 [[B:%.*]]) {
+; CHECK-NEXT:    [[A_SUB:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[A]], i64 -9223372036854775807)
+; CHECK-NEXT:    [[B_SUB:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[B]], i64 -9223372036854775806)
+; CHECK-NEXT:    [[OR:%.*]] = or i64 [[A_SUB]], [[B_SUB]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[OR]], 0
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP]], <2 x i64> zeroinitializer, <2 x i64> splat (i64 -9223372036854775808)
+; CHECK-NEXT:    ret <2 x i64> [[RES]]
+;
+  %a_sub = call i64 @llvm.usub.sat.i64(i64 %a, i64 -9223372036854775807)
+  %b_sub = call i64 @llvm.usub.sat.i64(i64 %b, i64 -9223372036854775806)
+  %or = or i64 %a_sub, %b_sub
+  %cmp = icmp eq i64 %or, 0
+  %res = select i1 %cmp, <2 x i64> splat(i64 0), <2 x i64> splat(i64 -9223372036854775808)
+  ret <2 x i64> %res
+}
+
 declare void @use(i8)

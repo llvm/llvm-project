@@ -1315,7 +1315,7 @@ define void @stencil_merge_mixed_member(ptr %a, ptr %out, i64 %n, i64 %s1, i64 %
 ; MERGE-NEXT:          (Low: (32 + %out) High: (-32 + (8 * %n) + %out))
 ; MERGE-NEXT:            Member: {(32 + %out),+,8}<nuw><%loop>
 ; MERGE-NEXT:        Group GRP1:
-; MERGE-NEXT:          (Low: ((32 + (-5 * %s2) + %a) umin (32 + (-5 * %s1) + %a)) High: (-32 + (5 * %s1) + (5 * %s2) + (8 * %n) + %a))
+; MERGE-NEXT:          (Low: ((32 + (-5 * %s1) + %a) umin (32 + (-5 * %s2) + %a)) High: (-32 + (5 * %s1) + (5 * %s2) + (8 * %n) + %a))
 ; MERGE-NEXT:            Member: {(32 + (5 * %s1) + (5 * %s2) + %a),+,8}<nw><%loop>
 ; MERGE-NEXT:            Member: {(32 + (5 * %s2) + %a),+,8}<nw><%loop>
 ; MERGE-NEXT:            Member: {(32 + (-5 * %s2) + %a),+,8}<nw><%loop>
@@ -2202,7 +2202,7 @@ define void @stencil_merge_three_stride_star(ptr %a, ptr %out, ptr %out2, i64 %n
 ; MERGE-NEXT:          (Low: (32 + %out2) High: (-32 + (8 * %n) + %out2))
 ; MERGE-NEXT:            Member: {(32 + %out2),+,8}<nuw><%loop>
 ; MERGE-NEXT:        Group GRP2:
-; MERGE-NEXT:          (Low: ((32 + (-1 * %s3) + %a) umin (32 + (-1 * %s2) + %a) umin (32 + (-1 * %s1) + %a)) High: ((-32 + (8 * %n) + %s1 + %a) umax (-32 + (8 * %n) + %s2 + %a) umax (-32 + (8 * %n) + %s3 + %a)))
+; MERGE-NEXT:          (Low: ((32 + (-1 * %s1) + %a) umin (32 + (-1 * %s2) + %a) umin (32 + (-1 * %s3) + %a)) High: ((-32 + (8 * %n) + %s1 + %a) umax (-32 + (8 * %n) + %s2 + %a) umax (-32 + (8 * %n) + %s3 + %a)))
 ; MERGE-NEXT:            Member: {(32 + %s3 + %a),+,8}<nw><%loop>
 ; MERGE-NEXT:            Member: {(32 + (-1 * %s3) + %a),+,8}<nw><%loop>
 ; MERGE-NEXT:            Member: {(32 + %s2 + %a),+,8}<nw><%loop>
@@ -3256,8 +3256,8 @@ define void @corner_sum_overflow(ptr %a, ptr %out, i64 %n, i64 %s1in, i64 %s2in,
 ; CHECK-NEXT:          (Low: ((1 smax %s1in) + %a) High: ((8 * (1 smax %n)) + (1 smax %s1in) + %a))
 ; CHECK-NEXT:            Member: {((1 smax %s1in) + %a),+,8}<nw><%loop>
 ; CHECK-NEXT:        Group GRP7:
-; CHECK-NEXT:          (Low: ((-4611686018427387904 * (1 smax %s3in)) + (-4611686018427387904 * (1 smax %s2in)) + (-4611686018427387904 * (1 smax %s1in)) + %a) High: ((8 * (1 smax %n)) + (-4611686018427387904 * (1 smax %s3in)) + (-4611686018427387904 * (1 smax %s2in)) + (-4611686018427387904 * (1 smax %s1in)) + %a))
-; CHECK-NEXT:            Member: {((-4611686018427387904 * (1 smax %s3in)) + (-4611686018427387904 * (1 smax %s2in)) + (-4611686018427387904 * (1 smax %s1in)) + %a),+,8}<nw><%loop>
+; CHECK-NEXT:          (Low: ((-4611686018427387904 * (1 smax %s1in)) + (-4611686018427387904 * (1 smax %s2in)) + (-4611686018427387904 * (1 smax %s3in)) + %a) High: ((8 * (1 smax %n)) + (-4611686018427387904 * (1 smax %s1in)) + (-4611686018427387904 * (1 smax %s2in)) + (-4611686018427387904 * (1 smax %s3in)) + %a))
+; CHECK-NEXT:            Member: {((-4611686018427387904 * (1 smax %s1in)) + (-4611686018427387904 * (1 smax %s2in)) + (-4611686018427387904 * (1 smax %s3in)) + %a),+,8}<nw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -3334,14 +3334,14 @@ define void @corner_sum_no_overflow(ptr %a, ptr %out, i64 %n, i64 %s1in, i64 %s2
 ; MERGE-NEXT:          (Low: %out High: ((8 * (1 smax %n)) + %out))
 ; MERGE-NEXT:            Member: {%out,+,8}<nuw><%loop>
 ; MERGE-NEXT:        Group GRP1:
-; MERGE-NEXT:          (Low: ((-1152921504606846976 * (1 smax %s3in)) + (-1152921504606846976 * (1 smax %s2in)) + (-1152921504606846976 * (1 smax %s1in)) + %a) High: (((8 * (1 smax %n)) + (1 smax %s3in) + %a) umax ((8 * (1 smax %n)) + (1 smax %s2in) + %a) umax ((8 * (1 smax %n)) + (1 smax %s1in) + %a)))
+; MERGE-NEXT:          (Low: ((-1152921504606846976 * (1 smax %s1in)) + (-1152921504606846976 * (1 smax %s2in)) + (-1152921504606846976 * (1 smax %s3in)) + %a) High: (((8 * (1 smax %n)) + (1 smax %s1in) + %a) umax ((8 * (1 smax %n)) + (1 smax %s2in) + %a) umax ((8 * (1 smax %n)) + (1 smax %s3in) + %a)))
 ; MERGE-NEXT:            Member: {((-1 * (1 smax %s3in))<nsw> + %a),+,8}<nw><%loop>
 ; MERGE-NEXT:            Member: {((1 smax %s3in) + %a),+,8}<nw><%loop>
 ; MERGE-NEXT:            Member: {((-1 * (1 smax %s2in))<nsw> + %a),+,8}<nw><%loop>
 ; MERGE-NEXT:            Member: {((1 smax %s2in) + %a),+,8}<nw><%loop>
 ; MERGE-NEXT:            Member: {((-1 * (1 smax %s1in))<nsw> + %a),+,8}<nw><%loop>
 ; MERGE-NEXT:            Member: {((1 smax %s1in) + %a),+,8}<nw><%loop>
-; MERGE-NEXT:            Member: {((-1152921504606846976 * (1 smax %s3in)) + (-1152921504606846976 * (1 smax %s2in)) + (-1152921504606846976 * (1 smax %s1in)) + %a),+,8}<nw><%loop>
+; MERGE-NEXT:            Member: {((-1152921504606846976 * (1 smax %s1in)) + (-1152921504606846976 * (1 smax %s2in)) + (-1152921504606846976 * (1 smax %s3in)) + %a),+,8}<nw><%loop>
 ; MERGE-EMPTY:
 ; MERGE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; MERGE-NEXT:      SCEV assumptions:
@@ -3414,8 +3414,8 @@ define void @corner_sum_no_overflow(ptr %a, ptr %out, i64 %n, i64 %s1in, i64 %s2
 ; NOMERGE-NEXT:          (Low: ((1 smax %s1in) + %a) High: ((8 * (1 smax %n)) + (1 smax %s1in) + %a))
 ; NOMERGE-NEXT:            Member: {((1 smax %s1in) + %a),+,8}<nw><%loop>
 ; NOMERGE-NEXT:        Group GRP7:
-; NOMERGE-NEXT:          (Low: ((-1152921504606846976 * (1 smax %s3in)) + (-1152921504606846976 * (1 smax %s2in)) + (-1152921504606846976 * (1 smax %s1in)) + %a) High: ((8 * (1 smax %n)) + (-1152921504606846976 * (1 smax %s3in)) + (-1152921504606846976 * (1 smax %s2in)) + (-1152921504606846976 * (1 smax %s1in)) + %a))
-; NOMERGE-NEXT:            Member: {((-1152921504606846976 * (1 smax %s3in)) + (-1152921504606846976 * (1 smax %s2in)) + (-1152921504606846976 * (1 smax %s1in)) + %a),+,8}<nw><%loop>
+; NOMERGE-NEXT:          (Low: ((-1152921504606846976 * (1 smax %s1in)) + (-1152921504606846976 * (1 smax %s2in)) + (-1152921504606846976 * (1 smax %s3in)) + %a) High: ((8 * (1 smax %n)) + (-1152921504606846976 * (1 smax %s1in)) + (-1152921504606846976 * (1 smax %s2in)) + (-1152921504606846976 * (1 smax %s3in)) + %a))
+; NOMERGE-NEXT:            Member: {((-1152921504606846976 * (1 smax %s1in)) + (-1152921504606846976 * (1 smax %s2in)) + (-1152921504606846976 * (1 smax %s3in)) + %a),+,8}<nw><%loop>
 ; NOMERGE-EMPTY:
 ; NOMERGE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; NOMERGE-NEXT:      SCEV assumptions:
@@ -3692,7 +3692,7 @@ define void @constant_offset_fits(ptr %a, ptr %out, i64 %n, i64 %s1in, i64 %s2in
 ; MERGE-NEXT:          (Low: %out High: ((8 * (1 smax %n)) + %out))
 ; MERGE-NEXT:            Member: {%out,+,8}<nuw><%loop>
 ; MERGE-NEXT:        Group GRP1:
-; MERGE-NEXT:          (Low: (-4611686018427387904 + (-1 * ((1 smax %s1in) + (1 smax %s2in) + (1 smax %s3in))) + %a) High: (((8 * (1 smax %n)) + (1 smax %s3in) + %a) umax ((8 * (1 smax %n)) + (1 smax %s2in) + %a) umax ((8 * (1 smax %n)) + (1 smax %s1in) + %a)))
+; MERGE-NEXT:          (Low: (-4611686018427387904 + (-1 * ((1 smax %s1in) + (1 smax %s2in) + (1 smax %s3in))) + %a) High: (((8 * (1 smax %n)) + (1 smax %s1in) + %a) umax ((8 * (1 smax %n)) + (1 smax %s2in) + %a) umax ((8 * (1 smax %n)) + (1 smax %s3in) + %a)))
 ; MERGE-NEXT:            Member: {((-1 * (1 smax %s3in))<nsw> + %a),+,8}<nw><%loop>
 ; MERGE-NEXT:            Member: {((1 smax %s3in) + %a),+,8}<nw><%loop>
 ; MERGE-NEXT:            Member: {((-1 * (1 smax %s2in))<nsw> + %a),+,8}<nw><%loop>
@@ -4032,6 +4032,117 @@ loop:
   store double %s1, ptr %outp, align 8
   %iv.next = add nuw nsw i64 %iv, 1
   %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+;; Test 31: A positive-stride predicate on the same expression as an equal
+;; predicate. The backedge-taken count needs (%k & 3) == 0 and the merged bounds
+;; need (%k & 3) > 0.
+define void @equal_predicate_does_not_imply_positive_stride(ptr %src, ptr %dst, i64 %k) {
+; MERGE-LABEL: 'equal_predicate_does_not_imply_positive_stride'
+; MERGE-NEXT:    loop:
+; MERGE-NEXT:      Memory dependences are safe with run-time checks
+; MERGE-NEXT:      Dependences:
+; MERGE-NEXT:      Run-time memory checks:
+; MERGE-NEXT:      Check 0:
+; MERGE-NEXT:        Comparing group GRP0:
+; MERGE-NEXT:          %gep.dst = getelementptr inbounds i32, ptr %dst, i64 %iv
+; MERGE-NEXT:        Against group GRP1:
+; MERGE-NEXT:          %gep.src.stride.3 = getelementptr inbounds i32, ptr %src, i64 %iv.stride.3
+; MERGE-NEXT:          %gep.src.stride = getelementptr inbounds i32, ptr %src, i64 %iv.stride
+; MERGE-NEXT:          %gep.src.3 = getelementptr inbounds i32, ptr %src, i64 %iv.3
+; MERGE-NEXT:          %gep.src = getelementptr inbounds i32, ptr %src, i64 %iv
+; MERGE-NEXT:      Grouped accesses:
+; MERGE-NEXT:        Group GRP0:
+; MERGE-NEXT:          (Low: %dst High: (4 + (4 * ((-4 + %k) /u 4))<nuw> + %dst))
+; MERGE-NEXT:            Member: {%dst,+,4}<nuw><%loop>
+; MERGE-NEXT:        Group GRP1:
+; MERGE-NEXT:          (Low: %src High: (4 + (4 * ((-4 + %k) /u 4))<nuw> + (12 * (zext i2 (trunc i64 %k to i2) to i64))<nuw><nsw> + %src))
+; MERGE-NEXT:            Member: {((12 * (zext i2 (trunc i64 %k to i2) to i64))<nuw><nsw> + %src),+,4}<%loop>
+; MERGE-NEXT:            Member: {((4 * (zext i2 (trunc i64 %k to i2) to i64))<nuw><nsw> + %src),+,4}<%loop>
+; MERGE-NEXT:            Member: {(12 + %src),+,4}<%loop>
+; MERGE-NEXT:            Member: {%src,+,4}<nuw><%loop>
+; MERGE-EMPTY:
+; MERGE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; MERGE-NEXT:      SCEV assumptions:
+; MERGE-NEXT:      Equal predicate: (zext i2 (trunc i64 %k to i2) to i64) == 0
+; MERGE-NEXT:      Compare predicate: (zext i2 (trunc i64 %k to i2) to i64) sgt) 0
+; MERGE-EMPTY:
+; MERGE-NEXT:      Expressions re-written:
+;
+; NOMERGE-LABEL: 'equal_predicate_does_not_imply_positive_stride'
+; NOMERGE-NEXT:    loop:
+; NOMERGE-NEXT:      Memory dependences are safe with run-time checks
+; NOMERGE-NEXT:      Dependences:
+; NOMERGE-NEXT:      Run-time memory checks:
+; NOMERGE-NEXT:      Check 0:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %gep.dst = getelementptr inbounds i32, ptr %dst, i64 %iv
+; NOMERGE-NEXT:        Against group GRP1:
+; NOMERGE-NEXT:          %gep.src.stride.3 = getelementptr inbounds i32, ptr %src, i64 %iv.stride.3
+; NOMERGE-NEXT:      Check 1:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %gep.dst = getelementptr inbounds i32, ptr %dst, i64 %iv
+; NOMERGE-NEXT:        Against group GRP2:
+; NOMERGE-NEXT:          %gep.src.stride = getelementptr inbounds i32, ptr %src, i64 %iv.stride
+; NOMERGE-NEXT:      Check 2:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %gep.dst = getelementptr inbounds i32, ptr %dst, i64 %iv
+; NOMERGE-NEXT:        Against group GRP3:
+; NOMERGE-NEXT:          %gep.src.3 = getelementptr inbounds i32, ptr %src, i64 %iv.3
+; NOMERGE-NEXT:          %gep.src = getelementptr inbounds i32, ptr %src, i64 %iv
+; NOMERGE-NEXT:      Grouped accesses:
+; NOMERGE-NEXT:        Group GRP0:
+; NOMERGE-NEXT:          (Low: %dst High: (4 + (4 * ((-4 + %k) /u 4))<nuw> + %dst))
+; NOMERGE-NEXT:            Member: {%dst,+,4}<nuw><%loop>
+; NOMERGE-NEXT:        Group GRP1:
+; NOMERGE-NEXT:          (Low: ((12 * (zext i2 (trunc i64 %k to i2) to i64))<nuw><nsw> + %src) High: (4 + (4 * ((-4 + %k) /u 4))<nuw> + (12 * (zext i2 (trunc i64 %k to i2) to i64))<nuw><nsw> + %src))
+; NOMERGE-NEXT:            Member: {((12 * (zext i2 (trunc i64 %k to i2) to i64))<nuw><nsw> + %src),+,4}<%loop>
+; NOMERGE-NEXT:        Group GRP2:
+; NOMERGE-NEXT:          (Low: ((4 * (zext i2 (trunc i64 %k to i2) to i64))<nuw><nsw> + %src) High: (4 + (4 * (zext i2 (trunc i64 %k to i2) to i64))<nuw><nsw> + (4 * ((-4 + %k) /u 4))<nuw> + %src))
+; NOMERGE-NEXT:            Member: {((4 * (zext i2 (trunc i64 %k to i2) to i64))<nuw><nsw> + %src),+,4}<%loop>
+; NOMERGE-NEXT:        Group GRP3:
+; NOMERGE-NEXT:          (Low: %src High: (16 + (4 * ((-4 + %k) /u 4))<nuw> + %src))
+; NOMERGE-NEXT:            Member: {(12 + %src),+,4}<%loop>
+; NOMERGE-NEXT:            Member: {%src,+,4}<nuw><%loop>
+; NOMERGE-EMPTY:
+; NOMERGE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; NOMERGE-NEXT:      SCEV assumptions:
+; NOMERGE-NEXT:      Equal predicate: (zext i2 (trunc i64 %k to i2) to i64) == 0
+; NOMERGE-EMPTY:
+; NOMERGE-NEXT:      Expressions re-written:
+;
+entry:
+  %stride = and i64 %k, 3
+  %stride.3 = mul i64 %stride, 3
+  %start = sub i64 0, %k
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %cnt = phi i64 [ %start, %entry ], [ %cnt.next, %loop ]
+  %gep.src = getelementptr inbounds i32, ptr %src, i64 %iv
+  %l.src = load i32, ptr %gep.src, align 4
+  %iv.3 = add i64 %iv, 3
+  %gep.src.3 = getelementptr inbounds i32, ptr %src, i64 %iv.3
+  %l.src.3 = load i32, ptr %gep.src.3, align 4
+  %iv.stride = add i64 %iv, %stride
+  %gep.src.stride = getelementptr inbounds i32, ptr %src, i64 %iv.stride
+  %l.src.stride = load i32, ptr %gep.src.stride, align 4
+  %iv.stride.3 = add i64 %iv, %stride.3
+  %gep.src.stride.3 = getelementptr inbounds i32, ptr %src, i64 %iv.stride.3
+  %l.src.stride.3 = load i32, ptr %gep.src.stride.3, align 4
+  %add.1 = add i32 %l.src, %l.src.3
+  %add.2 = add i32 %add.1, %l.src.stride
+  %add.3 = add i32 %add.2, %l.src.stride.3
+  %gep.dst = getelementptr inbounds i32, ptr %dst, i64 %iv
+  store i32 %add.3, ptr %gep.dst, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %cnt.next = add i64 %cnt, 4
+  %ec = icmp eq i64 %cnt.next, 0
   br i1 %ec, label %exit, label %loop
 
 exit:

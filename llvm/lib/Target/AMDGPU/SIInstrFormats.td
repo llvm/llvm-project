@@ -57,6 +57,8 @@ class InstSI <dag outs, dag ins, string asm = "",
 
   field bit VOPD3 = 0;
 
+  field bit HasNoOpSelHi = 0;
+
   // High bits - other information.
   field bit VM_CNT = 0;
   field bit EXP_CNT = 0;
@@ -156,6 +158,9 @@ class InstSI <dag outs, dag ins, string asm = "",
   // This bit indicates that this is one of SWMMAC instructions.
   field bit IsSWMMAC = 0;
 
+  // A load or store pseudo of the VGPR "as memory" address space (13).
+  field bit VGPRAsMem = 0;
+
   // These need to be kept in sync with the enum in SIInstrFlags.
   let TSFlags{0} = SALU;
   let TSFlags{1} = VALU;
@@ -214,6 +219,8 @@ class InstSI <dag outs, dag ins, string asm = "",
   let TSFlags{42} = VOP3_OPSEL;
 
   let TSFlags{43} = maybeAtomic;
+
+  let TSFlags{44} = VGPRAsMem;
 
   let TSFlags{45} = FPClamp;
   let TSFlags{46} = IntClamp;
@@ -310,7 +317,7 @@ def CPolBit {
   int DLC = 2;
   int SCC = 4;
   int NV = 5;
-  int SCAL = 11;
+  int SCAL = 9;
 }
 
 class VOPDstOperand<RegisterClassLike rc> : RegisterOperand<rc, "printVOPDst">;
@@ -455,7 +462,7 @@ class VIMAGE_VSAMPLE_Common <bits<8> op> : Enc96 {
   bits<4> dmask;
   bits<8> vdata;
   bits<9> rsrc;
-  bits<6> cpol;
+  bits<9> cpol;
   bits<8> vaddr0;
   bits<8> vaddr1;
   bits<8> vaddr2;

@@ -91,7 +91,6 @@ using TargetRegisterClass = MCRegisterClass;
     /// Lower VECTOR_SHUFFLE into one of a number of instructions
     /// depending on the indices in the shuffle.
     SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) const;
-    SDValue lowerSELECT(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerFP16_TO_FP(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerFP_TO_FP16(SDValue Op, SelectionDAG &DAG) const;
 

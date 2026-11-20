@@ -172,7 +172,9 @@ class TestCase(TestBase):
             "totalSymbolTableParseTime",
             "totalSymbolTableIndexTime",
             "totalSymbolTablesLoadedFromCache",
+            "totalSymbolTablesParsedFromObjectFile",
             "totalSymbolTablesSavedToCache",
+            "totalSymbolTablesSymbolFileAddedSymbols",
             "totalSymbolTableSymbolCount",
             "totalSymbolTablesLoaded",
             "totalDebugInfoByteSize",
@@ -287,7 +289,9 @@ class TestCase(TestBase):
             "totalSymbolTableParseTime",
             "totalSymbolTableIndexTime",
             "totalSymbolTablesLoadedFromCache",
+            "totalSymbolTablesParsedFromObjectFile",
             "totalSymbolTablesSavedToCache",
+            "totalSymbolTablesSymbolFileAddedSymbols",
             "totalDebugInfoByteSize",
             "totalDebugInfoIndexTime",
             "totalDebugInfoIndexLoadedFromCache",
@@ -328,7 +332,9 @@ class TestCase(TestBase):
             "totalSymbolTableParseTime",
             "totalSymbolTableIndexTime",
             "totalSymbolTablesLoadedFromCache",
+            "totalSymbolTablesParsedFromObjectFile",
             "totalSymbolTablesSavedToCache",
+            "totalSymbolTablesSymbolFileAddedSymbols",
             "totalDebugInfoParseTime",
             "totalDebugInfoIndexTime",
             "totalDebugInfoIndexLoadedFromCache",
@@ -383,7 +389,9 @@ class TestCase(TestBase):
             "totalSymbolTableParseTime",
             "totalSymbolTableIndexTime",
             "totalSymbolTablesLoadedFromCache",
+            "totalSymbolTablesParsedFromObjectFile",
             "totalSymbolTablesSavedToCache",
+            "totalSymbolTablesSymbolFileAddedSymbols",
             "totalDebugInfoParseTime",
             "totalDebugInfoIndexTime",
             "totalDebugInfoIndexLoadedFromCache",
@@ -410,8 +418,10 @@ class TestCase(TestBase):
             "path",
             "symbolTableIndexTime",
             "symbolTableLoadedFromCache",
+            "symbolTableParsedFromObjectFile",
             "symbolTableParseTime",
             "symbolTableSavedToCache",
+            "symbolTableSymbolFileAddedSymbols",
             "dwoFileCount",
             "loadedDwoFileCount",
             "dwoErrorCount",
@@ -497,7 +507,9 @@ class TestCase(TestBase):
             "totalSymbolTableParseTime",
             "totalSymbolTableIndexTime",
             "totalSymbolTablesLoadedFromCache",
+            "totalSymbolTablesParsedFromObjectFile",
             "totalSymbolTablesSavedToCache",
+            "totalSymbolTablesSymbolFileAddedSymbols",
             "totalDebugInfoParseTime",
             "totalDebugInfoIndexTime",
             "totalDebugInfoIndexLoadedFromCache",
@@ -1271,7 +1283,6 @@ class TestCase(TestBase):
                 f"The order of options '{options[0]}' and '{options[1]}' should not matter",
             )
 
-    @skipIfWindows
     def test_summary_statistics_providers(self):
         """
         Test summary timing statistics is included in statistics dump when
@@ -1311,7 +1322,6 @@ class TestCase(TestBase):
         self.assertIn("'totalTime':", summary_provider_str)
         self.assertIn("'type': 'python'", summary_provider_str)
 
-    @skipIfWindows
     def test_summary_statistics_providers_vec(self):
         """
         Test summary timing statistics is included in statistics dump when
@@ -1337,7 +1347,6 @@ class TestCase(TestBase):
         if "c++" in summary_provider_str:
             self.assertIn("std::vector", summary_provider_str)
 
-    @skipIfWindows
     def test_multiple_targets(self):
         """
         Test statistics dump only reports the stats from current target and

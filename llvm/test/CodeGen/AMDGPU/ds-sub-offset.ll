@@ -58,33 +58,29 @@ define amdgpu_kernel void @write_ds_sub0_offset0_global_clamp_bit(float %dummy.v
 ; CI-NEXT:    s_load_dword s0, s[4:5], 0x0
 ; CI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; CI-NEXT:    v_sub_i32_e32 v0, vcc, 0, v0
-; CI-NEXT:    s_mov_b64 vcc, 0
-; CI-NEXT:    s_waitcnt lgkmcnt(0)
-; CI-NEXT:    v_mov_b32_e32 v1, s0
-; CI-NEXT:    v_mov_b32_e32 v2, 0x7b
-; CI-NEXT:    v_div_fmas_f32 v1, v1, v1, v1
+; CI-NEXT:    v_mov_b32_e32 v1, 0x7b
 ; CI-NEXT:    s_mov_b32 m0, -1
+; CI-NEXT:    ds_write_b32 v0, v1 offset:12
+; CI-NEXT:    s_waitcnt lgkmcnt(0)
+; CI-NEXT:    v_fma_f32 v0, s0, s0, s0
 ; CI-NEXT:    s_mov_b64 s[0:1], 0
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, -1
-; CI-NEXT:    ds_write_b32 v0, v2 offset:12
-; CI-NEXT:    buffer_store_dword v1, off, s[0:3], 0
+; CI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; CI-NEXT:    s_waitcnt vmcnt(0)
 ; CI-NEXT:    s_endpgm
 ;
 ; GFX9-LABEL: write_ds_sub0_offset0_global_clamp_bit:
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_load_dword s0, s[4:5], 0x0
-; GFX9-NEXT:    s_mov_b64 vcc, 0
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX9-NEXT:    v_sub_u32_e32 v3, 0, v0
-; GFX9-NEXT:    v_mov_b32_e32 v4, 0x7b
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v1, s0
-; GFX9-NEXT:    v_div_fmas_f32 v2, v1, v1, v1
+; GFX9-NEXT:    v_sub_u32_e32 v0, 0, v0
+; GFX9-NEXT:    v_mov_b32_e32 v1, 0x7b
+; GFX9-NEXT:    ds_write_b32 v0, v1 offset:12
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
-; GFX9-NEXT:    ds_write_b32 v3, v4 offset:12
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    v_fma_f32 v2, s0, s0, s0
 ; GFX9-NEXT:    global_store_dword v[0:1], v2, off
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_endpgm
@@ -93,14 +89,13 @@ define amdgpu_kernel void @write_ds_sub0_offset0_global_clamp_bit(float %dummy.v
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_load_dword s0, s[4:5], 0x0
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX10-NEXT:    s_mov_b32 vcc_lo, 0
 ; GFX10-NEXT:    v_mov_b32_e32 v3, 0x7b
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10-NEXT:    v_sub_nc_u32_e32 v2, 0, v0
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-NEXT:    ds_write_b32 v2, v3 offset:12
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    v_div_fmas_f32 v4, s0, s0, s0
+; GFX10-NEXT:    v_fma_f32 v4, s0, s0, s0
 ; GFX10-NEXT:    global_store_dword v[0:1], v4, off
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_endpgm
@@ -109,14 +104,13 @@ define amdgpu_kernel void @write_ds_sub0_offset0_global_clamp_bit(float %dummy.v
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v0, 0x3ff, v0
-; GFX11-NEXT:    s_mov_b32 vcc_lo, 0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_dual_mov_b32 v3, 0x7b :: v_dual_lshlrev_b32 v0, 2, v0
 ; GFX11-NEXT:    v_sub_nc_u32_e32 v2, 0, v0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    ds_store_b32 v2, v3 offset:12
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_div_fmas_f32 v4, s0, s0, s0
+; GFX11-NEXT:    v_fma_f32 v4, s0, s0, s0
 ; GFX11-NEXT:    global_store_b32 v[0:1], v4, off dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_endpgm
@@ -135,17 +129,15 @@ define amdgpu_kernel void @write_ds_sub_max_offset_global_clamp_bit(float %dummy
 ; CI-LABEL: write_ds_sub_max_offset_global_clamp_bit:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dword s0, s[4:5], 0x0
-; CI-NEXT:    s_mov_b64 vcc, 0
-; CI-NEXT:    v_mov_b32_e32 v1, 0x7b
-; CI-NEXT:    v_mov_b32_e32 v2, 0
+; CI-NEXT:    v_mov_b32_e32 v0, 0x7b
+; CI-NEXT:    v_mov_b32_e32 v1, 0
 ; CI-NEXT:    s_mov_b32 m0, -1
+; CI-NEXT:    ds_write_b32 v1, v0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
-; CI-NEXT:    v_mov_b32_e32 v0, s0
-; CI-NEXT:    v_div_fmas_f32 v0, v0, v0, v0
+; CI-NEXT:    v_fma_f32 v0, s0, s0, s0
 ; CI-NEXT:    s_mov_b64 s[0:1], 0
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, -1
-; CI-NEXT:    ds_write_b32 v2, v1
 ; CI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; CI-NEXT:    s_waitcnt vmcnt(0)
 ; CI-NEXT:    s_endpgm
@@ -153,15 +145,13 @@ define amdgpu_kernel void @write_ds_sub_max_offset_global_clamp_bit(float %dummy
 ; GFX9-LABEL: write_ds_sub_max_offset_global_clamp_bit:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dword s0, s[4:5], 0x0
-; GFX9-NEXT:    s_mov_b64 vcc, 0
-; GFX9-NEXT:    v_mov_b32_e32 v3, 0x7b
-; GFX9-NEXT:    v_mov_b32_e32 v4, 0
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0x7b
+; GFX9-NEXT:    v_mov_b32_e32 v1, 0
+; GFX9-NEXT:    ds_write_b32 v1, v0
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, s0
-; GFX9-NEXT:    v_div_fmas_f32 v2, v0, v0, v0
-; GFX9-NEXT:    v_mov_b32_e32 v0, 0
-; GFX9-NEXT:    ds_write_b32 v4, v3
+; GFX9-NEXT:    v_fma_f32 v2, s0, s0, s0
 ; GFX9-NEXT:    global_store_dword v[0:1], v2, off
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_endpgm
@@ -169,14 +159,13 @@ define amdgpu_kernel void @write_ds_sub_max_offset_global_clamp_bit(float %dummy
 ; GFX10-LABEL: write_ds_sub_max_offset_global_clamp_bit:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_load_dword s0, s[4:5], 0x0
-; GFX10-NEXT:    s_mov_b32 vcc_lo, 0
 ; GFX10-NEXT:    v_mov_b32_e32 v2, 0x7b
 ; GFX10-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10-NEXT:    ds_write_b32 v3, v2
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    v_div_fmas_f32 v4, s0, s0, s0
+; GFX10-NEXT:    v_fma_f32 v4, s0, s0, s0
 ; GFX10-NEXT:    global_store_dword v[0:1], v4, off
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_endpgm
@@ -184,12 +173,11 @@ define amdgpu_kernel void @write_ds_sub_max_offset_global_clamp_bit(float %dummy
 ; GFX11-LABEL: write_ds_sub_max_offset_global_clamp_bit:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b32 s0, s[4:5], 0x0
-; GFX11-NEXT:    s_mov_b32 vcc_lo, 0
 ; GFX11-NEXT:    v_dual_mov_b32 v2, 0x7b :: v_dual_mov_b32 v3, 0
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0
 ; GFX11-NEXT:    ds_store_b32 v3, v2
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_div_fmas_f32 v4, s0, s0, s0
+; GFX11-NEXT:    v_fma_f32 v4, s0, s0, s0
 ; GFX11-NEXT:    global_store_b32 v[0:1], v4, off dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_endpgm
@@ -561,35 +549,31 @@ define amdgpu_kernel void @add_x_shl_neg_to_sub_misaligned_i64_max_offset_clamp_
 ; CI-NEXT:    s_load_dword s0, s[4:5], 0x0
 ; CI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; CI-NEXT:    v_sub_i32_e32 v0, vcc, 0x3fb, v0
-; CI-NEXT:    s_mov_b64 vcc, 0
-; CI-NEXT:    s_waitcnt lgkmcnt(0)
-; CI-NEXT:    v_mov_b32_e32 v1, s0
-; CI-NEXT:    v_mov_b32_e32 v2, 0x7b
-; CI-NEXT:    v_div_fmas_f32 v1, v1, v1, v1
-; CI-NEXT:    v_mov_b32_e32 v3, 0
+; CI-NEXT:    v_mov_b32_e32 v1, 0x7b
+; CI-NEXT:    v_mov_b32_e32 v2, 0
 ; CI-NEXT:    s_mov_b32 m0, -1
+; CI-NEXT:    ds_write2_b32 v0, v1, v2 offset1:1
+; CI-NEXT:    s_waitcnt lgkmcnt(0)
+; CI-NEXT:    v_fma_f32 v0, s0, s0, s0
 ; CI-NEXT:    s_mov_b64 s[0:1], 0
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, -1
-; CI-NEXT:    ds_write2_b32 v0, v2, v3 offset1:1
-; CI-NEXT:    buffer_store_dword v1, off, s[0:3], 0
+; CI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; CI-NEXT:    s_waitcnt vmcnt(0)
 ; CI-NEXT:    s_endpgm
 ;
 ; GFX9-LABEL: add_x_shl_neg_to_sub_misaligned_i64_max_offset_clamp_bit:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dword s0, s[4:5], 0x0
-; GFX9-NEXT:    s_mov_b64 vcc, 0
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX9-NEXT:    v_sub_u32_e32 v3, 0x3fb, v0
-; GFX9-NEXT:    v_mov_b32_e32 v4, 0x7b
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v1, s0
-; GFX9-NEXT:    v_div_fmas_f32 v2, v1, v1, v1
-; GFX9-NEXT:    v_mov_b32_e32 v5, 0
+; GFX9-NEXT:    v_sub_u32_e32 v0, 0x3fb, v0
+; GFX9-NEXT:    v_mov_b32_e32 v1, 0x7b
+; GFX9-NEXT:    v_mov_b32_e32 v2, 0
+; GFX9-NEXT:    ds_write2_b32 v0, v1, v2 offset1:1
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
-; GFX9-NEXT:    ds_write2_b32 v3, v4, v5 offset1:1
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    v_fma_f32 v2, s0, s0, s0
 ; GFX9-NEXT:    global_store_dword v[0:1], v2, off
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_endpgm
@@ -598,7 +582,6 @@ define amdgpu_kernel void @add_x_shl_neg_to_sub_misaligned_i64_max_offset_clamp_
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_load_dword s0, s[4:5], 0x0
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX10-NEXT:    s_mov_b32 vcc_lo, 0
 ; GFX10-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10-NEXT:    v_mov_b32_e32 v4, 0x7b
@@ -607,7 +590,7 @@ define amdgpu_kernel void @add_x_shl_neg_to_sub_misaligned_i64_max_offset_clamp_
 ; GFX10-NEXT:    ds_write_b32 v2, v3 offset:1023
 ; GFX10-NEXT:    ds_write_b32 v2, v4 offset:1019
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    v_div_fmas_f32 v5, s0, s0, s0
+; GFX10-NEXT:    v_fma_f32 v5, s0, s0, s0
 ; GFX10-NEXT:    global_store_dword v[0:1], v5, off
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_endpgm
@@ -616,7 +599,6 @@ define amdgpu_kernel void @add_x_shl_neg_to_sub_misaligned_i64_max_offset_clamp_
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v0, 0x3ff, v0
-; GFX11-NEXT:    s_mov_b32 vcc_lo, 0
 ; GFX11-NEXT:    v_dual_mov_b32 v4, 0 :: v_dual_mov_b32 v3, 0x7b
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
@@ -624,7 +606,7 @@ define amdgpu_kernel void @add_x_shl_neg_to_sub_misaligned_i64_max_offset_clamp_
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    ds_store_2addr_b32 v2, v3, v4 offset1:1
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_div_fmas_f32 v5, s0, s0, s0
+; GFX11-NEXT:    v_fma_f32 v5, s0, s0, s0
 ; GFX11-NEXT:    global_store_b32 v[0:1], v5, off dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_endpgm
