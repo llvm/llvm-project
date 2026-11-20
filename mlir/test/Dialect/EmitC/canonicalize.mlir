@@ -11,3 +11,11 @@ func.func @fold_cast_to_i64(%arg0: i32) {
   %1 = emitc.cast %arg0 pure : i32 to i64
   return
 }
+
+// CHECK-LABEL: func.func @erase_dead_if
+// CHECK-NEXT:    return
+func.func @erase_dead_if(%arg0: i1) {
+  emitc.if %arg0 {
+  }
+  return
+}

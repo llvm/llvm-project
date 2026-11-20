@@ -983,3 +983,28 @@ module @symbol_ops {
     return
   }
 }
+
+// -----
+
+// CHECK-LABEL: func.func @keep_region_with_early_exit
+// CHECK-NEXT:    "test.any_cond"() ({
+// CHECK-NEXT:      test.early_exit
+// CHECK-NEXT:    }) : () -> ()
+// CHECK-NEXT:    return
+func.func @keep_region_with_early_exit() {
+  "test.any_cond"() ({
+    test.early_exit
+  }) : () -> ()
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func.func @erase_region_with_return_like
+// CHECK-NEXT:    return
+func.func @erase_region_with_return_like() {
+  "test.any_cond"() ({
+    "test.return"() : () -> ()
+  }) : () -> ()
+  return
+}
