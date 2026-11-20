@@ -322,10 +322,17 @@ public:
   /// -4.0f, -2.0f, -1.0f, -0.5f, 0.0f, 0.5f, 1.0f, 2.0f, 4.0f.
   bool opCanUseInlineConstant(unsigned OpType) const;
 
-  MCRegister findUnusedRegister(const MachineRegisterInfo &MRI,
-                                const TargetRegisterClass *RC,
-                                const MachineFunction &MF,
-                                bool ReserveHighestVGPR = false) const;
+  MCRegister
+  findUnusedRegister(const MachineRegisterInfo &MRI,
+                     const TargetRegisterClass *RC, const MachineFunction &MF,
+                     bool ReserveHighestRegister = false,
+                     const LiveRegUnits *LiveRegs = nullptr) const;
+
+  /// Find an unused scratch pair for a long branch. Branch relaxation runs
+  /// after callee saves are emitted, so exclude callee-saved registers and any
+  /// incoming return address in addition to reserved registers and VCC.
+  MCRegister findUnusedLongBranchSGPR(const MachineFunction &MF,
+                                      bool ReserveHighestRegister = false) const;
 
   const TargetRegisterClass *getRegClassForReg(const MachineRegisterInfo &MRI,
                                                Register Reg) const;

@@ -105,17 +105,6 @@ bool GCNPreRALongBranchReg::run(MachineFunction &MF) {
   const SIInstrInfo *TII = STM.getInstrInfo();
   const SIRegisterInfo *TRI = STM.getRegisterInfo();
   SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-  MachineRegisterInfo &MRI = MF.getRegInfo();
-
-  // For now, reserve highest available SGPR pair. After RA,
-  // shift down to a lower unused pair of SGPRs
-  // If all registers are used, then findUnusedRegister will return
-  // AMDGPU::NoRegister.
-  constexpr bool ReserveHighestRegister = true;
-  Register LongBranchReservedReg = TRI->findUnusedRegister(
-      MRI, &AMDGPU::SGPR_64RegClass, MF, ReserveHighestRegister);
-  if (!LongBranchReservedReg)
-    return false;
 
   // Approximate code size and offsets of each basic block
   SmallVector<BasicBlockInfo, 16> BlockInfo;
@@ -132,6 +121,13 @@ bool GCNPreRALongBranchReg::run(MachineFunction &MF) {
     // If the distance falls outside the threshold assume it is a long branch
     // and we need to reserve the registers
     if (!TII->isBranchOffsetInRange(Last->getOpcode(), BlockDistance)) {
+      // Reserve the highest available SGPR pair to leave lower registers
+      // available for register allocation. Frame lowering can move the
+      // reservation to a lower pair afterward.
+      Register LongBranchReservedReg =
+          TRI->findUnusedLongBranchSGPR(MF, /*ReserveHighestRegister=*/true);
+      if (!LongBranchReservedReg)
+        return false;
       MFI->setLongBranchReservedReg(LongBranchReservedReg);
       return true;
     }
