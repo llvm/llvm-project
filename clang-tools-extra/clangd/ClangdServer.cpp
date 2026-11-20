@@ -254,6 +254,7 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
   if (Opts.BackgroundIndex) {
     BackgroundIndex::Options BGOpts;
     BGOpts.ThreadPoolSize = std::max(Opts.AsyncThreadsCount, 1u);
+    BGOpts.IndexingPriority = Opts.BackgroundIndexPriority;
     BGOpts.OnProgress = [Callbacks](BackgroundQueue::Stats S) {
       if (Callbacks)
         Callbacks->onBackgroundIndexProgress(S);
