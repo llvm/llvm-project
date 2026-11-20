@@ -14,16 +14,16 @@
 #ifndef LLVM_LIBC_SRC_STDLIB_STRTOF128_H
 #define LLVM_LIBC_SRC_STDLIB_STRTOF128_H
 
-#include "include/llvm-libc-types/float128.h"
 #include "src/__support/FPUtil/float128.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/properties/types.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 // TODO: Remove this alias once transition to emulated float128 is complete.
-#if !defined(LIBC_TYPES_HAS_NATIVE_FLOAT128)
+#ifndef LIBC_TYPES_HAS_NATIVE_FLOAT128
 using float128 = LIBC_NAMESPACE::fputil::Float128;
-#endif // !LIBC_TYPES_HAS_NATIVE_FLOAT128
+#endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
 
 float128 strtof128(const char *__restrict str, char **__restrict str_end);
 

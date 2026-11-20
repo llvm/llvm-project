@@ -12,6 +12,8 @@
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/simd.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/attributes.h"
+#include "src/__support/macros/optimization.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace clang_vector {
@@ -21,7 +23,7 @@ template <typename byte_ty>
 LIBC_INLINE constexpr cpp::simd_mask<byte_ty> shift_mask(cpp::simd_mask<char> m,
                                                          size_t shift) {
   using bitmask_ty = cpp::simd_bitmask<char>;
-  bitmask_ty r = cpp::bit_cast<bitmask_ty>(m) >> shift;
+  bitmask_ty r = cpp::to_bitmask(m) >> shift;
   return cpp::bit_cast<cpp::simd_mask<byte_ty>>(r);
 }
 
@@ -59,35 +61,35 @@ LIBC_INLINE_VAR constexpr size_t VEC_SIZE = sizeof(cpp::simd<char>);
 LIBC_INLINE_VAR constexpr size_t LOOP_BLOCK_SIZE = 4 * VEC_SIZE;
 
 // A find_first_character implementation for inputs less than the loop block
-// size. It loads N vectors with the last end of the last vector alinging
+// size. It loads VecN vectors with the end of the last vector aligning
 // with the end of the buffer passed in.
-template <size_t N>
+template <size_t VecN>
 LIBC_NO_SANITIZE_OOB_ACCESS LIBC_ALWAYS_INLINE static const void *
 find_first_character_small(const unsigned char *s, cpp::simd<char> c,
                            size_t n) {
-  static_assert(N >= 2 && N <= 4);
+  static_assert(VecN >= 2 && VecN <= 4);
 
-  const unsigned char *ptrs[N];
-  cpp::simd_mask<char> masks[N];
-  for (size_t i = 0; i < N - 1; ++i) {
+  const unsigned char *ptrs[VecN];
+  cpp::simd_mask<char> masks[VecN];
+  for (size_t i = 0; i < VecN - 1; ++i) {
     ptrs[i] = s + i * VEC_SIZE;
     masks[i] = cpp::load<cpp::simd<char>>(ptrs[i], /*aligned=*/false) == c;
   }
-  ptrs[N - 1] = s + n - VEC_SIZE;
-  masks[N - 1] =
-      cpp::load<cpp::simd<char>>(ptrs[N - 1], /*aligned=*/false) == c;
+  ptrs[VecN - 1] = s + n - VEC_SIZE;
+  masks[VecN - 1] =
+      cpp::load<cpp::simd<char>>(ptrs[VecN - 1], /*aligned=*/false) == c;
 
   cpp::simd_mask<char> combined = masks[0] | masks[1];
-  if constexpr (N == 3)
+  if constexpr (VecN == 3)
     combined = combined | masks[2];
-  else if constexpr (N == 4)
+  else if constexpr (VecN == 4)
     combined = combined | (masks[2] | masks[3]);
 
   if (cpp::any_of(combined)) {
-    for (size_t i = 0; i < N - 1; ++i)
+    for (size_t i = 0; i < VecN - 1; ++i)
       if (cpp::any_of(masks[i]))
         return ptrs[i] + cpp::find_first_set(masks[i]);
-    return ptrs[N - 1] + cpp::find_first_set(masks[N - 1]);
+    return ptrs[VecN - 1] + cpp::find_first_set(masks[VecN - 1]);
   }
   return nullptr;
 }
@@ -163,26 +165,22 @@ find_first_character(const unsigned char *s, unsigned char c, size_t n) {
 
   const cpp::simd<char> *loop_aligned;
   if (LOOP_BLOCK_SIZE <= 64 && n > LOOP_BLOCK_SIZE) {
-    if constexpr (LOOP_BLOCK_SIZE <= 64) {
-      // Align s down to LOOP_BLOCK_SIZE; all 4 vectors lie on the same page.
-      const cpp::simd<char> *block = reinterpret_cast<const cpp::simd<char> *>(
-          __builtin_align_down(s, LOOP_BLOCK_SIZE));
-      size_t offset = static_cast<size_t>(
-          s - reinterpret_cast<const unsigned char *>(block));
-      uint64_t combined = 0;
-      for (size_t i = 0; i < 4; ++i) {
-        cpp::simd_mask<char> m =
-            cpp::load<cpp::simd<char>>(block + i, /*aligned=*/true) == c_byte;
-        combined |=
-            static_cast<uint64_t>(cpp::bit_cast<cpp::simd_bitmask<char>>(m))
-            << (i * VEC_SIZE);
-      }
-      combined >>= offset;
-      if (LIBC_UNLIKELY(combined != 0))
-        return s + cpp::countr_zero(combined);
-      n -= LOOP_BLOCK_SIZE - offset;
-      loop_aligned = block + 4;
+    // Align s down to LOOP_BLOCK_SIZE; all 4 vectors lie on the same page.
+    const cpp::simd<char> *block = reinterpret_cast<const cpp::simd<char> *>(
+        __builtin_align_down(s, LOOP_BLOCK_SIZE));
+    size_t offset =
+        static_cast<size_t>(s - reinterpret_cast<const unsigned char *>(block));
+    uint64_t combined = 0;
+    for (size_t i = 0; i < 4; ++i) {
+      cpp::simd_mask<char> m =
+          cpp::load<cpp::simd<char>>(block + i, /*aligned=*/true) == c_byte;
+      combined |= static_cast<uint64_t>(cpp::to_bitmask(m)) << (i * VEC_SIZE);
     }
+    combined >>= offset;
+    if (LIBC_UNLIKELY(combined != 0))
+      return s + cpp::countr_zero(combined);
+    n -= LOOP_BLOCK_SIZE - offset;
+    loop_aligned = block + 4;
   } else {
     // Fallback for page-crossing small inputs or wide vectors (LOOP_BLOCK_SIZE
     // > 64): step aligned vectors until done or LOOP_BLOCK_SIZE-aligned.
