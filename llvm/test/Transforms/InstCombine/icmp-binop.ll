@@ -123,8 +123,7 @@ define <2 x i1> @mul_setoddV_unkV_ne(<2 x i32> %v1, <2 x i32> %v2) {
 
 define i1 @mul_broddV_unkV_eq(i16 %v, i16 %v2) {
 ; CHECK-LABEL: @mul_broddV_unkV_eq(
-; CHECK-NEXT:    [[LB:%.*]] = and i16 [[V2:%.*]], 1
-; CHECK-NEXT:    [[ODD_NOT:%.*]] = icmp eq i16 [[LB]], 0
+; CHECK-NEXT:    [[ODD_NOT:%.*]] = trunc i16 [[V2:%.*]] to i1
 ; CHECK-NEXT:    br i1 [[ODD_NOT]], label [[FALSE:%.*]], label [[TRUE:%.*]]
 ; CHECK:       true:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[V:%.*]], 0

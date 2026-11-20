@@ -3,10 +3,10 @@
 
 define i8 @zext_or_icmp_icmp(i8 %a, i8 %b) {
 ; CHECK-LABEL: @zext_or_icmp_icmp(
-; CHECK-NEXT:    [[MASK:%.*]] = and i8 [[A:%.*]], 1
-; CHECK-NEXT:    [[TOBOOL1:%.*]] = icmp eq i8 [[MASK]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i8 [[A:%.*]] to i1
+; CHECK-NEXT:    [[TOBOOL1:%.*]] = xor i1 [[TMP1]], true
 ; CHECK-NEXT:    [[TOBOOL2:%.*]] = icmp eq i8 [[B:%.*]], 0
-; CHECK-NEXT:    [[BOTHCOND:%.*]] = or i1 [[TOBOOL1]], [[TOBOOL2]]
+; CHECK-NEXT:    [[BOTHCOND:%.*]] = or i1 [[TOBOOL2]], [[TOBOOL1]]
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[BOTHCOND]] to i8
 ; CHECK-NEXT:    ret i8 [[ZEXT]]
 ;
@@ -20,8 +20,8 @@ define i8 @zext_or_icmp_icmp(i8 %a, i8 %b) {
 
 define i8 @zext_or_icmp_icmp_logical(i8 %a, i8 %b) {
 ; CHECK-LABEL: @zext_or_icmp_icmp_logical(
-; CHECK-NEXT:    [[MASK:%.*]] = and i8 [[A:%.*]], 1
-; CHECK-NEXT:    [[TOBOOL1:%.*]] = icmp eq i8 [[MASK]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i8 [[A:%.*]] to i1
+; CHECK-NEXT:    [[TOBOOL1:%.*]] = xor i1 [[TMP1]], true
 ; CHECK-NEXT:    [[TOBOOL2:%.*]] = icmp eq i8 [[B:%.*]], 0
 ; CHECK-NEXT:    [[BOTHCOND:%.*]] = select i1 [[TOBOOL1]], i1 true, i1 [[TOBOOL2]]
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[BOTHCOND]] to i8
@@ -151,9 +151,9 @@ define i32 @select_zext_or_eq_ult_add(i32 %i) {
 
 define i32 @PR49475(i32 %x, i16 %y) {
 ; CHECK-LABEL: @PR49475(
-; CHECK-NEXT:    [[M:%.*]] = and i16 [[Y:%.*]], 1
 ; CHECK-NEXT:    [[B1:%.*]] = icmp eq i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[B2:%.*]] = icmp eq i16 [[M]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i16 [[Y:%.*]] to i1
+; CHECK-NEXT:    [[B2:%.*]] = xor i1 [[TMP1]], true
 ; CHECK-NEXT:    [[T1:%.*]] = or i1 [[B1]], [[B2]]
 ; CHECK-NEXT:    [[Z:%.*]] = zext i1 [[T1]] to i32
 ; CHECK-NEXT:    ret i32 [[Z]]

@@ -478,8 +478,9 @@ define i1 @test22_logical(i32 %A, i32 %X) {
 
 define i32 @test23(i32 %a) {
 ; CHECK-LABEL: @test23(
-; CHECK-NEXT:    [[TMP_1:%.*]] = and i32 [[A:%.*]], 1
-; CHECK-NEXT:    [[TMP_3:%.*]] = xor i32 [[TMP_1]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[A:%.*]] to i1
+; CHECK-NEXT:    [[TMP_2:%.*]] = xor i1 [[TMP1]], true
+; CHECK-NEXT:    [[TMP_3:%.*]] = zext i1 [[TMP_2]] to i32
 ; CHECK-NEXT:    ret i32 [[TMP_3]]
 ;
   %tmp.1 = and i32 %a, 1
@@ -490,8 +491,9 @@ define i32 @test23(i32 %a) {
 
 define <2 x i32> @test23vec(<2 x i32> %a) {
 ; CHECK-LABEL: @test23vec(
-; CHECK-NEXT:    [[TMP_1:%.*]] = and <2 x i32> [[A:%.*]], splat (i32 1)
-; CHECK-NEXT:    [[TMP_3:%.*]] = xor <2 x i32> [[TMP_1]], splat (i32 1)
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i32> [[A:%.*]] to <2 x i1>
+; CHECK-NEXT:    [[TMP_2:%.*]] = xor <2 x i1> [[TMP1]], splat (i1 true)
+; CHECK-NEXT:    [[TMP_3:%.*]] = zext <2 x i1> [[TMP_2]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[TMP_3]]
 ;
   %tmp.1 = and <2 x i32> %a, <i32 1, i32 1>

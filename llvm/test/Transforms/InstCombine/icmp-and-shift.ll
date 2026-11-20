@@ -644,9 +644,9 @@ define i1 @test_const_shr_and_1_ne_0(i32 %b) {
 
 define i1 @test_not_const_shr_and_1_ne_0(i32 %b) {
 ; CHECK-LABEL: @test_not_const_shr_and_1_ne_0(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i32 1, [[B:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 42
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP2]], 0
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 42, [[B:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHR]] to i1
+; CHECK-NEXT:    [[CMP:%.*]] = xor i1 [[TMP1]], true
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %shr = lshr i32 42, %b
