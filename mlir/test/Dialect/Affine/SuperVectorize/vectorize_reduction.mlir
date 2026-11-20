@@ -710,8 +710,10 @@ func.func @vecdim_reduction_nonzero_lb(%in: memref<256x512xf32>, %out: memref<25
 }
 
 // CHECK-LABEL: @vecdim_reduction_nonzero_lb
-// CHECK:         %{{.*}} = affine.for %{{.*}} = 127 to 511 step 128 iter_args({{.*}}) -> (vector<128xf32>) {
-// CHECK-NOT:     arith.select
+// CHECK:         %{{.*}} = affine.for %{{.*}} = 127 to 511 step 128 iter_args(%[[RED_ITER:.*]] = %{{.*}}) -> (vector<128xf32>) {
+// CHECK:           %[[LD:.*]] = vector.mask %{{.*}} { vector.transfer_read
+// CHECK-NEXT:      %[[ADD:.*]] = arith.addf %[[RED_ITER]], %[[LD]] : vector<128xf32>
+// CHECK-NEXT:      affine.yield %[[ADD]] : vector<128xf32>
 
 // -----
 

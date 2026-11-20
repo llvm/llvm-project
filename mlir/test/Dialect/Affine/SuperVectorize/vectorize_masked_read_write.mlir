@@ -1,6 +1,7 @@
 // RUN: mlir-opt %s -affine-super-vectorize="virtual-vector-size=8" | FileCheck %s
 
-// Each transfer is masked by what is left of the memref from its index.
+// Verify the masks of the vectorized reads and writes: each one enables what is
+// left of the memref from the transfer index.
 
 // CHECK-LABEL: func.func @shifted_read
 // CHECK:         affine.for %[[IV:.*]] = 0 to 63 step 8

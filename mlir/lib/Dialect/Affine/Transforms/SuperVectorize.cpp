@@ -127,9 +127,7 @@ using namespace vector;
 /// search on vectorization patterns and sizes.
 ///
 /// Each transfer is emitted under a `vector.mask` that enables the lanes inside
-/// the memref. The examples in this file leave the mask out. Run
-/// `-eliminate-vector-masks` to remove the masks that are provably all-true and
-/// `-lower-vector-mask` to lower the rest.
+/// the memref. The examples in this file leave the mask out.
 ///
 /// Occurrence of super-vectorization in the compiler flow:
 /// =======================================================

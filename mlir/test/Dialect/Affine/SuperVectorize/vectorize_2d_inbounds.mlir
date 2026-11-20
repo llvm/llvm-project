@@ -24,11 +24,10 @@
 // CHECK-LABEL: func.func @copy
 // When the memref is static and its dimension is divisible by the vector
 // width, the masks are proven all-true and removed.
-// CHECK-NOT: vector.mask
-// CHECK:     vector.transfer_read {{.*}} {in_bounds = [true]} : memref<512x512xf32>, vector<4xf32>
-// CHECK-NOT: vector.transfer_read
-// CHECK:     vector.transfer_write {{.*}} {in_bounds = [true]} : vector<4xf32>, memref<512x512xf32>
-// CHECK-NOT: vector.transfer_write
+// CHECK:      %[[READ:.*]] = vector.transfer_read {{.*}} {in_bounds = [true]} : memref<512x512xf32>, vector<4xf32>
+// CHECK-NEXT: vector.transfer_write %[[READ]], {{.*}} {in_bounds = [true]} : vector<4xf32>, memref<512x512xf32>{{$}}
+// CHECK-NOT:  vector.transfer_read
+// CHECK-NOT:  vector.transfer_write
 
 // LLVM-LABEL: llvm.func @copy
 // Verify that in_bounds lowers to plain llvm.load/store with inbounds|nuw GEP,
@@ -51,11 +50,15 @@ func.func @copy(%A: memref<512x512xf32>, %B: memref<512x512xf32>) {
 
 
 // MATMUL-LABEL: func.func @matmul
-// Verify all three transfer_read ops are unmasked and carry in_bounds=[true]
-// after the full linalg-to-affine + tiling + vectorization pipeline.
-// MATMUL-NOT:     vector.mask
-// MATMUL-COUNT-3: vector.transfer_read {{.*}} {in_bounds = [true]
-// MATMUL-NOT:     vector.transfer_read
+// Verify that all transfers are unmasked and carry in_bounds=[true] after the
+// full linalg-to-affine + tiling + vectorization pipeline.
+// MATMUL:      %[[A:.*]] = vector.transfer_read {{.*}} {in_bounds = [true], permutation_map = #{{.*}}} : memref<512x512xf32>, vector<4xf32>
+// MATMUL-NEXT: %[[B:.*]] = vector.transfer_read {{.*}} {in_bounds = [true]} : memref<512x512xf32>, vector<4xf32>
+// MATMUL-NEXT: %[[C:.*]] = vector.transfer_read {{.*}} {in_bounds = [true]} : memref<512x512xf32>, vector<4xf32>
+// MATMUL-NEXT: %[[MUL:.*]] = arith.mulf %[[A]], %[[B]] : vector<4xf32>
+// MATMUL-NEXT: %[[ADD:.*]] = arith.addf %[[C]], %[[MUL]] : vector<4xf32>
+// MATMUL-NEXT: vector.transfer_write %[[ADD]], {{.*}} {in_bounds = [true]} : vector<4xf32>, memref<512x512xf32>{{$}}
+// MATMUL-NOT:  vector.transfer_read
 func.func @matmul(%A: memref<512x512xf32>,
                   %B: memref<512x512xf32>,
                   %C: memref<512x512xf32>) {
