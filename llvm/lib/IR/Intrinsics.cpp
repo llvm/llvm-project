@@ -15,6 +15,7 @@
 #include "llvm/ADT/StringTable.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsARM.h"
@@ -1513,6 +1514,21 @@ Intrinsic::ID Intrinsic::getInterleaveIntrinsicID(unsigned Factor) {
 Intrinsic::ID Intrinsic::getDeinterleaveIntrinsicID(unsigned Factor) {
   assert(Factor >= 2 && Factor <= 8 && "Unexpected factor");
   return InterleaveIntrinsics[Factor - 2].Deinterleave;
+}
+
+unsigned Intrinsic::getMaskedIntDivRemOpcode(ID IID) {
+  switch (IID) {
+  case masked_udiv:
+    return Instruction::UDiv;
+  case masked_sdiv:
+    return Instruction::SDiv;
+  case masked_urem:
+    return Instruction::URem;
+  case masked_srem:
+    return Instruction::SRem;
+  default:
+    return 0;
+  }
 }
 
 LLVM_ABI void Intrinsic::printFPClassMask(raw_ostream &OS,

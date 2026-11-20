@@ -299,3 +299,26 @@ entry:
   store <vscale x 4 x i32> %r, ptr %pr
   ret void
 }
+
+define i32 @scalar(i32 %a, i32 %b, i1 %mask) sanitize_memory {
+; CHECK-LABEL: @scalar(
+; CHECK-NEXT:    [[TMP1:%.*]] = load i1, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    call void @llvm.donothing()
+; CHECK-NEXT:    [[_MSMASKEDDIVISOR:%.*]] = select i1 [[MASK:%.*]], i32 [[TMP2]], i32 0
+; CHECK-NEXT:    [[_MSMASKEDDIV:%.*]] = select i1 [[MASK]], i32 [[TMP3]], i32 -1
+; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i32 [[_MSMASKEDDIVISOR]], 0
+; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[TMP1]], [[_MSCMP]]
+; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
+; CHECK:       4:
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
+; CHECK-NEXT:    unreachable
+; CHECK:       5:
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.masked.udiv.i32(i32 [[A:%.*]], i32 [[B:%.*]], i1 [[MASK]])
+; CHECK-NEXT:    store i32 [[_MSMASKEDDIV]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %r = call i32 @llvm.masked.udiv.i32(i32 %a, i32 %b, i1 %mask)
+  ret i32 %r
+}

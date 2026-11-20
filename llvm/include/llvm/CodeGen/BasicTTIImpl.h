@@ -2848,35 +2848,30 @@ public:
     case Intrinsic::masked_sdiv:
     case Intrinsic::masked_urem:
     case Intrinsic::masked_srem: {
-      unsigned UnmaskedOpc;
       switch (IID) {
       case Intrinsic::masked_udiv:
         ISD = ISD::MASKED_UDIV;
-        UnmaskedOpc = Instruction::UDiv;
         break;
       case Intrinsic::masked_sdiv:
         ISD = ISD::MASKED_SDIV;
-        UnmaskedOpc = Instruction::SDiv;
         break;
       case Intrinsic::masked_urem:
         ISD = ISD::MASKED_UREM;
-        UnmaskedOpc = Instruction::URem;
         break;
       case Intrinsic::masked_srem:
         ISD = ISD::MASKED_SREM;
-        UnmaskedOpc = Instruction::SRem;
         break;
       default:
         llvm_unreachable("Unexpected intrinsic ID");
       }
+      unsigned UnmaskedOpc = Intrinsic::getMaskedIntDivRemOpcode(IID);
       InstructionCost Cost =
           thisT()->getArithmeticInstrCost(UnmaskedOpc, RetTy, CostKind);
 
       // Expansion generates a (select %mask, %rhs, 1) for the divisor.
       MVT LT = getTypeLegalizationCost(RetTy).second;
       if (!getTLI()->isOperationLegalOrCustom(ISD, LT)) {
-        Type *CondTy = cast<VectorType>(RetTy)->getWithNewType(
-            IntegerType::getInt1Ty(RetTy->getContext()));
+        Type *CondTy = RetTy->getWithNewBitWidth(1);
         Cost += thisT()->getCmpSelInstrCost(
             BinaryOperator::Select, RetTy, CondTy, CmpInst::BAD_ICMP_PREDICATE,
             CostKind, {}, {TTI::OK_UniformConstantValue, TTI::OP_PowerOf2});

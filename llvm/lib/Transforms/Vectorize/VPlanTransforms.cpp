@@ -1830,22 +1830,6 @@ static void reassociateHeaderMask(VPlan &Plan) {
   }
 }
 
-static std::optional<Instruction::BinaryOps>
-getUnmaskedDivRemOpcode(Intrinsic::ID ID) {
-  switch (ID) {
-  case Intrinsic::masked_udiv:
-    return Instruction::UDiv;
-  case Intrinsic::masked_sdiv:
-    return Instruction::SDiv;
-  case Intrinsic::masked_urem:
-    return Instruction::URem;
-  case Intrinsic::masked_srem:
-    return Instruction::SRem;
-  default:
-    return {};
-  }
-}
-
 static void narrowToSingleScalarRecipes(VPlan &Plan) {
   if (Plan.hasScalarVFOnly())
     return;
@@ -1884,7 +1868,8 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
       if (auto *IntrR = dyn_cast<VPWidenIntrinsicRecipe>(RepOrWidenR)) {
         if (!vputils::onlyFirstLaneUsed(IntrR))
           continue;
-        auto Opc = getUnmaskedDivRemOpcode(IntrR->getVectorIntrinsicID());
+        unsigned Opc =
+            Intrinsic::getMaskedIntDivRemOpcode(IntrR->getVectorIntrinsicID());
         if (!Opc)
           continue;
         VPBuilder Builder(IntrR);
@@ -1892,8 +1877,8 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
             IntrR->getOperand(2), IntrR->getOperand(1),
             Plan.getConstantInt(IntrR->getScalarType(), 1));
         VPValue *Clone = Builder.createNaryOp(
-            *Opc, {IntrR->getOperand(0), SafeDivisor},
-            VPIRFlags::getDefaultFlags(*Opc), IntrR->getDebugLoc());
+            Opc, {IntrR->getOperand(0), SafeDivisor},
+            VPIRFlags::getDefaultFlags(Opc), IntrR->getDebugLoc());
         IntrR->replaceAllUsesWith(Clone);
         IntrR->eraseFromParent();
         continue;
