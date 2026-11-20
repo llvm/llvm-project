@@ -204,3 +204,37 @@ define amdgpu_ps float @shl_or_vgpr_const_scalar2(i32 %a, i32 inreg %b) {
   %bc = bitcast i32 %result to float
   ret float %bc
 }
+
+define amdgpu_ps <3 x float> @shl_or_shared_literals(<3 x i32> %a) {
+; VI-LABEL: shl_or_shared_literals:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_mov_b32 s0, 0xf000f
+; VI-NEXT:    v_lshlrev_b32_e64 v2, v2, s0
+; VI-NEXT:    v_lshlrev_b32_e64 v1, v1, s0
+; VI-NEXT:    v_lshlrev_b32_e64 v0, v0, s0
+; VI-NEXT:    v_or_b32_e32 v0, 0x64006400, v0
+; VI-NEXT:    v_or_b32_e32 v1, 0x64006400, v1
+; VI-NEXT:    v_or_b32_e32 v2, 0x64006400, v2
+; VI-NEXT:    ; return to shader part epilog
+;
+; GFX9-LABEL: shl_or_shared_literals:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_mov_b32 s0, 0xf000f
+; GFX9-NEXT:    v_mov_b32_e32 v3, 0x64006400
+; GFX9-NEXT:    v_lshl_or_b32 v0, s0, v0, v3
+; GFX9-NEXT:    v_lshl_or_b32 v1, s0, v1, v3
+; GFX9-NEXT:    v_lshl_or_b32 v2, s0, v2, v3
+; GFX9-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: shl_or_shared_literals:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_mov_b32 s0, 0xf000f
+; GFX10-NEXT:    v_lshl_or_b32 v0, s0, v0, 0x64006400
+; GFX10-NEXT:    v_lshl_or_b32 v1, s0, v1, 0x64006400
+; GFX10-NEXT:    v_lshl_or_b32 v2, s0, v2, 0x64006400
+; GFX10-NEXT:    ; return to shader part epilog
+  %x = shl <3 x i32> splat (i32 983055), %a
+  %r = or <3 x i32> %x, splat (i32 1677747200)
+  %f = bitcast <3 x i32> %r to <3 x float>
+  ret <3 x float> %f
+}
