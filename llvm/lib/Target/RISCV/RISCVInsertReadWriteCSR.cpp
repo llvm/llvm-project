@@ -53,12 +53,29 @@ char RISCVInsertReadWriteCSRLegacy::ID = 0;
 INITIALIZE_PASS(RISCVInsertReadWriteCSRLegacy, DEBUG_TYPE,
                 RISCV_INSERT_READ_WRITE_CSR_NAME, false, false)
 
-// TODO: Use more accurate rounding mode at the start of MBB.
+// Return the rounding mode FRM is known to hold at the start of each basic
+// block and after each call.  Outside strictfp functions LLVM assumes the
+// default floating-point environment, so FRM is round-to-nearest-even unless
+// the function itself writes FRM.  Inline assembly may write FRM without
+// declaring it, so stay conservative in functions that contain any.
+static unsigned getDefaultRoundingMode(const MachineFunction &MF) {
+  if (MF.getFunction().hasFnAttribute(Attribute::StrictFP))
+    return RISCVFPRndMode::DYN;
+  for (const MachineBasicBlock &MBB : MF)
+    for (const MachineInstr &MI : MBB)
+      if (MI.isInlineAsm() || MI.getOpcode() == RISCV::SwapFRMImm ||
+          MI.getOpcode() == RISCV::WriteFRMImm ||
+          MI.getOpcode() == RISCV::WriteFRM)
+        return RISCVFPRndMode::DYN;
+  return RISCVFPRndMode::RNE;
+}
+
 static bool emitWriteRoundingModeOpt(MachineBasicBlock &MBB,
-                                     const TargetInstrInfo *TII) {
+                                     const TargetInstrInfo *TII,
+                                     unsigned DefaultRM) {
   bool Changed = false;
   MachineInstr *LastFRMChanger = nullptr;
-  unsigned CurrentRM = RISCVFPRndMode::DYN;
+  unsigned CurrentRM = DefaultRM;
   Register SavedFRM;
 
   for (MachineInstr &MI : MBB) {
@@ -81,7 +98,7 @@ static bool emitWriteRoundingModeOpt(MachineBasicBlock &MBB,
       if (SavedFRM.isValid())
         BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(RISCV::WriteFRM))
             .addReg(SavedFRM);
-      CurrentRM = RISCVFPRndMode::DYN;
+      CurrentRM = DefaultRM;
       SavedFRM = Register();
       continue;
     }
@@ -175,12 +192,13 @@ static bool insertReadWriteCSROnMachineFunction(MachineFunction &MF) {
   const TargetInstrInfo *TII = ST.getInstrInfo();
 
   bool Changed = false;
+  unsigned DefaultRM = getDefaultRoundingMode(MF);
 
   for (MachineBasicBlock &MBB : MF) {
     if (!ST.getCLOpts().frm_insert_opt)
       Changed |= emitWriteRoundingMode(MBB, TII);
     else
-      Changed |= emitWriteRoundingModeOpt(MBB, TII);
+      Changed |= emitWriteRoundingModeOpt(MBB, TII, DefaultRM);
   }
 
   return Changed;
