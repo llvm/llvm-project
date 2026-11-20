@@ -56,10 +56,12 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetOptions.h"
@@ -287,6 +289,11 @@ ErrorOr<std::unique_ptr<DWARFFile>> DwarfLinkerForBinary::loadObject(
         Obj.getObjectFilename(), std::move(Context),
         std::make_unique<AddressManager>(*this, *ErrorOrObj, Obj, DLBRM),
         [&](StringRef FileName) { BinHolder.eraseObjectEntry(FileName); });
+    Res->UnitOffsetsFunc = [DLBRM](uint64_t UnitOffset,
+                                   uint64_t DebugInfoOffset,
+                                   uint64_t DebugAddrOffset) {
+      DLBRM->setUnitOffsets(UnitOffset, DebugInfoOffset, DebugAddrOffset);
+    };
 
     if (Error E = PL.collect(*ErrorOrObj))
       reportWarning(toString(std::move(E)), Obj.getObjectFilename());
@@ -499,6 +506,54 @@ void DwarfLinkerForBinary::collectRelocationsToApplyToSwiftReflectionSections(
     RelocationsToApply.emplace_back(AddressFromDwarfVM, Value,
                                     ShouldSubtractDwarfVM);
   }
+}
+
+std::shared_ptr<PrefixMapper>
+DwarfLinkerForBinary::findCompilationPrefixMap(StringRef ObjectPath) {
+  // With compilation caching, the compiler can prefix map the paths it sees,
+  // so that cache keys don't depend on where the build happens. The build
+  // system then records the mapping in compilation-prefix-map.json in a parent
+  // directory of the object files, as a JSON object from each remapped prefix
+  // to the original one.
+  StringRef ObjectDir = sys::path::parent_path(ObjectPath);
+  auto [It, Inserted] = CompilationPrefixMaps.try_emplace(ObjectDir);
+  if (!Inserted)
+    return It->second;
+
+  std::optional<std::string> Path = vfs::findFileInParentDirectories(
+      *Options.VFS, ObjectDir, {"compilation-prefix-map.json"});
+  if (!Path)
+    return nullptr;
+
+  if (Options.Verbose)
+    outs() << "found compilation prefix map " << *Path << '\n';
+  auto BufferOrErr = Options.VFS->getBufferForFile(*Path);
+  if (!BufferOrErr) {
+    reportWarning("cannot read compilation prefix map: " +
+                      BufferOrErr.getError().message(),
+                  *Path);
+    return nullptr;
+  }
+  Expected<json::Value> Root = json::parse((*BufferOrErr)->getBuffer());
+  if (!Root) {
+    reportWarning("cannot parse compilation prefix map: " +
+                      toString(Root.takeError()),
+                  *Path);
+    return nullptr;
+  }
+  const json::Object *Entries = Root->getAsObject();
+  if (!Entries) {
+    reportWarning("cannot parse compilation prefix map: expected a JSON "
+                  "object",
+                  *Path);
+    return nullptr;
+  }
+  auto PrefixMap = std::make_shared<PrefixMapper>();
+  for (const auto &Entry : *Entries)
+    if (std::optional<StringRef> Original = Entry.second.getAsString())
+      PrefixMap->add(MappedPrefix(Entry.first, *Original));
+  PrefixMap->sort();
+  return It->second = std::move(PrefixMap);
 }
 
 Error DwarfLinkerForBinary::copySwiftInterfaces(StringRef Architecture) const {
@@ -948,6 +1003,8 @@ bool DwarfLinkerForBinary::linkImpl(
     auto DLBRelocMap = std::make_shared<DwarfLinkerForBinaryRelocationMap>();
     if (ErrorOr<std::unique_ptr<DWARFFile>> ErrorOrObj =
             loadObject(*Obj, Map, RL, PL, DLBRelocMap)) {
+      (*ErrorOrObj)->PrefixMap =
+          findCompilationPrefixMap(Obj->getObjectFilename());
       ObjectsForLinking.emplace_back(std::move(*ErrorOrObj), DLBRelocMap);
       GeneralLinker->addObjectFile(*ObjectsForLinking.back().Object, Loader,
                                    OnCUDieLoaded);
@@ -1351,8 +1408,16 @@ void DwarfLinkerForBinaryRelocationMap::addValidRelocs(RelocationMap &RM) {
   std::vector<ValidReloc> DebugInfoRelocs;
   std::vector<ValidReloc> DebugAddrRelocs;
   for (const auto &[UnitOffset, Relocs] : Units) {
-    llvm::append_range(DebugInfoRelocs, Relocs.DebugInfo);
-    llvm::append_range(DebugAddrRelocs, Relocs.DebugAddr);
+    auto [DebugInfoBase, DebugAddrBase] =
+        Relocs.Offsets.value_or(std::pair<uint64_t, uint64_t>(0, 0));
+    for (ValidReloc R : Relocs.DebugInfo) {
+      R.Offset = R.Offset + DebugInfoBase;
+      DebugInfoRelocs.push_back(R);
+    }
+    for (ValidReloc R : Relocs.DebugAddr) {
+      R.Offset = R.Offset + DebugAddrBase;
+      DebugAddrRelocs.push_back(R);
+    }
   }
 
   // The units are unordered.
@@ -1362,6 +1427,13 @@ void DwarfLinkerForBinaryRelocationMap::addValidRelocs(RelocationMap &RM) {
     RM.addDebugInfoRelocationMapEntry(R);
   for (const ValidReloc &R : DebugAddrRelocs)
     RM.addDebugAddrRelocationMapEntry(R);
+}
+
+void DwarfLinkerForBinaryRelocationMap::setUnitOffsets(
+    uint64_t UnitOffset, uint64_t DebugInfoOffset, uint64_t DebugAddrOffset) {
+  auto It = Units.find(UnitOffset);
+  assert(It != Units.end() && "unit placed before init()");
+  It->second.Offsets.emplace(DebugInfoOffset, DebugAddrOffset);
 }
 
 void DwarfLinkerForBinaryRelocationMap::updateAndSaveValidRelocs(

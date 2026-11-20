@@ -72,6 +72,7 @@ body: |
     ; ON-NEXT: $exec_lo = S_MOV_B32 0
     ; ON-NEXT: DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 $vgpr0, 0, 0, implicit-def $asynccnt, implicit $asynccnt, implicit $exec
     ; ON-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B8_replay undef $vgpr0, undef $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt, implicit-def $sgpr105
+    ; ON-NEXT: S_WAIT_XCNT 0
     ; ON-NEXT: $exec_lo = S_MOV_B32 -1
     ; ON-NEXT: S_ENDPGM 0
     ;

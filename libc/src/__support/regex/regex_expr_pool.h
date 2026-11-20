@@ -14,6 +14,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_REGEX_REGEX_EXPR_POOL_H
 #define LLVM_LIBC_SRC___SUPPORT_REGEX_REGEX_EXPR_POOL_H
 
+#include "hdr/stdint_proxy.h"
 #include "hdr/types/size_t.h"
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/span.h"
@@ -21,6 +22,7 @@
 #include "src/__support/error_or.h"
 #include "src/__support/libc_assert.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/optimization.h"
 #include "src/__support/regex/regex_ast.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -58,7 +60,7 @@ class ExprPool {
   /// Scaling factor used when growing dynamic pool arrays and hash tables.
   static constexpr size_t GROWTH_FACTOR = 2;
   /// Grow the hash table when occupancy reaches 70% (7 / 10) to keep
-  /// linear-probing chains short without floating-point arithmetic.
+  /// triangular-probing chains short without floating-point arithmetic.
   static constexpr size_t MAX_LOAD_NUMERATOR = 7;
   static constexpr size_t MAX_LOAD_DENOMINATOR = 10;
 
@@ -67,7 +69,9 @@ class ExprPool {
   size_t block_capacity = 0;
   size_t block_count = 0;
   /// Total number of nodes allocated across all blocks.
-  size_t node_count = 0;
+  ExprId node_count = 0;
+  /// Per-pool hash seed mixed once at initialisation to deter hash clustering.
+  uint32_t hash_seed = 0;
 
   /// Lazily allocated array of deduplicated 256-bit character sets.
   cpp::unique_ptr<ByteSet[]> byte_sets;
@@ -128,20 +132,41 @@ public:
   ExprPool(ExprPool &&) = delete;
   ExprPool &operator=(ExprPool &&) = delete;
 
+  /// Returns true iff id refers to an interned node in this pool.
+  constexpr bool is_valid(ExprId id) const {
+    return id != INVALID_EXPR_ID && id <= node_count;
+  }
+
+  /// Returns true iff id is an interned node or one of the two constant empty
+  /// sentinels (EMPTY_SET_ID / EMPTY_STR_ID) usable before lazy init.
+  constexpr bool is_valid_input(ExprId id) const {
+    return is_valid(id) || id == EMPTY_SET_ID || id == EMPTY_STR_ID;
+  }
+
   /// Resolves an ExprId to a value copy of its 16-byte Expr node.
-  Expr get(ExprId id) const { return slot_at(id); }
+  Expr get(ExprId id) const {
+    if (LIBC_LIKELY(is_valid(id)))
+      return slot_at(id);
+    if (id == EMPTY_STR_ID)
+      return Expr::make_empty_str();
+    LIBC_ASSERT(id == EMPTY_SET_ID);
+    return Expr::make_empty_set();
+  }
 
   /// Resolves a ByteSet index to its 256-bit character set.
   const ByteSet &get_byte_set(uint32_t id) const {
-    LIBC_ASSERT(id < byte_set_count);
+    if (LIBC_UNLIKELY(id >= byte_set_count)) {
+      LIBC_ASSERT(false);
+      static constexpr ByteSet EMPTY_BYTE_SET{};
+      return EMPTY_BYTE_SET;
+    }
     return byte_sets[id];
   }
 
   /// O(1) unconditional nullability query for a valid ExprId.
-  bool is_nullable(ExprId id) const { return get(id).nullable; }
-
-  /// O(1) query indicating whether the subtree at id contains an Anchor node.
-  bool has_anchors(ExprId id) const { return get(id).has_anchors; }
+  bool is_nullable(ExprId id) const {
+    return (get(id).nullable_mask & 1u) != 0;
+  }
 
   /// Returns the number of unique AST nodes currently interned in this pool.
   size_t size() const { return node_count; }

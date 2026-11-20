@@ -129,6 +129,7 @@ HexagonPacketizerList::HexagonPacketizerList(MachineFunction &MF,
 
   addMutation(std::make_unique<HexagonSubtarget::UsrOverflowMutation>());
   addMutation(std::make_unique<HexagonSubtarget::HVXMemLatencyMutation>());
+  addMutation(std::make_unique<HexagonSubtarget::HMXActivateWeightMutation>());
   addMutation(std::make_unique<HexagonSubtarget::BankConflictMutation>());
   addMutation(std::make_unique<HexagonSubtarget::HLXPseudoMutation>());
 }
@@ -1752,6 +1753,33 @@ HexagonPacketizerList::addToPacket(MachineInstr &MI) {
     return MII;
   }
   assert(ResourceTracker->canReserveResources(MI));
+
+  MachineBasicBlock::iterator nextMII = MII;
+  if (std::next(MII) != MI.getParent()->end()) {
+    MachineInstr &nextMI = *++nextMII;
+    if (HII->isActivateWeightPair(MI, nextMI)) {
+      for (auto J : CurrentPacketMIs) {
+        MachineInstr &JMI = *J;
+        if (HII->isDependent(JMI, MI) || HII->isDependent(JMI, nextMI)) {
+          endPacket(MBB, MI);
+          break;
+        }
+      }
+      ResourceTracker->reserveResources(MI);
+      if (ResourceTracker->canReserveResources(nextMI))
+        ResourceTracker->reserveResources(nextMI);
+      else {
+        endPacket(MBB, MI);
+        assert(ResourceTracker->canReserveResources(MI));
+        ResourceTracker->reserveResources(MI);
+        assert(ResourceTracker->canReserveResources(nextMI));
+        ResourceTracker->reserveResources(nextMI);
+      }
+      CurrentPacketMIs.push_back(&MI);
+      CurrentPacketMIs.push_back(&nextMI);
+      return nextMII;
+    }
+  }
 
   bool ExtMI = HII->isExtended(MI) || HII->isConstExtended(MI);
   bool Good = true;

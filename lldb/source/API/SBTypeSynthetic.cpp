@@ -166,7 +166,7 @@ bool SBTypeSynthetic::operator!=(lldb::SBTypeSynthetic &rhs) {
   LLDB_INSTRUMENT_VA(this, rhs);
 
   if (!IsValid())
-    return !rhs.IsValid();
+    return rhs.IsValid();
   return m_opaque_sp != rhs.m_opaque_sp;
 }
 

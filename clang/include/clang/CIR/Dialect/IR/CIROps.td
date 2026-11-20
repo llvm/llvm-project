@@ -1120,6 +1120,7 @@ def CIR_ReturnOp : CIR_Op<"return", [
 //===----------------------------------------------------------------------===//
 
 def CIR_IfOp : CIR_RegionBranchOpBase<"if", [
+  DeclareOpInterfaceMethods<PromotableRegionOpInterface>,
   RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments
 ], ["getEntrySuccessorRegions"]> {
   let summary = "the if-then-else operation";
@@ -1411,6 +1412,7 @@ def CIR_ResumeFlatOp : CIR_Op<"resume.flat", [
 //===----------------------------------------------------------------------===//
 
 def CIR_ScopeOp : CIR_EnterAnyRegionBranchOpBase<"scope", [
+  DeclareOpInterfaceMethods<PromotableRegionOpInterface>,
   RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments,
   RecursiveMemoryEffects
 ]> {
@@ -3430,6 +3432,7 @@ def CIR_SelectOp : CIR_Op<"select", [
 //===----------------------------------------------------------------------===//
 
 def CIR_TernaryOp : CIR_EnterAnyRegionBranchOpBase<"ternary", [
+  DeclareOpInterfaceMethods<PromotableRegionOpInterface>,
   RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments
 ], ["getEntrySuccessorRegions"]> {
   let summary = "The `cond ? a : b` C/C++ ternary operation";
@@ -10611,6 +10614,7 @@ def CIR_AtomicFetchOp : CIR_Op<"atomic.fetch", [
     CIR_AtomicFetchKindAttr:$binop,
     Arg<CIR_MemOrderAttr, "memory order">:$mem_order,
     Arg<CIR_SyncScopeKindAttr, "synchronization scope">:$sync_scope,
+    OptionalAttr<I64Attr>:$alignment,
     UnitAttr:$is_volatile,
     UnitAttr:$fetch_first
   );
@@ -10620,6 +10624,7 @@ def CIR_AtomicFetchOp : CIR_Op<"atomic.fetch", [
     `syncscope` `(` enum($sync_scope) `)`
     (`fetch_first` $fetch_first^)?
     $ptr `,` $val
+    (`align` `(` $alignment^ `)`)?
     (`volatile` $is_volatile^)?
     `:` `(` qualified(type($ptr)) `,` qualified(type($val)) `)`
     `->` type($result) attr-dict
@@ -10667,6 +10672,7 @@ def CIR_AtomicXchgOp : CIR_Op<"atomic.xchg", [
     CIR_AnyType:$val,
     Arg<CIR_MemOrderAttr, "memory order">:$mem_order,
     CIR_SyncScopeKindAttr:$sync_scope,
+    OptionalAttr<I64Attr>:$alignment,
     UnitAttr:$is_volatile
   );
 
@@ -10675,6 +10681,7 @@ def CIR_AtomicXchgOp : CIR_Op<"atomic.xchg", [
     `syncscope` `(` enum($sync_scope) `)`
     (`volatile` $is_volatile^)?
     $ptr `,` $val
+    (`align` `(` $alignment^ `)`)?
     `:` functional-type(operands, results) attr-dict
   }];
 }

@@ -1058,6 +1058,32 @@ define float @fsub_rna__sub__norm(float nofpclass(nan inf zero norm) %lhs, float
 }
 
 ;-------------------------------------------------------------------------------
+; Constant threshold tests.
+;-------------------------------------------------------------------------------
+
+; For float, the threshold T is 2^-103.
+define float @fadd_dyn__threshold(float noundef %arg) #0 strictfp {
+; CHECK-LABEL: define float @fadd_dyn__threshold(
+; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FADD:%.*]] = call float @llvm.experimental.constrained.fadd.f32(float noundef [[ARG]], float noundef f0x0C000000, metadata !"round.dynamic", metadata !"fpexcept.ignore") #[[ATTR8]]
+; CHECK-NEXT:    ret float [[FADD]]
+;
+  %fadd = call float @llvm.experimental.constrained.fadd.f32(float %arg, float f0x0C000000, metadata !"round.dynamic", metadata !"fpexcept.ignore")
+  ret float %fadd
+}
+
+; nextup(T) in float precision.
+define float @fadd_dyn__nextup_threshold(float noundef %arg) #0 strictfp {
+; CHECK-LABEL: define nofpclass(sub) float @fadd_dyn__nextup_threshold(
+; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FADD:%.*]] = call nofpclass(sub) float @llvm.experimental.constrained.fadd.f32(float noundef [[ARG]], float noundef f0x0C000001, metadata !"round.dynamic", metadata !"fpexcept.ignore") #[[ATTR8]]
+; CHECK-NEXT:    ret float [[FADD]]
+;
+  %fadd = call float @llvm.experimental.constrained.fadd.f32(float %arg, float f0x0C000001, metadata !"round.dynamic", metadata !"fpexcept.ignore")
+  ret float %fadd
+}
+
+;-------------------------------------------------------------------------------
 
 attributes #0 = { denormal_fpenv(ieee) }
 attributes #1 = { denormal_fpenv(dynamic) }
