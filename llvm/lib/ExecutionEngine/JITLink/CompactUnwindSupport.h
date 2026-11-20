@@ -14,6 +14,7 @@
 #define LIB_EXECUTIONENGINE_JITLINK_COMPACTUNWINDSUPPORTIMPL_H
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ExecutionEngine/JITLink/EHFrameSupport.h"
 #include "llvm/ExecutionEngine/JITLink/MachO.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Endian.h"
@@ -186,8 +187,16 @@ public:
         for (auto &E : Fn.getBlock().edges_at(0)) {
           if (E.getKind() == Edge::KeepAlive && E.getTarget().isDefined() &&
               &E.getTarget().getSection() == EHFrameSec) {
-            KeepAliveEdge = &E;
-            break;
+            // A code block can contain several functions and their FDE edges.
+            auto *FDEPCBegin =
+                EHFrameCFIBlockInspector::FromEdgeScan(E.getTarget().getBlock())
+                    .getPCBeginEdge();
+            if (FDEPCBegin && FDEPCBegin->getTarget().getAddress() +
+                                      FDEPCBegin->getAddend() ==
+                                  Fn.getAddress() + PCBeginEdge->getAddend()) {
+              KeepAliveEdge = &E;
+              break;
+            }
           }
         }
 
