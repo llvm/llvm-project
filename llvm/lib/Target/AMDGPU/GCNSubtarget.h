@@ -847,6 +847,14 @@ public:
   /// utility function called by MachineFunction and
   /// Function variants of getReservedNumSGPRs.
   unsigned getBaseReservedNumSGPRs(const bool HasFlatScratch) const;
+
+  /// \returns true if the total number of SGPRs of a kernel, i.e. the SGPRs
+  /// used by it and its callees plus its FLAT_SCRATCH, XNACK_MASK and VCC
+  /// SGPRs, must not exceed the number of addressable SGPRs.
+  bool hasLimitedTotalNumSGPRs() const {
+    return getGeneration() <= AMDGPUSubtarget::SEA_ISLANDS || hasSGPRInitBug();
+  }
+
   /// \returns Reserved number of SGPRs for given machine function \p MF.
   unsigned getReservedNumSGPRs(const MachineFunction &MF) const;
 
