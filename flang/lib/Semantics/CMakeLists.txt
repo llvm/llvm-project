@@ -21,6 +21,7 @@ add_flang_library(FortranSemantics
   check-namelist.cpp
   check-nullify.cpp
   check-omp-atomic.cpp
+  check-omp-device.cpp
   check-omp-loop.cpp
   check-omp-variant.cpp
   check-omp-structure.cpp
