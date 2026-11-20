@@ -98,6 +98,9 @@ static void calcPredicateUsingInteger(ArrayRef<EdgeDescriptor> Branches,
                               FirstGuardBlock);
 
   for (auto [BB, Succ0, Succ1] : Branches) {
+    // Save the branch weights before this branch is replaced.
+    MDNode *BranchProfile =
+        BB->getTerminator()->getMetadata(LLVMContext::MD_prof);
     Value *Condition = redirectToHub(BB, Succ0, Succ1, FirstGuardBlock);
     Value *IncomingId = nullptr;
     if (Succ0 && Succ1 && Succ0 != Succ1) {
@@ -107,8 +110,11 @@ static void calcPredicateUsingInteger(ArrayRef<EdgeDescriptor> Branches,
           ConstantInt::get(Int32Ty, std::distance(Outgoing.begin(), Succ0Iter));
       Value *Id1 =
           ConstantInt::get(Int32Ty, std::distance(Outgoing.begin(), Succ1Iter));
-      IncomingId = SelectInst::Create(Condition, Id0, Id1, "target.bb.idx",
-                                      BB->getTerminator()->getIterator());
+      auto *TargetSelect =
+          SelectInst::Create(Condition, Id0, Id1, "target.bb.idx",
+                             BB->getTerminator()->getIterator());
+      TargetSelect->setMetadata(LLVMContext::MD_prof, BranchProfile);
+      IncomingId = TargetSelect;
     } else {
       // Get the index of the non-null successor, or when both successors
       // are the same block, use that block's index directly.
