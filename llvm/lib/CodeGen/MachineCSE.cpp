@@ -803,8 +803,13 @@ bool MachineCSEImpl::isPRECandidate(MachineInstr *MI,
     if (MO.isReg() && !MO.getReg().isVirtual()) {
       if (MO.isDef())
         return false;
-      else
-        PhysRefs.insert(MO.getReg());
+      Register Reg = MO.getReg();
+      // Uses that cannot block CSE cannot block PRE either.
+      if (Reg.isPhysical() && isCallerPreservedOrConstPhysReg(
+                                  Reg.asMCReg(), *MI, MI->getOperandNo(&MO),
+                                  *MI->getMF(), *TRI, *TII))
+        continue;
+      PhysRefs.insert(Reg);
     }
   }
 
