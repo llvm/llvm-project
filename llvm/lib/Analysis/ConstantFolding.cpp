@@ -1915,6 +1915,10 @@ static bool canConstantFoldIntrinsic(Intrinsic::ID ID, bool IsStrictFP) {
   case Intrinsic::pdep:
   case Intrinsic::pext:
   case Intrinsic::launder_invariant_group:
+  case Intrinsic::masked_udiv:
+  case Intrinsic::masked_sdiv:
+  case Intrinsic::masked_urem:
+  case Intrinsic::masked_srem:
   case Intrinsic::masked_load:
   case Intrinsic::get_active_lane_mask:
   case Intrinsic::mask_beforefirst:
@@ -4308,6 +4312,18 @@ static Constant *ConstantFoldScalarCall3(StringRef Name,
                                          const TargetLibraryInfo *TLI = nullptr,
                                          const CallBase *Call = nullptr) {
   assert(Operands.size() == 3 && "Wrong number of operands.");
+
+  if (unsigned Opcode = Intrinsic::getMaskedIntDivRemOpcode(IntrinsicID)) {
+    // Choose an inactive lane for undef masks. Disabled and poison mask lanes
+    // are poison without evaluating the ordinary operation.
+    if (isa<UndefValue>(Operands[2]) || Operands[2]->isNullValue())
+      return PoisonValue::get(Ty);
+    if (!Operands[2]->isOneValue())
+      return nullptr;
+    // Ordinary constant folding also refines exceptional enabled operations
+    // to poison. Fixed vectors reach this point one lane at a time.
+    return ConstantFoldBinaryInstruction(Opcode, Operands[0], Operands[1]);
+  }
 
   if (const auto *Op1 = dyn_cast<ConstantFP>(Operands[0])) {
     if (const auto *Op2 = dyn_cast<ConstantFP>(Operands[1])) {

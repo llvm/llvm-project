@@ -1873,8 +1873,17 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
         if (!Opc)
           continue;
         VPBuilder Builder(IntrR);
+        // Signed i1 masked div/rem is folded to 0 by simplifyRecipes before
+        // narrowing. A poison mask cannot make a safe operation undefined, even
+        // when narrowing a vector recipe to a single scalar operation.
+        assert(
+            !(IntrR->getScalarType()->isIntegerTy(1) &&
+              (Opc == Instruction::SDiv || Opc == Instruction::SRem)) &&
+            "Signed i1 masked div/rem should be simplified before narrowing");
+        VPValue *Mask =
+            Builder.createNaryOp(Instruction::Freeze, IntrR->getOperand(2));
         VPValue *SafeDivisor = Builder.createSelect(
-            IntrR->getOperand(2), IntrR->getOperand(1),
+            Mask, IntrR->getOperand(1),
             Plan.getConstantInt(IntrR->getScalarType(), 1));
         VPValue *Clone = Builder.createNaryOp(
             Opc, {IntrR->getOperand(0), SafeDivisor},
@@ -6251,6 +6260,10 @@ static CallWideningDecision decideCallWidening(VPInstruction &VPI,
   if (ID) {
     InstructionCost IntrinsicCost =
         VPWidenIntrinsicRecipe::computeCallCost(ID, Ops, VPI, VF, CostCtx);
+    if (MaskRequired && Intrinsic::getMaskedIntDivRemOpcode(ID))
+      IntrinsicCost += CostCtx.TTI.getArithmeticInstrCost(
+          Instruction::And, toVectorTy(Type::getInt1Ty(CI->getContext()), VF),
+          CostCtx.CostKind);
     if (IntrinsicCost.isValid() && ScalarCost >= IntrinsicCost &&
         (!VecFunc || VecCallCost >= IntrinsicCost))
       return CallWideningDecision::KindTy::Intrinsic;
@@ -6294,6 +6307,12 @@ bool VPlanTransforms::makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
       case CallWideningDecision::KindTy::Intrinsic: {
         Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, &CostCtx.TLI);
         Type *ResultTy = VPI.getScalarType();
+        if (VPI.isMasked() && Intrinsic::getMaskedIntDivRemOpcode(ID)) {
+          VPBuilder Builder(&VPI);
+          // Use logical AND (select) so a disabled block also suppresses a
+          // poison intrinsic mask, rather than enabling UB in that lane.
+          Ops[2] = Builder.createLogicalAnd(VPI.getMask(), Ops[2]);
+        }
         Replacement = new VPWidenIntrinsicRecipe(*CI, ID, Ops, ResultTy, VPI,
                                                  VPI, VPI.getDebugLoc());
         Widened = true;
