@@ -12,17 +12,22 @@
 /// Handles all cases of temporal divergence.
 /// For divergent non-phi i1 and uniform i1 uses outside of the cycle this pass
 /// currently depends on LCSSA to insert phis with one incoming.
+/// Also folds away the readfirstlanes AMDGPUInlineAsmLowering inserts for
+/// SGPR-constrained inline asm operands once uniformity proves them uniform.
 //
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
 #include "AMDGPUGlobalISelUtils.h"
 #include "SILowerI1Copies.h"
+#include "llvm/ADT/SmallSet.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineUniformityAnalysis.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/InitializePasses.h"
 
 #define DEBUG_TYPE "amdgpu-global-isel-divergence-lowering"
@@ -81,6 +86,9 @@ public:
 
   bool lowerTemporalDivergence();
   bool lowerTemporalDivergenceI1();
+  bool isOnlyUsedByInlineAsm(Register Reg) const;
+  bool foldUniformReadFirstLane();
+  bool foldSplitAsmOperand();
 };
 
 DivergenceLoweringHelper::DivergenceLoweringHelper(
@@ -295,6 +303,150 @@ bool DivergenceLoweringHelper::lowerTemporalDivergenceI1() {
   return false;
 }
 
+/// Returns true if \p Reg only reaches inline asm operands, possibly through
+/// the merge used to reassemble a split operand. This is a use-pattern match,
+/// not provenance: an instruction inserted in between only costs the fold.
+bool DivergenceLoweringHelper::isOnlyUsedByInlineAsm(Register Reg) const {
+  SmallVector<Register, 8> Worklist = {Reg};
+  SmallSet<Register, 8> Visited;
+  while (!Worklist.empty()) {
+    Register Current = Worklist.pop_back_val();
+    if (!Visited.insert(Current).second)
+      continue;
+    if (MRI->use_nodbg_empty(Current))
+      return false;
+
+    for (const MachineOperand &Use : MRI->use_nodbg_operands(Current)) {
+      const MachineInstr *UseMI = Use.getParent();
+      if (UseMI->isInlineAsm())
+        continue;
+      if (UseMI->isCopy()) {
+        // The copy target is the register the constraint selected.
+        Worklist.push_back(UseMI->getOperand(0).getReg());
+        continue;
+      }
+      switch (UseMI->getOpcode()) {
+      case TargetOpcode::G_BUILD_VECTOR:
+      case TargetOpcode::G_BUILD_VECTOR_TRUNC:
+      case TargetOpcode::G_MERGE_VALUES:
+      case TargetOpcode::G_CONCAT_VECTORS:
+      case TargetOpcode::G_UNMERGE_VALUES:
+      case TargetOpcode::G_EXTRACT:
+      case TargetOpcode::G_BITCAST:
+        for (const MachineOperand &Def : UseMI->defs())
+          Worklist.push_back(Def.getReg());
+        continue;
+      default:
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+/// Replace the readfirstlane of an operand the uniformity analysis proves
+/// uniform with a copy. A leftover readfirstlane is not incorrect, it just
+/// costs a round trip through a VGPR.
+bool DivergenceLoweringHelper::foldUniformReadFirstLane() {
+  bool Changed = false;
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : make_early_inc_range(MBB)) {
+      auto *GMI = dyn_cast<GIntrinsic>(&MI);
+      if (!GMI || !GMI->is(Intrinsic::amdgcn_readfirstlane))
+        continue;
+
+      Register Dst = GMI->getReg(0);
+      // The intrinsic ID comes after the defs, the argument follows it.
+      Register Src = MI.getOperand(GMI->getNumExplicitDefs() + 1).getReg();
+      // Folding a lane mask readfirstlane would bypass the lane mask lowering.
+      if (MRI->getType(Dst) == LLT::scalar(1) || MUI->isDivergentAtDef(Src) ||
+          !isOnlyUsedByInlineAsm(Dst))
+        continue;
+
+      B.setInstrAndDebugLoc(MI);
+      B.buildCopy(Dst, Src);
+      MI.eraseFromParent();
+      Changed = true;
+    }
+  }
+  return Changed;
+}
+
+/// Reassemble an operand the lowering split into dwords once its pieces are
+/// uniform, so a uniform 64-bit operand stays one s_mov_b64:
+///
+/// %bc = G_BITCAST %src; %lo, %hi = G_UNMERGE_VALUES %bc
+/// %m = G_BUILD_VECTOR %lo, %hi  ->  %m replaced with %bc
+bool DivergenceLoweringHelper::foldSplitAsmOperand() {
+  bool Changed = false;
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : make_early_inc_range(MBB)) {
+      if (MI.getOpcode() != TargetOpcode::G_BUILD_VECTOR &&
+          MI.getOpcode() != TargetOpcode::G_MERGE_VALUES)
+        continue;
+
+      Register Dst = MI.getOperand(0).getReg();
+      if (!isOnlyUsedByInlineAsm(Dst))
+        continue;
+
+      // All pieces have to come from the same unmerge, in order. Remember the
+      // copies in between so the whole chain can be deleted again.
+      SmallVector<Register, 8> Chain;
+      GUnmerge *Unmerge = nullptr;
+      bool IsSplit = true;
+      for (unsigned I = 1; I != MI.getNumOperands() && IsSplit; ++I) {
+        Register Piece = MI.getOperand(I).getReg();
+        while (MachineInstr *Def = MRI->getVRegDef(Piece)) {
+          if (!Def->isCopy() || !MRI->hasOneUse(Piece))
+            break;
+          Register CopySrc = Def->getOperand(1).getReg();
+          if (!CopySrc.isVirtual())
+            break;
+          Chain.push_back(Piece);
+          Piece = CopySrc;
+        }
+
+        auto *Def = dyn_cast_or_null<GUnmerge>(MRI->getVRegDef(Piece));
+        if (!Def || (Unmerge && Def != Unmerge) ||
+            Def->findRegisterDefOperandIdx(Piece, nullptr) != int(I) - 1) {
+          IsSplit = false;
+          break;
+        }
+        Unmerge = Def;
+      }
+
+      if (!IsSplit || !Unmerge)
+        continue;
+      Register SplitSrc = Unmerge->getSourceReg();
+      if (MRI->getType(SplitSrc) != MRI->getType(Dst))
+        continue;
+
+      for (const MachineOperand &Def : Unmerge->defs())
+        Chain.push_back(Def.getReg());
+
+      MRI->replaceRegWith(Dst, SplitSrc);
+      MI.eraseFromParent();
+      Changed = true;
+
+      // Iterate until nothing dies: the pieces only become dead after the
+      // copies that carried the readfirstlane result are gone.
+      bool Erased = true;
+      while (Erased) {
+        Erased = false;
+        for (Register Reg : Chain) {
+          MachineInstr *Def = MRI->getVRegDef(Reg);
+          if (!Def || !Def->isDead(*MRI))
+            continue;
+          Def->eraseFromParent();
+          Erased = true;
+        }
+      }
+    }
+  }
+
+  return Changed;
+}
+
 static bool runDivergenceLowering(MachineFunction &MF, MachineDominatorTree &DT,
                                   MachinePostDominatorTree &PDT,
                                   MachineUniformityInfo &MUI) {
@@ -316,6 +468,8 @@ static bool runDivergenceLowering(MachineFunction &MF, MachineDominatorTree &DT,
   // could also be handled by lowerPhis but we do it in lowerTempDivergenceI1
   // since in some case lowerPhis does unnecessary lane mask merging.
   Changed |= Helper.lowerPhis();
+  Changed |= Helper.foldUniformReadFirstLane();
+  Changed |= Helper.foldSplitAsmOperand();
   return Changed;
 }
 
