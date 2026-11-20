@@ -17,15 +17,14 @@
 #include "HWModel.h"
 #include "Simulator.h"
 #include "llvm/Support/ErrorHandling.h"
-#include <memory>
 
 namespace llvm {
 namespace AMDGPUSim {
 
-inline std::unique_ptr<HWModel> createHWModel(GPUTarget Target) {
+inline GFX1250HWModel createHWModel(GPUTarget Target) {
   switch (Target) {
   case GPUTarget::GFX1250:
-    return std::make_unique<GFX1250HWModel>();
+    return GFX1250HWModel();
   }
   llvm_unreachable("unknown GPU target");
 }

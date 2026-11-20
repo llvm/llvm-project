@@ -30,6 +30,7 @@ using WaitRequirements = SmallVector<WaitRequirement, 2>;
 /// adapter.
 class SimInstInfo {
 public:
+  /// Virtual destructor to allow derivations to be deleted.
   virtual ~SimInstInfo() = default;
 
   /// Return execution unit occupancy in cycles for resource modeling and long

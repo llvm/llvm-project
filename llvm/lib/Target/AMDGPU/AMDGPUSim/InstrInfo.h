@@ -16,63 +16,26 @@
 
 #include "SimInst.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/ErrorHandling.h"
 
 namespace llvm {
 namespace AMDGPUSim {
 
 /// Dominant cause of an instruction issue stall.
 enum class StallReason : uint8_t {
-  /// No categorized stall source.
-  NONE = 0,
-  /// A functional unit or VALU resource is unavailable.
-  FU_BUSY,
-  /// A coexecution window or scaled WMMA LD_SCALE slot blocks issue.
-  COEXEC_BLOCKED,
-  /// An active WMMA window blocks a long latency VALU until the window ends.
-  LONG_LAT_VALU,
-  /// A TRANS or long latency VALU must preserve issue spacing of two cycles.
-  LOLVALU_TRANS_HAZARD,
-  /// A SALU waits for an active VALU or WMMA SGPR read.
-  VA_SSRC_STALL,
-  /// The VaVdst count exceeds the requested DEPCTR target.
-  VA_VDST_WAIT,
-  /// A modeled wait counter other than VaVdst has not reached its threshold.
-  WAITCNT,
-  /// A current or deferred S_DELAY_ALU dependency is not ready.
-  DELAY_ALU,
-  /// A DS, VMEM, or TDM issue queue is at capacity.
-  MEM_FIFO,
-  /// An unfused and unmasked S_SET_VGPR_MSB consumes one cycle.
-  MSB_SET_EXPOSED
+#define AMDGPUSIM_STALL_REASON(Name, Label) Name,
+#include "SimEnums.def"
 };
 
 /// Return a stable label for \p Reason, or null when Reason is NONE.
 inline const char *getStallReasonString(StallReason Reason) {
   switch (Reason) {
-  case StallReason::NONE:
-    return nullptr;
-  case StallReason::FU_BUSY:
-    return "FU busy";
-  case StallReason::COEXEC_BLOCKED:
-    return "CoExec blocked";
-  case StallReason::LONG_LAT_VALU:
-    return "LongLatVALU blocked";
-  case StallReason::LOLVALU_TRANS_HAZARD:
-    return "LOLVALU<->TRANS hazard";
-  case StallReason::VA_SSRC_STALL:
-    return "VA_SSRC blocked";
-  case StallReason::VA_VDST_WAIT:
-    return "VA_VDST wait";
-  case StallReason::WAITCNT:
-    return "WaitCnt";
-  case StallReason::DELAY_ALU:
-    return "DelayAlu";
-  case StallReason::MEM_FIFO:
-    return "FIFO full";
-  case StallReason::MSB_SET_EXPOSED:
-    return "MSB exposed";
+#define AMDGPUSIM_STALL_REASON(Name, Label)                                    \
+  case StallReason::Name:                                                      \
+    return Label;
+#include "SimEnums.def"
   }
-  return "Unknown";
+  llvm_unreachable("unknown stall reason");
 }
 
 /// Stall sources measured in cycles while determining instruction issue.
@@ -117,6 +80,11 @@ struct InstrSimInfo {
   StallReason Reason = StallReason::NONE;
   StallBreakdown Breakdown;
 
+  /// Whether this instruction was classified as WMMA.
+  bool IsWMMA = false;
+  /// Modeled coexecution window pattern, or empty when no window is modeled.
+  StringRef WMMAPattern;
+
   // WMMA window snapshot captured during stall evaluation.
   bool InWMMAWindow = false;
   uint8_t WMMAStage = 0;
@@ -133,10 +101,6 @@ struct InstrSimInfo {
   /// Whether an exposed S_SET_VGPR_MSB consumes no cycle because the next
   /// instruction already has a coexecution delay.
   bool WasMasked = false;
-  /// Whether this instruction was classified as WMMA.
-  bool IsWMMA = false;
-  /// Modeled coexecution window pattern, or empty when no window is modeled.
-  StringRef WMMAPattern;
 
   /// Return the dominant stall reason name, or null when Reason is NONE.
   const char *getReasonString() const { return getStallReasonString(Reason); }

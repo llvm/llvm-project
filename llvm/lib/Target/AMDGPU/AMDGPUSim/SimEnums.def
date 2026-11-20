@@ -1,0 +1,96 @@
+//===--- SimEnums.def -----------------------------------------*- C++ -*---===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file contains descriptions of the instruction classes, functional
+// units, and stall reasons used by the static simulator.
+//
+//===----------------------------------------------------------------------===//
+
+// NOTE: NO INCLUDE GUARD DESIRED!
+
+// clang-format off
+
+// Provide empty defaults so that users of this file only define the table
+// they need.
+//
+// AMDGPUSIM_INST_CLASS(Name, Unit, Flavor) describes an instruction class,
+// the FunctionalUnit it occupies, and the AMDGPU::InstructionFlavor it uses in
+// shared coexecution windows.
+#ifndef AMDGPUSIM_INST_CLASS
+#define AMDGPUSIM_INST_CLASS(Name, Unit, Flavor)
+#endif
+
+// AMDGPUSIM_FUNCTIONAL_UNIT(Name) describes a structural execution unit.
+#ifndef AMDGPUSIM_FUNCTIONAL_UNIT
+#define AMDGPUSIM_FUNCTIONAL_UNIT(Name)
+#endif
+
+// AMDGPUSIM_STALL_REASON(Name, Label) describes a stall reason and its report
+// label. NONE has a null label.
+#ifndef AMDGPUSIM_STALL_REASON
+#define AMDGPUSIM_STALL_REASON(Name, Label)
+#endif
+
+AMDGPUSIM_INST_CLASS(VALU,           VALU,   SingleCycleVALU)
+AMDGPUSIM_INST_CLASS(SALU,           SALU,   SALU)
+AMDGPUSIM_INST_CLASS(TRANS,          TRANS,  TRANS)
+AMDGPUSIM_INST_CLASS(WMMA,           XDL,    WMMA)
+AMDGPUSIM_INST_CLASS(DS_READ,        LDS,    DS)
+AMDGPUSIM_INST_CLASS(DS_WRITE,       LDS,    DS)
+AMDGPUSIM_INST_CLASS(VMEM_READ,      VMEM,   VMEM)
+AMDGPUSIM_INST_CLASS(VMEM_WRITE,     VMEM,   VMEM)
+AMDGPUSIM_INST_CLASS(SMEM,           SMEM,   SMEM)
+AMDGPUSIM_INST_CLASS(TDM,            LDS,    DMA)
+AMDGPUSIM_INST_CLASS(BARRIER,        NONE,   Fence)
+AMDGPUSIM_INST_CLASS(BARRIER_SIGNAL, NONE,   Fence)
+AMDGPUSIM_INST_CLASS(BARRIER_WAIT,   NONE,   Fence)
+AMDGPUSIM_INST_CLASS(WAITCNT,        NONE,   Fence)
+AMDGPUSIM_INST_CLASS(DELAY_ALU,      SALU,   Other)
+AMDGPUSIM_INST_CLASS(MSB_SET,        SALU,   Other)
+AMDGPUSIM_INST_CLASS(NOP,            NONE,   SALU)
+AMDGPUSIM_INST_CLASS(BRANCH,         BRANCH, SALU)
+AMDGPUSIM_INST_CLASS(OTHER,          NONE,   Other)
+
+AMDGPUSIM_FUNCTIONAL_UNIT(NONE)
+AMDGPUSIM_FUNCTIONAL_UNIT(XDL)
+AMDGPUSIM_FUNCTIONAL_UNIT(VALU)
+AMDGPUSIM_FUNCTIONAL_UNIT(SALU)
+AMDGPUSIM_FUNCTIONAL_UNIT(TRANS)
+AMDGPUSIM_FUNCTIONAL_UNIT(LDS)
+AMDGPUSIM_FUNCTIONAL_UNIT(VMEM)
+AMDGPUSIM_FUNCTIONAL_UNIT(SMEM)
+AMDGPUSIM_FUNCTIONAL_UNIT(BRANCH)
+
+// No categorized stall source.
+AMDGPUSIM_STALL_REASON(NONE,                 nullptr)
+// A functional unit or VALU resource is unavailable.
+AMDGPUSIM_STALL_REASON(FU_BUSY,              "FU busy")
+// A coexecution window or scaled WMMA LD_SCALE slot blocks issue.
+AMDGPUSIM_STALL_REASON(COEXEC_BLOCKED,       "CoExec blocked")
+// An active WMMA window blocks a long latency VALU until the window ends.
+AMDGPUSIM_STALL_REASON(LONG_LAT_VALU,        "LongLatVALU blocked")
+// A TRANS or long latency VALU must preserve issue spacing of two cycles.
+AMDGPUSIM_STALL_REASON(LOLVALU_TRANS_HAZARD, "LOLVALU<->TRANS hazard")
+// A SALU waits for an active VALU or WMMA SGPR read.
+AMDGPUSIM_STALL_REASON(VA_SSRC_STALL,        "VA_SSRC blocked")
+// The VaVdst count exceeds the requested DEPCTR target.
+AMDGPUSIM_STALL_REASON(VA_VDST_WAIT,         "VA_VDST wait")
+// A modeled wait counter other than VaVdst has not reached its threshold.
+AMDGPUSIM_STALL_REASON(WAITCNT,              "WaitCnt")
+// A current or deferred S_DELAY_ALU dependency is not ready.
+AMDGPUSIM_STALL_REASON(DELAY_ALU,            "DelayAlu")
+// A DS, VMEM, or TDM issue queue is at capacity.
+AMDGPUSIM_STALL_REASON(MEM_FIFO,             "FIFO full")
+// An unfused and unmasked S_SET_VGPR_MSB consumes one cycle.
+AMDGPUSIM_STALL_REASON(MSB_SET_EXPOSED,      "MSB exposed")
+
+// clang-format on
+
+#undef AMDGPUSIM_INST_CLASS
+#undef AMDGPUSIM_FUNCTIONAL_UNIT
+#undef AMDGPUSIM_STALL_REASON

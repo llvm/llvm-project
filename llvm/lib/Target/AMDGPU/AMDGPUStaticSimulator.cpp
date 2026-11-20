@@ -30,7 +30,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <iterator>
-#include <memory>
 
 using namespace llvm;
 using namespace llvm::AMDGPU;
@@ -432,12 +431,12 @@ static StaticSimulatorReport
 analyzeFunction(MachineFunction &MF, const SIInstrInfo &TII, bool Verbose) {
   StaticSimulatorReport Report;
   MachineInstrInfo MII(TII, TII.getRegisterInfo());
-  std::unique_ptr<HWModel> Model = createHWModel(GPUTarget::GFX1250);
+  GFX1250HWModel Model = createHWModel(GPUTarget::GFX1250);
 
   SimulatorConfig Config;
   Config.Verbose = Verbose;
   Config.Log = Verbose ? &dbgs() : nullptr;
-  Simulator Sim(MII, *Model, Config);
+  Simulator Sim(MII, Model, Config);
 
   for (MachineBasicBlock &MBB : MF) {
     StaticSimulatorBlockMetrics Metrics = analyzeBlock(MBB, Sim, MII, Verbose);

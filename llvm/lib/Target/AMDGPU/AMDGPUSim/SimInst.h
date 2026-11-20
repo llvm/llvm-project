@@ -16,6 +16,7 @@
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUSIM_SIMINST_H
 
 #include "AMDGPUCoExecInfo.h"
+#include "llvm/Support/ErrorHandling.h"
 #include <cstdint>
 
 namespace llvm {
@@ -23,146 +24,50 @@ namespace AMDGPUSim {
 
 /// Instruction classes used to select simulator timing behavior.
 enum class InstClass : uint8_t {
-  VALU,
-  SALU,
-  TRANS,
-  WMMA,
-  DS_READ,
-  DS_WRITE,
-  VMEM_READ,
-  VMEM_WRITE,
-  SMEM,
-  TDM,
-  BARRIER,
-  BARRIER_SIGNAL,
-  BARRIER_WAIT,
-  WAITCNT,
-  DELAY_ALU,
-  MSB_SET,
-  NOP,
-  BRANCH,
-  OTHER
+#define AMDGPUSIM_INST_CLASS(Name, Unit, Flavor) Name,
+#include "SimEnums.def"
 };
 
 /// Structural execution units tracked for resource occupancy and issue stalls.
 enum class FunctionalUnit : uint8_t {
-  NONE = 0,
-  XDL,
-  VALU,
-  SALU,
-  TRANS,
-  LDS,
-  VMEM,
-  SMEM,
-  BRANCH,
+#define AMDGPUSIM_FUNCTIONAL_UNIT(Name) Name,
+#include "SimEnums.def"
   NUM_UNITS
 };
 
 /// Return the textual representation of \p IC.
 inline const char *getInstClassName(InstClass IC) {
   switch (IC) {
-  case InstClass::VALU:
-    return "VALU";
-  case InstClass::SALU:
-    return "SALU";
-  case InstClass::TRANS:
-    return "TRANS";
-  case InstClass::WMMA:
-    return "WMMA";
-  case InstClass::DS_READ:
-    return "DS_READ";
-  case InstClass::DS_WRITE:
-    return "DS_WRITE";
-  case InstClass::VMEM_READ:
-    return "VMEM_READ";
-  case InstClass::VMEM_WRITE:
-    return "VMEM_WRITE";
-  case InstClass::SMEM:
-    return "SMEM";
-  case InstClass::TDM:
-    return "TDM";
-  case InstClass::BARRIER:
-    return "BARRIER";
-  case InstClass::BARRIER_SIGNAL:
-    return "BARRIER_SIGNAL";
-  case InstClass::BARRIER_WAIT:
-    return "BARRIER_WAIT";
-  case InstClass::WAITCNT:
-    return "WAITCNT";
-  case InstClass::DELAY_ALU:
-    return "DELAY_ALU";
-  case InstClass::MSB_SET:
-    return "MSB_SET";
-  case InstClass::NOP:
-    return "NOP";
-  case InstClass::BRANCH:
-    return "BRANCH";
-  case InstClass::OTHER:
-    return "OTHER";
+#define AMDGPUSIM_INST_CLASS(Name, Unit, Flavor)                               \
+  case InstClass::Name:                                                        \
+    return #Name;
+#include "SimEnums.def"
   }
-  return "UNKNOWN";
+  llvm_unreachable("unknown instruction class");
 }
 
 /// Return the textual representation of \p Unit.
 inline const char *getUnitName(FunctionalUnit Unit) {
   switch (Unit) {
-  case FunctionalUnit::NONE:
-    return "NONE";
-  case FunctionalUnit::XDL:
-    return "XDL";
-  case FunctionalUnit::VALU:
-    return "VALU";
-  case FunctionalUnit::SALU:
-    return "SALU";
-  case FunctionalUnit::TRANS:
-    return "TRANS";
-  case FunctionalUnit::LDS:
-    return "LDS";
-  case FunctionalUnit::VMEM:
-    return "VMEM";
-  case FunctionalUnit::SMEM:
-    return "SMEM";
-  case FunctionalUnit::BRANCH:
-    return "BRANCH";
+#define AMDGPUSIM_FUNCTIONAL_UNIT(Name)                                        \
+  case FunctionalUnit::Name:                                                   \
+    return #Name;
+#include "SimEnums.def"
   case FunctionalUnit::NUM_UNITS:
-    return "NUM_UNITS";
+    break;
   }
-  return "UNKNOWN";
+  llvm_unreachable("unknown functional unit");
 }
 
 /// Return the structural unit occupied by \p IC.
 inline FunctionalUnit getUnitForClass(InstClass IC) {
   switch (IC) {
-  case InstClass::WMMA:
-    return FunctionalUnit::XDL;
-  case InstClass::VALU:
-    return FunctionalUnit::VALU;
-  case InstClass::TRANS:
-    return FunctionalUnit::TRANS;
-  case InstClass::SALU:
-  case InstClass::DELAY_ALU:
-  case InstClass::MSB_SET:
-    return FunctionalUnit::SALU;
-  case InstClass::DS_READ:
-  case InstClass::DS_WRITE:
-  case InstClass::TDM:
-    return FunctionalUnit::LDS;
-  case InstClass::VMEM_READ:
-  case InstClass::VMEM_WRITE:
-    return FunctionalUnit::VMEM;
-  case InstClass::SMEM:
-    return FunctionalUnit::SMEM;
-  case InstClass::BRANCH:
-    return FunctionalUnit::BRANCH;
-  case InstClass::BARRIER:
-  case InstClass::BARRIER_SIGNAL:
-  case InstClass::BARRIER_WAIT:
-  case InstClass::WAITCNT:
-  case InstClass::NOP:
-  case InstClass::OTHER:
-    return FunctionalUnit::NONE;
+#define AMDGPUSIM_INST_CLASS(Name, Unit, Flavor)                               \
+  case InstClass::Name:                                                        \
+    return FunctionalUnit::Unit;
+#include "SimEnums.def"
   }
-  return FunctionalUnit::NONE;
+  llvm_unreachable("unknown instruction class");
 }
 
 /// Wait counter domains modeled by the simulator.

@@ -53,9 +53,6 @@ AMDGPU::CoExecMaskT getCoExecMask(InstClass IC);
 /// Target resource limits consumed by the static simulator.
 class HWModel {
 public:
-  virtual ~HWModel() = default;
-  virtual GPUTarget getTarget() const = 0;
-
   /// Maximum operations accepted before the corresponding FIFO stalls.
   /// The default value leaves the capacity unbounded.
   unsigned MaxDSInFlight = ~0u;
@@ -65,16 +62,12 @@ public:
   /// Scale factor from VALU latency to VaVdst write readiness.
   /// Concrete models must replace the unset default.
   unsigned VaVdstMultiplier = ~0u;
-
-protected:
-  HWModel() = default;
 };
 
 /// GFX1250 resource limits for single wave simulation.
 class GFX1250HWModel final : public HWModel {
 public:
   GFX1250HWModel();
-  GPUTarget getTarget() const override { return GPUTarget::GFX1250; }
 };
 
 } // namespace AMDGPUSim

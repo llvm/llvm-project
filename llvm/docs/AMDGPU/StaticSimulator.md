@@ -152,17 +152,19 @@ from the underlying instruction type. The simulator queries:
 - Memory FIFO depths
 - VA_VDST multiplier
 
-`HWModel` is an abstract base declaring the hardware parameter fields, which
+`HWModel` is a base class declaring the hardware parameter fields, which
 default to `~0u` (a deliberately invalid "unset" sentinel). Concrete subclasses
 set target-specific values in their constructor. The only subclass today is
-`GFX1250HWModel`. Obtain one via the factory `createHWModel(GPUTarget)`, which
-returns `std::unique_ptr<HWModel>`.
+`GFX1250HWModel`. Obtain one by value via the factory
+`createHWModel(GPUTarget)`. `HWModel` has no virtual destructor, so hold models
+by value and pass them to `Simulator` as `const HWModel &`.
 
 Note that per-class default latencies (`getLatencyForClass`) and the latency
 and capacity constants in the `GFX1250` namespace are gfx1250 values baked in
 as `constexpr`, not part of the subclass. WMMA co-execution windows come from
 the shared `AMDGPUCoExecInfo.h` model. Adding a target today requires a
-`GPUTarget` enum value, a new `HWModel` subclass, and a factory case.
+`GPUTarget` enum value, a new `HWModel` subclass, and a factory change, since
+`createHWModel` returns `GFX1250HWModel`.
 
 ### `GPUSimState`
 
@@ -237,7 +239,7 @@ branch relaxation in `GCNPassConfig::addPreEmitPass()` when
 `-amdgpu-enable-static-simulator` is set. For each function it:
 1. skips subtargets without `hasGFX1250Insts()`
 2. warns when expert scheduling mode is not enabled
-3. creates a `MachineInstrInfo` adapter, a GFX1250 `HWModel` from
+3. creates a `MachineInstrInfo` adapter, a `GFX1250HWModel` from
    `createHWModel()`, and one `Simulator`, then walks the blocks once in
    layout order. Bundle headers and meta instructions are skipped. Each
    remaining instruction is passed to `simulateInst()`, with the next

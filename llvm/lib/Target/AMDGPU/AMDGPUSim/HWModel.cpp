@@ -51,35 +51,10 @@ unsigned getLatencyForClass(InstClass IC) {
 // coexecution windows.
 static AMDGPU::InstructionFlavor getInstructionFlavor(InstClass IC) {
   switch (IC) {
-  case InstClass::VALU:
-    return AMDGPU::InstructionFlavor::SingleCycleVALU;
-  case InstClass::TRANS:
-    return AMDGPU::InstructionFlavor::TRANS;
-  case InstClass::WMMA:
-    return AMDGPU::InstructionFlavor::WMMA;
-  case InstClass::SALU:
-  case InstClass::BRANCH:
-  case InstClass::NOP:
-    return AMDGPU::InstructionFlavor::SALU;
-  case InstClass::DS_READ:
-  case InstClass::DS_WRITE:
-    return AMDGPU::InstructionFlavor::DS;
-  case InstClass::VMEM_READ:
-  case InstClass::VMEM_WRITE:
-    return AMDGPU::InstructionFlavor::VMEM;
-  case InstClass::SMEM:
-    return AMDGPU::InstructionFlavor::SMEM;
-  case InstClass::TDM:
-    return AMDGPU::InstructionFlavor::DMA;
-  case InstClass::BARRIER:
-  case InstClass::BARRIER_SIGNAL:
-  case InstClass::BARRIER_WAIT:
-  case InstClass::WAITCNT:
-    return AMDGPU::InstructionFlavor::Fence;
-  case InstClass::DELAY_ALU:
-  case InstClass::MSB_SET:
-  case InstClass::OTHER:
-    return AMDGPU::InstructionFlavor::Other;
+#define AMDGPUSIM_INST_CLASS(Name, Unit, Flavor)                               \
+  case InstClass::Name:                                                        \
+    return AMDGPU::InstructionFlavor::Flavor;
+#include "SimEnums.def"
   }
   llvm_unreachable("unknown instruction class");
 }

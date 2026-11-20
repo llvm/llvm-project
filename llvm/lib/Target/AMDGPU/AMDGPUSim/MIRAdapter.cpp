@@ -43,18 +43,14 @@ InstClass MachineInstrInfo::classifyInst(const MachineInstr &MI) const {
   if (Opc == AMDGPU::S_SET_VGPR_MSB)
     return InstClass::MSB_SET;
 
-  if (Opc == AMDGPU::S_BARRIER_SIGNAL_M0 ||
-      Opc == AMDGPU::S_BARRIER_SIGNAL_ISFIRST_M0 ||
-      Opc == AMDGPU::S_BARRIER_SIGNAL_IMM ||
-      Opc == AMDGPU::S_BARRIER_SIGNAL_ISFIRST_IMM)
+  if (Opc == AMDGPU::S_BARRIER)
+    return InstClass::BARRIER;
+  if (TII.isBarrierStart(Opc))
     return InstClass::BARRIER_SIGNAL;
   if (Opc == AMDGPU::S_BARRIER_WAIT)
     return InstClass::BARRIER_WAIT;
-  if (Opc == AMDGPU::S_BARRIER)
-    return InstClass::BARRIER;
 
-  if (TII.isWaitcnt(Opc) || Opc == AMDGPU::S_WAITCNT_DEPCTR ||
-      Opc == AMDGPU::S_WAIT_XCNT || Opc == AMDGPU::S_WAIT_TENSORCNT)
+  if (TII.isWaitcnt(Opc) || Opc == AMDGPU::S_WAITCNT_DEPCTR)
     return InstClass::WAITCNT;
 
   if (MI.isBranch())
@@ -63,13 +59,7 @@ InstClass MachineInstrInfo::classifyInst(const MachineInstr &MI) const {
   if (TII.isXDLWMMA(MI))
     return InstClass::WMMA;
 
-  if (Opc == AMDGPU::TENSOR_LOAD_TO_LDS_d4 ||
-      Opc == AMDGPU::TENSOR_LOAD_TO_LDS_d2 ||
-      Opc == AMDGPU::TENSOR_STORE_FROM_LDS_d4 ||
-      Opc == AMDGPU::TENSOR_STORE_FROM_LDS_d2 ||
-      Opc == AMDGPU::TENSOR_LOAD_TO_LDS_d4_gfx1250 ||
-      Opc == AMDGPU::TENSOR_LOAD_TO_LDS_d2_gfx1250 ||
-      AMDGPU::isTensorStore(Opc))
+  if (SIInstrInfo::usesTENSOR_CNT(MI))
     return InstClass::TDM;
 
   if (SIInstrFlags::isDS(MI)) {
