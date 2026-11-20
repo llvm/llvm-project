@@ -1100,6 +1100,10 @@ std::optional<ObjCSelectorNames> llvm::getObjCNamesIfSelector(StringRef Name) {
 
   ObjCSelectorNames Ans;
   Ans.ClassName = ClassNameStart.take_front(FirstSpace);
+  // "-[ sel]" has a selector but no class name. ClassName is documented to be
+  // non-empty on success, and back() below requires it.
+  if (Ans.ClassName.empty())
+    return std::nullopt;
   Ans.Selector = SelectorStart.drop_back(); // drop ']';
 
   // "-[Class(Category) selector :withArg ...]"

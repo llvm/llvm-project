@@ -311,4 +311,18 @@ TEST(DWARFDebugNames, TestStripTemplateParameters) {
   ASSERT_FALSE(stripped_name.has_value());
 }
 
+TEST(DWARFDebugNames, ObjCSelectorWithoutClassName) {
+  // "-[ sel]" has a selector but no class name. The documented contract says
+  // ClassName is never empty in the result, and the implementation used to
+  // call back() on the empty StringRef.
+  EXPECT_EQ(getObjCNamesIfSelector("-[ sel]"), std::nullopt);
+}
+
+TEST(DWARFDebugNames, ObjCSelectorWithClassName) {
+  std::optional<ObjCSelectorNames> Names = getObjCNamesIfSelector("-[A sel:]");
+  ASSERT_TRUE(Names.has_value());
+  EXPECT_EQ(Names->ClassName, "A");
+  EXPECT_EQ(Names->Selector, "sel:");
+}
+
 } // end anonymous namespace
