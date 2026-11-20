@@ -5765,11 +5765,11 @@ mlir::LogicalResult CIRToLLVMVTableGetVirtualFnOpLowering::matchAndRewrite(
   if (!resultType)
     return emitTypeConversionError(op, op.getType());
 
-  mlir::ModuleOp module = op->getParentOfType<mlir::ModuleOp>();
-  if (usesRelativeVTables(module)) {
+  mlir::ModuleOp mod = op->getParentOfType<mlir::ModuleOp>();
+  if (usesRelativeVTables(mod)) {
     // The entry is a function pointer relative to the address point.
     int64_t byteOffset =
-        op.getIndex() * cir::getVTableEntrySize(module, dataLayout);
+        op.getIndex() * cir::getVTableEntrySize(mod, dataLayout);
     rewriter.replaceOp(op, createVTableLoadRelative(
                                rewriter, op.getLoc(), adaptor.getVptr(),
                                mlir::LLVM::ConstantOp::create(
@@ -5827,14 +5827,14 @@ mlir::LogicalResult CIRToLLVMVTableGetOffsetOpLowering::matchAndRewrite(
 
   // The entry is the offset itself: load it from its slot, addressed by its
   // byte offset.
-  mlir::ModuleOp module = op->getParentOfType<mlir::ModuleOp>();
-  int64_t byteOffset =
-      op.getIndex() * cir::getVTableEntrySize(module, dataLayout);
+  mlir::ModuleOp mod = op->getParentOfType<mlir::ModuleOp>();
+  int64_t byteOffset = op.getIndex() * cir::getVTableEntrySize(mod, dataLayout);
 
-  if (usesRelativeVTables(module)) {
+  if (usesRelativeVTables(mod)) {
     // The offset is stored as a plain 32-bit integer, unlike the entries that
     // refer to other symbols.
-    auto i32Ty = rewriter.getI32Type();
+    mlir::Type entryTy =
+        rewriter.getIntegerType(cir::getVTableEntrySize(mod, dataLayout) * 8);
     mlir::Value byteOffsetVal = mlir::LLVM::ConstantOp::create(
         rewriter, op.getLoc(), rewriter.getI64Type(),
         rewriter.getI64IntegerAttr(byteOffset));
@@ -5844,8 +5844,8 @@ mlir::LogicalResult CIRToLLVMVTableGetOffsetOpLowering::matchAndRewrite(
         rewriter.getI8Type(), adaptor.getVptr(),
         llvm::ArrayRef<mlir::LLVM::GEPArg>{byteOffsetVal});
     mlir::Value offset =
-        mlir::LLVM::LoadOp::create(rewriter, op.getLoc(), i32Ty, slot,
-                                   dataLayout.getTypeABIAlignment(i32Ty));
+        mlir::LLVM::LoadOp::create(rewriter, op.getLoc(), entryTy, slot,
+                                   dataLayout.getTypeABIAlignment(entryTy));
     rewriter.replaceOpWithNewOp<mlir::LLVM::SExtOp>(op, resultType, offset);
     return mlir::success();
   }
@@ -5869,11 +5869,11 @@ mlir::LogicalResult CIRToLLVMVTableGetEntryOpLowering::matchAndRewrite(
   if (!resultType)
     return emitTypeConversionError(op, op.getType());
 
-  mlir::ModuleOp module = op->getParentOfType<mlir::ModuleOp>();
-  if (usesRelativeVTables(module)) {
+  mlir::ModuleOp mod = op->getParentOfType<mlir::ModuleOp>();
+  if (usesRelativeVTables(mod)) {
     // The entry is a pointer relative to the address point.
     int64_t byteOffset =
-        op.getIndex() * cir::getVTableEntrySize(module, dataLayout);
+        op.getIndex() * cir::getVTableEntrySize(mod, dataLayout);
     rewriter.replaceOp(op, createVTableLoadRelative(
                                rewriter, op.getLoc(), adaptor.getVptr(),
                                mlir::LLVM::ConstantOp::create(
