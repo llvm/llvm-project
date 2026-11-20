@@ -710,80 +710,72 @@ Module *Context::createModule(llvm::Module *LLVMM) {
 }
 
 void Context::runEraseInstrCallbacks(Instruction *I) {
-  for (const auto &[ID, CB, CBName] : EraseInstrCallbacks)
+  for (const auto &[ID, CB] : EraseInstrCallbacks)
     CB(I);
 }
 
 void Context::runCreateInstrCallbacks(Instruction *I) {
   for (auto &CBEntry : CreateInstrCallbacks)
-    CBEntry.Fn(I);
+    CBEntry.second(I);
 }
 
 void Context::runMoveInstrCallbacks(Instruction *I, const BBIterator &WhereIt) {
   for (auto &CBEntry : MoveInstrCallbacks)
-    CBEntry.Fn(I, WhereIt);
+    CBEntry.second(I, WhereIt);
 }
 
 void Context::runSetUseCallbacks(const Use &U, Value *NewSrc) {
   for (auto &CBEntry : SetUseCallbacks)
-    CBEntry.Fn(U, NewSrc);
+    CBEntry.second(U, NewSrc);
 }
 
 Context::CallbackID
-Context::registerEraseInstrCallback(EraseInstrCallback CB, StringRef CBName,
-                                    bool AllowDuplicateNames,
+Context::registerEraseInstrCallback(EraseInstrCallback CB,
                                     std::optional<CallbackID> BeforeID) {
-  return registerCallbackCommon(CB, CBName, AllowDuplicateNames,
-                                EraseInstrCallbacks, BeforeID);
+  return registerCallbackCommon(CB, EraseInstrCallbacks, BeforeID);
 }
 void Context::unregisterEraseInstrCallback(CallbackID ID) {
   [[maybe_unused]] auto It = find_if(
-      EraseInstrCallbacks, [ID](const auto &Entry) { return Entry.ID == ID; });
+      EraseInstrCallbacks, [ID](const auto &Pair) { return Pair.first == ID; });
   assert(It != EraseInstrCallbacks.end() &&
          "Callback ID not found in EraseInstrCallbacks during deregistration");
   EraseInstrCallbacks.erase(It);
 }
 
 Context::CallbackID
-Context::registerCreateInstrCallback(CreateInstrCallback CB, StringRef CBName,
-                                     bool AllowDuplicateNames,
+Context::registerCreateInstrCallback(CreateInstrCallback CB,
                                      std::optional<CallbackID> BeforeID) {
-  return registerCallbackCommon(CB, CBName, AllowDuplicateNames,
-                                CreateInstrCallbacks, BeforeID);
+  return registerCallbackCommon(CB, CreateInstrCallbacks, BeforeID);
 }
 void Context::unregisterCreateInstrCallback(CallbackID ID) {
   auto It = find_if(CreateInstrCallbacks,
-                    [ID](const auto &Entry) { return Entry.ID == ID; });
+                    [ID](const auto &Pair) { return Pair.first == ID; });
   assert(It != CreateInstrCallbacks.end() &&
          "Callback ID not found in CreateInstrCallbacks during deregistration");
   CreateInstrCallbacks.erase(It);
 }
 
 Context::CallbackID
-Context::registerMoveInstrCallback(MoveInstrCallback CB, StringRef CBName,
-                                   bool AllowDuplicateNames,
+Context::registerMoveInstrCallback(MoveInstrCallback CB,
                                    std::optional<CallbackID> BeforeID) {
-  return registerCallbackCommon(CB, CBName, AllowDuplicateNames,
-                                MoveInstrCallbacks, BeforeID);
+  return registerCallbackCommon(CB, MoveInstrCallbacks, BeforeID);
 }
 void Context::unregisterMoveInstrCallback(CallbackID ID) {
   [[maybe_unused]] auto It = find_if(
-      MoveInstrCallbacks, [ID](const auto &Entry) { return Entry.ID == ID; });
+      MoveInstrCallbacks, [ID](const auto &Pair) { return Pair.first == ID; });
   assert(It != MoveInstrCallbacks.end() &&
          "Callback ID not found in MoveInstrCallbacks during deregistration");
   MoveInstrCallbacks.erase(It);
 }
 
 Context::CallbackID
-Context::registerSetUseCallback(SetUseCallback CB, StringRef CBName,
-                                bool AllowDuplicateNames,
+Context::registerSetUseCallback(SetUseCallback CB,
                                 std::optional<CallbackID> BeforeID) {
-  return registerCallbackCommon(CB, CBName, AllowDuplicateNames,
-                                SetUseCallbacks, BeforeID);
+  return registerCallbackCommon(CB, SetUseCallbacks, BeforeID);
 }
 void Context::unregisterSetUseCallback(CallbackID ID) {
   [[maybe_unused]] auto It = find_if(
-      SetUseCallbacks, [ID](const auto &Entry) { return Entry.ID == ID; });
+      SetUseCallbacks, [ID](const auto &Pair) { return Pair.first == ID; });
   assert(It != SetUseCallbacks.end() &&
          "Callback ID not found in SetUseCallbacks during deregistration");
   SetUseCallbacks.erase(It);

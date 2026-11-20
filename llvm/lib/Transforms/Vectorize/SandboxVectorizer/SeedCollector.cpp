@@ -174,14 +174,12 @@ SeedCollector::SeedCollector(BasicBlock *BB, ScalarEvolution &SE,
   if (!CollectStores && !CollectLoads)
     return;
 
-  EraseCallbackID = Ctx.registerEraseInstrCallback(
-      [this](Instruction *I) {
-        if (auto SI = dyn_cast<StoreInst>(I))
-          StoreSeeds.erase(SI);
-        else if (auto LI = dyn_cast<LoadInst>(I))
-          LoadSeeds.erase(LI);
-      },
-      "SeedCollector");
+  EraseCallbackID = Ctx.registerEraseInstrCallback([this](Instruction *I) {
+    if (auto SI = dyn_cast<StoreInst>(I))
+      StoreSeeds.erase(SI);
+    else if (auto LI = dyn_cast<LoadInst>(I))
+      LoadSeeds.erase(LI);
+  });
 
   // Actually collect the seeds.
   const VectorizeOptions &Opts = getVectorizeOptions(Ctx);

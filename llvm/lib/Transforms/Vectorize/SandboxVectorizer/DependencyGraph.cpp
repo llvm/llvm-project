@@ -611,13 +611,12 @@ void DependencyGraph::notifyMoveInstr(Instruction *I, const BBIterator &To) {
   // the borders, i.e., right before the top or right after the bottom.
   assert(To.getNodeParent() == I->getParent() &&
          "TODO: We don't support movement across BBs!");
-  bool A = To == std::next(DAGInterval.bottom()->getIterator());
-  bool B =
-      (To != BB->end() && std::next(To) == DAGInterval.top()->getIterator());
-  bool C = (To != BB->end() && DAGInterval.contains(&*To));
-  assert((A || B || C) &&
-         "TODO: To should be either within the DAGInterval or right "
-         "before/after it.");
+  assert(
+      (To == std::next(DAGInterval.bottom()->getIterator()) ||
+       (To != BB->end() && std::next(To) == DAGInterval.top()->getIterator()) ||
+       (To != BB->end() && DAGInterval.contains(&*To))) &&
+      "TODO: To should be either within the DAGInterval or right "
+      "before/after it.");
 
   // Make a copy of the DAGInterval before we update it.
   auto OrigDAGInterval = DAGInterval;

@@ -96,25 +96,18 @@ protected:
   /// Type objects.
   DenseMap<llvm::Type *, std::unique_ptr<Type, TypeDeleter>> LLVMTypeToTypeMap;
 
-  template <typename FnT> struct CallbackEntry {
-    CallbackEntry(CallbackID ID, FnT Fn, StringRef CBName)
-        : ID(ID), Fn(Fn), CBName(CBName) {}
-    CallbackID ID;
-    FnT Fn;
-    std::string CBName;
-  };
   /// Callbacks called when an IR instruction is about to get erased. CallbackID
   /// is used as an identifier for deregistration.
-  SmallVector<CallbackEntry<EraseInstrCallback>> EraseInstrCallbacks;
+  SmallVector<std::pair<CallbackID, EraseInstrCallback>> EraseInstrCallbacks;
   /// Callbacks called when an IR instruction is about to get created.
   /// CallbackID is used as an identifier for deregistration.
-  SmallVector<CallbackEntry<CreateInstrCallback>> CreateInstrCallbacks;
+  SmallVector<std::pair<CallbackID, CreateInstrCallback>> CreateInstrCallbacks;
   /// Callbacks called when an IR instruction is about to get moved. CallbackID
   /// is used as an identifier for deregistration.
-  SmallVector<CallbackEntry<MoveInstrCallback>> MoveInstrCallbacks;
+  SmallVector<std::pair<CallbackID, MoveInstrCallback>> MoveInstrCallbacks;
   /// Callbacks called when a Use gets its source set. CallbackID is used as an
   /// identifier for deregistration.
-  SmallVector<CallbackEntry<SetUseCallback>> SetUseCallbacks;
+  SmallVector<std::pair<CallbackID, SetUseCallback>> SetUseCallbacks;
 
   /// A counter used for assigning callback IDs during registration. The same
   /// counter is used for all kinds of callbacks so we can detect mismatched
@@ -294,25 +287,19 @@ private:
   [[maybe_unused]] static constexpr int MaxRegisteredCallbacks = 16;
 
   template <typename CBT, typename CBVecT>
-  CallbackID registerCallbackCommon(CBT CB, StringRef CBName,
-                                    bool AllowDuplicateNames, CBVecT &CBVec,
+  CallbackID registerCallbackCommon(CBT CB, CBVecT &CBVec,
                                     std::optional<CallbackID> BeforeID) {
     assert(CBVec.size() <= MaxRegisteredCallbacks &&
            "EraseInstrCallbacks size limit exceeded");
-    assert((AllowDuplicateNames || none_of(CBVec,
-                                           [CBName](const auto &Entry) {
-                                             return Entry.CBName == CBName;
-                                           })) &&
-           "Callback with CBName already exists!");
     auto BeforeIt = CBVec.end();
     if (BeforeID) {
-      BeforeIt = find_if(CBVec, [BeforeID](const auto &Entry) {
-        return Entry.ID == *BeforeID;
+      BeforeIt = find_if(CBVec, [BeforeID](const auto &Pair) {
+        return Pair.first == *BeforeID;
       });
       assert(BeforeIt != CBVec.end() && "Not found!");
     }
     CallbackID ID{NextCallbackID++};
-    CBVec.insert(BeforeIt, CallbackEntry<CBT>(ID, std::move(CB), CBName));
+    CBVec.insert(BeforeIt, {ID, std::move(CB)});
     return ID;
   }
 
@@ -323,11 +310,8 @@ public:
   /// If \p BeforeID is specified, CB will be ordered just before \p BeforeID,
   /// so it will be called first once the callbacks get executed.
   /// \Returns a callback ID for later deregistration.
-  /// \p CBName helps prevent multiple registrations with the same name. If this
-  /// is intentional you can set \p AllowDuplicateNames to true.
   CallbackID
-  registerEraseInstrCallback(EraseInstrCallback CB, StringRef CBName,
-                             bool AllowDuplicateNames = false,
+  registerEraseInstrCallback(EraseInstrCallback CB,
                              std::optional<CallbackID> BeforeID = std::nullopt);
   void unregisterEraseInstrCallback(CallbackID ID);
 
@@ -337,11 +321,8 @@ public:
   /// If \p BeforeID is specified, CB will be ordered just before \p BeforeID,
   /// so it will be called first once the callbacks get executed.
   /// \Returns a callback ID for later deregistration.
-  /// \p CBName helps prevent multiple registrations with the same name. If this
-  /// is intentional you can set \p AllowDuplicateNames to true.
   CallbackID registerCreateInstrCallback(
-      CreateInstrCallback CB, StringRef CBName,
-      bool AllowDuplicateNames = false,
+      CreateInstrCallback CB,
       std::optional<CallbackID> BeforeID = std::nullopt);
   void unregisterCreateInstrCallback(CallbackID ID);
 
@@ -350,11 +331,8 @@ public:
   /// If \p BeforeID is specified, CB will be ordered just before \p BeforeID,
   /// so it will be called first once the callbacks get executed.
   /// \Returns a callback ID for later deregistration.
-  /// \p CBName helps prevent multiple registrations with the same name. If this
-  /// is intentional you can set \p AllowDuplicateNames to true.
   CallbackID
-  registerMoveInstrCallback(MoveInstrCallback CB, StringRef CBName,
-                            bool AllowDuplicateNames = false,
+  registerMoveInstrCallback(MoveInstrCallback CB,
                             std::optional<CallbackID> BeforeID = std::nullopt);
   void unregisterMoveInstrCallback(CallbackID ID);
 
@@ -362,11 +340,8 @@ public:
   /// If \p BeforeID is specified, CB will be ordered just before \p BeforeID,
   /// so it will be called first once the callbacks get executed.
   /// \Returns a callback ID for later deregistration.
-  /// \p CBName helps prevent multiple registrations with the same name. If this
-  /// is intentional you can set \p AllowDuplicateNames to true.
   CallbackID
-  registerSetUseCallback(SetUseCallback CB, StringRef CBName,
-                         bool AllowDuplicateNames = false,
+  registerSetUseCallback(SetUseCallback CB,
                          std::optional<CallbackID> BeforeID = std::nullopt);
   void unregisterSetUseCallback(CallbackID ID);
 };

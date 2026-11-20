@@ -531,17 +531,15 @@ public:
       : Dir(Dir), Ctx(&Ctx), Sched(Sched),
         BatchAA(std::make_unique<BatchAAResults>(AA)) {
     CreateInstrCB = Ctx.registerCreateInstrCallback(
-        [this](Instruction *I) { notifyCreateInstr(I); }, "DAG");
+        [this](Instruction *I) { notifyCreateInstr(I); });
     EraseInstrCB = Ctx.registerEraseInstrCallback(
-        [this](Instruction *I) { notifyEraseInstr(I); }, "DAG");
+        [this](Instruction *I) { notifyEraseInstr(I); });
     MoveInstrCB = Ctx.registerMoveInstrCallback(
         [this](Instruction *I, const BBIterator &To) {
           notifyMoveInstr(I, To);
-        },
-        "DAG");
+        });
     SetUseCB = Ctx.registerSetUseCallback(
-        [this](const Use &U, Value *NewSrc) { notifySetUse(U, NewSrc); },
-        "DAG");
+        [this](const Use &U, Value *NewSrc) { notifySetUse(U, NewSrc); });
   }
   ~DependencyGraph() {
     if (CreateInstrCB)
