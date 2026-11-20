@@ -120,11 +120,10 @@ bool matchSubShiftsToOrcB(MachineInstr &MI, MachineRegisterInfo &MRI,
   if (RightShift == 0) {
     if (RHS != Src)
       return false;
-  } else {
-    int64_t Shift;
-    if (!mi_match(RHS, MRI, m_GLShr(m_SpecificReg(Src), m_ICst(Shift))) ||
-        Shift != RightShift)
-      return false;
+  } else if (!mi_match(
+                 RHS, MRI,
+                 m_GLShr(m_SpecificReg(Src), m_SpecificICst(RightShift)))) {
+    return false;
   }
 
   // At least one shift must disappear to make the replacement profitable.
