@@ -339,9 +339,12 @@ bool DWARFFormValue::extractValue(const DWARFDataExtractor &Data,
       // Value has been already set by DWARFFormValue::createFromSValue.
       break;
     default:
-      // DWARFFormValue::skipValue() will have caught this and caused all
-      // DWARF DIEs to fail to be parsed, so this code is not be reachable.
-      llvm_unreachable("unsupported form");
+      // Most callers run skipValue() on the attributes first, which rejects
+      // unknown forms, but the DWARF v5 line table prologue parses its entry
+      // content descriptors without that validation, so malformed input can
+      // reach this point.
+      consumeError(std::move(Err));
+      return false;
     }
   } while (Indirect && !Err);
 
