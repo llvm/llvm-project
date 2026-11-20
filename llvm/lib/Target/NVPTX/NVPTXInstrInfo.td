@@ -267,7 +267,7 @@ def hasFP16X2ToNarrowFPConversionSupport
   : PredAnd<[PTX91, PredOr<[SM100f, SM110f, SM120f]>]>;
 
 def hasS2F6X2ConversionSupport
-  : PredAnd<[PTX91, PredOr<[SM100a, SM103a, SM110a, SM120a, SM121a]>]>;
+  : PredAnd<[PTX91, PredOr<[SM100a, SM103a, SM107a, SM110a, SM120a, SM121a]>]>;
 
 // Checks support for conversions from narrow FP types to bf16x2.
 def hasNarrowFPToBF16x2ConversionSupport

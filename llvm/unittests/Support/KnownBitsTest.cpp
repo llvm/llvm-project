@@ -694,6 +694,20 @@ TEST(KnownBitsTest, UnaryExhaustive) {
       [](const APInt &N) { return N * N; }, /*CheckOptimality=*/false);
 }
 
+TEST(KnownBitsTest, CtlzExhaustive) {
+  for (bool ZeroIsPoison : {false, true}) {
+    testUnaryOpExhaustive(
+        "ctlz",
+        [=](const KnownBits &Known) { return Known.ctlz(ZeroIsPoison); },
+        [=](const APInt &N) -> std::optional<APInt> {
+          if (ZeroIsPoison && N.isZero())
+            return std::nullopt;
+          return APInt(N.getBitWidth(), N.countl_zero());
+        },
+        /*CheckOptimality=*/false);
+  }
+}
+
 TEST(KnownBitsTest, NonZeroDenomSDiv) {
   KnownBits Num = KnownBits::makeConstant(APInt(4, -8, true));
 

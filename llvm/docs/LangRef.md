@@ -1320,11 +1320,17 @@ that affect how values are passed to/from functions, like `zeroext`,
 additional optimization guarantees, like `noalias`, `nonnull` and
 `dereferenceable`.
 
-ABI attributes must be specified *both* at the function declaration/definition
-and call-site, otherwise the behavior may be undefined. ABI attributes cannot
-be safely dropped. Optimization attributes do not have to match between
-call-site and function: The intersection of their implied semantics applies.
-Optimization attributes can also be freely dropped.
+Optimization attributes do not have to match between call-site and function:
+The intersection of their implied semantics applies. Optimization attributes
+can also be freely dropped.
+
+ABI attributes should match between the function declaration/definition and the
+call-site, and generally cannot be safely dropped. Similar to a mismatch
+in function types, a mismatch in ABI attributes between caller and callee will
+often result in undefined behavior, but can be well-defined if the effective
+ABI after lowering is compatible. As this depends on target-specific lowering
+details that may change, the use of matching function types and ABI attributes
+is recommended.
 
 If an integer argument to a function is not marked signext/zeroext/noext, the
 kind of extension used is target-specific. Some targets depend for
@@ -1333,15 +1339,18 @@ correctness on the kind of extension to be explicitly specified.
 Currently, only the following parameter attributes are defined:
 
 `zeroext`
-:   This indicates to the code generator that the parameter or return
-    value should be zero-extended to the extent required by the target's
-    ABI by the caller (for a parameter) or the callee (for a return value).
+:   On a call-site argument or function return value, this indicates to the
+    code generator that the value should be zero-extended to the extent
+    required by the target's ABI. On a function argument or call-site return
+    value it indicates that the value is assumed to be zero-extended to that
+    extent, otherwise the behavior is undefined.
 
 `signext`
-:   This indicates to the code generator that the parameter or return
-    value should be sign-extended to the extent required by the target's
-    ABI (which is usually 32-bits) by the caller (for a parameter) or
-    the callee (for a return value).
+:   On a call-site argument or function return value, this indicates to the
+    code generator that the value should be sign-extended to the extent
+    required by the target's ABI. On a function argument or call-site return
+    value it indicates that the value is assumed to be sign-extended to that
+    extent, otherwise the behavior is undefined.
 
 `noext`
 :   This indicates to the code generator that the parameter or return
@@ -8280,6 +8289,24 @@ node has a single operand containing the name string:
 ```llvm
 !0 = !{!"llvm.loop.vectorize.enable"}
 !1 = !{!"llvm.loop.vectorize.disable"}
+```
+
+When `llvm.loop.vectorize.enable` is present, the Loop Vectorizer is also
+permitted to apply floating-point transforms that may change the computed
+result by default (equivalent to the behaviour of
+`#pragma clang loop vectorize(enable)`). This default can be overridden
+per-loop using `llvm.loop.vectorize.fp_unsafe.enable` /
+`llvm.loop.vectorize.fp_unsafe.disable` (see below).
+
+#### '`llvm.loop.vectorize.fp_unsafe.enable`' and '`llvm.loop.vectorize.fp_unsafe.disable`' Metadata
+
+This metadata gives the Loop Vectorizer an explicit per-loop instruction about
+whether floating-point transforms that may change the computed result are
+permitted. Each node has a single operand containing the name string:
+
+```llvm
+!0 = !{!"llvm.loop.vectorize.fp_unsafe.enable"}   ; allowed
+!1 = !{!"llvm.loop.vectorize.fp_unsafe.disable"}  ; suppressed
 ```
 
 #### '`llvm.loop.vectorize.predicate.enable`' and '`llvm.loop.vectorize.predicate.disable`' Metadata
