@@ -151,18 +151,29 @@ private:
   /// Scheduler-mode part of Reset().
   void schedulerReset();
 
-  /// RegUnits of uses in the current soft memory clause.
-  mutable BitVector ClauseUses;
+  enum class SoftClauseKind { None, SMEM, VMEM };
 
-  /// RegUnits of defs in the current soft memory clause.
-  mutable BitVector ClauseDefs;
+  /// The current soft memory clause, as reg units. It cannot be rebuilt from
+  /// EmittedInstrs: getMaxLookAhead() bounds wait states, not clause length.
+  SoftClauseKind ClauseKind = SoftClauseKind::None;
+  BitVector ClauseUses;
+  BitVector ClauseDefs;
 
-  void resetClause() const {
+  void resetClause() {
+    // EmitNoops() calls this once per nop, and clearing is not free.
+    if (ClauseKind == SoftClauseKind::None) {
+      assert(ClauseUses.none() && ClauseDefs.none() &&
+             "no clause kind implies no tracked reg units");
+      return;
+    }
+    ClauseKind = SoftClauseKind::None;
     ClauseUses.reset();
     ClauseDefs.reset();
   }
 
-  void addClauseInst(const MachineInstr &MI) const;
+  static SoftClauseKind getSoftClauseKind(const MachineInstr &MI);
+
+  void updateSoftClause(const MachineInstr &MI);
 
   /// \returns the number of wait states before another MFMA instruction can be
   /// issued after \p MI.
