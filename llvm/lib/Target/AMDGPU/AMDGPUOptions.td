@@ -223,6 +223,8 @@ defm : OptionalBoolField<"amdgpu-enable-delay-alu",
   "Enable s_delay_alu insertion">;
 defm : BoolField<"amdgpu-enable-hipstdpar", "false",
   "Enable HIP Standard Parallelism Offload support">;
+defm : BoolField<"amdgpu-enable-hoist-allocas", "true",
+  "Move fixed size allocas outside of cycles into the entry block">;
 defm : OptionalBoolField<"amdgpu-enable-image-intrinsic-optimizer",
   "Enable image intrinsic optimizer pass">;
 defm : BoolField<"amdgpu-enable-lower-exec-sync", "true",

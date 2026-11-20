@@ -66,13 +66,16 @@ bool AMDGPUResourceUsageAnalysisWrapperPass::runOnMachineFunction(
   const MCSubtargetInfo &STI = TM.getMCSubtargetInfo();
 
   // By default, for code object v5 and later, track only the minimum scratch
-  // size
+  // size. PAL has no way to request a dynamically sized stack, so dynamic stack
+  // objects still need an assumed size there.
   const AMDGPUOptions &CLOpts = TM.getCLOpts();
+  bool IsPAL = STI.getTargetTriple().getOS() == Triple::AMDPAL;
   bool MinScratch = AMDGPU::getAMDHSACodeObjectVersion(
                         *MF.getFunction().getParent()) >= AMDGPU::AMDHSA_COV5 ||
-                    STI.getTargetTriple().getOS() == Triple::AMDPAL;
+                    IsPAL;
   uint32_t AssumedStackSizeForDynamicSizeObjects =
-      CLOpts.assume_dynamic_stack_object_size.value_or(MinScratch ? 0 : 4096);
+      CLOpts.assume_dynamic_stack_object_size.value_or(
+          MinScratch && !IsPAL ? 0 : 4096);
   uint32_t AssumedStackSizeForExternalCall =
       CLOpts.assume_external_call_stack_size.value_or(MinScratch ? 0 : 16384);
 
@@ -90,13 +93,16 @@ AMDGPUResourceUsageAnalysis::run(MachineFunction &MF,
   const MCSubtargetInfo &STI = TM.getMCSubtargetInfo();
 
   // By default, for code object v5 and later, track only the minimum scratch
-  // size
+  // size. PAL has no way to request a dynamically sized stack, so dynamic stack
+  // objects still need an assumed size there.
   const AMDGPUOptions &CLOpts = TM.getCLOpts();
+  bool IsPAL = STI.getTargetTriple().getOS() == Triple::AMDPAL;
   bool MinScratch = AMDGPU::getAMDHSACodeObjectVersion(
                         *MF.getFunction().getParent()) >= AMDGPU::AMDHSA_COV5 ||
-                    STI.getTargetTriple().getOS() == Triple::AMDPAL;
+                    IsPAL;
   uint32_t AssumedStackSizeForDynamicSizeObjects =
-      CLOpts.assume_dynamic_stack_object_size.value_or(MinScratch ? 0 : 4096);
+      CLOpts.assume_dynamic_stack_object_size.value_or(
+          MinScratch && !IsPAL ? 0 : 4096);
   uint32_t AssumedStackSizeForExternalCall =
       CLOpts.assume_external_call_stack_size.value_or(MinScratch ? 0 : 16384);
 
