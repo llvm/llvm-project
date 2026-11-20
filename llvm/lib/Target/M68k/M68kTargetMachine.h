@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
+#include "llvm/Target/LastSubtargetCache.h"
 
 #include <optional>
 
@@ -34,6 +35,18 @@ class M68kTargetMachine : public CodeGenTargetMachineImpl {
   M68kSubtarget Subtarget;
 
   mutable StringMap<std::unique_ptr<M68kSubtarget>> SubtargetMap;
+
+  /// The attributes that select a subtarget.
+  struct SubtargetAttrs {
+    Attribute CPU, FS;
+
+    bool operator==(const SubtargetAttrs &RHS) const {
+      return CPU == RHS.CPU && FS == RHS.FS;
+    }
+
+    bool operator!=(const SubtargetAttrs &RHS) const { return !(*this == RHS); }
+  };
+  mutable LastSubtargetCache<M68kSubtarget, SubtargetAttrs> LastSubtarget;
 
 public:
   M68kTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
