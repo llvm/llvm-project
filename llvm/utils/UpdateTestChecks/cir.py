@@ -21,7 +21,10 @@ Shared bodies are checked less strictly than normal checks:
 from __future__ import print_function
 
 import collections
+import functools
+import os
 import re
+import subprocess
 import sys
 
 from . import common
@@ -69,6 +72,36 @@ def split_list(value):
 
 def emits_cir(clang_args):
     return "-emit-cir" in clang_args
+
+
+@functools.lru_cache(maxsize=None)
+def clang_has_cir(clang):
+    """Whether `clang` was built with ClangIR support."""
+    result = subprocess.run(
+        [clang, "-cc1", "-fclangir", "-emit-cir", "-x", "c", "-o", os.devnull, "-"],
+        input="",
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        universal_newlines=True,
+    )
+    return result.returncode == 0
+
+
+def check_clang_has_cir(clang, run_list, path):
+    """Error out if RUN lines use -fclangir but `clang` has no CIR support.
+
+    Without CIR, -fclangir -emit-llvm silently falls back to classic codegen,
+    which would generate classic checks for the CIR RUN lines.
+    """
+    if not any("-fclangir" in i[1] for i in run_list):
+        return
+    if not clang_has_cir(clang):
+        common.error(
+            "RUN lines use -fclangir, but {} was built without CIR (build it "
+            "with -DCLANG_ENABLE_CIR=ON)".format(clang),
+            test_file=path,
+        )
+        sys.exit(1)
 
 
 def add_arguments(parser):

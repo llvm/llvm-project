@@ -436,6 +436,7 @@ def update_test(ti: common.TestInfo):
     if cir_run_list and ti.args.include_generated_funcs:
         common.error("--include-generated-funcs doesn't support -emit-cir")
         sys.exit(1)
+    cir.check_clang_has_cir(ti.args.clang, run_list, ti.path)
 
     ginfo = common.make_ir_generalizer(ti.args.version, ti.args.check_globals == "none")
     builder = common.FunctionTestBuilder(
