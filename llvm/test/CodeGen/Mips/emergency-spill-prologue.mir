@@ -18,14 +18,13 @@ body: |
     ; MIPS32-LABEL: name: f
     ; MIPS32: liveins: $r4, $r5, $r6, $r7, $r17, $r18, $r19, $r20, $r21, $r22, $r23, $r30, $r28, $r31, $r16
     ; MIPS32-NEXT: {{  $}}
-    ; MIPS32-NEXT: SW killed $r5, $r29, 0 :: (store (s32) into %stack.1)
-    ; MIPS32-NEXT: $r1 = ORi $r0, -32728
-    ; MIPS32-NEXT: $r29 = SUBu $r29, killed $r1
-    ; MIPS32-NEXT: CFI_INSTRUCTION def_cfa_offset 32808
+    ; MIPS32-NEXT: $r1 = frame-setup ORi $r0, -32728
+    ; MIPS32-NEXT: $r29 = frame-setup SUBu $r29, killed $r1
+    ; MIPS32-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 32808
     ; MIPS32-NEXT: $r1 = LUi 1
     ; MIPS32-NEXT: $r1 = ADDu $r29, killed $r1
-    ; MIPS32-NEXT: SW killed $r16, killed $r1, -32732 :: (store (s32) into %stack.2)
-    ; MIPS32-NEXT: CFI_INSTRUCTION offset $r16_64, -4
+    ; MIPS32-NEXT: frame-setup SW killed $r16, killed $r1, -32732 :: (store (s32) into %stack.2)
+    ; MIPS32-NEXT: frame-setup CFI_INSTRUCTION offset $r16_64, -4
     ; MIPS32-NEXT: $r1 = ADDiu $r0, 0
     ; MIPS32-NEXT: $r2 = ADDiu $r0, 0
     ; MIPS32-NEXT: $r3 = ADDiu $r0, 0
@@ -40,6 +39,7 @@ body: |
     ; MIPS32-NEXT: $r24 = ADDiu $r0, 0
     ; MIPS32-NEXT: $r25 = ADDiu $r0, 0
     ; MIPS32-NEXT: $r16 = ADDiu $r0, 0
+    ; MIPS32-NEXT: SW killed $r5, $r29, 0 :: (store (s32) into %stack.1)
     ; MIPS32-NEXT: $r5 = LUi 1
     ; MIPS32-NEXT: $r5 = ADDu $r29, killed $r5
     ; MIPS32-NEXT: SW $r4, killed $r5, -29532
@@ -55,14 +55,13 @@ body: |
     ; MIPS64-LABEL: name: f
     ; MIPS64: liveins: $r4, $r5, $r6, $r7, $r17, $r18, $r19, $r20, $r21, $r22, $r23, $r30, $r28, $r31, $r16_64
     ; MIPS64-NEXT: {{  $}}
-    ; MIPS64-NEXT: SD killed $r5_64, $r29_64, 0 :: (store (s64) into %stack.1)
-    ; MIPS64-NEXT: $r1_64 = ORi64 $r0_64, -32720
-    ; MIPS64-NEXT: $r29_64 = DSUBu $r29_64, killed $r1_64
-    ; MIPS64-NEXT: CFI_INSTRUCTION def_cfa_offset 32816
+    ; MIPS64-NEXT: $r1_64 = frame-setup ORi64 $r0_64, -32720
+    ; MIPS64-NEXT: $r29_64 = frame-setup DSUBu $r29_64, killed $r1_64
+    ; MIPS64-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 32816
     ; MIPS64-NEXT: $r1_64 = LUi64 1
     ; MIPS64-NEXT: $r1_64 = DADDu $r29_64, killed $r1_64
-    ; MIPS64-NEXT: SD killed $r16_64, killed $r1_64, -32728 :: (store (s64) into %stack.2)
-    ; MIPS64-NEXT: CFI_INSTRUCTION offset $r16_64, -8
+    ; MIPS64-NEXT: frame-setup SD killed $r16_64, killed $r1_64, -32728 :: (store (s64) into %stack.2)
+    ; MIPS64-NEXT: frame-setup CFI_INSTRUCTION offset $r16_64, -8
     ; MIPS64-NEXT: $r1 = ADDiu $r0, 0
     ; MIPS64-NEXT: $r2 = ADDiu $r0, 0
     ; MIPS64-NEXT: $r3 = ADDiu $r0, 0
@@ -77,6 +76,7 @@ body: |
     ; MIPS64-NEXT: $r24 = ADDiu $r0, 0
     ; MIPS64-NEXT: $r25 = ADDiu $r0, 0
     ; MIPS64-NEXT: $r16 = ADDiu $r0, 0
+    ; MIPS64-NEXT: SD killed $r5_64, $r29_64, 0 :: (store (s64) into %stack.1)
     ; MIPS64-NEXT: $r5_64 = LUi64 1
     ; MIPS64-NEXT: $r5_64 = DADDu $r29_64, killed $r5_64
     ; MIPS64-NEXT: SW $r4, killed $r5_64, -29528
