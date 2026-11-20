@@ -2644,6 +2644,23 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     IRBuilder<> &IRB;
     MemorySanitizerVisitor *MSV;
 
+    /// Returns the type in which to combine two shadows, at least one of which
+    /// is a scalable vector: a scalable vector with their element count and the
+    /// wider element type. A clean constant scalar shadow doesn't widen it.
+    static Type *getScalableCombinedTy(Value *A, Value *B) {
+      auto *VTy = dyn_cast<ScalableVectorType>(A->getType());
+      if (!VTy)
+        VTy = cast<ScalableVectorType>(B->getType());
+      unsigned Bits = 0;
+      for (Value *V : {A, B}) {
+        auto *C = dyn_cast<Constant>(V);
+        if (V->getType()->isVectorTy() || !C || !C->isNullValue())
+          Bits = std::max(Bits, V->getType()->getScalarSizeInBits());
+      }
+      return VectorType::get(IntegerType::get(VTy->getContext(), Bits),
+                             VTy->getElementCount());
+    }
+
   public:
     Combiner(MemorySanitizerVisitor *MSV, IRBuilder<> &IRB)
         : IRB(IRB), MSV(MSV) {}
@@ -2654,7 +2671,13 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         assert(OpShadow);
         if (!Shadow)
           Shadow = OpShadow;
-        else {
+        else if (isa<ScalableVectorType>(Shadow->getType()) ||
+                 isa<ScalableVectorType>(OpShadow->getType())) {
+          Type *Ty = getScalableCombinedTy(Shadow, OpShadow);
+          Value *Cast = MSV->CreateShadowCast(IRB, Shadow, Ty);
+          Value *OpCast = MSV->CreateShadowCast(IRB, OpShadow, Ty);
+          Shadow = IRB.CreateOr(Cast, OpCast, "_msprop");
+        } else {
           OpShadow = MSV->CreateShadowCast(IRB, OpShadow, Shadow->getType());
           Shadow = IRB.CreateOr(Shadow, OpShadow, "_msprop");
         }
