@@ -2974,6 +2974,7 @@ void LoweringPreparePass::buildCUDAModuleCtor() {
       builder, loc, fatbinWrapperName, fatbinWrapperType,
       /*isConstant=*/true, {}, GlobalLinkageKind::PrivateLinkage);
   fatbinWrapper.setSection(fatbinSectionName);
+  builder.disableSanitizerForGlobal(fatbinWrapper, getLangOpts().Sanitize);
 
   constexpr unsigned cudaFatMagic = 0x466243b1;
   constexpr unsigned hipFatMagic = 0x48495046;

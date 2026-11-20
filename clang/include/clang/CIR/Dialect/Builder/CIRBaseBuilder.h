@@ -590,6 +590,17 @@ public:
                                  linkage);
   }
 
+  /// Exclude a compiler-generated global from sanitizer instrumentation.
+  void disableSanitizerForGlobal(cir::GlobalOp gv,
+                                 const clang::SanitizerSet &sanitize) {
+    bool noAddress = sanitize.hasOneOf(clang::SanitizerKind::Address |
+                                       clang::SanitizerKind::KernelAddress);
+    bool noHWAddress = sanitize.has(clang::SanitizerKind::HWAddress);
+    if (noAddress || noHWAddress)
+      gv.setSanitizerMetadataAttr(cir::SanitizerMetadataAttr::get(
+          getContext(), noAddress, noHWAddress));
+  }
+
   cir::GetMemberOp createGetMember(mlir::Location loc, mlir::Type resultTy,
                                    mlir::Value base, llvm::StringRef name,
                                    unsigned index) {

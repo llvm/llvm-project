@@ -3578,6 +3578,9 @@ def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
     LoweringPrepare uses it to place the dynamic initializer emitted from
     `ctorRegion` into a priority-specific `_GLOBAL__I_<priority>` function
     instead of the default `_GLOBAL__sub_I_*` function.
+
+    The `sanitizer_metadata` attribute controls sanitizer instrumentation of
+    the global, see `SanitizerMetadataAttr`.
   }];
 
   // Note that both sym_name and sym_visibility are tied to Symbol trait.
@@ -3606,7 +3609,8 @@ def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
                        OptionalAttr<CIR_AnnotationArrayAttr>:$annotations,
                        OptionalAttr<FlatSymbolRefAttr>:$aliasee,
                        UnitAttr:$strictfp,
-                       OptionalAttr<I32Attr>:$init_priority
+                       OptionalAttr<I32Attr>:$init_priority,
+                       OptionalAttr<CIR_SanitizerMetadataAttr>:$sanitizer_metadata
                        );
 
   let regions = (region MaxSizedRegion<1>:$ctorRegion,
@@ -3635,6 +3639,7 @@ def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
     (`section` `(` $section^ `)`)?
     (`strictfp` $strictfp^)?
     (`init_priority` `(` $init_priority^ `)`)?
+    (`sanitizer_metadata` `` $sanitizer_metadata^)?
     attr-dict
   }];
 

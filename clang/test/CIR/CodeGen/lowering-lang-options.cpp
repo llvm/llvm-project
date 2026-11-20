@@ -9,6 +9,9 @@
 // RUN:   -no-enable-noundef-analysis -emit-cir %s -o - \
 // RUN:   | FileCheck %s --check-prefix=NONOUNDEF
 // RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir \
+// RUN:   -fsanitize=address,hwaddress -emit-cir %s -o - \
+// RUN:   | FileCheck %s --check-prefix=SAN
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir \
 // RUN:   -fexperimental-relative-c++-abi-vtables -emit-cir %s -o - \
 // RUN:   | FileCheck %s --check-prefix=RELVT
 
@@ -36,6 +39,9 @@ int x;
 // PLAIN-SAME: openmp_is_target_device = false
 // PLAIN-SAME: clang_abi_compat = {{[0-9]+}}
 // PLAIN-SAME: long_double_size = 0
+// PLAIN-SAME: sanitize_address = false
+// PLAIN-SAME: sanitize_kernel_address = false
+// PLAIN-SAME: sanitize_hwaddress = false
 // PLAIN-SAME: enable_noundef_attrs = true
 // PLAIN-SAME: no_trapping_math = true
 // PLAIN-SAME: ssp_buffer_size = 8>
@@ -59,6 +65,11 @@ int x;
 // NONOUNDEF: cir.lowering_options = #cir.lowering_options<
 // NONOUNDEF-SAME: exceptions = false
 // NONOUNDEF-SAME: enable_noundef_attrs = false,
+
+// SAN: cir.lowering_options = #cir.lowering_options<
+// SAN-SAME: sanitize_address = true
+// SAN-SAME: sanitize_kernel_address = false
+// SAN-SAME: sanitize_hwaddress = true
 
 // -fexperimental-relative-c++-abi-vtables sets relative_cxx_abi_vtables.
 // RELVT: cir.lowering_options = #cir.lowering_options<
