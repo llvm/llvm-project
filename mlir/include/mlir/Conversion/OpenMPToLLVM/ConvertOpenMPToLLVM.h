@@ -18,6 +18,8 @@ class MLIRContext;
 class Pass;
 class RewritePatternSet;
 
+// MLIROpenMPToLLVMConversion provides the conversion helpers and dialect
+// interface below. MLIROpenMPToLLVM also provides the standalone pass.
 #define GEN_PASS_DECL_CONVERTOPENMPTOLLVMPASS
 #include "mlir/Conversion/Passes.h.inc"
 

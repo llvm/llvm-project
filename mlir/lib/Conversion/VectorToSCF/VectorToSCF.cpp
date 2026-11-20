@@ -54,6 +54,15 @@ static bool isTensorOp(VectorTransferOpInterface xferOp) {
   return false;
 }
 
+/// Fail to match if the transfer op is masked by a vector.mask.
+template <typename OpTy>
+static LogicalResult checkNotMasked(OpTy xferOp, PatternRewriter &rewriter) {
+  if (xferOp.isMasked())
+    return rewriter.notifyMatchFailure(
+        xferOp, "masked by vector.mask, lower the mask first");
+  return success();
+}
+
 /// Patterns that inherit from this struct have access to
 /// VectorTransferToSCFOptions.
 template <typename OpTy>
@@ -557,6 +566,8 @@ static LogicalResult checkPrepareXferOp(OpTy xferOp, PatternRewriter &rewriter,
   if (xferOp->hasDiscardableAttr(kPassLabel))
     return rewriter.notifyMatchFailure(
         xferOp, "kPassLabel is present (vector-to-scf lowering in progress)");
+  if (failed(checkNotMasked(xferOp, rewriter)))
+    return failure();
   if (xferOp.getVectorType().getRank() <= options.targetRank)
     return rewriter.notifyMatchFailure(
         xferOp, "xferOp vector rank <= transformation target rank");
@@ -1084,6 +1095,8 @@ struct ScalableTransposeTransferWriteConversion
                                 PatternRewriter &rewriter) const override {
     if (failed(checkLowerTensors(writeOp, rewriter)))
       return failure();
+    if (failed(checkNotMasked(writeOp, rewriter)))
+      return failure();
 
     VectorType vectorType = writeOp.getVectorType();
 
@@ -1310,6 +1323,8 @@ struct UnrollTransferReadConversion
           xferOp, "vector rank is less or equal to target rank");
     if (failed(checkLowerTensors(xferOp, rewriter)))
       return failure();
+    if (failed(checkNotMasked(xferOp, rewriter)))
+      return failure();
     if (xferOp.getVectorType().getElementType() !=
         xferOp.getShapedType().getElementType())
       return rewriter.notifyMatchFailure(
@@ -1455,6 +1470,8 @@ struct UnrollTransferWriteConversion
       return failure();
 
     if (failed(checkLowerTensors(xferOp, rewriter)))
+      return failure();
+    if (failed(checkNotMasked(xferOp, rewriter)))
       return failure();
     // Transfer ops that modify the element type are not supported atm.
     if (inputVectorTy.getElementType() !=
@@ -1665,6 +1682,8 @@ struct TransferOp1dConversion : public VectorToSCFPattern<OpTy> {
                                 PatternRewriter &rewriter) const override {
     // TODO: support 0-d corner case.
     if (xferOp.getTransferRank() == 0)
+      return failure();
+    if (failed(checkNotMasked(xferOp, rewriter)))
       return failure();
     auto map = xferOp.getPermutationMap();
     auto memRefType = dyn_cast<MemRefType>(xferOp.getShapedType());

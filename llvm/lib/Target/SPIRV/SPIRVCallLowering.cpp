@@ -68,7 +68,7 @@ static uint32_t getFunctionControl(const Function &F,
 
   uint32_t FuncControl = static_cast<uint32_t>(SPIRV::FunctionControl::None);
 
-  if (F.hasFnAttribute(Attribute::AttrKind::NoInline))
+  if (F.isNoInline())
     FuncControl |= static_cast<uint32_t>(SPIRV::FunctionControl::DontInline);
   else if (F.hasFnAttribute(Attribute::AttrKind::AlwaysInline))
     FuncControl |= static_cast<uint32_t>(SPIRV::FunctionControl::Inline);
@@ -271,8 +271,11 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
       GR->assignSPIRVTypeToVReg(SpirvTy, VRegs[i][0], MIRBuilder.getMF());
       ArgTypeVRegs.push_back(SpirvTy);
 
-      if (Arg.hasName())
-        buildOpName(VRegs[i][0], Arg.getName(), MIRBuilder);
+      StringRef ArgName = Arg.getName();
+      if (F.getCallingConv() == CallingConv::SPIR_KERNEL)
+        if (MDString *MDName = getOCLKernelArgName(F, i))
+          ArgName = MDName->getString();
+      buildOpName(VRegs[i][0], ArgName, MIRBuilder);
       if (isPointerTyOrWrapper(Arg.getType()) && !ST->isShader()) {
         auto DerefBytes = static_cast<unsigned>(Arg.getDereferenceableBytes());
         if (DerefBytes != 0 && ST->isAtLeastSPIRVVer(VersionTuple(1, 1)))
@@ -346,24 +349,9 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
 
       MDNode *Node = F.getMetadata("spirv.ParameterDecorations");
       if (Node && i < Node->getNumOperands() &&
-          isa<MDNode>(Node->getOperand(i))) {
-        MDNode *MD = cast<MDNode>(Node->getOperand(i));
-        for (const MDOperand &MDOp : MD->operands()) {
-          MDNode *MD2 = dyn_cast<MDNode>(MDOp);
-          assert(MD2 && "Metadata operand is expected");
-          ConstantInt *Const = getMDOperandAsConstInt(MD2, 0);
-          assert(Const && "MDOperand should be ConstantInt");
-          auto Dec =
-              static_cast<SPIRV::Decoration::Decoration>(Const->getZExtValue());
-          std::vector<uint32_t> DecVec;
-          for (unsigned j = 1; j < MD2->getNumOperands(); j++) {
-            ConstantInt *Const = getMDOperandAsConstInt(MD2, j);
-            assert(Const && "MDOperand should be ConstantInt");
-            DecVec.push_back(static_cast<uint32_t>(Const->getZExtValue()));
-          }
-          buildOpDecorate(VRegs[i][0], MIRBuilder, Dec, DecVec);
-        }
-      }
+          isa<MDNode>(Node->getOperand(i)))
+        buildOpSpirvDecorations(VRegs[i][0], MIRBuilder,
+                                cast<MDNode>(Node->getOperand(i)), *ST);
       ++i;
     }
   }
@@ -636,6 +624,7 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
           .isValid()) {
     // insert a no-op
     MIRBuilder.buildTrap();
+    Info.LoweredTailCall = true; // Do not emit an ill-formed G_ASSERT_ALIGN.
     return true;
   }
 
@@ -680,6 +669,8 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                  .addDef(ResVReg)
                  .addUse(GR->getSPIRVTypeID(RetType))
                  .add(Info.Callee);
+  if (Info.NoMerge)
+    MIB.setMIFlag(MachineInstr::MIFlag::NoMerge);
 
   for (const auto &Arg : Info.OrigArgs) {
     // Currently call args should have single vregs.

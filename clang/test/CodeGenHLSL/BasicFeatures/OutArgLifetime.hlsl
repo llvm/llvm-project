@@ -39,13 +39,13 @@ void reset(out int I) { I = 0; }
 // CHECK-NEXT:    [[X_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store i32 [[X]], ptr [[X_ADDR]], align 4, !tbaa [[INT_TBAA12]]
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP]]) #[[ATTR3:[0-9]+]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP]])
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[X_ADDR]], align 4, !tbaa [[INT_TBAA12]]
 // CHECK-NEXT:    store i32 [[TMP1]], ptr [[TMP]], align 4, !tbaa [[INT_TBAA12]]
-// CHECK-NEXT:    call void @_Z9incrementRi(ptr noalias noundef nonnull align 4 dereferenceable(4) [[TMP]]) #[[ATTR4:[0-9]+]] [ "convergencectrl"(token [[TMP0]]) ]
+// CHECK-NEXT:    call void @_Z9incrementRi(ptr noalias noundef nonnull align 4 dereferenceable(4) [[TMP]]) #[[ATTR3:[0-9]+]] [ "convergencectrl"(token [[TMP0]]) ]
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP]], align 4, !tbaa [[INT_TBAA12]]
 // CHECK-NEXT:    store i32 [[TMP2]], ptr [[X_ADDR]], align 4, !tbaa [[INT_TBAA12]]
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP]]) #[[ATTR3]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP]])
 // CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[X_ADDR]], align 4, !tbaa [[INT_TBAA12]]
 // CHECK-NEXT:    ret i32 [[TMP3]]
 //
@@ -62,14 +62,14 @@ int inout_test(int X) {
 // CHECK-NEXT:    [[TMP0:%.*]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[X:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[TMP:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[X]]) #[[ATTR3]]
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP]]) #[[ATTR3]]
-// CHECK-NEXT:    call void @_Z5resetRi(ptr noalias noundef nonnull align 4 dereferenceable(4) [[TMP]]) #[[ATTR4]] [ "convergencectrl"(token [[TMP0]]) ]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[X]])
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP]])
+// CHECK-NEXT:    call void @_Z5resetRi(ptr noalias noundef nonnull align 4 dereferenceable(4) [[TMP]]) #[[ATTR3]] [ "convergencectrl"(token [[TMP0]]) ]
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP]], align 4, !tbaa [[INT_TBAA12]]
 // CHECK-NEXT:    store i32 [[TMP1]], ptr [[X]], align 4, !tbaa [[INT_TBAA12]]
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP]]) #[[ATTR3]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP]])
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[X]], align 4, !tbaa [[INT_TBAA12]]
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[X]]) #[[ATTR3]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[X]])
 // CHECK-NEXT:    ret i32 [[TMP2]]
 //
 int out_test() {

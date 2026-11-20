@@ -9,8 +9,8 @@
 #ifndef LLVM_CLANG_AST_INTERP_DYNAMIC_ALLOCATOR_H
 #define LLVM_CLANG_AST_INTERP_DYNAMIC_ALLOCATOR_H
 
+#include "Block.h"
 #include "Descriptor.h"
-#include "InterpBlock.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Allocator.h"

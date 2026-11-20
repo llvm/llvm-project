@@ -99,10 +99,26 @@ public:
     const CFGBlock *Start = isForward() ? &Cfg.getEntry() : &Cfg.getExit();
     InStates[Start] = D.getInitialState();
     W.enqueueBlock(Start);
+    drainWorklist(D, W);
 
+    // Walking predecessors from the exit only reaches blocks that can reach the
+    // exit, e.g., it misses the body of an infinite loop. Analyze those too.
+    // Their in-state is left unset rather than seeded, so that only the first
+    // block analyzed in each such cycle starts from the initial state.
+    if constexpr (!isForward()) {
+      for (const CFGBlock *B : Cfg)
+        if (!InStates.contains(B))
+          W.enqueueBlock(B);
+      drainWorklist(D, W);
+    }
+  }
+
+private:
+  template <typename WorklistT> void drainWorklist(Derived &D, WorklistT &W) {
     while (const CFGBlock *B = W.dequeue()) {
-      Lattice StateIn = *getInState(B);
-      Lattice StateOut = transferBlock(B, StateIn);
+      std::optional<Lattice> StateIn = getInState(B);
+      Lattice StateOut =
+          transferBlock(B, StateIn ? *StateIn : D.getInitialState());
       OutStates[B] = StateOut;
       for (const CFGBlock *AdjacentB : isForward() ? B->succs() : B->preds()) {
         if (!AdjacentB)

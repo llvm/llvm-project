@@ -1575,8 +1575,8 @@ bool DataFlowSanitizer::runImpl(
       // Code will sometimes check if an extern weak function is null.
       // This could look something like:
       //   declare extern_weak i8 @my_func(i8)
-      //   br i1 icmp ne (i8 (i8)* @my_func, i8 (i8)* null), label %use_my_func,
-      //   label %avoid_my_func
+      //   %cmp = icmp ne ptr @my_func, null
+      //   br i1 %cmp, label %use_my_func, label %avoid_my_func
       // The @"dfsw$my_func" wrapper is never null, so if we replace this use
       // in the comparison, the icmp will simplify to false and we have
       // accidentally optimized away a null check that is necessary.
@@ -1590,12 +1590,6 @@ bool DataFlowSanitizer::runImpl(
       // We will default to replacing with wrapper in cases we are unsure.
       auto IsNotCmpUse = [](Use &U) -> bool {
         User *Usr = U.getUser();
-        if (ConstantExpr *CE = dyn_cast<ConstantExpr>(Usr)) {
-          // This is the most common case for icmp ne null
-          if (CE->getOpcode() == Instruction::ICmp) {
-            return false;
-          }
-        }
         if (Instruction *I = dyn_cast<Instruction>(Usr)) {
           if (I->getOpcode() == Instruction::ICmp) {
             return false;
@@ -1641,7 +1635,13 @@ bool DataFlowSanitizer::runImpl(
     DFSanFunction DFSF(*this, F, FnsWithNativeABI.count(F),
                        FnsWithForceZeroLabel.count(F), GetTLI(*F));
 
-    if (Opts.dfsan_reaches_function_callbacks) {
+    // Skip wrappers: they may be called from uninstrumented code (e.g. the
+    // runtime calling the reaches function callback), so their argument
+    // shadows are stale, which can cause infinite callback recursion.
+    if (Opts.dfsan_reaches_function_callbacks && !UnwrappedFnMap.count(F)) {
+      // Instructions inserted below all precede this one.
+      Instruction *FirstOrigInst = &F->getEntryBlock().front();
+
       // Add callback for arguments reaching this function.
       for (auto &FArg : F->args()) {
         Instruction *Next = &F->getEntryBlock().front();
@@ -1663,6 +1663,14 @@ bool DataFlowSanitizer::runImpl(
         }
         IRBuilder<> IRB(Next);
         DFSF.addReachesFunctionCallbacksIfEnabled(IRB, *Next, &FArg);
+      }
+
+      // Don't instrument the instrumentation inserted above; e.g. the callback
+      // calls would otherwise clobber __dfsan_arg_tls.
+      for (Instruction &I : F->getEntryBlock()) {
+        if (&I == FirstOrigInst)
+          break;
+        DFSF.SkipInsts.insert(&I);
       }
     }
 
@@ -1733,8 +1741,7 @@ bool DataFlowSanitizer::runImpl(
 }
 
 Value *DFSanFunction::getArgTLS(Type *T, unsigned ArgOffset, IRBuilder<> &IRB) {
-  return IRB.CreatePtrAdd(DFS.ArgTLS, ConstantInt::get(DFS.IntptrTy, ArgOffset),
-                          "_dfsarg");
+  return IRB.CreatePtrAddWithUnsignedOffset(DFS.ArgTLS, ArgOffset, "_dfsarg");
 }
 
 Value *DFSanFunction::getRetvalTLS(Type *T, IRBuilder<> &IRB) {
@@ -2086,6 +2093,7 @@ Value *DataFlowSanitizer::loadNextOrigin(BasicBlock::iterator Pos,
                                          Align OriginAlign,
                                          Value **OriginAddr) {
   IRBuilder<> IRB(Pos);
+  IRB.disableGEPCanonicalization();
   *OriginAddr =
       IRB.CreateGEP(OriginTy, *OriginAddr, ConstantInt::get(IntptrTy, 1));
   return IRB.CreateAlignedLoad(OriginTy, *OriginAddr, OriginAlign);
@@ -2118,6 +2126,7 @@ std::pair<Value *, Value *> DFSanFunction::loadShadowFast(
       ShadowSize == 4 ? Type::getInt32Ty(*DFS.Ctx) : Type::getInt64Ty(*DFS.Ctx);
 
   IRBuilder<> IRB(Pos);
+  IRB.disableGEPCanonicalization();
   Value *CombinedWideShadow =
       IRB.CreateAlignedLoad(WideShadowTy, ShadowAddr, ShadowAlign);
 
@@ -2262,6 +2271,7 @@ std::pair<Value *, Value *> DFSanFunction::loadShadowOriginSansLoadTracking(
   }
   case 2: {
     IRBuilder<> IRB(Pos);
+    IRB.disableGEPCanonicalization();
     Value *ShadowAddr1 = IRB.CreateGEP(DFS.PrimitiveShadowTy, ShadowAddr,
                                        ConstantInt::get(DFS.IntptrTy, 1));
     Value *Load =
@@ -2482,6 +2492,7 @@ void DFSanFunction::storeOrigin(BasicBlock::iterator Pos, Value *Addr,
   const Align OriginAlignment = getOriginAlign(InstAlignment);
   Value *CollapsedShadow = collapseToPrimitiveShadow(Shadow, Pos);
   IRBuilder<> IRB(Pos);
+  IRB.disableGEPCanonicalization();
   if (auto *ConstantShadow = dyn_cast<Constant>(CollapsedShadow)) {
     if (!ConstantShadow->isNullValue())
       paintOrigin(IRB, updateOrigin(Origin, IRB), StoreOriginAddr, Size,
@@ -2499,6 +2510,7 @@ void DFSanFunction::storeOrigin(BasicBlock::iterator Pos, Value *Addr,
     Instruction *CheckTerm = SplitBlockAndInsertIfThen(
         Cmp, &*IRB.GetInsertPoint(), false, DFS.OriginStoreWeights, &DTU);
     IRBuilder<> IRBNew(CheckTerm);
+    IRBNew.disableGEPCanonicalization();
     paintOrigin(IRBNew, updateOrigin(Origin, IRBNew), StoreOriginAddr, Size,
                 OriginAlignment);
     ++NumOriginStores;
@@ -2549,6 +2561,7 @@ void DFSanFunction::storePrimitiveShadowOrigin(Value *Addr, uint64_t Size,
   }
 
   IRBuilder<> IRB(Pos);
+  IRB.disableGEPCanonicalization();
   Value *ShadowAddr, *OriginAddr;
   std::tie(ShadowAddr, OriginAddr) =
       DFS.getShadowOriginAddress(Addr, InstAlignment, Pos);
@@ -2672,7 +2685,6 @@ void DFSanVisitor::visitCASOrRMW(Align InstAlignment, Instruction &I) {
 
   // Conservatively set data at stored addresses and return with zero shadow to
   // prevent shadow data races.
-  IRBuilder<> IRB(&I);
   Value *Addr = I.getOperand(0);
   const Align ShadowAlign = DFSF.getShadowAlign(InstAlignment);
   DFSF.storeZeroPrimitiveShadow(Addr, Size, ShadowAlign, I.getIterator());
@@ -2977,7 +2989,7 @@ void DFSanVisitor::addShadowArguments(Function &F, CallBase &CB,
           LabelVAPtr);
     }
 
-    Args.push_back(IRB.CreateStructGEP(LabelVATy, LabelVAAlloca, 0));
+    Args.push_back(LabelVAAlloca);
   }
 
   // Adds the return value shadow.
@@ -3015,7 +3027,7 @@ void DFSanVisitor::addOriginArguments(Function &F, CallBase &CB,
       IRB.CreateStore(DFSF.getOrigin(*I), OriginVAPtr);
     }
 
-    Args.push_back(IRB.CreateStructGEP(OriginVATy, OriginVAAlloca, 0));
+    Args.push_back(OriginVAAlloca);
   }
 
   // Add the return value origin.
@@ -3031,6 +3043,7 @@ void DFSanVisitor::addOriginArguments(Function &F, CallBase &CB,
 
 bool DFSanVisitor::visitWrappedCallBase(Function &F, CallBase &CB) {
   IRBuilder<> IRB(&CB);
+  IRB.disableGEPCanonicalization();
   switch (DFSF.DFS.getWrapperKind(&F)) {
   case DataFlowSanitizer::WK_Warning:
     CB.setCalledFunction(&F);
@@ -3428,8 +3441,8 @@ PreservedAnalyses DataFlowSanitizerPass::run(Module &M,
         AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
     return FAM.getResult<TargetLibraryAnalysis>(F);
   };
-  if (!DataFlowSanitizer(InstrumentationOptions::Global, ABIListFiles, FS)
-           .runImpl(M, GetTLI))
+  const InstrumentationOptions &Opts = getInstrumentationOptions(M);
+  if (!DataFlowSanitizer(Opts, ABIListFiles, FS).runImpl(M, GetTLI))
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA = PreservedAnalyses::none();

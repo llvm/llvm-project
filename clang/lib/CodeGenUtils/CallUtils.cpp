@@ -7,6 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/CodeGenUtils/CallUtils.h"
+#include "clang/AST/Attr.h"
+#include "clang/AST/ExprCXX.h"
+#include "clang/Basic/TargetCXXABI.h"
 
 namespace clang::CodeGenUtils {
 
@@ -23,6 +26,58 @@ llvm::FPClassTest getNoFPClassTestMask(const LangOptions &LangOpts) {
   if (LangOpts.NoHonorNaNs)
     Mask |= llvm::fcNan;
   return Mask;
+}
+
+bool isArgumentMaybeUndef(const Decl *TargetDecl, unsigned NumRequiredArgs,
+                          unsigned ArgNo) {
+  const auto *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl);
+  if (!FD)
+    return false;
+
+  // Assume variadic arguments do not have maybe_undef attribute.
+  if (ArgNo >= NumRequiredArgs)
+    return false;
+
+  // Check if argument has maybe_undef attribute.
+  if (ArgNo < FD->getNumParams()) {
+    const ParmVarDecl *Param = FD->getParamDecl(ArgNo);
+    if (Param && Param->hasAttr<MaybeUndefAttr>())
+      return true;
+  }
+
+  return false;
+}
+
+EvaluationOrder getCallArgEvaluationOrder(const CallExpr *E) {
+  // Note that we allow this to override the order dictated by the calling
+  // convention on the MS ABI, which means that parameter destruction order is
+  // not necessarily reverse construction order.
+  // FIXME: Revisit this based on C++ committee response to unimplementability.
+  const auto *OCE = dyn_cast<CXXOperatorCallExpr>(E);
+  if (!OCE)
+    return EvaluationOrder::Default;
+
+  if (OCE->isAssignmentOp())
+    return EvaluationOrder::ForceRightToLeft;
+
+  switch (OCE->getOperator()) {
+  case OO_LessLess:
+  case OO_GreaterGreater:
+  case OO_AmpAmp:
+  case OO_PipePipe:
+  case OO_Comma:
+  case OO_ArrowStar:
+    return EvaluationOrder::ForceLeftToRight;
+  default:
+    return EvaluationOrder::Default;
+  }
+}
+
+bool shouldEvaluateArgsLeftToRight(EvaluationOrder Order,
+                                   const TargetCXXABI &ABI) {
+  return ABI.areArgsDestroyedLeftToRightInCallee()
+             ? Order == EvaluationOrder::ForceLeftToRight
+             : Order != EvaluationOrder::ForceRightToLeft;
 }
 
 } // namespace clang::CodeGenUtils

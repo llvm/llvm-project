@@ -15,6 +15,7 @@
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/Analysis/DomainSpecific/CocoaConventions.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
@@ -574,8 +575,8 @@ public:
 class UnborrowedCallArgsChecker final : public RawPtrRefCallArgsChecker {
 public:
   UnborrowedCallArgsChecker()
-      : RawPtrRefCallArgsChecker("Loan on a CanBorrow object not guarded by "
-                                 "const or a Borrow",
+      : RawPtrRefCallArgsChecker("Unborrowed call argument for a raw "
+                                 "pointer/reference parameter",
                                  makeBorrowSafetyModel()) {}
 };
 

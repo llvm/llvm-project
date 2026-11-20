@@ -138,21 +138,63 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
   movq  %rsi, 40(PTR)
   movq  %rbp, 48(PTR)
   movq  %rsp, 56(PTR)
+#if !defined(X86_64_BASE_SYSCALL)
   addq  $8,   56(PTR)
+#endif
   movq  %r8,  64(PTR)
   movq  %r9,  72(PTR)
   movq  %r10, 80(PTR)
   movq  %r11, 88(PTR)
   movq  %r12, 96(PTR)
   movq  %r13,104(PTR)
+# Skip spilling r14/r15 under LFI; reserved by LFI ABI.
+#if !defined(__LFI__)
   movq  %r14,112(PTR)
   movq  %r15,120(PTR)
+#endif
   movq  (%rsp),TMP
   movq  TMP,128(PTR) # store return address as rip
+#if defined(X86_64_BASE_SYSCALL)
+  # Capture flags before any instruction that changes them.
+  pushfq
+  popq  TMP
+  movl  %esi,136(PTR)
+  leaq  8(%rsp),TMP
+  movq  TMP,56(PTR) # store what sp was at call site as rsp
+  movw  %cs,140(PTR)
+  movw  %fs,148(PTR)
+  movw  %gs,150(PTR)
+  movw  %es,146(PTR)
+  movw  %ss,142(PTR)
+  movw  %ds,144(PTR)
+  movq  $0,152(PTR)
+  movq  $0,160(PTR)
+
+  # Use syscalls rather than FSGSBASE instructions, which require both CPU
+  # support and OS enablement. All syscall-clobbered registers are saved above.
+  # FreeBSD may clear r8-r10 on syscall return. Keep the context pointer in
+  # the callee-saved rbx, preserving its value for our caller as well.
+  pushq %rbx
+  movq  PTR,%rbx
+  movq  $X86_64_BASE_SYSCALL,%rax
+  movq  $X86_64_GET_FSBASE,%rdi
+  leaq  152(%rbx),%rsi
+  syscall
+  # FreeBSD reports errors in CF with a positive errno in rax.
+  jc    9f
+  movq  $X86_64_BASE_SYSCALL,%rax
+  movq  $X86_64_GET_GSBASE,%rdi
+  leaq  160(%rbx),%rsi
+  syscall
+  jc    9f
+  movq  %rbx,PTR
+  popq  %rbx
+#else
   # skip rflags
   # skip cs
   # skip fs
   # skip gs
+#endif
 
 #if defined(_WIN64)
   movdqu %xmm0,176(PTR)
@@ -174,6 +216,12 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
 #endif
   xorl  %eax, %eax    # return UNW_ESUCCESS
   ret
+#if defined(X86_64_BASE_SYSCALL)
+9:
+  popq %rbx
+  movl $-6540,%eax # UNW_EUNSPEC: segment base capture failed
+  ret
+#endif
 
 #elif defined(__mips__) && defined(_ABIO32) && _MIPS_SIM == _ABIO32
 
@@ -229,7 +277,43 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
   sw    $8,  (4 * 34)($4)
 #endif
 #ifdef __mips_hard_float
-#if __mips_fpr != 64
+#if defined(__mips_single_float)
+  // A single-precision-only FPU has no sdc1. Each register still occupies
+  // an 8-byte slot so that the context layout matches the other o32 FPU
+  // configurations; only the low half of each slot is used.
+  swc1  $f0, (4 * 36 + 8 * 0)($4)
+  swc1  $f1, (4 * 36 + 8 * 1)($4)
+  swc1  $f2, (4 * 36 + 8 * 2)($4)
+  swc1  $f3, (4 * 36 + 8 * 3)($4)
+  swc1  $f4, (4 * 36 + 8 * 4)($4)
+  swc1  $f5, (4 * 36 + 8 * 5)($4)
+  swc1  $f6, (4 * 36 + 8 * 6)($4)
+  swc1  $f7, (4 * 36 + 8 * 7)($4)
+  swc1  $f8, (4 * 36 + 8 * 8)($4)
+  swc1  $f9, (4 * 36 + 8 * 9)($4)
+  swc1  $f10, (4 * 36 + 8 * 10)($4)
+  swc1  $f11, (4 * 36 + 8 * 11)($4)
+  swc1  $f12, (4 * 36 + 8 * 12)($4)
+  swc1  $f13, (4 * 36 + 8 * 13)($4)
+  swc1  $f14, (4 * 36 + 8 * 14)($4)
+  swc1  $f15, (4 * 36 + 8 * 15)($4)
+  swc1  $f16, (4 * 36 + 8 * 16)($4)
+  swc1  $f17, (4 * 36 + 8 * 17)($4)
+  swc1  $f18, (4 * 36 + 8 * 18)($4)
+  swc1  $f19, (4 * 36 + 8 * 19)($4)
+  swc1  $f20, (4 * 36 + 8 * 20)($4)
+  swc1  $f21, (4 * 36 + 8 * 21)($4)
+  swc1  $f22, (4 * 36 + 8 * 22)($4)
+  swc1  $f23, (4 * 36 + 8 * 23)($4)
+  swc1  $f24, (4 * 36 + 8 * 24)($4)
+  swc1  $f25, (4 * 36 + 8 * 25)($4)
+  swc1  $f26, (4 * 36 + 8 * 26)($4)
+  swc1  $f27, (4 * 36 + 8 * 27)($4)
+  swc1  $f28, (4 * 36 + 8 * 28)($4)
+  swc1  $f29, (4 * 36 + 8 * 29)($4)
+  swc1  $f30, (4 * 36 + 8 * 30)($4)
+  swc1  $f31, (4 * 36 + 8 * 31)($4)
+#elif __mips_fpr != 64
   sdc1  $f0, (4 * 36 + 8 * 0)($4)
   sdc1  $f2, (4 * 36 + 8 * 2)($4)
   sdc1  $f4, (4 * 36 + 8 * 4)($4)

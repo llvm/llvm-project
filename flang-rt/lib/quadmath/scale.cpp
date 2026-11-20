@@ -17,8 +17,8 @@ extern "C" {
 F128Type RTDEF(Scale16)(F128Type x, std::int64_t p) {
   auto ip{static_cast<int>(p)};
   if (ip != p) {
-    ip = p < 0 ? std::numeric_limits<int>::min()
-               : std::numeric_limits<int>::max();
+    ip = p < 0 ? common::numeric_limits<int>::min()
+               : common::numeric_limits<int>::max();
   }
   return LDEXPTy<F128Type>::compute(x, ip);
 }

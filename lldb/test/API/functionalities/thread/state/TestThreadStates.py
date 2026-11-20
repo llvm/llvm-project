@@ -10,6 +10,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@requireThreadSupport
 class ThreadStateTestCase(TestBase):
     def test_state_after_breakpoint(self):
         """Test thread state after breakpoint."""

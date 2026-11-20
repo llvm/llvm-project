@@ -52,29 +52,8 @@ public:
     // want to clobber the upper 32 bits of a GPR unnecessarily.
     return 32;
   }
-  TargetLoweringBase::LegalizeTypeAction getPreferredVectorAction(MVT VT)
-    const override {
-    // Widen subvectors to the full width rather than promoting integer
-    // elements.  This is better because:
-    //
-    // (a) it means that we can handle the ABI for passing and returning
-    //     sub-128 vectors without having to handle them as legal types.
-    //
-    // (b) we don't have instructions to extend on load and truncate on store,
-    //     so promoting the integers is less efficient.
-    //
-    // (c) there are no multiplication instructions for the widest integer
-    //     type (v2i64).
-
-    // Expand (narrow) f16 vectors during type legalization to avoid
-    // operations for all elements as with expansion after widening.
-    if (VT.getScalarType() == MVT::f16)
-      return VT.getVectorElementCount().isScalar() ? TypeScalarizeVector
-                                                   : TypeSplitVector;
-    if (VT.getScalarSizeInBits() % 8 == 0)
-      return TypeWidenVector;
-    return TargetLoweringBase::getPreferredVectorAction(VT);
-  }
+  TargetLoweringBase::LegalizeTypeAction
+  getPreferredVectorAction(MVT VT) const override;
   unsigned
   getNumRegisters(LLVMContext &Context, EVT VT,
                   std::optional<MVT> RegisterVT) const override {
@@ -107,8 +86,8 @@ public:
                          EVT) const override;
   bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
                                   EVT VT) const override;
-  bool isFPImmLegal(const APFloat &Imm, EVT VT,
-                    bool ForCodeSize) const override;
+  FPImmAction getFPImmAction(const APFloat &Imm, EVT VT,
+                             bool ForCodeSize) const override;
   bool ShouldShrinkFPConstant(EVT VT) const override {
     // Do not shrink 64-bit FP constpool entries since LDEB is slower than
     // LD, and having the full constant in memory enables reg/mem opcodes.
@@ -119,6 +98,11 @@ public:
 
   MachineBasicBlock *emitEHSjLjLongJmp(MachineInstr &MI,
                                        MachineBasicBlock *MBB) const;
+
+  bool canMergeStoresTo(unsigned AS, EVT MemVT,
+                        const MachineFunction &MF) const override;
+
+  bool aggressivelyPreferBuildVectorSources(EVT VecVT) const override;
 
   bool hasInlineStackProbe(const MachineFunction &MF) const override;
   AtomicExpansionKind shouldCastAtomicLoadInIR(LoadInst *LI) const override;
@@ -142,6 +126,7 @@ public:
                           const AttributeList &FuncAttributes) const override;
   bool isTruncateFree(Type *, Type *) const override;
   bool isTruncateFree(EVT, EVT) const override;
+  bool isTypeDesirableForOp(SDNode *N, EVT VT) const override;
 
   bool shouldFormOverflowOp(unsigned Opcode, EVT VT,
                             bool MathUsed) const override {
@@ -374,8 +359,8 @@ private:
   SDValue lowerATOMIC_LOAD(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerATOMIC_STORE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerATOMIC_LDST_I128(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerATOMIC_LOAD_OP(SDValue Op, SelectionDAG &DAG,
-                              unsigned Opcode) const;
+  void lowerATOMIC_LOAD_OP(SDNode *N, SmallVectorImpl<SDValue> &Results,
+                           SelectionDAG &DAG, unsigned Opcode) const;
   SDValue lowerATOMIC_LOAD_SUB(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerATOMIC_CMP_SWAP(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerSTACKSAVE(SDValue Op, SelectionDAG &DAG) const;
@@ -447,10 +432,6 @@ private:
                                    bool Invert) const;
   MachineBasicBlock *emitICmp128Hi(MachineInstr &MI, MachineBasicBlock *BB,
                                    bool Unsigned) const;
-  MachineBasicBlock *emitPair128(MachineInstr &MI,
-                                 MachineBasicBlock *MBB) const;
-  MachineBasicBlock *emitExt128(MachineInstr &MI, MachineBasicBlock *MBB,
-                                bool ClearEven) const;
   MachineBasicBlock *emitAtomicLoadBinary(MachineInstr &MI,
                                           MachineBasicBlock *BB,
                                           unsigned BinOpcode,
@@ -483,17 +464,20 @@ private:
 
   MachineMemOperand::Flags
   getTargetMMOFlags(const Instruction &I) const override;
-  const TargetRegisterClass *getRepRegClassFor(MVT VT) const override;
 
 private:
+  bool enableNarrowIntArgsVerification() const;
   bool isInternal(const Function *Fn) const;
   mutable std::map<const Function *, bool> IsInternalCache;
-  void verifyNarrowIntegerArgs_Call(const SmallVectorImpl<ISD::OutputArg> &Outs,
+  void verifyNarrowIntegerArgs_Call(CallLoweringInfo &CLI,
+                                    const SmallVectorImpl<ISD::OutputArg> &Outs,
                                     const Function *F, SDValue Callee) const;
-  void verifyNarrowIntegerArgs_Ret(const SmallVectorImpl<ISD::OutputArg> &Outs,
+  void verifyNarrowIntegerArgs_Ret(CallingConv::ID CallConv,
+                                   const SmallVectorImpl<ISD::OutputArg> &Outs,
                                    const Function *F) const;
-  bool
-  verifyNarrowIntegerArgs(const SmallVectorImpl<ISD::OutputArg> &Outs) const;
+  bool verifyNarrowIntegerArgs(bool C_ABI,
+                               const SmallVectorImpl<ISD::OutputArg> &Outs,
+                               const Function *FunHeader, bool IsRet) const;
 
 public:
 };

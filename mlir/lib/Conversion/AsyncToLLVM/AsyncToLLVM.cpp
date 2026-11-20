@@ -17,7 +17,14 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Func/Transforms/FuncConversions.h"
 #include "mlir/Dialect/LLVMIR/FunctionCallUtils.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMArithOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMCallOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMConstantOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMConversionOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMCoroIntrinsicOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMMemoryOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMModuleOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMTerminatorOps.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -450,7 +457,7 @@ public:
 namespace {
 class CoroEndOpConversion : public OpConversionPattern<CoroEndOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(CoroEndOp op, OpAdaptor adaptor,
@@ -479,7 +486,7 @@ public:
 namespace {
 class CoroSaveOpConversion : public OpConversionPattern<CoroSaveOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(CoroSaveOp op, OpAdaptor adaptor,
@@ -525,7 +532,7 @@ namespace {
 ///
 class CoroSuspendOpConversion : public OpConversionPattern<CoroSuspendOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(CoroSuspendOp op, OpAdaptor adaptor,
@@ -653,7 +660,7 @@ namespace {
 class RuntimeSetAvailableOpLowering
     : public OpConversionPattern<RuntimeSetAvailableOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(RuntimeSetAvailableOp op, OpAdaptor adaptor,
@@ -679,7 +686,7 @@ namespace {
 class RuntimeSetErrorOpLowering
     : public OpConversionPattern<RuntimeSetErrorOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(RuntimeSetErrorOp op, OpAdaptor adaptor,
@@ -704,7 +711,7 @@ public:
 namespace {
 class RuntimeIsErrorOpLowering : public OpConversionPattern<RuntimeIsErrorOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(RuntimeIsErrorOp op, OpAdaptor adaptor,
@@ -729,7 +736,7 @@ public:
 namespace {
 class RuntimeAwaitOpLowering : public OpConversionPattern<RuntimeAwaitOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(RuntimeAwaitOp op, OpAdaptor adaptor,
@@ -901,7 +908,7 @@ namespace {
 class RuntimeAddToGroupOpLowering
     : public OpConversionPattern<RuntimeAddToGroupOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(RuntimeAddToGroupOp op, OpAdaptor adaptor,
@@ -928,7 +935,7 @@ namespace {
 class RuntimeNumWorkerThreadsOpLowering
     : public OpConversionPattern<RuntimeNumWorkerThreadsOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(RuntimeNumWorkerThreadsOp op, OpAdaptor adaptor,
@@ -998,7 +1005,7 @@ public:
 namespace {
 class ReturnOpOpConversion : public OpConversionPattern<func::ReturnOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(func::ReturnOp op, OpAdaptor adaptor,
@@ -1103,7 +1110,7 @@ void ConvertAsyncToLLVMPass::runOnOperation() {
 namespace {
 class ConvertExecuteOpTypes : public OpConversionPattern<ExecuteOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(ExecuteOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -1127,7 +1134,7 @@ public:
 // Dummy pattern to trigger the appropriate type conversion / materialization.
 class ConvertAwaitOpTypes : public OpConversionPattern<AwaitOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(AwaitOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -1139,7 +1146,7 @@ public:
 // Dummy pattern to trigger the appropriate type conversion / materialization.
 class ConvertYieldOpTypes : public OpConversionPattern<async::YieldOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(async::YieldOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {

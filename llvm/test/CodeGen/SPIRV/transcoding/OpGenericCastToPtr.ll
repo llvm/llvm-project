@@ -96,6 +96,21 @@ entry:
   ret i32 %r
 }
 
+; CHECK-SPIRV:      OpFunction
+; CHECK-SPIRV:      %[[#IntFencePtr:]] = OpFunctionParameter %[[#GenericIntPtr]]
+; CHECK-SPIRV:      %[[#CharFencePtr:]] = OpBitcast %[[#GenericCharPtr]] %[[#IntFencePtr]]
+; CHECK-SPIRV-NEXT: %[[#IntSem:]] = OpGenericPtrMemSemantics %[[#Int]] %[[#CharFencePtr]]
+; CHECK-SPIRV-NEXT: %[[#]] = OpShiftRightLogical %[[#Int]] %[[#IntSem]] %[[#Eight]]
+; CHECK-SPIRV:      OpFunctionEnd
+
+define spir_func i32 @test_get_fence_int_ptr(ptr addrspace(4) %p) {
+entry:
+  %v = load i32, ptr addrspace(4) %p, align 4
+  %r = call spir_func i32 @_Z9get_fencePU3AS4v(ptr addrspace(4) %p)
+  %s = add i32 %v, %r
+  ret i32 %s
+}
+
 declare spir_func ptr addrspace(1) @_Z33__spirv_GenericCastToPtr_ToGlobalPvi(ptr addrspace(4), i32)
 declare spir_func ptr addrspace(3) @_Z32__spirv_GenericCastToPtr_ToLocalPvi(ptr addrspace(4), i32)
 declare spir_func ptr @_Z34__spirv_GenericCastToPtr_ToPrivatePvi(ptr addrspace(4), i32)
