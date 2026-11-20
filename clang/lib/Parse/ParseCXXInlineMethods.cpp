@@ -751,22 +751,6 @@ bool Parser::checkLateAttributeParamRefs(
     }
   }
 
-  // A name binds the same way in a template, but instantiation cannot yet map a
-  // pointee's parameters, which are instantiated with the declaration's type
-  // and not kept. Reject the attribute rather than instantiate it wrongly.
-  // FIXME: Map these parameters during template instantiation.
-  if (Actions.CurContext->isDependentContext() ||
-      getCurScope()->getTemplateParamParent() ||
-      Actions.getCurGenericLambda()) {
-    for (const DeclRefExpr *DRE : ParamRefs) {
-      const auto *PVD = cast<ParmVarDecl>(DRE->getDecl());
-      if (!IsPointeeParam(PVD))
-        continue;
-      Diag(DRE->getLocation(), diag::err_late_attribute_param_in_template)
-          << &LPA.AttrName << PVD;
-      return true;
-    }
-  }
   return false;
 }
 
