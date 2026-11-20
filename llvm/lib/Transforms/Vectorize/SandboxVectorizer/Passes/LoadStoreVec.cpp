@@ -69,11 +69,10 @@ bool LoadStoreVec::acceptOrRevert() {
   return true;
 }
 
-/// \returns the type of the lanes of \p LaneTy that hold a value of type \p Ty
-/// in a packed vector: \p LaneTy itself, or <N x LaneTy> if \p Ty is wider.
-static Type *getLanesTypeFor(Type *Ty, Type *LaneTy, const DataLayout &DL) {
-  unsigned NumLanes = Utils::getNumBits(Ty, DL) / Utils::getNumBits(LaneTy, DL);
-  return NumLanes > 1 ? VecUtils::getWideType(LaneTy, NumLanes) : LaneTy;
+/// \returns \p ElemTy if \p N is 1, otherwise < \p N x \p ElemTy >.
+static Type *getWidenedType(Type *ElemTy, unsigned N) {
+  assert(!ElemTy->isVectorTy() && "Expected a scalar element type!");
+  return N == 1 ? ElemTy : FixedVectorType::get(ElemTy, N);
 }
 
 LoadInst *LoadStoreVec::createVectorLoad(BndlRef<Instruction *> Loads) {
@@ -353,9 +352,11 @@ LoadInst *LoadStoreVec::vectorizeLoads(BndlRef<Instruction *> Loads,
   // Each load is unpacked from the lanes it occupies in the vector and, for a
   // chain of mixed types, reinterpreted back as the type of the load.
   Type *VecElemTy = cast<FixedVectorType>(*VecTy)->getElementType();
-  if (any_of(Loads, [this, VecElemTy](Instruction *I) {
+  unsigned ElemBits = Utils::getNumBits(VecElemTy, *DL);
+  if (any_of(Loads, [this, VecElemTy, ElemBits](Instruction *I) {
+        unsigned NumElems = Utils::getNumBits(I) / ElemBits;
         return !SameSizeReinterpret::canReinterpret(
-            getLanesTypeFor(I->getType(), VecElemTy, *DL), I->getType(), *DL);
+            getWidenedType(VecElemTy, NumElems), I->getType(), *DL);
       }))
     return nullptr;
 
@@ -364,19 +365,20 @@ LoadInst *LoadStoreVec::vectorizeLoads(BndlRef<Instruction *> Loads,
   auto *VecLoad = createVectorLoad(Loads);
   assert(VecLoad != nullptr && "Expected vector load");
 
-  // Lanes are counted in units of LaneTy, so a load wider than LaneTy spans
-  // several lanes.
+  // Lanes are counted in units of VecElemTy, so a load wider than VecElemTy
+  // spans several lanes.
   BasicBlock::iterator WhereIt = std::next(VecLoad->getIterator());
   unsigned Lane = 0;
   for (Instruction *I : Loads) {
-    auto *OrigLoad = cast<LoadInst>(I);
-    Type *VecTy = getLanesTypeFor(OrigLoad->getType(), VecElemTy, *DL);
-    unsigned NumLanes = VecUtils::getNumLanes(VecTy);
-    if (!OrigLoad->hasNUses(0)) {
-      Value *Unpacked = VecUtils::unpack(VecLoad, VecTy, Lane, WhereIt);
-      Unpacked = SameSizeReinterpret::reinterpretValue(
-          Unpacked, OrigLoad->getType(), WhereIt, *Ctx, *DL);
-      OrigLoad->replaceAllUsesWith(Unpacked);
+    unsigned NumElems =
+        Utils::getNumBits(I) / Utils::getNumBits(VecElemTy, *DL);
+    Type *UnpackTy = getWidenedType(VecElemTy, NumElems);
+    unsigned NumLanes = VecUtils::getNumLanes(UnpackTy);
+    if (!I->hasNUses(0)) {
+      Value *Unpacked = VecUtils::unpack(VecLoad, UnpackTy, Lane, WhereIt);
+      Unpacked = SameSizeReinterpret::reinterpretValue(Unpacked, I->getType(),
+                                                       WhereIt, *Ctx, *DL);
+      I->replaceAllUsesWith(Unpacked);
     }
     Lane += NumLanes;
   }
