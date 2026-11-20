@@ -154,6 +154,26 @@ else()
   set(ASAN_ENABLE_EXCEPTIONS_DEFAULT ON)
 endif()
 
+# With COMPILER_RT_CXX_LIBRARY=default, <new> must come from the toolchain.
+# Some sysroots provide only a C library (e.g. musl), so check for it and
+# default exceptions off when it is missing.
+if(COMPILER_RT_CXX_LIBRARY STREQUAL "default")
+  include(CheckIncludeFileCXX)
+  include(CMakePushCheckState)
+  cmake_push_check_state()
+  # Runtimes builds add -nostdinc++ to the check flags; the toolchain's C++
+  # headers are exactly what this check is looking for.
+  string(REPLACE "-nostdinc++" "" CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS}")
+  set(ASAN_SAVED_TRY_COMPILE_TARGET_TYPE ${CMAKE_TRY_COMPILE_TARGET_TYPE})
+  set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
+  check_include_file_cxx(new COMPILER_RT_HAS_CXX_NEW_HEADER)
+  set(CMAKE_TRY_COMPILE_TARGET_TYPE ${ASAN_SAVED_TRY_COMPILE_TARGET_TYPE})
+  cmake_pop_check_state()
+  if(NOT COMPILER_RT_HAS_CXX_NEW_HEADER)
+    set(ASAN_ENABLE_EXCEPTIONS_DEFAULT OFF)
+  endif()
+endif()
+
 option(COMPILER_RT_ASAN_ENABLE_EXCEPTIONS
   "Enable exceptions in ASan C++ runtime" ${ASAN_ENABLE_EXCEPTIONS_DEFAULT})
 
@@ -171,6 +191,15 @@ if(COMPILER_RT_ASAN_ENABLE_EXCEPTIONS AND
     "COMPILER_RT_CXX_LIBRARY=none. Set "
     "-DCOMPILER_RT_ASAN_ENABLE_EXCEPTIONS=OFF or pick a different "
     "COMPILER_RT_CXX_LIBRARY.")
+endif()
+if(COMPILER_RT_ASAN_ENABLE_EXCEPTIONS AND
+   COMPILER_RT_CXX_LIBRARY STREQUAL "default" AND
+   NOT COMPILER_RT_HAS_CXX_NEW_HEADER)
+  message(FATAL_ERROR
+    "COMPILER_RT_ASAN_ENABLE_EXCEPTIONS=ON requires a C++ standard "
+    "library (for <new> and std::bad_alloc), but the toolchain provides "
+    "no <new>. Set -DCOMPILER_RT_ASAN_ENABLE_EXCEPTIONS=OFF or "
+    "-DCOMPILER_RT_CXX_LIBRARY=libcxx.")
 endif()
 
 # Two paths for resolving <new>:
