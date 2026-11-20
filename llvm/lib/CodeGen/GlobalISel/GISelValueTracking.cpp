@@ -1735,8 +1735,8 @@ void GISelValueTracking::computeKnownFPClass(Register R,
 
     LLT Ty = MRI.getType(Val).getScalarType();
     const fltSemantics &FPType = getFltSemanticForLLT(Ty);
-    DenormalMode DenormMode = MF->getDenormalMode(FPType);
-    Known = KnownFPClass::canonicalize(KnownSrc, DenormMode);
+    DenormalMode Mode = MF->getDenormalMode(FPType);
+    Known = KnownFPClass::canonicalize(KnownSrc, FPType, Mode);
     break;
   }
   case TargetOpcode::G_VECREDUCE_FMAX:

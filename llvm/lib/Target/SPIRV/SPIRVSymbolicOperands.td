@@ -388,7 +388,7 @@ defm SPV_INTEL_tensor_float32_conversion : ExtensionOperand<125, [EnvOpenCL]>;
 defm SPV_KHR_bfloat16 : ExtensionOperand<126, [EnvVulkan, EnvOpenCL]>;
 defm SPV_INTEL_predicated_io : ExtensionOperand<127, [EnvOpenCL]>;
 defm SPV_KHR_maximal_reconvergence : ExtensionOperand<128, [EnvVulkan]>;
-defm SPV_INTEL_bfloat16_arithmetic
+defm SPV_EXT_bfloat16_arithmetic
     : ExtensionOperand<129, [EnvVulkan, EnvOpenCL]>;
 defm SPV_INTEL_16bit_atomics : ExtensionOperand<130, [EnvVulkan, EnvOpenCL]>;
 defm SPV_ALTERA_arbitrary_precision_fixed_point : ExtensionOperand<131, [EnvOpenCL, EnvVulkan]>;
@@ -413,6 +413,9 @@ defm SPV_KHR_relaxed_extended_instruction : ExtensionOperand<142, [EnvVulkan, En
 defm SPV_EXT_shader_subgroup_partitioned : ExtensionOperand<143, [EnvVulkan]>;
 defm SPV_KHR_quad_control : ExtensionOperand<144, [EnvVulkan]>;
 defm SPV_KHR_compute_shader_derivatives : ExtensionOperand<145, [EnvVulkan]>;
+// Legacy name for SPV_EXT_bfloat16_arithmetic. It is kept for consumers
+// that recognize only the INTEL name, until they transition to the EXT name.
+defm SPV_INTEL_bfloat16_arithmetic : ExtensionOperand<146, [EnvOpenCL]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define Capabilities enum values and at the same time
@@ -577,7 +580,11 @@ defm ComputeDerivativeGroupQuadsKHR
 def ComputeDerivativeGroupQuadsNV
     : Capability<"ComputeDerivativeGroupQuadsNV", 5288>;
 defm DemoteToHelperInvocation : CapabilityOperand<5379, 0x10600, 0, [SPV_EXT_demote_to_helper_invocation], []>;
-defm ComputeDerivativeGroupLinearNV : CapabilityOperand<5350, 0, 0, [], []>;
+defm ComputeDerivativeGroupLinearKHR
+    : CapabilityOperand<5350, 0, 0, [SPV_KHR_compute_shader_derivatives],
+                        [Shader]>;
+def ComputeDerivativeGroupLinearNV
+    : Capability<"ComputeDerivativeGroupLinearNV", 5350>;
 defm FragmentDensityEXT : CapabilityOperand<5291, 0, 0, [], [Shader]>;
 defm PhysicalStorageBufferAddressesEXT : CapabilityOperand<5347, 0, 0, [], [Shader]>;
 defm CooperativeMatrixNV : CapabilityOperand<5357, 0, 0, [], [Shader]>;
@@ -614,6 +621,7 @@ defm AtomicBFloat16LoadStoreINTEL : CapabilityOperand<6262, 0, 0, [SPV_INTEL_16b
 defm VariableLengthArrayINTEL : CapabilityOperand<5817, 0, 0, [SPV_INTEL_variable_length_array], []>;
 defm GroupUniformArithmeticKHR : CapabilityOperand<6400, 0, 0, [SPV_KHR_uniform_group_instructions], []>;
 defm USMStorageClassesINTEL : CapabilityOperand<5935, 0, 0, [SPV_INTEL_usm_storage_classes], [Kernel]>;
+defm BFloat16ArithmeticEXT : CapabilityOperand<6226, 0, 0, [SPV_EXT_bfloat16_arithmetic], []>;
 defm BFloat16ArithmeticINTEL : CapabilityOperand<6226, 0, 0, [SPV_INTEL_bfloat16_arithmetic], []>;
 defm BFloat16ConversionINTEL : CapabilityOperand<6115, 0, 0, [SPV_INTEL_bfloat16_conversion], []>;
 defm GlobalVariableHostAccessINTEL : CapabilityOperand<6187, 0, 0, [SPV_INTEL_global_variable_host_access], []>;
@@ -864,7 +872,9 @@ defm OutputLinesNV : ExecutionModeOperand<5269, [MeshShadingNV]>;
 defm DerivativeGroupQuadsKHR
     : ExecutionModeOperand<5289, [ComputeDerivativeGroupQuadsKHR]>;
 def DerivativeGroupQuadsNV : ExecutionMode<"DerivativeGroupQuadsNV", 5289>;
-defm DerivativeGroupLinearNV : ExecutionModeOperand<5290, [ComputeDerivativeGroupLinearNV]>;
+defm DerivativeGroupLinearKHR
+    : ExecutionModeOperand<5290, [ComputeDerivativeGroupLinearKHR]>;
+def DerivativeGroupLinearNV : ExecutionMode<"DerivativeGroupLinearNV", 5290>;
 defm OutputTrianglesNV : ExecutionModeOperand<5298, [MeshShadingNV]>;
 defm RoundingModeRTPINTEL : ExecutionModeOperand<5620, [RoundToInfinityINTEL]>;
 defm RoundingModeRTNINTEL : ExecutionModeOperand<5621, [RoundToInfinityINTEL]>;

@@ -26,21 +26,6 @@
 ---
 name:            func16
 alignment:       16
-registers:
-  - { id: 0, class: gr32 }
-  - { id: 1, class: gr32 }
-  - { id: 2, class: gr32 }
-  - { id: 3, class: gr16 }
-  - { id: 4, class: gr32 }
-  - { id: 5, class: gr16 }
-  - { id: 6, class: gr16 }
-  - { id: 7, class: gr32 }
-  - { id: 8, class: gr32 }
-  - { id: 9, class: gr32 }
-  - { id: 10, class: gr16 }
-  - { id: 11, class: gr32 }
-  - { id: 13, class: gr32 }
-  - { id: 14, class: gr16 }
 frameInfo:
   maxAlignment:    1
 body:             |
