@@ -230,7 +230,10 @@ void X86AsmPrinter::emitKCFITypeId(const MachineFunction &MF) {
           ++Arity;
         }
       }
+      assert(Arity < 7 &&
+             "-fsanitize-kcfi-arity requires System V ABI compliance");
     }
+
     DestReg = ArityToRegMap[Arity];
   }
 
