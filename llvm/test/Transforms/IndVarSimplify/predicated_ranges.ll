@@ -469,8 +469,6 @@ define void @test_can_predicate_simple_unsigned(ptr %p, ptr %arr) {
 ; CHECK-LABEL: @test_can_predicate_simple_unsigned(
 ; CHECK-NEXT:  preheader:
 ; CHECK-NEXT:    [[LEN:%.*]] = load i32, ptr [[P:%.*]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[LEN]], -1
-; CHECK-NEXT:    [[RANGE_CHECK_FIRST_ITER:%.*]] = icmp ult i32 [[TMP0]], [[LEN]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[LEN]], [[PREHEADER:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
@@ -478,7 +476,7 @@ define void @test_can_predicate_simple_unsigned(ptr %p, ptr %arr) {
 ; CHECK-NEXT:    br i1 [[ZERO_COND]], label [[EXIT:%.*]], label [[RANGE_CHECK_BLOCK:%.*]]
 ; CHECK:       range_check_block:
 ; CHECK-NEXT:    [[IV_NEXT]] = sub nuw i32 [[IV]], 1
-; CHECK-NEXT:    br i1 [[RANGE_CHECK_FIRST_ITER]], label [[BACKEDGE]], label [[FAIL:%.*]]
+; CHECK-NEXT:    br i1 true, label [[BACKEDGE]], label [[FAIL:%.*]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[EL_PTR:%.*]] = getelementptr i32, ptr [[P]], i32 [[IV]]
 ; CHECK-NEXT:    [[EL:%.*]] = load i32, ptr [[EL_PTR]], align 4
@@ -520,8 +518,6 @@ define void @test_can_predicate_simple_unsigned_inverted(ptr %p, ptr %arr) {
 ; CHECK-LABEL: @test_can_predicate_simple_unsigned_inverted(
 ; CHECK-NEXT:  preheader:
 ; CHECK-NEXT:    [[LEN:%.*]] = load i32, ptr [[P:%.*]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[LEN]], -1
-; CHECK-NEXT:    [[RANGE_CHECK_FIRST_ITER:%.*]] = icmp uge i32 [[TMP0]], [[LEN]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[LEN]], [[PREHEADER:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
@@ -529,7 +525,7 @@ define void @test_can_predicate_simple_unsigned_inverted(ptr %p, ptr %arr) {
 ; CHECK-NEXT:    br i1 [[ZERO_COND]], label [[EXIT:%.*]], label [[RANGE_CHECK_BLOCK:%.*]]
 ; CHECK:       range_check_block:
 ; CHECK-NEXT:    [[IV_NEXT]] = sub nuw i32 [[IV]], 1
-; CHECK-NEXT:    br i1 [[RANGE_CHECK_FIRST_ITER]], label [[FAIL:%.*]], label [[BACKEDGE]]
+; CHECK-NEXT:    br i1 false, label [[FAIL:%.*]], label [[BACKEDGE]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[EL_PTR:%.*]] = getelementptr i32, ptr [[P]], i32 [[IV]]
 ; CHECK-NEXT:    [[EL:%.*]] = load i32, ptr [[EL_PTR]], align 4
@@ -968,6 +964,57 @@ loop:
 range_check_block:
   %iv.next = sub i32 %iv, 1
   %range_check = icmp slt i32 %iv.next, %len
+  br i1 %range_check, label %backedge, label %fail
+
+backedge:
+  %el.ptr = getelementptr i32, ptr %p, i32 %iv
+  %el = load i32, ptr %el.ptr
+  %loop.cond = icmp eq i32 %el, 0
+  br i1 %loop.cond, label %loop, label %exit
+
+exit:
+  ret void
+
+fail:
+  unreachable
+}
+
+define void @test_can_predicate_simple_unsigned_len_may_be_zero(ptr %p, ptr %arr) {
+; CHECK-LABEL: @test_can_predicate_simple_unsigned_len_may_be_zero(
+; CHECK-NEXT:  preheader:
+; CHECK-NEXT:    [[LEN:%.*]] = load i32, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[LEN]], -1
+; CHECK-NEXT:    [[RANGE_CHECK_FIRST_ITER:%.*]] = icmp ult i32 [[TMP0]], [[LEN]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[LEN]], [[PREHEADER:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[ONE_COND:%.*]] = icmp eq i32 [[IV]], 1
+; CHECK-NEXT:    br i1 [[ONE_COND]], label [[EXIT:%.*]], label [[RANGE_CHECK_BLOCK:%.*]]
+; CHECK:       range_check_block:
+; CHECK-NEXT:    [[IV_NEXT]] = sub i32 [[IV]], 1
+; CHECK-NEXT:    br i1 [[RANGE_CHECK_FIRST_ITER]], label [[BACKEDGE]], label [[FAIL:%.*]]
+; CHECK:       backedge:
+; CHECK-NEXT:    [[EL_PTR:%.*]] = getelementptr i32, ptr [[P]], i32 [[IV]]
+; CHECK-NEXT:    [[EL:%.*]] = load i32, ptr [[EL_PTR]], align 4
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp eq i32 [[EL]], 0
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+; CHECK:       fail:
+; CHECK-NEXT:    unreachable
+;
+preheader:
+  %len = load i32, ptr %p
+  br label %loop
+
+loop:
+  %iv = phi i32 [%len, %preheader], [%iv.next, %backedge]
+  %one_cond = icmp eq i32 %iv, 1
+  br i1 %one_cond, label %exit, label %range_check_block
+
+range_check_block:
+  %iv.next = sub i32 %iv, 1
+  %range_check = icmp ult i32 %iv.next, %len
   br i1 %range_check, label %backedge, label %fail
 
 backedge:
