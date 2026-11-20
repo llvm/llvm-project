@@ -12,6 +12,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -38,6 +39,10 @@ static bool hasJumpStmts(const Stmt *Body) {
       if (cast<GCCAsmStmt>(S)->isAsmGoto())
         return true;
       break;
+    case Stmt::LambdaExprClass:
+      for (const Expr *Init : cast<LambdaExpr>(S)->capture_inits())
+        Worklist.push_back(Init);
+      continue;
     default:
       break;
     }
@@ -297,6 +302,14 @@ bool VarBypassDetector::BuildScopeInformation(CodeGenModule &CGM, const Stmt *S,
   case Stmt::ChooseExprClass:
     return BuildScopeInformation(CGM, cast<ChooseExpr>(S)->getChosenSubExpr(),
                                  origParentScope);
+
+  case Stmt::LambdaExprClass:
+    // Only walk capture initializers; the lambda body is a separate function
+    // analyzed by its own VarBypassDetector.
+    for (const Expr *Init : cast<LambdaExpr>(S)->capture_inits())
+      if (Init && !BuildScopeInformation(CGM, Init, origParentScope))
+        return false;
+    return true;
 
   case Stmt::ForStmtClass:
     if (!CGM.getLangOpts().C99 && !CGM.getLangOpts().CPlusPlus) {
