@@ -320,13 +320,13 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::ATOMIC_LOAD, MVT::f128, Custom);
   setOperationAction(ISD::ATOMIC_STORE, MVT::f128, Custom);
 
-  // Mark sign/zero extending atomic loads as legal, which will make
+  // Mark extending atomic loads as legal, which will make
   // DAGCombiner fold extensions into atomic loads if possible.
-  setAtomicLoadExtAction({ISD::SEXTLOAD, ISD::ZEXTLOAD}, MVT::i64,
+  setAtomicLoadExtAction({ISD::EXTLOAD, ISD::SEXTLOAD, ISD::ZEXTLOAD}, MVT::i64,
                          {MVT::i8, MVT::i16, MVT::i32}, Legal);
-  setAtomicLoadExtAction({ISD::SEXTLOAD, ISD::ZEXTLOAD}, MVT::i32,
+  setAtomicLoadExtAction({ISD::EXTLOAD, ISD::SEXTLOAD, ISD::ZEXTLOAD}, MVT::i32,
                          {MVT::i8, MVT::i16}, Legal);
-  setAtomicLoadExtAction({ISD::SEXTLOAD, ISD::ZEXTLOAD}, MVT::i16,
+  setAtomicLoadExtAction({ISD::EXTLOAD, ISD::SEXTLOAD, ISD::ZEXTLOAD}, MVT::i16,
                          MVT::i8, Legal);
 
   // We can use the CC result of compare-and-swap to implement

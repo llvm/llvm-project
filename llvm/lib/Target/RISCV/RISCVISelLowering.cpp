@@ -895,6 +895,17 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   else
     setOperationAction(ISD::PREFETCH, MVT::Other, Legal);
 
+  setAtomicLoadExtAction(ISD::SEXTLOAD, XLenVT, {MVT::i8, MVT::i16}, Legal);
+  // TODO: Zero extending atomic loads are only legal for monotonic and weaker
+  // orderings. Custom only stops the generic combine from forming them. Make
+  // the atomic extload legality query ordering aware, teach the generic AND
+  // load folds to handle ATOMIC_LOAD, and remove reduceANDOfAtomicLoad.
+  setAtomicLoadExtAction(ISD::ZEXTLOAD, XLenVT, {MVT::i8, MVT::i16}, Custom);
+  if (Subtarget.is64Bit()) {
+    setAtomicLoadExtAction(ISD::SEXTLOAD, MVT::i64, MVT::i32, Legal);
+    setAtomicLoadExtAction(ISD::ZEXTLOAD, MVT::i64, MVT::i32, Custom);
+  }
+
   if (Subtarget.hasStdExtZalrsc()) {
     setMaxAtomicSizeInBitsSupported(Subtarget.getXLen());
     if (Subtarget.hasStdExtZabha() && Subtarget.hasStdExtZacas())
@@ -8466,6 +8477,11 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return LowerPREFETCH(Op, Subtarget, DAG);
   case ISD::ATOMIC_FENCE:
     return LowerATOMIC_FENCE(Op, DAG, Subtarget);
+  case ISD::ATOMIC_LOAD:
+    assert(!isStrongerThanMonotonic(
+               cast<AtomicSDNode>(Op)->getSuccessOrdering()) &&
+           "only relaxed zero extending atomic loads are formed");
+    return Op;
   case ISD::GlobalAddress:
     return lowerGlobalAddress(Op, DAG);
   case ISD::BlockAddress:

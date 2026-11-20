@@ -117,6 +117,11 @@ BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::ATOMIC_LOAD_SUB, VT, Expand);
   }
 
+  setAtomicLoadExtAction({ISD::EXTLOAD, ISD::ZEXTLOAD, ISD::SEXTLOAD}, MVT::i32,
+                         {MVT::i8, MVT::i16}, Custom);
+  setAtomicLoadExtAction({ISD::EXTLOAD, ISD::ZEXTLOAD, ISD::SEXTLOAD}, MVT::i64,
+                         {MVT::i8, MVT::i16, MVT::i32}, Custom);
+
   setOperationAction(ISD::ATOMIC_FENCE, MVT::Other, Custom);
 
   for (auto VT : { MVT::i32, MVT::i64 }) {

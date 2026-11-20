@@ -1570,6 +1570,7 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
 
   setMaxAtomicSizeInBitsSupported(64);
   setMinCmpXchgSizeInBits(32);
+  setAtomicLoadExtAction(ISD::ZEXTLOAD, MVT::i32, {MVT::i8, MVT::i16}, Legal);
 
   if (EnableHexSDNodeSched)
     setSchedulingPreference(Sched::VLIW);

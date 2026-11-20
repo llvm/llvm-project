@@ -194,6 +194,8 @@ R600TargetLowering::R600TargetLowering(const TargetMachine &TM,
   // LLVM will expand these to atomic_cmp_swap(0)
   // and atomic_swap, respectively.
   setOperationAction({ISD::ATOMIC_LOAD, ISD::ATOMIC_STORE}, MVT::i32, Expand);
+  setAtomicLoadExtAction({ISD::EXTLOAD, ISD::ZEXTLOAD, ISD::SEXTLOAD}, MVT::i32,
+                         {MVT::i8, MVT::i16}, Expand);
 
   // We need to custom lower some of the intrinsics
   setOperationAction({ISD::INTRINSIC_VOID, ISD::INTRINSIC_WO_CHAIN}, MVT::Other,
@@ -412,6 +414,8 @@ SDValue R600TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const 
   case ISD::FSIN: return LowerTrig(Op, DAG);
   case ISD::SELECT_CC: return LowerSELECT_CC(Op, DAG);
   case ISD::STORE: return LowerSTORE(Op, DAG);
+  case ISD::ATOMIC_STORE:
+    return SDValue();
   case ISD::LOAD: {
     SDValue Result = LowerLOAD(Op, DAG);
     assert((!Result.getNode() ||
