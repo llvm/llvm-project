@@ -1,6 +1,9 @@
 # RUN: llc -mtriple=x86_64-- -run-pass=branch-folder -o - %s | FileCheck %s
 # RUN: llc -mtriple=x86_64-- -passes="require<profile-summary>,function(machine-function(branch-folder<enable-tail-merge>))" -o - %s | FileCheck %s
 
+# Each common tail must exceed the default tail-merge threshold. Otherwise
+# these cases do not exercise detaching real instructions from distinct probes.
+
 --- |
   target triple = "x86_64-unknown-unknown"
 
@@ -62,6 +65,7 @@ name: probe_different_context
 body: |
   ; CHECK-LABEL: name: probe_different_context
   ; CHECK-COUNT-2: PSEUDO_PROBE 1, 1, 0, 0
+  ; CHECK-NOT: PSEUDO_PROBE 1, 1, 0, 0
   bb.0:
     liveins: $al
     TEST8rr killed $al, killed $al, implicit-def $eflags
@@ -70,10 +74,14 @@ body: |
   bb.1:
     PSEUDO_PROBE 1, 1, 0, 0, debug-location !8
     NOOP
+    NOOP
+    NOOP
     RET 0
 
   bb.2:
     PSEUDO_PROBE 1, 1, 0, 0, debug-location !9
+    NOOP
+    NOOP
     NOOP
     RET 0
 ...
@@ -83,6 +91,7 @@ name: probe_same_context
 body: |
   ; CHECK-LABEL: name: probe_same_context
   ; CHECK-COUNT-1: PSEUDO_PROBE 2, 1, 0, 0
+  ; CHECK-NOT: PSEUDO_PROBE 2, 1, 0, 0
   bb.0:
     liveins: $al
     TEST8rr killed $al, killed $al, implicit-def $eflags
@@ -91,10 +100,14 @@ body: |
   bb.1:
     PSEUDO_PROBE 2, 1, 0, 0, debug-location !13
     NOOP
+    NOOP
+    NOOP
     RET 0
 
   bb.2:
     PSEUDO_PROBE 2, 1, 0, 0, debug-location !13
+    NOOP
+    NOOP
     NOOP
     RET 0
 ...
@@ -104,6 +117,7 @@ name: call_different_context
 body: |
   ; CHECK-LABEL: name: call_different_context
   ; CHECK-COUNT-2: CALL64pcrel32 @callee
+  ; CHECK-NOT: CALL64pcrel32 @callee
   bb.0:
     liveins: $al
     TEST8rr killed $al, killed $al, implicit-def $eflags
@@ -112,10 +126,14 @@ body: |
   bb.1:
     CALL64pcrel32 @callee, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, debug-location !19
     NOOP
+    NOOP
+    NOOP
     RET 0
 
   bb.2:
     CALL64pcrel32 @callee, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, debug-location !20
+    NOOP
+    NOOP
     NOOP
     RET 0
 ...
@@ -125,6 +143,7 @@ name: call_same_context
 body: |
   ; CHECK-LABEL: name: call_same_context
   ; CHECK-COUNT-1: CALL64pcrel32 @callee
+  ; CHECK-NOT: CALL64pcrel32 @callee
   bb.0:
     liveins: $al
     TEST8rr killed $al, killed $al, implicit-def $eflags
@@ -133,10 +152,14 @@ body: |
   bb.1:
     CALL64pcrel32 @callee, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, debug-location !25
     NOOP
+    NOOP
+    NOOP
     RET 0
 
   bb.2:
     CALL64pcrel32 @callee, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, debug-location !25
+    NOOP
+    NOOP
     NOOP
     RET 0
 ...

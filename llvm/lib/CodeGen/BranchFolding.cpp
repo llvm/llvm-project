@@ -385,8 +385,13 @@ static unsigned ComputeCommonTailLength(MachineBasicBlock *MBB1,
     MBBI2 = skipBackwardPastNonInstructions(MBBI2, MBB2);
     if (MBBI1 == MBB1->end() || MBBI2 == MBB2->end())
       break;
+    // Do not detach a common machine-code tail from distinct probe contexts.
+    // Merely stopping the scan here can leave the probes in blocks without
+    // sampleable instructions. Branch folding or dangling-probe cleanup then
+    // deletes those probes, losing the inline contexts from the next profile.
+    if (!haveSamePseudoProbeContext(*MBBI1, *MBBI2))
+      return 0;
     if (!MBBI1->isIdenticalTo(*MBBI2) ||
-        !haveSamePseudoProbeContext(*MBBI1, *MBBI2) ||
         // FIXME: This check is dubious. It's used to get around a problem where
         // people incorrectly expect inline asm directives to remain in the same
         // relative order. This is untenable because normal compiler
