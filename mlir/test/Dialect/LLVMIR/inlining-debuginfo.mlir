@@ -9,11 +9,11 @@ llvm.func @with_byval_arg(%ptr : !llvm.ptr { llvm.byval = f64 }) {
 // CHECK-LABEL: llvm.func @test_byval
 llvm.func @test_byval() {
   // CHECK: %[[COPY:.+]] = llvm.alloca %{{.+}} x f64
-  // CHECK-SAME: loc(#[[LOC:.+]])
-  // CHECK: %[[ORIG:.+]] = llvm.call @foo() : () -> !llvm.ptr loc(#[[LOC]])
+  // CHECK-SAME: loc(#[[$LOC:.+]])
+  // CHECK: %[[ORIG:.+]] = llvm.call @foo() : () -> !llvm.ptr loc(#[[$LOC]])
   %0 = llvm.call @foo() : () -> !llvm.ptr loc("inlining-debuginfo.mlir":14:2)
   // CHECK: "llvm.intr.memcpy"(%[[COPY]], %[[ORIG]]
-  // CHECK-SAME: loc(#[[LOC]])
+  // CHECK-SAME: loc(#[[$LOC]])
   llvm.call @with_byval_arg(%0) : (!llvm.ptr) -> ()
   llvm.return
 }
@@ -41,7 +41,7 @@ llvm.func @caller() {
 #caller_loc = loc(fused<#caller>["test.c":10:1])
 #leaf_loc = loc(fused<#leaf>["test.c":1:1])
 
-// CHECK: #[[LOC]] = loc("inlining-debuginfo.mlir":14:2)
+// CHECK: #[[$LOC]] = loc("inlining-debuginfo.mlir":14:2)
 // CHECK: #[[UNKNOWN:.+]] = loc(unknown)
 // CHECK: #[[CALLSITE:.+]] = loc("-":0:0)
 // CHECK: #[[INLINED]] = loc(callsite(#[[UNKNOWN]] at #[[CALLSITE]]))
