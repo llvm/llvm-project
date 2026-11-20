@@ -501,6 +501,65 @@ TEST(SetTest, divisionsDefByEq) {
   expectEqual(evens, PresburgerSet(evensDefByIneq));
 }
 
+// A local whose bounds are strictly tighter than its floor division bounds
+// is still recognized as a division, but the tighter bounds also constrain the
+// set. Subtraction must complement them instead of treating them as the
+// division's definition.
+TEST(SetTest, divisionsDefByTightIneqs) {
+  // multiples3 = {x : exists q, 3q <= x <= 3q}: the bounds of x floordiv 3
+  // tightened to an equality.
+  PresburgerSet multiples3{parseIntegerPolyhedronAndMakeLocals(
+      "(x, y) : (x - 3 * y >= 0, -x + 3 * y >= 0)", /*numLocals=*/1)};
+  PresburgerSet multiples3DefByEq{parseIntegerPolyhedronAndMakeLocals(
+      "(x, y) : (x - 3 * y == 0)", /*numLocals=*/1)};
+  PresburgerSet nonMultiples3{
+      parseIntegerPolyhedron("(x) : (x - 3 * (x floordiv 3) - 1 >= 0)")};
+  expectEqual(multiples3, multiples3DefByEq);
+  expectEqual(multiples3.complement(), nonMultiples3);
+  expectEqual(nonMultiples3.complement(), multiples3);
+
+  PresburgerSet zeroToFive{
+      parseIntegerPolyhedron("(x) : (x >= 0, 5 - x >= 0)")};
+  testSubtractAtPoints(zeroToFive, multiples3,
+                       {{-1}, {0}, {1}, {2}, {3}, {4}, {5}, {6}});
+  EXPECT_FALSE(zeroToFive.isSubsetOf(multiples3));
+  EXPECT_FALSE(zeroToFive.subtract(multiples3).isIntegerEmpty());
+
+  // {x : exists q, 0 <= x - 4q <= 1}: x mod 4 is 0 or 1.
+  PresburgerSet lowResidues4{parseIntegerPolyhedronAndMakeLocals(
+      "(x, y) : (x - 4 * y >= 0, -x + 4 * y + 1 >= 0)", /*numLocals=*/1)};
+  PresburgerSet zeroToThree{
+      parseIntegerPolyhedron("(x) : (x >= 0, 3 - x >= 0)")};
+  testSubtractAtPoints(zeroToThree, lowResidues4,
+                       {{-1}, {0}, {1}, {2}, {3}, {4}});
+  EXPECT_FALSE(zeroToThree.isSubsetOf(lowResidues4));
+
+  // {x : exists q, 1 <= x - 3q <= 2}: only the lower bound is tightened.
+  PresburgerSet highResidues3{parseIntegerPolyhedronAndMakeLocals(
+      "(x, y) : (x - 3 * y - 1 >= 0, -x + 3 * y + 2 >= 0)", /*numLocals=*/1)};
+  expectEqual(highResidues3, nonMultiples3);
+  testSubtractAtPoints(zeroToFive, highResidues3,
+                       {{0}, {1}, {2}, {3}, {4}, {5}});
+
+  // Two locals each pinned by an equality: computeReprWithOnlyDivLocals
+  // turns them into tightened division bounds.
+  // Y = {(y0, y1) : exists a, b, q1, q2 : a = 3 q1, 0 <= a <= 13, y1 = a,
+  //                 b = 4 q2, 0 <= b <= 7, b <= y0 <= b + 3}
+  //   = [0, 7] x {0, 3, 6, 9, 12}.
+  PresburgerSet y{parseIntegerPolyhedronAndMakeLocals(
+      "(y0, y1, a, b, q1, q2) : (a - 3 * q1 == 0, a >= 0, 13 - a >= 0, "
+      "y1 - a == 0, b - 4 * q2 == 0, b >= 0, 7 - b >= 0, y0 - b >= 0, "
+      "b + 3 - y0 >= 0)",
+      /*numLocals=*/4)};
+  PresburgerSet box{parseIntegerPolyhedron(
+      "(y0, y1) : (y0 >= 0, 7 - y0 >= 0, y1 >= 0, 14 - y1 >= 0)")};
+  EXPECT_FALSE(box.isSubsetOf(y));
+  EXPECT_TRUE(y.isSubsetOf(box));
+  testSubtractAtPoints(
+      box, y,
+      {{0, 0}, {0, 1}, {0, 2}, {0, 3}, {7, 12}, {7, 13}, {7, 14}, {8, 0}});
+}
+
 TEST(SetTest, divisionNonDivLocals) {
   // This is a tetrahedron with vertices at
   // (1/3, 0, 0), (2/3, 0, 0), (2/3, 0, 1000), and (1000, 1000, 1000).
