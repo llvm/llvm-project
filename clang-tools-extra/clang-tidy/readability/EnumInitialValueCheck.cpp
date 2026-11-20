@@ -21,11 +21,19 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::readability {
 
 /// Check if \p ECD is initialized by referencing another enumerator in the
-/// same enum (e.g., `last = first`).
+/// same enum (e.g., `last = first`). For unscoped enums, the reference may be
+/// wrapped in an implicit conversion to the enum's underlying type.
 static bool isSelfReference(const EnumConstantDecl *ECD) {
-  const auto *CE = dyn_cast_if_present<ConstantExpr>(ECD->getInitExpr());
-  const auto *DRE =
-      dyn_cast_if_present<DeclRefExpr>(CE ? CE->getSubExpr() : nullptr);
+  const Expr *Init = ECD->getInitExpr();
+  if (!Init)
+    return false;
+
+  if (const auto *CE = dyn_cast<ConstantExpr>(Init))
+    Init = CE->getSubExpr();
+
+  Init = Init->IgnoreImpCasts();
+
+  const auto *DRE = dyn_cast<DeclRefExpr>(Init);
   const auto *RefECD =
       dyn_cast_if_present<EnumConstantDecl>(DRE ? DRE->getDecl() : nullptr);
   return RefECD && RefECD->getDeclContext() == ECD->getDeclContext();

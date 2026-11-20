@@ -24,6 +24,25 @@ enum class ERefAll {
   ERefAll_last = ERefAll_b,
 };
 
+// OK: first-only + self-refs, where later self-references do not need to
+// immediately follow the enumerator they reference and do not require every
+// preceding enumerator to be explicitly initialized.
+enum EFirstThenRefs {
+  EFirstThenRefs_a = 0,
+  EFirstThenRefs_b,
+  EFirstThenRefs_c,
+  EFirstThenRefs_first = EFirstThenRefs_a,
+  EFirstThenRefs_last = EFirstThenRefs_c,
+};
+
+// OK: a self-reference may appear before later implicit enumerators.
+enum ERefThenImplicit {
+  ERefThenImplicit_a = 0,
+  ERefThenImplicit_alias = ERefThenImplicit_a,
+  ERefThenImplicit_b,
+  ERefThenImplicit_c,
+};
+
 // Error: literal duplicate (not a reference).
 enum class ERefErr {
   // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: initial values in enum 'ERefErr' are not consistent
