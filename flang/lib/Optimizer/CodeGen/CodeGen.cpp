@@ -1804,7 +1804,7 @@ static mlir::Value genSourceFile(mlir::Location loc, mlir::ModuleOp mod,
                                  mlir::ConversionPatternRewriter &rewriter,
                                  mlir::SymbolTableCollection *symbolTables) {
   auto ptrTy = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
-  if (auto flc = mlir::dyn_cast<mlir::FileLineColLoc>(loc)) {
+  if (auto flc = loc->findInstanceOf<mlir::FileLineColLoc>()) {
     auto fn = flc.getFilename().str() + '\0';
     std::string globalName = fir::factory::uniqueCGIdent("cl", fn);
 
@@ -1840,7 +1840,7 @@ static mlir::Value genSourceFile(mlir::Location loc, mlir::ModuleOp mod,
 
 static mlir::Value genSourceLine(mlir::Location loc,
                                  mlir::ConversionPatternRewriter &rewriter) {
-  if (auto flc = mlir::dyn_cast<mlir::FileLineColLoc>(loc))
+  if (auto flc = loc->findInstanceOf<mlir::FileLineColLoc>())
     return mlir::LLVM::ConstantOp::create(rewriter, loc, rewriter.getI32Type(),
                                           flc.getLine());
   return mlir::LLVM::ConstantOp::create(rewriter, loc, rewriter.getI32Type(),
