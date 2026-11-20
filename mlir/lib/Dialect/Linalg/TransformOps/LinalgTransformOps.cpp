@@ -3901,10 +3901,12 @@ void transform::TileUsingForOp::getEffects(
 // TileUsingForallOp
 //===----------------------------------------------------------------------===//
 
-void transform::TileUsingForallOp::build(
-    OpBuilder &builder, OperationState &result, Value target,
-    ArrayRef<int64_t> staticTileSizes, transform::TileSizesSpec,
-    ArrayAttr mapping, std::optional<ArrayRef<bool>> scalableSizes) {
+void transform::TileUsingForallOp::build(OpBuilder &builder,
+                                         OperationState &result, Value target,
+                                         ArrayRef<int64_t> staticTileSizes,
+                                         transform::TileSizesSpec,
+                                         ArrayAttr mapping,
+                                         ArrayRef<bool> scalableSizes) {
   return build(builder, result,
                /*target=*/target,
                /*mixedTileSizes=*/
@@ -3913,10 +3915,12 @@ void transform::TileUsingForallOp::build(
                /*mapping=*/mapping, scalableSizes);
 }
 
-void transform::TileUsingForallOp::build(
-    OpBuilder &builder, OperationState &result, Value target,
-    ArrayRef<OpFoldResult> mixedTileSizes, transform::TileSizesSpec,
-    ArrayAttr mapping, std::optional<ArrayRef<bool>> scalableSizes) {
+void transform::TileUsingForallOp::build(OpBuilder &builder,
+                                         OperationState &result, Value target,
+                                         ArrayRef<OpFoldResult> mixedTileSizes,
+                                         transform::TileSizesSpec,
+                                         ArrayAttr mapping,
+                                         ArrayRef<bool> scalableSizes) {
   SmallVector<int64_t> staticTileSizes;
   SmallVector<Value> dynamicTileSizes;
   dispatchIndexOpFoldResults(mixedTileSizes, dynamicTileSizes, staticTileSizes);
@@ -3935,8 +3939,7 @@ void transform::TileUsingForallOp::build(
         /*packed_tile_sizes=*/Value(),
         /*static_num_threads=*/builder.getDenseI64ArrayAttr({}),
         /*static_tile_sizes=*/staticTileSizesAttr,
-        /*scalable_sizes=*/
-        builder.getDenseBoolArrayAttr(scalableSizes.value_or(ArrayRef<bool>{})),
+        /*scalable_sizes=*/builder.getDenseBoolArrayAttr(scalableSizes),
         /*mapping=*/mapping);
 }
 
