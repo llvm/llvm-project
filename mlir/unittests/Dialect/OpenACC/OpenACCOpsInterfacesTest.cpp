@@ -105,8 +105,7 @@ TEST_F(OpenACCOpsInterfacesTest, GlobalVariableOpInterfaceInitRegion) {
 
 TEST_F(OpenACCOpsInterfacesTest,
        GlobalVariableOpInterfaceInternalLinkageDefault) {
-  // memref.global does not override isInternalLinkage(), so the interface
-  // default applies.
+  // memref.global has no linkage, so isInternalLinkage() is false.
   auto memrefType = MemRefType::get({10}, builder.getF32Type());
   OwningOpRef<memref::GlobalOp> globalOp = memref::GlobalOp::create(
       builder, loc,
