@@ -332,7 +332,7 @@ define <3 x i1> @legalize_scalarize_load_v3i1(ptr addrspace(1) %p) {
 
 define void @legalize_scalarize_store_v3i1(ptr addrspace(1) %p, <3 x i1> %v) {
 ; CHECK-LABEL: legalize_scalarize_store_v3i1(
-; CHECK:    st.global.L1::evict_first.b8 [%rd1], %rs10;
+; CHECK:    st.global.L1::evict_first.b8 [%rd1], %rs1;
   store <3 x i1> %v, ptr addrspace(1) %p, align 1, !mem.cache_hint !14
   ret void
 }
