@@ -38,21 +38,27 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace syslog_internal {
 
-static constexpr size_t BUFFER_SIZE = 1024;
+namespace {
 
-static Mutex log_mutex(/*is_priority_inherit=*/false, /*is_recursive=*/false,
-                       /*is_robust=*/false, /*is_pshared=*/false);
-LIBC_CONSTINIT static LogState log_state;
+constexpr size_t BUFFER_SIZE = 1024;
+
+Mutex log_mutex(/*is_priority_inherit=*/false, /*is_recursive=*/false,
+                /*is_robust=*/false, /*is_pshared=*/false);
+LIBC_CONSTINIT internal::LogState log_state;
 
 LIBC_INLINE int stderr_write_hook(cpp::string_view str, void *) {
   write_to_stderr(str);
   return printf_core::WRITE_OK;
 }
 
+} // namespace
+
+namespace internal {
+
 bool write_log_message(
     printf_core::Writer<printf_core::OverflowMode::CALLBACK> &writer,
     const LogState &state, int priority, const char *__restrict format,
-    internal::ArgList &args, const tm *timestamp, pid_t pid,
+    internal::ArgList &args, const tm &timestamp, pid_t pid,
     const char *default_ident) {
   if (!state.allows_priority(priority))
     return false;
@@ -73,7 +79,7 @@ bool write_log_message(
   // RFC 3164 timestamp format: abbreviated month name, space-padded day of
   // month, and 24-hour HH:MM:SS time
   // (e.g. "Nov 14 01:02:03 " or "Jan  5 23:59:58 ").
-  if (!strftime_core::strftime_main(&writer, "%b %e %T ", timestamp)
+  if (!strftime_core::strftime_main(&writer, "%b %e %T ", &timestamp)
            .has_value())
     return false;
 
@@ -95,6 +101,8 @@ bool write_log_message(
 
   return true;
 }
+
+} // namespace internal
 
 void open_log(const char *ident, int options, int facility) {
   log_mutex.lock();
@@ -128,8 +136,9 @@ void log_message(int priority, const char *__restrict format,
       printf_core::Writer writer = printf_core::make_writer(
           buffer, sizeof(buffer),
           &printf_core::overflow_write_flush_to_sink<char, stderr_write_hook>);
-      if (write_log_message(writer, log_state, priority, format, args,
-                            &local_time, pid, program_invocation_short_name))
+      if (internal::write_log_message(writer, log_state, priority, format, args,
+                                    local_time, pid,
+                                    program_invocation_short_name))
         writer.get_write_buffer().flush_to_sink<stderr_write_hook>();
     }
   }

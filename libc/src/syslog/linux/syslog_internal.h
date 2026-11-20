@@ -24,6 +24,10 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace syslog_internal {
 
+// Unlocked state and formatting helpers (exposed here for unit testing).
+// Callers operating on shared state must synchronize externally.
+namespace internal {
+
 inline constexpr int LEVEL_MASK = 0x07;
 inline constexpr int FACILITY_MASK = 0x3f8;
 
@@ -65,8 +69,10 @@ struct LogState {
 bool write_log_message(
     printf_core::Writer<printf_core::OverflowMode::CALLBACK> &writer,
     const LogState &state, int priority, const char *__restrict format,
-    internal::ArgList &args, const tm *timestamp, pid_t pid,
+    internal::ArgList &args, const tm &timestamp, pid_t pid,
     const char *default_ident);
+
+} // namespace internal
 
 void open_log(const char *ident, int options, int facility);
 

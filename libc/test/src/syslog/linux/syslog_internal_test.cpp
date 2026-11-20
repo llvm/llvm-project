@@ -30,7 +30,7 @@
 
 using LIBC_NAMESPACE::cpp::string_view;
 using LIBC_NAMESPACE::printf_core::overflow_write_flush_to_sink;
-using LIBC_NAMESPACE::syslog_internal::LogState;
+using LIBC_NAMESPACE::syslog_internal::internal::LogState;
 
 struct CaptureBuffer {
   char data[2048] = {};
@@ -51,7 +51,7 @@ struct CaptureBuffer {
 };
 
 static bool format_to_capture(const LogState &state, int priority,
-                              const tm *timestamp, pid_t pid,
+                              const tm &timestamp, pid_t pid,
                               const char *default_ident, CaptureBuffer &capture,
                               const char *format, ...) {
   capture.clear();
@@ -65,7 +65,7 @@ static bool format_to_capture(const LogState &state, int priority,
   va_start(vlist, format);
   LIBC_NAMESPACE::internal::ArgList args(vlist);
   va_end(vlist);
-  bool wrote = LIBC_NAMESPACE::syslog_internal::write_log_message(
+  bool wrote = LIBC_NAMESPACE::syslog_internal::internal::write_log_message(
       writer, state, priority, format, args, timestamp, pid, default_ident);
   if (wrote)
     writer.get_write_buffer().flush_to_sink<CaptureBuffer::write_hook>(
@@ -86,7 +86,7 @@ TEST_F(LlvmLibcSyslogInternalTest, DefaultStateUsesLogUserAndDefaultIdent) {
   time.tm_min = 2;
   time.tm_sec = 3;
 
-  ASSERT_TRUE(format_to_capture(state, LOG_INFO, &time, 1234, "myprog", capture,
+  ASSERT_TRUE(format_to_capture(state, LOG_INFO, time, 1234, "myprog", capture,
                                 "hello %d", 42));
   ASSERT_EQ(capture.view(),
             string_view("<14>Nov 14 01:02:03 myprog: hello 42\n"));
@@ -104,8 +104,8 @@ TEST_F(LlvmLibcSyslogInternalTest, ConfigureWithPidAndIdent) {
   time.tm_sec = 3;
 
   state.configure("prog", LOG_PID, LOG_USER);
-  ASSERT_TRUE(format_to_capture(state, LOG_INFO, &time, 1234, "ignored",
-                                capture, "hello %d", 42));
+  ASSERT_TRUE(format_to_capture(state, LOG_INFO, time, 1234, "ignored", capture,
+                                "hello %d", 42));
   ASSERT_EQ(capture.view(),
             string_view("<14>Nov 14 01:02:03 prog[1234]: hello 42\n"));
 }
@@ -122,7 +122,7 @@ TEST_F(LlvmLibcSyslogInternalTest, WithoutPidPadsSingleDigitDay) {
   time.tm_sec = 58;
 
   state.configure("prog", 0, LOG_USER);
-  ASSERT_TRUE(format_to_capture(state, LOG_INFO, &time, 1234, nullptr, capture,
+  ASSERT_TRUE(format_to_capture(state, LOG_INFO, time, 1234, nullptr, capture,
                                 "%s", "msg"));
   ASSERT_EQ(capture.view(), string_view("<14>Jan  5 23:59:58 prog: msg\n"));
 }
@@ -140,20 +140,20 @@ TEST_F(LlvmLibcSyslogInternalTest, FacilitySelectionAndOverride) {
 
   state.configure("prog", 0, LOG_LOCAL0);
   ASSERT_TRUE(
-      format_to_capture(state, LOG_ERR, &time, 0, nullptr, capture, "default"));
+      format_to_capture(state, LOG_ERR, time, 0, nullptr, capture, "default"));
   ASSERT_EQ(capture.view(),
             string_view("<131>Nov 14 01:02:03 prog: default\n"));
 
   // Explicit facility in priority overrides the openlog default.
-  ASSERT_TRUE(format_to_capture(state, LOG_LOCAL7 | LOG_DEBUG, &time, 0,
-                                nullptr, capture, "explicit"));
+  ASSERT_TRUE(format_to_capture(state, LOG_LOCAL7 | LOG_DEBUG, time, 0, nullptr,
+                                capture, "explicit"));
   ASSERT_EQ(capture.view(),
             string_view("<191>Nov 14 01:02:03 prog: explicit\n"));
 
   // Passing facility == 0 preserves the current default facility.
   state.configure("prog2", LOG_NOWAIT, 0);
   ASSERT_TRUE(
-      format_to_capture(state, LOG_ERR, &time, 0, nullptr, capture, "kept"));
+      format_to_capture(state, LOG_ERR, time, 0, nullptr, capture, "kept"));
   ASSERT_EQ(capture.view(), string_view("<131>Nov 14 01:02:03 prog2: kept\n"));
 }
 
@@ -173,7 +173,7 @@ TEST_F(LlvmLibcSyslogInternalTest, ResetClearsAttributesAndKeepsMask) {
   state.reset();
 
   ASSERT_EQ(state.update_mask(0), LOG_MASK(LOG_ERR));
-  ASSERT_TRUE(format_to_capture(state, LOG_ERR, &time, 99, nullptr, capture,
+  ASSERT_TRUE(format_to_capture(state, LOG_ERR, time, 99, nullptr, capture,
                                 "after close"));
   ASSERT_EQ(capture.view(), string_view("<11>Nov 14 01:02:03 : after close\n"));
 }
@@ -192,14 +192,14 @@ TEST_F(LlvmLibcSyslogInternalTest, UpdateMaskFiltersMessages) {
   state.configure("prog", 0, LOG_USER);
   ASSERT_EQ(state.update_mask(LOG_UPTO(LOG_ERR)), LOG_UPTO(LOG_DEBUG));
 
-  ASSERT_FALSE(format_to_capture(state, LOG_DEBUG, &time, 0, nullptr, capture,
+  ASSERT_FALSE(format_to_capture(state, LOG_DEBUG, time, 0, nullptr, capture,
                                  "dropped"));
   ASSERT_EQ(capture.length, size_t(0));
-  ASSERT_FALSE(format_to_capture(state, LOG_LOCAL0 | LOG_INFO, &time, 0,
-                                 nullptr, capture, "also dropped"));
+  ASSERT_FALSE(format_to_capture(state, LOG_LOCAL0 | LOG_INFO, time, 0, nullptr,
+                                 capture, "also dropped"));
   ASSERT_EQ(capture.length, size_t(0));
 
-  ASSERT_TRUE(format_to_capture(state, LOG_LOCAL0 | LOG_ERR, &time, 0, nullptr,
+  ASSERT_TRUE(format_to_capture(state, LOG_LOCAL0 | LOG_ERR, time, 0, nullptr,
                                 capture, "delivered"));
   ASSERT_EQ(capture.view(),
             string_view("<131>Nov 14 01:02:03 prog: delivered\n"));
@@ -217,7 +217,7 @@ TEST_F(LlvmLibcSyslogInternalTest, PreservesExistingTrailingNewline) {
   time.tm_sec = 3;
 
   state.configure("prog", 0, LOG_USER);
-  ASSERT_TRUE(format_to_capture(state, LOG_INFO, &time, 0, nullptr, capture,
+  ASSERT_TRUE(format_to_capture(state, LOG_INFO, time, 0, nullptr, capture,
                                 "already ended\n"));
   ASSERT_EQ(capture.view(),
             string_view("<14>Nov 14 01:02:03 prog: already ended\n"));
@@ -235,7 +235,7 @@ TEST_F(LlvmLibcSyslogInternalTest, FlushesMessagesLongerThanBuffer) {
   time.tm_sec = 3;
 
   state.configure("prog", 0, LOG_USER);
-  ASSERT_TRUE(format_to_capture(state, LOG_INFO, &time, 0, nullptr, capture,
+  ASSERT_TRUE(format_to_capture(state, LOG_INFO, time, 0, nullptr, capture,
                                 "%120s", "end"));
   ASSERT_EQ(capture.length, size_t(147));
   ASSERT_EQ(capture.view().substr(0, 26),
@@ -256,7 +256,7 @@ TEST_F(LlvmLibcSyslogInternalTest, EscapedPercentMIsLiteral) {
 
   state.configure("prog", 0, LOG_USER);
   libc_errno = EINVAL;
-  ASSERT_TRUE(format_to_capture(state, LOG_INFO, &time, 0, nullptr, capture,
+  ASSERT_TRUE(format_to_capture(state, LOG_INFO, time, 0, nullptr, capture,
                                 "literal %%m"));
   ASSERT_ERRNO_EQ(EINVAL);
   ASSERT_EQ(capture.view(),
@@ -277,7 +277,7 @@ TEST_F(LlvmLibcSyslogInternalTest, PercentMFormatsErrnoAndConvertsNoArgs) {
 
   state.configure("prog", 0, LOG_USER);
   libc_errno = EINVAL;
-  ASSERT_TRUE(format_to_capture(state, LOG_INFO, &time, 0, nullptr, capture,
+  ASSERT_TRUE(format_to_capture(state, LOG_INFO, time, 0, nullptr, capture,
                                 "%s: %m (%d) [%m]", "open", 7));
   ASSERT_ERRNO_EQ(EINVAL);
   ASSERT_EQ(capture.view(),
@@ -298,7 +298,7 @@ TEST_F(LlvmLibcSyslogInternalTest, PercentMWithPositionalArguments) {
 
   state.configure("prog", 0, LOG_USER);
   libc_errno = EINVAL;
-  ASSERT_TRUE(format_to_capture(state, LOG_INFO, &time, 0, nullptr, capture,
+  ASSERT_TRUE(format_to_capture(state, LOG_INFO, time, 0, nullptr, capture,
                                 "%2$d: %m (%1$s)", "open", 7));
   ASSERT_ERRNO_EQ(EINVAL);
   ASSERT_EQ(capture.view(),
