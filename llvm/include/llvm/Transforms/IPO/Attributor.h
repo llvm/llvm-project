@@ -1590,8 +1590,8 @@ struct Attributor {
     if (!shouldPropagateCallBaseContext(IRP))
       IRP = IRP.stripCallBaseContext();
 
-    if (AAType *AAPtr = lookupAAFor<AAType>(IRP, QueryingAA, DepClass,
-                                            /* AllowInvalidState */ true)) {
+    if (AAType *AAPtr = lookupAAForImpl<AAType>(IRP, QueryingAA, DepClass,
+                                                /* AllowInvalidState */ true)) {
       if (ForceUpdate && Phase == AttributorPhase::UPDATE)
         updateAA(*AAPtr);
       return AAPtr;
@@ -1669,13 +1669,21 @@ struct Attributor {
                       const AbstractAttribute *QueryingAA = nullptr,
                       DepClassTy DepClass = DepClassTy::OPTIONAL,
                       bool AllowInvalidState = false) {
-    static_assert(std::is_base_of<AbstractAttribute, AAType>::value,
-                  "Cannot query an attribute with a type not derived from "
-                  "'AbstractAttribute'!");
     // Attributes of a kind that is not allowed are never created.
     if (!isAllowed<AAType>())
       return nullptr;
+    return lookupAAForImpl<AAType>(IRP, QueryingAA, DepClass,
+                                   AllowInvalidState);
+  }
 
+  /// Like lookupAAFor, but for a kind that is known to be allowed.
+  template <typename AAType>
+  AAType *lookupAAForImpl(const IRPosition &IRP,
+                          const AbstractAttribute *QueryingAA,
+                          DepClassTy DepClass, bool AllowInvalidState) {
+    static_assert(std::is_base_of<AbstractAttribute, AAType>::value,
+                  "Cannot query an attribute with a type not derived from "
+                  "'AbstractAttribute'!");
     // Lookup the abstract attribute of type AAType. If found, return it after
     // registering a dependence of QueryingAA on the one returned attribute.
     AbstractAttribute *AAPtr = AAMap.lookup({&AAType::ID, IRP});
@@ -1814,9 +1822,6 @@ struct Attributor {
   template <typename AAType>
   bool shouldInitialize(const IRPosition &IRP, bool &ShouldUpdateAA) {
     if (!AAType::isValidIRPositionForInit(*this, IRP))
-      return false;
-
-    if (!isAllowed<AAType>())
       return false;
 
     // For now we skip anything in naked and optnone functions.
