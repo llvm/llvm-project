@@ -540,7 +540,6 @@ StringRef object::getImageKindName(ImageKind Kind) {
 
 bool object::areTargetsEquivalent(const OffloadFile::TargetID &LHS,
                                   const OffloadFile::TargetID &RHS) {
-  // Device images that list different real devices are linked separately.
   if (LHS.Code != RHS.Code)
     return false;
 
