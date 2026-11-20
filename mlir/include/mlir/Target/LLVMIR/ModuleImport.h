@@ -14,7 +14,7 @@
 #ifndef MLIR_TARGET_LLVMIR_MODULEIMPORT_H
 #define MLIR_TARGET_LLVMIR_MODULEIMPORT_H
 
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMModuleOps.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Target/LLVMIR/Import.h"
 #include "mlir/Target/LLVMIR/LLVMImportInterface.h"
@@ -34,6 +34,8 @@ class Value;
 
 namespace mlir {
 namespace LLVM {
+class CallOp;
+class InvokeOp;
 
 namespace detail {
 class DataLayoutImporter;

@@ -305,6 +305,7 @@ define i8 @f7() #0 "stack-probe-size"="65536" nounwind {
 ; RV64I-NEXT:    lui a0, 13
 ; RV64I-NEXT:    addi a0, a0, -1520
 ; RV64I-NEXT:    sub sp, sp, a0
+; RV64I-NEXT:    sd zero, 0(sp)
 ; RV64I-NEXT:    li a0, 3
 ; RV64I-NEXT:    sb a0, 9(sp)
 ; RV64I-NEXT:    lbu a0, 9(sp)
@@ -327,6 +328,7 @@ define i8 @f7() #0 "stack-probe-size"="65536" nounwind {
 ; RV32I-NEXT:    lui a0, 13
 ; RV32I-NEXT:    addi a0, a0, -1520
 ; RV32I-NEXT:    sub sp, sp, a0
+; RV32I-NEXT:    sw zero, 0(sp)
 ; RV32I-NEXT:    li a0, 3
 ; RV32I-NEXT:    sb a0, 9(sp)
 ; RV32I-NEXT:    lbu a0, 9(sp)

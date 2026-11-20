@@ -211,8 +211,10 @@ bool isCommutative(const Instruction *I, const Value *ValWithUses,
                       (Pred == ICmpInst::ICMP_EQ || Pred == ICmpInst::ICMP_NE))
                     return true;
                   // Commutative, if abs(sub nsw, true) or abs(sub, false).
+                  // A lane without wrap flags, like an or converted to sub,
+                  // does not clear nsw of the vector sub.
                   ConstantInt *Flag;
-                  auto *I = dyn_cast<BinaryOperator>(U.get());
+                  auto *I = dyn_cast<OverflowingBinaryOperator>(U.get());
                   return match(U.getUser(),
                                m_Intrinsic<Intrinsic::abs>(
                                    m_Specific(U.get()), m_ConstantInt(Flag))) &&

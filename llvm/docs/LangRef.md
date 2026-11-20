@@ -1320,11 +1320,17 @@ that affect how values are passed to/from functions, like `zeroext`,
 additional optimization guarantees, like `noalias`, `nonnull` and
 `dereferenceable`.
 
-ABI attributes must be specified *both* at the function declaration/definition
-and call-site, otherwise the behavior may be undefined. ABI attributes cannot
-be safely dropped. Optimization attributes do not have to match between
-call-site and function: The intersection of their implied semantics applies.
-Optimization attributes can also be freely dropped.
+Optimization attributes do not have to match between call-site and function:
+The intersection of their implied semantics applies. Optimization attributes
+can also be freely dropped.
+
+ABI attributes should match between the function declaration/definition and the
+call-site, and generally cannot be safely dropped. Similar to a mismatch
+in function types, a mismatch in ABI attributes between caller and callee will
+often result in undefined behavior, but can be well-defined if the effective
+ABI after lowering is compatible. As this depends on target-specific lowering
+details that may change, the use of matching function types and ABI attributes
+is recommended.
 
 If an integer argument to a function is not marked signext/zeroext/noext, the
 kind of extension used is target-specific. Some targets depend for
@@ -1333,15 +1339,18 @@ correctness on the kind of extension to be explicitly specified.
 Currently, only the following parameter attributes are defined:
 
 `zeroext`
-:   This indicates to the code generator that the parameter or return
-    value should be zero-extended to the extent required by the target's
-    ABI by the caller (for a parameter) or the callee (for a return value).
+:   On a call-site argument or function return value, this indicates to the
+    code generator that the value should be zero-extended to the extent
+    required by the target's ABI. On a function argument or call-site return
+    value it indicates that the value is assumed to be zero-extended to that
+    extent, otherwise the behavior is undefined.
 
 `signext`
-:   This indicates to the code generator that the parameter or return
-    value should be sign-extended to the extent required by the target's
-    ABI (which is usually 32-bits) by the caller (for a parameter) or
-    the callee (for a return value).
+:   On a call-site argument or function return value, this indicates to the
+    code generator that the value should be sign-extended to the extent
+    required by the target's ABI. On a function argument or call-site return
+    value it indicates that the value is assumed to be sign-extended to that
+    extent, otherwise the behavior is undefined.
 
 `noext`
 :   This indicates to the code generator that the parameter or return
@@ -2765,8 +2774,9 @@ fn -> other_fn -> other_fn ; fn is norecurse
 `"oracle-function"`
 :   This attribute indicates that the function is an oracle function of
     '`llvm.speculative.load`'. A function with this attribute must have local
-    linkage, and it may only be used as the oracle argument of
-    '`llvm.speculative.load`' calls.
+    linkage, be non-variadic, return `i64`, be `nounwind`, `nosync`,
+    `willreturn`, and have at most `memory(argmem: read)`. It may only be used
+    as the oracle argument of '`llvm.speculative.load`' calls.
 
 `speculative_load_hardening`
 :   This attribute indicates that
@@ -9408,6 +9418,23 @@ function that has had all calls to it inlined.
 call void @foo(), !inline_history !0
 
 !0 = !{ptr @bar, null, ptr @baz}
+```
+
+### '`call_target`' Matadata
+The `call_target` metadata may be attached to a call instruction. It
+identifies expected type information of indirect calls by providing
+a sample function. For virtual calls in object oriented languages, this
+is expected to be the member function in the base class.
+
+This is intended to be used by debuggers to detect when the current
+call matches the frame function.
+
+```llvm
+%0 = load ptr, ptr %virtualfunction, align 8, !dbg !47
+call void %0(ptr noundef nonnull align 8 dereferenceable(8) %obj), !call_target !0
+
+!0 = !DISubprogram(name: "foo", linkageName: "_ZN5CBase2f00Ev", virtualIndex: 0, 
+flags: DIFlagPrototyped, spFlags: DISPFlagVirtual, ...)
 ```
 
 #### '`elf_section_properties`' Metadata

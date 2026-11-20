@@ -46,7 +46,6 @@ class AArch64ELFStreamer;
 
 class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
   formatted_raw_ostream &OS;
-  std::string VendorTag;
 
   void emitInst(uint32_t Inst) override;
 

@@ -28,7 +28,9 @@ define <2 x i1> @sadd_vec_opposite_signs(<2 x i8> %v, <2 x i8> %w) {
 ; CHECK-SAME: <2 x i8> [[V:%.*]], <2 x i8> [[W:%.*]]) {
 ; CHECK-NEXT:    [[A:%.*]] = lshr <2 x i8> [[V]], splat (i8 1)
 ; CHECK-NEXT:    [[B:%.*]] = or <2 x i8> [[W]], splat (i8 -128)
-; CHECK-NEXT:    ret <2 x i1> zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = call { <2 x i8>, <2 x i1> } @llvm.sadd.with.overflow.v2i8(<2 x i8> [[A]], <2 x i8> [[B]])
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { <2 x i8>, <2 x i1> } [[R]], 1
+; CHECK-NEXT:    ret <2 x i1> [[OV]]
 ;
   %a = lshr <2 x i8> %v, splat (i8 1)
   %b = or <2 x i8> %w, splat (i8 -128)
