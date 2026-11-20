@@ -8470,6 +8470,17 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       break;
     }
 
+    case bitc::FS_SECTION_INFO: {
+      if (Record.size() < 3)
+        return error("Invalid record");
+      uint64_t GUID = Record[0];
+      StringRef OutputSectionName(Strtab.data() + Record[1], Record[2]);
+
+      auto &Entry = TheIndex.sectionInfos()[GUID];
+      Entry.OutputSectionName = TheIndex.saveString(OutputSectionName);
+      break;
+    }
+
     case bitc::FS_STACK_IDS: { // [n x stackid]
       // Save stack ids in the reader to consult when adding stack ids from the
       // lists in the stack node and alloc node entries.

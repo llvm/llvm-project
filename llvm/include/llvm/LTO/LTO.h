@@ -84,6 +84,9 @@ LLVM_ABI std::string computeLTOCacheKey(
 LLVM_ABI std::string recomputeLTOCacheKey(const std::string &Key,
                                           StringRef ExtraID);
 
+LLVM_ABI void setOutputSectionAttribute(Module &M, GlobalValue *GV,
+                                        StringRef OutputSectionName);
+
 namespace lto {
 
 LLVM_ABI StringLiteral getThinLTODefaultCPU(const Triple &TheTriple);
@@ -142,6 +145,7 @@ private:
   // standalone file. Effectively, extracted from its container.
   bool ExtractForDistribution = false;
   bool IsThinLTO = false;
+  bool IncludeLocalSymbols = false;
   StringRef ArchivePath;
   StringRef MemberName;
 
@@ -150,7 +154,7 @@ public:
 
   /// Create an InputFile.
   LLVM_ABI static Expected<std::unique_ptr<InputFile>>
-  create(MemoryBufferRef Object);
+  create(MemoryBufferRef Object, bool IncludeLocalSymbols = false);
 
   /// The purpose of this struct is to only expose the symbol information that
   /// an LTO client should need in order to do symbol resolution.
@@ -716,6 +720,12 @@ struct SymbolResolution {
   /// Linker redefined version of the symbol which appeared in -wrap or -defsym
   /// linker option.
   unsigned LinkerRedefined : 1;
+
+  /// When linking with a linker script, the output section where this symbol
+  /// will be placed. Certain optimizations must be suppressed between globals
+  /// with a different output section, to ensure the variable or function is
+  /// actually emitted into the correct section.
+  StringRef OutputSectionName;
 };
 
 } // namespace lto
