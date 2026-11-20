@@ -938,7 +938,36 @@ int32_t getSVERevInstr(uint32_t Opcode);
 int32_t getSVENonRevInstr(uint32_t Opcode);
 
 int32_t getSMEPseudoMap(uint32_t Opcode);
+
+struct KCFICheckRegs {
+  Register AddrReg;
+  Register TargetHashReg;
+  Register ExpectedTypeReg;
+};
+
+inline KCFICheckRegs getKCFICheckRegs(Register TargetReg) {
+  if (TargetReg == AArch64::XZR)
+    return {AArch64::X16, AArch64::W16, AArch64::W17};
+  return {
+      TargetReg,
+      TargetReg == AArch64::X16 ? AArch64::W9 : AArch64::W16,
+      TargetReg == AArch64::X17 ? AArch64::W9 : AArch64::W17,
+  };
 }
+
+inline unsigned getKCFITrapESR(const MCRegisterInfo &MRI, Register AddrReg,
+                               Register TypeReg) {
+  // The base ESR is 0x8000 and the register information is encoded in bits
+  // 0-9 as follows:
+  // - 0-4: n, where register Xn contains the target address
+  // - 5-9: m, where register Wm contains the expected type hash
+  // Where n, m are in [0, 30].
+  unsigned AddrIndex = MRI.getEncodingValue(AddrReg);
+  unsigned TypeIndex = MRI.getEncodingValue(TypeReg);
+  assert(AddrIndex < 31 && TypeIndex < 31 && "Invalid KCFI trap registers");
+  return 0x8000 | (TypeIndex << 5) | AddrIndex;
+}
+} // namespace AArch64
 
 } // end namespace llvm
 

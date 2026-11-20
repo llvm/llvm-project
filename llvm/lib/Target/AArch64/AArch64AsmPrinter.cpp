@@ -697,31 +697,41 @@ void AArch64AsmPrinter::LowerPATCHABLE_EVENT_CALL(const MachineInstr &MI,
 
 void AArch64AsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
   Register AddrReg = MI.getOperand(0).getReg();
-  assert(std::next(MI.getIterator())->isCall() &&
-         "KCFI_CHECK not followed by a call instruction");
-  assert(std::next(MI.getIterator())->getOperand(0).getReg() == AddrReg &&
-         "KCFI_CHECK call target doesn't match call operand");
+  // Pick intra-procedure-call temporary registers via getKCFICheckRegs so
+  // EmitKCFIOutOfLineTrap and LowerKCFI_CHECK agree on the trap registers.
+  AArch64::KCFICheckRegs Regs = AArch64::getKCFICheckRegs(AddrReg);
 
-  // Default to using the intra-procedure-call temporary registers for
-  // comparing the hashes.
-  unsigned ScratchRegs[] = {AArch64::W16, AArch64::W17};
+  // KCFI_CMP is KCFI_CHECK without the trap: it's followed by the branch to
+  // its trap block, which falls through to the call.
+  bool IsCmp = MI.getOpcode() == AArch64::KCFI_CMP;
+  if (IsCmp) {
+#ifndef NDEBUG
+    // The branch to the trap is the first terminator after KCFI_CMP. Other
+    // instructions (e.g. pseudo probes) may be in between, as long as they
+    // don't clobber NZCV or the trap registers.
+    const TargetRegisterInfo *TRI =
+        MI.getMF()->getSubtarget().getRegisterInfo();
+    auto It = std::next(MI.getIterator()), End = MI.getParent()->instr_end();
+    for (; It != End && !It->isTerminator(); ++It)
+      assert(!It->modifiesRegister(AArch64::NZCV, TRI) &&
+             !It->modifiesRegister(Regs.AddrReg, TRI) &&
+             !It->modifiesRegister(Regs.ExpectedTypeReg, TRI) &&
+             "KCFI_CMP state clobbered before its branch");
+    assert(It != End && It->isConditionalBranch() &&
+           "KCFI_CMP not followed by a conditional branch");
+#endif
+  } else {
+    assert(std::next(MI.getIterator())->isCall() &&
+           "KCFI_CHECK not followed by a call instruction");
+    assert(std::next(MI.getIterator())->getOperand(0).getReg() == AddrReg &&
+           "KCFI_CHECK call target doesn't match call operand");
+  }
   if (AddrReg == AArch64::XZR) {
     // Checking XZR makes no sense. Instead of emitting a load, zero
-    // ScratchRegs[0] and use it for the ESR AddrIndex below.
-    AddrReg = getXRegFromWReg(ScratchRegs[0]);
-    emitMovXReg(AddrReg, AArch64::XZR);
+    // Regs.AddrReg so the trap below still encodes a valid GPR.
+    emitMovXReg(Regs.AddrReg, AArch64::XZR);
   } else {
-    // If one of the scratch registers is used for the call target (e.g.
-    // with AArch64::TCRETURNriBTI), we can clobber another caller-saved
-    // temporary register instead (in this case, AArch64::W9) as the check
-    // is immediately followed by the call instruction.
-    for (auto &Reg : ScratchRegs) {
-      if (Reg == getWRegFromXReg(AddrReg)) {
-        Reg = AArch64::W9;
-        break;
-      }
-    }
-    assert(ScratchRegs[0] != AddrReg && ScratchRegs[1] != AddrReg &&
+    assert(Regs.TargetHashReg != AddrReg && Regs.ExpectedTypeReg != AddrReg &&
            "Invalid scratch registers for KCFI_CHECK");
 
     // Adjust the offset for patchable-function-prefix. This assumes that
@@ -732,22 +742,25 @@ void AArch64AsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
 
     // Load the target function type hash.
     EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::LDURWi)
-                                     .addReg(ScratchRegs[0])
-                                     .addReg(AddrReg)
+                                     .addReg(Regs.TargetHashReg)
+                                     .addReg(Regs.AddrReg)
                                      .addImm(-(PrefixNops * 4 + 4)));
   }
 
   // Load the expected type hash.
-  const int64_t Type = MI.getOperand(1).getImm();
-  emitMOVK(ScratchRegs[1], Type & 0xFFFF, 0);
-  emitMOVK(ScratchRegs[1], (Type >> 16) & 0xFFFF, 16);
+  int64_t Type = MI.getOperand(1).getImm();
+  emitMOVK(Regs.ExpectedTypeReg, Type & 0xFFFF, 0);
+  emitMOVK(Regs.ExpectedTypeReg, (Type >> 16) & 0xFFFF, 16);
 
   // Compare the hashes and trap if there's a mismatch.
   EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::SUBSWrs)
                                    .addReg(AArch64::WZR)
-                                   .addReg(ScratchRegs[0])
-                                   .addReg(ScratchRegs[1])
+                                   .addReg(Regs.TargetHashReg)
+                                   .addReg(Regs.ExpectedTypeReg)
                                    .addImm(0));
+
+  if (IsCmp)
+    return;
 
   MCSymbol *Pass = OutContext.createTempSymbol();
   EmitToStreamer(*OutStreamer,
@@ -755,29 +768,10 @@ void AArch64AsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
                      .addImm(AArch64CC::EQ)
                      .addExpr(MCSymbolRefExpr::create(Pass, OutContext)));
 
-  // The base ESR is 0x8000 and the register information is encoded in bits
-  // 0-9 as follows:
-  // - 0-4: n, where the register Xn contains the target address
-  // - 5-9: m, where the register Wm contains the expected type hash
-  // Where n, m are in [0, 30].
-  unsigned TypeIndex = ScratchRegs[1] - AArch64::W0;
-  unsigned AddrIndex;
-  switch (AddrReg) {
-  default:
-    AddrIndex = AddrReg - AArch64::X0;
-    break;
-  case AArch64::FP:
-    AddrIndex = 29;
-    break;
-  case AArch64::LR:
-    AddrIndex = 30;
-    break;
-  }
-
-  assert(AddrIndex < 31 && TypeIndex < 31);
-
-  unsigned ESR = 0x8000 | ((TypeIndex & 31) << 5) | (AddrIndex & 31);
-  EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::BRK).addImm(ESR));
+  EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::BRK)
+                                   .addImm(AArch64::getKCFITrapESR(
+                                       *OutContext.getRegisterInfo(),
+                                       Regs.AddrReg, Regs.ExpectedTypeReg)));
   OutStreamer->emitLabel(Pass);
 }
 
@@ -3974,6 +3968,7 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     return LowerPATCHABLE_EVENT_CALL(*MI, true);
 
   case AArch64::KCFI_CHECK:
+  case AArch64::KCFI_CMP:
     LowerKCFI_CHECK(*MI);
     return;
 

@@ -91,6 +91,7 @@ struct ForcePassLinking {
     (void)llvm::createInstructionCombiningPass();
     (void)llvm::createJMCInstrumenterPass();
     (void)llvm::createKCFIPass();
+    (void)llvm::createKCFISplitPass();
     (void)llvm::createLCSSAPass();
     (void)llvm::createLICMPass();
     (void)llvm::createLazyValueInfoPass();

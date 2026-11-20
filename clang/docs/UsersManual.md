@@ -2463,6 +2463,14 @@ additional function arity information (for supported targets). See
 {doc}`ControlFlowIntegrity` for more details.
 :::
 
+:::{option} -f[no-]sanitize-kcfi-out-of-line-traps
+
+Move the trap instructions of `-fsanitize=kcfi` indirect call checks out of
+line into cold blocks instead of emitting them inline before each call (on
+x86-64 and AArch64). Disabled by default. See {doc}`ControlFlowIntegrity` for
+more details.
+:::
+
 :::{option} -fsanitize-trap-loop
 
 When a UBSan or CFI check fails in trapping mode, spin in an infinite

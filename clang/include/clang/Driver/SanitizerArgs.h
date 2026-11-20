@@ -51,6 +51,7 @@ class SanitizerArgs {
   bool CfiCanonicalJumpTables = false;
   bool KcfiArity = false;
   std::optional<std::string> KcfiHash;
+  bool KcfiOutOfLineTraps = false;
   int AsanFieldPadding = 0;
   bool SharedRuntime = false;
   bool StableABI = false;

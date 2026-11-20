@@ -11362,9 +11362,23 @@ AArch64InstrInfo::getOutliningTypeImpl(const MachineModuleInfo &MMI,
                                        unsigned Flags) const {
   MachineInstr &MI = *MIT;
 
-  // Don't outline anything used for return address signing. The outlined
-  // function will get signed later if needed
+  // Don't outline anything used for return address signing or KCFI checks.
+  // Signed functions will get signed later if needed, whereas outlining a KCFI
+  // check loses patchable-function-prefix from its caller and separates it from
+  // its paired call (or risks linker veneers clobbering X16/X17/NZCV).
+  if (MI.isBundle()) {
+    for (auto It = std::next(MI.getIterator()),
+              End = MI.getParent()->instr_end();
+         It != End && It->isBundledWithPred(); ++It) {
+      if (It->getOpcode() == AArch64::KCFI_CHECK)
+        return outliner::InstrType::Illegal;
+      if (!It->isDebugInstr())
+        break;
+    }
+  }
   switch (MI.getOpcode()) {
+  case AArch64::KCFI_CHECK:
+  case AArch64::KCFI_CMP:
   case AArch64::PACM:
   case AArch64::PACIASP:
   case AArch64::PACIBSP:
