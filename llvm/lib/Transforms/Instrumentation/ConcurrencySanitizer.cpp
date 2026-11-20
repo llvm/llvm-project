@@ -26,6 +26,8 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/Module.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
@@ -33,6 +35,8 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/TargetParser/Triple.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/BuildLibCalls.h"
 #include "llvm/Transforms/Utils/EscapeEnumerator.h"
 #include "llvm/Transforms/Utils/Instrumentation.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -65,6 +69,10 @@ static cl::opt<bool> ClDistinguishVolatile(
     "csan-distinguish-volatile", cl::init(false),
     cl::desc("Treat aligned volatile accesses up to 8 bytes as atomic"),
     cl::Hidden);
+static cl::opt<bool>
+    ClMinimal("csan-minimal", cl::init(false),
+              cl::desc("Inline value checks with a report-only runtime"),
+              cl::Hidden);
 STATISTIC(NumInstrumentedReads, "Number of instrumented reads");
 STATISTIC(NumInstrumentedWrites, "Number of instrumented writes");
 STATISTIC(NumOmittedReadsBeforeWrite,
@@ -104,7 +112,8 @@ enum class AccessFlags : unsigned {
   None = 0,
   Atomic = 1u << 0,
   Compound = 1u << 1,
-  LLVM_MARK_AS_BITMASK_ENUM(Compound),
+  Write = 1u << 2,
+  LLVM_MARK_AS_BITMASK_ENUM(Write),
 };
 
 static bool isAtomicMemoryAccess(const Instruction *I) {
@@ -202,6 +211,13 @@ private:
   bool insertAccessProbe(Instruction *I, Value *Addr, Type *AccessTy,
                          const DataLayout &DL, bool IsWrite, bool IsCompound,
                          bool IsAtomic);
+  bool insertTypedValueCheck(Instruction *I, Value *Addr, Type *AccessTy,
+                             const DataLayout &DL, bool IsWrite);
+  bool insertRangeValueCheck(Instruction *I, Value *Addr, Value *ByteSize,
+                             bool IsWrite);
+  bool emitValueCheck(Instruction *I, Value *Addr, Type *LoadTy,
+                      Value *ByteSize, Align Alignment, bool IsWrite);
+  void insertInlineDelay(Instruction *InsertBefore);
   bool shouldInstrumentAddress(Value *Addr) const;
   bool shouldInstrumentAccess(Instruction *I) const;
   void insertFuncEntryExit(Function &F);
@@ -211,6 +227,7 @@ private:
   }
 
   Module *Mod = nullptr;
+  const TargetLibraryInfo *LibInfo = nullptr;
   Type *IntptrTy = nullptr;
   IntegerType *FlagsTy = nullptr;
 
@@ -242,6 +259,8 @@ private:
   FunctionCallee CsanAtomicThreadFence;
   // void __csan_atomic_signal_fence(i32);
   FunctionCallee CsanAtomicSignalFence;
+  // void __csan_report_race(ptr, intptr, i32);
+  FunctionCallee CsanReportRace;
 };
 
 void insertModuleCtor(Module &M) {
@@ -279,6 +298,10 @@ void ConcurrencySanitizer::initialize(Module &M, const TargetLibraryInfo &TLI) {
   IRBuilder<> IRB(M);
   Type *VoidTy = IRB.getVoidTy();
   Type *PtrTy = IRB.getPtrTy();
+  AttributeList ReportAttrs = Attr.addFnAttribute(Ctx, Attribute::NoInline)
+                                  .addFnAttribute(Ctx, Attribute::Cold);
+  CsanReportRace = M.getOrInsertFunction("__csan_report_race", ReportAttrs,
+                                         VoidTy, PtrTy, IntptrTy, FlagsTy);
   CsanFuncEntry =
       M.getOrInsertFunction("__csan_func_entry", Attr, VoidTy, PtrTy);
   CsanFuncExit = M.getOrInsertFunction("__csan_func_exit", Attr, VoidTy);
@@ -330,6 +353,7 @@ bool ConcurrencySanitizer::sanitizeFunction(Function &F,
     return false;
 
   Mod = F.getParent();
+  LibInfo = &TLI;
   MemoryAccessLists Acc;
   collectMemoryAccesses(F, Acc);
 
@@ -337,13 +361,16 @@ bool ConcurrencySanitizer::sanitizeFunction(Function &F,
       F.hasFnAttribute("sanitize_concurrency_no_checking_at_run_time");
   const bool SanitizeFunction =
       F.hasFnAttribute(Attribute::SanitizeConcurrency) && !SuppressChecking;
+  const bool CheckAtomics = ClInstrumentAtomics && !ClMinimal;
   const bool MayInstrument =
       SanitizeFunction &&
       ((ClInstrumentMemoryAccesses && !Acc.LoadsAndStores.empty()) ||
-       (ClInstrumentAtomics && !Acc.AtomicAccesses.empty()) ||
+       (CheckAtomics && !Acc.AtomicAccesses.empty()) ||
        (ClInstrumentMemIntrinsics && !Acc.MemIntrinCalls.empty()));
-  const bool NeedsRuntimeIgnores = SuppressChecking && Acc.HasCalls;
-  const bool NeedsFuncEntryExit = ClInstrumentFuncEntryExit && Acc.HasCalls;
+  const bool NeedsRuntimeIgnores =
+      SuppressChecking && Acc.HasCalls && !ClMinimal;
+  const bool NeedsFuncEntryExit =
+      ClInstrumentFuncEntryExit && Acc.HasCalls && !ClMinimal;
   if (!MayInstrument && !NeedsRuntimeIgnores && !NeedsFuncEntryExit)
     return false;
 
@@ -355,7 +382,7 @@ bool ConcurrencySanitizer::sanitizeFunction(Function &F,
     for (Instruction *I : Acc.LoadsAndStores)
       Res |= instrumentLoadOrStore(I, DL);
 
-  if (ClInstrumentAtomics && SanitizeFunction)
+  if (CheckAtomics && SanitizeFunction)
     for (Instruction *I : Acc.AtomicAccesses)
       Res |= instrumentAtomic(I, DL);
 
@@ -368,7 +395,7 @@ bool ConcurrencySanitizer::sanitizeFunction(Function &F,
     Res = true;
   }
 
-  if ((Res || Acc.HasCalls) && ClInstrumentFuncEntryExit) {
+  if (!ClMinimal && (Res || Acc.HasCalls) && ClInstrumentFuncEntryExit) {
     insertFuncEntryExit(F);
     Res = true;
   }
@@ -442,9 +469,14 @@ bool ConcurrencySanitizer::instrumentLoadOrStore(Instruction *I,
                                                  const DataLayout &DL) {
   const bool IsWrite = isa<StoreInst>(I);
   Value *Addr = getLoadStorePointerOperand(I);
-  if (!insertAccessProbe(I, Addr, getLoadStoreType(I), DL, IsWrite,
-                         /*IsCompound=*/false, /*IsAtomic=*/false))
+  Type *AccessTy = getLoadStoreType(I);
+  if (ClMinimal) {
+    if (!insertTypedValueCheck(I, Addr, AccessTy, DL, IsWrite))
+      return false;
+  } else if (!insertAccessProbe(I, Addr, AccessTy, DL, IsWrite,
+                                /*IsCompound=*/false, /*IsAtomic=*/false)) {
     return false;
+  }
   if (IsWrite)
     ++NumInstrumentedWrites;
   else
@@ -521,6 +553,22 @@ bool ConcurrencySanitizer::instrumentMemIntrinsic(IntrinsicInst *II,
     TypeSize Size = DL.getTypeAllocSize(MSP->getValue()->getType());
     Len = IRB.CreateMul(Len, IRB.CreateTypeSize(IntptrTy, Size));
   }
+  if (ClMinimal) {
+    if (MI && MI->isAtomic())
+      return false;
+    bool Changed = false;
+    if (InstrumentRead &&
+        insertRangeValueCheck(II, Src, Len, /*IsWrite=*/false)) {
+      ++NumInstrumentedReads;
+      Changed = true;
+    }
+    if (InstrumentWrite &&
+        insertRangeValueCheck(II, Dst, Len, /*IsWrite=*/true)) {
+      ++NumInstrumentedWrites;
+      Changed = true;
+    }
+    return Changed;
+  }
   Constant *Flags =
       getFlags(MI && MI->isAtomic() ? AccessFlags::Atomic : AccessFlags::None);
   if (InstrumentRead) {
@@ -531,6 +579,171 @@ bool ConcurrencySanitizer::instrumentMemIntrinsic(IntrinsicInst *II,
     IRB.CreateCall(CsanWriteRange, {getCallbackAddress(IRB, Dst), Len, Flags});
     ++NumInstrumentedWrites;
   }
+  return true;
+}
+
+// Builds a loop that spins until a timed deadline is complete.
+static void insertDeadlineLoop(Instruction *InsertBefore, Value *End,
+                               Intrinsic::ID Clock, Intrinsic::ID Wait,
+                               Value *WaitArg) {
+  BasicBlock *Pre = InsertBefore->getParent();
+  BasicBlock *Check =
+      Pre->splitBasicBlock(InsertBefore->getIterator(), "csan.delay");
+  BasicBlock *Done =
+      Check->splitBasicBlock(InsertBefore->getIterator(), "csan.delay.done");
+  BasicBlock *Body = BasicBlock::Create(Pre->getContext(), "csan.delay.body",
+                                        Pre->getParent(), Done);
+
+  Instruction *ToDone = Check->getTerminator();
+  InstrumentationIRBuilder C(ToDone);
+  Value *Now = C.CreateIntrinsic(Clock, {});
+  C.CreateCondBr(C.CreateICmpULT(Now, End, "csan.delaying"), Body, Done);
+  ToDone->eraseFromParent();
+
+  IRBuilder<> B(Body);
+  InstrumentationIRBuilder::ensureDebugInfo(B, *Pre->getParent());
+  if (WaitArg)
+    B.CreateIntrinsic(Wait, {WaitArg});
+  else
+    B.CreateIntrinsic(Wait, {});
+  B.CreateBr(Check);
+}
+
+void ConcurrencySanitizer::insertInlineDelay(Instruction *InsertBefore) {
+  Module *M = InsertBefore->getModule();
+  InstrumentationIRBuilder IRB(InsertBefore);
+  if (M->getTargetTriple().isAMDGPU()) {
+    // 1000 ticks is 10us at the 100MHz rate the device sampler assumes.
+    // s_sleep(15) is the yield that sampler uses between polls.
+    constexpr uint64_t AmdgpuDelayTicks = 1000;
+    Value *End =
+        IRB.CreateAdd(IRB.CreateIntrinsic(Intrinsic::readsteadycounter, {}),
+                      IRB.getInt64(AmdgpuDelayTicks), "csan.delay.end");
+    IRB.CreateIntrinsic(Intrinsic::amdgcn_s_sleep, {IRB.getInt32(2)});
+    insertDeadlineLoop(InsertBefore, End, Intrinsic::readsteadycounter,
+                       Intrinsic::amdgcn_s_sleep, IRB.getInt32(15));
+    return;
+  }
+  if (M->getTargetTriple().isNVPTX()) {
+    // The operand is nanoseconds. 10us is the device sampler's upper delay.
+    constexpr unsigned NvptxDelayNs = 10000;
+    IRB.CreateIntrinsic(Intrinsic::nvvm_nanosleep,
+                        {IRB.getInt32(NvptxDelayNs)});
+    return;
+  }
+
+  // Default udelay of the host sampler.
+  constexpr unsigned HostDelayUs = 80;
+  FunctionCallee USleep;
+  if (isLibFuncEmittable(M, LibInfo, LibFunc_usleep)) {
+    USleep = getOrInsertLibFunc(M, *LibInfo, LibFunc_usleep, IRB.getInt32Ty(),
+                                IRB.getInt32Ty());
+    inferNonMandatoryLibFuncAttrs(M, LibInfo->getName(LibFunc_usleep),
+                                  *LibInfo);
+  } else {
+    USleep =
+        M->getOrInsertFunction("usleep", IRB.getInt32Ty(), IRB.getInt32Ty());
+  }
+  CallInst *CI = IRB.CreateCall(USleep, {IRB.getInt32(HostDelayUs)});
+  if (auto *F = dyn_cast<Function>(USleep.getCallee()))
+    CI->setCallingConv(F->getCallingConv());
+}
+
+// A memcpy has no value type. Read at most 8 bytes, or one byte when the
+// length is not a constant.
+static Type *rangeSampleTy(LLVMContext &Ctx, Value *ByteSize) {
+  uint64_t Bytes = 1;
+  if (auto *C = dyn_cast<ConstantInt>(ByteSize)) {
+    Bytes = C->getZExtValue();
+    if (Bytes > 8)
+      Bytes = 8;
+  }
+  return Type::getIntNTy(Ctx, Bytes * 8);
+}
+
+bool ConcurrencySanitizer::insertTypedValueCheck(Instruction *I, Value *Addr,
+                                                 Type *AccessTy,
+                                                 const DataLayout &DL,
+                                                 bool IsWrite) {
+  if (Addr->isSwiftError() || !AccessTy->isSized())
+    return false;
+  TypeSize StoreSize = DL.getTypeStoreSize(AccessTy);
+  if (StoreSize.isZero())
+    return false;
+
+  // icmp has no aggregate form. Load the stored bytes as an integer.
+  Type *LoadTy = AccessTy;
+  if (!AccessTy->isIntOrIntVectorTy() && !AccessTy->isPtrOrPtrVectorTy() &&
+      !AccessTy->isFPOrFPVectorTy()) {
+    TypeSize Bits = DL.getTypeStoreSizeInBits(AccessTy);
+    if (!Bits.isFixed())
+      return false;
+    LoadTy = Type::getIntNTy(AccessTy->getContext(), Bits.getFixedValue());
+  }
+
+  InstrumentationIRBuilder IRB(I);
+  Value *ByteSize = IRB.CreateTypeSize(IntptrTy, StoreSize);
+  return emitValueCheck(I, Addr, LoadTy, ByteSize, getLoadStoreAlignment(I),
+                        IsWrite);
+}
+
+bool ConcurrencySanitizer::insertRangeValueCheck(Instruction *I, Value *Addr,
+                                                 Value *ByteSize,
+                                                 bool IsWrite) {
+  if (auto *C = dyn_cast<ConstantInt>(ByteSize)) {
+    if (C->isZero())
+      return false;
+  } else {
+    // A dynamic length may be zero.
+    InstrumentationIRBuilder IRB(I);
+    I = SplitBlockAndInsertIfThen(IRB.CreateIsNotNull(ByteSize), I,
+                                  /*Unreachable=*/false);
+  }
+  return emitValueCheck(I, Addr, rangeSampleTy(I->getContext(), ByteSize),
+                        ByteSize, Align(1), IsWrite);
+}
+
+bool ConcurrencySanitizer::emitValueCheck(Instruction *I, Value *Addr,
+                                          Type *LoadTy, Value *ByteSize,
+                                          Align Alignment, bool IsWrite) {
+  const DataLayout &DL = I->getModule()->getDataLayout();
+  MDNode *NoSanitize = MDNode::get(I->getContext(), {});
+  InstrumentationIRBuilder IRB(I);
+  LoadInst *Old = IRB.CreateAlignedLoad(LoadTy, Addr, Alignment,
+                                        /*isVolatile=*/true, "csan.old");
+  Old->setMetadata(LLVMContext::MD_nosanitize, NoSanitize);
+
+  insertInlineDelay(I);
+
+  InstrumentationIRBuilder After(I);
+  LoadInst *New = After.CreateAlignedLoad(LoadTy, Addr, Alignment,
+                                          /*isVolatile=*/true, "csan.new");
+  New->setMetadata(LLVMContext::MD_nosanitize, NoSanitize);
+
+  // Compare the raw bits. A scalable vector has no fixed integer width.
+  TypeSize Bits = DL.getTypeSizeInBits(LoadTy);
+  Type *BitTy;
+  if (Bits.isScalable())
+    BitTy = LoadTy->isPtrOrPtrVectorTy()
+                ? DL.getIntPtrType(LoadTy)
+                : VectorType::getInteger(cast<VectorType>(LoadTy));
+  else
+    BitTy = After.getIntNTy(Bits.getFixedValue());
+  Value *Changed = After.CreateICmpNE(
+      After.CreateBitPreservingCastChain(DL, Old, BitTy),
+      After.CreateBitPreservingCastChain(DL, New, BitTy), "csan.changed");
+  if (BitTy->isVectorTy())
+    Changed = After.CreateOrReduce(Changed);
+
+  Instruction *ReportTerm =
+      SplitBlockAndInsertIfThen(Changed, I, /*Unreachable=*/false);
+  InstrumentationIRBuilder Report(ReportTerm);
+  Report.CreateCall(CsanReportRace, {getCallbackAddress(Report, Addr), ByteSize,
+                                     getFlags(IsWrite ? AccessFlags::Write
+                                                      : AccessFlags::None)});
+
+  InstrumentationIRBuilder Tail(I);
+  Tail.CreateFence(AtomicOrdering::AcquireRelease, SyncScope::SingleThread);
   return true;
 }
 

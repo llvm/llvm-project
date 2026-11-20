@@ -981,6 +981,10 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setOnlyReadsMemory(F, 0);
     break;
+  case LibFunc_usleep:
+    Changed |= setRetAndArgsNoUndef(F);
+    Changed |= setDoesNotThrow(F);
+    break;
   case LibFunc_utime:
   case LibFunc_utimes:
     Changed |= setRetAndArgsNoUndef(F);
@@ -1580,6 +1584,10 @@ FunctionCallee llvm::getOrInsertLibFunc(Module *M, const TargetLibraryInfo &TLI,
     // on any target: A size_t argument (which may be an i32 on some targets)
     // should not trigger the assert below.
   case LibFunc_bcmp:
+    setRetExtAttr(*F, TLI);
+    break;
+  case LibFunc_usleep:
+    setArgExtAttr(*F, 0, TLI, /*Signed=*/false);
     setRetExtAttr(*F, TLI);
     break;
   case LibFunc_calloc:
