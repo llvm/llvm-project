@@ -94,6 +94,21 @@ LLDBServerMockAcceleratorPlugin::GetInitializeActions() {
   return actions;
 }
 
+std::optional<AcceleratorActions>
+LLDBServerMockAcceleratorPlugin::NativeProcessIsStopping() {
+  if (!::getenv("LLDB_MOCK_ACCELERATOR_NATIVE_STOP_ACTIONS") ||
+      m_sent_native_stop_actions.exchange(true))
+    return std::nullopt;
+
+  AcceleratorActions actions = GetNewAcceleratorAction();
+  AcceleratorBreakpointInfo bp;
+  bp.identifier = kBreakpointIDNativeStopAction;
+  bp.by_name = AcceleratorBreakpointByName{
+      std::nullopt, "mock_gpu_accelerator_native_stop_action"};
+  actions.breakpoints.push_back(std::move(bp));
+  return actions;
+}
+
 llvm::Expected<AcceleratorBreakpointHitResponse>
 LLDBServerMockAcceleratorPlugin::BreakpointWasHit(
     AcceleratorBreakpointHitArgs &args) {
@@ -141,6 +156,8 @@ LLDBServerMockAcceleratorPlugin::BreakpointWasHit(
   }
   case kBreakpointIDByAddress:
   case kBreakpointIDByNameShlib:
+  case kBreakpointIDNativeStopAction:
+  case ProcessMockAccelerator::kStopReplyBreakpointID:
     // Disable and stop the native process so the hit is observable.
     response.disable_bp = true;
     response.auto_resume_native = false;

@@ -566,12 +566,18 @@ private:
                                 lldb::user_id_t break_id,
                                 lldb::user_id_t break_loc_id);
 
-  /// Tracks the last action identifier handled per accelerator plugin so the
-  /// same actions are not processed more than once. Accelerator actions can
+  /// Tracks the last action identifier handled per accelerator plugin so a
+  /// repeat of that identifier is skipped. Accelerator actions can
   /// arrive in a stop reply packet, and if the debugger re-requests the stop
   /// reply with a '?' packet we can be handed the same actions again; this
   /// guards against handling them (e.g. setting the same breakpoints) twice.
   std::map<std::string, int64_t> m_processed_accelerator_actions;
+
+  /// Serializes deduplication and all target mutations performed by actions
+  /// arriving from the native and accelerator private state threads. This is
+  /// recursive because a synchronous accelerator connection can route its
+  /// initial actions back to the CPU process on the same thread.
+  std::recursive_mutex m_accelerator_actions_mutex;
 
   // ContinueDelegate interface
   void HandleAsyncStdout(llvm::StringRef out) override;

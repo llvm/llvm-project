@@ -14,6 +14,7 @@
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Host/MainLoopBase.h"
 
+#include <atomic>
 #include <memory>
 #include <optional>
 #include <vector>
@@ -35,6 +36,7 @@ public:
   llvm::StringRef GetPluginName() override;
   std::optional<LLDBSettings> GetLLDBSettings() override;
   std::optional<AcceleratorActions> GetInitializeActions() override;
+  std::optional<AcceleratorActions> NativeProcessIsStopping() override;
   llvm::Expected<AcceleratorBreakpointHitResponse>
   BreakpointWasHit(AcceleratorBreakpointHitArgs &args) override;
   void NativeProcessDidExit(const WaitStatus &exit_status) override;
@@ -62,6 +64,10 @@ private:
   // Breakpoint on the dedicated "mock_gpu_accelerator_connect" hook; only the
   // connection test defines that function. See BreakpointWasHit for the hit.
   static constexpr int64_t kBreakpointIDConnect = 4;
+  // Breakpoint requested through the native process's first stop reply.
+  static constexpr int64_t kBreakpointIDNativeStopAction = 5;
+
+  std::atomic<bool> m_sent_native_stop_actions{false};
 
   // The mock accelerator server runs on its own main loop and thread so its
   // packets don't contend with the native process. Populated by
