@@ -624,8 +624,8 @@ declare void @has_varargs_sret(ptr sret([100 x i8]), ...) nounwind;
 ; CHECK-NEXT:     .seh_endfunclet
 ; CHECK-NEXT:     .seh_endproc
 declare [2 x i8] @small_array([2 x i8], [2 x half], [2 x fp128], [2 x float]) nounwind;
-; CHECK-LABEL:    .def    $iexit_thunk$cdecl$m2$m2__llvm_H__4__llvm_Q__32F8;
-; CHECK:          .section        .wowthk$aa,"xr",discard,$iexit_thunk$cdecl$m2$m2__llvm_H__4__llvm_Q__32F8
+; CHECK-LABEL:    .def    $iexit_thunk$cdecl$m2$m2__llvm_H__4__llvm_Q__32a16F8;
+; CHECK:          .section        .wowthk$aa,"xr",discard,$iexit_thunk$cdecl$m2$m2__llvm_H__4__llvm_Q__32a16F8
 ; CHECK:          // %bb.0:
 ; CHECK-NEXT:     sub     sp, sp, #112
 ; CHECK-NEXT:     .seh_stackalloc 112
@@ -671,8 +671,8 @@ declare [2 x i8] @small_array([2 x i8], [2 x half], [2 x fp128], [2 x float]) no
 ; CHECK-NEXT:     adrp    x11, small_array
 ; CHECK-NEXT:     add     x11, x11, :lo12:small_array
 ; CHECK-NEXT:     ldr     x8, [x8, :lo12:__os_arm64x_check_icall]
-; CHECK-NEXT:     adrp    x10, $iexit_thunk$cdecl$m2$m2__llvm_H__4__llvm_Q__32F8
-; CHECK-NEXT:     add     x10, x10, :lo12:$iexit_thunk$cdecl$m2$m2__llvm_H__4__llvm_Q__32F8
+; CHECK-NEXT:     adrp    x10, $iexit_thunk$cdecl$m2$m2__llvm_H__4__llvm_Q__32a16F8
+; CHECK-NEXT:     add     x10, x10, :lo12:$iexit_thunk$cdecl$m2$m2__llvm_H__4__llvm_Q__32a16F8
 ; CHECK-NEXT:     blr     x8
 ; CHECK-NEXT:     .seh_startepilogue
 ; CHECK-NEXT:     ldr     x30, [sp], #16                  // 8-byte Folded Reload
@@ -857,8 +857,8 @@ declare <4 x i8> @small_vector(<4 x i8> %0) nounwind;
 ; CHECK-NEXT:     .seh_endproc
 
 declare <8 x i16> @large_vector(<8 x i16> %0) nounwind;
-; CHECK-LABEL:    .def	$iexit_thunk$cdecl$m16$m16;
-; CHECK:          .section	.wowthk$aa,"xr",discard,$iexit_thunk$cdecl$m16$m16
+; CHECK-LABEL:    .def	$iexit_thunk$cdecl$m16$m16a16;
+; CHECK:          .section	.wowthk$aa,"xr",discard,$iexit_thunk$cdecl$m16$m16a16
 ; CHECK:          // %bb.0:
 ; CHECK-NEXT:     sub	sp, sp, #80
 ; CHECK-NEXT:     .seh_stackalloc	80
@@ -895,8 +895,8 @@ declare <8 x i16> @large_vector(<8 x i16> %0) nounwind;
 ; CHECK-NEXT:     adrp	x11, large_vector
 ; CHECK-NEXT:     add	x11, x11, :lo12:large_vector
 ; CHECK-NEXT:     ldr	x8, [x8, :lo12:__os_arm64x_check_icall]
-; CHECK-NEXT:     adrp	x10, $iexit_thunk$cdecl$m16$m16
-; CHECK-NEXT:     add	x10, x10, :lo12:$iexit_thunk$cdecl$m16$m16
+; CHECK-NEXT:     adrp	x10, $iexit_thunk$cdecl$m16$m16a16
+; CHECK-NEXT:     add	x10, x10, :lo12:$iexit_thunk$cdecl$m16$m16a16
 ; CHECK-NEXT:     blr	x8
 ; CHECK-NEXT:     .seh_startepilogue
 ; CHECK-NEXT:     ldr	x30, [sp], #16                  // 8-byte Folded Reload
@@ -905,6 +905,20 @@ declare <8 x i16> @large_vector(<8 x i16> %0) nounwind;
 ; CHECK-NEXT:     br	x11
 ; CHECK-NEXT:     .seh_endfunclet
 ; CHECK-NEXT:     .seh_endproc
+
+declare void @aligned_i128(ptr, i128) nounwind
+; CHECK-LABEL:    .def    $iexit_thunk$cdecl$v$i8m16a16;
+; CHECK:          .seh_endprologue
+; CHECK:          sub     x1, x29, #16
+; CHECK-NEXT:     stp     x2, x3, [x29, #-16]
+; CHECK:          blr     x16
+
+declare void @pair_i64(ptr, [2 x i64]) nounwind
+; CHECK-LABEL:    .def    $iexit_thunk$cdecl$v$i8m16;
+; CHECK:          .seh_endprologue
+; CHECK:          stp     x1, x2, [x29, #-16]
+; CHECK-NEXT:     sub     x1, x29, #16
+; CHECK:          blr     x16
 
 declare void @"??@md5mangleaaaaaaaaaaaaaaaaaaaaaaa@"()
 ; CHECK-LABEL:       .def    "??$exit_thunk@md5mangleaaaaaaaaaaaaaaaaaaaaaaa@$$h@";
@@ -1012,7 +1026,7 @@ declare void @"??@md5mangleaaaaaaaaaaaaaaaaaaaaaaa@"()
 ; CHECK-NEXT:     .symidx has_varargs_sret
 ; CHECK-NEXT:     .word   0
 ; CHECK-NEXT:     .symidx small_array
-; CHECK-NEXT:     .symidx $iexit_thunk$cdecl$m2$m2__llvm_H__4__llvm_Q__32F8
+; CHECK-NEXT:     .symidx $iexit_thunk$cdecl$m2$m2__llvm_H__4__llvm_Q__32a16F8
 ; CHECK-NEXT:     .word   4
 ; CHECK-NEXT:     .symidx "#small_array$exit_thunk"
 ; CHECK-NEXT:     .symidx small_array
@@ -1036,11 +1050,23 @@ declare void @"??@md5mangleaaaaaaaaaaaaaaaaaaaaaaa@"()
 ; CHECK-NEXT:     .symidx	small_vector
 ; CHECK-NEXT:     .word	0
 ; CHECK-NEXT:     .symidx	large_vector
-; CHECK-NEXT:     .symidx	$iexit_thunk$cdecl$m16$m16
+; CHECK-NEXT:     .symidx	$iexit_thunk$cdecl$m16$m16a16
 ; CHECK-NEXT:     .word	4
 ; CHECK-NEXT:     .symidx	"#large_vector$exit_thunk"
 ; CHECK-NEXT:     .symidx	large_vector
 ; CHECK-NEXT:     .word	0
+; CHECK-NEXT:     .symidx aligned_i128
+; CHECK-NEXT:     .symidx $iexit_thunk$cdecl$v$i8m16a16
+; CHECK-NEXT:     .word   4
+; CHECK-NEXT:     .symidx "#aligned_i128$exit_thunk"
+; CHECK-NEXT:     .symidx aligned_i128
+; CHECK-NEXT:     .word   0
+; CHECK-NEXT:     .symidx pair_i64
+; CHECK-NEXT:     .symidx $iexit_thunk$cdecl$v$i8m16
+; CHECK-NEXT:     .word   4
+; CHECK-NEXT:     .symidx "#pair_i64$exit_thunk"
+; CHECK-NEXT:     .symidx pair_i64
+; CHECK-NEXT:     .word   0
 ; CHECK-NEXT:     .symidx "??@md5mangleaaaaaaaaaaaaaaaaaaaaaaa@"
 ; CHECK-NEXT:     .symidx $iexit_thunk$cdecl$v$v
 ; CHECK-NEXT:     .word   4
@@ -1068,6 +1094,9 @@ define void @func_caller() nounwind {
   call %T2 @simple_struct(%T1 { i16 0 }, %T2 { i32 0, float 0.0 }, %T3 { i64 0, double 0.0 }, %T4 { i64 0, double 0.0, i8 0 })
   call <4 x i8> @small_vector(<4 x i8> <i8 0, i8 0, i8 0, i8 0>)
   call <8 x i16> @large_vector(<8 x i16> <i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0>)
+  call void @aligned_i128(ptr null, i128 0)
+  call void @pair_i64(ptr null, [2 x i64] zeroinitializer)
   call void @"??@md5mangleaaaaaaaaaaaaaaaaaaaaaaa@"()
   ret void
 }
+

@@ -16,12 +16,14 @@
 #include "llvm/CodeGen/BasicBlockSectionsProfileReader.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/Transforms/Utils/SampleProfileInference.h"
+#include <memory>
 
 namespace llvm {
 
-/// Whether to match basic blocks using BBIDs instead of hashes for Propeller
-/// inference.
-LLVM_ABI extern cl::opt<bool> PropellerMatchBBID;
+class Module;
+namespace sampleprof {
+class SampleProfileReader;
+} // namespace sampleprof
 
 class LLVM_ABI BasicBlockMatchingAndInference : public MachineFunctionPass {
 private:
@@ -41,6 +43,7 @@ private:
 public:
   static char ID;
   BasicBlockMatchingAndInference();
+  ~BasicBlockMatchingAndInference() override;
 
   StringRef getPassName() const override {
     return "Basic Block Matching and Inference";
@@ -48,12 +51,20 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
+  bool doInitialization(Module &M) override;
   bool runOnMachineFunction(MachineFunction &F) override;
+  bool doFinalization(Module &M) override;
 
   std::optional<WeightInfo> getWeightInfo(StringRef FuncName) const;
 
 private:
   StringMap<WeightInfo> ProgramWeightInfo;
+  // The supplemental sample profile of the current module. Null if no
+  // supplemental sample profile is given or it fails to load.
+  std::unique_ptr<sampleprof::SampleProfileReader> SampleReader;
+
+  void supplementWithSampleProfile(MachineFunction &MF,
+                                   WeightInfo &MatchWeight);
 
   WeightInfo initWeightInfoByMatching(MachineFunction &MF);
   WeightInfo initWeightInfoByBBID(MachineFunction &MF, const CFGProfile &CFG);

@@ -172,6 +172,11 @@ TEST_F(DefinitionBlockSeparatorTest, Basic) {
                "enum Bar { FOOBAR, BARFOO };",
                Style);
 
+  verifyFormat("struct D {};\n"
+               "\n"
+               "enum class E : char { k };",
+               Style);
+
   FormatStyle BreakAfterReturnTypeStyle = Style;
   BreakAfterReturnTypeStyle.BreakAfterReturnType = FormatStyle::RTBS_All;
   // Test uppercased long typename
@@ -575,6 +580,23 @@ TEST_F(DefinitionBlockSeparatorTest, TryBlocks) {
                "{\n"
                "}",
                Style, "", /*Inverse=*/false);
+}
+
+TEST_F(DefinitionBlockSeparatorTest, MacroExpansion) {
+  FormatStyle Style = getLLVMStyle();
+  Style.SeparateDefinitionBlocks = FormatStyle::SDS_Always;
+  Style.Macros = {"AUTO_RETURN(a)=-> decltype(auto) { return a; }"};
+  verifyFormat("auto a(int t) AUTO_RETURN(g(t))\n"
+               "auto b(int t) AUTO_RETURN(g(t))\n"
+               "\n"
+               "int f(bool c) {\n"
+               "  if (c) {\n"
+               "    return 1;\n"
+               "  } else {\n"
+               "    return 2;\n"
+               "  }\n"
+               "}",
+               Style);
 }
 
 TEST_F(DefinitionBlockSeparatorTest, Leave) {

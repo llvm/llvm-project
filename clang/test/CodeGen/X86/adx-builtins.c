@@ -1,5 +1,9 @@
 // RUN: %clang_cc1 -x c -triple x86_64-unknown-unknown -ffreestanding -target-feature +adx -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -x c++ -triple x86_64-unknown-unknown -ffreestanding -target-feature +adx -emit-llvm -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -x c -triple x86_64-unknown-unknown -ffreestanding -target-feature +adx -fclangir -emit-llvm -o - %s | FileCheck %s %}
+// RUN: %if cir-enabled %{ %clang_cc1 -x c++ -triple x86_64-unknown-unknown -ffreestanding -target-feature +adx -fclangir -emit-llvm -o - %s | FileCheck %s %}
+// RUN: %if cir-enabled %{ %clang_cc1 -x c -triple x86_64-unknown-unknown -ffreestanding -target-feature +adx -fclangir -emit-cir -o - %s | FileCheck %s --check-prefix=CIR %}
+// RUN: %if cir-enabled %{ %clang_cc1 -x c++ -triple x86_64-unknown-unknown -ffreestanding -target-feature +adx -fclangir -emit-cir -o - %s | FileCheck %s --check-prefix=CIR %}
 
 #include <immintrin.h>
 
@@ -10,6 +14,13 @@ unsigned char test_addcarryx_u32(unsigned char __cf, unsigned int __x,
 // CHECK: [[DATA:%.*]] = extractvalue { i8, i32 } [[ADC]], 1
 // CHECK: store i32 [[DATA]], ptr %{{.*}}
 // CHECK: [[CF:%.*]] = extractvalue { i8, i32 } [[ADC]], 0
+// CIR-LABEL: cir.func {{.*}}@{{.*}}test_addcarryx_u32
+// CIR: cir.call @_addcarryx_u32(
+// CIR-LABEL: cir.func {{.*}}@_addcarryx_u32(
+// CIR: [[RES:%.*]] = cir.call_llvm_intrinsic "x86.addcarry.32"
+// CIR: [[VAL:%.*]] = cir.extract_member [[RES]][1] : {{.*}} -> !u32i
+// CIR: cir.store [[VAL]], {{%.*}} : !u32i, !cir.ptr<!u32i>
+// CIR: [[CF:%.*]] = cir.extract_member [[RES]][0] : {{.*}} -> !u8i
   return _addcarryx_u32(__cf, __x, __y, __p);
 }
 
@@ -21,6 +32,13 @@ unsigned char test_addcarryx_u64(unsigned char __cf, unsigned long long __x,
 // CHECK: [[DATA:%.*]] = extractvalue { i8, i64 } [[ADC]], 1
 // CHECK: store i64 [[DATA]], ptr %{{.*}}
 // CHECK: [[CF:%.*]] = extractvalue { i8, i64 } [[ADC]], 0
+// CIR-LABEL: cir.func {{.*}}@{{.*}}test_addcarryx_u64
+// CIR: cir.call @_addcarryx_u64(
+// CIR-LABEL: cir.func {{.*}}@_addcarryx_u64(
+// CIR: [[RES:%.*]] = cir.call_llvm_intrinsic "x86.addcarry.64"
+// CIR: [[VAL:%.*]] = cir.extract_member [[RES]][1] : {{.*}} -> !u64i
+// CIR: cir.store [[VAL]], {{%.*}} : !u64i, !cir.ptr<!u64i>
+// CIR: [[CF:%.*]] = cir.extract_member [[RES]][0] : {{.*}} -> !u8i
   return _addcarryx_u64(__cf, __x, __y, __p);
 }
 

@@ -41,6 +41,10 @@ device queue::get_device() const {
 
 bool queue::is_in_order() const { return impl->isInOrder(); }
 
+const property_list &queue::getPropertyList() const noexcept {
+  return impl->getPropList();
+}
+
 void queue::wait() { impl->wait(); }
 
 void queue::wait_and_throw() { impl->waitAndThrow(); }

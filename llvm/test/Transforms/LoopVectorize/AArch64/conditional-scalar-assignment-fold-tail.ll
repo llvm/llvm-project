@@ -3,7 +3,7 @@
 
 target triple = "aarch64-linux-gnu"
 
-define i32 @simple_find_last_reduction(i64 %N, ptr %data, i32 %a) {
+define i32 @simple_find_last_reduction(i64 %N, ptr %data, i32 %a) vscale_range(1,16) {
 ; CHECK-LABEL: define i32 @simple_find_last_reduction(
 ; CHECK-SAME: i64 [[N:%.*]], ptr [[DATA:%.*]], i32 [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -68,7 +68,7 @@ exit:
 ;       result = b[i];
 ;   return result;
 ; }
-define i32 @non_speculatable_find_last_reduction(ptr noalias %a, ptr noalias %b, i32 %default_val, i64 %N, i32 %threshold) {
+define i32 @non_speculatable_find_last_reduction(ptr noalias %a, ptr noalias %b, i32 %default_val, i64 %N, i32 %threshold) vscale_range(1,16) {
 ; CHECK-LABEL: define i32 @non_speculatable_find_last_reduction(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], i32 [[DEFAULT_VAL:%.*]], i64 [[N:%.*]], i32 [[THRESHOLD:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -138,7 +138,7 @@ exit:
 ; Check that we do not crash when the backedge of a find-last-like reduction
 ; phi is the phi itself (e.g. because a blend with a poison incoming was
 ; simplified away).
-define i8 @findlast_blend_with_poison(i8 %e, i1 %c) {
+define i8 @findlast_blend_with_poison(i8 %e, i1 %c) vscale_range(1,16) {
 ; CHECK-LABEL: define i8 @findlast_blend_with_poison(
 ; CHECK-NOT:    vector.body
 entry:

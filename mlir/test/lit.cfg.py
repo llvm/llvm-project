@@ -5,6 +5,7 @@ import platform
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 
 import lit.formats
@@ -356,6 +357,8 @@ if config.enable_bindings_python:
         ],
         append_path=True,
     )
+
+config.available_features.add("host-byteorder-" + sys.byteorder + "-endian")
 
 if config.enable_assertions:
     config.available_features.add("asserts")

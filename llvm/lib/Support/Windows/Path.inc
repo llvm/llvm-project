@@ -29,6 +29,7 @@
 #include <shellapi.h>
 #include <shlobj.h>
 #include <winioctl.h>
+#include <winternl.h>
 
 #undef max
 
@@ -41,6 +42,32 @@ typedef int errno_t;
 #ifdef _MSC_VER
 #pragma comment(lib, "advapi32.lib") // This provides CryptAcquireContextW.
 #pragma comment(lib, "ole32.lib")    // This provides CoTaskMemFree
+#endif
+
+#ifndef __MINGW32__
+// The Windows SDK does not declare these types.
+// The WDK declares the types in `wdm.h` and `NtQueryVolumeInformationFile`
+// in `ntifs.h`.
+// MinGW-w64 declares all three in `winternl.h`.
+typedef enum _FSINFOCLASS { FileFsDeviceInformation = 4 } FS_INFORMATION_CLASS;
+
+typedef struct _FILE_FS_DEVICE_INFORMATION {
+  DEVICE_TYPE DeviceType;
+  ULONG Characteristics;
+} FILE_FS_DEVICE_INFORMATION;
+
+// Exported by `ntdll.dll`.
+extern "C" NTSYSAPI NTSTATUS NTAPI NtQueryVolumeInformationFile(
+    HANDLE FileHandle, PIO_STATUS_BLOCK IoStatusBlock, PVOID FsInformation,
+    ULONG Length, FS_INFORMATION_CLASS FsInformationClass);
+#endif
+
+// Defined only in `wdm.h` in WDK and MinGW-w64.
+#ifndef FILE_REMOVABLE_MEDIA
+#define FILE_REMOVABLE_MEDIA 0x00000001
+#endif
+#ifndef FILE_REMOTE_DEVICE
+#define FILE_REMOTE_DEVICE 0x00000010
 #endif
 
 using namespace llvm;
@@ -549,16 +576,31 @@ static std::error_code realPathFromHandle(HANDLE H,
   return std::error_code();
 }
 
+static std::error_code is_local_internal(HANDLE Handle, bool &Result) {
+  // Fast path for the common case: an ordinary local disk, one system call on
+  // the handle. Everything else goes through the path-based check below.
+  IO_STATUS_BLOCK IoStatus;
+  FILE_FS_DEVICE_INFORMATION Info;
+  if (::NtQueryVolumeInformationFile(Handle, &IoStatus, &Info, sizeof(Info),
+                                     FileFsDeviceInformation) >= 0 &&
+      (Info.DeviceType == FILE_DEVICE_DISK ||
+       Info.DeviceType == FILE_DEVICE_DISK_FILE_SYSTEM) &&
+      !(Info.Characteristics & (FILE_REMOVABLE_MEDIA | FILE_REMOTE_DEVICE))) {
+    Result = true;
+    return std::error_code();
+  }
+
+  SmallVector<wchar_t, 128> FinalPath;
+  if (std::error_code EC = realPathFromHandle(Handle, FinalPath))
+    return EC;
+  return is_local_internal(FinalPath, Result);
+}
+
 std::error_code is_local(int FD, bool &Result) {
   sandbox::violationIfEnabled();
 
-  SmallVector<wchar_t, 128> FinalPath;
   HANDLE Handle = reinterpret_cast<HANDLE>(_get_osfhandle(FD));
-
-  if (std::error_code EC = realPathFromHandle(Handle, FinalPath))
-    return EC;
-
-  return is_local_internal(FinalPath, Result);
+  return is_local_internal(Handle, Result);
 }
 
 static std::error_code setDeleteDisposition(HANDLE Handle, bool Delete) {
@@ -577,12 +619,8 @@ static std::error_code setDeleteDisposition(HANDLE Handle, bool Delete) {
   // Check if the file is on a network (non-local) drive. If so, don't
   // continue when DeleteFile is true, since it prevents opening the file for
   // writes.
-  SmallVector<wchar_t, 128> FinalPath;
-  if (std::error_code EC = realPathFromHandle(Handle, FinalPath))
-    return EC;
-
   bool IsLocal;
-  if (std::error_code EC = is_local_internal(FinalPath, IsLocal))
+  if (std::error_code EC = is_local_internal(Handle, IsLocal))
     return EC;
 
   if (!IsLocal)
@@ -1179,12 +1217,9 @@ void mapped_file_region::unmapImpl() {
         // cases where we do the flushing. Only do the flushing if we aren't
         // sure we are on a local file system.
         bool IsLocal = false;
-        SmallVector<wchar_t, 128> FinalPath;
-        if (!realPathFromHandle(FileHandle.get(), FinalPath)) {
-          // Not checking the return value here - if the check fails, assume the
-          // file isn't local.
-          is_local_internal(FinalPath, IsLocal);
-        }
+        // Not checking the return value here - if the check fails, assume the
+        // file isn't local.
+        is_local_internal(FileHandle.get(), IsLocal);
         DoFlush = !IsLocal;
       }
       if (DoFlush)
@@ -1579,6 +1614,11 @@ Expected<size_t> readNativeFileSlice(file_t FileHandle,
   return readNativeFileImpl(FileHandle, Buf, &Overlapped);
 }
 
+std::error_code getRealPathFromHandle(file_t Handle,
+                                      SmallVectorImpl<char> &RealPath) {
+  return realPathFromHandle(Handle.get(), RealPath);
+}
+
 std::error_code tryLockFile(int FD, std::chrono::milliseconds Timeout,
                             LockKind Kind) {
   DWORD Flags = Kind == LockKind::Exclusive ? LOCKFILE_EXCLUSIVE_LOCK : 0;
@@ -1628,6 +1668,58 @@ std::error_code closeFile(file_t &F) {
   return std::error_code();
 }
 
+#if LLVM_WINDOWS_RESTRICTED_APIS
+// Remove a file or an empty directory. Like IFileOperation, this also removes
+// read-only entries. Junctions and symlinks are removed, not their targets.
+static std::error_code removeEntry(ArrayRef<wchar_t> Path16, DWORD Attrs) {
+  auto Remove = [&] {
+    return (Attrs & FILE_ATTRIBUTE_DIRECTORY)
+               ? ::RemoveDirectoryW(Path16.data())
+               : ::DeleteFileW(Path16.data());
+  };
+  if (Remove())
+    return std::error_code();
+  DWORD Err = ::GetLastError();
+  if (Err != ERROR_ACCESS_DENIED || !(Attrs & FILE_ATTRIBUTE_READONLY))
+    return mapWindowsError(Err);
+  DWORD NewAttrs = Attrs & ~FILE_ATTRIBUTE_READONLY;
+  if (!::SetFileAttributesW(Path16.data(),
+                            NewAttrs ? NewAttrs : FILE_ATTRIBUTE_NORMAL) ||
+      !Remove())
+    return mapWindowsError(::GetLastError());
+  return std::error_code();
+}
+
+static std::error_code removeTree(const Twine &Path, bool IgnoreErrors) {
+  SmallVector<wchar_t, 128> Path16;
+  if (std::error_code EC = widenPath(Path, Path16))
+    return EC;
+  DWORD Attrs = ::GetFileAttributesW(Path16.data());
+  if (Attrs == INVALID_FILE_ATTRIBUTES)
+    return mapWindowsError(::GetLastError());
+
+  // Do not recurse through junctions and symlinks.
+  if ((Attrs & FILE_ATTRIBUTE_DIRECTORY) &&
+      !(Attrs & FILE_ATTRIBUTE_REPARSE_POINT)) {
+    std::error_code EC;
+    for (directory_iterator I(Path, EC, false), E; I != E; I.increment(EC)) {
+      EC = removeTree(I->path(), IgnoreErrors);
+      if (EC && !IgnoreErrors)
+        return EC;
+    }
+    if (EC && !IgnoreErrors)
+      return EC;
+  }
+  return removeEntry(Path16, Attrs);
+}
+
+std::error_code remove_directories(const Twine &path, bool IgnoreErrors) {
+  std::error_code EC = removeTree(path, IgnoreErrors);
+  if (EC && EC != errc::no_such_file_or_directory && !IgnoreErrors)
+    return EC;
+  return std::error_code();
+}
+#else
 std::error_code remove_directories(const Twine &path, bool IgnoreErrors) {
   SmallString<128> NativePath;
   llvm::sys::path::native(path, NativePath, path::Style::windows_backslash);
@@ -1677,6 +1769,7 @@ std::error_code remove_directories(const Twine &path, bool IgnoreErrors) {
     return mapWindowsError(HRESULT_CODE(HR));
   return std::error_code();
 }
+#endif
 
 static void expandTildeExpr(SmallVectorImpl<char> &Path) {
   // Path does not begin with a tilde expression.
@@ -1841,34 +1934,7 @@ std::error_code readlink(const Twine &path, SmallVectorImpl<char> &dest) {
 } // end namespace fs
 
 namespace path {
-static bool getKnownFolderPath(KNOWNFOLDERID folderId,
-                               SmallVectorImpl<char> &result) {
-  wchar_t *path = nullptr;
-  if (::SHGetKnownFolderPath(folderId, KF_FLAG_CREATE, nullptr, &path) != S_OK)
-    return false;
-
-  bool ok = !UTF16ToUTF8(path, ::wcslen(path), result);
-  ::CoTaskMemFree(path);
-  if (ok)
-    llvm::sys::path::make_preferred(result);
-  return ok;
-}
-
-bool home_directory(SmallVectorImpl<char> &result) {
-  return getKnownFolderPath(FOLDERID_Profile, result);
-}
-
-bool user_config_directory(SmallVectorImpl<char> &result) {
-  // Either local or roaming appdata may be suitable in some cases, depending
-  // on the data. Local is more conservative, Roaming may not always be correct.
-  return getKnownFolderPath(FOLDERID_LocalAppData, result);
-}
-
-bool cache_directory(SmallVectorImpl<char> &result) {
-  return getKnownFolderPath(FOLDERID_LocalAppData, result);
-}
-
-static bool getTempDirEnvVar(const wchar_t *Var, SmallVectorImpl<char> &Res) {
+static bool getEnvVar(const wchar_t *Var, SmallVectorImpl<char> &Res) {
   SmallVector<wchar_t, 1024> Buf;
   size_t Size = 1024;
   do {
@@ -1884,10 +1950,49 @@ static bool getTempDirEnvVar(const wchar_t *Var, SmallVectorImpl<char> &Res) {
   return !windows::UTF16ToUTF8(Buf.data(), Size, Res);
 }
 
+// EnvVar is the environment variable that normally points at folderId. It is
+// used instead of shell32 when LLVM_WINDOWS_RESTRICTED_APIS is set.
+static bool getKnownFolderPath(KNOWNFOLDERID folderId, const wchar_t *EnvVar,
+                               SmallVectorImpl<char> &result) {
+#if LLVM_WINDOWS_RESTRICTED_APIS
+  (void)folderId;
+  if (!getEnvVar(EnvVar, result))
+    return false;
+  llvm::sys::path::make_preferred(result);
+  // Match KF_FLAG_CREATE.
+  return !fs::create_directories(result);
+#else
+  (void)EnvVar;
+  wchar_t *path = nullptr;
+  if (::SHGetKnownFolderPath(folderId, KF_FLAG_CREATE, nullptr, &path) != S_OK)
+    return false;
+
+  bool ok = !UTF16ToUTF8(path, ::wcslen(path), result);
+  ::CoTaskMemFree(path);
+  if (ok)
+    llvm::sys::path::make_preferred(result);
+  return ok;
+#endif
+}
+
+bool home_directory(SmallVectorImpl<char> &result) {
+  return getKnownFolderPath(FOLDERID_Profile, L"USERPROFILE", result);
+}
+
+bool user_config_directory(SmallVectorImpl<char> &result) {
+  // Either local or roaming appdata may be suitable in some cases, depending
+  // on the data. Local is more conservative, Roaming may not always be correct.
+  return getKnownFolderPath(FOLDERID_LocalAppData, L"LOCALAPPDATA", result);
+}
+
+bool cache_directory(SmallVectorImpl<char> &result) {
+  return getKnownFolderPath(FOLDERID_LocalAppData, L"LOCALAPPDATA", result);
+}
+
 static bool getTempDirEnvVar(SmallVectorImpl<char> &Res) {
   const wchar_t *EnvironmentVariables[] = {L"TMP", L"TEMP", L"USERPROFILE"};
   for (auto *Env : EnvironmentVariables) {
-    if (getTempDirEnvVar(Env, Res))
+    if (getEnvVar(Env, Res))
       return true;
   }
   return false;

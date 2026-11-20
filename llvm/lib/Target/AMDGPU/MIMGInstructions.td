@@ -2351,12 +2351,10 @@ class VIMAGE_TENSOR_Real <bits<8> op, VIMAGE_TENSOR_Pseudo ps, string opName = p
 }
 
 multiclass VIMAGE_TENSOR_Real_gfx1250<bits<8> op> {
-  let AssemblerPredicate = isGFX125xOnly, DecoderNamespace = "GFX1250" in {
-    foreach DSuffix = ["_d2", "_d4"] in {
-      defvar ps = !cast<VIMAGE_TENSOR_Pseudo>(NAME # DSuffix);
-      def DSuffix # _gfx1250 : VIMAGE_TENSOR_Real<op, ps, ps.Mnemonic>,
-                SIMCInstr<ps.PseudoInstr, SIEncodingFamily.GFX1250>;
-    }
+  foreach DSuffix = ["_d2", "_d4"] in {
+    defvar ps = !cast<VIMAGE_TENSOR_Pseudo>(NAME # DSuffix);
+    def DSuffix # _gfx1250 : VIMAGE_TENSOR_Real<op, ps, ps.Mnemonic>,
+              Select<GFX1250Gen, ps.PseudoInstr>;
   }
 }
 
