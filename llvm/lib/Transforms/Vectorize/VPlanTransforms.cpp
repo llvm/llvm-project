@@ -1351,8 +1351,8 @@ static VPValue *simplifyRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
   }
 
   VPIRValue *IRV;
-  if (Def->getNumOperands() == 1 &&
-      match(Def, m_ComputeReductionResult(m_VPIRValue(IRV))))
+  if (match(Def, m_ComputeReductionResult(m_VPIRValue(IRV))) &&
+      !cast<VPInstruction>(Def)->getAppliedStartValue())
     return IRV;
 
   if (match(Def, m_VPInstruction<VPInstruction::WideIVStep>(m_VPValue(A),
@@ -5666,7 +5666,7 @@ getScaledReductionChain(VPReductionPHIRecipe *RedPhiR) {
   auto *RdxResult = vputils::findComputeReductionResult(RedPhiR);
   if (!RdxResult)
     return std::nullopt;
-  VPValue *ExitValue = RdxResult->getOperand(0);
+  VPValue *ExitValue = *RdxResult->getReductionParts().begin();
   match(ExitValue, m_Select(m_VPValue(), m_VPValue(ExitValue), m_VPValue()));
 
   SmallVector<PartialReductionDescriptor> Chain;
@@ -5760,11 +5760,10 @@ static void updatePartialReductionPhiAndResult(VPlan &Plan,
   // Replace reduction_result by 'sub (startval, reductionresult)'.
   VPInstruction *RdxResult = vputils::findComputeReductionResult(Phi);
   assert(RdxResult && "Could not find reduction result");
-  // Fold the start op, if any, into the subtraction.
-  if (VPInstruction *StartOp = vputils::findReductionStartOp(RdxResult)) {
-    OldStartValue = StartOp->getOperand(1);
-    StartOp->replaceAllUsesWith(RdxResult);
-    StartOp->eraseFromParent();
+  // Move an applied start value into the subtraction; leave the identity.
+  if (VPValue *Start = RdxResult->getAppliedStartValue()) {
+    OldStartValue = Start;
+    RdxResult->setOperand(0, StartInst->getOperand(1));
   }
 
   VPBuilder Builder = VPBuilder::getToInsertAfter(RdxResult);
@@ -5921,10 +5920,7 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
       // Check if the compute-reduction-result is used by a sunk store.
       // TODO: Also form partial reductions in those cases.
       if (auto *RdxResult = vputils::findComputeReductionResult(RedPhiR)) {
-        VPValue *Result = RdxResult;
-        if (VPInstruction *StartOp = vputils::findReductionStartOp(RdxResult))
-          Result = StartOp;
-        if (any_of(Result->users(), [](VPUser *U) {
+        if (any_of(RdxResult->users(), [](VPUser *U) {
               auto *RepR = dyn_cast<VPReplicateRecipe>(U);
               return RepR && RepR->getOpcode() == Instruction::Store;
             })) {

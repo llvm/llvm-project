@@ -1602,6 +1602,27 @@ public:
   /// Returns true if the recipe produces a single scalar value.
   bool isSingleScalar() const;
 
+  /// Returns true if an out-of-loop ComputeReductionResult of kind \p RK has a
+  /// start operand first: the kinds that reduce with a binary operator.
+  static bool hasStartOperand(RecurKind RK);
+
+  /// Returns the start operand of this ComputeReductionResult, or nullptr. It
+  /// is the identity while the start value is in the reduction phi.
+  VPValue *getStartOperand() const {
+    if (getOpcode() != VPInstruction::ComputeReductionResult ||
+        isReductionInLoop() || !hasStartOperand(getRecurKind()))
+      return nullptr;
+    return getOperand(0);
+  }
+
+  /// Returns the start operand if it is not the identity, or nullptr.
+  VPValue *getAppliedStartValue() const;
+
+  /// Returns the operands to reduce, skipping the start operand.
+  auto getReductionParts() const {
+    return drop_begin(operands(), getStartOperand() != nullptr);
+  }
+
   /// Returns the symbolic name assigned to the VPInstruction.
   StringRef getName() const { return Name; }
 

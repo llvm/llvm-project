@@ -6576,6 +6576,17 @@ LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan, VFRange &Range,
   return Plan;
 }
 
+/// Makes \p RdxResult apply \p Start after the reduction, unless it has no
+/// start operand or reduces in a narrower type. Returns true if it did.
+static bool applyStartInReductionResult(VPInstruction *RdxResult,
+                                        VPValue *Start) {
+  if (!RdxResult->getStartOperand() ||
+      RdxResult->getScalarType() != Start->getScalarType())
+    return false;
+  RdxResult->setOperand(0, Start);
+  return true;
+}
+
 void LoopVectorizationPlanner::addReductionResultComputation(
     VPlanPtr &Plan, ElementCount MinVF, LoopVectorizationCostModel &PlanCM) {
   using namespace VPlanPatternMatch;
@@ -6746,8 +6757,15 @@ void LoopVectorizationPlanner::addReductionResultComputation(
 
       VPIRFlags Flags(RecurrenceKind, PhiR->isOrdered(), PhiR->isInLoop(),
                       PhiR->getFastMathFlagsOrNone());
+      // The start operand is the identity while the start is in the phi.
+      SmallVector<VPValue *, 2> Ops;
+      if (!PhiR->isInLoop() && VPInstruction::hasStartOperand(RecurrenceKind))
+        Ops.push_back(Plan->getOrAddLiveIn(
+            getRecurrenceIdentity(RecurrenceKind, ReductionOp->getScalarType(),
+                                  PhiR->getFastMathFlagsOrNone())));
+      Ops.push_back(ReductionOp);
       FinalReductionResult = Builder.createNaryOp(
-          VPInstruction::ComputeReductionResult, {ReductionOp}, Flags, ExitDL);
+          VPInstruction::ComputeReductionResult, Ops, Flags, ExitDL);
       if (ExtendOpc != Instruction::CastOpsEnd)
         FinalReductionResult = Builder.createScalarCast(
             ExtendOpc, FinalReductionResult, PhiTy, {});
@@ -6777,10 +6795,7 @@ void LoopVectorizationPlanner::addReductionResultComputation(
     }
 
     RecurKind RK = PhiR->getRecurrenceKind();
-    if ((!RecurrenceDescriptor::isAnyOfRecurrenceKind(RK) &&
-         !RecurrenceDescriptor::isFindIVRecurrenceKind(RK) &&
-         !RecurrenceDescriptor::isMinMaxRecurrenceKind(RK) &&
-         !RecurrenceDescriptor::isFindLastRecurrenceKind(RK))) {
+    if (VPInstruction::hasStartOperand(RK)) {
       VPBuilder PHBuilder(Plan->getVectorPreheader());
       VPValue *Iden = Plan->getOrAddLiveIn(
           getRecurrenceIdentity(RK, PhiTy, PhiR->getFastMathFlagsOrNone()));
@@ -6789,7 +6804,7 @@ void LoopVectorizationPlanner::addReductionResultComputation(
       // each part with the identity can let SLP vectorize the loop anyway.
       if (TTI.preferReductionStartAfterLoop() && MinVF.isVector() &&
           !isa<VPConstant>(Start) &&
-          vputils::createReductionStartOp(FinalReductionResult, Start))
+          applyStartInReductionResult(FinalReductionResult, Start))
         Start = Iden;
       auto *ScaleFactorVPV = Plan->getConstantInt(32, 1);
       VPValue *StartV =
@@ -7364,14 +7379,13 @@ static void preparePlanForEpilogueVectorLoop(
                  "(or negative zero)");
 
           Sub->setOperand(0, ResumeVPV);
-        } else if (VPInstruction *StartOp =
-                       vputils::findReductionStartOp(RdxResult)) {
-          StartOp->setOperand(1, ResumeVPV);
+        } else if (RdxResult->getAppliedStartValue()) {
+          RdxResult->setOperand(0, ResumeVPV);
         } else {
           // The original start may be a constant, but the resume value is not.
           VPValue *NewStartV = ResumeVPV;
           if (Config.getTTI().preferReductionStartAfterLoop() &&
-              vputils::createReductionStartOp(RdxResult, ResumeVPV))
+              applyStartInReductionResult(RdxResult, ResumeVPV))
             NewStartV = VPI->getOperand(1);
           // The start vector may be shared by multiple reductions, so create
           // a new one.

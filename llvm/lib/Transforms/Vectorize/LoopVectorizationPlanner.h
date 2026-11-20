@@ -350,8 +350,9 @@ public:
            "ChainOp must be i1 for AnyOf reduction");
     VPIRFlags Flags(RecurKind::Or, /*IsOrdered=*/false, /*IsInLoop=*/false,
                     FastMathFlags());
+    // The or-reduction has no start value, so its start operand is false.
     auto *OrReduce = createNaryOp(VPInstruction::ComputeReductionResult,
-                                  {ChainOp}, Flags, DL);
+                                  {getPlan().getFalse(), ChainOp}, Flags, DL);
     auto *Freeze = createNaryOp(Instruction::Freeze, {OrReduce}, DL);
     return createSelect(Freeze, TrueVal, FalseVal, DL, "rdx.select");
   }

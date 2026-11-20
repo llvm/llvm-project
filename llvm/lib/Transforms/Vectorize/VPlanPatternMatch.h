@@ -490,10 +490,25 @@ m_ExtractLastActive(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
   return m_VPInstruction<VPInstruction::ExtractLastActive>(Op0, Op1, Op2);
 }
 
+/// Match a ComputeReductionResult whose single reduction part matches \p Op0.
+template <typename Op0_t> struct ComputeReductionResult_match {
+  Op0_t Op0;
+
+  ComputeReductionResult_match(const Op0_t &Op0) : Op0(Op0) {}
+
+  template <typename T> bool match(const T *V) const {
+    auto *VPI = dyn_cast<VPInstruction>(V);
+    if (!VPI || VPI->getOpcode() != VPInstruction::ComputeReductionResult)
+      return false;
+    auto Parts = VPI->getReductionParts();
+    return hasSingleElement(Parts) && Op0.match(*Parts.begin());
+  }
+};
+
 template <typename Op0_t>
-inline VPInstruction_match<VPInstruction::ComputeReductionResult, Op0_t>
+inline ComputeReductionResult_match<Op0_t>
 m_ComputeReductionResult(const Op0_t &Op0) {
-  return m_VPInstruction<VPInstruction::ComputeReductionResult>(Op0);
+  return ComputeReductionResult_match<Op0_t>(Op0);
 }
 
 /// Match FindIV result pattern:
