@@ -1,3 +1,23 @@
+posix: posix-2024
+types:
+  key_t:
+    in-latest-posix: ''
+  pid_t:
+    in-latest-posix: ''
+  size_t:
+    in-latest-posix: ''
+  struct ipc_perm:
+    in-latest-posix: ''
+  struct sembuf:
+    in-latest-posix: ''
+  struct semid_ds:
+    in-latest-posix: ''
+  struct seminfo:
+    extension: linux
+  struct timespec:
+    in-latest-posix: ''
+  time_t:
+    in-latest-posix: ''
 functions:
   semctl:
     in-latest-posix: ''
@@ -23,3 +43,9 @@ macros:
     in-latest-posix: ''
   SETVAL:
     in-latest-posix: ''
+  SEM_INFO:
+    extension: linux
+  SEM_STAT:
+    extension: linux
+  SEM_STAT_ANY:
+    extension: linux

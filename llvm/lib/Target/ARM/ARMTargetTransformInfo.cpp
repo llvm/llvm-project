@@ -2336,7 +2336,7 @@ bool ARMTTIImpl::isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
                                           HardwareLoopInfo &HWLoopInfo) const {
   // Low-overhead branches are only supported in the 'low-overhead branch'
   // extension of v8.1-m.
-  if (!ST->hasLOB() || DisableLowOverheadLoops) {
+  if (!ST->hasV8_1MMainlineOps() || !ST->hasLOB() || DisableLowOverheadLoops) {
     LLVM_DEBUG(dbgs() << "ARMHWLoops: Disabled\n");
     return false;
   }

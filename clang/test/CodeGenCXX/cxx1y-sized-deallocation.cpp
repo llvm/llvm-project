@@ -50,59 +50,59 @@ template void del<F>();
 D::D() {}
 
 // CHECK-LABEL: define weak_odr void @_Z3delIiEvv()
-// CHECK: call void @_ZdlPvm(ptr noundef %{{[^ ]*}}, i64 noundef 4)
-// CHECK: call void @_ZdaPv(ptr noundef %{{[^ ]*}})
+// CHECK: call void @_ZdlPvm(ptr allocptr noundef %{{[^ ]*}}, i64 noundef 4)
+// CHECK: call void @_ZdaPv(ptr allocptr noundef %{{[^ ]*}})
 //
-// CHECK: call void @_ZdlPvm(ptr noundef %{{[^ ]*}}, i64 noundef 4)
-// CHECK: call void @_ZdaPv(ptr noundef %{{[^ ]*}})
+// CHECK: call void @_ZdlPvm(ptr allocptr noundef %{{[^ ]*}}, i64 noundef 4)
+// CHECK: call void @_ZdaPv(ptr allocptr noundef %{{[^ ]*}})
 
 // CHECK-LABEL: declare void @_ZdlPvm(ptr
 
 // CHECK-LABEL: define weak_odr void @_Z3delI1BEvv()
-// CHECK: call void @_ZdlPvm(ptr noundef %{{[^ ]*}}, i64 noundef 4)
-// CHECK: call void @_ZdaPv(ptr noundef %{{[^ ]*}})
+// CHECK: call void @_ZdlPvm(ptr allocptr noundef %{{[^ ]*}}, i64 noundef 4)
+// CHECK: call void @_ZdaPv(ptr allocptr noundef %{{[^ ]*}})
 //
-// CHECK: call void @_ZdlPvm(ptr noundef %{{[^ ]*}}, i64 noundef 4)
-// CHECK: call void @_ZdaPv(ptr noundef %{{[^ ]*}})
+// CHECK: call void @_ZdlPvm(ptr allocptr noundef %{{[^ ]*}}, i64 noundef 4)
+// CHECK: call void @_ZdaPv(ptr allocptr noundef %{{[^ ]*}})
 
 // CHECK-LABEL: define weak_odr void @_Z3delI1CEvv()
-// CHECK: call void @_ZdlPvm(ptr noundef %{{[^ ]*}}, i64 noundef 1)
+// CHECK: call void @_ZdlPvm(ptr allocptr noundef %{{[^ ]*}}, i64 noundef 1)
 // CHECK: mul i64 1, %{{[^ ]*}}
 // CHECK: add i64 %{{[^ ]*}}, 8
-// CHECK: call void @_ZdaPvm(ptr noundef %{{[^ ]*}}, i64 noundef %{{[^ ]*}})
+// CHECK: call void @_ZdaPvm(ptr allocptr noundef %{{[^ ]*}}, i64 noundef %{{[^ ]*}})
 //
-// CHECK: call void @_ZdlPvm(ptr noundef %{{[^ ]*}}, i64 noundef 1)
+// CHECK: call void @_ZdlPvm(ptr allocptr noundef %{{[^ ]*}}, i64 noundef 1)
 // CHECK: mul i64 1, %{{[^ ]*}}
 // CHECK: add i64 %{{[^ ]*}}, 8
-// CHECK: call void @_ZdaPvm(ptr noundef %{{[^ ]*}}, i64 noundef %{{[^ ]*}})
+// CHECK: call void @_ZdaPvm(ptr allocptr noundef %{{[^ ]*}}, i64 noundef %{{[^ ]*}})
 
 // CHECK-LABEL: declare void @_ZdaPvm(ptr
 
 // CHECK-LABEL: define weak_odr void @_Z3delI1DEvv()
-// CHECK: call void @_ZdlPvm(ptr noundef %{{[^ ]*}}, i64 noundef 8)
+// CHECK: call void @_ZdlPvm(ptr allocptr noundef %{{[^ ]*}}, i64 noundef 8)
 // CHECK: mul i64 8, %{{[^ ]*}}
 // CHECK: add i64 %{{[^ ]*}}, 8
-// CHECK: call void @_ZdaPvm(ptr noundef %{{[^ ]*}}, i64 noundef %{{[^ ]*}})
+// CHECK: call void @_ZdaPvm(ptr allocptr noundef %{{[^ ]*}}, i64 noundef %{{[^ ]*}})
 //
 // CHECK-NOT: Zdl
 // CHECK: call void %{{.*}}
 // CHECK-NOT: Zdl
 // CHECK: mul i64 8, %{{[^ ]*}}
 // CHECK: add i64 %{{[^ ]*}}, 8
-// CHECK: call void @_ZdaPvm(ptr noundef %{{[^ ]*}}, i64 noundef %{{[^ ]*}})
+// CHECK: call void @_ZdaPvm(ptr allocptr noundef %{{[^ ]*}}, i64 noundef %{{[^ ]*}})
 
 // CHECK-LABEL: define weak_odr void @_Z3delI1EEvv()
-// CHECK: call void @_ZdlPvm(ptr noundef %{{[^ ]*}}, i64 noundef 1)
-// CHECK: call void @_ZdaPv(ptr noundef %{{[^ ]*}})
+// CHECK: call void @_ZdlPvm(ptr allocptr noundef %{{[^ ]*}}, i64 noundef 1)
+// CHECK: call void @_ZdaPv(ptr allocptr noundef %{{[^ ]*}})
 //
 // CHECK: call void @_ZN1EdlEPv(ptr noundef %{{[^ ]*}})
 // CHECK: call void @_ZN1EdaEPv(ptr noundef %{{[^ ]*}})
 
 // CHECK-LABEL: define weak_odr void @_Z3delI1FEvv()
-// CHECK: call void @_ZdlPvm(ptr noundef %{{[^ ]*}}, i64 noundef 1)
+// CHECK: call void @_ZdlPvm(ptr allocptr noundef %{{[^ ]*}}, i64 noundef 1)
 // CHECK: mul i64 1, %{{[^ ]*}}
 // CHECK: add i64 %{{[^ ]*}}, 8
-// CHECK: call void @_ZdaPvm(ptr noundef %{{[^ ]*}}, i64 noundef %{{[^ ]*}})
+// CHECK: call void @_ZdaPvm(ptr allocptr noundef %{{[^ ]*}}, i64 noundef %{{[^ ]*}})
 //
 // CHECK: call void @_ZN1FdlEPvm(ptr noundef %{{[^ ]*}}, i64 noundef 1)
 // CHECK: mul i64 1, %{{[^ ]*}}
@@ -111,4 +111,4 @@ D::D() {}
 
 
 // CHECK-LABEL: define linkonce_odr void @_ZN1DD0Ev(ptr {{[^,]*}} %this)
-// CHECK: call void @_ZdlPvm(ptr noundef %{{[^ ]*}}, i64 noundef 8)
+// CHECK: call void @_ZdlPvm(ptr allocptr noundef %{{[^ ]*}}, i64 noundef 8)

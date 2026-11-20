@@ -23,10 +23,10 @@
 #ifndef ASSERT_SUCCESS
 #define ASSERT_SUCCESS(ACTUAL)                                                 \
   do {                                                                         \
-    ol_result_t Res = ACTUAL;                                                  \
-    if (Res && Res->Code != OL_ERRC_SUCCESS) {                                 \
-      GTEST_FAIL() << #ACTUAL " returned " << Res->Code << ": "                \
-                   << Res->Details;                                            \
+    ol_result_t Res_ = ACTUAL;                                                 \
+    if (Res_ && Res_->Code != OL_ERRC_SUCCESS) {                               \
+      GTEST_FAIL() << #ACTUAL " returned " << Res_->Code << ": "               \
+                   << Res_->Details;                                           \
     }                                                                          \
   } while (0)
 #endif
@@ -34,13 +34,13 @@
 #ifndef ASSERT_SUCCESS_OR_UNSUPPORTED
 #define ASSERT_SUCCESS_OR_UNSUPPORTED(ACTUAL)                                  \
   do {                                                                         \
-    ol_result_t Res = ACTUAL;                                                  \
-    if (Res && Res->Code == OL_ERRC_UNSUPPORTED) {                             \
+    ol_result_t Res_ = ACTUAL;                                                 \
+    if (Res_ && Res_->Code == OL_ERRC_UNSUPPORTED) {                           \
       GTEST_SKIP() << #ACTUAL " returned unsupported; skipping test";          \
       return;                                                                  \
-    } else if (Res && Res->Code != OL_ERRC_SUCCESS) {                          \
-      GTEST_FAIL() << #ACTUAL " returned " << Res->Code << ": "                \
-                   << Res->Details;                                            \
+    } else if (Res_ && Res_->Code != OL_ERRC_SUCCESS) {                        \
+      GTEST_FAIL() << #ACTUAL " returned " << Res_->Code << ": "               \
+                   << Res_->Details;                                           \
     }                                                                          \
   } while (0)
 #endif
@@ -48,21 +48,21 @@
 #ifndef ASSERT_ERROR
 #define ASSERT_ERROR(EXPECTED, ACTUAL)                                         \
   do {                                                                         \
-    ol_result_t Res = ACTUAL;                                                  \
-    if (!Res)                                                                  \
+    ol_result_t Res_ = ACTUAL;                                                 \
+    if (!Res_)                                                                 \
       GTEST_FAIL() << #ACTUAL " succeeded when we expected it to fail";        \
-    if (Res->Code != EXPECTED)                                                 \
+    if (Res_->Code != EXPECTED)                                                \
       GTEST_FAIL() << #ACTUAL " was expected to return "                       \
-                   << #EXPECTED " but instead returned " << Res->Code << ": "  \
-                   << Res->Details;                                            \
+                   << #EXPECTED " but instead returned " << Res_->Code << ": " \
+                   << Res_->Details;                                           \
   } while (0)
 #endif
 
 #ifndef ASSERT_ANY_ERROR
 #define ASSERT_ANY_ERROR(ACTUAL)                                               \
   do {                                                                         \
-    ol_result_t Res = ACTUAL;                                                  \
-    ASSERT_TRUE(Res);                                                          \
+    ol_result_t Res_ = ACTUAL;                                                 \
+    ASSERT_TRUE(Res_);                                                         \
   } while (0)
 #endif
 

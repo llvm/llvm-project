@@ -980,3 +980,48 @@ loop:
 exit:
   ret void
 }
+
+; Don't version a stride that is a cast of poison.
+define void @stride_sext_poison(ptr %A, ptr %B, i64 %n) {
+; CHECK-LABEL: 'stride_sext_poison'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.B = getelementptr i32, ptr %B, i64 %iv
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %gep.A = getelementptr i32, ptr %A, i64 %offset
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: %B High: ((4 * %n) + %B))
+; CHECK-NEXT:            Member: {%B,+,4}<%loop>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: (((4 * (sext i32 poison to i64) * (-1 + %n)) + %A) umin %A) High: (4 + (((4 * (sext i32 poison to i64) * (-1 + %n)) + %A) umax %A)))
+; CHECK-NEXT:            Member: {%A,+,(4 * (sext i32 poison to i64))<nsw>}<%loop>
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-NEXT:      {%A,+,(4 * (sext i32 poison to i64))<nsw>}<%loop> Added Flags: <nusw>
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  %stride = sext i32 poison to i64
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %offset = mul i64 %iv, %stride
+  %gep.A = getelementptr i32, ptr %A, i64 %offset
+  %l = load i32, ptr %gep.A, align 4
+  %gep.B = getelementptr i32, ptr %B, i64 %iv
+  store i32 %l, ptr %gep.B, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}

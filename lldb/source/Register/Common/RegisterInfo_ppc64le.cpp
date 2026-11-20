@@ -49,9 +49,7 @@ RegisterInfo_ppc64le::RegisterInfo_ppc64le(
       m_register_info_p(GetRegisterInfoPtr(target_arch)),
       m_register_info_count(GetRegisterInfoCount(target_arch)) {}
 
-size_t RegisterInfo_ppc64le::GetGPRSize() const {
-  return sizeof(GPR);
-}
+size_t RegisterInfo_ppc64le::GetGPRSize() const { return sizeof(GPR); }
 
 const lldb_private::RegisterInfo *
 RegisterInfo_ppc64le::GetRegisterInfo() const {

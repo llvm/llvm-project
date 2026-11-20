@@ -20,4 +20,3 @@ body:             |
     ; Force preserve a CSR to create a hole in the CSR stack region.
     $x28 = IMPLICIT_DEF
     RET_ReallyLR
----

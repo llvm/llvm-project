@@ -8,19 +8,28 @@ define void @test(ptr %arg3, double %load.2.i, double %load.i, double %fadd10.i.
 ; CHECK-NEXT:  [[BB:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x double>, ptr [[ARG3]], align 8
 ; CHECK-NEXT:    [[GETELEMENTPTR_4_I:%.*]] = getelementptr i8, ptr [[ARG3]], i64 32
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x double>, ptr [[GETELEMENTPTR_4_I]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x double> poison, double [[LOAD_I]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x double> [[TMP2]], double [[FADD10_I_I]], i64 1
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x double> [[TMP3]], double [[LOAD_2_I]], i64 2
+; CHECK-NEXT:    [[LOAD_4_I:%.*]] = load double, ptr [[GETELEMENTPTR_4_I]], align 8
+; CHECK-NEXT:    [[GETELEMENTPTR_5_I:%.*]] = getelementptr i8, ptr [[ARG3]], i64 40
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[GETELEMENTPTR_5_I]], align 8
+; CHECK-NEXT:    [[GETELEMENTPTR_7_I:%.*]] = getelementptr i8, ptr [[ARG3]], i64 56
+; CHECK-NEXT:    [[LOAD_7_I:%.*]] = load double, ptr [[GETELEMENTPTR_7_I]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[LOAD_4_I]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[LOAD_7_I]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> poison, double [[LOAD_I]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> poison, double [[FADD10_I_I]], i64 0
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> [[TMP5]], double [[LOAD_2_I]], i64 1
 ; CHECK-NEXT:    br label %[[BB7:.*]]
 ; CHECK:       [[BB7]]:
-; CHECK-NEXT:    [[TMP5:%.*]] = phi <4 x double> [ [[TMP1]], %[[BB]] ], [ [[TMP11:%.*]], %[[BB7]] ]
-; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <4 x double> [[TMP5]], <4 x double> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[TMP7:%.*]] = phi <2 x double> [ [[TMP3]], %[[BB]] ], [ [[TMP16:%.*]], %[[BB7]] ]
+; CHECK-NEXT:    [[TMP8:%.*]] = phi <2 x double> [ [[TMP1]], %[[BB]] ], [ [[TMP17:%.*]], %[[BB7]] ]
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x double> [[TMP7]], <2 x double> [[TMP8]], <4 x i32> <i32 1, i32 3, i32 2, i32 0>
 ; CHECK-NEXT:    [[TMP13:%.*]] = fmul <4 x double> [[TMP0]], [[TMP12]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <4 x double> [[TMP13]], <4 x double> poison, <4 x i32> <i32 3, i32 0, i32 2, i32 1>
 ; CHECK-NEXT:    [[TMP14:%.*]] = call double @llvm.vector.reduce.fadd.v4f64(double -0.000000e+00, <4 x double> [[TMP18]])
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x double> [[TMP4]], double [[TMP14]], i64 3
-; CHECK-NEXT:    [[TMP11]] = fadd <4 x double> [[TMP10]], <double 0.000000e+00, double -0.000000e+00, double 0.000000e+00, double 0.000000e+00>
+; CHECK-NEXT:    [[TMP19:%.*]] = fadd <2 x double> [[TMP6]], <double -0.000000e+00, double 0.000000e+00>
+; CHECK-NEXT:    [[TMP17]] = shufflevector <2 x double> [[TMP19]], <2 x double> [[TMP6]], <2 x i32> <i32 2, i32 1>
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <2 x double> [[TMP4]], double [[TMP14]], i64 1
+; CHECK-NEXT:    [[TMP16]] = fadd <2 x double> [[TMP15]], zeroinitializer
 ; CHECK-NEXT:    br label %[[BB7]]
 ;
 bb:
