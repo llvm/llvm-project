@@ -38,6 +38,18 @@ endif()
 append_list_if(COMPILER_RT_HAS_WTHREAD_SAFETY_FLAG -Werror=thread-safety
   SCUDO_UNITTEST_CFLAGS)
 
+foreach(func
+    mallinfo
+    mallopt
+    malloc_info
+  )
+  string(TOUPPER ${func} FUNC)
+  check_symbol_exists(${func} malloc.h SCUDO_HAS_DECL_${FUNC})
+  if(NOT SCUDO_HAS_DECL_${FUNC})
+    list(APPEND SCUDO_UNITTEST_CFLAGS -DNEED_DECL_${FUNC})
+  endif()
+endforeach()
+
 set(SCUDO_TEST_ARCH ${SCUDO_STANDALONE_SUPPORTED_ARCH})
 
 # gtests requires c++

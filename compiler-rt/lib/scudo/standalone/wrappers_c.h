@@ -54,4 +54,16 @@ struct __scudo_mallinfo2 {
 #define SCUDO_MALLINFO __scudo_mallinfo
 #endif
 
+extern "C" {
+#ifdef NEED_DECL_MALLINFO
+struct SCUDO_MALLINFO mallinfo(void);
+#endif
+#ifdef NEED_DECL_MALLOPT
+int mallopt(int param, int value);
+#endif
+#ifdef NEED_DECL_MALLOC_INFO
+int malloc_info(int options, FILE *stream);
+#endif
+}
+
 #endif // SCUDO_WRAPPERS_C_H_
