@@ -63,7 +63,7 @@ template<typename T>
 // it is caused by return type check is after pointer check which is acceptable.
 // expected-error@+1 {{pointers are unsupported in HLSL}}
 groupshared void (*fp)();
-// expected-warning@+2 {{support for groupshared parameter annotation not added until HLSL 202x}}
+// expected-warning@+2 {{'groupshared' parameter annotation is an HLSL 202x extension}}
 // expected-error@+1 {{pointers are unsupported in HLSL}}
 void (*fp2)(groupshared float);
 // NOTE: HLSL not support trailing return types.
@@ -98,5 +98,5 @@ _Static_assert(S3<groupshared float>::value, "");
 
 // Can you overload based on the qualifier?
 void func(float f) {}
-// expected-warning@+1 {{support for groupshared parameter annotation not added until HLSL 202x}}
+// expected-warning@+1 {{'groupshared' parameter annotation is an HLSL 202x extension}}
 void func(groupshared float f) {}
