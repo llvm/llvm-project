@@ -694,8 +694,570 @@ declare void @use32(i32)
 !1 = !{!"branch_weights", i32 2, i32 3}
 !2 = !{!"branch_weights", i32 5, i32 3}
 !3 = !{!"branch_weights", i32 7, i32 11}
+
+; select(C, op(select(C, X, Y), W), Z) -> select(C, op(X, W), Z)
+; op may have other uses if they are all the same operand of selects on C.
+define i8 @sel_op_sel_tval_multi_use(i1 %c, i8 %a, i8 %b, i8 %w, i8 %x, i8 %y) {
+; CHECK-LABEL: @sel_op_sel_tval_multi_use(
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], i8 [[A:%.*]], i8 [[B:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[S]])
+; CHECK-NEXT:    [[I:%.*]] = add i8 [[A]], [[W:%.*]]
+; CHECK-NEXT:    [[R0:%.*]] = select i1 [[C]], i8 [[I]], i8 [[X:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[R0]])
+; CHECK-NEXT:    [[R1:%.*]] = select i1 [[C]], i8 [[I]], i8 [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[R1]]
+;
+  %s = select i1 %c, i8 %a, i8 %b
+  call void @use8(i8 %s)
+  %i = add i8 %s, %w
+  %r0 = select i1 %c, i8 %i, i8 %x
+  call void @use8(i8 %r0)
+  %r1 = select i1 %c, i8 %i, i8 %y
+  ret i8 %r1
+}
+
+define i8 @sel_op_sel_fval_multi_use(i1 %c, i8 %a, i8 %b, i8 %w, i8 %x, i8 %y) {
+; CHECK-LABEL: @sel_op_sel_fval_multi_use(
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], i8 [[A:%.*]], i8 [[B:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[S]])
+; CHECK-NEXT:    [[I:%.*]] = add i8 [[B]], [[W:%.*]]
+; CHECK-NEXT:    [[R0:%.*]] = select i1 [[C]], i8 [[X:%.*]], i8 [[I]]
+; CHECK-NEXT:    call void @use8(i8 [[R0]])
+; CHECK-NEXT:    [[R1:%.*]] = select i1 [[C]], i8 [[Y:%.*]], i8 [[I]]
+; CHECK-NEXT:    ret i8 [[R1]]
+;
+  %s = select i1 %c, i8 %a, i8 %b
+  call void @use8(i8 %s)
+  %i = add i8 %s, %w
+  %r0 = select i1 %c, i8 %x, i8 %i
+  call void @use8(i8 %r0)
+  %r1 = select i1 %c, i8 %y, i8 %i
+  ret i8 %r1
+}
+
+define i8 @sel_op_sel_commute(i1 %c, i8 %a, i8 %b, i8 %w, i8 %x, i8 %y) {
+; CHECK-LABEL: @sel_op_sel_commute(
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], i8 [[A:%.*]], i8 [[B:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[S]])
+; CHECK-NEXT:    [[I:%.*]] = sub i8 [[W:%.*]], [[A]]
+; CHECK-NEXT:    [[R0:%.*]] = select i1 [[C]], i8 [[I]], i8 [[X:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[R0]])
+; CHECK-NEXT:    [[R1:%.*]] = select i1 [[C]], i8 [[I]], i8 [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[R1]]
+;
+  %s = select i1 %c, i8 %a, i8 %b
+  call void @use8(i8 %s)
+  %i = sub i8 %w, %s
+  %r0 = select i1 %c, i8 %i, i8 %x
+  call void @use8(i8 %r0)
+  %r1 = select i1 %c, i8 %i, i8 %y
+  ret i8 %r1
+}
+
+define i8 @sel_op_sel_both_operands(i1 %c, i8 %a, i8 %b, i8 %d, i8 %e, i8 %x, i8 %y) {
+; CHECK-LABEL: @sel_op_sel_both_operands(
+; CHECK-NEXT:    [[S0:%.*]] = select i1 [[C:%.*]], i8 [[A:%.*]], i8 [[B:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[S0]])
+; CHECK-NEXT:    [[S1:%.*]] = select i1 [[C]], i8 [[D:%.*]], i8 [[E:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[S1]])
+; CHECK-NEXT:    [[I:%.*]] = mul i8 [[A]], [[D]]
+; CHECK-NEXT:    [[R0:%.*]] = select i1 [[C]], i8 [[I]], i8 [[X:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[R0]])
+; CHECK-NEXT:    [[R1:%.*]] = select i1 [[C]], i8 [[I]], i8 [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[R1]]
+;
+  %s0 = select i1 %c, i8 %a, i8 %b
+  call void @use8(i8 %s0)
+  %s1 = select i1 %c, i8 %d, i8 %e
+  call void @use8(i8 %s1)
+  %i = mul i8 %s0, %s1
+  %r0 = select i1 %c, i8 %i, i8 %x
+  call void @use8(i8 %r0)
+  %r1 = select i1 %c, i8 %i, i8 %y
+  ret i8 %r1
+}
+
+define i1 @sel_icmp_sel(i1 %c, i8 %a, i8 %b, i8 %w, i1 %x) {
+; CHECK-LABEL: @sel_icmp_sel(
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], i8 [[A:%.*]], i8 [[B:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[S]])
+; CHECK-NEXT:    [[I:%.*]] = icmp ult i8 [[A]], [[W:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i1 [[I]], i1 [[X:%.*]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %s = select i1 %c, i8 %a, i8 %b
+  call void @use8(i8 %s)
+  %i = icmp ult i8 %s, %w
+  %r = select i1 %c, i1 %i, i1 %x
+  ret i1 %r
+}
+
+define i16 @sel_zext_sel(i1 %c, i8 %a, i8 %b, i16 %x) {
+; CHECK-LABEL: @sel_zext_sel(
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], i8 [[A:%.*]], i8 [[B:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[S]])
+; CHECK-NEXT:    [[I:%.*]] = zext i8 [[A]] to i16
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i16 [[I]], i16 [[X:%.*]]
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %s = select i1 %c, i8 %a, i8 %b
+  call void @use8(i8 %s)
+  %i = zext i8 %s to i16
+  %r = select i1 %c, i16 %i, i16 %x
+  ret i16 %r
+}
+
+define i8 @sel_umin_sel(i1 %c, i8 %a, i8 %b, i8 %w, i8 %x) {
+; CHECK-LABEL: @sel_umin_sel(
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], i8 [[A:%.*]], i8 [[B:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[S]])
+; CHECK-NEXT:    [[I:%.*]] = call i8 @llvm.umin.i8(i8 [[A]], i8 [[W:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i8 [[I]], i8 [[X:%.*]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %s = select i1 %c, i8 %a, i8 %b
+  call void @use8(i8 %s)
+  %i = call i8 @llvm.umin.i8(i8 %s, i8 %w)
+  %r = select i1 %c, i8 %i, i8 %x
+  ret i8 %r
+}
+
+define ptr @sel_gep_sel(i1 %c, ptr %p, ptr %q, ptr %x) {
+; CHECK-LABEL: @sel_gep_sel(
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], ptr [[P:%.*]], ptr [[Q:%.*]]
+; CHECK-NEXT:    call void @useptr(ptr [[S]])
+; CHECK-NEXT:    [[I:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 4
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], ptr [[I]], ptr [[X:%.*]]
+; CHECK-NEXT:    ret ptr [[R]]
+;
+  %s = select i1 %c, ptr %p, ptr %q
+  call void @useptr(ptr %s)
+  %i = getelementptr inbounds i8, ptr %s, i64 4
+  %r = select i1 %c, ptr %i, ptr %x
+  ret ptr %r
+}
+
+define float @sel_fneg_sel(i1 %c, float %a, float %b, float %x) {
+; CHECK-LABEL: @sel_fneg_sel(
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], float [[A:%.*]], float [[B:%.*]]
+; CHECK-NEXT:    call void @usef(float [[S]])
+; CHECK-NEXT:    [[I:%.*]] = fneg float [[A]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], float [[I]], float [[X:%.*]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %s = select i1 %c, float %a, float %b
+  call void @usef(float %s)
+  %i = fneg float %s
+  %r = select i1 %c, float %i, float %x
+  ret float %r
+}
+
+define i8 @sel_op_sel_nuw_nsw(i1 %c, i8 %a, i8 %b, i8 %w, i8 %x, i8 %y) {
+; CHECK-LABEL: @sel_op_sel_nuw_nsw(
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], i8 [[A:%.*]], i8 [[B:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[S]])
+; CHECK-NEXT:    [[I:%.*]] = add nuw nsw i8 [[A]], [[W:%.*]]
+; CHECK-NEXT:    [[R0:%.*]] = select i1 [[C]], i8 [[I]], i8 [[X:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[R0]])
+; CHECK-NEXT:    [[R1:%.*]] = select i1 [[C]], i8 [[I]], i8 [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[R1]]
+;
+  %s = select i1 %c, i8 %a, i8 %b
+  call void @use8(i8 %s)
+  %i = add nuw nsw i8 %s, %w
+  %r0 = select i1 %c, i8 %i, i8 %x
+  call void @use8(i8 %r0)
+  %r1 = select i1 %c, i8 %i, i8 %y
+  ret i8 %r1
+}
+
+define float @sel_op_sel_fmf(i1 %c, float %a, float %b, float %w, float %x, float %y) {
+; CHECK-LABEL: @sel_op_sel_fmf(
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], float [[A:%.*]], float [[B:%.*]]
+; CHECK-NEXT:    call void @usef(float [[S]])
+; CHECK-NEXT:    [[I:%.*]] = fadd nnan float [[A]], [[W:%.*]]
+; CHECK-NEXT:    [[R0:%.*]] = select i1 [[C]], float [[I]], float [[X:%.*]]
+; CHECK-NEXT:    call void @usef(float [[R0]])
+; CHECK-NEXT:    [[R1:%.*]] = select i1 [[C]], float [[I]], float [[Y:%.*]]
+; CHECK-NEXT:    ret float [[R1]]
+;
+  %s = select i1 %c, float %a, float %b
+  call void @usef(float %s)
+  %i = fadd nnan float %s, %w
+  %r0 = select i1 %c, float %i, float %x
+  call void @usef(float %r0)
+  %r1 = select i1 %c, float %i, float %y
+  ret float %r1
+}
+
+define i8 @sel_udiv_sel_dividend(i1 %c, i8 %a, i8 %b, i8 %x) {
+; CHECK-LABEL: @sel_udiv_sel_dividend(
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], i8 [[A:%.*]], i8 [[B:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[S]])
+; CHECK-NEXT:    [[I:%.*]] = udiv i8 [[A]], 7
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i8 [[I]], i8 [[X:%.*]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %s = select i1 %c, i8 %a, i8 %b
+  call void @use8(i8 %s)
+  %i = udiv i8 %s, 7
+  %r = select i1 %c, i8 %i, i8 %x
+  ret i8 %r
+}
+
+define <2 x i8> @sel_op_sel_vec(<2 x i1> %c, <2 x i8> %a, <2 x i8> %b, <2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @sel_op_sel_vec(
+; CHECK-NEXT:    [[S:%.*]] = select <2 x i1> [[C:%.*]], <2 x i8> [[A:%.*]], <2 x i8> [[B:%.*]]
+; CHECK-NEXT:    call void @usev(<2 x i8> [[S]])
+; CHECK-NEXT:    [[I:%.*]] = add <2 x i8> [[A]], splat (i8 1)
+; CHECK-NEXT:    [[R0:%.*]] = select <2 x i1> [[C]], <2 x i8> [[I]], <2 x i8> [[X:%.*]]
+; CHECK-NEXT:    call void @usev(<2 x i8> [[R0]])
+; CHECK-NEXT:    [[R1:%.*]] = select <2 x i1> [[C]], <2 x i8> [[I]], <2 x i8> [[Y:%.*]]
+; CHECK-NEXT:    ret <2 x i8> [[R1]]
+;
+  %s = select <2 x i1> %c, <2 x i8> %a, <2 x i8> %b
+  call void @usev(<2 x i8> %s)
+  %i = add <2 x i8> %s, splat (i8 1)
+  %r0 = select <2 x i1> %c, <2 x i8> %i, <2 x i8> %x
+  call void @usev(<2 x i8> %r0)
+  %r1 = select <2 x i1> %c, <2 x i8> %i, <2 x i8> %y
+  ret <2 x i8> %r1
+}
+
+; Negative test - op has a use that is not a select on C.
+define i8 @sel_op_sel_extra_use(i1 %c, i8 %a, i8 %b, i8 %w, i8 %x) {
+; CHECK-LABEL: @sel_op_sel_extra_use(
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], i8 [[A:%.*]], i8 [[B:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[S]])
+; CHECK-NEXT:    [[I:%.*]] = add i8 [[S]], [[W:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[I]])
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i8 [[I]], i8 [[X:%.*]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %s = select i1 %c, i8 %a, i8 %b
+  call void @use8(i8 %s)
+  %i = add i8 %s, %w
+  call void @use8(i8 %i)
+  %r = select i1 %c, i8 %i, i8 %x
+  ret i8 %r
+}
+
+; Negative test - op is both a TValue and an FValue.
+define i8 @sel_op_sel_tval_and_fval_use(i1 %c, i8 %a, i8 %b) {
+; CHECK-LABEL: @sel_op_sel_tval_and_fval_use(
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], i8 [[B:%.*]], i8 [[A:%.*]]
+; CHECK-NEXT:    [[I:%.*]] = add i8 [[S]], 1
+; CHECK-NEXT:    [[AN:%.*]] = select i1 [[C]], i8 [[A]], i8 [[I]]
+; CHECK-NEXT:    call void @use8(i8 [[AN]])
+; CHECK-NEXT:    [[BN:%.*]] = select i1 [[C]], i8 [[I]], i8 [[B]]
+; CHECK-NEXT:    ret i8 [[BN]]
+;
+  %s = select i1 %c, i8 %b, i8 %a
+  %i = add i8 %s, 1
+  %an = select i1 %c, i8 %a, i8 %i
+  call void @use8(i8 %an)
+  %bn = select i1 %c, i8 %i, i8 %b
+  ret i8 %bn
+}
+
+; Negative test - op is used by a select on another condition.
+define i8 @sel_op_sel_wrong_cond_use(i1 %c, i1 %d, i8 %a, i8 %b, i8 %w, i8 %x, i8 %y) {
+; CHECK-LABEL: @sel_op_sel_wrong_cond_use(
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], i8 [[A:%.*]], i8 [[B:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[S]])
+; CHECK-NEXT:    [[I:%.*]] = add i8 [[S]], [[W:%.*]]
+; CHECK-NEXT:    [[R0:%.*]] = select i1 [[C]], i8 [[I]], i8 [[X:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[R0]])
+; CHECK-NEXT:    [[R1:%.*]] = select i1 [[D:%.*]], i8 [[I]], i8 [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[R1]]
+;
+  %s = select i1 %c, i8 %a, i8 %b
+  call void @use8(i8 %s)
+  %i = add i8 %s, %w
+  %r0 = select i1 %c, i8 %i, i8 %x
+  call void @use8(i8 %r0)
+  %r1 = select i1 %d, i8 %i, i8 %y
+  ret i8 %r1
+}
+
+; Negative test - the inner select is on another condition.
+define i8 @sel_op_sel_wrong_cond_inner(i1 %c, i1 %d, i8 %a, i8 %b, i8 %w, i8 %x) {
+; CHECK-LABEL: @sel_op_sel_wrong_cond_inner(
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[D:%.*]], i8 [[A:%.*]], i8 [[B:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[S]])
+; CHECK-NEXT:    [[I:%.*]] = add i8 [[S]], [[W:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C:%.*]], i8 [[I]], i8 [[X:%.*]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %s = select i1 %d, i8 %a, i8 %b
+  call void @use8(i8 %s)
+  %i = add i8 %s, %w
+  %r = select i1 %c, i8 %i, i8 %x
+  ret i8 %r
+}
+
+; Negative test - phi is not speculatable.
+define i8 @sel_phi_sel(i1 %c, i1 %e, i8 %a, i8 %b, i8 %x) {
+; CHECK-LABEL: @sel_phi_sel(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], i8 [[A:%.*]], i8 [[B:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[S]])
+; CHECK-NEXT:    br i1 [[E:%.*]], label [[THEN:%.*]], label [[JOIN:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[I:%.*]] = phi i8 [ [[S]], [[ENTRY:%.*]] ], [ [[X:%.*]], [[THEN]] ]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i8 [[I]], i8 [[X]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+entry:
+  %s = select i1 %c, i8 %a, i8 %b
+  call void @use8(i8 %s)
+  br i1 %e, label %then, label %join
+
+then:
+  br label %join
+
+join:
+  %i = phi i8 [ %s, %entry ], [ %x, %then ]
+  %r = select i1 %c, i8 %i, i8 %x
+  ret i8 %r
+}
+
+; Negative test - udiv by the inner select is not speculatable.
+define i8 @sel_udiv_sel_divisor(i1 %c, i8 %a, i8 %b, i8 %w, i8 %x) {
+; CHECK-LABEL: @sel_udiv_sel_divisor(
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], i8 [[A:%.*]], i8 [[B:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[S]])
+; CHECK-NEXT:    [[I:%.*]] = udiv i8 [[W:%.*]], [[S]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i8 [[I]], i8 [[X:%.*]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %s = select i1 %c, i8 %a, i8 %b
+  call void @use8(i8 %s)
+  %i = udiv i8 %w, %s
+  %r = select i1 %c, i8 %i, i8 %x
+  ret i8 %r
+}
+
+; Negative test - vec shuffle.
+define <2 x i8> @sel_shuf_sel_lane_crossing(<2 x i1> %c, <2 x i8> %a, <2 x i8> %b, <2 x i8> %x) {
+; CHECK-LABEL: @sel_shuf_sel_lane_crossing(
+; CHECK-NEXT:    [[S:%.*]] = select <2 x i1> [[C:%.*]], <2 x i8> [[A:%.*]], <2 x i8> [[B:%.*]]
+; CHECK-NEXT:    call void @usev(<2 x i8> [[S]])
+; CHECK-NEXT:    [[I:%.*]] = shufflevector <2 x i8> [[S]], <2 x i8> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[C]], <2 x i8> [[I]], <2 x i8> [[X:%.*]]
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %s = select <2 x i1> %c, <2 x i8> %a, <2 x i8> %b
+  call void @usev(<2 x i8> %s)
+  %i = shufflevector <2 x i8> %s, <2 x i8> poison, <2 x i32> <i32 1, i32 0>
+  %r = select <2 x i1> %c, <2 x i8> %i, <2 x i8> %x
+  ret <2 x i8> %r
+}
+
+; Negative test - the noundef argument could become poison.
+define i8 @sel_call_sel_noundef(i1 %c, i8 %x, i8 %z) {
+; CHECK-LABEL: @sel_call_sel_noundef(
+; CHECK-NEXT:    [[P:%.*]] = add nsw i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], i8 [[P]], i8 0
+; CHECK-NEXT:    call void @use8(i8 [[S]])
+; CHECK-NEXT:    [[R:%.*]] = call i8 @speculatable_fn(i8 noundef [[S]])
+; CHECK-NEXT:    [[O:%.*]] = select i1 [[C]], i8 [[R]], i8 [[Z:%.*]]
+; CHECK-NEXT:    ret i8 [[O]]
+;
+  %p = add nsw i8 %x, 1
+  %s = select i1 %c, i8 %p, i8 0
+  call void @use8(i8 %s)
+  %r = call i8 @speculatable_fn(i8 noundef %s)
+  %o = select i1 %c, i8 %r, i8 %z
+  ret i8 %o
+}
+
+declare void @usev(<2 x i8>)
+declare void @useptr(ptr)
+declare void @usef(float)
+declare i8 @speculatable_fn(i8) speculatable memory(none) nounwind willreturn
+
+define i8 @sel_op_sel_implied_cond(i8 %p, i1 %c2, i8 %a, i8 %b, i8 %w, i8 %x) {
+; CHECK-LABEL: @sel_op_sel_implied_cond(
+; CHECK-NEXT:    [[C1:%.*]] = icmp ult i8 [[P:%.*]], 5
+; CHECK-NEXT:    [[C:%.*]] = and i1 [[C1]], [[C2:%.*]]
+; CHECK-NEXT:    [[I:%.*]] = add i8 [[A:%.*]], [[W:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i8 [[I]], i8 [[X:%.*]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %c1 = icmp ult i8 %p, 5
+  %c = and i1 %c1, %c2
+  %s = select i1 %c1, i8 %a, i8 %b
+  %i = add i8 %s, %w
+  %r = select i1 %c, i8 %i, i8 %x
+  ret i8 %r
+}
+
+define i8 @sel_op_sel_implied_cond_fval(i1 %c1, i8 %p, i8 %a, i8 %b, i8 %w, i8 %x) {
+; CHECK-LABEL: @sel_op_sel_implied_cond_fval(
+; CHECK-NEXT:    [[C2:%.*]] = icmp ugt i8 [[P:%.*]], 4
+; CHECK-NEXT:    [[C:%.*]] = or i1 [[C1:%.*]], [[C2]]
+; CHECK-NEXT:    [[I:%.*]] = add i8 [[A:%.*]], [[W:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i8 [[X:%.*]], i8 [[I]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %c2 = icmp ult i8 %p, 5
+  %not_c2 = xor i1 %c2, true
+  %c = or i1 %c1, %not_c2
+  %s = select i1 %c2, i8 %a, i8 %b
+  %i = add i8 %s, %w
+  %r = select i1 %c, i8 %x, i8 %i
+  ret i8 %r
+}
+
+define i8 @sel_op_sel_implied_range(i8 %p, i8 %a, i8 %b, i8 %w, i8 %x) {
+; CHECK-LABEL: @sel_op_sel_implied_range(
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[P:%.*]], 3
+; CHECK-NEXT:    [[I:%.*]] = add i8 [[A:%.*]], [[W:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i8 [[I]], i8 [[X:%.*]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %c = icmp ult i8 %p, 3
+  %d = icmp ult i8 %p, 7
+  %s = select i1 %d, i8 %a, i8 %b
+  %i = add i8 %s, %w
+  %r = select i1 %c, i8 %i, i8 %x
+  ret i8 %r
+}
+
+define i8 @sel_op_sel_inverted_cond(i1 %c, i8 %a, i8 %b, i8 %w, i8 %x) {
+; CHECK-LABEL: @sel_op_sel_inverted_cond(
+; CHECK-NEXT:    [[I:%.*]] = add i8 [[B:%.*]], [[W:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C:%.*]], i8 [[I]], i8 [[X:%.*]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %not_c = xor i1 %c, true
+  %s = select i1 %not_c, i8 %a, i8 %b
+  %i = add i8 %s, %w
+  %r = select i1 %c, i8 %i, i8 %x
+  ret i8 %r
+}
+
+define i1 @sel_op_sel_inverted_cond_logical(i1 %c, i1 %y, i1 %z) {
+; CHECK-LABEL: @sel_op_sel_inverted_cond_logical(
+; CHECK-NEXT:    [[I:%.*]] = or i1 [[S:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C:%.*]], i1 [[I]], i1 false
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %not_c = xor i1 %c, true
+  %s = select i1 %not_c, i1 true, i1 %y
+  %i = or i1 %s, %z
+  %r = select i1 %c, i1 %i, i1 false
+  ret i1 %r
+}
+
+define i8 @sel_op_sel_implied_cond_multi_use(i8 %p, i1 %c2, i1 %c3, i8 %a, i8 %b, i8 %w, i8 %x, i8 %y) {
+; CHECK-LABEL: @sel_op_sel_implied_cond_multi_use(
+; CHECK-NEXT:    [[C1:%.*]] = icmp ult i8 [[P:%.*]], 5
+; CHECK-NEXT:    [[CA:%.*]] = and i1 [[C1]], [[C2:%.*]]
+; CHECK-NEXT:    [[CB:%.*]] = and i1 [[C1]], [[C3:%.*]]
+; CHECK-NEXT:    [[I:%.*]] = add i8 [[A:%.*]], [[W:%.*]]
+; CHECK-NEXT:    [[R1:%.*]] = select i1 [[CA]], i8 [[I]], i8 [[X:%.*]]
+; CHECK-NEXT:    [[R2:%.*]] = select i1 [[CB]], i8 [[I]], i8 [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = xor i8 [[R1]], [[R2]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %c1 = icmp ult i8 %p, 5
+  %ca = and i1 %c1, %c2
+  %cb = and i1 %c1, %c3
+  %s = select i1 %c1, i8 %a, i8 %b
+  %i = add i8 %s, %w
+  %r1 = select i1 %ca, i8 %i, i8 %x
+  %r2 = select i1 %cb, i8 %i, i8 %y
+  %r = xor i8 %r1, %r2
+  ret i8 %r
+}
+
+; Negative test: p < 7 does not imply p < 3.
+define i8 @sel_op_sel_not_implied_range(i8 %p, i8 %a, i8 %b, i8 %w, i8 %x) {
+; CHECK-LABEL: @sel_op_sel_not_implied_range(
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[P:%.*]], 7
+; CHECK-NEXT:    [[D:%.*]] = icmp ult i8 [[P]], 3
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[D]], i8 [[A:%.*]], i8 [[B:%.*]]
+; CHECK-NEXT:    [[I:%.*]] = add i8 [[S]], [[W:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i8 [[I]], i8 [[X:%.*]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %c = icmp ult i8 %p, 7
+  %d = icmp ult i8 %p, 3
+  %s = select i1 %d, i8 %a, i8 %b
+  %i = add i8 %s, %w
+  %r = select i1 %c, i8 %i, i8 %x
+  ret i8 %r
+}
+
+; Negative test: the users imply opposite values of the inner condition.
+define i8 @sel_op_sel_implied_cond_users_disagree(i8 %p, i8 %a, i8 %b, i8 %w, i8 %x, i8 %y) {
+; CHECK-LABEL: @sel_op_sel_implied_cond_users_disagree(
+; CHECK-NEXT:    [[C1:%.*]] = icmp ult i8 [[P:%.*]], 3
+; CHECK-NEXT:    [[C2:%.*]] = icmp ugt i8 [[P]], 7
+; CHECK-NEXT:    [[D:%.*]] = icmp ult i8 [[P]], 5
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[D]], i8 [[A:%.*]], i8 [[B:%.*]]
+; CHECK-NEXT:    [[I:%.*]] = add i8 [[S]], [[W:%.*]]
+; CHECK-NEXT:    [[R1:%.*]] = select i1 [[C1]], i8 [[I]], i8 [[X:%.*]]
+; CHECK-NEXT:    [[R2:%.*]] = select i1 [[C2]], i8 [[I]], i8 [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = xor i8 [[R1]], [[R2]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %c1 = icmp ult i8 %p, 3
+  %c2 = icmp ugt i8 %p, 7
+  %d = icmp ult i8 %p, 5
+  %s = select i1 %d, i8 %a, i8 %b
+  %i = add i8 %s, %w
+  %r1 = select i1 %c1, i8 %i, i8 %x
+  %r2 = select i1 %c2, i8 %i, i8 %y
+  %r = xor i8 %r1, %r2
+  ret i8 %r
+}
+
+; TODO: isImpliedCondition does not decompose a logical and on the LHS when
+; the RHS is not a compare.
+define i8 @sel_op_sel_implied_cond_non_cmp(i1 %c1, i1 %c2, i8 %a, i8 %b, i8 %w, i8 %x) {
+; CHECK-LABEL: @sel_op_sel_implied_cond_non_cmp(
+; CHECK-NEXT:    [[C:%.*]] = and i1 [[C1:%.*]], [[C2:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C1]], i8 [[A:%.*]], i8 [[B:%.*]]
+; CHECK-NEXT:    [[I:%.*]] = add i8 [[S]], [[W:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i8 [[I]], i8 [[X:%.*]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %c = and i1 %c1, %c2
+  %s = select i1 %c1, i8 %a, i8 %b
+  %i = add i8 %s, %w
+  %r = select i1 %c, i8 %i, i8 %x
+  ret i8 %r
+}
+
+; TODO: The implication only holds through the assume.
+define i8 @sel_op_sel_implied_by_assume(i1 %c1, i1 %c2, i8 %a, i8 %b, i8 %w, i8 %x) {
+; CHECK-LABEL: @sel_op_sel_implied_by_assume(
+; CHECK-NEXT:    [[NOT_C1:%.*]] = xor i1 [[C1:%.*]], true
+; CHECK-NEXT:    [[IMP:%.*]] = select i1 [[NOT_C1]], i1 true, i1 [[C2:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[IMP]])
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C2]], i8 [[A:%.*]], i8 [[B:%.*]]
+; CHECK-NEXT:    [[I:%.*]] = add i8 [[S]], [[W:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C1]], i8 [[I]], i8 [[X:%.*]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %imp = select i1 %c1, i1 %c2, i1 true
+  call void @llvm.assume(i1 %imp)
+  %s = select i1 %c2, i8 %a, i8 %b
+  %i = add i8 %s, %w
+  %r = select i1 %c1, i8 %i, i8 %x
+  ret i8 %r
+}
+
+declare void @llvm.assume(i1)
 ;.
-; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
+; CHECK: attributes #[[ATTR0:[0-9]+]] = { nounwind speculatable willreturn memory(none) }
+; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }
+; CHECK: attributes #[[ATTR2:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{!"function_entry_count", i64 1000}
 ; CHECK: [[PROF1]] = !{!"unknown", !"instcombine"}

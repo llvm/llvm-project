@@ -367,14 +367,14 @@ define ptr @shared_select_cond_icmp(i16 %tag, ptr %p) {
   ret ptr %result
 }
 
-; Negative test: the inner select has another use, so it cannot be rewritten.
+; The inner select has another use, but the GEP is only used by the outer
+; select, so the inner select can still be resolved in the GEP.
 define ptr @shared_select_cond_extra_use(ptr %p, ptr %q, i1 %c) {
 ; CHECK-LABEL: @shared_select_cond_extra_use(
 ; CHECK-NEXT:    [[BASE:%.*]] = select i1 [[C:%.*]], ptr [[P:%.*]], ptr null
-; CHECK-NEXT:    [[LEFT:%.*]] = getelementptr inbounds nuw i8, ptr [[BASE]], i64 48
 ; CHECK-NEXT:    store ptr [[BASE]], ptr [[Q:%.*]], align 8
-; CHECK-NEXT:    [[RIGHT:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 40
-; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[C]], ptr [[LEFT]], ptr [[RIGHT]]
+; CHECK-NEXT:    [[RESULT_V:%.*]] = select i1 [[C]], i64 48, i64 40
+; CHECK-NEXT:    [[RESULT:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 [[RESULT_V]]
 ; CHECK-NEXT:    ret ptr [[RESULT]]
 ;
   %base = select i1 %c, ptr %p, ptr null
