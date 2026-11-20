@@ -976,6 +976,56 @@ static PHINode *FindLoopCounter(Loop *L, BasicBlock *ExitingBB,
   return BestPhi;
 }
 
+/// Avoid a predicate-only rewrite that obscures a redundant self-retention
+/// select on the backedge. Keeping the relational test allows later CSE and
+/// CVP to remove the select without reconstructing loop-specific range facts.
+static bool shouldPreserveSelfRetentionPredicate(Loop *L, BasicBlock *ExitingBB,
+                                                 PHINode *IndVar,
+                                                 const SCEV *ExitCount,
+                                                 ScalarEvolution &SE) {
+  if (ExitingBB != L->getLoopLatch())
+    return false;
+
+  auto *BI = cast<CondBrInst>(ExitingBB->getTerminator());
+  Value *Inc = IndVar->getIncomingValueForBlock(ExitingBB);
+  Value *Bound;
+  CmpPredicate ContinuePred;
+  // LFTR must retain the same post-increment counter and comparison width.
+  if (!Inc->getType()->isIntegerTy() ||
+      Inc->getType() != ExitCount->getType() ||
+      !match(BI->getCondition(),
+             m_c_ICmp(ContinuePred, m_Specific(Inc), m_Value(Bound))) ||
+      ICmpInst::isEquality(ContinuePred) || !L->isLoopInvariant(Bound))
+    return false;
+
+  if (BI->getSuccessor(0) != L->getHeader())
+    ContinuePred = ICmpInst::getInverseCmpPredicate(ContinuePred);
+
+  for (PHINode &Phi : L->getHeader()->phis()) {
+    Value *True, *False;
+    CmpPredicate Pred;
+    // Match exact operands in either order, preserving comparison flags.
+    if (!match(Phi.getIncomingValueForBlock(ExitingBB),
+               m_OneUse(
+                   m_Select(m_c_ICmp(Pred, m_Specific(Inc), m_Specific(Bound)),
+                            m_Value(True), m_Value(False)))) ||
+        Pred.hasSameSign() != ContinuePred.hasSameSign() ||
+        (True == &Phi) == (False == &Phi))
+      continue;
+    if (True == &Phi)
+      Pred = ICmpInst::getInverseCmpPredicate(Pred);
+    if (Pred.dropSameSign() != ContinuePred.dropSameSign())
+      continue;
+
+    // Check the prospective limit only after finding the narrow carry pattern.
+    // Width equality above avoids genLoopLimit's truncation case.
+    const auto *AR = cast<SCEVAddRecExpr>(SE.getSCEV(IndVar));
+    return AR->getPostIncExpr(SE)->evaluateAtIteration(ExitCount, SE) ==
+           SE.getSCEV(Bound);
+  }
+  return false;
+}
+
 /// Insert an IR expression which computes the value held by the IV IndVar
 /// (which must be an loop counter w/unit stride) after the backedge of loop L
 /// is taken ExitCount times.
@@ -2133,6 +2183,10 @@ bool IndVarSimplify::run(Loop *L) {
 
       PHINode *IndVar = FindLoopCounter(L, ExitingBB, ExitCount, SE, DT);
       if (!IndVar)
+        continue;
+
+      if (shouldPreserveSelfRetentionPredicate(L, ExitingBB, IndVar, ExitCount,
+                                               *SE))
         continue;
 
       // Avoid high cost expansions.  Note: This heuristic is questionable in
