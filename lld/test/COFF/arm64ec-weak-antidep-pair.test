@@ -1,0 +1,52 @@
+REQUIRES: aarch64, x86
+RUN: split-file %s %t.dir && cd %t.dir
+
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows chain.s -o chain.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows ref.s -o ref.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows %S/Inputs/loadconfig-arm64ec.s -o loadconfig-arm64ec.obj
+
+A weak default may land on an ARM64EC symbol that is itself an anti-dependency
+alias of its own mangled form. The two names denote one function, so the
+fallback can continue through the pair and reach the definition.
+
+RUN: lld-link -machine:arm64ec -dll -noentry -nodefaultlib -out:out.dll \
+RUN:          ref.obj chain.obj loadconfig-arm64ec.obj
+RUN: llvm-objdump -d out.dll | FileCheck --check-prefix=DISASM %s
+DISASM:      0000000180001000 <.text>:
+DISASM-NEXT: 180001000: d65f03c0     ret
+
+Anti-dependency links that are not such a pair are still not chained, so this
+one stays unresolved.
+
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows unrelated.s -o unrelated.obj
+RUN: not lld-link -machine:arm64ec -dll -noentry -nodefaultlib -out:bad.dll \
+RUN:              ref.obj unrelated.obj loadconfig-arm64ec.obj 2>&1 | FileCheck --check-prefix=ERR %s
+ERR: error: undefined symbol: vecdtor
+
+#--- chain.s
+    .text
+    .globl "#target"
+"#target":
+    ret
+
+    .weak_anti_dep target
+.set target, "#target"
+
+    .weak vecdtor
+.set vecdtor, target
+
+#--- unrelated.s
+    .text
+    .globl "#other"
+"#other":
+    ret
+
+    .weak_anti_dep middle
+.set middle, "#other"
+
+    .weak vecdtor
+.set vecdtor, middle
+
+#--- ref.s
+    .section .test, "r"
+    .rva vecdtor
