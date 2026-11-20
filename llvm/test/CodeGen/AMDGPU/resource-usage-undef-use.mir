@@ -1,0 +1,120 @@
+# RUN: llc -mtriple=amdgpu9.42 -start-before=amdgpu-resource-usage -o - %s | FileCheck %s
+
+# A register named only by undef uses does not count toward the registers a
+# function uses, except on a return or in inline asm. A function with calls is
+# counted another way, so the calls_ functions cover that too.
+
+# CHECK-LABEL: {{^}}undef_vgpr_use:
+# CHECK: NumVgprs: 1
+---
+name: undef_vgpr_use
+body: |
+  bb.0:
+    $vgpr0 = V_MOV_B32_e32 undef $vgpr200, implicit $exec
+    S_ENDPGM 0
+...
+
+# CHECK-LABEL: {{^}}undef_and_defined_vgpr:
+# CHECK: NumVgprs: 201
+---
+name: undef_and_defined_vgpr
+body: |
+  bb.0:
+    $vgpr0 = V_MOV_B32_e32 undef $vgpr200, implicit $exec
+    $vgpr200 = V_MOV_B32_e32 0, implicit $exec
+    S_ENDPGM 0
+...
+
+# CHECK-LABEL: {{^}}undef_tuple_use:
+# CHECK: NumVgprs: 2
+---
+name: undef_tuple_use
+body: |
+  bb.0:
+    $vgpr0_vgpr1 = V_LSHLREV_B64_e64 0, undef $vgpr200_vgpr201, implicit $exec
+    S_ENDPGM 0
+...
+
+# CHECK-LABEL: {{^}}undef_vgpr_use_on_return:
+# CHECK: NumVgprs: 201
+---
+name: undef_vgpr_use_on_return
+body: |
+  bb.0:
+    SI_RETURN implicit undef $vgpr200
+...
+
+# CHECK-LABEL: {{^}}undef_vgpr_use_on_return_to_epilog:
+# CHECK: NumVgprs: 201
+---
+name: undef_vgpr_use_on_return_to_epilog
+body: |
+  bb.0:
+    SI_RETURN_TO_EPILOG undef $vgpr200
+...
+
+# CHECK-LABEL: {{^}}undef_vgpr_use_in_inline_asm:
+# CHECK: NumVgprs: 201
+---
+name: undef_vgpr_use_in_inline_asm
+body: |
+  bb.0:
+    INLINEASM &"; use $0", sideeffect attdialect, reguse:VGPR_32, undef $vgpr200
+    S_ENDPGM 0
+...
+
+# CHECK-LABEL: {{^}}undef_sgpr_use:
+# CHECK: .set .Lundef_sgpr_use.numbered_sgpr, 1{{$}}
+---
+name: undef_sgpr_use
+body: |
+  bb.0:
+    $sgpr0 = S_MOV_B32 undef $sgpr100
+    S_ENDPGM 0
+...
+
+# CHECK-LABEL: {{^}}undef_agpr_use:
+# CHECK: NumAgprs: 0
+---
+name: undef_agpr_use
+body: |
+  bb.0:
+    $vgpr0 = V_ACCVGPR_READ_B32_e64 undef $agpr100, implicit $exec
+    S_ENDPGM 0
+...
+
+# CHECK-LABEL: {{^}}calls_undef_vgpr_use:
+# CHECK: NumVgprs: 1
+---
+name: calls_undef_vgpr_use
+frameInfo:
+  hasCalls: true
+body: |
+  bb.0:
+    $vgpr0 = V_MOV_B32_e32 undef $vgpr200, implicit $exec
+    S_ENDPGM 0
+...
+
+# CHECK-LABEL: {{^}}calls_undef_vgpr_use_on_return:
+# CHECK: NumVgprs: 201
+---
+name: calls_undef_vgpr_use_on_return
+frameInfo:
+  hasCalls: true
+body: |
+  bb.0:
+    SI_RETURN implicit undef $vgpr200
+...
+
+# An undef operand of a call does not count either.
+# CHECK-LABEL: {{^}}calls_undef_sgpr_use_on_call:
+# CHECK: .set .Lcalls_undef_sgpr_use_on_call.numbered_sgpr, max(32, amdgpu.max_num_sgpr){{$}}
+---
+name: calls_undef_sgpr_use_on_call
+frameInfo:
+  hasCalls: true
+body: |
+  bb.0:
+    $sgpr30_sgpr31 = SI_CALL undef $sgpr0_sgpr1, 0, CustomRegMask(), implicit undef $sgpr100
+    S_ENDPGM 0
+...
