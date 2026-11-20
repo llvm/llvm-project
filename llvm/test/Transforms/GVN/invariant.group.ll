@@ -469,11 +469,12 @@ define void @testNotGlobal() {
 ; CHECK-LABEL: define void @testNotGlobal() {
 ; CHECK-NEXT:    [[A:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    call void @foo(ptr [[A]])
-; CHECK-NEXT:    [[B:%.*]] = load i8, ptr [[A]], align 1, !invariant.group [[META0]]
+; CHECK-NEXT:    [[B_BYTES:%.*]] = load b8, ptr [[A]], align 1, !invariant.group [[META0]]
+; CHECK-NEXT:    [[B:%.*]] = bitcast b8 [[B_BYTES]] to i8
 ; CHECK-NEXT:    call void @foo2(ptr [[A]], i8 [[B]])
 ; CHECK-NEXT:    call void @bar(i8 [[B]])
 ; CHECK-NEXT:    call void @fooBit(ptr [[A]], i1 true)
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i8 [[B]] to i1
+; CHECK-NEXT:    [[TMP1:%.*]] = bitextract i1, b8 [[B_BYTES]], i32 0
 ; CHECK-NEXT:    call void @fooBit(ptr [[A]], i1 [[TMP1]])
 ; CHECK-NEXT:    call void @fooBit(ptr [[A]], i1 [[TMP1]])
 ; CHECK-NEXT:    ret void
