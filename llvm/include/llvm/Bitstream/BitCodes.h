@@ -17,6 +17,7 @@
 #ifndef LLVM_BITSTREAM_BITCODES_H
 #define LLVM_BITSTREAM_BITCODES_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Bitstream/BitCodeEnums.h"
@@ -107,12 +108,18 @@ public:
 /// abbreviation allows a complex record that has redundancy to be stored in a
 /// specialized format instead of the fully-general, fully-vbr, format.
 class BitCodeAbbrev {
-  SmallVector<BitCodeAbbrevOp, 32> OperandList;
+  // Most abbreviations have only a few operands, and a reader can keep many of
+  // them alive at once (e.g. one list per loaded Clang module file), so keep
+  // the inline storage small.
+  SmallVector<BitCodeAbbrevOp, 3> OperandList;
 
 public:
   BitCodeAbbrev() = default;
 
   explicit BitCodeAbbrev(std::initializer_list<BitCodeAbbrevOp> OperandList)
+      : OperandList(OperandList) {}
+
+  explicit BitCodeAbbrev(ArrayRef<BitCodeAbbrevOp> OperandList)
       : OperandList(OperandList) {}
 
   unsigned getNumOperandInfos() const {

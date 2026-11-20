@@ -151,6 +151,76 @@ TEST(BitstreamReaderTest, readRecordWithBlobWhileStreaming) {
   }
 }
 
+TEST(BitstreamReaderTest, readAbbrevWithManyOperands) {
+  // Abbreviations of various sizes, crossing the inline capacities of the
+  // operand lists.
+  const unsigned BlockID = bitc::FIRST_APPLICATION_BLOCKID;
+  const unsigned RecordID = 1;
+  for (unsigned NumOps : {1, 2, 3, 4, 7, 8, 32, 33, 40}) {
+    // The record code, then fixed-width, VBR and literal operands.
+    SmallVector<BitCodeAbbrevOp> Ops;
+    SmallVector<uint64_t> Values;
+    Ops.push_back(BitCodeAbbrevOp(RecordID));
+    for (unsigned I = 1; I != NumOps; ++I) {
+      Values.push_back(I * 3);
+      if (I % 3 == 0)
+        Ops.push_back(BitCodeAbbrevOp(I * 3));
+      else
+        Ops.push_back(BitCodeAbbrevOp(
+            I % 3 == 1 ? BitCodeAbbrevOp::Fixed : BitCodeAbbrevOp::VBR, 7));
+    }
+
+    SmallVector<char, 1> Buffer;
+    unsigned AbbrevID;
+    {
+      BitstreamWriter Stream(Buffer);
+      Stream.EnterSubblock(BlockID, 3);
+      auto Abbrev = std::make_shared<BitCodeAbbrev>();
+      for (const BitCodeAbbrevOp &Op : Ops)
+        Abbrev->Add(Op);
+      AbbrevID = Stream.EmitAbbrev(std::move(Abbrev));
+      Stream.EmitRecord(RecordID, Values, AbbrevID);
+      Stream.ExitBlock();
+    }
+
+    BitstreamCursor Stream(
+        ArrayRef<uint8_t>((const uint8_t *)Buffer.begin(), Buffer.size()));
+    Expected<BitstreamEntry> MaybeEntry =
+        Stream.advance(BitstreamCursor::AF_DontAutoprocessAbbrevs);
+    ASSERT_TRUE((bool)MaybeEntry);
+    ASSERT_EQ(BitstreamEntry::SubBlock, MaybeEntry->Kind);
+    ASSERT_FALSE(Stream.EnterSubBlock(BlockID));
+
+    // The abbreviation is read automatically, then the record.
+    MaybeEntry = Stream.advance();
+    ASSERT_TRUE((bool)MaybeEntry);
+    ASSERT_EQ(BitstreamEntry::Record, MaybeEntry->Kind);
+    ASSERT_EQ(AbbrevID, MaybeEntry->ID);
+
+    Expected<const BitCodeAbbrev *> MaybeAbbrev = Stream.getAbbrev(AbbrevID);
+    ASSERT_TRUE((bool)MaybeAbbrev);
+    const BitCodeAbbrev *Abbrev = *MaybeAbbrev;
+    ASSERT_EQ(NumOps, Abbrev->getNumOperandInfos());
+    for (unsigned I = 0; I != NumOps; ++I) {
+      const BitCodeAbbrevOp &Want = Ops[I];
+      const BitCodeAbbrevOp &Got = Abbrev->getOperandInfo(I);
+      ASSERT_EQ(Want.isLiteral(), Got.isLiteral());
+      if (Want.isLiteral()) {
+        EXPECT_EQ(Want.getLiteralValue(), Got.getLiteralValue());
+      } else {
+        EXPECT_EQ(Want.getEncoding(), Got.getEncoding());
+        EXPECT_EQ(Want.getEncodingData(), Got.getEncodingData());
+      }
+    }
+
+    SmallVector<uint64_t> Record;
+    Expected<unsigned> MaybeRecord = Stream.readRecord(AbbrevID, Record);
+    ASSERT_TRUE((bool)MaybeRecord);
+    EXPECT_EQ(RecordID, *MaybeRecord);
+    EXPECT_EQ(Values, Record);
+  }
+}
+
 TEST(BitstreamReaderTest, shortRead) {
   uint8_t Bytes[] = {8, 7, 6, 5, 4, 3, 2, 1};
   for (unsigned I = 1; I != 8; ++I) {
