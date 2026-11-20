@@ -1942,7 +1942,8 @@ isl::set Scop::getAssumedContext() const {
 }
 
 bool Scop::isProfitable(bool ScalarsAreUnprofitable) const {
-  if (PollyProcessUnprofitable)
+  if (PollyDetectForVectorization || PollyOptimizeForVectorization ||
+      PollyProcessUnprofitable)
     return true;
 
   if (isEmpty())
