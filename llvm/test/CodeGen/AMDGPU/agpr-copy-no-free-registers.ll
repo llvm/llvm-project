@@ -375,64 +375,48 @@ define void @v32_asm_def_use(float %v0, float %v1) #4 {
 ; GFX908-NEXT:    ;;#ASMSTART
 ; GFX908-NEXT:    ; def v[0:31] a[0:15]
 ; GFX908-NEXT:    ;;#ASMEND
-; GFX908-NEXT:    v_accvgpr_read_b32 v35, a15
+; GFX908-NEXT:    v_accvgpr_read_b32 v32, a15
+; GFX908-NEXT:    v_accvgpr_read_b32 v35, a14
+; GFX908-NEXT:    v_accvgpr_read_b32 v36, a13
+; GFX908-NEXT:    v_accvgpr_write_b32 a31, v32
+; GFX908-NEXT:    v_accvgpr_read_b32 v32, a12
+; GFX908-NEXT:    v_accvgpr_write_b32 a30, v35
+; GFX908-NEXT:    v_accvgpr_write_b32 a29, v36
+; GFX908-NEXT:    v_accvgpr_write_b32 a28, v32
+; GFX908-NEXT:    v_accvgpr_read_b32 v35, a11
+; GFX908-NEXT:    v_accvgpr_read_b32 v36, a10
+; GFX908-NEXT:    v_accvgpr_read_b32 v32, a9
+; GFX908-NEXT:    v_accvgpr_write_b32 a27, v35
+; GFX908-NEXT:    v_accvgpr_write_b32 a26, v36
+; GFX908-NEXT:    v_accvgpr_write_b32 a25, v32
+; GFX908-NEXT:    v_accvgpr_read_b32 v35, a8
+; GFX908-NEXT:    v_accvgpr_read_b32 v36, a7
+; GFX908-NEXT:    v_accvgpr_read_b32 v32, a6
+; GFX908-NEXT:    v_accvgpr_write_b32 a24, v35
+; GFX908-NEXT:    v_accvgpr_write_b32 a23, v36
+; GFX908-NEXT:    v_accvgpr_write_b32 a22, v32
+; GFX908-NEXT:    v_accvgpr_read_b32 v35, a5
+; GFX908-NEXT:    v_accvgpr_read_b32 v36, a4
+; GFX908-NEXT:    v_accvgpr_read_b32 v32, a3
+; GFX908-NEXT:    v_accvgpr_write_b32 a21, v35
+; GFX908-NEXT:    v_accvgpr_write_b32 a20, v36
+; GFX908-NEXT:    v_accvgpr_write_b32 a19, v32
+; GFX908-NEXT:    v_accvgpr_read_b32 v35, a2
+; GFX908-NEXT:    v_accvgpr_read_b32 v36, a1
+; GFX908-NEXT:    v_accvgpr_read_b32 v32, a0
+; GFX908-NEXT:    v_accvgpr_write_b32 a18, v35
+; GFX908-NEXT:    v_accvgpr_write_b32 a17, v36
+; GFX908-NEXT:    v_accvgpr_write_b32 a16, v32
 ; GFX908-NEXT:    ;;#ASMSTART
 ; GFX908-NEXT:    ; def v32
 ; GFX908-NEXT:    ;;#ASMEND
-; GFX908-NEXT:    s_nop 1
-; GFX908-NEXT:    v_accvgpr_write_b32 a31, v35
-; GFX908-NEXT:    v_accvgpr_read_b32 v35, a14
-; GFX908-NEXT:    s_nop 1
-; GFX908-NEXT:    v_accvgpr_write_b32 a30, v35
-; GFX908-NEXT:    v_accvgpr_read_b32 v35, a13
-; GFX908-NEXT:    s_nop 1
-; GFX908-NEXT:    v_accvgpr_write_b32 a29, v35
-; GFX908-NEXT:    v_accvgpr_read_b32 v35, a12
-; GFX908-NEXT:    s_nop 1
-; GFX908-NEXT:    v_accvgpr_write_b32 a28, v35
-; GFX908-NEXT:    v_accvgpr_read_b32 v35, a11
-; GFX908-NEXT:    s_nop 1
-; GFX908-NEXT:    v_accvgpr_write_b32 a27, v35
-; GFX908-NEXT:    v_accvgpr_read_b32 v35, a10
-; GFX908-NEXT:    s_nop 1
-; GFX908-NEXT:    v_accvgpr_write_b32 a26, v35
-; GFX908-NEXT:    v_accvgpr_read_b32 v35, a9
-; GFX908-NEXT:    s_nop 1
-; GFX908-NEXT:    v_accvgpr_write_b32 a25, v35
-; GFX908-NEXT:    v_accvgpr_read_b32 v35, a8
-; GFX908-NEXT:    s_nop 1
-; GFX908-NEXT:    v_accvgpr_write_b32 a24, v35
-; GFX908-NEXT:    v_accvgpr_read_b32 v35, a7
-; GFX908-NEXT:    s_nop 1
-; GFX908-NEXT:    v_accvgpr_write_b32 a23, v35
-; GFX908-NEXT:    v_accvgpr_read_b32 v35, a6
-; GFX908-NEXT:    s_nop 1
-; GFX908-NEXT:    v_accvgpr_write_b32 a22, v35
-; GFX908-NEXT:    v_accvgpr_read_b32 v35, a5
-; GFX908-NEXT:    s_nop 1
-; GFX908-NEXT:    v_accvgpr_write_b32 a21, v35
-; GFX908-NEXT:    v_accvgpr_read_b32 v35, a4
-; GFX908-NEXT:    s_nop 1
-; GFX908-NEXT:    v_accvgpr_write_b32 a20, v35
-; GFX908-NEXT:    v_accvgpr_read_b32 v35, a3
-; GFX908-NEXT:    s_nop 1
-; GFX908-NEXT:    v_accvgpr_write_b32 a19, v35
-; GFX908-NEXT:    v_accvgpr_read_b32 v35, a2
-; GFX908-NEXT:    s_nop 1
-; GFX908-NEXT:    v_accvgpr_write_b32 a18, v35
-; GFX908-NEXT:    v_accvgpr_read_b32 v35, a1
-; GFX908-NEXT:    s_nop 1
-; GFX908-NEXT:    v_accvgpr_write_b32 a17, v35
-; GFX908-NEXT:    v_accvgpr_read_b32 v35, a0
-; GFX908-NEXT:    s_nop 1
-; GFX908-NEXT:    v_accvgpr_write_b32 a16, v35
 ; GFX908-NEXT:    ;;#ASMSTART
 ; GFX908-NEXT:    ; copy
 ; GFX908-NEXT:    ;;#ASMEND
-; GFX908-NEXT:    v_accvgpr_read_b32 v35, a1
+; GFX908-NEXT:    v_accvgpr_read_b32 v37, a1
 ; GFX908-NEXT:    v_mfma_f32_16x16x1f32 a[0:15], v34, v33, a[16:31]
 ; GFX908-NEXT:    s_nop 0
-; GFX908-NEXT:    v_accvgpr_write_b32 a32, v35
+; GFX908-NEXT:    v_accvgpr_write_b32 a32, v37
 ; GFX908-NEXT:    ;;#ASMSTART
 ; GFX908-NEXT:    ; copy
 ; GFX908-NEXT:    ;;#ASMEND
