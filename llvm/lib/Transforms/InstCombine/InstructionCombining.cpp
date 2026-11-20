@@ -6129,10 +6129,12 @@ bool InstCombinerImpl::prepareWorklist(Function &F) {
                             << '\n');
           Inst.replaceAllUsesWith(C);
           ++NumConstProp;
-          if (isInstructionTriviallyDead(&Inst, &TLI))
-            Inst.eraseFromParent();
           MadeIRChange = true;
-          continue;
+          if (isInstructionTriviallyDead(&Inst, &TLI)) {
+            // Omit the instruction from the worklist only if we deleted it.
+            Inst.eraseFromParent();
+            continue;
+          }
         }
 
       // See if we can constant fold its operands.
