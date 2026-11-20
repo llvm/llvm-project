@@ -2,8 +2,9 @@
 ; RUN: opt -passes=constraint-elimination -S %s | FileCheck %s
 
 ; Looking through 'sub %x, %step' in the unsigned system requires proving
-; '%x >=u %step', which decomposes %x again. Without decomposition caching,
-; this file takes a long time to compile.
+; '%x >=u %step', which decomposes %x again. Without decomposition caching or
+; the doesHold recursion limit, this file takes a long time to compile. It does
+; not fold because the depth is greater than the limit.
 
 define i1 @sub_chain_unsigned(i32 %start, i32 %step) {
 ; CHECK-LABEL: define i1 @sub_chain_unsigned(
@@ -99,7 +100,8 @@ define i1 @sub_chain_unsigned(i32 %start, i32 %step) {
 ; CHECK-NEXT:    [[C_21:%.*]] = icmp ult i32 [[REM_21]], [[STEP]]
 ; CHECK-NEXT:    br i1 [[C_21]], label %[[EXIT]], label %[[GUARD_22:.*]]
 ; CHECK:       [[GUARD_22]]:
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[RES:%.*]] = icmp ule i32 [[REM_22]], [[START]]
+; CHECK-NEXT:    ret i1 [[RES]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret i1 false
 ;

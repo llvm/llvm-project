@@ -15,6 +15,7 @@
 
 #include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/algorithm.h"
+#include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/tuple.h"
 #include "src/__support/CPP/type_traits.h"
@@ -194,6 +195,18 @@ template <typename T, size_t N, internal::enable_if_integral_t<T> = 0>
 LIBC_INLINE constexpr static int find_last_set(simd<T, N> v) {
   constexpr size_t size = simd_size_v<simd<T, N>>;
   return size - 1 - __builtin_clzg(simd_cast<bool>(v));
+}
+template <size_t N>
+LIBC_INLINE constexpr static auto to_bitmask(const simd<bool, N> &m) {
+  using bitmask_t = internal::get_as_integer_type_t<simd<bool, N>>;
+  if constexpr (N % CHAR_BIT == 0) {
+    return cpp::bit_cast<bitmask_t>(m);
+  } else {
+    bitmask_t res = 0;
+    for (size_t i = 0; i < N; ++i)
+      res |= static_cast<bitmask_t>(m[i]) << i;
+    return res;
+  }
 }
 
 // Elementwise operations.
