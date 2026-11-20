@@ -17,6 +17,9 @@ class DataFormatterSynthValueTestCase(TestBase):
         self.line = line_number("main.cpp", "break here")
 
     @expectedFailureAll(bugnumber="llvm.org/pr50814", compiler="gcc")
+    @expectedFailureAll(
+        bugnumber="llvm.org/pr239769", oslist=["windows"], debug_info="dwarf"
+    )
     def test_with_run_command(self):
         """Test using Python synthetic children provider to provide a value."""
         self.build()
