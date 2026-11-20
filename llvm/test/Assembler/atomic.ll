@@ -89,6 +89,22 @@ define void @f(ptr %x) {
   ret void
 }
 
+define void @cmpxchg_non_integer(ptr %x, float %fcmp, float %fnew, <2 x i16> %icmp, <2 x i16> %inew, <2 x half> %vfcmp, <2 x half> %vfnew, <2 x ptr> %pcmp, <2 x ptr> %pnew) {
+  ; CHECK: %atomic.cmpxchg.fp = cmpxchg ptr %x, float %fcmp, float %fnew seq_cst monotonic
+  %atomic.cmpxchg.fp = cmpxchg ptr %x, float %fcmp, float %fnew seq_cst monotonic
+
+  ; CHECK: %atomic.cmpxchg.int.vector = cmpxchg ptr %x, <2 x i16> %icmp, <2 x i16> %inew seq_cst monotonic
+  %atomic.cmpxchg.int.vector = cmpxchg ptr %x, <2 x i16> %icmp, <2 x i16> %inew seq_cst monotonic
+
+  ; CHECK: %atomic.cmpxchg.fp.vector = cmpxchg ptr %x, <2 x half> %vfcmp, <2 x half> %vfnew seq_cst monotonic
+  %atomic.cmpxchg.fp.vector = cmpxchg ptr %x, <2 x half> %vfcmp, <2 x half> %vfnew seq_cst monotonic
+
+  ; CHECK: %atomic.cmpxchg.ptr.vector = cmpxchg ptr %x, <2 x ptr> %pcmp, <2 x ptr> %pnew seq_cst monotonic
+  %atomic.cmpxchg.ptr.vector = cmpxchg ptr %x, <2 x ptr> %pcmp, <2 x ptr> %pnew seq_cst monotonic
+
+  ret void
+}
+
 define void @fp_atomics(ptr %x) {
  ; CHECK: atomicrmw fadd ptr %x, float 1.000000e+00 seq_cst
   atomicrmw fadd ptr %x, float 1.0 seq_cst
