@@ -526,18 +526,6 @@ void VPlanTransforms::expandBranchOnTwoConds(VPlan &Plan) {
     VPBlockBase *Succ1 = Successors[1];
     VPBlockBase *Succ2 = Successors[2];
 
-    // If the successor block for both conditions is the same, then combine the
-    // two conditions and plant a single conditional branch.
-    if (Succ0 == Succ1) {
-      VPBuilder Builder(Br);
-      VPValue *Combined = Builder.createOr(Cond0, Cond1, DL);
-      Builder.createNaryOp(VPInstruction::BranchOnCond, {Combined}, DL);
-      VPBlockUtils::connectBlocks(BrOnTwoCondsBB, Succ0);
-      VPBlockUtils::connectBlocks(BrOnTwoCondsBB, Succ2);
-      Br->eraseFromParent();
-      continue;
-    }
-
     assert(!Succ0->getParent() && !Succ1->getParent() && !Succ2->getParent() &&
            !BrOnTwoCondsBB->getParent() && "regions must already be dissolved");
 

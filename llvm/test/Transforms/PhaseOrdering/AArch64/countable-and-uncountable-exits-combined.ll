@@ -35,7 +35,7 @@ define void @foo() #0 {
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub nuw nsw i64 10000, [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY_INTERIM:.*]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw [4 x i8], ptr @c, i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD_FR:%.*]] = freeze <vscale x 4 x i32> [[WIDE_LOAD]]
@@ -47,17 +47,20 @@ define void @foo() #0 {
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr [4 x i8], ptr @dst, i64 [[INDEX]]
 ; CHECK-NEXT:    tail call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[TMP6]], ptr align 4 [[TMP7]], <vscale x 4 x i1> [[UNCOUNTABLE_EXIT_MASK]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = tail call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP3]])
+; CHECK-NEXT:    br i1 [[TMP8]], label %[[VECTOR_EARLY_EXIT:.*]], label %[[VECTOR_BODY_INTERIM]]
+; CHECK:       [[VECTOR_BODY_INTERIM]]:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    [[TMP10:%.*]] = or i1 [[TMP8]], [[TMP9]]
-; CHECK-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[FOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[FOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_MOD_VF]], 0
+; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[FOR_BODY_PREHEADER]]
+; CHECK:       [[VECTOR_EARLY_EXIT]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = tail call i64 @llvm.experimental.cttz.elts.i64.nxv4i1(<vscale x 4 x i1> [[TMP3]], i1 false)
 ; CHECK-NEXT:    [[TMP11:%.*]] = add i64 [[INDEX]], [[TMP4]]
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[TMP11]], 10000
-; CHECK-NEXT:    br i1 [[TMP12]], label %[[EXIT:.*]], label %[[FOR_BODY_PREHEADER]]
+; CHECK-NEXT:    br label %[[FOR_BODY_PREHEADER]]
 ; CHECK:       [[FOR_BODY_PREHEADER]]:
-; CHECK-NEXT:    [[INDVARS_IV_PH:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[TMP11]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[INDVARS_IV_PH:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[TMP11]], %[[VECTOR_EARLY_EXIT]] ], [ [[N_VEC]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY1:.*]]
 ; CHECK:       [[FOR_BODY1]]:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY1]] ], [ [[INDVARS_IV_PH]], %[[FOR_BODY_PREHEADER]] ]

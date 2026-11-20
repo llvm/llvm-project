@@ -418,6 +418,15 @@ the vector loop after dissolving loop regions:
 ```{image} vplan-early-exit-lowered.png
 ```
 
+If the loop has side effects (stores), the lanes before the first exiting lane
+are executed in the vector loop under a mask, and the exiting lane is handled by
+the scalar loop. The plan has the same shape, but `vector.early.exit` computes
+the index of the first exiting lane and branches to `scalar.ph`, which resumes
+the scalar loop at that index:
+
+```{image} vplan-early-exit-side-effects.png
+```
+
 ### Performance
 
 This section shows the execution time of Clang on a simple benchmark:
