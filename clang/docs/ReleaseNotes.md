@@ -1673,6 +1673,8 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 - `-fsanitize=alloc-token` now also infers the allocated type from a placement
   `new` into the result of an untyped allocation call, e.g. `new (malloc(n)) T`
   or `void *p = malloc(n); new (p) T;`.
+- Clang now defines the `__SANITIZE_KCFI__` macro when `-fsanitize=kcfi` is
+  enabled, like `__SANITIZE_ADDRESS__` and other sanitizer macros.
 
 ### Python Binding Changes
 

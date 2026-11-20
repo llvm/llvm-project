@@ -1547,6 +1547,8 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
     Builder.defineMacro("__SANITIZE_CONCURRENCY__");
   if (LangOpts.Sanitize.has(SanitizerKind::AllocToken))
     Builder.defineMacro("__SANITIZE_ALLOC_TOKEN__");
+  if (LangOpts.Sanitize.has(SanitizerKind::KCFI))
+    Builder.defineMacro("__SANITIZE_KCFI__");
 
   if (LangOpts.PointerFieldProtectionABI)
     Builder.defineMacro("__POINTER_FIELD_PROTECTION_ABI__");

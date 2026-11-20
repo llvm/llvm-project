@@ -321,6 +321,9 @@ cross-DSO function address equality. These properties make KCFI easier to
 adopt in low-level software. KCFI is limited to checking only function
 pointers, and isn't compatible with executable-only memory.
 
+When `-fsanitize=kcfi` is enabled, Clang defines the `__SANITIZE_KCFI__`
+macro and `__has_feature(kcfi)` evaluates to 1.
+
 ### `-fsanitize-kcfi-arity`
 
 For supported targets, this feature extends kCFI by telling the compiler to
