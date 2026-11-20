@@ -3370,8 +3370,8 @@ void Attributor::checkAndQueryIRAttr(const IRPosition &IRP, AttributeSet Attrs,
 void Attributor::identifyDefaultAbstractAttributes(Function &F) {
   // Seed the simplification of a position. This only creates the AAs that
   // simplify it, so there is nothing to do if none of them are allowed.
-  bool SeedSimplification = isAllowed<AAValueSimplify>() ||
-                            isAllowed<AAPotentialValues>();
+  bool SeedSimplification =
+      isAllowed<AAValueSimplify>() || isAllowed<AAPotentialValues>();
   auto SeedSimplified = [&](const IRPosition &IRP) {
     if (!SeedSimplification && !hasSimplificationCallback(IRP))
       return;
