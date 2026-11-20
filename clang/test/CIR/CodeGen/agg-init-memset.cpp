@@ -26,6 +26,10 @@ void assign_empty(Big *p) { *p = {}; }
 // CIR-NOT:     cir.store
 // CIR:         cir.call @_ZN3BigaSEOS_({{.*}}, %[[TMP]])
 
+// OGCG avoids emitting the trivial copy/move assignment operator when it is not
+// necessary, CIR have chosen to emit it and allow later optimizations to remove
+// it when appropriate. See also the comment in
+// CIRGenFunction::emitCXXMemberOrOperatorMemberCallExpr.
 // LLVM-LABEL: define {{.*}} void @_Z12assign_emptyP3Big
 // LLVM:         call void @llvm.memset.p0.i64(ptr align 8 %[[TMP:.*]], i8 0, i64 272, i1 false)
 // LLVM-NOT:     store
