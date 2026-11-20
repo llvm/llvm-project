@@ -1248,19 +1248,24 @@ struct Obj {
   Obj(Obj &&s) : p(s.p) {
     s.p = 0;
     clang_analyzer_dump(this);
-    // expected-warning-re@-1 {{{{conj_\$[0-9]+{Obj \*, LC2, S[0-9]+, #[0-9]+}}}}}
+    // expected-warning-re@-1 {{{{conj_\$[0-9]+{Obj \*, LC3, S[0-9]+, #[0-9]+}}}}}
   }
   ~Obj();  // Presumably releases 'p'.
 };
 
 Obj inner() {
-  // This is stack frame #2 (displayed as LC2 in the conjured symbol dump).
+  // This is stack frame #3 (displayed as LC3 in the conjured symbol dump).
   Obj o;
   return o;
 }
 
-Obj outer() {
-  // This is stack frame #1 (would be displayed as LC1).
+Obj middle() {
+  // This is stack frame #2 (would be displayed as LC2).
   return inner();
+}
+
+Obj entrypoint() {
+  // This is stack frame #1 (would be displayed as LC1).
+  return middle();
 }
 } // namespace stack_frame_of_return_from_top
