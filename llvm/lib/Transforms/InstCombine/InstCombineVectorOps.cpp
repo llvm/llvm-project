@@ -523,6 +523,13 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
           return nullptr;
         return replaceInstUsesWith(EI, Idx);
       }
+      // extelt (vector.shuffle Src, Idx), C --> extelt Src, (extelt Idx, C)
+      if (IID == Intrinsic::vector_shuffle && HasKnownValidIndex &&
+          II->hasOneUse()) {
+        Value *Lane =
+            Builder.CreateExtractElement(II->getArgOperand(1), IndexC);
+        return ExtractElementInst::Create(II->getArgOperand(0), Lane);
+      }
     }
 
     // InstSimplify should handle cases where the index is invalid.
@@ -1466,6 +1473,76 @@ static Instruction *foldInsSequenceIntoSplat(InsertElementInst &InsElt) {
   return new ShuffleVectorInst(FirstIE, Mask);
 }
 
+/// Match insertelt(X, extractelt(Src, extractelt(Idx, Lane)), Lane).
+static bool matchVectorShuffleLane(InsertElementInst &InsElt, Value *&Src,
+                                   Value *&Idx) {
+  Value *EltIdx;
+  uint64_t Lane, IdxLane;
+  if (!match(&InsElt,
+             m_InsertElt(m_Value(), m_ExtractElt(m_Value(Src), m_Value(EltIdx)),
+                         m_ConstantInt(Lane))))
+    return false;
+
+  // sext is safe only if negative indices land out of range.
+  unsigned NumElts = cast<FixedVectorType>(InsElt.getType())->getNumElements();
+  Value *Narrow;
+  if (match(EltIdx, m_ZExt(m_Value(Narrow))) ||
+      (match(EltIdx, m_SExt(m_Value(Narrow))) &&
+       Log2_64_Ceil(NumElts) < EltIdx->getType()->getScalarSizeInBits()))
+    EltIdx = Narrow;
+
+  return match(EltIdx, m_ExtractElt(m_Value(Idx), m_ConstantInt(IdxLane))) &&
+         IdxLane == Lane;
+}
+
+/// insertelt(... insertelt(X, extractelt(Src, extractelt(Idx, 0)), 0) ...) ->
+/// llvm.vector.shuffle(Src, Idx)
+static Instruction *
+foldInsSequenceIntoVectorShuffle(InsertElementInst &InsElt) {
+  auto *VecTy = dyn_cast<FixedVectorType>(InsElt.getType());
+  Value *Src, *Idx;
+  if (!VecTy || VecTy->getNumElements() == 1 ||
+      !matchVectorShuffleLane(InsElt, Src, Idx))
+    return nullptr;
+  unsigned NumElts = VecTy->getNumElements();
+  auto *IdxTy = dyn_cast<FixedVectorType>(Idx->getType());
+  if (Src->getType() != VecTy || !IdxTy || IdxTy->getNumElements() != NumElts)
+    return nullptr;
+
+  SmallBitVector ElementPresent(NumElts, false);
+  Value *Base = &InsElt;
+  while (!ElementPresent.all()) {
+    auto *CurrIE = dyn_cast<InsertElementInst>(Base);
+    if (!CurrIE)
+      break;
+    if (CurrIE != &InsElt && !CurrIE->hasOneUse())
+      return nullptr;
+    uint64_t Lane;
+    if (!match(CurrIE->getOperand(2), m_ConstantInt(Lane)) || Lane >= NumElts)
+      return nullptr;
+    Base = CurrIE->getOperand(0);
+    // A later insert already overwrote this lane.
+    if (ElementPresent[Lane])
+      continue;
+    ElementPresent.set(Lane);
+
+    Value *EltSrc, *EltIdx;
+    if (!matchVectorShuffleLane(*CurrIE, EltSrc, EltIdx) || EltSrc != Src ||
+        EltIdx != Idx)
+      return nullptr;
+  }
+
+  // Lanes that are not inserted must be poison, and may only be a minority
+  // since the shuffle computes them too.
+  if (!ElementPresent.all() &&
+      (!match(Base, m_Poison()) || ElementPresent.count() * 2 <= NumElts))
+    return nullptr;
+
+  Function *F = Intrinsic::getOrInsertDeclaration(
+      InsElt.getModule(), Intrinsic::vector_shuffle, {VecTy, IdxTy});
+  return CallInst::Create(F, {Src, Idx});
+}
+
 /// Try to fold an insert element into an existing splat shuffle by changing
 /// the shuffle's mask to include the index of this insert element.
 static Instruction *foldInsEltIntoSplat(InsertElementInst &InsElt) {
@@ -1924,6 +2001,17 @@ Instruction *InstCombinerImpl::visitInsertElementInst(InsertElementInst &IE) {
 
   if (Instruction *Broadcast = foldInsSequenceIntoSplat(IE))
     return Broadcast;
+
+  // insertelt (vector.shuffle Src, Idx), Src[Idx[C]], C --> vector.shuffle
+  Value *Src, *Idx;
+  if (isa<FixedVectorType>(IE.getType()) &&
+      matchVectorShuffleLane(IE, Src, Idx) &&
+      match(VecOp, m_Intrinsic<Intrinsic::vector_shuffle>(m_Specific(Src),
+                                                          m_Specific(Idx))))
+    return replaceInstUsesWith(IE, VecOp);
+
+  if (Instruction *Shuf = foldInsSequenceIntoVectorShuffle(IE))
+    return Shuf;
 
   if (Instruction *Splat = foldInsEltIntoSplat(IE))
     return Splat;
