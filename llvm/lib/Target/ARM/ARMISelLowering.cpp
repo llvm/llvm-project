@@ -17235,6 +17235,57 @@ static SDValue PerformInterleavedStoreCombine(
   return NewStore;
 }
 
+static SDValue performSplitConstantStore(StoreSDNode *St, SelectionDAG &DAG,
+                                         const ARMSubtarget *Subtarget) {
+  SDValue Val = St->getValue();
+  EVT VT = Val.getValueType();
+  if (!Subtarget->isLittle() || !VT.isVector() ||
+      VT.getVectorNumElements() > 4 || VT.getScalarType() != MVT::i32 ||
+      St->isVolatile() || !ISD::isNormalStore(St) || !Val.hasOneUse() ||
+      Val.getOpcode() != ISD::BUILD_VECTOR)
+    return SDValue();
+
+  // We are looking for a build vector of constants that will not be lowered to
+  // a splat.
+  unsigned Cost = 0;
+  SmallSet<unsigned, 4> ImmSet;
+  for (unsigned I = 0; I < VT.getVectorNumElements(); I++) {
+    auto *C = dyn_cast<ConstantSDNode>(Val.getOperand(I));
+    if (!C)
+      return SDValue();
+    if (!ImmSet.insert(C->getZExtValue()).second)
+      continue;
+    Cost += ConstantMaterializationCost(C->getZExtValue(), Subtarget,
+                                        Subtarget->hasMinSize());
+    if (Cost > 4)
+      return SDValue();
+  }
+  if (ImmSet.size() == 1) // Don't include splats
+    return SDValue();
+
+  // Look for a simple single block loop, we can hoist the vector load out in
+  // that case.
+  const BasicBlock *Block = DAG.getBasicBlock();
+  assert(Block && "Expected a valid block!");
+  if (is_contained(successors(Block), Block))
+    return SDValue();
+
+  SDValue Chain = St->getChain();
+  SDLoc DL(St);
+
+  for (unsigned I = 0; I < VT.getVectorNumElements(); I++) {
+    unsigned Offset = I * VT.getScalarStoreSize();
+    SDValue OffsetPtr = DAG.getObjectPtrOffset(
+        DL, St->getBasePtr(), DAG.getConstant(Offset, DL, MVT::i32));
+    Chain = DAG.getStore(Chain, DL, Val.getOperand(I), OffsetPtr,
+                         St->getPointerInfo().getWithOffset(Offset),
+                         commonAlignment(St->getBaseAlign(), Offset),
+                         St->getMemOperand()->getFlags(), St->getAAInfo());
+  }
+
+  return Chain;
+}
+
 /// PerformSTORECombine - Target-specific dag combine xforms for
 /// ISD::STORE.
 static SDValue PerformSTORECombine(SDNode *N,
@@ -17311,6 +17362,9 @@ static SDValue PerformSTORECombine(SDNode *N,
                         St->getPointerInfo(), St->getAlign(),
                         St->getMemOperand()->getFlags(), St->getAAInfo());
   }
+
+  if (SDValue S = performSplitConstantStore(St, DCI.DAG, Subtarget))
+    return S;
 
   // If this is a legal vector store, try to combine it into a VST1_UPD.
   if (Subtarget->hasNEON() && ISD::isNormalStore(N) && VT.isVector() &&

@@ -30,8 +30,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #  if _LIBCPP_STD_VER >= 23
 
 template <class = void> // TODO: to_chars(floating-point) markup fires too eagerly (http://llvm.org/PR61563).
-_LIBCPP_HIDE_FROM_ABI inline void
-__vprint_nonunicode(ostream& __os, string_view __fmt, format_args __args, bool __write_nl) {
+inline void __vprint_nonunicode(ostream& __os, string_view __fmt, format_args __args, bool __write_nl) {
   // [ostream.formatted.print]/3
   // Effects: Behaves as a formatted output function
   // ([ostream.formatted.reqmts]) of os, except that:
@@ -65,7 +64,7 @@ __vprint_nonunicode(ostream& __os, string_view __fmt, format_args __args, bool _
 }
 
 template <class = void> // TODO: to_chars(floating-point) markup fires too eagerly (http://llvm.org/PR61563).
-_LIBCPP_HIDE_FROM_ABI inline void vprint_nonunicode(ostream& __os, string_view __fmt, format_args __args) {
+inline void vprint_nonunicode(ostream& __os, string_view __fmt, format_args __args) {
   std::__vprint_nonunicode(__os, __fmt, __args, false);
 }
 
@@ -88,7 +87,7 @@ _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 
 #    if _LIBCPP_HAS_UNICODE
 template <class = void> // TODO: to_chars(floating-point) markup fires too eagerly (http://llvm.org/PR61563).
-_LIBCPP_HIDE_FROM_ABI void __vprint_unicode(ostream& __os, string_view __fmt, format_args __args, bool __write_nl) {
+void __vprint_unicode(ostream& __os, string_view __fmt, format_args __args, bool __write_nl) {
 #      ifndef _WIN32
   return std::__vprint_nonunicode(__os, __fmt, __args, __write_nl);
 #      else
@@ -127,13 +126,13 @@ _LIBCPP_HIDE_FROM_ABI void __vprint_unicode(ostream& __os, string_view __fmt, fo
 }
 
 template <class = void> // TODO: to_chars(floating-point) markup fires too eagerly (http://llvm.org/PR61563).
-_LIBCPP_HIDE_FROM_ABI inline void vprint_unicode(ostream& __os, string_view __fmt, format_args __args) {
+inline void vprint_unicode(ostream& __os, string_view __fmt, format_args __args) {
   std::__vprint_unicode(__os, __fmt, __args, false);
 }
 #    endif // _LIBCPP_HAS_UNICODE
 
 template <class... _Args>
-_LIBCPP_HIDE_FROM_ABI void print(ostream& __os, format_string<_Args...> __fmt, _Args&&... __args) {
+void print(ostream& __os, format_string<_Args...> __fmt, _Args&&... __args) {
 #    if _LIBCPP_HAS_UNICODE
   if constexpr (__print::__use_unicode_execution_charset)
     std::__vprint_unicode(__os, __fmt.get(), std::make_format_args(__args...), false);
@@ -145,7 +144,7 @@ _LIBCPP_HIDE_FROM_ABI void print(ostream& __os, format_string<_Args...> __fmt, _
 }
 
 template <class... _Args>
-_LIBCPP_HIDE_FROM_ABI void println(ostream& __os, format_string<_Args...> __fmt, _Args&&... __args) {
+void println(ostream& __os, format_string<_Args...> __fmt, _Args&&... __args) {
 #    if _LIBCPP_HAS_UNICODE
   // Note the wording in the Standard is inefficient. The output of
   // std::format is a std::string which is then copied. This solution
@@ -160,7 +159,7 @@ _LIBCPP_HIDE_FROM_ABI void println(ostream& __os, format_string<_Args...> __fmt,
 }
 
 template <class _Void = void> // TODO: to_chars(floating-point) markup fires too eagerly (http://llvm.org/PR61563).
-_LIBCPP_HIDE_FROM_ABI inline void println(ostream& __os) {
+inline void println(ostream& __os) {
   std::print(__os, (_Void(), "\n"));
 }
 

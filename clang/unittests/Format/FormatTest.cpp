@@ -3007,6 +3007,18 @@ TEST_F(FormatTest, ShortEnums) {
                Style);
 }
 
+TEST_F(FormatTest, ShortEnumsWithoutColumnLimit) {
+  FormatStyle Style = getLLVMStyle();
+  Style.ColumnLimit = 0;
+  verifyNoChange("enum { A, B, C };", Style);
+  verifyNoChange("enum {\n"
+                 "  A,\n"
+                 "  B,\n"
+                 "  C\n"
+                 "};",
+                 Style);
+}
+
 TEST_F(FormatTest, ShortCompoundRequirement) {
   constexpr StringRef Code("template <typename T>\n"
                            "concept c = requires(T x) {\n"
@@ -27206,6 +27218,109 @@ TEST_F(FormatTest, UnbalancedAngleBrackets) {
 
 TEST_F(FormatTest, LambdaArrowAsTrailingReturnArrow) {
   verifyNoCrash("void foo()([] consteval -> int {}())");
+}
+
+TEST_F(FormatTest, FormatsVaOptWithTrailingComma) {
+  FormatStyle Style = getLLVMStyle();
+  Style.AlignEscapedNewlines = FormatStyle::ENAS_Left;
+  FormatStyle Style40 = getStyleWithColumns(Style, 40);
+  FormatStyle Style50 = getStyleWithColumns(Style, 50);
+
+  verifyFormat("#define M(...)                \\\n"
+               "  enum E {                    \\\n"
+               "    kA = -1,                  \\\n"
+               "    __VA_OPT__(__VA_ARGS__, ) \\\n"
+               "    kB,                       \\\n"
+               "    kCount,                   \\\n"
+               "  };",
+               Style);
+
+  FormatStyle NoShortEnums = Style;
+  NoShortEnums.AllowShortEnumsOnASingleLine = false;
+  verifyFormat("#define M(...)                \\\n"
+               "  enum E {                    \\\n"
+               "    __VA_OPT__(__VA_ARGS__, ) \\\n"
+               "    kOnly                     \\\n"
+               "  };",
+               NoShortEnums);
+
+  FormatStyle InsertComma = Style;
+  InsertComma.EnumTrailingComma = FormatStyle::ETC_Insert;
+  verifyFormat("#define M(...)                \\\n"
+               "  enum E {                    \\\n"
+               "    kFirst,                   \\\n"
+               "    __VA_OPT__(__VA_ARGS__, ) \\\n"
+               "  };",
+               InsertComma);
+
+  verifyFormat("#define M(...)                  \\\n"
+               "  int x[] = {                   \\\n"
+               "      1,                        \\\n"
+               "      2,                        \\\n"
+               "      __VA_OPT__(__VA_ARGS__, ) \\\n"
+               "  };",
+               Style);
+  verifyFormat("#define M(...)                                          \\\n"
+               "  int x[] = {__VA_OPT__(a, ) 1, 1000000000, 2000000000, \\\n"
+               "             3000000000,     4, 5000000000, 6000000000};",
+               Style);
+
+  FormatStyle OnePerLine = Style;
+  OnePerLine.PackParameters.BinPack = FormatStyle::BPPS_AlwaysOnePerLine;
+  verifyFormat("#define M(...)                   \\\n"
+               "  struct S {                     \\\n"
+               "    template <__VA_OPT__(int, )> \\\n"
+               "    void f(__VA_OPT__(int a, )   \\\n"
+               "           int b,                \\\n"
+               "           __VA_OPT__(int c, )); \\\n"
+               "  };",
+               OnePerLine);
+
+  verifyFormat("#define M(...)                            \\\n"
+               "  SomeFunction(x, y, a + b __VA_OPT__(, ) \\\n"
+               "               ccc + ddddddddddddddd, z);",
+               Style50);
+
+  verifyFormat("#define M(...)             \\\n"
+               "  foo(aaaa,                \\\n"
+               "      bbbb(cccccc, dddddd) \\\n"
+               "          __VA_OPT__(, )   \\\n"
+               "      eeee);",
+               Style40);
+
+  verifyFormat("#define M(...)                        \\\n"
+               "  foo(aaaaaaaaaaaa +                  \\\n"
+               "          bbbbbbbbbbbb __VA_OPT__(, ) \\\n"
+               "      c, d, e);",
+               Style40);
+
+  verifyFormat("#define M(...)                    \\\n"
+               "  void f(__VA_OPT__(int aaaaaa, ) \\\n"
+               "         int bbbbbbbbbbbb);",
+               Style40);
+
+  FormatStyle DontAlign = Style50;
+  DontAlign.AlignAfterOpenBracket = false;
+  verifyFormat("#define M(...)                                   \\\n"
+               "  void g() {                                     \\\n"
+               "    foo(__VA_OPT__(a, ) callee(bbbbbbbbbbbbbbbb, \\\n"
+               "                            cccccccccccccccc));  \\\n"
+               "  }",
+               DontAlign);
+
+  verifyFormat("#define M(...) foo(__VA_OPT__(a, ) (b + c), __VA_OPT__(d, ))",
+               Style);
+  verifyFormat("#define M(...) __VA_OPT__(a, );", Style);
+
+  verifyFormat("#define M(...)                 \\\n"
+               "  void g() {                   \\\n"
+               "    __VA_OPT__(aaaaaaaaaaaa, ) \\\n"
+               "        bbbbbbbbbbbbbbbbbb();  \\\n"
+               "  }",
+               Style40);
+
+  verifyNoCrash("FOO([] {\n  x();\n");
+  verifyNoCrash("enum E { A = f([] { return 1;\n", NoShortEnums);
 }
 
 } // namespace

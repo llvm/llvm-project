@@ -1,0 +1,93 @@
+add_object_library(
+  syslog_internal
+  SRCS
+    syslog_internal.cpp
+  HDRS
+    syslog_internal.h
+  DEPENDS
+    libc.hdr.syslog_macros
+    libc.hdr.time_macros
+    libc.hdr.types.pid_t
+    libc.hdr.types.size_t
+    libc.hdr.types.struct_timespec
+    libc.hdr.types.struct_tm
+    libc.src.__support.CPP.string_view
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.getpid
+    libc.src.__support.arg_list
+    libc.src.__support.integer_to_string
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.__support.printf_core.core_structs
+    libc.src.__support.printf_core.printf_main
+    libc.src.__support.printf_core.writer
+    libc.src.__support.threads.mutex
+    libc.src.__support.time.clock_gettime
+    libc.src.errno.program_invocation_short_name
+    libc.src.time.strftime_core.strftime_main
+    libc.src.time.time_utils
+)
+
+add_entrypoint_object(
+  closelog
+  SRCS
+    closelog.cpp
+  HDRS
+    ../closelog.h
+  DEPENDS
+    .syslog_internal
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)
+
+add_entrypoint_object(
+  openlog
+  SRCS
+    openlog.cpp
+  HDRS
+    ../openlog.h
+  DEPENDS
+    .syslog_internal
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)
+
+add_entrypoint_object(
+  setlogmask
+  SRCS
+    setlogmask.cpp
+  HDRS
+    ../setlogmask.h
+  DEPENDS
+    .syslog_internal
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)
+
+add_entrypoint_object(
+  syslog
+  SRCS
+    syslog.cpp
+  HDRS
+    ../syslog.h
+  DEPENDS
+    .syslog_internal
+    libc.src.__support.arg_list
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+)
+
+add_entrypoint_object(
+  vsyslog
+  SRCS
+    vsyslog.cpp
+  HDRS
+    ../vsyslog.h
+  DEPENDS
+    .syslog_internal
+    libc.src.__support.arg_list
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+)
