@@ -18,11 +18,11 @@
 
 ORC_RT_SPS_WRAPPER_DECL(orc_rt_ci_sps_Session_lookupInstanceSymbols)
 
-namespace orc_rt::sps_ci {
+namespace orc_rt::sps::ci {
 
 /// Add the SPS controller interface to the Session APIs.
 Error addSession(SimpleSymbolTable &ST) noexcept;
 
-} // namespace orc_rt::sps_ci
+} // namespace orc_rt::sps::ci
 
 #endif // ORC_RT_BEDROCK_SPS_SESSIONSPSCI_H

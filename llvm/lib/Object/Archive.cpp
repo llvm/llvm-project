@@ -1262,7 +1262,7 @@ Expected<Archive::Child> Archive::Symbol::getMember() const {
 
 Archive::Symbol Archive::Symbol::getNext() const {
   Symbol t(*this);
-  if (Parent->kind() == K_BSD) {
+  if (Parent->kind() == K_BSD || Parent->kind() == K_DARWIN64) {
     // t.StringIndex is an offset from the start of the __.SYMDEF or
     // "__.SYMDEF SORTED" member into the string table for the ranlib
     // struct indexed by t.SymbolIndex .  To change t.StringIndex to the
@@ -1276,18 +1276,24 @@ Archive::Symbol Archive::Symbol::getNext() const {
     // and the second being the offset into the archive of the member that
     // define the symbol. After that the next uint32_t is the byte count of
     // the string table followed by the string table.
+    //
+    // The __.SYMDEF_64 or "__.SYMDEF_64 SORTED" member has the same layout
+    // with uint64_t in place of uint32_t (ranlib_64 structs).
+    const bool Is64 = Parent->kind() == K_DARWIN64;
+    const unsigned WordSize = Is64 ? 8 : 4;
+    auto ReadWord = [&](const char *P) -> uint64_t {
+      return Is64 ? read64le(P) : read32le(P);
+    };
     const char *Buf = Parent->getSymbolTable().begin();
-    uint32_t RanlibCount = 0;
-    RanlibCount = read32le(Buf) / 8;
+    uint64_t RanlibCount = ReadWord(Buf) / (2 * WordSize);
     // If t.SymbolIndex + 1 will be past the count of symbols (the RanlibCount)
     // don't change the t.StringIndex as we don't want to reference a ranlib
     // past RanlibCount.
     if (t.SymbolIndex + 1 < RanlibCount) {
-      const char *Ranlibs = Buf + 4;
-      uint32_t CurRanStrx = 0;
-      uint32_t NextRanStrx = 0;
-      CurRanStrx = read32le(Ranlibs + t.SymbolIndex * 8);
-      NextRanStrx = read32le(Ranlibs + (t.SymbolIndex + 1) * 8);
+      const char *Ranlibs = Buf + WordSize;
+      uint64_t CurRanStrx = ReadWord(Ranlibs + t.SymbolIndex * 2 * WordSize);
+      uint64_t NextRanStrx =
+          ReadWord(Ranlibs + (t.SymbolIndex + 1) * 2 * WordSize);
       t.StringIndex -= CurRanStrx;
       t.StringIndex += NextRanStrx;
     }

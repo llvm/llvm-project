@@ -100,6 +100,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
+#include "AnalysisOptions.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/MemoryLocation.h"
@@ -113,16 +114,10 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include <cassert>
 #include <cstdint>
 
 using namespace llvm;
-
-// A handy option for disabling TBAA functionality. The same effect can also be
-// achieved by stripping the !tbaa tags from IR, but this option is sometimes
-// more convenient.
-static cl::opt<bool> EnableTBAA("enable-tbaa", cl::init(true), cl::Hidden);
 
 namespace {
 
@@ -680,14 +675,19 @@ bool TypeBasedAAResult::Aliases(const MDNode *A, const MDNode *B) const {
   return matchAccessTags(A, B);
 }
 
+TypeBasedAAResult::TypeBasedAAResult(const LLVMContext &C,
+                                     bool UsingTypeSanitizer)
+    : Opts(getAnalysisOptions(C)), UsingTypeSanitizer(UsingTypeSanitizer) {}
+
 bool TypeBasedAAResult::shouldUseTBAA() const {
-  return EnableTBAA && !UsingTypeSanitizer;
+  return Opts.enable_tbaa && !UsingTypeSanitizer;
 }
 
 AnalysisKey TypeBasedAA::Key;
 
 TypeBasedAAResult TypeBasedAA::run(Function &F, FunctionAnalysisManager &AM) {
-  return TypeBasedAAResult(F.hasFnAttribute(Attribute::SanitizeType));
+  return TypeBasedAAResult(F.getContext(),
+                           F.hasFnAttribute(Attribute::SanitizeType));
 }
 
 char TypeBasedAAWrapperPass::ID = 0;
@@ -701,7 +701,8 @@ ImmutablePass *llvm::createTypeBasedAAWrapperPass() {
 TypeBasedAAWrapperPass::TypeBasedAAWrapperPass() : ImmutablePass(ID) {}
 
 bool TypeBasedAAWrapperPass::doInitialization(Module &M) {
-  Result.reset(new TypeBasedAAResult(/*UsingTypeSanitizer=*/false));
+  Result.reset(
+      new TypeBasedAAResult(M.getContext(), /*UsingTypeSanitizer=*/false));
   return false;
 }
 
@@ -771,7 +772,7 @@ MDNode *AAMDNodes::shiftTBAAStruct(MDNode *MD, size_t Offset) {
   return MDNode::get(MD->getContext(), Sub);
 }
 
-MDNode *AAMDNodes::extendToTBAA(MDNode *MD, ssize_t Len) {
+MDNode *AAMDNodes::extendToTBAA(MDNode *MD, std::optional<uint64_t> Len) {
   // Fast path if 0-length
   if (Len == 0)
     return nullptr;
@@ -783,7 +784,7 @@ MDNode *AAMDNodes::extendToTBAA(MDNode *MD, ssize_t Len) {
     return MD;
 
   // If unknown size, drop the TBAA.
-  if (Len == -1)
+  if (!Len)
     return nullptr;
 
   // Otherwise, create TBAA with the new Len
@@ -792,12 +793,18 @@ MDNode *AAMDNodes::extendToTBAA(MDNode *MD, ssize_t Len) {
   ConstantInt *PreviousSize = mdconst::extract<ConstantInt>(NextNodes[3]);
 
   // Don't create a new MDNode if it is the same length.
-  if (PreviousSize->equalsInt(Len))
+  if (PreviousSize->equalsInt(*Len))
     return MD;
 
   NextNodes[3] =
-      ConstantAsMetadata::get(ConstantInt::get(PreviousSize->getType(), Len));
+      ConstantAsMetadata::get(ConstantInt::get(PreviousSize->getType(), *Len));
   return MDNode::get(MD->getContext(), NextNodes);
+}
+
+AAMDNodes AAMDNodes::extendTo(Value *Size) const {
+  if (auto *CI = dyn_cast<ConstantInt>(Size))
+    return extendTo(CI->getValue().tryZExtValue());
+  return extendTo(std::nullopt);
 }
 
 AAMDNodes AAMDNodes::adjustForAccess(unsigned AccessSize) {

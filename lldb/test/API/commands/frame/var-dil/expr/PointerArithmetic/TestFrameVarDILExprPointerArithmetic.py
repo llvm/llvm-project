@@ -17,8 +17,6 @@ class TestFrameVarDILExprPointerArithmetic(TestBase):
             self, "Set a breakpoint here", lldb.SBFileSpec("main.cpp")
         )
 
-        self.runCmd("settings set target.experimental.use-DIL true")
-
         self.expect_var_path("+array", type="int *")
         self.expect_var_path("+array_ref", type="int *")
         self.expect_var_path("+p_int0", type="int *")

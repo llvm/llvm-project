@@ -1064,7 +1064,7 @@ bool TargetInstrInfo::getAccumulatorReassociationPatterns(
   if (!MRI.hasOneNonDBGUser(Root.getOperand(0).getReg()))
     return false;
 
-  auto User = MRI.use_instr_begin(Root.getOperand(0).getReg());
+  auto User = MRI.use_instr_nodbg_begin(Root.getOperand(0).getReg());
   if (User->getOpcode() == Opc)
     return false;
 
@@ -2236,7 +2236,7 @@ bool TargetInstrInfo::isMBBSafeToOutlineFrom(MachineBasicBlock &MBB,
     return false;
 
   if (Last != First && Last->isReturn()) {
-    --Last;
+    Last = prev_nodbg(Last, First, /*SkipPseudoOp=*/false);
     if (Last->getOpcode() == TargetOpcode::PATCHABLE_FUNCTION_EXIT ||
         Last->getOpcode() == TargetOpcode::PATCHABLE_TAIL_CALL)
       return false;

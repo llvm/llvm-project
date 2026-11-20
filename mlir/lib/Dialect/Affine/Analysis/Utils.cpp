@@ -859,6 +859,10 @@ void MemRefDependenceGraph::print(raw_ostream &os) const {
   }
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void MemRefDependenceGraph::dump() const { print(llvm::errs()); }
+#endif
+
 void mlir::affine::getAffineForIVs(Operation &op,
                                    SmallVectorImpl<AffineForOp> *loops) {
   auto *currOp = op.getParentOp();
@@ -949,6 +953,7 @@ void ComputationSliceState::clearBounds() {
   ubOperands.clear();
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void ComputationSliceState::dump() const {
   llvm::errs() << "\tIVs:\n";
   for (Value iv : ivs)
@@ -970,6 +975,7 @@ void ComputationSliceState::dump() const {
       llvm::errs() << "\t\t\t" << ubOp << "\n";
   }
 }
+#endif
 
 /// Fast check to determine if the computation slice is maximal. Returns true if
 /// each slice dimension maps to an existing dst dimension and both the src

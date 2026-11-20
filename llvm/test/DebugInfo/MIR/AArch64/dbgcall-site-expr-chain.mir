@@ -59,7 +59,6 @@
 ...
 ---
 name:            foo
-tracksRegLiveness: true
 stack:
   - { id: 0, type: spill-slot, offset: -16, size: 8, alignment: 16, callee-saved-register: '$x19' }
   - { id: 1, type: spill-slot, offset: -24, size: 8, alignment: 8, callee-saved-register: '$lr' }

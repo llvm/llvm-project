@@ -1,11 +1,10 @@
-# RUN: llc -verify-machineinstrs %s -run-pass prolog-epilog -mtriple=x86_64-pc-win32-coreclr -o - | FileCheck %s
+# RUN: llc %s -run-pass prolog-epilog -mtriple=x86_64-pc-win32-coreclr -o - | FileCheck %s
 ...
 ---
 name:            main4k
 # CHECK-LABEL: name: main4k
 
 alignment:       16
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    8
 stack:

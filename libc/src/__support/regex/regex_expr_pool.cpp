@@ -13,54 +13,64 @@
 
 #include "src/__support/regex/regex_expr_pool.h"
 #include "hdr/regex_macros.h"
-#include "src/__support/CPP/new.h"
-#include "src/__support/CPP/scope.h"
+#include "hdr/stdint_proxy.h"
+#include "src/__support/CPP/algorithm.h"
+#include "src/__support/CPP/array.h"
+#include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/utility.h"
-#include "src/__support/alloc-checker.h"
+#include "src/__support/checked_ptr.h"
 #include "src/__support/hash.h"
 #include "src/__support/macros/config.h"
-#include "src/string/memory_utils/inline_memset.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace regex {
 
 namespace {
 
-// Hash an Expr node for hash-consing.
-uint32_t hash_expr(const Expr &e) {
-  // Initialise HashState with a constant seed. The specific value (0x12345678)
-  // is an arbitrary placeholder; HashState immediately mixes this seed with
-  // high-entropy constants (derived from aHash) to produce a strong hash, while
-  // the constant value guarantees deterministic hashing for hash-consing.
-  internal::HashState hasher(0x12345678);
-  uint64_t kind = static_cast<uint64_t>(e.kind);
-  hasher.update(&kind, sizeof(kind));
+// Hash an Expr node for hash-consing using the pool's pre-mixed seed.
+uint32_t hash_expr(const Expr e, uint32_t seed) {
+  const uint64_t s = (static_cast<uint64_t>(seed) << 32) | seed;
+  internal::HashState hasher(
+      internal::RANDOMNESS[1][0] ^ s, internal::RANDOMNESS[1][1] ^ s,
+      internal::RANDOMNESS[1][2] ^ s, internal::RANDOMNESS[1][3] ^ s);
+  struct HashKey {
+    uint64_t kind;
+    uint64_t payload;
+  } key = {static_cast<uint64_t>(e.kind), 0};
+  static_assert(sizeof(HashKey) == 2 * sizeof(uint64_t));
   switch (e.kind) {
+  case ExprKind::EmptySet:
+  case ExprKind::EmptyStr:
+    break;
   case ExprKind::Literal:
-    hasher.update(&e.ch, sizeof(e.ch));
+    key.payload = static_cast<uint8_t>(e.ch);
     break;
   case ExprKind::Anchor:
-    hasher.update(&e.anchor_mask, sizeof(e.anchor_mask));
+    key.payload = e.anchor_mask;
     break;
   case ExprKind::ByteSet:
-    hasher.update(&e.byte_set_id, sizeof(e.byte_set_id));
+    key.payload = e.byte_set_id;
     break;
   case ExprKind::Star:
-    hasher.update(&e.body, sizeof(e.body));
+    key.payload = e.body;
+    break;
+  case ExprKind::Repeat:
+    key.payload = (static_cast<uint64_t>(e.rep.body) << 32) |
+                  (static_cast<uint64_t>(e.rep.min) << 16) | e.rep.max;
     break;
   case ExprKind::Concat:
   case ExprKind::Alt:
-    hasher.update(&e.bin.left, sizeof(e.bin.left));
-    hasher.update(&e.bin.right, sizeof(e.bin.right));
-    break;
-  default:
+    key.payload = (static_cast<uint64_t>(e.bin.left) << 32) | e.bin.right;
     break;
   }
+  hasher.update(&key, sizeof(key));
   uint64_t h = hasher.finish();
   return static_cast<uint32_t>(h ^ (h >> 32));
 }
 
-// Bounded linear-probing range over a power-of-two open-addressing table.
+// Bounded triangular-probing range over a power-of-two open-addressing table.
+// Triangular numbers k(k+1)/2 mod 2^p visit every bucket exactly once while
+// avoiding linear-probing primary clustering.
 class BucketProber {
   cpp::span<ExprId> table;
   size_t start_idx;
@@ -79,8 +89,10 @@ public:
 
     ExprId &operator*() const { return table[idx]; }
     Iterator &operator++() {
-      idx = (idx + 1) & mask();
+      // Advance by increasing step sizes (triangular probing) rather than
+      // sequentially; visiting buckets out of order is intentional.
       ++step;
+      idx = (idx + step) & mask();
       return *this;
     }
     constexpr bool operator!=(Sentinel) const { return step != table.size(); }
@@ -97,33 +109,32 @@ public:
 
 } // namespace
 
-// TODO: When cpp::unique_ptr and cpp::make_unique are added to
-// src/__support/CPP/, replace the manual AllocChecker + new[]/delete[] calls in
-// ensure_initialized(), ~ExprPool(), allocate_block(), make_byte_set(), and
-// grow_hashtable() with cpp::make_unique<ExprId[]>(...) and
-// cpp::make_unique<Block>(), eliminating explicit zeroing via inline_memset and
-// the destructor cleanup loop.
-ExprPool::~ExprPool() {
-  delete[] byte_sets.data();
-  delete[] hashtable.data();
-  for (Block *blk : active_blocks())
-    delete blk;
-  delete[] blocks.data();
-}
-
 bool ExprPool::ensure_initialized() {
   if (block_count > 0)
     return true;
-  AllocChecker ac;
-  ExprId *raw_table = new (ac) ExprId[INITIAL_HASH_CAPACITY];
-  if (!ac)
+  auto table = make_unique<ExprId[]>(INITIAL_HASH_CAPACITY);
+  if (!table)
     return false;
-  cpp::scope_exit table_guard([raw_table] { delete[] raw_table; });
   if (!allocate_block())
     return false;
-  table_guard.release();
-  hashtable = cpp::span<ExprId>(raw_table, INITIAL_HASH_CAPACITY);
-  inline_memset(hashtable.data(), 0, hashtable.size_bytes());
+  hashtable = table.take_unique();
+  hashtable_capacity = INITIAL_HASH_CAPACITY;
+
+  // Seed per-pool hashing from both heap and stack addresses without syscalls
+  // so baremetal and GPU targets stay self-contained.  Do not XOR this with
+  // blocks.get(): regcomp() allocates RegexInternal on the heap right before
+  // blocks, so both pointers share the same heap ASLR base and XORing them
+  // cancels the randomised upper bits into a constant offset.  Feeding them
+  // separately into HashState alongside a stack address (&ptrs) preserves both
+  // heap and stack ASLR entropy while sequential ExprIds stay deterministic.
+  const cpp::array<uintptr_t, 2> ptrs = {
+      reinterpret_cast<uintptr_t>(blocks.get()),
+      reinterpret_cast<uintptr_t>(&ptrs)};
+  internal::HashState seed_hasher(
+      static_cast<uint64_t>(reinterpret_cast<uintptr_t>(this)));
+  seed_hasher.update(ptrs.data(), sizeof(ptrs));
+  const uint64_t mixed = seed_hasher.finish();
+  hash_seed = static_cast<uint32_t>(mixed ^ (mixed >> 32));
 
   [[maybe_unused]] auto empty_set_id = intern(Expr::make_empty_set());
   [[maybe_unused]] auto empty_str_id = intern(Expr::make_empty_str());
@@ -132,56 +143,51 @@ bool ExprPool::ensure_initialized() {
   return true;
 }
 
-ExprId &ExprPool::find_bucket(cpp::span<ExprId> table, const Expr &e) const {
+ExprId &ExprPool::find_bucket(cpp::span<ExprId> table, const Expr e) const {
   for (ExprId &slot : BucketProber(table, e.hash)) {
     if (slot == INVALID_EXPR_ID)
       return slot;
-    const Expr &cand = get(slot);
+    const Expr cand = get(slot);
     if (cand.hash == e.hash && cand == e)
       return slot;
   }
+  LIBC_ASSERT(false);
   __builtin_unreachable();
 }
 
 bool ExprPool::allocate_block() {
-  AllocChecker ac;
-  if (block_count == blocks.size()) {
-    size_t new_cap = blocks.empty() ? INITIAL_BLOCKS_CAPACITY
-                                    : blocks.size() * GROWTH_FACTOR;
-    Block **new_blocks = new (ac) Block *[new_cap];
-    if (!ac)
+  if (block_count == block_capacity) {
+    size_t new_cap = block_capacity == 0 ? INITIAL_BLOCKS_CAPACITY
+                                         : block_capacity * GROWTH_FACTOR;
+    auto new_blocks = make_unique<cpp::unique_ptr<Block>[]>(new_cap);
+    if (!new_blocks)
       return false;
-    Block **dst = new_blocks;
-    for (Block *blk : active_blocks()) {
-      *dst = blk;
-      ++dst;
-    }
-    delete[] blocks.data();
-    blocks = cpp::span<Block *>(new_blocks, new_cap);
+    for (size_t i = 0; i < block_count; ++i)
+      new_blocks[i] = cpp::move(blocks[i]);
+    blocks = new_blocks.take_unique();
+    block_capacity = new_cap;
   }
-  Block *blk = new (ac) Block();
-  if (!ac)
+  auto blk = make_unique<Block>();
+  if (!blk)
     return false;
-  blocks[block_count] = blk;
+  blocks[block_count] = blk.take_unique();
   ++block_count;
   return true;
 }
 
 bool ExprPool::grow_hashtable() {
-  size_t new_cap = hashtable.size() * GROWTH_FACTOR;
-  AllocChecker ac;
-  ExprId *raw_table = new (ac) ExprId[new_cap];
-  if (!ac)
+  size_t new_cap = hashtable_capacity * GROWTH_FACTOR;
+  auto new_table = make_unique<ExprId[]>(new_cap);
+  if (!new_table)
     return false;
-  cpp::span<ExprId> new_table(raw_table, new_cap);
-  inline_memset(new_table.data(), 0, new_table.size_bytes());
 
-  for (ExprId id : hashtable)
+  cpp::span<ExprId> new_slots(new_table.get(), new_cap);
+  for (ExprId id : hashtable_slots())
     if (id != INVALID_EXPR_ID)
-      find_bucket(new_table, get(id)) = id;
+      find_bucket(new_slots, get(id)) = id;
 
-  delete[] hashtable.data();
-  hashtable = new_table;
+  hashtable = new_table.take_unique();
+  hashtable_capacity = new_cap;
   return true;
 }
 
@@ -190,8 +196,8 @@ ErrorOr<ExprId> ExprPool::intern(Expr e) {
     return Error(REG_ESPACE);
 
   // Probe for an existing node with identical content.
-  e.hash = hash_expr(e);
-  ExprId *bucket = &find_bucket(hashtable, e);
+  e.hash = hash_expr(e, hash_seed);
+  ExprId *bucket = &find_bucket(hashtable_slots(), e);
   if (*bucket != INVALID_EXPR_ID)
     return *bucket;
 
@@ -202,7 +208,7 @@ ErrorOr<ExprId> ExprPool::intern(Expr e) {
   if (node_count >= max_hashtable_nodes()) {
     if (!grow_hashtable())
       return Error(REG_ESPACE);
-    bucket = &find_bucket(hashtable, e);
+    bucket = &find_bucket(hashtable_slots(), e);
   }
 
   // Arena Allocation: If no matching node found, allocate a stable slot.
@@ -213,7 +219,7 @@ ErrorOr<ExprId> ExprPool::intern(Expr e) {
 
   // Node Initialisation: Copy the structural definition into the arena.
   ++node_count;
-  ExprId new_id = static_cast<ExprId>(node_count);
+  ExprId new_id = node_count;
   slot_at(new_id) = e;
   *bucket = new_id;
   return new_id;
@@ -233,6 +239,8 @@ ErrorOr<ExprId> ExprPool::make_lit(char c) {
   return intern(Expr::make_literal(c));
 }
 ErrorOr<ExprId> ExprPool::make_anchor(uint8_t mask) {
+  if (mask == 0 || (mask & ~ALL_ANCHORS_MASK) != 0)
+    return Error(REG_BADPAT);
   return intern(Expr::make_anchor(mask));
 }
 
@@ -243,6 +251,8 @@ ErrorOr<ExprId> ExprPool::make_byte_set(const ByteSet &bs) {
     if (bs.test(b)) {
       ++count;
       last_bit = b;
+      if (count > 1)
+        break;
     }
   }
   if (count == 0)
@@ -257,20 +267,16 @@ ErrorOr<ExprId> ExprPool::make_byte_set(const ByteSet &bs) {
     ++bs_id;
   }
 
-  if (byte_set_count == byte_sets.size()) {
-    size_t new_cap = byte_sets.empty() ? INITIAL_BYTE_SETS_CAPACITY
-                                       : byte_sets.size() * GROWTH_FACTOR;
-    AllocChecker ac;
-    ByteSet *new_sets = new (ac) ByteSet[new_cap];
-    if (!ac)
+  if (byte_set_count == byte_set_capacity) {
+    size_t new_cap = byte_set_capacity == 0 ? INITIAL_BYTE_SETS_CAPACITY
+                                            : byte_set_capacity * GROWTH_FACTOR;
+    auto new_sets = make_unique<ByteSet[]>(new_cap);
+    if (!new_sets)
       return Error(REG_ESPACE);
-    ByteSet *dst = new_sets;
-    for (const ByteSet &existing : active_byte_sets()) {
-      *dst = existing;
-      ++dst;
-    }
-    delete[] byte_sets.data();
-    byte_sets = cpp::span<ByteSet>(new_sets, new_cap);
+    for (size_t i = 0; i < byte_set_count; ++i)
+      new_sets[i] = byte_sets[i];
+    byte_sets = new_sets.take_unique();
+    byte_set_capacity = new_cap;
   }
 
   ErrorOr<ExprId> id = intern(Expr::make_byte_set(bs_id));
@@ -281,30 +287,74 @@ ErrorOr<ExprId> ExprPool::make_byte_set(const ByteSet &bs) {
   return id;
 }
 
+namespace {
+
+// Multiplies a subexpression's repeat expansion factor by an enclosing repeat
+// bound, saturating at MAX_REPEAT_EXPANSION + 1 so nested bounds checks never
+// overflow uint16_t.
+constexpr uint16_t scale_exp(uint16_t base, uint16_t factor) {
+  if (factor <= 1)
+    return base;
+  uint32_t prod = static_cast<uint32_t>(base) * static_cast<uint32_t>(factor);
+  return static_cast<uint16_t>(
+      cpp::min<uint32_t>(prod, MAX_REPEAT_EXPANSION + 1));
+}
+
+} // namespace
+
 ErrorOr<ExprId> ExprPool::make_star(ExprId body) {
-  if (body == INVALID_EXPR_ID)
+  if (!is_valid_input(body))
     return Error(REG_BADPAT);
   // Ø* = ε and ε* = ε
   if (body == EMPTY_SET_ID || body == EMPTY_STR_ID)
     return empty_str();
-  // (R*)* = R* (Idempotency)
-  if (get(body).kind == ExprKind::Star)
+  // (R*)* = R* and (R{m,n})* = R* iff m <= 1 (since R^1 is in R{m,n} iff
+  // m <= 1, whereas (a{2,3})* excludes "a").
+  const Expr be = get(body);
+  if (be.kind == ExprKind::Star)
     return body;
-  return intern(Expr::make_star(body, has_anchors(body)));
+  if (be.kind == ExprKind::Repeat && be.rep.min <= 1)
+    return make_star(be.rep.body);
+  return intern(Expr::make_star(body, be.has_repeat, be.rep_expansion));
+}
+
+ErrorOr<ExprId> ExprPool::make_repeat(ExprId body, uint16_t min, uint16_t max) {
+  if (!is_valid_input(body) || min > max || min == REPEAT_INF)
+    return Error(REG_BADPAT);
+  // Normalize R{0,0} = ε, ε{m,n} = ε, Ø{m,n}, R{1,1} = R, and
+  // R{0,REPEAT_INF} = R*.
+  if (max == 0 || body == EMPTY_STR_ID)
+    return empty_str();
+  if (body == EMPTY_SET_ID)
+    return (min == 0) ? empty_str() : empty_set();
+  if (min == 1 && max == 1)
+    return body;
+  if (min == 0 && max == REPEAT_INF)
+    return make_star(body);
+  const Expr be = get(body);
+  if (be.kind == ExprKind::Star)
+    return body;
+  if (be.kind == ExprKind::Repeat && be.rep.min == 1 &&
+      be.rep.max == REPEAT_INF)
+    return make_repeat(be.rep.body, min, REPEAT_INF);
+  uint16_t factor = (max == REPEAT_INF) ? min : max;
+  return intern(Expr::make_repeat(body, min, max, be.nullable_mask,
+                                  scale_exp(be.rep_expansion, factor)));
 }
 
 ErrorOr<ExprId> ExprPool::make_concat(ExprId l, ExprId r) {
-  if (l == INVALID_EXPR_ID || r == INVALID_EXPR_ID)
+  if (!is_valid_input(l) || !is_valid_input(r))
     return Error(REG_BADPAT);
   // Apply basic algebraic identities for concatenation:
   // Ø · R = R · Ø = Ø (Identity: null set)
   if (l == EMPTY_SET_ID || r == EMPTY_SET_ID)
     return empty_set();
   // ε · R = R · ε = R (Identity: empty string)
-  if (l == EMPTY_STR_ID)
-    return r;
-  if (r == EMPTY_STR_ID)
-    return l;
+  if (l == EMPTY_STR_ID || r == EMPTY_STR_ID) {
+    if (!ensure_initialized())
+      return Error(REG_ESPACE);
+    return (l == EMPTY_STR_ID) ? r : l;
+  }
   // (A · B) · C = A · (B · C) (Right-associative canonical form)
   const Expr le = get(l);
   if (le.kind == ExprKind::Concat) {
@@ -313,35 +363,175 @@ ErrorOr<ExprId> ExprPool::make_concat(ExprId l, ExprId r) {
       return tail;
     return make_concat(le.bin.left, *tail);
   }
-  return intern(Expr::make_concat(l, r, is_nullable(l) && is_nullable(r),
-                                  has_anchors(l) || has_anchors(r)));
+  const Expr re = get(r);
+  return intern(Expr::make_concat(
+      l, r, static_cast<uint8_t>(le.nullable_mask & re.nullable_mask),
+      le.has_repeat || re.has_repeat,
+      cpp::max(le.rep_expansion, re.rep_expansion)));
 }
 
+namespace {
+
+// Coalesces R{m1,n1} | R{m2,n2} (and shared-prefix/shared-suffix Concat nodes)
+// when their repetition intervals overlap or are adjacent.  Returns
+// INVALID_EXPR_ID when the pair cannot be coalesced.
+ErrorOr<ExprId> coalesce_repeat_pair(ExprId a, ExprId b, ExprPool &pool) {
+  const Expr ae = pool.get(a);
+  const Expr be = pool.get(b);
+  if (!ae.has_repeat && !be.has_repeat)
+    return INVALID_EXPR_ID;
+  if (ae.kind == ExprKind::Concat && be.kind == ExprKind::Concat) {
+    if (ae.bin.right == be.bin.right) {
+      ErrorOr<ExprId> left =
+          coalesce_repeat_pair(ae.bin.left, be.bin.left, pool);
+      if (!left.has_value() || *left == INVALID_EXPR_ID)
+        return left;
+      return pool.make_concat(*left, ae.bin.right);
+    }
+    if (ae.bin.left == be.bin.left) {
+      ErrorOr<ExprId> right =
+          coalesce_repeat_pair(ae.bin.right, be.bin.right, pool);
+      if (!right.has_value() || *right == INVALID_EXPR_ID)
+        return right;
+      return pool.make_concat(ae.bin.left, *right);
+    }
+  }
+  // Handle Concat(X, S) | S and Concat(P, X) | P where R{0,0} normalized to
+  // EmptyStr on one side.
+  if (ae.kind == ExprKind::Concat && ae.bin.right == b) {
+    ErrorOr<ExprId> left =
+        coalesce_repeat_pair(ae.bin.left, EMPTY_STR_ID, pool);
+    if (!left.has_value() || *left == INVALID_EXPR_ID)
+      return left;
+    return pool.make_concat(*left, b);
+  }
+  if (be.kind == ExprKind::Concat && be.bin.right == a) {
+    ErrorOr<ExprId> left =
+        coalesce_repeat_pair(EMPTY_STR_ID, be.bin.left, pool);
+    if (!left.has_value() || *left == INVALID_EXPR_ID)
+      return left;
+    return pool.make_concat(*left, a);
+  }
+  if (ae.kind == ExprKind::Concat && ae.bin.left == b) {
+    ErrorOr<ExprId> right =
+        coalesce_repeat_pair(ae.bin.right, EMPTY_STR_ID, pool);
+    if (!right.has_value() || *right == INVALID_EXPR_ID)
+      return right;
+    return pool.make_concat(b, *right);
+  }
+  if (be.kind == ExprKind::Concat && be.bin.left == a) {
+    ErrorOr<ExprId> right =
+        coalesce_repeat_pair(EMPTY_STR_ID, be.bin.right, pool);
+    if (!right.has_value() || *right == INVALID_EXPR_ID)
+      return right;
+    return pool.make_concat(a, *right);
+  }
+  if (ae.kind != ExprKind::Repeat && be.kind != ExprKind::Repeat)
+    return INVALID_EXPR_ID;
+  // When b is Repeat(a, ...) and a is itself a Repeat, pick body = a so
+  // get_interval(a, ae) matches [1, 1] via `id == body` symmetrically with
+  // coalesce_repeat_pair(b, a).
+  ExprId body = (ae.kind == ExprKind::Repeat &&
+                 !(be.kind == ExprKind::Repeat && be.rep.body == a))
+                    ? ae.rep.body
+                    : be.rep.body;
+  struct RepeatInterval {
+    uint16_t min;
+    uint16_t max;
+  };
+  // Undo make_repeat normalizations: R -> [1,1], EmptyStr -> [0,0], and
+  // Star(R) -> [0,REPEAT_INF].
+  auto get_interval = [&](ExprId id,
+                          const Expr e) -> cpp::optional<RepeatInterval> {
+    if (e.kind == ExprKind::Repeat && e.rep.body == body)
+      return RepeatInterval{e.rep.min, e.rep.max};
+    if (e.kind == ExprKind::Star && e.body == body)
+      return RepeatInterval{0, REPEAT_INF};
+    if (id == body)
+      return RepeatInterval{1, 1};
+    if (id == EMPTY_STR_ID)
+      return RepeatInterval{0, 0};
+    return cpp::nullopt;
+  };
+  cpp::optional<RepeatInterval> lhs = get_interval(a, ae);
+  cpp::optional<RepeatInterval> rhs = get_interval(b, be);
+  if (!lhs.has_value() || !rhs.has_value())
+    return INVALID_EXPR_ID;
+  // Integer intervals [lhs->min, lhs->max] and [rhs->min, rhs->max] coalesce
+  // iff they overlap or are adjacent (later_min <= earlier_max + 1, e.g.
+  // [2,3] U [4,5] = [2,5]).
+  uint16_t later_min = cpp::max(lhs->min, rhs->min);
+  uint16_t earlier_max = cpp::min(lhs->max, rhs->max);
+  if (earlier_max != REPEAT_INF && later_min > earlier_max + 1)
+    return INVALID_EXPR_ID;
+  return pool.make_repeat(body, cpp::min(lhs->min, rhs->min),
+                          cpp::max(lhs->max, rhs->max));
+}
+
+// Attempts to coalesce a single non-Alt branch `item` with any branch in
+// `spine`, returning INVALID_EXPR_ID if no branch coalesces.
+ErrorOr<ExprId> coalesce_item_into_spine(ExprId item, ExprId spine,
+                                         ExprPool &pool) {
+  const Expr item_e = pool.get(item);
+  const Expr spine_e = pool.get(spine);
+  if (!item_e.has_repeat && !spine_e.has_repeat)
+    return INVALID_EXPR_ID;
+  if (spine_e.kind != ExprKind::Alt)
+    return coalesce_repeat_pair(item, spine, pool);
+  ErrorOr<ExprId> head_c = coalesce_repeat_pair(item, spine_e.bin.left, pool);
+  if (!head_c.has_value())
+    return head_c;
+  if (*head_c != INVALID_EXPR_ID)
+    return pool.make_alt(*head_c, spine_e.bin.right);
+  ErrorOr<ExprId> tail_c =
+      coalesce_item_into_spine(item, spine_e.bin.right, pool);
+  if (!tail_c.has_value() || *tail_c == INVALID_EXPR_ID)
+    return tail_c;
+  return pool.make_alt(spine_e.bin.left, *tail_c);
+}
+
+} // namespace
+
 ErrorOr<ExprId> ExprPool::make_alt(ExprId l, ExprId r) {
-  if (l == INVALID_EXPR_ID || r == INVALID_EXPR_ID)
+  if (!is_valid_input(l) || !is_valid_input(r))
     return Error(REG_BADPAT);
   // Apply basic algebraic identities for alternation:
-  // Ø | R = R | Ø = R (Identity: null set)
-  if (l == EMPTY_SET_ID)
-    return r;
-  if (r == EMPTY_SET_ID)
-    return l;
-  // R | R = R (Idempotency)
-  if (l == r)
-    return l;
+  // Ø | R = R | Ø = R (Identity: null set) and R | R = R (Idempotency)
+  if (l == EMPTY_SET_ID || r == EMPTY_SET_ID || l == r) {
+    if (!ensure_initialized())
+      return Error(REG_ESPACE);
+    return (l == EMPTY_SET_ID) ? r : l;
+  }
 
   const Expr le = get(l);
   const Expr re = get(r);
   if (le.kind != ExprKind::Alt && re.kind != ExprKind::Alt) {
+    ErrorOr<ExprId> coalesced = coalesce_repeat_pair(l, r, *this);
+    if (!coalesced.has_value() || *coalesced != INVALID_EXPR_ID)
+      return coalesced;
     if (l > r)
       cpp::swap(l, r);
-    return intern(Expr::make_alt(l, r, is_nullable(l) || is_nullable(r),
-                                 has_anchors(l) || has_anchors(r)));
+    return intern(Expr::make_alt(
+        l, r, static_cast<uint8_t>(le.nullable_mask | re.nullable_mask),
+        le.has_repeat || re.has_repeat,
+        cpp::max(le.rep_expansion, re.rep_expansion)));
+  }
+
+  if (le.has_repeat || re.has_repeat) {
+    if (le.kind != ExprKind::Alt) {
+      ErrorOr<ExprId> c = coalesce_item_into_spine(l, r, *this);
+      if (!c.has_value() || *c != INVALID_EXPR_ID)
+        return c;
+    } else if (re.kind != ExprKind::Alt) {
+      ErrorOr<ExprId> c = coalesce_item_into_spine(r, l, *this);
+      if (!c.has_value() || *c != INVALID_EXPR_ID)
+        return c;
+    }
   }
 
   // Merge two right-associated sorted Alt spines in ascending ExprId order so
   // multi-way alternations canonicalize to a single deduplicated tree and
-  // derivative state spaces under '*' stay finite.
+  // derivative state spaces under '*' and '{m,n}' stay finite.
   ExprId hl = (le.kind == ExprKind::Alt) ? le.bin.left : l;
   ExprId tl = (le.kind == ExprKind::Alt) ? le.bin.right : EMPTY_SET_ID;
   ExprId hr = (re.kind == ExprKind::Alt) ? re.bin.left : r;
@@ -358,9 +548,24 @@ ErrorOr<ExprId> ExprPool::make_alt(ExprId l, ExprId r) {
   }
   if (!rest.has_value())
     return rest;
-  return intern(Expr::make_alt(head, *rest,
-                               is_nullable(head) || is_nullable(*rest),
-                               has_anchors(head) || has_anchors(*rest)));
+  // When merging two Alt spines, `head` (or a newly coalesced interval in
+  // `*rest`) may now coalesce across the two spines or out-of-order ExprIds.
+  const Expr he = get(head);
+  const Expr re_rest = get(*rest);
+  if (le.kind == ExprKind::Alt && re.kind == ExprKind::Alt &&
+      (he.has_repeat || re_rest.has_repeat)) {
+    ErrorOr<ExprId> c = coalesce_item_into_spine(head, *rest, *this);
+    if (!c.has_value() || *c != INVALID_EXPR_ID)
+      return c;
+  }
+  ExprId rest_head = (re_rest.kind == ExprKind::Alt) ? re_rest.bin.left : *rest;
+  if (head >= rest_head)
+    return make_alt(head, *rest);
+  return intern(Expr::make_alt(
+      head, *rest,
+      static_cast<uint8_t>(he.nullable_mask | re_rest.nullable_mask),
+      he.has_repeat || re_rest.has_repeat,
+      cpp::max(he.rep_expansion, re_rest.rep_expansion)));
 }
 
 } // namespace regex

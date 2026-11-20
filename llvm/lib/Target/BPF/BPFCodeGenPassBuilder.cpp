@@ -43,6 +43,7 @@ public:
                                  PassInstrumentationCallbacks *PIC)
       : CodeGenPassBuilder(TM, Opts, PIC) {}
 
+protected:
   void addIRPasses(PassManagerWrapper &PMW) override;
 
   Error addInstSelector(PassManagerWrapper &PMW) override;
@@ -60,9 +61,13 @@ public:
 };
 
 void BPFCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
+  const BPFSubtarget *Subtarget = getTM().getSubtargetImpl();
+
   addFunctionPass(AtomicExpandPass(TM), PMW);
   flushFPMsToMPM(PMW);
   addModulePass(BPFCheckAndAdjustIRPass(), PMW);
+  if (Subtarget->hasFuncTable())
+    addModulePass(BPFFuncTablePass(), PMW);
 
   Base::addIRPasses(PMW);
 }
