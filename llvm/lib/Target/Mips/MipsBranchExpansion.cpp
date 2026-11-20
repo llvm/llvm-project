@@ -939,15 +939,15 @@ bool MipsBranchExpansionImpl::runOnMachineFunction(MachineFunction &MF) {
                  fpuDelaySlotChanged || loadDelaySlotChanged || MfloChanged;
 
   // Then run them alternatively while there are changes.
-  while (forbiddenSlotChanged) {
+  while (forbiddenSlotChanged || fpuDelaySlotChanged || loadDelaySlotChanged ||
+         MfloChanged) {
+    longBranchChanged = handlePossibleLongBranch();
+    if (!longBranchChanged)
+      break;
+    forbiddenSlotChanged = handleForbiddenSlot();
     longBranchChanged = handlePossibleLongBranch();
     fpuDelaySlotChanged = handleFPUDelaySlot();
     loadDelaySlotChanged = handleLoadDelaySlot();
-    MfloChanged = handleMFLO();
-    if (!longBranchChanged && !fpuDelaySlotChanged && !loadDelaySlotChanged &&
-        !MfloChanged)
-      break;
-    forbiddenSlotChanged = handleForbiddenSlot();
   }
 
   return Changed;
