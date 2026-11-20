@@ -21,17 +21,17 @@
 #include <memory>
 
 namespace hlfir {
-  /// Specifies the scope to which SimplifyHLFIRIntrinsics applies.
-  enum class HLFIRIntrinsicSimplificationScope {
-    /// Apply SimplifyHLFIRIntrinsics to all intrinsics.
-    All,
-    /// Apply SimplifyHLFIRIntrinsics only to sum intrinsics.
-    SumOnly,
-    /// Apply SimplifyHLFIRIntrinsics to all intrinsics except sum intrinsics.
-    ExceptSum,
-    /// Do not apply SimplifyHLFIRIntrinsics to any intrinsics.
-    None,
-  };
+/// Specifies the scope to which SimplifyHLFIRIntrinsics applies.
+enum class HLFIRIntrinsicSimplificationScope {
+  /// Apply SimplifyHLFIRIntrinsics to all intrinsics.
+  All,
+  /// Apply SimplifyHLFIRIntrinsics only to sum intrinsics.
+  SumOnly,
+  /// Apply SimplifyHLFIRIntrinsics to all intrinsics except sum intrinsics.
+  ExceptSum,
+  /// Do not apply SimplifyHLFIRIntrinsics to any intrinsics.
+  None,
+};
 #define GEN_PASS_DECL
 #define GEN_PASS_REGISTRATION
 #include "flang/Optimizer/HLFIR/Passes.h.inc"
