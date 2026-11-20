@@ -248,10 +248,6 @@ FileSpec ModuleListProperties::GetLLDBIndexCachePath() const {
       .value_or(FileSpec());
 }
 
-bool ModuleListProperties::SetLLDBIndexCachePath(const FileSpec &path) {
-  return m_index_cache_sp->SetPropertyAtIndex(ePropertyIndexCachePath, path);
-}
-
 bool ModuleListProperties::GetLLDBIndexCacheForceDisable() const {
   const uint32_t idx = ePropertyIndexCacheForceDisable;
   return m_index_cache_sp->GetPropertyAtIndexAs<bool>(idx).value_or(
