@@ -898,6 +898,14 @@ def ElementwiseMappableOp : TEST_Op<"elementwise_mappable",
   let results = (outs Variadic<AnyType>);
 }
 
+def PureElementwiseRegionOp : TEST_Op<"pure_elementwise_region",
+    [Elementwise, RecursivelySpeculatable, RecursiveMemoryEffects, SingleBlock]> {
+  let summary = "elementwise region op that can capture external values";
+  let arguments = (ins Variadic<AnyType>);
+  let results = (outs AnyType);
+  let regions = (region SizedRegion<1>:$body);
+}
+
 def ArgAndResHaveFixedElementTypesOp :
     TEST_Op<"arg_and_res_have_fixed_element_types",
       [PredOpTrait<"fixed type combination",
@@ -989,6 +997,28 @@ def OperandRankEqualsResultSize :
                       "operand rank equals result size">]> {
   let arguments = (ins AnyShaped:$operand);
   let results = (outs AnyShaped:$result);
+}
+
+def VariadicOperandsHaveSameElementType :
+    TEST_Op<"variadic_operands_have_same_element_type",
+            [VariadicAllElementTypesMatch<"xs">]> {
+  let arguments = (ins AnyType:$first, Variadic<AnyType>:$xs);
+}
+
+def VariadicOperandsHaveSameRank :
+    TEST_Op<"variadic_operands_have_same_rank", [VariadicAllRanksMatch<"xs">]> {
+  let arguments = (ins Variadic<AnyShaped>:$xs);
+}
+
+def VariadicOperandsHaveSameShape :
+    TEST_Op<"variadic_operands_have_same_shape",
+            [VariadicAllShapesMatch<"xs">]> {
+  let arguments = (ins Variadic<AnyShaped>:$xs);
+}
+
+def VariadicOperandsHaveSameType :
+    TEST_Op<"variadic_operands_have_same_type", [VariadicAllTypesMatch<"xs">]> {
+  let arguments = (ins Variadic<AnyType>:$xs);
 }
 
 def IfFirstOperandIsNoneThenSoIsSecond :

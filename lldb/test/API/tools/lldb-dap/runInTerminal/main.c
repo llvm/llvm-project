@@ -9,8 +9,12 @@
 extern char **environ;
 #endif
 
-static int echo_cmd(const char *val) {
-  puts(val);
+static int echo_cmd(int input_count, const char *inputs[]) {
+  if (input_count <= 0)
+    return EXIT_FAILURE;
+
+  for (int i = 0; i < input_count; ++i)
+    printf("echoed: %s\n", inputs[i]);
   return EXIT_SUCCESS;
 }
 
@@ -26,9 +30,7 @@ static int handle_cmd(int argc, const char *argv[]) {
 
   const char *cmd_name = argv[1];
   if (strcmp(cmd_name, "echo") == 0) {
-    if (argc < 3)
-      return EXIT_FAILURE;
-    return echo_cmd(argv[2]);
+    return echo_cmd(argc - 2, argv + 2);
   }
 
   if (strcmp(cmd_name, "env") == 0) {

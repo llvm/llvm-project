@@ -23,6 +23,7 @@
 #include "clang/AST/TypeOrdering.h"
 #include "clang/Basic/ASTSourceDescriptor.h"
 #include "clang/Basic/CodeGenOptions.h"
+#include "clang/Basic/FileEntry.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -58,7 +59,6 @@ class CGBlockInfo;
 /// backend.
 class CGDebugInfo {
   friend class ApplyDebugLocation;
-  friend class SaveAndRestoreLocation;
   friend class ApplyAtomGroup;
 
   CodeGenModule &CGM;
@@ -84,7 +84,6 @@ class CGDebugInfo {
   llvm::DIType *OCLEventDITy = nullptr;
   llvm::DIType *OCLClkEventDITy = nullptr;
   llvm::DIType *OCLQueueDITy = nullptr;
-  llvm::DIType *OCLNDRangeDITy = nullptr;
   llvm::DIType *OCLReserveIDDITy = nullptr;
 #define EXT_OPAQUE_TYPE(ExtType, Id, Ext) \
   llvm::DIType *Id##Ty = nullptr;
@@ -97,9 +96,6 @@ class CGDebugInfo {
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
   llvm::DIType *SingletonId = nullptr;
 #include "clang/Basic/HLSLIntangibleTypes.def"
-#define HLSL_PACKED_TYPE(Name, Id, SingletonId)                                \
-  llvm::DIType *SingletonId = nullptr;
-#include "clang/Basic/HLSLPackedTypes.def"
 #define SPIRV_TYPE(Name, Id, SingletonId) llvm::DIType *SingletonId = nullptr;
 #include "clang/Basic/SPIRVTypes.def"
 
@@ -160,6 +156,11 @@ class CGDebugInfo {
 
   /// Keep track of our current nested lexical block.
   std::vector<llvm::TypedTrackingMDRef<llvm::DIScope>> LexicalBlockStack;
+
+  /// Map of AST declaration to its lexical block scope.
+  llvm::DenseMap<const Decl *, llvm::TypedTrackingMDRef<llvm::DIScope>>
+      LexicalBlockMap;
+
   llvm::DenseMap<const Decl *, llvm::TrackingMDRef> RegionMap;
   /// Keep track of LexicalBlockStack counter at the beginning of a
   /// function. This is used to pop unbalanced regions at the end of a
@@ -171,6 +172,16 @@ class CGDebugInfo {
   llvm::BumpPtrAllocator DebugInfoNames;
 
   llvm::DenseMap<const char *, llvm::TrackingMDRef> DIFileCache;
+  /// Where a DIFile came from, for mapping debug locations back to files.
+  struct DIFileSource {
+    /// The file the DIFile was first created for. Invalid if the DIFile was
+    /// also created for a location that is not in a file, such as one renamed
+    /// by a line directive.
+    FileID FID;
+    /// Whether the DIFile was also created for a different file.
+    bool Shared = false;
+  };
+  llvm::DenseMap<const llvm::DIFile *, DIFileSource> DIFileSources;
   llvm::DenseMap<const FunctionDecl *, llvm::TrackingMDRef> SPCache;
   /// Cache declarations relevant to DW_TAG_imported_declarations (C++
   /// using declarations and global alias variables) that aren't covered
@@ -597,6 +608,13 @@ public:
   /// Emit information about global variable alias.
   void EmitGlobalAlias(const llvm::GlobalValue *GV, const GlobalDecl Decl);
 
+  /// Return the source file each DIFile was created for, or std::nullopt for a
+  /// DIFile shared by several files. DIFiles of files with line directives are
+  /// omitted, because debug locations in them use presumed lines. Line
+  /// directives are only all known once the translation unit is parsed.
+  llvm::DenseMap<const llvm::DIFile *, OptionalFileEntryRef>
+  getDIFileSources() const;
+
   /// Emit C++ using directive.
   void EmitUsingDirective(const UsingDirectiveDecl &UD);
 
@@ -636,6 +654,12 @@ public:
 
   /// Emit an Objective-C interface type standalone debug info.
   llvm::DIType *getOrCreateInterfaceType(QualType Ty, SourceLocation Loc);
+
+  /// Map AST declaration to its lexical block scope if available.
+  void recordDeclarationLexicalScope(const Decl &D);
+
+  /// Get lexical scope of AST declaration.
+  llvm::DIScope *getDeclarationLexicalScope(const Decl *D);
 
   /// Emit standalone debug info for a type.
   llvm::DIType *getOrCreateStandaloneType(QualType Ty, SourceLocation Loc);
@@ -782,6 +806,9 @@ private:
   /// Convenience function to get the file debug info descriptor for the input
   /// location.
   llvm::DIFile *getOrCreateFile(SourceLocation Loc);
+
+  /// Note that \p F was created for a location in \p FID.
+  void recordDIFileSource(const llvm::DIFile *F, FileID FID);
 
   /// Create a file debug info descriptor for a source file.
   llvm::DIFile *
