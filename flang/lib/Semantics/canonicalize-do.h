@@ -13,7 +13,8 @@
 // logically nested) into the more structured DoConstruct (explicitly nested)
 namespace Fortran::parser {
 struct Program;
-bool CanonicalizeDo(Program &program);
+class Messages;
+bool CanonicalizeDo(Messages &messages, Program &program);
 } // namespace Fortran::parser
 
 #endif // FORTRAN_SEMANTICS_CANONICALIZE_DO_H_

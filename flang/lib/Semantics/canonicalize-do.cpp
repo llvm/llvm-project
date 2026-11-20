@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "canonicalize-do.h"
+#include "flang/Parser/message.h"
 #include "flang/Parser/openmp-utils.h"
 #include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Parser/tools.h"
@@ -20,6 +21,8 @@ class CanonicalizationOfDoLoops {
   };
 
 public:
+  explicit CanonicalizationOfDoLoops(Messages &messages)
+      : messages_{messages} {}
   template <typename T> bool Pre(T &) { return true; }
   template <typename T> void Post(T &) {}
   void Post(Block &block) {
@@ -107,6 +110,17 @@ public:
             executableConstruct->u);
       }
     }
+    // The terminating statement of a remaining labeled DO statement is not in
+    // this block, e.g. it is inside a construct but is not the last statement
+    // of the construct's block, or the DO statement is inside a construct and
+    // the terminating statement follows it.
+    for (const LabelInfo &info : stack) {
+      const auto &labelDo{std::get<Statement<common::Indirection<LabelDoStmt>>>(
+          std::get<ExecutableConstruct>(info.iter->u).u)};
+      messages_.Say(labelDo.source,
+          "Label '%u' is not in DO loop scope"_err_en_US,
+          static_cast<unsigned>(info.label));
+    }
   }
 
 private:
@@ -170,12 +184,14 @@ private:
         },
         omp.u);
   }
+
+  Messages &messages_;
 };
 
-bool CanonicalizeDo(Program &program) {
-  CanonicalizationOfDoLoops canonicalizationOfDoLoops;
+bool CanonicalizeDo(Messages &messages, Program &program) {
+  CanonicalizationOfDoLoops canonicalizationOfDoLoops{messages};
   Walk(program, canonicalizationOfDoLoops);
-  return true;
+  return !messages.AnyFatalError();
 }
 
 } // namespace Fortran::parser
