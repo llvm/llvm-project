@@ -130,7 +130,6 @@
 ---
 name:            test_ctlz_i8
 alignment:       2
-registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }
   - { reg: '$r1', virtual-reg: '' }
@@ -242,7 +241,6 @@ body:             |
 ---
 name:            test_ctlz_i16
 alignment:       2
-registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }
   - { reg: '$r1', virtual-reg: '' }
@@ -354,7 +352,6 @@ body:             |
 ---
 name:            test_ctlz_i32
 alignment:       2
-registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }
   - { reg: '$r1', virtual-reg: '' }

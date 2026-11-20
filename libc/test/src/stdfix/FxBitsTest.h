@@ -16,8 +16,8 @@
 
 #include "test/UnitTest/Test.h"
 
-#include "src/__support/CPP/bit.h"
-#include "src/__support/fixed_point/fx_bits.h"
+#include "src/__support/fixed_point/fx_rep.h"
+#include "src/__support/math_extras.h"
 
 template <typename T, typename XType>
 class FxBitsTest : public LIBC_NAMESPACE::testing::Test {
