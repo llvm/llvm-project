@@ -207,3 +207,44 @@ define <4 x i32> @keep_low_64_or(<4 x i32> %a, <4 x i32> %b) {
   %r = or <4 x i32> %lo, %b
   ret <4 x i32> %r
 }
+
+; Keeping the low 32 bits of a 64-bit vector: mov v.s[1], wzr.
+
+define <2 x i32> @and_v2i32_keep_low_32(<2 x i32> %a) {
+; CHECK-LABEL: and_v2i32_keep_low_32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    mov v0.s[1], wzr
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ret
+  %r = and <2 x i32> %a, <i32 -1, i32 0>
+  ret <2 x i32> %r
+}
+
+define <4 x i16> @and_v4i16_keep_low_32(<4 x i16> %a) {
+; CHECK-LABEL: and_v4i16_keep_low_32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    mov v0.s[1], wzr
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ret
+  %r = and <4 x i16> %a, <i16 -1, i16 -1, i16 0, i16 0>
+  ret <4 x i16> %r
+}
+
+define <8 x i8> @and_v8i8_keep_low_32(<8 x i8> %a) {
+; CHECK-SD-LABEL: and_v8i8_keep_low_32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    movi d1, #0x000000ffffffff
+; CHECK-SD-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: and_v8i8_keep_low_32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    mov v0.s[1], wzr
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    ret
+  %r = and <8 x i8> %a, <i8 -1, i8 -1, i8 -1, i8 -1, i8 0, i8 0, i8 0, i8 0>
+  ret <8 x i8> %r
+}
