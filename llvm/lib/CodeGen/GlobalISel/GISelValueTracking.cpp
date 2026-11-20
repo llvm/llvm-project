@@ -1017,8 +1017,7 @@ void GISelValueTracking::computeKnownBits(Register R, KnownBits &Known,
     KnownBits SrcOpKnown;
     computeKnownBitsImpl(MI.getOperand(1).getReg(), SrcOpKnown, DemandedElts,
                          Depth + 1);
-    Known = SrcOpKnown.ctlz(Opcode == TargetOpcode::G_CTLZ_ZERO_POISON)
-                .zextOrTrunc(BitWidth);
+    Known = SrcOpKnown.ctlz(/*ZeroIsPoison=*/false).zextOrTrunc(BitWidth);
     break;
   }
   case TargetOpcode::G_CTLS: {

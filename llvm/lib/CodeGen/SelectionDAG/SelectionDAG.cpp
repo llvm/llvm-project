@@ -3952,7 +3952,7 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
   case ISD::CTLZ:
   case ISD::CTLZ_ZERO_POISON: {
     Known2 = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
-    Known = Known2.ctlz(Opcode == ISD::CTLZ_ZERO_POISON).zextOrTrunc(BitWidth);
+    Known = Known2.ctlz(/*ZeroIsPoison=*/false).zextOrTrunc(BitWidth);
     break;
   }
   case ISD::CTLS: {

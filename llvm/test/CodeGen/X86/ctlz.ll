@@ -180,7 +180,7 @@ define i64 @ctlz_i64(i64 %x) {
 ; X86-CLZ-NEXT:    jne .LBB3_1
 ; X86-CLZ-NEXT:  # %bb.2:
 ; X86-CLZ-NEXT:    lzcntl {{[0-9]+}}(%esp), %eax
-; X86-CLZ-NEXT:    orl $32, %eax
+; X86-CLZ-NEXT:    addl $32, %eax
 ; X86-CLZ-NEXT:    xorl %edx, %edx
 ; X86-CLZ-NEXT:    retl
 ; X86-CLZ-NEXT:  .LBB3_1:
@@ -205,7 +205,7 @@ define i64 @ctlz_i64(i64 %x) {
 ; X86-FASTLZCNT-NEXT:    jne .LBB3_1
 ; X86-FASTLZCNT-NEXT:  # %bb.2:
 ; X86-FASTLZCNT-NEXT:    lzcntl {{[0-9]+}}(%esp), %eax
-; X86-FASTLZCNT-NEXT:    orl $32, %eax
+; X86-FASTLZCNT-NEXT:    addl $32, %eax
 ; X86-FASTLZCNT-NEXT:    xorl %edx, %edx
 ; X86-FASTLZCNT-NEXT:    retl
 ; X86-FASTLZCNT-NEXT:  .LBB3_1:
@@ -1169,7 +1169,7 @@ define i64 @ctlz_xor63_i64_true(i64 %x) {
 ; X86-CLZ-NEXT:    jne .LBB19_1
 ; X86-CLZ-NEXT:  # %bb.2:
 ; X86-CLZ-NEXT:    lzcntl {{[0-9]+}}(%esp), %eax
-; X86-CLZ-NEXT:    orl $32, %eax
+; X86-CLZ-NEXT:    addl $32, %eax
 ; X86-CLZ-NEXT:    jmp .LBB19_3
 ; X86-CLZ-NEXT:  .LBB19_1:
 ; X86-CLZ-NEXT:    lzcntl %eax, %eax
@@ -1196,7 +1196,7 @@ define i64 @ctlz_xor63_i64_true(i64 %x) {
 ; X86-FASTLZCNT-NEXT:    jne .LBB19_1
 ; X86-FASTLZCNT-NEXT:  # %bb.2:
 ; X86-FASTLZCNT-NEXT:    lzcntl {{[0-9]+}}(%esp), %eax
-; X86-FASTLZCNT-NEXT:    orl $32, %eax
+; X86-FASTLZCNT-NEXT:    addl $32, %eax
 ; X86-FASTLZCNT-NEXT:    jmp .LBB19_3
 ; X86-FASTLZCNT-NEXT:  .LBB19_1:
 ; X86-FASTLZCNT-NEXT:    lzcntl %eax, %eax
