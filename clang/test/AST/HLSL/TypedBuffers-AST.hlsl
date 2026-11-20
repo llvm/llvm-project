@@ -2,7 +2,7 @@
 // RUN:   -DRESOURCE=RWBuffer %s | FileCheck -DRESOURCE=RWBuffer -check-prefix=EMPTY %s
 //
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump -DEMPTY \
-// RUN:   -DRESOURCE=Buffer %s | FileCheck -DRESOURCE=Buffer -check-prefix=EMPTY %s
+// RUN:   -DRESOURCE=Buffer %s | FileCheck -DRESOURCE=Buffer -check-prefixes=EMPTY,EMPTY-SRV %s
 //
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump \
 // RUN:   -DRESOURCE=RWBuffer %s | FileCheck -DRESOURCE=RWBuffer \
@@ -26,6 +26,9 @@
 
 // EMPTY: ClassTemplateDecl {{.*}} implicit [[RESOURCE]]
 // EMPTY-NEXT: TemplateTypeParmDecl {{.*}} typename depth 0 index 0 element_type
+// EMPTY-SRV-NEXT: TemplateArgument type 'vector<float, 4>'
+// EMPTY-SRV-NEXT: ExtVectorType {{.*}} 'vector<float, 4>'
+// EMPTY-SRV-NEXT: BuiltinType {{.*}} 'float'
 // EMPTY-NEXT: ConceptSpecializationExpr {{.*}} 'bool' Concept {{.*}} '__is_typed_resource_element_compatible'
 // EMPTY-NEXT: ImplicitConceptSpecializationDecl
 // EMPTY-NEXT: TemplateArgument type 'type-parameter-0-0'
@@ -48,6 +51,9 @@ RESOURCE<float> Buffer;
 
 // CHECK: ClassTemplateDecl {{.*}} implicit referenced [[RESOURCE]]
 // CHECK-NEXT: TemplateTypeParmDecl {{.*}} typename depth 0 index 0 element_type
+// CHECK-SRV-NEXT: TemplateArgument type 'vector<float, 4>'
+// CHECK-SRV-NEXT: ExtVectorType {{.*}} 'vector<float, 4>'
+// CHECK-SRV-NEXT: BuiltinType {{.*}} 'float'
 // CHECK-NEXT: ConceptSpecializationExpr {{.*}} 'bool' Concept {{.*}}  '__is_typed_resource_element_compatible'
 // CHECK-NEXT: ImplicitConceptSpecializationDecl
 // CHECK-NEXT: TemplateArgument type 'type-parameter-0-0'
