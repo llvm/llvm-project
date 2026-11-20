@@ -968,3 +968,51 @@ define i32 @and_add_and (i32 %x) {
   ret i32 %and
 }
 
+
+define i32 @urem_scaled_constant_divisor(i32 %x) {
+; CHECK-LABEL: @urem_scaled_constant_divisor(
+; CHECK-NEXT:    [[TMP1:%.*]] = urem i32 [[X:%.*]], 48
+; CHECK-NEXT:    [[R:%.*]] = shl nuw nsw i32 [[TMP1]], 3
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %x8 = shl nuw i32 %x, 3
+  %r = urem i32 %x8, 384
+  ret i32 %r
+}
+
+define i32 @urem_scaled_constant_divisor_no_nuw(i32 %x) {
+; CHECK-LABEL: @urem_scaled_constant_divisor_no_nuw(
+; CHECK-NEXT:    [[X8:%.*]] = shl i32 [[X:%.*]], 3
+; CHECK-NEXT:    [[R:%.*]] = urem i32 [[X8]], 384
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %x8 = shl i32 %x, 3
+  %r = urem i32 %x8, 384
+  ret i32 %r
+}
+
+define i32 @scaled_urem_constant_divisor(i32 noundef %x) {
+; CHECK-LABEL: @scaled_urem_constant_divisor(
+; CHECK-NEXT:    [[SUM:%.*]] = shl i32 [[X:%.*]], 9
+; CHECK-NEXT:    ret i32 [[SUM]]
+;
+  %q = udiv i32 %x, 48
+  %x8 = shl nuw i32 %x, 3
+  %r = urem i32 %x8, 384
+  %qbytes = mul i32 %q, 24576
+  %rbytes = shl i32 %r, 6
+  %sum = add i32 %qbytes, %rbytes
+  ret i32 %sum
+}
+
+define i32 @urem_scaled_nondivisible_constant_divisor(i32 %x) {
+; CHECK-LABEL: @urem_scaled_nondivisible_constant_divisor(
+; CHECK-NEXT:    [[X8:%.*]] = shl nuw i32 [[X:%.*]], 3
+; CHECK-NEXT:    [[R:%.*]] = urem i32 [[X8]], 386
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %x8 = shl nuw i32 %x, 3
+  %r = urem i32 %x8, 386
+  ret i32 %r
+}
+
