@@ -69,11 +69,22 @@ bool LoadStoreVec::acceptOrRevert() {
   return true;
 }
 
-/// \returns the type of the lanes of \p LaneTy that hold a value of type \p Ty
-/// in a packed vector: \p LaneTy itself, or <N x LaneTy> if \p Ty is wider.
-static Type *getLanesTypeFor(Type *Ty, Type *LaneTy, const DataLayout &DL) {
-  unsigned NumLanes = Utils::getNumBits(Ty, DL) / Utils::getNumBits(LaneTy, DL);
-  return NumLanes > 1 ? VecUtils::getWideType(LaneTy, NumLanes) : LaneTy;
+/// \returns \p ElemTy, or <N x \p ElemTy>, with the same bit width as \p Ty.
+/// \p ElemTy must be a scalar. A scalar wider than \p ElemTy becomes a vector,
+/// so this is the lane type occupied by \p Ty, not an element-type swap:
+///   Ty = float,       ElemTy = i32 -> i32
+///   Ty = <2 x float>, ElemTy = i32 -> <2 x i32>
+///   Ty = double,      ElemTy = i32 -> <2 x i32>
+/// Pointer size comes from \p DL, and a scalar such as double can span more
+/// than one lane, so FixedVectorType::getNumElements() is not enough.
+static Type *getSameBitWidthType(Type *Ty, Type *ElemTy, const DataLayout &DL) {
+  assert(!ElemTy->isVectorTy() && "Expected a scalar element type!");
+  unsigned ElemBits = Utils::getNumBits(ElemTy, DL);
+  unsigned TyBits = Utils::getNumBits(Ty, DL);
+  assert(ElemBits != 0 && TyBits % ElemBits == 0 &&
+         "Expected Ty to be a multiple of ElemTy!");
+  unsigned NumElems = TyBits / ElemBits;
+  return NumElems == 1 ? ElemTy : FixedVectorType::get(ElemTy, NumElems);
 }
 
 LoadInst *LoadStoreVec::createVectorLoad(BndlRef<Instruction *> Loads) {
@@ -355,7 +366,8 @@ LoadInst *LoadStoreVec::vectorizeLoads(BndlRef<Instruction *> Loads,
   Type *VecElemTy = cast<FixedVectorType>(*VecTy)->getElementType();
   if (any_of(Loads, [this, VecElemTy](Instruction *I) {
         return !SameSizeReinterpret::canReinterpret(
-            getLanesTypeFor(I->getType(), VecElemTy, *DL), I->getType(), *DL);
+            getSameBitWidthType(I->getType(), VecElemTy, *DL), I->getType(),
+            *DL);
       }))
     return nullptr;
 
@@ -364,19 +376,18 @@ LoadInst *LoadStoreVec::vectorizeLoads(BndlRef<Instruction *> Loads,
   auto *VecLoad = createVectorLoad(Loads);
   assert(VecLoad != nullptr && "Expected vector load");
 
-  // Lanes are counted in units of LaneTy, so a load wider than LaneTy spans
-  // several lanes.
+  // Lanes are counted in units of VecElemTy, so a load wider than VecElemTy
+  // spans several lanes.
   BasicBlock::iterator WhereIt = std::next(VecLoad->getIterator());
   unsigned Lane = 0;
   for (Instruction *I : Loads) {
-    auto *OrigLoad = cast<LoadInst>(I);
-    Type *VecTy = getLanesTypeFor(OrigLoad->getType(), VecElemTy, *DL);
-    unsigned NumLanes = VecUtils::getNumLanes(VecTy);
-    if (!OrigLoad->hasNUses(0)) {
-      Value *Unpacked = VecUtils::unpack(VecLoad, VecTy, Lane, WhereIt);
-      Unpacked = SameSizeReinterpret::reinterpretValue(
-          Unpacked, OrigLoad->getType(), WhereIt, *Ctx, *DL);
-      OrigLoad->replaceAllUsesWith(Unpacked);
+    Type *UnpackTy = getSameBitWidthType(I->getType(), VecElemTy, *DL);
+    unsigned NumLanes = VecUtils::getNumLanes(UnpackTy);
+    if (!I->hasNUses(0)) {
+      Value *Unpacked = VecUtils::unpack(VecLoad, UnpackTy, Lane, WhereIt);
+      Unpacked = SameSizeReinterpret::reinterpretValue(Unpacked, I->getType(),
+                                                       WhereIt, *Ctx, *DL);
+      I->replaceAllUsesWith(Unpacked);
     }
     Lane += NumLanes;
   }
