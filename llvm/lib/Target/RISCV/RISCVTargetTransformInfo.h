@@ -444,7 +444,9 @@ public:
     case RecurKind::Sub:
     case RecurKind::AddChainWithSubs:
     case RecurKind::And:
+    case RecurKind::AndWithSelect:
     case RecurKind::Or:
+    case RecurKind::OrWithSelect:
     case RecurKind::Xor:
     case RecurKind::SMin:
     case RecurKind::SMax:
