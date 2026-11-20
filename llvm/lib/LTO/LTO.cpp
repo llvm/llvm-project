@@ -125,13 +125,6 @@ cl::opt<bool> EnableLTOInternalization(
 static cl::opt<bool>
     LTOKeepSymbolCopies("lto-keep-symbol-copies", cl::init(false), cl::Hidden,
                         cl::desc("Keep copies of symbols in LTO indexing"));
-
-/// Indicate we are linking with an allocator that supports hot/cold operator
-/// new interfaces.
-extern cl::opt<bool> SupportsHotColdNew;
-
-/// Enable MemProf context disambiguation for thin link.
-extern cl::opt<bool> EnableMemProfContextDisambiguation;
 } // namespace llvm
 
 // Computes a unique hash for the Module considering the current list of
@@ -1411,7 +1404,8 @@ Error LTO::run(AddStreamFn AddStream, FileCache Cache) {
   // an internal option (which would still be needed for tests, however). For
   // example, if the library exported a symbol like __malloc_hot_cold the linker
   // could recognize that and set a flag in the lto::Config.
-  if (SupportsHotColdNew)
+  if (MemProfContextDisambiguation::supportsHotColdNew(
+          RegularLTO.Ctx.getLibraryOptions()))
     ThinLTO.CombinedIndex.setWithSupportsHotColdNew();
 
   Error Result = runRegularLTO(AddStream);
@@ -2213,7 +2207,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
   auto isPrevailing = [&](GlobalValue::GUID GUID, const GlobalValueSummary *S) {
     return ThinLTO.isPrevailingModuleForGUID(GUID, S->modulePath());
   };
-  if (EnableMemProfContextDisambiguation) {
+  if (MemProfContextDisambiguation::isEnabled(LibraryOptions)) {
     MemProfContextDisambiguation ContextDisambiguation;
     ContextDisambiguation.run(
         ThinLTO.CombinedIndex, isPrevailing, RegularLTO.Ctx,

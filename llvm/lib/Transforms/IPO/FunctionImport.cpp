@@ -89,8 +89,6 @@ extern cl::opt<bool> AlwaysRenamePromotedLocals;
 extern cl::opt<std::string> UseCtxProfile;
 
 extern cl::list<GlobalValue::GUID> MoveSymbolGUID;
-
-extern cl::opt<bool> EnableMemProfContextDisambiguation;
 } // end namespace llvm
 
 // Load lazily a module from \p FileName in \p Context.
@@ -2082,7 +2080,7 @@ Expected<bool> FunctionImporter::importFunctions(
           // MemProf should match function's definition and summary,
           // 'thinlto_src_module' is needed.
           if (Opts.enable_import_metadata ||
-              EnableMemProfContextDisambiguation) {
+              Opts.memprof_context_disambiguation) {
             // Add 'thinlto_src_module' and 'thinlto_src_file' metadata for
             // statistics and debugging.
             F.setMetadata(
@@ -2159,7 +2157,7 @@ Expected<bool> FunctionImporter::importFunctions(
                      << " " << GO->getName() << " from "
                      << SrcModule->getSourceFileName() << "\n");
           if (Opts.enable_import_metadata ||
-              EnableMemProfContextDisambiguation) {
+              Opts.memprof_context_disambiguation) {
             // Add 'thinlto_src_module', 'thinlto_src_file', and
             // 'thinlto_alias_guid' metadata for statistics, debugging, and
             // summary lookup (since Fn retains the aliasee's !guid metadata).

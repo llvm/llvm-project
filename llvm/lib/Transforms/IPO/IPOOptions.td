@@ -300,6 +300,118 @@ defm : ValueField<"lowertypetests-write-summary", "StringRef", "",
 defm : BoolField<"reorder-cfi-jump-tables-profiles", "true",
   "Reorder CFI jump tables using profile information">;
 
+// MemProfContextDisambiguation.cpp
+// Optionally enable cloning of callsites involved with recursive cycles
+defm : BoolField<"memprof-allow-recursive-callsites", "true",
+  "Allow cloning of callsites involved in recursive cycles">;
+// When disabled, try to detect and prevent cloning of recursive contexts.
+// This is only necessary until we support cloning through recursive cycles.
+// Leave on by default for now, as disabling requires a little bit of compile
+// time overhead and doesn't affect correctness, it will just inflate the cold
+// hinted bytes reporting a bit when -memprof-report-hinted-sizes is enabled.
+defm : BoolField<"memprof-allow-recursive-contexts", "true",
+  "Allow cloning of contexts having recursive cycles">;
+// When updating the stack nodes for callsites, a call with inlined frames is
+// assigned the contexts that include all of its stack ids that have context
+// nodes. The profile may have trimmed some contexts at an earlier stack id in
+// that sequence (because they had a single allocation type from that point
+// on); when a later stack id has a node due to other contexts, those trimmed
+// contexts are not assigned to the call, only to calls whose last stack id
+// with a node is the earlier id (e.g. an out-of-line copy of the inlined
+// callee). When enabled, also assign them to the call with the inlined frames,
+// via duplicates of their context ids (the other calls keep the originals).
+// TODO: Remove this option once the new handling is validated more widely.
+defm : BoolField<"memprof-assign-trimmed-inlined-contexts", "true",
+  "Assign contexts trimmed within a call's inlined stack id sequence to that call">;
+defm : BoolField<"memprof-clone-recursive-contexts", "true",
+  "Allow cloning of contexts through recursive cycles">;
+defm : BoolField<"memprof-context-disambiguation", "false",
+  "Enable MemProf context disambiguation">;
+defm : OptionalValueField<"memprof-dot-alloc-id", "unsigned",
+  "Id of alloc to export if -memprof-dot-scope=alloc or to highlight if -memprof-dot-scope=all">;
+defm : OptionalValueField<"memprof-dot-context-id", "unsigned",
+  "Id of context to export if -memprof-dot-scope=context or to highlight otherwise">;
+defm : ValueField<"memprof-dot-file-path-prefix", "StringRef", "",
+  "Specify the path prefix of the MemProf dot files">;
+defm : EnumField<"memprof-dot-scope", "MemProfDotScope", "",
+  "all,alloc,context",
+  ["MemProfDotScope::All", "MemProfDotScope::Alloc", "MemProfDotScope::Context"],
+  "Scope of graph to export to dot">;
+defm : BoolField<"memprof-dump-ccg", "false",
+  "Dump CallingContextGraph to stdout after each stage">;
+defm : BoolField<"memprof-export-to-dot", "false",
+  "Export graph to dot files">;
+defm : BoolField<"memprof-fixup-important", "true",
+  "Enables edge fixup for important contexts">;
+// Set the minimum absolute count threshold for allowing inlining of indirect
+// calls promoted during cloning.
+defm : ValueField<"memprof-icp-noinline-threshold", "unsigned", "0",
+  "Minimum absolute count for promoted target to be inlinable">;
+// Applying the thin link cloning decisions to indirect calls requires the
+// ThinLTO backend to perform ICP to the profiled target, which requires that
+// the target be available in the caller's module (or in any module the caller
+// is imported into). When the target is defined in a different module it must
+// be imported, but the profiled targets are often synthesized from the MemProf
+// profile with a small count, so their summary edges are not hot and large
+// targets are often not imported. Since the thin link cloning runs before the
+// function importing analysis, we can mark the indirect call edges to callees
+// of callsites that were assigned to call a cloned callee as requiring a
+// declaration import, in which case the function importer imports at least a
+// declaration of the callee into any module containing the caller that
+// doesn't define the callee. Direct calls don't require importing the callee,
+// since the ThinLTO backend can simply call a declaration of the callee clone,
+// so we only do this for edges marked as being from indirect calls in the
+// summary. Note that unlike regular ICP, which by default requires the
+// target's definition (see -icp-allow-decls), MemProf ICP can promote to a
+// declaration of the target (see -memprof-require-definition-for-promotion),
+// since the purpose is to call the assigned clone rather than to inline. This
+// is therefore not done under -memprof-require-definition-for-promotion.
+defm : BoolField<"memprof-import-cloned-indirect-targets", "true",
+  "Import at least a declaration of the indirect call targets of callsites assigned to call a cloned callee (needed for MemProf ICP in the ThinLTO backend)">;
+defm : ValueField<"memprof-import-summary", "StringRef", "",
+  "Import summary to use for testing the ThinLTO backend via opt">;
+// Whether the ThinLTO search for frames missing due to tail calls should look
+// through indirect tail calls, via the summary call edges to their profiled
+// targets.
+defm : BoolField<"memprof-indirect-tail-call-search", "true",
+  "Search for missing frames through indirect tail calls to their profiled targets (ThinLTO)">;
+// Generally this is needed for correct assignment of allocation clones to
+// function clones, however, allow it to be disabled for debugging while the
+// functionality is new and being tested more widely.
+defm : BoolField<"memprof-merge-clones", "true",
+  "Merge clones before assigning functions">;
+// TODO: Remove this option once new handling is validated more widely.
+defm : BoolField<"memprof-merge-iteration", "true",
+  "Iteratively apply merging on a node to catch new callers">;
+// Appends a per-context diagnostic suffix to each -memprof-report-hinted-sizes
+// line: the allocation function clone, how far the context matched, and the
+// post-cloning call paths from the outermost matched caller to the reached
+// allocation clone(s) and their final hints. Requires
+// -memprof-report-hinted-sizes, and adds some memory and time overhead.
+defm : BoolField<"memprof-report-hinted-sizes-detail", "false",
+  "Append post-cloning call path and matching details to each -memprof-report-hinted-sizes line">;
+// Post-cloning call paths in the detail suffix longer than this (in functions)
+// have runs of uncloned (or cloned) functions in their middle elided to
+// "...", keeping the ends and every cloned/uncloned transition.
+defm : ValueField<"memprof-report-hinted-sizes-detail-max-path-len", "unsigned", "7",
+  "Maximum number of functions printed in full for a post-cloning call path in the -memprof-report-hinted-sizes-detail suffix; longer paths are elided in the middle">;
+defm : BoolField<"memprof-require-definition-for-promotion", "false",
+  "Require target function definition when promoting indirect calls">;
+defm : ValueField<"memprof-tail-call-search-depth", "unsigned", "5",
+  "Max depth to recursively search for missing frames through tail calls">;
+defm : ValueField<"memprof-top-n-important", "unsigned", "10",
+  "Number of largest cold contexts to consider important">;
+defm : BoolField<"memprof-verify-ccg", "false",
+  "Perform verification checks on CallingContextGraph">;
+defm : BoolField<"memprof-verify-nodes", "false",
+  "Perform frequent verification checks on nodes">;
+// Indicate we are linking with an allocator that supports hot/cold operator
+// new interfaces.
+defm : BoolField<"supports-hot-cold-new", "false",
+  "Linking with hot/cold operator new interfaces">;
+// TODO: Remove the old spelling after 2027-05.
+def : AliasOf<"enable-memprof-context-disambiguation", "memprof-context-disambiguation">;
+
 // MergeFunctions.cpp
 // Under option -mergefunc-preserve-debug-info we:
 // - Do not create a new function for a thunk.
