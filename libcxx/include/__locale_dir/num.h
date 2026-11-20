@@ -314,8 +314,11 @@ _LIBCPP_HIDE_FROM_ABI _Tp __num_get_float(const char* __a, const char* __a_end, 
     if (__p2 != __a_end) {
       __err = ios_base::failbit;
       return 0;
-    } else if (__current_errno == ERANGE)
-      __err = ios_base::failbit;
+    } else if (__current_errno == ERANGE) {
+      // Nonzero subnormal values are representable, despite ERANGE.
+      if (__ld == 0 || __ld <= -numeric_limits<_Tp>::min() || __ld >= numeric_limits<_Tp>::min())
+        __err = ios_base::failbit;
+    }
     return __ld;
   }
   __err = ios_base::failbit;
