@@ -1,15 +1,7 @@
 # See for https://openmp.llvm.org/SupportAndFAQ.html for instructions on how
 # to build offload with CMake.
 
-cmake_minimum_required(VERSION 3.20.0)
-if("${CMAKE_VERSION}" VERSION_LESS "3.31.0")
-  message(WARNING
-    "Your CMake version is ${CMAKE_VERSION}. Starting with LLVM 24, the "
-    "minimum version of CMake required to build LLVM will become 3.31.0, and "
-    "using an older CMake will become an error. Please upgrade your CMake to "
-    "at least 3.31.0 now to avoid issues in the future.")
-endif()
-
+cmake_minimum_required(VERSION 3.31.0)
 set(LLVM_SUBPROJECT_TITLE "liboffload")
 
 # The minimum versions required for dependencies.
@@ -210,8 +202,8 @@ foreach(plugin IN LISTS LIBOMPTARGET_PLUGINS_TO_BUILD)
 endforeach()
 string(STRIP "${LIBOMPTARGET_ENUM_PLUGIN_TARGETS}" LIBOMPTARGET_ENUM_PLUGIN_TARGETS)
 configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/include/Shared/Targets.def.in
-  ${CMAKE_CURRENT_BINARY_DIR}/include/Shared/Targets.def
+  ${CMAKE_CURRENT_SOURCE_DIR}/liboffload/include/Targets.def.in
+  ${CMAKE_CURRENT_BINARY_DIR}/liboffload/include/Targets.def
 )
 
 include_directories(${LIBOMPTARGET_LLVM_INCLUDE_DIRS})
@@ -322,7 +314,7 @@ pythonize_bool(LIBOMPTARGET_OMPT_SUPPORT)
 pythonize_bool(BUILD_LIBACCTARGET)
 
 set(LIBOMPTARGET_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
-set(LIBOMPTARGET_BINARY_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/include)
+set(LIBOMPACCSUPPORT_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libompaccsupport/include)
 message(STATUS "OpenMP tools dir in libomptarget: ${LIBOMP_OMP_TOOLS_INCLUDE_DIR}")
 if(LIBOMP_OMP_TOOLS_INCLUDE_DIR)
   include_directories(${LIBOMP_OMP_TOOLS_INCLUDE_DIR})
@@ -366,8 +358,6 @@ function(offload_tablegen ofn)
   set(TABLEGEN_OUTPUT ${TABLEGEN_OUTPUT} PARENT_SCOPE)
 endfunction()
 
-# Build offloading plugins and device RTLs if they are available.
-add_subdirectory(plugins-nextgen)
 add_subdirectory(tools)
 add_subdirectory(docs)
 

@@ -121,6 +121,15 @@ int main(int, char**) {
       {
         auto pred = maybe_throw(tokens[5], [](int x) -> bool { return x % 2 == 0; });
 
+        // copy_if(first, last, dest, pred)
+        assert_non_throwing([=, &policy] {
+          (void)std::copy_if(policy, std::move(first1), std::move(last1), std::move(dest), pred);
+        });
+      }
+
+      {
+        auto pred = maybe_throw(tokens[5], [](int x) -> bool { return x % 2 == 0; });
+
         // count(first, last, val)
         assert_non_throwing([=, &policy] { (void)std::count(policy, std::move(first1), std::move(last1), val); });
 
@@ -317,6 +326,20 @@ int main(int, char**) {
         // is_partitioned(first, last, pred)
         assert_non_throwing([=, &policy] {
           (void)std::is_partitioned(policy, std::move(first1), std::move(last1), pred);
+        });
+
+        // partition(first, last, pred)
+        assert_non_throwing([=, &policy] { (void)std::partition(policy, std::move(first1), std::move(last1), pred); });
+
+        // stable_partition(first, last, pred)
+        assert_non_throwing([=, &policy] {
+          (void)std::stable_partition(policy, std::move(first1), std::move(last1), pred);
+        });
+
+        // partition_copy(first, last, dest1, dest2, pred)
+        assert_non_throwing([=, &policy] {
+          (void)std::partition_copy(
+              policy, std::move(first1), std::move(last1), std::move(first2), std::move(dest), pred);
         });
       }
 

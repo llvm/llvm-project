@@ -280,7 +280,7 @@ static void setNativeShapeAttr(VectorTransferOpInterface op,
 static LogicalResult matchCanonicalMatmul(MLUCandidate &candidate,
                                           PatternRewriter &rewriter) {
   vector::ContractionOp contract = candidate.contract;
-  if (contract.getKind() != vector::CombiningKind::ADD)
+  if (!contract.isAddKind())
     return rewriter.notifyMatchFailure(contract,
                                        "not using ADD combining kind");
 
@@ -630,7 +630,9 @@ static void makeAccResultBackedByMemory(MLUCandidate &candidate,
     ValueRange accWriteIndices = accWrite.getIndices();
 
     auto isSafeToUseView = [&]() {
-      if (candidate.accIsZeroInit)
+      // A single register tile reads all of its input before writing.
+      if (candidate.accIsZeroInit ||
+          candidate.accType == candidate.accRegTileType)
         return true;
       auto accMemInView = candidate.accMemIn.getDefiningOp<memref::SubViewOp>();
       if (!accMemInView)

@@ -1634,6 +1634,14 @@ def FeatureVendorXSfsclic
     : RISCVExperimentalExtension<0, 1,
                                  "SiFive CLIC Supervisor-mode CSRs">;
 
+def FeatureVendorXSfvfofp4min
+    : RISCVExtension<0, 1, "SiFive Vector OFP4 Conversion Instruction",
+                     [FeatureStdExtZve32f]>;
+def HasVendorXSfvfofp4min
+    : Predicate<"Subtarget->hasVendorXSfvfofp4min()">,
+      AssemblerPredicate<(all_of FeatureVendorXSfvfofp4min),
+                         "'XSfvfofp4min' (SiFive Vector OFP4 Conversion Instruction)">;
+
 // Core-V Extensions
 
 def FeatureVendorXCVelw
@@ -2038,7 +2046,7 @@ def FeatureExactAssembly
 
 foreach i = {1-31} in
   def FeatureReserveX#i :
-      SubtargetFeature<"reserve-x"#i, "UserReservedRegister[RISCV::X"#i#"]",
+      SubtargetFeature<"reserve-x"#i, "UserReservedXRegs["#i#"]",
                        "true", "Reserve X"#i>;
 
 def FeatureSaveRestore : SubtargetFeature<"save-restore", "EnableSaveRestore",
@@ -2093,6 +2101,13 @@ def FeatureTaggedGlobals : SubtargetFeature<"tagged-globals",
     "AllowTaggedGlobals",
     "true", "Use an instruction sequence for taking the address of a global "
     "that allows a memory tag in the upper address bits">;
+
+def FeatureFixSiFiveMAL9174
+    : SubtargetFeature<"fix-sifive-mal-9174",
+                       "FixSiFiveMAL9174", "true",
+                       "Workaround SiFive erratum MAL-9174 by "
+                       "disallowing overlapping source and destination for "
+                       "vector indexed loads">;
 
 //===----------------------------------------------------------------------===//
 // Tuning features

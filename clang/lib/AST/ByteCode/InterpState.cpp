@@ -101,17 +101,15 @@ void InterpState::deallocateWithPointers(Block *B) {
   assert(!B->isDead());
   assert(!B->isInitialized());
 
-  if (B->hasPointers()) {
-    size_t Size = B->getAllocSize();
-    // Allocate a new block, transferring over pointers.
-    char *Memory =
-        reinterpret_cast<char *>(std::malloc(sizeof(DeadBlock) + Size));
-    auto *D = new (Memory) DeadBlock(DeadBlocks, B);
-    // Since the block doesn't hold any actual data anymore, we can just
-    // memcpy() everything over.
-    std::memcpy(D->rawData(), B->rawData(), Size);
-    D->B.IsInitialized = false;
-  }
+  size_t Size = B->getAllocSize();
+  // Allocate a new block, transferring over pointers.
+  char *Memory =
+      reinterpret_cast<char *>(std::malloc(sizeof(DeadBlock) + Size));
+  auto *D = new (Memory) DeadBlock(DeadBlocks, B);
+  // Since the block doesn't hold any actual data anymore, we can just
+  // memcpy() everything over.
+  std::memcpy(D->rawData(), B->rawData(), Size);
+  D->B.IsInitialized = false;
 }
 
 bool InterpState::maybeDiagnoseDanglingAllocations() {

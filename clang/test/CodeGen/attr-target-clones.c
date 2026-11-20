@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefixes=LINUX,CHECK
-// RUN: %clang_cc1 -triple x86_64-apple-macos -emit-llvm %s -o - | FileCheck %s --check-prefixes=DARWIN,CHECK
-// RUN: %clang_cc1 -triple x86_64-windows-pc -emit-llvm %s -o - | FileCheck %s --check-prefixes=WINDOWS,CHECK
+// RUN: %clang_cc1 -fno-module-local-hints -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefixes=LINUX,CHECK
+// RUN: %clang_cc1 -fno-module-local-hints -triple x86_64-apple-macos -emit-llvm %s -o - | FileCheck %s --check-prefixes=DARWIN,CHECK
+// RUN: %clang_cc1 -fno-module-local-hints -triple x86_64-windows-pc -emit-llvm %s -o - | FileCheck %s --check-prefixes=WINDOWS,CHECK
 
 // LINUX: $foo.resolver = comdat any
 // LINUX: $foo_dupes.resolver = comdat any
@@ -154,6 +154,31 @@ int test_inherited(void) {
   // DARWIN: call i32 @inherited()
   // WINDOWS: call i32 @inherited()
 }
+
+// GH149372
+int __attribute__((target_clones("default,avx"))) redecl(int x) { return x; }
+int redecl(int);
+int __attribute__((target_clones("default,avx"))) redecl(int);
+// LINUX: define {{.*}}i32 @redecl.default.1(
+// LINUX: define {{.*}}i32 @redecl.avx.0(
+// LINUX: define weak_odr ptr @redecl.resolver() #[[ATTR_RESOLVER]] comdat
+// LINUX: ret ptr @redecl.avx.0
+// LINUX-NOT: ret ptr @redecl.avx.0
+// LINUX: ret ptr @redecl.default.1
+
+// DARWIN: define {{.*}}i32 @redecl.default.1(
+// DARWIN: define {{.*}}i32 @redecl.avx.0(
+// DARWIN: define weak_odr ptr @redecl.resolver() #[[ATTR_RESOLVER]] {
+// DARWIN: ret ptr @redecl.avx.0
+// DARWIN-NOT: ret ptr @redecl.avx.0
+// DARWIN: ret ptr @redecl.default.1
+
+// WINDOWS: define dso_local i32 @redecl.default.1(
+// WINDOWS: define dso_local i32 @redecl.avx.0(
+// WINDOWS: define weak_odr dso_local i32 @redecl(i32{{.*}}) #[[ATTR_RESOLVER]] comdat
+// WINDOWS: musttail call i32 @redecl.avx.0
+// WINDOWS-NOT: musttail call i32 @redecl.avx.0
+// WINDOWS: musttail call i32 @redecl.default.1
 
 inline int __attribute__((target_clones("arch=sandybridge,default,sse4.2")))
 foo_inline(void) { return 0; }

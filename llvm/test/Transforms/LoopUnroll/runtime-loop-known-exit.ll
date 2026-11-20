@@ -44,3 +44,87 @@ exit1:
 exit2:
   ret void
 }
+
+; The urem in the exit count may not execute; expanding it must not add UB.
+define void @latch_exit_count_umin_seq_with_urem(ptr %a, i64 %n, i64 %m, i64 %y, i64 %z) {
+; CHECK-LABEL: @latch_exit_count_umin_seq_with_urem(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP6:%.*]] = freeze i64 [[Z1:%.*]]
+; CHECK-NEXT:    [[Z:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP6]], i64 1)
+; CHECK-NEXT:    [[TMP0:%.*]] = urem i64 [[Y:%.*]], [[Z]]
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze i64 [[TMP0]]
+; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP1]], i64 [[M:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = add nuw i64 [[UMIN]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = freeze i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[TMP3]], -1
+; CHECK-NEXT:    [[XTRAITER:%.*]] = and i64 [[TMP3]], 1
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], 1
+; CHECK-NEXT:    br i1 [[TMP5]], label [[LOOP_HEADER_EPIL_PREHEADER:%.*]], label [[ENTRY_NEW:%.*]]
+; CHECK:       entry.new:
+; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = sub i64 [[TMP3]], [[XTRAITER]]
+; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY_NEW]] ], [ [[IV_NEXT_1:%.*]], [[LOOP_LATCH_1:%.*]] ]
+; CHECK-NEXT:    [[NITER:%.*]] = phi i64 [ 0, [[ENTRY_NEW]] ], [ [[NITER_NEXT_1:%.*]], [[LOOP_LATCH_1]] ]
+; CHECK-NEXT:    [[C_0:%.*]] = icmp eq i64 [[IV]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[C_0]], label [[EXIT_EPILOG_LCSSA_LOOPEXIT:%.*]], label [[LOOP_LATCH:%.*]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[A:%.*]], i64 [[IV]]
+; CHECK-NEXT:    store i64 [[IV]], ptr [[GEP]], align 4
+; CHECK-NEXT:    [[IV_NEXT:%.*]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[C_0_1:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[C_0_1]], label [[EXIT_EPILOG_LCSSA_LOOPEXIT]], label [[LOOP_LATCH_1]]
+; CHECK:       loop.latch.1:
+; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr i64, ptr [[A]], i64 [[IV_NEXT]]
+; CHECK-NEXT:    store i64 [[IV_NEXT]], ptr [[GEP_1]], align 4
+; CHECK-NEXT:    [[IV_NEXT_1]] = add nuw i64 [[IV]], 2
+; CHECK-NEXT:    [[NITER_NEXT_1]] = add i64 [[NITER]], 2
+; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp ne i64 [[NITER_NEXT_1]], [[UNROLL_ITER]]
+; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label [[LOOP_HEADER]], label [[EXIT_UNR_LCSSA:%.*]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK:       exit.unr-lcssa:
+; CHECK-NEXT:    [[IV_UNR:%.*]] = phi i64 [ [[IV_NEXT_1]], [[LOOP_LATCH_1]] ]
+; CHECK-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i64 [[XTRAITER]], 0
+; CHECK-NEXT:    br i1 [[LCMP_MOD]], label [[LOOP_HEADER_EPIL_PREHEADER]], label [[EXIT:%.*]]
+; CHECK:       loop.header.epil.preheader:
+; CHECK-NEXT:    [[IV_EPIL_INIT:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_UNR]], [[EXIT_UNR_LCSSA]] ]
+; CHECK-NEXT:    [[LCMP_MOD1:%.*]] = icmp ne i64 [[XTRAITER]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[LCMP_MOD1]])
+; CHECK-NEXT:    br label [[LOOP_HEADER_EPIL:%.*]]
+; CHECK:       loop.header.epil:
+; CHECK-NEXT:    [[C_0_EPIL:%.*]] = icmp eq i64 [[IV_EPIL_INIT]], [[N]]
+; CHECK-NEXT:    br i1 [[C_0_EPIL]], label [[EXIT_EPILOG_LCSSA:%.*]], label [[LOOP_LATCH_EPIL:%.*]]
+; CHECK:       loop.latch.epil:
+; CHECK-NEXT:    [[GEP_EPIL:%.*]] = getelementptr i64, ptr [[A]], i64 [[IV_EPIL_INIT]]
+; CHECK-NEXT:    store i64 [[IV_EPIL_INIT]], ptr [[GEP_EPIL]], align 4
+; CHECK-NEXT:    br label [[EXIT_EPILOG_LCSSA]]
+; CHECK:       exit.epilog-lcssa.loopexit:
+; CHECK-NEXT:    br label [[EXIT_EPILOG_LCSSA]]
+; CHECK:       exit.epilog-lcssa:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %c.0 = icmp eq i64 %iv, %n
+  br i1 %c.0, label %exit, label %loop.latch
+
+loop.latch:
+  %rem = urem i64 %y, %z
+  %gep = getelementptr i64, ptr %a, i64 %iv
+  store i64 %iv, ptr %gep
+  %iv.next = add nuw i64 %iv, 1
+  %c.1 = icmp ne i64 %iv, %m
+  %c.2 = icmp ne i64 %iv, %rem
+  %and = select i1 %c.1, i1 %c.2, i1 false
+  br i1 %and, label %loop.header, label %exit, !llvm.loop !0
+
+exit:
+  ret void
+}
+
+!0 = distinct !{!0, !1}
+!1 = !{!"llvm.loop.unroll.count", i32 2}

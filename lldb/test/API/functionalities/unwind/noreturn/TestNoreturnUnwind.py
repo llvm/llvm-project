@@ -13,6 +13,7 @@ class NoreturnUnwind(TestBase):
     # clang does not preserve LR in noreturn functions, making unwinding impossible
     @skipIf(compiler="clang", archs=["arm$"], oslist=["linux"])
     @expectedFailureAll(bugnumber="llvm.org/pr33452", triple="^mips")
+    @skipIfWasm  # abort() is an inlined trap with no frame
     def test(self):
         """Test that we can backtrace correctly with 'noreturn' functions on the stack"""
         self.build()
