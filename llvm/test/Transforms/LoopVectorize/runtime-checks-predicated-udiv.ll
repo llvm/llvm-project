@@ -14,7 +14,9 @@ define void @scev_check_predicated_udiv(ptr noalias %src, ptr noalias %dst, i32 
 ; DEFAULT-NEXT:    br i1 [[MIN_ITERS_CHECK]], [[SCALAR_PH:label %.*]], label %[[VECTOR_SCEVCHECK:.*]]
 ; DEFAULT:       [[VECTOR_SCEVCHECK]]:
 ; DEFAULT-NEXT:    [[TMP0:%.*]] = add i64 [[N]], -1
-; DEFAULT-NEXT:    [[TMP1:%.*]] = udiv i32 [[A]], [[B]]
+; DEFAULT-NEXT:    [[TMP7:%.*]] = freeze i32 [[B]]
+; DEFAULT-NEXT:    [[TMP8:%.*]] = call i32 @llvm.umax.i32(i32 [[TMP7]], i32 1)
+; DEFAULT-NEXT:    [[TMP1:%.*]] = udiv i32 [[A]], [[TMP8]]
 ; DEFAULT-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP0]] to i32
 ; DEFAULT-NEXT:    [[TMP3:%.*]] = add i32 [[TMP1]], [[TMP2]]
 ; DEFAULT-NEXT:    [[TMP4:%.*]] = icmp ult i32 [[TMP3]], [[TMP1]]
@@ -29,7 +31,9 @@ define void @scev_check_predicated_udiv(ptr noalias %src, ptr noalias %dst, i32 
 ; ALIAS-NEXT:    br label %[[VECTOR_SCEVCHECK:.*]]
 ; ALIAS:       [[VECTOR_SCEVCHECK]]:
 ; ALIAS-NEXT:    [[TMP0:%.*]] = add i64 [[N]], -1
-; ALIAS-NEXT:    [[TMP1:%.*]] = udiv i32 [[A]], [[B]]
+; ALIAS-NEXT:    [[TMP7:%.*]] = freeze i32 [[B]]
+; ALIAS-NEXT:    [[TMP8:%.*]] = call i32 @llvm.umax.i32(i32 [[TMP7]], i32 1)
+; ALIAS-NEXT:    [[TMP1:%.*]] = udiv i32 [[A]], [[TMP8]]
 ; ALIAS-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP0]] to i32
 ; ALIAS-NEXT:    [[TMP3:%.*]] = add i32 [[TMP1]], [[TMP2]]
 ; ALIAS-NEXT:    [[TMP4:%.*]] = icmp ult i32 [[TMP3]], [[TMP1]]
@@ -76,7 +80,9 @@ define void @diff_check_predicated_udiv(ptr %src, ptr %dst, i64 %a, i64 %b, i64 
 ; DEFAULT-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
 ; DEFAULT-NEXT:    br i1 [[MIN_ITERS_CHECK]], [[SCALAR_PH:label %.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; DEFAULT:       [[VECTOR_MEMCHECK]]:
-; DEFAULT-NEXT:    [[TMP0:%.*]] = udiv i64 [[A]], [[B]]
+; DEFAULT-NEXT:    [[TMP5:%.*]] = freeze i64 [[B]]
+; DEFAULT-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP5]], i64 1)
+; DEFAULT-NEXT:    [[TMP0:%.*]] = udiv i64 [[A]], [[TMP6]]
 ; DEFAULT-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 3
 ; DEFAULT-NEXT:    [[TMP2:%.*]] = add i64 [[DST3]], [[TMP1]]
 ; DEFAULT-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP2]], [[SRC4]]
@@ -92,7 +98,9 @@ define void @diff_check_predicated_udiv(ptr %src, ptr %dst, i64 %a, i64 %b, i64 
 ; ALIAS-NEXT:    [[SRC1:%.*]] = ptrtoaddr ptr [[SRC]] to i64
 ; ALIAS-NEXT:    br label %[[VECTOR_CLAMPED_VF_CHECK:.*]]
 ; ALIAS:       [[VECTOR_CLAMPED_VF_CHECK]]:
-; ALIAS-NEXT:    [[TMP0:%.*]] = udiv i64 [[A]], [[B]]
+; ALIAS-NEXT:    [[TMP8:%.*]] = freeze i64 [[B]]
+; ALIAS-NEXT:    [[TMP9:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP8]], i64 1)
+; ALIAS-NEXT:    [[TMP0:%.*]] = udiv i64 [[A]], [[TMP9]]
 ; ALIAS-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 3
 ; ALIAS-NEXT:    [[TMP2:%.*]] = add i64 [[DST2]], [[TMP1]]
 ; ALIAS-NEXT:    [[TMP3:%.*]] = call <4 x i1> @llvm.loop.dependence.war.mask.v4i1.i64(i64 [[SRC1]], i64 [[TMP2]], i64 8)
@@ -138,7 +146,9 @@ define void @bound_check_predicated_udiv(ptr %src, ptr %dst, i64 %a, i64 %b, i64
 ; DEFAULT-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
 ; DEFAULT-NEXT:    br i1 [[MIN_ITERS_CHECK]], [[SCALAR_PH:label %.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; DEFAULT:       [[VECTOR_MEMCHECK]]:
-; DEFAULT-NEXT:    [[TMP0:%.*]] = udiv i64 [[A]], [[B]]
+; DEFAULT-NEXT:    [[TMP8:%.*]] = freeze i64 [[B]]
+; DEFAULT-NEXT:    [[TMP9:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP8]], i64 1)
+; DEFAULT-NEXT:    [[TMP0:%.*]] = udiv i64 [[A]], [[TMP9]]
 ; DEFAULT-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 3
 ; DEFAULT-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP1]]
 ; DEFAULT-NEXT:    [[TMP3:%.*]] = shl i64 [[N]], 3
@@ -157,7 +167,9 @@ define void @bound_check_predicated_udiv(ptr %src, ptr %dst, i64 %a, i64 %b, i64
 ; ALIAS-NEXT:  [[ENTRY:.*:]]
 ; ALIAS-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; ALIAS:       [[VECTOR_MEMCHECK]]:
-; ALIAS-NEXT:    [[TMP0:%.*]] = udiv i64 [[A]], [[B]]
+; ALIAS-NEXT:    [[TMP8:%.*]] = freeze i64 [[B]]
+; ALIAS-NEXT:    [[TMP9:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP8]], i64 1)
+; ALIAS-NEXT:    [[TMP0:%.*]] = udiv i64 [[A]], [[TMP9]]
 ; ALIAS-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 3
 ; ALIAS-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP1]]
 ; ALIAS-NEXT:    [[TMP3:%.*]] = shl i64 [[N]], 3

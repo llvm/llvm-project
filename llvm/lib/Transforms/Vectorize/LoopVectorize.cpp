@@ -1149,7 +1149,8 @@ public:
                     TTI::TargetCostKind CostKind,
                     bool LoopUsesPartialAliasMasking)
       : Opts(Opts), DT(DT), LI(LI), TTI(TTI),
-        SCEVExp(*PSE.getSE(), "scev.check", /*PreserveLCSSA=*/false),
+        SCEVExp(*PSE.getSE(), "scev.check", /*PreserveLCSSA=*/false,
+                /*SafeDivisorMode=*/true),
         MemCheckExp(*PSE.getSE(), "scev.check", /*PreserveLCSSA=*/false),
         PSE(PSE), CostKind(CostKind),
         LoopUsesPartialAliasMasking(LoopUsesPartialAliasMasking) {}
