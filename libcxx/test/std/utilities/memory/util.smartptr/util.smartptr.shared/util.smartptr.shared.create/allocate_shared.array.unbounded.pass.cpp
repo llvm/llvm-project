@@ -532,7 +532,7 @@ int main(int, char**) {
     check_size_overflow<int[]>(min_allocator<int[]>(), max);
   }
 
-  // Check that we don't over-allocate (e.g. by multiplying by the control block size instead of sizeof(T)).
+  // Check that we don't over-allocate
   {
     constexpr std::size_t n = 1024;
     std::size_t bytes       = 0;
