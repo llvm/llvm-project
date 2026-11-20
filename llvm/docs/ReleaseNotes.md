@@ -249,7 +249,8 @@ Makes programs 10x faster by doing Special New Thing.
   create with plain `add_library()` or `add_executable()`. To keep LLVM's
   warnings on such a target, call `llvm_apply_warning_options(<target>)`.
   Projects can add or suppress warnings relative to LLVM's baseline with
-  `llvm_add_warning_options(<C|CXX|ALL> <option>...)`. Options in
+  `llvm_add_warning_options(<lang>... <option>...)`, which adds each option
+  to each named (enabled) language. Options in
   `CMAKE_<LANG>_FLAGS`, `CMAKE_<LANG>_FLAGS_<CONFIG>` and directory-level
   `add_compile_options()` now precede LLVM's options, so they no longer
   override them.

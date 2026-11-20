@@ -386,30 +386,45 @@ macro(add_flag_if_supported flag name)
   append_if("CXX_SUPPORTS_${name}" "${flag}" CMAKE_CXX_FLAGS)
 endmacro()
 
-# LLVM's diagnostic policy is collected in LLVM_WARNING_OPTIONS_C/CXX instead of
-# CMAKE_<LANG>_FLAGS, which every target in the build tree would inherit. The
-# lists are applied to LLVM-owned targets by llvm_apply_warning_options().
+# LLVM's diagnostic policy is collected in per-language lists,
+# LLVM_WARNING_OPTIONS_<lang>, instead of CMAKE_<LANG>_FLAGS, which every target
+# in the build tree would inherit. The lists are applied to LLVM-owned targets
+# by llvm_apply_warning_options().
 #
-#   llvm_add_warning_options(<C|CXX|ALL> <option>...)
+#   llvm_add_warning_options(<lang>... <option>...)
+#
+# Arguments starting with '-' or '/' are options; all others are languages, which
+# must already be enabled. Every option is added to every named language.
 #
 # An option that is already present is moved to the end, because
 # target_compile_options() keeps only the first of duplicates while the last of
 # conflicting options (-Wno-foo ... -Wfoo) wins on the command line.
-macro(llvm_add_warning_options lang)
-  if (NOT "${lang}" MATCHES "^(C|CXX|ALL)$")
-    message(FATAL_ERROR "llvm_add_warning_options: language must be C, CXX or ALL, not '${lang}'")
-  endif()
-  foreach(_llvm_warning_opt ${ARGN})
-    if (NOT "${lang}" STREQUAL "CXX")
-      list(REMOVE_ITEM LLVM_WARNING_OPTIONS_C "${_llvm_warning_opt}")
-      list(APPEND LLVM_WARNING_OPTIONS_C "${_llvm_warning_opt}")
-    endif()
-    if (NOT "${lang}" STREQUAL "C")
-      list(REMOVE_ITEM LLVM_WARNING_OPTIONS_CXX "${_llvm_warning_opt}")
-      list(APPEND LLVM_WARNING_OPTIONS_CXX "${_llvm_warning_opt}")
+function(llvm_add_warning_options)
+  get_property(enabled_langs GLOBAL PROPERTY ENABLED_LANGUAGES)
+  set(langs)
+  set(opts)
+  foreach(arg IN LISTS ARGN)
+    if ("${arg}" MATCHES "^[-/]")
+      list(APPEND opts "${arg}")
+    elseif (arg IN_LIST enabled_langs)
+      list(APPEND langs "${arg}")
+    else()
+      message(SEND_ERROR "llvm_add_warning_options: ${arg}: "
+                         "language needs to be enabled before use.")
     endif()
   endforeach()
-endmacro()
+  if (NOT langs)
+    message(SEND_ERROR "llvm_add_warning_options: no language specified")
+  endif()
+  foreach(lang IN LISTS langs)
+    set(lang_opts ${LLVM_WARNING_OPTIONS_${lang}})
+    foreach(opt IN LISTS opts)
+      list(REMOVE_ITEM lang_opts "${opt}")
+      list(APPEND lang_opts "${opt}")
+    endforeach()
+    set(LLVM_WARNING_OPTIONS_${lang} "${lang_opts}" PARENT_SCOPE)
+  endforeach()
+endfunction()
 
 # Like add_flag_if_supported, but adds a warning option to the per-target lists
 # instead of CMAKE_<LANG>_FLAGS.
@@ -634,8 +649,6 @@ endif()
 option(LLVM_ENABLE_WARNINGS "Enable compiler warnings." ON)
 option(LLVM_ENABLE_WARNING_SUPPRESSIONS "Suppress compiler warnings." ON)
 
-set(LLVM_WARNING_OPTIONS_C "")
-set(LLVM_WARNING_OPTIONS_CXX "")
 
 if( MSVC )
 
@@ -669,7 +682,7 @@ if( MSVC )
   endif()
 
   if (LLVM_ENABLE_WERROR)
-    llvm_add_warning_options(ALL /WX)
+    llvm_add_warning_options(C CXX /WX)
   endif (LLVM_ENABLE_WERROR)
 
   append("/Zc:inline" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
@@ -768,7 +781,7 @@ endif( MSVC )
 # Warnings-as-errors handling for GCC-compatible compilers:
 if ( LLVM_COMPILER_IS_GCC_COMPATIBLE )
   if (LLVM_ENABLE_WERROR)
-    llvm_add_warning_options(ALL -Werror)
+    llvm_add_warning_options(C CXX -Werror)
     # Keep configure probes working when a project adds its own -Werror to
     # CMAKE_<LANG>_FLAGS (e.g. OPENMP_ENABLE_WERROR).
     append("-Wno-error" CMAKE_REQUIRED_FLAGS)
@@ -777,11 +790,11 @@ endif( LLVM_COMPILER_IS_GCC_COMPATIBLE )
 
 # Specific default warnings-as-errors for compilers accepting GCC-compatible warning flags:
 if ( LLVM_COMPILER_IS_GCC_COMPATIBLE OR CMAKE_CXX_COMPILER_ID MATCHES "XL" )
-  llvm_add_warning_options(ALL -Werror=date-time)
+  llvm_add_warning_options(C CXX -Werror=date-time)
 endif( LLVM_COMPILER_IS_GCC_COMPATIBLE OR CMAKE_CXX_COMPILER_ID MATCHES "XL" )
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  llvm_add_warning_options(ALL -Werror=unguarded-availability-new)
+  llvm_add_warning_options(C CXX -Werror=unguarded-availability-new)
 endif()
 
 # Modules enablement for GCC-compatible compilers:
@@ -869,7 +882,7 @@ if (MSVC)
     endif (LLVM_ENABLE_PEDANTIC)
   endif (LLVM_ENABLE_WARNINGS)
 
-  llvm_add_warning_options(ALL ${msvc_warning_flags})
+  llvm_add_warning_options(C CXX ${msvc_warning_flags})
 endif (MSVC)
 
 if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
@@ -877,24 +890,24 @@ if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
   # Don't add -Wall for clang-cl, because it maps -Wall to -Weverything for
   # MSVC compatibility.  /W4 is added above instead.
   if (NOT CLANG_CL)
-    llvm_add_warning_options(ALL -Wall)
+    llvm_add_warning_options(C CXX -Wall)
   endif()
 
-  llvm_add_warning_options(ALL -Wextra -Wno-unused-parameter -Wwrite-strings)
-  llvm_add_warning_options(ALL -Wcast-qual)
+  llvm_add_warning_options(C CXX -Wextra -Wno-unused-parameter -Wwrite-strings)
+  llvm_add_warning_options(C CXX -Wcast-qual)
 
   # Turn off missing field initializer warnings for gcc to avoid noise from
   # false positives with empty {}. Turn them on otherwise (they're off by
   # default for clang).
   if (CMAKE_COMPILER_IS_GNUCXX)
-    llvm_add_warning_options(ALL -Wno-missing-field-initializers)
+    llvm_add_warning_options(C CXX -Wno-missing-field-initializers)
   else()
-    llvm_add_warning_options(ALL -Wmissing-field-initializers)
+    llvm_add_warning_options(C CXX -Wmissing-field-initializers)
   endif()
 
   if (LLVM_ENABLE_PEDANTIC AND LLVM_COMPILER_IS_GCC_COMPATIBLE)
-    llvm_add_warning_options(ALL -pedantic)
-    llvm_add_warning_options(ALL -Wno-long-long)
+    llvm_add_warning_options(C CXX -pedantic)
+    llvm_add_warning_options(C CXX -Wno-long-long)
 
     # GCC warns about redundant toplevel semicolons (enabled by -pedantic
     # above), while Clang doesn't. Enable the corresponding Clang option to
@@ -902,12 +915,12 @@ if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
     llvm_add_warning_flag_if_supported("-Wc++98-compat-extra-semi" CXX98_COMPAT_EXTRA_SEMI_FLAG)
   endif()
 
-  llvm_add_warning_options(ALL -Wimplicit-fallthrough)
+  llvm_add_warning_options(C CXX -Wimplicit-fallthrough)
 
   set(CXX_SUPPORTS_COVERED_SWITCH_DEFAULT_FLAG 0)
   if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     set(CXX_SUPPORTS_COVERED_SWITCH_DEFAULT_FLAG 1)
-    llvm_add_warning_options(ALL -Wcovered-switch-default)
+    llvm_add_warning_options(C CXX -Wcovered-switch-default)
   endif()
   if (USE_NO_UNINITIALIZED)
     llvm_add_warning_options(CXX -Wno-uninitialized)
@@ -1004,12 +1017,12 @@ if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
                           C_WCOMMENT_ALLOWS_LINE_WRAP)
   set(CMAKE_REQUIRED_FLAGS ${OLD_CMAKE_REQUIRED_FLAGS})
   if (NOT C_WCOMMENT_ALLOWS_LINE_WRAP)
-    llvm_add_warning_options(ALL -Wno-comment)
+    llvm_add_warning_options(C CXX -Wno-comment)
   endif()
 
   # Enable -Wstring-conversion to catch misuse of string literals.
   if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    llvm_add_warning_options(ALL -Wstring-conversion)
+    llvm_add_warning_options(C CXX -Wstring-conversion)
 
     # Disable -Wno-pass-failed flag, which reports failure to perform
     # optimizations suggested by pragmas. This warning is not relevant for LLVM
@@ -1036,13 +1049,17 @@ if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
 endif (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
 
 if (LLVM_COMPILER_IS_GCC_COMPATIBLE AND NOT LLVM_ENABLE_WARNINGS)
-  llvm_add_warning_options(ALL -w)
+  llvm_add_warning_options(C CXX -w)
 endif()
 
 if (NOT LLVM_ENABLE_WARNING_SUPPRESSIONS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
   # Drop the -Wno- options LLVM selected.
-  list(FILTER LLVM_WARNING_OPTIONS_C EXCLUDE REGEX "^-Wno-[a-zA-Z0-9_-]+")
-  list(FILTER LLVM_WARNING_OPTIONS_CXX EXCLUDE REGEX "^-Wno-[a-zA-Z0-9_-]+")
+  get_property(_llvm_langs GLOBAL PROPERTY ENABLED_LANGUAGES)
+  foreach(_lang IN LISTS _llvm_langs)
+    list(FILTER LLVM_WARNING_OPTIONS_${_lang} EXCLUDE REGEX "^-Wno-[a-zA-Z0-9_-]+")
+  endforeach()
+  unset(_lang)
+  unset(_llvm_langs)
 endif()
 
 macro(append_common_sanitizer_flags)

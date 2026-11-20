@@ -725,7 +725,8 @@ sub-projects. Nearly all of these variable names begin with `LLVM_`.
     `CMAKE_<LANG>_FLAGS`. Targets that merely link LLVM do not inherit it. Other
     targets can opt in with `llvm_apply_warning_options(<target>)`, and
     subprojects can adjust the policy with
-    `llvm_add_warning_options(<C|CXX|ALL> <option>...)`.
+    `llvm_add_warning_options(<lang>... <option>...)`, which adds each option
+    to each named (enabled) language.
 
 **LLVM_ENABLE_WARNING_SUPPRESSIONS**:BOOL
 

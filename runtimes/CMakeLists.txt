@@ -222,11 +222,17 @@ include(HandleLLVMOptions)
 # The runtimes rely on LLVM's diagnostic policy being in CMAKE_<LANG>_FLAGS, so
 # keep it there for this build. Clear the lists so that targets created with
 # LLVM's helpers don't apply it again, which would override later suppressions.
-foreach(_lang C CXX)
-  list(JOIN LLVM_WARNING_OPTIONS_${_lang} " " _llvm_warning_options)
-  string(APPEND CMAKE_${_lang}_FLAGS " ${_llvm_warning_options}")
-  set(LLVM_WARNING_OPTIONS_${_lang} "")
+get_property(_llvm_langs GLOBAL PROPERTY ENABLED_LANGUAGES)
+foreach(_lang IN LISTS _llvm_langs)
+  if (LLVM_WARNING_OPTIONS_${_lang})
+    list(JOIN LLVM_WARNING_OPTIONS_${_lang} " " _llvm_warning_options)
+    string(APPEND CMAKE_${_lang}_FLAGS " ${_llvm_warning_options}")
+    set(LLVM_WARNING_OPTIONS_${_lang} "")
+  endif()
 endforeach()
+unset(_lang)
+unset(_llvm_langs)
+unset(_llvm_warning_options)
 
 # Loot at the PATH first to avoid a version mismatch between the command-line
 # python and the CMake-found version
