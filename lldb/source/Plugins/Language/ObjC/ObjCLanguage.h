@@ -156,6 +156,9 @@ public:
   std::vector<lldb::LanguageType>
   GetFormatterLanguages(lldb::LanguageType language) const override;
 
+  bool IsCategoryApplicable(lldb::LanguageType category_language,
+                            lldb::LanguageType valobj_language) const override;
+
   std::unique_ptr<TypeScavenger> GetTypeScavenger() override;
 
   std::pair<llvm::StringRef, llvm::StringRef>

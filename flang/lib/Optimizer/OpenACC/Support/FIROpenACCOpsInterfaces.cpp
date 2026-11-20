@@ -153,6 +153,12 @@ bool GlobalVariableModel::isCompilerGenerated(mlir::Operation *op) const {
   return fir::NameUniquer::isCompilerGenerated(globalOp.getSymName());
 }
 
+bool GlobalVariableModel::isInternalLinkage(mlir::Operation *op) const {
+  auto globalOp = mlir::cast<fir::GlobalOp>(op);
+  auto linkage = globalOp.getLinkage();
+  return linkage.has_value() && linkage.value() == fir::LinkageEnum::Internal;
+}
+
 bool OutlineRematerializationModel<
     fir::ConvertOp>::isRematerializationCandidate(mlir::Operation *op) const {
   auto convertOp = mlir::cast<fir::ConvertOp>(op);

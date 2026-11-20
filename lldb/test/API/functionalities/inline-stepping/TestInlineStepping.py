@@ -29,7 +29,8 @@ class TestInlineStepping(TestBase):
 
     @add_test_categories(["pyapi"])
     @expectedFailureAll(
-        oslist=["windows"], debug_info=no_match(["pdb"]), bugnumber="llvm.org/pr32343"
+        oslist=["windows"],
+        archs=["aarch64"],
     )
     def test_step_in_template_with_python_api(self):
         """Test stepping in to templated functions."""
