@@ -206,30 +206,29 @@ define amdgpu_ps <10 x float> @image_bvh_dual_intersect_ray_vvvvvv(i64 %node_ptr
 ; GFX12-GISEL-NEXT:    v_dual_mov_b32 v21, v5 :: v_dual_mov_b32 v24, v8
 ; GFX12-GISEL-NEXT:    v_dual_mov_b32 v23, v7 :: v_dual_mov_b32 v30, v10
 ; GFX12-GISEL-NEXT:    v_dual_mov_b32 v29, v9 :: v_dual_mov_b32 v28, 0
-; GFX12-GISEL-NEXT:    s_mov_b32 s1, exec_lo
+; GFX12-GISEL-NEXT:    s_mov_b32 s4, exec_lo
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-GISEL-NEXT:    s_mov_b32 s5, s4
 ; GFX12-GISEL-NEXT:  .LBB3_1: ; =>This Inner Loop Header: Depth=1
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s4, v11
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s5, v12
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s6, v13
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s7, v14
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s0, v11
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s1, v12
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s2, v13
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s3, v14
 ; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-GISEL-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[11:12]
-; GFX12-GISEL-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[13:14]
-; GFX12-GISEL-NEXT:    s_and_b32 s0, vcc_lo, s0
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-GISEL-NEXT:    s_and_saveexec_b32 s0, s0
+; GFX12-GISEL-NEXT:    v_cmpx_eq_u64_e32 s[0:1], v[11:12]
+; GFX12-GISEL-NEXT:    v_cmpx_eq_u64_e32 s[2:3], v[13:14]
 ; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-GISEL-NEXT:    image_bvh_dual_intersect_ray v[0:9], [v[25:26], v[27:28], v[19:21], v[22:24], v[29:30]], s[4:7]
+; GFX12-GISEL-NEXT:    image_bvh_dual_intersect_ray v[0:9], [v[25:26], v[27:28], v[19:21], v[22:24], v[29:30]], s[0:3]
 ; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr11
 ; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr25_vgpr26
 ; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr27_vgpr28
 ; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr29_vgpr30
 ; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr13_vgpr14
-; GFX12-GISEL-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
+; GFX12-GISEL-NEXT:    s_and_not1_wrexec_b32 s5, s5
 ; GFX12-GISEL-NEXT:    s_cbranch_execnz .LBB3_1
 ; GFX12-GISEL-NEXT:  ; %bb.2:
-; GFX12-GISEL-NEXT:    s_mov_b32 exec_lo, s1
+; GFX12-GISEL-NEXT:    s_mov_b32 exec_lo, s4
 ; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GISEL-NEXT:    global_store_b96 v[15:16], v[19:21], off
 ; GFX12-GISEL-NEXT:    global_store_b96 v[17:18], v[22:24], off

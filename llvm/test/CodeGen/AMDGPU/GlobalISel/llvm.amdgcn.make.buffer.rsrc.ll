@@ -730,6 +730,7 @@ define amdgpu_ps float @general_case_load_with_waterfall(ptr %p, i16 %stride, i6
   ; CHECK45-NEXT: bb.2:
   ; CHECK45-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK45-NEXT: {{  $}}
+  ; CHECK45-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_6]], %bb.1, %95, %bb.3
   ; CHECK45-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY8]], implicit $exec
   ; CHECK45-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[V_LSHL_OR_B32_e64_]], implicit $exec
   ; CHECK45-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY13]], implicit $exec
@@ -739,16 +740,15 @@ define amdgpu_ps float @general_case_load_with_waterfall(ptr %p, i16 %stride, i6
   ; CHECK45-NEXT:   [[COPY17:%[0-9]+]]:vreg_64_align2 = COPY [[REG_SEQUENCE2]].sub2_sub3
   ; CHECK45-NEXT:   [[COPY18:%[0-9]+]]:sreg_64 = COPY [[REG_SEQUENCE3]].sub0_sub1
   ; CHECK45-NEXT:   [[COPY19:%[0-9]+]]:sreg_64 = COPY [[REG_SEQUENCE3]].sub2_sub3
-  ; CHECK45-NEXT:   [[V_CMP_EQ_U64_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U64_e64 [[COPY18]], [[COPY16]], implicit $exec
-  ; CHECK45-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U64_e64 [[COPY19]], [[COPY17]], implicit $exec
-  ; CHECK45-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_B32 [[V_CMP_EQ_U64_e64_]], [[V_CMP_EQ_U64_e64_1]], implicit-def dead $scc
-  ; CHECK45-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 [[S_AND_B32_]], implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; CHECK45-NEXT:   V_CMPX_EQ_U64_nosdst_e32_term [[COPY18]], [[COPY16]], implicit-def $exec, implicit $exec
+  ; CHECK45-NEXT:   V_CMPX_EQ_U64_nosdst_e32_term [[COPY19]], [[COPY17]], implicit-def $exec, implicit $exec
   ; CHECK45-NEXT: {{  $}}
   ; CHECK45-NEXT: bb.3:
   ; CHECK45-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
   ; CHECK45-NEXT: {{  $}}
   ; CHECK45-NEXT:   [[BUFFER_LOAD_DWORD_VBUFFER_IDXEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_IDXEN [[COPY15]], [[REG_SEQUENCE3]], $sgpr_null, 0, 0, 0, implicit $exec :: (dereferenceable load (f32) from %ir.rsrc, align 1, addrspace 8)
-  ; CHECK45-NEXT:   $exec_lo = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def dead $scc
+  ; CHECK45-NEXT:   [[S_ANDN2_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_B32 [[PHI]], $exec_lo, implicit-def dead $scc
+  ; CHECK45-NEXT:   $exec_lo = S_MOV_B32_term [[S_ANDN2_B32_]]
   ; CHECK45-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; CHECK45-NEXT: {{  $}}
   ; CHECK45-NEXT: bb.4:
