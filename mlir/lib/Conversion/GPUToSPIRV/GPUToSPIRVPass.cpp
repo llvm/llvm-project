@@ -137,6 +137,15 @@ void GPUToSPIRVPass::runOnOperation() {
       });
     }
 
+    // Skip unrolling when nothing needs it: the unroll functions also run
+    // whole-module canonicalization as a side effect.
+    if (spirv::hasMultiRankVectorType(gpuModule)) {
+      if (failed(spirv::unrollVectorsInSignatures(gpuModule)))
+        return signalPassFailure();
+      if (failed(spirv::unrollVectorsInFuncBodies(gpuModule)))
+        return signalPassFailure();
+    }
+
     std::unique_ptr<ConversionTarget> target =
         SPIRVConversionTarget::get(targetAttr);
 
