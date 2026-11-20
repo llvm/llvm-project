@@ -283,22 +283,13 @@ LLVM_ABI OffloadKind getOffloadKind(StringRef Name);
 /// Convert an offload kind to its string representation.
 LLVM_ABI StringRef getOffloadKindName(OffloadKind Name);
 
-/// Returns true if the device image \p Provided, e.g. a static archive member,
-/// can be linked into the group of device images \p Requested.
-///
-/// - A generic device image can be linked into any group.
-/// - Otherwise, both must have identical "code" lists, and the same
-///   architecture unless the group is generic.
-///
-///   Device image to add       Group to link it into              Result
-///   (Provided)                (Requested)
-///   generic                   igca_30r, code=xe-mtl-u            true
-///   igca_30r                  generic                            true
-///   igca_30r, code=xe-mtl-u   igca_30r, code=xe-mtl-u            true
-///   igca_30r, code=xe-mtl-u   igca_30r, code=xe-mtl-h,xe-mtl-u   false
-///   igca_30r, code=xe-mtl-u   generic                            false
-///
-/// For AMDGPU a target id is a string conforming to the following BNF syntax:
+/// Returns true if an image built for target \p Provided can provide the device
+/// code for a request for target \p Requested. This is directional: a
+/// feature-unspecified or generic image serves a more specific request (e.g. a
+/// generic static-archive member pulled into a specific device-image group),
+/// but not vice versa. Unless \p Provided is generic, both must also have
+/// identical "code" lists. For AMDGPU a target id is a string conforming to the
+/// following BNF syntax:
 ///
 ///  target-id ::= '<arch> ( : <feature> ( '+' | '-' ) )*'
 ///
@@ -308,9 +299,8 @@ LLVM_ABI StringRef getOffloadKindName(OffloadKind Name);
 LLVM_ABI bool areTargetsCompatible(const OffloadFile::TargetID &Provided,
                                    const OffloadFile::TargetID &Requested);
 
-/// Returns true if device images built for \p LHS and \p RHS are linked
-/// together: they have the same processor and features, and identical "code"
-/// lists.
+/// Returns true if \p LHS and \p RHS denote the same logical target, i.e. the
+/// same processor and features, and identical "code" lists.
 LLVM_ABI bool areTargetsEquivalent(const OffloadFile::TargetID &LHS,
                                    const OffloadFile::TargetID &RHS);
 
