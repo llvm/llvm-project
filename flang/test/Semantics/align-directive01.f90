@@ -154,6 +154,45 @@ contains
       outer = 1.0
     end block
   end subroutine
+  ! An implicitly typed name is declared by any statement of the
+  ! specification part that mentions it.
+  subroutine implicit_names()
+    !dir$ align(64) :: save_only, data_only, volatile_only
+    !WARNING: !DIR$ ALIGN on 'save_only' is not yet implemented and was ignored [-Wignored-directive]
+    save save_only
+    !WARNING: !DIR$ ALIGN on 'data_only' is not yet implemented and was ignored [-Wignored-directive]
+    data data_only /1.0/
+    !WARNING: !DIR$ ALIGN on 'volatile_only' is not yet implemented and was ignored [-Wignored-directive]
+    volatile volatile_only
+    !WARNING: !DIR$ ALIGN is ignored for 'common_only' because it is in COMMON or EQUIVALENCE storage [-Wignored-directive]
+    !dir$ align(64) :: common_only
+    !WARNING: !DIR$ ALIGN is ignored for 'equivalence_only' because it is in COMMON or EQUIVALENCE storage [-Wignored-directive]
+    !dir$ align(64) :: equivalence_only
+    common /implicit_blk/ common_only
+    equivalence (equivalence_only, other)
+  end subroutine
+  subroutine implicit_rule()
+    implicit integer(a-z)
+    !dir$ align(64) :: by_rule
+    !WARNING: !DIR$ ALIGN on 'by_rule' is not yet implemented and was ignored [-Wignored-directive]
+    dimension by_rule(4)
+  end subroutine
+  subroutine no_implicit()
+    implicit none
+    !ERROR: 'undeclared' must be declared in this scoping unit to be aligned with !DIR$ ALIGN
+    !dir$ align(64) :: undeclared
+  end subroutine
+  ! With a host variable of the same name, DIMENSION and SAVE declare a
+  ! local variable, and VOLATILE refers to the host variable.
+  subroutine host_names()
+    !ERROR: 'ok_intel' must be declared in this scoping unit to be aligned with !DIR$ ALIGN
+    !dir$ align(64) :: ok_module, ok_after, ok_intel
+    !WARNING: !DIR$ ALIGN on 'ok_module' is not yet implemented and was ignored [-Wignored-directive]
+    dimension ok_module(4)
+    !WARNING: !DIR$ ALIGN on 'ok_after' is not yet implemented and was ignored [-Wignored-directive]
+    save ok_after
+    volatile ok_intel
+  end subroutine
   function f()
     !dir$ align(64) :: f
     !ERROR: !DIR$ ALIGN may not apply to function result 'f'
