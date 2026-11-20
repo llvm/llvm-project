@@ -563,6 +563,9 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
   setBooleanVectorContents(ZeroOrNegativeOneBooleanContent);
 
   setMaxAtomicSizeInBitsSupported(Subtarget.getGRLen());
+  setAtomicLoadExtAction(ISD::SEXTLOAD, GRLenVT, {MVT::i8, MVT::i16}, Legal);
+  if (Subtarget.is64Bit())
+    setAtomicLoadExtAction(ISD::SEXTLOAD, MVT::i64, MVT::i32, Legal);
 
   setMinCmpXchgSizeInBits(32);
 

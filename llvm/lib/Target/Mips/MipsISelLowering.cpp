@@ -420,6 +420,8 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
   // Sink shifts into their users' blocks to expose extract patterns.
   setHasExtractBitsInsn(Subtarget.hasExtractInsert());
 
+  setAtomicLoadExtAction(ISD::SEXTLOAD, MVT::i32, {MVT::i8, MVT::i16}, Legal);
+
   // R5900 has no LL/SC instructions for atomic operations
   if (Subtarget.isR5900())
     setMaxAtomicSizeInBitsSupported(0);

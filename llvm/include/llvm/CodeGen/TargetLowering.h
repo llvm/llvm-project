@@ -1568,13 +1568,13 @@ public:
   }
 
   /// Returns an alternative action to use when the coarser lookups (configured
-  /// through `setLoadExtAction` and `setAtomicLoadExtAction`) yield
-  /// `LegalizeAction::Custom`. Allows targets to use builtin behaviors (e.g.
-  /// Legal, Promote) specialized by Alignment and AddrSpace, rather than just
-  /// types.
-  virtual LegalizeAction
-  getCustomLoadAction(EVT ValVT, EVT MemVT, Align Alignment, unsigned AddrSpace,
-                      unsigned ExtType, bool Atomic) const {
+  /// through `setLoadExtAction`) yield `LegalizeAction::Custom`. Allows targets
+  /// to use builtin behaviors (e.g. Legal, Promote) specialized by Alignment
+  /// and AddrSpace, rather than just types.
+  virtual LegalizeAction getCustomLoadAction(EVT ValVT, EVT MemVT,
+                                             Align Alignment,
+                                             unsigned AddrSpace,
+                                             unsigned ExtType) const {
     return LegalizeAction::Custom;
   }
 
@@ -1582,8 +1582,7 @@ public:
   /// needs to be promoted to a larger size, needs to be expanded to some other
   /// code sequence, or the target has a custom expander for it.
   LegalizeAction getLoadAction(EVT ValVT, EVT MemVT, Align Alignment,
-                               unsigned AddrSpace, unsigned ExtType,
-                               bool Atomic) const {
+                               unsigned AddrSpace, unsigned ExtType) const {
     if (ValVT.isExtended() || MemVT.isExtended())
       return Expand;
     unsigned ValI = (unsigned)ValVT.getSimpleVT().SimpleTy;
@@ -1591,40 +1590,49 @@ public:
     assert(ExtType < ISD::LAST_LOADEXT_TYPE && ValI < MVT::VALUETYPE_SIZE &&
            MemI < MVT::VALUETYPE_SIZE && "Table isn't big enough!");
     unsigned Shift = 4 * ExtType;
+    LegalizeAction Action =
+        (LegalizeAction)((LoadExtActions[ValI][MemI] >> Shift) & 0xf);
 
-    LegalizeAction Action;
-    if (Atomic) {
-      Action =
-          (LegalizeAction)((AtomicLoadExtActions[ValI][MemI] >> Shift) & 0xf);
-      assert((Action == Legal || Action == Expand) &&
-             "Unsupported atomic load extension action.");
-    } else {
-      Action = (LegalizeAction)((LoadExtActions[ValI][MemI] >> Shift) & 0xf);
-    }
-
-    if (Action == LegalizeAction::Custom) {
-      return getCustomLoadAction(ValVT, MemVT, Alignment, AddrSpace, ExtType,
-                                 Atomic);
-    }
+    if (Action == LegalizeAction::Custom)
+      return getCustomLoadAction(ValVT, MemVT, Alignment, AddrSpace, ExtType);
 
     return Action;
   }
 
   /// Return true if the specified load with extension is legal on this target.
   bool isLoadLegal(EVT ValVT, EVT MemVT, Align Alignment, unsigned AddrSpace,
-                   unsigned ExtType, bool Atomic) const {
-    return getLoadAction(ValVT, MemVT, Alignment, AddrSpace, ExtType, Atomic) ==
-           Legal;
+                   unsigned ExtType) const {
+    return getLoadAction(ValVT, MemVT, Alignment, AddrSpace, ExtType) == Legal;
   }
 
   /// Return true if the specified load with extension is legal or custom
   /// on this target.
   bool isLoadLegalOrCustom(EVT ValVT, EVT MemVT, Align Alignment,
-                           unsigned AddrSpace, unsigned ExtType,
-                           bool Atomic) const {
+                           unsigned AddrSpace, unsigned ExtType) const {
     LegalizeAction Action =
-        getLoadAction(ValVT, MemVT, Alignment, AddrSpace, ExtType, Atomic);
+        getLoadAction(ValVT, MemVT, Alignment, AddrSpace, ExtType);
     return Action == Legal || Action == Custom;
+  }
+
+  /// Return how this atomic load with extension should be treated: either it
+  /// is legal, needs to be promoted to a larger size, needs to be expanded to
+  /// some other code sequence, or the target has a custom expander for it.
+  LegalizeAction getAtomicLoadExtAction(unsigned ExtType, EVT ValVT,
+                                        EVT MemVT) const {
+    if (ValVT.isExtended() || MemVT.isExtended())
+      return Expand;
+    unsigned ValI = (unsigned)ValVT.getSimpleVT().SimpleTy;
+    unsigned MemI = (unsigned)MemVT.getSimpleVT().SimpleTy;
+    assert(ExtType < ISD::LAST_LOADEXT_TYPE && ValI < MVT::VALUETYPE_SIZE &&
+           MemI < MVT::VALUETYPE_SIZE && "Table isn't big enough!");
+    unsigned Shift = 4 * ExtType;
+    return (LegalizeAction)((AtomicLoadExtActions[ValI][MemI] >> Shift) & 0xf);
+  }
+
+  /// Return true if the specified atomic load with extension is legal on this
+  /// target.
+  bool isAtomicLoadExtLegal(unsigned ExtType, EVT ValVT, EVT MemVT) const {
+    return getAtomicLoadExtAction(ExtType, ValVT, MemVT) == Legal;
   }
 
   /// Returns an alternative action to use when the coarser lookups (configured
@@ -3356,7 +3364,7 @@ public:
     }
 
     return isLoadLegal(VT, LoadVT, Load->getAlign(),
-                       Load->getPointerAddressSpace(), LType, false);
+                       Load->getPointerAddressSpace(), LType);
   }
 
   /// Return true if any actual instruction that defines a value of type FromTy
@@ -3992,8 +4000,9 @@ private:
   /// for each of the 4 load ext types.
   uint16_t LoadExtActions[MVT::VALUETYPE_SIZE][MVT::VALUETYPE_SIZE];
 
-  /// Similar to LoadExtActions, but for atomic loads. Only Legal or Expand
-  /// (default) values are supported.
+  /// Similar to LoadExtActions, but for atomic loads. Only Legal, Custom,
+  /// Promote or Expand values are supported. All extending atomic loads
+  /// default to Expand.
   uint16_t AtomicLoadExtActions[MVT::VALUETYPE_SIZE][MVT::VALUETYPE_SIZE];
 
   /// For each value type pair keep a LegalizeAction that indicates whether a

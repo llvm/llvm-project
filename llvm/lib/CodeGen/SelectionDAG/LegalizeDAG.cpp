@@ -345,7 +345,7 @@ SDValue SelectionDAGLegalize::ExpandConstantFP(ConstantFPSDNode *CFP) {
                   SVT.getTypeForEVT(*DAG.getContext()))),
               MachinePointerInfo::getConstantPool(DAG.getMachineFunction())
                   .getAddrSpace(),
-              ISD::EXTLOAD, false) &&
+              ISD::EXTLOAD) &&
           TLI.ShouldShrinkFPConstant(OrigVT)) {
         Type *SType = SVT.getTypeForEVT(*DAG.getContext());
         LLVMC = cast<ConstantFP>(ConstantFoldCastOperand(
@@ -749,8 +749,8 @@ void SelectionDAGLegalize::LegalizeLoadOps(SDNode *Node) {
       // Until such a way is found, don't insist on promoting i1 here.
       (SrcVT != MVT::i1 ||
        TLI.getLoadAction(Node->getValueType(0), MVT::i1, LD->getAlign(),
-                         LD->getAddressSpace(), ExtType,
-                         false) == TargetLowering::Promote)) {
+                         LD->getAddressSpace(),
+                         ExtType) == TargetLowering::Promote)) {
     // Promote to a byte-sized load if not loading an integral number of
     // bytes.  For example, promote EXTLOAD:i20 -> EXTLOAD:i24.
     unsigned NewWidth = SrcVT.getStoreSizeInBits();
@@ -861,8 +861,7 @@ void SelectionDAGLegalize::LegalizeLoadOps(SDNode *Node) {
   } else {
     bool isCustom = false;
     switch (TLI.getLoadAction(Node->getValueType(0), SrcVT.getSimpleVT(),
-                              LD->getAlign(), LD->getAddressSpace(), ExtType,
-                              false)) {
+                              LD->getAlign(), LD->getAddressSpace(), ExtType)) {
     default:
       llvm_unreachable("This action is not supported yet!");
     case TargetLowering::Custom:
@@ -892,7 +891,7 @@ void SelectionDAGLegalize::LegalizeLoadOps(SDNode *Node) {
     case TargetLowering::Expand: {
       EVT DestVT = Node->getValueType(0);
       if (!TLI.isLoadLegal(DestVT, SrcVT, LD->getAlign(), LD->getAddressSpace(),
-                           ISD::EXTLOAD, false)) {
+                           ISD::EXTLOAD)) {
         // If the source type is not legal, see if there is a legal extload to
         // an intermediate type that we can then extend further.
         EVT LoadVT =
@@ -900,7 +899,7 @@ void SelectionDAGLegalize::LegalizeLoadOps(SDNode *Node) {
         if ((LoadVT.isFloatingPoint() == SrcVT.isFloatingPoint()) &&
             (TLI.isTypeLegal(SrcVT) || // Same as SrcVT == LoadVT?
              TLI.isLoadLegal(LoadVT, SrcVT, LD->getAlign(),
-                             LD->getAddressSpace(), ExtType, false))) {
+                             LD->getAddressSpace(), ExtType))) {
           // If we are loading a legal type, this is a non-extload followed by a
           // full extend.
           ISD::LoadExtType MidExtType =
@@ -1059,10 +1058,30 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
     Action = TLI.getOperationAction(Node->getOpcode(), InnerType);
     break;
   }
-  case ISD::ATOMIC_STORE:
-    Action = TLI.getOperationAction(Node->getOpcode(),
-                                    Node->getOperand(1).getValueType());
+  case ISD::ATOMIC_LOAD: {
+    auto *AN = cast<AtomicSDNode>(Node);
+    EVT VT = Node->getValueType(0);
+    ISD::LoadExtType ExtType = AN->getExtensionType();
+    if (ExtType == ISD::NON_EXTLOAD)
+      Action = TLI.getOperationAction(Node->getOpcode(), VT);
+    else
+      Action = TLI.getAtomicLoadExtAction(ExtType, VT, AN->getMemoryVT());
     break;
+  }
+  case ISD::ATOMIC_STORE: {
+    auto *AN = cast<AtomicSDNode>(Node);
+    EVT VT = Node->getOperand(1).getValueType();
+    EVT MemVT = AN->getMemoryVT();
+    Action = TargetLowering::Legal;
+    if (MemVT.bitsLT(VT)) {
+      Action = TLI.getTruncStoreAction(VT, MemVT, AN->getAlign(),
+                                       AN->getAddressSpace());
+    }
+
+    if (Action == TargetLowering::Legal)
+      Action = TLI.getOperationAction(Node->getOpcode(), VT);
+    break;
+  }
   case ISD::ATOMIC_SWAP:
   case ISD::ATOMIC_LOAD_ADD:
   case ISD::ATOMIC_LOAD_SUB:
@@ -1881,7 +1900,7 @@ SDValue SelectionDAGLegalize::EmitStackConvert(SDValue SrcOp, EVT SlotVT,
       (SlotVT.bitsLT(DestVT) &&
        !TLI.isLoadLegalOrCustom(DestVT, SlotVT, DestAlign,
                                 DAG.getDataLayout().getAllocaAddrSpace(),
-                                ISD::EXTLOAD, false)))
+                                ISD::EXTLOAD)))
     return SDValue();
 
   return DAG.emitStackConvert(SrcOp, SlotVT, DestVT, dl, Chain);
@@ -3296,6 +3315,24 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Results.push_back(Node->getOperand(0));
     break;
   case ISD::ATOMIC_LOAD: {
+    auto *AN = cast<AtomicSDNode>(Node);
+    EVT VT = Node->getValueType(0);
+    EVT MemVT = AN->getMemoryVT();
+    ISD::LoadExtType ExtType = AN->getExtensionType();
+    if ((ExtType == ISD::SEXTLOAD || ExtType == ISD::ZEXTLOAD) &&
+        TLI.isAtomicLoadExtLegal(ISD::EXTLOAD, VT, MemVT)) {
+      SDValue Load =
+          DAG.getAtomicLoad(ISD::EXTLOAD, dl, MemVT, VT, AN->getChain(),
+                            AN->getBasePtr(), AN->getMemOperand());
+      SDValue Ext = ExtType == ISD::SEXTLOAD
+                        ? DAG.getNode(ISD::SIGN_EXTEND_INREG, dl, VT, Load,
+                                      DAG.getValueType(MemVT))
+                        : DAG.getZeroExtendInReg(Load, dl, MemVT);
+      Results.push_back(Ext);
+      Results.push_back(Load.getValue(1));
+      break;
+    }
+
     // There is no libcall for atomic load; fake it with ATOMIC_CMP_SWAP.
     SDValue Zero = DAG.getConstant(0, dl, Node->getValueType(0));
     SDVTList VTs = DAG.getVTList(Node->getValueType(0), MVT::Other);
@@ -3308,6 +3345,17 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     break;
   }
   case ISD::ATOMIC_STORE: {
+    auto *AN = cast<AtomicSDNode>(Node);
+    SDValue Val = AN->getVal();
+    EVT MemVT = AN->getMemoryVT();
+    if (MemVT.bitsLT(Val.getValueType()) && TLI.isTypeLegal(MemVT)) {
+      SDValue Trunc = DAG.getNode(ISD::TRUNCATE, dl, MemVT, Val);
+      Results.push_back(DAG.getAtomic(ISD::ATOMIC_STORE, dl, MemVT,
+                                      AN->getChain(), Trunc, AN->getBasePtr(),
+                                      AN->getMemOperand()));
+      break;
+    }
+
     // There is no libcall for atomic store; fake it with ATOMIC_SWAP.
     SDValue Swap = DAG.getAtomic(
         ISD::ATOMIC_SWAP, dl, cast<AtomicSDNode>(Node)->getMemoryVT(),

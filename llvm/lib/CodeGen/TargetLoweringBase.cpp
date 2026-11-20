@@ -788,8 +788,8 @@ void TargetLoweringBase::initActions() {
   // Let extending atomic loads be unsupported by default.
   for (MVT ValVT : MVT::all_valuetypes())
     for (MVT MemVT : MVT::all_valuetypes())
-      setAtomicLoadExtAction({ISD::SEXTLOAD, ISD::ZEXTLOAD}, ValVT, MemVT,
-                             Expand);
+      setAtomicLoadExtAction({ISD::EXTLOAD, ISD::SEXTLOAD, ISD::ZEXTLOAD},
+                             ValVT, MemVT, Expand);
 
   // We're somewhat special casing MVT::i2 and MVT::i4. Ideally we want to
   // remove this and targets should individually set these types if not legal.
