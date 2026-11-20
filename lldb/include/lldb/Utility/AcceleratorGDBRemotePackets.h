@@ -122,12 +122,6 @@ llvm::json::Value toJSON(const AcceleratorConnectionInfo &data);
 /// - Breakpoint hits: when a native breakpoint requested by a plugin is hit,
 ///   the AcceleratorBreakpointHitResponse contains an AcceleratorActions that
 ///   can request additional breakpoints or other actions.
-///
-/// In future patches, AcceleratorActions will also be returned:
-/// - When the native process stops (via NativeProcessIsStopping), allowing
-///   plugins to react to arbitrary stop events.
-/// - Via accelerator stop reply packets, enabling plugins to inject actions
-///   into the native process asynchronously.
 struct AcceleratorActions {
   AcceleratorActions() = default;
   AcceleratorActions(llvm::StringRef plugin_name, int64_t action_id)
@@ -139,11 +133,17 @@ struct AcceleratorActions {
   std::string session_name;
   /// Unique identifier for this action within the plugin.
   int64_t identifier = 0;
+  /// Stop identifier from the accelerator process's GDB server. The
+  /// wait-for-resume action below uses this to refer to a specific stop.
+  std::optional<uint32_t> stop_id;
   /// New breakpoints to set. Nothing to set if this is empty.
   std::vector<AcceleratorBreakpointInfo> breakpoints;
   /// If set, the client should create a new target and connect to the
   /// accelerator GDB server described here.
   std::optional<AcceleratorConnectionInfo> connect_info;
+  /// Request that the client wait for the accelerator process to resume from
+  /// stop_id.
+  bool wait_for_accelerator_process_to_resume = false;
 };
 
 bool fromJSON(const llvm::json::Value &value, AcceleratorActions &data,

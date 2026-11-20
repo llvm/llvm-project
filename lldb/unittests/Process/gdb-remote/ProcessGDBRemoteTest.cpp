@@ -25,11 +25,94 @@
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
+#include <chrono>
+#include <future>
 #include <mutex>
 
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::process_gdb_remote;
+
+namespace lldb_private::process_gdb_remote {
+class ProcessGDBRemoteSyncStateTest : public ::testing::Test {
+protected:
+  using SyncState = ProcessGDBRemote::SyncState;
+};
+
+TEST_F(ProcessGDBRemoteSyncStateTest, WaitsForMatchingResume) {
+  using namespace std::chrono_literals;
+  SyncState state;
+
+  std::future<llvm::Error> resumed = std::async(
+      std::launch::async, [&] { return state.WaitForResume(7, 2s); });
+  EXPECT_EQ(std::future_status::timeout, resumed.wait_for(10ms));
+
+  // The AMDGPU use case can begin waiting before the predicted stop arrives.
+  state.SetStopped(7);
+  EXPECT_EQ(std::future_status::timeout, resumed.wait_for(10ms));
+
+  state.PrepareToResume();
+  state.SetResumed();
+  EXPECT_THAT_ERROR(resumed.get(), llvm::Succeeded());
+}
+
+TEST_F(ProcessGDBRemoteSyncStateTest, NewStopSupersedesPreparedResume) {
+  using namespace std::chrono_literals;
+  SyncState state;
+
+  state.SetStopped(UINT32_MAX);
+  state.PrepareToResume();
+  state.SetStopped(0); // Stop IDs wrap modulo uint32_t.
+  state.SetResumed();  // A late completion for the old stop is ignored.
+  EXPECT_THAT_ERROR(state.WaitForResume(0, 1ms), llvm::Failed());
+
+  state.PrepareToResume();
+  state.SetResumed();
+  EXPECT_THAT_ERROR(state.WaitForResume(0, 1ms), llvm::Succeeded());
+  EXPECT_THAT_ERROR(state.WaitForResume(UINT32_MAX, 1ms), llvm::Succeeded());
+}
+
+TEST_F(ProcessGDBRemoteSyncStateTest, ReplayedStopDoesNotUndoResume) {
+  using namespace std::chrono_literals;
+  SyncState state;
+
+  state.SetStopped(11);
+  state.PrepareToResume();
+  state.SetResumed();
+  state.SetStopped(11);
+  EXPECT_THAT_ERROR(state.WaitForResume(11, 1ms), llvm::Succeeded());
+}
+
+TEST_F(ProcessGDBRemoteSyncStateTest, CancelWakesWaiters) {
+  using namespace std::chrono_literals;
+  SyncState state;
+
+  std::future<llvm::Error> wait = std::async(
+      std::launch::async, [&] { return state.WaitForResume(9, 2s); });
+  EXPECT_EQ(std::future_status::timeout, wait.wait_for(10ms));
+  state.Cancel();
+  EXPECT_THAT_ERROR(wait.get(), llvm::Failed());
+  EXPECT_THAT_ERROR(state.WaitForResume(9, 1ms), llvm::Failed());
+}
+
+TEST_F(ProcessGDBRemoteSyncStateTest, ResetInvalidatesOldState) {
+  using namespace std::chrono_literals;
+  SyncState state;
+
+  state.SetStopped(5);
+  std::future<llvm::Error> wait = std::async(
+      std::launch::async, [&] { return state.WaitForResume(5, 2s); });
+  EXPECT_EQ(std::future_status::timeout, wait.wait_for(10ms));
+  state.Reset();
+  EXPECT_EQ(std::future_status::ready, wait.wait_for(1s));
+  EXPECT_THAT_ERROR(wait.get(), llvm::Failed());
+
+  state.SetStopped(1);
+  state.PrepareToResume();
+  state.SetResumed();
+  EXPECT_THAT_ERROR(state.WaitForResume(1, 1ms), llvm::Succeeded());
+}
+} // namespace lldb_private::process_gdb_remote
 
 namespace {
 class ProcessGDBRemoteDiagnosticsTest : public ::testing::Test {

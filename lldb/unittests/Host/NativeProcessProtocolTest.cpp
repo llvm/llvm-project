@@ -17,6 +17,33 @@ using namespace lldb_private;
 using namespace lldb;
 using namespace testing;
 
+namespace {
+class StateTestProcess : public MockProcess<NativeProcessProtocol> {
+public:
+  using MockProcess<NativeProcessProtocol>::MockProcess;
+  using NativeProcessProtocol::SetState;
+};
+} // namespace
+
+TEST(NativeProcessProtocolTest, GetNextStopID) {
+  NiceMock<MockDelegate> DummyDelegate;
+  StateTestProcess Process(DummyDelegate, ArchSpec("x86_64-pc-linux"));
+
+  EXPECT_EQ(Process.GetStopID(), 0u);
+  EXPECT_EQ(Process.GetNextStopID(), 0u);
+
+  Process.SetState(eStateRunning, /*notify_delegates=*/false);
+  EXPECT_EQ(Process.GetStopID(), 0u);
+  EXPECT_EQ(Process.GetNextStopID(), 1u);
+
+  Process.SetState(eStateStepping, /*notify_delegates=*/false);
+  EXPECT_EQ(Process.GetNextStopID(), 1u);
+
+  Process.SetState(eStateStopped, /*notify_delegates=*/false);
+  EXPECT_EQ(Process.GetStopID(), 1u);
+  EXPECT_EQ(Process.GetNextStopID(), 1u);
+}
+
 TEST(NativeProcessProtocolTest, SetBreakpoint) {
   NiceMock<MockDelegate> DummyDelegate;
   MockProcess<NativeProcessProtocol> Process(DummyDelegate,

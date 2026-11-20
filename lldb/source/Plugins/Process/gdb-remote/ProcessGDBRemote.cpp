@@ -274,6 +274,108 @@ std::chrono::milliseconds ProcessGDBRemote::GetPacketTestDelay() {
       GetGlobalPluginProperties().GetPacketTestDelay());
 }
 
+void ProcessGDBRemote::SyncState::Reset() {
+  {
+    std::lock_guard<std::mutex> guard(m_mutex);
+    ++m_cancel_generation;
+    m_cancelled = false;
+    m_stop_id.reset();
+    m_state = State::Unknown;
+    m_pending_resume.reset();
+    m_completed_resume_generation = 0;
+  }
+  m_cv.notify_all();
+}
+
+void ProcessGDBRemote::SyncState::Cancel() {
+  {
+    std::lock_guard<std::mutex> guard(m_mutex);
+    ++m_cancel_generation;
+    m_cancelled = true;
+    m_pending_resume.reset();
+  }
+  m_cv.notify_all();
+}
+
+void ProcessGDBRemote::SyncState::SetStopped(uint32_t stop_id) {
+  {
+    std::lock_guard<std::mutex> guard(m_mutex);
+    if (m_cancelled)
+      return;
+
+    if (m_stop_id) {
+      int32_t order = CompareStopIDs(stop_id, *m_stop_id);
+      if (order < 0)
+        return;
+      // Replayed stop replies must not turn a stop that has already resumed
+      // back into a stopped state.
+      if (order == 0)
+        return;
+    }
+
+    m_stop_id = stop_id;
+    m_state = State::Stopped;
+    ++m_stop_generation;
+    m_pending_resume.reset();
+  }
+  m_cv.notify_all();
+}
+
+void ProcessGDBRemote::SyncState::PrepareToResume() {
+  std::lock_guard<std::mutex> guard(m_mutex);
+  if (m_cancelled || !m_stop_id || m_state != State::Stopped) {
+    m_pending_resume.reset();
+    return;
+  }
+
+  m_pending_resume = PendingResume{m_stop_generation, ++m_resume_generation};
+}
+
+void ProcessGDBRemote::SyncState::SetResumed() {
+  {
+    std::lock_guard<std::mutex> guard(m_mutex);
+    if (m_cancelled || !m_pending_resume || !m_stop_id ||
+        m_state != State::Stopped ||
+        m_pending_resume->stop_generation != m_stop_generation) {
+      m_pending_resume.reset();
+      return;
+    }
+
+    m_state = State::Running;
+    m_completed_resume_generation = m_pending_resume->resume_generation;
+    m_pending_resume.reset();
+  }
+  m_cv.notify_all();
+}
+
+llvm::Error ProcessGDBRemote::SyncState::WaitForResume(
+    uint32_t stop_id, std::chrono::steady_clock::duration timeout) {
+  std::unique_lock<std::mutex> lock(m_mutex);
+  const uint64_t cancel_generation = m_cancel_generation;
+  const auto deadline = std::chrono::steady_clock::now() + timeout;
+  auto finished = [&] {
+    if (m_cancelled || cancel_generation != m_cancel_generation)
+      return true;
+    if (!m_stop_id)
+      return false;
+    int32_t order = CompareStopIDs(*m_stop_id, stop_id);
+    return order > 0 || (order == 0 && m_state == State::Running &&
+                         m_completed_resume_generation != 0);
+  };
+
+  if (!m_cv.wait_until(lock, deadline, finished))
+    return llvm::createStringError(
+        "timed out waiting for accelerator process to resume from stop ID "
+        "%u",
+        stop_id);
+  if (cancel_generation != m_cancel_generation || m_cancelled)
+    return llvm::createStringError(
+        "accelerator process synchronization was %s while waiting to resume "
+        "from stop ID %u",
+        m_cancelled ? "cancelled" : "reset", stop_id);
+  return llvm::Error::success();
+}
+
 ArchSpec ProcessGDBRemote::GetSystemArchitecture() {
   return m_gdb_comm.GetHostArchitecture();
 }
@@ -746,6 +848,8 @@ Status ProcessGDBRemote::DoConnectRemote(llvm::StringRef remote_url) {
 
 Status ProcessGDBRemote::WillLaunchOrAttach() {
   Status error;
+  m_accelerator_sync_state.Reset();
+  m_processed_accelerator_actions.clear();
   m_stdio_communication.Clear();
   return error;
 }
@@ -1358,6 +1462,7 @@ ProcessGDBRemote::TraceGetBinaryData(const TraceGetBinaryDataRequest &request) {
 }
 
 void ProcessGDBRemote::DidExit() {
+  m_accelerator_sync_state.Cancel();
   // When we exit, disconnect from the GDB server communications
   m_gdb_comm.Disconnect();
 }
@@ -1369,6 +1474,7 @@ void ProcessGDBRemote::DidAttach(ArchSpec &process_arch) {
 }
 
 Status ProcessGDBRemote::WillResume() {
+  m_accelerator_sync_state.PrepareToResume();
   m_continue_c_tids.clear();
   m_continue_C_tids.clear();
   m_continue_s_tids.clear();
@@ -1378,6 +1484,8 @@ Status ProcessGDBRemote::WillResume() {
   m_shared_cache_info.Lock()->reset();
   return Status();
 }
+
+void ProcessGDBRemote::DidResume() { m_accelerator_sync_state.SetResumed(); }
 
 bool ProcessGDBRemote::SupportsReverseDirection() {
   return m_gdb_comm.GetReverseStepSupported() ||
@@ -2527,6 +2635,7 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
     uint64_t queue_serial_number = 0;
     ExpeditedRegisterMap expedited_register_map;
     AddressableBits addressable_bits;
+    std::optional<uint32_t> server_stop_id;
     while (stop_packet.GetNameColonValue(key, value)) {
       if (key.compare("metype") == 0) {
         // exception type in big endian hex
@@ -2685,6 +2794,10 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
         if (!value.getAsInteger(BASE_10, addressing_bits)) {
           addressable_bits.SetHighmemAddressableBits(addressing_bits);
         }
+      } else if (key == "stop_id") {
+        uint32_t parsed_stop_id;
+        if (!value.getAsInteger(BASE_10, parsed_stop_id))
+          server_stop_id = parsed_stop_id;
       } else if (key == "added-binaries") {
         // A comma separated list of all threads in the current
         // process that includes the thread for this stop reply packet
@@ -2744,6 +2857,11 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
         associated_with_dispatch_queue, dispatch_queue_t, queue_name,
         queue_kind, queue_serial_number, added_binaries,
         detailed_binaries_info);
+
+    // Publish the server stop only after every field in the packet and the
+    // stopped thread's metadata have been installed.
+    if (server_stop_id)
+      m_accelerator_sync_state.SetStopped(*server_stop_id);
 
     return eStateStopped;
   } break;
@@ -4199,6 +4317,10 @@ void ProcessGDBRemote::StopAsyncThread() {
 
   LLDB_LOGF(log, "ProcessGDBRemote::%s ()", __FUNCTION__);
 
+  // Wake synchronization waiters before joining this thread. A waiter may be
+  // blocked on work that requires this connection to remain alive.
+  m_accelerator_sync_state.Cancel();
+
   std::lock_guard<std::recursive_mutex> guard(m_async_thread_state_mutex);
   if (m_async_thread.IsJoinable()) {
     m_async_broadcaster.BroadcastEvent(eBroadcastBitAsyncThreadShouldExit);
@@ -4349,6 +4471,7 @@ thread_result_t ProcessGDBRemote::AsyncThread() {
     }
   }
 
+  m_accelerator_sync_state.Cancel();
   LLDB_LOGF(log, "ProcessGDBRemote::%s(pid = %" PRIu64 ") thread exiting...",
             __FUNCTION__, GetID());
 
@@ -4402,12 +4525,15 @@ llvm::Error
 ProcessGDBRemote::HandleAcceleratorActions(const AcceleratorActions &actions) {
   Log *log = GetLog(GDBRLog::Process);
 
-  // The same set of actions can be delivered to the client more than once: a
-  // plugin may keep reporting the same actions (with the same identifier) on
-  // subsequent native stops until its state advances. The identifier uniquely
-  // names a set of actions for a plugin, so skip any set we have already
-  // processed to avoid re-running its side effects (e.g. setting the same
-  // breakpoints again).
+  if (actions.wait_for_accelerator_process_to_resume && !actions.stop_id)
+    return llvm::createStringError(
+        "accelerator action for plugin '%s' requests a wait without a stop "
+        "ID",
+        actions.plugin_name.c_str());
+
+  // A plugin can repeat its current actions in initialization or
+  // breakpoint-hit responses. Skip a repeated identifier to avoid re-running
+  // its side effects (e.g. setting the same breakpoints again).
   auto it = m_processed_accelerator_actions.find(actions.plugin_name);
   if (it != m_processed_accelerator_actions.end() &&
       it->second == actions.identifier) {
@@ -4432,7 +4558,62 @@ ProcessGDBRemote::HandleAcceleratorActions(const AcceleratorActions &actions) {
       return error;
   }
 
+  if (!actions.wait_for_accelerator_process_to_resume)
+    return llvm::Error::success();
+
+  llvm::Expected<std::shared_ptr<ProcessGDBRemote>> accelerator_process =
+      GetAcceleratorProcess(actions.plugin_name);
+  if (!accelerator_process)
+    return accelerator_process.takeError();
+
+  if (llvm::Error error = (*accelerator_process)
+                              ->m_accelerator_sync_state.WaitForResume(
+                                  *actions.stop_id, GetPacketTimeout()))
+    return error;
+
   return llvm::Error::success();
+}
+
+llvm::Expected<std::shared_ptr<ProcessGDBRemote>>
+ProcessGDBRemote::GetAcceleratorProcess(llvm::StringRef plugin_name) {
+  TargetSP cpu_target_sp = GetTarget().shared_from_this();
+  std::shared_ptr<ProcessGDBRemote> matching_process;
+  bool found_cpu_group = false;
+
+  for (const TargetGroupSP &group_base_sp : GetTarget().GetTargetGroups()) {
+    auto *group =
+        llvm::dyn_cast<TargetGroupCPUAndAccelerators>(group_base_sp.get());
+    if (!group || group->GetRole(cpu_target_sp) != TargetGroup::Role::CPU)
+      continue;
+    found_cpu_group = true;
+
+    for (const TargetSP &target_sp :
+         group->GetTargets(TargetGroup::Role::Accelerator)) {
+      ProcessSP process_sp = target_sp->GetProcessSP();
+      if (!process_sp || process_sp->GetPluginName() != GetPluginNameStatic())
+        continue;
+
+      auto process = std::static_pointer_cast<ProcessGDBRemote>(process_sp);
+      std::optional<LLDBSettings> settings =
+          process->GetGDBRemote().GetLLDBSettings();
+      if (!settings || settings->accelerator_plugin_name != plugin_name)
+        continue;
+
+      if (matching_process)
+        return llvm::createStringError(
+            "multiple accelerator processes use plugin '%s'",
+            plugin_name.str().c_str());
+      matching_process = std::move(process);
+    }
+  }
+
+  if (!found_cpu_group)
+    return llvm::createStringError(
+        "CPU target is not in a CPU and accelerator target group");
+  if (!matching_process)
+    return llvm::createStringError("no accelerator process uses plugin '%s'",
+                                   plugin_name.str().c_str());
+  return matching_process;
 }
 
 llvm::Error ProcessGDBRemote::HandleAcceleratorConnection(

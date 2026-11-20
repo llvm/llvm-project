@@ -272,6 +272,10 @@ public:
   // Stop id interface
   uint32_t GetStopID() const;
 
+  /// Return the identifier for the current stop, or the next stop when the
+  /// process is running.
+  uint32_t GetNextStopID() const;
+
   // Callbacks for low-level process state changes
   class NativeDelegate {
   public:

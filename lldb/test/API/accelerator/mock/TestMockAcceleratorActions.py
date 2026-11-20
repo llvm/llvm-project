@@ -212,6 +212,64 @@ class MockAcceleratorActionsTestCase(TestBase):
         self.assertState(accelerator_process.GetState(), lldb.eStateExited)
         self.assertEqual(accelerator_process.GetExitStatus(), process.GetExitStatus())
 
+    @skipIfRemote
+    @add_test_categories(["llgs"])
+    def test_wait_for_accelerator_process_to_resume(self):
+        """A native breakpoint action waits for the accelerator to resume."""
+        self.set_mock_env("LLDB_MOCK_ACCELERATOR_WAIT_FOR_RESUME", "1")
+        self.build()
+
+        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        self.assertTrue(target, VALID_TARGET)
+        process = target.LaunchSimple(
+            None, None, self.get_process_working_directory()
+        )
+        self.assertTrue(process, PROCESS_IS_VALID)
+        self.check_accelerator_breakpoint_stop(
+            process, "mock_gpu_accelerator_initialize", hit_count=1
+        )
+
+        process.Continue()
+        self.check_accelerator_breakpoint_stop(
+            process, "mock_gpu_accelerator_connect", hit_count=1
+        )
+        accelerator_targets = [
+            candidate for candidate in self.dbg if candidate != target
+        ]
+        self.assertEqual(len(accelerator_targets), 1)
+        accelerator_process = accelerator_targets[0].GetProcess()
+        self.assertTrue(accelerator_process.IsValid())
+        self.assertState(accelerator_process.GetState(), lldb.eStateStopped)
+
+        listener = self.dbg.GetListener()
+        self.addTearDownHook(lambda: self.dbg.SetAsync(False))
+        self.dbg.SetAsync(True)
+        self.assertSuccess(process.Continue())
+        lldbutil.expect_state_changes(self, listener, process, [lldb.eStateRunning])
+
+        event = lldb.SBEvent()
+        self.assertFalse(
+            listener.WaitForEventForBroadcasterWithType(
+                1,
+                process.GetBroadcaster(),
+                lldb.SBProcess.eBroadcastBitStateChanged,
+                event,
+            ),
+            "the native process stopped before the accelerator resumed",
+        )
+
+        self.assertSuccess(accelerator_process.Continue())
+        lldbutil.expect_state_changes(
+            self, listener, accelerator_process, [lldb.eStateRunning]
+        )
+        lldbutil.expect_state_changes(
+            self, listener, process, [lldb.eStateStopped]
+        )
+        self.check_accelerator_breakpoint_stop(
+            process, "mock_gpu_accelerator_wait_for_resume", hit_count=1
+        )
+        self.assertState(accelerator_process.GetState(), lldb.eStateRunning)
+
     def run_expecting_failed_connection(self):
         """Run the inferior through its breakpoints, asserting the connection is
         attempted at the connection hook but no accelerator target is created

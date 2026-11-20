@@ -2382,6 +2382,9 @@ following keys and values:
   contain a `:` or a `;`. Use `hexname` if the thread
   name has special characters.
 * `hexname` - `ascii-hex` -  An ASCII hex string that contains the name of the thread
+* `stop_id` - `unsigned` -
+  Decimal 32-bit identifier for this process stop. The value advances each
+  time the process enters a stopped state.
 * `qaddr` - `hex` -
   Big endian hex value that contains the `libdispatch`
   queue address for the queue of the thread.
@@ -2920,8 +2923,8 @@ FPGAs) alongside the native host process via accelerator plugins installed
 in lldb-server.
 
 An accelerator plugin drives the client by returning a list of
-`AcceleratorActions` (currently just breakpoints to set in the native
-process). The client can receive `AcceleratorActions` at two points:
+`AcceleratorActions`. The client can receive `AcceleratorActions` at two
+points:
 
 1. Once, in response to the `jAcceleratorPluginInitialize` packet sent when
    the native process is launched or attached.
@@ -2999,6 +3002,25 @@ following fields:
 | `triple`        | string | Target triple for the accelerator target, used to ensure the architecture is compatible with `platform_name`. |
 | `exe_path`      | string | Optional path to the executable to use when creating the accelerator target. If omitted, an empty target is created. |
 | `synchronous`   | bool   | If true, connect synchronously: the client blocks until the accelerator process is connected and stopped before continuing. If false, the connection is made asynchronously. |
+
+An `accelerator_action` may also include the following optional fields for
+synchronizing its associated accelerator process:
+
+| Key                                      | Type    | Description |
+|------------------------------------------|---------|-------------|
+| `stop_id`                                | integer or null | Accelerator GDB server stop identifier associated with the wait-for-resume action; `null` when absent. |
+| `wait_for_accelerator_process_to_resume` | bool    | When true, request that the client wait for the accelerator process to resume from `stop_id`. Executing this request requires `stop_id`. |
+
+If omitted, `wait_for_accelerator_process_to_resume` defaults to false. JSON
+decoding accepts both fields independently; clients must check that `stop_id`
+is present when executing a wait request.
+
+The client identifies the accelerator process associated with `plugin_name`
+and waits until that process has resumed from `stop_id`. Observing a later
+stop identifier also completes the wait, because the process necessarily
+resumed from the requested stop before reaching the later one. The wait fails
+if the action has no `stop_id`, no matching accelerator process exists, the
+connection is torn down, or the packet timeout expires.
 
 **Priority To Implement:** Required for hardware accelerator debugging
 support. Not needed for non-hardware-accelerator debugging.
