@@ -12197,6 +12197,13 @@ static std::optional<IntRange> TryGetExprRange(ASTContext &C, const Expr *E,
                                                bool Approximate) {
   E = E->IgnoreParens();
 
+  // A BPF enumerator relocated at load time is not a constant. Use the range of
+  // its local value, as if it were not relocated, if an approximate range is
+  // allowed. Otherwise, use the range of its type, since its value is only
+  // known at load time.
+  if (Approximate && SemaBPF::isPreserveAIEnumeratorRef(E))
+    E = cast<PseudoObjectExpr>(E)->getSyntacticForm();
+
   // Try a full evaluation first.
   Expr::EvalResult result;
   if (E->EvaluateAsRValue(result, C, InConstantContext))
