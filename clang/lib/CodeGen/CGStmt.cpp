@@ -2974,10 +2974,22 @@ void AsmConstraintsInfo::HandleOutputConstraints() {
       ResultTypeRequiresCast.push_back(RequiresCast);
 
       if (RequiresCast) {
-        if (unsigned Size = getContext().getTypeSize(QTy))
+        if (unsigned Size = getContext().getTypeSize(QTy)) {
           Ty = llvm::IntegerType::get(getLLVMContext(), Size);
-        else
+
+          // The output is stored through an integer type of its size, so
+          // report here if there isn't one. The stores are emitted again for
+          // each target of an asm goto.
+          if (!getTargetHooks().isScalarizableAsmOperand(
+                  CGF, ResultTruncRegTypes.back()) &&
+              getContext()
+                  .getIntTypeForBitwidth(Size, /*Signed=*/false)
+                  .isNull())
+            CGM.getDiags().Report(OutExpr->getExprLoc(),
+                                  diag::err_store_value_to_reg);
+        } else {
           CGM.Error(OutExpr->getExprLoc(), "output size should not be zero");
+        }
       }
 
       ResultRegTypes.push_back(Ty);
@@ -3400,13 +3412,11 @@ void AsmConstraintsInfo::EmitAsmStores(
         continue;
       }
 
+      // HandleOutputConstraints() already reported that no integer type has
+      // the output's size.
       QualType Ty = getContext().getIntTypeForBitwidth(Size, /*Signed=*/false);
-      if (Ty.isNull()) {
-        const Expr *OutExpr = S.getOutputExpr(i);
-        CGM.getDiags().Report(OutExpr->getExprLoc(),
-                              diag::err_store_value_to_reg);
+      if (Ty.isNull())
         return;
-      }
 
       // The output's type may not be an integer: an output tied to a larger
       // input has the input's type (e.g., a pointer), and a mask register
