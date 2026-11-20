@@ -396,8 +396,7 @@ static Error parseArguments(cl::LibraryOptionsContext &,
             .Case("v3", V3)
             .Default(std::nullopt);
   if (!V)
-    return createStringError(
-        "SimplifyCFG: expected one argument, v1, v2 or v3");
+    return createStringError("expected one argument, v1, v2 or v3");
   Version = *V;
   return Error::success();
 }

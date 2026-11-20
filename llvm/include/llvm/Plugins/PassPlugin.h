@@ -152,7 +152,8 @@ private:
 
 /// Passes each "<PluginName>,<arg>" in \p Args to the \c ParseArguments
 /// callback of the extension in \p Infos with that name, together with
-/// \p LibraryOptions. Two extensions with the same name are an error.
+/// \p LibraryOptions. Two extensions with the same name are an error. Errors
+/// from a callback are prefixed with the name of its extension.
 LLVM_ABI Error passPluginArguments(ArrayRef<PassPluginLibraryInfo> Infos,
                                    ArrayRef<std::string> Args,
                                    cl::LibraryOptionsContext &LibraryOptions);

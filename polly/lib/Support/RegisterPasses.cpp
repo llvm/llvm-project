@@ -700,8 +700,12 @@ static Error parseArguments(cl::LibraryOptionsContext &,
   append_range(Argv, Args);
   std::string Msg;
   raw_string_ostream OS(Msg);
-  if (!cl::ParseCommandLineOptions(Argv.size(), Argv.data(), "", &OS))
-    return createStringError(StringRef(Msg).trim());
+  if (!cl::ParseCommandLineOptions(Argv.size(), Argv.data(), "", &OS)) {
+    // The host prefixes the plugin name already
+    StringRef Err = StringRef(Msg).trim();
+    Err.consume_front("Polly: ");
+    return createStringError(Err);
+  }
   return Error::success();
 }
 

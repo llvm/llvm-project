@@ -91,8 +91,10 @@ Error llvm::passPluginArguments(ArrayRef<PassPluginLibraryInfo> Infos,
     if (!Info.ParseArguments)
       return createStringError("pass plugin '" + Twine(Info.PluginName) +
                                "' does not accept arguments");
+    // Plugin errors don't know which -plugin-arg they came from
     if (Error E = Info.ParseArguments(LibraryOptions, PArgs))
-      return E;
+      return createStringError("pass plugin '" + Twine(Info.PluginName) +
+                               "': " + toString(std::move(E)));
   }
   return Error::success();
 }
