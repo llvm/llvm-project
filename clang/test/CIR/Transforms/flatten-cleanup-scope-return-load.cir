@@ -7,7 +7,8 @@
 !s32i = !cir.int<s, 32>
 !rec_Guard = !cir.struct<"Guard" {data !cir.ptr<!s32i>}>
 
-cir.func private @g(!s32i) -> !s32i
+cir.func private @use(!s32i)
+cir.func private @may_write()
 cir.func private @shouldReturn() -> !cir.bool
 cir.func private @guard_ctor(!cir.ptr<!rec_Guard>, !cir.ptr<!s32i>)
 cir.func private @guard_dtor(!cir.ptr<!rec_Guard>)
@@ -56,11 +57,10 @@ cir.func @lifetime_end_in_cleanup(%arg0: !s32i) -> !s32i {
   %0 = cir.alloca "x" align(4) : !cir.ptr<!s32i>
   cir.lifetime.start %0 : !cir.ptr<!s32i>
   cir.cleanup.scope {
-    %1 = cir.call @g(%arg0) : (!s32i) -> !s32i
-    cir.store %1, %0 : !s32i, !cir.ptr<!s32i>
-    %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
-    cir.return %2 : !s32i
-  } cleanup all {
+    cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
+    %1 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+    cir.return %1 : !s32i
+  } cleanup normal {
     cir.lifetime.end %0 : !cir.ptr<!s32i>
     cir.yield
   }
@@ -98,32 +98,31 @@ cir.func @escaped_slot() -> !s32i {
   cir.trap
 }
 
-// The address of x escapes by being stored.
+// The address of x is stored through %arg0, so the opaque call in the cleanup
+// may write x through it.
 
 // CHECK-LABEL: cir.func @escaped_by_store(
 // CHECK:         %[[TMP:.*]] = cir.alloca "__ret_operand_tmp"
 // CHECK:         %[[X:.*]] = cir.alloca "x"
-// CHECK:         %[[G:.*]] = cir.alloca "g"
 // CHECK:         %[[VAL:.*]] = cir.load %[[X]]
 // CHECK-NEXT:    cir.store %[[VAL]], %[[TMP]]
 // CHECK-NEXT:    cir.br ^[[CLEANUP:bb[0-9]+]]
 // CHECK:       ^[[CLEANUP]]:
-// CHECK-NEXT:    cir.call @guard_dtor(%[[G]])
+// CHECK-NEXT:    cir.call @may_write()
 // CHECK-NEXT:    cir.br ^[[EXIT:bb[0-9]+]]
 // CHECK:       ^[[EXIT]]:
 // CHECK-NEXT:    %[[RET:.*]] = cir.load %[[TMP]]
 // CHECK-NEXT:    cir.return %[[RET]] : !s32i
 cir.func @escaped_by_store(%arg0: !cir.ptr<!cir.ptr<!s32i>>) -> !s32i {
   %0 = cir.alloca "x" align(4) : !cir.ptr<!s32i>
-  %1 = cir.alloca "g" align(8) : !cir.ptr<!rec_Guard>
-  %2 = cir.const #cir.int<5> : !s32i
-  cir.store %2, %0 : !s32i, !cir.ptr<!s32i>
+  %1 = cir.const #cir.int<5> : !s32i
+  cir.store %1, %0 : !s32i, !cir.ptr<!s32i>
   cir.store %0, %arg0 : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
   cir.cleanup.scope {
-    %3 = cir.load %0 : !cir.ptr<!s32i>, !s32i
-    cir.return %3 : !s32i
+    %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+    cir.return %2 : !s32i
   } cleanup normal {
-    cir.call @guard_dtor(%1) : (!cir.ptr<!rec_Guard>) -> ()
+    cir.call @may_write() : () -> ()
     cir.yield
   }
   cir.trap
@@ -135,59 +134,82 @@ cir.func @escaped_by_store(%arg0: !cir.ptr<!cir.ptr<!s32i>>) -> !s32i {
 // CHECK-LABEL: cir.func @store_before_return(
 // CHECK:         %[[TMP:.*]] = cir.alloca "__ret_operand_tmp"
 // CHECK:         %[[X:.*]] = cir.alloca "x"
-// CHECK:         %[[G:.*]] = cir.alloca "g"
 // CHECK:         %[[VAL:.*]] = cir.load %[[X]]
 // CHECK-NEXT:    %[[NINE:.*]] = cir.const #cir.int<9>
 // CHECK-NEXT:    cir.store %[[NINE]], %[[X]]
 // CHECK-NEXT:    cir.store %[[VAL]], %[[TMP]]
 // CHECK-NEXT:    cir.br ^[[CLEANUP:bb[0-9]+]]
 // CHECK:       ^[[CLEANUP]]:
-// CHECK-NEXT:    cir.call @guard_dtor(%[[G]])
 // CHECK-NEXT:    cir.br ^[[EXIT:bb[0-9]+]]
 // CHECK:       ^[[EXIT]]:
 // CHECK-NEXT:    %[[RET:.*]] = cir.load %[[TMP]]
 // CHECK-NEXT:    cir.return %[[RET]] : !s32i
-cir.func @store_before_return(%arg0: !cir.ptr<!s32i>) -> !s32i {
+cir.func @store_before_return() -> !s32i {
   %0 = cir.alloca "x" align(4) : !cir.ptr<!s32i>
-  %1 = cir.alloca "g" align(8) : !cir.ptr<!rec_Guard>
-  %2 = cir.const #cir.int<5> : !s32i
-  cir.store %2, %0 : !s32i, !cir.ptr<!s32i>
-  cir.call @guard_ctor(%1, %arg0) : (!cir.ptr<!rec_Guard>, !cir.ptr<!s32i>) -> ()
+  %1 = cir.const #cir.int<5> : !s32i
+  cir.store %1, %0 : !s32i, !cir.ptr<!s32i>
   cir.cleanup.scope {
-    %3 = cir.load %0 : !cir.ptr<!s32i>, !s32i
-    %4 = cir.const #cir.int<9> : !s32i
-    cir.store %4, %0 : !s32i, !cir.ptr<!s32i>
-    cir.return %3 : !s32i
+    %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+    %3 = cir.const #cir.int<9> : !s32i
+    cir.store %3, %0 : !s32i, !cir.ptr<!s32i>
+    cir.return %2 : !s32i
   } cleanup normal {
-    cir.call @guard_dtor(%1) : (!cir.ptr<!rec_Guard>) -> ()
     cir.yield
   }
   cir.trap
 }
 
-// x does not escape and the cleanup does not use it, so the load is sunk.
+// x does not escape, so the opaque call in the cleanup cannot change it and
+// the load is sunk.
 
 // CHECK-LABEL: cir.func @untouched_slot(
 // CHECK-NOT:     "__ret_operand_tmp"
 // CHECK:         %[[X:.*]] = cir.alloca "x"
-// CHECK:         %[[G:.*]] = cir.alloca "g"
 // CHECK-NOT:     cir.load %[[X]]
-// CHECK:         cir.call @guard_dtor(%[[G]])
+// CHECK:         cir.call @may_write()
 // CHECK-NEXT:    cir.br ^[[EXIT:bb[0-9]+]]
 // CHECK:       ^[[EXIT]]:
 // CHECK-NEXT:    %[[RET:.*]] = cir.load %[[X]]
 // CHECK-NEXT:    cir.return %[[RET]] : !s32i
-cir.func @untouched_slot(%arg0: !cir.ptr<!s32i>) -> !s32i {
+cir.func @untouched_slot() -> !s32i {
   %0 = cir.alloca "x" align(4) : !cir.ptr<!s32i>
-  %1 = cir.alloca "g" align(8) : !cir.ptr<!rec_Guard>
-  %2 = cir.const #cir.int<5> : !s32i
-  cir.store %2, %0 : !s32i, !cir.ptr<!s32i>
-  cir.call @guard_ctor(%1, %arg0) : (!cir.ptr<!rec_Guard>, !cir.ptr<!s32i>) -> ()
+  %1 = cir.const #cir.int<5> : !s32i
+  cir.store %1, %0 : !s32i, !cir.ptr<!s32i>
   cir.cleanup.scope {
-    %3 = cir.load %0 : !cir.ptr<!s32i>, !s32i
-    cir.return %3 : !s32i
+    %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+    cir.return %2 : !s32i
   } cleanup normal {
-    cir.call @guard_dtor(%1) : (!cir.ptr<!rec_Guard>) -> ()
+    cir.call @may_write() : () -> ()
+    cir.yield
+  }
+  cir.trap
+}
+
+// Reading x in the cleanup does not change it, so the load is sunk.
+
+// CHECK-LABEL: cir.func @read_in_cleanup(
+// CHECK-NOT:     "__ret_operand_tmp"
+// CHECK:         %[[X:.*]] = cir.alloca "x"
+// CHECK:         cir.br ^[[BODY:bb[0-9]+]]
+// CHECK:       ^[[BODY]]:
+// CHECK-NEXT:    cir.br ^[[CLEANUP:bb[0-9]+]]
+// CHECK:       ^[[CLEANUP]]:
+// CHECK-NEXT:    %[[USE:.*]] = cir.load %[[X]]
+// CHECK-NEXT:    cir.call @use(%[[USE]])
+// CHECK-NEXT:    cir.br ^[[EXIT:bb[0-9]+]]
+// CHECK:       ^[[EXIT]]:
+// CHECK-NEXT:    %[[RET:.*]] = cir.load %[[X]]
+// CHECK-NEXT:    cir.return %[[RET]] : !s32i
+cir.func @read_in_cleanup() -> !s32i {
+  %0 = cir.alloca "x" align(4) : !cir.ptr<!s32i>
+  %1 = cir.const #cir.int<5> : !s32i
+  cir.store %1, %0 : !s32i, !cir.ptr<!s32i>
+  cir.cleanup.scope {
+    %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+    cir.return %2 : !s32i
+  } cleanup normal {
+    %3 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+    cir.call @use(%3) : (!s32i) -> ()
     cir.yield
   }
   cir.trap
@@ -255,9 +277,8 @@ cir.func @multi_exit() -> !s32i {
 // CHECK:         %[[TMP:.*]] = cir.alloca "__ret_operand_tmp"
 // CHECK:         %[[DEST:.*]] = cir.alloca "__cleanup_dest_slot"
 // CHECK:         %[[X:.*]] = cir.alloca "x"
-// CHECK:         %[[G:.*]] = cir.alloca "g"
 // CHECK-NOT:     cir.load %[[X]]
-// CHECK:         cir.call @guard_dtor(%[[G]])
+// CHECK:         cir.call @may_write()
 // CHECK-NEXT:    cir.br ^[[INNER_EXIT:bb[0-9]+]]
 // CHECK:       ^[[INNER_EXIT]]:
 // CHECK-NEXT:    %[[VAL:.*]] = cir.load %[[X]]
@@ -273,18 +294,16 @@ cir.func @multi_exit() -> !s32i {
 // CHECK:       ^[[OUTER_RET]]:
 // CHECK-NEXT:    %[[RET:.*]] = cir.load %[[TMP]]
 // CHECK-NEXT:    cir.return %[[RET]] : !s32i
-cir.func @nested_outer_clobbers(%arg0: !s32i, %arg1: !cir.ptr<!s32i>) -> !s32i {
+cir.func @nested_outer_clobbers(%arg0: !s32i) -> !s32i {
   %0 = cir.alloca "x" align(4) : !cir.ptr<!s32i>
-  %1 = cir.alloca "g" align(8) : !cir.ptr<!rec_Guard>
   cir.lifetime.start %0 : !cir.ptr<!s32i>
   cir.cleanup.scope {
     cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
-    cir.call @guard_ctor(%1, %arg1) : (!cir.ptr<!rec_Guard>, !cir.ptr<!s32i>) -> ()
     cir.cleanup.scope {
-      %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
-      cir.return %2 : !s32i
+      %1 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+      cir.return %1 : !s32i
     } cleanup normal {
-      cir.call @guard_dtor(%1) : (!cir.ptr<!rec_Guard>) -> ()
+      cir.call @may_write() : () -> ()
       cir.yield
     }
     cir.yield
@@ -302,7 +321,6 @@ cir.func @nested_outer_clobbers(%arg0: !s32i, %arg1: !cir.ptr<!s32i>) -> !s32i {
 // CHECK-DAG:     %[[DEST:.*]] = cir.alloca "__cleanup_dest_slot"
 // CHECK-DAG:     %[[TMP:.*]] = cir.alloca "__ret_operand_tmp"
 // CHECK:         %[[X:.*]] = cir.alloca "x"
-// CHECK:         %[[G:.*]] = cir.alloca "g"
 // CHECK:         %[[VAL:.*]] = cir.load %[[X]]
 // CHECK-NEXT:    cir.store %[[VAL]], %[[TMP]]
 // CHECK-NEXT:    cir.br ^[[INNER_CLEANUP:bb[0-9]+]]
@@ -315,30 +333,28 @@ cir.func @nested_outer_clobbers(%arg0: !s32i, %arg1: !cir.ptr<!s32i>) -> !s32i {
 // CHECK-NEXT:    cir.store %[[RET_ID]], %[[DEST]]
 // CHECK-NEXT:    cir.br ^[[OUTER_CLEANUP:bb[0-9]+]]
 // CHECK:       ^[[OUTER_CLEANUP]]:
-// CHECK-NEXT:    cir.call @guard_dtor(%[[G]])
+// CHECK-NEXT:    cir.call @may_write()
 // CHECK:         cir.switch.flat
 // CHECK-NEXT:      0: ^{{bb[0-9]+}},
 // CHECK-NEXT:      1: ^[[OUTER_RET:bb[0-9]+]]
 // CHECK:       ^[[OUTER_RET]]:
 // CHECK-NEXT:    %[[RET:.*]] = cir.load %[[TMP]]
 // CHECK-NEXT:    cir.return %[[RET]] : !s32i
-cir.func @nested_inner_clobbers(%arg0: !s32i, %arg1: !cir.ptr<!s32i>) -> !s32i {
+cir.func @nested_inner_clobbers(%arg0: !s32i) -> !s32i {
   %0 = cir.alloca "x" align(4) : !cir.ptr<!s32i>
-  %1 = cir.alloca "g" align(8) : !cir.ptr<!rec_Guard>
-  cir.call @guard_ctor(%1, %arg1) : (!cir.ptr<!rec_Guard>, !cir.ptr<!s32i>) -> ()
   cir.cleanup.scope {
     cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
     cir.cleanup.scope {
-      %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
-      cir.return %2 : !s32i
+      %1 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+      cir.return %1 : !s32i
     } cleanup normal {
-      %3 = cir.const #cir.int<7> : !s32i
-      cir.store %3, %0 : !s32i, !cir.ptr<!s32i>
+      %2 = cir.const #cir.int<7> : !s32i
+      cir.store %2, %0 : !s32i, !cir.ptr<!s32i>
       cir.yield
     }
     cir.yield
   } cleanup normal {
-    cir.call @guard_dtor(%1) : (!cir.ptr<!rec_Guard>) -> ()
+    cir.call @may_write() : () -> ()
     cir.yield
   }
   cir.trap

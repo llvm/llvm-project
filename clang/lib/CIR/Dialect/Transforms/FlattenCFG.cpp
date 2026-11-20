@@ -1168,23 +1168,31 @@ public:
   }
 
   // Whether the slot \p alloca read by \p loadOp may change before the end of
-  // \p cleanupRegion: it has a use after the load in its block or in the
-  // cleanup, or its address escapes through a use other than as the address
-  // of a load, store or lifetime marker.
+  // \p cleanupRegion: its address escapes, or a store or lifetime marker on it
+  // runs after the load, in the load's block or in the cleanup.
   static bool slotMayChangeBeforeCleanupEnd(cir::AllocaOp alloca,
                                             cir::LoadOp loadOp,
                                             mlir::Region &cleanupRegion) {
     mlir::Block *loadBlock = loadOp->getBlock();
     return llvm::any_of(alloca->getUsers(), [&](mlir::Operation *user) {
+      // Reads never change the slot.
+      if (mlir::isa<cir::LoadOp>(user))
+        return false;
+
+      // Storing the address, or using it in anything but a store to the slot
+      // or a lifetime marker, lets it escape.
+      if (auto storeOp = mlir::dyn_cast<cir::StoreOp>(user)) {
+        if (storeOp.getValue() == alloca.getResult())
+          return true;
+      } else if (!mlir::isa<cir::LifetimeStartOp, cir::LifetimeEndOp>(user)) {
+        return true;
+      }
+
+      // A store or lifetime marker only matters if it runs after the load.
       if (cleanupRegion.isAncestor(user->getParentRegion()))
         return true;
       mlir::Operation *userInBlock = loadBlock->findAncestorOpInBlock(*user);
-      if (userInBlock && loadOp->isBeforeInBlock(userInBlock))
-        return true;
-      if (auto storeOp = mlir::dyn_cast<cir::StoreOp>(user))
-        return storeOp.getValue() == alloca.getResult();
-      return !mlir::isa<cir::LoadOp, cir::LifetimeStartOp, cir::LifetimeEndOp>(
-          user);
+      return userInBlock && loadOp->isBeforeInBlock(userInBlock);
     });
   }
 
