@@ -664,8 +664,7 @@ struct VPlanTransforms {
   /// truncate as free. If narrowing is only profitable for a subset of VFs in
   /// \p Range, Range.End is updated.
   static void narrowInductionTruncates(VPlan &Plan, VFRange &Range,
-                                       const TargetTransformInfo &TTI,
-                                       PredicatedScalarEvolution &PSE);
+                                       const TargetTransformInfo &TTI);
 
   /// Wrap reduction operations and their vp.merge in expression recipes when
   /// the merge is expected to be folded, to better model the cost and register
