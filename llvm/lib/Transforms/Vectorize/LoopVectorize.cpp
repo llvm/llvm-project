@@ -6800,8 +6800,9 @@ void LoopVectorizationPlanner::addReductionResultComputation(
       VPValue *Iden = Plan->getOrAddLiveIn(
           getRecurrenceIdentity(RK, PhiTy, PhiR->getFastMathFlagsOrNone()));
       VPValue *Start = PhiR->getStartValue();
-      // Constant start values fold into the start vector. With VF 1, seeding
-      // each part with the identity can let SLP vectorize the loop anyway.
+      // Constant start values are available early, so keep them in the start
+      // vector. With VF 1, seeding each part with the identity can let SLP
+      // vectorize the loop anyway.
       if (TTI.preferReductionStartAfterLoop() && MinVF.isVector() &&
           !isa<VPConstant>(Start) &&
           applyStartInReductionResult(FinalReductionResult, Start))
