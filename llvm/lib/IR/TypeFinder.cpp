@@ -34,11 +34,17 @@ using namespace llvm;
 void TypeFinder::run(const Module &M, bool onlyNamed) {
   OnlyNamed = onlyNamed;
 
+  SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
+
   // Get types from global variables.
   for (const auto &G : M.globals()) {
     incorporateType(G.getValueType());
     if (G.hasInitializer())
       incorporateValue(G.getInitializer());
+    MDs.clear();
+    G.getAllMetadata(MDs);
+    for (const auto &MD : MDs)
+      incorporateMDNode(MD.second);
   }
 
   // Get types from aliases.
@@ -53,10 +59,14 @@ void TypeFinder::run(const Module &M, bool onlyNamed) {
     incorporateType(GI.getValueType());
 
   // Get types from functions.
-  SmallVector<std::pair<unsigned, MDNode *>, 4> MDForInst;
   for (const Function &FI : M) {
     incorporateType(FI.getFunctionType());
     incorporateAttributes(FI.getAttributes());
+
+    MDs.clear();
+    FI.getAllMetadata(MDs);
+    for (const auto &MD : MDs)
+      incorporateMDNode(MD.second);
 
     for (const Use &U : FI.operands())
       incorporateValue(U.get());
@@ -84,10 +94,10 @@ void TypeFinder::run(const Module &M, bool onlyNamed) {
           incorporateAttributes(CB->getAttributes());
 
         // Incorporate types hiding in metadata.
-        I.getAllMetadataOtherThanDebugLoc(MDForInst);
-        for (const auto &MD : MDForInst)
+        MDs.clear();
+        I.getAllMetadata(MDs);
+        for (const auto &MD : MDs)
           incorporateMDNode(MD.second);
-        MDForInst.clear();
 
         // Incorporate types hiding in variable-location information.
         for (const auto &Dbg : I.getDbgRecordRange()) {
