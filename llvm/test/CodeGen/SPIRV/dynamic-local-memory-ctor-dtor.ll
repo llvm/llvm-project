@@ -66,9 +66,8 @@ define spir_kernel void @kernel(ptr addrspace(1) %out) addrspace(9) {
   ret void
 }
 
-
 ; Constructor function accessing dynamic local memory should use slot
-; initialized by init kernel
+; initialized by init kernel.
 define void @ctor() addrspace(9) {
   store i32 42, ptr addrspace(3) @buf, align 4
   ret void

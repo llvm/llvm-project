@@ -205,13 +205,10 @@ void SPIRVPassConfig::addIRPasses() {
 
   addPass(createSPIRVRegularizerPass());
   addPass(createSPIRVCtorDtorLoweringLegacyPass());
-  // Lowering of dynamic local memory arrays has to happen
-  // after CtorDtor lowering, because the earlier pass
-  // might create new kernel entries in a module. This
-  // requires addition of trailing `ptr addrspace(3)` argument
-  // to the newly added constructor and destructor kernels
-  // because runtimes will add the argument for every kernel
-  // in module using dynamic local memory.
+  // LowerDynamicLocalMemoryPass must run after ctor/dtor lowering:
+  // the kernels CtorDtorLowering creates also need the trailing dynamic local
+  // memory argument, since runtimes pass it to every kernel of a module using
+  // such memory.
   addPass(createSPIRVLowerDynamicLocalMemoryPass(TM));
   addPass(createSPIRVPrepareFunctionsPass(TM));
   addPass(createSPIRVPrepareGlobalsPass());
