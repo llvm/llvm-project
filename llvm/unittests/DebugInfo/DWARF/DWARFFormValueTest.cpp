@@ -346,6 +346,21 @@ INSTANTIATE_TEST_SUITE_P(
         ErrorParams{DW_FORM_indirect, {DW_FORM_data1}},
         ErrorParams{DW_FORM_strp_sup, {}}, ErrorParams{DW_FORM_ref_sig8, {}}));
 
+TEST(DWARFFormValue, TruncatedBlockHasNoLength) {
+  // DW_FORM_exprloc with a declared length of 32 and no payload. The failed
+  // read must not leave the declared length in the value, otherwise
+  // getAsBlock() returns a 32 byte ArrayRef over a null pointer.
+  std::vector<uint8_t> Raw = {0x20};
+  DWARFDataExtractor Data(Raw, sys::IsLittleEndianHost, 8);
+  DWARFFormValue Form(DW_FORM_exprloc);
+  uint64_t Offset = 0;
+  EXPECT_FALSE(Form.extractValue(Data, &Offset, {0, 0, DWARF32}));
+
+  std::optional<ArrayRef<uint8_t>> Block = Form.getAsBlock();
+  ASSERT_TRUE(Block.has_value());
+  EXPECT_TRUE(Block->empty());
+}
+
 using DumpValueParams =
     std::tuple<Form, ArrayRef<uint8_t>, DwarfFormat, StringRef>;
 struct DumpValueFixture : public testing::TestWithParam<DumpValueParams> {
