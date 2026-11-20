@@ -1,0 +1,57 @@
+// RUN: cir-opt %s -cse -o - | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func @cse_load_across_scope_with_return(%arg0: !cir.ptr<!s32i>, %arg1: !cir.bool) -> !s32i {
+    %0 = cir.load %arg0 : !cir.ptr<!s32i>, !s32i
+    cir.scope {
+      cir.brcond %arg1 ^bb1, ^bb2
+    ^bb1:
+      cir.return %0 : !s32i
+    ^bb2:
+      cir.yield
+    }
+    %1 = cir.load %arg0 : !cir.ptr<!s32i>, !s32i
+    %2 = cir.add %0, %1 : !s32i
+    cir.return %2 : !s32i
+  }
+  // CHECK:      cir.func{{.*}} @cse_load_across_scope_with_return(%[[ARG0:.*]]: !cir.ptr<!s32i>, %[[ARG1:.*]]: !cir.bool) -> !s32i {
+  // CHECK-NEXT:   %[[LOAD:.*]] = cir.load %[[ARG0]] : !cir.ptr<!s32i>, !s32i
+  // CHECK-NEXT:   cir.scope {
+  // CHECK-NEXT:     cir.brcond %[[ARG1]] ^bb1, ^bb2
+  // CHECK-NEXT:   ^bb1:
+  // CHECK-NEXT:     cir.return %[[LOAD]] : !s32i
+  // CHECK-NEXT:   ^bb2:
+  // CHECK-NEXT:     cir.yield
+  // CHECK-NEXT:   }
+  // CHECK-NEXT:   %[[SUM:.*]] = cir.add %[[LOAD]], %[[LOAD]] : !s32i
+  // CHECK-NEXT:   cir.return %[[SUM]] : !s32i
+  // CHECK-NEXT: }
+
+  cir.func @cse_load_across_scope_with_unreachable(%arg0: !cir.ptr<!s32i>, %arg1: !cir.bool) -> !s32i {
+    %0 = cir.load %arg0 : !cir.ptr<!s32i>, !s32i
+    cir.scope {
+      cir.brcond %arg1 ^bb1, ^bb2
+    ^bb1:
+      cir.unreachable
+    ^bb2:
+      cir.yield
+    }
+    %1 = cir.load %arg0 : !cir.ptr<!s32i>, !s32i
+    %2 = cir.add %0, %1 : !s32i
+    cir.return %2 : !s32i
+  }
+  // CHECK:      cir.func{{.*}} @cse_load_across_scope_with_unreachable(%[[ARG0:.*]]: !cir.ptr<!s32i>, %[[ARG1:.*]]: !cir.bool) -> !s32i {
+  // CHECK-NEXT:   %[[LOAD:.*]] = cir.load %[[ARG0]] : !cir.ptr<!s32i>, !s32i
+  // CHECK-NEXT:   cir.scope {
+  // CHECK-NEXT:     cir.brcond %[[ARG1]] ^bb1, ^bb2
+  // CHECK-NEXT:   ^bb1:
+  // CHECK-NEXT:     cir.unreachable
+  // CHECK-NEXT:   ^bb2:
+  // CHECK-NEXT:     cir.yield
+  // CHECK-NEXT:   }
+  // CHECK-NEXT:   %[[SUM:.*]] = cir.add %[[LOAD]], %[[LOAD]] : !s32i
+  // CHECK-NEXT:   cir.return %[[SUM]] : !s32i
+  // CHECK-NEXT: }
+}
