@@ -18707,7 +18707,7 @@ ExprResult Sema::ActOnCXXReflectExpr(SourceLocation CaretCaretLoc,
 
 ExprResult Sema::BuildCXXReflectExpr(SourceLocation CaretCaretLoc,
                                      TypeSourceInfo *TSI) {
-  return CXXReflectExpr::Create(Context, CaretCaretLoc, TSI);
+  return CXXReflectExpr::Create(Context, CaretCaretLoc, ReflectionValue(TSI));
 }
 
 namespace {

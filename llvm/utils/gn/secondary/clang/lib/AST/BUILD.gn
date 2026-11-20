@@ -148,6 +148,7 @@ static_library("AST") {
     "RawCommentList.cpp",
     "RecordLayout.cpp",
     "RecordLayoutBuilder.cpp",
+    "Reflection.cpp",
     "ScanfFormatString.cpp",
     "SelectorLocationsKind.cpp",
     "Stmt.cpp",

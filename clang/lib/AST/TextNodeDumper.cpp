@@ -882,18 +882,7 @@ void TextNodeDumper::Visit(const APValue &Value, QualType Ty) {
     return;
   case APValue::Reflection:
     OS << "Reflection ";
-    switch (Value.getReflectionOperandKind()) {
-    case ReflectionKind::Null:
-      OS << "std::meta::info{}";
-      break;
-    case ReflectionKind::Type: {
-      OS << "^^";
-      const TypeSourceInfo *TSI = static_cast<const TypeSourceInfo *>(
-          Value.getReflectionOpaqueOperand());
-      TSI->getType().print(OS, PrintPolicy);
-      break;
-    }
-    }
+    Value.getReflectionValue().print(OS, PrintPolicy);
     return;
   }
   llvm_unreachable("Unknown APValue kind!");
