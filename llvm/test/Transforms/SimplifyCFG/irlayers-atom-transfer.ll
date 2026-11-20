@@ -1,10 +1,10 @@
 ; RUN: opt -S -passes=simplifycfg -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck %s
 
-;; Check that irlayers take precedence over Key Instructions atom groups when
-;; SimplifyCFG folds a branch into its predecessor. @test_no_transfer: the
-;; layers differ, so the predecessor's branch keeps its own location and does
-;; not take the folded branch's atom. @test_transfer: they match, the atom
-;; moves, and the rebuilt locations keep the layers.
+;; Check that SimplifyCFG does not replace a branch's irlayers when it folds
+;; another branch into it and moves that branch's Key Instructions atom group
+;; over. @test_no_transfer: the layers differ, so the atom is not moved and the
+;; predecessor's branch keeps its own location. @test_transfer: they match, the
+;; atom moves, and the rebuilt locations keep the layers.
 
 declare void @a()
 declare void @b()
