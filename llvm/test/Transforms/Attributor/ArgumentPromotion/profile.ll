@@ -10,11 +10,11 @@ define void @caller() #0 {
 ; TUNIT-NEXT:    [[X:%.*]] = alloca i32, align 4
 ; TUNIT-NEXT:    store i32 42, ptr [[X]], align 4
 ; TUNIT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[X]], align 4
-; TUNIT-NEXT:    call void @promote_i32_ptr(i32 [[TMP1]]), !prof [[PROF0:![0-9]+]]
+; TUNIT-NEXT:    call void @promote_i32_ptr(i32 [[TMP1]]), !prof [[PROF3:![0-9]+]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@caller() {
-; CGSCC-NEXT:    call void @promote_i32_ptr(i32 noundef 42), !prof [[PROF0:![0-9]+]]
+; CGSCC-NEXT:    call void @promote_i32_ptr(i32 noundef 42), !prof [[PROF3:![0-9]+]]
 ; CGSCC-NEXT:    ret void
 ;
   %x = alloca i32
@@ -23,13 +23,14 @@ define void @caller() #0 {
   ret void
 }
 
-define internal void @promote_i32_ptr(ptr %xp) {
+; !type, !kcfi_type and !callgraph name the old signature, so they are dropped.
+define internal void @promote_i32_ptr(ptr %xp) !dbg !4 !prof !1 !annotation !2 !section_prefix !11 !kcfi_type !12 !type !13 !exclude !14 !implicit.ref !15 !elf_section_properties !16 !metadata_section_kind !17 !callgraph !18 {
 ; CHECK: Function Attrs: memory(readwrite, argmem: none)
 ; CHECK-LABEL: define {{[^@]+}}@promote_i32_ptr
-; CHECK-SAME: (i32 [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (i32 [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] !dbg [[DBG4:![0-9]+]] !prof [[PROF9:![0-9]+]] !section_prefix [[META10:![0-9]+]] !annotation [[META11:![0-9]+]] !exclude [[META12:![0-9]+]] !implicit.ref [[META13:![0-9]+]] !elf_section_properties [[META14:![0-9]+]] !metadata_section_kind [[META12]] {
 ; CHECK-NEXT:    [[XP_PRIV:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    store i32 [[TMP0]], ptr [[XP_PRIV]], align 4
-; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[XP_PRIV]], align 4
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[XP_PRIV]], align 4, !invariant.load [[META12]]
 ; CHECK-NEXT:    call void @use_i32(i32 [[X]])
 ; CHECK-NEXT:    ret void
 ;
@@ -40,13 +41,62 @@ define internal void @promote_i32_ptr(ptr %xp) {
 
 declare void @use_i32(i32)
 
+!llvm.dbg.cu = !{!5}
+!llvm.module.flags = !{!6}
+
 !0 = !{!"branch_weights", i32 30}
+!1 = !{!"function_entry_count", i64 100}
+!2 = !{!"kept"}
+!3 = !DISubroutineType(types: !7)
+!4 = distinct !DISubprogram(name: "promote_i32_ptr", scope: null, file: !8, line: 1, type: !3, scopeLine: 1, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !5)
+!5 = distinct !DICompileUnit(language: DW_LANG_C99, file: !8, emissionKind: FullDebug)
+!6 = !{i32 2, !"Debug Info Version", i32 3}
+!7 = !{null, !9}
+!8 = !DIFile(filename: "test.c", directory: "")
+!9 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !10, size: 64)
+!10 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+!11 = !{!"function_section_prefix", !"hot"}
+!12 = !{i32 12345678}
+!13 = !{i64 0, !"old_sig"}
+!14 = !{}
+!15 = !{ptr @use_i32}
+!16 = !{i32 1, i64 8}
+!17 = !{}
+!18 = !{!"old_sig"}
 ;.
 ; TUNIT: attributes #[[ATTR0]] = { memory(readwrite, argmem: none) }
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { memory(readwrite, argmem: none) }
 ;.
-; TUNIT: [[PROF0]] = !{!"branch_weights", i32 30}
+; TUNIT: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C99, file: [[META1:![0-9]+]], isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug)
+; TUNIT: [[META1]] = !DIFile(filename: "{{.*}}test.c", directory: {{.*}})
+; TUNIT: [[META2:![0-9]+]] = !{i32 2, !"Debug Info Version", i32 3}
+; TUNIT: [[PROF3]] = !{!"branch_weights", i32 30}
+; TUNIT: [[DBG4]] = distinct !DISubprogram(name: "promote_i32_ptr", scope: null, file: [[META1]], line: 1, type: [[META5:![0-9]+]], scopeLine: 1, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: [[META0]])
+; TUNIT: [[META5]] = !DISubroutineType(cc: DW_CC_nocall, types: [[META6:![0-9]+]])
+; TUNIT: [[META6]] = !{null, [[META7:![0-9]+]]}
+; TUNIT: [[META7]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: [[META8:![0-9]+]], size: 64)
+; TUNIT: [[META8]] = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+; TUNIT: [[PROF9]] = !{!"function_entry_count", i64 100}
+; TUNIT: [[META10]] = !{!"function_section_prefix", !"hot"}
+; TUNIT: [[META11]] = !{!"kept"}
+; TUNIT: [[META12]] = !{}
+; TUNIT: [[META13]] = !{ptr @use_i32}
+; TUNIT: [[META14]] = !{i32 1, i64 8}
 ;.
-; CGSCC: [[PROF0]] = !{!"branch_weights", i32 30}
+; CGSCC: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C99, file: [[META1:![0-9]+]], isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug)
+; CGSCC: [[META1]] = !DIFile(filename: "{{.*}}test.c", directory: {{.*}})
+; CGSCC: [[META2:![0-9]+]] = !{i32 2, !"Debug Info Version", i32 3}
+; CGSCC: [[PROF3]] = !{!"branch_weights", i32 30}
+; CGSCC: [[DBG4]] = distinct !DISubprogram(name: "promote_i32_ptr", scope: null, file: [[META1]], line: 1, type: [[META5:![0-9]+]], scopeLine: 1, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: [[META0]])
+; CGSCC: [[META5]] = !DISubroutineType(cc: DW_CC_nocall, types: [[META6:![0-9]+]])
+; CGSCC: [[META6]] = !{null, [[META7:![0-9]+]]}
+; CGSCC: [[META7]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: [[META8:![0-9]+]], size: 64)
+; CGSCC: [[META8]] = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+; CGSCC: [[PROF9]] = !{!"function_entry_count", i64 100}
+; CGSCC: [[META10]] = !{!"function_section_prefix", !"hot"}
+; CGSCC: [[META11]] = !{!"kept"}
+; CGSCC: [[META12]] = !{}
+; CGSCC: [[META13]] = !{ptr @use_i32}
+; CGSCC: [[META14]] = !{i32 1, i64 8}
 ;.
