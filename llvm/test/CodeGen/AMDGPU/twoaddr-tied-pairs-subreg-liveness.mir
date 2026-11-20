@@ -1,0 +1,28 @@
+# RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -o /dev/null %s -passes='require<live-intervals>,two-address-instruction,print<live-intervals>' 2>&1 | FileCheck %s
+
+# V_PERMLANE32_SWAP_B32 has two tied operand pairs, and here both read
+# subregisters of the same register. Two-address pass emits one copy per
+# pair, so %0.sub0 dies at the first copy and %0.sub1 at the second.
+#
+# Shrinking every subrange to the last copy instead leaves sub0 live up to the
+# copy that only reads sub1, which the machine verifier rejects with
+# "Instruction ending live segment doesn't read the register".
+
+---
+name:            two_tied_pairs_same_reg
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: Live intervals for machine function: two_tied_pairs_same_reg
+    ; sub0 ends at the first copy, sub1 at the second.
+    ; CHECK: %0 [16r,28r:0) 0@16r L0000000000000003 [16r,24r:0) 0@16r L000000000000000C [16r,28r:0) 0@16r
+    ;
+    ; CHECK: 16B %0:vreg_64_align2 = IMPLICIT_DEF
+    ; CHECK-NEXT: 24B %1:vgpr_32 = COPY %0.sub0:vreg_64_align2
+    ; CHECK-NEXT: 28B %2:vgpr_32 = COPY %0.sub1:vreg_64_align2
+    ; CHECK-NEXT: 32B %1:vgpr_32, %2:vgpr_32 = V_PERMLANE32_SWAP_B32_e32 %1:vgpr_32(tied-def 0), %2:vgpr_32(tied-def 1), implicit $exec
+    %0:vreg_64_align2 = IMPLICIT_DEF
+    %1:vgpr_32, %2:vgpr_32 = V_PERMLANE32_SWAP_B32_e32 %0.sub0, %0.sub1, implicit $exec
+    S_NOP 0, implicit %1, implicit %2
+    S_ENDPGM 0
+...
