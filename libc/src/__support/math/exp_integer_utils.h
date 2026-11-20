@@ -14,8 +14,8 @@
 //
 #include "hdr/fenv_macros.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/multiply_add.h"
+#include "src/__support/FPUtil/polyeval.h"
 #include "src/__support/frac128.h"
 #include "src/__support/frac64.h"
 #include "src/__support/macros/attributes.h"
@@ -211,20 +211,11 @@ LIBC_ALWAYS_INLINE Frac64 exp_fast_path(uint64_t l2y_r_hi) {
   // Will fallback to normal fputil::polyeval conditions aren't met.
 
 #if defined(LIBC_TYPES_HAS_INT128) && !defined(LIBC_MATH_HAS_SMALL_TABLES)
-  Frac64 x2 = x_lo_frac * x_lo_frac;
-  Frac64 p_even = fputil::polyeval(x2, EXP_COEFFS_64[0], EXP_COEFFS_64[2],
-                                   EXP_COEFFS_64[4], EXP_COEFFS_64[6]);
-  Frac64 p_odd = fputil::polyeval(x2, EXP_COEFFS_64[1], EXP_COEFFS_64[3],
-                                  EXP_COEFFS_64[5]);
-  Frac64 p = fputil::multiply_add(p_odd, x_lo_frac, p_even) * x_lo_frac;
+  Frac64 p = fputil::estrin_polyeval(x_lo_frac, EXP_COEFFS_64);
 #else  // !defined(LIBC_TYPES_HAS_INT128) || defined(LIBC_MATH_HAS_SMALL_TABLES)
-  Frac64 p(EXP_COEFFS_64[6]);
-  LIBC_LOOP_NOUNROLL
-  for (int i = 5; i >= 0; --i) {
-    p = p * x_lo_frac + EXP_COEFFS_64[i];
-  }
-  p *= x_lo_frac;
+  Frac64 p = fputil::loop_polyeval(x_lo_frac, EXP_COEFFS_64);
 #endif // defined(LIBC_TYPES_HAS_INT128) && !defined(LIBC_MATH_HAS_SMALL_TABLES)
+  p *= x_lo_frac;
 
   // With:
   //  - p = 2^lo - 1 --> 2^lo = p + 1
@@ -247,24 +238,11 @@ LIBC_ALWAYS_INLINE uint64_t exp_accurate_path(Frac128 l2y_r, bool is_neg, int d,
   x_lo_frac.val[1] &= 0x0fff'ffff'ffff'ffff;
 
 #if defined(LIBC_TYPES_HAS_INT128) && !defined(LIBC_MATH_HAS_SMALL_TABLES)
-  Frac128 x2 = x_lo_frac * x_lo_frac;
-  Frac128 p_even = fputil::polyeval(x2, EXP_COEFFS_128[0], EXP_COEFFS_128[2],
-                                    EXP_COEFFS_128[4], EXP_COEFFS_128[6],
-                                    EXP_COEFFS_128[8], EXP_COEFFS_128[10],
-                                    EXP_COEFFS_128[12], EXP_COEFFS_128[14]);
-  Frac128 p_odd =
-      fputil::polyeval(x2, EXP_COEFFS_128[1], EXP_COEFFS_128[3],
-                       EXP_COEFFS_128[5], EXP_COEFFS_128[7], EXP_COEFFS_128[9],
-                       EXP_COEFFS_128[11], EXP_COEFFS_128[13]);
-  Frac128 p = fputil::multiply_add(p_odd, x_lo_frac, p_even) * x_lo_frac;
+  Frac128 p = fputil::estrin_polyeval(x_lo_frac, EXP_COEFFS_128);
 #else  // !defined(LIBC_TYPES_HAS_INT128) || defined(LIBC_MATH_HAS_SMALL_TABLES)
-  Frac128 p(EXP_COEFFS_128[14]);
-  LIBC_LOOP_NOUNROLL
-  for (int i = 13; i >= 0; --i) {
-    p = p * x_lo_frac + EXP_COEFFS_128[i];
-  }
-  p *= x_lo_frac;
+  Frac128 p = fputil::loop_polyeval(x_lo_frac, EXP_COEFFS_128);
 #endif // defined(LIBC_TYPES_HAS_INT128) && !defined(LIBC_MATH_HAS_SMALL_TABLES)
+  p *= x_lo_frac;
 
   Frac128 mid_val = EXP_MID_128[x_mid];
   Frac128 result = fputil::multiply_add(mid_val, p, mid_val);

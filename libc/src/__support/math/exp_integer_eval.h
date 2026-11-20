@@ -187,6 +187,13 @@ LIBC_ALWAYS_INLINE double exp(double x, [[maybe_unused]] int rounding) {
 namespace integer_eval {
 
 LIBC_ALWAYS_INLINE double exp(double x) {
+  // if testing against CORE-MATH:
+  // 1. add #include "src/__support/FPUtil/rounding_mode.h"
+  // 2. uncomment these LoCs, and comment the last return
+  //
+  // int rounding = fputil::quick_get_round();
+  // return static_rounding::exp(x, rounding);
+
   return static_rounding::exp(x, FE_TONEAREST);
 }
 

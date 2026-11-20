@@ -19,6 +19,10 @@
 #include "src/__support/macros/optimization.h"
 #include "src/__support/macros/properties/cpu_features.h"
 
+// if testing against CORE-MATH:
+// override the implementation by uncommenting the LoC below:
+// #define LIBC_MATH_EXP_IMPL integer_eval
+
 #ifndef LIBC_MATH_EXP_IMPL
 
 #if !defined(LIBC_TARGET_CPU_HAS_FPU_DOUBLE) &&                                \
