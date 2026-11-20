@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+bti %s -o - | FileCheck %s --check-prefixes=CHECK,LINUX
-; RUN: llc -mtriple=aarch64_lfi -mattr=+bti %s -o - | FileCheck %s --check-prefixes=CHECK,LFI
+; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+bti,+pauth %s -o - | FileCheck %s --check-prefixes=CHECK,LINUX
+; RUN: llc -mtriple=aarch64_lfi -mattr=+bti,+pauth %s -o - | FileCheck %s --check-prefixes=CHECK,LFI
 
 ;; LFI routes all indirect branches through x28, so tail calls are not exempted
 ;; from BTI rules via the x16/x17 exception. Thus function entries must be BTI JC
@@ -14,21 +14,19 @@ define void @plain() "branch-target-enforcement" {
 }
 
 define void @signed() "branch-target-enforcement" "sign-return-address"="all" {
-;; hint #25 is paciasp.
 ; CHECK-LABEL: signed:
 ; CHECK:       // %bb.0:
 ; LFI-NEXT:    bti jc
-; CHECK-NEXT:  hint #25
+; CHECK-NEXT:  paciasp
   ret void
 }
 
 define void @signed_bkey() "branch-target-enforcement" "sign-return-address"="all" "sign-return-address-key"="b_key" {
-;; hint #27 is pacibsp.
 ; CHECK-LABEL: signed_bkey:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:  .cfi_b_key_frame
 ; LFI-NEXT:    bti jc
-; CHECK-NEXT:  hint #27
+; CHECK-NEXT:  pacibsp
   ret void
 }
 
