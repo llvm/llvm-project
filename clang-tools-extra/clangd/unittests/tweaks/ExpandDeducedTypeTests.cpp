@@ -23,8 +23,12 @@ TEST_F(ExpandDeducedTypeTest, Test) {
     namespace ns {
       struct Class {
         struct Nested {};
+        static Nested make_Nested() { return Nested(); };
       };
       void Func();
+      Class make_Class() { return Class(); }
+      Class * make_Class_Ptr() { return new Class(); }
+      const Class &get_Class_Ref() const { static Class C; return C; }
     }
     inline namespace inl_ns {
       namespace {
@@ -58,7 +62,7 @@ TEST_F(ExpandDeducedTypeTest, Test) {
   EXPECT_UNAVAILABLE("au^to x = []{};");
   // inline namespaces
   EXPECT_EQ(apply("au^to x = inl_ns::Visible();"),
-            "inl_ns::Visible x = inl_ns::Visible();");
+            "Visible x = inl_ns::Visible();");
   // local class
   EXPECT_EQ(apply("namespace x { void y() { struct S{}; ^auto z = S(); } }"),
             "namespace x { void y() { struct S{}; S z = S(); } }");
@@ -71,9 +75,8 @@ TEST_F(ExpandDeducedTypeTest, Test) {
 
   EXPECT_EQ(apply("ns::Class * foo() { au^to c = foo(); return nullptr; }"),
             "ns::Class * foo() { ns::Class * c = foo(); return nullptr; }");
-  EXPECT_EQ(
-      apply("void ns::Func() { au^to x = new ns::Class::Nested{}; }"),
-      "void ns::Func() { ns::Class::Nested * x = new ns::Class::Nested{}; }");
+  EXPECT_EQ(apply("void ns::Func() { au^to x = new ns::Class::Nested{}; }"),
+            "void ns::Func() { Class::Nested * x = new ns::Class::Nested{}; }");
 
   EXPECT_EQ(apply("dec^ltype(auto) x = 10;"), "int x = 10;");
   EXPECT_EQ(apply("decltype(au^to) x = 10;"), "int x = 10;");
@@ -143,6 +146,27 @@ TEST_F(ExpandDeducedTypeTest, Test) {
   // lambda should not be replaced
   EXPECT_UNAVAILABLE("auto f = [](){}; decl^type(f) g;");
   EXPECT_UNAVAILABLE("decl^type([]{}) f;");
+
+  // check function return types: nested name specifiers
+  EXPECT_EQ(apply("au^to x = ns::make_Class();"),
+            "ns::Class x = ns::make_Class();");
+  EXPECT_EQ(apply("namespace ns { au^to x = make_Class(); }"),
+            "namespace ns { Class x = make_Class(); }");
+  EXPECT_EQ(apply("au^to x = ns::Class::make_Nested();"),
+            "ns::Class::Nested x = ns::Class::make_Nested();");
+  EXPECT_EQ(apply("namespace ns { au^to x = Class::make_Nested(); }"),
+            "namespace ns { Class::Nested x = Class::make_Nested(); }");
+  EXPECT_EQ(
+      apply("namespace other { au^to x = ns::Class::make_Nested(); }"),
+      "namespace other { ns::Class::Nested x = ns::Class::make_Nested(); }");
+
+  // check function return types: pointers and references
+  EXPECT_EQ(apply("au^to x = ns::make_Class_Ptr();"),
+            "ns::Class * x = ns::make_Class_Ptr();");
+  EXPECT_EQ(apply("au^to x = ns::get_Class_Ref();"),
+            "ns::Class x = ns::get_Class_Ref();");
+  EXPECT_EQ(apply("au^to &x = ns::get_Class_Ref();"),
+            "const ns::Class &x = ns::get_Class_Ref();");
 }
 
 } // namespace
