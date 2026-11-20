@@ -38,18 +38,24 @@ static bool IsApplicable(lldb::LanguageType category_lang,
     return valobj_lang == eLanguageTypeC89 || valobj_lang == eLanguageTypeC ||
            valobj_lang == eLanguageTypeC99 || valobj_lang == eLanguageTypeObjC;
 
+  // Rust knows about C and itself
+  case eLanguageTypeRust:
+    return valobj_lang == eLanguageTypeC89 || valobj_lang == eLanguageTypeC ||
+           valobj_lang == eLanguageTypeC99 || valobj_lang == eLanguageTypeRust;
+
   // C++ knows about C and C++
   case eLanguageTypeC_plus_plus:
     return valobj_lang == eLanguageTypeC89 || valobj_lang == eLanguageTypeC ||
            valobj_lang == eLanguageTypeC99 ||
-           valobj_lang == eLanguageTypeC_plus_plus;
+           valobj_lang == eLanguageTypeC_plus_plus ||
+           valobj_lang == eLanguageTypeRust;
 
   // ObjC++ knows about C,C++,ObjC and ObjC++
   case eLanguageTypeObjC_plus_plus:
     return valobj_lang == eLanguageTypeC89 || valobj_lang == eLanguageTypeC ||
            valobj_lang == eLanguageTypeC99 ||
            valobj_lang == eLanguageTypeC_plus_plus ||
-           valobj_lang == eLanguageTypeObjC;
+           valobj_lang == eLanguageTypeObjC || valobj_lang == eLanguageTypeRust;
 
   // Categories with unspecified language match everything.
   case eLanguageTypeUnknown:
