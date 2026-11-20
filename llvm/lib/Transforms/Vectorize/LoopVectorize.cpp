@@ -77,7 +77,6 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
@@ -2802,32 +2801,20 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
 
     VPRecipeBase *R = Subset.front().first;
 
-    unsigned Opcode =
-        TypeSwitch<const VPRecipeBase *, unsigned>(R)
-            .Case([](const VPHeaderPHIRecipe *R) { return Instruction::PHI; })
-            .Case(
-                [](const VPWidenStoreRecipe *R) { return Instruction::Store; })
-            .Case([](const VPWidenLoadRecipe *R) { return Instruction::Load; })
-            .Case([](const VPWidenStoreEVLRecipe *R) {
-              return Instruction::Store;
-            })
-            .Case(
-                [](const VPWidenLoadEVLRecipe *R) { return Instruction::Load; })
-            .Case<VPWidenCallRecipe, VPWidenIntrinsicRecipe>(
-                [](const auto *R) { return Instruction::Call; })
-            .Case<VPInstruction, VPWidenRecipe, VPReplicateRecipe,
-                  VPWidenCastRecipe>(
-                [](const auto *R) { return R->getOpcode(); })
-            .Case([](const VPInterleaveRecipe *R) {
-              return R->getStoredValues().empty() ? Instruction::Load
-                                                  : Instruction::Store;
-            })
-            .Case([](const VPReductionRecipe *R) {
-              return RecurrenceDescriptor::getOpcode(R->getRecurrenceKind());
-            })
-            .Case([](const VPBranchOnMaskRecipe *) {
-              return Instruction::CondBr;
-            });
+    std::pair<bool, unsigned> OpcodeOrIID;
+    if (Intrinsic::ID IID = vputils::getIntrinsicID(R))
+      OpcodeOrIID = {true, IID};
+    else if (unsigned Opcode = R->getOpcode())
+      OpcodeOrIID = {false, Opcode};
+    else if (isa<VPHeaderPHIRecipe>(R))
+      OpcodeOrIID = {false, Instruction::PHI};
+    else if (auto *InterleaveR = dyn_cast<VPInterleaveRecipe>(R))
+      OpcodeOrIID = {false, InterleaveR->getStoredValues().empty()
+                                ? Instruction::Load
+                                : Instruction::Store};
+    else if (auto *RedR = dyn_cast<VPReductionRecipe>(R))
+      OpcodeOrIID = {
+          false, RecurrenceDescriptor::getOpcode(RedR->getRecurrenceKind())};
 
     // If the next recipe is different, or if there are no other pairs,
     // emit a remark for the collated subset. e.g.
@@ -2841,22 +2828,18 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
       OS << "Recipe with invalid costs prevented vectorization at VF=(";
       for (const auto &Pair : Subset)
         OS << (Pair.second == Subset.front().second ? "" : ", ") << Pair.second;
-      OS << "):";
-      if (Opcode == Instruction::Call) {
-        StringRef Name = "";
-        if (auto *Int = dyn_cast<VPWidenIntrinsicRecipe>(R)) {
-          Name = Int->getIntrinsicName();
-        } else {
-          auto *WidenCall = dyn_cast<VPWidenCallRecipe>(R);
-          Function *CalledFn =
-              WidenCall
-                  ? WidenCall->getCalledScalarFunction()
-                  : cast<Function>(R->getLastOperand()->getLiveInIRValue());
-          Name = CalledFn->getName();
-        }
-        OS << " call to " << Name;
-      } else
-        OS << " " << Instruction::getOpcodeName(Opcode);
+      OS << ")";
+      if (OpcodeOrIID.first)
+        OS << ": call to " << Intrinsic::getBaseName(OpcodeOrIID.second);
+      else if (auto *RepR = dyn_cast<VPReplicateRecipe>(R);
+               RepR && OpcodeOrIID.second == Instruction::Call)
+        OS << ": call to "
+           << cast<Function>(
+                  RepR->getOperand(RepR->getNumOperandsWithoutMask() - 1)
+                      ->getLiveInIRValue())
+                  ->getName();
+      else if (OpcodeOrIID.second)
+        OS << ": " << Instruction::getOpcodeName(OpcodeOrIID.second);
       reportVectorizationInfo(OutString, "InvalidCost", ORE, OrigLoop, nullptr,
                               R->getDebugLoc());
       Tail = Tail.drop_front(Subset.size());
