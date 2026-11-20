@@ -19,6 +19,7 @@ include "mlir/IR/BuiltinTypeInterfaces.td"
 
 class AMDGPU_Type<string name, string typeMnemonic, list<Trait> traits = []>
     : TypeDef<AMDGPU_Dialect, name, traits> {
+  let cppIncludes = ["mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"];
   let mnemonic = typeMnemonic;
 }
 

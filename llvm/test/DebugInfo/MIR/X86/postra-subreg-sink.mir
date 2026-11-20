@@ -43,7 +43,6 @@
 ...
 ---
 name:            main
-tracksRegLiveness: true
 registers:
 liveins:
   - { reg: '$edi', virtual-reg: '' }

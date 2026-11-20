@@ -12,4 +12,4 @@
 #define OPTIONS_STRUCT_DEFS
 #include "MCCLOptions.inc"
 
-static llvm::opt::RegisterLibraryOptions<llvm::MCCLOptions> Registration;
+LLVM_REGISTER_LIBRARY_OPTIONS(llvm::MCCLOptions)

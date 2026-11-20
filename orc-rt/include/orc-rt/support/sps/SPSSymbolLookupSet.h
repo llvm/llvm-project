@@ -21,8 +21,6 @@ namespace orc_rt {
 
 using SPSSymbolLookupSet = SPSSequence<SPSTuple<SPSString, bool>>;
 
-using SPSSymbolLookupResult = SPSSequence<SPSOptional<SPSExecutorAddr>>;
-
 /// SPS serialization for SymbolLookupFlags as a bool.
 ///
 /// RequiredSymbol serializes as true, WeaklyReferencedSymbol as false. This
@@ -65,28 +63,6 @@ public:
   static void reserve(SymbolLookupSet &S, uint64_t Size) { S.reserve(Size); }
   static bool append(SymbolLookupSet &S, element_type E) {
     S.push_back(std::move(E));
-    return true;
-  }
-};
-
-/// Trivial SymbolLookupResult -> SPSSequence<SPSElementTagT> serialization.
-template <typename SPSElementTagT>
-class TrivialSPSSequenceSerialization<SPSElementTagT, SymbolLookupResult> {
-public:
-  static constexpr bool available = true;
-};
-
-/// Trivial SPSSequence<SPSElementTagT> -> SymbolLookupResult deserialization.
-template <typename SPSElementTagT>
-class TrivialSPSSequenceDeserialization<SPSElementTagT, SymbolLookupResult> {
-public:
-  static constexpr bool available = true;
-
-  using element_type = SymbolLookupResult::value_type;
-
-  static void reserve(SymbolLookupResult &R, uint64_t Size) { R.reserve(Size); }
-  static bool append(SymbolLookupResult &R, element_type E) {
-    R.push_back(std::move(E));
     return true;
   }
 };

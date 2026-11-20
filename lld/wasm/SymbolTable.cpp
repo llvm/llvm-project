@@ -718,28 +718,35 @@ Symbol *SymbolTable::addDefinedTable(StringRef name, uint32_t flags,
 // With LTO these attributes are not available when the bitcode is read and only
 // become available when the LTO object is read.  In this case we silently
 // replace the empty attributes with the valid ones.
-static void
-updateExistingUndefined(Symbol *existing, uint32_t flags, InputFile *file,
-                        std::optional<StringRef> importName = {},
-                        std::optional<StringRef> importModule = {}) {
+// Any mismatches are recorded and only reported later in checkImportAttributes
+// if the symbol remains undefined after all input files have been processed.
+void SymbolTable::updateExistingUndefined(
+    Symbol *existing, uint32_t flags, InputFile *file,
+    std::optional<StringRef> importName,
+    std::optional<StringRef> importModule) {
   if (importName) {
     if (!existing->importName)
       existing->importName = importName;
     if (existing->importName != importName)
-      error("import name mismatch for symbol: " + toString(*existing) +
-            "\n>>> defined as " + *existing->importName + " in " +
-            toString(existing->getFile()) + "\n>>> defined as " + *importName +
-            " in " + toString(file));
+      importMismatches.emplace_back(
+          existing, ("import name mismatch for symbol: " + toString(*existing) +
+                     "\n>>> defined as " + *existing->importName + " in " +
+                     toString(existing->getFile()) + "\n>>> defined as " +
+                     *importName + " in " + toString(file))
+                        .str());
   }
 
   if (importModule) {
     if (!existing->importModule)
       existing->importModule = importModule;
     if (existing->importModule != importModule)
-      error("import module mismatch for symbol: " + toString(*existing) +
-            "\n>>> defined as " + *existing->importModule + " in " +
-            toString(existing->getFile()) + "\n>>> defined as " +
-            *importModule + " in " + toString(file));
+      importMismatches.emplace_back(
+          existing,
+          ("import module mismatch for symbol: " + toString(*existing) +
+           "\n>>> defined as " + *existing->importModule + " in " +
+           toString(existing->getFile()) + "\n>>> defined as " + *importModule +
+           " in " + toString(file))
+              .str());
   }
 
   // Update symbol binding, if the existing symbol is weak
@@ -1222,4 +1229,10 @@ void SymbolTable::handleSymbolVariants() {
   }
 }
 
+void SymbolTable::checkImportAttributes() {
+  for (const auto &[sym, msg] : importMismatches) {
+    if (sym->isUndefined())
+      error(msg);
+  }
+}
 } // namespace lld::wasm

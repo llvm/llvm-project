@@ -49,6 +49,15 @@ struct count_equal
 
 unsigned count_equal::count = 0;
 
+// The predicate is called with the earlier element as the first argument. The input is strictly increasing,
+// so the first argument must be smaller than the second.
+struct check_argument_order {
+  bool operator()(int x, int y) const {
+    assert(x < y);
+    return x / 2 == y / 2;
+  }
+};
+
 template <class InIter, class OutIter>
 void
 test()
@@ -132,6 +141,15 @@ test()
     assert(ji[1] == 1);
     assert(ji[2] == 2);
     assert(count_equal::count == si-1);
+
+    const int ik[]    = {0, 1, 2, 3, 4, 5};
+    const unsigned sk = sizeof(ik) / sizeof(ik[0]);
+    int jk[sk]        = {-1};
+    r                 = std::unique_copy(InIter(ik), InIter(ik + sk), OutIter(jk), check_argument_order());
+    assert(base(r) == jk + 3);
+    assert(jk[0] == 0);
+    assert(jk[1] == 2);
+    assert(jk[2] == 4);
 }
 
 int main(int, char**)

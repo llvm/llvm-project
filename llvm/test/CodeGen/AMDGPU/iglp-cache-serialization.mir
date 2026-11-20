@@ -1,0 +1,40 @@
+# RUN: llc -mtriple=amdgpu9.42 -run-pass=postmisched -o - %s | FileCheck %s
+
+# Test that IGLP analysis data stored on IGLP_OPT round-trips through MIR and
+# that PostRA scheduling handles IGLP_OPTs with and without that data (the
+# latter happens if pre-RA scheduling did not run or did not apply the
+# strategy). The S_NOPs make each region large enough to be scheduled.
+
+# CHECK-LABEL: name: iglp_cache_test
+# CHECK: IGLP_OPT 1, 8, 4, 2{{$}}
+# CHECK: IGLP_OPT 2, 42, 43, 44, 45, 46, 47, 1, 0{{$}}
+# CHECK-LABEL: name: iglp_no_cache_test
+# CHECK: IGLP_OPT 1{{$}}
+# CHECK: IGLP_OPT 2{{$}}
+
+---
+name:            iglp_cache_test
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    IGLP_OPT 1, 8, 4, 2
+    S_NOP 0
+
+  bb.1:
+    IGLP_OPT 2, 42, 43, 44, 45, 46, 47, 1, 0
+    S_NOP 0
+    S_ENDPGM 0
+...
+---
+name:            iglp_no_cache_test
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    IGLP_OPT 1
+    S_NOP 0
+
+  bb.1:
+    IGLP_OPT 2
+    S_NOP 0
+    S_ENDPGM 0
+...

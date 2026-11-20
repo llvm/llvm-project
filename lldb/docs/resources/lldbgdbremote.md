@@ -2403,6 +2403,9 @@ following keys and values:
     the `description` key/value pair to describe the
     exceptional event the user should see as the stop
     reason.
+  * `dyld` - the dynamic loader has library changes for the client to process.
+    LLDB updates its loaded modules and automatically continues unless
+    `target.process.stop-on-sharedlibrary-events` is true.
   * `description` -
     An ASCII hex string that contains a more descriptive
     reason that the thread stopped. This is only needed

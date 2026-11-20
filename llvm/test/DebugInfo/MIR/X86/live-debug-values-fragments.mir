@@ -201,7 +201,6 @@
 ...
 ---
 name:            foo
-tracksRegLiveness: true
 debugInstrRef: true
 registers:       []
 liveins:         
@@ -245,7 +244,6 @@ body:             |
 ...
 ---
 name:            bar
-tracksRegLiveness: true
 debugInstrRef: true
 registers:       []
 liveins:         
@@ -291,7 +289,6 @@ body:             |
 ...
 ---
 name:            baz
-tracksRegLiveness: true
 debugInstrRef: true
 registers:       []
 liveins:         

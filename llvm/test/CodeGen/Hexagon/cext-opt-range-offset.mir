@@ -5,7 +5,6 @@
 
 ---
 name: fred
-tracksRegLiveness: true
 registers:
   - { id: 0, class: intregs }
   - { id: 1, class: intregs }
