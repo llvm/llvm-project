@@ -16,6 +16,7 @@
 #include "clang/AST/OSLog.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/Support/Regex.h"
+#include "llvm/Support/TextEncoding.h"
 
 using clang::analyze_format_string::ArgType;
 using clang::analyze_format_string::ConversionSpecifier;
@@ -109,7 +110,7 @@ PrintfFormatStringParser::parseSpecifier(const char *&Beg, const char *E,
       H.HandleNullChar(I);
       return true;
     }
-    if (c == '%') {
+    if (Conv.convertBasicChar(c) == u8'%') {
       Start = I++; // Record the start of the format specifier.
       break;
     }
@@ -208,27 +209,27 @@ PrintfFormatStringParser::parseSpecifier(const char *&Beg, const char *E,
   // Look for flags (if any).
   bool hasMore = true;
   for (; I != E; ++I) {
-    switch (*I) {
+    switch (Conv.convertBasicChar(*I)) {
     default:
       hasMore = false;
       break;
-    case '\'':
+    case u8'\'':
       // FIXME: POSIX specific.  Always accept?
       FS.setHasThousandsGrouping(I);
       break;
-    case '-':
+    case u8'-':
       FS.setIsLeftJustified(I);
       break;
-    case '+':
+    case u8'+':
       FS.setHasPlusPrefix(I);
       break;
-    case ' ':
+    case u8' ':
       FS.setHasSpacePrefix(I);
       break;
-    case '#':
+    case u8'#':
       FS.setHasAlternativeForm(I);
       break;
-    case '0':
+    case u8'0':
       FS.setHasLeadingZeros(I);
       break;
     }
@@ -256,7 +257,7 @@ PrintfFormatStringParser::parseSpecifier(const char *&Beg, const char *E,
   }
 
   // Look for the precision (if any).
-  if (*I == '.') {
+  if (Conv.convertBasicChar(*I) == u8'.') {
     ++I;
     if (I == E) {
       if (Warn)
@@ -294,7 +295,7 @@ PrintfFormatStringParser::parseSpecifier(const char *&Beg, const char *E,
   // enables better recovery, and we don't know if
   // these flags are applicable until later.
   const char *ObjCModifierFlagsStart = nullptr, *ObjCModifierFlagsEnd = nullptr;
-  if (*I == '[') {
+  if (Conv.convertBasicChar(*I) == u8'[') {
     ObjCModifierFlagsStart = I;
     ++I;
     auto flagStart = I;
@@ -306,7 +307,7 @@ PrintfFormatStringParser::parseSpecifier(const char *&Beg, const char *E,
         return true;
       }
       // Did we find the closing ']'?
-      if (*I == ']') {
+      if (Conv.convertBasicChar(*I) == u8']') {
         if (parseObjCFlags(FS, flagStart, I))
           return true;
         ++I;
@@ -327,139 +328,139 @@ PrintfFormatStringParser::parseSpecifier(const char *&Beg, const char *E,
   // Finally, look for the conversion specifier.
   const char *conversionPosition = I++;
   ConversionSpecifier::Kind k = ConversionSpecifier::InvalidSpecifier;
-  switch (*conversionPosition) {
+  switch (Conv.convertBasicChar(*conversionPosition)) {
   default:
     break;
   // C99: 7.19.6.1 (section 8).
-  case '%':
+  case u8'%':
     k = ConversionSpecifier::PercentArg;
     break;
-  case 'A':
+  case u8'A':
     k = ConversionSpecifier::AArg;
     break;
-  case 'E':
+  case u8'E':
     k = ConversionSpecifier::EArg;
     break;
-  case 'F':
+  case u8'F':
     k = ConversionSpecifier::FArg;
     break;
-  case 'G':
+  case u8'G':
     k = ConversionSpecifier::GArg;
     break;
-  case 'X':
+  case u8'X':
     k = ConversionSpecifier::XArg;
     break;
-  case 'a':
+  case u8'a':
     k = ConversionSpecifier::aArg;
     break;
-  case 'c':
+  case u8'c':
     k = ConversionSpecifier::cArg;
     break;
-  case 'd':
+  case u8'd':
     k = ConversionSpecifier::dArg;
     break;
-  case 'e':
+  case u8'e':
     k = ConversionSpecifier::eArg;
     break;
-  case 'f':
+  case u8'f':
     k = ConversionSpecifier::fArg;
     break;
-  case 'g':
+  case u8'g':
     k = ConversionSpecifier::gArg;
     break;
-  case 'i':
+  case u8'i':
     k = ConversionSpecifier::iArg;
     break;
-  case 'n':
+  case u8'n':
     // Not handled, but reserved in OpenCL.
     if (!LO.OpenCL)
       k = ConversionSpecifier::nArg;
     break;
-  case 'o':
+  case u8'o':
     k = ConversionSpecifier::oArg;
     break;
-  case 'p':
+  case u8'p':
     k = ConversionSpecifier::pArg;
     break;
-  case 's':
+  case u8's':
     k = ConversionSpecifier::sArg;
     break;
-  case 'u':
+  case u8'u':
     k = ConversionSpecifier::uArg;
     break;
-  case 'x':
+  case u8'x':
     k = ConversionSpecifier::xArg;
     break;
   // C23.
-  case 'b':
+  case u8'b':
     if (IsFreeBSDKPrintf)
       k = ConversionSpecifier::FreeBSDbArg; // int followed by char *
     else
       k = ConversionSpecifier::bArg;
     break;
-  case 'B':
+  case u8'B':
     k = ConversionSpecifier::BArg;
     break;
   // POSIX specific.
-  case 'C':
+  case u8'C':
     k = ConversionSpecifier::CArg;
     break;
-  case 'S':
+  case u8'S':
     k = ConversionSpecifier::SArg;
     break;
   // Apple extension for os_log
-  case 'P':
+  case u8'P':
     k = ConversionSpecifier::PArg;
     break;
   // Objective-C.
-  case '@':
+  case u8'@':
     k = ConversionSpecifier::ObjCObjArg;
     break;
   // Glibc specific.
-  case 'm':
+  case u8'm':
     k = ConversionSpecifier::PrintErrno;
     break;
-  case 'r':
+  case u8'r':
     if (IsFreeBSDKPrintf)
       k = ConversionSpecifier::FreeBSDrArg; // int
     else if (LO.FixedPoint)
       k = ConversionSpecifier::rArg;
     break;
-  case 'y':
+  case u8'y':
     if (IsFreeBSDKPrintf)
       k = ConversionSpecifier::FreeBSDyArg; // int
     break;
   // Apple-specific.
-  case 'D':
+  case u8'D':
     if (IsFreeBSDKPrintf)
       k = ConversionSpecifier::FreeBSDDArg; // void * followed by char *
     else if (Target.getTriple().isOSDarwin())
       k = ConversionSpecifier::DArg;
     break;
-  case 'O':
+  case u8'O':
     if (Target.getTriple().isOSDarwin())
       k = ConversionSpecifier::OArg;
     break;
-  case 'U':
+  case u8'U':
     if (Target.getTriple().isOSDarwin())
       k = ConversionSpecifier::UArg;
     break;
   // MS specific.
-  case 'Z':
+  case u8'Z':
     if (Target.getTriple().isOSMSVCRT())
       k = ConversionSpecifier::ZArg;
     break;
   // ISO/IEC TR 18037 (fixed-point) specific.
   // NOTE: 'r' is handled up above since FreeBSD also supports %r.
-  case 'k':
+  case u8'k':
     if (LO.FixedPoint)
       k = ConversionSpecifier::kArg;
     break;
-  case 'K':
+  case u8'K':
     if (LO.FixedPoint)
       k = ConversionSpecifier::KArg;
     break;
-  case 'R':
+  case u8'R':
     if (LO.FixedPoint)
       k = ConversionSpecifier::RArg;
     break;
@@ -502,8 +503,7 @@ bool clang::analyze_format_string::ParsePrintfString(
   unsigned argIndex = 0;
 
   // Keep looking for a format specifier until we have exhausted the string.
-  llvm::TextEncodingConverter Conv =
-      llvm::TextEncodingConverter::createNoopConverter();
+  llvm::TextEncodingConverter Conv = createFormatStrConverter(Target);
   PrintfFormatStringParser P(H, LO, Target, /*Warn=*/true, isFreeBSDKPrintf,
                              Conv);
   while (I != E) {
@@ -530,11 +530,9 @@ bool clang::analyze_format_string::ParseFormatStringHasSArg(
     const TargetInfo &Target) {
 
   unsigned argIndex = 0;
-
   // Keep looking for a %s format specifier until we have exhausted the string.
   FormatStringHandler H;
-  llvm::TextEncodingConverter Conv =
-      llvm::TextEncodingConverter::createNoopConverter();
+  llvm::TextEncodingConverter Conv = createFormatStrConverter(Target);
   PrintfFormatStringParser P(H, LO, Target, /*Warn=*/false,
                              /*IsFreeBSDKPrintf=*/false, Conv);
   while (I != E) {
@@ -562,8 +560,7 @@ bool clang::analyze_format_string::parseFormatStringHasFormattingSpecifiers(
   unsigned ArgIndex = 0;
   // Keep looking for a formatting specifier until we have exhausted the string.
   FormatStringHandler H;
-  llvm::TextEncodingConverter Conv =
-      llvm::TextEncodingConverter::createNoopConverter();
+  llvm::TextEncodingConverter Conv = createFormatStrConverter(Target);
   PrintfFormatStringParser P(H, LO, Target, /*Warn=*/false,
                              /*IsFreeBSDKPrintf=*/false, Conv);
   while (Begin != End) {
