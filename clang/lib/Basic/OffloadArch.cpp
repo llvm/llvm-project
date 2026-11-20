@@ -76,9 +76,10 @@ const char *OffloadArchToVirtualArchString(OffloadArch A) {
     return "unknown";
   case OffloadArch::TargetArch::IntelIGCA:
     return llvm::IntelGPU::getIGCATargetName(A.igcaTarget()).data();
+  case OffloadArch::TargetArch::IntelGPU:
+    return OffloadArchToString(A.intelGPUIGCATarget());
   case OffloadArch::TargetArch::Unused:
   case OffloadArch::TargetArch::IntelCPU:
-  case OffloadArch::TargetArch::IntelGPU:
   case OffloadArch::TargetArch::Generic:
     return "";
   }
@@ -109,11 +110,6 @@ OffloadArch StringToOffloadArch(llvm::StringRef S) {
   if (llvm::IntelGPU::IGCATarget IT = llvm::IntelGPU::parseIGCATarget(S))
     return OffloadArch::getIntelIGCA(IT);
   return OffloadArch::getUnknown();
-}
-
-llvm::StringRef getArchToCompileFor(llvm::StringRef Arch) {
-  OffloadArch ID = StringToOffloadArch(Arch);
-  return ID.isIntelGPU() ? OffloadArchToString(ID.intelGPUIGCATarget()) : Arch;
 }
 
 OffloadArch getSubArchOffloadArch(llvm::Triple::SubArchType SubArch) {

@@ -9975,7 +9975,8 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
         // A SYCL device image for an Intel GPU is labeled with the GPU's IGCA
         // target.
         if (Kind == Action::OFK_SYCL)
-          Name = getArchToCompileFor(Name);
+          if (OffloadArch ID = StringToOffloadArch(Name); ID.isIntelGPU())
+            Name = OffloadArchToVirtualArchString(ID);
         // Intel GPUs that share an IGCA target ask for it once.
         if (ShouldExtract.insert(Name).second)
           CmdArgs.emplace_back(Args.MakeArgString("--should-extract=" + Name));

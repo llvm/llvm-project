@@ -4157,7 +4157,11 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
   if (Kind == Action::OFK_SYCL) {
     llvm::DenseSet<StringRef> Targets;
     for (StringRef Arch : Archs) {
-      StringRef Target = getArchToCompileFor(Arch);
+      // The device job for an Intel GPU is named after its IGCA target; other
+      // values are kept as given.
+      OffloadArch ID = StringToOffloadArch(Arch);
+      StringRef Target =
+          ID.isIntelGPU() ? OffloadArchToVirtualArchString(ID) : Arch;
       Targets.insert(Target);
       if (Target != Arch)
         C.addIGCADevice(&TC, Target, Arch);

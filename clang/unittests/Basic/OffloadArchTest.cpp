@@ -95,16 +95,13 @@ TEST(OffloadArchTest, IntelGPUIGCATarget) {
   EXPECT_TRUE(parse("xe-pvc").intelGPUIGCATarget().isIntelIGCA());
 }
 
-TEST(OffloadArchTest, ArchToCompileFor) {
-  // A device job for an Intel GPU is named after its IGCA target, and for
-  // anything else after the value itself.
-  EXPECT_EQ(getArchToCompileFor("xe-mtl-u"), "igca_30r");
-  EXPECT_EQ(getArchToCompileFor("xe-mtl-h"), "igca_30r");
-  EXPECT_EQ(getArchToCompileFor("igca_30r"), "igca_30r");
-  EXPECT_EQ(getArchToCompileFor("graniterapids"), "graniterapids");
-  EXPECT_EQ(getArchToCompileFor("sm_70"), "sm_70");
-  EXPECT_EQ(getArchToCompileFor("gfx90a:xnack+"), "gfx90a:xnack+");
-  EXPECT_EQ(getArchToCompileFor("generic"), "generic");
+TEST(OffloadArchTest, VirtualArch) {
+  // The virtual architecture of an Intel GPU is its IGCA target.
+  EXPECT_STREQ(OffloadArchToVirtualArchString(parse("xe-mtl-u")), "igca_30r");
+  EXPECT_STREQ(OffloadArchToVirtualArchString(parse("xe-mtl-h")), "igca_30r");
+  EXPECT_STREQ(OffloadArchToVirtualArchString(parse("xe-pvc")), "igca_20ca");
+  EXPECT_STREQ(OffloadArchToVirtualArchString(parse("igca_30r")), "igca_30r");
+  EXPECT_STREQ(OffloadArchToVirtualArchString(parse("sm_70")), "compute_70");
 }
 
 TEST(OffloadArchTest, Defaults) {
