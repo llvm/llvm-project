@@ -59,11 +59,21 @@ const unsigned TotalAllocaSizeRecursiveCaller = 1024;
 /// Do not inline dynamic allocas that have been constant propagated to be
 /// static allocas above this amount in bytes.
 const uint64_t MaxSimplifiedDynamicAllocaToInline = 65536;
+/// Default combined caller+callee static stack size (in bytes) above which
+/// stack-frame growth is limited when only inline-large-stack-frame-growth is
+/// specified.
+const uint64_t DefaultLargeStackFrame = 256;
+/// Default maximum allowed stack frame growth percentage when only
+/// inline-large-stack-frame is specified.
+const uint64_t DefaultLargeStackFrameGrowth = 1000;
 
 const char FunctionInlineCostMultiplierAttributeName[] =
     "function-inline-cost-multiplier";
 
 const char MaxInlineStackSizeAttributeName[] = "inline-max-stacksize";
+const char MaxInlineLargeStackFrameAttributeName[] = "inline-large-stack-frame";
+const char MaxInlineLargeStackFrameGrowthAttributeName[] =
+    "inline-large-stack-frame-growth";
 } // namespace InlineConstants
 
 // The cost-benefit pair computed by cost-benefit analysis.

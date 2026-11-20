@@ -55,6 +55,60 @@ using namespace llvm;
 
 STATISTIC(NumCallsAnalyzed, "Number of call sites analyzed");
 
+static std::optional<uint64_t> getStringFnAttrAsUInt64(const Function *F,
+                                                       StringRef AttrKind) {
+  Attribute Attr = F->getFnAttribute(AttrKind);
+  if (Attr.isValid()) {
+    uint64_t AttrValue = 0;
+    if (!Attr.getValueAsString().getAsInteger(10, AttrValue))
+      return AttrValue;
+  }
+  return std::nullopt;
+}
+
+static uint64_t computeCallerStaticAllocaSize(const Function &Caller,
+                                              const DataLayout &DL) {
+  if (Caller.empty())
+    return 0;
+
+  uint64_t CallerAllocatedSize = 0;
+  for (const Instruction &I : Caller.getEntryBlock()) {
+    const auto *AI = dyn_cast<AllocaInst>(&I);
+    if (!AI || !AI->isStaticAlloca())
+      continue;
+    TypeSize AllocSize =
+        AI->getAllocationSize(DL).value_or(TypeSize::getZero());
+    CallerAllocatedSize =
+        SaturatingAdd(AllocSize.getKnownMinValue(), CallerAllocatedSize);
+  }
+  return CallerAllocatedSize;
+}
+
+static bool exceedsStackFrameGrowth(uint64_t CallerAllocatedSize,
+                                    uint64_t CalleeAllocatedSize,
+                                    uint64_t LargeStackFrame,
+                                    uint64_t LargeStackFrameGrowth) {
+  if (CalleeAllocatedSize == 0)
+    return false;
+  if (SaturatingAdd(CallerAllocatedSize, CalleeAllocatedSize) <=
+      LargeStackFrame)
+    return false;
+  if (CallerAllocatedSize == 0)
+    return true;
+
+  bool LHSOverflow = false;
+  bool RHSOverflow = false;
+  uint64_t LHS =
+      SaturatingMultiply<uint64_t>(CalleeAllocatedSize, 100, &LHSOverflow);
+  uint64_t RHS = SaturatingMultiply<uint64_t>(
+      CallerAllocatedSize, LargeStackFrameGrowth, &RHSOverflow);
+  if (!LHSOverflow && !RHSOverflow)
+    return LHS > RHS;
+
+  return (APInt(128, CalleeAllocatedSize) * 100)
+      .ugt(APInt(128, CallerAllocatedSize) * APInt(128, LargeStackFrameGrowth));
+}
+
 namespace llvm {
 std::optional<int> getStringFnAttrAsInt(const Attribute &Attr) {
   if (Attr.isValid()) {
@@ -2948,6 +3002,25 @@ InlineResult CallAnalyzer::analyze() {
     FinalStackSizeThreshold = *AttrMaxStackSize;
   if (AllocatedSize > FinalStackSizeThreshold)
     return InlineResult::failure("stacksize");
+
+  // If stack frame growth limits are configured via function attributes,
+  // prevent inlining when the combined caller+callee static stack size exceeds
+  // LargeStackFrame and the callee grows the caller's stack by more than
+  // LargeStackFrameGrowth%.
+  std::optional<uint64_t> LargeStackFrame = getStringFnAttrAsUInt64(
+      Caller, InlineConstants::MaxInlineLargeStackFrameAttributeName);
+  std::optional<uint64_t> LargeStackFrameGrowth = getStringFnAttrAsUInt64(
+      Caller, InlineConstants::MaxInlineLargeStackFrameGrowthAttributeName);
+  if (AllocatedSize > 0 && (LargeStackFrame || LargeStackFrameGrowth)) {
+    uint64_t FrameLimit =
+        LargeStackFrame.value_or(InlineConstants::DefaultLargeStackFrame);
+    uint64_t GrowthLimit = LargeStackFrameGrowth.value_or(
+        InlineConstants::DefaultLargeStackFrameGrowth);
+    uint64_t CallerAllocatedSize = computeCallerStaticAllocaSize(*Caller, DL);
+    if (exceedsStackFrameGrowth(CallerAllocatedSize, AllocatedSize, FrameLimit,
+                                GrowthLimit))
+      return InlineResult::failure("stacksize-growth");
+  }
 
   return finalizeAnalysis();
 }
