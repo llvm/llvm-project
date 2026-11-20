@@ -31,12 +31,12 @@ jobs:
           pkg update
           pkg upgrade -y
           pkg install -y ninja cmake llvm22 python3
+          mkdir -p /tmp/build && mount -t tmpfs tmpfs /tmp/build
 
     # Use MinSizeRel to reduce the size of the build.
     - name: Configure CMake
       shell: freebsd {0}
       run: >
-        mkdir -p /tmp/build && mount -t tmpfs tmpfs /tmp/build
         cmake -B /tmp/build
         -DCMAKE_CXX_COMPILER=clang++22
         -DCMAKE_C_COMPILER=clang22
