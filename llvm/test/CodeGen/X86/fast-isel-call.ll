@@ -90,3 +90,19 @@ entry:
   ret void
 }
 declare x86_stdcallcc void @stdcallfun(i32) #1
+
+; Keep unused read-only calls that may not return or may throw.
+define void @test7() {
+; CHECK-LABEL: test7:
+; CHECK: calll {{.*}}readonly_may_not_return
+; CHECK-NEXT: calll {{.*}}readonly_may_throw
+; CHECK-NOT: calll
+; CHECK: retl
+  call void @readonly_may_not_return()
+  call void @readonly_may_throw()
+  call void @readonly_returns()
+  ret void
+}
+declare void @readonly_may_not_return() nounwind memory(read)
+declare void @readonly_may_throw() willreturn memory(read)
+declare void @readonly_returns() nounwind willreturn memory(read)
