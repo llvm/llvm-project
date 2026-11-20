@@ -279,10 +279,29 @@ exit:
 define void @gather_s8(ptr %out, ptr %tab, ptr %idx, i64 %n) {
 ; CHECK-LABEL: 'gather_s8'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.out = getelementptr inbounds float, ptr %out, i64 %iv
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %gep.idx = getelementptr inbounds i8, ptr %idx, i64 %iv
+; CHECK-NEXT:      Check 1:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.out = getelementptr inbounds float, ptr %out, i64 %iv
+; CHECK-NEXT:        Against group GRP2:
+; CHECK-NEXT:          %gep.tab = getelementptr inbounds float, ptr %tab, i64 %k.ext
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: %out High: ((4 * %n) + %out))
+; CHECK-NEXT:            Member: {%out,+,4}<nuw><%loop>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: %idx High: (%n + %idx))
+; CHECK-NEXT:            Member: {%idx,+,1}<nuw><%loop>
+; CHECK-NEXT:        Group GRP2:
+; CHECK-NEXT:          (Low: ((-1 * (512 umin (ptrtoaddr ptr %tab to i64)))<nsw> + %tab) High: ((512 umin (-1 + (-1 * (ptrtoaddr ptr %tab to i64)))) + %tab))
+; CHECK-NEXT:            Member: ((4 * (sext i8 %k to i64))<nsw> + %tab)
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:

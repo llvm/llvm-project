@@ -8,10 +8,29 @@
 define void @arg_s8_inbounds(ptr %out, ptr %tab, ptr %idx, i64 %n) {
 ; CHECK-LABEL: 'arg_s8_inbounds'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %go = getelementptr inbounds float, ptr %out, i64 %iv
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %gi = getelementptr inbounds i8, ptr %idx, i64 %iv
+; CHECK-NEXT:      Check 1:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %go = getelementptr inbounds float, ptr %out, i64 %iv
+; CHECK-NEXT:        Against group GRP2:
+; CHECK-NEXT:          %gt = getelementptr inbounds float, ptr %tab, i64 %ke
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: %out High: ((4 * %n) + %out))
+; CHECK-NEXT:            Member: {%out,+,4}<nuw><%loop>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: %idx High: (%n + %idx))
+; CHECK-NEXT:            Member: {%idx,+,1}<nuw><%loop>
+; CHECK-NEXT:        Group GRP2:
+; CHECK-NEXT:          (Low: ((-1 * (512 umin (ptrtoaddr ptr %tab to i64)))<nsw> + %tab) High: ((512 umin (-1 + (-1 * (ptrtoaddr ptr %tab to i64)))) + %tab))
+; CHECK-NEXT:            Member: ((4 * (sext i8 %k to i64))<nsw> + %tab)
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -72,10 +91,37 @@ exit:
 define void @arg_diff_u8(ptr %out, ptr %bp, ptr %a, ptr %b, i64 %n) {
 ; CHECK-LABEL: 'arg_diff_u8'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %go = getelementptr inbounds i8, ptr %out, i64 %iv
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %ga.p = getelementptr inbounds i8, ptr %a, i64 %iv
+; CHECK-NEXT:      Check 1:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %go = getelementptr inbounds i8, ptr %out, i64 %iv
+; CHECK-NEXT:        Against group GRP2:
+; CHECK-NEXT:          %gb.p = getelementptr inbounds i8, ptr %b, i64 %iv
+; CHECK-NEXT:      Check 2:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %go = getelementptr inbounds i8, ptr %out, i64 %iv
+; CHECK-NEXT:        Against group GRP3:
+; CHECK-NEXT:          %gt = getelementptr inbounds i8, ptr %bp, i64 %de
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: %out High: (%n + %out))
+; CHECK-NEXT:            Member: {%out,+,1}<nuw><%loop>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: %a High: (%n + %a))
+; CHECK-NEXT:            Member: {%a,+,1}<nuw><%loop>
+; CHECK-NEXT:        Group GRP2:
+; CHECK-NEXT:          (Low: %b High: (%n + %b))
+; CHECK-NEXT:            Member: {%b,+,1}<nuw><%loop>
+; CHECK-NEXT:        Group GRP3:
+; CHECK-NEXT:          (Low: ((-1 * (255 umin (ptrtoaddr ptr %bp to i64)))<nsw> + %bp) High: ((256 umin (-1 + (-1 * (ptrtoaddr ptr %bp to i64)))) + %bp))
+; CHECK-NEXT:            Member: ((zext i8 %x to i64) + (-1 * (zext i8 %y to i64))<nsw> + %bp)
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -109,10 +155,29 @@ exit:
 define void @nuw_chain_u8(ptr %out, ptr %tab, ptr %idx, i64 %c, i64 %n) {
 ; CHECK-LABEL: 'nuw_chain_u8'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %go = getelementptr inbounds float, ptr %out, i64 %iv
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %gi = getelementptr inbounds i8, ptr %idx, i64 %iv
+; CHECK-NEXT:      Check 1:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %go = getelementptr inbounds float, ptr %out, i64 %iv
+; CHECK-NEXT:        Against group GRP2:
+; CHECK-NEXT:          %gt = getelementptr nuw float, ptr %row, i64 %ke
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: %out High: ((4 * %n) + %out))
+; CHECK-NEXT:            Member: {%out,+,4}<nuw><%loop>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: %idx High: (%n + %idx))
+; CHECK-NEXT:            Member: {%idx,+,1}<nuw><%loop>
+; CHECK-NEXT:        Group GRP2:
+; CHECK-NEXT:          (Low: ((4 * %c) + %tab) High: ((4 * %c) + (1024 umin (-1 + (-4 * %c) + (-1 * (ptrtoaddr ptr %tab to i64)))) + %tab))
+; CHECK-NEXT:            Member: ((4 * (zext i8 %k to i64))<nuw><nsw> + (4 * %c) + %tab)
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -181,10 +246,37 @@ exit:
 define void @same_scev_different_roots(ptr %out, ptr %tab, ptr %idx, i64 %n) {
 ; CHECK-LABEL: 'same_scev_different_roots'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %go = getelementptr inbounds float, ptr %out, i64 %iv
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %gi = getelementptr inbounds i8, ptr %idx, i64 %iv
+; CHECK-NEXT:      Check 1:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %go = getelementptr inbounds float, ptr %out, i64 %iv
+; CHECK-NEXT:        Against group GRP2:
+; CHECK-NEXT:          %gt.b = getelementptr inbounds float, ptr %row, i64 %kr
+; CHECK-NEXT:      Check 2:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %go = getelementptr inbounds float, ptr %out, i64 %iv
+; CHECK-NEXT:        Against group GRP3:
+; CHECK-NEXT:          %gt.a = getelementptr inbounds float, ptr %tab, i64 %ke
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: %out High: ((4 * %n) + %out))
+; CHECK-NEXT:            Member: {%out,+,4}<nuw><%loop>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: %idx High: (%n + %idx))
+; CHECK-NEXT:            Member: {%idx,+,1}<nuw><%loop>
+; CHECK-NEXT:        Group GRP2:
+; CHECK-NEXT:          (Low: (64 + (-1 * (576 umin (64 + (ptrtoaddr ptr %tab to i64))<nuw>))<nsw> + %tab) High: (64 + (448 umin (-65 + (-1 * (ptrtoaddr ptr %tab to i64)))) + %tab))
+; CHECK-NEXT:            Member: ((4 * (sext i8 %k to i64))<nsw> + %tab)
+; CHECK-NEXT:        Group GRP3:
+; CHECK-NEXT:          (Low: ((-1 * (512 umin (ptrtoaddr ptr %tab to i64)))<nsw> + %tab) High: ((512 umin (-1 + (-1 * (ptrtoaddr ptr %tab to i64)))) + %tab))
+; CHECK-NEXT:            Member: ((4 * (sext i8 %k to i64))<nsw> + %tab)
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:

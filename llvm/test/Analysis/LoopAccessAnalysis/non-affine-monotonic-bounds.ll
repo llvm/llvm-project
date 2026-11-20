@@ -211,10 +211,21 @@ exit:
 define void @urem5_not_monotonic(ptr %a, ptr %b, i64 %N) {
 ; CHECK-LABEL: 'urem5_not_monotonic'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.b = getelementptr inbounds i8, ptr %b, i64 %iv
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %gep.a = getelementptr inbounds i8, ptr %a, i64 %rem
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: %b High: (%N + %b))
+; CHECK-NEXT:            Member: {%b,+,1}<nuw><%loop>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: %a High: ((5 umin (-1 + (-1 * (ptrtoaddr ptr %a to i64)))) + %a))
+; CHECK-NEXT:            Member: ((-5 * ({0,+,1}<nuw><nsw><%loop> /u 5))<nsw> + {%a,+,1}<nw><%loop>)
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:

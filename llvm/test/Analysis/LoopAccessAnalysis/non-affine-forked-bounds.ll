@@ -11,10 +11,45 @@
 define void @forked_globals_u8(ptr %out, ptr %idx, ptr %cs, i64 %n) {
 ; CHECK-LABEL: 'forked_globals_u8'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %go = getelementptr inbounds float, ptr %out, i64 %iv
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %gi = getelementptr inbounds i8, ptr %idx, i64 %iv
+; CHECK-NEXT:      Check 1:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %go = getelementptr inbounds float, ptr %out, i64 %iv
+; CHECK-NEXT:        Against group GRP2:
+; CHECK-NEXT:          %gc = getelementptr inbounds i8, ptr %cs, i64 %iv
+; CHECK-NEXT:      Check 2:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %go = getelementptr inbounds float, ptr %out, i64 %iv
+; CHECK-NEXT:        Against group GRP3:
+; CHECK-NEXT:          %gt = getelementptr inbounds float, ptr %t, i64 %ke
+; CHECK-NEXT:      Check 3:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %go = getelementptr inbounds float, ptr %out, i64 %iv
+; CHECK-NEXT:        Against group GRP4:
+; CHECK-NEXT:          %gt = getelementptr inbounds float, ptr %t, i64 %ke
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: %out High: ((4 * %n) + %out))
+; CHECK-NEXT:            Member: {%out,+,4}<nuw><%loop>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: %idx High: (%n + %idx))
+; CHECK-NEXT:            Member: {%idx,+,1}<nuw><%loop>
+; CHECK-NEXT:        Group GRP2:
+; CHECK-NEXT:          (Low: %cs High: (%n + %cs))
+; CHECK-NEXT:            Member: {%cs,+,1}<nuw><%loop>
+; CHECK-NEXT:        Group GRP3:
+; CHECK-NEXT:          (Low: @ga High: (1024 + @ga)<nuw>)
+; CHECK-NEXT:            Member: ((4 * (zext i8 %k to i64))<nuw><nsw> + @ga)
+; CHECK-NEXT:        Group GRP4:
+; CHECK-NEXT:          (Low: @gb High: (1024 + @gb)<nuw>)
+; CHECK-NEXT:            Member: ((4 * (zext i8 %k to i64))<nuw><nsw> + @gb)
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:

@@ -576,6 +576,59 @@ getNonAffineRangeBounds(const Loop *Lp, const SCEV *PtrExpr,
   return getSaturatingInterval(Base, Interval->first, Interval->second, *SE);
 }
 
+/// Try to bound the loop-variant pointer \p Ptr, with SCEV \p PtrExpr, by the
+/// value range of its offset from the first loop-invariant pointer in the chain
+/// of GEPs that computes it. Unlike the SCEV no-wrap flags, the flags of the
+/// GEPs only hold where \p Ptr is accessed, so the result is only valid for
+/// accesses through \p Ptr.
+///
+/// If every GEP in the chain is nuw, the address of an executed access is the
+/// root plus the unsigned value of the offset. If every GEP is inbounds, the
+/// root and the address of an executed access are in bounds of the same
+/// allocation (LangRef, getelementptr), whose size fits in the signed index
+/// type, so the address is the root plus the signed value of the offset.
+static std::pair<const SCEV *, const SCEV *>
+getNonAffineGEPBounds(const Loop *Lp, const SCEV *PtrExpr, Value *Ptr,
+                      const SCEV *EltSizeSCEV, ScalarEvolution *SE,
+                      ScalarEvolution::LoopGuards *Guards) {
+  const uint64_t MaxRangeBoundBytes =
+      getAnalysisOptions(*Lp).laa_max_range_bound_bytes;
+  const auto *EltSizeC = dyn_cast<SCEVConstant>(EltSizeSCEV);
+  if (!Ptr || !EltSizeC)
+    return {nullptr, nullptr};
+  bool AllNUW = true, AllInBounds = true;
+  const SCEV *Root = nullptr;
+  for (auto *GEP = dyn_cast<GEPOperator>(Ptr); GEP;
+       GEP = dyn_cast<GEPOperator>(GEP->getPointerOperand())) {
+    AllNUW &= GEP->hasNoUnsignedWrap();
+    AllInBounds &= GEP->isInBounds();
+    if ((!AllNUW && !AllInBounds) || GEP->getType()->isVectorTy())
+      return {nullptr, nullptr};
+    const SCEV *Op = SE->getSCEV(GEP->getPointerOperand());
+    if (SE->isLoopInvariant(Op, Lp)) {
+      Root = Op;
+      break;
+    }
+  }
+  if (!Root)
+    return {nullptr, nullptr};
+  const SCEV *Offset = SE->getMinusSCEV(PtrExpr, Root);
+  if (isa<SCEVCouldNotCompute>(Offset) ||
+      Offset->getType() != EltSizeSCEV->getType())
+    return {nullptr, nullptr};
+
+  const APInt &EltSize = EltSizeC->getAPInt();
+  std::optional<std::pair<APInt, APInt>> Interval;
+  if (AllNUW)
+    Interval = getOffsetRangeInterval(Offset, EltSize, *SE, Guards);
+  if (!Interval && AllInBounds)
+    Interval = getOffsetRangeInterval(Offset, EltSize, *SE, Guards,
+                                      /*AllowSigned=*/true);
+  if (!Interval || (Interval->second - Interval->first).ugt(MaxRangeBoundBytes))
+    return {nullptr, nullptr};
+  return getSaturatingInterval(Root, Interval->first, Interval->second, *SE);
+}
+
 /// Try to bound a loop-variant pointer that is not an affine AddRec, as a
 /// monotonic expression, by the allocation its base points into, or by the
 /// value range of its offset. The result only depends on \p PtrExpr, so it can
@@ -597,17 +650,19 @@ std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
     DenseMap<std::pair<const SCEV *, const SCEV *>,
              std::pair<const SCEV *, const SCEV *>> *PointerBounds,
     DominatorTree *DT, AssumptionCache *AC,
-    ScalarEvolution::LoopGuards &LoopGuards) {
+    ScalarEvolution::LoopGuards &LoopGuards, Value *Ptr) {
   auto &DL = Lp->getHeader()->getDataLayout();
   Type *IdxTy = DL.getIndexType(PtrExpr->getType());
   const SCEV *EltSizeSCEV = SE->getStoreSizeOfExpr(IdxTy, AccessTy);
 
   // Delegate to the SCEV-based overload, passing through the cache.
   return getStartAndEndForAccess(Lp, PtrExpr, EltSizeSCEV, BTC, MaxBTC, SE,
-                                 PointerBounds, DT, AC, LoopGuards);
+                                 PointerBounds, DT, AC, LoopGuards, Ptr);
 }
 
-std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
+/// Compute the bounds of an access from \p PtrExpr alone, caching the result,
+/// including a failure, in \p PointerBounds.
+static std::pair<const SCEV *, const SCEV *> getStartAndEndForAccessBySCEV(
     const Loop *Lp, const SCEV *PtrExpr, const SCEV *EltSizeSCEV,
     const SCEV *BTC, const SCEV *MaxBTC, ScalarEvolution *SE,
     DenseMap<std::pair<const SCEV *, const SCEV *>,
@@ -704,6 +759,30 @@ RuntimePointerChecking::RuntimePointerChecking(
     : Opts(getAnalysisOptions(*DC.getInnermostLoop())), DC(DC), SE(SE),
       LoopGuards(LoopGuards) {}
 
+std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
+    const Loop *Lp, const SCEV *PtrExpr, const SCEV *EltSizeSCEV,
+    const SCEV *BTC, const SCEV *MaxBTC, ScalarEvolution *SE,
+    DenseMap<std::pair<const SCEV *, const SCEV *>,
+             std::pair<const SCEV *, const SCEV *>> *PointerBounds,
+    DominatorTree *DT, AssumptionCache *AC,
+    ScalarEvolution::LoopGuards &LoopGuards, Value *Ptr) {
+  auto Res =
+      getStartAndEndForAccessBySCEV(Lp, PtrExpr, EltSizeSCEV, BTC, MaxBTC, SE,
+                                    PointerBounds, DT, AC, LoopGuards);
+  // The flags of the GEPs computing Ptr only hold where Ptr is accessed, so a
+  // bound taken from them does not apply to another access with the same SCEV.
+  // Do not cache it.
+  const auto *AR = dyn_cast<SCEVAddRecExpr>(PtrExpr);
+  if (Ptr && isa<SCEVCouldNotCompute>(Res.first) &&
+      !SE->isLoopInvariant(PtrExpr, Lp) && !(AR && AR->isAffine())) {
+    auto Bounds =
+        getNonAffineGEPBounds(Lp, PtrExpr, Ptr, EltSizeSCEV, SE, &LoopGuards);
+    if (Bounds.first)
+      return Bounds;
+  }
+  return Res;
+}
+
 /// Calculate Start and End points of memory access using
 /// getStartAndEndForAccess.
 bool RuntimePointerChecking::insert(Loop *Lp, Value *Ptr, const SCEV *PtrExpr,
@@ -713,9 +792,10 @@ bool RuntimePointerChecking::insert(Loop *Lp, Value *Ptr, const SCEV *PtrExpr,
                                     bool NeedsFreeze, bool IsForked) {
   const SCEV *SymbolicMaxBTC = PSE.getSymbolicMaxBackedgeTakenCount();
   const SCEV *BTC = PSE.getBackedgeTakenCount();
-  const auto &[ScStart, ScEnd] = getStartAndEndForAccess(
-      Lp, PtrExpr, AccessTy, BTC, SymbolicMaxBTC, PSE.getSE(),
-      &DC.getPointerBounds(), DC.getDT(), DC.getAC(), LoopGuards);
+  const auto &[ScStart, ScEnd] =
+      getStartAndEndForAccess(Lp, PtrExpr, AccessTy, BTC, SymbolicMaxBTC,
+                              PSE.getSE(), &DC.getPointerBounds(), DC.getDT(),
+                              DC.getAC(), LoopGuards, IsForked ? nullptr : Ptr);
   if (isa<SCEVCouldNotCompute>(ScStart) || isa<SCEVCouldNotCompute>(ScEnd))
     return false;
   Pointers.emplace_back(Ptr, ScStart, ScEnd, WritePtr, DepSetId, ASId, PtrExpr,
@@ -2346,12 +2426,19 @@ bool AccessAnalysis::createCheckForAccess(RuntimePointerChecking &RtCheck,
 
   // RTCheckPtrs must have size 2 if there are forked pointers. Otherwise, there
   // are no forked pointers; replaceSymbolicStridesSCEV in this case.
-  auto IsLoopInvariantOrAR =
-      [&SE, &TheLoop](const PointerIntPair<const SCEV *, 1, bool> &P) {
-        return SE->isLoopInvariant(P.getPointer(), TheLoop) ||
-               isa<SCEVAddRecExpr>(P.getPointer());
-      };
-  if (RTCheckPtrs.size() == 2 && all_of(RTCheckPtrs, IsLoopInvariantOrAR)) {
+  auto GetEltSize = [&](const SCEV *PtrExpr) {
+    return SE->getStoreSizeOfExpr(DL.getIndexType(PtrExpr->getType()),
+                                  AccessTy);
+  };
+  auto CanCheckFork = [&](const PointerIntPair<const SCEV *, 1, bool> &P) {
+    const SCEV *PtrExpr = P.getPointer();
+    return SE->isLoopInvariant(PtrExpr, TheLoop) ||
+           isa<SCEVAddRecExpr>(PtrExpr) ||
+           (Assume && getNonAffineBounds(TheLoop, PtrExpr, GetEltSize(PtrExpr),
+                                         SE, &RtCheck.getLoopGuards())
+                          .first);
+  };
+  if (RTCheckPtrs.size() == 2 && all_of(RTCheckPtrs, CanCheckFork)) {
     LLVM_DEBUG(dbgs() << "LAA: Found forked pointer: " << *Ptr << "\n";
                for (const auto &[Idx, Q] : enumerate(RTCheckPtrs)) dbgs()
                << "\t(" << Idx << ") " << *Q.getPointer() << "\n");
@@ -2373,11 +2460,16 @@ bool AccessAnalysis::createCheckForAccess(RuntimePointerChecking &RtCheck,
       AR = PSE.getAsAddRec(Ptr, &Predicates);
     if (!AR || !AR->isAffine()) {
       // Check if bounds for non-affine expressions can be formed.
-      const SCEV *EltSizeSCEV = SE->getStoreSizeOfExpr(
-          DL.getIndexType(P.getPointer()->getType()), AccessTy);
-      if (!Assume || !getNonAffineBounds(TheLoop, P.getPointer(), EltSizeSCEV,
-                                         SE, &RtCheck.getLoopGuards())
-                          .first)
+      if (!Assume)
+        return false;
+      const SCEV *EltSize = GetEltSize(P.getPointer());
+      ScalarEvolution::LoopGuards *Guards = &RtCheck.getLoopGuards();
+      auto Bounds =
+          getNonAffineBounds(TheLoop, P.getPointer(), EltSize, SE, Guards);
+      if (!Bounds.first && RTCheckPtrs.size() == 1)
+        Bounds = getNonAffineGEPBounds(TheLoop, P.getPointer(), Ptr, EltSize,
+                                       SE, Guards);
+      if (!Bounds.first)
         return false;
       continue;
     }
