@@ -86,8 +86,8 @@ define void @vector_reverse_i64(i64 %N, ptr %a, ptr %b) #0 {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP0]], 7
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[TMP2]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[TMP0]], 7
+; CHECK-NEXT:    [[TMP3:%.*]] = add nsw i64 [[TMP2]], -1
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[B3]], [[A4]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP4]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP5]], [[TMP3]]
@@ -144,7 +144,7 @@ for.body:
   br i1 %cmp, label %for.body, label %for.cond.cleanup, !llvm.loop !0
 }
 
-attributes #0 = { "target-cpu"="generic" "target-features"="+neon,+sve" }
+attributes #0 = { "target-cpu"="generic" "target-features"="+neon,+sve" vscale_range(1,16) }
 
 !0 = distinct !{!0, !1, !2, !3, !4, !5}
 !1 = !{!"llvm.loop.mustprogress"}

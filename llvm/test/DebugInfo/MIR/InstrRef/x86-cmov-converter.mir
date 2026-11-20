@@ -95,15 +95,6 @@
 name:            CmovInHotPath
 tracksRegLiveness: true
 debugInstrRef:   true
-registers:
-  - { id: 0, class: gr64, preferred-register: '' }
-  - { id: 1, class: gr64, preferred-register: '' }
-  - { id: 2, class: gr64, preferred-register: '' }
-  - { id: 3, class: gr64, preferred-register: '' }
-  - { id: 4, class: gr64, preferred-register: '' }
-  - { id: 5, class: gr32, preferred-register: '' }
-  - { id: 6, class: gr32, preferred-register: '' }
-  - { id: 7, class: gr32, preferred-register: '' }
 liveins:
   - { reg: '$edi', virtual-reg: '%5' }
   - { reg: '$esi', virtual-reg: '%6' }
@@ -158,14 +149,6 @@ name:            test_cmov_memoperand_in_group_reuse_for_addr2
 alignment:       16
 tracksRegLiveness: true
 debugInstrRef:   true
-registers:
-  - { id: 0, class: gr32, preferred-register: '' }
-  - { id: 1, class: gr32, preferred-register: '' }
-  - { id: 2, class: gr64, preferred-register: '' }
-  - { id: 3, class: gr64, preferred-register: '' }
-  - { id: 4, class: gr32, preferred-register: '' }
-  - { id: 5, class: gr64, preferred-register: '' }
-  - { id: 6, class: gr32, preferred-register: '' }
 liveins:
   - { reg: '$edi', virtual-reg: '%0' }
   - { reg: '$esi', virtual-reg: '%1' }

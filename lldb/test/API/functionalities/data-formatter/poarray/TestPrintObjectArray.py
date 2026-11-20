@@ -23,7 +23,7 @@ class PrintObjectArrayTestCase(TestBase):
         """Test that expr -O -Z works"""
         disable_constant_classes = {
             "USE_SYSTEM_STDLIB": "1",  # See above.
-            "CFLAGS_EXTRAS": "-fno-constant-nsnumber-literals "
+            "TEST_CFLAGS_EXTRAS": "-fno-constant-nsnumber-literals "
             + "-fno-constant-nsarray-literals "
             + "-fno-constant-nsdictionary-literals",
         }

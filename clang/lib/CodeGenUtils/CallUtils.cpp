@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/CodeGenUtils/CallUtils.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/Basic/TargetCXXABI.h"
 
@@ -25,6 +26,26 @@ llvm::FPClassTest getNoFPClassTestMask(const LangOptions &LangOpts) {
   if (LangOpts.NoHonorNaNs)
     Mask |= llvm::fcNan;
   return Mask;
+}
+
+bool isArgumentMaybeUndef(const Decl *TargetDecl, unsigned NumRequiredArgs,
+                          unsigned ArgNo) {
+  const auto *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl);
+  if (!FD)
+    return false;
+
+  // Assume variadic arguments do not have maybe_undef attribute.
+  if (ArgNo >= NumRequiredArgs)
+    return false;
+
+  // Check if argument has maybe_undef attribute.
+  if (ArgNo < FD->getNumParams()) {
+    const ParmVarDecl *Param = FD->getParamDecl(ArgNo);
+    if (Param && Param->hasAttr<MaybeUndefAttr>())
+      return true;
+  }
+
+  return false;
 }
 
 EvaluationOrder getCallArgEvaluationOrder(const CallExpr *E) {

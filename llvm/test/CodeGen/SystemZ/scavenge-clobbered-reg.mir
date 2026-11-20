@@ -2,7 +2,6 @@
 # RUN: llc %s -mtriple=s390x-ibm-linux -mcpu=z15 -run-pass=prolog-epilog -o - | FileCheck %s
 ---
 name:            repro
-tracksRegLiveness: true
 stack:
   - { id: 0, offset: 0, size: 16384, callee-saved-restored: true }
 body:             |
