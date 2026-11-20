@@ -171,6 +171,7 @@ public:
   }
 
   [[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8 locale getloc() const { return __loc_; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const locale& __getloc() const { return __loc_; }
 
   // 27.6.2.2.2 buffer and positioning:
   inline _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8 basic_streambuf* pubsetbuf(char_type* __s, streamsize __n) {
