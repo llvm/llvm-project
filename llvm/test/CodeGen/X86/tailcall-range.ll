@@ -23,7 +23,8 @@ entry:
 }
 
 declare i64 @llvm.llround.f32(float) nounwind readnone
-define range(i64 0, 8) i64 @testmsxs(float %x) {
+; minsize keeps llround as a libcall, otherwise it is expanded inline.
+define range(i64 0, 8) i64 @testmsxs(float %x) minsize {
 ; CHECK-LABEL: testmsxs:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    jmp llroundf@PLT # TAILCALL
