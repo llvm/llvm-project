@@ -177,3 +177,7 @@ namespace ADL {
     void g() { f({}, {}); }
   }
 }
+
+namespace GH139511 {
+  const struct { char y[4]; } a = {.y[2] = 'e', "aaa"}; // expected-error {{cannot initialize an array element of type 'char' with an lvalue of type 'const char[4]'}}
+}

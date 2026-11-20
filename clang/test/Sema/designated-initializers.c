@@ -375,3 +375,5 @@ void gh154046(void) {
     [1] = ""  // expected-error {{incompatible pointer to integer conversion initializing 'const char' with an expression of type 'char[1]'}}
   }[1];
 }
+
+const struct { char y[4]; } gh139511 = {.y[2] = 'e', "aaa"}; // expected-error {{incompatible pointer to integer conversion initializing 'char' with an expression of type 'char[4]'}} expected-error {{initializer element is not a compile-time constant}}
