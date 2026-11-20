@@ -30,6 +30,7 @@
 #include "Shared/Utils.h"
 #include "Utils/ELF.h"
 
+#include "AMDGPUDeviceOptions.h"
 #include "GenericProfiler.h"
 #include "GlobalHandler.h"
 #include "OffloadAPI.h"
@@ -80,8 +81,7 @@ using namespace llvm::offload::debug;
 using namespace error;
 
 namespace llvm {
-namespace omp {
-namespace target {
+namespace offload {
 namespace plugin {
 
 /// Forward declarations for all specialized data structures.
@@ -132,8 +132,7 @@ getOrNullProfilerSpecificData(AsyncInfoWrapperTy &AsyncInfoWrapper) {
 }
 
 } // namespace plugin
-} // namespace target
-} // namespace omp
+} // namespace offload
 } // namespace llvm
 
 static double setTicksToTime() {
@@ -175,8 +174,7 @@ void setOmptAsyncCopyProfile(bool Enable) {}
 void setGlobalOmptKernelProfile(void *Device, int Enable) {}
 
 namespace llvm {
-namespace omp {
-namespace target {
+namespace offload {
 namespace plugin {
 
 namespace hsa_utils {
@@ -970,7 +968,7 @@ private:
 
   /// Reference counter for tracking the concurrent use count. This is mainly
   /// used for knowing how many streams are using the signal.
-  RefCountTy<uint32_t> UseCount;
+  omp::target::RefCountTy<uint32_t> UseCount;
 };
 
 /// Classes for holding AMDGPU signals and managing signals.
@@ -2523,8 +2521,6 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
         OMPX_InitialNumSignals("LIBOMPTARGET_AMDGPU_NUM_INITIAL_HSA_SIGNALS",
                                64),
         OMPX_StreamBusyWait("LIBOMPTARGET_AMDGPU_STREAM_BUSYWAIT", 2000000),
-        OMPX_UseMultipleSdmaEngines(
-            "LIBOMPTARGET_AMDGPU_USE_MULTIPLE_SDMA_ENGINES", false),
         OMPX_ApuMaps("OMPX_APU_MAPS", false), AMDGPUStreamManager(*this, Agent),
         AMDGPUEventManager(*this), AMDGPUSignalManager(*this), Agent(Agent),
         HostDevice(HostDevice) {}
@@ -2589,9 +2585,9 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     // Load the grid values depending on the wavefront.
     if (WavefrontSize == 32)
-      GridValues = getAMDGPUGridValues<32>();
+      GridValues = llvm::omp::getAMDGPUGridValues<32>();
     else if (WavefrontSize == 64)
-      GridValues = getAMDGPUGridValues<64>();
+      GridValues = llvm::omp::getAMDGPUGridValues<64>();
     else
       return Plugin::error(ErrorCode::UNSUPPORTED,
                            "unexpected AMDGPU wavefront %d", WavefrontSize);
@@ -2629,6 +2625,11 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
       return Err;
     HardwareParallelism = ComputeUnits * WavesPerCU;
 
+    if (auto Err = checkIfAPU())
+      return Err;
+
+    DeviceOptions = AMDGPUDeviceOptionsTy(ComputeUnitKind, IsAPU);
+
     // Get maximum size of any device queues and maximum number of queues.
     uint32_t MaxQueueSize;
     if (auto Err = getDeviceAttr(HSA_AGENT_INFO_QUEUE_MAX_SIZE, MaxQueueSize))
@@ -2661,10 +2662,6 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
       return Err;
     if (!Targets.empty() && Targets[0].str().contains("xnack+"))
       IsXnackEnabled = true;
-
-    // detect if device is an APU.
-    if (auto Err = checkIfAPU())
-      return Err;
 
     // Retrieve the size of the group memory.
     for (const auto *Pool : AllMemoryPools) {
@@ -3837,7 +3834,9 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
         });
   }
 
-  bool useMultipleSdmaEngines() const { return OMPX_UseMultipleSdmaEngines; }
+  bool useMultipleSdmaEngines() const {
+    return DeviceOptions.UseMultipleSdmaEngines;
+  }
 
 private:
   using AMDGPUEventRef = AMDGPUResourceRef<AMDGPUEventTy>;
@@ -3923,6 +3922,9 @@ private:
     return 0;
   }
 
+  /// Runtime options of the device.
+  AMDGPUDeviceOptionsTy DeviceOptions;
+
   /// Envar for controlling the number of HSA queues per device. High number of
   /// queues may degrade performance.
   UInt32Envar OMPX_NumQueues;
@@ -3955,9 +3957,6 @@ private:
   /// before going into a blocking HSA wait state. The unit for these variables
   /// are microseconds.
   UInt32Envar OMPX_StreamBusyWait;
-
-  /// Use ROCm 5.7 interface for multiple SDMA engines
-  BoolEnvar OMPX_UseMultipleSdmaEngines;
 
   /// Value of OMPX_APU_MAPS env var used to force
   /// automatic zero-copy behavior on non-APU GPUs.
@@ -4968,12 +4967,11 @@ static Error timeKernelInNsAsync(void *Data) {
 }
 
 } // namespace plugin
-} // namespace target
-} // namespace omp
+} // namespace offload
 } // namespace llvm
 
 extern "C" {
-llvm::omp::target::plugin::GenericPluginTy *createPlugin_amdgpu() {
-  return new llvm::omp::target::plugin::AMDGPUPluginTy();
+llvm::offload::plugin::GenericPluginTy *createPlugin_amdgpu() {
+  return new llvm::offload::plugin::AMDGPUPluginTy();
 }
 }
