@@ -1,0 +1,33 @@
+## Reject offsets outside the buffer and unaligned hash table headers.
+# RUN: split-file %s %t
+# RUN: %python %t/generate.py %t
+# RUN: not llvm-profdata show %t/huge.profdata 2>&1 | FileCheck %s
+# RUN: not llvm-profdata show %t/max.profdata 2>&1 | FileCheck %s
+# RUN: not llvm-profdata show %t/end.profdata 2>&1 | FileCheck %s
+# RUN: not llvm-profdata show %t/short.profdata 2>&1 | FileCheck %s
+# RUN: not llvm-profdata show %t/unaligned.profdata 2>&1 | FileCheck %s
+# RUN: not llvm-profdata show %t/partially-aligned.profdata 2>&1 | FileCheck %s
+# RUN: not llvm-profdata show %t/before-data.profdata 2>&1 | FileCheck %s
+# RUN: llvm-profdata show %t/valid.profdata
+# CHECK: malformed instrumentation profile data: corrupt hash table offset
+
+#--- generate.py
+import ctypes
+import pathlib
+import struct
+import sys
+
+out = pathlib.Path(sys.argv[1])
+def words(*values):
+    return struct.pack("<" + "Q" * len(values), *values)
+
+summary = words(6, 0, *([0] * 6))
+table = words(1, 0, 0)
+size = 40 + len(summary) + len(table)
+for name, offset in [("huge", 0x10000000000008F0), ("max", 2**64 - 1),
+                     ("end", size), ("short", size - 8), ("before-data", 0),
+                     ("unaligned", 40 + len(summary) + 1),
+                     ("partially-aligned", 40 + len(summary) + ctypes.alignment(ctypes.c_uint64) // 2),
+                     ("valid", 40 + len(summary))]:
+    header = b"\xfflprofi\x81" + words(4, 0, 0, offset)
+    (out / (name + ".profdata")).write_bytes(header + summary + table)
