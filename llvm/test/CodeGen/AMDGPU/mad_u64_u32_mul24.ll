@@ -7,8 +7,6 @@
 ; v_mad_i64_i32 instead of a mul24 + carry chain. GlobalISel has no such fold,
 ; so it still uses the mul24 and narrowing rewrites.
 
-declare i32 @llvm.amdgcn.workitem.id.x()
-
 ; Unsigned 24-bit product feeding an add. The add combine must run before
 ; performMulCombine turns the plain mul into a mul24 pair.
 define amdgpu_kernel void @mul24_u_add_to_mad(ptr addrspace(1) %p, ptr addrspace(1) %q) {

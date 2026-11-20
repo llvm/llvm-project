@@ -1404,6 +1404,17 @@ bool AMDGPUCodeGenPrepareImpl::tryNarrowMathIfNoOverflow(Instruction *I) {
   return true;
 }
 
+// Mirrors the selector choice in addCoreISelPasses. GlobalISel can be enabled
+// through TargetOptions without the -global-isel flag.
+static bool usesGlobalISel(const TargetMachine &TM) {
+  CGPassBuilderOption Opt = getCGPassBuilderOption(TM);
+  if (Opt.EnableFastISelOption == cl::boolOrDefault::BOU_TRUE)
+    return false;
+  return Opt.EnableGlobalISelOption == cl::boolOrDefault::BOU_TRUE ||
+         (TM.Options.EnableGlobalISel &&
+          Opt.EnableGlobalISelOption != cl::boolOrDefault::BOU_FALSE);
+}
+
 // Mul24 or narrowing would hide the ISD::MUL that tryFoldToMad64_32 matches.
 bool AMDGPUCodeGenPrepareImpl::shouldKeepMulForMad64(
     const BinaryOperator &I) const {
@@ -1412,8 +1423,7 @@ bool AMDGPUCodeGenPrepareImpl::shouldKeepMulForMad64(
   if (AMDGPU::isNotGFX9Plus(ST) || UA.isUniformAtDef(&I))
     return false;
   // Only the SelectionDAG add combine fuses the mul into the mad.
-  if (getCGPassBuilderOption(TM).EnableGlobalISelOption ==
-      cl::boolOrDefault::BOU_TRUE)
+  if (usesGlobalISel(TM))
     return false;
   return I.hasOneUse() && match(I.user_back(), m_Add(m_Value(), m_Value()));
 }
