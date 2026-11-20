@@ -41,6 +41,22 @@ add_header_library(
 )
 
 add_header_library(
+  c32rtomb
+  HDRS
+    c32rtomb.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.types.char32_t
+    libc.hdr.types.size_t
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.libc_assert
+    libc.src.__support.macros.null_check
+    .character_converter
+    .mbstate
+)
+
+add_header_library(
   wcrtomb
   HDRS
     wcrtomb.h
