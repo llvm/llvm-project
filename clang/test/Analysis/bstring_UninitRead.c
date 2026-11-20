@@ -128,9 +128,45 @@ void mempcpy_struct_fully_uninit() {
   struct st s1;
   struct st s2;
 
-  // FIXME: Maybe ask UninitializedObjectChecker whether s1 is fully
-  // initialized?
-  mempcpy(&s2, &s1, sizeof(struct st));
+  mempcpy(&s2, &s1, sizeof(struct st)); // expected-warning{{The 2nd argument contains uninitialized data}}
+                                        // expected-note@-1{{Other elements might also be undefined}}
+}
+
+void mempcpy_struct_array_first_element_fully_uninit() {
+  struct st s1[2];
+  struct st s2;
+
+  memcpy(&s2, &s1[0], sizeof(s1[0])); // expected-warning{{The 2nd argument contains uninitialized data}}
+                                      // expected-note@-1{{Other elements might also be undefined}}
+}
+
+void mempcpy_struct_array_first_element_fully_init() {
+  struct st s1[2];
+  struct st s2;
+
+  s1[0].i = 0;
+  s1[0].j = 0;
+  mempcpy(&s2, &s1[0], sizeof(s1[0])); // no-warning
+}
+
+void memcpy_struct_array_second_element_fully_uninit() {
+  struct st s1[2];
+  struct st s2;
+
+  s1[0].i = 0;
+  s1[0].j = 0;
+  memcpy(&s2, &s1[1], sizeof(s1[1])); // expected-warning{{The 2nd argument contains uninitialized data}}
+                                      // expected-note@-1{{Other elements might also be undefined}}
+}
+
+void mempcpy_struct_array_last_element_fully_uninit() {
+  struct st s1[2];
+  struct st s2[2];
+
+  s1[0].i = 0;
+  s1[0].j = 0;
+  mempcpy(&s2, &s1, sizeof(s1)); // expected-warning{{The 2nd argument contains uninitialized data}}
+                                 // expected-note@-1{{Other elements might also be undefined}}
 }
 
 // Creduced crash. In this case, an symbolicregion is wrapped in an
