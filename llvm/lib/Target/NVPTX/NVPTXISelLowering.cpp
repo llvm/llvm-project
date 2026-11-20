@@ -2366,10 +2366,35 @@ SDValue NVPTXTargetLowering::LowerINT_TO_FP(SDValue Op,
 
   if (Op.getValueType() == MVT::bf16) {
     SDLoc Loc(Op);
-    return DAG.getNode(
-        ISD::FP_ROUND, Loc, MVT::bf16,
-        DAG.getNode(Op.getOpcode(), Loc, MVT::f32, Op.getOperand(0)),
-        DAG.getIntPtrConstant(0, Loc, /*isTarget=*/true));
+    SDValue Src = Op.getOperand(0);
+    EVT SrcVT = Src.getValueType();
+    bool IsSigned = Op.getOpcode() == ISD::SINT_TO_FP;
+    SDValue F32;
+    if (IsSigned ? DAG.ComputeMaxSignificantBits(Src) <= 25
+                 : DAG.computeKnownBits(Src).countMaxActiveBits() <= 24) {
+      // The value is exact in f32, so only the f32 -> bf16 step rounds.
+      F32 = DAG.getNode(Op.getOpcode(), Loc, MVT::f32, Src);
+    } else {
+      // Rounding to f32 and then to bf16 can round twice. Instead, round to
+      // f32 towards zero and set the lowest bit if that was inexact
+      // (round-to-odd), which makes the f32 -> bf16 rounding exact.
+      assert((SrcVT == MVT::i32 || SrcVT == MVT::i64) && "Unexpected type");
+      Intrinsic::ID IID =
+          SrcVT == MVT::i64
+              ? (IsSigned ? Intrinsic::nvvm_ll2f_rz : Intrinsic::nvvm_ull2f_rz)
+              : (IsSigned ? Intrinsic::nvvm_i2f_rz : Intrinsic::nvvm_ui2f_rz);
+      SDValue RZ = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, Loc, MVT::f32,
+                               DAG.getConstant(IID, Loc, MVT::i32), Src);
+      SDValue Back = DAG.getNode(IsSigned ? ISD::FP_TO_SINT : ISD::FP_TO_UINT,
+                                 Loc, SrcVT, RZ);
+      SDValue Inexact = DAG.getSetCC(Loc, MVT::i1, Back, Src, ISD::SETNE);
+      SDValue Bits =
+          DAG.getNode(ISD::OR, Loc, MVT::i32, DAG.getBitcast(MVT::i32, RZ),
+                      DAG.getZExtOrTrunc(Inexact, Loc, MVT::i32));
+      F32 = DAG.getBitcast(MVT::f32, Bits);
+    }
+    return DAG.getNode(ISD::FP_ROUND, Loc, MVT::bf16, F32,
+                       DAG.getIntPtrConstant(0, Loc, /*isTarget=*/true));
   }
 
   // Everything else is considered legal.
