@@ -31,7 +31,6 @@ jobs:
           pkg update
           pkg upgrade -y
           pkg install -y ninja cmake llvm22 python3
-          mkdir -p /tmp/build && mount -t tmpfs tmpfs /tmp/build
 
     # Use MinSizeRel to reduce the size of the build.
     - name: Configure CMake
