@@ -397,14 +397,14 @@ defm : SKXWriteResPair<WriteVarShuffle,  [SKXPort0,SKXPort5], 1, [1,1], 2, 5>; /
 defm : SKXWriteResPair<WriteVarShuffleX, [SKXPort5], 1, [1], 1, 6>;
 defm : SKXWriteResPair<WriteVarShuffleY, [SKXPort5], 1, [1], 1, 7>;
 defm : SKXWriteResPair<WriteVarShuffleZ, [SKXPort5], 1, [1], 1, 7>;
-defm : SKXWriteResPair<WritePBLENDDX,[SKXPort015], 1, [1], 1, 6>; // Vector blends.
-defm : SKXWriteResPair<WritePBLENDDY,[SKXPort015], 1, [1], 1, 7>;
-defm : SKXWriteResPair<WritePBLENDWX,[SKXPort5], 1, [1], 1, 6>; // Vector blends.
-defm : SKXWriteResPair<WritePBLENDWY,[SKXPort5], 1, [1], 1, 7>;
 defm : SKXWriteResPair<WritePack,  [SKXPort5], 2, [2], 2, 5>; // Vector packs.
 defm : SKXWriteResPair<WritePackX, [SKXPort5], 1, [1], 1, 6>;
 defm : SKXWriteResPair<WritePackY, [SKXPort5], 1, [1], 1, 7>;
 defm : SKXWriteResPair<WritePackZ, [SKXPort5], 1, [1], 1, 7>;
+defm : SKXWriteResPair<WritePBLENDDX,[SKXPort015], 1, [1], 1, 6>; // Vector blends.
+defm : SKXWriteResPair<WritePBLENDDY,[SKXPort015], 1, [1], 1, 7>;
+defm : SKXWriteResPair<WritePBLENDWX,[SKXPort5], 1, [1], 1, 6>; // Vector blends.
+defm : SKXWriteResPair<WritePBLENDWY,[SKXPort5], 1, [1], 1, 7>;
 defm : SKXWriteResPair<WriteVarBlend, [SKXPort015], 2, [2], 2, 6>; // Vector variable blends.
 defm : SKXWriteResPair<WriteVarBlendY,[SKXPort015], 2, [2], 2, 6>;
 defm : SKXWriteResPair<WriteVarBlendZ,[SKXPort05],  2, [1], 1, 6>;
