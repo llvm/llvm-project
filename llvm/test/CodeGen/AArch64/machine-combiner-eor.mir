@@ -10,14 +10,6 @@
 ---
 
 name:            reassociate_xors_sve_1
-registers:
-  - { id: 0, class: zpr, preferred-register: '' }
-  - { id: 1, class: zpr, preferred-register: '' }
-  - { id: 2, class: zpr, preferred-register: '' }
-  - { id: 3, class: zpr, preferred-register: '' }
-  - { id: 4, class: zpr, preferred-register: '' }
-  - { id: 5, class: zpr, preferred-register: '' }
-  - { id: 6, class: zpr, preferred-register: '' }
 body:             |
   bb.0:
     liveins: $z0, $z1, $z2, $z3
@@ -48,14 +40,6 @@ body:             |
 ---
 
 name:            reassociate_xors_sve_2
-registers:
-  - { id: 0, class: zpr, preferred-register: '' }
-  - { id: 1, class: zpr, preferred-register: '' }
-  - { id: 2, class: zpr, preferred-register: '' }
-  - { id: 3, class: zpr, preferred-register: '' }
-  - { id: 4, class: zpr, preferred-register: '' }
-  - { id: 5, class: zpr, preferred-register: '' }
-  - { id: 6, class: zpr, preferred-register: '' }
 body:             |
   bb.0:
     liveins: $z0, $z1, $z2, $z3

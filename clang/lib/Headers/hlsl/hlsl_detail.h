@@ -38,23 +38,6 @@ template <typename T> struct type_identity {
 
 template <typename T> using type_identity_t = typename type_identity<T>::Type;
 
-template <typename U, typename T, int R, int C>
-constexpr enable_if_t<sizeof(U) == sizeof(T), matrix<U, R, C>>
-bit_cast(matrix<T, R, C> M) {
-  return __builtin_bit_cast(matrix<U, R, C>, M);
-}
-
-template <typename U, typename T, int N>
-constexpr enable_if_t<sizeof(U) == sizeof(T), vector<U, N>>
-bit_cast(vector<T, N> V) {
-  return __builtin_bit_cast(vector<U, N>, V);
-}
-
-template <typename U, typename T>
-constexpr enable_if_t<sizeof(U) == sizeof(T), U> bit_cast(T F) {
-  return __builtin_bit_cast(U, F);
-}
-
 template <typename T> struct is_arithmetic {
   static const bool Value = __is_arithmetic(T);
 };
@@ -83,5 +66,23 @@ struct sampler_descriptor_heap_struct {
 };
 
 } // namespace __detail
+
+template <typename U, typename T, int R, int C>
+constexpr __detail::enable_if_t<sizeof(U) == sizeof(T), matrix<U, R, C>>
+bit_cast(matrix<T, R, C> M) {
+  return __builtin_bit_cast(matrix<U, R, C>, M);
+}
+
+template <typename U, typename T, int N>
+constexpr __detail::enable_if_t<sizeof(U) == sizeof(T), vector<U, N>>
+bit_cast(vector<T, N> V) {
+  return __builtin_bit_cast(vector<U, N>, V);
+}
+
+template <typename U, typename T>
+constexpr __detail::enable_if_t<sizeof(U) == sizeof(T), U> bit_cast(T F) {
+  return __builtin_bit_cast(U, F);
+}
+
 } // namespace hlsl
 #endif //_HLSL_HLSL_DETAILS_H_

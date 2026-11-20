@@ -1503,7 +1503,9 @@ def skipUnlessUndefinedBehaviorSanitizer(func):
                 return "No llvm-nm or nm binary."
 
             # Check that we actually see ubsan instrumentation in the binary.
-            nm_output = subprocess.check_output([nm_bin, outputf.path], text=True)
+            nm_output = subprocess.check_output(
+                [nm_bin, outputf.path], stderr=subprocess.PIPE, text=True
+            )
             if "__ubsan_handle_divrem_overflow" not in nm_output:
                 return "Division by zero instrumentation is missing"
 

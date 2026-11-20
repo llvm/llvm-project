@@ -50,6 +50,14 @@ __allocator_destroy(_Alloc& __alloc, _Iter __first, _Sent __last) {
     allocator_traits<_Alloc>::destroy(__alloc, std::addressof(*__first));
 }
 
+template <class _Alloc, class _Iter>
+_LIBCPP_CONSTEXPR_SINCE_CXX20 void __allocator_destroy_backward(_Alloc& __alloc, _Iter __first, _Iter __last) {
+  while (__first != __last) {
+    --__last;
+    allocator_traits<_Alloc>::destroy(__alloc, std::addressof(*__last));
+  }
+}
+
 #if _LIBCPP_STD_VER >= 17
 template <class _ForwardIterator>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void destroy(_ForwardIterator __first, _ForwardIterator __last) {
