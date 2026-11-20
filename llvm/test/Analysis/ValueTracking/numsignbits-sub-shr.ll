@@ -5,10 +5,9 @@ define i32 @sub_ashr_signbits(i8 noundef %x) {
 ; CHECK-LABEL: define i32 @sub_ashr_signbits(
 ; CHECK-SAME: i8 noundef [[X:%.*]]) {
 ; CHECK-NEXT:    [[WIDE:%.*]] = sext i8 [[X]] to i32
-; CHECK-NEXT:    [[SHIFTED:%.*]] = ashr i32 [[WIDE]], 1
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[WIDE]], [[SHIFTED]]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SUB]], 128
-; CHECK-NEXT:    [[RES:%.*]] = add nsw i32 [[AND]], [[SUB]]
+; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[WIDE]], 1
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[WIDE]], [[SHIFTED]]
+; CHECK-NEXT:    [[RES:%.*]] = and i32 [[SUB]], 127
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %wide = sext i8 %x to i32
@@ -27,8 +26,7 @@ define i32 @sub_lshr_signbits(i8 noundef %x) {
 ; CHECK-NEXT:    [[WIDE:%.*]] = zext nneg i8 [[MASKED]] to i32
 ; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[WIDE]], 1
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[WIDE]], [[SHIFTED]]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SUB]], 128
-; CHECK-NEXT:    [[RES:%.*]] = add nsw i32 [[AND]], [[SUB]]
+; CHECK-NEXT:    [[RES:%.*]] = and i32 [[SUB]], 127
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %masked = and i8 %x, 127
@@ -44,10 +42,9 @@ define <2 x i32> @sub_ashr_signbits_vector(<2 x i8> noundef %x) {
 ; CHECK-LABEL: define <2 x i32> @sub_ashr_signbits_vector(
 ; CHECK-SAME: <2 x i8> noundef [[X:%.*]]) {
 ; CHECK-NEXT:    [[WIDE:%.*]] = sext <2 x i8> [[X]] to <2 x i32>
-; CHECK-NEXT:    [[SHIFTED:%.*]] = ashr <2 x i32> [[WIDE]], splat (i32 1)
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw <2 x i32> [[WIDE]], [[SHIFTED]]
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[SUB]], splat (i32 128)
-; CHECK-NEXT:    [[RES:%.*]] = add nsw <2 x i32> [[AND]], [[SUB]]
+; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr <2 x i32> [[WIDE]], splat (i32 1)
+; CHECK-NEXT:    [[SUB:%.*]] = sub <2 x i32> [[WIDE]], [[SHIFTED]]
+; CHECK-NEXT:    [[RES:%.*]] = and <2 x i32> [[SUB]], splat (i32 127)
 ; CHECK-NEXT:    ret <2 x i32> [[RES]]
 ;
   %wide = sext <2 x i8> %x to <2 x i32>
@@ -65,8 +62,7 @@ define <2 x i32> @sub_lshr_signbits_vector(<2 x i8> noundef %x) {
 ; CHECK-NEXT:    [[WIDE:%.*]] = zext nneg <2 x i8> [[MASKED]] to <2 x i32>
 ; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr <2 x i32> [[WIDE]], splat (i32 1)
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw <2 x i32> [[WIDE]], [[SHIFTED]]
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[SUB]], splat (i32 128)
-; CHECK-NEXT:    [[RES:%.*]] = add nsw <2 x i32> [[AND]], [[SUB]]
+; CHECK-NEXT:    [[RES:%.*]] = and <2 x i32> [[SUB]], splat (i32 127)
 ; CHECK-NEXT:    ret <2 x i32> [[RES]]
 ;
   %masked = and <2 x i8> %x, splat (i8 127)

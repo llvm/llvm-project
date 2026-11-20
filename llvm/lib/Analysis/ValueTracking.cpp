@@ -4812,7 +4812,7 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
         break;
       return std::min(Tmp, Tmp2) - 1;
 
-    case Instruction::Sub:
+    case Instruction::Sub: {
       Tmp2 = ComputeNumSignBits(U->getOperand(1), DemandedElts, Q, Depth + 1);
       if (Tmp2 == 1)
         break;
@@ -4836,13 +4836,26 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
           // Otherwise, we treat this like a SUB.
         }
 
+      bool NeedsExtraBit = true;
+      Value *X = U->getOperand(0);
+      const APInt *C = nullptr;
+      // if have a sub X, ashr/lshr (X, C), we can avoid losing one
+      // known sign bit if ashr or if lshr and X is no negative.
+      if ((match(U->getOperand(1), m_Shr(m_Specific(X), m_APInt(C)))) &&
+          isGuaranteedNotToBeUndef(U->getOperand(0), Q.AC, Q.CtxI, Q.DT,
+                                   Depth + 1)) {
+        auto *Shift = cast<Operator>(U->getOperand(1));
+        bool IsLShr = Shift->getOpcode() == Instruction::LShr;
+        NeedsExtraBit =
+            (!IsLShr || isKnownNonNegative(X, Q, Depth + 1)) ? false : true;
+      }
       // Sub can have at most one carry bit.  Thus we know that the output
       // is, at worst, one more bit than the inputs.
       Tmp = ComputeNumSignBits(U->getOperand(0), DemandedElts, Q, Depth + 1);
       if (Tmp == 1)
         break;
-      return std::min(Tmp, Tmp2) - 1;
-
+      return NeedsExtraBit ? std::min(Tmp, Tmp2) - 1 : std::min(Tmp, Tmp2);
+    }
     case Instruction::Mul: {
       // The output of the Mul can be at most twice the valid bits in the
       // inputs.
