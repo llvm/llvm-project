@@ -86,8 +86,8 @@ define i1 @both(i8 %bits0, i8 %bits1) {
 define i1 @both_swapped(i8 %bits0, i8 %bits1) {
 ; CHECK-LABEL: @both_swapped(
 ; CHECK-NEXT:    [[T0:%.*]] = shl nuw i8 1, [[BITS0:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = shl nuw i8 1, [[BITS1:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[T0]], [[T1]]
+; CHECK-NEXT:    [[T0_HIGHBITS:%.*]] = lshr i8 [[T0]], [[BITS1:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[T0_HIGHBITS]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = shl i8 1, %bits0
