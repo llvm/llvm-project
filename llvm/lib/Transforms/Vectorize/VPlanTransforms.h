@@ -37,16 +37,12 @@ class TargetTransformInfo;
 class VPRecipeBuilder;
 struct VFRange;
 
-<<<<<<< HEAD
 LLVM_ABI_FOR_TEST extern cl::opt<bool> VerifyEachVPlan;
 LLVM_ABI_FOR_TEST extern cl::opt<bool> EnableVPlanBasedStrideMV;
-||||||| a9ba4a720691
-LLVM_ABI_FOR_TEST extern cl::opt<bool> VerifyEachVPlan;
-=======
+
 struct VPlanTransforms {
   /// Abort if -vplan-verify-each is set and \p Plan is invalid.
   LLVM_ABI_FOR_TEST static void verifyIfRequested(VPlan &Plan);
->>>>>>> origin/main
 
 #ifndef NDEBUG
   LLVM_ABI_FOR_TEST static bool isPrintingRequested(const VPlan &Plan);

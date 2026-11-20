@@ -49,14 +49,11 @@ using namespace LoopVectorizationUtils;
 using namespace VPlanPatternMatch;
 using namespace SCEVPatternMatch;
 
-<<<<<<< HEAD
 cl::opt<bool> llvm::EnableVPlanBasedStrideMV(
     "enable-vplan-based-stride-mv", cl::init(false), cl::Hidden,
     cl::desc("Perform stride multiversioning directly on VPlan instead of in "
              "LoopAccessAnalysis."));
 
-||||||| a9ba4a720691
-=======
 void VPlanTransforms::verifyIfRequested(VPlan &Plan) {
   const VectorizeOptions &Opts = getVectorizeOptions(Plan.getContext());
   if (Opts.vplan_verify_each && !verifyVPlanIsValid(Plan))
@@ -88,8 +85,6 @@ void VPlanTransforms::printIfRequested(VPlan &Plan, Function *Fn,
     dbgs() << Plan << '\n';
 }
 #endif
-
->>>>>>> origin/main
 /// Returns the metadata attached to \p R, or an empty set for a recipe that
 /// does not carry any.
 static VPIRMetadata getMetadataOf(VPRecipeBase *R) {
@@ -6272,8 +6267,8 @@ void VPlanTransforms::multiversionForUnitStridedMemOps(
 
       VPValue *RewrittenLiveIn =
           vputils::getOrCreateVPValueForSCEVExpr(Plan, RewrittenS);
-      LiveIn->replaceUsesWithIf(RewrittenLiveIn, [&](VPUser &U) {
-        auto *R = cast<VPRecipeBase>(&U);
+      LiveIn->replaceUsesWithIf(RewrittenLiveIn, [&](VPUser *U) {
+        auto *R = cast<VPRecipeBase>(U);
         return R->getRegion() || R->getParent() == Plan.getVectorPreheader();
       });
     }
