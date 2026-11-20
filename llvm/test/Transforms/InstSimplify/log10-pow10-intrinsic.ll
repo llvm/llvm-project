@@ -28,15 +28,17 @@ define double @log10_strict_pow10_reassoc(double %x) {
 
 define double @log10_reassoc_pow10_strict(double %x) {
 ; CHECK-LABEL: @log10_reassoc_pow10_strict(
-; CHECK-NEXT:    ret double [[X:%.*]]
+; CHECK-NEXT:    [[TMP:%.*]] = call double @llvm.pow.f64(double 1.000000e+01, double [[X:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call reassoc double @llvm.log10.f64(double [[TMP]])
+; CHECK-NEXT:    ret double [[TMP1]]
 ;
   %tmp = call double @llvm.pow.f64(double 1.000000e+01, double %x)
   %tmp1 = call reassoc double @llvm.log10.f64(double %tmp)
   ret double %tmp1
 }
 
-define double @log10_pow10_reassoc(double %x) {
-; CHECK-LABEL: @log10_pow10_reassoc(
+define double @log10_reassoc_pow10_reassoc(double %x) {
+; CHECK-LABEL: @log10_reassoc_pow10_reassoc(
 ; CHECK-NEXT:    ret double [[X:%.*]]
 ;
   %tmp = call reassoc double @llvm.pow.f64(double 1.000000e+01, double %x)
