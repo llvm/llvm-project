@@ -323,9 +323,12 @@ static BasicBlock *getCommonExitBlock(const SetVector<BasicBlock *> &Blocks) {
 
 CodeExtractorAnalysisCache::CodeExtractorAnalysisCache(Function &F) {
   for (BasicBlock &BB : F) {
-    for (Instruction &II : BB)
+    for (Instruction &II : BB) {
       if (auto *AI = dyn_cast<AllocaInst>(&II))
         Allocas.push_back(AI);
+      else if (auto *CB = dyn_cast<CallBase>(&II))
+        HasReturnsTwiceCall |= CB->hasFnAttr(Attribute::ReturnsTwice);
+    }
 
     findSideEffectInfoForBlock(BB);
   }
@@ -546,6 +549,26 @@ void CodeExtractor::findAllocas(const CodeExtractorAnalysisCache &CEAC,
     return true;
   };
 
+  // If control never leaves the region, it runs at most once per call of the
+  // function, so allocas that are only used in the region can live in the
+  // frame of the extracted function, even if they have no lifetime markers.
+  // This does not hold if the function can be re-entered by a longjmp, or if
+  // the caller disables non-returning alloca sinking (e.g., for parallel
+  // runtime dispatch).
+  bool NoReturnRegion = AllowNoReturnAllocaSinking &&
+                        !CEAC.hasReturnsTwiceCall() && isNoReturnRegion();
+  auto isOnlyUsedInRegion = [&](AllocaInst *AI) {
+    bool HasRegionUse = false;
+    for (User *U : AI->users()) {
+      if (isa<LifetimeIntrinsic>(U))
+        continue;
+      if (!definedInRegion(Blocks, U))
+        return false;
+      HasRegionUse = true;
+    }
+    return HasRegionUse;
+  };
+
   // Look up allocas in the original function in CodeExtractorAnalysisCache, as
   // this is much faster than walking all the instructions.
   for (AllocaInst *AI : CEAC.getAllocas()) {
@@ -566,7 +589,24 @@ void CodeExtractor::findAllocas(const CodeExtractorAnalysisCache &CEAC,
       SinkCands.insert(AI);
       continue;
     }
+
+    // Any lifetime markers of such an alloca outside of the region are erased
+    // by extractCodeRegion().
+    if (NoReturnRegion && AI->isStaticAlloca() && isOnlyUsedInRegion(AI)) {
+      LLVM_DEBUG(dbgs() << "Sinking alloca into non-returning region: " << *AI
+                        << "\n");
+      SinkCands.insert(AI);
+    }
   }
+}
+
+bool CodeExtractor::isNoReturnRegion() const {
+  return all_of(Blocks, [&](const BasicBlock *BB) {
+    if (succ_empty(BB))
+      return isa<UnreachableInst>(BB->getTerminator());
+    return all_of(successors(BB),
+                  [&](const BasicBlock *Succ) { return Blocks.count(Succ); });
+  });
 }
 
 bool CodeExtractor::isEligible() const {
@@ -1414,6 +1454,16 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
   BasicBlock *CommonExit = nullptr;
   findAllocas(CEAC, SinkingCands, HoistingCands, CommonExit);
   assert(HoistingCands.empty() || CommonExit);
+
+  // Allocas sunk into a region that never returns may have lifetime markers
+  // outside of it, which would otherwise refer to the extracted function.
+  for (Value *V : SinkingCands)
+    if (auto *AI = dyn_cast<AllocaInst>(V))
+      for (User *U : make_early_inc_range(AI->users()))
+        if (auto *LI = dyn_cast<LifetimeIntrinsic>(U))
+          if (!Blocks.count(LI->getParent()) && !SinkingCands.contains(LI) &&
+              !HoistingCands.contains(LI))
+            LI->eraseFromParent();
 
   // Find inputs to, outputs from the code region.
   findInputsOutputs(inputs, outputs, SinkingCands);
