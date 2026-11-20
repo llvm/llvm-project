@@ -41,34 +41,13 @@ COMPILER_RT_VISIBILITY void __llvm_profile_set_page_size(unsigned PS) {
   PageSize = PS;
 }
 
-COMPILER_RT_VISIBILITY
-uint64_t __llvm_profile_get_size_for_buffer(void) {
-  const __llvm_profile_data *DataBegin = __llvm_profile_begin_data();
-  const __llvm_profile_data *DataEnd = __llvm_profile_end_data();
-  const char *CountersBegin = __llvm_profile_begin_counters();
-  const char *CountersEnd = __llvm_profile_end_counters();
-  const char *BitmapBegin = __llvm_profile_begin_bitmap();
-  const char *BitmapEnd = __llvm_profile_end_bitmap();
-  const char *NamesBegin = __llvm_profile_begin_names();
-  const char *NamesEnd = __llvm_profile_end_names();
-  const VTableProfData *VTableBegin = __llvm_profile_begin_vtables();
-  const VTableProfData *VTableEnd = __llvm_profile_end_vtables();
-  const char *VNamesBegin = __llvm_profile_begin_vtabnames();
-  const char *VNamesEnd = __llvm_profile_end_vtabnames();
-
-  return __llvm_profile_get_size_for_buffer_internal(
-      DataBegin, DataEnd, CountersBegin, CountersEnd, BitmapBegin, BitmapEnd,
-      NamesBegin, NamesEnd, VTableBegin, VTableEnd, VNamesBegin, VNamesEnd);
-}
-
-// NOTE: Caller should guarantee that `Begin` and `End` specifies a half-open
-// interval [Begin, End). Namely, `End` is one-byte past the end of the array.
+// Explicit custom ranges are contiguous. The full module bounds may also
+// identify pointer-indexed records on Windows.
 COMPILER_RT_VISIBILITY
 uint64_t __llvm_profile_get_num_data(const __llvm_profile_data *Begin,
                                      const __llvm_profile_data *End) {
-  intptr_t BeginI = (intptr_t)Begin, EndI = (intptr_t)End;
-  return ((EndI + sizeof(__llvm_profile_data) - 1) - BeginI) /
-         sizeof(__llvm_profile_data);
+  ProfDataRange R = lprofGetDataRange(Begin, End);
+  return lprofDataIsValid(R) ? lprofNumData(R) : 0;
 }
 
 COMPILER_RT_VISIBILITY
@@ -196,16 +175,19 @@ int __llvm_profile_get_padding_sizes_for_counters(
   return 0;
 }
 
-COMPILER_RT_VISIBILITY
-uint64_t __llvm_profile_get_size_for_buffer_internal(
-    const __llvm_profile_data *DataBegin, const __llvm_profile_data *DataEnd,
-    const char *CountersBegin, const char *CountersEnd, const char *BitmapBegin,
-    const char *BitmapEnd, const char *NamesBegin, const char *NamesEnd,
-    const VTableProfData *VTableBegin, const VTableProfData *VTableEnd,
-    const char *VNamesBegin, const char *VNamesEnd) {
+static uint64_t getSizeForBuffer(ProfDataRange Data, const char *CountersBegin,
+                                 const char *CountersEnd,
+                                 const char *BitmapBegin, const char *BitmapEnd,
+                                 const char *NamesBegin, const char *NamesEnd,
+                                 const VTableProfData *VTableBegin,
+                                 const VTableProfData *VTableEnd,
+                                 const char *VNamesBegin,
+                                 const char *VNamesEnd) {
   /* Match logic in __llvm_profile_write_buffer(). */
   const uint64_t NamesSize = (NamesEnd - NamesBegin) * sizeof(char);
-  uint64_t DataSize = __llvm_profile_get_data_size(DataBegin, DataEnd);
+  if (!lprofDataIsValid(Data))
+    return 0;
+  uint64_t DataSize = lprofNumData(Data) * sizeof(*Data.Begin);
   uint64_t CountersSize =
       __llvm_profile_get_counters_size(CountersBegin, CountersEnd);
   const uint64_t NumBitmapBytes =
@@ -237,6 +219,29 @@ uint64_t __llvm_profile_get_size_for_buffer_internal(
          PaddingBytesAfterVTable + VNameSize + PaddingBytesAfterVNames;
 }
 
+COMPILER_RT_VISIBILITY uint64_t __llvm_profile_get_size_for_buffer(void) {
+  return getSizeForBuffer(
+      lprofGetModuleData(), __llvm_profile_begin_counters(),
+      __llvm_profile_end_counters(), __llvm_profile_begin_bitmap(),
+      __llvm_profile_end_bitmap(), __llvm_profile_begin_names(),
+      __llvm_profile_end_names(), __llvm_profile_begin_vtables(),
+      __llvm_profile_end_vtables(), __llvm_profile_begin_vtabnames(),
+      __llvm_profile_end_vtabnames());
+}
+
+COMPILER_RT_VISIBILITY
+uint64_t __llvm_profile_get_size_for_buffer_internal(
+    const __llvm_profile_data *DataBegin, const __llvm_profile_data *DataEnd,
+    const char *CountersBegin, const char *CountersEnd, const char *BitmapBegin,
+    const char *BitmapEnd, const char *NamesBegin, const char *NamesEnd,
+    const VTableProfData *VTableBegin, const VTableProfData *VTableEnd,
+    const char *VNamesBegin, const char *VNamesEnd) {
+  return getSizeForBuffer(lprofGetDataRange(DataBegin, DataEnd), CountersBegin,
+                          CountersEnd, BitmapBegin, BitmapEnd, NamesBegin,
+                          NamesEnd, VTableBegin, VTableEnd, VNamesBegin,
+                          VNamesEnd);
+}
+
 COMPILER_RT_VISIBILITY
 void initBufferWriter(ProfDataWriter *BufferWriter, char *Buffer) {
   BufferWriter->Write = lprofBufferWriter;
@@ -258,8 +263,8 @@ COMPILER_RT_VISIBILITY int __llvm_profile_write_buffer_internal(
   initBufferWriter(&BufferWriter, Buffer);
   // Set virtual table arguments to NULL since they are not supported yet.
   return lprofWriteDataImpl(
-      &BufferWriter, DataBegin, DataEnd, CountersBegin, CountersEnd,
-      BitmapBegin, BitmapEnd, /*UniformCountersBegin=*/NULL,
+      &BufferWriter, lprofGetDataRange(DataBegin, DataEnd), CountersBegin,
+      CountersEnd, BitmapBegin, BitmapEnd, /*UniformCountersBegin=*/NULL,
       /*UniformCountersEnd=*/NULL, /*VPDataReader=*/0, NamesBegin, NamesEnd,
       /*VTableBegin=*/NULL, /*VTableEnd=*/NULL, /*VNamesBegin=*/NULL,
       /*VNamesEnd=*/NULL, /*SkipNameDataWrite=*/0,

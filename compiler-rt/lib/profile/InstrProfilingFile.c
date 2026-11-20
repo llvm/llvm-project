@@ -572,6 +572,13 @@ static int writeFile(const char *OutputName) {
   int RetVal;
   FILE *OutputFile;
 
+#ifdef _WIN32
+  if (!lprofDataIsValid(lprofGetModuleData())) {
+    PROF_ERR("%s\n", "Cannot profile mixed COFF instrumentation with padded "
+                     "legacy records; rebuild the legacy objects.");
+    return -1;
+  }
+#endif
   int MergeDone = 0;
   VPMergeHook = &lprofMergeValueProfData;
   if (doMerging())
@@ -1407,9 +1414,10 @@ int __llvm_write_custom_profile(
 
   /* Write custom data to the file */
   ReturnValue = lprofWriteDataImpl(
-      &fileWriter, DataBegin, DataEnd, CountersBegin, CountersEnd, NULL, NULL,
-      UniformCountersBegin, UniformCountersEnd, lprofGetVPDataReader(),
-      NamesBegin, NamesEnd, NULL, NULL, NULL, NULL, 0, Version);
+      &fileWriter, lprofGetDataRange(DataBegin, DataEnd), CountersBegin,
+      CountersEnd, NULL, NULL, UniformCountersBegin, UniformCountersEnd,
+      lprofGetVPDataReader(), NamesBegin, NamesEnd, NULL, NULL, NULL, NULL, 0,
+      Version);
   closeFileObject(OutputFile);
 
   // Restore SIGKILL.

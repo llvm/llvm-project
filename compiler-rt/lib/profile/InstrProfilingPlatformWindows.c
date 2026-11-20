@@ -27,6 +27,8 @@
 /* Allocate read-only section bounds. */
 #pragma section(".lprfn$A", read)
 #pragma section(".lprfn$Z", read)
+#pragma section(".lprfp$A", read)
+#pragma section(".lprfp$Z", read)
 
 /* Allocate read-write section bounds. */
 #pragma section(".lprfd$A", read, write)
@@ -50,6 +52,16 @@ __llvm_profile_data COMPILER_RT_SECTION(".lprfd$A") DataStart = {0};
 COMPILER_RT_ALIGNAS(INSTR_PROF_DATA_ALIGNMENT)
 __llvm_profile_data COMPILER_RT_SECTION(".lprfd$Z") DataEnd = {0};
 
+/* Required by objects with indexed records. Use the start sentinel itself as
+ * the ABI guard, so such objects cannot silently link against an old runtime.
+ */
+COMPILER_RT_ALIGNAS(sizeof(void *))
+COMPILER_RT_SECTION(".lprfp$A")
+const __llvm_profile_data *const __llvm_profile_record_refs_v1 = NULL;
+COMPILER_RT_ALIGNAS(sizeof(void *))
+COMPILER_RT_SECTION(".lprfp$Z")
+const __llvm_profile_data *const RecordRefsEnd = NULL;
+
 const char COMPILER_RT_SECTION(".lprfn$A") NamesStart = '\0';
 const char COMPILER_RT_SECTION(".lprfn$Z") NamesEnd = '\0';
 
@@ -61,10 +73,53 @@ char COMPILER_RT_SECTION(".lprfb$Z") BitmapEnd;
 ValueProfNode COMPILER_RT_SECTION(".lprfnd$A") VNodesStart;
 ValueProfNode COMPILER_RT_SECTION(".lprfnd$Z") VNodesEnd;
 
-const __llvm_profile_data *__llvm_profile_begin_data(void) {
-  return &DataStart + 1;
+ProfDataRange lprofGetModuleData(void) {
+  ProfDataRange R = lprofContiguousData(&DataStart + 1, &DataEnd);
+  R.Refs = (uintptr_t)&__llvm_profile_record_refs_v1 + sizeof(void *);
+  R.RefsEnd = (uintptr_t)&RecordRefsEnd;
+  while (R.Refs < R.RefsEnd && !lprofReadRef(R.Refs))
+    R.Refs += sizeof(void *);
+  /* If only the legacy sentinels remain, a linker alignment gap between them
+   * is not a legacy record. Leave legacy-only images on their original path. */
+  if (R.Refs != R.RefsEnd &&
+      (uintptr_t)R.End - (uintptr_t)R.Begin < sizeof(*R.Begin))
+    R.Begin = R.End;
+  return R;
 }
-const __llvm_profile_data *__llvm_profile_end_data(void) { return &DataEnd; }
+
+const __llvm_profile_data *__llvm_profile_begin_data(void) {
+  ProfDataRange R = lprofGetModuleData();
+  if (!lprofDataIsValid(R))
+    return R.End;
+  return R.Refs < R.RefsEnd ? lprofReadRef(R.Refs) : R.Begin;
+}
+
+static const __llvm_profile_data *moduleEnd(ProfDataRange R) {
+  if (R.Refs >= R.RefsEnd || R.Begin != R.End)
+    return R.End;
+  uintptr_t Max = 0;
+  for (; R.Refs < R.RefsEnd; R.Refs += sizeof(void *)) {
+    uintptr_t D = (uintptr_t)lprofReadRef(R.Refs);
+    if (D > Max)
+      Max = D;
+  }
+  return (const __llvm_profile_data *)(Max + sizeof(*R.Begin));
+}
+
+const __llvm_profile_data *__llvm_profile_end_data(void) {
+  return moduleEnd(lprofGetModuleData());
+}
+
+ProfDataRange lprofGetDataRange(const __llvm_profile_data *Begin,
+                                const __llvm_profile_data *End) {
+  ProfDataRange R = lprofGetModuleData();
+  if (!lprofDataIsValid(R) && Begin == R.End && End == R.End)
+    return R;
+  if (R.Refs < R.RefsEnd && Begin == lprofReadRef(R.Refs) &&
+      End == moduleEnd(R))
+    return R;
+  return lprofContiguousData(Begin, End);
+}
 
 // Type profiling isn't implemented under MSVC ABI, so return NULL (rather than
 // implementing linker magic on Windows) to make it more explicit. To elaborate,

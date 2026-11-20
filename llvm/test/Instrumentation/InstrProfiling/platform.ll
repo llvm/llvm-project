@@ -29,7 +29,7 @@
 
 ; MACHO: @__profd_foo = private {{.*}}, section "__DATA,__llvm_prf_data,regular,live_support", align 8
 ; ELF: @__profd_foo = private {{.*}}, section "__llvm_prf_data", comdat($__profc_foo), align 8
-; WINDOWS: @__profd_foo = private global {{.*}}, section ".lprfd$M", align 8
+; WINDOWS: @__profd_foo = private global {{.*}}, section ".lprfd$0", align 8
 ; AIX: @__profd_foo = private {{.*}}, section "__llvm_prf_data", align 8
 ;; AMDGPU without CUID uses per-function data (not alias)
 ; AMDGPU: @__profd_foo = linkonce_odr protected addrspace(1) global {{.*}}, section "__llvm_prf_data", comdat($__profc_foo), align 8

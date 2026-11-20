@@ -74,7 +74,7 @@ define internal void @foo_internal() {
 ; MACHO: @__profc_foo_inline = linkonce_odr hidden global
 ; MACHO: @__profd_foo_inline = linkonce_odr hidden global
 ; COFF: @__profc_foo_inline = linkonce_odr hidden global{{.*}} section ".lprfc$M", align 8
-; COFF: @__profd_foo_inline = private global{{.*}} section ".lprfd$M", align 8
+; COFF: @__profd_foo_inline = private global{{.*}} section ".lprfd$0", align 8
 ; XCOFF: @__profc_foo_inline = private global
 ; XCOFF: @__profd_foo_inline = private global
 define linkonce_odr void @foo_inline() {
@@ -87,7 +87,7 @@ define linkonce_odr void @foo_inline() {
 ; MACHO: @__profc_foo_extern = linkonce_odr hidden global
 ; MACHO: @__profd_foo_extern = linkonce_odr hidden global
 ; COFF: @__profc_foo_extern = linkonce_odr hidden global {{.*}}section ".lprfc$M", comdat, align 8
-; COFF: @__profd_foo_extern = internal global {{.*}}section ".lprfd$M", comdat($__profc_foo_extern), align 8
+; COFF: @__profd_foo_extern = internal global {{.*}}section ".lprfd$0", comdat($__profc_foo_extern), align 8
 ; XCOFF: @__profc_foo_extern = private global
 ; XCOFF: @__profd_foo_extern = private global
 define available_externally void @foo_extern() {
@@ -99,7 +99,7 @@ declare void @llvm.instrprof.increment(ptr, i64, i32, i32)
 
 ; ELF:         @llvm.compiler.used = appending global {{.*}} [{{.*}}ptr @__profd_foo, ptr @__profd_foo_weak, ptr @"__profd_linkage.ll:foo_internal", ptr @__profd_foo_inline, ptr @__profd_foo_extern{{.*}}]
 ; MACHO:       @llvm.compiler.used = appending global [6 x ptr] [ptr @__llvm_profile_runtime_user, ptr @__profd_foo, {{.*}}
-; COFF:        @llvm.compiler.used = appending global [6 x ptr] [ptr @__llvm_profile_runtime_user, ptr @__profd_foo, ptr @__profd_foo_weak, ptr @"__profd_linkage.ll:foo_internal", ptr @__profd_foo_inline, ptr @__profd_foo_extern]
+; COFF:        @llvm.compiler.used = appending global [11 x ptr] [ptr @__llvm_profile_runtime_user, ptr @__profd_foo, ptr @__profd_foo_weak, ptr @"__profd_linkage.ll:foo_internal", ptr @__profd_foo_inline, ptr @__profd_foo_extern,
 ; XCOFF:       @llvm.used = appending global [6 x ptr] [ptr @__profd_foo, ptr @__profd_foo_weak, ptr @"__profd_linkage.ll:foo_internal", ptr @__profd_foo_inline, ptr @__profd_foo_extern, ptr @__llvm_prf_nm]
 ; WASM:        @llvm.used = appending global [7 x ptr] [ptr @__llvm_profile_runtime_user, ptr @__profd_foo, ptr @__profd_foo_weak, ptr @"__profd_linkage.ll:foo_internal", ptr @__profd_foo_inline, ptr @__profd_foo_extern, ptr @__llvm_prf_nm]
 

@@ -13,6 +13,99 @@
 
 #include "InstrProfiling.h"
 
+/* By-value cursor; the records themselves always belong to the instrumented
+ * program. COFF pointer-indexed records precede any legacy contiguous range. */
+typedef struct ProfDataRange {
+  const __llvm_profile_data *Begin, *End;
+#ifdef _WIN32
+  uintptr_t Refs, RefsEnd;
+#endif
+} ProfDataRange;
+
+static inline ProfDataRange
+lprofContiguousData(const __llvm_profile_data *Begin,
+                    const __llvm_profile_data *End) {
+  ProfDataRange R = {0};
+  R.Begin = Begin;
+  R.End = End;
+  return R;
+}
+
+#ifdef _WIN32
+ProfDataRange lprofGetModuleData(void);
+ProfDataRange lprofGetDataRange(const __llvm_profile_data *Begin,
+                                const __llvm_profile_data *End);
+
+static inline const __llvm_profile_data *lprofReadRef(uintptr_t Slot) {
+  return *(const __llvm_profile_data *const *)Slot;
+}
+#else
+#define lprofGetDataRange lprofContiguousData
+static inline ProfDataRange lprofGetModuleData(void) {
+  return lprofContiguousData(__llvm_profile_begin_data(),
+                             __llvm_profile_end_data());
+}
+#endif
+
+static inline int lprofDataIsValid(ProfDataRange R) {
+#ifdef _WIN32
+  /* Legacy objects have no record index: in a mixed image they still require
+   * the old contiguous ABI. Never round a partial legacy record up and read
+   * beyond the end sentinel. */
+  if (R.Refs < R.RefsEnd)
+    return ((uintptr_t)R.End - (uintptr_t)R.Begin) % sizeof(*R.Begin) == 0;
+#endif
+  return 1;
+}
+
+static inline const __llvm_profile_data *lprofNextData(ProfDataRange *R) {
+#ifdef _WIN32
+  while (R->Refs < R->RefsEnd) {
+    const __llvm_profile_data *D = lprofReadRef(R->Refs);
+    R->Refs += sizeof(D);
+    if (D)
+      return D;
+  }
+#endif
+  if ((uintptr_t)R->Begin >= (uintptr_t)R->End)
+    return NULL;
+  const __llvm_profile_data *D = R->Begin;
+  R->Begin = (const __llvm_profile_data *)((uintptr_t)D + sizeof(*D));
+  return D;
+}
+
+/* If every record is already packed in serialization order, return its base
+ * so the writer can emit the whole range without copying or rebasing. */
+static inline uint64_t lprofDataLayout(ProfDataRange R,
+                                       const __llvm_profile_data **Dense) {
+  uintptr_t Bytes = (uintptr_t)R.End - (uintptr_t)R.Begin;
+  uint64_t Count = (Bytes + sizeof(*R.Begin) - 1) / sizeof(*R.Begin);
+  *Dense = R.Begin;
+#ifdef _WIN32
+  if (R.Refs < R.RefsEnd) {
+    *Dense = lprofReadRef(R.Refs);
+    uintptr_t Next = (uintptr_t)*Dense;
+    for (; R.Refs < R.RefsEnd; R.Refs += sizeof(*Dense)) {
+      const __llvm_profile_data *D = lprofReadRef(R.Refs);
+      if (!D)
+        continue;
+      if ((uintptr_t)D != Next)
+        *Dense = NULL;
+      Next += sizeof(*D);
+      ++Count;
+    }
+    if (Bytes && (uintptr_t)R.Begin != Next)
+      *Dense = NULL;
+  }
+#endif
+  return Count;
+}
+
+static inline uint64_t lprofNumData(ProfDataRange R) {
+  const __llvm_profile_data *Dense;
+  return lprofDataLayout(R, &Dense);
+}
+
 /*!
  * \brief Write instrumentation data to the given buffer, given explicit
  * pointers to the live data in memory.  This function is probably not what you
@@ -152,15 +245,16 @@ typedef struct VPDataReaderType {
    the name data is already in destination, we just skip over it. */
 int lprofWriteData(ProfDataWriter *Writer, VPDataReaderType *VPDataReader,
                    int SkipNameDataWrite);
-int lprofWriteDataImpl(
-    ProfDataWriter *Writer, const __llvm_profile_data *DataBegin,
-    const __llvm_profile_data *DataEnd, const char *CountersBegin,
-    const char *CountersEnd, const char *BitmapBegin, const char *BitmapEnd,
-    const char *UniformCountersBegin, const char *UniformCountersEnd,
-    VPDataReaderType *VPDataReader, const char *NamesBegin,
-    const char *NamesEnd, const VTableProfData *VTableBegin,
-    const VTableProfData *VTableEnd, const char *VNamesBegin,
-    const char *VNamesEnd, int SkipNameDataWrite, uint64_t Version);
+int lprofWriteDataImpl(ProfDataWriter *Writer, ProfDataRange Data,
+                       const char *CountersBegin, const char *CountersEnd,
+                       const char *BitmapBegin, const char *BitmapEnd,
+                       const char *UniformCountersBegin,
+                       const char *UniformCountersEnd,
+                       VPDataReaderType *VPDataReader, const char *NamesBegin,
+                       const char *NamesEnd, const VTableProfData *VTableBegin,
+                       const VTableProfData *VTableEnd, const char *VNamesBegin,
+                       const char *VNamesEnd, int SkipNameDataWrite,
+                       uint64_t Version);
 
 /* Merge value profile data pointed to by SrcValueProfData into
  * in-memory profile counters pointed by to DstData.  */

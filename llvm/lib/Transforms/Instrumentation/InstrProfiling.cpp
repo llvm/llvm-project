@@ -190,6 +190,7 @@ private:
   DenseMap<const Function *, LoadInst *> FunctionToProfileBiasMap;
   std::vector<GlobalValue *> CompilerUsedVars;
   std::vector<GlobalValue *> UsedVars;
+  SmallVector<GlobalValue *> COFFDataRefs;
   std::vector<GlobalVariable *> ReferencedNames;
   // The list of virtual table variables of which the VTableProfData is
   // collected.
@@ -2094,6 +2095,26 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
 
   PD.DataVar = Data;
 
+  if (DataSectionKind == IPSK_data && TT.isWindowsMSVCEnvironment() &&
+      TT.isOSBinFormatCOFF()) {
+    // Keep indexed records outside the legacy $A..$Z range. A runtime
+    // linking both kinds of objects must not enumerate these records twice.
+    Data->setSection(".lprfd$0");
+    // Weak definitions can also occur without an explicit function COMDAT.
+    // Do not leave independent slots pointing at the prevailing definition.
+    if (Data->isWeakForLinker() && !Data->hasComdat())
+      Data->setComdat(M.getOrInsertComdat(Data->getName()));
+    auto *Ref = new GlobalVariable(M, Data->getType(), /*isConstant=*/true,
+                                   GlobalValue::PrivateLinkage, Data,
+                                   Data->getName() + ".ref");
+    Ref->setSection(".lprfp$M");
+    Ref->setAlignment(M.getDataLayout().getPointerABIAlignment(0));
+    // Use the record's group (which may be led by the counter), never a
+    // separately coalescible pointer or an externally visible associate.
+    Ref->setComdat(Data->getComdat());
+    COFFDataRefs.push_back(Ref);
+  }
+
   // Mark the data variable as used so that it isn't stripped out.
   CompilerUsedVars.push_back(Data);
   // Now that the linkage set by the FE has been passed to the data and counter
@@ -2401,6 +2422,16 @@ void InstrLowerer::emitUses() {
     appendToCompilerUsed(M, CompilerUsedVars);
   else
     appendToUsed(M, CompilerUsedVars);
+
+  if (!COFFDataRefs.empty()) {
+    appendToCompilerUsed(M, COFFDataRefs);
+    // Emit /include so that linking against a runtime that only understands
+    // the legacy data range fails rather than silently losing profiles.
+    auto *ABI = M.getOrInsertGlobal("__llvm_profile_record_refs_v1",
+                                    PointerType::getUnqual(M.getContext()));
+    ABI->setConstant(true);
+    UsedVars.push_back(ABI);
+  }
 
   // We do not add proper references from used metadata sections to NamesVar and
   // VNodesVar, so we have to be conservative and place them in llvm.used
