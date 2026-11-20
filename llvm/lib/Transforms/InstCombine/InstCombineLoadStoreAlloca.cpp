@@ -1814,6 +1814,12 @@ bool InstCombinerImpl::mergeStoreIntoSuccessor(StoreInst &SI) {
   NewSI->setMetadata(LLVMContext::MD_access_group,
                      intersectAccessGroups(&SI, OtherStore));
 
+  // The merged store stands for both, so it requests the PC sections of either.
+  NewSI->setMetadata(LLVMContext::MD_pcsections,
+                     MDNode::getMergedPCSectionsMetadata(
+                         SI.getMetadata(LLVMContext::MD_pcsections),
+                         OtherStore->getMetadata(LLVMContext::MD_pcsections)));
+
   // Nuke the old stores.
   eraseInstFromFunction(SI);
   eraseInstFromFunction(*OtherStore);

@@ -599,6 +599,12 @@ Interpreter::Visit(const IdentifierNode &node) {
   }
 
   if (!identifier) {
+    if (lldb::StackFrameSP frame_sp = m_exe_ctx.GetFrameSP())
+      if (std::string message =
+              frame_sp->GetMissingVariableDiagnostic(node.GetName());
+          !message.empty())
+        return llvm::make_error<DILDiagnosticError>(
+            m_expr, message, node.GetLocation(), node.GetName().size());
     std::string errMsg =
         llvm::formatv("use of undeclared identifier '{0}'", node.GetName());
     return llvm::make_error<DILDiagnosticError>(
