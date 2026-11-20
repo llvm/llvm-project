@@ -286,8 +286,7 @@ define <2 x i1> @icmp_eq_vector_positive_equal(<2 x i8> %arg) {
 define <2 x i1> @icmp_eq_vector_positive_unequal(<2 x i8> %arg) {
 ; CHECK-LABEL: define <2 x i1> @icmp_eq_vector_positive_unequal
 ; CHECK-SAME: (<2 x i8> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[SUB:%.*]] = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> [[ARG]], <2 x i8> <i8 1, i8 2>)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[SUB]], <i8 5, i8 6>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[ARG]], <i8 6, i8 8>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %sub = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> %arg, <2 x i8> <i8 1, i8 2>)
@@ -309,8 +308,7 @@ define <2 x i1> @icmp_ne_vector_positive_equal(<2 x i16> %arg) {
 define <2 x i1> @icmp_ne_vector_positive_unequal(<2 x i16> %arg) {
 ; CHECK-LABEL: define <2 x i1> @icmp_ne_vector_positive_unequal
 ; CHECK-SAME: (<2 x i16> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[SUB:%.*]] = call <2 x i16> @llvm.usub.sat.v2i16(<2 x i16> [[ARG]], <2 x i16> <i16 3, i16 33>)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i16> [[SUB]], <i16 7, i16 6>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i16> [[ARG]], <i16 10, i16 39>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %sub = call <2 x i16> @llvm.usub.sat.v2i16(<2 x i16> %arg, <2 x i16> <i16 3, i16 33>)
@@ -332,8 +330,7 @@ define <2 x i1> @icmp_ule_vector_positive_equal(<2 x i32> %arg) {
 define <2 x i1> @icmp_ule_vector_positive_unequal(<2 x i32> %arg) {
 ; CHECK-LABEL: define <2 x i1> @icmp_ule_vector_positive_unequal
 ; CHECK-SAME: (<2 x i32> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[SUB:%.*]] = call <2 x i32> @llvm.usub.sat.v2i32(<2 x i32> [[ARG]], <2 x i32> <i32 3, i32 35>)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i32> [[SUB]], <i32 5, i32 7>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i32> [[ARG]], <i32 8, i32 42>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %sub = call <2 x i32> @llvm.usub.sat.v2i32(<2 x i32> %arg, <2 x i32> <i32 3, i32 35>)
@@ -356,8 +353,8 @@ define <2 x i1> @icmp_sgt_vector_positive_equal(<2 x i64> %arg) {
 define <2 x i1> @icmp_sgt_vector_positive_unequal(<2 x i64> %arg) {
 ; CHECK-LABEL: define <2 x i1> @icmp_sgt_vector_positive_unequal
 ; CHECK-SAME: (<2 x i64> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[SUB:%.*]] = call <2 x i64> @llvm.usub.sat.v2i64(<2 x i64> [[ARG]], <2 x i64> <i64 320498, i64 409623>)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i64> [[SUB]], <i64 1234, i64 3456>
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i64> [[ARG]], <i64 -321733, i64 -413080>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i64> [[TMP1]], <i64 9223372036854774573, i64 9223372036854772351>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %sub = call <2 x i64> @llvm.usub.sat.v2i64(<2 x i64> %arg, <2 x i64> <i64 320498, i64 409623>)
@@ -382,8 +379,7 @@ define <2 x i1> @icmp_eq_vector_negative_equal(<2 x i8> %arg) {
 define <2 x i1> @icmp_eq_vector_negative_unequal(<2 x i8> %arg) {
 ; CHECK-LABEL: define <2 x i1> @icmp_eq_vector_negative_unequal
 ; CHECK-SAME: (<2 x i8> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[SUB:%.*]] = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> [[ARG]], <2 x i8> <i8 -10, i8 -20>)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[SUB]], <i8 5, i8 6>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[ARG]], <i8 -5, i8 -14>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %sub = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> %arg, <2 x i8> <i8 -10, i8 -20>)
