@@ -9,13 +9,13 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -ftrivial-auto-var-init=zero -ftrivial-auto-var-init-max-size=4096 %s -emit-llvm -o - | FileCheck -check-prefix=ZERO-COMMON -check-prefix=ZERO-MAX-4096 %s
 
 struct Foo {
-    int x; // TODO we should try to make sure X is initialized.
-    char buff[1024];  // this one is fine to skip
+    int x; // x should be initialized.
+    char buff[1024];  // this one is fine to skip.
 };
 
 struct Bar {
-    struct Foo f1; // TODO x in Foo should be initialized.
-    int y; // TODO y should be initialized.
+    struct Foo f; // x in f should be initialized.
+    int y; // y should be initialized.
 };
 
 int foo(unsigned n) {
@@ -48,7 +48,13 @@ int foo(unsigned n) {
   // PATTERN-MAX-1-NOT: store i64 -6148914691236517206, ptr %var_size_8_init_later, align 8, !annotation [[AUTO_INIT:!.+]]
   // PATTERN-MAX-1-NOT: store ptr inttoptr (i64 -6148914691236517206 to ptr), ptr %var_size_8p, align 8, !annotation [[AUTO_INIT:!.+]]
   // PATTERN-MAX-1-NOT: call void @llvm.memset.p0.i64(ptr align 16 %var_size_1024, i8 -86, i64 1024, i1 false), !annotation [[AUTO_INIT:!.+]]
-  // PATTERN-MAX-1-NOT: call void @llvm.memset.p0.i64(ptr align 4 %var_size_1032, i8 -86, i64 1032, i1 false), !annotation [[AUTO_INIT:!.+]]
+  // PATTERN-MAX-1-NOT: %f = getelementptr inbounds nuw %struct.Bar, ptr %var_size_1032, i32 0, i32 0
+  // PATTERN-MAX-1-NOT: %x = getelementptr inbounds nuw %struct.Foo, ptr %f, i32 0, i32 0
+  // PATTERN-MAX-1-NOT: store i32 -1431655766, ptr %x, align 4, !annotation !1
+  // PATTERN-MAX-1-NOT: %buff = getelementptr inbounds nuw %struct.Foo, ptr %f, i32 0, i32 1
+  // PATTERN-MAX-1-NOT: call void @llvm.memset.p0.i64(ptr align 4 %buff, i8 -86, i64 1024, i1 false), !annotation !1
+  // PATTERN-MAX-1-NOT: %y = getelementptr inbounds nuw %struct.Bar, ptr %var_size_1032, i32 0, i32 1
+  // PATTERN-MAX-1-NOT: store i32 -1431655766, ptr %y, align 4, !annotation !1
   // PATTERN-MAX-1-NOT: call void @llvm.memset.p0.i64(ptr align 16 %var_size_4096, i8 -86, i64 4096, i1 false), !annotation [[AUTO_INIT:!.+]]
 
   // PATTERN-MAX-1024: store i8 -86, ptr %var_size_1, align 1, !annotation [[AUTO_INIT:!.+]]
@@ -57,7 +63,13 @@ int foo(unsigned n) {
   // PATTERN-MAX-1024: store i64 -6148914691236517206, ptr %var_size_8_init_later, align 8, !annotation [[AUTO_INIT:!.+]]
   // PATTERN-MAX-1024: store ptr inttoptr (i64 -6148914691236517206 to ptr), ptr %var_size_8p, align 8, !annotation [[AUTO_INIT:!.+]]
   // PATTERN-MAX-1024: call void @llvm.memset.p0.i64(ptr align 16 %var_size_1024, i8 -86, i64 1024, i1 false), !annotation [[AUTO_INIT:!.+]]
-  // PATTERN-MAX-1024-NOT: call void @llvm.memset.p0.i64(ptr align 4 %var_size_1032, i8 -86, i64 1032, i1 false), !annotation [[AUTO_INIT:!.+]]
+  // PATTERN-MAX-1024: %f = getelementptr inbounds nuw %struct.Bar, ptr %var_size_1032, i32 0, i32 0
+  // PATTERN-MAX-1024: %x = getelementptr inbounds nuw %struct.Foo, ptr %f, i32 0, i32 0
+  // PATTERN-MAX-1024: store i32 -1431655766, ptr %x, align 4, !annotation !1
+  // PATTERN-MAX-1024: %buff = getelementptr inbounds nuw %struct.Foo, ptr %f, i32 0, i32 1
+  // PATTERN-MAX-1024: call void @llvm.memset.p0.i64(ptr align 4 %buff, i8 -86, i64 1024, i1 false), !annotation !1
+  // PATTERN-MAX-1024: %y = getelementptr inbounds nuw %struct.Bar, ptr %var_size_1032, i32 0, i32 1
+  // PATTERN-MAX-1024: store i32 -1431655766, ptr %y, align 4, !annotation !1
   // PATTERN-MAX-1024-NOT: call void @llvm.memset.p0.i64(ptr align 16 %var_size_4096, i8 -86, i64 4096, i1 false), !annotation [[AUTO_INIT:!.+]]
 
   // PATTERN-MAX-4096: store i8 -86, ptr %var_size_1, align 1, !annotation [[AUTO_INIT:!.+]]
@@ -78,7 +90,13 @@ int foo(unsigned n) {
   // ZERO-MAX-1-NOT: store i64 0, ptr %var_size_8_init_later, align 8, !annotation [[AUTO_INIT:!.+]]
   // ZERO-MAX-1-NOT: store ptr null, ptr %var_size_8p, align 8, !annotation [[AUTO_INIT:!.+]]
   // ZERO-MAX-1-NOT: call void @llvm.memset.p0.i64(ptr align 16 %var_size_1024, i8 0, i64 1024, i1 false), !annotation [[AUTO_INIT:!.+]]
-  // ZERO-MAX-1-NOT: call void @llvm.memset.p0.i64(ptr align 4 %var_size_1032, i8 0, i64 1032, i1 false), !annotation [[AUTO_INIT:!.+]]
+  // ZERO-MAX-1-NOT: %f = getelementptr inbounds nuw %struct.Bar, ptr %var_size_1032, i32 0, i32 0
+  // ZERO-MAX-1-NOT: %x = getelementptr inbounds nuw %struct.Foo, ptr %f, i32 0, i32 0
+  // ZERO-MAX-1-NOT: store i32 0, ptr %x, align 4, !annotation !1
+  // ZERO-MAX-1-NOT: %buff = getelementptr inbounds nuw %struct.Foo, ptr %f, i32 0, i32 1
+  // ZERO-MAX-1-NOT: call void @llvm.memset.p0.i64(ptr align 4 %buff, i8 0, i64 1024, i1 false), !annotation !1
+  // ZERO-MAX-1-NOT: %y = getelementptr inbounds nuw %struct.Bar, ptr %var_size_1032, i32 0, i32 1
+  // ZERO-MAX-1-NOT: store i32 0, ptr %y, align 4, !annotation !1
   // ZERO-MAX-1-NOT: call void @llvm.memset.p0.i64(ptr align 16 %var_size_4096, i8 0, i64 4096, i1 false), !annotation [[AUTO_INIT:!.+]]
 
   // ZERO-MAX-1024: store i8 0, ptr %var_size_1, align 1, !annotation [[AUTO_INIT:!.+]]
@@ -87,7 +105,13 @@ int foo(unsigned n) {
   // ZERO-MAX-1024: store i64 0, ptr %var_size_8_init_later, align 8, !annotation [[AUTO_INIT:!.+]]
   // ZERO-MAX-1024: store ptr null, ptr %var_size_8p, align 8, !annotation [[AUTO_INIT:!.+]]
   // ZERO-MAX-1024: call void @llvm.memset.p0.i64(ptr align 16 %var_size_1024, i8 0, i64 1024, i1 false), !annotation [[AUTO_INIT:!.+]]
-  // ZERO-MAX-1024-NOT: call void @llvm.memset.p0.i64(ptr align 4 %var_size_1032, i8 0, i64 1032, i1 false), !annotation [[AUTO_INIT:!.+]]
+  // ZERO-MAX-1024: %f = getelementptr inbounds nuw %struct.Bar, ptr %var_size_1032, i32 0, i32 0
+  // ZERO-MAX-1024: %x = getelementptr inbounds nuw %struct.Foo, ptr %f, i32 0, i32 0
+  // ZERO-MAX-1024: store i32 0, ptr %x, align 4, !annotation !1
+  // ZERO-MAX-1024: %buff = getelementptr inbounds nuw %struct.Foo, ptr %f, i32 0, i32 1
+  // ZERO-MAX-1024: call void @llvm.memset.p0.i64(ptr align 4 %buff, i8 0, i64 1024, i1 false), !annotation !1
+  // ZERO-MAX-1024: %y = getelementptr inbounds nuw %struct.Bar, ptr %var_size_1032, i32 0, i32 1
+  // ZERO-MAX-1024: store i32 0, ptr %y, align 4, !annotation !1
   // ZERO-MAX-1024-NOT: call void @llvm.memset.p0.i64(ptr align 16 %var_size_4096, i8 0, i64 4096, i1 false), !annotation [[AUTO_INIT:!.+]]
 
   // ZERO-MAX-4096: store i8 0, ptr %var_size_1, align 1, !annotation [[AUTO_INIT:!.+]]
