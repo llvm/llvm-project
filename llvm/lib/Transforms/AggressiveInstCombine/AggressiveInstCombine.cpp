@@ -14,13 +14,16 @@
 
 #include "llvm/Transforms/AggressiveInstCombine/AggressiveInstCombine.h"
 #include "AggressiveInstCombineInternal.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
+#include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/GlobalsModRef.h"
+#include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -33,12 +36,16 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/ProfDataUtils.h"
+#include "llvm/IR/ValueHandle.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include <iterator>
+#include <memory>
 
 using namespace llvm;
 using namespace PatternMatch;
@@ -1795,6 +1802,354 @@ static bool foldConsecutiveStores(BasicBlock &BB, const DataLayout &DL,
   return MadeChange;
 }
 
+static MemoryAccess *getClobberBefore(const Instruction &I,
+                                      const MemoryLocation &Loc,
+                                      MemorySSA &MSSA) {
+  auto *Access = MSSA.getMemoryAccess(&I);
+  if (!Access)
+    return nullptr;
+  return MSSA.getWalker()->getClobberingMemoryAccess(
+      Access->getDefiningAccess(), Loc);
+}
+
+struct MaskedStore {
+  StoreInst *Store;
+  Value *Insert;
+  unsigned Shift;
+  unsigned Offset;
+};
+
+/// Match a masked read-modify-write that can be narrowed to one byte.
+///
+///   store ((load Ptr & ~Mask) or disjoint (Insert & Mask)), Ptr
+///     -> store i8 trunc(Insert >> Shift), Ptr + Offset
+///
+/// The load and store can be in different blocks if the loaded word is still
+/// available at the store.
+static std::optional<MaskedStore>
+matchMaskedStore(StoreInst &SI, AliasAnalysis &AA, DominatorTree &DT,
+                 std::unique_ptr<MemorySSA> &MSSA) {
+  auto *Ty = dyn_cast<IntegerType>(SI.getValueOperand()->getType());
+  Value *Ptr = SI.getPointerOperand();
+  if (!Ty || Ty->getBitWidth() <= 8 || Ty->getBitWidth() % 8 ||
+      Ptr->isSwiftError())
+    return std::nullopt;
+
+  Value *Old, *Insert;
+  const APInt *KeepMask, *InsertMask;
+  // Require the merge and both masks to die. Replacing these three
+  // instructions with a shift, a truncate and an address offset then
+  // cannot increase the instruction count.
+  if (!match(SI.getValueOperand(),
+             m_OneUse(m_c_DisjointOr(
+                 m_OneUse(m_c_And(m_Value(Old, m_LoadSimple(m_Specific(Ptr))),
+                                  m_APInt(KeepMask))),
+                 m_OneUse(m_c_And(m_Value(Insert), m_APInt(InsertMask)))))))
+    return std::nullopt;
+
+  unsigned Shift, MaskWidth;
+  if (*InsertMask != ~*KeepMask ||
+      !InsertMask->isShiftedMask(Shift, MaskWidth) || MaskWidth != 8 ||
+      Shift % 8)
+    return std::nullopt;
+
+  auto *LI = cast<LoadInst>(Old);
+  if (!MSSA)
+    MSSA = std::make_unique<MemorySSA>(*SI.getFunction(), &AA, &DT);
+  auto *LoadAccess = MSSA->getMemoryAccess(LI);
+  if (!LoadAccess)
+    return std::nullopt;
+
+  // The wide store writes back the preserved bytes from LI. Conservatively
+  // prove that the entire word is unchanged by checking that the clobber
+  // immediately before SI dominates LI. Start before SI's own MemoryDef.
+  MemoryLocation Loc = MemoryLocation::get(LI).getWithoutAATags();
+  MemoryAccess *Clobber = getClobberBefore(SI, Loc, *MSSA);
+  if (!Clobber || !MSSA->dominates(Clobber, LoadAccess))
+    return std::nullopt;
+
+  const DataLayout &DL = SI.getDataLayout();
+  unsigned Offset =
+      DL.isLittleEndian() ? Shift / 8 : Ty->getBitWidth() / 8 - Shift / 8 - 1;
+  return MaskedStore{&SI, Insert, Shift, Offset};
+}
+
+static bool narrowMatchedStores(ArrayRef<MaskedStore> Stores) {
+  if (Stores.empty())
+    return false;
+
+  for (const MaskedStore &Candidate : Stores) {
+    StoreInst &SI = *Candidate.Store;
+    unsigned Offset = Candidate.Offset;
+    Value *Ptr = SI.getPointerOperand();
+    Type *ByteTy = Type::getInt8Ty(SI.getContext());
+    IRBuilder<> Builder(&SI);
+    Value *Byte = Candidate.Insert;
+    if (Candidate.Shift)
+      Byte = Builder.CreateLShr(Byte, Candidate.Shift);
+    Byte = Builder.CreateTrunc(Byte, ByteTy);
+    if (Offset)
+      Ptr = Builder.CreateConstGEP1_64(ByteTy, Ptr, Offset);
+    Align Alignment = commonAlignment(SI.getAlign(), Offset);
+    StoreInst *NewSI = Builder.CreateAlignedStore(Byte, Ptr, Alignment);
+    NewSI->setAAMetadata(SI.getAAMetadata().adjustForAccess(Offset, 1));
+    NewSI->copyMetadata(SI, {LLVMContext::MD_access_group});
+    SI.eraseFromParent();
+  }
+  return true;
+}
+
+static StoreInst *getClobberingStore(MemoryAccess *Clobber) {
+  auto *Def = dyn_cast_if_present<MemoryDef>(Clobber);
+  return Def ? dyn_cast_or_null<StoreInst>(Def->getMemoryInst()) : nullptr;
+}
+
+struct ChainedStore {
+  StoreInst *Store;
+  uint64_t Offset;
+};
+
+/// Find the preceding simple store whose entire byte range is written by SI.
+/// The chain is local to this block, with no intervening clobber of SI's range.
+/// A consumer must separately check whether either store can be changed.
+static std::optional<ChainedStore> findChainedStore(StoreInst &SI,
+                                                    MemorySSA &MSSA) {
+  MemoryLocation Loc = MemoryLocation::get(&SI).getWithoutAATags();
+  if (!Loc.Size.isPrecise() || Loc.Size.isScalable())
+    return std::nullopt;
+
+  auto *First = getClobberingStore(getClobberBefore(SI, Loc, MSSA));
+  if (!First || !First->isSimple() || First->getParent() != SI.getParent() ||
+      !First->comesBefore(&SI) ||
+      First->getPointerAddressSpace() != SI.getPointerAddressSpace())
+    return std::nullopt;
+
+  MemoryLocation FirstLoc = MemoryLocation::get(First).getWithoutAATags();
+  LocationSize FirstSize = FirstLoc.Size;
+  if (!FirstSize.isPrecise() || FirstSize.isScalable() || FirstSize.isZero())
+    return std::nullopt;
+
+  AliasResult Alias = MSSA.getAA().alias(Loc, FirstLoc);
+  int64_t Offset = 0;
+  if (Alias != AliasResult::MustAlias) {
+    if (Alias != AliasResult::PartialAlias || !Alias.hasOffset())
+      return std::nullopt;
+    Offset = Alias.getOffset();
+  }
+  uint64_t FirstBytes = FirstSize.getValue().getFixedValue();
+  uint64_t LastBytes = Loc.Size.getValue().getFixedValue();
+  if (Offset < 0 || FirstBytes > LastBytes ||
+      uint64_t(Offset) > LastBytes - FirstBytes)
+    return std::nullopt;
+  return ChainedStore{First, uint64_t(Offset)};
+}
+
+struct MaskedStoreChain {
+  StoreInst *First;
+  LoadInst *Reload;
+  LoadInst *Insert;
+  Use *Keep;
+  Use *Bits;
+};
+
+/// Match a bit-8 update that reads the word written by the first store in
+/// this chain. The first store supplies the low byte of the reload.
+static std::optional<MaskedStoreChain>
+matchMaskedStoreChain(StoreInst &Last, AliasAnalysis &AA, DominatorTree &DT,
+                      std::unique_ptr<MemorySSA> &MSSA) {
+  assert(Last.getValueOperand()->getType()->isIntegerTy(16));
+
+  Instruction *Keep, *Bits, *Reload, *Insert;
+  Value *Ptr = Last.getPointerOperand();
+  auto KeepMask = m_Instruction(
+      Keep,
+      m_OneUse(m_c_And(m_Instruction(Reload, m_LoadSimple(m_Specific(Ptr))),
+                       m_SpecificInt(0xfeff))));
+  auto InsertMask = m_Instruction(
+      Bits, m_OneUse(m_c_And(m_Instruction(Insert, m_LoadSimple(m_Value())),
+                             m_SpecificInt(0x100))));
+  if (!match(Last.getValueOperand(),
+             m_OneUse(m_c_DisjointOr(KeepMask, InsertMask))))
+    return std::nullopt;
+
+  auto *Load = cast<LoadInst>(Reload);
+  auto *BitLoad = cast<LoadInst>(Insert);
+  if (Load->getParent() != Last.getParent() ||
+      Load->hasMetadata(LLVMContext::MD_invariant_group) ||
+      Load->hasMetadata(LLVMContext::MD_invariant_load) ||
+      BitLoad->getParent() != Last.getParent() ||
+      BitLoad->getPointerOperand() == Ptr ||
+      BitLoad->hasMetadata(LLVMContext::MD_invariant_group))
+    return std::nullopt;
+
+  if (!MSSA)
+    MSSA = std::make_unique<MemorySSA>(*Last.getFunction(), &AA, &DT);
+  auto First = findChainedStore(Last, *MSSA);
+  if (!First || !First->Store->getValueOperand()->getType()->isIntegerTy(8) ||
+      First->Offset != (Last.getDataLayout().isLittleEndian() ? 0u : 1u) ||
+      First->Store->hasMetadata(LLVMContext::MD_invariant_group) ||
+      !First->Store->comesBefore(Load))
+    return std::nullopt;
+
+  // First is also the clobber before Last. Both stores and the reload are
+  // in the same block and Reload reads the same range that Last writes.
+  return MaskedStoreChain{First->Store, Load, BitLoad,
+                          &Keep->getOperandUse(Keep->getOperand(0) != Load),
+                          &Bits->getOperandUse(Bits->getOperand(0) != BitLoad)};
+}
+
+/// Find the word containing the byte that the other chain stores. Its high
+/// byte must still be available when this chain writes its low byte.
+static Instruction *findOriginalWord(const MaskedStoreChain &Chain,
+                                     const MaskedStoreChain &Other,
+                                     MemorySSA &MSSA, const SimplifyQuery &SQ) {
+  MemoryLocation Loc = MemoryLocation::get(Chain.Reload).getWithoutAATags();
+  MemoryAccess *BeforeByte = getClobberBefore(*Chain.First, Loc, MSSA);
+  if (!BeforeByte)
+    return nullptr;
+  Value *Written = Other.First->getValueOperand();
+  Instruction *Start;
+  if (auto *Byte = dyn_cast<ConstantInt>(Written)) {
+    auto *Initial = getClobberingStore(BeforeByte);
+    if (!Initial || !Initial->isSimple() ||
+        !Initial->getValueOperand()->getType()->isIntegerTy(16) ||
+        Initial->getPointerOperand() != Loc.Ptr)
+      return nullptr;
+
+    // This initializer can be in a different block. Require private memory
+    // so synchronization cannot change the word before the byte store.
+    auto *Alloca = dyn_cast<AllocaInst>(getUnderlyingObject(Loc.Ptr));
+    if (!Alloca || PointerMayBeCaptured(Alloca, /*ReturnCaptures=*/true))
+      return nullptr;
+
+    KnownBits LowByte = computeKnownBits(Initial->getValueOperand(),
+                                         SQ.getWithInstruction(Initial))
+                            .trunc(8);
+    if (!LowByte.isConstant() || LowByte.getConstant() != Byte->getValue())
+      return nullptr;
+    Start = Initial;
+  } else {
+    Instruction *Old;
+    if (!match(Written, m_Trunc(m_Instruction(
+                            Old, m_LoadSimple(m_Specific(Loc.Ptr))))) ||
+        !Old->getType()->isIntegerTy(16) ||
+        Old->getParent() != Chain.Reload->getParent() ||
+        !Old->comesBefore(Chain.First) ||
+        Old->hasMetadata(LLVMContext::MD_invariant_group) ||
+        getClobberBefore(*Old, Loc, MSSA) != BeforeByte)
+      return nullptr;
+    Start = Old;
+  }
+
+  auto Begin = isa<LoadInst>(Start) ? std::next(Start->getIterator())
+                                    : Chain.First->getIterator();
+  // A synchronization operation can affect what the reload sees even when
+  // the clobber for its memory location stays the same.
+  unsigned Remaining = MaxInstrsToScan;
+  for (Instruction &I : make_range(Begin, Chain.Reload->getIterator()))
+    if (Remaining-- == 0 || I.isAtomic() || I.isVolatile() ||
+        I.maySynchronize())
+      return nullptr;
+  return Start;
+}
+
+/// Forward the value of the two reloads used by a reciprocal byte and bit
+/// update. Both reloads still contribute to both stores, so an original load
+/// that is poison because of its overwritten low byte also reaches both
+/// stores through the byte written to the other address.
+static bool foldMaskedStoreChains(ArrayRef<MaskedStoreChain> Chains,
+                                  MemorySSA &MSSA, const SimplifyQuery &SQ) {
+  if (Chains.size() < 2)
+    return false;
+
+  SmallDenseMap<LoadInst *, const MaskedStoreChain *, 4> ByReload;
+  for (const MaskedStoreChain &Chain : Chains) {
+    // A later chain for the same reload would have an intervening clobber.
+    [[maybe_unused]] bool Inserted =
+        ByReload.try_emplace(Chain.Reload, &Chain).second;
+    assert(Inserted && "Expected at most one chain per reload");
+  }
+
+  struct Forwarding {
+    const MaskedStoreChain *A;
+    const MaskedStoreChain *B;
+    Instruction *OldA;
+    Instruction *OldB;
+  };
+  SmallVector<Forwarding, 1> Candidates;
+  for (const MaskedStoreChain &A : Chains) {
+    const auto *B = ByReload.lookup(A.Insert);
+    if (!B || B->Insert != A.Reload || !A.Reload->comesBefore(B->Reload))
+      continue;
+    if (Instruction *OldA = findOriginalWord(A, *B, MSSA, SQ))
+      if (Instruction *OldB = findOriginalWord(*B, A, MSSA, SQ))
+        Candidates.push_back({&A, B, OldA, OldB});
+  }
+
+  auto GetOriginalValue = [&](Instruction *Word) -> Value * {
+    auto *Initial = dyn_cast<StoreInst>(Word);
+    if (!Initial)
+      return Word;
+    Value *V = Initial->getValueOperand();
+    if (!isGuaranteedNotToBeUndefOrPoison(V, SQ.AC, Initial, SQ.DT)) {
+      IRBuilder<> Builder(Initial);
+      // Freeze the stored initializer so the forwarded value also agrees
+      // with any other loads from this initialization.
+      V = Builder.CreateFreeze(V);
+      Initial->setOperand(0, V);
+    }
+    return V;
+  };
+  auto ForwardReload = [](const MaskedStoreChain &Chain, Use &OtherBits,
+                          Value *Old) {
+    IRBuilder<> Builder(Chain.Reload);
+    // Replace the two uses feeding the paired stores. Other uses need their
+    // own poison proof, since an earlier byte store can overwrite poison.
+    Value *Low = Builder.CreateZExt(Chain.First->getValueOperand(),
+                                    Chain.Reload->getType());
+    Value *High = Builder.CreateAnd(Old, 0xff00);
+    Value *Word = Builder.CreateOr(High, Low, "", /*IsDisjoint=*/true);
+    Chain.Keep->set(Word);
+    OtherBits.set(Word);
+  };
+  // Finish the MemorySSA queries before forwarding. InstCombine simplifies
+  // the recomposed words and DSE can remove the now unobserved byte stores.
+  for (const auto &[A, B, OldA, OldB] : Candidates) {
+    ForwardReload(*A, *B->Bits, GetOriginalValue(OldA));
+    ForwardReload(*B, *A->Bits, GetOriginalValue(OldB));
+  }
+  return !Candidates.empty();
+}
+
+static bool foldChainedStores(BasicBlock &BB, DominatorTree &DT,
+                              AliasAnalysis &AA, const SimplifyQuery &SQ) {
+  SmallVector<MaskedStore, 4> Stores;
+  SmallVector<MaskedStoreChain, 2> MaskedChains;
+  bool SawByteStore = false;
+  bool MadeChange = false;
+  // Finish all MemorySSA queries before replacing any stores in the block.
+  {
+    std::unique_ptr<MemorySSA> MSSA;
+    for (Instruction &I : BB) {
+      auto *SI = dyn_cast<StoreInst>(&I);
+      if (!SI || !SI->isSimple())
+        continue;
+      Type *Ty = SI->getValueOperand()->getType();
+      if (SawByteStore && Ty->isIntegerTy(16))
+        if (auto Chain = matchMaskedStoreChain(*SI, AA, DT, MSSA))
+          MaskedChains.push_back(*Chain);
+      SawByteStore |= Ty->isIntegerTy(8);
+      if (auto Candidate = matchMaskedStore(*SI, AA, DT, MSSA))
+        Stores.push_back(*Candidate);
+    }
+    if (MSSA)
+      MadeChange = foldMaskedStoreChains(MaskedChains, *MSSA, SQ);
+  }
+
+  MadeChange |= narrowMatchedStores(Stores);
+  return MadeChange;
+}
+
 /// Combine away instructions providing they are still equivalent when compared
 /// against 0. i.e do they have any bits set.
 static Value *optimizeShiftInOrChain(Value *V, IRBuilder<> &Builder) {
@@ -2714,6 +3069,10 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
 
     // Do this separately to avoid redundantly scanning stores multiple times.
     MadeChange |= foldConsecutiveStores(BB, DL, TTI, AA);
+
+    // Use the original byte stores to find chains before applying narrowing.
+    // Match the masks before final simplification can remove them.
+    MadeChange |= foldChainedStores(BB, DT, AA, SimplifyQuery(DL, &TLI, &DT, &AC));
   }
 
   // We're done with transforms, so remove dead instructions.
