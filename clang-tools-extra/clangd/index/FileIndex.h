@@ -87,7 +87,9 @@ public:
              DuplicateHandling DuplicateHandle = DuplicateHandling::PickOne,
              size_t *Version = nullptr);
 
-  void profile(MemoryTree &MT) const;
+  /// Returns the size of the symbol and ref slabs. An index that was built
+  /// from them keeps them alive, and counts them in its own memory usage.
+  size_t profile(MemoryTree &MT) const;
 
 private:
   IndexContents IdxContents;

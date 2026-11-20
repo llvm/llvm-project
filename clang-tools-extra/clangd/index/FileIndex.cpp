@@ -401,23 +401,27 @@ FileSymbols::buildIndex(IndexType Type, DuplicateHandling DuplicateHandle,
   llvm_unreachable("Unknown clangd::IndexType");
 }
 
-void FileSymbols::profile(MemoryTree &MT) const {
+size_t FileSymbols::profile(MemoryTree &MT) const {
   std::lock_guard<std::mutex> Lock(Mutex);
+  size_t KeptAliveByIndex = 0;
   for (const auto &SymSlab : SymbolsSnapshot) {
     MT.detail(SymSlab.first())
         .child("symbols")
         .addUsage(SymSlab.second->bytes());
+    KeptAliveByIndex += SymSlab.second->bytes();
   }
   for (const auto &RefSlab : RefsSnapshot) {
     MT.detail(RefSlab.first())
         .child("references")
         .addUsage(RefSlab.second.Slab->bytes());
+    KeptAliveByIndex += RefSlab.second.Slab->bytes();
   }
   for (const auto &RelSlab : RelationsSnapshot) {
     MT.detail(RelSlab.first())
         .child("relations")
         .addUsage(RelSlab.second->bytes());
   }
+  return KeptAliveByIndex;
 }
 
 FileIndex::FileIndex(bool SupportContainedRefs)
@@ -494,15 +498,25 @@ void FileIndex::updateMain(PathRef Path, ParsedAST &AST) {
   }
 }
 
+// The index counts the slabs that it keeps alive, which are reported on their
+// own. If they changed since the index was built, this is only close.
+static size_t indexUsageWithoutSlabs(const SymbolIndex &Index,
+                                     size_t SlabBytes) {
+  size_t IndexBytes = Index.estimateMemoryUsage();
+  return IndexBytes > SlabBytes ? IndexBytes - SlabBytes : 0;
+}
+
 void FileIndex::profile(MemoryTree &MT) const {
-  PreambleSymbols.profile(MT.child("preamble").child("slabs"));
+  size_t PreambleSlabs =
+      PreambleSymbols.profile(MT.child("preamble").child("slabs"));
   MT.child("preamble")
       .child("index")
-      .addUsage(PreambleIndex.estimateMemoryUsage());
-  MainFileSymbols.profile(MT.child("main_file").child("slabs"));
+      .addUsage(indexUsageWithoutSlabs(PreambleIndex, PreambleSlabs));
+  size_t MainFileSlabs =
+      MainFileSymbols.profile(MT.child("main_file").child("slabs"));
   MT.child("main_file")
       .child("index")
-      .addUsage(MainFileIndex.estimateMemoryUsage());
+      .addUsage(indexUsageWithoutSlabs(MainFileIndex, MainFileSlabs));
 }
 } // namespace clangd
 } // namespace clang
