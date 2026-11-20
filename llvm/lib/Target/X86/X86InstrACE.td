@@ -143,21 +143,20 @@ multiclass ACE_TOP<bits<8> Opc, string Opstr, Prefix P> {
 // The mixed-precision outer products take an immediate selecting the element
 // formats and read the scales from the block scale register.
 multiclass ACE_TOP4MX<bits<8> Opc, string Opstr, Prefix P> {
+  // 4VOp3 takes the EVEX.vvvv source last, so the operand lists read in order.
   let Constraints = "$src1 = $dst", SchedRW = [WriteSystem], Uses = [BSR0],
       OpPrefix = P in
-  def trri : Ii8<Opc, MRMSrcReg, (outs TILE:$dst),
-                 (ins TILE:$src1, VR512:$src3, VR512:$src2, u8imm:$imm),
+  def trri : Ii8<Opc, MRMSrcReg4VOp3, (outs TILE:$dst),
+                 (ins TILE:$src1, VR512:$src2, VR512:$src3, u8imm:$imm),
                  !strconcat(Opstr,
                      "\t{$imm, $src3, $src2, $dst|$dst, $src2, $src3, $imm}"),
                  []>,
                  EVEX, VVVV, TA, EVEX_V512;
 
-  // The pseudos take their sources in the order the instruction above does,
-  // because expanding them only drops operands and leaves the rest in place.
   let usesCustomInserter = 1, hasNoSchedulingInfo = 1 in
   def "P"#NAME#"trri"
       : PseudoI<(outs),
-                (ins u8imm:$dst, VR512:$src3, VR512:$src2, u8imm:$imm),
+                (ins u8imm:$dst, VR512:$src2, VR512:$src3, u8imm:$imm),
                 [(!cast<Intrinsic>("int_x86_acev1_"#Opstr)
                   timm:$dst, VR512:$src2, VR512:$src3, timm:$imm)]>;
 
@@ -166,7 +165,7 @@ multiclass ACE_TOP4MX<bits<8> Opc, string Opstr, Prefix P> {
   def "P"#NAME#"trriV"
       : PseudoI<(outs TILE:$dst),
                 (ins GR16:$row, GR16:$col, u8imm:$imm,
-                     TILE:$src1, VR512:$src3, VR512:$src2),
+                     TILE:$src1, VR512:$src2, VR512:$src3),
                 [(set TILE:$dst,
                   (!cast<Intrinsic>("int_x86_acev1_"#Opstr#"_internal")
                    GR16:$row, GR16:$col, timm:$imm,
