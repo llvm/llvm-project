@@ -902,9 +902,7 @@ public:
 
   RegionBindingsRef getRegionBindings() const { return B; }
 
-  bool isVisited(const MemRegion *R) {
-    return Visited.count(getCluster(R));
-  }
+  bool isVisited(const ClusterBindings *C) const { return Visited.count(C); }
 
   void GenerateClusters() {
     // Scan the entire set of bindings and record the region clusters.
@@ -3170,7 +3168,7 @@ StoreRef RegionStoreManager::removeDeadBindings(Store store,
   // as live.  We now remove all the regions that are dead from the store
   // as well as update DSymbols with the set symbols that are now dead.
   // A cluster that has been visited has been marked live.
-  B = B.filterClusters([&](const auto &E) { return W.isVisited(E.first); });
+  B = B.filterClusters([&](const auto &E) { return W.isVisited(&E.second); });
 
   return StoreRef(B.asStore(), *this);
 }
