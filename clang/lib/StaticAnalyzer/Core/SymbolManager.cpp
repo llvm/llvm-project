@@ -257,15 +257,15 @@ const SymbolRefSmallVectorTy *SymbolManager::getDependentSymbols(
   return I->second.get();
 }
 
-void SymbolReaper::markDependentsLive(SymbolRef sym) {
+void SymbolReaper::markDependentsLive(SymbolMapTy::iterator LI) {
   // Do not mark dependents more then once.
-  SymbolMapTy::iterator LI = TheLiving.find(sym);
-  assert(LI != TheLiving.end() && "The primary symbol is not live.");
   if (LI->second == HaveMarkedDependents)
     return;
   LI->second = HaveMarkedDependents;
 
-  if (const SymbolRefSmallVectorTy *Deps = SymMgr.getDependentSymbols(sym)) {
+  // Marking the dependents inserts into TheLiving, invalidating LI.
+  if (const SymbolRefSmallVectorTy *Deps =
+          SymMgr.getDependentSymbols(LI->first)) {
     for (const auto I : *Deps) {
       if (TheLiving.contains(I))
         continue;
@@ -275,8 +275,7 @@ void SymbolReaper::markDependentsLive(SymbolRef sym) {
 }
 
 void SymbolReaper::markLive(SymbolRef sym) {
-  TheLiving[sym] = NotProcessed;
-  markDependentsLive(sym);
+  markDependentsLive(TheLiving.try_emplace(sym, NotProcessed).first);
 }
 
 void SymbolReaper::markLive(const MemRegion *region) {
@@ -336,8 +335,8 @@ bool SymbolReaper::isReadableRegion(const MemRegion *MR) {
 }
 
 bool SymbolReaper::isLive(SymbolRef sym) {
-  if (TheLiving.count(sym)) {
-    markDependentsLive(sym);
+  if (auto LI = TheLiving.find(sym); LI != TheLiving.end()) {
+    markDependentsLive(LI);
     return true;
   }
 

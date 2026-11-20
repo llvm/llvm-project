@@ -645,8 +645,8 @@ private:
   // is readable.
   bool isReadableRegion(const MemRegion *region);
 
-  /// Mark the symbols dependent on the input symbol as live.
-  void markDependentsLive(SymbolRef sym);
+  /// Mark the symbols dependent on the live symbol \p LI as live.
+  void markDependentsLive(SymbolMapTy::iterator LI);
 };
 
 class SymbolVisitor {

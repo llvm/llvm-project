@@ -896,9 +896,7 @@ public:
 
   RegionBindingsRef getRegionBindings() const { return B; }
 
-  bool isVisited(const MemRegion *R) {
-    return Visited.count(getCluster(R));
-  }
+  bool isVisited(const ClusterBindings *C) const { return Visited.count(C); }
 
   void GenerateClusters() {
     // Scan the entire set of bindings and record the region clusters.
@@ -3163,10 +3161,10 @@ StoreRef RegionStoreManager::removeDeadBindings(Store store,
   // We have now scanned the store, marking reachable regions and symbols
   // as live.  We now remove all the regions that are dead from the store
   // as well as update DSymbols with the set symbols that are now dead.
-  for (const MemRegion *Base : llvm::make_first_range(B)) {
+  for (const auto &[Base, Cluster] : B) {
     // If the cluster has been visited, we know the region has been marked.
     // Otherwise, remove the dead entry.
-    if (!W.isVisited(Base))
+    if (!W.isVisited(&Cluster))
       B = B.removeCluster(Base);
   }
 
