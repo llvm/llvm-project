@@ -322,6 +322,7 @@
 #include "llvm/Transforms/Scalar/GVNHoist.h"
 #include "llvm/Transforms/Scalar/GVNSink.h"
 #include "llvm/Transforms/Scalar/GuardWidening.h"
+#include "llvm/Transforms/Scalar/HoistZeroCostConditionalValues.h"
 #include "llvm/Transforms/Scalar/IVUsersPrinter.h"
 #include "llvm/Transforms/Scalar/IndVarSimplify.h"
 #include "llvm/Transforms/Scalar/InductiveRangeCheckElimination.h"
