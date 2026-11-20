@@ -785,14 +785,14 @@ StackFrameSP StackFrameList::GetFrameWithStackID(const StackID &stack_id) {
       // First see if the frame is already realized.  This is the scope for
       // the shared mutex:
       llvm::sys::ScopedReader guard(m_list_mutex);
-      // Do a binary search in case the stack frame is already in our cache
-      Process &process = *m_thread.GetProcess();
-      collection::const_iterator pos = llvm::lower_bound(
-          m_frames, stack_id,
-          [&](const StackFrameSP &frame_sp, const StackID &other) {
-            return frame_sp->GetStackID().IsYoungerThan(other, process);
+      // Look for the stack frame in our cache. Ordering frames can require the
+      // language runtimes (see StackID::IsYoungerThan()), so compare them for
+      // equality instead of doing a binary search.
+      collection::const_iterator pos =
+          llvm::find_if(m_frames, [&](const StackFrameSP &frame_sp) {
+            return frame_sp->GetStackID() == stack_id;
           });
-      if (pos != m_frames.end() && (*pos)->GetStackID() == stack_id)
+      if (pos != m_frames.end())
         return *pos;
     }
     // If we needed to add more frames, we would get to here.

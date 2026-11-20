@@ -26,237 +26,234 @@ define amdgpu_kernel void @single_exit_copy(
 ; CHECK-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x0
 ; CHECK-NEXT:    s_load_dword s0, s[4:5], 0x20
 ; CHECK-NEXT:    s_mov_b32 s1, 0
-; CHECK-NEXT:    v_mov_b32_e32 v3, 0
-; CHECK-NEXT:    v_mov_b32_e32 v2, 0
-; CHECK-NEXT:    v_mov_b32_e32 v1, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    v_mov_b32_e32 v7, 0
-; CHECK-NEXT:    v_mov_b32_e32 v6, 0
-; CHECK-NEXT:    v_mov_b32_e32 v5, 0
+; CHECK-NEXT:    v_mov_b32_e32 v1, 0
+; CHECK-NEXT:    v_mov_b32_e32 v2, 0
+; CHECK-NEXT:    v_mov_b32_e32 v3, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v4, 0
-; CHECK-NEXT:    v_mov_b32_e32 v11, 0
-; CHECK-NEXT:    v_mov_b32_e32 v10, 0
-; CHECK-NEXT:    v_mov_b32_e32 v9, 0
+; CHECK-NEXT:    v_mov_b32_e32 v5, 0
+; CHECK-NEXT:    v_mov_b32_e32 v6, 0
+; CHECK-NEXT:    v_mov_b32_e32 v7, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v8, 0
-; CHECK-NEXT:    v_mov_b32_e32 v15, 0
-; CHECK-NEXT:    v_mov_b32_e32 v14, 0
-; CHECK-NEXT:    v_mov_b32_e32 v13, 0
+; CHECK-NEXT:    v_mov_b32_e32 v9, 0
+; CHECK-NEXT:    v_mov_b32_e32 v10, 0
+; CHECK-NEXT:    v_mov_b32_e32 v11, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v12, 0
-; CHECK-NEXT:    v_mov_b32_e32 v19, 0
-; CHECK-NEXT:    v_mov_b32_e32 v18, 0
-; CHECK-NEXT:    v_mov_b32_e32 v17, 0
+; CHECK-NEXT:    v_mov_b32_e32 v13, 0
+; CHECK-NEXT:    v_mov_b32_e32 v14, 0
+; CHECK-NEXT:    v_mov_b32_e32 v15, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v16, 0
-; CHECK-NEXT:    v_mov_b32_e32 v23, 0
-; CHECK-NEXT:    v_mov_b32_e32 v22, 0
-; CHECK-NEXT:    v_mov_b32_e32 v21, 0
+; CHECK-NEXT:    v_mov_b32_e32 v17, 0
+; CHECK-NEXT:    v_mov_b32_e32 v18, 0
+; CHECK-NEXT:    v_mov_b32_e32 v19, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v20, 0
-; CHECK-NEXT:    v_mov_b32_e32 v27, 0
-; CHECK-NEXT:    v_mov_b32_e32 v26, 0
-; CHECK-NEXT:    v_mov_b32_e32 v25, 0
+; CHECK-NEXT:    v_mov_b32_e32 v21, 0
+; CHECK-NEXT:    v_mov_b32_e32 v22, 0
+; CHECK-NEXT:    v_mov_b32_e32 v23, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v24, 0
-; CHECK-NEXT:    v_mov_b32_e32 v31, 0
-; CHECK-NEXT:    v_mov_b32_e32 v30, 0
-; CHECK-NEXT:    v_mov_b32_e32 v29, 0
+; CHECK-NEXT:    v_mov_b32_e32 v25, 0
+; CHECK-NEXT:    v_mov_b32_e32 v26, 0
+; CHECK-NEXT:    v_mov_b32_e32 v27, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v28, 0
-; CHECK-NEXT:    v_mov_b32_e32 v35, 0
-; CHECK-NEXT:    v_mov_b32_e32 v34, 0
-; CHECK-NEXT:    v_mov_b32_e32 v33, 0
+; CHECK-NEXT:    v_mov_b32_e32 v29, 0
+; CHECK-NEXT:    v_mov_b32_e32 v30, 0
+; CHECK-NEXT:    v_mov_b32_e32 v31, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v32, 0
-; CHECK-NEXT:    v_mov_b32_e32 v39, 0
-; CHECK-NEXT:    v_mov_b32_e32 v38, 0
-; CHECK-NEXT:    v_mov_b32_e32 v37, 0
+; CHECK-NEXT:    v_mov_b32_e32 v33, 0
+; CHECK-NEXT:    v_mov_b32_e32 v34, 0
+; CHECK-NEXT:    v_mov_b32_e32 v35, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v36, 0
-; CHECK-NEXT:    v_mov_b32_e32 v43, 0
-; CHECK-NEXT:    v_mov_b32_e32 v42, 0
-; CHECK-NEXT:    v_mov_b32_e32 v41, 0
+; CHECK-NEXT:    v_mov_b32_e32 v37, 0
+; CHECK-NEXT:    v_mov_b32_e32 v38, 0
+; CHECK-NEXT:    v_mov_b32_e32 v39, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v40, 0
-; CHECK-NEXT:    v_mov_b32_e32 v47, 0
-; CHECK-NEXT:    v_mov_b32_e32 v46, 0
-; CHECK-NEXT:    v_mov_b32_e32 v45, 0
+; CHECK-NEXT:    v_mov_b32_e32 v41, 0
+; CHECK-NEXT:    v_mov_b32_e32 v42, 0
+; CHECK-NEXT:    v_mov_b32_e32 v43, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v44, 0
-; CHECK-NEXT:    v_mov_b32_e32 v51, 0
-; CHECK-NEXT:    v_mov_b32_e32 v50, 0
-; CHECK-NEXT:    v_mov_b32_e32 v49, 0
+; CHECK-NEXT:    v_mov_b32_e32 v45, 0
+; CHECK-NEXT:    v_mov_b32_e32 v46, 0
+; CHECK-NEXT:    v_mov_b32_e32 v47, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v48, 0
-; CHECK-NEXT:    v_mov_b32_e32 v55, 0
-; CHECK-NEXT:    v_mov_b32_e32 v54, 0
-; CHECK-NEXT:    v_mov_b32_e32 v53, 0
+; CHECK-NEXT:    v_mov_b32_e32 v49, 0
+; CHECK-NEXT:    v_mov_b32_e32 v50, 0
+; CHECK-NEXT:    v_mov_b32_e32 v51, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v52, 0
-; CHECK-NEXT:    v_mov_b32_e32 v59, 0
-; CHECK-NEXT:    v_mov_b32_e32 v58, 0
-; CHECK-NEXT:    v_mov_b32_e32 v57, 0
+; CHECK-NEXT:    v_mov_b32_e32 v53, 0
+; CHECK-NEXT:    v_mov_b32_e32 v54, 0
+; CHECK-NEXT:    v_mov_b32_e32 v55, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v56, 0
-; CHECK-NEXT:    v_mov_b32_e32 v63, 0
-; CHECK-NEXT:    v_mov_b32_e32 v62, 0
-; CHECK-NEXT:    v_mov_b32_e32 v61, 0
+; CHECK-NEXT:    v_mov_b32_e32 v57, 0
+; CHECK-NEXT:    v_mov_b32_e32 v58, 0
+; CHECK-NEXT:    v_mov_b32_e32 v59, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v60, 0
-; CHECK-NEXT:    v_mov_b32_e32 v67, 0
-; CHECK-NEXT:    v_mov_b32_e32 v66, 0
-; CHECK-NEXT:    v_mov_b32_e32 v65, 0
+; CHECK-NEXT:    v_mov_b32_e32 v61, 0
+; CHECK-NEXT:    v_mov_b32_e32 v62, 0
+; CHECK-NEXT:    v_mov_b32_e32 v63, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v64, 0
-; CHECK-NEXT:    v_mov_b32_e32 v71, 0
-; CHECK-NEXT:    v_mov_b32_e32 v70, 0
-; CHECK-NEXT:    v_mov_b32_e32 v69, 0
+; CHECK-NEXT:    v_mov_b32_e32 v65, 0
+; CHECK-NEXT:    v_mov_b32_e32 v66, 0
+; CHECK-NEXT:    v_mov_b32_e32 v67, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v68, 0
-; CHECK-NEXT:    v_mov_b32_e32 v75, 0
-; CHECK-NEXT:    v_mov_b32_e32 v74, 0
-; CHECK-NEXT:    v_mov_b32_e32 v73, 0
+; CHECK-NEXT:    v_mov_b32_e32 v69, 0
+; CHECK-NEXT:    v_mov_b32_e32 v70, 0
+; CHECK-NEXT:    v_mov_b32_e32 v71, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v72, 0
-; CHECK-NEXT:    v_mov_b32_e32 v79, 0
-; CHECK-NEXT:    v_mov_b32_e32 v78, 0
-; CHECK-NEXT:    v_mov_b32_e32 v77, 0
+; CHECK-NEXT:    v_mov_b32_e32 v73, 0
+; CHECK-NEXT:    v_mov_b32_e32 v74, 0
+; CHECK-NEXT:    v_mov_b32_e32 v75, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v76, 0
-; CHECK-NEXT:    v_mov_b32_e32 v83, 0
-; CHECK-NEXT:    v_mov_b32_e32 v82, 0
-; CHECK-NEXT:    v_mov_b32_e32 v81, 0
+; CHECK-NEXT:    v_mov_b32_e32 v77, 0
+; CHECK-NEXT:    v_mov_b32_e32 v78, 0
+; CHECK-NEXT:    v_mov_b32_e32 v79, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v80, 0
-; CHECK-NEXT:    v_mov_b32_e32 v87, 0
-; CHECK-NEXT:    v_mov_b32_e32 v86, 0
-; CHECK-NEXT:    v_mov_b32_e32 v85, 0
+; CHECK-NEXT:    v_mov_b32_e32 v81, 0
+; CHECK-NEXT:    v_mov_b32_e32 v82, 0
+; CHECK-NEXT:    v_mov_b32_e32 v83, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v84, 0
-; CHECK-NEXT:    v_mov_b32_e32 v91, 0
-; CHECK-NEXT:    v_mov_b32_e32 v90, 0
-; CHECK-NEXT:    v_mov_b32_e32 v89, 0
+; CHECK-NEXT:    v_mov_b32_e32 v85, 0
+; CHECK-NEXT:    v_mov_b32_e32 v86, 0
+; CHECK-NEXT:    v_mov_b32_e32 v87, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v88, 0
-; CHECK-NEXT:    v_mov_b32_e32 v95, 0
-; CHECK-NEXT:    v_mov_b32_e32 v94, 0
-; CHECK-NEXT:    v_mov_b32_e32 v93, 0
+; CHECK-NEXT:    v_mov_b32_e32 v89, 0
+; CHECK-NEXT:    v_mov_b32_e32 v90, 0
+; CHECK-NEXT:    v_mov_b32_e32 v91, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v92, 0
-; CHECK-NEXT:    v_mov_b32_e32 v99, 0
-; CHECK-NEXT:    v_mov_b32_e32 v98, 0
-; CHECK-NEXT:    v_mov_b32_e32 v97, 0
+; CHECK-NEXT:    v_mov_b32_e32 v93, 0
+; CHECK-NEXT:    v_mov_b32_e32 v94, 0
+; CHECK-NEXT:    v_mov_b32_e32 v95, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v96, 0
-; CHECK-NEXT:    v_mov_b32_e32 v103, 0
-; CHECK-NEXT:    v_mov_b32_e32 v102, 0
-; CHECK-NEXT:    v_mov_b32_e32 v101, 0
+; CHECK-NEXT:    v_mov_b32_e32 v97, 0
+; CHECK-NEXT:    v_mov_b32_e32 v98, 0
+; CHECK-NEXT:    v_mov_b32_e32 v99, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v100, 0
-; CHECK-NEXT:    v_mov_b32_e32 v107, 0
-; CHECK-NEXT:    v_mov_b32_e32 v106, 0
-; CHECK-NEXT:    v_mov_b32_e32 v105, 0
+; CHECK-NEXT:    v_mov_b32_e32 v101, 0
+; CHECK-NEXT:    v_mov_b32_e32 v102, 0
+; CHECK-NEXT:    v_mov_b32_e32 v103, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v104, 0
-; CHECK-NEXT:    v_mov_b32_e32 v111, 0
-; CHECK-NEXT:    v_mov_b32_e32 v110, 0
-; CHECK-NEXT:    v_mov_b32_e32 v109, 0
+; CHECK-NEXT:    v_mov_b32_e32 v105, 0
+; CHECK-NEXT:    v_mov_b32_e32 v106, 0
+; CHECK-NEXT:    v_mov_b32_e32 v107, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v108, 0
-; CHECK-NEXT:    v_mov_b32_e32 v115, 0
-; CHECK-NEXT:    v_mov_b32_e32 v114, 0
-; CHECK-NEXT:    v_mov_b32_e32 v113, 0
+; CHECK-NEXT:    v_mov_b32_e32 v109, 0
+; CHECK-NEXT:    v_mov_b32_e32 v110, 0
+; CHECK-NEXT:    v_mov_b32_e32 v111, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v112, 0
-; CHECK-NEXT:    v_mov_b32_e32 v119, 0
-; CHECK-NEXT:    v_mov_b32_e32 v118, 0
-; CHECK-NEXT:    v_mov_b32_e32 v117, 0
+; CHECK-NEXT:    v_mov_b32_e32 v113, 0
+; CHECK-NEXT:    v_mov_b32_e32 v114, 0
+; CHECK-NEXT:    v_mov_b32_e32 v115, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v116, 0
-; CHECK-NEXT:    v_mov_b32_e32 v123, 0
-; CHECK-NEXT:    v_mov_b32_e32 v122, 0
-; CHECK-NEXT:    v_mov_b32_e32 v121, 0
+; CHECK-NEXT:    v_mov_b32_e32 v117, 0
+; CHECK-NEXT:    v_mov_b32_e32 v118, 0
+; CHECK-NEXT:    v_mov_b32_e32 v119, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v120, 0
-; CHECK-NEXT:    v_mov_b32_e32 v127, 0
-; CHECK-NEXT:    v_mov_b32_e32 v126, 0
-; CHECK-NEXT:    v_mov_b32_e32 v125, 0
+; CHECK-NEXT:    v_mov_b32_e32 v121, 0
+; CHECK-NEXT:    v_mov_b32_e32 v122, 0
+; CHECK-NEXT:    v_mov_b32_e32 v123, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v124, 0
-; CHECK-NEXT:    v_mov_b32_e32 v131, 0
-; CHECK-NEXT:    v_mov_b32_e32 v130, 0
-; CHECK-NEXT:    v_mov_b32_e32 v129, 0
+; CHECK-NEXT:    v_mov_b32_e32 v125, 0
+; CHECK-NEXT:    v_mov_b32_e32 v126, 0
+; CHECK-NEXT:    v_mov_b32_e32 v127, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v128, 0
-; CHECK-NEXT:    v_mov_b32_e32 v135, 0
-; CHECK-NEXT:    v_mov_b32_e32 v134, 0
-; CHECK-NEXT:    v_mov_b32_e32 v133, 0
+; CHECK-NEXT:    v_mov_b32_e32 v129, 0
+; CHECK-NEXT:    v_mov_b32_e32 v130, 0
+; CHECK-NEXT:    v_mov_b32_e32 v131, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v132, 0
-; CHECK-NEXT:    v_mov_b32_e32 v139, 0
-; CHECK-NEXT:    v_mov_b32_e32 v138, 0
-; CHECK-NEXT:    v_mov_b32_e32 v137, 0
+; CHECK-NEXT:    v_mov_b32_e32 v133, 0
+; CHECK-NEXT:    v_mov_b32_e32 v134, 0
+; CHECK-NEXT:    v_mov_b32_e32 v135, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v136, 0
-; CHECK-NEXT:    v_mov_b32_e32 v143, 0
-; CHECK-NEXT:    v_mov_b32_e32 v142, 0
-; CHECK-NEXT:    v_mov_b32_e32 v141, 0
+; CHECK-NEXT:    v_mov_b32_e32 v137, 0
+; CHECK-NEXT:    v_mov_b32_e32 v138, 0
+; CHECK-NEXT:    v_mov_b32_e32 v139, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v140, 0
-; CHECK-NEXT:    v_mov_b32_e32 v147, 0
-; CHECK-NEXT:    v_mov_b32_e32 v146, 0
-; CHECK-NEXT:    v_mov_b32_e32 v145, 0
+; CHECK-NEXT:    v_mov_b32_e32 v141, 0
+; CHECK-NEXT:    v_mov_b32_e32 v142, 0
+; CHECK-NEXT:    v_mov_b32_e32 v143, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v144, 0
-; CHECK-NEXT:    v_mov_b32_e32 v151, 0
-; CHECK-NEXT:    v_mov_b32_e32 v150, 0
-; CHECK-NEXT:    v_mov_b32_e32 v149, 0
+; CHECK-NEXT:    v_mov_b32_e32 v145, 0
+; CHECK-NEXT:    v_mov_b32_e32 v146, 0
+; CHECK-NEXT:    v_mov_b32_e32 v147, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v148, 0
-; CHECK-NEXT:    v_mov_b32_e32 v155, 0
-; CHECK-NEXT:    v_mov_b32_e32 v154, 0
-; CHECK-NEXT:    v_mov_b32_e32 v153, 0
+; CHECK-NEXT:    v_mov_b32_e32 v149, 0
+; CHECK-NEXT:    v_mov_b32_e32 v150, 0
+; CHECK-NEXT:    v_mov_b32_e32 v151, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v152, 0
-; CHECK-NEXT:    v_mov_b32_e32 v159, 0
-; CHECK-NEXT:    v_mov_b32_e32 v158, 0
-; CHECK-NEXT:    v_mov_b32_e32 v157, 0
+; CHECK-NEXT:    v_mov_b32_e32 v153, 0
+; CHECK-NEXT:    v_mov_b32_e32 v154, 0
+; CHECK-NEXT:    v_mov_b32_e32 v155, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v156, 0
-; CHECK-NEXT:    v_mov_b32_e32 v163, 0
-; CHECK-NEXT:    v_mov_b32_e32 v162, 0
-; CHECK-NEXT:    v_mov_b32_e32 v161, 0
+; CHECK-NEXT:    v_mov_b32_e32 v157, 0
+; CHECK-NEXT:    v_mov_b32_e32 v158, 0
+; CHECK-NEXT:    v_mov_b32_e32 v159, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v160, 0
-; CHECK-NEXT:    v_mov_b32_e32 v167, 0
-; CHECK-NEXT:    v_mov_b32_e32 v166, 0
-; CHECK-NEXT:    v_mov_b32_e32 v165, 0
+; CHECK-NEXT:    v_mov_b32_e32 v161, 0
+; CHECK-NEXT:    v_mov_b32_e32 v162, 0
+; CHECK-NEXT:    v_mov_b32_e32 v163, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v164, 0
-; CHECK-NEXT:    v_mov_b32_e32 v171, 0
-; CHECK-NEXT:    v_mov_b32_e32 v170, 0
-; CHECK-NEXT:    v_mov_b32_e32 v169, 0
+; CHECK-NEXT:    v_mov_b32_e32 v165, 0
+; CHECK-NEXT:    v_mov_b32_e32 v166, 0
+; CHECK-NEXT:    v_mov_b32_e32 v167, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v168, 0
-; CHECK-NEXT:    v_mov_b32_e32 v175, 0
-; CHECK-NEXT:    v_mov_b32_e32 v174, 0
-; CHECK-NEXT:    v_mov_b32_e32 v173, 0
+; CHECK-NEXT:    v_mov_b32_e32 v169, 0
+; CHECK-NEXT:    v_mov_b32_e32 v170, 0
+; CHECK-NEXT:    v_mov_b32_e32 v171, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v172, 0
-; CHECK-NEXT:    v_mov_b32_e32 v179, 0
-; CHECK-NEXT:    v_mov_b32_e32 v178, 0
-; CHECK-NEXT:    v_mov_b32_e32 v177, 0
+; CHECK-NEXT:    v_mov_b32_e32 v173, 0
+; CHECK-NEXT:    v_mov_b32_e32 v174, 0
+; CHECK-NEXT:    v_mov_b32_e32 v175, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v176, 0
-; CHECK-NEXT:    v_mov_b32_e32 v183, 0
-; CHECK-NEXT:    v_mov_b32_e32 v182, 0
-; CHECK-NEXT:    v_mov_b32_e32 v181, 0
+; CHECK-NEXT:    v_mov_b32_e32 v177, 0
+; CHECK-NEXT:    v_mov_b32_e32 v178, 0
+; CHECK-NEXT:    v_mov_b32_e32 v179, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v180, 0
-; CHECK-NEXT:    v_mov_b32_e32 v187, 0
-; CHECK-NEXT:    v_mov_b32_e32 v186, 0
-; CHECK-NEXT:    v_mov_b32_e32 v185, 0
+; CHECK-NEXT:    v_mov_b32_e32 v181, 0
+; CHECK-NEXT:    v_mov_b32_e32 v182, 0
+; CHECK-NEXT:    v_mov_b32_e32 v183, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v184, 0
-; CHECK-NEXT:    v_mov_b32_e32 v191, 0
-; CHECK-NEXT:    v_mov_b32_e32 v190, 0
-; CHECK-NEXT:    v_mov_b32_e32 v189, 0
+; CHECK-NEXT:    v_mov_b32_e32 v185, 0
+; CHECK-NEXT:    v_mov_b32_e32 v186, 0
+; CHECK-NEXT:    v_mov_b32_e32 v187, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v188, 0
-; CHECK-NEXT:    v_mov_b32_e32 v195, 0
-; CHECK-NEXT:    v_mov_b32_e32 v194, 0
-; CHECK-NEXT:    v_mov_b32_e32 v193, 0
+; CHECK-NEXT:    v_mov_b32_e32 v189, 0
+; CHECK-NEXT:    v_mov_b32_e32 v190, 0
+; CHECK-NEXT:    v_mov_b32_e32 v191, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v192, 0
-; CHECK-NEXT:    v_mov_b32_e32 v199, 0
-; CHECK-NEXT:    v_mov_b32_e32 v198, 0
-; CHECK-NEXT:    v_mov_b32_e32 v197, 0
+; CHECK-NEXT:    v_mov_b32_e32 v193, 0
+; CHECK-NEXT:    v_mov_b32_e32 v194, 0
+; CHECK-NEXT:    v_mov_b32_e32 v195, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v196, 0
-; CHECK-NEXT:    v_mov_b32_e32 v203, 0
-; CHECK-NEXT:    v_mov_b32_e32 v202, 0
-; CHECK-NEXT:    v_mov_b32_e32 v201, 0
+; CHECK-NEXT:    v_mov_b32_e32 v197, 0
+; CHECK-NEXT:    v_mov_b32_e32 v198, 0
+; CHECK-NEXT:    v_mov_b32_e32 v199, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v200, 0
-; CHECK-NEXT:    v_mov_b32_e32 v207, 0
-; CHECK-NEXT:    v_mov_b32_e32 v206, 0
-; CHECK-NEXT:    v_mov_b32_e32 v205, 0
+; CHECK-NEXT:    v_mov_b32_e32 v201, 0
+; CHECK-NEXT:    v_mov_b32_e32 v202, 0
+; CHECK-NEXT:    v_mov_b32_e32 v203, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v204, 0
-; CHECK-NEXT:    v_mov_b32_e32 v211, 0
-; CHECK-NEXT:    v_mov_b32_e32 v210, 0
-; CHECK-NEXT:    v_mov_b32_e32 v209, 0
+; CHECK-NEXT:    v_mov_b32_e32 v205, 0
+; CHECK-NEXT:    v_mov_b32_e32 v206, 0
+; CHECK-NEXT:    v_mov_b32_e32 v207, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v208, 0
-; CHECK-NEXT:    v_mov_b32_e32 v215, 0
-; CHECK-NEXT:    v_mov_b32_e32 v214, 0
-; CHECK-NEXT:    v_mov_b32_e32 v213, 0
+; CHECK-NEXT:    v_mov_b32_e32 v209, 0
+; CHECK-NEXT:    v_mov_b32_e32 v210, 0
+; CHECK-NEXT:    v_mov_b32_e32 v211, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v212, 0
-; CHECK-NEXT:    v_mov_b32_e32 v219, 0
-; CHECK-NEXT:    v_mov_b32_e32 v218, 0
-; CHECK-NEXT:    v_mov_b32_e32 v217, 0
+; CHECK-NEXT:    v_mov_b32_e32 v213, 0
+; CHECK-NEXT:    v_mov_b32_e32 v214, 0
+; CHECK-NEXT:    v_mov_b32_e32 v215, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v216, 0
-; CHECK-NEXT:    v_mov_b32_e32 v223, 0
-; CHECK-NEXT:    v_mov_b32_e32 v222, 0
-; CHECK-NEXT:    v_mov_b32_e32 v221, 0
+; CHECK-NEXT:    v_mov_b32_e32 v217, 0
+; CHECK-NEXT:    v_mov_b32_e32 v218, 0
+; CHECK-NEXT:    v_mov_b32_e32 v219, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v220, 0
-; CHECK-NEXT:    v_mov_b32_e32 v227, 0
-; CHECK-NEXT:    v_mov_b32_e32 v226, 0
-; CHECK-NEXT:    v_mov_b32_e32 v225, 0
+; CHECK-NEXT:    v_mov_b32_e32 v221, 0
+; CHECK-NEXT:    v_mov_b32_e32 v222, 0
+; CHECK-NEXT:    v_mov_b32_e32 v223, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v224, 0
-; CHECK-NEXT:    v_mov_b32_e32 v231, 0
-; CHECK-NEXT:    v_mov_b32_e32 v230, 0
-; CHECK-NEXT:    v_mov_b32_e32 v229, 0
+; CHECK-NEXT:    v_mov_b32_e32 v225, 0
+; CHECK-NEXT:    v_mov_b32_e32 v226, 0
+; CHECK-NEXT:    v_mov_b32_e32 v227, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v228, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v243, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v242, 0
@@ -278,10 +275,13 @@ define amdgpu_kernel void @single_exit_copy(
 ; CHECK-NEXT:    v_mov_b32_e32 v250, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v249, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v248, 0
-; CHECK-NEXT:    v_mov_b32_e32 v255, 0
-; CHECK-NEXT:    v_mov_b32_e32 v254, 0
-; CHECK-NEXT:    v_mov_b32_e32 v253, 0
+; CHECK-NEXT:    v_mov_b32_e32 v249, 0
+; CHECK-NEXT:    v_mov_b32_e32 v250, 0
+; CHECK-NEXT:    v_mov_b32_e32 v251, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v252, 0
+; CHECK-NEXT:    v_mov_b32_e32 v253, 0
+; CHECK-NEXT:    v_mov_b32_e32 v254, 0
+; CHECK-NEXT:    v_mov_b32_e32 v255, 0
 ; CHECK-NEXT:    v_accvgpr_write_b32 a0, 0
 ; CHECK-NEXT:    v_accvgpr_write_b32 a1, 0
 ; CHECK-NEXT:    v_accvgpr_write_b32 a2, 0
@@ -324,129 +324,147 @@ define amdgpu_kernel void @single_exit_copy(
 ; CHECK-NEXT:    v_pk_add_f32 v[248:249], v[248:249], v[248:249]
 ; CHECK-NEXT:    v_pk_add_f32 v[254:255], v[254:255], v[254:255]
 ; CHECK-NEXT:    v_pk_add_f32 v[252:253], v[252:253], v[252:253]
-; CHECK-NEXT:    v_pk_add_f32 v[194:195], v[194:195], v[194:195]
-; CHECK-NEXT:    v_pk_add_f32 v[192:193], v[192:193], v[192:193]
-; CHECK-NEXT:    v_pk_add_f32 v[198:199], v[198:199], v[198:199]
-; CHECK-NEXT:    v_pk_add_f32 v[196:197], v[196:197], v[196:197]
-; CHECK-NEXT:    v_pk_add_f32 v[202:203], v[202:203], v[202:203]
-; CHECK-NEXT:    v_pk_add_f32 v[200:201], v[200:201], v[200:201]
-; CHECK-NEXT:    v_pk_add_f32 v[206:207], v[206:207], v[206:207]
-; CHECK-NEXT:    v_pk_add_f32 v[204:205], v[204:205], v[204:205]
-; CHECK-NEXT:    v_pk_add_f32 v[210:211], v[210:211], v[210:211]
-; CHECK-NEXT:    v_pk_add_f32 v[208:209], v[208:209], v[208:209]
-; CHECK-NEXT:    v_pk_add_f32 v[214:215], v[214:215], v[214:215]
-; CHECK-NEXT:    v_pk_add_f32 v[212:213], v[212:213], v[212:213]
-; CHECK-NEXT:    v_pk_add_f32 v[218:219], v[218:219], v[218:219]
-; CHECK-NEXT:    v_pk_add_f32 v[216:217], v[216:217], v[216:217]
+; CHECK-NEXT:    v_mfma_f32_16x16x32_f16 a[0:3], a[4:7], a[8:11], a[0:3]
+; CHECK-NEXT:    v_add_f32_e64 v250, v250, v250
+; CHECK-NEXT:    v_add_f32_e64 v251, v251, v251
+; CHECK-NEXT:    v_pk_add_f32 v[248:249], v[248:249], v[248:249]
+; CHECK-NEXT:    v_pk_add_f32 v[246:247], v[246:247], v[246:247]
+; CHECK-NEXT:    v_mfma_f32_16x16x32_f16 a[0:3], a[4:7], a[8:11], a[0:3]
+; CHECK-NEXT:    v_add_f32_e64 v244, v244, v244
+; CHECK-NEXT:    v_add_f32_e64 v245, v245, v245
+; CHECK-NEXT:    v_pk_add_f32 v[242:243], v[242:243], v[242:243]
+; CHECK-NEXT:    v_pk_add_f32 v[240:241], v[240:241], v[240:241]
+; CHECK-NEXT:    v_pk_add_f32 v[238:239], v[238:239], v[238:239]
+; CHECK-NEXT:    v_pk_add_f32 v[236:237], v[236:237], v[236:237]
+; CHECK-NEXT:    v_pk_add_f32 v[234:235], v[234:235], v[234:235]
+; CHECK-NEXT:    v_pk_add_f32 v[232:233], v[232:233], v[232:233]
+; CHECK-NEXT:    v_pk_add_f32 v[230:231], v[230:231], v[230:231]
+; CHECK-NEXT:    v_pk_add_f32 v[228:229], v[228:229], v[228:229]
+; CHECK-NEXT:    v_pk_add_f32 v[226:227], v[226:227], v[226:227]
+; CHECK-NEXT:    v_pk_add_f32 v[224:225], v[224:225], v[224:225]
 ; CHECK-NEXT:    v_pk_add_f32 v[222:223], v[222:223], v[222:223]
 ; CHECK-NEXT:    v_pk_add_f32 v[220:221], v[220:221], v[220:221]
-; CHECK-NEXT:    v_pk_add_f32 v[162:163], v[162:163], v[162:163]
-; CHECK-NEXT:    v_pk_add_f32 v[160:161], v[160:161], v[160:161]
-; CHECK-NEXT:    v_pk_add_f32 v[166:167], v[166:167], v[166:167]
-; CHECK-NEXT:    v_pk_add_f32 v[164:165], v[164:165], v[164:165]
-; CHECK-NEXT:    v_pk_add_f32 v[170:171], v[170:171], v[170:171]
-; CHECK-NEXT:    v_pk_add_f32 v[168:169], v[168:169], v[168:169]
-; CHECK-NEXT:    v_pk_add_f32 v[174:175], v[174:175], v[174:175]
-; CHECK-NEXT:    v_pk_add_f32 v[172:173], v[172:173], v[172:173]
-; CHECK-NEXT:    v_pk_add_f32 v[178:179], v[178:179], v[178:179]
-; CHECK-NEXT:    v_pk_add_f32 v[176:177], v[176:177], v[176:177]
-; CHECK-NEXT:    v_pk_add_f32 v[182:183], v[182:183], v[182:183]
-; CHECK-NEXT:    v_pk_add_f32 v[180:181], v[180:181], v[180:181]
-; CHECK-NEXT:    v_pk_add_f32 v[186:187], v[186:187], v[186:187]
-; CHECK-NEXT:    v_pk_add_f32 v[184:185], v[184:185], v[184:185]
+; CHECK-NEXT:    v_pk_add_f32 v[218:219], v[218:219], v[218:219]
+; CHECK-NEXT:    v_pk_add_f32 v[216:217], v[216:217], v[216:217]
+; CHECK-NEXT:    v_pk_add_f32 v[214:215], v[214:215], v[214:215]
+; CHECK-NEXT:    v_pk_add_f32 v[212:213], v[212:213], v[212:213]
+; CHECK-NEXT:    v_pk_add_f32 v[210:211], v[210:211], v[210:211]
+; CHECK-NEXT:    v_pk_add_f32 v[208:209], v[208:209], v[208:209]
+; CHECK-NEXT:    v_pk_add_f32 v[206:207], v[206:207], v[206:207]
+; CHECK-NEXT:    v_pk_add_f32 v[204:205], v[204:205], v[204:205]
+; CHECK-NEXT:    v_pk_add_f32 v[202:203], v[202:203], v[202:203]
+; CHECK-NEXT:    v_pk_add_f32 v[200:201], v[200:201], v[200:201]
+; CHECK-NEXT:    v_pk_add_f32 v[198:199], v[198:199], v[198:199]
+; CHECK-NEXT:    v_pk_add_f32 v[196:197], v[196:197], v[196:197]
+; CHECK-NEXT:    v_pk_add_f32 v[194:195], v[194:195], v[194:195]
+; CHECK-NEXT:    v_pk_add_f32 v[192:193], v[192:193], v[192:193]
 ; CHECK-NEXT:    v_pk_add_f32 v[190:191], v[190:191], v[190:191]
 ; CHECK-NEXT:    v_pk_add_f32 v[188:189], v[188:189], v[188:189]
-; CHECK-NEXT:    v_pk_add_f32 v[130:131], v[130:131], v[130:131]
-; CHECK-NEXT:    v_pk_add_f32 v[128:129], v[128:129], v[128:129]
-; CHECK-NEXT:    v_pk_add_f32 v[134:135], v[134:135], v[134:135]
-; CHECK-NEXT:    v_pk_add_f32 v[132:133], v[132:133], v[132:133]
-; CHECK-NEXT:    v_pk_add_f32 v[138:139], v[138:139], v[138:139]
-; CHECK-NEXT:    v_pk_add_f32 v[136:137], v[136:137], v[136:137]
-; CHECK-NEXT:    v_pk_add_f32 v[142:143], v[142:143], v[142:143]
-; CHECK-NEXT:    v_pk_add_f32 v[140:141], v[140:141], v[140:141]
-; CHECK-NEXT:    v_pk_add_f32 v[146:147], v[146:147], v[146:147]
-; CHECK-NEXT:    v_pk_add_f32 v[144:145], v[144:145], v[144:145]
-; CHECK-NEXT:    v_pk_add_f32 v[150:151], v[150:151], v[150:151]
-; CHECK-NEXT:    v_pk_add_f32 v[148:149], v[148:149], v[148:149]
-; CHECK-NEXT:    v_pk_add_f32 v[154:155], v[154:155], v[154:155]
-; CHECK-NEXT:    v_pk_add_f32 v[152:153], v[152:153], v[152:153]
+; CHECK-NEXT:    v_pk_add_f32 v[186:187], v[186:187], v[186:187]
+; CHECK-NEXT:    v_pk_add_f32 v[184:185], v[184:185], v[184:185]
+; CHECK-NEXT:    v_pk_add_f32 v[182:183], v[182:183], v[182:183]
+; CHECK-NEXT:    v_pk_add_f32 v[180:181], v[180:181], v[180:181]
+; CHECK-NEXT:    v_pk_add_f32 v[178:179], v[178:179], v[178:179]
+; CHECK-NEXT:    v_pk_add_f32 v[176:177], v[176:177], v[176:177]
+; CHECK-NEXT:    v_pk_add_f32 v[174:175], v[174:175], v[174:175]
+; CHECK-NEXT:    v_pk_add_f32 v[172:173], v[172:173], v[172:173]
+; CHECK-NEXT:    v_pk_add_f32 v[170:171], v[170:171], v[170:171]
+; CHECK-NEXT:    v_pk_add_f32 v[168:169], v[168:169], v[168:169]
+; CHECK-NEXT:    v_pk_add_f32 v[166:167], v[166:167], v[166:167]
+; CHECK-NEXT:    v_pk_add_f32 v[164:165], v[164:165], v[164:165]
+; CHECK-NEXT:    v_pk_add_f32 v[162:163], v[162:163], v[162:163]
+; CHECK-NEXT:    v_pk_add_f32 v[160:161], v[160:161], v[160:161]
 ; CHECK-NEXT:    v_pk_add_f32 v[158:159], v[158:159], v[158:159]
 ; CHECK-NEXT:    v_pk_add_f32 v[156:157], v[156:157], v[156:157]
-; CHECK-NEXT:    v_pk_add_f32 v[98:99], v[98:99], v[98:99]
-; CHECK-NEXT:    v_pk_add_f32 v[96:97], v[96:97], v[96:97]
-; CHECK-NEXT:    v_pk_add_f32 v[102:103], v[102:103], v[102:103]
-; CHECK-NEXT:    v_pk_add_f32 v[100:101], v[100:101], v[100:101]
-; CHECK-NEXT:    v_pk_add_f32 v[106:107], v[106:107], v[106:107]
-; CHECK-NEXT:    v_pk_add_f32 v[104:105], v[104:105], v[104:105]
-; CHECK-NEXT:    v_pk_add_f32 v[110:111], v[110:111], v[110:111]
-; CHECK-NEXT:    v_pk_add_f32 v[108:109], v[108:109], v[108:109]
-; CHECK-NEXT:    v_pk_add_f32 v[114:115], v[114:115], v[114:115]
-; CHECK-NEXT:    v_pk_add_f32 v[112:113], v[112:113], v[112:113]
-; CHECK-NEXT:    v_pk_add_f32 v[118:119], v[118:119], v[118:119]
-; CHECK-NEXT:    v_pk_add_f32 v[116:117], v[116:117], v[116:117]
-; CHECK-NEXT:    v_pk_add_f32 v[122:123], v[122:123], v[122:123]
-; CHECK-NEXT:    v_pk_add_f32 v[120:121], v[120:121], v[120:121]
+; CHECK-NEXT:    v_pk_add_f32 v[154:155], v[154:155], v[154:155]
+; CHECK-NEXT:    v_pk_add_f32 v[152:153], v[152:153], v[152:153]
+; CHECK-NEXT:    v_pk_add_f32 v[150:151], v[150:151], v[150:151]
+; CHECK-NEXT:    v_pk_add_f32 v[148:149], v[148:149], v[148:149]
+; CHECK-NEXT:    v_pk_add_f32 v[146:147], v[146:147], v[146:147]
+; CHECK-NEXT:    v_pk_add_f32 v[144:145], v[144:145], v[144:145]
+; CHECK-NEXT:    v_pk_add_f32 v[142:143], v[142:143], v[142:143]
+; CHECK-NEXT:    v_pk_add_f32 v[140:141], v[140:141], v[140:141]
+; CHECK-NEXT:    v_pk_add_f32 v[138:139], v[138:139], v[138:139]
+; CHECK-NEXT:    v_pk_add_f32 v[136:137], v[136:137], v[136:137]
+; CHECK-NEXT:    v_pk_add_f32 v[134:135], v[134:135], v[134:135]
+; CHECK-NEXT:    v_pk_add_f32 v[132:133], v[132:133], v[132:133]
+; CHECK-NEXT:    v_pk_add_f32 v[130:131], v[130:131], v[130:131]
+; CHECK-NEXT:    v_pk_add_f32 v[128:129], v[128:129], v[128:129]
 ; CHECK-NEXT:    v_pk_add_f32 v[126:127], v[126:127], v[126:127]
 ; CHECK-NEXT:    v_pk_add_f32 v[124:125], v[124:125], v[124:125]
-; CHECK-NEXT:    v_pk_add_f32 v[66:67], v[66:67], v[66:67]
-; CHECK-NEXT:    v_pk_add_f32 v[64:65], v[64:65], v[64:65]
-; CHECK-NEXT:    v_pk_add_f32 v[70:71], v[70:71], v[70:71]
-; CHECK-NEXT:    v_pk_add_f32 v[68:69], v[68:69], v[68:69]
-; CHECK-NEXT:    v_pk_add_f32 v[74:75], v[74:75], v[74:75]
-; CHECK-NEXT:    v_pk_add_f32 v[72:73], v[72:73], v[72:73]
-; CHECK-NEXT:    v_pk_add_f32 v[78:79], v[78:79], v[78:79]
-; CHECK-NEXT:    v_pk_add_f32 v[76:77], v[76:77], v[76:77]
-; CHECK-NEXT:    v_pk_add_f32 v[82:83], v[82:83], v[82:83]
-; CHECK-NEXT:    v_pk_add_f32 v[80:81], v[80:81], v[80:81]
-; CHECK-NEXT:    v_pk_add_f32 v[86:87], v[86:87], v[86:87]
-; CHECK-NEXT:    v_pk_add_f32 v[84:85], v[84:85], v[84:85]
-; CHECK-NEXT:    v_pk_add_f32 v[90:91], v[90:91], v[90:91]
-; CHECK-NEXT:    v_pk_add_f32 v[88:89], v[88:89], v[88:89]
+; CHECK-NEXT:    v_pk_add_f32 v[122:123], v[122:123], v[122:123]
+; CHECK-NEXT:    v_pk_add_f32 v[120:121], v[120:121], v[120:121]
+; CHECK-NEXT:    v_pk_add_f32 v[118:119], v[118:119], v[118:119]
+; CHECK-NEXT:    v_pk_add_f32 v[116:117], v[116:117], v[116:117]
+; CHECK-NEXT:    v_pk_add_f32 v[114:115], v[114:115], v[114:115]
+; CHECK-NEXT:    v_pk_add_f32 v[112:113], v[112:113], v[112:113]
+; CHECK-NEXT:    v_pk_add_f32 v[110:111], v[110:111], v[110:111]
+; CHECK-NEXT:    v_pk_add_f32 v[108:109], v[108:109], v[108:109]
+; CHECK-NEXT:    v_pk_add_f32 v[106:107], v[106:107], v[106:107]
+; CHECK-NEXT:    v_pk_add_f32 v[104:105], v[104:105], v[104:105]
+; CHECK-NEXT:    v_pk_add_f32 v[102:103], v[102:103], v[102:103]
+; CHECK-NEXT:    v_pk_add_f32 v[100:101], v[100:101], v[100:101]
+; CHECK-NEXT:    v_pk_add_f32 v[98:99], v[98:99], v[98:99]
+; CHECK-NEXT:    v_pk_add_f32 v[96:97], v[96:97], v[96:97]
 ; CHECK-NEXT:    v_pk_add_f32 v[94:95], v[94:95], v[94:95]
 ; CHECK-NEXT:    v_pk_add_f32 v[92:93], v[92:93], v[92:93]
-; CHECK-NEXT:    v_pk_add_f32 v[34:35], v[34:35], v[34:35]
-; CHECK-NEXT:    v_pk_add_f32 v[32:33], v[32:33], v[32:33]
-; CHECK-NEXT:    v_pk_add_f32 v[38:39], v[38:39], v[38:39]
-; CHECK-NEXT:    v_pk_add_f32 v[36:37], v[36:37], v[36:37]
-; CHECK-NEXT:    v_pk_add_f32 v[42:43], v[42:43], v[42:43]
-; CHECK-NEXT:    v_pk_add_f32 v[40:41], v[40:41], v[40:41]
-; CHECK-NEXT:    v_pk_add_f32 v[46:47], v[46:47], v[46:47]
-; CHECK-NEXT:    v_pk_add_f32 v[44:45], v[44:45], v[44:45]
-; CHECK-NEXT:    v_pk_add_f32 v[50:51], v[50:51], v[50:51]
-; CHECK-NEXT:    v_pk_add_f32 v[48:49], v[48:49], v[48:49]
-; CHECK-NEXT:    v_pk_add_f32 v[54:55], v[54:55], v[54:55]
-; CHECK-NEXT:    v_pk_add_f32 v[52:53], v[52:53], v[52:53]
-; CHECK-NEXT:    v_pk_add_f32 v[58:59], v[58:59], v[58:59]
-; CHECK-NEXT:    v_pk_add_f32 v[56:57], v[56:57], v[56:57]
+; CHECK-NEXT:    v_pk_add_f32 v[90:91], v[90:91], v[90:91]
+; CHECK-NEXT:    v_pk_add_f32 v[88:89], v[88:89], v[88:89]
+; CHECK-NEXT:    v_pk_add_f32 v[86:87], v[86:87], v[86:87]
+; CHECK-NEXT:    v_pk_add_f32 v[84:85], v[84:85], v[84:85]
+; CHECK-NEXT:    v_pk_add_f32 v[82:83], v[82:83], v[82:83]
+; CHECK-NEXT:    v_pk_add_f32 v[80:81], v[80:81], v[80:81]
+; CHECK-NEXT:    v_pk_add_f32 v[78:79], v[78:79], v[78:79]
+; CHECK-NEXT:    v_pk_add_f32 v[76:77], v[76:77], v[76:77]
+; CHECK-NEXT:    v_pk_add_f32 v[74:75], v[74:75], v[74:75]
+; CHECK-NEXT:    v_pk_add_f32 v[72:73], v[72:73], v[72:73]
+; CHECK-NEXT:    v_pk_add_f32 v[70:71], v[70:71], v[70:71]
+; CHECK-NEXT:    v_pk_add_f32 v[68:69], v[68:69], v[68:69]
+; CHECK-NEXT:    v_pk_add_f32 v[66:67], v[66:67], v[66:67]
+; CHECK-NEXT:    v_pk_add_f32 v[64:65], v[64:65], v[64:65]
 ; CHECK-NEXT:    v_pk_add_f32 v[62:63], v[62:63], v[62:63]
 ; CHECK-NEXT:    v_pk_add_f32 v[60:61], v[60:61], v[60:61]
-; CHECK-NEXT:    v_pk_add_f32 v[2:3], v[2:3], v[2:3]
-; CHECK-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[0:1]
-; CHECK-NEXT:    v_pk_add_f32 v[6:7], v[6:7], v[6:7]
-; CHECK-NEXT:    v_pk_add_f32 v[4:5], v[4:5], v[4:5]
-; CHECK-NEXT:    v_pk_add_f32 v[10:11], v[10:11], v[10:11]
-; CHECK-NEXT:    v_pk_add_f32 v[8:9], v[8:9], v[8:9]
-; CHECK-NEXT:    v_pk_add_f32 v[14:15], v[14:15], v[14:15]
-; CHECK-NEXT:    v_pk_add_f32 v[12:13], v[12:13], v[12:13]
-; CHECK-NEXT:    v_pk_add_f32 v[18:19], v[18:19], v[18:19]
-; CHECK-NEXT:    v_pk_add_f32 v[16:17], v[16:17], v[16:17]
-; CHECK-NEXT:    v_pk_add_f32 v[22:23], v[22:23], v[22:23]
-; CHECK-NEXT:    v_pk_add_f32 v[20:21], v[20:21], v[20:21]
+; CHECK-NEXT:    v_pk_add_f32 v[58:59], v[58:59], v[58:59]
+; CHECK-NEXT:    v_pk_add_f32 v[56:57], v[56:57], v[56:57]
+; CHECK-NEXT:    v_pk_add_f32 v[54:55], v[54:55], v[54:55]
+; CHECK-NEXT:    v_pk_add_f32 v[52:53], v[52:53], v[52:53]
+; CHECK-NEXT:    v_pk_add_f32 v[50:51], v[50:51], v[50:51]
+; CHECK-NEXT:    v_pk_add_f32 v[48:49], v[48:49], v[48:49]
+; CHECK-NEXT:    v_pk_add_f32 v[46:47], v[46:47], v[46:47]
+; CHECK-NEXT:    v_pk_add_f32 v[44:45], v[44:45], v[44:45]
+; CHECK-NEXT:    v_pk_add_f32 v[42:43], v[42:43], v[42:43]
+; CHECK-NEXT:    v_pk_add_f32 v[40:41], v[40:41], v[40:41]
+; CHECK-NEXT:    v_pk_add_f32 v[38:39], v[38:39], v[38:39]
+; CHECK-NEXT:    v_pk_add_f32 v[36:37], v[36:37], v[36:37]
+; CHECK-NEXT:    v_pk_add_f32 v[34:35], v[34:35], v[34:35]
+; CHECK-NEXT:    v_pk_add_f32 v[32:33], v[32:33], v[32:33]
+; CHECK-NEXT:    v_pk_add_f32 v[30:31], v[30:31], v[30:31]
+; CHECK-NEXT:    v_pk_add_f32 v[28:29], v[28:29], v[28:29]
 ; CHECK-NEXT:    v_pk_add_f32 v[26:27], v[26:27], v[26:27]
 ; CHECK-NEXT:    v_pk_add_f32 v[24:25], v[24:25], v[24:25]
-; CHECK-NEXT:    v_pk_add_f32 v[30:31], v[30:31], v[30:31]
+; CHECK-NEXT:    v_pk_add_f32 v[22:23], v[22:23], v[22:23]
+; CHECK-NEXT:    v_pk_add_f32 v[20:21], v[20:21], v[20:21]
+; CHECK-NEXT:    v_pk_add_f32 v[18:19], v[18:19], v[18:19]
+; CHECK-NEXT:    v_pk_add_f32 v[16:17], v[16:17], v[16:17]
+; CHECK-NEXT:    v_pk_add_f32 v[14:15], v[14:15], v[14:15]
+; CHECK-NEXT:    v_pk_add_f32 v[12:13], v[12:13], v[12:13]
+; CHECK-NEXT:    v_pk_add_f32 v[10:11], v[10:11], v[10:11]
+; CHECK-NEXT:    v_pk_add_f32 v[8:9], v[8:9], v[8:9]
+; CHECK-NEXT:    v_pk_add_f32 v[6:7], v[6:7], v[6:7]
+; CHECK-NEXT:    v_pk_add_f32 v[4:5], v[4:5], v[4:5]
+; CHECK-NEXT:    v_pk_add_f32 v[2:3], v[2:3], v[2:3]
 ; CHECK-NEXT:    s_cmp_lt_i32 s1, s0
-; CHECK-NEXT:    v_pk_add_f32 v[28:29], v[28:29], v[28:29]
+; CHECK-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[0:1]
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB0_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x28
-; CHECK-NEXT:    v_accvgpr_write_b32 a11, v3
-; CHECK-NEXT:    v_accvgpr_write_b32 a10, v2
-; CHECK-NEXT:    v_accvgpr_write_b32 a9, v1
-; CHECK-NEXT:    v_accvgpr_write_b32 a8, v0
+; CHECK-NEXT:    v_accvgpr_write_b32 a7, v3
+; CHECK-NEXT:    v_accvgpr_write_b32 a6, v2
+; CHECK-NEXT:    v_accvgpr_write_b32 a5, v1
+; CHECK-NEXT:    v_accvgpr_write_b32 a4, v0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v0, v[224:227], s[0:1] offset:2032
+; CHECK-NEXT:    global_store_dwordx4 v0, v[252:255], s[0:1] offset:2032
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    global_store_dwordx4 v0, v[228:231], s[0:1] offset:2016
 ; CHECK-NEXT:    global_store_dwordx4 v0, v[240:243], s[0:1] offset:2000

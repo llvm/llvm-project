@@ -170,55 +170,72 @@ clang::writeImpl(StringRef Path, llvm::MemoryBufferRef Buffer, off_t &Size,
   ModelPath += Extension;
   ModelPath += ".tmp";
 
-  std::error_code EC;
-  int FD;
-  SmallString<128> TmpPath;
-  if ((EC = llvm::sys::fs::createUniqueFile(ModelPath, FD, TmpPath))) {
-    if (EC != std::errc::no_such_file_or_directory)
-      return EC;
+  // The temporary file is removed on discard() and also when crashing, so that
+  // failing to produce the PCM doesn't leave it behind.
+  llvm::ErrorOr<llvm::sys::fs::TempFile> Temp =
+      llvm::sys::fs::TempFile::createWithErrorCode(ModelPath);
+  if (!Temp) {
+    if (Temp.getError() != std::errc::no_such_file_or_directory)
+      return Temp.getError();
 
     StringRef Dir = llvm::sys::path::parent_path(Path);
     if (std::error_code InnerEC = llvm::sys::fs::create_directories(Dir))
       return InnerEC;
 
-    if ((EC = llvm::sys::fs::createUniqueFile(ModelPath, FD, TmpPath)))
-      return EC;
+    Temp = llvm::sys::fs::TempFile::createWithErrorCode(ModelPath);
+    if (!Temp)
+      return Temp.getError();
   }
 
   llvm::sys::fs::file_status Status;
   std::unique_ptr<llvm::MemoryBuffer> Written;
-  {
-    llvm::raw_fd_ostream OS(FD, /*shouldClose=*/true);
+  auto WriteContentsAndReadBack = [&]() -> std::error_code {
+    // The file descriptor is owned (and closed) by the temporary file.
+    llvm::raw_fd_ostream OS(Temp->FD, /*shouldClose=*/false);
     OS << Buffer.getBuffer();
     // Make sure all contents reach the file before querying its status.
     OS.flush();
+    if (std::error_code EC = OS.error()) {
+      // Prevent the destructor from reporting a fatal error.
+      OS.clear_error();
+      return EC;
+    }
     // Using the status from an open file descriptor ensures this is not racy.
-    if ((EC = llvm::sys::fs::status(FD, Status)))
+    if (std::error_code EC = llvm::sys::fs::status(Temp->FD, Status))
       return EC;
     if (ReadBack) {
       llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Buf =
           llvm::MemoryBuffer::getOpenFile(
-              llvm::sys::fs::convertFDToNativeFile(FD), Path, Status.getSize(),
-              /*RequiresNullTerminator=*/false);
+              llvm::sys::fs::convertFDToNativeFile(Temp->FD), Path,
+              Status.getSize(), /*RequiresNullTerminator=*/false);
       if (!Buf)
         return Buf.getError();
       Written = std::move(*Buf);
     }
+    return {};
+  };
+
+  if (std::error_code EC = WriteContentsAndReadBack()) {
+    llvm::consumeError(Temp->discard());
+    return EC;
   }
+
+  // Rename to the final path and close. This preserves both size and
+  // modification time. On failure, the temporary file is removed.
+  if (std::error_code EC = Temp->keepWithErrorCode(Path))
+    return EC;
 
   Size = Status.getSize();
   ModTime = llvm::sys::toTimeT(Status.getLastModificationTime());
 
-  // This preserves both size and modification time.
-  if ((EC = llvm::sys::fs::rename(TmpPath, Path)))
-    return EC;
-
   return std::move(Written);
 }
 
+#ifndef _WIN32
 /// The access time of a module file is only refreshed explicitly when it is
 /// older than this interval so we avoid frequent yet unnecessary updates.
 static constexpr std::chrono::seconds AccessTimeRefreshInterval(60);
+#endif
 
 /// Record that the module file open as \p FD has just been used by setting its
 /// access time to now, if it is older than AccessTimeRefreshInterval. Module

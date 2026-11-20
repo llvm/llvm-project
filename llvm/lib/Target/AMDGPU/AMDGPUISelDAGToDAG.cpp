@@ -14,6 +14,7 @@
 #include "AMDGPUISelDAGToDAG.h"
 #include "AMDGPU.h"
 #include "AMDGPUInstrInfo.h"
+#include "AMDGPUMachineInstrs.h"
 #include "AMDGPUSubtarget.h"
 #include "MCTargetDesc/R600MCTargetDesc.h"
 #include "R600RegisterInfo.h"
@@ -1091,6 +1092,21 @@ bool AMDGPUDAGToDAGISel::isUniformBr(const SDNode *N) const {
          Term->getMetadata("structurizecfg.uniform");
 }
 
+bool AMDGPUDAGToDAGISel::isVRegIdxFoldableAdd(const SDNode *N,
+                                              unsigned NumDwords) const {
+  auto *C = dyn_cast<ConstantSDNode>(N->getOperand(1));
+  if (!C)
+    return false;
+  int64_t Offset = C->getSExtValue();
+  unsigned NumIndexable =
+      AMDGPUMI::VLoadStoreIdxInst::getNumIndexableVGPRs(*MF);
+  if (Offset < 0 || Offset + NumDwords > NumIndexable)
+    return false;
+  // The pattern matches only a disjoint or, which cannot wrap.
+  return N->getOpcode() == ISD::OR || N->getFlags().hasNoUnsignedWrap() ||
+         CurDAG->SignBitIsZero(N->getOperand(0));
+}
+
 bool AMDGPUDAGToDAGISel::isUnneededShiftMask(const SDNode *N,
                                              unsigned ShAmtBits) const {
   assert(N->getOpcode() == ISD::AND);
@@ -2057,7 +2073,7 @@ bool AMDGPUDAGToDAGISel::SelectFlatOffsetImpl(
   bool CanHaveFlatSegmentOffsetBug =
       Subtarget->hasFlatSegmentOffsetBug() &&
       FlatVariant == FlatAddrSpace::FLAT &&
-      (AS == AMDGPUAS::FLAT_ADDRESS || AS == AMDGPUAS::GLOBAL_ADDRESS);
+      (AS == AMDGPUAS::FLAT_ADDRESS || AMDGPU::isExtendedGlobalAddrSpace(AS));
 
   if (Subtarget->hasFlatInstOffsets() && !CanHaveFlatSegmentOffsetBug) {
     SDValue N0, N1;
@@ -3037,10 +3053,14 @@ bool AMDGPUDAGToDAGISel::isCBranchSCC(const SDNode *N) const {
   if (Cond.getOpcode() == ISD::CopyToReg)
     Cond = Cond.getOperand(2);
 
-  if (Cond.getOpcode() != ISD::SETCC || !Cond.hasOneUse())
+  if (!Cond.hasOneUse() ||
+      (Cond.getOpcode() != ISD::SETCC && Cond.getOpcode() != ISD::TRUNCATE))
     return false;
 
   MVT VT = Cond.getOperand(0).getSimpleValueType();
+  if (Cond.getOpcode() == ISD::TRUNCATE)
+    return VT == MVT::i16 || VT == MVT::i32 || VT == MVT::i64;
+
   if (VT == MVT::i32)
     return true;
 
