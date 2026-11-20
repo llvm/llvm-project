@@ -572,7 +572,7 @@ static int writeFile(const char *OutputName) {
   int RetVal;
   FILE *OutputFile;
 
-#ifdef _WIN32
+#ifdef LPROF_COFF_RECORD_RVAS
   if (!lprofDataIsValid(lprofGetModuleData())) {
     PROF_ERR("%s\n", "Cannot profile mixed COFF instrumentation with padded "
                      "legacy records; rebuild the legacy objects.");

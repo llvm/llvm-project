@@ -18,6 +18,12 @@
 #pragma comment(linker, "/MERGE:.lprfd=.data")
 #pragma comment(linker, "/MERGE:.lprfv=.data")
 #pragma comment(linker, "/MERGE:.lprfnd=.data")
+#ifdef LPROF_COFF_RECORD_RVAS
+/* Only the runtime needs the RVA table, via its sorted bounds. */
+#pragma comment(linker, "/MERGE:.lprfr=.rdata")
+#pragma section(".lprfr$A", read)
+#pragma section(".lprfr$Z", read)
+#endif
 /* Do *NOT* merge .lprfn and .lcovmap into .rdata. llvm-cov must be able to find
  * after the fact.
  * Do *NOT* merge .lprfb .lprfc .rdata. When binary profile correlation is
@@ -27,8 +33,6 @@
 /* Allocate read-only section bounds. */
 #pragma section(".lprfn$A", read)
 #pragma section(".lprfn$Z", read)
-#pragma section(".lprfp$A", read)
-#pragma section(".lprfp$Z", read)
 
 /* Allocate read-write section bounds. */
 #pragma section(".lprfd$A", read, write)
@@ -52,15 +56,16 @@ __llvm_profile_data COMPILER_RT_SECTION(".lprfd$A") DataStart = {0};
 COMPILER_RT_ALIGNAS(INSTR_PROF_DATA_ALIGNMENT)
 __llvm_profile_data COMPILER_RT_SECTION(".lprfd$Z") DataEnd = {0};
 
+#ifdef LPROF_COFF_RECORD_RVAS
 /* Required by objects with indexed records. Use the start sentinel itself as
  * the ABI guard, so such objects cannot silently link against an old runtime.
  */
-COMPILER_RT_ALIGNAS(sizeof(void *))
-COMPILER_RT_SECTION(".lprfp$A")
-const __llvm_profile_data *const __llvm_profile_record_refs_v1 = NULL;
-COMPILER_RT_ALIGNAS(sizeof(void *))
-COMPILER_RT_SECTION(".lprfp$Z")
-const __llvm_profile_data *const RecordRefsEnd = NULL;
+COMPILER_RT_ALIGNAS(sizeof(uint32_t))
+COMPILER_RT_SECTION(".lprfr$A") const uint32_t __llvm_profile_record_rvas_v2 =
+    0;
+COMPILER_RT_ALIGNAS(sizeof(uint32_t))
+COMPILER_RT_SECTION(".lprfr$Z") const uint32_t RecordRVAsEnd = 0;
+#endif
 
 const char COMPILER_RT_SECTION(".lprfn$A") NamesStart = '\0';
 const char COMPILER_RT_SECTION(".lprfn$Z") NamesEnd = '\0';
@@ -73,18 +78,61 @@ char COMPILER_RT_SECTION(".lprfb$Z") BitmapEnd;
 ValueProfNode COMPILER_RT_SECTION(".lprfnd$A") VNodesStart;
 ValueProfNode COMPILER_RT_SECTION(".lprfnd$Z") VNodesEnd;
 
+#ifdef LPROF_COFF_RECORD_RVAS
 ProfDataRange lprofGetModuleData(void) {
   ProfDataRange R = lprofContiguousData(&DataStart + 1, &DataEnd);
-  R.Refs = (uintptr_t)&__llvm_profile_record_refs_v1 + sizeof(void *);
-  R.RefsEnd = (uintptr_t)&RecordRefsEnd;
+  R.Refs = (uintptr_t)&__llvm_profile_record_rvas_v2 + sizeof(uint32_t);
+  R.RefsEnd = (uintptr_t)&RecordRVAsEnd;
   while (R.Refs < R.RefsEnd && !lprofReadRef(R.Refs))
-    R.Refs += sizeof(void *);
+    R.Refs += sizeof(uint32_t);
   /* If only the legacy sentinels remain, a linker alignment gap between them
    * is not a legacy record. Leave legacy-only images on their original path. */
   if (R.Refs != R.RefsEnd &&
       (uintptr_t)R.End - (uintptr_t)R.Begin < sizeof(*R.Begin))
     R.Begin = R.End;
   return R;
+}
+
+uint64_t lprofIndexedDataLayout(ProfDataRange R,
+                                const __llvm_profile_data **Dense) {
+  const __llvm_profile_data *First = lprofReadRef(R.Refs);
+#if COMPILER_RT_HAS_ATOMICS == 1
+  /* The slots and their targets' addresses are fixed for the image lifetime.
+   * Publish count and density together; competing initializers compute the
+   * same word. Zero means unknown (there is at least one indexed record). */
+  static volatile LONG Layout;
+  ProfDataRange Module = lprofGetModuleData();
+  int WholeModule = R.Refs == Module.Refs && R.RefsEnd == Module.RefsEnd &&
+                    R.Begin == Module.Begin && R.End == Module.End;
+  if (WholeModule) {
+    uint32_t Word = (uint32_t)InterlockedCompareExchange(&Layout, 0, 0);
+    if (Word) {
+      *Dense = Word & 1 ? First : NULL;
+      return Word >> 1;
+    }
+  }
+#endif
+  uintptr_t Bytes = (uintptr_t)R.End - (uintptr_t)R.Begin;
+  uint64_t Count = (Bytes + sizeof(*R.Begin) - 1) / sizeof(*R.Begin);
+  *Dense = First;
+  uintptr_t Next = (uintptr_t)First;
+  for (; R.Refs < R.RefsEnd; R.Refs += sizeof(uint32_t)) {
+    const __llvm_profile_data *D = lprofReadRef(R.Refs);
+    if (!D)
+      continue;
+    if ((uintptr_t)D != Next)
+      *Dense = NULL;
+    Next += sizeof(*D);
+    ++Count;
+  }
+  if (Bytes && (uintptr_t)R.Begin != Next)
+    *Dense = NULL;
+#if COMPILER_RT_HAS_ATOMICS == 1
+  if (WholeModule && Count <= UINT32_MAX >> 1)
+    InterlockedExchange(&Layout,
+                        (LONG)((uint32_t)Count << 1 | (*Dense != NULL)));
+#endif
+  return Count;
 }
 
 const __llvm_profile_data *__llvm_profile_begin_data(void) {
@@ -98,7 +146,7 @@ static const __llvm_profile_data *moduleEnd(ProfDataRange R) {
   if (R.Refs >= R.RefsEnd || R.Begin != R.End)
     return R.End;
   uintptr_t Max = 0;
-  for (; R.Refs < R.RefsEnd; R.Refs += sizeof(void *)) {
+  for (; R.Refs < R.RefsEnd; R.Refs += sizeof(uint32_t)) {
     uintptr_t D = (uintptr_t)lprofReadRef(R.Refs);
     if (D > Max)
       Max = D;
@@ -120,6 +168,12 @@ ProfDataRange lprofGetDataRange(const __llvm_profile_data *Begin,
     return R;
   return lprofContiguousData(Begin, End);
 }
+#else
+const __llvm_profile_data *__llvm_profile_begin_data(void) {
+  return &DataStart + 1;
+}
+const __llvm_profile_data *__llvm_profile_end_data(void) { return &DataEnd; }
+#endif
 
 // Type profiling isn't implemented under MSVC ABI, so return NULL (rather than
 // implementing linker magic on Windows) to make it more explicit. To elaborate,

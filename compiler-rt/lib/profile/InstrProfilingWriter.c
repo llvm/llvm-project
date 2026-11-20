@@ -264,7 +264,7 @@ COMPILER_RT_VISIBILITY int lprofWriteData(ProfDataWriter *Writer,
                             VNamesBegin, VNamesEnd, SkipNameDataWrite, Version);
 }
 
-#ifdef _WIN32
+#ifdef LPROF_COFF_RECORD_RVAS
 /* The COFF object contains 32-bit label differences even on Win64. Convert
  * each to a file-relative difference from its own packed record. */
 static uintptr_t rawOffset(const __llvm_profile_data *D, const void *Relative,
@@ -385,7 +385,7 @@ COMPILER_RT_VISIBILITY int lprofWriteDataImpl(
   Header.BitmapDelta = (uint32_t)Header.BitmapDelta;
   Header.UniformCountersDelta = (uint32_t)Header.UniformCountersDelta;
 #endif
-#ifdef _WIN32
+#ifdef LPROF_COFF_RECORD_RVAS
   if (!DataBegin && NumData) {
     Header.CountersDelta = DataSectionSize + PaddingBytesBeforeCounters;
     Header.BitmapDelta =
@@ -438,7 +438,7 @@ COMPILER_RT_VISIBILITY int lprofWriteDataImpl(
       {SkipNameDataWrite ? NULL : VNamesBegin, sizeof(uint8_t), VNamesSize, 0},
       {NULL, sizeof(uint8_t), PaddingBytesAfterVNames, 1}};
   uint32_t FirstIO = 0;
-#ifdef _WIN32
+#ifdef LPROF_COFF_RECORD_RVAS
   if (!DataBegin && NumData) {
     if (writeIndexedData(Writer, Data, &Header, CountersBegin, BitmapBegin,
                          UniformCountersBegin))

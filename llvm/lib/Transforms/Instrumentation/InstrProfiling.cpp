@@ -190,7 +190,7 @@ private:
   DenseMap<const Function *, LoadInst *> FunctionToProfileBiasMap;
   std::vector<GlobalValue *> CompilerUsedVars;
   std::vector<GlobalValue *> UsedVars;
-  SmallVector<GlobalValue *> COFFDataRefs;
+  SmallVector<GlobalValue *> COFFDataRVAs;
   std::vector<GlobalVariable *> ReferencedNames;
   // The list of virtual table variables of which the VTableProfData is
   // collected.
@@ -2095,8 +2095,14 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
 
   PD.DataVar = Data;
 
+  // Only native x64 and Arm64 PE images have been qualified. The triple
+  // parser also maps the "arm64x" spelling to aarch64. A composite ARM64X
+  // image is assembled at link time from ordinary Arm64 and Arm64EC inputs;
+  // it is not a supported final image even if a native input qualifies here.
   if (DataSectionKind == IPSK_data && TT.isWindowsMSVCEnvironment() &&
-      TT.isOSBinFormatCOFF()) {
+      TT.isOSBinFormatCOFF() && M.getDataLayout().getPointerSizeInBits() == 64 &&
+      (TT.getArch() == Triple::x86_64 || TT.getArchName() == "aarch64" ||
+       TT.getArchName() == "arm64")) {
     // Keep indexed records outside the legacy $A..$Z range. A runtime
     // linking both kinds of objects must not enumerate these records twice.
     Data->setSection(".lprfd$0");
@@ -2104,15 +2110,30 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
     // Do not leave independent slots pointing at the prevailing definition.
     if (Data->isWeakForLinker() && !Data->hasComdat())
       Data->setComdat(M.getOrInsertComdat(Data->getName()));
-    auto *Ref = new GlobalVariable(M, Data->getType(), /*isConstant=*/true,
-                                   GlobalValue::PrivateLinkage, Data,
-                                   Data->getName() + ".ref");
-    Ref->setSection(".lprfp$M");
-    Ref->setAlignment(M.getDataLayout().getPointerABIAlignment(0));
+    // As in MSVC RTTI, this becomes an ADDR32NB relocation in the object
+    // and needs no loader base relocation in the image. RVA zero denotes
+    // padding: the first bytes of the image are PE headers, not records.
+    GlobalVariable *ImageBase = M.getNamedGlobal("__ImageBase");
+    if (!ImageBase) {
+      ImageBase = new GlobalVariable(M, Type::getInt8Ty(Ctx), true,
+                                     GlobalValue::ExternalLinkage, nullptr,
+                                     "__ImageBase");
+      ImageBase->setDSOLocal(true);
+    }
+    Constant *RVA = ConstantExpr::getSub(
+        ConstantExpr::getPtrToInt(Data, IntPtrTy),
+        ConstantExpr::getPtrToInt(ImageBase, IntPtrTy));
+    auto *I32Ty = Type::getInt32Ty(Ctx);
+    auto *Ref = new GlobalVariable(M, I32Ty, /*isConstant=*/true,
+                                   GlobalValue::PrivateLinkage,
+                                   ConstantExpr::getTrunc(RVA, I32Ty),
+                                   Data->getName() + ".rva");
+    Ref->setSection(".lprfr$M");
+    Ref->setAlignment(Align(4));
     // Use the record's group (which may be led by the counter), never a
     // separately coalescible pointer or an externally visible associate.
     Ref->setComdat(Data->getComdat());
-    COFFDataRefs.push_back(Ref);
+    COFFDataRVAs.push_back(Ref);
   }
 
   // Mark the data variable as used so that it isn't stripped out.
@@ -2423,12 +2444,12 @@ void InstrLowerer::emitUses() {
   else
     appendToUsed(M, CompilerUsedVars);
 
-  if (!COFFDataRefs.empty()) {
-    appendToCompilerUsed(M, COFFDataRefs);
+  if (!COFFDataRVAs.empty()) {
+    appendToCompilerUsed(M, COFFDataRVAs);
     // Emit /include so that linking against a runtime that only understands
     // the legacy data range fails rather than silently losing profiles.
-    auto *ABI = M.getOrInsertGlobal("__llvm_profile_record_refs_v1",
-                                    PointerType::getUnqual(M.getContext()));
+    auto *ABI = M.getOrInsertGlobal("__llvm_profile_record_rvas_v2",
+                                    Type::getInt32Ty(M.getContext()));
     ABI->setConstant(true);
     UsedVars.push_back(ABI);
   }

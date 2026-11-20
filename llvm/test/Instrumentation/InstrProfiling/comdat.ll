@@ -35,7 +35,7 @@ $foo_private_profn = comdat any
 ; COFF0: @__profd_foo_inline = internal global {{.*}}, section ".lprfd$0", comdat($__profc_foo_inline), align 8
 ; COFF1: @__profc_foo_inline = linkonce_odr hidden global {{.*}}, section ".lprfc$M", comdat, align 8
 ; COFF1: @__profd_foo_inline = linkonce_odr hidden global {{.*}}, section ".lprfd$0", comdat, align 8
-; COFF1: @__profd_foo_inline.ref = private constant ptr @__profd_foo_inline, section ".lprfp$M", comdat($__profd_foo_inline), align 8
+; COFF1: @__profd_foo_inline.rva = private constant i32 {{.*}}, section ".lprfr$M", comdat($__profd_foo_inline), align 4
 define weak_odr void @foo_inline() comdat {
   call void @llvm.instrprof.increment(ptr @__profn_foo_inline, i64 0, i32 1, i32 0)
   ret void
@@ -65,7 +65,7 @@ define void @foo_private_profn() comdat {
 
 ; ELF:   @llvm.compiler.used = appending global [3 x ptr] [ptr @__profd_foo_inline, ptr @__profd_foo_extern, ptr @__profd_foo_private_profn]
 ; COFF0: @llvm.compiler.used = appending global [7 x ptr] [ptr @__llvm_profile_runtime_user, ptr @__profd_foo_inline, ptr @__profd_foo_extern, ptr @__profd_foo_private_profn,
-; COFF1: @llvm.used = appending global [6 x ptr] [ptr @__llvm_profile_runtime_user, ptr @__profd_foo_inline, ptr @__profd_foo_extern, ptr @__profd_foo_private_profn, ptr @__llvm_prf_nm, ptr @__llvm_profile_record_refs_v1]
+; COFF1: @llvm.used = appending global [6 x ptr] [ptr @__llvm_profile_runtime_user, ptr @__profd_foo_inline, ptr @__profd_foo_extern, ptr @__profd_foo_private_profn, ptr @__llvm_prf_nm, ptr @__llvm_profile_record_rvas_v2]
 
 ;--- disable.ll
 !llvm.module.flags = !{!0}

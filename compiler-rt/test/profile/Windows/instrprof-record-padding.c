@@ -1,17 +1,17 @@
-// REQUIRES: target={{.*windows-msvc.*}}
+// REQUIRES: target={{(x86_64|aarch64|arm64)-.*windows-msvc.*}}
 //
 // Keep Clang's actual records, references and relocations. Over-align both
 // kinds of contribution so even a linker that packs them as tightly as it
-// can must leave holes *between* records and null slots between references.
+// can must leave holes *between* records and zero slots between 32-bit RVAs.
 // The explicitly ordered contributions below also put padding at the ends.
 // RUN: %clang_profgen -O0 -mllvm -enable-value-profiling -S -emit-llvm %s -o %t.ll
 // RUN: sed -e '/section "[.]lprfd[$]0"/s/align [0-9][0-9]*/align 128/' \
-// RUN:     -e '/section "[.]lprfp[$]M"/s/align [0-9][0-9]*/align 128/' %t.ll > %t.padded.ll
+// RUN:     -e '/section "[.]lprfr[$]M"/s/align [0-9][0-9]*/align 128/' %t.ll > %t.padded.ll
 // RUN: FileCheck %s --check-prefix=LAYOUT < %t.padded.ll
 // LAYOUT-DAG: section ".lprfd$0"{{.*}}align 128
 // LAYOUT-DAG: section ".lprfd$0"{{.*}}align 128
-// LAYOUT-DAG: section ".lprfp$M"{{.*}}align 128
-// LAYOUT-DAG: section ".lprfp$M"{{.*}}align 128
+// LAYOUT-DAG: section ".lprfr$M"{{.*}}align 128
+// LAYOUT-DAG: section ".lprfr$M"{{.*}}align 128
 // RUN: %clang -c %t.padded.ll -o %t.obj
 //
 // DEFINE: %{check_profile} = rm -rf %t.profiles && \
@@ -21,6 +21,8 @@
 // RUN: %clang_profgen -fuse-ld=link %t.obj -o %t.exe && %{check_profile}
 // RUN: %if lld-available %{ %clang_profgen -fuse-ld=lld %t.obj -o %t.exe && %{check_profile} %}
 
+#include <stdint.h>
+
 // These sort on either side of the indexed .lprfd$0 records, outside the
 // legacy $A..$Z range. Neither contribution is a profile record.
 #pragma section(".lprfd$.", read, write)
@@ -28,8 +30,8 @@ __attribute__((used)) __declspec(allocate(".lprfd$.")) char Before[13] = {0};
 #pragma section(".lprfd$1", read, write)
 __attribute__((used)) __declspec(allocate(".lprfd$1")) char After[19] = {0};
 
-#pragma section(".lprfp$B", read)
-__attribute__((used)) __declspec(allocate(".lprfp$B")) const void *const NullRef = 0;
+#pragma section(".lprfr$B", read)
+__attribute__((used)) __declspec(allocate(".lprfr$B")) const uint32_t NullRVA = 0;
 
 int callee(int n) {
   if (n)

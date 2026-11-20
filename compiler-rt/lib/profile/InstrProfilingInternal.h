@@ -13,11 +13,16 @@
 
 #include "InstrProfiling.h"
 
+#if defined(_WIN64) && defined(_MSC_VER) && !defined(_M_ARM64EC) &&            \
+    (defined(_M_X64) || defined(_M_ARM64))
+#define LPROF_COFF_RECORD_RVAS 1
+#endif
+
 /* By-value cursor; the records themselves always belong to the instrumented
  * program. COFF pointer-indexed records precede any legacy contiguous range. */
 typedef struct ProfDataRange {
   const __llvm_profile_data *Begin, *End;
-#ifdef _WIN32
+#ifdef LPROF_COFF_RECORD_RVAS
   uintptr_t Refs, RefsEnd;
 #endif
 } ProfDataRange;
@@ -31,13 +36,25 @@ lprofContiguousData(const __llvm_profile_data *Begin,
   return R;
 }
 
-#ifdef _WIN32
+#ifdef LPROF_COFF_RECORD_RVAS
 ProfDataRange lprofGetModuleData(void);
 ProfDataRange lprofGetDataRange(const __llvm_profile_data *Begin,
                                 const __llvm_profile_data *End);
+uint64_t lprofIndexedDataLayout(ProfDataRange R,
+                                const __llvm_profile_data **Dense);
 
+/* The PE linker provides this symbol separately in each EXE or DLL. */
+#ifdef __cplusplus
+extern "C" {
+#endif
+extern IMAGE_DOS_HEADER __ImageBase;
+#ifdef __cplusplus
+}
+#endif
 static inline const __llvm_profile_data *lprofReadRef(uintptr_t Slot) {
-  return *(const __llvm_profile_data *const *)Slot;
+  uint32_t RVA = *(const uint32_t *)Slot;
+  return RVA ? (const __llvm_profile_data *)((uintptr_t)&__ImageBase + RVA)
+             : NULL;
 }
 #else
 #define lprofGetDataRange lprofContiguousData
@@ -48,7 +65,7 @@ static inline ProfDataRange lprofGetModuleData(void) {
 #endif
 
 static inline int lprofDataIsValid(ProfDataRange R) {
-#ifdef _WIN32
+#ifdef LPROF_COFF_RECORD_RVAS
   /* Legacy objects have no record index: in a mixed image they still require
    * the old contiguous ABI. Never round a partial legacy record up and read
    * beyond the end sentinel. */
@@ -59,10 +76,10 @@ static inline int lprofDataIsValid(ProfDataRange R) {
 }
 
 static inline const __llvm_profile_data *lprofNextData(ProfDataRange *R) {
-#ifdef _WIN32
+#ifdef LPROF_COFF_RECORD_RVAS
   while (R->Refs < R->RefsEnd) {
     const __llvm_profile_data *D = lprofReadRef(R->Refs);
-    R->Refs += sizeof(D);
+    R->Refs += sizeof(uint32_t);
     if (D)
       return D;
   }
@@ -78,27 +95,13 @@ static inline const __llvm_profile_data *lprofNextData(ProfDataRange *R) {
  * so the writer can emit the whole range without copying or rebasing. */
 static inline uint64_t lprofDataLayout(ProfDataRange R,
                                        const __llvm_profile_data **Dense) {
-  uintptr_t Bytes = (uintptr_t)R.End - (uintptr_t)R.Begin;
-  uint64_t Count = (Bytes + sizeof(*R.Begin) - 1) / sizeof(*R.Begin);
-  *Dense = R.Begin;
-#ifdef _WIN32
-  if (R.Refs < R.RefsEnd) {
-    *Dense = lprofReadRef(R.Refs);
-    uintptr_t Next = (uintptr_t)*Dense;
-    for (; R.Refs < R.RefsEnd; R.Refs += sizeof(*Dense)) {
-      const __llvm_profile_data *D = lprofReadRef(R.Refs);
-      if (!D)
-        continue;
-      if ((uintptr_t)D != Next)
-        *Dense = NULL;
-      Next += sizeof(*D);
-      ++Count;
-    }
-    if (Bytes && (uintptr_t)R.Begin != Next)
-      *Dense = NULL;
-  }
+#ifdef LPROF_COFF_RECORD_RVAS
+  if (R.Refs < R.RefsEnd)
+    return lprofIndexedDataLayout(R, Dense);
 #endif
-  return Count;
+  *Dense = R.Begin;
+  uintptr_t Bytes = (uintptr_t)R.End - (uintptr_t)R.Begin;
+  return (Bytes + sizeof(*R.Begin) - 1) / sizeof(*R.Begin);
 }
 
 static inline uint64_t lprofNumData(ProfDataRange R) {
