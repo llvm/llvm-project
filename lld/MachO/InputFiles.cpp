@@ -570,7 +570,6 @@ void ObjFile::parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
 
   Subsections &subsections = section.subsections;
   auto subsecIt = subsections.rbegin();
-  bool descending = true;
   uint32_t prevOffset = UINT32_MAX;
   for (size_t i = 0; i < relInfos.size(); i++) {
     // Paired relocations serve as Mach-O's method for attaching a
@@ -661,18 +660,17 @@ void ObjFile::parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
     // unsorted relocations (in `-r` mode), so we have a fallback for that
     // uncommon case.
     if (r.offset > prevOffset)
-      descending = false;
+      subsecIt = subsections.rend();
     prevOffset = r.offset;
     InputSection *subsec;
-    while (descending && subsecIt != subsections.rend() &&
-           subsecIt->offset > r.offset)
+    while (subsecIt != subsections.rend() && subsecIt->offset > r.offset)
       ++subsecIt;
-    if (!descending || subsecIt == subsections.rend() ||
+    if (subsecIt == subsections.rend() ||
         subsecIt->offset + subsecIt->isec->getSize() <= r.offset) {
       subsec = findContainingSubsection(section, &r.offset);
       // Now that we know the relocs are unsorted, avoid trying the 'fast path'
       // for the other relocations.
-      descending = false;
+      subsecIt = subsections.rend();
     } else {
       subsec = subsecIt->isec;
       r.offset -= subsecIt->offset;
@@ -705,7 +703,7 @@ void ObjFile::parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
   }
   // The branch extension algorithm relies on the descending order compilers
   // emit, which relocations in object files produced by `ld -r` do not follow.
-  if (!descending)
+  if (subsecIt == subsections.rend())
     for (const Subsection &subsection : subsections)
       llvm::stable_sort(subsection.isec->relocs,
                         [](const Relocation &a, const Relocation &b) {
