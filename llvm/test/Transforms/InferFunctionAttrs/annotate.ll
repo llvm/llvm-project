@@ -1158,6 +1158,12 @@ declare i32 @unlink(ptr)
 ; CHECK: declare noundef i32 @unsetenv(ptr noundef readonly captures(none)) [[NOFREE_NOUNWIND]]
 declare i32 @unsetenv(ptr)
 
+; CHECK-LINUX: declare noundef i32 @usleep(i32 noundef) [[NOFREE_NOUNWIND]]
+; CHECK-DARWIN: declare noundef i32 @usleep(i32 noundef) [[NOFREE_NOUNWIND]]
+; CHECK-UNKNOWN: declare i32 @usleep(i32)
+; CHECK-NVPTX: declare i32 @usleep(i32)
+declare i32 @usleep(i32)
+
 ; CHECK: declare noundef i32 @utime(ptr noundef readonly captures(none), ptr noundef readonly captures(none)) [[NOFREE_NOUNWIND]]
 declare i32 @utime(ptr, ptr)
 
