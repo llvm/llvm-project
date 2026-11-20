@@ -520,6 +520,7 @@ protected:
     if (freeNodes) {
       T = freeNodes;
       freeNodes = T->getLeft();
+      assert(!T->isMutable() && "free-list node must have been destroyed");
       assert(T != L);
       assert(T != R);
     } else {
