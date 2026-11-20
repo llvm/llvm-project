@@ -155,9 +155,10 @@ RT_API_ATTRS OwningPtr<Descriptor> Descriptor::Create(
 
 RT_API_ATTRS std::size_t Descriptor::SizeInBytes() const {
   const DescriptorAddendum *addendum{Addendum()};
-  std::size_t bytes{ sizeof *this - sizeof(Dimension) + raw_.rank * sizeof(Dimension) +
-      (addendum ? addendum->SizeInBytes() : 0)};
-  assert (bytes <= MaxDescriptorSizeInBytes(raw_.rank,addendum) && "Descriptor must fit compiler-allocated space");
+  std::size_t bytes{sizeof *this - sizeof(Dimension) +
+      raw_.rank * sizeof(Dimension) + (addendum ? addendum->SizeInBytes() : 0)};
+  assert(bytes <= MaxDescriptorSizeInBytes(raw_.rank, addendum) &&
+      "Descriptor must fit compiler-allocated space");
   return bytes;
 }
 
@@ -167,12 +168,19 @@ RT_API_ATTRS std::size_t Descriptor::Elements() const {
 
 RT_API_ATTRS int Descriptor::Allocate(std::int64_t *asyncObject) {
   std::size_t elementBytes{ElementBytes()};
+  std::size_t elements{Elements()};
   if (static_cast<std::int64_t>(elementBytes) < 0) {
     // F'2023 7.4.4.2 p5: "If the character length parameter value evaluates
     // to a negative value, the length of character entities declared is zero."
     elementBytes = raw_.elem_len = 0;
   }
-  std::size_t byteSize{Elements() * elementBytes};
+  // Check for excessively large allocations, where the product of
+  //    elements * elementBytes
+  // will overflow and wrap around.
+  if (elementBytes != 0 && elements > SIZE_MAX / elementBytes) {
+    return CFI_ERROR_MEM_ALLOCATION;
+  }
+  std::size_t byteSize{elements * elementBytes};
   // For arrays, use the default array alignment
   std::size_t alignment{rank() > 0 ? kDefaultArrayAlignment : 0};
   // Zero size allocation is possible in Fortran and the resulting
@@ -467,7 +475,7 @@ void Descriptor::Dump(FILE *f, bool dumpRawType) const {
     std::fprintf(f, "         sm          %jd\n",
         static_cast<std::intmax_t>(raw_.dim[j].sm));
   }
-  if (const DescriptorAddendum * addendum{Addendum()}) {
+  if (const DescriptorAddendum *addendum{Addendum()}) {
     addendum->Dump(f);
   }
 }
