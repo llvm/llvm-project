@@ -1152,3 +1152,19 @@ func.func @convertf_int_output(%arg0 : f32) {
   %0 = arith.convertf %arg0 : f32 to i32
   return
 }
+
+// -----
+
+func.func @remsi_invalid_overflow(%a: i32, %b: i32) -> i32 {
+  // expected-error @+1 {{expected 'zero'}}
+  %r = arith.remsi %a, %b overflow<nsw> : i32
+  return %r : i32
+}
+
+// -----
+
+func.func @remsi_invalid_overflow_attribute(%a: i32, %b: i32) -> i32 {
+  // expected-error @+1 {{Invalid attribute `isOverflowZero` in property conversion: true}}
+  %r = "arith.remsi"(%a, %b) <{isOverflowZero = true}> : (i32, i32) -> i32
+  return %r : i32
+}
