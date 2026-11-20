@@ -1584,6 +1584,281 @@ define i32 @test44_extra_use(i32 %A) {
   ret i32 %D
 }
 
+; (X & C2) + C --> X & (C2 & ~-C) iff -C is in C2 and known one in X
+define i32 @masked_add_assumed(i32 %x) {
+; CHECK-LABEL: @masked_add_assumed(
+; CHECK-NEXT:    [[BIT:%.*]] = and i32 [[X:%.*]], 8
+; CHECK-NEXT:    [[ISSET:%.*]] = icmp ne i32 [[BIT]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ISSET]])
+; CHECK-NEXT:    [[SUB:%.*]] = and i32 [[X]], 7
+; CHECK-NEXT:    ret i32 [[SUB]]
+;
+  %bit = and i32 %x, 8
+  %isset = icmp ne i32 %bit, 0
+  call void @llvm.assume(i1 %isset)
+  %and = and i32 %x, 15
+  %sub = add nsw i32 %and, -8
+  ret i32 %sub
+}
+
+define i32 @masked_add_assumed_eq(i32 %x) {
+; CHECK-LABEL: @masked_add_assumed_eq(
+; CHECK-NEXT:    [[BIT:%.*]] = and i32 [[X:%.*]], 8
+; CHECK-NEXT:    [[ISSET:%.*]] = icmp ne i32 [[BIT]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ISSET]])
+; CHECK-NEXT:    [[SUB:%.*]] = and i32 [[X]], 7
+; CHECK-NEXT:    ret i32 [[SUB]]
+;
+  %bit = and i32 %x, 8
+  %isset = icmp eq i32 %bit, 8
+  call void @llvm.assume(i1 %isset)
+  %and = and i32 %x, 15
+  %sub = add nsw i32 %and, -8
+  ret i32 %sub
+}
+
+define i32 @masked_add_sub_form(i32 %x) {
+; CHECK-LABEL: @masked_add_sub_form(
+; CHECK-NEXT:    [[BIT:%.*]] = and i32 [[X:%.*]], 8
+; CHECK-NEXT:    [[ISSET:%.*]] = icmp ne i32 [[BIT]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ISSET]])
+; CHECK-NEXT:    [[SUB:%.*]] = and i32 [[X]], 7
+; CHECK-NEXT:    ret i32 [[SUB]]
+;
+  %bit = and i32 %x, 8
+  %isset = icmp ne i32 %bit, 0
+  call void @llvm.assume(i1 %isset)
+  %and = and i32 %x, 15
+  %sub = sub i32 %and, 8
+  ret i32 %sub
+}
+
+define i32 @masked_add_constructed(i32 %y) {
+; CHECK-LABEL: @masked_add_constructed(
+; CHECK-NEXT:    [[X:%.*]] = and i32 [[Y:%.*]], 7
+; CHECK-NEXT:    ret i32 [[X]]
+;
+  %x = or i32 %y, 8
+  %and = and i32 %x, 15
+  %sub = add nsw i32 %and, -8
+  ret i32 %sub
+}
+
+define i32 @masked_add_multiple_bits(i32 %x) {
+; CHECK-LABEL: @masked_add_multiple_bits(
+; CHECK-NEXT:    [[BITS:%.*]] = and i32 [[X:%.*]], 48
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[BITS]], 48
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
+; CHECK-NEXT:    [[SUB:%.*]] = and i32 [[X]], 207
+; CHECK-NEXT:    ret i32 [[SUB]]
+;
+  %bits = and i32 %x, 48
+  %c = icmp eq i32 %bits, 48
+  call void @llvm.assume(i1 %c)
+  %and = and i32 %x, 255
+  %sub = add i32 %and, -48
+  ret i32 %sub
+}
+
+define i32 @masked_add_range_attr(i32 range(i32 -8, 0) %x) {
+; CHECK-LABEL: @masked_add_range_attr(
+; CHECK-NEXT:    [[SUB:%.*]] = and i32 [[X:%.*]], 4
+; CHECK-NEXT:    ret i32 [[SUB]]
+;
+  %and = and i32 %x, 12
+  %sub = add i32 %and, -8
+  ret i32 %sub
+}
+
+define <2 x i32> @masked_add_vector_splat(<2 x i32> range(i32 -8, 0) %x) {
+; CHECK-LABEL: @masked_add_vector_splat(
+; CHECK-NEXT:    [[SUB:%.*]] = and <2 x i32> [[X:%.*]], splat (i32 4)
+; CHECK-NEXT:    ret <2 x i32> [[SUB]]
+;
+  %and = and <2 x i32> %x, <i32 12, i32 12>
+  %sub = add <2 x i32> %and, <i32 -8, i32 -8>
+  ret <2 x i32> %sub
+}
+
+define i32 @masked_add_guarded(i32 %x) {
+; CHECK-LABEL: @masked_add_guarded(
+; CHECK-NEXT:    [[BIT:%.*]] = and i32 [[X:%.*]], 8
+; CHECK-NEXT:    [[ISSET_NOT:%.*]] = icmp eq i32 [[BIT]], 0
+; CHECK-NEXT:    br i1 [[ISSET_NOT]], label [[IF_CLEAR:%.*]], label [[IF_SET:%.*]]
+; CHECK:       if.set:
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[X]], 7
+; CHECK-NEXT:    ret i32 [[R]]
+; CHECK:       if.clear:
+; CHECK-NEXT:    ret i32 -1
+;
+  %bit = and i32 %x, 8
+  %isset = icmp ne i32 %bit, 0
+  br i1 %isset, label %if.set, label %if.clear
+
+if.set:
+  %and = and i32 %x, 15
+  %r = add nsw i32 %and, -8
+  ret i32 %r
+
+if.clear:
+  ret i32 -1
+}
+
+define i32 @masked_add_guarded_false_edge(i32 %x) {
+; CHECK-LABEL: @masked_add_guarded_false_edge(
+; CHECK-NEXT:    [[BIT:%.*]] = and i32 [[X:%.*]], 8
+; CHECK-NEXT:    [[NOTSET:%.*]] = icmp eq i32 [[BIT]], 0
+; CHECK-NEXT:    br i1 [[NOTSET]], label [[IF_CLEAR:%.*]], label [[IF_SET:%.*]]
+; CHECK:       if.set:
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[X]], 7
+; CHECK-NEXT:    ret i32 [[R]]
+; CHECK:       if.clear:
+; CHECK-NEXT:    ret i32 -1
+;
+  %bit = and i32 %x, 8
+  %notset = icmp eq i32 %bit, 0
+  br i1 %notset, label %if.clear, label %if.set
+
+if.set:
+  %and = and i32 %x, 15
+  %r = add nsw i32 %and, -8
+  ret i32 %r
+
+if.clear:
+  ret i32 -1
+}
+
+; TODO: The bit is known on each incoming edge of the phi.
+define i32 @masked_add_phi_per_edge_conditions(i32 %a, i32 %b, i1 %c) {
+; CHECK-LABEL: @masked_add_phi_per_edge_conditions(
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[CHECK_A:%.*]], label [[CHECK_B:%.*]]
+; CHECK:       check.a:
+; CHECK-NEXT:    [[ABIT:%.*]] = and i32 [[A:%.*]], 8
+; CHECK-NEXT:    [[ANOTSET:%.*]] = icmp eq i32 [[ABIT]], 0
+; CHECK-NEXT:    br i1 [[ANOTSET]], label [[EXIT:%.*]], label [[IF_SET:%.*]]
+; CHECK:       check.b:
+; CHECK-NEXT:    [[BBIT:%.*]] = and i32 [[B:%.*]], 8
+; CHECK-NEXT:    [[BSET_NOT:%.*]] = icmp eq i32 [[BBIT]], 0
+; CHECK-NEXT:    br i1 [[BSET_NOT]], label [[EXIT]], label [[IF_SET]]
+; CHECK:       if.set:
+; CHECK-NEXT:    [[V:%.*]] = phi i32 [ [[A]], [[CHECK_A]] ], [ [[B]], [[CHECK_B]] ]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[V]], 15
+; CHECK-NEXT:    [[R:%.*]] = add nsw i32 [[AND]], -8
+; CHECK-NEXT:    ret i32 [[R]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 -1
+;
+  br i1 %c, label %check.a, label %check.b
+
+check.a:
+  %abit = and i32 %a, 8
+  %anotset = icmp eq i32 %abit, 0
+  br i1 %anotset, label %exit, label %if.set
+
+check.b:
+  %bbit = and i32 %b, 8
+  %bset = icmp ne i32 %bbit, 0
+  br i1 %bset, label %if.set, label %exit
+
+if.set:
+  %v = phi i32 [ %a, %check.a ], [ %b, %check.b ]
+  %and = and i32 %v, 15
+  %r = add nsw i32 %and, -8
+  ret i32 %r
+
+exit:
+  ret i32 -1
+}
+
+; Negative tests
+
+define i32 @masked_add_bit_not_known(i32 %x) {
+; CHECK-LABEL: @masked_add_bit_not_known(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 15
+; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[AND]], -8
+; CHECK-NEXT:    ret i32 [[SUB]]
+;
+  %and = and i32 %x, 15
+  %sub = add nsw i32 %and, -8
+  ret i32 %sub
+}
+
+define i32 @masked_add_guarded_wrong_edge(i32 %x) {
+; CHECK-LABEL: @masked_add_guarded_wrong_edge(
+; CHECK-NEXT:    [[BIT:%.*]] = and i32 [[X:%.*]], 8
+; CHECK-NEXT:    [[ISSET_NOT:%.*]] = icmp eq i32 [[BIT]], 0
+; CHECK-NEXT:    br i1 [[ISSET_NOT]], label [[IF_CLEAR:%.*]], label [[IF_SET:%.*]]
+; CHECK:       if.set:
+; CHECK-NEXT:    ret i32 -1
+; CHECK:       if.clear:
+; CHECK-NEXT:    [[R:%.*]] = or i32 [[X]], -8
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %bit = and i32 %x, 8
+  %isset = icmp ne i32 %bit, 0
+  br i1 %isset, label %if.set, label %if.clear
+
+if.set:
+  ret i32 -1
+
+if.clear:
+  %and = and i32 %x, 15
+  %r = add nsw i32 %and, -8
+  ret i32 %r
+}
+
+define i32 @masked_add_and_multi_use(i32 %x) {
+; CHECK-LABEL: @masked_add_and_multi_use(
+; CHECK-NEXT:    [[BIT:%.*]] = and i32 [[X:%.*]], 8
+; CHECK-NEXT:    [[ISSET:%.*]] = icmp ne i32 [[BIT]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ISSET]])
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X]], 15
+; CHECK-NEXT:    call void @use_i32(i32 [[AND]])
+; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[AND]], -8
+; CHECK-NEXT:    ret i32 [[SUB]]
+;
+  %bit = and i32 %x, 8
+  %isset = icmp ne i32 %bit, 0
+  call void @llvm.assume(i1 %isset)
+  %and = and i32 %x, 15
+  call void @use_i32(i32 %and)
+  %sub = add nsw i32 %and, -8
+  ret i32 %sub
+}
+
+define i32 @masked_add_c_not_in_mask(i32 %x) {
+; CHECK-LABEL: @masked_add_c_not_in_mask(
+; CHECK-NEXT:    [[BIT:%.*]] = and i32 [[X:%.*]], 16
+; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[BIT]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
+; CHECK-NEXT:    [[SUB:%.*]] = or i32 [[X]], -16
+; CHECK-NEXT:    ret i32 [[SUB]]
+;
+  %bit = and i32 %x, 16
+  %c = icmp ne i32 %bit, 0
+  call void @llvm.assume(i1 %c)
+  %and = and i32 %x, 15
+  %sub = add nsw i32 %and, -16
+  ret i32 %sub
+}
+
+define i32 @masked_add_c_partially_known(i32 %x) {
+; CHECK-LABEL: @masked_add_c_partially_known(
+; CHECK-NEXT:    [[BIT:%.*]] = and i32 [[X:%.*]], 8
+; CHECK-NEXT:    [[ISSET:%.*]] = icmp ne i32 [[BIT]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ISSET]])
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X]], 31
+; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[AND]], -24
+; CHECK-NEXT:    ret i32 [[SUB]]
+;
+  %bit = and i32 %x, 8
+  %isset = icmp ne i32 %bit, 0
+  call void @llvm.assume(i1 %isset)
+  %and = and i32 %x, 31
+  %sub = add nsw i32 %and, -24
+  ret i32 %sub
+}
+
 define i32 @test44_non_matching(i32 %A) {
 ; CHECK-LABEL: @test44_non_matching(
 ; CHECK-NEXT:    [[B:%.*]] = or i32 [[A:%.*]], 123
