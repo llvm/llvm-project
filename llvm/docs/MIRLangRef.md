@@ -63,8 +63,11 @@ below can be used:
 
     `# RUN: llc -o - %s -mtriple=x86_64-- -run-pass=post-ra-pseudos | FileCheck %s`
 
+The machine verifier already runs on the parsed input and on the
+output by default, so `-verify-machineinstrs` is not needed.
+
 The MIR files are target dependent, so they have to be placed in the
-target-specific test directories (`lib/CodeGen/TARGETNAME`). They also need to
+target-specific test directories (`test/CodeGen/TARGETNAME`). They also need to
 specify a target triple or a target architecture either in the `RUN` line or in
 the embedded LLVM IR module.
 

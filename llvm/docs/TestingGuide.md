@@ -341,9 +341,15 @@ without pre-commit review if you have commit access.
 
 - Use auto-generated check lines (produced by the scripts mentioned above)
   whenever feasible.
+- Don't convert an existing test to auto-generated check lines as part of a
+  functional change. Update hand-written checks by hand, and do the
+  conversion in a separate NFC commit so the functional diff stays readable.
 - Include comments about what is tested/expected in a particular test. If there
   are relevant issues in the bug tracker, add references to those bug reports
   (for example, "See PR999 for more details").
+- Include negative tests. For a new transform, add cases where it must not
+  apply (e.g., wrong types, extra uses, or mismatched operands) in addition
+  to cases where it does.
 - Avoid undefined behavior and poison/undef values unless necessary. For
   example, do not use patterns like `br i1 undef`, which are likely to break
   as a result of future optimizations.
@@ -368,14 +374,16 @@ without pre-commit review if you have commit access.
   a specific target, prefer putting it in a target-specific test
   subdirectory rather than requiring a specific backend to be built with a
   `REQUIRES:` line.
+- Tests that only run an IR pass with `opt` belong under that pass's
+  `test/Transforms` directory, even if they are target-specific (e.g.,
+  `test/Transforms/LoopVectorize/AArch64`), not in `test/CodeGen/<target>`.
 - Use a minimal number of non-default (`CHECK-<prefix>`) check prefixes.
   Avoid setting a check prefix if all `FileCheck` invocations in the test
   expect the same output.
 - Don't produce output the test doesn't check. If a `RUN` line only
-  checks diagnostics on stderr (e.g., errors, warnings, remarks), or
-  only checks that the tool doesn't crash, suppress the normal output
-  instead of writing it to the default location (a file or stdout) or
-  redirecting it to `/dev/null`:
+  checks diagnostics on stderr (e.g., errors, warnings, remarks),
+  suppress the normal output instead of writing it to the default
+  location (a file or stdout) or redirecting it to `/dev/null`:
 
   - `opt`, `llvm-as`: `-disable-output`
   - `llc`, `llvm-mc`: `-filetype=null`
@@ -389,9 +397,86 @@ without pre-commit review if you have commit access.
   where it can accidentally match `CHECK` or `CHECK-NOT` lines.
 
   Redirecting with `-o /dev/null` still does all the work of printing or
-  encoding the output. `-filetype=null` skips the MC assembler and
-  object writer entirely, so tests for errors from the emitter (e.g.,
-  relocation errors) still need `-filetype=obj`.
+  encoding the output.
+
+(best-practices-for-codegen-tests)=
+
+### Best practices for codegen tests
+
+In addition to the above, code generator (`llc`) tests should follow these
+guidelines:
+
+- Consider adding both MIR and IR (`.ll`) tests for a change. A MIR test runs
+  a single pass on exactly the input you write, so it is the best way to
+  stress edge cases that are hard to produce from IR. For optimizations, a
+  MIR test alone can get lost in details that never occur in a real
+  end-to-end compile, so also add an IR test showing the net effect on the
+  final output.
+- Prefer testing codegen optimizations on IR in the canonical form the middle
+  end produces, which better reflects what the backend sees in practice.
+- Tests for crash fixes should still check the generated output, not just that
+  `llc` doesn't crash. Checking the output also catches miscompiles in the
+  same code.
+- Trim unnecessary fields from MIR tests. MIR printed by `-stop-after` or
+  `-stop-before` is very verbose; generating it with `-simplify-mir` is a
+  better starting point. See
+  [Simplifying MIR files](MIRLangRef.md#simplifying-mir-files) for what can
+  usually be removed.
+- Avoid checking `-debug-only` output when the effect can be checked in the
+  generated code instead. Debug output is not a stable interface and may be
+  reworded at any time.
+- Mark functions `nounwind` unless the test is about unwind information.
+  Otherwise many targets emit `.cfi_*` directives, which clutter the checks
+  and change with unrelated frame lowering changes.
+- Don't specify the target triple both with `-mtriple` on the `RUN` line and
+  in the test's IR (`target triple = ...`). Choose one; `-mtriple` overrides
+  the module triple, so the other is redundant and potentially misleading.
+- Use `-mtriple` instead of `-march`. If the test has no other triple,
+  `-march` only replaces the architecture of the default target triple, so
+  the OS and environment still come from the host, and the output may differ
+  depending on where the test runs.
+- Only pass `-mcpu` or `-mattr` when the test depends on them. Extra subtarget
+  options tie the test to unrelated features.
+- Don't pass `-O2` to `llc`; it's the default. Avoid `-O3` unless the test
+  really needs it. The codegen pass pipeline at `-O3` is barely changed from
+  `-O2`, so it rarely adds coverage. A test that only reproduces an issue at
+  `-O3` is likely fragile, and may silently stop reproducing it as the
+  compiler changes.
+- Avoid `-global-isel=0` unless the test also has `RUN` lines for GlobalISel.
+  If the target later switches its default to GlobalISel, a test that forces
+  SelectionDAG keeps passing but silently stops covering the selector that is
+  actually used. When testing both selectors, give them a common check prefix
+  (e.g., `--check-prefixes=CHECK,SDAG` and `--check-prefixes=CHECK,GISEL`) so
+  identical output is only checked once.
+- In new MIR tests, prefer the new pass manager's `-passes=` over the legacy
+  `-run-pass=` when the pass has been ported.
+- Use `-verify-machineinstrs` sparingly. It runs the machine verifier after
+  every pass, which is slow. Builds with `LLVM_ENABLE_EXPENSIVE_CHECKS`
+  already enable it by default for most targets. Only add it when a verifier
+  error was the bug's only symptom, so the test wouldn't fail without the
+  flag. In that case, also add a MIR test that runs the pass that introduced
+  the error and checks the part of its output that was wrong (e.g., a flag or
+  operand). MIR tests themselves should almost never use the flag, since
+  `llc` verifies input MIR and, by default, any MIR output (`-run-pass`,
+  `-passes`, `-stop-after`, `-stop-before`).
+- Use `-filetype=null` for `llc` tests that only check diagnostics, unless the
+  error comes from the emitter (e.g., relocation errors). `-filetype=null`
+  skips the MC assembler and object writer entirely, so those tests need
+  `-filetype=obj`.
+- Tests that use options only available in builds with assertions enabled,
+  such as `-debug-only` or `-stats`, need `REQUIRES: asserts`. Without it, the
+  test fails in release builds.
+- `test/CodeGen/MIR` is only for tests of the MIR parser and printer, which
+  usually run `llc -run-pass=none`. Tests of codegen passes belong in
+  `test/CodeGen/<target>`, even if they use MIR input.
+- Tests that check the machine verifier reports an error belong in
+  `test/MachineVerifier` (or `test/MachineVerifier/<target>` for
+  target-specific checks), not in `test/CodeGen/<target>`.
+- Avoid adding tests to `test/CodeGen/Generic`. These tests run `llc` with the
+  default target triple, which depends on how LLVM was configured, so a test
+  that passes on one host may fail on another. Put the test in a target
+  directory with an explicit triple instead; unlike most `opt` tests, `llc`
+  tests almost always depend on the target.
 
 ### Extra files
 
