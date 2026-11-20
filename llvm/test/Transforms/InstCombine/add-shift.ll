@@ -78,3 +78,79 @@ define <2 x i8> @flip_add_of_shift_neg_vec_fail_multiuse_shift(<2 x i8> %v, <2 x
   %r = add <2 x i8> %x, %sv
   ret <2 x i8> %r
 }
+
+define i64 @factorize_add_of_ashr(i64 %v1, i64 %v2) {
+; CHECK-LABEL: define i64 @factorize_add_of_ashr(
+; CHECK-SAME: i64 [[V1:%.*]], i64 [[V2:%.*]]) {
+; CHECK-NEXT:    [[S01:%.*]] = add i64 [[V1]], [[V2]]
+; CHECK-NEXT:    [[R:%.*]] = ashr i64 [[S01]], 3
+; CHECK-NEXT:    [[A:%.*]] = icmp ult i64 [[R]], 1152921504606846976
+; CHECK-NEXT:    call void @llvm.assume(i1 [[A]])
+; CHECK-NEXT:    ret i64 [[R]]
+;
+  %s0 = ashr exact i64 %v1, 3
+  %s1 = ashr exact i64 %v2, 3
+  %r = add i64 %s0, %s1
+  %a = icmp ult i64 %r, 1152921504606846976
+  call void @llvm.assume(i1 %a)
+  ret i64 %r
+}
+
+; llvm.assume on the prospective add's operands rather than
+; on add's result.
+define i64 @factorize_add_of_ashr2(i64 %v1, i64 %v2) {
+; CHECK-LABEL: define i64 @factorize_add_of_ashr2(
+; CHECK-SAME: i64 [[V1:%.*]], i64 [[V2:%.*]]) {
+; CHECK-NEXT:    [[S01:%.*]] = add nuw nsw i64 [[V1]], [[V2]]
+; CHECK-NEXT:    [[R:%.*]] = lshr i64 [[S01]], 3
+; CHECK-NEXT:    [[A0:%.*]] = icmp ult i64 [[V1]], 2147483648
+; CHECK-NEXT:    [[A1:%.*]] = icmp ult i64 [[V2]], 2147483648
+; CHECK-NEXT:    call void @llvm.assume(i1 [[A0]])
+; CHECK-NEXT:    call void @llvm.assume(i1 [[A1]])
+; CHECK-NEXT:    ret i64 [[R]]
+;
+  %s0 = ashr exact i64 %v1, 3
+  %s1 = ashr exact i64 %v2, 3
+  %r = add i64 %s0, %s1
+  %a0 = icmp ult i64 %v1, 2147483648
+  %a1 = icmp ult i64 %v2, 2147483648
+  call void @llvm.assume(i1 %a0)
+  call void @llvm.assume(i1 %a1)
+  ret i64 %r
+}
+
+define i64 @factorize_add_of_lshr(i64 %v1, i64 %v2) {
+; CHECK-LABEL: define i64 @factorize_add_of_lshr(
+; CHECK-SAME: i64 [[V1:%.*]], i64 [[V2:%.*]]) {
+; CHECK-NEXT:    [[S01:%.*]] = add i64 [[V1]], [[V2]]
+; CHECK-NEXT:    [[R:%.*]] = lshr i64 [[S01]], 3
+; CHECK-NEXT:    [[A:%.*]] = icmp sgt i64 [[S01]], -1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[A]])
+; CHECK-NEXT:    ret i64 [[R]]
+;
+  %s0 = lshr exact i64 %v1, 3
+  %s1 = lshr exact i64 %v2, 3
+  %r = add i64 %s0, %s1
+  %a = icmp ult i64 %r, 1152921504606846976
+  call void @llvm.assume(i1 %a)
+  ret i64 %r
+}
+
+; The right shiftings need to be exact
+define i64 @negative_factorize_add_of_ashr(i64 %v1, i64 %v2) {
+; CHECK-LABEL: define i64 @negative_factorize_add_of_ashr(
+; CHECK-SAME: i64 [[V1:%.*]], i64 [[V2:%.*]]) {
+; CHECK-NEXT:    [[S0:%.*]] = ashr i64 [[V1]], 3
+; CHECK-NEXT:    [[S1:%.*]] = ashr i64 [[V2]], 3
+; CHECK-NEXT:    [[R:%.*]] = add nsw i64 [[S0]], [[S1]]
+; CHECK-NEXT:    [[A:%.*]] = icmp ult i64 [[R]], 1152921504606846976
+; CHECK-NEXT:    call void @llvm.assume(i1 [[A]])
+; CHECK-NEXT:    ret i64 [[R]]
+;
+  %s0 = ashr i64 %v1, 3
+  %s1 = ashr i64 %v2, 3
+  %r = add i64 %s0, %s1
+  %a = icmp ult i64 %r, 1152921504606846976
+  call void @llvm.assume(i1 %a)
+  ret i64 %r
+}
