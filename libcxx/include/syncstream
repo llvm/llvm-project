@@ -271,7 +271,10 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI basic_syncbuf(basic_syncbuf&& __other)
-      : __wrapped_(__other.get_wrapped()), __str_(std::move(__other.__str_)), __emit_on_sync_(__other.__emit_on_sync_) {
+      : __wrapped_(__other.get_wrapped()),
+        __str_(std::move(__other.__str_)),
+        __emit_on_sync_(__other.__emit_on_sync_),
+        __pending_flush_(__other.__pending_flush_) {
     __move_common(__other);
   }
 
@@ -295,9 +298,10 @@ public:
     emit();
     __dec_reference();
 
-    __wrapped_      = __other.get_wrapped();
-    __str_          = std::move(__other.__str_);
-    __emit_on_sync_ = __other.__emit_on_sync_;
+    __wrapped_       = __other.get_wrapped();
+    __str_           = std::move(__other.__str_);
+    __emit_on_sync_  = __other.__emit_on_sync_;
+    __pending_flush_ = __other.__pending_flush_;
 
     __move_common(__other);
 
@@ -316,7 +320,13 @@ public:
 
   // [syncstream.syncbuf.members], member functions
 
-  _LIBCPP_HIDE_FROM_ABI bool emit() { return emit(false); }
+  _LIBCPP_HIDE_FROM_ABI bool emit() {
+    // [syncstream.syncbuf.members]/1: wrapped->pubsync() is called if and only
+    // if sync() was called since the most recent call to emit().
+    bool __flush     = __pending_flush_;
+    __pending_flush_ = false;
+    return emit(__flush);
+  }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI streambuf_type* get_wrapped() const noexcept { return __wrapped_; }
 
@@ -329,7 +339,10 @@ protected:
 
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL
   int sync() override {
-    if (__emit_on_sync_ && !emit(true))
+    // [syncstream.syncbuf.virtuals]/1: record that the wrapped stream buffer is
+    // to be flushed, then emit if emit-on-sync is true.
+    __pending_flush_ = true;
+    if (__emit_on_sync_ && !emit())
       return -1;
     return 0;
   }
@@ -371,6 +384,7 @@ private:
 
   basic_string<_CharT, _Traits, _Allocator> __str_;
   bool __emit_on_sync_{false};
+  bool __pending_flush_{false};
 
   _LIBCPP_HIDE_FROM_ABI bool emit(bool __flush) {
     if (!__wrapped_)
@@ -406,7 +420,8 @@ private:
 
     // Clear __other_ so the destructor will act as a NOP.
     __other.setp(nullptr, nullptr);
-    __other.__wrapped_ = nullptr;
+    __other.__wrapped_       = nullptr;
+    __other.__pending_flush_ = false;
   }
 
   _LIBCPP_HIDE_FROM_ABI void __inc_reference() {
