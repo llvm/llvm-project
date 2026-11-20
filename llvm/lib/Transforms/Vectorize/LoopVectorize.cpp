@@ -4912,6 +4912,15 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
            !TheLoop->contains(cast<Instruction>(U)->getParent());
   };
 
+  // Returns true if the address of interleaved access I is used by its group.
+  // VPlan uses the address of member 0 for store groups. For load groups, it
+  // may use the address of the insert position instead.
+  auto IsGroupAddress = [this](Instruction *I) {
+    auto *Group = getInterleavedAccessGroup(I);
+    return isa<StoreInst>(I) ? Group->getMember(0) == I
+                             : Group->getInsertPos() == I;
+  };
+
   LoopBlocksDFS DFS(TheLoop);
   DFS.perform(LI);
   for (BasicBlock *BB : reverse(make_range(DFS.beginRPO(), DFS.endRPO())))
@@ -4929,11 +4938,10 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
         DeadOps.push_back(&I);
 
       // For interleave groups, we only create a pointer for the start of the
-      // interleave group. Queue up addresses of group members except the insert
-      // position for further processing.
+      // interleave group. Queue up addresses of group members not used by the
+      // group for further processing.
       if (isAccessInterleaved(&I)) {
-        auto *Group = getInterleavedAccessGroup(&I);
-        if (Group->getInsertPos() == &I)
+        if (IsGroupAddress(&I))
           continue;
         Value *PointerOp = getLoadStorePointerOperand(&I);
         DeadInterleavePointerOps.push_back(PointerOp);
@@ -4949,11 +4957,11 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
   // by other dead computations.
   for (unsigned I = 0; I != DeadInterleavePointerOps.size(); ++I) {
     auto *Op = dyn_cast<Instruction>(DeadInterleavePointerOps[I]);
-    if (!Op || !TheLoop->contains(Op) || any_of(Op->users(), [this](User *U) {
+    if (!Op || !TheLoop->contains(Op) ||
+        any_of(Op->users(), [this, &IsGroupAddress](User *U) {
           Instruction *UI = cast<Instruction>(U);
           return !VecValuesToIgnore.contains(U) &&
-                 (!isAccessInterleaved(UI) ||
-                  getInterleavedAccessGroup(UI)->getInsertPos() == UI);
+                 (!isAccessInterleaved(UI) || IsGroupAddress(UI));
         }))
       continue;
     VecValuesToIgnore.insert(Op);

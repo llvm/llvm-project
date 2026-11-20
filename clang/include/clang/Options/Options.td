@@ -7051,8 +7051,15 @@ def print_supported_cpus : Flag<["-", "--"], "print-supported-cpus">,
            "specified,it will print the supported cpus for the default target)">,
   MarshallingInfoFlag<FrontendOpts<"PrintSupportedCPUs">>;
 
+def print_supported_tune_cpus : Flag<["-", "--"], "print-supported-tune-cpus">,
+  Group<CompileOnly_Group>,
+  HelpText<"Print supported tuning cpu models for the given target (if target "
+           "is not specified, it will print the supported tuning cpus for the "
+           "default target)">,
+  MarshallingInfoFlag<FrontendOpts<"PrintSupportedTuneCPUs">>;
+
 def : Flag<["-"], "mcpu=help">, Alias<print_supported_cpus>;
-def : Flag<["-"], "mtune=help">, Alias<print_supported_cpus>;
+def : Flag<["-"], "mtune=help">, Alias<print_supported_tune_cpus>;
 
 } // let Visibility = [ClangOption, CC1Option, CLOption, FlangOption, FC1Option]
 
