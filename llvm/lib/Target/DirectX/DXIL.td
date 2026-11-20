@@ -280,10 +280,9 @@ def all_stages : DXILShaderStage;
 // Denote support for DXIL Op to have been removed
 def removed : DXILShaderStage;
 
-class DXILIntrinsicStages<Intrinsic intrinsic, string builtinName, string name,
+class DXILIntrinsicStages<Intrinsic intrinsic, string name,
                           list<DXILShaderStage> stages> {
   Intrinsic Intrin = intrinsic;
-  string BuiltinName = builtinName;
   string Name = name;
   list<DXILShaderStage> Stages = stages;
 }
@@ -1676,7 +1675,7 @@ def CreateHandleFromHeap : DXILOp<218, createHandleFromHeap> {
 defvar QuadVoteStages = [compute, amplification, mesh, pixel, node];
 
 def QuadAllStages : DXILIntrinsicStages<
-    int_dx_quad_all, "__builtin_hlsl_quad_all", "QuadAll", QuadVoteStages>;
+    int_dx_quad_all, "QuadAll", QuadVoteStages>;
 
 def QuadVote : DXILOp<222, quadVote> {
   let Doc = "compares a boolean condition across a quad";

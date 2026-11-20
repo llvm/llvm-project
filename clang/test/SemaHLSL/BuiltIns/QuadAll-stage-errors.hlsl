@@ -1,20 +1,24 @@
 // RUN: %clang_cc1 -finclude-default-header -triple \
-// RUN:   dxil-pc-shadermodel6.0-library %s -fsyntax-only -verify=dxil
+// RUN:   dxil-pc-shadermodel6.0-library %s -fsyntax-only -verify=dxil,common
 // RUN: %clang_cc1 -finclude-default-header -triple \
-// RUN:   dxil-pc-shadermodel6.6-library %s -fsyntax-only -verify=dxil
+// RUN:   dxil-pc-shadermodel6.6-library %s -fsyntax-only -verify=dxil,common
 // RUN: %clang_cc1 -finclude-default-header -triple \
-// RUN:   dxil-pc-shadermodel6.7-library %s -fsyntax-only -verify=dxil
+// RUN:   dxil-pc-shadermodel6.7-library %s -fsyntax-only -verify=dxil,common
 // RUN: %clang_cc1 -finclude-default-header -triple \
 // RUN:   dxil-pc-shadermodel6.7-library %s -fhlsl-strict-availability \
-// RUN:   -fsyntax-only -verify=dxil
+// RUN:   -fsyntax-only -verify=dxil,common
+// RUN: %clang_cc1 -finclude-default-header -triple \
+// RUN:   dxil-pc-shadermodel6.7-library %s -Wno-error=hlsl-availability \
+// RUN:   -fsyntax-only -verify=relaxed,common
 // RUN: %clang_cc1 -finclude-default-header -triple \
 // RUN:   spirv-pc-vulkan-library %s -fsyntax-only -verify=spirv
 // spirv-no-diagnostics
+// common-note@* 10 {{'QuadAll' has been marked as being introduced}}
 
 bool shared(bool cond) {
   return QuadAll(cond); // #shared
-  // dxil-error@#shared {{intrinsic 'QuadAll' is not supported in 'vertex'}}
-  // dxil-error@#shared {{intrinsic 'QuadAll' is not supported in 'geometry'}}
+  // dxil-error@#shared 2 {{'QuadAll' is unavailable}}
+  // relaxed-warning@#shared 2 {{'QuadAll' is unavailable}}
 }
 
 bool indirect(bool cond) {
@@ -24,8 +28,6 @@ bool indirect(bool cond) {
 [shader("vertex")]
 void vertex() {
   indirect(true);
-  (void)__builtin_hlsl_quad_all(true);
-  // dxil-error@-1 {{intrinsic 'QuadAll' is not supported in 'vertex' shaders}}
 }
 
 [shader("vertex")]
@@ -41,49 +43,57 @@ void geometry() {
 [shader("hull")]
 void hull() {
   (void)QuadAll(true);
-  // dxil-error@-1 {{'QuadAll' is not supported in 'hull' shaders}}
+  // dxil-error@-1 {{'QuadAll' is unavailable}}
+  // relaxed-warning@-2 {{'QuadAll' is unavailable}}
 }
 
 [shader("domain")]
 void domain() {
   (void)QuadAll(true);
-  // dxil-error@-1 {{'QuadAll' is not supported in 'domain' shaders}}
+  // dxil-error@-1 {{'QuadAll' is unavailable}}
+  // relaxed-warning@-2 {{'QuadAll' is unavailable}}
 }
 
 [shader("raygeneration")]
 void raygeneration() {
   (void)QuadAll(true);
-  // dxil-error@-1 {{'QuadAll' is not supported in 'raygeneration' shaders}}
+  // dxil-error@-1 {{'QuadAll' is unavailable}}
+  // relaxed-warning@-2 {{'QuadAll' is unavailable}}
 }
 
 [shader("intersection")]
 void intersection() {
   (void)QuadAll(true);
-  // dxil-error@-1 {{'QuadAll' is not supported in 'intersection' shaders}}
+  // dxil-error@-1 {{'QuadAll' is unavailable}}
+  // relaxed-warning@-2 {{'QuadAll' is unavailable}}
 }
 
 [shader("anyhit")]
 void anyhit() {
   (void)QuadAll(true);
-  // dxil-error@-1 {{'QuadAll' is not supported in 'anyhit' shaders}}
+  // dxil-error@-1 {{'QuadAll' is unavailable}}
+  // relaxed-warning@-2 {{'QuadAll' is unavailable}}
 }
 
 [shader("closesthit")]
 void closesthit() {
   (void)QuadAll(true);
-  // dxil-error@-1 {{'QuadAll' is not supported in 'closesthit' shaders}}
+  // dxil-error@-1 {{'QuadAll' is unavailable}}
+  // relaxed-warning@-2 {{'QuadAll' is unavailable}}
 }
 
 [shader("miss")]
 void miss() {
   (void)QuadAll(true);
-  // dxil-error@-1 {{'QuadAll' is not supported in 'miss' shaders}}
+  // dxil-error@-1 {{'QuadAll' is unavailable}}
+  // relaxed-warning@-2 {{'QuadAll' is unavailable}}
 }
 
 [shader("callable")]
 void callable() {
   (void)QuadAll(true);
-  // dxil-error@-1 {{'QuadAll' is not supported in 'callable' shaders}}
+  // dxil-error@-1 {{'QuadAll' is unavailable}}
+  // relaxed-warning@-2 {{'QuadAll' is unavailable}}
 }
 
 [shader("pixel")]

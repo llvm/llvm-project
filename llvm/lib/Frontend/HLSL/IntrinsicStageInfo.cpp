@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Frontend/HLSL/IntrinsicStageInfo.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/IntrinsicsDirectX.h"
 
 using namespace llvm;
@@ -18,26 +16,33 @@ namespace {
 #include "DXILIntrinsicStages.inc"
 } // namespace
 
+StringRef IntrinsicStageInfo::getName() const {
+  return DXILIntrinsicStageStrings + NameOffset;
+}
+
 bool IntrinsicStageInfo::isSupportedIn(StringRef Stage) const {
-  return Stage.empty() || Stage == "unknown" || Stage == "library" ||
-         llvm::is_contained(Stages, Stage);
+  if (Stage.empty() || Stage == "unknown" || Stage == "library")
+    return true;
+  for (unsigned Offset :
+       ArrayRef(DXILIntrinsicStageOffsets).slice(StagesOffset, NumStages))
+    if (Stage == DXILIntrinsicStageStrings + Offset)
+      return true;
+  return false;
 }
 
 std::string IntrinsicStageInfo::getStageNames() const {
-  return llvm::join(
-      llvm::map_range(
-          Stages, [](StringRef Stage) { return ("'" + Stage + "'").str(); }),
-      ", ");
+  std::string Names;
+  for (unsigned Offset :
+       ArrayRef(DXILIntrinsicStageOffsets).slice(StagesOffset, NumStages)) {
+    if (!Names.empty())
+      Names += ", ";
+    Names += "'";
+    Names += DXILIntrinsicStageStrings + Offset;
+    Names += "'";
+  }
+  return Names;
 }
 
 ArrayRef<IntrinsicStageInfo> llvm::hlsl::getDXILIntrinsicStageInfos() {
   return DXILIntrinsicStages;
-}
-
-const IntrinsicStageInfo *
-llvm::hlsl::getDXILIntrinsicStageInfo(StringRef BuiltinName) {
-  auto It = llvm::find_if(DXILIntrinsicStages, [=](const auto &Info) {
-    return Info.BuiltinName == BuiltinName;
-  });
-  return It == std::end(DXILIntrinsicStages) ? nullptr : It;
 }

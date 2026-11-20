@@ -143,8 +143,20 @@ struct TypeInfo {
 // Availability helpers
 //===----------------------------------------------------------------------===//
 
-static void emitAvailability(raw_ostream &OS, StringRef Version,
-                             bool Use16Bit = false) {
+static void emitAvailability(raw_ostream &OS, StringRef Version, bool Use16Bit,
+                             ArrayRef<StringRef> Stages) {
+  if (!Stages.empty()) {
+    for (StringRef Stage : Stages) {
+      OS << (Use16Bit ? "_HLSL_16BIT_AVAILABILITY_STAGE"
+                      : "_HLSL_AVAILABILITY_STAGE")
+         << "(shadermodel, " << (Use16Bit ? StringRef(SM6_2) : Version) << ", "
+         << Stage;
+      if (Use16Bit && !Version.empty())
+        OS << ", " << Version;
+      OS << ")\n";
+    }
+    return;
+  }
   if (Use16Bit) {
     OS << "_HLSL_16BIT_AVAILABILITY(shadermodel, " << SM6_2;
     if (!Version.empty())
@@ -465,6 +477,7 @@ static void emitDocComment(raw_ostream &OS, const Record *R) {
 /// availability annotations and #ifdef guards.
 static void emitWorklistOverloads(raw_ostream &OS, const OverloadContext &Ctx,
                                   ArrayRef<TypeWorkItem> Worklist,
+                                  ArrayRef<StringRef> Stages,
                                   bool EmitScalarOverload,
                                   ArrayRef<int64_t> VectorSizes,
                                   bool EmitLongVectorOverload,
@@ -479,7 +492,7 @@ static void emitWorklistOverloads(raw_ostream &OS, const OverloadContext &Ctx,
 
     auto EmitAvail = [&]() {
       if (!Item.Availability.empty() || Item.Use16BitAvail)
-        emitAvailability(OS, Item.Availability, Item.Use16BitAvail);
+        emitAvailability(OS, Item.Availability, Item.Use16BitAvail, Stages);
     };
 
     if (EmitScalarOverload) {
@@ -534,6 +547,7 @@ static void emitBuiltinOverloads(raw_ostream &OS, const Record *R) {
   bool EmitLongVectorOverload = R->getValueAsBit("VaryingLongVector");
   std::vector<const Record *> MatrixDimensions =
       R->getValueAsListOfDefs("VaryingMatDims");
+  std::vector<StringRef> Stages = R->getValueAsListOfStrings("Stages");
 
   // Sort vector sizes and matrix dimensions for consistent output order.
   llvm::sort(VectorSizes);
@@ -544,8 +558,8 @@ static void emitBuiltinOverloads(raw_ostream &OS, const Record *R) {
     return A->getValueAsInt("Cols") < B->getValueAsInt("Cols");
   });
 
-  emitWorklistOverloads(OS, Ctx, Worklist, EmitScalarOverload, VectorSizes,
-                        EmitLongVectorOverload, MatrixDimensions);
+  emitWorklistOverloads(OS, Ctx, Worklist, Stages, EmitScalarOverload,
+                        VectorSizes, EmitLongVectorOverload, MatrixDimensions);
 }
 
 /// Emit alias overloads for a single HLSLBuiltin record.

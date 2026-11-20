@@ -1430,8 +1430,8 @@ static bool validateIntrinsicStages(Module &M) {
           Stage = ShaderAttr.getValueAsString();
         if (!Info.isSupportedIn(Stage)) {
           M.getContext().emitError(
-              "intrinsic '" + Info.Name + "' is not supported in '" + Stage +
-              "' shaders for DirectX; supported stages: " +
+              "intrinsic '" + Info.getName() + "' is not supported in '" +
+              Stage + "' shaders for DirectX; supported stages: " +
               Info.getStageNames() + " (function '" + F->getName() + "')");
           return false;
         }

@@ -19,17 +19,16 @@ namespace llvm::hlsl {
 
 struct IntrinsicStageInfo {
   Intrinsic::ID ID;
-  StringRef BuiltinName;
-  StringRef Name;
-  ArrayRef<StringRef> Stages;
+  unsigned NameOffset;
+  unsigned StagesOffset;
+  unsigned NumStages;
 
+  LLVM_ABI StringRef getName() const;
   LLVM_ABI bool isSupportedIn(StringRef Stage) const;
   LLVM_ABI std::string getStageNames() const;
 };
 
 LLVM_ABI ArrayRef<IntrinsicStageInfo> getDXILIntrinsicStageInfos();
-LLVM_ABI const IntrinsicStageInfo *
-getDXILIntrinsicStageInfo(StringRef BuiltinName);
 
 } // namespace llvm::hlsl
 

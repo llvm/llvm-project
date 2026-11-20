@@ -42,7 +42,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Frontend/HLSL/HLSLBinding.h"
-#include "llvm/Frontend/HLSL/IntrinsicStageInfo.h"
 #include "llvm/Frontend/HLSL/RootSignatureValidations.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/DXILABI.h"
@@ -3308,7 +3307,6 @@ class DiagnoseHLSLAvailability : public DynamicRecursiveASTVisitor {
                              SourceRange Range);
   const AvailabilityAttr *FindAvailabilityAttr(const Decl *D);
   bool HasMatchingEnvironmentOrNone(const AvailabilityAttr *AA);
-  void DiagnoseIntrinsicStage(CallExpr *CE);
   void DiagnoseBarrierCall(CallExpr *CE);
   uint64_t DiagnoseBarrierGroupMemory(Expr *MemoryArg, uint64_t MemoryFlags,
                                       bool HasVisibleGroup, bool IsAllMemory);
@@ -3344,31 +3342,10 @@ public:
   }
 
   bool VisitCallExpr(CallExpr *CE) override {
-    DiagnoseIntrinsicStage(CE);
     DiagnoseBarrierCall(CE);
     return true;
   }
 };
-
-void DiagnoseHLSLAvailability::DiagnoseIntrinsicStage(CallExpr *CE) {
-  if (!SemaRef.Context.getTargetInfo().getTriple().isDXIL() ||
-      InUnknownShaderStageContext())
-    return;
-
-  const FunctionDecl *FD = CE->getDirectCallee();
-  if (!FD || !FD->getBuiltinID())
-    return;
-
-  const auto *Info = llvm::hlsl::getDXILIntrinsicStageInfo(
-      SemaRef.Context.BuiltinInfo.getName(FD->getBuiltinID()));
-  StringRef Stage =
-      llvm::Triple::getEnvironmentTypeName(GetCurrentShaderEnvironment());
-  if (!Info || Info->isSupportedIn(Stage))
-    return;
-
-  SemaRef.Diag(CE->getExprLoc(), diag::err_hlsl_intrinsic_unsupported_in_stage)
-      << Info->Name << Stage << Info->getStageNames();
-}
 
 uint64_t DiagnoseHLSLAvailability::DiagnoseBarrierGroupMemory(
     Expr *MemoryArg, uint64_t MemoryFlags, bool HasVisibleGroup,

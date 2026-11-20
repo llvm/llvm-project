@@ -466,6 +466,35 @@ def test_18_long_vector : HLSLBuiltin<"longvec", "__builtin_longvec"> {
 //
 // ALIAS-NOT: longvec
 
+def test_19_stage_availability : HLSLBuiltin<"stagefunc", "__builtin_stagefunc"> {
+  let Args = [Varying];
+  let ReturnType = Varying;
+  let VaryingScalar = 1;
+  let VaryingVecSizes = [2];
+  let VaryingTypes = [HalfTy, FloatTy];
+  let Availability = SM6_0;
+  let Stages = ["pixel", "compute"];
+}
+
+// ALIAS-LABEL: // stagefunc overloads
+// ALIAS-NEXT: _HLSL_16BIT_AVAILABILITY_STAGE(shadermodel, 6.2, pixel, 6.0)
+// ALIAS-NEXT: _HLSL_16BIT_AVAILABILITY_STAGE(shadermodel, 6.2, compute, 6.0)
+// ALIAS-NEXT: _HLSL_BUILTIN_ALIAS(__builtin_stagefunc)
+// ALIAS-NEXT: half stagefunc(half);
+// ALIAS-NEXT: _HLSL_16BIT_AVAILABILITY_STAGE(shadermodel, 6.2, pixel, 6.0)
+// ALIAS-NEXT: _HLSL_16BIT_AVAILABILITY_STAGE(shadermodel, 6.2, compute, 6.0)
+// ALIAS-NEXT: _HLSL_BUILTIN_ALIAS(__builtin_stagefunc)
+// ALIAS-NEXT: half2 stagefunc(half2);
+// ALIAS: _HLSL_AVAILABILITY_STAGE(shadermodel, 6.0, pixel)
+// ALIAS-NEXT: _HLSL_AVAILABILITY_STAGE(shadermodel, 6.0, compute)
+// ALIAS-NEXT: _HLSL_BUILTIN_ALIAS(__builtin_stagefunc)
+// ALIAS-NEXT: float stagefunc(float);
+// ALIAS-NEXT: _HLSL_AVAILABILITY_STAGE(shadermodel, 6.0, pixel)
+// ALIAS-NEXT: _HLSL_AVAILABILITY_STAGE(shadermodel, 6.0, compute)
+// ALIAS-NEXT: _HLSL_BUILTIN_ALIAS(__builtin_stagefunc)
+// ALIAS-NEXT: float2 stagefunc(float2);
+// ALIAS-NOT: stagefunc
+
 //===----------------------------------------------------------------------===//
 // Verify no alias intrinsics are generated in the inline header.
 //===----------------------------------------------------------------------===//
@@ -487,6 +516,7 @@ def test_18_long_vector : HLSLBuiltin<"longvec", "__builtin_longvec"> {
 // INLINE-NOT: elemarg
 // INLINE-NOT: shapearg
 // INLINE-NOT: longvec
+// INLINE-NOT: stagefunc
 
 //===----------------------------------------------------------------------===//
 // Verify no inline intrinsics are generated in the alias header.
