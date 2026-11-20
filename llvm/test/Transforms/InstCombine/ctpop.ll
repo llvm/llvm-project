@@ -503,3 +503,31 @@ define i32 @ctpop_non_zero_with_existing_range_attr(i32 range(i32 1, 255) %x) {
   %ctpop = call range(i32 0, 9) i32 @llvm.ctpop.i32(i32 %x)
   ret i32 %ctpop
 }
+
+define i32 @parity_add(i32 %arg, i32 %arg1) {
+; CHECK-LABEL: @parity_add(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[ARG1:%.*]], [[ARG:%.*]]
+; CHECK-NEXT:    [[I3:%.*]] = call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[TMP1]])
+; CHECK-NEXT:    [[I4:%.*]] = and i32 [[I3]], 1
+; CHECK-NEXT:    ret i32 [[I4]]
+;
+  %i = tail call i32 @llvm.ctpop.i32(i32 %arg)
+  %i2 = tail call i32 @llvm.ctpop.i32(i32 %arg1)
+  %i3 = add i32 %i2, %i
+  %i4 = and i32 %i3, 1
+  ret i32 %i4
+}
+
+define i32 @parity_sub(i32 %arg, i32 %arg1) {
+; CHECK-LABEL: @parity_sub(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[ARG1:%.*]], [[ARG:%.*]]
+; CHECK-NEXT:    [[I3:%.*]] = call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[TMP1]])
+; CHECK-NEXT:    [[I4:%.*]] = and i32 [[I3]], 1
+; CHECK-NEXT:    ret i32 [[I4]]
+;
+  %i = tail call i32 @llvm.ctpop.i32(i32 %arg)
+  %i2 = tail call i32 @llvm.ctpop.i32(i32 %arg1)
+  %i3 = sub i32 %i2, %i
+  %i4 = and i32 %i3, 1
+  ret i32 %i4
+}
