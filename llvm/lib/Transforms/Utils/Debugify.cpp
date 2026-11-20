@@ -50,6 +50,11 @@ cl::opt<bool> ApplyAtomGroups("debugify-atoms", cl::init(false));
 cl::opt<bool> Quiet("debugify-quiet",
                     cl::desc("Suppress verbose debugify output"));
 
+cl::opt<bool> ReportDropped(
+    "debugify-report-dropped",
+    cl::desc("Report instructions with intentionally dropped DebugLoc"),
+    cl::init(false));
+
 cl::opt<uint64_t> DebugifyFunctionsLimit(
     "debugify-func-limit",
     cl::desc("Set max number of processed functions per pass."),
@@ -404,6 +409,8 @@ bool hasLoc(const Instruction &I) {
   const DILocation *Loc = I.getDebugLoc().get();
 #if LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE
   DebugLocKind Kind = I.getDebugLoc().getKind();
+  if (ReportDropped && Kind == DebugLocKind::Dropped)
+    return false;
   return Loc || Kind != DebugLocKind::Normal;
 #else
   return Loc;
@@ -547,12 +554,19 @@ static bool checkInstructionCoverage(Instruction &I,
     Bugs.push_back(std::move(BugEntry));
   };
 
+  bool IsDropped = false;
+#if LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE
+  IsDropped = Instr->getDebugLoc().getKind() == DebugLocKind::Dropped;
+#endif
+
   if (ShouldWriteIntoJSON)
-    CreateJSONBugEntry("not-generate");
+    CreateJSONBugEntry(IsDropped ? "drop" : "not-generate");
   else
     dbg() << "WARNING: " << NameOfWrappedPass
-          << " did not generate DILocation for " << *Instr << " (BB: " << BBName
-          << ", Fn: " << FnName << ", File: " << FileNameFromCU << ")\n";
+          << (IsDropped ? " dropped DILocation for "
+                        : " did not generate DILocation for ")
+          << *Instr << " (BB: " << BBName << ", Fn: " << FnName
+          << ", File: " << FileNameFromCU << ")\n";
   return false;
 }
 
