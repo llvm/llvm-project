@@ -182,13 +182,6 @@ static void diagnoseBadTypeAttribute(Sema &S, const ParsedAttr &attr,
   case ParsedAttr::AT_TypeNullableResult:                                      \
   case ParsedAttr::AT_TypeNullUnspecified
 
-// Bounds attributes of the counted_by family.
-#define COUNTED_BY_TYPE_ATTRS_CASELIST                                         \
-  case ParsedAttr::AT_CountedBy:                                               \
-  case ParsedAttr::AT_CountedByOrNull:                                         \
-  case ParsedAttr::AT_SizedBy:                                                 \
-  case ParsedAttr::AT_SizedByOrNull
-
 namespace {
   /// An object which stores processing state for the entire
   /// GetTypeForDeclarator process.
@@ -4406,7 +4399,10 @@ static bool isIndirectParamCount(const Declarator &D, unsigned ChunkIndex) {
 
   auto IsCount = [](const ParsedAttr &A) {
     switch (A.getKind()) {
-    COUNTED_BY_TYPE_ATTRS_CASELIST:
+    case ParsedAttr::AT_CountedBy:
+    case ParsedAttr::AT_CountedByOrNull:
+    case ParsedAttr::AT_SizedBy:
+    case ParsedAttr::AT_SizedByOrNull:
       return true;
     default:
       return false;
@@ -9509,7 +9505,10 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
       break;
     }
 
-    COUNTED_BY_TYPE_ATTRS_CASELIST: {
+    case ParsedAttr::AT_CountedBy:
+    case ParsedAttr::AT_CountedByOrNull:
+    case ParsedAttr::AT_SizedBy:
+    case ParsedAttr::AT_SizedByOrNull: {
       DeclaratorContext Ctx = state.getDeclarator().getContext();
       bool OnParam = Ctx == DeclaratorContext::Prototype ||
                      Ctx == DeclaratorContext::ObjCParameter ||
