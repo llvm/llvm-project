@@ -442,9 +442,18 @@ public:
 
   /// Perform a pointer to boolean conversion.
   mlir::Value emitPointerToBoolConversion(mlir::Value v, QualType qt) {
-    // TODO(cir): comparing the ptr to null is done when lowering CIR to LLVM.
-    // We might want to have a separate pass for these types of conversions.
-    return cgf.getBuilder().createPtrToBoolCast(v);
+    mlir::Location loc = v.getLoc();
+    auto ptrTy = mlir::cast<cir::PointerType>(v.getType());
+    mlir::Value nullPtr = cgf.cgm.getNullPointer(ptrTy, qt, loc);
+    auto nullConst = nullPtr.getDefiningOp<cir::ConstantOp>();
+    // ptr_to_bool compares with zero, so it is only valid when the target null
+    // pointer is a plain null.
+    if (nullConst && nullConst.isNullPtr()) {
+      if (nullConst->use_empty())
+        nullConst->erase();
+      return builder.createPtrToBoolCast(v);
+    }
+    return builder.createCompare(loc, cir::CmpOpKind::ne, v, nullPtr);
   }
 
   mlir::Value emitFloatToBoolConversion(mlir::Value src, mlir::Location loc) {
