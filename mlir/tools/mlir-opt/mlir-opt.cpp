@@ -159,6 +159,7 @@ void registerTestTensorTransforms();
 void registerTestTopologicalSortAnalysisPass();
 void registerTestTransformDialectEraseSchedulePass();
 void registerTestPassStateExtensionCommunication();
+void registerTestVectorGatherScatterToSPIRV();
 void registerTestVectorLowerings();
 void registerTestVectorReductionToSPIRVDotProd();
 void registerTestVulkanRunnerPipeline();
@@ -309,6 +310,7 @@ static void registerTestPasses() {
   mlir::test::registerTestTopologicalSortAnalysisPass();
   mlir::test::registerTestTransformDialectEraseSchedulePass();
   mlir::test::registerTestPassStateExtensionCommunication();
+  mlir::test::registerTestVectorGatherScatterToSPIRV();
   mlir::test::registerTestVectorLowerings();
   mlir::test::registerTestVectorReductionToSPIRVDotProd();
   mlir::test::registerTestVulkanRunnerPipeline();
