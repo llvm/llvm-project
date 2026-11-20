@@ -162,3 +162,30 @@ void local_in_teams(void) {
 
 // LLVM-LABEL: define{{.*}} void @local_in_teams(
 // LLVM:         call void {{.*}}@__kmpc_fork_teams(
+
+// The composite loop's iteration variable is emitted without lifetime markers,
+// so the composite omp.parallel, omp.distribute and omp.wsloop stay directly
+// nested and the kernel is still SPMD.
+void local_in_teams_distribute_parallel_for(void) {
+#pragma omp target teams distribute parallel for
+  for (int i = 0; i < 10; i++) {
+    int t = i * 2;
+    use(t);
+  }
+}
+
+// CIR-LABEL: cir.func{{.*}}@local_in_teams_distribute_parallel_for
+// CIR:         omp.target kernel_type(spmd)
+// CIR:           omp.teams {
+// CIR:             omp.parallel
+// CIR-NOT:           cir.lifetime.start
+// CIR-NOT:           cir.cleanup.scope
+// CIR:               omp.distribute {
+// CIR-NEXT:            omp.wsloop {
+// CIR-NEXT:              omp.loop_nest
+// CIR:                     cir.lifetime.start
+// CIR:                     cir.cleanup.scope {
+// CIR:                     omp.yield
+
+// LLVM-LABEL: define{{.*}} void @local_in_teams_distribute_parallel_for(
+// LLVM:         call i32 @__tgt_target_kernel(
