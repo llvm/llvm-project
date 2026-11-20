@@ -1,6 +1,6 @@
 ## This test verifies that llvm-objcopy can add multiple sections to a Mach-O binary.
 
-# RUN: yaml2obj %s -o %t
+# RUN: yaml2obj --docnum=1 %s -o %t
 # RUN: echo -n FOOabcdefg > %t.foo.data
 # RUN: echo -n BARabcdefg > %t.bar.data
 
@@ -20,13 +20,22 @@
 # RUN: llvm-readobj --sections --section-data %t.foo.bar.3 \
 # RUN:   | FileCheck %s -check-prefix=CASE3
 
+## Object file (MH_OBJECT): one segment holds all sections.
+# RUN: yaml2obj --docnum=2 %s -o %t.o
+
+## Case 4: Add two new sections with different segment names into an existing
+## segment.
+# RUN: llvm-objcopy --add-section __FOO,__foo=%t.foo.data --add-section __BAR,__bar=%t.bar.data %t.o %t.foo.bar.4
+# RUN: llvm-readobj --sections --macho-segment %t.foo.bar.4 \
+# RUN:   | FileCheck %s -check-prefix=CASE4
+
 --- !mach-o
 IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x01000007
   cpusubtype:      0x00000003
-  filetype:        0x00000002
+  filetype:        0x00000002 # MH_EXECUTE
   ncmds:           3
   sizeofcmds:      248
   flags:           0x00000000
@@ -209,4 +218,53 @@ LinkEditData:
 # CASE3-NEXT:      )
 # CASE3-NEXT:    }
 # CASE3-NEXT:  ]
+
+--- !mach-o
+IsLittleEndian:  true
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x00000003
+  filetype:        0x00000001 # MH_OBJECT
+  ncmds:           1
+  sizeofcmds:      152
+  flags:           0x00002000
+  reserved:        0x00000000
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         152
+    segname:         __TEXT
+    vmaddr:          0
+    vmsize:          4
+    fileoff:         184
+    filesize:        4
+    maxprot:         7
+    initprot:        7
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0000000000000000
+        content:         'AABBCCDD'
+        size:            4
+        offset:          184
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+
+# CASE4:          Name: __foo (5F 5F 66 6F 6F 00 00 00 00 00 00 00 00 00 00 00)
+# CASE4-NEXT:     Segment: __FOO (5F 5F 46 4F 4F 00 00 00 00 00 00 00 00 00 00 00)
+# CASE4:          Name: __bar (5F 5F 62 61 72 00 00 00 00 00 00 00 00 00 00 00)
+# CASE4-NEXT:     Segment: __BAR (5F 5F 42 41 52 00 00 00 00 00 00 00 00 00 00 00)
+
+# CASE4:        Segment {
+# CASE4-NEXT:     Cmd: LC_SEGMENT_64
+# CASE4-NEXT:     Name: __TEXT{{$}}
+# CASE4:          nsects: 3
+# CASE4-NOT:    Segment {
 

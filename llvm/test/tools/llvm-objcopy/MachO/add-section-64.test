@@ -25,24 +25,25 @@
 
 ## Object file (MH_OBJECT): one segment holds all sections.
 # RUN: yaml2obj --docnum=2 %s -o %t.o
-# RUN: yaml2obj --docnum=2 -DSEGNAME= %s -o %t.empty.o
 
 ## Case 4: Add a new section into an existing segment.
 # RUN: llvm-objcopy --add-section __TEXT,__bar=%t.data %t.o %t.out4
 # RUN: llvm-readobj --sections --macho-segment %t.out4 \
 # RUN:   | FileCheck %s --check-prefixes=OBJ,CASE4
 
-## Case 5: Add a new section with an empty segment name into an existing segment
-## with an empty name.
-# RUN: llvm-objcopy --add-section ,__bar=%t.data %t.empty.o %t.out5
+## Case 5: Add a new section with a different segment name into an existing
+## segment.
+# RUN: llvm-objcopy --add-section __FOO,__bar=%t.data %t.o %t.out5
 # RUN: llvm-readobj --sections --macho-segment %t.out5 \
 # RUN:   | FileCheck %s --check-prefixes=OBJ,CASE5
 
-## Case 6: Add a new section with a new segment name into an object file whose
-## only segment has an empty name.
-# RUN: llvm-objcopy --add-section __FOO,__bar=%t.data %t.empty.o %t.out6
+## Case 6: Add a new section into an object file with more than one segment.
+## The section goes into the first segment, even if a later segment has the
+## requested name.
+# RUN: yaml2obj --docnum=3 %s -o %t.multi.o
+# RUN: llvm-objcopy --add-section __FOO,__baz=%t.data %t.multi.o %t.out6
 # RUN: llvm-readobj --sections --macho-segment %t.out6 \
-# RUN:   | FileCheck %s --check-prefixes=OBJ,CASE6
+# RUN:   | FileCheck %s --check-prefix=CASE6
 
 --- !mach-o
 IsLittleEndian:  true
@@ -50,7 +51,7 @@ FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x01000007
   cpusubtype:      0x00000003
-  filetype:        0x00000002
+  filetype:        0x00000002 # MH_EXECUTE
   ncmds:           3
   sizeofcmds:      248
   flags:           0x00000000
@@ -170,7 +171,7 @@ FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x01000007
   cpusubtype:      0x00000003
-  filetype:        0x00000001
+  filetype:        0x00000001 # MH_OBJECT
   ncmds:           1
   sizeofcmds:      152
   flags:           0x00002000
@@ -178,7 +179,7 @@ FileHeader:
 LoadCommands:
   - cmd:             LC_SEGMENT_64
     cmdsize:         152
-    segname:         '[[SEGNAME=__TEXT]]'
+    segname:         __TEXT
     vmaddr:          0
     vmsize:          4
     fileoff:         184
@@ -204,13 +205,86 @@ LoadCommands:
 
 # OBJ:          Name: __bar (5F 5F 62 61 72 00 00 00 00 00 00 00 00 00 00 00)
 # CASE4-NEXT:   Segment: __TEXT (5F 5F 54 45 58 54 00 00 00 00 00 00 00 00 00 00)
-# CASE5-NEXT:   Segment: (00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00)
-# CASE6-NEXT:   Segment: __FOO (5F 5F 46 4F 4F 00 00 00 00 00 00 00 00 00 00 00)
+# CASE5-NEXT:   Segment: __FOO (5F 5F 46 4F 4F 00 00 00 00 00 00 00 00 00 00 00)
 
 # OBJ:          Segment {
 # OBJ-NEXT:       Cmd: LC_SEGMENT_64
-# CASE4-NEXT:     Name: __TEXT{{$}}
-# CASE5-NEXT:     Name: {{$}}
-# CASE6-NEXT:     Name: {{$}}
+# OBJ-NEXT:       Name: __TEXT{{$}}
 # OBJ:            nsects: 2
 # OBJ-NOT:      Segment {
+
+--- !mach-o
+IsLittleEndian:  true
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x00000003
+  filetype:        0x00000001 # MH_OBJECT
+  ncmds:           2
+  sizeofcmds:      304
+  flags:           0x00002000
+  reserved:        0x00000000
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         152
+    segname:         __TEXT
+    vmaddr:          0
+    vmsize:          4
+    fileoff:         336
+    filesize:        4
+    maxprot:         7
+    initprot:        7
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0000000000000000
+        content:         'AABBCCDD'
+        size:            4
+        offset:          336
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         152
+    segname:         __FOO
+    vmaddr:          4
+    vmsize:          4
+    fileoff:         340
+    filesize:        4
+    maxprot:         7
+    initprot:        7
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        __bar
+        segname:         __FOO
+        addr:            0x0000000000000004
+        content:         '11223344'
+        size:            4
+        offset:          340
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+
+# CASE6:          Name: __baz (5F 5F 62 61 7A 00 00 00 00 00 00 00 00 00 00 00)
+# CASE6-NEXT:     Segment: __FOO (5F 5F 46 4F 4F 00 00 00 00 00 00 00 00 00 00 00)
+
+# CASE6:        Segment {
+# CASE6-NEXT:     Cmd: LC_SEGMENT_64
+# CASE6-NEXT:     Name: __TEXT{{$}}
+# CASE6:          nsects: 2
+# CASE6:        Segment {
+# CASE6-NEXT:     Cmd: LC_SEGMENT_64
+# CASE6-NEXT:     Name: __FOO{{$}}
+# CASE6:          nsects: 1
+# CASE6-NOT:    Segment {
