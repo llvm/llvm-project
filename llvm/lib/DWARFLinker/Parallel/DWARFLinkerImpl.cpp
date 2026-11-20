@@ -624,6 +624,12 @@ Error DWARFLinkerImpl::LinkContext::link(TypeUnit *ArtificialTypeUnit) {
     });
   }
 
+  // The input is unloaded next, while the units are only placed once all the
+  // inputs are linked.
+  for (std::unique_ptr<CompileUnit> &CU : CompileUnits)
+    if (CU->getStage() != CompileUnit::Stage::Skipped)
+      CU->saveRelocations();
+
   if (GlobalData.getOptions().UpdateIndexTablesOnly) {
     // Emit Invariant sections.
 
@@ -992,6 +998,8 @@ void DWARFLinkerImpl::glueCompileUnitsAndWriteToTheOutput() {
   // Go through all object files, all compile units and assign
   // offsets to them.
   assignOffsets();
+
+  forEachCompileUnit([&](CompileUnit *CU) { CU->reportUnitOffsets(); });
 
   // Patch size/offsets fields according to the assigned CU offsets.
   patchOffsetsAndSizes();
