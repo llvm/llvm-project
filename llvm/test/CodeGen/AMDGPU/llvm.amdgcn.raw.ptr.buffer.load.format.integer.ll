@@ -23,14 +23,6 @@ define amdgpu_ps <4 x float> @raw_ptr_buffer_load_format_v4i32(ptr addrspace(8) 
 ; GISEL-NEXT:    s_mov_b32 s3, s5
 ; GISEL-NEXT:    buffer_load_format_xyzw v[0:3], off, s[0:3], 0
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GISEL-NEXT:    v_readfirstlane_b32 s0, v0
-; GISEL-NEXT:    v_readfirstlane_b32 s1, v1
-; GISEL-NEXT:    v_readfirstlane_b32 s2, v2
-; GISEL-NEXT:    v_readfirstlane_b32 s3, v3
-; GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; GISEL-NEXT:    v_mov_b32_e32 v1, s1
-; GISEL-NEXT:    v_mov_b32_e32 v2, s2
-; GISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GISEL-NEXT:    ; return to shader part epilog
 main_body:
   %data = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.format.v4i32(ptr addrspace(8) %rsrc, i32 0, i32 0, i32 0)

@@ -2,11 +2,11 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgpu9.00-mesa-mesa3d < %s | FileCheck -check-prefixes=GCN,GCN-SDAG %s
 ; RUN: llc -global-isel=1 -mtriple=amdgpu9.00-mesa-mesa3d < %s | FileCheck -check-prefixes=GCN,GCN-GISEL %s
 
-; RUN: llc -global-isel=0 -mtriple=amdgpu10.10-mesa-mesa3d < %s | FileCheck -check-prefixes=GFX10,GFX10-SDAG %s
-; RUN: llc -global-isel=1 -mtriple=amdgpu10.10-mesa-mesa3d < %s | FileCheck -check-prefixes=GFX10,GFX10-GISEL %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu10.10-mesa-mesa3d < %s | FileCheck -check-prefix=GFX10 %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu10.10-mesa-mesa3d < %s | FileCheck -check-prefix=GFX10 %s
 
-; RUN: llc -global-isel=0 -mtriple=amdgpu11.00-mesa-mesa3d -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefixes=GFX11,GFX11-SDAG %s
-; RUN: llc -global-isel=1 -mtriple=amdgpu11.00-mesa-mesa3d -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefixes=GFX11,GFX11-GISEL %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu11.00-mesa-mesa3d -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefix=GFX11 %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu11.00-mesa-mesa3d -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefix=GFX11 %s
 
 define double @v_constained_fsub_f64_fpexcept_strict(double %x, double %y) #0 {
 ; GCN-LABEL: v_constained_fsub_f64_fpexcept_strict:
@@ -190,38 +190,17 @@ define amdgpu_ps <2 x float> @s_constained_fsub_f64_fpexcept_strict(double inreg
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v1, s3
 ; GCN-GISEL-NEXT:    v_add_f64 v[0:1], v[0:1], -s[4:5]
-; GCN-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
-; GCN-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
-; GCN-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; GCN-GISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; GCN-GISEL-NEXT:    ; return to shader part epilog
 ;
-; GFX10-SDAG-LABEL: s_constained_fsub_f64_fpexcept_strict:
-; GFX10-SDAG:       ; %bb.0:
-; GFX10-SDAG-NEXT:    v_add_f64 v[0:1], s[2:3], -s[4:5]
-; GFX10-SDAG-NEXT:    ; return to shader part epilog
+; GFX10-LABEL: s_constained_fsub_f64_fpexcept_strict:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    v_add_f64 v[0:1], s[2:3], -s[4:5]
+; GFX10-NEXT:    ; return to shader part epilog
 ;
-; GFX10-GISEL-LABEL: s_constained_fsub_f64_fpexcept_strict:
-; GFX10-GISEL:       ; %bb.0:
-; GFX10-GISEL-NEXT:    v_add_f64 v[0:1], s[2:3], -s[4:5]
-; GFX10-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX10-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX10-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; GFX10-GISEL-NEXT:    v_mov_b32_e32 v1, s1
-; GFX10-GISEL-NEXT:    ; return to shader part epilog
-;
-; GFX11-SDAG-LABEL: s_constained_fsub_f64_fpexcept_strict:
-; GFX11-SDAG:       ; %bb.0:
-; GFX11-SDAG-NEXT:    v_add_f64 v[0:1], s[0:1], -s[2:3]
-; GFX11-SDAG-NEXT:    ; return to shader part epilog
-;
-; GFX11-GISEL-LABEL: s_constained_fsub_f64_fpexcept_strict:
-; GFX11-GISEL:       ; %bb.0:
-; GFX11-GISEL-NEXT:    v_add_f64 v[0:1], s[0:1], -s[2:3]
-; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX11-GISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX11-GISEL-NEXT:    ; return to shader part epilog
+; GFX11-LABEL: s_constained_fsub_f64_fpexcept_strict:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    v_add_f64 v[0:1], s[0:1], -s[2:3]
+; GFX11-NEXT:    ; return to shader part epilog
   %val = call double @llvm.experimental.constrained.fsub.f64(double %x, double %y, metadata !"round.tonearest", metadata !"fpexcept.strict")
   %cast = bitcast double %val to <2 x float>
   ret <2 x float> %cast
