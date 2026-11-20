@@ -218,6 +218,7 @@ getBestVariantMatchForContext(const SmallVectorImpl<VariantMatchInfo> &VMIs,
 
 /// Return the indices (into \p VMIs) of the variants applicable in \p Ctx,
 /// by decreasing score and, for equal scores, by position in \p VMIs.
+/// Among equal scores, a strict subset of another variant goes after it.
 /// \p ConditionIds gives each variant's user condition an id (0 for none);
 /// a selector is only a subset of another if their conditions match.
 LLVM_ABI SmallVector<unsigned> getOrderedVariantMatchesForContext(

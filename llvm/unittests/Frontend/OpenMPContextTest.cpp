@@ -841,11 +841,12 @@ TEST_F(OpenMPContextTest, OrderedVariantMatches) {
   NoMatch.addTrait(TraitProperty::user_condition_false, "");
   Scored.addTrait(TraitProperty::implementation_vendor_llvm, "", &Three);
 
-  // Plain and Scored are strict subsets of Vendor, so they score zero and
-  // keep their order. NoMatch is dropped.
+  // Scored has the highest score, even though it is a strict subset of Vendor.
+  // Plain is a strict subset of Vendor with the same score, so it goes after
+  // it. NoMatch is dropped.
   SmallVector<VariantMatchInfo, 4> Candidates{Plain, Vendor, NoMatch, Scored};
   EXPECT_EQ(getOrderedVariantMatchesForContext(Candidates, Context),
-            (SmallVector<unsigned>{1, 0, 3}));
+            (SmallVector<unsigned>{3, 1, 0}));
 
   // Same condition: Plain is a strict subset of Vendor and goes last.
   SmallVector<VariantMatchInfo, 2> Pair{Plain, Vendor};
