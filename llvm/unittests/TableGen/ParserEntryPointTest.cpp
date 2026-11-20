@@ -30,11 +30,40 @@ TEST(Parser, SanityTest) {
       MemoryBuffer::getMemBuffer(SimpleTdSource, "test_buffer"), SMLoc());
 
   RecordKeeper Records;
-  bool ProcessResult = TableGenParseFile(SrcMgr, Records);
+  bool ProcessResult =
+      TableGenParseFile(SrcMgr, Records, /*TrackReferenceLocs=*/false);
   EXPECT_FALSE(ProcessResult);
 
   const Record *Foo = Records.getDef("Foo");
   std::optional<StringRef> Field = Foo->getValueAsOptionalString("strField");
   EXPECT_TRUE(Field.has_value());
   EXPECT_EQ(*Field, "value");
+}
+
+// Check that reference locations are only recorded when requested.
+TEST(Parser, TrackReferenceLocs) {
+  const char *TdSource = R"td(
+    class Foo {
+      int x = 1;
+    }
+    def Bar : Foo {
+      int y = x;
+    }
+  )td";
+
+  for (bool Track : {false, true}) {
+    SourceMgr SrcMgr;
+    SrcMgr.AddNewSourceBuffer(
+        MemoryBuffer::getMemBuffer(TdSource, "test_buffer"), SMLoc());
+
+    RecordKeeper Records;
+    EXPECT_FALSE(TableGenParseFile(SrcMgr, Records, Track));
+
+    const Record *Foo = Records.getClass("Foo");
+    const Record *Bar = Records.getDef("Bar");
+    ASSERT_TRUE(Foo && Bar);
+    const Init *X = StringInit::get(Records, "x");
+    EXPECT_EQ(Foo->getReferenceLocs().size(), Track ? 1u : 0u);
+    EXPECT_EQ(Bar->getValueReferenceLocs(X).size(), Track ? 1u : 0u);
+  }
 }
