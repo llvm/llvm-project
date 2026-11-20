@@ -481,7 +481,7 @@ lowerConstrainedFmuladd(IntrinsicInst *II,
   EraseFromParent.push_back(II);
 }
 
-// Give a zero minnum/maxnum result the sign llvm.minimum/maximum require.
+// Give a zero minnum/maxnum result the sign llvm.minimum/maximum(num) require.
 static Value *fixZeroSign(IRBuilderBase &Builder, bool IsMax, Value *Res,
                           Value *X, Value *Y) {
   Type *Ty = X->getType();
@@ -533,7 +533,9 @@ static void lowerFMinimumMaximum(IntrinsicInst *II,
   EraseFromParent.push_back(II);
 }
 
-// Replace single NaNs before minnum/maxnum and correct the zero ordering.
+// The SPIR-V fmin/fmax and NMin/NMax that minnum/maxnum lower to may return NaN
+// for an sNaN input and either zero for -0.0 vs +0.0; minimumnum/maximumnum
+// may not.
 static void
 lowerFMinimumMaximumNum(IntrinsicInst *II,
                         SmallVector<Instruction *> &EraseFromParent) {
@@ -546,7 +548,8 @@ lowerFMinimumMaximumNum(IntrinsicInst *II,
     X = Builder.CreateSelect(Builder.CreateFCmpUNO(X, X), Y, X);
     Y = Builder.CreateSelect(Builder.CreateFCmpUNO(Y, Y), X, Y);
   }
-  // No flags: SPIR-V NSZ and Fast would also drop the sign of same-sign zeros.
+  // Don't forward flags: SPIR-V NSZ and Fast would also drop the sign of
+  // same-sign zeros.
   Value *Res = Builder.CreateIntrinsic(
       IsMax ? Intrinsic::maxnum : Intrinsic::minnum, {Ty}, {X, Y});
   if (!FMF.noSignedZeros())
