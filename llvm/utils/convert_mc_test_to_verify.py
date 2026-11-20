@@ -34,12 +34,12 @@ DIAG_RE = re.compile(
     (?:
       (?P<unknown><unknown>:0:\s*)
     |
-      (?:<stdin>|[^\s:\[]*):?                       # Optional filename
+      (?P<file><stdin>|[^\s:\[\d][^\s:\[]*)?:?      # Optional filename
       (?:
         \[\[\#?\s*@LINE(?P<offset>[+-]\d+)?\]\]     # [[@LINE]] or [[#@LINE+N]]
       | \[\[\#\]\]                                  # [[#]]
       | \{\{\[0-9\]\+\}\}                           # {{[0-9]+}}
-      | \b\d+                                       # Fixed line number
+      | \b(?P<line>\d+)                             # Fixed line number
       ):
       (?:
         (?:
@@ -241,6 +241,9 @@ def convert(path: pathlib.Path, inline: bool = False) -> str | None:
             continue
         if m["suffix"] == "-LABEL":
             return None
+        # Fatal errors are not diagnostics, so --verify cannot check them.
+        if m["body"].startswith("LLVM ERROR:"):
+            return None
         diag = DIAG_RE.fullmatch(m["body"])
         if not diag:
             return None
@@ -250,11 +253,21 @@ def convert(path: pathlib.Path, inline: bool = False) -> str | None:
             return None
 
         offset = None
+        # Fixed line numbers in other files (e.g. from '# 3 "file"' markers)
+        # do not correspond to lines in the test.
+        file = diag["file"]
+        in_test = not file or file in ("<stdin>", path.name) or "{{" in file
         if diag["unknown"]:
             loc = "@unknown"
         elif diag["offset"]:
             offset = int(diag["offset"])
             loc = "@" + diag["offset"]
+        elif diag["line"] and in_test:
+            # Account for the multi-line RUN lines collapsed above the target.
+            target = int(diag["line"]) - 1
+            target -= sum(r.last_line - r.first_line for r in runs if r.last_line <= target)
+            offset = target - i
+            loc = f"@{offset:+d}" if offset else ""
         elif m["code"].strip():
             loc = ""  # Trailing comment on the same line as the code.
         else:
