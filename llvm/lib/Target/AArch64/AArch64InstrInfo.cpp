@@ -223,6 +223,11 @@ AArch64InstrInfo::getInstSizeInBytesNoGuard(const MachineInstr &MI) const {
   if (MI.isMetaInstruction())
     return 0;
 
+  // SEH pseudos only emit unwind opcodes into .xdata. Size = 0 in the .td does
+  // not work: the default case below treats getSize() == 0 as "unset".
+  if (isSEHInstruction(MI))
+    return 0;
+
   // FIXME: We currently only handle pseudoinstructions that don't get expanded
   //        before the assembly printer.
   unsigned NumBytes = 0;
