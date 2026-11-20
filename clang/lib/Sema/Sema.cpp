@@ -2692,13 +2692,30 @@ void Sema::setFunctionHasMustTail() {
     FunctionScopes.back()->setHasMustTail();
 }
 
+/// Whether \p Outer encloses \p DC semantically or lexically. A block-scope
+/// declaration in a lambda or block has the enclosing function or namespace as
+/// its semantic DeclContext, while its lexical DeclContext is enclosed by the
+/// lambda or block. Re-entering the context of such a declaration (e.g. to
+/// late-parse its attributes) does not leave the lambda or block.
+static bool enclosesContext(const DeclContext *Outer, const DeclContext *DC) {
+  return Outer->Encloses(DC) || Outer->LexicallyEncloses(DC);
+}
+
+/// Whether the lambda of \p LSI encloses \p DC semantically or lexically. The
+/// lexical DeclContext of the call operator of a lambda is the context of the
+/// lambda expression rather than the closure type.
+static bool enclosesContext(const LambdaScopeInfo *LSI, const DeclContext *DC) {
+  return enclosesContext(LSI->Lambda, DC) ||
+         (LSI->CallOperator && LSI->CallOperator->LexicallyEncloses(DC));
+}
+
 BlockScopeInfo *Sema::getCurBlock() {
   if (FunctionScopes.empty())
     return nullptr;
 
   auto CurBSI = dyn_cast<BlockScopeInfo>(FunctionScopes.back());
   if (CurBSI && CurBSI->TheDecl &&
-      !CurBSI->TheDecl->Encloses(CurContext)) {
+      !enclosesContext(CurBSI->TheDecl, CurContext)) {
     // We have switched contexts due to template instantiation.
     assert(!CodeSynthesisContexts.empty());
     return nullptr;
@@ -2723,7 +2740,7 @@ CapturingScopeInfo *Sema::getEnclosingLambdaOrBlock() const {
   for (auto *Scope : llvm::reverse(FunctionScopes)) {
     if (auto *CSI = dyn_cast<CapturingScopeInfo>(Scope)) {
       auto *LSI = dyn_cast<LambdaScopeInfo>(CSI);
-      if (LSI && LSI->Lambda && !LSI->Lambda->Encloses(CurContext) &&
+      if (LSI && LSI->Lambda && !enclosesContext(LSI, CurContext) &&
           LSI->AfterParameterList) {
         // We have switched contexts due to template instantiation.
         // FIXME: We should swap out the FunctionScopes during code synthesis
@@ -2751,7 +2768,7 @@ LambdaScopeInfo *Sema::getCurLambda(bool IgnoreNonLambdaCapturingScope) {
   }
   auto *CurLSI = dyn_cast<LambdaScopeInfo>(*I);
   if (CurLSI && CurLSI->Lambda && CurLSI->CallOperator &&
-      !CurLSI->Lambda->Encloses(CurContext) && CurLSI->AfterParameterList) {
+      !enclosesContext(CurLSI, CurContext) && CurLSI->AfterParameterList) {
     // We have switched contexts due to template instantiation.
     assert(!CodeSynthesisContexts.empty());
     return nullptr;
