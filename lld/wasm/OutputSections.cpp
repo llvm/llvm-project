@@ -11,9 +11,13 @@
 #include "InputElement.h"
 #include "InputFiles.h"
 #include "OutputSegment.h"
+#include "SymbolTable.h"
+#include "Symbols.h"
 #include "WriterUtils.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/LEB128.h"
 
@@ -293,5 +297,62 @@ void CustomSection::writeRelocations(raw_ostream &os) const {
     s->writeRelocations(os);
 }
 
+MemtagGlobalsSection::MemtagGlobalsSection()
+    : OutputSection(llvm::wasm::WASM_SEC_CUSTOM, "memtag.globals") {
+  // A relocatable or PIC output does not have final addresses for the
+  // descriptors; a later link (or the dynamic loader) has to assign them.
+  if (ctx.arg.relocatable || ctx.isPic)
+    return;
+
+  llvm::SmallVector<std::pair<uint64_t, uint64_t>, 16> globals;
+  // Local (static) tagged globals never make it into the symbol table, so
+  // walk each input file's symbol list as well.
+  for (InputFile *file : ctx.objectFiles) {
+    for (Symbol *sym : file->getSymbols()) {
+      if (!sym->isMemtag() || !isa<DefinedData>(sym) || sym->isDiscarded() ||
+          !sym->isLive())
+        continue;
+      auto *data = cast<DefinedData>(sym);
+      if (!data->segment)
+        continue;
+      globals.push_back({data->getVA(), data->getSize()});
+    }
+  }
+  if (globals.empty())
+    return;
+
+  llvm::sort(globals);
+  globals.erase(llvm::unique(globals), globals.end());
+
+  raw_string_ostream os(payload);
+  encodeULEB128(1, os); // version
+  encodeULEB128(globals.size(), os);
+  for (auto [addr, size] : globals) {
+    encodeULEB128(addr, os);
+    encodeULEB128(size, os);
+  }
+
+  raw_string_ostream nameOs(nameData);
+  encodeULEB128(name.size(), nameOs);
+  nameOs << name;
+
+  if (payload.size() + nameData.size() > UINT32_MAX)
+    error("section '" + name + "' too large to encode");
+}
+
+void MemtagGlobalsSection::finalizeContents() {
+  if (payload.empty())
+    return;
+  createHeader(payload.size() + nameData.size());
+}
+
+void MemtagGlobalsSection::writeTo(uint8_t *buf) {
+  buf += offset;
+  memcpy(buf, header.data(), header.size());
+  buf += header.size();
+  memcpy(buf, nameData.data(), nameData.size());
+  buf += nameData.size();
+  memcpy(buf, payload.data(), payload.size());
+}
 } // namespace wasm
 } // namespace lld
