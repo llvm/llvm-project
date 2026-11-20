@@ -11,7 +11,7 @@ target triple = "aarch64-none-elf"
 
 define float @fmaxnum_reduction_f32(float %base, i32 %n) {
 ; CHECK-LABEL: 'fmaxnum_reduction_f32'
-; CHECK:  Cost of 1 for VF 2: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
+; CHECK:  Cost of 1 for VF 2: ir<%iv> = WIDEN-INDUCTION nuw snsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; CHECK:  Cost of 0 for VF 2: WIDEN-REDUCTION-PHI ir<%max> = phi (fmaxnum) ir<-1.000000e+07>, ir<%max.next>
 ; CHECK:  Cost of 1 for VF 2: WIDEN-CAST ir<%iv.f> = sitofp ir<%iv> to float
 ; CHECK:  Cost of 1 for VF 2: WIDEN ir<%v> = fadd ir<%base>, ir<%iv.f>
@@ -42,7 +42,7 @@ define float @fmaxnum_reduction_f32(float %base, i32 %n) {
 ; CHECK:  Cost of 0 for VF 2: EMIT vp<[[VP14:%[0-9]+]]> = and vp<%cmp.n>, vp<[[VP13]]>
 ; CHECK:  Cost of 0 for VF 2: EMIT branch-on-cond vp<[[VP14]]>
 ; CHECK:  Cost of 0 for VF 2: IR %max.next.lcssa = phi float [ %max.next, %loop ] (extra operand: vp<[[VP12]]> from middle.block)
-; CHECK:  Cost of 1 for VF 4: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
+; CHECK:  Cost of 1 for VF 4: ir<%iv> = WIDEN-INDUCTION nuw snsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK:  Cost of 0 for VF 4: WIDEN-REDUCTION-PHI ir<%max> = phi (fmaxnum) ir<-1.000000e+07>, ir<%max.next>
 ; CHECK:  Cost of 1 for VF 4: WIDEN-CAST ir<%iv.f> = sitofp ir<%iv> to float
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%v> = fadd ir<%base>, ir<%iv.f>
@@ -94,7 +94,7 @@ exit:
 
 define double @fmaxnum_reduction_f64(double %base, i64 %n) {
 ; CHECK-LABEL: 'fmaxnum_reduction_f64'
-; CHECK:  Cost of 1 for VF 2: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
+; CHECK:  Cost of 1 for VF 2: ir<%iv> = WIDEN-INDUCTION nuw snsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; CHECK:  Cost of 0 for VF 2: WIDEN-REDUCTION-PHI ir<%max> = phi (fmaxnum) ir<-1.000000e+07>, ir<%max.next>
 ; CHECK:  Cost of 1 for VF 2: WIDEN-CAST ir<%iv.f> = sitofp ir<%iv> to double
 ; CHECK:  Cost of 1 for VF 2: WIDEN ir<%v> = fadd ir<%base>, ir<%iv.f>
@@ -185,8 +185,8 @@ define i32 @switch_to_cmp(ptr %s, ptr %dst, i64 %n) {
 ; CHECK:  Cost of 0 for VF 2: EMIT vp<[[VP34:%[0-9]+]]> = or vp<[[VP33]]>, vp<[[VP19]]>
 ; CHECK:  Cost of 0 for VF 2: EMIT vp<[[VP35:%[0-9]+]]> = or vp<[[VP34]]>, vp<[[VP20]]>
 ; CHECK:  Cost of 0 for VF 2: EMIT vp<[[VP36:%[0-9]+]]> = or vp<[[VP35]]>, vp<[[VP21]]>
-; CHECK:  Cost of 1 for VF 2: WIDEN ir<%c.4> = add ir<%c>, ir<4>
-; CHECK:  Cost of 1 for VF 2: WIDEN ir<%c.1> = add ir<%c>, ir<1>
+; CHECK:  Cost of 1 for VF 2: WIDEN ir<%c.4> = add ir<%c>, ir<4> (!vplan.execution.frequency 1085102596613472255 (5.882%, estimated))
+; CHECK:  Cost of 1 for VF 2: WIDEN ir<%c.1> = add ir<%c>, ir<1> (!vplan.execution.frequency 16276538884777574400 (88.24%, estimated))
 ; CHECK:  Cost of 7 for VF 2: BLEND ir<%c.next> = ir<%c> ir<%c.4>/vp<[[VP22]]> ir<%c.1>/vp<[[VP36]]>
 ; CHECK:  Cost of 0 for VF 2: CLONE ir<%dst.gep> = getelementptr ir<%dst>, vp<[[VP5]]>
 ; CHECK:  Cost of 0 for VF 2: vp<[[VP37:%[0-9]+]]> = vector-pointer i8, ir<%dst.gep>, ir<1>
@@ -243,8 +243,8 @@ define i32 @switch_to_cmp(ptr %s, ptr %dst, i64 %n) {
 ; CHECK:  Cost of 0 for VF 4: EMIT vp<[[VP34]]> = or vp<[[VP33]]>, vp<[[VP19]]>
 ; CHECK:  Cost of 0 for VF 4: EMIT vp<[[VP35]]> = or vp<[[VP34]]>, vp<[[VP20]]>
 ; CHECK:  Cost of 0 for VF 4: EMIT vp<[[VP36]]> = or vp<[[VP35]]>, vp<[[VP21]]>
-; CHECK:  Cost of 1 for VF 4: WIDEN ir<%c.4> = add ir<%c>, ir<4>
-; CHECK:  Cost of 1 for VF 4: WIDEN ir<%c.1> = add ir<%c>, ir<1>
+; CHECK:  Cost of 1 for VF 4: WIDEN ir<%c.4> = add ir<%c>, ir<4> (!vplan.execution.frequency 1085102596613472255 (5.882%, estimated))
+; CHECK:  Cost of 1 for VF 4: WIDEN ir<%c.1> = add ir<%c>, ir<1> (!vplan.execution.frequency 16276538884777574400 (88.24%, estimated))
 ; CHECK:  Cost of 13 for VF 4: BLEND ir<%c.next> = ir<%c> ir<%c.4>/vp<[[VP22]]> ir<%c.1>/vp<[[VP36]]>
 ; CHECK:  Cost of 0 for VF 4: CLONE ir<%dst.gep> = getelementptr ir<%dst>, vp<[[VP5]]>
 ; CHECK:  Cost of 0 for VF 4: vp<[[VP37]]> = vector-pointer i8, ir<%dst.gep>, ir<1>
@@ -301,8 +301,8 @@ define i32 @switch_to_cmp(ptr %s, ptr %dst, i64 %n) {
 ; CHECK:  Cost of 0 for VF 8: EMIT vp<[[VP34]]> = or vp<[[VP33]]>, vp<[[VP19]]>
 ; CHECK:  Cost of 0 for VF 8: EMIT vp<[[VP35]]> = or vp<[[VP34]]>, vp<[[VP20]]>
 ; CHECK:  Cost of 0 for VF 8: EMIT vp<[[VP36]]> = or vp<[[VP35]]>, vp<[[VP21]]>
-; CHECK:  Cost of 2 for VF 8: WIDEN ir<%c.4> = add ir<%c>, ir<4>
-; CHECK:  Cost of 2 for VF 8: WIDEN ir<%c.1> = add ir<%c>, ir<1>
+; CHECK:  Cost of 2 for VF 8: WIDEN ir<%c.4> = add ir<%c>, ir<4> (!vplan.execution.frequency 1085102596613472255 (5.882%, estimated))
+; CHECK:  Cost of 2 for VF 8: WIDEN ir<%c.1> = add ir<%c>, ir<1> (!vplan.execution.frequency 16276538884777574400 (88.24%, estimated))
 ; CHECK:  Cost of 10 for VF 8: BLEND ir<%c.next> = ir<%c> ir<%c.4>/vp<[[VP22]]> ir<%c.1>/vp<[[VP36]]>
 ; CHECK:  Cost of 0 for VF 8: CLONE ir<%dst.gep> = getelementptr ir<%dst>, vp<[[VP5]]>
 ; CHECK:  Cost of 0 for VF 8: vp<[[VP37]]> = vector-pointer i8, ir<%dst.gep>, ir<1>
@@ -359,8 +359,8 @@ define i32 @switch_to_cmp(ptr %s, ptr %dst, i64 %n) {
 ; CHECK:  Cost of 0 for VF 16: EMIT vp<[[VP34]]> = or vp<[[VP33]]>, vp<[[VP19]]>
 ; CHECK:  Cost of 0 for VF 16: EMIT vp<[[VP35]]> = or vp<[[VP34]]>, vp<[[VP20]]>
 ; CHECK:  Cost of 0 for VF 16: EMIT vp<[[VP36]]> = or vp<[[VP35]]>, vp<[[VP21]]>
-; CHECK:  Cost of 4 for VF 16: WIDEN ir<%c.4> = add ir<%c>, ir<4>
-; CHECK:  Cost of 4 for VF 16: WIDEN ir<%c.1> = add ir<%c>, ir<1>
+; CHECK:  Cost of 4 for VF 16: WIDEN ir<%c.4> = add ir<%c>, ir<4> (!vplan.execution.frequency 1085102596613472255 (5.882%, estimated))
+; CHECK:  Cost of 4 for VF 16: WIDEN ir<%c.1> = add ir<%c>, ir<1> (!vplan.execution.frequency 16276538884777574400 (88.24%, estimated))
 ; CHECK:  Cost of 20 for VF 16: BLEND ir<%c.next> = ir<%c> ir<%c.4>/vp<[[VP22]]> ir<%c.1>/vp<[[VP36]]>
 ; CHECK:  Cost of 0 for VF 16: CLONE ir<%dst.gep> = getelementptr ir<%dst>, vp<[[VP5]]>
 ; CHECK:  Cost of 0 for VF 16: vp<[[VP37]]> = vector-pointer i8, ir<%dst.gep>, ir<1>
@@ -442,7 +442,7 @@ define void @blend_fcmp_olt_f32(ptr noalias %dst, ptr noalias %src, i64 %n) {
 ; CHECK:  Cost of 0 for VF 2: vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds float, ir<%src.gep>, ir<1>
 ; CHECK:  Cost of 1 for VF 2: WIDEN ir<%l> = load vp<[[VP5]]>
 ; CHECK:  Cost of 1 for VF 2: WIDEN ir<%c> = fcmp olt ir<%l>, ir<0.000000e+00>
-; CHECK:  Cost of 1 for VF 2: WIDEN ir<%add> = fadd ir<%l>, ir<1.000000e+00>
+; CHECK:  Cost of 1 for VF 2: WIDEN ir<%add> = fadd ir<%l>, ir<1.000000e+00> (!vplan.execution.frequency 9223372036854775807 (50%, estimated))
 ; CHECK:  Cost of 1 for VF 2: BLEND ir<%p> = ir<%l> ir<%add>/ir<%c>
 ; CHECK:  Cost of 0 for VF 2: CLONE ir<%dst.gep> = getelementptr inbounds ir<%dst>, vp<[[VP4]]>
 ; CHECK:  Cost of 0 for VF 2: vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds float, ir<%dst.gep>, ir<1>
@@ -465,7 +465,7 @@ define void @blend_fcmp_olt_f32(ptr noalias %dst, ptr noalias %src, i64 %n) {
 ; CHECK:  Cost of 0 for VF 4: vp<[[VP5]]> = vector-pointer inbounds float, ir<%src.gep>, ir<1>
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%l> = load vp<[[VP5]]>
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%c> = fcmp olt ir<%l>, ir<0.000000e+00>
-; CHECK:  Cost of 1 for VF 4: WIDEN ir<%add> = fadd ir<%l>, ir<1.000000e+00>
+; CHECK:  Cost of 1 for VF 4: WIDEN ir<%add> = fadd ir<%l>, ir<1.000000e+00> (!vplan.execution.frequency 9223372036854775807 (50%, estimated))
 ; CHECK:  Cost of 1 for VF 4: BLEND ir<%p> = ir<%l> ir<%add>/ir<%c>
 ; CHECK:  Cost of 0 for VF 4: CLONE ir<%dst.gep> = getelementptr inbounds ir<%dst>, vp<[[VP4]]>
 ; CHECK:  Cost of 0 for VF 4: vp<[[VP6]]> = vector-pointer inbounds float, ir<%dst.gep>, ir<1>
@@ -518,7 +518,7 @@ define void @blend_fcmp_uno_f32(ptr noalias %dst, ptr noalias %src, i64 %n) {
 ; CHECK:  Cost of 0 for VF 2: vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds float, ir<%src.gep>, ir<1>
 ; CHECK:  Cost of 1 for VF 2: WIDEN ir<%l> = load vp<[[VP5]]>
 ; CHECK:  Cost of 3 for VF 2: WIDEN ir<%c> = fcmp uno ir<%l>, ir<0.000000e+00>
-; CHECK:  Cost of 1 for VF 2: WIDEN ir<%add> = fadd ir<%l>, ir<1.000000e+00>
+; CHECK:  Cost of 1 for VF 2: WIDEN ir<%add> = fadd ir<%l>, ir<1.000000e+00> (!vplan.execution.frequency 17592186044415 (9.537E-5%, estimated))
 ; CHECK:  Cost of 2 for VF 2: BLEND ir<%p> = ir<%l> ir<%add>/ir<%c>
 ; CHECK:  Cost of 0 for VF 2: CLONE ir<%dst.gep> = getelementptr inbounds ir<%dst>, vp<[[VP4]]>
 ; CHECK:  Cost of 0 for VF 2: vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds float, ir<%dst.gep>, ir<1>
@@ -541,7 +541,7 @@ define void @blend_fcmp_uno_f32(ptr noalias %dst, ptr noalias %src, i64 %n) {
 ; CHECK:  Cost of 0 for VF 4: vp<[[VP5]]> = vector-pointer inbounds float, ir<%src.gep>, ir<1>
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%l> = load vp<[[VP5]]>
 ; CHECK:  Cost of 3 for VF 4: WIDEN ir<%c> = fcmp uno ir<%l>, ir<0.000000e+00>
-; CHECK:  Cost of 1 for VF 4: WIDEN ir<%add> = fadd ir<%l>, ir<1.000000e+00>
+; CHECK:  Cost of 1 for VF 4: WIDEN ir<%add> = fadd ir<%l>, ir<1.000000e+00> (!vplan.execution.frequency 17592186044415 (9.537E-5%, estimated))
 ; CHECK:  Cost of 2 for VF 4: BLEND ir<%p> = ir<%l> ir<%add>/ir<%c>
 ; CHECK:  Cost of 0 for VF 4: CLONE ir<%dst.gep> = getelementptr inbounds ir<%dst>, vp<[[VP4]]>
 ; CHECK:  Cost of 0 for VF 4: vp<[[VP6]]> = vector-pointer inbounds float, ir<%dst.gep>, ir<1>

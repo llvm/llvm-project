@@ -36,7 +36,7 @@ define i64 @argmin_first_index(ptr %arr, i64 %n, i64 %start) {
 ; DATA-NEXT:    [[TMP8:%.*]] = select <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i1> [[TMP5]], <vscale x 2 x i1> zeroinitializer
 ; DATA-NEXT:    [[TMP9]] = select <vscale x 2 x i1> [[TMP8]], <vscale x 2 x i64> [[VEC_IND]], <vscale x 2 x i64> [[VEC_PHI3]]
 ; DATA-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP1]]
-; DATA-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT2]]
+; DATA-NEXT:    [[VEC_IND_NEXT]] = add nuw <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT2]]
 ; DATA-NEXT:    [[TMP29:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; DATA-NEXT:    br i1 [[TMP29]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; DATA:       [[MIDDLE_BLOCK]]:
@@ -133,7 +133,7 @@ define i64 @argmin_first_index(ptr %arr, i64 %n, i64 %start) {
 ; DATA_AND_CONTROL-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[TMP18]], i64 [[TRIP_COUNT_MINUS_VF]])
 ; DATA_AND_CONTROL-NEXT:    [[TMP28:%.*]] = extractelement <vscale x 2 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; DATA_AND_CONTROL-NEXT:    [[TMP29:%.*]] = xor i1 [[TMP28]], true
-; DATA_AND_CONTROL-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT2]]
+; DATA_AND_CONTROL-NEXT:    [[VEC_IND_NEXT]] = add nuw <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT2]]
 ; DATA_AND_CONTROL-NEXT:    [[INDEX_NEXT]] = add i64 [[TMP18]], [[TMP1]]
 ; DATA_AND_CONTROL-NEXT:    br i1 [[TMP29]], label %[[MIDDLE_BLOCK:.*]], label %[[PRED_LOAD_CONTINUE5]], !llvm.loop [[LOOP0:![0-9]+]]
 ; DATA_AND_CONTROL:       [[MIDDLE_BLOCK]]:
@@ -202,7 +202,7 @@ define i64 @argmin_last_index(ptr %arr, i64 %n, i64 %start) {
 ; DATA-NEXT:    [[TMP8:%.*]] = select <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i1> [[TMP5]], <vscale x 2 x i1> zeroinitializer
 ; DATA-NEXT:    [[TMP9]] = select <vscale x 2 x i1> [[TMP8]], <vscale x 2 x i64> [[VEC_IND]], <vscale x 2 x i64> [[VEC_PHI3]]
 ; DATA-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP1]]
-; DATA-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT2]]
+; DATA-NEXT:    [[VEC_IND_NEXT]] = add nuw <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT2]]
 ; DATA-NEXT:    [[TMP29:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; DATA-NEXT:    br i1 [[TMP29]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; DATA:       [[MIDDLE_BLOCK]]:
@@ -299,7 +299,7 @@ define i64 @argmin_last_index(ptr %arr, i64 %n, i64 %start) {
 ; DATA_AND_CONTROL-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[TMP18]], i64 [[TRIP_COUNT_MINUS_VF]])
 ; DATA_AND_CONTROL-NEXT:    [[TMP28:%.*]] = extractelement <vscale x 2 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; DATA_AND_CONTROL-NEXT:    [[TMP29:%.*]] = xor i1 [[TMP28]], true
-; DATA_AND_CONTROL-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT2]]
+; DATA_AND_CONTROL-NEXT:    [[VEC_IND_NEXT]] = add nuw <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT2]]
 ; DATA_AND_CONTROL-NEXT:    [[INDEX_NEXT]] = add i64 [[TMP18]], [[TMP1]]
 ; DATA_AND_CONTROL-NEXT:    br i1 [[TMP29]], label %[[MIDDLE_BLOCK:.*]], label %[[PRED_LOAD_CONTINUE5]], !llvm.loop [[LOOP3:![0-9]+]]
 ; DATA_AND_CONTROL:       [[MIDDLE_BLOCK]]:
@@ -337,3 +337,19 @@ for.end:
 
 !0 = distinct !{!0, !1}
 !1 = !{!"llvm.loop.vectorize.enable"}
+;.
+; DATA: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
+; DATA: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
+; DATA: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
+; DATA: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]], [[META2]]}
+;.
+; DATA_NO_LANEMASK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
+; DATA_NO_LANEMASK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
+; DATA_NO_LANEMASK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
+; DATA_NO_LANEMASK: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]], [[META2]]}
+;.
+; DATA_AND_CONTROL: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
+; DATA_AND_CONTROL: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
+; DATA_AND_CONTROL: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
+; DATA_AND_CONTROL: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]], [[META2]]}
+;.

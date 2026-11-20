@@ -9,7 +9,7 @@ define void @scalar_intrinsic_print(i64 %x, ptr %p) {
 ; CHECK-NEXT:  Live-in ir<128> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<entry>:
-; CHECK-NEXT:    EMIT-SCALAR vp<[[VP2:%[0-9]+]]> = call i64 @llvm.vscale(){{$}}
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP2:%[0-9]+]]> = call i64 @llvm.vscale()
 ; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = shl nuw vp<[[VP2]]>, ir<2>
 ; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult ir<128>, vp<[[VP3]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
@@ -27,7 +27,7 @@ define void @scalar_intrinsic_print(i64 %x, ptr %p) {
 ; CHECK-NEXT:    EMIT-SCALAR vp<%index> = phi [ ir<0>, vector.ph ], [ vp<%index.next>, vector.body ]
 ; CHECK-NEXT:    WIDEN-PHI vp<[[VP8:%[0-9]+]]> = phi [ vp<[[VP6]]>, vector.ph ], [ vp<%vec.ind.next>, vector.body ]
 ; CHECK-NEXT:    EMIT vp<%index.next> = add nuw vp<%index>, vp<[[VP3]]>
-; CHECK-NEXT:    EMIT vp<%vec.ind.next> = add nuw nsw vp<[[VP8]]>, vp<[[VP7]]>
+; CHECK-NEXT:    EMIT vp<%vec.ind.next> = add nuw snsw vp<[[VP8]]>, vp<[[VP7]]>
 ; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = icmp eq vp<%index.next>, vp<%n.vec>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP9]]>
 ; CHECK-NEXT:  Successor(s): middle.block, vector.body
