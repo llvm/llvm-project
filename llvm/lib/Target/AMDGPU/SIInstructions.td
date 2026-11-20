@@ -1336,8 +1336,9 @@ defm SI_SPILL_S512 : SI_SPILL_SGPR <SReg_512>;
 defm SI_SPILL_S1024 : SI_SPILL_SGPR <SReg_1024>;
 
 // Save one word in its original position in a tuple's shared spill slot.
-// Scratch lowering may read the other words to preserve them when no SGPR is
-// available to save EXEC. The data operand only reads this one source word.
+// Modeled as a pure store (mayLoad = 0). The fallback expansion with no SGPR to
+// save EXEC reload-preserves the slot's other words internally, but writes them
+// back unchanged, so there is no externally visible load.
 let UseNamedOperandTable = 1, Spill = 1, SALU = 1, Uses = [EXEC],
     mayStore = 1, mayLoad = 0 in
 def SI_SPILL_S32_SAVE_PARTIAL : PseudoInstSI<

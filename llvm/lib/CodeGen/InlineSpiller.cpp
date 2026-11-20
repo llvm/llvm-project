@@ -107,10 +107,9 @@ class HoistSpillHelper : private LiveRangeEdit::Delegate {
       MapVector<std::pair<int, VNInfo *>, SmallPtrSet<MachineInstr *, 16>>;
   MergeableSpillsMap MergeableSpills;
 
-  // Stack slots that received a partial (lane-masked) spill this run. A partial
-  // store covers only some lanes, so skip whole-slot optimizations (redundant-
-  // spill elimination, folding, spill hoisting/merging) on them. Sticky and
-  // conservative.
+  // Stack slots that received a partial (lane-masked) spill. A partial store
+  // covers only some lanes, so whole-slot optimizations (redundant-spill
+  // elimination, folding, spill hoisting/merging) must skip them.
   DenseSet<int> PartialSpillSlots;
 
   /// This is the map from original register to a set containing all its
@@ -252,9 +251,8 @@ private:
 
 } // end anonymous namespace
 
-// Return the lanes of LI that are live at Idx -- the lanes a spill must cover
-// there. A vreg without subranges is tracked as a whole, so every lane is live
-// wherever the interval is live; return the full mask.
+// Lanes of LI live at Idx -- the lanes a spill there must cover. A vreg without
+// subranges is tracked whole, so return the full mask wherever it is live.
 static LaneBitmask getLiveSpillLanes(const LiveInterval &LI, SlotIndex Idx,
                                      const MachineRegisterInfo &MRI) {
   if (!LI.hasSubRanges())
@@ -401,9 +399,7 @@ bool InlineSpiller::isSnippet(const LiveInterval &SnipLI) {
     if (SnipLI.reg() == TII.isLoadFromStackSlot(MI, FI) && FI == StackSlot)
       continue;
 
-    // Allow a stack slot store only when it covers the whole value. A known
-    // size smaller than the spill size is a partial store, so treat it as a
-    // real use. An unknown (zero) or scalable size counts as whole-value.
+    // Allow stack slot stores.
     TypeSize StoreBytes = TypeSize::getZero();
     if (SnipLI.reg() == TII.isStoreToStackSlot(MI, FI, StoreBytes) &&
         FI == StackSlot &&
@@ -513,20 +509,15 @@ bool InlineSpiller::hoistSpillInsideBB(LiveInterval &SpillLI,
   if (Lanes.none())
     return false;
 
-  // The hoist can only spill SrcReg as a full-width stack store. KeepLanes is
-  // non-empty when CopyMI cannot be spilled lane-masked natively: the lanes its
-  // partial def leaves unwritten but whose slot value is still needed later.
   if (KeepLanes.any()) {
-    // Lanes: lanes SrcReg holds at its def. KeepLanes ⊆ Lanes: the full-width
-    // store carries every KeepLane, hoist is safe. KeepLanes ⊄ Lanes: it
-    // clobbers the uncovered ones with bits SrcReg does not hold, so bail to
-    // the reload + full-width store path.
+    // KeepLanes ⊆ Lanes: the full-width store of SrcReg carries every KeepLane,
+    // so the hoist is safe. Otherwise it clobbers uncovered lanes with bits
+    // SrcReg does not hold -- bail to the reload + full-width store path.
     if ((KeepLanes & ~Lanes).any())
       return false;
   } else {
-    // Defer a partially-live SrcReg the target can spill lane-masked to the
-    // native partial-store path. Reachable only once native partial-store
-    // optimization support is enabled.
+    // A partially-live SrcReg would be spilled with the target's native partial
+    // store. Disable hoisting for that case for now, to be re-enabled later.
     const TargetRegisterClass *RC = MRI.getRegClass(SrcReg);
     if (Lanes != MRI.getMaxLaneMaskForVReg(SrcReg) &&
         TII.canStoreRegToStackSlotWithLanes(RC, Lanes))
@@ -595,8 +586,6 @@ bool InlineSpiller::hoistSpillInsideBB(LiveInterval &SpillLI,
 /// redundant spills of this value in SLI.reg and sibling copies.
 void InlineSpiller::eliminateRedundantSpills(LiveInterval &SLI, VNInfo *VNI) {
   assert(VNI && "Missing value");
-  // Do not erase spills on a slot that has partial spills. See
-  // PartialSpillSlots.
   if (HSpiller.hasPartialSpills(StackSlot))
     return;
   SmallVector<std::pair<LiveInterval*, VNInfo*>, 8> WorkList;
@@ -1004,13 +993,12 @@ void InlineSpiller::reMaterializeAll() {
 
 /// If MI is a load or store of StackSlot, it can be removed.
 ///
-/// Reg is being spilled and StackSlot is its home, so an access that names Reg
-/// and targets StackSlot just copies the slot onto itself -- dropping it
-/// changes nothing, lane for lane, even when the slot is only partially spilled
-/// (Reg's live lanes already match the slot; the rest are dead on both sides).
-/// Such an access is only ever a leftover of hoistSpillInsideBB or
-/// foldMemoryOperand on a sibling copy sharing this slot, redundant with Reg's
-/// own spill, so no partial-spill guard is needed here.
+/// Reg is being spilled and StackSlot is its home, so an access naming Reg and
+/// targeting StackSlot copies the slot onto itself -- dropping it changes
+/// nothing, lane for lane, even on a partially spilled slot (Reg's live lanes
+/// already match the slot; the rest are dead on both sides). Such an access is
+/// only ever a leftover of hoistSpillInsideBB or foldMemoryOperand on a sibling
+/// copy, redundant with Reg's own spill, so no partial-spill guard is needed.
 bool InlineSpiller::coalesceStackAccess(MachineInstr *MI, Register Reg) {
   int FI = 0;
   Register InstrReg = TII.isLoadFromStackSlot(*MI, FI);
@@ -1335,8 +1323,6 @@ SlotIndex InlineSpiller::insertReload(Register NewVReg, SlotIndex Idx,
   LLVM_DEBUG(dumpMachineInstrRangeWithSlotIndex(MIS.begin(), MI, LIS, "reload",
                                                 NewVReg));
   ++NumReloads;
-  // Return the index of the first reload instruction so callers can anchor to
-  // the start of a (possibly multi-instruction) reload sequence.
   return LIS.getInstructionIndex(*MIS.begin()).getRegSlot();
 }
 
@@ -1369,8 +1355,6 @@ void InlineSpiller::insertSpill(Register NewVReg,
   const TargetRegisterClass *RC = MRI.getRegClass(NewVReg);
 
   if (IsRealSpill)
-    // A native partial store's slot is marked partial by spillAroundUses before
-    // this point, so there is no need to mark it again here.
     TII.storeRegToStackSlot(MBB, SpillBefore, NewVReg, false, StackSlot, RC,
                             Register(), MachineInstr::NoFlags, StoreMask);
   else
@@ -1391,8 +1375,7 @@ void InlineSpiller::insertSpill(Register NewVReg,
   ++NumSpills;
   // If there is only 1 store instruction is required for spill, add it
   // to mergeable list. In X86 AMX, 2 instructions are required to store.
-  // We disable the merge for this case. A full StoreMask (getAll) marks the
-  // ordinary full-width spill; a native partial store is not mergeable.
+  // We disable the merge for this case.
   if (IsRealSpill && StoreMask == LaneBitmask::getAll() &&
       std::distance(Spill, MIS.end()) <= 1)
     HSpiller.addToMergeableSpills(*Spill, StackSlot, Original);
@@ -1441,26 +1424,17 @@ void InlineSpiller::spillAroundUses(Register Reg) {
     LaneBitmask Lanes = getLiveSpillLanes(OldLI, Idx, MRI);
     const TargetRegisterClass *RC = MRI.getRegClass(Reg);
 
-    // Lanes this partial def leaves unwritten but the original is still live
-    // in. A full-width store would clobber them and folding would drop them, so
-    // they must be preserved. Empty for a full def, or for an undef partial def
-    // whose uncovered lanes are dead -- those need only a plain full-width
-    // store.
+    // Uncovered lanes the original is still live in: a full-width store would
+    // clobber them and folding would drop them.
     LaneBitmask LiveUncovered;
     if (RI.Writes && isRealSpill(MI, Reg))
       LiveUncovered = (MRI.getMaxLaneMaskForVReg(Reg) & ~Lanes) &
                       getLiveSpillLanes(LIS.getInterval(Original), Idx, MRI);
 
-    // Only uncovered live lanes need more than a plain full-width store. With a
-    // native lane-masked store we write just Lanes and mark the slot a
-    // patchwork (see PartialSpillSlots); without one we emulate the partial
-    // store with a preservation reload + full-width store that is kept
-    // unfolded.
     bool NeedsNativePartialStore =
         LiveUncovered.any() && TII.canStoreRegToStackSlotWithLanes(RC, Lanes);
-    // Preservation reloads the slot, so it is only valid for a write-only def
-    // when the slot already holds the original's value (else the reload reads a
-    // dead spill slot).
+    // Reload the uncovered live lanes before the full-width store, emulating a
+    // partial store on a target that has no native one.
     bool NeedsLanePreservation = LiveUncovered.any() &&
                                  !NeedsNativePartialStore && !RI.Reads &&
                                  StackInt->liveAt(Idx.getBaseIndex());
@@ -1491,8 +1465,7 @@ void InlineSpiller::spillAroundUses(Register Reg) {
       }
     }
 
-    // Attempt to fold memory ops. A preservation spill needs its reload and
-    // store kept explicit, so do not fold it into the using instruction.
+    // Attempt to fold memory ops.
     if (!NeedsLanePreservation && foldMemoryOperand(Ops))
       continue;
 
@@ -1516,8 +1489,6 @@ void InlineSpiller::spillAroundUses(Register Reg) {
     for (const auto &OpPair : Ops) {
       MachineOperand &MO = OpPair.first->getOperand(OpPair.second);
       MO.setReg(NewVReg);
-      // After a preservation reload the def updates the reloaded value instead
-      // of starting a fresh one, so it no longer reads undef.
       if (NeedsLanePreservation && MO.isDef())
         MO.setIsUndef(false);
       if (MO.isDef() && !MO.isDead())
@@ -1530,9 +1501,6 @@ void InlineSpiller::spillAroundUses(Register Reg) {
       if (hasLiveDef) {
         LaneBitmask StoreMask =
             NeedsNativePartialStore ? Lanes : LaneBitmask::getAll();
-        // Partial and full stores share one hook: a partial store writes only
-        // the live lanes and preserves the rest of the shared slot, while a
-        // full store is the ordinary full-width spill.
         insertSpill(NewVReg, &MI, StoreMask);
       }
   }
@@ -1622,8 +1590,6 @@ void InlineSpiller::postOptimization() { HSpiller.hoistAllSpills(); }
 /// When a spill is inserted, add the spill to MergeableSpills map.
 void HoistSpillHelper::addToMergeableSpills(MachineInstr &Spill, int StackSlot,
                                             Register Original) {
-  // Do not make a slot with partial spills a hoist candidate. See
-  // PartialSpillSlots.
   if (hasPartialSpills(StackSlot))
     return;
   BumpPtrAllocator &Allocator = LIS.getVNInfoAllocator();
@@ -1958,7 +1924,6 @@ void HoistSpillHelper::hoistAllSpills() {
   // Each entry in MergeableSpills contains a spill set with equal values.
   for (auto &Ent : MergeableSpills) {
     int Slot = Ent.first.first;
-    // Skip hoisting on a slot that has partial spills. See PartialSpillSlots.
     if (hasPartialSpills(Slot))
       continue;
     LiveInterval &OrigLI = *StackSlotToOrigLI[Slot];
