@@ -62,10 +62,6 @@ STATISTIC(FlattenedMatrices, "Number of matrix flattenings");
 STATISTIC(ReshapedMatrices, "Number of matrix reshapes");
 STATISTIC(SplitMatrices, "Number of matrix splits");
 
-namespace llvm {
-extern cl::opt<bool> ProfcheckDisableMetadataFixes;
-} // end namespace llvm
-
 /// Helper function to either return Scope, if it is a subprogram or the
 /// attached subprogram for a local scope.
 static DISubprogram *getSubprogram(DIScope *Scope) {
@@ -2483,8 +2479,7 @@ public:
     } else {
       CondV.resize(A.getNumVectors());
       llvm::fill(CondV, Cond);
-      if (!ProfcheckDisableMetadataFixes)
-        MDFrom = Inst;
+      MDFrom = Inst;
     }
 
     for (auto [CV, AV, BV] : llvm::zip_equal(CondV, A.vectors(), B.vectors())) {

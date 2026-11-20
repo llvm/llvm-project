@@ -1,7 +1,7 @@
 ; REQUIRES: arm-registered-target
 
 ; RUN: opt -S -mtriple=arm-unknown-linux-gnu -passes=lowertypetests -lowertypetests-summary-action=export \
-; RUN:   -lowertypetests-read-summary=%s -lowertypetests-write-summary=%t %s | FileCheck %s
+; RUN:   -lowertypetests-read-summary=%s -lowertypetests-write-summary=%t.out %s | FileCheck %s
 target datalayout = "e-p:64:64"
 
 define void @f1() "target-features"="+thumb-mode,+v6t2" !type !0 {

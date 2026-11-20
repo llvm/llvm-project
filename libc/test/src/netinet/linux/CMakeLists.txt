@@ -1,0 +1,21 @@
+add_libc_test(
+  udp_test
+  SUITE
+    libc-netinet-tests
+  SRCS
+    udp_test.cpp
+  DEPENDS
+    libc.hdr.types.struct_udphdr
+    libc.src.__support.net.byte_order
+    libc.src.string.memcmp
+)
+
+add_libc_test(
+  tcp_test
+  SUITE
+    libc-netinet-tests
+  SRCS
+    tcp_test.cpp
+  DEPENDS
+    libc.hdr.types.struct_tcp_info
+)

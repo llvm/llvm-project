@@ -2,11 +2,13 @@
 # RUN: llc -mtriple=aarch64 -run-pass=legalizer -global-isel-abort=1  %s -o - | FileCheck %s
 ---
 name:            test_scalar_mul_small
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x0, $x1
     ; CHECK-LABEL: name: test_scalar_mul_small
-    ; CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $x1
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC [[COPY]](i64)
     ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(i32) = G_TRUNC [[COPY1]](i64)
@@ -24,11 +26,13 @@ body:             |
 ...
 ---
 name:            test_smul_overflow
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $x0, $x1
     ; CHECK-LABEL: name: test_smul_overflow
-    ; CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $x1
     ; CHECK-NEXT: [[SMULH:%[0-9]+]]:_(i64) = G_SMULH [[COPY]], [[COPY1]]
     ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(i64) = G_MUL [[COPY]], [[COPY1]]
@@ -47,11 +51,13 @@ body:             |
 ...
 ---
 name:            test_umul_overflow
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $x0, $x1
     ; CHECK-LABEL: name: test_umul_overflow
-    ; CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $x1
     ; CHECK-NEXT: [[UMULH:%[0-9]+]]:_(i64) = G_UMULH [[COPY]], [[COPY1]]
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
@@ -69,11 +75,13 @@ body:             |
 ...
 ---
 name:            test_smul_overflow_s32
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $w0, $w1
     ; CHECK-LABEL: name: test_smul_overflow_s32
-    ; CHECK: %lhs:_(i32) = COPY $w0
+    ; CHECK: liveins: $w0, $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %lhs:_(i32) = COPY $w0
     ; CHECK-NEXT: %rhs:_(i32) = COPY $w1
     ; CHECK-NEXT: [[SEXT:%[0-9]+]]:_(i64) = G_SEXT %lhs(i32)
     ; CHECK-NEXT: [[SEXT1:%[0-9]+]]:_(i64) = G_SEXT %rhs(i32)
@@ -99,11 +107,13 @@ body:             |
 ...
 ---
 name:            test_umul_overflow_s32
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $w0, $w1
     ; CHECK-LABEL: name: test_umul_overflow_s32
-    ; CHECK: %lhs:_(i32) = COPY $w0
+    ; CHECK: liveins: $w0, $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %lhs:_(i32) = COPY $w0
     ; CHECK-NEXT: %rhs:_(i32) = COPY $w1
     ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(i64) = G_ZEXT %lhs(i32)
     ; CHECK-NEXT: [[ZEXT1:%[0-9]+]]:_(i64) = G_ZEXT %rhs(i32)
@@ -128,11 +138,13 @@ body:             |
 ...
 ---
 name:            test_umul_overflow_s24
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $w0, $w1
     ; CHECK-LABEL: name: test_umul_overflow_s24
-    ; CHECK: %lhs_wide:_(i32) = COPY $w0
+    ; CHECK: liveins: $w0, $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %lhs_wide:_(i32) = COPY $w0
     ; CHECK-NEXT: %rhs_wide:_(i32) = COPY $w1
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 16777215
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i32) = G_AND %lhs_wide, [[C]]
@@ -169,7 +181,6 @@ body:             |
 ...
 ---
 name:            vector_mul_scalarize
-tracksRegLiveness: false
 liveins:
   - { reg: '$q0' }
   - { reg: '$q1' }
@@ -455,11 +466,13 @@ body:             |
 ...
 ---
 name:            test_vector_mul_v16s16
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $q0, $q1
     ; CHECK-LABEL: name: test_vector_mul_v16s16
-    ; CHECK: [[COPY:%[0-9]+]]:_(<8 x i16>) = COPY $q0
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x i16>) = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<8 x i16>) = COPY $q1
     ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(<8 x i16>) = G_MUL [[COPY]], [[COPY]]
     ; CHECK-NEXT: [[MUL1:%[0-9]+]]:_(<8 x i16>) = G_MUL [[COPY1]], [[COPY1]]
@@ -476,11 +489,13 @@ body:             |
 ...
 ---
 name:            test_vector_mul_v32s8
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $q0, $q1
     ; CHECK-LABEL: name: test_vector_mul_v32s8
-    ; CHECK: [[COPY:%[0-9]+]]:_(<16 x i8>) = COPY $q0
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<16 x i8>) = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<16 x i8>) = COPY $q1
     ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(<16 x i8>) = G_MUL [[COPY]], [[COPY]]
     ; CHECK-NEXT: [[MUL1:%[0-9]+]]:_(<16 x i8>) = G_MUL [[COPY1]], [[COPY1]]

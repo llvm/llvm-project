@@ -12,14 +12,6 @@
 ...
 ---
 name:            main
-registers:
-  - { id: 0, class: gpr64common, preferred-register: '' }
-  - { id: 1, class: gpr64common, preferred-register: '' }
-  - { id: 2, class: gpr64, preferred-register: '' }
-  - { id: 3, class: gpr64common, preferred-register: '' }
-  - { id: 4, class: gpr32, preferred-register: '' }
-  - { id: 5, class: gpr32all, preferred-register: '' }
-  - { id: 6, class: gpr64common, preferred-register: '' }
 body:             |
   bb.0:
     successors: %bb.4(0x30000000), %bb.5(0x50000000)
