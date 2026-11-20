@@ -135,7 +135,7 @@ define i1 @n10(i8 %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X]], [[NEG_X]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-  %neg_x = sub i8 0, %x ; not nsw
+  %neg_x = sub i8 0, %x ; not nsw, but slt/sge are invalid without it (differ at INT_MIN)
   %cmp = icmp sgt i8 %neg_x, %x
   ret i1 %cmp
 }
@@ -159,5 +159,65 @@ define i1 @n12(i8 %x1, i8 %x2) {
 ;
   %neg_x = sub nsw i8 0, %x1 ; not %x2
   %cmp = icmp sgt i8 %neg_x, %x2 ; not %x1
+  ret i1 %cmp
+}
+
+; The signed greater-than / less-or-equal folds do not require nsw:
+; 0 and INT_MIN are equal to their wrapping negation, so the strict
+; comparison is false there, and every other value has the opposite
+; sign from its negation.
+
+define i1 @t13_no_nsw(i8 %x) {
+; CHECK-LABEL: @t13_no_nsw(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[X:%.*]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %neg_x = sub i8 0, %x ; not nsw, folds anyway
+  %cmp = icmp slt i8 %neg_x, %x
+  ret i1 %cmp
+}
+
+define i1 @t14_no_nsw(i8 %x) {
+; CHECK-LABEL: @t14_no_nsw(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X:%.*]], 1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %neg_x = sub i8 0, %x ; not nsw, folds anyway
+  %cmp = icmp sge i8 %neg_x, %x
+  ret i1 %cmp
+}
+
+define i1 @t15_no_nsw_commutative(i8 %x) {
+; CHECK-LABEL: @t15_no_nsw_commutative(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[X:%.*]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %neg_x = sub i8 0, %x ; not nsw, folds anyway
+  %cmp = icmp sgt i8 %x, %neg_x
+  ret i1 %cmp
+}
+
+; Negative tests: these differ from the folded form at INT_MIN,
+; where -x wraps back to x.
+
+define i1 @n16_no_nsw_slt(i8 %x) {
+; CHECK-LABEL: @n16_no_nsw_slt(
+; CHECK-NEXT:    [[NEG_X:%.*]] = sub i8 0, [[X:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X]], [[NEG_X]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %neg_x = sub i8 0, %x ; not nsw
+  %cmp = icmp slt i8 %x, %neg_x
+  ret i1 %cmp
+}
+
+define i1 @n17_no_nsw_sge(i8 %x) {
+; CHECK-LABEL: @n17_no_nsw_sge(
+; CHECK-NEXT:    [[NEG_X:%.*]] = sub i8 0, [[X:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i8 [[X]], [[NEG_X]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %neg_x = sub i8 0, %x ; not nsw
+  %cmp = icmp sge i8 %x, %neg_x
   ret i1 %cmp
 }

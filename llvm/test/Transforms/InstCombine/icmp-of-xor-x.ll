@@ -314,8 +314,7 @@ define i1 @src_sle_incx_nx(i8 %x) {
 ; (X-1) comp X^Neg_C
 define i1 @src_sle_decx_nx(i8 %x) {
 ; CHECK-LABEL: @src_sle_decx_nx(
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 0, [[X:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i8 [[X]], [[TMP1]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X:%.*]], 1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %nx = xor i8 %x, -1
@@ -338,8 +337,7 @@ define i1 @src_sle_x_nincx(i8 %x) {
 ; X comp (X-1)^Neg_C
 define i1 @src_sle_x_ndecx(i8 %x) {
 ; CHECK-LABEL: @src_sle_x_ndecx(
-; CHECK-NEXT:    [[NOT_DEC_X:%.*]] = sub i8 0, [[X:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i8 [[X]], [[NOT_DEC_X]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X:%.*]], 1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %dec.x = add i8 %x, -1
