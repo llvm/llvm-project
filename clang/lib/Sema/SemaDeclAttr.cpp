@@ -7807,6 +7807,9 @@ ProcessDeclAttribute(Sema &S, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_WebAssemblyImportName:
     S.Wasm().handleWebAssemblyImportNameAttr(D, AL);
     break;
+  case ParsedAttr::AT_WebAssemblyGlobal:
+    S.Wasm().handleWebAssemblyGlobalAttr(D, AL);
+    break;
   case ParsedAttr::AT_IBOutlet:
     S.ObjC().handleIBOutlet(D, AL);
     break;
