@@ -456,6 +456,20 @@ int main(int, char**) {
       {
         auto pred = maybe_throw(tokens[5], [](int x) -> bool { return x % 2 == 0; });
 
+        // remove_copy(first, last, dest, val)
+        assert_non_throwing([=, &policy] {
+          (void)std::remove_copy(policy, std::move(first1), std::move(last1), std::move(dest), val);
+        });
+
+        // remove_copy_if(first, last, dest, pred)
+        assert_non_throwing([=, &policy] {
+          (void)std::remove_copy_if(policy, std::move(first1), std::move(last1), std::move(dest), pred);
+        });
+      }
+
+      {
+        auto pred = maybe_throw(tokens[5], [](int x) -> bool { return x % 2 == 0; });
+
         // replace_if(first, last, pred, val)
         assert_non_throwing([=, &policy] {
           (void)std::replace_if(policy, std::move(first1), std::move(last1), pred, val);
