@@ -185,8 +185,20 @@ DecodeStatus M68kDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
   Size = 2;
   Result = decodeInstruction(DecoderTable80, Instr, Insn, Address, this, STI,
                              MakeUp);
-  if (Result == DecodeStatus::Success)
-    Size = InstrLenTable[Instr.getOpcode()] >> 3;
+  if (Result != DecodeStatus::Success)
+    return Result;
+
+  // If the two register fields in the extension word differ, this is a
+  // 64-bit two-register divide (Dr:Dq) we don't model. Refuse to
+  // disassemble rather than print a quotient-only form.
+  unsigned Opc = Instr.getOpcode();
+  if (Opc == M68k::SDIVd32d32 || Opc == M68k::UDIVd32d32) {
+    uint16_t Ext = support::endian::read16be(Bytes.data() + 2);
+    if (((Ext >> 12) & 7) != (Ext & 7))
+      return DecodeStatus::Fail;
+  }
+
+  Size = InstrLenTable[Opc] >> 3;
   return Result;
 }
 

@@ -1,0 +1,16 @@
+# RUN: llvm-mc -disassemble -triple m68k %s 2>/dev/null | FileCheck %s
+# RUN: llvm-mc -disassemble -triple m68k %s 2>&1 >/dev/null \
+# RUN:   | FileCheck --check-prefix=INVALID %s
+
+# CHECK:      divs.l %d1, %d3
+0x4c 0x41 0x38 0x03
+# CHECK-NEXT: divu.l %d1, %d3
+0x4c 0x41 0x30 0x03
+
+# INVALID:      warning: invalid instruction encoding
+# INVALID-NEXT: 0x4c 0x41 0x38 0x02
+0x4c 0x41 0x38 0x02
+# INVALID:      warning: invalid instruction encoding
+# INVALID-NEXT: 0x4c 0x41 0x30 0x00
+0x4c 0x41 0x30 0x00
+# CHECK-NOT: div
