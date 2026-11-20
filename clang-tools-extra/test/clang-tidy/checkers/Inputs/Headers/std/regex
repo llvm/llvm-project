@@ -1,0 +1,24 @@
+#ifndef TEST_REGEX
+#define TEST_REGEX
+
+namespace std {
+
+template <typename BidirectionalIterator>
+class match_results {
+public:
+  using size_type = unsigned long;
+  using difference_type = long;
+
+  difference_type length(size_type sub = 0) const;
+  size_type size() const;
+  bool empty() const;
+};
+
+using smatch = match_results<string::const_iterator>;
+using cmatch = match_results<const char *>;
+using wsmatch = match_results<wstring::const_iterator>;
+using wcmatch = match_results<const wchar_t *>;
+
+} // namespace std
+
+#endif
