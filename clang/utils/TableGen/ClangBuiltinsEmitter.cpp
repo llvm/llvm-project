@@ -211,6 +211,14 @@ public:
       : Loc(Builtin->getFieldLoc("Prototype")), Substitution(Substitution),
         EnableOpenCLLong(Builtin->getValueAsBit("EnableOpenCLLong")) {
     ParsePrototype(Builtin->getValueAsString("Prototype"));
+    if (std::optional<StringRef> WinProto =
+            Builtin->getValueAsOptionalString("WindowsPrototype")) {
+      Loc = Builtin->getFieldLoc("WindowsPrototype");
+      if (Type.empty())
+        PrintFatalError(Loc, "WindowsPrototype requires a non-empty Prototype");
+      Type += '|';
+      ParsePrototype(*WinProto);
+    }
   }
 
   std::string takeTypeString() && { return std::move(Type); }
@@ -221,15 +229,9 @@ private:
 
     // Some builtins don't have an expressible prototype, simply emit an empty
     // string for them.
-    if (Prototype.empty()) {
-      Type = "";
+    if (Prototype.empty())
       return;
-    }
 
-    ParseTypes(Prototype);
-  }
-
-  void ParseTypes(StringRef &Prototype) {
     auto ReturnType = Prototype.take_until([](char c) { return c == '('; });
     ParseType(ReturnType);
     Prototype = Prototype.drop_front(ReturnType.size() + 1);
@@ -387,16 +389,25 @@ private:
                                .Case("int32_t", "Zi")
                                .Case("int64_t", "Wi")
                                .Case("jmp_buf", "J")
+                               .Case("mode_t", "t")
                                .Case("msint32_t", "Ni")
                                .Case("msuint32_t", "UNi")
+                               .Case("nfds_t", "t")
                                .Case("objc_super", "M")
                                .Case("pid_t", "p")
                                .Case("ptrdiff_t", "Y")
                                .Case("SEL", "H")
                                .Case("short", "s")
                                .Case("sigjmp_buf", "SJ")
+                               .Case("sigset_t", "t")
+                               .Case("sigset64_t", "t")
                                .Case("size_t", "z")
+                               .Case("socklen_t", "t")
+                               .Case("ssize_t", "Sz")
                                .Case("std::meta::info", "r")
+                               .Case("struct pollfd", "u")
+                               .Case("struct sockaddr", "u")
+                               .Case("struct timespec", "u")
                                .Case("ucontext_t", "K")
                                .Case("uint8_t", "UBi")
                                .Case("uint16_t", "UTi")
@@ -417,6 +428,21 @@ private:
       if (ReturnTypeVal == "error")
         PrintFatalError(Loc, "Unknown Type: " + T);
       Type += ReturnTypeVal;
+      if (ReturnTypeVal == "t" || ReturnTypeVal == "u") {
+        SmallVector<StringRef, 2> Words;
+        T.split(Words, ' ', /*MaxSplit=*/-1, /*KeepEmpty=*/false);
+        if (ReturnTypeVal == "t") {
+          if (Words.size() != 1)
+            PrintFatalError(Loc,
+                            "Expected single identifier for typedef: " + T);
+        } else {
+          if (Words.size() != 2 || Words[0] != "struct")
+            PrintFatalError(Loc, "Expected 'struct <name>': " + T);
+        }
+        StringRef TypeName = Words.back();
+        Type += std::to_string(TypeName.size());
+        Type += TypeName;
+      }
     }
   }
 

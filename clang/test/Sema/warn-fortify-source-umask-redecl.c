@@ -1,16 +1,48 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu %s -verify
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -x c++ %s -DNON_INT_MODE_T -verify
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu %s -DSTRUCT_MODE_T -verify
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -x c++ %s -DSTRUCT_MODE_T -verify
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu %s -DPOINTER_MODE_T -verify
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -x c++ %s -DPOINTER_MODE_T -verify
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu %s -DNARROW_MODE_T -verify
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -x c++ %s -DNARROW_MODE_T -verify
+// expected-no-diagnostics
 
-// A user declaration of umask whose integer type differs from the historical
-// unsigned-int spelling -- here a plain int, as in a K&R-era or sloppy
-// prototype -- is still recognized as the libc umask and checked. Because
-// umask is a LibBuiltin with no prototype to match, the declaration is not
-// flagged as an incompatible library redeclaration (it would have been when
-// the builtin carried a fixed unsigned-int prototype), and the fortify check
-// still fires on an out-of-range constant.
+#if defined(NON_INT_MODE_T)
+enum class mode_t { V = 0xFFFF };
+extern "C" mode_t umask(mode_t);
+void call_user_umask(void) { umask(mode_t::V); }
+#elif defined(STRUCT_MODE_T)
+typedef struct { int x; } mode_t;
+#ifdef __cplusplus
+extern "C"
+#endif
+mode_t umask(mode_t);
+void call_user_umask(mode_t m) { umask(m); }
+#elif defined(POINTER_MODE_T)
+typedef void *mode_t;
+#ifdef __cplusplus
+extern "C"
+#endif
+mode_t umask(mode_t);
+void call_user_umask(mode_t m) { umask(m); }
+#elif defined(NARROW_MODE_T)
+typedef unsigned char mode_t;
+#ifdef __cplusplus
+extern "C"
+#endif
+mode_t umask(mode_t);
+void call_user_umask(void) { umask(0); }
+#else
+// A user declaration of umask whose signature does not match mode_t(mode_t) is
+// neither flagged as an incompatible library redeclaration nor recognized as
+// the libc umask builtin.
 
+typedef unsigned int mode_t;
 extern int umask(int);
 
 void call_user_umask(void) {
   umask(0644);
-  umask(0xFFFF); // expected-warning {{'umask' argument sets non-file-permission bits (0177000); those bits are ignored}}
+  umask(0xFFFF);
 }
+#endif

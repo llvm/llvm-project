@@ -12856,9 +12856,9 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
     assert(HowLong == 0 && !Signed && !Unsigned && "Bad modifiers for 'b'!");
     Type = Context.BoolTy;
     break;
-  case 'z':  // size_t.
-    assert(HowLong == 0 && !Signed && !Unsigned && "Bad modifiers for 'z'!");
-    Type = Context.getSizeType();
+  case 'z': // size_t or ssize_t.
+    assert(HowLong == 0 && !Unsigned && "Bad modifiers for 'z'!");
+    Type = Signed ? Context.getSignedSizeType() : Context.getSizeType();
     break;
   case 'w':  // wchar_t.
     assert(HowLong == 0 && !Signed && !Unsigned && "Bad modifiers for 'w'!");
@@ -13009,6 +13009,39 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
   case 'm':
     Type = Context.MFloat8Ty;
     break;
+  case 'u':
+  case 't': {
+    assert(HowLong == 0 && !Signed && !Unsigned &&
+           "Bad modifiers for 'u' or 't'!");
+    bool IsStruct = *(Str - 1) == 'u';
+    char *End;
+    unsigned Len = strtoul(Str, &End, 10);
+    assert(End != Str && "Missing identifier length");
+    StringRef Name(End, Len);
+    Str = End + Len;
+    for (NamedDecl *ND :
+         Context.getTranslationUnitDecl()->lookup(&Context.Idents.get(Name))) {
+      if (ND->isInvalidDecl())
+        continue;
+      if (IsStruct) {
+        if (const auto *RD = dyn_cast<RecordDecl>(ND); RD && RD->isStruct()) {
+          Type = Context.getCanonicalTagType(RD);
+          break;
+        }
+      } else if (const auto *TD = dyn_cast<TypedefNameDecl>(ND);
+                 TD && TD->getUnderlyingType()->isObjectType() &&
+                 !TD->getUnderlyingType()->isArrayType()) {
+        Type = Context.getTypedefType(ElaboratedTypeKeyword::None,
+                                      /*Qualifier=*/std::nullopt, TD);
+        break;
+      }
+    }
+    if (Type.isNull()) {
+      Error = ASTContext::GE_Missing_type;
+      return {};
+    }
+    break;
+  }
   }
 
   // If there are modifiers and if we're allowed to parse them, go for it.
@@ -13075,6 +13108,10 @@ QualType ASTContext::GetBuiltinType(unsigned Id,
     Error = GE_Missing_type;
     return {};
   }
+  if (Target->getTriple().isOSWindows()) {
+    if (const char *WinTypeStr = strchr(TypeStr, '|'))
+      TypeStr = WinTypeStr + 1;
+  }
 
   SmallVector<QualType, 8> ArgTypes;
 
@@ -13087,7 +13124,7 @@ QualType ASTContext::GetBuiltinType(unsigned Id,
 
   assert(!RequiresICE && "Result of intrinsic cannot be required to be an ICE");
 
-  while (TypeStr[0] && TypeStr[0] != '.') {
+  while (TypeStr[0] && TypeStr[0] != '.' && TypeStr[0] != '|') {
     QualType Ty = DecodeTypeFromStr(TypeStr, *this, Error, RequiresICE, true);
     if (Error != GE_None)
       return {};
@@ -13107,7 +13144,7 @@ QualType ASTContext::GetBuiltinType(unsigned Id,
   if (Id == Builtin::BI__GetExceptionInfo)
     return {};
 
-  assert((TypeStr[0] != '.' || TypeStr[1] == 0) &&
+  assert((TypeStr[0] != '.' || TypeStr[1] == 0 || TypeStr[1] == '|') &&
          "'.' should only occur at end of builtin type list!");
 
   bool Variadic = (TypeStr[0] == '.');

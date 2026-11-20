@@ -7,6 +7,8 @@
 //   * a file-local umask with internal linkage;
 //   * in C++, a umask without C language linkage (e.g. a user's own overload).
 
+typedef int mode_t;
+
 static int umask(int m) { return m; }
 
 void call_static_umask(void) {
