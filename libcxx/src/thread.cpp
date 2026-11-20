@@ -98,6 +98,7 @@ void sleep_for(const chrono::nanoseconds& ns) {
 
 } // namespace this_thread
 
+#ifndef _LIBCPP_ABI_THREAD_SPECIFIC_PTR
 __thread_specific_ptr<__thread_struct>& __thread_local_data() {
   // Even though __thread_specific_ptr's destructor doesn't actually destroy
   // anything (see comments there), we can't call it at all because threads may
@@ -107,6 +108,7 @@ __thread_specific_ptr<__thread_struct>& __thread_local_data() {
   static __thread_specific_ptr<__thread_struct>* __p = new (__b) __thread_specific_ptr<__thread_struct>();
   return *__p;
 }
+#endif
 
 // __thread_struct_imp
 
@@ -159,6 +161,22 @@ void __thread_struct_imp::__make_ready_at_thread_exit(__assoc_sub_state* __s) {
   __s->__add_shared();
 }
 
+#ifdef _LIBCPP_ABI_THREAD_SPECIFIC_PTR
+static __thread_struct_imp& get_imp() {
+  static thread_local __thread_struct_imp imp;
+  return imp;
+}
+
+void __initialize_thread_local_data() {
+  // Try to register the destructor for this data early.
+  get_imp();
+}
+
+void __notify_all_at_thread_exit(condition_variable* cv, mutex* m) { get_imp().notify_all_at_thread_exit(cv, m); }
+
+void __make_ready_at_thread_exit(__assoc_sub_state* s) { get_imp().__make_ready_at_thread_exit(s); }
+#else
+
 // __thread_struct
 
 __thread_struct::__thread_struct() : __p_(new __thread_struct_imp) {}
@@ -170,6 +188,7 @@ void __thread_struct::notify_all_at_thread_exit(condition_variable* cv, mutex* m
 }
 
 void __thread_struct::__make_ready_at_thread_exit(__assoc_sub_state* __s) { __p_->__make_ready_at_thread_exit(__s); }
+#endif // _LIBCPP_ABI_THREAD_SPECIFIC_PTR
 
 _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD

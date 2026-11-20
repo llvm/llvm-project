@@ -633,7 +633,11 @@ void __assoc_state<_Rp>::set_value_at_thread_exit(_Arg&& __arg) {
     std::__throw_future_error(future_errc::promise_already_satisfied);
   ::new ((void*)std::addressof(__value_)) _Rp(std::forward<_Arg>(__arg));
   this->__state_ |= base::__constructed;
+#    ifdef _LIBCPP_ABI_THREAD_SPECIFIC_PTR
+  __make_ready_at_thread_exit(this);
+#    else
   __thread_local_data()->__make_ready_at_thread_exit(this);
+#    endif // _LIBCPP_ABI_THREAD_SPECIFIC_PTR
 }
 
 template <class _Rp>
@@ -693,7 +697,11 @@ void __assoc_state<_Rp&>::set_value_at_thread_exit(_Rp& __arg) {
     std::__throw_future_error(future_errc::promise_already_satisfied);
   __value_ = std::addressof(__arg);
   this->__state_ |= base::__constructed;
+#    ifdef _LIBCPP_ABI_THREAD_SPECIFIC_PTR
+  __make_ready_at_thread_exit(this);
+#    else
   __thread_local_data()->__make_ready_at_thread_exit(this);
+#    endif // _LIBCPP_ABI_THREAD_SPECIFIC_PTR
 }
 
 template <class _Rp>

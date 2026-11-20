@@ -93,6 +93,9 @@ void __libcpp_thread_sleep_for(const chrono::nanoseconds&);
 //
 // Thread local storage
 //
+// Note these APIs are not required if _LIBCPP_ABI_THREAD_SPECIFIC_PTR is true
+// and the environment provides __cxa_thread_atexit or __cxa_thread_atexit_impl.
+//
 #define _LIBCPP_TLS_DESTRUCTOR_CC ...
 using __libcpp_tls_key = ...;
 
