@@ -19,11 +19,13 @@ using LIBC_NAMESPACE::regex::ANCHOR_BOL;
 using LIBC_NAMESPACE::regex::ANCHOR_EOL;
 using LIBC_NAMESPACE::regex::ByteSet;
 using LIBC_NAMESPACE::regex::EMPTY_SET_ID;
+using LIBC_NAMESPACE::regex::EMPTY_STR_ID;
 using LIBC_NAMESPACE::regex::Expr;
 using LIBC_NAMESPACE::regex::ExprId;
 using LIBC_NAMESPACE::regex::ExprKind;
 using LIBC_NAMESPACE::regex::ExprPool;
 using LIBC_NAMESPACE::regex::INVALID_EXPR_ID;
+using LIBC_NAMESPACE::regex::REPEAT_INF;
 
 TEST(LlvmLibcRegexExprTest, Interning) {
   ExprPool pool;
@@ -35,11 +37,14 @@ TEST(LlvmLibcRegexExprTest, Interning) {
   ASSERT_TRUE(lit_a_2.has_value());
   // Hash-consing: same literal should return the same ExprId.
   EXPECT_EQ(*lit_a, *lit_a_2);
-  EXPECT_FALSE(pool.has_anchors(*lit_a));
 
   auto lit_b = pool.make_lit('b');
   ASSERT_TRUE(lit_b.has_value());
   EXPECT_NE(*lit_a, *lit_b);
+
+  auto bad_anchor = pool.make_anchor(0);
+  ASSERT_FALSE(bad_anchor.has_value());
+  EXPECT_EQ(bad_anchor.error(), REG_BADPAT);
 
   auto bol_1 = pool.make_anchor(ANCHOR_BOL);
   auto bol_2 = pool.make_anchor(ANCHOR_BOL);
@@ -50,10 +55,6 @@ TEST(LlvmLibcRegexExprTest, Interning) {
   EXPECT_EQ(*bol_1, *bol_2);
   EXPECT_NE(*bol_1, *eol);
   EXPECT_FALSE(pool.is_nullable(*bol_1));
-  EXPECT_TRUE(pool.has_anchors(*bol_1));
-  EXPECT_TRUE(pool.has_anchors(*pool.make_concat(*bol_1, *lit_a)));
-  EXPECT_TRUE(pool.has_anchors(*pool.make_alt(*lit_a, *eol)));
-  EXPECT_FALSE(pool.has_anchors(*pool.make_concat(*lit_a, *lit_b)));
 
   auto empty_set_1 = pool.empty_set();
   auto empty_set_2 = pool.empty_set();
@@ -135,6 +136,14 @@ TEST(LlvmLibcRegexExprTest, AlgebraicIdentitiesConcat) {
   ASSERT_FALSE(bad_right.has_value());
   EXPECT_EQ(bad_right.error(), REG_BADPAT);
 
+  // Identity shortcuts on a freshly constructed pool still initialize storage
+  // so the returned ExprId is safely dereferenceable via get().
+  ExprPool fresh_concat;
+  auto fresh_concat_id = fresh_concat.make_concat(EMPTY_STR_ID, EMPTY_STR_ID);
+  ASSERT_TRUE(fresh_concat_id.has_value());
+  EXPECT_EQ(*fresh_concat_id, EMPTY_STR_ID);
+  EXPECT_EQ(fresh_concat.get(*fresh_concat_id).kind, ExprKind::EmptyStr);
+
   // (Ø · R) or (R · Ø) => Ø
   EXPECT_EQ(*pool.make_concat(empty_set, lit_a), empty_set);
   EXPECT_EQ(*pool.make_concat(lit_a, empty_set), empty_set);
@@ -182,6 +191,26 @@ TEST(LlvmLibcRegexExprTest, AlgebraicIdentitiesAltAndStar) {
   ASSERT_FALSE(bad_right.has_value());
   EXPECT_EQ(bad_right.error(), REG_BADPAT);
 
+  // Identity and idempotency shortcuts on a freshly constructed pool still
+  // initialize storage so the returned ExprId is safely dereferenceable.
+  ExprPool fresh_alt;
+  auto fresh_alt_id = fresh_alt.make_alt(EMPTY_STR_ID, EMPTY_SET_ID);
+  ASSERT_TRUE(fresh_alt_id.has_value());
+  EXPECT_EQ(*fresh_alt_id, EMPTY_STR_ID);
+  EXPECT_EQ(fresh_alt.get(*fresh_alt_id).kind, ExprKind::EmptyStr);
+
+  ExprPool fresh_alt_lhs;
+  auto fresh_alt_lhs_id = fresh_alt_lhs.make_alt(EMPTY_SET_ID, EMPTY_STR_ID);
+  ASSERT_TRUE(fresh_alt_lhs_id.has_value());
+  EXPECT_EQ(*fresh_alt_lhs_id, EMPTY_STR_ID);
+  EXPECT_EQ(fresh_alt_lhs.get(*fresh_alt_lhs_id).kind, ExprKind::EmptyStr);
+
+  ExprPool fresh_idem;
+  auto fresh_idem_id = fresh_idem.make_alt(EMPTY_STR_ID, EMPTY_STR_ID);
+  ASSERT_TRUE(fresh_idem_id.has_value());
+  EXPECT_EQ(*fresh_idem_id, EMPTY_STR_ID);
+  EXPECT_EQ(fresh_idem.get(*fresh_idem_id).kind, ExprKind::EmptyStr);
+
   // (Ø | R) or (R | Ø) => R
   EXPECT_EQ(*pool.make_alt(empty_set, lit_a), lit_a);
   EXPECT_EQ(*pool.make_alt(lit_a, empty_set), lit_a);
@@ -219,10 +248,90 @@ TEST(LlvmLibcRegexExprTest, AlgebraicIdentitiesAltAndStar) {
   const ExprId star_a = *pool.make_star(lit_a);
   EXPECT_EQ(*pool.make_star(star_a), star_a);
   EXPECT_TRUE(pool.is_nullable(star_a));
-  EXPECT_FALSE(pool.has_anchors(star_a));
-  EXPECT_TRUE(pool.has_anchors(*pool.make_star(*pool.make_anchor(ANCHOR_BOL))));
   EXPECT_TRUE(Expr::make_star(lit_a) == Expr::make_star(lit_a));
   EXPECT_FALSE(Expr::make_star(lit_a) == Expr::make_star(lit_b));
+
+  // Repeat identities and interval coalescing in make_alt.
+  const ExprId plus_a = *pool.make_repeat(lit_a, 1, REPEAT_INF);
+  auto bad_rep_id = pool.make_repeat(INVALID_EXPR_ID, 1, 2);
+  auto bad_rep_range = pool.make_repeat(lit_a, 3, 2);
+  auto bad_rep_inf = pool.make_repeat(lit_a, REPEAT_INF, REPEAT_INF);
+  ASSERT_FALSE(bad_rep_id.has_value());
+  ASSERT_FALSE(bad_rep_range.has_value());
+  ASSERT_FALSE(bad_rep_inf.has_value());
+  EXPECT_EQ(bad_rep_id.error(), REG_BADPAT);
+  EXPECT_EQ(bad_rep_range.error(), REG_BADPAT);
+  EXPECT_EQ(bad_rep_inf.error(), REG_BADPAT);
+  EXPECT_EQ(*pool.make_repeat(lit_a, 0, 0), empty_str);
+  EXPECT_EQ(*pool.make_repeat(empty_str, 2, 4), empty_str);
+  EXPECT_EQ(*pool.make_repeat(empty_set, 0, 3), empty_str);
+  EXPECT_EQ(*pool.make_repeat(empty_set, 1, 3), empty_set);
+  EXPECT_EQ(*pool.make_repeat(lit_a, 1, 1), lit_a);
+  EXPECT_EQ(*pool.make_repeat(lit_a, 0, REPEAT_INF), star_a);
+  EXPECT_EQ(*pool.make_repeat(star_a, 2, 4), star_a);
+  EXPECT_EQ(*pool.make_star(plus_a), star_a);
+  EXPECT_EQ(*pool.make_repeat(plus_a, 0, 3), star_a);
+  EXPECT_EQ(*pool.make_repeat(plus_a, 1, 5), plus_a);
+  EXPECT_EQ(*pool.make_repeat(plus_a, 1, REPEAT_INF), plus_a);
+  EXPECT_EQ(*pool.make_repeat(plus_a, 2, 5),
+            *pool.make_repeat(lit_a, 2, REPEAT_INF));
+
+  const ExprId rep_0_3 = *pool.make_repeat(lit_a, 0, 3);
+  const ExprId rep_1_3 = *pool.make_repeat(lit_a, 1, 3);
+  const ExprId rep_2_3 = *pool.make_repeat(lit_a, 2, 3);
+  const ExprId rep_3_4 = *pool.make_repeat(lit_a, 3, 4);
+  const ExprId rep_4_5 = *pool.make_repeat(lit_a, 4, 5);
+  const ExprId rep_5_6 = *pool.make_repeat(lit_a, 5, 6);
+  const ExprId rep_1_2 = *pool.make_repeat(lit_a, 1, 2);
+  const ExprId rep_1_6 = *pool.make_repeat(lit_a, 1, 6);
+  const ExprId rep_2_5 = *pool.make_repeat(lit_a, 2, 5);
+  EXPECT_EQ(*pool.make_alt(rep_2_3, rep_4_5), rep_2_5);
+  EXPECT_EQ(*pool.make_alt(lit_a, rep_2_3), rep_1_3);
+  EXPECT_EQ(*pool.make_alt(empty_str, plus_a), star_a);
+  EXPECT_EQ(*pool.make_alt(*pool.make_repeat(lit_a, 2, REPEAT_INF), star_a),
+            star_a);
+  EXPECT_EQ(*pool.make_alt(*pool.make_concat(rep_2_3, lit_b),
+                           *pool.make_concat(rep_4_5, lit_b)),
+            *pool.make_concat(rep_2_5, lit_b));
+  EXPECT_EQ(*pool.make_alt(*pool.make_concat(lit_b, rep_2_3),
+                           *pool.make_concat(lit_b, rep_4_5)),
+            *pool.make_concat(lit_b, rep_2_5));
+  // Shared-suffix Concat(X, S) | S and shared-prefix Concat(P, X) | P in both
+  // argument orders.
+  EXPECT_EQ(*pool.make_alt(*pool.make_concat(rep_1_3, lit_b), lit_b),
+            *pool.make_concat(rep_0_3, lit_b));
+  EXPECT_EQ(*pool.make_alt(lit_b, *pool.make_concat(rep_1_3, lit_b)),
+            *pool.make_concat(rep_0_3, lit_b));
+  EXPECT_EQ(*pool.make_alt(*pool.make_concat(lit_b, rep_1_3), lit_b),
+            *pool.make_concat(lit_b, rep_0_3));
+  EXPECT_EQ(*pool.make_alt(lit_b, *pool.make_concat(lit_b, rep_1_3)),
+            *pool.make_concat(lit_b, rep_0_3));
+  // Nested Repeat(R, 2, 3) | R coalesces symmetrically when R is a Repeat node.
+  const ExprId nested_rep_2_3 = *pool.make_repeat(rep_1_2, 2, 3);
+  const ExprId nested_rep_1_3 = *pool.make_repeat(rep_1_2, 1, 3);
+  EXPECT_EQ(*pool.make_alt(rep_1_2, nested_rep_2_3), nested_rep_1_3);
+  EXPECT_EQ(*pool.make_alt(nested_rep_2_3, rep_1_2), nested_rep_1_3);
+  // Out-of-order 3-way interval bridging and 2-spine merges preserve
+  // commutativity and associativity.
+  EXPECT_EQ(*pool.make_alt(*pool.make_alt(rep_1_2, rep_5_6), rep_3_4), rep_1_6);
+  EXPECT_EQ(*pool.make_alt(rep_3_4, *pool.make_alt(rep_1_2, rep_5_6)), rep_1_6);
+  const ExprId spine_empty_2_3 = *pool.make_alt(empty_str, rep_2_3);
+  const ExprId spine_empty_1 = *pool.make_alt(empty_str, lit_a);
+  EXPECT_EQ(*pool.make_alt(spine_empty_2_3, spine_empty_1), rep_0_3);
+  EXPECT_EQ(*pool.make_alt(spine_empty_1, spine_empty_2_3), rep_0_3);
+  const ExprId spine_a = *pool.make_alt(lit_c, rep_1_2);
+  const ExprId spine_b = *pool.make_alt(lit_b, rep_3_4);
+  EXPECT_EQ(*pool.make_alt(spine_a, spine_b), *pool.make_alt(spine_b, spine_a));
+  EXPECT_EQ(*pool.make_alt(*pool.make_alt(rep_2_3, lit_c), rep_4_5),
+            *pool.make_alt(rep_2_3, *pool.make_alt(lit_c, rep_4_5)));
+  const ExprId merged = *pool.make_alt(*pool.make_alt(lit_c, rep_2_3), rep_1_2);
+  EXPECT_EQ(merged, *pool.make_alt(lit_c, rep_1_3));
+  EXPECT_LT(pool.get(merged).bin.left, pool.get(merged).bin.right);
+  EXPECT_TRUE(pool.is_nullable(*pool.make_repeat(lit_a, 0, 2)));
+  EXPECT_FALSE(pool.is_nullable(rep_2_3));
+  EXPECT_TRUE(Expr::make_repeat(lit_a, 2, 3) == Expr::make_repeat(lit_a, 2, 3));
+  EXPECT_FALSE(Expr::make_repeat(lit_a, 2, 3) ==
+               Expr::make_repeat(lit_a, 2, 4));
 }
 
 TEST(LlvmLibcRegexExprTest, HermeticHundredPools) {
@@ -261,4 +370,65 @@ TEST(LlvmLibcRegexExprTest, MemoryLimits) {
   ASSERT_FALSE(bs_fail.has_value());
   EXPECT_EQ(bs_fail.error(), REG_ESPACE);
   EXPECT_EQ(pool.num_byte_sets(), size_t(0));
+}
+
+TEST(LlvmLibcRegexExprTest, BoundsGuardsAndNullableMask) {
+  // Uninitialised pool safely resolves constant sentinels and rejects invalid
+  // or out-of-range ExprIds.
+  {
+    ExprPool fresh;
+    EXPECT_FALSE(fresh.is_valid(EMPTY_SET_ID));
+    EXPECT_TRUE(fresh.is_valid_input(EMPTY_SET_ID));
+    EXPECT_TRUE(fresh.is_valid_input(EMPTY_STR_ID));
+    EXPECT_FALSE(fresh.is_valid_input(INVALID_EXPR_ID));
+    EXPECT_EQ(fresh.get(EMPTY_SET_ID).kind, ExprKind::EmptySet);
+    EXPECT_EQ(fresh.get(EMPTY_STR_ID).kind, ExprKind::EmptyStr);
+    EXPECT_FALSE(fresh.is_nullable(EMPTY_SET_ID));
+    EXPECT_TRUE(fresh.is_nullable(EMPTY_STR_ID));
+    EXPECT_EQ(fresh.allocated_bytes(), size_t(0));
+    auto expect_badpat = [](const auto &res) {
+      ASSERT_FALSE(res.has_value());
+      EXPECT_EQ(res.error(), REG_BADPAT);
+    };
+    expect_badpat(fresh.make_star(999));
+    expect_badpat(fresh.make_repeat(999, 1, 2));
+    expect_badpat(fresh.make_concat(999, EMPTY_STR_ID));
+    expect_badpat(fresh.make_alt(EMPTY_SET_ID, 999));
+    expect_badpat(fresh.make_anchor(0x04));
+    expect_badpat(fresh.make_anchor(ANCHOR_BOL | 0x04));
+    expect_badpat(fresh.make_anchor(0xFF));
+  }
+
+  ExprPool pool;
+  auto bol = pool.make_anchor(ANCHOR_BOL);
+  auto eol = pool.make_anchor(ANCHOR_EOL);
+  auto both = pool.make_anchor(ANCHOR_BOL | ANCHOR_EOL);
+  auto lit_a = pool.make_lit('a');
+  ASSERT_TRUE(bol.has_value());
+  ASSERT_TRUE(eol.has_value());
+  ASSERT_TRUE(both.has_value());
+  ASSERT_TRUE(lit_a.has_value());
+  auto bol_eol = pool.make_concat(*bol, *eol);
+  auto bol_or_eol = pool.make_alt(*bol, *eol);
+  auto bol_or_a = pool.make_alt(*bol, *lit_a);
+  ASSERT_TRUE(bol_eol.has_value());
+  ASSERT_TRUE(bol_or_eol.has_value());
+  ASSERT_TRUE(bol_or_a.has_value());
+  auto rep_bol = pool.make_repeat(*bol, 2, 3);
+  auto rep_bol_0 = pool.make_repeat(*bol, 0, 3);
+  auto star_bol = pool.make_star(*bol);
+  auto rep_bol_or_a = pool.make_repeat(*bol_or_a, 2, 3);
+  ASSERT_TRUE(rep_bol.has_value());
+  ASSERT_TRUE(rep_bol_0.has_value());
+  ASSERT_TRUE(star_bol.has_value());
+  ASSERT_TRUE(rep_bol_or_a.has_value());
+  EXPECT_EQ(pool.get(*bol).nullable_mask, uint8_t(0b1010));
+  EXPECT_EQ(pool.get(*eol).nullable_mask, uint8_t(0b1100));
+  EXPECT_EQ(pool.get(*both).nullable_mask, uint8_t(0b1000));
+  EXPECT_EQ(pool.get(*bol_eol).nullable_mask, uint8_t(0b1000));
+  EXPECT_EQ(pool.get(*bol_or_eol).nullable_mask, uint8_t(0b1110));
+  EXPECT_EQ(pool.get(*rep_bol).nullable_mask, uint8_t(0b1010));
+  EXPECT_EQ(pool.get(*rep_bol_0).nullable_mask, uint8_t(0b1111));
+  EXPECT_EQ(pool.get(*star_bol).nullable_mask, uint8_t(0b1111));
+  EXPECT_EQ(pool.get(*rep_bol_or_a).nullable_mask, uint8_t(0b1010));
 }

@@ -101,4 +101,16 @@ class Dialect {
   bit isExtensible = 0;
 }
 
+// A partition of the definitions of a dialect, for "logical sharding" of their
+// generated declarations and definitions. See `Op::partition`.
+class Partition<string name> {
+  // The name of the partition, a C++ identifier. Generators select a partition
+  // by this name, e.g. `-gen-op-decls` and `-gen-op-defs` with
+  // `-op-partition=...`.
+  string partitionName = name;
+
+  assert !match(partitionName, "^[A-Za-z_][A-Za-z0-9_]*$"),
+         "partition name '" # partitionName # "' is not a C++ identifier";
+}
+
 #endif // DIALECTBASE_TD

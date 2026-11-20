@@ -5358,6 +5358,7 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
   // From here on, we can't fail and will be building new accesses, so rig up
   // an IR builder.
   IRBuilderTy IRB(&AI);
+  IRB.disableGEPCanonicalization();
 
   // Collect the new slices which we will merge into the alloca slices.
   SmallVector<Slice, 4> NewSlices;
@@ -6430,6 +6431,7 @@ SROA::runOnAlloca(AllocaInst &AI) {
   // First, split any FCA loads and stores touching this alloca to promote
   // better splitting and promotion opportunities.
   IRBuilderTy IRB(&AI);
+  IRB.disableGEPCanonicalization();
   AggLoadStoreRewriter AggRewriter(DL, IRB);
   Changed |= AggRewriter.rewrite(AI);
 

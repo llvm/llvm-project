@@ -36,12 +36,14 @@ static cl::opt<object::OffloadKind> Kind(
     cl::values(clEnumValN(object::OFK_OpenMP, "openmp", "Wrap OpenMP binaries"),
                clEnumValN(object::OFK_Cuda, "cuda", "Wrap CUDA binaries"),
                clEnumValN(object::OFK_HIP, "hip", "Wrap HIP binaries"),
-               clEnumValN(object::OFK_SYCL, "sycl", "Wrap SYCL binaries")));
+               clEnumValN(object::OFK_SYCL, "sycl", "Wrap SYCL binaries"),
+               clEnumValN(object::OFK_OpenACC, "openacc",
+                          "Wrap OpenACC binaries")));
 
-static cl::opt<bool> Relocatable(
-    "relocatable",
-    cl::desc("Wrap for a relocatable offloading application (OpenMP only)"),
-    cl::cat(OffloadWrapeprCategory));
+static cl::opt<bool>
+    Relocatable("relocatable",
+                cl::desc("Wrap for a relocatable offloading application"),
+                cl::cat(OffloadWrapeprCategory));
 
 static cl::opt<std::string> OutputFile("o", cl::desc("Write output to <file>."),
                                        cl::value_desc("file"),
@@ -74,6 +76,12 @@ static Error wrapImages(ArrayRef<ArrayRef<char>> BuffersToWrap) {
             /*Suffix=*/"", /*Relocatable=*/Relocatable))
       return Err;
     break;
+  case llvm::object::OFK_OpenACC:
+    if (Error Err = offloading::wrapOpenACCBinaries(
+            M, BuffersToWrap, offloading::getOffloadEntryArray(M),
+            /*Relocatable=*/Relocatable))
+      return Err;
+    break;
   case llvm::object::OFK_Cuda:
     if (Error Err = offloading::wrapCudaBinary(
             M, BuffersToWrap.front(), offloading::getOffloadEntryArray(M),
@@ -86,7 +94,9 @@ static Error wrapImages(ArrayRef<ArrayRef<char>> BuffersToWrap) {
       return Err;
     break;
   case llvm::object::OFK_SYCL:
-    if (Error Err = offloading::wrapSYCLBinaries(M, BuffersToWrap.front()))
+    if (Error Err = offloading::wrapSYCLBinaries(
+            M, BuffersToWrap.front(), offloading::SYCLJITOptions(),
+            /*IsFinalizedImage=*/Relocatable))
       return Err;
     break;
   default:

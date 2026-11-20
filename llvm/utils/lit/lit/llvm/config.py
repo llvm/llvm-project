@@ -144,6 +144,12 @@ class LLVMConfig:
         if "thread" in sanitizers:
             features.add("tsan")
 
+        have_icu = getattr(config, "have_icu", None)
+        if have_icu:
+            features.add("icu")
+        have_iconv = getattr(config, "have_iconv", None)
+        if have_iconv:
+            features.add("iconv")
         have_zlib = getattr(config, "have_zlib", None)
         if have_zlib:
             features.add("zlib")
