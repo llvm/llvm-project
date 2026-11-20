@@ -12,6 +12,7 @@
 
 #include "DXILWriterPass.h"
 #include "DXILBitcodeWriter.h"
+#include "DXILShaderFlags.h"
 #include "DirectX.h"
 #include "MCTargetDesc/DirectXContainerObjectWriter.h"
 #include "llvm/ADT/STLExtras.h"
@@ -59,10 +60,15 @@ public:
   StringRef getPassName() const override { return "Bitcode Writer"; }
 
   bool runOnModule(Module &M) override {
-    WriteDXILToFile(M, OS);
+    WriteDXILToFile(M, OS,
+                    !getAnalysis<ShaderFlagsAnalysisWrapper>()
+                         .getShaderFlags()
+                         .getCombinedFlags()
+                         .NativeLowPrecisionMode);
     return false;
   }
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<ShaderFlagsAnalysisWrapper>();
     AU.setPreservesAll();
   }
 };
@@ -168,12 +174,14 @@ public:
   bool runOnModule(Module &M) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<ShaderFlagsAnalysisWrapper>();
     AU.setPreservesAll();
   }
 };
 } // namespace
 
-static std::string writeModule(Module &M, bool HasDebugInfo, bool WriteDebug) {
+static std::string writeModule(Module &M, bool HasDebugInfo, bool WriteDebug,
+                               bool UsesLegacyDataLayout) {
   std::string Data;
   llvm::raw_string_ostream OS(Data);
 
@@ -217,7 +225,7 @@ static std::string writeModule(Module &M, bool HasDebugInfo, bool WriteDebug) {
            "Shader modules with debug info must have !DICompileUnit metadata.");
 #endif
   }
-  WriteDXILToFile(M, OS);
+  WriteDXILToFile(M, OS, UsesLegacyDataLayout);
   return Data;
 }
 
@@ -234,7 +242,7 @@ static GlobalVariable *createSectionGlobal(Module &M, StringRef Data,
   return GV;
 }
 
-static bool runEmbedderOnModule(Module &M) {
+static bool runEmbedderOnModule(Module &M, bool UsesLegacyDataLayout) {
   // Perform late legalization of lifetime intrinsics that would otherwise
   // fail the Module Verifier if performed in an earlier pass
   legalizeLifetimeIntrinsics(M);
@@ -254,14 +262,15 @@ static bool runEmbedderOnModule(Module &M) {
     // Write DXIL with debug info to ILDB part.
     // Clone the module to avoid alternating it with DebugInfoPass
     // before stripping the debug info later.
-    ILDBData =
-        writeModule(*llvm::CloneModule(M), HasDebugInfo, /*WriteDebug=*/true);
+    ILDBData = writeModule(*llvm::CloneModule(M), HasDebugInfo,
+                           /*WriteDebug=*/true, UsesLegacyDataLayout);
   }
 
   // Clone the module to save dx.source metadata nodes from stripping, as they
   // are needed for DXILMetadataAnalysisWrapperPass.
   std::string DXILData =
-      writeModule(*llvm::CloneModule(M), HasDebugInfo, /*WriteDebug=*/false);
+      writeModule(*llvm::CloneModule(M), HasDebugInfo, /*WriteDebug=*/false,
+                  UsesLegacyDataLayout);
 
   // We no longer need lifetime intrinsics after bitcode serialization, so we
   // simply remove them to keep the Module Verifier happy after our
@@ -280,11 +289,16 @@ static bool runEmbedderOnModule(Module &M) {
 }
 
 bool DXILEmbedderLegacy::runOnModule(Module &M) {
-  return runEmbedderOnModule(M);
+  return runEmbedderOnModule(M, !getAnalysis<ShaderFlagsAnalysisWrapper>()
+                                     .getShaderFlags()
+                                     .getCombinedFlags()
+                                     .NativeLowPrecisionMode);
 }
 
 PreservedAnalyses DXILEmbedderPass::run(Module &M, ModuleAnalysisManager &MAM) {
-  runEmbedderOnModule(M);
+  runEmbedderOnModule(M, !MAM.getResult<ShaderFlagsAnalysis>(M)
+                              .getCombinedFlags()
+                              .NativeLowPrecisionMode);
   return PreservedAnalyses::all();
 }
 
@@ -292,6 +306,7 @@ char DXILWriterLegacy::ID = 0;
 INITIALIZE_PASS_BEGIN(DXILWriterLegacy, "dxil-writer", "Write Bitcode", false,
                       true)
 INITIALIZE_PASS_DEPENDENCY(ModuleSummaryIndexWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(ShaderFlagsAnalysisWrapper)
 INITIALIZE_PASS_END(DXILWriterLegacy, "dxil-writer", "Write Bitcode", false,
                     true)
 
@@ -300,13 +315,20 @@ ModulePass *llvm::createDXILWriterLegacyPass(raw_ostream &Str) {
 }
 
 char DXILEmbedderLegacy::ID = 0;
-INITIALIZE_PASS(DXILEmbedderLegacy, "dxil-embedder", "Embed DXIL", false, true)
+INITIALIZE_PASS_BEGIN(DXILEmbedderLegacy, "dxil-embedder", "Embed DXIL", false,
+                      true)
+INITIALIZE_PASS_DEPENDENCY(ShaderFlagsAnalysisWrapper)
+INITIALIZE_PASS_END(DXILEmbedderLegacy, "dxil-embedder", "Embed DXIL", false,
+                    true)
 
 ModulePass *llvm::createDXILEmbedderLegacyPass() {
   return new DXILEmbedderLegacy();
 }
 
 PreservedAnalyses DXILWriterPass::run(Module &M, ModuleAnalysisManager &MAM) {
-  WriteDXILToFile(M, OS);
+  WriteDXILToFile(M, OS,
+                  !MAM.getResult<ShaderFlagsAnalysis>(M)
+                       .getCombinedFlags()
+                       .NativeLowPrecisionMode);
   return PreservedAnalyses::all();
 }
