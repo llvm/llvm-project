@@ -20,12 +20,12 @@ define amdgpu_kernel void @vgpr_mfma_pass_av_split_crash(double %arg1, i1 %arg2,
 ; CHECK-NEXT:    v_mov_b32_e32 v5, 0xbe927e4f
 ; CHECK-NEXT:    v_mov_b32_e32 v6, 0x19f4ec90
 ; CHECK-NEXT:    v_mov_b32_e32 v7, 0x3efa01a0
-; CHECK-NEXT:    v_mov_b32_e32 v8, 0x16c16967
-; CHECK-NEXT:    v_mov_b32_e32 v9, 0xbf56c16c
-; CHECK-NEXT:    v_mov_b32_e32 v10, 0x69efb384
-; CHECK-NEXT:    v_mov_b32_e32 v11, 0x3f4b2bb0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    v_mov_b64_e32 v[12:13], 0
+; CHECK-NEXT:    v_mov_b64_e32 v[8:9], 0
+; CHECK-NEXT:    v_mov_b32_e32 v10, 0x16c16967
+; CHECK-NEXT:    v_mov_b32_e32 v11, 0xbf56c16c
+; CHECK-NEXT:    v_mov_b32_e32 v12, 0x69efb384
+; CHECK-NEXT:    v_mov_b32_e32 v13, 0x3f4b2bb0
 ; CHECK-NEXT:    v_mov_b32_e32 v14, 0xa57d9582
 ; CHECK-NEXT:    v_mov_b32_e32 v15, 0xbf8c6ea4
 ; CHECK-NEXT:    v_mov_b32_e32 v16, 0xe82d3ff0
@@ -45,7 +45,7 @@ define amdgpu_kernel void @vgpr_mfma_pass_av_split_crash(double %arg1, i1 %arg2,
 ; CHECK-NEXT:    s_mov_b64 s[14:15], 0
 ; CHECK-NEXT:  .LBB0_2: ; %._crit_edge2105.i.i.i2330
 ; CHECK-NEXT:    ; in Loop: Header=BB0_3 Depth=1
-; CHECK-NEXT:    global_store_dwordx2 v0, v[12:13], s[8:9]
+; CHECK-NEXT:    global_store_dwordx2 v0, v[8:9], s[8:9]
 ; CHECK-NEXT:    v_accvgpr_write_b32 a0, v24
 ; CHECK-NEXT:    v_accvgpr_write_b32 a1, v25
 ; CHECK-NEXT:    s_mov_b64 s[10:11], s[16:17]
@@ -62,15 +62,17 @@ define amdgpu_kernel void @vgpr_mfma_pass_av_split_crash(double %arg1, i1 %arg2,
 ; CHECK-NEXT:  ; %bb.5: ; %.preheader1855.i.i.i3329.preheader
 ; CHECK-NEXT:    ; in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    flat_load_dwordx2 v[24:25], v[30:31]
-; CHECK-NEXT:    v_mov_b64_e32 v[28:29], v[14:15]
+; CHECK-NEXT:    v_mov_b64_e32 v[28:29], v[10:11]
 ; CHECK-NEXT:    v_accvgpr_write_b32 a2, 0
 ; CHECK-NEXT:    v_accvgpr_write_b32 a3, 0
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_fma_f64 v[26:27], 0, v[24:25], v[2:3]
 ; CHECK-NEXT:    v_fma_f64 v[26:27], 0, v[26:27], v[4:5]
 ; CHECK-NEXT:    v_fma_f64 v[26:27], 0, v[26:27], v[6:7]
-; CHECK-NEXT:    v_fma_f64 v[26:27], 0, v[26:27], v[8:9]
-; CHECK-NEXT:    v_fma_f64 v[26:27], 0, v[26:27], v[10:11]
+; CHECK-NEXT:    v_fmac_f64_e32 v[28:29], 0, v[26:27]
+; CHECK-NEXT:    v_mov_b64_e32 v[26:27], v[12:13]
+; CHECK-NEXT:    v_fmac_f64_e32 v[26:27], 0, v[28:29]
+; CHECK-NEXT:    v_mov_b64_e32 v[28:29], v[14:15]
 ; CHECK-NEXT:    v_fmac_f64_e32 v[28:29], 0, v[26:27]
 ; CHECK-NEXT:    v_mov_b64_e32 v[26:27], v[16:17]
 ; CHECK-NEXT:    v_fmac_f64_e32 v[26:27], 0, v[28:29]

@@ -4221,6 +4221,18 @@ unsigned SIRegisterInfo::getRegPressureSetLimit(const MachineFunction &MF,
   case AMDGPU::RegisterPressureSets::SReg_32:
     return getRegPressureLimit(&AMDGPU::SGPR_32RegClass,
                                const_cast<MachineFunction &>(MF));
+  case AMDGPU::RegisterPressureSets::AV_32: {
+    // Without AGPRs the set holds the same registers as VGPR_32, whose limit
+    // applies to them. Keep TableGen's limit, which stays above it after
+    // RegisterClassInfo subtracts the reserved AGPRs.
+    if (!ST.hasMAIInsts())
+      return AMDGPUGenRegisterInfo::getRegPressureSetLimit(MF, Idx);
+    // A unified register file shares the VGPR budget between the two banks;
+    // otherwise each bank has a budget of its own.
+    unsigned VGPRLimit = getRegPressureLimit(&AMDGPU::VGPR_32RegClass,
+                                             const_cast<MachineFunction &>(MF));
+    return ST.hasGFX90AInsts() ? VGPRLimit : 2 * VGPRLimit;
+  }
   }
 
   llvm_unreachable("Unexpected register pressure set!");

@@ -66,7 +66,6 @@ define amdgpu_kernel void @kernel(ptr addrspace(1) %arg1.global, i1 %tmp3.i.i, i
 ; GLOBALNESS1-NEXT:    s_mov_b64 s[34:35], s[10:11]
 ; GLOBALNESS1-NEXT:    v_mov_b32_e32 v46, 0x80
 ; GLOBALNESS1-NEXT:    v_mov_b32_e32 v47, 0
-; GLOBALNESS1-NEXT:    v_mov_b32_e32 v43, v42
 ; GLOBALNESS1-NEXT:    s_mov_b32 s32, 0
 ; GLOBALNESS1-NEXT:    ; implicit-def: $vgpr58_vgpr59
 ; GLOBALNESS1-NEXT:    s_waitcnt vmcnt(0)
@@ -148,6 +147,7 @@ define amdgpu_kernel void @kernel(ptr addrspace(1) %arg1.global, i1 %tmp3.i.i, i
 ; GLOBALNESS1-NEXT:    s_cbranch_scc0 .LBB1_10
 ; GLOBALNESS1-NEXT:  ; %bb.9: ; %bb39.i
 ; GLOBALNESS1-NEXT:    ; in Loop: Header=BB1_3 Depth=1
+; GLOBALNESS1-NEXT:    v_mov_b32_e32 v43, v42
 ; GLOBALNESS1-NEXT:    global_store_dwordx2 v[44:45], v[42:43], off
 ; GLOBALNESS1-NEXT:  .LBB1_10: ; %bb44.lr.ph.i
 ; GLOBALNESS1-NEXT:    ; in Loop: Header=BB1_3 Depth=1
@@ -220,6 +220,7 @@ define amdgpu_kernel void @kernel(ptr addrspace(1) %arg1.global, i1 %tmp3.i.i, i
 ; GLOBALNESS1-NEXT:    s_cbranch_execz .LBB1_11
 ; GLOBALNESS1-NEXT:  ; %bb.20: ; %bb62.i
 ; GLOBALNESS1-NEXT:    ; in Loop: Header=BB1_13 Depth=2
+; GLOBALNESS1-NEXT:    v_mov_b32_e32 v43, v42
 ; GLOBALNESS1-NEXT:    global_store_dwordx2 v[44:45], v[42:43], off
 ; GLOBALNESS1-NEXT:    s_branch .LBB1_11
 ; GLOBALNESS1-NEXT:  .LBB1_21: ; in Loop: Header=BB1_3 Depth=1
@@ -239,10 +240,12 @@ define amdgpu_kernel void @kernel(ptr addrspace(1) %arg1.global, i1 %tmp3.i.i, i
 ; GLOBALNESS1-NEXT:    s_cbranch_scc0 .LBB1_1
 ; GLOBALNESS1-NEXT:  ; %bb.24: ; %bb69.i
 ; GLOBALNESS1-NEXT:    ; in Loop: Header=BB1_3 Depth=1
+; GLOBALNESS1-NEXT:    v_mov_b32_e32 v43, v42
 ; GLOBALNESS1-NEXT:    global_store_dwordx2 v[44:45], v[42:43], off
 ; GLOBALNESS1-NEXT:    s_branch .LBB1_1
 ; GLOBALNESS1-NEXT:  .LBB1_25: ; %bb73.i
 ; GLOBALNESS1-NEXT:    ; in Loop: Header=BB1_3 Depth=1
+; GLOBALNESS1-NEXT:    v_mov_b32_e32 v43, v42
 ; GLOBALNESS1-NEXT:    global_store_dwordx2 v[44:45], v[42:43], off
 ; GLOBALNESS1-NEXT:    s_branch .LBB1_2
 ; GLOBALNESS1-NEXT:  .LBB1_26:
@@ -303,7 +306,6 @@ define amdgpu_kernel void @kernel(ptr addrspace(1) %arg1.global, i1 %tmp3.i.i, i
 ; GLOBALNESS0-NEXT:    s_mov_b64 s[34:35], s[10:11]
 ; GLOBALNESS0-NEXT:    v_mov_b32_e32 v46, 0x80
 ; GLOBALNESS0-NEXT:    v_mov_b32_e32 v47, 0
-; GLOBALNESS0-NEXT:    v_mov_b32_e32 v43, v42
 ; GLOBALNESS0-NEXT:    s_mov_b32 s32, 0
 ; GLOBALNESS0-NEXT:    ; implicit-def: $vgpr58_vgpr59
 ; GLOBALNESS0-NEXT:    s_waitcnt vmcnt(0)
@@ -385,6 +387,7 @@ define amdgpu_kernel void @kernel(ptr addrspace(1) %arg1.global, i1 %tmp3.i.i, i
 ; GLOBALNESS0-NEXT:    s_cbranch_scc0 .LBB1_10
 ; GLOBALNESS0-NEXT:  ; %bb.9: ; %bb39.i
 ; GLOBALNESS0-NEXT:    ; in Loop: Header=BB1_3 Depth=1
+; GLOBALNESS0-NEXT:    v_mov_b32_e32 v43, v42
 ; GLOBALNESS0-NEXT:    global_store_dwordx2 v[44:45], v[42:43], off
 ; GLOBALNESS0-NEXT:  .LBB1_10: ; %bb44.lr.ph.i
 ; GLOBALNESS0-NEXT:    ; in Loop: Header=BB1_3 Depth=1
@@ -457,6 +460,7 @@ define amdgpu_kernel void @kernel(ptr addrspace(1) %arg1.global, i1 %tmp3.i.i, i
 ; GLOBALNESS0-NEXT:    s_cbranch_execz .LBB1_11
 ; GLOBALNESS0-NEXT:  ; %bb.20: ; %bb62.i
 ; GLOBALNESS0-NEXT:    ; in Loop: Header=BB1_13 Depth=2
+; GLOBALNESS0-NEXT:    v_mov_b32_e32 v43, v42
 ; GLOBALNESS0-NEXT:    global_store_dwordx2 v[44:45], v[42:43], off
 ; GLOBALNESS0-NEXT:    s_branch .LBB1_11
 ; GLOBALNESS0-NEXT:  .LBB1_21: ; in Loop: Header=BB1_3 Depth=1
@@ -476,10 +480,12 @@ define amdgpu_kernel void @kernel(ptr addrspace(1) %arg1.global, i1 %tmp3.i.i, i
 ; GLOBALNESS0-NEXT:    s_cbranch_scc0 .LBB1_1
 ; GLOBALNESS0-NEXT:  ; %bb.24: ; %bb69.i
 ; GLOBALNESS0-NEXT:    ; in Loop: Header=BB1_3 Depth=1
+; GLOBALNESS0-NEXT:    v_mov_b32_e32 v43, v42
 ; GLOBALNESS0-NEXT:    global_store_dwordx2 v[44:45], v[42:43], off
 ; GLOBALNESS0-NEXT:    s_branch .LBB1_1
 ; GLOBALNESS0-NEXT:  .LBB1_25: ; %bb73.i
 ; GLOBALNESS0-NEXT:    ; in Loop: Header=BB1_3 Depth=1
+; GLOBALNESS0-NEXT:    v_mov_b32_e32 v43, v42
 ; GLOBALNESS0-NEXT:    global_store_dwordx2 v[44:45], v[42:43], off
 ; GLOBALNESS0-NEXT:    s_branch .LBB1_2
 ; GLOBALNESS0-NEXT:  .LBB1_26:
