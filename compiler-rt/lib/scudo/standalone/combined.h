@@ -500,9 +500,12 @@ public:
     if (AllocatorConfig::getExactUsableSize()) {
       if (DeallocSize != Size)
         reportDeleteSizeMismatch(Ptr, DeallocSize, Size);
-    } else if (DeallocSize != Size && DeallocSize != getUsableSize(Ptr, Header))
-      reportDeleteSizeMismatch(Ptr, DeallocSize, Size,
-                               getUsableSize(Ptr, Header));
+    } else {
+      uptr UsableSize = getUsableSize(Ptr, Header);
+      if (DeallocSize < Size || DeallocSize > UsableSize) {
+        reportDeleteSizeMismatch(Ptr, DeallocSize, Size, UsableSize);
+      }
+    }
   }
 
   ALWAYS_INLINE void checkTypeMatch(AllocatorAction Action, const void *Ptr,
