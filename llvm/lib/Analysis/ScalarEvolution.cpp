@@ -15893,11 +15893,22 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
           EnqueueOperands(SMax);
         break;
       case CmpInst::ICMP_UGT:
-      case CmpInst::ICMP_UGE:
-        To = SE.getUMaxExpr(FromRewritten, RHS);
+      case CmpInst::ICMP_UGE: {
+        // Clamp RHS to the maximum of From, so the range of the rewrite is at
+        // least as precise as the range of From. This is exact, as the guard
+        // cannot hold if RHS exceeds it. Don't clamp if RHS is known to exceed
+        // it, to keep the information that the guard cannot hold.
+        const SCEV *ClampedRHS = RHS;
+        APInt FromMax = SE.getUnsignedRangeMax(FromRewritten);
+        if (!RHS->getType()->isPointerTy() &&
+            !SE.getUnsignedRange(RHS).icmp(ICmpInst::ICMP_UGT,
+                                           ConstantRange(FromMax)))
+          ClampedRHS = SE.getUMinExpr(RHS, SE.getConstant(FromMax));
+        To = SE.getUMaxExpr(FromRewritten, ClampedRHS);
         if (auto *UMin = dyn_cast<SCEVUMinExpr>(FromRewritten))
           EnqueueOperands(UMin);
         break;
+      }
       case CmpInst::ICMP_SGT:
       case CmpInst::ICMP_SGE: {
         // From s>= RHS s>= 0 implies From u>= RHS, so an earlier
