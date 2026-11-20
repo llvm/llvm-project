@@ -33,6 +33,9 @@ static void test_mbrtoc8_short_alloc() {
   char8_t c8 = 0;
   assert(std::mbrtoc8(&c8, one_byte, 16, &st) == 1);
   assert(c8 == u8'a');
+  one_byte[0] = '\0';
+  assert(std::mbrtoc8(&c8, one_byte, 16, &st) == 0);
+  assert(c8 == u8'\0');
   free(one_byte);
 }
 

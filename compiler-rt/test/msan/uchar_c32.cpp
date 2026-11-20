@@ -47,6 +47,12 @@ static void test_mbrtoc32_partial_init() {
   assert(mbrtoc32(&c32, partial_init, sizeof(partial_init), &st) == 1);
   assert(__msan_test_shadow(&c32, sizeof(c32)) == -1);
   assert(c32 == U'x');
+
+  partial_init[0] = '\0';
+  __msan_poison(&c32, sizeof(c32));
+  assert(mbrtoc32(&c32, partial_init, sizeof(partial_init), &st) == 0);
+  assert(__msan_test_shadow(&c32, sizeof(c32)) == -1);
+  assert(c32 == U'\0');
 }
 
 // s == nullptr must not write or unpoison *pc32.
@@ -116,6 +122,31 @@ static void test_c32rtomb_utf8_multibyte() {
   assert(memcmp(buf, emoji, 4) == 0);
 }
 
+static void test_mbrtoc32_big5hkscs_continuation() {
+  if (!setlocale(LC_CTYPE, "zh_HK.BIG5-HKSCS") &&
+      !setlocale(LC_CTYPE, "zh_HK.big5hkscs"))
+    return;
+
+  mbstate_t st = {};
+  char buf[4];
+  __msan_poison(buf, sizeof(buf));
+  buf[0] = '\x88';
+  buf[1] = '\x62';
+
+  char32_t c1;
+  char32_t c2;
+  __msan_poison(&c1, sizeof(c1));
+  __msan_poison(&c2, sizeof(c2));
+  assert(mbrtoc32(&c1, buf, 2, &st) == 2);
+  assert(__msan_test_shadow(&c1, sizeof(c1)) == -1);
+  assert(c1 == 0xca);
+
+  size_t res = mbrtoc32(&c2, buf + 2, 1, &st);
+  assert(res == 0 || res == (size_t)-3);
+  assert(__msan_test_shadow(&c2, sizeof(c2)) == -1);
+  assert(c2 == 0x304);
+}
+
 int main(int argc, char **argv) {
   if (argc > 1) {
     if (strcmp(argv[1], "src") == 0) {
@@ -134,5 +165,6 @@ int main(int argc, char **argv) {
   test_c32rtomb_ascii();
   test_mbrtoc32_utf8_incomplete();
   test_c32rtomb_utf8_multibyte();
+  test_mbrtoc32_big5hkscs_continuation();
   return 0;
 }

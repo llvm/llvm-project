@@ -70,7 +70,7 @@
 #define SI_NETBSD 0
 #endif
 
-// NetBSD added <uchar.h> (c8/c16/c32 conversion functions) in NetBSD 11.
+// NetBSD added <uchar.h> (c8/c16/c32 conversion functions) in NetBSD 10.1.
 #if SANITIZER_NETBSD && __has_include(<uchar.h>)
 #  define SI_NETBSD_UCHAR 1
 #else

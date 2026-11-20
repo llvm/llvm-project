@@ -4084,7 +4084,7 @@ static ALWAYS_INLINE SIZE_T MbrtocImpl(void* ctx, Fn real, CharT* pc,
                                        const char* s, SIZE_T n, void* ps) {
   if (ps)
     COMMON_INTERCEPTOR_READ_RANGE(ctx, ps, mbstate_t_sz);
-  CharT local_pc;
+  CharT local_pc = 0;
   SIZE_T res = real(&local_pc, s, n, ps);
   if (ps)
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ps, mbstate_t_sz);
@@ -4104,16 +4104,25 @@ static ALWAYS_INLINE SIZE_T MbrtocImpl(void* ctx, Fn real, CharT* pc,
     return res;
   }
   if (res == (SIZE_T)-3) {
-    // A surrogate pair was read from `ps`. Nothing is read from `s`.
+    // A previous conversion resulted in multiple characters and the next
+    // character was read from `ps`. Nothing was read from `s`.
     if (pc) {
       COMMON_INTERCEPTOR_WRITE_RANGE(ctx, pc, sizeof(*pc));
       *pc = local_pc;
     }
     return res;
   }
-  SIZE_T read_cnt = (res == 0) ? 1 : res;
-  if (n > 0)
-    COMMON_INTERCEPTOR_READ_RANGE(ctx, s, Min(read_cnt, n));
+  SIZE_T read_cnt;
+  if (res == 0) {
+    // If local_pc == 0, shift-reset bytes plus '\0' were read; otherwise
+    // (e.g. glibc multi-codepoint continuation), 0 bytes were read from `s`.
+    read_cnt = (local_pc == 0) ? internal_strnlen(s, n) + 1 : 0;
+  } else {
+    read_cnt = res;
+  }
+  CHECK_LE(read_cnt, n);
+  if (read_cnt > 0)
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, s, read_cnt);
   if (pc) {
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, pc, sizeof(*pc));
     *pc = local_pc;
@@ -4134,7 +4143,8 @@ static ALWAYS_INLINE SIZE_T CrtombImpl(void* ctx, Fn real, char* s, CharT c,
     return res;
   }
 
-  // 32 is larger than MB_LEN_MAX, which is 16 on glibc/Linux.
+  // 32 is the largest MB_LEN_MAX across the targets we support.
+  // 16 on glibc/Linux and 32 on NetBSD.
   char local_dest[32];
   SIZE_T res = real(local_dest, c, ps);
   if (ps)

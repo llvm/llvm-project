@@ -47,6 +47,12 @@ static void test_mbrtoc16_partial_init() {
   assert(mbrtoc16(&c16, partial_init, sizeof(partial_init), &st) == 1);
   assert(__msan_test_shadow(&c16, sizeof(c16)) == -1);
   assert(c16 == u'x');
+
+  partial_init[0] = '\0';
+  __msan_poison(&c16, sizeof(c16));
+  assert(mbrtoc16(&c16, partial_init, sizeof(partial_init), &st) == 0);
+  assert(__msan_test_shadow(&c16, sizeof(c16)) == -1);
+  assert(c16 == u'\0');
 }
 
 // s == nullptr must not write or unpoison *pc16.
@@ -133,6 +139,31 @@ static void test_c16rtomb_utf8_multibyte() {
   assert(memcmp(buf, "\xe2\x82\xac", 3) == 0);
 }
 
+static void test_mbrtoc16_big5hkscs_continuation() {
+  if (!setlocale(LC_CTYPE, "zh_HK.BIG5-HKSCS") &&
+      !setlocale(LC_CTYPE, "zh_HK.big5hkscs"))
+    return;
+
+  mbstate_t st = {};
+  char buf[4];
+  __msan_poison(buf, sizeof(buf));
+  buf[0] = '\x88';
+  buf[1] = '\x62';
+
+  char16_t c1;
+  char16_t c2;
+  __msan_poison(&c1, sizeof(c1));
+  __msan_poison(&c2, sizeof(c2));
+  assert(mbrtoc16(&c1, buf, 2, &st) == 2);
+  assert(__msan_test_shadow(&c1, sizeof(c1)) == -1);
+  assert(c1 == 0xca);
+
+  size_t res = mbrtoc16(&c2, buf + 2, 1, &st);
+  assert(res == 0 || res == (size_t)-3);
+  assert(__msan_test_shadow(&c2, sizeof(c2)) == -1);
+  assert(c2 == 0x304);
+}
+
 int main(int argc, char **argv) {
   if (argc > 1) {
     if (strcmp(argv[1], "src") == 0) {
@@ -152,5 +183,6 @@ int main(int argc, char **argv) {
   test_mbrtoc16_utf8_surrogate_pair();
   test_mbrtoc16_utf8_incomplete();
   test_c16rtomb_utf8_multibyte();
+  test_mbrtoc16_big5hkscs_continuation();
   return 0;
 }
