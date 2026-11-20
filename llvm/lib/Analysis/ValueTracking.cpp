@@ -2278,13 +2278,8 @@ static void computeKnownBitsFromOperator(const Operator *I,
         break;
       case Intrinsic::ctlz: {
         computeKnownBits(I->getOperand(0), DemandedElts, Known2, Q, Depth + 1);
-        // If we have a known 1, its position is our upper bound.
-        unsigned PossibleLZ = Known2.countMaxLeadingZeros();
-        // If this call is poison for 0 input, the result will be less than 2^n.
-        if (II->getArgOperand(1) == ConstantInt::getTrue(II->getContext()))
-          PossibleLZ = std::min(PossibleLZ, BitWidth - 1);
-        unsigned LowBits = llvm::bit_width(PossibleLZ);
-        Known.Zero.setBitsFrom(LowBits);
+        bool ZeroIsPoison = match(II->getArgOperand(1), m_One());
+        Known = Known.unionWith(Known2.ctlz(ZeroIsPoison));
         break;
       }
       case Intrinsic::cttz: {
