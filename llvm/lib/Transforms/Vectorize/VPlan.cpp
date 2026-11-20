@@ -332,15 +332,15 @@ void VPTransformState::fixupHeaderPhis() {
     auto *LatchVPBB = cast<VPBasicBlock>(Header->getPredecessors()[1]);
     BasicBlock *VectorLatchBB = CFG.VPBB2IRBB[LatchVPBB];
 
-    for (VPRecipeBase &R : Header->phis()) {
-      auto *PhiR = cast<VPSingleDefRecipe>(&R);
+    for (VPSingleDefRecipe &PhiR :
+         map_range(Header->phis(), CastTo<VPSingleDefRecipe>)) {
       bool NeedsSingleScalar =
           isa<VPPhi, VPConditionalInductionPHIRecipe>(PhiR) ||
           (isa<VPReductionPHIRecipe>(PhiR) &&
-           cast<VPReductionPHIRecipe>(PhiR)->isInLoop());
+           cast<VPReductionPHIRecipe>(PhiR).isInLoop());
 
-      Value *Phi = get(PhiR, NeedsSingleScalar);
-      Value *Val = get(PhiR->getOperand(1), NeedsSingleScalar);
+      Value *Phi = get(&PhiR, NeedsSingleScalar);
+      Value *Val = get(PhiR.getOperand(1), NeedsSingleScalar);
       cast<PHINode>(Phi)->addIncoming(Val, VectorLatchBB);
     }
   }

@@ -22,3 +22,12 @@ TEST_F(SBTypeSyntheticTest, IsEqualToInvalid) {
   SBTypeSynthetic invalid;
   EXPECT_FALSE(synthetic.IsEqualTo(invalid));
 }
+
+TEST_F(SBTypeSyntheticTest, InequalityOfInvalidObjects) {
+  SBTypeSynthetic synthetic =
+      SBTypeSynthetic::CreateWithClassName("module.Class");
+  SBTypeSynthetic invalid;
+  SBTypeSynthetic other_invalid;
+  EXPECT_FALSE(invalid != other_invalid);
+  EXPECT_TRUE(invalid != synthetic);
+}
