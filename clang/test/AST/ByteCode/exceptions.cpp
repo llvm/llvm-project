@@ -921,7 +921,9 @@ namespace TheWorst {
   };
 
   constexpr int test() {
-    auto c = checker{11};
+    try {
+      auto c = checker{11};
+    } catch(...) {}
     return 42;
   }
   constexpr int constructor_test = test();
@@ -2094,4 +2096,86 @@ namespace CatchScopeDestroy {
     return n;
   }
   static_assert(viaReturn() == 11);
+}
+
+namespace ThrowingCtorInitializers {
+  constexpr int thrower() { throw 1; }
+
+  struct InitThrows {
+    int m;
+    constexpr InitThrows(bool &c) try : m(thrower()) {
+    } catch (...) {
+      c = true;
+    }
+  };
+  constexpr bool initCaught() {
+    bool c = false;
+    try {
+      InitThrows a(c);
+    } catch (...) {
+    }
+    return c;
+  }
+  static_assert(initCaught());
+
+  /// Catch handlers in ctors need to rethrow at the end.
+  struct BodyThrows {
+    constexpr BodyThrows() try {
+      throw 1;
+    } catch (...) {
+    }
+  };
+  constexpr int bodyRethrows() {
+    try {
+      BodyThrows b;
+    } catch (int) {
+      return 12;
+    }
+    return 0;
+  }
+  static_assert(bodyRethrows() == 12);
+
+}
+
+namespace ThrowingDtors {
+  struct S {
+    constexpr ~S() noexcept(false) {
+      throw -1;
+    }
+  };
+
+  struct F {
+    S s;
+
+    constexpr ~F() try {
+      // Field is destroyed.
+    } catch(...) {
+      return;
+    }
+  };
+
+  constexpr int test() {
+    {
+      F f;
+    }
+    return 12;
+  }
+  static_assert(test() == 12);
+
+  struct DtorThrows {
+    constexpr ~DtorThrows() noexcept(false) try {
+      throw 1;
+    } catch (...) {
+    }
+  };
+  constexpr int dtorRethrows() {
+    try {
+      DtorThrows d;
+    } catch (int) {
+      return 1;
+    }
+    return 0;
+  }
+  static_assert(dtorRethrows() == 1);
+
 }

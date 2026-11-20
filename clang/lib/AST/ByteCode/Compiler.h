@@ -463,8 +463,15 @@ private:
     return emitHLSLConstructAggregate(DestType, Elements, ElemIdx, E);
   }
 
-  bool compileConstructor(const CXXConstructorDecl *Ctor);
-  bool compileDestructor(const CXXDestructorDecl *Dtor);
+  bool compileConstructor(const CXXConstructorDecl *Ctor,
+                          const Stmt *Body = nullptr);
+  bool compileConstructorBody(const CXXConstructorDecl *Ctor, const Stmt *Body);
+  bool compileTryConstructor(const CXXConstructorDecl *Ctor);
+
+  bool compileDestructor(const CXXDestructorDecl *Dtor,
+                         const Stmt *Body = nullptr);
+  bool compileDestructorBody(const CXXDestructorDecl *Dtor, const Stmt *Body);
+  bool compileTryDestructor(const CXXDestructorDecl *Dtor);
   bool compileUnionAssignmentOperator(const CXXMethodDecl *MD);
 
   bool checkLiteralType(const Expr *E);
@@ -475,7 +482,10 @@ private:
   bool emitFunctionReturn(const FunctionDecl *FD, OptPrimType ReturnType);
 
   bool call(const Function *Func, SourceInfo Loc);
+  // Exception stuff.
   bool emitCallCatchEpilog(SourceInfo Loc, bool DestroyScopes = true);
+  bool emitCatchHandlers(const CXXTryStmt *S, unsigned TryBlockStart,
+                         unsigned TryBlockEnd, bool IsFunctionTryBlock = false);
 
 protected:
   /// Variable to storage mapping.

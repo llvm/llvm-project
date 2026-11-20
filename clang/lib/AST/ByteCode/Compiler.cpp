@@ -3926,38 +3926,10 @@ bool Compiler<Emitter>::VisitCXXThrowExpr(const CXXThrowExpr *E) {
 }
 
 template <class Emitter>
-bool Compiler<Emitter>::visitCXXTryStmt(const CXXTryStmt *S) {
-  if constexpr (std::is_same_v<Emitter, EvalEmitter>)
-    return false;
-
-  if (!Ctx.ExceptionsEnabled) {
-    // Ignore all handlers.
-    return this->visitStmt(S->getTryBlock());
-  }
-
-  if (this->InStmtExpr)
-    return this->emitUnsupported(S);
-
-  // When an exception is thrown in the middle of a try{} block, we use this
-  // throw trap to pop all values from the stack that have been added during
-  // the try block before the throw.
-  if (!this->emitThrowTrap(S))
-    return false;
-
-  // For the try block, we record the bytecode offset before and
-  // after it. When an exception is thrown, we check if the offset
-  // at that point is between the start/end of the appropriate catch
-  // handler for this try block. If we find such a handler, we jump to it.
-  unsigned TryBlockStart = this->currentCodeSize();
-  {
-    LocalScope<Emitter> Scope(this, ScopeKind::Try);
-    const auto *TryBlock = cast<CompoundStmt>(S->getTryBlock());
-    if (!this->visitStmt(TryBlock))
-      return false;
-    if (!Scope.destroyLocals())
-      return false;
-  }
-  unsigned TryBlockEnd = this->currentCodeSize();
+bool Compiler<Emitter>::emitCatchHandlers(const CXXTryStmt *S,
+                                          unsigned TryBlockStart,
+                                          unsigned TryBlockEnd,
+                                          bool IsFunctionTryBlock) {
 
   // Jump after handlers if nothing was thrown.
   LabelTy EndLabel = this->getLabel();
@@ -4024,12 +3996,20 @@ bool Compiler<Emitter>::visitCXXTryStmt(const CXXTryStmt *S) {
     if (!this->visitStmt(HandlerBlock))
       return false;
 
+    // function-try-blocks in constructors and restructors implicitly rethrow at
+    // the end of their catch handlers.
+    if (IsFunctionTryBlock) {
+      if (!this->emitReThrow(S))
+        return false;
+    }
+
     // Call destructors of the exception object and locals.
     if (!CatchScope.destroyLocals())
       return false;
 
     if (blockEndsInReturn(HandlerBlock))
       continue;
+    // Jump over remaining handlers right to the end.
     this->jump(EndLabel, S);
   }
 
@@ -4037,6 +4017,43 @@ bool Compiler<Emitter>::visitCXXTryStmt(const CXXTryStmt *S) {
   this->emitLabel(EndLabel);
 
   return true;
+}
+
+template <class Emitter>
+bool Compiler<Emitter>::visitCXXTryStmt(const CXXTryStmt *S) {
+  if constexpr (std::is_same_v<Emitter, EvalEmitter>)
+    return false;
+
+  if (!Ctx.ExceptionsEnabled) {
+    // Ignore all handlers.
+    return this->visitStmt(S->getTryBlock());
+  }
+
+  if (this->InStmtExpr)
+    return this->emitUnsupported(S);
+
+  // When an exception is thrown in the middle of a try{} block, we use this
+  // throw trap to pop all values from the stack that have been added during
+  // the try block before the throw.
+  if (!this->emitThrowTrap(S))
+    return false;
+
+  // For the try block, we record the bytecode offset before and
+  // after it. When an exception is thrown, we check if the offset
+  // at that point is between the start/end of the appropriate catch
+  // handler for this try block. If we find such a handler, we jump to it.
+  unsigned TryBlockStart = this->currentCodeSize();
+  {
+    LocalScope<Emitter> Scope(this, ScopeKind::Try);
+    const auto *TryBlock = cast<CompoundStmt>(S->getTryBlock());
+    if (!this->visitStmt(TryBlock))
+      return false;
+    if (!Scope.destroyLocals())
+      return false;
+  }
+  unsigned TryBlockEnd = this->currentCodeSize();
+
+  return this->emitCatchHandlers(S, TryBlockStart, TryBlockEnd);
 }
 
 template <class Emitter>
@@ -7915,8 +7932,10 @@ static bool initNeedsOverridenLoc(const CXXCtorInitializer *Init) {
   return false;
 }
 
+/// Compile the constructor initializers and the given body statement.
 template <class Emitter>
-bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
+bool Compiler<Emitter>::compileConstructorBody(const CXXConstructorDecl *Ctor,
+                                               const Stmt *Body) {
   assert(!ReturnType);
 
   // Only start the lifetime of the instance pointer.
@@ -7967,7 +7986,7 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
     // No special case for NumFields == 0 here, so the Memcpy op
     // below also does its checks in those cases.
 
-    assert(cast<CompoundStmt>(Ctor->getBody())->body_empty());
+    assert(cast<CompoundStmt>(Body)->body_empty());
     if (!this->emitThis(Ctor))
       return false;
 
@@ -8108,7 +8127,7 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
       return false;
   }
 
-  if (const Stmt *Body = Ctor->getBody()) {
+  if (Body) {
     // Only emit the CtorCheck op for non-empty CompoundStmt bodies.
     // For non-CompoundStmts, always assume they are non-empty and emit it.
     if (const auto *CS = dyn_cast<CompoundStmt>(Body)) {
@@ -8123,6 +8142,7 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
       if (!visitStmt(Body))
         return false;
     } else {
+      // FIXME: Remove this.
       // direct try {} body.
       LocalScope<Emitter> Scope(this);
       if (!visitStmt(Body))
@@ -8132,18 +8152,70 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
     }
   }
 
+  return true;
+}
+
+template <class Emitter>
+bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor,
+                                           const Stmt *Body) {
+  if (!Body)
+    Body = Ctor->getBody();
+
+  if (!this->compileConstructorBody(Ctor, Body))
+    return false;
+  return this->emitFunctionReturn(Ctor, ReturnType);
+}
+
+/// Compile a constructor immediately followed by try statement.
+/// The constructor initializers must be part of the try statement
+/// and the catch handlers must rethrow.
+/// For detailed comments, see VisitCXXTryStmt.
+template <class Emitter>
+bool Compiler<Emitter>::compileTryConstructor(const CXXConstructorDecl *Ctor) {
+  assert(Ctx.ExceptionsEnabled);
+  assert(!this->InStmtExpr);
+
+  const CXXTryStmt *S = cast<CXXTryStmt>(Ctor->getBody());
+  if (!this->emitThrowTrap(S))
+    return false;
+  unsigned TryBlockStart = this->currentCodeSize();
+  {
+    LocalScope<Emitter> Scope(this, ScopeKind::Try);
+    const auto *TryBlock = cast<CompoundStmt>(S->getTryBlock());
+    if (!this->compileConstructorBody(Ctor, TryBlock))
+      return false;
+    if (!Scope.destroyLocals())
+      return false;
+  }
+  unsigned TryBlockEnd = this->currentCodeSize();
+
+  if (!this->emitCatchHandlers(S, TryBlockStart, TryBlockEnd,
+                               /*IsFunctionTryBlock=*/true))
+    return false;
   return this->emitFunctionReturn(Ctor, ReturnType);
 }
 
 template <class Emitter>
-bool Compiler<Emitter>::compileDestructor(const CXXDestructorDecl *Dtor) {
+bool Compiler<Emitter>::compileDestructor(const CXXDestructorDecl *Dtor,
+                                          const Stmt *Body) {
+  if (!Body)
+    Body = Dtor->getBody();
+
+  if (!this->compileDestructorBody(Dtor, Body))
+    return false;
+  return this->emitFunctionReturn(Dtor, ReturnType);
+}
+
+template <class Emitter>
+bool Compiler<Emitter>::compileDestructorBody(const CXXDestructorDecl *Dtor,
+                                              const Stmt *Body) {
   const RecordDecl *RD = Dtor->getParent();
   const Record *R = this->getRecord(RD);
   if (!R)
     return false;
 
-  if (!Dtor->isTrivial() && Dtor->getBody()) {
-    if (!this->visitStmt(Dtor->getBody()))
+  if (!Dtor->isTrivial() && Body) {
+    if (!this->visitStmt(Body))
       return false;
   }
 
@@ -8155,7 +8227,6 @@ bool Compiler<Emitter>::compileDestructor(const CXXDestructorDecl *Dtor) {
 
   assert(R);
   if (!R->isUnion()) {
-
     LocOverrideScope<Emitter> LOS(this, SourceInfo{});
     // First, destroy all fields.
     for (const Record::Field &Field : llvm::reverse(R->fields())) {
@@ -8206,6 +8277,31 @@ bool Compiler<Emitter>::compileDestructor(const CXXDestructorDecl *Dtor) {
   if (!this->emitPopPtr(Dtor))
     return false;
 
+  return true;
+}
+
+template <class Emitter>
+bool Compiler<Emitter>::compileTryDestructor(const CXXDestructorDecl *Dtor) {
+  assert(Ctx.ExceptionsEnabled);
+  assert(!this->InStmtExpr);
+
+  const CXXTryStmt *S = cast<CXXTryStmt>(Dtor->getBody());
+  if (!this->emitThrowTrap(S))
+    return false;
+  unsigned TryBlockStart = this->currentCodeSize();
+  {
+    LocalScope<Emitter> Scope(this, ScopeKind::Try);
+    const auto *TryBlock = cast<CompoundStmt>(S->getTryBlock());
+    if (!this->compileDestructorBody(Dtor, TryBlock))
+      return false;
+    if (!Scope.destroyLocals())
+      return false;
+  }
+  unsigned TryBlockEnd = this->currentCodeSize();
+
+  if (!this->emitCatchHandlers(S, TryBlockStart, TryBlockEnd,
+                               /*IsFunctionTryBlock=*/true))
+    return false;
   return this->emitFunctionReturn(Dtor, ReturnType);
 }
 
@@ -8231,10 +8327,16 @@ bool Compiler<Emitter>::visitFunc(const FunctionDecl *F) {
 
   this->CompilingFunction = F;
 
-  if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(F))
+  if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(F)) {
+    if (Ctx.ExceptionsEnabled && isa_and_nonnull<CXXTryStmt>(Ctor->getBody()))
+      return this->compileTryConstructor(Ctor);
     return this->compileConstructor(Ctor);
-  if (const auto *Dtor = dyn_cast<CXXDestructorDecl>(F))
+  }
+  if (const auto *Dtor = dyn_cast<CXXDestructorDecl>(F)) {
+    if (Ctx.ExceptionsEnabled && isa_and_nonnull<CXXTryStmt>(Dtor->getBody()))
+      return this->compileTryDestructor(Dtor);
     return this->compileDestructor(Dtor);
+  }
 
   // Emit custom code if this is a lambda static invoker.
   if (const auto *MD = dyn_cast<CXXMethodDecl>(F)) {
