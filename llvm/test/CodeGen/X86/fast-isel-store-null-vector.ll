@@ -4,11 +4,33 @@
 define void @store_v2p0(ptr %p) nounwind {
 ; CHECK-LABEL: store_v2p0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    # kill: def $rax killed $eax
-; CHECK-NEXT:    vmovq %rax, %xmm0
+; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovdqa %xmm0, (%rdi)
 ; CHECK-NEXT:    retq
   store <2 x ptr> zeroinitializer, ptr %p
+  ret void
+}
+
+define void @store_v4p0(ptr %p) nounwind {
+; CHECK-LABEL: store_v4p0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    # kill: def $ymm0 killed $xmm0
+; CHECK-NEXT:    vmovaps %ymm0, (%rdi)
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  store <4 x ptr> zeroinitializer, ptr %p
+  ret void
+}
+
+define void @store_v8p0(ptr %p) nounwind {
+; CHECK-LABEL: store_v8p0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    # kill: def $zmm0 killed $xmm0
+; CHECK-NEXT:    vmovdqa64 %zmm0, (%rdi)
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  store <8 x ptr> zeroinitializer, ptr %p
   ret void
 }
