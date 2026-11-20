@@ -447,22 +447,19 @@ BoolValue *getHasValue(Environment &Env, RecordStorageLocation *OptionalLoc) {
 }
 
 QualType valueTypeFromOptionalDecl(const CXXRecordDecl &RD) {
-
   auto &CTSD = cast<ClassTemplateSpecializationDecl>(RD);
 
-  // handle curiously recurring template pattern
+  // Attempt to look up value_type in RD first since the first template argument
+  // is not necessarily the value_type, e.g. CRTP like Base<Derived, T>.
+  // This only checks RD, not any inherited value_type.
   if (RD.hasDefinition()) {
-    IdentifierInfo &id = RD.getASTContext().Idents.get("value_type");
-    DeclContextLookupResult Lookup = RD.lookup(&id);
-    if (!Lookup.empty()) {
-      auto *TypeND = dyn_cast<TypedefNameDecl>(Lookup.front());
-      if (TypeND) {
-        return TypeND->getUnderlyingType();
-      }
-    }
+    IdentifierInfo &ID = RD.getASTContext().Idents.get("value_type");
+    DeclContextLookupResult Lookup = RD.lookup(&ID);
+    if (auto *TypeND = Lookup.find_first<TypedefNameDecl>())
+      return TypeND->getUnderlyingType();
   }
 
-  // if this is a regular template with a type
+  // Otherwise we assume the first template arg is the value_type.
   return CTSD.getTemplateArgs()[0].getAsType();
 }
 

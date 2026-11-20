@@ -3019,6 +3019,9 @@ TEST_P(UncheckedOptionalAccessTest, AssertFalseGtestMacroWithNullableValue) {
 // The optional class is recognized by name, so its template parameters need
 // not start with the value type. Here the first parameter is the derived class
 // (CRTP); the value type must come from `value_type`, not template argument 0.
+// This is not how folly::Optional is really defined.
+// A name recognized by the model was required so it was reused for this test
+// to hit the CRTP edge case.
 TEST_P(UncheckedOptionalAccessTest, OptionalWithDerivedFirstTemplateParam) {
   ExpectDiagnosticsFor(R"cc(
     #include "unchecked_optional_access_test.h"
