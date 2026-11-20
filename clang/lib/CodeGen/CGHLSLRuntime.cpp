@@ -35,8 +35,10 @@
 #include "llvm/ADT/Enum.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Frontend/HLSL/HLSLResource.h"
 #include "llvm/Frontend/HLSL/RootSignatureMetadata.h"
 #include "llvm/Frontend/HLSL/SemanticSignaturePacking.h"
@@ -66,6 +68,11 @@ using namespace llvm;
 using llvm::hlsl::CBufferRowSizeInBytes;
 
 namespace {
+
+enum class SPIRVExecutionMode : uint32_t {
+  DerivativeGroupQuadsKHR = 5289,
+  DerivativeGroupLinearKHR = 5290
+};
 
 void addDxilValVersion(StringRef ValVersionStr, llvm::Module &M) {
   // The validation of ValVersionStr is done at HLSLToolChain::TranslateArgs.
@@ -1000,6 +1007,72 @@ void CGHLSLRuntime::addHLSLBufferLayoutType(const RecordType *StructType,
   LayoutTypes[StructType] = LayoutTy;
 }
 
+static std::array<uint32_t, 3> parseNumThreads(StringRef NumThreads) {
+  SmallVector<StringRef, 3> Dimensions;
+  NumThreads.split(Dimensions, ',');
+  assert(Dimensions.size() == 3 && "expected three numthreads dimensions");
+  std::array<uint32_t, 3> Threads;
+  for (auto [Dimension, Thread] : llvm::zip(Dimensions, Threads)) {
+    [[maybe_unused]] bool Invalid = Dimension.getAsInteger(10, Thread);
+    assert(!Invalid && "expected an integer numthreads dimension");
+  }
+  return Threads;
+}
+
+static void addSPIRVQuadAllExecutionModes(CodeGenModule &CGM) {
+  llvm::Module &M = CGM.getModule();
+  Function *QuadAll =
+      Intrinsic::getDeclarationIfExists(&M, Intrinsic::spv_quad_all);
+  if (!QuadAll)
+    return;
+
+  SmallVector<Function *, 8> Worklist{QuadAll};
+  SmallPtrSet<Function *, 16> Visited;
+  IRBuilder<> B(M);
+  while (!Worklist.empty()) {
+    Function *F = Worklist.pop_back_val();
+    if (!Visited.insert(F).second)
+      continue;
+
+    Attribute NumThreadsAttr = F->getFnAttribute("hlsl.numthreads");
+    if (NumThreadsAttr.isValid()) {
+      std::array<uint32_t, 3> Threads =
+          parseNumThreads(NumThreadsAttr.getValueAsString());
+      bool IsLinear = Threads[1] == 1 && Threads[2] == 1;
+      // QuadAll needs derivative groups for SPIR-V compute entry points.
+      // Linear groups need complete sets of four threads. Quad groups need
+      // complete 2-by-2 quads in the X and Y dimensions.
+      bool InvalidThreads;
+      SPIRVExecutionMode Mode;
+      if (IsLinear) {
+        InvalidThreads =
+            (uint64_t(Threads[0]) * Threads[1] * Threads[2]) % 4 != 0;
+        Mode = SPIRVExecutionMode::DerivativeGroupLinearKHR;
+      } else {
+        InvalidThreads = Threads[0] % 2 != 0 || Threads[1] % 2 != 0;
+        Mode = SPIRVExecutionMode::DerivativeGroupQuadsKHR;
+      }
+      if (InvalidThreads) {
+        CGM.getDiags().Report(diag::err_hlsl_spirv_derivative_group_numthreads)
+            << F->getName() << IsLinear;
+        CGM.getDiags().Report(
+            diag::note_hlsl_spirv_derivative_group_requirement)
+            << "QuadAll" << F->getName();
+        continue;
+      }
+      MDNode *MD = MDNode::get(
+          M.getContext(),
+          {ValueAsMetadata::get(F),
+           ConstantAsMetadata::get(B.getInt32(llvm::to_underlying(Mode)))});
+      M.getOrInsertNamedMetadata("spirv.ExecutionMode")->addOperand(MD);
+    }
+
+    for (User *U : F->users())
+      if (auto *Call = dyn_cast<CallBase>(U))
+        Worklist.push_back(Call->getFunction());
+  }
+}
+
 void CGHLSLRuntime::finishCodeGen() {
   auto &TargetOpts = CGM.getTarget().getTargetOpts();
   auto &CodeGenOpts = CGM.getCodeGenOpts();
@@ -1044,6 +1117,8 @@ void CGHLSLRuntime::finishCodeGen() {
   }
 
   generateGlobalCtorDtorCalls();
+  if (T.isSPIRV())
+    addSPIRVQuadAllExecutionModes(CGM);
 }
 
 void clang::CodeGen::CGHLSLRuntime::setHLSLEntryAttributes(
@@ -1183,14 +1258,39 @@ static llvm::Value *createSPIRVInputLoad(
     IRBuilder<> &B, llvm::Module &M, llvm::Type *Ty, const Twine &Name,
     llvm::hlsl::SPIRVInterfaceDecoration Decoration, unsigned Operand,
     llvm::hlsl::InterpolationMode InterpMode) {
+  // SPIR-V integer built-ins are 32-bit, so a narrower integer declaration
+  // loads the 32-bit built-in and truncates it. Other types are loaded as is.
+  // i1 is excluded: bool built-ins such as FrontFacing are OpTypeBool.
+  bool Truncate = Decoration == llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn &&
+                  Ty->isIntegerTy() && Ty->getIntegerBitWidth() > 1 &&
+                  Ty->getIntegerBitWidth() < 32;
+  llvm::Type *LoadTy = Truncate ? B.getInt32Ty() : Ty;
   auto *GV = new llvm::GlobalVariable(
-      M, Ty, /* isConstant= */ true, llvm::GlobalValue::ExternalLinkage,
+      M, LoadTy, /* isConstant= */ true, llvm::GlobalValue::ExternalLinkage,
       /* Initializer= */ nullptr, Name, /* insertBefore= */ nullptr,
       llvm::GlobalVariable::GeneralDynamicTLSModel,
       /* AddressSpace */ 7, /* isExternallyInitialized= */ true);
   GV->setVisibility(llvm::GlobalValue::HiddenVisibility);
   addSPIRVInterfaceDecorations(GV, Decoration, Operand, InterpMode);
-  return B.CreateLoad(Ty, GV);
+  llvm::Value *Value = B.CreateLoad(LoadTy, GV);
+  return Truncate ? B.CreateTrunc(Value, Ty) : Value;
+}
+
+// For Vulkan builtins which begin counting from a driver-supplied base offset,
+// where the corresponding HLSL system value is always zero-based within the
+// current draw call.
+static llvm::Value *
+createSPIRVBuiltinDelta(IRBuilder<> &B, llvm::Module &M, llvm::Type *Ty,
+                        const Twine &Name, unsigned BuiltInID,
+                        unsigned BaseBuiltInID,
+                        llvm::hlsl::InterpolationMode InterpMode) {
+  llvm::Value *Value = createSPIRVInputLoad(
+      B, M, Ty, Name, llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn, BuiltInID,
+      InterpMode);
+  llvm::Value *Base = createSPIRVInputLoad(
+      B, M, Ty, Name + Twine(".base"),
+      llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn, BaseBuiltInID, InterpMode);
+  return B.CreateSub(Value, Base);
 }
 
 llvm::Value *CGHLSLRuntime::emitSPIRVUserSemanticLoad(
@@ -1345,13 +1445,27 @@ static llvm::hlsl::SemanticSignatureElement createSemanticSignatureElement(
   for (uint32_t I = 0, E = Shape.getNumRows(); I < E; ++I)
     SemanticIndices.push_back(FirstSemanticIndex + I);
 
+  llvm::dxbc::PSV::SemanticKind Kind = llvm::hlsl::getSemanticKind(Name);
+  llvm::dxil::ElementType CompType =
+      getSignatureComponentType(CGM, Shape.RowType);
+  // SV_SampleIndex and SV_PrimitiveID may be declared as int or uint, as in
+  // DXC. Both are indices generated by the system, so they are never negative
+  // and a signed declaration reads the same value. DXIL signatures require an
+  // unsigned component type.
+  if (Kind == llvm::dxbc::PSV::SemanticKind::SampleIndex ||
+      Kind == llvm::dxbc::PSV::SemanticKind::PrimitiveID) {
+    if (CompType == llvm::dxil::ElementType::I16)
+      CompType = llvm::dxil::ElementType::U16;
+    else if (CompType == llvm::dxil::ElementType::I32)
+      CompType = llvm::dxil::ElementType::U32;
+  }
+
   // The remaining members keep their default value and will be filled at a
   // later stage, either during packing or analysis of usage. Interpolation
   // is set by the load/store traversal after visiting each leaf.
-  return llvm::hlsl::SemanticSignatureElement(
-      SigId, Name, getSignatureComponentType(CGM, Shape.RowType),
-      llvm::hlsl::getSemanticKind(Name), SemanticIndices,
-      static_cast<uint8_t>(Shape.Cols));
+  return llvm::hlsl::SemanticSignatureElement(SigId, Name, CompType, Kind,
+                                              SemanticIndices,
+                                              static_cast<uint8_t>(Shape.Cols));
 }
 
 llvm::Value *CGHLSLRuntime::emitDXILUserSemanticLoad(
@@ -1646,11 +1760,38 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
     assert(Stage == llvm::Triple::Vertex &&
            "SV_InstanceID is in an unavailable stage and should have been "
            "diagnosed by Sema");
-    if (CGM.getTarget().getTriple().isSPIRV())
+    if (CGM.getTarget().getTriple().isSPIRV()) {
+      // Matches DXC: only subtract BaseInstance when
+      // -fvk-support-nonzero-base-instance is given.
+      if (CGM.getLangOpts().HLSLSpvSupportNonzeroBaseInstance)
+        return createSPIRVBuiltinDelta(
+            B, CGM.getModule(), Type, Semantic->getAttrName()->getName(),
+            /* InstanceIndex */ 43, /* BaseInstance */ 4425, InterpMode);
       return createSPIRVInputLoad(B, CGM.getModule(), Type,
                                   Semantic->getAttrName()->getName(),
                                   llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn,
                                   /* InstanceIndex */ 43, InterpMode);
+    }
+    if (CGM.getTarget().getTriple().isDXIL())
+      return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index,
+                                      Signature);
+    break;
+  case llvm::dxbc::PSV::SemanticKind::IsFrontFace:
+    assert(Stage == llvm::Triple::Pixel &&
+           "SV_IsFrontFace is in an unavailable stage and should have been "
+           "diagnosed by Sema");
+    if (CGM.getTarget().getTriple().isSPIRV()) {
+      // The FrontFacing BuiltIn is always a bool in SPIR-V, whatever type the
+      // entry point declares. Load it as bool, then convert below.
+      llvm::Type *BoolTy = B.getInt1Ty();
+      // Integer pixel inputs cannot be interpolated and must be Flat.
+      llvm::Value *FF = createSPIRVInputLoad(
+          B, CGM.getModule(), BoolTy, Semantic->getAttrName()->getName(),
+          llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn,
+          /* FrontFacing */ 17, llvm::hlsl::InterpolationMode::Constant);
+      // Convert to the declared parameter type (eg uint).
+      return Type == BoolTy ? FF : B.CreateZExt(FF, Type);
+    }
     if (CGM.getTarget().getTriple().isDXIL())
       return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index,
                                       Signature);
@@ -1687,6 +1828,64 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
       return B.CreateCall(
           CGM.getIntrinsic(llvm::Intrinsic::dx_start_vertex_location));
     break;
+  case llvm::dxbc::PSV::SemanticKind::PrimitiveID:
+    assert(Stage == llvm::Triple::Pixel &&
+           "SV_PrimitiveID is in an unavailable stage and should have been "
+           "diagnosed by Sema");
+    if (CGM.getTarget().getTriple().isSPIRV())
+      return createSPIRVInputLoad(B, CGM.getModule(), Type,
+                                  Semantic->getAttrName()->getName(),
+                                  llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn,
+                                  /* PrimitiveId */ 7, InterpMode);
+    // Pixel shaders read the primitive ID from the input signature. The
+    // dx.op.primitiveID operation is only available to other stages.
+    if (CGM.getTarget().getTriple().isDXIL())
+      return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index,
+                                      Signature);
+    break;
+  case llvm::dxbc::PSV::SemanticKind::SampleIndex:
+    assert(Stage == llvm::Triple::Pixel &&
+           "SV_SampleIndex is in an unavailable stage and should have been "
+           "diagnosed by Sema");
+    if (CGM.getTarget().getTriple().isSPIRV())
+      return createSPIRVInputLoad(B, CGM.getModule(), Type,
+                                  Semantic->getAttrName()->getName(),
+                                  llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn,
+                                  /* SampleId */ 18, InterpMode);
+    if (CGM.getTarget().getTriple().isDXIL()) {
+      assert(Type->isIntegerTy() && Type->getIntegerBitWidth() <= 32 &&
+             "SV_SampleIndex must be a 16 or 32 bit scalar integer, as "
+             "diagnosed by Sema");
+      // The sample index is read with a dedicated operation, but an unpacked
+      // element is still added to the input signature for compatibility.
+      SemanticShape Shape =
+          getSemanticShape(CGM.getContext(), getSemanticLeafType(Decl));
+      Signature.push_back(createSemanticSignatureElement(
+          CGM, Signature.size(), Semantic, Index, Shape));
+      llvm::Value *SampleIndex =
+          B.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::dx_sample_index));
+      // dx.op.sampleIndex only has an i32 overload, so a 16-bit declaration
+      // narrows the result. The sample index always fits in 16 bits.
+      if (Type->getIntegerBitWidth() < 32)
+        SampleIndex = B.CreateTrunc(SampleIndex, Type);
+      return SampleIndex;
+    }
+    break;
+  case llvm::dxbc::PSV::SemanticKind::ViewID:
+    assert(llvm::is_contained({llvm::Triple::Vertex, llvm::Triple::Hull,
+                               llvm::Triple::Domain, llvm::Triple::Geometry,
+                               llvm::Triple::Pixel, llvm::Triple::Mesh},
+                              Stage) &&
+           "SV_ViewID is in an unavailable stage and should have been "
+           "diagnosed by Sema");
+    if (CGM.getTarget().getTriple().isSPIRV())
+      return createSPIRVInputLoad(B, CGM.getModule(), Type,
+                                  Semantic->getAttrName()->getName(),
+                                  llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn,
+                                  /* ViewIndex */ 4440, InterpMode);
+    if (CGM.getTarget().getTriple().isDXIL())
+      return B.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::dx_view_id));
+    break;
   case llvm::dxbc::PSV::SemanticKind::StartInstanceLocation:
     assert(Stage == llvm::Triple::Vertex &&
            "SV_StartInstanceLocation is in an unavailable stage and should "
@@ -1706,6 +1905,18 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
 
   llvm_unreachable(
       "Load hasn't been implemented yet for this system semantic. FIXME");
+}
+
+// Maps a [[vk::builtin(...)]] name to its SPIR-V spec `BuiltIn` decoration.
+// Deliberately not creating dependency on llvm::SPIRV::BuiltIn in front end.
+// Sema's handleVkBuiltInAttr only allows names handled here to reach CodeGen.
+static unsigned getSPIRVVkBuiltinID(StringRef BuiltIn) {
+  unsigned ID = llvm::StringSwitch<unsigned>(BuiltIn)
+                    .Case("PointSize", /* BuiltIn::PointSize */ 1)
+                    .Default(-1);
+  assert(ID != static_cast<unsigned>(-1) &&
+         "Sema should only allow builtin names implemented here");
+  return ID;
 }
 
 void CGHLSLRuntime::emitSystemSemanticStore(
@@ -1784,6 +1995,15 @@ llvm::Value *CGHLSLRuntime::handleScalarSemanticLoad(
     const clang::DeclaratorDecl *Decl, HLSLAppliedSemanticAttr *Semantic,
     SemanticSignatures &Signature, llvm::hlsl::InterpolationMode InterpMode) {
 
+  // [[vk::builtin(...)]] takes precedence over the recognized-semantic
+  // dispatch, so without this check they'd always be treated as an arbitrary
+  // user semantic. The attribute is only ever attached when targeting SPIR-V.
+  if (const auto *BuiltInAttr = Decl->getAttr<HLSLVkBuiltInAttr>())
+    return createSPIRVInputLoad(
+        B, CGM.getModule(), Type, Semantic->getAttrName()->getName(),
+        llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn,
+        getSPIRVVkBuiltinID(BuiltInAttr->getBuiltIn()), InterpMode);
+
   std::optional<unsigned> Index = Semantic->getSemanticIndex();
   llvm::dxbc::PSV::SemanticKind SemanticKind =
       llvm::hlsl::getSemanticKind(Semantic->getAttrName()->getName());
@@ -1809,6 +2029,15 @@ void CGHLSLRuntime::handleScalarSemanticStore(
     IRBuilder<> &B, const FunctionDecl *FD, llvm::Value *Source,
     const clang::DeclaratorDecl *Decl, HLSLAppliedSemanticAttr *Semantic,
     SemanticSignatures &Signature, llvm::hlsl::InterpolationMode InterpMode) {
+  // See the matching comment in `handleScalarSemanticLoad`
+  if (const auto *BuiltInAttr = Decl->getAttr<HLSLVkBuiltInAttr>()) {
+    createSPIRVOutputStore(
+        B, CGM.getModule(), Source, Semantic->getAttrName()->getName(),
+        llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn,
+        getSPIRVVkBuiltinID(BuiltInAttr->getBuiltIn()), InterpMode);
+    return;
+  }
+
   std::optional<unsigned> Index = Semantic->getSemanticIndex();
   llvm::dxbc::PSV::SemanticKind SemanticKind =
       llvm::hlsl::getSemanticKind(Semantic->getAttrName()->getName());

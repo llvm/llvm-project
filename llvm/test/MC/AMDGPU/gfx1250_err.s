@@ -188,6 +188,6 @@ v_pk_add_min_i16 v10, v1, v2, v3 neg_hi:[1,0,0]
 // GFX1250-ERR:                                  ^
 
 v_fmamk_f64 v[4:5], v[2:3], 123.0, v[7:8]
-// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid register class: vgpr tuples must be 64 bit aligned
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // GFX1250-ERR: v_fmamk_f64 v[4:5], v[2:3], 123.0, v[7:8]
-// GFX1250-ERR: ^
+// GFX1250-ERR:                                    ^

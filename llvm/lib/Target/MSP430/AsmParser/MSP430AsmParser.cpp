@@ -53,9 +53,6 @@ class MSP430AsmParser : public MCTargetAsmParser {
   ParseStatus parseDirective(AsmToken DirectiveID) override;
   bool ParseDirectiveRefSym(AsmToken DirectiveID);
 
-  unsigned validateTargetOperandClass(MCParsedAsmOperand &Op,
-                                      unsigned Kind) override;
-
   bool parseJccInstruction(ParseInstructionInfo &Info, StringRef Name,
                            SMLoc NameLoc, OperandVector &Operands);
 
@@ -183,11 +180,6 @@ public:
   MCRegister getReg() const override {
     assert(Kind == k_Reg && "Invalid access!");
     return Reg;
-  }
-
-  void setReg(MCRegister RegNo) {
-    assert(Kind == k_Reg && "Invalid access!");
-    Reg = RegNo;
   }
 
   static std::unique_ptr<MSP430Operand> CreateToken(StringRef Str, SMLoc S) {
@@ -542,44 +534,3 @@ LLVMInitializeMSP430AsmParser() {
 #define GET_REGISTER_MATCHER
 #define GET_MATCHER_IMPLEMENTATION
 #include "MSP430GenAsmMatcher.inc"
-
-static MCRegister convertGR16ToGR8(MCRegister Reg) {
-  switch (Reg.id()) {
-  default:
-    llvm_unreachable("Unknown GR16 register");
-  case MSP430::PC:  return MSP430::PCB;
-  case MSP430::SP:  return MSP430::SPB;
-  case MSP430::SR:  return MSP430::SRB;
-  case MSP430::CG:  return MSP430::CGB;
-  case MSP430::R4:  return MSP430::R4B;
-  case MSP430::R5:  return MSP430::R5B;
-  case MSP430::R6:  return MSP430::R6B;
-  case MSP430::R7:  return MSP430::R7B;
-  case MSP430::R8:  return MSP430::R8B;
-  case MSP430::R9:  return MSP430::R9B;
-  case MSP430::R10: return MSP430::R10B;
-  case MSP430::R11: return MSP430::R11B;
-  case MSP430::R12: return MSP430::R12B;
-  case MSP430::R13: return MSP430::R13B;
-  case MSP430::R14: return MSP430::R14B;
-  case MSP430::R15: return MSP430::R15B;
-  }
-}
-
-unsigned MSP430AsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
-                                                     unsigned Kind) {
-  MSP430Operand &Op = static_cast<MSP430Operand &>(AsmOp);
-
-  if (!Op.isReg())
-    return Match_InvalidOperand;
-
-  MCRegister Reg = Op.getReg();
-  bool isGR16 = getMSP430MCRegisterClass(MSP430::GR16RegClassID).contains(Reg);
-
-  if (isGR16 && (Kind == MCK_GR8)) {
-    Op.setReg(convertGR16ToGR8(Reg));
-    return Match_Success;
-  }
-
-  return Match_InvalidOperand;
-}

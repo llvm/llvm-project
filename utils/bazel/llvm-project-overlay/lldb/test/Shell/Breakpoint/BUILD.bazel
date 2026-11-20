@@ -1,0 +1,33 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("//llvm:lit_test.bzl", "lit_test")
+
+licenses(["notice"])
+
+[
+    lit_test(
+        name = "%s.test" % src,
+        srcs = [src],
+        data = glob(["Inputs/**"]) + [
+            "//lldb/test/Shell:lit_data",
+        ],
+    )
+    for src in glob(
+        ["*.test"],
+        exclude = [
+            # These run lldb itself through %lldb, which sources the
+            # lit-lldb-init-quiet file CMake writes into the test execution
+            # root. Bazel can't put a generated file there yet.
+            "breakpoint-command.test",
+            "condition-lang.test",
+            "dummy-target.test",
+            "invalid-condition.test",
+            "jit-loader_jitlink_elf.test",
+            "source-regex-missing-source.test",
+            "step-out.test",
+            "wasm-skip-function-header.test",
+        ],
+    )
+]

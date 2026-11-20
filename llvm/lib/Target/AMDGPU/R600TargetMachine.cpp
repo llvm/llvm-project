@@ -25,15 +25,6 @@
 
 using namespace llvm;
 
-static cl::opt<bool>
-    EnableR600StructurizeCFG("r600-ir-structurize",
-                             cl::desc("Use StructurizeCFG IR pass"),
-                             cl::init(true));
-
-static cl::opt<bool> EnableR600IfConvert("r600-if-convert",
-                                         cl::desc("Use if conversion pass"),
-                                         cl::ReallyHidden, cl::init(true));
-
 static cl::opt<bool, true> EnableAMDGPUFunctionCallsOpt(
     "amdgpu-function-calls", cl::desc("Enable AMDGPU function call support"),
     cl::location(AMDGPUTargetMachine::EnableFunctionCalls), cl::init(true),
@@ -56,6 +47,7 @@ public:
   R600CodeGenPassBuilder(R600TargetMachine &TM, const CGPassBuilderOption &Opts,
                          PassInstrumentationCallbacks *PIC);
 
+protected:
   void addPreISel(PassManagerWrapper &PMW) override;
   void addAsmPrinterBegin(PassManagerWrapper &PMW) override;
   void addAsmPrinter(PassManagerWrapper &PMW) override;
@@ -84,8 +76,22 @@ R600TargetMachine::R600TargetMachine(const Target &T, const Triple &TT,
 
 const TargetSubtargetInfo *
 R600TargetMachine::getSubtargetImpl(const Function &F) const {
-  StringRef GPU = getGPUName(F);
-  StringRef FS = getFeatureString(F);
+  AttributeSet FnAttrs = F.getAttributes().getFnAttrs();
+  const Module *M = F.getParent();
+  if (const R600Subtarget *ST = LastSubtarget.lookup(FnAttrs, M))
+    return ST;
+
+  SubtargetAttrs Attrs;
+  Attrs.GPU = FnAttrs.getAttribute("target-cpu");
+  Attrs.FS = FnAttrs.getAttribute("target-features");
+
+  if (const R600Subtarget *ST = LastSubtarget.lookup(FnAttrs, M, Attrs))
+    return ST;
+
+  StringRef GPU =
+      Attrs.GPU.isValid() ? Attrs.GPU.getValueAsString() : getTargetCPU();
+  StringRef FS = Attrs.FS.isValid() ? Attrs.FS.getValueAsString()
+                                    : getTargetFeatureString();
 
   SmallString<128> SubtargetKey(GPU);
   SubtargetKey.append(FS);
@@ -94,6 +100,7 @@ R600TargetMachine::getSubtargetImpl(const Function &F) const {
   if (!I)
     I = std::make_unique<R600Subtarget>(TargetTriple, GPU, FS, *this);
 
+  LastSubtarget.set(FnAttrs, M, Attrs, I.get());
   return I.get();
 }
 
@@ -128,7 +135,7 @@ public:
 bool R600PassConfig::addPreISel() {
   AMDGPUPassConfig::addPreISel();
 
-  if (EnableR600StructurizeCFG)
+  if (CLOpts.r600_ir_structurize)
     addPass(createStructurizeCFGPass());
   return false;
 }
@@ -142,7 +149,7 @@ void R600PassConfig::addPreRegAlloc() { addPass(createR600VectorRegMerger()); }
 
 void R600PassConfig::addPreSched2() {
   addPass(createR600EmitClauseMarkers());
-  if (EnableR600IfConvert)
+  if (CLOpts.r600_if_convert)
     addPass(&IfConverterID);
   addPass(createR600ClauseMergePass());
 }

@@ -26,6 +26,7 @@
 #include <optional>
 
 namespace llvm {
+struct AnalysisOptions;
 class BlockFrequencyInfo;
 class MachineFunction;
 
@@ -41,6 +42,7 @@ class MachineFunction;
 // units. This would require making this depend on BFI.
 class ProfileSummaryInfo {
 private:
+  const AnalysisOptions &Opts;
   const Module *M;
   std::unique_ptr<ProfileSummary> Summary;
   void computeThresholds();
@@ -61,7 +63,7 @@ private:
   mutable DenseMap<int, uint64_t> ThresholdCache;
 
 public:
-  ProfileSummaryInfo(const Module &M) : M(&M) { refresh(); }
+  LLVM_ABI ProfileSummaryInfo(const Module &M);
   ProfileSummaryInfo(ProfileSummaryInfo &&Arg) = default;
 
   /// If a summary is provided as argument, use that. Otherwise,

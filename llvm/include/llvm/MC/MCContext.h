@@ -136,9 +136,6 @@ private:
   /// objects.
   BumpPtrAllocator Allocator;
 
-  /// For MCFragment instances.
-  BumpPtrAllocator FragmentAllocator;
-
   SpecificBumpPtrAllocator<MCSectionCOFF> COFFAllocator;
   SpecificBumpPtrAllocator<MCSectionDXContainer> DXCAllocator;
   SpecificBumpPtrAllocator<MCSectionELF> ELFAllocator;
@@ -175,7 +172,7 @@ private:
   unsigned GetInstance(unsigned LocalLabelVal);
 
   /// SHT_LLVM_BB_ADDR_MAP version to emit.
-  uint8_t BBAddrMapVersion = 5;
+  uint8_t BBAddrMapVersion = 6;
 
   /// The file name of the log file from the environment variable
   /// AS_SECURE_LOG_FILE.  Which must be set before the .secure_log_unique

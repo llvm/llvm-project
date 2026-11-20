@@ -43,3 +43,15 @@ define i64 @myctpop64_2(i64 %a) {
   %val = call i64 @llvm.cttz.i64(i64 %a, i1 true) readnone
   ret i64 %val
 }
+
+; The cttz is expanded to popc.b64 during legalization, so the compare is
+; combined with the 32-bit count of a 64-bit value.
+define i1 @mycttz64_ult_2(i64 %a) {
+; CHECK-LABEL: mycttz64_ult_2(
+; CHECK: popc.b64 [[CNT:%r[0-9]+]],
+; CHECK: setp.lt.u32 {{%p[0-9]+}}, [[CNT]], 2;
+  %val = call i64 @llvm.cttz.i64(i64 %a, i1 true) readnone
+  %trunc = trunc i64 %val to i32
+  %cmp = icmp ult i32 %trunc, 2
+  ret i1 %cmp
+}

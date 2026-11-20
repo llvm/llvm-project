@@ -67,7 +67,7 @@ class TestDAP_attach(DAPTestCaseBase):
         self.assertEqual(process_event.body.systemProcessId, proc.pid)
         self.verify_pid(proc)
 
-    @expectedFailureWindowsAndNoLLDBServer
+    @skipIfWindowsAndNoLLDBServer # The in process plugin cannot support this feature.
     def test_by_name_waitFor(self):
         """
         Tests waiting for, and attaching to a process by process name that
