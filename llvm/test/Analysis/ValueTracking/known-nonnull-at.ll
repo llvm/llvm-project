@@ -95,12 +95,12 @@ declare i32 @esfp(...)
 define i1 @caller6(ptr %x, ptr %y) personality ptr @esfp{
 ; CHECK-LABEL: @caller6(
 ; CHECK-NEXT:    invoke void @bar(ptr [[X:%.*]], ptr nonnull [[Y:%.*]])
-; CHECK-NEXT:    to label [[CONT:%.*]] unwind label [[EXC:%.*]]
+; CHECK-NEXT:            to label [[CONT:%.*]] unwind label [[EXC:%.*]]
 ; CHECK:       cont:
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       exc:
 ; CHECK-NEXT:    [[LP:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    filter [0 x ptr] zeroinitializer
+; CHECK-NEXT:            filter [0 x ptr] zeroinitializer
 ; CHECK-NEXT:    unreachable
 ;
   invoke void @bar(ptr %x, ptr nonnull %y)
@@ -284,6 +284,49 @@ entry:
   %nonnull = icmp eq ptr %src, null
   ret i1 %nonnull
 }
+
+define void @nonnull_metadata_on_phi_node(ptr %p) {
+; CHECK-LABEL: @nonnull_metadata_on_phi_node(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[BB:%.*]]
+; CHECK:       bb:
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    [[P2:%.*]] = call ptr @get_ptr()
+; CHECK-NEXT:    br label [[BB]]
+;
+entry:
+  br label %bb
+
+bb:
+  %v = phi ptr [%p, %entry], [%p2, %bb], !nonnull !{}
+  %nonnull = icmp eq ptr %v, null
+  call void @use(i1 %nonnull)
+  %p2 = call ptr @get_ptr()
+  br label %bb
+}
+
+define void @dereferenceable_metadata_on_phi_node(ptr %p) {
+; CHECK-LABEL: @dereferenceable_metadata_on_phi_node(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[BB:%.*]]
+; CHECK:       bb:
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    [[P2:%.*]] = call ptr @get_ptr()
+; CHECK-NEXT:    br label [[BB]]
+;
+entry:
+  br label %bb
+
+bb:
+  %v = phi ptr [%p, %entry], [%p2, %bb], !dereferenceable !{i64 1}
+  %nonnull = icmp eq ptr %v, null
+  call void @use(i1 %nonnull)
+  %p2 = call ptr @get_ptr()
+  br label %bb
+}
+
+declare ptr @get_ptr()
+declare void @use(i1)
 
 declare void @callee(ptr)
 declare void @callee2(ptr noundef)

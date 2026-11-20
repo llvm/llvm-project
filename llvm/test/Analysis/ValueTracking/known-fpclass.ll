@@ -54,3 +54,26 @@ define i1 @vector_reverse_fpclass_demanded_fail(<4 x double> %vec, double nofpcl
   %cmp = fcmp oge double %ele, 0.0
   ret i1 %cmp
 }
+
+declare double @get_double()
+declare void @use(i1)
+
+define void @nofpclass_metadata_on_phi_node(double %p) {
+; CHECK-LABEL: @nofpclass_metadata_on_phi_node(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[BB:%.*]]
+; CHECK:       bb:
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    [[P2:%.*]] = call double @get_double()
+; CHECK-NEXT:    br label [[BB]]
+;
+entry:
+  br label %bb
+
+bb:
+  %v = phi double [%p, %entry], [%p2, %bb], !nofpclass !{i32 35}
+  %cmp = fcmp ord double %v, 0.0
+  call void @use(i1 %cmp)
+  %p2 = call double @get_double()
+  br label %bb
+}

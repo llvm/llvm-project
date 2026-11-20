@@ -3519,6 +3519,24 @@ static bool isNonZeroShift(const Operator *I, const APInt &DemandedElts,
   return false;
 }
 
+static bool isKnownNonZeroFromMetadata(const Instruction *I,
+                                       const SimplifyQuery &SQ) {
+  // A Load tagged with nonnull or dereferenceable with null pointer undefined
+  // is never null.
+  if (auto *PtrT = dyn_cast<PointerType>(I->getType())) {
+    return SQ.IIQ.getMetadata(I, LLVMContext::MD_nonnull) ||
+           (SQ.IIQ.getMetadata(I, LLVMContext::MD_dereferenceable) &&
+            !NullPointerIsDefined(I->getFunction(), PtrT->getAddressSpace()));
+  }
+
+  if (MDNode *Ranges = SQ.IIQ.getMetadata(I, LLVMContext::MD_range)) {
+    return rangeMetadataExcludesValue(
+        Ranges, APInt::getZero(I->getType()->getScalarSizeInBits()));
+  }
+
+  return false;
+}
+
 static bool isKnownNonZeroFromOperator(const Operator *I,
                                        const APInt &DemandedElts,
                                        const SimplifyQuery &Q, unsigned Depth) {
@@ -3736,6 +3754,10 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
   }
   case Instruction::PHI: {
     auto *PN = cast<PHINode>(I);
+
+    if (isKnownNonZeroFromMetadata(PN, Q))
+      return true;
+
     if (Q.IIQ.UseInstrInfo && isNonZeroRecurrence(PN))
       return true;
 
@@ -3822,23 +3844,10 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
     return isKnownNonZero(I->getOperand(0), Q, Depth) &&
            isGuaranteedNotToBePoison(I->getOperand(0), Q.AC, Q.CtxI, Q.DT,
                                      Depth);
-  case Instruction::Load: {
-    auto *LI = cast<LoadInst>(I);
-    // A Load tagged with nonnull or dereferenceable with null pointer undefined
-    // is never null.
-    if (auto *PtrT = dyn_cast<PointerType>(I->getType())) {
-      if (Q.IIQ.getMetadata(LI, LLVMContext::MD_nonnull) ||
-          (Q.IIQ.getMetadata(LI, LLVMContext::MD_dereferenceable) &&
-           !NullPointerIsDefined(LI->getFunction(), PtrT->getAddressSpace())))
-        return true;
-    } else if (MDNode *Ranges = Q.IIQ.getMetadata(LI, LLVMContext::MD_range)) {
-      return rangeMetadataExcludesValue(Ranges, APInt::getZero(BitWidth));
-    }
-
+  case Instruction::Load:
     // No need to fall through to computeKnownBits as range metadata is already
     // handled in isKnownNonZero.
-    return false;
-  }
+    return isKnownNonZeroFromMetadata(cast<LoadInst>(I), Q);
   case Instruction::ExtractValue: {
     const WithOverflowInst *WO;
     if (match(I, m_ExtractValue<0>(m_WithOverflowInst(WO)))) {
@@ -5471,6 +5480,16 @@ static bool isAbsoluteValueULEOne(const Value *V) {
          match(V, m_Intrinsic<Intrinsic::amdgcn_fract>(m_Value()));
 }
 
+static void computeKnownFPClassFromMetadata(const Instruction *I,
+                                     KnownFPClass &Known) {
+  const MDNode *NoFPClass = I->getMetadata(LLVMContext::MD_nofpclass);
+  if (!NoFPClass)
+    return;
+  ConstantInt *MaskVal =
+      mdconst::extract<ConstantInt>(NoFPClass->getOperand(0));
+  Known.knownNot(static_cast<FPClassTest>(MaskVal->getZExtValue()));
+}
+
 void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
                          FPClassTest InterestedClasses, KnownFPClass &Known,
                          const SimplifyQuery &Q, unsigned Depth) {
@@ -5613,17 +5632,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
             .intersectWith(ComputeForArm(Op->getOperand(2), /*Invert=*/true));
     break;
   }
-  case Instruction::Load: {
-    const MDNode *NoFPClass =
-        cast<LoadInst>(Op)->getMetadata(LLVMContext::MD_nofpclass);
-    if (!NoFPClass)
-      break;
-
-    ConstantInt *MaskVal =
-        mdconst::extract<ConstantInt>(NoFPClass->getOperand(0));
-    Known.knownNot(static_cast<FPClassTest>(MaskVal->getZExtValue()));
+  case Instruction::Load:
+    computeKnownFPClassFromMetadata(cast<LoadInst>(Op), Known);
     break;
-  }
   case Instruction::Call: {
     const CallInst *II = cast<CallInst>(Op);
     const Intrinsic::ID IID = II->getIntrinsicID();
@@ -6681,6 +6692,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
           break;
       }
     }
+
+    computeKnownFPClassFromMetadata(P, Known);
 
     // Look for the case of a for loop which has a positive
     // initial value and is incremented by a squared value.
@@ -8401,6 +8414,12 @@ bool llvm::impliesPoison(const Value *ValAssumedPoison, const Value *V) {
 
 static bool programUndefinedIfUndefOrPoison(const Value *V, bool PoisonOnly);
 
+static bool isGuaranteedNotToBeUndefOrPoisonFromMetadata(const Instruction *I) {
+  return I->hasMetadata(LLVMContext::MD_noundef) ||
+         I->hasMetadata(LLVMContext::MD_dereferenceable) ||
+         I->hasMetadata(LLVMContext::MD_dereferenceable_or_null);
+}
+
 static bool isGuaranteedNotToBeUndefOrPoison(
     const Value *V, AssumptionCache *AC, const Instruction *CtxI,
     const DominatorTree *DT, unsigned Depth, UndefPoisonKind Kind) {
@@ -8476,6 +8495,8 @@ static bool isGuaranteedNotToBeUndefOrPoison(
     if (!::canCreateUndefOrPoison(Opr, Kind,
                                   /*ConsiderFlagsAndMetadata=*/true)) {
       if (const auto *PN = dyn_cast<PHINode>(V)) {
+        if (isGuaranteedNotToBeUndefOrPoisonFromMetadata(PN))
+          return true;
         unsigned Num = PN->getNumIncomingValues();
         bool IsWellDefined = true;
         for (unsigned i = 0; i < Num; ++i) {
@@ -8500,11 +8521,9 @@ static bool isGuaranteedNotToBeUndefOrPoison(
     }
   }
 
-  if (auto *I = dyn_cast<LoadInst>(V))
-    if (I->hasMetadata(LLVMContext::MD_noundef) ||
-        I->hasMetadata(LLVMContext::MD_dereferenceable) ||
-        I->hasMetadata(LLVMContext::MD_dereferenceable_or_null))
-      return true;
+  if (auto *I = dyn_cast<LoadInst>(V);
+      I && isGuaranteedNotToBeUndefOrPoisonFromMetadata(I))
+    return true;
 
   if (programUndefinedIfUndefOrPoison(V, !includesUndef(Kind)))
     return true;
