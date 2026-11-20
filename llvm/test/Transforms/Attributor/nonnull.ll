@@ -1642,7 +1642,7 @@ if.else:
 ; arguments and return value must not be derived from its body.
 define linkonce_odr ptr @nonnull_return_from_load_non_exact(ptr %p) {
 ; CHECK-LABEL: define {{[^@]+}}@nonnull_return_from_load_non_exact
-; CHECK-SAME: (ptr align 4 [[P:%.*]]) {
+; CHECK-SAME: (ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    ret ptr [[P]]
 ;
@@ -1652,8 +1652,8 @@ define linkonce_odr ptr @nonnull_return_from_load_non_exact(ptr %p) {
 
 define ptr @call_nonnull_return_from_load_non_exact(ptr %p) {
 ; CHECK-LABEL: define {{[^@]+}}@call_nonnull_return_from_load_non_exact
-; CHECK-SAME: (ptr align 4 [[P:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call nonnull ptr @nonnull_return_from_load_non_exact(ptr align 4 [[P]])
+; CHECK-SAME: (ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call ptr @nonnull_return_from_load_non_exact(ptr [[P]])
 ; CHECK-NEXT:    ret ptr [[R]]
 ;
   %r = call ptr @nonnull_return_from_load_non_exact(ptr %p)
@@ -1673,7 +1673,7 @@ define linkonce_odr ptr @nonnull_return_from_assume_non_exact(ptr %p) {
 define ptr @call_nonnull_return_from_assume_non_exact(ptr %p) {
 ; CHECK-LABEL: define {{[^@]+}}@call_nonnull_return_from_assume_non_exact
 ; CHECK-SAME: (ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call nonnull ptr @nonnull_return_from_assume_non_exact(ptr [[P]])
+; CHECK-NEXT:    [[R:%.*]] = call ptr @nonnull_return_from_assume_non_exact(ptr [[P]])
 ; CHECK-NEXT:    ret ptr [[R]]
 ;
   %r = call ptr @nonnull_return_from_assume_non_exact(ptr %p)
@@ -1681,30 +1681,20 @@ define ptr @call_nonnull_return_from_assume_non_exact(ptr %p) {
 }
 
 define linkonce_odr void @align_from_assume_non_exact(ptr %a) {
-; TUNIT-LABEL: define {{[^@]+}}@align_from_assume_non_exact
-; TUNIT-SAME: (ptr align 16 [[A:%.*]]) {
-; TUNIT-NEXT:    call void @llvm.assume(i1 noundef true) [ "align"(ptr [[A]], i64 16) ]
-; TUNIT-NEXT:    ret void
-;
-; CGSCC-LABEL: define {{[^@]+}}@align_from_assume_non_exact
-; CGSCC-SAME: (ptr [[A:%.*]]) {
-; CGSCC-NEXT:    call void @llvm.assume(i1 noundef true) [ "align"(ptr [[A]], i64 16) ]
-; CGSCC-NEXT:    ret void
+; CHECK-LABEL: define {{[^@]+}}@align_from_assume_non_exact
+; CHECK-SAME: (ptr [[A:%.*]]) {
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef true) [ "align"(ptr [[A]], i64 16) ]
+; CHECK-NEXT:    ret void
 ;
   call void @llvm.assume(i1 true) [ "align"(ptr %a, i64 16) ]
   ret void
 }
 
 define void @call_align_from_assume_non_exact(ptr %a) {
-; TUNIT-LABEL: define {{[^@]+}}@call_align_from_assume_non_exact
-; TUNIT-SAME: (ptr align 16 [[A:%.*]]) {
-; TUNIT-NEXT:    call void @align_from_assume_non_exact(ptr align 16 [[A]])
-; TUNIT-NEXT:    ret void
-;
-; CGSCC-LABEL: define {{[^@]+}}@call_align_from_assume_non_exact
-; CGSCC-SAME: (ptr [[A:%.*]]) {
-; CGSCC-NEXT:    call void @align_from_assume_non_exact(ptr [[A]])
-; CGSCC-NEXT:    ret void
+; CHECK-LABEL: define {{[^@]+}}@call_align_from_assume_non_exact
+; CHECK-SAME: (ptr [[A:%.*]]) {
+; CHECK-NEXT:    call void @align_from_assume_non_exact(ptr [[A]])
+; CHECK-NEXT:    ret void
 ;
   call void @align_from_assume_non_exact(ptr %a)
   ret void

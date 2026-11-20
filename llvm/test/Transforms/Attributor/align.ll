@@ -1219,7 +1219,7 @@ declare void @implicit_cast_callee(i64)
 ; derived from its body.
 define linkonce_odr void @align_from_load_non_exact(ptr %a) {
 ; CHECK-LABEL: define {{[^@]+}}@align_from_load_non_exact
-; CHECK-SAME: (ptr align 8 [[A:%.*]]) {
+; CHECK-SAME: (ptr [[A:%.*]]) {
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[A]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -1229,8 +1229,8 @@ define linkonce_odr void @align_from_load_non_exact(ptr %a) {
 
 define void @call_align_from_load_non_exact(ptr %a) {
 ; CHECK-LABEL: define {{[^@]+}}@call_align_from_load_non_exact
-; CHECK-SAME: (ptr align 8 [[A:%.*]]) {
-; CHECK-NEXT:    call void @align_from_load_non_exact(ptr align 8 [[A]])
+; CHECK-SAME: (ptr [[A:%.*]]) {
+; CHECK-NEXT:    call void @align_from_load_non_exact(ptr [[A]])
 ; CHECK-NEXT:    ret void
 ;
   call void @align_from_load_non_exact(ptr %a)
