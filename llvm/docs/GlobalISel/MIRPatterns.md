@@ -211,6 +211,55 @@ Semantics:
 - If both old/new are operands of matched instructions,
   `canReplaceReg` is checked before applying the rule.
 
+#### GIReplaceRegWithConstant
+
+```{code-block} text
+:caption: Usage
+
+(apply (GIReplaceRegWithConstant $reg, Imm))
+```
+
+Operands:
+
+- `$reg` (out) register defined by the match root
+- `Imm`: an integer literal
+
+Semantics:
+
+- Can only appear in an 'apply' pattern.
+- `$reg` must be a register defined by the match root.
+- Builds a `G_CONSTANT` that defines `$reg` itself and erases the match root,
+  so the uses of `$reg` are left untouched. If `$reg` is a fixed vector, the
+  constant is splatted across all lanes.
+
+#### GIReplaceRegWithFConstant
+
+```{code-block} text
+:caption: Usage
+
+(apply (GIReplaceRegWithFConstant $reg, Imm))
+```
+
+Operands:
+
+- `$reg` (out) register defined by the match root
+- `Imm`: an integer literal
+
+```{warning}
+`Imm` is the **IEEE bit pattern** of `$reg`'s (scalar) type, not a decimal fp
+value: f32 `0` is `+0.0`. Truncate to that width. Above 64 bits only `0` can
+be represented. For 16-bit types, a non-zero pattern needs `$reg` to have an FP
+type (`f16` or `bf16`), since a scalar `s16` does not say which one it is.
+```
+
+Semantics:
+
+- Can only appear in an 'apply' pattern.
+- `$reg` must be a register defined by the match root.
+- Builds a `G_FCONSTANT` that defines `$reg` itself and erases the match root,
+  so the uses of `$reg` are left untouched. If `$reg` is a fixed vector, the
+  constant is splatted across all lanes.
+
 #### GIEraseRoot
 
 ```{code-block} text
@@ -439,6 +488,25 @@ def ReplaceTemp : GICombineRule<
             (G_UNMERGE_VALUES $a, $b, $tmp)),
   (apply  (G_UNMERGE_VALUES $a, i32:$new, $y),
           (GIReplaceReg $b, $new))>
+```
+
+#### Common Pattern #1b: Replace a Register with a Constant
+
+To turn a match root's def into a constant, use
+`GIReplaceRegWithConstant` (or `GIReplaceRegWithFConstant` for a
+`G_FCONSTANT`, where `Imm` is an IEEE bit pattern rather than a decimal fp
+value).
+
+```text
+def Foo : GICombineRule<
+  (defs root:$dst),
+  (match (G_AND $dst, $x, $undef):$mi, (G_IMPLICIT_DEF $undef)),
+  (apply (GIReplaceRegWithConstant $dst, 0))>;
+
+def Bar : GICombineRule<
+  (defs root:$dst),
+  (match (G_UITOFP $dst, 0)),
+  (apply (GIReplaceRegWithFConstant $dst, 0))>;
 ```
 
 #### Common Pattern #2: Erasing a Def-less Root
