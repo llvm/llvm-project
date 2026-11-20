@@ -84,7 +84,10 @@ add_libc_test(
   SRCS
     strtof128_test.cpp
   DEPENDS
+    libc.hdr.errno_macros
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.properties.types
     libc.src.__support.uint128
     libc.src.stdlib.strtof128
     libc.test.UnitTest.ErrnoCheckingTest
