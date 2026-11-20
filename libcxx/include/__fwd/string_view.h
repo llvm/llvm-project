@@ -45,6 +45,13 @@ class _LIBCPP_PREFERRED_NAME(string_view)
       _LIBCPP_PREFERRED_NAME(u32string_view)
       basic_string_view;
 // clang-format on
+
+template <class _Tp>
+inline const bool __is_std_string_view = false;
+
+template <class _CharT, class _Traits>
+inline const bool __is_std_string_view<basic_string_view<_CharT, _Traits> > = true;
+
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___FWD_STRING_VIEW_H
