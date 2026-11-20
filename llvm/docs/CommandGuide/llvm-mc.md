@@ -164,12 +164,13 @@ Check diagnostics against directives in single-line comments instead of printing
 .foo # expected-error {{unknown directive}}
 .bar
 # expected-error-re@-1 {{unknown {{directive|instruction}}}}
+.baz # expected-error:1 {{unknown directive}}
 ```
 
 Directives have the form:
 
 ```text
-<prefix>-<kind>[-re][@<offset>] {{<text>}}
+<prefix>-<kind>[-re][@<offset>][:<col>] {{<text>}}
 ```
 
 - `<prefix>`: `expected` by default, or any prefix listed in the comma-separated `<prefixes>` argument.
@@ -180,6 +181,8 @@ Directives have the form:
   - `@+N` / `@-N`: `N` lines below or above the directive.
   - `@above` / `@below`: the nearest non-directive line above or below.
   - `@unknown`: a diagnostic with no source location.
+- `:<col>`: the expected 1-based column.
+  (Note that in Clang, `@<file>:<line>` instead refers to a line in another file.)
 
 At most one directive is recognized per line.
 {program}`llvm-mc` succeeds if all directives are matched and no unexpected diagnostics are emitted.

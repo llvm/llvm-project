@@ -27,22 +27,10 @@ define void @fcmp_br_f32(float %a, float %b) nounwind strictfp {
 ; V8-NEXT:    nop
 ; V8-NEXT:    fbuge .LBB0_2
 ; V8-NEXT:    nop
-; V8-NEXT:  ! %bb.1: ! %entry
-; V8-NEXT:    mov %g0, %i0
-; V8-NEXT:    cmp %i0, 0
-; V8-NEXT:    be .LBB0_3
-; V8-NEXT:    nop
-; V8-NEXT:    ba .LBB0_4
-; V8-NEXT:    nop
-; V8-NEXT:  .LBB0_2:
-; V8-NEXT:    mov 1, %i0
-; V8-NEXT:    cmp %i0, 0
-; V8-NEXT:    bne .LBB0_4
-; V8-NEXT:    nop
-; V8-NEXT:  .LBB0_3: ! %t
+; V8-NEXT:  ! %bb.1: ! %t
 ; V8-NEXT:    call foo
 ; V8-NEXT:    nop
-; V8-NEXT:  .LBB0_4: ! %e
+; V8-NEXT:  .LBB0_2: ! %e
 ; V8-NEXT:    ret
 ; V8-NEXT:    restore
 ;
@@ -53,11 +41,8 @@ define void @fcmp_br_f32(float %a, float %b) nounwind strictfp {
 ; V8PLUS-NEXT:    st %i0, [%fp+-8]
 ; V8PLUS-NEXT:    ld [%fp+-4], %f0
 ; V8PLUS-NEXT:    ld [%fp+-8], %f1
-; V8PLUS-NEXT:    mov %g0, %i0
 ; V8PLUS-NEXT:    fcmps %fcc0, %f1, %f0
-; V8PLUS-NEXT:    movuge %fcc0, 1, %i0
-; V8PLUS-NEXT:    cmp %i0, 0
-; V8PLUS-NEXT:    bne %icc, .LBB0_2
+; V8PLUS-NEXT:    fbuge %fcc0, .LBB0_2
 ; V8PLUS-NEXT:    nop
 ; V8PLUS-NEXT:  ! %bb.1: ! %t
 ; V8PLUS-NEXT:    call foo
@@ -69,11 +54,8 @@ define void @fcmp_br_f32(float %a, float %b) nounwind strictfp {
 ; V9-LABEL: fcmp_br_f32:
 ; V9:       ! %bb.0: ! %entry
 ; V9-NEXT:    save %sp, -176, %sp
-; V9-NEXT:    mov %g0, %i0
 ; V9-NEXT:    fcmps %fcc0, %f1, %f3
-; V9-NEXT:    movuge %fcc0, 1, %i0
-; V9-NEXT:    cmp %i0, 0
-; V9-NEXT:    bne %icc, .LBB0_2
+; V9-NEXT:    fbuge %fcc0, .LBB0_2
 ; V9-NEXT:    nop
 ; V9-NEXT:  ! %bb.1: ! %t
 ; V9-NEXT:    call foo
@@ -93,33 +75,18 @@ define void @fcmp_br_f32(float %a, float %b) nounwind strictfp {
 ; V8-HQ-NEXT:    nop
 ; V8-HQ-NEXT:    fbuge .LBB0_2
 ; V8-HQ-NEXT:    nop
-; V8-HQ-NEXT:  ! %bb.1: ! %entry
-; V8-HQ-NEXT:    mov %g0, %i0
-; V8-HQ-NEXT:    cmp %i0, 0
-; V8-HQ-NEXT:    be .LBB0_3
-; V8-HQ-NEXT:    nop
-; V8-HQ-NEXT:    ba .LBB0_4
-; V8-HQ-NEXT:    nop
-; V8-HQ-NEXT:  .LBB0_2:
-; V8-HQ-NEXT:    mov 1, %i0
-; V8-HQ-NEXT:    cmp %i0, 0
-; V8-HQ-NEXT:    bne .LBB0_4
-; V8-HQ-NEXT:    nop
-; V8-HQ-NEXT:  .LBB0_3: ! %t
+; V8-HQ-NEXT:  ! %bb.1: ! %t
 ; V8-HQ-NEXT:    call foo
 ; V8-HQ-NEXT:    nop
-; V8-HQ-NEXT:  .LBB0_4: ! %e
+; V8-HQ-NEXT:  .LBB0_2: ! %e
 ; V8-HQ-NEXT:    ret
 ; V8-HQ-NEXT:    restore
 ;
 ; V9-HQ-LABEL: fcmp_br_f32:
 ; V9-HQ:       ! %bb.0: ! %entry
 ; V9-HQ-NEXT:    save %sp, -176, %sp
-; V9-HQ-NEXT:    mov %g0, %i0
 ; V9-HQ-NEXT:    fcmps %fcc0, %f1, %f3
-; V9-HQ-NEXT:    movuge %fcc0, 1, %i0
-; V9-HQ-NEXT:    cmp %i0, 0
-; V9-HQ-NEXT:    bne %icc, .LBB0_2
+; V9-HQ-NEXT:    fbuge %fcc0, .LBB0_2
 ; V9-HQ-NEXT:    nop
 ; V9-HQ-NEXT:  ! %bb.1: ! %t
 ; V9-HQ-NEXT:    call foo
@@ -151,22 +118,10 @@ define void @fcmps_br_f32(float %a, float %b) nounwind strictfp {
 ; V8-NEXT:    nop
 ; V8-NEXT:    fbuge .LBB1_2
 ; V8-NEXT:    nop
-; V8-NEXT:  ! %bb.1: ! %entry
-; V8-NEXT:    mov %g0, %i0
-; V8-NEXT:    cmp %i0, 0
-; V8-NEXT:    be .LBB1_3
-; V8-NEXT:    nop
-; V8-NEXT:    ba .LBB1_4
-; V8-NEXT:    nop
-; V8-NEXT:  .LBB1_2:
-; V8-NEXT:    mov 1, %i0
-; V8-NEXT:    cmp %i0, 0
-; V8-NEXT:    bne .LBB1_4
-; V8-NEXT:    nop
-; V8-NEXT:  .LBB1_3: ! %t
+; V8-NEXT:  ! %bb.1: ! %t
 ; V8-NEXT:    call foo
 ; V8-NEXT:    nop
-; V8-NEXT:  .LBB1_4: ! %e
+; V8-NEXT:  .LBB1_2: ! %e
 ; V8-NEXT:    ret
 ; V8-NEXT:    restore
 ;
@@ -177,11 +132,8 @@ define void @fcmps_br_f32(float %a, float %b) nounwind strictfp {
 ; V8PLUS-NEXT:    st %i0, [%fp+-8]
 ; V8PLUS-NEXT:    ld [%fp+-4], %f0
 ; V8PLUS-NEXT:    ld [%fp+-8], %f1
-; V8PLUS-NEXT:    mov %g0, %i0
 ; V8PLUS-NEXT:    fcmpes %fcc0, %f1, %f0
-; V8PLUS-NEXT:    movuge %fcc0, 1, %i0
-; V8PLUS-NEXT:    cmp %i0, 0
-; V8PLUS-NEXT:    bne %icc, .LBB1_2
+; V8PLUS-NEXT:    fbuge %fcc0, .LBB1_2
 ; V8PLUS-NEXT:    nop
 ; V8PLUS-NEXT:  ! %bb.1: ! %t
 ; V8PLUS-NEXT:    call foo
@@ -193,11 +145,8 @@ define void @fcmps_br_f32(float %a, float %b) nounwind strictfp {
 ; V9-LABEL: fcmps_br_f32:
 ; V9:       ! %bb.0: ! %entry
 ; V9-NEXT:    save %sp, -176, %sp
-; V9-NEXT:    mov %g0, %i0
 ; V9-NEXT:    fcmpes %fcc0, %f1, %f3
-; V9-NEXT:    movuge %fcc0, 1, %i0
-; V9-NEXT:    cmp %i0, 0
-; V9-NEXT:    bne %icc, .LBB1_2
+; V9-NEXT:    fbuge %fcc0, .LBB1_2
 ; V9-NEXT:    nop
 ; V9-NEXT:  ! %bb.1: ! %t
 ; V9-NEXT:    call foo
@@ -217,33 +166,18 @@ define void @fcmps_br_f32(float %a, float %b) nounwind strictfp {
 ; V8-HQ-NEXT:    nop
 ; V8-HQ-NEXT:    fbuge .LBB1_2
 ; V8-HQ-NEXT:    nop
-; V8-HQ-NEXT:  ! %bb.1: ! %entry
-; V8-HQ-NEXT:    mov %g0, %i0
-; V8-HQ-NEXT:    cmp %i0, 0
-; V8-HQ-NEXT:    be .LBB1_3
-; V8-HQ-NEXT:    nop
-; V8-HQ-NEXT:    ba .LBB1_4
-; V8-HQ-NEXT:    nop
-; V8-HQ-NEXT:  .LBB1_2:
-; V8-HQ-NEXT:    mov 1, %i0
-; V8-HQ-NEXT:    cmp %i0, 0
-; V8-HQ-NEXT:    bne .LBB1_4
-; V8-HQ-NEXT:    nop
-; V8-HQ-NEXT:  .LBB1_3: ! %t
+; V8-HQ-NEXT:  ! %bb.1: ! %t
 ; V8-HQ-NEXT:    call foo
 ; V8-HQ-NEXT:    nop
-; V8-HQ-NEXT:  .LBB1_4: ! %e
+; V8-HQ-NEXT:  .LBB1_2: ! %e
 ; V8-HQ-NEXT:    ret
 ; V8-HQ-NEXT:    restore
 ;
 ; V9-HQ-LABEL: fcmps_br_f32:
 ; V9-HQ:       ! %bb.0: ! %entry
 ; V9-HQ-NEXT:    save %sp, -176, %sp
-; V9-HQ-NEXT:    mov %g0, %i0
 ; V9-HQ-NEXT:    fcmpes %fcc0, %f1, %f3
-; V9-HQ-NEXT:    movuge %fcc0, 1, %i0
-; V9-HQ-NEXT:    cmp %i0, 0
-; V9-HQ-NEXT:    bne %icc, .LBB1_2
+; V9-HQ-NEXT:    fbuge %fcc0, .LBB1_2
 ; V9-HQ-NEXT:    nop
 ; V9-HQ-NEXT:  ! %bb.1: ! %t
 ; V9-HQ-NEXT:    call foo
@@ -279,22 +213,10 @@ define void @fcmp_br_f64(double %a, double %b) nounwind strictfp {
 ; V8-NEXT:    nop
 ; V8-NEXT:    fbuge .LBB2_2
 ; V8-NEXT:    nop
-; V8-NEXT:  ! %bb.1: ! %entry
-; V8-NEXT:    mov %g0, %i0
-; V8-NEXT:    cmp %i0, 0
-; V8-NEXT:    be .LBB2_3
-; V8-NEXT:    nop
-; V8-NEXT:    ba .LBB2_4
-; V8-NEXT:    nop
-; V8-NEXT:  .LBB2_2:
-; V8-NEXT:    mov 1, %i0
-; V8-NEXT:    cmp %i0, 0
-; V8-NEXT:    bne .LBB2_4
-; V8-NEXT:    nop
-; V8-NEXT:  .LBB2_3: ! %t
+; V8-NEXT:  ! %bb.1: ! %t
 ; V8-NEXT:    call foo
 ; V8-NEXT:    nop
-; V8-NEXT:  .LBB2_4: ! %e
+; V8-NEXT:  .LBB2_2: ! %e
 ; V8-NEXT:    ret
 ; V8-NEXT:    restore
 ;
@@ -309,11 +231,8 @@ define void @fcmp_br_f64(double %a, double %b) nounwind strictfp {
 ; V8PLUS-NEXT:    std %i0, [%fp+-8]
 ; V8PLUS-NEXT:    ldd [%fp+-16], %f0
 ; V8PLUS-NEXT:    ldd [%fp+-8], %f2
-; V8PLUS-NEXT:    mov %g0, %i0
 ; V8PLUS-NEXT:    fcmpd %fcc0, %f2, %f0
-; V8PLUS-NEXT:    movuge %fcc0, 1, %i0
-; V8PLUS-NEXT:    cmp %i0, 0
-; V8PLUS-NEXT:    bne %icc, .LBB2_2
+; V8PLUS-NEXT:    fbuge %fcc0, .LBB2_2
 ; V8PLUS-NEXT:    nop
 ; V8PLUS-NEXT:  ! %bb.1: ! %t
 ; V8PLUS-NEXT:    call foo
@@ -325,11 +244,8 @@ define void @fcmp_br_f64(double %a, double %b) nounwind strictfp {
 ; V9-LABEL: fcmp_br_f64:
 ; V9:       ! %bb.0: ! %entry
 ; V9-NEXT:    save %sp, -176, %sp
-; V9-NEXT:    mov %g0, %i0
 ; V9-NEXT:    fcmpd %fcc0, %f0, %f2
-; V9-NEXT:    movuge %fcc0, 1, %i0
-; V9-NEXT:    cmp %i0, 0
-; V9-NEXT:    bne %icc, .LBB2_2
+; V9-NEXT:    fbuge %fcc0, .LBB2_2
 ; V9-NEXT:    nop
 ; V9-NEXT:  ! %bb.1: ! %t
 ; V9-NEXT:    call foo
@@ -353,33 +269,18 @@ define void @fcmp_br_f64(double %a, double %b) nounwind strictfp {
 ; V8-HQ-NEXT:    nop
 ; V8-HQ-NEXT:    fbuge .LBB2_2
 ; V8-HQ-NEXT:    nop
-; V8-HQ-NEXT:  ! %bb.1: ! %entry
-; V8-HQ-NEXT:    mov %g0, %i0
-; V8-HQ-NEXT:    cmp %i0, 0
-; V8-HQ-NEXT:    be .LBB2_3
-; V8-HQ-NEXT:    nop
-; V8-HQ-NEXT:    ba .LBB2_4
-; V8-HQ-NEXT:    nop
-; V8-HQ-NEXT:  .LBB2_2:
-; V8-HQ-NEXT:    mov 1, %i0
-; V8-HQ-NEXT:    cmp %i0, 0
-; V8-HQ-NEXT:    bne .LBB2_4
-; V8-HQ-NEXT:    nop
-; V8-HQ-NEXT:  .LBB2_3: ! %t
+; V8-HQ-NEXT:  ! %bb.1: ! %t
 ; V8-HQ-NEXT:    call foo
 ; V8-HQ-NEXT:    nop
-; V8-HQ-NEXT:  .LBB2_4: ! %e
+; V8-HQ-NEXT:  .LBB2_2: ! %e
 ; V8-HQ-NEXT:    ret
 ; V8-HQ-NEXT:    restore
 ;
 ; V9-HQ-LABEL: fcmp_br_f64:
 ; V9-HQ:       ! %bb.0: ! %entry
 ; V9-HQ-NEXT:    save %sp, -176, %sp
-; V9-HQ-NEXT:    mov %g0, %i0
 ; V9-HQ-NEXT:    fcmpd %fcc0, %f0, %f2
-; V9-HQ-NEXT:    movuge %fcc0, 1, %i0
-; V9-HQ-NEXT:    cmp %i0, 0
-; V9-HQ-NEXT:    bne %icc, .LBB2_2
+; V9-HQ-NEXT:    fbuge %fcc0, .LBB2_2
 ; V9-HQ-NEXT:    nop
 ; V9-HQ-NEXT:  ! %bb.1: ! %t
 ; V9-HQ-NEXT:    call foo
@@ -415,22 +316,10 @@ define void @fcmps_br_f64(double %a, double %b) nounwind strictfp {
 ; V8-NEXT:    nop
 ; V8-NEXT:    fbuge .LBB3_2
 ; V8-NEXT:    nop
-; V8-NEXT:  ! %bb.1: ! %entry
-; V8-NEXT:    mov %g0, %i0
-; V8-NEXT:    cmp %i0, 0
-; V8-NEXT:    be .LBB3_3
-; V8-NEXT:    nop
-; V8-NEXT:    ba .LBB3_4
-; V8-NEXT:    nop
-; V8-NEXT:  .LBB3_2:
-; V8-NEXT:    mov 1, %i0
-; V8-NEXT:    cmp %i0, 0
-; V8-NEXT:    bne .LBB3_4
-; V8-NEXT:    nop
-; V8-NEXT:  .LBB3_3: ! %t
+; V8-NEXT:  ! %bb.1: ! %t
 ; V8-NEXT:    call foo
 ; V8-NEXT:    nop
-; V8-NEXT:  .LBB3_4: ! %e
+; V8-NEXT:  .LBB3_2: ! %e
 ; V8-NEXT:    ret
 ; V8-NEXT:    restore
 ;
@@ -445,11 +334,8 @@ define void @fcmps_br_f64(double %a, double %b) nounwind strictfp {
 ; V8PLUS-NEXT:    std %i0, [%fp+-8]
 ; V8PLUS-NEXT:    ldd [%fp+-16], %f0
 ; V8PLUS-NEXT:    ldd [%fp+-8], %f2
-; V8PLUS-NEXT:    mov %g0, %i0
 ; V8PLUS-NEXT:    fcmped %fcc0, %f2, %f0
-; V8PLUS-NEXT:    movuge %fcc0, 1, %i0
-; V8PLUS-NEXT:    cmp %i0, 0
-; V8PLUS-NEXT:    bne %icc, .LBB3_2
+; V8PLUS-NEXT:    fbuge %fcc0, .LBB3_2
 ; V8PLUS-NEXT:    nop
 ; V8PLUS-NEXT:  ! %bb.1: ! %t
 ; V8PLUS-NEXT:    call foo
@@ -461,11 +347,8 @@ define void @fcmps_br_f64(double %a, double %b) nounwind strictfp {
 ; V9-LABEL: fcmps_br_f64:
 ; V9:       ! %bb.0: ! %entry
 ; V9-NEXT:    save %sp, -176, %sp
-; V9-NEXT:    mov %g0, %i0
 ; V9-NEXT:    fcmped %fcc0, %f0, %f2
-; V9-NEXT:    movuge %fcc0, 1, %i0
-; V9-NEXT:    cmp %i0, 0
-; V9-NEXT:    bne %icc, .LBB3_2
+; V9-NEXT:    fbuge %fcc0, .LBB3_2
 ; V9-NEXT:    nop
 ; V9-NEXT:  ! %bb.1: ! %t
 ; V9-NEXT:    call foo
@@ -489,33 +372,18 @@ define void @fcmps_br_f64(double %a, double %b) nounwind strictfp {
 ; V8-HQ-NEXT:    nop
 ; V8-HQ-NEXT:    fbuge .LBB3_2
 ; V8-HQ-NEXT:    nop
-; V8-HQ-NEXT:  ! %bb.1: ! %entry
-; V8-HQ-NEXT:    mov %g0, %i0
-; V8-HQ-NEXT:    cmp %i0, 0
-; V8-HQ-NEXT:    be .LBB3_3
-; V8-HQ-NEXT:    nop
-; V8-HQ-NEXT:    ba .LBB3_4
-; V8-HQ-NEXT:    nop
-; V8-HQ-NEXT:  .LBB3_2:
-; V8-HQ-NEXT:    mov 1, %i0
-; V8-HQ-NEXT:    cmp %i0, 0
-; V8-HQ-NEXT:    bne .LBB3_4
-; V8-HQ-NEXT:    nop
-; V8-HQ-NEXT:  .LBB3_3: ! %t
+; V8-HQ-NEXT:  ! %bb.1: ! %t
 ; V8-HQ-NEXT:    call foo
 ; V8-HQ-NEXT:    nop
-; V8-HQ-NEXT:  .LBB3_4: ! %e
+; V8-HQ-NEXT:  .LBB3_2: ! %e
 ; V8-HQ-NEXT:    ret
 ; V8-HQ-NEXT:    restore
 ;
 ; V9-HQ-LABEL: fcmps_br_f64:
 ; V9-HQ:       ! %bb.0: ! %entry
 ; V9-HQ-NEXT:    save %sp, -176, %sp
-; V9-HQ-NEXT:    mov %g0, %i0
 ; V9-HQ-NEXT:    fcmped %fcc0, %f0, %f2
-; V9-HQ-NEXT:    movuge %fcc0, 1, %i0
-; V9-HQ-NEXT:    cmp %i0, 0
-; V9-HQ-NEXT:    bne %icc, .LBB3_2
+; V9-HQ-NEXT:    fbuge %fcc0, .LBB3_2
 ; V9-HQ-NEXT:    nop
 ; V9-HQ-NEXT:  ! %bb.1: ! %t
 ; V9-HQ-NEXT:    call foo
@@ -553,22 +421,10 @@ define void @fcmp_br_f128(fp128 %a, fp128 %b) nounwind strictfp {
 ; V8-NEXT:    cmp %o0, 1
 ; V8-NEXT:    bne .LBB4_2
 ; V8-NEXT:    nop
-; V8-NEXT:  ! %bb.1: ! %entry
-; V8-NEXT:    mov %g0, %i0
-; V8-NEXT:    cmp %i0, 0
-; V8-NEXT:    be .LBB4_3
-; V8-NEXT:    nop
-; V8-NEXT:    ba .LBB4_4
-; V8-NEXT:    nop
-; V8-NEXT:  .LBB4_2:
-; V8-NEXT:    mov 1, %i0
-; V8-NEXT:    cmp %i0, 0
-; V8-NEXT:    bne .LBB4_4
-; V8-NEXT:    nop
-; V8-NEXT:  .LBB4_3: ! %t
+; V8-NEXT:  ! %bb.1: ! %t
 ; V8-NEXT:    call foo
 ; V8-NEXT:    nop
-; V8-NEXT:  .LBB4_4: ! %e
+; V8-NEXT:  .LBB4_2: ! %e
 ; V8-NEXT:    ret
 ; V8-NEXT:    restore
 ;
@@ -586,10 +442,7 @@ define void @fcmp_br_f128(fp128 %a, fp128 %b) nounwind strictfp {
 ; V8PLUS-NEXT:    add %fp, -16, %o0
 ; V8PLUS-NEXT:    call _Q_cmp
 ; V8PLUS-NEXT:    add %fp, -32, %o1
-; V8PLUS-NEXT:    mov %g0, %i0
 ; V8PLUS-NEXT:    cmp %o0, 1
-; V8PLUS-NEXT:    movne %icc, 1, %i0
-; V8PLUS-NEXT:    cmp %i0, 0
 ; V8PLUS-NEXT:    bne %icc, .LBB4_2
 ; V8PLUS-NEXT:    nop
 ; V8PLUS-NEXT:  ! %bb.1: ! %t
@@ -609,10 +462,7 @@ define void @fcmp_br_f128(fp128 %a, fp128 %b) nounwind strictfp {
 ; V9-NEXT:    add %fp, 2031, %o0
 ; V9-NEXT:    call _Qp_cmp
 ; V9-NEXT:    add %fp, 2015, %o1
-; V9-NEXT:    mov %g0, %i0
 ; V9-NEXT:    cmp %o0, 1
-; V9-NEXT:    movne %icc, 1, %i0
-; V9-NEXT:    cmp %i0, 0
 ; V9-NEXT:    bne %icc, .LBB4_2
 ; V9-NEXT:    nop
 ; V9-NEXT:  ! %bb.1: ! %t
@@ -633,33 +483,18 @@ define void @fcmp_br_f128(fp128 %a, fp128 %b) nounwind strictfp {
 ; V8-HQ-NEXT:    nop
 ; V8-HQ-NEXT:    fbuge .LBB4_2
 ; V8-HQ-NEXT:    nop
-; V8-HQ-NEXT:  ! %bb.1: ! %entry
-; V8-HQ-NEXT:    mov %g0, %i0
-; V8-HQ-NEXT:    cmp %i0, 0
-; V8-HQ-NEXT:    be .LBB4_3
-; V8-HQ-NEXT:    nop
-; V8-HQ-NEXT:    ba .LBB4_4
-; V8-HQ-NEXT:    nop
-; V8-HQ-NEXT:  .LBB4_2:
-; V8-HQ-NEXT:    mov 1, %i0
-; V8-HQ-NEXT:    cmp %i0, 0
-; V8-HQ-NEXT:    bne .LBB4_4
-; V8-HQ-NEXT:    nop
-; V8-HQ-NEXT:  .LBB4_3: ! %t
+; V8-HQ-NEXT:  ! %bb.1: ! %t
 ; V8-HQ-NEXT:    call foo
 ; V8-HQ-NEXT:    nop
-; V8-HQ-NEXT:  .LBB4_4: ! %e
+; V8-HQ-NEXT:  .LBB4_2: ! %e
 ; V8-HQ-NEXT:    ret
 ; V8-HQ-NEXT:    restore
 ;
 ; V9-HQ-LABEL: fcmp_br_f128:
 ; V9-HQ:       ! %bb.0: ! %entry
 ; V9-HQ-NEXT:    save %sp, -176, %sp
-; V9-HQ-NEXT:    mov %g0, %i0
 ; V9-HQ-NEXT:    fcmpq %fcc0, %f0, %f4
-; V9-HQ-NEXT:    movuge %fcc0, 1, %i0
-; V9-HQ-NEXT:    cmp %i0, 0
-; V9-HQ-NEXT:    bne %icc, .LBB4_2
+; V9-HQ-NEXT:    fbuge %fcc0, .LBB4_2
 ; V9-HQ-NEXT:    nop
 ; V9-HQ-NEXT:  ! %bb.1: ! %t
 ; V9-HQ-NEXT:    call foo
@@ -697,22 +532,10 @@ define void @fcmps_br_f128(fp128 %a, fp128 %b) nounwind strictfp {
 ; V8-NEXT:    cmp %o0, 1
 ; V8-NEXT:    bne .LBB5_2
 ; V8-NEXT:    nop
-; V8-NEXT:  ! %bb.1: ! %entry
-; V8-NEXT:    mov %g0, %i0
-; V8-NEXT:    cmp %i0, 0
-; V8-NEXT:    be .LBB5_3
-; V8-NEXT:    nop
-; V8-NEXT:    ba .LBB5_4
-; V8-NEXT:    nop
-; V8-NEXT:  .LBB5_2:
-; V8-NEXT:    mov 1, %i0
-; V8-NEXT:    cmp %i0, 0
-; V8-NEXT:    bne .LBB5_4
-; V8-NEXT:    nop
-; V8-NEXT:  .LBB5_3: ! %t
+; V8-NEXT:  ! %bb.1: ! %t
 ; V8-NEXT:    call foo
 ; V8-NEXT:    nop
-; V8-NEXT:  .LBB5_4: ! %e
+; V8-NEXT:  .LBB5_2: ! %e
 ; V8-NEXT:    ret
 ; V8-NEXT:    restore
 ;
@@ -730,10 +553,7 @@ define void @fcmps_br_f128(fp128 %a, fp128 %b) nounwind strictfp {
 ; V8PLUS-NEXT:    add %fp, -16, %o0
 ; V8PLUS-NEXT:    call _Q_cmpe
 ; V8PLUS-NEXT:    add %fp, -32, %o1
-; V8PLUS-NEXT:    mov %g0, %i0
 ; V8PLUS-NEXT:    cmp %o0, 1
-; V8PLUS-NEXT:    movne %icc, 1, %i0
-; V8PLUS-NEXT:    cmp %i0, 0
 ; V8PLUS-NEXT:    bne %icc, .LBB5_2
 ; V8PLUS-NEXT:    nop
 ; V8PLUS-NEXT:  ! %bb.1: ! %t
@@ -753,10 +573,7 @@ define void @fcmps_br_f128(fp128 %a, fp128 %b) nounwind strictfp {
 ; V9-NEXT:    add %fp, 2031, %o0
 ; V9-NEXT:    call _Qp_cmpe
 ; V9-NEXT:    add %fp, 2015, %o1
-; V9-NEXT:    mov %g0, %i0
 ; V9-NEXT:    cmp %o0, 1
-; V9-NEXT:    movne %icc, 1, %i0
-; V9-NEXT:    cmp %i0, 0
 ; V9-NEXT:    bne %icc, .LBB5_2
 ; V9-NEXT:    nop
 ; V9-NEXT:  ! %bb.1: ! %t
@@ -777,33 +594,18 @@ define void @fcmps_br_f128(fp128 %a, fp128 %b) nounwind strictfp {
 ; V8-HQ-NEXT:    nop
 ; V8-HQ-NEXT:    fbuge .LBB5_2
 ; V8-HQ-NEXT:    nop
-; V8-HQ-NEXT:  ! %bb.1: ! %entry
-; V8-HQ-NEXT:    mov %g0, %i0
-; V8-HQ-NEXT:    cmp %i0, 0
-; V8-HQ-NEXT:    be .LBB5_3
-; V8-HQ-NEXT:    nop
-; V8-HQ-NEXT:    ba .LBB5_4
-; V8-HQ-NEXT:    nop
-; V8-HQ-NEXT:  .LBB5_2:
-; V8-HQ-NEXT:    mov 1, %i0
-; V8-HQ-NEXT:    cmp %i0, 0
-; V8-HQ-NEXT:    bne .LBB5_4
-; V8-HQ-NEXT:    nop
-; V8-HQ-NEXT:  .LBB5_3: ! %t
+; V8-HQ-NEXT:  ! %bb.1: ! %t
 ; V8-HQ-NEXT:    call foo
 ; V8-HQ-NEXT:    nop
-; V8-HQ-NEXT:  .LBB5_4: ! %e
+; V8-HQ-NEXT:  .LBB5_2: ! %e
 ; V8-HQ-NEXT:    ret
 ; V8-HQ-NEXT:    restore
 ;
 ; V9-HQ-LABEL: fcmps_br_f128:
 ; V9-HQ:       ! %bb.0: ! %entry
 ; V9-HQ-NEXT:    save %sp, -176, %sp
-; V9-HQ-NEXT:    mov %g0, %i0
 ; V9-HQ-NEXT:    fcmpeq %fcc0, %f0, %f4
-; V9-HQ-NEXT:    movuge %fcc0, 1, %i0
-; V9-HQ-NEXT:    cmp %i0, 0
-; V9-HQ-NEXT:    bne %icc, .LBB5_2
+; V9-HQ-NEXT:    fbuge %fcc0, .LBB5_2
 ; V9-HQ-NEXT:    nop
 ; V9-HQ-NEXT:  ! %bb.1: ! %t
 ; V9-HQ-NEXT:    call foo
@@ -817,6 +619,113 @@ entry:
 
 t:
   call void @foo() strictfp
+  br label %e
+
+e:
+  ret void
+}
+
+;; %p is live into %t, so the branch's chain is a token factor that also
+;; carries the CopyToReg for it. This used to fail scheduling.
+define void @fcmps_br_liveout(double %a, double %b, i32 %x, i32 %y, ptr %p) nounwind strictfp {
+; V8-LABEL: fcmps_br_liveout:
+; V8:       ! %bb.0: ! %entry
+; V8-NEXT:    add %sp, -112, %sp
+; V8-NEXT:    ! kill: def $o3 killed $o3 killed $o2_o3 def $o2_o3
+; V8-NEXT:    ! kill: def $o1 killed $o1 killed $o0_o1 def $o0_o1
+; V8-NEXT:    ! kill: def $o2 killed $o2 killed $o2_o3 def $o2_o3
+; V8-NEXT:    std %o2, [%sp+96]
+; V8-NEXT:    ! kill: def $o0 killed $o0 killed $o0_o1 def $o0_o1
+; V8-NEXT:    std %o0, [%sp+104]
+; V8-NEXT:    ldd [%sp+96], %f0
+; V8-NEXT:    ldd [%sp+104], %f2
+; V8-NEXT:    fcmped %f2, %f0
+; V8-NEXT:    nop
+; V8-NEXT:    fbuge .LBB6_2
+; V8-NEXT:    nop
+; V8-NEXT:  ! %bb.1: ! %t
+; V8-NEXT:    ld [%sp+204], %o0
+; V8-NEXT:    mov %g0, %o2
+; V8-NEXT:    mov %g0, %o3
+; V8-NEXT:    std %o2, [%o0]
+; V8-NEXT:  .LBB6_2: ! %e
+; V8-NEXT:    retl
+; V8-NEXT:    add %sp, 112, %sp
+;
+; V8PLUS-LABEL: fcmps_br_liveout:
+; V8PLUS:       ! %bb.0: ! %entry
+; V8PLUS-NEXT:    add %sp, -112, %sp
+; V8PLUS-NEXT:    ! kill: def $o3 killed $o3 killed $o2_o3 def $o2_o3
+; V8PLUS-NEXT:    ! kill: def $o1 killed $o1 killed $o0_o1 def $o0_o1
+; V8PLUS-NEXT:    ! kill: def $o2 killed $o2 killed $o2_o3 def $o2_o3
+; V8PLUS-NEXT:    std %o2, [%sp+96]
+; V8PLUS-NEXT:    ! kill: def $o0 killed $o0 killed $o0_o1 def $o0_o1
+; V8PLUS-NEXT:    std %o0, [%sp+104]
+; V8PLUS-NEXT:    ldd [%sp+96], %f0
+; V8PLUS-NEXT:    ldd [%sp+104], %f2
+; V8PLUS-NEXT:    fcmped %fcc0, %f2, %f0
+; V8PLUS-NEXT:    fbuge %fcc0, .LBB6_2
+; V8PLUS-NEXT:    nop
+; V8PLUS-NEXT:  ! %bb.1: ! %t
+; V8PLUS-NEXT:    ld [%sp+204], %o0
+; V8PLUS-NEXT:    mov %g0, %o2
+; V8PLUS-NEXT:    mov %g0, %o3
+; V8PLUS-NEXT:    std %o2, [%o0]
+; V8PLUS-NEXT:  .LBB6_2: ! %e
+; V8PLUS-NEXT:    retl
+; V8PLUS-NEXT:    add %sp, 112, %sp
+;
+; V9-LABEL: fcmps_br_liveout:
+; V9:       ! %bb.0: ! %entry
+; V9-NEXT:    fcmped %fcc0, %f0, %f2
+; V9-NEXT:    fbuge %fcc0, .LBB6_2
+; V9-NEXT:    nop
+; V9-NEXT:  ! %bb.1: ! %t
+; V9-NEXT:    stx %g0, [%o4]
+; V9-NEXT:  .LBB6_2: ! %e
+; V9-NEXT:    retl
+; V9-NEXT:    nop
+;
+; V8-HQ-LABEL: fcmps_br_liveout:
+; V8-HQ:       ! %bb.0: ! %entry
+; V8-HQ-NEXT:    add %sp, -112, %sp
+; V8-HQ-NEXT:    ! kill: def $o3 killed $o3 killed $o2_o3 def $o2_o3
+; V8-HQ-NEXT:    ! kill: def $o1 killed $o1 killed $o0_o1 def $o0_o1
+; V8-HQ-NEXT:    ! kill: def $o2 killed $o2 killed $o2_o3 def $o2_o3
+; V8-HQ-NEXT:    std %o2, [%sp+96]
+; V8-HQ-NEXT:    ! kill: def $o0 killed $o0 killed $o0_o1 def $o0_o1
+; V8-HQ-NEXT:    std %o0, [%sp+104]
+; V8-HQ-NEXT:    ldd [%sp+96], %f0
+; V8-HQ-NEXT:    ldd [%sp+104], %f2
+; V8-HQ-NEXT:    fcmped %f2, %f0
+; V8-HQ-NEXT:    nop
+; V8-HQ-NEXT:    fbuge .LBB6_2
+; V8-HQ-NEXT:    nop
+; V8-HQ-NEXT:  ! %bb.1: ! %t
+; V8-HQ-NEXT:    ld [%sp+204], %o0
+; V8-HQ-NEXT:    mov %g0, %o2
+; V8-HQ-NEXT:    mov %g0, %o3
+; V8-HQ-NEXT:    std %o2, [%o0]
+; V8-HQ-NEXT:  .LBB6_2: ! %e
+; V8-HQ-NEXT:    retl
+; V8-HQ-NEXT:    add %sp, 112, %sp
+;
+; V9-HQ-LABEL: fcmps_br_liveout:
+; V9-HQ:       ! %bb.0: ! %entry
+; V9-HQ-NEXT:    fcmped %fcc0, %f0, %f2
+; V9-HQ-NEXT:    fbuge %fcc0, .LBB6_2
+; V9-HQ-NEXT:    nop
+; V9-HQ-NEXT:  ! %bb.1: ! %t
+; V9-HQ-NEXT:    stx %g0, [%o4]
+; V9-HQ-NEXT:  .LBB6_2: ! %e
+; V9-HQ-NEXT:    retl
+; V9-HQ-NEXT:    nop
+entry:
+  %c = call i1 @llvm.experimental.constrained.fcmps.f64(double %a, double %b, metadata !"olt", metadata !"fpexcept.strict") strictfp
+  br i1 %c, label %t, label %e
+
+t:
+  store double 0.0, ptr %p
   br label %e
 
 e:

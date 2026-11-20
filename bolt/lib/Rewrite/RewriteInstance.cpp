@@ -1512,7 +1512,7 @@ void RewriteInstance::discoverFileObjects() {
   }
 
   if (BC->isAArch64()) {
-    const RelocationHandler &RH = BC->getRelocationHandler();
+    [[maybe_unused]] const RelocationHandler &RH = BC->getRelocationHandler();
     // Check for dynamic relocations that might be contained in
     // constant islands.
     for (const BinarySection &Section : BC->allocatableSections()) {

@@ -288,5 +288,11 @@ interface StackFrame {
    * keys they do not know. Omitted if the runtime reports nothing.
    */
   $__lldb_languageSpecificData?: any;
+
+  /**
+   * True if the stack frame is optimized.
+   * @since LLDB 24
+   */
+  $__lldb_isOptimized?: boolean;
 }
 ```

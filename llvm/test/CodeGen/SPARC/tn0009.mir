@@ -13,7 +13,7 @@ body:             |
     STrr $o1, $g0, $o0
     NOP
     STrr $o1, $g0, $o0
-
+...
 ---
 # CHECK:      STDrr $i0, $g0, $i0_i1
 # CHECK-NEXT: NOP

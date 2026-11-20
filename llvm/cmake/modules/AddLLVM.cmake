@@ -146,6 +146,34 @@ function(llvm_update_pch name)
   endif()
 endfunction()
 
+# llvm_update_abi_definitions(<name> [COMPONENT_LIB] [DISABLE_LLVM_LINK_LLVM_DYLIB])
+#
+# Add to target <name> the compile definitions that select how the export
+# annotations (LLVM_ABI, LLVM_C_ABI, ...) expand in its sources.
+#
+# The arguments (COMPONENT_LIB, DISABLE_LLVM_LINK_LLVM_DYLIB) are the same ones
+# used by add_llvm_library().
+function(llvm_update_abi_definitions name)
+  if(NOT WIN32 OR MINGW OR NOT LLVM_BUILD_LLVM_DYLIB)
+    # Nothing to do when not building a DLL for Windows with MSVC/clang-cl.
+    return()
+  endif()
+
+  cmake_parse_arguments(ARG "COMPONENT_LIB;DISABLE_LLVM_LINK_LLVM_DYLIB" "" ""
+    ${ARGN})
+  if(ARG_COMPONENT_LIB)
+    # This is a component library of LLVM, export its symbols.
+    set(definitions LLVM_EXPORTS LLVM_C_EXPORTS)
+  elseif(LLVM_LINK_LLVM_DYLIB AND NOT ARG_DISABLE_LLVM_LINK_LLVM_DYLIB)
+    # This target imports the annotated symbols from the shared library.
+    set(definitions "")
+  else()
+    # This target links the annotated symbols statically.
+    set(definitions LLVM_BUILD_STATIC)
+  endif()
+  target_compile_definitions(${name} PRIVATE ${definitions})
+endfunction()
+
 function(add_llvm_symbol_exports target_name export_file)
   cmake_parse_arguments(ARG "NO_TARGET_DEPENDENCY" "OUTPUT_FILE_VAR" "" ${ARGN})
 
@@ -475,14 +503,18 @@ endfunction()
 # into the output .exe or .dll.
 # TODO: Enable for MinGW Windows builds too.
 #
-function(add_windows_version_resource_file OUT_VAR)
+function(add_windows_version_resource_file OUT_VAR RESOURCE_VAR name)
   set(sources ${ARGN})
+  set(${RESOURCE_VAR} "" PARENT_SCOPE)
   if (MSVC AND CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows")
-    set(resource_file ${LLVM_SOURCE_DIR}/resources/windows_version_resource.rc)
-    if(EXISTS ${resource_file})
-      set(sources ${sources} ${resource_file})
-      source_group("Resource Files" ${resource_file})
-      set(windows_resource_file ${resource_file} PARENT_SCOPE)
+    set(resource_file "${LLVM_SOURCE_DIR}/resources/windows_version_resource.rc")
+    if(EXISTS "${resource_file}")
+      set(target_resource_file
+        "${CMAKE_CURRENT_BINARY_DIR}/${name}_windows_version_resource.rc")
+      configure_file("${resource_file}" "${target_resource_file}" COPYONLY)
+      list(APPEND sources "${target_resource_file}")
+      source_group("Resource Files" FILES "${target_resource_file}")
+      set(${RESOURCE_VAR} "${target_resource_file}" PARENT_SCOPE)
     endif()
   endif(MSVC AND CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows")
 
@@ -498,13 +530,15 @@ endfunction(add_windows_version_resource_file)
 #     Optional patchlevel version number (defaults to LLVM_VERSION_PATCH)
 #   VERSION_STRING
 #     Optional version string (defaults to PACKAGE_VERSION)
+#   FILE_DESCRIPTION
+#     Optional file description (defaults to the product and target names)
 #   PRODUCT_NAME
 #     Optional product name string (defaults to "LLVM")
 #   )
 function(set_windows_version_resource_properties name resource_file)
   cmake_parse_arguments(ARG
     ""
-    "VERSION_MAJOR;VERSION_MINOR;VERSION_PATCHLEVEL;VERSION_STRING;PRODUCT_NAME"
+    "VERSION_MAJOR;VERSION_MINOR;VERSION_PATCHLEVEL;VERSION_STRING;PRODUCT_NAME;FILE_DESCRIPTION"
     ""
     ${ARGN})
 
@@ -544,6 +578,10 @@ function(set_windows_version_resource_properties name resource_file)
     set(ARG_PRODUCT_NAME "LLVM")
   endif()
 
+  if(NOT DEFINED ARG_FILE_DESCRIPTION OR "${ARG_FILE_DESCRIPTION}" STREQUAL "")
+    set(ARG_FILE_DESCRIPTION "${ARG_PRODUCT_NAME} ${name}")
+  endif()
+
   set_property(SOURCE ${resource_file}
                PROPERTY COMPILE_FLAGS /nologo)
   set_property(SOURCE ${resource_file}
@@ -554,6 +592,9 @@ function(set_windows_version_resource_properties name resource_file)
                "RC_VERSION_FIELD_4=0"
                "RC_FILE_VERSION=\"${ARG_VERSION_STRING}\""
                "RC_INTERNAL_NAME=\"${name}\""
+               "RC_FILE_DESCRIPTION=\"${ARG_FILE_DESCRIPTION}\""
+               "RC_COPYRIGHT=\"Copyright (c) LLVM contributors.\""
+               "RC_ORIGINAL_FILENAME=\"$<TARGET_FILE_NAME:${name}>\""
                "RC_PRODUCT_NAME=\"${ARG_PRODUCT_NAME}\""
                "RC_PRODUCT_VERSION=\"${ARG_VERSION_STRING}\"")
 endfunction(set_windows_version_resource_properties)
@@ -570,6 +611,8 @@ endfunction(set_windows_version_resource_properties)
 #   DISABLE_LLVM_LINK_LLVM_DYLIB
 #     Do not link this library to libLLVM, even if
 #     LLVM_LINK_LLVM_DYLIB is enabled.
+#   FILE_DESCRIPTION description
+#     Description for the Windows version resource.
 #   OUTPUT_NAME name
 #     Corresponds to OUTPUT_NAME in target properties.
 #   DEPENDS targets...
@@ -601,7 +644,7 @@ endfunction(set_windows_version_resource_properties)
 function(llvm_add_library name)
   cmake_parse_arguments(ARG
     "MODULE;SHARED;STATIC;OBJECT;DISABLE_LLVM_LINK_LLVM_DYLIB;SONAME;NO_INSTALL_RPATH;COMPONENT_LIB;DISABLE_PCH_REUSE"
-    "OUTPUT_NAME;PLUGIN_TOOL;ENTITLEMENTS;BUNDLE_PATH"
+    "OUTPUT_NAME;PLUGIN_TOOL;ENTITLEMENTS;BUNDLE_PATH;FILE_DESCRIPTION"
     "ADDITIONAL_HEADERS;PRECOMPILE_HEADERS;DEPENDS;LINK_COMPONENTS;LINK_LIBS;OBJLIBS"
     ${ARGN})
   list(APPEND LLVM_COMMON_DEPENDS ${ARG_DEPENDS})
@@ -698,10 +741,6 @@ function(llvm_add_library name)
         endif()
       endforeach()
     endif()
-
-    if(ARG_DISABLE_LLVM_LINK_LLVM_DYLIB)
-      target_compile_definitions(${obj_name} PRIVATE LLVM_BUILD_STATIC)
-    endif()
   endif()
 
   if(ARG_SHARED AND ARG_STATIC)
@@ -727,15 +766,22 @@ function(llvm_add_library name)
     set(ARG_STATIC)
   endif()
 
+  set(windows_resource_file "")
   if(ARG_MODULE)
     add_library(${name} MODULE ${ALL_FILES})
   elseif(ARG_SHARED)
-    add_windows_version_resource_file(ALL_FILES ${ALL_FILES})
+    add_windows_version_resource_file(ALL_FILES windows_resource_file ${name} ${ALL_FILES})
     add_library(${name} SHARED ${ALL_FILES})
   else()
     add_library(${name} STATIC ${ALL_FILES})
   endif()
   set_target_properties(${name} PROPERTIES FOLDER "${subproject_title}/Libraries")
+
+  # Set the ABI definitions for the library and its object library.
+  llvm_update_abi_definitions(${name} ${ARGN})
+  if(TARGET obj.${name})
+    llvm_update_abi_definitions(obj.${name} ${ARGN})
+  endif()
 
   ## If were compiling with clang-cl use /Zc:dllexportInlines- to exclude inline
   ## class members from being dllexport'ed to reduce compile time.
@@ -752,9 +798,6 @@ function(llvm_add_library name)
 
   if(ARG_COMPONENT_LIB)
     set_target_properties(${name} PROPERTIES LLVM_COMPONENT TRUE)
-    if(LLVM_BUILD_LLVM_DYLIB OR BUILD_SHARED_LIBS)
-      target_compile_definitions(${name} PRIVATE LLVM_EXPORTS LLVM_C_EXPORTS)
-    endif()
 
     # When building shared objects for each target there are some internal APIs
     # that are used across shared objects which we can't hide.
@@ -779,9 +822,11 @@ function(llvm_add_library name)
 
   setup_dependency_debugging(${name} ${LLVM_COMMON_DEPENDS})
 
-  if(DEFINED windows_resource_file)
-    set_windows_version_resource_properties(${name} ${windows_resource_file})
-    set(windows_resource_file ${windows_resource_file} PARENT_SCOPE)
+  if(windows_resource_file)
+    set_windows_version_resource_properties(${name} ${windows_resource_file}
+      FILE_DESCRIPTION "${ARG_FILE_DESCRIPTION}")
+    set_property(TARGET ${name} PROPERTY LLVM_WINDOWS_VERSION_RESOURCE_FILE
+      "${windows_resource_file}")
   endif()
 
   set_output_directory(${name} BINARY_DIR ${LLVM_RUNTIME_OUTPUT_INTDIR} LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
@@ -870,9 +915,6 @@ function(llvm_add_library name)
     if (LLVM_LINK_LLVM_DYLIB AND NOT ARG_DISABLE_LLVM_LINK_LLVM_DYLIB)
       set(llvm_libs LLVM)
     else()
-      if(ARG_DISABLE_LLVM_LINK_LLVM_DYLIB)
-        target_compile_definitions(${name} PRIVATE LLVM_BUILD_STATIC)
-      endif()
       llvm_map_components_to_libnames(llvm_libs
         ${LLVM_LINK_COMPONENTS}
        )
@@ -1162,7 +1204,7 @@ macro(add_llvm_executable name)
     ""
     ${ARGN})
   generate_llvm_objects(${name} ${ARG_UNPARSED_ARGUMENTS})
-  add_windows_version_resource_file(ALL_FILES ${ALL_FILES})
+  add_windows_version_resource_file(ALL_FILES windows_resource_file ${name} ${ALL_FILES})
 
   if(XCODE)
     # Note: the dummy.cpp source file provides no definitions. However,
@@ -1191,8 +1233,10 @@ macro(add_llvm_executable name)
     set_property(TARGET ${name} PROPERTY INSTALL_RPATH "${LLVM_LOCAL_RPATH}")
   endif()
 
-  if(DEFINED windows_resource_file)
+  if(windows_resource_file)
     set_windows_version_resource_properties(${name} ${windows_resource_file})
+    set_property(TARGET ${name} PROPERTY LLVM_WINDOWS_VERSION_RESOURCE_FILE
+      "${windows_resource_file}")
   endif()
 
   # CMake position-independent code sets -fPIE for source files in executables.
@@ -1281,8 +1325,10 @@ macro(add_llvm_executable name)
     export_executable_symbols(${name})
   endif()
 
-  if(ARG_DISABLE_LLVM_LINK_LLVM_DYLIB OR NOT LLVM_LINK_LLVM_DYLIB)
-    target_compile_definitions(${name} PRIVATE LLVM_BUILD_STATIC)
+  # Set the ABI definitions for the executable and its object library.
+  llvm_update_abi_definitions(${name} ${ARGN})
+  if(TARGET obj.${name})
+    llvm_update_abi_definitions(obj.${name} ${ARGN})
   endif()
 
   if(LLVM_BUILD_LLVM_DYLIB_VIS AND NOT LLVM_DYLIB_EXPORT_INLINES AND MSVC)

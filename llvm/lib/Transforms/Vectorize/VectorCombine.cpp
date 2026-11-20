@@ -6436,9 +6436,14 @@ bool VectorCombine::foldInterleaveIntrinsics(Instruction &I) {
     return false;
   }
 
-  APInt NewSplatVal = SplatVal1->zext(Width * 2);
+  // The bitcast puts element 0 of the narrow vector in the low half of each
+  // wide element on little-endian targets, and in the high half on big-endian
+  // targets.
+  const APInt &LowHalf = DL->isLittleEndian() ? *SplatVal0 : *SplatVal1;
+  const APInt &HighHalf = DL->isLittleEndian() ? *SplatVal1 : *SplatVal0;
+  APInt NewSplatVal = HighHalf.zext(Width * 2);
   NewSplatVal <<= Width;
-  NewSplatVal |= SplatVal0->zext(Width * 2);
+  NewSplatVal |= LowHalf.zext(Width * 2);
   auto *NewSplat = ConstantVector::getSplat(
       ExtVTy->getElementCount(), ConstantInt::get(F.getContext(), NewSplatVal));
 
@@ -6476,10 +6481,6 @@ bool VectorCombine::foldInterleaveIntrinsics(Instruction &I) {
 /// %merge1 = bitcast <vscale x 16 x i16> %f1 to <vscale x 8 x i32>
 /// ```
 bool VectorCombine::foldDeinterleaveIntrinsics(Instruction &I) {
-  // This pattern involves bitcast that is not compatible with big endian.
-  if (DL->isBigEndian())
-    return false;
-
   using namespace PatternMatch;
   Value *DeinterleavedVal;
   if (!match(&I, m_Deinterleave2(m_Value(DeinterleavedVal))))
@@ -6508,6 +6509,9 @@ bool VectorCombine::foldDeinterleaveIntrinsics(Instruction &I) {
       return false;
     OrigFields[Idx] = E;
   }
+
+  if (DL->isBigEndian())
+    std::swap(OrigFields[0], OrigFields[1]);
 
   // Find the merge instruction (i.e. OR) first.
   SmallVector<Instruction *, 2> MergeInsts;
@@ -6570,6 +6574,8 @@ bool VectorCombine::foldDeinterleaveIntrinsics(Instruction &I) {
   Value *NewDeinterleave = Builder.CreateIntrinsic(
       Intrinsic::vector_deinterleave2, {NewVecTy}, {NewVecCast});
   for (auto [Idx, MergeInst] : enumerate(MergeInsts)) {
+    if (DL->isBigEndian())
+      Idx ^= 1;
     Value *NewField = Builder.CreateExtractValue(NewDeinterleave, Idx);
     NewField = Builder.CreateBitCast(NewField, MergeInst->getType());
     replaceValue(*MergeInst, *NewField);

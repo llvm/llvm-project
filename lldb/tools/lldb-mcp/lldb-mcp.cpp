@@ -132,6 +132,10 @@ OPTIONS:
 }
 
 void printVersion(StringRef tool_name) {
+  // Plugins add to the version string, so initialize them first.
+  SBDebugger::Initialize();
+  llvm::scope_exit cleanup{[]() { SBDebugger::Terminate(); }};
+
   outs() << tool_name << ": ";
   cl::PrintVersionMessage();
   outs() << "liblldb: " << SBDebugger::GetVersionString() << '\n';

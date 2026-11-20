@@ -26,10 +26,11 @@ public:
   AMDGPUABIClassifier(const mlir::DataLayout &dl, mlir::ModuleOp modOp)
       : CIRABIClassifierCommon(dl, modOp) {}
 
-  std::optional<ArgClassification> classifyVAArg(cir::VAArgOp vaArg) override {
+  mlir::FailureOr<ArgClassification>
+  classifyVAArg(cir::VAArgOp vaArg) override {
     vaArg->emitOpError()
         << "not yet implemented in CallConvLowering for AMDGPU";
-    return std::nullopt;
+    return mlir::failure();
   }
 
 protected:

@@ -67,10 +67,22 @@ class EnumClassFlag<string flag, string getter> :
 
 def DIBasicTypeAttr : DialectAttribute<(attr
   VarInt:$tag,
-  String:$name,
+  OptionalAttribute<"StringAttr">:$name,
   VarInt:$sizeInBits,
   VarInt:$encoding
 )>;
+
+//===----------------------------------------------------------------------===//
+// DIEnumeratorAttr
+//===----------------------------------------------------------------------===//
+
+def DIEnumeratorAttr : DialectAttribute<(attr
+  OptionalAttribute<"StringAttr">:$name,
+  Attr<"IntegerAttr">:$value,
+  Bool:$isUnsigned
+)> {
+  let cBuilder = "$_resultType::get(context, $_args)";
+}
 
 //===----------------------------------------------------------------------===//
 // DIExpressionAttr, DIExpressionElemAttr
@@ -361,7 +373,8 @@ def LLVMDialectAttributes : DialectAttributes<"LLVM"> {
     DISubprogramAttr,
     DISubrangeAttr,
     DISubroutineTypeAttr,
-    LoopAnnotationAttr
+    LoopAnnotationAttr,
+    DIEnumeratorAttr
     // Referenced attributes currently missing support:
     // AccessGroupAttr, LoopVectorizeAttr, LoopInterleaveAttr, LoopUnrollAttr,
     // LoopUnrollAndJamAttr, LoopLICMAttr, LoopDistributeAttr, LoopPipelineAttr,
