@@ -157,6 +157,17 @@ public:
     llvm_unreachable("Needed if fixupNeedsRelaxationAdvanced may return true");
   }
 
+  /// Expand a late MC pseudo instruction into encoded bytes and fixups.
+  /// Return false to use the code emitter. If EndLabel is non-null, the caller
+  /// defines it immediately after the emitted instruction sequence.
+  virtual bool expandInstruction(const MCInst &Inst,
+                                 SmallVectorImpl<char> &Data,
+                                 SmallVectorImpl<MCFixup> &Fixups,
+                                 const MCSubtargetInfo &STI,
+                                 MCSymbol *&EndLabel) const {
+    return false;
+  }
+
   // Defined by linker relaxation targets.
 
   // Return false to use default handling. Otherwise, set `Size` to the number
