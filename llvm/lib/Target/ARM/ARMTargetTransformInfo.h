@@ -331,6 +331,12 @@ public:
   bool isProfitableToSinkOperands(Instruction *I,
                                   SmallVectorImpl<Use *> &Ops) const override;
 
+  bool supportsTailCalls() const { return ST->supportsTailCall(); }
+
+  bool supportsTailCallFor(const CallBase *CB) const {
+    return supportsTailCalls();
+  }
+
   /// @}
 };
 
