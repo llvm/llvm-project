@@ -203,14 +203,16 @@ void BinarySection::flushPendingRelocations(raw_fd_ostream &OS,
     }
 
     uint32_t OriginalInst = 0;
-    // Are we dealing with B.cond, TBZ/TBNZ, CBZ/CBNZ and need extra info
-    // to be able to encode the instruction.
-    if (BC.isAArch64() && (Reloc.Type == ELF::R_AARCH64_CONDBR19 ||
-                           Reloc.Type == ELF::R_AARCH64_TSTBR14)) {
-      StringRef Contents = getContents();
-      assert(Contents.size() >= Reloc.Offset + 4 &&
+    // Preserve registers and condition bits when updating branch immediates.
+    if (RH.needsOriginalInstruction(Reloc.Type)) {
+      const StringRef Contents = getContents();
+      const size_t Size = RH.getSizeForType(Reloc.Type);
+      assert((Size == 2 || Size == 4) && "Unexpected instruction size");
+      assert(Contents.size() >= Reloc.Offset + Size &&
              "Complete instruction must lie in contents.");
-      OriginalInst = support::endian::read32le(Contents.data() + Reloc.Offset);
+      const char *InstData = Contents.data() + Reloc.Offset;
+      OriginalInst = Size == 2 ? support::endian::read16le(InstData)
+                               : support::endian::read32le(InstData);
     }
     Value = RH.encodeValue(Reloc.Type, Value, SectionAddress + Reloc.Offset,
                            OriginalInst);
