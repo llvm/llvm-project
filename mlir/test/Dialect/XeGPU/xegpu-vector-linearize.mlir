@@ -226,6 +226,39 @@ func.func @gather_memref_2d(%base: memref<?x?xf32>, %v: vector<2x3xindex>, %mask
 }
 
 // -----
+// A gather on a tensor base lowers to tensor.extract rather than vector.load,
+// so the pass has to have the tensor dialect loaded.
+
+// CHECK-LABEL: func.func @gather_tensor_1d
+// CHECK-SAME: (%[[BASE:.*]]: tensor<?xf32>, %[[IDX:.*]]: vector<2xindex>, %[[MASK:.*]]: vector<2xi1>, %[[PASS:.*]]: vector<2xf32>) -> vector<2xf32>
+
+// CHECK: %[[MASK_0:.*]] = vector.extract %[[MASK]][0] : i1 from vector<2xi1>
+// CHECK: %[[IDX_0:.*]] = vector.extract %[[IDX]][0] : index from vector<2xindex>
+// CHECK: %[[IF_0:.*]] = scf.if %[[MASK_0]] -> (vector<2xf32>) {
+// CHECK:   %[[ELEM_0:.*]] = tensor.extract %[[BASE]][%[[IDX_0]]] : tensor<?xf32>
+// CHECK:   %[[INS_0:.*]] = vector.insert %[[ELEM_0]], %[[PASS]] [0] : f32 into vector<2xf32>
+// CHECK:   scf.yield %[[INS_0]] : vector<2xf32>
+// CHECK: } else {
+// CHECK:   scf.yield %[[PASS]] : vector<2xf32>
+// CHECK: }
+
+// CHECK: %[[MASK_1:.*]] = vector.extract %[[MASK]][1] : i1 from vector<2xi1>
+// CHECK: %[[IDX_1:.*]] = vector.extract %[[IDX]][1] : index from vector<2xindex>
+// CHECK: %[[IF_1:.*]] = scf.if %[[MASK_1]] -> (vector<2xf32>) {
+// CHECK:   %[[ELEM_1:.*]] = tensor.extract %[[BASE]][%[[IDX_1]]] : tensor<?xf32>
+// CHECK:   %[[INS_1:.*]] = vector.insert %[[ELEM_1]], %[[IF_0]] [1] : f32 into vector<2xf32>
+// CHECK:   scf.yield %[[INS_1]] : vector<2xf32>
+// CHECK: } else {
+// CHECK:   scf.yield %[[IF_0]] : vector<2xf32>
+// CHECK: }
+// CHECK: return %[[IF_1]] : vector<2xf32>
+func.func @gather_tensor_1d(%base: tensor<?xf32>, %v: vector<2xindex>, %mask: vector<2xi1>, %pass_thru: vector<2xf32>) -> vector<2xf32> {
+  %c0 = arith.constant 0 : index
+  %0 = vector.gather %base[%c0][%v], %mask, %pass_thru : tensor<?xf32>, vector<2xindex>, vector<2xi1>, vector<2xf32> into vector<2xf32>
+  return %0 : vector<2xf32>
+}
+
+// -----
 // Check for vector linearization interoperability with XeGPU dialect ops.
 // The `xegpu-vector-linearize` pass does not itself affect the XeGPU ops.
 
