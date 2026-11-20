@@ -795,7 +795,7 @@ bool SCEVExprContains(const SCEV *Root, PredTy Pred) {
 /// The result from each visit is cached, so it will return the same
 /// SCEV for the same input.
 template <typename SC>
-class SCEVRewriteVisitor : public SCEVVisitor<SC, SCEVUse> {
+class SCEVRewriteVisitor : public SCEVUseVisitor<SC, SCEVUse> {
 protected:
   ScalarEvolution &SE;
   // Memoize the result of each visit so that we only compute once for
@@ -803,82 +803,84 @@ protected:
   // a SCEV is referenced by multiple SCEVs. Without memoization, this
   // visit algorithm would have exponential time complexity in the worst
   // case, causing the compiler to hang on certain tests.
-  SmallDenseMap<const SCEV *, SCEVUse, 16> RewriteResults;
+  SmallDenseMap<SCEVUse, SCEVUse, 16> RewriteResults;
 
 public:
   SCEVRewriteVisitor(ScalarEvolution &SE) : SE(SE) {}
 
-  SCEVUse visit(const SCEV *S) {
+  SCEVUse visit(SCEVUse S) {
     auto It = RewriteResults.find(S);
     if (It != RewriteResults.end())
       return It->second;
-    SCEVUse Visited = SCEVVisitor<SC, SCEVUse>::visit(S);
+    SCEVUse Visited = SCEVUseVisitor<SC, SCEVUse>::visit(S);
     auto Result = RewriteResults.try_emplace(S, Visited);
     assert(Result.second && "Should insert a new entry");
     return Result.first->second;
   }
 
-  SCEVUse visitConstant(const SCEVConstant *Constant) { return Constant; }
+  SCEVUse visitConstant(SCEVUseT<const SCEVConstant *> Constant) {
+    return Constant;
+  }
 
-  SCEVUse visitVScale(const SCEVVScale *VScale) { return VScale; }
+  SCEVUse visitVScale(SCEVUseT<const SCEVVScale *> VScale) { return VScale; }
 
-  SCEVUse visitPtrToAddrExpr(const SCEVPtrToAddrExpr *Expr) {
+  SCEVUse visitPtrToAddrExpr(SCEVUseT<const SCEVPtrToAddrExpr *> Expr) {
     SCEVUse Operand = ((SC *)this)->visit(Expr->getOperand());
     return Operand == Expr->getOperand() ? Expr : SE.getPtrToAddrExpr(Operand);
   }
 
-  SCEVUse visitTruncateExpr(const SCEVTruncateExpr *Expr) {
+  SCEVUse visitTruncateExpr(SCEVUseT<const SCEVTruncateExpr *> Expr) {
     SCEVUse Operand = ((SC *)this)->visit(Expr->getOperand());
     return Operand == Expr->getOperand()
                ? Expr
                : SE.getTruncateExpr(Operand, Expr->getType());
   }
 
-  SCEVUse visitZeroExtendExpr(const SCEVZeroExtendExpr *Expr) {
+  SCEVUse visitZeroExtendExpr(SCEVUseT<const SCEVZeroExtendExpr *> Expr) {
     SCEVUse Operand = ((SC *)this)->visit(Expr->getOperand());
     return Operand == Expr->getOperand()
                ? Expr
                : SE.getZeroExtendExpr(Operand, Expr->getType());
   }
 
-  SCEVUse visitSignExtendExpr(const SCEVSignExtendExpr *Expr) {
+  SCEVUse visitSignExtendExpr(SCEVUseT<const SCEVSignExtendExpr *> Expr) {
     SCEVUse Operand = ((SC *)this)->visit(Expr->getOperand());
     return Operand == Expr->getOperand()
                ? Expr
                : SE.getSignExtendExpr(Operand, Expr->getType());
   }
 
-  SCEVUse visitAddExpr(const SCEVAddExpr *Expr) {
+  SCEVUse visitAddExpr(SCEVUseT<const SCEVAddExpr *> Expr) {
     SmallVector<SCEVUse, 2> Operands;
     bool Changed = false;
-    for (const SCEV *Op : Expr->operands()) {
+    for (SCEVUse Op : Expr->operands()) {
       Operands.push_back(((SC *)this)->visit(Op));
       Changed |= Op != Operands.back();
     }
     return !Changed ? Expr : SE.getAddExpr(Operands);
   }
 
-  SCEVUse visitMulExpr(const SCEVMulExpr *Expr) {
+  SCEVUse visitMulExpr(SCEVUseT<const SCEVMulExpr *> Expr) {
     SmallVector<SCEVUse, 2> Operands;
     bool Changed = false;
-    for (const SCEV *Op : Expr->operands()) {
+    for (SCEVUse Op : Expr->operands()) {
       Operands.push_back(((SC *)this)->visit(Op));
       Changed |= Op != Operands.back();
     }
     return !Changed ? Expr : SE.getMulExpr(Operands);
   }
 
-  SCEVUse visitUDivExpr(const SCEVUDivExpr *Expr) {
+  SCEVUse visitUDivExpr(SCEVUseT<const SCEVUDivExpr *> Expr) {
     SCEVUse LHS = ((SC *)this)->visit(Expr->getLHS());
     SCEVUse RHS = ((SC *)this)->visit(Expr->getRHS());
     bool Changed = LHS != Expr->getLHS() || RHS != Expr->getRHS();
     return !Changed ? Expr : SE.getUDivExpr(LHS, RHS);
   }
 
-  SCEVUse visitAddRecExpr(const SCEVAddRecExpr *Expr) {
+  SCEVUse visitAddRecExpr(SCEVUseT<const SCEVAddRecExpr *> Expr) {
     SmallVector<SCEVUse, 2> Operands;
     bool Changed = false;
-    for (const SCEV *Op : Expr->operands()) {
+    for (SCEVUse Op : Expr->operands()) {
       Operands.push_back(((SC *)this)->visit(Op));
       Changed |= Op != Operands.back();
     }
@@ -887,59 +889,62 @@ public:
                                        Expr->getNoWrapFlags());
   }
 
-  SCEVUse visitSMaxExpr(const SCEVSMaxExpr *Expr) {
+  SCEVUse visitSMaxExpr(SCEVUseT<const SCEVSMaxExpr *> Expr) {
     SmallVector<SCEVUse, 2> Operands;
     bool Changed = false;
-    for (const SCEV *Op : Expr->operands()) {
+    for (SCEVUse Op : Expr->operands()) {
       Operands.push_back(((SC *)this)->visit(Op));
       Changed |= Op != Operands.back();
     }
     return !Changed ? Expr : SE.getSMaxExpr(Operands);
   }
 
-  SCEVUse visitUMaxExpr(const SCEVUMaxExpr *Expr) {
+  SCEVUse visitUMaxExpr(SCEVUseT<const SCEVUMaxExpr *> Expr) {
     SmallVector<SCEVUse, 2> Operands;
     bool Changed = false;
-    for (const SCEV *Op : Expr->operands()) {
+    for (SCEVUse Op : Expr->operands()) {
       Operands.push_back(((SC *)this)->visit(Op));
       Changed |= Op != Operands.back();
     }
     return !Changed ? Expr : SE.getUMaxExpr(Operands);
   }
 
-  SCEVUse visitSMinExpr(const SCEVSMinExpr *Expr) {
+  SCEVUse visitSMinExpr(SCEVUseT<const SCEVSMinExpr *> Expr) {
     SmallVector<SCEVUse, 2> Operands;
     bool Changed = false;
-    for (const SCEV *Op : Expr->operands()) {
+    for (SCEVUse Op : Expr->operands()) {
       Operands.push_back(((SC *)this)->visit(Op));
       Changed |= Op != Operands.back();
     }
     return !Changed ? Expr : SE.getSMinExpr(Operands);
   }
 
-  SCEVUse visitUMinExpr(const SCEVUMinExpr *Expr) {
+  SCEVUse visitUMinExpr(SCEVUseT<const SCEVUMinExpr *> Expr) {
     SmallVector<SCEVUse, 2> Operands;
     bool Changed = false;
-    for (const SCEV *Op : Expr->operands()) {
+    for (SCEVUse Op : Expr->operands()) {
       Operands.push_back(((SC *)this)->visit(Op));
       Changed |= Op != Operands.back();
     }
     return !Changed ? Expr : SE.getUMinExpr(Operands);
   }
 
-  SCEVUse visitSequentialUMinExpr(const SCEVSequentialUMinExpr *Expr) {
+  SCEVUse
+  visitSequentialUMinExpr(SCEVUseT<const SCEVSequentialUMinExpr *> Expr) {
     SmallVector<SCEVUse, 2> Operands;
     bool Changed = false;
-    for (const SCEV *Op : Expr->operands()) {
+    for (SCEVUse Op : Expr->operands()) {
       Operands.push_back(((SC *)this)->visit(Op));
       Changed |= Op != Operands.back();
     }
     return !Changed ? Expr : SE.getUMinExpr(Operands, /*Sequential=*/true);
   }
 
-  SCEVUse visitUnknown(const SCEVUnknown *Expr) { return Expr; }
+  SCEVUse visitUnknown(SCEVUseT<const SCEVUnknown *> Expr) { return Expr; }
 
-  SCEVUse visitCouldNotCompute(const SCEVCouldNotCompute *Expr) { return Expr; }
+  SCEVUse visitCouldNotCompute(SCEVUseT<const SCEVCouldNotCompute *> Expr) {
+    return Expr;
+  }
 };
 
 using ValueToValueMap = DenseMap<const Value *, Value *>;
@@ -949,7 +954,7 @@ using ValueToSCEVMapTy = DenseMap<const Value *, SCEVUse>;
 /// the SCEVUnknown components following the Map (Value -> SCEV).
 class SCEVParameterRewriter : public SCEVRewriteVisitor<SCEVParameterRewriter> {
 public:
-  static const SCEV *rewrite(const SCEV *Scev, ScalarEvolution &SE,
+  static const SCEV *rewrite(SCEVUse Scev, ScalarEvolution &SE,
                              ValueToSCEVMapTy &Map) {
     SCEVParameterRewriter Rewriter(SE, Map);
     return Rewriter.visit(Scev);
@@ -958,7 +963,7 @@ public:
   SCEVParameterRewriter(ScalarEvolution &SE, ValueToSCEVMapTy &M)
       : SCEVRewriteVisitor(SE), Map(M) {}
 
-  SCEVUse visitUnknown(const SCEVUnknown *Expr) {
+  SCEVUse visitUnknown(SCEVUseT<const SCEVUnknown *> Expr) {
     auto I = Map.find(Expr->getValue());
     if (I == Map.end())
       return Expr;
